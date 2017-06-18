@@ -1,0 +1,8 @@
+# Mac
+._.DS_Store
+
+# VSCode 
+.vscode/*
+
+# Coverage
+c.out
