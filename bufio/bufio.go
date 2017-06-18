@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package bufio implements buffered I/O with support for the \r eol marker. It wraps an io.Reader or io.Writer
-// object, creating another object (Reader or Writer) that also implements
+// Package bufio extends the stdlib bufio with additional support for the \r eol marker.
+// It wraps an io.Reader or io.Writer object, creating another object (Reader or Writer) that also implements
 // the interface but provides buffering and some help for textual I/O.
 //
 // The PDF specification ISO 32000 defines the PDF end of line markers at 4.20 as:
@@ -23,16 +23,16 @@
 // because it is common for real world PDF files to have arbitrary eol markers (and therefore violating the spec)
 // even within the same file we need to extend bufio in order to support PDF end of line markers in a flexible way.
 //
-// Although on may suppose that extending ReadLine() is the perfect candidate for this
+// Although one may suppose that extending ReadLine() is the perfect candidate for this
 // the decision was to enhance ReadSlice(delim byte) by supporting an "unknownDelimiter" (=0) as argument for the delimiter parameter.
 //
 // Extending ReadSlice(delim byte) worked out as the better alternative because it is called once for every line
 // whereas ReadLine() needs to be called in a loop returning chunks.
 //
-// The nice thing about extending ReadSlice(delim byte) is we can still call ReadString(delim byte) because the delimiter
-// parameter gets passed down to ReadSlice(delim byte) and we can keep the modification to a minimum.
+// The nice thing about extending ReadSlice(delim byte) is that we still can call ReadString(delim byte) because the delimiter
+// parameter gets passed down to ReadSlice(delim byte) and as a result swe can keep the modification to a minimum.
 //
-// based on go1.8.3
+// based on go1.9beta1
 package bufio
 
 import (
@@ -144,6 +144,69 @@ func (b *Reader) readErr() error {
 	return err
 }
 
+// Peek returns the next n bytes without advancing the reader. The bytes stop
+// being valid at the next read call. If Peek returns fewer than n bytes, it
+// also returns an error explaining why the read is short. The error is
+// ErrBufferFull if n is larger than b's buffer size.
+func (b *Reader) Peek(n int) ([]byte, error) {
+	if n < 0 {
+		return nil, ErrNegativeCount
+	}
+
+	for b.w-b.r < n && b.w-b.r < len(b.buf) && b.err == nil {
+		b.fill() // b.w-b.r < len(b.buf) => buffer is not full
+	}
+
+	if n > len(b.buf) {
+		return b.buf[b.r:b.w], ErrBufferFull
+	}
+
+	// 0 <= n <= len(b.buf)
+	var err error
+	if avail := b.w - b.r; avail < n {
+		// not enough data in buffer
+		n = avail
+		err = b.readErr()
+		if err == nil {
+			err = ErrBufferFull
+		}
+	}
+	return b.buf[b.r : b.r+n], err
+}
+
+// Discard skips the next n bytes, returning the number of bytes discarded.
+//
+// If Discard skips fewer than n bytes, it also returns an error.
+// If 0 <= n <= b.Buffered(), Discard is guaranteed to succeed without
+// reading from the underlying io.Reader.
+func (b *Reader) Discard(n int) (discarded int, err error) {
+	if n < 0 {
+		return 0, ErrNegativeCount
+	}
+	if n == 0 {
+		return
+	}
+	remain := n
+	for {
+		skip := b.Buffered()
+		if skip == 0 {
+			b.fill()
+			skip = b.Buffered()
+		}
+		if skip > remain {
+			skip = remain
+		}
+		b.r += skip
+		remain -= skip
+		if remain == 0 {
+			return n, nil
+		}
+		if b.err != nil {
+			return n - remain, b.readErr()
+		}
+	}
+}
+
 // Read reads data into p.
 // It returns the number of bytes read into p.
 // The bytes are taken from at most one Read on the underlying Reader,
@@ -171,10 +234,18 @@ func (b *Reader) Read(p []byte) (n int, err error) {
 			}
 			return n, b.readErr()
 		}
-		b.fill() // buffer is empty
-		if b.r == b.w {
+		// One read.
+		// Do not use b.fill, which will loop.
+		b.r = 0
+		b.w = 0
+		n, b.err = b.rd.Read(b.buf)
+		if n < 0 {
+			panic(errNegativeRead)
+		}
+		if n == 0 {
 			return 0, b.readErr()
 		}
+		b.w += n
 	}
 
 	// copy as much as we can
@@ -183,6 +254,75 @@ func (b *Reader) Read(p []byte) (n int, err error) {
 	b.lastByte = int(b.buf[b.r-1])
 	b.lastRuneSize = -1
 	return n, nil
+}
+
+// ReadByte reads and returns a single byte.
+// If no byte is available, returns an error.
+func (b *Reader) ReadByte() (byte, error) {
+	b.lastRuneSize = -1
+	for b.r == b.w {
+		if b.err != nil {
+			return 0, b.readErr()
+		}
+		b.fill() // buffer is empty
+	}
+	c := b.buf[b.r]
+	b.r++
+	b.lastByte = int(c)
+	return c, nil
+}
+
+// UnreadByte unreads the last byte. Only the most recently read byte can be unread.
+func (b *Reader) UnreadByte() error {
+	if b.lastByte < 0 || b.r == 0 && b.w > 0 {
+		return ErrInvalidUnreadByte
+	}
+	// b.r > 0 || b.w == 0
+	if b.r > 0 {
+		b.r--
+	} else {
+		// b.r == 0 && b.w == 0
+		b.w = 1
+	}
+	b.buf[b.r] = byte(b.lastByte)
+	b.lastByte = -1
+	b.lastRuneSize = -1
+	return nil
+}
+
+// ReadRune reads a single UTF-8 encoded Unicode character and returns the
+// rune and its size in bytes. If the encoded rune is invalid, it consumes one byte
+// and returns unicode.ReplacementChar (U+FFFD) with a size of 1.
+func (b *Reader) ReadRune() (r rune, size int, err error) {
+	for b.r+utf8.UTFMax > b.w && !utf8.FullRune(b.buf[b.r:b.w]) && b.err == nil && b.w-b.r < len(b.buf) {
+		b.fill() // b.w-b.r < len(buf) => buffer is not full
+	}
+	b.lastRuneSize = -1
+	if b.r == b.w {
+		return 0, 0, b.readErr()
+	}
+	r, size = rune(b.buf[b.r]), 1
+	if r >= utf8.RuneSelf {
+		r, size = utf8.DecodeRune(b.buf[b.r:b.w])
+	}
+	b.r += size
+	b.lastByte = int(b.buf[b.r-1])
+	b.lastRuneSize = size
+	return r, size, nil
+}
+
+// UnreadRune unreads the last rune. If the most recent read operation on
+// the buffer was not a ReadRune, UnreadRune returns an error.  (In this
+// regard it is stricter than UnreadByte, which will unread the last byte
+// from any read operation.)
+func (b *Reader) UnreadRune() error {
+	if b.lastRuneSize < 0 || b.r < b.lastRuneSize {
+		return ErrInvalidUnreadRune
+	}
+	b.r -= b.lastRuneSize
+	b.lastByte = -1
+	b.lastRuneSize = -1
+	return nil
 }
 
 // Buffered returns the number of bytes that can be read from the current buffer.
@@ -391,6 +531,7 @@ func (b *Reader) ReadString(delim byte) (string, error) {
 }
 
 // WriteTo implements io.WriterTo.
+// This may make multiple calls to the Read method of the underlying Reader.
 func (b *Reader) WriteTo(w io.Writer) (n int64, err error) {
 	n, err = b.writeBuf(w)
 	if err != nil {
@@ -446,7 +587,7 @@ func (b *Reader) writeBuf(w io.Writer) (int64, error) {
 
 // Writer implements buffering for an io.Writer object.
 // If an error occurs writing to a Writer, no more data will be
-// accepted and all subsequent writes will return the error.
+// accepted and all subsequent writes, and Flush, will return the error.
 // After all data has been written, the client should call the
 // Flush method to guarantee all data has been forwarded to
 // the underlying io.Writer.

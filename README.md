@@ -9,7 +9,7 @@ Supported are all versions up to PDF 1.7 (ISO-32000).
 Reducing the size of large PDF files for mass mailings by optimization to the bare minimum.
 This can be achieved by analyzing a PDF's cross reference table, removing redundant embedded resources like font files or images and by always writing back the file maxing out PDF compression.
 
-I also wanted to have my own swiss army knife for PDFs written entirely in Go that allows me to trim, split and merge PDFs.
+I also wanted to have my own swiss army knife for PDFs written entirely in Go that allows me to trim, split and merge.
 
 ### Features
 * Validate (validates PDF files up to version 7.0)
