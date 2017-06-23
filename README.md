@@ -83,22 +83,19 @@ The extraction code for font files and images is experimental and serves as proo
 * validateActionDicts
 * validateAnnotationDicts
 * validateFileSpecDict
-* validateNamTreeValue
+* validateNameTreeValue
 * validateOptionalContent
 * validatePageEntryPresSteps
 * validatePageEntryVP
 * validateOPIDict
 * validateExtensions
-* validateThreadDict
 * validateAA
 * validateSpiderInfo
 * validatePermissions
 * validateLegal
 * validateRequirements
 * validateCollection
-* handle hybrid PDF files
-* handle linearized PDF files
-* implement filters ascii85Decode, asciiHexDecode, complete FlateDecode + tests
+* implement filters
 
 
 ### Disclaimer
