@@ -1234,6 +1234,39 @@ func validateFunctionArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict,
 	return
 }
 
+func validateIndRefEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (indRefp *types.PDFIndirectRef, err error) {
+
+	logInfoValidate.Printf("validateIndRefEntry begin: entry=%s\n", entryName)
+
+	obj, found := dict.Find(entryName)
+	if !found || obj == nil {
+		if required {
+			err = errors.Errorf("validateIndRefEntry: dict=%s required entry=%s missing", dictName, entryName)
+			return
+		}
+		logInfoValidate.Printf("validateIndRefEntry end: entry %s is nil\n", entryName)
+		return
+	}
+
+	indRef, ok := obj.(types.PDFIndirectRef)
+	if !ok {
+		err = errors.Errorf("validateIndRefEntry: dict=%s entry=%s invalid type", dictName, entryName)
+		return
+	}
+
+	// Version check
+	if xRefTable.Version() < sinceVersion {
+		err = errors.Errorf("validateIndRefEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
+		return
+	}
+
+	indRefp = &indRef
+
+	logInfoValidate.Printf("validateIndRefEntry end: entry=%s\n", entryName)
+
+	return
+}
+
 func validateIndRefArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string,
 	required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (arrp *types.PDFArray, err error) {
 

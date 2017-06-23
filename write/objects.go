@@ -457,6 +457,45 @@ func writeTextString(ctx *types.PDFContext, obj interface{}, validate func(strin
 	return
 }
 
+func writeDate(ctx *types.PDFContext, obj interface{}) (s *string, written bool, err error) {
+
+	logInfoWriter.Printf("writeDate begin: offset=%d\n", ctx.Write.Offset)
+
+	obj, written, err = writeObject(ctx, obj)
+	if err != nil {
+		return
+	}
+
+	if written {
+		return
+	}
+
+	if obj == nil {
+		err = errors.New("writeDate: missing object")
+		return
+	}
+
+	date, ok := obj.(types.PDFStringLiteral)
+	if !ok {
+		err = errors.New("writeDate: invalid type")
+		return
+	}
+
+	dateString := date.Value()
+
+	// Validation
+	if ok := validate.Date(dateString); !ok {
+		err = errors.Errorf("writeDate: invalid date: %s\n", date)
+		return
+	}
+
+	s = &dateString
+
+	logInfoWriter.Printf("writeDate end: offset=%d\n", ctx.Write.Offset)
+
+	return
+}
+
 func writeInteger(ctx *types.PDFContext, obj interface{}, validate func(int) bool) (ip *types.PDFInteger, written bool, err error) {
 
 	logInfoWriter.Printf("writeInteger begin: offset=%d\n", ctx.Write.Offset)
@@ -1442,6 +1481,47 @@ func writeFunctionEntry(ctx *types.PDFContext, dict types.PDFDict, dictName stri
 	return
 }
 
+func writeIndRefEntry(ctx *types.PDFContext, dict types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (indRefp *types.PDFIndirectRef, written bool, err error) {
+
+	logInfoWriter.Printf("writeIndRefEntry begin: entry=%s offset=%d\n", entryName, ctx.Write.Offset)
+
+	obj, found := dict.Find(entryName)
+	if !found || obj == nil {
+		if required {
+			err = errors.Errorf("writeIndRefEntry: dict=%s required entry=%s missing", dictName, entryName)
+			return
+		}
+		logInfoWriter.Printf("writeIndRefEntry end: optional entry %s not found or nil\n", entryName)
+		return
+	}
+
+	// Version check
+	if ctx.Version() < sinceVersion {
+		err = errors.Errorf("writeIndRefEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, ctx.VersionString())
+		return
+	}
+
+	indRef, ok := obj.(types.PDFIndirectRef)
+	if !ok {
+		err = errors.Errorf("writeIndRefEntry: invalid type\n")
+		return
+	}
+
+	objNumber := int(indRef.ObjectNumber)
+	if !ctx.Exists(objNumber) {
+		err = errors.Errorf("writeIndRefEntry: entry obj#%d unknown object.\n", objNumber)
+		return
+	}
+
+	_, written, err = writeIndRef(ctx, indRef)
+
+	indRefp = &indRef
+
+	logInfoWriter.Printf("writeIndRefEntry end: entry=%s offset=%d\n", entryName, ctx.Write.Offset)
+
+	return
+}
+
 func writeArrayEntry(ctx *types.PDFContext, dict types.PDFDict, dictName string, entryName string,
 	required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (arrp *types.PDFArray, written bool, err error) {
 
@@ -1500,7 +1580,7 @@ func writeArrayEntry(ctx *types.PDFContext, dict types.PDFDict, dictName string,
 	return
 }
 
-// Write an array of indRefs. All referenced objects must already be written.
+// Write an array of indRefs.
 func writeIndRefArrayEntry(ctx *types.PDFContext, dict types.PDFDict, dictName string, entryName string,
 	required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (arrp *types.PDFArray, written bool, err error) {
 
@@ -1524,8 +1604,13 @@ func writeIndRefArrayEntry(ctx *types.PDFContext, dict types.PDFDict, dictName s
 		}
 
 		objNumber := int(indRef.ObjectNumber)
-		if !ctx.Write.HasWriteOffset(objNumber) {
-			err = errors.Errorf("writeIndRefArrayEntry: entry at index %d has not been written.\n", i)
+		if !ctx.Exists(objNumber) {
+			err = errors.Errorf("writeIndRefArrayEntry: entry at index %d unknown object#%d.\n", i, objNumber)
+			return
+		}
+
+		_, _, err = writeIndRef(ctx, indRef)
+		if err != nil {
 			return
 		}
 

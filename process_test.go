@@ -10,10 +10,6 @@ import (
 
 const outputDir = "testdata/out"
 
-//func Example() {
-//	// Package example.
-//}
-
 func ExampleProcess_validate() {
 
 	mode := "relaxed"

@@ -399,12 +399,201 @@ func writePageMode(ctx *types.PDFContext, rootDict types.PDFDict, required bool,
 	return
 }
 
-// TODO implement
-func writeThreadDict(ctx *types.PDFContext, obj interface{}) (err error) {
+func writeBeadDict(ctx *types.PDFContext, indRefBeadDict, indRefThreadDict, indRefPreviousBead, indRefLastBead types.PDFIndirectRef) (err error) {
+
+	objNumber := indRefBeadDict.ObjectNumber.Value()
+
+	logInfoWriter.Printf("*** writeBeadDict begin: objectNumber=%d ***", objNumber)
+
+	dictName := "beadDict"
+	sinceVersion := types.V10
+
+	dict, err := ctx.DereferenceDict(indRefBeadDict)
+	if err != nil {
+		return
+	}
+
+	if dict == nil {
+		err = errors.Errorf("writeBeadDict: obj#%d missing dict", objNumber)
+		return
+	}
+
+	// Write optional entry Type, must be "Bead".
+	_, _, err = writeNameEntry(ctx, *dict, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Bead" })
+	if err != nil {
+		return
+	}
+
+	// Write entry T, must refer to threadDict.
+	indRefT, _, err := writeIndRefEntry(ctx, *dict, dictName, "T", REQUIRED, sinceVersion)
+	if err != nil {
+		return
+	}
+
+	if !indRefT.Equals(indRefThreadDict) {
+		err = errors.Errorf("writeBeadDict: obj#%d invalid entry T (backpointer to ThreadDict)", objNumber)
+		return
+	}
+
+	// Write required entry R, must be rectangle.
+	_, _, err = writeRectangleEntry(ctx, *dict, dictName, "R", REQUIRED, sinceVersion, nil)
+	if err != nil {
+		return
+	}
+
+	// Write required entry P, must be indRef to pageDict.
+	pageDict, _, err := writeDictEntry(ctx, *dict, dictName, "P", REQUIRED, sinceVersion, nil)
+	if err != nil || pageDict == nil || pageDict.Type() == nil || *pageDict.Type() == "Page" {
+		return
+	}
+
+	// Write required entry V, must refer to previous bead.
+	previousBeadIndRef, _, err := writeIndRefEntry(ctx, *dict, dictName, "V", REQUIRED, sinceVersion)
+	if err != nil {
+		return
+	}
+
+	if !previousBeadIndRef.Equals(indRefPreviousBead) {
+		err = errors.Errorf("writeBeadDict: obj#%d invalid entry V, corrupt previous Bead indirect reference", objNumber)
+		return
+	}
+
+	// Write required entry N, must refer to last bead.
+	nextBeadIndRef, _, err := writeIndRefEntry(ctx, *dict, dictName, "N", REQUIRED, sinceVersion)
+	if err != nil {
+		return
+	}
+
+	// Recurse until next bead equals last bead.
+	if !nextBeadIndRef.Equals(indRefLastBead) {
+		err = writeBeadDict(ctx, indRefBeadDict, indRefThreadDict, indRefBeadDict, indRefLastBead)
+		if err != nil {
+			return err
+		}
+	}
+
+	logInfoWriter.Printf("*** validateBeadDict end: objectNumber=%d ***", objNumber)
+
+	return
+}
+
+func writeFirstBeadDict(ctx *types.PDFContext, indRefBeadDict, indRefThreadDict types.PDFIndirectRef) (err error) {
+
+	logInfoWriter.Printf("*** writeFirstBeadDict begin beadDictObj#%d threadDictObj#%d ***",
+		indRefBeadDict.ObjectNumber.Value(), indRefThreadDict.ObjectNumber.Value())
+
+	dictName := "firstBeadDict"
+	sinceVersion := types.V10
+
+	dict, err := ctx.DereferenceDict(indRefBeadDict)
+	if err != nil {
+		return
+	}
+
+	if dict == nil {
+		err = errors.New("writeFirstBeadDict: missing dict")
+		return
+	}
+
+	_, _, err = writeNameEntry(ctx, *dict, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Bead" })
+	if err != nil {
+		return
+	}
+
+	indRefT, _, err := writeIndRefEntry(ctx, *dict, dictName, "T", REQUIRED, sinceVersion)
+	if err != nil {
+		return
+	}
+
+	if !indRefT.Equals(indRefThreadDict) {
+		err = errors.New("writeFirstBeadDict: invalid entry T (backpointer to ThreadDict)")
+		return
+	}
+
+	_, _, err = writeRectangleEntry(ctx, *dict, dictName, "R", REQUIRED, sinceVersion, nil)
+	if err != nil {
+		return
+	}
+
+	pageDict, written, err := writeDictEntry(ctx, *dict, dictName, "P", REQUIRED, sinceVersion, nil)
+	if err != nil || !written && (pageDict == nil || pageDict.Type() == nil || *pageDict.Type() != "Page") {
+		return errors.New("validateFirstBeadDict: invalid page dict")
+	}
+
+	previousBeadIndRef, _, err := writeIndRefEntry(ctx, *dict, dictName, "V", REQUIRED, sinceVersion)
+	if err != nil {
+		return
+	}
+
+	nextBeadIndRef, _, err := writeIndRefEntry(ctx, *dict, dictName, "N", REQUIRED, sinceVersion)
+	if err != nil {
+		return
+	}
+
+	// if N and V reference same bead dict, must be the first and only one.
+	if previousBeadIndRef.Equals(*nextBeadIndRef) {
+		if !indRefBeadDict.Equals(*previousBeadIndRef) {
+			err = errors.New("writeFirstBeadDict: corrupt chain of beads")
+			return
+		}
+		logInfoWriter.Println("*** writeFirstBeadDict end single bead ***")
+		return
+	}
+
+	err = writeBeadDict(ctx, *nextBeadIndRef, indRefThreadDict, indRefBeadDict, *previousBeadIndRef)
+	if err != nil {
+		return
+	}
+
+	logInfoWriter.Println("*** writeFirstBeadDict end ***")
+
+	return
+}
+
+func writeThreadDict(ctx *types.PDFContext, obj interface{}, sinceVersion types.PDFVersion) (err error) {
 
 	logInfoWriter.Printf("*** writeThreadDict begin: offset=%d ***\n", ctx.Write.Offset)
 
-	err = errors.New("*** writeThreadDict: not supported ***")
+	dictName := "threadDict"
+
+	indRefThreadDict, ok := obj.(types.PDFIndirectRef)
+	if !ok {
+		err = errors.New("writeThreadDict: not an indirect ref")
+		return
+	}
+
+	objNumber := indRefThreadDict.ObjectNumber.Value()
+
+	dict, written, err := writeDict(ctx, obj)
+	if err != nil || written || dict == nil {
+		return
+	}
+
+	_, _, err = writeNameEntry(ctx, *dict, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Thread" })
+	if err != nil {
+		return
+	}
+
+	// Write optional thread information dict entry.
+	obj, found := dict.Find("I")
+	if found && obj != nil {
+		_, err = writeDocumentInfoDict(ctx, obj, false)
+		if err != nil {
+			return
+		}
+	}
+
+	firstBeadDict := dict.IndirectRefEntry("F")
+	if firstBeadDict == nil {
+		err = errors.Errorf("writeThreadDict: obj#%d required indirect entry \"F\" missing", objNumber)
+		return
+	}
+
+	// Write the list of beads starting with the first bead dict.
+	err = writeFirstBeadDict(ctx, *firstBeadDict, indRefThreadDict)
+	if err != nil {
+		return
+	}
 
 	logInfoWriter.Printf("*** writeThreadDict end: offset=%d ***\n", ctx.Write.Offset)
 
@@ -453,10 +642,16 @@ func writeThreads(ctx *types.PDFContext, rootDict types.PDFDict, required bool, 
 	}
 
 	for _, obj := range arr {
-		err = writeThreadDict(ctx, obj)
+
+		if obj == nil {
+			continue
+		}
+
+		err = writeThreadDict(ctx, obj, sinceVersion)
 		if err != nil {
 			return
 		}
+
 	}
 
 	logInfoWriter.Printf("*** writeThreads end: offset=%d ***\n", ctx.Write.Offset)
@@ -2151,7 +2346,7 @@ func PDFFile(ctx *types.PDFContext) (err error) {
 	logInfoWriter.Printf("offset after writeRootObject: %d\n", ctx.Write.Offset)
 
 	// Write document information dictionary.
-	err = writeInfoObject(ctx)
+	err = writeDocumentInfoObject(ctx)
 	if err != nil {
 		return
 	}

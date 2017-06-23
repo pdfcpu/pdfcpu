@@ -189,3 +189,9 @@ func (indirectRef PDFIndirectRef) String() string {
 func (indirectRef PDFIndirectRef) PDFString() string {
 	return fmt.Sprintf("%d %d R", indirectRef.ObjectNumber, indirectRef.GenerationNumber)
 }
+
+// Equals returns true if two indirect References refer to the same object.
+func (indirectRef PDFIndirectRef) Equals(indRef PDFIndirectRef) bool {
+	return indirectRef.ObjectNumber == indRef.ObjectNumber &&
+		indirectRef.GenerationNumber == indRef.GenerationNumber
+}

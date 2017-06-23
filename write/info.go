@@ -10,51 +10,19 @@ import (
 	"github.com/pkg/errors"
 )
 
-func writeInfoObject(ctx *types.PDFContext) (err error) {
+// The main info dict gets a modified Producer and Creation/ModDates.
+func writeDocumentInfoDict(ctx *types.PDFContext, obj interface{}, main bool) (hasModDate bool, err error) {
 
-	// => 14.3.3 Document Information Dictionary
+	logInfoWriter.Printf("*** writeDocumentInfoInfoDict begin: offset=%d ***\n", ctx.Write.Offset)
 
-	// Optional:
-	// Title                -
-	// Author               -
-	// Subject              -
-	// Keywords             -
-	// Creator              -
-	// Producer		        modified by pdflib
-	// CreationDate	        modified by pdflib
-	// ModDate		        modified by pdflib
-	// Trapped              -
-
-	logInfoWriter.Printf("*** writeInfoObject begin: offset=%d ***\n", ctx.Write.Offset)
-
-	xRefTable := ctx.XRefTable
-
-	// Document info object is optional.
-	if xRefTable.Info == nil {
-		logInfoWriter.Printf("writeInfoObject end: No info object present, offset=%d\n", ctx.Write.Offset)
-		// TODO Generate info object from scratch.
-		return
-	}
-
-	logInfoWriter.Printf("writeInfoObject: %s\n", *xRefTable.Info)
-	info := *xRefTable.Info
-	objNumber := int(info.ObjectNumber)
-	genNumber := int(info.GenerationNumber)
-
-	infoDict, err := xRefTable.DereferenceDict(info)
-	if err != nil {
-		return errors.New("writeInfoObject: corrupt info dict")
-	}
-
-	// Document info object is optional.
-	if infoDict == nil {
-		// TODO Generate pdflib info object.
+	dict, err := ctx.DereferenceDict(obj)
+	if err != nil || dict == nil {
 		return
 	}
 
 	var s *string
 
-	for key, value := range infoDict.Dict {
+	for key, value := range dict.Dict {
 
 		switch key {
 
@@ -71,7 +39,9 @@ func writeInfoObject(ctx *types.PDFContext) (err error) {
 			if err != nil {
 				return
 			}
-			xRefTable.Author = strings.Replace(*s, ";", ",", -1)
+			if main {
+				ctx.Author = strings.Replace(*s, ";", ",", -1)
+			}
 
 		case "Subject":
 			logDebugWriter.Println("found Subject")
@@ -93,15 +63,23 @@ func writeInfoObject(ctx *types.PDFContext) (err error) {
 			if err != nil {
 				return
 			}
-			xRefTable.Creator = strings.Replace(*s, ";", ",", -1)
+			if main {
+				ctx.Creator = strings.Replace(*s, ";", ",", -1)
+			}
 
 		case "Producer":
-			// Do not write indRef, will be modified by pdflib.
 			logDebugWriter.Println("found Producer")
+			if !main {
+				_, _, err = writeTextString(ctx, value, nil)
+				if err != nil {
+					return
+				}
+				continue
+			}
 
 			indRef, ok := value.(types.PDFIndirectRef)
 			if ok {
-				value, _ = xRefTable.Dereference(indRef)
+				value, _ = ctx.Dereference(indRef)
 				ctx.Optimize.DuplicateInfoObjects[int(indRef.ObjectNumber)] = true
 			}
 
@@ -122,21 +100,40 @@ func writeInfoObject(ctx *types.PDFContext) (err error) {
 				}
 
 			default:
-				return errors.New("writeInfoObject: corrupt \"Producer\"")
+				return false, errors.New("writeInfoObject: corrupt \"Producer\"")
 			}
 
-			xRefTable.Producer = strings.Replace(s, ";", ",", -1)
+			ctx.Producer = strings.Replace(s, ";", ",", -1)
 
 		case "CreationDate":
-			// Do not write indRef, will be modified by pdflib.
 			logDebugWriter.Println("found CreationDate")
+			if !main {
+				_, _, err = writeDate(ctx, value)
+				if err != nil {
+					return
+				}
+				continue
+			}
+
+			// Do not write indRef, will be modified by pdflib.
 			if indRef, ok := value.(types.PDFIndirectRef); ok {
 				ctx.Optimize.DuplicateInfoObjects[int(indRef.ObjectNumber)] = true
 			}
 
 		case "ModDate":
-			// Do not write indRef, will be modified by pdflib.
 			logDebugWriter.Println("found ModDate")
+
+			hasModDate = true
+
+			if !main {
+				_, _, err = writeDate(ctx, value)
+				if err != nil {
+					return
+				}
+				continue
+			}
+
+			// Do not write indRef, will be modified by pdflib.
 			if indRef, ok := value.(types.PDFIndirectRef); ok {
 				ctx.Optimize.DuplicateInfoObjects[int(indRef.ObjectNumber)] = true
 			}
@@ -150,8 +147,6 @@ func writeInfoObject(ctx *types.PDFContext) (err error) {
 
 		default:
 			logInfoWriter.Printf("writeInfoObject: found out of spec entry %s %v\n", key, value)
-			// Relaxed allow any object, should be text string.
-			//_, _, err = writeTextString(source, dest, value, nil)
 			_, _, err = writeObject(ctx, value)
 			if err != nil {
 				return
@@ -160,32 +155,72 @@ func writeInfoObject(ctx *types.PDFContext) (err error) {
 		}
 	}
 
-	now := time.Now()
-	_, tz := now.Zone()
+	if main {
 
-	dateStr := fmt.Sprintf("D:%d%02d%02d%02d%02d%02d+%02d'%02d'",
-		now.Year(), now.Month(), now.Day(),
-		now.Hour(), now.Minute(), now.Second(),
-		tz/60/60, tz/60%60)
+		// These are the modifications for the main document info dict of this PDF file.
 
-	if !validate.Date(dateStr) {
-		return errors.Errorf("writeInfoObect: invalid date: %s\n", dateStr)
+		now := time.Now()
+		_, tz := now.Zone()
+
+		dateStr := fmt.Sprintf("D:%d%02d%02d%02d%02d%02d+%02d'%02d'",
+			now.Year(), now.Month(), now.Day(),
+			now.Hour(), now.Minute(), now.Second(),
+			tz/60/60, tz/60%60)
+
+		if !validate.Date(dateStr) {
+			return false, errors.Errorf("writeInfoObect: invalid date: %s\n", dateStr)
+		}
+
+		// TODO insert CreationDate, ModDate and Producer if missing.
+		dict.Update("CreationDate", types.PDFStringLiteral(dateStr))
+		dict.Update("ModDate", types.PDFStringLiteral(dateStr))
+		dict.Update("Producer", types.PDFStringLiteral("golang pdflib"))
 	}
 
-	infoDict.Update("CreationDate", types.PDFStringLiteral(dateStr))
-	infoDict.Update("ModDate", types.PDFStringLiteral(dateStr))
-	infoDict.Update("Producer", types.PDFStringLiteral("golang pdflib"))
+	logInfoWriter.Printf("writeInfoObject: gets writeoffset: %d\n", ctx.Write.Offset)
 
-	logInfoWriter.Printf("writeInfoObject: object #%d gets writeoffset: %d\n", objNumber, ctx.Write.Offset)
-
-	err = writePDFDictObject(ctx, objNumber, genNumber, *infoDict)
+	_, _, err = writeObject(ctx, obj)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	logDebugWriter.Printf("writeInfoObject: new offset after infoDict = %d\n", ctx.Write.Offset)
+	return
+}
 
-	logInfoWriter.Printf("*** writeInfoObject end: offset=%d ***\n", ctx.Write.Offset)
+// Write the document info object for this PDF file.
+// Add pdflib as Producer with proper creation date and mod date.
+func writeDocumentInfoObject(ctx *types.PDFContext) (err error) {
+
+	// => 14.3.3 Document Information Dictionary
+
+	// Optional:
+	// Title                -
+	// Author               -
+	// Subject              -
+	// Keywords             -
+	// Creator              -
+	// Producer		        modified by pdflib
+	// CreationDate	        modified by pdflib
+	// ModDate		        modified by pdflib
+	// Trapped              -
+
+	logInfoWriter.Printf("*** writeDocumentInfoObject begin: offset=%d ***\n", ctx.Write.Offset)
+
+	// Document info object is optional.
+	if ctx.Info == nil {
+		logInfoWriter.Printf("writeDocumentInfoObject end: No info object present, offset=%d\n", ctx.Write.Offset)
+		// TODO Generate info object from scratch.
+		return
+	}
+
+	logInfoWriter.Printf("writeDocumentInfoObject: %s\n", *ctx.Info)
+
+	_, err = writeDocumentInfoDict(ctx, *ctx.Info, true)
+	if err != nil {
+		return
+	}
+
+	logInfoWriter.Printf("*** writeDocumentInfoObject end: offset=%d ***\n", ctx.Write.Offset)
 
 	return
 }
