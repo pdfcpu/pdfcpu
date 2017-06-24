@@ -8,11 +8,7 @@ import (
 	"os"
 )
 
-var (
-	logDebugExtract *log.Logger
-	logInfoExtract  *log.Logger
-	logErrorExtract *log.Logger
-)
+var logDebugExtract, logInfoExtract, logErrorExtract *log.Logger
 
 func init() {
 	logDebugExtract = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)

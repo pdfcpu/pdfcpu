@@ -11,20 +11,23 @@ import (
 	"github.com/hhrutter/pdflib/types"
 )
 
-func writeFont(ctx *types.PDFContext, fileName, extension string, fontFileIndRef types.PDFIndirectRef, objNr int) (err error) {
+func writeFont(ctx *types.PDFContext, fileName, extension string, fontFileIndRef *types.PDFIndirectRef, objNr int) (err error) {
 
 	fileName = fileName + "_" + strconv.Itoa(objNr) + "." + extension
 
 	logDebugExtract.Printf("writeFont begin: writing to %s\n", fileName)
 
-	streamDict, err := ctx.DereferenceStreamDict(fontFileIndRef)
+	streamDict, err := ctx.DereferenceStreamDict(*fontFileIndRef)
 	if err != nil {
 		return
 	}
 
-	// Decode streamDict if used filter supported only.
+	// Decode streamDict if used filter is supported only.
 	err = filter.DecodeStream(streamDict)
 	if err != nil {
+		// Skip over filter errors.
+		// This is brute force for continuing after an "unsupported filter" error.
+		err = nil
 		return
 	}
 
@@ -47,7 +50,9 @@ func sortFOKeys(m map[int]*types.FontObject) (j []int) {
 	return
 }
 
-func writeFontObject(ctx *types.PDFContext, objNumber int, fontFileIndRefs *map[types.PDFIndirectRef]bool) (err error) {
+// Stupid dump of the font file for this font object.
+// Right now only for True Type fonts.
+func writeFontObject(ctx *types.PDFContext, objNumber int, fontFileIndRefs map[types.PDFIndirectRef]bool) (err error) {
 
 	fontObject := ctx.Optimize.FontObjects[objNumber]
 
@@ -63,13 +68,13 @@ func writeFontObject(ctx *types.PDFContext, objNumber int, fontFileIndRefs *map[
 		return
 	}
 
-	indRef := optimize.FontDescriptorFontFileIndirectObjectRef(*dict)
+	indRef := optimize.FontDescriptorFontFileIndirectObjectRef(dict)
 	if indRef == nil {
 		logInfoExtract.Printf("writeFonts: ignoring - no font file available\n")
 		return
 	}
 
-	if (*fontFileIndRefs)[*indRef] {
+	if fontFileIndRefs[*indRef] {
 		logInfoExtract.Printf("writeFonts: ignoring - already written\n")
 		return
 	}
@@ -84,7 +89,7 @@ func writeFontObject(ctx *types.PDFContext, objNumber int, fontFileIndRefs *map[
 		// ttf ... true type file
 		// ttc ... true type collection
 		// This is just me guessing..
-		err = writeFont(ctx, fileName, "ttf", *indRef, objNumber)
+		err = writeFont(ctx, fileName, "ttf", indRef, objNumber)
 		if err != nil {
 			return err
 		}
@@ -94,7 +99,7 @@ func writeFontObject(ctx *types.PDFContext, objNumber int, fontFileIndRefs *map[
 		return
 	}
 
-	(*fontFileIndRefs)[*indRef] = true
+	fontFileIndRefs[*indRef] = true
 
 	return
 }
@@ -103,32 +108,36 @@ func writeFonts(ctx *types.PDFContext, selectedPages types.IntSet) (err error) {
 
 	logDebugExtract.Println("writeFonts begin")
 
-	oc := ctx.Optimize
-
 	fontFileIndRefs := map[types.PDFIndirectRef]bool{}
 
 	if selectedPages == nil || len(selectedPages) == 0 {
 
-		for _, i := range sortFOKeys(oc.FontObjects) {
+		for _, i := range sortFOKeys(ctx.Optimize.FontObjects) {
 			logInfoExtract.Printf("writeFonts: processing fontobject %d\n", i)
-			writeFontObject(ctx, i, &fontFileIndRefs)
+			writeFontObject(ctx, i, fontFileIndRefs)
 		}
 
 	} else {
 
 		for p, v := range selectedPages {
+
 			if v {
-				logErrorExtract.Printf("writeFonts: writing fonts for page %d\n", p)
-				objs := oc.PageFonts[p-1]
+
+				logInfoExtract.Printf("writeFonts: writing fonts for page %d\n", p)
+
+				objs := ctx.Optimize.PageFonts[p-1]
 				if len(objs) == 0 {
 					// This page has no fonts.
 					logErrorExtract.Printf("writeFonts: Page %d does not have fonts to extract\n", p)
 					continue
 				}
+
 				for i := range objs {
-					writeFontObject(ctx, i, &fontFileIndRefs)
+					writeFontObject(ctx, i, fontFileIndRefs)
 				}
+
 			}
+
 		}
 
 	}

@@ -11,7 +11,7 @@ f=${1##*/}
 f1=${f%.*}
 out=$2
 
-rm -drf $out/*
+#rm -drf $out/*
 
 cp $1 $out/$f
 

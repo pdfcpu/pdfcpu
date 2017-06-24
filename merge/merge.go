@@ -13,11 +13,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
-	logDebugMerge *log.Logger
-	logInfoMerge  *log.Logger
-	logErrorMerge *log.Logger
-)
+var logDebugMerge, logInfoMerge, logErrorMerge *log.Logger
 
 func init() {
 	//logDebugMerge = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
@@ -187,7 +183,7 @@ func patchSourceObjectNumbers(ctxSource, ctxDest *types.PDFContext) (err error) 
 
 	}
 
-	// Patch obj numbers for xref entries.
+	// Patch xref entry object numbers.
 	m := make(map[int]*types.XRefTableEntry, *ctxSource.Size)
 	for k, v := range lookup {
 		m[v] = ctxSource.Table[k]
@@ -195,23 +191,7 @@ func patchSourceObjectNumbers(ctxSource, ctxDest *types.PDFContext) (err error) 
 	m[0] = ctxSource.Table[0]
 	ctxSource.Table = m
 
-	// Transform object numbers of duplicates.
-	// fonts := types.IntSet{}
-	// for k, v := range ctxSource.Optimize.DuplicateFontObjs {
-	// 	if v {
-	// 		fonts[lookup[k]] = v
-	// 	}
-	// }
-	// ctxSource.Optimize.DuplicateFontObjs = fonts
-
-	// images := types.IntSet{}
-	// for k, v := range ctxSource.Optimize.DuplicateImageObjs {
-	// 	if v {
-	// 		images[lookup[k]] = v
-	// 	}
-	// }
-	// ctxSource.Optimize.DuplicateImageObjs = images
-
+	// Patch DuplicateInfo object numbers.
 	infos := types.IntSet{}
 	for k, v := range ctxSource.Optimize.DuplicateInfoObjects {
 		if v {
@@ -220,6 +200,7 @@ func patchSourceObjectNumbers(ctxSource, ctxDest *types.PDFContext) (err error) 
 	}
 	ctxSource.Optimize.DuplicateInfoObjects = infos
 
+	// Patch Linearization object numbers.
 	lin := types.IntSet{}
 	for k, v := range ctxSource.LinearizationObjs {
 		if v {
@@ -228,6 +209,7 @@ func patchSourceObjectNumbers(ctxSource, ctxDest *types.PDFContext) (err error) 
 	}
 	ctxSource.LinearizationObjs = lin
 
+	// Patch XRefStream objects numbers.
 	xrefs := types.IntSet{}
 	for k, v := range ctxSource.Read.XRefStreams {
 		if v {
@@ -236,6 +218,7 @@ func patchSourceObjectNumbers(ctxSource, ctxDest *types.PDFContext) (err error) 
 	}
 	ctxSource.Read.XRefStreams = xrefs
 
+	// Patch object stream object numbers.
 	objstms := types.IntSet{}
 	for k, v := range ctxSource.Read.ObjectStreams {
 		if v {
@@ -274,6 +257,7 @@ func appendSourcePageTreeToDestPageTree(ctxSource, ctxDest *types.PDFContext) (e
 
 	pageTreeRootDictSource.Insert("Parent", *indRefPageTreeRootDictDest)
 
+	// The source page tree gets appended on to the dest page tree.
 	*arr = append(*arr, *indRefPageTreeRootDictSource)
 	logDebugMerge.Printf("Kids after: %v\n", *arr)
 
@@ -324,8 +308,6 @@ func mergeDuplicateObjNumberIntSets(ctxSource, ctxDest *types.PDFContext) (err e
 
 	logDebugMerge.Println("mergeDuplicateObjNumberIntSets begin")
 
-	//mergeIntSets(ctxSource.Optimize.DuplicateFontObjs, ctxDest.Optimize.DuplicateFontObjs)
-	//mergeIntSets(ctxSource.Optimize.DuplicateImageObjs, ctxDest.Optimize.DuplicateImageObjs)
 	mergeIntSets(ctxSource.Optimize.DuplicateInfoObjects, ctxDest.Optimize.DuplicateInfoObjects)
 	mergeIntSets(ctxSource.LinearizationObjs, ctxDest.LinearizationObjs)
 	mergeIntSets(ctxSource.Read.XRefStreams, ctxDest.Read.XRefStreams)
@@ -339,15 +321,11 @@ func mergeDuplicateObjNumberIntSets(ctxSource, ctxDest *types.PDFContext) (err e
 // XRefTables merges PDFContext ctxSource into ctxDest by appending its page tree.
 func XRefTables(ctxSource, ctxDest *types.PDFContext) (err error) {
 
-	//logDebugMerge.Printf("Source XRefTable before merge:\n%s\n", ctxSource)
-
 	// Sweep over ctxSource cross ref table and ensure valid object numbers in ctxDest's space.
 	err = patchSourceObjectNumbers(ctxSource, ctxDest)
 	if err != nil {
 		return
 	}
-
-	//logDebugMerge.Printf("Source XRefTable patched obj numbers:\n%s\n", ctxSource)
 
 	// Append ctxSource pageTree to ctxDest pageTree.
 	logInfoMerge.Println("appendSourcePageTreeToDestPageTree")

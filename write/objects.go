@@ -65,8 +65,13 @@ func writePDFObject(ctx *types.PDFContext, objNumber, genNumber int, s string) (
 		objStrEntry, _ := xRefTable.FindTableEntry(*ctx.Write.CurrentObjStream, 0)
 		objStreamDict, _ := (objStrEntry.Object).(types.PDFObjectStreamDict)
 
+		// Get next free index in object stream.
 		i := objStreamDict.ObjCount
+
+		// Locate the xref table entry for the object to be added to this object stream.
 		entry, _ := xRefTable.FindTableEntry(objNumber, genNumber)
+
+		// Turn entry into a compressed entry located in object stream at index i.
 		entry.Compressed = true
 		entry.ObjectStream = ctx.Write.CurrentObjStream // !
 		entry.ObjectStreamInd = &i

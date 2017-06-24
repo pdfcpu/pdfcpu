@@ -74,8 +74,7 @@ type XRefTable struct {
 // NewXRefTable creates a new XRefTable.
 func newXRefTable(validationMode int) (xRefTable *XRefTable) {
 	return &XRefTable{
-		Table: map[int]*XRefTableEntry{},
-		//FreeObjects:       []int{}, // slices intialisieren oder nicht?
+		Table:             map[int]*XRefTableEntry{},
 		LinearizationObjs: IntSet{},
 		Stats:             NewPDFStats(),
 		ValidationMode:    validationMode,
@@ -86,9 +85,6 @@ func newXRefTable(validationMode int) (xRefTable *XRefTable) {
 // Before V1.4 this is the header version.
 // Since V1.4 the catalog may contain a Version entry which takes precedence over the header version.
 func (xRefTable *XRefTable) Version() PDFVersion {
-
-	// TODO relaxed, RootVersion has always priority.
-	//if *ctx.Read.HeaderVersion >= V14 && *ctx.Read.RootVersion != nil {
 
 	if xRefTable.RootVersion != nil {
 		return *xRefTable.RootVersion
@@ -244,7 +240,7 @@ func (xRefTable *XRefTable) Insert(objNumber int, xRefTableEntry XRefTableEntry)
 }
 
 // InsertNew adds given xRefTableEntry at next new objNumber into the cross reference table.
-// Only to be called once after an xRefTable has been generated completely and all trailer dicts have been processed.
+// Only to be called once an xRefTable has been generated completely and all trailer dicts have been processed.
 // xRefTable.Size is the size entry of the first trailer dict processed.
 // Called on creation of new object streams.
 // Called by InsertAndUseRecycled.

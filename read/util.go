@@ -41,8 +41,6 @@ func Dump2Bufs(buf1 []byte, buf2 []byte, lineLength int) {
 
 func positionToNextWhitespace(s string) (int, string) {
 
-	// TODO no runes in pdf!
-
 	for i, c := range s {
 		if unicode.IsSpace(c) {
 			return i, s[i:]
@@ -53,8 +51,6 @@ func positionToNextWhitespace(s string) (int, string) {
 
 // PositionToNextWhitespaceOrChar trims a string to next whitespace or one of given chars.
 func positionToNextWhitespaceOrChar(s, chars string) (int, string) {
-
-	// TODO no runes in pdf!
 
 	if len(chars) == 0 {
 		return positionToNextWhitespace(s)
@@ -73,8 +69,6 @@ func positionToNextWhitespaceOrChar(s, chars string) (int, string) {
 }
 
 func positionToNextEOL(s string) string {
-
-	// TODO no runes in pdf!
 
 	chars := "\x0A\x0D"
 

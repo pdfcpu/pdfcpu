@@ -9,15 +9,14 @@ import (
 // PDFArray represents a PDF array object.
 type PDFArray []interface{}
 
-func (array PDFArray) string(i int, arr *PDFArray) string {
+func (array PDFArray) string(ident int) string {
 
-	logstr := []string{} //make([]string, 20)
-	logstr = append(logstr, "[")
-	tabstr := strings.Repeat("\t", i)
+	logstr := []string{"["}
+	tabstr := strings.Repeat("\t", ident)
 	first := true
 	sepstr := ""
 
-	for _, entry := range *arr {
+	for _, entry := range array {
 
 		if first {
 			first = false
@@ -26,30 +25,29 @@ func (array PDFArray) string(i int, arr *PDFArray) string {
 			sepstr = " "
 		}
 
-		subdict, ok := entry.(PDFDict)
-
-		if ok {
-			dictstr := subdict.string(i+1, &subdict)
+		if subdict, ok := entry.(PDFDict); ok {
+			dictstr := subdict.string(ident + 1)
 			logstr = append(logstr, fmt.Sprintf("\n%s%s\n%s", tabstr, dictstr, tabstr))
 			first = true
-		} else {
-			array, ok := entry.(PDFArray)
-			if ok {
-				arrstr := array.string(i+1, &array)
-				logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, arrstr))
-			} else {
-				logstr = append(logstr, fmt.Sprintf("%s%v", sepstr, entry))
-			}
+			continue
 		}
 
+		if array, ok := entry.(PDFArray); ok {
+			arrstr := array.string(ident + 1)
+			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, arrstr))
+			continue
+		}
+
+		logstr = append(logstr, fmt.Sprintf("%s%v", sepstr, entry))
 	}
 
 	logstr = append(logstr, "]")
+
 	return strings.Join(logstr, "")
 }
 
 func (array PDFArray) String() string {
-	return array.string(1, &array)
+	return array.string(1)
 }
 
 // PDFString returns a string representation as found in and written to a PDF file.

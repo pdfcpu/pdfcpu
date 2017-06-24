@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+// Encode a test string twice with same filter
+// then decode the result twice to get to the original string.
 func TestEncodeDecode(t *testing.T) {
 
 	filter, err := NewFilter("FlateDecode", nil, nil)

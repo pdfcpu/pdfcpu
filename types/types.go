@@ -30,11 +30,7 @@ const (
 	OPTIONAL = false
 )
 
-var (
-	logDebugTypes *log.Logger
-	logInfoTypes  *log.Logger
-	logErrorTypes *log.Logger
-)
+var logDebugTypes, logInfoTypes, logErrorTypes *log.Logger
 
 func init() {
 

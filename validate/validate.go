@@ -26,11 +26,7 @@ const (
 	OPTIONAL = false
 )
 
-var (
-	logDebugValidate *log.Logger
-	logInfoValidate  *log.Logger
-	logErrorValidate *log.Logger
-)
+var logDebugValidate, logInfoValidate, logErrorValidate *log.Logger
 
 func init() {
 	logDebugValidate = log.New(ioutil.Discard, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)

@@ -10,6 +10,10 @@ import (
 	"github.com/hhrutter/pdflib/types"
 )
 
+// Stupid dump of image data to a file.
+// Right now supported are:
+// "DCTDecode" dumps to a jpg file.
+// "JPXDecode" dumps to a jpx file.
 func writeImage(fileName string, imageDict *types.PDFStreamDict, objNr int) (err error) {
 
 	var filters string
@@ -89,31 +93,36 @@ func writeImages(ctx *types.PDFContext, selectedPages types.IntSet) (err error) 
 
 	logDebugExtract.Println("writeImages begin")
 
-	oc := ctx.Optimize
-
 	if selectedPages == nil || len(selectedPages) == 0 {
 
 		logInfoExtract.Println("writeImages: pages == nil, extracting images for all pages")
-		for _, i := range sortIOKeys(oc.ImageObjects) {
+		for _, i := range sortIOKeys(ctx.Optimize.ImageObjects) {
 			writeImageObject(ctx, i)
 		}
 
 	} else {
 
 		logErrorExtract.Println("writeImages: extracting images for selected images")
+
 		for p, v := range selectedPages {
+
 			if v {
+
 				logInfoExtract.Printf("writeImages: writing images for page %d\n", p)
-				objs := oc.PageImages[p-1]
+
+				objs := ctx.Optimize.PageImages[p-1]
 				if len(objs) == 0 {
 					// This page has no images.
 					logInfoExtract.Printf("writeImages: Page %d does not have images to extract\n", p)
 					continue
 				}
+
 				for i := range objs {
 					writeImageObject(ctx, i)
 				}
+
 			}
+
 		}
 
 	}
@@ -129,9 +138,7 @@ func Images(ctx *types.PDFContext, selectedPages types.IntSet) (err error) {
 
 	logDebugExtract.Println("Images begin")
 
-	oc := ctx.Optimize
-
-	if len(oc.ImageObjects) == 0 {
+	if len(ctx.Optimize.ImageObjects) == 0 {
 		logInfoExtract.Println("No image info available.")
 		return
 	}

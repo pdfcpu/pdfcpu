@@ -2,7 +2,7 @@
 //
 // See the PDF spec at 7.4 for a list of defined filter types.
 //
-// Currently supported filters: FlateDecode, ASCII85Decode, ASCIIHexDecode
+// Currently supported filters: FlateDecode
 package filter
 
 import (
@@ -16,12 +16,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
-	logDebugFilter   *log.Logger
-	logInfoFilter    *log.Logger
-	logWarningFilter *log.Logger
-	logErrorFilter   *log.Logger
-)
+var logDebugFilter, logInfoFilter, logWarningFilter, logErrorFilter *log.Logger
 
 func init() {
 
@@ -49,12 +44,15 @@ func NewFilter(filterName string, decodeParms, encodeParms *types.PDFDict) (filt
 	case "FlateDecode":
 		filter = flate{baseFilter{decodeParms, encodeParms}}
 
+	// not implemeted
 	case "ASCII85Decode":
 		filter = ascii85Decode{baseFilter{decodeParms, encodeParms}}
 
+	// not implemented
 	case "ASCIIHexDecode":
 		filter = asciiHexDecode{baseFilter{decodeParms, encodeParms}}
 
+	// LZWDecode
 	// CCITTFaxDecode etc.
 
 	default:

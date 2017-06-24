@@ -15,7 +15,6 @@ type ascii85Decode struct {
 
 // Encode implements encoding for an ASCII85Decode filter.
 func (f ascii85Decode) Encode(r io.Reader) (*bytes.Buffer, error) {
-
 	return nil, nil
 }
 

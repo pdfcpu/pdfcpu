@@ -25,12 +25,7 @@ const (
 	unknownDelimiter = byte(0)
 )
 
-var (
-	logDebugReader   *log.Logger
-	logInfoReader    *log.Logger
-	logWarningReader *log.Logger
-	logErrorReader   *log.Logger
-)
+var logDebugReader, logInfoReader, logWarningReader, logErrorReader *log.Logger
 
 func init() {
 	logDebugReader = log.New(ioutil.Discard, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)

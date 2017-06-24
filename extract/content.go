@@ -13,15 +13,18 @@ import (
 func writeContent(ctx *types.PDFContext, streamDict *types.PDFStreamDict, pageNumber, section int) (err error) {
 
 	var fileName string
+
 	if section >= 0 {
 		fileName = fmt.Sprintf("%s/content_p%d_%d.txt", ctx.Write.DirName, pageNumber, section)
 	} else {
 		fileName = fmt.Sprintf("%s/content_p%d.txt", ctx.Write.DirName, pageNumber)
 	}
 
-	// Decode streamDict if used filter supported only.
+	// Decode streamDict if used filter is supported only.
 	err = filter.DecodeStream(streamDict)
 	if err != nil {
+		// Skip over filter errors.
+		// This is brute force for continuing after an "unsupported filter" error.
 		err = nil
 		return
 	}
@@ -32,7 +35,8 @@ func writeContent(ctx *types.PDFContext, streamDict *types.PDFStreamDict, pageNu
 	return
 }
 
-func processPageDict(ctx *types.PDFContext, objNumber, genNumber int, dict types.PDFDict, pageNumber int) (err error) {
+// Process the content of a page which is a stream dict or an array of stream dicts.
+func processPageDict(ctx *types.PDFContext, objNumber, genNumber int, dict *types.PDFDict, pageNumber int) (err error) {
 
 	logDebugExtract.Printf("processPageDict begin: page=%d\n", pageNumber)
 
@@ -84,26 +88,13 @@ func processPageDict(ctx *types.PDFContext, objNumber, genNumber int, dict types
 	return
 }
 
-func processPagesDict(ctx *types.PDFContext, indRef types.PDFIndirectRef, pageCount *int, selectedPages types.IntSet) (err error) {
+func processPagesDict(ctx *types.PDFContext, indRef *types.PDFIndirectRef, pageCount *int, selectedPages types.IntSet) (err error) {
 
 	logDebugExtract.Printf("processPagesDict begin: pageCount=%d\n", *pageCount)
 
-	xRefTable := ctx.XRefTable
-	objNumber := int(indRef.ObjectNumber)
-
-	obj, err := xRefTable.Dereference(indRef)
+	dict, err := ctx.DereferenceDict(*indRef)
 	if err != nil {
-		err = errors.Wrapf(err, "writePagesDict: unable to dereference indirect object #%d", objNumber)
 		return
-	}
-
-	if obj == nil {
-		return errors.Errorf("writePagesDict end: obj#%d offset=%d *** nil or already written", indRef.ObjectNumber, ctx.Write.Offset)
-	}
-
-	dict, ok := obj.(types.PDFDict)
-	if !ok {
-		return errors.Errorf("writePagesDict: corrupt pages dict, obj#%d", objNumber)
 	}
 
 	// Iterate over page tree.
@@ -145,16 +136,16 @@ func processPagesDict(ctx *types.PDFContext, indRef types.PDFIndirectRef, pageCo
 
 		case "Pages":
 			// Recurse over pagetree
-			err = processPagesDict(ctx, indRef, pageCount, selectedPages)
+			err = processPagesDict(ctx, &indRef, pageCount, selectedPages)
 			if err != nil {
 				return err
 			}
 
 		case "Page":
 			*pageCount++
-			// extractContent for all pages if no pages selected or for selected pages only.
+			// extractContent of a page if no pages selected or if page is selected.
 			if selectedPages == nil || len(selectedPages) == 0 || selectedPages[*pageCount] {
-				err = processPageDict(ctx, objNumber, genNumber, *pageNodeDict, *pageCount)
+				err = processPageDict(ctx, objNumber, genNumber, pageNodeDict, *pageCount)
 				if err != nil {
 					return err
 				}
@@ -178,13 +169,14 @@ func Content(ctx *types.PDFContext, selectedPages types.IntSet) (err error) {
 
 	logDebugExtract.Printf("Content begin: dirOut=%s\n", ctx.Write.DirName)
 
-	indRefPages, err := ctx.Pages()
+	// Get an indirect reference to the root page dict.
+	indRefRootPageDict, err := ctx.Pages()
 	if err != nil {
 		return err
 	}
 
 	pageCount := 0
-	err = processPagesDict(ctx, *indRefPages, &pageCount, selectedPages)
+	err = processPagesDict(ctx, indRefRootPageDict, &pageCount, selectedPages)
 	if err != nil {
 		return err
 	}

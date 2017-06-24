@@ -308,11 +308,10 @@ func (d PDFDict) IsLinearizationParmDict() bool {
 	return d.IntEntry("Linearized") != nil
 }
 
-func (d PDFDict) string(i int, dict *PDFDict) string {
+func (d PDFDict) string(ident int) string {
 
-	logstr := []string{} //make([]string, 20)
-	logstr = append(logstr, "<<\n")
-	tabstr := strings.Repeat("\t", i)
+	logstr := []string{"<<\n"}
+	tabstr := strings.Repeat("\t", ident)
 
 	var keys []string
 	for k := range d.Dict {
@@ -324,30 +323,24 @@ func (d PDFDict) string(i int, dict *PDFDict) string {
 
 		v := d.Dict[k]
 
-		subdict, ok := v.(PDFDict)
-
-		if ok {
-
-			dictStr := subdict.string(i+1, &subdict)
+		if subdict, ok := v.(PDFDict); ok {
+			dictStr := subdict.string(ident + 1)
 			logstr = append(logstr, fmt.Sprintf("%s<%s, %s>\n", tabstr, k, dictStr))
-
-		} else {
-
-			array, ok := v.(PDFArray)
-
-			if ok {
-				arrStr := array.string(i+1, &array)
-				logstr = append(logstr, fmt.Sprintf("%s<%s, %s>\n", tabstr, k, arrStr))
-			} else {
-				logstr = append(logstr, fmt.Sprintf("%s<%s, %v>\n", tabstr, k, v))
-				//logstr = append(logstr, fmt.Sprintf("%s<%s, %v> %T\n", tabstr, k, v, v))
-			}
-
+			continue
 		}
+
+		if array, ok := v.(PDFArray); ok {
+			arrStr := array.string(ident + 1)
+			logstr = append(logstr, fmt.Sprintf("%s<%s, %s>\n", tabstr, k, arrStr))
+			continue
+		}
+
+		logstr = append(logstr, fmt.Sprintf("%s<%s, %v>\n", tabstr, k, v))
 
 	}
 
-	logstr = append(logstr, fmt.Sprintf("%s%s", strings.Repeat("\t", i-1), ">>"))
+	logstr = append(logstr, fmt.Sprintf("%s%s", strings.Repeat("\t", ident-1), ">>"))
+
 	return strings.Join(logstr, "")
 }
 
@@ -438,5 +431,5 @@ func (d PDFDict) PDFString() string {
 }
 
 func (d PDFDict) String() string {
-	return d.string(1, &d)
+	return d.string(1)
 }
