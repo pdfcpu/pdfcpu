@@ -16,7 +16,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logDebugFilter, logInfoFilter, logWarningFilter, logErrorFilter *log.Logger
+var (
+	logDebugFilter, logInfoFilter, logWarningFilter, logErrorFilter *log.Logger
+
+	// ErrUnsupportedFilter signals an unsupported filter type.
+	ErrUnsupportedFilter = errors.New("Filter not supported")
+)
 
 func init() {
 
@@ -57,7 +62,7 @@ func NewFilter(filterName string, decodeParms, encodeParms *types.PDFDict) (filt
 
 	default:
 		logWarningFilter.Printf("Filter not supported: %s", filterName)
-		err = errors.Errorf("Filter not supported: %s", filterName)
+		err = ErrUnsupportedFilter
 	}
 
 	return

@@ -2311,15 +2311,28 @@ func PDFFile(ctx *types.PDFContext) (err error) {
 		return errors.Wrapf(err, "can't create %s\n%s", fileName, err)
 	}
 
+	ctx.Write.Writer = bufio.NewWriter(file)
+
 	defer func() {
-		ctx.Write.Flush()
-		file.Close()
+
+		// Processing error takes precedence.
+		if err != nil {
+			ctx.Write.Flush()
+			file.Close()
+			return
+		}
+
+		// Flush error takes precedence.
+		err = ctx.Write.Flush()
+		if err != nil {
+			file.Close()
+			return
+		}
+
+		// Do not miss out on closing errors.
+		err = file.Close()
+
 	}()
-
-	//ctx.Write.File = file
-
-	w := bufio.NewWriter(file)
-	ctx.Write.Writer = w
 
 	// Write a PDF file header stating the version of the used conforming writer.
 	// This has to be the source version or any version higher.
@@ -2369,30 +2382,27 @@ func PDFFile(ctx *types.PDFContext) (err error) {
 	if ctx.WriteXRefStream {
 		// Write cross reference stream and generate objectstreams.
 		err = writeXRefStream(ctx)
-		if err != nil {
-			return
-		}
 	} else {
 		// Write cross reference table section.
 		err = writeXRefTable(ctx)
-		if err != nil {
-			return
-		}
+	}
+	if err != nil {
+		return
 	}
 
 	// Write pdf trailer.
 	_, err = writeTrailer(ctx)
 	if err != nil {
-		return err
+		return
 	}
 
+	// Get file info for file just written.
 	fileInfo, err := file.Stat()
 	if err != nil {
-		return err
+		return
 	}
 	ctx.Write.FileSize = fileInfo.Size()
 
-	// Refactor, calculate
 	ctx.Write.BinaryImageSize = ctx.Read.BinaryImageSize
 	ctx.Write.BinaryFontSize = ctx.Read.BinaryFontSize
 

@@ -1,6 +1,6 @@
 # pdflib: a golang pdf processor [![GoDoc](https://godoc.org/github.com/hhrutter/pdflib?status.svg)](https://godoc.org/github.com/hhrutter/pdflib) [![Go Report Card](https://goreportcard.com/badge/github.com/hhrutter/pdflib)](https://goreportcard.com/report/github.com/hhrutter/pdflib) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Package pdflib is a PDF processing library written in [Go](http://golang.org).
+Package pdflib is a simple PDF processing library written in [Go](http://golang.org).
 It provides both an API and a command line tool.
 Supported are all versions up to PDF 1.7 (ISO-32000).
 
@@ -9,7 +9,7 @@ Supported are all versions up to PDF 1.7 (ISO-32000).
 Reducing the size of large PDF files for mass mailings by optimization to the bare minimum.
 This can be achieved by analyzing a PDF's cross reference table, removing redundant embedded resources like font files or images and by always writing back the file maxing out PDF compression.
 
-I also wanted to have my own swiss army knife for PDFs written entirely in Go that allows me to trim, split and merge.
+I also wanted to have my own swiss army knife for PDFs written entirely in [Go](http://golang.org) that allows me to trim, split and merge PDF content.
 
 ### Features
 * Validate (validates PDF files up to version 7.0)

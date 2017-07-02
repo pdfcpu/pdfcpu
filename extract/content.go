@@ -22,10 +22,11 @@ func writeContent(ctx *types.PDFContext, streamDict *types.PDFStreamDict, pageNu
 
 	// Decode streamDict if used filter is supported only.
 	err = filter.DecodeStream(streamDict)
-	if err != nil {
-		// Skip over filter errors.
-		// This is brute force for continuing after an "unsupported filter" error.
+	if err == filter.ErrUnsupportedFilter {
 		err = nil
+		return
+	}
+	if err != nil {
 		return
 	}
 

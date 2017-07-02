@@ -1,7 +1,6 @@
 package read
 
 import (
-	"errors"
 	"io/ioutil"
 	"log"
 	"os"
@@ -9,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hhrutter/pdflib/types"
+	"github.com/pkg/errors"
 )
 
 var (

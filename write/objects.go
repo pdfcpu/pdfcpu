@@ -47,12 +47,14 @@ func writePDFObject(ctx *types.PDFContext, objNumber, genNumber int, s string) (
 
 	logInfoWriter.Printf("writePDFObject begin, obj#:%d gen#:%d\n", objNumber, genNumber)
 
+	w := ctx.Write
+
 	if ctx.WriteXRefStream && // object streams assume an xRefStream to be generated.
 		ctx.WriteObjectStream && // signal for compression into object stream is on.
 		ctx.Write.WriteToObjectStream && // currently writing to object stream.
 		genNumber == 0 {
 
-		if ctx.Write.CurrentObjStream == nil {
+		if w.CurrentObjStream == nil {
 			// Create new objects stream on first write.
 			err = startObjectStream(ctx)
 			if err != nil {
@@ -75,7 +77,7 @@ func writePDFObject(ctx *types.PDFContext, objNumber, genNumber int, s string) (
 		entry.Compressed = true
 		entry.ObjectStream = ctx.Write.CurrentObjStream // !
 		entry.ObjectStreamInd = &i
-		ctx.Write.SetWriteOffset(objNumber) // for a compressed obj this is supposed to be a fake offset. value does not matter.
+		w.SetWriteOffset(objNumber) // for a compressed obj this is supposed to be a fake offset. value does not matter.
 
 		// Append to prolog & content
 		err = objStreamDict.AddObject(objNumber, entry)
@@ -92,32 +94,32 @@ func writePDFObject(ctx *types.PDFContext, objNumber, genNumber int, s string) (
 			if err != nil {
 				return
 			}
-			ctx.Write.WriteToObjectStream = true
+			w.WriteToObjectStream = true
 		}
 
 		return
 	}
 
 	// Set write-offset for this object.
-	ctx.Write.SetWriteOffset(objNumber)
+	w.SetWriteOffset(objNumber)
 
-	written, err := writeObjectHeader(ctx.Write, objNumber, genNumber)
+	written, err := writeObjectHeader(w, objNumber, genNumber)
 	if err != nil {
 		return
 	}
 
-	i, err := ctx.Write.Writer.WriteString(s)
+	i, err := w.WriteString(s)
 	if err != nil {
 		return
 	}
 
-	j, err := writeObjectTrailer(ctx.Write)
+	j, err := writeObjectTrailer(w)
 	if err != nil {
 		return
 	}
 
 	// Write-offset for next object.
-	ctx.Write.Offset += int64(written + i + j)
+	w.Offset += int64(written + i + j)
 
 	// TODO max 255 chars per line!
 	logInfoWriter.Printf("writePDFObject end, %d bytes written\n", written)

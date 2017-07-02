@@ -2,7 +2,7 @@
 
 Package pdflib is a simple PDF processing library written in Go.
 It provides both an API and a command line tool.
-Supported are versions up to PDF 1.7 (ISO-32000).
+Supported are all versions up to PDF 1.7 (ISO-32000).
 
 The available commands are:
 
