@@ -248,12 +248,8 @@ func validateNameTree(xRefTable *types.XRefTable, name string, indRef types.PDFI
 	// if Kids present then recurse
 
 	dict, err := xRefTable.DereferenceDict(indRef)
-	if err != nil {
+	if err != nil || dict == nil {
 		return
-	}
-
-	if dict == nil {
-		return errors.New("validateNameTree: missing dict")
 	}
 
 	// Kids: array of indirect references to the immediate children of this node.

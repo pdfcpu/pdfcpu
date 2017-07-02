@@ -265,7 +265,7 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 		return
 	}
 
-	// if none available, add new object & return.
+	// If none available, add new object & return.
 	if *freeListHeadEntry.Offset == 0 {
 
 		i, ok := xRefTable.InsertNew(xRefTableEntry)
@@ -279,7 +279,7 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 		return
 	}
 
-	// recycle free object, update free list & return.
+	// Recycle free object, update free list & return.
 	objNumber = int(*freeListHeadEntry.Offset)
 	entry, found := xRefTable.FindTableEntryLight(objNumber)
 	if !found {
@@ -287,11 +287,14 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 		return
 	}
 
+	// The new free list head entry becomes the old head entry's successor.
 	freeListHeadEntry.Offset = entry.Offset
+
+	// The old head entry becomes garbage.
 	entry.Free = false
 	entry.Offset = nil
-	// entry is now garbage
 
+	// Create a new entry for the recycled object.
 	if !xRefTable.Insert(objNumber, xRefTableEntry) {
 		err = errors.Errorf("InsertAndRecycle: Problem inserting entry for %d", objNumber)
 	}
@@ -422,6 +425,46 @@ func (xRefTable *XRefTable) DeleteObject(objectNumber int) (err error) {
 	freeListHeadEntry.Offset = &next
 
 	logInfoTypes.Printf("DeleteObject: end %d\n", objectNumber)
+
+	return
+}
+
+// UndeleteObject ensures an object is not recorded in the free list.
+// e.g. sometimes caused by indirect references to free objects in the original PDF file.
+func (xRefTable *XRefTable) UndeleteObject(objectNumber int) (err error) {
+
+	logDebugTypes.Printf("UndeleteObject: begin %d\n", objectNumber)
+
+	var f, entry *XRefTableEntry
+
+	f, err = xRefTable.Free(0)
+	if err != nil {
+		return
+	}
+
+	// until we have found the last free object which should point to obj 0.
+	for *f.Offset != 0 {
+
+		objNr := int(*f.Offset)
+
+		entry, err = xRefTable.Free(objNr)
+		if err != nil {
+			return
+		}
+
+		if objNr == objectNumber {
+			logDebugTypes.Printf("UndeleteObject end: undeleting obj#%d\n", objectNumber)
+			*f.Offset = *entry.Offset
+			entry.Offset = nil
+			entry.Free = false
+			return
+		}
+
+		f = entry
+
+	}
+
+	logDebugTypes.Printf("UndeleteObject: end: obj#%d not in free list.\n", objectNumber)
 
 	return
 }
@@ -633,7 +676,7 @@ func (xRefTable *XRefTable) DereferenceDict(obj interface{}) (dictp *PDFDict, er
 
 	dict, ok := obj.(PDFDict)
 	if !ok {
-		err = errors.Errorf("DereferenceDict: wrong type <%v>", obj)
+		err = errors.Errorf("DereferenceDict: wrong type %T <%v>", obj, obj)
 	}
 
 	dictp = &dict

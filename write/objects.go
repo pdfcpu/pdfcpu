@@ -304,6 +304,7 @@ func writeIndRef(ctx *types.PDFContext, indRef types.PDFIndirectRef) (obj interf
 
 	if obj == nil {
 		logInfoWriter.Printf("writeIndRef end: object #%d is nil.\n", objNumber)
+		ctx.UndeleteObject(objNumber)
 		err = writePDFNullObject(ctx, objNumber, genNumber)
 		logInfoWriter.Printf("writeIndRef: end offset=%d\n", ctx.Write.Offset)
 		return

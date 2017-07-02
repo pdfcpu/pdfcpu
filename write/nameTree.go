@@ -281,13 +281,9 @@ func writeNameTree(ctx *types.PDFContext, name string, indRef types.PDFIndirectR
 		return err
 	}
 
-	if written {
+	if written || obj == nil {
 		logInfoWriter.Printf("writeNameTree end: %s, offset:%d\n", name, ctx.Write.Offset)
 		return nil
-	}
-
-	if obj == nil {
-		return errors.New("writeNameTree: missing dict")
 	}
 
 	dict, ok := obj.(types.PDFDict)
