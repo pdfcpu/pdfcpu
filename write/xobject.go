@@ -821,13 +821,31 @@ func writeXObjectStreamDict(ctx *types.PDFContext, streamDict types.PDFStreamDic
 		return
 	}
 
-	subtype, _, err := writeNameEntry(ctx, streamDict.PDFDict, "xObjectStreamDict", "Subtype", OPTIONAL, types.V10, nil)
+	required := REQUIRED
+	if ctx.XRefTable.ValidationMode == types.ValidationRelaxed {
+		required = OPTIONAL
+	}
+	subtype, _, err := writeNameEntry(ctx, streamDict.PDFDict, "xObjectStreamDict", "Subtype", required, types.V10, nil)
 	if err != nil {
 		return
 	}
 
 	if subtype == nil {
-		// TODO relaxed for page Thumb:
+
+		// relaxed
+		_, found := streamDict.Find("BBox")
+		if found {
+
+			err = writeFormStreamDict(ctx, streamDict)
+			if err != nil {
+				return
+			}
+
+			logInfoWriter.Println("writeXObjectStreamDict end")
+			return
+		}
+
+		// Relaxed for page Thumb
 		err = writeImageStreamDict(ctx, streamDict, isNoAlternateImageStreamDict)
 		if err != nil {
 			return
@@ -835,7 +853,6 @@ func writeXObjectStreamDict(ctx *types.PDFContext, streamDict types.PDFStreamDic
 
 		logInfoWriter.Printf("writeXObjectStreamDict end: offset=%d\n", ctx.Write.Offset)
 		return
-		//log.Fatalln("writeXObjectStreamDict: missing Subtype")
 	}
 
 	switch *subtype {

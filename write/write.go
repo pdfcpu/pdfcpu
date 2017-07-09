@@ -661,22 +661,6 @@ func writeThreads(ctx *types.PDFContext, rootDict types.PDFDict, required bool, 
 	return
 }
 
-// TODO implement
-func writeAA(ctx *types.PDFContext, obj interface{}) (written bool, err error) {
-
-	// => 12.6.3 Trigger Events
-
-	logInfoWriter.Printf("*** writeAA begin: offset=%d ***\n", ctx.Write.Offset)
-
-	err = errors.New("*** writeAA: not supported ***")
-
-	// dest.XRefTable.Stats.AddRootAttr(types.RootAA)
-
-	logInfoWriter.Printf("*** writeAA end: offset=%d ***\n", ctx.Write.Offset)
-
-	return
-}
-
 func writeURI(ctx *types.PDFContext, rootDict types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
 
 	// => 12.6.4.7 URI Actions
@@ -1604,15 +1588,12 @@ func writeRootObject(ctx *types.PDFContext) (err error) {
 		return
 	}
 
-	if obj, found := dict.Find("AA"); found {
-		// TODO implement
-		written, err := writeAA(ctx, obj)
-		if err != nil {
-			return err
-		}
-		if written {
-			ctx.Stats.AddRootAttr(types.RootAA)
-		}
+	written, err := writeAdditionalActions(ctx, &dict, "rootDict", "AA", OPTIONAL, types.V14, "root")
+	if err != nil {
+		return
+	}
+	if written {
+		ctx.Stats.AddRootAttr(types.RootAA)
 	}
 
 	err = writeURI(ctx, dict, OPTIONAL, types.V11)
@@ -1643,7 +1624,7 @@ func writeRootObject(ctx *types.PDFContext) (err error) {
 	}
 
 	// Relaxed to V1.3
-	written, err := writeMetadata(ctx, dict, OPTIONAL, types.V13)
+	written, err = writeMetadata(ctx, dict, OPTIONAL, types.V13)
 	if err != nil {
 		return err
 	}

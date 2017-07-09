@@ -746,7 +746,7 @@ func validateXObjectStreamDict(xRefTable *types.XRefTable, streamDict *types.PDF
 
 	// see 8.8 External Objects
 
-	logInfoValidate.Println("*** writeXObjectStreamDict begin ***")
+	logInfoValidate.Println("*** validateXObjectStreamDict begin ***")
 
 	_, err = validateNameEntry(xRefTable, &streamDict.PDFDict, "xObjectStreamDict", "Type", OPTIONAL, types.V10, func(s string) bool { return s == "XObject" })
 	if err != nil {
@@ -764,13 +764,26 @@ func validateXObjectStreamDict(xRefTable *types.XRefTable, streamDict *types.PDF
 
 	if subtype == nil {
 
-		// relaxed for page Thumb:
+		// relaxed
+		_, found := streamDict.Find("BBox")
+		if found {
+
+			err = validateFormStreamDict(xRefTable, streamDict)
+			if err != nil {
+				return
+			}
+
+			logInfoValidate.Println("validateXObjectStreamDict end")
+			return
+		}
+
+		// Relaxed for page Thumb
 		err = validateImageStreamDict(xRefTable, streamDict, isNoAlternateImageStreamDict)
 		if err != nil {
 			return
 		}
 
-		logInfoValidate.Println("writeXObjectStreamDict end")
+		logInfoValidate.Println("validateXObjectStreamDict end")
 		return
 	}
 
@@ -783,14 +796,14 @@ func validateXObjectStreamDict(xRefTable *types.XRefTable, streamDict *types.PDF
 		err = validateImageStreamDict(xRefTable, streamDict, isNoAlternateImageStreamDict)
 
 	case "PS":
-		err = errors.Errorf("writeXObjectStreamDict: PostScript XObjects should not be used")
+		err = errors.Errorf("validateXObjectStreamDict: PostScript XObjects should not be used")
 
 	default:
-		err = errors.Errorf("writeXObjectStreamDict: unknown Subtype: %s\n", *subtype)
+		err = errors.Errorf("validateXObjectStreamDict: unknown Subtype: %s\n", *subtype)
 
 	}
 
-	logInfoValidate.Println("*** writeXObjectStreamDict end  ***")
+	logInfoValidate.Println("*** validateXObjectStreamDict end  ***")
 
 	return
 }

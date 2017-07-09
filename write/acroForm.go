@@ -140,17 +140,20 @@ func writeAppearanceDict(ctx *types.PDFContext, obj interface{}) (err error) {
 		return errors.New("writeAppearanceDict: not a dict")
 	}
 
+	// N, required, stream or dict, the annotation's normal appearance
 	obj, ok = dict.Find("N")
 	if !ok {
-		return errors.New("writeAppearanceDict: missing required entry \"N\"")
+		if ctx.XRefTable.ValidationMode == types.ValidationStrict {
+			return errors.New("writeAppearanceDict: missing required entry \"N\"")
+		}
+	} else {
+		err = writeAppearanceDictEntry(ctx, obj)
+		if err != nil {
+			return
+		}
 	}
 
-	err = writeAppearanceDictEntry(ctx, obj)
-	if err != nil {
-		return
-	}
-
-	// Rollover Appearance
+	// R, optional, stream or dict, the annotation's rollover appearance
 	if obj, ok = dict.Find("R"); ok {
 		err = writeAppearanceDictEntry(ctx, obj)
 		if err != nil {
@@ -158,7 +161,7 @@ func writeAppearanceDict(ctx *types.PDFContext, obj interface{}) (err error) {
 		}
 	}
 
-	// Down Appearance
+	// D, optional, stream or dict, the annotation's down appearance
 	if obj, ok = dict.Find("D"); ok {
 		err = writeAppearanceDictEntry(ctx, obj)
 		if err != nil {
@@ -175,7 +178,7 @@ func writeAcroFieldDictEntries(ctx *types.PDFContext, dict types.PDFDict, termin
 
 	logInfoWriter.Printf("*** writeAcroFieldDictEntries begin: offset=%d ***\n", ctx.Write.Offset)
 
-	// FT: Btn,Tx,Ch,Sig
+	// FT, name, required for terminal fields, Btn,Tx,Ch,Sig
 	fieldType := dict.PDFNameEntry("FT")
 	if terminalNode && fieldType == nil && inFieldType == nil {
 		return nil, errors.New("writeAcroFieldDictEntries: missing field type")
@@ -244,12 +247,28 @@ func writeAcroFieldDictEntries(ctx *types.PDFContext, dict types.PDFDict, termin
 		}
 	}
 
-	// TODO: for terminal fields: parent field must already be written.
-	if indRef := dict.IndirectRefEntry("Parent"); indRef != nil {
-		objNumber := int(indRef.ObjectNumber)
-		if !ctx.Write.HasWriteOffset(objNumber) {
-			return nil, errors.Errorf("writeAcroFieldDictEntries: unknown parent field obj#:%d\n", objNumber)
-		}
+	// Parent, dict, required for kid fields.
+	_, _, err = writeIndRefEntry(ctx, dict, "acroFieldDict", "Parent", OPTIONAL, types.V10)
+	if err != nil {
+		return
+	}
+
+	// T, optional, text string
+
+	// TU, optional, text string, since V1.3
+
+	// TM, optional, text string, since V1.3
+
+	// Ff, optional, integer
+
+	// V, optional, various
+
+	// DV, optional, various
+
+	// AA, optional, dict, since V1.2
+	_, err = writeAdditionalActions(ctx, &dict, "acroFieldDict", "AA", OPTIONAL, types.V12, "fieldOrAnnot")
+	if err != nil {
+		return
 	}
 
 	logInfoWriter.Printf("*** writeAcroFieldDictEntries end: offset=%d ***\n", ctx.Write.Offset)
@@ -257,11 +276,13 @@ func writeAcroFieldDictEntries(ctx *types.PDFContext, dict types.PDFDict, termin
 	return
 }
 
-func writeAcroFieldDict(ctx *types.PDFContext, indRef types.PDFIndirectRef, inFieldType *types.PDFName) (err error) {
+func writeAcroFieldDict(ctx *types.PDFContext, indRef *types.PDFIndirectRef, inFieldType *types.PDFName) (err error) {
 
-	logInfoWriter.Printf("*** writeAcroFieldDict begin: obj#:%d offset=%d ***\n", indRef.ObjectNumber, ctx.Write.Offset)
+	objNr := int(indRef.ObjectNumber)
 
-	obj, written, err := writeIndRef(ctx, indRef)
+	logInfoWriter.Printf("*** writeAcroFieldDict begin: obj#:%d offset=%d ***\n", objNr, ctx.Write.Offset)
+
+	obj, written, err := writeIndRef(ctx, *indRef)
 	if err != nil {
 		return err
 	}
@@ -289,11 +310,7 @@ func writeAcroFieldDict(ctx *types.PDFContext, indRef types.PDFIndirectRef, inFi
 		}
 
 		// Write field entries.
-		logInfoWriter.Printf("writeAcroFieldDict moving on before, inFieldType=%v", inFieldType)
 		xinFieldType, err := writeAcroFieldDictEntries(ctx, dict, false, inFieldType)
-		logInfoWriter.Printf("writeAcroFieldDict moving on after, xinFieldType=%v", xinFieldType)
-		//inFieldType = xinFieldType
-		//logInfoWriter.Printf("writeAcroFieldDict moving on after, inFieldType=%v", inFieldType)
 		if err != nil {
 			return err
 		}
@@ -320,7 +337,7 @@ func writeAcroFieldDict(ctx *types.PDFContext, indRef types.PDFIndirectRef, inFi
 				return errors.New("writeAcroFieldDict: corrupt kids array: entries must be indirect reference")
 			}
 
-			err = writeAcroFieldDict(ctx, indRef, xinFieldType)
+			err = writeAcroFieldDict(ctx, &indRef, xinFieldType)
 			if err != nil {
 				return err
 			}
@@ -336,7 +353,7 @@ func writeAcroFieldDict(ctx *types.PDFContext, indRef types.PDFIndirectRef, inFi
 		}
 
 		// Write field entries.
-		_, err = writeAcroFieldDictEntries(ctx, dict, false, inFieldType)
+		_, err = writeAcroFieldDictEntries(ctx, dict, true, inFieldType)
 		if err != nil {
 			return
 		}
@@ -377,7 +394,6 @@ func writeAcroFormFields(ctx *types.PDFContext, pdfObject interface{}) (err erro
 		return errors.New("writeAcroFormFields: corrupt form field array: obj must be array")
 	}
 
-	// TODO why is index unused?
 	for _, value := range arr {
 
 		indRef, ok := value.(types.PDFIndirectRef)
@@ -385,7 +401,7 @@ func writeAcroFormFields(ctx *types.PDFContext, pdfObject interface{}) (err erro
 			return errors.New("writeAcroFormFields: corrupt form field array entry")
 		}
 
-		err = writeAcroFieldDict(ctx, indRef, nil)
+		err = writeAcroFieldDict(ctx, &indRef, nil)
 		if err != nil {
 			return
 		}
@@ -397,15 +413,41 @@ func writeAcroFormFields(ctx *types.PDFContext, pdfObject interface{}) (err erro
 	return
 }
 
-// TODO implement
-func writeAcroFormEntryCO(ctx *types.PDFContext, obj interface{}) (err error) {
+func writeAcroFormEntryCO(ctx *types.PDFContext, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+	// since V1.3
+	// Array of indRefs to field dicts with calculation actions.
+	// => 12.6.3 Trigger Events
 
 	logInfoWriter.Printf("*** writeAcroFormEntryCO begin: offset=%d ***\n", ctx.Write.Offset)
 
-	err = errors.New("*** writeAcroFormEntryCO unsupported ***")
+	// Version check
+	if ctx.Version() < sinceVersion {
+		return errors.Errorf("writeAcroFormEntryCO: unsupported in version %s.\n", ctx.VersionString())
+	}
 
-	// Array of indRefs to field dicts with calculation actions.
-	// => 12.6.3 Trigger Events
+	var (
+		arr  *types.PDFArray
+		dict *types.PDFDict
+	)
+
+	arr, _, err = writeArray(ctx, obj)
+	if err != nil {
+		return
+	}
+
+	for _, obj := range *arr {
+
+		dict, err = ctx.DereferenceDict(obj)
+		if err != nil || dict == nil {
+			return
+		}
+
+		err = writeAnnotationDict(ctx, *dict)
+		if err != nil {
+			return
+		}
+
+	}
 
 	logInfoWriter.Printf("*** writeAcroFormEntryCO end: offset=%d ***\n", ctx.Write.Offset)
 
@@ -478,7 +520,7 @@ func writeAcroForm(ctx *types.PDFContext, rootDict types.PDFDict, required bool,
 	// CO: array
 	// TODO since 1.3, required if any fields in the document have additional-actions dictionaries containing a C entry.ObjectStream
 	if obj, ok := dict.Find("CO"); ok {
-		err = writeAcroFormEntryCO(ctx, obj)
+		err = writeAcroFormEntryCO(ctx, obj, types.V13)
 		if err != nil {
 			return
 		}

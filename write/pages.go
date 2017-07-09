@@ -778,9 +778,6 @@ func writePageDict(ctx *types.PDFContext, objNumber, genNumber int, pagesDict ty
 		return errors.New("writePageDict: missing parent")
 	}
 
-	var obj interface{}
-	var ok bool
-
 	// Contents
 	hasContents, err := writePageContents(ctx, pagesDict)
 	if err != nil {
@@ -841,7 +838,7 @@ func writePageDict(ctx *types.PDFContext, objNumber, genNumber int, pagesDict ty
 
 	// LastModified
 	// lm, ...
-	_, _, err = writeDateEntry(ctx, pagesDict, "PageDict", "LastModified", OPTIONAL, types.V13)
+	_, _, err = writeDateEntry(ctx, pagesDict, "pageDict", "LastModified", OPTIONAL, types.V13)
 	if err != nil {
 		return
 	}
@@ -892,19 +889,16 @@ func writePageDict(ctx *types.PDFContext, objNumber, genNumber int, pagesDict ty
 	}
 
 	// AA
-	if obj, ok = pagesDict.Find("AA"); ok && obj != nil {
-		// TODO implement
-		written, err := writeAA(ctx, obj)
-		if err != nil {
-			return err
-		}
-		if written {
-			ctx.Stats.AddPageAttr(types.PageAA)
-		}
+	written, err := writeAdditionalActions(ctx, &pagesDict, "pageDict", "AA", OPTIONAL, types.V14, "page")
+	if err != nil {
+		return
+	}
+	if written {
+		ctx.Stats.AddPageAttr(types.PageAA)
 	}
 
 	// Metadata
-	written, err := writeMetadata(ctx, pagesDict, OPTIONAL, types.V14)
+	written, err = writeMetadata(ctx, pagesDict, OPTIONAL, types.V14)
 	if err != nil {
 		return
 	}
@@ -971,136 +965,136 @@ func writePageDict(ctx *types.PDFContext, objNumber, genNumber int, pagesDict ty
 	return
 }
 
-func writePagesDictOrig(ctx *types.PDFContext, indRef types.PDFIndirectRef, hasResources, hasMediaBox bool) (err error) {
+// func writePagesDictOrig(ctx *types.PDFContext, indRef types.PDFIndirectRef, hasResources, hasMediaBox bool) (err error) {
 
-	logPages.Printf("*** writePagesDict begin: hasMediaBox=%v obj#%d offset=%d ***\n", hasMediaBox, indRef.ObjectNumber, ctx.Write.Offset)
+// 	logPages.Printf("*** writePagesDict begin: hasMediaBox=%v obj#%d offset=%d ***\n", hasMediaBox, indRef.ObjectNumber, ctx.Write.Offset)
 
-	obj, written, err := writeIndRef(ctx, indRef)
-	if err != nil {
-		return
-	}
+// 	obj, written, err := writeIndRef(ctx, indRef)
+// 	if err != nil {
+// 		return
+// 	}
 
-	if written || obj == nil {
-		return errors.Errorf("writePagesDict end: obj#%d offset=%d *** nil or already written", indRef.ObjectNumber, ctx.Write.Offset)
-	}
+// 	if written || obj == nil {
+// 		return errors.Errorf("writePagesDict end: obj#%d offset=%d *** nil or already written", indRef.ObjectNumber, ctx.Write.Offset)
+// 	}
 
-	dict, ok := obj.(types.PDFDict)
-	if !ok {
-		return errors.New("writePagesDict: corrupt pages dict")
-	}
+// 	dict, ok := obj.(types.PDFDict)
+// 	if !ok {
+// 		return errors.New("writePagesDict: corrupt pages dict")
+// 	}
 
-	// Get number of pages of this PDF file.
-	count, ok := dict.Find("Count")
-	if !ok {
-		return errors.New("writePagesDict: missing \"Count\"")
-	}
+// 	// Get number of pages of this PDF file.
+// 	count, ok := dict.Find("Count")
+// 	if !ok {
+// 		return errors.New("writePagesDict: missing \"Count\"")
+// 	}
 
-	pageCount := int(count.(types.PDFInteger))
-	logPages.Printf("writePagesDict: This page node has %d pages\n", pageCount)
+// 	pageCount := int(count.(types.PDFInteger))
+// 	logPages.Printf("writePagesDict: This page node has %d pages\n", pageCount)
 
-	// Resources: optional, dict
-	if obj, ok := dict.Find("Resources"); ok {
-		written, err = writeResourceDict(ctx, obj)
-		if err != nil {
-			return
-		}
-		if written {
-			ctx.Stats.AddPageAttr(types.PageResources)
-			hasResources = true
-		}
-	}
+// 	// Resources: optional, dict
+// 	if obj, ok := dict.Find("Resources"); ok {
+// 		written, err = writeResourceDict(ctx, obj)
+// 		if err != nil {
+// 			return
+// 		}
+// 		if written {
+// 			ctx.Stats.AddPageAttr(types.PageResources)
+// 			hasResources = true
+// 		}
+// 	}
 
-	// MediaBox: optional, rectangle
-	hasPageNodeMediaBox, err := writePageEntryMediaBox(ctx, dict, OPTIONAL, types.V10)
-	if err != nil {
-		return
-	}
+// 	// MediaBox: optional, rectangle
+// 	hasPageNodeMediaBox, err := writePageEntryMediaBox(ctx, dict, OPTIONAL, types.V10)
+// 	if err != nil {
+// 		return
+// 	}
 
-	if hasPageNodeMediaBox {
-		hasMediaBox = true
-	}
+// 	if hasPageNodeMediaBox {
+// 		hasMediaBox = true
+// 	}
 
-	// CropBox: optional, rectangle
-	err = writePageEntryCropBox(ctx, dict, OPTIONAL, types.V10)
-	if err != nil {
-		return
-	}
+// 	// CropBox: optional, rectangle
+// 	err = writePageEntryCropBox(ctx, dict, OPTIONAL, types.V10)
+// 	if err != nil {
+// 		return
+// 	}
 
-	// Rotate:  optional, integer
-	err = writePageEntryRotate(ctx, dict, OPTIONAL, types.V10)
-	if err != nil {
-		return
-	}
+// 	// Rotate:  optional, integer
+// 	err = writePageEntryRotate(ctx, dict, OPTIONAL, types.V10)
+// 	if err != nil {
+// 		return
+// 	}
 
-	// Iterate over page tree.
-	kidsArray := dict.PDFArrayEntry("Kids")
-	if kidsArray == nil {
-		return errors.New("writePagesDict: corrupt \"Kids\" entry")
-	}
+// 	// Iterate over page tree.
+// 	kidsArray := dict.PDFArrayEntry("Kids")
+// 	if kidsArray == nil {
+// 		return errors.New("writePagesDict: corrupt \"Kids\" entry")
+// 	}
 
-	for _, obj := range *kidsArray {
+// 	for _, obj := range *kidsArray {
 
-		if obj == nil {
-			logDebugWriter.Println("writePagesDict: kid is nil")
-			continue
-		}
+// 		if obj == nil {
+// 			logDebugWriter.Println("writePagesDict: kid is nil")
+// 			continue
+// 		}
 
-		// Dereference next page node dict.
-		indRef, ok := obj.(types.PDFIndirectRef)
-		if !ok {
-			return errors.New("writePagesDict: missing indirect reference for kid")
-		}
+// 		// Dereference next page node dict.
+// 		indRef, ok := obj.(types.PDFIndirectRef)
+// 		if !ok {
+// 			return errors.New("writePagesDict: missing indirect reference for kid")
+// 		}
 
-		logInfoWriter.Printf("writePagesDict: PageNode: %s\n", indRef)
+// 		logInfoWriter.Printf("writePagesDict: PageNode: %s\n", indRef)
 
-		objNumber := int(indRef.ObjectNumber)
-		genNumber := int(indRef.GenerationNumber)
+// 		objNumber := int(indRef.ObjectNumber)
+// 		genNumber := int(indRef.GenerationNumber)
 
-		if ctx.Write.HasWriteOffset(objNumber) {
-			logInfoWriter.Printf("writePagesDict: object #%d already written.\n", objNumber)
-			continue
-		}
+// 		if ctx.Write.HasWriteOffset(objNumber) {
+// 			logInfoWriter.Printf("writePagesDict: object #%d already written.\n", objNumber)
+// 			continue
+// 		}
 
-		pageNodeDict, err := ctx.DereferenceDict(indRef)
-		if err != nil {
-			return errors.New("writePagesDict: cannot dereference pageNodeDict")
-		}
+// 		pageNodeDict, err := ctx.DereferenceDict(indRef)
+// 		if err != nil {
+// 			return errors.New("writePagesDict: cannot dereference pageNodeDict")
+// 		}
 
-		if pageNodeDict == nil {
-			return errors.New("validatePagesDict: pageNodeDict is null")
-		}
+// 		if pageNodeDict == nil {
+// 			return errors.New("validatePagesDict: pageNodeDict is null")
+// 		}
 
-		dictType := pageNodeDict.Type()
-		if dictType == nil {
-			return errors.New("writePagesDict: missing pageNodeDict type")
-		}
+// 		dictType := pageNodeDict.Type()
+// 		if dictType == nil {
+// 			return errors.New("writePagesDict: missing pageNodeDict type")
+// 		}
 
-		switch *dictType {
+// 		switch *dictType {
 
-		case "Pages":
-			// Recurse over pagetree
-			err = writePagesDictOrig(ctx, indRef, hasResources, hasMediaBox)
-			if err != nil {
-				return err
-			}
+// 		case "Pages":
+// 			// Recurse over pagetree
+// 			err = writePagesDictOrig(ctx, indRef, hasResources, hasMediaBox)
+// 			if err != nil {
+// 				return err
+// 			}
 
-		case "Page":
-			err = writePageDict(ctx, objNumber, genNumber, *pageNodeDict, hasResources, hasMediaBox)
-			if err != nil {
-				return err
-			}
+// 		case "Page":
+// 			err = writePageDict(ctx, objNumber, genNumber, *pageNodeDict, hasResources, hasMediaBox)
+// 			if err != nil {
+// 				return err
+// 			}
 
-		default:
-			return errors.Errorf("writePagesDict: Unexpected dict type: %s", *dictType)
+// 		default:
+// 			return errors.Errorf("writePagesDict: Unexpected dict type: %s", *dictType)
 
-		}
+// 		}
 
-	}
+// 	}
 
-	logPages.Printf("*** writePagesDict end: obj#%d offset=%d ***\n", indRef.ObjectNumber, ctx.Write.Offset)
+// 	logPages.Printf("*** writePagesDict end: obj#%d offset=%d ***\n", indRef.ObjectNumber, ctx.Write.Offset)
 
-	return
-}
+// 	return
+// }
 
 func locateKidForPageNumber(ctx *types.PDFContext, kidsArray *types.PDFArray, pageCount *int, pageNumber int) (kid interface{}, err error) {
 

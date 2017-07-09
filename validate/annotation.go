@@ -100,6 +100,30 @@ func validateAnnotationDictPopup(xRefTable *types.XRefTable, dict *types.PDFDict
 
 	logInfoValidate.Println("*** validateAnnotationDictPopup begin ***")
 
+	//return errors.New("*** validateAnnotationDictPopUp not supported ***")
+
+	// 26:   offset=  165836 generation=0 types.PDFDict type=Annot subType=Text
+	// <<
+	// 	<C, [1.00 0.91 0.61]>
+	// 	<Contents, (kjhkjhkjhkj)>
+	// 	<F, 4>
+	// 	<M, (D:20160228075028Z00'00')>
+	// 	<Name, Comment>
+	// 	<Open, true>
+	// 	<Popup, (27 0 R)>
+	// 	<Rect, [93.90 190.36 117.90 214.36]>
+	// 	<Subtype, Text>
+	// 	<T, (Horst Rutter)>
+	// 	<Type, Annot>
+	// >>
+	//    27:   offset=  165733 generation=0 types.PDFDict type=Annot subType=Popup
+	// <<
+	// 	<Open, true>
+	// 	<Parent, (26 0 R)>
+	// 	<Rect, [314 323 442 387]>
+	// 	<Subtype, Popup>
+	// 	<Type, Annot>
+
 	// xRefTable := source.XRefTable
 
 	// Parent, dict
@@ -216,50 +240,58 @@ func validateAnnotationDictWidget(xRefTable *types.XRefTable, dict *types.PDFDic
 
 	logInfoValidate.Printf("*** validateAnnotationDictWidget begin ***")
 
+	dictName := "widgetAnnotDict"
+
+	// H, optional, name
+	_, err = validateNameEntry(xRefTable, dict, dictName, "H", OPTIONAL, types.V10, validateAnnotationHighlightingMode)
+	if err != nil {
+		return
+	}
+
 	// MK, optional, dict
 	// An appearance characteristics dictionary that shall be used in constructing
 	// a dynamic appearance stream specifying the annotation’s visual presentation on the page.dict
-	if indRef := dict.IndirectRefEntry("MK"); indRef != nil {
-
-		dict, err = xRefTable.DereferenceDict(*indRef)
+	d, err := validateDictEntry(xRefTable, dict, dictName, "MK", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+	if d != nil {
+		// TODO
+		//err = validateAppearanceCharacteristicsDict(xRefTable, d)
 		if err != nil {
-			return err
-		}
-
-		if dict == nil {
-			err = errors.New("validateAnnotationDictWidget: corrupt MK dict")
 			return
 		}
-
 	}
 
-	// A, optional, dict
+	// A, optional, dict, since V1.1
 	// An action that shall be performed when the annotation is activated.
-	if indRef := dict.IndirectRefEntry("A"); indRef != nil {
-
-		dict, err = xRefTable.DereferenceDict(*indRef)
+	d, err = validateDictEntry(xRefTable, dict, dictName, "A", OPTIONAL, types.V11, nil)
+	if err != nil {
+		return err
+	}
+	if d != nil {
+		err = validateActionDict(xRefTable, *d)
 		if err != nil {
-			return err
-		}
-
-		if dict == nil {
-			err = errors.New("validateAnnotationDictWidget: corrupt A action dict")
 			return
 		}
-
 	}
 
-	// AA, optional, dict
+	// AA, optional, dict, since V1.2
 	// An additional-actions dictionary defining the annotation’s behaviour in response to various trigger events.
-	if _, ok := dict.Find("AA"); ok {
-		//log.Fatalln("writeAnnotationDictWidget: unsupported entry \"AA\"")
+	err = validateAdditionalActions(xRefTable, dict, dictName, "AA", OPTIONAL, types.V12, "fieldOrAnnot")
+	if err != nil {
+		return
 	}
 
-	// BS, optional, dict
+	// BS, optional, dict, since V1.2
 	// A border style dictionary specifying the width and dash pattern
 	// that shall be used in drawing the annotation’s border.
-	if obj, found := dict.Find("BS"); found {
-		err = validateBorderStyleDict(xRefTable, obj)
+	d, err = validateDictEntry(xRefTable, dict, dictName, "BC", OPTIONAL, types.V12, nil)
+	if err != nil {
+		return
+	}
+	if d != nil {
+		err = validateBorderStyleDict(xRefTable, *d)
 		if err != nil {
 			return
 		}
@@ -268,8 +300,9 @@ func validateAnnotationDictWidget(xRefTable *types.XRefTable, dict *types.PDFDic
 	// Parent, dict, required if one of multiple children in a field.
 	// An indirect reference to the widget annotation’s parent field.
 	// for terminal fields: parent field must already be written.
-	if indRef := dict.IndirectRefEntry("Parent"); indRef != nil {
-		//objNumber := int(indRef.ObjectNumber)
+	_, err = validateIndRefEntry(xRefTable, dict, dictName, "Parent", OPTIONAL, types.V10)
+	if err != nil {
+		return
 	}
 
 	logInfoValidate.Println("*** validateAnnotationDictWidget end ***")
@@ -277,38 +310,126 @@ func validateAnnotationDictWidget(xRefTable *types.XRefTable, dict *types.PDFDic
 	return
 }
 
-// TODO implement
 func validateAnnotationDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
 
 	logInfoValidate.Println("*** validateAnnotationDict begin ***")
 
-	// handle annotation types
+	dictName := "annotDict"
+	var subtype *types.PDFName
 
-	if dict.Type() != nil && *dict.Type() != "Annot" {
-		return errors.New("validateAnnotationDict: corrupt Annot dict type")
+	// Type, optional, name
+	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "Annot" })
+	if err != nil {
+		return
 	}
 
-	subtype := dict.Subtype()
-	if subtype == nil {
-		return errors.New("validateAnnotationDict: missing Annot dict subtype")
+	// Subtype, required, name
+	subtype, err = validateNameEntry(xRefTable, dict, dictName, "Subtype", REQUIRED, types.V10, nil)
+	if err != nil {
+		return err
 	}
 
-	//  P, optional, corresponding page object
-	//  All pages written at this point.
-	if indRef := dict.IndirectRefEntry("P"); indRef != nil {
-		//objNumber := indRef.ObjectNumber.Value()
+	// Rect, required, rectangle
+	_, err = validateRectangleEntry(xRefTable, dict, dictName, "Rect", REQUIRED, types.V10, nil)
+	if err != nil {
+		return
 	}
 
-	// appearance stream, optional
-	if obj, ok := dict.Find("AP"); ok {
-		err = validateAppearanceDict(xRefTable, obj)
+	// Contents, optional, text string
+	_, err = validateStringEntry(xRefTable, dict, dictName, "Contents", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	// P, optional, indRef of page dict
+	var indRef *types.PDFIndirectRef
+	indRef, err = validateIndRefEntry(xRefTable, dict, dictName, "P", OPTIONAL, types.V10)
+	if err != nil {
+		return
+	}
+	if indRef != nil {
+		// check if this indRef points to a pageDict.
+		var d *types.PDFDict
+		d, err = xRefTable.DereferenceDict(*indRef)
+		if err != nil {
+			return
+		}
+		if d == nil {
+			err = errors.Errorf("validateAnnotationDict: entry \"P\" (obj#%d) is nil", indRef.ObjectNumber)
+		}
+		_, err = validateNameEntry(xRefTable, d, "pageDict", "Type", REQUIRED, types.V10, func(s string) bool { return s == "Page" })
+		if err != nil {
+			return
+		}
+
+		if d == nil || d.Type() == nil || *d.Type() != "Page" {
+			err = errors.Errorf("validateAnnotationDict: entry \"P\" (obj#%d) not a pageDict", indRef.ObjectNumber)
+			return
+		}
+	}
+
+	// NM, optional, text string, since V1.4
+	_, err = validateStringEntry(xRefTable, dict, dictName, "NM", OPTIONAL, types.V14, nil)
+	if err != nil {
+		return
+	}
+
+	// M, optional, date string in any format, since V1.1
+	_, err = validateStringEntry(xRefTable, dict, dictName, "M", OPTIONAL, types.V11, nil)
+	if err != nil {
+		return
+	}
+
+	// F, optional integer, since V1.1, annotation flags
+	_, err = validateIntegerEntry(xRefTable, dict, dictName, "F", OPTIONAL, types.V11, nil)
+	if err != nil {
+		return
+	}
+
+	// AP, optional, appearance dict, since V1.2
+	d, err := validateDictEntry(xRefTable, dict, dictName, "AP", OPTIONAL, types.V12, nil)
+	if err != nil {
+		return
+	}
+	if d != nil {
+		err = validateAppearanceDict(xRefTable, *d)
 		if err != nil {
 			return
 		}
 	}
 
-	// optional content group or optional content membership dictionary
-	// specifying the optional content properties for the annotation.
+	// AS, optional, name, since V1.2
+	_, err = validateNameEntry(xRefTable, dict, dictName, "AS", OPTIONAL, types.V11, nil)
+	if err != nil {
+		return
+	}
+
+	// Border, optional, array of numbers
+	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "Border", OPTIONAL, types.V10, func(a types.PDFArray) bool { return len(a) == 3 || len(a) == 4 })
+	if err != nil {
+		return
+	}
+
+	// C, optional array, of numbers, since V1.1
+	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "C", OPTIONAL, types.V11, nil)
+	if err != nil {
+		return
+	}
+
+	// StructParent, optional, integer, since V1.3
+	_, err = validateIntegerEntry(xRefTable, dict, dictName, "StructParent", OPTIONAL, types.V13, nil)
+	if err != nil {
+		return
+	}
+
+	// TODO
+	// OC, optional, content group or optional content membership dictionary
+	// specifying the optional content properties for the annotation, since V1.3
+	//err = validateOptionalContent(xRefTable, dict, dictName, "OC", OPTIONAL, types.V13)
+	//if err != nil {
+	//	return
+	//}
+
 	if _, ok := dict.Find("OC"); ok {
 		return errors.New("validateAnnotationDict: unsupported entry OC")
 	}
@@ -397,12 +518,6 @@ func validateAnnotationDict(xRefTable *types.XRefTable, dict *types.PDFDict) (er
 		return errors.Errorf("validateAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
 
 	}
-
-	// AP
-	// P
-	// V
-	// Dest a13
-	// A -> Action mit URI
 
 	if err == nil {
 		logInfoValidate.Println("*** validateAnnotationDict end ***")

@@ -7,7 +7,7 @@ import (
 
 func validateResourceDict(xRefTable *types.XRefTable, obj interface{}) (hasResources bool, err error) {
 
-	logInfoValidate.Println("*** writeResourceDict begin: ***")
+	logInfoValidate.Println("*** validateResourceDict begin: ***")
 
 	dict, err := xRefTable.DereferenceDict(obj)
 	if err != nil {
@@ -764,7 +764,7 @@ func validatePageDict(xRefTable *types.XRefTable, pageDict *types.PDFDict, objNu
 	}
 
 	// LastModified
-	lm, err := validateDateEntry(xRefTable, pageDict, "PageDict", "LastModified", OPTIONAL, types.V13)
+	lm, err := validateDateEntry(xRefTable, pageDict, "pageDict", "LastModified", OPTIONAL, types.V13)
 	if err != nil {
 		return
 	}
@@ -814,7 +814,7 @@ func validatePageDict(xRefTable *types.XRefTable, pageDict *types.PDFDict, objNu
 	}
 
 	// AA
-	err = validateAA(xRefTable, pageDict, OPTIONAL, types.V14)
+	err = validateAdditionalActions(xRefTable, pageDict, "pageDict", "AA", OPTIONAL, types.V14, "page")
 	if err != nil {
 		return
 	}

@@ -1,4 +1,6 @@
-# pdflib: a golang pdf processor [![GoDoc](https://godoc.org/github.com/hhrutter/pdflib?status.svg)](https://godoc.org/github.com/hhrutter/pdflib) [![Go Report Card](https://goreportcard.com/badge/github.com/hhrutter/pdflib)](https://goreportcard.com/report/github.com/hhrutter/pdflib) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+# pdflib: a golang pdf processor ![](https://img.shields.io/badge/status-experimental-orange.svg) [![GoDoc](https://godoc.org/github.com/hhrutter/pdflib?status.svg)](https://godoc.org/github.com/hhrutter/pdflib) [![Go Report Card](https://goreportcard.com/badge/github.com/hhrutter/pdflib)](https://goreportcard.com/report/github.com/hhrutter/pdflib) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) 
+
+
 
 Package pdflib is a simple PDF processing library written in [Go](http://golang.org).
 It provides both an API and a command line tool.
@@ -77,7 +79,6 @@ The extraction code for font files and images is experimental and serves as proo
 ### To Do
 * validateFileSpecString
 * validateURLString
-* validateAcroFormEntryCO
 * validateAcroFormEntryXFA
 * validateColorKeyMaskArray
 * validateActionDicts
@@ -89,7 +90,6 @@ The extraction code for font files and images is experimental and serves as proo
 * validatePageEntryVP
 * validateOPIDict
 * validateExtensions
-* validateAA
 * validateSpiderInfo
 * validatePermissions
 * validateLegal

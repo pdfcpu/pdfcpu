@@ -6,12 +6,11 @@ package validate
 import (
 	"io/ioutil"
 	"log"
+	"net/url"
 	"os"
-	"time"
-
-	"strings"
-
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/hhrutter/pdflib/types"
 	"github.com/pkg/errors"
@@ -80,12 +79,14 @@ func validateFileSpecString(s string) bool {
 	return true
 }
 
-// TODO implement
 func validateURLString(s string) bool {
 
 	// see 7.11.5
 
-	//log.Fatalf("validateURLString: unsupported: %s\n", s)
+	_, err := url.ParseRequestURI(s)
+	if err != nil {
+		return false
+	}
 
 	return true
 }
@@ -686,6 +687,47 @@ func validateDocInfoDictTrapped(s string) bool {
 	return false
 }
 
+func memberOf(s string, list []string) bool {
+	for _, v := range list {
+		if s == v {
+			return true
+		}
+	}
+	return false
+}
+
+func validateAdditionalAction(s, source string) bool {
+
+	switch source {
+
+	case "root":
+		if memberOf(s, []string{"WC", "WS", "DS", "WP", "DP"}) {
+			return true
+		}
+
+	case "page":
+		if memberOf(s, []string{"O", "C"}) {
+			return true
+		}
+
+	case "fieldOrAnnot":
+		// A terminal acro field may be merged with a widget annotation.
+		fieldOptions := []string{"K", "F", "V", "C"}
+		annotOptions := []string{"E", "X", "D", "U", "Fo", "Bl", "PO", "PC", "PV", "Pl"}
+		options := append(fieldOptions, annotOptions...)
+		if memberOf(s, options) {
+			return true
+		}
+
+	}
+
+	return false
+}
+
+func validateAnnotationHighlightingMode(s string) bool {
+	return memberOf(s, []string{"N", "I", "O", "P", "T", "A"})
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////
 // Exported stubs for package write.
 // This should go away.
@@ -727,6 +769,8 @@ func BaseState(s string) bool                   { return validateBaseState(s) }
 func ListMode(s string) bool                    { return validateListMode(s) }
 func OptContentConfigDictIntent(s string) bool  { return validateOptContentConfigDictIntent(s) }
 func DocInfoDictTrapped(s string) bool          { return validateDocInfoDictTrapped(s) }
+func AdditionalAction(s, source string) bool    { return validateAdditionalAction(s, source) }
+func AnnotationHighlightingMode(s string) bool  { return validateAnnotationHighlightingMode(s) }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 
@@ -751,7 +795,6 @@ func validateAnyEntry(xRefTable *types.XRefTable, dict *types.PDFDict, entryName
 	}
 
 	objNumber := indRef.ObjectNumber.Value()
-	//genNumber := indRef.GenerationNumber.Value()
 
 	obj, err := xRefTable.Dereference(indRef)
 	if err != nil {

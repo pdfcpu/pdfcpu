@@ -6,82 +6,171 @@ import (
 	"github.com/hhrutter/pdflib/types"
 )
 
-func validateDestsNameTreeValue(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateDestsNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
 	logInfoValidate.Println("*** validateDestsNameTreeValue: begin ***")
+
+	if xRefTable.Version() < sinceVersion {
+		err = errors.Errorf("validateDestsNameTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
+		return
+	}
+
 	err = validateDestination(xRefTable, obj)
+
 	logInfoValidate.Println("*** validateDestsNameTreeValue: end ***")
+
 	return
 }
 
-// TODO implement
-func validateAPNameTreeValue(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateAPNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
 	logInfoValidate.Println("validateAPNameTreeValue: begin")
-	err = errors.New("*** validateAPNameTreeValue: unsupported ***")
+
+	if xRefTable.Version() < sinceVersion {
+		err = errors.Errorf("validateAPNameTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
+		return
+	}
+
+	err = validateAppearanceDict(xRefTable, obj)
+
 	logInfoValidate.Println("validateAPNameTreeValue: end")
+
 	return
 }
 
-// TODO implement
-func validateJavaScriptNameTreeValue(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateJavaScriptNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
 	logInfoValidate.Println("*** validateJavaScriptNameTreeValue: begin ***")
-	err = errors.New("*** validateJavaScriptNameTreeValue: unsupported ***")
+
+	dict, err := xRefTable.DereferenceDict(obj)
+	if err != nil {
+		return
+	}
+
+	// Javascript Action:
+	err = validateJavaScriptActionDict(xRefTable, dict, sinceVersion)
+
 	logInfoValidate.Println("*** validateJavaScriptNameTreeValue: end ***")
+
 	return
 }
 
 // TODO implement
-func validatePagesNameTreeValue(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validatePagesNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
 	logInfoValidate.Println("*** validatePagesNameTreeValue: begin ***")
+
+	if xRefTable.Version() < sinceVersion {
+		err = errors.Errorf("validatePagesNameTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
+		return
+	}
+
 	err = errors.New("*** validatePagesNameTreeValue: unsupported ***")
+
 	logInfoValidate.Println("*** validatePagesNameTreeValue: end ***")
+
 	return
 }
 
 // TODO implement
-func validateTemplatesNameTreeValue(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateTemplatesNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
 	logInfoValidate.Printf("*** validateTemplatesNameTreeValue: begin ***")
+
+	if xRefTable.Version() < sinceVersion {
+		err = errors.Errorf("validateTemplatesNameTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
+		return
+	}
+
 	err = errors.New("*** validateTemplatesNameTreeValue: unsupported ***")
+
 	logInfoValidate.Printf("*** validateTemplatesNameTreeValue: end ***")
+
 	return
 }
 
 // TODO implement
-func validateIDSTreeValue(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateIDSTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
 	logInfoValidate.Printf("*** validateIDSTreeValue: begin ***")
+
+	if xRefTable.Version() < sinceVersion {
+		err = errors.Errorf("validateIDSTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
+		return
+	}
+
 	err = errors.New("*** validateIDSTreeValue: unsupported ***")
+
 	logInfoValidate.Printf("*** validateIDSTreeValue: end ***")
+
 	return
 }
 
 // TODO implement
-func validateURLSNameTreeValue(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateURLSNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
 	logInfoValidate.Println("*** validateURLSNameTreeValue: begin ***")
+
+	if xRefTable.Version() < sinceVersion {
+		err = errors.Errorf("validateURLSNameTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
+		return
+	}
+
 	err = errors.New("*** validateURLSNameTreeValue: unsupported ***")
+
 	logInfoValidate.Println("*** validateURLSNameTreeValue: end ***")
+
 	return
 }
 
 // TODO implement
-func validateEmbeddedFilesNameTreeValue(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateEmbeddedFilesNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
 	logInfoValidate.Printf("*** validateEmbeddedFilesNameTreeValue: begin ***")
+
+	if xRefTable.Version() < sinceVersion {
+		err = errors.Errorf("validateEmbeddedFilesNameTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
+		return
+	}
+
 	err = errors.New("*** validateEmbeddedFilesNameTreeValue: unsupported ***")
+
 	logInfoValidate.Printf("*** validateEmbeddedFilesNameTreeValue: end ***")
+
 	return
 }
 
 // TODO implement
-func validateAlternatePresentationsNameTreeValue(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateAlternatePresentationsNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
 	logInfoValidate.Println("*** validateAlternatePresentationsNameTreeValue: begin ***")
+
+	if xRefTable.Version() < sinceVersion {
+		err = errors.Errorf("validateAlternatePresentationsNameTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
+		return
+	}
+
 	err = errors.New("*** validateAlternatePresentationsNameTreeValue: unsupported ***")
+
 	logInfoValidate.Println("*** validateAlternatePresentationsNameTreeValue: end ***")
+
 	return
 }
 
 // TODO implement
-func validateRenditionsNameTreeValue(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateRenditionsNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
 	logInfoValidate.Println("*** validateRenditionsNameTreeValue: begin ***")
+
+	if xRefTable.Version() < sinceVersion {
+		err = errors.Errorf("validateRenditionsNameTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
+		return
+	}
+
 	err = errors.New("*** validateRenditionsNameTreeValue: unsupported ***")
+
 	logInfoValidate.Println("*** validateRenditionsNameTreeValue: end ***")
+
 	return
 }
 
@@ -157,36 +246,37 @@ func validateNameTreeDictNamesEntry(xRefTable *types.XRefTable, dict *types.PDFD
 		switch name {
 
 		case "Dests":
-			err = validateDestsNameTreeValue(xRefTable, obj)
+			err = validateDestsNameTreeValue(xRefTable, obj, types.V12)
 
 		case "AP":
-			err = validateAPNameTreeValue(xRefTable, obj)
+			err = validateAPNameTreeValue(xRefTable, obj, types.V13)
 
 		case "JavaScript":
-			err = validateJavaScriptNameTreeValue(xRefTable, obj)
+			err = validateJavaScriptNameTreeValue(xRefTable, obj, types.V13)
 
 		case "Pages":
-			err = validatePagesNameTreeValue(xRefTable, obj)
+			err = validatePagesNameTreeValue(xRefTable, obj, types.V13)
 
 		case "Templates":
-			err = validateTemplatesNameTreeValue(xRefTable, obj)
+			err = validateTemplatesNameTreeValue(xRefTable, obj, types.V13)
 
 		case "IDS":
-			err = validateIDSTreeValue(xRefTable, obj)
+			err = validateIDSTreeValue(xRefTable, obj, types.V13)
 
 		case "URLS":
-			err = validateURLSNameTreeValue(xRefTable, obj)
+			err = validateURLSNameTreeValue(xRefTable, obj, types.V13)
 
 		case "EmbeddedFiles":
-			err = validateEmbeddedFilesNameTreeValue(xRefTable, obj)
+			err = validateEmbeddedFilesNameTreeValue(xRefTable, obj, types.V14)
 
 		case "AlternatePresentations":
-			err = validateAlternatePresentationsNameTreeValue(xRefTable, obj)
+			err = validateAlternatePresentationsNameTreeValue(xRefTable, obj, types.V14)
 
 		case "Renditions":
-			err = validateRenditionsNameTreeValue(xRefTable, obj)
+			err = validateRenditionsNameTreeValue(xRefTable, obj, types.V15)
 
 		case "IDTree":
+			// for structure tree root
 			err = validateIDTreeValue(xRefTable, obj)
 
 		default:

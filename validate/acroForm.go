@@ -94,6 +94,7 @@ func validateAppearanceDictEntry(xRefTable *types.XRefTable, obj interface{}) (e
 }
 
 func validateAppearanceDict(xRefTable *types.XRefTable, obj interface{}) (err error) {
+	// see 12.5.5 Appearance Streams
 
 	logInfoValidate.Println("*** validateAppearanceDict begin ***")
 
@@ -109,12 +110,14 @@ func validateAppearanceDict(xRefTable *types.XRefTable, obj interface{}) (err er
 
 	obj, ok := dict.Find("N")
 	if !ok {
-		return errors.New("validateAppearanceDict: missing required entry \"N\"")
-	}
-
-	err = validateAppearanceDictEntry(xRefTable, obj)
-	if err != nil {
-		return
+		if xRefTable.ValidationMode == types.ValidationStrict {
+			return errors.New("validateAppearanceDict: missing required entry \"N\"")
+		}
+	} else {
+		err = validateAppearanceDictEntry(xRefTable, obj)
+		if err != nil {
+			return
+		}
 	}
 
 	// Rollover Appearance
@@ -208,9 +211,27 @@ func validateAcroFieldDictEntries(xRefTable *types.XRefTable, dict *types.PDFDic
 		}
 	}
 
-	// TODO: for terminal fields: parent field must already be written.
-	if indRef := dict.IndirectRefEntry("Parent"); indRef != nil {
-		//objNumber := int(indRef.ObjectNumber)
+	_, err = validateIndRefEntry(xRefTable, dict, "acroFieldDict", "Parent", OPTIONAL, types.V10)
+	if err != nil {
+		return
+	}
+
+	// T, optional, text string
+
+	// TU, optional, text string, since V1.3
+
+	// TM, optional, text string, since V1.3
+
+	// Ff, optional, integer
+
+	// V, optional, various
+
+	// DV, optional, various
+
+	// AA, optional, dict, since V1.2
+	err = validateAdditionalActions(xRefTable, dict, "acroFieldDict", "AA", OPTIONAL, types.V14, "fieldOrAnnot")
+	if err != nil {
+		return
 	}
 
 	logInfoValidate.Println("*** validateAcroFieldDictEntries end ***")
@@ -220,7 +241,9 @@ func validateAcroFieldDictEntries(xRefTable *types.XRefTable, dict *types.PDFDic
 
 func validateAcroFieldDict(xRefTable *types.XRefTable, indRef *types.PDFIndirectRef, inFieldType *types.PDFName) (err error) {
 
-	logInfoValidate.Printf("*** validateAcroFieldDict begin: obj#:%d ***\n", indRef.ObjectNumber)
+	objNr := int(indRef.ObjectNumber)
+
+	logInfoValidate.Printf("*** validateAcroFieldDict begin: obj#:%d ***\n", objNr)
 
 	dict, err := xRefTable.DereferenceDict(*indRef)
 	if err != nil {
@@ -240,11 +263,7 @@ func validateAcroFieldDict(xRefTable *types.XRefTable, indRef *types.PDFIndirect
 		}
 
 		// Write field entries.
-		logInfoValidate.Printf("validateAcroFieldDict moving on before, inFieldType=%v", inFieldType)
 		xinFieldType, err := validateAcroFieldDictEntries(xRefTable, dict, false, inFieldType)
-		logInfoValidate.Printf("validateAcroFieldDict moving on after, xinFieldType=%v", xinFieldType)
-		//inFieldType = xinFieldType
-		//logInfoWriter.Printf("writeAcroFieldDict moving on after, inFieldType=%v", inFieldType)
 		if err != nil {
 			return err
 		}
@@ -282,12 +301,12 @@ func validateAcroFieldDict(xRefTable *types.XRefTable, indRef *types.PDFIndirect
 		}
 
 		// Write field entries.
-		_, err = validateAcroFieldDictEntries(xRefTable, dict, false, inFieldType)
+		_, err = validateAcroFieldDictEntries(xRefTable, dict, true, inFieldType)
 		if err != nil {
 			return
 		}
 
-		// Write widget annotation.
+		// Validate widget annotation - Validation of AA redundant because of merged acrofield with widget annotation.
 		err = validateAnnotationDict(xRefTable, dict)
 		if err != nil {
 			return
@@ -313,7 +332,6 @@ func validateAcroFormFields(xRefTable *types.XRefTable, obj interface{}) (err er
 		return
 	}
 
-	// TODO why is index unused?
 	for _, value := range *arr {
 
 		indRef, ok := value.(types.PDFIndirectRef)
@@ -333,15 +351,41 @@ func validateAcroFormFields(xRefTable *types.XRefTable, obj interface{}) (err er
 	return
 }
 
-// TODO implement
-func validateAcroFormEntryCO(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateAcroFormEntryCO(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+	// since V1.3
+	// Array of indRefs to field dicts with calculation actions.
+	// => 12.6.3 Trigger Events
 
 	logInfoValidate.Println("*** validateAcroFormEntryCO begin ***")
 
-	err = errors.New("*** validateAcroFormEntryCO unsupported ***")
+	// Version check
+	if xRefTable.Version() < sinceVersion {
+		return errors.Errorf("validateAcroFormEntryCO: unsupported in version %s.\n", xRefTable.VersionString())
+	}
 
-	// Array of indRefs to field dicts with calculation actions.
-	// => 12.6.3 Trigger Events
+	var (
+		arr  *types.PDFArray
+		dict *types.PDFDict
+	)
+
+	arr, err = validateArray(xRefTable, obj)
+	if err != nil {
+		return
+	}
+
+	for _, obj := range *arr {
+
+		dict, err = xRefTable.DereferenceDict(obj)
+		if err != nil || dict == nil {
+			return
+		}
+
+		err = validateAnnotationDict(xRefTable, dict)
+		if err != nil {
+			return
+		}
+
+	}
 
 	logInfoValidate.Println("*** validateAcroFormEntryCO end ***")
 
@@ -409,7 +453,7 @@ func validateAcroForm(xRefTable *types.XRefTable, rootDict *types.PDFDict, requi
 	// CO: array
 	// TODO since 1.3, required if any fields in the document have additional-actions dictionaries containing a C entry.ObjectStream
 	if obj, ok := dict.Find("CO"); ok {
-		err = validateAcroFormEntryCO(xRefTable, obj)
+		err = validateAcroFormEntryCO(xRefTable, obj, types.V13)
 		if err != nil {
 			return
 		}

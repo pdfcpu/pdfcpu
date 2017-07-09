@@ -219,7 +219,7 @@ func validateNames(xRefTable *types.XRefTable, rootDict *types.PDFDict, required
 			return errors.New("validateNames: name tree must be indirect ref")
 		}
 
-		logInfoValidate.Printf("writing Nametree: %s\n", treeName)
+		logInfoValidate.Printf("validating Nametree: %s\n", treeName)
 		err = validateNameTree(xRefTable, treeName, indRef, true)
 		if err != nil {
 			return
@@ -611,35 +611,6 @@ func validateThreads(xRefTable *types.XRefTable, rootDict *types.PDFDict, requir
 	}
 
 	logInfoValidate.Println("*** validateThreads end ***")
-
-	return
-}
-
-// TODO implement (for rootdict und pagedict)
-func validateAA(xRefTable *types.XRefTable, rootDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
-
-	// => 12.6.3 Trigger Events
-
-	logInfoValidate.Println("*** validateAA begin ***")
-
-	obj, found := rootDict.Find("AA")
-	if !found || obj == nil {
-		if required {
-			err = errors.Errorf("validateAA: required entry \"AA\" missing")
-			return
-		}
-		logInfoValidate.Println("validateAA end: optional entry \"AA\" not found or nil.")
-		return
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAA: unsupported in version %s.\n", xRefTable.VersionString())
-	}
-
-	err = errors.New("*** validateAA: not supported ***")
-
-	logInfoValidate.Println("*** validateAA end ***")
 
 	return
 }
@@ -1137,7 +1108,7 @@ func validateRootObject(xRefTable *types.XRefTable) (err error) {
 	}
 
 	// AA
-	err = validateAA(xRefTable, rootDict, OPTIONAL, types.V14)
+	err = validateAdditionalActions(xRefTable, rootDict, "rootDict", "AA", OPTIONAL, types.V14, "root")
 	if err != nil {
 		return
 	}

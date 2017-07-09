@@ -13,6 +13,7 @@ import (
 	"github.com/hhrutter/pdflib/optimize"
 	"github.com/hhrutter/pdflib/read"
 	"github.com/hhrutter/pdflib/types"
+	"github.com/hhrutter/pdflib/validate"
 	"github.com/hhrutter/pdflib/write"
 )
 
@@ -189,7 +190,7 @@ func setupLogging(verbose bool) {
 
 	types.Verbose(verbose)
 	read.Verbose(verbose)
-	//validate.Verbose(verbose)
+	validate.Verbose(verbose)
 	optimize.Verbose(verbose)
 	write.Verbose(verbose)
 	extract.Verbose(verbose)

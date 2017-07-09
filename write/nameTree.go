@@ -5,82 +5,185 @@ import (
 	"github.com/pkg/errors"
 )
 
-func writeDestsNameTreeValue(ctx *types.PDFContext, obj interface{}) (err error) {
+func writeDestsNameTreeValue(ctx *types.PDFContext, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
 	logInfoWriter.Printf("*** writeDestsNameTreeValue: begin offset:%d ***\n", ctx.Write.Offset)
+
+	if ctx.Version() < sinceVersion {
+		err = errors.Errorf("writeDestsNameTreeValue: unsupported in version %s.\n", ctx.VersionString())
+		return
+	}
+
 	err = writeDestination(ctx, obj)
+
 	logInfoWriter.Printf("*** writeDestsNameTreeValue: end offset:%d ***\n", ctx.Write.Offset)
+
 	return
 }
 
-// TODO implement
-func writeAPNameTreeValue(ctx *types.PDFContext, obj interface{}) (err error) {
+func writeAPNameTreeValue(ctx *types.PDFContext, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
 	logInfoWriter.Printf("writeAPNameTreeValue: begin offset:%d\n", ctx.Write.Offset)
-	err = errors.New("*** writeAPNameTreeValue: unsupported ***")
+
+	if ctx.Version() < sinceVersion {
+		err = errors.Errorf("writeAPNameTreeValue: unsupported in version %s.\n", ctx.VersionString())
+		return
+	}
+
+	err = writeAppearanceDict(ctx, obj)
+
 	logInfoWriter.Printf("writeAPNameTreeValue: end offset:%d\n", ctx.Write.Offset)
+
 	return
 }
 
-// TODO implement
-func writeJavaScriptNameTreeValue(ctx *types.PDFContext, obj interface{}) (err error) {
+func writeJavaScriptNameTreeValue(ctx *types.PDFContext, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
 	logInfoWriter.Printf("*** writeJavaScriptNameTreeValue: begin offset:%d ***\n", ctx.Write.Offset)
-	err = errors.New("*** writeJavaScriptNameTreeValue: unsupported ***")
+
+	obj, written, err := writeObject(ctx, obj)
+	if err != nil {
+		return
+	}
+
+	if written {
+		logInfoWriter.Printf("writeJavaScriptNameTreeValue: already written, end offset=%d\n", ctx.Write.Offset)
+		return
+	}
+
+	if obj == nil {
+		logInfoWriter.Printf("writeJavaScriptNameTreeValue: is nil, end offset=%d\n", ctx.Write.Offset)
+		return
+	}
+
+	dict, ok := obj.(types.PDFDict)
+	if !ok {
+		return errors.New("writeJavaScriptNameTreeValue: invalid type, should be dict")
+	}
+	// Javascript Action:
+	err = writeJavaScriptActionDict(ctx, &dict, sinceVersion)
+
 	logInfoWriter.Printf("*** writeJavaScriptNameTreeValue: end offset:%d ***\n", ctx.Write.Offset)
+
 	return
 }
 
 // TODO implement
-func writePagesNameTreeValue(ctx *types.PDFContext, obj interface{}) (err error) {
+func writePagesNameTreeValue(ctx *types.PDFContext, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
 	logInfoWriter.Printf("*** writePagesNameTreeValue: begin offset:%d ***\n", ctx.Write.Offset)
+
+	if ctx.Version() < sinceVersion {
+		err = errors.Errorf("writePagesNameTreeValue: unsupported in version %s.\n", ctx.VersionString())
+		return
+	}
+
 	err = errors.New("*** writePagesNameTreeValue: unsupported ***")
+
 	logInfoWriter.Printf("*** writePagesNameTreeValue: end offset:%d ***\n", ctx.Write.Offset)
+
 	return
 }
 
 // TODO implement
-func writeTemplatesNameTreeValue(ctx *types.PDFContext, obj interface{}) (err error) {
+func writeTemplatesNameTreeValue(ctx *types.PDFContext, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
 	logInfoWriter.Printf("*** writeTemplatesNameTreeValue: begin offset:%d ***\n", ctx.Write.Offset)
+
+	if ctx.Version() < sinceVersion {
+		err = errors.Errorf("writeTemplatesNameTreeValue: unsupported in version %s.\n", ctx.VersionString())
+		return
+	}
+
 	err = errors.New("*** writeTemplatesNameTreeValue: unsupported ***")
+
 	logInfoWriter.Printf("*** writeTemplatesNameTreeValue: end offset:%d ***\n", ctx.Write.Offset)
+
 	return
 }
 
 // TODO implement
-func writeIDSTreeValue(ctx *types.PDFContext, obj interface{}) (err error) {
+func writeIDSTreeValue(ctx *types.PDFContext, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
 	logInfoWriter.Printf("*** writeIDSTreeValue: begin offset:%d ***\n", ctx.Write.Offset)
+
+	if ctx.Version() < sinceVersion {
+		err = errors.Errorf("writeIDSTreeValue: unsupported in version %s.\n", ctx.VersionString())
+		return
+	}
+
 	err = errors.New("*** writeIDSTreeValue: unsupported ***")
+
 	logInfoWriter.Printf("*** writeIDSTreeValue: end offset:%d ***\n", ctx.Write.Offset)
+
 	return
 }
 
 // TODO implement
-func writeURLSNameTreeValue(ctx *types.PDFContext, obj interface{}) (err error) {
+func writeURLSNameTreeValue(ctx *types.PDFContext, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
 	logInfoWriter.Printf("*** writeURLSNameTreeValue: begin offset:%d ***\n", ctx.Write.Offset)
+
+	if ctx.Version() < sinceVersion {
+		err = errors.Errorf("writeURLSNameTreeValue: unsupported in version %s.\n", ctx.VersionString())
+		return
+	}
+
 	err = errors.New("*** writeURLSNameTreeValue: unsupported ***")
+
 	logInfoWriter.Printf("*** writeURLSNameTreeValue: end offset:%d ***\n", ctx.Write.Offset)
+
 	return
 }
 
 // TODO implement
-func writeEmbeddedFilesNameTreeValue(ctx *types.PDFContext, obj interface{}) (err error) {
+func writeEmbeddedFilesNameTreeValue(ctx *types.PDFContext, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
 	logInfoWriter.Printf("*** writeEmbeddedFilesNameTreeValue: begin offset:%d ***\n", ctx.Write.Offset)
+
+	if ctx.Version() < sinceVersion {
+		err = errors.Errorf("writeEmbeddedFilesNameTreeValue: unsupported in version %s.\n", ctx.VersionString())
+		return
+	}
+
 	err = errors.New("*** writeEmbeddedFilesNameTreeValue: unsupported ***")
+
 	logInfoWriter.Printf("*** writeEmbeddedFilesNameTreeValue: end offset:%d ***\n", ctx.Write.Offset)
+
 	return
 }
 
 // TODO implement
-func writeAlternatePresentationsNameTreeValue(ctx *types.PDFContext, obj interface{}) (err error) {
+func writeAlternatePresentationsNameTreeValue(ctx *types.PDFContext, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
 	logInfoWriter.Printf("*** writeAlternatePresentationsNameTreeValue: begin offset:%d ***\n", ctx.Write.Offset)
+
+	if ctx.Version() < sinceVersion {
+		err = errors.Errorf("writeAlternatePresentationsNameTreeValue: unsupported in version %s.\n", ctx.VersionString())
+		return
+	}
+
 	err = errors.New("*** writeAlternatePresentationsNameTreeValue: unsupported ***")
+
 	logInfoWriter.Printf("*** writeAlternatePresentationsNameTreeValue: end offset:%d ***\n", ctx.Write.Offset)
+
 	return
 }
 
 // TODO implement
-func writeRenditionsNameTreeValue(ctx *types.PDFContext, obj interface{}) (err error) {
+func writeRenditionsNameTreeValue(ctx *types.PDFContext, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
 	logInfoWriter.Printf("*** writeRenditionsNameTreeValue: begin offset:%d ***\n", ctx.Write.Offset)
+
+	if ctx.Version() < sinceVersion {
+		err = errors.Errorf("writeRenditionsNameTreeValue: unsupported in version %s.\n", ctx.VersionString())
+		return
+	}
+
 	err = errors.New("*** writeRenditionsNameTreeValue: unsupported ***")
+
 	logInfoWriter.Printf("*** writeRenditionsNameTreeValue: end offset:%d ***\n", ctx.Write.Offset)
+
 	return
 }
 
@@ -176,36 +279,37 @@ func writeNameTreeDictNamesEntry(ctx *types.PDFContext, dict types.PDFDict, name
 		switch name {
 
 		case "Dests":
-			err = writeDestsNameTreeValue(ctx, obj)
+			err = writeDestsNameTreeValue(ctx, obj, types.V12)
 
 		case "AP":
-			err = writeAPNameTreeValue(ctx, obj)
+			err = writeAPNameTreeValue(ctx, obj, types.V13)
 
 		case "JavaScript":
-			err = writeJavaScriptNameTreeValue(ctx, obj)
+			err = writeJavaScriptNameTreeValue(ctx, obj, types.V13)
 
 		case "Pages":
-			err = writePagesNameTreeValue(ctx, obj)
+			err = writePagesNameTreeValue(ctx, obj, types.V13)
 
 		case "Templates":
-			err = writeTemplatesNameTreeValue(ctx, obj)
+			err = writeTemplatesNameTreeValue(ctx, obj, types.V13)
 
 		case "IDS":
-			err = writeIDSTreeValue(ctx, obj)
+			err = writeIDSTreeValue(ctx, obj, types.V13)
 
 		case "URLS":
-			err = writeURLSNameTreeValue(ctx, obj)
+			err = writeURLSNameTreeValue(ctx, obj, types.V13)
 
 		case "EmbeddedFiles":
-			err = writeEmbeddedFilesNameTreeValue(ctx, obj)
+			err = writeEmbeddedFilesNameTreeValue(ctx, obj, types.V14)
 
 		case "AlternatePresentations":
-			err = writeAlternatePresentationsNameTreeValue(ctx, obj)
+			err = writeAlternatePresentationsNameTreeValue(ctx, obj, types.V14)
 
 		case "Renditions":
-			err = writeRenditionsNameTreeValue(ctx, obj)
+			err = writeRenditionsNameTreeValue(ctx, obj, types.V15)
 
 		case "IDTree":
+			// for structure tree root
 			err = writeIDTreeValue(ctx, obj)
 
 		default:

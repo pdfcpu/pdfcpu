@@ -2,6 +2,7 @@ package write
 
 import (
 	"github.com/hhrutter/pdflib/types"
+	"github.com/hhrutter/pdflib/validate"
 	"github.com/pkg/errors"
 )
 
@@ -45,7 +46,7 @@ func writeBorderStyleDict(ctx *types.PDFContext, obj interface{}) (err error) {
 	return
 }
 
-func writeAnnotationDictLink(ctx *types.PDFContext, dict types.PDFDict) (err error) {
+func writeAnnotationDictLink(ctx *types.PDFContext, dict *types.PDFDict) (err error) {
 
 	logInfoWriter.Printf("*** writeAnnotationDictLink begin: offset=%d ***\n", ctx.Write.Offset)
 
@@ -103,22 +104,23 @@ func writeAnnotationDictLink(ctx *types.PDFContext, dict types.PDFDict) (err err
 	return
 }
 
-// not used.
-func writeAnnotationDictPopup(ctx *types.PDFContext, dict types.PDFDict) (err error) {
+func writeAnnotationDictPopup(ctx *types.PDFContext, dict *types.PDFDict) (err error) {
 
 	logInfoWriter.Printf("*** writeAnnotationDictPopup begin: offset=%d ***\n", ctx.Write.Offset)
+
+	//return errors.New("*** writeAnnotationDictPopUp not supported ***")
 
 	// xRefTable := dest.XRefTable
 
 	// Parent, dict
 	// An indirect reference to the widget annotation’s parent field.
 	// for terminal fields: parent field must already be written.
-	if indRef := dict.IndirectRefEntry("Parent"); indRef != nil {
-		objNumber := int(indRef.ObjectNumber)
-		if !ctx.Write.HasWriteOffset(objNumber) {
-			return errors.Errorf("*** writeAnnotationDictPopup: unknown parent field obj#:%d\n", objNumber)
-		}
-	}
+	// if indRef := dict.IndirectRefEntry("Parent"); indRef != nil {
+	// 	objNumber := int(indRef.ObjectNumber)
+	// 	if !ctx.Write.HasWriteOffset(objNumber) {
+	// 		return errors.Errorf("*** writeAnnotationDictPopup: unknown parent field obj#:%d\n", objNumber)
+	// 	}
+	// }
 
 	logInfoWriter.Printf("*** writeAnnotationDictPopup end: offset=%d ***\n", ctx.Write.Offset)
 
@@ -186,7 +188,7 @@ func writeAnnotationDictFreeTextAAPLAKExtras(ctx *types.PDFContext, indRef *type
 	return nil
 }
 
-func writeAnnotationDictFreeText(ctx *types.PDFContext, dict types.PDFDict) (err error) {
+func writeAnnotationDictFreeText(ctx *types.PDFContext, dict *types.PDFDict) (err error) {
 
 	logInfoWriter.Printf("*** writeAnnotationDictFreeText begin: offset=%d ***\n", ctx.Write.Offset)
 
@@ -271,7 +273,7 @@ func writeAnnotationDictStampAAPLAKExtras(ctx *types.PDFContext, indRef *types.P
 	return
 }
 
-func writeAnnotationDictStamp(ctx *types.PDFContext, dict types.PDFDict) (err error) {
+func writeAnnotationDictStamp(ctx *types.PDFContext, dict *types.PDFDict) (err error) {
 
 	logInfoWriter.Printf("*** writeAnnotationDictStamp begin: offset=%d ***\n", ctx.Write.Offset)
 
@@ -287,82 +289,73 @@ func writeAnnotationDictStamp(ctx *types.PDFContext, dict types.PDFDict) (err er
 	return
 }
 
-func writeAnnotationDictWidget(ctx *types.PDFContext, dict types.PDFDict) (err error) {
+func writeAnnotationDictWidget(ctx *types.PDFContext, dict *types.PDFDict) (err error) {
 
 	logInfoWriter.Printf("*** writeAnnotationDictWidget begin: offset=%d ***\n", ctx.Write.Offset)
 
+	dictName := "widgetAnnotDict"
+
+	// H, optional, name
+	_, _, err = writeNameEntry(ctx, *dict, dictName, "H", OPTIONAL, types.V10, validate.AnnotationHighlightingMode)
+	if err != nil {
+		return
+	}
+
 	// MK, optional, dict
 	// An appearance characteristics dictionary that shall be used in constructing
-	// a dynamic appearance stream specifying the annotation’s visual presentation on the page.dict
-	if indRef := dict.IndirectRefEntry("MK"); indRef != nil {
-
-		objNumber := int(indRef.ObjectNumber)
-		genNumber := int(indRef.GenerationNumber)
-
-		if ctx.Write.HasWriteOffset(objNumber) {
-			logInfoWriter.Printf("writeAnnotationDictWidget end: object #%d already written, offset=%d\n", objNumber, ctx.Write.Offset)
-		} else if dict, err := ctx.DereferenceDict(*indRef); err != nil || dict == nil {
-			return errors.New("writeAnnotationDictWidget: corrupt MK dict")
-		} else {
-			logInfoWriter.Printf("writeAnnotationDictWidget: object #%d gets writeoffset: %d\n", objNumber, ctx.Write.Offset)
-
-			err := writePDFDictObject(ctx, objNumber, genNumber, *dict)
-			if err != nil {
-				return err
-			}
-
-			logDebugWriter.Printf("writeAnnotationDictWidget: new offset after MK dict = %d\n", ctx.Write.Offset)
-		}
+	// a dynamic appearance stream specifying the annotation‚Äôs visual presentation on the page.dict
+	d, _, err := writeDictEntry(ctx, *dict, dictName, "MK", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
 	}
-
-	// A, optional, dict
-	// An action that shall be performed when the annotation is activated.
-	if indRef := dict.IndirectRefEntry("A"); indRef != nil {
-
-		objNumber := int(indRef.ObjectNumber)
-		genNumber := int(indRef.GenerationNumber)
-
-		if ctx.Write.HasWriteOffset(objNumber) {
-			logInfoWriter.Printf("writeAnnotationDictWidget end: object #%d already written, offset=%d\n", objNumber, ctx.Write.Offset)
-		} else if actionDict, err := ctx.DereferenceDict(*indRef); err != nil || actionDict == nil {
-			return errors.New("writeAnnotationDictWidget: corrupt A action dict")
-		} else {
-
-			logInfoWriter.Printf("writeAnnotationDictWidget: object #%d gets writeoffset: %d\n", objNumber, ctx.Write.Offset)
-
-			err := writePDFDictObject(ctx, objNumber, genNumber, *actionDict)
-			if err != nil {
-				return err
-			}
-
-			logDebugWriter.Printf("writeAnnotationDictWidget: new offset after actionDict = %d\n", ctx.Write.Offset)
-		}
-	}
-
-	// AA, optional, dict
-	// An additional-actions dictionary defining the annotation’s behaviour in response to various trigger events.
-	if _, ok := dict.Find("AA"); ok {
-		//log.Fatalln("writeAnnotationDictWidget: unsupported entry \"AA\"")
-	}
-
-	// BS, optional, dict
-	// A border style dictionary specifying the width and dash pattern
-	// that shall be used in drawing the annotation’s border.
-	if pdfObject, found := dict.Find("BS"); found {
-		err = writeBorderStyleDict(ctx, pdfObject)
+	if d != nil {
+		// TODO
+		//err = validateAppearanceCharacteristicsDict(xRefTable, d)
 		if err != nil {
 			return
 		}
 	}
 
-	// Parent, dict
-	// An indirect reference to the widget annotation’s parent field.
-	// for terminal fields: parent field must already be written.
-	if indRef := dict.IndirectRefEntry("Parent"); indRef != nil {
-		objNumber := int(indRef.ObjectNumber)
-		if !ctx.Write.HasWriteOffset(objNumber) {
-			return errors.Errorf("writeAnnotationDictWidget: unknown parent field obj#:%d\n", objNumber)
+	// A, optional, dict, since V1.1
+	// An action that shall be performed when the annotation is activated.
+	d, _, err = writeDictEntry(ctx, *dict, dictName, "A", OPTIONAL, types.V11, nil)
+	if err != nil {
+		return err
+	}
+	if d != nil {
+		err = writeActionDict(ctx, *d)
+		if err != nil {
+			return
 		}
+	}
+
+	// AA, optional, dict, since V1.2
+	// An additional-actions dictionary defining the annotation’s behaviour in response to various trigger events.
+	_, err = writeAdditionalActions(ctx, dict, "annotDict", "AA", OPTIONAL, types.V12, "fieldOrAnnot")
+	if err != nil {
+		return
+	}
+
+	// BS, optional, dict, since V1.2
+	// A border style dictionary specifying the width and dash pattern
+	// that shall be used in drawing the annotation‚Äôs border.
+	d, _, err = writeDictEntry(ctx, *dict, dictName, "BC", OPTIONAL, types.V12, nil)
+	if err != nil {
+		return
+	}
+	if d != nil {
+		err = writeBorderStyleDict(ctx, *d)
+		if err != nil {
+			return
+		}
+	}
+
+	// Parent, dict, required if one of multiple children in a field.
+	// An indirect reference to the widget annotation‚Äôs parent field.
+	// for terminal fields: parent field must already be written.
+	_, _, err = writeIndRefEntry(ctx, *dict, dictName, "Parent", OPTIONAL, types.V10)
+	if err != nil {
+		return
 	}
 
 	logInfoWriter.Printf("*** writeAnnotationDictWidget begin: offset=%d ***\n", ctx.Write.Offset)
@@ -370,20 +363,62 @@ func writeAnnotationDictWidget(ctx *types.PDFContext, dict types.PDFDict) (err e
 	return
 }
 
-// TODO implement
 func writeAnnotationDict(ctx *types.PDFContext, dict types.PDFDict) (err error) {
 
 	logInfoWriter.Printf("*** writeAnnotationDict begin: offset=%d ***\n", ctx.Write.Offset)
 
-	// handle annotation types
+	dictName := "annotDict"
+	var subtype *types.PDFName
 
-	if dict.Type() != nil && *dict.Type() != "Annot" {
-		return errors.New("writeAnnotationDict: corrupt Annot dict type")
+	// Type, optional, name
+	_, _, err = writeNameEntry(ctx, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "Annot" })
+	if err != nil {
+		return
 	}
 
-	subtype := dict.Subtype()
-	if subtype == nil {
-		return errors.New("writeAnnotationDict: missing Annot dict subtype")
+	// Subtype, required, name
+	subtype, _, err = writeNameEntry(ctx, dict, dictName, "Subtype", REQUIRED, types.V10, nil)
+	if err != nil {
+		return err
+	}
+
+	// Rect, required, rectangle
+	_, _, err = writeRectangleEntry(ctx, dict, dictName, "Rect", REQUIRED, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	// Contents, optional, text string
+	_, _, err = writeStringEntry(ctx, dict, dictName, "Contents", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	// P, optional, indRef of page dict
+	var indRef *types.PDFIndirectRef
+	indRef, _, err = writeIndRefEntry(ctx, dict, dictName, "P", OPTIONAL, types.V10)
+	if err != nil {
+		return
+	}
+	if indRef != nil {
+		// check if this indRef points to a pageDict.
+		var d *types.PDFDict
+		d, err = ctx.DereferenceDict(*indRef)
+		if err != nil {
+			return
+		}
+		if d == nil {
+			err = errors.Errorf("writeAnnotationDict: entry \"P\" (obj#%d) is nil", indRef.ObjectNumber)
+		}
+		_, _, err = writeNameEntry(ctx, *d, "pageDict", "Type", REQUIRED, types.V10, func(s string) bool { return s == "Page" })
+		if err != nil {
+			return
+		}
+
+		if d == nil || d.Type() == nil || *d.Type() != "Page" {
+			err = errors.Errorf("writeAnnotationDict: entry \"P\" (obj#%d) not a pageDict", indRef.ObjectNumber)
+			return
+		}
 	}
 
 	//  P, optional, corresponding page object
@@ -395,16 +430,68 @@ func writeAnnotationDict(ctx *types.PDFContext, dict types.PDFDict) (err error) 
 		}
 	}
 
-	// appearance stream, optional
-	if pdfObject, ok := dict.Find("AP"); ok {
-		err = writeAppearanceDict(ctx, pdfObject)
+	// NM, optional, text string, since V1.4
+	_, _, err = writeStringEntry(ctx, dict, dictName, "NM", OPTIONAL, types.V14, nil)
+	if err != nil {
+		return
+	}
+
+	// M, optional, date string in any format, since V1.1
+	_, _, err = writeStringEntry(ctx, dict, dictName, "M", OPTIONAL, types.V11, nil)
+	if err != nil {
+		return
+	}
+
+	// F, optional integer, since V1.1, annotation flags
+	_, _, err = writeIntegerEntry(ctx, dict, dictName, "F", OPTIONAL, types.V11, nil)
+	if err != nil {
+		return
+	}
+
+	// AP, optional, appearance dict, since V1.2
+	d, _, err := writeDictEntry(ctx, dict, dictName, "AP", OPTIONAL, types.V12, nil)
+	if err != nil {
+		return
+	}
+	if d != nil {
+		err = writeAppearanceDict(ctx, *d)
 		if err != nil {
 			return
 		}
 	}
 
-	// optional content group or optional content membership dictionary
-	// specifying the optional content properties for the annotation.
+	// AS, optional, name, since V1.2
+	_, _, err = writeNameEntry(ctx, dict, dictName, "AS", OPTIONAL, types.V11, nil)
+	if err != nil {
+		return
+	}
+
+	// Border, optional, array of numbers
+	_, _, err = writeNumberArrayEntry(ctx, dict, dictName, "Border", OPTIONAL, types.V10, func(a types.PDFArray) bool { return len(a) == 3 || len(a) == 4 })
+	if err != nil {
+		return
+	}
+
+	// C, optional array, of numbers, since V1.1
+	_, _, err = writeNumberArrayEntry(ctx, dict, dictName, "C", OPTIONAL, types.V11, nil)
+	if err != nil {
+		return
+	}
+
+	// StructParent, optional, integer, since V1.3
+	_, _, err = writeIntegerEntry(ctx, dict, dictName, "StructParent", OPTIONAL, types.V13, nil)
+	if err != nil {
+		return
+	}
+
+	// TODO
+	// OC, optional, content group or optional content membership dictionary
+	// specifying the optional content properties for the annotation, since V1.3
+	//err = validateOptionalContent(xRefTable, dict, dictName, "OC", OPTIONAL, types.V13)
+	//if err != nil {
+	//	return
+	//}
+
 	if _, ok := dict.Find("OC"); ok {
 		return errors.New("writeAnnotationDict: unsupported entry OC")
 	}
@@ -415,66 +502,84 @@ func writeAnnotationDict(ctx *types.PDFContext, dict types.PDFDict) (err error) 
 		// passthough - entry Popup not part of standard.
 
 	case "Link":
-		err = writeAnnotationDictLink(ctx, dict)
+		err = writeAnnotationDictLink(ctx, &dict)
 
 	case "FreeText":
-		err = writeAnnotationDictFreeText(ctx, dict)
+		err = writeAnnotationDictFreeText(ctx, &dict)
 
 	case "Line":
 		return errors.Errorf("writeAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
+
 	case "Square":
 		return errors.Errorf("writeAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
+
 	case "Circle":
 		return errors.Errorf("writeAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
+
 	case "Polygon":
 		return errors.Errorf("writeAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
+
 	case "PolyLine":
 		return errors.Errorf("writeAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
+
 	case "Highlight":
 		return errors.Errorf("writeAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
+
 	case "Underline":
 		return errors.Errorf("writeAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
+
 	case "Squiggly":
 		return errors.Errorf("writeAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
+
 	case "StrikeOut":
 		return errors.Errorf("writeAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
+
 	case "Stamp":
-		err = writeAnnotationDictStamp(ctx, dict)
+		err = writeAnnotationDictStamp(ctx, &dict)
+
 	case "Caret":
 		return errors.Errorf("writeAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
+
 	case "Ink":
 		return errors.Errorf("writeAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
+
 	case "Popup":
-		err = writeAnnotationDictPopup(ctx, dict)
+		err = writeAnnotationDictPopup(ctx, &dict)
+
 	case "FileAttachment":
 		return errors.Errorf("writeAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
+
 	case "Sound":
 		return errors.Errorf("writeAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
+
 	case "Movie":
 		return errors.Errorf("writeAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
+
 	case "Widget":
-		err = writeAnnotationDictWidget(ctx, dict)
+		err = writeAnnotationDictWidget(ctx, &dict)
+
 	case "Screen":
 		return errors.Errorf("writeAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
+
 	case "PrinterMark":
 		return errors.Errorf("writeAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
+
 	case "TrapNet":
 		return errors.Errorf("writeAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
+
 	case "Watermark":
 		return errors.Errorf("writeAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
+
 	case "3D":
 		return errors.Errorf("writeAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
+
 	case "Redact":
 		return errors.Errorf("writeAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
+
 	default:
 		return errors.Errorf("writeAnnotationDict: unsupported annotation subtype:%s\n", *subtype)
-	}
 
-	// AP
-	// P
-	// V
-	// Dest a13
-	// A -> Action mit URI
+	}
 
 	if err == nil {
 		logInfoWriter.Printf("*** writeAnnotationDict end: offset=%d ***\n", ctx.Write.Offset)
