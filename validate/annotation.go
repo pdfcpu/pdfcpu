@@ -38,6 +38,40 @@ func validateBorderStyleDict(xRefTable *types.XRefTable, obj interface{}) (err e
 	return
 }
 
+func validateAnnotationDictText(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+
+	logInfoValidate.Println("*** validateAnnotationDictText begin ***")
+
+	dictName := "textAnnotDict"
+
+	// Open, optional, boolean
+	_, err = validateBooleanEntry(xRefTable, dict, dictName, "Open", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	// Name, optional, name
+	_, err = validateNameEntry(xRefTable, dict, dictName, "Name", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	// State, optional, text string, since V1.5
+	state, err := validateStringEntry(xRefTable, dict, dictName, "State", OPTIONAL, types.V15, validateAnnotationState)
+	if err != nil {
+		return
+	}
+
+	_, err = validateStringEntry(xRefTable, dict, dictName, "StateModel", state != nil, types.V15, validateAnnotationStateModel)
+	if err != nil {
+		return
+	}
+
+	logInfoValidate.Println("*** validateAnnotationDictText end ***")
+
+	return
+}
+
 func validateAnnotationDictLink(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
 
 	logInfoValidate.Println("*** validateAnnotationDictLink begin ***")
@@ -100,41 +134,27 @@ func validateAnnotationDictPopup(xRefTable *types.XRefTable, dict *types.PDFDict
 
 	logInfoValidate.Println("*** validateAnnotationDictPopup begin ***")
 
-	//return errors.New("*** validateAnnotationDictPopUp not supported ***")
+	// Parent, optional, dict indRef
+	indRef, err := validateIndRefEntry(xRefTable, dict, "popupAnnotDict", "Parent", OPTIONAL, types.V10)
+	if err != nil {
+		return
+	}
 
-	// 26:   offset=  165836 generation=0 types.PDFDict type=Annot subType=Text
-	// <<
-	// 	<C, [1.00 0.91 0.61]>
-	// 	<Contents, (kjhkjhkjhkj)>
-	// 	<F, 4>
-	// 	<M, (D:20160228075028Z00'00')>
-	// 	<Name, Comment>
-	// 	<Open, true>
-	// 	<Popup, (27 0 R)>
-	// 	<Rect, [93.90 190.36 117.90 214.36]>
-	// 	<Subtype, Text>
-	// 	<T, (Horst Rutter)>
-	// 	<Type, Annot>
-	// >>
-	//    27:   offset=  165733 generation=0 types.PDFDict type=Annot subType=Popup
-	// <<
-	// 	<Open, true>
-	// 	<Parent, (26 0 R)>
-	// 	<Rect, [314 323 442 387]>
-	// 	<Subtype, Popup>
-	// 	<Type, Annot>
+	dict, err = xRefTable.DereferenceDict(*indRef)
+	if err != nil || dict == nil {
+		return
+	}
 
-	// xRefTable := source.XRefTable
+	err = validateAnnotationDict(xRefTable, dict)
+	if err != nil {
+		return
+	}
 
-	// Parent, dict
-	// An indirect reference to the widget annotation’s parent field.
-	// for terminal fields: parent field must already be written.
-	// if indRef := dict.IndirectRefEntry("Parent"); indRef != nil {
-	// 	objNumber := int(indRef.ObjectNumber)
-	// 	if !dest.HasWriteOffset(objNumber) {
-	// 		return errors.Errorf("*** validateAnnotationDictPopup: unknown parent field obj#:%d\n", objNumber)
-	// 	}
-	// }
+	// Open, optional, boolean
+	_, err = validateBooleanEntry(xRefTable, dict, "popupAnnotDict", "Open", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
 
 	logInfoValidate.Println("*** validateAnnotationDictPopup end ***")
 
@@ -437,7 +457,7 @@ func validateAnnotationDict(xRefTable *types.XRefTable, dict *types.PDFDict) (er
 	switch *subtype {
 
 	case "Text":
-		// passthough - entry Popup not part of standard.
+		err = validateAnnotationDictText(xRefTable, dict)
 
 	case "Link":
 		err = validateAnnotationDictLink(xRefTable, dict)

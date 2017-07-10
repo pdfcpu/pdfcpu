@@ -728,6 +728,14 @@ func validateAnnotationHighlightingMode(s string) bool {
 	return memberOf(s, []string{"N", "I", "O", "P", "T", "A"})
 }
 
+func validateAnnotationState(s string) bool {
+	return memberOf(s, []string{"None", "Unmarked"})
+}
+
+func validateAnnotationStateModel(s string) bool {
+	return memberOf(s, []string{"Marked", "Review"})
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////
 // Exported stubs for package write.
 // This should go away.
@@ -771,6 +779,8 @@ func OptContentConfigDictIntent(s string) bool  { return validateOptContentConfi
 func DocInfoDictTrapped(s string) bool          { return validateDocInfoDictTrapped(s) }
 func AdditionalAction(s, source string) bool    { return validateAdditionalAction(s, source) }
 func AnnotationHighlightingMode(s string) bool  { return validateAnnotationHighlightingMode(s) }
+func AnnotationState(s string) bool             { return validateAnnotationState(s) }
+func AnnotationStateModel(s string) bool        { return validateAnnotationStateModel(s) }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 

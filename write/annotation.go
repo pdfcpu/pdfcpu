@@ -46,6 +46,41 @@ func writeBorderStyleDict(ctx *types.PDFContext, obj interface{}) (err error) {
 	return
 }
 
+func writeAnnotationDictText(ctx *types.PDFContext, dict *types.PDFDict) (err error) {
+
+	logInfoWriter.Println("*** writeAnnotationDictText begin ***")
+
+	dictName := "textAnnotDict"
+
+	// Open, optional, boolean
+	_, _, err = writeBooleanEntry(ctx, *dict, dictName, "Open", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	// Name, optional, name
+	_, _, err = writeNameEntry(ctx, *dict, dictName, "Name", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	// State, optional, text string, since V1.5
+	state, _, err := writeStringEntry(ctx, *dict, dictName, "State", OPTIONAL, types.V15, validate.AnnotationState)
+	if err != nil {
+		return
+	}
+
+	// StateModel, required if state, text string, since V1.5
+	_, _, err = writeStringEntry(ctx, *dict, dictName, "StateModel", state != nil, types.V15, validate.AnnotationStateModel)
+	if err != nil {
+		return
+	}
+
+	logInfoWriter.Println("*** writeAnnotationDictText end ***")
+
+	return
+}
+
 func writeAnnotationDictLink(ctx *types.PDFContext, dict *types.PDFDict) (err error) {
 
 	logInfoWriter.Printf("*** writeAnnotationDictLink begin: offset=%d ***\n", ctx.Write.Offset)
@@ -108,19 +143,27 @@ func writeAnnotationDictPopup(ctx *types.PDFContext, dict *types.PDFDict) (err e
 
 	logInfoWriter.Printf("*** writeAnnotationDictPopup begin: offset=%d ***\n", ctx.Write.Offset)
 
-	//return errors.New("*** writeAnnotationDictPopUp not supported ***")
+	// Parent, optional, dict indRef
+	indRef, written, err := writeIndRefEntry(ctx, *dict, "popupAnnotDict", "Parent", OPTIONAL, types.V10)
+	if err != nil || written {
+		return
+	}
 
-	// xRefTable := dest.XRefTable
+	dict, err = ctx.DereferenceDict(*indRef)
+	if err != nil || dict == nil {
+		return
+	}
 
-	// Parent, dict
-	// An indirect reference to the widget annotation’s parent field.
-	// for terminal fields: parent field must already be written.
-	// if indRef := dict.IndirectRefEntry("Parent"); indRef != nil {
-	// 	objNumber := int(indRef.ObjectNumber)
-	// 	if !ctx.Write.HasWriteOffset(objNumber) {
-	// 		return errors.Errorf("*** writeAnnotationDictPopup: unknown parent field obj#:%d\n", objNumber)
-	// 	}
-	// }
+	err = writeAnnotationDict(ctx, *dict)
+	if err != nil {
+		return
+	}
+
+	// Open, optional, boolean
+	_, _, err = writeBooleanEntry(ctx, *dict, "popupAnnotDict", "Open", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
 
 	logInfoWriter.Printf("*** writeAnnotationDictPopup end: offset=%d ***\n", ctx.Write.Offset)
 
@@ -499,7 +542,7 @@ func writeAnnotationDict(ctx *types.PDFContext, dict types.PDFDict) (err error) 
 	switch *subtype {
 
 	case "Text":
-		// passthough - entry Popup not part of standard.
+		err = writeAnnotationDictText(ctx, &dict)
 
 	case "Link":
 		err = writeAnnotationDictLink(ctx, &dict)
