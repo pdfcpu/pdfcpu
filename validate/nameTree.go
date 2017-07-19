@@ -385,15 +385,20 @@ func validateNameTree(xRefTable *types.XRefTable, name string, indRef types.PDFI
 
 	if !root {
 
-		obj, found := dict.Find("Limits")
-		if !found {
-			return errors.New("validateNameTree: missing \"Limits\" entry")
-		}
-
-		err = validateNameTreeDictLimitsEntry(xRefTable, obj)
+		_, err = validateStringArrayEntry(xRefTable, dict, "nameTreeDict", "Limits", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
 		if err != nil {
 			return
 		}
+
+		// obj, found := dict.Find("Limits")
+		// if !found {
+		// 	return errors.New("validateNameTree: missing \"Limits\" entry")
+		// }
+
+		// err = validateNameTreeDictLimitsEntry(xRefTable, obj)
+		// if err != nil {
+		// 	return
+		// }
 
 	}
 

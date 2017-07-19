@@ -5,7 +5,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TODO actually write something!
 func validateDestinationArray(xRefTable *types.XRefTable, arr *types.PDFArray) (err error) {
 
 	logInfoValidate.Println("*** validateDestinationArray: begin ***")
@@ -74,11 +73,9 @@ func validateDestination(xRefTable *types.XRefTable, obj interface{}) (err error
 
 	case types.PDFName:
 		// no further processing.
-		//ok = true
 
 	case types.PDFStringLiteral:
 		// no further processing.
-		//ok = true
 
 	case types.PDFDict:
 		err = validateDestinationDict(xRefTable, &obj)

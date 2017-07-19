@@ -36,10 +36,10 @@ func init() {
 // Verbose controls logging output.
 func Verbose(verbose bool) {
 	if verbose {
-		logDebugValidate = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
+		//logDebugValidate = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
 		logInfoValidate = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 	} else {
-		logDebugValidate = log.New(ioutil.Discard, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
+		//logDebugValidate = log.New(ioutil.Discard, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
 		logInfoValidate = log.New(ioutil.Discard, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 	}
 }
@@ -577,7 +577,6 @@ func validateTabs(s string) bool {
 	return false
 }
 
-// TODO version based validation
 func validateTransitionStyle(s string) bool {
 
 	// see 12.4.4
@@ -588,9 +587,20 @@ func validateTransitionStyle(s string) bool {
 		}
 	}
 
-	// TODO
-	// if version >= 1.5 the following values are also valid:
-	// Fly, Push, Cover, Uncover, Fade
+	return false
+}
+
+func validateTransitionStyleV15(s string) bool {
+
+	if validateTransitionStyle(s) {
+		return true
+	}
+
+	for _, v := range []string{"Fly", "Push", "Cover", "Uncover", "Fade"} {
+		if s == v {
+			return true
+		}
+	}
 
 	return false
 }
@@ -736,53 +746,24 @@ func validateAnnotationStateModel(s string) bool {
 	return memberOf(s, []string{"Marked", "Review"})
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////
-// Exported stubs for package write.
-// This should go away.
-
-func StandardType1Font(s string) bool           { return validateStandardType1Font(s) }
-func FileSpecString(s string) bool              { return validateFileSpecString(s) }
-func URLString(s string) bool                   { return validateURLString(s) }
-func FileSpecStringOrURLString(s string) bool   { return validateFileSpecStringOrURLString(s) }
-func FontEncodingName(s string) bool            { return validateFontEncodingName(s) }
-func StyleDict(dict types.PDFDict) bool         { return validateStyleDict(dict) }
-func ExtGStateDictFont(arr types.PDFArray) bool { return validateExtGStateDictFont(arr) }
-func BlendMode(s string) bool                   { return validateBlendMode(s) }
-func SpotFunctionName(s string) bool            { return validateSpotFunctionName(s) }
-func ICCBasedColorSpaceEntryN(i int) bool       { return validateICCBasedColorSpaceEntryN(i) }
-func ColorKeyMaskArray(arr types.PDFArray) bool { return validateColorKeyMaskArray(arr) }
-func RenderingIntent(s string) bool             { return validateRenderingIntent(s) }
-func OPIVersion(s string) bool                  { return validateOPIVersion(s) }
-func DeviceColorSpaceName(s string) bool        { return validateDeviceColorSpaceName(s) }
-func SpecialColorSpaceName(s string) bool       { return validateSpecialColorSpaceName(s) }
-func BitsPerCoordinate(i int) bool              { return validateBitsPerCoordinate(i) }
-func BitsPerComponent(i int) bool               { return validateBitsPerComponent(i) }
-func ProcedureSetName(s string) bool            { return validateProcedureSetName(s) }
-func Rotate(i int) bool                         { return validateRotate(i) }
-func NameTreeName(s string) bool                { return validateNameTreeName(s) }
-func NamedAction(s string) bool                 { return validateNamedAction(s) }
-func PageLabelDictEntryS(s string) bool         { return validatePageLabelDictEntryS(s) }
-func Date(s string) bool                        { return validateDate(s) }
-func ViewerPreferencesNonFullScreenPageMode(s string) bool {
-	return validateViewerPreferencesNonFullScreenPageMode(s)
+func validateBorderStyle(s string) bool {
+	return memberOf(s, []string{"S", "D", "B", "I", "U", "A"})
 }
-func ViewerPreferencesDirection(s string) bool  { return validateViewerPreferencesDirection(s) }
-func Tabs(s string) bool                        { return validateTabs(s) }
-func TransitionStyle(s string) bool             { return validateTransitionStyle(s) }
-func TransitionDimension(s string) bool         { return validateTransitionDimension(s) }
-func TransitionDirectionOfMotion(s string) bool { return validateTransitionDirectionOfMotion(s) }
-func BitsPerSample(i int) bool                  { return validateBitsPerSample(i) }
-func GuideLineStyle(s string) bool              { return validateGuideLineStyle(s) }
-func BaseState(s string) bool                   { return validateBaseState(s) }
-func ListMode(s string) bool                    { return validateListMode(s) }
-func OptContentConfigDictIntent(s string) bool  { return validateOptContentConfigDictIntent(s) }
-func DocInfoDictTrapped(s string) bool          { return validateDocInfoDictTrapped(s) }
-func AdditionalAction(s, source string) bool    { return validateAdditionalAction(s, source) }
-func AnnotationHighlightingMode(s string) bool  { return validateAnnotationHighlightingMode(s) }
-func AnnotationState(s string) bool             { return validateAnnotationState(s) }
-func AnnotationStateModel(s string) bool        { return validateAnnotationStateModel(s) }
 
-///////////////////////////////////////////////////////////////////////////////////////////
+func validateIconFitDict(s string) bool {
+	return memberOf(s, []string{"A", "B", "S", "N"})
+}
+
+func validateIntentOfFreeTextAnnotation(s string) bool {
+	return memberOf(s, []string{"FreeText", "FreeTextCallout", "FreeTextTypeWriter", "FreeTextTypewriter"})
+}
+
+func validateVisibilityPolicy(s string) bool {
+	return memberOf(s, []string{"AllOn", "AnyOn", "AnyOff", "AllOff"})
+}
+
+func Date(s string) bool       { return validateDate(s) }
+func BitsPerSample(i int) bool { return validateBitsPerSample(i) }
 
 func validateAnyEntry(xRefTable *types.XRefTable, dict *types.PDFDict, entryName string, required bool) (err error) {
 
@@ -1625,11 +1606,11 @@ func validateNameArray(xRefTable *types.XRefTable, obj interface{}) (arrp *types
 }
 
 func validateNameArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string,
-	required bool, sinceVersion types.PDFVersion, validate func(string) bool) (arrp *types.PDFArray, err error) {
+	required bool, sinceVersion types.PDFVersion, validate func(a types.PDFArray) bool) (arrp *types.PDFArray, err error) {
 
 	logInfoValidate.Printf("validateNameArrayEntry begin: entry=%s\n", entryName)
 
-	arrp, err = validateArrayEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
+	arrp, err = validateArrayEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, validate)
 	if err != nil || arrp == nil {
 		return
 	}
@@ -1645,14 +1626,9 @@ func validateNameArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dic
 			continue
 		}
 
-		name, ok := obj.(types.PDFName)
+		_, ok := obj.(types.PDFName)
 		if !ok {
 			err = errors.Errorf("validateNameArrayEntry: dict=%s entry=%s invalid type at index %d\n", dictName, entryName, i)
-			return
-		}
-
-		if validate != nil && !validate(name.String()) {
-			err = errors.Errorf("validateNameArrayEntry: dict=%s entry=%s invalid entry at index %d\n", dictName, entryName, i)
 			return
 		}
 
@@ -1722,6 +1698,7 @@ func validateNumberEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictNa
 	}
 
 	// Validation
+	// TODO Would be nice if we could always validate against a float here.
 	if validate != nil && !validate(obj) {
 		err = errors.Errorf("validateFloatEntry: dict=%s entry=%s invalid dict entry", dictName, entryName)
 		return
@@ -2017,6 +1994,56 @@ func validateStringArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, d
 	}
 
 	logInfoValidate.Printf("validateStringArrayEntry end: entry=%s\n", entryName)
+
+	return
+}
+
+func validateStringOrStreamEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string,
+	required bool, sinceVersion types.PDFVersion) (err error) {
+
+	logInfoValidate.Printf("validateStringOrStreamEntry begin: entry=%s\n", entryName)
+
+	obj, found := dict.Find(entryName)
+	if !found || obj == nil {
+		if required {
+			err = errors.Errorf("validateStringOrStreamEntry: dict=%s required entry=%s missing", dictName, entryName)
+			return
+		}
+		logInfoValidate.Printf("validateStringOrStreamEntry end: entry %s is nil\n", entryName)
+		return
+	}
+
+	obj, err = xRefTable.Dereference(obj)
+	if err != nil {
+		return
+	}
+
+	if obj == nil {
+		if required {
+			err = errors.Errorf("validateStringOrStreamEntry: dict=%s required entry=%s is nil", dictName, entryName)
+			return
+		}
+		logInfoValidate.Printf("validateStringOrStreamEntry end: optional entry %s is nil\n", entryName)
+		return
+	}
+
+	switch obj.(type) {
+
+	case types.PDFStringLiteral, types.PDFHexLiteral, types.PDFStreamDict:
+		// no further processing
+
+	default:
+		err = errors.Errorf("validateStringOrStreamEntry: dict=%s entry=%s invalid type", dictName, entryName)
+		return
+	}
+
+	// Version check
+	if xRefTable.Version() < sinceVersion {
+		err = errors.Errorf("validateStringOrStreamEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
+		return
+	}
+
+	logInfoValidate.Printf("validateStringOrStreamEntry end: entry=%s\n", entryName)
 
 	return
 }

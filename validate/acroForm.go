@@ -94,6 +94,7 @@ func validateAppearanceDictEntry(xRefTable *types.XRefTable, obj interface{}) (e
 }
 
 func validateAppearanceDict(xRefTable *types.XRefTable, obj interface{}) (err error) {
+
 	// see 12.5.5 Appearance Streams
 
 	logInfoValidate.Println("*** validateAppearanceDict begin ***")
@@ -245,7 +246,12 @@ func validateAcroFieldDict(xRefTable *types.XRefTable, indRef *types.PDFIndirect
 
 	logInfoValidate.Printf("*** validateAcroFieldDict begin: obj#:%d ***\n", objNr)
 
-	dict, err := xRefTable.DereferenceDict(*indRef)
+	var (
+		dict         *types.PDFDict
+		xInFieldType *types.PDFName
+	)
+
+	dict, err = xRefTable.DereferenceDict(*indRef)
 	if err != nil {
 		return
 	}
@@ -263,19 +269,16 @@ func validateAcroFieldDict(xRefTable *types.XRefTable, indRef *types.PDFIndirect
 		}
 
 		// Write field entries.
-		xinFieldType, err := validateAcroFieldDictEntries(xRefTable, dict, false, inFieldType)
+		xInFieldType, err = validateAcroFieldDictEntries(xRefTable, dict, false, inFieldType)
 		if err != nil {
 			return err
 		}
 
 		// Recurse over kids.
-		arr, err := xRefTable.DereferenceArray(pdfObject)
-		if err != nil {
+		var arr *types.PDFArray
+		arr, err = xRefTable.DereferenceArray(pdfObject)
+		if err != nil || arr == nil {
 			return err
-		}
-
-		if arr == nil {
-			return nil
 		}
 
 		for _, value := range *arr {
@@ -285,32 +288,35 @@ func validateAcroFieldDict(xRefTable *types.XRefTable, indRef *types.PDFIndirect
 				return errors.New("validateAcroFieldDict: corrupt kids array: entries must be indirect reference")
 			}
 
-			err = validateAcroFieldDict(xRefTable, &indRef, xinFieldType)
+			err = validateAcroFieldDict(xRefTable, &indRef, xInFieldType)
 			if err != nil {
 				return err
 			}
 
 		}
 
-	} else {
+		logInfoValidate.Printf("*** validateAcroFieldDict end: obj#:%d ***", indRef.ObjectNumber)
 
-		// dict represents a terminal field.
+		return
 
-		if dict.Subtype() == nil || *dict.Subtype() != "Widget" {
-			return errors.New("validateAcroFieldDict: terminal field must be widget annotation")
-		}
+	}
 
-		// Write field entries.
-		_, err = validateAcroFieldDictEntries(xRefTable, dict, true, inFieldType)
-		if err != nil {
-			return
-		}
+	// dict represents a terminal field.
 
-		// Validate widget annotation - Validation of AA redundant because of merged acrofield with widget annotation.
-		err = validateAnnotationDict(xRefTable, dict)
-		if err != nil {
-			return
-		}
+	if dict.Subtype() == nil || *dict.Subtype() != "Widget" {
+		return errors.New("validateAcroFieldDict: terminal field must be widget annotation")
+	}
+
+	// Write field entries.
+	_, err = validateAcroFieldDictEntries(xRefTable, dict, true, inFieldType)
+	if err != nil {
+		return
+	}
+
+	// Validate widget annotation - Validation of AA redundant because of merged acrofield with widget annotation.
+	err = validateAnnotationDict(xRefTable, dict)
+	if err != nil {
+		return
 	}
 
 	logInfoValidate.Printf("*** validateAcroFieldDict end: obj#:%d ***", indRef.ObjectNumber)
@@ -322,7 +328,9 @@ func validateAcroFormFields(xRefTable *types.XRefTable, obj interface{}) (err er
 
 	logInfoValidate.Println("*** validateAcroFormFields begin ***")
 
-	arr, err := xRefTable.DereferenceArray(obj)
+	var arr *types.PDFArray
+
+	arr, err = xRefTable.DereferenceArray(obj)
 	if err != nil {
 		return
 	}
@@ -352,9 +360,9 @@ func validateAcroFormFields(xRefTable *types.XRefTable, obj interface{}) (err er
 }
 
 func validateAcroFormEntryCO(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
-	// since V1.3
-	// Array of indRefs to field dicts with calculation actions.
-	// => 12.6.3 Trigger Events
+
+	// see 12.6.3 Trigger Events
+	// Array of indRefs to field dicts with calculation actions, since V1.3
 
 	logInfoValidate.Println("*** validateAcroFormEntryCO begin ***")
 

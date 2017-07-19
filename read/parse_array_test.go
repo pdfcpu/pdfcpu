@@ -14,7 +14,7 @@ func doTestParseArrayOK(parseString string, t *testing.T) {
 	//str := parseString
 	_, err := parseObject(&parseString)
 	if err != nil {
-		t.Errorf("parseArray failed: <%v>\n", err)
+		t.Errorf("parseArray failed: <%v> <%s>\n", err, parseString)
 		return
 	}
 
@@ -213,6 +213,7 @@ func TestParseArray(t *testing.T) {
 
 	// Name objects
 	doTestParseArrayFail("[/]", t)
+	doTestParseArrayOK("[/ ]", t)
 	doTestParseArrayOK("[/N]", t)
 	doTestParseArrayOK("[/Name]", t)
 	doTestParseArrayOK("[/First /Last]", t)

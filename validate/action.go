@@ -513,7 +513,9 @@ func validateActionDict(xRefTable *types.XRefTable, obj interface{}) (err error)
 
 	dictName := "actionDict"
 
-	dict, err := xRefTable.DereferenceDict(obj)
+	var dict *types.PDFDict
+
+	dict, err = xRefTable.DereferenceDict(obj)
 	if err != nil || dict == nil {
 		return
 	}
@@ -525,10 +527,13 @@ func validateActionDict(xRefTable *types.XRefTable, obj interface{}) (err error)
 	}
 
 	// S, required, name, action Type
-	s, err := validateNameEntry(xRefTable, dict, dictName, "S", REQUIRED, types.V10, nil)
+	var s *types.PDFName
+
+	s, err = validateNameEntry(xRefTable, dict, dictName, "S", REQUIRED, types.V10, nil)
 	if err != nil {
 		return
 	}
+
 	if s == nil {
 		logInfoValidate.Println("validateActionDict end: \"S\" is nil")
 		return
@@ -599,8 +604,35 @@ func validateActionDict(xRefTable *types.XRefTable, obj interface{}) (err error)
 		return
 	}
 
-	if _, ok := dict.Find("Next"); ok {
-		return errors.New("validateActionDict: unsupported entry \"Next\"")
+	if obj, ok := dict.Find("Next"); ok {
+
+		// either optional action dict
+		dict, err = xRefTable.DereferenceDict(obj)
+		if err == nil {
+
+			err = validateActionDict(xRefTable, *dict)
+			if err != nil {
+				return
+			}
+			logInfoValidate.Println("*** validateActionDict end ***")
+			return
+		}
+
+		// or optional array of action dicts
+		var arr *types.PDFArray
+
+		arr, err = xRefTable.DereferenceArray(obj)
+		if err != nil {
+			return
+		}
+
+		for _, v := range *arr {
+			err = validateActionDict(xRefTable, v)
+			if err != nil {
+				return
+			}
+		}
+
 	}
 
 	logInfoValidate.Println("*** validateActionDict end ***")
@@ -638,19 +670,23 @@ func validateOpenAction(xRefTable *types.XRefTable, rootDict *types.PDFDict, req
 	}
 
 	if _, err = xRefTable.DereferenceDict(obj); err == nil {
+
 		err = validateActionDict(xRefTable, obj)
 		if err != nil {
 			return
 		}
+
 		logInfoValidate.Println("*** validateOpenAction end ***")
 		return
 	}
 
 	if _, err = xRefTable.DereferenceArray(obj); err == nil {
+
 		err = validateDestination(xRefTable, obj)
 		if err != nil {
 			return
 		}
+
 		logInfoValidate.Println("*** validateOpenAction end ***")
 		return
 	}

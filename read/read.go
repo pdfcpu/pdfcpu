@@ -1190,7 +1190,7 @@ func getObject(ctx *types.ReadContext, offset int64, objectNumber int, generatio
 
 	streamLength, streamLengthRef := pdfDict.Length()
 	if streamLength == nil && streamLengthRef == nil {
-		// return PDFDict
+		logDebugReader.Printf("getObject: end, #%d\n", objectNumber)
 		return pdfDict, nil
 	}
 

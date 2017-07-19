@@ -25,7 +25,7 @@ func validateLineDashPatternEntry(xRefTable *types.XRefTable, dict *types.PDFDic
 	// dash array (user space units)
 	array, ok := a[0].(types.PDFArray)
 	if !ok {
-		return errors.Errorf("validateLineDashPatternEntry: dict=%s entry \"%s\" corrupt dash array.", dictName, entryName)
+		return errors.Errorf("validateLineDashPatternEntry: dict=%s entry \"%s\" corrupt dash array: %v", dictName, entryName, a)
 	}
 
 	_, err = validateIntegerArray(xRefTable, array)

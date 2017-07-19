@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/hhrutter/pdflib/types"
 	"github.com/pkg/errors"
@@ -312,11 +313,13 @@ func parseName(line *string) (*types.PDFName, error) {
 
 	// cut off on whitespace or delimiter
 	eok, _ := positionToNextWhitespaceOrChar(l, "/<>()[]")
-	//logDebugParse.Printf("parseNameObject: wants to cut off at %d\n", eok)
-	if eok > 0 {
+
+	if eok > 0 || unicode.IsSpace(rune(l[0])) {
+		logDebugParse.Printf("parseNameObject: wants to cut off at %d\n", eok)
 		*line = l[eok:]
 		l = l[:eok]
 	} else {
+		logDebugParse.Println("parseNameObject: nothing to cut off")
 		*line = ""
 	}
 

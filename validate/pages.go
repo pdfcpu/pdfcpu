@@ -426,7 +426,11 @@ func validatePageEntryTrans(xRefTable *types.XRefTable, pageDict *types.PDFDict,
 
 	dictName := "transitionDict"
 
-	transStyle, err := validateNameEntry(xRefTable, dict, dictName, "S", OPTIONAL, types.V10, validateTransitionStyle)
+	validate := validateTransitionStyle
+	if xRefTable.Version() >= types.V15 {
+		validate = validateTransitionStyleV15
+	}
+	transStyle, err := validateNameEntry(xRefTable, dict, dictName, "S", OPTIONAL, types.V10, validate)
 	if err != nil {
 		return
 	}

@@ -1,6 +1,8 @@
 package read
 
-import "testing"
+import (
+	"testing"
+)
 
 func doTestParseDictOK(parseString string, t *testing.T) {
 	//str := parseString
@@ -10,14 +12,14 @@ func doTestParseDictOK(parseString string, t *testing.T) {
 		return
 	}
 
-	// var nextParseString string
-	// if &parseString == nil {
-	// 	nextParseString = "end of parseString.\n"
-	// } else {
-	// 	nextParseString = fmt.Sprintf("next parseString: %s\n\n", parseString)
-	// }
+	//var nextParseString string
+	//if &parseString == nil {
+	//	nextParseString = "end of parseString.\n"
+	//} else {
+	//	nextParseString = fmt.Sprintf("next parseString: %s\n\n", parseString)
+	//}
 
-	// t.Logf("parseString: %s parsed Dict: %v\n%s", str, pdfDict, nextParseString)
+	//t.Logf("parseString: %s parsed Dict: %v\n%s", str, pdfDict, nextParseString)
 }
 
 func doTestParseDictFail(parseString string, t *testing.T) {
@@ -30,7 +32,7 @@ func doTestParseDictFail(parseString string, t *testing.T) {
 	}
 }
 
-func TestParseDict(t *testing.T) {
+func doTestParseDictGeneral(t *testing.T) {
 
 	doTestParseDictOK("<</Type /Pages /Count 24 /Kids [6 0 R 16 0 R 21 0 R 27 0 R 30 0 R 32 0 R 34 0 R 36 0 R 38 0 R 40 0 R 42 0 R 44 0 R 46 0 R 48 0 R 50 0 R 52 0 R 54 0 R 56 0 R 58 0 R 60 0 R 62 0 R 64 0 R 69 0 R 71 0 R] /MediaBox [0 0 595.2756 841.8898]>>", t)
 
@@ -45,51 +47,38 @@ func TestParseDict(t *testing.T) {
 	doTestParseDictFail("<</Key1/Value1/Key1/Value2>>", t)
 	doTestParseDictOK("<</Key1/Value1/key1/Value2>>", t)
 
+	// Real stuff
+	doTestParseDictOK("<</Type/Page/Parent 2 0 R/Resources<</Font<</F1 5 0 R/F2 7 0 R/F3 9 0 R>>/XObject<</Image11 11 0 R>>/ProcSet[/PDF/Text/ImageB/ImageC/ImageI]>>/MediaBox[ 0 0 595.32 841.92]/Contents 4 0 R/Group<</Type/Group/S/Transparency/CS/DeviceRGB>>/Tabs/S/StructParents 0>>", t)
+	doTestParseDictOK("<</Type /Pages /Count 24 /Kids [6 0 R 16 0 R 21 0 R 27 0 R 30 0 R 32 0 R 34 0 R 36 0 R 38 0 R 40 0 R 42 0 R 44 0 R 46 0 R 48 0 R 50 0 R 52 0 R 54 0 R 56 0 R 58 0 R 60 0 R 62 0 R 64 0 R 69 0 R 71 0 R] /MediaBox [0 0 595.2756 841.8898]>>", t)
+	doTestParseDictOK("<< /Key1 <abc> /Key2 <d> >>", t)
+	doTestParseDictFail("<<", t)
+	doTestParseDictFail("<<>", t)
+	doTestParseDictOK("<<>>", t)
+	doTestParseDictOK("<<     >>", t)
+
+	// TODO right now we accept a duplicate key!
+	doTestParseDictFail("<</Key1/Value1/Key1/Value2>>", t)
+
+	doTestParseDictOK("<</Key1/Value1/key1/Value2>>", t)
+}
+
+func doTestParseDictNameObjects(t *testing.T) {
 	// Name Objects
+	doTestParseDictOK("<</K1 / /K2 /Name2>>", t)
 	doTestParseDictOK("<</Key/Value>>", t)
 	doTestParseDictOK("<< /Key	/Value>>", t)
 	doTestParseDictOK("<<	/Key/Value	>>", t)
 	doTestParseDictOK("<<	/Key	/Value	>>", t)
 	doTestParseDictOK("<</Key1/Value1/Key2/Value2>>", t)
+}
 
+func doTestParseDictStringLiteral(t *testing.T) {
 	// String literals
 	doTestParseDictOK("<</Key1(abc)/Key2(def)>>..", t)
 	doTestParseDictOK("<</Key1(abc(inner1<<>>inner2)def)    >>..", t)
+}
 
-	// Dictionaries
-	doTestParseDictOK("<</Key<</Sub1 1/Sub2 2>>>>", t)
-	doTestParseDictOK("<</Key<</Sub1(xyz)>>>>", t)
-	doTestParseDictOK("<</Key<</Sub1[]>>>>", t)
-	doTestParseDictOK("<</Key<</Sub1[1]>>>>", t)
-	doTestParseDictOK("<</Key<</Sub1[(Go)]>>>>", t)
-	doTestParseDictOK("<</Key<</Sub1[(Go)]/Sub2[(rocks!)]>>>>", t)
-	doTestParseDictOK("<</A[/B1 /B2<</C 1>>]>>", t)
-	doTestParseDictOK("<</A[/B1 /B2<</C 1>> /B3]>>", t)
-	doTestParseDictOK("<</Name1[/CalRGB<</Matrix[0.41239 0.21264]/Gamma[2.22 2.22 2.22]/WhitePoint[0.95043 1 1.09]>>]>>", t)
-	doTestParseDictOK("<</A[/DictName<</A 123 /B<c0ff>>>]>>", t)
-
-	// Arrays
-	doTestParseDictOK("<</A[/B]>>", t)
-	doTestParseDictOK("<</Key1[<abc><def>12.24 (gopher)]>>", t)
-	doTestParseDictOK("<</Key1[<abc><def>12.24 (gopher)] /Key2[(abc)2.34[<c012>2 0 R]]>>", t)
-	doTestParseDictOK("<</Key1[1 2 3 [4]]>>", t)
-	doTestParseDictOK("<</K[<</Obj 71 0 R/Type/OBJR>>269 0 R]/P 258 0 R/S/Link/Pg 19 0 R>>", t)
-
-	// null, true, false
-	doTestParseDictOK("<</Key1 true>>", t)
-	doTestParseDictOK("<</Key1 			false>>", t)
-	doTestParseDictOK("<</Key1 null /Key2 true /Key3 false>>", t)
-	doTestParseDictFail("<</Key1 TRUE>>", t)
-
-	// Numerics
-	doTestParseDictOK("<</Key1 16>>", t)
-	doTestParseDictOK("<</Key1 .034>>", t)
-	doTestParseDictFail("<</Key1 ,034>>", t)
-
-	// Indirect object references
-	doTestParseDictOK("<</Key1 32 0 R>>", t)
-	doTestParseDictOK("<</Key1 32 0 R/Key2 32 /Key3 3.34>>", t)
-
+func doTestParseDictHexLiteral(t *testing.T) {
 	// Hex literals
 	doTestParseDictFail("<</Key<>>", t)
 	doTestParseDictFail("<</Key<a4>>", t)
@@ -105,32 +94,9 @@ func TestParseDict(t *testing.T) {
 	doTestParseDictOK("<</Key1<ABC>>>", t)
 	doTestParseDictOK("<</Key1<0ab>>>", t)
 	doTestParseDictOK("<</Key<>>>", t)
+}
 
-	// Real stuff
-	doTestParseDictOK("<</Type/Page/Parent 2 0 R/Resources<</Font<</F1 5 0 R/F2 7 0 R/F3 9 0 R>>/XObject<</Image11 11 0 R>>/ProcSet[/PDF/Text/ImageB/ImageC/ImageI]>>/MediaBox[ 0 0 595.32 841.92]/Contents 4 0 R/Group<</Type/Group/S/Transparency/CS/DeviceRGB>>/Tabs/S/StructParents 0>>", t)
-	doTestParseDictOK("<</Type /Pages /Count 24 /Kids [6 0 R 16 0 R 21 0 R 27 0 R 30 0 R 32 0 R 34 0 R 36 0 R 38 0 R 40 0 R 42 0 R 44 0 R 46 0 R 48 0 R 50 0 R 52 0 R 54 0 R 56 0 R 58 0 R 60 0 R 62 0 R 64 0 R 69 0 R 71 0 R] /MediaBox [0 0 595.2756 841.8898]>>", t)
-	doTestParseDictOK("<< /Key1 <abc> /Key2 <d> >>", t)
-	doTestParseDictFail("<<", t)
-	doTestParseDictFail("<<>", t)
-	doTestParseDictOK("<<>>", t)
-	doTestParseDictOK("<<     >>", t)
-
-	// TODO right now we accept a duplicate key!
-	doTestParseDictFail("<</Key1/Value1/Key1/Value2>>", t)
-
-	doTestParseDictOK("<</Key1/Value1/key1/Value2>>", t)
-
-	// Name Objects
-	doTestParseDictOK("<</Key/Value>>", t)
-	doTestParseDictOK("<< /Key	/Value>>", t)
-	doTestParseDictOK("<<	/Key/Value	>>", t)
-	doTestParseDictOK("<<	/Key	/Value	>>", t)
-	doTestParseDictOK("<</Key1/Value1/Key2/Value2>>", t)
-
-	// String literals
-	doTestParseDictOK("<</Key1(abc)/Key2(def)>>..", t)
-	doTestParseDictOK("<</Key1(abc(inner1<<>>inner2)def)    >>..", t)
-
+func doTestParseDictDict(t *testing.T) {
 	// Dictionaries
 	doTestParseDictOK("<</Key<</Sub1 1/Sub2 2>>>>", t)
 	doTestParseDictOK("<</Key<</Sub1(xyz)>>>>", t)
@@ -142,45 +108,47 @@ func TestParseDict(t *testing.T) {
 	doTestParseDictOK("<</A[/B1 /B2<</C 1>> /B3]>>", t)
 	doTestParseDictOK("<</Name1[/CalRGB<</Matrix[0.41239 0.21264]/Gamma[2.22 2.22 2.22]/WhitePoint[0.95043 1 1.09]>>]>>", t)
 	doTestParseDictOK("<</A[/DictName<</A 123 /B<c0ff>>>]>>", t)
+}
 
+func doTestParseDictArray(t *testing.T) {
 	// Arrays
 	doTestParseDictOK("<</A[/B]>>", t)
 	doTestParseDictOK("<</Key1[<abc><def>12.24 (gopher)]>>", t)
 	doTestParseDictOK("<</Key1[<abc><def>12.24 (gopher)] /Key2[(abc)2.34[<c012>2 0 R]]>>", t)
 	doTestParseDictOK("<</Key1[1 2 3 [4]]>>", t)
 	doTestParseDictOK("<</K[<</Obj 71 0 R/Type/OBJR>>269 0 R]/P 258 0 R/S/Link/Pg 19 0 R>>", t)
+}
 
+func doTestParseDictBool(t *testing.T) {
 	// null, true, false
 	doTestParseDictOK("<</Key1 true>>", t)
 	doTestParseDictOK("<</Key1 			false>>", t)
 	doTestParseDictOK("<</Key1 null /Key2 true /Key3 false>>", t)
 	doTestParseDictFail("<</Key1 TRUE>>", t)
+}
 
+func doTestParseDictNumerics(t *testing.T) {
 	// Numerics
 	doTestParseDictOK("<</Key1 16>>", t)
 	doTestParseDictOK("<</Key1 .034>>", t)
 	doTestParseDictFail("<</Key1 ,034>>", t)
+}
 
+func doTestParseDictIndirectRefs(t *testing.T) {
 	// Indirect object references
 	doTestParseDictOK("<</Key1 32 0 R>>", t)
 	doTestParseDictOK("<</Key1 32 0 R/Key2 32 /Key3 3.34>>", t)
+}
 
-	// Hex literals
-	doTestParseDictFail("%comment\x0a<</Key<>>", t)
-	doTestParseDictFail("<</Key<a4>>", t)
-	doTestParseDictFail("<</Key<    >", t)
-	doTestParseDictFail("<</Key<ade>", t)
-	doTestParseDictFail("<</Key<ABG>>>", t)
-	doTestParseDictFail("<</Key <FEFF ABC2>>>", t)
-	doTestParseDictFail("<</Key<   ABG>>>", t)
-	doTestParseDictFail("<</Key<0ab><bcf098>", t)
-	doTestParseDictOK("<</Key1<abc>/Key2<def>>>", t)
-	doTestParseDictOK("<< /Key1 <abc> /Key2 <def> >>", t)
-	doTestParseDictOK("<</Key1<AB>>>", t)
-	doTestParseDictOK("<</Key1<ABC>>>", t)
-	doTestParseDictOK("<</Key1<0ab>>>", t)
-	doTestParseDictOK("%comment\x0a<</Key<>>>", t)
+func TestParseDict(t *testing.T) {
 
-	// Real stuff
-	doTestParseDictOK("<</Type/Page/Parent 2 0 R/Resources<</Font<</F1 5 0 R/F2 7 0 R/F3 9 0 R>>/XObject<</Image11 11 0 R>>/ProcSet[/PDF/Text/ImageB/ImageC/ImageI]>>/MediaBox[ 0 0 595.32 841.92]/Contents 4 0 R/Group<</Type/Group/S/Transparency/CS/DeviceRGB>>/Tabs/S/StructParents 0\x0a%comment\x0a>>", t)
+	doTestParseDictGeneral(t)
+	doTestParseDictNameObjects(t)
+	doTestParseDictStringLiteral(t)
+	doTestParseDictHexLiteral(t)
+	doTestParseDictDict(t)
+	doTestParseDictArray(t)
+	doTestParseDictBool(t)
+	doTestParseDictNumerics(t)
+	doTestParseDictIndirectRefs(t)
 }

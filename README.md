@@ -71,7 +71,7 @@ I also wanted to have my own swiss army knife for PDFs written entirely in [Go](
 
 Version: 0.0.1-alpha
 
-Work in progess.
+Work in progress.
 
 The extraction code for font files and images is experimental and serves as proof of concept only.
 

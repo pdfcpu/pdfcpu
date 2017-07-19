@@ -420,7 +420,7 @@ func writeString(ctx *types.PDFContext, obj interface{}, validate func(string) b
 
 func writeTextString(ctx *types.PDFContext, obj interface{}, validate func(string) bool) (s *string, written bool, err error) {
 
-	logInfoWriter.Printf("writeTextString begin: offset=%d\n", ctx.Write.Offset)
+	logDebugWriter.Printf("writeTextString begin: offset=%d\n", ctx.Write.Offset)
 
 	obj, written, err = writeObject(ctx, obj)
 	if err != nil {
@@ -460,7 +460,7 @@ func writeTextString(ctx *types.PDFContext, obj interface{}, validate func(strin
 
 	s = &str
 
-	logInfoWriter.Printf("writeTextString end: offset=%d\n", ctx.Write.Offset)
+	logDebugWriter.Printf("writeTextString end: offset=%d\n", ctx.Write.Offset)
 
 	return
 }
@@ -1885,6 +1885,175 @@ func writeRectangleEntry(ctx *types.PDFContext, dict types.PDFDict, dictName str
 	}
 
 	logInfoWriter.Printf("writeRectangleEntry end: entry=%s offset=%d\n", entryName, ctx.Write.Offset)
+
+	return
+}
+
+func writeDeepObject(ctx *types.PDFContext, objIn interface{}) (objOut interface{}, written bool, err error) {
+
+	logDebugWriter.Printf("writeDeepObject: begin offset=%d\n", ctx.Write.Offset)
+
+	indRef, ok := objIn.(types.PDFIndirectRef)
+	if !ok {
+
+		switch obj := objIn.(type) {
+
+		case types.PDFDict:
+			for _, v := range obj.Dict {
+				_, _, err = writeDeepObject(ctx, v)
+				if err != nil {
+					return
+				}
+			}
+			logDebugWriter.Printf("writeDeepObject: end offset=%d\n", ctx.Write.Offset)
+
+		case types.PDFArray:
+			for _, v := range obj {
+				_, _, err = writeDeepObject(ctx, v)
+				if err != nil {
+					return
+				}
+			}
+			logDebugWriter.Printf("writeDeepObject: end offset=%d\n", ctx.Write.Offset)
+
+		default:
+			logDebugWriter.Printf("writeDeepObject: end, direct obj - nothing written: offset=%d\n%v\n", ctx.Write.Offset, objIn)
+
+		}
+
+		objOut = objIn
+		return
+	}
+
+	objNumber := int(indRef.ObjectNumber)
+	genNumber := int(indRef.GenerationNumber)
+
+	if ctx.Write.HasWriteOffset(objNumber) {
+		logDebugWriter.Printf("writeDeepObject end: object #%d already written.\n", objNumber)
+		return
+	}
+
+	obj, err := ctx.Dereference(indRef)
+	if err != nil {
+		err = errors.Wrapf(err, "writeDeepObject: unable to dereference indirect object #%d", objNumber)
+		return
+	}
+
+	logDebugWriter.Printf("writeDeepObject: object #%d gets writeoffset: %d\n", objNumber, ctx.Write.Offset)
+
+	if obj == nil {
+
+		// An indirect reference to nil is a corner case.
+		// Still, it is an object that will be written.
+		err = writePDFNullObject(ctx, objNumber, genNumber)
+		if err != nil {
+			return
+		}
+
+		// Ensure no entry in free list.
+		err = ctx.UndeleteObject(objNumber)
+		if err != nil {
+			return
+		}
+
+		written = true
+
+		logDebugWriter.Printf("writeDeepObject: end, obj#%d resolved to nil, offset=%d\n", objNumber, ctx.Write.Offset)
+
+		return
+	}
+
+	switch obj := obj.(type) {
+
+	case types.PDFDict:
+		err = writePDFDictObject(ctx, objNumber, genNumber, obj)
+		if err != nil {
+			return
+		}
+		for _, v := range obj.Dict {
+			_, _, err = writeDeepObject(ctx, v)
+			if err != nil {
+				return
+			}
+		}
+
+	case types.PDFStreamDict:
+		err = writePDFStreamDictObject(ctx, objNumber, genNumber, obj)
+		if err != nil {
+			return
+		}
+		for _, v := range obj.Dict {
+			_, _, err = writeDeepObject(ctx, v)
+			if err != nil {
+				return
+			}
+		}
+
+	case types.PDFArray:
+		err = writePDFArrayObject(ctx, objNumber, genNumber, obj)
+		if err != nil {
+			return
+		}
+		for _, v := range obj {
+			_, _, err = writeDeepObject(ctx, v)
+			if err != nil {
+				return
+			}
+		}
+
+	case types.PDFInteger:
+		err = writePDFIntegerObject(ctx, objNumber, genNumber, obj)
+
+	case types.PDFFloat:
+		err = writePDFFloatObject(ctx, objNumber, genNumber, obj)
+
+	case types.PDFStringLiteral:
+		err = writePDFStringLiteralObject(ctx, objNumber, genNumber, obj)
+
+	case types.PDFHexLiteral:
+		err = writePDFHexLiteralObject(ctx, objNumber, genNumber, obj)
+
+	case types.PDFBoolean:
+		err = writePDFBooleanObject(ctx, objNumber, genNumber, obj)
+
+	case types.PDFName:
+		err = writePDFNameObject(ctx, objNumber, genNumber, obj)
+
+	default:
+		err = errors.Errorf("writeDeepObject: undefined PDF object #%d\n", objNumber)
+
+	}
+
+	if err == nil {
+		objOut = obj
+		written = true
+		logDebugWriter.Printf("writeDeepObject: end offset=%d\n", ctx.Write.Offset)
+	}
+
+	return
+}
+
+func writeEntry(ctx *types.PDFContext, dict *types.PDFDict, dictName, entryName string) (written bool, err error) {
+
+	obj, found := dict.Find(entryName)
+	if !found || obj == nil {
+		logDebugWriter.Printf("writeEntry end: entry %s is nil\n", entryName)
+		return
+	}
+
+	logInfoWriter.Printf("writeEntry begin: dict=%s entry=%s offset=%d\n", dictName, entryName, ctx.Write.Offset)
+
+	obj, written, err = writeDeepObject(ctx, obj)
+	if err != nil {
+		return
+	}
+
+	if obj == nil {
+		logInfoWriter.Printf("writeEntry end: dict=%s entry=%s resolved to nil, offset=%d\n", dictName, entryName, ctx.Write.Offset)
+		return
+	}
+
+	logInfoWriter.Printf("writeEntry end: dict=%s entry=%s offset=%d\n", dictName, entryName, ctx.Write.Offset)
 
 	return
 }

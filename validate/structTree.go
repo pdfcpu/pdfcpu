@@ -438,7 +438,11 @@ func validateStructElementDict(xRefTable *types.XRefTable, dict *types.PDFDict) 
 	}
 
 	// Lang: optional, text string, since 1.4
-	_, err = validateStringEntry(xRefTable, dict, dictName, "Lang", OPTIONAL, types.V14, nil)
+	sinceVersion := types.V14
+	if xRefTable.ValidationMode == types.ValidationRelaxed {
+		sinceVersion = types.V13
+	}
+	_, err = validateStringEntry(xRefTable, dict, dictName, "Lang", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return
 	}
