@@ -21,15 +21,6 @@ const (
 	FreeHeadGeneration = 65535
 )
 
-const (
-
-	// REQUIRED is used for required dict entries.
-	REQUIRED = true
-
-	// OPTIONAL is used for optional dict entries.
-	OPTIONAL = false
-)
-
 var logDebugTypes, logInfoTypes, logErrorTypes *log.Logger
 
 func init() {
@@ -116,7 +107,11 @@ func (nameObject PDFName) String() string {
 
 // PDFString returns a string representation as found in and written to a PDF file.
 func (nameObject PDFName) PDFString() string {
-	return fmt.Sprintf("/%s", string(nameObject))
+	s := " "
+	if len(nameObject) > 0 {
+		s = string(nameObject)
+	}
+	return fmt.Sprintf("/%s", s)
 }
 
 // Value returns a string value for this PDF object.

@@ -19,8 +19,6 @@ func logWriteStats(ctx *types.PDFContext) {
 		logXRef.Printf("%d missing objects: %s\n", missing, *str)
 	}
 
-	//var xrefStreams []string
-	//var linearizationObjs []string
 	var nonRefObjs []int
 
 	for i := 0; i < *xRefTable.Size; i++ {
@@ -29,37 +27,6 @@ func logWriteStats(ctx *types.PDFContext) {
 		if !found || entry.Free || ctx.Write.HasWriteOffset(i) {
 			continue
 		}
-
-		// Object not written to dest.
-
-		// if _, ok := entry.Object.(*types.PDFXRefStreamDict); ok {
-		// 	xrefStreams = append(xrefStreams, fmt.Sprintf("%d", i))
-		// 	continue
-		// }
-
-		// if xRefTable.Linearized {
-
-		// 	if dict, ok := entry.Object.(types.PDFDict); ok && dict.IsLinearizationParmDict() {
-		// 		linearizationObjs = append(linearizationObjs, fmt.Sprintf("%d", i))
-		// 		continue
-		// 	}
-
-		// 	if _, ok := entry.Object.(types.PDFStreamDict); ok {
-
-		// 		if *entry.Offset == *xRefTable.OffsetPrimaryHintTable {
-		// 			linearizationObjs = append(linearizationObjs, fmt.Sprintf("%d", i))
-		// 			continue
-		// 		}
-
-		// 		if xRefTable.OffsetOverflowHintTable != nil &&
-		// 			*entry.Offset == *xRefTable.OffsetOverflowHintTable {
-		// 			linearizationObjs = append(linearizationObjs, fmt.Sprintf("%d", i))
-		// 			continue
-		// 		}
-
-		// 	}
-
-		// }
 
 		nonRefObjs = append(nonRefObjs, i)
 

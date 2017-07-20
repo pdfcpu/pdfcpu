@@ -5,104 +5,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-func processPageAnnotations(ctx *types.PDFContext, objNumber, genNumber int, pageDict types.PDFDict) (written bool, err error) {
-
-	logPages.Printf("*** processPageAnnotations begin: obj#%d offset=%d ***\n", objNumber, ctx.Write.Offset)
-
-	written, err = writeEntry(ctx, &pageDict, "pageDict", "Annots")
-	if err != nil {
-		return
-	}
-
-	logInfoWriter.Printf("*** processPageAnnotations end: obj#%d offset=%d ***\n", objNumber, ctx.Write.Offset)
-
-	return
-}
-
-func writePagesAnnotations(ctx *types.PDFContext, indRef types.PDFIndirectRef) (written bool, err error) {
-
-	logInfoWriter.Printf("*** writePagesAnnotations begin: obj#%d offset=%d ***\n", indRef.ObjectNumber, ctx.Write.Offset)
-
-	objNumber := int(indRef.ObjectNumber)
-	genNumber := int(indRef.GenerationNumber)
-
-	obj, err := ctx.Dereference(indRef)
-	if err != nil {
-		logInfoWriter.Printf("writePagesAnnotations end: obj#%d s nil\n", objNumber)
-		return
-	}
-
-	pagesDict, ok := obj.(types.PDFDict)
-	if !ok {
-		return false, errors.New("writePagesAnnotations: corrupt pages dict")
-	}
-
-	// Get number of pages of this PDF file.
-	count, ok := pagesDict.Find("Count")
-	if !ok {
-		return false, errors.New("writePagesAnnotations: missing \"Count\"")
-	}
-
-	pageCount := int(count.(types.PDFInteger))
-	logInfoWriter.Printf("writePagesAnnotations: This page node has %d pages\n", pageCount)
-
-	// Iterate over page tree.
-	kidsArray := pagesDict.PDFArrayEntry("Kids")
-
-	for _, v := range *kidsArray {
-
-		// Dereference next page node dict.
-		indRef, ok := v.(types.PDFIndirectRef)
-		if !ok {
-			return false, errors.New("writePagesAnnotations: corrupt page node dict")
-		}
-
-		logInfoWriter.Printf("writePagesAnnotations: PageNode: %s\n", indRef)
-
-		objNumber = int(indRef.ObjectNumber)
-		genNumber = int(indRef.GenerationNumber)
-
-		pageNodeDict, err := ctx.DereferenceDict(indRef)
-		if err != nil {
-			return false, errors.New("writePagesAnnotations: corrupt pageNodeDict")
-		}
-
-		if pageNodeDict == nil {
-			return false, errors.New("writePagesAnnotations: pageNodeDict is null")
-		}
-
-		dictType := pageNodeDict.Type()
-		if *dictType == "Pages" {
-			// Recurse over pagetree
-			smthWritten, err := writePagesAnnotations(ctx, indRef)
-			if err != nil {
-				return false, err
-			}
-			if !written {
-				written = smthWritten
-			}
-			continue
-		}
-
-		if *dictType != "Page" {
-			return false, errors.Errorf("writePagesAnnotations: expected dict type: %s\n", *dictType)
-		}
-
-		// Write page dict.
-		smthWritten, err := processPageAnnotations(ctx, objNumber, genNumber, *pageNodeDict)
-		if err != nil {
-			return false, err
-		}
-		if !written {
-			written = smthWritten
-		}
-	}
-
-	logInfoWriter.Printf("*** writePagesAnnotations end: obj#%d offset=%d ***\n", indRef.ObjectNumber, ctx.Write.Offset)
-
-	return
-}
-
 func writePageEntry(ctx *types.PDFContext, dict *types.PDFDict, dictName, entryName string, statsAttr int) (err error) {
 
 	written, err := writeEntry(ctx, dict, dictName, entryName)
@@ -118,8 +20,6 @@ func writePageEntry(ctx *types.PDFContext, dict *types.PDFDict, dictName, entryN
 }
 
 func writePageDict(ctx *types.PDFContext, objNumber, genNumber int, pageDict *types.PDFDict) (err error) {
-
-	logPages.Printf("*** writePageDict begin: obj#%d offset=%d ***\n", objNumber, ctx.Write.Offset)
 
 	logInfoWriter.Printf("writePageDict: object #%d gets writeoffset: %d\n", objNumber, ctx.Write.Offset)
 
@@ -201,9 +101,10 @@ func writePageDict(ctx *types.PDFContext, objNumber, genNumber int, pageDict *ty
 		return
 	}
 
-	// Annotations
-	// delay until processing of AcroForms.
-	// see ...
+	err = writePageEntry(ctx, pageDict, dictName, "Annots", types.PageAnnots)
+	if err != nil {
+		return
+	}
 
 	err = writePageEntry(ctx, pageDict, dictName, "Thumb", types.PageThumb)
 	if err != nil {

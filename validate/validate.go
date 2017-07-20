@@ -762,8 +762,7 @@ func validateVisibilityPolicy(s string) bool {
 	return memberOf(s, []string{"AllOn", "AnyOn", "AnyOff", "AllOff"})
 }
 
-func Date(s string) bool       { return validateDate(s) }
-func BitsPerSample(i int) bool { return validateBitsPerSample(i) }
+func Date(s string) bool { return validateDate(s) }
 
 func validateAnyEntry(xRefTable *types.XRefTable, dict *types.PDFDict, entryName string, required bool) (err error) {
 

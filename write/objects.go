@@ -8,6 +8,18 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+
+	// REQUIRED is used for required dict entries.
+	REQUIRED = true
+
+	// OPTIONAL is used for optional dict entries.
+	OPTIONAL = false
+
+	// ObjectStreamMaxObjects limits the number of objects within an object stream written.
+	ObjectStreamMaxObjects = 100
+)
+
 func writeCommentLine(w *types.WriteContext, comment string) (int, error) {
 	return w.WriteString(fmt.Sprintf("%%%s%s", comment, eol))
 }
@@ -194,14 +206,6 @@ func writePDFStreamDictObject(ctx *types.PDFContext, objNumber, genNumber int, s
 
 	xRefTable := ctx.XRefTable
 
-	// Stream dicts are not to be written to object streams.
-	// Save pointer to object number of current object stream.
-	//var saveObjStrPtr *int
-	//if ctx.Write.CurrentObjStream != nil {
-	//	saveObjStrPtr = ctx.Write.CurrentObjStream
-	//	ctx.Write.CurrentObjStream = nil
-	//}
-
 	var inObjStream bool
 	if ctx.Write.WriteToObjectStream == true {
 		inObjStream = true
@@ -257,11 +261,6 @@ func writePDFStreamDictObject(ctx *types.PDFContext, objNumber, genNumber int, s
 
 	ctx.Write.Offset += written
 	ctx.Write.BinaryTotalSize += *streamDict.StreamLength
-
-	// Restore pointer to object number of current object stream.
-	//if saveObjStrPtr != nil {
-	//	ctx.Write.CurrentObjStream = saveObjStrPtr
-	//}
 
 	if inObjStream {
 		ctx.Write.WriteToObjectStream = true
@@ -582,8 +581,6 @@ func writeFloat(ctx *types.PDFContext, obj interface{}, validate func(float64) b
 
 func writeNumber(ctx *types.PDFContext, obj interface{}) (n interface{}, written bool, err error) {
 
-	// TODO written irrelevant?
-
 	logInfoWriter.Printf("writeNumber begin: offset=%d\n", ctx.Write.Offset)
 
 	n, written, err = writeObject(ctx, obj)
@@ -619,8 +616,6 @@ func writeNumber(ctx *types.PDFContext, obj interface{}) (n interface{}, written
 }
 
 func writeName(ctx *types.PDFContext, obj interface{}, validate func(string) bool) (namep *types.PDFName, written bool, err error) {
-
-	// TODO written irrelevant?
 
 	logInfoWriter.Printf("writeName begin: offset=%d\n", ctx.Write.Offset)
 

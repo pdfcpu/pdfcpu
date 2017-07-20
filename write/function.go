@@ -2,7 +2,6 @@ package write
 
 import (
 	"github.com/hhrutter/pdflib/types"
-	"github.com/hhrutter/pdflib/validate"
 	"github.com/pkg/errors"
 )
 
@@ -108,7 +107,7 @@ func writeSampledFunctionStreamDict(ctx *types.PDFContext, dict types.PDFStreamD
 		return
 	}
 
-	_, _, err = writeIntegerEntry(ctx, dict.PDFDict, "functionDict", "BitsPerSample", REQUIRED, types.V12, validate.BitsPerSample)
+	_, _, err = writeIntegerEntry(ctx, dict.PDFDict, "functionDict", "BitsPerSample", REQUIRED, types.V12, nil)
 	if err != nil {
 		return
 	}

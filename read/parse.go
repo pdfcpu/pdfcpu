@@ -444,7 +444,7 @@ func parseNumericOrIndRef(line *string) (interface{}, error) {
 		}
 
 		// We have a Float!
-		logDebugParse.Printf("NewParseObject: value is numeric float: %f\n", f)
+		logDebugParse.Printf("parseNumericOrIndRef: value is numeric float: %f\n", f)
 		*line = l1
 		return types.PDFFloat(f), nil
 	}
@@ -453,7 +453,7 @@ func parseNumericOrIndRef(line *string) (interface{}, error) {
 
 	// if not followed by whitespace return sole integer value.
 	if i1 == 0 || delimiter(l[i1]) {
-		logDebugParse.Printf("NewParseObject: value is numeric int: %d\n", i)
+		logDebugParse.Printf("parseNumericOrIndRef: value is numeric int: %d\n", i)
 		*line = l1
 		return types.PDFInteger(i), nil
 	}
@@ -476,7 +476,7 @@ func parseNumericOrIndRef(line *string) (interface{}, error) {
 	// if only 2 token, can't be indirect reference.
 	// if not followed by whitespace return sole integer value.
 	if i2 == 0 || delimiter(l[i2]) {
-		logDebugParse.Printf("NewParseObject: 2 objects => value is numeric int: %d\n", i)
+		logDebugParse.Printf("parseNumericOrIndRef: 2 objects => value is numeric int: %d\n", i)
 		*line = l1
 		return types.PDFInteger(i), nil
 	}
@@ -491,7 +491,7 @@ func parseNumericOrIndRef(line *string) (interface{}, error) {
 	if err != nil {
 		// 2nd int(generation number) not available.
 		// Can't be an indirect reference.
-		logDebugParse.Printf("NewParseObject: 3 objects, 2nd no int, value is no indirect ref but numeric int: %d\n", i)
+		logDebugParse.Printf("parseNumericOrIndRef: 3 objects, 2nd no int, value is no indirect ref but numeric int: %d\n", i)
 		*line = l1
 		return types.PDFInteger(i), nil
 	}
@@ -516,7 +516,7 @@ func parseNumericOrIndRef(line *string) (interface{}, error) {
 
 	// 'R' not available.
 	// Can't be an indirect reference.
-	logDebugParse.Printf("NewParseObject: value is no indirect ref(no 'R') but numeric int: %d\n", i)
+	logDebugParse.Printf("parseNumericOrIndRef: value is no indirect ref(no 'R') but numeric int: %d\n", i)
 	*line = l1
 	return types.PDFInteger(i), nil
 }

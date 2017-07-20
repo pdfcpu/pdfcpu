@@ -16,18 +16,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-
-	// REQUIRED is used for required dict entries.
-	REQUIRED = true
-
-	// OPTIONAL is used for optional dict entries.
-	OPTIONAL = false
-
-	// ObjectStreamMaxObjects limits the number of objects within an object stream written.
-	ObjectStreamMaxObjects = 100
-)
-
 var (
 	logDebugWriter *log.Logger
 	logInfoWriter  *log.Logger
@@ -52,18 +40,23 @@ func init() {
 
 // Verbose controls logging output.
 func Verbose(verbose bool) {
+
 	out := ioutil.Discard
 	if verbose {
 		out = os.Stdout
 	}
+
 	logInfoWriter = log.New(out, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 	logPages = log.New(out, "PAGES: ", log.Ldate|log.Ltime|log.Lshortfile)
 	logXRef = log.New(out, "XREF: ", log.Ldate|log.Ltime|log.Lshortfile)
 }
 
+// Write root entry to disk.
 func writeRootEntry(ctx *types.PDFContext, dict *types.PDFDict, dictName, entryName string, statsAttr int) (err error) {
 
-	written, err := writeEntry(ctx, dict, dictName, entryName)
+	var written bool
+
+	written, err = writeEntry(ctx, dict, dictName, entryName)
 	if err != nil {
 		return
 	}
@@ -75,48 +68,14 @@ func writeRootEntry(ctx *types.PDFContext, dict *types.PDFDict, dictName, entryN
 	return
 }
 
-func writePages(ctx *types.PDFContext, rootDict *types.PDFDict) (pagesIndRef *types.PDFIndirectRef, err error) {
+// Write root entry to object stream.
+func writeRootEntryToObjStream(ctx *types.PDFContext, dict *types.PDFDict, dictName, entryName string, statsAttr int) (err error) {
 
-	//logInfoWriter.Printf("*** writePages begin: offset=%d ***\n", ctx.Write.Offset)
-
-	pagesIndRef = rootDict.IndirectRefEntry("Pages")
-	if pagesIndRef == nil {
-		err = errors.New("writePages: missing indirect obj for pages dict")
-		return
-	}
-
-	if ctx.Write.ExtractPages != nil && len(ctx.Write.ExtractPages) > 0 {
-		p := 0
-		_, err = trimPagesDict(ctx, *pagesIndRef, &p)
-		if err != nil {
-			return
-		}
-	}
-
-	err = writePagesDict(ctx, *pagesIndRef, 0)
-	if err != nil {
-		return
-	}
-
-	//logInfoWriter.Printf("*** writePages end: offset=%d ***\n", ctx.Write.Offset)
-
-	return
-}
-
-func writeStructTree(ctx *types.PDFContext, dict *types.PDFDict, dictName string) (err error) {
-
-	//logInfoWriter.Printf("*** writeStructTree begin: offset=%d ***\n", ctx.Write.Offset)
-
-	// Embedd all struct tree objects into objects stream.
 	ctx.Write.WriteToObjectStream = true
 
-	written, err := writeEntry(ctx, dict, dictName, "StructTreeRoot")
+	err = writeRootEntry(ctx, dict, dictName, entryName, statsAttr)
 	if err != nil {
 		return
-	}
-
-	if written {
-		ctx.Stats.AddRootAttr(types.RootStructTreeRoot)
 	}
 
 	err = stopObjectStream(ctx)
@@ -124,7 +83,57 @@ func writeStructTree(ctx *types.PDFContext, dict *types.PDFDict, dictName string
 		return
 	}
 
-	//logInfoWriter.Printf("*** writeStructTree end: offset=%d ***\n", ctx.Write.Offset)
+	return
+}
+
+// Write page tree.
+func writePages(ctx *types.PDFContext, rootDict *types.PDFDict) (err error) {
+
+	// Page tree root (the top "Pages" dict) must be indirect reference.
+	indRef := rootDict.IndirectRefEntry("Pages")
+	if indRef == nil {
+		err = errors.New("writePages: missing indirect obj for pages dict")
+		return
+	}
+
+	// Manipulate page tree as needed for splitting, trimming or page extraction.
+	if ctx.Write.ExtractPages != nil && len(ctx.Write.ExtractPages) > 0 {
+		p := 0
+		_, err = trimPagesDict(ctx, *indRef, &p)
+		if err != nil {
+			return
+		}
+	}
+
+	// Embedd all page tree objects into objects stream.
+	ctx.Write.WriteToObjectStream = true
+
+	// Write page tree.
+	err = writePagesDict(ctx, *indRef, 0)
+	if err != nil {
+		return
+	}
+
+	// if !ctx.Write.ReducedFeatureSet() {
+
+	// 	var written bool
+
+	// 	// Write remainder of annotations after AcroForm processing only.
+	// 	written, err = writePagesAnnotations(ctx, *indRef)
+	// 	if err != nil {
+	// 		return
+	// 	}
+
+	// 	if written {
+	// 		ctx.Stats.AddPageAttr(types.PageAnnots)
+	// 	}
+
+	// }
+
+	err = stopObjectStream(ctx)
+	if err != nil {
+		return
+	}
 
 	return
 }
@@ -173,8 +182,14 @@ func writeRootObject(ctx *types.PDFContext) (err error) {
 
 	logPages.Printf("*** writeRootObject: begin offset=%d *** %s\n", ctx.Write.Offset, catalog)
 
-	dict, err := xRefTable.DereferenceDict(catalog)
-	if err != nil || dict == nil {
+	var dict *types.PDFDict
+
+	dict, err = xRefTable.DereferenceDict(catalog)
+	if err != nil {
+		return
+	}
+
+	if dict == nil {
 		err = errors.Errorf("writeRootObject: unable to dereference root dict")
 		return
 	}
@@ -206,15 +221,7 @@ func writeRootObject(ctx *types.PDFContext) (err error) {
 		return
 	}
 
-	// Embedd all page tree objects into objects stream.
-	ctx.Write.WriteToObjectStream = true
-
-	pagesIndRef, err := writePages(ctx, dict)
-	if err != nil {
-		return
-	}
-
-	err = stopObjectStream(ctx)
+	err = writePages(ctx, dict)
 	if err != nil {
 		return
 	}
@@ -284,28 +291,12 @@ func writeRootObject(ctx *types.PDFContext) (err error) {
 		return err
 	}
 
-	if !ctx.Write.ReducedFeatureSet() {
-
-		// Write remainder of annotations after AcroForm processing only.
-		written, err := writePagesAnnotations(ctx, *pagesIndRef)
-		if err != nil {
-			return err
-		}
-
-		if written {
-			ctx.Stats.AddPageAttr(types.PageAnnots)
-		}
-
-	} else {
-		logDebugWriter.Printf("writeRootObject: exclude PageAnnotations: len=%d extractPage=%d\n", len(ctx.Write.ExtractPages), ctx.Write.ExtractPageNr)
-	}
-
 	err = writeRootEntry(ctx, dict, dictName, "Metadata", types.RootMetadata)
 	if err != nil {
 		return err
 	}
 
-	err = writeStructTree(ctx, dict, dictName)
+	err = writeRootEntryToObjStream(ctx, dict, dictName, "StructTreeRoot", types.RootStructTreeRoot)
 	if err != nil {
 		return
 	}
@@ -366,34 +357,6 @@ func writeRootObject(ctx *types.PDFContext) (err error) {
 	}
 
 	logInfoWriter.Printf("*** writeRootObject: end offset=%d ***\n", ctx.Write.Offset)
-
-	return
-}
-
-// TODO implement
-func writeAdditionalStreams(ctx *types.PDFContext) (err error) {
-
-	logInfoWriter.Printf("writeAdditionalStreams begin: offset=%d\n", ctx.Write.Offset)
-
-	if len(ctx.AdditionalStreams) == 0 {
-		logInfoWriter.Printf("writeAdditionalStreams end: no additional streams\n")
-		return nil
-	}
-
-	for _, indRef := range ctx.AdditionalStreams {
-
-		obj, written, err := writeIndRef(ctx, indRef)
-		if err != nil {
-			return err
-		}
-
-		if written || obj == nil {
-			continue
-		}
-
-	}
-
-	logInfoWriter.Printf("writeAdditionalStreams end: offset=%d\n", ctx.Write.Offset)
 
 	return
 }
@@ -489,24 +452,25 @@ func writeXRefSubsection(ctx *types.PDFContext, start int, size int) (err error)
 func deleteRedundantObjects(ctx *types.PDFContext) (err error) {
 
 	xRefTable := ctx.XRefTable
+
 	logInfoWriter.Printf("deleteRedundantObjects begin: Size=%d\n", *xRefTable.Size)
 
 	for i := 0; i < *xRefTable.Size; i++ {
 
+		// Missing object remains missing.
 		entry, found := xRefTable.Find(i)
 		if !found {
-			// missing object remains missing.
 			continue
 		}
 
+		// Free object
 		if entry.Free {
 			continue
 		}
 
-		// object written to dest
-
+		// Object written
 		if ctx.Write.HasWriteOffset(i) {
-			// Resources may be cross referenced from different directions.
+			// Resources may be cross referenced from different objects
 			// eg. font descriptors may be shared by different font dicts.
 			// Try to remove this object from the list of the potential duplicate objects.
 			logDebugWriter.Printf("deleteRedundantObjects: remove duplicate obj #%d\n", i)
@@ -516,7 +480,7 @@ func deleteRedundantObjects(ctx *types.PDFContext) (err error) {
 			continue
 		}
 
-		// object not written to dest
+		// Object not written
 
 		if ctx.Read.Linearized {
 
@@ -536,6 +500,7 @@ func deleteRedundantObjects(ctx *types.PDFContext) (err error) {
 				}
 
 			}
+
 		}
 
 		if ctx.Write.ExtractPageNr == 0 &&
@@ -726,16 +691,7 @@ func stopObjectStream(ctx *types.PDFContext) (err error) {
 	return
 }
 
-func int64ByteCount(i int64) (byteCount int) {
-
-	for i > 0 {
-		i >>= 8
-		byteCount++
-	}
-
-	return
-}
-
+// int64ToBuf returns a byte slice with length byteCount representing integer i.
 func int64ToBuf(i int64, byteCount int) (buf []byte) {
 
 	j := 0
@@ -745,9 +701,9 @@ func int64ToBuf(i int64, byteCount int) (buf []byte) {
 		b = append(b, byte(k&0xff))
 		k >>= 8
 		j++
-
 	}
 
+	// Swap byte order
 	for i, j := 0, len(b)-1; i < j; i, j = i+1, j-1 {
 		b[i], b[j] = b[j], b[i]
 	}
@@ -859,7 +815,8 @@ func writeXRefStream(ctx *types.PDFContext) (err error) {
 	xRefTableEntry.Object = *xRefStreamDict
 
 	// Reuse free objects (including recycled objects from this run).
-	objNumber, err := xRefTable.InsertAndUseRecycled(*xRefTableEntry)
+	var objNumber int
+	objNumber, err = xRefTable.InsertAndUseRecycled(*xRefTableEntry)
 	if err != nil {
 		return
 	}
@@ -880,8 +837,17 @@ func writeXRefStream(ctx *types.PDFContext) (err error) {
 	}
 
 	i1 := 1 // 0, 1 or 2 always fit into 1 byte.
-	i2 := int64ByteCount(i2Base)
+
+	i2 := func(i int64) (byteCount int) {
+		for i > 0 {
+			i >>= 8
+			byteCount++
+		}
+		return
+	}(i2Base)
+
 	i3 := 2 // scale for max objectstream index <= 0x ff ff
+
 	wArr := types.PDFArray{types.PDFInteger(i1), types.PDFInteger(i2), types.PDFInteger(i3)}
 	xRefStreamDict.Insert("W", wArr)
 
@@ -1007,9 +973,11 @@ func PDFFile(ctx *types.PDFContext) (err error) {
 	logInfoWriter.Printf("offset after writeInfoObject: %d\n", ctx.Write.Offset)
 
 	// Write offspec additional streams as declared in pdf trailer.
-	err = writeAdditionalStreams(ctx)
-	if err != nil {
-		return
+	if ctx.AdditionalStreams != nil {
+		_, _, err = writeDeepObject(ctx, ctx.AdditionalStreams)
+		if err != nil {
+			return
+		}
 	}
 
 	// Mark redundant objects as free.
@@ -1048,5 +1016,5 @@ func PDFFile(ctx *types.PDFContext) (err error) {
 
 	logWriteStats(ctx)
 
-	return nil
+	return
 }
