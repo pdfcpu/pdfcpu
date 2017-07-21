@@ -16,6 +16,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// PdflibVersion is the current version.
+const PdflibVersion = "0.0.1-alpha"
+
 var (
 	logDebugWriter *log.Logger
 	logInfoWriter  *log.Logger
@@ -54,14 +57,14 @@ func Verbose(verbose bool) {
 // Write root entry to disk.
 func writeRootEntry(ctx *types.PDFContext, dict *types.PDFDict, dictName, entryName string, statsAttr int) (err error) {
 
-	var written bool
+	var obj interface{}
 
-	written, err = writeEntry(ctx, dict, dictName, entryName)
+	obj, err = writeEntry(ctx, dict, dictName, entryName)
 	if err != nil {
 		return
 	}
 
-	if written {
+	if obj != nil {
 		ctx.Stats.AddRootAttr(statsAttr)
 	}
 
@@ -105,7 +108,7 @@ func writePages(ctx *types.PDFContext, rootDict *types.PDFDict) (err error) {
 		}
 	}
 
-	// Embedd all page tree objects into objects stream.
+	// Embed all page tree objects into objects stream.
 	ctx.Write.WriteToObjectStream = true
 
 	// Write page tree.
@@ -113,22 +116,6 @@ func writePages(ctx *types.PDFContext, rootDict *types.PDFDict) (err error) {
 	if err != nil {
 		return
 	}
-
-	// if !ctx.Write.ReducedFeatureSet() {
-
-	// 	var written bool
-
-	// 	// Write remainder of annotations after AcroForm processing only.
-	// 	written, err = writePagesAnnotations(ctx, *indRef)
-	// 	if err != nil {
-	// 		return
-	// 	}
-
-	// 	if written {
-	// 		ctx.Stats.AddPageAttr(types.PageAnnots)
-	// 	}
-
-	// }
 
 	err = stopObjectStream(ctx)
 	if err != nil {
@@ -520,9 +507,9 @@ func deleteRedundantObjects(ctx *types.PDFContext) (err error) {
 	return
 }
 
+// After inserting the last object write the cross reference table to disk.
 func writeXRefTable(ctx *types.PDFContext) (err error) {
 
-	// After the last insert of an object.
 	err = ctx.EnsureValidFreeList()
 	if err != nil {
 		return
@@ -605,88 +592,6 @@ func writeXRefTable(ctx *types.PDFContext) (err error) {
 	if err != nil {
 		return
 	}
-
-	return
-}
-
-func startObjectStream(ctx *types.PDFContext) (err error) {
-
-	// See 7.5.7 Object streams
-	// When new object streams and compressed objects are created, they shall always be assigned new object numbers,
-	// not old ones taken from the free list.
-
-	logDebugWriter.Println("startObjectStream begin")
-
-	xRefTable := ctx.XRefTable
-	objStreamDict := types.NewPDFObjectStreamDict()
-	xRefTableEntry := types.NewXRefTableEntryGen0()
-	xRefTableEntry.Object = *objStreamDict
-
-	objNumber, ok := xRefTable.InsertNew(*xRefTableEntry)
-	if !ok {
-		return errors.Errorf("startObjectStream: Problem inserting entry for %d", objNumber)
-	}
-
-	ctx.Write.CurrentObjStream = &objNumber
-
-	logDebugWriter.Println("startObjectStream end")
-
-	return
-}
-
-func stopObjectStream(ctx *types.PDFContext) (err error) {
-
-	logDebugWriter.Println("stopObjectStream begin")
-
-	xRefTable := ctx.XRefTable
-
-	if !ctx.Write.WriteToObjectStream {
-		err = errors.Errorf("stopObjectStream: Not writing to object stream.")
-		return
-	}
-
-	if ctx.Write.CurrentObjStream == nil {
-		ctx.Write.WriteToObjectStream = false
-		logDebugWriter.Println("stopObjectStream end (no content)")
-		return
-	}
-
-	entry, _ := xRefTable.FindTableEntry(*ctx.Write.CurrentObjStream, 0)
-	objStreamDict, _ := (entry.Object).(types.PDFObjectStreamDict)
-	//logDebugWriter.Printf("stopObjectStream objStreamDict:\n%v", objStreamDict)
-
-	// When we are ready to write: append prolog and content
-	objStreamDict.Finalize()
-	//logDebugWriter.Printf("stopObjectStream Content:\n%s", hex.Dump(objStreamDict.Content))
-
-	// Encode objStreamDict.Content -> objStreamDict.Raw
-	// and wipe (decoded) content to free up memory.
-	err = filter.EncodeStream(&objStreamDict.PDFStreamDict)
-	if err != nil {
-		return
-	}
-
-	// Release memory.
-	objStreamDict.Content = nil
-
-	objStreamDict.PDFStreamDict.Insert("First", types.PDFInteger(objStreamDict.FirstObjOffset))
-	objStreamDict.PDFStreamDict.Insert("N", types.PDFInteger(objStreamDict.ObjCount))
-
-	// for each objStream execute at the end right before xRefStreamDict gets written.
-	logDebugWriter.Printf("stopObjectStream: objStreamDict: %s\n", objStreamDict)
-
-	err = writePDFStreamDictObject(ctx, *ctx.Write.CurrentObjStream, 0, objStreamDict.PDFStreamDict)
-	if err != nil {
-		return
-	}
-
-	// Release memory.
-	objStreamDict.Raw = nil
-
-	ctx.Write.CurrentObjStream = nil
-	ctx.Write.WriteToObjectStream = false
-
-	logDebugWriter.Println("stopObjectStream end")
 
 	return
 }
@@ -943,13 +848,13 @@ func PDFFile(ctx *types.PDFContext) (err error) {
 	// Write a PDF file header stating the version of the used conforming writer.
 	// This has to be the source version or any version higher.
 	// For using objectstreams and xrefstreams we need at least PDF V1.5.
+	v := ctx.Version()
 	if ctx.Version() < types.V15 {
-		v := types.V15
-		ctx.RootVersion = &v
+		v = types.V15
 		logInfoWriter.Println("Ensure V1.5 for writing object & xref streams")
 	}
 
-	err = writeHeader(ctx)
+	err = writeHeader(ctx, v)
 	if err != nil {
 		return
 	}
@@ -965,7 +870,7 @@ func PDFFile(ctx *types.PDFContext) (err error) {
 	logInfoWriter.Printf("offset after writeRootObject: %d\n", ctx.Write.Offset)
 
 	// Write document information dictionary.
-	err = writeDocumentInfoObject(ctx)
+	err = writeDocumentInfoDict(ctx)
 	if err != nil {
 		return
 	}

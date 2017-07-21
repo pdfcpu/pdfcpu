@@ -5,14 +5,17 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Write page entry to disk.
 func writePageEntry(ctx *types.PDFContext, dict *types.PDFDict, dictName, entryName string, statsAttr int) (err error) {
 
-	written, err := writeEntry(ctx, dict, dictName, entryName)
+	var obj interface{}
+
+	obj, err = writeEntry(ctx, dict, dictName, entryName)
 	if err != nil {
 		return
 	}
 
-	if written {
+	if obj != nil {
 		ctx.Stats.AddPageAttr(statsAttr)
 	}
 

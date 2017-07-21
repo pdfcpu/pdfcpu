@@ -18,8 +18,6 @@ import (
 )
 
 const (
-	pdflibVersion = "0.0.1-alpha"
-
 	usageValidate = "usage: pdflib validate [-verbose] [-mode strict|relaxed] inFile"
 	usageOptimize = "usage: pdflib optimize [-verbose] [-stats csvFile] inFile [outFile]"
 	usageSplit    = "usage: pdflib split [-verbose] inFile outDir"
@@ -84,7 +82,7 @@ func usage() {
 }
 
 func version() {
-	fmt.Printf("pdflib version %s\n", pdflibVersion)
+	fmt.Printf("pdflib version %s\n", write.PdflibVersion)
 }
 
 func usagePageSelection() {

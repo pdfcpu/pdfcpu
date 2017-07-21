@@ -3,6 +3,7 @@ package write
 import (
 	"fmt"
 
+	"github.com/hhrutter/pdflib/filter"
 	"github.com/hhrutter/pdflib/types"
 	"github.com/hhrutter/pdflib/validate"
 	"github.com/pkg/errors"
@@ -24,9 +25,7 @@ func writeCommentLine(w *types.WriteContext, comment string) (int, error) {
 	return w.WriteString(fmt.Sprintf("%%%s%s", comment, eol))
 }
 
-func writeHeader(ctx *types.PDFContext) error {
-
-	v := ctx.XRefTable.Version()
+func writeHeader(ctx *types.PDFContext, v types.PDFVersion) error {
 
 	i, err := writeCommentLine(ctx.Write, "PDF-"+types.VersionString(v))
 	if err != nil {
@@ -53,6 +52,86 @@ func writeObjectHeader(w *types.WriteContext, objNumber, genNumber int) (int, er
 
 func writeObjectTrailer(w *types.WriteContext) (int, error) {
 	return w.WriteString(fmt.Sprintf("%sendobj%s", eol, eol))
+}
+
+func startObjectStream(ctx *types.PDFContext) (err error) {
+
+	// See 7.5.7 Object streams
+	// When new object streams and compressed objects are created, they shall always be assigned new object numbers,
+	// not old ones taken from the free list.
+
+	logDebugWriter.Println("startObjectStream begin")
+
+	xRefTable := ctx.XRefTable
+	objStreamDict := types.NewPDFObjectStreamDict()
+	xRefTableEntry := types.NewXRefTableEntryGen0()
+	xRefTableEntry.Object = *objStreamDict
+
+	objNumber, ok := xRefTable.InsertNew(*xRefTableEntry)
+	if !ok {
+		return errors.Errorf("startObjectStream: Problem inserting entry for %d", objNumber)
+	}
+
+	ctx.Write.CurrentObjStream = &objNumber
+
+	logDebugWriter.Println("startObjectStream end")
+
+	return
+}
+
+func stopObjectStream(ctx *types.PDFContext) (err error) {
+
+	logDebugWriter.Println("stopObjectStream begin")
+
+	xRefTable := ctx.XRefTable
+
+	if !ctx.Write.WriteToObjectStream {
+		err = errors.Errorf("stopObjectStream: Not writing to object stream.")
+		return
+	}
+
+	if ctx.Write.CurrentObjStream == nil {
+		ctx.Write.WriteToObjectStream = false
+		logDebugWriter.Println("stopObjectStream end (no content)")
+		return
+	}
+
+	entry, _ := xRefTable.FindTableEntry(*ctx.Write.CurrentObjStream, 0)
+	objStreamDict, _ := (entry.Object).(types.PDFObjectStreamDict)
+
+	// When we are ready to write: append prolog and content
+	objStreamDict.Finalize()
+
+	// Encode objStreamDict.Content -> objStreamDict.Raw
+	// and wipe (decoded) content to free up memory.
+	err = filter.EncodeStream(&objStreamDict.PDFStreamDict)
+	if err != nil {
+		return
+	}
+
+	// Release memory.
+	objStreamDict.Content = nil
+
+	objStreamDict.PDFStreamDict.Insert("First", types.PDFInteger(objStreamDict.FirstObjOffset))
+	objStreamDict.PDFStreamDict.Insert("N", types.PDFInteger(objStreamDict.ObjCount))
+
+	// for each objStream execute at the end right before xRefStreamDict gets written.
+	logDebugWriter.Printf("stopObjectStream: objStreamDict: %s\n", objStreamDict)
+
+	err = writePDFStreamDictObject(ctx, *ctx.Write.CurrentObjStream, 0, objStreamDict.PDFStreamDict)
+	if err != nil {
+		return
+	}
+
+	// Release memory.
+	objStreamDict.Raw = nil
+
+	ctx.Write.CurrentObjStream = nil
+	ctx.Write.WriteToObjectStream = false
+
+	logDebugWriter.Println("stopObjectStream end")
+
+	return
 }
 
 func writePDFObject(ctx *types.PDFContext, objNumber, genNumber int, s string) (err error) {
@@ -2028,7 +2107,7 @@ func writeDeepObject(ctx *types.PDFContext, objIn interface{}) (objOut interface
 	return
 }
 
-func writeEntry(ctx *types.PDFContext, dict *types.PDFDict, dictName, entryName string) (written bool, err error) {
+func writeEntry(ctx *types.PDFContext, dict *types.PDFDict, dictName, entryName string) (obj interface{}, err error) {
 
 	obj, found := dict.Find(entryName)
 	if !found || obj == nil {
@@ -2038,7 +2117,7 @@ func writeEntry(ctx *types.PDFContext, dict *types.PDFDict, dictName, entryName 
 
 	logInfoWriter.Printf("writeEntry begin: dict=%s entry=%s offset=%d\n", dictName, entryName, ctx.Write.Offset)
 
-	obj, written, err = writeDeepObject(ctx, obj)
+	obj, _, err = writeDeepObject(ctx, obj)
 	if err != nil {
 		return
 	}
