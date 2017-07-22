@@ -183,12 +183,6 @@ func validateICCBasedColorSpaceEntryN(i int) bool {
 	return false
 }
 
-// TODO implement
-func validateColorKeyMaskArray(arr types.PDFArray) bool {
-	// TODO validate integer array.
-	return true
-}
-
 func validateRenderingIntent(s string) bool {
 
 	// see 8.6.5.8
@@ -1560,7 +1554,7 @@ func validateNameEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName
 
 	// Validation
 	if validate != nil && !validate(name.String()) {
-		err = errors.Errorf("validateNameEntry: dict=%s entry=%s invalid dict entry", dictName, entryName)
+		err = errors.Errorf("validateNameEntry: dict=%s entry=%s invalid dict entry: %s", dictName, entryName, name.String())
 		return
 	}
 

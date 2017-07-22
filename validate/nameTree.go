@@ -55,8 +55,9 @@ func validateJavaScriptNameTreeValue(xRefTable *types.XRefTable, obj interface{}
 	return
 }
 
-// TODO implement
 func validatePagesNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
+	// see 12.7.6
 
 	logInfoValidate.Println("*** validatePagesNameTreeValue: begin ***")
 
@@ -65,15 +66,30 @@ func validatePagesNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sin
 		return
 	}
 
-	err = errors.New("*** validatePagesNameTreeValue: unsupported ***")
+	// Value is a page dict.
+
+	d, err := xRefTable.DereferenceDict(obj)
+	if err != nil {
+		return
+	}
+
+	if d == nil {
+		return errors.New("validatePagesNameTreeValue: value is nil")
+	}
+
+	_, err = validateNameEntry(xRefTable, d, "pageDict", "Type", REQUIRED, types.V10, func(s string) bool { return s == "Page" })
+	if err != nil {
+		return
+	}
 
 	logInfoValidate.Println("*** validatePagesNameTreeValue: end ***")
 
 	return
 }
 
-// TODO implement
 func validateTemplatesNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
+	// see 12.7.6
 
 	logInfoValidate.Printf("*** validateTemplatesNameTreeValue: begin ***")
 
@@ -82,7 +98,21 @@ func validateTemplatesNameTreeValue(xRefTable *types.XRefTable, obj interface{},
 		return
 	}
 
-	err = errors.New("*** validateTemplatesNameTreeValue: unsupported ***")
+	// Value is a template dict.
+
+	d, err := xRefTable.DereferenceDict(obj)
+	if err != nil {
+		return
+	}
+
+	if d == nil {
+		return errors.New("validatePagesNameTreeValue: value is nil")
+	}
+
+	_, err = validateNameEntry(xRefTable, d, "templateDict", "Type", REQUIRED, types.V10, func(s string) bool { return s == "Template" })
+	if err != nil {
+		return
+	}
 
 	logInfoValidate.Printf("*** validateTemplatesNameTreeValue: end ***")
 
@@ -90,16 +120,20 @@ func validateTemplatesNameTreeValue(xRefTable *types.XRefTable, obj interface{},
 }
 
 // TODO implement
-func validateIDSTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+func validateIDSNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
 
-	logInfoValidate.Printf("*** validateIDSTreeValue: begin ***")
+	// see 14.10.4
+
+	logInfoValidate.Printf("*** validateIDSNameTreeValue: begin ***")
 
 	if xRefTable.Version() < sinceVersion {
-		err = errors.Errorf("validateIDSTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
+		err = errors.Errorf("validateIDSNameTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
 		return
 	}
 
-	err = errors.New("*** validateIDSTreeValue: unsupported ***")
+	// Value is a web capture content set.
+
+	err = errors.New("*** validateIDSNAmeTreeValue: unsupported ***")
 
 	logInfoValidate.Printf("*** validateIDSTreeValue: end ***")
 
@@ -109,12 +143,16 @@ func validateIDSTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVers
 // TODO implement
 func validateURLSNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
 
+	// see 14.10.4
+
 	logInfoValidate.Println("*** validateURLSNameTreeValue: begin ***")
 
 	if xRefTable.Version() < sinceVersion {
 		err = errors.Errorf("validateURLSNameTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
 		return
 	}
+
+	// Value is a web capture content set.
 
 	err = errors.New("*** validateURLSNameTreeValue: unsupported ***")
 
@@ -126,12 +164,16 @@ func validateURLSNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinc
 // TODO implement
 func validateEmbeddedFilesNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
 
+	// see 7.11.4
+
 	logInfoValidate.Printf("*** validateEmbeddedFilesNameTreeValue: begin ***")
 
 	if xRefTable.Version() < sinceVersion {
 		err = errors.Errorf("validateEmbeddedFilesNameTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
 		return
 	}
+
+	// Value is a file specification.
 
 	err = errors.New("*** validateEmbeddedFilesNameTreeValue: unsupported ***")
 
@@ -141,7 +183,14 @@ func validateEmbeddedFilesNameTreeValue(xRefTable *types.XRefTable, obj interfac
 }
 
 // TODO implement
+func validateSlideShowDict(XRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+
+	return errors.New("*** validateSlideShowDict: unsupported ***")
+}
+
 func validateAlternatePresentationsNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
+	// see 13.5
 
 	logInfoValidate.Println("*** validateAlternatePresentationsNameTreeValue: begin ***")
 
@@ -150,7 +199,19 @@ func validateAlternatePresentationsNameTreeValue(xRefTable *types.XRefTable, obj
 		return
 	}
 
-	err = errors.New("*** validateAlternatePresentationsNameTreeValue: unsupported ***")
+	// Value is a slide show dict.
+
+	dict, err := xRefTable.DereferenceDict(obj)
+	if err != nil {
+		return
+	}
+
+	if dict != nil {
+		err = validateSlideShowDict(xRefTable, dict)
+		if err != nil {
+			return
+		}
+	}
 
 	logInfoValidate.Println("*** validateAlternatePresentationsNameTreeValue: end ***")
 
@@ -160,6 +221,8 @@ func validateAlternatePresentationsNameTreeValue(xRefTable *types.XRefTable, obj
 // TODO implement
 func validateRenditionsNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
 
+	// see 13.2.3
+
 	logInfoValidate.Println("*** validateRenditionsNameTreeValue: begin ***")
 
 	if xRefTable.Version() < sinceVersion {
@@ -167,14 +230,15 @@ func validateRenditionsNameTreeValue(xRefTable *types.XRefTable, obj interface{}
 		return
 	}
 
-	err = errors.New("*** validateRenditionsNameTreeValue: unsupported ***")
+	// Value is a rendition object.
+
+	err = errors.New("*** validateEmbeddedFilesNameTreeValue: unsupported ***")
 
 	logInfoValidate.Println("*** validateRenditionsNameTreeValue: end ***")
 
 	return
 }
 
-// TODO OBJR
 func validateIDTreeValue(xRefTable *types.XRefTable, obj interface{}) (err error) {
 
 	logInfoValidate.Println("*** validateIDTreeValue: begin ***")
@@ -198,11 +262,6 @@ func validateIDTreeValue(xRefTable *types.XRefTable, obj interface{}) (err error
 	} else {
 		return errors.Errorf("validateIDTreeValue: invalid dictType %s (should be \"StructElem\")\n", *dictType)
 	}
-
-	//if *dictType == "OBJR" {
-	//    writeObjectReferenceDict(source, dest, dict)
-	//    break
-	//}
 
 	logInfoValidate.Println("*** validateIDTreeValue: end ***")
 
@@ -261,7 +320,7 @@ func validateNameTreeDictNamesEntry(xRefTable *types.XRefTable, dict *types.PDFD
 			err = validateTemplatesNameTreeValue(xRefTable, obj, types.V13)
 
 		case "IDS":
-			err = validateIDSTreeValue(xRefTable, obj, types.V13)
+			err = validateIDSNameTreeValue(xRefTable, obj, types.V13)
 
 		case "URLS":
 			err = validateURLSNameTreeValue(xRefTable, obj, types.V13)
@@ -311,8 +370,6 @@ func validateNameTreeDictLimitsEntry(xRefTable *types.XRefTable, obj interface{}
 		return errors.New("validateNameTreeDictLimitsEntry: corrupt array entry \"Limits\" expected to contain 2 integers")
 	}
 
-	// TODO process indref PDFStringLiteral?
-
 	if _, ok := (*arr)[0].(types.PDFStringLiteral); !ok {
 		return errors.New("validateNameTreeDictLimitsEntry: corrupt array entry \"Limits\" expected to contain 2 integers")
 	}
@@ -328,14 +385,9 @@ func validateNameTreeDictLimitsEntry(xRefTable *types.XRefTable, obj interface{}
 
 func validateNameTree(xRefTable *types.XRefTable, name string, indRef types.PDFIndirectRef, root bool) (err error) {
 
-	logInfoValidate.Printf("*** validateNameTree: %s ***\n", name)
+	// see 7.7.4
 
-	// Rootnode has "Kids" or "Names" entry.
-	// Kids: array of indirect references to the immediate children of this node.
-	// Names: array of the form [key1 value1 key2 value2 ... keyn valuen]
-	// key: string
-	// value: indRef or the object associated with the key.
-	// if Kids present then recurse
+	logInfoValidate.Printf("*** validateNameTree: %s ***\n", name)
 
 	dict, err := xRefTable.DereferenceDict(indRef)
 	if err != nil || dict == nil {
@@ -352,11 +404,7 @@ func validateNameTree(xRefTable *types.XRefTable, name string, indRef types.PDFI
 		}
 
 		if arr == nil {
-
 			return errors.New("validateNameTree: missing \"Kids\" array")
-
-			//logInfoValidate.Printf("validateNameTree end: %s\n", name)
-			//return nil
 		}
 
 		for _, obj := range *arr {
@@ -375,6 +423,7 @@ func validateNameTree(xRefTable *types.XRefTable, name string, indRef types.PDFI
 		}
 
 		logInfoValidate.Printf("validateNameTree end: %s\n", name)
+
 		return nil
 	}
 
@@ -389,16 +438,6 @@ func validateNameTree(xRefTable *types.XRefTable, name string, indRef types.PDFI
 		if err != nil {
 			return
 		}
-
-		// obj, found := dict.Find("Limits")
-		// if !found {
-		// 	return errors.New("validateNameTree: missing \"Limits\" entry")
-		// }
-
-		// err = validateNameTreeDictLimitsEntry(xRefTable, obj)
-		// if err != nil {
-		// 	return
-		// }
 
 	}
 

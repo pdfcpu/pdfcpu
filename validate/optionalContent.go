@@ -77,7 +77,6 @@ func validateOptionalContentGroupIntent(xRefTable *types.XRefTable, dict *types.
 	return
 }
 
-// TODO implement
 func validateOptionalContentGroupUsageDict(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) (err error) {
 
 	// see 8.11.4.4
@@ -92,6 +91,46 @@ func validateOptionalContentGroupUsageDict(xRefTable *types.XRefTable, dict *typ
 	}
 
 	dictName = "OCUsageDict"
+
+	_, err = validateDictEntry(xRefTable, d, dictName, "CreatorInfo", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	_, err = validateDictEntry(xRefTable, d, dictName, "Language", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	_, err = validateDictEntry(xRefTable, d, dictName, "Export", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	_, err = validateDictEntry(xRefTable, d, dictName, "Zoom", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	_, err = validateDictEntry(xRefTable, d, dictName, "Print", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	_, err = validateDictEntry(xRefTable, d, dictName, "View", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	_, err = validateDictEntry(xRefTable, d, dictName, "User", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	_, err = validateDictEntry(xRefTable, d, dictName, "PageElement", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
 
 	err = errors.New("*** unsupported entry OCG usage dict ***")
 
@@ -236,10 +275,38 @@ func validateOptionalContentMembershipDict(xRefTable *types.XRefTable, dict *typ
 	return
 }
 
-// TODO implement
 func validateOptionalContentGroupArray(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, dictEntry string, required bool, sinceVersion types.PDFVersion) (err error) {
 
 	logInfoValidate.Println("*** validateOptionalContentGroupArray begin ***")
+
+	arr, err := validateArrayEntry(xRefTable, dict, dictName, dictEntry, required, sinceVersion, nil)
+	if err != nil || arr == nil {
+		return
+	}
+
+	for _, v := range *arr {
+
+		if v == nil {
+			continue
+		}
+
+		var d *types.PDFDict
+
+		d, err = xRefTable.DereferenceDict(v)
+		if err != nil {
+			return
+		}
+
+		if d == nil {
+			continue
+		}
+
+		err = validateOptionalContentGroupDict(xRefTable, d)
+		if err != nil {
+			return
+		}
+
+	}
 
 	logInfoValidate.Println("*** validateOptionalContentGroupArray end ***")
 
@@ -285,32 +352,65 @@ func validateOptContentConfigDictIntentEntry(xRefTable *types.XRefTable, dict *t
 	return
 }
 
-// TODO implement
+func validateUsageApplicationDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+
+	dictName := "usageAppDict"
+
+	// Event, required, name
+	_, err = validateNameEntry(xRefTable, dict, dictName, "Event", REQUIRED, types.V10, func(s string) bool { return s == "View" || s == "Print" || s == "Export" })
+	if err != nil {
+		return
+	}
+
+	// OCGs, optional, array of content groups
+	err = validateOptionalContentGroupArray(xRefTable, dict, dictName, "OCGs`", OPTIONAL, types.V10)
+	if err != nil {
+		return err
+	}
+
+	// Category, required, array of names
+	_, err = validateNameArrayEntry(xRefTable, dict, dictName, "Category", REQUIRED, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
 func validateUsageApplicationDictArray(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, dictEntry string, required bool, sinceVersion types.PDFVersion) (err error) {
 
 	logInfoValidate.Println("*** validateUsageApplicationDictArray begin ***")
 
+	arr, err := validateArrayEntry(xRefTable, dict, dictName, dictEntry, required, sinceVersion, nil)
+	if err != nil || arr == nil {
+		return
+	}
+
+	for _, v := range *arr {
+
+		if v == nil {
+			continue
+		}
+
+		var d *types.PDFDict
+
+		d, err = xRefTable.DereferenceDict(v)
+		if err != nil {
+			return
+		}
+
+		if d == nil {
+			continue
+		}
+
+		err = validateUsageApplicationDict(xRefTable, d)
+		if err != nil {
+			return
+		}
+
+	}
+
 	logInfoValidate.Println("*** validateUsageApplicationDictArray end ***")
-
-	return
-}
-
-// TODO implement
-func validateOptContentConfigDictOrderEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, dictEntry string, required bool, sinceVersion types.PDFVersion) (err error) {
-
-	logInfoValidate.Println("*** validateOptContentConfigDictOrderEntry begin ***")
-
-	logInfoValidate.Println("*** validateOptContentConfigDictOrderEntry end ***")
-
-	return
-}
-
-// TODO implement
-func validateRBGroupsEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, dictEntry string, required bool, sinceVersion types.PDFVersion) (err error) {
-
-	logInfoValidate.Println("*** validateRBGroupsEntry begin ***")
-
-	logInfoValidate.Println("*** validateRBGroupsEntry end ***")
 
 	return
 }
@@ -364,7 +464,7 @@ func validateOptionalContentConfigurationDict(xRefTable *types.XRefTable, dict *
 		return err
 	}
 
-	err = validateOptContentConfigDictOrderEntry(xRefTable, dict, dictName, "Order", OPTIONAL, types.V10)
+	_, err = validateArrayEntry(xRefTable, dict, dictName, "Order", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -374,7 +474,7 @@ func validateOptionalContentConfigurationDict(xRefTable *types.XRefTable, dict *
 		return
 	}
 
-	err = validateRBGroupsEntry(xRefTable, dict, dictName, "RBGroups", OPTIONAL, types.V10)
+	_, err = validateArrayEntry(xRefTable, dict, dictName, "RBGroups", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return err
 	}

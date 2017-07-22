@@ -80,20 +80,14 @@ The extraction code for font files and images is experimental and serves as proo
 * validateFileSpecString
 * validateURLString
 * validateAcroFormEntryXFA
-* validateColorKeyMaskArray
 * validateActionDicts
 * validateAnnotationDicts
 * validateFileSpecDict
 * validateNameTreeValue
-* validateOptionalContent
 * validatePageEntryPresSteps
-* validatePageEntryVP
-* validateOPIDict
-* validateExtensions
 * validateSpiderInfo
 * validatePermissions
 * validateLegal
-* validateRequirements
 * validateCollection
 * implement filters
 

@@ -571,6 +571,8 @@ func validateDeviceColorantEntry(xRefTable *types.XRefTable, dict *types.PDFDict
 
 func validatePageEntrySeparationInfo(xRefTable *types.XRefTable, pagesDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
 
+	// see 14.11.4
+
 	logInfoValidate.Printf("*** writePageEntrySeparationInfo begin ***")
 
 	dict, err := validateDictEntry(xRefTable, pagesDict, "pagesDict", "SeparationInfo", required, sinceVersion, nil)
@@ -598,7 +600,7 @@ func validatePageEntrySeparationInfo(xRefTable *types.XRefTable, pagesDict *type
 		return
 	}
 	if arr != nil {
-		// TODO Separation or DeviceN color space only
+		// TODO Limit validation to Separation or DeviceN color space.
 		err = validateColorSpaceArray(xRefTable, arr, ExcludePatternCS)
 		if err != nil {
 			return
@@ -626,6 +628,8 @@ func validatePageEntryTabs(xRefTable *types.XRefTable, dict *types.PDFDict, requ
 
 func validatePageEntryTemplateInstantiated(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
 
+	// see 12.7.6
+
 	logInfoValidate.Println("*** validatePageEntryTemplateInstantiated begin ***")
 
 	_, err = validateNameEntry(xRefTable, dict, "pagesDict", "TemplateInstantiated", required, sinceVersion, nil)
@@ -643,6 +647,8 @@ func validatePageEntryTemplateInstantiated(xRefTable *types.XRefTable, dict *typ
 // TODO implement
 func validatePageEntryPresSteps(xRefTable *types.XRefTable, pagesDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
 
+	// see 12.4.4.2
+
 	logInfoValidate.Println("*** validatePageEntryPresSteps begin ***")
 
 	dict, err := validateDictEntry(xRefTable, pagesDict, "pagesDict", "PresSteps", required, sinceVersion, nil)
@@ -657,8 +663,6 @@ func validatePageEntryPresSteps(xRefTable *types.XRefTable, pagesDict *types.PDF
 
 	err = errors.New("*** validatePageEntryPresSteps: not supported ***")
 
-	// source.XRefTable.Stats.AddPageAttr(types.PagePresSteps)
-
 	logInfoValidate.Println("*** validatePageEntryPresSteps end ***")
 
 	return
@@ -668,7 +672,8 @@ func validatePageEntryUserUnit(xRefTable *types.XRefTable, dict *types.PDFDict, 
 
 	logInfoValidate.Println("*** validatePageEntryUserUnit begin ***")
 
-	// TODO validate positive number
+	// UserUnit, optional, positive number, since V1.6
+	// TODO number validation
 	_, err = validateNumberEntry(xRefTable, dict, "pagesDict", "UserUnit", required, sinceVersion, nil)
 	if err != nil {
 		return
@@ -679,22 +684,105 @@ func validatePageEntryUserUnit(xRefTable *types.XRefTable, dict *types.PDFDict, 
 	return
 }
 
-// TODO implement
-func validatePageEntryVP(xRefTable *types.XRefTable, pagesDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateMeasureDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
 
-	logInfoValidate.Println("*** validatePageEntryVP begin ***")
+	logInfoValidate.Println("*** validateMeasureDict begin ***")
 
-	dict, err := validateDictEntry(xRefTable, pagesDict, "pagesDict", "VP", required, sinceVersion, nil)
+	dictName := "measureDict"
+
+	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "Measure" })
 	if err != nil {
 		return
 	}
 
-	if dict == nil {
+	_, err = validateNameEntry(xRefTable, dict, dictName, "Subtype", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	// TODO validate rectilinear measure dict (= default SubType or SubType "RL")
+
+	logInfoValidate.Println("*** validateMeasureDict end ***")
+
+	return
+}
+
+func validateViewportDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+
+	logInfoValidate.Println("*** validateViewportDict begin ***")
+
+	dictName := "viewportDict"
+
+	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "Viewport" })
+	if err != nil {
+		return
+	}
+
+	_, err = validateRectangleEntry(xRefTable, dict, dictName, "BBox", REQUIRED, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	_, err = validateStringEntry(xRefTable, dict, dictName, "Name", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	// Measure, optional, dict
+	d, err := validateDictEntry(xRefTable, dict, dictName, "Measure", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	err = validateMeasureDict(xRefTable, d)
+	if err != nil {
+		return
+	}
+
+	logInfoValidate.Println("*** validateViewportDict end ***")
+
+	return
+}
+
+func validatePageEntryVP(xRefTable *types.XRefTable, pagesDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+
+	// see table 260
+
+	logInfoValidate.Println("*** validatePageEntryVP begin ***")
+
+	arr, err := validateArrayEntry(xRefTable, pagesDict, "pagesDict", "VP", required, sinceVersion, nil)
+	if err != nil {
+		return
+	}
+
+	if arr == nil {
 		logInfoValidate.Println("validatePageEntryVP end: is nil.")
 		return
 	}
 
-	err = errors.New("*** validatePageEntryVP: not supported ***")
+	var dict *types.PDFDict
+
+	for _, v := range *arr {
+
+		if v == nil {
+			continue
+		}
+
+		dict, err = xRefTable.DereferenceDict(v)
+		if err != nil {
+			return
+		}
+
+		if dict == nil {
+			continue
+		}
+
+		err = validateViewportDict(xRefTable, dict)
+		if err != nil {
+			return
+		}
+
+	}
 
 	logInfoValidate.Printf("*** validatePageEntryVP end ***")
 

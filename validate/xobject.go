@@ -86,29 +86,123 @@ func validateReferenceDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err
 	return
 }
 
-// TODO implement
 func validateOPIDictV13(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
 
 	// 14.11.7 Open Prepresse interface (OPI)
 
 	logInfoValidate.Println("*** validateOPIDictV13 begin ***")
 
-	err = errors.New("*** validateOPIDictV13: unsupported ***")
+	dictName := "opiDictV13"
+
+	// Type, optional, name
+	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "OPI" })
+	if err != nil {
+		return
+	}
+
+	// Version, required, number
+	_, err = validateNumberEntry(xRefTable, dict, dictName, "Version", REQUIRED, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	// F, required, file specification
+	err = validateFileSpecEntry(xRefTable, dict, dictName, "F", REQUIRED, types.V10)
+	if err != nil {
+		return
+	}
+
+	// ID, optional, byte string
+	_, err = validateStringEntry(xRefTable, dict, dictName, "ID", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	// Comments, optional, text string
+	_, err = validateStringEntry(xRefTable, dict, dictName, "Comments", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	// Size, required, array of integers, len 2
+	_, err = validateIntegerArrayEntry(xRefTable, dict, dictName, "Size", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
+	if err != nil {
+		return
+	}
+
+	// CropRect, required, array of integers, len 4
+	_, err = validateIntegerArrayEntry(xRefTable, dict, dictName, "CropRect", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 4 })
+	if err != nil {
+		return
+	}
+
+	// CropFixed, optional, array of numbers, len 4
+	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "CropFixed", OPTIONAL, types.V10, func(a types.PDFArray) bool { return len(a) == 4 })
+	if err != nil {
+		return
+	}
+
+	// Position, required, array of numbers, len 8
+	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "Position", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 8 })
+	if err != nil {
+		return
+	}
+
+	// Resolution, optional, array of numbers, len 2
+	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "Resolution", OPTIONAL, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
+	if err != nil {
+		return
+	}
+
+	// ColorType, optional, name
+	_, err = validateNameEntry(xRefTable, dict, dictName, "ColorType", OPTIONAL, types.V10, func(s string) bool { return s == "Process" || s == "Spot" || s == "Separation" })
+	if err != nil {
+		return
+	}
+
+	// Color, optional, array, len 5
+	_, err = validateArrayEntry(xRefTable, dict, dictName, "Color", OPTIONAL, types.V10, func(a types.PDFArray) bool { return len(a) == 5 })
+	if err != nil {
+		return
+	}
+
+	// Tint, optional, number
+	_, err = validateNumberEntry(xRefTable, dict, dictName, "Tint", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	// Overprint, optional, number
+	_, err = validateNumberEntry(xRefTable, dict, dictName, "Overprint", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	// ImageType, optional, array of integers, len 2
+	_, err = validateIntegerArrayEntry(xRefTable, dict, dictName, "ImageType", OPTIONAL, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
+	if err != nil {
+		return
+	}
+
+	// GrayMap, optional, array of integers
+	_, err = validateIntegerArrayEntry(xRefTable, dict, dictName, "GrayMap", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	// Transparency, optional, boolean
+	_, err = validateBooleanEntry(xRefTable, dict, dictName, "Transparency", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	// Tags, optional, array
+	_, err = validateArrayEntry(xRefTable, dict, dictName, "Tags", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
 
 	logInfoValidate.Println("*** validateOPIDictV13 end ***")
-
-	return
-}
-
-// TODO implement
-func validateOPIDictInkArray(xRefTable *types.XRefTable, arr *types.PDFArray) (err error) {
-
-	logInfoValidate.Println("*** validateOPIDictInkArray begin ***")
-
-	// name, name1, real1, name2, real2 ...
-	err = errors.New("*** validateOPIDictInkArray: unsupported ***")
-
-	logInfoValidate.Println("*** validateOPIDictInkArray end ***")
 
 	return
 }
@@ -135,7 +229,7 @@ func validateOPIDictInks(xRefTable *types.XRefTable, obj interface{}) (err error
 		}
 
 	case types.PDFArray:
-		err = validateOPIDictInkArray(xRefTable, &obj)
+		// no further processing
 
 	default:
 		err = errors.New("validateOPIDictInks: corrupt type")
@@ -324,9 +418,7 @@ func validateMaskEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName
 		err = validateMaskStreamDict(xRefTable, &obj)
 
 	case types.PDFArray:
-		if ok := validateColorKeyMaskArray(obj); !ok {
-			err = errors.New("validateMaskEntry: invalid color key mask array")
-		}
+		// no further processing
 
 	default:
 
