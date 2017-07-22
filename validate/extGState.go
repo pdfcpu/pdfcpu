@@ -33,11 +33,6 @@ func validateLineDashPatternEntry(xRefTable *types.XRefTable, dict *types.PDFDic
 		return
 	}
 
-	// dash phase (user space units)
-	//i, ok := a[1].(PDFInteger)
-	//if !ok {
-	//	log.Fatalf("writeLineDashPatternEntry: dict=%s entry \"%s\" corrupt dash phase.", dictName, entryName)
-	//}
 	_, err = validateInteger(xRefTable, a[1], nil)
 	if err != nil {
 		return

@@ -321,7 +321,7 @@ func main() {
 
 		pages, err := pdflib.ParsePageSelection(pageSelection)
 		if err != nil {
-			log.Fatalf("extract flag problem: %v", err)
+			log.Fatalf("extract: problem with flag pageSelection: %v", err)
 		}
 
 		switch mode {
@@ -344,7 +344,7 @@ func main() {
 
 		pages, err := pdflib.ParsePageSelection(pageSelection)
 		if err != nil {
-			log.Fatalf("extract flag problem: %v", err)
+			log.Fatalf("trim: problem with flag pageSelection: %v", err)
 		}
 
 		filenameIn := flag.Arg(0)

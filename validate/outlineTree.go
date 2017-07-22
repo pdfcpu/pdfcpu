@@ -5,18 +5,104 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TODO implement, parentCheck, BUG
-func validateOutlineTree(xRefTable *types.XRefTable, first *types.PDFIndirectRef, last *types.PDFIndirectRef) (err error) {
+func validateOutlineItemDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+
+	logInfoValidate.Printf("validateOutlineItemDict begin")
+
+	dictName := "outlineItemDict"
+
+	var indRef *types.PDFIndirectRef
+
+	// Title, required, text string
+	_, err = validateStringEntry(xRefTable, dict, dictName, "Title", REQUIRED, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	// Parent, required, dict indRef
+	indRef, err = validateIndRefEntry(xRefTable, dict, dictName, "Parent", REQUIRED, types.V10)
+	if err != nil {
+		return
+	}
+	_, err = xRefTable.DereferenceDict(*indRef)
+	if err != nil {
+		return
+	}
+
+	// Count, optional, int
+	_, err = validateIntegerEntry(xRefTable, dict, dictName, "Count", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	// SE, optional, dict indRef, since V1.3
+	indRef, err = validateIndRefEntry(xRefTable, dict, dictName, "SE", OPTIONAL, types.V13)
+	if err != nil {
+		return
+	}
+	if indRef != nil {
+		_, err = xRefTable.DereferenceDict(*indRef)
+		if err != nil {
+			return
+		}
+	}
+
+	// C, optional, array of 3 numbers, since V1.4
+	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "C", OPTIONAL, types.V14, func(a types.PDFArray) bool { return len(a) == 3 })
+	if err != nil {
+		return
+	}
+
+	// F, optional integer, since V1.4
+	_, err = validateIntegerEntry(xRefTable, dict, dictName, "F", OPTIONAL, types.V14, nil)
+	if err != nil {
+		return
+	}
+
+	var d *types.PDFDict
+
+	// A, optional if no Dest entry present, dict, since V1.1
+	d, err = validateDictEntry(xRefTable, dict, dictName, "A", OPTIONAL, types.V11, nil)
+	if err != nil {
+		return
+	}
+	if d != nil {
+		err = validateActionDict(xRefTable, *d)
+		if err != nil {
+			return
+		}
+		logInfoValidate.Printf("validateOutlineItemDict end")
+		return
+	}
+
+	// Dest, optional if no A entry present, name, byte string, array
+	if dest, found := dict.Find("Dest"); found {
+		err = validateDestination(xRefTable, dest)
+		if err != nil {
+			return
+		}
+	}
+
+	logInfoValidate.Printf("validateOutlineItemDict end")
+
+	return
+}
+
+func validateOutlineTree(xRefTable *types.XRefTable, first, last *types.PDFIndirectRef) (err error) {
 
 	logInfoValidate.Printf("*** validateOutlineTree(%d,%d) begin ***\n", first.ObjectNumber, last.ObjectNumber)
 
-	var dict *types.PDFDict
-	var objNumber int
+	var (
+		dict      *types.PDFDict
+		objNumber int
+	)
 
+	// Process linked list of outline items.
 	for indRef := first; indRef != nil; indRef = dict.IndirectRefEntry("Next") {
 
 		objNumber = indRef.ObjectNumber.Value()
 
+		// outline item dict
 		dict, err = xRefTable.DereferenceDict(*indRef)
 		if err != nil {
 			return
@@ -27,70 +113,7 @@ func validateOutlineTree(xRefTable *types.XRefTable, first *types.PDFIndirectRef
 
 		logInfoValidate.Printf("validateOutlineTree: Next object #%d\n", objNumber)
 
-		// optional Dest or A entry
-		// Dest: name, byte string, or array
-		//       The destination that shall be displayed when this item is activated.
-
-		// A: dictionary
-		//    The action that shall be performed when this item is activated.
-
-		if obj, found := dict.Find("A"); found {
-			if _, found = dict.Find("Dest"); found {
-				return errors.New("validateOutlineTree: only Dest or A allowed")
-			}
-			err = validateActionDict(xRefTable, obj)
-			if err != nil {
-				return
-			}
-		}
-
-		if obj, found := dict.Find("Dest"); found {
-			if _, found = dict.Find("A"); found {
-				return errors.New("validateOutlineTree: only Dest or A allowed")
-			}
-			// TODO BUG
-			err = validateDestination(xRefTable, obj)
-			if err != nil {
-				return
-			}
-		}
-
-		// Title: required, PdfStringliteral or PDFHexLiteral.
-		_, err = validateStringEntry(xRefTable, dict, "outlineItemDict", "Title", REQUIRED, types.V10, nil)
-		if err != nil {
-			return
-		}
-
-		/*if indRef := dict.IndirectRefEntry("Title"); indRef != nil {
-
-			oNumber := int(indRef.ObjectNumber)
-			gNumber := int(indRef.GenerationNumber)
-
-			if dest.HasWriteOffset(oNumber) {
-				logInfoWriter.Printf("*** writeOutlineTree: title object #%d already written. ***\n", oNumber)
-			} else {
-				if str, ok := xRefTable.Dereference(*indRef).(PDFStringLiteral); ok {
-					logInfoWriter.Printf("writeOutlineTree: object #%d gets writeoffset: %d\n", oNumber, dest.Offset)
-					writePDFStringLiteralObject(dest, oNumber, gNumber, str)
-					logDebugWriter.Printf("writeOutlineTree: new offset after str = %d\n", dest.Offset)
-				} else if hexstr, ok := xRefTable.Dereference(*indRef).(PDFHexLiteral); ok {
-					logInfoWriter.Printf("writeOutlineTree: object #%d gets writeoffset: %d\n", oNumber, dest.Offset)
-					writePDFHexLiteralObject(dest, oNumber, gNumber, hexstr)
-					logDebugWriter.Printf("writeOutlineTree: new offset after hexstr = %d\n", dest.Offset)
-				} else {
-					log.Fatalf("writeOutlineTree: indRef for Title must be PDFStringLiteral or PDFHexLiteral.")
-				}
-			}
-
-		}
-		*/
-
-		// TODO SE, optional, since 1.3 indRef, structure element
-
-		// TODO C, optional, since 1.4, array of three numbers in the range 0.0 to 1.0
-
-		// F, optional, since 1.4, integer
-		_, err = validateIntegerEntry(xRefTable, dict, "outlineItemDict", "F", OPTIONAL, types.V14, nil)
+		err = validateOutlineItemDict(xRefTable, dict)
 		if err != nil {
 			return
 		}
@@ -116,6 +139,7 @@ func validateOutlineTree(xRefTable *types.XRefTable, first *types.PDFIndirectRef
 
 	}
 
+	// Relaxed validation
 	if objNumber != last.ObjectNumber.Value() && xRefTable.ValidationMode == types.ValidationStrict {
 		logErrorValidate.Printf("validateOutlineTree: corrupted child list %d <> %d\n", objNumber, last.ObjectNumber)
 	}
@@ -131,35 +155,26 @@ func validateOutlines(xRefTable *types.XRefTable, rootDict *types.PDFDict, requi
 
 	logInfoValidate.Println("*** validateOutlines begin ***")
 
-	indRef := rootDict.IndirectRefEntry("Outlines")
-	if indRef == nil {
-		if required {
-			err = errors.Errorf("validateOutlines: required entry \"Outlines\" missing")
-			return
-		}
-		logInfoValidate.Println("validateOutlines end: object is nil.")
+	var (
+		indRef *types.PDFIndirectRef
+		dict   *types.PDFDict
+	)
+
+	indRef, err = validateIndRefEntry(xRefTable, rootDict, "rootDict", "Outlines", OPTIONAL, sinceVersion)
+	if err != nil || indRef == nil {
 		return
 	}
 
-	dict, err := xRefTable.DereferenceDict(*indRef)
+	dict, err = xRefTable.DereferenceDict(*indRef)
+	if err != nil || dict == nil {
+		return
+	}
+
+	// Type, optional, name
+	_, err = validateNameEntry(xRefTable, dict, "outlineDict", "Type", OPTIONAL, types.V10, func(s string) bool { return s == "Outlines" })
 	if err != nil {
 		return
 	}
-
-	if dict == nil {
-		logInfoValidate.Println("validateOutlines end: object is nil.")
-		return
-	}
-
-	// dict, ok := obj.(types.PDFDict)
-	// if !ok {
-	// 	return errors.Errorf("validateOutlines: corrupt outlines dict obj#%d\n", indRef.ObjectNumber)
-	// 	// Ignore and continue if file has invalid Outline
-	// 	//logErrorWriter.Println("writeOutlines: ignoring corrupt Outlines dict.")
-	// 	//return
-	// }
-
-	// optional Type entry must be Outline
 
 	first := dict.IndirectRefEntry("First")
 	last := dict.IndirectRefEntry("Last")
@@ -169,7 +184,6 @@ func validateOutlines(xRefTable *types.XRefTable, rootDict *types.PDFDict, requi
 			return errors.New("validateOutlines: corrupted, root needs both first and last")
 		}
 		// leaf
-		//log.Fatalln("writeOutlines: root = leaf, doesn't make much sense. ")
 		logInfoValidate.Printf("validateOutlines end: obj#%d\n", indRef.ObjectNumber)
 		return
 	}

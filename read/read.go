@@ -233,33 +233,6 @@ func getCompressedObject(s string) (interface{}, error) {
 	}
 
 	return nil, errors.New("getCompressedObject: Stream objects are not to be stored in an object stream")
-
-	// TODO Maybe allow based on some readMode=Relaxed flag?
-
-	// Parse associated stream data into a PDFStreamDict.
-
-	// 	filterPipeline, err := getPDFFilterPipeline(pdfDict)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-
-	// 	pdfStreamDict := types.NewPDFStreamDict(pdfDict, 0, streamLength, streamLengthRef, filterPipeline)
-
-	// 	logDebugReader.Printf("compressed streamdict: len=%d streamL=%d\n", len(s), streamLength)
-
-	// 	if !strings.HasPrefix(s, "stream") {
-	// 		return nil, errors.New("getCompressedObject: corrupt object stream")
-	// 	}
-
-	// 	s = s[len("stream"):]
-	// 	s, _ = TrimLeftSpace(s)
-
-	// 	pdfStreamDict.Raw = []byte(s[:*streamLength])
-
-	// 	logDebugReader.Println("getCompressedObject: end, stream dict")
-
-	// 	return pdfStreamDict, nil
-
 }
 
 // Parse all objects of an object stream and save them into objectStreamDict.ObjArray.
@@ -1769,11 +1742,6 @@ func PDFFile(fileName string, config *types.Configuration) (ctx *types.PDFContex
 	if err != nil {
 		return
 	}
-
-	// Log xRefTable.
-	//logErrorReader.Printf("dereferenced xrefTable:\n%s\n", xRefTable)
-
-	//s := types.NewPDFSource(filename, file, xRefTable)
 
 	logDebugReader.Println("PDFFile: end")
 

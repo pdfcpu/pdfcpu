@@ -826,15 +826,9 @@ func PDFFile(ctx *types.PDFContext) (err error) {
 
 	defer func() {
 
-		// Processing error takes precedence.
-		if err != nil {
-			ctx.Write.Flush()
-			file.Close()
-			return
-		}
+		// The underlying bufio.Writer has already been flushed.
 
-		// Flush error takes precedence.
-		err = ctx.Write.Flush()
+		// Processing error takes precedence.
 		if err != nil {
 			file.Close()
 			return
@@ -909,7 +903,13 @@ func PDFFile(ctx *types.PDFContext) (err error) {
 		return
 	}
 
-	// Get file info for file just written.
+	// Get file info for file just written,
+	// but flush first to get correct file size.
+	err = ctx.Write.Flush()
+	if err != nil {
+		return
+	}
+
 	fileInfo, err := file.Stat()
 	if err != nil {
 		return

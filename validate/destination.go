@@ -5,30 +5,79 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateDestinationArray(xRefTable *types.XRefTable, arr *types.PDFArray) (err error) {
+func validateDestinationArray(xRefTable *types.XRefTable, arr *types.PDFArray) error {
 
 	logInfoValidate.Println("*** validateDestinationArray: begin ***")
 
-	// Relaxed: Allow nil for Page for all actions, (according to spec only for remote Goto actions nil allowed)
-	//if arr[0] == nil {
-	//	return false, errors.New("writeDestinationArray end: arr[0] (PageIndRef) is null")
-	//}
-
-	indRef, ok := (*arr)[0].(types.PDFIndirectRef)
-	if !ok {
-		// TODO: log.Fatalln("writeDestinationArray: destination array[0] not an indirect ref.")
-		logInfoValidate.Println("validateDestinationArray end: arr[0] is no indRef")
-		return
+	// First element: indRef of page dict or pageNumber(int) of remote doc for remote Go-to Action or nil.
+	obj, err := xRefTable.Dereference((*arr)[0])
+	if err != nil {
+		return err
 	}
 
-	pageDict, err := xRefTable.DereferenceDict(indRef)
-	if err != nil || pageDict == nil || pageDict.Type() == nil || *pageDict.Type() != "Page" {
-		return errors.Errorf("validateDestinationArray: invalid destination page dict. for obj#%d", indRef.ObjectNumber)
+	if obj == nil {
+		return nil
+	}
+
+	switch obj := obj.(type) {
+
+	case types.PDFInteger: // no further processing
+
+	case types.PDFDict:
+		if obj.Type() == nil || *obj.Type() != "Page" {
+			return errors.New("validateDestinationArray: first element refers to invalid destination page dict")
+		}
+
+	default:
+		return errors.Errorf("validateDestinationArray: first element must be a pageDict indRef or an integer: %v", obj)
+	}
+
+	switch len(*arr) {
+
+	case 2:
+		name, ok := (*arr)[1].(types.PDFName)
+		if !ok {
+			return errors.New("validateDestinationArray: second element must be a name")
+		}
+		if name.Value() != "Fit" && name.Value() != "FitB" {
+			return errors.New("validateDestinationArray: arr[1] corrupt")
+		}
+
+	case 3:
+		name, ok := (*arr)[1].(types.PDFName)
+		if !ok {
+			return errors.New("validateDestinationArray: arr[1] must be a name")
+		}
+		if name.Value() != "FitH" && name.Value() != "FitV" && name.Value() != "FitBH" {
+			return errors.New("validateDestinationArray: arr[1] corrupt")
+		}
+
+	case 5:
+		name, ok := (*arr)[1].(types.PDFName)
+		if !ok {
+			return errors.New("validateDestinationArray: arr[1] must be a name")
+		}
+		if name.Value() != "XYZ" {
+			return errors.New("validateDestinationArray: arr[1] corrupt")
+		}
+
+	case 6:
+
+		name, ok := (*arr)[1].(types.PDFName)
+		if !ok {
+			return errors.New("validateDestinationArray: arr[1] must be a name")
+		}
+		if name.Value() != "FitR" {
+			return errors.New("validateDestinationArray: arr[1] corrupt")
+		}
+
+	default:
+		return errors.Errorf("validateDestinationArray: array length %d not alowed: %v", len(*arr), arr)
 	}
 
 	logInfoValidate.Println("*** validateDestinationArray: end ***")
 
-	return
+	return nil
 }
 
 func validateDestinationDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
@@ -97,6 +146,8 @@ func validateDestination(xRefTable *types.XRefTable, obj interface{}) (err error
 
 func validateDestinationEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string,
 	required bool, sinceVersion types.PDFVersion, validate func(interface{}) bool) (err error) {
+
+	// see 12.3.2
 
 	logInfoValidate.Printf("*** validateDestinationEntry begin: entry=%s ***\n", entryName)
 

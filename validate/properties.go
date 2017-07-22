@@ -48,10 +48,6 @@ func validatePropertiesDict(xRefTable *types.XRefTable, dict *types.PDFDict) (er
 
 		case "Contents":
 			logInfoValidate.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
-			//indRef, ok := val.(PDFIndirectRef)
-			//if !ok {
-			//	log.Fatalf("writePropertiesDict: currupt entry \"%s\"\n", key)
-			//}
 			_, err = validateStreamDict(xRefTable, val)
 			if err != nil {
 				return

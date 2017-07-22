@@ -191,7 +191,7 @@ func writeDocumentInfoDict(ctx *types.PDFContext) (err error) {
 	// TODO insert CreationDate, ModDate and Producer if missing.
 	dict.Update("CreationDate", types.PDFStringLiteral(dateStr))
 	dict.Update("ModDate", types.PDFStringLiteral(dateStr))
-	dict.Update("Producer", types.PDFStringLiteral("golang pdflib version "+PdflibVersion))
+	dict.Update("Producer", types.PDFStringLiteral("golang pdflib v"+PdflibVersion))
 
 	_, _, err = writeDeepObject(ctx, obj)
 	if err != nil {
