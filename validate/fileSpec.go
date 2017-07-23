@@ -52,7 +52,7 @@ func validateEmbeddedFileStreamParameterDict(xRefTable *types.XRefTable, obj int
 		return
 	}
 
-	dictName := "embeddedFileStreamParameterDict"
+	dictName := "embeddedFileStreamParmDict"
 
 	// Size, optional integer
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "Size", OPTIONAL, types.V10, nil)
@@ -99,18 +99,25 @@ func validateEmbeddedFileStreamParameterDict(xRefTable *types.XRefTable, obj int
 	return
 }
 
-// TODO implement
 func processEmbeddedFileStreamDict(xRefTable *types.XRefTable, sd *types.PDFStreamDict) (err error) {
 
 	logInfoValidate.Println("*** processEmbeddedFileStreamDict begin ***")
 
-	if sd.Type() != nil && *sd.Type() != "EmbeddedFile" {
-		return errors.Errorf("processEmbeddedFileStreamDict: invalid type: %s\n", *sd.Type())
+	dictName := "embeddedFileStreamDict"
+
+	// Type, optional, name
+	_, err = validateNameEntry(xRefTable, &sd.PDFDict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "EmbeddedFile" })
+	if err != nil {
+		return
 	}
 
-	// TODO Subtype, optional name, see Annex E, RFC 2046 (MIME)
+	// Subtype, optional, name
+	_, err = validateNameEntry(xRefTable, &sd.PDFDict, dictName, "Subtype", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
 
-	// Params, optional dict
+	// Params, optional, dict
 	// parameter dict containing additional file-specific information.
 	if obj, found := sd.PDFDict.Find("Params"); found && obj != nil {
 		err = validateEmbeddedFileStreamParameterDict(xRefTable, obj)
@@ -124,7 +131,6 @@ func processEmbeddedFileStreamDict(xRefTable *types.XRefTable, sd *types.PDFStre
 	return
 }
 
-// TODO implement
 func processFileSpecDictEntriesEFAndRF(xRefTable *types.XRefTable, efDict, rfDict *types.PDFDict) (err error) {
 
 	// EF only or EF and RF
@@ -169,19 +175,56 @@ func processFileSpecDictEntriesEFAndRF(xRefTable *types.XRefTable, efDict, rfDic
 
 			// value must be related files array.
 			// see 7.11.4.2
-			obj, err = xRefTable.Dereference(val)
+			var arr *types.PDFArray
+			arr, err = xRefTable.DereferenceArray(val)
 			if err != nil {
 				return
 			}
 
-			if obj == nil {
+			if arr == nil {
 				continue
 			}
 
-			// TODO:
-			// array length must be even
-			// odd entries must be strings
-			// even entries must be ind ref of embedded file stream
+			if len(*arr)%2 > 0 {
+				return errors.New("processFileSpecDictEntriesEFAndRF: rfDict array corrupt")
+			}
+
+			for k, v := range *arr {
+
+				if v == nil {
+					return errors.New("processFileSpecDictEntriesEFAndRF: rfDict, array entry nil")
+				}
+
+				obj, err = xRefTable.Dereference(v)
+				if err != nil {
+					return
+				}
+
+				if obj == nil {
+					return errors.New("processFileSpecDictEntriesEFAndRF: rfDict, array entry nil")
+				}
+
+				if k%2 > 0 {
+					_, ok := obj.(types.PDFStringLiteral)
+					if !ok {
+						return errors.New("processFileSpecDictEntriesEFAndRF: rfDict, array entry corrupt")
+					}
+				} else {
+
+					// value must be embedded file stream dict
+					// see 7.11.4
+					sd, err := validateStreamDict(xRefTable, obj)
+					if err != nil {
+						return err
+					}
+
+					err = processEmbeddedFileStreamDict(xRefTable, sd)
+					if err != nil {
+						return err
+					}
+
+				}
+			}
 
 		}
 
@@ -192,15 +235,20 @@ func processFileSpecDictEntriesEFAndRF(xRefTable *types.XRefTable, efDict, rfDic
 	return
 }
 
-// TODO implement
 func processFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
 
 	logInfoValidate.Println("*** processFileSpecDict begin ***")
 
 	dictName := "fileSpecDict"
 
-	// TODO validation, see 7.11.3
-	_, err = validateNameEntry(xRefTable, dict, dictName, "FS", OPTIONAL, types.V10, nil)
+	// Type, optional, name
+	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "Filespec" })
+	if err != nil {
+		return
+	}
+
+	// FS, optional, name
+	fsName, err := validateNameEntry(xRefTable, dict, dictName, "FS", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return
 	}
@@ -214,35 +262,42 @@ func processFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err e
 	// Unix, byte string, optional, obsolescent.
 	_, unixFound := dict.Find("Unix")
 
-	// TODO if $FS=URL, process text string for F
-	_, err = validateStringEntry(xRefTable, dict, dictName, "F", !dosFound && !macFound && !unixFound, types.V10, validateFileSpecStringOrURLString)
+	// F, file spec string
+	validate := validateFileSpecString
+	if fsName != nil && fsName.Value() == "URL" {
+		validate = validateURLString
+	}
+
+	_, err = validateStringEntry(xRefTable, dict, dictName, "F", !dosFound && !macFound && !unixFound, types.V10, validate)
 	if err != nil {
 		return
 	}
 
-	// TODO process text string
+	// UF, optional, text string
 	_, err = validateStringEntry(xRefTable, dict, dictName, "UF", OPTIONAL, types.V17, validateFileSpecString)
 	if err != nil {
 		return
 	}
 
+	// ID, optional, array of strings
 	_, err = validateStringArrayEntry(xRefTable, dict, dictName, "ID", OPTIONAL, types.V11, func(arr types.PDFArray) bool { return len(arr) == 2 })
 	if err != nil {
 		return
 	}
 
+	// V, optional, boolean, since V1.2
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "V", OPTIONAL, types.V12, nil)
 	if err != nil {
 		return
 	}
 
-	// RF, dict of related files arrays, optional, since 1.3
+	// RF, optional, dict of related files arrays, since V1.3
 	rfDict, err := validateDictEntry(xRefTable, dict, dictName, "RF", OPTIONAL, types.V13, nil)
 	if err != nil {
 		return
 	}
 
-	// EF, dict of embedded file streams, required if RF is present, since 1.3
+	// EF, required if RF present, dict of embedded file streams, since 1.3
 	efDict, err := validateDictEntry(xRefTable, dict, dictName, "EF", rfDict != nil, types.V13, nil)
 	if err != nil {
 		return
@@ -262,21 +317,16 @@ func processFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err e
 
 	}
 
+	// Desc, optional, text string, since V1.6
 	_, err = validateStringEntry(xRefTable, dict, dictName, "Desc", OPTIONAL, types.V16, nil)
 	if err != nil {
 		return
 	}
 
-	// TODO shall be indirect ref, collection item dict.
-	// see 7.11.6
-	d, err := validateDictEntry(xRefTable, dict, dictName, "CI", OPTIONAL, types.V17, nil)
+	// CI, optional, collection item dict, since V1.7
+	_, err = validateDictEntry(xRefTable, dict, dictName, "CI", OPTIONAL, types.V17, nil)
 	if err != nil {
 		return
-	}
-
-	if d != nil {
-		// TODO
-		return errors.New("processFileSpecDict: unsupported entry CI")
 	}
 
 	logInfoValidate.Println("*** processFileSpecDict end ***")

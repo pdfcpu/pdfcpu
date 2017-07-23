@@ -419,7 +419,6 @@ func (xRefTable *XRefTable) DeleteObject(objectNumber int) (err error) {
 	entry.Compressed = false
 	entry.Offset = freeListHeadEntry.Offset
 	entry.Object = nil
-	// TODO reset other fields?
 
 	next := int64(objectNumber)
 	freeListHeadEntry.Offset = &next

@@ -616,6 +616,9 @@ func validatePageEntryTabs(xRefTable *types.XRefTable, dict *types.PDFDict, requ
 
 	logInfoValidate.Println("*** writePageEntryTabs begin ***")
 
+	// Include out of spec entry "W"
+	validateTabs := func(s string) bool { return memberOf(s, []string{"R", "C", "S", "W"}) }
+
 	_, err = validateNameEntry(xRefTable, dict, "pagesDict", "Tabs", required, sinceVersion, validateTabs)
 	if err != nil {
 		return

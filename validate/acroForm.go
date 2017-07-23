@@ -144,14 +144,18 @@ func validateAppearanceDict(xRefTable *types.XRefTable, obj interface{}) (err er
 
 func validateAcroFieldDictEntries(xRefTable *types.XRefTable, dict *types.PDFDict, terminalNode bool, inFieldType *types.PDFName) (outFieldType *types.PDFName, err error) {
 
-	logInfoValidate.Println("*** validateAcroFieldDictEntries begin ***")
+	logInfoValidate.Printf("*** validateAcroFieldDictEntries begin *** terminalNode=%v inFieldType=%v\n", terminalNode, inFieldType)
 
 	dictName := "acroFieldDict"
 
 	// FT: name, Btn,Tx,Ch,Sig
-	_, err = validateNameEntry(xRefTable, dict, dictName, "FT", terminalNode && inFieldType == nil, types.V10, validateAcroFieldType)
+	fieldType, err := validateNameEntry(xRefTable, dict, dictName, "FT", terminalNode && inFieldType == nil, types.V10, validateAcroFieldType)
 	if err != nil {
 		return
+	}
+
+	if fieldType != nil {
+		outFieldType = fieldType
 	}
 
 	logInfoValidate.Printf("validateAcroFieldDictEntries, inFieldType=%v outFieldType=%v", inFieldType, outFieldType)

@@ -641,12 +641,6 @@ func validateFormStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStr
 
 	// 8.10 Form XObjects
 
-	// pdfTex may produce custom entries:
-	//
-	//	TODO <PTEX.FileName, (./figures/fig209.pdf)>
-	//	<PTEX.InfoDict, (1404 0 R)>
-	//	<PTEX.PageNumber, 1>
-
 	logInfoValidate.Println("*** validateFormStreamDict begin ***")
 
 	dict := streamDict.PDFDict

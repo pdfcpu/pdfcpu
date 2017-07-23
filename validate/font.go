@@ -247,6 +247,19 @@ func validateFontDescriptor(xRefTable *types.XRefTable, fontDict *types.PDFDict,
 
 	if fontDictType == "CIDFontType0" || fontDictType == "CIDFontType2" {
 
+		validateStyleDict := func(dict types.PDFDict) bool {
+
+			// see 9.8.3.2
+
+			if dict.Len() != 1 {
+				return false
+			}
+
+			_, found := dict.Find("Panose")
+
+			return found
+		}
+
 		// Style, dict, optional
 		_, err = validateDictEntry(xRefTable, dict, dictName, "Style", OPTIONAL, types.V10, validateStyleDict)
 		if err != nil {
