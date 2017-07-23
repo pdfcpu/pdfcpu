@@ -541,6 +541,8 @@ func validatePieceDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err err
 
 	logInfoValidate.Println("*** validatePieceDict begin ***")
 
+	dictName := "pieceDict"
+
 	for _, obj := range dict.Dict {
 
 		dict, err = xRefTable.DereferenceDict(obj)
@@ -553,12 +555,12 @@ func validatePieceDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err err
 			continue
 		}
 
-		_, err = validateDateEntry(xRefTable, dict, "PagePieceDataDict", "LastModified", REQUIRED, types.V10)
+		_, err = validateDateEntry(xRefTable, dict, dictName, "LastModified", REQUIRED, types.V10)
 		if err != nil {
 			return err
 		}
 
-		err = validateAnyEntry(xRefTable, dict, "Private", OPTIONAL)
+		err = validateAnyEntry(xRefTable, dict, dictName, "Private", OPTIONAL)
 		if err != nil {
 			return err
 		}

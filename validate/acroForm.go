@@ -146,88 +146,57 @@ func validateAcroFieldDictEntries(xRefTable *types.XRefTable, dict *types.PDFDic
 
 	logInfoValidate.Println("*** validateAcroFieldDictEntries begin ***")
 
-	// FT: Btn,Tx,Ch,Sig
-	fieldType := dict.PDFNameEntry("FT")
-	if terminalNode && fieldType == nil && inFieldType == nil {
-		return nil, errors.New("writeAcroFieldDictEntries: missing field type")
+	dictName := "acroFieldDict"
+
+	// FT: name, Btn,Tx,Ch,Sig
+	_, err = validateNameEntry(xRefTable, dict, dictName, "FT", terminalNode && inFieldType == nil, types.V10, validateAcroFieldType)
+	if err != nil {
+		return
 	}
 
-	logInfoValidate.Printf("validateAcroFieldDictEntries moving on, inFieldType=%v outFieldType=%v", inFieldType, outFieldType)
+	logInfoValidate.Printf("validateAcroFieldDictEntries, inFieldType=%v outFieldType=%v", inFieldType, outFieldType)
 
-	if fieldType != nil {
-
-		outFieldType = fieldType
-		logInfoValidate.Printf("validateAcroFieldDictEntries moving on 2, inFieldType=%v outFieldType=%v", inFieldType, outFieldType)
-
-		switch *fieldType {
-
-		case "Btn": // Button field
-
-			//	<DA, (/ZaDb 0 Tf 0 g)>
-			//	<FT, Btn>
-			//	<Ff, 49152>
-			//	<Kids, [(257 0 R) (256 0 R) (255 0 R)]>
-			//	<T, (Art)>
-
-		case "Tx": // Text field
-
-		case "Ch": // Choice field
-			return nil, errors.New("validateAcroFieldDictEntries: \"Ch\" not supported")
-
-		case "Sig": // Signature field
-
-			if _, ok := dict.Find("Lock"); ok {
-				return nil, errors.New("validateAcroFieldDictEntries: \"Lock\" not supported")
-			}
-
-			if _, ok := dict.Find("SV"); ok {
-				return nil, errors.New("validateAcroFieldDictEntries: \"SV\" not supported")
-			}
-
-			// V, optional, signature dictionary containing the signature and specifying various attributes of the signature field.
-			if obj, ok := dict.Find("V"); ok {
-				err = validateSignatureDict(xRefTable, obj)
-				if err != nil {
-					return
-				}
-			}
-
-			// DV, optional, defaultvalue, like V
-			if obj, ok := dict.Find("DV"); ok {
-				err = validateSignatureDict(xRefTable, obj)
-				if err != nil {
-					return
-				}
-			}
-
-			if obj, ok := dict.Find("AP"); ok {
-				err = validateAppearanceDict(xRefTable, obj)
-				if err != nil {
-					return
-				}
-			}
-
-		default:
-			return nil, errors.Errorf("validateAcroFieldDictEntries: unknown fieldType:%s\n", fieldType)
-		}
-	}
-
-	_, err = validateIndRefEntry(xRefTable, dict, "acroFieldDict", "Parent", OPTIONAL, types.V10)
+	// Parent, required if this is a child in the field hierarchy.
+	_, err = validateIndRefEntry(xRefTable, dict, dictName, "Parent", OPTIONAL, types.V10)
 	if err != nil {
 		return
 	}
 
 	// T, optional, text string
+	_, err = validateStringEntry(xRefTable, dict, dictName, "T", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
 
 	// TU, optional, text string, since V1.3
+	_, err = validateStringEntry(xRefTable, dict, dictName, "TU", OPTIONAL, types.V13, nil)
+	if err != nil {
+		return
+	}
 
 	// TM, optional, text string, since V1.3
+	_, err = validateStringEntry(xRefTable, dict, dictName, "TM", OPTIONAL, types.V13, nil)
+	if err != nil {
+		return
+	}
 
 	// Ff, optional, integer
+	_, err = validateIntegerEntry(xRefTable, dict, dictName, "Ff", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
 
 	// V, optional, various
+	err = validateAnyEntry(xRefTable, dict, dictName, "V", OPTIONAL)
+	if err != nil {
+		return
+	}
 
 	// DV, optional, various
+	err = validateAnyEntry(xRefTable, dict, dictName, "DV", OPTIONAL)
+	if err != nil {
+		return
+	}
 
 	// AA, optional, dict, since V1.2
 	err = validateAdditionalActions(xRefTable, dict, "acroFieldDict", "AA", OPTIONAL, types.V14, "fieldOrAnnot")
@@ -301,10 +270,10 @@ func validateAcroFieldDict(xRefTable *types.XRefTable, indRef *types.PDFIndirect
 
 	}
 
-	// dict represents a terminal field.
-
-	if dict.Subtype() == nil || *dict.Subtype() != "Widget" {
-		return errors.New("validateAcroFieldDict: terminal field must be widget annotation")
+	// dict represents a terminal field and must have Subtype "Widget"
+	validateNameEntry(xRefTable, dict, "acroFieldDict", "Subtype", REQUIRED, types.V10, func(s string) bool { return s == "Widget" })
+	if err != nil {
+		return
 	}
 
 	// Write field entries.
@@ -376,8 +345,13 @@ func validateAcroFormEntryCO(xRefTable *types.XRefTable, obj interface{}, sinceV
 		dict *types.PDFDict
 	)
 
-	arr, err = validateArray(xRefTable, obj)
+	arr, err = xRefTable.DereferenceArray(obj)
 	if err != nil {
+		return
+	}
+
+	if arr == nil {
+		logDebugValidate.Println("validateAcroFormEntryCO: end, is nil")
 		return
 	}
 
@@ -400,12 +374,68 @@ func validateAcroFormEntryCO(xRefTable *types.XRefTable, obj interface{}, sinceV
 	return
 }
 
-// TODO implement
 func validateAcroFormEntryXFA(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+
+	// see 12.7.8
 
 	logInfoValidate.Println("*** validateAcroFormEntryXFA begin ***")
 
-	err = errors.New("*** validateAcroFormEntryXFA unsupported ***")
+	// streamDict or array of text,streamDict pairs
+
+	obj, err = xRefTable.Dereference(obj)
+	if err != nil {
+		return
+	}
+
+	if obj == nil {
+		logInfoValidate.Println("validateAcroFormEntryXFA end")
+		return
+	}
+
+	switch obj := obj.(type) {
+
+	case types.PDFStreamDict:
+		// no further processing
+
+	case types.PDFArray:
+
+		i := 0
+
+		for _, v := range obj {
+
+			if v == nil {
+				return errors.New("validateAcroFormEntryXFA: array entry is nil")
+			}
+
+			var o interface{}
+
+			o, err = xRefTable.Dereference(v)
+			if err != nil {
+				return
+			}
+
+			if i%2 == 0 {
+
+				_, ok := o.(types.PDFStringLiteral)
+				if !ok {
+					return errors.New("validateAcroFormEntryXFA: even array must be a string")
+				}
+
+			} else {
+
+				_, ok := o.(types.PDFStreamDict)
+				if !ok {
+					return errors.New("validateAcroFormEntryXFA: odd array entry must be a streamDict")
+				}
+
+			}
+
+			i++
+		}
+
+	default:
+		return errors.New("validateAcroFormEntryXFA: needs to be streamDict or array")
+	}
 
 	logInfoValidate.Println("*** validateAcroFormEntryXFA end ***")
 
@@ -459,7 +489,6 @@ func validateAcroForm(xRefTable *types.XRefTable, rootDict *types.PDFDict, requi
 	}
 
 	// CO: array
-	// TODO since 1.3, required if any fields in the document have additional-actions dictionaries containing a C entry.ObjectStream
 	if obj, ok := dict.Find("CO"); ok {
 		err = validateAcroFormEntryCO(xRefTable, obj, types.V13)
 		if err != nil {
@@ -487,7 +516,7 @@ func validateAcroForm(xRefTable *types.XRefTable, rootDict *types.PDFDict, requi
 		return
 	}
 
-	// TODO XFA: optional, since 1.5, stream or array
+	// XFA: optional, since 1.5, stream or array
 	if obj, ok := dict.Find("XFA"); ok {
 		err = validateAcroFormEntryXFA(xRefTable, obj, types.V15)
 		if err != nil {
