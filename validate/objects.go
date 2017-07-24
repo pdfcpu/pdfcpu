@@ -1296,3 +1296,101 @@ func validateStringOrStreamEntry(xRefTable *types.XRefTable, dict *types.PDFDict
 
 	return
 }
+
+func validateIntOrStringEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) (err error) {
+
+	logInfoValidate.Printf("validateIntOrStringEntry begin: entry=%s\n", entryName)
+
+	obj, found := dict.Find(entryName)
+	if !found || obj == nil {
+		if required {
+			err = errors.Errorf("validateIntOrStringEntry: dict=%s required entry=%s missing", dictName, entryName)
+			return
+		}
+		logInfoValidate.Printf("validateIntOrStringEntry end: entry %s is nil\n", entryName)
+		return
+	}
+
+	obj, err = xRefTable.Dereference(obj)
+	if err != nil {
+		return
+	}
+
+	if obj == nil {
+		if required {
+			err = errors.Errorf("validateIntOrStringEntry: dict=%s required entry=%s is nil", dictName, entryName)
+			return
+		}
+		logInfoValidate.Printf("validateIntOrStringEntry end: optional entry %s is nil\n", entryName)
+		return
+	}
+
+	switch obj.(type) {
+
+	case types.PDFStringLiteral, types.PDFHexLiteral, types.PDFInteger:
+		// no further processing
+
+	default:
+		err = errors.Errorf("validateIntOrStringEntry: dict=%s entry=%s invalid type", dictName, entryName)
+		return
+	}
+
+	// Version check
+	if xRefTable.Version() < sinceVersion {
+		err = errors.Errorf("validateIntOrStringEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
+		return
+	}
+
+	logInfoValidate.Printf("validateIntOrStringEntry end: entry=%s\n", entryName)
+
+	return
+}
+
+func validateIntOrDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) (err error) {
+
+	logInfoValidate.Printf("validateIntOrDictEntry begin: entry=%s\n", entryName)
+
+	obj, found := dict.Find(entryName)
+	if !found || obj == nil {
+		if required {
+			err = errors.Errorf("validateIntOrDictEntry: dict=%s required entry=%s missing", dictName, entryName)
+			return
+		}
+		logInfoValidate.Printf("validateIntOrDictEntry end: entry %s is nil\n", entryName)
+		return
+	}
+
+	obj, err = xRefTable.Dereference(obj)
+	if err != nil {
+		return
+	}
+
+	if obj == nil {
+		if required {
+			err = errors.Errorf("validateIntOrDictEntry: dict=%s required entry=%s is nil", dictName, entryName)
+			return
+		}
+		logInfoValidate.Printf("validateIntOrDictEntry end: optional entry %s is nil\n", entryName)
+		return
+	}
+
+	switch obj.(type) {
+
+	case types.PDFInteger, types.PDFDict:
+		// no further processing
+
+	default:
+		err = errors.Errorf("validateIntOrDictEntry: dict=%s entry=%s invalid type", dictName, entryName)
+		return
+	}
+
+	// Version check
+	if xRefTable.Version() < sinceVersion {
+		err = errors.Errorf("validateIntOrDictEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
+		return
+	}
+
+	logInfoValidate.Printf("validateIntOrDictEntry end: entry=%s\n", entryName)
+
+	return
+}

@@ -149,7 +149,12 @@ func validateBitsPerComponent(i int) bool {
 
 func validateRotate(i int) bool {
 
-	return intMemberOf(i, []int{0, 90, 4, 180, 270})
+	return intMemberOf(i, []int{0, 90, 180, 270})
+}
+
+func validateDi(i int) bool {
+
+	return intMemberOf(i, []int{0, 90, 180, 270, 315})
 }
 
 func validateNameTreeName(s string) bool {

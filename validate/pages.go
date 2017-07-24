@@ -410,6 +410,82 @@ func validatePageEntryDur(xRefTable *types.XRefTable, dict *types.PDFDict, requi
 	return
 }
 
+func validateTransitionDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+
+	logInfoValidate.Println("*** validateTransitionDict begin ***")
+
+	dictName := "transitionDict"
+
+	// S, name, optional
+	validate := validateTransitionStyle
+	if xRefTable.Version() >= types.V15 {
+		validate = validateTransitionStyleV15
+	}
+	transStyle, err := validateNameEntry(xRefTable, dict, dictName, "S", OPTIONAL, types.V10, validate)
+	if err != nil {
+		return
+	}
+
+	// D, optional, number > 0
+	_, err = validateNumberEntry(xRefTable, dict, dictName, "D", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	// Dm, optional, name
+	validateDm := func(s string) bool {
+		return validateTransitionDimension(s) && (transStyle != nil && (*transStyle == "Split" || *transStyle == "Blinds"))
+	}
+	_, err = validateNameEntry(xRefTable, dict, dictName, "Dm", OPTIONAL, types.V10, validateDm)
+	if err != nil {
+		return
+	}
+
+	// M, optional, name
+	validateM := func(s string) bool {
+		return validateTransitionDirectionOfMotion(s) &&
+			(transStyle != nil && (*transStyle == "Split" || *transStyle == "Box" || *transStyle == "Fly"))
+	}
+	_, err = validateNameEntry(xRefTable, dict, dictName, "M", OPTIONAL, types.V10, validateM)
+	if err != nil {
+		return
+	}
+
+	// Di, optional, number or name
+	obj, found := dict.Find("Di")
+	if found {
+		switch obj := obj.(type) {
+		case types.PDFInteger:
+			if !validateDi(obj.Value()) {
+				return errors.New("validateTransitionDict: entry Di int value undefined")
+			}
+
+		case types.PDFName:
+			if obj.Value() != "None" {
+				return errors.New("validateTransitionDict: entry Di name value undefined")
+			}
+		}
+	}
+
+	// SS, optional, number, since V1.5
+	validateSS := func(interface{}) bool { return transStyle != nil || *transStyle == "Fly" }
+	_, err = validateNumberEntry(xRefTable, dict, dictName, "SS", OPTIONAL, types.V15, validateSS)
+	if err != nil {
+		return
+	}
+
+	// B, optional, boolean, since V1.5
+	validateB := func(b bool) bool { return transStyle != nil && *transStyle == "Fly" }
+	_, err = validateBooleanEntry(xRefTable, dict, dictName, "B", OPTIONAL, types.V15, validateB)
+	if err != nil {
+		return
+	}
+
+	logInfoValidate.Println("*** validateTransitionDict end ***")
+
+	return
+}
+
 func validatePageEntryTrans(xRefTable *types.XRefTable, pageDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
 
 	logInfoValidate.Println("*** validatePageEntryTrans begin ***")
@@ -424,62 +500,10 @@ func validatePageEntryTrans(xRefTable *types.XRefTable, pageDict *types.PDFDict,
 		return
 	}
 
-	dictName := "transitionDict"
-
-	validate := validateTransitionStyle
-	if xRefTable.Version() >= types.V15 {
-		validate = validateTransitionStyleV15
-	}
-	transStyle, err := validateNameEntry(xRefTable, dict, dictName, "S", OPTIONAL, types.V10, validate)
+	err = validateTransitionDict(xRefTable, dict)
 	if err != nil {
 		return
 	}
-
-	// TODO: validate >= 0
-	_, err = validateNumberEntry(xRefTable, dict, dictName, "D", OPTIONAL, types.V10, nil)
-	if err != nil {
-		return
-	}
-
-	validateDm := func(s string) bool {
-		return validateTransitionDimension(s) && (transStyle != nil && (*transStyle == "Split" || *transStyle == "Blinds"))
-	}
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Dm", OPTIONAL, types.V10, validateDm)
-	if err != nil {
-		return
-	}
-
-	validateM := func(s string) bool {
-		return validateTransitionDirectionOfMotion(s) &&
-			(transStyle != nil && (*transStyle == "Split" || *transStyle == "Box" || *transStyle == "Fly"))
-	}
-	_, err = validateNameEntry(xRefTable, dict, dictName, "M", OPTIONAL, types.V10, validateM)
-	if err != nil {
-		return
-	}
-
-	// TODO: "Di" number or name
-
-	// TODO: validate >= 0
-	validateSS := func(interface{}) bool { return transStyle != nil || *transStyle == "Fly" }
-	_, err = validateNumberEntry(xRefTable, dict, dictName, "SS", OPTIONAL, types.V15, validateSS)
-	if err != nil {
-		return
-	}
-
-	validateB := func(b bool) bool { return transStyle != nil && *transStyle == "Fly" }
-	_, err = validateBooleanEntry(xRefTable, dict, dictName, "B", OPTIONAL, types.V15, validateB)
-	if err != nil {
-		return
-	}
-	// Variante:
-	// B, err := validateBooleanEntry(xRefTable, dict, dictName, "B", OPTIONAL, types.V15, validateB)
-	// if err != nil {
-	// 	return
-	// }
-	// if B != nil && (transStyle == nil || *transStyle != "Fly") {
-	// 	return errors.New("writePageEntryTrans: entry \"B\" requires entry \"S\" of value \"Fly\"")
-	// }
 
 	logInfoValidate.Println("*** validatePageEntryTrans begin ***")
 

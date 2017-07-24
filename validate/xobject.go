@@ -59,7 +59,7 @@ func validateReferenceDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err
 	logInfoValidate.Println("*** validateReferenceDict begin ***")
 
 	// F, file spec, required
-	err = validateFileSpecEntry(xRefTable, dict, "refDict", "F", REQUIRED, types.V10)
+	_, err = validateFileSpecEntry(xRefTable, dict, "refDict", "F", REQUIRED, types.V10)
 	if err != nil {
 		return
 	}
@@ -107,7 +107,7 @@ func validateOPIDictV13(xRefTable *types.XRefTable, dict *types.PDFDict) (err er
 	}
 
 	// F, required, file specification
-	err = validateFileSpecEntry(xRefTable, dict, dictName, "F", REQUIRED, types.V10)
+	_, err = validateFileSpecEntry(xRefTable, dict, dictName, "F", REQUIRED, types.V10)
 	if err != nil {
 		return
 	}
@@ -259,7 +259,7 @@ func validateOPIDictV20(xRefTable *types.XRefTable, dict *types.PDFDict) (err er
 		return
 	}
 
-	err = validateFileSpecEntry(xRefTable, dict, dictName, "F", REQUIRED, types.V10)
+	_, err = validateFileSpecEntry(xRefTable, dict, dictName, "F", REQUIRED, types.V10)
 	if err != nil {
 		return
 	}

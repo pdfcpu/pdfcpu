@@ -335,7 +335,7 @@ func processFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err e
 }
 
 func validateFileSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string,
-	required bool, sinceVersion types.PDFVersion) (err error) {
+	required bool, sinceVersion types.PDFVersion) (o interface{}, err error) {
 
 	logInfoValidate.Printf("*** validateFileSpecEntry begin: entry=%s ***\n", entryName)
 
@@ -389,6 +389,8 @@ func validateFileSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dict
 		err = errors.Errorf("validateFileSpecEntry: dict=%s entry=%s invalid type", dictName, entryName)
 		return
 	}
+
+	o = obj
 
 	logInfoValidate.Printf("*** validateFileSpecEntry end: entry=%s ***\n", entryName)
 
