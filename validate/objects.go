@@ -1247,6 +1247,44 @@ func validateStringArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, d
 	return
 }
 
+func validateArrayArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string,
+	required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (arrp *types.PDFArray, err error) {
+
+	logInfoValidate.Printf("validateArrayArrayEntry begin: entry=%s\n", entryName)
+
+	arrp, err = validateArrayEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, validate)
+	if err != nil || arrp == nil {
+		return
+	}
+
+	for i, obj := range *arrp {
+
+		obj, err = xRefTable.Dereference(obj)
+		if err != nil {
+			return
+		}
+
+		if obj == nil {
+			continue
+		}
+
+		switch obj.(type) {
+
+		case types.PDFArray:
+			// no further processing.
+
+		default:
+			err = errors.Errorf("validateArrayArrayEntry: invalid type at index %d\n", i)
+			return
+		}
+
+	}
+
+	logInfoValidate.Printf("validateArrayArrayEntry end: entry=%s\n", entryName)
+
+	return
+}
+
 func validateStringOrStreamEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string,
 	required bool, sinceVersion types.PDFVersion) (err error) {
 
@@ -1391,6 +1429,104 @@ func validateIntOrDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dic
 	}
 
 	logInfoValidate.Printf("validateIntOrDictEntry end: entry=%s\n", entryName)
+
+	return
+}
+
+func validateBooleanOrStreamEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) (err error) {
+
+	logInfoValidate.Printf("validateBooleanOrStreamEntry begin: entry=%s\n", entryName)
+
+	obj, found := dict.Find(entryName)
+	if !found || obj == nil {
+		if required {
+			err = errors.Errorf("validateBooleanOrStreamEntry: dict=%s required entry=%s missing", dictName, entryName)
+			return
+		}
+		logInfoValidate.Printf("validateBooleanOrStreamEntry end: entry %s is nil\n", entryName)
+		return
+	}
+
+	obj, err = xRefTable.Dereference(obj)
+	if err != nil {
+		return
+	}
+
+	if obj == nil {
+		if required {
+			err = errors.Errorf("validateBooleanOrStreamEntry: dict=%s required entry=%s is nil", dictName, entryName)
+			return
+		}
+		logInfoValidate.Printf("validateBooleanOrStreamEntry end: optional entry %s is nil\n", entryName)
+		return
+	}
+
+	switch obj.(type) {
+
+	case types.PDFBoolean, types.PDFStreamDict:
+		// no further processing
+
+	default:
+		err = errors.Errorf("validateBooleanOrStreamEntry: dict=%s entry=%s invalid type", dictName, entryName)
+		return
+	}
+
+	// Version check
+	if xRefTable.Version() < sinceVersion {
+		err = errors.Errorf("validateBooleanOrStreamEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
+		return
+	}
+
+	logInfoValidate.Printf("validateBooleanOrStreamEntry end: entry=%s\n", entryName)
+
+	return
+}
+
+func validateStreamDictOrDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) (err error) {
+
+	logInfoValidate.Printf("validateStreamDictOrDictEntry begin: entry=%s\n", entryName)
+
+	obj, found := dict.Find(entryName)
+	if !found || obj == nil {
+		if required {
+			err = errors.Errorf("validateStreamDictOrDictEntry: dict=%s required entry=%s missing", dictName, entryName)
+			return
+		}
+		logInfoValidate.Printf("validateStreamDictOrDictEntry end: entry %s is nil\n", entryName)
+		return
+	}
+
+	obj, err = xRefTable.Dereference(obj)
+	if err != nil {
+		return
+	}
+
+	if obj == nil {
+		if required {
+			err = errors.Errorf("validateStreamDictOrDictEntry: dict=%s required entry=%s is nil", dictName, entryName)
+			return
+		}
+		logInfoValidate.Printf("validateStreamDictOrDictEntry end: optional entry %s is nil\n", entryName)
+		return
+	}
+
+	switch obj.(type) {
+
+	case types.PDFStreamDict, types.PDFDict:
+		// no further processing
+
+	default:
+		err = errors.Errorf("validateStreamDictOrDictEntry: dict=%s entry=%s invalid type", dictName, entryName)
+		return
+	}
+
+	// Version check
+	if xRefTable.Version() < sinceVersion {
+		err = errors.Errorf("validateStreamDictOrDictEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
+		return
+	}
+
+	logInfoValidate.Printf("validateStreamDictOrDictEntry end: entry=%s\n", entryName)
 
 	return
 }

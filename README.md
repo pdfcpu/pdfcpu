@@ -77,7 +77,6 @@ The extraction code for font files and images is experimental and serves as proo
 
 
 ### To Do
-* validateAnnotationDicts
 * validateNameTreeValue
 * validatePageEntryPresSteps
 * validateSpiderInfo
