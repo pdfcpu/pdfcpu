@@ -334,6 +334,44 @@ func processFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err e
 	return
 }
 
+func validateFileSpecification(xRefTable *types.XRefTable, obj interface{}) (o interface{}, err error) {
+
+	logInfoValidate.Println("*** validateFileSpecification begin ***")
+
+	switch obj := obj.(type) {
+
+	case types.PDFStringLiteral:
+		s := obj.Value()
+		if !validateFileSpecString(s) {
+			err = errors.Errorf("validateFileSpecification: invalid file spec string: %s", s)
+			return
+		}
+
+	case types.PDFHexLiteral:
+		s := obj.Value()
+		if !validateFileSpecString(s) {
+			err = errors.Errorf("validateFileSpecification: invalid file spec string: %s", s)
+			return
+		}
+
+	case types.PDFDict:
+		err = processFileSpecDict(xRefTable, &obj)
+		if err != nil {
+			return
+		}
+
+	default:
+		err = errors.Errorf("validateFileSpecification: invalid type")
+		return
+	}
+
+	o = obj
+
+	logInfoValidate.Println("*** validateFileSpecification end ***")
+
+	return
+}
+
 func validateFileSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string,
 	required bool, sinceVersion types.PDFVersion) (o interface{}, err error) {
 
@@ -363,19 +401,33 @@ func validateFileSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dict
 		return
 	}
 
+	o, err = validateFileSpecification(xRefTable, obj)
+	if err != nil {
+		return
+	}
+
+	logInfoValidate.Printf("*** validateFileSpecEntry end: entry=%s ***\n", entryName)
+
+	return
+}
+
+func validateFileSpecificationOrFormObject(xRefTable *types.XRefTable, obj interface{}) (o interface{}, err error) {
+
+	logInfoValidate.Println("*** validateFileSpecificationOrFormObject begin ***")
+
 	switch obj := obj.(type) {
 
 	case types.PDFStringLiteral:
 		s := obj.Value()
 		if !validateFileSpecString(s) {
-			err = errors.Errorf("validateFileSpecEntry: dict=%s entry=%s invalid file spec string: %s", dictName, entryName, s)
+			err = errors.Errorf("validateFileSpecificationOrFormObject: invalid file spec string: %s", s)
 			return
 		}
 
 	case types.PDFHexLiteral:
 		s := obj.Value()
 		if !validateFileSpecString(s) {
-			err = errors.Errorf("validateFileSpecEntry: dict=%s entry=%s invalid file spec string: %s", dictName, entryName, s)
+			err = errors.Errorf("validateFileSpecificationOrFormObject: invalid file spec string: %s", s)
 			return
 		}
 
@@ -385,14 +437,20 @@ func validateFileSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dict
 			return
 		}
 
+	case types.PDFStreamDict:
+		err = validateFormStreamDict(xRefTable, &obj)
+		if err != nil {
+			return
+		}
+
 	default:
-		err = errors.Errorf("validateFileSpecEntry: dict=%s entry=%s invalid type", dictName, entryName)
+		err = errors.Errorf("validateFileSpecificationOrFormObject: invalid type")
 		return
 	}
 
 	o = obj
 
-	logInfoValidate.Printf("*** validateFileSpecEntry end: entry=%s ***\n", entryName)
+	logInfoValidate.Println("*** validateFileSpecificationOrFormObject end ***")
 
 	return
 }

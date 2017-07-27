@@ -1530,3 +1530,73 @@ func validateStreamDictOrDictEntry(xRefTable *types.XRefTable, dict *types.PDFDi
 
 	return
 }
+
+func validateIntegerOrArrayOfInteger(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) (err error) {
+
+	logInfoValidate.Printf("validateIntegerOrArrayOfInteger begin: entry=%s\n", entryName)
+
+	obj, found := dict.Find(entryName)
+	if !found || obj == nil {
+		if required {
+			err = errors.Errorf("validateIntegerOrArrayOfInteger: dict=%s required entry=%s missing", dictName, entryName)
+			return
+		}
+		logInfoValidate.Printf("validateIntegerOrArrayOfInteger end: entry %s is nil\n", entryName)
+		return
+	}
+
+	obj, err = xRefTable.Dereference(obj)
+	if err != nil {
+		return
+	}
+
+	if obj == nil {
+		if required {
+			err = errors.Errorf("validateIntegerOrArrayOfInteger: dict=%s required entry=%s is nil", dictName, entryName)
+			return
+		}
+		logInfoValidate.Printf("validateIntegerOrArrayOfInteger end: optional entry %s is nil\n", entryName)
+		return
+	}
+
+	switch obj := obj.(type) {
+
+	case types.PDFStringLiteral, types.PDFHexLiteral:
+		// no further processing
+
+	case types.PDFArray:
+
+		for i, obj := range obj {
+
+			obj, err = xRefTable.Dereference(obj)
+			if err != nil {
+				return
+			}
+
+			if obj == nil {
+				continue
+			}
+
+			_, ok := obj.(types.PDFInteger)
+			if !ok {
+				err = errors.Errorf("validateIntegerOrArrayOfInteger: dict=%s entry=%s invalid type at index %d\n", dictName, entryName, i)
+				return
+			}
+
+		}
+
+	default:
+		err = errors.Errorf("validateIntegerOrArrayOfInteger: dict=%s entry=%s invalid type", dictName, entryName)
+		return
+	}
+
+	// Version check
+	if xRefTable.Version() < sinceVersion {
+		err = errors.Errorf("validateIntegerOrArrayOfInteger: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
+		return
+	}
+
+	logInfoValidate.Printf("validateIntegerOrArrayOfInteger end: entry=%s\n", entryName)
+
+	return
+}
