@@ -485,10 +485,9 @@ func validateDeviceNColorSpaceAttributesDict(xRefTable *types.XRefTable, obj int
 		}
 	}
 
-	// Relaxed from 1.6 to 1.4
 	sinceVersion := types.V16
 	if xRefTable.ValidationMode == types.ValidationRelaxed {
-		sinceVersion = types.V14
+		sinceVersion = types.V13
 	}
 	d, err = validateDictEntry(xRefTable, dict, dictName, "Process", OPTIONAL, sinceVersion, nil)
 	if err != nil {

@@ -107,7 +107,11 @@ func (b *Reader) reset(buf []byte, r io.Reader) {
 
 var errNegativeRead = errors.New("bufio: reader returned negative count from Read")
 
-// fill reads a new chunk into the buffer.
+// Fill reads a new chunk into the buffer.
+func (b *Reader) Fill() {
+	b.fill()
+}
+
 func (b *Reader) fill() {
 	// Slide existing data to beginning.
 	if b.r > 0 {
@@ -234,6 +238,7 @@ func (b *Reader) Read(p []byte) (n int, err error) {
 			}
 			return n, b.readErr()
 		}
+
 		// One read.
 		// Do not use b.fill, which will loop.
 		b.r = 0

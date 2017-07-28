@@ -1143,6 +1143,48 @@ func validateStreamDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, di
 	return
 }
 
+func validateString(xRefTable *types.XRefTable, obj interface{}, validate func(string) bool) (s *string, err error) {
+
+	logInfoValidate.Println("validateString begin")
+
+	obj, err = xRefTable.Dereference(obj)
+	if err != nil {
+		return
+	}
+
+	if obj == nil {
+		err = errors.New("validateString: missing object")
+		return
+	}
+
+	var str string
+
+	switch obj := obj.(type) {
+
+	case types.PDFStringLiteral:
+		str = obj.Value()
+
+	case types.PDFHexLiteral:
+		str = obj.Value()
+
+	default:
+		err = errors.New("validateString: invalid type")
+		return
+	}
+
+	// Validation
+	if validate != nil && !validate(str) {
+		err = errors.Errorf("validateString: %s invalid", str)
+		return
+	}
+
+	s = &str
+
+	logInfoValidate.Println("validateString end")
+
+	return
+}
+
 func validateStringEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string,
 	required bool, sinceVersion types.PDFVersion, validate func(string) bool) (s *string, err error) {
 

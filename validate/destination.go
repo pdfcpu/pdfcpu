@@ -39,8 +39,14 @@ func validateDestinationArray(xRefTable *types.XRefTable, arr *types.PDFArray) e
 		if !ok {
 			return errors.New("validateDestinationArray: second element must be a name")
 		}
-		if name.Value() != "Fit" && name.Value() != "FitB" {
-			return errors.New("validateDestinationArray: arr[1] corrupt")
+		if xRefTable.ValidationMode == types.ValidationRelaxed {
+			if !memberOf(name.Value(), []string{"Fit", "FitB", "FitH"}) {
+				return errors.New("validateDestinationArray: arr[1] corrupt")
+			}
+		} else {
+			if !memberOf(name.Value(), []string{"Fit", "FitB"}) {
+				return errors.New("validateDestinationArray: arr[1] corrupt")
+			}
 		}
 
 	case 3:

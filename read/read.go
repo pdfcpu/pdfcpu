@@ -459,7 +459,7 @@ func parseXRefStream(rd io.Reader, offset *int64, ctx *types.PDFContext) (prevOf
 		return nil, errors.New("parseXRefStream: no \"Length\" entry")
 	}
 
-	filterPipeline, err := getPDFFilterPipeline(pdfDict)
+	filterPipeline, err := getPDFFilterPipeline(ctx, pdfDict)
 	if err != nil {
 		return nil, err
 	}
@@ -705,6 +705,7 @@ func parseXRefSection(rd *bufio.Reader, ctx *types.PDFContext) (*int64, error) {
 	// Otherwise we can run into a situation where we only get the last chunk of the reader buf
 	// into the buffer provided to "read".
 	// That is because "read" itself does not provide for refilling.
+	rd.Fill()
 	if n, err = rd.Read(bufb); err != nil {
 		return nil, err
 	}
@@ -714,19 +715,12 @@ func parseXRefSection(rd *bufio.Reader, ctx *types.PDFContext) (*int64, error) {
 	if line != "trailer" {
 		trailerString = line[7:]
 		logDebugReader.Printf("parseXRefSection: trailer leftover: <%s>\n", trailerString)
+	} else {
+		logDebugReader.Printf("line (len %d) <%s>\n", len(line), line)
 	}
 
 	trailerString += string(bufb)
-	logDebugReader.Printf("parseXRefSection: trailerString: <%s>\n", trailerString)
-
-	// if line == "trailer" {
-	// 	logDebugReader.Println("==trailer")
-	// 	trailerString = line1 //string(bufb)
-	// } else {
-	// 	trailerString = (line)[7:]
-	// 	trailerString += line1 //string(bufb)
-	// 	logDebugReader.Printf("parseXRefSection: trailerString: <%s>\n", trailerString)
-	// }
+	logDebugReader.Printf("parseXRefSection: trailerString: (len:%d) <%s>\n", len(trailerString), trailerString)
 
 	pdfObject, err := parseObject(&trailerString)
 	if err != nil {
@@ -1014,7 +1008,7 @@ func keywordStreamRightAfterEndOfDict(buf string, pos int) bool {
 }
 
 // Return the filter pipeline associated with this stream dict.
-func getPDFFilterPipeline(pdfDict types.PDFDict) ([]types.PDFFilter, error) {
+func getPDFFilterPipeline(ctx *types.PDFContext, pdfDict types.PDFDict) ([]types.PDFFilter, error) {
 
 	logDebugReader.Println("getPDFFilterPipeline: begin")
 
@@ -1029,6 +1023,14 @@ func getPDFFilterPipeline(pdfDict types.PDFDict) ([]types.PDFFilter, error) {
 	var filterPipeline []types.PDFFilter
 
 	// TODO use switch Name or Array
+
+	if indRef, ok := obj.(types.PDFIndirectRef); ok {
+		var err error
+		obj, err = dereferencedObject(ctx, indRef.ObjectNumber.Value())
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	if name, ok := obj.(types.PDFName); ok {
 
@@ -1056,7 +1058,7 @@ func getPDFFilterPipeline(pdfDict types.PDFDict) ([]types.PDFFilter, error) {
 	// Array of filternames
 	filterArray, ok := obj.(types.PDFArray)
 	if !ok {
-		return nil, errors.Errorf("getPDFFilterPipeline: Expected filterArray corrupt, %v", obj)
+		return nil, errors.Errorf("getPDFFilterPipeline: Expected filterArray corrupt, %v %T", obj, obj)
 	}
 
 	// Optional array of decode parameter dicts.
@@ -1093,9 +1095,9 @@ func getPDFFilterPipeline(pdfDict types.PDFDict) ([]types.PDFFilter, error) {
 
 // Parses an object from file at given offset.
 // Could work with SectionReader
-func getObject(ctx *types.ReadContext, offset int64, objectNumber int, generationNumber int) (interface{}, error) {
+func getObject(ctx *types.PDFContext, offset int64, objectNumber int, generationNumber int) (interface{}, error) {
 
-	rd, err := newPositionedReader(ctx.File, &offset)
+	rd, err := newPositionedReader(ctx.Read.File, &offset)
 	if err != nil {
 		return nil, err
 	}
@@ -1173,7 +1175,7 @@ func getObject(ctx *types.ReadContext, offset int64, objectNumber int, generatio
 		return nil, errors.New("getObject: stream object without streamOffset")
 	}
 
-	filterPipeline, err := getPDFFilterPipeline(pdfDict)
+	filterPipeline, err := getPDFFilterPipeline(ctx, pdfDict)
 	if err != nil {
 		return nil, err
 	}
@@ -1188,14 +1190,11 @@ func getObject(ctx *types.ReadContext, offset int64, objectNumber int, generatio
 	return pdfStreamDict, nil
 }
 
-// dereference a PDFInteger object representing a int64 value.
-func getInt64Object(ctx *types.PDFContext, objectNumber int) (*int64, error) {
-
-	logDebugReader.Printf("getInt64Object begin: %d\n", objectNumber)
+func dereferencedObject(ctx *types.PDFContext, objectNumber int) (interface{}, error) {
 
 	entry, ok := ctx.Find(objectNumber)
 	if !ok {
-		return nil, errors.New("getInt64Object: object not registered in xRefTable")
+		return nil, errors.New("dereferencedObject: object not registered in xRefTable")
 	}
 
 	if entry.Compressed {
@@ -1206,21 +1205,34 @@ func getInt64Object(ctx *types.PDFContext, objectNumber int) (*int64, error) {
 
 		// dereference this object!
 
-		logDebugReader.Printf("getInt64Object: dereferencing object %d\n", objectNumber)
+		logDebugReader.Printf("dereferencedObject: dereferencing object %d\n", objectNumber)
 
-		obj, err := getObject(ctx.Read, *entry.Offset, objectNumber, *entry.Generation)
+		obj, err := getObject(ctx, *entry.Offset, objectNumber, *entry.Generation)
 		if err != nil {
-			return nil, errors.Wrapf(err, "getInt64Object: problem dereferencing object %d", objectNumber)
+			return nil, errors.Wrapf(err, "dereferencedObject: problem dereferencing object %d", objectNumber)
 		}
 
 		if obj == nil {
-			return nil, errors.New("getInt64Object: object is nil")
+			return nil, errors.New("dereferencedObject: object is nil")
 		}
 
 		entry.Object = obj
 	}
 
-	i, ok := entry.Object.(types.PDFInteger)
+	return entry.Object, nil
+}
+
+// dereference a PDFInteger object representing a int64 value.
+func getInt64Object(ctx *types.PDFContext, objectNumber int) (*int64, error) {
+
+	logDebugReader.Printf("getInt64Object begin: %d\n", objectNumber)
+
+	obj, err := dereferencedObject(ctx, objectNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	i, ok := obj.(types.PDFInteger)
 	if !ok {
 		return nil, errors.New("getInt64Object: object is not PDFInteger")
 	}
@@ -1415,7 +1427,7 @@ func decodeObjectStreams(ctx *types.PDFContext) (err error) {
 		logDebugReader.Printf("decodeObjectStreams: parsing object stream for obj#%d\n", objectNumber)
 
 		// Parse object stream from file.
-		obj, err := getObject(ctx.Read, *entry.Offset, objectNumber, *entry.Generation)
+		obj, err := getObject(ctx, *entry.Offset, objectNumber, *entry.Generation)
 		if err != nil || obj == nil {
 			return errors.New("decodeObjectStreams: corrupt object stream")
 		}
@@ -1546,7 +1558,7 @@ func dereferenceObjects(ctx *types.PDFContext) error {
 		logDebugReader.Printf("dereferenceObjects: dereferencing object %d\n", objectNumber)
 
 		// Parse object from file: anything goes dict,array,integer,float,streamdicts..
-		obj, err = getObject(ctx.Read, *entry.Offset, objectNumber, *entry.Generation)
+		obj, err = getObject(ctx, *entry.Offset, objectNumber, *entry.Generation)
 		if err != nil {
 			return errors.Wrapf(err, "dereferenceObjects: problem dereferencing object %d", objectNumber)
 		}

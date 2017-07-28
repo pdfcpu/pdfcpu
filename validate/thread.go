@@ -72,7 +72,7 @@ func validateBeadDict(xRefTable *types.XRefTable, indRefBeadDict, indRefThreadDi
 
 	// Recurse until next bead equals last bead.
 	if !nextBeadIndRef.Equals(indRefLastBead) {
-		err = validateBeadDict(xRefTable, indRefBeadDict, indRefThreadDict, indRefBeadDict, indRefLastBead)
+		err = validateBeadDict(xRefTable, *nextBeadIndRef, indRefThreadDict, indRefBeadDict, indRefLastBead)
 		if err != nil {
 			return err
 		}

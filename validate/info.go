@@ -71,10 +71,16 @@ func validateDocumentInfoDict(xRefTable *types.XRefTable, obj interface{}) (hasM
 
 		// date, optional
 		case "CreationDate":
-
-			_, err = validateDateObject(xRefTable, v, types.V10)
-			if err != nil {
-				return
+			if xRefTable.ValidationMode == types.ValidationRelaxed {
+				_, err = validateString(xRefTable, v, nil)
+				if err != nil {
+					return
+				}
+			} else {
+				_, err = validateDateObject(xRefTable, v, types.V10)
+				if err != nil {
+					return
+				}
 			}
 
 		// date, required if PieceInfo is present in document catalog.

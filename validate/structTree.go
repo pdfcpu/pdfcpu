@@ -640,9 +640,21 @@ func validateStructTreeRootDict(xRefTable *types.XRefTable, dict *types.PDFDict)
 	// A number tree used in finding the structure elements to which content items belong.
 	// TODO Required if any structure element contains content items.
 	if indRef = dict.IndirectRefEntry("ParentTree"); indRef != nil {
-		err = validateNumberTree(xRefTable, "StructTree", *indRef, true)
-		if err != nil {
-			return
+		if xRefTable.ValidationMode == types.ValidationRelaxed {
+			// Accept empty dict
+			var d *types.PDFDict
+			d, err = xRefTable.DereferenceDict(*indRef)
+			if err != nil {
+				return
+			}
+			if d == nil || len(d.Dict) == 0 {
+				return errors.New("validateStructTreeRootDict: corrupt entry \"ParentTree\"")
+			}
+		} else {
+			err = validateNumberTree(xRefTable, "StructTree", *indRef, true)
+			if err != nil {
+				return
+			}
 		}
 	}
 

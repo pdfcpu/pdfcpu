@@ -935,7 +935,11 @@ func validateRootObject(xRefTable *types.XRefTable) (err error) {
 	}
 
 	// OutputIntents
-	err = validateOutputIntents(xRefTable, rootDict, OPTIONAL, types.V14)
+	sinceVersion = types.V14
+	if xRefTable.ValidationMode == types.ValidationRelaxed {
+		sinceVersion = types.V13
+	}
+	err = validateOutputIntents(xRefTable, rootDict, OPTIONAL, sinceVersion)
 	if err != nil {
 		return err
 	}

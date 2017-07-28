@@ -172,8 +172,8 @@ func validateOPIDictV13(xRefTable *types.XRefTable, dict *types.PDFDict) (err er
 		return
 	}
 
-	// Overprint, optional, number
-	_, err = validateNumberEntry(xRefTable, dict, dictName, "Overprint", OPTIONAL, types.V10, nil)
+	// Overprint, optional, boolean
+	_, err = validateBooleanEntry(xRefTable, dict, dictName, "Overprint", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return
 	}
