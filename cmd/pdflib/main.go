@@ -268,7 +268,8 @@ func main() {
 			//logInfo.Printf("stats will be appended to %s\n", fileStats)
 		}
 
-		cmd = pdflib.OptimizeCommand(filenameIn, filenameOut, fileStats)
+		// Always write using 0x0A end of line sequence.
+		cmd = pdflib.OptimizeCommand(filenameIn, filenameOut, fileStats, types.EolLF)
 
 	case "split", "s":
 

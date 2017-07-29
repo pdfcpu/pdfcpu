@@ -27,11 +27,13 @@ type WriteContext struct {
 
 	WriteToObjectStream bool // if true start to embed objects into object streams and obey ObjectStreamMaxObjects.
 	CurrentObjStream    *int // if not nil, any new non-stream-object gets added to the object stream with this object number.
+
+	Eol string // end of line char sequence
 }
 
 // NewWriteContext returns a new WriteContext.
 func NewWriteContext() *WriteContext {
-	return &WriteContext{Table: map[int]int64{}}
+	return &WriteContext{Table: map[int]int64{}, Eol: EolLF}
 }
 
 // SetWriteOffset saves the current write offset to the PDFDestination.
@@ -86,4 +88,12 @@ func (wc *WriteContext) LogStats(log *log.Logger) {
 	log.Printf("images               : %s (%d bytes) %4.1f%%\n", ByteSize(binaryImageSize), binaryImageSize, float32(binaryImageSize)/float32(binaryTotalSize)*100)
 	log.Printf("fonts                : %s (%d bytes) %4.1f%%\n", ByteSize(binaryFontSize), binaryFontSize, float32(binaryFontSize)/float32(binaryTotalSize)*100)
 	log.Printf("other                : %s (%d bytes) %4.1f%%\n\n", ByteSize(binaryOtherSize), binaryOtherSize, float32(binaryOtherSize)/float32(binaryTotalSize)*100)
+}
+
+// WriteEol writes an end of line sequence.
+func (wc *WriteContext) WriteEol() error {
+
+	_, err := wc.WriteString(wc.Eol)
+
+	return err
 }

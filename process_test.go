@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/hhrutter/pdflib/types"
 )
 
 const outputDir = "testdata/out"
@@ -28,7 +30,7 @@ func ExampleProcess_optimize() {
 	// Generate optional stats.
 	statsFile := "stats.csv"
 
-	cmd := OptimizeCommand("in.pdf", "out.pdf", statsFile)
+	cmd := OptimizeCommand("in.pdf", "out.pdf", statsFile, types.EolLF)
 
 	err := Process(&cmd)
 	if err != nil {
@@ -139,7 +141,7 @@ func TestValidateCommand(t *testing.T) {
 }
 
 // Optimize all PDFs in testdata.
-func TestOptimizeCommand(t *testing.T) {
+func TestOptimizeCommandWithLF(t *testing.T) {
 
 	files, err := ioutil.ReadDir("testdata")
 	if err != nil {
@@ -148,7 +150,45 @@ func TestOptimizeCommand(t *testing.T) {
 
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), "pdf") {
-			cmd := OptimizeCommand("testdata/"+file.Name(), outputDir+"/test.pdf", "")
+			cmd := OptimizeCommand("testdata/"+file.Name(), outputDir+"/test.pdf", "", types.EolCR)
+			err = Process(&cmd)
+			if err != nil {
+				t.Fatalf("TestOptimizeCommand: %v\n", err)
+			}
+		}
+	}
+
+}
+
+func TestOptimizeCommandWithCRLF(t *testing.T) {
+
+	files, err := ioutil.ReadDir("testdata")
+	if err != nil {
+		t.Fatalf("TestOptimizeCommmand: %v\n", err)
+	}
+
+	for _, file := range files {
+		if strings.HasSuffix(file.Name(), "pdf") {
+			cmd := OptimizeCommand("testdata/"+file.Name(), outputDir+"/test.pdf", "", types.EolCRLF)
+			err = Process(&cmd)
+			if err != nil {
+				t.Fatalf("TestOptimizeCommand: %v\n", err)
+			}
+		}
+	}
+
+}
+
+func TestOptimizeCommandWithCR(t *testing.T) {
+
+	files, err := ioutil.ReadDir("testdata")
+	if err != nil {
+		t.Fatalf("TestOptimizeCommmand: %v\n", err)
+	}
+
+	for _, file := range files {
+		if strings.HasSuffix(file.Name(), "pdf") {
+			cmd := OptimizeCommand("testdata/"+file.Name(), outputDir+"/test.pdf", "", types.EolCR)
 			err = Process(&cmd)
 			if err != nil {
 				t.Fatalf("TestOptimizeCommand: %v\n", err)

@@ -237,7 +237,7 @@ func readValidateAndOptimize(fileIn string, from1 time.Time) (ctx *types.PDFCont
 }
 
 // Optimize reads in fileIn, does validation, optimization and writes the result to fileOut.
-func Optimize(fileIn, fileOut, fileStats string) (err error) {
+func Optimize(fileIn, fileOut, fileStats, eol string) (err error) {
 
 	fromStart := time.Now()
 
@@ -259,6 +259,7 @@ func Optimize(fileIn, fileOut, fileStats string) (err error) {
 	dirName, fileName := filepath.Split(fileOut)
 	ctx.Write.DirName = dirName
 	ctx.Write.FileName = fileName
+	ctx.Write.Eol = eol
 
 	err = Write(ctx)
 	if err != nil {

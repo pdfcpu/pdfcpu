@@ -22,36 +22,36 @@ const (
 )
 
 func writeCommentLine(w *types.WriteContext, comment string) (int, error) {
-	return w.WriteString(fmt.Sprintf("%%%s%s", comment, eol))
+	return w.WriteString(fmt.Sprintf("%%%s%s", comment, w.Eol))
 }
 
-func writeHeader(ctx *types.PDFContext, v types.PDFVersion) error {
+func writeHeader(w *types.WriteContext, v types.PDFVersion) error {
 
-	i, err := writeCommentLine(ctx.Write, "PDF-"+types.VersionString(v))
+	i, err := writeCommentLine(w, "PDF-"+types.VersionString(v))
 	if err != nil {
 		return err
 	}
 
-	j, err := writeCommentLine(ctx.Write, "\xe2\xe3\xcf\xD3")
+	j, err := writeCommentLine(w, "\xe2\xe3\xcf\xD3")
 	if err != nil {
 		return err
 	}
 
-	ctx.Write.Offset += int64(i + j)
+	w.Offset += int64(i + j)
 
 	return nil
 }
 
-func writeTrailer(ctx *types.PDFContext) (int, error) {
-	return ctx.Write.WriteString("%%EOF")
+func writeTrailer(w *types.WriteContext) (int, error) {
+	return w.WriteString("%%EOF")
 }
 
 func writeObjectHeader(w *types.WriteContext, objNumber, genNumber int) (int, error) {
-	return w.WriteString(fmt.Sprintf("%d %d obj%s", objNumber, genNumber, eol))
+	return w.WriteString(fmt.Sprintf("%d %d obj%s", objNumber, genNumber, w.Eol))
 }
 
 func writeObjectTrailer(w *types.WriteContext) (int, error) {
-	return w.WriteString(fmt.Sprintf("%sendobj%s", eol, eol))
+	return w.WriteString(fmt.Sprintf("%sendobj%s", w.Eol, w.Eol))
 }
 
 func startObjectStream(ctx *types.PDFContext) (err error) {
@@ -256,7 +256,7 @@ func writePDFArrayObject(ctx *types.PDFContext, objNumber, genNumber int, array 
 
 func writeStream(w *types.WriteContext, streamDict types.PDFStreamDict) (int64, error) {
 
-	b, err := w.WriteString(fmt.Sprintf("%sstream%s", eol, eol))
+	b, err := w.WriteString(fmt.Sprintf("%sstream%s", w.Eol, w.Eol))
 	if err != nil {
 		return 0, errors.Wrapf(err, "writeStream: failed to write raw content")
 	}

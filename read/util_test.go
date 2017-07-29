@@ -28,45 +28,43 @@ func TestPositionToNextWhitespaceOrChar(t *testing.T) {
 func TestTrimLeftSpace(t *testing.T) {
 
 	str := "   %     x"
-	s, wsCount := trimLeftSpace(str)
-	s = s
-	wsCount = wsCount
+	trimLeftSpace(str)
 	//t.Logf("raw<%s> trimmedLeftSpace<%s> number of trimmed ws:%d\n", str, s, wsCount)
 
 	str = "   %\x0Aabc"
-	s, wsCount = trimLeftSpace(str)
+	trimLeftSpace(str)
 	//t.Logf("raw<%s> trimmedLeftSpace<%s> number of trimmed ws:%d\n", str, s, wsCount)
 
 	str = "   %\x0Dabc"
-	s, wsCount = trimLeftSpace(str)
+	trimLeftSpace(str)
 	//t.Logf("raw<%s> trimmedLeftSpace<%s> number of trimmed ws:%d\n", str, s, wsCount)
 
 	str = "   %\x0D%     \x0A\x0Ddef"
-	s, wsCount = trimLeftSpace(str)
+	trimLeftSpace(str)
 	//t.Logf("raw<%s> trimmedLeftSpace<%s> number of trimmed ws:%d\n", str, s, wsCount)
 
 	str = "        x"
-	s, wsCount = trimLeftSpace(str)
+	trimLeftSpace(str)
 	//t.Logf("raw<%s> trimmedLeftSpace<%s> number of trimmed ws:%d\n", str, s, wsCount)
 
 	str = "x"
-	s, wsCount = trimLeftSpace(str)
+	trimLeftSpace(str)
 	//t.Logf("raw<%s> trimmedLeftSpace<%s> number of trimmed ws:%d\n", str, s, wsCount)
 
 	str = "   x       "
-	s, wsCount = trimLeftSpace(str)
+	trimLeftSpace(str)
 	//t.Logf("raw<%s> trimmedLeftSpace<%s> number of trimmed ws:%d\n", str, s, wsCount)
 
 	str = ""
-	s, wsCount = trimLeftSpace(str)
+	trimLeftSpace(str)
 	//t.Logf("raw<%s> trimmedLeftSpace<%s> number of trimmed ws:%d\n", str, s, wsCount)
 
 	str = "         "
-	s, wsCount = trimLeftSpace(str)
+	trimLeftSpace(str)
 	//t.Logf("raw<%s> trimmedLeftSpace<%s> number of trimmed ws:%d\n", str, s, wsCount)
 
 	str = "   \t    "
-	s, wsCount = trimLeftSpace(str)
+	trimLeftSpace(str)
 	//t.Logf("raw<%s> trimmedLeftSpace<%s> number of trimmed ws:%d\n", str, s, wsCount)
 }
 

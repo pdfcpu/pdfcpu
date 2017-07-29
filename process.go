@@ -25,6 +25,7 @@ type Command struct {
 	PageSelection  *[]string   //    -         -        -      -       *      *
 	StatsFile      *string     //    -         *        -      -       -      -
 	ValidationMode *string     //    *         -        -      -       -      -
+	Eol            *string     //    -         *        -      -       -      -
 }
 
 // ValidateCommand creates a new ValidateCommand.
@@ -40,12 +41,13 @@ func ValidateCommand(pdfFileName, validationMode string) Command {
 }
 
 // OptimizeCommand creates a new OptimizeCommand.
-func OptimizeCommand(pdfFileNameIn, pdfFileNameOut, statsFileName string) Command {
+func OptimizeCommand(pdfFileNameIn, pdfFileNameOut, statsFileName, eol string) Command {
 	return Command{
 		Mode:      OPTIMIZE,
 		InFile:    &pdfFileNameIn,
 		OutFile:   &pdfFileNameOut,
-		StatsFile: &statsFileName}
+		StatsFile: &statsFileName,
+		Eol:       &eol}
 }
 
 // SplitCommand creates a new SplitCommand.
@@ -121,7 +123,7 @@ func Process(cmd *Command) (err error) {
 		err = Validate(*cmd.InFile, *cmd.ValidationMode)
 
 	case OPTIMIZE:
-		err = Optimize(*cmd.InFile, *cmd.OutFile, *cmd.StatsFile)
+		err = Optimize(*cmd.InFile, *cmd.OutFile, *cmd.StatsFile, *cmd.Eol)
 
 	case SPLIT:
 		err = Split(*cmd.InFile, *cmd.OutDir)

@@ -25,8 +25,6 @@ var (
 	logErrorWriter *log.Logger
 	logPages       *log.Logger
 	logXRef        *log.Logger
-
-	eol string
 )
 
 func init() {
@@ -37,8 +35,6 @@ func init() {
 	logErrorWriter = log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
 	logPages = log.New(ioutil.Discard, "PAGES: ", log.Ldate|log.Ltime|log.Lshortfile)
 	logXRef = log.New(ioutil.Discard, "XREF: ", log.Ldate|log.Ltime|log.Lshortfile)
-
-	eol = types.EolLF
 }
 
 // Verbose controls logging output.
@@ -360,7 +356,7 @@ func writeTrailerDict(ctx *types.PDFContext) (err error) {
 		return
 	}
 
-	_, err = w.WriteString(eol)
+	err = w.WriteEol()
 	if err != nil {
 		return
 	}
@@ -393,7 +389,7 @@ func writeXRefSubsection(ctx *types.PDFContext, start int, size int) (err error)
 
 	w := ctx.Write
 
-	_, err = w.WriteString(fmt.Sprintf("%d %d%s", start, size, eol))
+	_, err = w.WriteString(fmt.Sprintf("%d %d%s", start, size, w.Eol))
 	if err != nil {
 		return
 	}
@@ -411,14 +407,14 @@ func writeXRefSubsection(ctx *types.PDFContext, start int, size int) (err error)
 		var s string
 
 		if entry.Free {
-			s = fmt.Sprintf("%010d %05d f%2s", *entry.Offset, *entry.Generation, eol)
+			s = fmt.Sprintf("%010d %05d f%2s", *entry.Offset, *entry.Generation, w.Eol)
 		} else {
 			var off int64
 			writeOffset, found := ctx.Write.Table[i]
 			if found {
 				off = writeOffset
 			}
-			s = fmt.Sprintf("%010d %05d n%2s", off, *entry.Generation, eol)
+			s = fmt.Sprintf("%010d %05d n%2s", off, *entry.Generation, w.Eol)
 		}
 
 		lines = append(lines, fmt.Sprintf("%d: %s", i, s))
@@ -533,7 +529,7 @@ func writeXRefTable(ctx *types.PDFContext) (err error) {
 		return
 	}
 
-	_, err = ctx.Write.WriteString(eol)
+	err = ctx.Write.WriteEol()
 	if err != nil {
 		return
 	}
@@ -568,7 +564,7 @@ func writeXRefTable(ctx *types.PDFContext) (err error) {
 		return
 	}
 
-	_, err = ctx.Write.WriteString(eol)
+	err = ctx.Write.WriteEol()
 	if err != nil {
 		return
 	}
@@ -578,7 +574,7 @@ func writeXRefTable(ctx *types.PDFContext) (err error) {
 		return
 	}
 
-	_, err = ctx.Write.WriteString(eol)
+	err = ctx.Write.WriteEol()
 	if err != nil {
 		return
 	}
@@ -588,7 +584,7 @@ func writeXRefTable(ctx *types.PDFContext) (err error) {
 		return
 	}
 
-	_, err = ctx.Write.WriteString(eol)
+	err = ctx.Write.WriteEol()
 	if err != nil {
 		return
 	}
@@ -780,7 +776,7 @@ func writeXRefStream(ctx *types.PDFContext) (err error) {
 
 	w := ctx.Write
 
-	_, err = w.WriteString(eol)
+	err = w.WriteEol()
 	if err != nil {
 		return
 	}
@@ -790,7 +786,7 @@ func writeXRefStream(ctx *types.PDFContext) (err error) {
 		return
 	}
 
-	_, err = w.WriteString(eol)
+	err = w.WriteEol()
 	if err != nil {
 		return
 	}
@@ -800,7 +796,7 @@ func writeXRefStream(ctx *types.PDFContext) (err error) {
 		return
 	}
 
-	_, err = w.WriteString(eol)
+	err = w.WriteEol()
 	if err != nil {
 		return
 	}
@@ -848,7 +844,7 @@ func PDFFile(ctx *types.PDFContext) (err error) {
 		logInfoWriter.Println("Ensure V1.5 for writing object & xref streams")
 	}
 
-	err = writeHeader(ctx, v)
+	err = writeHeader(ctx.Write, v)
 	if err != nil {
 		return
 	}
@@ -898,7 +894,7 @@ func PDFFile(ctx *types.PDFContext) (err error) {
 	}
 
 	// Write pdf trailer.
-	_, err = writeTrailer(ctx)
+	_, err = writeTrailer(ctx.Write)
 	if err != nil {
 		return
 	}
