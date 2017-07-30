@@ -156,8 +156,8 @@ func NewPDFXRefStreamDict(xRefTable *XRefTable) *PDFXRefStreamDict {
 	streamDict := PDFStreamDict{PDFDict: NewPDFDict()}
 
 	streamDict.Insert("Type", PDFName("XRef"))
-	streamDict.Insert("Filter", PDFName("FlateDecode"))
-	streamDict.FilterPipeline = []PDFFilter{PDFFilter{Name: "FlateDecode", DecodeParms: nil}}
+	streamDict.Insert("Filter", PDFName("ASCIIHexDecode"))
+	streamDict.FilterPipeline = []PDFFilter{PDFFilter{Name: "ASCIIHexDecode", DecodeParms: nil}}
 
 	streamDict.Insert("Root", *xRefTable.Root)
 

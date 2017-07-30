@@ -77,12 +77,12 @@ The extraction code for font files and images is experimental and serves as proo
 
 
 ### To Do
-* validatePageEntryPresSteps
-* validateSpiderInfo
-* validatePermissions
-* validateLegal
-* validateCollection
-* implement filters
+
+* validation of the less used page entry "PresSteps"
+* validation of the less used root entries "SpiderInfo", "Permissions", "Legal", "Collection"
+
+I am looking for test PDFs using one of these features. So if you have one that you can share let me know.
+I am also accepting PRs but right now only regarding the defined items on the todo list.
 
 
 ### Disclaimer

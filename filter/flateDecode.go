@@ -4,13 +4,10 @@ import (
 	"bytes"
 	"compress/zlib"
 	"io"
+	"io/ioutil"
 
 	"github.com/pkg/errors"
 )
-
-////////
-// Flate
-////////
 
 var (
 	errFlateMissingDecodeParmColumn    = errors.New("filter FlateDecode: missing decode parm: Columns")
@@ -32,26 +29,13 @@ func (f flate) Encode(r io.Reader) (*bytes.Buffer, error) {
 	var b bytes.Buffer
 	w := zlib.NewWriter(&b)
 
-	p := []byte{}
-	var err error
-	var n int
-
-	for err == nil {
-
-		buf := make([]byte, 16*1024)
-		n, err = r.Read(buf)
-		logDebugFilter.Printf("Read returning: n:%d err:%v\n", n, err)
-		if n > 0 {
-			p = append(p, buf[:n]...)
-		}
-		if err != nil && err != io.EOF {
-			return nil, err
-		}
+	p, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
 	}
-
 	logDebugFilter.Printf("EncodeFlate: read %d bytes\n", len(p))
 
-	n, err = w.Write(p)
+	n, err := w.Write(p)
 	if err != nil {
 		return nil, err
 	}

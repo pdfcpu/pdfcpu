@@ -1,9 +1,7 @@
-// Package filter contains implementations for PDF filters for encoding/decoding data.
-//
-// See the PDF spec at 7.4 for a list of defined filter types.
-//
-// Currently supported filters: FlateDecode
+// Package filter contains implementations for PDF filters.
 package filter
+
+// See 7.4 for a list of defined filter types.
 
 import (
 	"bytes"
@@ -42,23 +40,23 @@ type Filter interface {
 // NewFilter returns a filter for given filterName and an optional parameter dictionary.
 func NewFilter(filterName string, decodeParms, encodeParms *types.PDFDict) (filter Filter, err error) {
 
-	// TODO validate against Version.
-
 	switch filterName {
 
 	case "FlateDecode":
 		filter = flate{baseFilter{decodeParms, encodeParms}}
 
-	// not implemeted
 	case "ASCII85Decode":
 		filter = ascii85Decode{baseFilter{decodeParms, encodeParms}}
 
-	// not implemented
 	case "ASCIIHexDecode":
 		filter = asciiHexDecode{baseFilter{decodeParms, encodeParms}}
 
 	// LZWDecode
-	// CCITTFaxDecode etc.
+	// RunLengthDecode
+	// CCITTFaxDecode
+	// JBIG2Decode
+	// DCTDecode
+	// JPXDecode
 
 	default:
 		logWarningFilter.Printf("Filter not supported: %s", filterName)
