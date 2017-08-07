@@ -6,3 +6,6 @@
 
 # Coverage
 c.out
+
+// Stats
+_scripts/*.csv

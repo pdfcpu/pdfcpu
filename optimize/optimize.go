@@ -132,11 +132,8 @@ func handleDuplicateFontObject(font *types.PDFDict, indRef *types.PDFIndirectRef
 		if ok {
 
 			// We have detected a redundant font dict.
-
 			logInfoOptimize.Printf("optimizeFontResourcesDict: redundant fontObj#:%d basefont %s already registered with obj#:%d !\n", objectNumber, fontName, fontObjectNumber)
-
 			// This is an optimization patch of the fontobject for a fontResource
-			// TODO include generation number!
 
 			// Modify the indirect object reference to point to the single instance of this fontDict.
 			indRef.ObjectNumber = types.PDFInteger(fontObjectNumber)
@@ -422,7 +419,7 @@ func optimizeResources(ctx *types.PDFContext, resourcesDict *types.PDFDict, page
 
 	}
 
-	// TODO Process ExtGState SMask G
+	// Note: An optional ExtGState resource dict may contain binary content in the following entries: "SMask", "HT".
 
 	// Process XObject resource dict, get rid of redundant images.
 	obj, found = resourcesDict.Find("XObject")
@@ -507,9 +504,10 @@ func parsePagesDict(ctx *types.PDFContext, pagesDict *types.PDFDict, pageNumber 
 			return 0, errors.New("parsePagesDict: Missing dict type")
 		}
 
-		// TODO Pages may contain a to be inheritated ResourcesDict.
+		// Note: Pages may contain a to be inheritated ResourcesDict.
 
 		if *dictType == "Pages" {
+
 			// Recurse over pagetree and optimize resources.
 			pageNumber, err = parsePagesDict(ctx, &pageNodeDict, pageNumber)
 			if err != nil {
@@ -652,7 +650,6 @@ func calcRedundantObjects(ctx *types.PDFContext) (err error) {
 
 // Iterate over all pages and optimize resources.
 // Get rid of duplicate embedded fonts and images.
-// TODO Remove duplicate content streams.
 func optimizeFontAndImages(ctx *types.PDFContext) (err error) {
 
 	logInfoOptimize.Println("optimizeFontAndImages begin")
@@ -736,7 +733,7 @@ func calcEmbeddedFontsMemoryUsage(ctx *types.PDFContext) error {
 
 	var objectNumbers []int
 
-	// TODO Sorting unnecessary.
+	// Sorting unnecessary.
 	for k := range ctx.Optimize.FontObjects {
 		objectNumbers = append(objectNumbers, k)
 	}
@@ -822,8 +819,7 @@ func FontDescriptor(xRefTable *types.XRefTable, fontDict *types.PDFDict, objectN
 		return dict, nil
 	}
 
-	// Try to access a fontDescriptor in a Descendent font.
-	// TODO for Type 0 fonts only!
+	// Try to access a fontDescriptor in a Descendent font for Type0 fonts.
 
 	obj, ok = fontDict.Find("DescendantFonts")
 	if !ok {
@@ -887,18 +883,14 @@ func processFontFilesForFontDict(xRefTable *types.XRefTable, fontDict *types.PDF
 
 	logDebugOptimize.Println("processFontFilesForFontDict begin")
 
-	// TODO: ToUnicode is also a stream that needs to be counted!
-	// TODO: Resources, CharProcs for Type 3 fonts missing as well.
-	// TODO If version < 1.5 no FontDescriptor needed for standard 14 fonts.
-
-	// See 9.6.2.2 Standard Type 1 fonts.
+	// Note:
+	// "ToUnicode" is also an entry containing binary content that could be inspected for duplicate content.
 
 	dict, err := FontDescriptor(xRefTable, fontDict, objectNumber)
 	if err != nil {
 		return err
 	}
 
-	//
 	if dict != nil {
 		if indRef := FontDescriptorFontFileIndirectObjectRef(dict); indRef != nil {
 			indRefsMap[*indRef] = true
@@ -995,7 +987,7 @@ func calcBinarySizes(ctx *types.PDFContext) (err error) {
 	// Calculate image memory usage for stats.
 	calcImageBinarySizes(ctx)
 
-	// TODO calc ContentBinarySizes; process all content streams.
+	// Note: Content streams also represent binary content.
 
 	logInfoOptimize.Println("calcBinarySizes end")
 

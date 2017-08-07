@@ -120,7 +120,6 @@ func validateNames(xRefTable *types.XRefTable, rootDict *types.PDFDict, required
 
 		indRef, ok := value.(types.PDFIndirectRef)
 		if !ok {
-			// TODO: All values are name trees or indirect refs.
 			return errors.New("validateNames: name tree must be indirect ref")
 		}
 
@@ -475,15 +474,13 @@ func validateOutputIntentDict(xRefTable *types.XRefTable, dict *types.PDFDict) (
 		return
 	}
 
-	// Info, text string
-	// TODO Required if OutputConditionIdentifier does not specify a standard production condition; optional otherwise
+	// Info, optional, text string
 	_, err = validateStringEntry(xRefTable, dict, dictName, "Info", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return
 	}
 
-	// DestOutputProfile, streamDict
-	// TODO Required if OutputConditionIdentifier does not specify a standard production condition; optional otherwise
+	// DestOutputProfile, optional, streamDict
 	_, err = validateStreamDictEntry(xRefTable, dict, dictName, "DestOutputProfile", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return
@@ -951,7 +948,6 @@ func validateRootObject(xRefTable *types.XRefTable) (err error) {
 	}
 
 	// OCProperties
-	// TODO Required if document contains optional content.
 	sinceVersion = types.V15
 	if xRefTable.ValidationMode == types.ValidationRelaxed {
 		sinceVersion = types.V14

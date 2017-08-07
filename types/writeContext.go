@@ -16,7 +16,7 @@ type WriteContext struct {
 
 	Command       string // command in effect.
 	ExtractPageNr int    // page to be generated for rendering a single-page/PDF.
-	ExtractPages  IntSet // pages to be generated for a trimmed PDF. TODO is never nil!
+	ExtractPages  IntSet // pages to be generated for a trimmed PDF.
 
 	BinaryTotalSize int64 // total stream data, counts 100% all stream data written.
 	BinaryImageSize int64 // total image stream data written = Read.BinaryImageSize.
@@ -32,8 +32,8 @@ type WriteContext struct {
 }
 
 // NewWriteContext returns a new WriteContext.
-func NewWriteContext() *WriteContext {
-	return &WriteContext{Table: map[int]int64{}, Eol: EolLF}
+func NewWriteContext(eol string) *WriteContext {
+	return &WriteContext{Table: map[int]int64{}, Eol: eol}
 }
 
 // SetWriteOffset saves the current write offset to the PDFDestination.

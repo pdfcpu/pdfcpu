@@ -173,7 +173,6 @@ func validateICCBasedColorSpace(xRefTable *types.XRefTable, arr *types.PDFArray,
 		return
 	}
 
-	// TODO sinceVersion
 	err = validateColorSpaceEntry(xRefTable, &dict, dictName, "Alternate", OPTIONAL, ExcludePatternCS)
 	if err != nil {
 		return
@@ -249,7 +248,7 @@ func validateIndexedColorSpace(xRefTable *types.XRefTable, arr *types.PDFArray, 
 		return errors.Errorf("validateIndexedColorSpace: unsupported in version %s.\n", xRefTable.VersionString())
 	}
 
-	// arr[1] base: basecolorspace noPatternCS, TODO noIndexedCS
+	// arr[1] base: basecolorspace
 	err = validateColorSpace(xRefTable, (*arr)[1], ExcludePatternCS)
 	if err != nil {
 		return
@@ -261,7 +260,7 @@ func validateIndexedColorSpace(xRefTable *types.XRefTable, arr *types.PDFArray, 
 		return
 	}
 
-	// arr[3] lookup: stream or TODO byte string(since V1.2)
+	// arr[3] lookup: stream or byte string, since V1.2
 	err = validateIndexedColorSpaceLookuptable(xRefTable, (*arr)[3], sinceVersion)
 	if err != nil {
 		return
@@ -316,7 +315,7 @@ func validateSeparationColorSpace(xRefTable *types.XRefTable, arr *types.PDFArra
 		return
 	}
 
-	// arr[2]: alternate space: TODO noSpecialCS
+	// arr[2]: alternate space
 	err = validateColorSpace(xRefTable, (*arr)[2], ExcludePatternCS)
 	if err != nil {
 		return
@@ -357,19 +356,10 @@ func validateDeviceNColorSpaceColorantsDict(xRefTable *types.XRefTable, dict *ty
 
 func validateDeviceNColorSpaceProcessDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
 
-	// ColorSpace, required, colorSpace
-	// Components, required, array
-	// e.g.,
-	//	<<
-	//	  <ColorSpace, DeviceCMYK>
-	//	  <Components, [Cyan Magenta Yellow Black]>
-	//  >>
-
 	logInfoValidate.Printf("validateDeviceNColorSpaceProcessDict begin ***")
 
 	dictName := "DeviceNCSProcessDict"
 
-	// TODO only Device or CIE colorspace allowed
 	err = validateColorSpaceEntry(xRefTable, dict, dictName, "ColorSpace", REQUIRED, true)
 	if err != nil {
 		return
@@ -535,13 +525,12 @@ func validateDeviceNColorSpace(xRefTable *types.XRefTable, arr *types.PDFArray, 
 
 	// arr[1]: array of names specifying the individual color components
 	// length subject to implementation limit.
-	// TODO validation??
 	_, err = validateNameArray(xRefTable, (*arr)[1])
 	if err != nil {
 		return
 	}
 
-	// arr[2]: alternate space: TODO noSpecialCS
+	// arr[2]: alternate space
 	err = validateColorSpace(xRefTable, (*arr)[2], ExcludePatternCS)
 	if err != nil {
 		return

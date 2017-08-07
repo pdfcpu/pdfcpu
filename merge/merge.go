@@ -18,7 +18,7 @@ var logDebugMerge, logInfoMerge, logErrorMerge *log.Logger
 func init() {
 	//logDebugMerge = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 	logDebugMerge = log.New(ioutil.Discard, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logInfoMerge = log.New(os.Stdout, "STATS: ", log.Ldate|log.Ltime|log.Lshortfile)
+	logInfoMerge = log.New(ioutil.Discard, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 	logErrorMerge = log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
 }
 
@@ -348,7 +348,7 @@ func XRefTables(ctxSource, ctxDest *types.PDFContext) (err error) {
 	}
 
 	// Mark source's info object as free.
-	// TODO Any indRefs this info object depends on are missed!
+	// Note: Any indRefs this info object depends on are missed.
 	if ctxSource.Info != nil {
 		err = ctxDest.DeleteObject(int(ctxSource.Info.ObjectNumber))
 		if err != nil {

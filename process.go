@@ -1,5 +1,7 @@
 package pdflib
 
+import "github.com/hhrutter/pdflib/types"
+
 type commandMode int
 
 // The available commands for the CLI.
@@ -17,101 +19,101 @@ const (
 
 // Command represents an execution context.
 type Command struct {
-	Mode           commandMode // VALIDATE  OPTIMIZE  SPLIT  MERGE  EXTRACT  TRIM
-	InFile         *string     //    *         *        *      -       *      *
-	InFiles        *[]string   //    -         -        -      *       -      -
-	OutFile        *string     //    -         *        -      *       -      *
-	OutDir         *string     //    -         -        *      -       *      -
-	PageSelection  *[]string   //    -         -        -      -       *      *
-	StatsFile      *string     //    -         *        -      -       -      -
-	ValidationMode *string     //    *         -        -      -       -      -
-	Eol            *string     //    -         *        -      -       -      -
+	Mode          commandMode          // VALIDATE  OPTIMIZE  SPLIT  MERGE  EXTRACT  TRIM
+	InFile        *string              //    *         *        *      -       *      *
+	InFiles       *[]string            //    -         -        -      *       -      -
+	OutFile       *string              //    -         *        -      *       -      *
+	OutDir        *string              //    -         -        *      -       *      -
+	PageSelection *[]string            //    -         -        -      -       *      *
+	Config        *types.Configuration //
 }
 
 // ValidateCommand creates a new ValidateCommand.
-func ValidateCommand(pdfFileName, validationMode string) Command {
-	vMode := "strict"
-	if len(validationMode) > 0 {
-		vMode = validationMode
-	}
+func ValidateCommand(pdfFileName string, config *types.Configuration) Command {
 	return Command{
-		Mode:           VALIDATE,
-		InFile:         &pdfFileName,
-		ValidationMode: &vMode}
+		Mode:   VALIDATE,
+		InFile: &pdfFileName,
+		Config: config}
 }
 
 // OptimizeCommand creates a new OptimizeCommand.
-func OptimizeCommand(pdfFileNameIn, pdfFileNameOut, statsFileName, eol string) Command {
+func OptimizeCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configuration) Command {
 	return Command{
-		Mode:      OPTIMIZE,
-		InFile:    &pdfFileNameIn,
-		OutFile:   &pdfFileNameOut,
-		StatsFile: &statsFileName,
-		Eol:       &eol}
+		Mode:    OPTIMIZE,
+		InFile:  &pdfFileNameIn,
+		OutFile: &pdfFileNameOut,
+		Config:  config}
 }
 
 // SplitCommand creates a new SplitCommand.
-func SplitCommand(pdfFileNameIn, dirNameOut string) Command {
+func SplitCommand(pdfFileNameIn, dirNameOut string, config *types.Configuration) Command {
 	return Command{
 		Mode:   SPLIT,
 		InFile: &pdfFileNameIn,
-		OutDir: &dirNameOut}
+		OutDir: &dirNameOut,
+		Config: config}
 }
 
 // MergeCommand creates a new MergeCommand.
-func MergeCommand(pdfFileNamesIn []string, pdfFileNameOut string) Command {
+func MergeCommand(pdfFileNamesIn []string, pdfFileNameOut string, config *types.Configuration) Command {
 	return Command{
 		Mode:    MERGE,
 		InFiles: &pdfFileNamesIn,
-		OutFile: &pdfFileNameOut}
+		OutFile: &pdfFileNameOut,
+		Config:  config}
 }
 
 // ExtractImagesCommand creates a new ExtractImagesCommand.
 // (experimental)
-func ExtractImagesCommand(pdfFileNameIn, dirNameOut string, pageSelection []string) Command {
+func ExtractImagesCommand(pdfFileNameIn, dirNameOut string, pageSelection []string, config *types.Configuration) Command {
 	return Command{
 		Mode:          EXTRACTIMAGES,
 		InFile:        &pdfFileNameIn,
 		OutDir:        &dirNameOut,
-		PageSelection: &pageSelection}
+		PageSelection: &pageSelection,
+		Config:        config}
 }
 
 // ExtractFontsCommand creates a new ExtractFontsCommand.
 // (experimental)
-func ExtractFontsCommand(pdfFileNameIn, dirNameOut string, pageSelection []string) Command {
+func ExtractFontsCommand(pdfFileNameIn, dirNameOut string, pageSelection []string, config *types.Configuration) Command {
 	return Command{
 		Mode:          EXTRACTFONTS,
 		InFile:        &pdfFileNameIn,
 		OutDir:        &dirNameOut,
-		PageSelection: &pageSelection}
+		PageSelection: &pageSelection,
+		Config:        config}
 }
 
 // ExtractPagesCommand creates a new ExtractPagesCommand.
-func ExtractPagesCommand(pdfFileNameIn, dirNameOut string, pageSelection []string) Command {
+func ExtractPagesCommand(pdfFileNameIn, dirNameOut string, pageSelection []string, config *types.Configuration) Command {
 	return Command{
 		Mode:          EXTRACTPAGES,
 		InFile:        &pdfFileNameIn,
 		OutDir:        &dirNameOut,
-		PageSelection: &pageSelection}
+		PageSelection: &pageSelection,
+		Config:        config}
 }
 
 // ExtractContentCommand creates a new ExtractContentCommand.
-func ExtractContentCommand(pdfFileNameIn, dirNameOut string, pageSelection []string) Command {
+func ExtractContentCommand(pdfFileNameIn, dirNameOut string, pageSelection []string, config *types.Configuration) Command {
 	return Command{
 		Mode:          EXTRACTCONTENT,
 		InFile:        &pdfFileNameIn,
 		OutDir:        &dirNameOut,
-		PageSelection: &pageSelection}
+		PageSelection: &pageSelection,
+		Config:        config}
 }
 
 // TrimCommand creates a new TrimCommand.
-func TrimCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []string) Command {
+func TrimCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []string, config *types.Configuration) Command {
 	// A slice parameter can be called with nil => empty slice.
 	return Command{
 		Mode:          TRIM,
 		InFile:        &pdfFileNameIn,
 		OutFile:       &pdfFileNameOut,
-		PageSelection: &pageSelection}
+		PageSelection: &pageSelection,
+		Config:        config}
 }
 
 // Process executes a pdflib command.
@@ -120,31 +122,31 @@ func Process(cmd *Command) (err error) {
 	switch cmd.Mode {
 
 	case VALIDATE:
-		err = Validate(*cmd.InFile, *cmd.ValidationMode)
+		err = Validate(*cmd.InFile, cmd.Config)
 
 	case OPTIMIZE:
-		err = Optimize(*cmd.InFile, *cmd.OutFile, *cmd.StatsFile, *cmd.Eol)
+		err = Optimize(*cmd.InFile, *cmd.OutFile, cmd.Config)
 
 	case SPLIT:
-		err = Split(*cmd.InFile, *cmd.OutDir)
+		err = Split(*cmd.InFile, *cmd.OutDir, cmd.Config)
 
 	case MERGE:
-		err = Merge(*cmd.InFiles, *cmd.OutFile)
+		err = Merge(*cmd.InFiles, *cmd.OutFile, cmd.Config)
 
 	case EXTRACTIMAGES:
-		err = ExtractImages(*cmd.InFile, *cmd.OutDir, cmd.PageSelection)
+		err = ExtractImages(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Config)
 
 	case EXTRACTFONTS:
-		err = ExtractFonts(*cmd.InFile, *cmd.OutDir, cmd.PageSelection)
+		err = ExtractFonts(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Config)
 
 	case EXTRACTPAGES:
-		err = ExtractPages(*cmd.InFile, *cmd.OutDir, cmd.PageSelection)
+		err = ExtractPages(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Config)
 
 	case EXTRACTCONTENT:
-		err = ExtractContent(*cmd.InFile, *cmd.OutDir, cmd.PageSelection)
+		err = ExtractContent(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Config)
 
 	case TRIM:
-		err = Trim(*cmd.InFile, *cmd.OutFile, cmd.PageSelection)
+		err = Trim(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Config)
 	}
 
 	return

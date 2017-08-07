@@ -42,16 +42,16 @@ func validateTilingPatternDict(xRefTable *types.XRefTable, streamDict *types.PDF
 		return
 	}
 
-	_, err = validateNumberEntry(xRefTable, &dict, dictName, "XStep", REQUIRED, sinceVersion, nil) // TODO validate != 0
+	_, err = validateNumberEntry(xRefTable, &dict, dictName, "XStep", REQUIRED, sinceVersion, func(f float64) bool { return f != 0 })
 	if err != nil {
 		return
 	}
-	_, err = validateNumberEntry(xRefTable, &dict, dictName, "YStep", REQUIRED, sinceVersion, nil) // TODO validate != 0
+	_, err = validateNumberEntry(xRefTable, &dict, dictName, "YStep", REQUIRED, sinceVersion, func(f float64) bool { return f != 0 })
 	if err != nil {
 		return
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, &dict, dictName, "Matrix", OPTIONAL, sinceVersion, nil) // TODO len(arr) == 6
+	_, err = validateNumberArrayEntry(xRefTable, &dict, dictName, "Matrix", OPTIONAL, sinceVersion, func(a types.PDFArray) bool { return len(a) == 6 })
 	if err != nil {
 		return
 	}
@@ -92,7 +92,7 @@ func validateShadingPatternDict(xRefTable *types.XRefTable, dict *types.PDFDict,
 		return
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "Matrix", OPTIONAL, sinceVersion, nil) // TODO len(arr) == 6
+	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "Matrix", OPTIONAL, sinceVersion, func(a types.PDFArray) bool { return len(a) == 6 })
 	if err != nil {
 		return
 	}

@@ -68,14 +68,16 @@ func (fo FontObject) Encoding() string {
 	return encoding
 }
 
-// Embedded return true if the font is embedded into this PDF file.
-func (fo FontObject) Embedded() bool {
-	// TODO FontDescriptor does not always have a FontFile!
-	_, embedded := fo.FontDict.Find("FontDescriptor")
+// Embedded returns true if the font is embedded into this PDF file.
+func (fo FontObject) Embedded() (embedded bool) {
+
+	_, embedded = fo.FontDict.Find("FontDescriptor")
+
 	if !embedded {
 		_, embedded = fo.FontDict.Find("DescendantFonts")
 	}
-	return embedded
+
+	return
 }
 
 func (fo FontObject) String() string {

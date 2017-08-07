@@ -89,6 +89,11 @@ func processPageDict(ctx *types.PDFContext, objNumber, genNumber int, dict *type
 	return
 }
 
+func needsPage(selectedPages types.IntSet, pageCount int) bool {
+
+	return selectedPages == nil || len(selectedPages) == 0 || selectedPages[pageCount]
+}
+
 func processPagesDict(ctx *types.PDFContext, indRef *types.PDFIndirectRef, pageCount *int, selectedPages types.IntSet) (err error) {
 
 	logDebugExtract.Printf("processPagesDict begin: pageCount=%d\n", *pageCount)
@@ -145,7 +150,7 @@ func processPagesDict(ctx *types.PDFContext, indRef *types.PDFIndirectRef, pageC
 		case "Page":
 			*pageCount++
 			// extractContent of a page if no pages selected or if page is selected.
-			if selectedPages == nil || len(selectedPages) == 0 || selectedPages[*pageCount] {
+			if needsPage(selectedPages, *pageCount) {
 				err = processPageDict(ctx, objNumber, genNumber, pageNodeDict, *pageCount)
 				if err != nil {
 					return err

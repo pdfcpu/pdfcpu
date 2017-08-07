@@ -269,7 +269,7 @@ func validateOPIDictV20(xRefTable *types.XRefTable, dict *types.PDFDict) (err er
 		return
 	}
 
-	_, err = validateArrayEntry(xRefTable, dict, dictName, "Tags", OPTIONAL, types.V10, nil) // TODO validate
+	_, err = validateArrayEntry(xRefTable, dict, dictName, "Tags", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return
 	}
@@ -518,8 +518,12 @@ func validateImageStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFSt
 
 	}
 
-	// BitsPerComponent, integer, TODO required unless used filter is JPXDecode.
-	_, err = validateIntegerEntry(xRefTable, &dict, dictName, "BitsPerComponent", REQUIRED, types.V10, nil)
+	// BitsPerComponent, integer
+	required := REQUIRED
+	if streamDict.HasSoleFilterNamed("JPXDecode") {
+		required = OPTIONAL
+	}
+	_, err = validateIntegerEntry(xRefTable, &dict, dictName, "BitsPerComponent", required, types.V10, nil)
 	if err != nil {
 		return
 	}
@@ -571,20 +575,20 @@ func validateImageStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFSt
 		}
 	}
 
-	// SMaskInData, integer, optional TODO since V1.5 if used filter is JPXDecode
-	_, err = validateIntegerEntry(xRefTable, &dict, dictName, "SMaskInData", OPTIONAL, types.V15, func(i int) bool { return i >= 0 && i <= 2 })
+	// SMaskInData, integer, optional
+	_, err = validateIntegerEntry(xRefTable, &dict, dictName, "SMaskInData", OPTIONAL, types.V10, func(i int) bool { return i >= 0 && i <= 2 })
 	if err != nil {
 		return
 	}
 
-	// Name, name, required TODO in V1.0 only.
+	// Name, name, required for V10
 	// Shall no longer be used.
-	_, err = validateNameEntry(xRefTable, &dict, dictName, "Name", OPTIONAL, types.V10, nil)
+	_, err = validateNameEntry(xRefTable, &dict, dictName, "Name", xRefTable.Version() == types.V10, types.V10, nil)
 	if err != nil {
 		return
 	}
 
-	// StructParent, integer, TODO required since V1.3 if image is structural content item.
+	// StructParent, integer, optional
 	_, err = validateIntegerEntry(xRefTable, &dict, dictName, "StructParent", OPTIONAL, types.V13, nil)
 	if err != nil {
 		return
@@ -709,16 +713,19 @@ func validateFormStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStr
 		return
 	}
 
-	// StructParent, integer // TODO validate either StructParent or StructParents entry present,
-	_, err = validateIntegerEntry(xRefTable, &dict, dictName, "StructParent", OPTIONAL, types.V13, nil)
+	// StructParent, integer
+	sp, err := validateIntegerEntry(xRefTable, &dict, dictName, "StructParent", OPTIONAL, types.V13, nil)
 	if err != nil {
 		return
 	}
 
 	// StructParents, integer
-	_, err = validateIntegerEntry(xRefTable, &dict, dictName, "StructParents", OPTIONAL, types.V13, nil)
+	sps, err := validateIntegerEntry(xRefTable, &dict, dictName, "StructParents", OPTIONAL, types.V13, nil)
 	if err != nil {
 		return
+	}
+	if sp != nil && sps != nil {
+		return errors.New("validateFormStreamDict: only \"StructParent\" or \"StructParents\" allowed")
 	}
 
 	// OPI, dict, optional, since V1.2
@@ -850,7 +857,7 @@ func validateGroupAttributesDict(xRefTable *types.XRefTable, obj interface{}) (e
 		return
 	}
 
-	// CS, colorSpace, "sometimes required" TODO restrict allowed colorSpace type
+	// CS, colorSpace, optional
 	err = validateColorSpaceEntry(xRefTable, dict, dictName, "CS", OPTIONAL, ExcludePatternCS)
 	if err != nil {
 		return

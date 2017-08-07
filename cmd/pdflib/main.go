@@ -210,6 +210,8 @@ func main() {
 
 	setupLogging(verbose)
 
+	config := types.NewDefaultConfiguration()
+
 	var cmd pdflib.Command
 
 	command := os.Args[1]
@@ -231,8 +233,6 @@ func main() {
 		filenameIn := flag.Arg(0)
 		ensurePdfExtension(filenameIn)
 
-		var validationMode string
-
 		if mode != "" && mode != "strict" && mode != "s" && mode != "relaxed" && mode != "r" {
 			fmt.Printf("%s\n\n", usageValidate)
 			return
@@ -240,12 +240,12 @@ func main() {
 
 		switch mode {
 		case "strict", "s":
-			validationMode = "strict"
+			config.SetValidationStrict()
 		case "relaxed", "r":
-			validationMode = "relaxed"
+			config.SetValidationRelaxed()
 		}
 
-		cmd = pdflib.ValidateCommand(filenameIn, validationMode)
+		cmd = pdflib.ValidateCommand(filenameIn, config)
 
 	case "optimize", "o":
 
@@ -263,13 +263,14 @@ func main() {
 			ensurePdfExtension(filenameOut)
 		}
 
+		config.StatsFileName = fileStats
 		if len(fileStats) > 0 {
 			fmt.Printf("stats will be appended to %s\n", fileStats)
 			//logInfo.Printf("stats will be appended to %s\n", fileStats)
 		}
 
 		// Always write using 0x0A end of line sequence.
-		cmd = pdflib.OptimizeCommand(filenameIn, filenameOut, fileStats, types.EolLF)
+		cmd = pdflib.OptimizeCommand(filenameIn, filenameOut, config)
 
 	case "split", "s":
 
@@ -283,7 +284,7 @@ func main() {
 
 		dirnameOut := flag.Arg(1)
 
-		cmd = pdflib.SplitCommand(filenameIn, dirnameOut)
+		cmd = pdflib.SplitCommand(filenameIn, dirnameOut, config)
 
 	case "merge", "m":
 
@@ -304,7 +305,7 @@ func main() {
 			filenamesIn = append(filenamesIn, arg)
 		}
 
-		cmd = pdflib.MergeCommand(filenamesIn, filenameOut)
+		cmd = pdflib.MergeCommand(filenamesIn, filenameOut, config)
 
 	case "extract", "e":
 
@@ -327,13 +328,13 @@ func main() {
 
 		switch mode {
 		case "image", "i":
-			cmd = pdflib.ExtractImagesCommand(filenameIn, dirnameOut, pages)
+			cmd = pdflib.ExtractImagesCommand(filenameIn, dirnameOut, pages, config)
 		case "font", "f":
-			cmd = pdflib.ExtractFontsCommand(filenameIn, dirnameOut, pages)
+			cmd = pdflib.ExtractFontsCommand(filenameIn, dirnameOut, pages, config)
 		case "page", "p":
-			cmd = pdflib.ExtractPagesCommand(filenameIn, dirnameOut, pages)
+			cmd = pdflib.ExtractPagesCommand(filenameIn, dirnameOut, pages, config)
 		case "content", "c":
-			cmd = pdflib.ExtractContentCommand(filenameIn, dirnameOut, pages)
+			cmd = pdflib.ExtractContentCommand(filenameIn, dirnameOut, pages, config)
 		}
 
 	case "trim", "t":
@@ -357,7 +358,7 @@ func main() {
 			ensurePdfExtension(filenameOut)
 		}
 
-		cmd = pdflib.TrimCommand(filenameIn, filenameOut, pages)
+		cmd = pdflib.TrimCommand(filenameIn, filenameOut, pages, config)
 
 	case "version":
 

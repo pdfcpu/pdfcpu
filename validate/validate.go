@@ -539,4 +539,5 @@ func validateDate(s string) bool {
 	return s[22] == '\''
 }
 
+// Date validates an ISO/IEC 8824 compliant date string.
 func Date(s string) bool { return validateDate(s) }

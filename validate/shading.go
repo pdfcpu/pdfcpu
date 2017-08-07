@@ -59,7 +59,7 @@ func validateFunctionBasedShadingDict(xRefTable *types.XRefTable, dict *types.PD
 		return
 	}
 
-	err = validateFunctionEntry(xRefTable, dict, dictName, "Function", REQUIRED, types.V10) // TODO or array of functions
+	err = validateFunctionOrArrayOfFunctionsEntry(xRefTable, dict, dictName, "Function", REQUIRED, types.V10)
 	if err != nil {
 		return
 	}
@@ -85,7 +85,7 @@ func validateAxialShadingDict(xRefTable *types.XRefTable, dict *types.PDFDict) (
 		return
 	}
 
-	err = validateFunctionEntry(xRefTable, dict, dictName, "Function", REQUIRED, types.V10) // TODO or array of functions
+	err = validateFunctionOrArrayOfFunctionsEntry(xRefTable, dict, dictName, "Function", REQUIRED, types.V10)
 	if err != nil {
 		return
 	}
@@ -116,8 +116,7 @@ func validateRadialShadingDict(xRefTable *types.XRefTable, dict *types.PDFDict) 
 		return
 	}
 
-	// TODO or array of functions
-	err = validateFunctionEntry(xRefTable, dict, dictName, "Function", REQUIRED, types.V10)
+	err = validateFunctionOrArrayOfFunctionsEntry(xRefTable, dict, dictName, "Function", REQUIRED, types.V10)
 	if err != nil {
 		return
 	}
@@ -188,7 +187,7 @@ func validateFreeFormGouroudShadedTriangleMeshesDict(xRefTable *types.XRefTable,
 		return
 	}
 
-	err = validateFunctionEntry(xRefTable, dict, dictName, "Function", OPTIONAL, types.V10) // TODO or array of functions
+	err = validateFunctionOrArrayOfFunctionsEntry(xRefTable, dict, dictName, "Function", OPTIONAL, types.V10)
 	if err != nil {
 		return
 	}
@@ -224,7 +223,7 @@ func validateLatticeFormGouraudShadedTriangleMeshesDict(xRefTable *types.XRefTab
 		return
 	}
 
-	err = validateFunctionEntry(xRefTable, dict, dictName, "Function", OPTIONAL, types.V10) // TODO or array of functions
+	err = validateFunctionOrArrayOfFunctionsEntry(xRefTable, dict, dictName, "Function", OPTIONAL, types.V10)
 	if err != nil {
 		return
 	}
@@ -264,7 +263,7 @@ func validateCoonsPatchMeshesDict(xRefTable *types.XRefTable, dict *types.PDFDic
 		return
 	}
 
-	err = validateFunctionEntry(xRefTable, dict, dictName, "Function", OPTIONAL, types.V10) // TODO or array of functions
+	err = validateFunctionOrArrayOfFunctionsEntry(xRefTable, dict, dictName, "Function", OPTIONAL, types.V10)
 	if err != nil {
 		return
 	}
@@ -304,7 +303,7 @@ func validateTensorProductPatchMeshesDict(xRefTable *types.XRefTable, dict *type
 		return
 	}
 
-	err = validateFunctionEntry(xRefTable, dict, dictName, "Function", OPTIONAL, types.V10) // TODO or array of functions
+	err = validateFunctionOrArrayOfFunctionsEntry(xRefTable, dict, dictName, "Function", OPTIONAL, types.V10)
 	if err != nil {
 		return
 	}

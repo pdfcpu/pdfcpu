@@ -818,7 +818,6 @@ func (xRefTable *XRefTable) list(logStr []string) []string {
 					pdfStreamDict, _ := entry.Object.(PDFStreamDict)
 					str += fmt.Sprintf("stream content length = %d\n", len(pdfStreamDict.Content))
 					if pdfStreamDict.IsPageContent {
-						// TODO logContent that drives this output.
 						str += fmt.Sprintf("content: <%s>\n", pdfStreamDict.Content)
 					}
 				}

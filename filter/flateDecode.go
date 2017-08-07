@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/zlib"
 	"io"
-	"io/ioutil"
 
 	"github.com/pkg/errors"
 )
@@ -24,22 +23,18 @@ func (f flate) Encode(r io.Reader) (*bytes.Buffer, error) {
 
 	logDebugFilter.Println("EncodeFlate begin")
 
-	// TODO EncodeParams preprocessing missing.
+	// Optional decode parameters need preprocessing
+	// but this filter implementation is used for object streams
+	// and xref streams only and does not use decode parameters.
 
 	var b bytes.Buffer
 	w := zlib.NewWriter(&b)
 
-	p, err := ioutil.ReadAll(r)
+	written, err := io.Copy(w, r)
 	if err != nil {
 		return nil, err
 	}
-	logDebugFilter.Printf("EncodeFlate: read %d bytes\n", len(p))
-
-	n, err := w.Write(p)
-	if err != nil {
-		return nil, err
-	}
-	logDebugFilter.Printf("EncodeFlate: %d bytes written\n", n)
+	logDebugFilter.Printf("EncodeFlate: %d bytes written\n", written)
 
 	w.Close()
 
@@ -74,29 +69,27 @@ func (f flate) Decode(r io.Reader) (*bytes.Buffer, error) {
 
 	logDebugFilter.Println("DecodeFlate end w/o decodeParms")
 
-	// If we have decode parms we need to do some postprocessing.
+	// Optional decode parameters need postprocessing.
 	return f.decodePostProcess(&b)
 }
 
 // decodePostProcess
-// TODO Post processing for other predictors than PredictorUp.
-// TODO Process parameters
-// "Colors"(>=1), check Version, default=1
-// "BitsPerComponent"(1,2,4,8,16). check Version, default=8
 func (f flate) decodePostProcess(rin io.Reader) (a *bytes.Buffer, err error) {
 
-	const PredictorNo = 1       // Don't use prediction - missing.
-	const PredictorTIFF = 2     // all lines use TIFF predictor - missing.
-	const PredictorNone = 10    // all lines have Png predictor 0x00 - missing.
-	const PredictorSub = 11     // all lines have Png predictor 0x01 - missing.
-	const PredictorUp = 12      // all lines have Png predictor 0x02 - implemented.
-	const PredictorAverage = 13 // all lines have Png predictor 0x03 - missing.
-	const PredictorPaeth = 14   // all lines have Png predictor 0x04 - missing.
-	const PredictorOptimum = 15 // each line has individual predictor - missing.
+	// The only postprocessing needed (for decoding object streams) is: PredictorUp with PngUp.
+
+	const PredictorNo = 1
+	const PredictorTIFF = 2
+	const PredictorNone = 10
+	const PredictorSub = 11
+	const PredictorUp = 12 // implemented
+	const PredictorAverage = 13
+	const PredictorPaeth = 14
+	const PredictorOptimum = 15
 
 	const PngNone = 0x00
 	const PngSub = 0x01
-	const PngUp = 0x02
+	const PngUp = 0x02 // implemented
 	const PngAverage = 0x03
 	const PngPaeth = 0x04
 
@@ -116,8 +109,25 @@ func (f flate) decodePostProcess(rin io.Reader) (a *bytes.Buffer, err error) {
 
 	predictor := *p
 
+	// PredictorUp is a popular predictor used for flate encoded stream dicts.
 	if predictor != PredictorUp {
 		err = errors.Errorf("Filter FlateDecode: Predictor %d unsupported", predictor)
+		return
+	}
+
+	// BitsPerComponent optional, integer: 1,2,4,8,16 (Default:8)
+	// The number of bits used to represent each colour component in a sample.
+	bpc := f.decodeParms.IntEntry("BitsPerComponents")
+	if bpc != nil {
+		err = errors.Errorf("Filter FlateDecode: Unexpected \"BitsPerComponent\": %d", *bpc)
+		return
+	}
+
+	// Colors, optional, integer: 1,2,3,4 (Default:1)
+	// The number of interleaved colour components per sample.
+	colors := f.decodeParms.IntEntry("Colors")
+	if colors != nil {
+		err = errors.Errorf("Filter FlateDecode: Unexpected \"Colors\": %d", *colors)
 		return
 	}
 

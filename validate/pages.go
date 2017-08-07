@@ -249,7 +249,6 @@ func validateBoxStyleDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, 
 	dictName = "boxStyleDict"
 
 	// C, number array with 3 elements, optional
-	// TODO entries between 0.0 and 1.0
 	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "C", OPTIONAL, sinceVersion, func(arr types.PDFArray) bool { return len(arr) == 3 })
 	if err != nil {
 		return
@@ -287,7 +286,7 @@ func validatePageBoxColorInfo(xRefTable *types.XRefTable, pageDict *types.PDFDic
 
 	var dict *types.PDFDict
 
-	dict, err = validateDictEntry(xRefTable, pageDict, "", "BoxColorInfo", required, sinceVersion, nil)
+	dict, err = validateDictEntry(xRefTable, pageDict, "pageDict", "BoxColorInfo", required, sinceVersion, nil)
 	if err != nil || dict == nil {
 		return
 	}
@@ -333,12 +332,17 @@ func validatePageEntryRotate(xRefTable *types.XRefTable, dict *types.PDFDict, re
 
 func validatePageEntryGroup(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
 
-	// TODO validate Version
-
 	logInfoValidate.Println("*** validatePageEntryGroup begin ***")
 
-	if obj, ok := dict.Find("Group"); ok {
-		err = validateGroupAttributesDict(xRefTable, obj)
+	var d *types.PDFDict
+
+	d, err = validateDictEntry(xRefTable, dict, "pageDict", "Group", required, sinceVersion, nil)
+	if err != nil {
+		return
+	}
+
+	if d != nil {
+		err = validateGroupAttributesDict(xRefTable, *d)
 		if err != nil {
 			return
 		}
@@ -375,7 +379,7 @@ func validatePageEntryThumb(xRefTable *types.XRefTable, dict *types.PDFDict, req
 
 func validatePageEntryB(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
 
-	// only makes sense if Threads entry in document root exists.
+	// Note: Only makes sense if "Threads" entry in document root and bead dicts present.
 
 	logInfoValidate.Println("*** validatePageEntryB begin ***")
 
@@ -388,8 +392,6 @@ func validatePageEntryB(xRefTable *types.XRefTable, dict *types.PDFDict, require
 		logInfoValidate.Println("validatePageEntryB end: is nil.")
 		return
 	}
-
-	// TODO verify indRefs against article beads.
 
 	logInfoValidate.Println("*** validatePageEntryB end ***")
 
@@ -427,7 +429,7 @@ func validateTransitionDict(xRefTable *types.XRefTable, dict *types.PDFDict) (er
 	}
 
 	// D, optional, number > 0
-	_, err = validateNumberEntry(xRefTable, dict, dictName, "D", OPTIONAL, types.V10, nil)
+	_, err = validateNumberEntry(xRefTable, dict, dictName, "D", OPTIONAL, types.V10, func(f float64) bool { return f > 0 })
 	if err != nil {
 		return
 	}
@@ -468,10 +470,11 @@ func validateTransitionDict(xRefTable *types.XRefTable, dict *types.PDFDict) (er
 	}
 
 	// SS, optional, number, since V1.5
-	validateSS := func(interface{}) bool { return transStyle != nil || *transStyle == "Fly" }
-	_, err = validateNumberEntry(xRefTable, dict, dictName, "SS", OPTIONAL, types.V15, validateSS)
-	if err != nil {
-		return
+	if transStyle != nil || *transStyle == "Fly" {
+		_, err = validateNumberEntry(xRefTable, dict, dictName, "SS", OPTIONAL, types.V15, nil)
+		if err != nil {
+			return
+		}
 	}
 
 	// B, optional, boolean, since V1.5
@@ -573,14 +576,9 @@ func validateDeviceColorantEntry(xRefTable *types.XRefTable, dict *types.PDFDict
 		return
 	}
 
-	// TODO validate colorant
-
 	switch obj.(type) {
 
-	case types.PDFName:
-		// no further processing
-
-	case types.PDFStringLiteral:
+	case types.PDFName, types.PDFStringLiteral:
 		// no further processing
 
 	default:
@@ -624,7 +622,6 @@ func validatePageEntrySeparationInfo(xRefTable *types.XRefTable, pagesDict *type
 		return
 	}
 	if arr != nil {
-		// TODO Limit validation to Separation or DeviceN color space.
 		err = validateColorSpaceArray(xRefTable, arr, ExcludePatternCS)
 		if err != nil {
 			return
@@ -664,8 +661,6 @@ func validatePageEntryTemplateInstantiated(xRefTable *types.XRefTable, dict *typ
 		return
 	}
 
-	// TODO Validate against root name dictionary
-
 	logInfoValidate.Println("*** validatePageEntryTemplateInstantiated end ***")
 
 	return
@@ -700,8 +695,7 @@ func validatePageEntryUserUnit(xRefTable *types.XRefTable, dict *types.PDFDict, 
 	logInfoValidate.Println("*** validatePageEntryUserUnit begin ***")
 
 	// UserUnit, optional, positive number, since V1.6
-	// TODO number validation
-	_, err = validateNumberEntry(xRefTable, dict, "pagesDict", "UserUnit", required, sinceVersion, nil)
+	_, err = validateNumberEntry(xRefTable, dict, "pagesDict", "UserUnit", required, sinceVersion, func(f float64) bool { return f > 0 })
 	if err != nil {
 		return
 	}
