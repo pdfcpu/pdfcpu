@@ -303,7 +303,7 @@ func stringLiteral(s string) string {
 
 			if containsByte("01234567", c) {
 				// begin octal code escape sequence.
-				logDebugUtil.Printf("ParseStringLiteral: recognized octaldigit: %d 0x%x\n", c, c)
+				logDebugUtil.Printf("ParseStringLiteral: recognized octaldigit: %d 0x%[1]x\n", c)
 				octalCode = append(octalCode, c)
 				wasCR = false
 				continue
@@ -329,7 +329,7 @@ func stringLiteral(s string) string {
 		if containsByte("01234567", c) {
 
 			// append to octal code escape sequence.
-			logDebugUtil.Printf("ParseStringLiteral: recognized octaldigit: %d 0x%x\n", c, c)
+			logDebugUtil.Printf("ParseStringLiteral: recognized octaldigit: %[1]d 0x%[1]x\n", c)
 			octalCode = append(octalCode, c)
 			if len(octalCode) < 3 {
 				wasCR = false

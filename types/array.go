@@ -27,7 +27,7 @@ func (array PDFArray) string(ident int) string {
 
 		if subdict, ok := entry.(PDFDict); ok {
 			dictstr := subdict.string(ident + 1)
-			logstr = append(logstr, fmt.Sprintf("\n%s%s\n%s", tabstr, dictstr, tabstr))
+			logstr = append(logstr, fmt.Sprintf("\n%[1]s%[2]s\n%[1]s", tabstr, dictstr))
 			first = true
 			continue
 		}
@@ -128,7 +128,7 @@ func (array PDFArray) PDFString() string {
 			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, hl.String()))
 			continue
 		}
-		log.Fatalf("PDFArray.PDFString(): entry of unknown object type: %T %v\n", entry, entry)
+		log.Fatalf("PDFArray.PDFString(): entry of unknown object type: %[1]T %[1]v\n", entry)
 	}
 
 	logstr = append(logstr, "]")

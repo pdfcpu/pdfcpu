@@ -426,7 +426,7 @@ func parseXRefStream(rd io.Reader, offset *int64, ctx *types.PDFContext) (prevOf
 		return nil, err
 	}
 
-	logDebugReader.Printf("parseXRefStream: endInd=%d(%x) streamInd=%d(%x)\n", endInd, endInd, streamInd, streamInd)
+	logDebugReader.Printf("parseXRefStream: endInd=%[1]d(%[1]x) streamInd=%[2]d(%[2]x)\n", endInd, streamInd)
 
 	line := string(buf)
 
