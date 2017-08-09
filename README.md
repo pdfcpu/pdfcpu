@@ -1,6 +1,6 @@
  
  
- [![Build Status](https://travis-ci.org/hhrutter/pdflib.svg?branch=master)](https://travis-ci.org/hhrutter/pdflib) [![stability-stable](https://img.shields.io/badge/stability-stable-green.svg)](https://github.com/emersion/stability-badges#stable) [![GoDoc](https://godoc.org/github.com/hhrutter/pdflib?status.svg)](https://godoc.org/github.com/hhrutter/pdflib)  [![Go Report Card](https://goreportcard.com/badge/github.com/hhrutter/pdflib)](https://goreportcard.com/report/github.com/hhrutter/pdflib) [![License: MIT](https://img.shields.io/github/license/mashape/apistatus.svg)](https://opensource.org/licenses/MIT) 
+ [![Build Status](https://travis-ci.org/hhrutter/pdflib.svg?branch=master)](https://travis-ci.org/hhrutter/pdflib) [![stability-stable](https://img.shields.io/badge/stability-stable-green.svg)](https://github.com/emersion/stability-badges#stable) [![GoDoc](https://godoc.org/github.com/hhrutter/pdflib?status.svg)](https://godoc.org/github.com/hhrutter/pdflib) [![Coverage Status](https://coveralls.io/repos/github/hhrutter/pdflib/badge.svg?branch=master)](https://coveralls.io/github/hhrutter/pdflib?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/hhrutter/pdflib)](https://goreportcard.com/report/github.com/hhrutter/pdflib) [![License: MIT](https://img.shields.io/github/license/mashape/apistatus.svg)](https://opensource.org/licenses/MIT) 
  
  # pdflib: a golang pdf processor
 
