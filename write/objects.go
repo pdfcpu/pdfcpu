@@ -260,7 +260,7 @@ func writeStream(w *types.WriteContext, streamDict types.PDFStreamDict) (int64, 
 		return 0, errors.Wrapf(err, "writeStream: failed to write raw content")
 	}
 
-	c, err := w.WriteString(string(streamDict.Raw))
+	c, err := w.Write(streamDict.Raw)
 	if err != nil {
 		return 0, errors.Wrapf(err, "writeStream: failed to write raw content")
 	}
