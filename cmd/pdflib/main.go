@@ -7,14 +7,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hhrutter/pdflib"
-	"github.com/hhrutter/pdflib/extract"
-	"github.com/hhrutter/pdflib/merge"
-	"github.com/hhrutter/pdflib/optimize"
-	"github.com/hhrutter/pdflib/read"
-	"github.com/hhrutter/pdflib/types"
-	"github.com/hhrutter/pdflib/validate"
-	"github.com/hhrutter/pdflib/write"
+	"github.com/EndFirstCorp/pdflib"
+	"github.com/EndFirstCorp/pdflib/extract"
+	"github.com/EndFirstCorp/pdflib/merge"
+	"github.com/EndFirstCorp/pdflib/optimize"
+	"github.com/EndFirstCorp/pdflib/read"
+	"github.com/EndFirstCorp/pdflib/types"
+	"github.com/EndFirstCorp/pdflib/validate"
+	"github.com/EndFirstCorp/pdflib/write"
 )
 
 const (

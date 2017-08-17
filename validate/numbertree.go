@@ -3,7 +3,7 @@ package validate
 import (
 	"github.com/pkg/errors"
 
-	"github.com/hhrutter/pdflib/types"
+	"github.com/EndFirstCorp/pdflib/types"
 )
 
 func validatePageLabelDict(xRefTable *types.XRefTable, obj interface{}) (err error) {

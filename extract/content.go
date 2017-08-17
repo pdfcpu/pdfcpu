@@ -8,8 +8,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/hhrutter/pdflib/filter"
-	"github.com/hhrutter/pdflib/types"
+	"github.com/EndFirstCorp/pdflib/filter"
+	"github.com/EndFirstCorp/pdflib/types"
 	"github.com/pkg/errors"
 )
 
@@ -282,9 +282,6 @@ func getPagesText(ctx *types.PDFContext, indRef *types.PDFIndirectRef, pageCount
 }
 
 func getPageText(ctx *types.PDFContext, objNumber, genNumber int, dict *types.PDFDict, pageNumber int, charmap map[string]map[string]string) (io.Reader, error) {
-	/*	if pageNumber != 1 {
-		return &bytes.Buffer{}, nil
-	}*/
 	obj, found := dict.Find("Contents")
 	if !found || obj == nil {
 		return nil, errors.New("content not found")
@@ -394,7 +391,6 @@ func getText(content []byte, charmap map[string]map[string]string) ([]byte, erro
 			}
 			if charmap != nil {
 				newHex := mapHex(charmap, font, hexBuf.String())
-				fmt.Println("mapped", hexBuf.String(), "to", newHex, "using", charmap[font])
 				buf.WriteString(newHex)
 			} else {
 				buf.Write(hexBuf.Bytes())

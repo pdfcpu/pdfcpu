@@ -11,8 +11,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hhrutter/pdflib/filter"
-	"github.com/hhrutter/pdflib/types"
+	"github.com/EndFirstCorp/pdflib/filter"
+	"github.com/EndFirstCorp/pdflib/types"
 	"github.com/pkg/errors"
 )
 

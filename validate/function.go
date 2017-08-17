@@ -3,7 +3,7 @@ package validate
 import (
 	"github.com/pkg/errors"
 
-	"github.com/hhrutter/pdflib/types"
+	"github.com/EndFirstCorp/pdflib/types"
 )
 
 func validateExponentialInterpolationFunctionDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {

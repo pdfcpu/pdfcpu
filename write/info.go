@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hhrutter/pdflib/types"
-	"github.com/hhrutter/pdflib/validate"
+	"github.com/EndFirstCorp/pdflib/types"
+	"github.com/EndFirstCorp/pdflib/validate"
 	"github.com/pkg/errors"
 )
 

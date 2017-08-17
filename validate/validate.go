@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hhrutter/pdflib/types"
+	"github.com/EndFirstCorp/pdflib/types"
 )
 
 var logDebugValidate, logInfoValidate, logErrorValidate *log.Logger

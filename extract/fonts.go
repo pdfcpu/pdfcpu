@@ -6,9 +6,9 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/hhrutter/pdflib/filter"
-	"github.com/hhrutter/pdflib/optimize"
-	"github.com/hhrutter/pdflib/types"
+	"github.com/EndFirstCorp/pdflib/filter"
+	"github.com/EndFirstCorp/pdflib/optimize"
+	"github.com/EndFirstCorp/pdflib/types"
 )
 
 func writeFont(ctx *types.PDFContext, fileName, extension string, fontFileIndRef *types.PDFIndirectRef, objNr int) (err error) {
