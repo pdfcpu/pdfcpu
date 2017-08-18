@@ -27,6 +27,7 @@ I also wanted to have my own swiss army knife for PDFs written entirely in [Go](
 * Extract Fonts (extract all embedded fonts of a PDF file into a given dir)
 * Extract Pages (extract specific pages into a given dir)
 * Extract Content (extract the PDF-Source into given dir)
+* Extract Text (extract the text of the PDF to an io.Reader)
 
 ### Installation
 `go get github.com/hhrutter/pdflib/cmd/...`

@@ -2,6 +2,7 @@ package pdflib
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -685,6 +686,39 @@ func ExtractContent(fileIn, dirOut string, pageSelection *[]string, config *type
 	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
 
 	return
+}
+
+// ExtractText converts PDF into text
+func ExtractText(fileIn string, config *types.Configuration) (io.Reader, error) {
+
+	fromStart := time.Now()
+
+	fmt.Printf("extracting text from %s ...\n", fileIn)
+
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
+	if err != nil {
+		return nil, err
+	}
+
+	fromWrite := time.Now()
+
+	r, err := extract.Text(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	durWrite := time.Since(fromWrite).Seconds()
+	durTotal := time.Since(fromStart).Seconds()
+
+	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
+	logStatsAPI.Println("Timing:")
+	logStatsAPI.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	logStatsAPI.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	logStatsAPI.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	logStatsAPI.Printf("write content        : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
+	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
+
+	return r, nil
 }
 
 // Trim generates a trimmed version of fileIn containing all pages selected.
