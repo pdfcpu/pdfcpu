@@ -219,14 +219,6 @@ func getPageText(ctx *types.PDFContext, objNumber, genNumber int, dict *types.PD
 	}
 }
 
-type cmd struct {
-	font string
-	op   string
-	text []byte
-	data []byte
-	err  error
-}
-
 func getText(content []byte, charmap map[string]map[string]string) ([]byte, error) {
 	var buf bytes.Buffer
 	var font string
@@ -289,8 +281,7 @@ func getText(content []byte, charmap map[string]map[string]string) ([]byte, erro
 				hexBuf.WriteByte('0')
 			}
 			if charmap != nil {
-				newHex := mapHex(charmap, font, hexBuf.String())
-				buf.WriteString(newHex)
+				buf.WriteString(mapHex(charmap, font, hexBuf.String()))
 			} else {
 				buf.Write(hexBuf.Bytes())
 			}
@@ -323,30 +314,6 @@ func mapHex(charmap map[string]map[string]string, font string, hexChars string) 
 		} else {
 			v, _ := strconv.ParseInt(orig, 16, 16)
 			hexRepl.WriteString(fmt.Sprintf("%c", v))
-		}
-	}
-	return hexRepl.String()
-}
-
-func getString(charmap map[string]map[string]string, font string, hexBuf *bytes.Buffer) string {
-	if charmap == nil {
-		return hexBuf.String()
-	}
-	fontMap, ok := charmap[font]
-	if !ok {
-		return hexBuf.String()
-	}
-
-	hexString := hexBuf.String()
-	var hexRepl bytes.Buffer
-	for i := 0; i < hexBuf.Len()/4; i++ {
-		start := i * 4
-		end := (i+1)*4 + 1
-		orig := hexString[start:end]
-		if repl, ok := fontMap[orig]; ok {
-			hexRepl.WriteString(repl)
-		} else {
-			hexRepl.WriteString(orig)
 		}
 	}
 	return hexRepl.String()
