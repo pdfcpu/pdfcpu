@@ -3,8 +3,8 @@ package write
 import (
 	"fmt"
 
-	"github.com/EndFirstCorp/pdflib/filter"
-	"github.com/EndFirstCorp/pdflib/types"
+	"github.com/hhrutter/pdflib/filter"
+	"github.com/hhrutter/pdflib/types"
 	"github.com/pkg/errors"
 )
 

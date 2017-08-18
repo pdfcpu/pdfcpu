@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/EndFirstCorp/pdflib/types"
+	"github.com/hhrutter/pdflib/types"
 )
 
 // Stupid dump of image data to a file.
