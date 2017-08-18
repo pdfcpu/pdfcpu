@@ -1,6 +1,6 @@
 package pdflib
 
-import "github.com/hhrutter/pdflib/types"
+import "github.com/EndFirstCorp/pdflib/types"
 
 type commandMode int
 
