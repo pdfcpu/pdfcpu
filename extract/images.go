@@ -51,6 +51,7 @@ func writeImage(fileName string, imageDict *types.PDFStreamDict, objNr int) (err
 
 		case "DCTDecode":
 			// Dump encoded chunk to file.
+			logInfoExtract.Printf("writing %s\n", fileName+".jpg")
 			err = ioutil.WriteFile(fileName+".jpg", imageDict.Raw, os.ModePerm)
 			if err != nil {
 				return
@@ -58,6 +59,7 @@ func writeImage(fileName string, imageDict *types.PDFStreamDict, objNr int) (err
 
 		case "JPXDecode":
 			// Dump encoded chunk to file.
+			logInfoExtract.Printf("writing %s\n", fileName+".jpx")
 			err = ioutil.WriteFile(fileName+".jpx", imageDict.Raw, os.ModePerm)
 			if err != nil {
 				return

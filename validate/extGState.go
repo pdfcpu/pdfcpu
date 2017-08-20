@@ -458,7 +458,6 @@ func validateType5HalftoneDict(xRefTable *types.XRefTable, dict *types.PDFDict, 
 		return
 	}
 
-	// TODO non standard color components missing.
 	err = validateHalfToneEntry(xRefTable, dict, dictName, "Default", REQUIRED, sinceVersion)
 	if err != nil {
 		return
@@ -634,7 +633,7 @@ func validateHalfToneStreamDict(xRefTable *types.XRefTable, dict *types.PDFStrea
 	case 10:
 		err = validateType10HalftoneStreamDict(xRefTable, dict, sinceVersion)
 
-	case 16: // TODO since V1.3
+	case 16:
 		err = validateType16HalftoneStreamDict(xRefTable, dict, sinceVersion)
 
 	default:
@@ -648,6 +647,8 @@ func validateHalfToneStreamDict(xRefTable *types.XRefTable, dict *types.PDFStrea
 }
 
 func validateHalfToneEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (err error) {
+
+	// See 10.5
 
 	logInfoValidate.Println("*** validateHalfToneEntry begin ***")
 
@@ -998,7 +999,6 @@ func validateExtGStateDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err
 	}
 
 	// Font, array, optional, since V1.3
-	// TODO validate[font(indRef(fontDict)) size(number expressed in text space units)]
 	_, err = validateArrayEntry(xRefTable, dict, dictName, "Font", OPTIONAL, types.V13, nil)
 	if err != nil {
 		return

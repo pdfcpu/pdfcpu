@@ -66,7 +66,7 @@ func validateBorderEffectDictEntry(xRefTable *types.XRefTable, dict *types.PDFDi
 	}
 
 	// I, optional, number in the range 0 to 2
-	_, err = validateNumberEntry(xRefTable, d, dictName, "I", OPTIONAL, types.V10, nil) // validation missing
+	_, err = validateNumberEntry(xRefTable, d, dictName, "I", OPTIONAL, types.V10, func(f float64) bool { return 0 <= f && f <= 2 }) // validation missing
 	if err != nil {
 		return
 	}
@@ -545,7 +545,6 @@ func validateAnnotationDictLine(xRefTable *types.XRefTable, dict *types.PDFDict,
 	}
 
 	// LE, optional, name array, since V1.4, len:2
-	// TODO validate line ending styles
 	sinceVersion = types.V14
 	if xRefTable.ValidationMode == types.ValidationRelaxed {
 		sinceVersion = types.V13
@@ -562,7 +561,7 @@ func validateAnnotationDictLine(xRefTable *types.XRefTable, dict *types.PDFDict,
 	}
 
 	// LLE, optional, number, since V1.6, >0
-	lle, err := validateNumberEntry(xRefTable, dict, dictName, "LLE", OPTIONAL, types.V16, nil)
+	lle, err := validateNumberEntry(xRefTable, dict, dictName, "LLE", OPTIONAL, types.V16, func(f float64) bool { return f > 0 })
 	if err != nil {
 		return
 	}
@@ -586,7 +585,7 @@ func validateAnnotationDictLine(xRefTable *types.XRefTable, dict *types.PDFDict,
 	}
 
 	// LLO, optionl, number, since V1.7, >0
-	_, err = validateNumberEntry(xRefTable, dict, dictName, "LLO", OPTIONAL, types.V17, nil)
+	_, err = validateNumberEntry(xRefTable, dict, dictName, "LLO", OPTIONAL, types.V17, func(f float64) bool { return f > 0 })
 	if err != nil {
 		return
 	}
@@ -1392,7 +1391,7 @@ func validateAnnotationDictRedact(xRefTable *types.XRefTable, dict *types.PDFDic
 		return
 	}
 
-	// IC, optional, number array, lenght:3 [0.0 .. 1.0]
+	// IC, optional, number array, length:3 [0.0 .. 1.0]
 	validateICArray := func(arr types.PDFArray) bool {
 
 		if len(arr) != 3 {

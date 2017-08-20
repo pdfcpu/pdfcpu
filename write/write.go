@@ -17,7 +17,7 @@ import (
 )
 
 // PdflibVersion is the current version.
-const PdflibVersion = "0.0.1-alpha"
+const PdflibVersion = "0.0.1"
 
 var (
 	logDebugWriter *log.Logger

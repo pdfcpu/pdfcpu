@@ -423,7 +423,7 @@ func (d PDFDict) PDFString() string {
 			continue
 		}
 
-		log.Fatalf("PDFDict.PDFString(): entry of unknown object type: %T %v\n", v, v)
+		log.Fatalf("PDFDict.PDFString(): entry of unknown object type: %T %[1]v\n", v)
 	}
 
 	logstr = append(logstr, ">>")

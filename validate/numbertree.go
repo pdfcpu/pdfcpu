@@ -135,13 +135,13 @@ func validateNumberTreeDictLimitsEntry(xRefTable *types.XRefTable, obj interface
 		return errors.New("validateNumberTreeDictLimitsEntry: corrupt array entry \"Limits\" expected to contain 2 integers")
 	}
 
-	// TODO process indref PDFInteger?
-
-	if _, ok := (*arr)[0].(types.PDFInteger); !ok {
+	_, err = xRefTable.DereferenceInteger((*arr)[0])
+	if err != nil {
 		return errors.New("validateNumberTreeDictLimitsEntry: corrupt array entry \"Limits\" expected to contain 2 integers")
 	}
 
-	if _, ok := (*arr)[1].(types.PDFInteger); !ok {
+	_, err = xRefTable.DereferenceInteger((*arr)[1])
+	if err != nil {
 		return errors.New("validateNumberTreeDictLimitsEntry: corrupt array entry \"Limits\" expected to contain 2 integers")
 	}
 

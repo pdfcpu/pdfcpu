@@ -84,14 +84,7 @@ func parseObjectAttributes(line *string) (objectNumber *int, generationNumber *i
 	remainder = l[i+len("obj"):]
 	l = l[:i]
 
-	// Digest %comment white space
-	// WS int WS    int        WS obj
-	//    object    generation
-	//      nr.        nr.
-
-	////////////////////////////////////////
 	// object number
-	////////////////////////////////////////
 
 	l, _ = trimLeftSpace(l)
 	if len(l) == 0 {
@@ -108,9 +101,7 @@ func parseObjectAttributes(line *string) (objectNumber *int, generationNumber *i
 		return nil, nil, err
 	}
 
-	////////////////////////////////////////
 	// generation number
-	////////////////////////////////////////
 
 	l = l[i:]
 	l, _ = trimLeftSpace(l)
@@ -294,7 +285,7 @@ func parseHexLiteral(line *string) (interface{}, error) {
 
 func parseName(line *string) (*types.PDFName, error) {
 
-	// TODO rules, see 7.3.5
+	// see 7.3.5
 
 	if line == nil || len(*line) == 0 {
 		return nil, errBufNotAvailable
@@ -378,8 +369,6 @@ func parseDict(line *string) (*types.PDFDict, error) {
 		}
 
 		logDebugParse.Printf("ParseDict: dict[%s]=%v\n", key, obj)
-		// TODO really ignore duplicate keys?
-		//dict.Insert(string(*key), obj)
 		if ok := dict.Insert(string(*key), obj); !ok {
 			return nil, errDictionaryDuplicateKey
 		}

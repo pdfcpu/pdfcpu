@@ -369,7 +369,7 @@ func validateSoundActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, si
 	}
 
 	// Volume, optional, number: -1.0 .. +1.0
-	_, err = validateNumberEntry(xRefTable, dict, dictName, "Volume", OPTIONAL, types.V10, nil)
+	_, err = validateNumberEntry(xRefTable, dict, dictName, "Volume", OPTIONAL, types.V10, func(f float64) bool { return -1.0 <= f && f <= 1.0 })
 	if err != nil {
 		return
 	}
@@ -993,7 +993,7 @@ func validateGoTo3DViewActionDict(xRefTable *types.XRefTable, dict *types.PDFDic
 	}
 
 	// V, required, the view to use: 3DViewDict or integer or text string or name
-	// TODO Elaborate validation.
+	// TODO Validation.
 	err = validateAnyEntry(xRefTable, dict, dictName, "V", REQUIRED)
 	if err != nil {
 		return

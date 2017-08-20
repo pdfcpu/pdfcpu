@@ -50,7 +50,7 @@ func validateMinimumScreenSizeDict(xRefTable *types.XRefTable, dict *types.PDFDi
 		return
 	}
 
-	// V, required, integer array, lenght 2
+	// V, required, integer array, length 2
 	_, err = validateIntegerArrayEntry(xRefTable, dict, dictName, "V", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
 	if err != nil {
 		return
@@ -278,7 +278,7 @@ func validateMediaPlayerInfoDict(xRefTable *types.XRefTable, dict *types.PDFDict
 
 	var d *types.PDFDict
 
-	// PID, required, sofware identifier dict
+	// PID, required, software identifier dict
 	d, err = validateDictEntry(xRefTable, dict, dictName, "PID", REQUIRED, types.V10, nil)
 	if err != nil {
 		return

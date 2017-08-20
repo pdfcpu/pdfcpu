@@ -71,25 +71,11 @@ func Read(fileIn string, config *types.Configuration) (ctx *types.PDFContext, er
 	return
 }
 
-func newConfig(validationMode string) (config *types.Configuration) {
-
-	config = types.NewDefaultConfiguration()
-
-	if validationMode == "strict" {
-		config.ValidationMode = types.ValidationStrict
-	} else {
-		config.ValidationMode = types.ValidationRelaxed
-	}
-
-	return
-}
-
 // Validate validates a PDF file against ISO-32000-1:2008.
-func Validate(fileIn, validationMode string) (err error) {
+func Validate(fileIn string, config *types.Configuration) (err error) {
 
 	from1 := time.Now()
 
-	config := newConfig(validationMode)
 	fmt.Printf("validating(mode=%s) %s ...\n", config.ValidationModeString(), fileIn)
 	//logInfoAPI.Printf("validating(mode=%s) %s..\n", config.ValidationModeString(), fileIn)
 
@@ -156,14 +142,14 @@ func singlePageFileName(ctx *types.PDFContext, pageNr int) string {
 
 func writeSinglePagePDF(ctx *types.PDFContext, pageNr int, dirOut string) (err error) {
 
-	ctx.Write = types.NewWriteContext()
-	ctx.Write.ExtractPageNr = pageNr
-	ctx.Write.Command = "Split"
-	ctx.Write.DirName = dirOut + "/"
-	fileName := singlePageFileName(ctx, pageNr)
-	ctx.Write.FileName = fileName
+	ctx.ResetWriteContext()
 
-	fmt.Printf("writing %s ...\n", ctx.Write.DirName+ctx.Write.FileName)
+	w := ctx.Write
+	w.Command = "Split"
+	w.ExtractPageNr = pageNr
+	w.DirName = dirOut + "/"
+	w.FileName = singlePageFileName(ctx, pageNr)
+	fmt.Printf("writing %s ...\n", w.DirName+w.FileName)
 
 	return write.PDFFile(ctx)
 }
@@ -192,12 +178,7 @@ func writeSinglePagePDFs(ctx *types.PDFContext, selectedPages types.IntSet, dirO
 	return
 }
 
-func readAndValidate(fileIn string, from1 time.Time) (ctx *types.PDFContext, dur1, dur2 float64, err error) {
-
-	config := types.NewDefaultConfiguration()
-
-	// Activate for object and xref stream suppression.
-	//config.WriteXRefStream = false
+func readAndValidate(fileIn string, config *types.Configuration, from1 time.Time) (ctx *types.PDFContext, dur1, dur2 float64, err error) {
 
 	ctx, err = Read(fileIn, config)
 	if err != nil {
@@ -217,9 +198,9 @@ func readAndValidate(fileIn string, from1 time.Time) (ctx *types.PDFContext, dur
 	return
 }
 
-func readValidateAndOptimize(fileIn string, from1 time.Time) (ctx *types.PDFContext, dur1, dur2, dur3 float64, err error) {
+func readValidateAndOptimize(fileIn string, config *types.Configuration, from1 time.Time) (ctx *types.PDFContext, dur1, dur2, dur3 float64, err error) {
 
-	ctx, dur1, dur2, err = readAndValidate(fileIn, from1)
+	ctx, dur1, dur2, err = readAndValidate(fileIn, config, from1)
 	if err != nil {
 		return
 	}
@@ -237,11 +218,11 @@ func readValidateAndOptimize(fileIn string, from1 time.Time) (ctx *types.PDFCont
 }
 
 // Optimize reads in fileIn, does validation, optimization and writes the result to fileOut.
-func Optimize(fileIn, fileOut, fileStats, eol string) (err error) {
+func Optimize(fileIn, fileOut string, config *types.Configuration) (err error) {
 
 	fromStart := time.Now()
 
-	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, fromStart)
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
 		return
 	}
@@ -250,16 +231,9 @@ func Optimize(fileIn, fileOut, fileStats, eol string) (err error) {
 
 	fromWrite := time.Now()
 
-	if len(fileStats) > 0 {
-		ctx.StatsFileName = fileStats
-	}
-
-	ctx.Write.Command = "Optimize"
-
 	dirName, fileName := filepath.Split(fileOut)
 	ctx.Write.DirName = dirName
 	ctx.Write.FileName = fileName
-	ctx.Write.Eol = eol
 
 	err = Write(ctx)
 	if err != nil {
@@ -333,7 +307,7 @@ func pagesForPageSelection(pageCount int, pageSelection *[]string) (selectedPage
 		var negated bool
 		if v[0] == '!' || v[0] == 'n' {
 			negated = true
-			logInfoAPI.Printf("is a negated exp\n")
+			//logInfoAPI.Printf("is a negated exp\n")
 			v = v[1:]
 		}
 
@@ -428,7 +402,7 @@ func pagesForPageSelection(pageCount int, pageSelection *[]string) (selectedPage
 		}
 
 		// must be # ... select a specific page
-		// or !# ... deselect a sepcific page
+		// or !# ... deselect a specific page
 		i, err := strconv.Atoi(pr[0])
 		if err != nil {
 			return nil, err
@@ -451,13 +425,13 @@ func pagesForPageSelection(pageCount int, pageSelection *[]string) (selectedPage
 }
 
 // Split generates a sequence of single page PDF files in dirOut creating one file for every page of inFile.
-func Split(fileIn, dirOut string) (err error) {
+func Split(fileIn, dirOut string, config *types.Configuration) (err error) {
 
 	fromStart := time.Now()
 
 	fmt.Printf("splitting %s into %s ...\n", fileIn, dirOut)
 
-	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, fromStart)
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
 		return
 	}
@@ -491,7 +465,7 @@ func appendTo(fileIn string, ctxDest *types.PDFContext) (err error) {
 	logStatsAPI.Printf("appendTo: appending %s to %s\n", fileIn, ctxDest.Read.FileName)
 
 	// Build a PDFContext for fileIn.
-	ctxSource, _, _, err := readAndValidate(fileIn, time.Now())
+	ctxSource, _, _, err := readAndValidate(fileIn, ctxDest.Configuration, time.Now())
 	if err != nil {
 		return
 	}
@@ -504,24 +478,22 @@ func appendTo(fileIn string, ctxDest *types.PDFContext) (err error) {
 // Merge some PDF files together and write the result to fileOut.
 // This corresponds to concatenating these files in the order specified by filesIn.
 // The first entry of filesIn serves as the destination xRefTable where all the remaining files gets merged into.
-func Merge(filesIn []string, fileOut string) (err error) {
+func Merge(filesIn []string, fileOut string, config *types.Configuration) (err error) {
 
 	fmt.Printf("merging into %s: %v\n", fileOut, filesIn)
 	//logErrorAPI.Printf("Merge: filesIn: %v\n", filesIn)
 
 	fileDest := filesIn[0]
 
-	ctxDest, _, _, err := readAndValidate(fileDest, time.Now())
+	ctxDest, _, _, err := readAndValidate(fileDest, config, time.Now())
 	if err != nil {
 		return
 	}
 
 	if ctxDest.XRefTable.Version() < types.V15 {
-		// TODO xRefTable.SetRootVersion(version string)
 		v, _ := types.Version("1.5")
 		ctxDest.XRefTable.RootVersion = &v
 		logStatsAPI.Println("Ensure V1.5 for writing object & xref streams")
-		//logInfoAPI.Println("Ensure V1.5 for writing object & xref streams")
 	}
 
 	// Repeatedly merge files into fileDest's xref table.
@@ -559,13 +531,13 @@ func Merge(filesIn []string, fileOut string) (err error) {
 }
 
 // ExtractImages dumps embedded image resources from fileIn into dirOut for selected pages.
-func ExtractImages(fileIn, dirOut string, pageSelection *[]string) (err error) {
+func ExtractImages(fileIn, dirOut string, pageSelection *[]string, config *types.Configuration) (err error) {
 
 	fromStart := time.Now()
 
 	fmt.Printf("extracting images from %s into %s ...\n", fileIn, dirOut)
 
-	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, fromStart)
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
 		return
 	}
@@ -598,13 +570,13 @@ func ExtractImages(fileIn, dirOut string, pageSelection *[]string) (err error) {
 }
 
 // ExtractFonts dumps embedded fontfiles from fileIn into dirOut for selected pages.
-func ExtractFonts(fileIn, dirOut string, pageSelection *[]string) (err error) {
+func ExtractFonts(fileIn, dirOut string, pageSelection *[]string, config *types.Configuration) (err error) {
 
 	fromStart := time.Now()
 
 	fmt.Printf("extracting fonts from %s into %s ...\n", fileIn, dirOut)
 
-	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, fromStart)
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
 		return
 	}
@@ -637,13 +609,13 @@ func ExtractFonts(fileIn, dirOut string, pageSelection *[]string) (err error) {
 }
 
 // ExtractPages generates single page PDF files from fileIn in dirOut for selected pages.
-func ExtractPages(fileIn, dirOut string, pageSelection *[]string) (err error) {
+func ExtractPages(fileIn, dirOut string, pageSelection *[]string, config *types.Configuration) (err error) {
 
 	fromStart := time.Now()
 
 	fmt.Printf("extracting pages from %s into %s ...\n", fileIn, dirOut)
 
-	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, fromStart)
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
 		return
 	}
@@ -677,13 +649,13 @@ func ExtractPages(fileIn, dirOut string, pageSelection *[]string) (err error) {
 }
 
 // ExtractContent dumps "PDF source" files from fileIn into dirOut for selected pages.
-func ExtractContent(fileIn, dirOut string, pageSelection *[]string) (err error) {
+func ExtractContent(fileIn, dirOut string, pageSelection *[]string, config *types.Configuration) (err error) {
 
 	fromStart := time.Now()
 
 	fmt.Printf("extracting content from %s into %s ...\n", fileIn, dirOut)
 
-	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, fromStart)
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
 		return
 	}
@@ -716,7 +688,7 @@ func ExtractContent(fileIn, dirOut string, pageSelection *[]string) (err error) 
 }
 
 // Trim generates a trimmed version of fileIn containing all pages selected.
-func Trim(fileIn, fileOut string, pageSelection *[]string) (err error) {
+func Trim(fileIn, fileOut string, pageSelection *[]string, config *types.Configuration) (err error) {
 
 	// pageSelection points to an empty slice if flag pages was omitted.
 
@@ -724,7 +696,7 @@ func Trim(fileIn, fileOut string, pageSelection *[]string) (err error) {
 
 	fmt.Printf("trimming %s ...\n", fileIn)
 
-	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, fromStart)
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
 		return
 	}

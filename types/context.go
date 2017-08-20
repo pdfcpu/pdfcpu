@@ -34,10 +34,20 @@ func NewPDFContext(fileName string, file *os.File, config *Configuration) (ctx *
 		newXRefTable(config.ValidationMode),
 		newReadContext(fileName, file, fileInfo.Size()),
 		newOptimizationContext(),
-		NewWriteContext(),
+		NewWriteContext(config.Eol),
 	}
 
 	return
+}
+
+// ResetWriteContext prepares an existing WriteContext for a new file to be written.
+func (ctx *PDFContext) ResetWriteContext() {
+
+	w := ctx.Write
+
+	w.Table = map[int]int64{}
+	w.Offset = 0
+
 }
 
 func (ctx *PDFContext) String() string {

@@ -15,6 +15,7 @@ func writeFont(ctx *types.PDFContext, fileName, extension string, fontFileIndRef
 
 	fileName = fileName + "_" + strconv.Itoa(objNr) + "." + extension
 
+	logInfoExtract.Printf("writing %s\n", fileName)
 	logDebugExtract.Printf("writeFont begin: writing to %s\n", fileName)
 
 	streamDict, err := ctx.DereferenceStreamDict(*fontFileIndRef)
@@ -114,7 +115,7 @@ func writeFonts(ctx *types.PDFContext, selectedPages types.IntSet) (err error) {
 	if selectedPages == nil || len(selectedPages) == 0 {
 
 		for _, i := range sortFOKeys(ctx.Optimize.FontObjects) {
-			logInfoExtract.Printf("writeFonts: processing fontobject %d\n", i)
+			logDebugExtract.Printf("writeFonts: processing fontobject %d\n", i)
 			writeFontObject(ctx, i, fontFileIndRefs)
 		}
 

@@ -9,10 +9,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-/////////////////
-// ASCIIHexDecode
-/////////////////
-
 type asciiHexDecode struct {
 	baseFilter
 }

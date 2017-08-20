@@ -24,6 +24,9 @@ type Configuration struct {
 	// Validate against ISO-32000: strict or relaxed
 	ValidationMode int
 
+	// End of line char sequence for writing.
+	Eol string
+
 	// Turns on object stream generation.
 	// A signal for compressing any new non-stream-object into an object stream.
 	// true enforces WriteXRefStream to true.
@@ -46,6 +49,7 @@ func NewDefaultConfiguration() *Configuration {
 		Reader15:          true,
 		DecodeAllStreams:  false,
 		ValidationMode:    ValidationRelaxed,
+		Eol:               EolLF,
 		WriteObjectStream: true,
 		WriteXRefStream:   true,
 		CollectStats:      true,
@@ -64,4 +68,14 @@ func (c *Configuration) ValidationModeString() string {
 	}
 
 	return ""
+}
+
+// SetValidationStrict sets strict validation.
+func (c *Configuration) SetValidationStrict() {
+	c.ValidationMode = ValidationStrict
+}
+
+// SetValidationRelaxed sets relaxed validation.
+func (c *Configuration) SetValidationRelaxed() {
+	c.ValidationMode = ValidationRelaxed
 }

@@ -1,8 +1,10 @@
-# pdflib: a golang pdf processor ![](https://img.shields.io/badge/status-experimental-orange.svg) [![GoDoc](https://godoc.org/github.com/hhrutter/pdflib?status.svg)](https://godoc.org/github.com/hhrutter/pdflib) [![Go Report Card](https://goreportcard.com/badge/github.com/hhrutter/pdflib)](https://goreportcard.com/report/github.com/hhrutter/pdflib) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) 
+ 
+ 
+ [![Build Status](https://travis-ci.org/hhrutter/pdflib.svg?branch=master)](https://travis-ci.org/hhrutter/pdflib) [![stability-stable](https://img.shields.io/badge/stability-stable-green.svg)](https://github.com/emersion/stability-badges#stable) [![GoDoc](https://godoc.org/github.com/hhrutter/pdflib?status.svg)](https://godoc.org/github.com/hhrutter/pdflib) [![Coverage Status](https://coveralls.io/repos/github/hhrutter/pdflib/badge.svg?branch=master)](https://coveralls.io/github/hhrutter/pdflib?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/hhrutter/pdflib)](https://goreportcard.com/report/github.com/hhrutter/pdflib) [![License: MIT](https://img.shields.io/github/license/mashape/apistatus.svg)](https://opensource.org/licenses/MIT) 
+ 
+ # pdflib: a golang pdf processor
 
-
-
-Package pdflib is a simple PDF processing library written in [Go](http://golang.org).
+Package pdflib is a simple PDF processing library written in [Go](http://golang.org)
 It provides both an API and a command line tool.
 Supported are all versions up to PDF 1.7 (ISO-32000).
 
@@ -25,6 +27,9 @@ I also wanted to have my own swiss army knife for PDFs written entirely in [Go](
 * Extract Fonts (extract all embedded fonts of a PDF file into a given dir)
 * Extract Pages (extract specific pages into a given dir)
 * Extract Content (extract the PDF-Source into given dir)
+
+### Demo Screencast
+[![asciicast](demo.png)](https://asciinema.org/a/05NjBWR8TeuaAe4V8lSrAUnwJ)
 
 ### Installation
 `go get github.com/hhrutter/pdflib/cmd/...`
@@ -52,26 +57,19 @@ I also wanted to have my own swiss army knife for PDFs written entirely in [Go](
 
 	Use "pdflib help [command]" for more information about a command.
 
-`pdflib validate [-verbose] [-mode strict|relaxed] inFile`
-
-`pdflib optimize [-verbose] [-stats csvFile] inFile [outFile]`
-
-`pdflib split [-verbose] inFile outDir`
-
-`pdflib merge [-verbose] outFile inFile1 inFile2 ...`
-
-`pdflib extract [-verbose] -mode image|font|content|page [-pages pageSelection] inFile outDir`
-
-`pdflib trim [-verbose] -pages pageSelection inFile outFile`
+    pdflib validate [-verbose] [-mode strict|relaxed] inFile
+    pdflib optimize [-verbose] [-stats csvFile] inFile [outFile]
+    pdflib split [-verbose] inFile outDir
+    pdflib merge [-verbose] outFile inFile1 inFile2 ...
+    pdflib extract [-verbose] -mode image|font|content|page [-pages pageSelection] inFile outDir
+    pdflib trim [-verbose] -pages pageSelection inFile outFile
 
  [Please read the documentation ](https://godoc.org/github.com/hhrutter/pdflib)
 
 
 ### Status
 
-Version: 0.0.1-alpha
-
-Work in progress.
+Version: 0.0.1
 
 The extraction code for font files and images is experimental and serves as proof of concept only.
 
@@ -81,7 +79,7 @@ The extraction code for font files and images is experimental and serves as proo
 * validation of the less used page entry "PresSteps"
 * validation of the less used root entries "SpiderInfo", "Permissions", "Legal", "Collection"
 
-I am looking for test PDFs using one of these features. So if you have one that you can share let me know.
+I am looking for test PDFs using one of these features. If you have one and you can share let me know.
 I am also accepting PRs but right now only regarding the defined items on the todo list.
 
 

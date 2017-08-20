@@ -68,8 +68,18 @@ func readLine(rd *bufio.Reader) (s string, err error) {
 // Go to end of file and search backwards for the first occurrence of startxref {offset} %%EOF
 func getOffsetLastXRefSection(ra io.ReaderAt, fileSize int64) (*int64, error) {
 
-	buf := make([]byte, defaultBufSize)
-	if _, err := ra.ReadAt(buf, fileSize-defaultBufSize); err != nil {
+	var bufSize int64 = defaultBufSize
+
+	off := fileSize - defaultBufSize
+	if off < 0 {
+		off = 0
+		bufSize = fileSize
+	}
+	buf := make([]byte, bufSize)
+
+	logDebugReader.Printf("getOffsetLastXRefSection at %d\n", off)
+
+	if _, err := ra.ReadAt(buf, off); err != nil {
 		return nil, err
 	}
 
@@ -139,10 +149,8 @@ func parseXRefTableEntry(rd *bufio.Reader, xRefTable *types.XRefTable, objectNum
 
 		logDebugReader.Printf("parseXRefTableEntry: Object #%d is in use at offset=%d, generation=%d\n", objectNumber, offset, generation)
 
-		// TODO if offset == 0 there is something wrong => fail
-
 		if offset == 0 {
-			logWarningReader.Printf("parseXRefTableEntry: Skip entry for in use object #%d with offset 0\n", objectNumber)
+			logInfoReader.Printf("parseXRefTableEntry: Skip entry for in use object #%d with offset 0\n", objectNumber)
 			return nil
 		}
 
@@ -164,7 +172,6 @@ func parseXRefTableEntry(rd *bufio.Reader, xRefTable *types.XRefTable, objectNum
 				Offset:     &offset,
 				Generation: &generation}
 
-		//xRefTable.AddToFreeObjects(objectNumber)
 	}
 
 	logDebugReader.Printf("parseXRefTableEntry: Insert new xreftable entry for Object %d\n", objectNumber)
@@ -224,7 +231,6 @@ func getCompressedObject(s string) (interface{}, error) {
 		return pdfObject, nil
 	}
 
-	// TODO streamlength is always explicit for object streams.
 	streamLength, streamLengthRef := pdfDict.Length()
 	if streamLength == nil && streamLengthRef == nil {
 		// return PDFDict
@@ -303,7 +309,7 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, xRefStreamDict types.PDFX
 
 	logDebugReader.Printf("extractXRefTableEntriesFromXRefStream begin")
 
-	// TODO
+	// Note:
 	// A value of zero for an element in the W array indicates that the corresponding field shall not be present in the stream,
 	// and the default value shall be used, if there is one.
 	// If the first element is zero, the type field shall not be present, and shall default to type 1.
@@ -339,8 +345,6 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, xRefStreamDict types.PDFX
 
 		var xRefTableEntry types.XRefTableEntry
 
-		var isFree bool
-
 		switch buf[i] {
 
 		case 0x00:
@@ -354,8 +358,6 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, xRefStreamDict types.PDFX
 					Compressed: false,
 					Offset:     &c2,
 					Generation: &g}
-
-			isFree = true
 
 		case 0x01:
 			// in use object
@@ -396,9 +398,6 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, xRefStreamDict types.PDFX
 				return errors.Errorf("extractXRefTableEntriesFromXRefStream: Problem inserting entry for %d", objectNumber)
 			}
 
-			if isFree {
-				//ctx.XRefTable.AddToFreeObjects(objectNumber)
-			}
 		}
 
 		j++
@@ -419,7 +418,7 @@ func parseXRefStream(rd io.Reader, offset *int64, ctx *types.PDFContext) (prevOf
 		return nil, err
 	}
 
-	logDebugReader.Printf("parseXRefStream: endInd=%d(%x) streamInd=%d(%x)\n", endInd, endInd, streamInd, streamInd)
+	logDebugReader.Printf("parseXRefStream: endInd=%[1]d(%[1]x) streamInd=%[2]d(%[2]x)\n", endInd, streamInd)
 
 	line := string(buf)
 
@@ -489,8 +488,6 @@ func parseXRefStream(rd io.Reader, offset *int64, ctx *types.PDFContext) (prevOf
 	if err != nil {
 		return nil, err
 	}
-
-	//logErrorReader.Printf("xRefStream.Content:\n%s\n", hex.Dump(pdfStreamDict.Content))
 
 	// Parse xRefStream and create xRefTable entries for embedded objects.
 	err = extractXRefTableEntriesFromXRefStream(pdfStreamDict.Content, *pdfXRefStreamDict, ctx)
@@ -906,10 +903,8 @@ func getBuffer(rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffse
 			continue
 		}
 
-		// for rare cases where "stream" also occurs in obj dict
+		// For rare cases where "stream" also occurs in obj dict
 		// we need to find the last occurrence of "stream" before a possible end marker.
-		// TODO what about inline "endobj"?
-
 		for streamInd > 0 && !keywordStreamRightAfterEndOfDict(line, streamInd) {
 
 			// search for next "stream" in line.
@@ -917,7 +912,6 @@ func getBuffer(rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffse
 			bufpos := streamInd + len("stream")
 
 			if bufpos > len(line)-len("stream") {
-				// TODO block overlapping "stream"?
 				streamInd = -1
 				break
 			}
@@ -961,8 +955,6 @@ func getBuffer(rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffse
 				line = string(buf)
 
 			}
-
-			// TODO this should be "while white space" ...
 
 			if line[streamOffset] == '\n' || line[streamOffset] == '\r' {
 				streamOffset++
@@ -1021,8 +1013,6 @@ func getPDFFilterPipeline(ctx *types.PDFContext, pdfDict types.PDFDict) ([]types
 	// compressed stream.
 
 	var filterPipeline []types.PDFFilter
-
-	// TODO use switch Name or Array
 
 	if indRef, ok := obj.(types.PDFIndirectRef); ok {
 		var err error
@@ -1303,7 +1293,6 @@ func GetEncodedStreamContent(ctx *types.PDFContext, streamDict *types.PDFStreamD
 	logDebugReader.Printf("GetEncodedStreamContent: seeked to offset:%d\n", newOffset)
 
 	// Buffer stream contents.
-	// TODO INT64 or INT ???
 	// Read content from disk.
 	rawContent, err := readContentStream(rd, int(*streamDict.StreamLength))
 	if err != nil {
@@ -1326,7 +1315,6 @@ func setDecodedStreamContent(streamDict *types.PDFStreamDict) (err error) {
 
 	// Actual decoding of content stream.
 	err = filter.DecodeStream(streamDict)
-	//err = nil
 	if err != nil {
 		return
 	}
@@ -1407,8 +1395,11 @@ func logStream(obj interface{}) {
 }
 
 // Decode all object streams so contained objects are ready to be used.
-// TODO Process "Extends" for object stream graphs.
 func decodeObjectStreams(ctx *types.PDFContext) (err error) {
+
+	// Note:
+	// Entry "Extends" intentionally left out.
+	// No object stream collection validation necessary.
 
 	logDebugReader.Println("decodeObjectStreams: begin")
 
@@ -1447,8 +1438,6 @@ func decodeObjectStreams(ctx *types.PDFContext) (err error) {
 		if err = setDecodedStreamContent(&pdfStreamDict); err != nil {
 			logErrorReader.Printf("obj %d: %s", objectNumber, err)
 		}
-
-		//xRefTable.BinaryTotalSize += *pdfStreamDict.StreamLength
 
 		// Ensure decoded objectArray for object stream dicts.
 		if !pdfStreamDict.IsObjStm() {
@@ -1565,9 +1554,7 @@ func dereferenceObjects(ctx *types.PDFContext) error {
 
 		entry.Object = obj
 
-		// TODO Handle linearized PDF files.
-		// As of now linearization dicts are only recognized and put into the xRefTable.
-		// No reading taking advantage of linearization implemented!
+		// Linearization dicts are only validated and recorded for stats.
 		if !ctx.Read.Linearized {
 
 			// handle linearization parm dict.
@@ -1677,7 +1664,7 @@ func identifyRootVersion(xRefTable *types.XRefTable) (err error) {
 
 	// since V1.4 the header version may be overridden by a Version entry in the catalog.
 	if *xRefTable.HeaderVersion < types.V14 {
-		logWarningReader.Printf("identifyRootVersion: PDF version is %s - will ignore root version: %s\n",
+		logInfoReader.Printf("identifyRootVersion: PDF version is %s - will ignore root version: %s\n",
 			types.VersionString(*xRefTable.HeaderVersion), *rootVersionStr)
 	}
 
@@ -1739,7 +1726,6 @@ func PDFFile(fileName string, config *types.Configuration) (ctx *types.PDFContex
 		logInfoReader.Println("PDF Version 1.5 conforming reader")
 	} else {
 		logErrorReader.Println("PDF Version 1.4 conforming reader - no object streams and xrefstreams allowed")
-		// TODO need these checks.
 	}
 
 	// Populate xRefTable.

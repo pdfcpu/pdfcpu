@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strconv"
 )
 
 // Supported line delimiters
@@ -63,7 +64,7 @@ func (boolean PDFBoolean) Value() bool {
 type PDFFloat float64
 
 func (f PDFFloat) String() string {
-	// TODO use strconv
+	// strconv may be faster.
 	return fmt.Sprintf("%.2f", float64(f))
 }
 
@@ -83,7 +84,7 @@ func (f PDFFloat) Value() float64 {
 type PDFInteger int
 
 func (i PDFInteger) String() string {
-	return fmt.Sprintf("%d", int(i))
+	return strconv.Itoa(int(i))
 }
 
 // PDFString returns a string representation as found in and written to a PDF file.

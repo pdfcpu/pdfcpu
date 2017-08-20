@@ -401,7 +401,7 @@ func validateWebCaptureContentSetDict(XRefTable *types.XRefTable, dict *types.PD
 	if *s == "SIS" {
 
 		// R, required, integer or array of integers
-		err = validateIntegerOrArrayOfInteger(XRefTable, dict, dictName, "R", REQUIRED, types.V10)
+		err = validateIntegerOrArrayOfIntegerEntry(XRefTable, dict, dictName, "R", REQUIRED, types.V10)
 		if err != nil {
 			return
 		}

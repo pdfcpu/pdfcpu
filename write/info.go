@@ -81,7 +81,7 @@ func writeDocumentInfoDict(ctx *types.PDFContext) (err error) {
 	// Document info object is optional.
 	if ctx.Info == nil {
 		logInfoWriter.Printf("writeDocumentInfoObject end: No info object present, offset=%d\n", ctx.Write.Offset)
-		// TODO Generate info object from scratch.
+		// Note: We could generate an info object from scratch in this scenario.
 		return
 	}
 
@@ -188,7 +188,6 @@ func writeDocumentInfoDict(ctx *types.PDFContext) (err error) {
 		return
 	}
 
-	// TODO insert CreationDate, ModDate and Producer if missing.
 	dict.Update("CreationDate", types.PDFStringLiteral(dateStr))
 	dict.Update("ModDate", types.PDFStringLiteral(dateStr))
 	dict.Update("Producer", types.PDFStringLiteral("golang pdflib v"+PdflibVersion))

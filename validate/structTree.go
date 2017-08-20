@@ -241,7 +241,7 @@ func processStructElementDictPgEntry(xRefTable *types.XRefTable, indRef types.PD
 		return errors.Errorf("processStructElementDictPgEntry: Pg object corrupt dict: %s\n", obj)
 	}
 
-	if t := pageDict.Type(); t == nil || *t != "Page" { // or "Pages" ?
+	if t := pageDict.Type(); t == nil || *t != "Page" {
 		return errors.Errorf("processStructElementDictPgEntry: Pg object no pageDict: %s\n", pageDict)
 	}
 
@@ -285,11 +285,14 @@ func validateStructElementDictEntryA(xRefTable *types.XRefTable, obj interface{}
 
 			switch obj.(type) {
 
-			case types.PDFInteger: // TODO: Each array element may be followed by a revision number (int).sort
+			case types.PDFInteger:
+				// Each array element may be followed by a revision number (int).sort
 
-			case types.PDFDict: // No further processing.
+			case types.PDFDict:
+				// No further processing.
 
-			case types.PDFStreamDict: // No further processing.
+			case types.PDFStreamDict:
+				// No further processing.
 
 			default:
 				return errors.Errorf("validateStructElementDictEntryA: unsupported PDF object: %v\n.", obj)
@@ -308,8 +311,6 @@ func validateStructElementDictEntryA(xRefTable *types.XRefTable, obj interface{}
 
 func validateStructElementDictEntryC(xRefTable *types.XRefTable, obj interface{}) (err error) {
 
-	// TODO content element unclear!
-
 	logInfoValidate.Println("*** validateStructElementDictEntryC begin ***")
 
 	obj, err = xRefTable.Dereference(obj)
@@ -324,7 +325,8 @@ func validateStructElementDictEntryC(xRefTable *types.XRefTable, obj interface{}
 
 	switch obj := obj.(type) {
 
-	case types.PDFName: // No further processing.
+	case types.PDFName:
+		// No further processing.
 
 	case types.PDFArray:
 
@@ -341,9 +343,11 @@ func validateStructElementDictEntryC(xRefTable *types.XRefTable, obj interface{}
 
 			switch obj.(type) {
 
-			case types.PDFName: // No further processing.
+			case types.PDFName:
+				// No further processing.
 
-			case types.PDFInteger: // TODO: Each array element may be followed by a revision number (int).sort
+			case types.PDFInteger:
+				// Each array element may be followed by a revision number.
 
 			default:
 				return errors.New("validateStructElementDictEntryC: unsupported PDF object")
@@ -362,6 +366,8 @@ func validateStructElementDictEntryC(xRefTable *types.XRefTable, obj interface{}
 }
 
 func validateStructElementDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+
+	// See table 323
 
 	logInfoValidate.Println("*** validateStructElementDict begin ***")
 
@@ -470,7 +476,6 @@ func validateStructElementDict(xRefTable *types.XRefTable, dict *types.PDFDict) 
 	return
 }
 
-// TODO implement OBJR
 func validateStructTreeRootDictEntryK(xRefTable *types.XRefTable, obj interface{}) (err error) {
 
 	// The immediate child or children of the structure tree root in the structure hierarchy.
@@ -502,11 +507,6 @@ func validateStructTreeRootDictEntryK(xRefTable *types.XRefTable, obj interface{
 			break
 		}
 
-		//if *dictType == "OBJR" {
-		//	writeObjectReferenceDict(source, dest, o)
-		//	break
-		//}
-
 		return errors.Errorf("validateStructTreeRootDictEntryK: invalid dictType %s (should be \"StructElem\")\n", *dictType)
 
 	case types.PDFArray:
@@ -535,11 +535,6 @@ func validateStructTreeRootDictEntryK(xRefTable *types.XRefTable, obj interface{
 					}
 					break
 				}
-
-				//if *dictType == "OBJR" {
-				//	writeObjectReferenceDict(source, dest, o)
-				//	break
-				//}
 
 				return errors.Errorf("validateStructTreeRootDictEntryK: invalid dictType %s (should be \"StructElem\")\n", *dictType)
 
@@ -626,7 +621,6 @@ func validateStructTreeRootDict(xRefTable *types.XRefTable, dict *types.PDFDict)
 
 	// Optional entry IDTree: name tree, key=elementId value=struct element dict
 	// A name tree that maps element identifiers to the structure elements they denote.
-	// TODO Required if structure elements have element identifiers.
 	indRef := dict.IndirectRefEntry("IDTree")
 	if indRef != nil {
 		logInfoValidate.Println("validateStructTreeRootDict: writing IDTree.")
@@ -638,7 +632,6 @@ func validateStructTreeRootDict(xRefTable *types.XRefTable, dict *types.PDFDict)
 
 	// Optional entry ParentTree: number tree, value=indRef of struct element dict or array of struct element dicts
 	// A number tree used in finding the structure elements to which content items belong.
-	// TODO Required if any structure element contains content items.
 	if indRef = dict.IndirectRefEntry("ParentTree"); indRef != nil {
 		if xRefTable.ValidationMode == types.ValidationRelaxed {
 			// Accept empty dict

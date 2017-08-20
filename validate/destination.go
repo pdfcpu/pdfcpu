@@ -78,7 +78,7 @@ func validateDestinationArray(xRefTable *types.XRefTable, arr *types.PDFArray) e
 		}
 
 	default:
-		return errors.Errorf("validateDestinationArray: array length %d not alowed: %v", len(*arr), arr)
+		return errors.Errorf("validateDestinationArray: array length %d not allowed: %v", len(*arr), arr)
 	}
 
 	logInfoValidate.Println("*** validateDestinationArray: end ***")

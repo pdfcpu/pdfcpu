@@ -23,7 +23,6 @@ func validateFontFile(xRefTable *types.XRefTable, dict *types.PDFDict, dictName 
 	// Process font file stream dict entries.
 
 	// SubType, required if referenced from FontFile3.
-	// TODO since 1.2
 	if entryName == "FontFile3" {
 
 		dictSubType := streamDict.Subtype()
@@ -357,7 +356,6 @@ func validateTrueTypeFontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (
 	if err != nil {
 		return
 	}
-	// TODO check ok..
 
 	// FirstChar, integer, required.
 	required := REQUIRED
@@ -514,7 +512,6 @@ func validateCIDFontDict(xRefTable *types.XRefTable, fontDict *types.PDFDict) (e
 	dictName := "CIDFontDict"
 
 	// BaseFont, name, required
-	// TODO Validate
 	_, err = validateNameEntry(xRefTable, fontDict, dictName, "BaseFont", REQUIRED, types.V10, nil)
 	if err != nil {
 		return
@@ -840,6 +837,8 @@ func validateCIDSystemInfoDict(xRefTable *types.XRefTable, dict *types.PDFDict) 
 
 func validateCMapStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStreamDict) (err error) {
 
+	// See table 120
+
 	logInfoValidate.Println("*** validateCMapStreamDict begin ***")
 
 	// Type, name, required
@@ -851,7 +850,6 @@ func validateCMapStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStr
 	dictName := "CMapStreamDict"
 
 	// CMapName, name, required
-
 	_, err = validateNameEntry(xRefTable, &streamDict.PDFDict, dictName, "CMapName", REQUIRED, types.V10, nil)
 	if err != nil {
 		return
@@ -869,13 +867,6 @@ func validateCMapStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStr
 			return
 		}
 	}
-
-	_, err = validateDictEntry(xRefTable, &streamDict.PDFDict, dictName, "CIDSystemInfo", REQUIRED, types.V10, nil)
-	if err != nil {
-		return
-	}
-
-	// TODO writeCIDSystemInfoDict
 
 	// WMode, integer, optional, 0 or 1
 	_, err = validateIntegerEntry(xRefTable, &streamDict.PDFDict, dictName, "WMode", OPTIONAL, types.V10, func(i int) bool { return i == 0 || i == 1 })
@@ -963,8 +954,7 @@ func validateType3FontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err
 		return
 	}
 
-	// FontMatrix, array, required
-	// TODO validate array of six numbers. see 9.2.4.
+	// FontMatrix, number array, required
 	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "FontMatrix", REQUIRED, types.V10, func(arr types.PDFArray) bool { return len(arr) == 6 })
 	if err != nil {
 		return
@@ -1009,9 +999,14 @@ func validateType3FontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err
 		}
 	}
 
-	// Resources, dict, optional, TODO since 1.2
-	if obj, ok := dict.Find("Resources"); ok {
-		_, err := validateResourceDict(xRefTable, obj)
+	// Resources, dict, optional, since V1.2
+	var d *types.PDFDict
+	d, err = validateDictEntry(xRefTable, dict, dictName, "Resources", OPTIONAL, types.V12, nil)
+	if err != nil {
+		return
+	}
+	if d != nil {
+		_, err := validateResourceDict(xRefTable, *d)
 		if err != nil {
 			return err
 		}
@@ -1052,7 +1047,7 @@ func validateFontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err erro
 	case "Type1":
 		err = validateType1FontDict(xRefTable, dict)
 
-	case "MMType1": // TODO Test ???
+	case "MMType1":
 		err = validateType1FontDict(xRefTable, dict)
 
 	case "Type3":
