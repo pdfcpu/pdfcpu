@@ -151,6 +151,34 @@ func TestValidateCommand(t *testing.T) {
 
 }
 
+func TestValidateOneFile(t *testing.T) {
+
+	config := types.NewDefaultConfiguration()
+	config.SetValidationRelaxed()
+
+	cmd := ValidateCommand("testdata/gobook.0.pdf", config)
+	err := Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestValidateOneFile: %v\n", err)
+	}
+
+}
+
+func BenchmarkValidateCommand(b *testing.B) {
+
+	config := types.NewDefaultConfiguration()
+	config.SetValidationRelaxed()
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		cmd := ValidateCommand("testdata/gobook.0.pdf", config)
+		err := Process(&cmd)
+		if err != nil {
+			b.Fatalf("BenchmarkValidateCommand: %v\n", err)
+		}
+	}
+}
+
 // Optimize all PDFs in testdata and write with (default) end of line sequence "\n".
 func TestOptimizeCommandWithLF(t *testing.T) {
 

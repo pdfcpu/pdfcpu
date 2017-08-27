@@ -37,50 +37,40 @@ I also wanted to have my own swiss army knife for PDFs written entirely in [Go](
 
 ### Usage
 
-	pdflib is a tool for PDF manipulation written in Go.
-
-	Usage:
-
-	pdflib command [arguments]
-
- 	The commands are:
-
-	validate	validate PDF against PDF 32000-1:2008 (PDF 1.7)
-	optimize	optimize PDF by getting rid of redundant page resources
-	split		split multi-page PDF into several single-page PDFs
-	merge		concatenate 2 or more PDFs
-	extract		extract images, fonts, content, pages out of a PDF
-	trim		create trimmed version of a PDF
-	version		print pdflib version
-
-	Single-letter Unix-style supported for commands and flags.
-
-	Use "pdflib help [command]" for more information about a command.
-
     pdflib validate [-verbose] [-mode strict|relaxed] inFile
+
     pdflib optimize [-verbose] [-stats csvFile] inFile [outFile]
+ 
     pdflib split [-verbose] inFile outDir
+ 
     pdflib merge [-verbose] outFile inFile1 inFile2 ...
+ 
     pdflib extract [-verbose] -mode image|font|content|page [-pages pageSelection] inFile outDir
+ 
     pdflib trim [-verbose] -pages pageSelection inFile outFile
 
  [Please read the documentation ](https://godoc.org/github.com/hhrutter/pdflib)
 
 
 ### Status
-
 Version: 0.0.1
 
 The extraction code for font files and images is experimental and serves as proof of concept only.
 
 
 ### To Do
+* validation of the less used PDF page entry element "PresSteps"
+* validation of the less used PDF root entry elements "SpiderInfo", "Permissions", "Legal" and "Collection"
 
-* validation of the less used page entry "PresSteps"
-* validation of the less used root entries "SpiderInfo", "Permissions", "Legal", "Collection"
+I am looking for PDFs using one of these features in order to implement validation. If you have one and you can share let me know.
 
-I am looking for test PDFs using one of these features. If you have one and you can share let me know.
-I am also accepting PRs but right now only regarding the defined items on the todo list.
+
+### Contributing
+Pull requests, bug fixes and issue reports are always welcome.
+
+Please open an issue if you want to propose a change.
+
+PDF files that will increase pdflib's coverage are very much welcome.
 
 
 ### Disclaimer

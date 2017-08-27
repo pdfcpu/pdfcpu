@@ -24,15 +24,15 @@
 // even within the same file we need to extend bufio in order to support PDF end of line markers in a flexible way.
 //
 // Although one may suppose that extending ReadLine() is the perfect candidate for this
-// the decision was to enhance ReadSlice(delim byte) by supporting an "unknownDelimiter" (=0) as argument for the delimiter parameter.
+// the decision was to enhance ReadSlice(delim byte) by supporting an "unknownDelimiter" (=0) as the argument for the delimiter parameter.
 //
 // Extending ReadSlice(delim byte) worked out as the better alternative because it is called once for every line
 // whereas ReadLine() needs to be called in a loop returning chunks.
 //
 // The nice thing about extending ReadSlice(delim byte) is that we still can call ReadString(delim byte) because the delimiter
-// parameter gets passed down to ReadSlice(delim byte) and as a result swe can keep the modification to a minimum.
+// parameter gets passed down to ReadSlice(delim byte).
 //
-// based on go1.9beta1
+// based on go1.9
 package bufio
 
 import (
@@ -370,7 +370,7 @@ func (b *Reader) endOfLine(buf []byte) int {
 // ReadSlice reads until the first occurrence of delim in the input,
 // returning a slice pointing at the bytes in the buffer.
 // For delim 0 it reads until the first occurrence of either \n, \r\n, or \r.
-// The bytes stop being valid the next read.
+// The bytes stop being valid at the next read.
 // If ReadSlice encounters an error before finding a delimiter,
 // it returns all the data in the buffer and the error itself (often io.EOF).
 // ReadSlice fails with error ErrBufferFull if the buffer fills without a delim.
