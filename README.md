@@ -29,7 +29,7 @@ I also wanted to have my own swiss army knife for PDFs written entirely in [Go](
 * Extract Content (extract the PDF-Source into given dir)
 
 ### Demo Screencast
-[![asciicast](demo.png)](https://asciinema.org/a/05NjBWR8TeuaAe4V8lSrAUnwJ)
+[![asciicast](demo.png)](https://asciinema.org/a/P5jaAo9kgZXKj2iSA1OqIdLAU)
 
 ### Installation
 `go get github.com/hhrutter/pdfcpu/cmd/...`
