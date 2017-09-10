@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// PDFContext represents the context for processing PDF files with pdflib.
+// PDFContext represents the context for processing PDF files with pdfcpu.
 type PDFContext struct {
 	*Configuration
 	*XRefTable

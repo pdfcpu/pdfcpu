@@ -25,7 +25,7 @@ do
     mkdir $out/$f1
     cp $pdf $out/$f1
 
-    pdflib extract -verbose -mode=image $out/$f1/$f $out/$f1 > $out/$f1/$f1.log
+    pdfcpu extract -verbose -mode=image $out/$f1/$f $out/$f1 > $out/$f1/$f1.log
     if [ $? -eq 1 ]; then
         echo "image extraction error: $pdf -> $out/$f1"
         echo

@@ -1,4 +1,4 @@
-package pdflib
+package pdfcpu
 
 import (
 	"fmt"
@@ -11,13 +11,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hhrutter/pdflib/extract"
-	"github.com/hhrutter/pdflib/merge"
-	"github.com/hhrutter/pdflib/optimize"
-	"github.com/hhrutter/pdflib/read"
-	"github.com/hhrutter/pdflib/types"
-	"github.com/hhrutter/pdflib/validate"
-	"github.com/hhrutter/pdflib/write"
+	"github.com/hhrutter/pdfcpu/extract"
+	"github.com/hhrutter/pdfcpu/merge"
+	"github.com/hhrutter/pdfcpu/optimize"
+	"github.com/hhrutter/pdfcpu/read"
+	"github.com/hhrutter/pdfcpu/types"
+	"github.com/hhrutter/pdfcpu/validate"
+	"github.com/hhrutter/pdfcpu/write"
 
 	"github.com/pkg/errors"
 )

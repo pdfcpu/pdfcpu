@@ -1,4 +1,4 @@
-package pdflib
+package pdfcpu
 
 import (
 	"log"
@@ -7,7 +7,7 @@ import (
 
 	"strings"
 
-	"github.com/hhrutter/pdflib/types"
+	"github.com/hhrutter/pdfcpu/types"
 )
 
 var r *regexp.Regexp

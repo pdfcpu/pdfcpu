@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hhrutter/pdflib/types"
-	"github.com/hhrutter/pdflib/validate"
+	"github.com/hhrutter/pdfcpu/types"
+	"github.com/hhrutter/pdfcpu/validate"
 	"github.com/pkg/errors"
 )
 
@@ -60,7 +60,7 @@ func textString(ctx *types.PDFContext, obj interface{}) (string, error) {
 }
 
 // Write the document info object for this PDF file.
-// Add pdflib as Producer with proper creation date and mod date.
+// Add pdfcpu as Producer with proper creation date and mod date.
 func writeDocumentInfoDict(ctx *types.PDFContext) (err error) {
 
 	// => 14.3.3 Document Information Dictionary
@@ -71,9 +71,9 @@ func writeDocumentInfoDict(ctx *types.PDFContext) (err error) {
 	// Subject              -
 	// Keywords             -
 	// Creator              -
-	// Producer		        modified by pdflib
-	// CreationDate	        modified by pdflib
-	// ModDate		        modified by pdflib
+	// Producer		        modified by pdfcpu
+	// CreationDate	        modified by pdfcpu
+	// ModDate		        modified by pdfcpu
 	// Trapped              -
 
 	logInfoWriter.Printf("*** writeDocumentInfoDict begin: offset=%d ***\n", ctx.Write.Offset)
@@ -145,7 +145,7 @@ func writeDocumentInfoDict(ctx *types.PDFContext) (err error) {
 				if err != nil {
 					return
 				}
-				// Do not write indRef, will be modified by pdflib.
+				// Do not write indRef, will be modified by pdfcpu.
 				ctx.Optimize.DuplicateInfoObjects[int(indRef.ObjectNumber)] = true
 			}
 
@@ -158,7 +158,7 @@ func writeDocumentInfoDict(ctx *types.PDFContext) (err error) {
 			logDebugWriter.Println("found CreationDate")
 
 			if indRef, ok := value.(types.PDFIndirectRef); ok {
-				// Do not write indRef, will be modified by pdflib.
+				// Do not write indRef, will be modified by pdfcpu.
 				ctx.Optimize.DuplicateInfoObjects[int(indRef.ObjectNumber)] = true
 			}
 
@@ -166,7 +166,7 @@ func writeDocumentInfoDict(ctx *types.PDFContext) (err error) {
 			logDebugWriter.Println("found ModDate")
 
 			if indRef, ok := value.(types.PDFIndirectRef); ok {
-				// Do not write indRef, will be modified by pdflib.
+				// Do not write indRef, will be modified by pdfcpu.
 				ctx.Optimize.DuplicateInfoObjects[int(indRef.ObjectNumber)] = true
 			}
 
@@ -190,7 +190,7 @@ func writeDocumentInfoDict(ctx *types.PDFContext) (err error) {
 
 	dict.Update("CreationDate", types.PDFStringLiteral(dateStr))
 	dict.Update("ModDate", types.PDFStringLiteral(dateStr))
-	dict.Update("Producer", types.PDFStringLiteral("golang pdflib v"+PdflibVersion))
+	dict.Update("Producer", types.PDFStringLiteral("golang pdfcpu v"+PdfcpuVersion))
 
 	_, _, err = writeDeepObject(ctx, obj)
 	if err != nil {

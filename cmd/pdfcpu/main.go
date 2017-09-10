@@ -7,22 +7,22 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hhrutter/pdflib"
-	"github.com/hhrutter/pdflib/extract"
-	"github.com/hhrutter/pdflib/merge"
-	"github.com/hhrutter/pdflib/optimize"
-	"github.com/hhrutter/pdflib/read"
-	"github.com/hhrutter/pdflib/types"
-	"github.com/hhrutter/pdflib/validate"
-	"github.com/hhrutter/pdflib/write"
+	"github.com/hhrutter/pdfcpu"
+	"github.com/hhrutter/pdfcpu/extract"
+	"github.com/hhrutter/pdfcpu/merge"
+	"github.com/hhrutter/pdfcpu/optimize"
+	"github.com/hhrutter/pdfcpu/read"
+	"github.com/hhrutter/pdfcpu/types"
+	"github.com/hhrutter/pdfcpu/validate"
+	"github.com/hhrutter/pdfcpu/write"
 )
 
 const (
-	usage = `pdflib is a tool for PDF manipulation written in Go.
+	usage = `pdfcpu is a tool for PDF manipulation written in Go.
 	
 Usage:
 	
-	pdflib command [arguments]
+	pdfcpu command [arguments]
 		
 The commands are:
 	
@@ -32,13 +32,13 @@ The commands are:
 	merge		concatenate 2 or more PDFs
 	extract		extract images, fonts, content, pages out of a PDF
 	trim		create trimmed version of a PDF
-	version		print pdflib version
+	version		print pdfcpu version
 
 	Single-letter Unix-style supported for commands and flags.
 
-Use "pdflib help [command]" for more information about a command.`
+Use "pdfcpu help [command]" for more information about a command.`
 
-	usageValidate     = "usage: pdflib validate [-verbose] [-mode strict|relaxed] inFile"
+	usageValidate     = "usage: pdfcpu validate [-verbose] [-mode strict|relaxed] inFile"
 	usageLongValidate = `Validate checks the inFile for specification compliance.
 
 verbose ... extensive log output
@@ -50,7 +50,7 @@ The validation modes are:
  strict ... (default) validates against PDF 32000-1:2008 (PDF 1.7)
 relaxed ... like strict but doesn't complain about common seen spec violations.`
 
-	usageOptimize     = "usage: pdflib optimize [-verbose] [-stats csvFile] inFile [outFile]"
+	usageOptimize     = "usage: pdfcpu optimize [-verbose] [-stats csvFile] inFile [outFile]"
 	usageLongOptimize = `Optimize reads inFile, removes redundant page resources like embedded fonts and images and writes the result to outFile.
 
 verbose ... extensive log output
@@ -59,21 +59,21 @@ verbose ... extensive log output
  inFile ... input pdf file
 outFile ... output pdf file (default: inputPdfFile-opt.pdf)`
 
-	usageSplit     = "usage: pdflib split [-verbose] inFile outDir"
+	usageSplit     = "usage: pdfcpu split [-verbose] inFile outDir"
 	usageLongSplit = `Split generates a set of single page PDFs for the input file in outDir.
 
 verbose ... extensive log output
  inFile ... input pdf file
  outDir ... output directory`
 
-	usageMerge     = "usage: pdflib merge [-verbose] outFile inFile1 inFile2 ..."
+	usageMerge     = "usage: pdfcpu merge [-verbose] outFile inFile1 inFile2 ..."
 	usageLongMerge = `Merge concatenates a sequence of PDFs/inFiles to outFile.
 
 verbose ... extensive log output
 outFile	... output pdf file
 inFiles ... a list of at least 2 pdf files subject to concatenation.`
 
-	usageExtract     = "usage: pdflib extract [-verbose] -mode image|font|content|page [-pages pageSelection] inFile outDir"
+	usageExtract     = "usage: pdfcpu extract [-verbose] -mode image|font|content|page [-pages pageSelection] inFile outDir"
 	usageLongExtract = `Extract exports inFile's images, fonts, content or pages into outDir.
 
 verbose ... extensive log output
@@ -89,12 +89,12 @@ verbose ... extensive log output
 content ... extract raw page content
    page ... extract single page PDFs`
 
-	usageTrim     = "usage: pdflib trim [-verbose] -pages pageSelection inFile outFile"
+	usageTrim     = "usage: pdfcpu trim [-verbose] -pages pageSelection inFile outFile"
 	usageLongTrim = `Trim generates a trimmed version of inFile for selectedPages.
 
 verbose ... extensive log output
   pages ... page selection
- inFile ... input pdf file
+ inFile ... input pdf file 
 outFile ... output pdf file, the trimmed version of inFile`
 
 	usagePageSelection = `pageSelection selects pages for processing and is a comma separated list of expressions:
@@ -115,8 +115,8 @@ Valid pageSelections e.g. -3,5,7- or 4-7,!6 or 1-,!5
 
 A missing pageSelection means all pages are selected for generation.`
 
-	usageVersion     = "usage: pdflib version"
-	usageLongVersion = "Version prints the pdflib version"
+	usageVersion     = "usage: pdfcpu version"
+	usageLongVersion = "Version prints the pdfcpu version"
 )
 
 var (
@@ -136,8 +136,8 @@ func init() {
 	flag.StringVar(&mode, "mode", "", "validate: strict|relaxed; extract: image|font|content|page")
 	flag.StringVar(&mode, "m", "", "validate: strict|relaxed; extract: image|font|content|page")
 
-	flag.StringVar(&pageSelection, "pages", "", "a comma separated list of pages or page ranges, see pdflib help split/extract")
-	flag.StringVar(&pageSelection, "p", "", "a comma separated list of pages or page ranges, see pdflib help split/extract")
+	flag.StringVar(&pageSelection, "pages", "", "a comma separated list of pages or page ranges, see pdfcpu help split/extract")
+	flag.StringVar(&pageSelection, "p", "", "a comma separated list of pages or page ranges, see pdfcpu help split/extract")
 
 	flag.BoolVar(&verbose, "verbose", false, "")
 	flag.BoolVar(&verbose, "v", false, "")
@@ -157,7 +157,7 @@ func defaultFilenameOut(fileName string) string {
 }
 
 func version() {
-	fmt.Printf("pdflib version %s\n", write.PdflibVersion)
+	fmt.Printf("pdfcpu version %s\n", write.PdfcpuVersion)
 }
 
 func help() {
@@ -168,7 +168,7 @@ func help() {
 	}
 
 	if len(flag.Args()) > 1 {
-		fmt.Printf("usage: pdflib help command\n\nToo many arguments given.\n")
+		fmt.Printf("usage: pdfcpu help command\n\nToo many arguments given.\n")
 		return
 	}
 
@@ -198,7 +198,7 @@ func help() {
 		fmt.Printf("%s\n\n%s\n", usageVersion, usageLongVersion)
 
 	default:
-		fmt.Printf("Unknown help topic `%s`.  Run 'pdflib help'.\n", topic)
+		fmt.Printf("Unknown help topic `%s`.  Run 'pdfcpu help'.\n", topic)
 
 	}
 }
@@ -212,7 +212,7 @@ func setupLogging(verbose bool) {
 	write.Verbose(verbose)
 	extract.Verbose(verbose)
 	merge.Verbose(verbose)
-	pdflib.Verbose(verbose)
+	pdfcpu.Verbose(verbose)
 
 	needStackTrace = verbose
 }
@@ -224,14 +224,14 @@ func main() {
 		return
 	}
 
-	// the first argument is the pdflib command, start flag processing with 2nd argument.
+	// the first argument is the pdfcpu command, start flag processing with 2nd argument.
 	flag.CommandLine.Parse(os.Args[2:])
 
 	setupLogging(verbose)
 
 	config := types.NewDefaultConfiguration()
 
-	var cmd pdflib.Command
+	var cmd pdfcpu.Command
 
 	command := os.Args[1]
 
@@ -264,7 +264,7 @@ func main() {
 			config.SetValidationRelaxed()
 		}
 
-		cmd = pdflib.ValidateCommand(filenameIn, config)
+		cmd = pdfcpu.ValidateCommand(filenameIn, config)
 
 	case "optimize", "o":
 
@@ -288,7 +288,7 @@ func main() {
 		}
 
 		// Always write using 0x0A end of line sequence.
-		cmd = pdflib.OptimizeCommand(filenameIn, filenameOut, config)
+		cmd = pdfcpu.OptimizeCommand(filenameIn, filenameOut, config)
 
 	case "split", "s":
 
@@ -302,7 +302,7 @@ func main() {
 
 		dirnameOut := flag.Arg(1)
 
-		cmd = pdflib.SplitCommand(filenameIn, dirnameOut, config)
+		cmd = pdfcpu.SplitCommand(filenameIn, dirnameOut, config)
 
 	case "merge", "m":
 
@@ -323,7 +323,7 @@ func main() {
 			filenamesIn = append(filenamesIn, arg)
 		}
 
-		cmd = pdflib.MergeCommand(filenamesIn, filenameOut, config)
+		cmd = pdfcpu.MergeCommand(filenamesIn, filenameOut, config)
 
 	case "extract", "e":
 
@@ -339,20 +339,20 @@ func main() {
 
 		dirnameOut := flag.Arg(1)
 
-		pages, err := pdflib.ParsePageSelection(pageSelection)
+		pages, err := pdfcpu.ParsePageSelection(pageSelection)
 		if err != nil {
 			log.Fatalf("extract: problem with flag pageSelection: %v", err)
 		}
 
 		switch mode {
 		case "image", "i":
-			cmd = pdflib.ExtractImagesCommand(filenameIn, dirnameOut, pages, config)
+			cmd = pdfcpu.ExtractImagesCommand(filenameIn, dirnameOut, pages, config)
 		case "font", "f":
-			cmd = pdflib.ExtractFontsCommand(filenameIn, dirnameOut, pages, config)
+			cmd = pdfcpu.ExtractFontsCommand(filenameIn, dirnameOut, pages, config)
 		case "page", "p":
-			cmd = pdflib.ExtractPagesCommand(filenameIn, dirnameOut, pages, config)
+			cmd = pdfcpu.ExtractPagesCommand(filenameIn, dirnameOut, pages, config)
 		case "content", "c":
-			cmd = pdflib.ExtractContentCommand(filenameIn, dirnameOut, pages, config)
+			cmd = pdfcpu.ExtractContentCommand(filenameIn, dirnameOut, pages, config)
 		}
 
 	case "trim", "t":
@@ -362,7 +362,7 @@ func main() {
 			return
 		}
 
-		pages, err := pdflib.ParsePageSelection(pageSelection)
+		pages, err := pdfcpu.ParsePageSelection(pageSelection)
 		if err != nil {
 			log.Fatalf("trim: problem with flag pageSelection: %v", err)
 		}
@@ -376,7 +376,7 @@ func main() {
 			ensurePdfExtension(filenameOut)
 		}
 
-		cmd = pdflib.TrimCommand(filenameIn, filenameOut, pages, config)
+		cmd = pdfcpu.TrimCommand(filenameIn, filenameOut, pages, config)
 
 	case "version":
 
@@ -395,13 +395,13 @@ func main() {
 
 	default:
 
-		fmt.Printf("pdflib unknown subcommand \"%s\"\n", command)
-		fmt.Println("Run 'pdflib help' for usage.")
+		fmt.Printf("pdfcpu unknown subcommand \"%s\"\n", command)
+		fmt.Println("Run 'pdfcpu help' for usage.")
 		return
 
 	}
 
-	err := pdflib.Process(&cmd)
+	err := pdfcpu.Process(&cmd)
 	if err != nil {
 		if needStackTrace {
 			fmt.Printf("Fatal: %+v\n", err)

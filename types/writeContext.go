@@ -48,7 +48,7 @@ func (wc *WriteContext) HasWriteOffset(objNumber int) bool {
 }
 
 // ReducedFeatureSet returns true for Split,Trim,Merge,ExtractPages.
-// Don't confuse with pdflib commands, these are internal triggers.
+// Don't confuse with pdfcpu commands, these are internal triggers.
 func (wc *WriteContext) ReducedFeatureSet() bool {
 	switch wc.Command {
 	case "Split", "Trim", "Merge":

@@ -1,4 +1,4 @@
-package pdflib
+package pdfcpu
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hhrutter/pdflib/types"
+	"github.com/hhrutter/pdfcpu/types"
 )
 
 const outputDir = "testdata/out"

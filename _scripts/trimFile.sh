@@ -21,13 +21,13 @@ out=$2
 cp $1 $out/$f 
 
 out1=$out/$f1$new.pdf
-pdflib trim -verbose -pages=-5 $out/$f $out1 > $out/$f1.log
+pdfcpu trim -verbose -pages=-5 $out/$f $out1 > $out/$f1.log
 if [ $? -eq 1 ]; then
     echo "trim error: $1 -> $out1"
     exit $?
 else
     echo "trim success: $1 -> $out1"
-    pdflib validate -verbose -mode=relaxed $out1 >> $out/$f1.log
+    pdfcpu validate -verbose -mode=relaxed $out1 >> $out/$f1.log
     if [ $? -eq 1 ]; then
         echo "validation error: $out1"
         exit $?

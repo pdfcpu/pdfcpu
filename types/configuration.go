@@ -43,7 +43,7 @@ type Configuration struct {
 	StatsFileName string
 }
 
-// NewDefaultConfiguration returns the default pdflib configuration.
+// NewDefaultConfiguration returns the default pdfcpu configuration.
 func NewDefaultConfiguration() *Configuration {
 	return &Configuration{
 		Reader15:          true,

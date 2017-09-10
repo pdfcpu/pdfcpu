@@ -5,8 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/hhrutter/pdflib/filter"
-	"github.com/hhrutter/pdflib/types"
+	"github.com/hhrutter/pdfcpu/filter"
+	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 

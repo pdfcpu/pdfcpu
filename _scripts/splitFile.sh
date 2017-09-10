@@ -18,7 +18,7 @@ out=$2
 mkdir $out/$f1
 cp $1 $out/$f1 
 
-pdflib split -verbose $out/$f1/$f $out/$f1 > $out/$f1/$f1.log
+pdfcpu split -verbose $out/$f1/$f $out/$f1 > $out/$f1/$f1.log
 if [ $? -eq 1 ]; then
     echo "split error: $1 -> $out"
     exit $?
@@ -26,7 +26,7 @@ else
     echo "split success: $1 -> $out"
     for pdf in $out/$f1/*_?.pdf
     do
-        pdflib validate -verbose -mode=relaxed $pdf >> $out/$f1/$f1.log
+        pdfcpu validate -verbose -mode=relaxed $pdf >> $out/$f1/$f1.log
         if [ $? -eq 1 ]; then
             echo "validation error: $pdf"
             exit $?

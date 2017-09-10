@@ -3,7 +3,7 @@ package validate
 import (
 	"github.com/pkg/errors"
 
-	"github.com/hhrutter/pdflib/types"
+	"github.com/hhrutter/pdfcpu/types"
 )
 
 func validateDestsNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {

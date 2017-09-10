@@ -11,13 +11,13 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hhrutter/pdflib/filter"
-	"github.com/hhrutter/pdflib/types"
+	"github.com/hhrutter/pdfcpu/filter"
+	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
-// PdflibVersion is the current version.
-const PdflibVersion = "0.0.1"
+// PdfcpuVersion is the current version.
+const PdfcpuVersion = "0.0.1"
 
 var (
 	logDebugWriter *log.Logger

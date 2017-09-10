@@ -1,6 +1,6 @@
-package pdflib
+package pdfcpu
 
-import "github.com/hhrutter/pdflib/types"
+import "github.com/hhrutter/pdfcpu/types"
 
 type commandMode int
 
@@ -116,7 +116,7 @@ func TrimCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []string, c
 		Config:        config}
 }
 
-// Process executes a pdflib command.
+// Process executes a pdfcpu command.
 func Process(cmd *Command) (err error) {
 
 	switch cmd.Mode {

@@ -15,7 +15,7 @@ out=$2
 
 cp $1 $out/$f
 
-pdflib validate -verbose -mode=relaxed $out/$f > $out/$f1.log
+pdfcpu validate -verbose -mode=relaxed $out/$f > $out/$f1.log
 
 if [ $? -eq 1 ]; then
     echo "validation error: $out/$f"

@@ -14,9 +14,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hhrutter/pdflib/bufio"
-	"github.com/hhrutter/pdflib/filter"
-	"github.com/hhrutter/pdflib/types"
+	"github.com/hhrutter/pdfcpu/bufio"
+	"github.com/hhrutter/pdfcpu/filter"
+	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 

@@ -28,7 +28,7 @@ do
 	cp $pdf $out/$f
 	
 	out1=$out/$f1$new.pdf
-	pdflib optimize -verbose -stats=stats.csv $out/$f $out1 > $out/$f1.log
+	pdfcpu optimize -verbose -stats=stats.csv $out/$f $out1 > $out/$f1.log
 	if [ $? -eq 1 ]; then
         echo "optimization error: $pdf -> $out1"
         echo
@@ -38,7 +38,7 @@ do
     fi
 	
 	out2=$out/$f1$new$new.pdf
-	pdflib optimize -verbose -stats=statsNew.csv $out1 $out2 > $out/$f1$new.log
+	pdfcpu optimize -verbose -stats=statsNew.csv $out1 $out2 > $out/$f1$new.log
 	if [ $? -eq 1 ]; then
         echo "optimization error: $out1 -> $out2"
     else

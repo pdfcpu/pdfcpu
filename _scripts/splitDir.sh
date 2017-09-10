@@ -25,7 +25,7 @@ do
     mkdir $out/$f1
     cp $pdf $out/$f1
 
-    pdflib split -verbose $out/$f1/$f $out/$f1 > $out/$f1/$f1.log
+    pdfcpu split -verbose $out/$f1/$f $out/$f1 > $out/$f1/$f1.log
     if [ $? -eq 1 ]; then
         echo "split error: $pdf -> $out/$f1"
         echo
@@ -34,7 +34,7 @@ do
         echo "split success: $pdf -> $out/$f1"
         for subpdf in $out/$f1/*_?.pdf
         do
-            pdflib validate -verbose -mode=relaxed $subpdf >> $out/$f1/$f1.log
+            pdfcpu validate -verbose -mode=relaxed $subpdf >> $out/$f1/$f1.log
             if [ $? -eq 1 ]; then
                 echo "validation error: $subpdf"
                 exit $?

@@ -1,10 +1,10 @@
  
  
- [![Build Status](https://travis-ci.org/hhrutter/pdflib.svg?branch=master)](https://travis-ci.org/hhrutter/pdflib) [![stability-stable](https://img.shields.io/badge/stability-stable-green.svg)](https://github.com/emersion/stability-badges#stable) [![GoDoc](https://godoc.org/github.com/hhrutter/pdflib?status.svg)](https://godoc.org/github.com/hhrutter/pdflib) [![Coverage Status](https://coveralls.io/repos/github/hhrutter/pdflib/badge.svg?branch=master)](https://coveralls.io/github/hhrutter/pdflib?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/hhrutter/pdflib)](https://goreportcard.com/report/github.com/hhrutter/pdflib) [![License: MIT](https://img.shields.io/github/license/mashape/apistatus.svg)](https://opensource.org/licenses/MIT) 
+ [![Build Status](https://travis-ci.org/hhrutter/pdfcpu.svg?branch=master)](https://travis-ci.org/hhrutter/pdfcpu) [![stability-stable](https://img.shields.io/badge/stability-stable-green.svg)](https://github.com/emersion/stability-badges#stable) [![GoDoc](https://godoc.org/github.com/hhrutter/pdfcpu?status.svg)](https://godoc.org/github.com/hhrutter/pdfcpu) [![Coverage Status](https://coveralls.io/repos/github/hhrutter/pdfcpu/badge.svg?branch=master)](https://coveralls.io/github/hhrutter/pdfcpu?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/hhrutter/pdfcpu)](https://goreportcard.com/report/github.com/hhrutter/pdfcpu) [![License: MIT](https://img.shields.io/github/license/mashape/apistatus.svg)](https://opensource.org/licenses/MIT) 
  
- # pdflib: a golang pdf processor
+ # pdfcpu: a golang pdf processor
 
-Package pdflib is a simple PDF processing library written in [Go](http://golang.org)
+Package pdfcpu is a simple PDF processing library written in [Go](http://golang.org)
 It provides both an API and a command line tool.
 Supported are all versions up to PDF 1.7 (ISO-32000).
 
@@ -32,24 +32,24 @@ I also wanted to have my own swiss army knife for PDFs written entirely in [Go](
 [![asciicast](demo.png)](https://asciinema.org/a/05NjBWR8TeuaAe4V8lSrAUnwJ)
 
 ### Installation
-`go get github.com/hhrutter/pdflib/cmd/...`
+`go get github.com/hhrutter/pdfcpu/cmd/...`
 
 
 ### Usage
 
-    pdflib validate [-verbose] [-mode strict|relaxed] inFile
+    pdfcpu validate [-verbose] [-mode strict|relaxed] inFile
 
-    pdflib optimize [-verbose] [-stats csvFile] inFile [outFile]
+    pdfcpu optimize [-verbose] [-stats csvFile] inFile [outFile]
  
-    pdflib split [-verbose] inFile outDir
+    pdfcpu split [-verbose] inFile outDir
  
-    pdflib merge [-verbose] outFile inFile1 inFile2 ...
+    pdfcpu merge [-verbose] outFile inFile1 inFile2 ...
  
-    pdflib extract [-verbose] -mode image|font|content|page [-pages pageSelection] inFile outDir
+    pdfcpu extract [-verbose] -mode image|font|content|page [-pages pageSelection] inFile outDir
  
-    pdflib trim [-verbose] -pages pageSelection inFile outFile
+    pdfcpu trim [-verbose] -pages pageSelection inFile outFile
 
- [Please read the documentation ](https://godoc.org/github.com/hhrutter/pdflib)
+ [Please read the documentation ](https://godoc.org/github.com/hhrutter/pdfcpu)
 
 
 ### Status
@@ -70,11 +70,11 @@ Pull requests, bug fixes and issue reports are always welcome.
 
 Please open an issue if you want to propose a change.
 
-PDF files that will increase pdflib's coverage are very much welcome.
+PDF files that will increase pdfcpu's coverage are very much welcome.
 
 
 ### Disclaimer
-Usage of pdflib assumes you know about and respect all copyrights of any PDF content you may be processing. This applies to the PDF files as such, their content and in particular all embedded resources like font files or images.
+Usage of pdfcpu assumes you know about and respect all copyrights of any PDF content you may be processing. This applies to the PDF files as such, their content and in particular all embedded resources like font files or images.
 
 
 ### License

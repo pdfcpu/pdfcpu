@@ -29,14 +29,14 @@ do
 	cp $pdf $out/$f
 	
 	out1=$out/$f1$new.pdf
-	pdflib trim -verbose -pages=-5 $out/$f $out1 > $out/$f1.log
+	pdfcpu trim -verbose -pages=-5 $out/$f $out1 > $out/$f1.log
 	if [ $? -eq 1 ]; then
         echo "trim error: $pdf -> $out1"
         echo
 		continue
     else
         echo "trim success: $pdf -> $out1"
-		pdflib validate -verbose -mode=relaxed $out1 >> $out/$f1.log
+		pdfcpu validate -verbose -mode=relaxed $out1 >> $out/$f1.log
        	if [ $? -eq 1 ]; then
         	echo "validation error: $out"
             exit $?

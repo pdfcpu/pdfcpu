@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hhrutter/pdflib/read"
-	"github.com/hhrutter/pdflib/types"
+	"github.com/hhrutter/pdfcpu/read"
+	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 

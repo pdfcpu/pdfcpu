@@ -1,6 +1,6 @@
 /*
 
-Package pdflib is a simple PDF processing library written in Go.
+Package pdfcpu is a simple PDF processing library written in Go.
 It provides both an API and a command line tool.
 Supported are all versions up to PDF 1.7 (ISO-32000).
 
@@ -12,7 +12,7 @@ The available commands are:
 	merge		concatenate 2 or more PDFs
 	extract		extract images, fonts, content, pages out of a PDF
 	trim		create trimmed version of a PDF
-	version		print pdflib version
+	version		print pdfcpu version
 
 */
-package pdflib
+package pdfcpu

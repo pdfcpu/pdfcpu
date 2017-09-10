@@ -1,7 +1,7 @@
 package write
 
 import (
-	"github.com/hhrutter/pdflib/types"
+	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 

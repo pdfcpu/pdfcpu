@@ -8,7 +8,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/hhrutter/pdflib/types"
+	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 

@@ -20,7 +20,7 @@ out=$2
 cp $1 $out/$f
 
 out1=$out/$f1$new.pdf
-pdflib optimize -verbose $out/$f $out1 > $out/$f1.log
+pdfcpu optimize -verbose $out/$f $out1 > $out/$f1.log
 if [ $? -eq 1 ]; then
     echo "optimization error: $1 -> $out1"
     exit $?
@@ -29,7 +29,7 @@ else
 fi
 	
 out2=$out/$f1$new$new.pdf
-pdflib optimize -verbose $out1 $out2 > $out/$f1$new.log
+pdfcpu optimize -verbose $out1 $out2 > $out/$f1$new.log
 if [ $? -eq 1 ]; then
     echo "optimization error: $out1 -> $out2"
     exit $?
