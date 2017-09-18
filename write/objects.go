@@ -73,7 +73,7 @@ func startObjectStream(ctx *types.PDFContext) (err error) {
 
 	ctx.Write.CurrentObjStream = &objNumber
 
-	logDebugWriter.Println("startObjectStream end")
+	logDebugWriter.Printf("startObjectStream end: %d\n", objNumber)
 
 	return
 }
@@ -152,16 +152,14 @@ func writePDFObject(ctx *types.PDFContext, objNumber, genNumber int, s string) (
 			}
 		}
 
-		xRefTable := ctx.XRefTable
-
-		objStrEntry, _ := xRefTable.FindTableEntry(*ctx.Write.CurrentObjStream, 0)
+		objStrEntry, _ := ctx.FindTableEntry(*ctx.Write.CurrentObjStream, 0)
 		objStreamDict, _ := (objStrEntry.Object).(types.PDFObjectStreamDict)
 
 		// Get next free index in object stream.
 		i := objStreamDict.ObjCount
 
 		// Locate the xref table entry for the object to be added to this object stream.
-		entry, _ := xRefTable.FindTableEntry(objNumber, genNumber)
+		entry, _ := ctx.FindTableEntry(objNumber, genNumber)
 
 		// Turn entry into a compressed entry located in object stream at index i.
 		entry.Compressed = true
@@ -188,7 +186,12 @@ func writePDFObject(ctx *types.PDFContext, objNumber, genNumber int, s string) (
 		}
 
 		return
+
 	}
+
+	// Cleanup entry (nexessary for split command)
+	entry, _ := ctx.FindTableEntry(objNumber, genNumber)
+	entry.Compressed = false
 
 	// Set write-offset for this object.
 	w.SetWriteOffset(objNumber)

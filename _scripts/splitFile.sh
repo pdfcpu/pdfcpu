@@ -24,8 +24,9 @@ if [ $? -eq 1 ]; then
     exit $?
 else
     echo "split success: $1 -> $out"
-    for pdf in $out/$f1/*_?.pdf
+    for pdf in $out/$f1/*_*.pdf
     do
+        echo "validating: $pdf"
         pdfcpu validate -verbose -mode=relaxed $pdf >> $out/$f1/$f1.log
         if [ $? -eq 1 ]; then
             echo "validation error: $pdf"

@@ -107,11 +107,6 @@ func (b *Reader) reset(buf []byte, r io.Reader) {
 
 var errNegativeRead = errors.New("bufio: reader returned negative count from Read")
 
-// Fill reads a new chunk into the buffer.
-func (b *Reader) Fill() {
-	b.fill()
-}
-
 func (b *Reader) fill() {
 	// Slide existing data to beginning.
 	if b.r > 0 {
@@ -340,8 +335,9 @@ func (b *Reader) endOfLine(buf []byte) int {
 	indCR := bytes.IndexByte(buf, '\r')
 	indLF := bytes.IndexByte(buf, '\n')
 
-	// both 0x0D and 0x0A encountered
-	if indCR >= 0 && indLF >= 0 {
+	switch {
+
+	case indCR >= 0 && indLF >= 0:
 		if indCR < indLF {
 			if indLF == indCR+1 {
 				// 0x0D0A
@@ -352,19 +348,18 @@ func (b *Reader) endOfLine(buf []byte) int {
 		}
 		// 0x0A ... 0x0D
 		return indLF
-	}
 
-	// 0x0D
-	if indCR >= 0 {
+	case indCR >= 0:
 		return indCR
-	}
 
-	// 0x0A
-	if indLF >= 0 {
+	case indLF >= 0:
 		return indLF
+
+	default:
+		return -1
+
 	}
 
-	return -1
 }
 
 // ReadSlice reads until the first occurrence of delim in the input,

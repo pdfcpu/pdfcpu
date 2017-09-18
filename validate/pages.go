@@ -470,7 +470,7 @@ func validateTransitionDict(xRefTable *types.XRefTable, dict *types.PDFDict) (er
 	}
 
 	// SS, optional, number, since V1.5
-	if transStyle != nil || *transStyle == "Fly" {
+	if transStyle != nil && *transStyle == "Fly" {
 		_, err = validateNumberEntry(xRefTable, dict, dictName, "SS", OPTIONAL, types.V15, nil)
 		if err != nil {
 			return

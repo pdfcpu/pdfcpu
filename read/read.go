@@ -696,13 +696,6 @@ func parseXRefSection(rd *bufio.Reader, ctx *types.PDFContext) (*int64, error) {
 	var n int
 
 	bufb := make([]byte, defaultBufSize)
-
-	// Here we execute "read" on the bufio.reader.
-	// In case we are almost at the end of the reader buffer we need to enforce filling.
-	// Otherwise we can run into a situation where we only get the last chunk of the reader buf
-	// into the buffer provided to "read".
-	// That is because "read" itself does not provide for refilling.
-	rd.Fill()
 	if n, err = rd.Read(bufb); err != nil {
 		return nil, err
 	}
@@ -1414,6 +1407,9 @@ func decodeObjectStreams(ctx *types.PDFContext) (err error) {
 
 		// Get XRefTableEntry.
 		entry := ctx.XRefTable.Table[objectNumber]
+		if entry == nil {
+			return errors.Errorf("decodeObjectStream: missing entry for obj#%d\n", objectNumber)
+		}
 
 		logDebugReader.Printf("decodeObjectStreams: parsing object stream for obj#%d\n", objectNumber)
 

@@ -32,7 +32,7 @@ do
 		continue
     else
         echo "split success: $pdf -> $out/$f1"
-        for subpdf in $out/$f1/*_?.pdf
+        for subpdf in $out/$f1/*_*.pdf
         do
             pdfcpu validate -verbose -mode=relaxed $subpdf >> $out/$f1/$f1.log
             if [ $? -eq 1 ]; then
