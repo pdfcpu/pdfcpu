@@ -548,10 +548,15 @@ func parseTrailerInfo(dict types.PDFDict, xRefTable *types.XRefTable) error {
 
 	logDebugReader.Println("parseTrailerInfo begin")
 
+	// Encrypted files are not supported.
+	if _, found := dict.Find("Encrypt"); found {
+		return errors.New("parseTrailerInfo: unsupported entry \"Encrypt\"")
+	}
+
 	if xRefTable.Size == nil {
 		size := dict.Size()
 		if size == nil {
-			return errors.New("parseTrailerInfo: missing Size entry")
+			return errors.New("parseTrailerInfo: missing entry \"Size\"")
 		}
 		xRefTable.Size = size
 	}
@@ -559,7 +564,7 @@ func parseTrailerInfo(dict types.PDFDict, xRefTable *types.XRefTable) error {
 	if xRefTable.Root == nil {
 		rootObjRef := dict.IndirectRefEntry("Root")
 		if rootObjRef == nil {
-			return errors.New("parseTrailerInfo: missing Root entry")
+			return errors.New("parseTrailerInfo: missing entry \"Root\"")
 		}
 		xRefTable.Root = rootObjRef
 		logDebugReader.Printf("parseTrailerInfo: Root object: %s\n", *xRefTable.Root)
@@ -595,11 +600,6 @@ func parseTrailerDict(trailerDict types.PDFDict, ctx *types.PDFContext) (*int64,
 	err := parseTrailerInfo(trailerDict, xRefTable)
 	if err != nil {
 		return nil, err
-	}
-
-	// Abort if file is encryped.
-	if _, found := trailerDict.Find("Encrypt"); found {
-		return nil, errors.New("parseTrailerInfo: unsupported entry \"Encrypt\"")
 	}
 
 	if arr := trailerDict.PDFArrayEntry("AdditionalStreams"); arr != nil {
@@ -985,9 +985,7 @@ func keywordStreamRightAfterEndOfDict(buf string, pos int) bool {
 
 	// return true if after >> only whitespace
 	ok := strings.TrimSpace(b[eod:]) == ">>"
-	//logDebugReader.Printf("keywordStreamRightAfterEndOfDict: %v\n", ok)
-
-	logDebugReader.Println("keywordStreamRightAfterEndOfDict: end")
+	logDebugReader.Printf("keywordStreamRightAfterEndOfDict: end, %v\n", ok)
 
 	return ok
 }
@@ -1024,6 +1022,7 @@ func getPDFFilterPipeline(ctx *types.PDFContext, pdfDict types.PDFDict) ([]types
 		obj, found := pdfDict.Find("DecodeParms")
 		if !found {
 			// w/o decode parameters.
+			logDebugReader.Println("getPDFFilterPipeline: end w/o decode parms")
 			return append(filterPipeline, types.PDFFilter{Name: filterName, DecodeParms: nil}), nil
 		}
 
@@ -1033,6 +1032,7 @@ func getPDFFilterPipeline(ctx *types.PDFContext, pdfDict types.PDFDict) ([]types
 		}
 
 		// with decode parameters.
+		logDebugReader.Println("getPDFFilterPipeline: end with decode parms")
 		return append(filterPipeline, types.PDFFilter{Name: filterName, DecodeParms: &dict}), nil
 	}
 
@@ -1080,12 +1080,14 @@ func getPDFFilterPipeline(ctx *types.PDFContext, pdfDict types.PDFDict) ([]types
 // Could work with SectionReader
 func getObject(ctx *types.PDFContext, offset int64, objectNumber int, generationNumber int) (interface{}, error) {
 
+	logDebugReader.Printf("getObject: begin, obj#%d, offset:%d\n", objectNumber, offset)
+
 	rd, err := newPositionedReader(ctx.Read.File, &offset)
 	if err != nil {
 		return nil, err
 	}
 
-	logDebugReader.Printf("getObject: begin, obj#%d seeked to offset:%d\n", objectNumber, offset)
+	logDebugReader.Printf("getObject: seeked to offset:%d\n", offset)
 
 	// process: # gen obj ... obj dict ... {stream ... data ... endstream} endobj
 	//                                    streamInd                        endInd
@@ -1094,6 +1096,9 @@ func getObject(ctx *types.PDFContext, offset int64, objectNumber int, generation
 	if err != nil {
 		return nil, err
 	}
+
+	//logDebugReader.Printf("streamInd:%d(#%x) streamOffset:%d(#%x) endInd:%d(#%x)\n", streamInd, streamInd, streamOffset, streamOffset, endInd, endInd)
+	//logDebugReader.Printf("buflen=%d\n%s", len(buf), hex.Dump(buf))
 
 	line := string(buf)
 
@@ -1252,7 +1257,7 @@ func readContentStream(rd io.Reader, streamLength int) (buf []byte, err error) {
 // GetEncodedStreamContent loads the encoded stream content from file into PDFStreamDict.
 func GetEncodedStreamContent(ctx *types.PDFContext, streamDict *types.PDFStreamDict) ([]byte, error) {
 
-	logDebugReader.Println("GetEncodedStreamContent: begin")
+	logDebugReader.Printf("GetEncodedStreamContent: begin\n%v\n", streamDict)
 
 	var err error
 
@@ -1291,6 +1296,8 @@ func GetEncodedStreamContent(ctx *types.PDFContext, streamDict *types.PDFStreamD
 	if err != nil {
 		return nil, err
 	}
+
+	//logDebugReader.Printf("rawContent buflen=%d(#%x)\n%s", len(rawContent), len(rawContent), hex.Dump(rawContent))
 
 	// Save encoded content.
 	streamDict.Raw = rawContent
@@ -1433,6 +1440,7 @@ func decodeObjectStreams(ctx *types.PDFContext) (err error) {
 		// Save decoded stream content to xRefTable.
 		if err = setDecodedStreamContent(&pdfStreamDict); err != nil {
 			logErrorReader.Printf("obj %d: %s", objectNumber, err)
+			return err
 		}
 
 		// Ensure decoded objectArray for object stream dicts.
@@ -1682,6 +1690,7 @@ func dereferenceXRefTable(ctx *types.PDFContext) (err error) {
 	if err != nil {
 		return
 	}
+
 	// For each xRefTableEntry assign a PDFObject either by parsing from file or pointing to a decompressed object.
 	err = dereferenceObjects(ctx)
 	if err != nil {
