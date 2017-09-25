@@ -1,8 +1,10 @@
 package read
 
 import (
+	"bytes"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -41,6 +43,356 @@ func init() {
 	//logDebugParse = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
 
 	logInfoParse = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
+}
+
+func positionToNextWhitespace(s string) (int, string) {
+
+	for i, c := range s {
+		if unicode.IsSpace(c) {
+			return i, s[i:]
+		}
+	}
+	return 0, s
+}
+
+// PositionToNextWhitespaceOrChar trims a string to next whitespace or one of given chars.
+func positionToNextWhitespaceOrChar(s, chars string) (int, string) {
+
+	if len(chars) == 0 {
+		return positionToNextWhitespace(s)
+	}
+
+	if len(chars) > 0 {
+		for i, c := range s {
+			for _, m := range chars {
+				if c == m || unicode.IsSpace(c) {
+					return i, s[i:]
+				}
+			}
+		}
+	}
+	return 0, s
+}
+
+func positionToNextEOL(s string) string {
+
+	chars := "\x0A\x0D"
+
+	for i, c := range s {
+		for _, m := range chars {
+			if c == m {
+				return s[i:]
+			}
+		}
+	}
+	return ""
+}
+
+// trimLeftSpace trims leading whitespace and trailing comment.
+func trimLeftSpace(s string) (outstr string, trimmedSpaces int) {
+
+	logDebugParse.Printf("TrimLeftSpace: begin %s\n", s)
+
+	whitespace := func(c rune) bool { return unicode.IsSpace(c) }
+
+	outstr = s
+	for {
+		// trim leading whitespace
+		outstr = strings.TrimLeftFunc(outstr, whitespace)
+		logDebugParse.Printf("1 outstr: <%s>\n", outstr)
+		if len(outstr) <= 1 || outstr[0] != '%' {
+			break
+		}
+		// trim PDF comment (= '%' up to eol)
+		outstr = positionToNextEOL(outstr)
+		logDebugParse.Printf("2 outstr: <%s>\n", outstr)
+
+	}
+
+	trimmedSpaces = len(s) - len(outstr)
+
+	logDebugParse.Printf("TrimLeftSpace: end %s %d\n", outstr, trimmedSpaces)
+
+	return
+}
+
+// HexString validates and formats a hex string to be of even length.
+func hexString(s string) (*string, bool) {
+
+	logDebugParse.Printf("HexString(%s)\n", s)
+
+	if len(s) == 0 {
+		s1 := ""
+		return &s1, true
+	}
+
+	uc := strings.ToUpper(s)
+
+	for _, c := range uc {
+		logDebugParse.Printf("checking <%c>\n", c)
+		isHexChar := false
+		for _, hexch := range "ABCDEF1234567890" {
+			logDebugParse.Printf("checking against <%c>\n", hexch)
+			if c == hexch {
+				isHexChar = true
+				break
+			}
+		}
+		if !isHexChar {
+			logDebugParse.Println("isHexStr returning false")
+			return nil, false
+		}
+	}
+
+	logDebugParse.Println("isHexStr returning true")
+
+	// If the final digit of a hexadecimal string is missing -
+	// that is, if there is an odd number of digits - the final digit shall be assumed to be 0.
+	if len(uc)%2 == 1 {
+		uc = uc + "0"
+	}
+
+	return &uc, true
+}
+
+// balancedParenthesesPrefix returns the index of the end position of the balanced parentheses prefix of s
+// or -1 if unbalanced. s has to start with '('
+func balancedParenthesesPrefix(s string) int {
+
+	var j int
+	escaped := false
+
+	for i := 0; i < len(s); i++ {
+
+		c := s[i]
+
+		if !escaped && c == '\\' {
+			escaped = true
+			continue
+		}
+
+		if escaped {
+			escaped = false
+			continue
+		}
+
+		if c == '(' {
+			j++
+		}
+
+		if c == ')' {
+			j--
+		}
+
+		if j == 0 {
+			return i
+		}
+
+	}
+
+	return -1
+}
+
+func containsByte(s string, b byte) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] == b {
+			return true
+		}
+	}
+	return false
+}
+
+// Convert a 1,2 or 3 digit unescaped octal string into the corresponding byte value.
+func byteForOctalString(octalBytes []byte) (b byte) {
+
+	var j float64
+
+	for i := len(octalBytes) - 1; i >= 0; i-- {
+		b += (octalBytes[i] - '0') * byte(math.Pow(8, j))
+		j++
+	}
+
+	logDebugParse.Printf("getByteForOctalString: returning x%x for %v\n", b, octalBytes)
+
+	return
+}
+
+// stringLiteral see 7.3.4.2
+func stringLiteral(s string) string {
+
+	logDebugParse.Printf("ParseStringLiteral: begin <%s>\n", s)
+
+	if len(s) == 0 {
+		return s
+	}
+
+	var b bytes.Buffer
+	var octalCode []byte
+
+	escaped := false
+	wasCR := false
+
+	for i := 0; i < len(s); i++ {
+
+		c := s[i]
+
+		if !escaped {
+
+			if c == '\\' {
+				escaped = true
+				wasCR = false
+				octalCode = nil
+				continue
+			}
+
+			// Write \x0d as \x0a.
+			if c == '\x0d' {
+				if !wasCR {
+					wasCR = true
+				}
+				b.WriteByte('\x0a')
+				continue
+			}
+
+			// Write \x0a as \x0a.
+			// Skip, if 2nd char of eol.
+			if c == '\x0a' {
+				if wasCR {
+					wasCR = false
+				} else {
+					b.WriteByte('\x0a')
+				}
+				continue
+			}
+
+			b.WriteByte(c)
+			wasCR = false
+			continue
+		}
+
+		// escaped:
+
+		if len(octalCode) == 0 {
+
+			if c == '\x0d' {
+				if !wasCR {
+					// split line by \\x0d or \\x0d\x0a.
+					wasCR = true
+				} else {
+					// the 2nd of 2 split lines starts with \x0d.
+					escaped = false
+					wasCR = false
+					b.WriteByte('\x0d')
+				}
+				continue
+			}
+
+			if c == '\x0a' {
+				// split line by \\x0a or \\x0d\x0a
+				escaped = false
+				wasCR = false
+				continue
+			}
+
+			if wasCR {
+				// join lines split by \\x0d unless 2nd line starts with '\\'
+				if c == '\\' {
+					escaped = true
+					wasCR = false
+					continue
+				}
+				b.WriteByte(c)
+				wasCR = false
+				escaped = false
+				continue
+			}
+
+			if containsByte("01234567", c) {
+				// begin octal code escape sequence.
+				logDebugParse.Printf("ParseStringLiteral: recognized octaldigit: %d 0x%[1]x\n", c)
+				octalCode = append(octalCode, c)
+				wasCR = false
+				continue
+			}
+
+			if containsByte("nrtbf()\\", c) {
+				// check against defined escape sequences.
+				logDebugParse.Printf("ParseStringLiteral: recognized escape sequence: \\%c\n", c)
+				b.WriteByte('\\')
+				b.WriteByte(c)
+			} else {
+				// Skip '\' for undefined escape sequences.
+				logDebugParse.Printf("ParseStringLiteral: skipping undefined escape sequence: \\%c\n", c)
+				b.WriteByte(c)
+			}
+
+			escaped = false
+			continue
+		}
+
+		// in octal code escape sequence: len(octalCode) > 0
+
+		if containsByte("01234567", c) {
+
+			// append to octal code escape sequence.
+			logDebugParse.Printf("ParseStringLiteral: recognized octaldigit: %[1]d 0x%[1]x\n", c)
+			octalCode = append(octalCode, c)
+			if len(octalCode) < 3 {
+				wasCR = false
+				continue
+			}
+
+			// 3 digit octal code sequence completed.
+			logDebugParse.Printf("ParseStringLiteral: recognized escaped octalCode: %s\n", octalCode)
+			b.WriteByte(byteForOctalString(octalCode))
+			wasCR = false
+			escaped = false
+			continue
+
+		}
+
+		// 1 or 2 digit octal code sequence completed.
+		logDebugParse.Printf("ParseStringLiteral: recognized escaped octalCode: %s\n", octalCode)
+		b.WriteByte(byteForOctalString(octalCode))
+
+		escaped = false
+
+		if c == '\\' {
+			escaped = true
+			wasCR = false
+			octalCode = nil
+			continue
+		}
+
+		// Write \x0d as \x0a.
+		if c == '\x0d' {
+			if !wasCR {
+				wasCR = true
+			}
+			b.WriteByte('\x0a')
+			continue
+		}
+
+		// Write \x0a as \x0a.
+		// Skip, if 2nd char of eol.
+		if c == '\x0a' {
+			if wasCR {
+				wasCR = false
+			} else {
+				b.WriteByte('\x0a')
+			}
+			continue
+		}
+
+		b.WriteByte(c)
+		wasCR = false
+		octalCode = nil
+
+	}
+
+	logDebugParse.Printf("ParseStringLiteral: end <%s>\n", b.String())
+
+	return b.String()
 }
 
 func forwardParseBuf(buf string, pos int) string {
@@ -619,7 +971,7 @@ func parseObject(line *string) (interface{}, error) {
 	return value, nil
 }
 
-// ParseXRefStreamDict creates a PDFXRefStreamDict out of a PDFStreamDict.
+// parseXRefStreamDict creates a PDFXRefStreamDict out of a PDFStreamDict.
 func parseXRefStreamDict(pdfStreamDict types.PDFStreamDict) (*types.PDFXRefStreamDict, error) {
 
 	logDebugParse.Println("ParseXRefStreamDict: begin")
@@ -714,7 +1066,7 @@ func parseXRefStreamDict(pdfStreamDict types.PDFStreamDict) (*types.PDFXRefStrea
 	return &xRefStreamDict, nil
 }
 
-// ObjectStreamDict creates a PDFObjectStreamDict out of a PDFStreamDict.
+// objectStreamDict creates a PDFObjectStreamDict out of a PDFStreamDict.
 func objectStreamDict(pdfStreamDict types.PDFStreamDict) (*types.PDFObjectStreamDict, error) {
 
 	if pdfStreamDict.First() == nil {

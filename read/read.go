@@ -6,6 +6,8 @@
 package read
 
 import (
+	"bufio"
+	"bytes"
 	"io"
 	"io/ioutil"
 	"log"
@@ -14,7 +16,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hhrutter/pdfcpu/bufio"
 	"github.com/hhrutter/pdfcpu/filter"
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
@@ -44,6 +45,54 @@ func Verbose(verbose bool) {
 	//logDebugReader = log.New(out, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
 }
 
+// ScanLines is a split function for a Scanner that returns each line of
+// text, stripped of any trailing end-of-line marker. The returned line may
+// be empty. The end-of-line marker is one carriage return followed
+// by one newline or one carriage return or one newline.
+// In regular expression notation, it is `\r?\n`.
+// The last non-empty line of input will be returned even if it has no newline.
+func ScanLines(data []byte, atEOF bool) (advance int, token []byte, err error) {
+
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+
+	indCR := bytes.IndexByte(data, '\r')
+	indLF := bytes.IndexByte(data, '\n')
+
+	switch {
+
+	case indCR >= 0 && indLF >= 0:
+		if indCR < indLF {
+			if indLF == indCR+1 {
+				// 0x0D0A
+				return indLF + 1, data[0:indCR], nil
+			}
+			// 0x0D ... 0x0A
+			return indCR + 1, data[0:indCR], nil
+		}
+		// 0x0A ... 0x0D
+		return indLF + 1, data[0:indLF], nil
+
+	case indCR >= 0:
+		// We have a full carriage return terminated line.
+		return indCR + 1, data[0:indCR], nil
+
+	case indLF >= 0:
+		// We have a full newline-terminated line.
+		return indLF + 1, data[0:indLF], nil
+
+	}
+
+	// If we're at EOF, we have a final, non-terminated line. Return it.
+	if atEOF {
+		return len(data), data, nil
+	}
+
+	// Request more data.
+	return 0, nil, nil
+}
+
 func newPositionedReader(rs io.ReadSeeker, offset *int64) (*bufio.Reader, error) {
 
 	if _, err := rs.Seek(*offset, 0); err != nil {
@@ -53,15 +102,6 @@ func newPositionedReader(rs io.ReadSeeker, offset *int64) (*bufio.Reader, error)
 	logDebugReader.Printf("newPositionedReader: positioned to offset: %d\n", *offset)
 
 	return bufio.NewReader(rs), nil
-}
-
-func readLine(rd *bufio.Reader) (s string, err error) {
-
-	if s, err = rd.ReadString(unknownDelimiter); err != nil {
-		return s, err
-	}
-
-	return strings.TrimRight(s, "\r\n"), nil
 }
 
 // Get the file offset of the last XRefSection.
@@ -106,11 +146,11 @@ func getOffsetLastXRefSection(ra io.ReaderAt, fileSize int64) (*int64, error) {
 }
 
 // Read next subsection entry and generate corresponding xref table entry.
-func parseXRefTableEntry(rd *bufio.Reader, xRefTable *types.XRefTable, objectNumber int) error {
+func parseXRefTableEntry(s *bufio.Scanner, xRefTable *types.XRefTable, objectNumber int) error {
 
 	logDebugReader.Println("parseXRefTableEntry: begin")
 
-	line, err := readLine(rd)
+	line, err := scanLine(s)
 	if err != nil {
 		return err
 	}
@@ -186,7 +226,7 @@ func parseXRefTableEntry(rd *bufio.Reader, xRefTable *types.XRefTable, objectNum
 }
 
 // Process xRef table subsection and create corrresponding xRef table entries.
-func parseXRefTableSubSection(rd *bufio.Reader, xRefTable *types.XRefTable, fields []string) error {
+func parseXRefTableSubSection(s *bufio.Scanner, xRefTable *types.XRefTable, fields []string) error {
 
 	logDebugReader.Println("parseXRefTableSubSection: begin")
 
@@ -204,7 +244,7 @@ func parseXRefTableSubSection(rd *bufio.Reader, xRefTable *types.XRefTable, fiel
 
 	// Process all entries of this subsection into xRefTable entries.
 	for i := 0; i < objCount; i++ {
-		if err = parseXRefTableEntry(rd, xRefTable, startObjNumber+i); err != nil {
+		if err = parseXRefTableEntry(s, xRefTable, startObjNumber+i); err != nil {
 			return err
 		}
 	}
@@ -248,7 +288,6 @@ func parseObjectStream(objectStreamDict *types.PDFObjectStreamDict) error {
 
 	decodedContent := objectStreamDict.Content
 	prolog := decodedContent[:objectStreamDict.FirstObjOffset]
-	//DumpBuf(prolog, 16, "Prolog:")
 
 	objs := strings.Fields(string(prolog))
 	if len(objs)%2 > 0 {
@@ -334,6 +373,17 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, xRefStreamDict types.PDFX
 	}
 
 	j := 0
+
+	// getInt interprets the content of buf as an int64.
+	getInt := func(buf []byte) (i int64) {
+
+		for _, b := range buf {
+			i <<= 8
+			i |= int64(b)
+		}
+
+		return
+	}
 
 	for i := 0; i < len(buf) && j < len(xRefStreamDict.Objects); i += xrefEntryLen {
 
@@ -649,15 +699,63 @@ func parseTrailerDict(trailerDict types.PDFDict, ctx *types.PDFContext) (*int64,
 	return offset, nil
 }
 
+func scanLine(s *bufio.Scanner) (string, error) {
+	for i := 0; i <= 1; i++ {
+		if ok := s.Scan(); !ok {
+			err := s.Err()
+			if err != nil {
+				return "", err
+			}
+			return "", errors.New("scanner: returning nothing")
+		}
+		if len(s.Text()) > 0 {
+			break
+		}
+	}
+	return s.Text(), nil
+}
+
+func scanTrailerDict(s *bufio.Scanner, startTag bool) (string, error) {
+
+	var buf bytes.Buffer
+	var line string
+	var err error
+
+	if !startTag {
+		// scan for dict start tag <<
+		for strings.Index(line, "<<") < 0 {
+			line, err = scanLine(s)
+			if err != nil {
+				return "", err
+			}
+			buf.WriteString(line)
+			buf.WriteString(" ")
+		}
+	}
+
+	// scan for dict end tag >>
+	for strings.Index(line, ">>") < 0 {
+		line, err = scanLine(s)
+		if err != nil {
+			return "", err
+		}
+		buf.WriteString(line)
+		buf.WriteString(" ")
+	}
+
+	return buf.String(), nil
+}
+
 // Parse xRef section into corresponding number of xRef table entries.
-func parseXRefSection(rd *bufio.Reader, ctx *types.PDFContext) (*int64, error) {
+func parseXRefSection(s *bufio.Scanner, ctx *types.PDFContext) (*int64, error) {
 
 	logDebugReader.Println("parseXRefSection begin")
 
-	line, err := readLine(rd)
+	line, err := scanLine(s)
 	if err != nil {
 		return nil, err
 	}
+
 	logDebugReader.Printf("parseXRefSection: <%s>\n", line)
 
 	fields := strings.Fields(line)
@@ -665,18 +763,18 @@ func parseXRefSection(rd *bufio.Reader, ctx *types.PDFContext) (*int64, error) {
 	// Process all sub sections of this xRef section.
 	for !strings.HasPrefix(line, "trailer") && len(fields) == 2 {
 
-		if err = parseXRefTableSubSection(rd, ctx.XRefTable, fields); err != nil {
+		if err = parseXRefTableSubSection(s, ctx.XRefTable, fields); err != nil {
 			return nil, err
 		}
 
 		// trailer or another xref table subsection ?
-		if line, err = readLine(rd); err != nil {
+		if line, err = scanLine(s); err != nil {
 			return nil, err
 		}
 
 		// if empty line try next line for trailer
 		if len(line) == 0 {
-			if line, err = readLine(rd); err != nil {
+			if line, err = scanLine(s); err != nil {
 				return nil, err
 			}
 		}
@@ -693,14 +791,6 @@ func parseXRefSection(rd *bufio.Reader, ctx *types.PDFContext) (*int64, error) {
 	logDebugReader.Println("parseXRefSection: parsing trailer dict..")
 
 	var trailerString string
-	var n int
-
-	bufb := make([]byte, defaultBufSize)
-	if n, err = rd.Read(bufb); err != nil {
-		return nil, err
-	}
-
-	logDebugReader.Printf("parseXRefSection: read: %d bytes\n", n)
 
 	if line != "trailer" {
 		trailerString = line[7:]
@@ -709,7 +799,18 @@ func parseXRefSection(rd *bufio.Reader, ctx *types.PDFContext) (*int64, error) {
 		logDebugReader.Printf("line (len %d) <%s>\n", len(line), line)
 	}
 
-	trailerString += string(bufb)
+	// Unless trailerDict already scanned into trailerString
+	if strings.Index(trailerString, ">>") == -1 {
+
+		// scan lines until we have the complete trailer dict:  << ... >>
+		trailerDictString, err := scanTrailerDict(s, strings.Index(trailerString, "<<") > 0)
+		if err != nil {
+			return nil, err
+		}
+
+		trailerString += trailerDictString
+	}
+
 	logDebugReader.Printf("parseXRefSection: trailerString: (len:%d) <%s>\n", len(trailerString), trailerString)
 
 	pdfObject, err := parseObject(&trailerString)
@@ -793,7 +894,10 @@ func buildXRefTableStartingAt(ctx *types.PDFContext, offset *int64) error {
 			return err
 		}
 
-		line, err := readLine(rd)
+		s := bufio.NewScanner(rd)
+		s.Split(ScanLines)
+
+		line, err := scanLine(s)
 		if err != nil {
 			return err
 		}
@@ -816,7 +920,7 @@ func buildXRefTableStartingAt(ctx *types.PDFContext, offset *int64) error {
 		} else {
 
 			logDebugReader.Println("buildXRefTableStartingAt: found xref section")
-			if offset, err = parseXRefSection(rd, ctx); err != nil {
+			if offset, err = parseXRefSection(s, ctx); err != nil {
 				return err
 			}
 
@@ -864,6 +968,36 @@ func readXRefTable(ctx *types.PDFContext) (err error) {
 	return
 }
 
+func growBufBy(buf []byte, size int, rd io.Reader) ([]byte, error) {
+
+	b := make([]byte, size)
+
+	n, err := rd.Read(b)
+	if err != nil {
+		return nil, err
+	}
+	logDebugReader.Printf("growBufBy: Read %d bytes\n", n)
+
+	return append(buf, b...), nil
+}
+
+func getStreamOffset(line string, streamInd int) (off int) {
+
+	off = streamInd + len("stream")
+
+	// Skip eol char.
+	if line[off] == '\n' || line[off] == '\r' {
+		off++
+	}
+
+	// Skip eol char.
+	if line[off] == '\n' || line[off] == '\r' {
+		off++
+	}
+
+	return
+}
+
 // Provide a PDF file buffer of sufficient size for parsing an object w/o stream.
 func getBuffer(rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffset int64, err error) {
 
@@ -877,47 +1011,46 @@ func getBuffer(rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffse
 
 	for endInd < 0 && streamInd < 0 {
 
-		var n int
-		buf2 := make([]byte, defaultBufSize)
-		// n may be  < bufSize !!!
-		if n, err = rd.Read(buf2); err != nil {
+		buf, err = growBufBy(buf, defaultBufSize, rd)
+		if err != nil {
 			return
 		}
 
-		logDebugReader.Printf("getBuffer: Read %d bytes for object read\n", n)
-
-		buf = append(buf, buf2...)
 		line := string(buf)
 		endInd = strings.Index(line, "endobj")
 		streamInd = strings.Index(line, "stream")
 
 		if endInd > 0 && (streamInd < 0 || streamInd > endInd) {
-			// no stream.
-			continue
+			// No stream marker in buf detected.
+			break
 		}
 
-		// For rare cases where "stream" also occurs in obj dict
-		// we need to find the last occurrence of "stream" before a possible end marker.
+		// For very rare cases where "stream" also occurs within obj dict
+		// we need to find the last "stream" marker before a possible end marker.
 		for streamInd > 0 && !keywordStreamRightAfterEndOfDict(line, streamInd) {
 
-			// search for next "stream" in line.
+			if streamInd > len(line)-len("stream") {
+				// No space for another stream marker.
+				streamInd = -1
+				break
+			}
 
+			// We start searching after this stream marker.
 			bufpos := streamInd + len("stream")
 
-			if bufpos > len(line)-len("stream") {
-				streamInd = -1
-				break
-			}
-
+			// Search for next stream marker.
 			i := strings.Index(line[bufpos:], "stream")
-
 			if i < 0 {
+				// No stream marker within line buffer.
 				streamInd = -1
 				break
 			}
 
+			// We found the next stream marker.
 			streamInd += len("stream") + i
+
 			if endInd > 0 && streamInd > endInd {
+				// We found a stream marker of another object
 				streamInd = -1
 				break
 			}
@@ -927,36 +1060,22 @@ func getBuffer(rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffse
 
 		if streamInd > 0 {
 
-			// streamOffset ... the offset where stream data begins.
+			// streamOffset ... the offset where the actual stream data begins.
 			//                  is right after the eol after "stream".
+			need := streamInd + len("stream") + 2 // 2 = maxLen(eol)
 
-			streamOffset = int64(streamInd + len("stream"))
+			if len(line) < need {
 
-			if len(line) < (streamInd + len("stream") + 10) {
-
-				// prevent buffer overflow.
-
-				buf2 := make([]byte, 20)
-				// n kann < bufSize sein!!!
-				if n, err = rd.Read(buf2); err != nil {
+				// to prevent buffer overflow.
+				buf, err = growBufBy(buf, need-len(line), rd)
+				if err != nil {
 					return
 				}
 
-				logDebugReader.Printf("getBuffer: to prevent overflow: Read %d bytes for object read\n", n)
-
-				buf = append(buf, buf2...)
 				line = string(buf)
-
 			}
 
-			if line[streamOffset] == '\n' || line[streamOffset] == '\r' {
-				streamOffset++
-			}
-
-			if line[streamOffset] == '\n' || line[streamOffset] == '\r' {
-				streamOffset++
-			}
-
+			streamOffset = int64(getStreamOffset(line, streamInd))
 		}
 	}
 
@@ -966,25 +1085,23 @@ func getBuffer(rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffse
 }
 
 // return true if 'stream' follows end of dict: >>{whitespace}stream
-func keywordStreamRightAfterEndOfDict(buf string, pos int) bool {
+func keywordStreamRightAfterEndOfDict(buf string, streamInd int) bool {
 
 	logDebugReader.Println("keywordStreamRightAfterEndOfDict: begin")
 
-	//logDebugReader.Printf("keywordStreamRightAfterEndOfDict pos=%d\n", pos)
-	//DumpBuf([]byte(buf), 16, "buf")
+	// Get a slice of the chunk right in front of 'stream'.
+	b := buf[:streamInd]
 
-	b := buf[:pos]
+	// Look for last end of dict marker.
 	eod := strings.LastIndex(b, ">>")
 	if eod < 0 {
-		//logDebugReader.Printf("keywordStreamRightAfterEndOfDict: false pos=%d\n", pos)
+		// No end of dict in buf.
 		return false
 	}
 
-	// we found the last >>.....
-	//logDebugReader.Printf("last '>>' at pos %d\n", eod)
-
-	// return true if after >> only whitespace
+	// We found the last >>. Return true if after end of dict only whitespace.
 	ok := strings.TrimSpace(b[eod:]) == ">>"
+
 	logDebugReader.Printf("keywordStreamRightAfterEndOfDict: end, %v\n", ok)
 
 	return ok
@@ -1118,7 +1235,7 @@ func getObject(ctx *types.PDFContext, offset int64, objectNumber int, generation
 		l = line[:endInd]
 	} else if streamInd < endInd {
 		// buf: # gen obj ... obj dict ... stream ... data ... endstream endobj
-		// implies we detected endobj and no stream.
+		// implies we detected endobj and stream.
 		// small stream within buffer, parse until "stream"
 		logDebugReader.Println("getObject: small stream within buffer, parse until stream")
 		l = line[:streamInd]
@@ -1210,7 +1327,7 @@ func dereferencedObject(ctx *types.PDFContext, objectNumber int) (interface{}, e
 	return entry.Object, nil
 }
 
-// dereference a PDFInteger object representing a int64 value.
+// dereference a PDFInteger object representing an int64 value.
 func getInt64Object(ctx *types.PDFContext, objectNumber int) (*int64, error) {
 
 	logDebugReader.Printf("getInt64Object begin: %d\n", objectNumber)
