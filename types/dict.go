@@ -1,10 +1,14 @@
 package types
 
 import (
+	"bytes"
 	"fmt"
 	"log"
+	"math"
 	"sort"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 // PDFDict represents a PDF dict object.
@@ -58,19 +62,20 @@ func (d *PDFDict) Delete(key string) (value interface{}) {
 }
 
 // BooleanEntry expects and returns a BooleanEntry for given key.
-func (d PDFDict) BooleanEntry(key string) (b bool) {
+func (d PDFDict) BooleanEntry(key string) *bool {
 
 	value, found := d.Find(key)
 	if !found {
-		return
+		return nil
 	}
 
 	bb, ok := value.(PDFBoolean)
 	if ok {
-		b = bb.Value()
+		b := bb.Value()
+		return &b
 	}
 
-	return
+	return nil
 }
 
 // StringEntry expects and returns a PDFStringLiteral entry for given key.
@@ -216,6 +221,22 @@ func (d PDFDict) PDFStringLiteralEntry(key string) *PDFStringLiteral {
 	}
 
 	s, ok := value.(PDFStringLiteral)
+	if ok {
+		return &s
+	}
+
+	return nil
+}
+
+// PDFHexLiteralEntry returns a PDFStringLiteral object for given key.
+func (d PDFDict) PDFHexLiteralEntry(key string) *PDFHexLiteral {
+
+	value, found := d.Find(key)
+	if !found {
+		return nil
+	}
+
+	s, ok := value.(PDFHexLiteral)
 	if ok {
 		return &s
 	}
@@ -432,4 +453,114 @@ func (d PDFDict) PDFString() string {
 
 func (d PDFDict) String() string {
 	return d.string(1)
+}
+
+// Convert a 1,2 or 3 digit unescaped octal string into the corresponding byte value.
+func byteForOctalString(octalBytes []byte) (b byte) {
+
+	var j float64
+
+	for i := len(octalBytes) - 1; i >= 0; i-- {
+		b += (octalBytes[i] - '0') * byte(math.Pow(8, j))
+		j++
+	}
+
+	return
+}
+
+// Unescape resolves all escape sequences of s.
+func Unescape(s string) ([]byte, error) {
+
+	var esc bool
+	var octalCode []byte
+	var b bytes.Buffer
+
+	//fmt.Printf("\nunescape from: <%s> <%X> %d\n", s, []byte(s), len(s))
+
+	for i := 0; i < len(s); i++ {
+
+		c := s[i]
+
+		//fmt.Printf("c= %X\n", c)
+
+		if c != 0x5C && !esc {
+			b.WriteByte(c)
+			continue
+		}
+
+		if c == 0x5c { // \
+			if !esc { // Start escape sequence.
+				esc = true
+			} else { // Escaped \
+				if len(octalCode) > 0 {
+					return nil, errors.Errorf("Unescape: illegal \\ in octal code sequence detected %X", octalCode)
+				}
+				b.WriteByte(c)
+				esc = false
+			}
+			continue
+		}
+
+		// escaped = true && any other than \
+
+		if len(octalCode) > 0 {
+			if !strings.ContainsRune("01234567", rune(c)) {
+				return nil, errors.Errorf("Unescape: illegal octal sequence detected %X", octalCode)
+			}
+			octalCode = append(octalCode, c)
+			//fmt.Printf("appending %x to octalCode %x\n", c, octalCode)
+			if len(octalCode) == 3 {
+				// Convert octal code to byte and write it.
+				//ob := byteForOctalString(octalCode)
+				//fmt.Printf("Unescape write byte %X for octalCode %x\n", ob, octalCode)
+				b.WriteByte(byteForOctalString(octalCode))
+				octalCode = nil
+				esc = false
+			}
+			continue
+		}
+
+		if !strings.ContainsRune("nrtbf()01234567", rune(c)) {
+			return nil, errors.Errorf("Unescape: illegal escape sequence \\%c detected", c)
+		}
+
+		switch c {
+		case 'n':
+			c = 0x0A
+		case 'r':
+			c = 0x0D
+		case 't':
+			c = 0x09
+		case 'b':
+			c = 0x08
+		case 'f':
+			c = 0x0C
+		case '(', ')':
+		case '0', '1', '2', '3', '4', '5', '6', '7':
+			octalCode = append(octalCode, c)
+			//fmt.Printf("appending first %x to octalCode %x\n", c, octalCode)
+			continue
+		}
+
+		b.WriteByte(c)
+		esc = false
+	}
+
+	return b.Bytes(), nil
+}
+
+// StringEntryBytes returns the byte slice representing the string value for key.
+func (d PDFDict) StringEntryBytes(key string) ([]byte, error) {
+
+	s := d.PDFStringLiteralEntry(key)
+	if s != nil {
+		return Unescape(s.Value())
+	}
+
+	h := d.PDFHexLiteralEntry(key)
+	if h != nil {
+		return h.Bytes()
+	}
+
+	return nil, nil
 }

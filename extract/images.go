@@ -42,7 +42,7 @@ func writeImage(fileName string, imageDict *types.PDFStreamDict, objNr int) (err
 		}
 
 		// Ignore imageMasks
-		if imageDict.BooleanEntry("ImageMask") {
+		if im := imageDict.BooleanEntry("ImageMask"); im != nil && *im {
 			logInfoExtract.Printf("writeImage end: ignore %s, imageMask.\n", fileName)
 			return
 		}

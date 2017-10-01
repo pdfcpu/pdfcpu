@@ -35,10 +35,15 @@ func NewXRefTableEntryGen0() *XRefTableEntry {
 
 // XRefTable represents a PDF cross reference table plus stats for a PDF file.
 type XRefTable struct {
-	Table     map[int]*XRefTableEntry
-	Size      *int            // Object count from PDF trailer dict.
-	PageCount int             // Number of pages.
-	Root      *PDFIndirectRef // Catalog (reference to root object).
+	Table               map[int]*XRefTableEntry
+	Size                *int            // Object count from PDF trailer dict.
+	PageCount           int             // Number of pages.
+	Root                *PDFIndirectRef // Catalog (reference to root object).
+	Encrypt             *PDFIndirectRef // Encrypt dict.
+	EncKey              []byte          // Encrypt key.
+	AES4Strings         bool
+	AES4Streams         bool
+	AES4EmbeddedStreams bool
 
 	// PDF Version
 	HeaderVersion *PDFVersion // The PDF version the source is claiming to us as per its header.

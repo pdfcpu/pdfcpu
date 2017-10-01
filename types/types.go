@@ -6,6 +6,7 @@
 package types
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -148,7 +149,7 @@ func (hexliteral PDFHexLiteral) String() string {
 	return fmt.Sprintf("<%s>", string(hexliteral))
 }
 
-// PDFString returns a string representation as found in and written to a PDF file.
+// PDFString returns the string representation as found in and written to a PDF file.
 func (hexliteral PDFHexLiteral) PDFString() string {
 	return hexliteral.String()
 }
@@ -156,6 +157,15 @@ func (hexliteral PDFHexLiteral) PDFString() string {
 // Value returns a string value for this PDF object.
 func (hexliteral PDFHexLiteral) Value() string {
 	return string(hexliteral)
+}
+
+// Bytes returns the byte representation.
+func (hexliteral PDFHexLiteral) Bytes() ([]byte, error) {
+	b, err := hex.DecodeString(hexliteral.Value())
+	if err != nil {
+		return nil, err
+	}
+	return b, err
 }
 
 ///////////////////////////////////////////////////////////////////////////////////

@@ -194,6 +194,7 @@ func balancedParenthesesPrefix(s string) int {
 }
 
 func containsByte(s string, b byte) bool {
+
 	for i := 0; i < len(s); i++ {
 		if s[i] == b {
 			return true
@@ -589,12 +590,12 @@ func parseStringLiteral(line *string) (interface{}, error) {
 	balParStr := l[1:i]
 
 	// Parse string literal, see 7.3.4.2
-	str := stringLiteral(balParStr)
+	//str := stringLiteral(balParStr)
 
 	// position behind ')'
 	*line = forwardParseBuf(l[i:], 1)
 
-	stringLiteral := types.PDFStringLiteral(str)
+	stringLiteral := types.PDFStringLiteral(balParStr)
 	logDebugParse.Printf("parseStringLiteral: end <%s>\n", stringLiteral)
 
 	return stringLiteral, nil

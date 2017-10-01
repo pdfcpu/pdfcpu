@@ -274,7 +274,11 @@ func processFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err e
 	}
 
 	// UF, optional, text string
-	_, err = validateStringEntry(xRefTable, dict, dictName, "UF", OPTIONAL, types.V17, validateFileSpecString)
+	sinceVersion := types.V17
+	if xRefTable.ValidationMode == types.ValidationRelaxed {
+		sinceVersion = types.V16
+	}
+	_, err = validateStringEntry(xRefTable, dict, dictName, "UF", OPTIONAL, sinceVersion, validateFileSpecString)
 	if err != nil {
 		return
 	}
