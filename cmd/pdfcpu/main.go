@@ -38,11 +38,13 @@ The commands are:
 
 Use "pdfcpu help [command]" for more information about a command.`
 
-	usageValidate     = "usage: pdfcpu validate [-verbose] [-mode strict|relaxed] inFile"
-	usageLongValidate = `Validate checks the inFile for specification compliance.
+	usageValidate     = "usage: pdfcpu validate [-verbose] [-mode strict|relaxed] [-upw userpw] [-opw ownerpw] inFile"
+	usageLongValidate = `Validate checks inFile for specification compliance.
 
 verbose ... extensive log output
    mode ... validation mode
+    upw ... user password
+    opw ... owner password
  inFile ... input pdf file
 		
 The validation modes are:
@@ -50,19 +52,23 @@ The validation modes are:
  strict ... (default) validates against PDF 32000-1:2008 (PDF 1.7)
 relaxed ... like strict but doesn't complain about common seen spec violations.`
 
-	usageOptimize     = "usage: pdfcpu optimize [-verbose] [-stats csvFile] inFile [outFile]"
+	usageOptimize     = "usage: pdfcpu optimize [-verbose] [-stats csvFile] [-upw userpw] [-opw ownerpw] inFile [outFile]"
 	usageLongOptimize = `Optimize reads inFile, removes redundant page resources like embedded fonts and images and writes the result to outFile.
 
 verbose ... extensive log output
   stats ... appends a stats line to a csv file with information about the usage of root and page entries.
             useful for batch optimization and debugging PDFs.
+    upw ... user password
+    opw ... owner password
  inFile ... input pdf file
 outFile ... output pdf file (default: inputPdfFile-opt.pdf)`
 
-	usageSplit     = "usage: pdfcpu split [-verbose] inFile outDir"
+	usageSplit     = "usage: pdfcpu split [-verbose] [-upw userpw] [-opw ownerpw] inFile outDir"
 	usageLongSplit = `Split generates a set of single page PDFs for the input file in outDir.
 
 verbose ... extensive log output
+    upw ... user password
+    opw ... owner password
  inFile ... input pdf file
  outDir ... output directory`
 
@@ -73,12 +79,14 @@ verbose ... extensive log output
 outFile	... output pdf file
 inFiles ... a list of at least 2 pdf files subject to concatenation.`
 
-	usageExtract     = "usage: pdfcpu extract [-verbose] -mode image|font|content|page [-pages pageSelection] inFile outDir"
+	usageExtract     = "usage: pdfcpu extract [-verbose] -mode image|font|content|page [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile outDir"
 	usageLongExtract = `Extract exports inFile's images, fonts, content or pages into outDir.
 
 verbose ... extensive log output
    mode ... extraction mode
   pages ... page selection
+    upw ... user password
+    opw ... owner password
  inFile ... input pdf file
  outDir ... output directory
 
@@ -89,11 +97,13 @@ verbose ... extensive log output
 content ... extract raw page content
    page ... extract single page PDFs`
 
-	usageTrim     = "usage: pdfcpu trim [-verbose] -pages pageSelection inFile outFile"
+	usageTrim     = "usage: pdfcpu trim [-verbose] -pages pageSelection [-upw userpw] [-opw ownerpw] inFile outFile"
 	usageLongTrim = `Trim generates a trimmed version of inFile for selectedPages.
 
 verbose ... extensive log output
   pages ... page selection
+    upw ... user password
+    opw ... owner password
  inFile ... input pdf file 
 outFile ... output pdf file, the trimmed version of inFile`
 
@@ -122,6 +132,7 @@ A missing pageSelection means all pages are selected for generation.`
 var (
 	fileStats, mode, pageSelection string
 	in, out                        string
+	upw, opw                       string
 	verbose                        bool
 	logInfo                        *log.Logger
 
@@ -141,6 +152,9 @@ func init() {
 
 	flag.BoolVar(&verbose, "verbose", false, "")
 	flag.BoolVar(&verbose, "v", false, "")
+
+	flag.StringVar(&upw, "upw", "", "user password")
+	flag.StringVar(&opw, "opw", "", "owner password")
 
 	logInfo = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 }
@@ -229,7 +243,7 @@ func main() {
 
 	setupLogging(verbose)
 
-	config := types.NewDefaultConfiguration()
+	config := types.NewDefaultConfiguration(upw, opw)
 
 	var cmd pdfcpu.Command
 

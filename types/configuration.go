@@ -41,10 +41,14 @@ type Configuration struct {
 
 	// A CSV-filename holding the statistics.
 	StatsFileName string
+
+	UserPW string
+
+	OwnerPW string
 }
 
 // NewDefaultConfiguration returns the default pdfcpu configuration.
-func NewDefaultConfiguration() *Configuration {
+func NewDefaultConfiguration(userpw, ownerpw string) *Configuration {
 	return &Configuration{
 		Reader15:          true,
 		DecodeAllStreams:  false,
@@ -53,6 +57,8 @@ func NewDefaultConfiguration() *Configuration {
 		WriteObjectStream: true,
 		WriteXRefStream:   true,
 		CollectStats:      true,
+		UserPW:            userpw,
+		OwnerPW:           ownerpw,
 	}
 }
 

@@ -25,15 +25,8 @@ type encrypt struct {
 
 func validateUserPassword(userpw string, e *encrypt, id []byte) (ok bool, key []byte, err error) {
 
-	// fmt.Printf("id: %X\n", id)
-	// fmt.Printf(" o: %X\n", e.o)
-	// fmt.Printf(" u: %X\n", e.u)
-	// fmt.Printf(" l:%d p:%d r:%d  v:%d emd:%t\n", e.l, e.p, e.r, e.v, e.emd)
-
 	// Alg.4/5 p63
-
 	// 4a/5a create enryption key using Alg.2 p61
-
 	// 2a
 	pw := []byte(userpw)
 	if len(pw) >= 32 {
@@ -42,7 +35,7 @@ func validateUserPassword(userpw string, e *encrypt, id []byte) (ok bool, key []
 		pw = append(pw, pad[:32-len(pw)]...)
 	}
 
-	// Create an enryption key Algor 2
+	// Create encryption key Algor 2
 	// 2b
 	h := md5.New()
 	h.Write(pw)
@@ -64,15 +57,13 @@ func validateUserPassword(userpw string, e *encrypt, id []byte) (ok bool, key []
 
 	// 2g
 	key = h.Sum(nil)
-	//fmt.Printf("start key: % x\n\n", key)
 
 	// 2h
 	if e.r >= 3 {
 		for i := 0; i < 50; i++ {
 			h.Reset()
 			h.Write(key[:e.l/8])
-			key = h.Sum(key[:0])
-			//fmt.Printf("%02d: % x\n", i, key)
+			key = h.Sum(nil)
 		}
 	}
 
@@ -82,7 +73,6 @@ func validateUserPassword(userpw string, e *encrypt, id []byte) (ok bool, key []
 	} else {
 		key = key[:5]
 	}
-	//fmt.Printf("\nencryption key after 50 md5 iterations:\n%X\n\n", key)
 
 	c, err := rc4.NewCipher(key)
 	if err != nil {
@@ -110,8 +100,6 @@ func validateUserPassword(userpw string, e *encrypt, id []byte) (ok bool, key []
 		c.XORKeyStream(u, u)
 
 		// 5e
-		//fmt.Printf("u: %X\n", u)
-
 		for i := 1; i <= 19; i++ {
 			keynew := make([]byte, len(key))
 			copy(keynew, key)
@@ -125,14 +113,85 @@ func validateUserPassword(userpw string, e *encrypt, id []byte) (ok bool, key []
 				return false, nil, err
 			}
 			c.XORKeyStream(u, u)
-			//fmt.Printf("%02d: %X\n", i, u)
 		}
 	}
 
-	//fmt.Printf("\ncalculated u: %X\n", u)
-	//fmt.Printf("u:            %X\n", e.u)
-
 	return bytes.HasPrefix(e.u, u), key, nil
+}
+
+func validateOwnerPassword(ownerpw, userpw string, e *encrypt, id []byte) (ok bool, err error) {
+
+	// 7a: Alg.3 p62 a-d
+	pw := []byte(ownerpw)
+	if len(pw) == 0 {
+		pw = []byte(userpw)
+	}
+	if len(pw) >= 32 {
+		pw = pw[:32]
+	} else {
+		pw = append(pw, pad[:32-len(pw)]...)
+	}
+
+	// 3b
+	h := md5.New()
+	h.Write(pw)
+	key := h.Sum(nil)
+
+	// 3c
+	if e.r >= 3 {
+		for i := 0; i < 50; i++ {
+			h.Reset()
+			h.Write(key)
+			key = h.Sum(nil)
+		}
+	}
+
+	// 3d
+	if e.r >= 3 {
+		key = key[:e.l/8]
+	} else {
+		key = key[:5]
+	}
+
+	// 7b
+
+	upw := make([]byte, len(e.o))
+	copy(upw, e.o)
+
+	switch e.r {
+
+	case 2:
+		c, err := rc4.NewCipher(key)
+		if err != nil {
+			return false, err
+		}
+		c.XORKeyStream(upw, upw)
+
+	case 3, 4:
+		for i := 19; i >= 0; i-- {
+
+			keynew := make([]byte, len(key))
+			copy(keynew, key)
+
+			for j := range keynew {
+				keynew[j] ^= byte(i)
+			}
+
+			c, err := rc4.NewCipher(keynew)
+			if err != nil {
+				return false, err
+			}
+
+			c.XORKeyStream(upw, upw)
+		}
+	}
+
+	ok, _, err = validateUserPassword(string(upw), e, id)
+	if err != nil {
+		return false, err
+	}
+
+	return ok, nil
 }
 
 func supportedCFEntry(d *types.PDFDict) (bool, bool) {
@@ -156,6 +215,36 @@ func supportedCFEntry(d *types.PDFDict) (bool, bool) {
 	}
 
 	return cfm != nil && *cfm == "AESV2", true
+}
+
+func printP(p int) {
+
+	logDebugReader.Printf("P: %d -> %b\n", p, uint32(p)&0x0F3C)
+
+	logDebugReader.Printf("Bit  3: %t\n", p&0x0004 > 0)
+	logDebugReader.Printf("Bit  4: %t\n", p&0x0008 > 0)
+	logDebugReader.Printf("Bit  5: %t\n", p&0x0010 > 0)
+	logDebugReader.Printf("Bit  6: %t\n", p&0x0020 > 0)
+	logDebugReader.Printf("Bit  9: %t\n", p&0x0100 > 0)
+	logDebugReader.Printf("Bit 10: %t\n", p&0x0200 > 0)
+	logDebugReader.Printf("Bit 11: %t\n", p&0x0400 > 0)
+	logDebugReader.Printf("Bit 12: %t\n", p&0x0800 > 0)
+}
+
+func hasNeededPermissions(enc *encrypt) bool {
+
+	// see 7.6.3.2
+
+	printP(enc.p)
+
+	if enc.r >= 3 {
+		// needs set bits 10 and 11
+		return enc.p&0x0200 > 0 && enc.p&0x0400 > 0
+	}
+
+	// R == 2
+	// needs set bits 4 and 5
+	return enc.p&0x0008 > 0 && enc.p&0x0010 > 0
 }
 
 func supportedEncryption(ctx *types.PDFContext, dict *types.PDFDict) (*encrypt, error) {
@@ -266,7 +355,6 @@ func supportedEncryption(ctx *types.PDFContext, dict *types.PDFDict) (*encrypt, 
 		logErrorReader.Println("supportedEncryption: required entry \"O\" missing or invalid")
 		return nil, nil
 	}
-	//logDebugReader.Printf("O: %X %s len:%d\n", o, o, len(o))
 
 	// U
 	u, err := dict.StringEntryBytes("U")
@@ -277,7 +365,6 @@ func supportedEncryption(ctx *types.PDFContext, dict *types.PDFDict) (*encrypt, 
 		logErrorReader.Printf("supportedEncryption: required entry \"U\" missing or invalid %d", len(u))
 		return nil, nil
 	}
-	//logDebugReader.Printf("U: %X %s len:%d\n", u, u, len(u))
 
 	// P
 	p := dict.IntEntry("P")
@@ -296,7 +383,7 @@ func supportedEncryption(ctx *types.PDFContext, dict *types.PDFDict) (*encrypt, 
 	return &encrypt{o, u, length, *p, *r, *v, encMeta}, nil
 }
 
-func checkForEncryption(ctx *types.PDFContext) error {
+func checkForEncryption(ctx *types.PDFContext, userpw, ownerpw string) error {
 
 	indRef := ctx.Encrypt
 	if indRef == nil {
@@ -311,7 +398,6 @@ func checkForEncryption(ctx *types.PDFContext) error {
 	}
 
 	encryptDict, ok := obj.(types.PDFDict)
-
 	if !ok {
 		return errors.New("corrupt encrypt dict")
 	}
@@ -329,21 +415,33 @@ func checkForEncryption(ctx *types.PDFContext) error {
 	if ctx.ID == nil {
 		return errors.New("missing ID entry")
 	}
+
 	hex, ok := ((*ctx.ID)[0]).(types.PDFHexLiteral)
 	if !ok {
 		return errors.New("corrupt encrypt dict")
 	}
+
 	id, err := hex.Bytes()
 	if err != nil {
 		return err
 	}
 
-	ok, key, err := validateUserPassword("", enc, id)
+	ok, key, err := validateUserPassword(userpw, enc, id)
 	if err != nil {
 		return err
 	}
 	if !ok {
-		return errors.New("Authentication error")
+		return errors.New("UserPW Authentication error")
+	}
+	logDebugReader.Println("userpw ok!")
+
+	ok, err = validateOwnerPassword(ownerpw, userpw, enc, id)
+	if err != nil || !ok {
+		if !hasNeededPermissions(enc) {
+			return errors.New("Insufficient access permissions")
+		}
+	} else {
+		logDebugReader.Println("ownerpw ok!")
 	}
 
 	ctx.EncKey = key
@@ -385,6 +483,31 @@ func decryptKey(objNumber, generation int, key []byte, aes bool) []byte {
 	return dk
 }
 
+func decryptAESBytes(b, key []byte) (data []byte, err error) {
+
+	if len(b) < aes.BlockSize {
+		return nil, errors.New("decryptAESBytes: Ciphertext too short")
+	}
+
+	if len(b)%aes.BlockSize > 0 {
+		return nil, errors.New("decryptAESBytes: Ciphertext not a multiple of block size")
+	}
+
+	cb, err := aes.NewCipher(key)
+	if err != nil {
+		return
+	}
+
+	iv := make([]byte, aes.BlockSize)
+	copy(iv, b[:aes.BlockSize])
+
+	data = b[aes.BlockSize:]
+	mode := cipher.NewCBCDecrypter(cb, iv)
+	mode.CryptBlocks(data, data)
+
+	return
+}
+
 func decryptString(s string, objNr, genNr int, key []byte, needAES bool) (*string, error) {
 
 	logDebugReader.Printf("decryptString begin s:<%s> %d %d key:%X aes:%t\n", s, objNr, genNr, key, needAES)
@@ -400,29 +523,13 @@ func decryptString(s string, objNr, genNr int, key []byte, needAES bool) (*strin
 
 	if needAES {
 
-		block, err := aes.NewCipher(k)
+		b1, err := decryptAESBytes(b, k)
 		if err != nil {
 			return nil, err
 		}
 
-		if len(b) < aes.BlockSize {
-			return nil, errors.New("decryptStream: aes ciphertext too short")
-		}
-
-		iv := make([]byte, 16)
-		copy(iv, b[:16])
-
-		data := b[16:]
-
-		if len(data)%aes.BlockSize != 0 {
-			return nil, errors.New("decryptStream: aes ciphertext not a multiple of block size")
-		}
-
-		mode := cipher.NewCBCDecrypter(block, iv)
-		mode.CryptBlocks(data, data)
-		s1 := string(data)
-		logDebugReader.Printf("decryptString end, returning: <%s>\n", s1)
-		//panic("string game over!")
+		s1 := string(b1)
+		logDebugReader.Printf("decryptString end, aes returning: <%s>\n", s1)
 
 		return &s1, nil
 	}
@@ -434,15 +541,12 @@ func decryptString(s string, objNr, genNr int, key []byte, needAES bool) (*strin
 
 	c.XORKeyStream(b, b)
 	s1 := string(b)
-	logDebugReader.Printf("decryptString end, returning: <%s>\n", s1)
-	//panic("game over!")
+	logDebugReader.Printf("decryptString end, rc4 returning: <%s>\n", s1)
 
 	return &s1, nil
 }
 
 func decryptDeepObject(objIn interface{}, objNr, genNr int, key []byte, aes bool) (*types.PDFStringLiteral, error) {
-
-	//logDebugReader.Printf("decryptDeepObject: <%v> %T\n", objIn, objIn)
 
 	_, ok := objIn.(types.PDFIndirectRef)
 	if ok {
@@ -484,7 +588,6 @@ func decryptDeepObject(objIn interface{}, objNr, genNr int, key []byte, aes bool
 		return &sl, nil
 
 	default:
-		//logDebugReader.Printf("decryptDeepObject: obj=%T\n", obj)
 
 	}
 
@@ -504,41 +607,7 @@ func decryptStream(buf []byte, objNr, genNr int, key []byte, needAES bool) ([]by
 	k := decryptKey(objNr, genNr, key, needAES)
 
 	if needAES {
-
-		block, err := aes.NewCipher(k)
-		if err != nil {
-			return nil, err
-		}
-
-		if len(buf) < aes.BlockSize {
-			return nil, errors.New("decryptStream: aes ciphertext too short")
-		}
-
-		iv := make([]byte, 16)
-		copy(iv, buf[:16])
-		//stream := cipher.NewOFB(block, iv)
-
-		data := buf[16:]
-		if len(data)%aes.BlockSize != 0 {
-			return nil, errors.New("decryptStream: aes ciphertext not a multiple of block size")
-		}
-
-		//r := bytes.NewReader(data)
-		//var b bytes.Buffer
-
-		mode := cipher.NewCBCDecrypter(block, iv)
-		mode.CryptBlocks(data, data)
-		//panic("stream game over!")
-
-		//rd := &cipher.StreamReader{S: stream, R: r}
-
-		// Copy the input file to the output file, decrypting as we go.
-		//if _, err := io.Copy(&b, rd); err != nil {
-		//	return nil, err
-		//}
-
-		return data, nil
-		//return b.Bytes(), nil
+		return decryptAESBytes(buf, k)
 	}
 
 	c, err := rc4.NewCipher(k)
@@ -546,73 +615,10 @@ func decryptStream(buf []byte, objNr, genNr int, key []byte, needAES bool) ([]by
 		return nil, err
 	}
 
-	r := bytes.NewReader(buf)
 	var b bytes.Buffer
 
-	rd := &cipher.StreamReader{S: c, R: r}
+	r := &cipher.StreamReader{S: c, R: bytes.NewReader(buf)}
 
-	if _, err = io.Copy(&b, rd); err != nil {
-		return nil, err
-	}
-
-	return b.Bytes(), nil
-}
-
-func decryptStreamFix(buf []byte, k []byte, needAES bool) ([]byte, error) {
-
-	logDebugReader.Printf("decryptStreamFix begin key:%X aes:%t\n", k, needAES)
-
-	if needAES {
-
-		block, err := aes.NewCipher(k)
-		if err != nil {
-			return nil, err
-		}
-
-		if len(buf) < aes.BlockSize {
-			return nil, errors.New("decryptStream: aes ciphertext too short")
-		}
-
-		iv := make([]byte, 16)
-		copy(iv, buf[:16])
-		//stream := cipher.NewOFB(block, iv)
-
-		data := buf[16:]
-		if len(data)%aes.BlockSize != 0 {
-			return nil, errors.New("decryptStream: aes ciphertext not a multiple of block size")
-		}
-
-		//r := bytes.NewReader(data)
-		//var b bytes.Buffer
-
-		mode := cipher.NewCBCDecrypter(block, iv)
-		mode.CryptBlocks(data, data)
-		//panic("stream game over!")
-
-		//rd := &cipher.StreamReader{S: stream, R: r}
-
-		// Copy the input file to the output file, decrypting as we go.
-		//if _, err := io.Copy(&b, rd); err != nil {
-		//	return nil, err
-		//}
-
-		return data, nil
-		//return b.Bytes(), nil
-	}
-
-	c, err := rc4.NewCipher(k)
-	if err != nil {
-		return nil, err
-	}
-
-	r := bytes.NewReader(buf)
-	var b bytes.Buffer
-
-	rd := &cipher.StreamReader{S: c, R: r}
-
-	if _, err = io.Copy(&b, rd); err != nil {
-		return nil, err
-	}
-
+	_, err = io.Copy(&b, r)
 	return b.Bytes(), nil
 }

@@ -42,7 +42,7 @@ func Verbose(verbose bool) {
 		out = os.Stdout
 	}
 	logInfoReader = log.New(out, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	//logDebugReader = log.New(out, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
+	logDebugReader = log.New(out, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
 }
 
 // ScanLines is a split function for a Scanner that returns each line of
@@ -1846,13 +1846,17 @@ func identifyRootVersion(xRefTable *types.XRefTable) (err error) {
 
 // Parse all PDFObjects including stream content from file and save to the corresponding xRefTableEntries.
 // This includes processing of object streams and linearization dicts.
-func dereferenceXRefTable(ctx *types.PDFContext) (err error) {
+func dereferenceXRefTable(ctx *types.PDFContext, config *types.Configuration) (err error) {
 
 	logDebugReader.Println("dereferenceXRefTable: begin")
 
 	xRefTable := ctx.XRefTable
 
-	err = checkForEncryption(ctx)
+	// Note for encrypted files:
+	// Mandatory supply userpw to open & display file.
+	// Access may be restricted (Decode access privileges).
+	// Optionally supply ownerpw in order to gain unrestricted access.
+	err = checkForEncryption(ctx, config.UserPW, config.OwnerPW)
 	if err != nil {
 		return
 	}
@@ -1914,7 +1918,7 @@ func PDFFile(fileName string, config *types.Configuration) (ctx *types.PDFContex
 
 	// Make all objects explicitly available (load into memory) in corresponding xRefTable entries.
 	// Also decode any involved object streams.
-	err = dereferenceXRefTable(ctx)
+	err = dereferenceXRefTable(ctx, config)
 	if err != nil {
 		return
 	}
