@@ -21,7 +21,7 @@ type PDFContext struct {
 func NewPDFContext(fileName string, file *os.File, config *Configuration) (ctx *PDFContext, err error) {
 
 	if config == nil {
-		config = NewDefaultConfiguration("", "")
+		config = NewDefaultConfiguration()
 	}
 
 	fileInfo, err := file.Stat()

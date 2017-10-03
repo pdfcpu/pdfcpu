@@ -48,7 +48,7 @@ type Configuration struct {
 }
 
 // NewDefaultConfiguration returns the default pdfcpu configuration.
-func NewDefaultConfiguration(userpw, ownerpw string) *Configuration {
+func NewDefaultConfiguration() *Configuration {
 	return &Configuration{
 		Reader15:          true,
 		DecodeAllStreams:  false,
@@ -57,8 +57,6 @@ func NewDefaultConfiguration(userpw, ownerpw string) *Configuration {
 		WriteObjectStream: true,
 		WriteXRefStream:   true,
 		CollectStats:      true,
-		UserPW:            userpw,
-		OwnerPW:           ownerpw,
 	}
 }
 

@@ -243,7 +243,9 @@ func main() {
 
 	setupLogging(verbose)
 
-	config := types.NewDefaultConfiguration(upw, opw)
+	config := types.NewDefaultConfiguration()
+	config.UserPW = upw
+	config.OwnerPW = opw
 
 	var cmd pdfcpu.Command
 
