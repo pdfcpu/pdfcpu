@@ -268,8 +268,6 @@ func printP(enc *Encrypt) {
 // HasNeededPermissions returns true if permissions for pdfcpu processing are present.
 func HasNeededPermissions(enc *Encrypt) bool {
 
-	return true
-
 	// see 7.6.3.2
 
 	printP(enc)
