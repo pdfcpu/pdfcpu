@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hhrutter/pdfcpu/crypto"
 	"github.com/hhrutter/pdfcpu/filter"
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
@@ -42,7 +43,7 @@ func Verbose(verbose bool) {
 		out = os.Stdout
 	}
 	logInfoReader = log.New(out, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logDebugReader = log.New(out, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
+	//logDebugReader = log.New(out, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
 }
 
 // ScanLines is a split function for a Scanner that returns each line of
@@ -597,14 +598,12 @@ func parseTrailerInfo(dict types.PDFDict, xRefTable *types.XRefTable) error {
 
 	logDebugReader.Println("parseTrailerInfo begin")
 
-	// Encrypted files are not supported.
 	if _, found := dict.Find("Encrypt"); found {
 		encryptObjRef := dict.IndirectRefEntry("Encrypt")
 		if encryptObjRef != nil {
 			xRefTable.Encrypt = encryptObjRef
 			logDebugReader.Printf("parseTrailerInfo: Encrypt object: %s\n", *xRefTable.Encrypt)
 		}
-		//return errors.New("parseTrailerInfo: unsupported entry \"Encrypt\"")
 	}
 
 	if xRefTable.Size == nil {
@@ -637,6 +636,8 @@ func parseTrailerInfo(dict types.PDFDict, xRefTable *types.XRefTable) error {
 		if idArray != nil {
 			xRefTable.ID = idArray
 			logDebugReader.Printf("parseTrailerInfo: ID object: %s\n", *xRefTable.ID)
+		} else if xRefTable.Encrypt != nil {
+			return errors.New("parseTrailerInfo: missing entry \"ID\"")
 		}
 	}
 
@@ -1271,7 +1272,7 @@ func getObject(ctx *types.PDFContext, offset int64, objectNumber int, generation
 
 	case types.PDFArray:
 		if ctx.EncKey != nil {
-			if _, err = decryptDeepObject(o, *objNr, *genNr, ctx.EncKey, ctx.AES4Strings); err != nil {
+			if _, err = crypto.DecryptDeepObject(o, *objNr, *genNr, ctx.EncKey, ctx.AES4Strings); err != nil {
 				return nil, err
 			}
 		}
@@ -1279,13 +1280,22 @@ func getObject(ctx *types.PDFContext, offset int64, objectNumber int, generation
 
 	case types.PDFStringLiteral:
 		if ctx.EncKey != nil {
-			s1, err := decryptString(o.Value(), *objNr, *genNr, ctx.EncKey, ctx.AES4Strings)
+			s1, err := crypto.DecryptString(ctx.AES4Strings, o.Value(), *objNr, *genNr, ctx.EncKey)
 			if err != nil {
 				return nil, err
 			}
 			return types.PDFStringLiteral(*s1), nil
 		}
 		return o, nil
+
+	case types.PDFHexLiteral:
+		if ctx.EncKey != nil {
+			s1, err := crypto.DecryptString(ctx.AES4Strings, o.Value(), *objNr, *genNr, ctx.EncKey)
+			if err != nil {
+				return nil, err
+			}
+			return types.PDFHexLiteral(*s1), nil
+		}
 
 	default:
 		return o, nil
@@ -1294,7 +1304,7 @@ func getObject(ctx *types.PDFContext, offset int64, objectNumber int, generation
 	pdfDict := pdfObject.(types.PDFDict)
 
 	if ctx.EncKey != nil {
-		_, err = decryptDeepObject(pdfDict, *objNr, *genNr, ctx.EncKey, ctx.AES4Strings)
+		_, err = crypto.DecryptDeepObject(pdfDict, *objNr, *genNr, ctx.EncKey, ctx.AES4Strings)
 		if err != nil {
 			return nil, err
 		}
@@ -1452,7 +1462,7 @@ func GetEncodedStreamContent(ctx *types.PDFContext, streamDict *types.PDFStreamD
 	// Save encoded content.
 	streamDict.Raw = rawContent
 
-	logDebugReader.Println("GetEncodedStreamContent: end")
+	logDebugReader.Printf("GetEncodedStreamContent: end: len(streamDictRaw)=%d\n", len(streamDict.Raw))
 
 	// Return encoded content.
 	return rawContent, nil
@@ -1461,18 +1471,20 @@ func GetEncodedStreamContent(ctx *types.PDFContext, streamDict *types.PDFStreamD
 // Decodes the raw encoded stream content and saves it to streamDict.Content.
 func setDecodedStreamContent(ctx *types.PDFContext, streamDict *types.PDFStreamDict, objNr, genNr int, decode bool) (err error) {
 
-	logDebugReader.Println("setDecodedStreamContent: begin")
+	logDebugReader.Printf("setDecodedStreamContent: begin decode=%t\n", decode)
 
-	if ctx != nil && ctx.EncKey != nil &&
-		len(streamDict.FilterPipeline) == 1 && streamDict.FilterPipeline[0].Name == "Crypt" {
-		streamDict.Content = streamDict.Raw
-		return
+	//  If the "Identity" crypt filter is used we do not need to decrypt.
+	if ctx != nil && ctx.EncKey != nil {
+		if len(streamDict.FilterPipeline) == 1 && streamDict.FilterPipeline[0].Name == "Crypt" {
+			streamDict.Content = streamDict.Raw
+			return
+		}
 	}
 
 	// ctx gets created after XRefStream parsing.
 	// XRefStreams are not encrypted.
 	if ctx != nil && ctx.EncKey != nil {
-		streamDict.Raw, err = decryptStream(streamDict.Raw, objNr, genNr, ctx.EncKey, ctx.AES4Streams)
+		streamDict.Raw, err = crypto.DecryptStream(ctx.AES4Streams, streamDict.Raw, objNr, genNr, ctx.EncKey)
 		if err != nil {
 			return
 		}
@@ -1783,8 +1795,6 @@ func dereferenceObjects(ctx *types.PDFContext) error {
 		// Save encoded stream content for stream dicts into xRefTable entry.
 		if pdfStreamDict, ok := obj.(types.PDFStreamDict); ok {
 
-			// fontfiles, images, ?
-
 			if _, err = GetEncodedStreamContent(ctx, &pdfStreamDict); err != nil {
 				return errors.Wrapf(err, "dereferenceObjects: problem dereferencing stream %d", objectNumber)
 			}
@@ -1883,6 +1893,72 @@ func dereferenceXRefTable(ctx *types.PDFContext, config *types.Configuration) (e
 	logDebugReader.Println("dereferenceXRefTable: end")
 
 	return
+}
+
+func checkForEncryption(ctx *types.PDFContext, userpw, ownerpw string) error {
+
+	indRef := ctx.Encrypt
+	if indRef == nil {
+		return nil
+	}
+
+	logDebugReader.Printf("Encryption: %v\n", indRef)
+
+	obj, err := dereferencedObject(ctx, indRef.ObjectNumber.Value())
+	if err != nil {
+		return err
+	}
+
+	encryptDict, ok := obj.(types.PDFDict)
+	if !ok {
+		return errors.New("corrupt encrypt dict")
+	}
+
+	logDebugReader.Printf("%s\n", encryptDict)
+
+	enc, err := crypto.SupportedEncryption(ctx, &encryptDict)
+	if err != nil {
+		return err
+	}
+	if enc == nil {
+		return errors.New("This encryption is not supported")
+	}
+
+	if ctx.ID == nil {
+		return errors.New("missing ID entry")
+	}
+
+	hex, ok := ((*ctx.ID)[0]).(types.PDFHexLiteral)
+	if !ok {
+		return errors.New("corrupt encrypt dict")
+	}
+
+	id, err := hex.Bytes()
+	if err != nil {
+		return err
+	}
+
+	ok, key, err := crypto.ValidateUserPassword(userpw, enc, id)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return errors.New("UserPW Authentication error")
+	}
+	logDebugReader.Println("userpw ok!")
+
+	ok, err = crypto.ValidateOwnerPassword(ownerpw, userpw, enc, id)
+	if err != nil || !ok {
+		if !crypto.HasNeededPermissions(enc) {
+			return errors.New("Insufficient access permissions")
+		}
+	} else {
+		logDebugReader.Println("ownerpw ok!")
+	}
+
+	ctx.EncKey = key
+
+	return nil
 }
 
 // PDFFile reads in a PDFFile and generates a PDFContext, an in-memory representation containing a cross reference table.

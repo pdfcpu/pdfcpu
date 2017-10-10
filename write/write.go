@@ -17,7 +17,7 @@ import (
 )
 
 // PdfcpuVersion is the current version.
-const PdfcpuVersion = "0.0.6"
+const PdfcpuVersion = "0.0.7"
 
 var (
 	logDebugWriter *log.Logger
@@ -806,6 +806,22 @@ func writeXRefStream(ctx *types.PDFContext) (err error) {
 	return
 }
 
+func writeEncryptDict(ctx *types.PDFContext) (err error) {
+
+	indRef := *ctx.Encrypt
+	objNumber := int(indRef.ObjectNumber)
+	genNumber := int(indRef.GenerationNumber)
+
+	var dict *types.PDFDict
+
+	dict, err = ctx.DereferenceDict(indRef)
+	if err != nil {
+		return
+	}
+
+	return writePDFObject(ctx, objNumber, genNumber, dict.PDFString())
+}
+
 // PDFFile generates a PDF file for the cross reference table contained in PDFContext.
 func PDFFile(ctx *types.PDFContext) (err error) {
 
@@ -870,6 +886,13 @@ func PDFFile(ctx *types.PDFContext) (err error) {
 	// Write offspec additional streams as declared in pdf trailer.
 	if ctx.AdditionalStreams != nil {
 		_, _, err = writeDeepObject(ctx, ctx.AdditionalStreams)
+		if err != nil {
+			return
+		}
+	}
+
+	if ctx.Encrypt != nil {
+		err = writeEncryptDict(ctx)
 		if err != nil {
 			return
 		}

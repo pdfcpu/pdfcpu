@@ -468,6 +468,26 @@ func byteForOctalString(octalBytes []byte) (b byte) {
 	return
 }
 
+// Escape applies all defined escape sequences to s.
+func Escape(s string) (*string, error) {
+
+	var b bytes.Buffer
+
+	for i := 0; i < len(s); i++ {
+
+		c := s[i]
+
+		if strings.ContainsRune("()\\", rune(c)) {
+			b.WriteByte(0x5C) // \
+		}
+		b.WriteByte(c)
+	}
+
+	s1 := b.String()
+
+	return &s1, nil
+}
+
 // Unescape resolves all escape sequences of s.
 func Unescape(s string) ([]byte, error) {
 
@@ -475,13 +495,9 @@ func Unescape(s string) ([]byte, error) {
 	var octalCode []byte
 	var b bytes.Buffer
 
-	//fmt.Printf("\nunescape from: <%s> <%X> %d\n", s, []byte(s), len(s))
-
 	for i := 0; i < len(s); i++ {
 
 		c := s[i]
-
-		//fmt.Printf("c= %X\n", c)
 
 		if c != 0x5C && !esc {
 			b.WriteByte(c)
@@ -508,11 +524,7 @@ func Unescape(s string) ([]byte, error) {
 				return nil, errors.Errorf("Unescape: illegal octal sequence detected %X", octalCode)
 			}
 			octalCode = append(octalCode, c)
-			//fmt.Printf("appending %x to octalCode %x\n", c, octalCode)
 			if len(octalCode) == 3 {
-				// Convert octal code to byte and write it.
-				//ob := byteForOctalString(octalCode)
-				//fmt.Printf("Unescape write byte %X for octalCode %x\n", ob, octalCode)
 				b.WriteByte(byteForOctalString(octalCode))
 				octalCode = nil
 				esc = false
@@ -538,7 +550,6 @@ func Unescape(s string) ([]byte, error) {
 		case '(', ')':
 		case '0', '1', '2', '3', '4', '5', '6', '7':
 			octalCode = append(octalCode, c)
-			//fmt.Printf("appending first %x to octalCode %x\n", c, octalCode)
 			continue
 		}
 

@@ -168,5 +168,9 @@ func NewPDFXRefStreamDict(xRefTable *XRefTable) *PDFXRefStreamDict {
 		streamDict.Insert("ID", *xRefTable.ID)
 	}
 
+	if xRefTable.Encrypt != nil {
+		streamDict.Insert("Encrypt", *xRefTable.Encrypt)
+	}
+
 	return &PDFXRefStreamDict{PDFStreamDict: streamDict}
 }

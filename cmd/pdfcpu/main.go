@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hhrutter/pdfcpu"
+	"github.com/hhrutter/pdfcpu/crypto"
 	"github.com/hhrutter/pdfcpu/extract"
 	"github.com/hhrutter/pdfcpu/merge"
 	"github.com/hhrutter/pdfcpu/optimize"
@@ -220,6 +221,7 @@ func help() {
 func setupLogging(verbose bool) {
 
 	types.Verbose(verbose)
+	crypto.Verbose(verbose)
 	read.Verbose(verbose)
 	validate.Verbose(verbose)
 	optimize.Verbose(verbose)

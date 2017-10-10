@@ -40,23 +40,23 @@ I also wanted to have my own swiss army knife for PDFs written entirely in [Go](
 
 ### Usage
 
-    pdfcpu validate [-verbose] [-mode strict|relaxed] inFile
+    pdfcpu validate [-verbose] [-mode strict|relaxed] [-upw userpw] [-opw ownerpw] inFile
 
-    pdfcpu optimize [-verbose] [-stats csvFile] inFile [outFile]
+    pdfcpu optimize [-verbose] [-stats csvFile] [-upw userpw] [-opw ownerpw] inFile [outFile]
  
-    pdfcpu split [-verbose] inFile outDir
+    pdfcpu split [-verbose] [-upw userpw] [-opw ownerpw] inFile outDir
  
     pdfcpu merge [-verbose] outFile inFile1 inFile2 ...
  
-    pdfcpu extract [-verbose] -mode image|font|content|page [-pages pageSelection] inFile outDir
+    pdfcpu extract [-verbose] -mode image|font|content|page [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile outDir
  
-    pdfcpu trim [-verbose] -pages pageSelection inFile outFile
+    pdfcpu trim [-verbose] -pages pageSelection [-upw userpw] [-opw ownerpw] inFile outFile
 
  [Please read the documentation ](https://godoc.org/github.com/hhrutter/pdfcpu)
 
 
 ### Status
-Version: 0.0.6
+Version: 0.0.7
 
 The extraction code for font files and images is experimental and serves as proof of concept only.
 
@@ -77,7 +77,7 @@ PDF files that will increase pdfcpu's coverage are very much welcome.
 
 
 ### Disclaimer
-Usage of pdfcpu assumes you know about and respect all copyrights of any PDF content you may be processing. This applies to the PDF files as such, their content and in particular all embedded resources like font files or images. As of now encrypted PDF files are not supported. Credit goes to [Renee French](https://instagram.com/reneefrench) for creating our beloved Gopher.
+Usage of pdfcpu assumes you know about and respect all copyrights of any PDF content you may be processing. This applies to the PDF files as such, their content and in particular all embedded resources like font files or images. Credit goes to [Renee French](https://instagram.com/reneefrench) for creating our beloved Gopher.
 
 
 ### License
