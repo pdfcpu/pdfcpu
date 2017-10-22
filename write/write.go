@@ -4,6 +4,7 @@ package write
 import (
 	"bufio"
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -11,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hhrutter/pdfcpu/crypto"
 	"github.com/hhrutter/pdfcpu/filter"
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
@@ -369,6 +371,10 @@ func writeTrailerDict(ctx *types.PDFContext) (err error) {
 		dict.Insert("Info", *xRefTable.Info)
 	}
 
+	if ctx.Encrypt != nil && ctx.EncKey != nil {
+		dict.Insert("Encrypt", *ctx.Encrypt)
+	}
+
 	if xRefTable.ID != nil {
 		dict.Insert("ID", *xRefTable.ID)
 	}
@@ -711,7 +717,7 @@ func writeXRefStream(ctx *types.PDFContext) (err error) {
 	logInfoWriter.Println("writeXRefStream begin")
 
 	xRefTable := ctx.XRefTable
-	xRefStreamDict := types.NewPDFXRefStreamDict(xRefTable)
+	xRefStreamDict := types.NewPDFXRefStreamDict(ctx)
 	xRefTableEntry := types.NewXRefTableEntryGen0()
 	xRefTableEntry.Object = *xRefStreamDict
 
@@ -808,6 +814,11 @@ func writeXRefStream(ctx *types.PDFContext) (err error) {
 
 func writeEncryptDict(ctx *types.PDFContext) (err error) {
 
+	// Bail out unless we really have to write encrypted.
+	if ctx.Encrypt == nil || ctx.EncKey == nil {
+		return
+	}
+
 	indRef := *ctx.Encrypt
 	objNumber := int(indRef.ObjectNumber)
 	genNumber := int(indRef.GenerationNumber)
@@ -820,6 +831,135 @@ func writeEncryptDict(ctx *types.PDFContext) (err error) {
 	}
 
 	return writePDFObject(ctx, objNumber, genNumber, dict.PDFString())
+}
+
+func handleEncryption(ctx *types.PDFContext) (err error) {
+
+	var d *types.PDFDict
+
+	if ctx.Decrypt != nil {
+		if *ctx.Decrypt {
+			// Remove encryption.
+			ctx.EncKey = nil
+		} else {
+			// Encrypt this document.
+
+			dict := types.NewEncryptDict()
+
+			ctx.E, err = crypto.SupportedEncryption(ctx, dict)
+			if err != nil {
+				return
+			}
+
+			hexID, _ := ((*ctx.ID)[0]).(types.PDFHexLiteral)
+			var id []byte
+			id, err = hexID.Bytes()
+			if err != nil {
+				return err
+			}
+
+			ctx.E.ID = id
+
+			fmt.Printf("opw before: length:%d <%s>\n", len(ctx.E.O), ctx.E.O)
+			ctx.E.O, err = crypto.O(ctx)
+			if err != nil {
+				return
+			}
+			fmt.Printf("opw after: length:%d <%s> %0X\n", len(ctx.E.O), ctx.E.O, ctx.E.O)
+
+			fmt.Printf("upw before: length:%d <%s>\n", len(ctx.E.U), ctx.E.U)
+			ctx.E.U, ctx.EncKey, err = crypto.U(ctx)
+			if err != nil {
+				return
+			}
+			if len(ctx.E.U) < 32 {
+				pad := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+				//pad := "12345678901234567890123456789012"
+				ctx.E.U = append(ctx.E.U, pad[:32-len(ctx.E.U)]...)
+			}
+			fmt.Printf("upw after: length:%d <%s> %0X\n", len(ctx.E.U), ctx.E.U, ctx.E.U)
+			fmt.Printf("encKey = %0X\n", ctx.EncKey)
+
+			dict.Update("U", types.PDFHexLiteral(hex.EncodeToString(ctx.E.U)))
+			dict.Update("O", types.PDFHexLiteral(hex.EncodeToString(ctx.E.O)))
+
+			xRefTableEntry := types.NewXRefTableEntryGen0()
+			xRefTableEntry.Object = *dict
+
+			// Reuse free objects (including recycled objects from this run).
+			var objNumber int
+			objNumber, err = ctx.InsertAndUseRecycled(*xRefTableEntry)
+			if err != nil {
+				return
+			}
+
+			indRef := types.NewPDFIndirectRef(objNumber, 0)
+			ctx.Encrypt = &indRef
+
+		}
+	} else if ctx.UserPWNew != nil || ctx.OwnerPWNew != nil {
+
+		if ctx.UserPWNew != nil {
+			fmt.Printf("change upw from <%s> to <%s>\n", ctx.UserPW, *ctx.UserPWNew)
+			ctx.UserPW = *ctx.UserPWNew
+		}
+
+		if ctx.OwnerPWNew != nil {
+			fmt.Printf("change opw from <%s> to <%s>\n", ctx.OwnerPW, *ctx.OwnerPWNew)
+			ctx.OwnerPW = *ctx.OwnerPWNew
+		}
+
+		fmt.Printf("opw before: length:%d <%s>\n", len(ctx.E.O), ctx.E.O)
+		ctx.E.O, err = crypto.O(ctx)
+		if err != nil {
+			return
+		}
+		fmt.Printf("opw after: length:%d <%s> %0X\n", len(ctx.E.O), ctx.E.O, ctx.E.O)
+
+		fmt.Printf("upw before: length:%d <%s>\n", len(ctx.E.U), ctx.E.U)
+		ctx.E.U, ctx.EncKey, err = crypto.U(ctx)
+		if err != nil {
+			return
+		}
+		if len(ctx.E.U) < 32 {
+			pad := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+			//pad := "12345678901234567890123456789012"
+			ctx.E.U = append(ctx.E.U, pad[:32-len(ctx.E.U)]...)
+		}
+		fmt.Printf("upw after: length:%d <%s> %0X\n", len(ctx.E.U), ctx.E.U, ctx.E.U)
+		fmt.Printf("encKey = %0X\n", ctx.EncKey)
+
+		// update EncryptDict.U+O
+		d, err = ctx.EncryptDict()
+		if err != nil {
+			return
+		}
+
+		d.Update("U", types.PDFHexLiteral(hex.EncodeToString(ctx.E.U)))
+		d.Update("O", types.PDFHexLiteral(hex.EncodeToString(ctx.E.O)))
+
+	}
+
+	// write xrefstream only if aleady using xrefstream.
+	if ctx.Encrypt != nil && ctx.EncKey != nil && !ctx.Read.UsingXRefStreams {
+		ctx.WriteObjectStream = false
+		ctx.WriteXRefStream = false
+	}
+
+	return
+}
+
+func writeXRef(ctx *types.PDFContext) (err error) {
+
+	if ctx.WriteXRefStream {
+		// Write cross reference stream and generate objectstreams.
+		return writeXRefStream(ctx)
+	}
+
+	// Write cross reference table section.
+	return writeXRefTable(ctx)
 }
 
 // PDFFile generates a PDF file for the cross reference table contained in PDFContext.
@@ -850,6 +990,11 @@ func PDFFile(ctx *types.PDFContext) (err error) {
 		err = file.Close()
 
 	}()
+
+	err = handleEncryption(ctx)
+	if err != nil {
+		return
+	}
 
 	// Write a PDF file header stating the version of the used conforming writer.
 	// This has to be the source version or any version higher.
@@ -891,11 +1036,9 @@ func PDFFile(ctx *types.PDFContext) (err error) {
 		}
 	}
 
-	if ctx.Encrypt != nil {
-		err = writeEncryptDict(ctx)
-		if err != nil {
-			return
-		}
+	err = writeEncryptDict(ctx)
+	if err != nil {
+		return
 	}
 
 	// Mark redundant objects as free.
@@ -905,13 +1048,7 @@ func PDFFile(ctx *types.PDFContext) (err error) {
 		return
 	}
 
-	if ctx.WriteXRefStream {
-		// Write cross reference stream and generate objectstreams.
-		err = writeXRefStream(ctx)
-	} else {
-		// Write cross reference table section.
-		err = writeXRefTable(ctx)
-	}
+	err = writeXRef(ctx)
 	if err != nil {
 		return
 	}

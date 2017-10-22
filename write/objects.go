@@ -283,12 +283,16 @@ func writePDFStringLiteralObject(ctx *types.PDFContext, objNumber, genNumber int
 		return nil
 	}
 
-	s1, err := crypto.EncryptString(ctx.AES4Strings, stringLiteral.Value(), objNumber, genNumber, ctx.EncKey)
-	if err != nil {
-		return err
-	}
+	sl := stringLiteral
 
-	sl := types.PDFStringLiteral(*s1)
+	if ctx.EncKey != nil {
+		s1, err := crypto.EncryptString(ctx.AES4Strings, stringLiteral.Value(), objNumber, genNumber, ctx.EncKey)
+		if err != nil {
+			return err
+		}
+
+		sl = types.PDFStringLiteral(*s1)
+	}
 
 	return writePDFObject(ctx, objNumber, genNumber, sl.PDFString())
 }
@@ -304,12 +308,16 @@ func writePDFHexLiteralObject(ctx *types.PDFContext, objNumber, genNumber int, h
 		return nil
 	}
 
-	s1, err := crypto.EncryptString(ctx.AES4Strings, hexLiteral.Value(), objNumber, genNumber, ctx.EncKey)
-	if err != nil {
-		return err
-	}
+	hl := hexLiteral
 
-	hl := types.PDFHexLiteral(*s1)
+	if ctx.EncKey != nil {
+		s1, err := crypto.EncryptString(ctx.AES4Strings, hexLiteral.Value(), objNumber, genNumber, ctx.EncKey)
+		if err != nil {
+			return err
+		}
+
+		hl = types.PDFHexLiteral(*s1)
+	}
 
 	return writePDFObject(ctx, objNumber, genNumber, hl.PDFString())
 }

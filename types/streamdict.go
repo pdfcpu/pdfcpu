@@ -150,7 +150,7 @@ type PDFXRefStreamDict struct {
 }
 
 // NewPDFXRefStreamDict creates a new PDFXRefStreamDict object.
-func NewPDFXRefStreamDict(xRefTable *XRefTable) *PDFXRefStreamDict {
+func NewPDFXRefStreamDict(ctx *PDFContext) *PDFXRefStreamDict {
 
 	streamDict := PDFStreamDict{PDFDict: NewPDFDict()}
 
@@ -158,18 +158,18 @@ func NewPDFXRefStreamDict(xRefTable *XRefTable) *PDFXRefStreamDict {
 	streamDict.Insert("Filter", PDFName("FlateDecode"))
 	streamDict.FilterPipeline = []PDFFilter{PDFFilter{Name: "FlateDecode", DecodeParms: nil}}
 
-	streamDict.Insert("Root", *xRefTable.Root)
+	streamDict.Insert("Root", *ctx.Root)
 
-	if xRefTable.Info != nil {
-		streamDict.Insert("Info", *xRefTable.Info)
+	if ctx.Info != nil {
+		streamDict.Insert("Info", *ctx.Info)
 	}
 
-	if xRefTable.ID != nil {
-		streamDict.Insert("ID", *xRefTable.ID)
+	if ctx.ID != nil {
+		streamDict.Insert("ID", *ctx.ID)
 	}
 
-	if xRefTable.Encrypt != nil {
-		streamDict.Insert("Encrypt", *xRefTable.Encrypt)
+	if ctx.Encrypt != nil && ctx.EncKey != nil {
+		streamDict.Insert("Encrypt", *ctx.Encrypt)
 	}
 
 	return &PDFXRefStreamDict{PDFStreamDict: streamDict}

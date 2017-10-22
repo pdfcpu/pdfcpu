@@ -4,7 +4,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/hhrutter/pdfcpu)](https://goreportcard.com/report/github.com/hhrutter/pdfcpu) 
 [![License: MIT](https://img.shields.io/github/license/mashape/apistatus.svg)](https://opensource.org/licenses/MIT) 
 
-![logo](pdfchip3.png)
+![logo](resources/pdfchip3.png)
   # pdfcpu: a golang pdf processor
 
 Package pdfcpu is a simple PDF processing library written in [Go](http://golang.org).
@@ -25,14 +25,16 @@ I also wanted to have my own swiss army knife for PDFs written entirely in [Go](
 * Optimize (gets rid of redundancies like duplicate fonts, images)
 * Split (split a multi page PDF file into single page PDF files)
 * Merge (a set of PDF files into one consolidated PDF file)
-* Trim (generate a custom version of a PDF file)
 * Extract Images (extract all embedded images of a PDF file into a given dir)
 * Extract Fonts (extract all embedded fonts of a PDF file into a given dir)
 * Extract Pages (extract specific pages into a given dir)
 * Extract Content (extract the PDF-Source into given dir)
+* Trim (generate a custom version of a PDF file)
+* Encrypt
+* Decrypt
 
 ### Demo Screencast
-[![asciicast](demo.png)](https://asciinema.org/a/P5jaAo9kgZXKj2iSA1OqIdLAU)
+[![asciicast](resources/demo.png)](https://asciinema.org/a/P5jaAo9kgZXKj2iSA1OqIdLAU)
 
 ### Installation
 `go get github.com/hhrutter/pdfcpu/cmd/...`
@@ -51,6 +53,10 @@ I also wanted to have my own swiss army knife for PDFs written entirely in [Go](
     pdfcpu extract [-verbose] -mode image|font|content|page [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile outDir
  
     pdfcpu trim [-verbose] -pages pageSelection [-upw userpw] [-opw ownerpw] inFile outFile
+
+    pdfcpu encrypt [-verbose] [-upw userpw] [-opw ownerpw] inFile [outFile]
+
+    pdfcpu decrypt [-verbose] [-upw userpw] [-opw ownerpw] inFile [outFile]
 
  [Please read the documentation ](https://godoc.org/github.com/hhrutter/pdfcpu)
 

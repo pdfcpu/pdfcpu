@@ -8,6 +8,7 @@ package read
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -43,7 +44,7 @@ func Verbose(verbose bool) {
 		out = os.Stdout
 	}
 	logInfoReader = log.New(out, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	//logDebugReader = log.New(out, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
+	logDebugReader = log.New(out, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
 }
 
 // ScanLines is a split function for a Scanner that returns each line of
@@ -1866,7 +1867,7 @@ func dereferenceXRefTable(ctx *types.PDFContext, config *types.Configuration) (e
 	// Mandatory supply userpw to open & display file.
 	// Access may be restricted (Decode access privileges).
 	// Optionally supply ownerpw in order to gain unrestricted access.
-	err = checkForEncryption(ctx, config.UserPW, config.OwnerPW)
+	err = checkForEncryption(ctx)
 	if err != nil {
 		return
 	}
@@ -1895,14 +1896,36 @@ func dereferenceXRefTable(ctx *types.PDFContext, config *types.Configuration) (e
 	return
 }
 
-func checkForEncryption(ctx *types.PDFContext, userpw, ownerpw string) error {
+func checkForEncryption(ctx *types.PDFContext) error {
 
 	indRef := ctx.Encrypt
 	if indRef == nil {
+
+		if ctx.Decrypt == nil {
+			return nil
+		}
+
+		if *ctx.Decrypt {
+			return errors.New("decrypt: this file is not encrypted")
+		}
+
+		if len(ctx.UserPW) == 0 && len(ctx.OwnerPW) == 0 {
+			return errors.New("encrypt: user or owner password missing")
+		}
+
+		_, ok := ((*ctx.ID)[0]).(types.PDFHexLiteral)
+		if !ok {
+			return errors.New("encrypt: ID missing")
+		}
+
 		return nil
 	}
 
-	logDebugReader.Printf("Encryption: %v\n", indRef)
+	if ctx.Decrypt != nil && !*ctx.Decrypt {
+		return errors.New("encrypt: This file is already encrypted")
+	}
+
+	logInfoReader.Printf("Encryption: %v\n", indRef)
 
 	obj, err := dereferencedObject(ctx, indRef.ObjectNumber.Value())
 	if err != nil {
@@ -1923,6 +1946,9 @@ func checkForEncryption(ctx *types.PDFContext, userpw, ownerpw string) error {
 	if enc == nil {
 		return errors.New("This encryption is not supported")
 	}
+	ctx.E = enc
+	fmt.Printf("read: O = %0X\n", enc.O)
+	fmt.Printf("read: U = %0X\n", enc.U)
 
 	if ctx.ID == nil {
 		return errors.New("missing ID entry")
@@ -1937,23 +1963,26 @@ func checkForEncryption(ctx *types.PDFContext, userpw, ownerpw string) error {
 	if err != nil {
 		return err
 	}
+	enc.ID = id
 
-	ok, key, err := crypto.ValidateUserPassword(userpw, enc, id)
+	ok, key, err := crypto.ValidateUserPassword(ctx)
 	if err != nil {
 		return err
 	}
+	fmt.Printf("read encKey: %0X\n", key)
 	if !ok {
 		return errors.New("UserPW Authentication error")
 	}
-	logDebugReader.Println("userpw ok!")
+	logErrorReader.Println("userpw ok!")
 
-	ok, err = crypto.ValidateOwnerPassword(ownerpw, userpw, enc, id)
+	ok, err = crypto.ValidateOwnerPassword(ctx)
 	if err != nil || !ok {
-		if !crypto.HasNeededPermissions(enc) {
-			return errors.New("Insufficient access permissions")
+		if (ctx.Decrypt != nil && *ctx.Decrypt) || !crypto.HasNeededPermissions(enc) {
+			return errors.New("ownerpw not ok and insufficient access permissions")
 		}
+		logErrorReader.Println("ownerpw not ok, but access permissions ok")
 	} else {
-		logDebugReader.Println("ownerpw ok!")
+		logErrorReader.Println("ownerpw ok!")
 	}
 
 	ctx.EncKey = key

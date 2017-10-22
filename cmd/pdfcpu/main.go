@@ -31,9 +31,13 @@ The commands are:
 	optimize	optimize PDF by getting rid of redundant page resources
 	split		split multi-page PDF into several single-page PDFs
 	merge		concatenate 2 or more PDFs
-	extract		extract images, fonts, content, pages out of a PDF
-	trim		create trimmed version of a PDF
-	version		print pdfcpu version
+	extract		extract images, fonts, content or pages
+	trim		create trimmed version
+	encrypt		set password protection		
+	decrypt		remove password protection
+	changeupw	change user password
+	changeopw	change owner password
+	version		print version
 
 	Single-letter Unix-style supported for commands and flags.
 
@@ -62,7 +66,7 @@ verbose ... extensive log output
     upw ... user password
     opw ... owner password
  inFile ... input pdf file
-outFile ... output pdf file (default: inputPdfFile-opt.pdf)`
+outFile ... output pdf file (default: inFile-new.pdf)`
 
 	usageSplit     = "usage: pdfcpu split [-verbose] [-upw userpw] [-opw ownerpw] inFile outDir"
 	usageLongSplit = `Split generates a set of single page PDFs for the input file in outDir.
@@ -125,6 +129,24 @@ n serves as an alternative for !, since ! needs to be escaped with single quotes
 Valid pageSelections e.g. -3,5,7- or 4-7,!6 or 1-,!5
 
 A missing pageSelection means all pages are selected for generation.`
+
+	usageEncrypt     = "usage: pdfcpu encrypt [-verbose] [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageLongEncrypt = `Encrypt sets password protection based on user and owner password.
+
+verbose ... extensive log output
+    upw ... user password
+    opw ... owner password
+ inFile ... input pdf file
+outFile ... output pdf file (default: inFile-new.pdf)`
+
+	usageDecrypt     = "usage: pdfcpu decrypt [-verbose] [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageLongDecrypt = `Decrypt removes the password protection.
+
+verbose ... extensive log output
+    upw ... user password
+    opw ... owner password
+ inFile ... input pdf file
+outFile ... output pdf file (default: inFile-new.pdf)`
 
 	usageVersion     = "usage: pdfcpu version"
 	usageLongVersion = "Version prints the pdfcpu version"
@@ -208,6 +230,12 @@ func help() {
 
 	case "trim":
 		fmt.Printf("%s\n\n%s\n\n%s\n", usageTrim, usageLongTrim, usagePageSelection)
+
+	case "encrypt":
+		fmt.Printf("%s\n\n%s\n", usageEncrypt, usageLongEncrypt)
+
+	case "decrypt":
+		fmt.Printf("%s\n\n%s\n", usageDecrypt, usageLongDecrypt)
 
 	case "version":
 		fmt.Printf("%s\n\n%s\n", usageVersion, usageLongVersion)
@@ -395,6 +423,77 @@ func main() {
 		}
 
 		cmd = pdfcpu.TrimCommand(filenameIn, filenameOut, pages, config)
+
+	case "decrypt", "d", "dec":
+
+		d := true
+		config.Decrypt = &d
+
+		if len(flag.Args()) == 0 || len(flag.Args()) > 2 || pageSelection != "" {
+			fmt.Printf("%s\n\n", usageDecrypt)
+			return
+		}
+
+		filenameIn := flag.Arg(0)
+		ensurePdfExtension(filenameIn)
+
+		filenameOut := defaultFilenameOut(filenameIn)
+		if len(flag.Args()) == 2 {
+			filenameOut = flag.Arg(1)
+			ensurePdfExtension(filenameOut)
+		}
+
+		// Always write using 0x0A end of line sequence.
+		cmd = pdfcpu.OptimizeCommand(filenameIn, filenameOut, config)
+
+	case "encrypt", "enc":
+
+		d := false
+		config.Decrypt = &d
+
+		if len(flag.Args()) == 0 || len(flag.Args()) > 2 || pageSelection != "" {
+			fmt.Printf("%s\n\n", usageEncrypt)
+			return
+		}
+
+		filenameIn := flag.Arg(0)
+		ensurePdfExtension(filenameIn)
+
+		filenameOut := defaultFilenameOut(filenameIn)
+		if len(flag.Args()) == 2 {
+			filenameOut = flag.Arg(1)
+			ensurePdfExtension(filenameOut)
+		}
+
+		cmd = pdfcpu.OptimizeCommand(filenameIn, filenameOut, config)
+
+	case "changeupw":
+		if len(flag.Args()) != 3 {
+			fmt.Println("changeupw needs 3 args")
+			return
+		}
+		config.UserPW = flag.Arg(1)
+		s := flag.Arg(2)
+		config.UserPWNew = &s
+		fmt.Printf("changeupw: old=%s new=%s\n", config.UserPW, *config.UserPWNew)
+
+		filenameIn := flag.Arg(0)
+		ensurePdfExtension(filenameIn)
+		cmd = pdfcpu.OptimizeCommand(filenameIn, defaultFilenameOut(filenameIn), config)
+
+	case "changeopw":
+		if len(flag.Args()) != 3 {
+			fmt.Println("changeopw needs 3 args")
+			return
+		}
+		config.OwnerPW = flag.Arg(1)
+		s := flag.Arg(2)
+		config.OwnerPWNew = &s
+		fmt.Printf("changeopw: old=%s new=%s\n", config.UserPW, *config.OwnerPWNew)
+
+		filenameIn := flag.Arg(0)
+		ensurePdfExtension(filenameIn)
+		cmd = pdfcpu.OptimizeCommand(filenameIn, defaultFilenameOut(filenameIn), config)
 
 	case "version":
 

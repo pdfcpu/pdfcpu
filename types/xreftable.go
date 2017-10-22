@@ -33,6 +33,14 @@ func NewXRefTableEntryGen0() *XRefTableEntry {
 	return &XRefTableEntry{Generation: &zero}
 }
 
+// Enc wraps around all defined encryption attributes.
+type Enc struct {
+	O, U       []byte
+	L, P, R, V int
+	Emd        bool // encrypt meta data
+	ID         []byte
+}
+
 // XRefTable represents a PDF cross reference table plus stats for a PDF file.
 type XRefTable struct {
 	Table               map[int]*XRefTableEntry
@@ -40,7 +48,8 @@ type XRefTable struct {
 	PageCount           int             // Number of pages.
 	Root                *PDFIndirectRef // Catalog (reference to root object).
 	Encrypt             *PDFIndirectRef // Encrypt dict.
-	EncKey              []byte          // Encrypt key.
+	E                   *Enc
+	EncKey              []byte // Encrypt key.
 	AES4Strings         bool
 	AES4Streams         bool
 	AES4EmbeddedStreams bool
@@ -717,6 +726,22 @@ func (xRefTable *XRefTable) Catalog() (*PDFDict, error) {
 	pdfDict, ok := pdfObject.(PDFDict)
 	if !ok {
 		return nil, errors.New("Catalog: corrupt root catalog")
+	}
+
+	return &pdfDict, nil
+}
+
+// EncryptDict returns a pointer to the root object / catalog.
+func (xRefTable *XRefTable) EncryptDict() (*PDFDict, error) {
+
+	pdfObject, err := xRefTable.object(xRefTable.Encrypt)
+	if err != nil {
+		return nil, err
+	}
+
+	pdfDict, ok := pdfObject.(PDFDict)
+	if !ok {
+		return nil, errors.New("EncryptDict: corrupt encrypt dict")
 	}
 
 	return &pdfDict, nil

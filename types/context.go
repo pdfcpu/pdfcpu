@@ -91,6 +91,10 @@ func (ctx *PDFContext) String() string {
 		logStr = append(logStr, fmt.Sprintf("                ID object: %s\n", *ctx.ID))
 	}
 
+	if ctx.Encrypt != nil {
+		logStr = append(logStr, fmt.Sprintf("           Encrypt object: %s\n", *ctx.Encrypt))
+	}
+
 	if len(ctx.AdditionalStreams) > 0 {
 
 		var objectNumbers []string

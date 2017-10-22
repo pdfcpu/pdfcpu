@@ -42,9 +42,16 @@ type Configuration struct {
 	// A CSV-filename holding the statistics.
 	StatsFileName string
 
-	UserPW string
+	// Supplied user password
+	UserPW    string
+	UserPWNew *string
 
-	OwnerPW string
+	// Supplied owner password
+	OwnerPW    string
+	OwnerPWNew *string
+
+	// Encrypt or decrypt or leave encryption state as is if nil.
+	Decrypt *bool
 }
 
 // NewDefaultConfiguration returns the default pdfcpu configuration.

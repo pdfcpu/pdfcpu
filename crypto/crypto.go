@@ -1,3 +1,4 @@
+// Package crypto provides PDF encryption plumbing.
 package crypto
 
 import (
@@ -7,6 +8,7 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"crypto/rc4"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -40,18 +42,8 @@ var pad = []byte{
 	0x2E, 0x2E, 0x00, 0xB6, 0xD0, 0x68, 0x3E, 0x80, 0x2F, 0x0C, 0xA9, 0xFE, 0x64, 0x53, 0x69, 0x7A,
 }
 
-// Encrypt wraps around all defined encryption attributes.
-type Encrypt struct {
-	o, u       []byte
-	l, p, r, v int
-	emd        bool
-}
+func encKey(userpw string, e *types.Enc) (key []byte) {
 
-// ValidateUserPassword validates userpw.
-func ValidateUserPassword(userpw string, e *Encrypt, id []byte) (ok bool, key []byte, err error) {
-
-	// Alg.4/5 p63
-	// 4a/5a create enryption key using Alg.2 p61
 	// 2a
 	pw := []byte(userpw)
 	if len(pw) >= 32 {
@@ -60,23 +52,22 @@ func ValidateUserPassword(userpw string, e *Encrypt, id []byte) (ok bool, key []
 		pw = append(pw, pad[:32-len(pw)]...)
 	}
 
-	// Create encryption key Algor 2
 	// 2b
 	h := md5.New()
 	h.Write(pw)
 
 	// 2c
-	h.Write(e.o)
+	h.Write(e.O)
 
 	// 2d
-	var q = uint32(e.p)
+	var q = uint32(e.P)
 	h.Write([]byte{byte(q), byte(q >> 8), byte(q >> 16), byte(q >> 24)})
 
 	// 2e
-	h.Write(id)
+	h.Write(e.ID)
 
 	// 2f
-	if e.r == 4 && !e.emd {
+	if e.R == 4 && !e.Emd {
 		h.Write([]byte{0xff, 0xff, 0xff, 0xff})
 	}
 
@@ -84,29 +75,141 @@ func ValidateUserPassword(userpw string, e *Encrypt, id []byte) (ok bool, key []
 	key = h.Sum(nil)
 
 	// 2h
-	if e.r >= 3 {
+	if e.R >= 3 {
 		for i := 0; i < 50; i++ {
 			h.Reset()
-			h.Write(key[:e.l/8])
+			h.Write(key[:e.L/8])
 			key = h.Sum(nil)
 		}
 	}
 
 	// 2i
-	if e.r >= 3 {
-		key = key[:e.l/8]
+	if e.R >= 3 {
+		key = key[:e.L/8]
 	} else {
 		key = key[:5]
 	}
 
-	c, err := rc4.NewCipher(key)
+	return
+}
+
+// ValidateUserPassword validates userpw.
+func ValidateUserPassword(ctx *types.PDFContext) (ok bool, key []byte, err error) {
+
+	// Alg.4/5 p63
+	// 4a/5a create enryption key using Alg.2 p61
+	fmt.Printf("validateUserPassword: ctx.E = \n%v\n", ctx.E)
+
+	u, key, err := U(ctx)
 	if err != nil {
-		return false, nil, err
+		return
 	}
 
-	var u []byte
+	return bytes.HasPrefix(ctx.E.U, u), key, nil
+}
 
-	if e.r == 2 {
+func key(ownerpw, userpw string, r, l int) (key []byte) {
+
+	// 3a
+	pw := []byte(ownerpw)
+	if len(pw) == 0 {
+		pw = []byte(userpw)
+	}
+	if len(pw) >= 32 {
+		pw = pw[:32]
+	} else {
+		pw = append(pw, pad[:32-len(pw)]...)
+	}
+
+	// 3b
+	h := md5.New()
+	h.Write(pw)
+	key = h.Sum(nil)
+
+	// 3c
+	if r >= 3 {
+		for i := 0; i < 50; i++ {
+			h.Reset()
+			h.Write(key)
+			key = h.Sum(nil)
+		}
+	}
+
+	// 3d
+	if r >= 3 {
+		key = key[:l/8]
+	} else {
+		key = key[:5]
+	}
+
+	return
+}
+
+// O calculates the owner password digest.
+func O(ctx *types.PDFContext) ([]byte, error) {
+
+	ownerpw := ctx.OwnerPW
+	userpw := ctx.UserPW
+
+	fmt.Printf("O: opw=<%s> upw=<%s>\n", ownerpw, userpw)
+
+	e := ctx.E
+
+	// 3a-d
+	key := key(ownerpw, userpw, e.R, e.L)
+
+	// 3e
+	o := []byte(userpw)
+	if len(o) >= 32 {
+		o = o[:32]
+	} else {
+		o = append(o, pad[:32-len(o)]...)
+	}
+
+	// 3f
+	c, err := rc4.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	c.XORKeyStream(o, o)
+
+	// 3g
+	if e.R >= 3 {
+		for i := 1; i <= 19; i++ {
+			keynew := make([]byte, len(key))
+			copy(keynew, key)
+
+			for j := range keynew {
+				keynew[j] ^= byte(i)
+			}
+
+			c, err := rc4.NewCipher(keynew)
+			if err != nil {
+				return nil, err
+			}
+			c.XORKeyStream(o, o)
+		}
+	}
+
+	return o, nil
+}
+
+// U calculates the user password digest.
+func U(ctx *types.PDFContext) (u []byte, key []byte, err error) {
+
+	userpw := ctx.UserPW
+	fmt.Printf("U userpw=%s\n", userpw)
+
+	e := ctx.E
+
+	key = encKey(userpw, e)
+
+	c, err := rc4.NewCipher(key)
+	if err != nil {
+		return
+	}
+
+	if e.R == 2 {
 		// 4b
 		u = make([]byte, 32)
 		copy(u, pad)
@@ -114,11 +217,12 @@ func ValidateUserPassword(userpw string, e *Encrypt, id []byte) (ok bool, key []
 	} else {
 
 		// 5b
+		h := md5.New()
 		h.Reset()
 		h.Write(pad)
 
 		// 5c
-		h.Write(id)
+		h.Write(e.ID)
 		u = h.Sum(nil)
 
 		// 5ds
@@ -133,58 +237,35 @@ func ValidateUserPassword(userpw string, e *Encrypt, id []byte) (ok bool, key []
 				keynew[j] ^= byte(i)
 			}
 
-			c, err := rc4.NewCipher(keynew)
+			c, err = rc4.NewCipher(keynew)
 			if err != nil {
-				return false, nil, err
+				return
 			}
 			c.XORKeyStream(u, u)
 		}
 	}
 
-	return bytes.HasPrefix(e.u, u), key, nil
+	return u, key, nil
 }
 
 // ValidateOwnerPassword validates ownerpw.
-func ValidateOwnerPassword(ownerpw, userpw string, e *Encrypt, id []byte) (ok bool, err error) {
+func ValidateOwnerPassword(ctx *types.PDFContext) (ok bool, err error) {
+
+	ownerpw := ctx.OwnerPW
+	userpw := ctx.UserPW
+
+	fmt.Printf("ValidateOwnerPassword: opw=%s upw=%s\n", ownerpw, userpw)
+
+	e := ctx.E
 
 	// 7a: Alg.3 p62 a-d
-	pw := []byte(ownerpw)
-	if len(pw) == 0 {
-		pw = []byte(userpw)
-	}
-	if len(pw) >= 32 {
-		pw = pw[:32]
-	} else {
-		pw = append(pw, pad[:32-len(pw)]...)
-	}
-
-	// 3b
-	h := md5.New()
-	h.Write(pw)
-	key := h.Sum(nil)
-
-	// 3c
-	if e.r >= 3 {
-		for i := 0; i < 50; i++ {
-			h.Reset()
-			h.Write(key)
-			key = h.Sum(nil)
-		}
-	}
-
-	// 3d
-	if e.r >= 3 {
-		key = key[:e.l/8]
-	} else {
-		key = key[:5]
-	}
+	key := key(ownerpw, userpw, e.R, e.L)
 
 	// 7b
+	upw := make([]byte, len(e.O))
+	copy(upw, e.O)
 
-	upw := make([]byte, len(e.o))
-	copy(upw, e.o)
-
-	switch e.r {
+	switch e.R {
 
 	case 2:
 		c, err := rc4.NewCipher(key)
@@ -212,15 +293,18 @@ func ValidateOwnerPassword(ownerpw, userpw string, e *Encrypt, id []byte) (ok bo
 		}
 	}
 
-	ok, _, err = ValidateUserPassword(string(upw), e, id)
+	upws := ctx.UserPW
+	ctx.UserPW = string(upw)
+	ok, _, err = ValidateUserPassword(ctx)
 	if err != nil {
 		return false, err
 	}
+	ctx.UserPW = upws
 
 	return ok, nil
 }
 
-// SupportedCFEntry returns true if all entries found entries are suppoerted.
+// SupportedCFEntry returns true if all entries found entries are supported.
 func SupportedCFEntry(d *types.PDFDict) (bool, bool) {
 
 	cfm := d.NameEntry("CFM")
@@ -244,12 +328,12 @@ func SupportedCFEntry(d *types.PDFDict) (bool, bool) {
 	return cfm != nil && *cfm == "AESV2", true
 }
 
-func printP(enc *Encrypt) {
+func printP(enc *types.Enc) {
 
-	p := enc.p
+	p := enc.P
 
 	bits := "4,5"
-	if enc.r >= 3 {
+	if enc.R >= 3 {
 		bits = "10,11"
 	}
 
@@ -266,24 +350,25 @@ func printP(enc *Encrypt) {
 }
 
 // HasNeededPermissions returns true if permissions for pdfcpu processing are present.
-func HasNeededPermissions(enc *Encrypt) bool {
+func HasNeededPermissions(enc *types.Enc) bool {
 
+	//return true
 	// see 7.6.3.2
 
 	printP(enc)
 
-	if enc.r >= 3 {
+	if enc.R >= 3 {
 		// needs set bits 10 and 11
-		return enc.p&0x0200 > 0 && enc.p&0x0400 > 0
+		return enc.P&0x0200 > 0 && enc.P&0x0400 > 0
 	}
 
 	// R == 2
 	// needs set bits 4 and 5
-	return enc.p&0x0008 > 0 && enc.p&0x0010 > 0
+	return enc.P&0x0008 > 0 && enc.P&0x0010 > 0
 }
 
 // SupportedEncryption returns true if used encryption is supported by pdfcpu.
-func SupportedEncryption(ctx *types.PDFContext, dict *types.PDFDict) (*Encrypt, error) {
+func SupportedEncryption(ctx *types.PDFContext, dict *types.PDFDict) (*types.Enc, error) {
 
 	var aes, ok bool
 	var err error
@@ -416,7 +501,7 @@ func SupportedEncryption(ctx *types.PDFContext, dict *types.PDFDict) (*Encrypt, 
 		encMeta = *emd
 	}
 
-	return &Encrypt{o, u, length, *p, *r, *v, encMeta}, nil
+	return &types.Enc{O: o, U: u, L: length, P: *p, R: *r, V: *v, Emd: encMeta}, nil
 }
 
 func decryptKey(objNumber, generation int, key []byte, aes bool) []byte {
@@ -456,6 +541,8 @@ func decryptKey(objNumber, generation int, key []byte, aes bool) []byte {
 // EncryptString encrypts s using RC4 or AES.
 func EncryptString(needAES bool, s string, objNr, genNr int, key []byte) (*string, error) {
 
+	logInfoCrypto.Printf("EncryptString begin obj:%d gen:%d key:%X aes:%t\n", objNr, genNr, key, needAES)
+
 	var s1 *string
 	var err error
 	k := decryptKey(objNr, genNr, key, needAES)
@@ -480,6 +567,8 @@ func EncryptString(needAES bool, s string, objNr, genNr int, key []byte) (*strin
 
 // DecryptString decrypts s using RC4 or AES.
 func DecryptString(needAES bool, s string, objNr, genNr int, key []byte) (*string, error) {
+
+	logInfoCrypto.Printf("DecryptString begin obj:%d gen:%d key:%X aes:%t\n", objNr, genNr, key, needAES)
 
 	b, err := types.Unescape(s)
 	if err != nil {
@@ -617,7 +706,7 @@ func DecryptDeepObject(objIn interface{}, objNr, genNr int, key []byte, aes bool
 // EncryptStream encrypts a stream buffer using RC4 or AES.
 func EncryptStream(needAES bool, buf []byte, objNr, genNr int, key []byte) ([]byte, error) {
 
-	logDebugCrypto.Printf("EncryptStream begin obj:%d gen:%d key:%X aes:%t\n", objNr, genNr, key, needAES)
+	logInfoCrypto.Printf("EncryptStream begin obj:%d gen:%d key:%X aes:%t\n", objNr, genNr, key, needAES)
 
 	k := decryptKey(objNr, genNr, key, needAES)
 
@@ -632,7 +721,7 @@ func EncryptStream(needAES bool, buf []byte, objNr, genNr int, key []byte) ([]by
 // DecryptStream decrypts a stream buffer using RC4 or AES.
 func DecryptStream(needAES bool, buf []byte, objNr, genNr int, key []byte) ([]byte, error) {
 
-	logDebugCrypto.Printf("DecryptStream begin obj:%d gen:%d key:%X aes:%t\n", objNr, genNr, key, needAES)
+	logInfoCrypto.Printf("DecryptStream begin obj:%d gen:%d key:%X aes:%t\n", objNr, genNr, key, needAES)
 
 	k := decryptKey(objNr, genNr, key, needAES)
 
