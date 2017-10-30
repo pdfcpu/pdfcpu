@@ -30,8 +30,9 @@ I also wanted to have my own swiss army knife for PDFs written entirely in [Go](
 * Extract Pages (extract specific pages into a given dir)
 * Extract Content (extract the PDF-Source into given dir)
 * Trim (generate a custom version of a PDF file)
-* Encrypt
-* Decrypt
+* Encrypt (sets password protection)
+* Decrypt (removes password protection)
+* Change user/owner password
 
 ### Demo Screencast
 [![asciicast](resources/demo.png)](https://asciinema.org/a/P5jaAo9kgZXKj2iSA1OqIdLAU)
@@ -57,14 +58,19 @@ I also wanted to have my own swiss army knife for PDFs written entirely in [Go](
     pdfcpu encrypt [-verbose] [-upw userpw] [-opw ownerpw] inFile [outFile]
 
     pdfcpu decrypt [-verbose] [-upw userpw] [-opw ownerpw] inFile [outFile]
+	
+    pdfcpu changeupw [-verbose] inFile upwOld upwNew
+
+    pdfcpu changeopw [-verbose] inFile opwOld opwNew
 
  [Please read the documentation ](https://godoc.org/github.com/hhrutter/pdfcpu)
 
 
 ### Status
-Version: 0.0.7
+Version: 0.1
 
-* Encryption support is available for the PDF standard security handler.
+* Encryption support including changing passwords is available for the PDF standard security handler.
+* "Encrypt" uses AES with a 128 bit encryption key.
 * The extraction code for font files and images is experimental and serves as proof of concept only.
 
 

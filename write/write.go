@@ -19,7 +19,7 @@ import (
 )
 
 // PdfcpuVersion is the current version.
-const PdfcpuVersion = "0.0.7"
+const PdfcpuVersion = "0.1"
 
 var (
 	logDebugWriter *log.Logger
@@ -838,10 +838,16 @@ func handleEncryption(ctx *types.PDFContext) (err error) {
 	var d *types.PDFDict
 
 	if ctx.Decrypt != nil {
+
+		// Flag is set for encryption or decryption.
+
 		if *ctx.Decrypt {
+
 			// Remove encryption.
 			ctx.EncKey = nil
+
 		} else {
+
 			// Encrypt this document.
 
 			dict := types.NewEncryptDict()
@@ -860,14 +866,14 @@ func handleEncryption(ctx *types.PDFContext) (err error) {
 
 			ctx.E.ID = id
 
-			fmt.Printf("opw before: length:%d <%s>\n", len(ctx.E.O), ctx.E.O)
+			//fmt.Printf("opw before: length:%d <%s>\n", len(ctx.E.O), ctx.E.O)
 			ctx.E.O, err = crypto.O(ctx)
 			if err != nil {
 				return
 			}
-			fmt.Printf("opw after: length:%d <%s> %0X\n", len(ctx.E.O), ctx.E.O, ctx.E.O)
+			//fmt.Printf("opw after: length:%d <%s> %0X\n", len(ctx.E.O), ctx.E.O, ctx.E.O)
 
-			fmt.Printf("upw before: length:%d <%s>\n", len(ctx.E.U), ctx.E.U)
+			//fmt.Printf("upw before: length:%d <%s>\n", len(ctx.E.U), ctx.E.U)
 			ctx.E.U, ctx.EncKey, err = crypto.U(ctx)
 			if err != nil {
 				return
@@ -878,8 +884,8 @@ func handleEncryption(ctx *types.PDFContext) (err error) {
 				//pad := "12345678901234567890123456789012"
 				ctx.E.U = append(ctx.E.U, pad[:32-len(ctx.E.U)]...)
 			}
-			fmt.Printf("upw after: length:%d <%s> %0X\n", len(ctx.E.U), ctx.E.U, ctx.E.U)
-			fmt.Printf("encKey = %0X\n", ctx.EncKey)
+			//fmt.Printf("upw after: length:%d <%s> %0X\n", len(ctx.E.U), ctx.E.U, ctx.E.U)
+			//fmt.Printf("encKey = %0X\n", ctx.EncKey)
 
 			dict.Update("U", types.PDFHexLiteral(hex.EncodeToString(ctx.E.U)))
 			dict.Update("O", types.PDFHexLiteral(hex.EncodeToString(ctx.E.O)))
@@ -900,24 +906,26 @@ func handleEncryption(ctx *types.PDFContext) (err error) {
 		}
 	} else if ctx.UserPWNew != nil || ctx.OwnerPWNew != nil {
 
+		// Change user or owner password.
+
 		if ctx.UserPWNew != nil {
-			fmt.Printf("change upw from <%s> to <%s>\n", ctx.UserPW, *ctx.UserPWNew)
+			//fmt.Printf("change upw from <%s> to <%s>\n", ctx.UserPW, *ctx.UserPWNew)
 			ctx.UserPW = *ctx.UserPWNew
 		}
 
 		if ctx.OwnerPWNew != nil {
-			fmt.Printf("change opw from <%s> to <%s>\n", ctx.OwnerPW, *ctx.OwnerPWNew)
+			//fmt.Printf("change opw from <%s> to <%s>\n", ctx.OwnerPW, *ctx.OwnerPWNew)
 			ctx.OwnerPW = *ctx.OwnerPWNew
 		}
 
-		fmt.Printf("opw before: length:%d <%s>\n", len(ctx.E.O), ctx.E.O)
+		//fmt.Printf("opw before: length:%d <%s>\n", len(ctx.E.O), ctx.E.O)
 		ctx.E.O, err = crypto.O(ctx)
 		if err != nil {
 			return
 		}
-		fmt.Printf("opw after: length:%d <%s> %0X\n", len(ctx.E.O), ctx.E.O, ctx.E.O)
+		//fmt.Printf("opw after: length:%d <%s> %0X\n", len(ctx.E.O), ctx.E.O, ctx.E.O)
 
-		fmt.Printf("upw before: length:%d <%s>\n", len(ctx.E.U), ctx.E.U)
+		//fmt.Printf("upw before: length:%d <%s>\n", len(ctx.E.U), ctx.E.U)
 		ctx.E.U, ctx.EncKey, err = crypto.U(ctx)
 		if err != nil {
 			return
@@ -928,8 +936,8 @@ func handleEncryption(ctx *types.PDFContext) (err error) {
 			//pad := "12345678901234567890123456789012"
 			ctx.E.U = append(ctx.E.U, pad[:32-len(ctx.E.U)]...)
 		}
-		fmt.Printf("upw after: length:%d <%s> %0X\n", len(ctx.E.U), ctx.E.U, ctx.E.U)
-		fmt.Printf("encKey = %0X\n", ctx.EncKey)
+		//fmt.Printf("upw after: length:%d <%s> %0X\n", len(ctx.E.U), ctx.E.U, ctx.E.U)
+		//fmt.Printf("encKey = %0X\n", ctx.EncKey)
 
 		// update EncryptDict.U+O
 		d, err = ctx.EncryptDict()

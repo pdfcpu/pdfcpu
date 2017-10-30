@@ -131,22 +131,38 @@ Valid pageSelections e.g. -3,5,7- or 4-7,!6 or 1-,!5
 A missing pageSelection means all pages are selected for generation.`
 
 	usageEncrypt     = "usage: pdfcpu encrypt [-verbose] [-upw userpw] [-opw ownerpw] inFile [outFile]"
-	usageLongEncrypt = `Encrypt sets password protection based on user and owner password.
+	usageLongEncrypt = `Encrypt sets a password protection based on user and owner password.
 
 verbose ... extensive log output
     upw ... user password
     opw ... owner password
  inFile ... input pdf file
-outFile ... output pdf file (default: inFile-new.pdf)`
+outFile ... output pdf file`
 
 	usageDecrypt     = "usage: pdfcpu decrypt [-verbose] [-upw userpw] [-opw ownerpw] inFile [outFile]"
-	usageLongDecrypt = `Decrypt removes the password protection.
+	usageLongDecrypt = `Decrypt removes a password protection.
 
 verbose ... extensive log output
     upw ... user password
     opw ... owner password
  inFile ... input pdf file
-outFile ... output pdf file (default: inFile-new.pdf)`
+outFile ... output pdf file`
+
+	usageChangeUserPW     = "usage: pdfcpu changeupw [-verbose] inFile upwOld upwNew"
+	usageLongChangeUserPW = `Changeupw changes the user password.
+	
+verbose ... extensive log output
+ inFile ... input pdf file
+ upwOld ... old user password
+ upwNew ... new user password`
+
+	usageChangeOwnerPW     = "usage: pdfcpu changeopw [-verbose] inFile opwOld opwNew"
+	usageLongChangeOwnerPW = `Changeopw changes the owner password.
+	
+verbose ... extensive log output
+ inFile ... input pdf file
+ opwOld ... old owner password
+ opwNew ... new owner password`
 
 	usageVersion     = "usage: pdfcpu version"
 	usageLongVersion = "Version prints the pdfcpu version"
@@ -236,6 +252,12 @@ func help() {
 
 	case "decrypt":
 		fmt.Printf("%s\n\n%s\n", usageDecrypt, usageLongDecrypt)
+
+	case "changeupw":
+		fmt.Printf("%s\n\n%s\n", usageChangeUserPW, usageLongChangeUserPW)
+
+	case "changeopw":
+		fmt.Printf("%s\n\n%s\n", usageChangeOwnerPW, usageLongChangeOwnerPW)
 
 	case "version":
 		fmt.Printf("%s\n\n%s\n", usageVersion, usageLongVersion)
@@ -437,7 +459,7 @@ func main() {
 		filenameIn := flag.Arg(0)
 		ensurePdfExtension(filenameIn)
 
-		filenameOut := defaultFilenameOut(filenameIn)
+		filenameOut := filenameIn
 		if len(flag.Args()) == 2 {
 			filenameOut = flag.Arg(1)
 			ensurePdfExtension(filenameOut)
@@ -459,7 +481,7 @@ func main() {
 		filenameIn := flag.Arg(0)
 		ensurePdfExtension(filenameIn)
 
-		filenameOut := defaultFilenameOut(filenameIn)
+		filenameOut := filenameIn
 		if len(flag.Args()) == 2 {
 			filenameOut = flag.Arg(1)
 			ensurePdfExtension(filenameOut)
@@ -469,31 +491,27 @@ func main() {
 
 	case "changeupw":
 		if len(flag.Args()) != 3 {
-			fmt.Println("changeupw needs 3 args")
+			fmt.Printf("%s\n\n", usageChangeUserPW)
 			return
 		}
 		config.UserPW = flag.Arg(1)
 		s := flag.Arg(2)
 		config.UserPWNew = &s
-		fmt.Printf("changeupw: old=%s new=%s\n", config.UserPW, *config.UserPWNew)
-
 		filenameIn := flag.Arg(0)
 		ensurePdfExtension(filenameIn)
-		cmd = pdfcpu.OptimizeCommand(filenameIn, defaultFilenameOut(filenameIn), config)
+		cmd = pdfcpu.OptimizeCommand(filenameIn, filenameIn, config)
 
 	case "changeopw":
 		if len(flag.Args()) != 3 {
-			fmt.Println("changeopw needs 3 args")
+			fmt.Printf("%s\n\n", usageChangeOwnerPW)
 			return
 		}
 		config.OwnerPW = flag.Arg(1)
 		s := flag.Arg(2)
 		config.OwnerPWNew = &s
-		fmt.Printf("changeopw: old=%s new=%s\n", config.UserPW, *config.OwnerPWNew)
-
 		filenameIn := flag.Arg(0)
 		ensurePdfExtension(filenameIn)
-		cmd = pdfcpu.OptimizeCommand(filenameIn, defaultFilenameOut(filenameIn), config)
+		cmd = pdfcpu.OptimizeCommand(filenameIn, filenameIn, config)
 
 	case "version":
 

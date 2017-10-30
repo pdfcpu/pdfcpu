@@ -8,7 +8,6 @@ package read
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -44,7 +43,7 @@ func Verbose(verbose bool) {
 		out = os.Stdout
 	}
 	logInfoReader = log.New(out, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logDebugReader = log.New(out, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
+	//logDebugReader = log.New(out, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
 }
 
 // ScanLines is a split function for a Scanner that returns each line of
@@ -1947,8 +1946,8 @@ func checkForEncryption(ctx *types.PDFContext) error {
 		return errors.New("This encryption is not supported")
 	}
 	ctx.E = enc
-	fmt.Printf("read: O = %0X\n", enc.O)
-	fmt.Printf("read: U = %0X\n", enc.U)
+	//fmt.Printf("read: O = %0X\n", enc.O)
+	//fmt.Printf("read: U = %0X\n", enc.U)
 
 	if ctx.ID == nil {
 		return errors.New("missing ID entry")
@@ -1969,20 +1968,20 @@ func checkForEncryption(ctx *types.PDFContext) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("read encKey: %0X\n", key)
+	//fmt.Printf("read encKey: %0X\n", key)
 	if !ok {
 		return errors.New("UserPW Authentication error")
 	}
-	logErrorReader.Println("userpw ok!")
+	//logErrorReader.Println("userpw ok!")
 
 	ok, err = crypto.ValidateOwnerPassword(ctx)
 	if err != nil || !ok {
 		if (ctx.Decrypt != nil && *ctx.Decrypt) || !crypto.HasNeededPermissions(enc) {
 			return errors.New("ownerpw not ok and insufficient access permissions")
 		}
-		logErrorReader.Println("ownerpw not ok, but access permissions ok")
+		//logErrorReader.Println("ownerpw not ok, but access permissions ok")
 	} else {
-		logErrorReader.Println("ownerpw ok!")
+		//logErrorReader.Println("ownerpw ok!")
 	}
 
 	ctx.EncKey = key

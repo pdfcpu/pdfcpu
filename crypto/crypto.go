@@ -8,7 +8,6 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"crypto/rc4"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -98,7 +97,8 @@ func ValidateUserPassword(ctx *types.PDFContext) (ok bool, key []byte, err error
 
 	// Alg.4/5 p63
 	// 4a/5a create enryption key using Alg.2 p61
-	fmt.Printf("validateUserPassword: ctx.E = \n%v\n", ctx.E)
+
+	//fmt.Printf("validateUserPassword: ctx.E = \n%v\n", ctx.E)
 
 	u, key, err := U(ctx)
 	if err != nil {
@@ -151,7 +151,7 @@ func O(ctx *types.PDFContext) ([]byte, error) {
 	ownerpw := ctx.OwnerPW
 	userpw := ctx.UserPW
 
-	fmt.Printf("O: opw=<%s> upw=<%s>\n", ownerpw, userpw)
+	//fmt.Printf("O: opw=<%s> upw=<%s>\n", ownerpw, userpw)
 
 	e := ctx.E
 
@@ -198,7 +198,7 @@ func O(ctx *types.PDFContext) ([]byte, error) {
 func U(ctx *types.PDFContext) (u []byte, key []byte, err error) {
 
 	userpw := ctx.UserPW
-	fmt.Printf("U userpw=%s\n", userpw)
+	// fmt.Printf("U userpw=%s\n", userpw)
 
 	e := ctx.E
 
@@ -254,7 +254,7 @@ func ValidateOwnerPassword(ctx *types.PDFContext) (ok bool, err error) {
 	ownerpw := ctx.OwnerPW
 	userpw := ctx.UserPW
 
-	fmt.Printf("ValidateOwnerPassword: opw=%s upw=%s\n", ownerpw, userpw)
+	//fmt.Printf("ValidateOwnerPassword: opw=%s upw=%s\n", ownerpw, userpw)
 
 	e := ctx.E
 
@@ -304,7 +304,7 @@ func ValidateOwnerPassword(ctx *types.PDFContext) (ok bool, err error) {
 	return ok, nil
 }
 
-// SupportedCFEntry returns true if all entries found entries are supported.
+// SupportedCFEntry returns true if all entries found are supported.
 func SupportedCFEntry(d *types.PDFDict) (bool, bool) {
 
 	cfm := d.NameEntry("CFM")
