@@ -213,7 +213,7 @@ func byteForOctalString(octalBytes []byte) (b byte) {
 		j++
 	}
 
-	logDebugParse.Printf("getByteForOctalString: returning x%x for %v\n", b, octalBytes)
+	logDebugParse.Printf("byteForOctalString: returning x%x for %v\n", b, octalBytes)
 
 	return
 }

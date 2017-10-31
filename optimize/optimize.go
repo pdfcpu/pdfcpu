@@ -101,7 +101,7 @@ func ResourcesDictForPageDict(xRefTable *types.XRefTable, pageDict *types.PDFDic
 
 	obj, found := pageDict.Find("Resources")
 	if !found {
-		logInfoOptimize.Printf("getResourcesDict end: No resources dict for page object %d, may be inheritated\n", pageObjNumber)
+		logInfoOptimize.Printf("ResourcesDictForPageDict end: No resources dict for page object %d, may be inheritated\n", pageObjNumber)
 		return
 	}
 
@@ -706,7 +706,7 @@ func optimizeFontAndImages(ctx *types.PDFContext) (err error) {
 // Return stream length for font file object.
 func streamLengthFontFile(xRefTable *types.XRefTable, indirectRef *types.PDFIndirectRef) (*int64, error) {
 
-	logDebugOptimize.Println("getStreamLengthFontFile begin")
+	logDebugOptimize.Println("streamLengthFontFile begin")
 
 	objectNumber := indirectRef.ObjectNumber
 
@@ -716,10 +716,10 @@ func streamLengthFontFile(xRefTable *types.XRefTable, indirectRef *types.PDFIndi
 	}
 
 	if streamDict == nil || (*streamDict).StreamLength == nil {
-		return nil, errors.Errorf("getStreamLengthFontFile: fontFile Streamlength is nil for object %d\n", objectNumber)
+		return nil, errors.Errorf("streamLengthFontFile: fontFile Streamlength is nil for object %d\n", objectNumber)
 	}
 
-	logDebugOptimize.Println("getStreamLengthFontFile end")
+	logDebugOptimize.Println("streamLengthFontFile end")
 
 	return (*streamDict).StreamLength, nil
 }
@@ -772,7 +772,7 @@ func calcEmbeddedFontsMemoryUsage(ctx *types.PDFContext) error {
 // FontDescriptorFontFileIndirectObjectRef returns the indirect object for the font file for given font descriptor.
 func FontDescriptorFontFileIndirectObjectRef(fontDescriptorDict *types.PDFDict) *types.PDFIndirectRef {
 
-	logDebugOptimize.Println("getFontDescriptorFontFileIndirectObjectRef begin")
+	logDebugOptimize.Println("FontDescriptorFontFileIndirectObjectRef begin")
 
 	indirectRef := fontDescriptorDict.IndirectRefEntry("FontFile")
 
@@ -785,10 +785,10 @@ func FontDescriptorFontFileIndirectObjectRef(fontDescriptorDict *types.PDFDict) 
 	}
 
 	if indirectRef == nil {
-		//logInfoReader.Printf("getFontDescriptorFontFileLength: FontDescriptor dict without fontFile: \n%s\n", fontDescriptorDict)
+		//logInfoReader.Printf("FontDescriptorFontFileLength: FontDescriptor dict without fontFile: \n%s\n", fontDescriptorDict)
 	}
 
-	logDebugOptimize.Println("getFontDescriptorFontFileIndirectObjectRef end")
+	logDebugOptimize.Println("FontDescriptorFontFileIndirectObjectRef end")
 
 	return indirectRef
 }
@@ -796,7 +796,7 @@ func FontDescriptorFontFileIndirectObjectRef(fontDescriptorDict *types.PDFDict) 
 // FontDescriptor gets the font descriptor for this font.
 func FontDescriptor(xRefTable *types.XRefTable, fontDict *types.PDFDict, objectNumber int) (*types.PDFDict, error) {
 
-	logDebugOptimize.Println("getFontDescriptor begin")
+	logDebugOptimize.Println("FontDescriptor begin")
 
 	obj, ok := fontDict.Find("FontDescriptor")
 	if ok {
@@ -809,11 +809,11 @@ func FontDescriptor(xRefTable *types.XRefTable, fontDict *types.PDFDict, objectN
 		}
 
 		if dict == nil {
-			return nil, errors.Errorf("getFontDescriptor: FontDescriptor is null for font object %d\n", objectNumber)
+			return nil, errors.Errorf("FontDescriptor: FontDescriptor is null for font object %d\n", objectNumber)
 		}
 
 		if dict.Type() != nil && *dict.Type() != "FontDescriptor" {
-			return nil, errors.Errorf("getFontDescriptor: FontDescriptor dict incorrect dict type for font object %d\n", objectNumber)
+			return nil, errors.Errorf("FontDescriptor: FontDescriptor dict incorrect dict type for font object %d\n", objectNumber)
 		}
 
 		return dict, nil
@@ -823,7 +823,7 @@ func FontDescriptor(xRefTable *types.XRefTable, fontDict *types.PDFDict, objectN
 
 	obj, ok = fontDict.Find("DescendantFonts")
 	if !ok {
-		//logErrorOptimize.Printf("getFontDescriptor: Neither FontDescriptor nor DescendantFonts for font object %d\n", objectNumber)
+		//logErrorOptimize.Printf("FontDescriptor: Neither FontDescriptor nor DescendantFonts for font object %d\n", objectNumber)
 		return nil, nil
 	}
 
@@ -831,49 +831,49 @@ func FontDescriptor(xRefTable *types.XRefTable, fontDict *types.PDFDict, objectN
 
 	arr, err := xRefTable.DereferenceArray(obj)
 	if err != nil || arr == nil {
-		return nil, errors.Errorf("getFontDescriptor: DescendantFonts: IndirectRef or Array wth length 1 expected for font object %d\n", objectNumber)
+		return nil, errors.Errorf("FontDescriptor: DescendantFonts: IndirectRef or Array wth length 1 expected for font object %d\n", objectNumber)
 	}
 
 	if len(*arr) > 1 {
-		return nil, errors.Errorf("getFontDescriptor: DescendantFonts Array length > 1 %v\n", arr)
+		return nil, errors.Errorf("FontDescriptor: DescendantFonts Array length > 1 %v\n", arr)
 	}
 
 	// dict is the fontDict of the descendant font.
 	dict, err := xRefTable.DereferenceDict((*arr)[0])
 	if err != nil {
-		return nil, errors.Errorf("getFontDescriptor: No descendant font dict for %v\n", arr)
+		return nil, errors.Errorf("FontDescriptor: No descendant font dict for %v\n", arr)
 	}
 
 	if dict == nil {
-		return nil, errors.Errorf("getFontDescriptor: descendant font dict is null for %v\n", arr)
+		return nil, errors.Errorf("FontDescriptor: descendant font dict is null for %v\n", arr)
 	}
 
 	if *dict.Type() != "Font" {
-		return nil, errors.Errorf("getFontDescriptor: font dict with incorrect dict type for %v\n", dict)
+		return nil, errors.Errorf("FontDescriptor: font dict with incorrect dict type for %v\n", dict)
 	}
 
 	obj, ok = (*dict).Find("FontDescriptor")
 	if !ok {
-		logInfoOptimize.Printf("getFontDescriptor: descendant font not embedded %s\n", dict)
+		logInfoOptimize.Printf("FontDescriptor: descendant font not embedded %s\n", dict)
 		return nil, nil
 	}
 
 	dict, err = xRefTable.DereferenceDict(obj)
 	if err != nil {
-		return nil, errors.Errorf("getFontDescriptor: No FontDescriptor dict for font object %d\n", objectNumber)
+		return nil, errors.Errorf("FontDescriptor: No FontDescriptor dict for font object %d\n", objectNumber)
 	}
 
 	if dict == nil {
-		return nil, errors.Errorf("getFontDescriptor: FontDescriptor dict is null for font object %d\n", objectNumber)
+		return nil, errors.Errorf("FontDescriptor: FontDescriptor dict is null for font object %d\n", objectNumber)
 	}
 
 	if dict.Type() == nil {
-		logErrorOptimize.Printf("getFontDescriptor: FontDescriptor without type \"FontDescriptor\" objNumber:%d\n", objectNumber)
+		logErrorOptimize.Printf("FontDescriptor: FontDescriptor without type \"FontDescriptor\" objNumber:%d\n", objectNumber)
 	} else if *dict.Type() != "FontDescriptor" {
-		return nil, errors.Errorf("getFontDescriptor: FontDescriptor dict incorrect dict type for font object %d\n", objectNumber)
+		return nil, errors.Errorf("FontDescriptor: FontDescriptor dict incorrect dict type for font object %d\n", objectNumber)
 	}
 
-	logDebugOptimize.Println("getFontDescriptor end")
+	logDebugOptimize.Println("FontDescriptor end")
 
 	return dict, nil
 }

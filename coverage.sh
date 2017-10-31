@@ -6,7 +6,7 @@ set -e
 
 echo mode: set > c.out
 
-function getInternalDeps {
+function internalDeps {
 
     for p in $(go list -f '{{.Deps}}' $1)
     do
@@ -22,7 +22,7 @@ for q in $(go list ./...)
 do
     #echo collecting coverage for $q
     idep=$q
-    getInternalDeps $idep
+    internalDeps $idep
     go test -coverprofile=c1.out -coverpkg=$idep $q && tail -n +2 c1.out  >> c.out
 done
 

@@ -139,7 +139,7 @@ func (xRefTable *XRefTable) ParseRootVersion() (*string, error) {
 		return nil, errors.New("ParseRootVersion: corrupt \"Version\" in root")
 	}
 
-	pdfObject, err := xRefTable.object(indirectRef)
+	pdfObject, err := xRefTable.indRefToObject(indirectRef)
 	if err != nil {
 		return nil, err
 	}
@@ -198,12 +198,12 @@ func (xRefTable *XRefTable) Free(objNumber int) (entry *XRefTableEntry, err erro
 	entry, found := xRefTable.Find(objNumber)
 
 	if !found {
-		err = errors.Errorf("GetFree: object #%d not found.", objNumber)
+		err = errors.Errorf("Free: object #%d not found.", objNumber)
 		return
 	}
 
 	if !entry.Free {
-		err = errors.Errorf("GetFree: object #%d found, but not free.", objNumber)
+		err = errors.Errorf("Free: object #%d found, but not free.", objNumber)
 	}
 
 	return
@@ -482,16 +482,16 @@ func (xRefTable *XRefTable) UndeleteObject(objectNumber int) (err error) {
 	return
 }
 
-// getObject dereferences an indirect object from the xRefTable and returns the result.
-func (xRefTable *XRefTable) object(indObjRef *PDFIndirectRef) (interface{}, error) {
+// indRefToObject dereferences an indirect object from the xRefTable and returns the result.
+func (xRefTable *XRefTable) indRefToObject(indObjRef *PDFIndirectRef) (interface{}, error) {
 
-	logDebugTypes.Printf("getObject: begin")
+	logDebugTypes.Printf("indRefToObject: begin")
 
 	if indObjRef == nil {
-		return nil, errors.New("getObject: input argument is nil")
+		return nil, errors.New("indRefToObject: input argument is nil")
 	}
 
-	logDebugTypes.Printf("getObject: != nil")
+	logDebugTypes.Printf("indRefToObject: != nil")
 
 	objectNumber := indObjRef.ObjectNumber.Value()
 
@@ -499,22 +499,22 @@ func (xRefTable *XRefTable) object(indObjRef *PDFIndirectRef) (interface{}, erro
 
 	entry, found := xRefTable.FindTableEntry(objectNumber, generationNumber)
 	if !found {
-		return nil, errors.Errorf("getObject(obj#%d, gen#%d): xref table entry not found", objectNumber, generationNumber)
+		return nil, errors.Errorf("indRefToObject(obj#%d, gen#%d): xref table entry not found", objectNumber, generationNumber)
 	}
 
-	logDebugTypes.Printf("getObject: found xRefTable entry")
+	logDebugTypes.Printf("indRefToObject: found xRefTable entry")
 
 	if entry.Free {
-		logDebugTypes.Printf("getObject(obj#%d, gen#%d): entry is free", objectNumber, generationNumber)
+		logDebugTypes.Printf("indRefToObject(obj#%d, gen#%d): entry is free", objectNumber, generationNumber)
 		return nil, nil
 	}
 
 	if entry.Object == nil {
-		logDebugTypes.Printf("getObject(obj#%d, gen#%d): entry.Object is nil", objectNumber, generationNumber)
+		logDebugTypes.Printf("indRefToObject(obj#%d, gen#%d): entry.Object is nil", objectNumber, generationNumber)
 		return nil, nil
 	}
 
-	logDebugTypes.Printf("getObject: end")
+	logDebugTypes.Printf("indRefToObject: end")
 
 	// return dereferenced object
 	return entry.Object, nil
@@ -529,7 +529,7 @@ func (xRefTable *XRefTable) Dereference(obj interface{}) (interface{}, error) {
 		return obj, nil
 	}
 
-	return xRefTable.object(&indRef)
+	return xRefTable.indRefToObject(&indRef)
 }
 
 // DereferenceInteger resolves and validates an integer object, which may be an indirect reference.
@@ -718,7 +718,7 @@ func (xRefTable *XRefTable) DereferenceStreamDict(obj interface{}) (streamDictp 
 // Catalog returns a pointer to the root object / catalog.
 func (xRefTable *XRefTable) Catalog() (*PDFDict, error) {
 
-	pdfObject, err := xRefTable.object(xRefTable.Root)
+	pdfObject, err := xRefTable.indRefToObject(xRefTable.Root)
 	if err != nil {
 		return nil, err
 	}
@@ -734,7 +734,7 @@ func (xRefTable *XRefTable) Catalog() (*PDFDict, error) {
 // EncryptDict returns a pointer to the root object / catalog.
 func (xRefTable *XRefTable) EncryptDict() (*PDFDict, error) {
 
-	pdfObject, err := xRefTable.object(xRefTable.Encrypt)
+	pdfObject, err := xRefTable.indRefToObject(xRefTable.Encrypt)
 	if err != nil {
 		return nil, err
 	}
