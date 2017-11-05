@@ -12,6 +12,10 @@ The available commands are:
 	merge		concatenate 2 or more PDFs
 	extract		extract images, fonts, content, pages out of a PDF
 	trim		create trimmed version of a PDF
+	encrypt		set password
+	decrypt		remove password
+	changeupw	change user password
+	changeopw	change owner password
 	version		print pdfcpu version
 
 */

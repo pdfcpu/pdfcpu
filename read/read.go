@@ -990,14 +990,19 @@ func nextStreamOffset(line string, streamInd int) (off int) {
 
 	off = streamInd + len("stream")
 
-	// Skip eol char.
-	if line[off] == '\n' || line[off] == '\r' {
+	// Skip 0A eol.
+	if line[off] == '\n' {
 		off++
+		return
 	}
 
-	// Skip eol char.
-	if line[off] == '\n' || line[off] == '\r' {
+	// Skip 0D eol.
+	if line[off] == '\r' {
 		off++
+		// Skip 0D0A eol.
+		if line[off] == '\n' {
+			off++
+		}
 	}
 
 	return
@@ -1084,7 +1089,7 @@ func buffer(rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffset i
 		}
 	}
 
-	logDebugReader.Printf("buffer: end, returned bufsize=%d\n", len(buf))
+	logDebugReader.Printf("buffer: end, returned bufsize=%d streamOffset=%d\n", len(buf), streamOffset)
 
 	return
 }
@@ -1912,9 +1917,16 @@ func checkForEncryption(ctx *types.PDFContext) error {
 			return errors.New("encrypt: user or owner password missing")
 		}
 
-		_, ok := ((*ctx.ID)[0]).(types.PDFHexLiteral)
-		if !ok {
-			return errors.New("encrypt: ID missing")
+		// Ensure ctx.ID
+		if ctx.ID == nil {
+			ctx.ID = crypto.ID(ctx)
+		}
+
+		// Must be array of length 2
+		arr := *ctx.ID
+
+		if len(arr) != 2 {
+			return errors.New("encrypt: ID must be array with 2 elements")
 		}
 
 		return nil
@@ -1953,15 +1965,25 @@ func checkForEncryption(ctx *types.PDFContext) error {
 		return errors.New("missing ID entry")
 	}
 
-	hex, ok := ((*ctx.ID)[0]).(types.PDFHexLiteral)
-	if !ok {
-		return errors.New("corrupt encrypt dict")
+	var id []byte
+
+	hl, ok := ((*ctx.ID)[0]).(types.PDFHexLiteral)
+	if ok {
+		id, err = hl.Bytes()
+		if err != nil {
+			return err
+		}
+	} else {
+		sl, ok := ((*ctx.ID)[0]).(types.PDFStringLiteral)
+		if !ok {
+			return errors.New("encryption: ID must contain PDFHexLiterals or PDFStringLiterals")
+		}
+		id, err = types.Unescape(sl.Value())
+		if err != nil {
+			return err
+		}
 	}
 
-	id, err := hex.Bytes()
-	if err != nil {
-		return err
-	}
 	enc.ID = id
 
 	ok, key, err := crypto.ValidateUserPassword(ctx)
@@ -1972,7 +1994,7 @@ func checkForEncryption(ctx *types.PDFContext) error {
 	if !ok {
 		return errors.New("UserPW Authentication error")
 	}
-	//logErrorReader.Println("userpw ok!")
+	logErrorReader.Println("userpw ok!")
 
 	ok, err = crypto.ValidateOwnerPassword(ctx)
 	if err != nil || !ok {
@@ -1981,7 +2003,7 @@ func checkForEncryption(ctx *types.PDFContext) error {
 		}
 		//logErrorReader.Println("ownerpw not ok, but access permissions ok")
 	} else {
-		//logErrorReader.Println("ownerpw ok!")
+		logErrorReader.Println("ownerpw ok!")
 	}
 
 	ctx.EncKey = key

@@ -16,6 +16,10 @@ func ExampleProcess_validate() {
 
 	config := types.NewDefaultConfiguration()
 
+	// Set optional password(s).
+	//config.UserPW = "upw"
+	//config.OwnerPW = "opw"
+
 	// Set relaxed validation mode.
 	config.SetValidationRelaxed()
 
@@ -31,6 +35,10 @@ func ExampleProcess_validate() {
 func ExampleProcess_optimize() {
 
 	config := types.NewDefaultConfiguration()
+
+	// Set optional password(s).
+	//config.UserPW = "upw"
+	//config.OwnerPW = "opw"
 
 	// Generate optional stats.
 	config.StatsFileName = "stats.csv"
@@ -62,8 +70,14 @@ func ExampleProcess_merge() {
 }
 func ExampleProcess_split() {
 
+	config := types.NewDefaultConfiguration()
+
+	// Set optional password(s).
+	//config.UserPW = "upw"
+	//config.OwnerPW = "opw"
+
 	// Split into single-page PDFs.
-	cmd := SplitCommand("in.pdf", "outDir", types.NewDefaultConfiguration())
+	cmd := SplitCommand("in.pdf", "outDir", config)
 
 	err := Process(&cmd)
 	if err != nil {
@@ -77,7 +91,13 @@ func ExampleProcess_trim() {
 	// Trim to first three pages.
 	selectedPages := []string{"-3"}
 
-	cmd := TrimCommand("in.pdf", "out.pdf", selectedPages, types.NewDefaultConfiguration())
+	config := types.NewDefaultConfiguration()
+
+	// Set optional password(s).
+	//config.UserPW = "upw"
+	//config.OwnerPW = "opw"
+
+	cmd := TrimCommand("in.pdf", "out.pdf", selectedPages, config)
 
 	err := Process(&cmd)
 	if err != nil {
@@ -91,7 +111,13 @@ func ExampleProcess_extractPages() {
 	// Extract single-page PDFs for pages 3, 4 and 5.
 	selectedPages := []string{"3..5"}
 
-	cmd := ExtractPagesCommand("in.pdf", "dirOut", selectedPages, types.NewDefaultConfiguration())
+	config := types.NewDefaultConfiguration()
+
+	// Set optional password(s).
+	//config.UserPW = "upw"
+	//config.OwnerPW = "opw"
+
+	cmd := ExtractPagesCommand("in.pdf", "dirOut", selectedPages, config)
 
 	err := Process(&cmd)
 	if err != nil {
@@ -105,13 +131,86 @@ func ExampleProcess_extractImages() {
 	// Extract all embedded images for first 5 and last 5 pages but not for page 4.
 	selectedPages := []string{"-5", "5-", "!4"}
 
-	cmd := ExtractImagesCommand("in.pdf", "dirOut", selectedPages, types.NewDefaultConfiguration())
+	config := types.NewDefaultConfiguration()
+
+	// Set optional password(s).
+	//config.UserPW = "upw"
+	//config.OwnerPW = "opw"
+
+	cmd := ExtractImagesCommand("in.pdf", "dirOut", selectedPages, config)
 
 	err := Process(&cmd)
 	if err != nil {
 		return
 	}
 
+}
+
+func ExampleProcess_encrypt() {
+
+	config := types.NewDefaultConfiguration()
+
+	config.UserPW = "upw"
+	config.OwnerPW = "opw"
+
+	cmd := EncryptCommand("in.pdf", "out.pdf", config)
+
+	err := Process(&cmd)
+	if err != nil {
+		return
+	}
+}
+
+func ExampleProcess_decrypt() {
+
+	config := types.NewDefaultConfiguration()
+
+	config.UserPW = "upw"
+	config.OwnerPW = "opw"
+
+	cmd := DecryptCommand("in.pdf", "out.pdf", config)
+
+	err := Process(&cmd)
+	if err != nil {
+		return
+	}
+}
+
+func ExampleProcess_changeUserPW() {
+
+	config := types.NewDefaultConfiguration()
+
+	// supply existing owner pw like so
+	config.OwnerPW = "opw"
+
+	pwOld := "pwOld"
+	pwNew := "pwNew"
+
+	cmd := ChangeUserPWCommand("in.pdf", "out.pdf", config, &pwOld, &pwNew)
+
+	err := Process(&cmd)
+	if err != nil {
+		return
+	}
+}
+
+func ExampleProcess_changeOwnerPW() {
+
+	config := types.NewDefaultConfiguration()
+
+	// supply existing user pw like so
+	config.UserPW = "upw"
+
+	// old and new owner pw
+	pwOld := "pwOld"
+	pwNew := "pwNew"
+
+	cmd := ChangeOwnerPWCommand("in.pdf", "out.pdf", config, &pwOld, &pwNew)
+
+	err := Process(&cmd)
+	if err != nil {
+		return
+	}
 }
 
 func TestMain(m *testing.M) {
@@ -361,4 +460,111 @@ func TestExtractPagesCommand(t *testing.T) {
 		t.Fatalf("TestExtractPagesCommand: %v\n", err)
 	}
 
+}
+
+func TestEncryptDecrypt(t *testing.T) {
+
+	files, err := ioutil.ReadDir("testdata")
+	if err != nil {
+		t.Fatalf("TestEncryptDecrypt: %v\n", err)
+	}
+
+	for _, file := range files {
+
+		if strings.HasSuffix(file.Name(), "pdf") {
+
+			fin := "testdata/" + file.Name()
+			fmt.Println("\n" + fin)
+			f := outputDir + "/test.pdf"
+
+			// Encrypt
+			//fmt.Println("\nEncrypt")
+			config := types.NewDefaultConfiguration()
+			config.UserPW = "upw"
+			config.OwnerPW = "opw"
+			cmd := EncryptCommand(fin, f, config)
+			err := Process(&cmd)
+			if err != nil {
+				t.Fatalf("TestEncryptDecrypt - encrypt %s: %v\n", err, f)
+			}
+
+			// Validate
+			//fmt.Println("\nValidate")
+			config = types.NewDefaultConfiguration()
+			config.UserPW = "upw"
+			config.OwnerPW = "opw"
+			cmd = ValidateCommand(f, config)
+			err = Process(&cmd)
+			if err != nil {
+				t.Fatalf("TestEncryptDecrypt - validate %s: %v\n", err, f)
+			}
+
+			// ChangeUserPW
+			//fmt.Println("\nChangeUserPW")
+			config = types.NewDefaultConfiguration()
+			config.OwnerPW = "opw"
+			pwOld := "upw"
+			pwNew := "upwNew"
+			cmd = ChangeUserPWCommand(f, f, config, &pwOld, &pwNew)
+			err = Process(&cmd)
+			if err != nil {
+				t.Fatalf("TestEncryption - change userPW: %v\n", err)
+			}
+
+			// Validate
+			//fmt.Println("\nValidate")
+			config = types.NewDefaultConfiguration()
+			config.UserPW = "upwNew"
+			config.OwnerPW = "opw"
+			cmd = ValidateCommand(f, config)
+			err = Process(&cmd)
+			if err != nil {
+				t.Fatalf("TestEncryption - validate: %v\n", err)
+			}
+
+			// ChangeOwnerPW
+			//fmt.Println("\nChangeOwnerPW")
+			config = types.NewDefaultConfiguration()
+			config.UserPW = "upwNew"
+			pwOld = "opw"
+			pwNew = "opwNew"
+			cmd = ChangeOwnerPWCommand(f, f, config, &pwOld, &pwNew)
+			err = Process(&cmd)
+			if err != nil {
+				t.Fatalf("TestEncryption - change ownerPW: %v\n", err)
+			}
+
+			// Validate
+			//fmt.Println("\nValidate")
+			config = types.NewDefaultConfiguration()
+			config.UserPW = "upwNew"
+			config.OwnerPW = "opwNew"
+			cmd = ValidateCommand(f, config)
+			err = Process(&cmd)
+			if err != nil {
+				t.Fatalf("TestEncryption - validate: %v\n", err)
+			}
+
+			// Decrypt
+			//fmt.Println("\nDecrypt")
+			config = types.NewDefaultConfiguration()
+			config.UserPW = "upwNew"
+			config.OwnerPW = "opwNew"
+			cmd = DecryptCommand(f, f, config)
+			err = Process(&cmd)
+			if err != nil {
+				t.Fatalf("TestEncryptDecrypt - decrypt %s: %v\n", err, f)
+			}
+
+			// Validate
+			//fmt.Println("\nValidate")
+			config = types.NewDefaultConfiguration()
+			cmd = ValidateCommand(f, config)
+			err = Process(&cmd)
+			if err != nil {
+				t.Fatalf("TestEncryption - validate %s: %v\n", err, f)
+			}
+
+		}
+	}
 }

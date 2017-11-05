@@ -1,4 +1,4 @@
-// Package crypto provides PDF encryption plumbing.
+// Package crypto provides PDF encryption plumbing code.
 package crypto
 
 import (
@@ -8,10 +8,13 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"crypto/rc4"
+	"encoding/hex"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
@@ -22,7 +25,7 @@ var logDebugCrypto, logInfoCrypto, logErrorCrypto *log.Logger
 func init() {
 	logDebugCrypto = log.New(ioutil.Discard, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
 	//logDebugCrypto = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logInfoCrypto = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
+	logInfoCrypto = log.New(ioutil.Discard, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 	logErrorCrypto = log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
 }
 
@@ -96,7 +99,7 @@ func encKey(userpw string, e *types.Enc) (key []byte) {
 func ValidateUserPassword(ctx *types.PDFContext) (ok bool, key []byte, err error) {
 
 	// Alg.4/5 p63
-	// 4a/5a create enryption key using Alg.2 p61
+	// 4a/5a create encryption key using Alg.2 p61
 
 	//fmt.Printf("validateUserPassword: ctx.E = \n%v\n", ctx.E)
 
@@ -198,7 +201,7 @@ func O(ctx *types.PDFContext) ([]byte, error) {
 func U(ctx *types.PDFContext) (u []byte, key []byte, err error) {
 
 	userpw := ctx.UserPW
-	// fmt.Printf("U userpw=%s\n", userpw)
+	//fmt.Printf("U userpw=%s\n", userpw)
 
 	e := ctx.E
 
@@ -337,7 +340,7 @@ func printP(enc *types.Enc) {
 		bits = "10,11"
 	}
 
-	logInfoCrypto.Printf("permission to process needs bits: %s\n", bits)
+	logInfoCrypto.Printf("permission for processing needs the following bits set: %s\n", bits)
 	logDebugCrypto.Printf("P: %d -> %0b\n", p, uint32(p)&0x0F3C)
 	logInfoCrypto.Printf("Bit  3: %t (print)\n", p&0x0004 > 0)
 	logInfoCrypto.Printf("Bit  4: %t (modify)\n", p&0x0008 > 0)
@@ -352,7 +355,9 @@ func printP(enc *types.Enc) {
 // HasNeededPermissions returns true if permissions for pdfcpu processing are present.
 func HasNeededPermissions(enc *types.Enc) bool {
 
+	//
 	//return true
+
 	// see 7.6.3.2
 
 	printP(enc)
@@ -568,7 +573,7 @@ func EncryptString(needAES bool, s string, objNr, genNr int, key []byte) (*strin
 // DecryptString decrypts s using RC4 or AES.
 func DecryptString(needAES bool, s string, objNr, genNr int, key []byte) (*string, error) {
 
-	logInfoCrypto.Printf("DecryptString begin obj:%d gen:%d key:%X aes:%t\n", objNr, genNr, key, needAES)
+	logInfoCrypto.Printf("DecryptString begin obj:%d gen:%d key:%X aes:%t s:<%s>\n", objNr, genNr, key, needAES, s)
 
 	b, err := types.Unescape(s)
 	if err != nil {
@@ -614,6 +619,17 @@ func EncryptDeepObject(objIn interface{}, objNr, genNr int, key []byte, aes bool
 	}
 
 	switch obj := objIn.(type) {
+
+	case types.PDFStreamDict:
+		for k, v := range obj.Dict {
+			s, err := EncryptDeepObject(v, objNr, genNr, key, aes)
+			if err != nil {
+				return nil, err
+			}
+			if s != nil {
+				obj.Dict[k] = *s
+			}
+		}
 
 	case types.PDFDict:
 		for k, v := range obj.Dict {
@@ -750,6 +766,8 @@ func applyRC4Bytes(buf, key []byte) ([]byte, error) {
 
 func encryptAESBytes(b, key []byte) ([]byte, error) {
 
+	//fmt.Printf("encryptAESBytes before:\n%s\n", hex.Dump(b))
+
 	// pad b to aes.Blocksize
 	l := len(b) % aes.BlockSize
 	c := 0x10
@@ -782,10 +800,14 @@ func encryptAESBytes(b, key []byte) ([]byte, error) {
 	mode := cipher.NewCBCEncrypter(cb, iv)
 	mode.CryptBlocks(data[aes.BlockSize:], b)
 
+	//fmt.Printf("encryptAESBytes after:\n%s\n", hex.Dump(data))
+
 	return data, nil
 }
 
 func decryptAESBytes(b, key []byte) (data []byte, err error) {
+
+	//fmt.Printf("decryptAESBytes before:\n%s\n", hex.Dump(b))
 
 	if len(b) < aes.BlockSize {
 		return nil, errors.New("decryptAESBytes: Ciphertext too short")
@@ -814,5 +836,30 @@ func decryptAESBytes(b, key []byte) (data []byte, err error) {
 		data = data[:e]
 	}
 
+	//fmt.Printf("decryptAESBytes after:\n%s\n", hex.Dump(data))
+
 	return
+}
+
+func fileID(ctx *types.PDFContext) types.PDFHexLiteral {
+
+	// see also 14.4 File Identifiers.
+
+	h := md5.New()
+	h.Write([]byte(time.Now().String())) // current timestamp.
+	//h.Write() file location - ignore, we don't have this.
+	h.Write([]byte(strconv.Itoa(int(ctx.Read.FileSize)))) // file size.
+	// h.Write(allValuesOfTheInfoDict) - ignore, does not make sense in this case because we patch the info dict.
+	m := h.Sum(nil)
+
+	return types.PDFHexLiteral(hex.EncodeToString(m))
+}
+
+// ID generates the ID element for this file.
+func ID(ctx *types.PDFContext) *types.PDFArray {
+
+	// Generate a PDFArray for the ID element.
+
+	fid := fileID(ctx)
+	return &types.PDFArray{fid, fid}
 }

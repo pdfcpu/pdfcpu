@@ -15,17 +15,23 @@ const (
 	EXTRACTPAGES
 	EXTRACTCONTENT
 	TRIM
+	ENCRYPT
+	DECRYPT
+	CHANGEUPW
+	CHANGEOPW
 )
 
 // Command represents an execution context.
 type Command struct {
-	Mode          commandMode          // VALIDATE  OPTIMIZE  SPLIT  MERGE  EXTRACT  TRIM
-	InFile        *string              //    *         *        *      -       *      *
-	InFiles       *[]string            //    -         -        -      *       -      -
-	OutFile       *string              //    -         *        -      *       -      *
-	OutDir        *string              //    -         -        *      -       *      -
-	PageSelection *[]string            //    -         -        -      -       *      *
-	Config        *types.Configuration //    *         *        *      *       *      *
+	Mode          commandMode          // VALIDATE  OPTIMIZE  SPLIT  MERGE  EXTRACT  TRIM  ENCRYPT  DECRYPT  CHANGEUPW  CHANGEOPW
+	InFile        *string              //    *         *        *      -       *      *       *        *         *          *
+	InFiles       *[]string            //    -         -        -      *       -      -       -        -         -          -
+	OutFile       *string              //    -         *        -      *       -      *       *        *         *          *
+	OutDir        *string              //    -         -        *      -       *      -       -        -         -          -
+	PageSelection *[]string            //    -         -        -      -       *      *       -        -         -          -
+	Config        *types.Configuration //    *         *        *      *       *      *       *        *         *          *
+	PWOld         *string              //    -         -        -      -       -      -       -        -         *          *
+	PWNew         *string              //    -         -        -      -       -      -       -        -         *          *
 }
 
 // ValidateCommand creates a new ValidateCommand.
@@ -116,6 +122,46 @@ func TrimCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []string, c
 		Config:        config}
 }
 
+// EncryptCommand creates a new EncryptCommand.
+func EncryptCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configuration) Command {
+	return Command{
+		Mode:    ENCRYPT,
+		InFile:  &pdfFileNameIn,
+		OutFile: &pdfFileNameOut,
+		Config:  config}
+}
+
+// DecryptCommand creates a new DecryptCommand.
+func DecryptCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configuration) Command {
+	return Command{
+		Mode:    DECRYPT,
+		InFile:  &pdfFileNameIn,
+		OutFile: &pdfFileNameOut,
+		Config:  config}
+}
+
+// ChangeUserPWCommand creates a new ChangeUserPWCommand.
+func ChangeUserPWCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configuration, pwOld, pwNew *string) Command {
+	return Command{
+		Mode:    CHANGEUPW,
+		InFile:  &pdfFileNameIn,
+		OutFile: &pdfFileNameOut,
+		Config:  config,
+		PWOld:   pwOld,
+		PWNew:   pwNew}
+}
+
+// ChangeOwnerPWCommand creates a new ChangeOwnerPWCommand.
+func ChangeOwnerPWCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configuration, pwOld, pwNew *string) Command {
+	return Command{
+		Mode:    CHANGEOPW,
+		InFile:  &pdfFileNameIn,
+		OutFile: &pdfFileNameOut,
+		Config:  config,
+		PWOld:   pwOld,
+		PWNew:   pwNew}
+}
+
 // Process executes a pdfcpu command.
 func Process(cmd *Command) (err error) {
 
@@ -147,6 +193,18 @@ func Process(cmd *Command) (err error) {
 
 	case TRIM:
 		err = Trim(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Config)
+
+	case ENCRYPT:
+		err = Encrypt(*cmd.InFile, *cmd.OutFile, cmd.Config)
+
+	case DECRYPT:
+		err = Decrypt(*cmd.InFile, *cmd.OutFile, cmd.Config)
+
+	case CHANGEUPW:
+		err = ChangeUserPassword(*cmd.InFile, *cmd.OutFile, cmd.Config, cmd.PWOld, cmd.PWNew)
+
+	case CHANGEOPW:
+		err = ChangeOwnerPassword(*cmd.InFile, *cmd.OutFile, cmd.Config, cmd.PWOld, cmd.PWNew)
 	}
 
 	return

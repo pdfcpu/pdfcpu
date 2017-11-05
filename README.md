@@ -59,15 +59,15 @@ I also wanted to have my own swiss army knife for PDFs written entirely in [Go](
 
     pdfcpu decrypt [-verbose] [-upw userpw] [-opw ownerpw] inFile [outFile]
 	
-    pdfcpu changeupw [-verbose] inFile upwOld upwNew
+    pdfcpu changeupw [-verbose] [-opw ownerpw] inFile upwOld upwNew
 
-    pdfcpu changeopw [-verbose] inFile opwOld opwNew
+    pdfcpu changeopw [-verbose] [-upw userpw] inFile opwOld opwNew
 
  [Please read the documentation ](https://godoc.org/github.com/hhrutter/pdfcpu)
 
 
 ### Status
-Version: 0.1
+Version: 0.1.1
 
 * Encryption support including changing passwords is available for the PDF standard security handler.
 * "Encrypt" uses AES with a 128 bit encryption key.

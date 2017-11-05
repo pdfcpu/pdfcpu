@@ -148,18 +148,20 @@ verbose ... extensive log output
  inFile ... input pdf file
 outFile ... output pdf file`
 
-	usageChangeUserPW     = "usage: pdfcpu changeupw [-verbose] inFile upwOld upwNew"
+	usageChangeUserPW     = "usage: pdfcpu changeupw [-verbose] [-opw ownerpw] inFile upwOld upwNew"
 	usageLongChangeUserPW = `Changeupw changes the user password.
 	
 verbose ... extensive log output
+	opw ... owner password
  inFile ... input pdf file
  upwOld ... old user password
  upwNew ... new user password`
 
-	usageChangeOwnerPW     = "usage: pdfcpu changeopw [-verbose] inFile opwOld opwNew"
+	usageChangeOwnerPW     = "usage: pdfcpu changeopw [-verbose] [-upw userpw] inFile opwOld opwNew"
 	usageLongChangeOwnerPW = `Changeopw changes the owner password.
 	
 verbose ... extensive log output
+    upw ... user password
  inFile ... input pdf file
  opwOld ... old owner password
  opwNew ... new owner password`
@@ -448,9 +450,6 @@ func main() {
 
 	case "decrypt", "d", "dec":
 
-		d := true
-		config.Decrypt = &d
-
 		if len(flag.Args()) == 0 || len(flag.Args()) > 2 || pageSelection != "" {
 			fmt.Printf("%s\n\n", usageDecrypt)
 			return
@@ -465,13 +464,9 @@ func main() {
 			ensurePdfExtension(filenameOut)
 		}
 
-		// Always write using 0x0A end of line sequence.
-		cmd = pdfcpu.OptimizeCommand(filenameIn, filenameOut, config)
+		cmd = pdfcpu.DecryptCommand(filenameIn, filenameOut, config)
 
 	case "encrypt", "enc":
-
-		d := false
-		config.Decrypt = &d
 
 		if len(flag.Args()) == 0 || len(flag.Args()) > 2 || pageSelection != "" {
 			fmt.Printf("%s\n\n", usageEncrypt)
@@ -487,31 +482,33 @@ func main() {
 			ensurePdfExtension(filenameOut)
 		}
 
-		cmd = pdfcpu.OptimizeCommand(filenameIn, filenameOut, config)
+		cmd = pdfcpu.EncryptCommand(filenameIn, filenameOut, config)
 
 	case "changeupw":
 		if len(flag.Args()) != 3 {
 			fmt.Printf("%s\n\n", usageChangeUserPW)
 			return
 		}
-		config.UserPW = flag.Arg(1)
-		s := flag.Arg(2)
-		config.UserPWNew = &s
+		pwOld := flag.Arg(1)
+		pwNew := flag.Arg(2)
+
 		filenameIn := flag.Arg(0)
 		ensurePdfExtension(filenameIn)
-		cmd = pdfcpu.OptimizeCommand(filenameIn, filenameIn, config)
+
+		cmd = pdfcpu.ChangeUserPWCommand(filenameIn, filenameIn, config, &pwOld, &pwNew)
 
 	case "changeopw":
 		if len(flag.Args()) != 3 {
 			fmt.Printf("%s\n\n", usageChangeOwnerPW)
 			return
 		}
-		config.OwnerPW = flag.Arg(1)
-		s := flag.Arg(2)
-		config.OwnerPWNew = &s
+		pwOld := flag.Arg(1)
+		pwNew := flag.Arg(2)
+
 		filenameIn := flag.Arg(0)
 		ensurePdfExtension(filenameIn)
-		cmd = pdfcpu.OptimizeCommand(filenameIn, filenameIn, config)
+
+		cmd = pdfcpu.ChangeOwnerPWCommand(filenameIn, filenameIn, config, &pwOld, &pwNew)
 
 	case "version":
 

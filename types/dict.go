@@ -228,7 +228,7 @@ func (d PDFDict) PDFStringLiteralEntry(key string) *PDFStringLiteral {
 	return nil
 }
 
-// PDFHexLiteralEntry returns a PDFStringLiteral object for given key.
+// PDFHexLiteralEntry returns a PDFHexLiteral object for given key.
 func (d PDFDict) PDFHexLiteralEntry(key string) *PDFHexLiteral {
 
 	value, found := d.Find(key)
@@ -531,6 +531,12 @@ func Unescape(s string) ([]byte, error) {
 			}
 			continue
 		}
+
+		//if c == 0x0D {
+		//	//Ignore eol
+		//	esc = false
+		//	continue
+		//}
 
 		if !strings.ContainsRune("nrtbf()01234567", rune(c)) {
 			return nil, errors.Errorf("Unescape: illegal escape sequence \\%c detected", c)

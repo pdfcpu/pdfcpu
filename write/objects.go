@@ -190,6 +190,8 @@ func writeToObjectStream(ctx *types.PDFContext, objNumber, genNumber int) (ok bo
 
 	}
 
+	logInfoWriter.Printf("addToObjectStream end, obj#:%d gen#:%d\n", objNumber, genNumber)
+
 	return
 }
 
@@ -508,7 +510,7 @@ func writePDFStreamDictObject(ctx *types.PDFContext, objNumber, genNumber int, s
 
 func writeDeepObject(ctx *types.PDFContext, objIn interface{}) (objOut interface{}, written bool, err error) {
 
-	logDebugWriter.Printf("writeDeepObject: begin offset=%d\n", ctx.Write.Offset)
+	logDebugWriter.Printf("writeDeepObject: begin offset=%d\n%s\n", ctx.Write.Offset, objIn)
 
 	indRef, ok := objIn.(types.PDFIndirectRef)
 	if !ok {
@@ -595,7 +597,12 @@ func writeDeepObject(ctx *types.PDFContext, objIn interface{}) (objOut interface
 		}
 
 	case types.PDFStreamDict:
-		// Encrypt stream data as needed.
+		if ctx.EncKey != nil {
+			_, err = crypto.EncryptDeepObject(obj, objNumber, genNumber, ctx.EncKey, ctx.AES4Strings)
+			if err != nil {
+				return
+			}
+		}
 		err = writePDFStreamDictObject(ctx, objNumber, genNumber, obj)
 		if err != nil {
 			return

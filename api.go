@@ -256,6 +256,34 @@ func Optimize(fileIn, fileOut string, config *types.Configuration) (err error) {
 	return
 }
 
+// Encrypt fileIn and write result to fileOut.
+func Encrypt(fileIn, fileOut string, config *types.Configuration) (err error) {
+	d := false
+	config.Decrypt = &d
+	return Optimize(fileIn, fileOut, config)
+}
+
+// Decrypt fileIn and write result to fileOut.
+func Decrypt(fileIn, fileOut string, config *types.Configuration) (err error) {
+	d := true
+	config.Decrypt = &d
+	return Optimize(fileIn, fileOut, config)
+}
+
+// ChangeUserPassword of fileIn and write result to fileOut.
+func ChangeUserPassword(fileIn, fileOut string, config *types.Configuration, pwOld, pwNew *string) (err error) {
+	config.UserPW = *pwOld
+	config.UserPWNew = pwNew
+	return Optimize(fileIn, fileOut, config)
+}
+
+// ChangeOwnerPassword of fileIn and write result to fileOut.
+func ChangeOwnerPassword(fileIn, fileOut string, config *types.Configuration, pwOld, pwNew *string) (err error) {
+	config.OwnerPW = *pwOld
+	config.OwnerPWNew = pwNew
+	return Optimize(fileIn, fileOut, config)
+}
+
 // ParsePageSelection ensures a correct page selection expression.
 func ParsePageSelection(s string) (ps []string, err error) {
 

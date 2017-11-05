@@ -19,7 +19,7 @@ import (
 )
 
 // PdfcpuVersion is the current version.
-const PdfcpuVersion = "0.1"
+const PdfcpuVersion = "0.1.1"
 
 var (
 	logDebugWriter *log.Logger
@@ -857,11 +857,27 @@ func handleEncryption(ctx *types.PDFContext) (err error) {
 				return
 			}
 
-			hexID, _ := ((*ctx.ID)[0]).(types.PDFHexLiteral)
+			if ctx.ID == nil {
+				return errors.New("encrypt: missing ID")
+			}
+
 			var id []byte
-			id, err = hexID.Bytes()
-			if err != nil {
-				return err
+
+			hl, ok := ((*ctx.ID)[0]).(types.PDFHexLiteral)
+			if ok {
+				id, err = hl.Bytes()
+				if err != nil {
+					return err
+				}
+			} else {
+				sl, ok := ((*ctx.ID)[0]).(types.PDFStringLiteral)
+				if !ok {
+					return errors.New("encrypt: ID must contain PDFHexLiterals or PDFStringLiterals")
+				}
+				id, err = types.Unescape(sl.Value())
+				if err != nil {
+					return err
+				}
 			}
 
 			ctx.E.ID = id
