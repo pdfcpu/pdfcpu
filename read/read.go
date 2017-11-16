@@ -1994,7 +1994,7 @@ func checkForEncryption(ctx *types.PDFContext) error {
 	if !ok {
 		return errors.New("UserPW Authentication error")
 	}
-	logErrorReader.Println("userpw ok!")
+	//logErrorReader.Println("userpw ok!")
 
 	ok, err = crypto.ValidateOwnerPassword(ctx)
 	if err != nil || !ok {
@@ -2003,7 +2003,7 @@ func checkForEncryption(ctx *types.PDFContext) error {
 		}
 		//logErrorReader.Println("ownerpw not ok, but access permissions ok")
 	} else {
-		logErrorReader.Println("ownerpw ok!")
+		//logErrorReader.Println("ownerpw ok!")
 	}
 
 	ctx.EncKey = key

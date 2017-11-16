@@ -563,7 +563,11 @@ func validateImageStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFSt
 	}
 
 	// SMask, stream, optional, since V1.4
-	sd, err := validateStreamDictEntry(xRefTable, &dict, dictName, "SMask", OPTIONAL, types.V14, nil)
+	sinceVersion := types.V14
+	if xRefTable.ValidationMode == types.ValidationRelaxed {
+		sinceVersion = types.V13
+	}
+	sd, err := validateStreamDictEntry(xRefTable, &dict, dictName, "SMask", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return
 	}
@@ -614,7 +618,7 @@ func validateImageStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFSt
 	}
 
 	// Metadata, stream, optional since V1.4
-	sinceVersion := types.V14
+	sinceVersion = types.V14
 	if xRefTable.ValidationMode == types.ValidationRelaxed {
 		sinceVersion = types.V13
 	}

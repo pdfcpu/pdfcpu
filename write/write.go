@@ -19,7 +19,7 @@ import (
 )
 
 // PdfcpuVersion is the current version.
-const PdfcpuVersion = "0.1.1"
+const PdfcpuVersion = "0.1.2"
 
 var (
 	logDebugWriter *log.Logger

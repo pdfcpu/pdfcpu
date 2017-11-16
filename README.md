@@ -5,7 +5,8 @@
 [![License: MIT](https://img.shields.io/github/license/mashape/apistatus.svg)](https://opensource.org/licenses/MIT) 
 
 ![logo](resources/pdfchip3.png)
-  # pdfcpu: a golang pdf processor
+
+# pdfcpu: a golang pdf processor
 
 Package pdfcpu is a simple PDF processing library written in [Go](http://golang.org).
 It provides both an API and a command line tool.
@@ -19,6 +20,7 @@ This can be achieved by analyzing a PDF's cross reference table, removing redund
 I also wanted to have my own swiss army knife for PDFs written entirely in [Go](http://golang.org) that allows me to trim, split and merge PDF content.
 
 ### Features
+
 * Validate (validates PDF files up to version 7.0)
 * Read (builds xref table from PDF file)
 * Write (writes xref table to PDF file)
@@ -35,9 +37,11 @@ I also wanted to have my own swiss army knife for PDFs written entirely in [Go](
 * Change user/owner password
 
 ### Demo Screencast
+
 [![asciicast](resources/demo.png)](https://asciinema.org/a/P5jaAo9kgZXKj2iSA1OqIdLAU)
 
 ### Installation
+
 `go get github.com/hhrutter/pdfcpu/cmd/...`
 
 
@@ -63,11 +67,12 @@ I also wanted to have my own swiss army knife for PDFs written entirely in [Go](
 
     pdfcpu changeopw [-verbose] [-upw userpw] inFile opwOld opwNew
 
- [Please read the documentation ](https://godoc.org/github.com/hhrutter/pdfcpu)
+ [Please read the documentation](https://godoc.org/github.com/hhrutter/pdfcpu)
 
 
 ### Status
-Version: 0.1.1
+
+Version: 0.1.2
 
 * Encryption support including changing passwords is available for the PDF standard security handler.
 * "Encrypt" uses AES with a 128 bit encryption key.
@@ -75,6 +80,7 @@ Version: 0.1.1
 
 
 ### To Do
+
 * validation of the less used PDF page entry element "PresSteps"
 * validation of the less used PDF root entry elements "SpiderInfo", "Permissions", "Legal" and "Collection"
 
@@ -82,6 +88,7 @@ I am looking for PDFs using one of these features in order to implement validati
 
 
 ### Contributing
+
 Pull requests, bug fixes and issue reports are always welcome.
 
 Please open an issue if you want to propose a change.
@@ -90,10 +97,12 @@ PDF files that will increase pdfcpu's coverage are very much welcome.
 
 
 ### Disclaimer
+
 Usage of pdfcpu assumes you know about and respect all copyrights of any PDF content you may be processing. This applies to the PDF files as such, their content and in particular all embedded resources like font files or images. Credit goes to [Renee French](https://instagram.com/reneefrench) for creating our beloved Gopher.
 
 
 ### License
+
 MIT
 
 
