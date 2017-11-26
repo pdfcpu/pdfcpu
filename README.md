@@ -72,7 +72,7 @@ I also wanted to have my own swiss army knife for PDFs written entirely in [Go](
 
 ### Status
 
-Version: 0.1.2
+Version: 0.1.3
 
 * Encryption support including changing passwords is available for the PDF standard security handler.
 * "Encrypt" uses AES with a 128 bit encryption key.

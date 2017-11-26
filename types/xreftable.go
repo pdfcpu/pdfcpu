@@ -21,7 +21,7 @@ type XRefTableEntry struct {
 	Free            bool
 	Offset          *int64
 	Generation      *int
-	Object          interface{}
+	Object          interface{} // Use interface PDFObject (suggested by Francesc Campoy).
 	Compressed      bool
 	ObjectStream    *int
 	ObjectStreamInd *int

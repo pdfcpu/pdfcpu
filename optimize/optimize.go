@@ -4,6 +4,7 @@
 package optimize
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -30,6 +31,7 @@ func Verbose(verbose bool) {
 		out = os.Stdout
 	}
 	logInfoOptimize = log.New(out, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
+	//logDebugOptimize = log.New(out, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
 }
 
 // Mark all content streams for a page dictionary (for stats).
@@ -199,22 +201,35 @@ func optimizeFontResourcesDict(ctx *types.PDFContext, fontResourcesDict *types.P
 			return errors.Errorf("optimizeFontResourcesDict: expected Type=Font, unexpected Type: %s", *fontDict.Type())
 		}
 
-		// Process font dict
-		baseFont, found := fontDict.Find("BaseFont")
-		if !found {
+		var baseFont interface{}
+		var fontName string
+		var found bool
+
+		if *fontDict.Subtype() != "Type3" {
+
+			baseFont, found = fontDict.Find("BaseFont")
+			if !found {
+				baseFont, found = fontDict.Find("Name")
+				if !found {
+					return errors.New("optimizeFontResourcesDict: missing fontDict entries \"BaseFont\" and \"Name\"")
+				}
+			}
+
+			baseFont, _ = ctx.Dereference(baseFont)
+			baseF, ok := baseFont.(types.PDFName)
+			if !ok {
+				return errors.New("optimizeFontResourcesDict: corrupt fontDict entry BaseFont")
+			}
+			fontName = string(baseF)
+
+		} else {
+			// Type3 fonts only have Name in V1.0 else use generic name.
 			baseFont, found = fontDict.Find("Name")
 			if !found {
-				return errors.New("optimizeFontResourcesDict: missing fontDict entries \"BaseFont\" and \"Name\"")
+				fontName = fmt.Sprintf("Type3_%d", indRef.ObjectNumber.Value())
 			}
 		}
 
-		baseFont, _ = ctx.Dereference(baseFont)
-		baseF, ok := baseFont.(types.PDFName)
-		if !ok {
-			return errors.New("optimizeFontResourcesDict: corrupt fontDict entry BaseFont")
-		}
-
-		fontName := string(baseF)
 		logDebugOptimize.Printf("optimizeFontResourcesDict: baseFont: %s\n", fontName)
 
 		// Isolate fontname prefix

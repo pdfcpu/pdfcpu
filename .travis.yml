@@ -1,7 +1,7 @@
 language: go
 
 go:
-  - 1.8.x
+  - 1.8
   - 1.9
 
 before_install:
@@ -11,5 +11,5 @@ sudo: false
 
 script:
   - go vet -v ./...
-  - go test -v ./... # goveralls also runs this, but I want to see verbose test output in travis.
+  #- go test -v ./... # goveralls also runs this, but I want to see verbose test output in travis.
   - $HOME/gopath/bin/goveralls -service=travis-ci
