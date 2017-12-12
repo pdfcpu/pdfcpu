@@ -11,13 +11,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-// IsStringUTF16BE checks for Big Endian byte order BOM in octal.
+// IsStringUTF16BE checks a string for Big Endian byte order BOM.
 func IsStringUTF16BE(s string) bool {
-	// UTF16-BE BOM disguised as octal.
 
 	s1 := fmt.Sprintf("%s", s)
 
-	ok := strings.HasPrefix(s1, "\376\377")
+	ok := strings.HasPrefix(s1, "\376\377") // 0xFE 0xFF
 
 	logDebugTypes.Printf("IsStringUTF16BE: <%s> returning %v\n", s1, ok)
 	logDebugTypes.Printf("\n%s", hex.Dump([]byte(s1)))
@@ -128,16 +127,22 @@ func DecodeUTF16String(s string) (string, error) {
 }
 
 // StringLiteralToString returns the best possible string rep for a string literal.
-func StringLiteralToString(str string) (s string, err error) {
+func StringLiteralToString(s string) (string, error) {
+
+	b, err := Unescape(s)
+	if err != nil {
+		return "", err
+	}
+
+	s1 := string(b)
 
 	// Check for Big Endian UTF-16.
-	if IsStringUTF16BE(s) {
-		return DecodeUTF16String(s)
+	if IsStringUTF16BE(s1) {
+		return DecodeUTF16String(s1)
 	}
 
 	// if no acceptable UTF16 encoding found, just return str.
-
-	return str, nil
+	return s1, nil
 }
 
 // HexLiteralToString returns a possibly UTF16 encoded string for a hex string.

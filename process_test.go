@@ -2,6 +2,7 @@ package pdfcpu
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -25,7 +26,7 @@ func ExampleProcess_validate() {
 
 	cmd := ValidateCommand("in.pdf", config)
 
-	err := Process(&cmd)
+	_, err := Process(&cmd)
 	if err != nil {
 		return
 	}
@@ -48,7 +49,7 @@ func ExampleProcess_optimize() {
 
 	cmd := OptimizeCommand("in.pdf", "out.pdf", config)
 
-	err := Process(&cmd)
+	_, err := Process(&cmd)
 	if err != nil {
 		return
 	}
@@ -62,7 +63,7 @@ func ExampleProcess_merge() {
 
 	cmd := MergeCommand(filenamesIn, "out.pdf", types.NewDefaultConfiguration())
 
-	err := Process(&cmd)
+	_, err := Process(&cmd)
 	if err != nil {
 		return
 	}
@@ -79,7 +80,7 @@ func ExampleProcess_split() {
 	// Split into single-page PDFs.
 	cmd := SplitCommand("in.pdf", "outDir", config)
 
-	err := Process(&cmd)
+	_, err := Process(&cmd)
 	if err != nil {
 		return
 	}
@@ -99,7 +100,7 @@ func ExampleProcess_trim() {
 
 	cmd := TrimCommand("in.pdf", "out.pdf", selectedPages, config)
 
-	err := Process(&cmd)
+	_, err := Process(&cmd)
 	if err != nil {
 		return
 	}
@@ -119,7 +120,7 @@ func ExampleProcess_extractPages() {
 
 	cmd := ExtractPagesCommand("in.pdf", "dirOut", selectedPages, config)
 
-	err := Process(&cmd)
+	_, err := Process(&cmd)
 	if err != nil {
 		return
 	}
@@ -139,11 +140,98 @@ func ExampleProcess_extractImages() {
 
 	cmd := ExtractImagesCommand("in.pdf", "dirOut", selectedPages, config)
 
-	err := Process(&cmd)
+	_, err := Process(&cmd)
 	if err != nil {
 		return
 	}
 
+}
+
+func ExampleProcess_listAttachments() {
+
+	config := types.NewDefaultConfiguration()
+
+	// Set optional password(s).
+	//config.UserPW = "upw"
+	//config.OwnerPW = opw"
+
+	cmd := ListAttachmentsCommand("in.pdf", config)
+
+	list, err := Process(&cmd)
+	if err != nil {
+		return
+	}
+
+	// Print attachment list.
+	for _, l := range list {
+		fmt.Println(l)
+	}
+
+}
+
+func ExampleProcess_addAttachments() {
+
+	config := types.NewDefaultConfiguration()
+
+	// Set optional password(s).
+	//config.UserPW = "upw"
+	//config.OwnerPW = "opw"
+
+	cmd := AddAttachmentsCommand("in.pdf", []string{"a.csv", "b.jpg", "c.pdf"}, config)
+
+	_, err := Process(&cmd)
+	if err != nil {
+		return
+	}
+}
+
+func ExampleProcess_removeAttachments() {
+
+	config := types.NewDefaultConfiguration()
+
+	// Set optional password(s).
+	//config.UserPW = "upw"
+	//config.OwnerPW = "opw"
+
+	// Not to be confused with the ExtractAttachmentsCommand!
+
+	// Remove all attachments.
+	cmd := RemoveAttachmentsCommand("in.pdf", nil, config)
+	_, err := Process(&cmd)
+	if err != nil {
+		return
+	}
+
+	// Remove specific attachments.
+	cmd = RemoveAttachmentsCommand("in.pdf", []string{"a.csv", "b.jpg"}, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		return
+	}
+
+}
+
+func ExampleProcess_extractAttachments() {
+
+	config := types.NewDefaultConfiguration()
+
+	// Set optional password(s).
+	//config.UserPW = "upw"
+	//config.OwnerPW = "opw"
+
+	// Extract all attachments.
+	cmd := ExtractAttachmentsCommand("in.pdf", "dirOut", nil, config)
+	_, err := Process(&cmd)
+	if err != nil {
+		return
+	}
+
+	// Extract specific attachments.
+	cmd = ExtractAttachmentsCommand("in.pdf", "dirOut", []string{"a.csv", "b.pdf"}, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		return
+	}
 }
 
 func ExampleProcess_encrypt() {
@@ -155,7 +243,7 @@ func ExampleProcess_encrypt() {
 
 	cmd := EncryptCommand("in.pdf", "out.pdf", config)
 
-	err := Process(&cmd)
+	_, err := Process(&cmd)
 	if err != nil {
 		return
 	}
@@ -170,7 +258,7 @@ func ExampleProcess_decrypt() {
 
 	cmd := DecryptCommand("in.pdf", "out.pdf", config)
 
-	err := Process(&cmd)
+	_, err := Process(&cmd)
 	if err != nil {
 		return
 	}
@@ -188,7 +276,7 @@ func ExampleProcess_changeUserPW() {
 
 	cmd := ChangeUserPWCommand("in.pdf", "out.pdf", config, &pwOld, &pwNew)
 
-	err := Process(&cmd)
+	_, err := Process(&cmd)
 	if err != nil {
 		return
 	}
@@ -207,7 +295,7 @@ func ExampleProcess_changeOwnerPW() {
 
 	cmd := ChangeOwnerPWCommand("in.pdf", "out.pdf", config, &pwOld, &pwNew)
 
-	err := Process(&cmd)
+	_, err := Process(&cmd)
 	if err != nil {
 		return
 	}
@@ -241,7 +329,7 @@ func TestValidateCommand(t *testing.T) {
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), "pdf") {
 			cmd := ValidateCommand("testdata/"+file.Name(), config)
-			err = Process(&cmd)
+			_, err = Process(&cmd)
 			if err != nil {
 				t.Fatalf("TestValidateCommand: %v\n", err)
 			}
@@ -256,7 +344,7 @@ func TestValidateOneFile(t *testing.T) {
 	config.SetValidationRelaxed()
 
 	cmd := ValidateCommand("testdata/gobook.0.pdf", config)
-	err := Process(&cmd)
+	_, err := Process(&cmd)
 	if err != nil {
 		t.Fatalf("TestValidateOneFile: %v\n", err)
 	}
@@ -271,7 +359,7 @@ func BenchmarkValidateCommand(b *testing.B) {
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		cmd := ValidateCommand("testdata/gobook.0.pdf", config)
-		err := Process(&cmd)
+		_, err := Process(&cmd)
 		if err != nil {
 			b.Fatalf("BenchmarkValidateCommand: %v\n", err)
 		}
@@ -294,7 +382,7 @@ func TestOptimizeCommandWithLF(t *testing.T) {
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), "pdf") {
 			cmd := OptimizeCommand("testdata/"+file.Name(), outputDir+"/test.pdf", config)
-			err = Process(&cmd)
+			_, err = Process(&cmd)
 			if err != nil {
 				t.Fatalf("TestOptimizeCommand: %v\n", err)
 			}
@@ -317,7 +405,7 @@ func TestOptimizeCommandWithCR(t *testing.T) {
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), "pdf") {
 			cmd := OptimizeCommand("testdata/"+file.Name(), outputDir+"/test.pdf", config)
-			err = Process(&cmd)
+			_, err = Process(&cmd)
 			if err != nil {
 				t.Fatalf("TestOptimizeCommand: %v\n", err)
 			}
@@ -343,7 +431,7 @@ func TestOptimizeCommandWithCRAndNoXrefStream(t *testing.T) {
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), "pdf") {
 			cmd := OptimizeCommand("testdata/"+file.Name(), outputDir+"/test.pdf", config)
-			err = Process(&cmd)
+			_, err = Process(&cmd)
 			if err != nil {
 				t.Fatalf("TestOptimizeCommand: %v\n", err)
 			}
@@ -367,7 +455,7 @@ func TestOptimizeCommandWithCRLF(t *testing.T) {
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), "pdf") {
 			cmd := OptimizeCommand("testdata/"+file.Name(), outputDir+"/test.pdf", config)
-			err = Process(&cmd)
+			_, err = Process(&cmd)
 			if err != nil {
 				t.Fatalf("TestOptimizeCommand: %v\n", err)
 			}
@@ -381,7 +469,7 @@ func TestSplitCommand(t *testing.T) {
 
 	cmd := SplitCommand("testdata/Acroforms2.pdf", outputDir, types.NewDefaultConfiguration())
 
-	err := Process(&cmd)
+	_, err := Process(&cmd)
 	if err != nil {
 		t.Fatalf("TestSplitCommand: %v\n", err)
 	}
@@ -403,7 +491,7 @@ func TestMergeCommand(t *testing.T) {
 	}
 
 	cmd := MergeCommand(inFiles, outputDir+"/test.pdf", types.NewDefaultConfiguration())
-	err = Process(&cmd)
+	_, err = Process(&cmd)
 	if err != nil {
 		t.Fatalf("TestMergeCommand: %v\n", err)
 	}
@@ -415,7 +503,7 @@ func TestTrimCommand(t *testing.T) {
 
 	cmd := TrimCommand("testdata/pike-stanford.pdf", outputDir+"/test.pdf", []string{"-2"}, types.NewDefaultConfiguration())
 
-	err := Process(&cmd)
+	_, err := Process(&cmd)
 	if err != nil {
 		t.Fatalf("TestTrimCommand: %v\n", err)
 	}
@@ -425,7 +513,7 @@ func TestTrimCommand(t *testing.T) {
 func TestExtractImagesCommand(t *testing.T) {
 
 	cmd := ExtractImagesCommand("testdata/TheGoProgrammingLanguageCh1.pdf", outputDir, nil, types.NewDefaultConfiguration())
-	err := Process(&cmd)
+	_, err := Process(&cmd)
 	if err != nil {
 		t.Fatalf("TestExtractImageCommand: %v\n", err)
 	}
@@ -435,7 +523,7 @@ func TestExtractImagesCommand(t *testing.T) {
 func TestExtractFontsCommand(t *testing.T) {
 
 	cmd := ExtractFontsCommand("testdata/TheGoProgrammingLanguageCh1.pdf", outputDir, nil, types.NewDefaultConfiguration())
-	err := Process(&cmd)
+	_, err := Process(&cmd)
 	if err != nil {
 		t.Fatalf("TestExtractFontsCommand: %v\n", err)
 	}
@@ -445,7 +533,7 @@ func TestExtractFontsCommand(t *testing.T) {
 func TestExtractContentCommand(t *testing.T) {
 
 	cmd := ExtractContentCommand("testdata/TheGoProgrammingLanguageCh1.pdf", outputDir, nil, types.NewDefaultConfiguration())
-	err := Process(&cmd)
+	_, err := Process(&cmd)
 	if err != nil {
 		t.Fatalf("TestExtractContentCommand: %v\n", err)
 	}
@@ -455,7 +543,7 @@ func TestExtractContentCommand(t *testing.T) {
 func TestExtractPagesCommand(t *testing.T) {
 
 	cmd := ExtractPagesCommand("testdata/TheGoProgrammingLanguageCh1.pdf", outputDir, []string{"1"}, types.NewDefaultConfiguration())
-	err := Process(&cmd)
+	_, err := Process(&cmd)
 	if err != nil {
 		t.Fatalf("TestExtractPagesCommand: %v\n", err)
 	}
@@ -483,7 +571,7 @@ func TestEncryptDecrypt(t *testing.T) {
 			config.UserPW = "upw"
 			config.OwnerPW = "opw"
 			cmd := EncryptCommand(fin, f, config)
-			err := Process(&cmd)
+			_, err := Process(&cmd)
 			if err != nil {
 				t.Fatalf("TestEncryptDecrypt - encrypt %s: %v\n", err, f)
 			}
@@ -494,7 +582,7 @@ func TestEncryptDecrypt(t *testing.T) {
 			config.UserPW = "upw"
 			config.OwnerPW = "opw"
 			cmd = ValidateCommand(f, config)
-			err = Process(&cmd)
+			_, err = Process(&cmd)
 			if err != nil {
 				t.Fatalf("TestEncryptDecrypt - validate %s: %v\n", err, f)
 			}
@@ -506,7 +594,7 @@ func TestEncryptDecrypt(t *testing.T) {
 			pwOld := "upw"
 			pwNew := "upwNew"
 			cmd = ChangeUserPWCommand(f, f, config, &pwOld, &pwNew)
-			err = Process(&cmd)
+			_, err = Process(&cmd)
 			if err != nil {
 				t.Fatalf("TestEncryption - change userPW: %v\n", err)
 			}
@@ -517,7 +605,7 @@ func TestEncryptDecrypt(t *testing.T) {
 			config.UserPW = "upwNew"
 			config.OwnerPW = "opw"
 			cmd = ValidateCommand(f, config)
-			err = Process(&cmd)
+			_, err = Process(&cmd)
 			if err != nil {
 				t.Fatalf("TestEncryption - validate: %v\n", err)
 			}
@@ -529,7 +617,7 @@ func TestEncryptDecrypt(t *testing.T) {
 			pwOld = "opw"
 			pwNew = "opwNew"
 			cmd = ChangeOwnerPWCommand(f, f, config, &pwOld, &pwNew)
-			err = Process(&cmd)
+			_, err = Process(&cmd)
 			if err != nil {
 				t.Fatalf("TestEncryption - change ownerPW: %v\n", err)
 			}
@@ -540,7 +628,7 @@ func TestEncryptDecrypt(t *testing.T) {
 			config.UserPW = "upwNew"
 			config.OwnerPW = "opwNew"
 			cmd = ValidateCommand(f, config)
-			err = Process(&cmd)
+			_, err = Process(&cmd)
 			if err != nil {
 				t.Fatalf("TestEncryption - validate: %v\n", err)
 			}
@@ -551,7 +639,7 @@ func TestEncryptDecrypt(t *testing.T) {
 			config.UserPW = "upwNew"
 			config.OwnerPW = "opwNew"
 			cmd = DecryptCommand(f, f, config)
-			err = Process(&cmd)
+			_, err = Process(&cmd)
 			if err != nil {
 				t.Fatalf("TestEncryptDecrypt - decrypt %s: %v\n", err, f)
 			}
@@ -560,11 +648,132 @@ func TestEncryptDecrypt(t *testing.T) {
 			//fmt.Println("\nValidate")
 			config = types.NewDefaultConfiguration()
 			cmd = ValidateCommand(f, config)
-			err = Process(&cmd)
+			_, err = Process(&cmd)
 			if err != nil {
 				t.Fatalf("TestEncryption - validate %s: %v\n", err, f)
 			}
 
 		}
+	}
+}
+
+func copyFile(srcFileName, destFileName string) (err error) {
+
+	from, err := os.Open(srcFileName)
+	if err != nil {
+		return
+	}
+	defer from.Close()
+
+	to, err := os.OpenFile(destFileName, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		return
+	}
+	defer to.Close()
+
+	_, err = io.Copy(to, from)
+
+	return
+}
+
+func TestAttachments(t *testing.T) {
+
+	testDir := "testdata"
+
+	testFile := testDir + "/go.pdf"
+	err := copyFile(testFile, outputDir+"/go.pdf")
+	if err != nil {
+		t.Fatalf("TestAttachments - copy File %s: %v\n", testFile, err)
+	}
+
+	testFile = testDir + "/golang.pdf"
+	err = copyFile(testFile, outputDir+"/golang.pdf")
+	if err != nil {
+		t.Fatalf("TestAttachments - copy File %s: %v\n", testFile, err)
+	}
+
+	testFile = testDir + "/T4.pdf"
+	err = copyFile(testFile, outputDir+"/T4.pdf")
+	if err != nil {
+		t.Fatalf("TestAttachments - copy File %s: %v\n", testFile, err)
+	}
+
+	config := types.NewDefaultConfiguration()
+
+	fileName := outputDir + "/go.pdf"
+
+	// attach list must be 0
+	cmd := ListAttachmentsCommand(fileName, config)
+	list, err := Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestAttachments - list attachments %s: %v\n", fileName, err)
+	}
+	if len(list) > 0 {
+		t.Fatalf("TestAttachments - list attachments %s: should have 0 attachments\n", fileName)
+	}
+
+	// attach add 2 files
+	cmd = AddAttachmentsCommand(fileName, []string{outputDir + "/golang.pdf", outputDir + "/T4.pdf"}, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestAttachments - add attachments to %s: %v\n", fileName, err)
+	}
+
+	// attach list must be 2
+	cmd = ListAttachmentsCommand(fileName, config)
+	list, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestAttachments - list attachments %s: %v\n", fileName, err)
+	}
+	if len(list) != 2 {
+		t.Fatalf("TestAttachments - list attachments %s: should have 0 attachments\n", fileName)
+	}
+
+	// attach extract all
+	cmd = ExtractAttachmentsCommand(fileName, ".", nil, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestAttachments - extract all attachments from %s to %s: %v\n", fileName, ".", err)
+	}
+
+	// attach extract 1 file
+	cmd = ExtractAttachmentsCommand(fileName, ".", []string{outputDir + "/golang.pdf"}, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestAttachments - extract 1 attachment from %s to %s: %v\n", fileName, ".", err)
+	}
+
+	// attach remove 1 file
+	cmd = RemoveAttachmentsCommand(fileName, []string{outputDir + "/golang.pdf"}, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestAttachments - remove attachment from %s: %v\n", fileName, err)
+	}
+
+	// attach list must be 1
+	cmd = ListAttachmentsCommand(fileName, config)
+	list, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestAttachments - list attachments %s: %v\n", fileName, err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("TestAttachments - list attachments %s: should have 0 attachments\n", fileName)
+	}
+
+	// attach remove all
+	cmd = RemoveAttachmentsCommand(fileName, nil, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestAttachments - remove all attachment from %s: %v\n", fileName, err)
+	}
+
+	// attach list must be 0.
+	cmd = ListAttachmentsCommand(fileName, config)
+	list, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestAttachments - list attachments %s: %v\n", fileName, err)
+	}
+	if len(list) > 0 {
+		t.Fatalf("TestAttachments - list attachments %s: should have 0 attachments\n", fileName)
 	}
 }

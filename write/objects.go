@@ -57,21 +57,14 @@ func writeObjectTrailer(w *types.WriteContext) (int, error) {
 func startObjectStream(ctx *types.PDFContext) (err error) {
 
 	// See 7.5.7 Object streams
-	// When new object streams and compressed objects are created, they shall always be assigned new object numbers,
-	// not old ones taken from the free list.
+	// When new object streams and compressed objects are created, they shall always be assigned new object numbers.
 
 	logDebugWriter.Println("startObjectStream begin")
 
 	xRefTable := ctx.XRefTable
 	objStreamDict := types.NewPDFObjectStreamDict()
-	xRefTableEntry := types.NewXRefTableEntryGen0()
-	xRefTableEntry.Object = *objStreamDict
-
-	objNumber, ok := xRefTable.InsertNew(*xRefTableEntry)
-	if !ok {
-		return errors.Errorf("startObjectStream: Problem inserting entry for %d", objNumber)
-	}
-
+	xRefTableEntry := types.NewXRefTableEntryGen0(*objStreamDict)
+	objNumber := xRefTable.InsertNew(*xRefTableEntry)
 	ctx.Write.CurrentObjStream = &objNumber
 
 	logDebugWriter.Printf("startObjectStream end: %d\n", objNumber)

@@ -6,6 +6,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+// See 7.11.4
+
 func processEmbeddedFileStreamMacParameterDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
 
 	logInfoValidate.Println("*** processEmbeddedFileStreamMacParameterDict begin ***")
@@ -77,15 +79,11 @@ func validateEmbeddedFileStreamParameterDict(xRefTable *types.XRefTable, obj int
 	if err != nil {
 		return
 	}
-
-	if obj == nil {
-		logInfoValidate.Println("validateEmbeddedFileStreamParameterDict end")
-		return
-	}
-
-	err = processEmbeddedFileStreamMacParameterDict(xRefTable, macDict)
-	if err != nil {
-		return
+	if macDict != nil {
+		err = processEmbeddedFileStreamMacParameterDict(xRefTable, macDict)
+		if err != nil {
+			return
+		}
 	}
 
 	// CheckSum, optional string
@@ -241,12 +239,6 @@ func processFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err e
 
 	dictName := "fileSpecDict"
 
-	// Type, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "Filespec" })
-	if err != nil {
-		return
-	}
-
 	// FS, optional, name
 	fsName, err := validateNameEntry(xRefTable, dict, dictName, "FS", OPTIONAL, types.V10, nil)
 	if err != nil {
@@ -276,7 +268,7 @@ func processFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err e
 	// UF, optional, text string
 	sinceVersion := types.V17
 	if xRefTable.ValidationMode == types.ValidationRelaxed {
-		sinceVersion = types.V16
+		sinceVersion = types.V14
 	}
 	_, err = validateStringEntry(xRefTable, dict, dictName, "UF", OPTIONAL, sinceVersion, validateFileSpecString)
 	if err != nil {
@@ -307,10 +299,19 @@ func processFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err e
 		return
 	}
 
+	// Type, required if EF present, name
+	validate = func(s string) bool {
+		return s == "Filespec" || (xRefTable.ValidationMode == types.ValidationRelaxed && s == "F")
+	}
+	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", efDict != nil, types.V10, validate)
+	if err != nil {
+		return
+	}
+
 	// if EF present, Type "FileSpec" is required
 	if efDict != nil {
 
-		if dict.Type() == nil || *dict.Type() != "Filespec" {
+		if dict.Type() == nil || (*dict.Type() != "Filespec" && (xRefTable.ValidationMode == types.ValidationRelaxed && *dict.Type() != "F")) {
 			return errors.New("processFileSpecDict: missing type: FileSpec")
 		}
 
@@ -322,7 +323,11 @@ func processFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err e
 	}
 
 	// Desc, optional, text string, since V1.6
-	_, err = validateStringEntry(xRefTable, dict, dictName, "Desc", OPTIONAL, types.V16, nil)
+	sinceVersion = types.V16
+	if xRefTable.ValidationMode == types.ValidationRelaxed {
+		sinceVersion = types.V10
+	}
+	_, err = validateStringEntry(xRefTable, dict, dictName, "Desc", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return
 	}
@@ -340,7 +345,14 @@ func processFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err e
 
 func validateFileSpecification(xRefTable *types.XRefTable, obj interface{}) (o interface{}, err error) {
 
+	// See 7.11.4
+
 	logInfoValidate.Println("*** validateFileSpecification begin ***")
+
+	obj, err = xRefTable.Dereference(obj)
+	if err != nil {
+		return
+	}
 
 	switch obj := obj.(type) {
 

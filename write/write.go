@@ -1,4 +1,4 @@
-// Package write contains code that writes PDF data from memory to a file.
+// Package write renders a PDF cross reference table to a PDF file.
 package write
 
 import (
@@ -17,9 +17,6 @@ import (
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
 )
-
-// PdfcpuVersion is the current version.
-const PdfcpuVersion = "0.1.2"
 
 var (
 	logDebugWriter *log.Logger
@@ -718,8 +715,7 @@ func writeXRefStream(ctx *types.PDFContext) (err error) {
 
 	xRefTable := ctx.XRefTable
 	xRefStreamDict := types.NewPDFXRefStreamDict(ctx)
-	xRefTableEntry := types.NewXRefTableEntryGen0()
-	xRefTableEntry.Object = *xRefStreamDict
+	xRefTableEntry := types.NewXRefTableEntryGen0(*xRefStreamDict)
 
 	// Reuse free objects (including recycled objects from this run).
 	var objNumber int
@@ -906,8 +902,7 @@ func handleEncryption(ctx *types.PDFContext) (err error) {
 			dict.Update("U", types.PDFHexLiteral(hex.EncodeToString(ctx.E.U)))
 			dict.Update("O", types.PDFHexLiteral(hex.EncodeToString(ctx.E.O)))
 
-			xRefTableEntry := types.NewXRefTableEntryGen0()
-			xRefTableEntry.Object = *dict
+			xRefTableEntry := types.NewXRefTableEntryGen0(*dict)
 
 			// Reuse free objects (including recycled objects from this run).
 			var objNumber int

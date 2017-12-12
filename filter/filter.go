@@ -1,4 +1,4 @@
-// Package filter contains implementations for PDF filters.
+// Package filter contains PDF filter implementations.
 package filter
 
 // See 7.4 for a list of defined filter types.

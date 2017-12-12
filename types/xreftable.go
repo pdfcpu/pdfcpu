@@ -8,9 +8,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// IntSet is a set of integers.
-type IntSet map[int]bool
-
 // XRefTableEntry represents an entry in the PDF cross reference table.
 //
 // This may be a free object, a compressed object or any in use PDF object:
@@ -28,9 +25,9 @@ type XRefTableEntry struct {
 }
 
 // NewXRefTableEntryGen0 creates a cross reference table entry for an object with generation 0.
-func NewXRefTableEntryGen0() *XRefTableEntry {
+func NewXRefTableEntryGen0(obj interface{}) *XRefTableEntry {
 	zero := 0
-	return &XRefTableEntry{Generation: &zero}
+	return &XRefTableEntry{Generation: &zero, Object: obj}
 }
 
 // Enc wraps around all defined encryption attributes.
@@ -47,6 +44,7 @@ type XRefTable struct {
 	Size                *int            // Object count from PDF trailer dict.
 	PageCount           int             // Number of pages.
 	Root                *PDFIndirectRef // Catalog (reference to root object).
+	EmbeddedFiles       *PDFNameTree    // EmbeddedFiles name tree.
 	Encrypt             *PDFIndirectRef // Encrypt dict.
 	E                   *Enc
 	EncKey              []byte // Encrypt key.
@@ -140,7 +138,7 @@ func (xRefTable *XRefTable) ParseRootVersion() (*string, error) {
 	}
 
 	pdfObject, err := xRefTable.indRefToObject(indirectRef)
-	if err != nil {
+	if err != nil || pdfObject == nil {
 		return nil, err
 	}
 
@@ -246,21 +244,14 @@ func (xRefTable *XRefTable) FindTableEntryForIndRef(indRef *PDFIndirectRef) (*XR
 	return xRefTable.FindTableEntry(indRef.ObjectNumber.Value(), indRef.GenerationNumber.Value())
 }
 
-// Insert adds given xRefTableEntry at given index objNumber into the cross reference table.
-// Gets called when reading in a PDF file and generating its xRefTable in memory.
-func (xRefTable *XRefTable) Insert(objNumber int, xRefTableEntry XRefTableEntry) bool {
-	xRefTable.Table[objNumber] = &xRefTableEntry
-	return true
-}
-
 // InsertNew adds given xRefTableEntry at next new objNumber into the cross reference table.
 // Only to be called once an xRefTable has been generated completely and all trailer dicts have been processed.
 // xRefTable.Size is the size entry of the first trailer dict processed.
 // Called on creation of new object streams.
 // Called by InsertAndUseRecycled.
-func (xRefTable *XRefTable) InsertNew(xRefTableEntry XRefTableEntry) (objNumber int, ok bool) {
+func (xRefTable *XRefTable) InsertNew(xRefTableEntry XRefTableEntry) (objNumber int) {
 	objNumber = *xRefTable.Size
-	ok = xRefTable.Insert(objNumber, xRefTableEntry)
+	xRefTable.Table[objNumber] = &xRefTableEntry
 	*xRefTable.Size++
 	return
 }
@@ -281,14 +272,7 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 
 	// If none available, add new object & return.
 	if *freeListHeadEntry.Offset == 0 {
-
-		i, ok := xRefTable.InsertNew(xRefTableEntry)
-		if !ok {
-			err = errors.Errorf("InsertAndRecycle: Problem inserting entry for %d", i)
-			return
-		}
-
-		objNumber = i
+		objNumber = xRefTable.InsertNew(xRefTableEntry)
 		logInfoTypes.Printf("InsertAndUseRecycled: end, new objNr=%d\n", objNumber)
 		return
 	}
@@ -309,11 +293,34 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 	entry.Offset = nil
 
 	// Create a new entry for the recycled object.
-	if !xRefTable.Insert(objNumber, xRefTableEntry) {
-		err = errors.Errorf("InsertAndRecycle: Problem inserting entry for %d", objNumber)
-	}
+	xRefTable.Table[objNumber] = &xRefTableEntry
 
 	logInfoTypes.Printf("InsertAndUseRecycled: end, recycled objNr=%d\n", objNumber)
+
+	return
+}
+
+// InsertObject appends dict to the xRefTable.
+func (xRefTable *XRefTable) InsertObject(obj interface{}) (objNumber int, err error) {
+	xRefTableEntry := NewXRefTableEntryGen0(obj)
+	objNumber = xRefTable.InsertNew(*xRefTableEntry)
+	return
+}
+
+// InsertPDFStreamDict creates a streamDict for buf and puts it into the xRefTable.
+func (xRefTable *XRefTable) InsertPDFStreamDict(buf []byte) (sd *PDFStreamDict, err error) {
+
+	sd =
+		&PDFStreamDict{
+			PDFDict:        NewPDFDict(),
+			Content:        buf,
+			FilterPipeline: []PDFFilter{PDFFilter{Name: "FlateDecode", DecodeParms: nil}}}
+
+	ok := sd.Insert("Filter", PDFName("FlateDecode"))
+	if !ok {
+		err = errors.New("InsertPDFStreamDict: duplicate error on \"Filter\" entry ")
+		return
+	}
 
 	return
 }
@@ -410,12 +417,80 @@ func (xRefTable *XRefTable) EnsureValidFreeList() (err error) {
 	return
 }
 
+func (xRefTable *XRefTable) deleteObject(obj interface{}) (err error) {
+
+	logInfoTypes.Println("deleteObject: begin")
+
+	indRef, ok := obj.(PDFIndirectRef)
+	if ok {
+
+		objNumber := int(indRef.ObjectNumber)
+		obj, err = xRefTable.Dereference(indRef)
+		if err != nil {
+			return
+		}
+
+		err = xRefTable.DeleteObject(objNumber)
+		if err != nil {
+			return
+		}
+
+		if obj == nil {
+			logInfoTypes.Println("deleteObject: end, obj == nil")
+			return
+		}
+	}
+
+	switch obj := obj.(type) {
+
+	case PDFDict:
+		for _, v := range obj.Dict {
+			err = xRefTable.deleteObject(v)
+			if err != nil {
+				return
+			}
+		}
+
+	case PDFArray:
+		for _, v := range obj {
+			err = xRefTable.deleteObject(v)
+			if err != nil {
+				return
+			}
+		}
+
+	}
+
+	logInfoTypes.Println("deleteObject: end")
+	return
+}
+
+// DeleteObjectGraph deletes all objects reachable by indRef.
+func (xRefTable *XRefTable) DeleteObjectGraph(obj interface{}) (err error) {
+
+	logInfoTypes.Println("DeleteObjectGraph: begin")
+
+	indRef, ok := obj.(PDFIndirectRef)
+	if !ok {
+		return
+	}
+
+	// Delete ObjectGraph for object indRef.ObjectNumber.Value() via recursion.
+	err = xRefTable.deleteObject(indRef)
+	if err != nil {
+		return
+	}
+
+	logInfoTypes.Println("DeleteObjectGraph: end")
+	return
+}
+
 // DeleteObject marks an object as free and inserts it into the free list right after the head.
 func (xRefTable *XRefTable) DeleteObject(objectNumber int) (err error) {
 
 	// see 7.5.4 Cross-Reference Table
 
-	logDebugTypes.Printf("DeleteObject: begin %d\n", objectNumber)
+	logInfoTypes.Printf("DeleteObject: begin %d\n", objectNumber)
 
 	freeListHeadEntry, err := xRefTable.Free(0)
 	if err != nil {
@@ -425,6 +500,11 @@ func (xRefTable *XRefTable) DeleteObject(objectNumber int) (err error) {
 	entry, found := xRefTable.FindTableEntryLight(objectNumber)
 	if !found {
 		err = errors.Errorf("DeleteObject: no entry for obj #%d\n", objectNumber)
+		return
+	}
+
+	if entry.Free {
+		logInfoTypes.Printf("DeleteObject: end %d already free\n", objectNumber)
 		return
 	}
 
@@ -499,7 +579,8 @@ func (xRefTable *XRefTable) indRefToObject(indObjRef *PDFIndirectRef) (interface
 
 	entry, found := xRefTable.FindTableEntry(objectNumber, generationNumber)
 	if !found {
-		return nil, errors.Errorf("indRefToObject(obj#%d, gen#%d): xref table entry not found", objectNumber, generationNumber)
+		logDebugTypes.Printf("indRefToObject(obj#%d, gen#%d): xref table entry not found\n", objectNumber, generationNumber)
+		return nil, nil
 	}
 
 	logDebugTypes.Printf("indRefToObject: found xRefTable entry")
@@ -719,7 +800,7 @@ func (xRefTable *XRefTable) DereferenceStreamDict(obj interface{}) (streamDictp 
 func (xRefTable *XRefTable) Catalog() (*PDFDict, error) {
 
 	pdfObject, err := xRefTable.indRefToObject(xRefTable.Root)
-	if err != nil {
+	if err != nil || pdfObject == nil {
 		return nil, err
 	}
 
@@ -735,7 +816,7 @@ func (xRefTable *XRefTable) Catalog() (*PDFDict, error) {
 func (xRefTable *XRefTable) EncryptDict() (*PDFDict, error) {
 
 	pdfObject, err := xRefTable.indRefToObject(xRefTable.Encrypt)
-	if err != nil {
+	if err != nil || pdfObject == nil {
 		return nil, err
 	}
 

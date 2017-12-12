@@ -1,4 +1,4 @@
-// Package read provides methods for parsing PDF files into memory.
+// Package read provides for parsing a PDF file into memory.
 //
 // The in memory representation of a PDF file is called a PDFContext.
 //
@@ -216,9 +216,7 @@ func parseXRefTableEntry(s *bufio.Scanner, xRefTable *types.XRefTable, objectNum
 
 	logDebugReader.Printf("parseXRefTableEntry: Insert new xreftable entry for Object %d\n", objectNumber)
 
-	if !xRefTable.Insert(objectNumber, xRefTableEntry) {
-		return errors.Errorf("parseXRefTableEntry: Problem inserting entry for %d", objectNumber)
-	}
+	xRefTable.Table[objectNumber] = &xRefTableEntry
 
 	logDebugReader.Println("parseXRefTableEntry: end")
 
@@ -442,12 +440,7 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, xRefStreamDict types.PDFX
 		if ctx.XRefTable.Exists(objectNumber) {
 			logDebugReader.Printf("extractXRefTableEntriesFromXRefStream: Skip entry %d - already assigned\n", objectNumber)
 		} else {
-
-			//logDebugReader.Printf("Insert new xreftable entry for Object %d\n", objectNumber)
-			if !ctx.XRefTable.Insert(objectNumber, xRefTableEntry) {
-				return errors.Errorf("extractXRefTableEntriesFromXRefStream: Problem inserting entry for %d", objectNumber)
-			}
-
+			ctx.Table[objectNumber] = &xRefTableEntry
 		}
 
 		j++
@@ -555,13 +548,8 @@ func parseXRefStream(rd io.Reader, offset *int64, ctx *types.PDFContext) (prevOf
 
 	logDebugReader.Printf("parseXRefStream: Insert new xRefTable entry for Object %d\n", *objectNumber)
 
-	if !ctx.XRefTable.Insert(*objectNumber, entry) {
-		logDebugReader.Printf("parseXRefStream: Problem inserting entry for %d\n", *objectNumber)
-		return nil, errors.New("parseXRefStreams: can't insert entry into xRefTable")
-	}
-
+	ctx.Table[*objectNumber] = &entry
 	ctx.Read.XRefStreams[*objectNumber] = true
-
 	prevOffset = pdfXRefStreamDict.PreviousOffset
 
 	logDebugReader.Println("parseXRefStream: end")

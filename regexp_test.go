@@ -71,7 +71,7 @@ func doTestPageSelection(s string, pageCount int, compareString string, t *testi
 		log.Fatal()
 	}
 
-	selectedPages, err := pagesForPageSelection(pageCount, &pageSelection)
+	selectedPages, err := pagesForPageSelection(pageCount, pageSelection)
 	if err != nil {
 		log.Fatal()
 	}

@@ -624,7 +624,7 @@ func validateStructTreeRootDict(xRefTable *types.XRefTable, dict *types.PDFDict)
 	indRef := dict.IndirectRefEntry("IDTree")
 	if indRef != nil {
 		logInfoValidate.Println("validateStructTreeRootDict: writing IDTree.")
-		err = validateNameTree(xRefTable, "IDTree", *indRef, true)
+		_, _, err = validateNameTree(xRefTable, "IDTree", *indRef, true)
 		if err != nil {
 			return
 		}
@@ -644,7 +644,7 @@ func validateStructTreeRootDict(xRefTable *types.XRefTable, dict *types.PDFDict)
 				return errors.New("validateStructTreeRootDict: corrupt entry \"ParentTree\"")
 			}
 		} else {
-			err = validateNumberTree(xRefTable, "StructTree", *indRef, true)
+			_, _, err = validateNumberTree(xRefTable, "StructTree", *indRef, true)
 			if err != nil {
 				return
 			}

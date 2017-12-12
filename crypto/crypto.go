@@ -1,4 +1,4 @@
-// Package crypto provides PDF encryption plumbing code.
+// Package crypto contains PDF encryption code.
 package crypto
 
 import (

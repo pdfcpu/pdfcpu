@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hhrutter/pdfcpu"
+	"github.com/hhrutter/pdfcpu/attach"
 	"github.com/hhrutter/pdfcpu/crypto"
 	"github.com/hhrutter/pdfcpu/extract"
 	"github.com/hhrutter/pdfcpu/merge"
@@ -33,6 +34,7 @@ The commands are:
 	merge		concatenate 2 or more PDFs
 	extract		extract images, fonts, content or pages
 	trim		create trimmed version
+	attach		list, add, remove, extract embedded file attachments
 	encrypt		set password protection		
 	decrypt		remove password protection
 	changeupw	change user password
@@ -77,7 +79,7 @@ verbose ... extensive log output
  inFile ... input pdf file
  outDir ... output directory`
 
-	usageMerge     = "usage: pdfcpu merge [-verbose] outFile inFile1 inFile2 ..."
+	usageMerge     = "usage: pdfcpu merge [-verbose] outFile inFile..."
 	usageLongMerge = `Merge concatenates a sequence of PDFs/inFiles to outFile.
 
 verbose ... extensive log output
@@ -129,6 +131,21 @@ n serves as an alternative for !, since ! needs to be escaped with single quotes
 Valid pageSelections e.g. -3,5,7- or 4-7,!6 or 1-,!5
 
 A missing pageSelection means all pages are selected for generation.`
+
+	usageAttachList    = "pdfcpu attach list [-verbose] [-upw userpw] [-opw ownerpw] inFile"
+	usageAttachAdd     = "pdfcpu attach add [-verbose] [-upw userpw] [-opw ownerpw] inFile file..."
+	usageAttachRemove  = "pdfcpu attach remove [-verbose] [-upw userpw] [-opw ownerpw] inFile [file...]"
+	usageAttachExtract = "pdfcpu attach extract [-verbose] [-upw userpw] [-opw ownerpw] inFile outDir [file...]"
+
+	usageAttach = "usage: " + usageAttachList + "\n\t" + usageAttachAdd + "\n\t" + usageAttachRemove + "\n\t" + usageAttachExtract
+
+	usageLongAttach = `Attach manages embedded file attachments.
+	
+verbose ... extensive log output
+    upw ... user password
+    opw ... owner password
+ inFile ... input pdf file
+ outDir ... output directory`
 
 	usageEncrypt     = "usage: pdfcpu encrypt [-verbose] [-upw userpw] [-opw ownerpw] inFile [outFile]"
 	usageLongEncrypt = `Encrypt sets a password protection based on user and owner password.
@@ -200,74 +217,81 @@ func init() {
 	logInfo = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 }
 
-func ensurePdfExtension(fileName string) {
-	if !strings.HasSuffix(fileName, ".pdf") {
-		log.Fatalf("%s needs extension \".pdf\".", fileName)
+func ensurePdfExtension(filename string) {
+	if !strings.HasSuffix(filename, ".pdf") {
+		log.Fatalf("%s needs extension \".pdf\".", filename)
 	}
 }
 
-func defaultFilenameOut(fileName string) string {
-	ensurePdfExtension(fileName)
-	return strings.TrimSuffix(fileName, ".pdf") + "_new.pdf"
+func defaultFilenameOut(filename string) string {
+	ensurePdfExtension(filename)
+	return strings.TrimSuffix(filename, ".pdf") + "_new.pdf"
 }
 
 func version() {
-	fmt.Printf("pdfcpu version %s\n", write.PdfcpuVersion)
+	fmt.Printf("pdfcpu version %s\n", types.PDFCPUVersion)
 }
 
 func help() {
 
 	if len(flag.Args()) == 0 {
-		fmt.Println(usage)
+		fmt.Fprintln(os.Stderr, usage)
 		return
 	}
 
 	if len(flag.Args()) > 1 {
-		fmt.Printf("usage: pdfcpu help command\n\nToo many arguments given.\n")
+		fmt.Fprintln(os.Stderr, "usage: pdfcpu help command\n\nToo many arguments given.")
 		return
 	}
 
 	topic := flag.Arg(0)
 
+	var u string
+
 	switch topic {
 
 	case "validate":
-		fmt.Printf("%s\n\n%s\n", usageValidate, usageLongValidate)
+		u = fmt.Sprintf("%s\n\n%s\n", usageValidate, usageLongValidate)
 
 	case "optimize":
-		fmt.Printf("%s\n\n%s\n", usageOptimize, usageLongOptimize)
+		u = fmt.Sprintf("%s\n\n%s\n", usageOptimize, usageLongOptimize)
 
 	case "split":
-		fmt.Printf("%s\n\n%s\n", usageSplit, usageLongSplit)
+		u = fmt.Sprintf("%s\n\n%s\n", usageSplit, usageLongSplit)
 
 	case "merge":
-		fmt.Printf("%s\n\n%s\n", usageMerge, usageLongMerge)
+		u = fmt.Sprintf("%s\n\n%s\n", usageMerge, usageLongMerge)
 
 	case "extract":
-		fmt.Printf("%s\n\n%s\n\n%s\n", usageExtract, usageLongExtract, usagePageSelection)
+		u = fmt.Sprintf("%s\n\n%s\n\n%s\n", usageExtract, usageLongExtract, usagePageSelection)
 
 	case "trim":
-		fmt.Printf("%s\n\n%s\n\n%s\n", usageTrim, usageLongTrim, usagePageSelection)
+		u = fmt.Sprintf("%s\n\n%s\n\n%s\n", usageTrim, usageLongTrim, usagePageSelection)
+
+	case "attach":
+		u = fmt.Sprintf("%s\n\n%s\n", usageAttach, usageLongAttach)
 
 	case "encrypt":
-		fmt.Printf("%s\n\n%s\n", usageEncrypt, usageLongEncrypt)
+		u = fmt.Sprintf("%s\n\n%s\n", usageEncrypt, usageLongEncrypt)
 
 	case "decrypt":
-		fmt.Printf("%s\n\n%s\n", usageDecrypt, usageLongDecrypt)
+		u = fmt.Sprintf("%s\n\n%s\n", usageDecrypt, usageLongDecrypt)
 
 	case "changeupw":
-		fmt.Printf("%s\n\n%s\n", usageChangeUserPW, usageLongChangeUserPW)
+		u = fmt.Sprintf("%s\n\n%s\n", usageChangeUserPW, usageLongChangeUserPW)
 
 	case "changeopw":
-		fmt.Printf("%s\n\n%s\n", usageChangeOwnerPW, usageLongChangeOwnerPW)
+		u = fmt.Sprintf("%s\n\n%s\n", usageChangeOwnerPW, usageLongChangeOwnerPW)
 
 	case "version":
-		fmt.Printf("%s\n\n%s\n", usageVersion, usageLongVersion)
+		u = fmt.Sprintf("%s\n\n%s\n", usageVersion, usageLongVersion)
 
 	default:
-		fmt.Printf("Unknown help topic `%s`.  Run 'pdfcpu help'.\n", topic)
+		u = fmt.Sprintf("Unknown help topic `%s`.  Run 'pdfcpu help'.\n", topic)
 
 	}
+
+	fmt.Fprintln(os.Stderr, u)
 }
 
 func setupLogging(verbose bool) {
@@ -280,6 +304,7 @@ func setupLogging(verbose bool) {
 	write.Verbose(verbose)
 	extract.Verbose(verbose)
 	merge.Verbose(verbose)
+	attach.Verbose(verbose)
 	pdfcpu.Verbose(verbose)
 
 	needStackTrace = verbose
@@ -288,12 +313,22 @@ func setupLogging(verbose bool) {
 func main() {
 
 	if len(os.Args) == 1 {
-		fmt.Println(usage)
-		return
+		fmt.Fprintln(os.Stderr, usage)
+		os.Exit(1)
 	}
 
-	// the first argument is the pdfcpu command, start flag processing with 2nd argument.
-	flag.CommandLine.Parse(os.Args[2:])
+	// The first argument is the pdfcpu command => start flag processing after 2nd argument.
+	command := os.Args[1]
+	i := 2
+	if command == "attach" {
+		// The attach command uses a subcommand and therefore a special case => start flag processing after 3rd argument.
+		if len(os.Args) == 2 {
+			fmt.Fprintln(os.Stderr, usageAttach)
+			os.Exit(1)
+		}
+		i = 3
+	}
+	flag.CommandLine.Parse(os.Args[i:])
 
 	setupLogging(verbose)
 
@@ -302,8 +337,6 @@ func main() {
 	config.OwnerPW = opw
 
 	var cmd pdfcpu.Command
-
-	command := os.Args[1]
 
 	switch command {
 
@@ -315,16 +348,16 @@ func main() {
 		}
 
 		if len(flag.Args()) == 0 || len(flag.Args()) > 1 || pageSelection != "" {
-			fmt.Printf("%s\n\n", usageValidate)
-			return
+			fmt.Fprintf(os.Stderr, "%s\n\n", usageValidate)
+			os.Exit(1)
 		}
 
 		filenameIn := flag.Arg(0)
 		ensurePdfExtension(filenameIn)
 
 		if mode != "" && mode != "strict" && mode != "s" && mode != "relaxed" && mode != "r" {
-			fmt.Printf("%s\n\n", usageValidate)
-			return
+			fmt.Fprintf(os.Stderr, "%s\n\n", usageValidate)
+			os.Exit(1)
 		}
 
 		switch mode {
@@ -339,8 +372,8 @@ func main() {
 	case "optimize", "o":
 
 		if len(flag.Args()) == 0 || len(flag.Args()) > 2 || pageSelection != "" {
-			fmt.Printf("%s\n\n", usageOptimize)
-			return
+			fmt.Fprintf(os.Stderr, "%s\n\n", usageOptimize)
+			os.Exit(1)
 		}
 
 		filenameIn := flag.Arg(0)
@@ -363,8 +396,8 @@ func main() {
 	case "split", "s":
 
 		if len(flag.Args()) != 2 || pageSelection != "" {
-			fmt.Printf("%s\n\n", usageSplit)
-			return
+			fmt.Fprintf(os.Stderr, "%s\n\n", usageSplit)
+			os.Exit(1)
 		}
 
 		filenameIn := flag.Arg(0)
@@ -377,8 +410,8 @@ func main() {
 	case "merge", "m":
 
 		if len(flag.Args()) < 3 || pageSelection != "" {
-			fmt.Printf("%s\n\n", usageMerge)
-			return
+			fmt.Fprintf(os.Stderr, "%s\n\n", usageMerge)
+			os.Exit(1)
 		}
 
 		filenameOut := ""
@@ -395,13 +428,13 @@ func main() {
 
 		cmd = pdfcpu.MergeCommand(filenamesIn, filenameOut, config)
 
-	case "extract", "e":
+	case "extract", "ext":
 
 		if len(flag.Args()) != 2 || mode == "" ||
 			(mode != "image" && mode != "font" && mode != "page" && mode != "content") &&
-				(mode != "i" && mode != "f" && mode != "p" && mode != "c") {
-			fmt.Printf("%s\n\n", usageExtract)
-			return
+				(mode != "i" && mode != "p" && mode != "c") {
+			fmt.Fprintf(os.Stderr, "%s\n\n", usageExtract)
+			os.Exit(1)
 		}
 
 		filenameIn := flag.Arg(0)
@@ -417,7 +450,7 @@ func main() {
 		switch mode {
 		case "image", "i":
 			cmd = pdfcpu.ExtractImagesCommand(filenameIn, dirnameOut, pages, config)
-		case "font", "f":
+		case "font":
 			cmd = pdfcpu.ExtractFontsCommand(filenameIn, dirnameOut, pages, config)
 		case "page", "p":
 			cmd = pdfcpu.ExtractPagesCommand(filenameIn, dirnameOut, pages, config)
@@ -428,8 +461,8 @@ func main() {
 	case "trim", "t":
 
 		if len(flag.Args()) == 0 || len(flag.Args()) > 2 || pageSelection == "" {
-			fmt.Printf("%s\n\n", usageTrim)
-			return
+			fmt.Fprintf(os.Stderr, "%s\n\n", usageTrim)
+			os.Exit(1)
 		}
 
 		pages, err := pdfcpu.ParsePageSelection(pageSelection)
@@ -448,11 +481,97 @@ func main() {
 
 		cmd = pdfcpu.TrimCommand(filenameIn, filenameOut, pages, config)
 
+	case "attach":
+
+		if len(os.Args) == 2 {
+			fmt.Fprintln(os.Stderr, usageAttach)
+			os.Exit(1)
+		}
+
+		var filenameIn string
+		filenames := []string{}
+		subCmd := os.Args[2]
+
+		switch subCmd {
+
+		case "list":
+
+			if len(flag.Args()) != 1 || pageSelection != "" {
+				fmt.Fprintf(os.Stderr, "usage: %s %v\n\n", usageAttachList, flag.Args())
+				os.Exit(1)
+			}
+
+			filenameIn = flag.Arg(0)
+			ensurePdfExtension(filenameIn)
+			//fmt.Println("filenameIn: " + filenameIn)
+			cmd = pdfcpu.ListAttachmentsCommand(filenameIn, config)
+
+		case "add":
+
+			if len(flag.Args()) < 2 || pageSelection != "" {
+				fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageAttachAdd)
+				os.Exit(1)
+			}
+
+			for i, arg := range flag.Args() {
+				if i == 0 {
+					filenameIn = arg
+					ensurePdfExtension(filenameIn)
+					continue
+				}
+				filenames = append(filenames, arg)
+			}
+			cmd = pdfcpu.AddAttachmentsCommand(filenameIn, filenames, config)
+
+		case "remove":
+
+			if len(flag.Args()) < 1 || pageSelection != "" {
+				fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageAttachRemove)
+				os.Exit(1)
+			}
+
+			for i, arg := range flag.Args() {
+				if i == 0 {
+					filenameIn = arg
+					ensurePdfExtension(filenameIn)
+					continue
+				}
+				filenames = append(filenames, arg)
+			}
+			cmd = pdfcpu.RemoveAttachmentsCommand(filenameIn, filenames, config)
+
+		case "extract":
+
+			if len(flag.Args()) < 2 || pageSelection != "" {
+				fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageAttachExtract)
+				os.Exit(1)
+			}
+
+			var dirnameOut string
+			for i, arg := range flag.Args() {
+				if i == 0 {
+					filenameIn = arg
+					ensurePdfExtension(filenameIn)
+					continue
+				}
+				if i == 1 {
+					dirnameOut = arg
+					continue
+				}
+				filenames = append(filenames, arg)
+			}
+			cmd = pdfcpu.ExtractAttachmentsCommand(filenameIn, dirnameOut, filenames, config)
+
+		default:
+			fmt.Fprintln(os.Stderr, usageAttach)
+			os.Exit(1)
+		}
+
 	case "decrypt", "d", "dec":
 
 		if len(flag.Args()) == 0 || len(flag.Args()) > 2 || pageSelection != "" {
-			fmt.Printf("%s\n\n", usageDecrypt)
-			return
+			fmt.Fprintf(os.Stderr, "%s\n\n", usageDecrypt)
+			os.Exit(1)
 		}
 
 		filenameIn := flag.Arg(0)
@@ -469,8 +588,8 @@ func main() {
 	case "encrypt", "enc":
 
 		if len(flag.Args()) == 0 || len(flag.Args()) > 2 || pageSelection != "" {
-			fmt.Printf("%s\n\n", usageEncrypt)
-			return
+			fmt.Fprintf(os.Stderr, "%s\n\n", usageEncrypt)
+			os.Exit(1)
 		}
 
 		filenameIn := flag.Arg(0)
@@ -485,10 +604,12 @@ func main() {
 		cmd = pdfcpu.EncryptCommand(filenameIn, filenameOut, config)
 
 	case "changeupw":
+
 		if len(flag.Args()) != 3 {
-			fmt.Printf("%s\n\n", usageChangeUserPW)
-			return
+			fmt.Fprintf(os.Stderr, "%s\n\n", usageChangeUserPW)
+			os.Exit(1)
 		}
+
 		pwOld := flag.Arg(1)
 		pwNew := flag.Arg(2)
 
@@ -498,10 +619,12 @@ func main() {
 		cmd = pdfcpu.ChangeUserPWCommand(filenameIn, filenameIn, config, &pwOld, &pwNew)
 
 	case "changeopw":
+
 		if len(flag.Args()) != 3 {
-			fmt.Printf("%s\n\n", usageChangeOwnerPW)
-			return
+			fmt.Fprintf(os.Stderr, "%s\n\n", usageChangeOwnerPW)
+			os.Exit(1)
 		}
+
 		pwOld := flag.Arg(1)
 		pwNew := flag.Arg(2)
 
@@ -513,8 +636,8 @@ func main() {
 	case "version":
 
 		if len(flag.Args()) != 0 {
-			fmt.Printf("%s\n\n", usageVersion)
-			return
+			fmt.Fprintf(os.Stderr, "%s\n\n", usageVersion)
+			os.Exit(1)
 		}
 
 		version()
@@ -523,17 +646,17 @@ func main() {
 	case "help", "h":
 
 		help()
-		return
+		os.Exit(1)
 
 	default:
 
-		fmt.Printf("pdfcpu unknown subcommand \"%s\"\n", command)
-		fmt.Println("Run 'pdfcpu help' for usage.")
-		return
+		fmt.Fprintf(os.Stderr, "pdfcpu unknown subcommand \"%s\"\n", command)
+		fmt.Fprintln(os.Stderr, "Run 'pdfcpu help' for usage.")
+		os.Exit(1)
 
 	}
 
-	err := pdfcpu.Process(&cmd)
+	out, err := pdfcpu.Process(&cmd)
 	if err != nil {
 		if needStackTrace {
 			fmt.Printf("Fatal: %+v\n", err)
@@ -541,6 +664,12 @@ func main() {
 			fmt.Printf("%v\n", err)
 		}
 		os.Exit(1)
+	}
+
+	if out != nil {
+		for _, l := range out {
+			fmt.Println(l)
+		}
 	}
 
 }

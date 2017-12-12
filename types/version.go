@@ -6,6 +6,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	// PDFCPUVersion returns the current pdfcpu version.
+	PDFCPUVersion = "0.1.3"
+
+	// PDFCPULongVersion returns pdfcpu's signature.
+	PDFCPULongVersion = "golang pdfcpu v" + PDFCPUVersion
+)
+
 // PDFVersion is a type for the internal representation of PDF versions.
 type PDFVersion int
 

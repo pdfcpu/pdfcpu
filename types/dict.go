@@ -492,12 +492,22 @@ func Escape(s string) (*string, error) {
 func Unescape(s string) ([]byte, error) {
 
 	var esc bool
+	var longEol bool
 	var octalCode []byte
 	var b bytes.Buffer
 
 	for i := 0; i < len(s); i++ {
 
 		c := s[i]
+
+		if longEol {
+			esc = false
+			longEol = false
+			// c is completing a 0x5C0D0A line break.
+			if c == 0x0A {
+				continue
+			}
+		}
 
 		if c != 0x5C && !esc {
 			b.WriteByte(c)
@@ -532,11 +542,16 @@ func Unescape(s string) ([]byte, error) {
 			continue
 		}
 
-		//if c == 0x0D {
-		//	//Ignore eol
-		//	esc = false
-		//	continue
-		//}
+		// Ignore \eol line breaks.
+		if c == 0x0A {
+			esc = false
+			continue
+		}
+
+		if c == 0x0D {
+			longEol = true
+			continue
+		}
 
 		if !strings.ContainsRune("nrtbf()01234567", rune(c)) {
 			return nil, errors.Errorf("Unescape: illegal escape sequence \\%c detected", c)

@@ -1,4 +1,4 @@
-// Package merge provides code for merging two PDFContexts.
+// Package merge provides for the merging of two PDFContexts.
 //
 // This means the concatenation of two page trees and merging all data involved.
 package merge
@@ -10,7 +10,6 @@ import (
 	"sort"
 
 	"github.com/hhrutter/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 var logDebugMerge, logInfoMerge, logErrorMerge *log.Logger
@@ -284,9 +283,7 @@ func appendSourceObjectsToDest(ctxSource, ctxDest *types.PDFContext) (err error)
 
 		logDebugMerge.Printf("adding obj %d from src to dest\n", objNr)
 
-		if !ctxDest.Insert(objNr, *entry) {
-			return errors.Errorf("appendSourceObjectsToDest: failed to insert new obj %d into ctxDest", objNr)
-		}
+		ctxDest.Table[objNr] = entry
 
 		*ctxDest.Size++
 

@@ -8,7 +8,7 @@
 
 # pdfcpu: a golang pdf processor
 
-Package pdfcpu is a simple PDF processing library written in [Go](http://golang.org).
+Package pdfcpu is a simple PDF processing library written in [Go](http://golang.org) supporting encryption.
 It provides both an API and a command line tool.
 Supported are all versions up to PDF 1.7 (ISO-32000).
 
@@ -32,6 +32,7 @@ I also wanted to have my own swiss army knife for PDFs written entirely in [Go](
 * Extract Pages (extract specific pages into a given dir)
 * Extract Content (extract the PDF-Source into given dir)
 * Trim (generate a custom version of a PDF file)
+* Manage (add,remove,list,extract) embedded file attachments
 * Encrypt (sets password protection)
 * Decrypt (removes password protection)
 * Change user/owner password
@@ -48,35 +49,36 @@ I also wanted to have my own swiss army knife for PDFs written entirely in [Go](
 ### Usage
 
     pdfcpu validate [-verbose] [-mode strict|relaxed] [-upw userpw] [-opw ownerpw] inFile
-
     pdfcpu optimize [-verbose] [-stats csvFile] [-upw userpw] [-opw ownerpw] inFile [outFile]
- 
     pdfcpu split [-verbose] [-upw userpw] [-opw ownerpw] inFile outDir
- 
-    pdfcpu merge [-verbose] outFile inFile1 inFile2 ...
- 
+    pdfcpu merge [-verbose] outFile inFile...
     pdfcpu extract [-verbose] -mode image|font|content|page [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile outDir
- 
     pdfcpu trim [-verbose] -pages pageSelection [-upw userpw] [-opw ownerpw] inFile outFile
 
+    pdfcpu attach list [-verbose] [-upw userpw] [-opw ownerpw] inFile
+    pdfcpu attach add [-verbose] [-upw userpw] [-opw ownerpw] inFile file...
+    pdfcpu attach remove [-verbose] [-upw userpw] [-opw ownerpw] inFile [file...]
+    pdfcpu attach extract [-verbose] [-upw userpw] [-opw ownerpw] inFile outDir [file...]
+
     pdfcpu encrypt [-verbose] [-upw userpw] [-opw ownerpw] inFile [outFile]
-
     pdfcpu decrypt [-verbose] [-upw userpw] [-opw ownerpw] inFile [outFile]
-	
     pdfcpu changeupw [-verbose] [-opw ownerpw] inFile upwOld upwNew
-
     pdfcpu changeopw [-verbose] [-upw userpw] inFile opwOld opwNew
+
+    pdfcpu version
 
  [Please read the documentation](https://godoc.org/github.com/hhrutter/pdfcpu)
 
 
 ### Status
 
-Version: 0.1.2
+Version: 0.1.3
 
-* Encryption support including changing passwords is available for the PDF standard security handler.
-* "Encrypt" uses AES with a 128 bit encryption key.
-* The extraction code for font files and images is experimental and serves as proof of concept only.
+* Support for embedded file attachments
+  * **Attach List** shows a list of all embedded files.
+  * **Attach Extract** exports embedded files.
+  * **Attach Add** embeds any number of files.
+  * **Attach Remove** deletes embedded files.
 
 
 ### To Do
@@ -93,7 +95,7 @@ Pull requests, bug fixes and issue reports are always welcome.
 
 Please open an issue if you want to propose a change.
 
-PDF files that will increase pdfcpu's coverage are very much welcome.
+PDF files that will increase pdfcpu's coverage are always welcome.
 
 
 ### Disclaimer

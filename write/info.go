@@ -190,7 +190,7 @@ func writeDocumentInfoDict(ctx *types.PDFContext) (err error) {
 
 	dict.Update("CreationDate", types.PDFStringLiteral(dateStr))
 	dict.Update("ModDate", types.PDFStringLiteral(dateStr))
-	dict.Update("Producer", types.PDFStringLiteral("golang pdfcpu v"+PdfcpuVersion))
+	dict.Update("Producer", types.PDFStringLiteral(types.PDFCPULongVersion))
 
 	_, _, err = writeDeepObject(ctx, obj)
 	if err != nil {

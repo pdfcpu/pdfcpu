@@ -20,7 +20,7 @@ func writeContent(ctx *types.PDFContext, streamDict *types.PDFStreamDict, pageNu
 		fileName = fmt.Sprintf("%s/content_p%d.txt", ctx.Write.DirName, pageNumber)
 	}
 
-	// Decode streamDict if used filter is supported only.
+	// Decode streamDict for supported filters only.
 	err = filter.DecodeStream(streamDict)
 	if err == filter.ErrUnsupportedFilter {
 		err = nil
@@ -52,7 +52,7 @@ func processPageDict(ctx *types.PDFContext, objNumber, genNumber int, dict *type
 	}
 
 	obj, err = ctx.Dereference(obj)
-	if err != nil {
+	if err != nil || obj == nil {
 		return
 	}
 

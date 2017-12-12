@@ -52,16 +52,14 @@ func validatePageLabelDict(xRefTable *types.XRefTable, obj interface{}) (err err
 	return
 }
 
-func validateNumberTreeDictNumsEntry(xRefTable *types.XRefTable, dict *types.PDFDict, name string) (err error) {
+func validateNumberTreeDictNumsEntry(xRefTable *types.XRefTable, dict *types.PDFDict, name string) (firstKey, lastKey int, err error) {
 
 	logInfoValidate.Println("*** validateNumberTreeDictNumsEntry begin ***")
 
-	// Nums: array of the form [key1 value1 key2 value2 ... keyn valuen]
-	// key: int
-	// value: indRef of structElemDict or array of indRefs of structElemDicts.
+	// Nums: array of the form [key1 value1 key2 value2 ... key n value n]
 	obj, found := dict.Find("Nums")
 	if !found {
-		return errors.New("writeNumberTreeDictNumsEntry: missing \"Kids\" or \"Nums\" entry")
+		return 0, 0, errors.New("writeNumberTreeDictNumsEntry: missing \"Kids\" or \"Nums\" entry")
 	}
 
 	arr, err := xRefTable.DereferenceArray(obj)
@@ -70,14 +68,14 @@ func validateNumberTreeDictNumsEntry(xRefTable *types.XRefTable, dict *types.PDF
 	}
 
 	if arr == nil {
-		return errors.New("validateNumberTreeDictNumsEntry: missing \"Nums\" array")
+		return 0, 0, errors.New("validateNumberTreeDictNumsEntry: missing \"Nums\" array")
 	}
 
 	logInfoValidate.Println("validateNumberTreeDictNumsEntry: \"Nums\": now writing value objects")
 
 	// arr length needs to be even because of contained key value pairs.
 	if len(*arr)%2 == 1 {
-		return errors.Errorf("validateNumberTreeDictNumsEntry: Nums array entry length needs to be even, length=%d\n", len(*arr))
+		return 0, 0, errors.Errorf("validateNumberTreeDictNumsEntry: Nums array entry length needs to be even, length=%d\n", len(*arr))
 	}
 
 	// every other entry is a value
@@ -88,6 +86,23 @@ func validateNumberTreeDictNumsEntry(xRefTable *types.XRefTable, dict *types.PDF
 	for i, obj := range *arr {
 
 		if i%2 == 0 {
+
+			obj, err = xRefTable.Dereference(obj)
+			if err != nil {
+				return
+			}
+
+			i, ok := obj.(types.PDFInteger)
+			if !ok {
+				return 0, 0, errors.Errorf("validateNumberTreeDictNumsEntry: corrupt key <%v>\n", obj)
+			}
+
+			if firstKey == 0 {
+				firstKey = i.Value()
+			}
+
+			lastKey = i.Value()
+
 			continue
 		}
 
@@ -115,67 +130,32 @@ func validateNumberTreeDictNumsEntry(xRefTable *types.XRefTable, dict *types.PDF
 	return
 }
 
-func validateNumberTreeDictLimitsEntry(xRefTable *types.XRefTable, obj interface{}) (err error) {
-
-	logInfoValidate.Printf("*** validateNumberTreeDictLimitsEntry begin ***")
-
-	// An array of two integers, that shall specify the
-	// numerically least and greatest keys included in the "Nums" array.
-
-	arr, err := xRefTable.DereferenceArray(obj)
-	if err != nil {
-		return
-	}
-
-	if arr == nil {
-		return errors.New("validateNumberTreeDictLimitsEntry: missing \"Limits\" array")
-	}
-
-	if len(*arr) != 2 {
-		return errors.New("validateNumberTreeDictLimitsEntry: corrupt array entry \"Limits\" expected to contain 2 integers")
-	}
-
-	_, err = xRefTable.DereferenceInteger((*arr)[0])
-	if err != nil {
-		return errors.New("validateNumberTreeDictLimitsEntry: corrupt array entry \"Limits\" expected to contain 2 integers")
-	}
-
-	_, err = xRefTable.DereferenceInteger((*arr)[1])
-	if err != nil {
-		return errors.New("validateNumberTreeDictLimitsEntry: corrupt array entry \"Limits\" expected to contain 2 integers")
-	}
-
-	logInfoValidate.Println("*** validateNumberTreeDictLimitsEntry end ***")
-
-	return
-}
-
-func validateNumberTree(xRefTable *types.XRefTable, name string, indRef types.PDFIndirectRef, root bool) (err error) {
+func validateNumberTree(xRefTable *types.XRefTable, name string, indRef types.PDFIndirectRef, root bool) (firstKey, lastKey int, err error) {
 
 	logInfoValidate.Printf("*** validateNumberTree: %s, rootObj#:%d ***\n", name, indRef.ObjectNumber)
 
 	// A node has "Kids" or "Nums" entry.
 
-	dict, err := xRefTable.DereferenceDict(indRef)
-	if err != nil {
-		return
-	}
+	var dict *types.PDFDict
 
-	if dict == nil {
-		return errors.New("validateNumberTree: missing dict")
+	dict, err = xRefTable.DereferenceDict(indRef)
+	if err != nil || dict == nil {
+		return
 	}
 
 	// Kids: array of indirect references to the immediate children of this node.
 	// if Kids present then recurse
 	if obj, found := dict.Find("Kids"); found {
 
-		arr, err := xRefTable.DereferenceArray(obj)
+		var arr *types.PDFArray
+
+		arr, err = xRefTable.DereferenceArray(obj)
 		if err != nil {
-			return err
+			return
 		}
 
 		if arr == nil {
-			return errors.New("validateNumberTree: missing \"Kids\" array")
+			return 0, 0, errors.New("validateNumberTree: missing \"Kids\" array")
 		}
 
 		for _, obj := range *arr {
@@ -184,37 +164,54 @@ func validateNumberTree(xRefTable *types.XRefTable, name string, indRef types.PD
 
 			kid, ok := obj.(types.PDFIndirectRef)
 			if !ok {
-				return errors.New("validateNumberTree: corrupt kid, should be indirect reference")
+				return 0, 0, errors.New("validateNumberTree: corrupt kid, should be indirect reference")
 			}
 
-			err = validateNumberTree(xRefTable, name, kid, false)
+			var fk int
+			fk, lastKey, err = validateNumberTree(xRefTable, name, kid, false)
 			if err != nil {
-				return err
+				return
+			}
+			if firstKey == 0 {
+				firstKey = fk
+			}
+		}
+
+		if !root {
+			arr, err = validateIntegerArrayEntry(xRefTable, dict, "numberTreeDict", "Limits", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
+			if err != nil {
+				return
+			}
+			fk, _ := (*arr)[0].(types.PDFInteger)
+			lk, _ := (*arr)[1].(types.PDFInteger)
+			if firstKey != fk.Value() || lastKey != lk.Value() {
+				err = errors.Errorf("validateNumberTree: %s intermediate node corrupted: %d %d %d %d\n", name, firstKey, fk.Value(), lastKey, lk.Value())
 			}
 		}
 
 		logInfoValidate.Printf("validateNumberTree end: %s\n", name)
 
-		return err
+		return
 	}
 
-	err = validateNumberTreeDictNumsEntry(xRefTable, dict, name)
+	// Leaf node
+
+	firstKey, lastKey, err = validateNumberTreeDictNumsEntry(xRefTable, dict, name)
 	if err != nil {
 		return
 	}
 
 	if !root {
-
-		obj, found := dict.Find("Limits")
-		if !found {
-			return errors.New("validateNumberTree: missing \"Limits\" entry")
-		}
-
-		err = validateNumberTreeDictLimitsEntry(xRefTable, obj)
+		var arr *types.PDFArray
+		arr, err = validateIntegerArrayEntry(xRefTable, dict, "numberTreeDict", "Limits", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
 		if err != nil {
 			return
 		}
-
+		fk, _ := (*arr)[0].(types.PDFInteger)
+		lk, _ := (*arr)[1].(types.PDFInteger)
+		if firstKey != fk.Value() || lastKey != lk.Value() {
+			err = errors.Errorf("validateNumberTree: leaf node corrupted\n")
+		}
 	}
 
 	logInfoValidate.Printf("*** validateNumberTree end: %s ***\n", name)

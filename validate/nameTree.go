@@ -630,14 +630,14 @@ func validateIDTreeValue(xRefTable *types.XRefTable, obj interface{}) (err error
 	return
 }
 
-func validateNameTreeDictNamesEntry(xRefTable *types.XRefTable, dict *types.PDFDict, name string) (err error) {
+func validateNameTreeDictNamesEntry(xRefTable *types.XRefTable, dict *types.PDFDict, name string) (firstKey, lastKey string, err error) {
 
 	logInfoValidate.Printf("*** validateNameTreeDictNamesEntry begin: name:%s ***\n", name)
 
 	// Names: array of the form [key1 value1 key2 value2 ... key n value n]
 	obj, found := dict.Find("Names")
 	if !found {
-		return errors.Errorf("validateNameTreeDictNamesEntry: missing \"Kids\" or \"Names\" entry.")
+		return "", "", errors.Errorf("validateNameTreeDictNamesEntry: missing \"Kids\" or \"Names\" entry.")
 	}
 
 	arr, err := xRefTable.DereferenceArray(obj)
@@ -646,19 +646,36 @@ func validateNameTreeDictNamesEntry(xRefTable *types.XRefTable, dict *types.PDFD
 	}
 
 	if arr == nil {
-		return errors.Errorf("validateNameTreeDictNamesEntry: missing \"Names\" array.")
+		return "", "", errors.Errorf("validateNameTreeDictNamesEntry: missing \"Names\" array.")
 	}
 
 	logInfoValidate.Println("validateNameTreeDictNamesEntry: \"Nums\": now writing value objects")
 
 	// arr length needs to be even because of contained key value pairs.
 	if len(*arr)%2 == 1 {
-		return errors.Errorf("validateNameTreeDictNamesEntry: Names array entry length needs to be even, length=%d\n", len(*arr))
+		return "", "", errors.Errorf("validateNameTreeDictNamesEntry: Names array entry length needs to be even, length=%d\n", len(*arr))
 	}
 
 	for i, obj := range *arr {
 
 		if i%2 == 0 {
+
+			obj, err = xRefTable.Dereference(obj)
+			if err != nil {
+				return
+			}
+
+			s, ok := obj.(types.PDFStringLiteral)
+			if !ok {
+				return "", "", errors.Errorf("validateNameTreeDictNamesEntry: corrupt key <%v>\n", obj)
+			}
+
+			if firstKey == "" {
+				firstKey = s.Value()
+			}
+
+			lastKey = s.Value()
+
 			continue
 		}
 
@@ -712,46 +729,17 @@ func validateNameTreeDictNamesEntry(xRefTable *types.XRefTable, dict *types.PDFD
 	return
 }
 
-func validateNameTreeDictLimitsEntry(xRefTable *types.XRefTable, obj interface{}) (err error) {
-
-	logInfoValidate.Println("*** validateNameTreeDictLimitsEntry begin ***")
-
-	// An array of two integers, that shall specify the
-	// numerically least and greatest keys included in the "Nums" array.
-
-	arr, err := xRefTable.DereferenceArray(obj)
-	if err != nil {
-		return
-	}
-
-	if arr == nil {
-		return errors.New("validateNameTreeDictLimitsEntry: missing \"Limits\" array")
-	}
-
-	if len(*arr) != 2 {
-		return errors.New("validateNameTreeDictLimitsEntry: corrupt array entry \"Limits\" expected to contain 2 integers")
-	}
-
-	if _, ok := (*arr)[0].(types.PDFStringLiteral); !ok {
-		return errors.New("validateNameTreeDictLimitsEntry: corrupt array entry \"Limits\" expected to contain 2 integers")
-	}
-
-	if _, ok := (*arr)[1].(types.PDFStringLiteral); !ok {
-		return errors.New("validateNameTreeDictLimitsEntry: corrupt array entry \"Limits\" expected to contain 2 integers")
-	}
-
-	logInfoValidate.Println("*** validateNameTreeDictLimitsEntry end ***")
-
-	return
-}
-
-func validateNameTree(xRefTable *types.XRefTable, name string, indRef types.PDFIndirectRef, root bool) (err error) {
+func validateNameTree(xRefTable *types.XRefTable, name string, indRef types.PDFIndirectRef, root bool) (firstKey, lastKey string, err error) {
 
 	// see 7.7.4
 
-	logInfoValidate.Printf("*** validateNameTree: %s ***\n", name)
+	logInfoValidate.Printf("*** validateNameTree: %s obj#%d***\n", name, indRef.ObjectNumber)
 
-	dict, err := xRefTable.DereferenceDict(indRef)
+	// A node has "Kids" or "Names" entry.
+
+	var dict *types.PDFDict
+
+	dict, err = xRefTable.DereferenceDict(indRef)
 	if err != nil || dict == nil {
 		return
 	}
@@ -760,13 +748,15 @@ func validateNameTree(xRefTable *types.XRefTable, name string, indRef types.PDFI
 	// if Kids present then recurse
 	if obj, found := dict.Find("Kids"); found {
 
-		arr, err := xRefTable.DereferenceArray(obj)
+		var arr *types.PDFArray
+
+		arr, err = xRefTable.DereferenceArray(obj)
 		if err != nil {
-			return err
+			return
 		}
 
 		if arr == nil {
-			return errors.New("validateNameTree: missing \"Kids\" array")
+			return "", "", errors.New("validateNameTree: missing \"Kids\" array")
 		}
 
 		for _, obj := range *arr {
@@ -775,32 +765,57 @@ func validateNameTree(xRefTable *types.XRefTable, name string, indRef types.PDFI
 
 			kid, ok := obj.(types.PDFIndirectRef)
 			if !ok {
-				return errors.New("validateNameTree: corrupt kid, should be indirect reference")
+				return "", "", errors.New("validateNameTree: corrupt kid, should be indirect reference")
 			}
 
-			err = validateNameTree(xRefTable, name, kid, false)
+			var fk string
+			fk, lastKey, err = validateNameTree(xRefTable, name, kid, false)
 			if err != nil {
-				return err
+				return
+			}
+			if firstKey == "" {
+				firstKey = fk
+			}
+		}
+
+		if !root {
+
+			// Intermediate node
+
+			arr, err = validateStringArrayEntry(xRefTable, dict, "nameTreeDict", "Limits", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
+			if err != nil {
+				return
+			}
+			fk, _ := (*arr)[0].(types.PDFStringLiteral)
+			lk, _ := (*arr)[1].(types.PDFStringLiteral)
+			if firstKey != fk.Value() || lastKey != lk.Value() {
+				err = errors.Errorf("validateNameTree: %s intermediate node corrupted: %s %s %s %s\n", name, firstKey, fk.Value(), lastKey, lk.Value())
 			}
 		}
 
 		logInfoValidate.Printf("validateNameTree end: %s\n", name)
 
-		return nil
+		return
 	}
 
-	err = validateNameTreeDictNamesEntry(xRefTable, dict, name)
+	// Leaf node
+
+	firstKey, lastKey, err = validateNameTreeDictNamesEntry(xRefTable, dict, name)
 	if err != nil {
 		return
 	}
 
 	if !root {
-
-		_, err = validateStringArrayEntry(xRefTable, dict, "nameTreeDict", "Limits", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
+		var arr *types.PDFArray
+		arr, err = validateStringArrayEntry(xRefTable, dict, "nameTreeDict", "Limits", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
 		if err != nil {
 			return
 		}
-
+		fk, _ := (*arr)[0].(types.PDFStringLiteral)
+		lk, _ := (*arr)[1].(types.PDFStringLiteral)
+		if firstKey != fk.Value() || lastKey != lk.Value() {
+			err = errors.Errorf("validateNameTree: leaf node corrupted\n")
+		}
 	}
 
 	logInfoValidate.Println("*** validateNameTree end ***")

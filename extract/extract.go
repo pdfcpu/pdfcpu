@@ -1,4 +1,4 @@
-// Package extract provides methods for extracting fonts, images, pages and page content.
+// Package extract provides functions for extracting fonts, images, pages and page content.
 //
 package extract
 

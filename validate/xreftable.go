@@ -67,7 +67,7 @@ func validatePageLabels(xRefTable *types.XRefTable, rootDict *types.PDFDict, req
 		return errors.Errorf("validatePageLabels: unsupported in version %s.\n", xRefTable.VersionString())
 	}
 
-	err = validateNumberTree(xRefTable, "PageLabel", *indRef, true)
+	_, _, err = validateNumberTree(xRefTable, "PageLabel", *indRef, true)
 	if err != nil {
 		return
 	}
@@ -123,11 +123,13 @@ func validateNames(xRefTable *types.XRefTable, rootDict *types.PDFDict, required
 		}
 
 		logInfoValidate.Printf("validating Nametree: %s\n", treeName)
-		err = validateNameTree(xRefTable, treeName, indRef, true)
+		_, _, err = validateNameTree(xRefTable, treeName, indRef, true)
 		if err != nil {
 			return
 		}
-
+		if treeName == "EmbeddedFiles" {
+			xRefTable.EmbeddedFiles = types.NewNameTree(indRef)
+		}
 	}
 
 	logInfoValidate.Println("*** validateNames end ***")

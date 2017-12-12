@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hhrutter/pdfcpu/attach"
 	"github.com/hhrutter/pdfcpu/extract"
 	"github.com/hhrutter/pdfcpu/merge"
 	"github.com/hhrutter/pdfcpu/optimize"
@@ -29,6 +30,21 @@ var (
 
 	selectedPagesRegExp *regexp.Regexp
 )
+
+func stringSet(slice []string) types.StringSet {
+
+	strSet := types.StringSet{}
+
+	if slice == nil {
+		return strSet
+	}
+
+	for _, s := range slice {
+		strSet[s] = true
+	}
+
+	return strSet
+}
 
 func setupRegExpForPageSelection() *regexp.Regexp {
 
@@ -315,20 +331,20 @@ func ParsePageSelection(s string) (ps []string, err error) {
 	return
 }
 
-func pagesForPageSelection(pageCount int, pageSelection *[]string) (selectedPages types.IntSet, err error) {
+func pagesForPageSelection(pageCount int, pageSelection []string) (selectedPages types.IntSet, err error) {
 
 	if pageSelection == nil {
 		logInfoAPI.Println("pagesForPageSelection: pageSelection is nil")
 		return
 	}
 
-	if len(*pageSelection) == 0 {
+	if len(pageSelection) == 0 {
 		logStatsAPI.Println("pagesForPageSelection: pageSelection is empty")
 	}
 
 	selectedPages = types.IntSet{}
 
-	for _, v := range *pageSelection {
+	for _, v := range pageSelection {
 
 		//logStatsAPI.Printf("pageExp: <%s>\n", v)
 
@@ -511,9 +527,7 @@ func Merge(filesIn []string, fileOut string, config *types.Configuration) (err e
 	fmt.Printf("merging into %s: %v\n", fileOut, filesIn)
 	//logErrorAPI.Printf("Merge: filesIn: %v\n", filesIn)
 
-	fileDest := filesIn[0]
-
-	ctxDest, _, _, err := readAndValidate(fileDest, config, time.Now())
+	ctxDest, _, _, err := readAndValidate(filesIn[0], config, time.Now())
 	if err != nil {
 		return
 	}
@@ -525,8 +539,8 @@ func Merge(filesIn []string, fileOut string, config *types.Configuration) (err e
 	}
 
 	// Repeatedly merge files into fileDest's xref table.
-	for _, file := range filesIn[1:] {
-		err = appendTo(file, ctxDest)
+	for f := range stringSet(filesIn[1:]) {
+		err = appendTo(f, ctxDest)
 		if err != nil {
 			return
 		}
@@ -559,7 +573,7 @@ func Merge(filesIn []string, fileOut string, config *types.Configuration) (err e
 }
 
 // ExtractImages dumps embedded image resources from fileIn into dirOut for selected pages.
-func ExtractImages(fileIn, dirOut string, pageSelection *[]string, config *types.Configuration) (err error) {
+func ExtractImages(fileIn, dirOut string, pageSelection []string, config *types.Configuration) (err error) {
 
 	fromStart := time.Now()
 
@@ -598,7 +612,7 @@ func ExtractImages(fileIn, dirOut string, pageSelection *[]string, config *types
 }
 
 // ExtractFonts dumps embedded fontfiles from fileIn into dirOut for selected pages.
-func ExtractFonts(fileIn, dirOut string, pageSelection *[]string, config *types.Configuration) (err error) {
+func ExtractFonts(fileIn, dirOut string, pageSelection []string, config *types.Configuration) (err error) {
 
 	fromStart := time.Now()
 
@@ -637,7 +651,7 @@ func ExtractFonts(fileIn, dirOut string, pageSelection *[]string, config *types.
 }
 
 // ExtractPages generates single page PDF files from fileIn in dirOut for selected pages.
-func ExtractPages(fileIn, dirOut string, pageSelection *[]string, config *types.Configuration) (err error) {
+func ExtractPages(fileIn, dirOut string, pageSelection []string, config *types.Configuration) (err error) {
 
 	fromStart := time.Now()
 
@@ -677,7 +691,7 @@ func ExtractPages(fileIn, dirOut string, pageSelection *[]string, config *types.
 }
 
 // ExtractContent dumps "PDF source" files from fileIn into dirOut for selected pages.
-func ExtractContent(fileIn, dirOut string, pageSelection *[]string, config *types.Configuration) (err error) {
+func ExtractContent(fileIn, dirOut string, pageSelection []string, config *types.Configuration) (err error) {
 
 	fromStart := time.Now()
 
@@ -716,7 +730,7 @@ func ExtractContent(fileIn, dirOut string, pageSelection *[]string, config *type
 }
 
 // Trim generates a trimmed version of fileIn containing all pages selected.
-func Trim(fileIn, fileOut string, pageSelection *[]string, config *types.Configuration) (err error) {
+func Trim(fileIn, fileOut string, pageSelection []string, config *types.Configuration) (err error) {
 
 	// pageSelection points to an empty slice if flag pages was omitted.
 
@@ -760,6 +774,187 @@ func Trim(fileIn, fileOut string, pageSelection *[]string, config *types.Configu
 	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
 	ctx.Read.LogStats(logStatsAPI, ctx.Optimized)
 	ctx.Write.LogStats(logStatsAPI)
+
+	return
+}
+
+// ListAttachments returns a list of embedded file attachments.
+func ListAttachments(fileIn string, config *types.Configuration) (list []string, err error) {
+
+	fromStart := time.Now()
+
+	//fmt.Println("Attachments:")
+
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
+	if err != nil {
+		return
+	}
+
+	fromWrite := time.Now()
+
+	list, err = attach.List(ctx)
+	if err != nil {
+		return
+	}
+
+	durWrite := time.Since(fromWrite).Seconds()
+	durTotal := time.Since(fromStart).Seconds()
+
+	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
+	logStatsAPI.Println("Timing:")
+	logStatsAPI.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	logStatsAPI.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	logStatsAPI.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	logStatsAPI.Printf("list files           : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
+	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
+
+	return
+}
+
+// AddAttachments embeds files into a PDF.
+func AddAttachments(fileIn string, files []string, config *types.Configuration) (err error) {
+
+	fromStart := time.Now()
+
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
+	if err != nil {
+		return
+	}
+
+	fmt.Printf("adding %d attachments to %s ...\n", len(files), fileIn)
+
+	from := time.Now()
+	var ok bool
+
+	ok, err = attach.Add(ctx, stringSet(files))
+	if err != nil {
+		return
+	}
+	if !ok {
+		fmt.Println("no attachment added.")
+		return
+	}
+
+	durAdd := time.Since(from).Seconds()
+
+	fromWrite := time.Now()
+
+	fileOut := fileIn
+	dirName, fileName := filepath.Split(fileOut)
+	ctx.Write.DirName = dirName
+	ctx.Write.FileName = fileName
+
+	err = Write(ctx)
+	if err != nil {
+		return
+	}
+
+	durWrite := time.Since(fromWrite).Seconds()
+	durTotal := time.Since(fromStart).Seconds()
+
+	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
+	logStatsAPI.Println("Timing:")
+	logStatsAPI.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	logStatsAPI.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	logStatsAPI.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	logStatsAPI.Printf("add attachment       : %6.3fs  %4.1f%%\n", durAdd, durAdd/durTotal*100)
+	logStatsAPI.Printf("write                : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
+	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
+	ctx.Read.LogStats(logStatsAPI, ctx.Optimized)
+	ctx.Write.LogStats(logStatsAPI)
+
+	return
+}
+
+// RemoveAttachments deletes embedded files from a PDF.
+func RemoveAttachments(fileIn string, files []string, config *types.Configuration) (err error) {
+
+	fromStart := time.Now()
+
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
+	if err != nil {
+		return
+	}
+
+	if len(files) > 0 {
+		fmt.Printf("removing %d attachments from %s ...\n", len(files), fileIn)
+	} else {
+		fmt.Printf("removing all attachments from %s ...\n", fileIn)
+	}
+
+	from := time.Now()
+
+	var ok bool
+	ok, err = attach.Remove(ctx, stringSet(files))
+	if err != nil {
+		return
+	}
+	if !ok {
+		fmt.Println("no attachment removed.")
+		return
+	}
+
+	durAdd := time.Since(from).Seconds()
+
+	fromWrite := time.Now()
+
+	fileOut := fileIn
+	dirName, fileName := filepath.Split(fileOut)
+	ctx.Write.DirName = dirName
+	ctx.Write.FileName = fileName
+
+	err = Write(ctx)
+	if err != nil {
+		return
+	}
+
+	durWrite := time.Since(fromWrite).Seconds()
+	durTotal := time.Since(fromStart).Seconds()
+
+	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
+	logStatsAPI.Println("Timing:")
+	logStatsAPI.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	logStatsAPI.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	logStatsAPI.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	logStatsAPI.Printf("add attachment       : %6.3fs  %4.1f%%\n", durAdd, durAdd/durTotal*100)
+	logStatsAPI.Printf("write                : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
+	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
+	ctx.Read.LogStats(logStatsAPI, ctx.Optimized)
+	ctx.Write.LogStats(logStatsAPI)
+
+	return
+}
+
+// ExtractAttachments extracts embedded files from a PDF.
+func ExtractAttachments(fileIn, dirOut string, files []string, config *types.Configuration) (err error) {
+
+	fromStart := time.Now()
+
+	fmt.Printf("extracting attachments from %s into %s ...\n", fileIn, dirOut)
+
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
+	if err != nil {
+		return
+	}
+
+	fromWrite := time.Now()
+
+	ctx.Write.DirName = dirOut
+	err = attach.Extract(ctx, stringSet(files))
+	if err != nil {
+		return
+	}
+
+	durWrite := time.Since(fromWrite).Seconds()
+	durTotal := time.Since(fromStart).Seconds()
+
+	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
+	logStatsAPI.Println("Timing:")
+	logStatsAPI.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	logStatsAPI.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	logStatsAPI.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	logStatsAPI.Printf("write files          : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
+	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
 
 	return
 }

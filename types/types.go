@@ -42,6 +42,12 @@ func Verbose(verbose bool) {
 	}
 }
 
+// IntSet is a set of integers.
+type IntSet map[int]bool
+
+// StringSet is a set of strings.
+type StringSet map[string]bool
+
 // PDFBoolean represents a PDF boolean object.
 type PDFBoolean bool
 
