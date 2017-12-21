@@ -130,6 +130,25 @@ func validateNumberTreeDictNumsEntry(xRefTable *types.XRefTable, dict *types.PDF
 	return
 }
 
+func validateNumberTreeDictLimitsEntry(xRefTable *types.XRefTable, dict *types.PDFDict, firstKey, lastKey int) (err error) {
+
+	var arr *types.PDFArray
+
+	arr, err = validateStringArrayEntry(xRefTable, dict, "numberTreeDict", "Limits", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
+	if err != nil {
+		return
+	}
+
+	fk, _ := (*arr)[0].(types.PDFInteger)
+	lk, _ := (*arr)[1].(types.PDFInteger)
+
+	if firstKey != fk.Value() || lastKey != lk.Value() {
+		err = errors.Errorf("validateNumberTreeDictLimitsEntry: leaf node corrupted\n")
+	}
+
+	return
+}
+
 func validateNumberTree(xRefTable *types.XRefTable, name string, indRef types.PDFIndirectRef, root bool) (firstKey, lastKey int, err error) {
 
 	logInfoValidate.Printf("*** validateNumberTree: %s, rootObj#:%d ***\n", name, indRef.ObjectNumber)
@@ -177,41 +196,22 @@ func validateNumberTree(xRefTable *types.XRefTable, name string, indRef types.PD
 			}
 		}
 
-		if !root {
-			arr, err = validateIntegerArrayEntry(xRefTable, dict, "numberTreeDict", "Limits", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
-			if err != nil {
-				return
-			}
-			fk, _ := (*arr)[0].(types.PDFInteger)
-			lk, _ := (*arr)[1].(types.PDFInteger)
-			if firstKey != fk.Value() || lastKey != lk.Value() {
-				err = errors.Errorf("validateNumberTree: %s intermediate node corrupted: %d %d %d %d\n", name, firstKey, fk.Value(), lastKey, lk.Value())
-			}
-		}
+	} else {
 
-		logInfoValidate.Printf("validateNumberTree end: %s\n", name)
-
-		return
-	}
-
-	// Leaf node
-
-	firstKey, lastKey, err = validateNumberTreeDictNumsEntry(xRefTable, dict, name)
-	if err != nil {
-		return
-	}
-
-	if !root {
-		var arr *types.PDFArray
-		arr, err = validateIntegerArrayEntry(xRefTable, dict, "numberTreeDict", "Limits", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
+		// Leaf node
+		firstKey, lastKey, err = validateNumberTreeDictNumsEntry(xRefTable, dict, name)
 		if err != nil {
 			return
 		}
-		fk, _ := (*arr)[0].(types.PDFInteger)
-		lk, _ := (*arr)[1].(types.PDFInteger)
-		if firstKey != fk.Value() || lastKey != lk.Value() {
-			err = errors.Errorf("validateNumberTree: leaf node corrupted\n")
+	}
+
+	if !root {
+
+		err = validateNumberTreeDictLimitsEntry(xRefTable, dict, firstKey, lastKey)
+		if err != nil {
+			return
 		}
+
 	}
 
 	logInfoValidate.Printf("*** validateNumberTree end: %s ***\n", name)

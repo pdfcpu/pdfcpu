@@ -43,7 +43,8 @@ type XRefTable struct {
 	Table               map[int]*XRefTableEntry
 	Size                *int            // Object count from PDF trailer dict.
 	PageCount           int             // Number of pages.
-	Root                *PDFIndirectRef // Catalog (reference to root object).
+	Root                *PDFIndirectRef // Pointer to catalog (reference to root object).
+	RootDict            *PDFDict        // Catalog
 	EmbeddedFiles       *PDFNameTree    // EmbeddedFiles name tree.
 	Encrypt             *PDFIndirectRef // Encrypt dict.
 	E                   *Enc
@@ -314,7 +315,7 @@ func (xRefTable *XRefTable) InsertPDFStreamDict(buf []byte) (sd *PDFStreamDict, 
 		&PDFStreamDict{
 			PDFDict:        NewPDFDict(),
 			Content:        buf,
-			FilterPipeline: []PDFFilter{PDFFilter{Name: "FlateDecode", DecodeParms: nil}}}
+			FilterPipeline: []PDFFilter{{Name: "FlateDecode", DecodeParms: nil}}}
 
 	ok := sd.Insert("Filter", PDFName("FlateDecode"))
 	if !ok {
@@ -325,18 +326,26 @@ func (xRefTable *XRefTable) InsertPDFStreamDict(buf []byte) (sd *PDFStreamDict, 
 	return
 }
 
+func (xRefTable *XRefTable) freeObjects() IntSet {
+
+	m := IntSet{}
+
+	for k, v := range xRefTable.Table {
+		if v.Free && k > 0 {
+			m[k] = true
+		}
+	}
+
+	return m
+}
+
 // EnsureValidFreeList ensures the integrity of the free list associated with the recorded free objects.
 // See 7.5.4 Cross-Reference Table
 func (xRefTable *XRefTable) EnsureValidFreeList() (err error) {
 
 	logDebugTypes.Println("EnsureValidFreeList begin")
 
-	m := IntSet{}
-	for k, v := range xRefTable.Table {
-		if v.Free && k > 0 {
-			m[k] = true
-		}
-	}
+	m := xRefTable.freeObjects()
 
 	// Verify free object 0 as free list head.
 	head, err := xRefTable.Free(0)
@@ -799,17 +808,27 @@ func (xRefTable *XRefTable) DereferenceStreamDict(obj interface{}) (streamDictp 
 // Catalog returns a pointer to the root object / catalog.
 func (xRefTable *XRefTable) Catalog() (*PDFDict, error) {
 
-	pdfObject, err := xRefTable.indRefToObject(xRefTable.Root)
-	if err != nil || pdfObject == nil {
+	if xRefTable.RootDict != nil {
+		return xRefTable.RootDict, nil
+	}
+
+	if xRefTable.Root == nil {
+		return nil, errors.New("Catalog: missing root dict")
+	}
+
+	o, err := xRefTable.indRefToObject(xRefTable.Root)
+	if err != nil || o == nil {
 		return nil, err
 	}
 
-	pdfDict, ok := pdfObject.(PDFDict)
+	dict, ok := o.(PDFDict)
 	if !ok {
 		return nil, errors.New("Catalog: corrupt root catalog")
 	}
 
-	return &pdfDict, nil
+	xRefTable.RootDict = &dict
+
+	return xRefTable.RootDict, nil
 }
 
 // EncryptDict returns a pointer to the root object / catalog.

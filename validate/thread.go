@@ -5,6 +5,21 @@ import (
 	"github.com/pkg/errors"
 )
 
+func validateEntryV(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool, sinceVersion types.PDFVersion, indRefPreviousBead types.PDFIndirectRef, objNumber int) (err error) {
+
+	previousBeadIndRef, err := validateIndRefEntry(xRefTable, dict, dictName, "V", REQUIRED, sinceVersion)
+	if err != nil {
+		return
+	}
+
+	if !previousBeadIndRef.Equals(indRefPreviousBead) {
+		err = errors.Errorf("validateEntryV: obj#%d invalid entry V, corrupt previous Bead indirect reference", objNumber)
+		return
+	}
+
+	return
+}
+
 func validateBeadDict(xRefTable *types.XRefTable, indRefBeadDict, indRefThreadDict, indRefPreviousBead, indRefLastBead types.PDFIndirectRef) (err error) {
 
 	objNumber := indRefBeadDict.ObjectNumber.Value()
@@ -14,11 +29,11 @@ func validateBeadDict(xRefTable *types.XRefTable, indRefBeadDict, indRefThreadDi
 	dictName := "beadDict"
 	sinceVersion := types.V10
 
-	dict, err := xRefTable.DereferenceDict(indRefBeadDict)
+	var dict *types.PDFDict
+	dict, err = xRefTable.DereferenceDict(indRefBeadDict)
 	if err != nil {
 		return
 	}
-
 	if dict == nil {
 		err = errors.Errorf("validateBeadDict: obj#%d missing dict", objNumber)
 		return
@@ -35,7 +50,6 @@ func validateBeadDict(xRefTable *types.XRefTable, indRefBeadDict, indRefThreadDi
 	if err != nil {
 		return
 	}
-
 	if !indRefT.Equals(indRefThreadDict) {
 		err = errors.Errorf("validateBeadDict: obj#%d invalid entry T (backpointer to ThreadDict)", objNumber)
 		return
@@ -48,19 +62,14 @@ func validateBeadDict(xRefTable *types.XRefTable, indRefBeadDict, indRefThreadDi
 	}
 
 	// Validate required entry P, must be indRef to pageDict.
-	pageDict, err := validateDictEntry(xRefTable, dict, dictName, "P", REQUIRED, sinceVersion, nil)
-	if err != nil || pageDict == nil || pageDict.Type() == nil || *pageDict.Type() != "Page" {
-		return errors.Errorf("validateBeadDict: obj#%d invalid entry P, no page dict", objNumber)
-	}
-
-	// Validate required entry V, must refer to previous bead.
-	previousBeadIndRef, err := validateIndRefEntry(xRefTable, dict, dictName, "V", REQUIRED, sinceVersion)
+	err = validateEntryP(xRefTable, dict, dictName, REQUIRED, sinceVersion)
 	if err != nil {
 		return
 	}
 
-	if !previousBeadIndRef.Equals(indRefPreviousBead) {
-		err = errors.Errorf("validateBeadDict: obj#%d invalid entry V, corrupt previous Bead indirect reference", objNumber)
+	// Validate required entry V, must refer to previous bead.
+	err = validateEntryV(xRefTable, dict, dictName, REQUIRED, sinceVersion, indRefPreviousBead, objNumber)
+	if err != nil {
 		return
 	}
 
@@ -121,9 +130,9 @@ func validateFirstBeadDict(xRefTable *types.XRefTable, indRefBeadDict, indRefThr
 		return
 	}
 
-	pageDict, err := validateDictEntry(xRefTable, dict, dictName, "P", REQUIRED, sinceVersion, nil)
-	if err != nil || pageDict == nil || pageDict.Type() == nil || *pageDict.Type() != "Page" {
-		return errors.New("validateFirstBeadDict: invalid page dict")
+	err = validateEntryP(xRefTable, dict, dictName, REQUIRED, sinceVersion)
+	if err != nil {
+		return
 	}
 
 	previousBeadIndRef, err := validateIndRefEntry(xRefTable, dict, dictName, "V", REQUIRED, sinceVersion)
@@ -206,11 +215,16 @@ func validateThreadDict(xRefTable *types.XRefTable, obj interface{}, sinceVersio
 	return
 }
 
-func validateThreads(xRefTable *types.XRefTable, rootDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateThreads(xRefTable *types.XRefTable, required bool, sinceVersion types.PDFVersion) (err error) {
 
 	// => 12.4.3 Articles
 
 	logInfoValidate.Println("*** validateThreads begin ***")
+
+	rootDict, err := xRefTable.Catalog()
+	if err != nil {
+		return
+	}
 
 	indRef := rootDict.IndirectRefEntry("Threads")
 	if indRef == nil {

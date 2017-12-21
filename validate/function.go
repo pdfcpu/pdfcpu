@@ -157,6 +157,60 @@ func validatePostScriptCalculatorFunctionStreamDict(xRefTable *types.XRefTable, 
 	return
 }
 
+func processFunctionDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+
+	var funcType *types.PDFInteger
+
+	funcType, err = validateIntegerEntry(xRefTable, dict, "functionDict", "FunctionType", REQUIRED, types.V10, func(i int) bool { return i == 2 || i == 3 })
+	if err != nil {
+		return
+	}
+
+	switch *funcType {
+
+	case 2:
+		err = validateExponentialInterpolationFunctionDict(xRefTable, dict)
+		if err != nil {
+			return
+		}
+
+	case 3:
+		err = validateStitchingFunctionDict(xRefTable, dict)
+		if err != nil {
+			return
+		}
+
+	}
+
+	return
+}
+
+func processFunctionStreamDict(xRefTable *types.XRefTable, sd *types.PDFStreamDict) (err error) {
+
+	var funcType *types.PDFInteger
+	funcType, err = validateIntegerEntry(xRefTable, &sd.PDFDict, "functionDict", "FunctionType", REQUIRED, types.V10, func(i int) bool { return i == 0 || i == 4 })
+	if err != nil {
+		return
+	}
+
+	switch *funcType {
+	case 0:
+		err = validateSampledFunctionStreamDict(xRefTable, sd)
+		if err != nil {
+			return
+		}
+
+	case 4:
+		err = validatePostScriptCalculatorFunctionStreamDict(xRefTable, sd)
+		if err != nil {
+			return
+		}
+
+	}
+
+	return
+}
+
 func processFunction(xRefTable *types.XRefTable, obj interface{}) (err error) {
 
 	logInfoValidate.Printf("*** processFunction begin ***")
@@ -167,56 +221,22 @@ func processFunction(xRefTable *types.XRefTable, obj interface{}) (err error) {
 	// 3: Stitching function (dict)
 	// 4: PostScript calculator function (stream dict), since V1.3
 
-	var funcType *types.PDFInteger
-
 	switch obj := obj.(type) {
 
 	case types.PDFDict:
 
 		// process function  2,3
-
-		funcType, err = validateIntegerEntry(xRefTable, &obj, "functionDict", "FunctionType", REQUIRED, types.V10, func(i int) bool { return i == 2 || i == 3 })
+		err = processFunctionDict(xRefTable, &obj)
 		if err != nil {
 			return
-		}
-
-		switch *funcType {
-		case 2:
-			err = validateExponentialInterpolationFunctionDict(xRefTable, &obj)
-			if err != nil {
-				return
-			}
-
-		case 3:
-			err = validateStitchingFunctionDict(xRefTable, &obj)
-			if err != nil {
-				return
-			}
-
 		}
 
 	case types.PDFStreamDict:
 
 		// process function  0,4
-
-		funcType, err = validateIntegerEntry(xRefTable, &obj.PDFDict, "functionDict", "FunctionType", REQUIRED, types.V10, func(i int) bool { return i == 0 || i == 4 })
+		err = processFunctionStreamDict(xRefTable, &obj)
 		if err != nil {
 			return
-		}
-
-		switch *funcType {
-		case 0:
-			err = validateSampledFunctionStreamDict(xRefTable, &obj)
-			if err != nil {
-				return
-			}
-
-		case 4:
-			err = validatePostScriptCalculatorFunctionStreamDict(xRefTable, &obj)
-			if err != nil {
-				return
-			}
-
 		}
 
 	default:

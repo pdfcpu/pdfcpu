@@ -14,35 +14,35 @@ const (
 	OPTIONAL = false
 )
 
-func validateAnyEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool) (err error) {
+func validateEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool) (obj interface{}, err error) {
 
-	logInfoValidate.Printf("writeAnyEntry begin: entry=%s\n", entryName)
+	logInfoValidate.Printf("validateEntry begin: entry=%s\n", entryName)
 
-	entry, found := dict.Find(entryName)
-	if !found || entry == nil {
+	obj, found := dict.Find(entryName)
+	if !found || obj == nil {
 		if required {
-			err = errors.Errorf("writeAnyEntry: missing required entry: %s", entryName)
+			err = errors.Errorf("validateEntry: missing required entry: %s", entryName)
 			return
 		}
-		logInfoValidate.Printf("writeAnyEntry end: entry %s not found or nil\n", entryName)
+		logInfoValidate.Printf("validateEntry end: entry %s not found or nil\n", entryName)
 		return
 	}
 
-	indRef, ok := entry.(types.PDFIndirectRef)
-	if !ok {
-		logInfoValidate.Println("writeAnyEntry end")
+	// if indRef {
+
+	// 	var ok bool
+
+	// 	obj, ok = obj.(types.PDFIndirectRef)
+	// 	if !ok {
+	// 		err = errors.Errorf("entry: no indRef found")
+	// 		return
+	// 	}
+
+	// }
+
+	obj, err = xRefTable.Dereference(obj)
+	if err != nil || obj == nil {
 		return
-	}
-
-	objNumber := indRef.ObjectNumber.Value()
-
-	obj, err := xRefTable.Dereference(indRef)
-	if err != nil {
-		return errors.Wrapf(err, "writeAnyEntry: unable to dereference object #%d", objNumber)
-	}
-
-	if obj == nil {
-		return errors.Errorf("writeAnyEntry end: entry %s is nil", entryName)
 	}
 
 	switch obj.(type) {
@@ -52,11 +52,11 @@ func validateAnyEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName,
 		types.PDFHexLiteral, types.PDFBoolean, types.PDFName:
 
 	default:
-		err = errors.Errorf("writeAnyEntry: unsupported entry: %s", entryName)
+		err = errors.Errorf("validateEntry: unsupported entry: %s type: %T", entryName, obj)
 
 	}
 
-	logInfoValidate.Println("writeAnyEntry end")
+	logInfoValidate.Println("validateEntry end")
 
 	return
 }

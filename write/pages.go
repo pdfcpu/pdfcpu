@@ -427,6 +427,38 @@ func writePagesDict(ctx *types.PDFContext, indRef types.PDFIndirectRef, pageCoun
 	return
 }
 
+func pageNodeDictType(ctx *types.PDFContext, o interface{}) (dictType *string, indRef types.PDFIndirectRef, err error) {
+
+	// Dereference next page node dict.
+	var ok bool
+	indRef, ok = o.(types.PDFIndirectRef)
+	if !ok {
+		err = errors.New("pageNodeDictType: missing indirect reference")
+		return
+	}
+
+	logInfoWriter.Printf("pageNodeDictType: PageNode: %s\n", indRef)
+
+	var d *types.PDFDict
+	d, err = ctx.DereferenceDict(indRef)
+	if err != nil {
+		err = errors.New("pageNodeDictType: cannot dereference, pageNodeDict")
+		return
+	}
+	if d == nil {
+		err = errors.New("pageNodeDictType: pageNodeDict is null")
+		return
+	}
+
+	dictType = d.Type()
+	if dictType == nil {
+		err = errors.New("pageNodeDictType: missing pageNodeDict type")
+		return
+	}
+
+	return
+}
+
 func trimPagesDict(ctx *types.PDFContext, indRef types.PDFIndirectRef, pageCount *int) (count int, err error) {
 
 	xRefTable := ctx.XRefTable
@@ -470,26 +502,10 @@ func trimPagesDict(ctx *types.PDFContext, indRef types.PDFIndirectRef, pageCount
 			continue
 		}
 
-		// Dereference next page node dict.
-		indRef, ok := obj.(types.PDFIndirectRef)
-		if !ok {
-			return 0, errors.New("trimPagesDict: missing indirect reference for kid")
-		}
-
-		logInfoWriter.Printf("trimPagesDict: PageNode: %s\n", indRef)
-
-		pageNodeDict, err := ctx.DereferenceDict(indRef)
+		var dictType *string
+		dictType, indRef, err = pageNodeDictType(ctx, obj)
 		if err != nil {
-			return 0, errors.New("trimPagesDict: cannot dereference pageNodeDict")
-		}
-
-		if pageNodeDict == nil {
-			return 0, errors.New("trimPagesDict: pageNodeDict is null")
-		}
-
-		dictType := pageNodeDict.Type()
-		if dictType == nil {
-			return 0, errors.New("writePagesDict: missing pageNodeDict type")
+			return 0, err
 		}
 
 		switch *dictType {

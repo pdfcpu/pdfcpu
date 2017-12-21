@@ -435,6 +435,19 @@ func writeXRefSubsection(ctx *types.PDFContext, start int, size int) (err error)
 	return
 }
 
+func deleteRedundantObject(ctx *types.PDFContext, objNr int) {
+
+	if ctx.Write.ExtractPageNr == 0 &&
+		(ctx.Optimize.IsDuplicateFontObject(objNr) || ctx.Optimize.IsDuplicateImageObject(objNr)) {
+		ctx.DeleteObject(objNr)
+	}
+
+	if ctx.IsLinearizationObject(objNr) || ctx.Optimize.IsDuplicateInfoObject(objNr) ||
+		ctx.Read.IsObjectStreamObject(objNr) || ctx.Read.IsXRefStreamObject(objNr) {
+		ctx.DeleteObject(objNr)
+	}
+
+}
 func deleteRedundantObjects(ctx *types.PDFContext) (err error) {
 
 	xRefTable := ctx.XRefTable
@@ -489,21 +502,28 @@ func deleteRedundantObjects(ctx *types.PDFContext) (err error) {
 
 		}
 
-		if ctx.Write.ExtractPageNr == 0 &&
-			(ctx.Optimize.IsDuplicateFontObject(i) || ctx.Optimize.IsDuplicateImageObject(i)) {
-			xRefTable.DeleteObject(i)
-		}
-
-		if xRefTable.IsLinearizationObject(i) || ctx.Optimize.IsDuplicateInfoObject(i) ||
-			ctx.Read.IsObjectStreamObject(i) || ctx.Read.IsXRefStreamObject(i) {
-			xRefTable.DeleteObject(i)
-		}
+		deleteRedundantObject(ctx, i)
 
 	}
 
 	logInfoWriter.Println("deleteRedundantObjects end")
 
 	return
+}
+
+func sortedWritableKeys(ctx *types.PDFContext) []int {
+
+	var keys []int
+
+	for i, e := range ctx.Table {
+		if e.Free || ctx.Write.HasWriteOffset(i) {
+			keys = append(keys, i)
+		}
+	}
+
+	sort.Ints(keys)
+
+	return keys
 }
 
 // After inserting the last object write the cross reference table to disk.
@@ -514,15 +534,7 @@ func writeXRefTable(ctx *types.PDFContext) (err error) {
 		return
 	}
 
-	xRefTable := ctx.XRefTable
-
-	var keys []int
-	for i, e := range xRefTable.Table {
-		if e.Free || ctx.Write.HasWriteOffset(i) {
-			keys = append(keys, i)
-		}
-	}
-	sort.Ints(keys)
+	keys := sortedWritableKeys(ctx)
 
 	objCount := len(keys)
 	logXRef.Printf("xref has %d entries\n", objCount)
@@ -981,6 +993,25 @@ func writeXRef(ctx *types.PDFContext) (err error) {
 	return writeXRefTable(ctx)
 }
 
+func setFileSizeOfWrittenFile(w *types.WriteContext, f *os.File) (err error) {
+
+	// Get file info for file just written but flush first to get correct file size.
+
+	err = w.Flush()
+	if err != nil {
+		return
+	}
+
+	fileInfo, err := f.Stat()
+	if err != nil {
+		return
+	}
+
+	w.FileSize = fileInfo.Size()
+
+	return
+}
+
 // PDFFile generates a PDF file for the cross reference table contained in PDFContext.
 func PDFFile(ctx *types.PDFContext) (err error) {
 
@@ -1078,18 +1109,10 @@ func PDFFile(ctx *types.PDFContext) (err error) {
 		return
 	}
 
-	// Get file info for file just written,
-	// but flush first to get correct file size.
-	err = ctx.Write.Flush()
+	err = setFileSizeOfWrittenFile(ctx.Write, file)
 	if err != nil {
 		return
 	}
-
-	fileInfo, err := file.Stat()
-	if err != nil {
-		return
-	}
-	ctx.Write.FileSize = fileInfo.Size()
 
 	ctx.Write.BinaryImageSize = ctx.Read.BinaryImageSize
 	ctx.Write.BinaryFontSize = ctx.Read.BinaryFontSize

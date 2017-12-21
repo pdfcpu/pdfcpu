@@ -153,6 +153,54 @@ func validateUCR2Entry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName
 	return
 }
 
+func validateTransferFunction(xRefTable *types.XRefTable, obj interface{}) (err error) {
+
+	switch obj := obj.(type) {
+
+	case types.PDFName:
+		s := obj.String()
+		if s != "Identity" {
+			err = errors.New("validateTransferFunction: corrupt name")
+		}
+
+	case types.PDFArray:
+
+		if len(obj) != 4 {
+			return errors.New("validateTransferFunction: corrupt function array")
+		}
+
+		for _, obj := range obj {
+
+			obj, err = xRefTable.Dereference(obj)
+			if err != nil {
+				return
+			}
+
+			if obj == nil {
+				continue
+			}
+
+			err = processFunction(xRefTable, obj)
+			if err != nil {
+				return
+			}
+
+		}
+
+	case types.PDFDict:
+		err = processFunction(xRefTable, obj)
+
+	case types.PDFStreamDict:
+		err = processFunction(xRefTable, obj)
+
+	default:
+		err = errors.Errorf("validateTransferFunction: corrupt entry: %v\n", obj)
+
+	}
+
+	return
+}
+
 func validateTransferFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (err error) {
 
 	logInfoValidate.Println("*** validateTransferFunctionEntry begin ***")
@@ -184,18 +232,30 @@ func validateTransferFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDi
 		return errors.Errorf("validateTransferFunctionEntry: dict=%s entry=%s unsupported in version %s.\n", dictName, entryName, xRefTable.VersionString())
 	}
 
+	err = validateTransferFunction(xRefTable, obj)
+	if err != nil {
+		return
+	}
+
+	logInfoValidate.Printf("*** validateTransferFunctionEntry end ***")
+
+	return
+}
+
+func validateTR2(xRefTable *types.XRefTable, obj interface{}) (err error) {
+
 	switch obj := obj.(type) {
 
 	case types.PDFName:
 		s := obj.String()
-		if s != "Identity" {
-			err = errors.New("validateTransferFunctionEntry: corrupt name")
+		if s != "Identity" && s != "Default" {
+			err = errors.Errorf("validateTR2: corrupt name\n")
 		}
 
 	case types.PDFArray:
 
 		if len(obj) != 4 {
-			return errors.New("validateTransferFunctionEntry: corrupt function array")
+			return errors.New("validateTR2: corrupt function array")
 		}
 
 		for _, obj := range obj {
@@ -223,11 +283,9 @@ func validateTransferFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDi
 		err = processFunction(xRefTable, obj)
 
 	default:
-		err = errors.Errorf("validateTransferFunctionEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+		err = errors.Errorf("validateTR2: corrupt entry %v\n", obj)
 
 	}
-
-	logInfoValidate.Printf("*** validateTransferFunctionEntry end ***")
 
 	return
 }
@@ -263,47 +321,9 @@ func validateTR2Entry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName 
 		return errors.Errorf("validateTR2Entry: dict=%s entry=%s unsupported in version %s.\n", dictName, entryName, xRefTable.VersionString())
 	}
 
-	switch obj := obj.(type) {
-
-	case types.PDFName:
-		s := obj.String()
-		if s != "Identity" && s != "Default" {
-			err = errors.Errorf("validateTR2Entry: corrupt name\n")
-		}
-
-	case types.PDFArray:
-
-		if len(obj) != 4 {
-			return errors.New("validateTR2Entry: corrupt function array")
-		}
-
-		for _, obj := range obj {
-
-			obj, err = xRefTable.Dereference(obj)
-			if err != nil {
-				return
-			}
-
-			if obj == nil {
-				continue
-			}
-
-			err = processFunction(xRefTable, obj)
-			if err != nil {
-				return
-			}
-
-		}
-
-	case types.PDFDict:
-		err = processFunction(xRefTable, obj)
-
-	case types.PDFStreamDict:
-		err = processFunction(xRefTable, obj)
-
-	default:
-		err = errors.Errorf("validateTR2Entry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
-
+	err = validateTR2(xRefTable, obj)
+	if err != nil {
+		return
 	}
 
 	logInfoValidate.Printf("*** validateTR2Entry end ***")
@@ -692,16 +712,9 @@ func validateBlendModeEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dic
 
 	logInfoValidate.Println("*** validateBlendModeEntry begin ***")
 
-	obj, found := dict.Find(entryName)
-	if !found || obj == nil {
-		if required {
-			return errors.Errorf("validateBlendModeEntry: dict=%s required entry \"%s\" missing.", entryName, dictName)
-		}
-		logInfoValidate.Printf("validateBlendModeEntry end: \"%s\" is nil.\n", entryName)
-		return
-	}
+	var obj interface{}
 
-	obj, err = xRefTable.Dereference(obj)
+	obj, err = validateEntry(xRefTable, dict, dictName, entryName, required)
 	if err != nil {
 		return
 	}
@@ -710,7 +723,6 @@ func validateBlendModeEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dic
 		if required {
 			return errors.Errorf("validateBlendModeEntry: dict=%s required entry \"%s\" missing.", dictName, entryName)
 		}
-		// already written
 		return
 	}
 
@@ -932,17 +944,7 @@ func validateSoftMaskEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dict
 	return
 }
 
-func validateExtGStateDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
-
-	// 8.4.5 Graphics State Parameter Dictionaries
-
-	logInfoValidate.Println("*** validateExtGStateDict begin ***")
-
-	if dict.Type() != nil && *dict.Type() != "ExtGState" {
-		return errors.New("writeExtGStateDict: corrupt dict type")
-	}
-
-	dictName := "extGStateDict"
+func validateExtGStateDictPart1(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) (err error) {
 
 	// LW, number, optional, since V1.3
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "LW", OPTIONAL, types.V13, nil)
@@ -1003,6 +1005,11 @@ func validateExtGStateDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err
 	if err != nil {
 		return
 	}
+
+	return
+}
+
+func validateExtGStateDictPart2(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) (err error) {
 
 	// BG, function, optional, black-generation function, see 10.3.4
 	err = validateFunctionEntry(xRefTable, dict, dictName, "BG", OPTIONAL, types.V10)
@@ -1065,6 +1072,11 @@ func validateExtGStateDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err
 		return
 	}
 
+	return
+}
+
+func validateExtGStateDictPart3(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) (err error) {
+
 	// BM, name or array, optional, since V1.4
 	sinceVersion := types.V14
 	if xRefTable.ValidationMode == types.ValidationRelaxed {
@@ -1117,6 +1129,36 @@ func validateExtGStateDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err
 
 	// TK, boolean, optional, since V1.4, text knockout flag.
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "TK", OPTIONAL, types.V14, nil)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func validateExtGStateDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+
+	// 8.4.5 Graphics State Parameter Dictionaries
+
+	logInfoValidate.Println("*** validateExtGStateDict begin ***")
+
+	if dict.Type() != nil && *dict.Type() != "ExtGState" {
+		return errors.New("writeExtGStateDict: corrupt dict type")
+	}
+
+	dictName := "extGStateDict"
+
+	err = validateExtGStateDictPart1(xRefTable, dict, dictName)
+	if err != nil {
+		return
+	}
+
+	err = validateExtGStateDictPart2(xRefTable, dict, dictName)
+	if err != nil {
+		return
+	}
+
+	err = validateExtGStateDictPart3(xRefTable, dict, dictName)
 	if err != nil {
 		return
 	}

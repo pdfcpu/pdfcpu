@@ -189,13 +189,8 @@ func validateCommandInfoDict(xRefTable *types.XRefTable, dict *types.PDFDict) (e
 	return
 }
 
-func validateSourceInfoDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateSourceInfoDictEntryAU(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
 
-	logInfoValidate.Printf("*** validateSourceInfoDict: begin ***")
-
-	dictName := "sourceInfoDict"
-
-	// AU, required, ASCII string or dict
 	obj, found := dict.Find("AU")
 	if !found || obj == nil {
 		return errors.New("validateSourceInfoDict: missing required entry \"AU\"")
@@ -226,8 +221,17 @@ func validateSourceInfoDict(xRefTable *types.XRefTable, dict *types.PDFDict) (er
 
 	}
 
-	// TS, optional, date
-	_, err = validateDateEntry(xRefTable, dict, dictName, "TS", OPTIONAL, types.V10)
+	return
+}
+
+func validateSourceInfoDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+
+	logInfoValidate.Printf("*** validateSourceInfoDict: begin ***")
+
+	dictName := "sourceInfoDict"
+
+	// AU, required, ASCII string or dict
+	err = validateSourceInfoDictEntryAU(xRefTable, dict)
 	if err != nil {
 		return
 	}
@@ -630,6 +634,52 @@ func validateIDTreeValue(xRefTable *types.XRefTable, obj interface{}) (err error
 	return
 }
 
+func validateNameTreeByName(name string, xRefTable *types.XRefTable, obj interface{}) (err error) {
+
+	switch name {
+
+	case "Dests":
+		err = validateDestsNameTreeValue(xRefTable, obj, types.V12)
+
+	case "AP":
+		err = validateAPNameTreeValue(xRefTable, obj, types.V13)
+
+	case "JavaScript":
+		err = validateJavaScriptNameTreeValue(xRefTable, obj, types.V13)
+
+	case "Pages":
+		err = validatePagesNameTreeValue(xRefTable, obj, types.V13)
+
+	case "Templates":
+		err = validateTemplatesNameTreeValue(xRefTable, obj, types.V13)
+
+	case "IDS":
+		err = validateIDSNameTreeValue(xRefTable, obj, types.V13)
+
+	case "URLS":
+		err = validateURLSNameTreeValue(xRefTable, obj, types.V13)
+
+	case "EmbeddedFiles":
+		err = validateEmbeddedFilesNameTreeValue(xRefTable, obj, types.V14)
+
+	case "AlternatePresentations":
+		err = validateAlternatePresentationsNameTreeValue(xRefTable, obj, types.V14)
+
+	case "Renditions":
+		err = validateRenditionsNameTreeValue(xRefTable, obj, types.V15)
+
+	case "IDTree":
+		// for structure tree root
+		err = validateIDTreeValue(xRefTable, obj)
+
+	default:
+		err = errors.Errorf("validateNameTreeDictNamesEntry: unknown dict name: %s", name)
+
+	}
+
+	return
+}
+
 func validateNameTreeDictNamesEntry(xRefTable *types.XRefTable, dict *types.PDFDict, name string) (firstKey, lastKey string, err error) {
 
 	logInfoValidate.Printf("*** validateNameTreeDictNamesEntry begin: name:%s ***\n", name)
@@ -681,50 +731,33 @@ func validateNameTreeDictNamesEntry(xRefTable *types.XRefTable, dict *types.PDFD
 
 		logDebugValidate.Printf("validateNameTreeDictNamesEntry: Nums array value: %v\n", obj)
 
-		switch name {
-
-		case "Dests":
-			err = validateDestsNameTreeValue(xRefTable, obj, types.V12)
-
-		case "AP":
-			err = validateAPNameTreeValue(xRefTable, obj, types.V13)
-
-		case "JavaScript":
-			err = validateJavaScriptNameTreeValue(xRefTable, obj, types.V13)
-
-		case "Pages":
-			err = validatePagesNameTreeValue(xRefTable, obj, types.V13)
-
-		case "Templates":
-			err = validateTemplatesNameTreeValue(xRefTable, obj, types.V13)
-
-		case "IDS":
-			err = validateIDSNameTreeValue(xRefTable, obj, types.V13)
-
-		case "URLS":
-			err = validateURLSNameTreeValue(xRefTable, obj, types.V13)
-
-		case "EmbeddedFiles":
-			err = validateEmbeddedFilesNameTreeValue(xRefTable, obj, types.V14)
-
-		case "AlternatePresentations":
-			err = validateAlternatePresentationsNameTreeValue(xRefTable, obj, types.V14)
-
-		case "Renditions":
-			err = validateRenditionsNameTreeValue(xRefTable, obj, types.V15)
-
-		case "IDTree":
-			// for structure tree root
-			err = validateIDTreeValue(xRefTable, obj)
-
-		default:
-			err = errors.Errorf("validateNameTreeDictNamesEntry: unknown dict name: %s", name)
-
+		err = validateNameTreeByName(name, xRefTable, obj)
+		if err != nil {
+			return
 		}
 
 	}
 
 	logInfoValidate.Println("*** validateNameTreeDictNamesEntry end ***")
+
+	return
+}
+
+func validateNameTreeDictLimitsEntry(xRefTable *types.XRefTable, dict *types.PDFDict, firstKey, lastKey string) (err error) {
+
+	var arr *types.PDFArray
+
+	arr, err = validateStringArrayEntry(xRefTable, dict, "nameTreeDict", "Limits", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
+	if err != nil {
+		return
+	}
+
+	fk, _ := (*arr)[0].(types.PDFStringLiteral)
+	lk, _ := (*arr)[1].(types.PDFStringLiteral)
+
+	if firstKey != fk.Value() || lastKey != lk.Value() {
+		err = errors.Errorf("validateNameTreeDictLimitsEntry: leaf node corrupted\n")
+	}
 
 	return
 }
@@ -747,6 +780,8 @@ func validateNameTree(xRefTable *types.XRefTable, name string, indRef types.PDFI
 	// Kids: array of indirect references to the immediate children of this node.
 	// if Kids present then recurse
 	if obj, found := dict.Find("Kids"); found {
+
+		// Intermediate node
 
 		var arr *types.PDFArray
 
@@ -778,44 +813,22 @@ func validateNameTree(xRefTable *types.XRefTable, name string, indRef types.PDFI
 			}
 		}
 
-		if !root {
+	} else {
 
-			// Intermediate node
-
-			arr, err = validateStringArrayEntry(xRefTable, dict, "nameTreeDict", "Limits", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
-			if err != nil {
-				return
-			}
-			fk, _ := (*arr)[0].(types.PDFStringLiteral)
-			lk, _ := (*arr)[1].(types.PDFStringLiteral)
-			if firstKey != fk.Value() || lastKey != lk.Value() {
-				err = errors.Errorf("validateNameTree: %s intermediate node corrupted: %s %s %s %s\n", name, firstKey, fk.Value(), lastKey, lk.Value())
-			}
-		}
-
-		logInfoValidate.Printf("validateNameTree end: %s\n", name)
-
-		return
-	}
-
-	// Leaf node
-
-	firstKey, lastKey, err = validateNameTreeDictNamesEntry(xRefTable, dict, name)
-	if err != nil {
-		return
-	}
-
-	if !root {
-		var arr *types.PDFArray
-		arr, err = validateStringArrayEntry(xRefTable, dict, "nameTreeDict", "Limits", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
+		// Leaf node
+		firstKey, lastKey, err = validateNameTreeDictNamesEntry(xRefTable, dict, name)
 		if err != nil {
 			return
 		}
-		fk, _ := (*arr)[0].(types.PDFStringLiteral)
-		lk, _ := (*arr)[1].(types.PDFStringLiteral)
-		if firstKey != fk.Value() || lastKey != lk.Value() {
-			err = errors.Errorf("validateNameTree: leaf node corrupted\n")
+	}
+
+	if !root {
+
+		err = validateNameTreeDictLimitsEntry(xRefTable, dict, firstKey, lastKey)
+		if err != nil {
+			return
 		}
+
 	}
 
 	logInfoValidate.Println("*** validateNameTree end ***")

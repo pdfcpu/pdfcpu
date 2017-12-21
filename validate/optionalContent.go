@@ -5,33 +5,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateOptionalContentGroupIntent(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateOptionalContentGroupIntent(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool, sinceVersion types.PDFVersion) (err error) {
 
 	// see 8.11.2.1
 
 	logInfoValidate.Println("*** validateOptionalContentGroupIntent begin ***")
 
-	obj, found := dict.Find(entryName)
-	if !found || obj == nil {
-		if required {
-			err = errors.Errorf("validateOptionalContentGroupIntent: dict=%s required entry=%s missing", dictName, entryName)
-			return
-		}
-		logInfoValidate.Printf("validateOptionalContentGroupIntent end: entry %s is nil\n", entryName)
-		return
-	}
-
-	obj, err = xRefTable.Dereference(obj)
+	var obj interface{}
+	obj, err = validateEntry(xRefTable, dict, dictName, "Intent", required)
 	if err != nil {
-		return
-	}
-
-	if obj == nil {
-		if required {
-			err = errors.Errorf("validateOptionalContentGroupIntent: dict=%s required entry=%s is nil", dictName, entryName)
-			return
-		}
-		logInfoValidate.Printf("validateOptionalContentGroupIntent end: optional entry %s is nil\n", entryName)
 		return
 	}
 
@@ -160,7 +142,7 @@ func validateOptionalContentGroupDict(xRefTable *types.XRefTable, dict *types.PD
 	}
 
 	// Intent, optional, name or array
-	err = validateOptionalContentGroupIntent(xRefTable, dict, dictName, "Intent", OPTIONAL, types.V10)
+	err = validateOptionalContentGroupIntent(xRefTable, dict, dictName, OPTIONAL, types.V10)
 	if err != nil {
 		return
 	}
@@ -489,13 +471,22 @@ func validateOptionalContentConfigurationDict(xRefTable *types.XRefTable, dict *
 	return
 }
 
-func validateOCProperties(xRefTable *types.XRefTable, rootDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateOCProperties(xRefTable *types.XRefTable, required bool, sinceVersion types.PDFVersion) (err error) {
 
 	// aka optional content properties dict.
 
 	// => 8.11.4 Configuring Optional Content
 
 	logInfoValidate.Println("*** validateOCProperties begin ***")
+
+	if xRefTable.ValidationMode == types.ValidationRelaxed {
+		sinceVersion = types.V14
+	}
+
+	rootDict, err := xRefTable.Catalog()
+	if err != nil {
+		return
+	}
 
 	dict, err := validateDictEntry(xRefTable, rootDict, "rootDict", "OCProperties", required, sinceVersion, nil)
 	if err != nil {

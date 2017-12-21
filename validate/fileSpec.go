@@ -8,9 +8,9 @@ import (
 
 // See 7.11.4
 
-func processEmbeddedFileStreamMacParameterDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateEmbeddedFileStreamMacParameterDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
 
-	logInfoValidate.Println("*** processEmbeddedFileStreamMacParameterDict begin ***")
+	logInfoValidate.Println("*** validateEmbeddedFileStreamMacParameterDict begin ***")
 
 	dictName := "embeddedFileStreamMacParameterDict"
 
@@ -35,7 +35,7 @@ func processEmbeddedFileStreamMacParameterDict(xRefTable *types.XRefTable, dict 
 		return
 	}
 
-	logInfoValidate.Println("*** processEmbeddedFileStreamMacParameterDict end ***")
+	logInfoValidate.Println("*** validateEmbeddedFileStreamMacParameterDict end ***")
 
 	return
 }
@@ -80,7 +80,7 @@ func validateEmbeddedFileStreamParameterDict(xRefTable *types.XRefTable, obj int
 		return
 	}
 	if macDict != nil {
-		err = processEmbeddedFileStreamMacParameterDict(xRefTable, macDict)
+		err = validateEmbeddedFileStreamMacParameterDict(xRefTable, macDict)
 		if err != nil {
 			return
 		}
@@ -97,9 +97,9 @@ func validateEmbeddedFileStreamParameterDict(xRefTable *types.XRefTable, obj int
 	return
 }
 
-func processEmbeddedFileStreamDict(xRefTable *types.XRefTable, sd *types.PDFStreamDict) (err error) {
+func validateEmbeddedFileStreamDict(xRefTable *types.XRefTable, sd *types.PDFStreamDict) (err error) {
 
-	logInfoValidate.Println("*** processEmbeddedFileStreamDict begin ***")
+	logInfoValidate.Println("*** validateEmbeddedFileStreamDict begin ***")
 
 	dictName := "embeddedFileStreamDict"
 
@@ -124,43 +124,105 @@ func processEmbeddedFileStreamDict(xRefTable *types.XRefTable, sd *types.PDFStre
 		}
 	}
 
-	logInfoValidate.Println("*** processEmbeddedFileStreamDict end ***")
+	logInfoValidate.Println("*** validateEmbeddedFileStreamDict end ***")
 
 	return
 }
 
-func processFileSpecDictEntriesEFAndRF(xRefTable *types.XRefTable, efDict, rfDict *types.PDFDict) (err error) {
+func validateFileSpecDictEntriesEFAndRFKeys(k string) bool {
+	return k == "F" || k == "UF" || k == "DOS" || k == "Mac" || k == "Unix"
+}
 
-	// EF only or EF and RF
+func validateFileSpecDictEntryEFDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
 
-	logInfoValidate.Println("*** processFileSpecDictEntriesEFAndRF begin ***")
+	for k, obj := range (*dict).Dict {
 
-	if efDict == nil {
-		return errors.Errorf("processFileSpecEntriesEFAndRF: missing required efDict.")
-	}
-
-	var obj interface{}
-
-	for k, obj := range (*efDict).Dict {
-
-		if !(k == "F" || k == "UF" || k == "DOS" || k == "Mac" || k == "Unix") {
-			return errors.Errorf("processFileSpecEntriesEFAndRF: invalid key: %s", k)
+		if !validateFileSpecDictEntriesEFAndRFKeys(k) {
+			return errors.Errorf("validateFileSpecEntriesEFAndRF: invalid key: %s", k)
 		}
 
 		// value must be embedded file stream dict
 		// see 7.11.4
-		sd, err := validateStreamDict(xRefTable, obj)
+		var sd *types.PDFStreamDict
+		sd, err = validateStreamDict(xRefTable, obj)
 		if err != nil {
-			return err
+			return
 		}
 
-		err = processEmbeddedFileStreamDict(xRefTable, sd)
+		err = validateEmbeddedFileStreamDict(xRefTable, sd)
 		if err != nil {
-			return err
+			return
 		}
 
 		continue
 
+	}
+
+	return
+}
+
+func validateEFDictFilesArray(xRefTable *types.XRefTable, arr *types.PDFArray) (err error) {
+
+	if len(*arr)%2 > 0 {
+		return errors.New("validateEFDictFilesArray: rfDict array corrupt")
+	}
+
+	for k, v := range *arr {
+
+		if v == nil {
+			return errors.New("validateEFDictFilesArray: rfDict, array entry nil")
+		}
+
+		var obj interface{}
+		obj, err = xRefTable.Dereference(v)
+		if err != nil {
+			return
+		}
+
+		if obj == nil {
+			return errors.New("validateEFDictFilesArray: rfDict, array entry nil")
+		}
+
+		if k%2 > 0 {
+
+			_, ok := obj.(types.PDFStringLiteral)
+			if !ok {
+				return errors.New("validateEFDictFilesArray: rfDict, array entry corrupt")
+			}
+
+		} else {
+
+			// value must be embedded file stream dict
+			// see 7.11.4
+			sd, err := validateStreamDict(xRefTable, obj)
+			if err != nil {
+				return err
+			}
+
+			err = validateEmbeddedFileStreamDict(xRefTable, sd)
+			if err != nil {
+				return err
+			}
+
+		}
+	}
+
+	return
+}
+
+func validateFileSpecDictEntriesEFAndRF(xRefTable *types.XRefTable, efDict, rfDict *types.PDFDict) (err error) {
+
+	// EF only or EF and RF
+
+	logInfoValidate.Println("*** validateFileSpecDictEntriesEFAndRF begin ***")
+
+	if efDict == nil {
+		return errors.Errorf("validateFileSpecEntriesEFAndRF: missing required efDict.")
+	}
+
+	err = validateFileSpecDictEntryEFDict(xRefTable, efDict)
+	if err != nil {
+		return
 	}
 
 	if rfDict != nil {
@@ -168,7 +230,7 @@ func processFileSpecDictEntriesEFAndRF(xRefTable *types.XRefTable, efDict, rfDic
 		for k, val := range (*rfDict).Dict {
 
 			if _, ok := efDict.Find(k); !ok {
-				return errors.Errorf("processFileSpecEntriesEFAndRF: rfDict entry=%s missing corresponding efDict entry\n", k)
+				return errors.Errorf("validateFileSpecEntriesEFAndRF: rfDict entry=%s missing corresponding efDict entry\n", k)
 			}
 
 			// value must be related files array.
@@ -183,59 +245,76 @@ func processFileSpecDictEntriesEFAndRF(xRefTable *types.XRefTable, efDict, rfDic
 				continue
 			}
 
-			if len(*arr)%2 > 0 {
-				return errors.New("processFileSpecDictEntriesEFAndRF: rfDict array corrupt")
-			}
-
-			for k, v := range *arr {
-
-				if v == nil {
-					return errors.New("processFileSpecDictEntriesEFAndRF: rfDict, array entry nil")
-				}
-
-				obj, err = xRefTable.Dereference(v)
-				if err != nil {
-					return
-				}
-
-				if obj == nil {
-					return errors.New("processFileSpecDictEntriesEFAndRF: rfDict, array entry nil")
-				}
-
-				if k%2 > 0 {
-					_, ok := obj.(types.PDFStringLiteral)
-					if !ok {
-						return errors.New("processFileSpecDictEntriesEFAndRF: rfDict, array entry corrupt")
-					}
-				} else {
-
-					// value must be embedded file stream dict
-					// see 7.11.4
-					sd, err := validateStreamDict(xRefTable, obj)
-					if err != nil {
-						return err
-					}
-
-					err = processEmbeddedFileStreamDict(xRefTable, sd)
-					if err != nil {
-						return err
-					}
-
-				}
+			err = validateEFDictFilesArray(xRefTable, arr)
+			if err != nil {
+				return
 			}
 
 		}
 
 	}
 
-	logInfoValidate.Println("*** processFileSpecDictEntriesEFAndRF end ***")
+	logInfoValidate.Println("*** validateFileSpecDictEntriesEFAndRF end ***")
 
 	return
 }
 
-func processFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateFileSpecDictType(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
 
-	logInfoValidate.Println("*** processFileSpecDict begin ***")
+	if dict.Type() == nil || (*dict.Type() != "Filespec" && (xRefTable.ValidationMode == types.ValidationRelaxed && *dict.Type() != "F")) {
+		return errors.New("validateFileSpecDictType: missing type: FileSpec")
+	}
+	return
+}
+
+func requiredF(dosFound, macFound, unixFound bool) bool {
+	return !dosFound && !macFound && !unixFound
+}
+
+func validateFileSpecDictEFAndEF(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) (err error) {
+
+	// RF, optional, dict of related files arrays, since V1.3
+	rfDict, err := validateDictEntry(xRefTable, dict, dictName, "RF", OPTIONAL, types.V13, nil)
+	if err != nil {
+		return
+	}
+
+	// EF, required if RF present, dict of embedded file streams, since 1.3
+	efDict, err := validateDictEntry(xRefTable, dict, dictName, "EF", rfDict != nil, types.V13, nil)
+	if err != nil {
+		return
+	}
+
+	// Type, required if EF present, name
+	validate := func(s string) bool {
+		return s == "Filespec" || (xRefTable.ValidationMode == types.ValidationRelaxed && s == "F")
+	}
+	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", efDict != nil, types.V10, validate)
+	if err != nil {
+		return
+	}
+
+	// if EF present, Type "FileSpec" is required
+	if efDict != nil {
+
+		err = validateFileSpecDictType(xRefTable, dict)
+		if err != nil {
+			return
+		}
+
+		err = validateFileSpecDictEntriesEFAndRF(xRefTable, efDict, rfDict)
+		if err != nil {
+			return
+		}
+
+	}
+
+	return
+}
+
+func validateFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+
+	logInfoValidate.Println("*** validateFileSpecDict begin ***")
 
 	dictName := "fileSpecDict"
 
@@ -260,7 +339,7 @@ func processFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err e
 		validate = validateURLString
 	}
 
-	_, err = validateStringEntry(xRefTable, dict, dictName, "F", !dosFound && !macFound && !unixFound, types.V10, validate)
+	_, err = validateStringEntry(xRefTable, dict, dictName, "F", requiredF(dosFound, macFound, unixFound), types.V10, validate)
 	if err != nil {
 		return
 	}
@@ -287,39 +366,9 @@ func processFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err e
 		return
 	}
 
-	// RF, optional, dict of related files arrays, since V1.3
-	rfDict, err := validateDictEntry(xRefTable, dict, dictName, "RF", OPTIONAL, types.V13, nil)
+	err = validateFileSpecDictEFAndEF(xRefTable, dict, dictName)
 	if err != nil {
 		return
-	}
-
-	// EF, required if RF present, dict of embedded file streams, since 1.3
-	efDict, err := validateDictEntry(xRefTable, dict, dictName, "EF", rfDict != nil, types.V13, nil)
-	if err != nil {
-		return
-	}
-
-	// Type, required if EF present, name
-	validate = func(s string) bool {
-		return s == "Filespec" || (xRefTable.ValidationMode == types.ValidationRelaxed && s == "F")
-	}
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", efDict != nil, types.V10, validate)
-	if err != nil {
-		return
-	}
-
-	// if EF present, Type "FileSpec" is required
-	if efDict != nil {
-
-		if dict.Type() == nil || (*dict.Type() != "Filespec" && (xRefTable.ValidationMode == types.ValidationRelaxed && *dict.Type() != "F")) {
-			return errors.New("processFileSpecDict: missing type: FileSpec")
-		}
-
-		err = processFileSpecDictEntriesEFAndRF(xRefTable, efDict, rfDict)
-		if err != nil {
-			return
-		}
-
 	}
 
 	// Desc, optional, text string, since V1.6
@@ -338,7 +387,7 @@ func processFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err e
 		return
 	}
 
-	logInfoValidate.Println("*** processFileSpecDict end ***")
+	logInfoValidate.Println("*** validateFileSpecDict end ***")
 
 	return
 }
@@ -371,7 +420,7 @@ func validateFileSpecification(xRefTable *types.XRefTable, obj interface{}) (o i
 		}
 
 	case types.PDFDict:
-		err = processFileSpecDict(xRefTable, &obj)
+		err = validateFileSpecDict(xRefTable, &obj)
 		if err != nil {
 			return
 		}
@@ -448,7 +497,7 @@ func validateFileSpecificationOrFormObject(xRefTable *types.XRefTable, obj inter
 		}
 
 	case types.PDFDict:
-		err = processFileSpecDict(xRefTable, &obj)
+		err = validateFileSpecDict(xRefTable, &obj)
 		if err != nil {
 			return
 		}

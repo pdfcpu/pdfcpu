@@ -102,6 +102,48 @@ func patchArray(arr *types.PDFArray, lookup map[int]int) {
 	logDebugMerge.Printf("patchArray end: %v\n", arr)
 }
 
+func sortedKeys(ctx *types.PDFContext) []int {
+
+	var keys []int
+
+	for k := range ctx.Table {
+		if k == 0 {
+			// obj#0 is always the head of the freelist.
+			continue
+		}
+		keys = append(keys, k)
+	}
+
+	sort.Ints(keys)
+
+	return keys
+}
+
+func lookupTable(keys []int, i int) map[int]int {
+
+	m := map[int]int{}
+
+	for _, k := range keys {
+		m[k] = i
+		i++
+	}
+
+	return m
+}
+
+func patchObjects(s types.IntSet, lookup map[int]int) types.IntSet {
+
+	t := types.IntSet{}
+
+	for k, v := range s {
+		if v {
+			t[lookup[k]] = v
+		}
+	}
+
+	return t
+}
+
 func patchSourceObjectNumbers(ctxSource, ctxDest *types.PDFContext) (err error) {
 
 	logInfoMerge.Printf("patchSourceObjectNumbers: ctxSource: xRefTableSize:%d trailer.Size:%d - %s\n", len(ctxSource.Table), *ctxSource.Size, ctxSource.Read.FileName)
@@ -110,23 +152,10 @@ func patchSourceObjectNumbers(ctxSource, ctxDest *types.PDFContext) (err error) 
 	// Patch source xref tables obj numbers which are essentially the keys.
 	//logInfoMerge.Printf("Source XRefTable before:\n%s\n", ctxSource)
 
-	var keys []int
-	for k := range ctxSource.Table {
-		if k == 0 {
-			// obj#0 is always the head of the freelist.
-			continue
-		}
-		keys = append(keys, k)
-	}
-	sort.Ints(keys)
+	keys := sortedKeys(ctxSource)
 
 	// Create lookup table for obj numbers.
-	i := *ctxDest.Size
-	lookup := map[int]int{}
-	for _, k := range keys {
-		lookup[k] = i
-		i++
-	}
+	lookup := lookupTable(keys, *ctxDest.Size)
 
 	// Patch pointer to root object
 	patchIndRef(ctxSource.Root, lookup)
@@ -191,40 +220,16 @@ func patchSourceObjectNumbers(ctxSource, ctxDest *types.PDFContext) (err error) 
 	ctxSource.Table = m
 
 	// Patch DuplicateInfo object numbers.
-	infos := types.IntSet{}
-	for k, v := range ctxSource.Optimize.DuplicateInfoObjects {
-		if v {
-			infos[lookup[k]] = v
-		}
-	}
-	ctxSource.Optimize.DuplicateInfoObjects = infos
+	ctxSource.Optimize.DuplicateInfoObjects = patchObjects(ctxSource.Optimize.DuplicateInfoObjects, lookup)
 
 	// Patch Linearization object numbers.
-	lin := types.IntSet{}
-	for k, v := range ctxSource.LinearizationObjs {
-		if v {
-			lin[lookup[k]] = v
-		}
-	}
-	ctxSource.LinearizationObjs = lin
+	ctxSource.LinearizationObjs = patchObjects(ctxSource.LinearizationObjs, lookup)
 
 	// Patch XRefStream objects numbers.
-	xrefs := types.IntSet{}
-	for k, v := range ctxSource.Read.XRefStreams {
-		if v {
-			xrefs[lookup[k]] = v
-		}
-	}
-	ctxSource.Read.XRefStreams = xrefs
+	ctxSource.Read.XRefStreams = patchObjects(ctxSource.Read.XRefStreams, lookup)
 
 	// Patch object stream object numbers.
-	objstms := types.IntSet{}
-	for k, v := range ctxSource.Read.ObjectStreams {
-		if v {
-			objstms[lookup[k]] = v
-		}
-	}
-	ctxSource.Read.ObjectStreams = objstms
+	ctxSource.Read.ObjectStreams = patchObjects(ctxSource.Read.ObjectStreams, lookup)
 
 	logInfoMerge.Printf("patchSourceObjectNumbers end")
 

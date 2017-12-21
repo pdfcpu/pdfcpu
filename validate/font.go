@@ -5,6 +5,31 @@ import (
 	"github.com/pkg/errors"
 )
 
+func validateFontFile3SubType(sd *types.PDFStreamDict, fontType string) (err error) {
+
+	dictSubType := sd.Subtype()
+
+	if fontType == "Type1" || fontType == "MMType1" {
+		if dictSubType == nil || *dictSubType != "Type1C" {
+			return errors.New("validateFontFile3SubType: FontFile3 missing Subtype \"Type1C\"")
+		}
+	}
+
+	if fontType == "CIDFontType0" {
+		if dictSubType == nil || *dictSubType != "CIDFontType0C" {
+			return errors.New("validateFontFile3SubType: FontFile3 missing Subtype \"CIDFontType0C\"")
+		}
+	}
+
+	if fontType == "OpenType" {
+		if dictSubType == nil || *dictSubType != "OpenType" {
+			return errors.New("validateFontFile3SubType: FontFile3 missing Subtype \"OpenType\"")
+		}
+	}
+
+	return
+}
+
 func validateFontFile(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, fontType string, required bool, sinceVersion types.PDFVersion) (err error) {
 
 	logInfoValidate.Printf("*** validateFontFile begin: dictName=%s entryName=%s fontType=%s ***\n", dictName, entryName, fontType)
@@ -25,24 +50,9 @@ func validateFontFile(xRefTable *types.XRefTable, dict *types.PDFDict, dictName 
 	// SubType, required if referenced from FontFile3.
 	if entryName == "FontFile3" {
 
-		dictSubType := streamDict.Subtype()
-
-		if fontType == "Type1" || fontType == "MMType1" {
-			if dictSubType == nil || *dictSubType != "Type1C" {
-				return errors.New("validateFontFile: FontFile3 missing Subtype \"Type1C\"")
-			}
-		}
-
-		if fontType == "CIDFontType0" {
-			if dictSubType == nil || *dictSubType != "CIDFontType0C" {
-				return errors.New("validateFontFile: FontFile3 missing Subtype \"CIDFontType0C\"")
-			}
-		}
-
-		if fontType == "OpenType" {
-			if dictSubType == nil || *dictSubType != "OpenType" {
-				return errors.New("validateFontFile: FontFile3 missing Subtype \"OpenType\"")
-			}
+		err = validateFontFile3SubType(streamDict, fontType)
+		if err != nil {
+			return
 		}
 
 	}
@@ -76,43 +86,40 @@ func validateFontFile(xRefTable *types.XRefTable, dict *types.PDFDict, dictName 
 	return
 }
 
-func validateFontDescriptor(xRefTable *types.XRefTable, fontDict *types.PDFDict, fontDictName string, fontDictType string, required bool, sinceVersion types.PDFVersion) (err error) {
-
-	logInfoValidate.Printf("*** validateFontDescriptor begin: dictName=%s referrer=%s***\n", fontDictName, fontDictType)
-
-	dict, err := validateDictEntry(xRefTable, fontDict, fontDictName, "FontDescriptor", required, sinceVersion, nil)
-	if err != nil {
-		return
-	}
-
-	if dict == nil {
-		// optional and nil or already written
-		logInfoValidate.Println("validateFontDescriptor end")
-		return
-	}
-
-	// Process font descriptor dict
+func validateFontDescriptorType(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
 
 	dictType := dict.Type()
+
 	if dictType == nil {
+
 		if xRefTable.ValidationMode == types.ValidationRelaxed {
 			logDebugValidate.Println("validateFontDescriptor: missing entry \"Type\"")
 		} else {
 			return errors.New("validateFontDescriptor: missing entry \"Type\"")
 		}
+
 	}
+
 	if dictType != nil && *dictType != "FontDescriptor" {
 		return errors.New("writeFontDescriptor: corrupt font descriptor dict")
 	}
 
-	dictName := "fdDict"
+	return
+}
+
+func validateFontDescriptorPart1(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, fontDictType string) (err error) {
+
+	err = validateFontDescriptorType(xRefTable, dict)
+	if err != nil {
+		return
+	}
 
 	_, err = validateNameEntry(xRefTable, dict, dictName, "FontName", REQUIRED, types.V10, nil)
 	if err != nil {
 		return
 	}
 
-	sinceVersion = types.V15
+	sinceVersion := types.V15
 	if xRefTable.ValidationMode == types.ValidationRelaxed {
 		sinceVersion = types.V13
 	}
@@ -153,6 +160,11 @@ func validateFontDescriptor(xRefTable *types.XRefTable, fontDict *types.PDFDict,
 	if err != nil {
 		return
 	}
+
+	return
+}
+
+func validateFontDescriptorPart2(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, fontDictType string) (err error) {
 
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "Ascent", fontDictType != "Type3", types.V10, nil)
 	if err != nil {
@@ -204,6 +216,21 @@ func validateFontDescriptor(xRefTable *types.XRefTable, fontDict *types.PDFDict,
 		return
 	}
 
+	err = validateFontDescriptorFontFile(xRefTable, dict, dictName, fontDictType)
+	if err != nil {
+		return
+	}
+
+	_, err = validateStringEntry(xRefTable, dict, dictName, "CharSet", OPTIONAL, types.V11, nil)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func validateFontDescriptorFontFile(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, fontDictType string) (err error) {
+
 	if fontDictType == "Type1" || fontDictType == "MMType1" {
 
 		err = validateFontFile(xRefTable, dict, dictName, "FontFile", fontDictType, OPTIONAL, types.V10)
@@ -239,7 +266,34 @@ func validateFontDescriptor(xRefTable *types.XRefTable, fontDict *types.PDFDict,
 		}
 	}
 
-	_, err = validateStringEntry(xRefTable, dict, dictName, "CharSet", OPTIONAL, types.V11, nil)
+	return
+}
+
+func validateFontDescriptor(xRefTable *types.XRefTable, fontDict *types.PDFDict, fontDictName string, fontDictType string, required bool, sinceVersion types.PDFVersion) (err error) {
+
+	logInfoValidate.Printf("*** validateFontDescriptor begin: dictName=%s referrer=%s***\n", fontDictName, fontDictType)
+
+	dict, err := validateDictEntry(xRefTable, fontDict, fontDictName, "FontDescriptor", required, sinceVersion, nil)
+	if err != nil {
+		return
+	}
+
+	if dict == nil {
+		// optional and nil or already written
+		logInfoValidate.Println("validateFontDescriptor end")
+		return
+	}
+
+	dictName := "fdDict"
+
+	// Process font descriptor dict
+
+	err = validateFontDescriptorPart1(xRefTable, dict, dictName, fontDictType)
+	if err != nil {
+		return
+	}
+
+	err = validateFontDescriptorPart2(xRefTable, dict, dictName, fontDictType)
 	if err != nil {
 		return
 	}
@@ -486,6 +540,42 @@ func validateCIDFontGlyphWidths(xRefTable *types.XRefTable, dict *types.PDFDict,
 	return
 }
 
+func validateCIDFontDictEntryCIDSystemInfo(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) (err error) {
+
+	var d *types.PDFDict
+
+	d, err = validateDictEntry(xRefTable, dict, dictName, "CIDSystemInfo", REQUIRED, types.V10, nil)
+	if err != nil {
+		return
+	}
+	if d != nil {
+		err = validateCIDSystemInfoDict(xRefTable, d)
+		if err != nil {
+			return
+		}
+	}
+
+	return
+}
+
+func validateCIDFontDictEntryCIDToGIDMap(xRefTable *types.XRefTable, dict *types.PDFDict, isCIDFontType2 bool) (err error) {
+
+	if obj, found := dict.Find("CIDToGIDMap"); found {
+
+		if !isCIDFontType2 {
+			return errors.New("validateCIDFontDict: entry CIDToGIDMap not allowed - must be CIDFontType2")
+		}
+
+		err = validateCIDToGIDMap(xRefTable, obj)
+		if err != nil {
+			return
+		}
+
+	}
+
+	return
+}
+
 func validateCIDFontDict(xRefTable *types.XRefTable, fontDict *types.PDFDict) (err error) {
 
 	// see 9.7.4
@@ -518,16 +608,9 @@ func validateCIDFontDict(xRefTable *types.XRefTable, fontDict *types.PDFDict) (e
 	}
 
 	// CIDSystemInfo, dict, required
-	dict, err := validateDictEntry(xRefTable, fontDict, "CIDFontDict", "CIDSystemInfo", REQUIRED, types.V10, nil)
+	err = validateCIDFontDictEntryCIDSystemInfo(xRefTable, fontDict, "CIDFontDict")
 	if err != nil {
 		return
-	}
-
-	if dict != nil {
-		err = validateCIDSystemInfoDict(xRefTable, dict)
-		if err != nil {
-			return
-		}
 	}
 
 	// FontDescriptor, dictionary, required
@@ -563,14 +646,9 @@ func validateCIDFontDict(xRefTable *types.XRefTable, fontDict *types.PDFDict) (e
 
 	// CIDToGIDMap, stream or (name /Identity)
 	// optional, Type 2 CIDFonts with embedded associated TrueType font program only.
-	if obj, found := fontDict.Find("CIDToGIDMap"); found {
-		if !isCIDFontType2 {
-			return errors.New("validateCIDFontDict: entry CIDToGIDMap not allowed - must be CIDFontType2")
-		}
-		err = validateCIDToGIDMap(xRefTable, obj)
-		if err != nil {
-			return
-		}
+	err = validateCIDFontDictEntryCIDToGIDMap(xRefTable, fontDict, isCIDFontType2)
+	if err != nil {
+		return nil
 	}
 
 	logInfoValidate.Printf("*** validateCIDFontDict end ***")

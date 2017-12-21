@@ -372,10 +372,117 @@ func HasNeededPermissions(enc *types.Enc) bool {
 	return enc.P&0x0008 > 0 && enc.P&0x0010 > 0
 }
 
+func getV(dict *types.PDFDict) (v *int, err error) {
+
+	v = dict.IntEntry("V")
+
+	if v == nil || (*v != 1 && *v != 2 && *v != 4) {
+		logErrorCrypto.Println("checkV: \"V\" must be one of 1,2,4")
+		return nil, nil
+	}
+
+	return
+}
+func checkStmf(ctx *types.PDFContext, stmf *string, cfDict *types.PDFDict) error {
+
+	if stmf != nil && *stmf != "Identity" {
+		d := cfDict.PDFDictEntry(*stmf)
+		if d == nil {
+			//logErrorCrypto.Printf("checkV: entry \"%s\" missing in \"CF\"", *stmf)
+			return errors.Errorf("checkV: entry \"%s\" missing in \"CF\"", *stmf)
+		}
+		aes, ok := SupportedCFEntry(d)
+		if !ok {
+			return errors.Errorf("checkV: unsupported \"%s\" entry in \"CF\"", *stmf)
+		}
+		ctx.AES4Streams = aes
+	}
+
+	return nil
+}
+
+func checkV(ctx *types.PDFContext, dict *types.PDFDict) (v *int, err error) {
+
+	v, err = getV(dict)
+	if err != nil {
+		return
+	}
+
+	if *v != 4 {
+		return v, nil
+	}
+
+	// CF
+	cfDict := dict.PDFDictEntry("CF")
+	if cfDict == nil {
+		return nil, errors.Errorf("checkV: required entry \"CF\" missing.")
+	}
+
+	// StmF
+	stmf := dict.NameEntry("StmF")
+	err = checkStmf(ctx, stmf, cfDict)
+	if err != nil {
+		return nil, nil
+	}
+
+	// StrF
+	strf := dict.NameEntry("StrF")
+	if strf != nil && *strf != "Identity" {
+		d := cfDict.PDFDictEntry(*strf)
+		if d == nil {
+			return nil, errors.Errorf("checkV: entry \"%s\" missing in \"CF\"", *strf)
+		}
+		aes, ok := SupportedCFEntry(d)
+		if !ok {
+			return nil, errors.Errorf("checkV: unsupported \"%s\" entry in \"CF\"", *strf)
+		}
+		ctx.AES4Strings = aes
+	}
+
+	// EFF
+	eff := dict.NameEntry("EFF")
+	if eff != nil && *strf != "Identity" {
+		d := cfDict.PDFDictEntry(*eff)
+		if d == nil {
+			return nil, errors.Errorf("checkV: entry \"%s\" missing in \"CF\"", *eff)
+		}
+		aes, ok := SupportedCFEntry(d)
+		if !ok {
+			return nil, errors.Errorf("checkV: unsupported \"%s\" entry in \"CF\"", *eff)
+		}
+		ctx.AES4EmbeddedStreams = aes
+	}
+
+	return v, nil
+}
+
+func getLength(dict *types.PDFDict) (int, error) {
+
+	l := dict.IntEntry("Length")
+	if l == nil {
+		return 40, nil
+	}
+
+	if *l < 40 || *l > 128 || *l%8 > 0 {
+		return 0, errors.Errorf("getLength: \"Length\" %d not supported\n", *l)
+	}
+
+	return *l, nil
+}
+
+func getR(dict *types.PDFDict) (int, error) {
+
+	r := dict.IntEntry("R")
+	if r == nil || (*r != 2 && *r != 3 && *r != 4) {
+		return 0, errors.New("getR: \"R\" must be 2,3,4")
+	}
+
+	return *r, nil
+}
+
 // SupportedEncryption returns true if used encryption is supported by pdfcpu.
 func SupportedEncryption(ctx *types.PDFContext, dict *types.PDFDict) (*types.Enc, error) {
 
-	var aes, ok bool
 	var err error
 
 	// Filter
@@ -392,84 +499,21 @@ func SupportedEncryption(ctx *types.PDFContext, dict *types.PDFDict) (*types.Enc
 	}
 
 	// V
-	v := dict.IntEntry("V")
-	if v == nil || (*v != 1 && *v != 2 && *v != 4) {
-		logErrorCrypto.Println("supportedEncryption: \"V\" must be one of 1,2,4")
-		return nil, nil
+	v, err := checkV(ctx, dict)
+	if err != nil {
+		return nil, err
 	}
 
 	// Length
-	length := 40
-	l := dict.IntEntry("Length")
-	if l != nil {
-		if *l < 40 || *l > 128 || *l%8 > 0 {
-			logErrorCrypto.Printf("supportedEncryption: \"Length\" %d not supported\n", *l)
-			return nil, nil
-		}
-		length = *l
-	}
-
-	if *v == 4 {
-
-		// CF
-		cfDict := dict.PDFDictEntry("CF")
-		if cfDict == nil {
-			logErrorCrypto.Println("supportedEncryption: required entry \"CF\" missing.")
-			return nil, nil
-		}
-
-		// StmF
-		stmf := dict.NameEntry("StmF")
-		if stmf != nil && *stmf != "Identity" {
-			d := cfDict.PDFDictEntry(*stmf)
-			if d == nil {
-				logErrorCrypto.Printf("supportedEncryption: entry \"%s\" missing in \"CF\"", *stmf)
-				return nil, nil
-			}
-			aes, ok = SupportedCFEntry(d)
-			if !ok {
-				return nil, errors.Errorf("supportedEncryption: unsupported \"%s\" entry in \"CF\"", *stmf)
-			}
-			ctx.AES4Streams = aes
-		}
-
-		// StrF
-		strf := dict.NameEntry("StrF")
-		if strf != nil && *strf != "Identity" {
-			d := cfDict.PDFDictEntry(*strf)
-			if d == nil {
-				logErrorCrypto.Printf("supportedEncryption: entry \"%s\" missing in \"CF\"", *strf)
-				return nil, nil
-			}
-			aes, ok = SupportedCFEntry(d)
-			if !ok {
-				return nil, errors.Errorf("supportedEncryption: unsupported \"%s\" entry in \"CF\"", *strf)
-			}
-			ctx.AES4Strings = aes
-		}
-
-		// EFF
-		eff := dict.NameEntry("EFF")
-		if eff != nil && *strf != "Identity" {
-			d := cfDict.PDFDictEntry(*eff)
-			if d == nil {
-				logErrorCrypto.Printf("supportedEncryption: entry \"%s\" missing in \"CF\"", *eff)
-				return nil, nil
-			}
-			aes, ok = SupportedCFEntry(d)
-			if !ok {
-				return nil, errors.Errorf("supportedEncryption: unsupported \"%s\" entry in \"CF\"", *eff)
-			}
-			ctx.AES4EmbeddedStreams = aes
-		}
-
+	length, err := getLength(dict)
+	if err != nil {
+		return nil, err
 	}
 
 	// R
-	r := dict.IntEntry("R")
-	if r == nil || (*r != 2 && *r != 3 && *r != 4) {
-		logErrorCrypto.Println("supportedEncryption: \"R\" must be 2,3,4")
-		return nil, nil
+	r, err := getR(dict)
+	if err != nil {
+		return nil, err
 	}
 
 	// O
@@ -506,7 +550,7 @@ func SupportedEncryption(ctx *types.PDFContext, dict *types.PDFDict) (*types.Enc
 		encMeta = *emd
 	}
 
-	return &types.Enc{O: o, U: u, L: length, P: *p, R: *r, V: *v, Emd: encMeta}, nil
+	return &types.Enc{O: o, U: u, L: length, P: *p, R: r, V: *v, Emd: encMeta}, nil
 }
 
 func decryptKey(objNumber, generation int, key []byte, aes bool) []byte {
@@ -610,6 +654,20 @@ func applyRC4Cipher(b []byte, objNr, genNr int, key []byte, needAES bool) (*stri
 	return &s1, nil
 }
 
+func encrypt(m map[string]interface{}, k string, v interface{}, objNr, genNr int, key []byte, aes bool) error {
+
+	s, err := EncryptDeepObject(v, objNr, genNr, key, aes)
+	if err != nil {
+		return err
+	}
+
+	if s != nil {
+		m[k] = *s
+	}
+
+	return nil
+}
+
 // EncryptDeepObject recurses over non trivial PDF objects and encrypts all strings encountered.
 func EncryptDeepObject(objIn interface{}, objNr, genNr int, key []byte, aes bool) (*types.PDFStringLiteral, error) {
 
@@ -622,23 +680,17 @@ func EncryptDeepObject(objIn interface{}, objNr, genNr int, key []byte, aes bool
 
 	case types.PDFStreamDict:
 		for k, v := range obj.Dict {
-			s, err := EncryptDeepObject(v, objNr, genNr, key, aes)
+			err := encrypt(obj.Dict, k, v, objNr, genNr, key, aes)
 			if err != nil {
 				return nil, err
-			}
-			if s != nil {
-				obj.Dict[k] = *s
 			}
 		}
 
 	case types.PDFDict:
 		for k, v := range obj.Dict {
-			s, err := EncryptDeepObject(v, objNr, genNr, key, aes)
+			err := encrypt(obj.Dict, k, v, objNr, genNr, key, aes)
 			if err != nil {
 				return nil, err
-			}
-			if s != nil {
-				obj.Dict[k] = *s
 			}
 		}
 
@@ -760,6 +812,9 @@ func applyRC4Bytes(buf, key []byte) ([]byte, error) {
 	r := &cipher.StreamReader{S: c, R: bytes.NewReader(buf)}
 
 	_, err = io.Copy(&b, r)
+	if err != nil {
+		return nil, err
+	}
 
 	return b.Bytes(), nil
 }

@@ -1,7 +1,6 @@
 package pdfcpu
 
 import (
-	"log"
 	"regexp"
 	"testing"
 
@@ -68,12 +67,12 @@ func doTestPageSelection(s string, pageCount int, compareString string, t *testi
 
 	pageSelection, err := ParsePageSelection(s)
 	if err != nil {
-		log.Fatal()
+		t.Fatalf("TestPageSelection(%s) %v\n", s, err)
 	}
 
 	selectedPages, err := pagesForPageSelection(pageCount, pageSelection)
 	if err != nil {
-		log.Fatal()
+		t.Fatalf("TestPageSelection(%s) %v\n", s, err)
 	}
 
 	resultString := selectedPagesString(selectedPages, pageCount)

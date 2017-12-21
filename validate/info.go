@@ -5,15 +5,40 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateDocumentInfoDict(xRefTable *types.XRefTable, obj interface{}) (hasModDate bool, err error) {
+func validateCreationDate(xRefTable *types.XRefTable, o interface{}) (err error) {
 
-	dict, err := xRefTable.DereferenceDict(obj)
-	if err != nil {
-		return
+	if xRefTable.ValidationMode == types.ValidationRelaxed {
+		_, err = validateString(xRefTable, o, nil)
+		if err != nil {
+			return
+		}
+	} else {
+		_, err = validateDateObject(xRefTable, o, types.V10)
+		if err != nil {
+			return
+		}
 	}
 
+	return
+}
+
+func handleDefault(xRefTable *types.XRefTable, o interface{}) (err error) {
+
+	if xRefTable.ValidationMode == types.ValidationStrict {
+		_, err = xRefTable.DereferenceStringOrHexLiteral(o, types.V10, nil)
+	} else {
+		_, err = xRefTable.Dereference(o)
+	}
+
+	return
+}
+
+func validateDocumentInfoDict(xRefTable *types.XRefTable, obj interface{}) (hasModDate bool, err error) {
+
 	// Document info object is optional.
-	if dict == nil {
+
+	dict, err := xRefTable.DereferenceDict(obj)
+	if err != nil || dict == nil {
 		return
 	}
 
@@ -23,94 +48,49 @@ func validateDocumentInfoDict(xRefTable *types.XRefTable, obj interface{}) (hasM
 
 		// text string, opt, since V1.1
 		case "Title":
-
 			_, err = xRefTable.DereferenceStringOrHexLiteral(v, types.V11, nil)
-			if err != nil {
-				return
-			}
 
 		// text string, optional
 		case "Author":
-
 			_, err = xRefTable.DereferenceStringOrHexLiteral(v, types.V10, nil)
-			if err != nil {
-				return
-			}
 
 		// text string, optional, since V1.1
 		case "Subject":
-
 			_, err = xRefTable.DereferenceStringOrHexLiteral(v, types.V11, nil)
-			if err != nil {
-				return
-			}
 
 		// text string, optional, since V1.1
 		case "Keywords":
-
 			_, err = xRefTable.DereferenceStringOrHexLiteral(v, types.V11, nil)
-			if err != nil {
-				return
-			}
 
 		// text string, optional
 		case "Creator":
-
 			_, err = xRefTable.DereferenceStringOrHexLiteral(v, types.V10, nil)
-			if err != nil {
-				return
-			}
 
 		// text string, optional
 		case "Producer":
-
 			_, err = xRefTable.DereferenceStringOrHexLiteral(v, types.V10, nil)
-			if err != nil {
-				return
-			}
 
 		// date, optional
 		case "CreationDate":
-			if xRefTable.ValidationMode == types.ValidationRelaxed {
-				_, err = validateString(xRefTable, v, nil)
-				if err != nil {
-					return
-				}
-			} else {
-				_, err = validateDateObject(xRefTable, v, types.V10)
-				if err != nil {
-					return
-				}
-			}
+			err = validateCreationDate(xRefTable, v)
 
 		// date, required if PieceInfo is present in document catalog.
 		case "ModDate":
-
 			hasModDate = true
-
 			_, err = validateDateObject(xRefTable, v, types.V10)
-			if err != nil {
-				return
-			}
 
 		// name, optional, since V1.3
 		case "Trapped":
-
 			_, err = xRefTable.DereferenceName(v, types.V13, validateDocInfoDictTrapped)
-			if err != nil {
-				return
-			}
 
 		// text string, optional
 		default:
-			if xRefTable.ValidationMode == types.ValidationStrict {
-				_, err = xRefTable.DereferenceStringOrHexLiteral(v, types.V10, nil)
-			} else {
-				_, err = xRefTable.Dereference(v)
-			}
-			if err != nil {
-				return
-			}
+			err = handleDefault(xRefTable, v)
+
+		}
+
+		if err != nil {
+			return
 		}
 
 	}

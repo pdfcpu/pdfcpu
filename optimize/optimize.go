@@ -110,14 +110,13 @@ func ResourcesDictForPageDict(xRefTable *types.XRefTable, pageDict *types.PDFDic
 	return xRefTable.DereferenceDict(obj)
 }
 
-func handleDuplicateFontObject(font *types.PDFDict, indRef *types.PDFIndirectRef, fontName, resourceName string, pageNumber int, ctx *types.PDFContext) (bool, error) {
+func handleDuplicateFontObject(ctx *types.PDFContext, font *types.PDFDict, fontName, resourceName string, objNr, pageNumber int) (*int, error) {
 
 	fontObjectNumbers, found := ctx.Optimize.Fonts[fontName]
 	if !found {
-		return false, nil
+		return nil, nil
 	}
 
-	objectNumber := int(indRef.ObjectNumber)
 	pageFonts := ctx.Optimize.PageFonts[pageNumber]
 
 	for _, fontObjectNumber := range *fontObjectNumbers {
@@ -128,33 +127,82 @@ func handleDuplicateFontObject(font *types.PDFDict, indRef *types.PDFIndirectRef
 
 		ok, err := equalFontDicts(fontObject.FontDict, font, ctx)
 		if err != nil {
-			return false, err
+			return nil, err
 		}
 
 		if ok {
 
 			// We have detected a redundant font dict.
-			logInfoOptimize.Printf("optimizeFontResourcesDict: redundant fontObj#:%d basefont %s already registered with obj#:%d !\n", objectNumber, fontName, fontObjectNumber)
+			logInfoOptimize.Printf("optimizeFontResourcesDict: redundant fontObj#:%d basefont %s already registered with obj#:%d !\n", objNr, fontName, fontObjectNumber)
 			// This is an optimization patch of the fontobject for a fontResource
-
-			// Modify the indirect object reference to point to the single instance of this fontDict.
-			indRef.ObjectNumber = types.PDFInteger(fontObjectNumber)
-
-			// Update resourceDict entry with patched indRef.
-			font.Dict[resourceName] = *indRef
 
 			pageFonts[fontObjectNumber] = true
 
 			fontObject.AddResourceName(resourceName)
 
-			ctx.Optimize.DuplicateFonts[objectNumber] = font
+			ctx.Optimize.DuplicateFonts[objNr] = font
 
-			return true, nil
-
+			return &fontObjectNumber, nil
 		}
 	}
 
-	return false, nil
+	return nil, nil
+}
+
+func pageFonts(ctx *types.PDFContext, pageNumber int) (pageFonts types.IntSet) {
+
+	pageFonts = ctx.Optimize.PageFonts[pageNumber]
+
+	if pageFonts == nil {
+		pageFonts = types.IntSet{}
+		ctx.Optimize.PageFonts[pageNumber] = pageFonts
+	}
+
+	return
+}
+
+func fontName(ctx *types.PDFContext, fontDict *types.PDFDict, objNumber int) (fontName string, err error) {
+
+	var found bool
+	var o interface{}
+
+	if *fontDict.Subtype() != "Type3" {
+
+		o, found = fontDict.Find("BaseFont")
+		if !found {
+			o, found = fontDict.Find("Name")
+			if !found {
+				err = errors.New("fontName: missing fontDict entries \"BaseFont\" and \"Name\"")
+				return
+			}
+		}
+
+	} else {
+
+		// Type3 fonts only have Name in V1.0 else use generic name.
+
+		o, found = fontDict.Find("Name")
+		if !found {
+			fontName = fmt.Sprintf("Type3_%d", objNumber)
+			return
+		}
+
+	}
+
+	o, err = ctx.Dereference(o)
+	if err != nil {
+		return
+	}
+
+	baseFont, ok := o.(types.PDFName)
+	if !ok {
+		err = errors.New("fontName: corrupt fontDict entry BaseFont")
+		return
+	}
+
+	fontName = string(baseFont)
+
+	return
 }
 
 // Get rid of redundant fonts for given fontResources dictionary.
@@ -162,11 +210,7 @@ func optimizeFontResourcesDict(ctx *types.PDFContext, fontResourcesDict *types.P
 
 	logDebugOptimize.Printf("optimizeFontResourcesDict begin: page=%d pageObjNumber=%d %s\nPageFonts=%v\n", pageNumber, pageObjNumber, *fontResourcesDict, ctx.Optimize.PageFonts)
 
-	pageFonts := ctx.Optimize.PageFonts[pageNumber]
-	if pageFonts == nil {
-		pageFonts = types.IntSet{}
-		ctx.Optimize.PageFonts[pageNumber] = pageFonts
-	}
+	pageFonts := pageFonts(ctx, pageNumber)
 
 	for resourceName, v := range fontResourcesDict.Dict {
 
@@ -201,74 +245,55 @@ func optimizeFontResourcesDict(ctx *types.PDFContext, fontResourcesDict *types.P
 			return errors.Errorf("optimizeFontResourcesDict: expected Type=Font, unexpected Type: %s", *fontDict.Type())
 		}
 
-		var baseFont interface{}
-		var fontName string
-		var found bool
-
-		if *fontDict.Subtype() != "Type3" {
-
-			baseFont, found = fontDict.Find("BaseFont")
-			if !found {
-				baseFont, found = fontDict.Find("Name")
-				if !found {
-					return errors.New("optimizeFontResourcesDict: missing fontDict entries \"BaseFont\" and \"Name\"")
-				}
-			}
-
-			baseFont, _ = ctx.Dereference(baseFont)
-			baseF, ok := baseFont.(types.PDFName)
-			if !ok {
-				return errors.New("optimizeFontResourcesDict: corrupt fontDict entry BaseFont")
-			}
-			fontName = string(baseF)
-
-		} else {
-			// Type3 fonts only have Name in V1.0 else use generic name.
-			baseFont, found = fontDict.Find("Name")
-			if !found {
-				fontName = fmt.Sprintf("Type3_%d", indRef.ObjectNumber.Value())
-			}
-		}
-
-		logDebugOptimize.Printf("optimizeFontResourcesDict: baseFont: %s\n", fontName)
-
-		// Isolate fontname prefix
-		var prefix string
-		i := strings.Index(fontName, "+")
-
-		if i > 0 {
-			prefix = fontName[:i]
-			fontName = fontName[i+1:]
-		}
-
-		duplicate, err := handleDuplicateFontObject(&fontDict, &indRef, fontName, resourceName, pageNumber, ctx)
+		var fn string
+		fn, err = fontName(ctx, &fontDict, objectNumber)
 		if err != nil {
 			return err
 		}
 
-		if !duplicate {
+		logDebugOptimize.Printf("optimizeFontResourcesDict: baseFont: %s\n", fn)
+
+		// Isolate fontname prefix
+		var prefix string
+		i := strings.Index(fn, "+")
+
+		if i > 0 {
+			prefix = fn[:i]
+			fn = fn[i+1:]
+		}
+
+		uniqueFontObjNr, err := handleDuplicateFontObject(ctx, &fontDict, fn, resourceName, indRef.ObjectNumber.Value(), pageNumber)
+		if err != nil {
+			return err
+		}
+
+		if uniqueFontObjNr == nil {
 
 			// add fontInfo entry into Fonts
 			// add fontobject entry into fontObjects
-			logDebugOptimize.Printf("optimizeFontResourcesDict: adding new font %s obj#%d\n", fontName, objectNumber)
+			logDebugOptimize.Printf("optimizeFontResourcesDict: adding new font %s obj#%d\n", fn, objectNumber)
 
-			fontObjectNumbers, found := ctx.Optimize.Fonts[fontName]
+			fontObjectNumbers, found := ctx.Optimize.Fonts[fn]
 			if found {
-				logDebugOptimize.Printf("optimizeFontResourcesDict: appending %d to %s\n", objectNumber, fontName)
+				logDebugOptimize.Printf("optimizeFontResourcesDict: appending %d to %s\n", objectNumber, fn)
 				*fontObjectNumbers = append(*fontObjectNumbers, objectNumber)
 			} else {
-				ctx.Optimize.Fonts[fontName] = &[]int{objectNumber}
+				ctx.Optimize.Fonts[fn] = &[]int{objectNumber}
 			}
 
 			ctx.Optimize.FontObjects[objectNumber] =
 				&types.FontObject{
 					ResourceNames: []string{resourceName},
 					Prefix:        prefix,
-					FontName:      fontName,
-					FontDict:      &fontDict}
+					FontName:      fn,
+					FontDict:      &fontDict,
+				}
 
 			pageFonts[objectNumber] = true
 
+		} else {
+			// Update
+			fontResourcesDict.Dict[resourceName] = types.NewPDFIndirectRef(*uniqueFontObjNr, 0)
 		}
 	}
 
@@ -277,49 +302,39 @@ func optimizeFontResourcesDict(ctx *types.PDFContext, fontResourcesDict *types.P
 	return
 }
 
-func handleDuplicateImageObject(image *types.PDFStreamDict, indRef *types.PDFIndirectRef, resourceName string, pageNumber int, ctx *types.PDFContext) (bool, error) {
+func handleDuplicateImageObject(ctx *types.PDFContext, image *types.PDFStreamDict, resourceName string, objNr, pageNumber int) (*int, error) {
 
-	objectNumber := int(indRef.ObjectNumber)
 	pageImages := ctx.Optimize.PageImages[pageNumber]
 
 	// Process image dict, check if this is a duplicate.
 	for imageObjectNumber, imageObject := range ctx.Optimize.ImageObjects {
 
-		logDebugOptimize.Printf("handleDuplicateImageObject: comparing %d with imagedict Obj %d\n", objectNumber, imageObjectNumber)
+		logDebugOptimize.Printf("handleDuplicateImageObject: comparing with imagedict Obj %d\n", imageObjectNumber)
 
-		ok, err := equalPDFStreamDicts(image, imageObject.ImageDict, ctx)
+		ok, err := equalPDFStreamDicts(imageObject.ImageDict, image, ctx)
 		if err != nil {
-			return false, err
+			return nil, err
 		}
 
 		if ok {
 
 			// We have detected a redundant image dict.
-
-			logInfoOptimize.Printf("handleDuplicateImageObject: redundant imageObj#:%d already registered with obj#:%d !\n", objectNumber, imageObjectNumber)
-
+			logInfoOptimize.Printf("handleDuplicateImageObject: redundant imageObj#:%d already registered with obj#:%d !\n", objNr, imageObjectNumber)
 			// This is an optimization patch of the imageobject for an XObject Resource:
-
-			// Modify the indirect object reference to point to the single instance of this imageDict.
-			indRef.ObjectNumber = types.PDFInteger(imageObjectNumber)
-
-			// Save patched indRef to resourceDict.
-			image.Dict[resourceName] = *indRef
 
 			pageImages[imageObjectNumber] = true
 
 			imageObject.AddResourceName(resourceName)
 
-			ctx.Optimize.DuplicateImages[objectNumber] = image
+			ctx.Optimize.DuplicateImages[objNr] = image
 
-			logDebugOptimize.Printf("handleDuplicateImageObject: increment binary image duplsize for obj:%d: %d bytes\n", objectNumber, *image.StreamLength)
+			logDebugOptimize.Printf("handleDuplicateImageObject: increment binary image duplsize for obj:%d: %d bytes\n", objNr, *image.StreamLength)
 
-			return true, nil
-
+			return &imageObjectNumber, nil
 		}
 	}
 
-	return false, nil
+	return nil, nil
 }
 
 // Get rid of redundant XObjects e.g. embedded images.
@@ -369,19 +384,29 @@ func optimizeXObjectResourcesDict(ctx *types.PDFContext, xObjectResourcesDict *t
 				continue
 			}
 
-			duplicate, err := handleDuplicateImageObject(&xObjectStreamDict, &indRef, resourceName, pageNumber, ctx)
+			uniqueImgObjNr, err := handleDuplicateImageObject(ctx, &xObjectStreamDict, resourceName, indRef.ObjectNumber.Value(), pageNumber)
 			if err != nil {
 				return err
 			}
 
-			if !duplicate {
+			if uniqueImgObjNr == nil {
+
 				// Register new image dict.
 				logDebugOptimize.Printf("optimizeXObjectResourcesDict: adding new image obj#%d\n", objectNumber)
 
-				ctx.Optimize.ImageObjects[objectNumber] = &types.ImageObject{ResourceNames: []string{resourceName}, ImageDict: &xObjectStreamDict}
+				ctx.Optimize.ImageObjects[objectNumber] =
+					&types.ImageObject{
+						ResourceNames: []string{resourceName},
+						ImageDict:     &xObjectStreamDict,
+					}
+
 				pageImages[objectNumber] = true
 
 				logDebugOptimize.Printf("optimizeXObjectResourcesDict: increment binary image size for obj:%d: %d bytes\n", objectNumber, *xObjectStreamDict.StreamLength)
+
+			} else {
+				// Update
+				xObjectResourcesDict.Dict[resourceName] = types.NewPDFIndirectRef(*uniqueImgObjNr, 0)
 			}
 
 			continue
@@ -556,6 +581,29 @@ func parsePagesDict(ctx *types.PDFContext, pagesDict *types.PDFDict, pageNumber 
 	return pageNumber, nil
 }
 
+func traverse(xRefTable *types.XRefTable, value interface{}, duplObjs types.IntSet) error {
+
+	if indRef, ok := value.(types.PDFIndirectRef); ok {
+		duplObjs[int(indRef.ObjectNumber)] = true
+		o, err := xRefTable.Dereference(indRef)
+		if err != nil {
+			return err
+		}
+		traverseObjectGraphAndMarkDuplicates(xRefTable, o, duplObjs)
+	}
+	if dict, ok := value.(types.PDFDict); ok {
+		traverseObjectGraphAndMarkDuplicates(xRefTable, dict, duplObjs)
+	}
+	if streamDict, ok := value.(types.PDFStreamDict); ok {
+		traverseObjectGraphAndMarkDuplicates(xRefTable, streamDict, duplObjs)
+	}
+	if arr, ok := value.(types.PDFArray); ok {
+		traverseObjectGraphAndMarkDuplicates(xRefTable, arr, duplObjs)
+	}
+
+	return nil
+}
+
 // Traverse the object graph for a pdfObject and mark all objects as potential duplicates.
 func traverseObjectGraphAndMarkDuplicates(xRefTable *types.XRefTable, obj interface{}, duplObjs types.IntSet) (err error) {
 
@@ -566,66 +614,27 @@ func traverseObjectGraphAndMarkDuplicates(xRefTable *types.XRefTable, obj interf
 	case types.PDFDict:
 		logDebugOptimize.Println("traverseObjectGraphAndMarkDuplicates: dict.")
 		for _, value := range x.Dict {
-			if indRef, ok := value.(types.PDFIndirectRef); ok {
-				duplObjs[int(indRef.ObjectNumber)] = true
-				o, err := xRefTable.Dereference(indRef)
-				if err != nil {
-					return err
-				}
-				traverseObjectGraphAndMarkDuplicates(xRefTable, o, duplObjs)
-			}
-			if dict, ok := value.(types.PDFDict); ok {
-				traverseObjectGraphAndMarkDuplicates(xRefTable, dict, duplObjs)
-			}
-			if streamDict, ok := value.(types.PDFStreamDict); ok {
-				traverseObjectGraphAndMarkDuplicates(xRefTable, streamDict, duplObjs)
-			}
-			if arr, ok := value.(types.PDFArray); ok {
-				traverseObjectGraphAndMarkDuplicates(xRefTable, arr, duplObjs)
+			err = traverse(xRefTable, value, duplObjs)
+			if err != nil {
+				return
 			}
 		}
 
 	case types.PDFStreamDict:
 		logDebugOptimize.Println("traverseObjectGraphAndMarkDuplicates: streamDict.")
 		for _, value := range x.Dict {
-			if indRef, ok := value.(types.PDFIndirectRef); ok {
-				duplObjs[int(indRef.ObjectNumber)] = true
-				o, err := xRefTable.Dereference(indRef)
-				if err != nil {
-					return err
-				}
-				traverseObjectGraphAndMarkDuplicates(xRefTable, o, duplObjs)
-			}
-			if dict, ok := value.(types.PDFDict); ok {
-				traverseObjectGraphAndMarkDuplicates(xRefTable, dict, duplObjs)
-			}
-			if streamDict, ok := value.(types.PDFStreamDict); ok {
-				traverseObjectGraphAndMarkDuplicates(xRefTable, streamDict, duplObjs)
-			}
-			if arr, ok := value.(types.PDFArray); ok {
-				traverseObjectGraphAndMarkDuplicates(xRefTable, arr, duplObjs)
+			err = traverse(xRefTable, value, duplObjs)
+			if err != nil {
+				return
 			}
 		}
 
 	case types.PDFArray:
 		logDebugOptimize.Println("traverseObjectGraphAndMarkDuplicates: arr.")
 		for _, value := range x {
-			if indRef, ok := value.(types.PDFIndirectRef); ok {
-				duplObjs[int(indRef.ObjectNumber)] = true
-				o, err := xRefTable.Dereference(indRef)
-				if err != nil {
-					return err
-				}
-				traverseObjectGraphAndMarkDuplicates(xRefTable, o, duplObjs)
-			}
-			if dict, ok := value.(types.PDFDict); ok {
-				traverseObjectGraphAndMarkDuplicates(xRefTable, dict, duplObjs)
-			}
-			if streamDict, ok := value.(types.PDFStreamDict); ok {
-				traverseObjectGraphAndMarkDuplicates(xRefTable, streamDict, duplObjs)
-			}
-			if arr, ok := value.(types.PDFArray); ok {
-				traverseObjectGraphAndMarkDuplicates(xRefTable, arr, duplObjs)
+			err = traverse(xRefTable, value, duplObjs)
+			if err != nil {
+				return
 			}
 		}
 	}
@@ -808,35 +817,47 @@ func FontDescriptorFontFileIndirectObjectRef(fontDescriptorDict *types.PDFDict) 
 	return indirectRef
 }
 
+func trivialFontDescriptor(xRefTable *types.XRefTable, fontDict *types.PDFDict, objNr int) (*types.PDFDict, error) {
+
+	obj, ok := fontDict.Find("FontDescriptor")
+	if !ok {
+		return nil, nil
+	}
+
+	// fontDescriptor directly available.
+
+	dict, err := xRefTable.DereferenceDict(obj)
+	if err != nil {
+		return nil, err
+	}
+
+	if dict == nil {
+		return nil, errors.Errorf("FontDescriptor: FontDescriptor is null for font object %d\n", objNr)
+	}
+
+	if dict.Type() != nil && *dict.Type() != "FontDescriptor" {
+		return nil, errors.Errorf("FontDescriptor: FontDescriptor dict incorrect dict type for font object %d\n", objNr)
+	}
+
+	return dict, nil
+}
+
 // FontDescriptor gets the font descriptor for this font.
-func FontDescriptor(xRefTable *types.XRefTable, fontDict *types.PDFDict, objectNumber int) (*types.PDFDict, error) {
+func FontDescriptor(xRefTable *types.XRefTable, fontDict *types.PDFDict, objNr int) (*types.PDFDict, error) {
 
 	logDebugOptimize.Println("FontDescriptor begin")
 
-	obj, ok := fontDict.Find("FontDescriptor")
-	if ok {
-
-		// fontDescriptor directly available.
-
-		dict, err := xRefTable.DereferenceDict(obj)
-		if err != nil {
-			return nil, err
-		}
-
-		if dict == nil {
-			return nil, errors.Errorf("FontDescriptor: FontDescriptor is null for font object %d\n", objectNumber)
-		}
-
-		if dict.Type() != nil && *dict.Type() != "FontDescriptor" {
-			return nil, errors.Errorf("FontDescriptor: FontDescriptor dict incorrect dict type for font object %d\n", objectNumber)
-		}
-
+	dict, err := trivialFontDescriptor(xRefTable, fontDict, objNr)
+	if err != nil {
+		return nil, err
+	}
+	if dict != nil {
 		return dict, nil
 	}
 
 	// Try to access a fontDescriptor in a Descendent font for Type0 fonts.
 
-	obj, ok = fontDict.Find("DescendantFonts")
+	obj, ok := fontDict.Find("DescendantFonts")
 	if !ok {
 		//logErrorOptimize.Printf("FontDescriptor: Neither FontDescriptor nor DescendantFonts for font object %d\n", objectNumber)
 		return nil, nil
@@ -846,7 +867,7 @@ func FontDescriptor(xRefTable *types.XRefTable, fontDict *types.PDFDict, objectN
 
 	arr, err := xRefTable.DereferenceArray(obj)
 	if err != nil || arr == nil {
-		return nil, errors.Errorf("FontDescriptor: DescendantFonts: IndirectRef or Array wth length 1 expected for font object %d\n", objectNumber)
+		return nil, errors.Errorf("FontDescriptor: DescendantFonts: IndirectRef or Array wth length 1 expected for font object %d\n", objNr)
 	}
 
 	if len(*arr) > 1 {
@@ -854,7 +875,7 @@ func FontDescriptor(xRefTable *types.XRefTable, fontDict *types.PDFDict, objectN
 	}
 
 	// dict is the fontDict of the descendant font.
-	dict, err := xRefTable.DereferenceDict((*arr)[0])
+	dict, err = xRefTable.DereferenceDict((*arr)[0])
 	if err != nil {
 		return nil, errors.Errorf("FontDescriptor: No descendant font dict for %v\n", arr)
 	}
@@ -875,17 +896,17 @@ func FontDescriptor(xRefTable *types.XRefTable, fontDict *types.PDFDict, objectN
 
 	dict, err = xRefTable.DereferenceDict(obj)
 	if err != nil {
-		return nil, errors.Errorf("FontDescriptor: No FontDescriptor dict for font object %d\n", objectNumber)
+		return nil, errors.Errorf("FontDescriptor: No FontDescriptor dict for font object %d\n", objNr)
 	}
 
 	if dict == nil {
-		return nil, errors.Errorf("FontDescriptor: FontDescriptor dict is null for font object %d\n", objectNumber)
+		return nil, errors.Errorf("FontDescriptor: FontDescriptor dict is null for font object %d\n", objNr)
 	}
 
 	if dict.Type() == nil {
-		logErrorOptimize.Printf("FontDescriptor: FontDescriptor without type \"FontDescriptor\" objNumber:%d\n", objectNumber)
+		logErrorOptimize.Printf("FontDescriptor: FontDescriptor without type \"FontDescriptor\" objNumber:%d\n", objNr)
 	} else if *dict.Type() != "FontDescriptor" {
-		return nil, errors.Errorf("FontDescriptor: FontDescriptor dict incorrect dict type for font object %d\n", objectNumber)
+		return nil, errors.Errorf("FontDescriptor: FontDescriptor dict incorrect dict type for font object %d\n", objNr)
 	}
 
 	logDebugOptimize.Println("FontDescriptor end")

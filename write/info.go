@@ -32,6 +32,13 @@ func textString(ctx *types.PDFContext, obj interface{}) (string, error) {
 	var s string
 	var err error
 
+	if indRef, ok := obj.(types.PDFIndirectRef); ok {
+		obj, err = ctx.Dereference(indRef)
+		if err != nil {
+			return s, err
+		}
+	}
+
 	obj, err = ctx.Dereference(obj)
 	if err != nil {
 		return s, err
@@ -57,6 +64,54 @@ func textString(ctx *types.PDFContext, obj interface{}) (string, error) {
 
 	// Return a csv safe string.
 	return strings.Replace(s, ";", ",", -1), nil
+}
+
+func writeInfoDict(ctx *types.PDFContext, dict *types.PDFDict) (err error) {
+
+	for key, value := range dict.Dict {
+
+		switch key {
+
+		case "Title":
+			logDebugWriter.Println("found Title")
+
+		case "Author":
+			logDebugWriter.Println("found Author")
+			ctx.Author, err = textString(ctx, value)
+			if err != nil {
+				return
+			}
+
+		case "Subject":
+			logDebugWriter.Println("found Subject")
+
+		case "Keywords":
+			logDebugWriter.Println("found Keywords")
+
+		case "Creator":
+			logDebugWriter.Println("found Creator")
+			ctx.Creator, err = textString(ctx, value)
+			if err != nil {
+				return
+			}
+
+		case "Producer", "CreationDate", "ModDate":
+			logDebugWriter.Printf("found %s", key)
+			if indRef, ok := value.(types.PDFIndirectRef); ok {
+				// Do not write indRef, will be modified by pdfcpu.
+				ctx.Optimize.DuplicateInfoObjects[int(indRef.ObjectNumber)] = true
+			}
+
+		case "Trapped":
+			logDebugWriter.Println("found Trapped")
+
+		default:
+			logInfoWriter.Printf("writeInfoDict: found out of spec entry %s %v\n", key, value)
+
+		}
+	}
+
+	return
 }
 
 // Write the document info object for this PDF file.
@@ -94,89 +149,9 @@ func writeDocumentInfoDict(ctx *types.PDFContext) (err error) {
 		return
 	}
 
-	for key, value := range dict.Dict {
-
-		switch key {
-
-		case "Title":
-			logDebugWriter.Println("found Title")
-
-		case "Author":
-			logDebugWriter.Println("found Author")
-
-			if indRef, ok := value.(types.PDFIndirectRef); ok {
-				value, err = ctx.Dereference(indRef)
-				if err != nil {
-					return
-				}
-			}
-
-			ctx.Author, err = textString(ctx, value)
-			if err != nil {
-				return
-			}
-
-		case "Subject":
-			logDebugWriter.Println("found Subject")
-
-		case "Keywords":
-			logDebugWriter.Println("found Keywords")
-
-		case "Creator":
-			logDebugWriter.Println("found Creator")
-
-			if indRef, ok := value.(types.PDFIndirectRef); ok {
-				value, err = ctx.Dereference(indRef)
-				if err != nil {
-					return
-				}
-			}
-
-			ctx.Creator, err = textString(ctx, value)
-			if err != nil {
-				return
-			}
-
-		case "Producer":
-			logDebugWriter.Println("found Producer")
-
-			if indRef, ok := value.(types.PDFIndirectRef); ok {
-				value, err = ctx.Dereference(indRef)
-				if err != nil {
-					return
-				}
-				// Do not write indRef, will be modified by pdfcpu.
-				ctx.Optimize.DuplicateInfoObjects[int(indRef.ObjectNumber)] = true
-			}
-
-			ctx.Producer, err = textString(ctx, value)
-			if err != nil {
-				return
-			}
-
-		case "CreationDate":
-			logDebugWriter.Println("found CreationDate")
-
-			if indRef, ok := value.(types.PDFIndirectRef); ok {
-				// Do not write indRef, will be modified by pdfcpu.
-				ctx.Optimize.DuplicateInfoObjects[int(indRef.ObjectNumber)] = true
-			}
-
-		case "ModDate":
-			logDebugWriter.Println("found ModDate")
-
-			if indRef, ok := value.(types.PDFIndirectRef); ok {
-				// Do not write indRef, will be modified by pdfcpu.
-				ctx.Optimize.DuplicateInfoObjects[int(indRef.ObjectNumber)] = true
-			}
-
-		case "Trapped":
-			logDebugWriter.Println("found Trapped")
-
-		default:
-			logInfoWriter.Printf("writeInfoObject: found out of spec entry %s %v\n", key, value)
-
-		}
+	err = writeInfoDict(ctx, dict)
+	if err != nil {
+		return
 	}
 
 	// These are the modifications for the info dict of this PDF file:

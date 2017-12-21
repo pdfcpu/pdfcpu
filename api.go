@@ -331,16 +331,76 @@ func ParsePageSelection(s string) (ps []string, err error) {
 	return
 }
 
-func pagesForPageSelection(pageCount int, pageSelection []string) (selectedPages types.IntSet, err error) {
+func handlePrefix(v string, negated bool, pageCount int, selectedPages types.IntSet) error {
 
-	if pageSelection == nil {
-		logInfoAPI.Println("pagesForPageSelection: pageSelection is nil")
-		return
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		return err
 	}
 
-	if len(pageSelection) == 0 {
-		logStatsAPI.Println("pagesForPageSelection: pageSelection is empty")
+	// Handle overflow gracefully
+	if i > pageCount {
+		i = pageCount
 	}
+
+	// identified
+	// -# ... select all pages up to and including #
+	// or !-# ... deselect all pages up to and including #
+	for j := 1; j <= i; j++ {
+		selectedPages[j] = !negated
+	}
+
+	return nil
+
+}
+
+func handleSuffix(v string, negated bool, pageCount int, selectedPages types.IntSet) error {
+
+	// must be #- ... select all pages from here until the end.
+	// or !#- ... deselect all pages from here until the end.
+
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		return err
+	}
+
+	// Handle overflow gracefully
+	if i > pageCount {
+		return nil
+	}
+
+	for j := i; j <= pageCount; j++ {
+		selectedPages[j] = !negated
+	}
+
+	return nil
+}
+
+func handleSpecificPage(s string, negated bool, pageCount int, selectedPages types.IntSet) error {
+
+	// must be # ... select a specific page
+	// or !# ... deselect a specific page
+
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		return err
+	}
+
+	// Handle overflow gracefully
+	if i > pageCount {
+		return nil
+	}
+
+	selectedPages[i] = !negated
+
+	return nil
+}
+
+func negation(c byte) bool {
+	return c == '!' || c == 'n'
+}
+
+func setPageSelection(pageCount int, pageSelection []string) (selectedPages types.IntSet, err error) {
 
 	selectedPages = types.IntSet{}
 
@@ -349,56 +409,29 @@ func pagesForPageSelection(pageCount int, pageSelection []string) (selectedPages
 		//logStatsAPI.Printf("pageExp: <%s>\n", v)
 
 		var negated bool
-		if v[0] == '!' || v[0] == 'n' {
+		if negation(v[0]) {
 			negated = true
 			//logInfoAPI.Printf("is a negated exp\n")
 			v = v[1:]
 		}
 
 		if v[0] == '-' {
+
 			v = v[1:]
-			i, err := strconv.Atoi(v)
+
+			err = handlePrefix(v, negated, pageCount, selectedPages)
 			if err != nil {
-				return nil, err
+				return
 			}
 
-			// Handle overflow gracefully
-			if i > pageCount {
-				i = pageCount
-			}
-
-			// identified
-			// -# ... select all pages up to and including #
-			// or !-# ... deselect all pages up to and including #
-			for j := 1; j <= i; j++ {
-				if negated {
-					selectedPages[j] = false
-				} else {
-					selectedPages[j] = true
-				}
-			}
 			continue
 		}
 
 		if strings.HasSuffix(v, "-") {
-			// must be #- ... select all pages from here until the end.
-			// or !#- ... deselect all pages from here until the end.
-			i, err := strconv.Atoi(v[:len(v)-1])
+
+			err = handleSuffix(v[:len(v)-1], negated, pageCount, selectedPages)
 			if err != nil {
-				return nil, err
-			}
-
-			// Handle overflow gracefully
-			if i > pageCount {
-				continue
-			}
-
-			for j := i; j <= pageCount; j++ {
-				if negated {
-					selectedPages[j] = false
-				} else {
-					selectedPages[j] = true
-				}
+				return
 			}
 
 			continue
@@ -407,6 +440,7 @@ func pagesForPageSelection(pageCount int, pageSelection []string) (selectedPages
 		// if v contains '-' somewhere in the middle
 		// this must be #-# ... select a page range
 		// or !#-# ... deselect a page range
+
 		pr := strings.Split(v, "-")
 		if len(pr) == 2 {
 
@@ -435,37 +469,34 @@ func pagesForPageSelection(pageCount int, pageSelection []string) (selectedPages
 			}
 
 			for i := from; i <= thru; i++ {
-				if negated {
-					selectedPages[i] = false
-				} else {
-					selectedPages[i] = true
-				}
+				selectedPages[i] = !negated
 			}
 
 			continue
 		}
 
-		// must be # ... select a specific page
-		// or !# ... deselect a specific page
-		i, err := strconv.Atoi(pr[0])
+		err = handleSpecificPage(pr[0], negated, pageCount, selectedPages)
 		if err != nil {
-			return nil, err
-		}
-
-		// Handle overflow gracefully
-		if i > pageCount {
-			continue
-		}
-
-		if negated {
-			selectedPages[i] = false
-		} else {
-			selectedPages[i] = true
+			return
 		}
 
 	}
 
 	return
+}
+
+func pagesForPageSelection(pageCount int, pageSelection []string) (selectedPages types.IntSet, err error) {
+
+	if pageSelection == nil {
+		logInfoAPI.Println("pagesForPageSelection: pageSelection is nil")
+		return
+	}
+
+	if len(pageSelection) == 0 {
+		logStatsAPI.Println("pagesForPageSelection: pageSelection is empty")
+	}
+
+	return setPageSelection(pageCount, pageSelection)
 }
 
 // Split generates a sequence of single page PDF files in dirOut creating one file for every page of inFile.

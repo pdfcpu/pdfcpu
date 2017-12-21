@@ -64,7 +64,7 @@ func NewPDFObjectStreamDict() *PDFObjectStreamDict {
 	streamDict.Insert("Type", PDFName("ObjStm"))
 
 	streamDict.Insert("Filter", PDFName("FlateDecode"))
-	streamDict.FilterPipeline = []PDFFilter{PDFFilter{Name: "FlateDecode", DecodeParms: nil}}
+	streamDict.FilterPipeline = []PDFFilter{{Name: "FlateDecode", DecodeParms: nil}}
 
 	return &PDFObjectStreamDict{PDFStreamDict: streamDict}
 }
@@ -156,7 +156,7 @@ func NewPDFXRefStreamDict(ctx *PDFContext) *PDFXRefStreamDict {
 
 	streamDict.Insert("Type", PDFName("XRef"))
 	streamDict.Insert("Filter", PDFName("FlateDecode"))
-	streamDict.FilterPipeline = []PDFFilter{PDFFilter{Name: "FlateDecode", DecodeParms: nil}}
+	streamDict.FilterPipeline = []PDFFilter{{Name: "FlateDecode", DecodeParms: nil}}
 
 	streamDict.Insert("Root", *ctx.Root)
 

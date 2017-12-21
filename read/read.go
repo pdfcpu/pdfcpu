@@ -451,6 +451,41 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, xRefStreamDict types.PDFX
 	return nil
 }
 
+func xRefStreamDict(ctx *types.PDFContext, o interface{}, objNr int, streamOffset int64) (*types.PDFXRefStreamDict, error) {
+
+	// must be pdfDict
+	pdfDict, ok := o.(types.PDFDict)
+	if !ok {
+		return nil, errors.New("xRefStreamDict: no pdfDict")
+	}
+
+	// Parse attributes for stream object.
+	streamLength, streamLengthObjNr := pdfDict.Length()
+	if streamLength == nil && streamLengthObjNr == nil {
+		return nil, errors.New("xRefStreamDict: no \"Length\" entry")
+	}
+
+	filterPipeline, err := pdfFilterPipeline(ctx, pdfDict)
+	if err != nil {
+		return nil, err
+	}
+
+	// We have a stream object.
+	logDebugReader.Printf("xRefStreamDict: streamobject #%d\n", objNr)
+	pdfStreamDict := types.NewPDFStreamDict(pdfDict, streamOffset, streamLength, streamLengthObjNr, filterPipeline)
+
+	if _, err = EncodedStreamContent(ctx, &pdfStreamDict); err != nil {
+		return nil, err
+	}
+
+	// Decode xrefstream content
+	if err = setDecodedStreamContent(nil, &pdfStreamDict, 0, 0, true); err != nil {
+		return nil, errors.Wrapf(err, "xRefStreamDict: cannot decode stream for obj#:%d\n", objNr)
+	}
+
+	return parseXRefStreamDict(pdfStreamDict)
+}
+
 // Parse xRef stream and setup xrefTable entries for all embedded objects and the xref stream dict.
 func parseXRefStream(rd io.Reader, offset *int64, ctx *types.PDFContext) (prevOffset *int64, err error) {
 
@@ -489,39 +524,8 @@ func parseXRefStream(rd io.Reader, offset *int64, ctx *types.PDFContext) (prevOf
 
 	logDebugReader.Printf("parseXRefStream: we have a pdfObject: %s\n", pdfObject)
 
-	// must be pdfDict
-	pdfDict, ok := pdfObject.(types.PDFDict)
-	if !ok {
-		return nil, errors.New("parseXRefStream: no pdfDict")
-	}
-
-	// Parse attributes for stream object.
-	streamLength, streamLengthObjNr := pdfDict.Length()
-	if streamLength == nil && streamLengthObjNr == nil {
-		return nil, errors.New("parseXRefStream: no \"Length\" entry")
-	}
-
-	filterPipeline, err := pdfFilterPipeline(ctx, pdfDict)
-	if err != nil {
-		return nil, err
-	}
-
 	streamOffset += *offset
-
-	// We have a stream object.
-	logDebugReader.Printf("parseXRefStream: streamobject #%d\n", *objectNumber)
-	pdfStreamDict := types.NewPDFStreamDict(pdfDict, streamOffset, streamLength, streamLengthObjNr, filterPipeline)
-
-	if _, err = EncodedStreamContent(ctx, &pdfStreamDict); err != nil {
-		return nil, err
-	}
-
-	// Decode xrefstream content
-	if err = setDecodedStreamContent(nil, &pdfStreamDict, 0, 0, true); err != nil {
-		return nil, errors.Wrapf(err, "parseXRefStream: cannot decode stream for obj#:%d\n", *objectNumber)
-	}
-
-	pdfXRefStreamDict, err := parseXRefStreamDict(pdfStreamDict)
+	pdfXRefStreamDict, err := xRefStreamDict(ctx, pdfObject, *objectNumber, streamOffset)
 	if err != nil {
 		return nil, err
 	}
@@ -533,7 +537,7 @@ func parseXRefStream(rd io.Reader, offset *int64, ctx *types.PDFContext) (prevOf
 	}
 
 	// Parse xRefStream and create xRefTable entries for embedded objects.
-	err = extractXRefTableEntriesFromXRefStream(pdfStreamDict.Content, *pdfXRefStreamDict, ctx)
+	err = extractXRefTableEntriesFromXRefStream(pdfXRefStreamDict.Content, *pdfXRefStreamDict, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -996,6 +1000,35 @@ func nextStreamOffset(line string, streamInd int) (off int) {
 	return
 }
 
+func lastStreamMarker(streamInd *int, endInd int, line string) {
+
+	if *streamInd > len(line)-len("stream") {
+		// No space for another stream marker.
+		*streamInd = -1
+		return
+	}
+
+	// We start searching after this stream marker.
+	bufpos := *streamInd + len("stream")
+
+	// Search for next stream marker.
+	i := strings.Index(line[bufpos:], "stream")
+	if i < 0 {
+		// No stream marker within line buffer.
+		*streamInd = -1
+		return
+	}
+
+	// We found the next stream marker.
+	*streamInd += len("stream") + i
+
+	if endInd > 0 && *streamInd > endInd {
+		// We found a stream marker of another object
+		*streamInd = -1
+	}
+
+}
+
 // Provide a PDF file buffer of sufficient size for parsing an object w/o stream.
 func buffer(rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffset int64, err error) {
 
@@ -1026,32 +1059,7 @@ func buffer(rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffset i
 		// For very rare cases where "stream" also occurs within obj dict
 		// we need to find the last "stream" marker before a possible end marker.
 		for streamInd > 0 && !keywordStreamRightAfterEndOfDict(line, streamInd) {
-
-			if streamInd > len(line)-len("stream") {
-				// No space for another stream marker.
-				streamInd = -1
-				break
-			}
-
-			// We start searching after this stream marker.
-			bufpos := streamInd + len("stream")
-
-			// Search for next stream marker.
-			i := strings.Index(line[bufpos:], "stream")
-			if i < 0 {
-				// No stream marker within line buffer.
-				streamInd = -1
-				break
-			}
-
-			// We found the next stream marker.
-			streamInd += len("stream") + i
-
-			if endInd > 0 && streamInd > endInd {
-				// We found a stream marker of another object
-				streamInd = -1
-				break
-			}
+			lastStreamMarker(&streamInd, endInd, line)
 		}
 
 		logDebugReader.Printf("buffer: endInd=%d streamInd=%d\n", endInd, streamInd)

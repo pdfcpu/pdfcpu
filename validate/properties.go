@@ -27,11 +27,7 @@ func validatePropertiesDict(xRefTable *types.XRefTable, dict *types.PDFDict) (er
 
 	logInfoValidate.Println("*** validatePropertiesDict begin ***")
 
-	sinceVersion := types.V14
-	if xRefTable.ValidationMode == types.ValidationRelaxed {
-		sinceVersion = types.V13
-	}
-	err = validateMetadata(xRefTable, dict, OPTIONAL, sinceVersion)
+	err = validateMetadata(xRefTable, dict, OPTIONAL, types.V14)
 	if err != nil {
 		return
 	}

@@ -149,7 +149,7 @@ func validateOutlineTree(xRefTable *types.XRefTable, first, last *types.PDFIndir
 	return
 }
 
-func validateOutlines(xRefTable *types.XRefTable, rootDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateOutlines(xRefTable *types.XRefTable, required bool, sinceVersion types.PDFVersion) (err error) {
 
 	// => 12.3.3 Document Outline
 
@@ -159,6 +159,11 @@ func validateOutlines(xRefTable *types.XRefTable, rootDict *types.PDFDict, requi
 		indRef *types.PDFIndirectRef
 		dict   *types.PDFDict
 	)
+
+	rootDict, err := xRefTable.Catalog()
+	if err != nil {
+		return
+	}
 
 	indRef, err = validateIndRefEntry(xRefTable, rootDict, "rootDict", "Outlines", OPTIONAL, sinceVersion)
 	if err != nil || indRef == nil {

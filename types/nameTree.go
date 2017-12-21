@@ -179,6 +179,22 @@ func (nameTree *PDFNameTree) LeafNode(xRefTable *XRefTable, last bool, key strin
 	return
 }
 
+func (nameTree *PDFNameTree) key(xRefTable *XRefTable, o interface{}) (k string, err error) {
+
+	o, err = xRefTable.Dereference(o)
+	if err != nil {
+		return
+	}
+
+	sl, ok := o.(PDFStringLiteral)
+	if !ok {
+		err = errors.Errorf("corrupt key <%v>\n", o)
+		return
+	}
+
+	return StringLiteralToString(sl.Value())
+}
+
 // LeafNodeValue retrieves the indRef value for a given key of a leaf node.
 // Will return nil if key not found.
 func (nameTree *PDFNameTree) LeafNodeValue(xRefTable *XRefTable, key string) (indRef *PDFIndirectRef, err error) {
@@ -199,25 +215,15 @@ func (nameTree *PDFNameTree) LeafNodeValue(xRefTable *XRefTable, key string) (in
 
 		if i%2 == 0 {
 
-			obj, err = xRefTable.Dereference(obj)
-			if err != nil {
-				return
-			}
-
-			sl, ok := obj.(PDFStringLiteral)
-			if !ok {
-				return nil, errors.Errorf("LeafNodeValue: corrupt key <%v>\n", obj)
-			}
-
-			var s string
-			s, err = StringLiteralToString(sl.Value())
+			var k string
+			k, err = nameTree.key(xRefTable, obj)
 			if err != nil {
 				return
 			}
 
 			//logErrorTypes.Printf("<%s> <%s> %0X %0x\n", s, key, s, key)
 
-			if s == key {
+			if key == k {
 				getValue = true
 			}
 
@@ -276,19 +282,8 @@ func (nameTree *PDFNameTree) LeafNodeSetValue(xRefTable *XRefTable, key string, 
 		keyObj := a[i*2]
 		valObj := a[i*2+1]
 
-		var obj interface{}
-		obj, err = xRefTable.Dereference(keyObj)
-		if err != nil {
-			return
-		}
-
-		sl, ok := obj.(PDFStringLiteral)
-		if !ok {
-			return errors.Errorf("LeafNodeSetValue: corrupt key <%v>\n", obj)
-		}
-
 		var k string
-		k, err = StringLiteralToString(sl.Value())
+		k, err = nameTree.key(xRefTable, keyObj)
 		if err != nil {
 			return
 		}
@@ -379,23 +374,8 @@ func (nameTree *PDFNameTree) LeafNodeRemoveValue(xRefTable *XRefTable, root bool
 	// Iterate over contents of Names array - a sequence of key value pairs.
 	for i := 0; i < len(a)/2; i++ {
 
-		var obj interface{}
-		obj, err = xRefTable.Dereference(a[i*2])
-		if err != nil {
-			return
-		}
-		sl, ok := obj.(PDFStringLiteral)
-		if !ok {
-			err = errors.Errorf("LeafNodeRemoveValue: corrupt key <%v>\n", obj)
-			return
-		}
 		var k string
-		k, err = StringLiteralToString(sl.Value())
-		if err != nil {
-			return
-		}
-
-		//k := a[i*2].(PDFStringLiteral)
+		k, err = nameTree.key(xRefTable, a[i*2])
 		v := a[i*2+1]
 
 		logInfoTypes.Printf("LeafNodeRemoveValue: k=%s v=%v i=%d\n", k, v, i)
@@ -483,6 +463,99 @@ func (nameTree *PDFNameTree) SetValue(xRefTable *XRefTable, key string, val PDFI
 	return leafNode.LeafNodeSetValue(xRefTable, key, val)
 }
 
+func (nameTree *PDFNameTree) removeKid(xRefTable *XRefTable, dict *PDFDict, arr *PDFArray, pos int) (deadKid bool, err error) {
+
+	if len(*arr) > 1 {
+
+		// Remove kid i
+		a := *arr
+		if pos == len(a)-1 {
+			a = a[:pos]
+		} else {
+			a = append(a[:pos], a[:pos+1]...)
+		}
+		dict.Update("Kids", arr)
+
+		// Update Limits after kid removal.
+		var lFirst, lLast, l *PDFArray
+
+		lFirst, _, _, err = NewNameTree(a[0].(PDFIndirectRef)).limitsArray(xRefTable)
+		if err != nil {
+			return
+		}
+
+		lLast, _, _, err = NewNameTree(a[len(a)-1].(PDFIndirectRef)).limitsArray(xRefTable)
+		if err != nil {
+			return
+		}
+
+		l, _, _, err = nameTree.limitsArray(xRefTable)
+		if err != nil {
+			return
+		}
+
+		// min = first kid limits min
+		(*l)[0] = (*lFirst)[0]
+
+		// max = last kid limits max
+		(*l)[1] = (*lLast)[1]
+
+		deadKid = false
+
+	} else {
+		err = xRefTable.DeleteObject(nameTree.rootObjNr())
+		if err != nil {
+			return
+		}
+
+		deadKid = true
+	}
+
+	return
+}
+
+func checkLimits(xRefTable *XRefTable, dict *PDFDict, key string) (skip, ok bool, err error) {
+
+	var o interface{}
+	var found bool
+
+	o, found = dict.Find("Limits")
+	if !found {
+		return
+	}
+
+	var arr *PDFArray
+
+	arr, err = xRefTable.DereferenceArray(o)
+	if err != nil {
+		return
+	}
+
+	var minKey, maxKey string
+	minKey, maxKey, err = limits(arr)
+	if err != nil {
+		return
+	}
+
+	if key < minKey {
+		// name tree does not contain key, nothing removed.
+		ok = true
+		skip = true
+		logInfoTypes.Println("RemoveKeyValuePair end: name does not contain key, nothing removed")
+		return
+	}
+
+	// Skip this subtree
+	if key > maxKey {
+		skip = true
+		logInfoTypes.Println("RemoveKeyValuePair end: skip this subtree")
+		return
+	}
+
+	// We are in the correct subtree.
+	return
+}
+
 // RemoveKeyValuePair removes a key value pair.
 // ok is an indicator for stopping recursion.
 // found returns true on successful removal.
@@ -505,43 +578,22 @@ func (nameTree *PDFNameTree) RemoveKeyValuePair(xRefTable *XRefTable, root bool,
 	// if Kids present then recurse
 	if obj, foundKids := dict.Find("Kids"); foundKids {
 
-		var arr *PDFArray
-
 		// Check Limits array if present (intermediate nodes).
-		if o, foundLimits := dict.Find("Limits"); foundLimits {
-
-			arr, err = xRefTable.DereferenceArray(o)
-			if err != nil {
-				return
-			}
-
-			var minKey, maxKey string
-			minKey, maxKey, err = limits(arr)
-			if err != nil {
-				return
-			}
-
-			if key < minKey {
-				// name tree does not contain key, nothing removed.
-				ok = true
-				logInfoTypes.Println("RemoveKeyValuePair end: name does not contain key, nothing removed")
-				return
-			}
-
-			// Skip this subtree
-			if key > maxKey {
-				logInfoTypes.Println("RemoveKeyValuePair end: skip this subtree")
-				return
-			}
-
+		var skip bool
+		skip, ok, err = checkLimits(xRefTable, dict, key)
+		if err != nil || skip {
+			return
 		}
 
+		// We are in the correct subtree.
+		var arr *PDFArray
 		arr, err = xRefTable.DereferenceArray(obj)
 		if err != nil {
 			return
 		}
 		if arr == nil {
-			return false, false, false, errors.New("RemoveKeyValuePair: missing \"Kids\" array")
+			err = errors.New("RemoveKeyValuePair: missing \"Kids\" array")
+			return
 		}
 
 		for i, obj := range *arr {
@@ -576,47 +628,9 @@ func (nameTree *PDFNameTree) RemoveKeyValuePair(xRefTable *XRefTable, root bool,
 					// sole key removed, need to remove corresponding kid.
 					logDebugTypes.Printf("RemoveKeyValuePair: deadKid, will remove kid %d from len=%d\n", i, len(*arr))
 
-					if len(*arr) > 1 {
-						// Remove kid i
-						a := *arr
-						if i == len(a)-1 {
-							a = a[:i]
-						} else {
-							a = append(a[:i], a[:i+1]...)
-						}
-						dict.Update("Kids", arr)
-
-						// Update Limits after kid removal.
-						var lFirst, lLast, l *PDFArray
-
-						lFirst, _, _, err = NewNameTree(a[0].(PDFIndirectRef)).limitsArray(xRefTable)
-						if err != nil {
-							return
-						}
-
-						lLast, _, _, err = NewNameTree(a[len(a)-1].(PDFIndirectRef)).limitsArray(xRefTable)
-						if err != nil {
-							return
-						}
-
-						l, _, _, err = nameTree.limitsArray(xRefTable)
-						if err != nil {
-							return
-						}
-
-						// min = first kid limits min
-						(*l)[0] = (*lFirst)[0]
-
-						// max = last kid limits max
-						(*l)[1] = (*lLast)[1]
-
-						deadKid = false
-
-					} else {
-						err = xRefTable.DeleteObject(objNumber)
-						if err != nil {
-							return
-						}
+					deadKid, err = nameTree.removeKid(xRefTable, dict, arr, i)
+					if err != nil {
+						return
 					}
 
 					logInfoTypes.Println("RemoveKeyValuePair end")

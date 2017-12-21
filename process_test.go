@@ -676,26 +676,35 @@ func copyFile(srcFileName, destFileName string) (err error) {
 	return
 }
 
-func TestAttachments(t *testing.T) {
-
-	testDir := "testdata"
+func prepareForAttachmentTest(testDir string) (err error) {
 
 	testFile := testDir + "/go.pdf"
-	err := copyFile(testFile, outputDir+"/go.pdf")
+	err = copyFile(testFile, outputDir+"/go.pdf")
 	if err != nil {
-		t.Fatalf("TestAttachments - copy File %s: %v\n", testFile, err)
+		return
 	}
 
 	testFile = testDir + "/golang.pdf"
 	err = copyFile(testFile, outputDir+"/golang.pdf")
 	if err != nil {
-		t.Fatalf("TestAttachments - copy File %s: %v\n", testFile, err)
+		return
 	}
 
 	testFile = testDir + "/T4.pdf"
 	err = copyFile(testFile, outputDir+"/T4.pdf")
 	if err != nil {
-		t.Fatalf("TestAttachments - copy File %s: %v\n", testFile, err)
+		return
+	}
+
+	return
+}
+func TestAttachments(t *testing.T) {
+
+	testDir := "testdata"
+
+	err := prepareForAttachmentTest(testDir)
+	if err != nil {
+		t.Fatalf("prepare for attachments: %v\n", err)
 	}
 
 	config := types.NewDefaultConfiguration()

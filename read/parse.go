@@ -1,10 +1,8 @@
 package read
 
 import (
-	"bytes"
 	"io/ioutil"
 	"log"
-	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -191,209 +189,6 @@ func balancedParenthesesPrefix(s string) int {
 	}
 
 	return -1
-}
-
-func containsByte(s string, b byte) bool {
-
-	for i := 0; i < len(s); i++ {
-		if s[i] == b {
-			return true
-		}
-	}
-	return false
-}
-
-// Convert a 1,2 or 3 digit unescaped octal string into the corresponding byte value.
-func byteForOctalString(octalBytes []byte) (b byte) {
-
-	var j float64
-
-	for i := len(octalBytes) - 1; i >= 0; i-- {
-		b += (octalBytes[i] - '0') * byte(math.Pow(8, j))
-		j++
-	}
-
-	logDebugParse.Printf("byteForOctalString: returning x%x for %v\n", b, octalBytes)
-
-	return
-}
-
-// stringLiteral see 7.3.4.2
-func stringLiteral(s string) string {
-
-	logDebugParse.Printf("ParseStringLiteral: begin <%s>\n", s)
-
-	if len(s) == 0 {
-		return s
-	}
-
-	var b bytes.Buffer
-	var octalCode []byte
-
-	escaped := false
-	wasCR := false
-
-	for i := 0; i < len(s); i++ {
-
-		c := s[i]
-
-		if !escaped {
-
-			if c == '\\' {
-				escaped = true
-				wasCR = false
-				octalCode = nil
-				continue
-			}
-
-			// Write \x0d as \x0a.
-			if c == '\x0d' {
-				if !wasCR {
-					wasCR = true
-				}
-				b.WriteByte('\x0a')
-				continue
-			}
-
-			// Write \x0a as \x0a.
-			// Skip, if 2nd char of eol.
-			if c == '\x0a' {
-				if wasCR {
-					wasCR = false
-				} else {
-					b.WriteByte('\x0a')
-				}
-				continue
-			}
-
-			b.WriteByte(c)
-			wasCR = false
-			continue
-		}
-
-		// escaped:
-
-		if len(octalCode) == 0 {
-
-			if c == '\x0d' {
-				if !wasCR {
-					// split line by \\x0d or \\x0d\x0a.
-					wasCR = true
-				} else {
-					// the 2nd of 2 split lines starts with \x0d.
-					escaped = false
-					wasCR = false
-					b.WriteByte('\x0d')
-				}
-				continue
-			}
-
-			if c == '\x0a' {
-				// split line by \\x0a or \\x0d\x0a
-				escaped = false
-				wasCR = false
-				continue
-			}
-
-			if wasCR {
-				// join lines split by \\x0d unless 2nd line starts with '\\'
-				if c == '\\' {
-					escaped = true
-					wasCR = false
-					continue
-				}
-				b.WriteByte(c)
-				wasCR = false
-				escaped = false
-				continue
-			}
-
-			if containsByte("01234567", c) {
-				// begin octal code escape sequence.
-				logDebugParse.Printf("ParseStringLiteral: recognized octaldigit: %d 0x%[1]x\n", c)
-				octalCode = append(octalCode, c)
-				wasCR = false
-				continue
-			}
-
-			if containsByte("nrtbf()\\", c) {
-				// check against defined escape sequences.
-				logDebugParse.Printf("ParseStringLiteral: recognized escape sequence: \\%c\n", c)
-				b.WriteByte('\\')
-				b.WriteByte(c)
-			} else {
-				// Skip '\' for undefined escape sequences.
-				logDebugParse.Printf("ParseStringLiteral: skipping undefined escape sequence: \\%c\n", c)
-				b.WriteByte(c)
-			}
-
-			escaped = false
-			continue
-		}
-
-		// in octal code escape sequence: len(octalCode) > 0
-
-		if containsByte("01234567", c) {
-
-			// append to octal code escape sequence.
-			logDebugParse.Printf("ParseStringLiteral: recognized octaldigit: %[1]d 0x%[1]x\n", c)
-			octalCode = append(octalCode, c)
-			if len(octalCode) < 3 {
-				wasCR = false
-				continue
-			}
-
-			// 3 digit octal code sequence completed.
-			logDebugParse.Printf("ParseStringLiteral: recognized escaped octalCode: %s\n", octalCode)
-			b.WriteByte(byteForOctalString(octalCode))
-			wasCR = false
-			escaped = false
-			continue
-
-		}
-
-		// 1 or 2 digit octal code sequence completed.
-		logDebugParse.Printf("ParseStringLiteral: recognized escaped octalCode: %s\n", octalCode)
-		b.WriteByte(byteForOctalString(octalCode))
-
-		escaped = false
-
-		if c == '\\' {
-			escaped = true
-			wasCR = false
-			octalCode = nil
-			continue
-		}
-
-		// Write \x0d as \x0a.
-		if c == '\x0d' {
-			if !wasCR {
-				wasCR = true
-			}
-			b.WriteByte('\x0a')
-			continue
-		}
-
-		// Write \x0a as \x0a.
-		// Skip, if 2nd char of eol.
-		if c == '\x0a' {
-			if wasCR {
-				wasCR = false
-			} else {
-				b.WriteByte('\x0a')
-			}
-			continue
-		}
-
-		b.WriteByte(c)
-		wasCR = false
-		octalCode = nil
-
-	}
-
-	logDebugParse.Printf("ParseStringLiteral: end <%s>\n", b.String())
-
-	return b.String()
 }
 
 func forwardParseBuf(buf string, pos int) string {
@@ -749,9 +544,13 @@ func parseDict(line *string) (*types.PDFDict, error) {
 	return &dict, nil
 }
 
+func noBuf(l *string) bool {
+	return l == nil || len(*l) == 0
+}
+
 func parseNumericOrIndRef(line *string) (interface{}, error) {
 
-	if line == nil || len(*line) == 0 {
+	if noBuf(line) {
 		return nil, errBufNotAvailable
 	}
 
@@ -776,7 +575,6 @@ func parseNumericOrIndRef(line *string) (interface{}, error) {
 
 	// Try int
 	i, err := strconv.Atoi(str)
-
 	if err != nil {
 
 		// Try float
@@ -829,7 +627,6 @@ func parseNumericOrIndRef(line *string) (interface{}, error) {
 	}
 
 	iref2, err := strconv.Atoi(str)
-
 	if err != nil {
 		// 2nd int(generation number) not available.
 		// Can't be an indirect reference.
@@ -860,13 +657,62 @@ func parseNumericOrIndRef(line *string) (interface{}, error) {
 	// Can't be an indirect reference.
 	logDebugParse.Printf("parseNumericOrIndRef: value is no indirect ref(no 'R') but numeric int: %d\n", i)
 	*line = l1
+
 	return types.PDFInteger(i), nil
+}
+
+func parseHexLiteralOrDict(l *string) (val interface{}, err error) {
+
+	if len(*l) < 2 {
+		return nil, errBufNotAvailable
+	}
+
+	// if next char = '<' parseDict.
+	if (*l)[1] == '<' {
+		logDebugParse.Println("parseHexLiteralOrDict: value = Dictionary")
+		pdfDict, err := parseDict(l)
+		if err != nil {
+			return nil, err
+		}
+		val = *pdfDict
+	} else {
+		// hex literals
+		logDebugParse.Println("parseHexLiteralOrDict: value = Hex Literal")
+		if val, err = parseHexLiteral(l); err != nil {
+			return nil, err
+		}
+	}
+
+	return val, nil
+}
+
+func parseBoolean(l string) (val interface{}, s string, ok bool) {
+
+	// null, absent object
+	if strings.HasPrefix(l, "null") {
+		logDebugParse.Println("parseBoolean: value = null")
+		return nil, "null", true
+	}
+
+	// boolean true
+	if strings.HasPrefix(l, "true") {
+		logDebugParse.Println("parseBoolean: value = true")
+		return types.PDFBoolean(true), "true", true
+	}
+
+	// boolean false
+	if strings.HasPrefix(l, "false") {
+		logDebugParse.Println("parseBoolean: value = false")
+		return types.PDFBoolean(false), "false", true
+	}
+
+	return
 }
 
 // parseObject parses next PDFObject from string buffer.
 func parseObject(line *string) (interface{}, error) {
 
-	if line == nil || len(*line) == 0 {
+	if noBuf(line) {
 		return nil, errBufNotAvailable
 	}
 
@@ -903,25 +749,9 @@ func parseObject(line *string) (interface{}, error) {
 		value = *nameObj
 
 	case '<': // hex literal or dict
-
-		if len(l) < 2 {
-			return nil, errBufNotAvailable
-		}
-
-		// if next char = '<' parseDict.
-		if l[1] == '<' {
-			logDebugParse.Println("ParseObject: value = Dictionary")
-			pdfDict, err := parseDict(&l)
-			if err != nil {
-				return nil, err
-			}
-			value = *pdfDict
-		} else {
-			// hex literals
-			logDebugParse.Println("ParseObject: value = Hex Literal")
-			if value, err = parseHexLiteral(&l); err != nil {
-				return nil, err
-			}
+		value, err = parseHexLiteralOrDict(&l)
+		if err != nil {
+			return nil, err
 		}
 
 	case '(': // string literal
@@ -931,30 +761,13 @@ func parseObject(line *string) (interface{}, error) {
 		}
 
 	default:
-		// null, absent object
-		if strings.HasPrefix(l, "null") {
-			logDebugParse.Println("ParseObject: value = null")
-			value = nil
-			l = forwardParseBuf(l, len("null"))
+		var valStr string
+		var ok bool
+		value, valStr, ok = parseBoolean(l)
+		if ok {
+			l = forwardParseBuf(l, len(valStr))
 			break
 		}
-
-		// boolean true
-		if strings.HasPrefix(l, "true") {
-			logDebugParse.Println("ParseObject: value = true")
-			value = types.PDFBoolean(true)
-			l = forwardParseBuf(l, len("true"))
-			break
-		}
-
-		// boolean false
-		if strings.HasPrefix(l, "false") {
-			logDebugParse.Println("ParseObject: value = false")
-			value = types.PDFBoolean(false)
-			l = forwardParseBuf(l, len("false"))
-			break
-		}
-
 		// Must be numeric or indirect reference:
 		// int 0 r
 		// int
@@ -1034,25 +847,26 @@ func parseXRefStreamDict(pdfStreamDict types.PDFStreamDict) (*types.PDFXRefStrea
 		return nil, errXrefStreamCorruptW
 	}
 
-	i1, ok := arr[0].(types.PDFInteger)
-	if !ok || i1 < 0 {
-		return nil, errXrefStreamCorruptW
+	f := func(ok bool, i int) bool {
+		return !ok || i < 0
 	}
 
+	i1, ok := arr[0].(types.PDFInteger)
+	if f(ok, i1.Value()) {
+		return nil, errXrefStreamCorruptW
+	}
 	wIntArr[0] = int(i1)
 
 	i2, ok := arr[1].(types.PDFInteger)
-	if !ok || i2 < 0 {
+	if f(ok, i2.Value()) {
 		return nil, errXrefStreamCorruptW
 	}
-
 	wIntArr[1] = int(i2)
 
 	i3, ok := arr[2].(types.PDFInteger)
-	if !ok || i3 < 0 {
+	if f(ok, i3.Value()) {
 		return nil, errXrefStreamCorruptW
 	}
-
 	wIntArr[2] = int(i3)
 
 	xRefStreamDict := types.PDFXRefStreamDict{

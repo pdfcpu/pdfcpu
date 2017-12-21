@@ -10,100 +10,67 @@ import (
 	"github.com/pkg/errors"
 )
 
-func equalPDFObjects(o1, o2 interface{}, ctx *types.PDFContext) (bool, error) {
+func equalPDFObjects(o1, o2 interface{}, ctx *types.PDFContext) (ok bool, err error) {
 
 	o1Type := fmt.Sprintf("%T", o1)
 	o2Type := fmt.Sprintf("%T", o2)
 
+	logDebugOptimize.Printf("equalPDFObjects: comparing %s with %s \n", o1Type, o2Type)
+
 	if o1Type != o2Type {
-		return false, nil
+		return
+	}
+
+	o1, err = ctx.Dereference(o1)
+	if err != nil {
+		return
+	}
+
+	o2, err = ctx.Dereference(o2)
+	if err != nil {
+		return
 	}
 
 	switch o1.(type) {
 
 	case types.PDFName, types.PDFStringLiteral, types.PDFHexLiteral,
 		types.PDFInteger, types.PDFFloat, types.PDFBoolean:
-		if o1 != o2 {
-			return false, nil
-		}
+		ok = o1 == o2
 
 	case types.PDFDict:
 
 		d1 := o1.(types.PDFDict)
 		d2 := o2.(types.PDFDict)
-
-		ok, err := equalPDFDicts(d1, d2, ctx)
-		if err != nil {
-			return false, err
-		}
-		if !ok {
-			return false, nil
-		}
+		ok, err = equalPDFDicts(&d1, &d2, ctx)
 
 	case types.PDFStreamDict:
 
 		sd1 := o1.(types.PDFStreamDict)
 		sd2 := o2.(types.PDFStreamDict)
-
-		ok, err := equalPDFStreamDicts(&sd1, &sd2, ctx)
-		if err != nil {
-			return false, err
-		}
-		if !ok {
-			return false, nil
-		}
+		ok, err = equalPDFStreamDicts(&sd1, &sd2, ctx)
 
 	case types.PDFArray:
 
 		arr1 := o1.(types.PDFArray)
 		arr2 := o2.(types.PDFArray)
-
-		ok, err := equalPDFArrays(arr1, arr2, ctx)
-		if err != nil {
-			return false, err
-		}
-		if !ok {
-			return false, nil
-		}
-
-	case types.PDFIndirectRef:
-
-		ir1 := o1.(types.PDFIndirectRef)
-		o1, err := ctx.XRefTable.Dereference(ir1)
-		if err != nil {
-			return false, err
-		}
-
-		ir2 := o2.(types.PDFIndirectRef)
-		o2, err := ctx.XRefTable.Dereference(ir2)
-		if err != nil {
-			return false, err
-		}
-
-		ok, err := equalPDFObjects(o1, o2, ctx)
-		if err != nil {
-			return false, nil
-		}
-		if !ok {
-			return false, nil
-		}
+		ok, err = equalPDFArrays(&arr1, &arr2, ctx)
 
 	default:
-		return false, errors.Errorf("equalPDFObjects: unhandled compare for type %s\n", o1Type)
+		err = errors.Errorf("equalPDFObjects: unhandled compare for type %s\n", o1Type)
 	}
 
-	return true, nil
+	return
 }
 
-func equalPDFArrays(arr1, arr2 types.PDFArray, ctx *types.PDFContext) (bool, error) {
+func equalPDFArrays(arr1, arr2 *types.PDFArray, ctx *types.PDFContext) (bool, error) {
 
-	if len(arr1) != len(arr2) {
+	if len(*arr1) != len(*arr2) {
 		return false, nil
 	}
 
-	for i, o1 := range arr1 {
+	for i, o1 := range *arr1 {
 
-		o2 := arr2[i]
+		o2 := (*arr2)[i]
 
 		o1r := fmt.Sprintf("%T", o1)
 		o2r := fmt.Sprintf("%T", o2)
@@ -127,7 +94,7 @@ func equalPDFArrays(arr1, arr2 types.PDFArray, ctx *types.PDFContext) (bool, err
 
 func equalPDFStreamDicts(sd1, sd2 *types.PDFStreamDict, ctx *types.PDFContext) (bool, error) {
 
-	ok, err := equalPDFDicts(sd1.PDFDict, sd2.PDFDict, ctx)
+	ok, err := equalPDFDicts(&sd1.PDFDict, &sd2.PDFDict, ctx)
 	if err != nil {
 		return false, err
 	}
@@ -180,10 +147,14 @@ func equalFontNames(v1, v2 interface{}, ctx *types.PDFContext) (bool, error) {
 		bf2 = bf2[i+1:]
 	}
 
-	return bf1 != bf2, nil
+	logDebugOptimize.Printf("equalFontNames: bf1=%s fb2=%s\n", bf1, bf2)
+
+	return bf1 == bf2, nil
 }
 
-func equalPDFDicts(d1, d2 types.PDFDict, ctx *types.PDFContext) (bool, error) {
+func equalPDFDicts(d1, d2 *types.PDFDict, ctx *types.PDFContext) (bool, error) {
+
+	logDebugOptimize.Printf("equalPDFDicts: %v\n%v\n", d1, d2)
 
 	if len(d1.Dict) != len(d2.Dict) {
 		return false, nil
@@ -193,6 +164,7 @@ func equalPDFDicts(d1, d2 types.PDFDict, ctx *types.PDFContext) (bool, error) {
 
 		v2, found := d2.Dict[key]
 		if !found {
+			logDebugOptimize.Printf("equalPDFDict: return false, key=%s\n", key)
 			return false, nil
 		}
 
@@ -201,10 +173,12 @@ func equalPDFDicts(d1, d2 types.PDFDict, ctx *types.PDFContext) (bool, error) {
 
 			ok, err := equalFontNames(v1, v2, ctx)
 			if err != nil {
+				logDebugOptimize.Printf("equalPDFDict: return2 false, key=%s v1=%v\nv2=%v\n", key, v1, v2)
 				return false, err
 			}
 
 			if !ok {
+				logDebugOptimize.Printf("equalPDFDict: return3 false, key=%s v1=%v\nv2=%v\n", key, v1, v2)
 				return false, nil
 			}
 
@@ -213,19 +187,25 @@ func equalPDFDicts(d1, d2 types.PDFDict, ctx *types.PDFContext) (bool, error) {
 
 		ok, err := equalPDFObjects(v1, v2, ctx)
 		if err != nil {
+			logDebugOptimize.Printf("equalPDFDict: return4 false, key=%s v1=%v\nv2=%v\n%v\n", key, v1, v2, err)
 			return false, err
 		}
 
 		if !ok {
+			logDebugOptimize.Printf("equalPDFDict: return5 false, key=%s v1=%v\nv2=%v\n", key, v1, v2)
 			return false, nil
 		}
 
 	}
 
+	logDebugOptimize.Println("equalPDFDict: return true")
+
 	return true, nil
 }
 
 func equalFontDicts(fd1, fd2 *types.PDFDict, ctx *types.PDFContext) (bool, error) {
+
+	logDebugOptimize.Printf("equalFontDicts: %v\n%v\n", fd1, fd2)
 
 	if fd1 == fd2 {
 		return true, nil
@@ -239,7 +219,7 @@ func equalFontDicts(fd1, fd2 *types.PDFDict, ctx *types.PDFContext) (bool, error
 		return false, nil
 	}
 
-	ok, err := equalPDFDicts(*fd1, *fd2, ctx)
+	ok, err := equalPDFDicts(fd1, fd2, ctx)
 	if err != nil {
 		return false, err
 	}

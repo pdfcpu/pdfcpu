@@ -2,6 +2,7 @@ package pdfcpu
 
 import (
 	"github.com/hhrutter/pdfcpu/types"
+	"github.com/pkg/errors"
 )
 
 type commandMode int
@@ -206,6 +207,46 @@ func ChangeOwnerPWCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Co
 		PWNew:   pwNew}
 }
 
+func processAttachments(cmd *Command) (out []string, err error) {
+
+	switch cmd.Mode {
+
+	case LISTATTACHMENTS:
+		out, err = ListAttachments(*cmd.InFile, cmd.Config)
+
+	case ADDATTACHMENTS:
+		err = AddAttachments(*cmd.InFile, cmd.InFiles, cmd.Config)
+
+	case REMOVEATTACHMENTS:
+		err = RemoveAttachments(*cmd.InFile, cmd.InFiles, cmd.Config)
+
+	case EXTRACTATTACHMENTS:
+		err = ExtractAttachments(*cmd.InFile, *cmd.OutDir, cmd.InFiles, cmd.Config)
+	}
+
+	return
+}
+
+func processEncryption(cmd *Command) (err error) {
+
+	switch cmd.Mode {
+
+	case ENCRYPT:
+		err = Encrypt(*cmd.InFile, *cmd.OutFile, cmd.Config)
+
+	case DECRYPT:
+		err = Decrypt(*cmd.InFile, *cmd.OutFile, cmd.Config)
+
+	case CHANGEUPW:
+		err = ChangeUserPassword(*cmd.InFile, *cmd.OutFile, cmd.Config, cmd.PWOld, cmd.PWNew)
+
+	case CHANGEOPW:
+		err = ChangeOwnerPassword(*cmd.InFile, *cmd.OutFile, cmd.Config, cmd.PWOld, cmd.PWNew)
+	}
+
+	return
+}
+
 // Process executes a pdfcpu command.
 func Process(cmd *Command) (out []string, err error) {
 
@@ -238,29 +279,14 @@ func Process(cmd *Command) (out []string, err error) {
 	case TRIM:
 		err = Trim(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Config)
 
-	case LISTATTACHMENTS:
-		out, err = ListAttachments(*cmd.InFile, cmd.Config)
+	case LISTATTACHMENTS, ADDATTACHMENTS, REMOVEATTACHMENTS, EXTRACTATTACHMENTS:
+		out, err = processAttachments(cmd)
 
-	case ADDATTACHMENTS:
-		err = AddAttachments(*cmd.InFile, cmd.InFiles, cmd.Config)
+	case ENCRYPT, DECRYPT, CHANGEUPW, CHANGEOPW:
+		err = processEncryption(cmd)
 
-	case REMOVEATTACHMENTS:
-		err = RemoveAttachments(*cmd.InFile, cmd.InFiles, cmd.Config)
-
-	case EXTRACTATTACHMENTS:
-		err = ExtractAttachments(*cmd.InFile, *cmd.OutDir, cmd.InFiles, cmd.Config)
-
-	case ENCRYPT:
-		err = Encrypt(*cmd.InFile, *cmd.OutFile, cmd.Config)
-
-	case DECRYPT:
-		err = Decrypt(*cmd.InFile, *cmd.OutFile, cmd.Config)
-
-	case CHANGEUPW:
-		err = ChangeUserPassword(*cmd.InFile, *cmd.OutFile, cmd.Config, cmd.PWOld, cmd.PWNew)
-
-	case CHANGEOPW:
-		err = ChangeOwnerPassword(*cmd.InFile, *cmd.OutFile, cmd.Config, cmd.PWOld, cmd.PWNew)
+	default:
+		err = errors.Errorf("Process: Unknown command mode %d\n", cmd.Mode)
 	}
 
 	return

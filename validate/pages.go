@@ -5,19 +5,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateResourceDict(xRefTable *types.XRefTable, obj interface{}) (hasResources bool, err error) {
-
-	logInfoValidate.Println("*** validateResourceDict begin: ***")
-
-	dict, err := xRefTable.DereferenceDict(obj)
-	if err != nil {
-		return
-	}
-
-	if dict == nil {
-		logInfoValidate.Printf("validateResourceDict end: object  is nil.\n")
-		return
-	}
+func validateResourceDictPart1(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
 
 	if obj, ok := dict.Find("ExtGState"); ok {
 		err = validateExtGStateResourceDict(xRefTable, obj)
@@ -39,6 +27,11 @@ func validateResourceDict(xRefTable *types.XRefTable, obj interface{}) (hasResou
 			return
 		}
 	}
+
+	return
+}
+
+func validateResourceDictPart2(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
 
 	if obj, ok := dict.Find("Properties"); ok {
 		err = validatePropertiesResourceDict(xRefTable, obj)
@@ -66,6 +59,33 @@ func validateResourceDict(xRefTable *types.XRefTable, obj interface{}) (hasResou
 		if err != nil {
 			return
 		}
+	}
+
+	return
+}
+
+func validateResourceDict(xRefTable *types.XRefTable, obj interface{}) (hasResources bool, err error) {
+
+	logInfoValidate.Println("*** validateResourceDict begin: ***")
+
+	dict, err := xRefTable.DereferenceDict(obj)
+	if err != nil {
+		return
+	}
+
+	if dict == nil {
+		logInfoValidate.Printf("validateResourceDict end: object  is nil.\n")
+		return
+	}
+
+	err = validateResourceDictPart1(xRefTable, dict)
+	if err != nil {
+		return
+	}
+
+	err = validateResourceDictPart2(xRefTable, dict)
+	if err != nil {
+		return
 	}
 
 	// Beginning with PDF V1.4 this feature is considered to be obsolete.
@@ -412,6 +432,44 @@ func validatePageEntryDur(xRefTable *types.XRefTable, dict *types.PDFDict, requi
 	return
 }
 
+func validateTransitionDictEntryDi(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+
+	obj, found := dict.Find("Di")
+	if !found {
+		return
+	}
+
+	switch obj := obj.(type) {
+
+	case types.PDFInteger:
+		if !validateDi(obj.Value()) {
+			return errors.New("validateTransitionDict: entry Di int value undefined")
+		}
+
+	case types.PDFName:
+		if obj.Value() != "None" {
+			return errors.New("validateTransitionDict: entry Di name value undefined")
+		}
+	}
+
+	return
+}
+
+func validateTransitionDictEntryM(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, transStyle *types.PDFName) (err error) {
+
+	validateM := func(s string) bool {
+		return validateTransitionDirectionOfMotion(s) &&
+			(transStyle != nil && (*transStyle == "Split" || *transStyle == "Box" || *transStyle == "Fly"))
+	}
+
+	_, err = validateNameEntry(xRefTable, dict, dictName, "M", OPTIONAL, types.V10, validateM)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
 func validateTransitionDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
 
 	logInfoValidate.Println("*** validateTransitionDict begin ***")
@@ -444,29 +502,15 @@ func validateTransitionDict(xRefTable *types.XRefTable, dict *types.PDFDict) (er
 	}
 
 	// M, optional, name
-	validateM := func(s string) bool {
-		return validateTransitionDirectionOfMotion(s) &&
-			(transStyle != nil && (*transStyle == "Split" || *transStyle == "Box" || *transStyle == "Fly"))
-	}
-	_, err = validateNameEntry(xRefTable, dict, dictName, "M", OPTIONAL, types.V10, validateM)
+	err = validateTransitionDictEntryM(xRefTable, dict, dictName, transStyle)
 	if err != nil {
 		return
 	}
 
 	// Di, optional, number or name
-	obj, found := dict.Find("Di")
-	if found {
-		switch obj := obj.(type) {
-		case types.PDFInteger:
-			if !validateDi(obj.Value()) {
-				return errors.New("validateTransitionDict: entry Di int value undefined")
-			}
-
-		case types.PDFName:
-			if obj.Value() != "None" {
-				return errors.New("validateTransitionDict: entry Di name value undefined")
-			}
-		}
+	err = validateTransitionDictEntryDi(xRefTable, dict)
+	if err != nil {
+		return
 	}
 
 	// SS, optional, number, since V1.5
@@ -836,36 +880,6 @@ func validatePageDict(xRefTable *types.XRefTable, pageDict *types.PDFDict, objNu
 		return
 	}
 
-	// CropBox
-	err = validatePageEntryCropBox(xRefTable, pageDict, OPTIONAL, types.V10)
-	if err != nil {
-		return
-	}
-
-	// BleedBox
-	err = validatePageEntryBleedBox(xRefTable, pageDict, OPTIONAL, types.V13)
-	if err != nil {
-		return
-	}
-
-	// TrimBox
-	err = validatePageEntryTrimBox(xRefTable, pageDict, OPTIONAL, types.V13)
-	if err != nil {
-		return
-	}
-
-	// ArtBox
-	err = validatePageEntryArtBox(xRefTable, pageDict, OPTIONAL, types.V13)
-	if err != nil {
-		return
-	}
-
-	// BoxColorInfo
-	err = validatePageBoxColorInfo(xRefTable, pageDict, OPTIONAL, types.V14)
-	if err != nil {
-		return
-	}
-
 	// PieceInfo
 	sinceVersion := types.V13
 	if xRefTable.ValidationMode == types.ValidationRelaxed {
@@ -886,110 +900,45 @@ func validatePageDict(xRefTable *types.XRefTable, pageDict *types.PDFDict, objNu
 		return errors.New("writePageDict: missing \"LastModified\" (required by \"PieceInfo\")")
 	}
 
-	// Rotate
-	err = validatePageEntryRotate(xRefTable, pageDict, OPTIONAL, types.V10)
-	if err != nil {
-		return
-	}
-
-	// Group
-	err = validatePageEntryGroup(xRefTable, pageDict, OPTIONAL, types.V14)
-	if err != nil {
-		return
-	}
-
-	// Annotations
-	// delay until processing of AcroForms.
-	// see ...
-
-	// Thumb
-	err = validatePageEntryThumb(xRefTable, pageDict, OPTIONAL, types.V10)
-	if err != nil {
-		return
-	}
-
-	// B
-	err = validatePageEntryB(xRefTable, pageDict, OPTIONAL, types.V11)
-	if err != nil {
-		return
-	}
-
-	// Dur
-	err = validatePageEntryDur(xRefTable, pageDict, OPTIONAL, types.V11)
-	if err != nil {
-		return
-	}
-
-	// Trans
-	err = validatePageEntryTrans(xRefTable, pageDict, OPTIONAL, types.V11)
-	if err != nil {
-		return
-	}
-
 	// AA
 	err = validateAdditionalActions(xRefTable, pageDict, "pageDict", "AA", OPTIONAL, types.V14, "page")
 	if err != nil {
 		return
 	}
 
-	// Metadata
-	err = validateMetadata(xRefTable, pageDict, OPTIONAL, types.V14)
-	if err != nil {
-		return
+	type v struct {
+		validate     func(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error)
+		required     bool
+		sinceVersion types.PDFVersion
 	}
 
-	// StructParents
-	err = validatePageEntryStructParents(xRefTable, pageDict, OPTIONAL, types.V10)
-	if err != nil {
-		return
-	}
-
-	// ID
-	err = validatePageEntryID(xRefTable, pageDict, OPTIONAL, types.V13)
-	if err != nil {
-		return
-	}
-
-	// PZ
-	err = validatePageEntryPZ(xRefTable, pageDict, OPTIONAL, types.V13)
-	if err != nil {
-		return
-	}
-
-	// SeparationInfo
-	err = validatePageEntrySeparationInfo(xRefTable, pageDict, OPTIONAL, types.V13)
-	if err != nil {
-		return
-	}
-
-	// Tabs
-	err = validatePageEntryTabs(xRefTable, pageDict, OPTIONAL, types.V15)
-	if err != nil {
-		return
-	}
-
-	// TemplateInstantiateds
-	err = validatePageEntryTemplateInstantiated(xRefTable, pageDict, OPTIONAL, types.V15)
-	if err != nil {
-		return
-	}
-
-	// PresSteps
-	err = validatePageEntryPresSteps(xRefTable, pageDict, OPTIONAL, types.V15)
-	if err != nil {
-		return
-	}
-
-	// UserUnit
-	err = validatePageEntryUserUnit(xRefTable, pageDict, OPTIONAL, types.V16)
-	if err != nil {
-		return
-	}
-
-	// VP
-	err = validatePageEntryVP(xRefTable, pageDict, OPTIONAL, types.V16)
-	if err != nil {
-		return
+	for _, f := range []v{
+		{validatePageEntryCropBox, OPTIONAL, types.V10},
+		{validatePageEntryBleedBox, OPTIONAL, types.V13},
+		{validatePageEntryTrimBox, OPTIONAL, types.V13},
+		{validatePageEntryArtBox, OPTIONAL, types.V13},
+		{validatePageBoxColorInfo, OPTIONAL, types.V14},
+		{validatePageEntryRotate, OPTIONAL, types.V10},
+		{validatePageEntryGroup, OPTIONAL, types.V14},
+		{validatePageEntryThumb, OPTIONAL, types.V10},
+		{validatePageEntryB, OPTIONAL, types.V11},
+		{validatePageEntryDur, OPTIONAL, types.V11},
+		{validatePageEntryTrans, OPTIONAL, types.V11},
+		{validateMetadata, OPTIONAL, types.V14},
+		{validatePageEntryStructParents, OPTIONAL, types.V10},
+		{validatePageEntryID, OPTIONAL, types.V13},
+		{validatePageEntryPZ, OPTIONAL, types.V13},
+		{validatePageEntrySeparationInfo, OPTIONAL, types.V13},
+		{validatePageEntryTabs, OPTIONAL, types.V15},
+		{validatePageEntryTemplateInstantiated, OPTIONAL, types.V15},
+		{validatePageEntryPresSteps, OPTIONAL, types.V15},
+		{validatePageEntryUserUnit, OPTIONAL, types.V16},
+		{validatePageEntryVP, OPTIONAL, types.V16},
+	} {
+		err = f.validate(xRefTable, pageDict, f.required, f.sinceVersion)
+		if err != nil {
+			return
+		}
 	}
 
 	logInfoValidate.Printf("*** validatePageDict end: obj#%d ***\n", objNumber)
@@ -997,39 +946,17 @@ func validatePageDict(xRefTable *types.XRefTable, pageDict *types.PDFDict, objNu
 	return
 }
 
-func validatePagesDict(xRefTable *types.XRefTable, dict *types.PDFDict, objNumber, genNumber int, hasResources, hasMediaBox bool) (err error) {
+func validatePagesDictGeneralEntries(xRefTable *types.XRefTable, dict *types.PDFDict) (hasResources, hasMediaBox bool, err error) {
 
-	logInfoValidate.Printf("*** validatePagesDict begin: hasResources=%v hasMediaBox=%v obj#%d ***\n", hasResources, hasMediaBox, objNumber)
-
-	// Get number of pages of this PDF file.
-	pageCount := dict.IntEntry("Count")
-	if pageCount == nil {
-		return errors.New("validatePagesDict: missing \"Count\"")
-	}
-
-	// TODO not ideal - overall pageCount is only set during validation!
-	if xRefTable.PageCount == 0 {
-		xRefTable.PageCount = *pageCount
-	}
-
-	logInfoValidate.Printf("validatePagesDict: This page node has %d pages\n", *pageCount)
-
-	// Resources: optional, dict
-	if obj, ok := dict.Find("Resources"); ok {
-		hasResources, err = validateResourceDict(xRefTable, obj)
-		if err != nil {
-			return
-		}
-	}
-
-	// MediaBox: optional, rectangle
-	hasPageNodeMediaBox, err := validatePageEntryMediaBox(xRefTable, dict, OPTIONAL, types.V10)
+	hasResources, err = validateResources(xRefTable, dict)
 	if err != nil {
 		return
 	}
 
-	if hasPageNodeMediaBox {
-		hasMediaBox = true
+	// MediaBox: optional, rectangle
+	hasMediaBox, err = validatePageEntryMediaBox(xRefTable, dict, OPTIONAL, types.V10)
+	if err != nil {
+		return
 	}
 
 	// CropBox: optional, rectangle
@@ -1042,6 +969,65 @@ func validatePagesDict(xRefTable *types.XRefTable, dict *types.PDFDict, objNumbe
 	err = validatePageEntryRotate(xRefTable, dict, OPTIONAL, types.V10)
 	if err != nil {
 		return
+	}
+
+	return
+}
+
+func dictTypeForPageNodeDict(pageNodeDict *types.PDFDict) (string, error) {
+
+	if pageNodeDict == nil {
+		return "", errors.New("dictTypeForPageNodeDict: pageNodeDict is null")
+	}
+
+	dictType := pageNodeDict.Type()
+	if dictType == nil {
+		return "", errors.New("dictTypeForPageNodeDict: missing pageNodeDict type")
+	}
+
+	return *dictType, nil
+}
+
+func validateResources(xRefTable *types.XRefTable, dict *types.PDFDict) (hasResources bool, err error) {
+
+	// Get number of pages of this PDF file.
+	pageCount := dict.IntEntry("Count")
+	if pageCount == nil {
+		err = errors.New("validateResources: missing \"Count\"")
+		return
+	}
+
+	// TODO not ideal - overall pageCount is only set during validation!
+	if xRefTable.PageCount == 0 {
+		xRefTable.PageCount = *pageCount
+	}
+
+	logInfoValidate.Printf("validateResources: This page node has %d pages\n", *pageCount)
+
+	// Resources: optional, dict
+	obj, ok := dict.Find("Resources")
+	if !ok {
+		return
+	}
+
+	return validateResourceDict(xRefTable, obj)
+}
+
+func validatePagesDict(xRefTable *types.XRefTable, dict *types.PDFDict, objNumber, genNumber int, hasResources, hasMediaBox bool) (err error) {
+
+	logInfoValidate.Printf("*** validatePagesDict begin: hasResources=%v hasMediaBox=%v obj#%d ***\n", hasResources, hasMediaBox, objNumber)
+
+	// Resources and Mediabox are inheritated.
+	var dHasResources, dHasMediaBox bool
+	dHasResources, dHasMediaBox, err = validatePagesDictGeneralEntries(xRefTable, dict)
+	if err != nil {
+		return
+	}
+	if dHasResources {
+		hasResources = true
+	}
+	if dHasMediaBox {
+		hasMediaBox = true
 	}
 
 	// Iterate over page tree.
@@ -1068,39 +1054,34 @@ func validatePagesDict(xRefTable *types.XRefTable, dict *types.PDFDict, objNumbe
 		objNumber := indRef.ObjectNumber.Value()
 		genNumber := indRef.GenerationNumber.Value()
 
-		pageNodeDict, err := xRefTable.DereferenceDict(indRef)
+		var pageNodeDict *types.PDFDict
+		pageNodeDict, err = xRefTable.DereferenceDict(indRef)
 		if err != nil {
 			return err
-			//return errors.New("validatePagesDict: cannot dereference pageNodeDict")
 		}
 
-		if pageNodeDict == nil {
-			return errors.New("validatePagesDict: pageNodeDict is null")
+		var dictType string
+		dictType, err = dictTypeForPageNodeDict(pageNodeDict)
+		if err != nil {
+			return err
 		}
 
-		dictType := pageNodeDict.Type()
-		if dictType == nil {
-			return errors.New("validatePagesDict: missing pageNodeDict type")
-		}
-
-		switch *dictType {
+		switch dictType {
 
 		case "Pages":
 			// Recurse over pagetree
 			err = validatePagesDict(xRefTable, pageNodeDict, objNumber, genNumber, hasResources, hasMediaBox)
-			if err != nil {
-				return err
-			}
 
 		case "Page":
 			err = validatePageDict(xRefTable, pageNodeDict, objNumber, genNumber, hasResources, hasMediaBox)
-			if err != nil {
-				return err
-			}
 
 		default:
-			return errors.Errorf("validatePagesDict: Unexpected dict type: %s", *dictType)
+			err = errors.Errorf("validatePagesDict: Unexpected dict type: %s", dictType)
 
+		}
+
+		if err != nil {
+			return
 		}
 
 	}

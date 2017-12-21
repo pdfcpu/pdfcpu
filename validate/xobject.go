@@ -86,13 +86,7 @@ func validateReferenceDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err
 	return
 }
 
-func validateOPIDictV13(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
-
-	// 14.11.7 Open Prepresse interface (OPI)
-
-	logInfoValidate.Println("*** validateOPIDictV13 begin ***")
-
-	dictName := "opiDictV13"
+func validateOPIDictV13Part1(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) (err error) {
 
 	// Type, optional, name
 	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "OPI" })
@@ -148,6 +142,11 @@ func validateOPIDictV13(xRefTable *types.XRefTable, dict *types.PDFDict) (err er
 		return
 	}
 
+	return
+}
+
+func validateOPIDictV13Part2(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) (err error) {
+
 	// Resolution, optional, array of numbers, len 2
 	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "Resolution", OPTIONAL, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
 	if err != nil {
@@ -198,6 +197,27 @@ func validateOPIDictV13(xRefTable *types.XRefTable, dict *types.PDFDict) (err er
 
 	// Tags, optional, array
 	_, err = validateArrayEntry(xRefTable, dict, dictName, "Tags", OPTIONAL, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func validateOPIDictV13(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+
+	// 14.11.7 Open Prepresse interface (OPI)
+
+	logInfoValidate.Println("*** validateOPIDictV13 begin ***")
+
+	dictName := "opiDictV13"
+
+	err = validateOPIDictV13Part1(xRefTable, dict, dictName)
+	if err != nil {
+		return
+	}
+
+	err = validateOPIDictV13Part2(xRefTable, dict, dictName)
 	if err != nil {
 		return
 	}
@@ -470,13 +490,9 @@ func validateAlternateImageStreamDicts(xRefTable *types.XRefTable, dict *types.P
 	return
 }
 
-func validateImageStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStreamDict, isAlternate bool) (err error) {
-
-	logInfoValidate.Println("*** validateImageStreamDict begin ***")
+func validateImageStreamDictPart1(xRefTable *types.XRefTable, streamDict *types.PDFStreamDict, dictName string) (isImageMask bool, err error) {
 
 	dict := streamDict.PDFDict
-
-	dictName := "imageStreamDict"
 
 	// Width, integer, required
 	_, err = validateIntegerEntry(xRefTable, &dict, dictName, "Width", REQUIRED, types.V10, nil)
@@ -491,12 +507,12 @@ func validateImageStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFSt
 	}
 
 	// ImageMask, boolean, optional
-	imageMask, err := validateBooleanEntry(xRefTable, &streamDict.PDFDict, "imageStreamDict", "ImageMask", OPTIONAL, types.V10, nil)
+	imageMask, err := validateBooleanEntry(xRefTable, &dict, "imageStreamDict", "ImageMask", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return
 	}
 
-	isImageMask := imageMask != nil && *imageMask == true
+	isImageMask = imageMask != nil && *imageMask == true
 
 	// ColorSpace, name or array, required unless used filter is JPXDecode; not allowed for imagemasks.
 	if !isImageMask {
@@ -511,12 +527,19 @@ func validateImageStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFSt
 			required = OPTIONAL
 		}
 
-		err = validateColorSpaceEntry(xRefTable, &streamDict.PDFDict, "imageStreamDict", "ColorSpace", required, ExcludePatternCS)
+		err = validateColorSpaceEntry(xRefTable, &dict, "imageStreamDict", "ColorSpace", required, ExcludePatternCS)
 		if err != nil {
 			return
 		}
 
 	}
+
+	return
+}
+
+func validateImageStreamDictPart2(xRefTable *types.XRefTable, streamDict *types.PDFStreamDict, dictName string, isImageMask, isAlternate bool) (err error) {
+
+	dict := streamDict.PDFDict
 
 	// BitsPerComponent, integer
 	required := REQUIRED
@@ -579,6 +602,29 @@ func validateImageStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFSt
 		}
 	}
 
+	return
+}
+
+func validateImageStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStreamDict, isAlternate bool) (err error) {
+
+	logInfoValidate.Println("*** validateImageStreamDict begin ***")
+
+	dict := streamDict.PDFDict
+
+	dictName := "imageStreamDict"
+
+	var isImageMask bool
+
+	isImageMask, err = validateImageStreamDictPart1(xRefTable, streamDict, dictName)
+	if err != nil {
+		return
+	}
+
+	err = validateImageStreamDictPart2(xRefTable, streamDict, dictName, isImageMask, isAlternate)
+	if err != nil {
+		return
+	}
+
 	// SMaskInData, integer, optional
 	_, err = validateIntegerEntry(xRefTable, &dict, dictName, "SMaskInData", OPTIONAL, types.V10, func(i int) bool { return i >= 0 && i <= 2 })
 	if err != nil {
@@ -605,39 +651,21 @@ func validateImageStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFSt
 	}
 
 	// OPI, dict, optional since V1.2
-	d, err := validateDictEntry(xRefTable, &dict, dictName, "OPI", OPTIONAL, types.V12, nil)
+	err = validateEntryOPI(xRefTable, &dict, dictName, OPTIONAL, types.V12)
 	if err != nil {
 		return
 	}
 
-	if d != nil {
-		err = validateOPIVersionDict(xRefTable, d)
-		if err != nil {
-			return
-		}
-	}
-
 	// Metadata, stream, optional since V1.4
-	sinceVersion = types.V14
-	if xRefTable.ValidationMode == types.ValidationRelaxed {
-		sinceVersion = types.V13
-	}
-	err = validateMetadata(xRefTable, &streamDict.PDFDict, OPTIONAL, sinceVersion)
+	err = validateMetadata(xRefTable, &streamDict.PDFDict, OPTIONAL, types.V14)
 	if err != nil {
 		return
 	}
 
 	// OC, dict, optional since V1.5
-	d, err = validateDictEntry(xRefTable, &dict, dictName, "OC", OPTIONAL, types.V15, nil)
+	err = validateEntryOC(xRefTable, &dict, dictName, OPTIONAL, types.V15)
 	if err != nil {
 		return
-	}
-
-	if d != nil {
-		err = validateOptionalContentGroupDict(xRefTable, d)
-		if err != nil {
-			return
-		}
 	}
 
 	logInfoValidate.Println("*** validateImageStreamDict end ***")
@@ -645,15 +673,9 @@ func validateImageStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFSt
 	return
 }
 
-func validateFormStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStreamDict) (err error) {
-
-	// 8.10 Form XObjects
-
-	logInfoValidate.Println("*** validateFormStreamDict begin ***")
+func validateFormStreamDictPart1(xRefTable *types.XRefTable, streamDict *types.PDFStreamDict, dictName string) (err error) {
 
 	dict := streamDict.PDFDict
-
-	dictName := "formStreamDict"
 
 	_, err = validateIntegerEntry(xRefTable, &dict, dictName, "FormType", OPTIONAL, types.V10, func(i int) bool { return i == 1 })
 	if err != nil {
@@ -695,58 +717,19 @@ func validateFormStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStr
 	}
 
 	// Metadata, stream, optional, since V1.4
-	err = validateMetadata(xRefTable, &streamDict.PDFDict, OPTIONAL, types.V14)
+	err = validateMetadata(xRefTable, &dict, OPTIONAL, types.V14)
 	if err != nil {
 		return
 	}
 
-	// PieceInfo, dict, optional, since V1.3
-	hasPieceInfo, err := validatePieceInfo(xRefTable, &streamDict.PDFDict, OPTIONAL, types.V13)
-	if err != nil {
-		return err
-	}
+	return
+}
 
-	// LastModified, date, required if PieceInfo present, since V1.3
-	lm, err := validateDateEntry(xRefTable, &dict, dictName, "LastModified", OPTIONAL, types.V13)
-	if err != nil {
-		return
-	}
+func validateEntryOC(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool, sinceVersion types.PDFVersion) (err error) {
 
-	if hasPieceInfo && lm == nil {
-		err = errors.New("validateFormStreamDict: missing \"LastModified\" (required by \"PieceInfo\")")
-		return
-	}
+	var d *types.PDFDict
 
-	// StructParent, integer
-	sp, err := validateIntegerEntry(xRefTable, &dict, dictName, "StructParent", OPTIONAL, types.V13, nil)
-	if err != nil {
-		return
-	}
-
-	// StructParents, integer
-	sps, err := validateIntegerEntry(xRefTable, &dict, dictName, "StructParents", OPTIONAL, types.V13, nil)
-	if err != nil {
-		return
-	}
-	if sp != nil && sps != nil {
-		return errors.New("validateFormStreamDict: only \"StructParent\" or \"StructParents\" allowed")
-	}
-
-	// OPI, dict, optional, since V1.2
-	d, err = validateDictEntry(xRefTable, &dict, dictName, "OPI", OPTIONAL, types.V12, nil)
-	if err != nil {
-		return
-	}
-
-	if d != nil {
-		err = validateOPIVersionDict(xRefTable, d)
-		if err != nil {
-			return
-		}
-	}
-
-	// OC, dict, optional, since V1.5
-	d, err = validateDictEntry(xRefTable, &dict, dictName, "OC", OPTIONAL, types.V15, nil)
+	d, err = validateDictEntry(xRefTable, dict, dictName, "OC", required, sinceVersion, nil)
 	if err != nil {
 		return
 	}
@@ -758,9 +741,98 @@ func validateFormStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStr
 		}
 	}
 
+	return
+}
+
+func validateEntryOPI(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool, sinceVersion types.PDFVersion) (err error) {
+
+	var d *types.PDFDict
+
+	d, err = validateDictEntry(xRefTable, dict, dictName, "OPI", required, sinceVersion, nil)
+	if err != nil {
+		return
+	}
+
+	if d != nil {
+		err = validateOPIVersionDict(xRefTable, d)
+		if err != nil {
+			return
+		}
+	}
+
+	return
+}
+
+func validateFormStreamDictPart2(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) (err error) {
+
+	// PieceInfo, dict, optional, since V1.3
+	hasPieceInfo, err := validatePieceInfo(xRefTable, dict, OPTIONAL, types.V13)
+	if err != nil {
+		return err
+	}
+
+	// LastModified, date, required if PieceInfo present, since V1.3
+	lm, err := validateDateEntry(xRefTable, dict, dictName, "LastModified", OPTIONAL, types.V13)
+	if err != nil {
+		return
+	}
+
+	if hasPieceInfo && lm == nil {
+		err = errors.New("validateFormStreamDictPart2: missing \"LastModified\" (required by \"PieceInfo\")")
+		return
+	}
+
+	// StructParent, integer
+	sp, err := validateIntegerEntry(xRefTable, dict, dictName, "StructParent", OPTIONAL, types.V13, nil)
+	if err != nil {
+		return
+	}
+
+	// StructParents, integer
+	sps, err := validateIntegerEntry(xRefTable, dict, dictName, "StructParents", OPTIONAL, types.V13, nil)
+	if err != nil {
+		return
+	}
+	if sp != nil && sps != nil {
+		return errors.New("validateFormStreamDictPart2: only \"StructParent\" or \"StructParents\" allowed")
+	}
+
+	// OPI, dict, optional, since V1.2
+	err = validateEntryOPI(xRefTable, dict, dictName, OPTIONAL, types.V12)
+	if err != nil {
+		return
+	}
+
+	// OC, dict, optional, since V1.5
+	err = validateEntryOC(xRefTable, dict, dictName, OPTIONAL, types.V15)
+	if err != nil {
+		return
+	}
+
 	// Name, name, optional (required in 1.0)
 	required := xRefTable.Version() == types.V10
-	_, err = validateNameEntry(xRefTable, &dict, dictName, "Name", required, types.V10, nil)
+	_, err = validateNameEntry(xRefTable, dict, dictName, "Name", required, types.V10, nil)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func validateFormStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStreamDict) (err error) {
+
+	// 8.10 Form XObjects
+
+	logInfoValidate.Println("*** validateFormStreamDict begin ***")
+
+	dictName := "formStreamDict"
+
+	err = validateFormStreamDictPart1(xRefTable, streamDict, dictName)
+	if err != nil {
+		return
+	}
+
+	err = validateFormStreamDictPart2(xRefTable, &streamDict.PDFDict, dictName)
 	if err != nil {
 		return
 	}
