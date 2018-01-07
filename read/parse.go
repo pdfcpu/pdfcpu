@@ -869,7 +869,7 @@ func parseXRefStreamDict(pdfStreamDict types.PDFStreamDict) (*types.PDFXRefStrea
 	}
 	wIntArr[2] = int(i3)
 
-	xRefStreamDict := types.PDFXRefStreamDict{
+	xsd := &types.PDFXRefStreamDict{
 		PDFStreamDict:  pdfStreamDict,
 		Size:           *pdfStreamDict.Size(),
 		Objects:        objs,
@@ -878,7 +878,7 @@ func parseXRefStreamDict(pdfStreamDict types.PDFStreamDict) (*types.PDFXRefStrea
 
 	logDebugParse.Println("ParseXRefStreamDict: end")
 
-	return &xRefStreamDict, nil
+	return xsd, nil
 }
 
 // objectStreamDict creates a PDFObjectStreamDict out of a PDFStreamDict.
@@ -892,11 +892,11 @@ func objectStreamDict(pdfStreamDict types.PDFStreamDict) (*types.PDFObjectStream
 		return nil, errObjStreamMissingN
 	}
 
-	objectStreamDict := types.PDFObjectStreamDict{
+	osd := &types.PDFObjectStreamDict{
 		PDFStreamDict:  pdfStreamDict,
 		ObjCount:       *pdfStreamDict.N(),
 		FirstObjOffset: *pdfStreamDict.First(),
 		ObjArray:       nil}
 
-	return &objectStreamDict, nil
+	return osd, nil
 }

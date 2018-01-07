@@ -11,64 +11,59 @@ import (
 )
 
 // Stupid dump of image data to a file.
-// Right now supported are:
+// Right now supported:
 // "DCTDecode" dumps to a jpg file.
 // "JPXDecode" dumps to a jpx file.
 func writeImage(fileName string, imageDict *types.PDFStreamDict, objNr int) (err error) {
 
-	var filters string
-
 	fpl := imageDict.FilterPipeline
 	if fpl == nil {
-		filters = "none"
-	} else {
-		var s []string
-		for _, filter := range fpl {
-			s = append(s, filter.Name)
-		}
-		filters = strings.Join(s, ",")
+		return
 	}
+
+	var s []string
+	for _, filter := range fpl {
+		s = append(s, filter.Name)
+	}
+	filters := strings.Join(s, ",")
 
 	fileName = fileName + "_" + strconv.Itoa(objNr) + "_" + filters
 
 	logDebugExtract.Printf("writeImage begin: %s objNR:%d\n", fileName, objNr)
 
-	if fpl != nil {
+	// Ignore filter chains with length > 1
+	if len(fpl) > 1 {
+		logInfoExtract.Printf("writeImage end: ignore %s, more than 1 filter.\n", fileName)
+		return
+	}
 
-		// Ignore filter chains with length > 1
-		if len(fpl) > 1 {
-			logInfoExtract.Printf("writeImage end: ignore %s, more than 1 filter.\n", fileName)
+	// Ignore imageMasks
+	if im := imageDict.BooleanEntry("ImageMask"); im != nil && *im {
+		logInfoExtract.Printf("writeImage end: ignore %s, imageMask.\n", fileName)
+		return
+	}
+
+	switch fpl[0].Name {
+
+	case "DCTDecode":
+		// Dump encoded chunk to file.
+		logInfoExtract.Printf("writing %s\n", fileName+".jpg")
+		err = ioutil.WriteFile(fileName+".jpg", imageDict.Raw, os.ModePerm)
+		if err != nil {
 			return
 		}
 
-		// Ignore imageMasks
-		if im := imageDict.BooleanEntry("ImageMask"); im != nil && *im {
-			logInfoExtract.Printf("writeImage end: ignore %s, imageMask.\n", fileName)
+	case "JPXDecode":
+		// Dump encoded chunk to file.
+		logInfoExtract.Printf("writing %s\n", fileName+".jpx")
+		err = ioutil.WriteFile(fileName+".jpx", imageDict.Raw, os.ModePerm)
+		if err != nil {
 			return
 		}
 
-		switch fpl[0].Name {
-
-		case "DCTDecode":
-			// Dump encoded chunk to file.
-			logInfoExtract.Printf("writing %s\n", fileName+".jpg")
-			err = ioutil.WriteFile(fileName+".jpg", imageDict.Raw, os.ModePerm)
-			if err != nil {
-				return
-			}
-
-		case "JPXDecode":
-			// Dump encoded chunk to file.
-			logInfoExtract.Printf("writing %s\n", fileName+".jpx")
-			err = ioutil.WriteFile(fileName+".jpx", imageDict.Raw, os.ModePerm)
-			if err != nil {
-				return
-			}
-
-		default:
-			logDebugExtract.Printf("writeImage end: ignore %s filter neither \"DCTDecode\" nor \"JPXDecode\"\n", fileName)
-			return
-		}
+	default:
+		logDebugExtract.Printf("writeImage end: ignore %s filter neither \"DCTDecode\" nor \"JPXDecode\"\n", fileName)
+		return
 	}
 
 	logDebugExtract.Printf("writeImage end")
@@ -109,20 +104,10 @@ func writeImages(ctx *types.PDFContext, selectedPages types.IntSet) (err error) 
 		for p, v := range selectedPages {
 
 			if v {
-
 				logInfoExtract.Printf("writeImages: writing images for page %d\n", p)
-
-				objs := ctx.Optimize.PageImages[p-1]
-				if len(objs) == 0 {
-					// This page has no images.
-					logInfoExtract.Printf("writeImages: Page %d does not have images to extract\n", p)
-					continue
-				}
-
-				for i := range objs {
+				for i := range ctx.Optimize.PageImages[p-1] {
 					writeImageObject(ctx, i)
 				}
-
 			}
 
 		}

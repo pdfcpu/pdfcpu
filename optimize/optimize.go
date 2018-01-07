@@ -119,7 +119,7 @@ func handleDuplicateFontObject(ctx *types.PDFContext, font *types.PDFDict, fontN
 
 	pageFonts := ctx.Optimize.PageFonts[pageNumber]
 
-	for _, fontObjectNumber := range *fontObjectNumbers {
+	for _, fontObjectNumber := range fontObjectNumbers {
 
 		fontObject := ctx.Optimize.FontObjects[fontObjectNumber]
 
@@ -276,9 +276,9 @@ func optimizeFontResourcesDict(ctx *types.PDFContext, fontResourcesDict *types.P
 			fontObjectNumbers, found := ctx.Optimize.Fonts[fn]
 			if found {
 				logDebugOptimize.Printf("optimizeFontResourcesDict: appending %d to %s\n", objectNumber, fn)
-				*fontObjectNumbers = append(*fontObjectNumbers, objectNumber)
+				ctx.Optimize.Fonts[fn] = append(fontObjectNumbers, objectNumber)
 			} else {
-				ctx.Optimize.Fonts[fn] = &[]int{objectNumber}
+				ctx.Optimize.Fonts[fn] = []int{objectNumber}
 			}
 
 			ctx.Optimize.FontObjects[objectNumber] =

@@ -13,7 +13,7 @@ The commands are:
 	optimize	optimize PDF by getting rid of redundant page resources
 	split		split multi-page PDF into several single-page PDFs
 	merge		concatenate 2 or more PDFs
-    extract		extract images, fonts, content or pages
+	extract		extract images, fonts, content or pages
 	trim		create trimmed version
 	attach		list, add, remove, extract embedded file attachments
 	encrypt		set password protection		
@@ -128,10 +128,12 @@ verbose ... extensive log output
  inFile ... input pdf file
  outDir ... output directory`
 
-	usageEncrypt     = "usage: pdfcpu encrypt [-verbose] [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageEncrypt     = "usage: pdfcpu encrypt [-verbose] [-mode rc4|aes] [-key 40|128] [-upw userpw] [-opw ownerpw] inFile [outFile]"
 	usageLongEncrypt = `Encrypt sets a password protection based on user and owner password.
 
 verbose ... extensive log output
+   mode ... algorithm (default=aes)
+    key ... key length in bits (default=128)
     upw ... user password
     opw ... owner password
  inFile ... input pdf file
@@ -150,7 +152,7 @@ outFile ... output pdf file`
 	usageLongChangeUserPW = `Changeupw changes the user password.
 	
 verbose ... extensive log output
-	opw ... owner password
+    opw ... owner password
  inFile ... input pdf file
  upwOld ... old user password
  upwNew ... new user password`

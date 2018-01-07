@@ -1009,3 +1009,54 @@ func (xRefTable *XRefTable) freeList(logStr []string) ([]string, error) {
 
 	return logStr, nil
 }
+
+// LocateNameTree locates/ensures a specific name tree.
+func (xRefTable *XRefTable) LocateNameTree(name string, ensure bool) (*PDFNameTree, error) {
+
+	d, err := xRefTable.DereferenceDict(*xRefTable.Root)
+	if err != nil {
+		return nil, err
+	}
+
+	obj, found := d.Find("Names")
+	if !found {
+		if !ensure {
+			return nil, nil
+		}
+		dict := NewPDFDict()
+		objNumber, err := xRefTable.InsertObject(dict)
+		if err != nil {
+			return nil, err
+		}
+		d.Insert("Names", NewPDFIndirectRef(objNumber, 0))
+		d = &dict
+	} else {
+		d, err = xRefTable.DereferenceDict(obj)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	obj, found = d.Find("EmbeddedFiles")
+	if !found {
+		if !ensure {
+			return nil, nil
+		}
+		dict := NewPDFDict()
+		dict.Insert("Names", PDFArray{})
+		objNumber, err := xRefTable.InsertObject(dict)
+		if err != nil {
+			return nil, err
+		}
+		indRef := NewPDFIndirectRef(objNumber, 0)
+		d.Insert("EmbeddedFiles", indRef)
+		return NewNameTree(indRef), nil
+	}
+
+	indRef, ok := obj.(PDFIndirectRef)
+	if !ok {
+		return nil, errors.New("LocateNameTree: name tree must be indirect ref")
+	}
+
+	return NewNameTree(indRef), nil
+}

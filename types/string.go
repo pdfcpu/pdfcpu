@@ -30,9 +30,24 @@ func Escape(s string) (*string, error) {
 
 		c := s[i]
 
-		if strings.ContainsRune("()\\", rune(c)) {
-			b.WriteByte(0x5C) // \
+		switch c {
+		case 0x0A:
+			c = 'n'
+		case 0x0D:
+			c = 'r'
+		case 0x09:
+			c = 't'
+		case 0x08:
+			c = 'b'
+		case 0x0C:
+			c = 'f'
+		case '\\', '(', ')':
+		default:
+			b.WriteByte(c)
+			continue
 		}
+
+		b.WriteByte('\\')
 		b.WriteByte(c)
 	}
 

@@ -12,6 +12,30 @@ const (
 	StatsFileNameDefault = "stats.csv"
 )
 
+// CommandMode specifies the operation being executed.
+type CommandMode int
+
+// The available commands.
+const (
+	VALIDATE CommandMode = iota
+	OPTIMIZE
+	SPLIT
+	MERGE
+	EXTRACTIMAGES
+	EXTRACTFONTS
+	EXTRACTPAGES
+	EXTRACTCONTENT
+	TRIM
+	ADDATTACHMENTS
+	REMOVEATTACHMENTS
+	EXTRACTATTACHMENTS
+	LISTATTACHMENTS
+	ENCRYPT
+	DECRYPT
+	CHANGEUPW
+	CHANGEOPW
+)
+
 // Configuration of a PDFContext.
 type Configuration struct {
 
@@ -50,20 +74,32 @@ type Configuration struct {
 	OwnerPW    string
 	OwnerPWNew *string
 
-	// Encrypt or decrypt or leave encryption state as is if nil.
-	Decrypt *bool
+	// EncryptUsingAES ensures AES encryption.
+	// true: AES encryption
+	// false: RC4 encryption.
+	EncryptUsingAES bool
+
+	// EncryptUsing128BitKey ensures 128 bit key length.
+	// true: use 128 bit key
+	// false: use 40 bit key
+	EncryptUsing128BitKey bool
+
+	// Command being executed.
+	Mode CommandMode
 }
 
 // NewDefaultConfiguration returns the default pdfcpu configuration.
 func NewDefaultConfiguration() *Configuration {
 	return &Configuration{
-		Reader15:          true,
-		DecodeAllStreams:  false,
-		ValidationMode:    ValidationRelaxed,
-		Eol:               EolLF,
-		WriteObjectStream: true,
-		WriteXRefStream:   true,
-		CollectStats:      true,
+		Reader15:              true,
+		DecodeAllStreams:      false,
+		ValidationMode:        ValidationRelaxed,
+		Eol:                   EolLF,
+		WriteObjectStream:     true,
+		WriteXRefStream:       true,
+		CollectStats:          true,
+		EncryptUsingAES:       true,
+		EncryptUsing128BitKey: true,
 	}
 }
 

@@ -12,7 +12,7 @@ type OptimizationContext struct {
 	// Font section
 	PageFonts         []IntSet
 	FontObjects       map[int]*FontObject
-	Fonts             map[string]*[]int
+	Fonts             map[string][]int
 	DuplicateFontObjs IntSet
 	DuplicateFonts    map[int]*PDFDict
 
@@ -22,7 +22,7 @@ type OptimizationContext struct {
 	DuplicateImageObjs IntSet
 	DuplicateImages    map[int]*PDFStreamDict
 
-	DuplicateInfoObjects IntSet // Really a possible result of manual info dict modification.
+	DuplicateInfoObjects IntSet // Possible result of manual info dict modification.
 
 	NonReferencedObjs []int // Objects that are not referenced.
 }
@@ -30,7 +30,7 @@ type OptimizationContext struct {
 func newOptimizationContext() *OptimizationContext {
 	return &OptimizationContext{
 		FontObjects:          map[int]*FontObject{},
-		Fonts:                map[string]*[]int{},
+		Fonts:                map[string][]int{},
 		DuplicateFontObjs:    IntSet{},
 		DuplicateFonts:       map[int]*PDFDict{},
 		ImageObjects:         map[int]*ImageObject{},
@@ -181,7 +181,7 @@ func (oc *OptimizationContext) collectFontInfo(logStr []string) []string {
 	sort.Strings(fontNames)
 
 	for _, fontName := range fontNames {
-		for _, objectNumber := range *oc.Fonts[fontName] {
+		for _, objectNumber := range oc.Fonts[fontName] {
 			fontObject := oc.FontObjects[objectNumber]
 			logStr = append(logStr, fmt.Sprintf("#%-6d %s", objectNumber, fontObject))
 		}

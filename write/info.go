@@ -59,7 +59,7 @@ func textString(ctx *types.PDFContext, obj interface{}) (string, error) {
 		}
 
 	default:
-		return s, errors.New("writeInfoObject: corrupt \"Producer\"")
+		return s, errors.Errorf("textString: corrupt -  %v\n", obj)
 	}
 
 	// Return a csv safe string.
@@ -149,6 +149,7 @@ func writeDocumentInfoDict(ctx *types.PDFContext) (err error) {
 		return
 	}
 
+	// TODO Refactor - for stats only.
 	err = writeInfoDict(ctx, dict)
 	if err != nil {
 		return

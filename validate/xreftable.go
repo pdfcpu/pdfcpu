@@ -865,70 +865,43 @@ func validateNeedsRendering(xRefTable *types.XRefTable, required bool, sinceVers
 	return
 }
 
-func foo(xRefTable *types.XRefTable, rootDict *types.PDFDict) (err error) {
-
-	type v struct {
-		validate     func(xRefTable *types.XRefTable, required bool, sinceVersion types.PDFVersion) (err error)
-		required     bool
-		sinceVersion types.PDFVersion
-	}
-
-	// valFunctions := []v{
-	// 	{validateNeedsRendering, OPTIONAL, types.V13},
-	// 	{validateCollection, REQUIRED, types.V13},
-	// }
-
-	for _, f := range []v{
-		{validateNeedsRendering, OPTIONAL, types.V13},
-		{validateCollection, REQUIRED, types.V13},
-	} {
-
-		err = f.validate(xRefTable, f.required, f.sinceVersion)
-		if err != nil {
-			return
-		}
-	}
-
-	return
-}
-
 func validateRootObject(xRefTable *types.XRefTable) (err error) {
 
 	logInfoValidate.Println("*** validateRootObject begin ***")
 
 	// => 7.7.2 Document Catalog
 
-	// Entry	   	       opt	since		type			info
-	//------------------------------------------------------------------------------------
-	// Type			        n				string			"Catalog"
-	// Version		        y	1.4			name			overrules header version if later
-	// Extensions	        y	ISO 32000	dict			=> 7.12 Extensions Dictionary
-	// Pages		        n	-			(dict)			=> 7.7.3 Page Tree
-	// PageLabels	        y	1.3			number tree		=> 7.9.7 Number Trees, 12.4.2 Page Labels
-	// Names		        y	1.2			dict			=> 7.7.4 Name Dictionary
-	// Dests	    	    y	only 1.1	(dict)			=> 12.3.2.3 Named Destinations
-	// ViewerPreferences    y	1.2			dict			=> 12.2 Viewer Preferences
-	// PageLayout	        y	-			name			/SinglePage, /OneColumn etc.
-	// PageMode		        y	-			name			/UseNone, /FullScreen etc.
-	// Outlines		        y	-			(dict)			=> 12.3.3 Document Outline
-	// Threads		        y	1.1			(array)			=> 12.4.3 Articles
-	// OpenAction	        y	1.1			array or dict	=> 12.3.2 Destinations, 12.6 Actions
-	// AA			        y	1.4			dict			=> 12.6.3 Trigger Events
-	// URI			        y	1.1			dict			=> 12.6.4.7 URI Actions
-	// AcroForm		        y	1.2			dict			=> 12.7.2 Interactive Form Dictionary
-	// Metadata		        y	1.4			(stream)		=> 14.3.2 Metadata Streams
-	// StructTreeRoot 	    y 	1.3			dict			=> 14.7.2 Structure Hierarchy
-	// Markinfo		        y	1.4			dict			=> 14.7 Logical Structure
-	// Lang			        y	1.4			string
-	// SpiderInfo	        y	1.3			dict			=> 14.10.2 Web Capture Information Dictionary
-	// OutputIntents 	    y	1.4			array			=> 14.11.5 Output Intents
-	// PieceInfo	        y	1.4			dict			=> 14.5 Page-Piece Dictionaries
-	// OCProperties	        y	1.5			dict			=> 8.11.4 Configuring Optional Content
-	// Perms		        y	1.5			dict			=> 12.8.4 Permissions
-	// Legal		        y	1.5			dict			=> 12.8.5 Legal Content Attestations
-	// Requirements	        y	1.7			array			=> 12.10 Document Requirements
-	// Collection	        y	1.7			dict			=> 12.3.5 Collections
-	// NeedsRendering 	    y	1.7			boolean			=> XML Forms Architecture (XFA) Spec.
+	// Entry               opt  since       type            info
+	// ------------------------------------------------------------------------------------
+	// Type                 n               string          "Catalog"
+	// Version              y   1.4         name            overrules header version if later
+	// Extensions           y   ISO 32000   dict            => 7.12 Extensions Dictionary
+	// Pages                n   -           (dict)          => 7.7.3 Page Tree
+	// PageLabels           y   1.3         number tree     => 7.9.7 Number Trees, 12.4.2 Page Labels
+	// Names                y   1.2         dict            => 7.7.4 Name Dictionary
+	// Dests                y   only 1.1    (dict)          => 12.3.2.3 Named Destinations
+	// ViewerPreferences    y   1.2         dict            => 12.2 Viewer Preferences
+	// PageLayout           y   -           name            /SinglePage, /OneColumn etc.
+	// PageMode             y   -           name            /UseNone, /FullScreen etc.
+	// Outlines             y   -           (dict)          => 12.3.3 Document Outline
+	// Threads              y   1.1         (array)         => 12.4.3 Articles
+	// OpenAction           y   1.1         array or dict   => 12.3.2 Destinations, 12.6 Actions
+	// AA                   y   1.4         dict            => 12.6.3 Trigger Events
+	// URI                  y   1.1         dict            => 12.6.4.7 URI Actions
+	// AcroForm             y   1.2         dict            => 12.7.2 Interactive Form Dictionary
+	// Metadata             y   1.4         (stream)        => 14.3.2 Metadata Streams
+	// StructTreeRoot       y   1.3         dict            => 14.7.2 Structure Hierarchy
+	// Markinfo             y   1.4         dict            => 14.7 Logical Structure
+	// Lang                 y   1.4         string
+	// SpiderInfo           y   1.3         dict            => 14.10.2 Web Capture Information Dictionary
+	// OutputIntents        y   1.4         array           => 14.11.5 Output Intents
+	// PieceInfo            y   1.4         dict            => 14.5 Page-Piece Dictionaries
+	// OCProperties         y   1.5         dict            => 8.11.4 Configuring Optional Content
+	// Perms                y   1.5         dict            => 12.8.4 Permissions
+	// Legal                y   1.5         dict            => 12.8.5 Legal Content Attestations
+	// Requirements         y   1.7         array           => 12.10 Document Requirements
+	// Collection           y   1.7         dict            => 12.3.5 Collections
+	// NeedsRendering       y   1.7         boolean         => XML Forms Architecture (XFA) Spec.
 
 	rootDict, err := xRefTable.Catalog()
 	if err != nil {

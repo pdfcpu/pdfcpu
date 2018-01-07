@@ -253,13 +253,11 @@ func validateAppearanceCharacteristicsDictEntry(xRefTable *types.XRefTable, dict
 	return
 }
 
-func validateAnnotationDictText(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateAnnotationDictText(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) (err error) {
 
 	// see 12.5.6.4
 
 	logInfoValidate.Println("*** validateAnnotationDictText begin ***")
-
-	dictName := "annotText"
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
@@ -358,13 +356,11 @@ func validateURIActionDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict,
 	return
 }
 
-func validateAnnotationDictLink(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateAnnotationDictLink(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) (err error) {
 
 	// see 12.5.6.5
 
 	logInfoValidate.Println("*** validateAnnotationDictLink begin ***")
-
-	dictName := "annotLink"
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
@@ -503,13 +499,11 @@ func validateAnnotationDictFreeTextPart2(xRefTable *types.XRefTable, dict *types
 	return
 }
 
-func validateAnnotationDictFreeText(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateAnnotationDictFreeText(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) (err error) {
 
 	// see 12.5.6.6
 
 	logInfoValidate.Println("*** validateAnnotationDictFreeText begin ***")
-
-	dictName := "annotFreeText"
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
@@ -549,13 +543,11 @@ func validateEntryMeasure(xRefTable *types.XRefTable, dict *types.PDFDict, dictN
 
 func validateCP(s string) bool { return s == "Inline" || s == "Top" }
 
-func validateAnnotationDictLine(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateAnnotationDictLine(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) (err error) {
 
 	// see 12.5.6.7
 
 	logInfoValidate.Println("*** validateAnnotationDictLine begin ***")
-
-	dictName := "annotLine"
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
@@ -644,13 +636,11 @@ func validateAnnotationDictLine(xRefTable *types.XRefTable, dict *types.PDFDict,
 	return
 }
 
-func validateAnnotationDictCircleOrSquare(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateAnnotationDictCircleOrSquare(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) (err error) {
 
 	// see 12.5.6.8
 
 	logInfoValidate.Println("*** validateAnnotationDictCircleOrSquare begin ***")
-
-	dictName := "annotCircleOrSquare"
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
@@ -804,13 +794,11 @@ func validateTextMarkupAnnotation(xRefTable *types.XRefTable, dict *types.PDFDic
 	return
 }
 
-func validateAnnotationDictStamp(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateAnnotationDictStamp(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) (err error) {
 
 	// see 12.5.6.12
 
 	logInfoValidate.Println("*** validateAnnotationDictStamp begin ***")
-
-	dictName := "annotStamp"
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
@@ -829,13 +817,11 @@ func validateAnnotationDictStamp(xRefTable *types.XRefTable, dict *types.PDFDict
 	return
 }
 
-func validateAnnotationDictCaret(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateAnnotationDictCaret(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) (err error) {
 
 	// see 12.5.6.11
 
 	logInfoValidate.Println("*** validateAnnotationDictCaret begin ***")
-
-	dictName := "annotCaret"
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
@@ -860,13 +846,11 @@ func validateAnnotationDictCaret(xRefTable *types.XRefTable, dict *types.PDFDict
 	return
 }
 
-func validateAnnotationDictInk(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateAnnotationDictInk(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) (err error) {
 
 	// see 12.5.6.13
 
 	logInfoValidate.Println("*** validateAnnotationDictInk begin ***")
-
-	dictName := "annotInk"
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
@@ -891,13 +875,11 @@ func validateAnnotationDictInk(xRefTable *types.XRefTable, dict *types.PDFDict, 
 	return
 }
 
-func validateAnnotationDictPopup(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateAnnotationDictPopup(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) (err error) {
 
 	// see 12.5.6.14
 
 	logInfoValidate.Println("*** validateAnnotationDictPopup begin ***")
-
-	dictName := "annotPopup"
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
@@ -932,13 +914,11 @@ func validateAnnotationDictPopup(xRefTable *types.XRefTable, dict *types.PDFDict
 	return
 }
 
-func validateAnnotationDictFileAttachment(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateAnnotationDictFileAttachment(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) (err error) {
 
 	// see 12.5.6.15
 
 	logInfoValidate.Println("*** validateAnnotationDictFileAttachment begin ***")
-
-	dictName := "fileAttachment"
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
@@ -963,13 +943,11 @@ func validateAnnotationDictFileAttachment(xRefTable *types.XRefTable, dict *type
 	return
 }
 
-func validateAnnotationDictSound(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateAnnotationDictSound(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) (err error) {
 
 	// see 12.5.6.16
 
 	logInfoValidate.Println("*** validateAnnotationDictSound begin ***")
-
-	dictName := "annotSound"
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
@@ -1029,13 +1007,11 @@ func validateMovieDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err err
 	return
 }
 
-func validateAnnotationDictMovie(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateAnnotationDictMovie(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) (err error) {
 
 	// see 12.5.6.17
 
 	logInfoValidate.Println("*** validateAnnotationDictMovie begin ***")
-
-	dictName := "annotMovie"
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
@@ -1091,13 +1067,11 @@ func validateAnnotationDictMovie(xRefTable *types.XRefTable, dict *types.PDFDict
 	return
 }
 
-func validateAnnotationDictWidget(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateAnnotationDictWidget(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) (err error) {
 
 	// see 12.5.6.19
 
 	logInfoValidate.Printf("*** validateAnnotationDictWidget begin ***")
-
-	dictName := "widgetAnnotDict"
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
@@ -1159,13 +1133,11 @@ func validateAnnotationDictWidget(xRefTable *types.XRefTable, dict *types.PDFDic
 	return
 }
 
-func validateAnnotationDictScreen(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateAnnotationDictScreen(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) (err error) {
 
 	// see 12.5.6.18
 
 	logInfoValidate.Println("*** validateAnnotationDictScreen begin ***")
-
-	dictName := "annotScreen"
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
@@ -1209,13 +1181,11 @@ func validateAnnotationDictScreen(xRefTable *types.XRefTable, dict *types.PDFDic
 	return
 }
 
-func validateAnnotationDictPrinterMark(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateAnnotationDictPrinterMark(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) (err error) {
 
 	// see 12.5.6.20
 
 	logInfoValidate.Println("*** validateAnnotationDictPrinterMark begin ***")
-
-	dictName := "annotPrinterMark"
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
@@ -1239,13 +1209,11 @@ func validateAnnotationDictPrinterMark(xRefTable *types.XRefTable, dict *types.P
 	return
 }
 
-func validateAnnotationDictTrapNet(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateAnnotationDictTrapNet(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) (err error) {
 
 	// see 12.5.6.21
 
 	logInfoValidate.Println("*** validateAnnotationDictTrapNet begin ***")
-
-	dictName := "annotTrapNet"
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
@@ -1317,13 +1285,11 @@ func validateAnnotationDictTrapNet(xRefTable *types.XRefTable, dict *types.PDFDi
 	return
 }
 
-func validateAnnotationDictWatermark(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateAnnotationDictWatermark(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) (err error) {
 
 	// see 12.5.6.22
 
 	logInfoValidate.Println("*** validateAnnotationDictWatermark begin ***")
-
-	dictName := "annotWatermark"
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
@@ -1374,13 +1340,11 @@ func validateAnnotationDictWatermark(xRefTable *types.XRefTable, dict *types.PDF
 	return
 }
 
-func validateAnnotationDict3D(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateAnnotationDict3D(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) (err error) {
 
 	// see 13.6.2
 
 	logInfoValidate.Println("*** validateAnnotationDict3D begin ***")
-
-	dictName := "annot3D"
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
@@ -1454,13 +1418,11 @@ func validateEntryIC(xRefTable *types.XRefTable, dict *types.PDFDict, dictName s
 	return
 }
 
-func validateAnnotationDictRedact(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateAnnotationDictRedact(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) (err error) {
 
 	// see 12.5.6.23
 
 	logInfoValidate.Println("*** validateAnnotationDictRedact begin ***")
-
-	dictName := "annotRedact"
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
@@ -1699,130 +1661,45 @@ func validateAnnotationDictGeneral(xRefTable *types.XRefTable, dict *types.PDFDi
 	return
 }
 
-func validateAnnotationDictConcretePart1(xRefTable *types.XRefTable, dict *types.PDFDict, subtype types.PDFName) (ok bool, err error) {
-
-	ok = true
-
-	switch subtype {
-
-	case "Text":
-		err = validateAnnotationDictText(xRefTable, dict, types.V10)
-
-	case "Link":
-		err = validateAnnotationDictLink(xRefTable, dict, types.V10)
-
-	case "FreeText":
-		err = validateAnnotationDictFreeText(xRefTable, dict, types.V13)
-
-	case "Line":
-		err = validateAnnotationDictLine(xRefTable, dict, types.V13)
-
-	case "Square", "Circle":
-		err = validateAnnotationDictCircleOrSquare(xRefTable, dict, types.V13)
-
-	case "Polygon":
-		err = validateAnnotationDictPolyLine(xRefTable, dict, "annotPolygon", types.V15)
-
-	case "PolyLine":
-		err = validateAnnotationDictPolyLine(xRefTable, dict, "annotPolyLine", types.V15)
-
-	case "Highlight":
-		err = validateTextMarkupAnnotation(xRefTable, dict, "annotHighlight", types.V13)
-
-	case "Underline":
-		err = validateTextMarkupAnnotation(xRefTable, dict, "annotUnderline", types.V13)
-
-	case "Squiggly":
-		err = validateTextMarkupAnnotation(xRefTable, dict, "annotSquiggly", types.V14)
-
-	case "StrikeOut":
-		err = validateTextMarkupAnnotation(xRefTable, dict, "annotStrikeout", types.V13)
-
-	case "Stamp":
-		err = validateAnnotationDictStamp(xRefTable, dict, types.V13)
-
-	default:
-		ok = false
-
-	}
-
-	return
-}
-
-func validateAnnotationDictConcretePart2(xRefTable *types.XRefTable, dict *types.PDFDict, subtype types.PDFName) (ok bool, err error) {
-
-	ok = true
-
-	switch subtype {
-
-	case "Caret":
-		err = validateAnnotationDictCaret(xRefTable, dict, types.V15)
-
-	case "Ink":
-		err = validateAnnotationDictInk(xRefTable, dict, types.V13)
-
-	case "Popup":
-		err = validateAnnotationDictPopup(xRefTable, dict, types.V13)
-
-	case "FileAttachment":
-		err = validateAnnotationDictFileAttachment(xRefTable, dict, types.V13)
-
-	case "Sound":
-		err = validateAnnotationDictSound(xRefTable, dict, types.V12)
-
-	case "Movie":
-		err = validateAnnotationDictMovie(xRefTable, dict, types.V12)
-
-	case "Widget":
-		err = validateAnnotationDictWidget(xRefTable, dict, types.V12)
-
-	case "Screen":
-		err = validateAnnotationDictScreen(xRefTable, dict, types.V15)
-
-	case "PrinterMark":
-		err = validateAnnotationDictPrinterMark(xRefTable, dict, types.V14)
-
-	case "TrapNet":
-		err = validateAnnotationDictTrapNet(xRefTable, dict, types.V13)
-
-	case "Watermark":
-		err = validateAnnotationDictWatermark(xRefTable, dict, types.V16)
-
-	case "3D":
-		err = validateAnnotationDict3D(xRefTable, dict, types.V16)
-
-	case "Redact":
-		err = validateAnnotationDictRedact(xRefTable, dict, types.V17)
-
-	default:
-		ok = false
-
-	}
-
-	return
-}
-
 func validateAnnotationDictConcrete(xRefTable *types.XRefTable, dict *types.PDFDict, subtype types.PDFName) (err error) {
 
-	var ok bool
-
-	ok, err = validateAnnotationDictConcretePart1(xRefTable, dict, subtype)
-	if err != nil {
-		return
-	}
-
-	if !ok {
-		ok, err = validateAnnotationDictConcretePart2(xRefTable, dict, subtype)
-		if err != nil {
-			return
+	for k, v := range map[string]struct {
+		validate     func(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) (err error)
+		sinceVersion types.PDFVersion
+	}{
+		"Text":           {validateAnnotationDictText, types.V10},
+		"Link":           {validateAnnotationDictLink, types.V10},
+		"FreeText":       {validateAnnotationDictFreeText, types.V13},
+		"Line":           {validateAnnotationDictLine, types.V13},
+		"Polygon":        {validateAnnotationDictPolyLine, types.V15},
+		"PolyLine":       {validateAnnotationDictPolyLine, types.V15},
+		"Highlight":      {validateTextMarkupAnnotation, types.V13},
+		"Underline":      {validateTextMarkupAnnotation, types.V13},
+		"Squiggly":       {validateTextMarkupAnnotation, types.V14},
+		"StrikeOut":      {validateTextMarkupAnnotation, types.V13},
+		"Square":         {validateAnnotationDictCircleOrSquare, types.V13},
+		"Circle":         {validateAnnotationDictCircleOrSquare, types.V13},
+		"Stamp":          {validateAnnotationDictStamp, types.V13},
+		"Caret":          {validateAnnotationDictCaret, types.V15},
+		"Ink":            {validateAnnotationDictInk, types.V13},
+		"Popup":          {validateAnnotationDictPopup, types.V13},
+		"FileAttachment": {validateAnnotationDictFileAttachment, types.V13},
+		"Sound":          {validateAnnotationDictSound, types.V12},
+		"Movie":          {validateAnnotationDictMovie, types.V12},
+		"Widget":         {validateAnnotationDictWidget, types.V12},
+		"Screen":         {validateAnnotationDictScreen, types.V15},
+		"PrinterMark":    {validateAnnotationDictPrinterMark, types.V14},
+		"TrapNet":        {validateAnnotationDictTrapNet, types.V13},
+		"Watermark":      {validateAnnotationDictWatermark, types.V16},
+		"3D":             {validateAnnotationDict3D, types.V16},
+		"Redact":         {validateAnnotationDictRedact, types.V17},
+	} {
+		if subtype.Value() == k {
+			return v.validate(xRefTable, dict, k, v.sinceVersion)
 		}
 	}
 
-	if !ok {
-		err = errors.Errorf("validateAnnotationDictConcrete: unsupported annotation subtype:%s\n", subtype)
-	}
-
-	return
+	return errors.Errorf("validateAnnotationDictConcrete: unsupported annotation subtype:%s\n", subtype)
 }
 
 func validateAnnotationDictSpecial(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) (err error) {

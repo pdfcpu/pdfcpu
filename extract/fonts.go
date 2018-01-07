@@ -53,7 +53,7 @@ func sortFOKeys(m map[int]*types.FontObject) (j []int) {
 }
 
 // Stupid dump of the font file for this font object.
-// Right now only for True Type fonts.
+// Right now only True Type fonts are supported.
 func writeFontObject(ctx *types.PDFContext, objNumber int, fontFileIndRefs map[types.PDFIndirectRef]bool) (err error) {
 
 	fontObject := ctx.Optimize.FontObjects[objNumber]
@@ -124,20 +124,10 @@ func writeFonts(ctx *types.PDFContext, selectedPages types.IntSet) (err error) {
 		for p, v := range selectedPages {
 
 			if v {
-
 				logInfoExtract.Printf("writeFonts: writing fonts for page %d\n", p)
-
-				objs := ctx.Optimize.PageFonts[p-1]
-				if len(objs) == 0 {
-					// This page has no fonts.
-					logErrorExtract.Printf("writeFonts: Page %d does not have fonts to extract\n", p)
-					continue
-				}
-
-				for i := range objs {
+				for i := range ctx.Optimize.PageFonts[p-1] {
 					writeFontObject(ctx, i, fontFileIndRefs)
 				}
-
 			}
 
 		}

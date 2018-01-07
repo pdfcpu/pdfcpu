@@ -44,7 +44,7 @@ func (nameTree PDFNameTree) namesArray(xRefTable *XRefTable) (arr *PDFArray, err
 	return
 }
 
-func limits(arr *PDFArray) (min, max string, err error) {
+func (nameTree PDFNameTree) limits(arr *PDFArray) (min, max string, err error) {
 
 	if len(*arr) != 2 {
 		err = errors.Errorf("limits: corrupt \"Limits\" entry in %v\n", *arr)
@@ -93,7 +93,7 @@ func (nameTree PDFNameTree) limitsArray(xRefTable *XRefTable) (arr *PDFArray, mi
 		return
 	}
 
-	min, max, err = limits(arr)
+	min, max, err = nameTree.limits(arr)
 
 	return
 }
@@ -514,7 +514,7 @@ func (nameTree *PDFNameTree) removeKid(xRefTable *XRefTable, dict *PDFDict, arr 
 	return
 }
 
-func checkLimits(xRefTable *XRefTable, dict *PDFDict, key string) (skip, ok bool, err error) {
+func (nameTree *PDFNameTree) checkLimits(xRefTable *XRefTable, dict *PDFDict, key string) (skip, ok bool, err error) {
 
 	var o interface{}
 	var found bool
@@ -532,7 +532,7 @@ func checkLimits(xRefTable *XRefTable, dict *PDFDict, key string) (skip, ok bool
 	}
 
 	var minKey, maxKey string
-	minKey, maxKey, err = limits(arr)
+	minKey, maxKey, err = nameTree.limits(arr)
 	if err != nil {
 		return
 	}
@@ -580,7 +580,7 @@ func (nameTree *PDFNameTree) RemoveKeyValuePair(xRefTable *XRefTable, root bool,
 
 		// Check Limits array if present (intermediate nodes).
 		var skip bool
-		skip, ok, err = checkLimits(xRefTable, dict, key)
+		skip, ok, err = nameTree.checkLimits(xRefTable, dict, key)
 		if err != nil || skip {
 			return
 		}
@@ -660,55 +660,4 @@ func (nameTree *PDFNameTree) RemoveKeyValuePair(xRefTable *XRefTable, root bool,
 	logInfoTypes.Println("RemoveKeyValuePair end: leaf")
 
 	return
-}
-
-// LocateNameTree locates/ensures a specific name tree.
-func LocateNameTree(xRefTable *XRefTable, name string, ensure bool) (*PDFNameTree, error) {
-
-	d, err := xRefTable.DereferenceDict(*xRefTable.Root)
-	if err != nil {
-		return nil, err
-	}
-
-	obj, found := d.Find("Names")
-	if !found {
-		if !ensure {
-			return nil, nil
-		}
-		dict := NewPDFDict()
-		objNumber, err := xRefTable.InsertObject(dict)
-		if err != nil {
-			return nil, err
-		}
-		d.Insert("Names", NewPDFIndirectRef(objNumber, 0))
-		d = &dict
-	} else {
-		d, err = xRefTable.DereferenceDict(obj)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	obj, found = d.Find("EmbeddedFiles")
-	if !found {
-		if !ensure {
-			return nil, nil
-		}
-		dict := NewPDFDict()
-		dict.Insert("Names", PDFArray{})
-		objNumber, err := xRefTable.InsertObject(dict)
-		if err != nil {
-			return nil, err
-		}
-		indRef := NewPDFIndirectRef(objNumber, 0)
-		d.Insert("EmbeddedFiles", indRef)
-		return NewNameTree(indRef), nil
-	}
-
-	indRef, ok := obj.(PDFIndirectRef)
-	if !ok {
-		return nil, errors.New("LocateNameTree: name tree must be indirect ref")
-	}
-
-	return NewNameTree(indRef), nil
 }

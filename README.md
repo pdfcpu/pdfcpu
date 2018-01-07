@@ -56,7 +56,7 @@ Reducing the size of large PDF files for mass mailings by optimization to the ba
     pdfcpu attach remove [-verbose] [-upw userpw] [-opw ownerpw] inFile [file...]
     pdfcpu attach extract [-verbose] [-upw userpw] [-opw ownerpw] inFile outDir [file...]
 
-    pdfcpu encrypt [-verbose] [-upw userpw] [-opw ownerpw] inFile [outFile]
+    pdfcpu encrypt [-verbose] [-mode rc4|aes] [-key 40|128] [-upw userpw] [-opw ownerpw] inFile [outFile]
     pdfcpu decrypt [-verbose] [-upw userpw] [-opw ownerpw] inFile [outFile]
     pdfcpu changeupw [-verbose] [-opw ownerpw] inFile upwOld upwNew
     pdfcpu changeopw [-verbose] [-upw userpw] inFile opwOld opwNew
@@ -67,13 +67,14 @@ Reducing the size of large PDF files for mass mailings by optimization to the ba
 
 ## Status
 
-Version: 0.1.4
+Version: 0.1.5
 
-* Support for embedded file attachments
-  * **Attach List** shows a list of all embedded files.
-  * **Attach Extract** exports embedded files.
-  * **Attach Add** embeds any number of files.
-  * **Attach Remove** deletes embedded files.
+* **Encrypt**
+  * **-mode rc4|aes** (default=aes) specifies used encryption algorithm.
+  * **-key 40|128** (default=128) specifies keylength in bits.
+
+* **Decrypt**
+  * works now for both (user/owner) passwords.
 
 ## To Do
 

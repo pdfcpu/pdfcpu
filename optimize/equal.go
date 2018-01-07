@@ -103,12 +103,12 @@ func equalPDFStreamDicts(sd1, sd2 *types.PDFStreamDict, ctx *types.PDFContext) (
 		return false, nil
 	}
 
-	encodedStream1, err := read.EncodedStreamContent(ctx, sd1)
+	encodedStream1, err := read.LoadEncodedStreamContent(ctx, sd1)
 	if err != nil {
 		return false, err
 	}
 
-	encodedStream2, err := read.EncodedStreamContent(ctx, sd2)
+	encodedStream2, err := read.LoadEncodedStreamContent(ctx, sd2)
 	if err != nil {
 		return false, err
 	}

@@ -31,10 +31,9 @@ func writeContent(ctx *types.PDFContext, streamDict *types.PDFStreamDict, pageNu
 	}
 
 	logInfoExtract.Printf("writing to %s\n", fileName)
-	// Dump decoded chunk to file.
-	err = ioutil.WriteFile(fileName, streamDict.Content, os.ModePerm)
 
-	return
+	// Dump decoded chunk to file.
+	return ioutil.WriteFile(fileName, streamDict.Content, os.ModePerm)
 }
 
 // Process the content of a page which is a stream dict or an array of stream dicts.
@@ -43,11 +42,7 @@ func processPageDict(ctx *types.PDFContext, objNumber, genNumber int, dict *type
 	logDebugExtract.Printf("processPageDict begin: page=%d\n", pageNumber)
 
 	obj, found := dict.Find("Contents")
-	if !found {
-		return
-	}
-
-	if obj == nil {
+	if !found || obj == nil {
 		return
 	}
 
@@ -65,15 +60,10 @@ func processPageDict(ctx *types.PDFContext, objNumber, genNumber int, dict *type
 		}
 
 	case types.PDFArray:
-
 		// process array of content stream dicts.
-
 		for i, obj := range obj {
 
-			streamDict, err := ctx.DereferenceStreamDict(obj)
-			if err != nil {
-				return err
-			}
+			streamDict, _ := ctx.DereferenceStreamDict(obj)
 
 			err = writeContent(ctx, streamDict, pageNumber, i)
 			if err != nil {
@@ -82,9 +72,6 @@ func processPageDict(ctx *types.PDFContext, objNumber, genNumber int, dict *type
 
 		}
 
-	default:
-		err = errors.Errorf("writePageContents: page content must be stream dict or array")
-		return
 	}
 
 	return
@@ -99,16 +86,10 @@ func processPagesDict(ctx *types.PDFContext, indRef *types.PDFIndirectRef, pageC
 
 	logDebugExtract.Printf("processPagesDict begin: pageCount=%d\n", *pageCount)
 
-	dict, err := ctx.DereferenceDict(*indRef)
-	if err != nil {
-		return
-	}
+	dict, _ := ctx.DereferenceDict(*indRef)
 
 	// Iterate over page tree.
 	kidsArray := dict.PDFArrayEntry("Kids")
-	if kidsArray == nil {
-		return errors.New("writePagesDict: corrupt \"Kids\" entry")
-	}
 
 	for _, obj := range *kidsArray {
 
@@ -117,50 +98,32 @@ func processPagesDict(ctx *types.PDFContext, indRef *types.PDFIndirectRef, pageC
 		}
 
 		// Dereference next page node dict.
-		indRef, ok := obj.(types.PDFIndirectRef)
-		if !ok {
-			return errors.New("writePagesDict: missing indirect reference for kid")
-		}
-
+		indRef, _ := obj.(types.PDFIndirectRef)
 		objNumber := int(indRef.ObjectNumber)
 		genNumber := int(indRef.GenerationNumber)
 
-		pageNodeDict, err := ctx.DereferenceDict(indRef)
-		if err != nil {
-			return errors.New("writePagesDict: cannot dereference pageNodeDict")
-		}
-
+		pageNodeDict, _ := ctx.DereferenceDict(indRef)
 		if pageNodeDict == nil {
-			return errors.New("validatePagesDict: pageNodeDict is null")
+			return errors.New("processPagesDict: pageNodeDict is null")
 		}
 
-		dictType := pageNodeDict.Type()
-		if dictType == nil {
-			return errors.New("writePagesDict: missing pageNodeDict type")
-		}
-
-		switch *dictType {
+		switch *pageNodeDict.Type() {
 
 		case "Pages":
 			// Recurse over pagetree
 			err = processPagesDict(ctx, &indRef, pageCount, selectedPages)
-			if err != nil {
-				return err
-			}
 
 		case "Page":
 			*pageCount++
 			// extractContent of a page if no pages selected or if page is selected.
 			if needsPage(selectedPages, *pageCount) {
 				err = processPageDict(ctx, objNumber, genNumber, pageNodeDict, *pageCount)
-				if err != nil {
-					return err
-				}
 			}
 
-		default:
-			return errors.Errorf("writePagesDict: Unexpected dict type: %s", *dictType)
+		}
 
+		if err != nil {
+			return err
 		}
 
 	}
@@ -177,10 +140,7 @@ func Content(ctx *types.PDFContext, selectedPages types.IntSet) (err error) {
 	logDebugExtract.Printf("Content begin: dirOut=%s\n", ctx.Write.DirName)
 
 	// Get an indirect reference to the root page dict.
-	indRefRootPageDict, err := ctx.Pages()
-	if err != nil {
-		return err
-	}
+	indRefRootPageDict, _ := ctx.Pages()
 
 	pageCount := 0
 	err = processPagesDict(ctx, indRefRootPageDict, &pageCount, selectedPages)

@@ -22,7 +22,10 @@ func writePageEntry(ctx *types.PDFContext, dict *types.PDFDict, dictName, entryN
 	return
 }
 
-func writePageDict(ctx *types.PDFContext, objNumber, genNumber int, pageDict *types.PDFDict) (err error) {
+func writePageDict(ctx *types.PDFContext, indRef *types.PDFIndirectRef, pageDict *types.PDFDict) (err error) {
+
+	objNumber := indRef.ObjectNumber.Value()
+	genNumber := indRef.GenerationNumber.Value()
 
 	logInfoWriter.Printf("writePageDict: object #%d gets writeoffset: %d\n", objNumber, ctx.Write.Offset)
 
@@ -44,144 +47,43 @@ func writePageDict(ctx *types.PDFContext, objNumber, genNumber int, pageDict *ty
 		return errors.New("writePageDict: missing parent")
 	}
 
-	err = writePageEntry(ctx, pageDict, dictName, "Contents", types.PageContents)
-	if err != nil {
-		return err
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "Resources", types.PageResources)
-	if err != nil {
-		return err
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "MediaBox", types.PageMediaBox)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "CropBox", types.PageCropBox)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "BleedBox", types.PageBleedBox)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "TrimBox", types.PageTrimBox)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "ArtBox", types.PageArtBox)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "BoxColorInfo", types.PageBoxColorInfo)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "PieceInfo", types.PagePieceInfo)
-	if err != nil {
-		return err
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "LastModified", types.PageLastModified)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "Rotate", types.PageRotate)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "Group", types.PageGroup)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "Annots", types.PageAnnots)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "Thumb", types.PageThumb)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "B", types.PageB)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "Dur", types.PageDur)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "Trans", types.PageTrans)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "AA", types.PageAA)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "Metadata", types.PageMetadata)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "StructParents", types.PageStructParents)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "ID", types.PageID)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "PZ", types.PagePZ)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "SeparationInfo", types.PageSeparationInfo)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "Tabs", types.PageTabs)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "TemplateInstantiated", types.PageTemplateInstantiated)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "PresSteps", types.PagePresSteps)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "UserUnit", types.PageUserUnit)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, pageDict, dictName, "VP", types.PageVP)
-	if err != nil {
-		return
+	for _, e := range []struct {
+		entryName string
+		statsAttr int
+	}{
+		{"Contents", types.PageContents},
+		{"Resources", types.PageResources},
+		{"MediaBox", types.PageMediaBox},
+		{"CropBox", types.PageCropBox},
+		{"BleedBox", types.PageBleedBox},
+		{"TrimBox", types.PageTrimBox},
+		{"ArtBox", types.PageArtBox},
+		{"BoxColorInfo", types.PageBoxColorInfo},
+		{"PieceInfo", types.PagePieceInfo},
+		{"LastModified", types.PageLastModified},
+		{"Rotate", types.PageRotate},
+		{"Group", types.PageGroup},
+		{"Annots", types.PageAnnots},
+		{"Thumb", types.PageThumb},
+		{"B", types.PageB},
+		{"Dur", types.PageDur},
+		{"Trans", types.PageTrans},
+		{"AA", types.PageAA},
+		{"Metadata", types.PageMetadata},
+		{"StructParents", types.PageStructParents},
+		{"ID", types.PageID},
+		{"PZ", types.PagePZ},
+		{"SeparationInfo", types.PageSeparationInfo},
+		{"Tabs", types.PageTabs},
+		{"TemplateInstantiated", types.PageTemplateInstantiated},
+		{"PresSteps", types.PagePresSteps},
+		{"UserUnit", types.PageUserUnit},
+		{"VP", types.PageVP},
+	} {
+		err = writePageEntry(ctx, pageDict, dictName, e.entryName, e.statsAttr)
+		if err != nil {
+			return
+		}
 	}
 
 	logInfoWriter.Printf("*** writePageDict end: obj#%d offset=%d ***\n", objNumber, ctx.Write.Offset)
@@ -232,9 +134,9 @@ func locateKidForPageNumber(ctx *types.PDFContext, kidsArray *types.PDFArray, pa
 
 			if *pageCount+pCount < ctx.Write.ExtractPageNr {
 				*pageCount += pCount
-				logInfoWriter.Printf("locateKidForPageNumber: pageTree is no match")
+				logInfoWriter.Printf("locateKidForPageNumber: pageTree is no match: %d\n", ctx.Write.ExtractPageNr)
 			} else {
-				logInfoWriter.Printf("locateKidForPageNumber: pageTree is a match")
+				logInfoWriter.Printf("locateKidForPageNumber: pageTree is a match: %d\n", ctx.Write.ExtractPageNr)
 				return obj, nil
 			}
 
@@ -256,7 +158,110 @@ func locateKidForPageNumber(ctx *types.PDFContext, kidsArray *types.PDFArray, pa
 	return nil, errors.Errorf("locateKidForPageNumber: Unable to locate kid: pageCount:%d extractPageNr:%d\n", *pageCount, pageNumber)
 }
 
-func writePagesDict(ctx *types.PDFContext, indRef types.PDFIndirectRef, pageCount int) (err error) {
+func pageNodeDict(ctx *types.PDFContext, o interface{}) (d *types.PDFDict, indRef *types.PDFIndirectRef, err error) {
+
+	if o == nil {
+		logDebugWriter.Println("pageNodeDict: is nil")
+		return
+	}
+
+	// Dereference next page node dict.
+	iRef, ok := o.(types.PDFIndirectRef)
+	if !ok {
+		err = errors.New("pageNodeDict: missing indirect reference")
+		return
+	}
+	logInfoWriter.Printf("pageNodeDict: PageNode: %s\n", iRef)
+
+	objNumber := int(iRef.ObjectNumber)
+	//genNumber := int(indRef.GenerationNumber)
+
+	if ctx.Write.HasWriteOffset(objNumber) {
+		logInfoWriter.Printf("pageNodeDict: object #%d already written.\n", objNumber)
+		return
+	}
+
+	d, err = ctx.DereferenceDict(iRef)
+	if err != nil {
+		err = errors.New("pageNodeDict: cannot dereference, pageNodeDict")
+		return
+	}
+	if d == nil {
+		err = errors.New("pageNodeDict: pageNodeDict is null")
+		return
+	}
+
+	dictType := d.Type()
+	if dictType == nil {
+		err = errors.New("pageNodeDict: missing pageNodeDict type")
+		return
+	}
+
+	indRef = &iRef
+
+	return
+}
+
+func prepareSinglePageWrite(ctx *types.PDFContext, dict *types.PDFDict, kids *types.PDFArray, pageCount *int) error {
+
+	kid, err := locateKidForPageNumber(ctx, kids, pageCount, ctx.Write.ExtractPageNr)
+	if err != nil {
+		return err
+	}
+
+	if *pageCount == ctx.Write.ExtractPageNr {
+		// The identified kid is the page node for the page we are looking for.
+		logInfoWriter.Printf("prepareSinglePageWrite: found page to be extracted, pageCount=%d, extractPageNr=%d\n", *pageCount, ctx.Write.ExtractPageNr)
+	} else {
+		// The identified kid is the page tree containing the page we are looking for.
+		logInfoWriter.Printf("prepareSinglePageWrite: pageCount=%d, extractPageNr=%d\n", *pageCount, ctx.Write.ExtractPageNr)
+	}
+
+	// Modify KidsArray to hold a single entry for this kid
+	dict.Update("Kids", types.PDFArray{kid})
+
+	// Set Count =1
+	dict.Update("Count", types.PDFInteger(1))
+
+	return nil
+}
+
+func writeKids(ctx *types.PDFContext, arr *types.PDFArray, pageCount int) error {
+
+	for _, obj := range *arr {
+
+		d, indRef, err := pageNodeDict(ctx, obj)
+		if err != nil {
+			return err
+		}
+		if d == nil {
+			continue
+		}
+
+		switch *d.Type() {
+
+		case "Pages":
+			// Recurse over pagetree
+			err = writePagesDict(ctx, indRef, pageCount)
+
+		case "Page":
+			err = writePageDict(ctx, indRef, d)
+
+		default:
+			err = errors.Errorf("writeKids: Unexpected dict type: %s", *d.Type())
+
+		}
+
+		if err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+}
+
+func writePagesDict(ctx *types.PDFContext, indRef *types.PDFIndirectRef, pageCount int) (err error) {
 
 	logPages.Printf("*** writePagesDict begin: obj#%d offset=%d ***\n", indRef.ObjectNumber, ctx.Write.Offset)
 
@@ -268,7 +273,7 @@ func writePagesDict(ctx *types.PDFContext, indRef types.PDFIndirectRef, pageCoun
 		return errors.Errorf("writePagesDict end: obj#%d offset=%d *** nil or already written", indRef.ObjectNumber, ctx.Write.Offset)
 	}
 
-	dict, err := xRefTable.DereferenceDict(indRef)
+	dict, err := xRefTable.DereferenceDict(*indRef)
 	if err != nil {
 		err = errors.Wrapf(err, "writePagesDict: unable to dereference indirect object #%d", objNumber)
 		return
@@ -301,30 +306,16 @@ func writePagesDict(ctx *types.PDFContext, indRef types.PDFIndirectRef, pageCoun
 
 	// This is for Split and Extract when all we generate is a single page.
 	if ctx.Write.ExtractPageNr > 0 {
-
 		// Identify the kid containing the leaf for the page we are looking for aka the ExtractPageNr.
 		// pageCount is either already the number of the page we are looking for and we have identified the kid for its page dict
 		// or the number of pages before processing the next page tree containing the page we are looking for.
 		// We need to write all original pagetree nodes leading to a specific leave in order not to miss any inheritated resources.
-		kid, err := locateKidForPageNumber(ctx, kidsArrayOrig, &pageCount, ctx.Write.ExtractPageNr)
+		logInfoWriter.Printf("kidsArrayOrig before: %v", kidsArrayOrig)
+		err = prepareSinglePageWrite(ctx, dict, kidsArrayOrig, &pageCount)
 		if err != nil {
-			return err
+			return
 		}
-
-		if pageCount == ctx.Write.ExtractPageNr {
-			// The identified kid is the page node for the page we are looking for.
-			logInfoWriter.Printf("writePagesDict: found page to be extracted, pageCount=%d, extractPageNr=%d\n", pageCount, ctx.Write.ExtractPageNr)
-		} else {
-			// The identified kid is the page tree containing the page we are looking for.
-			logInfoWriter.Printf("writePagesDict: pageCount=%d, extractPageNr=%d\n", pageCount, ctx.Write.ExtractPageNr)
-		}
-
-		// Modify KidsArray to hold a single entry for this kid
-		dict.Update("Kids", types.PDFArray{kid})
-
-		// Set Count =1
-		dict.Update("Count", types.PDFInteger(1))
-
+		logInfoWriter.Printf("kidsArrayOrig after: %v", kidsArrayOrig)
 	}
 
 	err = writePDFDictObject(ctx, objNumber, genNumber, *dict)
@@ -334,24 +325,19 @@ func writePagesDict(ctx *types.PDFContext, indRef types.PDFIndirectRef, pageCoun
 
 	logInfoWriter.Printf("writePagesDict: %s\n", dict)
 
-	err = writePageEntry(ctx, dict, dictName, "Resources", types.PageResources)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, dict, dictName, "MediaBox", types.PageMediaBox)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, dict, dictName, "CropBox", types.PageCropBox)
-	if err != nil {
-		return
-	}
-
-	err = writePageEntry(ctx, dict, dictName, "Rotate", types.PageRotate)
-	if err != nil {
-		return
+	for _, e := range []struct {
+		entryName string
+		statsAttr int
+	}{
+		{"Resources", types.PageResources},
+		{"MediaBox", types.PageMediaBox},
+		{"CropBox", types.PageCropBox},
+		{"Rotate", types.PageRotate},
+	} {
+		err = writePageEntry(ctx, dict, dictName, e.entryName, e.statsAttr)
+		if err != nil {
+			return
+		}
 	}
 
 	// Iterate over page tree.
@@ -359,64 +345,11 @@ func writePagesDict(ctx *types.PDFContext, indRef types.PDFIndirectRef, pageCoun
 	if kidsArray == nil {
 		return errors.New("writePagesDict: corrupt \"Kids\" entry")
 	}
+	logInfoWriter.Printf("kidsArray: %v", kidsArray)
 
-	for _, obj := range *kidsArray {
-
-		if obj == nil {
-			logDebugWriter.Println("writePagesDict: kid is nil")
-			continue
-		}
-
-		// Dereference next page node dict.
-		indRef, ok := obj.(types.PDFIndirectRef)
-		if !ok {
-			return errors.New("writePagesDict: missing indirect reference for kid")
-		}
-
-		logInfoWriter.Printf("writePagesDict: PageNode: %s\n", indRef)
-
-		objNumber := int(indRef.ObjectNumber)
-		genNumber := int(indRef.GenerationNumber)
-
-		if ctx.Write.HasWriteOffset(objNumber) {
-			logInfoWriter.Printf("writePagesDict: object #%d already written.\n", objNumber)
-			continue
-		}
-
-		pageNodeDict, err := ctx.DereferenceDict(indRef)
-		if err != nil {
-			return errors.New("writePagesDict: cannot dereference pageNodeDict")
-		}
-
-		if pageNodeDict == nil {
-			return errors.New("validatePagesDict: pageNodeDict is null")
-		}
-
-		dictType := pageNodeDict.Type()
-		if dictType == nil {
-			return errors.New("writePagesDict: missing pageNodeDict type")
-		}
-
-		switch *dictType {
-
-		case "Pages":
-			// Recurse over pagetree
-			err = writePagesDict(ctx, indRef, pageCount)
-			if err != nil {
-				return err
-			}
-
-		case "Page":
-			err = writePageDict(ctx, objNumber, genNumber, pageNodeDict)
-			if err != nil {
-				return err
-			}
-
-		default:
-			return errors.Errorf("writePagesDict: Unexpected dict type: %s", *dictType)
-
-		}
-
+	err = writeKids(ctx, kidsArray, pageCount)
+	if err != nil {
+		return
 	}
 
 	dict.Update("Kids", *kidsArrayOrig)
@@ -427,44 +360,12 @@ func writePagesDict(ctx *types.PDFContext, indRef types.PDFIndirectRef, pageCoun
 	return
 }
 
-func pageNodeDictType(ctx *types.PDFContext, o interface{}) (dictType *string, indRef types.PDFIndirectRef, err error) {
-
-	// Dereference next page node dict.
-	var ok bool
-	indRef, ok = o.(types.PDFIndirectRef)
-	if !ok {
-		err = errors.New("pageNodeDictType: missing indirect reference")
-		return
-	}
-
-	logInfoWriter.Printf("pageNodeDictType: PageNode: %s\n", indRef)
-
-	var d *types.PDFDict
-	d, err = ctx.DereferenceDict(indRef)
-	if err != nil {
-		err = errors.New("pageNodeDictType: cannot dereference, pageNodeDict")
-		return
-	}
-	if d == nil {
-		err = errors.New("pageNodeDictType: pageNodeDict is null")
-		return
-	}
-
-	dictType = d.Type()
-	if dictType == nil {
-		err = errors.New("pageNodeDictType: missing pageNodeDict type")
-		return
-	}
-
-	return
-}
-
-func trimPagesDict(ctx *types.PDFContext, indRef types.PDFIndirectRef, pageCount *int) (count int, err error) {
+func trimPagesDict(ctx *types.PDFContext, indRef *types.PDFIndirectRef, pageCount *int) (count int, err error) {
 
 	xRefTable := ctx.XRefTable
 	objNumber := int(indRef.ObjectNumber)
 
-	obj, err := xRefTable.Dereference(indRef)
+	obj, err := xRefTable.Dereference(*indRef)
 	if err != nil {
 		err = errors.Wrapf(err, "trimPagesDict: unable to dereference indirect object #%d", objNumber)
 		return
@@ -497,18 +398,15 @@ func trimPagesDict(ctx *types.PDFContext, indRef types.PDFIndirectRef, pageCount
 
 	for _, obj := range *kidsArray {
 
-		if obj == nil {
-			logDebugWriter.Println("trimPagesDict: kid is nil")
-			continue
-		}
-
-		var dictType *string
-		dictType, indRef, err = pageNodeDictType(ctx, obj)
+		d, indRef, err := pageNodeDict(ctx, obj)
 		if err != nil {
 			return 0, err
 		}
+		if d == nil {
+			continue
+		}
 
-		switch *dictType {
+		switch *d.Type() {
 
 		case "Pages":
 			// Recurse over pagetree
@@ -530,7 +428,7 @@ func trimPagesDict(ctx *types.PDFContext, indRef types.PDFIndirectRef, pageCount
 			}
 
 		default:
-			return 0, errors.Errorf("trimPagesDict: Unexpected dict type: %s", *dictType)
+			return 0, errors.Errorf("trimPagesDict: Unexpected dict type: %s", *d.Type())
 
 		}
 

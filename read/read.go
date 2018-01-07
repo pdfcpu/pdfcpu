@@ -51,7 +51,7 @@ func Verbose(verbose bool) {
 // be empty. The end-of-line marker is one carriage return followed
 // by one newline or one carriage return or one newline.
 // The last non-empty line of input will be returned even if it has no newline.
-func ScanLines(data []byte, atEOF bool) (advance int, token []byte, err error) {
+func scanLines(data []byte, atEOF bool) (advance int, token []byte, err error) {
 
 	if atEOF && len(data) == 0 {
 		return 0, nil, nil
@@ -474,7 +474,7 @@ func xRefStreamDict(ctx *types.PDFContext, o interface{}, objNr int, streamOffse
 	logDebugReader.Printf("xRefStreamDict: streamobject #%d\n", objNr)
 	pdfStreamDict := types.NewPDFStreamDict(pdfDict, streamOffset, streamLength, streamLengthObjNr, filterPipeline)
 
-	if _, err = EncodedStreamContent(ctx, &pdfStreamDict); err != nil {
+	if _, err = LoadEncodedStreamContent(ctx, &pdfStreamDict); err != nil {
 		return nil, err
 	}
 
@@ -892,7 +892,7 @@ func buildXRefTableStartingAt(ctx *types.PDFContext, offset *int64) error {
 		}
 
 		s := bufio.NewScanner(rd)
-		s.Split(ScanLines)
+		s.Split(scanLines)
 
 		line, err := scanLine(s)
 		if err != nil {
@@ -1199,24 +1199,64 @@ func pdfFilterPipeline(ctx *types.PDFContext, pdfDict types.PDFDict) ([]types.PD
 	return filterPipeline, nil
 }
 
-// Parses an object from file at given offset.
-func pdfObject(ctx *types.PDFContext, offset int64, objectNumber int, generationNumber int) (interface{}, error) {
+func streamDict(ctx *types.PDFContext, pdfDict types.PDFDict, objNr, streamInd int, streamOffset, offset int64) (sd types.PDFStreamDict, err error) {
 
-	logDebugReader.Printf("pdfObject: begin, obj#%d, offset:%d\n", objectNumber, offset)
+	streamLength, streamLengthRef := pdfDict.Length()
 
-	rd, err := newPositionedReader(ctx.Read.File, &offset)
-	if err != nil {
-		return nil, err
+	if streamInd <= 0 {
+		err = errors.New("streamDict: stream object without streamOffset")
+		return
 	}
 
-	logDebugReader.Printf("pdfObject: seeked to offset:%d\n", offset)
+	filterPipeline, err := pdfFilterPipeline(ctx, pdfDict)
+	if err != nil {
+		return sd, err
+	}
+
+	streamOffset += offset
+
+	// We have a stream object.
+	sd = types.NewPDFStreamDict(pdfDict, streamOffset, streamLength, streamLengthRef, filterPipeline)
+
+	logDebugReader.Printf("streamDict: end, Streamobject #%d\n", objNr)
+
+	return
+}
+
+func dict(ctx *types.PDFContext, pdfDict types.PDFDict, objNr, genNr, endInd, streamInd int) (d *types.PDFDict, err error) {
+
+	if ctx.EncKey != nil {
+		_, err = crypto.DecryptDeepObject(pdfDict, objNr, genNr, ctx.EncKey, ctx.AES4Strings)
+		if err != nil {
+			return
+		}
+	}
+
+	if endInd >= 0 && (streamInd < 0 || streamInd > endInd) {
+		logDebugReader.Printf("dict: end, #%d\n", objNr)
+		d = &pdfDict
+	}
+
+	return
+}
+
+func object(ctx *types.PDFContext, offset int64, objNr, genNr int) (o interface{}, endInd, streamInd int, streamOffset int64, err error) {
+
+	var rd io.Reader
+	rd, err = newPositionedReader(ctx.Read.File, &offset)
+	if err != nil {
+		return
+	}
+
+	logDebugReader.Printf("object: seeked to offset:%d\n", offset)
 
 	// process: # gen obj ... obj dict ... {stream ... data ... endstream} endobj
 	//                                    streamInd                        endInd
 	//                                  -1 if absent                    -1 if absent
-	buf, endInd, streamInd, streamOffset, err := buffer(rd)
+	var buf []byte
+	buf, endInd, streamInd, streamOffset, err = buffer(rd)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	//logDebugReader.Printf("streamInd:%d(#%x) streamOffset:%d(#%x) endInd:%d(#%x)\n", streamInd, streamInd, streamOffset, streamOffset, endInd, endInd)
@@ -1230,39 +1270,51 @@ func pdfObject(ctx *types.PDFContext, offset int64, objectNumber int, generation
 		// buf: # gen obj ... obj dict ... stream ... data
 		// implies we detected no endobj and a stream starting at streamInd.
 		// big stream, we parse object until "stream"
-		logDebugReader.Println("pdfObject: big stream, we parse object until stream")
+		logDebugReader.Println("object: big stream, we parse object until stream")
 		l = line[:streamInd]
 	} else if streamInd < 0 { // dict
 		// buf: # gen obj ... obj dict ... endobj
 		// implies we detected endobj and no stream.
 		// small object w/o stream, parse until "endobj"
-		logDebugReader.Println("pdfObject: small object w/o stream, parse until endobj")
+		logDebugReader.Println("object: small object w/o stream, parse until endobj")
 		l = line[:endInd]
 	} else if streamInd < endInd { // streamdict
 		// buf: # gen obj ... obj dict ... stream ... data ... endstream endobj
 		// implies we detected endobj and stream.
 		// small stream within buffer, parse until "stream"
-		logDebugReader.Println("pdfObject: small stream within buffer, parse until stream")
+		logDebugReader.Println("object: small stream within buffer, parse until stream")
 		l = line[:streamInd]
 	} else { // dict
 		// buf: # gen obj ... obj dict ... endobj # gen obj ... obj dict ... stream
 		// small obj w/o stream, parse until "endobj"
 		// stream in buf belongs to subsequent object.
-		logDebugReader.Println("pdfObject: small obj w/o stream, parse until endobj")
+		logDebugReader.Println("object: small obj w/o stream, parse until endobj")
 		l = line[:endInd]
 	}
 
 	// Parse object number and object generation.
-	objNr, genNr, err := parseObjectAttributes(&l)
+	var objectNr, generationNr *int
+	objectNr, generationNr, err = parseObjectAttributes(&l)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	if *objNr != objectNumber || *genNr != generationNumber {
-		return nil, errors.Errorf("pdfObject: non matching objNr(%d) or generationNumber(%d) tags found.", *objNr, *genNr)
+	if objNr != *objectNr || genNr != *generationNr {
+		err = errors.Errorf("object: non matching objNr(%d) or generationNumber(%d) tags found.", *objectNr, *generationNr)
+		return
 	}
 
-	pdfObject, err := parseObject(&l)
+	o, err = parseObject(&l)
+
+	return
+}
+
+// Parses an object from file at given offset.
+func pdfObject(ctx *types.PDFContext, offset int64, objNr, genNr int) (interface{}, error) {
+
+	logDebugReader.Printf("pdfObject: begin, obj#%d, offset:%d\n", objNr, offset)
+
+	pdfObject, endInd, streamInd, streamOffset, err := object(ctx, offset, objNr, genNr)
 	if err != nil {
 		return nil, err
 	}
@@ -1270,10 +1322,16 @@ func pdfObject(ctx *types.PDFContext, offset int64, objectNumber int, generation
 	switch o := pdfObject.(type) {
 
 	case types.PDFDict:
+		d, err := dict(ctx, o, objNr, genNr, endInd, streamInd)
+		if err != nil || d != nil {
+			return *d, err
+		}
+		// Parse associated stream data into a PDFStreamDict.
+		return streamDict(ctx, o, objNr, streamInd, streamOffset, offset)
 
 	case types.PDFArray:
 		if ctx.EncKey != nil {
-			if _, err = crypto.DecryptDeepObject(o, *objNr, *genNr, ctx.EncKey, ctx.AES4Strings); err != nil {
+			if _, err = crypto.DecryptDeepObject(o, objNr, genNr, ctx.EncKey, ctx.AES4Strings); err != nil {
 				return nil, err
 			}
 		}
@@ -1281,7 +1339,7 @@ func pdfObject(ctx *types.PDFContext, offset int64, objectNumber int, generation
 
 	case types.PDFStringLiteral:
 		if ctx.EncKey != nil {
-			s1, err := crypto.DecryptString(ctx.AES4Strings, o.Value(), *objNr, *genNr, ctx.EncKey)
+			s1, err := crypto.DecryptString(ctx.AES4Strings, o.Value(), objNr, genNr, ctx.EncKey)
 			if err != nil {
 				return nil, err
 			}
@@ -1291,7 +1349,7 @@ func pdfObject(ctx *types.PDFContext, offset int64, objectNumber int, generation
 
 	case types.PDFHexLiteral:
 		if ctx.EncKey != nil {
-			s1, err := crypto.DecryptString(ctx.AES4Strings, o.Value(), *objNr, *genNr, ctx.EncKey)
+			s1, err := crypto.DecryptString(ctx.AES4Strings, o.Value(), objNr, genNr, ctx.EncKey)
 			if err != nil {
 				return nil, err
 			}
@@ -1302,41 +1360,7 @@ func pdfObject(ctx *types.PDFContext, offset int64, objectNumber int, generation
 		return o, nil
 	}
 
-	pdfDict := pdfObject.(types.PDFDict)
-
-	if ctx.EncKey != nil {
-		_, err = crypto.DecryptDeepObject(pdfDict, *objNr, *genNr, ctx.EncKey, ctx.AES4Strings)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	streamLength, streamLengthRef := pdfDict.Length()
-
-	if endInd >= 0 && (streamInd < 0 || streamInd > endInd) {
-		logDebugReader.Printf("pdfObject: end, #%d\n", objectNumber)
-		return pdfDict, nil
-	}
-
-	// Parse associated stream data into a PDFStreamDict.
-
-	if streamInd <= 0 {
-		return nil, errors.New("pdfObject: stream object without streamOffset")
-	}
-
-	filterPipeline, err := pdfFilterPipeline(ctx, pdfDict)
-	if err != nil {
-		return nil, err
-	}
-
-	streamOffset += offset
-
-	// We have a stream object.
-	pdfStreamDict := types.NewPDFStreamDict(pdfDict, streamOffset, streamLength, streamLengthRef, filterPipeline)
-
-	logDebugReader.Printf("pdfObject: end, Streamobject #%d\n", objectNumber)
-
-	return pdfStreamDict, nil
+	return nil, nil
 }
 
 func dereferencedObject(ctx *types.PDFContext, objectNumber int) (interface{}, error) {
@@ -1415,16 +1439,16 @@ func readContentStream(rd io.Reader, streamLength int) (buf []byte, err error) {
 	return
 }
 
-// EncodedStreamContent loads the encoded stream content from file into PDFStreamDict.
-func EncodedStreamContent(ctx *types.PDFContext, streamDict *types.PDFStreamDict) ([]byte, error) {
+// LoadEncodedStreamContent loads the encoded stream content from file into PDFStreamDict.
+func LoadEncodedStreamContent(ctx *types.PDFContext, streamDict *types.PDFStreamDict) ([]byte, error) {
 
-	logDebugReader.Printf("EncodedStreamContent: begin\n%v\n", streamDict)
+	logDebugReader.Printf("LoadEncodedStreamContent: begin\n%v\n", streamDict)
 
 	var err error
 
 	// Return saved decoded content.
 	if streamDict.Raw != nil {
-		logDebugReader.Println("EncodedStreamContent: end, already in memory.")
+		logDebugReader.Println("LoadEncodedStreamContent: end, already in memory.")
 		return streamDict.Raw, nil
 	}
 
@@ -1433,14 +1457,14 @@ func EncodedStreamContent(ctx *types.PDFContext, streamDict *types.PDFStreamDict
 	// Dereference stream length if stream length is an indirect object.
 	if streamDict.StreamLength == nil {
 		if streamDict.StreamLengthObjNr == nil {
-			return nil, errors.New("EncodedStreamContent: missing streamLength")
+			return nil, errors.New("LoadEncodedStreamContent: missing streamLength")
 		}
 		// Get stream length from indirect object
 		streamDict.StreamLength, err = int64Object(ctx, *streamDict.StreamLengthObjNr)
 		if err != nil {
 			return nil, err
 		}
-		logDebugReader.Printf("EncodedStreamContent: new indirect streamLength:%d\n", *streamDict.StreamLength)
+		logDebugReader.Printf("LoadEncodedStreamContent: new indirect streamLength:%d\n", *streamDict.StreamLength)
 	}
 
 	newOffset := streamDict.StreamOffset
@@ -1449,7 +1473,7 @@ func EncodedStreamContent(ctx *types.PDFContext, streamDict *types.PDFStreamDict
 		return nil, err
 	}
 
-	logDebugReader.Printf("EncodedStreamContent: seeked to offset:%d\n", newOffset)
+	logDebugReader.Printf("LoadEncodedStreamContent: seeked to offset:%d\n", newOffset)
 
 	// Buffer stream contents.
 	// Read content from disk.
@@ -1463,7 +1487,7 @@ func EncodedStreamContent(ctx *types.PDFContext, streamDict *types.PDFStreamDict
 	// Save encoded content.
 	streamDict.Raw = rawContent
 
-	logDebugReader.Printf("EncodedStreamContent: end: len(streamDictRaw)=%d\n", len(streamDict.Raw))
+	logDebugReader.Printf("LoadEncodedStreamContent: end: len(streamDictRaw)=%d\n", len(streamDict.Raw))
 
 	// Return encoded content.
 	return rawContent, nil
@@ -1616,8 +1640,8 @@ func decodeObjectStreams(ctx *types.PDFContext) (err error) {
 			return errors.New("decodeObjectStreams: corrupt object stream")
 		}
 
-		// Save encoded stream content to xRefTable.
-		if _, err = EncodedStreamContent(ctx, &pdfStreamDict); err != nil {
+		// Load encoded stream content to xRefTable.
+		if _, err = LoadEncodedStreamContent(ctx, &pdfStreamDict); err != nil {
 			return errors.Wrapf(err, "decodeObjectStreams: problem dereferencing object stream %d", objectNumber)
 		}
 
@@ -1665,159 +1689,193 @@ func decodeObjectStreams(ctx *types.PDFContext) (err error) {
 	return
 }
 
-// Dereferences all objects including compressed objects from object streams.
-func dereferenceObjects(ctx *types.PDFContext) error {
+func handleLinearizationParmDict(ctx *types.PDFContext, obj interface{}, objNr int) (err error) {
+
+	if ctx.Read.Linearized {
+		// Linearization dict already processed.
+		return
+	}
+
+	// handle linearization parm dict.
+	if pdfDict, ok := obj.(types.PDFDict); ok && pdfDict.IsLinearizationParmDict() {
+
+		ctx.Read.Linearized = true
+		ctx.LinearizationObjs[objNr] = true
+		logDebugReader.Printf("handleLinearizationParmDict: identified linearizationObj #%d\n", objNr)
+
+		arr := pdfDict.PDFArrayEntry("H")
+
+		if arr == nil {
+			return errors.Errorf("handleLinearizationParmDict: corrupt linearization dict at obj:%d - missing array entry H", objNr)
+		}
+
+		if len(*arr) != 2 && len(*arr) != 4 {
+			return errors.Errorf("handleLinearizationParmDict: corrupt linearization dict at obj:%d - corrupt array entry H, needs length 2 or 4", objNr)
+		}
+
+		offset, ok := (*arr)[0].(types.PDFInteger)
+		if !ok {
+			return errors.Errorf("handleLinearizationParmDict: corrupt linearization dict at obj:%d - corrupt array entry H, needs Integer values", objNr)
+		}
+
+		offset64 := int64(offset.Value())
+		ctx.OffsetPrimaryHintTable = &offset64
+
+		if len(*arr) == 4 {
+
+			offset, ok := (*arr)[2].(types.PDFInteger)
+			if !ok {
+				return errors.Errorf("handleLinearizationParmDict: corrupt linearization dict at obj:%d - corrupt array entry H, needs Integer values", objNr)
+			}
+
+			offset64 := int64(offset.Value())
+			ctx.OffsetOverflowHintTable = &offset64
+		}
+	}
+
+	return
+}
+
+func loadPDFStreamDict(ctx *types.PDFContext, sd *types.PDFStreamDict, objNr, genNr int) (err error) {
+
+	// Load encoded stream content for stream dicts into xRefTable entry.
+	if _, err = LoadEncodedStreamContent(ctx, sd); err != nil {
+		return errors.Wrapf(err, "dereferenceObject: problem dereferencing stream %d", objNr)
+	}
+
+	ctx.Read.BinaryTotalSize += *sd.StreamLength
+
+	// Decode stream content.
+	return setDecodedStreamContent(ctx, sd, objNr, genNr, ctx.DecodeAllStreams)
+}
+
+func updateBinaryTotalSize(ctx *types.PDFContext, o interface{}) {
+
+	switch obj := o.(type) {
+
+	case types.PDFStreamDict:
+		ctx.Read.BinaryTotalSize += *obj.StreamLength
+
+	case types.PDFObjectStreamDict:
+		ctx.Read.BinaryTotalSize += *obj.StreamLength
+
+	case types.PDFXRefStreamDict:
+		ctx.Read.BinaryTotalSize += *obj.StreamLength
+
+	}
+
+}
+
+func dereferenceObject(ctx *types.PDFContext, objNr int) (err error) {
 
 	xRefTable := ctx.XRefTable
 
-	logDebugReader.Println("dereferenceObjects: begin")
+	logDebugReader.Println("dereferenceObject: begin")
 
 	xRefTableSize := len(xRefTable.Table)
 
+	logDebugReader.Printf("dereferenceObject: dereferencing object %d\n", objNr)
+
+	entry := xRefTable.Table[objNr]
+
+	if entry.Free {
+		//logDebugReader.Printf("free object %d\n", objectNumber)
+		return
+	}
+
+	if entry.Compressed {
+		err = decompressXRefTableEntry(xRefTable, objNr, entry)
+		if err != nil {
+			return
+		}
+		logDebugReader.Printf("dereferenceObject: decompressed entry, Compressed=%v\n%s\n", entry.Compressed, entry.Object)
+		return
+	}
+
+	// entry is in use.
+
+	if entry.Offset == nil || *entry.Offset == 0 {
+		logDebugReader.Printf("dereferenceObject: already decompressed or used object w/o offset -> ignored")
+		return
+	}
+
+	obj := entry.Object
+
+	// Already dereferenced stream dict.
+	if obj != nil {
+		logStream(entry.Object)
+		updateBinaryTotalSize(ctx, obj)
+		logDebugReader.Printf("handleCachedStreamDict: using cached object %d of %d\n<%s>\n", objNr, xRefTableSize, entry.Object)
+		return
+	}
+
+	// Dereference (load from disk into memory).
+
+	logDebugReader.Printf("dereferenceObject: dereferencing object %d\n", objNr)
+
+	// Parse object from file: anything goes dict,array,integer,float,streamdicts..
+	obj, err = pdfObject(ctx, *entry.Offset, objNr, *entry.Generation)
+	if err != nil {
+		return errors.Wrapf(err, "dereferenceObject: problem dereferencing object %d", objNr)
+	}
+
+	entry.Object = obj
+
+	// Linearization dicts are validated and recorded for stats only.
+	err = handleLinearizationParmDict(ctx, obj, objNr)
+	if err != nil {
+		return
+	}
+
+	// Handle stream dicts.
+
+	if _, ok := obj.(types.PDFObjectStreamDict); ok {
+		return errors.Errorf("dereferenceObject: object stream should already be dereferenced at obj:%d", objNr)
+	}
+
+	if _, ok := obj.(types.PDFXRefStreamDict); ok {
+		return errors.Errorf("dereferenceObject: xref stream should already be dereferenced at obj:%d", objNr)
+	}
+
+	if pdfStreamDict, ok := obj.(types.PDFStreamDict); ok {
+
+		err = loadPDFStreamDict(ctx, &pdfStreamDict, objNr, *entry.Generation)
+		if err != nil {
+			return
+		}
+
+		entry.Object = pdfStreamDict
+	}
+
+	logDebugReader.Printf("dereferenceObject: end obj %d of %d\n<%s>\n", objNr, xRefTableSize, entry.Object)
+
+	logStream(entry.Object)
+
+	return
+}
+
+// Dereferences all objects including compressed objects from object streams.
+func dereferenceObjects(ctx *types.PDFContext) (err error) {
+
+	logDebugReader.Println("dereferenceObjects: begin")
+
 	// Get sorted slice of object numbers.
 	var keys []int
-	for k := range xRefTable.Table {
+	for k := range ctx.XRefTable.Table {
 		keys = append(keys, k)
 	}
 	sort.Ints(keys)
 
-	for _, objectNumber := range keys {
-
-		logDebugReader.Printf("dereferenceObjects: dereferencing object %d\n", objectNumber)
-
-		entry := xRefTable.Table[objectNumber]
-
-		if entry.Free {
-			//logDebugReader.Printf("free object %d\n", objectNumber)
-			continue
-		}
-
-		if entry.Compressed {
-			err := decompressXRefTableEntry(xRefTable, objectNumber, entry)
-			if err != nil {
-				return err
-			}
-			logDebugReader.Printf("dereferenceObjects: decompressed entry, Compressed=%v\n%s\n", entry.Compressed, entry.Object)
-			continue
-		}
-
-		// entry is in use.
-
-		if entry.Offset == nil || *entry.Offset == 0 {
-			logDebugReader.Printf("dereferenceObjects: already decompressed or used object w/o offset -> ignored")
-			continue
-		}
-
-		obj := entry.Object
-		var err error
-
-		// Already dereferenced stream dict.
-		if obj != nil {
-
-			logStream(entry.Object)
-
-			switch obj := obj.(type) {
-			case types.PDFStreamDict:
-				ctx.Read.BinaryTotalSize += *obj.StreamLength
-			case types.PDFObjectStreamDict:
-				ctx.Read.BinaryTotalSize += *obj.StreamLength
-			case types.PDFXRefStreamDict:
-				ctx.Read.BinaryTotalSize += *obj.StreamLength
-			}
-
-			logDebugReader.Printf("dereferenceObjects: using cached object %d of %d\n<%s>\n", objectNumber, xRefTableSize, entry.Object)
-
-			continue
-		}
-
-		// Dereference (load from disk into memory).
-
-		logDebugReader.Printf("dereferenceObjects: dereferencing object %d\n", objectNumber)
-
-		// Parse object from file: anything goes dict,array,integer,float,streamdicts..
-		obj, err = pdfObject(ctx, *entry.Offset, objectNumber, *entry.Generation)
+	for _, objNr := range keys {
+		err = dereferenceObject(ctx, objNr)
 		if err != nil {
-			return errors.Wrapf(err, "dereferenceObjects: problem dereferencing object %d", objectNumber)
+			return
 		}
-
-		entry.Object = obj
-
-		// Linearization dicts are only validated and recorded for stats.
-		if !ctx.Read.Linearized {
-
-			// handle linearization parm dict.
-			if pdfDict, ok := obj.(types.PDFDict); ok && pdfDict.IsLinearizationParmDict() {
-
-				ctx.Read.Linearized = true
-				xRefTable.LinearizationObjs[objectNumber] = true
-				logDebugReader.Printf("dereferenceObjects: identified linearizationObj #%d\n", objectNumber)
-
-				arr := pdfDict.PDFArrayEntry("H")
-
-				if arr == nil {
-					return errors.Errorf("dereferenceObjects: corrupt linearization dict at obj:%d - missing array entry H", objectNumber)
-				}
-
-				if len(*arr) != 2 && len(*arr) != 4 {
-					return errors.Errorf("dereferenceObjects: corrupt linearization dict at obj:%d - corrupt array entry H, needs length 2 or 4", objectNumber)
-				}
-
-				offset, ok := (*arr)[0].(types.PDFInteger)
-				if !ok {
-					return errors.Errorf("dereferenceObjects: corrupt linearization dict at obj:%d - corrupt array entry H, needs Integer values", objectNumber)
-				}
-
-				offset64 := int64(offset.Value())
-				xRefTable.OffsetPrimaryHintTable = &offset64
-
-				if len(*arr) == 4 {
-
-					offset, ok := (*arr)[2].(types.PDFInteger)
-					if !ok {
-						return errors.Errorf("dereferenceObjects: corrupt linearization dict at obj:%d - corrupt array entry H, needs Integer values", objectNumber)
-					}
-
-					offset64 := int64(offset.Value())
-					xRefTable.OffsetOverflowHintTable = &offset64
-				}
-			}
-		}
-
-		// Handle stream dicts.
-
-		if _, ok := obj.(types.PDFObjectStreamDict); ok {
-			return errors.Errorf("dereferenceObjects: object stream should already be dereferenced at obj:%d", objectNumber)
-		}
-
-		if _, ok := obj.(types.PDFXRefStreamDict); ok {
-			return errors.Errorf("dereferenceObjects: xref stream should already be dereferenced at obj:%d", objectNumber)
-		}
-
-		// Save encoded stream content for stream dicts into xRefTable entry.
-		if pdfStreamDict, ok := obj.(types.PDFStreamDict); ok {
-
-			if _, err = EncodedStreamContent(ctx, &pdfStreamDict); err != nil {
-				return errors.Wrapf(err, "dereferenceObjects: problem dereferencing stream %d", objectNumber)
-			}
-
-			ctx.Read.BinaryTotalSize += *pdfStreamDict.StreamLength
-
-			err = setDecodedStreamContent(ctx, &pdfStreamDict, objectNumber, *entry.Generation, ctx.DecodeAllStreams)
-			if err != nil {
-				return err
-			}
-
-			entry.Object = pdfStreamDict
-		}
-
-		logDebugReader.Printf("dereferenceObjects: end obj %d of %d\n<%s>\n", objectNumber, xRefTableSize, entry.Object)
-
-		logStream(entry.Object)
 	}
 
 	logDebugReader.Println("dereferenceObjects: end")
 
-	return nil
+	return
 }
 
 // Locate a possible Version entry (since V1.4) in the catalog
@@ -1896,115 +1954,151 @@ func dereferenceXRefTable(ctx *types.PDFContext, config *types.Configuration) (e
 	return
 }
 
-func checkForEncryption(ctx *types.PDFContext) error {
+func handleUnencryptedFile(ctx *types.PDFContext) (err error) {
 
-	indRef := ctx.Encrypt
-	if indRef == nil {
-
-		if ctx.Decrypt == nil {
-			return nil
-		}
-
-		if *ctx.Decrypt {
-			return errors.New("decrypt: this file is not encrypted")
-		}
-
-		if len(ctx.UserPW) == 0 && len(ctx.OwnerPW) == 0 {
-			return errors.New("encrypt: user or owner password missing")
-		}
-
-		// Ensure ctx.ID
-		if ctx.ID == nil {
-			ctx.ID = crypto.ID(ctx)
-		}
-
-		// Must be array of length 2
-		arr := *ctx.ID
-
-		if len(arr) != 2 {
-			return errors.New("encrypt: ID must be array with 2 elements")
-		}
-
-		return nil
+	if ctx.Mode == types.DECRYPT {
+		// Decrypt subcommand found.
+		return errors.New("decrypt: this file is not encrypted")
 	}
 
-	if ctx.Decrypt != nil && !*ctx.Decrypt {
-		return errors.New("encrypt: This file is already encrypted")
+	if ctx.Mode != types.ENCRYPT {
+		return
 	}
 
-	logInfoReader.Printf("Encryption: %v\n", indRef)
+	// Encrypt subcommand found.
 
-	obj, err := dereferencedObject(ctx, indRef.ObjectNumber.Value())
+	if len(ctx.UserPW) == 0 && len(ctx.OwnerPW) == 0 {
+		return errors.New("encrypt: user or owner password missing")
+	}
+
+	// Ensure ctx.ID
+	if ctx.ID == nil {
+		ctx.ID = crypto.ID(ctx)
+	}
+
+	// Must be array of length 2
+	arr := *ctx.ID
+
+	if len(arr) != 2 {
+		return errors.New("encrypt: ID must be array with 2 elements")
+	}
+
+	return
+}
+
+func dereferenceEncryptDict(ctx *types.PDFContext, encryptDictObjNr int) (*types.PDFDict, error) {
+
+	obj, err := dereferencedObject(ctx, encryptDictObjNr)
+	if err != nil {
+		return nil, err
+	}
+
+	dict, ok := obj.(types.PDFDict)
+	if !ok {
+		return nil, errors.New("corrupt encrypt dict")
+	}
+
+	return &dict, nil
+}
+
+func idBytes(ctx *types.PDFContext) (id []byte, err error) {
+
+	if ctx.ID == nil {
+		return nil, errors.New("missing ID entry")
+	}
+
+	hl, ok := ((*ctx.ID)[0]).(types.PDFHexLiteral)
+	if ok {
+		id, err = hl.Bytes()
+		if err != nil {
+			return
+		}
+	} else {
+		sl, ok := ((*ctx.ID)[0]).(types.PDFStringLiteral)
+		if !ok {
+			err = errors.New("encryption: ID must contain PDFHexLiterals or PDFStringLiterals")
+			return
+		}
+		id, err = types.Unescape(sl.Value())
+		if err != nil {
+			return
+		}
+	}
+
+	return
+}
+
+func setupEncryptionKey(ctx *types.PDFContext, encryptDictObjNr int) (err error) {
+
+	// Dereference encryptDict.
+	encryptDict, err := dereferenceEncryptDict(ctx, encryptDictObjNr)
 	if err != nil {
 		return err
 	}
 
-	encryptDict, ok := obj.(types.PDFDict)
-	if !ok {
-		return errors.New("corrupt encrypt dict")
-	}
-
 	logDebugReader.Printf("%s\n", encryptDict)
 
-	enc, err := crypto.SupportedEncryption(ctx, &encryptDict)
+	enc, err := crypto.SupportedEncryption(ctx, encryptDict)
 	if err != nil {
 		return err
 	}
 	if enc == nil {
 		return errors.New("This encryption is not supported")
 	}
+
 	ctx.E = enc
 	//fmt.Printf("read: O = %0X\n", enc.O)
 	//fmt.Printf("read: U = %0X\n", enc.U)
 
-	if ctx.ID == nil {
-		return errors.New("missing ID entry")
-	}
-
-	var id []byte
-
-	hl, ok := ((*ctx.ID)[0]).(types.PDFHexLiteral)
-	if ok {
-		id, err = hl.Bytes()
-		if err != nil {
-			return err
-		}
-	} else {
-		sl, ok := ((*ctx.ID)[0]).(types.PDFStringLiteral)
-		if !ok {
-			return errors.New("encryption: ID must contain PDFHexLiterals or PDFStringLiterals")
-		}
-		id, err = types.Unescape(sl.Value())
-		if err != nil {
-			return err
-		}
-	}
-
-	enc.ID = id
-
-	ok, key, err := crypto.ValidateUserPassword(ctx)
+	enc.ID, err = idBytes(ctx)
 	if err != nil {
 		return err
 	}
-	//fmt.Printf("read encKey: %0X\n", key)
+
+	var ok bool
+
+	ok, ctx.EncKey, err = crypto.ValidateOwnerPassword(ctx)
+	if err != nil {
+		return err
+	}
+	if ok {
+		return nil
+	}
+
+	ok, ctx.EncKey, err = crypto.ValidateUserPassword(ctx)
+	if err != nil {
+		return err
+	}
 	if !ok {
-		return errors.New("UserPW Authentication error")
-	}
-	//logErrorReader.Println("userpw ok!")
-
-	ok, err = crypto.ValidateOwnerPassword(ctx)
-	if err != nil || !ok {
-		if (ctx.Decrypt != nil && *ctx.Decrypt) || !crypto.HasNeededPermissions(enc) {
-			return errors.New("ownerpw not ok and insufficient access permissions")
-		}
-		//logErrorReader.Println("ownerpw not ok, but access permissions ok")
-	} else {
-		//logErrorReader.Println("ownerpw ok!")
+		return errors.New("Password authentication error")
 	}
 
-	ctx.EncKey = key
+	if !crypto.HasNeededPermissions(ctx.Mode, enc) {
+		return errors.New("Insufficient access permissions")
+	}
 
-	return nil
+	return
+}
+
+func checkForEncryption(ctx *types.PDFContext) error {
+
+	indRef := ctx.Encrypt
+
+	if indRef == nil {
+		// This file is not encrypted.
+		return handleUnencryptedFile(ctx)
+	}
+
+	// This file is encrypted.
+	logInfoReader.Printf("Encryption: %v\n", indRef)
+
+	if ctx.Mode == types.ENCRYPT {
+		// We want to encrypt this file.
+		return errors.New("encrypt: This file is already encrypted")
+	}
+
+	// We need to decrypt this file in order to read it.
+	return setupEncryptionKey(ctx, indRef.ObjectNumber.Value())
 }
 
 // PDFFile reads in a PDFFile and generates a PDFContext, an in-memory representation containing a cross reference table.
@@ -2029,7 +2123,7 @@ func PDFFile(fileName string, config *types.Configuration) (ctx *types.PDFContex
 	if ctx.Reader15 {
 		logInfoReader.Println("PDF Version 1.5 conforming reader")
 	} else {
-		logErrorReader.Println("PDF Version 1.4 conforming reader - no object streams and xrefstreams allowed")
+		logErrorReader.Println("PDF Version 1.4 conforming reader - no object streams or xrefstreams allowed")
 	}
 
 	// Populate xRefTable.

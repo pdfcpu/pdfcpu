@@ -22,7 +22,7 @@ import (
 var (
 	fileStats, mode, pageSelection string
 	in, out                        string
-	upw, opw                       string
+	upw, opw, key                  string
 	verbose                        bool
 	logInfo                        *log.Logger
 
@@ -31,14 +31,21 @@ var (
 
 func init() {
 
-	flag.StringVar(&fileStats, "stats", "", "optimize: a csv file for stats appending")
-	flag.StringVar(&fileStats, "s", "", "optimize: a csv file for stats appending")
+	statsUsage := "optimize: a csv file for stats appending"
+	flag.StringVar(&fileStats, "stats", "", statsUsage)
+	flag.StringVar(&fileStats, "s", "", statsUsage)
 
-	flag.StringVar(&mode, "mode", "", "validate: strict|relaxed; extract: image|font|content|page")
-	flag.StringVar(&mode, "m", "", "validate: strict|relaxed; extract: image|font|content|page")
+	modeUsage := "validate: strict|relaxed; extract: image|font|content|page; encrypt: rc4|aes"
+	flag.StringVar(&mode, "mode", "", modeUsage)
+	flag.StringVar(&mode, "m", "", modeUsage)
 
-	flag.StringVar(&pageSelection, "pages", "", "a comma separated list of pages or page ranges, see pdfcpu help split/extract")
-	flag.StringVar(&pageSelection, "p", "", "a comma separated list of pages or page ranges, see pdfcpu help split/extract")
+	keyUsage := "encrypt: 40|128"
+	flag.StringVar(&key, "key", "128", keyUsage)
+	flag.StringVar(&key, "k", "128", keyUsage)
+
+	pageSelectionUsage := "a comma separated list of pages or page ranges, see pdfcpu help split/extract"
+	flag.StringVar(&pageSelection, "pages", "", pageSelectionUsage)
+	flag.StringVar(&pageSelection, "p", "", pageSelectionUsage)
 
 	flag.BoolVar(&verbose, "verbose", false, "")
 	flag.BoolVar(&verbose, "v", false, "")
@@ -161,7 +168,7 @@ func parseFlagsAndGetCommand() (command string) {
 	command = os.Args[1]
 
 	i := 2
-	// The attach command uses a subcommand and therefore a special case => start flag processing after 3rd argument.
+	// The attach command uses a subcommand and is therefore a special case => start flag processing after 3rd argument.
 	if command == "attach" {
 		if len(os.Args) == 2 {
 			fmt.Fprintln(os.Stderr, usageAttach)
@@ -465,14 +472,24 @@ func prepareDecryptCommand(config *types.Configuration) pdfcpu.Command {
 
 func prepareEncryptCommand(config *types.Configuration) pdfcpu.Command {
 
-	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || pageSelection != "" {
+	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || pageSelection != "" ||
+		!(mode == "" || mode == "rc4" || mode == "aes") ||
+		!(key == "" || key == "40" || key == "128") {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageEncrypt)
 		os.Exit(1)
 	}
 
+	//fmt.Printf("mode: %s\n", mode)
+	if mode == "rc4" {
+		config.EncryptUsingAES = false
+	}
+
+	if key == "40" {
+		config.EncryptUsing128BitKey = false
+	}
+
 	filenameIn := flag.Arg(0)
 	ensurePdfExtension(filenameIn)
-
 	filenameOut := filenameIn
 	if len(flag.Args()) == 2 {
 		filenameOut = flag.Arg(1)
@@ -582,7 +599,7 @@ func main() {
 		cmd = prepareValidateCommand(config)
 
 	case "optimize", "o":
-		// Always write using 0x0A end of line sequence per default.
+		// Always write using 0x0A end of line sequence default.
 		cmd = prepareOptimizeCommand(config)
 
 	case "split", "s":

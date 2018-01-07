@@ -35,22 +35,22 @@ func processFileSpecDict(ctx *types.PDFContext, dict *types.PDFDict, processor f
 
 	logDebugAttach.Println("processFileSpecDict begin")
 
+	// Entry F holds the filename.
 	obj, found := dict.Find("F")
 	if !found || obj == nil {
 		return
 	}
-
 	obj, err = ctx.Dereference(obj)
 	if err != nil || obj == nil {
 		return
 	}
 	fileName, _ := obj.(types.PDFStringLiteral)
 
+	// Entry EF is a dict holding a stream dict in entry F.
 	obj, found = dict.Find("EF")
 	if !found || obj == nil {
 		return
 	}
-
 	var d *types.PDFDict
 	d, err = ctx.DereferenceDict(obj)
 	if err != nil {
@@ -60,11 +60,11 @@ func processFileSpecDict(ctx *types.PDFContext, dict *types.PDFDict, processor f
 		return
 	}
 
+	// Entry F holds the embedded file's data.
 	obj, found = d.Find("F")
 	if !found || obj == nil {
 		return
 	}
-
 	var sd *types.PDFStreamDict
 	sd, err = ctx.DereferenceStreamDict(obj)
 	if err != nil {
@@ -263,6 +263,7 @@ func extractAttachedFiles(ctx *types.PDFContext, files types.StringSet) (err err
 
 		for fileName := range files {
 
+			// Locate value for name tree key=fileName - the corresponding fileSpecDict.
 			var indRef *types.PDFIndirectRef
 			indRef, err = nameTree.Value(ctx.XRefTable, fileName)
 			if indRef == nil {
@@ -280,6 +281,7 @@ func extractAttachedFiles(ctx *types.PDFContext, files types.StringSet) (err err
 				continue
 			}
 
+			// Apply the writeFile processor to this fileSpecDict.
 			err = processFileSpecDict(ctx, d, writeFile)
 			if err != nil {
 				return
@@ -290,6 +292,7 @@ func extractAttachedFiles(ctx *types.PDFContext, files types.StringSet) (err err
 		return
 	}
 
+	// Extract all files.
 	return processNameTree(ctx, *nameTree, writeFile)
 }
 
@@ -299,7 +302,7 @@ func createFileSpecDict(ctx *types.PDFContext, filename string, indRefStreamDict
 	d.Insert("Type", types.PDFName("Filespec"))
 	d.Insert("F", types.PDFStringLiteral(filename))
 	d.Insert("UF", types.PDFStringLiteral(filename))
-	//d.Insert("UF", utf16.Encode([]rune(filename)))
+	// TODO d.Insert("UF", utf16.Encode([]rune(filename)))
 
 	efDict := types.NewPDFDict()
 	efDict.Insert("F", indRefStreamDict)
@@ -407,6 +410,7 @@ func removeEmbeddedFilesNameTree(ctx *types.PDFContext) (err error) {
 	rootDict.Delete("Names")
 
 	logDebugAttach.Println("removeEmbeddedFilesNameTree end")
+
 	return
 }
 
@@ -424,6 +428,7 @@ func removeAttachedFiles(ctx *types.PDFContext, files types.StringSet) (ok bool,
 		for fileName := range files {
 
 			logDebugAttach.Printf("removeAttachedFiles: removing %s\n", fileName)
+
 			// Any remove operation may be deleting the only key value pair of this name tree.
 			if ctx.EmbeddedFiles != nil {
 
@@ -484,7 +489,7 @@ func List(ctx *types.PDFContext) (list []string, err error) {
 	logDebugAttach.Println("List begin")
 
 	if !ctx.Valid && ctx.EmbeddedFiles == nil {
-		ctx.EmbeddedFiles, err = types.LocateNameTree(ctx.XRefTable, "EmbeddedFiles", false)
+		ctx.EmbeddedFiles, err = ctx.LocateNameTree("EmbeddedFiles", false)
 		if err != nil {
 			return
 		}
@@ -511,7 +516,7 @@ func Extract(ctx *types.PDFContext, files types.StringSet) (err error) {
 	logDebugAttach.Println("Extract begin")
 
 	if !ctx.Valid && ctx.EmbeddedFiles == nil {
-		ctx.EmbeddedFiles, err = types.LocateNameTree(ctx.XRefTable, "EmbeddedFiles", false)
+		ctx.EmbeddedFiles, err = ctx.LocateNameTree("EmbeddedFiles", false)
 		if err != nil {
 			return
 		}
@@ -539,7 +544,7 @@ func Add(ctx *types.PDFContext, files types.StringSet) (ok bool, err error) {
 	logDebugAttach.Println("Add begin")
 
 	if ctx.EmbeddedFiles == nil {
-		ctx.EmbeddedFiles, err = types.LocateNameTree(ctx.XRefTable, "EmbeddedFiles", true)
+		ctx.EmbeddedFiles, err = ctx.LocateNameTree("EmbeddedFiles", true)
 		if err != nil {
 			return
 		}
@@ -551,6 +556,7 @@ func Add(ctx *types.PDFContext, files types.StringSet) (ok bool, err error) {
 	}
 
 	logDebugAttach.Println("Add end")
+
 	return
 }
 
@@ -561,7 +567,7 @@ func Remove(ctx *types.PDFContext, files types.StringSet) (ok bool, err error) {
 	logDebugAttach.Println("Remove begin")
 
 	if !ctx.Valid && ctx.EmbeddedFiles == nil {
-		ctx.EmbeddedFiles, err = types.LocateNameTree(ctx.XRefTable, "EmbeddedFiles", false)
+		ctx.EmbeddedFiles, err = ctx.LocateNameTree("EmbeddedFiles", false)
 		if err != nil {
 			return
 		}
@@ -577,5 +583,6 @@ func Remove(ctx *types.PDFContext, files types.StringSet) (ok bool, err error) {
 	}
 
 	logDebugAttach.Println("Remove end")
+
 	return
 }

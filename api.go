@@ -148,7 +148,7 @@ func Write(ctx *types.PDFContext) (err error) {
 	return
 }
 
-// singlePageFileName for PDFContext and a specific page number.
+// singlePageFileName generates a filename for a PDFContext and a specific page number.
 func singlePageFileName(ctx *types.PDFContext, pageNr int) string {
 
 	baseFileName := filepath.Base(ctx.Read.FileName)
@@ -270,34 +270,6 @@ func Optimize(fileIn, fileOut string, config *types.Configuration) (err error) {
 	ctx.Write.LogStats(logStatsAPI)
 
 	return
-}
-
-// Encrypt fileIn and write result to fileOut.
-func Encrypt(fileIn, fileOut string, config *types.Configuration) (err error) {
-	d := false
-	config.Decrypt = &d
-	return Optimize(fileIn, fileOut, config)
-}
-
-// Decrypt fileIn and write result to fileOut.
-func Decrypt(fileIn, fileOut string, config *types.Configuration) (err error) {
-	d := true
-	config.Decrypt = &d
-	return Optimize(fileIn, fileOut, config)
-}
-
-// ChangeUserPassword of fileIn and write result to fileOut.
-func ChangeUserPassword(fileIn, fileOut string, config *types.Configuration, pwOld, pwNew *string) (err error) {
-	config.UserPW = *pwOld
-	config.UserPWNew = pwNew
-	return Optimize(fileIn, fileOut, config)
-}
-
-// ChangeOwnerPassword of fileIn and write result to fileOut.
-func ChangeOwnerPassword(fileIn, fileOut string, config *types.Configuration, pwOld, pwNew *string) (err error) {
-	config.OwnerPW = *pwOld
-	config.OwnerPWNew = pwNew
-	return Optimize(fileIn, fileOut, config)
 }
 
 // ParsePageSelection ensures a correct page selection expression.
@@ -807,6 +779,30 @@ func Trim(fileIn, fileOut string, pageSelection []string, config *types.Configur
 	ctx.Write.LogStats(logStatsAPI)
 
 	return
+}
+
+// Encrypt fileIn and write result to fileOut.
+func Encrypt(fileIn, fileOut string, config *types.Configuration) (err error) {
+	return Optimize(fileIn, fileOut, config)
+}
+
+// Decrypt fileIn and write result to fileOut.
+func Decrypt(fileIn, fileOut string, config *types.Configuration) (err error) {
+	return Optimize(fileIn, fileOut, config)
+}
+
+// ChangeUserPassword of fileIn and write result to fileOut.
+func ChangeUserPassword(fileIn, fileOut string, config *types.Configuration, pwOld, pwNew *string) (err error) {
+	config.UserPW = *pwOld
+	config.UserPWNew = pwNew
+	return Optimize(fileIn, fileOut, config)
+}
+
+// ChangeOwnerPassword of fileIn and write result to fileOut.
+func ChangeOwnerPassword(fileIn, fileOut string, config *types.Configuration, pwOld, pwNew *string) (err error) {
+	config.OwnerPW = *pwOld
+	config.OwnerPWNew = pwNew
+	return Optimize(fileIn, fileOut, config)
 }
 
 // ListAttachments returns a list of embedded file attachments.

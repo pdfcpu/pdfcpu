@@ -3,8 +3,6 @@ package types
 import (
 	"fmt"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 // FontObject represents a font used in a PDF file.
@@ -32,16 +30,6 @@ func (fo FontObject) ResourceNamesString() string {
 		resNames = append(resNames, resName)
 	}
 	return strings.Join(resNames, ",")
-}
-
-// BaseFont returns a string representation for the BaseFont of this font.
-func (fo FontObject) BaseFont() (*string, error) {
-	baseFont := fo.FontDict.NameEntry("BaseFont")
-	if baseFont == nil {
-		return nil, errors.New("missing fontDict entry BaseFont")
-	}
-
-	return baseFont, nil
 }
 
 // SubType returns the SubType of this font.

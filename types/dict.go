@@ -466,33 +466,3 @@ func (d PDFDict) StringEntryBytes(key string) ([]byte, error) {
 
 	return nil, nil
 }
-
-// NewEncryptDict creates a new EncryptDict using the standard security handler.
-func NewEncryptDict() *PDFDict {
-
-	d := NewPDFDict()
-	//d.Insert("Type", PDFName("Encrypt"))
-	d.Insert("Filter", PDFName("Standard"))
-	d.Insert("Length", PDFInteger(128))
-	d.Insert("R", PDFInteger(4))
-	d.Insert("V", PDFInteger(4))
-	d.Insert("P", PDFInteger(-4))
-	d.Insert("StmF", PDFName("StdCF"))
-	d.Insert("StrF", PDFName("StdCF"))
-
-	d1 := NewPDFDict()
-	d1.Insert("AuthEvent", PDFName("DocOpen"))
-	d1.Insert("CFM", PDFName("AESV2"))
-	d1.Insert("Length", PDFInteger(16))
-
-	d2 := NewPDFDict()
-	d2.Insert("StdCF", d1)
-
-	d.Insert("CF", d2)
-
-	h := "0000000000000000000000000000000000000000000000000000000000000000"
-	d.Insert("U", PDFHexLiteral(h))
-	d.Insert("O", PDFHexLiteral(h))
-
-	return &d
-}

@@ -25,7 +25,7 @@ var logDebugCrypto, logInfoCrypto, logErrorCrypto *log.Logger
 func init() {
 	logDebugCrypto = log.New(ioutil.Discard, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
 	//logDebugCrypto = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logInfoCrypto = log.New(ioutil.Discard, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
+	logInfoCrypto = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 	logErrorCrypto = log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
 }
 
@@ -39,9 +39,84 @@ func Verbose(verbose bool) {
 	//logDebugCrypto = log.New(out, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
 }
 
-var pad = []byte{
-	0x28, 0xBF, 0x4E, 0x5E, 0x4E, 0x75, 0x8A, 0x41, 0x64, 0x00, 0x4E, 0x56, 0xFF, 0xFA, 0x01, 0x08,
-	0x2E, 0x2E, 0x00, 0xB6, 0xD0, 0x68, 0x3E, 0x80, 0x2F, 0x0C, 0xA9, 0xFE, 0x64, 0x53, 0x69, 0x7A,
+var (
+	pad = []byte{
+		0x28, 0xBF, 0x4E, 0x5E, 0x4E, 0x75, 0x8A, 0x41, 0x64, 0x00, 0x4E, 0x56, 0xFF, 0xFA, 0x01, 0x08,
+		0x2E, 0x2E, 0x00, 0xB6, 0xD0, 0x68, 0x3E, 0x80, 0x2F, 0x0C, 0xA9, 0xFE, 0x64, 0x53, 0x69, 0x7A,
+	}
+
+	nullPad = []byte{
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	}
+
+	// Needed permission bits for operation.
+	perm = map[types.CommandMode]struct{ extract, modify int }{
+		types.VALIDATE:           {0, 0},
+		types.OPTIMIZE:           {0, 1},
+		types.SPLIT:              {1, 0},
+		types.MERGE:              {0, 0},
+		types.EXTRACTIMAGES:      {1, 0},
+		types.EXTRACTFONTS:       {1, 0},
+		types.EXTRACTPAGES:       {1, 0},
+		types.EXTRACTCONTENT:     {1, 0},
+		types.TRIM:               {0, 1},
+		types.LISTATTACHMENTS:    {0, 0},
+		types.EXTRACTATTACHMENTS: {1, 0},
+		types.ADDATTACHMENTS:     {0, 1},
+		types.REMOVEATTACHMENTS:  {0, 1},
+	}
+)
+
+// NewEncryptDict creates a new EncryptDict using the standard security handler.
+func NewEncryptDict(needAES, need128BitKey bool) *types.PDFDict {
+
+	d := types.NewPDFDict()
+
+	//d.Insert("Type", PDFName("Encrypt"))
+
+	d.Insert("Filter", types.PDFName("Standard"))
+
+	if need128BitKey {
+		d.Insert("Length", types.PDFInteger(128))
+		d.Insert("R", types.PDFInteger(4))
+		d.Insert("V", types.PDFInteger(4))
+	} else {
+		d.Insert("R", types.PDFInteger(2))
+		d.Insert("V", types.PDFInteger(1))
+	}
+
+	// Enable all permission bits.
+	d.Insert("P", types.PDFInteger(-4))
+
+	d.Insert("StmF", types.PDFName("StdCF"))
+	d.Insert("StrF", types.PDFName("StdCF"))
+
+	d1 := types.NewPDFDict()
+	d1.Insert("AuthEvent", types.PDFName("DocOpen"))
+
+	if needAES {
+		d1.Insert("CFM", types.PDFName("AESV2"))
+	} else {
+		d1.Insert("CFM", types.PDFName("V2"))
+	}
+
+	if need128BitKey {
+		d1.Insert("Length", types.PDFInteger(16))
+	} else {
+		d1.Insert("Length", types.PDFInteger(5))
+	}
+
+	d2 := types.NewPDFDict()
+	d2.Insert("StdCF", d1)
+
+	d.Insert("CF", d2)
+
+	h := "0000000000000000000000000000000000000000000000000000000000000000"
+	d.Insert("U", types.PDFHexLiteral(h))
+	d.Insert("O", types.PDFHexLiteral(h))
+
+	return &d
 }
 
 func encKey(userpw string, e *types.Enc) (key []byte) {
@@ -95,18 +170,20 @@ func encKey(userpw string, e *types.Enc) (key []byte) {
 	return
 }
 
-// ValidateUserPassword validates userpw.
+// ValidateUserPassword validates the user password aka document open password.
 func ValidateUserPassword(ctx *types.PDFContext) (ok bool, key []byte, err error) {
 
 	// Alg.4/5 p63
 	// 4a/5a create encryption key using Alg.2 p61
 
-	//fmt.Printf("validateUserPassword: ctx.E = \n%v\n", ctx.E)
+	//fmt.Printf("validateUserPassword: ctx.E.U = \n%v\n", ctx.E.U)
 
 	u, key, err := U(ctx)
 	if err != nil {
 		return
 	}
+
+	//fmt.Printf("u: %v\n", u)
 
 	return bytes.HasPrefix(ctx.E.U, u), key, nil
 }
@@ -212,13 +289,15 @@ func U(ctx *types.PDFContext) (u []byte, key []byte, err error) {
 		return
 	}
 
-	if e.R == 2 {
+	switch e.R {
+
+	case 2:
 		// 4b
 		u = make([]byte, 32)
 		copy(u, pad)
 		c.XORKeyStream(u, u)
-	} else {
 
+	case 3, 4:
 		// 5b
 		h := md5.New()
 		h.Reset()
@@ -248,32 +327,37 @@ func U(ctx *types.PDFContext) (u []byte, key []byte, err error) {
 		}
 	}
 
+	if len(u) < 32 {
+		u = append(u, nullPad[:32-len(u)]...)
+	}
+
 	return u, key, nil
 }
 
-// ValidateOwnerPassword validates ownerpw.
-func ValidateOwnerPassword(ctx *types.PDFContext) (ok bool, err error) {
+// ValidateOwnerPassword validates the owner password aka change permissions password.
+func ValidateOwnerPassword(ctx *types.PDFContext) (ok bool, k []byte, err error) {
 
 	ownerpw := ctx.OwnerPW
-	userpw := ctx.UserPW
 
-	//fmt.Printf("ValidateOwnerPassword: opw=%s upw=%s\n", ownerpw, userpw)
+	//fmt.Printf("ValidateOwnerPassword: opw=%s\n", ownerpw)
 
 	e := ctx.E
 
 	// 7a: Alg.3 p62 a-d
-	key := key(ownerpw, userpw, e.R, e.L)
+	key := key(ownerpw, "", e.R, e.L)
 
 	// 7b
 	upw := make([]byte, len(e.O))
 	copy(upw, e.O)
 
+	var c *rc4.Cipher
+
 	switch e.R {
 
 	case 2:
-		c, err := rc4.NewCipher(key)
+		c, err = rc4.NewCipher(key)
 		if err != nil {
-			return false, err
+			return
 		}
 		c.XORKeyStream(upw, upw)
 
@@ -287,24 +371,25 @@ func ValidateOwnerPassword(ctx *types.PDFContext) (ok bool, err error) {
 				keynew[j] ^= byte(i)
 			}
 
-			c, err := rc4.NewCipher(keynew)
+			c, err = rc4.NewCipher(keynew)
 			if err != nil {
-				return false, err
+				return
 			}
 
 			c.XORKeyStream(upw, upw)
 		}
 	}
 
+	// Save user pw
 	upws := ctx.UserPW
+
 	ctx.UserPW = string(upw)
-	ok, _, err = ValidateUserPassword(ctx)
-	if err != nil {
-		return false, err
-	}
+	ok, k, err = ValidateUserPassword(ctx)
+
+	// Restore user pw
 	ctx.UserPW = upws
 
-	return ok, nil
+	return
 }
 
 // SupportedCFEntry returns true if all entries found are supported.
@@ -335,41 +420,77 @@ func printP(enc *types.Enc) {
 
 	p := enc.P
 
-	bits := "4,5"
-	if enc.R >= 3 {
-		bits = "10,11"
+	logInfoCrypto.Printf("P: %d -> %0b\n", p, uint32(p)&0x0F3C)
+	logInfoCrypto.Printf("Bit  3: %t (print(rev2), print quality(rev>=3))\n", p&0x0004 > 0)
+	logInfoCrypto.Printf("Bit  4: %t (modify other than controlled by bits 6,9,11)\n", p&0x0008 > 0)
+	logInfoCrypto.Printf("Bit  5: %t (extract(rev2), extract other than controlled by bit 10(rev>=3))\n", p&0x0010 > 0)
+	logInfoCrypto.Printf("Bit  6: %t (add or modify annotations)\n", p&0x0020 > 0)
+	logInfoCrypto.Printf("Bit  9: %t (fill in form fields(rev>=3)\n", p&0x0100 > 0)
+	logInfoCrypto.Printf("Bit 10: %t (extract(rev>=3))\n", p&0x0200 > 0)
+	logInfoCrypto.Printf("Bit 11: %t (modify(rev>=3))\n", p&0x0400 > 0)
+	logInfoCrypto.Printf("Bit 12: %t (print high-level(rev>=3))\n", p&0x0800 > 0)
+}
+
+func getMaskExtract(mode types.CommandMode, secHandlerRev int) int {
+
+	p, ok := perm[mode]
+
+	// no permissions defined or don't need extract permission
+	if !ok || p.extract == 0 {
+		return 0
 	}
 
-	logInfoCrypto.Printf("permission for processing needs the following bits set: %s\n", bits)
-	logDebugCrypto.Printf("P: %d -> %0b\n", p, uint32(p)&0x0F3C)
-	logInfoCrypto.Printf("Bit  3: %t (print)\n", p&0x0004 > 0)
-	logInfoCrypto.Printf("Bit  4: %t (modify)\n", p&0x0008 > 0)
-	logInfoCrypto.Printf("Bit  5: %t (copy, extract)\n", p&0x0010 > 0)
-	logInfoCrypto.Printf("Bit  6: %t (add or modify annotations)\n", p&0x0020 > 0)
-	logInfoCrypto.Printf("Bit  9: %t (fill in form fields)\n", p&0x0100 > 0)
-	logInfoCrypto.Printf("Bit 10: %t (extract)\n", p&0x0200 > 0)
-	logInfoCrypto.Printf("Bit 11: %t (assemble)\n", p&0x0400 > 0)
-	logInfoCrypto.Printf("Bit 12: %t (print high-level)\n", p&0x0800 > 0)
+	// need extract permission
+
+	if secHandlerRev >= 3 {
+		return 0x0200 // need bit 10
+	}
+
+	return 0x0010 // need bit 5
+}
+
+func getMaskModify(mode types.CommandMode, secHandlerRev int) int {
+
+	p, ok := perm[mode]
+
+	// no permissions defined or don't need modify permission
+	if !ok || p.modify == 0 {
+		return 0
+	}
+
+	// need modify permission
+
+	if secHandlerRev >= 3 {
+		return 0x0400 // need bit 11
+	}
+
+	return 0x0008 // need bit 4
 }
 
 // HasNeededPermissions returns true if permissions for pdfcpu processing are present.
-func HasNeededPermissions(enc *types.Enc) bool {
-
-	//
-	//return true
+func HasNeededPermissions(mode types.CommandMode, enc *types.Enc) bool {
 
 	// see 7.6.3.2
 
+	//return true
+
 	printP(enc)
 
-	if enc.R >= 3 {
-		// needs set bits 10 and 11
-		return enc.P&0x0200 > 0 && enc.P&0x0400 > 0
+	m := getMaskExtract(mode, enc.R)
+	if m > 0 {
+		if enc.P&m == 0 {
+			return false
+		}
 	}
 
-	// R == 2
-	// needs set bits 4 and 5
-	return enc.P&0x0008 > 0 && enc.P&0x0010 > 0
+	m = getMaskModify(mode, enc.R)
+	if m > 0 {
+		if enc.P&m == 0 {
+			return false
+		}
+	}
+
+	return true
 }
 
 func getV(dict *types.PDFDict) (v *int, err error) {
@@ -456,7 +577,7 @@ func checkV(ctx *types.PDFContext, dict *types.PDFDict) (v *int, err error) {
 	return v, nil
 }
 
-func getLength(dict *types.PDFDict) (int, error) {
+func length(dict *types.PDFDict) (int, error) {
 
 	l := dict.IntEntry("Length")
 	if l == nil {
@@ -480,7 +601,8 @@ func getR(dict *types.PDFDict) (int, error) {
 	return *r, nil
 }
 
-// SupportedEncryption returns true if used encryption is supported by pdfcpu.
+// SupportedEncryption returns true if used encryption is supported by pdfcpu
+// Also returns a pointer to a struct encapsulating used encryption.
 func SupportedEncryption(ctx *types.PDFContext, dict *types.PDFDict) (*types.Enc, error) {
 
 	var err error
@@ -505,7 +627,7 @@ func SupportedEncryption(ctx *types.PDFContext, dict *types.PDFDict) (*types.Enc
 	}
 
 	// Length
-	length, err := getLength(dict)
+	l, err := length(dict)
 	if err != nil {
 		return nil, err
 	}
@@ -550,7 +672,7 @@ func SupportedEncryption(ctx *types.PDFContext, dict *types.PDFDict) (*types.Enc
 		encMeta = *emd
 	}
 
-	return &types.Enc{O: o, U: u, L: length, P: *p, R: r, V: *v, Emd: encMeta}, nil
+	return &types.Enc{O: o, U: u, L: l, P: *p, R: r, V: *v, Emd: encMeta}, nil
 }
 
 func decryptKey(objNumber, generation int, key []byte, aes bool) []byte {
@@ -590,11 +712,12 @@ func decryptKey(objNumber, generation int, key []byte, aes bool) []byte {
 // EncryptString encrypts s using RC4 or AES.
 func EncryptString(needAES bool, s string, objNr, genNr int, key []byte) (*string, error) {
 
-	logInfoCrypto.Printf("EncryptString begin obj:%d gen:%d key:%X aes:%t\n", objNr, genNr, key, needAES)
+	logInfoCrypto.Printf("EncryptString begin obj:%d gen:%d key:%X aes:%t\n<%s>\n", objNr, genNr, key, needAES, s)
 
 	var s1 *string
 	var err error
 	k := decryptKey(objNr, genNr, key, needAES)
+	//logInfoCrypto.Printf("EncryptString k = %v\n", k)
 
 	if needAES {
 		b, err := encryptAESBytes([]byte(s), k)

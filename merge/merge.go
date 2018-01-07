@@ -192,23 +192,7 @@ func patchSourceObjectNumbers(ctxSource, ctxDest *types.PDFContext) (err error) 
 			continue
 		}
 
-		if entry.Compressed {
-			logDebugMerge.Printf("patch compressed entry: old objstream obj#:%d\n", *entry.ObjectStream)
-			i := lookup[*entry.ObjectStream]
-			entry.ObjectStream = &i
-			logDebugMerge.Printf("patch compressed entry: new objstream obj#:%d\n", *entry.ObjectStream)
-			continue
-		}
-
 		patchObject(entry.Object, lookup)
-
-		if entry.ObjectStream != nil {
-			// was compressed
-			logDebugMerge.Printf("patch compressed entry: new objstream obj#:%d\n", *entry.ObjectStream)
-			i := lookup[*entry.ObjectStream]
-			entry.ObjectStream = &i
-		}
-
 	}
 
 	// Patch xref entry object numbers.

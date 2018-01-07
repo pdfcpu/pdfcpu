@@ -5,32 +5,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-type commandMode int
-
-// The available commands.
-const (
-	VALIDATE commandMode = iota
-	OPTIMIZE
-	SPLIT
-	MERGE
-	EXTRACTIMAGES
-	EXTRACTFONTS
-	EXTRACTPAGES
-	EXTRACTCONTENT
-	TRIM
-	ADDATTACHMENTS
-	REMOVEATTACHMENTS
-	EXTRACTATTACHMENTS
-	LISTATTACHMENTS
-	ENCRYPT
-	DECRYPT
-	CHANGEUPW
-	CHANGEOPW
-)
-
 // Command represents an execution context.
 type Command struct {
-	Mode          commandMode          // VALIDATE  OPTIMIZE  SPLIT  MERGE  EXTRACT  TRIM  LISTATT ADDATT REMATT EXTATT  ENCRYPT  DECRYPT  CHANGEUPW  CHANGEOPW
+	Mode          types.CommandMode    // VALIDATE  OPTIMIZE  SPLIT  MERGE  EXTRACT  TRIM  LISTATT ADDATT REMATT EXTATT  ENCRYPT  DECRYPT  CHANGEUPW  CHANGEOPW
 	InFile        *string              //    *         *        *      -       *      *      *       *       *      *       *        *         *          *
 	InFiles       []string             //    -         -        -      *       -      -      -       *       *      *       -        -         -          -
 	InDir         *string              //    -         -        -      -       -      -      -       -       -      -       -        -         -          -
@@ -45,7 +22,7 @@ type Command struct {
 // ValidateCommand creates a new ValidateCommand.
 func ValidateCommand(pdfFileName string, config *types.Configuration) Command {
 	return Command{
-		Mode:   VALIDATE,
+		Mode:   types.VALIDATE,
 		InFile: &pdfFileName,
 		Config: config}
 }
@@ -53,7 +30,7 @@ func ValidateCommand(pdfFileName string, config *types.Configuration) Command {
 // OptimizeCommand creates a new OptimizeCommand.
 func OptimizeCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configuration) Command {
 	return Command{
-		Mode:    OPTIMIZE,
+		Mode:    types.OPTIMIZE,
 		InFile:  &pdfFileNameIn,
 		OutFile: &pdfFileNameOut,
 		Config:  config}
@@ -62,7 +39,7 @@ func OptimizeCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configu
 // SplitCommand creates a new SplitCommand.
 func SplitCommand(pdfFileNameIn, dirNameOut string, config *types.Configuration) Command {
 	return Command{
-		Mode:   SPLIT,
+		Mode:   types.SPLIT,
 		InFile: &pdfFileNameIn,
 		OutDir: &dirNameOut,
 		Config: config}
@@ -71,7 +48,7 @@ func SplitCommand(pdfFileNameIn, dirNameOut string, config *types.Configuration)
 // MergeCommand creates a new MergeCommand.
 func MergeCommand(pdfFileNamesIn []string, pdfFileNameOut string, config *types.Configuration) Command {
 	return Command{
-		Mode: MERGE,
+		Mode: types.MERGE,
 		//InFile:  &pdfFileNameIn,
 		InFiles: pdfFileNamesIn,
 		OutFile: &pdfFileNameOut,
@@ -82,7 +59,7 @@ func MergeCommand(pdfFileNamesIn []string, pdfFileNameOut string, config *types.
 // (experimental)
 func ExtractImagesCommand(pdfFileNameIn, dirNameOut string, pageSelection []string, config *types.Configuration) Command {
 	return Command{
-		Mode:          EXTRACTIMAGES,
+		Mode:          types.EXTRACTIMAGES,
 		InFile:        &pdfFileNameIn,
 		OutDir:        &dirNameOut,
 		PageSelection: pageSelection,
@@ -93,7 +70,7 @@ func ExtractImagesCommand(pdfFileNameIn, dirNameOut string, pageSelection []stri
 // (experimental)
 func ExtractFontsCommand(pdfFileNameIn, dirNameOut string, pageSelection []string, config *types.Configuration) Command {
 	return Command{
-		Mode:          EXTRACTFONTS,
+		Mode:          types.EXTRACTFONTS,
 		InFile:        &pdfFileNameIn,
 		OutDir:        &dirNameOut,
 		PageSelection: pageSelection,
@@ -103,7 +80,7 @@ func ExtractFontsCommand(pdfFileNameIn, dirNameOut string, pageSelection []strin
 // ExtractPagesCommand creates a new ExtractPagesCommand.
 func ExtractPagesCommand(pdfFileNameIn, dirNameOut string, pageSelection []string, config *types.Configuration) Command {
 	return Command{
-		Mode:          EXTRACTPAGES,
+		Mode:          types.EXTRACTPAGES,
 		InFile:        &pdfFileNameIn,
 		OutDir:        &dirNameOut,
 		PageSelection: pageSelection,
@@ -113,7 +90,7 @@ func ExtractPagesCommand(pdfFileNameIn, dirNameOut string, pageSelection []strin
 // ExtractContentCommand creates a new ExtractContentCommand.
 func ExtractContentCommand(pdfFileNameIn, dirNameOut string, pageSelection []string, config *types.Configuration) Command {
 	return Command{
-		Mode:          EXTRACTCONTENT,
+		Mode:          types.EXTRACTCONTENT,
 		InFile:        &pdfFileNameIn,
 		OutDir:        &dirNameOut,
 		PageSelection: pageSelection,
@@ -124,7 +101,7 @@ func ExtractContentCommand(pdfFileNameIn, dirNameOut string, pageSelection []str
 func TrimCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []string, config *types.Configuration) Command {
 	// A slice parameter may be called with nil => empty slice.
 	return Command{
-		Mode:          TRIM,
+		Mode:          types.TRIM,
 		InFile:        &pdfFileNameIn,
 		OutFile:       &pdfFileNameOut,
 		PageSelection: pageSelection,
@@ -134,7 +111,7 @@ func TrimCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []string, c
 // ListAttachmentsCommand create a new ListAttachmentsCommand.
 func ListAttachmentsCommand(pdfFileNameIn string, config *types.Configuration) Command {
 	return Command{
-		Mode:   LISTATTACHMENTS,
+		Mode:   types.LISTATTACHMENTS,
 		InFile: &pdfFileNameIn,
 		Config: config}
 }
@@ -142,7 +119,7 @@ func ListAttachmentsCommand(pdfFileNameIn string, config *types.Configuration) C
 // AddAttachmentsCommand creates a new AddAttachmentsCommand.
 func AddAttachmentsCommand(pdfFileNameIn string, fileNamesIn []string, config *types.Configuration) Command {
 	return Command{
-		Mode:    ADDATTACHMENTS,
+		Mode:    types.ADDATTACHMENTS,
 		InFile:  &pdfFileNameIn,
 		InFiles: fileNamesIn,
 		Config:  config}
@@ -151,7 +128,7 @@ func AddAttachmentsCommand(pdfFileNameIn string, fileNamesIn []string, config *t
 // RemoveAttachmentsCommand creates a new RemoveAttachmentsCommand.
 func RemoveAttachmentsCommand(pdfFileNameIn string, fileNamesIn []string, config *types.Configuration) Command {
 	return Command{
-		Mode:    REMOVEATTACHMENTS,
+		Mode:    types.REMOVEATTACHMENTS,
 		InFile:  &pdfFileNameIn,
 		InFiles: fileNamesIn,
 		Config:  config}
@@ -160,7 +137,7 @@ func RemoveAttachmentsCommand(pdfFileNameIn string, fileNamesIn []string, config
 // ExtractAttachmentsCommand creates a new ExtractAttachmentsCommand.
 func ExtractAttachmentsCommand(pdfFileNameIn, dirNameOut string, fileNamesIn []string, config *types.Configuration) Command {
 	return Command{
-		Mode:    EXTRACTATTACHMENTS,
+		Mode:    types.EXTRACTATTACHMENTS,
 		InFile:  &pdfFileNameIn,
 		OutDir:  &dirNameOut,
 		InFiles: fileNamesIn,
@@ -170,7 +147,7 @@ func ExtractAttachmentsCommand(pdfFileNameIn, dirNameOut string, fileNamesIn []s
 // EncryptCommand creates a new EncryptCommand.
 func EncryptCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configuration) Command {
 	return Command{
-		Mode:    ENCRYPT,
+		Mode:    types.ENCRYPT,
 		InFile:  &pdfFileNameIn,
 		OutFile: &pdfFileNameOut,
 		Config:  config}
@@ -179,7 +156,7 @@ func EncryptCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configur
 // DecryptCommand creates a new DecryptCommand.
 func DecryptCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configuration) Command {
 	return Command{
-		Mode:    DECRYPT,
+		Mode:    types.DECRYPT,
 		InFile:  &pdfFileNameIn,
 		OutFile: &pdfFileNameOut,
 		Config:  config}
@@ -188,7 +165,7 @@ func DecryptCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configur
 // ChangeUserPWCommand creates a new ChangeUserPWCommand.
 func ChangeUserPWCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configuration, pwOld, pwNew *string) Command {
 	return Command{
-		Mode:    CHANGEUPW,
+		Mode:    types.CHANGEUPW,
 		InFile:  &pdfFileNameIn,
 		OutFile: &pdfFileNameOut,
 		Config:  config,
@@ -199,7 +176,7 @@ func ChangeUserPWCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Con
 // ChangeOwnerPWCommand creates a new ChangeOwnerPWCommand.
 func ChangeOwnerPWCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configuration, pwOld, pwNew *string) Command {
 	return Command{
-		Mode:    CHANGEOPW,
+		Mode:    types.CHANGEOPW,
 		InFile:  &pdfFileNameIn,
 		OutFile: &pdfFileNameOut,
 		Config:  config,
@@ -211,16 +188,16 @@ func processAttachments(cmd *Command) (out []string, err error) {
 
 	switch cmd.Mode {
 
-	case LISTATTACHMENTS:
+	case types.LISTATTACHMENTS:
 		out, err = ListAttachments(*cmd.InFile, cmd.Config)
 
-	case ADDATTACHMENTS:
+	case types.ADDATTACHMENTS:
 		err = AddAttachments(*cmd.InFile, cmd.InFiles, cmd.Config)
 
-	case REMOVEATTACHMENTS:
+	case types.REMOVEATTACHMENTS:
 		err = RemoveAttachments(*cmd.InFile, cmd.InFiles, cmd.Config)
 
-	case EXTRACTATTACHMENTS:
+	case types.EXTRACTATTACHMENTS:
 		err = ExtractAttachments(*cmd.InFile, *cmd.OutDir, cmd.InFiles, cmd.Config)
 	}
 
@@ -231,16 +208,16 @@ func processEncryption(cmd *Command) (err error) {
 
 	switch cmd.Mode {
 
-	case ENCRYPT:
+	case types.ENCRYPT:
 		err = Encrypt(*cmd.InFile, *cmd.OutFile, cmd.Config)
 
-	case DECRYPT:
+	case types.DECRYPT:
 		err = Decrypt(*cmd.InFile, *cmd.OutFile, cmd.Config)
 
-	case CHANGEUPW:
+	case types.CHANGEUPW:
 		err = ChangeUserPassword(*cmd.InFile, *cmd.OutFile, cmd.Config, cmd.PWOld, cmd.PWNew)
 
-	case CHANGEOPW:
+	case types.CHANGEOPW:
 		err = ChangeOwnerPassword(*cmd.InFile, *cmd.OutFile, cmd.Config, cmd.PWOld, cmd.PWNew)
 	}
 
@@ -250,39 +227,41 @@ func processEncryption(cmd *Command) (err error) {
 // Process executes a pdfcpu command.
 func Process(cmd *Command) (out []string, err error) {
 
+	cmd.Config.Mode = cmd.Mode
+
 	switch cmd.Mode {
 
-	case VALIDATE:
+	case types.VALIDATE:
 		err = Validate(*cmd.InFile, cmd.Config)
 
-	case OPTIMIZE:
+	case types.OPTIMIZE:
 		err = Optimize(*cmd.InFile, *cmd.OutFile, cmd.Config)
 
-	case SPLIT:
+	case types.SPLIT:
 		err = Split(*cmd.InFile, *cmd.OutDir, cmd.Config)
 
-	case MERGE:
+	case types.MERGE:
 		err = Merge(cmd.InFiles, *cmd.OutFile, cmd.Config)
 
-	case EXTRACTIMAGES:
+	case types.EXTRACTIMAGES:
 		err = ExtractImages(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Config)
 
-	case EXTRACTFONTS:
+	case types.EXTRACTFONTS:
 		err = ExtractFonts(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Config)
 
-	case EXTRACTPAGES:
+	case types.EXTRACTPAGES:
 		err = ExtractPages(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Config)
 
-	case EXTRACTCONTENT:
+	case types.EXTRACTCONTENT:
 		err = ExtractContent(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Config)
 
-	case TRIM:
+	case types.TRIM:
 		err = Trim(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Config)
 
-	case LISTATTACHMENTS, ADDATTACHMENTS, REMOVEATTACHMENTS, EXTRACTATTACHMENTS:
+	case types.LISTATTACHMENTS, types.ADDATTACHMENTS, types.REMOVEATTACHMENTS, types.EXTRACTATTACHMENTS:
 		out, err = processAttachments(cmd)
 
-	case ENCRYPT, DECRYPT, CHANGEUPW, CHANGEOPW:
+	case types.ENCRYPT, types.DECRYPT, types.CHANGEUPW, types.CHANGEOPW:
 		err = processEncryption(cmd)
 
 	default:

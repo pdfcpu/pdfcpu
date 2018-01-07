@@ -97,7 +97,7 @@ func writePages(ctx *types.PDFContext, rootDict *types.PDFDict) (err error) {
 	// Manipulate page tree as needed for splitting, trimming or page extraction.
 	if ctx.Write.ExtractPages != nil && len(ctx.Write.ExtractPages) > 0 {
 		p := 0
-		_, err = trimPagesDict(ctx, *indRef, &p)
+		_, err = trimPagesDict(ctx, indRef, &p)
 		if err != nil {
 			return
 		}
@@ -107,7 +107,7 @@ func writePages(ctx *types.PDFContext, rootDict *types.PDFDict) (err error) {
 	ctx.Write.WriteToObjectStream = true
 
 	// Write page tree.
-	err = writePagesDict(ctx, *indRef, 0)
+	err = writePagesDict(ctx, indRef, 0)
 	if err != nil {
 		return
 	}
@@ -123,38 +123,6 @@ func writePages(ctx *types.PDFContext, rootDict *types.PDFDict) (err error) {
 func writeRootObject(ctx *types.PDFContext) (err error) {
 
 	// => 7.7.2 Document Catalog
-
-	// Entry	   	       opt	since		type			info
-	//------------------------------------------------------------------------------------
-	// Type			        n				string			"Catalog"
-	// Version		        y	1.4			name			overrules header version if later
-	// Extensions	        y	ISO 32000	dict			=> 7.12 Extensions Dictionary
-	// Pages		        n	-			(dict)			=> 7.7.3 Page Tree
-	// PageLabels	        y	1.3			number tree		=> 7.9.7 Number Trees, 12.4.2 Page Labels
-	// Names		        y	1.2			dict			=> 7.7.4 Name Dictionary
-	// Dests	    	    y	only 1.1	(dict)			=> 12.3.2.3 Named Destinations
-	// ViewerPreferences    y	1.2			dict			=> 12.2 Viewer Preferences
-	// PageLayout	        y	-			name			/SinglePage, /OneColumn etc.
-	// PageMode		        y	-			name			/UseNone, /FullScreen etc.
-	// Outlines		        y	-			(dict)			=> 12.3.3 Document Outline
-	// Threads		        y	1.1			(array)			=> 12.4.3 Articles
-	// OpenAction	        y	1.1			array or dict	=> 12.3.2 Destinations, 12.6 Actions
-	// AA			        y	1.4			dict			=> 12.6.3 Trigger Events
-	// URI			        y	1.1			dict			=> 12.6.4.7 URI Actions
-	// AcroForm		        y	1.2			dict			=> 12.7.2 Interactive Form Dictionary
-	// Metadata		        y	1.4			(stream)		=> 14.3.2 Metadata Streams
-	// StructTreeRoot 	    y 	1.3			dict			=> 14.7.2 Structure Hierarchy
-	// Markinfo		        y	1.4			dict			=> 14.7 Logical Structure
-	// Lang			        y	1.4			string
-	// SpiderInfo	        y	1.3			dict			=> 14.10.2 Web Capture Information Dictionary
-	// OutputIntents 	    y	1.4			array			=> 14.11.5 Output Intents
-	// PieceInfo	        y	1.4			dict			=> 14.5 Page-Piece Dictionaries
-	// OCProperties	        y	1.5			dict			=> 8.11.4 Configuring Optional Content
-	// Perms		        y	1.5			dict			=> 12.8.4 Permissions
-	// Legal		        y	1.5			dict			=> 12.8.5 Legal Content Attestations
-	// Requirements	        y	1.7			array			=> 12.10 Document Requirements
-	// Collection	        y	1.7			dict			=> 12.3.5 Collections
-	// NeedsRendering 	    y	1.7			boolean			=> XML Forms Architecture (XFA) Spec.
 
 	xRefTable := ctx.XRefTable
 
@@ -208,74 +176,29 @@ func writeRootObject(ctx *types.PDFContext) (err error) {
 		return
 	}
 
-	err = writeRootEntry(ctx, dict, dictName, "Extensions", types.RootExtensions)
-	if err != nil {
-		return
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "PageLabels", types.RootPageLabels)
-	if err != nil {
-		return
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "Names", types.RootNames)
-	if err != nil {
-		return
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "Dests", types.RootDests)
-	if err != nil {
-		return
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "ViewerPreferences", types.RootViewerPrefs)
-	if err != nil {
-		return
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "PageLayout", types.RootPageLayout)
-	if err != nil {
-		return
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "PageMode", types.RootPageMode)
-	if err != nil {
-		return
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "Outlines", types.RootOutlines)
-	if err != nil {
-		return
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "Threads", types.RootThreads)
-	if err != nil {
-		return
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "OpenAction", types.RootOpenAction)
-	if err != nil {
-		return
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "AA", types.RootAA)
-	if err != nil {
-		return
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "URI", types.RootURI)
-	if err != nil {
-		return err
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "AcroForm", types.RootAcroForm)
-	if err != nil {
-		return err
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "Metadata", types.RootMetadata)
-	if err != nil {
-		return err
+	for _, e := range []struct {
+		entryName string
+		statsAttr int
+	}{
+		{"Extensions", types.RootExtensions},
+		{"PageLabels", types.RootPageLabels},
+		{"Names", types.RootNames},
+		{"Dests", types.RootDests},
+		{"ViewerPreferences", types.RootViewerPrefs},
+		{"PageLayout", types.RootPageLayout},
+		{"PageMode", types.RootPageMode},
+		{"Outlines", types.RootOutlines},
+		{"Threads", types.RootThreads},
+		{"OpenAction", types.RootOpenAction},
+		{"AA", types.RootAA},
+		{"URI", types.RootURI},
+		{"AcroForm", types.RootAcroForm},
+		{"Metadata", types.RootMetadata},
+	} {
+		err = writeRootEntry(ctx, dict, dictName, e.entryName, e.statsAttr)
+		if err != nil {
+			return
+		}
 	}
 
 	err = writeRootEntryToObjStream(ctx, dict, dictName, "StructTreeRoot", types.RootStructTreeRoot)
@@ -283,59 +206,26 @@ func writeRootObject(ctx *types.PDFContext) (err error) {
 		return
 	}
 
-	err = writeRootEntry(ctx, dict, dictName, "MarkInfo", types.RootMarkInfo)
-	if err != nil {
-		return
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "Lang", types.RootLang)
-	if err != nil {
-		return
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "SpiderInfo", types.RootSpiderInfo)
-	if err != nil {
-		return err
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "OutputIntents", types.RootOutputIntents)
-	if err != nil {
-		return err
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "PieceInfo", types.RootPieceInfo)
-	if err != nil {
-		return err
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "OCProperties", types.RootOCProperties)
-	if err != nil {
-		return
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "Perms", types.RootPerms)
-	if err != nil {
-		return
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "Legal", types.RootLegal)
-	if err != nil {
-		return
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "Requirements", types.RootRequirements)
-	if err != nil {
-		return
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "Collection", types.RootCollection)
-	if err != nil {
-		return
-	}
-
-	err = writeRootEntry(ctx, dict, dictName, "NeedsRendering", types.RootNeedsRendering)
-	if err != nil {
-		return
+	for _, e := range []struct {
+		entryName string
+		statsAttr int
+	}{
+		{"MarkInfo", types.RootMarkInfo},
+		{"Lang", types.RootLang},
+		{"SpiderInfo", types.RootSpiderInfo},
+		{"OutputIntents", types.RootOutputIntents},
+		{"PieceInfo", types.RootPieceInfo},
+		{"OCProperties", types.RootOCProperties},
+		{"Perms", types.RootPerms},
+		{"Legal", types.RootLegal},
+		{"Requirements", types.RootRequirements},
+		{"Collection", types.RootCollection},
+		{"NeedsRendering", types.RootNeedsRendering},
+	} {
+		err = writeRootEntry(ctx, dict, dictName, e.entryName, e.statsAttr)
+		if err != nil {
+			return
+		}
 	}
 
 	logInfoWriter.Printf("*** writeRootObject: end offset=%d ***\n", ctx.Write.Offset)
@@ -841,15 +731,80 @@ func writeEncryptDict(ctx *types.PDFContext) (err error) {
 	return writePDFObject(ctx, objNumber, genNumber, dict.PDFString())
 }
 
+func prepareForEncryption(ctx *types.PDFContext) (err error) {
+
+	dict := crypto.NewEncryptDict(ctx.EncryptUsingAES, ctx.EncryptUsing128BitKey)
+
+	ctx.E, err = crypto.SupportedEncryption(ctx, dict)
+	if err != nil {
+		return
+	}
+
+	if ctx.ID == nil {
+		return errors.New("encrypt: missing ID")
+	}
+
+	var id []byte
+
+	hl, ok := ((*ctx.ID)[0]).(types.PDFHexLiteral)
+	if ok {
+		id, err = hl.Bytes()
+		if err != nil {
+			return err
+		}
+	} else {
+		sl, ok := ((*ctx.ID)[0]).(types.PDFStringLiteral)
+		if !ok {
+			return errors.New("encrypt: ID must contain PDFHexLiterals or PDFStringLiterals")
+		}
+		id, err = types.Unescape(sl.Value())
+		if err != nil {
+			return err
+		}
+	}
+
+	ctx.E.ID = id
+
+	//fmt.Printf("opw before: length:%d <%s>\n", len(ctx.E.O), ctx.E.O)
+	ctx.E.O, err = crypto.O(ctx)
+	if err != nil {
+		return
+	}
+	//fmt.Printf("opw after: length:%d <%s> %0X\n", len(ctx.E.O), ctx.E.O, ctx.E.O)
+
+	//fmt.Printf("upw before: length:%d <%s>\n", len(ctx.E.U), ctx.E.U)
+	ctx.E.U, ctx.EncKey, err = crypto.U(ctx)
+	if err != nil {
+		return
+	}
+	//fmt.Printf("upw after: length:%d <%s> %0X\n", len(ctx.E.U), ctx.E.U, ctx.E.U)
+	//fmt.Printf("encKey = %0X\n", ctx.EncKey)
+
+	dict.Update("U", types.PDFHexLiteral(hex.EncodeToString(ctx.E.U)))
+	dict.Update("O", types.PDFHexLiteral(hex.EncodeToString(ctx.E.O)))
+
+	xRefTableEntry := types.NewXRefTableEntryGen0(*dict)
+
+	// Reuse free objects (including recycled objects from this run).
+	var objNumber int
+	objNumber, err = ctx.InsertAndUseRecycled(*xRefTableEntry)
+	if err != nil {
+		return
+	}
+
+	indRef := types.NewPDFIndirectRef(objNumber, 0)
+	ctx.Encrypt = &indRef
+
+	return
+}
+
 func handleEncryption(ctx *types.PDFContext) (err error) {
 
 	var d *types.PDFDict
 
-	if ctx.Decrypt != nil {
+	if ctx.Mode == types.ENCRYPT || ctx.Mode == types.DECRYPT {
 
-		// Flag is set for encryption or decryption.
-
-		if *ctx.Decrypt {
+		if ctx.Mode == types.DECRYPT {
 
 			// Remove encryption.
 			ctx.EncKey = nil
@@ -857,79 +812,21 @@ func handleEncryption(ctx *types.PDFContext) (err error) {
 		} else {
 
 			// Encrypt this document.
-
-			dict := types.NewEncryptDict()
-
-			ctx.E, err = crypto.SupportedEncryption(ctx, dict)
+			err = prepareForEncryption(ctx)
 			if err != nil {
 				return
 			}
-
-			if ctx.ID == nil {
-				return errors.New("encrypt: missing ID")
-			}
-
-			var id []byte
-
-			hl, ok := ((*ctx.ID)[0]).(types.PDFHexLiteral)
-			if ok {
-				id, err = hl.Bytes()
-				if err != nil {
-					return err
-				}
-			} else {
-				sl, ok := ((*ctx.ID)[0]).(types.PDFStringLiteral)
-				if !ok {
-					return errors.New("encrypt: ID must contain PDFHexLiterals or PDFStringLiterals")
-				}
-				id, err = types.Unescape(sl.Value())
-				if err != nil {
-					return err
-				}
-			}
-
-			ctx.E.ID = id
-
-			//fmt.Printf("opw before: length:%d <%s>\n", len(ctx.E.O), ctx.E.O)
-			ctx.E.O, err = crypto.O(ctx)
-			if err != nil {
-				return
-			}
-			//fmt.Printf("opw after: length:%d <%s> %0X\n", len(ctx.E.O), ctx.E.O, ctx.E.O)
-
-			//fmt.Printf("upw before: length:%d <%s>\n", len(ctx.E.U), ctx.E.U)
-			ctx.E.U, ctx.EncKey, err = crypto.U(ctx)
-			if err != nil {
-				return
-			}
-			if len(ctx.E.U) < 32 {
-				pad := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
-				//pad := "12345678901234567890123456789012"
-				ctx.E.U = append(ctx.E.U, pad[:32-len(ctx.E.U)]...)
-			}
-			//fmt.Printf("upw after: length:%d <%s> %0X\n", len(ctx.E.U), ctx.E.U, ctx.E.U)
-			//fmt.Printf("encKey = %0X\n", ctx.EncKey)
-
-			dict.Update("U", types.PDFHexLiteral(hex.EncodeToString(ctx.E.U)))
-			dict.Update("O", types.PDFHexLiteral(hex.EncodeToString(ctx.E.O)))
-
-			xRefTableEntry := types.NewXRefTableEntryGen0(*dict)
-
-			// Reuse free objects (including recycled objects from this run).
-			var objNumber int
-			objNumber, err = ctx.InsertAndUseRecycled(*xRefTableEntry)
-			if err != nil {
-				return
-			}
-
-			indRef := types.NewPDFIndirectRef(objNumber, 0)
-			ctx.Encrypt = &indRef
 
 		}
+
 	} else if ctx.UserPWNew != nil || ctx.OwnerPWNew != nil {
 
 		// Change user or owner password.
+
+		d, err = ctx.EncryptDict()
+		if err != nil {
+			return
+		}
 
 		if ctx.UserPWNew != nil {
 			//fmt.Printf("change upw from <%s> to <%s>\n", ctx.UserPW, *ctx.UserPWNew)
@@ -947,33 +844,20 @@ func handleEncryption(ctx *types.PDFContext) (err error) {
 			return
 		}
 		//fmt.Printf("opw after: length:%d <%s> %0X\n", len(ctx.E.O), ctx.E.O, ctx.E.O)
+		d.Update("O", types.PDFHexLiteral(hex.EncodeToString(ctx.E.O)))
 
 		//fmt.Printf("upw before: length:%d <%s>\n", len(ctx.E.U), ctx.E.U)
 		ctx.E.U, ctx.EncKey, err = crypto.U(ctx)
 		if err != nil {
 			return
 		}
-		if len(ctx.E.U) < 32 {
-			pad := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
-			//pad := "12345678901234567890123456789012"
-			ctx.E.U = append(ctx.E.U, pad[:32-len(ctx.E.U)]...)
-		}
 		//fmt.Printf("upw after: length:%d <%s> %0X\n", len(ctx.E.U), ctx.E.U, ctx.E.U)
 		//fmt.Printf("encKey = %0X\n", ctx.EncKey)
-
-		// update EncryptDict.U+O
-		d, err = ctx.EncryptDict()
-		if err != nil {
-			return
-		}
-
 		d.Update("U", types.PDFHexLiteral(hex.EncodeToString(ctx.E.U)))
-		d.Update("O", types.PDFHexLiteral(hex.EncodeToString(ctx.E.O)))
 
 	}
 
-	// write xrefstream only if aleady using xrefstream.
+	// write xrefstream if using xrefstream only.
 	if ctx.Encrypt != nil && ctx.EncKey != nil && !ctx.Read.UsingXRefStreams {
 		ctx.WriteObjectStream = false
 		ctx.WriteXRefStream = false
