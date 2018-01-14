@@ -16,6 +16,7 @@ The commands are:
 	extract		extract images, fonts, content or pages
 	trim		create trimmed version
 	attach		list, add, remove, extract embedded file attachments
+	perm		list, add user access permissions
 	encrypt		set password protection		
 	decrypt		remove password protection
 	changeupw	change user password
@@ -118,22 +119,40 @@ A missing pageSelection means all pages are selected for generation.`
 	usageAttachRemove  = "pdfcpu attach remove [-verbose] [-upw userpw] [-opw ownerpw] inFile [file...]"
 	usageAttachExtract = "pdfcpu attach extract [-verbose] [-upw userpw] [-opw ownerpw] inFile outDir [file...]"
 
-	usageAttach = "usage: " + usageAttachList + "\n\t" + usageAttachAdd + "\n\t" + usageAttachRemove + "\n\t" + usageAttachExtract
+	usageAttach = "usage: " + usageAttachList +
+		"\n       " + usageAttachAdd +
+		"\n       " + usageAttachRemove +
+		"\n       " + usageAttachExtract
 
 	usageLongAttach = `Attach manages embedded file attachments.
 	
 verbose ... extensive log output
+   perm ... user access permissions
     upw ... user password
     opw ... owner password
  inFile ... input pdf file
  outDir ... output directory`
 
-	usageEncrypt     = "usage: pdfcpu encrypt [-verbose] [-mode rc4|aes] [-key 40|128] [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usagePermList = "pdfcpu perm list [-verbose] [-upw userpw] [-opw ownerpw] inFile"
+	usagePermAdd  = "pdfcpu perm add [-verbose] [-perm none|all] [-upw userpw] -opw ownerpw inFile"
+
+	usagePerm = "usage: " + usagePermList + "\n       " + usagePermAdd
+
+	usageLongPerm = `Perm manages user access permissions.
+	
+verbose ... extensive log output
+   perm ... user access permissions
+    upw ... user password
+    opw ... owner password
+ inFile ... input pdf file`
+
+	usageEncrypt     = "usage: pdfcpu encrypt [-verbose] [-mode rc4|aes] [-key 40|128] [perm none|all] [-upw userpw] [-opw ownerpw] inFile [outFile]"
 	usageLongEncrypt = `Encrypt sets a password protection based on user and owner password.
 
 verbose ... extensive log output
    mode ... algorithm (default=aes)
     key ... key length in bits (default=128)
+   perm ... user access permissions
     upw ... user password
     opw ... owner password
  inFile ... input pdf file
@@ -152,7 +171,7 @@ outFile ... output pdf file`
 	usageLongChangeUserPW = `Changeupw changes the user password.
 	
 verbose ... extensive log output
-    opw ... owner password
+    opw ... owner password, required unless = ""
  inFile ... input pdf file
  upwOld ... old user password
  upwNew ... new user password`
@@ -161,9 +180,9 @@ verbose ... extensive log output
 	usageLongChangeOwnerPW = `Changeopw changes the owner password.
 	
 verbose ... extensive log output
-    upw ... user password
+    upw ... user password, required unless = ""
  inFile ... input pdf file
- opwOld ... old owner password
+ opwOld ... old owner password (supply user password on initial changeopw)
  opwNew ... new owner password`
 
 	usageVersion     = "usage: pdfcpu version"

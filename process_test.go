@@ -301,7 +301,44 @@ func ExampleProcess_changeOwnerPW() {
 	}
 }
 
+func ExampleProcess_listPermissions() {
+
+	config := types.NewDefaultConfiguration()
+	config.UserPW = "upw"
+	config.OwnerPW = "opw"
+
+	cmd := ListPermissionsCommand("in.pdf", config)
+
+	list, err := Process(&cmd)
+	if err != nil {
+		return
+	}
+
+	// Print permissions list.
+	for _, l := range list {
+		fmt.Println(l)
+	}
+}
+
+func ExampleProcess_addPermissions() {
+
+	config := types.NewDefaultConfiguration()
+	config.UserPW = "upw"
+	config.OwnerPW = "opw"
+
+	config.UserAccessPermissions = types.PermissionsAll
+
+	cmd := AddPermissionsCommand("in.pdf", config)
+
+	_, err := Process(&cmd)
+	if err != nil {
+		return
+	}
+
+}
+
 func TestMain(m *testing.M) {
+
 	os.Mkdir(outputDir, 0777)
 
 	exitCode := m.Run()
@@ -574,152 +611,605 @@ func TestExtractPagesCommand(t *testing.T) {
 
 }
 
+func TestEncryptUPWOnly(t *testing.T) {
+	t.Log("running TestEncryptUPWOnly..")
+
+	f := outputDir + "/test.pdf"
+
+	// Encrypt upw only
+	t.Log("Encrypt upw only")
+	config := types.NewDefaultConfiguration()
+	config.UserPW = "upw"
+	cmd := EncryptCommand("testdata/5116.DCT_Filter.pdf", f, config)
+	_, err := Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptUPWOnly - encrypt with upw only to %s: %v\n", f, err)
+	}
+
+	// Validate wrong upw
+	t.Log("Validate wrong upw fails")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upwWrong"
+	cmd = ValidateCommand(f, config)
+	_, err = Process(&cmd)
+	if err == nil {
+		t.Fatalf("TestEncryptUPWOnly - validate %s using wrong upw should fail!\n", f)
+	}
+
+	// Validate wrong opw
+	t.Log("Validate wrong opw fails")
+	config = types.NewDefaultConfiguration()
+	config.OwnerPW = "opwWrong"
+	cmd = ValidateCommand(f, config)
+	_, err = Process(&cmd)
+	if err == nil {
+		t.Fatalf("TestEncryptUPWOnly - validate %s using wrong opw should fail!\n", f)
+	}
+
+	// Validate default opw=upw (if there is no ownerpw set)
+	t.Log("Validate default opw")
+	config = types.NewDefaultConfiguration()
+	config.OwnerPW = "upw"
+	cmd = ValidateCommand(f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptUPWOnly - validate %s using default opw: %s!\n", f, err)
+	}
+
+	// Validate upw
+	t.Log("Validate upw")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upw"
+	cmd = ValidateCommand(f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptUPWOnly - validate %s using upw: %v\n", f, err)
+	}
+
+	// Optimize wrong opw
+	t.Log("Optimize wrong opw fails")
+	config = types.NewDefaultConfiguration()
+	config.OwnerPW = "opwWrong"
+	cmd = OptimizeCommand(f, f, config)
+	_, err = Process(&cmd)
+	if err == nil {
+		t.Fatalf("TestEncryptUPWOnly - optimize %s using wrong opw should fail!\n", f)
+	}
+
+	// Optimize empty opw
+	t.Log("Optimize empty opw fails")
+	config = types.NewDefaultConfiguration()
+	config.OwnerPW = ""
+	cmd = OptimizeCommand(f, f, config)
+	_, err = Process(&cmd)
+	if err == nil {
+		t.Fatalf("TestEncryptUPWOnly - optimize %s using empty opw should fail!\n", f)
+	}
+
+	// Optimize wrong upw
+	t.Log("Optimize wrong upw fails")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upwWrong"
+	cmd = OptimizeCommand(f, f, config)
+	_, err = Process(&cmd)
+	if err == nil {
+		t.Fatalf("TestEncryptUPWOnly - optimize %s using wrong upw should fail!\n", f)
+	}
+
+	// Optimize upw
+	t.Log("Optimize upw")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upw"
+	cmd = OptimizeCommand(f, f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptUPWOnly - optimize %s using upw: %v\n", f, err)
+	}
+
+	//Change upw wrong upwOld
+	t.Log("ChangeUserPW wrong upwOld fails")
+	config = types.NewDefaultConfiguration()
+	pwOld := "upwWrong"
+	pwNew := "upwNew"
+	cmd = ChangeUserPWCommand(f, f, config, &pwOld, &pwNew)
+	_, err = Process(&cmd)
+	if err == nil {
+		t.Fatalf("TestEncryptUPWOnly - %s change userPW using wrong upwOld should fail\n", f)
+	}
+
+	// Change upw
+	t.Log("ChangeUserPW")
+	config = types.NewDefaultConfiguration()
+	pwOld = "upw"
+	pwNew = "upwNew"
+	cmd = ChangeUserPWCommand(f, f, config, &pwOld, &pwNew)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptUPWOnly - %s change userPW: %v\n", f, err)
+	}
+
+	// Decrypt wrong opw
+	t.Log("Decrypt wrong opw fails")
+	config = types.NewDefaultConfiguration()
+	config.OwnerPW = "opwWrong"
+	cmd = DecryptCommand(f, f, config)
+	_, err = Process(&cmd)
+	if err == nil {
+		t.Fatalf("TestEncryptUPWOnly - %s decrypt using wrong opw should fail\n", f)
+	}
+
+	// Decrypt wrong upw
+	t.Log("Decrypt wrong upw fails")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upw"
+	cmd = DecryptCommand(f, f, config)
+	_, err = Process(&cmd)
+	if err == nil {
+		t.Fatalf("TestEncryptUPWOnly - %s decrypt using wrong upw should fail\n", f)
+	}
+
+	// Decrypt upw
+	t.Log("Decrypt upw")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upwNew"
+	cmd = DecryptCommand(f, f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptUPWOnly - %s decrypt using upw: %v\n", f, err)
+	}
+
+}
+
+func TestEncryptOPWOnly(t *testing.T) {
+
+	t.Log("running TestEncryptOPWOnly..")
+
+	f := outputDir + "/test.pdf"
+
+	// Encrypt opw only
+	t.Log("Encrypt opw only")
+	config := types.NewDefaultConfiguration()
+	config.OwnerPW = "opw"
+	cmd := EncryptCommand("testdata/5116.DCT_Filter.pdf", f, config)
+	_, err := Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptOPWOnly - encrypt with opw only to %s: %v\n", f, err)
+	}
+
+	// Validate wrong opw succeeds with fallback to empty upw
+	t.Log("Validate wrong opw succeeds with fallback to empty upw")
+	config = types.NewDefaultConfiguration()
+	config.OwnerPW = "opwWrong"
+	cmd = ValidateCommand(f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptOPWOnly - validate %s using wrong opw succeeds falling back to empty upw!: %v\n", f, err)
+	}
+
+	// Validate opw
+	t.Log("Validate opw")
+	config = types.NewDefaultConfiguration()
+	config.OwnerPW = "opw"
+	cmd = ValidateCommand(f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptOPWOnly - validate %s using opw: %v\n", f, err)
+	}
+
+	// Validate wrong upw
+	t.Log("Validate wrong upw fails")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upwWrong"
+	cmd = ValidateCommand(f, config)
+	_, err = Process(&cmd)
+	if err == nil {
+		t.Fatalf("TestEncryptOPWOnly - validate %s using wrong upw should fail!\n", f)
+	}
+
+	// Validate no pw using empty upw
+	t.Log("Validate no pw using empty upw")
+	config = types.NewDefaultConfiguration()
+	cmd = ValidateCommand(f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptOPWOnly - validate %s no pw using empty upw: %v\n", f, err)
+	}
+
+	// Optimize wrong opw, succeeds with fallback to empty upw
+	t.Log("Optimize wrong opw succeeds with fallback to empty upw")
+	config = types.NewDefaultConfiguration()
+	config.OwnerPW = "opwWrong"
+	cmd = OptimizeCommand(f, f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptOPWOnly - optimize %s using wrong opw succeeds falling back to empty upw: %v\n", f, err)
+	}
+
+	// Optimize opw
+	t.Log("Optimize opw")
+	config = types.NewDefaultConfiguration()
+	config.OwnerPW = "opw"
+	cmd = OptimizeCommand(f, f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptOPWOnly - optimize %s using opw: %v\n", f, err)
+	}
+
+	// Optimize wrong upw
+	t.Log("Optimize wrong upw fails")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upwWrong"
+	cmd = OptimizeCommand(f, f, config)
+	_, err = Process(&cmd)
+	if err == nil {
+		t.Fatalf("TestEncryptOPWOnly - optimize %s using wrong upw should fail!\n", f)
+	}
+
+	// Optimize empty upw
+	t.Log("Optimize empty upw")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = ""
+	cmd = OptimizeCommand(f, f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptOPWOnly - optimize %s using upw: %v\n", f, err)
+	}
+
+	// Change opw wrong upw
+	t.Log("ChangeOwnerPW wrong upw fails")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upw"
+	pwOld := "opw"
+	pwNew := "opwNew"
+	cmd = ChangeOwnerPWCommand(f, f, config, &pwOld, &pwNew)
+	_, err = Process(&cmd)
+	if err == nil {
+		t.Fatalf("TestEncryptOPWOnly - %s change opw using wrong upw should fail\n", f)
+	}
+
+	// Change opw wrong opwOld
+	t.Log("ChangeOwnerPW wrong opwOld fails")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = ""
+	pwOld = "opwOldWrong"
+	pwNew = "opwNew"
+	cmd = ChangeOwnerPWCommand(f, f, config, &pwOld, &pwNew)
+	_, err = Process(&cmd)
+	if err == nil {
+		t.Fatalf("TestEncryptOPWOnly - %s change opw using wrong opwOld should fail\n", f)
+	}
+
+	// Change opw
+	t.Log("ChangeOwnerPW")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = ""
+	pwOld = "opw"
+	pwNew = "opwNew"
+	cmd = ChangeOwnerPWCommand(f, f, config, &pwOld, &pwNew)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptOPWOnly - %s change opw: %v\n", f, err)
+	}
+
+	// Decrypt wrong upw
+	t.Log("Decrypt wrong upw fails")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upwWrong"
+	cmd = DecryptCommand(f, f, config)
+	_, err = Process(&cmd)
+	if err == nil {
+		t.Fatalf("TestEncryptOPWOnly - %s decrypt using wrong upw should fail \n", f)
+	}
+
+	// Decrypt wrong opw succeeds because of fallback to empty upw.
+	t.Log("Decrypt wrong opw succeeds because of fallback to empty upw")
+	config = types.NewDefaultConfiguration()
+	config.OwnerPW = "opw"
+	cmd = DecryptCommand(f, f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptOPWOnly - %s decrypt using opw: %v\n", f, err)
+	}
+
+}
+
+func TestEncrypt(t *testing.T) {
+
+	t.Log("running TestEncrypt..")
+
+	f := outputDir + "/test.pdf"
+
+	// Encrypt opw and upw
+	t.Log("Encrypt")
+	config := types.NewDefaultConfiguration()
+	config.UserPW = "upw"
+	config.OwnerPW = "opw"
+	cmd := EncryptCommand("testdata/5116.DCT_Filter.pdf", f, config)
+	_, err := Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncrypt - encrypt to %s: %v\n", f, err)
+	}
+
+	// Validate wrong opw
+	t.Log("Validate wrong opw fails")
+	config = types.NewDefaultConfiguration()
+	config.OwnerPW = "opwWrong"
+	cmd = ValidateCommand(f, config)
+	_, err = Process(&cmd)
+	if err == nil {
+		t.Fatalf("TestEncrypt - validate %s using wrong opw should fail!\n", f)
+	}
+
+	// Validate opw
+	t.Log("Validate opw")
+	config = types.NewDefaultConfiguration()
+	config.OwnerPW = "opw"
+	cmd = ValidateCommand(f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncrypt - validate %s using opw: %v\n", f, err)
+	}
+
+	// Validate wrong upw
+	t.Log("Validate wrong upw fails")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upwWrong"
+	cmd = ValidateCommand(f, config)
+	_, err = Process(&cmd)
+	if err == nil {
+		t.Fatalf("TestEncrypt - validate %s using wrong upw should fail!\n", f)
+	}
+
+	// Validate upw
+	t.Log("Validate upw")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upw"
+	cmd = ValidateCommand(f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncrypt - validate %s using upw: %v\n", f, err)
+	}
+
+	// Change upw to "" = remove document open password.
+	t.Log("ChangeUserPW to \"\"")
+	config = types.NewDefaultConfiguration()
+	config.OwnerPW = "opw"
+	pwOld := "upw"
+	pwNew := ""
+	cmd = ChangeUserPWCommand(f, f, config, &pwOld, &pwNew)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncrypt - %s change userPW to \"\": %v\n", f, err)
+	}
+
+	// Validate upw
+	t.Log("Validate upw")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = ""
+	cmd = ValidateCommand(f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncrypt - validate %s using upw: %v\n", f, err)
+	}
+
+	// Validate no pw
+	t.Log("Validate upw")
+	config = types.NewDefaultConfiguration()
+	cmd = ValidateCommand(f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncrypt - validate %s: %v\n", f, err)
+	}
+
+	// Change opw
+	t.Log("ChangeOwnerPW")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = ""
+	pwOld = "opw"
+	pwNew = "opwNew"
+	cmd = ChangeOwnerPWCommand(f, f, config, &pwOld, &pwNew)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncrypt - %s change opw: %v\n", f, err)
+	}
+
+	// Decrypt wrong upw
+	t.Log("Decrypt wrong upw fails")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upwWrong"
+	cmd = DecryptCommand(f, f, config)
+	_, err = Process(&cmd)
+	if err == nil {
+		t.Fatalf("TestEncrypt - %s decrypt using wrong upw should fail\n", f)
+	}
+
+	// Decrypt wrong opw succeeds on empty upw
+	t.Log("Decrypt wrong opw succeeds on empty upw")
+	config = types.NewDefaultConfiguration()
+	config.OwnerPW = "opwWrong"
+	cmd = DecryptCommand(f, f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncrypt - %s decrypt wrong opw, empty upw: %v\n", f, err)
+	}
+}
+
+func encryptDecrypt(fileName string, config *types.Configuration, t *testing.T) {
+
+	fin := "testdata/" + fileName
+	t.Log(fin)
+	f := outputDir + "/test.pdf"
+
+	// Encrypt
+	t.Log("Encrypt")
+	cmd := EncryptCommand(fin, f, config)
+	_, err := Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptDecrypt - encrypt %s: %v\n", f, err)
+	}
+
+	// Encrypt already encrypted
+	t.Log("Encrypt already encrypted")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upw"
+	config.OwnerPW = "opw"
+	cmd = EncryptCommand(f, f, config)
+	_, err = Process(&cmd)
+	if err == nil {
+		t.Fatalf("TestEncryptDecrypt - encrypt encrypted %s\n", f)
+	}
+
+	// Validate using wrong owner pw
+	t.Log("Validate wrong ownerPW")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upw"
+	config.OwnerPW = "opwWrong"
+	cmd = ValidateCommand(f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptDecrypt - validate %s using wrong ownerPW: %v\n", f, err)
+	}
+
+	// Optimize using wrong owner pw
+	t.Log("Optimize wrong ownerPW")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upw"
+	config.OwnerPW = "opwWrong"
+	cmd = OptimizeCommand(f, f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptDecrypt - optimize %s using wrong ownerPW: %v\n", f, err)
+	}
+
+	// Trim using wrong owner pw, falls back to upw and fails with insufficient permissions.
+	t.Log("Trim wrong ownerPW, fallback to upw and fail with insufficient permissions.")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upw"
+	config.OwnerPW = "opwWrong"
+	cmd = TrimCommand(f, f, nil, config)
+	_, err = Process(&cmd)
+	if err == nil {
+		t.Fatalf("TestEncryptDecrypt - trim %s using wrong ownerPW should fail: \n", f)
+	}
+
+	// Split using wrong owner pw, falls back to upw and fails with insufficient permissions.
+	t.Log("Split wrong ownerPW, fallback to upw and fail with insufficient permissions.")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upw"
+	config.OwnerPW = "opwWrong"
+	cmd = SplitCommand(f, outputDir, config)
+	_, err = Process(&cmd)
+	if err == nil {
+		t.Fatalf("TestEncryptDecrypt - split %s using wrong ownerPW should fail: \n", f)
+	}
+
+	// Add permissions
+	t.Log("Add user access permissions")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upw"
+	config.OwnerPW = "opw"
+	config.UserAccessPermissions = types.PermissionsAll
+	cmd = AddPermissionsCommand(f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptDecrypt - %s add permissions: %v\n", f, err)
+	}
+
+	// Split using wrong owner pw, falls back to upw
+	t.Log("Split wrong ownerPW")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upw"
+	config.OwnerPW = "opwWrong"
+	cmd = SplitCommand(f, outputDir, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptDecrypt - split %s using wrong ownerPW: %v\n", f, err)
+	}
+
+	// Validate
+	t.Log("Validate")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upw"
+	config.OwnerPW = "opw"
+	cmd = ValidateCommand(f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptDecrypt - validate %s: %v\n", f, err)
+	}
+
+	// ChangeUserPW using wrong userpw
+	t.Log("ChangeUserPW wrong userpw")
+	config = types.NewDefaultConfiguration()
+	config.OwnerPW = "opw"
+	pwOld := "upwWrong"
+	pwNew := "upwNew"
+	cmd = ChangeUserPWCommand(f, f, config, &pwOld, &pwNew)
+	_, err = Process(&cmd)
+	if err == nil {
+		t.Fatalf("TestEncryption - %s change userPW using wrong userPW should fail:\n", f)
+	}
+
+	// ChangeUserPW
+	t.Log("ChangeUserPW")
+	config = types.NewDefaultConfiguration()
+	config.OwnerPW = "opw"
+	pwOld = "upw"
+	pwNew = "upwNew"
+	cmd = ChangeUserPWCommand(f, f, config, &pwOld, &pwNew)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryption - change userPW %s: %v\n", f, err)
+	}
+
+	// ChangeOwnerPW
+	t.Log("ChangeOwnerPW")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upwNew"
+	pwOld = "opw"
+	pwNew = "opwNew"
+	cmd = ChangeOwnerPWCommand(f, f, config, &pwOld, &pwNew)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryption - change ownerPW %s: %v\n", f, err)
+	}
+
+	// Decrypt using wrong pw
+	t.Log("\nDecrypt using wrong pw")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upwWrong"
+	config.OwnerPW = "opwWrong"
+	cmd = DecryptCommand(f, f, config)
+	_, err = Process(&cmd)
+	if err == nil {
+		t.Fatalf("TestEncryptDecrypt - decrypt using wrong pw %s\n", f)
+	}
+
+	// Decrypt
+	t.Log("\nDecrypt")
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upwNew"
+	config.OwnerPW = "opwNew"
+	cmd = DecryptCommand(f, f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptDecrypt - decrypt %s: %v\n", f, err)
+	}
+
+}
+
 func TestEncryptDecrypt(t *testing.T) {
 
-	for _, fileName := range []string{"5116.DCT_Filter.pdf", "networkProgr.pdf"} {
+	config := types.NewDefaultConfiguration()
+	config.UserPW = "upw"
+	config.OwnerPW = "opw"
+	encryptDecrypt("5116.DCT_Filter.pdf", config, t)
 
-		fin := "testdata/" + fileName
-		fmt.Println("\n" + fin)
-		f := outputDir + "/test.pdf"
-
-		// Encrypt
-		fmt.Println("\nEncrypt")
-		config := types.NewDefaultConfiguration()
-		config.UserPW = "upw"
-		config.OwnerPW = "opw"
-		if fileName == "networkProgr.pdf" {
-			config.EncryptUsingAES = false
-			config.EncryptUsing128BitKey = false
-		}
-		cmd := EncryptCommand(fin, f, config)
-		_, err := Process(&cmd)
-		if err != nil {
-			t.Fatalf("TestEncryptDecrypt - encrypt %s: %v\n", f, err)
-		}
-
-		// Encrypt already encrypted
-		fmt.Println("\nEncrypt already encrypted")
-		config = types.NewDefaultConfiguration()
-		config.UserPW = "upw"
-		config.OwnerPW = "opw"
-		cmd = EncryptCommand(f, f, config)
-		_, err = Process(&cmd)
-		if err == nil {
-			t.Fatalf("TestEncryptDecrypt - encrypt encrypted %s\n", f)
-		}
-
-		// Validate using wrong owner pw
-		fmt.Println("\nValidate wrong ownerPW")
-		config = types.NewDefaultConfiguration()
-		config.UserPW = "upw"
-		config.OwnerPW = "opwWrong"
-		cmd = ValidateCommand(f, config)
-		_, err = Process(&cmd)
-		if err != nil {
-			t.Fatalf("TestEncryptDecrypt - validate %s using wrong ownerPW: %v\n", f, err)
-		}
-
-		// Optimize using wrong owner pw
-		//fmt.Println("\nOptimize wrong ownerPW")
-		config = types.NewDefaultConfiguration()
-		config.UserPW = "upw"
-		config.OwnerPW = "opwWrong"
-		cmd = OptimizeCommand(f, f, config)
-		_, err = Process(&cmd)
-		if err != nil {
-			t.Fatalf("TestEncryptDecrypt - optimize %s using wrong ownerPW: %v\n", f, err)
-		}
-
-		// Split using wrong owner pw
-		//fmt.Println("\nSplit wrong ownerPW")
-		config = types.NewDefaultConfiguration()
-		config.UserPW = "upw"
-		config.OwnerPW = "opwWrong"
-		cmd = SplitCommand(f, outputDir, config)
-		_, err = Process(&cmd)
-		if err != nil {
-			t.Fatalf("TestEncryptDecrypt - split %s using wrong ownerPW: %v\n", f, err)
-		}
-
-		// Validate
-		//fmt.Println("\nValidate")
-		config = types.NewDefaultConfiguration()
-		config.UserPW = "upw"
-		config.OwnerPW = "opw"
-		cmd = ValidateCommand(f, config)
-		_, err = Process(&cmd)
-		if err != nil {
-			t.Fatalf("TestEncryptDecrypt - validate %s: %v\n", f, err)
-		}
-
-		// ChangeUserPW using wrong userpw
-		//fmt.Println("\nChangeUserPW wrong userpw")
-		// config = types.NewDefaultConfiguration()
-		// config.OwnerPW = "opw"
-		// pwOld := "upwWrong"
-		// pwNew := "upwNew"
-		// cmd = ChangeUserPWCommand(f, f, config, &pwOld, &pwNew)
-		// _, err = Process(&cmd)
-		// if err == nil {
-		// 	t.Fatalf("TestEncryption - change userPW using wrong userPW%s:\n", f)
-		// }
-
-		// ChangeUserPW
-		//fmt.Println("\nChangeUserPW")
-		config = types.NewDefaultConfiguration()
-		config.OwnerPW = "opw"
-		pwOld := "upw"
-		pwNew := "upwNew"
-		cmd = ChangeUserPWCommand(f, f, config, &pwOld, &pwNew)
-		_, err = Process(&cmd)
-		if err != nil {
-			t.Fatalf("TestEncryption - change userPW %s: %v\n", f, err)
-		}
-
-		// ChangeOwnerPW
-		//fmt.Println("\nChangeOwnerPW")
-		config = types.NewDefaultConfiguration()
-		config.UserPW = "upwNew"
-		pwOld = "opw"
-		pwNew = "opwNew"
-		cmd = ChangeOwnerPWCommand(f, f, config, &pwOld, &pwNew)
-		_, err = Process(&cmd)
-		if err != nil {
-			t.Fatalf("TestEncryption - change ownerPW %s: %v\n", f, err)
-		}
-
-		// Decrypt using wrong pw
-		//fmt.Println("\nDecrypt using wrong pw")
-		config = types.NewDefaultConfiguration()
-		config.UserPW = "upwWrong"
-		config.OwnerPW = "opwWrong"
-		cmd = DecryptCommand(f, f, config)
-		_, err = Process(&cmd)
-		if err == nil {
-			t.Fatalf("TestEncryptDecrypt - decrypt using wrong pw %s\n", f)
-		}
-
-		// Decrypt
-		//fmt.Println("\nDecrypt")
-		config = types.NewDefaultConfiguration()
-		config.UserPW = "upwNew"
-		config.OwnerPW = "opwNew"
-		cmd = DecryptCommand(f, f, config)
-		_, err = Process(&cmd)
-		if err != nil {
-			t.Fatalf("TestEncryptDecrypt - decrypt %s: %v\n", f, err)
-		}
-
-		// Validate
-		//fmt.Println("\nValidate")
-		config = types.NewDefaultConfiguration()
-		cmd = ValidateCommand(f, config)
-		_, err = Process(&cmd)
-		if err != nil {
-			t.Fatalf("TestEncryption - validate %s: %v\n", f, err)
-		}
-
-	}
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upw"
+	config.OwnerPW = "opw"
+	config.EncryptUsingAES = false
+	config.EncryptUsing128BitKey = false
+	encryptDecrypt("networkProgr.pdf", config, t)
 }
 
 func copyFile(srcFileName, destFileName string) (err error) {
@@ -850,6 +1340,37 @@ func TestAttachments(t *testing.T) {
 	if len(list) > 0 {
 		t.Fatalf("TestAttachments - list attachments %s: should have 0 attachments\n", fileName)
 	}
+}
+
+func TestListPermissionsCommand(t *testing.T) {
+
+	fin := "testdata/" + "5116.DCT_Filter.pdf"
+
+	cmd := ListPermissionsCommand(fin, types.NewDefaultConfiguration())
+	_, err := Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestListPermissionsCommand: for unencrypted %s: %v\n", fin, err)
+	}
+
+	config := types.NewDefaultConfiguration()
+	config.UserPW = "upw"
+	config.OwnerPW = "opw"
+	f := outputDir + "/test.pdf"
+	cmd = EncryptCommand(fin, f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestEncryptDecrypt - encrypt %s: %v\n", f, err)
+	}
+
+	config = types.NewDefaultConfiguration()
+	config.UserPW = "upw"
+	config.OwnerPW = "opw"
+	cmd = ListPermissionsCommand(f, config)
+	_, err = Process(&cmd)
+	if err != nil {
+		t.Fatalf("TestListPermissionsCommand: for encrypted %s: %v\n", f, err)
+	}
+
 }
 
 func TestUnknownCommand(t *testing.T) {

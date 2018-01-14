@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"crypto/rc4"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -25,7 +26,8 @@ var logDebugCrypto, logInfoCrypto, logErrorCrypto *log.Logger
 func init() {
 	logDebugCrypto = log.New(ioutil.Discard, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
 	//logDebugCrypto = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logInfoCrypto = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
+	logInfoCrypto = log.New(ioutil.Discard, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
+	//logInfoCrypto = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
 	logErrorCrypto = log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
 }
 
@@ -53,7 +55,7 @@ var (
 	// Needed permission bits for operation.
 	perm = map[types.CommandMode]struct{ extract, modify int }{
 		types.VALIDATE:           {0, 0},
-		types.OPTIMIZE:           {0, 1},
+		types.OPTIMIZE:           {0, 0},
 		types.SPLIT:              {1, 0},
 		types.MERGE:              {0, 0},
 		types.EXTRACTIMAGES:      {1, 0},
@@ -65,11 +67,13 @@ var (
 		types.EXTRACTATTACHMENTS: {1, 0},
 		types.ADDATTACHMENTS:     {0, 1},
 		types.REMOVEATTACHMENTS:  {0, 1},
+		types.LISTPERMISSIONS:    {0, 0},
+		types.ADDPERMISSIONS:     {0, 0},
 	}
 )
 
 // NewEncryptDict creates a new EncryptDict using the standard security handler.
-func NewEncryptDict(needAES, need128BitKey bool) *types.PDFDict {
+func NewEncryptDict(needAES, need128BitKey bool, permissions int16) *types.PDFDict {
 
 	d := types.NewPDFDict()
 
@@ -86,8 +90,8 @@ func NewEncryptDict(needAES, need128BitKey bool) *types.PDFDict {
 		d.Insert("V", types.PDFInteger(1))
 	}
 
-	// Enable all permission bits.
-	d.Insert("P", types.PDFInteger(-4))
+	// Set user access permission flags.
+	d.Insert("P", types.PDFInteger(permissions))
 
 	d.Insert("StmF", types.PDFName("StdCF"))
 	d.Insert("StrF", types.PDFName("StdCF"))
@@ -176,14 +180,14 @@ func ValidateUserPassword(ctx *types.PDFContext) (ok bool, key []byte, err error
 	// Alg.4/5 p63
 	// 4a/5a create encryption key using Alg.2 p61
 
-	//fmt.Printf("validateUserPassword: ctx.E.U = \n%v\n", ctx.E.U)
+	//fmt.Printf("validateUserPassword: ctx.E.U =\n%v\n", ctx.E.U)
 
 	u, key, err := U(ctx)
 	if err != nil {
 		return
 	}
 
-	//fmt.Printf("u: %v\n", u)
+	//fmt.Printf("validateUserPassword: u =\n%v\n", u)
 
 	return bytes.HasPrefix(ctx.E.U, u), key, nil
 }
@@ -278,7 +282,7 @@ func O(ctx *types.PDFContext) ([]byte, error) {
 func U(ctx *types.PDFContext) (u []byte, key []byte, err error) {
 
 	userpw := ctx.UserPW
-	//fmt.Printf("U userpw=%s\n", userpw)
+	//fmt.Printf("U userpw=ctx.UserPW=%s\n", userpw)
 
 	e := ctx.E
 
@@ -338,13 +342,14 @@ func U(ctx *types.PDFContext) (u []byte, key []byte, err error) {
 func ValidateOwnerPassword(ctx *types.PDFContext) (ok bool, k []byte, err error) {
 
 	ownerpw := ctx.OwnerPW
+	userpw := ctx.UserPW
 
-	//fmt.Printf("ValidateOwnerPassword: opw=%s\n", ownerpw)
+	//fmt.Printf("ValidateOwnerPassword: ownerpw=ctx.OwnerPW=%s userpw=ctx.UserPW=%s\n", ownerpw, userpw)
 
 	e := ctx.E
 
 	// 7a: Alg.3 p62 a-d
-	key := key(ownerpw, "", e.R, e.L)
+	key := key(ownerpw, userpw, e.R, e.L)
 
 	// 7b
 	upw := make([]byte, len(e.O))
@@ -416,19 +421,38 @@ func SupportedCFEntry(d *types.PDFDict) (bool, bool) {
 	return cfm != nil && *cfm == "AESV2", true
 }
 
-func printP(enc *types.Enc) {
+func permissions(p int) (list []string) {
 
-	p := enc.P
+	list = append(list, fmt.Sprintf("%0b", uint32(p)&0x0F3C))
+	list = append(list, fmt.Sprintf("Bit  3: %t (print(rev2), print quality(rev>=3))", p&0x0004 > 0))
+	list = append(list, fmt.Sprintf("Bit  4: %t (modify other than controlled by bits 6,9,11)", p&0x0008 > 0))
+	list = append(list, fmt.Sprintf("Bit  5: %t (extract(rev2), extract other than controlled by bit 10(rev>=3))", p&0x0010 > 0))
+	list = append(list, fmt.Sprintf("Bit  6: %t (add or modify annotations)", p&0x0020 > 0))
+	list = append(list, fmt.Sprintf("Bit  9: %t (fill in form fields(rev>=3)", p&0x0100 > 0))
+	list = append(list, fmt.Sprintf("Bit 10: %t (extract(rev>=3))", p&0x0200 > 0))
+	list = append(list, fmt.Sprintf("Bit 11: %t (modify(rev>=3))", p&0x0400 > 0))
+	list = append(list, fmt.Sprintf("Bit 12: %t (print high-level(rev>=3))", p&0x0800 > 0))
 
-	logInfoCrypto.Printf("P: %d -> %0b\n", p, uint32(p)&0x0F3C)
-	logInfoCrypto.Printf("Bit  3: %t (print(rev2), print quality(rev>=3))\n", p&0x0004 > 0)
-	logInfoCrypto.Printf("Bit  4: %t (modify other than controlled by bits 6,9,11)\n", p&0x0008 > 0)
-	logInfoCrypto.Printf("Bit  5: %t (extract(rev2), extract other than controlled by bit 10(rev>=3))\n", p&0x0010 > 0)
-	logInfoCrypto.Printf("Bit  6: %t (add or modify annotations)\n", p&0x0020 > 0)
-	logInfoCrypto.Printf("Bit  9: %t (fill in form fields(rev>=3)\n", p&0x0100 > 0)
-	logInfoCrypto.Printf("Bit 10: %t (extract(rev>=3))\n", p&0x0200 > 0)
-	logInfoCrypto.Printf("Bit 11: %t (modify(rev>=3))\n", p&0x0400 > 0)
-	logInfoCrypto.Printf("Bit 12: %t (print high-level(rev>=3))\n", p&0x0800 > 0)
+	return
+}
+
+// ListPermissions returns the list of user access permissions.
+func ListPermissions(ctx *types.PDFContext) (list []string) {
+
+	if ctx.E == nil {
+		list = append(list, "full access")
+		return
+	}
+
+	return permissions(ctx.E.P)
+}
+
+func logP(enc *types.Enc) {
+
+	for _, s := range permissions(enc.P) {
+		logInfoCrypto.Println(s)
+	}
+
 }
 
 func getMaskExtract(mode types.CommandMode, secHandlerRev int) int {
@@ -474,7 +498,7 @@ func HasNeededPermissions(mode types.CommandMode, enc *types.Enc) bool {
 
 	//return true
 
-	printP(enc)
+	logP(enc)
 
 	m := getMaskExtract(mode, enc.R)
 	if m > 0 {

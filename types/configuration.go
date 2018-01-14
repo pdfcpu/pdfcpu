@@ -10,6 +10,13 @@ const (
 
 	// StatsFileNameDefault is the standard stats filename.
 	StatsFileNameDefault = "stats.csv"
+
+	// PermissionsAll enables all user access permission bits.
+	PermissionsAll int16 = -1 // 0xFFFF
+
+	// PermissionsNone disables all user access permissions bits.
+	PermissionsNone int16 = -3901 // 0xF0C3
+
 )
 
 // CommandMode specifies the operation being executed.
@@ -30,6 +37,8 @@ const (
 	REMOVEATTACHMENTS
 	EXTRACTATTACHMENTS
 	LISTATTACHMENTS
+	ADDPERMISSIONS
+	LISTPERMISSIONS
 	ENCRYPT
 	DECRYPT
 	CHANGEUPW
@@ -84,12 +93,16 @@ type Configuration struct {
 	// false: use 40 bit key
 	EncryptUsing128BitKey bool
 
+	// Supplied user access permissions, see Table 22
+	UserAccessPermissions int16
+
 	// Command being executed.
 	Mode CommandMode
 }
 
 // NewDefaultConfiguration returns the default pdfcpu configuration.
 func NewDefaultConfiguration() *Configuration {
+
 	return &Configuration{
 		Reader15:              true,
 		DecodeAllStreams:      false,
@@ -100,6 +113,7 @@ func NewDefaultConfiguration() *Configuration {
 		CollectStats:          true,
 		EncryptUsingAES:       true,
 		EncryptUsing128BitKey: true,
+		UserAccessPermissions: PermissionsNone,
 	}
 }
 

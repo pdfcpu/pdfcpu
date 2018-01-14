@@ -22,7 +22,7 @@ import (
 var (
 	fileStats, mode, pageSelection string
 	in, out                        string
-	upw, opw, key                  string
+	upw, opw, key, perm            string
 	verbose                        bool
 	logInfo                        *log.Logger
 
@@ -42,6 +42,9 @@ func init() {
 	keyUsage := "encrypt: 40|128"
 	flag.StringVar(&key, "key", "128", keyUsage)
 	flag.StringVar(&key, "k", "128", keyUsage)
+
+	permUsage := "encrypt, perm set: none|all"
+	flag.StringVar(&perm, "perm", "none", permUsage)
 
 	pageSelectionUsage := "a comma separated list of pages or page ranges, see pdfcpu help split/extract"
 	flag.StringVar(&pageSelection, "pages", "", pageSelectionUsage)
@@ -101,6 +104,9 @@ func helpString(topic string) string {
 
 	case "attach":
 		return fmt.Sprintf("%s\n\n%s\n", usageAttach, usageLongAttach)
+
+	case "perm":
+		return fmt.Sprintf("%s\n\n%s\n", usagePerm, usageLongPerm)
 
 	case "encrypt":
 		return fmt.Sprintf("%s\n\n%s\n", usageEncrypt, usageLongEncrypt)
@@ -172,6 +178,14 @@ func parseFlagsAndGetCommand() (command string) {
 	if command == "attach" {
 		if len(os.Args) == 2 {
 			fmt.Fprintln(os.Stderr, usageAttach)
+			os.Exit(1)
+		}
+		i = 3
+	}
+
+	if command == "perm" {
+		if len(os.Args) == 2 {
+			fmt.Fprintln(os.Stderr, usagePerm)
 			os.Exit(1)
 		}
 		i = 3
@@ -337,7 +351,7 @@ func prepareTrimCommand(config *types.Configuration) pdfcpu.Command {
 func prepareListAttachmentsCommand(config *types.Configuration) pdfcpu.Command {
 
 	if len(flag.Args()) != 1 || pageSelection != "" {
-		fmt.Fprintf(os.Stderr, "usage: %s %v\n\n", usageAttachList, flag.Args())
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usageAttachList)
 		os.Exit(1)
 	}
 
@@ -451,6 +465,66 @@ func prepareAttachmentCommand(config *types.Configuration) pdfcpu.Command {
 	return cmd
 }
 
+func prepareListPermissionsCommand(config *types.Configuration) pdfcpu.Command {
+
+	if len(flag.Args()) != 1 || pageSelection != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usagePermList)
+		os.Exit(1)
+	}
+
+	filenameIn := flag.Arg(0)
+	ensurePdfExtension(filenameIn)
+	//fmt.Println("filenameIn: " + filenameIn)
+
+	return pdfcpu.ListPermissionsCommand(filenameIn, config)
+}
+
+func prepareAddPermissionsCommand(config *types.Configuration) pdfcpu.Command {
+
+	if len(flag.Args()) != 1 || pageSelection != "" ||
+		!(perm == "" || perm == "none" || perm == "all") {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePermAdd)
+		os.Exit(1)
+	}
+
+	filenameIn := flag.Arg(0)
+	ensurePdfExtension(filenameIn)
+
+	if perm == "all" {
+		config.UserAccessPermissions = types.PermissionsAll
+	}
+
+	return pdfcpu.AddPermissionsCommand(filenameIn, config)
+}
+
+func preparePermissionsCommand(config *types.Configuration) pdfcpu.Command {
+
+	if len(os.Args) == 2 {
+		fmt.Fprintln(os.Stderr, usagePerm)
+		os.Exit(1)
+	}
+
+	var cmd pdfcpu.Command
+
+	subCmd := os.Args[2]
+
+	switch subCmd {
+
+	case "list":
+		cmd = prepareListPermissionsCommand(config)
+
+	case "add":
+		cmd = prepareAddPermissionsCommand(config)
+
+	default:
+		fmt.Fprintln(os.Stderr, usagePerm)
+		os.Exit(1)
+	}
+
+	return cmd
+
+}
+
 func prepareDecryptCommand(config *types.Configuration) pdfcpu.Command {
 
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || pageSelection != "" {
@@ -470,11 +544,16 @@ func prepareDecryptCommand(config *types.Configuration) pdfcpu.Command {
 	return pdfcpu.DecryptCommand(filenameIn, filenameOut, config)
 }
 
+func validEncryptOptions() bool {
+	return pageSelection == "" &&
+		(mode == "" || mode == "rc4" || mode == "aes") &&
+		(key == "" || key == "40" || key == "128") &&
+		(perm == "" || perm == "none" || perm == "all")
+}
+
 func prepareEncryptCommand(config *types.Configuration) pdfcpu.Command {
 
-	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || pageSelection != "" ||
-		!(mode == "" || mode == "rc4" || mode == "aes") ||
-		!(key == "" || key == "40" || key == "128") {
+	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || !validEncryptOptions() {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageEncrypt)
 		os.Exit(1)
 	}
@@ -486,6 +565,10 @@ func prepareEncryptCommand(config *types.Configuration) pdfcpu.Command {
 
 	if key == "40" {
 		config.EncryptUsing128BitKey = false
+	}
+
+	if perm == "all" {
+		config.UserAccessPermissions = types.PermissionsAll
 	}
 
 	filenameIn := flag.Arg(0)
@@ -625,6 +708,9 @@ func main() {
 
 	case "changeupw", "changeopw":
 		cmd = prepareChangePasswordCommand(config, command)
+
+	case "perm":
+		cmd = preparePermissionsCommand(config)
 
 	case "help", "h":
 		help()

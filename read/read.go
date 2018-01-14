@@ -1956,8 +1956,7 @@ func dereferenceXRefTable(ctx *types.PDFContext, config *types.Configuration) (e
 
 func handleUnencryptedFile(ctx *types.PDFContext) (err error) {
 
-	if ctx.Mode == types.DECRYPT {
-		// Decrypt subcommand found.
+	if ctx.Mode == types.DECRYPT || ctx.Mode == types.ADDPERMISSIONS {
 		return errors.New("decrypt: this file is not encrypted")
 	}
 
@@ -1968,7 +1967,7 @@ func handleUnencryptedFile(ctx *types.PDFContext) (err error) {
 	// Encrypt subcommand found.
 
 	if len(ctx.UserPW) == 0 && len(ctx.OwnerPW) == 0 {
-		return errors.New("encrypt: user or owner password missing")
+		return errors.New("encrypt: user or/and owner password missing")
 	}
 
 	// Ensure ctx.ID
@@ -2028,6 +2027,11 @@ func idBytes(ctx *types.PDFContext) (id []byte, err error) {
 	return
 }
 
+func needsOwnerAndUserPassword(cmd types.CommandMode) bool {
+
+	return cmd == types.CHANGEOPW || cmd == types.CHANGEUPW || cmd == types.ADDPERMISSIONS
+}
+
 func setupEncryptionKey(ctx *types.PDFContext, encryptDictObjNr int) (err error) {
 
 	// Dereference encryptDict.
@@ -2057,23 +2061,34 @@ func setupEncryptionKey(ctx *types.PDFContext, encryptDictObjNr int) (err error)
 
 	var ok bool
 
+	//fmt.Println("checking opw")
 	ok, ctx.EncKey, err = crypto.ValidateOwnerPassword(ctx)
 	if err != nil {
 		return err
 	}
-	if ok {
+
+	// If the owner password does not match we generally move on if the user password is correct
+	// unless we need to insist on a correct owner password.
+	if !ok && needsOwnerAndUserPassword(ctx.Mode) {
+		return errors.New("owner password authentication error")
+	}
+
+	// Generally the owner password, which is also regarded as the master password or set permissions password
+	// is sufficient for moving on. A password change is an exception since it requires both passwords authenticated.
+	if ok && !needsOwnerAndUserPassword(ctx.Mode) {
 		return nil
 	}
 
+	//fmt.Println("checking upw")
 	ok, ctx.EncKey, err = crypto.ValidateUserPassword(ctx)
 	if err != nil {
 		return err
 	}
 	if !ok {
-		return errors.New("Password authentication error")
+		return errors.New("user password authentication error")
 	}
 
-	if !crypto.HasNeededPermissions(ctx.Mode, enc) {
+	if !crypto.HasNeededPermissions(ctx.Mode, ctx.E) {
 		return errors.New("Insufficient access permissions")
 	}
 

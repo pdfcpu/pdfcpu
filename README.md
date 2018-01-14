@@ -33,6 +33,7 @@ Reducing the size of large PDF files for mass mailings by optimization to the ba
 * Encrypt (sets password protection)
 * Decrypt (removes password protection)
 * Change user/owner password
+* Manage (add,list) user access permissions
 
 ## Demo Screencast
 
@@ -56,10 +57,13 @@ Reducing the size of large PDF files for mass mailings by optimization to the ba
     pdfcpu attach remove [-verbose] [-upw userpw] [-opw ownerpw] inFile [file...]
     pdfcpu attach extract [-verbose] [-upw userpw] [-opw ownerpw] inFile outDir [file...]
 
-    pdfcpu encrypt [-verbose] [-mode rc4|aes] [-key 40|128] [-upw userpw] [-opw ownerpw] inFile [outFile]
+    pdfcpu encrypt [-verbose] [-mode rc4|aes] [-key 40|128] [-perm none|all] [-upw userpw] [-opw ownerpw] inFile [outFile]
     pdfcpu decrypt [-verbose] [-upw userpw] [-opw ownerpw] inFile [outFile]
     pdfcpu changeupw [-verbose] [-opw ownerpw] inFile upwOld upwNew
     pdfcpu changeopw [-verbose] [-upw userpw] inFile opwOld opwNew
+
+    pdfcpu perm list [-verbose] [-upw userpw] [-opw ownerpw] inFile
+    pdfcpu perm add [-verbose] [-perm none|all] [-upw userpw] -opw ownerpw inFile
 
     pdfcpu version
 
@@ -67,14 +71,19 @@ Reducing the size of large PDF files for mass mailings by optimization to the ba
 
 ## Status
 
-Version: 0.1.5
+Version: 0.1.6
 
-* **Encrypt**
-  * **-mode rc4|aes** (default=aes) specifies used encryption algorithm.
-  * **-key 40|128** (default=128) specifies keylength in bits.
+* **Encrypt** (new option)
+  * **-perm none|all** (default=none) disables/enables all user access permission flags.
+  * From now on Encrypt will disable all user access permissions per default.
 
-* **Decrypt**
-  * works now for both (user/owner) passwords.
+* **perm list** (new command)
+  * List user access permissions: pdfcpu perm list [-verbose] [-upw userpw] [-opw ownerpw] inFile
+
+* **perm add** (new command)
+  * Add user access permissions: pdfcpu perm add [-verbose] [-perm none|all] [-upw userpw] -opw ownerpw inFile
+
+  Note: User access permissions will only take effect based on a set owner password.
 
 ## To Do
 

@@ -7,16 +7,16 @@ import (
 
 // Command represents an execution context.
 type Command struct {
-	Mode          types.CommandMode    // VALIDATE  OPTIMIZE  SPLIT  MERGE  EXTRACT  TRIM  LISTATT ADDATT REMATT EXTATT  ENCRYPT  DECRYPT  CHANGEUPW  CHANGEOPW
-	InFile        *string              //    *         *        *      -       *      *      *       *       *      *       *        *         *          *
-	InFiles       []string             //    -         -        -      *       -      -      -       *       *      *       -        -         -          -
-	InDir         *string              //    -         -        -      -       -      -      -       -       -      -       -        -         -          -
-	OutFile       *string              //    -         *        -      *       -      *      -       -       -      -       *        *         *          *
-	OutDir        *string              //    -         -        *      -       *      -      -       -       -      *       -        -         -          -
-	PageSelection []string             //    -         -        -      -       *      *      -       -       -      -       -        -         -          -
-	Config        *types.Configuration //    *         *        *      *       *      *      *       *       *      *       *        *         *          *
-	PWOld         *string              //    -         -        -      -       -      -      -       -       -      -       -        -         *          *
-	PWNew         *string              //    -         -        -      -       -      -      -       -       -      -       -        -         *          *
+	Mode          types.CommandMode    // VALIDATE  OPTIMIZE  SPLIT  MERGE  EXTRACT  TRIM  LISTATT ADDATT REMATT EXTATT  ENCRYPT  DECRYPT  CHANGEUPW  CHANGEOPW LISTP ADDP
+	InFile        *string              //    *         *        *      -       *      *      *       *       *      *       *        *         *          *       *     *
+	InFiles       []string             //    -         -        -      *       -      -      -       *       *      *       -        -         -          -       -     -
+	InDir         *string              //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -
+	OutFile       *string              //    -         *        -      *       -      *      -       -       -      -       *        *         *          *       -     -
+	OutDir        *string              //    -         -        *      -       *      -      -       -       -      *       -        -         -          -       -     -
+	PageSelection []string             //    -         -        -      -       *      *      -       -       -      -       -        -         -          -       -     -
+	Config        *types.Configuration //    *         *        *      *       *      *      *       *       *      *       *        *         *          *       *     *
+	PWOld         *string              //    -         -        -      -       -      -      -       -       -      -       -        -         *          *       -     -
+	PWNew         *string              //    -         -        -      -       -      -      -       -       -      -       -        -         *          *       -     -
 }
 
 // ValidateCommand creates a new ValidateCommand.
@@ -184,6 +184,22 @@ func ChangeOwnerPWCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Co
 		PWNew:   pwNew}
 }
 
+// ListPermissionsCommand create a new ListPermissionsCommand.
+func ListPermissionsCommand(pdfFileNameIn string, config *types.Configuration) Command {
+	return Command{
+		Mode:   types.LISTPERMISSIONS,
+		InFile: &pdfFileNameIn,
+		Config: config}
+}
+
+// AddPermissionsCommand creates a new AddPermissionsCommand.
+func AddPermissionsCommand(pdfFileNameIn string, config *types.Configuration) Command {
+	return Command{
+		Mode:   types.ADDPERMISSIONS,
+		InFile: &pdfFileNameIn,
+		Config: config}
+}
+
 func processAttachments(cmd *Command) (out []string, err error) {
 
 	switch cmd.Mode {
@@ -219,6 +235,20 @@ func processEncryption(cmd *Command) (err error) {
 
 	case types.CHANGEOPW:
 		err = ChangeOwnerPassword(*cmd.InFile, *cmd.OutFile, cmd.Config, cmd.PWOld, cmd.PWNew)
+	}
+
+	return
+}
+
+func processPermissions(cmd *Command) (out []string, err error) {
+
+	switch cmd.Mode {
+
+	case types.LISTPERMISSIONS:
+		out, err = ListPermissions(*cmd.InFile, cmd.Config)
+
+	case types.ADDPERMISSIONS:
+		err = AddPermissions(*cmd.InFile, cmd.Config)
 	}
 
 	return
@@ -263,6 +293,9 @@ func Process(cmd *Command) (out []string, err error) {
 
 	case types.ENCRYPT, types.DECRYPT, types.CHANGEUPW, types.CHANGEOPW:
 		err = processEncryption(cmd)
+
+	case types.LISTPERMISSIONS, types.ADDPERMISSIONS:
+		out, err = processPermissions(cmd)
 
 	default:
 		err = errors.Errorf("Process: Unknown command mode %d\n", cmd.Mode)

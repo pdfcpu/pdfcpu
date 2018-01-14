@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hhrutter/pdfcpu/crypto"
+
 	"github.com/hhrutter/pdfcpu/attach"
 	"github.com/hhrutter/pdfcpu/extract"
 	"github.com/hhrutter/pdfcpu/merge"
@@ -982,6 +984,75 @@ func ExtractAttachments(fileIn, dirOut string, files []string, config *types.Con
 	logStatsAPI.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
 	logStatsAPI.Printf("write files          : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
 	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
+
+	return
+}
+
+// ListPermissions returns a list of user access permissions.
+func ListPermissions(fileIn string, config *types.Configuration) (list []string, err error) {
+
+	fromStart := time.Now()
+
+	//fmt.Println("User access permissions:")
+
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
+	if err != nil {
+		return
+	}
+
+	fromList := time.Now()
+	list = crypto.ListPermissions(ctx)
+	durList := time.Since(fromList).Seconds()
+
+	durTotal := time.Since(fromStart).Seconds()
+
+	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
+	logStatsAPI.Println("Timing:")
+	logStatsAPI.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	logStatsAPI.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	logStatsAPI.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	logStatsAPI.Printf("list permissions     : %6.3fs  %4.1f%%\n", durList, durList/durTotal*100)
+	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
+
+	return
+}
+
+// AddPermissions sets the user access permissions.
+func AddPermissions(fileIn string, config *types.Configuration) (err error) {
+
+	fromStart := time.Now()
+
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
+	if err != nil {
+		return
+	}
+
+	fmt.Printf("adding permissions to %s ...\n", fileIn)
+
+	fromWrite := time.Now()
+
+	fileOut := fileIn
+	dirName, fileName := filepath.Split(fileOut)
+	ctx.Write.DirName = dirName
+	ctx.Write.FileName = fileName
+
+	err = Write(ctx)
+	if err != nil {
+		return
+	}
+
+	durWrite := time.Since(fromWrite).Seconds()
+	durTotal := time.Since(fromStart).Seconds()
+
+	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
+	logStatsAPI.Println("Timing:")
+	logStatsAPI.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	logStatsAPI.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	logStatsAPI.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	logStatsAPI.Printf("write                : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
+	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
+	ctx.Read.LogStats(logStatsAPI, ctx.Optimized)
+	ctx.Write.LogStats(logStatsAPI)
 
 	return
 }
