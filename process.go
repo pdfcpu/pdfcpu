@@ -20,16 +20,16 @@ type Command struct {
 }
 
 // ValidateCommand creates a new ValidateCommand.
-func ValidateCommand(pdfFileName string, config *types.Configuration) Command {
-	return Command{
+func ValidateCommand(pdfFileName string, config *types.Configuration) *Command {
+	return &Command{
 		Mode:   types.VALIDATE,
 		InFile: &pdfFileName,
 		Config: config}
 }
 
 // OptimizeCommand creates a new OptimizeCommand.
-func OptimizeCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configuration) Command {
-	return Command{
+func OptimizeCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configuration) *Command {
+	return &Command{
 		Mode:    types.OPTIMIZE,
 		InFile:  &pdfFileNameIn,
 		OutFile: &pdfFileNameOut,
@@ -37,8 +37,8 @@ func OptimizeCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configu
 }
 
 // SplitCommand creates a new SplitCommand.
-func SplitCommand(pdfFileNameIn, dirNameOut string, config *types.Configuration) Command {
-	return Command{
+func SplitCommand(pdfFileNameIn, dirNameOut string, config *types.Configuration) *Command {
+	return &Command{
 		Mode:   types.SPLIT,
 		InFile: &pdfFileNameIn,
 		OutDir: &dirNameOut,
@@ -46,8 +46,8 @@ func SplitCommand(pdfFileNameIn, dirNameOut string, config *types.Configuration)
 }
 
 // MergeCommand creates a new MergeCommand.
-func MergeCommand(pdfFileNamesIn []string, pdfFileNameOut string, config *types.Configuration) Command {
-	return Command{
+func MergeCommand(pdfFileNamesIn []string, pdfFileNameOut string, config *types.Configuration) *Command {
+	return &Command{
 		Mode: types.MERGE,
 		//InFile:  &pdfFileNameIn,
 		InFiles: pdfFileNamesIn,
@@ -57,8 +57,8 @@ func MergeCommand(pdfFileNamesIn []string, pdfFileNameOut string, config *types.
 
 // ExtractImagesCommand creates a new ExtractImagesCommand.
 // (experimental)
-func ExtractImagesCommand(pdfFileNameIn, dirNameOut string, pageSelection []string, config *types.Configuration) Command {
-	return Command{
+func ExtractImagesCommand(pdfFileNameIn, dirNameOut string, pageSelection []string, config *types.Configuration) *Command {
+	return &Command{
 		Mode:          types.EXTRACTIMAGES,
 		InFile:        &pdfFileNameIn,
 		OutDir:        &dirNameOut,
@@ -68,8 +68,8 @@ func ExtractImagesCommand(pdfFileNameIn, dirNameOut string, pageSelection []stri
 
 // ExtractFontsCommand creates a new ExtractFontsCommand.
 // (experimental)
-func ExtractFontsCommand(pdfFileNameIn, dirNameOut string, pageSelection []string, config *types.Configuration) Command {
-	return Command{
+func ExtractFontsCommand(pdfFileNameIn, dirNameOut string, pageSelection []string, config *types.Configuration) *Command {
+	return &Command{
 		Mode:          types.EXTRACTFONTS,
 		InFile:        &pdfFileNameIn,
 		OutDir:        &dirNameOut,
@@ -78,8 +78,8 @@ func ExtractFontsCommand(pdfFileNameIn, dirNameOut string, pageSelection []strin
 }
 
 // ExtractPagesCommand creates a new ExtractPagesCommand.
-func ExtractPagesCommand(pdfFileNameIn, dirNameOut string, pageSelection []string, config *types.Configuration) Command {
-	return Command{
+func ExtractPagesCommand(pdfFileNameIn, dirNameOut string, pageSelection []string, config *types.Configuration) *Command {
+	return &Command{
 		Mode:          types.EXTRACTPAGES,
 		InFile:        &pdfFileNameIn,
 		OutDir:        &dirNameOut,
@@ -88,8 +88,8 @@ func ExtractPagesCommand(pdfFileNameIn, dirNameOut string, pageSelection []strin
 }
 
 // ExtractContentCommand creates a new ExtractContentCommand.
-func ExtractContentCommand(pdfFileNameIn, dirNameOut string, pageSelection []string, config *types.Configuration) Command {
-	return Command{
+func ExtractContentCommand(pdfFileNameIn, dirNameOut string, pageSelection []string, config *types.Configuration) *Command {
+	return &Command{
 		Mode:          types.EXTRACTCONTENT,
 		InFile:        &pdfFileNameIn,
 		OutDir:        &dirNameOut,
@@ -98,9 +98,9 @@ func ExtractContentCommand(pdfFileNameIn, dirNameOut string, pageSelection []str
 }
 
 // TrimCommand creates a new TrimCommand.
-func TrimCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []string, config *types.Configuration) Command {
+func TrimCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []string, config *types.Configuration) *Command {
 	// A slice parameter may be called with nil => empty slice.
-	return Command{
+	return &Command{
 		Mode:          types.TRIM,
 		InFile:        &pdfFileNameIn,
 		OutFile:       &pdfFileNameOut,
@@ -109,16 +109,16 @@ func TrimCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []string, c
 }
 
 // ListAttachmentsCommand create a new ListAttachmentsCommand.
-func ListAttachmentsCommand(pdfFileNameIn string, config *types.Configuration) Command {
-	return Command{
+func ListAttachmentsCommand(pdfFileNameIn string, config *types.Configuration) *Command {
+	return &Command{
 		Mode:   types.LISTATTACHMENTS,
 		InFile: &pdfFileNameIn,
 		Config: config}
 }
 
 // AddAttachmentsCommand creates a new AddAttachmentsCommand.
-func AddAttachmentsCommand(pdfFileNameIn string, fileNamesIn []string, config *types.Configuration) Command {
-	return Command{
+func AddAttachmentsCommand(pdfFileNameIn string, fileNamesIn []string, config *types.Configuration) *Command {
+	return &Command{
 		Mode:    types.ADDATTACHMENTS,
 		InFile:  &pdfFileNameIn,
 		InFiles: fileNamesIn,
@@ -126,8 +126,8 @@ func AddAttachmentsCommand(pdfFileNameIn string, fileNamesIn []string, config *t
 }
 
 // RemoveAttachmentsCommand creates a new RemoveAttachmentsCommand.
-func RemoveAttachmentsCommand(pdfFileNameIn string, fileNamesIn []string, config *types.Configuration) Command {
-	return Command{
+func RemoveAttachmentsCommand(pdfFileNameIn string, fileNamesIn []string, config *types.Configuration) *Command {
+	return &Command{
 		Mode:    types.REMOVEATTACHMENTS,
 		InFile:  &pdfFileNameIn,
 		InFiles: fileNamesIn,
@@ -135,8 +135,8 @@ func RemoveAttachmentsCommand(pdfFileNameIn string, fileNamesIn []string, config
 }
 
 // ExtractAttachmentsCommand creates a new ExtractAttachmentsCommand.
-func ExtractAttachmentsCommand(pdfFileNameIn, dirNameOut string, fileNamesIn []string, config *types.Configuration) Command {
-	return Command{
+func ExtractAttachmentsCommand(pdfFileNameIn, dirNameOut string, fileNamesIn []string, config *types.Configuration) *Command {
+	return &Command{
 		Mode:    types.EXTRACTATTACHMENTS,
 		InFile:  &pdfFileNameIn,
 		OutDir:  &dirNameOut,
@@ -145,8 +145,8 @@ func ExtractAttachmentsCommand(pdfFileNameIn, dirNameOut string, fileNamesIn []s
 }
 
 // EncryptCommand creates a new EncryptCommand.
-func EncryptCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configuration) Command {
-	return Command{
+func EncryptCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configuration) *Command {
+	return &Command{
 		Mode:    types.ENCRYPT,
 		InFile:  &pdfFileNameIn,
 		OutFile: &pdfFileNameOut,
@@ -154,8 +154,8 @@ func EncryptCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configur
 }
 
 // DecryptCommand creates a new DecryptCommand.
-func DecryptCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configuration) Command {
-	return Command{
+func DecryptCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configuration) *Command {
+	return &Command{
 		Mode:    types.DECRYPT,
 		InFile:  &pdfFileNameIn,
 		OutFile: &pdfFileNameOut,
@@ -163,8 +163,8 @@ func DecryptCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configur
 }
 
 // ChangeUserPWCommand creates a new ChangeUserPWCommand.
-func ChangeUserPWCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configuration, pwOld, pwNew *string) Command {
-	return Command{
+func ChangeUserPWCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configuration, pwOld, pwNew *string) *Command {
+	return &Command{
 		Mode:    types.CHANGEUPW,
 		InFile:  &pdfFileNameIn,
 		OutFile: &pdfFileNameOut,
@@ -174,8 +174,8 @@ func ChangeUserPWCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Con
 }
 
 // ChangeOwnerPWCommand creates a new ChangeOwnerPWCommand.
-func ChangeOwnerPWCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configuration, pwOld, pwNew *string) Command {
-	return Command{
+func ChangeOwnerPWCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Configuration, pwOld, pwNew *string) *Command {
+	return &Command{
 		Mode:    types.CHANGEOPW,
 		InFile:  &pdfFileNameIn,
 		OutFile: &pdfFileNameOut,
@@ -185,16 +185,16 @@ func ChangeOwnerPWCommand(pdfFileNameIn, pdfFileNameOut string, config *types.Co
 }
 
 // ListPermissionsCommand create a new ListPermissionsCommand.
-func ListPermissionsCommand(pdfFileNameIn string, config *types.Configuration) Command {
-	return Command{
+func ListPermissionsCommand(pdfFileNameIn string, config *types.Configuration) *Command {
+	return &Command{
 		Mode:   types.LISTPERMISSIONS,
 		InFile: &pdfFileNameIn,
 		Config: config}
 }
 
 // AddPermissionsCommand creates a new AddPermissionsCommand.
-func AddPermissionsCommand(pdfFileNameIn string, config *types.Configuration) Command {
-	return Command{
+func AddPermissionsCommand(pdfFileNameIn string, config *types.Configuration) *Command {
+	return &Command{
 		Mode:   types.ADDPERMISSIONS,
 		InFile: &pdfFileNameIn,
 		Config: config}
@@ -217,7 +217,7 @@ func processAttachments(cmd *Command) (out []string, err error) {
 		err = ExtractAttachments(*cmd.InFile, *cmd.OutDir, cmd.InFiles, cmd.Config)
 	}
 
-	return
+	return out, err
 }
 
 func processEncryption(cmd *Command) (err error) {
@@ -237,7 +237,7 @@ func processEncryption(cmd *Command) (err error) {
 		err = ChangeOwnerPassword(*cmd.InFile, *cmd.OutFile, cmd.Config, cmd.PWOld, cmd.PWNew)
 	}
 
-	return
+	return err
 }
 
 func processPermissions(cmd *Command) (out []string, err error) {
@@ -251,7 +251,7 @@ func processPermissions(cmd *Command) (out []string, err error) {
 		err = AddPermissions(*cmd.InFile, cmd.Config)
 	}
 
-	return
+	return out, err
 }
 
 // Process executes a pdfcpu command.
@@ -301,5 +301,5 @@ func Process(cmd *Command) (out []string, err error) {
 		err = errors.Errorf("Process: Unknown command mode %d\n", cmd.Mode)
 	}
 
-	return
+	return out, err
 }

@@ -5,7 +5,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validatePropertiesDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validatePropertiesDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// see 14.6.2
 	// a dictionary containing private information meaningful to the conforming writer creating marked content.
@@ -27,9 +27,9 @@ func validatePropertiesDict(xRefTable *types.XRefTable, dict *types.PDFDict) (er
 
 	logInfoValidate.Println("*** validatePropertiesDict begin ***")
 
-	err = validateMetadata(xRefTable, dict, OPTIONAL, types.V14)
+	err := validateMetadata(xRefTable, dict, OPTIONAL, types.V14)
 	if err != nil {
-		return
+		return err
 	}
 
 	for key, val := range dict.Dict {
@@ -46,14 +46,14 @@ func validatePropertiesDict(xRefTable *types.XRefTable, dict *types.PDFDict) (er
 			logInfoValidate.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
 			_, err = validateStreamDict(xRefTable, val)
 			if err != nil {
-				return
+				return err
 			}
 
 		case "Resources":
 			logInfoValidate.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
 			_, err = validateResourceDict(xRefTable, val)
 			if err != nil {
-				return
+				return err
 			}
 
 		case "OCG":
@@ -72,7 +72,7 @@ func validatePropertiesDict(xRefTable *types.XRefTable, dict *types.PDFDict) (er
 			logInfoValidate.Printf("validatePropertiesDict: processing unrecognized key \"%s\"\n", key)
 			_, err = xRefTable.Dereference(val)
 			if err != nil {
-				return
+				return err
 			}
 		}
 
@@ -80,21 +80,20 @@ func validatePropertiesDict(xRefTable *types.XRefTable, dict *types.PDFDict) (er
 
 	logInfoValidate.Println("*** validatePropertiesDict end ***")
 
-	return
+	return nil
 }
 
-func validatePropertiesResourceDict(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validatePropertiesResourceDict(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validatePropertiesResourceDict begin ***")
 
 	dict, err := xRefTable.DereferenceDict(obj)
 	if err != nil {
-		return
+		return err
 	}
-
 	if dict == nil {
 		logInfoValidate.Println("validatePropertiesResourceDict end: object is nil.")
-		return
+		return nil
 	}
 
 	// Version check
@@ -107,7 +106,7 @@ func validatePropertiesResourceDict(xRefTable *types.XRefTable, obj interface{})
 
 		dict, err = xRefTable.DereferenceDict(obj)
 		if err != nil {
-			return
+			return err
 		}
 
 		if dict == nil {
@@ -118,11 +117,11 @@ func validatePropertiesResourceDict(xRefTable *types.XRefTable, obj interface{})
 		// Process propDict
 		err = validatePropertiesDict(xRefTable, dict)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	logInfoValidate.Println("*** validatePropertiesResourceDict end ***")
 
-	return
+	return nil
 }

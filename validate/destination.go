@@ -5,11 +5,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateDestinationArrayFirstElement(xRefTable *types.XRefTable, arr *types.PDFArray) (obj interface{}, err error) {
+func validateDestinationArrayFirstElement(xRefTable *types.XRefTable, arr *types.PDFArray) (interface{}, error) {
 
-	obj, err = xRefTable.Dereference((*arr)[0])
+	obj, err := xRefTable.Dereference((*arr)[0])
 	if err != nil || obj == nil {
-		return
+		return nil, err
 	}
 
 	switch obj := obj.(type) {
@@ -25,7 +25,7 @@ func validateDestinationArrayFirstElement(xRefTable *types.XRefTable, arr *types
 		err = errors.Errorf("validateDestinationArrayFirstElement: first element must be a pageDict indRef or an integer: %v", obj)
 	}
 
-	return
+	return obj, err
 }
 
 func validateDestinationArrayLength(arr types.PDFArray) bool {
@@ -88,42 +88,40 @@ func validateDestinationArray(xRefTable *types.XRefTable, arr *types.PDFArray) e
 	return nil
 }
 
-func validateDestinationDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateDestinationDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	logInfoValidate.Println("*** validateDestinationDict: begin ***")
 
 	arr, err := validateArrayEntry(xRefTable, dict, "DestinationDict", "D", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
-
 	if arr == nil {
 		logInfoValidate.Println("validateDestinationDict: arr is nil end")
-		return
+		return nil
 	}
 
 	err = validateDestinationArray(xRefTable, arr)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateDestinationDict: end ***")
 
-	return
+	return nil
 }
 
-func validateDestination(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateDestination(xRefTable *types.XRefTable, obj interface{}) error {
 
 	logInfoValidate.Println("*** validateDestination: begin ***")
 
-	obj, err = xRefTable.Dereference(obj)
+	obj, err := xRefTable.Dereference(obj)
 	if err != nil {
-		return
+		return err
 	}
-
 	if obj == nil {
 		logInfoValidate.Println("validateDestination: is nil, end")
-		return
+		return nil
 	}
 
 	switch obj := obj.(type) {
@@ -149,11 +147,17 @@ func validateDestination(xRefTable *types.XRefTable, obj interface{}) (err error
 		logInfoValidate.Println("*** validateDestination: end ***")
 	}
 
-	return
+	return err
 }
 
-func validateDestinationEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string,
-	required bool, sinceVersion types.PDFVersion, validate func(interface{}) bool) (err error) {
+func validateDestinationEntry(
+	xRefTable *types.XRefTable,
+	dict *types.PDFDict,
+	dictName string,
+	entryName string,
+	required bool,
+	sinceVersion types.PDFVersion,
+	validate func(interface{}) bool) error {
 
 	// see 12.3.2
 
@@ -162,19 +166,18 @@ func validateDestinationEntry(xRefTable *types.XRefTable, dict *types.PDFDict, d
 	obj, found := dict.Find(entryName)
 	if !found || obj == nil {
 		if required {
-			err = errors.Errorf("validateDestinationEntry: dict=%s required entry=%s missing", dictName, entryName)
-			return
+			return errors.Errorf("validateDestinationEntry: dict=%s required entry=%s missing", dictName, entryName)
 		}
 		logInfoValidate.Printf("validateDestinationEntry end: entry %s is nil\n", entryName)
-		return
+		return nil
 	}
 
-	err = validateDestination(xRefTable, obj)
+	err := validateDestination(xRefTable, obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Printf("*** validateDestinationEntry end: entry=%s ***\n", entryName)
 
-	return
+	return nil
 }

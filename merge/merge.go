@@ -144,7 +144,7 @@ func patchObjects(s types.IntSet, lookup map[int]int) types.IntSet {
 	return t
 }
 
-func patchSourceObjectNumbers(ctxSource, ctxDest *types.PDFContext) (err error) {
+func patchSourceObjectNumbers(ctxSource, ctxDest *types.PDFContext) {
 
 	logInfoMerge.Printf("patchSourceObjectNumbers: ctxSource: xRefTableSize:%d trailer.Size:%d - %s\n", len(ctxSource.Table), *ctxSource.Size, ctxSource.Read.FileName)
 	logInfoMerge.Printf("patchSourceObjectNumbers:   ctxDest: xRefTableSize:%d trailer.Size:%d - %s\n", len(ctxDest.Table), *ctxDest.Size, ctxDest.Read.FileName)
@@ -216,17 +216,15 @@ func patchSourceObjectNumbers(ctxSource, ctxDest *types.PDFContext) (err error) 
 	ctxSource.Read.ObjectStreams = patchObjects(ctxSource.Read.ObjectStreams, lookup)
 
 	logInfoMerge.Printf("patchSourceObjectNumbers end")
-
-	return
 }
 
-func appendSourcePageTreeToDestPageTree(ctxSource, ctxDest *types.PDFContext) (err error) {
+func appendSourcePageTreeToDestPageTree(ctxSource, ctxDest *types.PDFContext) error {
 
 	logDebugMerge.Println("appendSourcePageTreeToDestPageTree begin")
 
 	indRefPageTreeRootDictSource, err := ctxSource.Pages()
 	if err != nil {
-		return
+		return err
 	}
 
 	pageTreeRootDictSource, _ := ctxSource.XRefTable.DereferenceDict(*indRefPageTreeRootDictSource)
@@ -234,7 +232,7 @@ func appendSourcePageTreeToDestPageTree(ctxSource, ctxDest *types.PDFContext) (e
 
 	indRefPageTreeRootDictDest, err := ctxDest.Pages()
 	if err != nil {
-		return
+		return err
 	}
 
 	pageTreeRootDictDest, _ := ctxDest.XRefTable.DereferenceDict(*indRefPageTreeRootDictDest)
@@ -256,10 +254,10 @@ func appendSourcePageTreeToDestPageTree(ctxSource, ctxDest *types.PDFContext) (e
 
 	logDebugMerge.Println("appendSourcePageTreeToDestPageTree end")
 
-	return
+	return nil
 }
 
-func appendSourceObjectsToDest(ctxSource, ctxDest *types.PDFContext) (err error) {
+func appendSourceObjectsToDest(ctxSource, ctxDest *types.PDFContext) {
 
 	logDebugMerge.Println("appendSourceObjectsToDest begin")
 
@@ -279,8 +277,6 @@ func appendSourceObjectsToDest(ctxSource, ctxDest *types.PDFContext) (err error)
 	}
 
 	logDebugMerge.Println("appendSourceObjectsToDest end")
-
-	return
 }
 
 // merge two disjunct IntSets
@@ -290,7 +286,7 @@ func mergeIntSets(src, dest types.IntSet) {
 	}
 }
 
-func mergeDuplicateObjNumberIntSets(ctxSource, ctxDest *types.PDFContext) (err error) {
+func mergeDuplicateObjNumberIntSets(ctxSource, ctxDest *types.PDFContext) {
 
 	logDebugMerge.Println("mergeDuplicateObjNumberIntSets begin")
 
@@ -300,18 +296,13 @@ func mergeDuplicateObjNumberIntSets(ctxSource, ctxDest *types.PDFContext) (err e
 	mergeIntSets(ctxSource.Read.ObjectStreams, ctxDest.Read.ObjectStreams)
 
 	logDebugMerge.Println("mergeDuplicateObjNumberIntSets end")
-
-	return
 }
 
 // XRefTables merges PDFContext ctxSource into ctxDest by appending its page tree.
 func XRefTables(ctxSource, ctxDest *types.PDFContext) (err error) {
 
 	// Sweep over ctxSource cross ref table and ensure valid object numbers in ctxDest's space.
-	err = patchSourceObjectNumbers(ctxSource, ctxDest)
-	if err != nil {
-		return
-	}
+	patchSourceObjectNumbers(ctxSource, ctxDest)
 
 	// Append ctxSource pageTree to ctxDest pageTree.
 	logInfoMerge.Println("appendSourcePageTreeToDestPageTree")
@@ -322,10 +313,7 @@ func XRefTables(ctxSource, ctxDest *types.PDFContext) (err error) {
 
 	// Append ctxSource objects to ctxDest
 	logInfoMerge.Println("appendSourceObjectsToDest")
-	err = appendSourceObjectsToDest(ctxSource, ctxDest)
-	if err != nil {
-		return err
-	}
+	appendSourceObjectsToDest(ctxSource, ctxDest)
 
 	// Mark source's root object as free.
 	err = ctxDest.DeleteObject(int(ctxSource.Root.ObjectNumber))
@@ -344,12 +332,9 @@ func XRefTables(ctxSource, ctxDest *types.PDFContext) (err error) {
 
 	// Merge all IntSets containing redundant object numbers.
 	logInfoMerge.Println("mergeDuplicateObjNumberIntSets")
-	err = mergeDuplicateObjNumberIntSets(ctxSource, ctxDest)
-	if err != nil {
-		return
-	}
+	mergeDuplicateObjNumberIntSets(ctxSource, ctxDest)
 
 	logInfoMerge.Printf("Dest XRefTable after merge:\n%s\n", ctxDest)
 
-	return
+	return nil
 }

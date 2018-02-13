@@ -9,17 +9,11 @@ func validateCreationDate(xRefTable *types.XRefTable, o interface{}) (err error)
 
 	if xRefTable.ValidationMode == types.ValidationRelaxed {
 		_, err = validateString(xRefTable, o, nil)
-		if err != nil {
-			return
-		}
 	} else {
 		_, err = validateDateObject(xRefTable, o, types.V10)
-		if err != nil {
-			return
-		}
 	}
 
-	return
+	return err
 }
 
 func handleDefault(xRefTable *types.XRefTable, o interface{}) (err error) {
@@ -30,7 +24,7 @@ func handleDefault(xRefTable *types.XRefTable, o interface{}) (err error) {
 		_, err = xRefTable.Dereference(o)
 	}
 
-	return
+	return err
 }
 
 func validateDocumentInfoDict(xRefTable *types.XRefTable, obj interface{}) (hasModDate bool, err error) {
@@ -39,7 +33,7 @@ func validateDocumentInfoDict(xRefTable *types.XRefTable, obj interface{}) (hasM
 
 	dict, err := xRefTable.DereferenceDict(obj)
 	if err != nil || dict == nil {
-		return
+		return false, err
 	}
 
 	for k, v := range dict.Dict {
@@ -90,39 +84,38 @@ func validateDocumentInfoDict(xRefTable *types.XRefTable, obj interface{}) (hasM
 		}
 
 		if err != nil {
-			return
+			return false, err
 		}
 
 	}
 
-	return
+	return hasModDate, nil
 }
 
-func validateDocumentInfoObject(xRefTable *types.XRefTable) (err error) {
+func validateDocumentInfoObject(xRefTable *types.XRefTable) error {
 
 	logInfoValidate.Println("*** validateDocumentInfoObject begin ***")
 
 	// Document info object is optional.
 	if xRefTable.Info == nil {
-		return
+		return nil
 	}
 
 	hasModDate, err := validateDocumentInfoDict(xRefTable, *xRefTable.Info)
 	if err != nil {
-		return
+		return err
 	}
 
 	hasPieceInfo, err := xRefTable.CatalogHasPieceInfo()
 	if err != nil {
-		return
+		return err
 	}
 
 	if hasPieceInfo && !hasModDate {
-		err = errors.Errorf("validateDocumentInfoObject: missing required entry \"ModDate\"")
-		return
+		return errors.Errorf("validateDocumentInfoObject: missing required entry \"ModDate\"")
 	}
 
 	logInfoValidate.Println("*** validateDocumentInfoObject end ***")
 
-	return
+	return nil
 }

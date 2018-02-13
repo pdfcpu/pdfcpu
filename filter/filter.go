@@ -63,7 +63,7 @@ func NewFilter(filterName string, decodeParms, encodeParms *types.PDFDict) (filt
 		err = ErrUnsupportedFilter
 	}
 
-	return
+	return filter, err
 }
 
 type baseFilter struct {
@@ -72,7 +72,7 @@ type baseFilter struct {
 }
 
 // EncodeStream encodes stream dict data by applying its filter pipeline.
-func EncodeStream(streamDict *types.PDFStreamDict) (err error) {
+func EncodeStream(streamDict *types.PDFStreamDict) error {
 
 	logDebugFilter.Printf("encodeStream begin")
 
@@ -83,7 +83,7 @@ func EncodeStream(streamDict *types.PDFStreamDict) (err error) {
 		streamLength := int64(len(streamDict.Raw))
 		streamDict.StreamLength = &streamLength
 		streamDict.Insert("Length", types.PDFInteger(streamLength))
-		return
+		return nil
 	}
 
 	var b io.Reader
@@ -123,11 +123,11 @@ func EncodeStream(streamDict *types.PDFStreamDict) (err error) {
 
 	logDebugFilter.Printf("encodeStream end")
 
-	return
+	return nil
 }
 
 // DecodeStream decodes streamDict data by applying its filter pipeline.
-func DecodeStream(streamDict *types.PDFStreamDict) (err error) {
+func DecodeStream(streamDict *types.PDFStreamDict) error {
 
 	logDebugFilter.Printf("decodeStream begin")
 
@@ -135,7 +135,7 @@ func DecodeStream(streamDict *types.PDFStreamDict) (err error) {
 	if streamDict.FilterPipeline == nil {
 		logDebugFilter.Println("decodeStream: returning uncompressed stream.")
 		streamDict.Content = streamDict.Raw
-		return
+		return nil
 	}
 
 	var b io.Reader
@@ -171,5 +171,5 @@ func DecodeStream(streamDict *types.PDFStreamDict) (err error) {
 
 	logDebugFilter.Printf("decodeStream end")
 
-	return
+	return nil
 }

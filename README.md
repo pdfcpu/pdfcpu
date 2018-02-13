@@ -87,8 +87,8 @@ Version: 0.1.6
 
 ## To Do
 
-* validation of the less used PDF page entry element "PresSteps"
-* validation of the less used PDF root entry elements "SpiderInfo", "Permissions", "Legal" and "Collection"
+* validation of the less used PDF page entry element *PresSteps*
+* validation of the less used PDF root entry elements *Permissions* and *Legal*
 
 I am looking for PDFs using one of these features in order to implement validation. If you have one and you can share let me know.
 

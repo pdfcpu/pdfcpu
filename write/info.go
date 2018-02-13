@@ -1,31 +1,12 @@
 package write
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/hhrutter/pdfcpu/types"
-	"github.com/hhrutter/pdfcpu/validate"
 	"github.com/pkg/errors"
 )
-
-func date() (string, error) {
-
-	now := time.Now()
-	_, tz := now.Zone()
-
-	dateStr := fmt.Sprintf("D:%d%02d%02d%02d%02d%02d+%02d'%02d'",
-		now.Year(), now.Month(), now.Day(),
-		now.Hour(), now.Minute(), now.Second(),
-		tz/60/60, tz/60%60)
-
-	if !validate.Date(dateStr) {
-		return "", errors.Errorf("date: invalid dateString: %s\n", dateStr)
-	}
-
-	return dateStr, nil
-}
 
 func textString(ctx *types.PDFContext, obj interface{}) (string, error) {
 
@@ -79,7 +60,7 @@ func writeInfoDict(ctx *types.PDFContext, dict *types.PDFDict) (err error) {
 			logDebugWriter.Println("found Author")
 			ctx.Author, err = textString(ctx, value)
 			if err != nil {
-				return
+				return err
 			}
 
 		case "Subject":
@@ -92,7 +73,7 @@ func writeInfoDict(ctx *types.PDFContext, dict *types.PDFDict) (err error) {
 			logDebugWriter.Println("found Creator")
 			ctx.Creator, err = textString(ctx, value)
 			if err != nil {
-				return
+				return err
 			}
 
 		case "Producer", "CreationDate", "ModDate":
@@ -111,12 +92,12 @@ func writeInfoDict(ctx *types.PDFContext, dict *types.PDFDict) (err error) {
 		}
 	}
 
-	return
+	return nil
 }
 
 // Write the document info object for this PDF file.
 // Add pdfcpu as Producer with proper creation date and mod date.
-func writeDocumentInfoDict(ctx *types.PDFContext) (err error) {
+func writeDocumentInfoDict(ctx *types.PDFContext) error {
 
 	// => 14.3.3 Document Information Dictionary
 
@@ -137,7 +118,7 @@ func writeDocumentInfoDict(ctx *types.PDFContext) (err error) {
 	if ctx.Info == nil {
 		logInfoWriter.Printf("writeDocumentInfoObject end: No info object present, offset=%d\n", ctx.Write.Offset)
 		// Note: We could generate an info object from scratch in this scenario.
-		return
+		return nil
 	}
 
 	logInfoWriter.Printf("writeDocumentInfoObject: %s\n", *ctx.Info)
@@ -146,34 +127,29 @@ func writeDocumentInfoDict(ctx *types.PDFContext) (err error) {
 
 	dict, err := ctx.DereferenceDict(obj)
 	if err != nil || dict == nil {
-		return
+		return err
 	}
 
 	// TODO Refactor - for stats only.
 	err = writeInfoDict(ctx, dict)
 	if err != nil {
-		return
+		return err
 	}
 
 	// These are the modifications for the info dict of this PDF file:
 
-	var dateStr string
+	dateStringLiteral := types.DateStringLiteral(time.Now())
 
-	dateStr, err = date()
-	if err != nil {
-		return
-	}
-
-	dict.Update("CreationDate", types.PDFStringLiteral(dateStr))
-	dict.Update("ModDate", types.PDFStringLiteral(dateStr))
+	dict.Update("CreationDate", dateStringLiteral)
+	dict.Update("ModDate", dateStringLiteral)
 	dict.Update("Producer", types.PDFStringLiteral(types.PDFCPULongVersion))
 
 	_, _, err = writeDeepObject(ctx, obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoWriter.Printf("*** writeDocumentInfoDict end: offset=%d ***\n", ctx.Write.Offset)
 
-	return
+	return nil
 }

@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 )
 
 // Supported line delimiters
@@ -106,6 +107,13 @@ func (i PDFInteger) Value() int {
 
 ///////////////////////////////////////////////////////////////////////////////////
 
+// NewRectangle creates a rectangle array
+func NewRectangle(llx, lly, urx, ury float64) PDFArray {
+	return NewNumberArray(llx, lly, urx, ury)
+}
+
+///////////////////////////////////////////////////////////////////////////////////
+
 // PDFName represents a PDF name object.
 type PDFName string
 
@@ -146,6 +154,19 @@ func (stringliteral PDFStringLiteral) Value() string {
 	return string(stringliteral)
 }
 
+// DateStringLiteral returns a PDFStringLiteral for time.
+func DateStringLiteral(t time.Time) PDFStringLiteral {
+
+	_, tz := t.Zone()
+
+	dateStr := fmt.Sprintf("D:%d%02d%02d%02d%02d%02d+%02d'%02d'",
+		t.Year(), t.Month(), t.Day(),
+		t.Hour(), t.Minute(), t.Second(),
+		tz/60/60, tz/60%60)
+
+	return PDFStringLiteral(dateStr)
+}
+
 ///////////////////////////////////////////////////////////////////////////////////
 
 // PDFHexLiteral represents a PDF hex literal object.
@@ -183,8 +204,8 @@ type PDFIndirectRef struct {
 }
 
 // NewPDFIndirectRef returns a new PDFIndirectRef object.
-func NewPDFIndirectRef(objectNumber, generationNumber int) PDFIndirectRef {
-	return PDFIndirectRef{
+func NewPDFIndirectRef(objectNumber, generationNumber int) *PDFIndirectRef {
+	return &PDFIndirectRef{
 		ObjectNumber:     PDFInteger(objectNumber),
 		GenerationNumber: PDFInteger(generationNumber)}
 }

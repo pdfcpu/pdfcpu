@@ -5,7 +5,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateTilingPatternDict(xRefTable *types.XRefTable, streamDict *types.PDFStreamDict, sinceVersion types.PDFVersion) (err error) {
+func validateTilingPatternDict(xRefTable *types.XRefTable, streamDict *types.PDFStreamDict, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validateTilingPatternDict begin ***")
 
@@ -17,43 +17,43 @@ func validateTilingPatternDict(xRefTable *types.XRefTable, streamDict *types.PDF
 	dict := streamDict.PDFDict
 	dictName := "tilingPatternDict"
 
-	_, err = validateNameEntry(xRefTable, &dict, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Pattern" })
+	_, err := validateNameEntry(xRefTable, &dict, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Pattern" })
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateIntegerEntry(xRefTable, &dict, dictName, "PatternType", REQUIRED, sinceVersion, func(i int) bool { return i == 1 })
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateIntegerEntry(xRefTable, &dict, dictName, "PaintType", REQUIRED, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateIntegerEntry(xRefTable, &dict, dictName, "TilingType", REQUIRED, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateRectangleEntry(xRefTable, &dict, dictName, "BBox", REQUIRED, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberEntry(xRefTable, &dict, dictName, "XStep", REQUIRED, sinceVersion, func(f float64) bool { return f != 0 })
 	if err != nil {
-		return
+		return err
 	}
 	_, err = validateNumberEntry(xRefTable, &dict, dictName, "YStep", REQUIRED, sinceVersion, func(f float64) bool { return f != 0 })
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberArrayEntry(xRefTable, &dict, dictName, "Matrix", OPTIONAL, sinceVersion, func(a types.PDFArray) bool { return len(a) == 6 })
 	if err != nil {
-		return
+		return err
 	}
 
 	obj, ok := streamDict.Find("Resources")
@@ -63,15 +63,15 @@ func validateTilingPatternDict(xRefTable *types.XRefTable, streamDict *types.PDF
 
 	_, err = validateResourceDict(xRefTable, obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateTilingPatternDict end ***")
 
-	return
+	return nil
 }
 
-func validateShadingPatternDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateShadingPatternDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validateShadingPatternDict begin ***")
 
@@ -82,30 +82,30 @@ func validateShadingPatternDict(xRefTable *types.XRefTable, dict *types.PDFDict,
 
 	dictName := "shadingPatternDict"
 
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Pattern" })
+	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Pattern" })
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "PatternType", REQUIRED, sinceVersion, func(i int) bool { return i == 2 })
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "Matrix", OPTIONAL, sinceVersion, func(a types.PDFArray) bool { return len(a) == 6 })
 	if err != nil {
-		return
+		return err
 	}
 
 	d, err := validateDictEntry(xRefTable, dict, dictName, "ExtGState", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	if d != nil {
 		err = validateExtGStateDict(xRefTable, d)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
@@ -117,26 +117,25 @@ func validateShadingPatternDict(xRefTable *types.XRefTable, dict *types.PDFDict,
 
 	err = validateShading(xRefTable, obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateShadingPatternDict end ***")
 
-	return
+	return nil
 }
 
-func validatePattern(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validatePattern(xRefTable *types.XRefTable, obj interface{}) error {
 
 	logInfoValidate.Println("*** validatePattern begin ***")
 
-	obj, err = xRefTable.Dereference(obj)
+	obj, err := xRefTable.Dereference(obj)
 	if err != nil {
-		return
+		return err
 	}
-
 	if obj == nil {
 		logInfoValidate.Println("validatePattern end: object is nil.")
-		return
+		return nil
 	}
 
 	switch obj := obj.(type) {
@@ -154,10 +153,10 @@ func validatePattern(xRefTable *types.XRefTable, obj interface{}) (err error) {
 
 	logInfoValidate.Println("*** validatePattern end ***")
 
-	return
+	return err
 }
 
-func validatePatternResourceDict(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validatePatternResourceDict(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
 
 	// see 8.7 Patterns
 
@@ -165,12 +164,12 @@ func validatePatternResourceDict(xRefTable *types.XRefTable, obj interface{}) (e
 
 	dict, err := xRefTable.DereferenceDict(obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	if dict == nil {
 		logInfoValidate.Println("validatePatternResourceDict end: object is nil.")
-		return
+		return err
 	}
 
 	// Iterate over pattern resource dictionary
@@ -181,11 +180,11 @@ func validatePatternResourceDict(xRefTable *types.XRefTable, obj interface{}) (e
 		// Process pattern
 		err = validatePattern(xRefTable, obj)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	logInfoValidate.Println("*** validatePatternResourceDict end ***")
 
-	return
+	return nil
 }

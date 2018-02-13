@@ -94,6 +94,7 @@ func trimLeftSpace(s string) (outstr string, trimmedSpaces int) {
 	whitespace := func(c rune) bool { return unicode.IsSpace(c) }
 
 	outstr = s
+
 	for {
 		// trim leading whitespace
 		outstr = strings.TrimLeftFunc(outstr, whitespace)
@@ -111,7 +112,7 @@ func trimLeftSpace(s string) (outstr string, trimmedSpaces int) {
 
 	logDebugParse.Printf("TrimLeftSpace: end %s %d\n", outstr, trimmedSpaces)
 
-	return
+	return outstr, trimmedSpaces
 }
 
 // HexString validates and formats a hex string to be of even length.
@@ -650,7 +651,7 @@ func parseNumericOrIndRef(line *string) (interface{}, error) {
 	if l[0] == 'R' {
 		// We have all 3 components to create an indirect reference.
 		*line = forwardParseBuf(l, 1)
-		return types.NewPDFIndirectRef(iref1, iref2), nil
+		return *types.NewPDFIndirectRef(iref1, iref2), nil
 	}
 
 	// 'R' not available.
@@ -706,7 +707,7 @@ func parseBoolean(l string) (val interface{}, s string, ok bool) {
 		return types.PDFBoolean(false), "false", true
 	}
 
-	return
+	return nil, "", false
 }
 
 // parseObject parses next PDFObject from string buffer.

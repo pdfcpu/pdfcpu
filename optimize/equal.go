@@ -18,17 +18,17 @@ func equalPDFObjects(o1, o2 interface{}, ctx *types.PDFContext) (ok bool, err er
 	logDebugOptimize.Printf("equalPDFObjects: comparing %s with %s \n", o1Type, o2Type)
 
 	if o1Type != o2Type {
-		return
+		return false, nil
 	}
 
 	o1, err = ctx.Dereference(o1)
 	if err != nil {
-		return
+		return false, err
 	}
 
 	o2, err = ctx.Dereference(o2)
 	if err != nil {
-		return
+		return false, err
 	}
 
 	switch o1.(type) {
@@ -59,7 +59,7 @@ func equalPDFObjects(o1, o2 interface{}, ctx *types.PDFContext) (ok bool, err er
 		err = errors.Errorf("equalPDFObjects: unhandled compare for type %s\n", o1Type)
 	}
 
-	return
+	return ok, err
 }
 
 func equalPDFArrays(arr1, arr2 *types.PDFArray, ctx *types.PDFContext) (bool, error) {

@@ -21,10 +21,10 @@ import (
 
 var (
 	fileStats, mode, pageSelection string
-	in, out                        string
 	upw, opw, key, perm            string
 	verbose                        bool
-	logInfo                        *log.Logger
+
+	logInfo *log.Logger
 
 	needStackTrace = true
 )
@@ -197,7 +197,7 @@ func parseFlagsAndGetCommand() (command string) {
 	return
 }
 
-func prepareValidateCommand(config *types.Configuration) pdfcpu.Command {
+func prepareValidateCommand(config *types.Configuration) *pdfcpu.Command {
 
 	if len(flag.Args()) == 0 || len(flag.Args()) > 1 || pageSelection != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageValidate)
@@ -222,7 +222,7 @@ func prepareValidateCommand(config *types.Configuration) pdfcpu.Command {
 	return pdfcpu.ValidateCommand(filenameIn, config)
 }
 
-func prepareOptimizeCommand(config *types.Configuration) pdfcpu.Command {
+func prepareOptimizeCommand(config *types.Configuration) *pdfcpu.Command {
 
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || pageSelection != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageOptimize)
@@ -246,7 +246,7 @@ func prepareOptimizeCommand(config *types.Configuration) pdfcpu.Command {
 	return pdfcpu.OptimizeCommand(filenameIn, filenameOut, config)
 }
 
-func prepareSplitCommand(config *types.Configuration) pdfcpu.Command {
+func prepareSplitCommand(config *types.Configuration) *pdfcpu.Command {
 
 	if len(flag.Args()) != 2 || pageSelection != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageSplit)
@@ -261,7 +261,7 @@ func prepareSplitCommand(config *types.Configuration) pdfcpu.Command {
 	return pdfcpu.SplitCommand(filenameIn, dirnameOut, config)
 }
 
-func prepareMergeCommand(config *types.Configuration) pdfcpu.Command {
+func prepareMergeCommand(config *types.Configuration) *pdfcpu.Command {
 
 	if len(flag.Args()) < 3 || pageSelection != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageMerge)
@@ -283,7 +283,7 @@ func prepareMergeCommand(config *types.Configuration) pdfcpu.Command {
 	return pdfcpu.MergeCommand(filenamesIn, filenameOut, config)
 }
 
-func prepareExtractCommand(config *types.Configuration) pdfcpu.Command {
+func prepareExtractCommand(config *types.Configuration) *pdfcpu.Command {
 
 	if len(flag.Args()) != 2 || mode == "" ||
 		(mode != "image" && mode != "font" && mode != "page" && mode != "content") &&
@@ -303,7 +303,7 @@ func prepareExtractCommand(config *types.Configuration) pdfcpu.Command {
 		log.Fatalf("extract: problem with flag pageSelection: %v", err)
 	}
 
-	var cmd pdfcpu.Command
+	var cmd *pdfcpu.Command
 
 	switch mode {
 
@@ -323,7 +323,7 @@ func prepareExtractCommand(config *types.Configuration) pdfcpu.Command {
 	return cmd
 }
 
-func prepareTrimCommand(config *types.Configuration) pdfcpu.Command {
+func prepareTrimCommand(config *types.Configuration) *pdfcpu.Command {
 
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || pageSelection == "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageTrim)
@@ -348,7 +348,7 @@ func prepareTrimCommand(config *types.Configuration) pdfcpu.Command {
 	return pdfcpu.TrimCommand(filenameIn, filenameOut, pages, config)
 }
 
-func prepareListAttachmentsCommand(config *types.Configuration) pdfcpu.Command {
+func prepareListAttachmentsCommand(config *types.Configuration) *pdfcpu.Command {
 
 	if len(flag.Args()) != 1 || pageSelection != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usageAttachList)
@@ -362,7 +362,7 @@ func prepareListAttachmentsCommand(config *types.Configuration) pdfcpu.Command {
 	return pdfcpu.ListAttachmentsCommand(filenameIn, config)
 }
 
-func prepareAddAttachmentsCommand(config *types.Configuration) pdfcpu.Command {
+func prepareAddAttachmentsCommand(config *types.Configuration) *pdfcpu.Command {
 
 	if len(flag.Args()) < 2 || pageSelection != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageAttachAdd)
@@ -384,7 +384,7 @@ func prepareAddAttachmentsCommand(config *types.Configuration) pdfcpu.Command {
 	return pdfcpu.AddAttachmentsCommand(filenameIn, filenames, config)
 }
 
-func prepareRemoveAttachmentsCommand(config *types.Configuration) pdfcpu.Command {
+func prepareRemoveAttachmentsCommand(config *types.Configuration) *pdfcpu.Command {
 
 	if len(flag.Args()) < 1 || pageSelection != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageAttachRemove)
@@ -406,7 +406,7 @@ func prepareRemoveAttachmentsCommand(config *types.Configuration) pdfcpu.Command
 	return pdfcpu.RemoveAttachmentsCommand(filenameIn, filenames, config)
 }
 
-func prepareExtractAttachmentsCommand(config *types.Configuration) pdfcpu.Command {
+func prepareExtractAttachmentsCommand(config *types.Configuration) *pdfcpu.Command {
 
 	if len(flag.Args()) < 2 || pageSelection != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageAttachExtract)
@@ -432,14 +432,14 @@ func prepareExtractAttachmentsCommand(config *types.Configuration) pdfcpu.Comman
 	return pdfcpu.ExtractAttachmentsCommand(filenameIn, dirnameOut, filenames, config)
 }
 
-func prepareAttachmentCommand(config *types.Configuration) pdfcpu.Command {
+func prepareAttachmentCommand(config *types.Configuration) *pdfcpu.Command {
 
 	if len(os.Args) == 2 {
 		fmt.Fprintln(os.Stderr, usageAttach)
 		os.Exit(1)
 	}
 
-	var cmd pdfcpu.Command
+	var cmd *pdfcpu.Command
 
 	subCmd := os.Args[2]
 
@@ -465,7 +465,7 @@ func prepareAttachmentCommand(config *types.Configuration) pdfcpu.Command {
 	return cmd
 }
 
-func prepareListPermissionsCommand(config *types.Configuration) pdfcpu.Command {
+func prepareListPermissionsCommand(config *types.Configuration) *pdfcpu.Command {
 
 	if len(flag.Args()) != 1 || pageSelection != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usagePermList)
@@ -479,7 +479,7 @@ func prepareListPermissionsCommand(config *types.Configuration) pdfcpu.Command {
 	return pdfcpu.ListPermissionsCommand(filenameIn, config)
 }
 
-func prepareAddPermissionsCommand(config *types.Configuration) pdfcpu.Command {
+func prepareAddPermissionsCommand(config *types.Configuration) *pdfcpu.Command {
 
 	if len(flag.Args()) != 1 || pageSelection != "" ||
 		!(perm == "" || perm == "none" || perm == "all") {
@@ -497,14 +497,14 @@ func prepareAddPermissionsCommand(config *types.Configuration) pdfcpu.Command {
 	return pdfcpu.AddPermissionsCommand(filenameIn, config)
 }
 
-func preparePermissionsCommand(config *types.Configuration) pdfcpu.Command {
+func preparePermissionsCommand(config *types.Configuration) *pdfcpu.Command {
 
 	if len(os.Args) == 2 {
 		fmt.Fprintln(os.Stderr, usagePerm)
 		os.Exit(1)
 	}
 
-	var cmd pdfcpu.Command
+	var cmd *pdfcpu.Command
 
 	subCmd := os.Args[2]
 
@@ -525,7 +525,7 @@ func preparePermissionsCommand(config *types.Configuration) pdfcpu.Command {
 
 }
 
-func prepareDecryptCommand(config *types.Configuration) pdfcpu.Command {
+func prepareDecryptCommand(config *types.Configuration) *pdfcpu.Command {
 
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || pageSelection != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageDecrypt)
@@ -551,7 +551,7 @@ func validEncryptOptions() bool {
 		(perm == "" || perm == "none" || perm == "all")
 }
 
-func prepareEncryptCommand(config *types.Configuration) pdfcpu.Command {
+func prepareEncryptCommand(config *types.Configuration) *pdfcpu.Command {
 
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || !validEncryptOptions() {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageEncrypt)
@@ -582,7 +582,7 @@ func prepareEncryptCommand(config *types.Configuration) pdfcpu.Command {
 	return pdfcpu.EncryptCommand(filenameIn, filenameOut, config)
 }
 
-func prepareChangeUserPasswordCommand(config *types.Configuration) pdfcpu.Command {
+func prepareChangeUserPasswordCommand(config *types.Configuration) *pdfcpu.Command {
 
 	if len(flag.Args()) != 3 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageChangeUserPW)
@@ -600,7 +600,7 @@ func prepareChangeUserPasswordCommand(config *types.Configuration) pdfcpu.Comman
 	return pdfcpu.ChangeUserPWCommand(filenameIn, filenameOut, config, &pwOld, &pwNew)
 }
 
-func prepareChangeOwnerPasswordCommand(config *types.Configuration) pdfcpu.Command {
+func prepareChangeOwnerPasswordCommand(config *types.Configuration) *pdfcpu.Command {
 
 	if len(flag.Args()) != 3 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageChangeOwnerPW)
@@ -618,9 +618,9 @@ func prepareChangeOwnerPasswordCommand(config *types.Configuration) pdfcpu.Comma
 	return pdfcpu.ChangeOwnerPWCommand(filenameIn, filenameOut, config, &pwOld, &pwNew)
 }
 
-func prepareChangePasswordCommand(config *types.Configuration, s string) pdfcpu.Command {
+func prepareChangePasswordCommand(config *types.Configuration, s string) *pdfcpu.Command {
 
-	var cmd pdfcpu.Command
+	var cmd *pdfcpu.Command
 
 	switch s {
 
@@ -672,7 +672,7 @@ func main() {
 	config.UserPW = upw
 	config.OwnerPW = opw
 
-	var cmd pdfcpu.Command
+	var cmd *pdfcpu.Command
 
 	handleVersion(command)
 
@@ -723,5 +723,5 @@ func main() {
 
 	}
 
-	process(&cmd)
+	process(cmd)
 }

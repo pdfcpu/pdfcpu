@@ -5,18 +5,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateSignatureDict(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateSignatureDict(xRefTable *types.XRefTable, obj interface{}) error {
 
 	logInfoValidate.Println("*** validateSignatureDict begin ***")
 
 	dict, err := xRefTable.DereferenceDict(obj)
-	if err != nil {
-		return
-	}
-
-	if dict == nil {
-		logInfoValidate.Println("validateSignatureDict end: object is nil.")
-		return
+	if err != nil || dict == nil {
+		return err
 	}
 
 	// process signature dict fields.
@@ -27,10 +22,10 @@ func validateSignatureDict(xRefTable *types.XRefTable, obj interface{}) (err err
 
 	logInfoValidate.Println("*** validateSignatureDict end ***")
 
-	return
+	return nil
 }
 
-func validateAppearanceSubDict(xRefTable *types.XRefTable, subDict *types.PDFDict) (err error) {
+func validateAppearanceSubDict(xRefTable *types.XRefTable, subDict *types.PDFDict) error {
 
 	logInfoValidate.Println("*** validateAppearanceSubDict begin ***")
 
@@ -55,24 +50,19 @@ func validateAppearanceSubDict(xRefTable *types.XRefTable, subDict *types.PDFDic
 
 	logInfoValidate.Println("*** validateAppearanceSubDict end ***")
 
-	return
+	return nil
 }
 
-func validateAppearanceDictEntry(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateAppearanceDictEntry(xRefTable *types.XRefTable, obj interface{}) error {
 
 	// stream or dict
 	// single appearance stream or subdict
 
 	logInfoValidate.Println("*** validateAppearanceDictEntry begin ***")
 
-	obj, err = xRefTable.Dereference(obj)
-	if err != nil {
-		return
-	}
-
-	if obj == nil {
-		logInfoValidate.Println("validateAppearanceDictEntry end")
-		return
+	obj, err := xRefTable.Dereference(obj)
+	if err != nil || obj == nil {
+		return err
 	}
 
 	switch obj := obj.(type) {
@@ -90,23 +80,18 @@ func validateAppearanceDictEntry(xRefTable *types.XRefTable, obj interface{}) (e
 
 	logInfoValidate.Println("*** validateAppearanceDictEntry end ***")
 
-	return
+	return err
 }
 
-func validateAppearanceDict(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateAppearanceDict(xRefTable *types.XRefTable, obj interface{}) error {
 
 	// see 12.5.5 Appearance Streams
 
 	logInfoValidate.Println("*** validateAppearanceDict begin ***")
 
 	dict, err := xRefTable.DereferenceDict(obj)
-	if err != nil {
-		return
-	}
-
-	if dict == nil {
-		logInfoValidate.Println("validateAppearanceDict end")
-		return
+	if err != nil || dict == nil {
+		return err
 	}
 
 	obj, ok := dict.Find("N")
@@ -117,7 +102,7 @@ func validateAppearanceDict(xRefTable *types.XRefTable, obj interface{}) (err er
 	} else {
 		err = validateAppearanceDictEntry(xRefTable, obj)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
@@ -125,7 +110,7 @@ func validateAppearanceDict(xRefTable *types.XRefTable, obj interface{}) (err er
 	if obj, ok = dict.Find("R"); ok {
 		err = validateAppearanceDictEntry(xRefTable, obj)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
@@ -133,13 +118,13 @@ func validateAppearanceDict(xRefTable *types.XRefTable, obj interface{}) (err er
 	if obj, ok = dict.Find("D"); ok {
 		err = validateAppearanceDictEntry(xRefTable, obj)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	logInfoValidate.Println("*** validateAppearanceDict end ***")
 
-	return
+	return nil
 }
 
 func validateAcroFieldDictEntries(xRefTable *types.XRefTable, dict *types.PDFDict, terminalNode bool, inFieldType *types.PDFName) (outFieldType *types.PDFName, err error) {
@@ -151,7 +136,7 @@ func validateAcroFieldDictEntries(xRefTable *types.XRefTable, dict *types.PDFDic
 	// FT: name, Btn,Tx,Ch,Sig
 	fieldType, err := validateNameEntry(xRefTable, dict, dictName, "FT", terminalNode && inFieldType == nil, types.V10, validateAcroFieldType)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if fieldType != nil {
@@ -163,75 +148,65 @@ func validateAcroFieldDictEntries(xRefTable *types.XRefTable, dict *types.PDFDic
 	// Parent, required if this is a child in the field hierarchy.
 	_, err = validateIndRefEntry(xRefTable, dict, dictName, "Parent", OPTIONAL, types.V10)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// T, optional, text string
 	_, err = validateStringEntry(xRefTable, dict, dictName, "T", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// TU, optional, text string, since V1.3
 	_, err = validateStringEntry(xRefTable, dict, dictName, "TU", OPTIONAL, types.V13, nil)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// TM, optional, text string, since V1.3
 	_, err = validateStringEntry(xRefTable, dict, dictName, "TM", OPTIONAL, types.V13, nil)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// Ff, optional, integer
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "Ff", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// V, optional, various
 	_, err = validateEntry(xRefTable, dict, dictName, "V", OPTIONAL)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// DV, optional, various
 	_, err = validateEntry(xRefTable, dict, dictName, "DV", OPTIONAL)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// AA, optional, dict, since V1.2
 	err = validateAdditionalActions(xRefTable, dict, "acroFieldDict", "AA", OPTIONAL, types.V14, "fieldOrAnnot")
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	logInfoValidate.Println("*** validateAcroFieldDictEntries end ***")
 
-	return
+	return outFieldType, nil
 }
 
-func validateAcroFieldDict(xRefTable *types.XRefTable, indRef *types.PDFIndirectRef, inFieldType *types.PDFName) (err error) {
+func validateAcroFieldDict(xRefTable *types.XRefTable, indRef *types.PDFIndirectRef, inFieldType *types.PDFName) error {
 
 	objNr := int(indRef.ObjectNumber)
 
 	logInfoValidate.Printf("*** validateAcroFieldDict begin: obj#:%d ***\n", objNr)
 
-	var (
-		dict         *types.PDFDict
-		xInFieldType *types.PDFName
-	)
-
-	dict, err = xRefTable.DereferenceDict(*indRef)
-	if err != nil {
-		return
-	}
-
-	if dict == nil {
-		logInfoValidate.Println("validateAcroFieldDict: is nil")
-		return nil
+	dict, err := xRefTable.DereferenceDict(*indRef)
+	if err != nil || dict == nil {
+		return err
 	}
 
 	if pdfObject, ok := dict.Find("Kids"); ok {
@@ -242,6 +217,7 @@ func validateAcroFieldDict(xRefTable *types.XRefTable, indRef *types.PDFIndirect
 		}
 
 		// Write field entries.
+		var xInFieldType *types.PDFName
 		xInFieldType, err = validateAcroFieldDictEntries(xRefTable, dict, false, inFieldType)
 		if err != nil {
 			return err
@@ -270,47 +246,39 @@ func validateAcroFieldDict(xRefTable *types.XRefTable, indRef *types.PDFIndirect
 
 		logInfoValidate.Printf("*** validateAcroFieldDict end: obj#:%d ***", indRef.ObjectNumber)
 
-		return
-
+		return nil
 	}
 
 	// dict represents a terminal field and must have Subtype "Widget"
-	validateNameEntry(xRefTable, dict, "acroFieldDict", "Subtype", REQUIRED, types.V10, func(s string) bool { return s == "Widget" })
+	_, err = validateNameEntry(xRefTable, dict, "acroFieldDict", "Subtype", REQUIRED, types.V10, func(s string) bool { return s == "Widget" })
 	if err != nil {
-		return
+		return err
 	}
 
 	// Write field entries.
 	_, err = validateAcroFieldDictEntries(xRefTable, dict, true, inFieldType)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Validate widget annotation - Validation of AA redundant because of merged acrofield with widget annotation.
-	err = validateAnnotationDict(xRefTable, dict)
+	_, err = validateAnnotationDict(xRefTable, dict)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Printf("*** validateAcroFieldDict end: obj#:%d ***", indRef.ObjectNumber)
 
-	return
+	return nil
 }
 
-func validateAcroFormFields(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateAcroFormFields(xRefTable *types.XRefTable, obj interface{}) error {
 
 	logInfoValidate.Println("*** validateAcroFormFields begin ***")
 
-	var arr *types.PDFArray
-
-	arr, err = xRefTable.DereferenceArray(obj)
-	if err != nil {
-		return
-	}
-
-	if arr == nil {
-		logInfoValidate.Println("validateAcroFormFields end: is nil.")
-		return
+	arr, err := xRefTable.DereferenceArray(obj)
+	if err != nil || arr == nil {
+		return err
 	}
 
 	for _, value := range *arr {
@@ -322,17 +290,17 @@ func validateAcroFormFields(xRefTable *types.XRefTable, obj interface{}) (err er
 
 		err = validateAcroFieldDict(xRefTable, &indRef, nil)
 		if err != nil {
-			return
+			return err
 		}
 
 	}
 
 	logInfoValidate.Printf("*** validateAcroFormFields end ***")
 
-	return
+	return nil
 }
 
-func validateAcroFormCO(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (err error) {
+func validateAcroFormCO(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
 
 	// see 12.6.3 Trigger Events
 	// Array of indRefs to field dicts with calculation actions, since V1.3
@@ -344,41 +312,34 @@ func validateAcroFormCO(xRefTable *types.XRefTable, obj interface{}, sinceVersio
 		return errors.Errorf("validateAcroFormCO: unsupported in version %s.\n", xRefTable.VersionString())
 	}
 
-	var (
-		arr  *types.PDFArray
-		dict *types.PDFDict
-	)
-
-	arr, err = xRefTable.DereferenceArray(obj)
-	if err != nil {
-		return
-	}
-
-	if arr == nil {
-		logDebugValidate.Println("validateAcroFormCO: end, is nil")
-		return
+	arr, err := xRefTable.DereferenceArray(obj)
+	if err != nil || arr == nil {
+		return err
 	}
 
 	for _, obj := range *arr {
 
-		dict, err = xRefTable.DereferenceDict(obj)
-		if err != nil || dict == nil {
-			return
+		dict, err := xRefTable.DereferenceDict(obj)
+		if err != nil {
+			return err
+		}
+		if dict == nil {
+			continue
 		}
 
-		err = validateAnnotationDict(xRefTable, dict)
+		_, err = validateAnnotationDict(xRefTable, dict)
 		if err != nil {
-			return
+			return err
 		}
 
 	}
 
 	logInfoValidate.Println("*** validateAcroFormCO end ***")
 
-	return
+	return nil
 }
 
-func validateAcroFormEntryXFA(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateAcroFormEntryXFA(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	// see 12.7.8
 
@@ -386,19 +347,15 @@ func validateAcroFormEntryXFA(xRefTable *types.XRefTable, dict *types.PDFDict, s
 
 	obj, ok := dict.Find("XFA")
 	if !ok {
-		return
+		return nil
 	}
 
 	// streamDict or array of text,streamDict pairs
 
+	var err error
 	obj, err = xRefTable.Dereference(obj)
-	if err != nil {
-		return
-	}
-
-	if obj == nil {
-		logInfoValidate.Println("validateAcroFormEntryXFA end")
-		return
+	if err != nil || obj == nil {
+		return err
 	}
 
 	switch obj := obj.(type) {
@@ -420,7 +377,7 @@ func validateAcroFormEntryXFA(xRefTable *types.XRefTable, dict *types.PDFDict, s
 
 			o, err = xRefTable.Dereference(v)
 			if err != nil {
-				return
+				return err
 			}
 
 			if i%2 == 0 {
@@ -448,52 +405,42 @@ func validateAcroFormEntryXFA(xRefTable *types.XRefTable, dict *types.PDFDict, s
 
 	logInfoValidate.Println("*** validateAcroFormEntryXFA end ***")
 
-	return
+	return nil
 }
 
 func validateQ(i int) bool { return i >= 0 && i <= 2 }
 
-func validateAcroFormEntryCO(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateAcroFormEntryCO(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	obj, ok := dict.Find("CO")
 	if !ok {
-		return
+		return nil
 	}
 
 	return validateAcroFormCO(xRefTable, obj, sinceVersion)
 }
 
-func validateAcroFormEntryDR(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateAcroFormEntryDR(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	obj, ok := dict.Find("DR")
 	if !ok {
-		return
+		return nil
 	}
 
-	_, err = validateResourceDict(xRefTable, obj)
+	_, err := validateResourceDict(xRefTable, obj)
 
 	return err
 }
 
-func validateAcroForm(xRefTable *types.XRefTable, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateAcroForm(xRefTable *types.XRefTable, rootDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	// => 12.7.2 Interactive Form Dictionary
 
 	logInfoValidate.Println("*** validateAcroForm begin ***")
 
-	rootDict, err := xRefTable.Catalog()
-	if err != nil {
-		return
-	}
-
 	dict, err := validateDictEntry(xRefTable, rootDict, "rootDict", "AcroForm", OPTIONAL, sinceVersion, nil)
-	if err != nil {
-		return
-	}
-
-	if dict == nil {
-		logInfoValidate.Println("validateAcroForm end: dict is nil.")
-		return
+	if err != nil || dict == nil {
+		return err
 	}
 
 	// Version check
@@ -509,7 +456,7 @@ func validateAcroForm(xRefTable *types.XRefTable, required bool, sinceVersion ty
 
 	err = validateAcroFormFields(xRefTable, obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	dictName := "acroFormDict"
@@ -517,46 +464,46 @@ func validateAcroForm(xRefTable *types.XRefTable, required bool, sinceVersion ty
 	// NeedAppearances: optional, boolean
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "NeedAppearances", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// SigFlags: optional, since 1.3, integer
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "SigFlags", OPTIONAL, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// CO: arra
 	err = validateAcroFormEntryCO(xRefTable, dict, types.V13)
 	if err != nil {
-		return
+		return err
 	}
 
 	// DR, optional, resource dict
 	err = validateAcroFormEntryDR(xRefTable, dict)
 	if err != nil {
-		return
+		return err
 	}
 
 	// DA: optional, string
 	_, err = validateStringEntry(xRefTable, dict, dictName, "DA", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Q: optional, integer
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "Q", OPTIONAL, types.V10, validateQ)
 	if err != nil {
-		return
+		return err
 	}
 
 	// XFA: optional, since 1.5, stream or array
 	err = validateAcroFormEntryXFA(xRefTable, dict, sinceVersion)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateAcroForm end ***")
 
-	return
+	return nil
 }

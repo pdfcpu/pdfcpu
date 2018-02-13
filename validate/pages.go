@@ -5,100 +5,48 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateResourceDictPart1(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
-
-	if obj, ok := dict.Find("ExtGState"); ok {
-		err = validateExtGStateResourceDict(xRefTable, obj)
-		if err != nil {
-			return
-		}
-	}
-
-	if obj, ok := dict.Find("Font"); ok {
-		err = validateFontResourceDict(xRefTable, obj)
-		if err != nil {
-			return
-		}
-	}
-
-	if obj, ok := dict.Find("XObject"); ok {
-		err = validateXObjectResourceDict(xRefTable, obj)
-		if err != nil {
-			return
-		}
-	}
-
-	return
-}
-
-func validateResourceDictPart2(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
-
-	if obj, ok := dict.Find("Properties"); ok {
-		err = validatePropertiesResourceDict(xRefTable, obj)
-		if err != nil {
-			return
-		}
-	}
-
-	if obj, ok := dict.Find("ColorSpace"); ok {
-		err = validateColorSpaceResourceDict(xRefTable, obj)
-		if err != nil {
-			return
-		}
-	}
-
-	if obj, ok := dict.Find("Pattern"); ok {
-		err = validatePatternResourceDict(xRefTable, obj)
-		if err != nil {
-			return
-		}
-	}
-
-	if obj, ok := dict.Find("Shading"); ok {
-		err = validateShadingResourceDict(xRefTable, obj, types.V13)
-		if err != nil {
-			return
-		}
-	}
-
-	return
-}
-
 func validateResourceDict(xRefTable *types.XRefTable, obj interface{}) (hasResources bool, err error) {
 
 	logInfoValidate.Println("*** validateResourceDict begin: ***")
 
 	dict, err := xRefTable.DereferenceDict(obj)
 	if err != nil {
-		return
+		return false, err
 	}
-
 	if dict == nil {
 		logInfoValidate.Printf("validateResourceDict end: object  is nil.\n")
-		return
+		return false, nil
 	}
 
-	err = validateResourceDictPart1(xRefTable, dict)
-	if err != nil {
-		return
-	}
-
-	err = validateResourceDictPart2(xRefTable, dict)
-	if err != nil {
-		return
+	for k, v := range map[string]struct {
+		validate     func(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error
+		sinceVersion types.PDFVersion
+	}{
+		"ExtGState":  {validateExtGStateResourceDict, types.V10},
+		"Font":       {validateFontResourceDict, types.V10},
+		"XObject":    {validateXObjectResourceDict, types.V10},
+		"Properties": {validatePropertiesResourceDict, types.V10},
+		"ColorSpace": {validateColorSpaceResourceDict, types.V10},
+		"Pattern":    {validatePatternResourceDict, types.V10},
+		"Shading":    {validateShadingResourceDict, types.V13},
+	} {
+		if obj, ok := dict.Find(k); ok {
+			err = v.validate(xRefTable, obj, v.sinceVersion)
+			if err != nil {
+				return false, err
+			}
+		}
 	}
 
 	// Beginning with PDF V1.4 this feature is considered to be obsolete.
-	//_, _, err = validateNameArrayEntry(xRefTable, dict, "resourceDict", "ProcSet", OPTIONAL, types.V10, validateProcedureSetName)
-	if err != nil {
-		return
-	}
-
-	hasResources = true
+	//_, err = validateNameArrayEntry(xRefTable, dict, "resourceDict", "ProcSet", OPTIONAL, types.V10, validateProcedureSetName)
+	//if err != nil {
+	//	return false, nil
+	//}
 
 	logInfoValidate.Println("*** validateResourceDict end ***")
 
-	return
+	return true, nil
 }
 
 func validatePageContents(xRefTable *types.XRefTable, dict *types.PDFDict) (hasContents bool, err error) {
@@ -107,16 +55,12 @@ func validatePageContents(xRefTable *types.XRefTable, dict *types.PDFDict) (hasC
 
 	obj, found := dict.Find("Contents")
 	if !found {
-		return
+		return false, err
 	}
 
 	obj, err = xRefTable.Dereference(obj)
-	if err != nil {
-		return
-	}
-
-	if obj == nil {
-		return
+	if err != nil || obj == nil {
+		return false, err
 	}
 
 	switch obj := obj.(type) {
@@ -134,7 +78,7 @@ func validatePageContents(xRefTable *types.XRefTable, dict *types.PDFDict) (hasC
 
 			obj, err = xRefTable.DereferenceStreamDict(obj)
 			if err != nil {
-				return
+				return false, err
 			}
 
 			if obj == nil {
@@ -146,46 +90,39 @@ func validatePageContents(xRefTable *types.XRefTable, dict *types.PDFDict) (hasC
 		}
 
 	default:
-		err = errors.Errorf("validatePageContents: page content must be stream dict or array")
-		return
+		return false, errors.Errorf("validatePageContents: page content must be stream dict or array")
 	}
 
 	logInfoValidate.Println("*** validatePageContents end ***")
 
-	return
+	return hasContents, nil
 }
 
-func validatePageResources(xRefTable *types.XRefTable, dict *types.PDFDict, hasResources, hasContents bool) (err error) {
+func validatePageResources(xRefTable *types.XRefTable, dict *types.PDFDict, hasResources, hasContents bool) error {
 
 	logInfoValidate.Println("*** validatePageResources begin ***")
 
 	if obj, found := dict.Find("Resources"); found {
-
 		_, err := validateResourceDict(xRefTable, obj)
-		if err != nil {
-			return err
-		}
-
-		// Leave here where called from writePageDict.
-		return nil
+		return err
 	}
 
 	if !hasResources && hasContents {
-		err = errors.New("validatePageResources: missing required entry \"Resources\" - should be inheritated")
+		return errors.New("validatePageResources: missing required entry \"Resources\" - should be inheritated")
 	}
 
 	logInfoValidate.Println("*** validatePageResources end ***")
 
-	return
+	return nil
 }
 
 func validatePageEntryMediaBox(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (hasMediaBox bool, err error) {
 
 	logInfoValidate.Println("*** validatePageEntryMediaBox begin ***")
 
-	obj, err := validateRectangleEntry(xRefTable, dict, "pagesDict", "MediaBox", required, sinceVersion, nil)
+	obj, err := validateRectangleEntry(xRefTable, dict, "pageDict", "MediaBox", required, sinceVersion, nil)
 	if err != nil {
-		return
+		return false, err
 	}
 	if obj != nil {
 		hasMediaBox = true
@@ -193,77 +130,76 @@ func validatePageEntryMediaBox(xRefTable *types.XRefTable, dict *types.PDFDict, 
 
 	logInfoValidate.Printf("*** validatePageEntryMediaBox end: hasMediaBox=%v ***\n", hasMediaBox)
 
-	return
+	return hasMediaBox, nil
 }
 
-func validatePageEntryCropBox(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validatePageEntryCropBox(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validatePageEntryCropBox begin ***")
 
-	_, err = validateRectangleEntry(xRefTable, dict, "pagesDict", "CropBox", required, sinceVersion, nil)
+	_, err := validateRectangleEntry(xRefTable, dict, "pagesDict", "CropBox", required, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validatePageEntryCropBox end ***")
 
-	return
+	return nil
 }
 
-func validatePageEntryBleedBox(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validatePageEntryBleedBox(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validatePageEntryBleedBox begin ***")
 
-	_, err = validateRectangleEntry(xRefTable, dict, "pagesDict", "BleedBox", required, sinceVersion, nil)
+	_, err := validateRectangleEntry(xRefTable, dict, "pagesDict", "BleedBox", required, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validatePageEntryBleedBox end ***")
 
-	return
+	return nil
 }
 
-func validatePageEntryTrimBox(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validatePageEntryTrimBox(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validatePageEntryTrimBox begin ***")
 
-	_, err = validateRectangleEntry(xRefTable, dict, "pagesDict", "TrimBox", required, sinceVersion, nil)
+	_, err := validateRectangleEntry(xRefTable, dict, "pagesDict", "TrimBox", required, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validatePageEntryTrimBox end ***")
 
-	return
+	return nil
 }
 
-func validatePageEntryArtBox(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validatePageEntryArtBox(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validatePageEntryArtBox begin ***")
 
-	_, err = validateRectangleEntry(xRefTable, dict, "pagesDict", "ArtBox", required, sinceVersion, nil)
+	_, err := validateRectangleEntry(xRefTable, dict, "pagesDict", "ArtBox", required, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validatePageEntryArtBox end ***")
 
-	return
+	return nil
 }
 
-func validateBoxStyleDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (d *types.PDFDict, err error) {
+func validateBoxStyleDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (*types.PDFDict, error) {
 
-	logInfoValidate.Println("*** writeBoxStyleDictEntry begin ***")
+	logInfoValidate.Println("*** validateBoxStyleDictEntry begin ***")
 
-	d, err = validateDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
+	d, err := validateDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
 	if err != nil {
-		return
+		return nil, err
 	}
-
 	if d == nil {
-		logInfoValidate.Printf("writeBoxStyleDictEntry end: is nil.\n")
-		return
+		logInfoValidate.Printf("validateBoxStyleDictEntry end: is nil.\n")
+		return nil, nil
 	}
 
 	dictName = "boxStyleDict"
@@ -271,33 +207,33 @@ func validateBoxStyleDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, 
 	// C, number array with 3 elements, optional
 	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "C", OPTIONAL, sinceVersion, func(arr types.PDFArray) bool { return len(arr) == 3 })
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// W, number, optional
 	_, err = validateNumberEntry(xRefTable, d, dictName, "W", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// S, name, optional
 	_, err = validateNameEntry(xRefTable, d, dictName, "S", OPTIONAL, sinceVersion, validateGuideLineStyle)
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	// D, array, optional, since V1.3, [dashArray dashPhase(integer)]
-	err = validateLineDashPatternEntry(xRefTable, d, dictName, "D", OPTIONAL, sinceVersion)
+	// D, array, optional, since V1.3, dashArray
+	_, err = validateIntegerArrayEntry(xRefTable, d, dictName, "D", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	logInfoValidate.Println("*** writeBoxStyleDictEntry end ***")
+	logInfoValidate.Println("*** validateBoxStyleDictEntry end ***")
 
-	return
+	return d, err
 }
 
-func validatePageBoxColorInfo(xRefTable *types.XRefTable, pageDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validatePageBoxColorInfo(xRefTable *types.XRefTable, pageDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	// box color information dict
 	// see 14.11.2.2
@@ -306,98 +242,99 @@ func validatePageBoxColorInfo(xRefTable *types.XRefTable, pageDict *types.PDFDic
 
 	var dict *types.PDFDict
 
-	dict, err = validateDictEntry(xRefTable, pageDict, "pageDict", "BoxColorInfo", required, sinceVersion, nil)
+	dictName := "pageDict"
+
+	dict, err := validateDictEntry(xRefTable, pageDict, dictName, "BoxColorInfo", required, sinceVersion, nil)
 	if err != nil || dict == nil {
-		return
+		return err
 	}
 
-	_, err = validateBoxStyleDictEntry(xRefTable, dict, "boxColorInfoDict", "CropBox", OPTIONAL, sinceVersion)
+	dictName = "boxColorInfoDict"
+
+	_, err = validateBoxStyleDictEntry(xRefTable, dict, dictName, "CropBox", OPTIONAL, sinceVersion)
 	if err != nil {
-		return
+		return err
 	}
 
-	_, err = validateBoxStyleDictEntry(xRefTable, dict, "boxColorInfoDict", "BleedBox", OPTIONAL, sinceVersion)
+	_, err = validateBoxStyleDictEntry(xRefTable, dict, dictName, "BleedBox", OPTIONAL, sinceVersion)
 	if err != nil {
-		return
+		return err
 	}
 
-	_, err = validateBoxStyleDictEntry(xRefTable, dict, "boxColorInfoDict", "TrimBox", OPTIONAL, sinceVersion)
+	_, err = validateBoxStyleDictEntry(xRefTable, dict, dictName, "TrimBox", OPTIONAL, sinceVersion)
 	if err != nil {
-		return
+		return err
 	}
 
-	_, err = validateBoxStyleDictEntry(xRefTable, dict, "boxColorInfoDict", "ArtBox", OPTIONAL, sinceVersion)
+	_, err = validateBoxStyleDictEntry(xRefTable, dict, dictName, "ArtBox", OPTIONAL, sinceVersion)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validatePageBoxColorInfo end ***")
 
-	return
+	return nil
 }
 
-func validatePageEntryRotate(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validatePageEntryRotate(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
-	logInfoValidate.Println("*** writePageEntryRotate begin ***")
+	logInfoValidate.Println("*** validatePageEntryRotate begin ***")
 
-	_, err = validateIntegerEntry(xRefTable, dict, "pagesDict", "Rotate", required, sinceVersion, validateRotate)
+	_, err := validateIntegerEntry(xRefTable, dict, "pagesDict", "Rotate", required, sinceVersion, validateRotate)
 	if err != nil {
-		return
+		return err
 	}
 
-	logInfoValidate.Println("*** writePageEntryRotate end ***")
+	logInfoValidate.Println("*** validatePageEntryRotate end ***")
 
-	return
+	return nil
 }
 
-func validatePageEntryGroup(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validatePageEntryGroup(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validatePageEntryGroup begin ***")
 
-	var d *types.PDFDict
-
-	d, err = validateDictEntry(xRefTable, dict, "pageDict", "Group", required, sinceVersion, nil)
+	d, err := validateDictEntry(xRefTable, dict, "pageDict", "Group", required, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	if d != nil {
 		err = validateGroupAttributesDict(xRefTable, *d)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	logInfoValidate.Println("*** validatePageEntryGroup end ***")
 
-	return
+	return nil
 }
 
-func validatePageEntryThumb(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validatePageEntryThumb(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validatePageEntryThumb begin ***")
 
 	streamDict, err := validateStreamDictEntry(xRefTable, dict, "pagesDict", "Thumb", required, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
-
 	if streamDict == nil {
 		logInfoValidate.Println("validatePageEntryThumb end: is nil.")
-		return
+		return nil
 	}
 
 	err = validateXObjectStreamDict(xRefTable, streamDict)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validatePageEntryThumb end ***")
 
-	return
+	return nil
 }
 
-func validatePageEntryB(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validatePageEntryB(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	// Note: Only makes sense if "Threads" entry in document root and bead dicts present.
 
@@ -405,38 +342,37 @@ func validatePageEntryB(xRefTable *types.XRefTable, dict *types.PDFDict, require
 
 	arr, err := validateIndRefArrayEntry(xRefTable, dict, "pagesDict", "B", required, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
-
 	if arr == nil {
 		logInfoValidate.Println("validatePageEntryB end: is nil.")
-		return
+		return nil
 	}
 
 	logInfoValidate.Println("*** validatePageEntryB end ***")
 
-	return
+	return nil
 }
 
-func validatePageEntryDur(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validatePageEntryDur(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Printf("*** validatePageEntryDur begin ***")
 
-	_, err = validateNumberEntry(xRefTable, dict, "pagesDict", "Dur", required, sinceVersion, nil)
+	_, err := validateNumberEntry(xRefTable, dict, "pagesDict", "Dur", required, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validatePageEntryDur end ***")
 
-	return
+	return nil
 }
 
-func validateTransitionDictEntryDi(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateTransitionDictEntryDi(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	obj, found := dict.Find("Di")
 	if !found {
-		return
+		return nil
 	}
 
 	switch obj := obj.(type) {
@@ -452,25 +388,22 @@ func validateTransitionDictEntryDi(xRefTable *types.XRefTable, dict *types.PDFDi
 		}
 	}
 
-	return
+	return nil
 }
 
-func validateTransitionDictEntryM(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, transStyle *types.PDFName) (err error) {
+func validateTransitionDictEntryM(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, transStyle *types.PDFName) error {
 
 	validateM := func(s string) bool {
 		return validateTransitionDirectionOfMotion(s) &&
 			(transStyle != nil && (*transStyle == "Split" || *transStyle == "Box" || *transStyle == "Fly"))
 	}
 
-	_, err = validateNameEntry(xRefTable, dict, dictName, "M", OPTIONAL, types.V10, validateM)
-	if err != nil {
-		return
-	}
+	_, err := validateNameEntry(xRefTable, dict, dictName, "M", OPTIONAL, types.V10, validateM)
 
-	return
+	return err
 }
 
-func validateTransitionDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateTransitionDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	logInfoValidate.Println("*** validateTransitionDict begin ***")
 
@@ -483,13 +416,13 @@ func validateTransitionDict(xRefTable *types.XRefTable, dict *types.PDFDict) (er
 	}
 	transStyle, err := validateNameEntry(xRefTable, dict, dictName, "S", OPTIONAL, types.V10, validate)
 	if err != nil {
-		return
+		return err
 	}
 
 	// D, optional, number > 0
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "D", OPTIONAL, types.V10, func(f float64) bool { return f > 0 })
 	if err != nil {
-		return
+		return err
 	}
 
 	// Dm, optional, name
@@ -498,26 +431,26 @@ func validateTransitionDict(xRefTable *types.XRefTable, dict *types.PDFDict) (er
 	}
 	_, err = validateNameEntry(xRefTable, dict, dictName, "Dm", OPTIONAL, types.V10, validateDm)
 	if err != nil {
-		return
+		return err
 	}
 
 	// M, optional, name
 	err = validateTransitionDictEntryM(xRefTable, dict, dictName, transStyle)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Di, optional, number or name
 	err = validateTransitionDictEntryDi(xRefTable, dict)
 	if err != nil {
-		return
+		return err
 	}
 
 	// SS, optional, number, since V1.5
 	if transStyle != nil && *transStyle == "Fly" {
 		_, err = validateNumberEntry(xRefTable, dict, dictName, "SS", OPTIONAL, types.V15, nil)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
@@ -525,193 +458,156 @@ func validateTransitionDict(xRefTable *types.XRefTable, dict *types.PDFDict) (er
 	validateB := func(b bool) bool { return transStyle != nil && *transStyle == "Fly" }
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "B", OPTIONAL, types.V15, validateB)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateTransitionDict end ***")
 
-	return
+	return nil
 }
 
-func validatePageEntryTrans(xRefTable *types.XRefTable, pageDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validatePageEntryTrans(xRefTable *types.XRefTable, pageDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validatePageEntryTrans begin ***")
 
 	dict, err := validateDictEntry(xRefTable, pageDict, "pagesDict", "Trans", required, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	if dict == nil {
 		logInfoValidate.Println("validatePageEntryTrans end: is nil.")
-		return
+		return err
 	}
 
 	err = validateTransitionDict(xRefTable, dict)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validatePageEntryTrans begin ***")
 
-	return
+	return nil
 }
 
-func validatePageEntryStructParents(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validatePageEntryStructParents(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Printf("*** validatePageEntryStructParents begin ***")
 
-	_, err = validateIntegerEntry(xRefTable, dict, "pagesDict", "StructParents", required, sinceVersion, nil)
+	_, err := validateIntegerEntry(xRefTable, dict, "pagesDict", "StructParents", required, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validatePageEntryStructParents end ***")
 
-	return
+	return nil
 }
 
-func validatePageEntryID(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validatePageEntryID(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validatePageEntryID begin ***")
 
-	_, err = validateStringEntry(xRefTable, dict, "pagesDict", "ID", required, sinceVersion, nil)
+	_, err := validateStringEntry(xRefTable, dict, "pagesDict", "ID", required, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validatePageEntryID end ***")
 
-	return
+	return nil
 }
 
-func validatePageEntryPZ(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validatePageEntryPZ(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	// Preferred zoom factor, number
 
 	logInfoValidate.Println("*** validatePageEntryPZ begin ***")
 
-	_, err = validateNumberEntry(xRefTable, dict, "pagesDict", "PZ", required, sinceVersion, nil)
+	_, err := validateNumberEntry(xRefTable, dict, "pagesDict", "PZ", required, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validatePageEntryPZ end ***")
 
-	return
+	return nil
 }
 
-func validateDeviceColorantEntry(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
-
-	logInfoValidate.Println("*** validateDeviceColorantEntry begin ***")
-
-	obj, found := dict.Find("DeviceColorant")
-	if !found || obj == nil {
-		return
-	}
-
-	obj, err = xRefTable.Dereference(obj)
-	if err != nil {
-		return
-	}
-
-	if obj == nil {
-		logInfoValidate.Println("validateDeviceColorantEntry end: is nil.")
-		return
-	}
-
-	switch obj.(type) {
-
-	case types.PDFName, types.PDFStringLiteral:
-		// no further processing
-
-	default:
-		err = errors.Errorf("validateDeviceColorantEntry: must be name or string.")
-		return
-	}
-
-	logInfoValidate.Println("*** validateDeviceColorantEntry end ***")
-
-	return
-}
-
-func validatePageEntrySeparationInfo(xRefTable *types.XRefTable, pagesDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validatePageEntrySeparationInfo(xRefTable *types.XRefTable, pagesDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	// see 14.11.4
 
-	logInfoValidate.Printf("*** writePageEntrySeparationInfo begin ***")
+	logInfoValidate.Printf("*** validatePageEntrySeparationInfo begin ***")
 
 	dict, err := validateDictEntry(xRefTable, pagesDict, "pagesDict", "SeparationInfo", required, sinceVersion, nil)
-	if err != nil {
-		return
+	if err != nil || dict == nil {
+		return err
 	}
 
-	if dict == nil {
-		logInfoValidate.Printf("writePageEntrySeparationInfo end: is nil.\n")
-		return
+	dictName := "separationDict"
+
+	_, err = validateIndRefArrayEntry(xRefTable, dict, dictName, "Pages", REQUIRED, sinceVersion, nil)
+	if err != nil {
+		return err
 	}
 
-	_, err = validateIndRefArrayEntry(xRefTable, dict, "separationDict", "Pages", OPTIONAL, sinceVersion, nil)
+	err = validateNameOrStringEntry(xRefTable, dict, dictName, "DeviceColorant", required, sinceVersion)
 	if err != nil {
-		return
+		return err
 	}
 
-	err = validateDeviceColorantEntry(xRefTable, dict, OPTIONAL, sinceVersion)
+	arr, err := validateArrayEntry(xRefTable, dict, dictName, "ColorSpace", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
-	}
-
-	arr, err := validateArrayEntry(xRefTable, dict, "separationDict", "ColorSpace", OPTIONAL, sinceVersion, nil)
-	if err != nil {
-		return
+		return err
 	}
 	if arr != nil {
-		err = validateColorSpaceArray(xRefTable, arr, ExcludePatternCS)
+		err = validateColorSpaceArraySubset(xRefTable, arr, []string{"Separation", "DeviceN"})
 		if err != nil {
-			return
+			return err
 		}
 	}
 
-	logInfoValidate.Println("*** writePageEntrySeparationInfo end ***")
+	logInfoValidate.Println("*** validatePageEntrySeparationInfo end ***")
 
-	return
+	return nil
 }
 
-func validatePageEntryTabs(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validatePageEntryTabs(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
-	logInfoValidate.Println("*** writePageEntryTabs begin ***")
+	logInfoValidate.Println("*** validatePageEntryTabs begin ***")
 
 	// Include out of spec entry "W"
 	validateTabs := func(s string) bool { return memberOf(s, []string{"R", "C", "S", "W"}) }
 
-	_, err = validateNameEntry(xRefTable, dict, "pagesDict", "Tabs", required, sinceVersion, validateTabs)
+	_, err := validateNameEntry(xRefTable, dict, "pagesDict", "Tabs", required, sinceVersion, validateTabs)
 	if err != nil {
-		return
+		return err
 	}
 
-	logInfoValidate.Println("*** writePageEntryTabs end ***")
+	logInfoValidate.Println("*** validatePageEntryTabs end ***")
 
-	return
+	return nil
 }
 
-func validatePageEntryTemplateInstantiated(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validatePageEntryTemplateInstantiated(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	// see 12.7.6
 
 	logInfoValidate.Println("*** validatePageEntryTemplateInstantiated begin ***")
 
-	_, err = validateNameEntry(xRefTable, dict, "pagesDict", "TemplateInstantiated", required, sinceVersion, nil)
+	_, err := validateNameEntry(xRefTable, dict, "pagesDict", "TemplateInstantiated", required, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validatePageEntryTemplateInstantiated end ***")
 
-	return
+	return nil
 }
 
 // TODO implement
-func validatePageEntryPresSteps(xRefTable *types.XRefTable, pagesDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validatePageEntryPresSteps(xRefTable *types.XRefTable, pagesDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	// see 12.4.4.2
 
@@ -719,97 +615,251 @@ func validatePageEntryPresSteps(xRefTable *types.XRefTable, pagesDict *types.PDF
 
 	dict, err := validateDictEntry(xRefTable, pagesDict, "pagesDict", "PresSteps", required, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
-
 	if dict == nil {
 		logInfoValidate.Println("validatePageEntryPresSteps end: is nil.")
-		return
+		return nil
 	}
 
-	err = errors.New("*** validatePageEntryPresSteps: not supported ***")
-
-	logInfoValidate.Println("*** validatePageEntryPresSteps end ***")
-
-	return
+	return errors.New("*** validatePageEntryPresSteps: not supported ***")
 }
 
-func validatePageEntryUserUnit(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validatePageEntryUserUnit(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validatePageEntryUserUnit begin ***")
 
 	// UserUnit, optional, positive number, since V1.6
-	_, err = validateNumberEntry(xRefTable, dict, "pagesDict", "UserUnit", required, sinceVersion, func(f float64) bool { return f > 0 })
+	_, err := validateNumberEntry(xRefTable, dict, "pagesDict", "UserUnit", required, sinceVersion, func(f float64) bool { return f > 0 })
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validatePageEntryUserUnit end ***")
 
-	return
+	return nil
 }
 
-func validateMeasureDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateNumberFormatDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
+
+	dictName := "numberFormatDict"
+
+	// Type, name, optional
+	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "NumberFormat" })
+	if err != nil {
+		return err
+	}
+
+	// U, text string, required
+	_, err = validateStringEntry(xRefTable, dict, dictName, "U", REQUIRED, sinceVersion, nil)
+	if err != nil {
+		return err
+	}
+
+	// C, number, required
+	_, err = validateNumberEntry(xRefTable, dict, dictName, "C", REQUIRED, sinceVersion, nil)
+	if err != nil {
+		return err
+	}
+
+	// F, name, optional
+	_, err = validateNameEntry(xRefTable, dict, dictName, "F", OPTIONAL, sinceVersion, nil)
+	if err != nil {
+		return err
+	}
+
+	// D, integer, optional
+	_, err = validateIntegerEntry(xRefTable, dict, dictName, "D", OPTIONAL, sinceVersion, nil)
+	if err != nil {
+		return err
+	}
+
+	// FD, bool, optional
+	_, err = validateBooleanEntry(xRefTable, dict, dictName, "FD", OPTIONAL, sinceVersion, nil)
+	if err != nil {
+		return err
+	}
+
+	// RT, text string, optional
+	_, err = validateStringEntry(xRefTable, dict, dictName, "RT", OPTIONAL, sinceVersion, nil)
+	if err != nil {
+		return err
+	}
+
+	// RD, text string, optional
+	_, err = validateStringEntry(xRefTable, dict, dictName, "RD", OPTIONAL, sinceVersion, nil)
+	if err != nil {
+		return err
+	}
+
+	// PS, text string, optional
+	_, err = validateStringEntry(xRefTable, dict, dictName, "PS", OPTIONAL, sinceVersion, nil)
+	if err != nil {
+		return err
+	}
+
+	// SS, text string, optional
+	_, err = validateStringEntry(xRefTable, dict, dictName, "SS", OPTIONAL, sinceVersion, nil)
+	if err != nil {
+		return err
+	}
+
+	// O, name, optional
+	_, err = validateNameEntry(xRefTable, dict, dictName, "O", OPTIONAL, sinceVersion, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateNumberFormatArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
+
+	arr, err := validateArrayEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
+	if err != nil {
+		return err
+	}
+
+	if arr == nil {
+		return nil
+	}
+
+	for _, v := range *arr {
+
+		d, err := xRefTable.DereferenceDict(v)
+		if err != nil {
+			return err
+		}
+
+		if d == nil {
+			continue
+		}
+
+		err = validateNumberFormatDict(xRefTable, d, sinceVersion)
+		if err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+}
+
+func validateMeasureDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validateMeasureDict begin ***")
 
 	dictName := "measureDict"
 
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "Measure" })
+	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Measure" })
 	if err != nil {
-		return
+		return err
 	}
 
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Subtype", OPTIONAL, types.V10, nil)
+	_, err = validateNameEntry(xRefTable, dict, dictName, "Subtype", OPTIONAL, sinceVersion, func(s string) bool { return s == "RL" })
 	if err != nil {
-		return
+		return err
 	}
 
-	// TODO validate rectilinear measure dict (= default SubType or SubType "RL")
+	// R, text string, required, scale ratio
+	_, err = validateStringEntry(xRefTable, dict, dictName, "R", REQUIRED, sinceVersion, nil)
+	if err != nil {
+		return err
+	}
+
+	// X, number format array, required, for measurement of change along the x axis and, if Y is not present, along the y axis as well.
+	err = validateNumberFormatArrayEntry(xRefTable, dict, dictName, "X", REQUIRED, sinceVersion)
+	if err != nil {
+		return err
+	}
+
+	// Y, number format array, required when the x and y scales have different units or conversion factors.
+	err = validateNumberFormatArrayEntry(xRefTable, dict, dictName, "Y", OPTIONAL, sinceVersion)
+	if err != nil {
+		return err
+	}
+
+	// D, number format array, required, for measurement of distance in any direction.
+	err = validateNumberFormatArrayEntry(xRefTable, dict, dictName, "D", REQUIRED, sinceVersion)
+	if err != nil {
+		return err
+	}
+
+	// A, number format array, required, for measurement of area.
+	err = validateNumberFormatArrayEntry(xRefTable, dict, dictName, "A", REQUIRED, sinceVersion)
+	if err != nil {
+		return err
+	}
+
+	// T, number format array, optional, for measurement of angles.
+	err = validateNumberFormatArrayEntry(xRefTable, dict, dictName, "T", OPTIONAL, sinceVersion)
+	if err != nil {
+		return err
+	}
+
+	// S, number format array, optional, for fmeasurement of the slope of a line.
+	err = validateNumberFormatArrayEntry(xRefTable, dict, dictName, "S", OPTIONAL, sinceVersion)
+	if err != nil {
+		return err
+	}
+
+	// O, number array, optional, array of two numbers that shall specify the origin of the measurement coordinate system in default user space coordinates.
+	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "O", OPTIONAL, sinceVersion, func(a types.PDFArray) bool { return len(a) == 2 })
+	if err != nil {
+		return err
+	}
+
+	// CYX, number, optional, a factor that shall be used to convert the largest units along the y axis to the largest units along the x axis.
+	_, err = validateNumberEntry(xRefTable, dict, dictName, "CYX", OPTIONAL, sinceVersion, nil)
+	if err != nil {
+		return err
+	}
 
 	logInfoValidate.Println("*** validateMeasureDict end ***")
 
-	return
+	return nil
 }
 
-func validateViewportDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateViewportDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validateViewportDict begin ***")
 
 	dictName := "viewportDict"
 
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "Viewport" })
+	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Viewport" })
 	if err != nil {
-		return
+		return err
 	}
 
-	_, err = validateRectangleEntry(xRefTable, dict, dictName, "BBox", REQUIRED, types.V10, nil)
+	_, err = validateRectangleEntry(xRefTable, dict, dictName, "BBox", REQUIRED, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
-	_, err = validateStringEntry(xRefTable, dict, dictName, "Name", OPTIONAL, types.V10, nil)
+	_, err = validateStringEntry(xRefTable, dict, dictName, "Name", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Measure, optional, dict
-	d, err := validateDictEntry(xRefTable, dict, dictName, "Measure", OPTIONAL, types.V10, nil)
+	d, err := validateDictEntry(xRefTable, dict, dictName, "Measure", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
-	err = validateMeasureDict(xRefTable, d)
-	if err != nil {
-		return
+	if d != nil {
+		err = validateMeasureDict(xRefTable, d, sinceVersion)
+		if err != nil {
+			return err
+		}
 	}
 
 	logInfoValidate.Println("*** validateViewportDict end ***")
 
-	return
+	return nil
 }
 
-func validatePageEntryVP(xRefTable *types.XRefTable, pagesDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (err error) {
+func validatePageEntryVP(xRefTable *types.XRefTable, pagesDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	// see table 260
 
@@ -817,12 +867,11 @@ func validatePageEntryVP(xRefTable *types.XRefTable, pagesDict *types.PDFDict, r
 
 	arr, err := validateArrayEntry(xRefTable, pagesDict, "pagesDict", "VP", required, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
-
 	if arr == nil {
 		logInfoValidate.Println("validatePageEntryVP end: is nil.")
-		return
+		return nil
 	}
 
 	var dict *types.PDFDict
@@ -835,26 +884,26 @@ func validatePageEntryVP(xRefTable *types.XRefTable, pagesDict *types.PDFDict, r
 
 		dict, err = xRefTable.DereferenceDict(v)
 		if err != nil {
-			return
+			return err
 		}
 
 		if dict == nil {
 			continue
 		}
 
-		err = validateViewportDict(xRefTable, dict)
+		err = validateViewportDict(xRefTable, dict, sinceVersion)
 		if err != nil {
-			return
+			return err
 		}
 
 	}
 
 	logInfoValidate.Printf("*** validatePageEntryVP end ***")
 
-	return
+	return nil
 }
 
-func validatePageDict(xRefTable *types.XRefTable, pageDict *types.PDFDict, objNumber, genNumber int, hasResources, hasMediaBox bool) (err error) {
+func validatePageDict(xRefTable *types.XRefTable, pageDict *types.PDFDict, objNumber, genNumber int, hasResources, hasMediaBox bool) error {
 
 	logInfoValidate.Printf("*** validatePageDict begin: hasResources=%v hasMediaBox=%v obj#%d ***\n", hasResources, hasMediaBox, objNumber)
 
@@ -877,7 +926,7 @@ func validatePageDict(xRefTable *types.XRefTable, pageDict *types.PDFDict, objNu
 	// MediaBox
 	_, err = validatePageEntryMediaBox(xRefTable, pageDict, !hasMediaBox, types.V10)
 	if err != nil {
-		return
+		return err
 	}
 
 	// PieceInfo
@@ -893,17 +942,17 @@ func validatePageDict(xRefTable *types.XRefTable, pageDict *types.PDFDict, objNu
 	// LastModified
 	lm, err := validateDateEntry(xRefTable, pageDict, "pageDict", "LastModified", OPTIONAL, types.V13)
 	if err != nil {
-		return
+		return err
 	}
 
 	if hasPieceInfo && lm == nil && xRefTable.ValidationMode == types.ValidationStrict {
-		return errors.New("writePageDict: missing \"LastModified\" (required by \"PieceInfo\")")
+		return errors.New("validatePageDict: missing \"LastModified\" (required by \"PieceInfo\")")
 	}
 
 	// AA
 	err = validateAdditionalActions(xRefTable, pageDict, "pageDict", "AA", OPTIONAL, types.V14, "page")
 	if err != nil {
-		return
+		return err
 	}
 
 	type v struct {
@@ -937,41 +986,41 @@ func validatePageDict(xRefTable *types.XRefTable, pageDict *types.PDFDict, objNu
 	} {
 		err = f.validate(xRefTable, pageDict, f.required, f.sinceVersion)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	logInfoValidate.Printf("*** validatePageDict end: obj#%d ***\n", objNumber)
 
-	return
+	return nil
 }
 
 func validatePagesDictGeneralEntries(xRefTable *types.XRefTable, dict *types.PDFDict) (hasResources, hasMediaBox bool, err error) {
 
 	hasResources, err = validateResources(xRefTable, dict)
 	if err != nil {
-		return
+		return false, false, err
 	}
 
 	// MediaBox: optional, rectangle
 	hasMediaBox, err = validatePageEntryMediaBox(xRefTable, dict, OPTIONAL, types.V10)
 	if err != nil {
-		return
+		return false, false, err
 	}
 
 	// CropBox: optional, rectangle
 	err = validatePageEntryCropBox(xRefTable, dict, OPTIONAL, types.V10)
 	if err != nil {
-		return
+		return false, false, err
 	}
 
 	// Rotate:  optional, integer
 	err = validatePageEntryRotate(xRefTable, dict, OPTIONAL, types.V10)
 	if err != nil {
-		return
+		return false, false, err
 	}
 
-	return
+	return hasResources, hasMediaBox, nil
 }
 
 func dictTypeForPageNodeDict(pageNodeDict *types.PDFDict) (string, error) {
@@ -993,8 +1042,7 @@ func validateResources(xRefTable *types.XRefTable, dict *types.PDFDict) (hasReso
 	// Get number of pages of this PDF file.
 	pageCount := dict.IntEntry("Count")
 	if pageCount == nil {
-		err = errors.New("validateResources: missing \"Count\"")
-		return
+		return false, errors.New("validateResources: missing \"Count\"")
 	}
 
 	// TODO not ideal - overall pageCount is only set during validation!
@@ -1007,25 +1055,27 @@ func validateResources(xRefTable *types.XRefTable, dict *types.PDFDict) (hasReso
 	// Resources: optional, dict
 	obj, ok := dict.Find("Resources")
 	if !ok {
-		return
+		return false, nil
 	}
 
 	return validateResourceDict(xRefTable, obj)
 }
 
-func validatePagesDict(xRefTable *types.XRefTable, dict *types.PDFDict, objNumber, genNumber int, hasResources, hasMediaBox bool) (err error) {
+func validatePagesDict(xRefTable *types.XRefTable, dict *types.PDFDict, objNumber, genNumber int, hasResources, hasMediaBox bool) error {
 
 	logInfoValidate.Printf("*** validatePagesDict begin: hasResources=%v hasMediaBox=%v obj#%d ***\n", hasResources, hasMediaBox, objNumber)
 
 	// Resources and Mediabox are inheritated.
-	var dHasResources, dHasMediaBox bool
-	dHasResources, dHasMediaBox, err = validatePagesDictGeneralEntries(xRefTable, dict)
+	//var dHasResources, dHasMediaBox bool
+	dHasResources, dHasMediaBox, err := validatePagesDictGeneralEntries(xRefTable, dict)
 	if err != nil {
-		return
+		return err
 	}
+
 	if dHasResources {
 		hasResources = true
 	}
+
 	if dHasMediaBox {
 		hasMediaBox = true
 	}
@@ -1060,8 +1110,7 @@ func validatePagesDict(xRefTable *types.XRefTable, dict *types.PDFDict, objNumbe
 			return err
 		}
 
-		var dictType string
-		dictType, err = dictTypeForPageNodeDict(pageNodeDict)
+		dictType, err := dictTypeForPageNodeDict(pageNodeDict)
 		if err != nil {
 			return err
 		}
@@ -1071,59 +1120,58 @@ func validatePagesDict(xRefTable *types.XRefTable, dict *types.PDFDict, objNumbe
 		case "Pages":
 			// Recurse over pagetree
 			err = validatePagesDict(xRefTable, pageNodeDict, objNumber, genNumber, hasResources, hasMediaBox)
+			if err != nil {
+				return err
+			}
 
 		case "Page":
 			err = validatePageDict(xRefTable, pageNodeDict, objNumber, genNumber, hasResources, hasMediaBox)
+			if err != nil {
+				return err
+			}
 
 		default:
-			err = errors.Errorf("validatePagesDict: Unexpected dict type: %s", dictType)
+			return errors.Errorf("validatePagesDict: Unexpected dict type: %s", dictType)
 
-		}
-
-		if err != nil {
-			return
 		}
 
 	}
 
 	logInfoValidate.Printf("*** validatePagesDict end: obj#%d ***\n", objNumber)
 
-	return
+	return nil
 }
 
-func validatePages(xRefTable *types.XRefTable, rootDict *types.PDFDict) (rootPageNodeDict *types.PDFDict, err error) {
+func validatePages(xRefTable *types.XRefTable, rootDict *types.PDFDict) (*types.PDFDict, error) {
 
 	logInfoValidate.Println("*** validatePages begin: ***")
 
 	// Ensure indirect reference entry "Pages".
 	indRef := rootDict.IndirectRefEntry("Pages")
 	if indRef == nil {
-		err = errors.New("validatePages: missing indirect obj for pages dict")
-		return
+		return nil, errors.New("validatePages: missing indirect obj for pages dict")
 	}
 
 	objNumber := indRef.ObjectNumber.Value()
 	genNumber := indRef.GenerationNumber.Value()
 
 	// Dereference root of page node tree.
-	rootPageNodeDict, err = xRefTable.DereferenceDict(*indRef)
+	rootPageNodeDict, err := xRefTable.DereferenceDict(*indRef)
 	if err != nil {
-		return
-		//return errors.New("validatePagesDict: cannot dereference pageNodeDict")
+		return nil, err
 	}
 
 	if rootPageNodeDict == nil {
-		err = errors.New("validatePagesDict: cannot dereference pageNodeDict")
-		return
+		return nil, errors.New("validatePagesDict: cannot dereference pageNodeDict")
 	}
 
 	// Process page node tree.
 	err = validatePagesDict(xRefTable, rootPageNodeDict, objNumber, genNumber, false, false)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	logInfoValidate.Println("*** validatePages end: ***")
 
-	return
+	return rootPageNodeDict, nil
 }

@@ -5,19 +5,18 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateLineDashPatternEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateLineDashPatternEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Printf("*** validateLineDashPatternEntry begin: entry=%s ***\n", entryName)
 
 	arr, err := validateArrayEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, func(arr types.PDFArray) bool { return len(arr) == 2 })
 	if err != nil {
-		return
+		return err
 	}
-
 	if arr == nil {
 		// optional and nil or already written
 		logInfoValidate.Println("validateLineDashPatternEntry end")
-		return
+		return nil
 	}
 
 	a := *arr
@@ -30,20 +29,20 @@ func validateLineDashPatternEntry(xRefTable *types.XRefTable, dict *types.PDFDic
 
 	_, err = validateIntegerArray(xRefTable, array)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateInteger(xRefTable, a[1], nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Printf("*** validateLineDashPatternEntry end: entry=%s ***\n", entryName)
 
-	return
+	return nil
 }
 
-func validateBG2Entry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateBG2Entry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validateBG2Entry begin ***")
 
@@ -53,12 +52,12 @@ func validateBG2Entry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName 
 			return errors.Errorf("validateBG2Entry: dict=%s required entry=%s missing.", dictName, entryName)
 		}
 		logInfoValidate.Printf("validateBG2Entry end: entry %s is nil\n", entryName)
-		return
+		return nil
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	obj, err := xRefTable.Dereference(obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	if obj == nil {
@@ -66,7 +65,7 @@ func validateBG2Entry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName 
 			return errors.Errorf("validateBG2Entry: dict=%s required entry \"%s\" missing.", dictName, entryName)
 		}
 		logInfoValidate.Println("validateBG2Entry end")
-		return
+		return nil
 	}
 
 	// Version check
@@ -95,10 +94,10 @@ func validateBG2Entry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName 
 
 	logInfoValidate.Println("*** validateBG2Entry end ***")
 
-	return
+	return err
 }
 
-func validateUCR2Entry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateUCR2Entry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validateUCR2Entry begin ***")
 
@@ -108,12 +107,12 @@ func validateUCR2Entry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName
 			return errors.Errorf("validateUCR2Entry: dict=%s required entry=%s missing.", dictName, entryName)
 		}
 		logInfoValidate.Printf("validateUCR2Entry end: entry %s is nil\n", entryName)
-		return
+		return nil
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	obj, err := xRefTable.Dereference(obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	if obj == nil {
@@ -121,7 +120,7 @@ func validateUCR2Entry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName
 			return errors.Errorf("validateUCR2Entry: dict=%s required entry \"%s\" missing.", dictName, entryName)
 		}
 		logInfoValidate.Println("validateUCR2Entry end")
-		return
+		return nil
 	}
 
 	// Version check
@@ -150,7 +149,7 @@ func validateUCR2Entry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName
 
 	logInfoValidate.Println("*** validateUCR2Entry end ***")
 
-	return
+	return err
 }
 
 func validateTransferFunction(xRefTable *types.XRefTable, obj interface{}) (err error) {
@@ -160,7 +159,7 @@ func validateTransferFunction(xRefTable *types.XRefTable, obj interface{}) (err 
 	case types.PDFName:
 		s := obj.String()
 		if s != "Identity" {
-			err = errors.New("validateTransferFunction: corrupt name")
+			return errors.New("validateTransferFunction: corrupt name")
 		}
 
 	case types.PDFArray:
@@ -171,18 +170,17 @@ func validateTransferFunction(xRefTable *types.XRefTable, obj interface{}) (err 
 
 		for _, obj := range obj {
 
-			obj, err = xRefTable.Dereference(obj)
+			obj, err := xRefTable.Dereference(obj)
 			if err != nil {
-				return
+				return err
 			}
-
 			if obj == nil {
 				continue
 			}
 
 			err = processFunction(xRefTable, obj)
 			if err != nil {
-				return
+				return err
 			}
 
 		}
@@ -194,14 +192,14 @@ func validateTransferFunction(xRefTable *types.XRefTable, obj interface{}) (err 
 		err = processFunction(xRefTable, obj)
 
 	default:
-		err = errors.Errorf("validateTransferFunction: corrupt entry: %v\n", obj)
+		return errors.Errorf("validateTransferFunction: corrupt entry: %v\n", obj)
 
 	}
 
-	return
+	return err
 }
 
-func validateTransferFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateTransferFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validateTransferFunctionEntry begin ***")
 
@@ -211,12 +209,12 @@ func validateTransferFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDi
 			return errors.Errorf("validateTransferFunctionEntry: dict=%s required entry=%s missing.", dictName, entryName)
 		}
 		logInfoValidate.Printf("validateTransferFunctionEntry end: entry %s is nil\n", entryName)
-		return
+		return nil
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	obj, err := xRefTable.Dereference(obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	if obj == nil {
@@ -224,7 +222,7 @@ func validateTransferFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDi
 			return errors.Errorf("validateTransferFunctionEntry: dict=%s required entry \"%s\" missing.", dictName, entryName)
 		}
 		logInfoValidate.Println("validateTransferFunctionEntry end")
-		return
+		return nil
 	}
 
 	// Version check
@@ -234,12 +232,12 @@ func validateTransferFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDi
 
 	err = validateTransferFunction(xRefTable, obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Printf("*** validateTransferFunctionEntry end ***")
 
-	return
+	return nil
 }
 
 func validateTR2(xRefTable *types.XRefTable, obj interface{}) (err error) {
@@ -249,7 +247,7 @@ func validateTR2(xRefTable *types.XRefTable, obj interface{}) (err error) {
 	case types.PDFName:
 		s := obj.String()
 		if s != "Identity" && s != "Default" {
-			err = errors.Errorf("validateTR2: corrupt name\n")
+			return errors.Errorf("validateTR2: corrupt name\n")
 		}
 
 	case types.PDFArray:
@@ -283,14 +281,14 @@ func validateTR2(xRefTable *types.XRefTable, obj interface{}) (err error) {
 		err = processFunction(xRefTable, obj)
 
 	default:
-		err = errors.Errorf("validateTR2: corrupt entry %v\n", obj)
+		return errors.Errorf("validateTR2: corrupt entry %v\n", obj)
 
 	}
 
-	return
+	return err
 }
 
-func validateTR2Entry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateTR2Entry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validateTR2Entry begin ***")
 
@@ -300,12 +298,12 @@ func validateTR2Entry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName 
 			return errors.Errorf("validateTR2Entry: dict=%s required entry=%s missing.", dictName, entryName)
 		}
 		logInfoValidate.Printf("validateTR2Entry end: entry %s is nil\n", entryName)
-		return
+		return nil
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	obj, err := xRefTable.Dereference(obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	if obj == nil {
@@ -313,7 +311,7 @@ func validateTR2Entry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName 
 			return errors.Errorf("validateTR2Entry: dict=%s required entry \"%s\" missing.", dictName, entryName)
 		}
 		logInfoValidate.Println("validateTR2Entry end")
-		return
+		return nil
 	}
 
 	// Version check
@@ -323,15 +321,15 @@ func validateTR2Entry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName 
 
 	err = validateTR2(xRefTable, obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Printf("*** validateTR2Entry end ***")
 
-	return
+	return nil
 }
 
-func validateSpotFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateSpotFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validateSpotFunctionEntry begin ***")
 
@@ -341,12 +339,12 @@ func validateSpotFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDict, 
 			return errors.Errorf("validateSpotFunctionEntry: dict=%s required entry=%s missing.", dictName, entryName)
 		}
 		logInfoValidate.Printf("validateSpotFunctionEntry end: entry %s is nil\n", entryName)
-		return
+		return nil
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	obj, err := xRefTable.Dereference(obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	if obj == nil {
@@ -354,7 +352,7 @@ func validateSpotFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDict, 
 			return errors.Errorf("validateSpotFunctionEntry: dict=%s required entry \"%s\" missing.", dictName, entryName)
 		}
 		logInfoValidate.Println("validateSpotFunctionEntry end")
-		return
+		return nil
 	}
 
 	// Version check
@@ -367,7 +365,7 @@ func validateSpotFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDict, 
 	case types.PDFName:
 		s := obj.String()
 		if !validateSpotFunctionName(s) {
-			err = errors.Errorf("validateSpotFunctionEntry: corrupt name\n")
+			return errors.Errorf("validateSpotFunctionEntry: corrupt name\n")
 		}
 
 	case types.PDFDict:
@@ -377,227 +375,227 @@ func validateSpotFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDict, 
 		err = processFunction(xRefTable, obj)
 
 	default:
-		err = errors.Errorf("validateSpotFunctionEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+		return errors.Errorf("validateSpotFunctionEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 
 	}
 
 	logInfoValidate.Println("*** validateSpotFunctionEntry end ***")
 
-	return
+	return err
 }
 
-func validateType1HalftoneDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateType1HalftoneDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validateType1HalftoneDict begin ***")
 
 	dictName := "type1HalftoneDict"
 
-	_, err = validateStringEntry(xRefTable, dict, dictName, "HalftoneName", OPTIONAL, sinceVersion, nil)
+	_, err := validateStringEntry(xRefTable, dict, dictName, "HalftoneName", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "Frequency", REQUIRED, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "Angle", REQUIRED, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = validateSpotFunctionEntry(xRefTable, dict, dictName, "Spotfunction", REQUIRED, sinceVersion)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = validateTransferFunctionEntry(xRefTable, dict, dictName, "TransferFunction", OPTIONAL, sinceVersion)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "AccurateScreens", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateType1HalftoneDict end ***")
 
-	return
+	return nil
 }
 
-func validateType5HalftoneDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateType5HalftoneDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Printf("*** validateType5HalftoneDict begin ***")
 
 	dictName := "type5HalftoneDict"
 
-	_, err = validateStringEntry(xRefTable, dict, dictName, "HalftoneName", OPTIONAL, sinceVersion, nil)
+	_, err := validateStringEntry(xRefTable, dict, dictName, "HalftoneName", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = validateHalfToneEntry(xRefTable, dict, dictName, "Gray", OPTIONAL, sinceVersion)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = validateHalfToneEntry(xRefTable, dict, dictName, "Red", OPTIONAL, sinceVersion)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = validateHalfToneEntry(xRefTable, dict, dictName, "Green", OPTIONAL, sinceVersion)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = validateHalfToneEntry(xRefTable, dict, dictName, "Blue", OPTIONAL, sinceVersion)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = validateHalfToneEntry(xRefTable, dict, dictName, "Cyan", OPTIONAL, sinceVersion)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = validateHalfToneEntry(xRefTable, dict, dictName, "Magenta", OPTIONAL, sinceVersion)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = validateHalfToneEntry(xRefTable, dict, dictName, "Yellow", OPTIONAL, sinceVersion)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = validateHalfToneEntry(xRefTable, dict, dictName, "Black", OPTIONAL, sinceVersion)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = validateHalfToneEntry(xRefTable, dict, dictName, "Default", REQUIRED, sinceVersion)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateType5HalftoneDict end ***")
 
-	return
+	return nil
 }
 
-func validateType6HalftoneStreamDict(xRefTable *types.XRefTable, dict *types.PDFStreamDict, sinceVersion types.PDFVersion) (err error) {
+func validateType6HalftoneStreamDict(xRefTable *types.XRefTable, dict *types.PDFStreamDict, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validateType6HalftoneStreamDict begin ***")
 
 	dictName := "type6HalftoneDict"
 
-	_, err = validateStringEntry(xRefTable, &dict.PDFDict, dictName, "HalftoneName", OPTIONAL, sinceVersion, nil)
+	_, err := validateStringEntry(xRefTable, &dict.PDFDict, dictName, "HalftoneName", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateIntegerEntry(xRefTable, &dict.PDFDict, dictName, "Width", REQUIRED, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateIntegerEntry(xRefTable, &dict.PDFDict, dictName, "Height", REQUIRED, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = validateTransferFunctionEntry(xRefTable, &dict.PDFDict, dictName, "TransferFunction", OPTIONAL, sinceVersion)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateType6HalftoneStreamDict end ***")
 
-	return
+	return nil
 }
 
-func validateType10HalftoneStreamDict(xRefTable *types.XRefTable, dict *types.PDFStreamDict, sinceVersion types.PDFVersion) (err error) {
+func validateType10HalftoneStreamDict(xRefTable *types.XRefTable, dict *types.PDFStreamDict, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validateType10HalftoneStreamDict begin ***")
 
 	dictName := "type10HalftoneDict"
 
-	_, err = validateStringEntry(xRefTable, &dict.PDFDict, dictName, "HalftoneName", OPTIONAL, sinceVersion, nil)
+	_, err := validateStringEntry(xRefTable, &dict.PDFDict, dictName, "HalftoneName", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateIntegerEntry(xRefTable, &dict.PDFDict, dictName, "Xsquare", REQUIRED, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateIntegerEntry(xRefTable, &dict.PDFDict, dictName, "Ysquare", REQUIRED, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = validateTransferFunctionEntry(xRefTable, &dict.PDFDict, dictName, "TransferFunction", OPTIONAL, sinceVersion)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateType10HalftoneStreamDict end ***")
 
-	return
+	return nil
 }
 
-func validateType16HalftoneStreamDict(xRefTable *types.XRefTable, dict *types.PDFStreamDict, sinceVersion types.PDFVersion) (err error) {
+func validateType16HalftoneStreamDict(xRefTable *types.XRefTable, dict *types.PDFStreamDict, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validateType16HalftoneStreamDict begin ***")
 
 	dictName := "type16HalftoneDict"
 
-	_, err = validateStringEntry(xRefTable, &dict.PDFDict, dictName, "HalftoneName", OPTIONAL, sinceVersion, nil)
+	_, err := validateStringEntry(xRefTable, &dict.PDFDict, dictName, "HalftoneName", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateIntegerEntry(xRefTable, &dict.PDFDict, dictName, "Width", REQUIRED, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateIntegerEntry(xRefTable, &dict.PDFDict, dictName, "Height", REQUIRED, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateIntegerEntry(xRefTable, &dict.PDFDict, dictName, "Width2", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateIntegerEntry(xRefTable, &dict.PDFDict, dictName, "Height2", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = validateTransferFunctionEntry(xRefTable, &dict.PDFDict, dictName, "TransferFunction", OPTIONAL, sinceVersion)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateType16HalftoneStreamDict end ***")
 
-	return
+	return nil
 }
 
-func validateHalfToneDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
+func validateHalfToneDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Printf("*** validateHalfToneDict begin ***")
 
 	Type, err := validateNameEntry(xRefTable, dict, "halfToneDict", "Type", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	if Type != nil && *Type != "Halftone" {
@@ -606,7 +604,7 @@ func validateHalfToneDict(xRefTable *types.XRefTable, dict *types.PDFDict, since
 
 	halftoneType, err := validateIntegerEntry(xRefTable, dict, "halfToneDict", "HalftoneType", REQUIRED, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	switch *halftoneType {
@@ -624,16 +622,16 @@ func validateHalfToneDict(xRefTable *types.XRefTable, dict *types.PDFDict, since
 
 	logInfoValidate.Printf("*** validateHalfToneDict end ***")
 
-	return
+	return err
 }
 
-func validateHalfToneStreamDict(xRefTable *types.XRefTable, dict *types.PDFStreamDict, sinceVersion types.PDFVersion) (err error) {
+func validateHalfToneStreamDict(xRefTable *types.XRefTable, dict *types.PDFStreamDict, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validateHalfToneStreamDict begin ***")
 
 	Type, err := validateNameEntry(xRefTable, &dict.PDFDict, "writeHalfToneStreamDict", "Type", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	if Type != nil && *Type != "Halftone" {
@@ -642,7 +640,7 @@ func validateHalfToneStreamDict(xRefTable *types.XRefTable, dict *types.PDFStrea
 
 	halftoneType, err := validateIntegerEntry(xRefTable, &dict.PDFDict, "writeHalfToneStreamDict", "HalftoneType", REQUIRED, sinceVersion, nil)
 	if err != nil || halftoneType == nil {
-		return
+		return err
 	}
 
 	switch *halftoneType {
@@ -663,7 +661,7 @@ func validateHalfToneStreamDict(xRefTable *types.XRefTable, dict *types.PDFStrea
 
 	logInfoValidate.Printf("*** validateHalfToneStreamDict end ***")
 
-	return
+	return err
 }
 
 func validateHalfToneEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (err error) {
@@ -678,7 +676,7 @@ func validateHalfToneEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dict
 			return errors.Errorf("validateHalfToneEntry: dict=%s required entry=%s missing.", dictName, entryName)
 		}
 		logInfoValidate.Printf("validateHalfToneEntry end: entry %s is nil\n", entryName)
-		return
+		return nil
 	}
 
 	// Version check
@@ -690,7 +688,7 @@ func validateHalfToneEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dict
 
 	case types.PDFName:
 		if obj.String() != "Default" {
-			err = errors.Errorf("validateHalfToneEntry: undefined name: %s\n", obj.String())
+			return errors.Errorf("validateHalfToneEntry: undefined name: %s\n", obj.String())
 		}
 
 	case types.PDFDict:
@@ -705,25 +703,25 @@ func validateHalfToneEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dict
 
 	logInfoValidate.Println("*** validateHalfToneEntry end ***")
 
-	return
+	return err
 }
 
-func validateBlendModeEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateBlendModeEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validateBlendModeEntry begin ***")
 
 	var obj interface{}
 
-	obj, err = validateEntry(xRefTable, dict, dictName, entryName, required)
+	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required)
 	if err != nil {
-		return
+		return err
 	}
 
 	if obj == nil {
 		if required {
 			return errors.Errorf("validateBlendModeEntry: dict=%s required entry \"%s\" missing.", dictName, entryName)
 		}
-		return
+		return nil
 	}
 
 	// Version check
@@ -744,7 +742,7 @@ func validateBlendModeEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dic
 
 			obj, err = xRefTable.Dereference(obj)
 			if err != nil {
-				return
+				return err
 			}
 
 			if obj == nil {
@@ -769,10 +767,10 @@ func validateBlendModeEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dic
 
 	logInfoValidate.Println("*** validateBlendModeEntry end ***")
 
-	return
+	return nil
 }
 
-func validateSoftMaskTransferFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateSoftMaskTransferFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validateSoftMaskTransferFunctionEntry begin ***")
 
@@ -782,20 +780,19 @@ func validateSoftMaskTransferFunctionEntry(xRefTable *types.XRefTable, dict *typ
 			return errors.Errorf("validateSoftMaskTransferFunctionEntry: dict=%s required entry=%s missing.", dictName, entryName)
 		}
 		logInfoValidate.Printf("validateSoftMaskTransferFunctionEntry end: entry %s is nil\n", entryName)
-		return
+		return nil
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	obj, err := xRefTable.Dereference(obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	if obj == nil {
 		if required {
 			return errors.Errorf("validateSoftMaskTransferFunctionEntry: dict=%s required entry \"%s\" missing.", dictName, entryName)
 		}
-		// already written
-		return
+		return nil
 	}
 
 	// Version check
@@ -813,15 +810,9 @@ func validateSoftMaskTransferFunctionEntry(xRefTable *types.XRefTable, dict *typ
 
 	case types.PDFDict:
 		err = processFunction(xRefTable, obj)
-		if err != nil {
-			return
-		}
 
 	case types.PDFStreamDict:
 		err = processFunction(xRefTable, obj)
-		if err != nil {
-			return
-		}
 
 	default:
 		return errors.Errorf("validateSoftMaskTransferFunctionEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
@@ -830,10 +821,10 @@ func validateSoftMaskTransferFunctionEntry(xRefTable *types.XRefTable, dict *typ
 
 	logInfoValidate.Println("*** validateSoftMaskTransferFunctionEntry end ***")
 
-	return
+	return err
 }
 
-func validateSoftMaskDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateSoftMaskDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// see 11.6.5.2
 
@@ -842,7 +833,7 @@ func validateSoftMaskDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err 
 	dictName := "softMaskDict"
 
 	// Type, name, optional
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "Mask" })
+	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "Mask" })
 	if err != nil {
 		return err
 	}
@@ -850,7 +841,7 @@ func validateSoftMaskDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err 
 	// S, name, required
 	_, err = validateNameEntry(xRefTable, dict, dictName, "S", REQUIRED, types.V10, func(s string) bool { return s == "Alpha" || s == "Luminosity" })
 	if err != nil {
-		return
+		return err
 	}
 
 	// G, stream, required
@@ -858,13 +849,13 @@ func validateSoftMaskDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err 
 	// to be used as the source of alpha or colour values for deriving the mask.
 	streamDict, err := validateStreamDictEntry(xRefTable, dict, dictName, "G", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	if streamDict != nil {
 		err = validateXObjectStreamDict(xRefTable, streamDict)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
@@ -873,7 +864,7 @@ func validateSoftMaskDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err 
 	// to be used in deriving the mask values.
 	err = validateSoftMaskTransferFunctionEntry(xRefTable, dict, dictName, "TR", OPTIONAL, types.V10)
 	if err != nil {
-		return
+		return err
 	}
 
 	// BC, number array, optional
@@ -881,15 +872,15 @@ func validateSoftMaskDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err 
 	// as the backdrop against which to composite the transparency group XObject G.
 	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "BC", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateSoftMaskDict end ***")
 
-	return
+	return nil
 }
 
-func validateSoftMaskEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateSoftMaskEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
 	// see 11.3.7.2 Source Shape and Opacity
 	// see 11.6.4.3 Mask Shape and Opacity
@@ -902,12 +893,12 @@ func validateSoftMaskEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dict
 			return errors.Errorf("validateSoftMaskEntry: dict=%s required entry \"%s\" missing.", entryName, dictName)
 		}
 		logInfoValidate.Printf("validateSoftMaskEntry end: \"%s\" is nil.\n", entryName)
-		return
+		return nil
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	obj, err := xRefTable.Dereference(obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	if obj == nil {
@@ -915,7 +906,7 @@ func validateSoftMaskEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dict
 			return errors.Errorf("validateSoftMaskEntry: dict=%s required entry \"%s\" missing.", dictName, entryName)
 		}
 		logInfoValidate.Println("validateSoftMaskEntry end")
-		return
+		return nil
 	}
 
 	// Version check
@@ -928,7 +919,7 @@ func validateSoftMaskEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dict
 	case types.PDFName:
 		s := obj.String()
 		if !validateBlendMode(s) {
-			err = errors.Errorf("validateSoftMaskEntry: invalid soft mask: %s\n", s)
+			return errors.Errorf("validateSoftMaskEntry: invalid soft mask: %s\n", s)
 		}
 
 	case types.PDFDict:
@@ -941,148 +932,148 @@ func validateSoftMaskEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dict
 
 	logInfoValidate.Println("*** validateSoftMaskEntry end ***")
 
-	return
+	return err
 }
 
-func validateExtGStateDictPart1(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) (err error) {
+func validateExtGStateDictPart1(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// LW, number, optional, since V1.3
-	_, err = validateNumberEntry(xRefTable, dict, dictName, "LW", OPTIONAL, types.V13, nil)
+	_, err := validateNumberEntry(xRefTable, dict, dictName, "LW", OPTIONAL, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// LC, integer, optional, since V1.3
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "LC", OPTIONAL, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// LJ, integer, optional, since V1.3
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "LJ", OPTIONAL, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// ML, number, optional, since V1.3
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "ML", OPTIONAL, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// D, array, optional, since V1.3, [dashArray dashPhase(integer)]
 	err = validateLineDashPatternEntry(xRefTable, dict, dictName, "D", OPTIONAL, types.V13)
 	if err != nil {
-		return
+		return err
 	}
 
 	// RI, name, optional, since V1.3
 	_, err = validateNameEntry(xRefTable, dict, dictName, "RI", OPTIONAL, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// OP, boolean, optional,
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "OP", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// op, boolean, optional, since V1.3
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "op", OPTIONAL, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// OPM, integer, optional, since V1.3
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "OPM", OPTIONAL, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Font, array, optional, since V1.3
 	_, err = validateArrayEntry(xRefTable, dict, dictName, "Font", OPTIONAL, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
-	return
+	return nil
 }
 
-func validateExtGStateDictPart2(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) (err error) {
+func validateExtGStateDictPart2(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// BG, function, optional, black-generation function, see 10.3.4
-	err = validateFunctionEntry(xRefTable, dict, dictName, "BG", OPTIONAL, types.V10)
+	err := validateFunctionEntry(xRefTable, dict, dictName, "BG", OPTIONAL, types.V10)
 	if err != nil {
-		return
+		return err
 	}
 
 	// BG2, function or name(/Default), optional, since V1.3
 	err = validateBG2Entry(xRefTable, dict, dictName, "BG2", OPTIONAL, types.V10)
 	if err != nil {
-		return
+		return err
 	}
 
 	// UCR, function, optional, undercolor-removal function, see 10.3.4
 	err = validateFunctionEntry(xRefTable, dict, dictName, "UCR", OPTIONAL, types.V10)
 	if err != nil {
-		return
+		return err
 	}
 
 	// UCR2, function or name(/Default), optional, since V1.3
 	err = validateUCR2Entry(xRefTable, dict, dictName, "UCR2", OPTIONAL, types.V10)
 	if err != nil {
-		return
+		return err
 	}
 
 	// TR, function, array of 4 functions or name(/Identity), optional, see 10.4 transfer functions
 	err = validateTransferFunctionEntry(xRefTable, dict, dictName, "TR", OPTIONAL, types.V10)
 	if err != nil {
-		return
+		return err
 	}
 
 	// TR2, function, array of 4 functions or name(/Identity,/Default), optional, since V1.3
 	err = validateTR2Entry(xRefTable, dict, dictName, "TR2", OPTIONAL, types.V10)
 	if err != nil {
-		return
+		return err
 	}
 
 	// HT, dict, stream or name, optional
 	// half tone dictionary or stream or /Default, see 10.5
 	err = validateHalfToneEntry(xRefTable, dict, dictName, "HT", OPTIONAL, types.V12)
 	if err != nil {
-		return
+		return err
 	}
 
 	// FL, number, optional, since V1.3, flatness tolerance, see 10.6.2
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "FL", OPTIONAL, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// SM, number, optional, since V1.3, smoothness tolerance
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "SM", OPTIONAL, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// SA, boolean, optional, see 10.6.5 Automatic Stroke Adjustment
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "SA", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
-	return
+	return nil
 }
 
-func validateExtGStateDictPart3(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) (err error) {
+func validateExtGStateDictPart3(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// BM, name or array, optional, since V1.4
 	sinceVersion := types.V14
 	if xRefTable.ValidationMode == types.ValidationRelaxed {
 		sinceVersion = types.V13
 	}
-	err = validateBlendModeEntry(xRefTable, dict, dictName, "BM", OPTIONAL, sinceVersion)
+	err := validateBlendModeEntry(xRefTable, dict, dictName, "BM", OPTIONAL, sinceVersion)
 	if err != nil {
 		return err
 	}
@@ -1094,7 +1085,7 @@ func validateExtGStateDictPart3(xRefTable *types.XRefTable, dict *types.PDFDict,
 	}
 	err = validateSoftMaskEntry(xRefTable, dict, dictName, "SMask", OPTIONAL, sinceVersion)
 	if err != nil {
-		return
+		return err
 	}
 
 	// CA, number, optional, since V1.4, current stroking alpha constant, see 11.3.7.2 and 11.6.4.4
@@ -1104,7 +1095,7 @@ func validateExtGStateDictPart3(xRefTable *types.XRefTable, dict *types.PDFDict,
 	}
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "CA", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// ca, number, optional, since V1.4, same as CA but for nonstroking operations.
@@ -1114,7 +1105,7 @@ func validateExtGStateDictPart3(xRefTable *types.XRefTable, dict *types.PDFDict,
 	}
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "ca", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// AIS, alpha source flag "alpha is shape", boolean, optional, since V1.4
@@ -1124,19 +1115,19 @@ func validateExtGStateDictPart3(xRefTable *types.XRefTable, dict *types.PDFDict,
 	}
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "AIS", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// TK, boolean, optional, since V1.4, text knockout flag.
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "TK", OPTIONAL, types.V14, nil)
 	if err != nil {
-		return
+		return err
 	}
 
-	return
+	return nil
 }
 
-func validateExtGStateDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateExtGStateDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// 8.4.5 Graphics State Parameter Dictionaries
 
@@ -1148,38 +1139,38 @@ func validateExtGStateDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err
 
 	dictName := "extGStateDict"
 
-	err = validateExtGStateDictPart1(xRefTable, dict, dictName)
+	err := validateExtGStateDictPart1(xRefTable, dict, dictName)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = validateExtGStateDictPart2(xRefTable, dict, dictName)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = validateExtGStateDictPart3(xRefTable, dict, dictName)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateExtGStateDict end ***")
 
-	return
+	return nil
 }
 
-func validateExtGStateResourceDict(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateExtGStateResourceDict(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validateExtGStateResourceDict begin ***")
 
 	dict, err := xRefTable.DereferenceDict(obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	if obj == nil {
 		logInfoValidate.Println("*** validateExtGStateResourceDict end: object is nil. ***")
-		return
+		return nil
 	}
 
 	// Iterate over extGState resource dictionary
@@ -1187,7 +1178,7 @@ func validateExtGStateResourceDict(xRefTable *types.XRefTable, obj interface{}) 
 
 		obj, err = xRefTable.Dereference(obj)
 		if err != nil {
-			return
+			return err
 		}
 
 		if obj == nil {
@@ -1203,12 +1194,12 @@ func validateExtGStateResourceDict(xRefTable *types.XRefTable, obj interface{}) 
 		// Process extGStateDict
 		err = validateExtGStateDict(xRefTable, &dict)
 		if err != nil {
-			return
+			return err
 		}
 
 	}
 
 	logInfoValidate.Println("*** validateExtGStateResourceDict end ***")
 
-	return
+	return nil
 }

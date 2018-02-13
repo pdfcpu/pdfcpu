@@ -79,7 +79,7 @@ func (oStreamDict *PDFObjectStreamDict) IndexedObject(index int) (interface{}, e
 
 // AddObject adds another object to this object stream.
 // Relies on decoded content!
-func (oStreamDict *PDFObjectStreamDict) AddObject(objNumber int, entry *XRefTableEntry) (err error) {
+func (oStreamDict *PDFObjectStreamDict) AddObject(objNumber int, entry *XRefTableEntry) error {
 
 	offset := len(oStreamDict.Content)
 
@@ -120,8 +120,7 @@ func (oStreamDict *PDFObjectStreamDict) AddObject(objNumber int, entry *XRefTabl
 		pdfString = obj.PDFString()
 
 	default:
-		err = errors.Errorf("AddObject: undefined PDF object #%d\n", objNumber)
-		return
+		return errors.Errorf("AddObject: undefined PDF object #%d\n", objNumber)
 
 	}
 
@@ -130,7 +129,7 @@ func (oStreamDict *PDFObjectStreamDict) AddObject(objNumber int, entry *XRefTabl
 
 	logDebugTypes.Printf("AddObject end : ObjCount:%d prolog = <%s> Content = <%s>\n", oStreamDict.ObjCount, oStreamDict.Prolog, oStreamDict.Content)
 
-	return
+	return nil
 }
 
 // Finalize prepares the final content of the objectstream.

@@ -5,7 +5,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateMinimumBitDepthDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateMinimumBitDepthDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// see table 269
 
@@ -14,29 +14,29 @@ func validateMinimumBitDepthDict(xRefTable *types.XRefTable, dict *types.PDFDict
 	dictName := "minBitDepthDict"
 
 	// Type, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "MinBitDepth" })
+	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "MinBitDepth" })
 	if err != nil {
-		return
+		return err
 	}
 
 	// V, required, integer
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "V", REQUIRED, types.V10, func(i int) bool { return i >= 0 })
 	if err != nil {
-		return
+		return err
 	}
 
 	// M, optional, integer
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "M", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateMinimumBitDepthDict: end ***")
 
-	return
+	return nil
 }
 
-func validateMinimumScreenSizeDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateMinimumScreenSizeDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// see table 269
 
@@ -45,29 +45,29 @@ func validateMinimumScreenSizeDict(xRefTable *types.XRefTable, dict *types.PDFDi
 	dictName := "minBitDepthDict"
 
 	// Type, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "MinScreenSize" })
+	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "MinScreenSize" })
 	if err != nil {
-		return
+		return err
 	}
 
 	// V, required, integer array, length 2
 	_, err = validateIntegerArrayEntry(xRefTable, dict, dictName, "V", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
 	if err != nil {
-		return
+		return err
 	}
 
 	// M, optional, integer
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "M", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateMinimumScreenSizeDict: end ***")
 
-	return
+	return nil
 }
 
-func validateSoftwareIdentifierDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateSoftwareIdentifierDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// see table 292
 
@@ -76,97 +76,97 @@ func validateSoftwareIdentifierDict(xRefTable *types.XRefTable, dict *types.PDFD
 	dictName := "swIdDict"
 
 	// Type, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "SoftwareIdentifier" })
+	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "SoftwareIdentifier" })
 	if err != nil {
-		return
+		return err
 	}
 
 	// U, required, ASCII string
 	_, err = validateStringEntry(xRefTable, dict, dictName, "U", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// L, optional, array
 	_, err = validateArrayEntry(xRefTable, dict, dictName, "L", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// LI, optional, boolean
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "LI", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// H, optional, array
 	_, err = validateArrayEntry(xRefTable, dict, dictName, "H", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// HI, optional, boolean
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "HI", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// OS, optional, array
 	_, err = validateStringArrayEntry(xRefTable, dict, dictName, "OS", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateSoftwareIdentifierDict: end ***")
 
-	return
+	return nil
 }
 
-func validateMediaCriteriaDictEntryD(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateMediaCriteriaDictEntryD(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool, sinceVersion types.PDFVersion) error {
 
 	var d *types.PDFDict
 
-	d, err = validateDictEntry(xRefTable, dict, dictName, "D", required, sinceVersion, nil)
+	d, err := validateDictEntry(xRefTable, dict, dictName, "D", required, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	if d != nil {
 		err = validateMinimumBitDepthDict(xRefTable, d)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
-	return
+	return nil
 }
 
-func validateMediaCriteriaDictEntryZ(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateMediaCriteriaDictEntryZ(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool, sinceVersion types.PDFVersion) error {
 
 	var d *types.PDFDict
 
-	d, err = validateDictEntry(xRefTable, dict, dictName, "Z", required, sinceVersion, nil)
+	d, err := validateDictEntry(xRefTable, dict, dictName, "Z", required, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	if d != nil {
 		err = validateMinimumScreenSizeDict(xRefTable, d)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
-	return
+	return nil
 }
 
-func validateMediaCriteriaDictEntryV(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateMediaCriteriaDictEntryV(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool, sinceVersion types.PDFVersion) error {
 
 	var a *types.PDFArray
 
-	a, err = validateArrayEntry(xRefTable, dict, dictName, "V", required, sinceVersion, nil)
+	a, err := validateArrayEntry(xRefTable, dict, dictName, "V", required, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	if a != nil {
@@ -177,16 +177,15 @@ func validateMediaCriteriaDictEntryV(xRefTable *types.XRefTable, dict *types.PDF
 				continue
 			}
 
-			var d *types.PDFDict
-			d, err = xRefTable.DereferenceDict(v)
+			d, err := xRefTable.DereferenceDict(v)
 			if err != nil {
-				return
+				return err
 			}
 
 			if d != nil {
 				err = validateSoftwareIdentifierDict(xRefTable, d)
 				if err != nil {
-					return
+					return err
 				}
 			}
 
@@ -194,10 +193,10 @@ func validateMediaCriteriaDictEntryV(xRefTable *types.XRefTable, dict *types.PDF
 
 	}
 
-	return
+	return nil
 }
 
-func validateMediaCriteriaDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateMediaCriteriaDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// see table 268
 
@@ -206,105 +205,109 @@ func validateMediaCriteriaDict(xRefTable *types.XRefTable, dict *types.PDFDict) 
 	dictName := "mediaCritDict"
 
 	// Type, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "MediaCriteria" })
+	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "MediaCriteria" })
 	if err != nil {
-		return
+		return err
 	}
 
 	// A, optional, boolean
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "A", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// C, optional, boolean
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "C", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// O, optional, boolean
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "O", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// S, optional, boolean
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "S", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// R, optional, integer
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "R", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// D, optional, dict
 	err = validateMediaCriteriaDictEntryD(xRefTable, dict, dictName, OPTIONAL, types.V10)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Z, optional, dict
 	err = validateMediaCriteriaDictEntryZ(xRefTable, dict, dictName, OPTIONAL, types.V10)
 	if err != nil {
-		return
+		return err
 	}
 
 	// V, optional, array
 	err = validateMediaCriteriaDictEntryV(xRefTable, dict, dictName, OPTIONAL, types.V10)
 	if err != nil {
-		return
+		return err
 	}
 
 	// P, optional, array
 	_, err = validateNameArrayEntry(xRefTable, dict, dictName, "P", OPTIONAL, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
 	if err != nil {
-		return
+		return err
 	}
 
 	// L, optional, array
 	_, err = validateStringArrayEntry(xRefTable, dict, dictName, "L", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateMediaCriteriaDict: end ***")
 
-	return
+	return nil
 }
 
-func validateMediaPermissionsDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateMediaPermissionsDict(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see table 275
+	d, err := validateDictEntry(xRefTable, dict, dictName, "P", OPTIONAL, types.V10, nil)
+	if err != nil || d == nil {
+		return err
+	}
 
 	logInfoValidate.Println("*** validateMediaPermissionsDict: begin ***")
 
-	dictName := "mediaPermissionDict"
+	dictName = "mediaPermissionDict"
 
 	// Type, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "MediaPermissions" })
+	_, err = validateNameEntry(xRefTable, d, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "MediaPermissions" })
 	if err != nil {
-		return
+		return err
 	}
 
 	// TF, optional, ASCII string
 	validateTempFilePolicy := func(s string) bool {
 		return memberOf(s, []string{"TEMPNEVER", "TEMPEXTRACT", "TEMPACCESS", "TEMPALWAYS"})
 	}
-	_, err = validateStringEntry(xRefTable, dict, dictName, "TF", OPTIONAL, types.V10, validateTempFilePolicy)
+	_, err = validateStringEntry(xRefTable, d, dictName, "TF", OPTIONAL, types.V10, validateTempFilePolicy)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateMediaPermissionsDict: end ***")
 
-	return
+	return nil
 }
 
-func validateMediaPlayerInfoDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateMediaPlayerInfoDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// see table 291
 
@@ -313,9 +316,9 @@ func validateMediaPlayerInfoDict(xRefTable *types.XRefTable, dict *types.PDFDict
 	dictName := "mediaPlayerInfoDict"
 
 	// Type, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "MediaPlayerInfo" })
+	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "MediaPlayerInfo" })
 	if err != nil {
-		return
+		return err
 	}
 
 	var d *types.PDFDict
@@ -323,31 +326,31 @@ func validateMediaPlayerInfoDict(xRefTable *types.XRefTable, dict *types.PDFDict
 	// PID, required, software identifier dict
 	d, err = validateDictEntry(xRefTable, dict, dictName, "PID", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 	err = validateSoftwareIdentifierDict(xRefTable, d)
 	if err != nil {
-		return
+		return err
 	}
 
 	// MH, optional, dict
 	_, err = validateDictEntry(xRefTable, dict, dictName, "MH", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// BE, optional, dict
 	_, err = validateDictEntry(xRefTable, dict, dictName, "BE", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateMediaPlayerInfoDict: end ***")
 
-	return
+	return nil
 }
 
-func validateMediaPlayersDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateMediaPlayersDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// see 13.2.7.2
 
@@ -356,47 +359,50 @@ func validateMediaPlayersDict(xRefTable *types.XRefTable, dict *types.PDFDict) (
 	dictName := "mediaPlayersDict"
 
 	// Type, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "MediaPlayers" })
+	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "MediaPlayers" })
 	if err != nil {
-		return
+		return err
 	}
-
-	var (
-		a *types.PDFArray
-		d *types.PDFDict
-	)
 
 	// MU, optional, array of media player info dicts
-	a, err = validateArrayEntry(xRefTable, dict, dictName, "MU", OPTIONAL, types.V10, nil)
+	a, err := validateArrayEntry(xRefTable, dict, dictName, "MU", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
+
 	if a != nil {
+
 		for _, v := range *a {
+
 			if v == nil {
 				continue
 			}
-			d, err = xRefTable.DereferenceDict(v)
+
+			d, err := xRefTable.DereferenceDict(v)
 			if err != nil {
-				return
+				return err
 			}
+
 			if d == nil {
 				continue
 			}
+
 			err = validateMediaPlayerInfoDict(xRefTable, d)
 			if err != nil {
-				return
+				return err
 			}
+
 		}
+
 	}
 
 	logInfoValidate.Println("*** validateMediaPlayersDict: end ***")
 
-	return
+	return nil
 
 }
 
-func validateFileSpecOrFormXObjectEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateFileSpecOrFormXObjectEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validateFileSpecOrFormXObjectEntry: begin ***")
 
@@ -405,20 +411,20 @@ func validateFileSpecOrFormXObjectEntry(xRefTable *types.XRefTable, dict *types.
 		if required {
 			return errors.Errorf("validateFileSpecOrFormXObjectEntry: missing entry \"%s\"", entryName)
 		}
-		return
+		return nil
 	}
 
-	_, err = validateFileSpecificationOrFormObject(xRefTable, obj)
+	_, err := validateFileSpecificationOrFormObject(xRefTable, obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateFileSpecOrFormXObjectEntry: begin ***")
 
-	return
+	return nil
 }
 
-func validateMediaClipDataDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateMediaClipDataDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// see 13.2.4.2
 
@@ -427,104 +433,102 @@ func validateMediaClipDataDict(xRefTable *types.XRefTable, dict *types.PDFDict) 
 	dictName := "mediaClipDataDict"
 
 	// D, required, file specification or stream
-	err = validateFileSpecOrFormXObjectEntry(xRefTable, dict, dictName, "D", REQUIRED, types.V10)
+	err := validateFileSpecOrFormXObjectEntry(xRefTable, dict, dictName, "D", REQUIRED, types.V10)
 	if err != nil {
-		return
+		return err
 	}
 
 	// CT, optional, ASCII string
 	_, err = validateNameEntry(xRefTable, dict, dictName, "CT", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
-
-	var d *types.PDFDict
 
 	// P, optional, media permissions dict
-	d, err = validateDictEntry(xRefTable, dict, dictName, "P", OPTIONAL, types.V10, nil)
+	err = validateMediaPermissionsDict(xRefTable, dict, dictName)
 	if err != nil {
-		return
-	}
-	if d != nil {
-		err = validateMediaPermissionsDict(xRefTable, d)
-		if err != nil {
-			return
-		}
+		return err
 	}
 
 	// Alt, optional, string array
 	_, err = validateStringArrayEntry(xRefTable, dict, dictName, "Alt", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// PL, optional, media players dict
-	d, err = validateDictEntry(xRefTable, dict, dictName, "PL", OPTIONAL, types.V10, nil)
+	d, err := validateDictEntry(xRefTable, dict, dictName, "PL", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 	if d != nil {
 		err = validateMediaPlayersDict(xRefTable, d)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	// MH, optional, dict
 	d, err = validateDictEntry(xRefTable, dict, dictName, "MH", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 	if d != nil {
 		// BU, optional, ASCII string
 		_, err = validateStringEntry(xRefTable, d, "", "BU", OPTIONAL, types.V10, nil)
+		if err != nil {
+			return err
+		}
 	}
 
 	// BE. optional, dict
 	d, err = validateDictEntry(xRefTable, dict, dictName, "BE", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 	if d != nil {
 		// BU, optional, ASCII string
 		_, err = validateStringEntry(xRefTable, d, "", "BU", OPTIONAL, types.V10, nil)
+		if err != nil {
+			return err
+		}
 	}
 
 	logInfoValidate.Println("*** validateMediaClipDataDict: end ***")
 
-	return
+	return nil
 }
 
-func validateTimespanDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateTimespanDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	logInfoValidate.Println("*** validateTimespanDict: begin ***")
 
 	dictName := "timespanDict"
 
 	// Type, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "Timespan" })
+	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "Timespan" })
 	if err != nil {
-		return
+		return err
 	}
 
 	// S, required, name
 	_, err = validateNameEntry(xRefTable, dict, dictName, "S", REQUIRED, types.V10, func(s string) bool { return s == "S" })
 	if err != nil {
-		return
+		return err
 	}
 
 	// V, required, number
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "V", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateTimespanDict: end ***")
 
-	return
+	return nil
 }
 
-func validateMediaOffsetDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateMediaOffsetDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// see 13.2.6.2
 
@@ -533,51 +537,49 @@ func validateMediaOffsetDict(xRefTable *types.XRefTable, dict *types.PDFDict) (e
 	dictName := "mediaOffsetDict"
 
 	// Type, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "MediaOffset" })
+	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "MediaOffset" })
 	if err != nil {
-		return
+		return err
 	}
 
 	// S, required, name
 	subType, err := validateNameEntry(xRefTable, dict, dictName, "S", REQUIRED, types.V10, func(s string) bool { return memberOf(s, []string{"T", "F", "M"}) })
 	if err != nil {
-		return
+		return err
 	}
-
-	var d *types.PDFDict
 
 	switch *subType {
 
 	case "T":
-		d, err = validateDictEntry(xRefTable, dict, dictName, "T", REQUIRED, types.V10, nil)
+		d, err := validateDictEntry(xRefTable, dict, dictName, "T", REQUIRED, types.V10, nil)
 		if err != nil {
-			return
+			return err
 		}
 		err = validateTimespanDict(xRefTable, d)
 		if err != nil {
-			return
+			return err
 		}
 
 	case "F":
 		_, err = validateIntegerEntry(xRefTable, dict, dictName, "F", REQUIRED, types.V10, func(i int) bool { return i >= 0 })
 		if err != nil {
-			return
+			return err
 		}
 
 	case "M":
 		_, err = validateStringEntry(xRefTable, dict, dictName, "M", REQUIRED, types.V10, nil)
 		if err != nil {
-			return
+			return err
 		}
 
 	}
 
 	logInfoValidate.Println("*** validateMediaOffsetDict: end ***")
 
-	return
+	return nil
 }
 
-func validateMediaClipSectionDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateMediaClipSectionDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// see 13.2.4.3
 
@@ -585,54 +587,52 @@ func validateMediaClipSectionDict(xRefTable *types.XRefTable, dict *types.PDFDic
 
 	dictName := "mediaClipSectionDict"
 
-	var d *types.PDFDict
-
 	// D, required, media clip dict
-	d, err = validateDictEntry(xRefTable, dict, dictName, "D", REQUIRED, types.V10, nil)
+	d, err := validateDictEntry(xRefTable, dict, dictName, "D", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 	err = validateMediaClipDict(xRefTable, d)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Alt, optional, string array
 	_, err = validateStringArrayEntry(xRefTable, dict, dictName, "Alt", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// MH, optional, dict
 	d, err = validateDictEntry(xRefTable, dict, dictName, "MH", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 	if d != nil {
 		err = validateMediaOffsetDict(xRefTable, d)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	// BE, optional, dict
 	d, err = validateDictEntry(xRefTable, dict, dictName, "BE", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 	if d != nil {
 		err = validateMediaOffsetDict(xRefTable, d)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	logInfoValidate.Println("*** validateMediaClipSectionDict: end ***")
 
-	return
+	return nil
 }
 
-func validateMediaClipDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateMediaClipDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// see 13.2.4
 
@@ -641,43 +641,43 @@ func validateMediaClipDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err
 	dictName := "mediaClipDict"
 
 	// Type, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "MediaClip" })
+	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "MediaClip" })
 	if err != nil {
-		return
+		return err
 	}
 
 	// S, required, name
 	subType, err := validateNameEntry(xRefTable, dict, dictName, "S", REQUIRED, types.V10, func(s string) bool { return s == "MCD" || s == "MCS" })
 	if err != nil {
-		return
+		return err
 	}
 
 	// N, optional, text string
 	_, err = validateStringEntry(xRefTable, dict, dictName, "N", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	if *subType == "MCD" {
 		err = validateMediaClipDataDict(xRefTable, dict)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	if *subType == "MCS" {
 		err = validateMediaClipSectionDict(xRefTable, dict)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	logInfoValidate.Println("*** validateMediaClipDict: end ***")
 
-	return
+	return nil
 }
 
-func validateMediaPlayParametersDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateMediaPlayParametersDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// see 13.2.5
 
@@ -686,55 +686,53 @@ func validateMediaPlayParametersDict(xRefTable *types.XRefTable, dict *types.PDF
 	dictName := "mediaPlayParmsDict"
 
 	// Type, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "MediaPlayParams" })
+	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "MediaPlayParams" })
 	if err != nil {
-		return
+		return err
 	}
 
-	var d *types.PDFDict
-
 	// PL, optional, media players dict
-	d, err = validateDictEntry(xRefTable, dict, dictName, "PL", OPTIONAL, types.V10, nil)
+	d, err := validateDictEntry(xRefTable, dict, dictName, "PL", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 	if d != nil {
 		err = validateMediaPlayersDict(xRefTable, d)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	// MH, optional, dict
 	d, err = validateDictEntry(xRefTable, dict, dictName, "MH", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 	if d != nil {
 		err = validateMediaOffsetDict(xRefTable, d)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	// BE, optional, dict
 	d, err = validateDictEntry(xRefTable, dict, dictName, "BE", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 	if d != nil {
 		err = validateMediaOffsetDict(xRefTable, d)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	logInfoValidate.Println("*** validateMediaPlayParametersDict: end ***")
 
-	return
+	return nil
 }
 
-func validateFloatingWindowsParameterDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateFloatingWindowsParameterDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// see table 284
 
@@ -743,65 +741,65 @@ func validateFloatingWindowsParameterDict(xRefTable *types.XRefTable, dict *type
 	dictName := "floatWinParamsDict"
 
 	// Type, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "FWParams" })
+	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "FWParams" })
 	if err != nil {
-		return
+		return err
 	}
 
 	// D, required, array of integers
 	_, err = validateIntegerArrayEntry(xRefTable, dict, dictName, "D", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
 	if err != nil {
-		return
+		return err
 	}
 
 	// RT, optional, integer
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "RT", OPTIONAL, types.V10, func(i int) bool { return intMemberOf(i, []int{0, 1, 2, 3}) })
 	if err != nil {
-		return
+		return err
 	}
 
 	// P, optional, integer
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "P", OPTIONAL, types.V10, func(i int) bool { return intMemberOf(i, []int{0, 1, 2, 3, 4, 5, 6, 7, 8}) })
 	if err != nil {
-		return
+		return err
 	}
 
 	// O, optional, integer
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "O", OPTIONAL, types.V10, func(i int) bool { return intMemberOf(i, []int{0, 1, 2}) })
 	if err != nil {
-		return
+		return err
 	}
 
 	// T, optional, boolean
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "T", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// UC, optional, boolean
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "UC", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// R, optional, integer
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "R", OPTIONAL, types.V10, func(i int) bool { return intMemberOf(i, []int{0, 1, 2}) })
 	if err != nil {
-		return
+		return err
 	}
 
 	// TT, optional, string array
 	_, err = validateStringArrayEntry(xRefTable, dict, dictName, "TT", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateFloatingWindowsParameterDict: end ***")
 
-	return
+	return nil
 }
 
-func validateScreenParametersMHBEDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateScreenParametersMHBEDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	logInfoValidate.Println("*** validateScreenParametersMHBEDict: begin ***")
 
@@ -812,7 +810,7 @@ func validateScreenParametersMHBEDict(xRefTable *types.XRefTable, dict *types.PD
 	// W, optional, integer
 	i, err := validateIntegerEntry(xRefTable, dict, dictName, "W", OPTIONAL, types.V10, func(i int) bool { return intMemberOf(i, []int{0, 1, 2, 3}) })
 	if err != nil {
-		return
+		return err
 	}
 	if i != nil {
 		w = (*i).Value()
@@ -821,41 +819,39 @@ func validateScreenParametersMHBEDict(xRefTable *types.XRefTable, dict *types.PD
 	// B, optional, array of 3 numbers
 	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "B", OPTIONAL, types.V10, func(a types.PDFArray) bool { return len(a) == 3 })
 	if err != nil {
-		return
+		return err
 	}
 
 	// O, optional, number
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "O", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// M, optional, integer
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "M", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
-	var d *types.PDFDict
-
 	// F, required if W == 0, floating windows parameter dict
-	d, err = validateDictEntry(xRefTable, dict, dictName, "F", w == 0, types.V10, nil)
+	d, err := validateDictEntry(xRefTable, dict, dictName, "F", w == 0, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 	if d != nil {
 		err = validateFloatingWindowsParameterDict(xRefTable, d)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	logInfoValidate.Println("*** validateScreenParametersMHBEDict: end ***")
 
-	return
+	return nil
 }
 
-func validateScreenParametersDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateScreenParametersDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// see 13.2.
 
@@ -864,43 +860,41 @@ func validateScreenParametersDict(xRefTable *types.XRefTable, dict *types.PDFDic
 	dictName := "screenParmsDict"
 
 	// Type, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "MediaScreenParams" })
+	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "MediaScreenParams" })
 	if err != nil {
-		return
+		return err
 	}
 
-	var d *types.PDFDict
-
 	// MH, optional, dict
-	d, err = validateDictEntry(xRefTable, dict, dictName, "MH", OPTIONAL, types.V10, nil)
+	d, err := validateDictEntry(xRefTable, dict, dictName, "MH", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 	if d != nil {
 		err = validateScreenParametersMHBEDict(xRefTable, d)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	// BE. optional. dict
 	d, err = validateDictEntry(xRefTable, dict, dictName, "BE", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 	if d != nil {
 		err = validateScreenParametersMHBEDict(xRefTable, d)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	logInfoValidate.Println("*** validateScreenParametersDict: end ***")
 
-	return
+	return nil
 }
 
-func validateMediaRenditionDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateMediaRenditionDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// table 271
 
@@ -911,47 +905,47 @@ func validateMediaRenditionDict(xRefTable *types.XRefTable, dict *types.PDFDict)
 	var d *types.PDFDict
 
 	// C, optional, dict
-	d, err = validateDictEntry(xRefTable, dict, dictName, "C", OPTIONAL, types.V10, nil)
+	d, err := validateDictEntry(xRefTable, dict, dictName, "C", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 	if d != nil {
 		err = validateMediaClipDict(xRefTable, d)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	// P, required if C not present, dict
 	d, err = validateDictEntry(xRefTable, dict, dictName, "P", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 	if d != nil {
 		err = validateMediaPlayParametersDict(xRefTable, d)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	// SP, optional, dict
 	d, err = validateDictEntry(xRefTable, dict, dictName, "SP", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 	if d != nil {
 		err = validateScreenParametersDict(xRefTable, d)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	logInfoValidate.Println("*** validateMediaRenditionDict: end ***")
 
-	return
+	return nil
 }
 
-func validateSelectorRenditionDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateSelectorRenditionDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// table 272
 
@@ -959,14 +953,10 @@ func validateSelectorRenditionDict(xRefTable *types.XRefTable, dict *types.PDFDi
 
 	dictName := "selectorRendDict"
 
-	var a *types.PDFArray
-
-	a, err = validateArrayEntry(xRefTable, dict, dictName, "R", REQUIRED, types.V10, nil)
+	a, err := validateArrayEntry(xRefTable, dict, dictName, "R", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
-
-	var d *types.PDFDict
 
 	for _, v := range *a {
 
@@ -974,9 +964,9 @@ func validateSelectorRenditionDict(xRefTable *types.XRefTable, dict *types.PDFDi
 			continue
 		}
 
-		d, err = xRefTable.DereferenceDict(v)
+		d, err := xRefTable.DereferenceDict(v)
 		if err != nil {
-			return
+			return err
 		}
 
 		if d == nil {
@@ -985,42 +975,40 @@ func validateSelectorRenditionDict(xRefTable *types.XRefTable, dict *types.PDFDi
 
 		err = validateRenditionDict(xRefTable, d)
 		if err != nil {
-			return
+			return err
 		}
 
 	}
 
 	logInfoValidate.Println("*** validateSelectorRenditionDict: end ***")
 
-	return
+	return nil
 }
 
-func validateRenditionDictEntryMH(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) (err error) {
+func validateRenditionDictEntryMH(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
-	var d *types.PDFDict
-
-	d, err = validateDictEntry(xRefTable, dict, dictName, "MH", OPTIONAL, types.V10, nil)
+	d, err := validateDictEntry(xRefTable, dict, dictName, "MH", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	if d != nil {
 
 		d, err = validateDictEntry(xRefTable, d, "MHDict", "C", OPTIONAL, types.V10, nil)
 		if err != nil {
-			return
+			return err
 		}
 
 		if d != nil {
 			err = validateMediaCriteriaDict(xRefTable, d)
 			if err != nil {
-				return
+				return err
 			}
 		}
 
 	}
 
-	return
+	return nil
 }
 
 func validateRenditionDictEntryBE(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) (err error) {

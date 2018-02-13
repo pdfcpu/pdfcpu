@@ -9,6 +9,42 @@ import (
 // PDFArray represents a PDF array object.
 type PDFArray []interface{}
 
+// NewNameArray returns a PDFArray with PDFName entries.
+func NewNameArray(sVars ...string) PDFArray {
+
+	a := PDFArray{}
+
+	for _, s := range sVars {
+		a = append(a, PDFName(s))
+	}
+
+	return a
+}
+
+// NewNumberArray returns a PDFArray with PDFFloat entries.
+func NewNumberArray(fVars ...float64) PDFArray {
+
+	a := PDFArray{}
+
+	for _, f := range fVars {
+		a = append(a, PDFFloat(f))
+	}
+
+	return a
+}
+
+// NewIntegerArray returns a PDFArray with PDFInteger entries.
+func NewIntegerArray(fVars ...int) PDFArray {
+
+	a := PDFArray{}
+
+	for _, f := range fVars {
+		a = append(a, PDFInteger(f))
+	}
+
+	return a
+}
+
 func (array PDFArray) string(ident int) string {
 
 	logstr := []string{"["}

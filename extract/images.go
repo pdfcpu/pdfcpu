@@ -14,11 +14,11 @@ import (
 // Right now supported:
 // "DCTDecode" dumps to a jpg file.
 // "JPXDecode" dumps to a jpx file.
-func writeImage(fileName string, imageDict *types.PDFStreamDict, objNr int) (err error) {
+func writeImage(fileName string, imageDict *types.PDFStreamDict, objNr int) error {
 
 	fpl := imageDict.FilterPipeline
 	if fpl == nil {
-		return
+		return nil
 	}
 
 	var s []string
@@ -34,13 +34,13 @@ func writeImage(fileName string, imageDict *types.PDFStreamDict, objNr int) (err
 	// Ignore filter chains with length > 1
 	if len(fpl) > 1 {
 		logInfoExtract.Printf("writeImage end: ignore %s, more than 1 filter.\n", fileName)
-		return
+		return nil
 	}
 
 	// Ignore imageMasks
 	if im := imageDict.BooleanEntry("ImageMask"); im != nil && *im {
 		logInfoExtract.Printf("writeImage end: ignore %s, imageMask.\n", fileName)
-		return
+		return nil
 	}
 
 	switch fpl[0].Name {
@@ -48,27 +48,27 @@ func writeImage(fileName string, imageDict *types.PDFStreamDict, objNr int) (err
 	case "DCTDecode":
 		// Dump encoded chunk to file.
 		logInfoExtract.Printf("writing %s\n", fileName+".jpg")
-		err = ioutil.WriteFile(fileName+".jpg", imageDict.Raw, os.ModePerm)
+		err := ioutil.WriteFile(fileName+".jpg", imageDict.Raw, os.ModePerm)
 		if err != nil {
-			return
+			return err
 		}
 
 	case "JPXDecode":
 		// Dump encoded chunk to file.
 		logInfoExtract.Printf("writing %s\n", fileName+".jpx")
-		err = ioutil.WriteFile(fileName+".jpx", imageDict.Raw, os.ModePerm)
+		err := ioutil.WriteFile(fileName+".jpx", imageDict.Raw, os.ModePerm)
 		if err != nil {
-			return
+			return err
 		}
 
 	default:
 		logDebugExtract.Printf("writeImage end: ignore %s filter neither \"DCTDecode\" nor \"JPXDecode\"\n", fileName)
-		return
+		return nil
 	}
 
 	logDebugExtract.Printf("writeImage end")
 
-	return
+	return nil
 }
 
 func sortIOKeys(m map[int]*types.ImageObject) (j []int) {
@@ -79,14 +79,14 @@ func sortIOKeys(m map[int]*types.ImageObject) (j []int) {
 	return
 }
 
-func writeImageObject(ctx *types.PDFContext, objNumber int) (err error) {
+func writeImageObject(ctx *types.PDFContext, objNumber int) error {
 	obj := ctx.Optimize.ImageObjects[objNumber]
 	logDebugExtract.Printf("%s\n%s", obj.ResourceNamesString(), obj.ImageDict)
 	fileName := ctx.Write.DirName + "/" + obj.ResourceNamesString()
 	return writeImage(fileName, obj.ImageDict, objNumber)
 }
 
-func writeImages(ctx *types.PDFContext, selectedPages types.IntSet) (err error) {
+func writeImages(ctx *types.PDFContext, selectedPages types.IntSet) error {
 
 	logDebugExtract.Println("writeImages begin")
 
@@ -116,26 +116,26 @@ func writeImages(ctx *types.PDFContext, selectedPages types.IntSet) (err error) 
 
 	logDebugExtract.Println("writeImages end")
 
-	return
+	return nil
 }
 
 // Images writes embedded image resources for selected pages to dirOut.
 // Supported PDF filters: DCT, JPX
-func Images(ctx *types.PDFContext, selectedPages types.IntSet) (err error) {
+func Images(ctx *types.PDFContext, selectedPages types.IntSet) error {
 
 	logDebugExtract.Println("Images begin")
 
 	if len(ctx.Optimize.ImageObjects) == 0 {
 		logInfoExtract.Println("No image info available.")
-		return
+		return nil
 	}
 
-	err = writeImages(ctx, selectedPages)
+	err := writeImages(ctx, selectedPages)
 	if err != nil {
-		return
+		return err
 	}
 
 	logDebugExtract.Println("Images end")
 
-	return
+	return nil
 }

@@ -31,60 +31,54 @@ func Verbose(verbose bool) {
 	}
 }
 
-func processFileSpecDict(ctx *types.PDFContext, dict *types.PDFDict, processor func(string, *types.PDFStreamDict) error) (err error) {
+func processFileSpecDict(ctx *types.PDFContext, dict *types.PDFDict, processor func(string, *types.PDFStreamDict) error) error {
 
 	logDebugAttach.Println("processFileSpecDict begin")
 
 	// Entry F holds the filename.
 	obj, found := dict.Find("F")
 	if !found || obj == nil {
-		return
+		return nil
 	}
-	obj, err = ctx.Dereference(obj)
+	obj, err := ctx.Dereference(obj)
 	if err != nil || obj == nil {
-		return
+		return err
 	}
 	fileName, _ := obj.(types.PDFStringLiteral)
 
 	// Entry EF is a dict holding a stream dict in entry F.
 	obj, found = dict.Find("EF")
 	if !found || obj == nil {
-		return
+		return nil
 	}
 	var d *types.PDFDict
 	d, err = ctx.DereferenceDict(obj)
-	if err != nil {
-		return
-	}
-	if obj == nil {
-		return
+	if err != nil || obj == nil {
+		return err
 	}
 
 	// Entry F holds the embedded file's data.
 	obj, found = d.Find("F")
 	if !found || obj == nil {
-		return
+		return nil
 	}
 	var sd *types.PDFStreamDict
 	sd, err = ctx.DereferenceStreamDict(obj)
-	if err != nil {
-		return
-	}
-	if sd == nil {
-		return
+	if err != nil || sd == nil {
+		return err
 	}
 
 	err = processor(fileName.Value(), sd)
 	if err != nil {
-		return
+		return err
 	}
 
 	logDebugAttach.Println("processFileSpecDict end")
 
-	return
+	return nil
 }
 
-func processNamesEntry(ctx *types.PDFContext, dict *types.PDFDict, processor func(string, *types.PDFStreamDict) error) (err error) {
+func processNamesEntry(ctx *types.PDFContext, dict *types.PDFDict, processor func(string, *types.PDFStreamDict) error) error {
 
 	logDebugAttach.Println("processNamesEntry begin")
 
@@ -94,12 +88,9 @@ func processNamesEntry(ctx *types.PDFContext, dict *types.PDFDict, processor fun
 		return errors.Errorf("processNamesEntry: missing \"Names\" entry.")
 	}
 
-	var arr *types.PDFArray
-	var d *types.PDFDict
-
-	arr, err = ctx.DereferenceArray(obj)
+	arr, err := ctx.DereferenceArray(obj)
 	if err != nil {
-		return
+		return err
 	}
 	if arr == nil {
 		return errors.Errorf("processNamesEntry: missing \"Names\" array.")
@@ -122,7 +113,7 @@ func processNamesEntry(ctx *types.PDFContext, dict *types.PDFDict, processor fun
 			continue
 		}
 
-		d, err = ctx.DereferenceDict(obj)
+		d, err := ctx.DereferenceDict(obj)
 		if err != nil {
 			return err
 		}
@@ -134,25 +125,23 @@ func processNamesEntry(ctx *types.PDFContext, dict *types.PDFDict, processor fun
 		logDebugAttach.Printf("processNamesEntry: file spec dict: %v\n", d)
 		err = processFileSpecDict(ctx, d, processor)
 		if err != nil {
-			return
+			return err
 		}
 
 	}
 
 	logDebugAttach.Println("processNamesEntry end")
 
-	return
+	return nil
 }
 
-func processNameTree(ctx *types.PDFContext, nameTree types.PDFNameTree, processor func(string, *types.PDFStreamDict) error) (err error) {
+func processNameTree(ctx *types.PDFContext, nameTree types.PDFNameTree, processor func(string, *types.PDFStreamDict) error) error {
 
 	logDebugAttach.Println("processNameTree begin")
 
-	var dict *types.PDFDict
-
-	dict, err = ctx.DereferenceDict(nameTree.PDFIndirectRef)
+	dict, err := ctx.DereferenceDict(nameTree.PDFIndirectRef)
 	if err != nil {
-		return
+		return err
 	}
 
 	if obj, found := dict.Find("Kids"); found {
@@ -185,32 +174,32 @@ func processNameTree(ctx *types.PDFContext, nameTree types.PDFNameTree, processo
 
 		logDebugAttach.Println("processNameTree end")
 
-		return
+		return nil
 	}
 
 	err = processNamesEntry(ctx, dict, processor)
 	if err != nil {
-		return
+		return err
 	}
 
 	logDebugAttach.Println("processNameTree end")
 
-	return
+	return nil
 }
 
 func listAttachedFiles(ctx *types.PDFContext) (list []string, err error) {
 
-	collectFileNames := func(fileName string, sd *types.PDFStreamDict) (err error) {
+	collectFileNames := func(fileName string, sd *types.PDFStreamDict) error {
 		list = append(list, fileName)
-		return
+		return nil
 	}
 
 	err = processNameTree(ctx, *ctx.EmbeddedFiles, collectFileNames)
 
-	return
+	return list, nil
 }
 
-func extractAttachedFiles(ctx *types.PDFContext, files types.StringSet) (err error) {
+func extractAttachedFiles(ctx *types.PDFContext, files types.StringSet) error {
 
 	writeFile := func(fileName string, sd *types.PDFStreamDict) (err error) {
 
@@ -229,19 +218,19 @@ func extractAttachedFiles(ctx *types.PDFContext, files types.StringSet) (err err
 			// Ignore filter chains with length > 1
 			if len(fpl) > 1 {
 				logDebugAttach.Printf("writeFile end: ignore %s, more than 1 filter.\n", fileName)
-				return
+				return nil
 			}
 
 			// Only FlateDecode supported.
 			if fpl[0].Name != "FlateDecode" {
 				logDebugAttach.Printf("writeFile: ignore %s, %s filter unsupported.\n", fileName, fpl[0].Name)
-				return
+				return nil
 			}
 
 			// Decode streamDict for supported filters only.
 			err = filter.DecodeStream(sd)
 			if err != nil {
-				return
+				return err
 			}
 
 		}
@@ -249,12 +238,12 @@ func extractAttachedFiles(ctx *types.PDFContext, files types.StringSet) (err err
 		logInfoAttach.Printf("writing %s\n", path)
 		err = ioutil.WriteFile(path, sd.Content, os.ModePerm)
 		if err != nil {
-			return
+			return err
 		}
 
 		logDebugAttach.Printf("writeFile end: %s \n", path)
 
-		return
+		return nil
 	}
 
 	nameTree := ctx.EmbeddedFiles
@@ -264,17 +253,15 @@ func extractAttachedFiles(ctx *types.PDFContext, files types.StringSet) (err err
 		for fileName := range files {
 
 			// Locate value for name tree key=fileName - the corresponding fileSpecDict.
-			var indRef *types.PDFIndirectRef
-			indRef, err = nameTree.Value(ctx.XRefTable, fileName)
+			indRef, err := nameTree.Value(ctx.XRefTable, fileName)
 			if indRef == nil {
 				logErrorAttach.Printf("%s not found", fileName)
 				continue
 			}
 
-			var d *types.PDFDict
-			d, err = ctx.DereferenceDict(*indRef)
+			d, err := ctx.DereferenceDict(*indRef)
 			if err != nil {
-				return
+				return err
 			}
 
 			if d == nil {
@@ -284,48 +271,30 @@ func extractAttachedFiles(ctx *types.PDFContext, files types.StringSet) (err err
 			// Apply the writeFile processor to this fileSpecDict.
 			err = processFileSpecDict(ctx, d, writeFile)
 			if err != nil {
-				return
+				return err
 			}
 
 		}
 
-		return
+		return nil
 	}
 
 	// Extract all files.
 	return processNameTree(ctx, *nameTree, writeFile)
 }
 
-func createFileSpecDict(ctx *types.PDFContext, filename string, indRefStreamDict types.PDFIndirectRef) (dict *types.PDFDict, err error) {
-
-	d := types.NewPDFDict()
-	d.Insert("Type", types.PDFName("Filespec"))
-	d.Insert("F", types.PDFStringLiteral(filename))
-	d.Insert("UF", types.PDFStringLiteral(filename))
-	// TODO d.Insert("UF", utf16.Encode([]rune(filename)))
-
-	efDict := types.NewPDFDict()
-	efDict.Insert("F", indRefStreamDict)
-	efDict.Insert("UF", indRefStreamDict)
-	d.Insert("EF", efDict)
-
-	d.Insert("Desc", types.PDFStringLiteral("attached by "+types.PDFCPULongVersion))
-
-	return &d, nil
-}
-
 // ok returns true if at least one attachment was added.
 func addAttachedFiles(ctx *types.PDFContext, files types.StringSet) (ok bool, err error) {
 
+	// Ensure a Collection entry in the catalog.
+	err = ctx.EnsureCollection()
+	if err != nil {
+		return false, err
+	}
+
 	for filename := range files {
 
-		buf, err := ioutil.ReadFile(filename)
-		if err != nil {
-			logErrorAttach.Printf("%s: %s\n", filename, err)
-			continue
-		}
-
-		sd, err := ctx.InsertPDFStreamDict(buf)
+		sd, err := ctx.NewEmbeddedFileStreamDict(filename)
 		if err != nil {
 			return false, err
 		}
@@ -335,24 +304,22 @@ func addAttachedFiles(ctx *types.PDFContext, files types.StringSet) (ok bool, er
 			return false, err
 		}
 
-		entry := types.NewXRefTableEntryGen0(*sd)
-		objNr := ctx.InsertNew(*entry)
-
-		indRefSD := types.NewPDFIndirectRef(objNr, 0)
-		dict, err := createFileSpecDict(ctx, filename, indRefSD)
+		indRef, err := ctx.IndRefForNewObject(*sd)
 		if err != nil {
 			return false, err
 		}
 
-		objNr, err = ctx.InsertObject(*dict)
+		dict, err := ctx.NewFileSpecDict(filename, *indRef)
 		if err != nil {
 			return false, err
 		}
 
-		indRefFS := types.NewPDFIndirectRef(objNr, 0)
-		//logErrorAttach.Printf("indRefSD:%s indRefFS:%s\n", indRefSD, indRefFS)
+		indRef, err = ctx.IndRefForNewObject(*dict)
+		if err != nil {
+			return false, err
+		}
 
-		err = ctx.EmbeddedFiles.SetValue(ctx.XRefTable, filename, indRefFS)
+		err = ctx.EmbeddedFiles.SetValue(ctx.XRefTable, filename, *indRef)
 		if err != nil {
 			return false, err
 		}
@@ -361,57 +328,7 @@ func addAttachedFiles(ctx *types.PDFContext, files types.StringSet) (ok bool, er
 
 	}
 
-	return
-}
-
-func removeEmbeddedFilesNameTree(ctx *types.PDFContext) (err error) {
-
-	logDebugAttach.Println("removeEmbeddedFilesNameTree begin")
-
-	if ctx.EmbeddedFiles != nil {
-		// Remove the object graph of ctx.EmbeddedFiles
-		logDebugAttach.Println("removeEmbeddedFilesNameTree: deleting object graph")
-		err = ctx.DeleteObjectGraph(ctx.EmbeddedFiles.PDFIndirectRef)
-		if err != nil {
-			return
-		}
-		ctx.EmbeddedFiles = nil
-	}
-
-	rootDict, err := ctx.DereferenceDict(*ctx.Root)
-	if err != nil {
-		return err
-	}
-
-	obj, found := rootDict.Find("Names")
-	if !found {
-		return errors.New("removeEmbeddedFilesNameTree: \"Names\" root entry missing")
-	}
-
-	namesDict, err := ctx.DereferenceDict(obj)
-	if err != nil {
-		return err
-	}
-
-	if namesDict == nil {
-		return errors.New("removeEmbeddedFilesNameTree: \"Names\" root entry corrupt")
-	}
-
-	namesDict.Delete("EmbeddedFiles")
-	if namesDict.Len() > 0 {
-		// Stop here, if EmbeddedFiles was not the only Names entry.
-		return
-	}
-
-	// Remove NamesDict.
-	if namesIndRef := rootDict.IndirectRefEntry("Names"); namesIndRef != nil {
-		ctx.DeleteObject(namesIndRef.ObjectNumber.Value())
-	}
-	rootDict.Delete("Names")
-
-	logDebugAttach.Println("removeEmbeddedFilesNameTree end")
-
-	return
+	return ok, nil
 }
 
 // ok returns true if at least one attachment was removed.
@@ -439,7 +356,7 @@ func removeAttachedFiles(ctx *types.PDFContext, files types.StringSet) (ok bool,
 				var root = true
 				_, found, deadKid, err = ctx.EmbeddedFiles.RemoveKeyValuePair(ctx.XRefTable, root, fileName)
 				if err != nil {
-					return
+					return false, err
 				}
 
 				if !found {
@@ -454,18 +371,13 @@ func removeAttachedFiles(ctx *types.PDFContext, files types.StringSet) (ok bool,
 				if deadKid {
 
 					// Delete name tree root object.
-					indRef := ctx.EmbeddedFiles.PDFIndirectRef
-					err = ctx.DeleteObject(indRef.ObjectNumber.Value())
+					// Clean up root.Names entry and delete if EmbeddedFiles was the only Names entry.
+					err = ctx.RemoveEmbeddedFilesNameTree()
 					if err != nil {
-						return
+						return false, err
 					}
 
-					// Clean up root.Names entry and delete if EmbeddedFiles was the only Names entry.
 					ctx.EmbeddedFiles = nil
-					err = removeEmbeddedFilesNameTree(ctx)
-					if err != nil {
-						return
-					}
 				}
 
 			} else {
@@ -476,11 +388,22 @@ func removeAttachedFiles(ctx *types.PDFContext, files types.StringSet) (ok bool,
 
 		}
 
-		return
+		return ok, nil
 	}
 
 	// If no files specified, remove all embedded files.
-	return true, removeEmbeddedFilesNameTree(ctx)
+	ok = true
+
+	// Delete name tree root object.
+
+	err = ctx.RemoveEmbeddedFilesNameTree()
+	if err != nil {
+		return false, err
+	}
+
+	ctx.EmbeddedFiles = nil
+
+	return ok, nil
 }
 
 // List returns a list of embedded files.
@@ -491,22 +414,22 @@ func List(ctx *types.PDFContext) (list []string, err error) {
 	if !ctx.Valid && ctx.EmbeddedFiles == nil {
 		ctx.EmbeddedFiles, err = ctx.LocateNameTree("EmbeddedFiles", false)
 		if err != nil {
-			return
+			return nil, err
 		}
 	}
 
 	if ctx.EmbeddedFiles == nil {
-		return
+		return nil, nil
 	}
 
 	list, err = listAttachedFiles(ctx)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	logDebugAttach.Println("List end")
 
-	return
+	return list, nil
 }
 
 // Extract exports specified embedded files.
@@ -518,7 +441,7 @@ func Extract(ctx *types.PDFContext, files types.StringSet) (err error) {
 	if !ctx.Valid && ctx.EmbeddedFiles == nil {
 		ctx.EmbeddedFiles, err = ctx.LocateNameTree("EmbeddedFiles", false)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
@@ -528,12 +451,12 @@ func Extract(ctx *types.PDFContext, files types.StringSet) (err error) {
 
 	err = extractAttachedFiles(ctx, files)
 	if err != nil {
-		return
+		return err
 	}
 
 	logDebugAttach.Println("Extract end")
 
-	return
+	return nil
 }
 
 // Add embeds specified files.
@@ -546,18 +469,15 @@ func Add(ctx *types.PDFContext, files types.StringSet) (ok bool, err error) {
 	if ctx.EmbeddedFiles == nil {
 		ctx.EmbeddedFiles, err = ctx.LocateNameTree("EmbeddedFiles", true)
 		if err != nil {
-			return
+			return false, err
 		}
 	}
 
 	ok, err = addAttachedFiles(ctx, files)
-	if err != nil {
-		return
-	}
 
 	logDebugAttach.Println("Add end")
 
-	return
+	return ok, err
 }
 
 // Remove deletes specified embedded files.
@@ -569,7 +489,7 @@ func Remove(ctx *types.PDFContext, files types.StringSet) (ok bool, err error) {
 	if !ctx.Valid && ctx.EmbeddedFiles == nil {
 		ctx.EmbeddedFiles, err = ctx.LocateNameTree("EmbeddedFiles", false)
 		if err != nil {
-			return
+			return false, err
 		}
 	}
 
@@ -578,11 +498,8 @@ func Remove(ctx *types.PDFContext, files types.StringSet) (ok bool, err error) {
 	}
 
 	ok, err = removeAttachedFiles(ctx, files)
-	if err != nil {
-		return
-	}
 
 	logDebugAttach.Println("Remove end")
 
-	return
+	return ok, err
 }

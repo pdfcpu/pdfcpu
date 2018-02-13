@@ -8,7 +8,7 @@ import (
 	"github.com/hhrutter/pdfcpu/types"
 )
 
-func prevalidate(s string) (string, bool) {
+func prevalidateDate(s string) (string, bool) {
 
 	// utf16 conversion if applicable.
 	if types.IsStringUTF16BE(s) {
@@ -277,7 +277,7 @@ func validateDate(s string) bool {
 	logDebugValidate.Printf("validateDate(%s)\n", s)
 
 	var ok bool
-	s, ok = prevalidate(s)
+	s, ok = prevalidateDate(s)
 	if !ok {
 		return false
 	}

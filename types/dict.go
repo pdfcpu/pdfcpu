@@ -5,6 +5,8 @@ import (
 	"log"
 	"sort"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 // PDFDict represents a PDF dict object.
@@ -22,13 +24,33 @@ func (d *PDFDict) Len() int {
 	return len(d.Dict)
 }
 
-// Insert adds a new entry(key,value) to this PDFDict.
+// Insert adds a new entry to this PDFDict.
 func (d *PDFDict) Insert(key string, value interface{}) (ok bool) {
 	if _, found := d.Find(key); found {
 		return false
 	}
 	d.Dict[key] = value
 	return true
+}
+
+// InsertInt adds a new int entry to this PDFDict.
+func (d *PDFDict) InsertInt(key string, value int) {
+	d.Insert(key, PDFInteger(value))
+}
+
+// InsertFloat adds a new float entry to this PDFDict.
+func (d *PDFDict) InsertFloat(key string, value float32) {
+	d.Insert(key, PDFFloat(value))
+}
+
+// InsertString adds a new string entry to this PDFDict.
+func (d *PDFDict) InsertString(key, value string) {
+	d.Insert(key, PDFStringLiteral(value))
+}
+
+// InsertName adds a new name entry to this PDFDict.
+func (d *PDFDict) InsertName(key, value string) {
+	d.Insert(key, PDFName(value))
 }
 
 // Update modifies an existing entry of this PDFDict.
@@ -55,6 +77,19 @@ func (d *PDFDict) Delete(key string) (value interface{}) {
 	delete(d.Dict, key)
 
 	return
+}
+
+// Entry returns the value for given key.
+func (d *PDFDict) Entry(dictName, key string, required bool) (interface{}, error) {
+	obj, found := d.Find(key)
+	if !found || obj == nil {
+		if required {
+			return nil, errors.Errorf("dict=%s required entry=%s missing", dictName, key)
+		}
+		logInfoTypes.Printf("dict=%s entry %s is nil\n", dictName, key)
+		return nil, nil
+	}
+	return obj, nil
 }
 
 // BooleanEntry expects and returns a BooleanEntry for given key.
@@ -156,6 +191,7 @@ func (d PDFDict) IndirectRefEntry(key string) *PDFIndirectRef {
 		return &pdfIndRef
 	}
 
+	// return err?
 	return nil
 }
 

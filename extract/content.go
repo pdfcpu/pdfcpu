@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func writeContent(ctx *types.PDFContext, streamDict *types.PDFStreamDict, pageNumber, section int) (err error) {
+func writeContent(ctx *types.PDFContext, streamDict *types.PDFStreamDict, pageNumber, section int) error {
 
 	var fileName string
 
@@ -21,13 +21,12 @@ func writeContent(ctx *types.PDFContext, streamDict *types.PDFStreamDict, pageNu
 	}
 
 	// Decode streamDict for supported filters only.
-	err = filter.DecodeStream(streamDict)
+	err := filter.DecodeStream(streamDict)
 	if err == filter.ErrUnsupportedFilter {
-		err = nil
-		return
+		return nil
 	}
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoExtract.Printf("writing to %s\n", fileName)
@@ -37,18 +36,18 @@ func writeContent(ctx *types.PDFContext, streamDict *types.PDFStreamDict, pageNu
 }
 
 // Process the content of a page which is a stream dict or an array of stream dicts.
-func processPageDict(ctx *types.PDFContext, objNumber, genNumber int, dict *types.PDFDict, pageNumber int) (err error) {
+func processPageDict(ctx *types.PDFContext, objNumber, genNumber int, dict *types.PDFDict, pageNumber int) error {
 
 	logDebugExtract.Printf("processPageDict begin: page=%d\n", pageNumber)
 
 	obj, found := dict.Find("Contents")
 	if !found || obj == nil {
-		return
+		return nil
 	}
 
-	obj, err = ctx.Dereference(obj)
+	obj, err := ctx.Dereference(obj)
 	if err != nil || obj == nil {
-		return
+		return err
 	}
 
 	switch obj := obj.(type) {
@@ -56,7 +55,7 @@ func processPageDict(ctx *types.PDFContext, objNumber, genNumber int, dict *type
 	case types.PDFStreamDict:
 		err = writeContent(ctx, &obj, pageNumber, -1)
 		if err != nil {
-			return
+			return err
 		}
 
 	case types.PDFArray:
@@ -74,7 +73,7 @@ func processPageDict(ctx *types.PDFContext, objNumber, genNumber int, dict *type
 
 	}
 
-	return
+	return nil
 }
 
 func needsPage(selectedPages types.IntSet, pageCount int) bool {
@@ -82,7 +81,7 @@ func needsPage(selectedPages types.IntSet, pageCount int) bool {
 	return selectedPages == nil || len(selectedPages) == 0 || selectedPages[pageCount]
 }
 
-func processPagesDict(ctx *types.PDFContext, indRef *types.PDFIndirectRef, pageCount *int, selectedPages types.IntSet) (err error) {
+func processPagesDict(ctx *types.PDFContext, indRef *types.PDFIndirectRef, pageCount *int, selectedPages types.IntSet) error {
 
 	logDebugExtract.Printf("processPagesDict begin: pageCount=%d\n", *pageCount)
 
@@ -107,6 +106,8 @@ func processPagesDict(ctx *types.PDFContext, indRef *types.PDFIndirectRef, pageC
 			return errors.New("processPagesDict: pageNodeDict is null")
 		}
 
+		var err error
+
 		switch *pageNodeDict.Type() {
 
 		case "Pages":
@@ -130,12 +131,12 @@ func processPagesDict(ctx *types.PDFContext, indRef *types.PDFIndirectRef, pageC
 
 	logDebugExtract.Printf("processPagesDict end: pageCount=%d\n", *pageCount)
 
-	return
+	return nil
 }
 
 // Content writes content streams for selected pages to dirOut.
 // Each content stream results in a separate text file.
-func Content(ctx *types.PDFContext, selectedPages types.IntSet) (err error) {
+func Content(ctx *types.PDFContext, selectedPages types.IntSet) error {
 
 	logDebugExtract.Printf("Content begin: dirOut=%s\n", ctx.Write.DirName)
 
@@ -143,12 +144,12 @@ func Content(ctx *types.PDFContext, selectedPages types.IntSet) (err error) {
 	indRefRootPageDict, _ := ctx.Pages()
 
 	pageCount := 0
-	err = processPagesDict(ctx, indRefRootPageDict, &pageCount, selectedPages)
+	err := processPagesDict(ctx, indRefRootPageDict, &pageCount, selectedPages)
 	if err != nil {
 		return err
 	}
 
 	logDebugExtract.Println("Content end")
 
-	return
+	return nil
 }

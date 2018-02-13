@@ -52,7 +52,7 @@ var (
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	}
 
-	// Needed permission bits for operation.
+	// Needed permission bits for pdfcpu commands.
 	perm = map[types.CommandMode]struct{ extract, modify int }{
 		types.VALIDATE:           {0, 0},
 		types.OPTIMIZE:           {0, 0},
@@ -171,7 +171,7 @@ func encKey(userpw string, e *types.Enc) (key []byte) {
 		key = key[:5]
 	}
 
-	return
+	return key
 }
 
 // ValidateUserPassword validates the user password aka document open password.
@@ -184,7 +184,7 @@ func ValidateUserPassword(ctx *types.PDFContext) (ok bool, key []byte, err error
 
 	u, key, err := U(ctx)
 	if err != nil {
-		return
+		return false, nil, err
 	}
 
 	//fmt.Printf("validateUserPassword: u =\n%v\n", u)
@@ -226,7 +226,7 @@ func key(ownerpw, userpw string, r, l int) (key []byte) {
 		key = key[:5]
 	}
 
-	return
+	return key
 }
 
 // O calculates the owner password digest.
@@ -290,7 +290,7 @@ func U(ctx *types.PDFContext) (u []byte, key []byte, err error) {
 
 	c, err := rc4.NewCipher(key)
 	if err != nil {
-		return
+		return nil, nil, err
 	}
 
 	switch e.R {
@@ -325,7 +325,7 @@ func U(ctx *types.PDFContext) (u []byte, key []byte, err error) {
 
 			c, err = rc4.NewCipher(keynew)
 			if err != nil {
-				return
+				return nil, nil, err
 			}
 			c.XORKeyStream(u, u)
 		}
@@ -378,7 +378,7 @@ func ValidateOwnerPassword(ctx *types.PDFContext) (ok bool, k []byte, err error)
 
 			c, err = rc4.NewCipher(keynew)
 			if err != nil {
-				return
+				return false, nil, err
 			}
 
 			c.XORKeyStream(upw, upw)
@@ -394,7 +394,7 @@ func ValidateOwnerPassword(ctx *types.PDFContext) (ok bool, k []byte, err error)
 	// Restore user pw
 	ctx.UserPW = upws
 
-	return
+	return ok, k, err
 }
 
 // SupportedCFEntry returns true if all entries found are supported.
@@ -433,15 +433,14 @@ func permissions(p int) (list []string) {
 	list = append(list, fmt.Sprintf("Bit 11: %t (modify(rev>=3))", p&0x0400 > 0))
 	list = append(list, fmt.Sprintf("Bit 12: %t (print high-level(rev>=3))", p&0x0800 > 0))
 
-	return
+	return list
 }
 
 // ListPermissions returns the list of user access permissions.
 func ListPermissions(ctx *types.PDFContext) (list []string) {
 
 	if ctx.E == nil {
-		list = append(list, "full access")
-		return
+		return append(list, "full access")
 	}
 
 	return permissions(ctx.E.P)
@@ -496,8 +495,6 @@ func HasNeededPermissions(mode types.CommandMode, enc *types.Enc) bool {
 
 	// see 7.6.3.2
 
-	//return true
-
 	logP(enc)
 
 	m := getMaskExtract(mode, enc.R)
@@ -517,16 +514,15 @@ func HasNeededPermissions(mode types.CommandMode, enc *types.Enc) bool {
 	return true
 }
 
-func getV(dict *types.PDFDict) (v *int, err error) {
+func getV(dict *types.PDFDict) (*int, error) {
 
-	v = dict.IntEntry("V")
+	v := dict.IntEntry("V")
 
 	if v == nil || (*v != 1 && *v != 2 && *v != 4) {
-		logErrorCrypto.Println("checkV: \"V\" must be one of 1,2,4")
-		return nil, nil
+		return nil, errors.Errorf("checkV: \"V\" must be one of 1,2,4")
 	}
 
-	return
+	return v, nil
 }
 func checkStmf(ctx *types.PDFContext, stmf *string, cfDict *types.PDFDict) error {
 
@@ -546,13 +542,14 @@ func checkStmf(ctx *types.PDFContext, stmf *string, cfDict *types.PDFDict) error
 	return nil
 }
 
-func checkV(ctx *types.PDFContext, dict *types.PDFDict) (v *int, err error) {
+func checkV(ctx *types.PDFContext, dict *types.PDFDict) (*int, error) {
 
-	v, err = getV(dict)
+	v, err := getV(dict)
 	if err != nil {
-		return
+		return nil, err
 	}
 
+	// Right now we support only 4
 	if *v != 4 {
 		return v, nil
 	}
@@ -628,8 +625,6 @@ func getR(dict *types.PDFDict) (int, error) {
 // SupportedEncryption returns true if used encryption is supported by pdfcpu
 // Also returns a pointer to a struct encapsulating used encryption.
 func SupportedEncryption(ctx *types.PDFContext, dict *types.PDFDict) (*types.Enc, error) {
-
-	var err error
 
 	// Filter
 	filter := dict.NameEntry("Filter")
@@ -930,7 +925,6 @@ func EncryptStream(needAES bool, buf []byte, objNr, genNr int, key []byte) ([]by
 	}
 
 	return applyRC4Bytes(buf, k)
-
 }
 
 // DecryptStream decrypts a stream buffer using RC4 or AES.
@@ -1007,7 +1001,7 @@ func encryptAESBytes(b, key []byte) ([]byte, error) {
 	return data, nil
 }
 
-func decryptAESBytes(b, key []byte) (data []byte, err error) {
+func decryptAESBytes(b, key []byte) ([]byte, error) {
 
 	//fmt.Printf("decryptAESBytes before:\n%s\n", hex.Dump(b))
 
@@ -1021,13 +1015,13 @@ func decryptAESBytes(b, key []byte) (data []byte, err error) {
 
 	cb, err := aes.NewCipher(key)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	iv := make([]byte, aes.BlockSize)
 	copy(iv, b[:aes.BlockSize])
 
-	data = b[aes.BlockSize:]
+	data := b[aes.BlockSize:]
 	mode := cipher.NewCBCDecrypter(cb, iv)
 	mode.CryptBlocks(data, data)
 
@@ -1040,7 +1034,7 @@ func decryptAESBytes(b, key []byte) (data []byte, err error) {
 
 	//fmt.Printf("decryptAESBytes after:\n%s\n", hex.Dump(data))
 
-	return
+	return data, nil
 }
 
 func fileID(ctx *types.PDFContext) types.PDFHexLiteral {

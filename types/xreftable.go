@@ -2,6 +2,9 @@ package types
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
 	"sort"
 	"strings"
 
@@ -24,10 +27,24 @@ type XRefTableEntry struct {
 	ObjectStreamInd *int
 }
 
-// NewXRefTableEntryGen0 creates a cross reference table entry for an object with generation 0.
+// NewXRefTableEntryGen0 returns a cross reference table entry for an object with generation 0.
 func NewXRefTableEntryGen0(obj interface{}) *XRefTableEntry {
 	zero := 0
 	return &XRefTableEntry{Generation: &zero, Object: obj}
+}
+
+// NewFreeHeadXRefTableEntry returns the xref table entry for object 0
+// which is per definition the head of the free list (list of free objects).
+func NewFreeHeadXRefTableEntry() *XRefTableEntry {
+
+	freeHeadGeneration := FreeHeadGeneration
+	zero := int64(0)
+
+	return &XRefTableEntry{
+		Free:       true,
+		Generation: &freeHeadGeneration,
+		Offset:     &zero,
+	}
 }
 
 // Enc wraps around all defined encryption attributes.
@@ -112,44 +129,22 @@ func (xRefTable *XRefTable) VersionString() string {
 }
 
 // ParseRootVersion returns a string representation for an optional Version entry in the root object.
-func (xRefTable *XRefTable) ParseRootVersion() (*string, error) {
+func (xRefTable *XRefTable) ParseRootVersion() (v *string, err error) {
 
-	// Look in the catalog/root for a name entry "Version"
-	// this should be the PDFVersion of this file.
+	// Look in the catalog/root for a name entry "Version".
+	// This entry overrides the header version.
 
 	rootDict, err := xRefTable.Catalog()
 	if err != nil {
 		return nil, err
 	}
 
-	// Optional
-	if _, ok := rootDict.Find("Version"); !ok {
-		return nil, nil
+	if n := rootDict.PDFNameEntry("Version"); n != nil {
+		s := n.String()
+		v = &s
 	}
 
-	v := rootDict.PDFNameEntry("Version")
-	if v != nil {
-		s := v.String()
-		return &s, nil
-	}
-
-	indirectRef := rootDict.IndirectRefEntry("Version")
-	if indirectRef == nil {
-		return nil, errors.New("ParseRootVersion: corrupt \"Version\" in root")
-	}
-
-	pdfObject, err := xRefTable.indRefToObject(indirectRef)
-	if err != nil || pdfObject == nil {
-		return nil, err
-	}
-
-	name, ok := pdfObject.(PDFName)
-	if !ok {
-		return nil, errors.New("ParseRootVersion: corrupt \"Version\" in root")
-	}
-
-	s := name.String()
-	return &s, nil
+	return v, nil
 }
 
 // IsLinearizationObject returns true if object #i is a a linearization object.
@@ -192,34 +187,31 @@ func (xRefTable *XRefTable) Find(objNumber int) (*XRefTableEntry, bool) {
 }
 
 // Free returns the cross ref table entry for given number of a free object.
-func (xRefTable *XRefTable) Free(objNumber int) (entry *XRefTableEntry, err error) {
+func (xRefTable *XRefTable) Free(objNumber int) (*XRefTableEntry, error) {
 
 	entry, found := xRefTable.Find(objNumber)
 
 	if !found {
-		err = errors.Errorf("Free: object #%d not found.", objNumber)
-		return
+		return nil, errors.Errorf("Free: object #%d not found.", objNumber)
 	}
 
 	if !entry.Free {
-		err = errors.Errorf("Free: object #%d found, but not free.", objNumber)
+		return nil, errors.Errorf("Free: object #%d found, but not free.", objNumber)
 	}
 
-	return
+	return entry, nil
 }
 
 // NextForFree returns the number of the object the free object with objNumber links to.
 // This is the successor of this free object in the free list.
-func (xRefTable *XRefTable) NextForFree(objNumber int) (next int, err error) {
+func (xRefTable *XRefTable) NextForFree(objNumber int) (int, error) {
 
 	entry, err := xRefTable.Free(objNumber)
 	if err != nil {
-		return
+		return 0, err
 	}
 
-	next = int(*entry.Offset)
-
-	return
+	return int(*entry.Offset), nil
 }
 
 // FindTableEntryLight returns the XRefTable entry for given object number.
@@ -258,7 +250,6 @@ func (xRefTable *XRefTable) InsertNew(xRefTableEntry XRefTableEntry) (objNumber 
 }
 
 // InsertAndUseRecycled adds given xRefTableEntry into the cross reference table utilizing the freelist.
-// Called on creation of new xref stream only.
 func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) (objNumber int, err error) {
 
 	// see 7.5.4 Cross-Reference Table
@@ -268,22 +259,21 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 	// Get Next free object from freelist.
 	freeListHeadEntry, err := xRefTable.Free(0)
 	if err != nil {
-		return
+		return 0, err
 	}
 
 	// If none available, add new object & return.
 	if *freeListHeadEntry.Offset == 0 {
 		objNumber = xRefTable.InsertNew(xRefTableEntry)
 		logInfoTypes.Printf("InsertAndUseRecycled: end, new objNr=%d\n", objNumber)
-		return
+		return objNumber, nil
 	}
 
 	// Recycle free object, update free list & return.
 	objNumber = int(*freeListHeadEntry.Offset)
 	entry, found := xRefTable.FindTableEntryLight(objNumber)
 	if !found {
-		err = errors.Errorf("InsertAndRecycle: no entry for obj #%d\n", objNumber)
-		return
+		return 0, errors.Errorf("InsertAndRecycle: no entry for obj #%d\n", objNumber)
 	}
 
 	// The new free list head entry becomes the old head entry's successor.
@@ -294,36 +284,118 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 	entry.Offset = nil
 
 	// Create a new entry for the recycled object.
+	// TODO use entrys generation.
 	xRefTable.Table[objNumber] = &xRefTableEntry
 
 	logInfoTypes.Printf("InsertAndUseRecycled: end, recycled objNr=%d\n", objNumber)
 
-	return
+	return objNumber, nil
 }
 
-// InsertObject appends dict to the xRefTable.
+// InsertObject inserts an object into the xRefTable.
 func (xRefTable *XRefTable) InsertObject(obj interface{}) (objNumber int, err error) {
 	xRefTableEntry := NewXRefTableEntryGen0(obj)
-	objNumber = xRefTable.InsertNew(*xRefTableEntry)
-	return
+	return xRefTable.InsertNew(*xRefTableEntry), nil
 }
 
-// InsertPDFStreamDict creates a streamDict for buf and puts it into the xRefTable.
-func (xRefTable *XRefTable) InsertPDFStreamDict(buf []byte) (sd *PDFStreamDict, err error) {
+// IndRefForNewObject inserts an object into the xRefTable and returns an indirect reference to it.
+func (xRefTable *XRefTable) IndRefForNewObject(obj interface{}) (*PDFIndirectRef, error) {
 
-	sd =
+	objNr, err := xRefTable.InsertObject(obj)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewPDFIndirectRef(objNr, 0), nil
+}
+
+// NewPDFStreamDict creates a streamDict for buf.
+func (xRefTable *XRefTable) NewPDFStreamDict(filename string) (*PDFStreamDict, error) {
+
+	buf, err := ioutil.ReadFile(filename)
+	if err != nil {
+		logErrorTypes.Printf("%s: %s\n", filename, err)
+		return nil, err
+	}
+
+	sd :=
 		&PDFStreamDict{
 			PDFDict:        NewPDFDict(),
 			Content:        buf,
 			FilterPipeline: []PDFFilter{{Name: "FlateDecode", DecodeParms: nil}}}
 
-	ok := sd.Insert("Filter", PDFName("FlateDecode"))
-	if !ok {
-		err = errors.New("InsertPDFStreamDict: duplicate error on \"Filter\" entry ")
-		return
+	sd.InsertName("Filter", "FlateDecode")
+
+	return sd, nil
+}
+
+// NewEmbeddedFileStreamDict creates and returns an embeddedFileStreamDict containing the file "filename".
+func (xRefTable *XRefTable) NewEmbeddedFileStreamDict(filename string) (*PDFStreamDict, error) {
+
+	sd, err := xRefTable.NewPDFStreamDict(filename)
+	if err != nil {
+		return nil, err
 	}
 
-	return
+	fi, err := os.Stat(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	sd.InsertName("Type", "EmbeddedFile")
+	//sd.InsertName("Subtype", "audio#2Fmpeg")
+
+	d := NewPDFDict()
+	d.InsertInt("Size", int(fi.Size()))
+	d.Insert("ModDate", DateStringLiteral(fi.ModTime()))
+	sd.Insert("Params", d)
+
+	return sd, nil
+}
+
+// NewSoundStreamDict returns a new sound stream dict.
+func (xRefTable *XRefTable) NewSoundStreamDict(filename string, samplingRate int, fileSpecDict *PDFDict) (*PDFStreamDict, error) {
+
+	sd, err := xRefTable.NewPDFStreamDict(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	sd.InsertName("Type", "Sound")
+	sd.InsertInt("R", samplingRate)
+
+	if fileSpecDict != nil {
+		sd.Insert("F", *fileSpecDict)
+	} else {
+		sd.Insert("F", PDFStringLiteral(path.Base(filename)))
+	}
+
+	return sd, nil
+}
+
+// NewFileSpecDict creates and returns a new fileSpec dictionary.
+func (xRefTable *XRefTable) NewFileSpecDict(filename string, indRefStreamDict PDFIndirectRef) (*PDFDict, error) {
+
+	d := NewPDFDict()
+	d.InsertName("Type", "Filespec")
+	d.InsertString("F", filename)
+	d.InsertString("UF", filename)
+	// TODO d.Insert("UF", utf16.Encode([]rune(filename)))
+
+	efDict := NewPDFDict()
+	efDict.Insert("F", indRefStreamDict)
+	efDict.Insert("UF", indRefStreamDict)
+	d.Insert("EF", efDict)
+
+	d.InsertString("Desc", "attached by "+PDFCPULongVersion)
+
+	// CI, optional, collection item dict, since V1.7
+	// a corresponding collection schema dict in a collection.
+	ciDict := NewPDFDict()
+	//add contextual meta info here.
+	d.Insert("CI", ciDict)
+
+	return &d, nil
 }
 
 func (xRefTable *XRefTable) freeObjects() IntSet {
@@ -341,7 +413,7 @@ func (xRefTable *XRefTable) freeObjects() IntSet {
 
 // EnsureValidFreeList ensures the integrity of the free list associated with the recorded free objects.
 // See 7.5.4 Cross-Reference Table
-func (xRefTable *XRefTable) EnsureValidFreeList() (err error) {
+func (xRefTable *XRefTable) EnsureValidFreeList() error {
 
 	logDebugTypes.Println("EnsureValidFreeList begin")
 
@@ -369,7 +441,7 @@ func (xRefTable *XRefTable) EnsureValidFreeList() (err error) {
 		}
 
 		logInfoTypes.Println("EnsureValidFreeList: empty free list.")
-		return
+		return nil
 	}
 
 	f := int(*head.Offset)
@@ -393,7 +465,7 @@ func (xRefTable *XRefTable) EnsureValidFreeList() (err error) {
 
 	if len(m) == 0 {
 		logInfoTypes.Println("EnsureValidFreeList: end, regular linked list")
-		return
+		return nil
 	}
 
 	// insert remaining free objects into verified linked list
@@ -423,10 +495,10 @@ func (xRefTable *XRefTable) EnsureValidFreeList() (err error) {
 
 	logInfoTypes.Println("EnsureValidFreeList: end, linked list plus some dangling free objects.")
 
-	return
+	return nil
 }
 
-func (xRefTable *XRefTable) deleteObject(obj interface{}) (err error) {
+func (xRefTable *XRefTable) deleteObject(obj interface{}) error {
 
 	logInfoTypes.Println("deleteObject: begin")
 
@@ -434,19 +506,19 @@ func (xRefTable *XRefTable) deleteObject(obj interface{}) (err error) {
 	if ok {
 
 		objNumber := int(indRef.ObjectNumber)
-		obj, err = xRefTable.Dereference(indRef)
+		obj, err := xRefTable.Dereference(indRef)
 		if err != nil {
-			return
+			return err
 		}
 
 		err = xRefTable.DeleteObject(objNumber)
 		if err != nil {
-			return
+			return err
 		}
 
 		if obj == nil {
 			logInfoTypes.Println("deleteObject: end, obj == nil")
-			return
+			return err
 		}
 	}
 
@@ -454,48 +526,56 @@ func (xRefTable *XRefTable) deleteObject(obj interface{}) (err error) {
 
 	case PDFDict:
 		for _, v := range obj.Dict {
-			err = xRefTable.deleteObject(v)
+			err := xRefTable.deleteObject(v)
 			if err != nil {
-				return
+				return err
+			}
+		}
+
+	case PDFStreamDict:
+		for _, v := range obj.Dict {
+			err := xRefTable.deleteObject(v)
+			if err != nil {
+				return err
 			}
 		}
 
 	case PDFArray:
 		for _, v := range obj {
-			err = xRefTable.deleteObject(v)
+			err := xRefTable.deleteObject(v)
 			if err != nil {
-				return
+				return err
 			}
 		}
 
 	}
 
 	logInfoTypes.Println("deleteObject: end")
-	return
+	return nil
 }
 
 // DeleteObjectGraph deletes all objects reachable by indRef.
-func (xRefTable *XRefTable) DeleteObjectGraph(obj interface{}) (err error) {
+func (xRefTable *XRefTable) DeleteObjectGraph(obj interface{}) error {
 
 	logInfoTypes.Println("DeleteObjectGraph: begin")
 
 	indRef, ok := obj.(PDFIndirectRef)
 	if !ok {
-		return
+		return nil
 	}
 
 	// Delete ObjectGraph for object indRef.ObjectNumber.Value() via recursion.
-	err = xRefTable.deleteObject(indRef)
+	err := xRefTable.deleteObject(indRef)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoTypes.Println("DeleteObjectGraph: end")
-	return
+	return nil
 }
 
 // DeleteObject marks an object as free and inserts it into the free list right after the head.
-func (xRefTable *XRefTable) DeleteObject(objectNumber int) (err error) {
+func (xRefTable *XRefTable) DeleteObject(objectNumber int) error {
 
 	// see 7.5.4 Cross-Reference Table
 
@@ -503,18 +583,17 @@ func (xRefTable *XRefTable) DeleteObject(objectNumber int) (err error) {
 
 	freeListHeadEntry, err := xRefTable.Free(0)
 	if err != nil {
-		return
+		return err
 	}
 
 	entry, found := xRefTable.FindTableEntryLight(objectNumber)
 	if !found {
-		err = errors.Errorf("DeleteObject: no entry for obj #%d\n", objectNumber)
-		return
+		return errors.Errorf("DeleteObject: no entry for obj #%d\n", objectNumber)
 	}
 
 	if entry.Free {
 		logInfoTypes.Printf("DeleteObject: end %d already free\n", objectNumber)
-		return
+		return nil
 	}
 
 	*entry.Generation++
@@ -528,20 +607,18 @@ func (xRefTable *XRefTable) DeleteObject(objectNumber int) (err error) {
 
 	logInfoTypes.Printf("DeleteObject: end %d\n", objectNumber)
 
-	return
+	return nil
 }
 
 // UndeleteObject ensures an object is not recorded in the free list.
 // e.g. sometimes caused by indirect references to free objects in the original PDF file.
-func (xRefTable *XRefTable) UndeleteObject(objectNumber int) (err error) {
+func (xRefTable *XRefTable) UndeleteObject(objectNumber int) error {
 
 	logDebugTypes.Printf("UndeleteObject: begin %d\n", objectNumber)
 
-	var f, entry *XRefTableEntry
-
-	f, err = xRefTable.Free(0)
+	f, err := xRefTable.Free(0)
 	if err != nil {
-		return
+		return err
 	}
 
 	// until we have found the last free object which should point to obj 0.
@@ -549,9 +626,9 @@ func (xRefTable *XRefTable) UndeleteObject(objectNumber int) (err error) {
 
 		objNr := int(*f.Offset)
 
-		entry, err = xRefTable.Free(objNr)
+		entry, err := xRefTable.Free(objNr)
 		if err != nil {
-			return
+			return err
 		}
 
 		if objNr == objectNumber {
@@ -559,7 +636,7 @@ func (xRefTable *XRefTable) UndeleteObject(objectNumber int) (err error) {
 			*f.Offset = *entry.Offset
 			entry.Offset = nil
 			entry.Free = false
-			return
+			return nil
 		}
 
 		f = entry
@@ -568,7 +645,7 @@ func (xRefTable *XRefTable) UndeleteObject(objectNumber int) (err error) {
 
 	logDebugTypes.Printf("UndeleteObject: end: obj#%d not in free list.\n", objectNumber)
 
-	return
+	return nil
 }
 
 // indRefToObject dereferences an indirect object from the xRefTable and returns the result.
@@ -623,21 +700,19 @@ func (xRefTable *XRefTable) Dereference(obj interface{}) (interface{}, error) {
 }
 
 // DereferenceInteger resolves and validates an integer object, which may be an indirect reference.
-func (xRefTable *XRefTable) DereferenceInteger(obj interface{}) (ip *PDFInteger, err error) {
+func (xRefTable *XRefTable) DereferenceInteger(obj interface{}) (*PDFInteger, error) {
 
-	obj, err = xRefTable.Dereference(obj)
+	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
-		return
+		return nil, err
 	}
 
 	i, ok := obj.(PDFInteger)
 	if !ok {
-		err = errors.Errorf("ValidateInteger: wrong type <%v>", obj)
+		return nil, errors.Errorf("ValidateInteger: wrong type <%v>", obj)
 	}
 
-	ip = &i
-
-	return
+	return &i, nil
 }
 
 // DereferenceName resolves and validates a name object, which may be an indirect reference.
@@ -645,28 +720,25 @@ func (xRefTable *XRefTable) DereferenceName(obj interface{}, sinceVersion PDFVer
 
 	obj, err = xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
-		return
+		return n, err
 	}
 
 	n, ok := obj.(PDFName)
 	if !ok {
-		err = errors.Errorf("ValidateName: wrong type <%v>", obj)
-		return
+		return n, errors.Errorf("ValidateName: wrong type <%v>", obj)
 	}
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
-		err = errors.Errorf("ValidateName: unsupported in version %s", xRefTable.VersionString())
-		return
+		return n, errors.Errorf("ValidateName: unsupported in version %s", xRefTable.VersionString())
 	}
 
 	// Validation
 	if validate != nil && !validate(n.Value()) {
-		err = errors.Errorf("ValidateName: invalid <%s>", n.Value())
-		return
+		return n, errors.Errorf("ValidateName: invalid <%s>", n.Value())
 	}
 
-	return
+	return n, nil
 }
 
 // DereferenceStringLiteral resolves and validates a string literal object, which may be an indirect reference.
@@ -674,34 +746,31 @@ func (xRefTable *XRefTable) DereferenceStringLiteral(obj interface{}, sinceVersi
 
 	obj, err = xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
-		return
+		return s, err
 	}
 
 	s, ok := obj.(PDFStringLiteral)
 	if !ok {
-		err = errors.Errorf("ValidateStringLiteral: wrong type <%v>", obj)
-		return
+		return s, errors.Errorf("ValidateStringLiteral: wrong type <%v>", obj)
 	}
 
 	// Ensure UTF16 correctness.
 	s1, err := StringLiteralToString(s.Value())
 	if err != nil {
-		return
+		return s, err
 	}
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
-		err = errors.Errorf("ValidateStringLiteral: unsupported in version %s", xRefTable.VersionString())
-		return
+		return s, errors.Errorf("ValidateStringLiteral: unsupported in version %s", xRefTable.VersionString())
 	}
 
 	// Validation
 	if validate != nil && !validate(s1) {
-		err = errors.Errorf("ValidateStringLiteral: invalid <%s>", s1)
-		return
+		return s, errors.Errorf("ValidateStringLiteral: invalid <%s>", s1)
 	}
 
-	return
+	return s, nil
 }
 
 // DereferenceStringOrHexLiteral resolves and validates a string or hex literal object, which may be an indirect reference.
@@ -709,7 +778,7 @@ func (xRefTable *XRefTable) DereferenceStringOrHexLiteral(obj interface{}, since
 
 	o, err = xRefTable.Dereference(obj)
 	if err != nil || o == nil {
-		return
+		return nil, err
 	}
 
 	var s string
@@ -720,89 +789,80 @@ func (xRefTable *XRefTable) DereferenceStringOrHexLiteral(obj interface{}, since
 		// Ensure UTF16 correctness.
 		s, err = StringLiteralToString(str.Value())
 		if err != nil {
-			return
+			return nil, err
 		}
 
 	case PDFHexLiteral:
 		// Ensure UTF16 correctness.
 		s, err = HexLiteralToString(str.Value())
 		if err != nil {
-			return
+			return nil, err
 		}
 
 	default:
-		err = errors.Errorf("ValidateStringOrHexLiteral: wrong type <%v>", obj)
-		return
+		return nil, errors.Errorf("ValidateStringOrHexLiteral: wrong type <%v>", obj)
 
 	}
 
 	// Version check
 	if xRefTable.Version() < sinceVersion {
-		err = errors.Errorf("ValidateStringLiteral: unsupported in version %s", xRefTable.VersionString())
-		return
+		return nil, errors.Errorf("ValidateStringLiteral: unsupported in version %s", xRefTable.VersionString())
 	}
 
 	// Validation
 	if validate != nil && !validate(s) {
-		err = errors.Errorf("ValidateStringLiteral: invalid <%s>", s)
-		return
+		return nil, errors.Errorf("ValidateStringLiteral: invalid <%s>", s)
 	}
 
-	return
+	return o, nil
 }
 
 // DereferenceArray resolves an indirect object that points to a PDFArray.
-func (xRefTable *XRefTable) DereferenceArray(obj interface{}) (arrp *PDFArray, err error) {
+func (xRefTable *XRefTable) DereferenceArray(obj interface{}) (*PDFArray, error) {
 
-	obj, err = xRefTable.Dereference(obj)
+	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
-		return
+		return nil, err
 	}
 
 	arr, ok := obj.(PDFArray)
 	if !ok {
-		err = errors.Errorf("DereferenceArray: wrong type <%v>", obj)
+		return nil, errors.Errorf("DereferenceArray: wrong type <%v>", obj)
 	}
 
-	arrp = &arr
-
-	return
+	return &arr, nil
 }
 
 // DereferenceDict resolves an indirect object that points to a PDFDict.
-func (xRefTable *XRefTable) DereferenceDict(obj interface{}) (dictp *PDFDict, err error) {
+func (xRefTable *XRefTable) DereferenceDict(obj interface{}) (*PDFDict, error) {
 
-	obj, err = xRefTable.Dereference(obj)
+	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
-		return
+		return nil, err
 	}
 
 	dict, ok := obj.(PDFDict)
 	if !ok {
-		err = errors.Errorf("DereferenceDict: wrong type %T <%v>", obj, obj)
+		return nil, errors.Errorf("DereferenceDict: wrong type %T <%v>", obj, obj)
 	}
 
-	dictp = &dict
-
-	return
+	return &dict, nil
 }
 
 // DereferenceStreamDict resolves an indirect object that points to a PDFStreamDict.
-func (xRefTable *XRefTable) DereferenceStreamDict(obj interface{}) (streamDictp *PDFStreamDict, err error) {
+func (xRefTable *XRefTable) DereferenceStreamDict(obj interface{}) (*PDFStreamDict, error) {
 
-	obj, err = xRefTable.Dereference(obj)
+	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
-		return
+		return nil, err
 	}
 
 	streamDict, ok := obj.(PDFStreamDict)
 	if !ok {
-		err = errors.Errorf("DereferenceStreamDict: wrong type <%v>", obj)
+		return nil, errors.Errorf("DereferenceStreamDict: wrong type <%v>", obj)
 	}
 
-	streamDictp = &streamDict
-
-	return
+	return &streamDict, nil
 }
 
 // Catalog returns a pointer to the root object / catalog.
@@ -1011,9 +1071,9 @@ func (xRefTable *XRefTable) freeList(logStr []string) ([]string, error) {
 }
 
 // LocateNameTree locates/ensures a specific name tree.
-func (xRefTable *XRefTable) LocateNameTree(name string, ensure bool) (*PDFNameTree, error) {
+func (xRefTable *XRefTable) LocateNameTree(nameTreeName string, ensure bool) (*PDFNameTree, error) {
 
-	d, err := xRefTable.DereferenceDict(*xRefTable.Root)
+	d, err := xRefTable.Catalog()
 	if err != nil {
 		return nil, err
 	}
@@ -1024,11 +1084,13 @@ func (xRefTable *XRefTable) LocateNameTree(name string, ensure bool) (*PDFNameTr
 			return nil, nil
 		}
 		dict := NewPDFDict()
-		objNumber, err := xRefTable.InsertObject(dict)
+
+		indRef, err := xRefTable.IndRefForNewObject(dict)
 		if err != nil {
 			return nil, err
 		}
-		d.Insert("Names", NewPDFIndirectRef(objNumber, 0))
+		d.Insert("Names", *indRef)
+
 		d = &dict
 	} else {
 		d, err = xRefTable.DereferenceDict(obj)
@@ -1037,20 +1099,22 @@ func (xRefTable *XRefTable) LocateNameTree(name string, ensure bool) (*PDFNameTr
 		}
 	}
 
-	obj, found = d.Find("EmbeddedFiles")
+	obj, found = d.Find(nameTreeName)
 	if !found {
 		if !ensure {
 			return nil, nil
 		}
 		dict := NewPDFDict()
 		dict.Insert("Names", PDFArray{})
-		objNumber, err := xRefTable.InsertObject(dict)
+
+		indRef, err := xRefTable.IndRefForNewObject(dict)
 		if err != nil {
 			return nil, err
 		}
-		indRef := NewPDFIndirectRef(objNumber, 0)
-		d.Insert("EmbeddedFiles", indRef)
-		return NewNameTree(indRef), nil
+
+		d.Insert(nameTreeName, *indRef)
+
+		return NewNameTree(*indRef), nil
 	}
 
 	indRef, ok := obj.(PDFIndirectRef)
@@ -1059,4 +1123,183 @@ func (xRefTable *XRefTable) LocateNameTree(name string, ensure bool) (*PDFNameTr
 	}
 
 	return NewNameTree(indRef), nil
+}
+
+// RemoveNameTree removes a specific name tree.
+// Also removes a resulting empty names dict.
+func (xRefTable *XRefTable) RemoveNameTree(nameTreeName string) error {
+
+	rootDict, err := xRefTable.Catalog()
+	if err != nil {
+		return err
+	}
+
+	obj, found := rootDict.Find("Names")
+	if !found {
+		return errors.New("RemoveNameTree: root entry \"Names\" missing")
+	}
+
+	namesDict, err := xRefTable.DereferenceDict(obj)
+	if err != nil {
+		return err
+	}
+
+	if namesDict == nil {
+		return errors.New("RemoveNameTree: root entry \"Names\" corrupt")
+	}
+
+	// We have an existing name dict.
+
+	// Delete the name tree.
+	if indRef := namesDict.IndirectRefEntry(nameTreeName); indRef != nil {
+		err = xRefTable.DeleteObjectGraph(*indRef)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Delete the name tree entry.
+	namesDict.Delete(nameTreeName)
+	if namesDict.Len() > 0 {
+		return nil
+	}
+
+	// Remove empty names dict.
+
+	if indRef := rootDict.IndirectRefEntry("Names"); indRef != nil {
+		err = xRefTable.DeleteObject(indRef.ObjectNumber.Value())
+		if err != nil {
+			return err
+		}
+	}
+
+	rootDict.Delete("Names")
+
+	return nil
+}
+
+// RemoveCollection removes an existing Collection entry from the catalog.
+func (xRefTable *XRefTable) RemoveCollection() error {
+
+	rootDict, err := xRefTable.Catalog()
+	if err != nil {
+		return err
+	}
+
+	if indRef := rootDict.IndirectRefEntry("Collection"); indRef != nil {
+		err = xRefTable.DeleteObjectGraph(*indRef)
+		if err != nil {
+			return err
+		}
+	}
+
+	rootDict.Delete("Collection")
+
+	return nil
+}
+
+// EnsureCollection makes sure there is a Collection entry in the catalog.
+// Needed for portfolio / portable collections.
+func (xRefTable *XRefTable) EnsureCollection() error {
+
+	rootDict, err := xRefTable.Catalog()
+	if err != nil {
+		return err
+	}
+
+	_, found := rootDict.Find("Collection")
+	if found {
+		return nil
+	}
+
+	dict := NewPDFDict()
+	dict.Insert("Type", PDFName("Collection"))
+	dict.Insert("View", PDFName("D"))
+
+	schemaDict := NewPDFDict()
+	schemaDict.Insert("Type", PDFName("CollectionSchema"))
+
+	// indexCFDict := NewPDFDict()
+	// indexCFDict.Insert("Type", PDFName("CollectionField"))
+	// indexCFDict.Insert("Subtype", PDFName("S"))
+	// indexCFDict.Insert("N", PDFStringLiteral("Id"))
+	// indexCFDict.Insert("O", PDFInteger(1))
+	// schemaDict.Insert("ID", indexCFDict)
+
+	fileNameCFDict := NewPDFDict()
+	fileNameCFDict.Insert("Type", PDFName("CollectionField"))
+	fileNameCFDict.Insert("Subtype", PDFName("F"))
+	fileNameCFDict.Insert("N", PDFStringLiteral("Filename"))
+	fileNameCFDict.Insert("O", PDFInteger(1))
+	schemaDict.Insert("FileName", fileNameCFDict)
+
+	descCFDict := NewPDFDict()
+	descCFDict.Insert("Type", PDFName("CollectionField"))
+	descCFDict.Insert("Subtype", PDFName("Desc"))
+	descCFDict.Insert("N", PDFStringLiteral("Description"))
+	descCFDict.Insert("O", PDFInteger(2))
+	schemaDict.Insert("Description", descCFDict)
+
+	sizeCFDict := NewPDFDict()
+	sizeCFDict.Insert("Type", PDFName("CollectionField"))
+	sizeCFDict.Insert("Subtype", PDFName("Size"))
+	sizeCFDict.Insert("N", PDFStringLiteral("Size"))
+	sizeCFDict.Insert("O", PDFInteger(3))
+	schemaDict.Insert("Size", sizeCFDict)
+
+	modDateCFDict := NewPDFDict()
+	modDateCFDict.Insert("Type", PDFName("CollectionField"))
+	modDateCFDict.Insert("Subtype", PDFName("ModDate"))
+	modDateCFDict.Insert("N", PDFStringLiteral("Last Modification"))
+	modDateCFDict.Insert("O", PDFInteger(4))
+	schemaDict.Insert("ModDate", modDateCFDict)
+
+	//TODO use xRefTable.InsertAndUseRecycled(xRefTableEntry)
+
+	indRef, err := xRefTable.IndRefForNewObject(schemaDict)
+	if err != nil {
+		return err
+	}
+	dict.Insert("Schema", *indRef)
+
+	sortDict := NewPDFDict()
+	sortDict.Insert("S", PDFName("ModDate"))
+	sortDict.Insert("A", PDFBoolean(false))
+	dict.Insert("Sort", sortDict)
+
+	indRef, err = xRefTable.IndRefForNewObject(dict)
+	if err != nil {
+		return err
+	}
+	rootDict.Insert("Collection", *indRef)
+
+	return nil
+}
+
+// RemoveEmbeddedFilesNameTree removes both the embedded files name tree and the Collection dict.
+func (xRefTable *XRefTable) RemoveEmbeddedFilesNameTree() error {
+
+	err := xRefTable.RemoveNameTree("EmbeddedFiles")
+	if err != nil {
+		return err
+	}
+
+	return xRefTable.RemoveCollection()
+}
+
+// IDFirstElement returns the first element of ID.
+func (xRefTable *XRefTable) IDFirstElement() (id []byte, err error) {
+
+	hl, ok := ((*xRefTable.ID)[0]).(PDFHexLiteral)
+	if ok {
+		id, err = hl.Bytes()
+	} else {
+		sl, ok := ((*xRefTable.ID)[0]).(PDFStringLiteral)
+		if !ok {
+			return nil, errors.New("ID must contain PDFHexLiterals or PDFStringLiterals")
+		}
+		id, err = Unescape(sl.Value())
+	}
+
+	return id, nil
 }

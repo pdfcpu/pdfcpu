@@ -239,11 +239,6 @@ func validateListMode(s string) bool {
 	return memberOf(s, []string{"AllPages", "VisiblePages"})
 }
 
-func validateOptContentConfigDictIntent(s string) bool {
-
-	return memberOf(s, []string{"View", "Design", "All"})
-}
-
 func validateDocInfoDictTrapped(s string) bool {
 
 	return memberOf(s, []string{"True", "False", "Unknown"})

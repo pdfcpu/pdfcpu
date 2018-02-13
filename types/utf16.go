@@ -28,18 +28,17 @@ func IsStringUTF16BE(s string) bool {
 func IsUTF16BE(b []byte) (ok bool, err error) {
 
 	if len(b) == 0 {
-		return
+		return false, nil
 	}
 
 	if len(b)%2 != 0 {
-		err = errors.Errorf("DecodeUTF16String: UTF16 needs even number of bytes: %v\n", b)
-		return
+		return false, errors.Errorf("DecodeUTF16String: UTF16 needs even number of bytes: %v\n", b)
 	}
 
 	// Check BOM
 	ok = b[0] == 0xFE && b[1] == 0xFF
 
-	return
+	return ok, nil
 }
 
 func decodeUTF16String(b []byte) (s string, err error) {
@@ -146,18 +145,18 @@ func StringLiteralToString(s string) (string, error) {
 }
 
 // HexLiteralToString returns a possibly UTF16 encoded string for a hex string.
-func HexLiteralToString(hexString string) (s string, err error) {
+func HexLiteralToString(hexString string) (string, error) {
 
 	// Get corresponding byte slice.
 	b, err := hex.DecodeString(hexString)
 	if err != nil {
-		return
+		return "", err
 	}
 
 	// Check for Big Endian UTF-16.
 	isUTF16BE, err := IsUTF16BE(b)
 	if err != nil {
-		return
+		return "", err
 	}
 
 	if isUTF16BE {
@@ -165,7 +164,5 @@ func HexLiteralToString(hexString string) (s string, err error) {
 	}
 
 	// if no acceptable UTF16 encoding found, just return decoded hexstring.
-	s = string(b)
-
-	return
+	return string(b), nil
 }

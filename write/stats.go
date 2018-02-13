@@ -155,49 +155,49 @@ func statsLine(ctx *types.PDFContext) *string {
 		*xRefTable.Size,
 		missingObjs,
 		nonreferencedObjs,
-		xRefTable.Stats.UsesRootAttr(types.RootVersion),        // ok
-		xRefTable.Stats.UsesRootAttr(types.RootExtensions),     // ok
-		xRefTable.Stats.UsesRootAttr(types.RootPageLabels),     // ok
-		xRefTable.Stats.UsesRootAttr(types.RootNames),          // ok
-		xRefTable.Stats.UsesRootAttr(types.RootDests),          // ok
-		xRefTable.Stats.UsesRootAttr(types.RootViewerPrefs),    // ok
-		xRefTable.Stats.UsesRootAttr(types.RootPageLayout),     // ok
-		xRefTable.Stats.UsesRootAttr(types.RootPageMode),       // ok
-		xRefTable.Stats.UsesRootAttr(types.RootOutlines),       // ok
-		xRefTable.Stats.UsesRootAttr(types.RootThreads),        // ok
-		xRefTable.Stats.UsesRootAttr(types.RootOpenAction),     // ok
-		xRefTable.Stats.UsesRootAttr(types.RootAA),             // ok
-		xRefTable.Stats.UsesRootAttr(types.RootURI),            // ok
-		xRefTable.Stats.UsesRootAttr(types.RootAcroForm),       // ok
-		xRefTable.Stats.UsesRootAttr(types.RootMetadata),       // ok
-		xRefTable.Stats.UsesRootAttr(types.RootStructTreeRoot), // ok
-		xRefTable.Stats.UsesRootAttr(types.RootMarkInfo),       // ok
-		xRefTable.Stats.UsesRootAttr(types.RootLang),           // ok
-		xRefTable.Stats.UsesRootAttr(types.RootSpiderInfo),     // ok
-		xRefTable.Stats.UsesRootAttr(types.RootOutputIntents),  // ok
-		xRefTable.Stats.UsesRootAttr(types.RootPieceInfo),      // ok
-		xRefTable.Stats.UsesRootAttr(types.RootOCProperties),   // ok
-		xRefTable.Stats.UsesRootAttr(types.RootPerms),          // ok
-		xRefTable.Stats.UsesRootAttr(types.RootLegal),          // ok
-		xRefTable.Stats.UsesRootAttr(types.RootRequirements),   // ok
-		xRefTable.Stats.UsesRootAttr(types.RootCollection),     // ok
-		xRefTable.Stats.UsesRootAttr(types.RootNeedsRendering), // ok
-		xRefTable.Stats.UsesPageAttr(types.PageLastModified),   // ok
-		xRefTable.Stats.UsesPageAttr(types.PageResources),      // ok
-		xRefTable.Stats.UsesPageAttr(types.PageMediaBox),       // ok
-		xRefTable.Stats.UsesPageAttr(types.PageCropBox),        // ok
-		xRefTable.Stats.UsesPageAttr(types.PageBleedBox),       // ok
-		xRefTable.Stats.UsesPageAttr(types.PageTrimBox),        // ok
-		xRefTable.Stats.UsesPageAttr(types.PageArtBox),         // ok
+		xRefTable.Stats.UsesRootAttr(types.RootVersion),
+		xRefTable.Stats.UsesRootAttr(types.RootExtensions),
+		xRefTable.Stats.UsesRootAttr(types.RootPageLabels),
+		xRefTable.Stats.UsesRootAttr(types.RootNames),
+		xRefTable.Stats.UsesRootAttr(types.RootDests),
+		xRefTable.Stats.UsesRootAttr(types.RootViewerPrefs),
+		xRefTable.Stats.UsesRootAttr(types.RootPageLayout),
+		xRefTable.Stats.UsesRootAttr(types.RootPageMode),
+		xRefTable.Stats.UsesRootAttr(types.RootOutlines),
+		xRefTable.Stats.UsesRootAttr(types.RootThreads),
+		xRefTable.Stats.UsesRootAttr(types.RootOpenAction),
+		xRefTable.Stats.UsesRootAttr(types.RootAA),
+		xRefTable.Stats.UsesRootAttr(types.RootURI),
+		xRefTable.Stats.UsesRootAttr(types.RootAcroForm),
+		xRefTable.Stats.UsesRootAttr(types.RootMetadata),
+		xRefTable.Stats.UsesRootAttr(types.RootStructTreeRoot),
+		xRefTable.Stats.UsesRootAttr(types.RootMarkInfo),
+		xRefTable.Stats.UsesRootAttr(types.RootLang),
+		xRefTable.Stats.UsesRootAttr(types.RootSpiderInfo),
+		xRefTable.Stats.UsesRootAttr(types.RootOutputIntents),
+		xRefTable.Stats.UsesRootAttr(types.RootPieceInfo),
+		xRefTable.Stats.UsesRootAttr(types.RootOCProperties),
+		xRefTable.Stats.UsesRootAttr(types.RootPerms),
+		xRefTable.Stats.UsesRootAttr(types.RootLegal),
+		xRefTable.Stats.UsesRootAttr(types.RootRequirements),
+		xRefTable.Stats.UsesRootAttr(types.RootCollection),
+		xRefTable.Stats.UsesRootAttr(types.RootNeedsRendering),
+		xRefTable.Stats.UsesPageAttr(types.PageLastModified),
+		xRefTable.Stats.UsesPageAttr(types.PageResources),
+		xRefTable.Stats.UsesPageAttr(types.PageMediaBox),
+		xRefTable.Stats.UsesPageAttr(types.PageCropBox),
+		xRefTable.Stats.UsesPageAttr(types.PageBleedBox),
+		xRefTable.Stats.UsesPageAttr(types.PageTrimBox),
+		xRefTable.Stats.UsesPageAttr(types.PageArtBox),
 		xRefTable.Stats.UsesPageAttr(types.PageBoxColorInfo),
-		xRefTable.Stats.UsesPageAttr(types.PageContents), // ok
+		xRefTable.Stats.UsesPageAttr(types.PageContents),
 		xRefTable.Stats.UsesPageAttr(types.PageRotate),
-		xRefTable.Stats.UsesPageAttr(types.PageGroup), // ok
-		xRefTable.Stats.UsesPageAttr(types.PageThumb), // ok
+		xRefTable.Stats.UsesPageAttr(types.PageGroup),
+		xRefTable.Stats.UsesPageAttr(types.PageThumb),
 		xRefTable.Stats.UsesPageAttr(types.PageB),
 		xRefTable.Stats.UsesPageAttr(types.PageDur),
 		xRefTable.Stats.UsesPageAttr(types.PageTrans),
-		xRefTable.Stats.UsesPageAttr(types.PageAnnots), // ok
+		xRefTable.Stats.UsesPageAttr(types.PageAnnots),
 		xRefTable.Stats.UsesPageAttr(types.PageAA),
 		xRefTable.Stats.UsesPageAttr(types.PageMetadata),
 		xRefTable.Stats.UsesPageAttr(types.PagePieceInfo),
@@ -215,13 +215,12 @@ func statsLine(ctx *types.PDFContext) *string {
 }
 
 // AppendStatsFile appends a stats line for this xRefTable to the configured csv file name.
-func AppendStatsFile(ctx *types.PDFContext) (err error) {
+func AppendStatsFile(ctx *types.PDFContext) error {
 
 	fileName := ctx.StatsFileName
 
 	// if file does not exist, create file
 	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_WRONLY, 0600)
-
 	if err != nil {
 
 		if os.IsExist(err) {
@@ -235,7 +234,7 @@ func AppendStatsFile(ctx *types.PDFContext) (err error) {
 
 		_, err = file.WriteString(*statsHeadLine())
 		if err != nil {
-			return
+			return err
 		}
 
 	}
@@ -246,5 +245,5 @@ func AppendStatsFile(ctx *types.PDFContext) (err error) {
 
 	_, err = file.WriteString(*statsLine(ctx))
 
-	return
+	return err
 }

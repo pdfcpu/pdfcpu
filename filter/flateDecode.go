@@ -74,7 +74,7 @@ func (f flate) Decode(r io.Reader) (*bytes.Buffer, error) {
 }
 
 // decodePostProcess
-func (f flate) decodePostProcess(rin io.Reader) (a *bytes.Buffer, err error) {
+func (f flate) decodePostProcess(rin io.Reader) (*bytes.Buffer, error) {
 
 	// The only postprocessing needed (for decoding object streams) is: PredictorUp with PngUp.
 
@@ -95,46 +95,41 @@ func (f flate) decodePostProcess(rin io.Reader) (a *bytes.Buffer, err error) {
 
 	c := f.decodeParms.IntEntry("Columns")
 	if c == nil {
-		err = errFlateMissingDecodeParmColumn
-		return
+		return nil, errFlateMissingDecodeParmColumn
 	}
 
 	columns := *c
 
 	p := f.decodeParms.IntEntry("Predictor")
 	if p == nil {
-		err = errFlateMissingDecodeParmPredictor
-		return
+		return nil, errFlateMissingDecodeParmPredictor
 	}
 
 	predictor := *p
 
 	// PredictorUp is a popular predictor used for flate encoded stream dicts.
 	if predictor != PredictorUp {
-		err = errors.Errorf("Filter FlateDecode: Predictor %d unsupported", predictor)
-		return
+		return nil, errors.Errorf("Filter FlateDecode: Predictor %d unsupported", predictor)
 	}
 
 	// BitsPerComponent optional, integer: 1,2,4,8,16 (Default:8)
 	// The number of bits used to represent each colour component in a sample.
 	bpc := f.decodeParms.IntEntry("BitsPerComponents")
 	if bpc != nil {
-		err = errors.Errorf("Filter FlateDecode: Unexpected \"BitsPerComponent\": %d", *bpc)
-		return
+		return nil, errors.Errorf("Filter FlateDecode: Unexpected \"BitsPerComponent\": %d", *bpc)
 	}
 
 	// Colors, optional, integer: 1,2,3,4 (Default:1)
 	// The number of interleaved colour components per sample.
 	colors := f.decodeParms.IntEntry("Colors")
 	if colors != nil {
-		err = errors.Errorf("Filter FlateDecode: Unexpected \"Colors\": %d", *colors)
-		return
+		return nil, errors.Errorf("Filter FlateDecode: Unexpected \"Colors\": %d", *colors)
 	}
 
 	buf := new(bytes.Buffer)
-	_, err = buf.ReadFrom(rin)
+	_, err := buf.ReadFrom(rin)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	b := buf.Bytes()
@@ -147,8 +142,7 @@ func (f flate) decodePostProcess(rin io.Reader) (a *bytes.Buffer, err error) {
 	j := 0
 	for i := 0; i < len(b); i += columns + 1 {
 		if b[i] != PngUp {
-			err = errFlatePostProcessing
-			return
+			return nil, errFlatePostProcessing
 		}
 		fbuf = append(fbuf, b[i+1:i+columns+1]...)
 		j++

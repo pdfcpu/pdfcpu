@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// PDFContext represents the context for processing PDF files with pdfcpu.
+// PDFContext represents the context for processing PDF files.
 type PDFContext struct {
 	*Configuration
 	*XRefTable
@@ -17,8 +17,8 @@ type PDFContext struct {
 	Write    *WriteContext
 }
 
-// NewPDFContext initializes a new PDF context.
-func NewPDFContext(fileName string, file *os.File, config *Configuration) (ctx *PDFContext, err error) {
+// NewPDFContext initializes a new PDFContext.
+func NewPDFContext(fileName string, file *os.File, config *Configuration) (*PDFContext, error) {
 
 	if config == nil {
 		config = NewDefaultConfiguration()
@@ -26,10 +26,10 @@ func NewPDFContext(fileName string, file *os.File, config *Configuration) (ctx *
 
 	fileInfo, err := file.Stat()
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	ctx = &PDFContext{
+	ctx := &PDFContext{
 		config,
 		newXRefTable(config.ValidationMode),
 		newReadContext(fileName, file, fileInfo.Size()),
@@ -37,7 +37,7 @@ func NewPDFContext(fileName string, file *os.File, config *Configuration) (ctx *
 		NewWriteContext(config.Eol),
 	}
 
-	return
+	return ctx, nil
 }
 
 // ResetWriteContext prepares an existing WriteContext for a new file to be written.

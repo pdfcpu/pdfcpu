@@ -6,7 +6,7 @@ import (
 	"github.com/hhrutter/pdfcpu/types"
 )
 
-func validateExponentialInterpolationFunctionDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateExponentialInterpolationFunctionDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	logInfoValidate.Println("*** validateExponentialInterpolationFunctionDict begin ***")
 
@@ -15,37 +15,37 @@ func validateExponentialInterpolationFunctionDict(xRefTable *types.XRefTable, di
 		return errors.Errorf("validateExponentialInterpolationFunctionDict: unsupported in version %s.\n", xRefTable.VersionString())
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, dict, "functionDict", "Domain", REQUIRED, types.V13, nil)
+	_, err := validateNumberArrayEntry(xRefTable, dict, "functionDict", "Domain", REQUIRED, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberArrayEntry(xRefTable, dict, "functionDict", "Range", OPTIONAL, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberArrayEntry(xRefTable, dict, "functionDict", "C0", OPTIONAL, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberArrayEntry(xRefTable, dict, "functionDict", "C1", OPTIONAL, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberEntry(xRefTable, dict, "functionDict", "N", REQUIRED, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateExponentialInterpolationFunctionDict end ***")
 
-	return
+	return nil
 }
 
-func validateStitchingFunctionDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateStitchingFunctionDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	logInfoValidate.Printf("validateStitchingFunctionDict begin ***")
 
@@ -54,37 +54,37 @@ func validateStitchingFunctionDict(xRefTable *types.XRefTable, dict *types.PDFDi
 		return errors.Errorf("validateStitchingFunctionDict: unsupported in version %s.\n", xRefTable.VersionString())
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, dict, "functionDict", "Domain", REQUIRED, types.V13, nil)
+	_, err := validateNumberArrayEntry(xRefTable, dict, "functionDict", "Domain", REQUIRED, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberArrayEntry(xRefTable, dict, "functionDict", "Range", OPTIONAL, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateFunctionArrayEntry(xRefTable, dict, "functionDict", "Functions", REQUIRED, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberArrayEntry(xRefTable, dict, "functionDict", "Bounds", REQUIRED, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberArrayEntry(xRefTable, dict, "functionDict", "Encode", REQUIRED, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateStitchingFunctionDict end ***")
 
-	return
+	return nil
 }
 
-func validateSampledFunctionStreamDict(xRefTable *types.XRefTable, dict *types.PDFStreamDict) (err error) {
+func validateSampledFunctionStreamDict(xRefTable *types.XRefTable, dict *types.PDFStreamDict) error {
 
 	logInfoValidate.Printf("*** validateSampledFunctionStreamDict begin ***")
 
@@ -93,47 +93,47 @@ func validateSampledFunctionStreamDict(xRefTable *types.XRefTable, dict *types.P
 		return errors.Errorf("validateSampledFunctionStreamDict: unsupported in version %s.\n", xRefTable.VersionString())
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, &dict.PDFDict, "functionDict", "Domain", REQUIRED, types.V12, nil)
+	_, err := validateNumberArrayEntry(xRefTable, &dict.PDFDict, "functionDict", "Domain", REQUIRED, types.V12, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberArrayEntry(xRefTable, &dict.PDFDict, "functionDict", "Range", REQUIRED, types.V12, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateIntegerArrayEntry(xRefTable, &dict.PDFDict, "functionDict", "Size", REQUIRED, types.V12, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateIntegerEntry(xRefTable, &dict.PDFDict, "functionDict", "BitsPerSample", REQUIRED, types.V12, validateBitsPerSample)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateIntegerEntry(xRefTable, &dict.PDFDict, "functionDict", "Order", OPTIONAL, types.V12, func(i int) bool { return i == 1 || i == 3 })
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberArrayEntry(xRefTable, &dict.PDFDict, "functionDict", "Encode", OPTIONAL, types.V12, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberArrayEntry(xRefTable, &dict.PDFDict, "functionDict", "Decode", OPTIONAL, types.V12, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateSampledFunctionStreamDict end ***")
 
-	return
+	return nil
 }
 
-func validatePostScriptCalculatorFunctionStreamDict(xRefTable *types.XRefTable, dict *types.PDFStreamDict) (err error) {
+func validatePostScriptCalculatorFunctionStreamDict(xRefTable *types.XRefTable, dict *types.PDFStreamDict) error {
 
 	logInfoValidate.Println("*** validatePostScriptCalculatorFunctionStreamDict begin ***")
 
@@ -142,73 +142,61 @@ func validatePostScriptCalculatorFunctionStreamDict(xRefTable *types.XRefTable, 
 		return errors.Errorf("validatePostScriptCalculatorFunctionStreamDict: unsupported in version %s.\n", xRefTable.VersionString())
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, &dict.PDFDict, "functionDict", "Domain", REQUIRED, types.V13, nil)
+	_, err := validateNumberArrayEntry(xRefTable, &dict.PDFDict, "functionDict", "Domain", REQUIRED, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberArrayEntry(xRefTable, &dict.PDFDict, "functionDict", "Range", REQUIRED, types.V13, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validatePostScriptCalculatorFunctionStreamDict end ***")
 
-	return
+	return nil
 }
 
-func processFunctionDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func processFunctionDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	var funcType *types.PDFInteger
 
-	funcType, err = validateIntegerEntry(xRefTable, dict, "functionDict", "FunctionType", REQUIRED, types.V10, func(i int) bool { return i == 2 || i == 3 })
+	funcType, err := validateIntegerEntry(xRefTable, dict, "functionDict", "FunctionType", REQUIRED, types.V10, func(i int) bool { return i == 2 || i == 3 })
 	if err != nil {
-		return
+		return err
 	}
 
 	switch *funcType {
 
 	case 2:
 		err = validateExponentialInterpolationFunctionDict(xRefTable, dict)
-		if err != nil {
-			return
-		}
 
 	case 3:
 		err = validateStitchingFunctionDict(xRefTable, dict)
-		if err != nil {
-			return
-		}
 
 	}
 
-	return
+	return err
 }
 
-func processFunctionStreamDict(xRefTable *types.XRefTable, sd *types.PDFStreamDict) (err error) {
+func processFunctionStreamDict(xRefTable *types.XRefTable, sd *types.PDFStreamDict) error {
 
 	var funcType *types.PDFInteger
-	funcType, err = validateIntegerEntry(xRefTable, &sd.PDFDict, "functionDict", "FunctionType", REQUIRED, types.V10, func(i int) bool { return i == 0 || i == 4 })
+	funcType, err := validateIntegerEntry(xRefTable, &sd.PDFDict, "functionDict", "FunctionType", REQUIRED, types.V10, func(i int) bool { return i == 0 || i == 4 })
 	if err != nil {
-		return
+		return err
 	}
 
 	switch *funcType {
 	case 0:
 		err = validateSampledFunctionStreamDict(xRefTable, sd)
-		if err != nil {
-			return
-		}
 
 	case 4:
 		err = validatePostScriptCalculatorFunctionStreamDict(xRefTable, sd)
-		if err != nil {
-			return
-		}
 
 	}
 
-	return
+	return err
 }
 
 func processFunction(xRefTable *types.XRefTable, obj interface{}) (err error) {
@@ -227,47 +215,37 @@ func processFunction(xRefTable *types.XRefTable, obj interface{}) (err error) {
 
 		// process function  2,3
 		err = processFunctionDict(xRefTable, &obj)
-		if err != nil {
-			return
-		}
 
 	case types.PDFStreamDict:
 
 		// process function  0,4
 		err = processFunctionStreamDict(xRefTable, &obj)
-		if err != nil {
-			return
-		}
 
 	default:
-		err = errors.New("processFunction: obj must be dict or stream dict")
+		return errors.New("processFunction: obj must be dict or stream dict")
 	}
 
 	logInfoValidate.Printf("*** processFunction end ***")
 
-	return
+	return err
 }
 
-func validateFunction(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateFunction(xRefTable *types.XRefTable, obj interface{}) error {
 
 	logInfoValidate.Printf("*** writeFunction begin ***")
 
-	obj, err = xRefTable.Dereference(obj)
+	obj, err := xRefTable.Dereference(obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	if obj == nil {
-		err = errors.New("writeFunction: missing object")
-		return
+		return errors.New("writeFunction: missing object")
 	}
 
 	err = processFunction(xRefTable, obj)
-	if err != nil {
-		return
-	}
 
 	logInfoValidate.Printf("*** writeFunction end ***")
 
-	return
+	return err
 }

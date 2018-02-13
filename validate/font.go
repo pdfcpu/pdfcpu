@@ -5,7 +5,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateFontFile3SubType(sd *types.PDFStreamDict, fontType string) (err error) {
+func validateFontFile3SubType(sd *types.PDFStreamDict, fontType string) error {
 
 	dictSubType := sd.Subtype()
 
@@ -27,22 +27,22 @@ func validateFontFile3SubType(sd *types.PDFStreamDict, fontType string) (err err
 		}
 	}
 
-	return
+	return nil
 }
 
-func validateFontFile(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, fontType string, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateFontFile(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, fontType string, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Printf("*** validateFontFile begin: dictName=%s entryName=%s fontType=%s ***\n", dictName, entryName, fontType)
 
 	streamDict, err := validateStreamDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	if streamDict == nil {
 		// optional and nil or already written
 		logInfoValidate.Printf("validateFontFile end: is nil. dictName=%s entryName=%s fontType=%s\n", dictName, entryName, fontType)
-		return
+		return nil
 	}
 
 	// Process font file stream dict entries.
@@ -52,7 +52,7 @@ func validateFontFile(xRefTable *types.XRefTable, dict *types.PDFDict, dictName 
 
 		err = validateFontFile3SubType(streamDict, fontType)
 		if err != nil {
-			return
+			return err
 		}
 
 	}
@@ -62,28 +62,28 @@ func validateFontFile(xRefTable *types.XRefTable, dict *types.PDFDict, dictName 
 
 	_, err = validateIntegerEntry(xRefTable, &streamDict.PDFDict, dName, "Length1", (fontType == "Type1" || fontType == "TrueType") && !compactFontFormat, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateIntegerEntry(xRefTable, &streamDict.PDFDict, dName, "Length2", fontType == "Type1" && !compactFontFormat, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateIntegerEntry(xRefTable, &streamDict.PDFDict, dName, "Length3", fontType == "Type1" && !compactFontFormat, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Metadata, stream, optional, since 1.4
 	err = validateMetadata(xRefTable, &streamDict.PDFDict, OPTIONAL, types.V14)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Printf("*** validateFontFile end: dictName=%s entryName=%s fontType=%s ***\n", dictName, entryName, fontType)
 
-	return
+	return nil
 }
 
 func validateFontDescriptorType(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
@@ -107,16 +107,16 @@ func validateFontDescriptorType(xRefTable *types.XRefTable, dict *types.PDFDict)
 	return
 }
 
-func validateFontDescriptorPart1(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, fontDictType string) (err error) {
+func validateFontDescriptorPart1(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, fontDictType string) error {
 
-	err = validateFontDescriptorType(xRefTable, dict)
+	err := validateFontDescriptorType(xRefTable, dict)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNameEntry(xRefTable, dict, dictName, "FontName", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	sinceVersion := types.V15
@@ -125,7 +125,7 @@ func validateFontDescriptorPart1(xRefTable *types.XRefTable, dict *types.PDFDict
 	}
 	_, err = validateStringEntry(xRefTable, dict, dictName, "FontFamily", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	sinceVersion = types.V15
@@ -134,7 +134,7 @@ func validateFontDescriptorPart1(xRefTable *types.XRefTable, dict *types.PDFDict
 	}
 	_, err = validateNameEntry(xRefTable, dict, dictName, "FontStretch", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	sinceVersion = types.V15
@@ -143,145 +143,135 @@ func validateFontDescriptorPart1(xRefTable *types.XRefTable, dict *types.PDFDict
 	}
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "FontWeight", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "Flags", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateRectangleEntry(xRefTable, dict, dictName, "FontBBox", fontDictType != "Type3", types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "ItalicAngle", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
-	return
+	return nil
 }
 
-func validateFontDescriptorPart2(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, fontDictType string) (err error) {
+func validateFontDescriptorPart2(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, fontDictType string) error {
 
-	_, err = validateNumberEntry(xRefTable, dict, dictName, "Ascent", fontDictType != "Type3", types.V10, nil)
+	_, err := validateNumberEntry(xRefTable, dict, dictName, "Ascent", fontDictType != "Type3", types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "Descent", fontDictType != "Type3", types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "Leading", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "CapHeight", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "XHeight", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "StemV", fontDictType != "Type3", types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "StemH", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "AvgWidth", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "MaxWidth", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "MissingWidth", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = validateFontDescriptorFontFile(xRefTable, dict, dictName, fontDictType)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = validateStringEntry(xRefTable, dict, dictName, "CharSet", OPTIONAL, types.V11, nil)
 	if err != nil {
-		return
+		return err
 	}
 
-	return
+	return nil
 }
 
 func validateFontDescriptorFontFile(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, fontDictType string) (err error) {
 
-	if fontDictType == "Type1" || fontDictType == "MMType1" {
+	switch fontDictType {
+
+	case "Type1", "MMType1":
 
 		err = validateFontFile(xRefTable, dict, dictName, "FontFile", fontDictType, OPTIONAL, types.V10)
 		if err != nil {
-			return
+			return err
 		}
 
 		err = validateFontFile(xRefTable, dict, dictName, "FontFile3", fontDictType, OPTIONAL, types.V12)
-		if err != nil {
-			return
-		}
 
-	}
-
-	if fontDictType == "TrueType" || fontDictType == "CIDFontType2" {
+	case "TrueType", "CIDFontType2":
 		err = validateFontFile(xRefTable, dict, dictName, "FontFile2", fontDictType, OPTIONAL, types.V11)
-		if err != nil {
-			return
-		}
-	}
 
-	if fontDictType == "CIDFontType0" {
+	case "CIDFontType0":
 		err = validateFontFile(xRefTable, dict, dictName, "FontFile3", fontDictType, OPTIONAL, types.V13)
-		if err != nil {
-			return
-		}
-	}
 
-	if fontDictType == "OpenType" {
+	case "OpenType":
 		err = validateFontFile(xRefTable, dict, dictName, "FontFile3", fontDictType, OPTIONAL, types.V16)
-		if err != nil {
-			return
-		}
+
+	default:
+		return errors.Errorf("unknown fontDictType: %s\n", fontDictType)
+
 	}
 
-	return
+	return err
 }
 
-func validateFontDescriptor(xRefTable *types.XRefTable, fontDict *types.PDFDict, fontDictName string, fontDictType string, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateFontDescriptor(xRefTable *types.XRefTable, fontDict *types.PDFDict, fontDictName string, fontDictType string, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Printf("*** validateFontDescriptor begin: dictName=%s referrer=%s***\n", fontDictName, fontDictType)
 
 	dict, err := validateDictEntry(xRefTable, fontDict, fontDictName, "FontDescriptor", required, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	if dict == nil {
 		// optional and nil or already written
 		logInfoValidate.Println("validateFontDescriptor end")
-		return
+		return nil
 	}
 
 	dictName := "fdDict"
@@ -290,12 +280,12 @@ func validateFontDescriptor(xRefTable *types.XRefTable, fontDict *types.PDFDict,
 
 	err = validateFontDescriptorPart1(xRefTable, dict, dictName, fontDictType)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = validateFontDescriptorPart2(xRefTable, dict, dictName, fontDictType)
 	if err != nil {
-		return
+		return err
 	}
 
 	if fontDictType == "CIDFontType0" || fontDictType == "CIDFontType2" {
@@ -316,35 +306,35 @@ func validateFontDescriptor(xRefTable *types.XRefTable, fontDict *types.PDFDict,
 		// Style, dict, optional
 		_, err = validateDictEntry(xRefTable, dict, dictName, "Style", OPTIONAL, types.V10, validateStyleDict)
 		if err != nil {
-			return
+			return err
 		}
 
 		// Lang, name, optional
 		_, err = validateNameEntry(xRefTable, dict, dictName, "Lang", OPTIONAL, types.V15, nil)
 		if err != nil {
-			return
+			return err
 		}
 
 		// FD, dict, optional
 		_, err = validateDictEntry(xRefTable, dict, dictName, "FD", OPTIONAL, types.V10, nil)
 		if err != nil {
-			return
+			return err
 		}
 
 		// CIDSet, stream, optional
 		_, err = validateStreamDictEntry(xRefTable, dict, dictName, "CIDSet", OPTIONAL, types.V10, nil)
 		if err != nil {
-			return
+			return err
 		}
 
 	}
 
 	logInfoValidate.Println("*** validateFontDescriptor end ***")
 
-	return
+	return nil
 }
 
-func validateFontEncoding(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool) (err error) {
+func validateFontEncoding(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool) error {
 
 	logInfoValidate.Printf("*** validateFontEncoding begin: dictName=%s ***", dictName)
 
@@ -353,25 +343,23 @@ func validateFontEncoding(xRefTable *types.XRefTable, dict *types.PDFDict, dictN
 	obj, found := dict.Find(entryName)
 	if !found || obj == nil {
 		if required {
-			err = errors.Errorf("validateFontEncoding: dict=%s required entry \"%s\" missing", dictName, entryName)
-			return
+			return errors.Errorf("validateFontEncoding: dict=%s required entry \"%s\" missing", dictName, entryName)
 		}
 		logInfoValidate.Printf("validateFontEncoding end: \"%s\" is nil.\n", entryName)
-		return
+		return nil
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	obj, err := xRefTable.Dereference(obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	if obj == nil {
 		if required {
-			err = errors.Errorf("validateFontEncoding: dict=%s required entry \"%s\" missing", dictName, entryName)
-			return
+			return errors.Errorf("validateFontEncoding: dict=%s required entry \"%s\" missing", dictName, entryName)
 		}
 		logInfoValidate.Printf("validateFontEncoding end: entry \"%s\" is nil\n", entryName)
-		return
+		return nil
 	}
 
 	switch obj := obj.(type) {
@@ -379,23 +367,23 @@ func validateFontEncoding(xRefTable *types.XRefTable, dict *types.PDFDict, dictN
 	case types.PDFName:
 		s := obj.String()
 		if !validateFontEncodingName(s) {
-			err = errors.Errorf("validateFontEncoding: invalid Encoding name: %s\n", s)
+			return errors.Errorf("validateFontEncoding: invalid Encoding name: %s\n", s)
 		}
 
 	case types.PDFDict:
 		// no further processing
 
 	default:
-		err = errors.Errorf("validateFontEncoding: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+		return errors.Errorf("validateFontEncoding: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 
 	}
 
 	logInfoValidate.Printf("*** validateFontEncoding end: \"%s\" is nil. ***", entryName)
 
-	return
+	return nil
 }
 
-func validateTrueTypeFontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateTrueTypeFontDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// see 9.6.3
 
@@ -406,9 +394,9 @@ func validateTrueTypeFontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (
 	// Name, name, obsolet and should not be used.
 
 	// BaseFont, name, required
-	_, err = validateNameEntry(xRefTable, dict, dictName, "BaseFont", REQUIRED, types.V10, nil)
+	_, err := validateNameEntry(xRefTable, dict, dictName, "BaseFont", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// FirstChar, integer, required.
@@ -418,7 +406,7 @@ func validateTrueTypeFontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (
 	}
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "FirstChar", required, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// LastChar, integer, required.
@@ -428,7 +416,7 @@ func validateTrueTypeFontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (
 	}
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "LastChar", required, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Widths, array of numbers.
@@ -438,7 +426,7 @@ func validateTrueTypeFontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (
 	}
 	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "Widths", required, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// FontDescriptor, dictionary, required
@@ -448,33 +436,33 @@ func validateTrueTypeFontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (
 	}
 	err = validateFontDescriptor(xRefTable, dict, dictName, "TrueType", required, types.V10)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Encoding: name or dict, optional
 	err = validateFontEncoding(xRefTable, dict, dictName, OPTIONAL)
 	if err != nil {
-		return
+		return err
 	}
 
 	// ToUnicode, stream, optional
 	_, err = validateStreamDictEntry(xRefTable, dict, dictName, "ToUnicode", OPTIONAL, types.V12, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateTrueTypeFontDict end ***")
 
-	return
+	return nil
 }
 
-func validateCIDToGIDMap(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateCIDToGIDMap(xRefTable *types.XRefTable, obj interface{}) error {
 
 	logInfoValidate.Println("*** validateCIDToGIDMap begin ***")
 
-	obj, err = xRefTable.Dereference(obj)
+	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
-		return
+		return err
 	}
 
 	switch obj := obj.(type) {
@@ -482,37 +470,36 @@ func validateCIDToGIDMap(xRefTable *types.XRefTable, obj interface{}) (err error
 	case types.PDFName:
 		s := obj.String()
 		if s != "Identity" {
-			err = errors.Errorf("validateCIDToGIDMap: invalid name: %s - must be \"Identity\"\n", s)
+			return errors.Errorf("validateCIDToGIDMap: invalid name: %s - must be \"Identity\"\n", s)
 		}
 
 	case types.PDFStreamDict:
 		// no further processing
 
 	default:
-		err = errors.New("validateCIDToGIDMap: corrupt entry")
+		return errors.New("validateCIDToGIDMap: corrupt entry")
 
 	}
 
 	logInfoValidate.Println("*** validateCIDToGIDMap end ***")
 
-	return
+	return nil
 }
 
-func validateCIDFontGlyphWidths(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string,
-	required bool, sinceVersion types.PDFVersion) (err error) {
+func validateCIDFontGlyphWidths(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validateCIDFontGlyphWidths begin ***")
 
 	arr, err := validateArrayEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
 	if err != nil || arr == nil {
-		return
+		return err
 	}
 
 	for i, obj := range *arr {
 
 		obj, err = xRefTable.Dereference(obj)
 		if err != nil || obj == nil {
-			return
+			return err
 		}
 
 		switch obj.(type) {
@@ -526,7 +513,7 @@ func validateCIDFontGlyphWidths(xRefTable *types.XRefTable, dict *types.PDFDict,
 		case types.PDFArray:
 			_, err = validateNumberArray(xRefTable, obj)
 			if err != nil {
-				return
+				return err
 			}
 
 		default:
@@ -537,28 +524,29 @@ func validateCIDFontGlyphWidths(xRefTable *types.XRefTable, dict *types.PDFDict,
 
 	logInfoValidate.Println("*** validateCIDFontGlyphWidths end ***")
 
-	return
+	return nil
 }
 
-func validateCIDFontDictEntryCIDSystemInfo(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) (err error) {
+func validateCIDFontDictEntryCIDSystemInfo(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	var d *types.PDFDict
 
-	d, err = validateDictEntry(xRefTable, dict, dictName, "CIDSystemInfo", REQUIRED, types.V10, nil)
+	d, err := validateDictEntry(xRefTable, dict, dictName, "CIDSystemInfo", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
+
 	if d != nil {
 		err = validateCIDSystemInfoDict(xRefTable, d)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
-	return
+	return nil
 }
 
-func validateCIDFontDictEntryCIDToGIDMap(xRefTable *types.XRefTable, dict *types.PDFDict, isCIDFontType2 bool) (err error) {
+func validateCIDFontDictEntryCIDToGIDMap(xRefTable *types.XRefTable, dict *types.PDFDict, isCIDFontType2 bool) error {
 
 	if obj, found := dict.Find("CIDToGIDMap"); found {
 
@@ -566,17 +554,17 @@ func validateCIDFontDictEntryCIDToGIDMap(xRefTable *types.XRefTable, dict *types
 			return errors.New("validateCIDFontDict: entry CIDToGIDMap not allowed - must be CIDFontType2")
 		}
 
-		err = validateCIDToGIDMap(xRefTable, obj)
+		err := validateCIDToGIDMap(xRefTable, obj)
 		if err != nil {
-			return
+			return err
 		}
 
 	}
 
-	return
+	return nil
 }
 
-func validateCIDFontDict(xRefTable *types.XRefTable, fontDict *types.PDFDict) (err error) {
+func validateCIDFontDict(xRefTable *types.XRefTable, fontDict *types.PDFDict) error {
 
 	// see 9.7.4
 
@@ -602,61 +590,61 @@ func validateCIDFontDict(xRefTable *types.XRefTable, fontDict *types.PDFDict) (e
 	dictName := "CIDFontDict"
 
 	// BaseFont, name, required
-	_, err = validateNameEntry(xRefTable, fontDict, dictName, "BaseFont", REQUIRED, types.V10, nil)
+	_, err := validateNameEntry(xRefTable, fontDict, dictName, "BaseFont", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// CIDSystemInfo, dict, required
 	err = validateCIDFontDictEntryCIDSystemInfo(xRefTable, fontDict, "CIDFontDict")
 	if err != nil {
-		return
+		return err
 	}
 
 	// FontDescriptor, dictionary, required
 	err = validateFontDescriptor(xRefTable, fontDict, dictName, fontType, REQUIRED, types.V10)
 	if err != nil {
-		return
+		return err
 	}
 
 	// DW, integer, optional
 	_, err = validateIntegerEntry(xRefTable, fontDict, dictName, "DW", OPTIONAL, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// W, array, optional
 	err = validateCIDFontGlyphWidths(xRefTable, fontDict, dictName, "W", OPTIONAL, types.V10)
 	if err != nil {
-		return
+		return err
 	}
 
 	// DW2, array, optional
 	// An array of two numbers specifying the default metrics for vertical writing.
 	_, err = validateNumberArrayEntry(xRefTable, fontDict, dictName, "DW2", OPTIONAL, types.V10, func(arr types.PDFArray) bool { return len(arr) == 2 })
 	if err != nil {
-		return
+		return err
 	}
 
 	// W2, array, optional
 	err = validateCIDFontGlyphWidths(xRefTable, fontDict, dictName, "W2", OPTIONAL, types.V10)
 	if err != nil {
-		return
+		return err
 	}
 
 	// CIDToGIDMap, stream or (name /Identity)
 	// optional, Type 2 CIDFonts with embedded associated TrueType font program only.
 	err = validateCIDFontDictEntryCIDToGIDMap(xRefTable, fontDict, isCIDFontType2)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	logInfoValidate.Printf("*** validateCIDFontDict end ***")
 
-	return
+	return nil
 }
 
-func validateDescendantFonts(xRefTable *types.XRefTable, fontDict *types.PDFDict, fontDictName string, required bool) (err error) {
+func validateDescendantFonts(xRefTable *types.XRefTable, fontDict *types.PDFDict, fontDictName string, required bool) error {
 
 	logInfoValidate.Printf("*** validateDescendantFonts begin ***")
 
@@ -664,64 +652,63 @@ func validateDescendantFonts(xRefTable *types.XRefTable, fontDict *types.PDFDict
 
 	arr, err := validateArrayEntry(xRefTable, fontDict, fontDictName, "DescendantFonts", required, types.V10, func(arr types.PDFArray) bool { return len(arr) == 1 })
 	if err != nil {
-		return
+		return err
 	}
-
 	if arr == nil {
 		logInfoValidate.Println("validateDescendantFonts end")
-		return
+		return nil
 	}
 
 	dict, err := xRefTable.DereferenceDict((*arr)[0])
 	if err != nil {
-		return
+		return err
 	}
 
 	if dict == nil {
 		if required {
 			return errors.Errorf("validateDescendantFonts: dict=%s required descendant font dict missing.\n", fontDictName)
 		}
-		return
+		return nil
 	}
 
 	err = validateCIDFontDict(xRefTable, dict)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateDescendantFonts end ***")
 
-	return
+	return nil
 }
 
-func validateType0FontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateType0FontDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	logInfoValidate.Println("*** validateType0FontDict begin ***")
 
 	dictName := "type0FontDict"
 
 	// BaseFont, name, required
-	_, err = validateNameEntry(xRefTable, dict, dictName, "BaseFont", REQUIRED, types.V10, nil)
+	_, err := validateNameEntry(xRefTable, dict, dictName, "BaseFont", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Encoding: name or CMap stream dict, required
 	err = validateType0FontEncoding(xRefTable, dict, dictName, REQUIRED)
 	if err != nil {
-		return
+		return err
 	}
 
 	// DescendantFonts: one-element array specifying the CIDFont dictionary that is the descendant of this Type 0 font, required.
 	err = validateDescendantFonts(xRefTable, dict, dictName, REQUIRED)
 	if err != nil {
-		return
+		return err
 	}
 
 	// ToUnicode, CMap stream dict, optional
 	_, err = validateStreamDictEntry(xRefTable, dict, dictName, "ToUnicode", OPTIONAL, types.V12, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	//if streamDict, ok := writeStreamDictEntry(source, dest, dict, "type0FontDict", "ToUnicode", OPTIONAL, V12, nil); ok {
@@ -730,10 +717,10 @@ func validateType0FontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err
 
 	logInfoValidate.Println("*** validateType0FontDict end ***")
 
-	return
+	return nil
 }
 
-func validateType1FontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateType1FontDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// see 9.6.2
 
@@ -746,7 +733,7 @@ func validateType1FontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err
 	// BaseFont, name, required
 	fontName, err := validateNameEntry(xRefTable, dict, dictName, "BaseFont", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	required := xRefTable.Version() >= types.V15 || !validateStandardType1Font((*fontName).String())
@@ -756,7 +743,7 @@ func validateType1FontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err
 	// FirstChar, integer, required except for standard 14 fonts. since 1.5 always required.
 	fc, err := validateIntegerEntry(xRefTable, dict, dictName, "FirstChar", required, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	if !required && fc != nil {
@@ -771,69 +758,69 @@ func validateType1FontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err
 	// LastChar, integer, required except for standard 14 fonts. since 1.5 always required.
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "LastChar", required, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Widths, array of numbers, required except for standard 14 fonts. since 1.5 always required.
 	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "Widths", required, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// FontDescriptor, dictionary
 	// required since version 1.5; required unless standard font for version < 1.5
 	err = validateFontDescriptor(xRefTable, dict, dictName, "Type1", required, types.V10)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Encoding: name or dict, optional
 	err = validateFontEncoding(xRefTable, dict, dictName, OPTIONAL)
 	if err != nil {
-		return
+		return err
 	}
 
 	// ToUnicode, stream, optional
 	_, err = validateStreamDictEntry(xRefTable, dict, dictName, "ToUnicode", OPTIONAL, types.V12, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateType1FontDict end ***")
 
-	return
+	return nil
 }
 
-func validateCharProcsDict(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool, sinceVersion types.PDFVersion) (err error) {
+func validateCharProcsDict(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validateCharProcsDict begin ***")
 
 	d, err := validateDictEntry(xRefTable, dict, dictName, "CharProcs", required, sinceVersion, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	if d == nil {
 		// optional and nil or already written
 		logInfoValidate.Println("validateCharProcsDict end")
-		return
+		return nil
 	}
 
 	for _, v := range d.Dict {
 
 		_, err = xRefTable.DereferenceStreamDict(v)
 		if err != nil {
-			return
+			return err
 		}
 
 	}
 
 	logInfoValidate.Println("*** validateCharProcsDict end ***")
 
-	return
+	return nil
 }
 
-func validateUseCMapEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool) (err error) {
+func validateUseCMapEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool) error {
 
 	logInfoValidate.Println("*** validateUseCMapEntry begin ***")
 
@@ -842,25 +829,23 @@ func validateUseCMapEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictN
 	obj, found := dict.Find(entryName)
 	if !found || obj == nil {
 		if required {
-			err = errors.Errorf("validateUseCMapEntry: dict=%s required entry \"%s\" missing.", dictName, entryName)
-			return
+			return errors.Errorf("validateUseCMapEntry: dict=%s required entry \"%s\" missing.", dictName, entryName)
 		}
 		logInfoValidate.Printf("validateUseCMapEntry end: \"%s\" is nil.", entryName)
-		return
+		return nil
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	obj, err := xRefTable.Dereference(obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	if obj == nil {
 		if required {
-			err = errors.Errorf("validateUseCMapEntry: dict=%s required entry \"%s\" missing", dictName, entryName)
-			return
+			return errors.Errorf("validateUseCMapEntry: dict=%s required entry \"%s\" missing", dictName, entryName)
 		}
 		logInfoValidate.Printf("validateUseCMapEntry end: entry \"%s\" is nil\n", entryName)
-		return
+		return nil
 	}
 
 	switch obj := obj.(type) {
@@ -871,49 +856,49 @@ func validateUseCMapEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictN
 	case types.PDFStreamDict:
 		err = validateCMapStreamDict(xRefTable, &obj)
 		if err != nil {
-			return
+			return err
 		}
 
 	default:
-		err = errors.Errorf("validateUseCMapEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+		return errors.Errorf("validateUseCMapEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 
 	}
 
 	logInfoValidate.Println("*** validateUseCMapEntry end ***")
 
-	return
+	return nil
 }
 
-func validateCIDSystemInfoDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateCIDSystemInfoDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	logInfoValidate.Println("*** validateCIDSystemInfoDict begin ***")
 
 	dictName := "CIDSystemInfoDict"
 
 	// Registry, ASCII string, required
-	_, err = validateStringEntry(xRefTable, dict, dictName, "Registry", REQUIRED, types.V10, nil)
+	_, err := validateStringEntry(xRefTable, dict, dictName, "Registry", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Ordering, ASCII string, required
 	_, err = validateStringEntry(xRefTable, dict, dictName, "Ordering", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Supplement, integer, required
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "Supplement", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateCIDSystemInfoDict end ***")
 
-	return
+	return nil
 }
 
-func validateCMapStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStreamDict) (err error) {
+func validateCMapStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStreamDict) error {
 
 	// See table 120
 
@@ -921,35 +906,34 @@ func validateCMapStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStr
 
 	// Type, name, required
 	if streamDict.Type() == nil || *streamDict.Type() != "CMap" {
-		err = errors.Errorf("validateCMapStreamDict: missing required type \"CMap\"")
-		return
+		return errors.Errorf("validateCMapStreamDict: missing required type \"CMap\"")
 	}
 
 	dictName := "CMapStreamDict"
 
 	// CMapName, name, required
-	_, err = validateNameEntry(xRefTable, &streamDict.PDFDict, dictName, "CMapName", REQUIRED, types.V10, nil)
+	_, err := validateNameEntry(xRefTable, &streamDict.PDFDict, dictName, "CMapName", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// CIDFontType0SystemInfo, dict, required
 	dict, err := validateDictEntry(xRefTable, &streamDict.PDFDict, dictName, "CIDSystemInfo", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	if dict != nil {
 		err = validateCIDSystemInfoDict(xRefTable, dict)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	// WMode, integer, optional, 0 or 1
 	_, err = validateIntegerEntry(xRefTable, &streamDict.PDFDict, dictName, "WMode", OPTIONAL, types.V10, func(i int) bool { return i == 0 || i == 1 })
 	if err != nil {
-		return
+		return err
 	}
 
 	// UseCMap, name or cmap stream dict, optional.
@@ -957,15 +941,15 @@ func validateCMapStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStr
 	// the character mappings that differ from the referenced CMap.
 	err = validateUseCMapEntry(xRefTable, &streamDict.PDFDict, dictName, OPTIONAL)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateCMapStreamDict end ***")
 
-	return
+	return nil
 }
 
-func validateType0FontEncoding(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool) (err error) {
+func validateType0FontEncoding(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool) error {
 
 	logInfoValidate.Printf("*** validateType0FontEncoding begin: dictName=%s ***", dictName)
 
@@ -974,25 +958,23 @@ func validateType0FontEncoding(xRefTable *types.XRefTable, dict *types.PDFDict, 
 	obj, found := dict.Find(entryName)
 	if !found || obj == nil {
 		if required {
-			err = errors.Errorf("validateType0FontEncoding: dict=%s required entry \"%s\" missing", dictName, entryName)
-			return
+			return errors.Errorf("validateType0FontEncoding: dict=%s required entry \"%s\" missing", dictName, entryName)
 		}
 		logInfoValidate.Printf("validateType0FontEncoding end: \"%s\" is nil.\n", entryName)
-		return
+		return nil
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	obj, err := xRefTable.Dereference(obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	if obj == nil {
 		if required {
-			err = errors.Errorf("validateType0FontEncoding: dict=%s required entry \"%s\" missing", dictName, entryName)
-			return
+			return errors.Errorf("validateType0FontEncoding: dict=%s required entry \"%s\" missing", dictName, entryName)
 		}
 		logInfoValidate.Printf("validateType0FontEncoding end: entry \"%s\" is nil\n", entryName)
-		return
+		return nil
 	}
 
 	switch obj := obj.(type) {
@@ -1003,20 +985,20 @@ func validateType0FontEncoding(xRefTable *types.XRefTable, dict *types.PDFDict, 
 	case types.PDFStreamDict:
 		err = validateCMapStreamDict(xRefTable, &obj)
 		if err != nil {
-			return
+			return err
 		}
 
 	default:
-		err = errors.Errorf("validateType0FontEncoding: dict=%s corrupt entry \"Encoding\"\n", dictName)
+		return errors.Errorf("validateType0FontEncoding: dict=%s corrupt entry \"Encoding\"\n", dictName)
 
 	}
 
 	logInfoValidate.Println("*** validateType0FontEncoding end ***")
 
-	return
+	return nil
 }
 
-func validateType3FontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateType3FontDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// see 9.6.5
 
@@ -1027,45 +1009,45 @@ func validateType3FontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err
 	// Name, name, obsolet and should not be used.
 
 	// FontBBox, rectangle, required
-	_, err = validateRectangleEntry(xRefTable, dict, dictName, "FontBBox", REQUIRED, types.V10, nil)
+	_, err := validateRectangleEntry(xRefTable, dict, dictName, "FontBBox", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// FontMatrix, number array, required
 	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "FontMatrix", REQUIRED, types.V10, func(arr types.PDFArray) bool { return len(arr) == 6 })
 	if err != nil {
-		return
+		return err
 	}
 
 	// CharProcs, dict, required
 	err = validateCharProcsDict(xRefTable, dict, dictName, REQUIRED, types.V10)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Encoding: name or dict, required
 	err = validateFontEncoding(xRefTable, dict, dictName, REQUIRED)
 	if err != nil {
-		return
+		return err
 	}
 
 	// FirstChar, integer, required.
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "FirstChar", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// LastChar, integer, required.
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "LastChar", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Widths, array of number.
 	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "Widths", REQUIRED, types.V10, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	// FontDescriptor, dictionary
@@ -1073,15 +1055,14 @@ func validateType3FontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err
 	if xRefTable.Tagged {
 		err = validateFontDescriptor(xRefTable, dict, dictName, "Type3", REQUIRED, types.V15)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	// Resources, dict, optional, since V1.2
-	var d *types.PDFDict
-	d, err = validateDictEntry(xRefTable, dict, dictName, "Resources", OPTIONAL, types.V12, nil)
+	d, err := validateDictEntry(xRefTable, dict, dictName, "Resources", OPTIONAL, types.V12, nil)
 	if err != nil {
-		return
+		return err
 	}
 	if d != nil {
 		_, err := validateResourceDict(xRefTable, *d)
@@ -1093,12 +1074,12 @@ func validateType3FontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err
 	// ToUnicode, stream, optional
 	_, err = validateStreamDictEntry(xRefTable, dict, dictName, "ToUnicode", OPTIONAL, types.V12, nil)
 	if err != nil {
-		return
+		return err
 	}
 
 	logInfoValidate.Println("*** validateType3FontDict end ***")
 
-	return
+	return nil
 }
 
 func validateFontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
@@ -1132,27 +1113,27 @@ func validateFontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err erro
 		err = validateType3FontDict(xRefTable, dict)
 
 	default:
-		err = errors.Errorf("validateFontDict: unknown Subtype: %s\n", *subtype)
+		return errors.Errorf("validateFontDict: unknown Subtype: %s\n", *subtype)
 
 	}
 
 	logInfoValidate.Println("*** validateFontDict end ***")
 
-	return
+	return err
 }
 
-func validateFontResourceDict(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateFontResourceDict(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Println("*** validateFontResourceDict begin ***")
 
 	dict, err := xRefTable.DereferenceDict(obj)
 	if err != nil {
-		return
+		return err
 	}
 
 	if dict == nil {
 		logInfoValidate.Println("validateFontResourceDict end: font resource dict is nil.")
-		return
+		return nil
 	}
 
 	// Iterate over font resource dict
@@ -1178,5 +1159,5 @@ func validateFontResourceDict(xRefTable *types.XRefTable, obj interface{}) (err 
 
 	logInfoValidate.Println("*** validateFontResourceDict end ***")
 
-	return
+	return nil
 }
