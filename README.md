@@ -9,8 +9,7 @@
 ![logo](resources/pdfchip3.png)
 
 Package pdfcpu is a simple PDF processing library written in [Go](http://golang.org) supporting encryption.
-It provides both an API and a command line tool.
-Supported are all versions up to PDF 1.7 (ISO-32000).
+It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO-32000).
 
 ## Motivation
 
@@ -85,17 +84,11 @@ Version: 0.1.6
 
   Note: User access permissions will only take effect based on a set owner password.
 
-## To Do
-
-* validation of the less used PDF page entry element *PresSteps*
-* validation of the less used PDF root entry elements *Permissions* and *Legal*
-
-I am looking for PDFs using one of these features in order to implement validation. If you have one and you can share let me know.
 
 ## Contributing
 
 * Please open an issue if you find a bug or want to propose a change.
-* Pull requests, bug fixes and issue reports and PDF files that will increase pdfcpu's coverage are always welcome.
+* Pull requests, bug fixes and issues are always welcome.
 
 ## Disclaimer
 

@@ -1,8 +1,7 @@
 /*
 
 Package pdfcpu is a simple PDF processing library written in Go supporting encryption.
-It provides both an API and a command line tool.
-Supported are all versions up to PDF 1.7 (ISO-32000).
+It provides an API and a command line interface. Supported are all versions up to PDF 1.7 (ISO-32000).
 
 The available commands are:
 

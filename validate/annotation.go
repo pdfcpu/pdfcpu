@@ -1125,7 +1125,7 @@ func validateAnnotationDictScreen(xRefTable *types.XRefTable, dict *types.PDFDic
 		return err
 	}
 	if d != nil {
-		err = validateActionDict(xRefTable, d)
+		err = validateActionDict(xRefTable, *d)
 		if err != nil {
 			return err
 		}

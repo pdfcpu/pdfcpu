@@ -603,7 +603,7 @@ func validateRenditionsNameTreeValue(xRefTable *types.XRefTable, obj interface{}
 	}
 
 	if dict != nil {
-		err = validateRenditionDict(xRefTable, dict)
+		err = validateRenditionDict(xRefTable, dict, sinceVersion)
 		if err != nil {
 			return err
 		}

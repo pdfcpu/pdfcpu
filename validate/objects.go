@@ -1316,7 +1316,7 @@ func validateBooleanOrStreamEntry(xRefTable *types.XRefTable, dict *types.PDFDic
 	return nil
 }
 
-// TODO movo to 3D annotation.
+// TODO move to 3D annotation.
 func validateStreamDictOrDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
 	logInfoValidate.Printf("validateStreamDictOrDictEntry begin: entry=%s\n", entryName)

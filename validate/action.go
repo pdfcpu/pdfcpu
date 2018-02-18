@@ -872,7 +872,7 @@ func validateRenditionActionDict(xRefTable *types.XRefTable, dict *types.PDFDict
 	// OP or JS need to be present.
 
 	// OP, integer
-	op, err := validateIntegerEntry(xRefTable, dict, dictName, "OP", OPTIONAL, types.V10, func(i int) bool { return 0 <= i && i <= 4 })
+	op, err := validateIntegerEntry(xRefTable, dict, dictName, "OP", OPTIONAL, sinceVersion, func(i int) bool { return 0 <= i && i <= 4 })
 	if err != nil {
 		return err
 	}
@@ -892,18 +892,18 @@ func validateRenditionActionDict(xRefTable *types.XRefTable, dict *types.PDFDict
 		return v == 0 || v == 4
 	}(op)
 
-	d, err := validateDictEntry(xRefTable, dict, dictName, "R", required, types.V10, nil)
+	d, err := validateDictEntry(xRefTable, dict, dictName, "R", required, sinceVersion, nil)
 	if d != nil {
-		err = validateRenditionDict(xRefTable, d)
+		err = validateRenditionDict(xRefTable, d, sinceVersion)
 		if err != nil {
 			return err
 		}
 	}
 
-	// AN, required for any OP 0..4, screen annotation dict
+	// AN, required for any OP 0..4, indRef of screen annotation dict
 	d, err = validateDictEntry(xRefTable, dict, dictName, "AN", op != nil, types.V10, nil)
 	if d != nil {
-		_, err = validateNameEntry(xRefTable, dict, dictName, "Subtype", REQUIRED, types.V10, func(s string) bool { return s == "Screen" })
+		_, err = validateNameEntry(xRefTable, d, dictName, "Subtype", REQUIRED, types.V10, func(s string) bool { return s == "Screen" })
 		if err != nil {
 			return err
 		}

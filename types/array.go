@@ -9,6 +9,18 @@ import (
 // PDFArray represents a PDF array object.
 type PDFArray []interface{}
 
+// NewStringArray returns a PDFArray with PDFStringLiteral entries.
+func NewStringArray(sVars ...string) PDFArray {
+
+	a := PDFArray{}
+
+	for _, s := range sVars {
+		a = append(a, PDFStringLiteral(s))
+	}
+
+	return a
+}
+
 // NewNameArray returns a PDFArray with PDFName entries.
 func NewNameArray(sVars ...string) PDFArray {
 
