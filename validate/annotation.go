@@ -1443,6 +1443,47 @@ func validateExDataDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	return err
 }
+
+func validatePopupEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
+
+	d, err := validateDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
+	if err != nil {
+		return err
+	}
+
+	if d != nil {
+		_, err = validateNameEntry(xRefTable, d, dictName, "Subtype", REQUIRED, types.V10, func(s string) bool { return s == "Popup" })
+		if err != nil {
+			return err
+		}
+
+		_, err = validateAnnotationDict(xRefTable, d)
+		if err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+}
+
+func validateIRTEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
+
+	d, err := validateDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
+	if err != nil {
+		return err
+	}
+
+	if d != nil {
+		_, err = validateAnnotationDict(xRefTable, d)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func validateMarkupAnnotation(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	dictName := "markupAnnot"
@@ -1454,22 +1495,9 @@ func validateMarkupAnnotation(xRefTable *types.XRefTable, dict *types.PDFDict) e
 	}
 
 	// Popup, optional, dict, since V1.3
-	d, err := validateDictEntry(xRefTable, dict, dictName, "Popup", OPTIONAL, types.V13, nil)
+	err = validatePopupEntry(xRefTable, dict, dictName, "Popup", OPTIONAL, types.V13)
 	if err != nil {
 		return err
-	}
-	if d != nil {
-
-		_, err = validateNameEntry(xRefTable, d, dictName, "Subtype", REQUIRED, types.V10, func(s string) bool { return s == "Popup" })
-		if err != nil {
-			return err
-		}
-
-		_, err = validateAnnotationDict(xRefTable, d)
-		if err != nil {
-			return err
-		}
-
 	}
 
 	// CA, optional, number, since V1.4
@@ -1491,15 +1519,9 @@ func validateMarkupAnnotation(xRefTable *types.XRefTable, dict *types.PDFDict) e
 	}
 
 	// IRT, optional, (in reply to) dict, since V1.5
-	d, err = validateDictEntry(xRefTable, dict, dictName, "IRT", OPTIONAL, types.V15, nil)
+	err = validateIRTEntry(xRefTable, dict, dictName, "IRT", OPTIONAL, types.V15)
 	if err != nil {
 		return err
-	}
-	if d != nil {
-		_, err = validateAnnotationDict(xRefTable, d)
-		if err != nil {
-			return err
-		}
 	}
 
 	// Subj, optional, text string, since V1.5
@@ -1522,7 +1544,7 @@ func validateMarkupAnnotation(xRefTable *types.XRefTable, dict *types.PDFDict) e
 	}
 
 	// ExData, optional, dict, since V1.7
-	d, err = validateDictEntry(xRefTable, dict, dictName, "ExData", OPTIONAL, types.V17, nil)
+	d, err := validateDictEntry(xRefTable, dict, dictName, "ExData", OPTIONAL, types.V17, nil)
 	if err != nil {
 		return err
 	}
