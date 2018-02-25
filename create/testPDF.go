@@ -2,12 +2,12 @@
 package create
 
 import (
-	"fmt"
-
 	"github.com/hhrutter/pdfcpu/filter"
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/hhrutter/pdfcpu/write"
 )
+
+const testAudioFileWAV = "testdata/test.wav"
 
 func createXRefTableWithRootDict() (*types.XRefTable, error) {
 
@@ -79,12 +79,12 @@ func addContents(xRefTable *types.XRefTable, pageDict *types.PDFDict) error {
 	contents.InsertName("Filter", "FlateDecode")
 	contents.FilterPipeline = []types.PDFFilter{{Name: "FlateDecode", DecodeParms: nil}}
 
-	// 595.27, 841.89)
+	// Page dimensions: 595.27, 841.89
 
-	// use buffer
+	// TODO use buffer
 	t := `BT /F1 12 Tf 0 1 Td 0 Tr 0.5 g (lower left) Tj ET `
-	t += "BT /F1 12 Tf 0 832 Td 1 Tr (upper left) Tj ET "
-	t += "BT /F1 12 Tf 537 832 Td 2 Tr (upper right) Tj ET "
+	t += "BT /F1 12 Tf 0 832 Td 0 Tr (upper left) Tj ET "
+	t += "BT /F1 12 Tf 537 832 Td 0 Tr (upper right) Tj ET "
 	t += "BT /F1 12 Tf 540 1 Td 0 Tr (lower right) Tj ET "
 	t += "BT /F1 12 Tf 297.55 420.5 Td (X) Tj ET "
 
@@ -220,7 +220,7 @@ func addViewportDict(pageDict *types.PDFDict) {
 
 func annotRect(i int, w, h, d, l float64) types.PDFArray {
 
-	// d..distance between rectangles
+	// d..distance between annotation rectangles
 	// l..side length of rectangle
 
 	// max number of rectangles fitting into w
@@ -238,46 +238,60 @@ func annotRect(i int, w, h, d, l float64) types.PDFArray {
 	urx := llx + l
 	ury := lly + l
 
-	r := types.NewRectangle(llx, lly, urx, ury)
-
-	fmt.Printf("annotRect(%d) = %v\n", i, r)
-
-	return r
+	return types.NewRectangle(llx, lly, urx, ury)
 }
 
 func createAnnotsArray(xRefTable *types.XRefTable, pageIndRef *types.PDFIndirectRef, mediaBox *types.PDFArray) (*types.PDFArray, error) {
 
 	// Generate side by side lined up annotations starting in the lower left corner of the page.
-	//
 
 	pageWidth := (*mediaBox)[2].(types.PDFFloat)
 	pageHeight := (*mediaBox)[3].(types.PDFFloat)
-	fmt.Printf("w=%3.2f h=%3.2f\n", pageWidth, pageHeight)
 
 	arr := types.PDFArray{}
 
 	for i, f := range []func(*types.XRefTable, *types.PDFIndirectRef, *types.PDFArray) (*types.PDFIndirectRef, error){
+		createTextAnnotation,
 		createLinkAnnotation,
+		createFreeTextAnnotation,
+		createLineAnnotation,
+		createSquareAnnotation,
+		createCircleAnnotation,
+		createPolygonAnnotation,
 		createPolyLineAnnotation,
-		createMarkupAnnotation,
+		createHighlightAnnotation,
+		createUnderlineAnnotation,
+		createSquigglyAnnotation,
+		createStrikeOutAnnotation,
 		createCaretAnnotation,
+		createStampAnnotation,
 		createInkAnnotation,
+		createPopupAnnotation,
 		createFileAttachmentAnnotation,
 		createSoundAnnotation,
 		createMovieAnnotation,
-		createWidgetAnnotation,
 		createScreenAnnotation,
+		createWidgetAnnotation,
 		createPrinterMarkAnnotation,
 		createWaterMarkAnnotation,
 		create3DAnnotation,
 		createRedactAnnotation,
+		createLinkAnnotationWithRemoteGoToAction,
+		createLinkAnnotationWithEmbeddedGoToAction,
+		createLinkAnnotationDictWithLaunchAction,
+		createLinkAnnotationDictWithThreadAction,
+		createLinkAnnotationDictWithSoundAction,
+		createLinkAnnotationDictWithMovieAction,
+		createLinkAnnotationDictWithHideAction,
 		createTrapNetAnnotation, // must be the last annotation for this page!
 	} {
 		r := annotRect(i, pageWidth.Value(), pageHeight.Value(), 30, 80)
+
 		indRef, err := f(xRefTable, pageIndRef, &r)
 		if err != nil {
 			return nil, err
 		}
+
 		arr = append(arr, *indRef)
 	}
 
@@ -420,7 +434,7 @@ func createThreadDict(xRefTable *types.XRefTable, pageIndRef *types.PDFIndirectR
 			"N":    *d1IndRef,
 			"V":    *d1IndRef,
 			"P":    *pageIndRef,
-			"R":    types.NewRectangle(0, 100, 100, 200),
+			"R":    types.NewRectangle(0, 100, 200, 100),
 		},
 	}
 
@@ -454,22 +468,24 @@ func addThreads(xRefTable *types.XRefTable, rootDict *types.PDFDict, pageIndRef 
 
 func addOpenAction(xRefTable *types.XRefTable, rootDict *types.PDFDict) error {
 
-	script := `var a = this.getAnnot(0, 'SoundFileAttachmentAnnot');
-	app.alert('Hello Gopher! AnnotType=' + a.type + ' ' + a.doc.URL);
-	var annot = this.addAnnot({ page: 0,
-		type: "Stamp",
-		author: "A. C. Robat",
-		name: "myStamp",
-		rect: [100, 100, 130, 130],
-		contents: "Try it again, this time with order and method!", AP: "NotApproved" });`
-	_ = script
+	nextActionDict := types.PDFDict{
+		Dict: map[string]interface{}{
+			"Type": types.PDFName("Action"),
+			"S":    types.PDFName("Movie"),
+			"T":    types.PDFStringLiteral("Sample Movie"),
+		},
+	}
 
-	d := types.NewPDFDict()
-	d.InsertName("Type", "Action")
-	//d.InsertName("S", "JavaScript")
-	d.InsertName("S", "Movie")
-	d.InsertString("T", "Sample Movie")
-	//d.InsertString("JS", script)
+	script := `app.alert('Hello Gopher!');`
+
+	d := types.PDFDict{
+		Dict: map[string]interface{}{
+			"Type": types.PDFName("Action"),
+			"S":    types.PDFName("JavaScript"),
+			"JS":   types.PDFStringLiteral(script),
+			"Next": nextActionDict,
+		},
+	}
 
 	rootDict.Insert("OpenAction", d)
 

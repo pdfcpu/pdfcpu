@@ -817,7 +817,7 @@ func ListAttachments(fileIn string, config *types.Configuration) ([]string, erro
 
 	fromWrite := time.Now()
 
-	list, err := attach.List(ctx)
+	list, err := attach.List(ctx.XRefTable)
 	if err != nil {
 		return nil, err
 	}
@@ -851,7 +851,7 @@ func AddAttachments(fileIn string, files []string, config *types.Configuration) 
 	from := time.Now()
 	var ok bool
 
-	ok, err = attach.Add(ctx, stringSet(files))
+	ok, err = attach.Add(ctx.XRefTable, stringSet(files))
 	if err != nil {
 		return err
 	}
@@ -910,7 +910,7 @@ func RemoveAttachments(fileIn string, files []string, config *types.Configuratio
 	from := time.Now()
 
 	var ok bool
-	ok, err = attach.Remove(ctx, stringSet(files))
+	ok, err = attach.Remove(ctx.XRefTable, stringSet(files))
 	if err != nil {
 		return err
 	}

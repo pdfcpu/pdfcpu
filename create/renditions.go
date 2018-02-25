@@ -110,10 +110,9 @@ func createSectionMHBEDict() *types.PDFDict {
 
 func createMediaClipDataDict(xRefTable *types.XRefTable) (*types.PDFIndirectRef, error) {
 
-	fileName := "testdata/a2.wav"
 	// not supported: mp3,mp4,m4a
 
-	fileSpecDict, err := createFileSpecDict(xRefTable, fileName)
+	fileSpecDict, err := createFileSpecDict(xRefTable, testAudioFileWAV)
 	if err != nil {
 		return nil, err
 	}
@@ -133,10 +132,10 @@ func createMediaClipDataDict(xRefTable *types.XRefTable) (*types.PDFIndirectRef,
 		Dict: map[string]interface{}{
 			"Type": types.PDFName("MediaClip"),
 			"S":    types.PDFName("MCD"), // media clip data
-			"N":    types.PDFStringLiteral("Sample movie"),
+			"N":    types.PDFStringLiteral("Sample Audio"),
 			"D":    *fileSpecDict,
 			"CT":   types.PDFStringLiteral("audio/x-wav"),
-			//"CT":   types.PDFStringLiteral("audio/mp4"),
+			//"CT": types.PDFStringLiteral("audio/mp4"),
 			//"CT":   types.PDFStringLiteral("video/mp4"),
 			"P":   mediaPermissionsDict,
 			"Alt": types.NewStringArray("en-US", "My vacation", "de", "Mein Urlaub", "", "My vacation"),
@@ -240,6 +239,7 @@ func createScreenParamsDict() *types.PDFDict {
 func createMediaRendition(xRefTable *types.XRefTable, mediaClipDataDict *types.PDFIndirectRef) *types.PDFDict {
 
 	mhbe := createMHBEDict()
+
 	d1 := createMediaPlayParamsDict()
 	d2 := createScreenParamsDict()
 

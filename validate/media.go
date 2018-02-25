@@ -402,8 +402,6 @@ func validateMediaPlayersDict(xRefTable *types.XRefTable, dict *types.PDFDict, s
 
 func validateFileSpecOrFormXObjectEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
-	logInfoValidate.Println("*** validateFileSpecOrFormXObjectEntry: begin ***")
-
 	obj, found := dict.Find(entryName)
 	if !found || obj == nil {
 		if required {
@@ -412,14 +410,7 @@ func validateFileSpecOrFormXObjectEntry(xRefTable *types.XRefTable, dict *types.
 		return nil
 	}
 
-	_, err := validateFileSpecificationOrFormObject(xRefTable, obj)
-	if err != nil {
-		return err
-	}
-
-	logInfoValidate.Println("*** validateFileSpecOrFormXObjectEntry: begin ***")
-
-	return nil
+	return validateFileSpecificationOrFormObject(xRefTable, obj)
 }
 
 func validateMediaClipDataDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {

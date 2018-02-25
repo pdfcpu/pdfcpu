@@ -363,6 +363,9 @@ func (xRefTable *XRefTable) NewSoundStreamDict(filename string, samplingRate int
 
 	sd.InsertName("Type", "Sound")
 	sd.InsertInt("R", samplingRate)
+	sd.InsertInt("C", 2)
+	sd.InsertInt("B", 8)
+	sd.InsertName("E", "Signed")
 
 	if fileSpecDict != nil {
 		sd.Insert("F", *fileSpecDict)

@@ -279,11 +279,8 @@ func validateAnnotationDictText(xRefTable *types.XRefTable, dict *types.PDFDict,
 	return nil
 }
 
-func validateOptionalActionOrDestination(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
+func validateActionOrDestination(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
-	logInfoValidate.Println("*** validateOptionalActionOrDestination begin ***")
-
-	// Validate optional action dict
 	// The action that shall be performed when this item is activated.
 	d1, err := validateDictEntry(xRefTable, dict, dictName, "A", OPTIONAL, types.V11, nil)
 	if err != nil {
@@ -293,18 +290,13 @@ func validateOptionalActionOrDestination(xRefTable *types.XRefTable, dict *types
 		return validateActionDict(xRefTable, *d1)
 	}
 
-	// Validate optional destination
 	// The destination that shall be displayed when this item is activated.
 	d2, found := dict.Find("Dest")
 	if !found {
-		return nil
+		return errors.Errorf("validateActionOrDestination: missing action or destination")
 	}
 
-	err = validateDestination(xRefTable, d2)
-
-	logInfoValidate.Println("*** validateOptionalActionOrDestination end ***")
-
-	return err
+	return validateDestination(xRefTable, d2)
 }
 
 func validateURIActionDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
@@ -342,8 +334,8 @@ func validateAnnotationDictLink(xRefTable *types.XRefTable, dict *types.PDFDict,
 		return errors.Errorf("validateAnnotationDictLink: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
 	}
 
-	// A or D, optional
-	err := validateOptionalActionOrDestination(xRefTable, dict, dictName)
+	// A or D, required either or
+	err := validateActionOrDestination(xRefTable, dict, dictName)
 	if err != nil {
 		return err
 	}
@@ -857,19 +849,15 @@ func validateAnnotationDictPopup(xRefTable *types.XRefTable, dict *types.PDFDict
 	if err != nil {
 		return err
 	}
-
-	d, err := xRefTable.DereferenceDict(*indRef)
-	if err != nil || d == nil {
-		return err
-	}
-
-	_, err = validateAnnotationDict(xRefTable, d)
-	if err != nil {
-		return err
+	if indRef != nil {
+		d, err := xRefTable.DereferenceDict(*indRef)
+		if err != nil || d == nil {
+			return err
+		}
 	}
 
 	// Open, optional, boolean
-	_, err = validateBooleanEntry(xRefTable, d, dictName, "Open", OPTIONAL, types.V10, nil)
+	_, err = validateBooleanEntry(xRefTable, dict, dictName, "Open", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -1442,6 +1430,112 @@ func validateAnnotationDictRedact(xRefTable *types.XRefTable, dict *types.PDFDic
 	return nil
 }
 
+func validateExDataDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
+
+	dictName := "ExData"
+
+	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "ExData" })
+	if err != nil {
+		return err
+	}
+
+	_, err = validateNameEntry(xRefTable, dict, dictName, "Subtype", REQUIRED, types.V10, func(s string) bool { return s == "Markup3D" })
+
+	return err
+}
+func validateMarkupAnnotation(xRefTable *types.XRefTable, dict *types.PDFDict) error {
+
+	dictName := "markupAnnot"
+
+	// T, optional, text string, since V1.1
+	_, err := validateStringEntry(xRefTable, dict, dictName, "T", OPTIONAL, types.V11, nil)
+	if err != nil {
+		return err
+	}
+
+	// Popup, optional, dict, since V1.3
+	d, err := validateDictEntry(xRefTable, dict, dictName, "Popup", OPTIONAL, types.V13, nil)
+	if err != nil {
+		return err
+	}
+	if d != nil {
+
+		_, err = validateNameEntry(xRefTable, d, dictName, "Subtype", REQUIRED, types.V10, func(s string) bool { return s == "Popup" })
+		if err != nil {
+			return err
+		}
+
+		_, err = validateAnnotationDict(xRefTable, d)
+		if err != nil {
+			return err
+		}
+
+	}
+
+	// CA, optional, number, since V1.4
+	_, err = validateNumberEntry(xRefTable, dict, dictName, "CA", OPTIONAL, types.V14, nil)
+	if err != nil {
+		return err
+	}
+
+	// RC, optional, text string or stream, since V1.5
+	err = validateStringOrStreamEntry(xRefTable, dict, dictName, "RC", OPTIONAL, types.V15)
+	if err != nil {
+		return err
+	}
+
+	// CreationDate, optional, date, since V1.5
+	_, err = validateDateEntry(xRefTable, dict, dictName, "CreationDate", OPTIONAL, types.V15)
+	if err != nil {
+		return err
+	}
+
+	// IRT, optional, (in reply to) dict, since V1.5
+	d, err = validateDictEntry(xRefTable, dict, dictName, "IRT", OPTIONAL, types.V15, nil)
+	if err != nil {
+		return err
+	}
+	if d != nil {
+		_, err = validateAnnotationDict(xRefTable, d)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Subj, optional, text string, since V1.5
+	_, err = validateStringEntry(xRefTable, dict, dictName, "Subj", OPTIONAL, types.V15, nil)
+	if err != nil {
+		return err
+	}
+
+	// RT, optional, name, since V1.6
+	validate := func(s string) bool { return s == "R" || s == "Group" }
+	_, err = validateNameEntry(xRefTable, dict, dictName, "RT", OPTIONAL, types.V16, validate)
+	if err != nil {
+		return err
+	}
+
+	// IT, optional, name, since V1.6
+	_, err = validateNameEntry(xRefTable, dict, dictName, "IT", OPTIONAL, types.V16, nil)
+	if err != nil {
+		return err
+	}
+
+	// ExData, optional, dict, since V1.7
+	d, err = validateDictEntry(xRefTable, dict, dictName, "ExData", OPTIONAL, types.V17, nil)
+	if err != nil {
+		return err
+	}
+	if d != nil {
+		err = validateExDataDict(xRefTable, d)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func validateOptionalContent(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
 	d, err := validateDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
@@ -1600,38 +1694,49 @@ func validateAnnotationDictGeneral(xRefTable *types.XRefTable, dict *types.PDFDi
 
 func validateAnnotationDictConcrete(xRefTable *types.XRefTable, dict *types.PDFDict, subtype types.PDFName) error {
 
+	// see table 169
+
 	for k, v := range map[string]struct {
 		validate     func(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error
 		sinceVersion types.PDFVersion
+		markup       bool
 	}{
-		"Text":           {validateAnnotationDictText, types.V10},
-		"Link":           {validateAnnotationDictLink, types.V10},
-		"FreeText":       {validateAnnotationDictFreeText, types.V13},
-		"Line":           {validateAnnotationDictLine, types.V13},
-		"Polygon":        {validateAnnotationDictPolyLine, types.V15},
-		"PolyLine":       {validateAnnotationDictPolyLine, types.V15},
-		"Highlight":      {validateTextMarkupAnnotation, types.V13},
-		"Underline":      {validateTextMarkupAnnotation, types.V13},
-		"Squiggly":       {validateTextMarkupAnnotation, types.V14},
-		"StrikeOut":      {validateTextMarkupAnnotation, types.V13},
-		"Square":         {validateAnnotationDictCircleOrSquare, types.V13},
-		"Circle":         {validateAnnotationDictCircleOrSquare, types.V13},
-		"Stamp":          {validateAnnotationDictStamp, types.V13},
-		"Caret":          {validateAnnotationDictCaret, types.V15},
-		"Ink":            {validateAnnotationDictInk, types.V13},
-		"Popup":          {validateAnnotationDictPopup, types.V13},
-		"FileAttachment": {validateAnnotationDictFileAttachment, types.V13},
-		"Sound":          {validateAnnotationDictSound, types.V12},
-		"Movie":          {validateAnnotationDictMovie, types.V12},
-		"Widget":         {validateAnnotationDictWidget, types.V12},
-		"Screen":         {validateAnnotationDictScreen, types.V15},
-		"PrinterMark":    {validateAnnotationDictPrinterMark, types.V14},
-		"TrapNet":        {validateAnnotationDictTrapNet, types.V13},
-		"Watermark":      {validateAnnotationDictWatermark, types.V16},
-		"3D":             {validateAnnotationDict3D, types.V16},
-		"Redact":         {validateAnnotationDictRedact, types.V17},
+		"Text":           {validateAnnotationDictText, types.V10, true},
+		"Link":           {validateAnnotationDictLink, types.V10, false},
+		"FreeText":       {validateAnnotationDictFreeText, types.V13, true},
+		"Line":           {validateAnnotationDictLine, types.V13, true},
+		"Polygon":        {validateAnnotationDictPolyLine, types.V15, true},
+		"PolyLine":       {validateAnnotationDictPolyLine, types.V15, true},
+		"Highlight":      {validateTextMarkupAnnotation, types.V13, true},
+		"Underline":      {validateTextMarkupAnnotation, types.V13, true},
+		"Squiggly":       {validateTextMarkupAnnotation, types.V14, true},
+		"StrikeOut":      {validateTextMarkupAnnotation, types.V13, true},
+		"Square":         {validateAnnotationDictCircleOrSquare, types.V13, true},
+		"Circle":         {validateAnnotationDictCircleOrSquare, types.V13, true},
+		"Stamp":          {validateAnnotationDictStamp, types.V13, true},
+		"Caret":          {validateAnnotationDictCaret, types.V15, true},
+		"Ink":            {validateAnnotationDictInk, types.V13, true},
+		"Popup":          {validateAnnotationDictPopup, types.V13, false},
+		"FileAttachment": {validateAnnotationDictFileAttachment, types.V13, true},
+		"Sound":          {validateAnnotationDictSound, types.V12, true},
+		"Movie":          {validateAnnotationDictMovie, types.V12, false},
+		"Widget":         {validateAnnotationDictWidget, types.V12, false},
+		"Screen":         {validateAnnotationDictScreen, types.V15, false},
+		"PrinterMark":    {validateAnnotationDictPrinterMark, types.V14, false},
+		"TrapNet":        {validateAnnotationDictTrapNet, types.V13, false},
+		"Watermark":      {validateAnnotationDictWatermark, types.V16, false},
+		"3D":             {validateAnnotationDict3D, types.V16, false},
+		"Redact":         {validateAnnotationDictRedact, types.V17, true},
 	} {
 		if subtype.Value() == k {
+
+			if v.markup {
+				err := validateMarkupAnnotation(xRefTable, dict)
+				if err != nil {
+					return err
+				}
+			}
+
 			return v.validate(xRefTable, dict, k, v.sinceVersion)
 		}
 	}
@@ -1659,12 +1764,12 @@ func validateAnnotationDict(xRefTable *types.XRefTable, dict *types.PDFDict) (is
 		return false, err
 	}
 
-	err = validateAnnotationDictSpecial(xRefTable, dict, dictName)
+	err = validateAnnotationDictConcrete(xRefTable, dict, *subtype)
 	if err != nil {
 		return false, err
 	}
 
-	err = validateAnnotationDictConcrete(xRefTable, dict, *subtype)
+	err = validateAnnotationDictSpecial(xRefTable, dict, dictName)
 	if err != nil {
 		return false, err
 	}

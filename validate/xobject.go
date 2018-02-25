@@ -703,7 +703,6 @@ func validateFormStreamDictPart1(xRefTable *types.XRefTable, streamDict *types.P
 	if err != nil {
 		return err
 	}
-
 	if d != nil {
 		err = validateReferenceDict(xRefTable, d)
 		if err != nil {
@@ -712,12 +711,7 @@ func validateFormStreamDictPart1(xRefTable *types.XRefTable, streamDict *types.P
 	}
 
 	// Metadata, stream, optional, since V1.4
-	err = validateMetadata(xRefTable, &dict, OPTIONAL, types.V14)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return validateMetadata(xRefTable, &dict, OPTIONAL, types.V14)
 }
 
 func validateEntryOC(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool, sinceVersion types.PDFVersion) error {

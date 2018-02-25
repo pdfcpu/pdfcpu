@@ -160,16 +160,16 @@ func validateFileSpecDictEntryEFDict(xRefTable *types.XRefTable, dict *types.PDF
 	return nil
 }
 
-func validateEFDictFilesArray(xRefTable *types.XRefTable, arr *types.PDFArray) error {
+func validateRFDictFilesArray(xRefTable *types.XRefTable, arr *types.PDFArray) error {
 
 	if len(*arr)%2 > 0 {
-		return errors.New("validateEFDictFilesArray: rfDict array corrupt")
+		return errors.New("validateRFDictFilesArray: rfDict array corrupt")
 	}
 
 	for k, v := range *arr {
 
 		if v == nil {
-			return errors.New("validateEFDictFilesArray: rfDict, array entry nil")
+			return errors.New("validateRFDictFilesArray: rfDict, array entry nil")
 		}
 
 		obj, err := xRefTable.Dereference(v)
@@ -178,14 +178,14 @@ func validateEFDictFilesArray(xRefTable *types.XRefTable, arr *types.PDFArray) e
 		}
 
 		if obj == nil {
-			return errors.New("validateEFDictFilesArray: rfDict, array entry nil")
+			return errors.New("validateRFDictFilesArray: rfDict, array entry nil")
 		}
 
 		if k%2 > 0 {
 
 			_, ok := obj.(types.PDFStringLiteral)
 			if !ok {
-				return errors.New("validateEFDictFilesArray: rfDict, array entry corrupt")
+				return errors.New("validateRFDictFilesArray: rfDict, array entry corrupt")
 			}
 
 		} else {
@@ -242,7 +242,7 @@ func validateFileSpecDictEntriesEFAndRF(xRefTable *types.XRefTable, efDict, rfDi
 				continue
 			}
 
-			err = validateEFDictFilesArray(xRefTable, arr)
+			err = validateRFDictFilesArray(xRefTable, arr)
 			if err != nil {
 				return err
 			}
@@ -268,7 +268,7 @@ func requiredF(dosFound, macFound, unixFound bool) bool {
 	return !dosFound && !macFound && !unixFound
 }
 
-func validateFileSpecDictEFAndEF(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
+func validateFileSpecDictEFAndRF(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// RF, optional, dict of related files arrays, since V1.3
 	rfDict, err := validateDictEntry(xRefTable, dict, dictName, "RF", OPTIONAL, types.V13, nil)
@@ -363,7 +363,7 @@ func validateFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict) error
 		return err
 	}
 
-	err = validateFileSpecDictEFAndEF(xRefTable, dict, dictName)
+	err = validateFileSpecDictEFAndRF(xRefTable, dict, dictName)
 	if err != nil {
 		return err
 	}
@@ -466,42 +466,16 @@ func validateFileSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dict
 	return fs, nil
 }
 
-func validateFileSpecificationOrFormObject(xRefTable *types.XRefTable, obj interface{}) (interface{}, error) {
+func validateFileSpecificationOrFormObject(xRefTable *types.XRefTable, obj interface{}) error {
 
 	logInfoValidate.Println("*** validateFileSpecificationOrFormObject begin ***")
 
-	switch obj := obj.(type) {
-
-	case types.PDFStringLiteral:
-		s := obj.Value()
-		if !validateFileSpecString(s) {
-			return nil, errors.Errorf("validateFileSpecificationOrFormObject: invalid file spec string: %s", s)
-		}
-
-	case types.PDFHexLiteral:
-		s := obj.Value()
-		if !validateFileSpecString(s) {
-			return nil, errors.Errorf("validateFileSpecificationOrFormObject: invalid file spec string: %s", s)
-		}
-
-	case types.PDFDict:
-		err := validateFileSpecDict(xRefTable, &obj)
-		if err != nil {
-			return nil, err
-		}
-
-	case types.PDFStreamDict:
-		err := validateFormStreamDict(xRefTable, &obj)
-		if err != nil {
-			return nil, err
-		}
-
-	default:
-		return nil, errors.Errorf("validateFileSpecificationOrFormObject: invalid type")
-
+	sd, ok := obj.(types.PDFStreamDict)
+	if ok {
+		return validateFormStreamDict(xRefTable, &sd)
 	}
 
-	logInfoValidate.Println("*** validateFileSpecificationOrFormObject end ***")
+	_, err := validateFileSpecification(xRefTable, obj)
 
-	return obj, nil
+	return err
 }

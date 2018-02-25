@@ -97,7 +97,7 @@ func validateTargetDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, di
 	}
 
 	// T, optional, target dict
-	err = validateTargetDictEntry(xRefTable, dict, dictName, "T", OPTIONAL, types.V10)
+	err = validateTargetDictEntry(xRefTable, d, dictName, "T", OPTIONAL, types.V10)
 	if err != nil {
 		return err
 	}
@@ -211,19 +211,88 @@ func validateLaunchActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, d
 		}
 	}
 
-	// Mac, optional, dict
-	_, err = validateDictEntry(xRefTable, dict, dictName, "Mac", OPTIONAL, types.V10, nil)
-	if err != nil {
-		return err
-	}
+	// Mac, optional, undefined dict
 
-	// Unix, optional, dict
-	_, err = validateDictEntry(xRefTable, dict, dictName, "Unix", OPTIONAL, types.V10, nil)
-	if err != nil {
-		return err
-	}
+	// Unix, optional, undefined dict
 
 	logInfoValidate.Println("*** validateLaunchActionDict end ***")
+
+	return nil
+}
+
+func validateDestinationThreadEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
+
+	// The destination thread (table 205)
+
+	obj, err := dict.Entry(dictName, entryName, required)
+	if err != nil || obj == nil {
+		return err
+	}
+
+	obj, err = xRefTable.Dereference(obj)
+	if err != nil {
+		return err
+	}
+	if obj == nil {
+		if required {
+			return errors.Errorf("validateDestinationThreadEntry: dict=%s required entry=%s is nil", dictName, entryName)
+		}
+		return nil
+	}
+
+	switch obj.(type) {
+
+	case types.PDFDict, types.PDFStringLiteral, types.PDFInteger:
+		// an indRef to a thread dictionary
+		// or an index of the thread within the roots Threads array
+		// or the title of the thread as specified in its thread info dict
+
+	default:
+		return errors.Errorf("validateDestinationThreadEntry: dict=%s entry=%s invalid type", dictName, entryName)
+	}
+
+	// Version check
+	if xRefTable.Version() < sinceVersion {
+		return errors.Errorf("validateDestinationThreadEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
+	}
+
+	return nil
+}
+
+func validateDestinationBeadEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
+
+	// The bead in the destination thread (table 205)
+
+	obj, err := dict.Entry(dictName, entryName, required)
+	if err != nil || obj == nil {
+		return err
+	}
+
+	obj, err = xRefTable.Dereference(obj)
+	if err != nil {
+		return err
+	}
+	if obj == nil {
+		if required {
+			return errors.Errorf("validateDestinationBeadEntry: dict=%s required entry=%s is nil", dictName, entryName)
+		}
+		return nil
+	}
+
+	switch obj.(type) {
+
+	case types.PDFDict, types.PDFInteger:
+		// an indRef to a bead dictionary of a thread in the current file
+		// or an index of the thread within its thread
+
+	default:
+		return errors.Errorf("validateDestinationBeadEntry: dict=%s entry=%s invalid type", dictName, entryName)
+	}
+
+	// Version check
+	if xRefTable.Version() < sinceVersion {
+		return errors.Errorf("validateDestinationBeadEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
+	}
 
 	return nil
 }
@@ -244,14 +313,14 @@ func validateThreadActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, d
 		return err
 	}
 
-	// D, required, name, byte string or array
-	err = validateDestinationEntry(xRefTable, dict, dictName, "D", REQUIRED, types.V10, nil)
+	// D, required, indRef to thread dict, integer or text string.
+	err = validateDestinationThreadEntry(xRefTable, dict, dictName, "D", REQUIRED, types.V10)
 	if err != nil {
 		return err
 	}
 
-	// B, optional, integer or bead dict
-	err = validateIntOrDictEntry(xRefTable, dict, dictName, "B", OPTIONAL, types.V10)
+	// B, optional, indRef to bead dict or integer.
+	err = validateDestinationBeadEntry(xRefTable, dict, dictName, "B", OPTIONAL, types.V10)
 	if err != nil {
 		return err
 	}
@@ -328,7 +397,7 @@ func validateSoundDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dic
 
 	// E, optional, name - encoding format
 	validateSampleDataEncoding := func(s string) bool {
-		return memberOf(s, []string{"Raw", "Signed", "muLaw", "Alaw"})
+		return memberOf(s, []string{"Raw", "Signed", "muLaw", "ALaw"})
 	}
 	_, err = validateNameEntry(xRefTable, dict, dictName, "E", OPTIONAL, types.V10, validateSampleDataEncoding)
 
@@ -490,8 +559,6 @@ func validateMovieActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, di
 
 	// see 12.6.4.9
 
-	logInfoValidate.Println("*** validateMovieActionDict begin ***")
-
 	if xRefTable.Version() < sinceVersion {
 		return errors.Errorf("validateMovieActionDict: unsupported in version %s.\n", xRefTable.VersionString())
 	}
@@ -504,36 +571,26 @@ func validateMovieActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, di
 
 	// Needs either Annotation or T entry but not both.
 
-	// T, optional, text string
-	t, err := validateStringEntry(xRefTable, dict, dictName, "T", OPTIONAL, types.V10, nil)
-	if err != nil {
+	// T, text string
+	_, err = validateStringEntry(xRefTable, dict, dictName, "T", OPTIONAL, types.V10, nil)
+	if err == nil {
+		return nil
+	}
+
+	// Annotation, indRef of movie annotation dict
+	indRef, err := validateIndRefEntry(xRefTable, dict, dictName, "Annotation", REQUIRED, types.V10)
+	if err != nil || indRef == nil {
 		return err
 	}
 
-	// Annotation, optional, indRef of movie annotation dict
-
-	indRef, err := validateIndRefEntry(xRefTable, dict, dictName, "Annotation", OPTIONAL, types.V10)
-	if err != nil {
-		return err
-	}
-	if (indRef != nil && t != nil) || (indRef == nil && t == nil) {
-		return errors.New("validateMovieActionDict: needs either T or Annotation entry")
+	d, err := xRefTable.DereferenceDict(*indRef)
+	if err != nil || d == nil {
+		return errors.New("validateMovieActionDict: missing required entry \"T\" or \"Annotation\"")
 	}
 
-	if indRef != nil {
-		d, err := xRefTable.DereferenceDict(*indRef)
-		if err != nil {
-			return err
-		}
-		_, err = validateNameEntry(xRefTable, d, "annotDict", "Subtype", REQUIRED, types.V10, func(s string) bool { return s == "Movie" })
-		if err != nil {
-			return err
-		}
-	}
+	_, err = validateNameEntry(xRefTable, d, "annotDict", "Subtype", REQUIRED, types.V10, func(s string) bool { return s == "Movie" })
 
-	logInfoValidate.Println("*** validateMovieActionDict end ***")
-
-	return nil
+	return err
 }
 
 func validateHideActionDictEntryT(xRefTable *types.XRefTable, obj interface{}) error {
