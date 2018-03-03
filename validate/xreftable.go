@@ -675,18 +675,18 @@ func validatePieceDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 func validateRootPieceInfo(xRefTable *types.XRefTable, rootDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
-	_, err := validatePieceInfo(xRefTable, rootDict, required, sinceVersion)
+	_, err := validatePieceInfo(xRefTable, rootDict, "rootDict", "PieceInfo", required, sinceVersion)
 
 	return err
 }
 
-func validatePieceInfo(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) (hasPieceInfo bool, err error) {
+func validatePieceInfo(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) (hasPieceInfo bool, err error) {
 
 	// 14.5 Page-Piece Dictionaries
 
 	logInfoValidate.Println("*** validatePieceInfo begin ***")
 
-	pieceDict, err := validateDictEntry(xRefTable, dict, "dict", "PieceInfo", required, sinceVersion, nil)
+	pieceDict, err := validateDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
 	if err != nil {
 		return false, err
 	}

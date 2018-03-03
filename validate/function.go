@@ -6,6 +6,8 @@ import (
 	"github.com/hhrutter/pdfcpu/types"
 )
 
+// see 7.10 Functions
+
 func validateExponentialInterpolationFunctionDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	logInfoValidate.Println("*** validateExponentialInterpolationFunctionDict begin ***")

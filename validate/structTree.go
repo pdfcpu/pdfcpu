@@ -89,22 +89,22 @@ func validateObjectReferenceDict(xRefTable *types.XRefTable, dict *types.PDFDict
 		return errors.New("validateObjectReferenceDict: missing required entry \"Obj\"")
 	}
 
-	switch obj := obj.(type) {
+	// switch obj := obj.(type) {
 
-	case types.PDFDict:
-		_, err = validateAnnotationDict(xRefTable, &obj)
+	// case types.PDFDict:
+	// 	_, err = validateAnnotationDict(xRefTable, &obj)
 
-	case types.PDFStreamDict:
-		err = validateXObjectStreamDict(xRefTable, &obj)
+	// case types.PDFStreamDict:
+	// 	err = validateXObjectStreamDict(xRefTable, &obj)
 
-	default:
-		return errors.Errorf("validateObjectReferenceDict: unsupported PDF object: %v", obj)
+	// default:
+	// 	return errors.Errorf("validateObjectReferenceDict: unsupported PDF object: %v", obj)
 
-	}
+	// }
 
 	logInfoValidate.Println("*** validateObjectReferenceDict end ***")
 
-	return err
+	return nil
 }
 
 func validateStructElementDictEntryKArray(xRefTable *types.XRefTable, arr *types.PDFArray) error {
@@ -383,7 +383,7 @@ func validateStructElementDictPart1(xRefTable *types.XRefTable, dict *types.PDFD
 		return err
 	}
 
-	// P: immediate parent, required, indirect reference
+	// pl: immediate parent, required, indirect reference
 	indRef := dict.IndirectRefEntry("P")
 	if indRef == nil {
 		return errors.Errorf("validateStructElementDict: missing entry P: %s\n", dict)

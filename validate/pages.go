@@ -907,6 +907,8 @@ func validatePageDict(xRefTable *types.XRefTable, pageDict *types.PDFDict, objNu
 
 	logInfoValidate.Printf("*** validatePageDict begin: hasResources=%v hasMediaBox=%v obj#%d ***\n", hasResources, hasMediaBox, objNumber)
 
+	dictName := "pageDict"
+
 	if indref := pageDict.IndirectRefEntry("Parent"); indref == nil {
 		return errors.New("validatePageDict: missing parent")
 	}
@@ -934,13 +936,13 @@ func validatePageDict(xRefTable *types.XRefTable, pageDict *types.PDFDict, objNu
 	if xRefTable.ValidationMode == types.ValidationRelaxed {
 		sinceVersion = types.V10
 	}
-	hasPieceInfo, err := validatePieceInfo(xRefTable, pageDict, OPTIONAL, sinceVersion)
+	hasPieceInfo, err := validatePieceInfo(xRefTable, pageDict, dictName, "PieceInfo", OPTIONAL, sinceVersion)
 	if err != nil {
 		return err
 	}
 
 	// LastModified
-	lm, err := validateDateEntry(xRefTable, pageDict, "pageDict", "LastModified", OPTIONAL, types.V13)
+	lm, err := validateDateEntry(xRefTable, pageDict, dictName, "LastModified", OPTIONAL, types.V13)
 	if err != nil {
 		return err
 	}
@@ -950,7 +952,7 @@ func validatePageDict(xRefTable *types.XRefTable, pageDict *types.PDFDict, objNu
 	}
 
 	// AA
-	err = validateAdditionalActions(xRefTable, pageDict, "pageDict", "AA", OPTIONAL, types.V14, "page")
+	err = validateAdditionalActions(xRefTable, pageDict, dictName, "AA", OPTIONAL, types.V14, "page")
 	if err != nil {
 		return err
 	}

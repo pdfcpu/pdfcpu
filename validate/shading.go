@@ -354,12 +354,8 @@ func validateShading(xRefTable *types.XRefTable, obj interface{}) error {
 	logInfoValidate.Println("*** validateShading begin ***")
 
 	obj, err := xRefTable.Dereference(obj)
-	if err != nil {
+	if err != nil || obj == nil {
 		return err
-	}
-	if obj == nil {
-		logInfoValidate.Println("validateShading end: object is nil.")
-		return nil
 	}
 
 	switch obj := obj.(type) {
@@ -392,12 +388,8 @@ func validateShadingResourceDict(xRefTable *types.XRefTable, obj interface{}, si
 	}
 
 	dict, err := xRefTable.DereferenceDict(obj)
-	if err != nil {
+	if err != nil || dict == nil {
 		return err
-	}
-	if dict == nil {
-		logInfoValidate.Println("*** validateShadingResourceDict end: object is nil. ***")
-		return nil
 	}
 
 	// Iterate over shading resource dictionary

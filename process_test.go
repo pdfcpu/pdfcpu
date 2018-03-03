@@ -1281,7 +1281,7 @@ func TestUnknownCommand(t *testing.T) {
 
 func xxxTestDemoXRef(t *testing.T) {
 
-	xRefTable, err := create.DemoXRef()
+	xRefTable, err := create.AnnotationDemoXRef()
 	if err != nil {
 		t.Fatalf("testDemoXRef %v\n", err)
 	}
@@ -1299,27 +1299,52 @@ func xxxTestDemoXRef(t *testing.T) {
 	// t.Logf("XRefTable:\n%s\n", strings.Join(logStr, ""))
 }
 
-func TestDemoPDF(t *testing.T) {
+func TestAnnotationDemoPDF(t *testing.T) {
 
 	//dir := "testdata"
 	dir := "testdata/out"
 
-	xRefTable, err := create.DemoXRef()
+	xRefTable, err := create.AnnotationDemoXRef()
 	if err != nil {
-		t.Fatalf("testDemoPDF %v\n", err)
+		t.Fatalf("testAnnotationDemoPDF %v\n", err)
 	}
 
-	err = create.DemoPDF(xRefTable, dir+"/", "demo.pdf")
+	err = create.DemoPDF(xRefTable, dir+"/", "annotationDemo.pdf")
 	if err != nil {
-		t.Fatalf("testDemoPDF %v\n", err)
+		t.Fatalf("testAnnotationDemoPDF %v\n", err)
 	}
 
 	config := types.NewDefaultConfiguration()
 	config.SetValidationRelaxed()
 
-	_, err = Process(ValidateCommand(dir+"/"+"demo.pdf", config))
+	_, err = Process(ValidateCommand(dir+"/"+"annotationDemo.pdf", config))
 	if err != nil {
-		t.Fatalf("testDemoPDF %v\n", err)
+		t.Fatalf("testAnnotationDemoPDF %v\n", err)
+	}
+
+}
+
+func TestAcroformDemoPDF(t *testing.T) {
+
+	//dir := "testdata"
+	dir := "testdata/out"
+
+	xRefTable, err := create.AcroFormDemoXRef()
+	if err != nil {
+		t.Fatalf("testAcroformDemoPDF %v\n", err)
+	}
+
+	err = create.DemoPDF(xRefTable, dir+"/", "acroFormDemo.pdf")
+	if err != nil {
+		t.Fatalf("testAcroformDemoPDF %v\n", err)
+	}
+
+	config := types.NewDefaultConfiguration()
+	config.SetValidationRelaxed()
+
+	_, err = Process(ValidateCommand(dir+"/"+"acroFormDemo.pdf", config))
+	if err != nil {
+		t.Fatalf("testAcroformDemoPDF %v\n", err)
 	}
 
 }

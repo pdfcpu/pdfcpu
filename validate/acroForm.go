@@ -255,7 +255,7 @@ func validateAcroFieldDict(xRefTable *types.XRefTable, indRef *types.PDFIndirect
 		return err
 	}
 
-	// Write field entries.
+	// Validate field dict entries.
 	_, err = validateAcroFieldDictEntries(xRefTable, dict, true, inFieldType)
 	if err != nil {
 		return err

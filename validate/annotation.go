@@ -361,7 +361,7 @@ func validateAnnotationDictLink(xRefTable *types.XRefTable, dict *types.PDFDict,
 	// BS, optional, border style dict, since V1.6
 	sinceVersion = types.V16
 	if xRefTable.ValidationMode == types.ValidationRelaxed {
-		sinceVersion = types.V14
+		sinceVersion = types.V13
 	}
 	_, err = validateBorderStyleDict(xRefTable, dict, dictName, "BS", OPTIONAL, sinceVersion)
 	if err != nil {
@@ -1623,6 +1623,8 @@ func validateBorderArrayLength(a types.PDFArray) bool {
 }
 
 func validateAnnotationDictGeneral(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) (*types.PDFName, error) {
+
+	//logErrorValidate.Println(dict)
 
 	// Type, optional, name
 	//v := func(s string) bool { return s == "Annot" }
