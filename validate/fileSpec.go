@@ -430,6 +430,40 @@ func validateFileSpecification(xRefTable *types.XRefTable, obj interface{}) (int
 	return obj, nil
 }
 
+func validateURLSpecification(xRefTable *types.XRefTable, obj interface{}) (interface{}, error) {
+
+	// See 7.11.4
+
+	logInfoValidate.Println("*** validateURLSpecification begin ***")
+
+	d, err := xRefTable.DereferenceDict(obj)
+	if err != nil {
+		return nil, err
+	}
+
+	if d == nil {
+		return nil, errors.New("validateURLSpecification: missing dict")
+	}
+
+	dictName := "urlSpec"
+
+	// FS, required, name
+	_, err = validateNameEntry(xRefTable, d, dictName, "FS", REQUIRED, types.V10, func(s string) bool { return s == "URL" })
+	if err != nil {
+		return nil, err
+	}
+
+	// F, required, string, URL (Internet RFC 1738)
+	_, err = validateStringEntry(xRefTable, d, dictName, "F", REQUIRED, types.V10, validateURLString)
+	if err != nil {
+		return nil, err
+	}
+
+	logInfoValidate.Println("*** validateURLSpecification end ***")
+
+	return obj, nil
+}
+
 func validateFileSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (interface{}, error) {
 
 	logInfoValidate.Printf("*** validateFileSpecEntry begin: entry=%s ***\n", entryName)
@@ -456,12 +490,58 @@ func validateFileSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dict
 		return nil, nil
 	}
 
+	err = xRefTable.ValidateVersion("fileSpec", sinceVersion)
+	if err != nil {
+		return nil, err
+	}
+
 	fs, err := validateFileSpecification(xRefTable, obj)
 	if err != nil {
 		return nil, err
 	}
 
 	logInfoValidate.Printf("*** validateFileSpecEntry end: entry=%s ***\n", entryName)
+
+	return fs, nil
+}
+
+func validateURLSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (interface{}, error) {
+
+	logInfoValidate.Printf("*** validateURLSpecEntry begin: entry=%s ***\n", entryName)
+
+	obj, found := dict.Find(entryName)
+	if !found || obj == nil {
+		if required {
+			return nil, errors.Errorf("validateURLSpecEntry: dict=%s required entry=%s missing", dictName, entryName)
+		}
+		logInfoValidate.Printf("validateURLSpecEntry end: entry %s is nil\n", entryName)
+		return nil, nil
+	}
+
+	obj, err := xRefTable.Dereference(obj)
+	if err != nil {
+		return nil, err
+	}
+
+	if obj == nil {
+		if required {
+			return nil, errors.Errorf("validateURLSpecEntry: dict=%s required entry=%s missing", dictName, entryName)
+		}
+		logInfoValidate.Printf("validateURLSpecEntry end: entry %s is nil\n", entryName)
+		return nil, nil
+	}
+
+	err = xRefTable.ValidateVersion("URLSpec", sinceVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	fs, err := validateURLSpecification(xRefTable, obj)
+	if err != nil {
+		return nil, err
+	}
+
+	logInfoValidate.Printf("*** validateURLSpecEntry end: entry=%s ***\n", entryName)
 
 	return fs, nil
 }

@@ -9,35 +9,26 @@ func validateGoToActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, dic
 
 	// see 12.6.4.2 Go-To Actions
 
-	logInfoValidate.Println("*** validateGoToActionDict begin ***")
-
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateGoToActionDict: unsupported in version %s.\n", xRefTable.VersionString())
-	}
-
-	// D, required, name, byte string or array
-	err := validateDestinationEntry(xRefTable, dict, dictName, "D", REQUIRED, types.V10, nil)
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
 	if err != nil {
 		return err
 	}
 
-	logInfoValidate.Println("*** validateGoToActionDict end ***")
-
-	return nil
+	// D, required, name, byte string or array
+	return validateDestinationEntry(xRefTable, dict, dictName, "D", REQUIRED, types.V10, nil)
 }
 
 func validateGoToRActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
 
 	// see 12.6.4.3 Remote Go-To Actions
 
-	logInfoValidate.Println("*** validateGoToRActionDict begin ***")
-
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateGoToRActionDict: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// F, required, file specification
-	_, err := validateFileSpecEntry(xRefTable, dict, dictName, "F", REQUIRED, types.V11)
+	_, err = validateFileSpecEntry(xRefTable, dict, dictName, "F", REQUIRED, types.V11)
 	if err != nil {
 		return err
 	}
@@ -50,20 +41,13 @@ func validateGoToRActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, di
 
 	// NewWindow, optional, boolean, since V1.2
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "NewWindow", OPTIONAL, types.V12, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateGoToRActionDict end ***")
-
-	return nil
+	return err
 }
 
 func validateTargetDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
 	// table 202
-
-	logInfoValidate.Println("*** validateTargetDictEntry begin ***")
 
 	d, err := validateDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
 	if err != nil || d == nil {
@@ -97,24 +81,16 @@ func validateTargetDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, di
 	}
 
 	// T, optional, target dict
-	err = validateTargetDictEntry(xRefTable, d, dictName, "T", OPTIONAL, types.V10)
-	if err != nil {
-		return err
-	}
-
-	logInfoValidate.Println("*** validateTargetDictEntry end ***")
-
-	return nil
+	return validateTargetDictEntry(xRefTable, d, dictName, "T", OPTIONAL, types.V10)
 }
 
 func validateGoToEActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
 
 	// see 12.6.4.4 Embedded Go-To Actions
 
-	logInfoValidate.Println("*** validateGoToEActionDict begin ***")
-
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateGoToEActionDict: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// F, optional, file specification
@@ -136,21 +112,12 @@ func validateGoToEActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, di
 	}
 
 	// T, required unless entry F is present, target dict
-	err = validateTargetDictEntry(xRefTable, dict, dictName, "T", f == nil, types.V10)
-	if err != nil {
-		return err
-	}
-
-	logInfoValidate.Println("*** validateGoToEActionDict end ***")
-
-	return nil
+	return validateTargetDictEntry(xRefTable, dict, dictName, "T", f == nil, types.V10)
 }
 
 func validateWinDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// see table 204
-
-	logInfoValidate.Println("*** validateWinDict begin ***")
 
 	dictName := "winDict"
 
@@ -174,27 +141,21 @@ func validateWinDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// P, optional, byte string
 	_, err = validateStringEntry(xRefTable, dict, dictName, "P", OPTIONAL, types.V10, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateWinDict end ***")
-
-	return nil
+	return err
 }
 
 func validateLaunchActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
 
 	// see 12.6.4.5
 
-	logInfoValidate.Println("*** validateLaunchActionDict begin ***")
-
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateLaunchActionDict: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// F, optional, file specification
-	_, err := validateFileSpecEntry(xRefTable, dict, dictName, "F", OPTIONAL, types.V11)
+	_, err = validateFileSpecEntry(xRefTable, dict, dictName, "F", OPTIONAL, types.V11)
 	if err != nil {
 		return err
 	}
@@ -206,18 +167,13 @@ func validateLaunchActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, d
 	}
 	if winDict != nil {
 		err = validateWinDict(xRefTable, winDict)
-		if err != nil {
-			return err
-		}
 	}
 
 	// Mac, optional, undefined dict
 
 	// Unix, optional, undefined dict
 
-	logInfoValidate.Println("*** validateLaunchActionDict end ***")
-
-	return nil
+	return err
 }
 
 func validateDestinationThreadEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
@@ -251,12 +207,7 @@ func validateDestinationThreadEntry(xRefTable *types.XRefTable, dict *types.PDFD
 		return errors.Errorf("validateDestinationThreadEntry: dict=%s entry=%s invalid type", dictName, entryName)
 	}
 
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateDestinationThreadEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
-	}
-
-	return nil
+	return xRefTable.ValidateVersion(dictName, sinceVersion)
 }
 
 func validateDestinationBeadEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
@@ -289,26 +240,20 @@ func validateDestinationBeadEntry(xRefTable *types.XRefTable, dict *types.PDFDic
 		return errors.Errorf("validateDestinationBeadEntry: dict=%s entry=%s invalid type", dictName, entryName)
 	}
 
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateDestinationBeadEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
-	}
-
-	return nil
+	return xRefTable.ValidateVersion(dictName, sinceVersion)
 }
 
 func validateThreadActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
 
 	//see 12.6.4.6
 
-	logInfoValidate.Println("*** validateThreadActionDict begin ***")
-
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateThreadActionDict: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// F, optional, file specification
-	_, err := validateFileSpecEntry(xRefTable, dict, dictName, "F", OPTIONAL, types.V11)
+	_, err = validateFileSpecEntry(xRefTable, dict, dictName, "F", OPTIONAL, types.V11)
 	if err != nil {
 		return err
 	}
@@ -320,48 +265,31 @@ func validateThreadActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, d
 	}
 
 	// B, optional, indRef to bead dict or integer.
-	err = validateDestinationBeadEntry(xRefTable, dict, dictName, "B", OPTIONAL, types.V10)
-	if err != nil {
-		return err
-	}
-
-	logInfoValidate.Println("*** validateThreadActionDict end ***")
-
-	return nil
+	return validateDestinationBeadEntry(xRefTable, dict, dictName, "B", OPTIONAL, types.V10)
 }
 
 func validateURIActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
 
 	// see 12.6.4.7
 
-	logInfoValidate.Println("*** validateURIActionDict begin ***")
-
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateURIActionDict: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// URI, required, string
-	_, err := validateStringEntry(xRefTable, dict, dictName, "URI", REQUIRED, types.V10, nil)
+	_, err = validateStringEntry(xRefTable, dict, dictName, "URI", REQUIRED, types.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// IsMap, optional, boolean
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "IsMap", OPTIONAL, types.V10, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateURIActionDict end ***")
-
-	return nil
+	return err
 }
 
 func validateSoundDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
-
-	logInfoValidate.Println("*** validateSoundDictEntry begin ***")
-
-	var sd *types.PDFStreamDict
 
 	sd, err := validateStreamDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
 	if err != nil || sd == nil {
@@ -401,8 +329,6 @@ func validateSoundDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dic
 	}
 	_, err = validateNameEntry(xRefTable, dict, dictName, "E", OPTIONAL, types.V10, validateSampleDataEncoding)
 
-	logInfoValidate.Println("*** validateSoundDictEntry end ***")
-
 	return err
 }
 
@@ -410,14 +336,13 @@ func validateSoundActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, di
 
 	// see 12.6.4.8
 
-	logInfoValidate.Println("*** validateSoundActionDict begin ***")
-
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateSoundActionDict: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// Sound, required, stream dict
-	err := validateSoundDictEntry(xRefTable, dict, dictName, "Sound", REQUIRED, types.V10)
+	err = validateSoundDictEntry(xRefTable, dict, dictName, "Sound", REQUIRED, types.V10)
 	if err != nil {
 		return err
 	}
@@ -442,13 +367,8 @@ func validateSoundActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, di
 
 	// Mix, optional, boolean
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "Mix", OPTIONAL, types.V10, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateSoundActionDict end ***")
-
-	return nil
+	return err
 }
 
 func validateMovieStartOrDurationEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool) error {
@@ -482,14 +402,10 @@ func validateMovieStartOrDurationEntry(xRefTable *types.XRefTable, dict *types.P
 		}
 	}
 
-	logInfoValidate.Println("*** validateMovieStartOrDurationEntry end ***")
-
 	return nil
 }
 
 func validateMovieActivationDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
-
-	logInfoValidate.Println("*** validateMovieActivationDict begin ***")
 
 	dictName := "movieActivationDict"
 
@@ -546,25 +462,21 @@ func validateMovieActivationDict(xRefTable *types.XRefTable, dict *types.PDFDict
 
 	// FWPosition, optional, array of 2 numbers [0.0 .. 1.0]
 	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "FWPosition", OPTIONAL, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateMovieActivationDict end ***")
-
-	return nil
+	return err
 }
 
 func validateMovieActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
 
 	// see 12.6.4.9
 
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateMovieActionDict: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// is a movie activation dict
-	err := validateMovieActivationDict(xRefTable, dict)
+	err = validateMovieActivationDict(xRefTable, dict)
 	if err != nil {
 		return err
 	}
@@ -652,10 +564,9 @@ func validateHideActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, dic
 
 	// see 12.6.4.10
 
-	logInfoValidate.Println("*** validateHideActionDict begin ***")
-
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateHideActionDict: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// T, required, dict, text string or array
@@ -664,13 +575,9 @@ func validateHideActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, dic
 		return errors.New("validateHideActionDict: missing required entry \"T\"")
 	}
 
-	obj, err := xRefTable.Dereference(obj)
-	if err != nil {
+	obj, err = xRefTable.Dereference(obj)
+	if err != nil || obj == nil {
 		return err
-	}
-	if obj == nil {
-		logInfoValidate.Println("validateHideActionDict end: is nil")
-		return nil
 	}
 
 	err = validateHideActionDictEntryT(xRefTable, obj)
@@ -680,47 +587,35 @@ func validateHideActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, dic
 
 	// H, optional, boolean
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "H", OPTIONAL, types.V10, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateHideActionDict end ***")
-
-	return nil
+	return err
 }
 
 func validateNamedActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
 
 	// see 12.6.4.11
 
-	logInfoValidate.Println("*** validateNamedActionDict begin ***")
-
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateNamedActionDict: unsupported in version %s.\n", xRefTable.VersionString())
-	}
-
-	_, err := validateNameEntry(xRefTable, dict, dictName, "N", REQUIRED, types.V10, validateNamedAction)
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
 	if err != nil {
 		return err
 	}
 
-	logInfoValidate.Println("*** validateNamedActionDict end ***")
+	_, err = validateNameEntry(xRefTable, dict, dictName, "N", REQUIRED, types.V10, validateNamedAction)
 
-	return nil
+	return err
 }
 
 func validateSubmitFormActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
 
 	// see 12.7.5.2
 
-	logInfoValidate.Println("*** validateSubmitFormActionDict begin ***")
-
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateSubmitFormActionDict: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
-	// F, required, file specification
-	_, err := validateFileSpecEntry(xRefTable, dict, dictName, "F", REQUIRED, types.V10)
+	// F, required, URL specification
+	_, err = validateURLSpecEntry(xRefTable, dict, dictName, "F", REQUIRED, types.V10)
 	if err != nil {
 		return err
 	}
@@ -747,23 +642,17 @@ func validateSubmitFormActionDict(xRefTable *types.XRefTable, dict *types.PDFDic
 
 	// Flags, optional, integer
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "Flags", OPTIONAL, types.V10, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateSubmitFormActionDict end ***")
-
-	return nil
+	return err
 }
 
 func validateResetFormActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
 
 	// see 12.7.5.3
 
-	logInfoValidate.Println("*** validateResetFormActionDict begin ***")
-
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateResetFormActionDict: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// Fields, optional, array
@@ -788,34 +677,23 @@ func validateResetFormActionDict(xRefTable *types.XRefTable, dict *types.PDFDict
 
 	// Flags, optional, integer
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "Flags", OPTIONAL, types.V10, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateResetFormActionDict end ***")
-
-	return nil
+	return err
 }
 
 func validateImportDataActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
 
 	// see 12.7.5.4
 
-	logInfoValidate.Println("*** validateImportDataActionDict begin ***")
-
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateImportDataActionDict: unsupported in version %s.\n", xRefTable.VersionString())
-	}
-
-	// F, required, file specification
-	_, err := validateFileSpecEntry(xRefTable, dict, dictName, "F", OPTIONAL, types.V11)
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
 	if err != nil {
 		return err
 	}
 
-	logInfoValidate.Println("*** validateImportDataActionDict end ***")
+	// F, required, file specification
+	_, err = validateFileSpecEntry(xRefTable, dict, dictName, "F", OPTIONAL, types.V11)
 
-	return nil
+	return err
 }
 
 func validateJavaScript(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool) error {
@@ -831,12 +709,8 @@ func validateJavaScript(xRefTable *types.XRefTable, dict *types.PDFDict, dictNam
 	}
 
 	obj, err := xRefTable.Dereference(obj)
-	if err != nil {
+	if err != nil || obj == nil {
 		return err
-	}
-	if obj == nil {
-		logInfoValidate.Println("validateJavaScript end: is nil")
-		return nil
 	}
 
 	switch s := obj.(type) {
@@ -863,8 +737,6 @@ func validateJavaScript(xRefTable *types.XRefTable, dict *types.PDFDict, dictNam
 
 	}
 
-	logInfoValidate.Println("*** validateJavaScript end ***")
-
 	return nil
 }
 
@@ -872,58 +744,43 @@ func validateJavaScriptActionDict(xRefTable *types.XRefTable, dict *types.PDFDic
 
 	// see 12.6.4.16
 
-	logInfoValidate.Println("*** validateJavaScriptActionDict begin ***")
-
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateJavaScriptActionDict: unsupported in version %s.\n", xRefTable.VersionString())
-	}
-
-	// JS, required, text string or stream
-	err := validateJavaScript(xRefTable, dict, dictName, "JS", REQUIRED)
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
 	if err != nil {
 		return err
 	}
 
-	logInfoValidate.Println("*** validateJavaScriptActionDict end ***")
-
-	return nil
+	// JS, required, text string or stream
+	return validateJavaScript(xRefTable, dict, dictName, "JS", REQUIRED)
 }
 
 func validateSetOCGStateActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
 
 	// see 12.6.4.12
 
-	logInfoValidate.Println("*** validateSetOCGStateActionDict begin ***")
-
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateSetOCGStateActionDict: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// State, required, array
-	_, err := validateArrayEntry(xRefTable, dict, dictName, "State", REQUIRED, types.V10, nil)
+	_, err = validateArrayEntry(xRefTable, dict, dictName, "State", REQUIRED, types.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// PreserveRB, optinal, boolean
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "PreserveRB", OPTIONAL, types.V10, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateSetOCGStateActionDict end ***")
-
-	return nil
+	return err
 }
 
 func validateRenditionActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
 
 	// see 12.6.4.13
 
-	logInfoValidate.Println("*** validateRenditionActionDict begin ***")
-
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateRenditionActionDict: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// OP or JS need to be present.
@@ -950,6 +807,9 @@ func validateRenditionActionDict(xRefTable *types.XRefTable, dict *types.PDFDict
 	}(op)
 
 	d, err := validateDictEntry(xRefTable, dict, dictName, "R", required, sinceVersion, nil)
+	if err != nil {
+		return err
+	}
 	if d != nil {
 		err = validateRenditionDict(xRefTable, d, sinceVersion)
 		if err != nil {
@@ -959,14 +819,15 @@ func validateRenditionActionDict(xRefTable *types.XRefTable, dict *types.PDFDict
 
 	// AN, required for any OP 0..4, indRef of screen annotation dict
 	d, err = validateDictEntry(xRefTable, dict, dictName, "AN", op != nil, types.V10, nil)
+	if err != nil {
+		return err
+	}
 	if d != nil {
 		_, err = validateNameEntry(xRefTable, d, dictName, "Subtype", REQUIRED, types.V10, func(s string) bool { return s == "Screen" })
 		if err != nil {
 			return err
 		}
 	}
-
-	logInfoValidate.Println("*** validateRenditionActionDict end ***")
 
 	return nil
 }
@@ -975,10 +836,9 @@ func validateTransActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, di
 
 	// see 12.6.4.14
 
-	logInfoValidate.Println("*** validateTransActionDict begin ***")
-
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateTransActionDict: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// Trans, required, transitionDict
@@ -987,14 +847,7 @@ func validateTransActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, di
 		return err
 	}
 
-	err = validateTransitionDict(xRefTable, d)
-	if err != nil {
-		return err
-	}
-
-	logInfoValidate.Println("*** validateTransActionDict end ***")
-
-	return nil
+	return validateTransitionDict(xRefTable, d)
 }
 
 func validateGoTo3DViewActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
@@ -1003,12 +856,12 @@ func validateGoTo3DViewActionDict(xRefTable *types.XRefTable, dict *types.PDFDic
 
 	logInfoValidate.Println("*** validateGoTo3DViewActionDict begin ***")
 
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateGoTo3DViewActionDict: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// TA, required, target annotation
-
 	d, err := validateDictEntry(xRefTable, dict, dictName, "TA", REQUIRED, types.V10, nil)
 	if err != nil {
 		return err
@@ -1022,13 +875,8 @@ func validateGoTo3DViewActionDict(xRefTable *types.XRefTable, dict *types.PDFDic
 	// V, required, the view to use: 3DViewDict or integer or text string or name
 	// TODO Validation.
 	_, err = validateEntry(xRefTable, dict, dictName, "V", REQUIRED)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateGoTo3DViewActionDict end ***")
-
-	return nil
+	return err
 }
 
 func validateActionDictCore(xRefTable *types.XRefTable, n *types.PDFName, dict *types.PDFDict) error {
@@ -1066,8 +914,6 @@ func validateActionDictCore(xRefTable *types.XRefTable, n *types.PDFName, dict *
 
 func validateActionDict(xRefTable *types.XRefTable, obj interface{}) error {
 
-	logInfoValidate.Println("*** validateActionDict begin ***")
-
 	dictName := "actionDict"
 
 	dict, err := xRefTable.DereferenceDict(obj)
@@ -1085,10 +931,6 @@ func validateActionDict(xRefTable *types.XRefTable, obj interface{}) error {
 	s, err := validateNameEntry(xRefTable, dict, dictName, "S", REQUIRED, types.V10, nil)
 	if err != nil {
 		return err
-	}
-	if s == nil {
-		logInfoValidate.Println("validateActionDict end: \"S\" is nil")
-		return nil
 	}
 
 	err = validateActionDictCore(xRefTable, s, dict)
@@ -1124,8 +966,6 @@ func validateActionDict(xRefTable *types.XRefTable, obj interface{}) error {
 
 	}
 
-	logInfoValidate.Println("*** validateActionDict end ***")
-
 	return nil
 }
 
@@ -1135,8 +975,6 @@ func validateRootAdditionalActions(xRefTable *types.XRefTable, rootDict *types.P
 }
 
 func validateAdditionalActions(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion, source string) error {
-
-	logInfoValidate.Println("*** validateAdditionalActions begin ***")
 
 	obj, found := dict.Find(entryName)
 	if !found || obj == nil {
@@ -1169,8 +1007,6 @@ func validateAdditionalActions(xRefTable *types.XRefTable, dict *types.PDFDict, 
 		}
 
 	}
-
-	logInfoValidate.Println("*** validateAdditionalActions begin ***")
 
 	return nil
 }

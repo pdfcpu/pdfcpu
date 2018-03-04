@@ -10,11 +10,12 @@ func validateDestsNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sin
 
 	logInfoValidate.Println("*** validateDestsNameTreeValue: begin ***")
 
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateDestsNameTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion("destsNameTreeValue", sinceVersion)
+	if err != nil {
+		return err
 	}
 
-	err := validateDestination(xRefTable, obj)
+	err = validateDestination(xRefTable, obj)
 
 	logInfoValidate.Println("*** validateDestsNameTreeValue: end ***")
 
@@ -25,11 +26,12 @@ func validateAPNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceV
 
 	logInfoValidate.Println("validateAPNameTreeValue: begin")
 
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAPNameTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion("APNameTreeValue", sinceVersion)
+	if err != nil {
+		return err
 	}
 
-	err := validateAppearanceDict(xRefTable, obj)
+	err = validateAppearanceDict(xRefTable, obj)
 
 	logInfoValidate.Println("validateAPNameTreeValue: end")
 
@@ -59,8 +61,9 @@ func validatePagesNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sin
 
 	logInfoValidate.Println("*** validatePagesNameTreeValue: begin ***")
 
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validatePagesNameTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion("pagesNameTreeValue", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// Value is a page dict.
@@ -90,8 +93,9 @@ func validateTemplatesNameTreeValue(xRefTable *types.XRefTable, obj interface{},
 
 	logInfoValidate.Printf("*** validateTemplatesNameTreeValue: begin ***")
 
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateTemplatesNameTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion("templatesNameTreeValue", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// Value is a template dict.
@@ -309,11 +313,13 @@ func validateEntrySI(xRefTable *types.XRefTable, dict *types.PDFDict, required b
 	}
 
 	obj, err := xRefTable.Dereference(obj)
-	if err != nil {
+	if err != nil || obj == nil {
 		return err
 	}
-	if obj == nil {
-		return errors.New("validateEntrySI: obj is nil")
+
+	err = xRefTable.ValidateVersion("SI", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	switch obj := obj.(type) {
@@ -439,17 +445,15 @@ func validateIDSNameTreeValue(xRefTable *types.XRefTable, obj interface{}, since
 
 	logInfoValidate.Printf("*** validateIDSNameTreeValue: begin ***")
 
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateIDSNameTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion("IDSNameTreeValue", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// Value is a web capture content set.
 	d, err := xRefTable.DereferenceDict(obj)
-	if err != nil {
+	if err != nil || d == nil {
 		return err
-	}
-	if d == nil {
-		return errors.New("validateIDSNameTreeValue: value is nil")
 	}
 
 	err = validateWebCaptureContentSetDict(xRefTable, d)
@@ -468,17 +472,15 @@ func validateURLSNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinc
 
 	logInfoValidate.Println("*** validateURLSNameTreeValue: begin ***")
 
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateURLSNameTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion("URLSNameTreeValue", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// Value is a web capture content set.
 	d, err := xRefTable.DereferenceDict(obj)
-	if err != nil {
+	if err != nil || d == nil {
 		return err
-	}
-	if d == nil {
-		return errors.New("validateURLSNameTreeValue: value is nil")
 	}
 
 	err = validateWebCaptureContentSetDict(xRefTable, d)
@@ -497,8 +499,9 @@ func validateEmbeddedFilesNameTreeValue(xRefTable *types.XRefTable, obj interfac
 
 	logInfoValidate.Printf("*** validateEmbeddedFilesNameTreeValue: begin ***")
 
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateEmbeddedFilesNameTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion("EmbeddedFilesNameTreeValue", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// Value is a file specification for an embedded file stream.
@@ -508,7 +511,7 @@ func validateEmbeddedFilesNameTreeValue(xRefTable *types.XRefTable, obj interfac
 		return nil
 	}
 
-	_, err := validateFileSpecification(xRefTable, obj)
+	_, err = validateFileSpecification(xRefTable, obj)
 	if err != nil {
 		return err
 	}
@@ -562,8 +565,9 @@ func validateAlternatePresentationsNameTreeValue(xRefTable *types.XRefTable, obj
 
 	logInfoValidate.Println("*** validateAlternatePresentationsNameTreeValue: begin ***")
 
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAlternatePresentationsNameTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion("AlternatePresentationsNameTreeValue", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// Value is a slide show dict.
@@ -591,8 +595,9 @@ func validateRenditionsNameTreeValue(xRefTable *types.XRefTable, obj interface{}
 
 	logInfoValidate.Println("*** validateRenditionsNameTreeValue: begin ***")
 
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateRenditionsNameTreeValue: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion("RenditionsNameTreeValue", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// Value is a rendition object.
@@ -619,12 +624,8 @@ func validateIDTreeValue(xRefTable *types.XRefTable, obj interface{}) error {
 	logInfoValidate.Println("*** validateIDTreeValue: begin ***")
 
 	dict, err := xRefTable.DereferenceDict(obj)
-	if err != nil {
+	if err != nil || dict == nil {
 		return err
-	}
-	if dict == nil {
-		logInfoValidate.Println("validateIDTreeValue: is nil.")
-		return nil
 	}
 
 	dictType := dict.Type()

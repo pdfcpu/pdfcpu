@@ -134,6 +134,54 @@ func addResources(xRefTable *types.XRefTable, pageDict *types.PDFDict) error {
 					"S3": *radialShDict,
 				},
 			},
+			"ColorSpace": types.PDFDict{
+				Dict: map[string]interface{}{
+					"CSCalGray": types.PDFArray{
+						types.PDFName("CalGray"),
+						types.PDFDict{
+							Dict: map[string]interface{}{
+								"WhitePoint": types.NewNumberArray(0.9505, 1.0000, 1.0890),
+							},
+						},
+					},
+					"CSCalRGB": types.PDFArray{
+						types.PDFName("CalRGB"),
+						types.PDFDict{
+							Dict: map[string]interface{}{
+								"WhitePoint": types.NewNumberArray(0.9505, 1.0000, 1.0890),
+							},
+						},
+					},
+					"CSLab": types.PDFArray{
+						types.PDFName("Lab"),
+						types.PDFDict{
+							Dict: map[string]interface{}{
+								"WhitePoint": types.NewNumberArray(0.9505, 1.0000, 1.0890),
+							},
+						},
+					},
+					"CSDeviceN": types.PDFArray{
+						types.PDFName("DeviceN"),
+						types.NewNameArray("Orange", "Green", "None"),
+						types.PDFName("DeviceCMYK"),
+						types.PDFDict{
+							Dict: map[string]interface{}{
+								"FunctionType": types.PDFInteger(2),
+								"Domain":       types.NewNumberArray(0.0, 1.0),
+								"C0":           types.NewNumberArray(0.0),
+								"C1":           types.NewNumberArray(1.0),
+								"N":            types.PDFFloat(1),
+							},
+						},
+						types.PDFDict{
+							Dict: map[string]interface{}{
+								"SubType": types.PDFName("DeviceN"),
+								//"Colorants": colorants,
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 
@@ -766,29 +814,6 @@ func setBit(i uint32, pos uint) uint32 {
 	return i
 }
 
-func createButtonFieldDict(xRefTable *types.XRefTable) (*types.PDFIndirectRef, error) {
-
-	var flags uint32
-
-	flags = setBit(flags, 17)
-
-	d := types.PDFDict{
-		Dict: map[string]interface{}{
-			"FT": types.PDFName("Btn"),
-			"Ff": types.PDFInteger(flags),
-			//"T":    types.PDFStringLiteral("Push"),
-			"Rect": types.NewRectangle(100, 100, 150, 150),
-			"H":    types.PDFName("I"),
-			//"Border":  types.NewIntegerArray(0, 0, 3),
-			//"C":       types.NewNumberArray(0.5, 0.5, 0.5),
-			"Type":    types.PDFName("Annot"),
-			"Subtype": types.PDFName("Widget"),
-		},
-	}
-
-	return xRefTable.IndRefForNewObject(d)
-}
-
 func createNormalAppearanceForFormField(xRefTable *types.XRefTable, w, h float64) (*types.PDFIndirectRef, error) {
 
 	// stroke outline path
@@ -806,10 +831,7 @@ func createNormalAppearanceForFormField(xRefTable *types.XRefTable, w, h float64
 			},
 		},
 		Content: b.Bytes(),
-		//FilterPipeline: []types.PDFFilter{{Name: "FlateDecode", DecodeParms: nil}},
 	}
-
-	//sd.InsertName("Filter", "FlateDecode")
 
 	err := filter.EncodeStream(sd)
 	if err != nil {
@@ -921,9 +943,6 @@ func createTextField(xRefTable *types.XRefTable, pageAnnots *types.PDFArray) (*t
 		},
 	}
 
-	// var flags uint32
-	// flags = setBit(flags, 24)
-
 	d := types.PDFDict{
 		Dict: map[string]interface{}{
 			"AP": types.PDFDict{
@@ -940,9 +959,10 @@ func createTextField(xRefTable *types.XRefTable, pageAnnots *types.PDFArray) (*t
 			"Border":  types.NewIntegerArray(0, 0, 1),
 			"Type":    types.PDFName("Annot"),
 			"Subtype": types.PDFName("Widget"),
-			"T":       types.PDFStringLiteral("Gopher"),
-			"TU":      types.PDFStringLiteral("Gopher"),
-			"V":       types.PDFStringLiteral("Inputfield default value"),
+			"T":       types.PDFStringLiteral("inputField"),
+			"TU":      types.PDFStringLiteral("inputField"),
+			"DV":      types.PDFStringLiteral("Default value"),
+			"V":       types.PDFStringLiteral("Default value"),
 		},
 	}
 
@@ -1080,7 +1100,8 @@ func createCheckBoxButtonField(xRefTable *types.XRefTable, pageAnnots *types.PDF
 			"Rect":    types.NewRectangle(250, 300, 270, 320),
 			"Type":    types.PDFName("Annot"),
 			"Subtype": types.PDFName("Widget"),
-			"T":       types.PDFStringLiteral("Urgent"),
+			"T":       types.PDFStringLiteral("CheckBox"),
+			"TU":      types.PDFStringLiteral("CheckBox"),
 			"V":       types.PDFName("Yes"),
 			"AS":      types.PDFName("Yes"),
 			"AP":      apDict,
@@ -1150,6 +1171,8 @@ func createRadioButtonField(xRefTable *types.XRefTable, pageAnnots *types.PDFArr
 			"Type":    types.PDFName("Annot"),
 			"Subtype": types.PDFName("Widget"),
 			"Parent":  *indRef,
+			"T":       types.PDFStringLiteral("Radio1"),
+			"TU":      types.PDFStringLiteral("Radio1"),
 			"AS":      types.PDFName("card1"),
 			"AP": types.PDFDict{
 				Dict: map[string]interface{}{
@@ -1175,6 +1198,8 @@ func createRadioButtonField(xRefTable *types.XRefTable, pageAnnots *types.PDFArr
 			"Type":    types.PDFName("Annot"),
 			"Subtype": types.PDFName("Widget"),
 			"Parent":  *indRef,
+			"T":       types.PDFStringLiteral("Radio2"),
+			"TU":      types.PDFStringLiteral("Radio2"),
 			"AS":      types.PDFName("Off"),
 			"AP": types.PDFDict{
 				Dict: map[string]interface{}{
@@ -1202,7 +1227,101 @@ func createRadioButtonField(xRefTable *types.XRefTable, pageAnnots *types.PDFArr
 	return indRef, nil
 }
 
-func streamObjForFXAElement(xRefTable *types.XRefTable, s string) (*types.PDFIndirectRef, error) {
+func createResetButton(xRefTable *types.XRefTable, pageAnnots *types.PDFArray) (*types.PDFIndirectRef, error) {
+
+	var flags uint32
+	flags = setBit(flags, 17)
+
+	fN, err := createNormalAppearanceForFormField(xRefTable, 20, 20)
+	if err != nil {
+		return nil, err
+	}
+
+	resetFormActionDict := types.PDFDict{
+		Dict: map[string]interface{}{
+			"Type":   types.PDFName("Action"),
+			"S":      types.PDFName("ResetForm"),
+			"Fields": types.NewStringArray("inputField"),
+			"Flags":  types.PDFInteger(0),
+		},
+	}
+
+	d := types.PDFDict{
+		Dict: map[string]interface{}{
+			"FT":      types.PDFName("Btn"),
+			"Ff":      types.PDFInteger(flags),
+			"Rect":    types.NewRectangle(100, 400, 120, 420),
+			"Type":    types.PDFName("Annot"),
+			"Subtype": types.PDFName("Widget"),
+			"AP":      types.PDFDict{Dict: map[string]interface{}{"N": *fN}},
+			"T":       types.PDFStringLiteral("Reset"),
+			"TU":      types.PDFStringLiteral("Reset"),
+			"A":       resetFormActionDict,
+		},
+	}
+
+	indRef, err := xRefTable.IndRefForNewObject(d)
+	if err != nil {
+		return nil, err
+	}
+
+	*pageAnnots = append(*pageAnnots, *indRef)
+
+	return indRef, nil
+}
+
+func createSubmitButton(xRefTable *types.XRefTable, pageAnnots *types.PDFArray) (*types.PDFIndirectRef, error) {
+
+	var flags uint32
+	flags = setBit(flags, 17)
+
+	fN, err := createNormalAppearanceForFormField(xRefTable, 20, 20)
+	if err != nil {
+		return nil, err
+	}
+
+	urlSpec := types.PDFDict{
+		Dict: map[string]interface{}{
+			"FS": types.PDFName("URL"),
+			"F":  types.PDFStringLiteral("http://www.me.com"),
+		},
+	}
+
+	submitFormActionDict := types.PDFDict{
+		Dict: map[string]interface{}{
+			"Type":   types.PDFName("Action"),
+			"S":      types.PDFName("SubmitForm"),
+			"F":      urlSpec,
+			"Fields": types.NewStringArray("inputField"),
+			"Flags":  types.PDFInteger(0),
+		},
+	}
+
+	d := types.PDFDict{
+		Dict: map[string]interface{}{
+			"FT":      types.PDFName("Btn"),
+			"Ff":      types.PDFInteger(flags),
+			"Rect":    types.NewRectangle(140, 400, 160, 420),
+			"Type":    types.PDFName("Annot"),
+			"Subtype": types.PDFName("Widget"),
+			"AP":      types.PDFDict{Dict: map[string]interface{}{"N": *fN}},
+			"T":       types.PDFStringLiteral("Submit"),
+			"TU":      types.PDFStringLiteral("Submit"),
+			"A":       submitFormActionDict,
+		},
+	}
+
+	indRef, err := xRefTable.IndRefForNewObject(d)
+	if err != nil {
+		return nil, err
+	}
+
+	*pageAnnots = append(*pageAnnots, *indRef)
+
+	return indRef, nil
+}
+
+func streamObjForXFAElement(xRefTable *types.XRefTable, s string) (*types.PDFIndirectRef, error) {
 
 	sd := &types.PDFStreamDict{
 		PDFDict: types.PDFDict{
@@ -1221,12 +1340,12 @@ func streamObjForFXAElement(xRefTable *types.XRefTable, s string) (*types.PDFInd
 
 func createXFAArray(xRefTable *types.XRefTable) (*types.PDFArray, error) {
 
-	sd1, err := streamObjForFXAElement(xRefTable, "<xdp:xdp xmlns:xdp=\"http://ns.adobe.com/xdp/\">")
+	sd1, err := streamObjForXFAElement(xRefTable, "<xdp:xdp xmlns:xdp=\"http://ns.adobe.com/xdp/\">")
 	if err != nil {
 		return nil, err
 	}
 
-	sd3, err := streamObjForFXAElement(xRefTable, "</xdp:xdp>")
+	sd3, err := streamObjForXFAElement(xRefTable, "</xdp:xdp>")
 	if err != nil {
 		return nil, err
 	}
@@ -1256,6 +1375,16 @@ func createAcroFormDict(xRefTable *types.XRefTable) (*types.PDFDict, *types.PDFA
 		return nil, nil, err
 	}
 
+	resetButton, err := createResetButton(xRefTable, &pageAnnots)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	submitButton, err := createSubmitButton(xRefTable, &pageAnnots)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	xfaArr, err := createXFAArray(xRefTable)
 	if err != nil {
 		return nil, nil, err
@@ -1263,7 +1392,7 @@ func createAcroFormDict(xRefTable *types.XRefTable) (*types.PDFDict, *types.PDFA
 
 	d := types.PDFDict{
 		Dict: map[string]interface{}{
-			"Fields":          types.PDFArray{*text, *checkBox, *radioButton}, // indRefs of fieldDicts
+			"Fields":          types.PDFArray{*text, *checkBox, *radioButton, *resetButton, *submitButton}, // indRefs of fieldDicts
 			"NeedAppearances": types.PDFBoolean(true),
 			"CO":              types.PDFArray{*text},
 			"XFA":             *xfaArr,

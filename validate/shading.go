@@ -383,8 +383,9 @@ func validateShadingResourceDict(xRefTable *types.XRefTable, obj interface{}, si
 	logInfoValidate.Println("*** validateShadingResourceDict begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateShadingResourceDict: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion("shadingResourceDict", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	dict, err := xRefTable.DereferenceDict(obj)

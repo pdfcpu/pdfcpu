@@ -32,16 +32,7 @@ func validateAppearanceSubDict(xRefTable *types.XRefTable, subDict *types.PDFDic
 	// dict of stream objects.
 	for _, obj := range subDict.Dict {
 
-		sd, err := xRefTable.DereferenceStreamDict(obj)
-		if err != nil {
-			return err
-		}
-
-		if sd == nil {
-			continue
-		}
-
-		err = validateXObjectStreamDict(xRefTable, sd)
+		err := validateXObjectStreamDict(xRefTable, obj)
 		if err != nil {
 			return err
 		}
@@ -71,7 +62,7 @@ func validateAppearanceDictEntry(xRefTable *types.XRefTable, obj interface{}) er
 		err = validateAppearanceSubDict(xRefTable, &obj)
 
 	case types.PDFStreamDict:
-		err = validateXObjectStreamDict(xRefTable, &obj)
+		err = validateXObjectStreamDict(xRefTable, obj)
 
 	default:
 		err = errors.New("validateAppearanceDictEntry: unsupported PDF object")
@@ -308,8 +299,9 @@ func validateAcroFormCO(xRefTable *types.XRefTable, obj interface{}, sinceVersio
 	logInfoValidate.Println("*** validateAcroFormCO begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAcroFormCO: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion("AcroFormCO", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	arr, err := xRefTable.DereferenceArray(obj)
@@ -339,11 +331,11 @@ func validateAcroFormCO(xRefTable *types.XRefTable, obj interface{}, sinceVersio
 	return nil
 }
 
-func validateAcroFormEntryXFA(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
+func validateAcroFormXFA(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	// see 12.7.8
 
-	logInfoValidate.Println("*** validateAcroFormEntryXFA begin ***")
+	logInfoValidate.Println("*** validateAcroFormXFA begin ***")
 
 	obj, ok := dict.Find("XFA")
 	if !ok {
@@ -352,8 +344,7 @@ func validateAcroFormEntryXFA(xRefTable *types.XRefTable, dict *types.PDFDict, s
 
 	// streamDict or array of text,streamDict pairs
 
-	var err error
-	obj, err = xRefTable.Dereference(obj)
+	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
 		return err
 	}
@@ -370,7 +361,7 @@ func validateAcroFormEntryXFA(xRefTable *types.XRefTable, dict *types.PDFDict, s
 		for _, v := range obj {
 
 			if v == nil {
-				return errors.New("validateAcroFormEntryXFA: array entry is nil")
+				return errors.New("validateAcroFormXFA: array entry is nil")
 			}
 
 			var o interface{}
@@ -384,14 +375,14 @@ func validateAcroFormEntryXFA(xRefTable *types.XRefTable, dict *types.PDFDict, s
 
 				_, ok := o.(types.PDFStringLiteral)
 				if !ok {
-					return errors.New("validateAcroFormEntryXFA: even array must be a string")
+					return errors.New("validateAcroFormXFA: even array must be a string")
 				}
 
 			} else {
 
 				_, ok := o.(types.PDFStreamDict)
 				if !ok {
-					return errors.New("validateAcroFormEntryXFA: odd array entry must be a streamDict")
+					return errors.New("validateAcroFormXFA: odd array entry must be a streamDict")
 				}
 
 			}
@@ -400,10 +391,15 @@ func validateAcroFormEntryXFA(xRefTable *types.XRefTable, dict *types.PDFDict, s
 		}
 
 	default:
-		return errors.New("validateAcroFormEntryXFA: needs to be streamDict or array")
+		return errors.New("validateAcroFormXFA: needs to be streamDict or array")
 	}
 
-	logInfoValidate.Println("*** validateAcroFormEntryXFA end ***")
+	err = xRefTable.ValidateVersion("AcroFormXFA", sinceVersion)
+	if err != nil {
+		return err
+	}
+
+	logInfoValidate.Println("*** validateAcroFormXFA end ***")
 
 	return nil
 }
@@ -444,10 +440,10 @@ func validateAcroForm(xRefTable *types.XRefTable, rootDict *types.PDFDict, requi
 	}
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAcroForm: unsupported in version %s.\n", xRefTable.VersionString())
+	err = xRefTable.ValidateVersion("AcroForm", sinceVersion)
+	if err != nil {
+		return err
 	}
-
 	// Fields, required, array of indirect references
 	obj, ok := dict.Find("Fields")
 	if !ok {
@@ -498,7 +494,7 @@ func validateAcroForm(xRefTable *types.XRefTable, rootDict *types.PDFDict, requi
 	}
 
 	// XFA: optional, since 1.5, stream or array
-	err = validateAcroFormEntryXFA(xRefTable, dict, sinceVersion)
+	err = validateAcroFormXFA(xRefTable, dict, sinceVersion)
 	if err != nil {
 		return err
 	}

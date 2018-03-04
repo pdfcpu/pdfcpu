@@ -5,7 +5,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validatePropertiesDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
+func validatePropertiesDict(xRefTable *types.XRefTable, obj interface{}) error {
 
 	// see 14.6.2
 	// a dictionary containing private information meaningful to the conforming writer creating marked content.
@@ -27,7 +27,12 @@ func validatePropertiesDict(xRefTable *types.XRefTable, dict *types.PDFDict) err
 
 	logInfoValidate.Println("*** validatePropertiesDict begin ***")
 
-	err := validateMetadata(xRefTable, dict, OPTIONAL, types.V14)
+	dict, err := xRefTable.DereferenceDict(obj)
+	if err != nil || obj == nil {
+		return err
+	}
+
+	err = validateMetadata(xRefTable, dict, OPTIONAL, types.V14)
 	if err != nil {
 		return err
 	}
@@ -85,43 +90,26 @@ func validatePropertiesDict(xRefTable *types.XRefTable, dict *types.PDFDict) err
 
 func validatePropertiesResourceDict(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
 
-	logInfoValidate.Println("*** validatePropertiesResourceDict begin ***")
-
-	dict, err := xRefTable.DereferenceDict(obj)
+	// Version check
+	err := xRefTable.ValidateVersion("PropertiesResourceDict", sinceVersion)
 	if err != nil {
 		return err
 	}
-	if dict == nil {
-		logInfoValidate.Println("validatePropertiesResourceDict end: object is nil.")
-		return nil
-	}
 
-	// Version check
-	if xRefTable.Version() < types.V12 {
-		return errors.Errorf("validatePropertiesResourceDict: unsupported in version %s.\n", xRefTable.VersionString())
+	dict, err := xRefTable.DereferenceDict(obj)
+	if err != nil || dict == nil {
+		return err
 	}
 
 	// Iterate over properties resource dict
 	for _, obj := range dict.Dict {
 
-		dict, err = xRefTable.DereferenceDict(obj)
-		if err != nil {
-			return err
-		}
-
-		if dict == nil {
-			logInfoValidate.Println("validatePropertiesResourceDict end: resource object is nil.")
-			continue
-		}
-
 		// Process propDict
-		err = validatePropertiesDict(xRefTable, dict)
+		err = validatePropertiesDict(xRefTable, obj)
 		if err != nil {
 			return err
 		}
 	}
-
-	logInfoValidate.Println("*** validatePropertiesResourceDict end ***")
 
 	return nil
 }

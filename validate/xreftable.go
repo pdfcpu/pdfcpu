@@ -5,18 +5,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateVersion(xRefTable *types.XRefTable, rootDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
-
-	logInfoValidate.Println("*** validateVersion begin ***")
+func validateRootVersion(xRefTable *types.XRefTable, rootDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	_, err := validateNameEntry(xRefTable, rootDict, "rootDict", "Version", OPTIONAL, types.V14, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateVersion end ***")
-
-	return nil
+	return err
 }
 
 func validateExtensions(xRefTable *types.XRefTable, rootDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
@@ -26,12 +19,8 @@ func validateExtensions(xRefTable *types.XRefTable, rootDict *types.PDFDict, req
 	logInfoValidate.Println("*** validateExtensions begin ***")
 
 	dict, err := validateDictEntry(xRefTable, rootDict, "rootDict", "Extensions", required, sinceVersion, nil)
-	if err != nil {
+	if err != nil || dict == nil {
 		return err
-	}
-	if dict == nil {
-		logInfoValidate.Println("validateExtensions end: dict is nil.")
-		return nil
 	}
 
 	// No validation due to lack of documentation.
@@ -60,12 +49,15 @@ func validatePageLabels(xRefTable *types.XRefTable, rootDict *types.PDFDict, req
 		return nil
 	}
 
+	dictName := "PageLabels"
+
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validatePageLabels: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
-	_, _, err := validateNumberTree(xRefTable, "PageLabel", *indRef, true)
+	_, _, err = validateNumberTree(xRefTable, "PageLabel", *indRef, true)
 	if err != nil {
 		return err
 	}
@@ -95,17 +87,14 @@ func validateNames(xRefTable *types.XRefTable, rootDict *types.PDFDict, required
 	logInfoValidate.Println("*** validateNames begin ***")
 
 	dict, err := validateDictEntry(xRefTable, rootDict, "rootDict", "Names", required, sinceVersion, nil)
-	if err != nil {
+	if err != nil || dict == nil {
 		return err
-	}
-	if dict == nil {
-		logInfoValidate.Println("validateNames end: dict is nil.")
-		return nil
 	}
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateNames: unsupported in version %s.\n", xRefTable.VersionString())
+	err = xRefTable.ValidateVersion("Names", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	for treeName, value := range dict.Dict {
@@ -143,17 +132,14 @@ func validateNamedDestinations(xRefTable *types.XRefTable, rootDict *types.PDFDi
 	logInfoValidate.Println("*** validateNamedDestinations begin ***")
 
 	dict, err := validateDictEntry(xRefTable, rootDict, "rootDict", "Dests", required, sinceVersion, nil)
-	if err != nil {
+	if err != nil || dict == nil {
 		return err
-	}
-	if dict == nil {
-		logInfoValidate.Println("validateNamedDestinations end: dict is nil.")
-		return nil
 	}
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateNamedDestinations: unsupported in version %s.\n", xRefTable.VersionString())
+	err = xRefTable.ValidateVersion("NamedDestinations", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	for _, value := range dict.Dict {
@@ -175,12 +161,8 @@ func validateViewerPreferences(xRefTable *types.XRefTable, rootDict *types.PDFDi
 	logInfoValidate.Println("*** validateViewerPreferences begin ***")
 
 	dict, err := validateDictEntry(xRefTable, rootDict, "rootDict", "ViewerPreferences", required, sinceVersion, nil)
-	if err != nil {
+	if err != nil || dict == nil {
 		return err
-	}
-	if dict == nil {
-		logInfoValidate.Println("validateViewerPreferences end: dict is nil.")
-		return nil
 	}
 
 	_, err = validateBooleanEntry(xRefTable, dict, "ViewerPreferences", "HideToolbar", OPTIONAL, types.V10, nil)
@@ -290,8 +272,9 @@ func validateOpenAction(xRefTable *types.XRefTable, rootDict *types.PDFDict, req
 	}
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateOpenAction: unsupported in version %s.\n", xRefTable.VersionString())
+	err := xRefTable.ValidateVersion("OpenAction", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// either optional action dict
@@ -318,17 +301,14 @@ func validateURI(xRefTable *types.XRefTable, rootDict *types.PDFDict, required b
 	logInfoValidate.Println("*** validateURI begin ***")
 
 	dict, err := validateDictEntry(xRefTable, rootDict, "rootDict", "URI", required, sinceVersion, nil)
-	if err != nil {
+	if err != nil || dict == nil {
 		return err
-	}
-	if dict == nil {
-		logInfoValidate.Println("validateURI end: dict is nil.")
-		return nil
 	}
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateURI: unsupported in version %s.\n", xRefTable.VersionString())
+	err = xRefTable.ValidateVersion("URI", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// Base, optional, ASCII string
@@ -362,12 +342,8 @@ func validateMetadata(xRefTable *types.XRefTable, dict *types.PDFDict, required 
 	}
 
 	streamDict, err := validateStreamDictEntry(xRefTable, dict, "dict", "Metadata", required, sinceVersion, nil)
-	if err != nil {
+	if err != nil || streamDict == nil {
 		return err
-	}
-	if streamDict == nil {
-		logInfoValidate.Printf("validateMetadata end: streamDict is nil\n")
-		return nil
 	}
 
 	dictName := "metaDataDict"
@@ -394,17 +370,8 @@ func validateMarkInfo(xRefTable *types.XRefTable, rootDict *types.PDFDict, requi
 	logInfoValidate.Println("*** validateMarkInfo begin ***")
 
 	dict, err := validateDictEntry(xRefTable, rootDict, "rootDict", "MarkInfo", required, sinceVersion, nil)
-	if err != nil {
+	if err != nil || dict == nil {
 		return err
-	}
-	if dict == nil {
-		logInfoValidate.Println("validateMarkInfo end: dict is nil.")
-		return nil
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateMarkInfo: unsupported in version %s.\n", xRefTable.VersionString())
 	}
 
 	var isTaggedPDF bool
@@ -518,17 +485,8 @@ func validateSpiderInfo(xRefTable *types.XRefTable, rootDict *types.PDFDict, req
 	logInfoValidate.Println("*** validateSpiderInfo begin ***")
 
 	dict, err := validateDictEntry(xRefTable, rootDict, "rootDict", "SpiderInfo", required, sinceVersion, nil)
-	if err != nil {
+	if err != nil || dict == nil {
 		return err
-	}
-	if dict == nil {
-		logInfoValidate.Println("validateSpiderInfo end: dict is nil.")
-		return nil
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateSpiderInfo: unsupported in version %s.\n", xRefTable.VersionString())
 	}
 
 	err = validateWebCaptureInfoDict(xRefTable, dict)
@@ -603,17 +561,8 @@ func validateOutputIntents(xRefTable *types.XRefTable, rootDict *types.PDFDict, 
 	}
 
 	arr, err := validateArrayEntry(xRefTable, rootDict, "rootDict", "OutputIntents", required, sinceVersion, nil)
-	if err != nil {
+	if err != nil || arr == nil {
 		return err
-	}
-	if arr == nil {
-		logInfoValidate.Println("validateOutputIntents end: array is nil.")
-		return nil
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateOutputIntents: unsupported in version %s.\n", xRefTable.VersionString())
 	}
 
 	for _, v := range *arr {
@@ -687,17 +636,8 @@ func validatePieceInfo(xRefTable *types.XRefTable, dict *types.PDFDict, dictName
 	logInfoValidate.Println("*** validatePieceInfo begin ***")
 
 	pieceDict, err := validateDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
-	if err != nil {
+	if err != nil || pieceDict == nil {
 		return false, err
-	}
-	if pieceDict == nil {
-		logInfoValidate.Println("validatePieceInfo end: pieceDict is nil.")
-		return false, nil
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return false, errors.Errorf("validatePieceInfo: unsupported in version %s.\n", xRefTable.VersionString())
 	}
 
 	err = validatePieceDict(xRefTable, pieceDict)
@@ -718,17 +658,8 @@ func validatePermissions(xRefTable *types.XRefTable, rootDict *types.PDFDict, re
 	logInfoValidate.Println("*** validatePermissions begin ***")
 
 	dict, err := validateDictEntry(xRefTable, rootDict, "rootDict", "Permissions", required, sinceVersion, nil)
-	if err != nil {
+	if err != nil || dict == nil {
 		return err
-	}
-	if dict == nil {
-		logInfoValidate.Println("validatePermissions end: dict is nil.")
-		return nil
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validatePermissions: unsupported in version %s.\n", xRefTable.VersionString())
 	}
 
 	return errors.New("*** validatePermissions: not supported ***")
@@ -742,17 +673,8 @@ func validateLegal(xRefTable *types.XRefTable, rootDict *types.PDFDict, required
 	logInfoValidate.Println("*** validateLegal begin ***")
 
 	dict, err := validateDictEntry(xRefTable, rootDict, "rootDict", "Legal", required, sinceVersion, nil)
-	if err != nil {
+	if err != nil || dict == nil {
 		return err
-	}
-	if dict == nil {
-		logInfoValidate.Println("validateLegal end: dict is nil.")
-		return nil
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateLegal: unsupported in version %s.\n", xRefTable.VersionString())
 	}
 
 	return errors.New("*** validateLegal: not supported ***")
@@ -788,11 +710,6 @@ func validateRequirements(xRefTable *types.XRefTable, rootDict *types.PDFDict, r
 	arr, err := validateArrayEntry(xRefTable, rootDict, "rootDict", "Requirements", required, sinceVersion, nil)
 	if err != nil || arr == nil {
 		return err
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateRequirements: unsupported in version %s.\n", xRefTable.VersionString())
 	}
 
 	for _, obj := range *arr {
@@ -929,17 +846,8 @@ func validateCollection(xRefTable *types.XRefTable, rootDict *types.PDFDict, req
 	logInfoValidate.Println("*** validateCollection begin ***")
 
 	dict, err := validateDictEntry(xRefTable, rootDict, "rootDict", "Collection", required, sinceVersion, nil)
-	if err != nil {
+	if err != nil || dict == nil {
 		return err
-	}
-	if dict == nil {
-		logInfoValidate.Println("validateCollection end: dict is nil.")
-		return nil
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateCollection: unsupported in version %s.\n", xRefTable.VersionString())
 	}
 
 	dictName := "Collection"
@@ -1064,7 +972,7 @@ func validateRootObject(xRefTable *types.XRefTable) error {
 		required     bool
 		sinceVersion types.PDFVersion
 	}{
-		{validateVersion, OPTIONAL, types.V14},
+		{validateRootVersion, OPTIONAL, types.V14},
 		{validateExtensions, OPTIONAL, types.V10},
 		{validatePageLabels, OPTIONAL, types.V13},
 		{validateNames, OPTIONAL, types.V12},

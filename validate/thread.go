@@ -239,8 +239,9 @@ func validateThreads(xRefTable *types.XRefTable, rootDict *types.PDFDict, requir
 		return nil
 	}
 
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateThreads: unsupported in version %s", xRefTable.VersionString())
+	err = xRefTable.ValidateVersion("threads", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	for _, obj := range *arr {

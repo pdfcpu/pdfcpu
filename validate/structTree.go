@@ -745,12 +745,8 @@ func validateStructTree(xRefTable *types.XRefTable, rootDict *types.PDFDict, req
 	logInfoValidate.Printf("*** validateStructTree: begin ***")
 
 	dict, err := validateDictEntry(xRefTable, rootDict, "RootDict", "StructTreeRoot", required, sinceVersion, nil)
-	if err != nil {
+	if err != nil || dict == nil {
 		return err
-	}
-	if dict == nil {
-		logDebugValidate.Println("validateStructTree: dict is nil.")
-		return nil
 	}
 
 	err = validateStructTreeRootDict(xRefTable, dict)

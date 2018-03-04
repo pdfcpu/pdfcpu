@@ -246,12 +246,13 @@ func validateAnnotationDictText(xRefTable *types.XRefTable, dict *types.PDFDict,
 	logInfoValidate.Println("*** validateAnnotationDictText begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAnnotationDictText: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// Open, optional, boolean
-	_, err := validateBooleanEntry(xRefTable, dict, dictName, "Open", OPTIONAL, types.V10, nil)
+	_, err = validateBooleanEntry(xRefTable, dict, dictName, "Open", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -330,12 +331,13 @@ func validateAnnotationDictLink(xRefTable *types.XRefTable, dict *types.PDFDict,
 	logInfoValidate.Println("*** validateAnnotationDictLink begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAnnotationDictLink: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// A or D, required either or
-	err := validateActionOrDestination(xRefTable, dict, dictName)
+	err = validateActionOrDestination(xRefTable, dict, dictName)
 	if err != nil {
 		return err
 	}
@@ -472,11 +474,12 @@ func validateAnnotationDictFreeText(xRefTable *types.XRefTable, dict *types.PDFD
 	logInfoValidate.Println("*** validateAnnotationDictFreeText begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAnnotationDictFreeText: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
-	err := validateAnnotationDictFreeTextPart1(xRefTable, dict, dictName, sinceVersion)
+	err = validateAnnotationDictFreeTextPart1(xRefTable, dict, dictName, sinceVersion)
 	if err != nil {
 		return err
 	}
@@ -517,12 +520,13 @@ func validateAnnotationDictLine(xRefTable *types.XRefTable, dict *types.PDFDict,
 	logInfoValidate.Println("*** validateAnnotationDictLine begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAnnotationDictLine: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// L, required, array of numbers, len:4
-	_, err := validateNumberArrayEntry(xRefTable, dict, dictName, "L", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 4 })
+	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "L", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 4 })
 	if err != nil {
 		return err
 	}
@@ -609,12 +613,13 @@ func validateAnnotationDictCircleOrSquare(xRefTable *types.XRefTable, dict *type
 	logInfoValidate.Println("*** validateAnnotationDictCircleOrSquare begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAnnotationDictCircleOrSquare: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// BS, optional, border style dict
-	_, err := validateBorderStyleDict(xRefTable, dict, dictName, "BS", OPTIONAL, types.V10)
+	_, err = validateBorderStyleDict(xRefTable, dict, dictName, "BS", OPTIONAL, types.V10)
 	if err != nil {
 		return err
 	}
@@ -677,12 +682,13 @@ func validateAnnotationDictPolyLine(xRefTable *types.XRefTable, dict *types.PDFD
 	logInfoValidate.Println("*** validateAnnotationDictPolyLine begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAnnotationDictText: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// Vertices, required, array of numbers
-	_, err := validateNumberArrayEntry(xRefTable, dict, dictName, "Vertices", REQUIRED, types.V10, nil)
+	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "Vertices", REQUIRED, types.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -740,12 +746,13 @@ func validateTextMarkupAnnotation(xRefTable *types.XRefTable, dict *types.PDFDic
 	logInfoValidate.Println("*** validateTextMarkupAnnotation begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateTextMarkupAnnotation: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// QuadPoints, required, number array, len:8
-	_, err := validateNumberArrayEntry(xRefTable, dict, dictName, "QuadPoints", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 8 })
+	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "QuadPoints", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 8 })
 	if err != nil {
 		return err
 	}
@@ -762,12 +769,13 @@ func validateAnnotationDictStamp(xRefTable *types.XRefTable, dict *types.PDFDict
 	logInfoValidate.Println("*** validateAnnotationDictStamp begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAnnotationDictStamp: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// Name, optional, name
-	_, err := validateNameEntry(xRefTable, dict, dictName, "Name", OPTIONAL, types.V10, nil)
+	_, err = validateNameEntry(xRefTable, dict, dictName, "Name", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -784,12 +792,13 @@ func validateAnnotationDictCaret(xRefTable *types.XRefTable, dict *types.PDFDict
 	logInfoValidate.Println("*** validateAnnotationDictCaret begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAnnotationDictCaret: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// RD, optional, rectangle, since V1.5
-	_, err := validateRectangleEntry(xRefTable, dict, dictName, "RD", OPTIONAL, types.V15, nil)
+	_, err = validateRectangleEntry(xRefTable, dict, dictName, "RD", OPTIONAL, types.V15, nil)
 	if err != nil {
 		return err
 	}
@@ -812,12 +821,13 @@ func validateAnnotationDictInk(xRefTable *types.XRefTable, dict *types.PDFDict, 
 	logInfoValidate.Println("*** validateAnnotationDictInk begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAnnotationDictInk: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// InkList, required, array of stroked path arrays
-	_, err := validateArrayArrayEntry(xRefTable, dict, dictName, "InkList", REQUIRED, types.V10, nil)
+	_, err = validateArrayArrayEntry(xRefTable, dict, dictName, "InkList", REQUIRED, types.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -840,8 +850,9 @@ func validateAnnotationDictPopup(xRefTable *types.XRefTable, dict *types.PDFDict
 	logInfoValidate.Println("*** validateAnnotationDictPopup begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAnnotationDictPopup: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// Parent, optional, dict indRef
@@ -874,12 +885,13 @@ func validateAnnotationDictFileAttachment(xRefTable *types.XRefTable, dict *type
 	logInfoValidate.Println("*** validateAnnotationDictFileAttachment begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAnnotationDictFileAttachment: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// FS, required, file specification
-	_, err := validateFileSpecEntry(xRefTable, dict, dictName, "FS", REQUIRED, types.V10)
+	_, err = validateFileSpecEntry(xRefTable, dict, dictName, "FS", REQUIRED, types.V10)
 	if err != nil {
 		return err
 	}
@@ -902,12 +914,13 @@ func validateAnnotationDictSound(xRefTable *types.XRefTable, dict *types.PDFDict
 	logInfoValidate.Println("*** validateAnnotationDictSound begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAnnotationDictSound: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// Sound, required, stream dict
-	err := validateSoundDictEntry(xRefTable, dict, dictName, "Sound", REQUIRED, types.V10)
+	err = validateSoundDictEntry(xRefTable, dict, dictName, "Sound", REQUIRED, types.V10)
 	if err != nil {
 		return err
 	}
@@ -968,12 +981,13 @@ func validateAnnotationDictMovie(xRefTable *types.XRefTable, dict *types.PDFDict
 	logInfoValidate.Println("*** validateAnnotationDictMovie begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAnnotationDictText: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// T, optional, text string
-	_, err := validateStringEntry(xRefTable, dict, dictName, "T", OPTIONAL, types.V10, nil)
+	_, err = validateStringEntry(xRefTable, dict, dictName, "T", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -1026,12 +1040,13 @@ func validateAnnotationDictWidget(xRefTable *types.XRefTable, dict *types.PDFDic
 	logInfoValidate.Printf("*** validateAnnotationDictWidget begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAnnotationDictWidget: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// H, optional, name
-	_, err := validateNameEntry(xRefTable, dict, dictName, "H", OPTIONAL, types.V10, validateAnnotationHighlightingMode)
+	_, err = validateNameEntry(xRefTable, dict, dictName, "H", OPTIONAL, types.V10, validateAnnotationHighlightingMode)
 	if err != nil {
 		return err
 	}
@@ -1091,12 +1106,13 @@ func validateAnnotationDictScreen(xRefTable *types.XRefTable, dict *types.PDFDic
 	logInfoValidate.Println("*** validateAnnotationDictScreen begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAnnotationDictScreen: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// T, optional, name
-	_, err := validateNameEntry(xRefTable, dict, dictName, "T", OPTIONAL, types.V10, nil)
+	_, err = validateNameEntry(xRefTable, dict, dictName, "T", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -1137,12 +1153,13 @@ func validateAnnotationDictPrinterMark(xRefTable *types.XRefTable, dict *types.P
 	logInfoValidate.Println("*** validateAnnotationDictPrinterMark begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAnnotationDictPrinterMark: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// MN, optional, name
-	_, err := validateNameEntry(xRefTable, dict, dictName, "MN", OPTIONAL, types.V10, nil)
+	_, err = validateNameEntry(xRefTable, dict, dictName, "MN", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -1171,12 +1188,13 @@ func validateAnnotationDictTrapNet(xRefTable *types.XRefTable, dict *types.PDFDi
 	logInfoValidate.Println("*** validateAnnotationDictTrapNet begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAnnotationDictTrapNet: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// LastModified, optional, date
-	_, err := validateDateEntry(xRefTable, dict, dictName, "LastModified", OPTIONAL, types.V10)
+	_, err = validateDateEntry(xRefTable, dict, dictName, "LastModified", OPTIONAL, types.V10)
 	if err != nil {
 		return err
 	}
@@ -1246,8 +1264,9 @@ func validateAnnotationDictWatermark(xRefTable *types.XRefTable, dict *types.PDF
 	logInfoValidate.Println("*** validateAnnotationDictWatermark begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAnnotationDictWatermark: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// FixedPrint, optional, dict
@@ -1283,7 +1302,7 @@ func validateAnnotationDictWatermark(xRefTable *types.XRefTable, dict *types.PDF
 		return true
 	}
 
-	_, err := validateDictEntry(xRefTable, dict, dictName, "FixedPrint", OPTIONAL, types.V10, validateFixedPrintDict)
+	_, err = validateDictEntry(xRefTable, dict, dictName, "FixedPrint", OPTIONAL, types.V10, validateFixedPrintDict)
 	if err != nil {
 		return err
 	}
@@ -1300,14 +1319,15 @@ func validateAnnotationDict3D(xRefTable *types.XRefTable, dict *types.PDFDict, d
 	logInfoValidate.Println("*** validateAnnotationDict3D begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAnnotationDict3D: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// AP with entry N, required
 
 	// 3DD, required, 3D stream or 3D reference dict
-	err := validateStreamDictOrDictEntry(xRefTable, dict, dictName, "3DD", REQUIRED, types.V10)
+	err = validateStreamDictOrDictEntry(xRefTable, dict, dictName, "3DD", REQUIRED, types.V10)
 	if err != nil {
 		return err
 	}
@@ -1379,12 +1399,13 @@ func validateAnnotationDictRedact(xRefTable *types.XRefTable, dict *types.PDFDic
 	logInfoValidate.Println("*** validateAnnotationDictRedact begin ***")
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateAnnotationDictRedact: dict=%s unsupported in version %s", dictName, xRefTable.VersionString())
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// QuadPoints, optional, number array
-	_, err := validateNumberArrayEntry(xRefTable, dict, dictName, "QuadPoints", OPTIONAL, types.V10, nil)
+	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "QuadPoints", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return err
 	}

@@ -1082,9 +1082,14 @@ func validateType3FontDict(xRefTable *types.XRefTable, dict *types.PDFDict) erro
 	return nil
 }
 
-func validateFontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err error) {
+func validateFontDict(xRefTable *types.XRefTable, obj interface{}) (err error) {
 
 	logInfoValidate.Println("*** validateFontDict begin ***")
+
+	dict, err := xRefTable.DereferenceDict(obj)
+	if err != nil || dict == nil {
+		return err
+	}
 
 	if dict.Type() == nil || *dict.Type() != "Font" {
 		return errors.New("validateFontDict: corrupt font dict")
@@ -1124,40 +1129,27 @@ func validateFontDict(xRefTable *types.XRefTable, dict *types.PDFDict) (err erro
 
 func validateFontResourceDict(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
 
-	logInfoValidate.Println("*** validateFontResourceDict begin ***")
-
-	dict, err := xRefTable.DereferenceDict(obj)
+	// Version check
+	err := xRefTable.ValidateVersion("fontResourceDict", sinceVersion)
 	if err != nil {
 		return err
 	}
 
-	if dict == nil {
-		logInfoValidate.Println("validateFontResourceDict end: font resource dict is nil.")
-		return nil
+	dict, err := xRefTable.DereferenceDict(obj)
+	if err != nil || dict == nil {
+		return err
 	}
 
 	// Iterate over font resource dict
 	for _, obj := range dict.Dict {
 
-		dict, err := xRefTable.DereferenceDict(obj)
-		if err != nil {
-			return err
-		}
-
-		if dict == nil {
-			logInfoValidate.Println("validateFontResourceDict end: font dict is nil.")
-			continue
-		}
-
 		// Process fontDict
-		err = validateFontDict(xRefTable, dict)
+		err = validateFontDict(xRefTable, obj)
 		if err != nil {
 			return err
 		}
 
 	}
-
-	logInfoValidate.Println("*** validateFontResourceDict end ***")
 
 	return nil
 }

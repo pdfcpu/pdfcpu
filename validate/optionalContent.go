@@ -21,8 +21,9 @@ func validateOptionalContentGroupIntent(xRefTable *types.XRefTable, dict *types.
 	}
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateOptionalContentGroupIntent: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
+	err = xRefTable.ValidateVersion("OCGIntent", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	switch obj := obj.(type) {
@@ -208,8 +209,9 @@ func validateOCGs(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, ent
 	}
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateOCGs: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
+	err = xRefTable.ValidateVersion("OCGs", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	obj, err = xRefTable.Dereference(obj)
@@ -417,12 +419,8 @@ func validateOCProperties(xRefTable *types.XRefTable, rootDict *types.PDFDict, r
 	}
 
 	dict, err := validateDictEntry(xRefTable, rootDict, "rootDict", "OCProperties", required, sinceVersion, nil)
-	if err != nil {
+	if err != nil || dict == nil {
 		return err
-	}
-	if dict == nil {
-		logInfoValidate.Println("validateOCProperties end: object is nil.")
-		return nil
 	}
 
 	dictName := "optContentPropertiesDict"

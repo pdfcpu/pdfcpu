@@ -9,25 +9,22 @@ func validateCalGrayColorSpace(xRefTable *types.XRefTable, arr *types.PDFArray, 
 
 	logInfoValidate.Println("*** validateCalGrayColorSpace begin ***")
 
+	dictName := "calGrayCSDict"
+
+	// Version check
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
+	}
+
 	if len(*arr) != 2 {
 		return errors.Errorf("validateCalGrayColorSpace: invalid array length %d (expected 2) \n.", len(*arr))
 	}
 
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateCalGrayColorSpace: unsupported in version %s.\n", xRefTable.VersionString())
-	}
-
 	dict, err := xRefTable.DereferenceDict((*arr)[1])
-	if err != nil {
+	if err != nil || dict == nil {
 		return err
 	}
-	if dict == nil {
-		logInfoValidate.Println("validateCalGrayColorSpace end")
-		return nil
-	}
-
-	dictName := "calGrayCSDict"
 
 	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "WhitePoint", REQUIRED, sinceVersion, func(arr types.PDFArray) bool { return len(arr) == 3 })
 	if err != nil {
@@ -53,25 +50,21 @@ func validateCalRGBColorSpace(xRefTable *types.XRefTable, arr *types.PDFArray, s
 
 	logInfoValidate.Println("*** validateCalRGBColorSpace begin ***")
 
+	dictName := "calRGBCSDict"
+
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
+	}
+
 	if len(*arr) != 2 {
 		return errors.Errorf("validateCalRGBColorSpace: invalid array length %d (expected 2) \n.", len(*arr))
 	}
 
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateCalRGBColorSpace: unsupported in version %s.\n", xRefTable.VersionString())
-	}
-
 	dict, err := xRefTable.DereferenceDict((*arr)[1])
-	if err != nil {
+	if err != nil || dict == nil {
 		return err
 	}
-	if dict == nil {
-		logInfoValidate.Println("validateCalRGBColorSpace end")
-		return nil
-	}
-
-	dictName := "calRGBCSDict"
 
 	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "WhitePoint", REQUIRED, sinceVersion, func(arr types.PDFArray) bool { return len(arr) == 3 })
 	if err != nil {
@@ -102,25 +95,21 @@ func validateLabColorSpace(xRefTable *types.XRefTable, arr *types.PDFArray, sinc
 
 	logInfoValidate.Println("*** validateLabColorSpace begin ***")
 
+	dictName := "labCSDict"
+
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
+	}
+
 	if len(*arr) != 2 {
 		return errors.Errorf("validateLabColorSpace: invalid array length %d (expected 2) \n.", len(*arr))
 	}
 
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateLabColorSpace: unsupported in version %s.\n", xRefTable.VersionString())
-	}
-
 	dict, err := xRefTable.DereferenceDict((*arr)[1])
-	if err != nil {
+	if err != nil || dict == nil {
 		return err
 	}
-	if dict == nil {
-		logInfoValidate.Println("validateLabColorSpace end")
-		return nil
-	}
-
-	dictName := "labCSDict"
 
 	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "WhitePoint", REQUIRED, sinceVersion, func(arr types.PDFArray) bool { return len(arr) == 3 })
 	if err != nil {
@@ -148,13 +137,15 @@ func validateICCBasedColorSpace(xRefTable *types.XRefTable, arr *types.PDFArray,
 
 	logInfoValidate.Printf("*** validateICCBasedColorSpace begin ***")
 
-	if len(*arr) != 2 {
-		return errors.Errorf("validateICCBasedColorSpace: invalid array length %d (expected 2) \n.", len(*arr))
+	dictName := "ICCBasedColorSpace"
+
+	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateICCBasedColorSpace: unsupported in version %s.\n", xRefTable.VersionString())
+	if len(*arr) != 2 {
+		return errors.Errorf("validateICCBasedColorSpace: invalid array length %d (expected 2) \n.", len(*arr))
 	}
 
 	sd, err := validateStreamDict(xRefTable, (*arr)[1])
@@ -163,7 +154,6 @@ func validateICCBasedColorSpace(xRefTable *types.XRefTable, arr *types.PDFArray,
 	}
 
 	dict := sd.PDFDict
-	dictName := "ICCBasedColorSpace"
 
 	N, err := validateIntegerEntry(xRefTable, &dict, dictName, "N", REQUIRED, sinceVersion, validateICCBasedColorSpaceEntryN)
 	if err != nil {
@@ -196,28 +186,17 @@ func validateIndexedColorSpaceLookuptable(xRefTable *types.XRefTable, obj interf
 	logInfoValidate.Println("*** validateIndexedColorSpaceLookuptable begin ***")
 
 	obj, err := xRefTable.Dereference(obj)
-	if err != nil {
+	if err != nil || obj == nil {
 		return err
-	}
-	if obj == nil {
-		logInfoValidate.Printf("validateIndexedColorSpaceLookuptable end: is nil\n")
-		return nil
 	}
 
 	switch obj.(type) {
 
-	case types.PDFStringLiteral:
-		if xRefTable.Version() < types.V12 {
-			err = errors.Errorf("validateIndexedColorSpaceLookuptable: string literal unsupported in version %s.\n", xRefTable.VersionString())
-		}
-
-	case types.PDFHexLiteral:
-		if xRefTable.Version() < types.V12 {
-			err = errors.Errorf("validateIndexedColorSpaceLookuptable: hex literal unsupported in version %s.\n", xRefTable.VersionString())
-		}
+	case types.PDFStringLiteral, types.PDFHexLiteral:
+		err = xRefTable.ValidateVersion("IndexedColorSpaceLookuptable", types.V12)
 
 	case types.PDFStreamDict:
-		// no further processing
+		err = xRefTable.ValidateVersion("IndexedColorSpaceLookuptable", sinceVersion)
 
 	default:
 		err = errors.Errorf("validateIndexedColorSpaceLookuptable: invalid type\n")
@@ -235,17 +214,17 @@ func validateIndexedColorSpace(xRefTable *types.XRefTable, arr *types.PDFArray, 
 
 	logInfoValidate.Printf("validateIndexedColorSpace begin ***")
 
+	err := xRefTable.ValidateVersion("IndexedColorSpace", sinceVersion)
+	if err != nil {
+		return err
+	}
+
 	if len(*arr) != 4 {
 		return errors.Errorf("validateIndexedColorSpace: invalid array length %d (expected 4) \n.", len(*arr))
 	}
 
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateIndexedColorSpace: unsupported in version %s.\n", xRefTable.VersionString())
-	}
-
 	// arr[1] base: basecolorspace
-	err := validateColorSpace(xRefTable, (*arr)[1], ExcludePatternCS)
+	err = validateColorSpace(xRefTable, (*arr)[1], ExcludePatternCS)
 	if err != nil {
 		return err
 	}
@@ -256,7 +235,7 @@ func validateIndexedColorSpace(xRefTable *types.XRefTable, arr *types.PDFArray, 
 		return err
 	}
 
-	// arr[3] lookup: stream or byte string, since V1.2
+	// arr[3] lookup: stream since V1.2 or byte string
 	err = validateIndexedColorSpaceLookuptable(xRefTable, (*arr)[3], sinceVersion)
 	if err != nil {
 		return err
@@ -271,13 +250,13 @@ func validatePatternColorSpace(xRefTable *types.XRefTable, arr *types.PDFArray, 
 
 	logInfoValidate.Printf("*** validatePatternColorSpace begin ***")
 
-	if len(*arr) < 1 || len(*arr) > 2 {
-		return errors.Errorf("validatePatternColorSpace: invalid array length %d (expected 1 or 2) \n.", len(*arr))
+	err := xRefTable.ValidateVersion("PatternColorSpace", sinceVersion)
+	if err != nil {
+		return err
 	}
 
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validatePatternColorSpace: unsupported in version %s.\n", xRefTable.VersionString())
+	if len(*arr) < 1 || len(*arr) > 2 {
+		return errors.Errorf("validatePatternColorSpace: invalid array length %d (expected 1 or 2) \n.", len(*arr))
 	}
 
 	// 8.7.3.3: arr[1]: name of underlying color space, any cs except PatternCS
@@ -299,17 +278,17 @@ func validateSeparationColorSpace(xRefTable *types.XRefTable, arr *types.PDFArra
 
 	logInfoValidate.Println("*** validateSeparationColorSpace begin ***")
 
+	err := xRefTable.ValidateVersion("SeparationColorSpace", sinceVersion)
+	if err != nil {
+		return err
+	}
+
 	if len(*arr) != 4 {
 		return errors.Errorf("validateSeparationColorSpace: invalid array length %d (expected 4) \n.", len(*arr))
 	}
 
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateSeparationColorSpace: unsupported in version %s.\n", xRefTable.VersionString())
-	}
-
 	// arr[1]: colorant name, arbitrary
-	_, err := validateName(xRefTable, (*arr)[1], nil)
+	_, err = validateName(xRefTable, (*arr)[1], nil)
 	if err != nil {
 		return err
 	}
@@ -480,10 +459,12 @@ func validateDeviceNColorSpaceAttributesDict(xRefTable *types.XRefTable, obj int
 	if xRefTable.ValidationMode == types.ValidationRelaxed {
 		sinceVersion = types.V13
 	}
+
 	d, err = validateDictEntry(xRefTable, dict, dictName, "Process", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
+
 	if d != nil {
 		err = validateDeviceNColorSpaceProcessDict(xRefTable, d)
 		if err != nil {
@@ -514,18 +495,18 @@ func validateDeviceNColorSpace(xRefTable *types.XRefTable, arr *types.PDFArray, 
 
 	logInfoValidate.Println("*** validateDeviceNColorSpace begin ***")
 
+	err := xRefTable.ValidateVersion("DeviceNColorSpace", sinceVersion)
+	if err != nil {
+		return err
+	}
+
 	if len(*arr) < 4 || len(*arr) > 5 {
 		return errors.Errorf("writeDeviceNColorSpace: invalid array length %d (expected 4 or 5) \n.", len(*arr))
 	}
 
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("writeDeviceNColorSpace: unsupported in version %s.\n", xRefTable.VersionString())
-	}
-
 	// arr[1]: array of names specifying the individual color components
 	// length subject to implementation limit.
-	_, err := validateNameArray(xRefTable, (*arr)[1])
+	_, err = validateNameArray(xRefTable, (*arr)[1])
 	if err != nil {
 		return err
 	}
@@ -667,12 +648,8 @@ func validateColorSpace(xRefTable *types.XRefTable, obj interface{}, excludePatt
 	logInfoValidate.Printf("*** validateColorSpace begin ***")
 
 	obj, err := xRefTable.Dereference(obj)
-	if err != nil {
+	if err != nil || obj == nil {
 		return err
-	}
-	if obj == nil {
-		logInfoValidate.Println("validateColorSpace end: resource object is nil")
-		return nil
 	}
 
 	switch obj := obj.(type) {
@@ -745,26 +722,19 @@ func validateColorSpaceResourceDict(xRefTable *types.XRefTable, obj interface{},
 
 	// see 8.6 Color Spaces
 
-	logInfoValidate.Println("*** validateColorSpaceResourceDict begin ***")
-
-	obj, err := xRefTable.Dereference(obj)
+	// Version check
+	err := xRefTable.ValidateVersion("ColorSpaceResourceDict", sinceVersion)
 	if err != nil {
 		return err
 	}
-	if obj == nil {
-		logInfoValidate.Println("validateColorSpaceResourceDict end: object is nil.")
-		return nil
-	}
 
-	dict, ok := obj.(types.PDFDict)
-	if !ok {
-		return errors.New("validateColorSpaceResourceDict: corrupt dict")
+	dict, err := xRefTable.DereferenceDict(obj)
+	if err != nil || dict == nil {
+		return err
 	}
 
 	// Iterate over colorspace resource dictionary
-	for key, obj := range dict.Dict {
-
-		logInfoValidate.Printf("validateColorSpaceResourceDict: processing entry: %s\n", key)
+	for _, obj := range dict.Dict {
 
 		// Process colorspace
 		err = validateColorSpace(xRefTable, obj, IncludePatternCS)
@@ -772,8 +742,6 @@ func validateColorSpaceResourceDict(xRefTable *types.XRefTable, obj interface{},
 			return err
 		}
 	}
-
-	logInfoValidate.Println("*** validateColorSpaceResourceDict end ***")
 
 	return nil
 }

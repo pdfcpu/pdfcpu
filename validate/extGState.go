@@ -10,13 +10,8 @@ func validateLineDashPatternEntry(xRefTable *types.XRefTable, dict *types.PDFDic
 	logInfoValidate.Printf("*** validateLineDashPatternEntry begin: entry=%s ***\n", entryName)
 
 	arr, err := validateArrayEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, func(arr types.PDFArray) bool { return len(arr) == 2 })
-	if err != nil {
+	if err != nil || arr == nil {
 		return err
-	}
-	if arr == nil {
-		// optional and nil or already written
-		logInfoValidate.Println("validateLineDashPatternEntry end")
-		return nil
 	}
 
 	a := *arr
@@ -69,8 +64,9 @@ func validateBG2Entry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName 
 	}
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateBG2Entry: dict=%s entry=%s unsupported in version %s.\n", dictName, entryName, xRefTable.VersionString())
+	err = xRefTable.ValidateVersion("BG2", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	switch obj := obj.(type) {
@@ -123,9 +119,9 @@ func validateUCR2Entry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName
 		return nil
 	}
 
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateUCR2Entry: dict=%s entry=%s unsupported in version %s.\n", dictName, entryName, xRefTable.VersionString())
+	err = xRefTable.ValidateVersion("UCR2", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	switch obj := obj.(type) {
@@ -226,8 +222,9 @@ func validateTransferFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDi
 	}
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateTransferFunctionEntry: dict=%s entry=%s unsupported in version %s.\n", dictName, entryName, xRefTable.VersionString())
+	err = xRefTable.ValidateVersion("TransferFunction", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	err = validateTransferFunction(xRefTable, obj)
@@ -315,8 +312,9 @@ func validateTR2Entry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName 
 	}
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateTR2Entry: dict=%s entry=%s unsupported in version %s.\n", dictName, entryName, xRefTable.VersionString())
+	err = xRefTable.ValidateVersion("TR2", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	err = validateTR2(xRefTable, obj)
@@ -356,8 +354,9 @@ func validateSpotFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDict, 
 	}
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateSpotFunctionEntry: dict=%s entry=%s unsupported in version %s.\n", dictName, entryName, xRefTable.VersionString())
+	err = xRefTable.ValidateVersion("SpotFunction", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	switch obj := obj.(type) {
@@ -680,8 +679,9 @@ func validateHalfToneEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dict
 	}
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateHalfToneEntry: dict=%s entry=%s unsupported in version %s.\n", dictName, entryName, xRefTable.VersionString())
+	err = xRefTable.ValidateVersion("halfToneDict", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	switch obj := obj.(type) {
@@ -725,8 +725,9 @@ func validateBlendModeEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dic
 	}
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateBlendModeEntry: dict=%s entry=%s unsupported in version %s.\n", dictName, entryName, xRefTable.VersionString())
+	err = xRefTable.ValidateVersion("blendMode", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	switch obj := obj.(type) {
@@ -796,8 +797,9 @@ func validateSoftMaskTransferFunctionEntry(xRefTable *types.XRefTable, dict *typ
 	}
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateSoftMaskTransferFunctionEntry: dict=%s entry=%s unsupported in version %s.\n", dictName, entryName, xRefTable.VersionString())
+	err = xRefTable.ValidateVersion("softMaskTransferFunction", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	switch obj := obj.(type) {
@@ -853,7 +855,7 @@ func validateSoftMaskDict(xRefTable *types.XRefTable, dict *types.PDFDict) error
 	}
 
 	if streamDict != nil {
-		err = validateXObjectStreamDict(xRefTable, streamDict)
+		err = validateXObjectStreamDict(xRefTable, *streamDict)
 		if err != nil {
 			return err
 		}
@@ -910,8 +912,9 @@ func validateSoftMaskEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dict
 	}
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateSoftMaskEntry: dict=%s entry=%s unsupported in version %s.\n", dictName, entryName, xRefTable.VersionString())
+	err = xRefTable.ValidateVersion("softMask", sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	switch obj := obj.(type) {
@@ -1127,11 +1130,16 @@ func validateExtGStateDictPart3(xRefTable *types.XRefTable, dict *types.PDFDict,
 	return nil
 }
 
-func validateExtGStateDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
+func validateExtGStateDict(xRefTable *types.XRefTable, obj interface{}) error {
 
 	// 8.4.5 Graphics State Parameter Dictionaries
 
 	logInfoValidate.Println("*** validateExtGStateDict begin ***")
+
+	dict, err := xRefTable.DereferenceDict(obj)
+	if err != nil || dict == nil {
+		return err
+	}
 
 	if dict.Type() != nil && *dict.Type() != "ExtGState" {
 		return errors.New("writeExtGStateDict: corrupt dict type")
@@ -1139,7 +1147,7 @@ func validateExtGStateDict(xRefTable *types.XRefTable, dict *types.PDFDict) erro
 
 	dictName := "extGStateDict"
 
-	err := validateExtGStateDictPart1(xRefTable, dict, dictName)
+	err = validateExtGStateDictPart1(xRefTable, dict, dictName)
 	if err != nil {
 		return err
 	}
@@ -1161,45 +1169,27 @@ func validateExtGStateDict(xRefTable *types.XRefTable, dict *types.PDFDict) erro
 
 func validateExtGStateResourceDict(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
 
-	logInfoValidate.Println("*** validateExtGStateResourceDict begin ***")
-
-	dict, err := xRefTable.DereferenceDict(obj)
+	// Version check
+	err := xRefTable.ValidateVersion("ExtGStateResourceDict", sinceVersion)
 	if err != nil {
 		return err
 	}
 
-	if obj == nil {
-		logInfoValidate.Println("*** validateExtGStateResourceDict end: object is nil. ***")
-		return nil
+	dict, err := xRefTable.DereferenceDict(obj)
+	if err != nil || dict == nil {
+		return err
 	}
 
 	// Iterate over extGState resource dictionary
 	for _, obj := range dict.Dict {
 
-		obj, err = xRefTable.Dereference(obj)
-		if err != nil {
-			return err
-		}
-
-		if obj == nil {
-			logInfoValidate.Println("*** validateExtGStateResourceDict end: resource object is nil. ***")
-			continue
-		}
-
-		dict, ok := obj.(types.PDFDict)
-		if !ok {
-			return errors.New("validateExtGStateResourceDict end: corrupt extGState dict")
-		}
-
 		// Process extGStateDict
-		err = validateExtGStateDict(xRefTable, &dict)
+		err = validateExtGStateDict(xRefTable, obj)
 		if err != nil {
 			return err
 		}
 
 	}
-
-	logInfoValidate.Println("*** validateExtGStateResourceDict end ***")
 
 	return nil
 }

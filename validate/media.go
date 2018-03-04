@@ -410,6 +410,11 @@ func validateFileSpecOrFormXObjectEntry(xRefTable *types.XRefTable, dict *types.
 		return nil
 	}
 
+	err := xRefTable.ValidateVersion("fileSpecOrFormXObject", sinceVersion)
+	if err != nil {
+		return err
+	}
+
 	return validateFileSpecificationOrFormObject(xRefTable, obj)
 }
 

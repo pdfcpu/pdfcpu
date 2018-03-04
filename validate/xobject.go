@@ -410,8 +410,9 @@ func validateMaskEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName
 	}
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateMaskEntry: unsupported in version %s.\n", xRefTable.VersionString())
+	err = xRefTable.ValidateVersion(entryName, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	switch obj := obj.(type) {
@@ -818,13 +819,21 @@ func validateFormStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStr
 	return nil
 }
 
-func validateXObjectStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStreamDict) error {
+func validateXObjectStreamDict(xRefTable *types.XRefTable, obj interface{}) error {
 
 	// see 8.8 External Objects
 
 	logInfoValidate.Println("*** validateXObjectStreamDict begin ***")
 
-	_, err := validateNameEntry(xRefTable, &streamDict.PDFDict, "xObjectStreamDict", "Type", OPTIONAL, types.V10, func(s string) bool { return s == "XObject" })
+	sd, err := xRefTable.DereferenceStreamDict(obj)
+	if err != nil || obj == nil {
+		return err
+	}
+
+	d := sd.PDFDict
+	dictName := "xObjectStreamDict"
+
+	_, err = validateNameEntry(xRefTable, &d, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "XObject" })
 	if err != nil {
 		return err
 	}
@@ -833,7 +842,7 @@ func validateXObjectStreamDict(xRefTable *types.XRefTable, streamDict *types.PDF
 	if xRefTable.ValidationMode == types.ValidationRelaxed {
 		required = OPTIONAL
 	}
-	subtype, err := validateNameEntry(xRefTable, &streamDict.PDFDict, "xObjectStreamDict", "Subtype", required, types.V10, nil)
+	subtype, err := validateNameEntry(xRefTable, &d, dictName, "Subtype", required, types.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -841,22 +850,22 @@ func validateXObjectStreamDict(xRefTable *types.XRefTable, streamDict *types.PDF
 	if subtype == nil {
 
 		// relaxed
-		_, found := streamDict.Find("BBox")
+		_, found := sd.Find("BBox")
 		if found {
-			return validateFormStreamDict(xRefTable, streamDict)
+			return validateFormStreamDict(xRefTable, sd)
 		}
 
 		// Relaxed for page Thumb
-		return validateImageStreamDict(xRefTable, streamDict, isNoAlternateImageStreamDict)
+		return validateImageStreamDict(xRefTable, sd, isNoAlternateImageStreamDict)
 	}
 
 	switch *subtype {
 
 	case "Form":
-		err = validateFormStreamDict(xRefTable, streamDict)
+		err = validateFormStreamDict(xRefTable, sd)
 
 	case "Image":
-		err = validateImageStreamDict(xRefTable, streamDict, isNoAlternateImageStreamDict)
+		err = validateImageStreamDict(xRefTable, sd, isNoAlternateImageStreamDict)
 
 	case "PS":
 		err = errors.Errorf("validateXObjectStreamDict: PostScript XObjects should not be used")
@@ -915,7 +924,11 @@ func validateGroupAttributesDict(xRefTable *types.XRefTable, obj interface{}) er
 
 func validateXObjectResourceDict(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
 
-	logInfoValidate.Println("*** validateXObjectResourceDict begin ***")
+	// Version check
+	err := xRefTable.ValidateVersion("XObjectResourceDict", sinceVersion)
+	if err != nil {
+		return err
+	}
 
 	dict, err := xRefTable.DereferenceDict(obj)
 	if err != nil || dict == nil {
@@ -925,23 +938,12 @@ func validateXObjectResourceDict(xRefTable *types.XRefTable, obj interface{}, si
 	// Iterate over xObject resource dictionary
 	for _, obj := range dict.Dict {
 
-		sd, err := xRefTable.DereferenceStreamDict(obj)
-		if err != nil {
-			return err
-		}
-
-		if sd == nil {
-			continue
-		}
-
 		// Process XObject dict
-		err = validateXObjectStreamDict(xRefTable, sd)
+		err = validateXObjectStreamDict(xRefTable, obj)
 		if err != nil {
 			return err
 		}
 	}
-
-	logInfoValidate.Println("*** validateXObjectResourceDict end ***")
 
 	return nil
 }

@@ -316,15 +316,11 @@ func validatePageEntryThumb(xRefTable *types.XRefTable, dict *types.PDFDict, req
 	logInfoValidate.Println("*** validatePageEntryThumb begin ***")
 
 	streamDict, err := validateStreamDictEntry(xRefTable, dict, "pagesDict", "Thumb", required, sinceVersion, nil)
-	if err != nil {
+	if err != nil || streamDict == nil {
 		return err
 	}
-	if streamDict == nil {
-		logInfoValidate.Println("validatePageEntryThumb end: is nil.")
-		return nil
-	}
 
-	err = validateXObjectStreamDict(xRefTable, streamDict)
+	err = validateXObjectStreamDict(xRefTable, *streamDict)
 	if err != nil {
 		return err
 	}
@@ -341,12 +337,8 @@ func validatePageEntryB(xRefTable *types.XRefTable, dict *types.PDFDict, require
 	logInfoValidate.Println("*** validatePageEntryB begin ***")
 
 	arr, err := validateIndRefArrayEntry(xRefTable, dict, "pagesDict", "B", required, sinceVersion, nil)
-	if err != nil {
+	if err != nil || arr == nil {
 		return err
-	}
-	if arr == nil {
-		logInfoValidate.Println("validatePageEntryB end: is nil.")
-		return nil
 	}
 
 	logInfoValidate.Println("*** validatePageEntryB end ***")
@@ -614,12 +606,8 @@ func validatePageEntryPresSteps(xRefTable *types.XRefTable, pagesDict *types.PDF
 	logInfoValidate.Println("*** validatePageEntryPresSteps begin ***")
 
 	dict, err := validateDictEntry(xRefTable, pagesDict, "pagesDict", "PresSteps", required, sinceVersion, nil)
-	if err != nil {
+	if err != nil || dict == nil {
 		return err
-	}
-	if dict == nil {
-		logInfoValidate.Println("validatePageEntryPresSteps end: is nil.")
-		return nil
 	}
 
 	return errors.New("*** validatePageEntryPresSteps: not supported ***")
@@ -866,12 +854,8 @@ func validatePageEntryVP(xRefTable *types.XRefTable, pagesDict *types.PDFDict, r
 	logInfoValidate.Println("*** validatePageEntryVP begin ***")
 
 	arr, err := validateArrayEntry(xRefTable, pagesDict, "pagesDict", "VP", required, sinceVersion, nil)
-	if err != nil {
+	if err != nil || arr == nil {
 		return err
-	}
-	if arr == nil {
-		logInfoValidate.Println("validatePageEntryVP end: is nil.")
-		return nil
 	}
 
 	var dict *types.PDFDict

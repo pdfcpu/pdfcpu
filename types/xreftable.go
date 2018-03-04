@@ -147,6 +147,16 @@ func (xRefTable *XRefTable) ParseRootVersion() (v *string, err error) {
 	return v, nil
 }
 
+// ValidateVersion validates against the xRefTable's version.
+func (xRefTable *XRefTable) ValidateVersion(element string, sinceVersion PDFVersion) error {
+
+	if xRefTable.Version() < sinceVersion {
+		return errors.Errorf("%s: unsupported in version %s\n", element, xRefTable.VersionString())
+	}
+
+	return nil
+}
+
 // IsLinearizationObject returns true if object #i is a a linearization object.
 func (xRefTable *XRefTable) IsLinearizationObject(i int) bool {
 	return xRefTable.LinearizationObjs[i]
@@ -728,17 +738,18 @@ func (xRefTable *XRefTable) DereferenceName(obj interface{}, sinceVersion PDFVer
 
 	n, ok := obj.(PDFName)
 	if !ok {
-		return n, errors.Errorf("ValidateName: wrong type <%v>", obj)
+		return n, errors.Errorf("DereferenceName: wrong type <%v>", obj)
 	}
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return n, errors.Errorf("ValidateName: unsupported in version %s", xRefTable.VersionString())
+	err = xRefTable.ValidateVersion("DereferenceName", sinceVersion)
+	if err != nil {
+		return n, err
 	}
 
 	// Validation
 	if validate != nil && !validate(n.Value()) {
-		return n, errors.Errorf("ValidateName: invalid <%s>", n.Value())
+		return n, errors.Errorf("DereferenceName: invalid <%s>", n.Value())
 	}
 
 	return n, nil
@@ -754,7 +765,7 @@ func (xRefTable *XRefTable) DereferenceStringLiteral(obj interface{}, sinceVersi
 
 	s, ok := obj.(PDFStringLiteral)
 	if !ok {
-		return s, errors.Errorf("ValidateStringLiteral: wrong type <%v>", obj)
+		return s, errors.Errorf("DereferenceStringLiteral: wrong type <%v>", obj)
 	}
 
 	// Ensure UTF16 correctness.
@@ -764,13 +775,14 @@ func (xRefTable *XRefTable) DereferenceStringLiteral(obj interface{}, sinceVersi
 	}
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return s, errors.Errorf("ValidateStringLiteral: unsupported in version %s", xRefTable.VersionString())
+	err = xRefTable.ValidateVersion("DereferenceStringLiteral", sinceVersion)
+	if err != nil {
+		return s, err
 	}
 
 	// Validation
 	if validate != nil && !validate(s1) {
-		return s, errors.Errorf("ValidateStringLiteral: invalid <%s>", s1)
+		return s, errors.Errorf("DereferenceStringLiteral: invalid <%s>", s1)
 	}
 
 	return s, nil
@@ -803,18 +815,19 @@ func (xRefTable *XRefTable) DereferenceStringOrHexLiteral(obj interface{}, since
 		}
 
 	default:
-		return nil, errors.Errorf("ValidateStringOrHexLiteral: wrong type <%v>", obj)
+		return nil, errors.Errorf("DereferenceStringOrHexLiteral: wrong type <%v>", obj)
 
 	}
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return nil, errors.Errorf("ValidateStringLiteral: unsupported in version %s", xRefTable.VersionString())
+	err = xRefTable.ValidateVersion("DereferenceStringOrHexLiteral", sinceVersion)
+	if err != nil {
+		return s, err
 	}
 
 	// Validation
 	if validate != nil && !validate(s) {
-		return nil, errors.Errorf("ValidateStringLiteral: invalid <%s>", s)
+		return nil, errors.Errorf("DereferenceStringOrHexLiteral: invalid <%s>", s)
 	}
 
 	return o, nil

@@ -1,6 +1,8 @@
 package validate
 
 import (
+	"fmt"
+
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
 )
@@ -65,14 +67,15 @@ func validateArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictNam
 		return nil, nil
 	}
 
+	// Version check
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return nil, err
+	}
+
 	arr, ok := obj.(types.PDFArray)
 	if !ok {
 		return nil, errors.Errorf("validateArrayEntry: dict=%s entry=%s invalid type", dictName, entryName)
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return nil, errors.Errorf("validateArrayEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
 	}
 
 	// Validation
@@ -106,14 +109,15 @@ func validateBooleanEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictN
 		return nil, nil
 	}
 
+	// Version check
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return nil, err
+	}
+
 	b, ok := obj.(types.PDFBoolean)
 	if !ok {
 		return nil, errors.Errorf("validateBooleanEntry: dict=%s entry=%s invalid type", dictName, entryName)
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return nil, errors.Errorf("validateBooleanEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
 	}
 
 	// Validation
@@ -182,14 +186,15 @@ func validateDateEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName
 		return nil, nil
 	}
 
+	// Version check
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return nil, err
+	}
+
 	date, ok := obj.(types.PDFStringLiteral)
 	if !ok {
 		return nil, errors.Errorf("validateDateEntry: dict=%s entry=%s invalid type", dictName, entryName)
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return nil, errors.Errorf("validateDateEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
 	}
 
 	// Validation
@@ -223,14 +228,15 @@ func validateDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName
 		return nil, nil
 	}
 
+	// Version check
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return nil, err
+	}
+
 	d, ok := obj.(types.PDFDict)
 	if !ok {
 		return nil, errors.Errorf("validateDictEntry: dict=%s entry=%s invalid type", dictName, entryName)
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return nil, errors.Errorf("validateDictEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
 	}
 
 	// Validation
@@ -291,14 +297,15 @@ func validateFloatEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictNam
 		return nil, nil
 	}
 
+	// Version check
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return nil, err
+	}
+
 	f, ok := obj.(types.PDFFloat)
 	if !ok {
 		return nil, errors.Errorf("validateFloatEntry: dict=%s entry=%s invalid type", dictName, entryName)
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return nil, errors.Errorf("validateFloatEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
 	}
 
 	// Validation
@@ -320,9 +327,9 @@ func validateFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dict
 		return err
 	}
 
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateFunctionEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	err = validateFunction(xRefTable, obj)
@@ -402,9 +409,9 @@ func validateFunctionOrArrayOfFunctionsEntry(xRefTable *types.XRefTable, dict *t
 
 	}
 
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateFunctionOrArrayOfFunctionsEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	logInfoValidate.Printf("validateFunctionOrArrayOfFunctionsEntry end: entry=%s\n", entryName)
@@ -427,8 +434,9 @@ func validateIndRefEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictNa
 	}
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return nil, errors.Errorf("validateIndRefEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return nil, err
 	}
 
 	logInfoValidate.Printf("validateIndRefEntry end: entry=%s\n", entryName)
@@ -506,14 +514,15 @@ func validateIntegerEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictN
 		return nil, nil
 	}
 
+	// Version check
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return nil, err
+	}
+
 	i, ok := obj.(types.PDFInteger)
 	if !ok {
 		return nil, errors.Errorf("validateIntegerEntry: dict=%s entry=%s invalid type", dictName, entryName)
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return nil, errors.Errorf("validateIntegerEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
 	}
 
 	// Validation
@@ -642,14 +651,15 @@ func validateNameEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName
 		return nil, nil
 	}
 
+	// Version check
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return nil, err
+	}
+
 	name, ok := obj.(types.PDFName)
 	if !ok {
 		return nil, errors.Errorf("validateNameEntry: dict=%s entry=%s invalid type", dictName, entryName)
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return nil, errors.Errorf("validateNameEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
 	}
 
 	// Validation
@@ -766,8 +776,9 @@ func validateNumberEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictNa
 	}
 
 	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return nil, errors.Errorf("validateNumberEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return nil, err
 	}
 
 	obj, err = validateNumber(xRefTable, obj)
@@ -935,14 +946,15 @@ func validateStreamDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, di
 		return nil, nil
 	}
 
+	// Version check
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return nil, err
+	}
+
 	sd, ok := obj.(types.PDFStreamDict)
 	if !ok {
 		return nil, errors.Errorf("validateStreamDictEntry: dict=%s entry=%s invalid type", dictName, entryName)
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return nil, errors.Errorf("validateStreamDictEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
 	}
 
 	// Validation
@@ -1012,6 +1024,12 @@ func validateStringEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictNa
 		return nil, nil
 	}
 
+	// Version check
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return nil, err
+	}
+
 	var s string
 
 	switch obj := obj.(type) {
@@ -1024,11 +1042,6 @@ func validateStringEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictNa
 
 	default:
 		return nil, errors.Errorf("validateStringEntry: dict=%s entry=%s invalid type", dictName, entryName)
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return nil, errors.Errorf("validateStringEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
 	}
 
 	// Validation
@@ -1137,6 +1150,12 @@ func validateStringOrStreamEntry(xRefTable *types.XRefTable, dict *types.PDFDict
 		return nil
 	}
 
+	// Version check
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return err
+	}
+
 	switch obj.(type) {
 
 	case types.PDFStringLiteral, types.PDFHexLiteral, types.PDFStreamDict:
@@ -1144,11 +1163,6 @@ func validateStringOrStreamEntry(xRefTable *types.XRefTable, dict *types.PDFDict
 
 	default:
 		return errors.Errorf("validateStringOrStreamEntry: dict=%s entry=%s invalid type", dictName, entryName)
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateStringOrStreamEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
 	}
 
 	logInfoValidate.Printf("validateStringOrStreamEntry end: entry=%s\n", entryName)
@@ -1177,6 +1191,12 @@ func validateNameOrStringEntry(xRefTable *types.XRefTable, dict *types.PDFDict, 
 		return nil
 	}
 
+	// Version check
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return err
+	}
+
 	switch obj.(type) {
 
 	case types.PDFStringLiteral, types.PDFName:
@@ -1184,11 +1204,6 @@ func validateNameOrStringEntry(xRefTable *types.XRefTable, dict *types.PDFDict, 
 
 	default:
 		return errors.Errorf("validateNameOrStringEntry: dict=%s entry=%s invalid type", dictName, entryName)
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateNameOrStringEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
 	}
 
 	logInfoValidate.Printf("validateNameOrStringEntry end: entry=%s\n", entryName)
@@ -1217,6 +1232,12 @@ func validateIntOrStringEntry(xRefTable *types.XRefTable, dict *types.PDFDict, d
 		return nil
 	}
 
+	// Version check
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return err
+	}
+
 	switch obj.(type) {
 
 	case types.PDFStringLiteral, types.PDFHexLiteral, types.PDFInteger:
@@ -1224,11 +1245,6 @@ func validateIntOrStringEntry(xRefTable *types.XRefTable, dict *types.PDFDict, d
 
 	default:
 		return errors.Errorf("validateIntOrStringEntry: dict=%s entry=%s invalid type", dictName, entryName)
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateIntOrStringEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
 	}
 
 	logInfoValidate.Printf("validateIntOrStringEntry end: entry=%s\n", entryName)
@@ -1257,6 +1273,12 @@ func validateIntOrDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dic
 		return nil
 	}
 
+	// Version check
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return err
+	}
+
 	switch obj.(type) {
 
 	case types.PDFInteger, types.PDFDict:
@@ -1264,11 +1286,6 @@ func validateIntOrDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dic
 
 	default:
 		return errors.Errorf("validateIntOrDictEntry: dict=%s entry=%s invalid type", dictName, entryName)
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateIntOrDictEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
 	}
 
 	logInfoValidate.Printf("validateIntOrDictEntry end: entry=%s\n", entryName)
@@ -1297,6 +1314,12 @@ func validateBooleanOrStreamEntry(xRefTable *types.XRefTable, dict *types.PDFDic
 		return nil
 	}
 
+	// Version check
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return err
+	}
+
 	switch obj.(type) {
 
 	case types.PDFBoolean, types.PDFStreamDict:
@@ -1304,11 +1327,6 @@ func validateBooleanOrStreamEntry(xRefTable *types.XRefTable, dict *types.PDFDic
 
 	default:
 		return errors.Errorf("validateBooleanOrStreamEntry: dict=%s entry=%s invalid type", dictName, entryName)
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateBooleanOrStreamEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
 	}
 
 	logInfoValidate.Printf("validateBooleanOrStreamEntry end: entry=%s\n", entryName)
@@ -1338,6 +1356,12 @@ func validateStreamDictOrDictEntry(xRefTable *types.XRefTable, dict *types.PDFDi
 		return nil
 	}
 
+	// Version check
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return err
+	}
+
 	switch obj.(type) {
 
 	case types.PDFStreamDict:
@@ -1348,11 +1372,6 @@ func validateStreamDictOrDictEntry(xRefTable *types.XRefTable, dict *types.PDFDi
 
 	default:
 		return errors.Errorf("validateStreamDictOrDictEntry: dict=%s entry=%s invalid type", dictName, entryName)
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateStreamDictOrDictEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
 	}
 
 	logInfoValidate.Printf("validateStreamDictOrDictEntry end: entry=%s\n", entryName)
@@ -1379,6 +1398,12 @@ func validateIntegerOrArrayOfIntegerEntry(xRefTable *types.XRefTable, dict *type
 		}
 		logInfoValidate.Printf("validateIntegerOrArrayOfIntegerEntry end: optional entry %s is nil\n", entryName)
 		return nil
+	}
+
+	// Version check
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	switch obj := obj.(type) {
@@ -1410,11 +1435,6 @@ func validateIntegerOrArrayOfIntegerEntry(xRefTable *types.XRefTable, dict *type
 		return errors.Errorf("validateIntegerOrArrayOfIntegerEntry: dict=%s entry=%s invalid type", dictName, entryName)
 	}
 
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateIntegerOrArrayOfIntegerEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
-	}
-
 	logInfoValidate.Printf("validateIntegerOrArrayOfIntegerEntry end: entry=%s\n", entryName)
 
 	return nil
@@ -1439,6 +1459,12 @@ func validateNameOrArrayOfNameEntry(xRefTable *types.XRefTable, dict *types.PDFD
 		}
 		logInfoValidate.Printf("validateNameOrArrayOfNameEntry end: optional entry %s is nil\n", entryName)
 		return nil
+	}
+
+	// Version check
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	switch obj := obj.(type) {
@@ -1471,11 +1497,6 @@ func validateNameOrArrayOfNameEntry(xRefTable *types.XRefTable, dict *types.PDFD
 		return errors.Errorf("validateNameOrArrayOfNameEntry: dict=%s entry=%s invalid type", dictName, entryName)
 	}
 
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateNameOrArrayOfNameEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
-	}
-
 	logInfoValidate.Printf("validateNameOrArrayOfNameEntry end: entry=%s\n", entryName)
 
 	return nil
@@ -1500,6 +1521,12 @@ func validateBooleanOrArrayOfBooleanEntry(xRefTable *types.XRefTable, dict *type
 		}
 		logInfoValidate.Printf("validateBooleanOrArrayOfBooleanEntry end: optional entry %s is nil\n", entryName)
 		return nil
+	}
+
+	// Version check
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	switch obj := obj.(type) {
@@ -1529,11 +1556,6 @@ func validateBooleanOrArrayOfBooleanEntry(xRefTable *types.XRefTable, dict *type
 
 	default:
 		return errors.Errorf("validateBooleanOrArrayOfBooleanEntry: dict=%s entry=%s invalid type", dictName, entryName)
-	}
-
-	// Version check
-	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("validateBooleanOrArrayOfBooleanEntry: dict=%s entry=%s unsupported in version %s", dictName, entryName, xRefTable.VersionString())
 	}
 
 	logInfoValidate.Printf("validateBooleanOrArrayOfBooleanEntry end: entry=%s\n", entryName)

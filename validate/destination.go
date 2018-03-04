@@ -172,7 +172,12 @@ func validateDestinationEntry(
 		return nil
 	}
 
-	err := validateDestination(xRefTable, obj)
+	err := xRefTable.ValidateVersion("destination", sinceVersion)
+	if err != nil {
+		return err
+	}
+
+	err = validateDestination(xRefTable, obj)
 	if err != nil {
 		return err
 	}
