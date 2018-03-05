@@ -23,8 +23,6 @@ func validateBeadDict(xRefTable *types.XRefTable, beadIndRef, threadIndRef, pBea
 
 	objNumber := beadIndRef.ObjectNumber.Value()
 
-	logInfoValidate.Printf("*** validateBeadDict begin: objectNumber=%d ***", objNumber)
-
 	dictName := "beadDict"
 	sinceVersion := types.V10
 
@@ -83,8 +81,6 @@ func validateBeadDict(xRefTable *types.XRefTable, beadIndRef, threadIndRef, pBea
 		}
 	}
 
-	logInfoValidate.Printf("*** validateBeadDict end: objectNumber=%d ***", objNumber)
-
 	return nil
 }
 
@@ -98,9 +94,6 @@ func validateBeadChainIntegrity(beadIndRef, pBeadIndRef, nBeadIndRef *types.PDFI
 }
 
 func validateFirstBeadDict(xRefTable *types.XRefTable, beadIndRef, threadIndRef *types.PDFIndirectRef) error {
-
-	logInfoValidate.Printf("*** validateFirstBeadDict begin beadDictObj#%d threadDictObj#%d ***",
-		beadIndRef.ObjectNumber.Value(), threadIndRef.ObjectNumber.Value())
 
 	dictName := "firstBeadDict"
 	sinceVersion := types.V10
@@ -157,19 +150,10 @@ func validateFirstBeadDict(xRefTable *types.XRefTable, beadIndRef, threadIndRef 
 		return errors.New("validateFirstBeadDict: corrupt chain of beads")
 	}
 
-	err = validateBeadDict(xRefTable, nBeadIndRef, threadIndRef, beadIndRef, pBeadIndRef)
-	if err != nil {
-		return err
-	}
-
-	logInfoValidate.Println("*** validateFirstBeadDict end ***")
-
-	return nil
+	return validateBeadDict(xRefTable, nBeadIndRef, threadIndRef, beadIndRef, pBeadIndRef)
 }
 
 func validateThreadDict(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
-
-	logInfoValidate.Println("*** validateThreadDict begin ***")
 
 	dictName := "threadDict"
 
@@ -205,21 +189,12 @@ func validateThreadDict(xRefTable *types.XRefTable, obj interface{}, sinceVersio
 	}
 
 	// Validate the list of beads starting with the first bead dict.
-	err = validateFirstBeadDict(xRefTable, fBeadIndRef, &threadIndRef)
-	if err != nil {
-		return err
-	}
-
-	logInfoValidate.Println("*** validateThreadDict end ***")
-
-	return nil
+	return validateFirstBeadDict(xRefTable, fBeadIndRef, &threadIndRef)
 }
 
 func validateThreads(xRefTable *types.XRefTable, rootDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	// => 12.4.3 Articles
-
-	logInfoValidate.Println("*** validateThreads begin ***")
 
 	indRef := rootDict.IndirectRefEntry("Threads")
 	if indRef == nil {
@@ -256,8 +231,6 @@ func validateThreads(xRefTable *types.XRefTable, rootDict *types.PDFDict, requir
 		}
 
 	}
-
-	logInfoValidate.Println("*** validateThreads end ***")
 
 	return nil
 }

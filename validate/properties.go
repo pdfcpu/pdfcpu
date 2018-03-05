@@ -25,8 +25,6 @@ func validatePropertiesDict(xRefTable *types.XRefTable, obj interface{}) error {
 	// Optional E see since 1.4 14.9.5
 	// Optional Lang string RFC 3066 see 14.9.2
 
-	logInfoValidate.Println("*** validatePropertiesDict begin ***")
-
 	dict, err := xRefTable.DereferenceDict(obj)
 	if err != nil || obj == nil {
 		return err
@@ -82,8 +80,6 @@ func validatePropertiesDict(xRefTable *types.XRefTable, obj interface{}) error {
 		}
 
 	}
-
-	logInfoValidate.Println("*** validatePropertiesDict end ***")
 
 	return nil
 }

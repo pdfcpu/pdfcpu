@@ -9,8 +9,6 @@ func validateMinimumBitDepthDict(xRefTable *types.XRefTable, dict *types.PDFDict
 
 	// see table 269
 
-	logInfoValidate.Println("*** validateMinimumBitDepthDict: begin ***")
-
 	dictName := "minBitDepthDict"
 
 	// Type, optional, name
@@ -27,20 +25,13 @@ func validateMinimumBitDepthDict(xRefTable *types.XRefTable, dict *types.PDFDict
 
 	// M, optional, integer
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "M", OPTIONAL, sinceVersion, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateMinimumBitDepthDict: end ***")
-
-	return nil
+	return err
 }
 
 func validateMinimumScreenSizeDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	// see table 269
-
-	logInfoValidate.Println("*** validateMinimumScreenSizeDict: begin ***")
 
 	dictName := "minBitDepthDict"
 
@@ -58,20 +49,13 @@ func validateMinimumScreenSizeDict(xRefTable *types.XRefTable, dict *types.PDFDi
 
 	// M, optional, integer
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "M", OPTIONAL, sinceVersion, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateMinimumScreenSizeDict: end ***")
-
-	return nil
+	return err
 }
 
 func validateSoftwareIdentifierDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	// see table 292
-
-	logInfoValidate.Println("*** validateSoftwareIdentifierDict: begin ***")
 
 	dictName := "swIdDict"
 
@@ -113,18 +97,11 @@ func validateSoftwareIdentifierDict(xRefTable *types.XRefTable, dict *types.PDFD
 
 	// OS, optional, array
 	_, err = validateStringArrayEntry(xRefTable, dict, dictName, "OS", OPTIONAL, sinceVersion, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateSoftwareIdentifierDict: end ***")
-
-	return nil
+	return err
 }
 
 func validateMediaCriteriaDictEntryD(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool, sinceVersion types.PDFVersion) error {
-
-	var d *types.PDFDict
 
 	d, err := validateDictEntry(xRefTable, dict, dictName, "D", required, sinceVersion, nil)
 	if err != nil {
@@ -143,8 +120,6 @@ func validateMediaCriteriaDictEntryD(xRefTable *types.XRefTable, dict *types.PDF
 
 func validateMediaCriteriaDictEntryZ(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool, sinceVersion types.PDFVersion) error {
 
-	var d *types.PDFDict
-
 	d, err := validateDictEntry(xRefTable, dict, dictName, "Z", required, sinceVersion, nil)
 	if err != nil {
 		return err
@@ -161,8 +136,6 @@ func validateMediaCriteriaDictEntryZ(xRefTable *types.XRefTable, dict *types.PDF
 }
 
 func validateMediaCriteriaDictEntryV(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool, sinceVersion types.PDFVersion) error {
-
-	var a *types.PDFArray
 
 	a, err := validateArrayEntry(xRefTable, dict, dictName, "V", required, sinceVersion, nil)
 	if err != nil {
@@ -199,8 +172,6 @@ func validateMediaCriteriaDictEntryV(xRefTable *types.XRefTable, dict *types.PDF
 func validateMediaCriteriaDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	// see table 268
-
-	logInfoValidate.Println("*** validateMediaCriteriaDict: begin ***")
 
 	dictName := "mediaCritDict"
 
@@ -266,13 +237,8 @@ func validateMediaCriteriaDict(xRefTable *types.XRefTable, dict *types.PDFDict, 
 
 	// L, optional, array
 	_, err = validateStringArrayEntry(xRefTable, dict, dictName, "L", OPTIONAL, sinceVersion, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateMediaCriteriaDict: end ***")
-
-	return nil
+	return err
 }
 
 func validateMediaPermissionsDict(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
@@ -282,8 +248,6 @@ func validateMediaPermissionsDict(xRefTable *types.XRefTable, dict *types.PDFDic
 	if err != nil || d == nil {
 		return err
 	}
-
-	logInfoValidate.Println("*** validateMediaPermissionsDict: begin ***")
 
 	dictName = "mediaPermissionDict"
 
@@ -298,20 +262,13 @@ func validateMediaPermissionsDict(xRefTable *types.XRefTable, dict *types.PDFDic
 		return memberOf(s, []string{"TEMPNEVER", "TEMPEXTRACT", "TEMPACCESS", "TEMPALWAYS"})
 	}
 	_, err = validateStringEntry(xRefTable, d, dictName, "TF", OPTIONAL, sinceVersion, validateTempFilePolicy)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateMediaPermissionsDict: end ***")
-
-	return nil
+	return err
 }
 
 func validateMediaPlayerInfoDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	// see table 291
-
-	logInfoValidate.Println("*** validateMediaPlayerInfoDict: begin ***")
 
 	dictName := "mediaPlayerInfoDict"
 
@@ -339,20 +296,13 @@ func validateMediaPlayerInfoDict(xRefTable *types.XRefTable, dict *types.PDFDict
 
 	// BE, optional, dict
 	_, err = validateDictEntry(xRefTable, dict, dictName, "BE", OPTIONAL, sinceVersion, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateMediaPlayerInfoDict: end ***")
-
-	return nil
+	return err
 }
 
 func validateMediaPlayersDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	// see 13.2.7.2
-
-	logInfoValidate.Println("*** validateMediaPlayersDict: begin ***")
 
 	dictName := "mediaPlayersDict"
 
@@ -394,8 +344,6 @@ func validateMediaPlayersDict(xRefTable *types.XRefTable, dict *types.PDFDict, s
 
 	}
 
-	logInfoValidate.Println("*** validateMediaPlayersDict: end ***")
-
 	return nil
 
 }
@@ -421,8 +369,6 @@ func validateFileSpecOrFormXObjectEntry(xRefTable *types.XRefTable, dict *types.
 func validateMediaClipDataDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	// see 13.2.4.2
-
-	logInfoValidate.Println("*** validateMediaClipDataDict: begin ***")
 
 	dictName := "mediaClipDataDict"
 
@@ -488,14 +434,10 @@ func validateMediaClipDataDict(xRefTable *types.XRefTable, dict *types.PDFDict, 
 		}
 	}
 
-	logInfoValidate.Println("*** validateMediaClipDataDict: end ***")
-
 	return nil
 }
 
 func validateTimespanDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
-
-	logInfoValidate.Println("*** validateTimespanDict: begin ***")
 
 	dictName := "timespanDict"
 
@@ -513,20 +455,13 @@ func validateTimespanDict(xRefTable *types.XRefTable, dict *types.PDFDict, since
 
 	// V, required, number
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "V", REQUIRED, sinceVersion, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateTimespanDict: end ***")
-
-	return nil
+	return err
 }
 
 func validateMediaOffsetDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	// see 13.2.6.2
-
-	logInfoValidate.Println("*** validateMediaOffsetDict: begin ***")
 
 	dictName := "mediaOffsetDict"
 
@@ -568,8 +503,6 @@ func validateMediaOffsetDict(xRefTable *types.XRefTable, dict *types.PDFDict, si
 
 	}
 
-	logInfoValidate.Println("*** validateMediaOffsetDict: end ***")
-
 	return nil
 }
 
@@ -605,8 +538,6 @@ func validateMediaClipSectionDictMHBE(xRefTable *types.XRefTable, dict *types.PD
 func validateMediaClipSectionDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	// see 13.2.4.3
-
-	logInfoValidate.Println("*** validateMediaClipSectionDict: begin ***")
 
 	dictName := "mediaClipSectionDict"
 
@@ -650,16 +581,12 @@ func validateMediaClipSectionDict(xRefTable *types.XRefTable, dict *types.PDFDic
 		}
 	}
 
-	logInfoValidate.Println("*** validateMediaClipSectionDict: end ***")
-
 	return nil
 }
 
 func validateMediaClipDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	// see 13.2.4
-
-	logInfoValidate.Println("*** validateMediaClipDict: begin ***")
 
 	dictName := "mediaClipDict"
 
@@ -694,8 +621,6 @@ func validateMediaClipDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinc
 			return err
 		}
 	}
-
-	logInfoValidate.Println("*** validateMediaClipDict: end ***")
 
 	return nil
 }
@@ -785,8 +710,6 @@ func validateMediaPlayParamsDict(xRefTable *types.XRefTable, dict *types.PDFDict
 
 	// see 13.2.5
 
-	logInfoValidate.Println("*** validateMediaPlayParamsDict: begin ***")
-
 	dictName := "mediaPlayParamsDict"
 
 	// Type, optional, name
@@ -831,16 +754,12 @@ func validateMediaPlayParamsDict(xRefTable *types.XRefTable, dict *types.PDFDict
 		}
 	}
 
-	logInfoValidate.Println("*** validateMediaPlayParamsDict: end ***")
-
 	return nil
 }
 
 func validateFloatingWindowsParameterDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	// see table 284
-
-	logInfoValidate.Println("*** validateFloatingWindowsParameterDict: begin ***")
 
 	dictName := "floatWinParamsDict"
 
@@ -894,18 +813,11 @@ func validateFloatingWindowsParameterDict(xRefTable *types.XRefTable, dict *type
 
 	// TT, optional, string array
 	_, err = validateStringArrayEntry(xRefTable, dict, dictName, "TT", OPTIONAL, sinceVersion, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateFloatingWindowsParameterDict: end ***")
-
-	return nil
+	return err
 }
 
 func validateScreenParametersMHBEDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
-
-	logInfoValidate.Println("*** validateScreenParametersMHBEDict: begin ***")
 
 	dictName := "screenParmsMHBEDict"
 
@@ -950,16 +862,12 @@ func validateScreenParametersMHBEDict(xRefTable *types.XRefTable, dict *types.PD
 		}
 	}
 
-	logInfoValidate.Println("*** validateScreenParametersMHBEDict: end ***")
-
 	return nil
 }
 
 func validateScreenParametersDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	// see 13.2.
-
-	logInfoValidate.Println("*** validateScreenParametersDict: begin ***")
 
 	dictName := "screenParmsDict"
 
@@ -993,16 +901,12 @@ func validateScreenParametersDict(xRefTable *types.XRefTable, dict *types.PDFDic
 		}
 	}
 
-	logInfoValidate.Println("*** validateScreenParametersDict: end ***")
-
 	return nil
 }
 
 func validateMediaRenditionDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	// table 271
-
-	logInfoValidate.Println("*** validateMediaRenditionDict: begin ***")
 
 	dictName := "mediaRendDict"
 
@@ -1044,16 +948,12 @@ func validateMediaRenditionDict(xRefTable *types.XRefTable, dict *types.PDFDict,
 		}
 	}
 
-	logInfoValidate.Println("*** validateMediaRenditionDict: end ***")
-
 	return nil
 }
 
 func validateSelectorRenditionDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	// table 272
-
-	logInfoValidate.Println("*** validateSelectorRenditionDict: begin ***")
 
 	dictName := "selectorRendDict"
 
@@ -1083,8 +983,6 @@ func validateSelectorRenditionDict(xRefTable *types.XRefTable, dict *types.PDFDi
 		}
 
 	}
-
-	logInfoValidate.Println("*** validateSelectorRenditionDict: end ***")
 
 	return nil
 }
@@ -1143,8 +1041,6 @@ func validateRenditionDictEntryBE(xRefTable *types.XRefTable, dict *types.PDFDic
 
 func validateRenditionDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) (err error) {
 
-	logInfoValidate.Printf("*** validateRenditionDict: begin ***")
-
 	dictName := "renditionDict"
 
 	// Type, optional, name
@@ -1190,8 +1086,6 @@ func validateRenditionDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinc
 			return
 		}
 	}
-
-	logInfoValidate.Printf("*** validateRenditionDict: end ***")
 
 	return
 }

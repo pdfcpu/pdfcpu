@@ -121,67 +121,160 @@ func addResources(xRefTable *types.XRefTable, pageDict *types.PDFDict) error {
 
 	radialShDict := createRadialShadingDict(xRefTable)
 
+	f := types.PDFDict{
+		Dict: map[string]interface{}{
+			"FunctionType": types.PDFInteger(2),
+			"Domain":       types.NewNumberArray(0.0, 1.0),
+			"C0":           types.NewNumberArray(0.0),
+			"C1":           types.NewNumberArray(1.0),
+			"N":            types.PDFFloat(1),
+		},
+	}
+
+	fontResources := types.PDFDict{
+		Dict: map[string]interface{}{
+			"F1": *fIndRef,
+		},
+	}
+
+	shadingResources := types.PDFDict{
+		Dict: map[string]interface{}{
+			"S1": *functionalBasedShDict,
+			"S3": *radialShDict,
+		},
+	}
+
+	colorSpaceResources := types.PDFDict{
+		Dict: map[string]interface{}{
+			"CSCalGray": types.PDFArray{
+				types.PDFName("CalGray"),
+				types.PDFDict{
+					Dict: map[string]interface{}{
+						"WhitePoint": types.NewNumberArray(0.9505, 1.0000, 1.0890),
+					},
+				},
+			},
+			"CSCalRGB": types.PDFArray{
+				types.PDFName("CalRGB"),
+				types.PDFDict{
+					Dict: map[string]interface{}{
+						"WhitePoint": types.NewNumberArray(0.9505, 1.0000, 1.0890),
+					},
+				},
+			},
+			"CSLab": types.PDFArray{
+				types.PDFName("Lab"),
+				types.PDFDict{
+					Dict: map[string]interface{}{
+						"WhitePoint": types.NewNumberArray(0.9505, 1.0000, 1.0890),
+					},
+				},
+			},
+			"CS4DeviceN": types.PDFArray{
+				types.PDFName("DeviceN"),
+				types.NewNameArray("Orange", "Green", "None"),
+				types.PDFName("DeviceCMYK"),
+				f,
+				types.PDFDict{
+					Dict: map[string]interface{}{
+						"SubType": types.PDFName("DeviceN"),
+					},
+				},
+			},
+			"CS6DeviceN": types.PDFArray{
+				types.PDFName("DeviceN"),
+				types.NewNameArray("L", "a", "b", "Spot1"),
+				types.PDFName("DeviceCMYK"),
+				f,
+				types.PDFDict{
+					Dict: map[string]interface{}{
+						"SubType": types.PDFName("NChannel"),
+						"Process": types.PDFDict{
+							Dict: map[string]interface{}{
+								"ColorSpace": types.PDFArray{
+									types.PDFName("Lab"),
+									types.PDFDict{
+										Dict: map[string]interface{}{
+											"WhitePoint": types.NewNumberArray(0.9505, 1.0000, 1.0890),
+										},
+									},
+								},
+								"Components": types.NewNameArray("L", "a", "b"),
+							},
+						},
+						"Colorants": types.PDFDict{
+							Dict: map[string]interface{}{
+								"Spot1": types.PDFArray{
+									types.PDFName("Separation"),
+									types.PDFName("Spot1"),
+									types.PDFName("DeviceCMYK"),
+									f,
+								},
+							},
+						},
+						"MixingHints": types.PDFDict{
+							Dict: map[string]interface{}{
+								"Solidities": types.PDFDict{
+									Dict: map[string]interface{}{
+										"Spot1": types.PDFFloat(1.0),
+									},
+								},
+								"DotGain": types.PDFDict{
+									Dict: map[string]interface{}{
+										"Spot1":   f,
+										"Magenta": f,
+										"Yellow":  f,
+									},
+								},
+								"PrintingOrder": types.NewNameArray("Magenta", "Yellow", "Spot1"),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	anyXObject, err := createNormalAppearanceForFormField(xRefTable, 20., 20.)
+	if err != nil {
+		return err
+	}
+
+	graphicStateResources := types.PDFDict{
+		Dict: map[string]interface{}{
+			"GS": types.PDFDict{
+				Dict: map[string]interface{}{
+					"Type": types.PDFName("ExtGState"),
+					"HT": types.PDFDict{
+						Dict: map[string]interface{}{
+							"Type":             types.PDFName("Halftone"),
+							"HalftoneType":     types.PDFInteger(1),
+							"Frequency":        types.PDFInteger(120),
+							"Angle":            types.PDFInteger(30),
+							"Spotfunction":     types.PDFName("CosineDot"),
+							"TransferFunction": types.PDFName("Identity"),
+						},
+					},
+					"BM": types.NewNameArray("Overlay", "Darken", "Normal"),
+					"SMask": types.PDFDict{
+						Dict: map[string]interface{}{
+							"Type": types.PDFName("Mask"),
+							"S":    types.PDFName("Alpha"),
+							"G":    *anyXObject,
+							"TR":   f,
+						},
+					},
+				},
+			},
+		},
+	}
+
 	resourceDict := types.PDFDict{
 		Dict: map[string]interface{}{
-			"Font": types.PDFDict{
-				Dict: map[string]interface{}{
-					"F1": *fIndRef,
-				},
-			},
-			"Shading": types.PDFDict{
-				Dict: map[string]interface{}{
-					"S1": *functionalBasedShDict,
-					"S3": *radialShDict,
-				},
-			},
-			"ColorSpace": types.PDFDict{
-				Dict: map[string]interface{}{
-					"CSCalGray": types.PDFArray{
-						types.PDFName("CalGray"),
-						types.PDFDict{
-							Dict: map[string]interface{}{
-								"WhitePoint": types.NewNumberArray(0.9505, 1.0000, 1.0890),
-							},
-						},
-					},
-					"CSCalRGB": types.PDFArray{
-						types.PDFName("CalRGB"),
-						types.PDFDict{
-							Dict: map[string]interface{}{
-								"WhitePoint": types.NewNumberArray(0.9505, 1.0000, 1.0890),
-							},
-						},
-					},
-					"CSLab": types.PDFArray{
-						types.PDFName("Lab"),
-						types.PDFDict{
-							Dict: map[string]interface{}{
-								"WhitePoint": types.NewNumberArray(0.9505, 1.0000, 1.0890),
-							},
-						},
-					},
-					"CSDeviceN": types.PDFArray{
-						types.PDFName("DeviceN"),
-						types.NewNameArray("Orange", "Green", "None"),
-						types.PDFName("DeviceCMYK"),
-						types.PDFDict{
-							Dict: map[string]interface{}{
-								"FunctionType": types.PDFInteger(2),
-								"Domain":       types.NewNumberArray(0.0, 1.0),
-								"C0":           types.NewNumberArray(0.0),
-								"C1":           types.NewNumberArray(1.0),
-								"N":            types.PDFFloat(1),
-							},
-						},
-						types.PDFDict{
-							Dict: map[string]interface{}{
-								"SubType": types.PDFName("DeviceN"),
-								//"Colorants": colorants,
-							},
-						},
-					},
-				},
-			},
+			"Font":       fontResources,
+			"Shading":    shadingResources,
+			"ColorSpace": colorSpaceResources,
+			"ExtGState":  graphicStateResources,
 		},
 	}
 
@@ -198,14 +291,21 @@ func addContents(xRefTable *types.XRefTable, pageDict *types.PDFDict) error {
 
 	// Page dimensions: 595.27, 841.89
 
-	// TODO use buffer
-	t := `BT /F1 12 Tf 0 1 Td 0 Tr 0.5 g (lower left) Tj ET `
-	t += "BT /F1 12 Tf 0 832 Td 0 Tr (upper left) Tj ET "
-	t += "BT /F1 12 Tf 537 832 Td 0 Tr (upper right) Tj ET "
-	t += "BT /F1 12 Tf 540 1 Td 0 Tr (lower right) Tj ET "
-	t += "BT /F1 12 Tf 297.55 420.5 Td (X) Tj ET "
+	var b bytes.Buffer
 
-	contents.Content = []byte(t)
+	b.WriteString("BT /F1 12 Tf 0 1 Td 0 Tr 0.5 g (lower left) Tj ET ")
+	b.WriteString("BT /F1 12 Tf 0 832 Td 0 Tr (upper left) Tj ET ")
+	b.WriteString("BT /F1 12 Tf 537 832 Td 0 Tr (upper right) Tj ET ")
+	b.WriteString("BT /F1 12 Tf 540 1 Td 0 Tr (lower right) Tj ET ")
+	b.WriteString("BT /F1 12 Tf 297.55 420.5 Td (X) Tj ET ")
+
+	// t := `BT /F1 12 Tf 0 1 Td 0 Tr 0.5 g (lower left) Tj ET `
+	// t += "BT /F1 12 Tf 0 832 Td 0 Tr (upper left) Tj ET "
+	// t += "BT /F1 12 Tf 537 832 Td 0 Tr (upper right) Tj ET "
+	// t += "BT /F1 12 Tf 540 1 Td 0 Tr (lower right) Tj ET "
+	// t += "BT /F1 12 Tf 297.55 420.5 Td (X) Tj ET "
+
+	contents.Content = b.Bytes()
 
 	err := filter.EncodeStream(contents)
 	if err != nil {

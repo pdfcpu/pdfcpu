@@ -10,8 +10,6 @@ import (
 
 func validateExponentialInterpolationFunctionDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
-	logInfoValidate.Println("*** validateExponentialInterpolationFunctionDict begin ***")
-
 	dictName := "exponentialInterpolationFunctionDict"
 
 	// Version check
@@ -41,18 +39,11 @@ func validateExponentialInterpolationFunctionDict(xRefTable *types.XRefTable, di
 	}
 
 	_, err = validateNumberEntry(xRefTable, dict, dictName, "N", REQUIRED, types.V13, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateExponentialInterpolationFunctionDict end ***")
-
-	return nil
+	return err
 }
 
 func validateStitchingFunctionDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
-
-	logInfoValidate.Printf("validateStitchingFunctionDict begin ***")
 
 	dictName := "stitchingFunctionDict"
 
@@ -83,18 +74,11 @@ func validateStitchingFunctionDict(xRefTable *types.XRefTable, dict *types.PDFDi
 	}
 
 	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "Encode", REQUIRED, types.V13, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateStitchingFunctionDict end ***")
-
-	return nil
+	return err
 }
 
 func validateSampledFunctionStreamDict(xRefTable *types.XRefTable, dict *types.PDFStreamDict) error {
-
-	logInfoValidate.Printf("*** validateSampledFunctionStreamDict begin ***")
 
 	dictName := "sampledFunctionStreamDict"
 
@@ -135,18 +119,11 @@ func validateSampledFunctionStreamDict(xRefTable *types.XRefTable, dict *types.P
 	}
 
 	_, err = validateNumberArrayEntry(xRefTable, &dict.PDFDict, dictName, "Decode", OPTIONAL, types.V12, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateSampledFunctionStreamDict end ***")
-
-	return nil
+	return err
 }
 
 func validatePostScriptCalculatorFunctionStreamDict(xRefTable *types.XRefTable, dict *types.PDFStreamDict) error {
-
-	logInfoValidate.Println("*** validatePostScriptCalculatorFunctionStreamDict begin ***")
 
 	dictName := "postScriptCalculatorFunctionStreamDict"
 
@@ -162,18 +139,11 @@ func validatePostScriptCalculatorFunctionStreamDict(xRefTable *types.XRefTable, 
 	}
 
 	_, err = validateNumberArrayEntry(xRefTable, &dict.PDFDict, dictName, "Range", REQUIRED, types.V13, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validatePostScriptCalculatorFunctionStreamDict end ***")
-
-	return nil
+	return err
 }
 
 func processFunctionDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
-
-	var funcType *types.PDFInteger
 
 	funcType, err := validateIntegerEntry(xRefTable, dict, "functionDict", "FunctionType", REQUIRED, types.V10, func(i int) bool { return i == 2 || i == 3 })
 	if err != nil {
@@ -195,7 +165,6 @@ func processFunctionDict(xRefTable *types.XRefTable, dict *types.PDFDict) error 
 
 func processFunctionStreamDict(xRefTable *types.XRefTable, sd *types.PDFStreamDict) error {
 
-	var funcType *types.PDFInteger
 	funcType, err := validateIntegerEntry(xRefTable, &sd.PDFDict, "functionDict", "FunctionType", REQUIRED, types.V10, func(i int) bool { return i == 0 || i == 4 })
 	if err != nil {
 		return err
@@ -214,8 +183,6 @@ func processFunctionStreamDict(xRefTable *types.XRefTable, sd *types.PDFStreamDi
 }
 
 func processFunction(xRefTable *types.XRefTable, obj interface{}) (err error) {
-
-	logInfoValidate.Printf("*** processFunction begin ***")
 
 	// Function dict: dict or stream dict with required entry "FunctionType" (integer):
 	// 0: Sampled function (stream dict)
@@ -239,27 +206,18 @@ func processFunction(xRefTable *types.XRefTable, obj interface{}) (err error) {
 		return errors.New("processFunction: obj must be dict or stream dict")
 	}
 
-	logInfoValidate.Printf("*** processFunction end ***")
-
 	return err
 }
 
 func validateFunction(xRefTable *types.XRefTable, obj interface{}) error {
 
-	logInfoValidate.Printf("*** writeFunction begin ***")
-
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil {
 		return err
 	}
-
 	if obj == nil {
 		return errors.New("writeFunction: missing object")
 	}
 
-	err = processFunction(xRefTable, obj)
-
-	logInfoValidate.Printf("*** writeFunction end ***")
-
-	return err
+	return processFunction(xRefTable, obj)
 }

@@ -10,8 +10,6 @@ func validatePageLabelDict(xRefTable *types.XRefTable, obj interface{}) error {
 
 	// see 12.4.2 Page Labels
 
-	logInfoValidate.Println("*** validatePageLabelDict: begin ***")
-
 	dict, err := xRefTable.DereferenceDict(obj)
 	if err != nil {
 		return err
@@ -42,18 +40,11 @@ func validatePageLabelDict(xRefTable *types.XRefTable, obj interface{}) error {
 	// Optional integer entry St
 	// The value of the numeric portion for the first page label in the range.
 	_, err = validateIntegerEntry(xRefTable, dict, "pageLabelDict", "St", OPTIONAL, types.V10, func(i int) bool { return i >= 1 })
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validatePageLabelDict: end ***")
-
-	return nil
+	return err
 }
 
 func validateNumberTreeDictNumsEntry(xRefTable *types.XRefTable, dict *types.PDFDict, name string) (firstKey, lastKey int, err error) {
-
-	logInfoValidate.Println("*** validateNumberTreeDictNumsEntry begin ***")
 
 	// Nums: array of the form [key1 value1 key2 value2 ... key n value n]
 	obj, found := dict.Find("Nums")
@@ -69,7 +60,7 @@ func validateNumberTreeDictNumsEntry(xRefTable *types.XRefTable, dict *types.PDF
 		return 0, 0, errors.New("validateNumberTreeDictNumsEntry: missing \"Nums\" array")
 	}
 
-	logInfoValidate.Println("validateNumberTreeDictNumsEntry: \"Nums\": now writing value objects")
+	logInfoValidate.Println("validateNumberTreeDictNumsEntry: \"Nums\": now validating value objects")
 
 	// arr length needs to be even because of contained key value pairs.
 	if len(*arr)%2 == 1 {
@@ -123,8 +114,6 @@ func validateNumberTreeDictNumsEntry(xRefTable *types.XRefTable, dict *types.PDF
 
 	}
 
-	logInfoValidate.Printf("*** validateNumberTreeDictNumsEntry end ***")
-
 	return firstKey, lastKey, nil
 }
 
@@ -146,8 +135,6 @@ func validateNumberTreeDictLimitsEntry(xRefTable *types.XRefTable, dict *types.P
 }
 
 func validateNumberTree(xRefTable *types.XRefTable, name string, indRef types.PDFIndirectRef, root bool) (firstKey, lastKey int, err error) {
-
-	logInfoValidate.Printf("*** validateNumberTree: %s, rootObj#:%d ***\n", name, indRef.ObjectNumber)
 
 	// A node has "Kids" or "Nums" entry.
 
@@ -206,8 +193,6 @@ func validateNumberTree(xRefTable *types.XRefTable, name string, indRef types.PD
 		}
 
 	}
-
-	logInfoValidate.Printf("*** validateNumberTree end: %s ***\n", name)
 
 	return firstKey, lastKey, nil
 }

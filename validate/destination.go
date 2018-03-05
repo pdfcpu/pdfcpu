@@ -35,8 +35,6 @@ func validateDestinationArrayLength(arr types.PDFArray) bool {
 
 func validateDestinationArray(xRefTable *types.XRefTable, arr *types.PDFArray) error {
 
-	logInfoValidate.Println("*** validateDestinationArray: begin ***")
-
 	// Validate first element: indRef of page dict or pageNumber(int) of remote doc for remote Go-to Action or nil.
 
 	obj, err := validateDestinationArrayFirstElement(xRefTable, arr)
@@ -83,14 +81,10 @@ func validateDestinationArray(xRefTable *types.XRefTable, arr *types.PDFArray) e
 		return errors.New("validateDestinationArray: arr[1] corrupt")
 	}
 
-	logInfoValidate.Println("*** validateDestinationArray: end ***")
-
 	return nil
 }
 
 func validateDestinationDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
-
-	logInfoValidate.Println("*** validateDestinationDict: begin ***")
 
 	arr, err := validateArrayEntry(xRefTable, dict, "DestinationDict", "D", REQUIRED, types.V10, nil)
 	if err != nil {
@@ -101,24 +95,16 @@ func validateDestinationDict(xRefTable *types.XRefTable, dict *types.PDFDict) er
 		return nil
 	}
 
-	err = validateDestinationArray(xRefTable, arr)
-	if err != nil {
-		return err
-	}
-
-	logInfoValidate.Println("*** validateDestinationDict: end ***")
-
-	return nil
+	return validateDestinationArray(xRefTable, arr)
 }
 
 func validateDestination(xRefTable *types.XRefTable, obj interface{}) error {
-
-	logInfoValidate.Println("*** validateDestination: begin ***")
 
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil {
 		return err
 	}
+
 	if obj == nil {
 		logInfoValidate.Println("validateDestination: is nil, end")
 		return nil
@@ -143,10 +129,6 @@ func validateDestination(xRefTable *types.XRefTable, obj interface{}) error {
 
 	}
 
-	if err == nil {
-		logInfoValidate.Println("*** validateDestination: end ***")
-	}
-
 	return err
 }
 
@@ -160,8 +142,6 @@ func validateDestinationEntry(
 	validate func(interface{}) bool) error {
 
 	// see 12.3.2
-
-	logInfoValidate.Printf("*** validateDestinationEntry begin: entry=%s ***\n", entryName)
 
 	obj, found := dict.Find(entryName)
 	if !found || obj == nil {
@@ -177,12 +157,5 @@ func validateDestinationEntry(
 		return err
 	}
 
-	err = validateDestination(xRefTable, obj)
-	if err != nil {
-		return err
-	}
-
-	logInfoValidate.Printf("*** validateDestinationEntry end: entry=%s ***\n", entryName)
-
-	return nil
+	return validateDestination(xRefTable, obj)
 }

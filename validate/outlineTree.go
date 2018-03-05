@@ -7,8 +7,6 @@ import (
 
 func validateOutlineItemDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
-	logInfoValidate.Printf("validateOutlineItemDict begin")
-
 	dictName := "outlineItemDict"
 
 	var indRef *types.PDFIndirectRef
@@ -81,14 +79,10 @@ func validateOutlineItemDict(xRefTable *types.XRefTable, dict *types.PDFDict) er
 		}
 	}
 
-	logInfoValidate.Printf("validateOutlineItemDict end")
-
 	return nil
 }
 
 func validateOutlineTree(xRefTable *types.XRefTable, first, last *types.PDFIndirectRef) error {
-
-	logInfoValidate.Printf("*** validateOutlineTree(%d,%d) begin ***\n", first.ObjectNumber, last.ObjectNumber)
 
 	var (
 		dict      *types.PDFDict
@@ -143,16 +137,12 @@ func validateOutlineTree(xRefTable *types.XRefTable, first, last *types.PDFIndir
 		logErrorValidate.Printf("validateOutlineTree: corrupted child list %d <> %d\n", objNumber, last.ObjectNumber)
 	}
 
-	logInfoValidate.Printf("*** validateOutlineTree(%d,%d) end ***\n", first.ObjectNumber, last.ObjectNumber)
-
 	return nil
 }
 
 func validateOutlines(xRefTable *types.XRefTable, rootDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	// => 12.3.3 Document Outline
-
-	logInfoValidate.Println("*** validateOutlines begin ***")
 
 	indRef, err := validateIndRefEntry(xRefTable, rootDict, "rootDict", "Outlines", OPTIONAL, sinceVersion)
 	if err != nil || indRef == nil {
@@ -186,12 +176,5 @@ func validateOutlines(xRefTable *types.XRefTable, rootDict *types.PDFDict, requi
 		return errors.New("validateOutlines: corrupted, root needs both first and last")
 	}
 
-	err = validateOutlineTree(xRefTable, first, last)
-	if err != nil {
-		return err
-	}
-
-	logInfoValidate.Printf("*** validateOutlines end: obj#%d ***", indRef.ObjectNumber)
-
-	return nil
+	return validateOutlineTree(xRefTable, first, last)
 }

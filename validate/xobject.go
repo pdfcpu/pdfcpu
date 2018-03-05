@@ -19,8 +19,6 @@ const (
 
 func validateReferenceDictPageEntry(xRefTable *types.XRefTable, obj interface{}) error {
 
-	logInfoValidate.Printf("*** validateReferenceDictPageEntry begin ***")
-
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
 		return err
@@ -42,16 +40,12 @@ func validateReferenceDictPageEntry(xRefTable *types.XRefTable, obj interface{})
 
 	}
 
-	logInfoValidate.Println("*** validateReferenceDictPageEntry end ***")
-
 	return nil
 }
 
 func validateReferenceDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// see 8.10.4 Reference XObjects
-
-	logInfoValidate.Println("*** validateReferenceDict begin ***")
 
 	dictName := "refDict"
 
@@ -74,13 +68,8 @@ func validateReferenceDict(xRefTable *types.XRefTable, dict *types.PDFDict) erro
 
 	// ID, string array, optional
 	_, err = validateStringArrayEntry(xRefTable, dict, dictName, "ID", OPTIONAL, types.V10, func(arr types.PDFArray) bool { return len(arr) == 2 })
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateReferenceDict end ***")
-
-	return nil
+	return err
 }
 
 func validateOPIDictV13Part1(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
@@ -136,11 +125,8 @@ func validateOPIDictV13Part1(xRefTable *types.XRefTable, dict *types.PDFDict, di
 
 	// Position, required, array of numbers, len 8
 	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "Position", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 8 })
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 func validateOPIDictV13Part2(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
@@ -195,18 +181,13 @@ func validateOPIDictV13Part2(xRefTable *types.XRefTable, dict *types.PDFDict, di
 
 	// Tags, optional, array
 	_, err = validateArrayEntry(xRefTable, dict, dictName, "Tags", OPTIONAL, types.V10, nil)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 func validateOPIDictV13(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// 14.11.7 Open Prepresse interface (OPI)
-
-	logInfoValidate.Println("*** validateOPIDictV13 begin ***")
 
 	dictName := "opiDictV13"
 
@@ -215,19 +196,10 @@ func validateOPIDictV13(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 		return err
 	}
 
-	err = validateOPIDictV13Part2(xRefTable, dict, dictName)
-	if err != nil {
-		return err
-	}
-
-	logInfoValidate.Println("*** validateOPIDictV13 end ***")
-
-	return nil
+	return validateOPIDictV13Part2(xRefTable, dict, dictName)
 }
 
 func validateOPIDictInks(xRefTable *types.XRefTable, obj interface{}) error {
-
-	logInfoValidate.Printf("*** validateOPIDictInks begin ***")
 
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
@@ -249,16 +221,12 @@ func validateOPIDictInks(xRefTable *types.XRefTable, obj interface{}) error {
 
 	}
 
-	logInfoValidate.Printf("*** validateOPIDictInks end ***")
-
 	return nil
 }
 
 func validateOPIDictV20(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// 14.11.7 Open Prepresse interface (OPI)
-
-	logInfoValidate.Println("*** validateOPIDictV20 begin ***")
 
 	dictName := "opiDictV20"
 
@@ -315,20 +283,13 @@ func validateOPIDictV20(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 	}
 
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "IncludedImageQuality", OPTIONAL, types.V10, func(i int) bool { return i >= 1 && i <= 3 })
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateOPIDictV20 end ***")
-
-	return nil
+	return err
 }
 
 func validateOPIVersionDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
 	// 14.11.7 Open Prepresse interface (OPI)
-
-	logInfoValidate.Println("*** validateOPIVersionDict begin ***")
 
 	if dict.Len() != 1 {
 		return errors.New("validateOPIVersionDict: must have exactly one entry keyed 1.3 or 2.0")
@@ -357,14 +318,10 @@ func validateOPIVersionDict(xRefTable *types.XRefTable, dict *types.PDFDict) err
 
 	}
 
-	logInfoValidate.Println("*** validateOPIVersionDict end ***")
-
 	return nil
 }
 
 func validateMaskStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStreamDict) error {
-
-	logInfoValidate.Println("*** validateMaskStreamDict begin ***")
 
 	if streamDict.Type() != nil && *streamDict.Type() != "XObject" {
 		return errors.New("validateMaskStreamDict: corrupt imageStreamDict type")
@@ -374,21 +331,12 @@ func validateMaskStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStr
 		return errors.New("validateMaskStreamDict: corrupt imageStreamDict subtype")
 	}
 
-	err := validateImageStreamDict(xRefTable, streamDict, isNoAlternateImageStreamDict)
-	if err != nil {
-		return err
-	}
-
-	logInfoValidate.Println("*** validateMaskStreamDict end: ***")
-
-	return nil
+	return validateImageStreamDict(xRefTable, streamDict, isNoAlternateImageStreamDict)
 }
 
 func validateMaskEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool, sinceVersion types.PDFVersion) error {
 
 	// stream ("explicit masking", another Image XObject) or array of colors ("color key masking")
-
-	logInfoValidate.Println("*** validateMaskEntry begin ***")
 
 	entryName := "Mask"
 
@@ -432,14 +380,10 @@ func validateMaskEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName
 
 	}
 
-	logInfoValidate.Println("*** validateMaskEntry end ***")
-
 	return nil
 }
 
 func validateAlternateImageStreamDicts(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) error {
-
-	logInfoValidate.Println("*** validateAlternateImageStreamDicts begin ***")
 
 	arr, err := validateArrayEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
 	if err != nil {
@@ -469,8 +413,6 @@ func validateAlternateImageStreamDicts(xRefTable *types.XRefTable, dict *types.P
 			return err
 		}
 	}
-
-	logInfoValidate.Println("*** validateAlternateImageStreamDicts begin ***")
 
 	return nil
 }
@@ -592,8 +534,6 @@ func validateImageStreamDictPart2(xRefTable *types.XRefTable, streamDict *types.
 
 func validateImageStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStreamDict, isAlternate bool) error {
 
-	logInfoValidate.Println("*** validateImageStreamDict begin ***")
-
 	dict := streamDict.PDFDict
 
 	dictName := "imageStreamDict"
@@ -648,14 +588,7 @@ func validateImageStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFSt
 	}
 
 	// OC, dict, optional since V1.5
-	err = validateEntryOC(xRefTable, &dict, dictName, "OC", OPTIONAL, types.V15)
-	if err != nil {
-		return err
-	}
-
-	logInfoValidate.Println("*** validateImageStreamDict end ***")
-
-	return nil
+	return validateEntryOC(xRefTable, &dict, dictName, "OC", OPTIONAL, types.V15)
 }
 
 func validateFormStreamDictPart1(xRefTable *types.XRefTable, streamDict *types.PDFStreamDict, dictName string) error {
@@ -800,8 +733,6 @@ func validateFormStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStr
 
 	// 8.10 Form XObjects
 
-	logInfoValidate.Println("*** validateFormStreamDict begin ***")
-
 	dictName := "formStreamDict"
 
 	err := validateFormStreamDictPart1(xRefTable, streamDict, dictName)
@@ -809,21 +740,12 @@ func validateFormStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStr
 		return err
 	}
 
-	err = validateFormStreamDictPart2(xRefTable, &streamDict.PDFDict, dictName)
-	if err != nil {
-		return err
-	}
-
-	logInfoValidate.Println("*** validateFormStreamDict end ***")
-
-	return nil
+	return validateFormStreamDictPart2(xRefTable, &streamDict.PDFDict, dictName)
 }
 
 func validateXObjectStreamDict(xRefTable *types.XRefTable, obj interface{}) error {
 
 	// see 8.8 External Objects
-
-	logInfoValidate.Println("*** validateXObjectStreamDict begin ***")
 
 	sd, err := xRefTable.DereferenceStreamDict(obj)
 	if err != nil || obj == nil {
@@ -875,16 +797,12 @@ func validateXObjectStreamDict(xRefTable *types.XRefTable, obj interface{}) erro
 
 	}
 
-	logInfoValidate.Println("*** validateXObjectStreamDict end  ***")
-
 	return err
 }
 
 func validateGroupAttributesDict(xRefTable *types.XRefTable, obj interface{}) error {
 
 	// see 11.6.6 Transparency Group XObjects
-
-	logInfoValidate.Println("*** validateGroupAttributesDict begin ***")
 
 	dict, err := xRefTable.DereferenceDict(obj)
 	if err != nil || dict == nil {
@@ -913,13 +831,8 @@ func validateGroupAttributesDict(xRefTable *types.XRefTable, obj interface{}) er
 
 	// I, boolean, optional
 	_, err = validateBooleanEntry(xRefTable, dict, dictName, "I", OPTIONAL, types.V10, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateGroupAttributesDict end ***")
-
-	return nil
+	return err
 }
 
 func validateXObjectResourceDict(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {

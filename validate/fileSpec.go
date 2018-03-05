@@ -10,8 +10,6 @@ import (
 
 func validateEmbeddedFileStreamMacParameterDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
-	logInfoValidate.Println("*** validateEmbeddedFileStreamMacParameterDict begin ***")
-
 	dictName := "embeddedFileStreamMacParameterDict"
 
 	// Subtype, optional integer
@@ -31,18 +29,11 @@ func validateEmbeddedFileStreamMacParameterDict(xRefTable *types.XRefTable, dict
 	// ResFork, optional stream dict
 	// The binary contents of the embedded file's resource fork.
 	_, err = validateStreamDictEntry(xRefTable, dict, dictName, "ResFork", OPTIONAL, types.V10, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateEmbeddedFileStreamMacParameterDict end ***")
-
-	return nil
+	return err
 }
 
 func validateEmbeddedFileStreamParameterDict(xRefTable *types.XRefTable, obj interface{}) error {
-
-	logInfoValidate.Println("*** validateEmbeddedFileStreamParameterDict begin ***")
 
 	dict, err := xRefTable.DereferenceDict(obj)
 	if err != nil {
@@ -88,18 +79,11 @@ func validateEmbeddedFileStreamParameterDict(xRefTable *types.XRefTable, obj int
 
 	// CheckSum, optional string
 	_, err = validateStringEntry(xRefTable, dict, dictName, "CheckSum", OPTIONAL, types.V10, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateEmbeddedFileStreamParameterDict end ***")
-
-	return nil
+	return err
 }
 
 func validateEmbeddedFileStreamDict(xRefTable *types.XRefTable, sd *types.PDFStreamDict) error {
-
-	logInfoValidate.Println("*** validateEmbeddedFileStreamDict begin ***")
 
 	dictName := "embeddedFileStreamDict"
 
@@ -123,8 +107,6 @@ func validateEmbeddedFileStreamDict(xRefTable *types.XRefTable, sd *types.PDFStr
 			return err
 		}
 	}
-
-	logInfoValidate.Println("*** validateEmbeddedFileStreamDict end ***")
 
 	return nil
 }
@@ -212,8 +194,6 @@ func validateFileSpecDictEntriesEFAndRF(xRefTable *types.XRefTable, efDict, rfDi
 
 	// EF only or EF and RF
 
-	logInfoValidate.Println("*** validateFileSpecDictEntriesEFAndRF begin ***")
-
 	if efDict == nil {
 		return errors.Errorf("validateFileSpecEntriesEFAndRF: missing required efDict.")
 	}
@@ -250,8 +230,6 @@ func validateFileSpecDictEntriesEFAndRF(xRefTable *types.XRefTable, efDict, rfDi
 		}
 
 	}
-
-	logInfoValidate.Println("*** validateFileSpecDictEntriesEFAndRF end ***")
 
 	return nil
 }
@@ -310,8 +288,6 @@ func validateFileSpecDictEFAndRF(xRefTable *types.XRefTable, dict *types.PDFDict
 }
 
 func validateFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
-
-	logInfoValidate.Println("*** validateFileSpecDict begin ***")
 
 	dictName := "fileSpecDict"
 
@@ -380,20 +356,13 @@ func validateFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict) error
 
 	// CI, optional, collection item dict, since V1.7
 	_, err = validateDictEntry(xRefTable, dict, dictName, "CI", OPTIONAL, types.V17, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateFileSpecDict end ***")
-
-	return nil
+	return err
 }
 
 func validateFileSpecification(xRefTable *types.XRefTable, obj interface{}) (interface{}, error) {
 
 	// See 7.11.4
-
-	logInfoValidate.Println("*** validateFileSpecification begin ***")
 
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil {
@@ -425,16 +394,12 @@ func validateFileSpecification(xRefTable *types.XRefTable, obj interface{}) (int
 
 	}
 
-	logInfoValidate.Println("*** validateFileSpecification end ***")
-
 	return obj, nil
 }
 
 func validateURLSpecification(xRefTable *types.XRefTable, obj interface{}) (interface{}, error) {
 
 	// See 7.11.4
-
-	logInfoValidate.Println("*** validateURLSpecification begin ***")
 
 	d, err := xRefTable.DereferenceDict(obj)
 	if err != nil {
@@ -455,18 +420,11 @@ func validateURLSpecification(xRefTable *types.XRefTable, obj interface{}) (inte
 
 	// F, required, string, URL (Internet RFC 1738)
 	_, err = validateStringEntry(xRefTable, d, dictName, "F", REQUIRED, types.V10, validateURLString)
-	if err != nil {
-		return nil, err
-	}
 
-	logInfoValidate.Println("*** validateURLSpecification end ***")
-
-	return obj, nil
+	return obj, err
 }
 
 func validateFileSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (interface{}, error) {
-
-	logInfoValidate.Printf("*** validateFileSpecEntry begin: entry=%s ***\n", entryName)
 
 	obj, found := dict.Find(entryName)
 	if !found || obj == nil {
@@ -495,19 +453,10 @@ func validateFileSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dict
 		return nil, err
 	}
 
-	fs, err := validateFileSpecification(xRefTable, obj)
-	if err != nil {
-		return nil, err
-	}
-
-	logInfoValidate.Printf("*** validateFileSpecEntry end: entry=%s ***\n", entryName)
-
-	return fs, nil
+	return validateFileSpecification(xRefTable, obj)
 }
 
 func validateURLSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (interface{}, error) {
-
-	logInfoValidate.Printf("*** validateURLSpecEntry begin: entry=%s ***\n", entryName)
 
 	obj, found := dict.Find(entryName)
 	if !found || obj == nil {
@@ -536,19 +485,10 @@ func validateURLSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictN
 		return nil, err
 	}
 
-	fs, err := validateURLSpecification(xRefTable, obj)
-	if err != nil {
-		return nil, err
-	}
-
-	logInfoValidate.Printf("*** validateURLSpecEntry end: entry=%s ***\n", entryName)
-
-	return fs, nil
+	return validateURLSpecification(xRefTable, obj)
 }
 
 func validateFileSpecificationOrFormObject(xRefTable *types.XRefTable, obj interface{}) error {
-
-	logInfoValidate.Println("*** validateFileSpecificationOrFormObject begin ***")
 
 	sd, ok := obj.(types.PDFStreamDict)
 	if ok {

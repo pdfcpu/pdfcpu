@@ -94,8 +94,6 @@ func validateDocumentInfoDict(xRefTable *types.XRefTable, obj interface{}) (hasM
 
 func validateDocumentInfoObject(xRefTable *types.XRefTable) error {
 
-	logInfoValidate.Println("*** validateDocumentInfoObject begin ***")
-
 	// Document info object is optional.
 	if xRefTable.Info == nil {
 		return nil
@@ -114,8 +112,6 @@ func validateDocumentInfoObject(xRefTable *types.XRefTable) error {
 	if hasPieceInfo && !hasModDate {
 		return errors.Errorf("validateDocumentInfoObject: missing required entry \"ModDate\"")
 	}
-
-	logInfoValidate.Println("*** validateDocumentInfoObject end ***")
 
 	return nil
 }

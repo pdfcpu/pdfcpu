@@ -7,8 +7,6 @@ import (
 
 func validateTilingPatternDict(xRefTable *types.XRefTable, streamDict *types.PDFStreamDict, sinceVersion types.PDFVersion) error {
 
-	logInfoValidate.Println("*** validateTilingPatternDict begin ***")
-
 	dictName := "tilingPatternDict"
 
 	// Version check
@@ -64,18 +62,11 @@ func validateTilingPatternDict(xRefTable *types.XRefTable, streamDict *types.PDF
 	}
 
 	_, err = validateResourceDict(xRefTable, obj)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateTilingPatternDict end ***")
-
-	return nil
+	return err
 }
 
 func validateShadingPatternDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
-
-	logInfoValidate.Println("*** validateShadingPatternDict begin ***")
 
 	dictName := "shadingPatternDict"
 
@@ -117,19 +108,10 @@ func validateShadingPatternDict(xRefTable *types.XRefTable, dict *types.PDFDict,
 		return errors.Errorf("validateShadingPatternDict: missing required entry \"Shading\".")
 	}
 
-	err = validateShading(xRefTable, obj)
-	if err != nil {
-		return err
-	}
-
-	logInfoValidate.Println("*** validateShadingPatternDict end ***")
-
-	return nil
+	return validateShading(xRefTable, obj)
 }
 
 func validatePattern(xRefTable *types.XRefTable, obj interface{}) error {
-
-	logInfoValidate.Println("*** validatePattern begin ***")
 
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
@@ -148,8 +130,6 @@ func validatePattern(xRefTable *types.XRefTable, obj interface{}) error {
 		err = errors.New("validatePattern: corrupt obj typ, must be dict or stream dict")
 
 	}
-
-	logInfoValidate.Println("*** validatePattern end ***")
 
 	return err
 }

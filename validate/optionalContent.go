@@ -9,8 +9,6 @@ func validateOptionalContentGroupIntent(xRefTable *types.XRefTable, dict *types.
 
 	// see 8.11.2.1
 
-	logInfoValidate.Println("*** validateOptionalContentGroupIntent begin ***")
-
 	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required)
 	if err != nil || obj == nil {
 		return err
@@ -55,16 +53,12 @@ func validateOptionalContentGroupIntent(xRefTable *types.XRefTable, dict *types.
 		return errors.New("validateOptionalContentGroupIntent: invalid type")
 	}
 
-	logInfoValidate.Println("*** validateOptionalContentGroupIntent end ***")
-
 	return nil
 }
 
 func validateOptionalContentGroupUsageDict(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
 	// see 8.11.4.4
-
-	logInfoValidate.Println("*** validateOptionalContentGroupUsageDict begin ***")
 
 	d, err := validateDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
 	if err != nil || d == nil {
@@ -117,20 +111,13 @@ func validateOptionalContentGroupUsageDict(xRefTable *types.XRefTable, dict *typ
 
 	// PageElement, optional, dict
 	_, err = validateDictEntry(xRefTable, d, dictName, "PageElement", OPTIONAL, sinceVersion, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateOptionalContentGroupUsageDict end ***")
-
-	return nil
+	return err
 }
 
 func validateOptionalContentGroupDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	// see 8.11 Optional Content
-
-	logInfoValidate.Println("*** validateOptionalContentGroupDict begin ***")
 
 	dictName := "optionalContentGroupDict"
 
@@ -153,19 +140,10 @@ func validateOptionalContentGroupDict(xRefTable *types.XRefTable, dict *types.PD
 	}
 
 	// Usage, optional, usage dict
-	err = validateOptionalContentGroupUsageDict(xRefTable, dict, dictName, "Usage", OPTIONAL, sinceVersion)
-	if err != nil {
-		return err
-	}
-
-	logInfoValidate.Println("*** validateOptionalContentGroupDict end ***")
-
-	return nil
+	return validateOptionalContentGroupUsageDict(xRefTable, dict, dictName, "Usage", OPTIONAL, sinceVersion)
 }
 
 func validateOptionalContentGroupArray(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, dictEntry string, sinceVersion types.PDFVersion) error {
-
-	logInfoValidate.Println("*** validateOptionalContentGroupArray begin ***")
 
 	arr, err := validateArrayEntry(xRefTable, dict, dictName, dictEntry, OPTIONAL, sinceVersion, nil)
 	if err != nil || arr == nil {
@@ -193,8 +171,6 @@ func validateOptionalContentGroupArray(xRefTable *types.XRefTable, dict *types.P
 		}
 
 	}
-
-	logInfoValidate.Println("*** validateOptionalContentGroupArray end ***")
 
 	return nil
 }
@@ -231,8 +207,6 @@ func validateOptionalContentMembershipDict(xRefTable *types.XRefTable, dict *typ
 
 	// see 8.11.2.2
 
-	logInfoValidate.Println("*** validateOptionalContentMembershipDict begin ***")
-
 	dictName := "OCMDict"
 
 	// OCGs, optional, dict or array
@@ -249,13 +223,8 @@ func validateOptionalContentMembershipDict(xRefTable *types.XRefTable, dict *typ
 
 	// VE, optional, array, since V1.6
 	_, err = validateArrayEntry(xRefTable, dict, dictName, "VE", OPTIONAL, types.V16, nil)
-	if err != nil {
-		return err
-	}
 
-	logInfoValidate.Println("*** validateOptionalContentMembershipDict end ***")
-
-	return nil
+	return err
 }
 
 func validateUsageApplicationDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
@@ -276,16 +245,11 @@ func validateUsageApplicationDict(xRefTable *types.XRefTable, dict *types.PDFDic
 
 	// Category, required, array of names
 	_, err = validateNameArrayEntry(xRefTable, dict, dictName, "Category", REQUIRED, sinceVersion, nil)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 func validateUsageApplicationDictArray(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, dictEntry string, required bool, sinceVersion types.PDFVersion) error {
-
-	logInfoValidate.Println("*** validateUsageApplicationDictArray begin ***")
 
 	arr, err := validateArrayEntry(xRefTable, dict, dictName, dictEntry, required, sinceVersion, nil)
 	if err != nil || arr == nil {
@@ -316,14 +280,10 @@ func validateUsageApplicationDictArray(xRefTable *types.XRefTable, dict *types.P
 
 	}
 
-	logInfoValidate.Println("*** validateUsageApplicationDictArray end ***")
-
 	return nil
 }
 
 func validateOptionalContentConfigurationDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
-
-	logInfoValidate.Println("*** validateOptionalContentConfigurationDict begin ***")
 
 	dictName := "optContentConfigDict"
 
@@ -396,14 +356,7 @@ func validateOptionalContentConfigurationDict(xRefTable *types.XRefTable, dict *
 	}
 
 	// Locked, optional, array
-	err = validateOptionalContentGroupArray(xRefTable, dict, dictName, "Locked", types.V16)
-	if err != nil {
-		return err
-	}
-
-	logInfoValidate.Println("*** validateOptionalContentConfigurationDict end ***")
-
-	return nil
+	return validateOptionalContentGroupArray(xRefTable, dict, dictName, "Locked", types.V16)
 }
 
 func validateOCProperties(xRefTable *types.XRefTable, rootDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
@@ -411,8 +364,6 @@ func validateOCProperties(xRefTable *types.XRefTable, rootDict *types.PDFDict, r
 	// aka optional content properties dict.
 
 	// => 8.11.4 Configuring Optional Content
-
-	logInfoValidate.Println("*** validateOCProperties begin ***")
 
 	if xRefTable.ValidationMode == types.ValidationRelaxed {
 		sinceVersion = types.V14
@@ -464,8 +415,6 @@ func validateOCProperties(xRefTable *types.XRefTable, rootDict *types.PDFDict, r
 			}
 		}
 	}
-
-	logInfoValidate.Println("*** validateOCProperties end ***")
 
 	return nil
 }
