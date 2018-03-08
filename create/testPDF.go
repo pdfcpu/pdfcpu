@@ -110,6 +110,94 @@ func createRadialShadingDict(xRefTable *types.XRefTable) *types.PDFDict {
 	return &d
 }
 
+func createStreamObjForHalftoneDictType6(xRefTable *types.XRefTable) (*types.PDFIndirectRef, error) {
+
+	sd := &types.PDFStreamDict{
+		PDFDict: types.PDFDict{
+			Dict: map[string]interface{}{
+				"Type":             types.PDFName("Halftone"),
+				"HalftoneType":     types.PDFInteger(6),
+				"Width":            types.PDFInteger(100),
+				"Height":           types.PDFInteger(100),
+				"TransferFunction": types.PDFName("Identity"),
+			},
+		},
+		Content: []byte{},
+	}
+
+	err := filter.EncodeStream(sd)
+	if err != nil {
+		return nil, err
+	}
+
+	return xRefTable.IndRefForNewObject(*sd)
+}
+
+func createStreamObjForHalftoneDictType10(xRefTable *types.XRefTable) (*types.PDFIndirectRef, error) {
+
+	sd := &types.PDFStreamDict{
+		PDFDict: types.PDFDict{
+			Dict: map[string]interface{}{
+				"Type":         types.PDFName("Halftone"),
+				"HalftoneType": types.PDFInteger(10),
+				"Xsquare":      types.PDFInteger(100),
+				"Ysquare":      types.PDFInteger(100),
+			},
+		},
+		Content: []byte{},
+	}
+
+	err := filter.EncodeStream(sd)
+	if err != nil {
+		return nil, err
+	}
+
+	return xRefTable.IndRefForNewObject(*sd)
+}
+
+func createStreamObjForHalftoneDictType16(xRefTable *types.XRefTable) (*types.PDFIndirectRef, error) {
+
+	sd := &types.PDFStreamDict{
+		PDFDict: types.PDFDict{
+			Dict: map[string]interface{}{
+				"Type":         types.PDFName("Halftone"),
+				"HalftoneType": types.PDFInteger(16),
+				"Width":        types.PDFInteger(100),
+				"Height":       types.PDFInteger(100),
+			},
+		},
+		Content: []byte{},
+	}
+
+	err := filter.EncodeStream(sd)
+	if err != nil {
+		return nil, err
+	}
+
+	return xRefTable.IndRefForNewObject(*sd)
+}
+
+func createPostScriptCalculatorFunctionStreamDict(xRefTable *types.XRefTable) (*types.PDFIndirectRef, error) {
+
+	sd := &types.PDFStreamDict{
+		PDFDict: types.PDFDict{
+			Dict: map[string]interface{}{
+				"FunctionType": types.PDFInteger(4),
+				"Domain":       types.NewNumberArray(100.),
+				"Range":        types.NewNumberArray(100.),
+			},
+		},
+		Content: []byte{},
+	}
+
+	err := filter.EncodeStream(sd)
+	if err != nil {
+		return nil, err
+	}
+
+	return xRefTable.IndRefForNewObject(*sd)
+}
+
 func addResources(xRefTable *types.XRefTable, pageDict *types.PDFDict) error {
 
 	fIndRef, err := createFontDict(xRefTable)
@@ -240,9 +328,29 @@ func addResources(xRefTable *types.XRefTable, pageDict *types.PDFDict) error {
 		return err
 	}
 
+	indRefHalfToneType6, err := createStreamObjForHalftoneDictType6(xRefTable)
+	if err != nil {
+		return err
+	}
+
+	indRefHalfToneType10, err := createStreamObjForHalftoneDictType10(xRefTable)
+	if err != nil {
+		return err
+	}
+
+	indRefHalfToneType16, err := createStreamObjForHalftoneDictType16(xRefTable)
+	if err != nil {
+		return err
+	}
+
+	indRefFunctionStream, err := createPostScriptCalculatorFunctionStreamDict(xRefTable)
+	if err != nil {
+		return err
+	}
+
 	graphicStateResources := types.PDFDict{
 		Dict: map[string]interface{}{
-			"GS": types.PDFDict{
+			"GS1": types.PDFDict{
 				Dict: map[string]interface{}{
 					"Type": types.PDFName("ExtGState"),
 					"HT": types.PDFDict{
@@ -262,6 +370,101 @@ func addResources(xRefTable *types.XRefTable, pageDict *types.PDFDict) error {
 							"S":    types.PDFName("Alpha"),
 							"G":    *anyXObject,
 							"TR":   f,
+						},
+					},
+					"TR":  f,
+					"TR2": f,
+				},
+			},
+			"GS2": types.PDFDict{
+				Dict: map[string]interface{}{
+					"Type": types.PDFName("ExtGState"),
+					"HT": types.PDFDict{
+						Dict: map[string]interface{}{
+							"Type":         types.PDFName("Halftone"),
+							"HalftoneType": types.PDFInteger(5),
+							"Default": types.PDFDict{
+								Dict: map[string]interface{}{
+									"Type":             types.PDFName("Halftone"),
+									"HalftoneType":     types.PDFInteger(1),
+									"Frequency":        types.PDFInteger(120),
+									"Angle":            types.PDFInteger(30),
+									"Spotfunction":     types.PDFName("CosineDot"),
+									"TransferFunction": types.PDFName("Identity"),
+								},
+							},
+						},
+					},
+					"BM": types.NewNameArray("Overlay", "Darken", "Normal"),
+					"SMask": types.PDFDict{
+						Dict: map[string]interface{}{
+							"Type": types.PDFName("Mask"),
+							"S":    types.PDFName("Alpha"),
+							"G":    *anyXObject,
+							"TR":   types.PDFName("Identity"),
+						},
+					},
+					"TR":   types.PDFArray{f, f, f, f},
+					"TR2":  types.PDFArray{f, f, f, f},
+					"BG2":  f,
+					"UCR2": f,
+					"D":    types.PDFArray{types.PDFArray{}, types.PDFInteger(0)},
+				},
+			},
+			"GS3": types.PDFDict{
+				Dict: map[string]interface{}{
+					"Type": types.PDFName("ExtGState"),
+					"HT":   *indRefHalfToneType6,
+					"SMask": types.PDFDict{
+						Dict: map[string]interface{}{
+							"Type": types.PDFName("Mask"),
+							"S":    types.PDFName("Alpha"),
+							"G":    *anyXObject,
+							"TR":   *indRefFunctionStream,
+						},
+					},
+					"BG2":  *indRefFunctionStream,
+					"UCR2": *indRefFunctionStream,
+					"TR":   *indRefFunctionStream,
+					"TR2":  *indRefFunctionStream,
+				},
+			},
+			"GS4": types.PDFDict{
+				Dict: map[string]interface{}{
+					"Type": types.PDFName("ExtGState"),
+					"HT":   *indRefHalfToneType10,
+				},
+			},
+			"GS5": types.PDFDict{
+				Dict: map[string]interface{}{
+					"Type": types.PDFName("ExtGState"),
+					"HT":   *indRefHalfToneType16,
+				},
+			},
+			"GS6": types.PDFDict{
+				Dict: map[string]interface{}{
+					"Type": types.PDFName("ExtGState"),
+					"HT": types.PDFDict{
+						Dict: map[string]interface{}{
+							"Type":         types.PDFName("Halftone"),
+							"HalftoneType": types.PDFInteger(1),
+							"Frequency":    types.PDFInteger(120),
+							"Angle":        types.PDFInteger(30),
+							"Spotfunction": *indRefFunctionStream,
+						},
+					},
+				},
+			},
+			"GS7": types.PDFDict{
+				Dict: map[string]interface{}{
+					"Type": types.PDFName("ExtGState"),
+					"HT": types.PDFDict{
+						Dict: map[string]interface{}{
+							"Type":         types.PDFName("Halftone"),
+							"HalftoneType": types.PDFInteger(1),
+							"Frequency":    types.PDFInteger(120),
+							"Angle":        types.PDFInteger(30),
+							"Spotfunction": f,
 						},
 					},
 				},

@@ -862,7 +862,7 @@ func validateGoTo3DViewActionDict(xRefTable *types.XRefTable, dict *types.PDFDic
 	}
 
 	// TA, required, target annotation
-	d, err := validateDictEntry(xRefTable, dict, dictName, "TA", REQUIRED, types.V10, nil)
+	d, err := validateDictEntry(xRefTable, dict, dictName, "TA", REQUIRED, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
@@ -874,7 +874,7 @@ func validateGoTo3DViewActionDict(xRefTable *types.XRefTable, dict *types.PDFDic
 
 	// V, required, the view to use: 3DViewDict or integer or text string or name
 	// TODO Validation.
-	_, err = validateEntry(xRefTable, dict, dictName, "V", REQUIRED)
+	_, err = validateEntry(xRefTable, dict, dictName, "V", REQUIRED, sinceVersion)
 
 	return err
 }

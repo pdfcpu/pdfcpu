@@ -16,32 +16,33 @@ const (
 	OPTIONAL = false
 )
 
-func validateEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool) (interface{}, error) {
+func validateEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) (interface{}, error) {
 
-	logInfoValidate.Printf("validateEntry begin: entry=%s\n", entryName)
+	obj, found := dict.Find(entryName)
+	if !found || obj == nil {
+		if required {
+			return nil, errors.Errorf("dict=%s required entry=%s missing.", dictName, entryName)
+		}
+		return nil, nil
+	}
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	obj, err := xRefTable.Dereference(obj)
+	if err != nil {
 		return nil, err
 	}
 
-	obj, err = xRefTable.Dereference(obj)
-	if err != nil || obj == nil {
+	if obj == nil {
+		if required {
+			return nil, errors.Errorf("dict=%s required entry=%s missing.", dictName, entryName)
+		}
+		return nil, nil
+	}
+
+	// Version check
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	if err != nil {
 		return nil, err
 	}
-
-	switch obj.(type) {
-
-	case types.PDFDict, types.PDFStreamDict, types.PDFArray,
-		types.PDFInteger, types.PDFFloat, types.PDFStringLiteral,
-		types.PDFHexLiteral, types.PDFBoolean, types.PDFName:
-
-	default:
-		return nil, errors.Errorf("validateEntry: unsupported entry: %s type: %T", entryName, obj)
-
-	}
-
-	logInfoValidate.Println("validateEntry end")
 
 	return obj, nil
 }
@@ -535,11 +536,11 @@ func validateIntegerEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictN
 	return &i, nil
 }
 
-func validateIntegerArray(xRefTable *types.XRefTable, arr types.PDFArray) (*types.PDFArray, error) {
+func validateIntegerArray(xRefTable *types.XRefTable, obj interface{}) (*types.PDFArray, error) {
 
 	logInfoValidate.Println("validateIntegerArray begin")
 
-	a, err := xRefTable.DereferenceArray(arr)
+	a, err := xRefTable.DereferenceArray(obj)
 	if err != nil || a == nil {
 		return nil, err
 	}

@@ -516,7 +516,7 @@ func validatePieceDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 			return err
 		}
 
-		_, err = validateEntry(xRefTable, dict, dictName, "Private", OPTIONAL)
+		_, err = validateEntry(xRefTable, dict, dictName, "Private", OPTIONAL, types.V10)
 		if err != nil {
 			return err
 		}

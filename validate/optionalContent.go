@@ -9,19 +9,13 @@ func validateOptionalContentGroupIntent(xRefTable *types.XRefTable, dict *types.
 
 	// see 8.11.2.1
 
-	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required)
+	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required, sinceVersion)
 	if err != nil || obj == nil {
 		return err
 	}
 
 	validate := func(s string) bool {
 		return s == "View" || s == "Design" || s == "All"
-	}
-
-	// Version check
-	err = xRefTable.ValidateVersion("OCGIntent", sinceVersion)
-	if err != nil {
-		return err
 	}
 
 	switch obj := obj.(type) {

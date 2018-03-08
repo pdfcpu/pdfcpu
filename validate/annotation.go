@@ -1151,25 +1151,25 @@ func validateAnnotationDict3D(xRefTable *types.XRefTable, dict *types.PDFDict, d
 	// AP with entry N, required
 
 	// 3DD, required, 3D stream or 3D reference dict
-	err = validateStreamDictOrDictEntry(xRefTable, dict, dictName, "3DD", REQUIRED, types.V10)
+	err = validateStreamDictOrDictEntry(xRefTable, dict, dictName, "3DD", REQUIRED, sinceVersion)
 	if err != nil {
 		return err
 	}
 
 	// 3DV, optional, various
-	_, err = validateEntry(xRefTable, dict, dictName, "3DV", OPTIONAL)
+	_, err = validateEntry(xRefTable, dict, dictName, "3DV", OPTIONAL, sinceVersion)
 	if err != nil {
 		return err
 	}
 
 	// 3DA, optional, activation dict
-	_, err = validateDictEntry(xRefTable, dict, dictName, "3DA", OPTIONAL, types.V10, nil)
+	_, err = validateDictEntry(xRefTable, dict, dictName, "3DA", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
 
 	// 3DI, optional, boolean
-	_, err = validateBooleanEntry(xRefTable, dict, dictName, "3DI", OPTIONAL, types.V10, nil)
+	_, err = validateBooleanEntry(xRefTable, dict, dictName, "3DI", OPTIONAL, sinceVersion, nil)
 
 	return err
 }

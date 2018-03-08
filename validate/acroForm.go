@@ -148,13 +148,13 @@ func validateAcroFieldDictEntries(xRefTable *types.XRefTable, dict *types.PDFDic
 	}
 
 	// V, optional, various
-	_, err = validateEntry(xRefTable, dict, dictName, "V", OPTIONAL)
+	_, err = validateEntry(xRefTable, dict, dictName, "V", OPTIONAL, types.V10)
 	if err != nil {
 		return nil, err
 	}
 
 	// DV, optional, various
-	_, err = validateEntry(xRefTable, dict, dictName, "DV", OPTIONAL)
+	_, err = validateEntry(xRefTable, dict, dictName, "DV", OPTIONAL, types.V10)
 	if err != nil {
 		return nil, err
 	}
