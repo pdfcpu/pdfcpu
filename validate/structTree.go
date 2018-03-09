@@ -83,19 +83,6 @@ func validateObjectReferenceDict(xRefTable *types.XRefTable, dict *types.PDFDict
 		return errors.New("validateObjectReferenceDict: missing required entry \"Obj\"")
 	}
 
-	// switch obj := obj.(type) {
-
-	// case types.PDFDict:
-	// 	_, err = validateAnnotationDict(xRefTable, &obj)
-
-	// case types.PDFStreamDict:
-	// 	err = validateXObjectStreamDict(xRefTable, &obj)
-
-	// default:
-	// 	return errors.Errorf("validateObjectReferenceDict: unsupported PDF object: %v", obj)
-
-	// }
-
 	return nil
 }
 
@@ -166,12 +153,8 @@ func validateStructElementDictEntryK(xRefTable *types.XRefTable, obj interface{}
 	// array of all above
 
 	obj, err := xRefTable.Dereference(obj)
-	if err != nil {
+	if err != nil || obj == nil {
 		return err
-	}
-	if obj == nil {
-		logInfoValidate.Println("validateStructElementDictEntryK: obj is nil, end")
-		return nil
 	}
 
 	switch obj := obj.(type) {
@@ -249,12 +232,8 @@ func processStructElementDictPgEntry(xRefTable *types.XRefTable, indRef types.PD
 func validateStructElementDictEntryA(xRefTable *types.XRefTable, obj interface{}) error {
 
 	obj, err := xRefTable.Dereference(obj)
-	if err != nil {
+	if err != nil || obj == nil {
 		return err
-	}
-	if obj == nil {
-		logInfoValidate.Println("validateStructElementDictEntryA: obj is nil, end")
-		return nil
 	}
 
 	switch obj := obj.(type) {
@@ -303,12 +282,8 @@ func validateStructElementDictEntryA(xRefTable *types.XRefTable, obj interface{}
 func validateStructElementDictEntryC(xRefTable *types.XRefTable, obj interface{}) error {
 
 	obj, err := xRefTable.Dereference(obj)
-	if err != nil {
+	if err != nil || obj == nil {
 		return err
-	}
-	if obj == nil {
-		logInfoValidate.Println("validateStructElementDictEntryC: obj is nil, end")
-		return nil
 	}
 
 	switch obj := obj.(type) {
@@ -521,12 +496,8 @@ func validateStructTreeRootDictEntryK(xRefTable *types.XRefTable, obj interface{
 	// The value may be either a dictionary representing a single structure element or an array of such dictionaries.
 
 	obj, err := xRefTable.Dereference(obj)
-	if err != nil {
+	if err != nil || obj == nil {
 		return err
-	}
-	if obj == nil {
-		logInfoValidate.Printf("validateStructTreeRootDictEntryK: is nil, end")
-		return nil
 	}
 
 	switch obj := obj.(type) {

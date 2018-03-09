@@ -103,7 +103,8 @@ func validateSampledFunctionStreamDict(xRefTable *types.XRefTable, dict *types.P
 		return err
 	}
 
-	_, err = validateIntegerEntry(xRefTable, &dict.PDFDict, dictName, "BitsPerSample", REQUIRED, types.V12, validateBitsPerSample)
+	validate := func(i int) bool { return intMemberOf(i, []int{1, 2, 4, 8, 12, 16, 24, 32}) }
+	_, err = validateIntegerEntry(xRefTable, &dict.PDFDict, dictName, "BitsPerSample", REQUIRED, types.V12, validate)
 	if err != nil {
 		return err
 	}

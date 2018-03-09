@@ -11,35 +11,36 @@ func validatePageLabelDict(xRefTable *types.XRefTable, obj interface{}) error {
 	// see 12.4.2 Page Labels
 
 	dict, err := xRefTable.DereferenceDict(obj)
-	if err != nil {
+	if err != nil || dict == nil {
 		return err
 	}
-	if dict == nil {
-		logInfoValidate.Println("validatePageLabelDict: end, obj is nil")
-		return nil
-	}
 
-	if dict.Type() != nil && *dict.Type() != "PageLabel" {
-		return errors.New("validatePageLabelDict: wrong type")
+	dictName := "pageLabelDict"
+
+	// Type, optional, name
+	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "PageLabel" })
+	if err != nil {
+		return err
 	}
 
 	// Optional name entry S
 	// The numbering style that shall be used for the numeric portion of each page label.
-	_, err = validateNameEntry(xRefTable, dict, " pageLabelDict", "S", OPTIONAL, types.V10, validatePageLabelDictEntryS)
+	validate := func(s string) bool { return memberOf(s, []string{"D", "R", "r", "A", "a"}) }
+	_, err = validateNameEntry(xRefTable, dict, dictName, "S", OPTIONAL, types.V10, validate)
 	if err != nil {
 		return err
 	}
 
 	// Optional string entry P
 	// Label prefix for page labels in this range.
-	_, err = validateStringEntry(xRefTable, dict, "pageLabelDict", "P", OPTIONAL, types.V10, nil)
+	_, err = validateStringEntry(xRefTable, dict, dictName, "P", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// Optional integer entry St
 	// The value of the numeric portion for the first page label in the range.
-	_, err = validateIntegerEntry(xRefTable, dict, "pageLabelDict", "St", OPTIONAL, types.V10, func(i int) bool { return i >= 1 })
+	_, err = validateIntegerEntry(xRefTable, dict, dictName, "St", OPTIONAL, types.V10, func(i int) bool { return i >= 1 })
 
 	return err
 }

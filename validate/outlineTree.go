@@ -57,29 +57,8 @@ func validateOutlineItemDict(xRefTable *types.XRefTable, dict *types.PDFDict) er
 		return err
 	}
 
-	// A, optional if no Dest entry present, dict, since V1.1
-	d, err := validateDictEntry(xRefTable, dict, dictName, "A", OPTIONAL, types.V11, nil)
-	if err != nil {
-		return err
-	}
-	if d != nil {
-		err = validateActionDict(xRefTable, *d)
-		if err != nil {
-			return err
-		}
-		logInfoValidate.Printf("validateOutlineItemDict end")
-		return nil
-	}
-
-	// Dest, optional if no A entry present, name, byte string, array
-	if dest, found := dict.Find("Dest"); found {
-		err = validateDestination(xRefTable, dest)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	// Optional A or Dest, since V1.1
+	return validateActionOrDestination(xRefTable, dict, dictName, types.V11)
 }
 
 func validateOutlineTree(xRefTable *types.XRefTable, first, last *types.PDFIndirectRef) error {

@@ -16,14 +16,11 @@ func validateExtensions(xRefTable *types.XRefTable, rootDict *types.PDFDict, req
 
 	// => 7.12 Extensions Dictionary
 
-	dict, err := validateDictEntry(xRefTable, rootDict, "rootDict", "Extensions", required, sinceVersion, nil)
-	if err != nil || dict == nil {
-		return err
-	}
+	_, err := validateDictEntry(xRefTable, rootDict, "rootDict", "Extensions", required, sinceVersion, nil)
 
 	// No validation due to lack of documentation.
 
-	return nil
+	return err
 }
 
 func validatePageLabels(xRefTable *types.XRefTable, rootDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
@@ -77,10 +74,9 @@ func validateNames(xRefTable *types.XRefTable, rootDict *types.PDFDict, required
 		return err
 	}
 
-	// Version check
-	err = xRefTable.ValidateVersion("Names", sinceVersion)
-	if err != nil {
-		return err
+	validateNameTreeName := func(s string) bool {
+		return memberOf(s, []string{"Dests", "AP", "JavaScript", "Pages", "Templates", "IDS",
+			"URLS", "EmbeddedFiles", "AlternatePresentations", "Renditions"})
 	}
 
 	for treeName, value := range dict.Dict {
@@ -118,12 +114,6 @@ func validateNamedDestinations(xRefTable *types.XRefTable, rootDict *types.PDFDi
 		return err
 	}
 
-	// Version check
-	err = xRefTable.ValidateVersion("NamedDestinations", sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	for _, value := range dict.Dict {
 		err = validateDestination(xRefTable, value)
 		if err != nil {
@@ -138,32 +128,36 @@ func validateViewerPreferences(xRefTable *types.XRefTable, rootDict *types.PDFDi
 
 	// => 12.2 Viewer Preferences
 
-	dict, err := validateDictEntry(xRefTable, rootDict, "rootDict", "ViewerPreferences", required, sinceVersion, nil)
+	dictName := "rootDict"
+
+	dict, err := validateDictEntry(xRefTable, rootDict, dictName, "ViewerPreferences", required, sinceVersion, nil)
 	if err != nil || dict == nil {
 		return err
 	}
 
-	_, err = validateBooleanEntry(xRefTable, dict, "ViewerPreferences", "HideToolbar", OPTIONAL, types.V10, nil)
+	dictName = "ViewerPreferences"
+
+	_, err = validateBooleanEntry(xRefTable, dict, dictName, "HideToolbar", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return err
 	}
 
-	_, err = validateBooleanEntry(xRefTable, dict, "ViewerPreferences", "HideMenubar", OPTIONAL, types.V10, nil)
+	_, err = validateBooleanEntry(xRefTable, dict, dictName, "HideMenubar", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return err
 	}
 
-	_, err = validateBooleanEntry(xRefTable, dict, "ViewerPreferences", "HideWindowUI", OPTIONAL, types.V10, nil)
+	_, err = validateBooleanEntry(xRefTable, dict, dictName, "HideWindowUI", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return err
 	}
 
-	_, err = validateBooleanEntry(xRefTable, dict, "ViewerPreferences", "FitWindow", OPTIONAL, types.V10, nil)
+	_, err = validateBooleanEntry(xRefTable, dict, dictName, "FitWindow", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return err
 	}
 
-	_, err = validateBooleanEntry(xRefTable, dict, "ViewerPreferences", "CenterWindow", OPTIONAL, types.V10, nil)
+	_, err = validateBooleanEntry(xRefTable, dict, dictName, "CenterWindow", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -172,22 +166,24 @@ func validateViewerPreferences(xRefTable *types.XRefTable, rootDict *types.PDFDi
 	if xRefTable.ValidationMode == types.ValidationRelaxed {
 		sinceVersion = types.V10
 	}
-	_, err = validateBooleanEntry(xRefTable, dict, "ViewerPreferences", "DisplayDocTitle", OPTIONAL, sinceVersion, nil)
+	_, err = validateBooleanEntry(xRefTable, dict, dictName, "DisplayDocTitle", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
 
-	_, err = validateNameEntry(xRefTable, dict, "ViewerPreferences", "NonFullScreenPageMode", OPTIONAL, types.V10, validateViewerPreferencesNonFullScreenPageMode)
+	validate := func(s string) bool { return memberOf(s, []string{"UseNone", "UseOutlines", "UseThumbs", "UseOC"}) }
+	_, err = validateNameEntry(xRefTable, dict, dictName, "NonFullScreenPageMode", OPTIONAL, types.V10, validate)
 	if err != nil {
 		return err
 	}
 
-	_, err = validateNameEntry(xRefTable, dict, "ViewerPreferences", "Direction", OPTIONAL, types.V13, validateViewerPreferencesDirection)
+	validate = func(s string) bool { return memberOf(s, []string{"L2R", "R2L"}) }
+	_, err = validateNameEntry(xRefTable, dict, dictName, "Direction", OPTIONAL, types.V13, validate)
 	if err != nil {
 		return err
 	}
 
-	_, err = validateNameEntry(xRefTable, dict, "ViewerPreferences", "ViewArea", OPTIONAL, types.V14, nil)
+	_, err = validateNameEntry(xRefTable, dict, dictName, "ViewArea", OPTIONAL, types.V14, nil)
 
 	return err
 }
@@ -218,35 +214,24 @@ func validateOpenAction(xRefTable *types.XRefTable, rootDict *types.PDFDict, req
 	// If this entry is absent, the document shall be opened
 	// to the top of the first page at the default magnification factor.
 
-	obj, found := rootDict.Find("OpenAction")
-	if !found || obj == nil {
-		if required {
-			err := errors.Errorf("validateOpenAction: required entry \"OpenAction\" missing")
-			return err
-		}
-		logInfoValidate.Println("validateOpenAction end: optional entry \"OpenAction\" not found or nil.")
-		return nil
-	}
-
-	// Version check
-	err := xRefTable.ValidateVersion("OpenAction", sinceVersion)
-	if err != nil {
+	obj, err := validateEntry(xRefTable, rootDict, "rootDict", "OpenAction", required, sinceVersion)
+	if err != nil || obj == nil {
 		return err
 	}
 
-	// either optional action dict
-	dict, err := xRefTable.DereferenceDict(obj)
-	if err == nil {
-		return validateActionDict(xRefTable, *dict)
+	switch obj := obj.(type) {
+
+	case types.PDFDict:
+		err = validateActionDict(xRefTable, &obj)
+
+	case types.PDFArray:
+		err = validateDestinationArray(xRefTable, &obj)
+
+	default:
+		err = errors.New("validateOpenAction: unexpected object")
 	}
 
-	// or optional destination array
-	arr, err := xRefTable.DereferenceArray(obj)
-	if err != nil {
-		return err
-	}
-
-	return validateDestination(xRefTable, *arr)
+	return err
 }
 
 func validateURI(xRefTable *types.XRefTable, rootDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
@@ -257,12 +242,6 @@ func validateURI(xRefTable *types.XRefTable, rootDict *types.PDFDict, required b
 
 	dict, err := validateDictEntry(xRefTable, rootDict, "rootDict", "URI", required, sinceVersion, nil)
 	if err != nil || dict == nil {
-		return err
-	}
-
-	// Version check
-	err = xRefTable.ValidateVersion("URI", sinceVersion)
-	if err != nil {
 		return err
 	}
 
@@ -387,20 +366,16 @@ func validateWebCaptureInfoDict(xRefTable *types.XRefTable, dict *types.PDFDict)
 	}
 
 	// C, optional, since V1.3, array of web capture command dict indRefs
-	var arr *types.PDFArray
-	arr, err = validateIndRefArrayEntry(xRefTable, dict, dictName, "C", OPTIONAL, types.V13, nil)
+	arr, err := validateIndRefArrayEntry(xRefTable, dict, dictName, "C", OPTIONAL, types.V13, nil)
 	if err != nil {
 		return err
 	}
 
 	if arr != nil {
 		err = validateCaptureCommandDictArray(xRefTable, arr)
-		if err != nil {
-			return err
-		}
 	}
 
-	return nil
+	return err
 }
 
 func validateSpiderInfo(xRefTable *types.XRefTable, rootDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
@@ -417,14 +392,16 @@ func validateSpiderInfo(xRefTable *types.XRefTable, rootDict *types.PDFDict, req
 
 func validateOutputIntentDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
-	if t := dict.Type(); t != nil && *t != "OutputIntent" {
-		return errors.New("validateOutputIntentDict: outputIntents corrupted Type")
-	}
-
 	dictName := "outputIntentDict"
 
+	// Type, optional, name
+	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "OutputIntent" })
+	if err != nil {
+		return err
+	}
+
 	// S: required, name
-	_, err := validateNameEntry(xRefTable, dict, dictName, "S", REQUIRED, types.V10, nil)
+	_, err = validateNameEntry(xRefTable, dict, dictName, "S", REQUIRED, types.V10, nil)
 	if err != nil {
 		return err
 	}

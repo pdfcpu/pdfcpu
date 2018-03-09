@@ -5,6 +5,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+func validateBitsPerComponent(i int) bool {
+	return intMemberOf(i, []int{1, 2, 4, 8, 12, 16})
+}
+
+func validateBitsPerCoordinate(i int) bool {
+	return intMemberOf(i, []int{1, 2, 4, 8, 12, 16, 24, 32})
+}
+
 func validateShadingDictCommonEntries(xRefTable *types.XRefTable, dict *types.PDFDict) (shadType int, err error) {
 
 	dictName := "shadingDictCommonEntries"

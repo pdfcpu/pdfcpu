@@ -26,13 +26,7 @@ func validateReferenceDictPageEntry(xRefTable *types.XRefTable, obj interface{})
 
 	switch obj.(type) {
 
-	case types.PDFInteger:
-		// no further processing
-
-	case types.PDFStringLiteral:
-		// no further processing
-
-	case types.PDFHexLiteral:
+	case types.PDFInteger, types.PDFStringLiteral, types.PDFHexLiteral:
 		// no further processing
 
 	default:
@@ -295,6 +289,8 @@ func validateOPIVersionDict(xRefTable *types.XRefTable, dict *types.PDFDict) err
 		return errors.New("validateOPIVersionDict: must have exactly one entry keyed 1.3 or 2.0")
 	}
 
+	validateOPIVersion := func(s string) bool { return memberOf(s, []string{"1.3", "2.0"}) }
+
 	for opiVersion, obj := range dict.Dict {
 
 		if !validateOPIVersion(opiVersion) {
@@ -334,32 +330,12 @@ func validateMaskStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStr
 	return validateImageStreamDict(xRefTable, streamDict, isNoAlternateImageStreamDict)
 }
 
-func validateMaskEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool, sinceVersion types.PDFVersion) error {
+func validateMaskEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
 	// stream ("explicit masking", another Image XObject) or array of colors ("color key masking")
 
-	entryName := "Mask"
-
-	obj, err := dict.Entry(dictName, entryName, required)
+	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required, sinceVersion)
 	if err != nil || obj == nil {
-		return err
-	}
-
-	obj, err = xRefTable.Dereference(obj)
-	if err != nil {
-		return err
-	}
-	if obj == nil {
-		if required {
-			return errors.Errorf("validateMaskEntry: dict=%s required entry \"%s\" missing.", dictName, entryName)
-		}
-		logInfoValidate.Println("validateMaskEntry end")
-		return nil
-	}
-
-	// Version check
-	err = xRefTable.ValidateVersion(entryName, sinceVersion)
-	if err != nil {
 		return err
 	}
 
@@ -479,14 +455,17 @@ func validateImageStreamDictPart2(xRefTable *types.XRefTable, streamDict *types.
 	}
 
 	// Intent, name, optional, since V1.0
-	_, err = validateNameEntry(xRefTable, &dict, dictName, "Intent", OPTIONAL, types.V11, validateRenderingIntent)
+	validate := func(s string) bool {
+		return memberOf(s, []string{"AbsoluteColorimetric", "RelativeColorimetric", "Saturation", "Perceptual"})
+	}
+	_, err = validateNameEntry(xRefTable, &dict, dictName, "Intent", OPTIONAL, types.V11, validate)
 	if err != nil {
 		return err
 	}
 
 	// Mask, stream or array, optional since V1.3; not allowed for image masks.
 	if !isImageMask {
-		err = validateMaskEntry(xRefTable, &dict, dictName, OPTIONAL, types.V13)
+		err = validateMaskEntry(xRefTable, &dict, dictName, "Mask", OPTIONAL, types.V13)
 		if err != nil {
 			return err
 		}

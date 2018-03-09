@@ -8,20 +8,10 @@ import (
 
 func validateDestsNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
 
-	err := xRefTable.ValidateVersion("destsNameTreeValue", sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	return validateDestination(xRefTable, obj)
 }
 
 func validateAPNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
-
-	err := xRefTable.ValidateVersion("APNameTreeValue", sinceVersion)
-	if err != nil {
-		return err
-	}
 
 	return validateAppearanceDict(xRefTable, obj)
 }
@@ -34,17 +24,12 @@ func validateJavaScriptNameTreeValue(xRefTable *types.XRefTable, obj interface{}
 	}
 
 	// Javascript Action:
-	return validateJavaScriptActionDict(xRefTable, dict, "JavaScript", sinceVersion)
+	return validateJavaScriptActionDict(xRefTable, dict, "JavaScript")
 }
 
 func validatePagesNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
 
 	// see 12.7.6
-
-	err := xRefTable.ValidateVersion("pagesNameTreeValue", sinceVersion)
-	if err != nil {
-		return err
-	}
 
 	// Value is a page dict.
 
@@ -65,11 +50,6 @@ func validatePagesNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sin
 func validateTemplatesNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
 
 	// see 12.7.6
-
-	err := xRefTable.ValidateVersion("templatesNameTreeValue", sinceVersion)
-	if err != nil {
-		return err
-	}
 
 	// Value is a template dict.
 
@@ -172,14 +152,9 @@ func validateCaptureCommandDict(xRefTable *types.XRefTable, dict *types.PDFDict)
 	return nil
 }
 
-func validateSourceInfoDictEntryAU(xRefTable *types.XRefTable, dict *types.PDFDict) error {
+func validateSourceInfoDictEntryAU(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
-	obj, found := dict.Find("AU")
-	if !found || obj == nil {
-		return errors.New("validateSourceInfoDict: missing required entry \"AU\"")
-	}
-
-	obj, err := xRefTable.Dereference(obj)
+	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required, sinceVersion)
 	if err != nil || obj == nil {
 		return err
 	}
@@ -208,7 +183,7 @@ func validateSourceInfoDict(xRefTable *types.XRefTable, dict *types.PDFDict) err
 	dictName := "sourceInfoDict"
 
 	// AU, required, ASCII string or dict
-	err := validateSourceInfoDictEntryAU(xRefTable, dict)
+	err := validateSourceInfoDictEntryAU(xRefTable, dict, dictName, "AU", REQUIRED, types.V10)
 	if err != nil {
 		return err
 	}
@@ -248,25 +223,12 @@ func validateSourceInfoDict(xRefTable *types.XRefTable, dict *types.PDFDict) err
 	return nil
 }
 
-func validateEntrySI(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
+func validateEntrySI(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
 	// see 14.10.5, table 355, source information dictionary
 
-	obj, found := dict.Find("SI")
-	if !found {
-		if required {
-			return errors.New("")
-		}
-		return nil
-	}
-
-	obj, err := xRefTable.Dereference(obj)
+	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required, sinceVersion)
 	if err != nil || obj == nil {
-		return err
-	}
-
-	err = xRefTable.ValidateVersion("SI", sinceVersion)
-	if err != nil {
 		return err
 	}
 
@@ -334,7 +296,7 @@ func validateWebCaptureContentSetDict(XRefTable *types.XRefTable, dict *types.PD
 	}
 
 	// SI, required, source info dict or array of source info dicts
-	err = validateEntrySI(XRefTable, dict, REQUIRED, types.V10)
+	err = validateEntrySI(XRefTable, dict, dictName, "SI", REQUIRED, types.V10)
 	if err != nil {
 		return err
 	}
@@ -385,11 +347,6 @@ func validateIDSNameTreeValue(xRefTable *types.XRefTable, obj interface{}, since
 
 	// see 14.10.4
 
-	err := xRefTable.ValidateVersion("IDSNameTreeValue", sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	// Value is a web capture content set.
 	d, err := xRefTable.DereferenceDict(obj)
 	if err != nil || d == nil {
@@ -402,11 +359,6 @@ func validateIDSNameTreeValue(xRefTable *types.XRefTable, obj interface{}, since
 func validateURLSNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
 
 	// see 14.10.4
-
-	err := xRefTable.ValidateVersion("URLSNameTreeValue", sinceVersion)
-	if err != nil {
-		return err
-	}
 
 	// Value is a web capture content set.
 	d, err := xRefTable.DereferenceDict(obj)
@@ -421,11 +373,6 @@ func validateEmbeddedFilesNameTreeValue(xRefTable *types.XRefTable, obj interfac
 
 	// see 7.11.4
 
-	err := xRefTable.ValidateVersion("EmbeddedFilesNameTreeValue", sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	// Value is a file specification for an embedded file stream.
 
 	if obj == nil {
@@ -433,7 +380,7 @@ func validateEmbeddedFilesNameTreeValue(xRefTable *types.XRefTable, obj interfac
 		return nil
 	}
 
-	_, err = validateFileSpecification(xRefTable, obj)
+	_, err := validateFileSpecification(xRefTable, obj)
 
 	return err
 }
@@ -473,11 +420,6 @@ func validateAlternatePresentationsNameTreeValue(xRefTable *types.XRefTable, obj
 
 	// see 13.5
 
-	err := xRefTable.ValidateVersion("AlternatePresentationsNameTreeValue", sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	// Value is a slide show dict.
 
 	dict, err := xRefTable.DereferenceDict(obj)
@@ -499,11 +441,6 @@ func validateRenditionsNameTreeValue(xRefTable *types.XRefTable, obj interface{}
 
 	// see 13.2.3
 
-	err := xRefTable.ValidateVersion("RenditionsNameTreeValue", sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	// Value is a rendition object.
 
 	dict, err := xRefTable.DereferenceDict(obj)
@@ -521,7 +458,7 @@ func validateRenditionsNameTreeValue(xRefTable *types.XRefTable, obj interface{}
 	return nil
 }
 
-func validateIDTreeValue(xRefTable *types.XRefTable, obj interface{}) error {
+func validateIDTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
 
 	dict, err := xRefTable.DereferenceDict(obj)
 	if err != nil || dict == nil {
@@ -543,48 +480,35 @@ func validateIDTreeValue(xRefTable *types.XRefTable, obj interface{}) error {
 
 func validateNameTreeByName(name string, xRefTable *types.XRefTable, obj interface{}) (err error) {
 
-	switch name {
+	for k, v := range map[string]struct {
+		validate     func(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error
+		sinceVersion types.PDFVersion
+	}{
+		"Dests":                  {validateDestsNameTreeValue, types.V12},
+		"AP":                     {validateAPNameTreeValue, types.V13},
+		"JavaScript":             {validateJavaScriptNameTreeValue, types.V13},
+		"Pages":                  {validatePagesNameTreeValue, types.V13},
+		"Templates":              {validateTemplatesNameTreeValue, types.V13},
+		"IDS":                    {validateIDSNameTreeValue, types.V13},
+		"URLS":                   {validateURLSNameTreeValue, types.V13},
+		"EmbeddedFiles":          {validateEmbeddedFilesNameTreeValue, types.V14},
+		"AlternatePresentations": {validateAlternatePresentationsNameTreeValue, types.V14},
+		"Renditions":             {validateRenditionsNameTreeValue, types.V15},
+		"IDTree":                 {validateIDTreeValue, types.V13},
+	} {
+		if name == k {
 
-	case "Dests":
-		err = validateDestsNameTreeValue(xRefTable, obj, types.V12)
+			err := xRefTable.ValidateVersion(name, v.sinceVersion)
+			if err != nil {
+				return err
+			}
 
-	case "AP":
-		err = validateAPNameTreeValue(xRefTable, obj, types.V13)
+			return v.validate(xRefTable, obj, v.sinceVersion)
 
-	case "JavaScript":
-		err = validateJavaScriptNameTreeValue(xRefTable, obj, types.V13)
-
-	case "Pages":
-		err = validatePagesNameTreeValue(xRefTable, obj, types.V13)
-
-	case "Templates":
-		err = validateTemplatesNameTreeValue(xRefTable, obj, types.V13)
-
-	case "IDS":
-		err = validateIDSNameTreeValue(xRefTable, obj, types.V13)
-
-	case "URLS":
-		err = validateURLSNameTreeValue(xRefTable, obj, types.V13)
-
-	case "EmbeddedFiles":
-		err = validateEmbeddedFilesNameTreeValue(xRefTable, obj, types.V14)
-
-	case "AlternatePresentations":
-		err = validateAlternatePresentationsNameTreeValue(xRefTable, obj, types.V14)
-
-	case "Renditions":
-		err = validateRenditionsNameTreeValue(xRefTable, obj, types.V15)
-
-	case "IDTree":
-		// for structure tree root
-		err = validateIDTreeValue(xRefTable, obj)
-
-	default:
-		return errors.Errorf("validateNameTreeDictNamesEntry: unknown dict name: %s", name)
-
+		}
 	}
 
-	return err
+	return errors.Errorf("validateNameTreeDictNamesEntry: unknown dict name: %s", name)
 }
 
 func validateNameTreeDictNamesEntry(xRefTable *types.XRefTable, dict *types.PDFDict, name string) (firstKey, lastKey string, err error) {

@@ -12,18 +12,17 @@ func validateSignatureDict(xRefTable *types.XRefTable, obj interface{}) error {
 		return err
 	}
 
-	if dict.Type() != nil && *dict.Type() != "Sig" {
-		return errors.New("validateSignatureDict: type must be \"Sig\"")
-	}
+	// Type, optional, name
+	_, err = validateNameEntry(xRefTable, dict, "signatureDict", "Type", OPTIONAL, types.V10, func(s string) bool { return s == "Sig" })
 
 	// process signature dict fields.
 
-	return nil
+	return err
 }
 
 func validateAppearanceSubDict(xRefTable *types.XRefTable, subDict *types.PDFDict) error {
 
-	// dict of stream objects.
+	// dict of xobjects
 	for _, obj := range subDict.Dict {
 
 		err := validateXObjectStreamDict(xRefTable, obj)
@@ -108,7 +107,8 @@ func validateAcroFieldDictEntries(xRefTable *types.XRefTable, dict *types.PDFDic
 	dictName := "acroFieldDict"
 
 	// FT: name, Btn,Tx,Ch,Sig
-	fieldType, err := validateNameEntry(xRefTable, dict, dictName, "FT", terminalNode && inFieldType == nil, types.V10, validateAcroFieldType)
+	validate := func(s string) bool { return memberOf(s, []string{"Btn", "Tx", "Ch", "Sig"}) }
+	fieldType, err := validateNameEntry(xRefTable, dict, dictName, "FT", terminalNode && inFieldType == nil, types.V10, validate)
 	if err != nil {
 		return nil, err
 	}

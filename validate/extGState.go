@@ -7,6 +7,15 @@ import (
 
 // see 8.4.5 Graphics State Parameter Dictionaries
 
+func validateBlendMode(s string) bool {
+
+	// see 11.3.5; table 136
+
+	return memberOf(s, []string{"None", "Normal", "Compatible", "Multiply", "Screen", "Overlay", "Darken", "Lighten",
+		"ColorDodge", "ColorBurn", "HardLight", "SoftLight", "Difference", "Exclusion",
+		"Hue", "Saturation", "Color", "Luminosity"})
+}
+
 func validateLineDashPatternEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
 	arr, err := validateArrayEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, func(arr types.PDFArray) bool { return len(arr) == 2 })
@@ -209,6 +218,11 @@ func validateSpotFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDict, 
 	switch obj := obj.(type) {
 
 	case types.PDFName:
+		validateSpotFunctionName := func(s string) bool {
+			return memberOf(s, []string{
+				"SimpleDot", "InvertedSimpleDot", "DoubleDot", "InvertedDoubleDot", "CosineDot",
+				"Double", "InvertedDouble", "Line", "LineX", "LineY"})
+		}
 		s := obj.String()
 		if !validateSpotFunctionName(s) {
 			return errors.Errorf("validateSpotFunctionEntry: corrupt name\n")

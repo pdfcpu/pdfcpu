@@ -8,12 +8,8 @@ import (
 func validateResourceDict(xRefTable *types.XRefTable, obj interface{}) (hasResources bool, err error) {
 
 	dict, err := xRefTable.DereferenceDict(obj)
-	if err != nil {
+	if err != nil || dict == nil {
 		return false, err
-	}
-	if dict == nil {
-		logInfoValidate.Printf("validateResourceDict end: object  is nil.\n")
-		return false, nil
 	}
 
 	for k, v := range map[string]struct {
@@ -148,12 +144,8 @@ func validatePageEntryArtBox(xRefTable *types.XRefTable, dict *types.PDFDict, re
 func validateBoxStyleDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (*types.PDFDict, error) {
 
 	d, err := validateDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
-	if err != nil {
+	if err != nil || d == nil {
 		return nil, err
-	}
-	if d == nil {
-		logInfoValidate.Printf("validateBoxStyleDictEntry end: is nil.\n")
-		return nil, nil
 	}
 
 	dictName = "boxStyleDict"
@@ -171,7 +163,8 @@ func validateBoxStyleDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, 
 	}
 
 	// S, name, optional
-	_, err = validateNameEntry(xRefTable, d, dictName, "S", OPTIONAL, sinceVersion, validateGuideLineStyle)
+	validate := func(s string) bool { return memberOf(s, []string{"S", "D"}) }
+	_, err = validateNameEntry(xRefTable, d, dictName, "S", OPTIONAL, sinceVersion, validate)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +211,8 @@ func validatePageBoxColorInfo(xRefTable *types.XRefTable, pageDict *types.PDFDic
 
 func validatePageEntryRotate(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
-	_, err := validateIntegerEntry(xRefTable, dict, "pagesDict", "Rotate", required, sinceVersion, validateRotate)
+	validate := func(i int) bool { return intMemberOf(i, []int{0, 90, 180, 270}) }
+	_, err := validateIntegerEntry(xRefTable, dict, "pagesDict", "Rotate", required, sinceVersion, validate)
 
 	return err
 }
@@ -242,12 +236,12 @@ func validatePageEntryGroup(xRefTable *types.XRefTable, dict *types.PDFDict, req
 
 func validatePageEntryThumb(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
-	streamDict, err := validateStreamDictEntry(xRefTable, dict, "pagesDict", "Thumb", required, sinceVersion, nil)
-	if err != nil || streamDict == nil {
+	sd, err := validateStreamDictEntry(xRefTable, dict, "pagesDict", "Thumb", required, sinceVersion, nil)
+	if err != nil || sd == nil {
 		return err
 	}
 
-	return validateXObjectStreamDict(xRefTable, *streamDict)
+	return validateXObjectStreamDict(xRefTable, *sd)
 }
 
 func validatePageEntryB(xRefTable *types.XRefTable, dict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
@@ -276,7 +270,8 @@ func validateTransitionDictEntryDi(xRefTable *types.XRefTable, dict *types.PDFDi
 	switch obj := obj.(type) {
 
 	case types.PDFInteger:
-		if !validateDi(obj.Value()) {
+		validate := func(i int) bool { return intMemberOf(i, []int{0, 90, 180, 270, 315}) }
+		if !validate(obj.Value()) {
 			return errors.New("validateTransitionDict: entry Di int value undefined")
 		}
 
@@ -290,6 +285,9 @@ func validateTransitionDictEntryDi(xRefTable *types.XRefTable, dict *types.PDFDi
 }
 
 func validateTransitionDictEntryM(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, transStyle *types.PDFName) error {
+
+	// see 12.4.4
+	validateTransitionDirectionOfMotion := func(s string) bool { return memberOf(s, []string{"I", "O"}) }
 
 	validateM := func(s string) bool {
 		return validateTransitionDirectionOfMotion(s) &&
@@ -306,9 +304,22 @@ func validateTransitionDict(xRefTable *types.XRefTable, dict *types.PDFDict) err
 	dictName := "transitionDict"
 
 	// S, name, optional
+
+	validateTransitionStyle := func(s string) bool {
+		return memberOf(s, []string{"Split", "Blinds", "Box", "Wipe", "Dissolve", "Glitter", "R"})
+	}
+
 	validate := validateTransitionStyle
+
 	if xRefTable.Version() >= types.V15 {
-		validate = validateTransitionStyleV15
+		validate = func(s string) bool {
+
+			if validateTransitionStyle(s) {
+				return true
+			}
+
+			return memberOf(s, []string{"Fly", "Push", "Cover", "Uncover", "Fade"})
+		}
 	}
 	transStyle, err := validateNameEntry(xRefTable, dict, dictName, "S", OPTIONAL, types.V10, validate)
 	if err != nil {
@@ -321,7 +332,9 @@ func validateTransitionDict(xRefTable *types.XRefTable, dict *types.PDFDict) err
 		return err
 	}
 
-	// Dm, optional, name
+	// Dm, optional, name, see 12.4.4
+	validateTransitionDimension := func(s string) bool { return memberOf(s, []string{"H", "V"}) }
+
 	validateDm := func(s string) bool {
 		return validateTransitionDimension(s) && (transStyle != nil && (*transStyle == "Split" || *transStyle == "Blinds"))
 	}
@@ -538,12 +551,8 @@ func validateNumberFormatDict(xRefTable *types.XRefTable, dict *types.PDFDict, s
 func validateNumberFormatArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
 	arr, err := validateArrayEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
-	if err != nil {
+	if err != nil || arr == nil {
 		return err
-	}
-
-	if arr == nil {
-		return nil
 	}
 
 	for _, v := range *arr {

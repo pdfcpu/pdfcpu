@@ -5,6 +5,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+func validateDeviceColorSpaceName(s string) bool {
+	return memberOf(s, []string{"DeviceGray", "DeviceRGB", "DeviceCMYK"})
+}
+
 func validateCalGrayColorSpace(xRefTable *types.XRefTable, arr *types.PDFArray, sinceVersion types.PDFVersion) error {
 
 	dictName := "calGrayCSDict"
@@ -132,7 +136,8 @@ func validateICCBasedColorSpace(xRefTable *types.XRefTable, arr *types.PDFArray,
 
 	dict := sd.PDFDict
 
-	N, err := validateIntegerEntry(xRefTable, &dict, dictName, "N", REQUIRED, sinceVersion, validateICCBasedColorSpaceEntryN)
+	validate := func(i int) bool { return intMemberOf(i, []int{1, 3, 4}) }
+	N, err := validateIntegerEntry(xRefTable, &dict, dictName, "N", REQUIRED, sinceVersion, validate)
 	if err != nil {
 		return err
 	}
@@ -562,6 +567,7 @@ func validateColorSpace(xRefTable *types.XRefTable, obj interface{}, excludePatt
 	switch obj := obj.(type) {
 
 	case types.PDFName:
+		validateSpecialColorSpaceName := func(s string) bool { return memberOf(s, []string{"Pattern"}) }
 		if ok := validateDeviceColorSpaceName(obj.String()) || validateSpecialColorSpaceName(obj.String()); !ok {
 			err = errors.Errorf("validateColorSpace: invalid device color space name: %v\n", obj)
 		}
@@ -579,26 +585,9 @@ func validateColorSpace(xRefTable *types.XRefTable, obj interface{}, excludePatt
 
 func validateColorSpaceEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, excludePatternCS bool) error {
 
-	obj, found := dict.Find(entryName)
-	if !found || obj == nil {
-		if required {
-			return errors.Errorf("validateColorSpaceEntry: dict=%s required entry \"%s\" missing.", dictName, entryName)
-		}
-		logInfoValidate.Printf("validateColorSpaceEntry end: \"%s\" is nil.\n", entryName)
-		return nil
-	}
-
-	obj, err := xRefTable.Dereference(obj)
-	if err != nil {
+	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required, types.V10)
+	if err != nil || obj == nil {
 		return err
-	}
-
-	if obj == nil {
-		if required {
-			return errors.Errorf("validateColorSpaceEntry: dict=%s required entry \"%s\" missing.", dictName, entryName)
-		}
-		logInfoValidate.Printf("validateColorSpaceEntry end: dictName=%s\n", dictName)
-		return nil
 	}
 
 	switch obj := obj.(type) {

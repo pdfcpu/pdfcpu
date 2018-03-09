@@ -86,7 +86,8 @@ func validateBorderStyleDict(xRefTable *types.XRefTable, dict *types.PDFDict, di
 	}
 
 	// S, optional, name, border style
-	_, err = validateNameEntry(xRefTable, d, dictName, "S", OPTIONAL, types.V10, validateBorderStyle)
+	validate := func(s string) bool { return memberOf(s, []string{"S", "D", "B", "I", "U", "A"}) }
+	_, err = validateNameEntry(xRefTable, d, dictName, "S", OPTIONAL, types.V10, validate)
 	if err != nil {
 		return err
 	}
@@ -109,7 +110,8 @@ func validateIconFitDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, d
 	dictName = "iconFitDict"
 
 	// SW, optional, name, A,B,S,N
-	_, err = validateNameEntry(xRefTable, d, dictName, "SW", OPTIONAL, types.V10, validateIconFitDict)
+	validate := func(s string) bool { return memberOf(s, []string{"A", "B", "S", "N"}) }
+	_, err = validateNameEntry(xRefTable, d, dictName, "SW", OPTIONAL, types.V10, validate)
 	if err != nil {
 		return err
 	}
@@ -212,18 +214,12 @@ func validateAppearanceCharacteristicsDictEntry(xRefTable *types.XRefTable, dict
 	return err
 }
 
-func validateAnnotationDictText(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
+func validateAnnotationDictText(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see 12.5.6.4
 
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	// Open, optional, boolean
-	_, err = validateBooleanEntry(xRefTable, dict, dictName, "Open", OPTIONAL, types.V10, nil)
+	_, err := validateBooleanEntry(xRefTable, dict, dictName, "Open", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -235,35 +231,37 @@ func validateAnnotationDictText(xRefTable *types.XRefTable, dict *types.PDFDict,
 	}
 
 	// State, optional, text string, since V1.5
-	state, err := validateStringEntry(xRefTable, dict, dictName, "State", OPTIONAL, types.V15, validateAnnotationState)
+	validate := func(s string) bool { return memberOf(s, []string{"None", "Unmarked"}) }
+	state, err := validateStringEntry(xRefTable, dict, dictName, "State", OPTIONAL, types.V15, validate)
 	if err != nil {
 		return err
 	}
 
 	// StateModel, text string, since V1.5
-	_, err = validateStringEntry(xRefTable, dict, dictName, "StateModel", state != nil, types.V15, validateAnnotationStateModel)
+	validate = func(s string) bool { return memberOf(s, []string{"Marked", "Review"}) }
+	_, err = validateStringEntry(xRefTable, dict, dictName, "StateModel", state != nil, types.V15, validate)
 
 	return err
 }
 
-func validateActionOrDestination(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
+func validateActionOrDestination(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
 
 	// The action that shall be performed when this item is activated.
-	d1, err := validateDictEntry(xRefTable, dict, dictName, "A", OPTIONAL, types.V11, nil)
+	d, err := validateDictEntry(xRefTable, dict, dictName, "A", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
-	if d1 != nil {
-		return validateActionDict(xRefTable, *d1)
+	if d != nil {
+		return validateActionDict(xRefTable, d)
 	}
 
-	// The destination that shall be displayed when this item is activated.
-	d2, found := dict.Find("Dest")
-	if !found {
-		return errors.Errorf("validateActionOrDestination: missing action or destination")
+	// Must be a destination that shall be displayed when this item is activated.
+	obj, err := validateEntry(xRefTable, dict, dictName, "Dest", REQUIRED, sinceVersion)
+	if err != nil {
+		return err
 	}
 
-	return validateDestination(xRefTable, d2)
+	return validateDestination(xRefTable, obj)
 }
 
 func validateURIActionDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
@@ -287,21 +285,15 @@ func validateURIActionDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict,
 		return err
 	}
 
-	return validateURIActionDict(xRefTable, d, dictName, types.V10)
+	return validateURIActionDict(xRefTable, d, dictName)
 }
 
-func validateAnnotationDictLink(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
+func validateAnnotationDictLink(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see 12.5.6.5
 
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
-		return err
-	}
-
-	// A or D, required either or
-	err = validateActionOrDestination(xRefTable, dict, dictName)
+	// A or Dest, required either or
+	err := validateActionOrDestination(xRefTable, dict, dictName, types.V11)
 	if err != nil {
 		return err
 	}
@@ -325,7 +317,7 @@ func validateAnnotationDictLink(xRefTable *types.XRefTable, dict *types.PDFDict,
 	}
 
 	// BS, optional, border style dict, since V1.6
-	sinceVersion = types.V16
+	sinceVersion := types.V16
 	if xRefTable.ValidationMode == types.ValidationRelaxed {
 		sinceVersion = types.V13
 	}
@@ -385,7 +377,10 @@ func validateAnnotationDictFreeTextPart2(xRefTable *types.XRefTable, dict *types
 	if xRefTable.ValidationMode == types.ValidationRelaxed {
 		sinceVersion = types.V14
 	}
-	_, err := validateNameEntry(xRefTable, dict, dictName, "IT", OPTIONAL, sinceVersion, validateIntentOfFreeTextAnnotation)
+	validate := func(s string) bool {
+		return memberOf(s, []string{"FreeText", "FreeTextCallout", "FreeTextTypeWriter", "FreeTextTypewriter"})
+	}
+	_, err := validateNameEntry(xRefTable, dict, dictName, "IT", OPTIONAL, sinceVersion, validate)
 	if err != nil {
 		return err
 	}
@@ -426,22 +421,16 @@ func validateAnnotationDictFreeTextPart2(xRefTable *types.XRefTable, dict *types
 	return err
 }
 
-func validateAnnotationDictFreeText(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
+func validateAnnotationDictFreeText(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see 12.5.6.6
 
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
+	err := validateAnnotationDictFreeTextPart1(xRefTable, dict, dictName, types.V13)
 	if err != nil {
 		return err
 	}
 
-	err = validateAnnotationDictFreeTextPart1(xRefTable, dict, dictName, sinceVersion)
-	if err != nil {
-		return err
-	}
-
-	return validateAnnotationDictFreeTextPart2(xRefTable, dict, dictName, sinceVersion)
+	return validateAnnotationDictFreeTextPart2(xRefTable, dict, dictName, types.V13)
 }
 
 func validateEntryMeasure(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool, sinceVersion types.PDFVersion) error {
@@ -463,18 +452,12 @@ func validateEntryMeasure(xRefTable *types.XRefTable, dict *types.PDFDict, dictN
 
 func validateCP(s string) bool { return s == "Inline" || s == "Top" }
 
-func validateAnnotationDictLine(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
+func validateAnnotationDictLine(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see 12.5.6.7
 
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	// L, required, array of numbers, len:4
-	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "L", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 4 })
+	_, err := validateNumberArrayEntry(xRefTable, dict, dictName, "L", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 4 })
 	if err != nil {
 		return err
 	}
@@ -486,7 +469,7 @@ func validateAnnotationDictLine(xRefTable *types.XRefTable, dict *types.PDFDict,
 	}
 
 	// LE, optional, name array, since V1.4, len:2
-	sinceVersion = types.V14
+	sinceVersion := types.V14
 	if xRefTable.ValidationMode == types.ValidationRelaxed {
 		sinceVersion = types.V13
 	}
@@ -549,24 +532,18 @@ func validateAnnotationDictLine(xRefTable *types.XRefTable, dict *types.PDFDict,
 	return err
 }
 
-func validateAnnotationDictCircleOrSquare(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
+func validateAnnotationDictCircleOrSquare(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see 12.5.6.8
 
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	// BS, optional, border style dict
-	err = validateBorderStyleDict(xRefTable, dict, dictName, "BS", OPTIONAL, types.V10)
+	err := validateBorderStyleDict(xRefTable, dict, dictName, "BS", OPTIONAL, types.V10)
 	if err != nil {
 		return err
 	}
 
 	// IC, optional, array, since V1.4
-	sinceVersion = types.V14
+	sinceVersion := types.V14
 	if xRefTable.ValidationMode == types.ValidationRelaxed {
 		sinceVersion = types.V13
 	}
@@ -611,18 +588,12 @@ func validateEntryIT(xRefTable *types.XRefTable, dict *types.PDFDict, dictName s
 	return err
 }
 
-func validateAnnotationDictPolyLine(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
+func validateAnnotationDictPolyLine(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see 12.5.6.9
 
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	// Vertices, required, array of numbers
-	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "Vertices", REQUIRED, types.V10, nil)
+	_, err := validateNumberArrayEntry(xRefTable, dict, dictName, "Vertices", REQUIRED, types.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -666,50 +637,32 @@ func validateAnnotationDictPolyLine(xRefTable *types.XRefTable, dict *types.PDFD
 	return validateEntryIT(xRefTable, dict, dictName, OPTIONAL, types.V16)
 }
 
-func validateTextMarkupAnnotation(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
+func validateTextMarkupAnnotation(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see 12.5.6.10
 
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	// QuadPoints, required, number array, len:8
-	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "QuadPoints", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 8 })
+	_, err := validateNumberArrayEntry(xRefTable, dict, dictName, "QuadPoints", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 8 })
 
 	return err
 }
 
-func validateAnnotationDictStamp(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
+func validateAnnotationDictStamp(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see 12.5.6.12
 
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	// Name, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Name", OPTIONAL, types.V10, nil)
+	_, err := validateNameEntry(xRefTable, dict, dictName, "Name", OPTIONAL, types.V10, nil)
 
 	return err
 }
 
-func validateAnnotationDictCaret(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
+func validateAnnotationDictCaret(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see 12.5.6.11
 
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	// RD, optional, rectangle, since V1.5
-	_, err = validateRectangleEntry(xRefTable, dict, dictName, "RD", OPTIONAL, types.V15, nil)
+	_, err := validateRectangleEntry(xRefTable, dict, dictName, "RD", OPTIONAL, types.V15, nil)
 	if err != nil {
 		return err
 	}
@@ -720,18 +673,12 @@ func validateAnnotationDictCaret(xRefTable *types.XRefTable, dict *types.PDFDict
 	return err
 }
 
-func validateAnnotationDictInk(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
+func validateAnnotationDictInk(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see 12.5.6.13
 
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	// InkList, required, array of stroked path arrays
-	_, err = validateArrayArrayEntry(xRefTable, dict, dictName, "InkList", REQUIRED, types.V10, nil)
+	_, err := validateArrayArrayEntry(xRefTable, dict, dictName, "InkList", REQUIRED, types.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -742,15 +689,9 @@ func validateAnnotationDictInk(xRefTable *types.XRefTable, dict *types.PDFDict, 
 	return err
 }
 
-func validateAnnotationDictPopup(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
+func validateAnnotationDictPopup(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see 12.5.6.14
-
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
-		return err
-	}
 
 	// Parent, optional, dict indRef
 	indRef, err := validateIndRefEntry(xRefTable, dict, dictName, "Parent", OPTIONAL, types.V10)
@@ -770,18 +711,12 @@ func validateAnnotationDictPopup(xRefTable *types.XRefTable, dict *types.PDFDict
 	return err
 }
 
-func validateAnnotationDictFileAttachment(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
+func validateAnnotationDictFileAttachment(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see 12.5.6.15
 
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	// FS, required, file specification
-	_, err = validateFileSpecEntry(xRefTable, dict, dictName, "FS", REQUIRED, types.V10)
+	_, err := validateFileSpecEntry(xRefTable, dict, dictName, "FS", REQUIRED, types.V10)
 	if err != nil {
 		return err
 	}
@@ -792,18 +727,12 @@ func validateAnnotationDictFileAttachment(xRefTable *types.XRefTable, dict *type
 	return err
 }
 
-func validateAnnotationDictSound(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
+func validateAnnotationDictSound(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see 12.5.6.16
 
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	// Sound, required, stream dict
-	err = validateSoundDictEntry(xRefTable, dict, dictName, "Sound", REQUIRED, types.V10)
+	err := validateSoundDictEntry(xRefTable, dict, dictName, "Sound", REQUIRED, types.V10)
 	if err != nil {
 		return err
 	}
@@ -840,21 +769,15 @@ func validateMovieDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 	return validateBooleanOrStreamEntry(xRefTable, dict, dictName, "Poster", OPTIONAL, types.V10)
 }
 
-func validateAnnotationDictMovie(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
+func validateAnnotationDictMovie(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see 12.5.6.17 Movie Annotations
 	// 13.4 Movies
 	// The features described in this sub-clause are obsolescent and their use is no longer recommended.
 	// They are superseded by the general multimedia framework described in 13.2, “Multimedia.”
 
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	// T, optional, text string
-	_, err = validateStringEntry(xRefTable, dict, dictName, "T", OPTIONAL, types.V10, nil)
+	_, err := validateStringEntry(xRefTable, dict, dictName, "T", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -898,18 +821,13 @@ func validateAnnotationDictMovie(xRefTable *types.XRefTable, dict *types.PDFDict
 	return nil
 }
 
-func validateAnnotationDictWidget(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
+func validateAnnotationDictWidget(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see 12.5.6.19
 
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	// H, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "H", OPTIONAL, types.V10, validateAnnotationHighlightingMode)
+	validate := func(s string) bool { return memberOf(s, []string{"N", "I", "O", "P", "T", "A"}) }
+	_, err := validateNameEntry(xRefTable, dict, dictName, "H", OPTIONAL, types.V10, validate)
 	if err != nil {
 		return err
 	}
@@ -929,7 +847,7 @@ func validateAnnotationDictWidget(xRefTable *types.XRefTable, dict *types.PDFDic
 		return err
 	}
 	if d != nil {
-		err = validateActionDict(xRefTable, *d)
+		err = validateActionDict(xRefTable, d)
 		if err != nil {
 			return err
 		}
@@ -957,18 +875,12 @@ func validateAnnotationDictWidget(xRefTable *types.XRefTable, dict *types.PDFDic
 	return err
 }
 
-func validateAnnotationDictScreen(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
+func validateAnnotationDictScreen(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see 12.5.6.18
 
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	// T, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "T", OPTIONAL, types.V10, nil)
+	_, err := validateNameEntry(xRefTable, dict, dictName, "T", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -985,7 +897,7 @@ func validateAnnotationDictScreen(xRefTable *types.XRefTable, dict *types.PDFDic
 		return err
 	}
 	if d != nil {
-		err = validateActionDict(xRefTable, *d)
+		err = validateActionDict(xRefTable, d)
 		if err != nil {
 			return err
 		}
@@ -995,18 +907,12 @@ func validateAnnotationDictScreen(xRefTable *types.XRefTable, dict *types.PDFDic
 	return validateAdditionalActions(xRefTable, dict, dictName, "AA", OPTIONAL, types.V12, "fieldOrAnnot")
 }
 
-func validateAnnotationDictPrinterMark(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
+func validateAnnotationDictPrinterMark(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see 12.5.6.20
 
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	// MN, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "MN", OPTIONAL, types.V10, nil)
+	_, err := validateNameEntry(xRefTable, dict, dictName, "MN", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -1021,18 +927,12 @@ func validateAnnotationDictPrinterMark(xRefTable *types.XRefTable, dict *types.P
 	return validateAppearDictEntry(xRefTable, dict, dictName, REQUIRED, types.V12)
 }
 
-func validateAnnotationDictTrapNet(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
+func validateAnnotationDictTrapNet(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see 12.5.6.21
 
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	// LastModified, optional, date
-	_, err = validateDateEntry(xRefTable, dict, dictName, "LastModified", OPTIONAL, types.V10)
+	_, err := validateDateEntry(xRefTable, dict, dictName, "LastModified", OPTIONAL, types.V10)
 	if err != nil {
 		return err
 	}
@@ -1090,15 +990,9 @@ func validateAnnotationDictTrapNet(xRefTable *types.XRefTable, dict *types.PDFDi
 	return err
 }
 
-func validateAnnotationDictWatermark(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
+func validateAnnotationDictWatermark(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see 12.5.6.22
-
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
-		return err
-	}
 
 	// FixedPrint, optional, dict
 
@@ -1133,43 +1027,37 @@ func validateAnnotationDictWatermark(xRefTable *types.XRefTable, dict *types.PDF
 		return true
 	}
 
-	_, err = validateDictEntry(xRefTable, dict, dictName, "FixedPrint", OPTIONAL, types.V10, validateFixedPrintDict)
+	_, err := validateDictEntry(xRefTable, dict, dictName, "FixedPrint", OPTIONAL, types.V10, validateFixedPrintDict)
 
 	return err
 }
 
-func validateAnnotationDict3D(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
+func validateAnnotationDict3D(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see 13.6.2
-
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
-		return err
-	}
 
 	// AP with entry N, required
 
 	// 3DD, required, 3D stream or 3D reference dict
-	err = validateStreamDictOrDictEntry(xRefTable, dict, dictName, "3DD", REQUIRED, sinceVersion)
+	err := validateStreamDictOrDictEntry(xRefTable, dict, dictName, "3DD", REQUIRED, types.V16)
 	if err != nil {
 		return err
 	}
 
 	// 3DV, optional, various
-	_, err = validateEntry(xRefTable, dict, dictName, "3DV", OPTIONAL, sinceVersion)
+	_, err = validateEntry(xRefTable, dict, dictName, "3DV", OPTIONAL, types.V16)
 	if err != nil {
 		return err
 	}
 
 	// 3DA, optional, activation dict
-	_, err = validateDictEntry(xRefTable, dict, dictName, "3DA", OPTIONAL, sinceVersion, nil)
+	_, err = validateDictEntry(xRefTable, dict, dictName, "3DA", OPTIONAL, types.V16, nil)
 	if err != nil {
 		return err
 	}
 
 	// 3DI, optional, boolean
-	_, err = validateBooleanEntry(xRefTable, dict, dictName, "3DI", OPTIONAL, sinceVersion, nil)
+	_, err = validateBooleanEntry(xRefTable, dict, dictName, "3DI", OPTIONAL, types.V16, nil)
 
 	return err
 }
@@ -1211,18 +1099,12 @@ func validateEntryIC(xRefTable *types.XRefTable, dict *types.PDFDict, dictName s
 	return err
 }
 
-func validateAnnotationDictRedact(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error {
+func validateAnnotationDictRedact(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error {
 
 	// see 12.5.6.23
 
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
-		return err
-	}
-
 	// QuadPoints, optional, number array
-	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "QuadPoints", OPTIONAL, types.V10, nil)
+	_, err := validateNumberArrayEntry(xRefTable, dict, dictName, "QuadPoints", OPTIONAL, types.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -1456,7 +1338,6 @@ func validateBorderArrayLength(a types.PDFArray) bool {
 func validateAnnotationDictGeneral(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) (*types.PDFName, error) {
 
 	// Type, optional, name
-	//v := func(s string) bool { return s == "Annot" }
 	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, types.V10, func(s string) bool { return s == "Annot" })
 	if err != nil {
 		return nil, err
@@ -1550,7 +1431,7 @@ func validateAnnotationDictConcrete(xRefTable *types.XRefTable, dict *types.PDFD
 	// see table 169
 
 	for k, v := range map[string]struct {
-		validate     func(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, sinceVersion types.PDFVersion) error
+		validate     func(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string) error
 		sinceVersion types.PDFVersion
 		markup       bool
 	}{
@@ -1583,6 +1464,11 @@ func validateAnnotationDictConcrete(xRefTable *types.XRefTable, dict *types.PDFD
 	} {
 		if subtype.Value() == k {
 
+			err := xRefTable.ValidateVersion(k, v.sinceVersion)
+			if err != nil {
+				return err
+			}
+
 			if v.markup {
 				err := validateMarkupAnnotation(xRefTable, dict)
 				if err != nil {
@@ -1590,7 +1476,7 @@ func validateAnnotationDictConcrete(xRefTable *types.XRefTable, dict *types.PDFD
 				}
 			}
 
-			return v.validate(xRefTable, dict, k, v.sinceVersion)
+			return v.validate(xRefTable, dict, k)
 		}
 	}
 

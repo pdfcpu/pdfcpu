@@ -1,12 +1,40 @@
 package validate
 
 import (
+	"net/url"
+
 	"github.com/hhrutter/pdfcpu/types"
 
 	"github.com/pkg/errors"
 )
 
 // See 7.11.4
+
+func validateFileSpecString(s string) bool {
+
+	// see 7.11.2
+	// The standard format for representing a simple file specification in string form divides the string into component substrings
+	// separated by the SOLIDUS character (2Fh) (/). The SOLIDUS is a generic component separator that shall be mapped to the appropriate
+	// platform-specific separator when generating a platform-dependent file name. Any of the components may be empty.
+	// If a component contains one or more literal SOLIDI, each shall be preceded by a REVERSE SOLIDUS (5Ch) (\), which in turn shall be
+	// preceded by another REVERSE SOLIDUS to indicate that it is part of the string and not an escape character.
+	//
+	// EXAMPLE ( in\\/out )
+	// represents the file name in/out
+
+	// I have not seen an instance of a single file spec string that actually complies with this definition and uses
+	// the double reverse solidi in front of the solidus, because of that we simply
+	return true
+}
+
+func validateURLString(s string) bool {
+
+	// RFC1738 compliant URL, see 7.11.5
+
+	_, err := url.ParseRequestURI(s)
+
+	return err == nil
+}
 
 func validateEmbeddedFileStreamMacParameterDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 
@@ -36,13 +64,8 @@ func validateEmbeddedFileStreamMacParameterDict(xRefTable *types.XRefTable, dict
 func validateEmbeddedFileStreamParameterDict(xRefTable *types.XRefTable, obj interface{}) error {
 
 	dict, err := xRefTable.DereferenceDict(obj)
-	if err != nil {
+	if err != nil || obj == nil {
 		return err
-	}
-
-	if obj == nil {
-		logInfoValidate.Println("validateEmbeddedFileStreamParameterDict end")
-		return nil
 	}
 
 	dictName := "embeddedFileStreamParmDict"
@@ -129,13 +152,14 @@ func validateFileSpecDictEntryEFDict(xRefTable *types.XRefTable, dict *types.PDF
 		if err != nil {
 			return err
 		}
+		if sd == nil {
+			continue
+		}
 
 		err = validateEmbeddedFileStreamDict(xRefTable, sd)
 		if err != nil {
 			return err
 		}
-
-		continue
 
 	}
 
@@ -239,6 +263,7 @@ func validateFileSpecDictType(xRefTable *types.XRefTable, dict *types.PDFDict) e
 	if dict.Type() == nil || (*dict.Type() != "Filespec" && (xRefTable.ValidationMode == types.ValidationRelaxed && *dict.Type() != "F")) {
 		return errors.New("validateFileSpecDictType: missing type: FileSpec")
 	}
+
 	return nil
 }
 
@@ -426,26 +451,9 @@ func validateURLSpecification(xRefTable *types.XRefTable, obj interface{}) (inte
 
 func validateFileSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (interface{}, error) {
 
-	obj, found := dict.Find(entryName)
-	if !found || obj == nil {
-		if required {
-			return nil, errors.Errorf("validateFileSpecEntry: dict=%s required entry=%s missing", dictName, entryName)
-		}
-		logInfoValidate.Printf("validateFileSpecEntry end: entry %s is nil\n", entryName)
-		return nil, nil
-	}
-
-	obj, err := xRefTable.Dereference(obj)
-	if err != nil {
+	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required, sinceVersion)
+	if err != nil || obj == nil {
 		return nil, err
-	}
-
-	if obj == nil {
-		if required {
-			return nil, errors.Errorf("validateFileSpecEntry: dict=%s required entry=%s missing", dictName, entryName)
-		}
-		logInfoValidate.Printf("validateFileSpecEntry end: entry %s is nil\n", entryName)
-		return nil, nil
 	}
 
 	err = xRefTable.ValidateVersion("fileSpec", sinceVersion)
@@ -458,26 +466,9 @@ func validateFileSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dict
 
 func validateURLSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (interface{}, error) {
 
-	obj, found := dict.Find(entryName)
-	if !found || obj == nil {
-		if required {
-			return nil, errors.Errorf("validateURLSpecEntry: dict=%s required entry=%s missing", dictName, entryName)
-		}
-		logInfoValidate.Printf("validateURLSpecEntry end: entry %s is nil\n", entryName)
-		return nil, nil
-	}
-
-	obj, err := xRefTable.Dereference(obj)
-	if err != nil {
+	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required, sinceVersion)
+	if err != nil || obj == nil {
 		return nil, err
-	}
-
-	if obj == nil {
-		if required {
-			return nil, errors.Errorf("validateURLSpecEntry: dict=%s required entry=%s missing", dictName, entryName)
-		}
-		logInfoValidate.Printf("validateURLSpecEntry end: entry %s is nil\n", entryName)
-		return nil, nil
 	}
 
 	err = xRefTable.ValidateVersion("URLSpec", sinceVersion)

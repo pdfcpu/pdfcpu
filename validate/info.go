@@ -75,7 +75,8 @@ func validateDocumentInfoDict(xRefTable *types.XRefTable, obj interface{}) (hasM
 
 		// name, optional, since V1.3
 		case "Trapped":
-			_, err = xRefTable.DereferenceName(v, types.V13, validateDocInfoDictTrapped)
+			validate := func(s string) bool { return memberOf(s, []string{"True", "False", "Unknown"}) }
+			_, err = xRefTable.DereferenceName(v, types.V13, validate)
 
 		// text string, optional
 		default:

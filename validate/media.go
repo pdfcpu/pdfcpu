@@ -2,7 +2,6 @@ package validate
 
 import (
 	"github.com/hhrutter/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 func validateMinimumBitDepthDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
@@ -350,16 +349,8 @@ func validateMediaPlayersDict(xRefTable *types.XRefTable, dict *types.PDFDict, s
 
 func validateFileSpecOrFormXObjectEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
-	obj, found := dict.Find(entryName)
-	if !found || obj == nil {
-		if required {
-			return errors.Errorf("validateFileSpecOrFormXObjectEntry: missing entry \"%s\"", entryName)
-		}
-		return nil
-	}
-
-	err := xRefTable.ValidateVersion("fileSpecOrFormXObject", sinceVersion)
-	if err != nil {
+	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required, sinceVersion)
+	if err != nil || obj == nil {
 		return err
 	}
 

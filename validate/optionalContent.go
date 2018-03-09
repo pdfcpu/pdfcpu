@@ -210,7 +210,8 @@ func validateOptionalContentMembershipDict(xRefTable *types.XRefTable, dict *typ
 	}
 
 	// P, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "P", OPTIONAL, sinceVersion, validateVisibilityPolicy)
+	validate := func(s string) bool { return memberOf(s, []string{"AllOn", "AnyOn", "AnyOff", "AllOff"}) }
+	_, err = validateNameEntry(xRefTable, dict, dictName, "P", OPTIONAL, sinceVersion, validate)
 	if err != nil {
 		return err
 	}
@@ -294,7 +295,8 @@ func validateOptionalContentConfigurationDict(xRefTable *types.XRefTable, dict *
 	}
 
 	// BaseState, optional, name
-	baseState, err := validateNameEntry(xRefTable, dict, dictName, "BaseState", OPTIONAL, sinceVersion, validateBaseState)
+	validate := func(s string) bool { return memberOf(s, []string{"ON", "OFF", "UNCHANGED"}) }
+	baseState, err := validateNameEntry(xRefTable, dict, dictName, "BaseState", OPTIONAL, sinceVersion, validate)
 	if err != nil {
 		return err
 	}
@@ -338,7 +340,8 @@ func validateOptionalContentConfigurationDict(xRefTable *types.XRefTable, dict *
 	}
 
 	// ListMode, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "ListMode", OPTIONAL, sinceVersion, validateListMode)
+	validate = func(s string) bool { return memberOf(s, []string{"AllPages", "VisiblePages"}) }
+	_, err = validateNameEntry(xRefTable, dict, dictName, "ListMode", OPTIONAL, sinceVersion, validate)
 	if err != nil {
 		return err
 	}
