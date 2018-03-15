@@ -540,7 +540,7 @@ func Merge(filesIn []string, fileOut string, config *types.Configuration) error 
 	}
 
 	// Repeatedly merge files into fileDest's xref table.
-	for f := range stringSet(filesIn[1:]) {
+	for _, f := range filesIn[1:] {
 		err = appendTo(f, ctxDest)
 		if err != nil {
 			return err
