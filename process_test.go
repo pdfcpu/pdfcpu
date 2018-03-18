@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/hhrutter/pdfcpu/create"
-	"github.com/hhrutter/pdfcpu/log"
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/hhrutter/pdfcpu/validate"
 )
@@ -311,7 +310,7 @@ func TestMain(m *testing.M) {
 
 	os.Mkdir(outputDir, 0777)
 
-	log.SetDefaultLoggers()
+	//log.SetDefaultLoggers()
 
 	exitCode := m.Run()
 
