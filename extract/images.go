@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hhrutter/pdfcpu/log"
 	"github.com/hhrutter/pdfcpu/types"
 )
 
@@ -29,17 +30,17 @@ func writeImage(fileName string, imageDict *types.PDFStreamDict, objNr int) erro
 
 	fileName = fileName + "_" + strconv.Itoa(objNr) + "_" + filters
 
-	logDebugExtract.Printf("writeImage begin: %s objNR:%d\n", fileName, objNr)
+	log.Debug.Printf("writeImage begin: %s objNR:%d\n", fileName, objNr)
 
 	// Ignore filter chains with length > 1
 	if len(fpl) > 1 {
-		logInfoExtract.Printf("writeImage end: ignore %s, more than 1 filter.\n", fileName)
+		log.Info.Printf("writeImage end: ignore %s, more than 1 filter.\n", fileName)
 		return nil
 	}
 
 	// Ignore imageMasks
 	if im := imageDict.BooleanEntry("ImageMask"); im != nil && *im {
-		logInfoExtract.Printf("writeImage end: ignore %s, imageMask.\n", fileName)
+		log.Info.Printf("writeImage end: ignore %s, imageMask.\n", fileName)
 		return nil
 	}
 
@@ -47,7 +48,7 @@ func writeImage(fileName string, imageDict *types.PDFStreamDict, objNr int) erro
 
 	case "DCTDecode":
 		// Dump encoded chunk to file.
-		logInfoExtract.Printf("writing %s\n", fileName+".jpg")
+		log.Info.Printf("writing %s\n", fileName+".jpg")
 		err := ioutil.WriteFile(fileName+".jpg", imageDict.Raw, os.ModePerm)
 		if err != nil {
 			return err
@@ -55,18 +56,18 @@ func writeImage(fileName string, imageDict *types.PDFStreamDict, objNr int) erro
 
 	case "JPXDecode":
 		// Dump encoded chunk to file.
-		logInfoExtract.Printf("writing %s\n", fileName+".jpx")
+		log.Info.Printf("writing %s\n", fileName+".jpx")
 		err := ioutil.WriteFile(fileName+".jpx", imageDict.Raw, os.ModePerm)
 		if err != nil {
 			return err
 		}
 
 	default:
-		logDebugExtract.Printf("writeImage end: ignore %s filter neither \"DCTDecode\" nor \"JPXDecode\"\n", fileName)
+		log.Debug.Printf("writeImage end: ignore %s filter neither \"DCTDecode\" nor \"JPXDecode\"\n", fileName)
 		return nil
 	}
 
-	logDebugExtract.Printf("writeImage end")
+	log.Debug.Printf("writeImage end")
 
 	return nil
 }
@@ -81,30 +82,30 @@ func sortIOKeys(m map[int]*types.ImageObject) (j []int) {
 
 func writeImageObject(ctx *types.PDFContext, objNumber int) error {
 	obj := ctx.Optimize.ImageObjects[objNumber]
-	logDebugExtract.Printf("%s\n%s", obj.ResourceNamesString(), obj.ImageDict)
+	log.Debug.Printf("%s\n%s", obj.ResourceNamesString(), obj.ImageDict)
 	fileName := ctx.Write.DirName + "/" + obj.ResourceNamesString()
 	return writeImage(fileName, obj.ImageDict, objNumber)
 }
 
 func writeImages(ctx *types.PDFContext, selectedPages types.IntSet) error {
 
-	logDebugExtract.Println("writeImages begin")
+	log.Debug.Println("writeImages begin")
 
 	if selectedPages == nil || len(selectedPages) == 0 {
 
-		logInfoExtract.Println("writeImages: pages == nil, extracting images for all pages")
+		log.Debug.Println("writeImages: pages == nil, extracting images for all pages")
 		for _, i := range sortIOKeys(ctx.Optimize.ImageObjects) {
 			writeImageObject(ctx, i)
 		}
 
 	} else {
 
-		logErrorExtract.Println("writeImages: extracting images for selected images")
+		//logErrorExtract.Println("writeImages: extracting images for selected images")
 
 		for p, v := range selectedPages {
 
 			if v {
-				logInfoExtract.Printf("writeImages: writing images for page %d\n", p)
+				log.Info.Printf("writeImages: writing images for page %d\n", p)
 				for i := range ctx.Optimize.PageImages[p-1] {
 					writeImageObject(ctx, i)
 				}
@@ -114,7 +115,7 @@ func writeImages(ctx *types.PDFContext, selectedPages types.IntSet) error {
 
 	}
 
-	logDebugExtract.Println("writeImages end")
+	log.Debug.Println("writeImages end")
 
 	return nil
 }
@@ -123,10 +124,10 @@ func writeImages(ctx *types.PDFContext, selectedPages types.IntSet) error {
 // Supported PDF filters: DCT, JPX
 func Images(ctx *types.PDFContext, selectedPages types.IntSet) error {
 
-	logDebugExtract.Println("Images begin")
+	log.Debug.Println("Images begin")
 
 	if len(ctx.Optimize.ImageObjects) == 0 {
-		logInfoExtract.Println("No image info available.")
+		log.Debug.Println("No image info available.")
 		return nil
 	}
 
@@ -135,7 +136,7 @@ func Images(ctx *types.PDFContext, selectedPages types.IntSet) error {
 		return err
 	}
 
-	logDebugExtract.Println("Images end")
+	log.Debug.Println("Images end")
 
 	return nil
 }

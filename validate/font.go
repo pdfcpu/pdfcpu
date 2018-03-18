@@ -1,6 +1,7 @@
 package validate
 
 import (
+	"github.com/hhrutter/pdfcpu/log"
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
 )
@@ -86,7 +87,7 @@ func validateFontDescriptorType(xRefTable *types.XRefTable, dict *types.PDFDict)
 	if dictType == nil {
 
 		if xRefTable.ValidationMode == types.ValidationRelaxed {
-			logDebugValidate.Println("validateFontDescriptor: missing entry \"Type\"")
+			log.Debug.Println("validateFontDescriptor: missing entry \"Type\"")
 		} else {
 			return errors.New("validateFontDescriptor: missing entry \"Type\"")
 		}

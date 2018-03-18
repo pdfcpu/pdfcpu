@@ -18,7 +18,7 @@ out=$2
 mkdir $out/$f1
 cp $1 $out/$f1 
 
-pdfcpu split -verbose $out/$f1/$f $out/$f1 > $out/$f1/$f1.log
+pdfcpu split -verbose $out/$f1/$f $out/$f1 &> $out/$f1/$f1.log
 if [ $? -eq 1 ]; then
     echo "split error: $1 -> $out"
     exit $?
@@ -27,7 +27,7 @@ else
     for pdf in $out/$f1/*_*.pdf
     do
         echo "validating: $pdf"
-        pdfcpu validate -verbose -mode=relaxed $pdf >> $out/$f1/$f1.log
+        pdfcpu validate -verbose -mode=relaxed $pdf >> $out/$f1/$f1.log 2>&1
         if [ $? -eq 1 ]; then
             echo "validation error: $pdf"
             exit $?

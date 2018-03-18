@@ -2,7 +2,8 @@ package types
 
 import (
 	"bufio"
-	"log"
+
+	"github.com/hhrutter/pdfcpu/log"
 )
 
 // WriteContext represents the context for writing a PDF file.
@@ -69,7 +70,7 @@ func (wc *WriteContext) ExtractPage(i int) bool {
 }
 
 // LogStats logs stats for written file.
-func (wc *WriteContext) LogStats(log *log.Logger) {
+func (wc *WriteContext) LogStats() {
 
 	fileSize := wc.FileSize
 	binaryTotalSize := wc.BinaryTotalSize  // stream data
@@ -79,15 +80,15 @@ func (wc *WriteContext) LogStats(log *log.Logger) {
 	binaryFontSize := wc.BinaryFontSize
 	binaryOtherSize := binaryTotalSize - binaryImageSize - binaryFontSize // content streams
 
-	log.Println("Optimized:")
-	log.Printf("File Size            : %s (%d bytes)\n", ByteSize(fileSize), fileSize)
-	log.Printf("Total Binary Data    : %s (%d bytes) %4.1f%%\n", ByteSize(binaryTotalSize), binaryTotalSize, float32(binaryTotalSize)/float32(fileSize)*100)
-	log.Printf("Total Text   Data    : %s (%d bytes) %4.1f%%\n\n", ByteSize(textSize), textSize, float32(textSize)/float32(fileSize)*100)
+	log.Stats.Println("Optimized:")
+	log.Stats.Printf("File Size            : %s (%d bytes)\n", ByteSize(fileSize), fileSize)
+	log.Stats.Printf("Total Binary Data    : %s (%d bytes) %4.1f%%\n", ByteSize(binaryTotalSize), binaryTotalSize, float32(binaryTotalSize)/float32(fileSize)*100)
+	log.Stats.Printf("Total Text   Data    : %s (%d bytes) %4.1f%%\n\n", ByteSize(textSize), textSize, float32(textSize)/float32(fileSize)*100)
 
-	log.Println("Breakup of binary data:")
-	log.Printf("images               : %s (%d bytes) %4.1f%%\n", ByteSize(binaryImageSize), binaryImageSize, float32(binaryImageSize)/float32(binaryTotalSize)*100)
-	log.Printf("fonts                : %s (%d bytes) %4.1f%%\n", ByteSize(binaryFontSize), binaryFontSize, float32(binaryFontSize)/float32(binaryTotalSize)*100)
-	log.Printf("other                : %s (%d bytes) %4.1f%%\n\n", ByteSize(binaryOtherSize), binaryOtherSize, float32(binaryOtherSize)/float32(binaryTotalSize)*100)
+	log.Stats.Println("Breakup of binary data:")
+	log.Stats.Printf("images               : %s (%d bytes) %4.1f%%\n", ByteSize(binaryImageSize), binaryImageSize, float32(binaryImageSize)/float32(binaryTotalSize)*100)
+	log.Stats.Printf("fonts                : %s (%d bytes) %4.1f%%\n", ByteSize(binaryFontSize), binaryFontSize, float32(binaryFontSize)/float32(binaryTotalSize)*100)
+	log.Stats.Printf("other                : %s (%d bytes) %4.1f%%\n\n", ByteSize(binaryOtherSize), binaryOtherSize, float32(binaryOtherSize)/float32(binaryTotalSize)*100)
 }
 
 // WriteEol writes an end of line sequence.

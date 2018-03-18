@@ -316,8 +316,6 @@ func validateSoundActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, di
 
 func validateMovieStartOrDurationEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
-	logInfoValidate.Println("*** validateMovieStartOrDurationEntry begin ***")
-
 	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required, sinceVersion)
 	if err != nil || obj == nil {
 		return err
@@ -616,8 +614,6 @@ func validateImportDataActionDict(xRefTable *types.XRefTable, dict *types.PDFDic
 
 func validateJavaScript(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool) error {
 
-	logInfoValidate.Println("*** validateJavaScript begin ***")
-
 	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required, types.V13)
 	if err != nil || obj == nil {
 		return err
@@ -738,8 +734,6 @@ func validateGoTo3DViewActionDict(xRefTable *types.XRefTable, dict *types.PDFDic
 
 	// see 12.6.4.15
 
-	logInfoValidate.Println("*** validateGoTo3DViewActionDict begin ***")
-
 	// TA, required, target annotation
 	d, err := validateDictEntry(xRefTable, dict, dictName, "TA", REQUIRED, types.V16, nil)
 	if err != nil {
@@ -827,7 +821,6 @@ func validateActionDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 			if err != nil {
 				return err
 			}
-			logInfoValidate.Println("*** validateActionDict end ***")
 			return nil
 		}
 

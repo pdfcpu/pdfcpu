@@ -1,6 +1,7 @@
 package validate
 
 import (
+	"github.com/hhrutter/pdfcpu/log"
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
 )
@@ -100,6 +101,8 @@ func validateDocumentInfoObject(xRefTable *types.XRefTable) error {
 		return nil
 	}
 
+	log.Debug.Println("*** validateDocumentInfoObject begin ***")
+
 	hasModDate, err := validateDocumentInfoDict(xRefTable, *xRefTable.Info)
 	if err != nil {
 		return err
@@ -113,6 +116,8 @@ func validateDocumentInfoObject(xRefTable *types.XRefTable) error {
 	if hasPieceInfo && !hasModDate {
 		return errors.Errorf("validateDocumentInfoObject: missing required entry \"ModDate\"")
 	}
+
+	log.Debug.Println("*** validateDocumentInfoObject end ***")
 
 	return nil
 }

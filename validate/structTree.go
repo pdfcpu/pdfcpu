@@ -10,7 +10,6 @@ func validateMarkedContentReferenceDict(xRefTable *types.XRefTable, dict *types.
 	// Pg: optional, indirect reference
 	// Page object representing a page on which the graphics object in the marked-content sequence shall be rendered.
 	if indRef := dict.IndirectRefEntry("Pg"); indRef != nil {
-		logInfoValidate.Println("validateMarkedContentReferenceDict: found entry \"Pg\".")
 		err := processStructElementDictPgEntry(xRefTable, *indRef)
 		if err != nil {
 			return err
@@ -20,7 +19,6 @@ func validateMarkedContentReferenceDict(xRefTable *types.XRefTable, dict *types.
 	// Stm: optional, indirect reference
 	// The content stream containing the marked-content sequence.
 	if indRef := dict.IndirectRefEntry("Stm"); indRef != nil {
-		logInfoValidate.Println("validateMarkedContentReferenceDict: found entry \"Stm\".")
 		_, err := xRefTable.Dereference(indRef)
 		if err != nil {
 			return err
@@ -30,7 +28,6 @@ func validateMarkedContentReferenceDict(xRefTable *types.XRefTable, dict *types.
 	// StmOwn: optional, indirect reference
 	// The PDF object owning the stream identified by Stems annotation to which an appearance stream belongs.
 	if indRef := dict.IndirectRefEntry("StmOwn"); indRef != nil {
-		logInfoValidate.Println("validateMarkedContentReferenceDict: found entry \"StmOwn\".")
 		_, err := xRefTable.Dereference(indRef)
 		if err != nil {
 			return err
@@ -40,7 +37,6 @@ func validateMarkedContentReferenceDict(xRefTable *types.XRefTable, dict *types.
 	// MCID: required, integer
 	// The marked-content identifier of the marked-content sequence within its content stream.
 	if obj, found := dict.Find("MCID"); !found {
-		logInfoValidate.Println("validateMarkedContentReferenceDict: missing entry \"MCID\".")
 	} else {
 		obj, err := xRefTable.Dereference(obj)
 		if err != nil {
@@ -48,7 +44,7 @@ func validateMarkedContentReferenceDict(xRefTable *types.XRefTable, dict *types.
 		}
 
 		if obj == nil {
-			logInfoValidate.Println("validateMarkedContentReferenceDict: missing entry \"MCID\".")
+			return errors.Errorf("validateMarkedContentReferenceDict: missing entry \"MCID\".")
 		}
 	}
 
@@ -60,7 +56,6 @@ func validateObjectReferenceDict(xRefTable *types.XRefTable, dict *types.PDFDict
 	// Pg: optional, indirect reference
 	// Page object representing a page on which some or all of the content items designated by the K entry shall be rendered.
 	if indRef := dict.IndirectRefEntry("Pg"); indRef != nil {
-		logInfoValidate.Println("validateObjectReferenceDict: found entry Pg")
 		err := processStructElementDictPgEntry(xRefTable, *indRef)
 		if err != nil {
 			return err
@@ -354,7 +349,6 @@ func validateStructElementDictPart1(xRefTable *types.XRefTable, dict *types.PDFD
 	// Pg: optional, indirect reference
 	// Page object representing a page on which some or all of the content items designated by the K entry shall be rendered.
 	if indRef := dict.IndirectRefEntry("Pg"); indRef != nil {
-		logInfoValidate.Println("validateStructElementDict: found entry Pg")
 		err = processStructElementDictPgEntry(xRefTable, *indRef)
 		if err != nil {
 			return err
@@ -543,7 +537,6 @@ func processStructTreeClassMapDict(xRefTable *types.XRefTable, dict *types.PDFDi
 		}
 
 		if obj == nil {
-			logInfoValidate.Println("processStructTreeClassMapDict: end")
 			continue
 		}
 
@@ -621,7 +614,6 @@ func validateStructTreeRootDict(xRefTable *types.XRefTable, dict *types.PDFDict)
 	// A name tree that maps element identifiers to the structure elements they denote.
 	indRef := dict.IndirectRefEntry("IDTree")
 	if indRef != nil {
-		logInfoValidate.Println("validateStructTreeRootDict: writing IDTree.")
 		_, _, err := validateNameTree(xRefTable, "IDTree", *indRef, true)
 		if err != nil {
 			return err

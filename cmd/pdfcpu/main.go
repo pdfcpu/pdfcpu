@@ -8,23 +8,14 @@ import (
 	"strings"
 
 	"github.com/hhrutter/pdfcpu"
-	"github.com/hhrutter/pdfcpu/attach"
-	"github.com/hhrutter/pdfcpu/crypto"
-	"github.com/hhrutter/pdfcpu/extract"
-	"github.com/hhrutter/pdfcpu/merge"
-	"github.com/hhrutter/pdfcpu/optimize"
-	"github.com/hhrutter/pdfcpu/read"
+	PDFCPULog "github.com/hhrutter/pdfcpu/log"
 	"github.com/hhrutter/pdfcpu/types"
-	"github.com/hhrutter/pdfcpu/validate"
-	"github.com/hhrutter/pdfcpu/write"
 )
 
 var (
 	fileStats, mode, pageSelection string
 	upw, opw, key, perm            string
 	verbose                        bool
-
-	logInfo *log.Logger
 
 	needStackTrace = true
 )
@@ -56,7 +47,6 @@ func init() {
 	flag.StringVar(&upw, "upw", "", "user password")
 	flag.StringVar(&opw, "opw", "", "owner password")
 
-	logInfo = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 }
 
 func ensurePdfExtension(filename string) {
@@ -77,7 +67,7 @@ func version() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("pdfcpu version %s\n", types.PDFCPUVersion)
+	fmt.Fprintf(os.Stderr, "pdfcpu version %s\n", types.PDFCPUVersion)
 }
 
 func helpString(topic string) string {
@@ -149,16 +139,14 @@ func help() {
 
 func setupLogging(verbose bool) {
 
-	types.Verbose(verbose)
-	crypto.Verbose(verbose)
-	read.Verbose(verbose)
-	validate.Verbose(verbose)
-	optimize.Verbose(verbose)
-	write.Verbose(verbose)
-	extract.Verbose(verbose)
-	merge.Verbose(verbose)
-	attach.Verbose(verbose)
-	pdfcpu.Verbose(verbose)
+	if verbose {
+
+		//PDFCPULog.SetDefaultLoggers()
+
+		PDFCPULog.SetDefaultDebugLogger()
+		PDFCPULog.SetDefaultInfoLogger()
+		PDFCPULog.SetDefaultStatsLogger()
+	}
 
 	needStackTrace = verbose
 }
@@ -240,7 +228,7 @@ func prepareOptimizeCommand(config *types.Configuration) *pdfcpu.Command {
 
 	config.StatsFileName = fileStats
 	if len(fileStats) > 0 {
-		fmt.Printf("stats will be appended to %s\n", fileStats)
+		fmt.Fprintf(os.Stdout, "stats will be appended to %s\n", fileStats)
 	}
 
 	return pdfcpu.OptimizeCommand(filenameIn, filenameOut, config)

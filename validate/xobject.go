@@ -369,7 +369,6 @@ func validateAlternateImageStreamDicts(xRefTable *types.XRefTable, dict *types.P
 		if required {
 			return errors.Errorf("validateAlternateImageStreamDicts: dict=%s required entry \"%s\" missing.", dictName, entryName)
 		}
-		logInfoValidate.Printf("validateAlternateImageStreamDicts end: dictName=%s", dictName)
 		return nil
 	}
 

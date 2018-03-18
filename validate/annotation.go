@@ -1,6 +1,7 @@
 package validate
 
 import (
+	"github.com/hhrutter/pdfcpu/log"
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
 )
@@ -1241,7 +1242,11 @@ func validateMarkupAnnotation(xRefTable *types.XRefTable, dict *types.PDFDict) e
 	}
 
 	// Subj, optional, text string, since V1.5
-	_, err = validateStringEntry(xRefTable, dict, dictName, "Subj", OPTIONAL, types.V15, nil)
+	sinceVersion := types.V15
+	if xRefTable.ValidationMode == types.ValidationRelaxed {
+		sinceVersion = types.V14
+	}
+	_, err = validateStringEntry(xRefTable, dict, dictName, "Subj", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
@@ -1562,7 +1567,7 @@ func validatePagesAnnotations(xRefTable *types.XRefTable, dict *types.PDFDict) e
 		return errors.New("validatePagesAnnotations: missing \"Count\"")
 	}
 
-	logInfoValidate.Printf("validatePagesAnnotations: This page node has %d pages\n", *pageCount)
+	log.Debug.Printf("validatePagesAnnotations: This page node has %d pages\n", *pageCount)
 
 	// Iterate over page tree.
 	kidsArray := dict.PDFArrayEntry("Kids")
@@ -1570,7 +1575,7 @@ func validatePagesAnnotations(xRefTable *types.XRefTable, dict *types.PDFDict) e
 	for _, v := range *kidsArray {
 
 		if v == nil {
-			logDebugValidate.Println("validatePagesAnnotations: kid is nil")
+			log.Debug.Println("validatePagesAnnotations: kid is nil")
 			continue
 		}
 

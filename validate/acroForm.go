@@ -210,8 +210,6 @@ func validateAcroFieldDict(xRefTable *types.XRefTable, indRef *types.PDFIndirect
 
 		}
 
-		logInfoValidate.Printf("*** validateAcroFieldDict end: obj#:%d ***", indRef.ObjectNumber)
-
 		return nil
 	}
 

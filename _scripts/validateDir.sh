@@ -29,7 +29,7 @@ do
 	
 	out1=$out/$f1$new.pdf
 	
-    pdfcpu validate -verbose -mode=relaxed $out/$f > $out/$f1.log
+    pdfcpu validate -verbose -mode=relaxed $out/$f &> $out/$f1.log
 
     if [ $? -eq 1 ]; then
         echo "validation error: $pdf"

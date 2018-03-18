@@ -376,7 +376,6 @@ func validateEmbeddedFilesNameTreeValue(xRefTable *types.XRefTable, obj interfac
 	// Value is a file specification for an embedded file stream.
 
 	if obj == nil {
-		logInfoValidate.Println("validateEmbeddedFilesNameTreeValue: is nil.")
 		return nil
 	}
 
@@ -527,8 +526,6 @@ func validateNameTreeDictNamesEntry(xRefTable *types.XRefTable, dict *types.PDFD
 		return "", "", errors.Errorf("validateNameTreeDictNamesEntry: missing \"Names\" array.")
 	}
 
-	logInfoValidate.Println("validateNameTreeDictNamesEntry: \"Nums\": now writing value objects")
-
 	// arr length needs to be even because of contained key value pairs.
 	if len(*arr)%2 == 1 {
 		return "", "", errors.Errorf("validateNameTreeDictNamesEntry: Names array entry length needs to be even, length=%d\n", len(*arr))
@@ -556,8 +553,6 @@ func validateNameTreeDictNamesEntry(xRefTable *types.XRefTable, dict *types.PDFD
 
 			continue
 		}
-
-		logDebugValidate.Printf("validateNameTreeDictNamesEntry: Nums array value: %v\n", obj)
 
 		err = validateNameTreeByName(name, xRefTable, obj)
 		if err != nil {
@@ -619,8 +614,6 @@ func validateNameTree(xRefTable *types.XRefTable, name string, indRef types.PDFI
 		}
 
 		for _, obj := range *arr {
-
-			logInfoValidate.Printf("validateNameTree: processing kid: %v\n", obj)
 
 			kid, ok := obj.(types.PDFIndirectRef)
 			if !ok {

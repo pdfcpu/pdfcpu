@@ -2,11 +2,13 @@ package types
 
 import (
 	"fmt"
-	"log"
+
 	"sort"
 	"strings"
 
 	"github.com/pkg/errors"
+
+	"github.com/hhrutter/pdfcpu/log"
 )
 
 // PDFDict represents a PDF dict object.
@@ -86,7 +88,7 @@ func (d *PDFDict) Entry(dictName, key string, required bool) (interface{}, error
 		if required {
 			return nil, errors.Errorf("dict=%s required entry=%s missing", dictName, key)
 		}
-		logInfoTypes.Printf("dict=%s entry %s is nil\n", dictName, key)
+		log.Debug.Printf("dict=%s entry %s is nil\n", dictName, key)
 		return nil, nil
 	}
 	return obj, nil
@@ -476,7 +478,8 @@ func (d PDFDict) PDFString() string {
 			continue
 		}
 
-		log.Fatalf("PDFDict.PDFString(): entry of unknown object type: %T %[1]v\n", v)
+		// At this point we should only deal with validated objects!
+		//log.Fatalf("PDFDict.PDFString(): entry of unknown object type: %T %[1]v\n", v)
 	}
 
 	logstr = append(logstr, ">>")

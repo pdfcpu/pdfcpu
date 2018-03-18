@@ -3,37 +3,17 @@ package attach
 
 import (
 	"io/ioutil"
-	"log"
 	"os"
 
 	"github.com/hhrutter/pdfcpu/filter"
+	"github.com/hhrutter/pdfcpu/log"
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
-var logDebugAttach, logInfoAttach, logErrorAttach *log.Logger
-
-func init() {
-	logDebugAttach = log.New(ioutil.Discard, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-	//logDebugAttach = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logInfoAttach = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logErrorAttach = log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
-}
-
-// Verbose controls logging output.
-func Verbose(verbose bool) {
-	if verbose {
-		logDebugAttach = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-		//logInfoAttach = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	} else {
-		logDebugAttach = log.New(ioutil.Discard, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-		//logInfoAttach = log.New(ioutil.Discard, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	}
-}
-
 func processFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict, processor func(string, *types.PDFStreamDict) error) error {
 
-	logDebugAttach.Println("processFileSpecDict begin")
+	log.Debug.Println("processFileSpecDict begin")
 
 	// Entry F holds the filename.
 	obj, found := dict.Find("F")
@@ -73,14 +53,14 @@ func processFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict, proces
 		return err
 	}
 
-	logDebugAttach.Println("processFileSpecDict end")
+	log.Debug.Println("processFileSpecDict end")
 
 	return nil
 }
 
 func processNamesEntry(xRefTable *types.XRefTable, dict *types.PDFDict, processor func(string, *types.PDFStreamDict) error) error {
 
-	logDebugAttach.Println("processNamesEntry begin")
+	log.Debug.Println("processNamesEntry begin")
 
 	// Names: array of the form [key1 value1 key2 value2 ... key n value n]
 	obj, found := dict.Find("Names")
@@ -107,7 +87,7 @@ func processNamesEntry(xRefTable *types.XRefTable, dict *types.PDFDict, processo
 			continue
 		}
 
-		logDebugAttach.Printf("processNamesEntry: Names array value: %v\n", obj)
+		log.Debug.Printf("processNamesEntry: Names array value: %v\n", obj)
 
 		if obj == nil {
 			continue
@@ -122,7 +102,7 @@ func processNamesEntry(xRefTable *types.XRefTable, dict *types.PDFDict, processo
 			continue
 		}
 
-		logDebugAttach.Printf("processNamesEntry: file spec dict: %v\n", d)
+		log.Debug.Printf("processNamesEntry: file spec dict: %v\n", d)
 		err = processFileSpecDict(xRefTable, d, processor)
 		if err != nil {
 			return err
@@ -130,14 +110,14 @@ func processNamesEntry(xRefTable *types.XRefTable, dict *types.PDFDict, processo
 
 	}
 
-	logDebugAttach.Println("processNamesEntry end")
+	log.Debug.Println("processNamesEntry end")
 
 	return nil
 }
 
 func processNameTree(xRefTable *types.XRefTable, nameTree types.PDFNameTree, processor func(string, *types.PDFStreamDict) error) error {
 
-	logDebugAttach.Println("processNameTree begin")
+	log.Debug.Println("processNameTree begin")
 
 	dict, err := xRefTable.DereferenceDict(nameTree.PDFIndirectRef)
 	if err != nil {
@@ -159,7 +139,7 @@ func processNameTree(xRefTable *types.XRefTable, nameTree types.PDFNameTree, pro
 
 		for _, obj := range *arr {
 
-			logDebugAttach.Printf("processNameTree: processing kid: %v\n", obj)
+			log.Debug.Printf("processNameTree: processing kid: %v\n", obj)
 
 			kid, ok := obj.(types.PDFIndirectRef)
 			if !ok {
@@ -172,7 +152,7 @@ func processNameTree(xRefTable *types.XRefTable, nameTree types.PDFNameTree, pro
 			}
 		}
 
-		logDebugAttach.Println("processNameTree end")
+		log.Debug.Println("processNameTree end")
 
 		return nil
 	}
@@ -182,7 +162,7 @@ func processNameTree(xRefTable *types.XRefTable, nameTree types.PDFNameTree, pro
 		return err
 	}
 
-	logDebugAttach.Println("processNameTree end")
+	log.Debug.Println("processNameTree end")
 
 	return nil
 }
@@ -205,7 +185,7 @@ func extractAttachedFiles(ctx *types.PDFContext, files types.StringSet) error {
 
 		path := ctx.Write.DirName + "/" + fileName
 
-		logDebugAttach.Printf("writeFile begin: %s\n", path)
+		log.Debug.Printf("writeFile begin: %s\n", path)
 
 		fpl := sd.FilterPipeline
 
@@ -217,13 +197,13 @@ func extractAttachedFiles(ctx *types.PDFContext, files types.StringSet) error {
 
 			// Ignore filter chains with length > 1
 			if len(fpl) > 1 {
-				logDebugAttach.Printf("writeFile end: ignore %s, more than 1 filter.\n", fileName)
+				log.Debug.Printf("writeFile end: ignore %s, more than 1 filter.\n", fileName)
 				return nil
 			}
 
 			// Only FlateDecode supported.
 			if fpl[0].Name != "FlateDecode" {
-				logDebugAttach.Printf("writeFile: ignore %s, %s filter unsupported.\n", fileName, fpl[0].Name)
+				log.Debug.Printf("writeFile: ignore %s, %s filter unsupported.\n", fileName, fpl[0].Name)
 				return nil
 			}
 
@@ -235,13 +215,13 @@ func extractAttachedFiles(ctx *types.PDFContext, files types.StringSet) error {
 
 		}
 
-		logInfoAttach.Printf("writing %s\n", path)
+		log.Info.Printf("writing %s\n", path)
 		err = ioutil.WriteFile(path, sd.Content, os.ModePerm)
 		if err != nil {
 			return err
 		}
 
-		logDebugAttach.Printf("writeFile end: %s \n", path)
+		log.Debug.Printf("writeFile end: %s \n", path)
 
 		return nil
 	}
@@ -255,7 +235,7 @@ func extractAttachedFiles(ctx *types.PDFContext, files types.StringSet) error {
 			// Locate value for name tree key=fileName - the corresponding fileSpecDict.
 			indRef, err := nameTree.Value(ctx.XRefTable, fileName)
 			if indRef == nil {
-				logErrorAttach.Printf("%s not found", fileName)
+				log.Info.Printf("%s not found", fileName)
 				continue
 			}
 
@@ -334,7 +314,7 @@ func addAttachedFiles(xRefTable *types.XRefTable, files types.StringSet) (ok boo
 // ok returns true if at least one attachment was removed.
 func removeAttachedFiles(xRefTable *types.XRefTable, files types.StringSet) (ok bool, err error) {
 
-	logDebugAttach.Println("removeAttachedFiles begin")
+	log.Debug.Println("removeAttachedFiles begin")
 
 	if xRefTable.EmbeddedFiles == nil {
 		return false, nil
@@ -344,7 +324,7 @@ func removeAttachedFiles(xRefTable *types.XRefTable, files types.StringSet) (ok 
 
 		for fileName := range files {
 
-			logDebugAttach.Printf("removeAttachedFiles: removing %s\n", fileName)
+			log.Debug.Printf("removeAttachedFiles: removing %s\n", fileName)
 
 			// Any remove operation may be deleting the only key value pair of this name tree.
 			if xRefTable.EmbeddedFiles != nil {
@@ -360,11 +340,11 @@ func removeAttachedFiles(xRefTable *types.XRefTable, files types.StringSet) (ok 
 				}
 
 				if !found {
-					logErrorAttach.Printf("removeAttachedFiles: %s not found\n", fileName)
+					log.Info.Printf("removeAttachedFiles: %s not found\n", fileName)
 					continue
 				}
 
-				logDebugAttach.Printf("removeAttachedFiles: removed key value pair for %s - deadKid=%t\n", fileName, deadKid)
+				log.Debug.Printf("removeAttachedFiles: removed key value pair for %s - deadKid=%t\n", fileName, deadKid)
 
 				ok = true
 
@@ -382,7 +362,7 @@ func removeAttachedFiles(xRefTable *types.XRefTable, files types.StringSet) (ok 
 
 			} else {
 
-				logErrorAttach.Printf("removeAttachedFiles: no attachments, can't remove %s\n", fileName)
+				//logErrorAttach.Printf("removeAttachedFiles: no attachments, can't remove %s\n", fileName)
 
 			}
 
@@ -409,7 +389,7 @@ func removeAttachedFiles(xRefTable *types.XRefTable, files types.StringSet) (ok 
 // List returns a list of embedded files.
 func List(xRefTable *types.XRefTable) (list []string, err error) {
 
-	logDebugAttach.Println("List begin")
+	log.Debug.Println("List begin")
 
 	if !xRefTable.Valid && xRefTable.EmbeddedFiles == nil {
 		xRefTable.EmbeddedFiles, err = xRefTable.LocateNameTree("EmbeddedFiles", false)
@@ -427,7 +407,7 @@ func List(xRefTable *types.XRefTable) (list []string, err error) {
 		return nil, err
 	}
 
-	logDebugAttach.Println("List end")
+	log.Debug.Println("List end")
 
 	return list, nil
 }
@@ -436,7 +416,7 @@ func List(xRefTable *types.XRefTable) (list []string, err error) {
 // If no files specified extract all embedded files.
 func Extract(ctx *types.PDFContext, files types.StringSet) (err error) {
 
-	logDebugAttach.Println("Extract begin")
+	log.Debug.Println("Extract begin")
 
 	if !ctx.Valid && ctx.EmbeddedFiles == nil {
 		ctx.EmbeddedFiles, err = ctx.LocateNameTree("EmbeddedFiles", false)
@@ -454,7 +434,7 @@ func Extract(ctx *types.PDFContext, files types.StringSet) (err error) {
 		return err
 	}
 
-	logDebugAttach.Println("Extract end")
+	log.Debug.Println("Extract end")
 
 	return nil
 }
@@ -464,7 +444,7 @@ func Extract(ctx *types.PDFContext, files types.StringSet) (err error) {
 // ok returns true if at least one attachment was added.
 func Add(xRefTable *types.XRefTable, files types.StringSet) (ok bool, err error) {
 
-	logDebugAttach.Println("Add begin")
+	log.Debug.Println("Add begin")
 
 	if xRefTable.EmbeddedFiles == nil {
 		xRefTable.EmbeddedFiles, err = xRefTable.LocateNameTree("EmbeddedFiles", true)
@@ -475,7 +455,7 @@ func Add(xRefTable *types.XRefTable, files types.StringSet) (ok bool, err error)
 
 	ok, err = addAttachedFiles(xRefTable, files)
 
-	logDebugAttach.Println("Add end")
+	log.Debug.Println("Add end")
 
 	return ok, err
 }
@@ -484,7 +464,7 @@ func Add(xRefTable *types.XRefTable, files types.StringSet) (ok bool, err error)
 // ok returns true if at least one attachment could be removed.
 func Remove(xRefTable *types.XRefTable, files types.StringSet) (ok bool, err error) {
 
-	logDebugAttach.Println("Remove begin")
+	log.Debug.Println("Remove begin")
 
 	if !xRefTable.Valid && xRefTable.EmbeddedFiles == nil {
 		xRefTable.EmbeddedFiles, err = xRefTable.LocateNameTree("EmbeddedFiles", false)
@@ -499,7 +479,7 @@ func Remove(xRefTable *types.XRefTable, files types.StringSet) (ok bool, err err
 
 	ok, err = removeAttachedFiles(xRefTable, files)
 
-	logDebugAttach.Println("Remove end")
+	log.Debug.Println("Remove end")
 
 	return ok, err
 }

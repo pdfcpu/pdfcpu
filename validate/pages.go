@@ -1,6 +1,7 @@
 package validate
 
 import (
+	"github.com/hhrutter/pdfcpu/log"
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
 )
@@ -61,8 +62,6 @@ func validatePageContents(xRefTable *types.XRefTable, dict *types.PDFDict) (hasC
 
 	case types.PDFArray:
 		// process array of content stream dicts.
-
-		logInfoValidate.Printf("validatePageContents: writing content array\n")
 
 		for _, obj := range obj {
 
@@ -863,7 +862,7 @@ func validateResources(xRefTable *types.XRefTable, dict *types.PDFDict) (hasReso
 		xRefTable.PageCount = *pageCount
 	}
 
-	logInfoValidate.Printf("validateResources: This page node has %d pages\n", *pageCount)
+	log.Debug.Printf("validateResources: This page node has %d pages\n", *pageCount)
 
 	// Resources: optional, dict
 	obj, ok := dict.Find("Resources")
@@ -900,7 +899,6 @@ func validatePagesDict(xRefTable *types.XRefTable, dict *types.PDFDict, objNumbe
 	for _, obj := range *kidsArray {
 
 		if obj == nil {
-			logDebugValidate.Println("validatePagesDict: kid is nil")
 			continue
 		}
 
@@ -910,7 +908,7 @@ func validatePagesDict(xRefTable *types.XRefTable, dict *types.PDFDict, objNumbe
 			return errors.New("validatePagesDict: missing indirect reference for kid")
 		}
 
-		logInfoValidate.Printf("validatePagesDict: PageNode: %s\n", indRef)
+		log.Debug.Printf("validatePagesDict: PageNode: %s\n", indRef)
 
 		objNumber := indRef.ObjectNumber.Value()
 		genNumber := indRef.GenerationNumber.Value()

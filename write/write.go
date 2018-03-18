@@ -6,48 +6,16 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"os"
 	"sort"
 	"strings"
 
 	"github.com/hhrutter/pdfcpu/crypto"
 	"github.com/hhrutter/pdfcpu/filter"
+	"github.com/hhrutter/pdfcpu/log"
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
 )
-
-var (
-	logDebugWriter *log.Logger
-	logInfoWriter  *log.Logger
-	logErrorWriter *log.Logger
-	logPages       *log.Logger
-	logXRef        *log.Logger
-)
-
-func init() {
-
-	logDebugWriter = log.New(ioutil.Discard, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-	//logDebugWriter = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logInfoWriter = log.New(ioutil.Discard, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logErrorWriter = log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logPages = log.New(ioutil.Discard, "PAGES: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logXRef = log.New(ioutil.Discard, "XREF: ", log.Ldate|log.Ltime|log.Lshortfile)
-}
-
-// Verbose controls logging output.
-func Verbose(verbose bool) {
-
-	out := ioutil.Discard
-	if verbose {
-		out = os.Stdout
-	}
-
-	logInfoWriter = log.New(out, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logPages = log.New(out, "PAGES: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logXRef = log.New(out, "XREF: ", log.Ldate|log.Ltime|log.Lshortfile)
-}
 
 // Write root entry to disk.
 func writeRootEntry(ctx *types.PDFContext, dict *types.PDFDict, dictName, entryName string, statsAttr int) error {
@@ -119,7 +87,7 @@ func writeRootObject(ctx *types.PDFContext) error {
 	objNumber := int(catalog.ObjectNumber)
 	genNumber := int(catalog.GenerationNumber)
 
-	logPages.Printf("*** writeRootObject: begin offset=%d *** %s\n", ctx.Write.Offset, catalog)
+	log.Debug.Printf("*** writeRootObject: begin offset=%d *** %s\n", ctx.Write.Offset, catalog)
 
 	var dict *types.PDFDict
 
@@ -135,7 +103,7 @@ func writeRootObject(ctx *types.PDFContext) error {
 	dictName := "rootDict"
 
 	if ctx.Write.ReducedFeatureSet() {
-		logDebugWriter.Println("writeRootObject: exclude complex entries on split,trim and page extraction.")
+		log.Debug.Println("writeRootObject: exclude complex entries on split,trim and page extraction.")
 		dict.Delete("Names")
 		dict.Delete("Dests")
 		dict.Delete("Outlines")
@@ -150,9 +118,9 @@ func writeRootObject(ctx *types.PDFContext) error {
 		return err
 	}
 
-	logPages.Printf("writeRootObject: %s\n", dict)
+	log.Debug.Printf("writeRootObject: %s\n", dict)
 
-	logDebugWriter.Printf("writeRootObject: new offset after rootDict = %d\n", ctx.Write.Offset)
+	log.Debug.Printf("writeRootObject: new offset after rootDict = %d\n", ctx.Write.Offset)
 
 	err = writeRootEntry(ctx, dict, dictName, "Version", types.RootVersion)
 	if err != nil {
@@ -216,14 +184,14 @@ func writeRootObject(ctx *types.PDFContext) error {
 		}
 	}
 
-	logInfoWriter.Printf("*** writeRootObject: end offset=%d ***\n", ctx.Write.Offset)
+	log.Debug.Printf("*** writeRootObject: end offset=%d ***\n", ctx.Write.Offset)
 
 	return nil
 }
 
 func writeTrailerDict(ctx *types.PDFContext) error {
 
-	logInfoWriter.Printf("writeTrailerDict begin\n")
+	log.Debug.Printf("writeTrailerDict begin\n")
 
 	w := ctx.Write
 	xRefTable := ctx.XRefTable
@@ -259,14 +227,14 @@ func writeTrailerDict(ctx *types.PDFContext) error {
 		return err
 	}
 
-	logInfoWriter.Printf("writeTrailerDict end\n")
+	log.Debug.Printf("writeTrailerDict end\n")
 
 	return nil
 }
 
 func writeXRefSubsection(ctx *types.PDFContext, start int, size int) error {
 
-	logXRef.Printf("writeXRefSubsection: start=%d size=%d\n", start, size)
+	log.Debug.Printf("writeXRefSubsection: start=%d size=%d\n", start, size)
 
 	w := ctx.Write
 
@@ -306,9 +274,8 @@ func writeXRefSubsection(ctx *types.PDFContext, start int, size int) error {
 		}
 	}
 
-	logXRef.Printf("\n%s\n", strings.Join(lines, ""))
-
-	logXRef.Printf("writeXRefSubsection: end\n")
+	log.Debug.Printf("\n%s\n", strings.Join(lines, ""))
+	log.Debug.Printf("writeXRefSubsection: end\n")
 
 	return nil
 }
@@ -334,7 +301,7 @@ func deleteRedundantObjects(ctx *types.PDFContext) {
 
 	xRefTable := ctx.XRefTable
 
-	logInfoWriter.Printf("deleteRedundantObjects begin: Size=%d\n", *xRefTable.Size)
+	log.Debug.Printf("deleteRedundantObjects begin: Size=%d\n", *xRefTable.Size)
 
 	for i := 0; i < *xRefTable.Size; i++ {
 
@@ -354,7 +321,7 @@ func deleteRedundantObjects(ctx *types.PDFContext) {
 			// Resources may be cross referenced from different objects
 			// eg. font descriptors may be shared by different font dicts.
 			// Try to remove this object from the list of the potential duplicate objects.
-			logDebugWriter.Printf("deleteRedundantObjects: remove duplicate obj #%d\n", i)
+			log.Debug.Printf("deleteRedundantObjects: remove duplicate obj #%d\n", i)
 			delete(ctx.Optimize.DuplicateFontObjs, i)
 			delete(ctx.Optimize.DuplicateImageObjs, i)
 			delete(ctx.Optimize.DuplicateInfoObjects, i)
@@ -371,13 +338,13 @@ func deleteRedundantObjects(ctx *types.PDFContext) {
 
 				if *entry.Offset == *xRefTable.OffsetPrimaryHintTable {
 					xRefTable.LinearizationObjs[i] = true
-					logDebugWriter.Printf("deleteRedundantObjects: primaryHintTable at obj #%d\n", i)
+					log.Debug.Printf("deleteRedundantObjects: primaryHintTable at obj #%d\n", i)
 				}
 
 				if xRefTable.OffsetOverflowHintTable != nil &&
 					*entry.Offset == *xRefTable.OffsetOverflowHintTable {
 					xRefTable.LinearizationObjs[i] = true
-					logDebugWriter.Printf("deleteRedundantObjects: overflowHintTable at obj #%d\n", i)
+					log.Debug.Printf("deleteRedundantObjects: overflowHintTable at obj #%d\n", i)
 				}
 
 			}
@@ -388,7 +355,7 @@ func deleteRedundantObjects(ctx *types.PDFContext) {
 
 	}
 
-	logInfoWriter.Println("deleteRedundantObjects end")
+	log.Debug.Println("deleteRedundantObjects end")
 }
 
 func sortedWritableKeys(ctx *types.PDFContext) []int {
@@ -417,7 +384,7 @@ func writeXRefTable(ctx *types.PDFContext) error {
 	keys := sortedWritableKeys(ctx)
 
 	objCount := len(keys)
-	logXRef.Printf("xref has %d entries\n", objCount)
+	log.Debug.Printf("xref has %d entries\n", objCount)
 
 	_, err = ctx.Write.WriteString("xref")
 	if err != nil {
@@ -510,7 +477,7 @@ func int64ToBuf(i int64, byteCount int) (buf []byte) {
 
 func createXRefStream(ctx *types.PDFContext, i1, i2, i3 int) ([]byte, *types.PDFArray, error) {
 
-	logDebugWriter.Println("createXRefStream begin")
+	log.Debug.Println("createXRefStream begin")
 
 	xRefTable := ctx.XRefTable
 
@@ -528,7 +495,7 @@ func createXRefStream(ctx *types.PDFContext, i1, i2, i3 int) ([]byte, *types.PDF
 	sort.Ints(keys)
 
 	objCount := len(keys)
-	logDebugWriter.Printf("createXRefStream: xref has %d entries\n", objCount)
+	log.Debug.Printf("createXRefStream: xref has %d entries\n", objCount)
 
 	start := keys[0]
 	size := 0
@@ -542,7 +509,7 @@ func createXRefStream(ctx *types.PDFContext, i1, i2, i3 int) ([]byte, *types.PDF
 		if entry.Free {
 
 			// unused
-			logDebugWriter.Printf("createXRefStream: unused i=%d nextFreeAt:%d gen:%d\n", j, int(*entry.Offset), int(*entry.Generation))
+			log.Debug.Printf("createXRefStream: unused i=%d nextFreeAt:%d gen:%d\n", j, int(*entry.Offset), int(*entry.Generation))
 
 			s1 = int64ToBuf(0, i1)
 			s2 = int64ToBuf(*entry.Offset, i2)
@@ -551,7 +518,7 @@ func createXRefStream(ctx *types.PDFContext, i1, i2, i3 int) ([]byte, *types.PDF
 		} else if entry.Compressed {
 
 			// in use, compressed into object stream
-			logDebugWriter.Printf("createXRefStream: compressed i=%d at objstr %d[%d]\n", j, int(*entry.ObjectStream), int(*entry.ObjectStreamInd))
+			log.Debug.Printf("createXRefStream: compressed i=%d at objstr %d[%d]\n", j, int(*entry.ObjectStream), int(*entry.ObjectStreamInd))
 
 			s1 = int64ToBuf(2, i1)
 			s2 = int64ToBuf(int64(*entry.ObjectStream), i2)
@@ -565,7 +532,7 @@ func createXRefStream(ctx *types.PDFContext, i1, i2, i3 int) ([]byte, *types.PDF
 			}
 
 			// in use, uncompressed
-			logDebugWriter.Printf("createXRefStream: used i=%d offset:%d gen:%d\n", j, int(off), int(*entry.Generation))
+			log.Debug.Printf("createXRefStream: used i=%d offset:%d gen:%d\n", j, int(off), int(*entry.Generation))
 
 			s1 = int64ToBuf(1, i1)
 			s2 = int64ToBuf(off, i2)
@@ -573,7 +540,7 @@ func createXRefStream(ctx *types.PDFContext, i1, i2, i3 int) ([]byte, *types.PDF
 
 		}
 
-		logDebugWriter.Printf("createXRefStream: written: %x %x %x \n", s1, s2, s3)
+		log.Debug.Printf("createXRefStream: written: %x %x %x \n", s1, s2, s3)
 
 		buf = append(buf, s1...)
 		buf = append(buf, s2...)
@@ -595,14 +562,14 @@ func createXRefStream(ctx *types.PDFContext, i1, i2, i3 int) ([]byte, *types.PDF
 	arr = append(arr, types.PDFInteger(start))
 	arr = append(arr, types.PDFInteger(size))
 
-	logDebugWriter.Println("createXRefStream end")
+	log.Debug.Println("createXRefStream end")
 
 	return buf, &arr, nil
 }
 
 func writeXRefStream(ctx *types.PDFContext) error {
 
-	logInfoWriter.Println("writeXRefStream begin")
+	log.Debug.Println("writeXRefStream begin")
 
 	xRefTable := ctx.XRefTable
 	xRefStreamDict := types.NewPDFXRefStreamDict(ctx)
@@ -660,7 +627,7 @@ func writeXRefStream(ctx *types.PDFContext) error {
 		return err
 	}
 
-	logInfoWriter.Printf("writeXRefStream: xRefStreamDict: %s\n", xRefStreamDict)
+	log.Debug.Printf("writeXRefStream: xRefStreamDict: %s\n", xRefStreamDict)
 
 	err = writePDFStreamDictObject(ctx, objNumber, 0, xRefStreamDict.PDFStreamDict)
 	if err != nil {
@@ -694,7 +661,7 @@ func writeXRefStream(ctx *types.PDFContext) error {
 		return err
 	}
 
-	logInfoWriter.Println("writeXRefStream end")
+	log.Debug.Println("writeXRefStream end")
 
 	return nil
 }
@@ -893,7 +860,7 @@ func PDFFile(ctx *types.PDFContext) error {
 
 	fileName := ctx.Write.DirName + ctx.Write.FileName
 
-	logInfoWriter.Printf("writing to %s...\n", fileName)
+	log.Info.Printf("writing to %s\n", fileName)
 
 	file, err := os.Create(fileName)
 	if err != nil {
@@ -928,7 +895,7 @@ func PDFFile(ctx *types.PDFContext) error {
 	//v := ctx.Version()
 	//if ctx.Version() < types.V15 {
 	//v := types.V15
-	//logInfoWriter.Println("Ensure V1.5 for writing object & xref streams")
+	//log.Info.Println("Ensure V1.5 for writing object & xref streams")
 	//}
 
 	// For using Collections we need PDF 1.7.
@@ -937,7 +904,7 @@ func PDFFile(ctx *types.PDFContext) error {
 		return err
 	}
 
-	logInfoWriter.Printf("offset after writeHeader: %d\n", ctx.Write.Offset)
+	log.Debug.Printf("offset after writeHeader: %d\n", ctx.Write.Offset)
 
 	// Write root object(aka the document catalog) and page tree.
 	err = writeRootObject(ctx)
@@ -945,7 +912,7 @@ func PDFFile(ctx *types.PDFContext) error {
 		return err
 	}
 
-	logInfoWriter.Printf("offset after writeRootObject: %d\n", ctx.Write.Offset)
+	log.Debug.Printf("offset after writeRootObject: %d\n", ctx.Write.Offset)
 
 	// Write document information dictionary.
 	err = writeDocumentInfoDict(ctx)
@@ -953,7 +920,7 @@ func PDFFile(ctx *types.PDFContext) error {
 		return err
 	}
 
-	logInfoWriter.Printf("offset after writeInfoObject: %d\n", ctx.Write.Offset)
+	log.Debug.Printf("offset after writeInfoObject: %d\n", ctx.Write.Offset)
 
 	// Write offspec additional streams as declared in pdf trailer.
 	if ctx.AdditionalStreams != nil {

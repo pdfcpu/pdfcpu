@@ -83,8 +83,6 @@ func validateOutlineTree(xRefTable *types.XRefTable, first, last *types.PDFIndir
 			return errors.Errorf("validateOutlineTree: object #%d is nil.", objNumber)
 		}
 
-		logInfoValidate.Printf("validateOutlineTree: Next object #%d\n", objNumber)
-
 		err = validateOutlineItemDict(xRefTable, dict)
 		if err != nil {
 			return err
@@ -113,7 +111,7 @@ func validateOutlineTree(xRefTable *types.XRefTable, first, last *types.PDFIndir
 
 	// Relaxed validation
 	if objNumber != last.ObjectNumber.Value() && xRefTable.ValidationMode == types.ValidationStrict {
-		logErrorValidate.Printf("validateOutlineTree: corrupted child list %d <> %d\n", objNumber, last.ObjectNumber)
+		return errors.Errorf("validateOutlineTree: corrupted child list %d <> %d\n", objNumber, last.ObjectNumber)
 	}
 
 	return nil
@@ -147,7 +145,6 @@ func validateOutlines(xRefTable *types.XRefTable, rootDict *types.PDFDict, requi
 			return errors.New("validateOutlines: corrupted, root needs both first and last")
 		}
 		// leaf
-		logInfoValidate.Printf("validateOutlines end: obj#%d\n", indRef.ObjectNumber)
 		return nil
 	}
 

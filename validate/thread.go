@@ -142,7 +142,6 @@ func validateFirstBeadDict(xRefTable *types.XRefTable, beadIndRef, threadIndRef 
 	}
 
 	if soleBeadDict(beadIndRef, pBeadIndRef, nBeadIndRef) {
-		logInfoValidate.Println("*** validateFirstBeadDict end single bead ***")
 		return nil
 	}
 
@@ -201,7 +200,6 @@ func validateThreads(xRefTable *types.XRefTable, rootDict *types.PDFDict, requir
 		if required {
 			return errors.New("validateThreads: required entry \"Threads\" missing")
 		}
-		logInfoValidate.Println("validateThreads end: object is nil.")
 		return nil
 	}
 
@@ -210,7 +208,6 @@ func validateThreads(xRefTable *types.XRefTable, rootDict *types.PDFDict, requir
 		return err
 	}
 	if arr == nil {
-		logInfoValidate.Println("validateThreads end: object is nil.")
 		return nil
 	}
 

@@ -322,9 +322,7 @@ func validateShadingResourceDict(xRefTable *types.XRefTable, obj interface{}, si
 	}
 
 	// Iterate over shading resource dictionary
-	for key, obj := range dict.Dict {
-
-		logInfoValidate.Printf("validateShadingResourceDict: processing entry: %s\n", key)
+	for _, obj := range dict.Dict {
 
 		// Process shading
 		err = validateShading(xRefTable, obj)

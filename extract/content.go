@@ -1,3 +1,4 @@
+// Package extract provides functions for extracting fonts, images, pages and page content.
 package extract
 
 import (
@@ -6,6 +7,7 @@ import (
 	"os"
 
 	"github.com/hhrutter/pdfcpu/filter"
+	"github.com/hhrutter/pdfcpu/log"
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
 )
@@ -29,7 +31,7 @@ func writeContent(ctx *types.PDFContext, streamDict *types.PDFStreamDict, pageNu
 		return err
 	}
 
-	logInfoExtract.Printf("writing to %s\n", fileName)
+	log.Info.Printf("writing to %s\n", fileName)
 
 	// Dump decoded chunk to file.
 	return ioutil.WriteFile(fileName, streamDict.Content, os.ModePerm)
@@ -38,7 +40,7 @@ func writeContent(ctx *types.PDFContext, streamDict *types.PDFStreamDict, pageNu
 // Process the content of a page which is a stream dict or an array of stream dicts.
 func processPageDict(ctx *types.PDFContext, objNumber, genNumber int, dict *types.PDFDict, pageNumber int) error {
 
-	logDebugExtract.Printf("processPageDict begin: page=%d\n", pageNumber)
+	log.Debug.Printf("processPageDict begin: page=%d\n", pageNumber)
 
 	obj, found := dict.Find("Contents")
 	if !found || obj == nil {
@@ -83,7 +85,7 @@ func needsPage(selectedPages types.IntSet, pageCount int) bool {
 
 func processPagesDict(ctx *types.PDFContext, indRef *types.PDFIndirectRef, pageCount *int, selectedPages types.IntSet) error {
 
-	logDebugExtract.Printf("processPagesDict begin: pageCount=%d\n", *pageCount)
+	log.Debug.Printf("processPagesDict begin: pageCount=%d\n", *pageCount)
 
 	dict, _ := ctx.DereferenceDict(*indRef)
 
@@ -129,7 +131,7 @@ func processPagesDict(ctx *types.PDFContext, indRef *types.PDFIndirectRef, pageC
 
 	}
 
-	logDebugExtract.Printf("processPagesDict end: pageCount=%d\n", *pageCount)
+	log.Debug.Printf("processPagesDict end: pageCount=%d\n", *pageCount)
 
 	return nil
 }
@@ -138,7 +140,7 @@ func processPagesDict(ctx *types.PDFContext, indRef *types.PDFIndirectRef, pageC
 // Each content stream results in a separate text file.
 func Content(ctx *types.PDFContext, selectedPages types.IntSet) error {
 
-	logDebugExtract.Printf("Content begin: dirOut=%s\n", ctx.Write.DirName)
+	log.Debug.Printf("Content begin: dirOut=%s\n", ctx.Write.DirName)
 
 	// Get an indirect reference to the root page dict.
 	indRefRootPageDict, _ := ctx.Pages()
@@ -149,7 +151,7 @@ func Content(ctx *types.PDFContext, selectedPages types.IntSet) error {
 		return err
 	}
 
-	logDebugExtract.Println("Content end")
+	log.Debug.Println("Content end")
 
 	return nil
 }

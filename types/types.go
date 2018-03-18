@@ -8,9 +8,6 @@ package types
 import (
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
-	"log"
-	"os"
 	"strconv"
 	"time"
 )
@@ -23,25 +20,6 @@ const (
 
 	FreeHeadGeneration = 65535
 )
-
-var logDebugTypes, logInfoTypes, logErrorTypes *log.Logger
-
-func init() {
-
-	//logDebugTypes = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logDebugTypes = log.New(ioutil.Discard, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logInfoTypes = log.New(ioutil.Discard, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logErrorTypes = log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
-}
-
-// Verbose controls logging output.
-func Verbose(verbose bool) {
-	if verbose {
-		logInfoTypes = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	} else {
-		logInfoTypes = log.New(ioutil.Discard, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	}
-}
 
 // ByteSize represents the various terms for storage space.
 type ByteSize float64

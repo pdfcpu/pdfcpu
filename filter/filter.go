@@ -6,30 +6,17 @@ package filter
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
-	"log"
-	"os"
 
+	"github.com/hhrutter/pdfcpu/log"
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
 var (
-	logDebugFilter, logInfoFilter, logWarningFilter, logErrorFilter *log.Logger
 
 	// ErrUnsupportedFilter signals an unsupported filter type.
 	ErrUnsupportedFilter = errors.New("Filter not supported")
 )
-
-func init() {
-
-	logDebugFilter = log.New(ioutil.Discard, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-	//logDebugFilter = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-
-	logInfoFilter = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logWarningFilter = log.New(os.Stdout, "WARNING: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logErrorFilter = log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
-}
 
 // Filter defines an interface for encoding/decoding buffers.
 type Filter interface {
@@ -59,7 +46,7 @@ func NewFilter(filterName string, decodeParms, encodeParms *types.PDFDict) (filt
 	// JPXDecode
 
 	default:
-		logWarningFilter.Printf("Filter not supported: %s", filterName)
+		log.Info.Printf("Filter not supported: %s", filterName)
 		err = ErrUnsupportedFilter
 	}
 
@@ -74,11 +61,11 @@ type baseFilter struct {
 // EncodeStream encodes stream dict data by applying its filter pipeline.
 func EncodeStream(streamDict *types.PDFStreamDict) error {
 
-	logDebugFilter.Printf("encodeStream begin")
+	log.Debug.Printf("encodeStream begin")
 
 	// No filter specified, nothing to encode.
 	if streamDict.FilterPipeline == nil {
-		logDebugFilter.Println("encodeStream: returning uncompressed stream.")
+		log.Debug.Println("encodeStream: returning uncompressed stream.")
 		streamDict.Raw = streamDict.Content
 		streamLength := int64(len(streamDict.Raw))
 		streamDict.StreamLength = &streamLength
@@ -95,9 +82,9 @@ func EncodeStream(streamDict *types.PDFStreamDict) error {
 	for _, f := range streamDict.FilterPipeline {
 
 		if f.DecodeParms != nil {
-			logDebugFilter.Printf("encodeStream: encoding filter:%s\ndecodeParms:%s\n", f.Name, f.DecodeParms)
+			log.Debug.Printf("encodeStream: encoding filter:%s\ndecodeParms:%s\n", f.Name, f.DecodeParms)
 		} else {
-			logDebugFilter.Printf("encodeStream: encoding filter:%s\n", f.Name)
+			log.Debug.Printf("encodeStream: encoding filter:%s\n", f.Name)
 		}
 
 		fi, err := NewFilter(f.Name, f.DecodeParms, nil)
@@ -121,7 +108,7 @@ func EncodeStream(streamDict *types.PDFStreamDict) error {
 	streamDict.StreamLength = &streamLength
 	streamDict.Insert("Length", types.PDFInteger(streamLength))
 
-	logDebugFilter.Printf("encodeStream end")
+	log.Debug.Printf("encodeStream end")
 
 	return nil
 }
@@ -129,11 +116,11 @@ func EncodeStream(streamDict *types.PDFStreamDict) error {
 // DecodeStream decodes streamDict data by applying its filter pipeline.
 func DecodeStream(streamDict *types.PDFStreamDict) error {
 
-	logDebugFilter.Printf("decodeStream begin")
+	log.Debug.Printf("decodeStream begin")
 
 	// No filter specified, nothing to decode.
 	if streamDict.FilterPipeline == nil {
-		logDebugFilter.Println("decodeStream: returning uncompressed stream.")
+		log.Debug.Println("decodeStream: returning uncompressed stream.")
 		streamDict.Content = streamDict.Raw
 		return nil
 	}
@@ -147,9 +134,9 @@ func DecodeStream(streamDict *types.PDFStreamDict) error {
 	for _, f := range streamDict.FilterPipeline {
 
 		if f.DecodeParms != nil {
-			logDebugFilter.Printf("decodeStream: decoding filter:%s\ndecodeParms:%s\n", f.Name, f.DecodeParms)
+			log.Debug.Printf("decodeStream: decoding filter:%s\ndecodeParms:%s\n", f.Name, f.DecodeParms)
 		} else {
-			logDebugFilter.Printf("decodeStream: decoding filter:%s\n", f.Name)
+			log.Debug.Printf("decodeStream: decoding filter:%s\n", f.Name)
 		}
 
 		fi, err := NewFilter(f.Name, f.DecodeParms, nil)
@@ -169,7 +156,7 @@ func DecodeStream(streamDict *types.PDFStreamDict) error {
 
 	//DumpBuf(c.Bytes(), 32, "decodedStream returning:")
 
-	logDebugFilter.Printf("decodeStream end")
+	log.Debug.Printf("decodeStream end")
 
 	return nil
 }

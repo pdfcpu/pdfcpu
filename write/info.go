@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hhrutter/pdfcpu/log"
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
 )
@@ -54,40 +55,40 @@ func writeInfoDict(ctx *types.PDFContext, dict *types.PDFDict) (err error) {
 		switch key {
 
 		case "Title":
-			logDebugWriter.Println("found Title")
+			log.Debug.Println("found Title")
 
 		case "Author":
-			logDebugWriter.Println("found Author")
+			log.Debug.Println("found Author")
 			ctx.Author, err = textString(ctx, value)
 			if err != nil {
 				return err
 			}
 
 		case "Subject":
-			logDebugWriter.Println("found Subject")
+			log.Debug.Println("found Subject")
 
 		case "Keywords":
-			logDebugWriter.Println("found Keywords")
+			log.Debug.Println("found Keywords")
 
 		case "Creator":
-			logDebugWriter.Println("found Creator")
+			log.Debug.Println("found Creator")
 			ctx.Creator, err = textString(ctx, value)
 			if err != nil {
 				return err
 			}
 
 		case "Producer", "CreationDate", "ModDate":
-			logDebugWriter.Printf("found %s", key)
+			log.Debug.Printf("found %s", key)
 			if indRef, ok := value.(types.PDFIndirectRef); ok {
 				// Do not write indRef, will be modified by pdfcpu.
 				ctx.Optimize.DuplicateInfoObjects[int(indRef.ObjectNumber)] = true
 			}
 
 		case "Trapped":
-			logDebugWriter.Println("found Trapped")
+			log.Debug.Println("found Trapped")
 
 		default:
-			logInfoWriter.Printf("writeInfoDict: found out of spec entry %s %v\n", key, value)
+			log.Debug.Printf("writeInfoDict: found out of spec entry %s %v\n", key, value)
 
 		}
 	}
@@ -112,16 +113,16 @@ func writeDocumentInfoDict(ctx *types.PDFContext) error {
 	// ModDate		        modified by pdfcpu
 	// Trapped              -
 
-	logInfoWriter.Printf("*** writeDocumentInfoDict begin: offset=%d ***\n", ctx.Write.Offset)
+	log.Debug.Printf("*** writeDocumentInfoDict begin: offset=%d ***\n", ctx.Write.Offset)
 
 	// Document info object is optional.
 	if ctx.Info == nil {
-		logInfoWriter.Printf("writeDocumentInfoObject end: No info object present, offset=%d\n", ctx.Write.Offset)
+		log.Debug.Printf("writeDocumentInfoObject end: No info object present, offset=%d\n", ctx.Write.Offset)
 		// Note: We could generate an info object from scratch in this scenario.
 		return nil
 	}
 
-	logInfoWriter.Printf("writeDocumentInfoObject: %s\n", *ctx.Info)
+	log.Debug.Printf("writeDocumentInfoObject: %s\n", *ctx.Info)
 
 	obj := *ctx.Info
 
@@ -149,7 +150,7 @@ func writeDocumentInfoDict(ctx *types.PDFContext) error {
 		return err
 	}
 
-	logInfoWriter.Printf("*** writeDocumentInfoDict end: offset=%d ***\n", ctx.Write.Offset)
+	log.Debug.Printf("*** writeDocumentInfoDict end: offset=%d ***\n", ctx.Write.Offset)
 
 	return nil
 }

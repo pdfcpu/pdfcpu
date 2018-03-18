@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hhrutter/pdfcpu/log"
 	"github.com/pkg/errors"
 )
 
@@ -241,7 +242,7 @@ func (xRefTable *XRefTable) FindTableEntry(objNumber int, generationNumber int) 
 // FindTableEntryForIndRef returns the XRefTable entry for given indirect reference.
 func (xRefTable *XRefTable) FindTableEntryForIndRef(indRef *PDFIndirectRef) (*XRefTableEntry, bool) {
 	if indRef == nil {
-		logErrorTypes.Println("FindTableEntryForIndRef: returning false on absent indRef")
+		//logErrorTypes.Println("FindTableEntryForIndRef: returning false on absent indRef")
 		return nil, false
 	}
 	return xRefTable.FindTableEntry(indRef.ObjectNumber.Value(), indRef.GenerationNumber.Value())
@@ -264,7 +265,7 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 
 	// see 7.5.4 Cross-Reference Table
 
-	logDebugTypes.Println("InsertAndUseRecycled: begin")
+	log.Debug.Println("InsertAndUseRecycled: begin")
 
 	// Get Next free object from freelist.
 	freeListHeadEntry, err := xRefTable.Free(0)
@@ -275,7 +276,7 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 	// If none available, add new object & return.
 	if *freeListHeadEntry.Offset == 0 {
 		objNumber = xRefTable.InsertNew(xRefTableEntry)
-		logInfoTypes.Printf("InsertAndUseRecycled: end, new objNr=%d\n", objNumber)
+		log.Debug.Printf("InsertAndUseRecycled: end, new objNr=%d\n", objNumber)
 		return objNumber, nil
 	}
 
@@ -297,7 +298,7 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 	// TODO use entrys generation.
 	xRefTable.Table[objNumber] = &xRefTableEntry
 
-	logInfoTypes.Printf("InsertAndUseRecycled: end, recycled objNr=%d\n", objNumber)
+	log.Debug.Printf("InsertAndUseRecycled: end, recycled objNr=%d\n", objNumber)
 
 	return objNumber, nil
 }
@@ -324,7 +325,7 @@ func (xRefTable *XRefTable) NewPDFStreamDict(filename string) (*PDFStreamDict, e
 
 	buf, err := ioutil.ReadFile(filename)
 	if err != nil {
-		logErrorTypes.Printf("%s: %s\n", filename, err)
+		//logErrorTypes.Printf("%s: %s\n", filename, err)
 		return nil, err
 	}
 
@@ -428,7 +429,7 @@ func (xRefTable *XRefTable) freeObjects() IntSet {
 // See 7.5.4 Cross-Reference Table
 func (xRefTable *XRefTable) EnsureValidFreeList() error {
 
-	logDebugTypes.Println("EnsureValidFreeList begin")
+	log.Debug.Println("EnsureValidFreeList begin")
 
 	m := xRefTable.freeObjects()
 
@@ -453,7 +454,7 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 			*head.Offset = 0
 		}
 
-		logInfoTypes.Println("EnsureValidFreeList: empty free list.")
+		log.Debug.Println("EnsureValidFreeList: empty free list.")
 		return nil
 	}
 
@@ -462,7 +463,7 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 	// until we have found the last free object which should point to obj 0.
 	for f != 0 {
 
-		logDebugTypes.Printf("EnsureValidFreeList: validating obj #%d %v\n", f, m)
+		log.Debug.Printf("EnsureValidFreeList: validating obj #%d %v\n", f, m)
 		// verify if obj f is one of the free objects recorded.
 		if !m[f] {
 			return errors.New("EnsureValidFreeList: freelist corrupted")
@@ -477,7 +478,7 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 	}
 
 	if len(m) == 0 {
-		logInfoTypes.Println("EnsureValidFreeList: end, regular linked list")
+		log.Debug.Println("EnsureValidFreeList: end, regular linked list")
 		return nil
 	}
 
@@ -506,14 +507,14 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 		head.Offset = &next
 	}
 
-	logInfoTypes.Println("EnsureValidFreeList: end, linked list plus some dangling free objects.")
+	log.Debug.Println("EnsureValidFreeList: end, linked list plus some dangling free objects.")
 
 	return nil
 }
 
 func (xRefTable *XRefTable) deleteObject(obj interface{}) error {
 
-	logInfoTypes.Println("deleteObject: begin")
+	log.Debug.Println("deleteObject: begin")
 
 	indRef, ok := obj.(PDFIndirectRef)
 	if ok {
@@ -530,7 +531,7 @@ func (xRefTable *XRefTable) deleteObject(obj interface{}) error {
 		}
 
 		if obj == nil {
-			logInfoTypes.Println("deleteObject: end, obj == nil")
+			log.Debug.Println("deleteObject: end, obj == nil")
 			return err
 		}
 	}
@@ -563,14 +564,14 @@ func (xRefTable *XRefTable) deleteObject(obj interface{}) error {
 
 	}
 
-	logInfoTypes.Println("deleteObject: end")
+	log.Debug.Println("deleteObject: end")
 	return nil
 }
 
 // DeleteObjectGraph deletes all objects reachable by indRef.
 func (xRefTable *XRefTable) DeleteObjectGraph(obj interface{}) error {
 
-	logInfoTypes.Println("DeleteObjectGraph: begin")
+	log.Debug.Println("DeleteObjectGraph: begin")
 
 	indRef, ok := obj.(PDFIndirectRef)
 	if !ok {
@@ -583,7 +584,7 @@ func (xRefTable *XRefTable) DeleteObjectGraph(obj interface{}) error {
 		return err
 	}
 
-	logInfoTypes.Println("DeleteObjectGraph: end")
+	log.Debug.Println("DeleteObjectGraph: end")
 	return nil
 }
 
@@ -592,7 +593,7 @@ func (xRefTable *XRefTable) DeleteObject(objectNumber int) error {
 
 	// see 7.5.4 Cross-Reference Table
 
-	logInfoTypes.Printf("DeleteObject: begin %d\n", objectNumber)
+	log.Debug.Printf("DeleteObject: begin %d\n", objectNumber)
 
 	freeListHeadEntry, err := xRefTable.Free(0)
 	if err != nil {
@@ -605,7 +606,7 @@ func (xRefTable *XRefTable) DeleteObject(objectNumber int) error {
 	}
 
 	if entry.Free {
-		logInfoTypes.Printf("DeleteObject: end %d already free\n", objectNumber)
+		log.Debug.Printf("DeleteObject: end %d already free\n", objectNumber)
 		return nil
 	}
 
@@ -618,7 +619,7 @@ func (xRefTable *XRefTable) DeleteObject(objectNumber int) error {
 	next := int64(objectNumber)
 	freeListHeadEntry.Offset = &next
 
-	logInfoTypes.Printf("DeleteObject: end %d\n", objectNumber)
+	log.Debug.Printf("DeleteObject: end %d\n", objectNumber)
 
 	return nil
 }
@@ -627,7 +628,7 @@ func (xRefTable *XRefTable) DeleteObject(objectNumber int) error {
 // e.g. sometimes caused by indirect references to free objects in the original PDF file.
 func (xRefTable *XRefTable) UndeleteObject(objectNumber int) error {
 
-	logDebugTypes.Printf("UndeleteObject: begin %d\n", objectNumber)
+	log.Debug.Printf("UndeleteObject: begin %d\n", objectNumber)
 
 	f, err := xRefTable.Free(0)
 	if err != nil {
@@ -645,7 +646,7 @@ func (xRefTable *XRefTable) UndeleteObject(objectNumber int) error {
 		}
 
 		if objNr == objectNumber {
-			logDebugTypes.Printf("UndeleteObject end: undeleting obj#%d\n", objectNumber)
+			log.Debug.Printf("UndeleteObject end: undeleting obj#%d\n", objectNumber)
 			*f.Offset = *entry.Offset
 			entry.Offset = nil
 			entry.Free = false
@@ -656,7 +657,7 @@ func (xRefTable *XRefTable) UndeleteObject(objectNumber int) error {
 
 	}
 
-	logDebugTypes.Printf("UndeleteObject: end: obj#%d not in free list.\n", objectNumber)
+	log.Debug.Printf("UndeleteObject: end: obj#%d not in free list.\n", objectNumber)
 
 	return nil
 }
@@ -664,13 +665,9 @@ func (xRefTable *XRefTable) UndeleteObject(objectNumber int) error {
 // indRefToObject dereferences an indirect object from the xRefTable and returns the result.
 func (xRefTable *XRefTable) indRefToObject(indObjRef *PDFIndirectRef) (interface{}, error) {
 
-	logDebugTypes.Printf("indRefToObject: begin")
-
 	if indObjRef == nil {
 		return nil, errors.New("indRefToObject: input argument is nil")
 	}
-
-	logDebugTypes.Printf("indRefToObject: != nil")
 
 	objectNumber := indObjRef.ObjectNumber.Value()
 
@@ -678,23 +675,16 @@ func (xRefTable *XRefTable) indRefToObject(indObjRef *PDFIndirectRef) (interface
 
 	entry, found := xRefTable.FindTableEntry(objectNumber, generationNumber)
 	if !found {
-		logDebugTypes.Printf("indRefToObject(obj#%d, gen#%d): xref table entry not found\n", objectNumber, generationNumber)
 		return nil, nil
 	}
 
-	logDebugTypes.Printf("indRefToObject: found xRefTable entry")
-
 	if entry.Free {
-		logDebugTypes.Printf("indRefToObject(obj#%d, gen#%d): entry is free", objectNumber, generationNumber)
 		return nil, nil
 	}
 
 	if entry.Object == nil {
-		logDebugTypes.Printf("indRefToObject(obj#%d, gen#%d): entry.Object is nil", objectNumber, generationNumber)
 		return nil, nil
 	}
-
-	logDebugTypes.Printf("indRefToObject: end")
 
 	// return dereferenced object
 	return entry.Object, nil
@@ -1049,7 +1039,7 @@ func (xRefTable *XRefTable) list(logStr []string) []string {
 // At this point the free list is assumed to be a linked list with its last node linked to the beginning.
 func (xRefTable *XRefTable) freeList(logStr []string) ([]string, error) {
 
-	logDebugTypes.Printf("freeList begin")
+	log.Debug.Printf("freeList begin")
 
 	head, err := xRefTable.Free(0)
 	if err != nil {
@@ -1067,7 +1057,7 @@ func (xRefTable *XRefTable) freeList(logStr []string) ([]string, error) {
 
 	for f != 0 {
 
-		logDebugTypes.Printf("freeList validating free object %d\n", f)
+		log.Debug.Printf("freeList validating free object %d\n", f)
 
 		entry, err := xRefTable.Free(f)
 		if err != nil {
@@ -1078,7 +1068,7 @@ func (xRefTable *XRefTable) freeList(logStr []string) ([]string, error) {
 		generation := *entry.Generation
 		s := fmt.Sprintf("%5d %5d %5d\n", f, next, generation)
 		logStr = append(logStr, s)
-		logDebugTypes.Printf("freeList: %s", s)
+		log.Debug.Printf("freeList: %s", s)
 
 		f = next
 	}

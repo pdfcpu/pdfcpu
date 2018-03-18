@@ -11,35 +11,13 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"log"
-	"os"
 	"strconv"
 	"time"
 
+	"github.com/hhrutter/pdfcpu/log"
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
 )
-
-var logDebugCrypto, logInfoCrypto, logErrorCrypto *log.Logger
-
-func init() {
-	logDebugCrypto = log.New(ioutil.Discard, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-	//logDebugCrypto = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logInfoCrypto = log.New(ioutil.Discard, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	//logInfoCrypto = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logErrorCrypto = log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
-}
-
-// Verbose controls logging output.
-func Verbose(verbose bool) {
-	out := ioutil.Discard
-	if verbose {
-		out = os.Stdout
-	}
-	logInfoCrypto = log.New(out, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	//logDebugCrypto = log.New(out, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-}
 
 var (
 	pad = []byte{
@@ -398,27 +376,24 @@ func ValidateOwnerPassword(ctx *types.PDFContext) (ok bool, k []byte, err error)
 }
 
 // SupportedCFEntry returns true if all entries found are supported.
-func SupportedCFEntry(d *types.PDFDict) (bool, bool) {
+func SupportedCFEntry(d *types.PDFDict) (bool, error) {
 
 	cfm := d.NameEntry("CFM")
 	if cfm != nil && *cfm != "V2" && *cfm != "AESV2" {
-		logErrorCrypto.Println("supportedCFEntry: invalid entry \"CFM\"")
-		return false, false
+		return false, errors.New("supportedCFEntry: invalid entry \"CFM\"")
 	}
 
 	ae := d.NameEntry("AuthEvent")
 	if ae != nil && *ae != "DocOpen" {
-		logErrorCrypto.Println("supportedCFEntry: invalid entry \"AuthEvent\"")
-		return false, false
+		return false, errors.New("supportedCFEntry: invalid entry \"AuthEvent\"")
 	}
 
 	l := d.IntEntry("Length")
 	if l != nil && (*l < 8 || *l > 128 || *l%8 > 1) {
-		logErrorCrypto.Println("supportedCFEntry: invalid entry \"Length\"")
-		return false, false
+		return false, errors.New("supportedCFEntry: invalid entry \"Length\"")
 	}
 
-	return cfm != nil && *cfm == "AESV2", true
+	return cfm != nil && *cfm == "AESV2", nil
 }
 
 func permissions(p int) (list []string) {
@@ -449,7 +424,7 @@ func ListPermissions(ctx *types.PDFContext) (list []string) {
 func logP(enc *types.Enc) {
 
 	for _, s := range permissions(enc.P) {
-		logInfoCrypto.Println(s)
+		log.Info.Println(s)
 	}
 
 }
@@ -527,14 +502,15 @@ func getV(dict *types.PDFDict) (*int, error) {
 func checkStmf(ctx *types.PDFContext, stmf *string, cfDict *types.PDFDict) error {
 
 	if stmf != nil && *stmf != "Identity" {
+
 		d := cfDict.PDFDictEntry(*stmf)
 		if d == nil {
-			//logErrorCrypto.Printf("checkV: entry \"%s\" missing in \"CF\"", *stmf)
 			return errors.Errorf("checkV: entry \"%s\" missing in \"CF\"", *stmf)
 		}
-		aes, ok := SupportedCFEntry(d)
-		if !ok {
-			return errors.Errorf("checkV: unsupported \"%s\" entry in \"CF\"", *stmf)
+
+		aes, err := SupportedCFEntry(d)
+		if err != nil {
+			return errors.Wrapf(err, "checkV: unsupported \"%s\" entry in \"CF\"", *stmf)
 		}
 		ctx.AES4Streams = aes
 	}
@@ -564,7 +540,7 @@ func checkV(ctx *types.PDFContext, dict *types.PDFDict) (*int, error) {
 	stmf := dict.NameEntry("StmF")
 	err = checkStmf(ctx, stmf, cfDict)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	// StrF
@@ -574,9 +550,9 @@ func checkV(ctx *types.PDFContext, dict *types.PDFDict) (*int, error) {
 		if d == nil {
 			return nil, errors.Errorf("checkV: entry \"%s\" missing in \"CF\"", *strf)
 		}
-		aes, ok := SupportedCFEntry(d)
-		if !ok {
-			return nil, errors.Errorf("checkV: unsupported \"%s\" entry in \"CF\"", *strf)
+		aes, err := SupportedCFEntry(d)
+		if err != nil {
+			return nil, errors.Wrapf(err, "checkV: unsupported \"%s\" entry in \"CF\"", *strf)
 		}
 		ctx.AES4Strings = aes
 	}
@@ -588,9 +564,9 @@ func checkV(ctx *types.PDFContext, dict *types.PDFDict) (*int, error) {
 		if d == nil {
 			return nil, errors.Errorf("checkV: entry \"%s\" missing in \"CF\"", *eff)
 		}
-		aes, ok := SupportedCFEntry(d)
-		if !ok {
-			return nil, errors.Errorf("checkV: unsupported \"%s\" entry in \"CF\"", *eff)
+		aes, err := SupportedCFEntry(d)
+		if err != nil {
+			return nil, errors.Wrapf(err, "checkV: unsupported \"%s\" entry in \"CF\"", *strf)
 		}
 		ctx.AES4EmbeddedStreams = aes
 	}
@@ -629,14 +605,12 @@ func SupportedEncryption(ctx *types.PDFContext, dict *types.PDFDict) (*types.Enc
 	// Filter
 	filter := dict.NameEntry("Filter")
 	if filter == nil || *filter != "Standard" {
-		logErrorCrypto.Println("supportedEncryption: Filter must be \"Standard\"")
-		return nil, nil
+		return nil, errors.New("unsupported encryption: filter must be \"Standard\"")
 	}
 
 	// SubFilter
 	if dict.NameEntry("SubFilter") != nil {
-		logErrorCrypto.Println("supportedEncryption: \"SubFilter\" not supported")
-		return nil, nil
+		return nil, errors.New("unsupported encryption: \"SubFilter\" not supported")
 	}
 
 	// V
@@ -663,8 +637,7 @@ func SupportedEncryption(ctx *types.PDFContext, dict *types.PDFDict) (*types.Enc
 		return nil, err
 	}
 	if o == nil || len(o) != 32 {
-		logErrorCrypto.Println("supportedEncryption: required entry \"O\" missing or invalid")
-		return nil, nil
+		return nil, errors.New("unsupported encryption: required entry \"O\" missing or invalid")
 	}
 
 	// U
@@ -673,15 +646,13 @@ func SupportedEncryption(ctx *types.PDFContext, dict *types.PDFDict) (*types.Enc
 		return nil, err
 	}
 	if u == nil || len(u) != 32 {
-		logErrorCrypto.Printf("supportedEncryption: required entry \"U\" missing or invalid %d", len(u))
-		return nil, nil
+		return nil, errors.Errorf("unsupported encryption: required entry \"U\" missing or invalid %d", len(u))
 	}
 
 	// P
 	p := dict.IntEntry("P")
 	if p == nil {
-		logErrorCrypto.Println("supportedEncryption: required entry \"P\" missing")
-		return nil, nil
+		return nil, errors.New("unsupported encryption: required entry \"P\" missing")
 	}
 
 	// EncryptMetadata
@@ -696,7 +667,7 @@ func SupportedEncryption(ctx *types.PDFContext, dict *types.PDFDict) (*types.Enc
 
 func decryptKey(objNumber, generation int, key []byte, aes bool) []byte {
 
-	logDebugCrypto.Printf("decryptKey: obj:%d gen:%d key:%x aes:%t\n", objNumber, generation, key, aes)
+	log.Debug.Printf("decryptKey: obj:%d gen:%d key:%x aes:%t\n", objNumber, generation, key, aes)
 
 	m := md5.New()
 
@@ -723,7 +694,7 @@ func decryptKey(objNumber, generation int, key []byte, aes bool) []byte {
 		dk = dk[:l]
 	}
 
-	logDebugCrypto.Printf("decryptKey returning: %X\n", dk)
+	log.Debug.Printf("decryptKey returning: %X\n", dk)
 
 	return dk
 }
@@ -731,7 +702,7 @@ func decryptKey(objNumber, generation int, key []byte, aes bool) []byte {
 // EncryptString encrypts s using RC4 or AES.
 func EncryptString(needAES bool, s string, objNr, genNr int, key []byte) (*string, error) {
 
-	logInfoCrypto.Printf("EncryptString begin obj:%d gen:%d key:%X aes:%t\n<%s>\n", objNr, genNr, key, needAES, s)
+	log.Debug.Printf("EncryptString begin obj:%d gen:%d key:%X aes:%t\n<%s>\n", objNr, genNr, key, needAES, s)
 
 	var s1 *string
 	var err error
@@ -759,7 +730,7 @@ func EncryptString(needAES bool, s string, objNr, genNr int, key []byte) (*strin
 // DecryptString decrypts s using RC4 or AES.
 func DecryptString(needAES bool, s string, objNr, genNr int, key []byte) (*string, error) {
 
-	logInfoCrypto.Printf("DecryptString begin obj:%d gen:%d key:%X aes:%t s:<%s>\n", objNr, genNr, key, needAES, s)
+	log.Debug.Printf("DecryptString begin obj:%d gen:%d key:%X aes:%t s:<%s>\n", objNr, genNr, key, needAES, s)
 
 	b, err := types.Unescape(s)
 	if err != nil {
@@ -782,7 +753,7 @@ func DecryptString(needAES bool, s string, objNr, genNr int, key []byte) (*strin
 
 func applyRC4Cipher(b []byte, objNr, genNr int, key []byte, needAES bool) (*string, error) {
 
-	logDebugCrypto.Printf("applyRC4Cipher begin s:<%v> %d %d key:%X aes:%t\n", b, objNr, genNr, key, needAES)
+	log.Debug.Printf("applyRC4Cipher begin s:<%v> %d %d key:%X aes:%t\n", b, objNr, genNr, key, needAES)
 
 	c, err := rc4.NewCipher(decryptKey(objNr, genNr, key, needAES))
 	if err != nil {
@@ -791,7 +762,7 @@ func applyRC4Cipher(b []byte, objNr, genNr int, key []byte, needAES bool) (*stri
 
 	c.XORKeyStream(b, b)
 	s1 := string(b)
-	logDebugCrypto.Printf("applyRC4Cipher end, rc4 returning: <%s>\n", s1)
+	log.Debug.Printf("applyRC4Cipher end, rc4 returning: <%s>\n", s1)
 
 	return &s1, nil
 }
@@ -916,7 +887,7 @@ func DecryptDeepObject(objIn interface{}, objNr, genNr int, key []byte, aes bool
 // EncryptStream encrypts a stream buffer using RC4 or AES.
 func EncryptStream(needAES bool, buf []byte, objNr, genNr int, key []byte) ([]byte, error) {
 
-	logInfoCrypto.Printf("EncryptStream begin obj:%d gen:%d key:%X aes:%t\n", objNr, genNr, key, needAES)
+	log.Debug.Printf("EncryptStream begin obj:%d gen:%d key:%X aes:%t\n", objNr, genNr, key, needAES)
 
 	k := decryptKey(objNr, genNr, key, needAES)
 
@@ -930,7 +901,7 @@ func EncryptStream(needAES bool, buf []byte, objNr, genNr int, key []byte) ([]by
 // DecryptStream decrypts a stream buffer using RC4 or AES.
 func DecryptStream(needAES bool, buf []byte, objNr, genNr int, key []byte) ([]byte, error) {
 
-	logInfoCrypto.Printf("DecryptStream begin obj:%d gen:%d key:%X aes:%t\n", objNr, genNr, key, needAES)
+	log.Debug.Printf("DecryptStream begin obj:%d gen:%d key:%X aes:%t\n", objNr, genNr, key, needAES)
 
 	k := decryptKey(objNr, genNr, key, needAES)
 

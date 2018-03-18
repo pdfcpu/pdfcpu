@@ -30,7 +30,6 @@ func prevalidateDate(s string) (string, bool) {
 func validateTimezoneMinutes(s string, o byte) bool {
 
 	tzmin := s[20:22]
-	logDebugValidate.Printf("validateTimezoneMinutes: tz minutes offset string = <%s>\n", tzmin)
 	tzm, err := strconv.Atoi(tzmin)
 	if err != nil {
 		return false
@@ -44,8 +43,6 @@ func validateTimezoneMinutes(s string, o byte) bool {
 		return false
 	}
 
-	logDebugValidate.Printf("validateTimezoneMinutes: returning %v\n", true)
-
 	// "D:YYYYMMDDHHmmSSZHH'mm"
 	if len(s) == 22 {
 		return false
@@ -58,7 +55,6 @@ func validateTimezoneMinutes(s string, o byte) bool {
 func validateTimezone(s string) bool {
 
 	o := s[16]
-	logDebugValidate.Printf("timezone operator:%s\n", string(o))
 
 	if o != '+' && o != '-' && o != 'Z' {
 		return false
@@ -75,7 +71,6 @@ func validateTimezone(s string) bool {
 	}
 
 	tzhours := s[17:19]
-	logDebugValidate.Printf("validateTimezone: tz hour offset string = <%s>\n", tzhours)
 	tzh, err := strconv.Atoi(tzhours)
 	if err != nil {
 		return false
@@ -109,8 +104,6 @@ func validateYear(s string) (y int, finished, ok bool) {
 
 	year := s[2:6]
 
-	logDebugValidate.Printf("validateYear: year string = <%s>\n", year)
-
 	y, err := strconv.Atoi(year)
 	if err != nil {
 		return 0, false, false
@@ -131,8 +124,6 @@ func validateYear(s string) (y int, finished, ok bool) {
 func validateMonth(s string) (m int, finished, ok bool) {
 
 	month := s[6:8]
-
-	logDebugValidate.Printf("validateMonth: month string = <%s>\n", month)
 
 	var err error
 	m, err = strconv.Atoi(month)
@@ -160,8 +151,6 @@ func validateDay(s string, y, m int) (finished, ok bool) {
 
 	day := s[8:10]
 
-	logDebugValidate.Printf("validateDay: day string = <%s>\n", day)
-
 	d, err := strconv.Atoi(day)
 	if err != nil {
 		return false, false
@@ -173,8 +162,6 @@ func validateDay(s string, y, m int) (finished, ok bool) {
 
 	// check valid Date(year,month,day)
 	t := time.Date(y, time.Month(m+1), 0, 0, 0, 0, 0, time.UTC)
-	logDebugValidate.Printf("last day of month is %d\n", t.Day())
-
 	if d > t.Day() {
 		return false, false
 	}
@@ -194,8 +181,6 @@ func validateDay(s string, y, m int) (finished, ok bool) {
 func validateHour(s string) (finished, ok bool) {
 
 	hour := s[10:12]
-
-	logDebugValidate.Printf("validateHour: hour string = <%s>\n", hour)
 
 	h, err := strconv.Atoi(hour)
 	if err != nil {
@@ -222,8 +207,6 @@ func validateMinute(s string) (finished, ok bool) {
 
 	minute := s[12:14]
 
-	logDebugValidate.Printf("validateMinute: minute string = <%s>\n", minute)
-
 	min, err := strconv.Atoi(minute)
 	if err != nil {
 		return false, false
@@ -249,8 +232,6 @@ func validateSecond(s string) (finished, ok bool) {
 
 	second := s[14:16]
 
-	logDebugValidate.Printf("validateSecond: second string = <%s>\n", second)
-
 	sec, err := strconv.Atoi(second)
 	if err != nil {
 		return false, false
@@ -273,8 +254,6 @@ func validateDate(s string) bool {
 
 	// 7.9.4 Dates
 	// (D:YYYYMMDDHHmmSSOHH'mm')
-
-	logDebugValidate.Printf("validateDate(%s)\n", s)
 
 	var ok bool
 	s, ok = prevalidateDate(s)

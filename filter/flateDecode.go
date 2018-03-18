@@ -5,6 +5,7 @@ import (
 	"compress/zlib"
 	"io"
 
+	"github.com/hhrutter/pdfcpu/log"
 	"github.com/pkg/errors"
 )
 
@@ -21,7 +22,7 @@ type flate struct {
 // Encode implements encoding for a Flate filter.
 func (f flate) Encode(r io.Reader) (*bytes.Buffer, error) {
 
-	logDebugFilter.Println("EncodeFlate begin")
+	log.Debug.Println("EncodeFlate begin")
 
 	// Optional decode parameters need preprocessing
 	// but this filter implementation is used for object streams
@@ -34,11 +35,11 @@ func (f flate) Encode(r io.Reader) (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, err
 	}
-	logDebugFilter.Printf("EncodeFlate: %d bytes written\n", written)
+	log.Debug.Printf("EncodeFlate: %d bytes written\n", written)
 
 	w.Close()
 
-	logDebugFilter.Println("EncodeFlate end")
+	log.Debug.Println("EncodeFlate end")
 
 	return &b, nil
 }
@@ -46,7 +47,7 @@ func (f flate) Encode(r io.Reader) (*bytes.Buffer, error) {
 // Decode implements decoding for a Flate filter.
 func (f flate) Decode(r io.Reader) (*bytes.Buffer, error) {
 
-	logDebugFilter.Println("DecodeFlate begin")
+	log.Debug.Println("DecodeFlate begin")
 
 	rc, err := zlib.NewReader(r)
 	if err != nil {
@@ -58,16 +59,16 @@ func (f flate) Decode(r io.Reader) (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, err
 	}
-	logDebugFilter.Printf("DecodeFlate: decoded %d bytes.\n", written)
+	log.Debug.Printf("DecodeFlate: decoded %d bytes.\n", written)
 
 	rc.Close()
 
 	if f.decodeParms == nil {
-		logDebugFilter.Println("DecodeFlate end w/o decodeParms")
+		log.Debug.Println("DecodeFlate end w/o decodeParms")
 		return &b, nil
 	}
 
-	logDebugFilter.Println("DecodeFlate end w/o decodeParms")
+	log.Debug.Println("DecodeFlate end w/o decodeParms")
 
 	// Optional decode parameters need postprocessing.
 	return f.decodePostProcess(&b)

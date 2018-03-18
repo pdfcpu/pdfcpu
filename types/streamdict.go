@@ -3,6 +3,7 @@ package types
 import (
 	"fmt"
 
+	"github.com/hhrutter/pdfcpu/log"
 	"github.com/pkg/errors"
 )
 
@@ -127,7 +128,7 @@ func (oStreamDict *PDFObjectStreamDict) AddObject(objNumber int, entry *XRefTabl
 	oStreamDict.Content = append(oStreamDict.Content, []byte(pdfString)...)
 	oStreamDict.ObjCount++
 
-	logDebugTypes.Printf("AddObject end : ObjCount:%d prolog = <%s> Content = <%s>\n", oStreamDict.ObjCount, oStreamDict.Prolog, oStreamDict.Content)
+	log.Debug.Printf("AddObject end : ObjCount:%d prolog = <%s> Content = <%s>\n", oStreamDict.ObjCount, oStreamDict.Prolog, oStreamDict.Content)
 
 	return nil
 }
@@ -136,7 +137,7 @@ func (oStreamDict *PDFObjectStreamDict) AddObject(objNumber int, entry *XRefTabl
 func (oStreamDict *PDFObjectStreamDict) Finalize() {
 	oStreamDict.Content = append(oStreamDict.Prolog, oStreamDict.Content...)
 	oStreamDict.FirstObjOffset = len(oStreamDict.Prolog)
-	logDebugTypes.Printf("Finalize : firstObjOffset:%d Content = <%s>\n", oStreamDict.FirstObjOffset, oStreamDict.Content)
+	log.Debug.Printf("Finalize : firstObjOffset:%d Content = <%s>\n", oStreamDict.FirstObjOffset, oStreamDict.Content)
 }
 
 // PDFXRefStreamDict represents a cross reference stream dictionary.

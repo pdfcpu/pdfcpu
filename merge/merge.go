@@ -4,31 +4,11 @@
 package merge
 
 import (
-	"io/ioutil"
-	"log"
-	"os"
 	"sort"
 
+	"github.com/hhrutter/pdfcpu/log"
 	"github.com/hhrutter/pdfcpu/types"
 )
-
-var logDebugMerge, logInfoMerge, logErrorMerge *log.Logger
-
-func init() {
-	//logDebugMerge = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logDebugMerge = log.New(ioutil.Discard, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logInfoMerge = log.New(ioutil.Discard, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logErrorMerge = log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
-}
-
-// Verbose controls logging output.
-func Verbose(verbose bool) {
-	out := ioutil.Discard
-	if verbose {
-		out = os.Stdout
-	}
-	logInfoMerge = log.New(out, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-}
 
 func patchIndRef(indRef *types.PDFIndirectRef, lookup map[int]int) {
 	i := indRef.ObjectNumber.Value()
@@ -37,7 +17,7 @@ func patchIndRef(indRef *types.PDFIndirectRef, lookup map[int]int) {
 
 func patchObject(o interface{}, lookup map[int]int) interface{} {
 
-	logDebugMerge.Printf("patchObject before: %v\n", o)
+	log.Debug.Printf("patchObject before: %v\n", o)
 
 	var ob interface{}
 
@@ -69,14 +49,14 @@ func patchObject(o interface{}, lookup map[int]int) interface{} {
 
 	}
 
-	logDebugMerge.Printf("patchObject end: %v\n", ob)
+	log.Debug.Printf("patchObject end: %v\n", ob)
 
 	return ob
 }
 
 func patchDict(dict *types.PDFDict, lookup map[int]int) {
 
-	logDebugMerge.Printf("patchDict before: %v\n", dict)
+	log.Debug.Printf("patchDict before: %v\n", dict)
 
 	for k, obj := range dict.Dict {
 		o := patchObject(obj, lookup)
@@ -85,12 +65,12 @@ func patchDict(dict *types.PDFDict, lookup map[int]int) {
 		}
 	}
 
-	logDebugMerge.Printf("patchDict after: %v\n", dict)
+	log.Debug.Printf("patchDict after: %v\n", dict)
 }
 
 func patchArray(arr *types.PDFArray, lookup map[int]int) {
 
-	logDebugMerge.Printf("patchArray begin: %v\n", arr)
+	log.Debug.Printf("patchArray begin: %v\n", arr)
 
 	for i, obj := range *arr {
 		o := patchObject(obj, lookup)
@@ -99,7 +79,7 @@ func patchArray(arr *types.PDFArray, lookup map[int]int) {
 		}
 	}
 
-	logDebugMerge.Printf("patchArray end: %v\n", arr)
+	log.Debug.Printf("patchArray end: %v\n", arr)
 }
 
 func sortedKeys(ctx *types.PDFContext) []int {
@@ -146,8 +126,8 @@ func patchObjects(s types.IntSet, lookup map[int]int) types.IntSet {
 
 func patchSourceObjectNumbers(ctxSource, ctxDest *types.PDFContext) {
 
-	logInfoMerge.Printf("patchSourceObjectNumbers: ctxSource: xRefTableSize:%d trailer.Size:%d - %s\n", len(ctxSource.Table), *ctxSource.Size, ctxSource.Read.FileName)
-	logInfoMerge.Printf("patchSourceObjectNumbers:   ctxDest: xRefTableSize:%d trailer.Size:%d - %s\n", len(ctxDest.Table), *ctxDest.Size, ctxDest.Read.FileName)
+	log.Debug.Printf("patchSourceObjectNumbers: ctxSource: xRefTableSize:%d trailer.Size:%d - %s\n", len(ctxSource.Table), *ctxSource.Size, ctxSource.Read.FileName)
+	log.Debug.Printf("patchSourceObjectNumbers:   ctxDest: xRefTableSize:%d trailer.Size:%d - %s\n", len(ctxDest.Table), *ctxDest.Size, ctxDest.Read.FileName)
 
 	// Patch source xref tables obj numbers which are essentially the keys.
 	//logInfoMerge.Printf("Source XRefTable before:\n%s\n", ctxSource)
@@ -181,14 +161,14 @@ func patchSourceObjectNumbers(ctxSource, ctxDest *types.PDFContext) {
 		entry := ctxSource.Table[k]
 
 		if entry.Free {
-			logDebugMerge.Printf("patch free entry: old offset:%d\n", *entry.Offset)
+			log.Debug.Printf("patch free entry: old offset:%d\n", *entry.Offset)
 			off := int(*entry.Offset)
 			if off == 0 {
 				continue
 			}
 			i := int64(lookup[off])
 			entry.Offset = &i
-			logDebugMerge.Printf("patch free entry: new offset:%d\n", *entry.Offset)
+			log.Debug.Printf("patch free entry: new offset:%d\n", *entry.Offset)
 			continue
 		}
 
@@ -215,12 +195,12 @@ func patchSourceObjectNumbers(ctxSource, ctxDest *types.PDFContext) {
 	// Patch object stream object numbers.
 	ctxSource.Read.ObjectStreams = patchObjects(ctxSource.Read.ObjectStreams, lookup)
 
-	logInfoMerge.Printf("patchSourceObjectNumbers end")
+	log.Debug.Printf("patchSourceObjectNumbers end")
 }
 
 func appendSourcePageTreeToDestPageTree(ctxSource, ctxDest *types.PDFContext) error {
 
-	logDebugMerge.Println("appendSourcePageTreeToDestPageTree begin")
+	log.Debug.Println("appendSourcePageTreeToDestPageTree begin")
 
 	indRefPageTreeRootDictSource, err := ctxSource.Pages()
 	if err != nil {
@@ -239,27 +219,27 @@ func appendSourcePageTreeToDestPageTree(ctxSource, ctxDest *types.PDFContext) er
 	pageCountDest := pageTreeRootDictDest.IntEntry("Count")
 
 	arr := pageTreeRootDictDest.PDFArrayEntry("Kids")
-	logDebugMerge.Printf("Kids before: %v\n", *arr)
+	log.Debug.Printf("Kids before: %v\n", *arr)
 
 	pageTreeRootDictSource.Insert("Parent", *indRefPageTreeRootDictDest)
 
 	// The source page tree gets appended on to the dest page tree.
 	*arr = append(*arr, *indRefPageTreeRootDictSource)
-	logDebugMerge.Printf("Kids after: %v\n", *arr)
+	log.Debug.Printf("Kids after: %v\n", *arr)
 
 	pageTreeRootDictDest.Update("Count", types.PDFInteger(*pageCountDest+*pageCountSource))
 	pageTreeRootDictDest.Update("Kids", *arr)
 
 	ctxDest.PageCount += ctxSource.PageCount
 
-	logDebugMerge.Println("appendSourcePageTreeToDestPageTree end")
+	log.Debug.Println("appendSourcePageTreeToDestPageTree end")
 
 	return nil
 }
 
 func appendSourceObjectsToDest(ctxSource, ctxDest *types.PDFContext) {
 
-	logDebugMerge.Println("appendSourceObjectsToDest begin")
+	log.Debug.Println("appendSourceObjectsToDest begin")
 
 	for objNr, entry := range ctxSource.Table {
 
@@ -268,7 +248,7 @@ func appendSourceObjectsToDest(ctxSource, ctxDest *types.PDFContext) {
 			continue
 		}
 
-		logDebugMerge.Printf("adding obj %d from src to dest\n", objNr)
+		log.Debug.Printf("adding obj %d from src to dest\n", objNr)
 
 		ctxDest.Table[objNr] = entry
 
@@ -276,7 +256,7 @@ func appendSourceObjectsToDest(ctxSource, ctxDest *types.PDFContext) {
 
 	}
 
-	logDebugMerge.Println("appendSourceObjectsToDest end")
+	log.Debug.Println("appendSourceObjectsToDest end")
 }
 
 // merge two disjunct IntSets
@@ -288,14 +268,14 @@ func mergeIntSets(src, dest types.IntSet) {
 
 func mergeDuplicateObjNumberIntSets(ctxSource, ctxDest *types.PDFContext) {
 
-	logDebugMerge.Println("mergeDuplicateObjNumberIntSets begin")
+	log.Debug.Println("mergeDuplicateObjNumberIntSets begin")
 
 	mergeIntSets(ctxSource.Optimize.DuplicateInfoObjects, ctxDest.Optimize.DuplicateInfoObjects)
 	mergeIntSets(ctxSource.LinearizationObjs, ctxDest.LinearizationObjs)
 	mergeIntSets(ctxSource.Read.XRefStreams, ctxDest.Read.XRefStreams)
 	mergeIntSets(ctxSource.Read.ObjectStreams, ctxDest.Read.ObjectStreams)
 
-	logDebugMerge.Println("mergeDuplicateObjNumberIntSets end")
+	log.Debug.Println("mergeDuplicateObjNumberIntSets end")
 }
 
 // XRefTables merges PDFContext ctxSource into ctxDest by appending its page tree.
@@ -305,14 +285,14 @@ func XRefTables(ctxSource, ctxDest *types.PDFContext) (err error) {
 	patchSourceObjectNumbers(ctxSource, ctxDest)
 
 	// Append ctxSource pageTree to ctxDest pageTree.
-	logInfoMerge.Println("appendSourcePageTreeToDestPageTree")
+	log.Debug.Println("appendSourcePageTreeToDestPageTree")
 	err = appendSourcePageTreeToDestPageTree(ctxSource, ctxDest)
 	if err != nil {
 		return err
 	}
 
 	// Append ctxSource objects to ctxDest
-	logInfoMerge.Println("appendSourceObjectsToDest")
+	log.Debug.Println("appendSourceObjectsToDest")
 	appendSourceObjectsToDest(ctxSource, ctxDest)
 
 	// Mark source's root object as free.
@@ -331,10 +311,10 @@ func XRefTables(ctxSource, ctxDest *types.PDFContext) (err error) {
 	}
 
 	// Merge all IntSets containing redundant object numbers.
-	logInfoMerge.Println("mergeDuplicateObjNumberIntSets")
+	log.Debug.Println("mergeDuplicateObjNumberIntSets")
 	mergeDuplicateObjNumberIntSets(ctxSource, ctxDest)
 
-	logInfoMerge.Printf("Dest XRefTable after merge:\n%s\n", ctxDest)
+	log.Info.Printf("Dest XRefTable after merge:\n%s\n", ctxDest)
 
 	return nil
 }

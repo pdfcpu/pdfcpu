@@ -61,8 +61,6 @@ func validateNumberTreeDictNumsEntry(xRefTable *types.XRefTable, dict *types.PDF
 		return 0, 0, errors.New("validateNumberTreeDictNumsEntry: missing \"Nums\" array")
 	}
 
-	logInfoValidate.Println("validateNumberTreeDictNumsEntry: \"Nums\": now validating value objects")
-
 	// arr length needs to be even because of contained key value pairs.
 	if len(*arr)%2 == 1 {
 		return 0, 0, errors.Errorf("validateNumberTreeDictNumsEntry: Nums array entry length needs to be even, length=%d\n", len(*arr))
@@ -95,8 +93,6 @@ func validateNumberTreeDictNumsEntry(xRefTable *types.XRefTable, dict *types.PDF
 
 			continue
 		}
-
-		logDebugValidate.Printf("validateNumberTreeDictNumsEntry: Nums array value: %v\n", obj)
 
 		switch name {
 
@@ -159,8 +155,6 @@ func validateNumberTree(xRefTable *types.XRefTable, name string, indRef types.PD
 		}
 
 		for _, obj := range *arr {
-
-			logInfoValidate.Printf("validateNumberTree: processing kid: %v\n", obj)
 
 			kid, ok := obj.(types.PDFIndirectRef)
 			if !ok {

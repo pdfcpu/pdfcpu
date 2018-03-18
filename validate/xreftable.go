@@ -1,6 +1,7 @@
 package validate
 
 import (
+	"github.com/hhrutter/pdfcpu/log"
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
 )
@@ -35,7 +36,6 @@ func validatePageLabels(xRefTable *types.XRefTable, rootDict *types.PDFDict, req
 		if required {
 			return errors.Errorf("validatePageLabels: required entry \"PageLabels\" missing")
 		}
-		logInfoValidate.Println("validatePageLabels end: indRef is nil.")
 		return nil
 	}
 
@@ -90,7 +90,6 @@ func validateNames(xRefTable *types.XRefTable, rootDict *types.PDFDict, required
 			return errors.New("validateNames: name tree must be indirect ref")
 		}
 
-		logInfoValidate.Printf("validating Nametree: %s\n", treeName)
 		_, _, err = validateNameTree(xRefTable, treeName, indRef, true)
 		if err != nil {
 			return err
@@ -484,7 +483,6 @@ func validatePieceDict(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 		}
 
 		if dict == nil {
-			logInfoValidate.Println("validatePieceDict: object is nil.")
 			continue
 		}
 
@@ -772,7 +770,7 @@ func validateNeedsRendering(xRefTable *types.XRefTable, rootDict *types.PDFDict,
 
 func validateRootObject(xRefTable *types.XRefTable) error {
 
-	logInfoValidate.Println("*** validateRootObject begin ***")
+	log.Debug.Println("*** validateRootObject begin ***")
 
 	// => 7.7.2 Document Catalog
 
@@ -867,7 +865,7 @@ func validateRootObject(xRefTable *types.XRefTable) error {
 	// Validate remainder of annotations after AcroForm validation only.
 	err = validatePagesAnnotations(xRefTable, rootPageNodeDict)
 
-	logInfoValidate.Println("*** validateRootObject end ***")
+	log.Debug.Println("*** validateRootObject end ***")
 
 	return err
 }
@@ -881,7 +879,8 @@ func validateAdditionalStreams(xRefTable *types.XRefTable) error {
 // XRefTable validates a PDF cross reference table obeying the validation mode.
 func XRefTable(xRefTable *types.XRefTable) error {
 
-	logInfoValidate.Println("*** validateXRefTable begin ***")
+	log.Info.Println("validating")
+	log.Debug.Println("*** validateXRefTable begin ***")
 
 	// Validate root object(aka the document catalog) and page tree.
 	err := validateRootObject(xRefTable)
@@ -903,7 +902,7 @@ func XRefTable(xRefTable *types.XRefTable) error {
 
 	xRefTable.Valid = true
 
-	logInfoValidate.Println("*** validateXRefTable end ***")
+	log.Debug.Println("*** validateXRefTable end ***")
 
 	return nil
 

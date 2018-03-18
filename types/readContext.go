@@ -2,10 +2,11 @@ package types
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"sort"
 	"strings"
+
+	"github.com/hhrutter/pdfcpu/log"
 )
 
 // ReadContext represents the context for reading a PDF file.
@@ -92,7 +93,9 @@ func (rc *ReadContext) XRefStreamsString() (int, string) {
 }
 
 // LogStats logs stats for read file.
-func (rc *ReadContext) LogStats(log *log.Logger, optimized bool) {
+func (rc *ReadContext) LogStats(optimized bool) {
+
+	log := log.Stats
 
 	textSize := rc.FileSize - rc.BinaryTotalSize // = non binary content = non stream data
 

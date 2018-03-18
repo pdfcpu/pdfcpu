@@ -2,19 +2,16 @@ package pdfcpu
 
 import (
 	"fmt"
-	"io/ioutil"
-	"log"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/hhrutter/pdfcpu/crypto"
-
 	"github.com/hhrutter/pdfcpu/attach"
+	"github.com/hhrutter/pdfcpu/crypto"
 	"github.com/hhrutter/pdfcpu/extract"
+	"github.com/hhrutter/pdfcpu/log"
 	"github.com/hhrutter/pdfcpu/merge"
 	"github.com/hhrutter/pdfcpu/optimize"
 	"github.com/hhrutter/pdfcpu/read"
@@ -26,10 +23,6 @@ import (
 )
 
 var (
-	logInfoAPI  *log.Logger
-	logStatsAPI *log.Logger
-	logErrorAPI *log.Logger
-
 	selectedPagesRegExp *regexp.Regexp
 )
 
@@ -60,20 +53,8 @@ func setupRegExpForPageSelection() *regexp.Regexp {
 }
 
 func init() {
-	logInfoAPI = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logStatsAPI = log.New(ioutil.Discard, "STATS: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logErrorAPI = log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
 
 	selectedPagesRegExp = setupRegExpForPageSelection()
-}
-
-// Verbose controls logging output.
-func Verbose(verbose bool) {
-	if verbose {
-		logStatsAPI = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-	} else {
-		logStatsAPI = log.New(ioutil.Discard, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-	}
 }
 
 // Read reads in a PDF file and builds an internal structure holding its cross reference table aka the PDFContext.
@@ -117,13 +98,13 @@ func Validate(fileIn string, config *types.Configuration) error {
 	dur2 := time.Since(from2).Seconds()
 	dur := time.Since(from1).Seconds()
 
-	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
-	logStatsAPI.Println("Timing:")
-	logStatsAPI.Printf("read                 : %6.3fs  %4.1f%%\n", dur1, dur1/dur*100)
-	logStatsAPI.Printf("validate             : %6.3fs  %4.1f%%\n", dur2, dur2/dur*100)
-	logStatsAPI.Printf("total processing time: %6.3fs\n\n", dur)
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	log.Stats.Println("Timing:")
+	log.Stats.Printf("read                 : %6.3fs  %4.1f%%\n", dur1, dur1/dur*100)
+	log.Stats.Printf("validate             : %6.3fs  %4.1f%%\n", dur2, dur2/dur*100)
+	log.Stats.Printf("total processing time: %6.3fs\n\n", dur)
 	// at this stage: no binary breakup available!
-	ctx.Read.LogStats(logStatsAPI, ctx.Optimized)
+	ctx.Read.LogStats(ctx.Optimized)
 
 	return err
 }
@@ -224,7 +205,6 @@ func readValidateAndOptimize(fileIn string, config *types.Configuration, from1 t
 
 	from3 := time.Now()
 	//fmt.Printf("optimizing %s ...\n", fileIn)
-	//logInfoAPI.Printf("optimizing %s..\n", fileIn)
 	err = optimize.XRefTable(ctx)
 	if err != nil {
 		return nil, 0, 0, 0, err
@@ -244,7 +224,7 @@ func Optimize(fileIn, fileOut string, config *types.Configuration) error {
 		return err
 	}
 
-	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
 
 	fromWrite := time.Now()
 
@@ -260,15 +240,15 @@ func Optimize(fileIn, fileOut string, config *types.Configuration) error {
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
 
-	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
-	logStatsAPI.Println("Timing:")
-	logStatsAPI.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
-	logStatsAPI.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
-	logStatsAPI.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
-	logStatsAPI.Printf("write                : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
-	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
-	ctx.Read.LogStats(logStatsAPI, ctx.Optimized)
-	ctx.Write.LogStats(logStatsAPI)
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	log.Stats.Println("Timing:")
+	log.Stats.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	log.Stats.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	log.Stats.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	log.Stats.Printf("write                : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
+	log.Stats.Printf("total processing time: %6.3fs\n\n", durTotal)
+	ctx.Read.LogStats(ctx.Optimized)
+	ctx.Write.LogStats()
 
 	return nil
 }
@@ -376,7 +356,7 @@ func setPageSelection(pageCount int, pageSelection []string) (selectedPages type
 
 	for _, v := range pageSelection {
 
-		//logStatsAPI.Printf("pageExp: <%s>\n", v)
+		//log.Stats.Printf("pageExp: <%s>\n", v)
 
 		var negated bool
 		if negation(v[0]) {
@@ -457,13 +437,9 @@ func setPageSelection(pageCount int, pageSelection []string) (selectedPages type
 
 func pagesForPageSelection(pageCount int, pageSelection []string) (selectedPages types.IntSet, err error) {
 
-	if pageSelection == nil {
-		logInfoAPI.Println("pagesForPageSelection: pageSelection is nil")
+	if pageSelection == nil || len(pageSelection) == 0 {
+		log.Info.Println("pagesForPageSelection: invalid pageSelection")
 		return nil, nil
-	}
-
-	if len(pageSelection) == 0 {
-		logStatsAPI.Println("pagesForPageSelection: pageSelection is empty")
 	}
 
 	return setPageSelection(pageCount, pageSelection)
@@ -491,15 +467,15 @@ func Split(fileIn, dirOut string, config *types.Configuration) error {
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
 
-	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
-	logStatsAPI.Println("Timing:")
-	logStatsAPI.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
-	logStatsAPI.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
-	logStatsAPI.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
-	logStatsAPI.Printf("split                : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
-	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
-	ctx.Read.LogStats(logStatsAPI, ctx.Optimized)
-	ctx.Write.LogStats(logStatsAPI)
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	log.Stats.Println("Timing:")
+	log.Stats.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	log.Stats.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	log.Stats.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	log.Stats.Printf("split                : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
+	log.Stats.Printf("total processing time: %6.3fs\n\n", durTotal)
+	ctx.Read.LogStats(ctx.Optimized)
+	ctx.Write.LogStats()
 
 	return nil
 }
@@ -507,7 +483,7 @@ func Split(fileIn, dirOut string, config *types.Configuration) error {
 // appendTo appends fileIn to ctxDest's page tree.
 func appendTo(fileIn string, ctxDest *types.PDFContext) error {
 
-	logStatsAPI.Printf("appendTo: appending %s to %s\n", fileIn, ctxDest.Read.FileName)
+	log.Stats.Printf("appendTo: appending %s to %s\n", fileIn, ctxDest.Read.FileName)
 
 	// Build a PDFContext for fileIn.
 	ctxSource, _, _, err := readAndValidate(fileIn, ctxDest.Configuration, time.Now())
@@ -536,11 +512,11 @@ func Merge(filesIn []string, fileOut string, config *types.Configuration) error 
 	if ctxDest.XRefTable.Version() < types.V15 {
 		v, _ := types.Version("1.5")
 		ctxDest.XRefTable.RootVersion = &v
-		logStatsAPI.Println("Ensure V1.5 for writing object & xref streams")
+		log.Stats.Println("Ensure V1.5 for writing object & xref streams")
 	}
 
 	// Repeatedly merge files into fileDest's xref table.
-	for f := range stringSet(filesIn[1:]) {
+	for _, f := range filesIn[1:] {
 		err = appendTo(f, ctxDest)
 		if err != nil {
 			return err
@@ -568,7 +544,7 @@ func Merge(filesIn []string, fileOut string, config *types.Configuration) error 
 		return err
 	}
 
-	logStatsAPI.Printf("XRefTable:\n%s\n", ctxDest)
+	log.Stats.Printf("XRefTable:\n%s\n", ctxDest)
 
 	return nil
 }
@@ -601,13 +577,13 @@ func ExtractImages(fileIn, dirOut string, pageSelection []string, config *types.
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
 
-	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
-	logStatsAPI.Println("Timing:")
-	logStatsAPI.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
-	logStatsAPI.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
-	logStatsAPI.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
-	logStatsAPI.Printf("write images         : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
-	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	log.Stats.Println("Timing:")
+	log.Stats.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	log.Stats.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	log.Stats.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	log.Stats.Printf("write images         : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
+	log.Stats.Printf("total processing time: %6.3fs\n\n", durTotal)
 
 	return nil
 }
@@ -640,13 +616,13 @@ func ExtractFonts(fileIn, dirOut string, pageSelection []string, config *types.C
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
 
-	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
-	logStatsAPI.Println("Timing:")
-	logStatsAPI.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
-	logStatsAPI.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
-	logStatsAPI.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
-	logStatsAPI.Printf("write fonts          : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
-	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	log.Stats.Println("Timing:")
+	log.Stats.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	log.Stats.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	log.Stats.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	log.Stats.Printf("write fonts          : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
+	log.Stats.Printf("total processing time: %6.3fs\n\n", durTotal)
 
 	return nil
 }
@@ -678,15 +654,15 @@ func ExtractPages(fileIn, dirOut string, pageSelection []string, config *types.C
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
 
-	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
-	logStatsAPI.Println("Timing:")
-	logStatsAPI.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
-	logStatsAPI.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
-	logStatsAPI.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
-	logStatsAPI.Printf("write PDFs           : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
-	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
-	ctx.Read.LogStats(logStatsAPI, ctx.Optimized)
-	ctx.Write.LogStats(logStatsAPI)
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	log.Stats.Println("Timing:")
+	log.Stats.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	log.Stats.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	log.Stats.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	log.Stats.Printf("write PDFs           : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
+	log.Stats.Printf("total processing time: %6.3fs\n\n", durTotal)
+	ctx.Read.LogStats(ctx.Optimized)
+	ctx.Write.LogStats()
 
 	return nil
 }
@@ -719,13 +695,13 @@ func ExtractContent(fileIn, dirOut string, pageSelection []string, config *types
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
 
-	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
-	logStatsAPI.Println("Timing:")
-	logStatsAPI.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
-	logStatsAPI.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
-	logStatsAPI.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
-	logStatsAPI.Printf("write content        : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
-	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	log.Stats.Println("Timing:")
+	log.Stats.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	log.Stats.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	log.Stats.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	log.Stats.Printf("write content        : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
+	log.Stats.Printf("total processing time: %6.3fs\n\n", durTotal)
 
 	return nil
 }
@@ -766,15 +742,15 @@ func Trim(fileIn, fileOut string, pageSelection []string, config *types.Configur
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
 
-	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
-	logStatsAPI.Println("Timing:")
-	logStatsAPI.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
-	logStatsAPI.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
-	logStatsAPI.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
-	logStatsAPI.Printf("write PDF            : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
-	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
-	ctx.Read.LogStats(logStatsAPI, ctx.Optimized)
-	ctx.Write.LogStats(logStatsAPI)
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	log.Stats.Println("Timing:")
+	log.Stats.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	log.Stats.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	log.Stats.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	log.Stats.Printf("write PDF            : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
+	log.Stats.Printf("total processing time: %6.3fs\n\n", durTotal)
+	ctx.Read.LogStats(ctx.Optimized)
+	ctx.Write.LogStats()
 
 	return nil
 }
@@ -825,13 +801,13 @@ func ListAttachments(fileIn string, config *types.Configuration) ([]string, erro
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
 
-	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
-	logStatsAPI.Println("Timing:")
-	logStatsAPI.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
-	logStatsAPI.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
-	logStatsAPI.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
-	logStatsAPI.Printf("list files           : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
-	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	log.Stats.Println("Timing:")
+	log.Stats.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	log.Stats.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	log.Stats.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	log.Stats.Printf("list files           : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
+	log.Stats.Printf("total processing time: %6.3fs\n\n", durTotal)
 
 	return list, nil
 }
@@ -877,16 +853,16 @@ func AddAttachments(fileIn string, files []string, config *types.Configuration) 
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
 
-	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
-	logStatsAPI.Println("Timing:")
-	logStatsAPI.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
-	logStatsAPI.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
-	logStatsAPI.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
-	logStatsAPI.Printf("add attachment       : %6.3fs  %4.1f%%\n", durAdd, durAdd/durTotal*100)
-	logStatsAPI.Printf("write                : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
-	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
-	ctx.Read.LogStats(logStatsAPI, ctx.Optimized)
-	ctx.Write.LogStats(logStatsAPI)
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	log.Stats.Println("Timing:")
+	log.Stats.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	log.Stats.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	log.Stats.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	log.Stats.Printf("add attachment       : %6.3fs  %4.1f%%\n", durAdd, durAdd/durTotal*100)
+	log.Stats.Printf("write                : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
+	log.Stats.Printf("total processing time: %6.3fs\n\n", durTotal)
+	ctx.Read.LogStats(ctx.Optimized)
+	ctx.Write.LogStats()
 
 	return nil
 }
@@ -936,16 +912,16 @@ func RemoveAttachments(fileIn string, files []string, config *types.Configuratio
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
 
-	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
-	logStatsAPI.Println("Timing:")
-	logStatsAPI.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
-	logStatsAPI.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
-	logStatsAPI.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
-	logStatsAPI.Printf("add attachment       : %6.3fs  %4.1f%%\n", durAdd, durAdd/durTotal*100)
-	logStatsAPI.Printf("write                : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
-	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
-	ctx.Read.LogStats(logStatsAPI, ctx.Optimized)
-	ctx.Write.LogStats(logStatsAPI)
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	log.Stats.Println("Timing:")
+	log.Stats.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	log.Stats.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	log.Stats.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	log.Stats.Printf("add attachment       : %6.3fs  %4.1f%%\n", durAdd, durAdd/durTotal*100)
+	log.Stats.Printf("write                : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
+	log.Stats.Printf("total processing time: %6.3fs\n\n", durTotal)
+	ctx.Read.LogStats(ctx.Optimized)
+	ctx.Write.LogStats()
 
 	return nil
 }
@@ -973,13 +949,13 @@ func ExtractAttachments(fileIn, dirOut string, files []string, config *types.Con
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
 
-	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
-	logStatsAPI.Println("Timing:")
-	logStatsAPI.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
-	logStatsAPI.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
-	logStatsAPI.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
-	logStatsAPI.Printf("write files          : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
-	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	log.Stats.Println("Timing:")
+	log.Stats.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	log.Stats.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	log.Stats.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	log.Stats.Printf("write files          : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
+	log.Stats.Printf("total processing time: %6.3fs\n\n", durTotal)
 
 	return nil
 }
@@ -1002,13 +978,13 @@ func ListPermissions(fileIn string, config *types.Configuration) ([]string, erro
 
 	durTotal := time.Since(fromStart).Seconds()
 
-	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
-	logStatsAPI.Println("Timing:")
-	logStatsAPI.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
-	logStatsAPI.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
-	logStatsAPI.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
-	logStatsAPI.Printf("list permissions     : %6.3fs  %4.1f%%\n", durList, durList/durTotal*100)
-	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	log.Stats.Println("Timing:")
+	log.Stats.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	log.Stats.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	log.Stats.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	log.Stats.Printf("list permissions     : %6.3fs  %4.1f%%\n", durList, durList/durTotal*100)
+	log.Stats.Printf("total processing time: %6.3fs\n\n", durTotal)
 
 	return list, nil
 }
@@ -1040,15 +1016,15 @@ func AddPermissions(fileIn string, config *types.Configuration) error {
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
 
-	logStatsAPI.Printf("XRefTable:\n%s\n", ctx)
-	logStatsAPI.Println("Timing:")
-	logStatsAPI.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
-	logStatsAPI.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
-	logStatsAPI.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
-	logStatsAPI.Printf("write                : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
-	logStatsAPI.Printf("total processing time: %6.3fs\n\n", durTotal)
-	ctx.Read.LogStats(logStatsAPI, ctx.Optimized)
-	ctx.Write.LogStats(logStatsAPI)
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	log.Stats.Println("Timing:")
+	log.Stats.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	log.Stats.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	log.Stats.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	log.Stats.Printf("write                : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
+	log.Stats.Printf("total processing time: %6.3fs\n\n", durTotal)
+	ctx.Read.LogStats(ctx.Optimized)
+	ctx.Write.LogStats()
 
 	return nil
 }

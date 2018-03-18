@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/hhrutter/pdfcpu/log"
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
 )
@@ -16,7 +17,7 @@ func logWriteStats(ctx *types.PDFContext) {
 
 	if len(xRefTable.Table) != *xRefTable.Size {
 		missing, str := xRefTable.MissingObjects()
-		logXRef.Printf("%d missing objects: %s\n", missing, *str)
+		log.Stats.Printf("%d missing objects: %s\n", missing, *str)
 	}
 
 	var nonRefObjs []int
@@ -35,31 +36,31 @@ func logWriteStats(ctx *types.PDFContext) {
 	// Non referenced objects
 	ctx.Optimize.NonReferencedObjs = nonRefObjs
 	l, str := ctx.Optimize.NonReferencedObjsString()
-	logXRef.Printf("%d original empty xref entries:\n%s", l, str)
+	log.Stats.Printf("%d original empty xref entries:\n%s", l, str)
 
 	// Duplicate font objects
 	l, str = ctx.Optimize.DuplicateFontObjectsString()
-	logXRef.Printf("%d original redundant font entries: %s", l, str)
+	log.Stats.Printf("%d original redundant font entries: %s", l, str)
 
 	// Duplicate image objects
 	l, str = ctx.Optimize.DuplicateImageObjectsString()
-	logXRef.Printf("%d original redundant image entries: %s", l, str)
+	log.Stats.Printf("%d original redundant image entries: %s", l, str)
 
 	// Duplicate info objects
 	l, str = ctx.Optimize.DuplicateInfoObjectsString()
-	logXRef.Printf("%d original redundant info entries: %s", l, str)
+	log.Stats.Printf("%d original redundant info entries: %s", l, str)
 
 	// ObjectStreams
 	l, str = ctx.Read.ObjectStreamsString()
-	logXRef.Printf("%d original objectStream entries: %s", l, str)
+	log.Stats.Printf("%d original objectStream entries: %s", l, str)
 
 	// XRefStreams
 	l, str = ctx.Read.XRefStreamsString()
-	logXRef.Printf("%d original xrefStream entries: %s", l, str)
+	log.Stats.Printf("%d original xrefStream entries: %s", l, str)
 
 	// Linearization objects
 	l, str = ctx.LinearizationObjsString()
-	logXRef.Printf("%d original linearization entries: %s", l, str)
+	log.Stats.Printf("%d original linearization entries: %s", l, str)
 }
 
 func statsHeadLine() *string {

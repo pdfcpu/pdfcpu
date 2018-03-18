@@ -1,6 +1,7 @@
 package validate
 
 import (
+	"github.com/hhrutter/pdfcpu/log"
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/pkg/errors"
 )
@@ -37,23 +38,23 @@ func validatePropertiesDict(xRefTable *types.XRefTable, obj interface{}) error {
 
 	for key, val := range dict.Dict {
 
-		logInfoValidate.Printf("validatePropertiesDict: key=%s val=%v\n", key, val)
+		log.Debug.Printf("validatePropertiesDict: key=%s val=%v\n", key, val)
 
 		switch key {
 
 		case "Metadata":
-			logInfoValidate.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
+			log.Debug.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
 			// see above
 
 		case "Contents":
-			logInfoValidate.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
+			log.Debug.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
 			_, err = validateStreamDict(xRefTable, val)
 			if err != nil {
 				return err
 			}
 
 		case "Resources":
-			logInfoValidate.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
+			log.Debug.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
 			_, err = validateResourceDict(xRefTable, val)
 			if err != nil {
 				return err
@@ -72,7 +73,7 @@ func validatePropertiesDict(xRefTable *types.XRefTable, obj interface{}) error {
 		//case "Lang": -> default
 
 		default:
-			logInfoValidate.Printf("validatePropertiesDict: processing unrecognized key \"%s\"\n", key)
+			log.Debug.Printf("validatePropertiesDict: processing unrecognized key \"%s\"\n", key)
 			_, err = xRefTable.Dereference(val)
 			if err != nil {
 				return err

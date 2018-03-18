@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/hhrutter/pdfcpu/filter"
+	"github.com/hhrutter/pdfcpu/log"
 	"github.com/hhrutter/pdfcpu/optimize"
 	"github.com/hhrutter/pdfcpu/types"
 )
@@ -15,8 +16,8 @@ func writeFont(ctx *types.PDFContext, fileName, extension string, fontFileIndRef
 
 	fileName = fileName + "_" + strconv.Itoa(objNr) + "." + extension
 
-	logInfoExtract.Printf("writing %s\n", fileName)
-	logDebugExtract.Printf("writeFont begin: writing to %s\n", fileName)
+	log.Info.Printf("writing %s\n", fileName)
+	log.Debug.Printf("writeFont begin: writing to %s\n", fileName)
 
 	streamDict, err := ctx.DereferenceStreamDict(*fontFileIndRef)
 	if err != nil {
@@ -38,7 +39,7 @@ func writeFont(ctx *types.PDFContext, fileName, extension string, fontFileIndRef
 		return err
 	}
 
-	logDebugExtract.Printf("writeFont end")
+	log.Debug.Printf("writeFont end")
 
 	return nil
 }
@@ -59,24 +60,24 @@ func writeFontObject(ctx *types.PDFContext, objNumber int, fontFileIndRefs map[t
 
 	// Only embedded fonts have binary data.
 	if !fontObject.Embedded() {
-		logInfoExtract.Printf("writeFonts: ignoring - non embedded font\n")
+		log.Debug.Printf("writeFonts: ignoring - non embedded font\n")
 		return nil
 	}
 
 	dict, err := optimize.FontDescriptor(ctx.XRefTable, fontObject.FontDict, objNumber)
 	if err != nil || dict == nil {
-		logInfoExtract.Printf("writeFonts: ignoring - no fontDescriptor available\n")
+		log.Debug.Printf("writeFonts: ignoring - no fontDescriptor available\n")
 		return nil
 	}
 
 	indRef := optimize.FontDescriptorFontFileIndirectObjectRef(dict)
 	if indRef == nil {
-		logInfoExtract.Printf("writeFonts: ignoring - no font file available\n")
+		log.Debug.Printf("writeFonts: ignoring - no font file available\n")
 		return nil
 	}
 
 	if fontFileIndRefs[*indRef] {
-		logInfoExtract.Printf("writeFonts: ignoring - already written\n")
+		log.Debug.Printf("writeFonts: ignoring - already written\n")
 		return nil
 	}
 
@@ -96,7 +97,7 @@ func writeFontObject(ctx *types.PDFContext, objNumber int, fontFileIndRefs map[t
 		}
 
 	default:
-		logInfoExtract.Printf("writeFonts: ignoring - unsupported fonttype: %s\n", fontType)
+		log.Info.Printf("writeFonts: ignoring - unsupported fonttype: %s\n", fontType)
 		return nil
 	}
 
@@ -107,14 +108,14 @@ func writeFontObject(ctx *types.PDFContext, objNumber int, fontFileIndRefs map[t
 
 func writeFonts(ctx *types.PDFContext, selectedPages types.IntSet) error {
 
-	logDebugExtract.Println("writeFonts begin")
+	log.Debug.Println("writeFonts begin")
 
 	fontFileIndRefs := map[types.PDFIndirectRef]bool{}
 
 	if selectedPages == nil || len(selectedPages) == 0 {
 
 		for _, i := range sortFOKeys(ctx.Optimize.FontObjects) {
-			logDebugExtract.Printf("writeFonts: processing fontobject %d\n", i)
+			log.Debug.Printf("writeFonts: processing fontobject %d\n", i)
 			writeFontObject(ctx, i, fontFileIndRefs)
 		}
 
@@ -123,7 +124,7 @@ func writeFonts(ctx *types.PDFContext, selectedPages types.IntSet) error {
 		for p, v := range selectedPages {
 
 			if v {
-				logInfoExtract.Printf("writeFonts: writing fonts for page %d\n", p)
+				log.Info.Printf("writeFonts: writing fonts for page %d\n", p)
 				for i := range ctx.Optimize.PageFonts[p-1] {
 					writeFontObject(ctx, i, fontFileIndRefs)
 				}
@@ -133,7 +134,7 @@ func writeFonts(ctx *types.PDFContext, selectedPages types.IntSet) error {
 
 	}
 
-	logDebugExtract.Println("writeFonts end")
+	log.Debug.Println("writeFonts end")
 
 	return nil
 }
@@ -142,10 +143,11 @@ func writeFonts(ctx *types.PDFContext, selectedPages types.IntSet) error {
 // Supported font types: TrueType.
 func Fonts(ctx *types.PDFContext, selectedPages types.IntSet) error {
 
-	logDebugExtract.Println("Fonts begin")
+	log.Info.Println("extracting fonts")
+	log.Debug.Println("Fonts begin")
 
 	if len(ctx.Optimize.FontObjects) == 0 {
-		logInfoExtract.Println("No font info available.")
+		log.Debug.Println("No font info available.")
 		return nil
 	}
 
@@ -154,7 +156,7 @@ func Fonts(ctx *types.PDFContext, selectedPages types.IntSet) error {
 		return err
 	}
 
-	logDebugExtract.Println("Fonts end")
+	log.Debug.Println("Fonts end")
 
 	return err
 }
