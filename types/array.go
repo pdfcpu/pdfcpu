@@ -176,6 +176,7 @@ func (array PDFArray) PDFString() string {
 			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, hl.String()))
 			continue
 		}
+
 		log.Fatalf("PDFArray.PDFString(): entry of unknown object type: %[1]T %[1]v\n", entry)
 	}
 

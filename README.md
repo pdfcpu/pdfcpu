@@ -40,7 +40,11 @@ Reducing the size of large PDF files for mass mailings by optimization to the ba
 
 ## Installation
 
+Required build version: go1.8 and up
+
 `go get github.com/hhrutter/pdfcpu/cmd/...`
+
+
 
 ## Usage
 
@@ -70,19 +74,11 @@ Reducing the size of large PDF files for mass mailings by optimization to the ba
 
 ## Status
 
-Version: 0.1.6
+Version: 0.1.7
 
-* **Encrypt** (new option)
-  * **-perm none|all** (default=none) disables/enables all user access permission flags.
-  * From now on Encrypt will disable all user access permissions per default.
+* go1.10 compatible release
 
-* **perm list** (new command)
-  * List user access permissions: pdfcpu perm list [-verbose] [-upw userpw] [-opw ownerpw] inFile
-
-* **perm add** (new command)
-  * Add user access permissions: pdfcpu perm add [-verbose] [-perm none|all] [-upw userpw] -opw ownerpw inFile
-
-  Note: User access permissions will only take effect based on a set owner password.
+* flexible logging (fixes issue #8)
 
 
 ## Contributing

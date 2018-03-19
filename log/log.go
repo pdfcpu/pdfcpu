@@ -64,6 +64,13 @@ func SetDefaultLoggers() {
 	SetDefaultStatsLogger()
 }
 
+// DisableLoggers turns off all logging.
+func DisableLoggers() {
+	SetDebugLogger(nil)
+	SetInfoLogger(nil)
+	SetStatsLogger(nil)
+}
+
 // Printf writes a formatted message to the log.
 func (l *logger) Printf(format string, v ...interface{}) {
 

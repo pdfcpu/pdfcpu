@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/hhrutter/pdfcpu/create"
+	"github.com/hhrutter/pdfcpu/log"
 	"github.com/hhrutter/pdfcpu/types"
 	"github.com/hhrutter/pdfcpu/validate"
 )
@@ -310,8 +311,6 @@ func TestMain(m *testing.M) {
 
 	os.Mkdir(outputDir, 0777)
 
-	//log.SetDefaultLoggers()
-
 	exitCode := m.Run()
 
 	err := os.RemoveAll(outputDir)
@@ -348,7 +347,7 @@ func TestValidateCommand(t *testing.T) {
 func TestValidateOneFile(t *testing.T) {
 
 	config := types.NewDefaultConfiguration()
-	config.SetValidationRelaxed()
+	config.SetValidationStrict()
 
 	_, err := Process(ValidateCommand("testdata/gobook.0.pdf", config))
 	if err != nil {
@@ -380,6 +379,7 @@ func TestOptimizeCommandWithLF(t *testing.T) {
 	}
 
 	config := types.NewDefaultConfiguration()
+	log.SetDefaultLoggers()
 
 	// this is not necessary but to make it clearer.
 	config.Eol = types.EolLF
@@ -392,6 +392,8 @@ func TestOptimizeCommandWithLF(t *testing.T) {
 			}
 		}
 	}
+
+	log.DisableLoggers()
 
 }
 
