@@ -7,7 +7,7 @@ import (
 )
 
 // PDFArray represents a PDF array object.
-type PDFArray []interface{}
+type PDFArray []PDFObject
 
 // NewStringArray returns a PDFArray with PDFStringLiteral entries.
 func NewStringArray(sVars ...string) PDFArray {
@@ -57,10 +57,10 @@ func NewIntegerArray(fVars ...int) PDFArray {
 	return a
 }
 
-func (array PDFArray) string(ident int) string {
+func (array PDFArray) indentedString(level int) string {
 
 	logstr := []string{"["}
-	tabstr := strings.Repeat("\t", ident)
+	tabstr := strings.Repeat("\t", level)
 	first := true
 	sepstr := ""
 
@@ -74,14 +74,14 @@ func (array PDFArray) string(ident int) string {
 		}
 
 		if subdict, ok := entry.(PDFDict); ok {
-			dictstr := subdict.string(ident + 1)
+			dictstr := subdict.indentedString(level + 1)
 			logstr = append(logstr, fmt.Sprintf("\n%[1]s%[2]s\n%[1]s", tabstr, dictstr))
 			first = true
 			continue
 		}
 
 		if array, ok := entry.(PDFArray); ok {
-			arrstr := array.string(ident + 1)
+			arrstr := array.indentedString(level + 1)
 			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, arrstr))
 			continue
 		}
@@ -95,7 +95,7 @@ func (array PDFArray) string(ident int) string {
 }
 
 func (array PDFArray) String() string {
-	return array.string(1)
+	return array.indentedString(1)
 }
 
 // PDFString returns a string representation as found in and written to a PDF file.

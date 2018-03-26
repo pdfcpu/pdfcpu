@@ -5,7 +5,7 @@ import "github.com/hhrutter/pdfcpu/types"
 func createMHBEDict() *types.PDFDict {
 
 	softwareIdentDict := types.PDFDict{
-		Dict: map[string]interface{}{
+		Dict: map[string]types.PDFObject{
 			"Type": types.PDFName("SoftwareIdentifier"),
 			"U":    types.PDFStringLiteral("vnd.adobe.swname:ADBE_Acrobat"),
 			"L":    types.NewIntegerArray(0),
@@ -15,7 +15,7 @@ func createMHBEDict() *types.PDFDict {
 	}
 
 	mediaCriteriaDict := types.PDFDict{
-		Dict: map[string]interface{}{
+		Dict: map[string]types.PDFObject{
 			"Type": types.PDFName("MediaCriteria"),
 			"A":    types.PDFBoolean(false),
 			"C":    types.PDFBoolean(false),
@@ -23,7 +23,7 @@ func createMHBEDict() *types.PDFDict {
 			"S":    types.PDFBoolean(false),
 			"R":    types.PDFInteger(0),
 			"D": types.PDFDict{
-				Dict: map[string]interface{}{
+				Dict: map[string]types.PDFObject{
 					"Type": types.PDFName("MinBitDepth"),
 					"V":    types.PDFInteger(0),
 					"M":    types.PDFInteger(0),
@@ -31,7 +31,7 @@ func createMHBEDict() *types.PDFDict {
 			},
 			"V": types.PDFArray{softwareIdentDict},
 			"Z": types.PDFDict{
-				Dict: map[string]interface{}{
+				Dict: map[string]types.PDFObject{
 					"Type": types.PDFName("MinScreenSize"),
 					"V":    types.NewIntegerArray(640, 480),
 					"M":    types.PDFInteger(0),
@@ -51,7 +51,7 @@ func createMHBEDict() *types.PDFDict {
 func createMediaPlayersDict() *types.PDFDict {
 
 	softwareIdentDict := types.PDFDict{
-		Dict: map[string]interface{}{
+		Dict: map[string]types.PDFObject{
 			"Type": types.PDFName("SoftwareIdentifier"),
 			"U":    types.PDFStringLiteral("vnd.adobe.swname:ADBE_Acrobat"),
 			"L":    types.NewIntegerArray(0),
@@ -61,14 +61,14 @@ func createMediaPlayersDict() *types.PDFDict {
 	}
 
 	mediaPlayerInfoDict := types.PDFDict{
-		Dict: map[string]interface{}{
+		Dict: map[string]types.PDFObject{
 			"Type": types.PDFName("MediaPlayerInfo"),
 			"PID":  softwareIdentDict,
 		},
 	}
 
 	return &types.PDFDict{
-		Dict: map[string]interface{}{
+		Dict: map[string]types.PDFObject{
 			"Type": types.PDFName("MediaPlayers"),
 			"MU":   types.PDFArray{mediaPlayerInfoDict},
 		},
@@ -79,7 +79,7 @@ func createMediaPlayersDict() *types.PDFDict {
 func createMediaOffsetDict() *types.PDFDict {
 
 	timeSpanDict := types.PDFDict{
-		Dict: map[string]interface{}{
+		Dict: map[string]types.PDFObject{
 			"Type": types.PDFName("Timespan"),
 			"S":    types.PDFName("S"),
 			"V":    types.PDFInteger(1),
@@ -87,7 +87,7 @@ func createMediaOffsetDict() *types.PDFDict {
 	}
 
 	return &types.PDFDict{
-		Dict: map[string]interface{}{
+		Dict: map[string]types.PDFObject{
 			"Type": types.PDFName("MediaOffset"),
 			"S":    types.PDFName("T"),
 			"T":    timeSpanDict,
@@ -101,7 +101,7 @@ func createSectionMHBEDict() *types.PDFDict {
 	d := createMediaOffsetDict()
 
 	return &types.PDFDict{
-		Dict: map[string]interface{}{
+		Dict: map[string]types.PDFObject{
 			"B": *d,
 			"E": *d,
 		},
@@ -118,7 +118,7 @@ func createMediaClipDataDict(xRefTable *types.XRefTable) (*types.PDFIndirectRef,
 	}
 
 	mediaPermissionsDict := types.PDFDict{
-		Dict: map[string]interface{}{
+		Dict: map[string]types.PDFObject{
 			"Type": types.PDFName("MediaPermissions"),
 			"TF":   types.PDFStringLiteral("TEMPNEVER"), //TEMPALWAYS
 		},
@@ -126,10 +126,10 @@ func createMediaClipDataDict(xRefTable *types.XRefTable) (*types.PDFIndirectRef,
 
 	mediaPlayersDict := createMediaPlayersDict()
 
-	mhbe := types.PDFDict{Dict: map[string]interface{}{"BU": nil}}
+	mhbe := types.PDFDict{Dict: map[string]types.PDFObject{"BU": nil}}
 
 	d := types.PDFDict{
-		Dict: map[string]interface{}{
+		Dict: map[string]types.PDFObject{
 			"Type": types.PDFName("MediaClip"),
 			"S":    types.PDFName("MCD"), // media clip data
 			"N":    types.PDFStringLiteral("Sample Audio"),
@@ -151,7 +151,7 @@ func createMediaClipDataDict(xRefTable *types.XRefTable) (*types.PDFIndirectRef,
 func createMediaPlayParamsMHBE() *types.PDFDict {
 
 	timeSpanDict := types.PDFDict{
-		Dict: map[string]interface{}{
+		Dict: map[string]types.PDFObject{
 			"Type": types.PDFName("Timespan"),
 			"S":    types.PDFName("S"),
 			"V":    types.PDFFloat(10.0),
@@ -159,7 +159,7 @@ func createMediaPlayParamsMHBE() *types.PDFDict {
 	}
 
 	mediaDurationDict := types.PDFDict{
-		Dict: map[string]interface{}{
+		Dict: map[string]types.PDFObject{
 			"Type": types.PDFName("MediaDuration"),
 			"S":    types.PDFName("T"),
 			"T":    timeSpanDict,
@@ -167,7 +167,7 @@ func createMediaPlayParamsMHBE() *types.PDFDict {
 	}
 
 	return &types.PDFDict{
-		Dict: map[string]interface{}{
+		Dict: map[string]types.PDFObject{
 			"V":  types.PDFInteger(100),
 			"C":  types.PDFBoolean(false),
 			"F":  types.PDFInteger(5),
@@ -185,7 +185,7 @@ func createMediaPlayParamsDict() *types.PDFDict {
 	mhbe := createMediaPlayParamsMHBE()
 
 	return &types.PDFDict{
-		Dict: map[string]interface{}{
+		Dict: map[string]types.PDFObject{
 			"Type": types.PDFName("MediaPlayParams"),
 			"PL":   *d,
 			"MH":   *mhbe,
@@ -198,7 +198,7 @@ func createMediaPlayParamsDict() *types.PDFDict {
 func createFloatingWindowsParamsDict() *types.PDFDict {
 
 	return &types.PDFDict{
-		Dict: map[string]interface{}{
+		Dict: map[string]types.PDFObject{
 			"Type": types.PDFName("FWParams"),
 			"D":    types.NewIntegerArray(200, 200),
 			"RT":   types.PDFInteger(0),
@@ -217,7 +217,7 @@ func createScreenParamsDict() *types.PDFDict {
 	d := createFloatingWindowsParamsDict()
 
 	mhbe := types.PDFDict{
-		Dict: map[string]interface{}{
+		Dict: map[string]types.PDFObject{
 			"Type": types.PDFName("MediaScreenParams"),
 			"W":    types.PDFInteger(0),
 			"B":    types.NewNumberArray(1.0, 0.0, 0.0),
@@ -228,7 +228,7 @@ func createScreenParamsDict() *types.PDFDict {
 	}
 
 	return &types.PDFDict{
-		Dict: map[string]interface{}{
+		Dict: map[string]types.PDFObject{
 			"Type": types.PDFName("MediaScreenParams"),
 			"MH":   mhbe,
 			"BE":   mhbe,
@@ -244,7 +244,7 @@ func createMediaRendition(xRefTable *types.XRefTable, mediaClipDataDict *types.P
 	d2 := createScreenParamsDict()
 
 	return &types.PDFDict{
-		Dict: map[string]interface{}{
+		Dict: map[string]types.PDFObject{
 			"Type": types.PDFName("Rendition"),
 			"S":    types.PDFName("MR"),
 			"MH":   *mhbe,
@@ -262,7 +262,7 @@ func createSectionMediaRendition(mediaClipDataDict *types.PDFIndirectRef) *types
 	mhbe := createSectionMHBEDict()
 
 	mediaClipSectionDict := types.PDFDict{
-		Dict: map[string]interface{}{
+		Dict: map[string]types.PDFObject{
 			"Type": types.PDFName("MediaClip"),
 			"S":    types.PDFName("MCS"), // media clip section
 			"N":    types.PDFStringLiteral("Sample movie"),
@@ -276,7 +276,7 @@ func createSectionMediaRendition(mediaClipDataDict *types.PDFIndirectRef) *types
 	mhbe = createMHBEDict()
 
 	return &types.PDFDict{
-		Dict: map[string]interface{}{
+		Dict: map[string]types.PDFObject{
 			"Type": types.PDFName("Rendition"),
 			"S":    types.PDFName("MR"),
 			"MH":   *mhbe,
@@ -294,7 +294,7 @@ func createSelectorRendition(mediaClipDataDict *types.PDFIndirectRef) *types.PDF
 	r := createSectionMediaRendition(mediaClipDataDict)
 
 	return &types.PDFDict{
-		Dict: map[string]interface{}{
+		Dict: map[string]types.PDFObject{
 			"Type": types.PDFName("Rendition"),
 			"S":    types.PDFName("SR"),
 			"MH":   *mhbe,

@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func equalPDFObjects(o1, o2 interface{}, ctx *types.PDFContext) (ok bool, err error) {
+func equalPDFObjects(o1, o2 types.PDFObject, ctx *types.PDFContext) (ok bool, err error) {
 
 	o1Type := fmt.Sprintf("%T", o1)
 	o2Type := fmt.Sprintf("%T", o2)
@@ -117,7 +117,7 @@ func equalPDFStreamDicts(sd1, sd2 *types.PDFStreamDict, ctx *types.PDFContext) (
 	return bytes.Equal(encodedStream1, encodedStream2), nil
 }
 
-func equalFontNames(v1, v2 interface{}, ctx *types.PDFContext) (bool, error) {
+func equalFontNames(v1, v2 types.PDFObject, ctx *types.PDFContext) (bool, error) {
 
 	v1, err := ctx.XRefTable.Dereference(v1)
 	if err != nil {

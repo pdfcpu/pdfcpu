@@ -6,7 +6,7 @@ import (
 	"github.com/hhrutter/pdfcpu/types"
 )
 
-func validatePageLabelDict(xRefTable *types.XRefTable, obj interface{}) error {
+func validatePageLabelDict(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	// see 12.4.2 Page Labels
 

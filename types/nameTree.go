@@ -177,7 +177,7 @@ func (nameTree *PDFNameTree) LeafNode(xRefTable *XRefTable, last bool, key strin
 	return leaf, nil
 }
 
-func (nameTree *PDFNameTree) key(xRefTable *XRefTable, o interface{}) (string, error) {
+func (nameTree *PDFNameTree) key(xRefTable *XRefTable, o PDFObject) (string, error) {
 
 	o, err := xRefTable.Dereference(o)
 	if err != nil {
@@ -507,17 +507,12 @@ func (nameTree *PDFNameTree) removeKid(xRefTable *XRefTable, dict *PDFDict, arr 
 
 func (nameTree *PDFNameTree) checkLimits(xRefTable *XRefTable, dict *PDFDict, key string) (skip, ok bool, err error) {
 
-	var o interface{}
-	var found bool
-
-	o, found = dict.Find("Limits")
+	o, found := dict.Find("Limits")
 	if !found {
 		return false, false, nil
 	}
 
-	var arr *PDFArray
-
-	arr, err = xRefTable.DereferenceArray(o)
+	arr, err := xRefTable.DereferenceArray(o)
 	if err != nil {
 		return false, false, err
 	}

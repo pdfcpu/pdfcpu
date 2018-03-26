@@ -6,17 +6,17 @@ import (
 	"github.com/hhrutter/pdfcpu/types"
 )
 
-func validateDestsNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
+func validateDestsNameTreeValue(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error {
 
 	return validateDestination(xRefTable, obj)
 }
 
-func validateAPNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
+func validateAPNameTreeValue(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error {
 
 	return validateAppearanceDict(xRefTable, obj)
 }
 
-func validateJavaScriptNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
+func validateJavaScriptNameTreeValue(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error {
 
 	dict, err := xRefTable.DereferenceDict(obj)
 	if err != nil {
@@ -27,7 +27,7 @@ func validateJavaScriptNameTreeValue(xRefTable *types.XRefTable, obj interface{}
 	return validateJavaScriptActionDict(xRefTable, dict, "JavaScript")
 }
 
-func validatePagesNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
+func validatePagesNameTreeValue(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error {
 
 	// see 12.7.6
 
@@ -47,7 +47,7 @@ func validatePagesNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sin
 	return err
 }
 
-func validateTemplatesNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
+func validateTemplatesNameTreeValue(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error {
 
 	// see 12.7.6
 
@@ -343,7 +343,7 @@ func validateWebCaptureContentSetDict(XRefTable *types.XRefTable, dict *types.PD
 	return nil
 }
 
-func validateIDSNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
+func validateIDSNameTreeValue(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error {
 
 	// see 14.10.4
 
@@ -356,7 +356,7 @@ func validateIDSNameTreeValue(xRefTable *types.XRefTable, obj interface{}, since
 	return validateWebCaptureContentSetDict(xRefTable, d)
 }
 
-func validateURLSNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
+func validateURLSNameTreeValue(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error {
 
 	// see 14.10.4
 
@@ -369,7 +369,7 @@ func validateURLSNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinc
 	return validateWebCaptureContentSetDict(xRefTable, d)
 }
 
-func validateEmbeddedFilesNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
+func validateEmbeddedFilesNameTreeValue(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error {
 
 	// see 7.11.4
 
@@ -415,7 +415,7 @@ func validateSlideShowDict(XRefTable *types.XRefTable, dict *types.PDFDict) erro
 	return err
 }
 
-func validateAlternatePresentationsNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
+func validateAlternatePresentationsNameTreeValue(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error {
 
 	// see 13.5
 
@@ -436,7 +436,7 @@ func validateAlternatePresentationsNameTreeValue(xRefTable *types.XRefTable, obj
 	return nil
 }
 
-func validateRenditionsNameTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
+func validateRenditionsNameTreeValue(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error {
 
 	// see 13.2.3
 
@@ -457,7 +457,7 @@ func validateRenditionsNameTreeValue(xRefTable *types.XRefTable, obj interface{}
 	return nil
 }
 
-func validateIDTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
+func validateIDTreeValue(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error {
 
 	dict, err := xRefTable.DereferenceDict(obj)
 	if err != nil || dict == nil {
@@ -477,10 +477,10 @@ func validateIDTreeValue(xRefTable *types.XRefTable, obj interface{}, sinceVersi
 	return nil
 }
 
-func validateNameTreeByName(name string, xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateNameTreeByName(name string, xRefTable *types.XRefTable, obj types.PDFObject) (err error) {
 
 	for k, v := range map[string]struct {
-		validate     func(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error
+		validate     func(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error
 		sinceVersion types.PDFVersion
 	}{
 		"Dests":                  {validateDestsNameTreeValue, types.V12},

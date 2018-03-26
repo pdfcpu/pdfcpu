@@ -233,7 +233,7 @@ func parseXRefTableSubSection(s *bufio.Scanner, xRefTable *types.XRefTable, fiel
 }
 
 // Parse compressed object.
-func compressedObject(s string) (interface{}, error) {
+func compressedObject(s string) (types.PDFObject, error) {
 
 	log.Debug.Println("compressedObject: begin")
 
@@ -431,7 +431,7 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, xRefStreamDict types.PDFX
 	return nil
 }
 
-func xRefStreamDict(ctx *types.PDFContext, o interface{}, objNr int, streamOffset int64) (*types.PDFXRefStreamDict, error) {
+func xRefStreamDict(ctx *types.PDFContext, o types.PDFObject, objNr int, streamOffset int64) (*types.PDFXRefStreamDict, error) {
 
 	// must be pdfDict
 	pdfDict, ok := o.(types.PDFDict)
@@ -631,11 +631,13 @@ func parseTrailerDict(trailerDict types.PDFDict, ctx *types.PDFContext) (*int64,
 
 	if arr := trailerDict.PDFArrayEntry("AdditionalStreams"); arr != nil {
 		log.Debug.Printf("parseTrailerInfo: found AdditionalStreams: %s\n", arr)
+		a := types.PDFArray{}
 		for _, value := range *arr {
 			if indRef, ok := value.(types.PDFIndirectRef); ok {
-				xRefTable.AdditionalStreams = append(xRefTable.AdditionalStreams, indRef)
+				a = append(a, indRef)
 			}
 		}
+		xRefTable.AdditionalStreams = &a
 	}
 
 	offset := trailerDict.Prev()
@@ -1219,7 +1221,7 @@ func dict(ctx *types.PDFContext, pdfDict types.PDFDict, objNr, genNr, endInd, st
 	return d, nil
 }
 
-func object(ctx *types.PDFContext, offset int64, objNr, genNr int) (o interface{}, endInd, streamInd int, streamOffset int64, err error) {
+func object(ctx *types.PDFContext, offset int64, objNr, genNr int) (o types.PDFObject, endInd, streamInd int, streamOffset int64, err error) {
 
 	var rd io.Reader
 	rd, err = newPositionedReader(ctx.Read.File, &offset)
@@ -1288,7 +1290,7 @@ func object(ctx *types.PDFContext, offset int64, objNr, genNr int) (o interface{
 }
 
 // Parses an object from file at given offset.
-func pdfObject(ctx *types.PDFContext, offset int64, objNr, genNr int) (interface{}, error) {
+func pdfObject(ctx *types.PDFContext, offset int64, objNr, genNr int) (types.PDFObject, error) {
 
 	log.Debug.Printf("pdfObject: begin, obj#%d, offset:%d\n", objNr, offset)
 
@@ -1341,7 +1343,7 @@ func pdfObject(ctx *types.PDFContext, offset int64, objNr, genNr int) (interface
 	return nil, nil
 }
 
-func dereferencedObject(ctx *types.PDFContext, objectNumber int) (interface{}, error) {
+func dereferencedObject(ctx *types.PDFContext, objectNumber int) (types.PDFObject, error) {
 
 	entry, ok := ctx.Find(objectNumber)
 	if !ok {
@@ -1545,7 +1547,7 @@ func decompressXRefTableEntry(xRefTable *types.XRefTable, objectNumber int, entr
 }
 
 // Log interesting stream content.
-func logStream(obj interface{}) {
+func logStream(obj types.PDFObject) {
 
 	switch obj := obj.(type) {
 
@@ -1667,7 +1669,7 @@ func decodeObjectStreams(ctx *types.PDFContext) error {
 	return nil
 }
 
-func handleLinearizationParmDict(ctx *types.PDFContext, obj interface{}, objNr int) error {
+func handleLinearizationParmDict(ctx *types.PDFContext, obj types.PDFObject, objNr int) error {
 
 	if ctx.Read.Linearized {
 		// Linearization dict already processed.
@@ -1727,7 +1729,7 @@ func loadPDFStreamDict(ctx *types.PDFContext, sd *types.PDFStreamDict, objNr, ge
 	return setDecodedStreamContent(ctx, sd, objNr, genNr, ctx.DecodeAllStreams)
 }
 
-func updateBinaryTotalSize(ctx *types.PDFContext, o interface{}) {
+func updateBinaryTotalSize(ctx *types.PDFContext, o types.PDFObject) {
 
 	switch obj := o.(type) {
 

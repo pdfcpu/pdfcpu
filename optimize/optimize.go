@@ -143,7 +143,7 @@ func pageFonts(ctx *types.PDFContext, pageNumber int) (pageFonts types.IntSet) {
 func fontName(ctx *types.PDFContext, fontDict *types.PDFDict, objNumber int) (fontName string, err error) {
 
 	var found bool
-	var o interface{}
+	var o types.PDFObject
 
 	if *fontDict.Subtype() != "Type3" {
 
@@ -553,7 +553,7 @@ func parsePagesDict(ctx *types.PDFContext, pagesDict *types.PDFDict, pageNumber 
 	return pageNumber, nil
 }
 
-func traverse(xRefTable *types.XRefTable, value interface{}, duplObjs types.IntSet) error {
+func traverse(xRefTable *types.XRefTable, value types.PDFObject, duplObjs types.IntSet) error {
 
 	if indRef, ok := value.(types.PDFIndirectRef); ok {
 		duplObjs[int(indRef.ObjectNumber)] = true
@@ -577,7 +577,7 @@ func traverse(xRefTable *types.XRefTable, value interface{}, duplObjs types.IntS
 }
 
 // Traverse the object graph for a pdfObject and mark all objects as potential duplicates.
-func traverseObjectGraphAndMarkDuplicates(xRefTable *types.XRefTable, obj interface{}, duplObjs types.IntSet) error {
+func traverseObjectGraphAndMarkDuplicates(xRefTable *types.XRefTable, obj types.PDFObject, duplObjs types.IntSet) error {
 
 	log.Debug.Printf("traverseObjectGraphAndMarkDuplicates begin type=%T\n", obj)
 

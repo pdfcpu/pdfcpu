@@ -17,7 +17,7 @@ const (
 	isNoAlternateImageStreamDict = false
 )
 
-func validateReferenceDictPageEntry(xRefTable *types.XRefTable, obj interface{}) error {
+func validateReferenceDictPageEntry(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
@@ -75,7 +75,7 @@ func validateOPIDictV13Part1(xRefTable *types.XRefTable, dict *types.PDFDict, di
 	}
 
 	// Version, required, number
-	_, err = validateNumberEntry(xRefTable, dict, dictName, "Version", REQUIRED, types.V10, nil)
+	_, err = validateFloatEntry(xRefTable, dict, dictName, "Version", REQUIRED, types.V10, func(f float64) bool { return f == 1.3 })
 	if err != nil {
 		return err
 	}
@@ -193,7 +193,7 @@ func validateOPIDictV13(xRefTable *types.XRefTable, dict *types.PDFDict) error {
 	return validateOPIDictV13Part2(xRefTable, dict, dictName)
 }
 
-func validateOPIDictInks(xRefTable *types.XRefTable, obj interface{}) error {
+func validateOPIDictInks(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
@@ -721,7 +721,7 @@ func validateFormStreamDict(xRefTable *types.XRefTable, streamDict *types.PDFStr
 	return validateFormStreamDictPart2(xRefTable, &streamDict.PDFDict, dictName)
 }
 
-func validateXObjectStreamDict(xRefTable *types.XRefTable, obj interface{}) error {
+func validateXObjectStreamDict(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	// see 8.8 External Objects
 
@@ -778,7 +778,7 @@ func validateXObjectStreamDict(xRefTable *types.XRefTable, obj interface{}) erro
 	return err
 }
 
-func validateGroupAttributesDict(xRefTable *types.XRefTable, obj interface{}) error {
+func validateGroupAttributesDict(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	// see 11.6.6 Transparency Group XObjects
 
@@ -813,7 +813,7 @@ func validateGroupAttributesDict(xRefTable *types.XRefTable, obj interface{}) er
 	return err
 }
 
-func validateXObjectResourceDict(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
+func validateXObjectResourceDict(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error {
 
 	// Version check
 	err := xRefTable.ValidateVersion("XObjectResourceDict", sinceVersion)

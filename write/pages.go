@@ -9,8 +9,6 @@ import (
 // Write page entry to disk.
 func writePageEntry(ctx *types.PDFContext, dict *types.PDFDict, dictName, entryName string, statsAttr int) error {
 
-	var obj interface{}
-
 	obj, err := writeEntry(ctx, dict, dictName, entryName)
 	if err != nil {
 		return err
@@ -92,7 +90,7 @@ func writePageDict(ctx *types.PDFContext, indRef *types.PDFIndirectRef, pageDict
 	return nil
 }
 
-func locateKidForPageNumber(ctx *types.PDFContext, kidsArray *types.PDFArray, pageCount *int, pageNumber int) (kid interface{}, err error) {
+func locateKidForPageNumber(ctx *types.PDFContext, kidsArray *types.PDFArray, pageCount *int, pageNumber int) (kid types.PDFObject, err error) {
 
 	for _, obj := range *kidsArray {
 
@@ -159,7 +157,7 @@ func locateKidForPageNumber(ctx *types.PDFContext, kidsArray *types.PDFArray, pa
 	return nil, errors.Errorf("locateKidForPageNumber: Unable to locate kid: pageCount:%d extractPageNr:%d\n", *pageCount, pageNumber)
 }
 
-func pageNodeDict(ctx *types.PDFContext, o interface{}) (d *types.PDFDict, indRef *types.PDFIndirectRef, err error) {
+func pageNodeDict(ctx *types.PDFContext, o types.PDFObject) (d *types.PDFDict, indRef *types.PDFIndirectRef, err error) {
 
 	if o == nil {
 		log.Debug.Println("pageNodeDict: is nil")

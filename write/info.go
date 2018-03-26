@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func textString(ctx *types.PDFContext, obj interface{}) (string, error) {
+func textString(ctx *types.PDFContext, obj types.PDFObject) (string, error) {
 
 	var s string
 	var err error

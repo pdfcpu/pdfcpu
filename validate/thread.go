@@ -152,7 +152,7 @@ func validateFirstBeadDict(xRefTable *types.XRefTable, beadIndRef, threadIndRef 
 	return validateBeadDict(xRefTable, nBeadIndRef, threadIndRef, beadIndRef, pBeadIndRef)
 }
 
-func validateThreadDict(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
+func validateThreadDict(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error {
 
 	dictName := "threadDict"
 

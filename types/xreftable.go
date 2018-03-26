@@ -22,14 +22,14 @@ type XRefTableEntry struct {
 	Free            bool
 	Offset          *int64
 	Generation      *int
-	Object          interface{} // Use interface PDFObject (suggested by Francesc Campoy).
+	Object          PDFObject
 	Compressed      bool
 	ObjectStream    *int
 	ObjectStreamInd *int
 }
 
 // NewXRefTableEntryGen0 returns a cross reference table entry for an object with generation 0.
-func NewXRefTableEntryGen0(obj interface{}) *XRefTableEntry {
+func NewXRefTableEntryGen0(obj PDFObject) *XRefTableEntry {
 	zero := 0
 	return &XRefTableEntry{Generation: &zero, Object: obj}
 }
@@ -88,7 +88,7 @@ type XRefTable struct {
 	LinearizationObjs       IntSet
 
 	// Offspec section
-	AdditionalStreams []PDFIndirectRef //trailer :e.g., Oasis "Open Doc"
+	AdditionalStreams *PDFArray // array of PDFIndirectRef - trailer :e.g., Oasis "Open Doc"
 
 	// Statistics
 	Stats PDFStats
@@ -304,13 +304,13 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 }
 
 // InsertObject inserts an object into the xRefTable.
-func (xRefTable *XRefTable) InsertObject(obj interface{}) (objNumber int, err error) {
+func (xRefTable *XRefTable) InsertObject(obj PDFObject) (objNumber int, err error) {
 	xRefTableEntry := NewXRefTableEntryGen0(obj)
 	return xRefTable.InsertNew(*xRefTableEntry), nil
 }
 
 // IndRefForNewObject inserts an object into the xRefTable and returns an indirect reference to it.
-func (xRefTable *XRefTable) IndRefForNewObject(obj interface{}) (*PDFIndirectRef, error) {
+func (xRefTable *XRefTable) IndRefForNewObject(obj PDFObject) (*PDFIndirectRef, error) {
 
 	objNr, err := xRefTable.InsertObject(obj)
 	if err != nil {
@@ -512,7 +512,7 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 	return nil
 }
 
-func (xRefTable *XRefTable) deleteObject(obj interface{}) error {
+func (xRefTable *XRefTable) deleteObject(obj PDFObject) error {
 
 	log.Debug.Println("deleteObject: begin")
 
@@ -569,7 +569,7 @@ func (xRefTable *XRefTable) deleteObject(obj interface{}) error {
 }
 
 // DeleteObjectGraph deletes all objects reachable by indRef.
-func (xRefTable *XRefTable) DeleteObjectGraph(obj interface{}) error {
+func (xRefTable *XRefTable) DeleteObjectGraph(obj PDFObject) error {
 
 	log.Debug.Println("DeleteObjectGraph: begin")
 
@@ -663,7 +663,7 @@ func (xRefTable *XRefTable) UndeleteObject(objectNumber int) error {
 }
 
 // indRefToObject dereferences an indirect object from the xRefTable and returns the result.
-func (xRefTable *XRefTable) indRefToObject(indObjRef *PDFIndirectRef) (interface{}, error) {
+func (xRefTable *XRefTable) indRefToObject(indObjRef *PDFIndirectRef) (PDFObject, error) {
 
 	if indObjRef == nil {
 		return nil, errors.New("indRefToObject: input argument is nil")
@@ -691,7 +691,7 @@ func (xRefTable *XRefTable) indRefToObject(indObjRef *PDFIndirectRef) (interface
 }
 
 // Dereference resolves an indirect object and returns the resulting PDF object.
-func (xRefTable *XRefTable) Dereference(obj interface{}) (interface{}, error) {
+func (xRefTable *XRefTable) Dereference(obj PDFObject) (PDFObject, error) {
 
 	indRef, ok := obj.(PDFIndirectRef)
 	if !ok {
@@ -703,7 +703,7 @@ func (xRefTable *XRefTable) Dereference(obj interface{}) (interface{}, error) {
 }
 
 // DereferenceInteger resolves and validates an integer object, which may be an indirect reference.
-func (xRefTable *XRefTable) DereferenceInteger(obj interface{}) (*PDFInteger, error) {
+func (xRefTable *XRefTable) DereferenceInteger(obj PDFObject) (*PDFInteger, error) {
 
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
@@ -719,7 +719,7 @@ func (xRefTable *XRefTable) DereferenceInteger(obj interface{}) (*PDFInteger, er
 }
 
 // DereferenceName resolves and validates a name object, which may be an indirect reference.
-func (xRefTable *XRefTable) DereferenceName(obj interface{}, sinceVersion PDFVersion, validate func(string) bool) (n PDFName, err error) {
+func (xRefTable *XRefTable) DereferenceName(obj PDFObject, sinceVersion PDFVersion, validate func(string) bool) (n PDFName, err error) {
 
 	obj, err = xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
@@ -746,7 +746,7 @@ func (xRefTable *XRefTable) DereferenceName(obj interface{}, sinceVersion PDFVer
 }
 
 // DereferenceStringLiteral resolves and validates a string literal object, which may be an indirect reference.
-func (xRefTable *XRefTable) DereferenceStringLiteral(obj interface{}, sinceVersion PDFVersion, validate func(string) bool) (s PDFStringLiteral, err error) {
+func (xRefTable *XRefTable) DereferenceStringLiteral(obj PDFObject, sinceVersion PDFVersion, validate func(string) bool) (s PDFStringLiteral, err error) {
 
 	obj, err = xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
@@ -779,7 +779,7 @@ func (xRefTable *XRefTable) DereferenceStringLiteral(obj interface{}, sinceVersi
 }
 
 // DereferenceStringOrHexLiteral resolves and validates a string or hex literal object, which may be an indirect reference.
-func (xRefTable *XRefTable) DereferenceStringOrHexLiteral(obj interface{}, sinceVersion PDFVersion, validate func(string) bool) (o interface{}, err error) {
+func (xRefTable *XRefTable) DereferenceStringOrHexLiteral(obj PDFObject, sinceVersion PDFVersion, validate func(string) bool) (o PDFObject, err error) {
 
 	o, err = xRefTable.Dereference(obj)
 	if err != nil || o == nil {
@@ -812,7 +812,7 @@ func (xRefTable *XRefTable) DereferenceStringOrHexLiteral(obj interface{}, since
 	// Version check
 	err = xRefTable.ValidateVersion("DereferenceStringOrHexLiteral", sinceVersion)
 	if err != nil {
-		return s, err
+		return nil, err
 	}
 
 	// Validation
@@ -823,8 +823,8 @@ func (xRefTable *XRefTable) DereferenceStringOrHexLiteral(obj interface{}, since
 	return o, nil
 }
 
-// DereferenceArray resolves an indirect object that points to a PDFArray.
-func (xRefTable *XRefTable) DereferenceArray(obj interface{}) (*PDFArray, error) {
+// DereferenceArray resolves and validates an array object, which may be an indirect reference.
+func (xRefTable *XRefTable) DereferenceArray(obj PDFObject) (*PDFArray, error) {
 
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
@@ -839,8 +839,8 @@ func (xRefTable *XRefTable) DereferenceArray(obj interface{}) (*PDFArray, error)
 	return &arr, nil
 }
 
-// DereferenceDict resolves an indirect object that points to a PDFDict.
-func (xRefTable *XRefTable) DereferenceDict(obj interface{}) (*PDFDict, error) {
+// DereferenceDict resolves and validates a dictionary object, which may be an indirect reference.
+func (xRefTable *XRefTable) DereferenceDict(obj PDFObject) (*PDFDict, error) {
 
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
@@ -855,8 +855,8 @@ func (xRefTable *XRefTable) DereferenceDict(obj interface{}) (*PDFDict, error) {
 	return &dict, nil
 }
 
-// DereferenceStreamDict resolves an indirect object that points to a PDFStreamDict.
-func (xRefTable *XRefTable) DereferenceStreamDict(obj interface{}) (*PDFStreamDict, error) {
+// DereferenceStreamDict resolves and validates a stream dictionary object, which may be an indirect reference.
+func (xRefTable *XRefTable) DereferenceStreamDict(obj PDFObject) (*PDFStreamDict, error) {
 
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {

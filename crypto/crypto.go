@@ -767,7 +767,7 @@ func applyRC4Cipher(b []byte, objNr, genNr int, key []byte, needAES bool) (*stri
 	return &s1, nil
 }
 
-func encrypt(m map[string]interface{}, k string, v interface{}, objNr, genNr int, key []byte, aes bool) error {
+func encrypt(m map[string]types.PDFObject, k string, v types.PDFObject, objNr, genNr int, key []byte, aes bool) error {
 
 	s, err := EncryptDeepObject(v, objNr, genNr, key, aes)
 	if err != nil {
@@ -782,7 +782,7 @@ func encrypt(m map[string]interface{}, k string, v interface{}, objNr, genNr int
 }
 
 // EncryptDeepObject recurses over non trivial PDF objects and encrypts all strings encountered.
-func EncryptDeepObject(objIn interface{}, objNr, genNr int, key []byte, aes bool) (*types.PDFStringLiteral, error) {
+func EncryptDeepObject(objIn types.PDFObject, objNr, genNr int, key []byte, aes bool) (*types.PDFStringLiteral, error) {
 
 	_, ok := objIn.(types.PDFIndirectRef)
 	if ok {
@@ -836,7 +836,7 @@ func EncryptDeepObject(objIn interface{}, objNr, genNr int, key []byte, aes bool
 }
 
 // DecryptDeepObject recurses over non trivial PDF objects and decrypts all strings encountered.
-func DecryptDeepObject(objIn interface{}, objNr, genNr int, key []byte, aes bool) (*types.PDFStringLiteral, error) {
+func DecryptDeepObject(objIn types.PDFObject, objNr, genNr int, key []byte, aes bool) (*types.PDFStringLiteral, error) {
 
 	_, ok := objIn.(types.PDFIndirectRef)
 	if ok {

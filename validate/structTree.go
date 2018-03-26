@@ -137,7 +137,7 @@ func validateStructElementDictEntryKArray(xRefTable *types.XRefTable, arr *types
 	return nil
 }
 
-func validateStructElementDictEntryK(xRefTable *types.XRefTable, obj interface{}) error {
+func validateStructElementDictEntryK(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	// K: optional, the children of this structure element
 	//
@@ -224,7 +224,7 @@ func processStructElementDictPgEntry(xRefTable *types.XRefTable, indRef types.PD
 	return nil
 }
 
-func validateStructElementDictEntryA(xRefTable *types.XRefTable, obj interface{}) error {
+func validateStructElementDictEntryA(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
@@ -274,7 +274,7 @@ func validateStructElementDictEntryA(xRefTable *types.XRefTable, obj interface{}
 	return nil
 }
 
-func validateStructElementDictEntryC(xRefTable *types.XRefTable, obj interface{}) error {
+func validateStructElementDictEntryC(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
@@ -484,7 +484,7 @@ func validateStructTreeRootDictEntryKArray(xRefTable *types.XRefTable, arr *type
 	return nil
 }
 
-func validateStructTreeRootDictEntryK(xRefTable *types.XRefTable, obj interface{}) error {
+func validateStructTreeRootDictEntryK(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	// The immediate child or children of the structure tree root in the structure hierarchy.
 	// The value may be either a dictionary representing a single structure element or an array of such dictionaries.

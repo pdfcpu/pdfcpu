@@ -281,7 +281,7 @@ func validateShadingStreamDict(xRefTable *types.XRefTable, streamDict *types.PDF
 	return err
 }
 
-func validateShading(xRefTable *types.XRefTable, obj interface{}) error {
+func validateShading(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	// see 8.7.4.3 Shading Dictionaries
 
@@ -306,7 +306,7 @@ func validateShading(xRefTable *types.XRefTable, obj interface{}) error {
 	return err
 }
 
-func validateShadingResourceDict(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
+func validateShadingResourceDict(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error {
 
 	// see 8.7.4.3 Shading Dictionaries
 

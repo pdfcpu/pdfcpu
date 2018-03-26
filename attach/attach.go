@@ -42,8 +42,8 @@ func processFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict, proces
 	if !found || obj == nil {
 		return nil
 	}
-	var sd *types.PDFStreamDict
-	sd, err = xRefTable.DereferenceStreamDict(obj)
+
+	sd, err := xRefTable.DereferenceStreamDict(obj)
 	if err != nil || sd == nil {
 		return err
 	}

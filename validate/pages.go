@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateResourceDict(xRefTable *types.XRefTable, obj interface{}) (hasResources bool, err error) {
+func validateResourceDict(xRefTable *types.XRefTable, obj types.PDFObject) (hasResources bool, err error) {
 
 	dict, err := xRefTable.DereferenceDict(obj)
 	if err != nil || dict == nil {
@@ -14,7 +14,7 @@ func validateResourceDict(xRefTable *types.XRefTable, obj interface{}) (hasResou
 	}
 
 	for k, v := range map[string]struct {
-		validate     func(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error
+		validate     func(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error
 		sinceVersion types.PDFVersion
 	}{
 		"ExtGState":  {validateExtGStateResourceDict, types.V10},

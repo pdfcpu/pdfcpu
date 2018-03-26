@@ -71,7 +71,7 @@ func NewPDFObjectStreamDict() *PDFObjectStreamDict {
 }
 
 // IndexedObject returns the object at given index from a PDFObjectStreamDict.
-func (oStreamDict *PDFObjectStreamDict) IndexedObject(index int) (interface{}, error) {
+func (oStreamDict *PDFObjectStreamDict) IndexedObject(index int) (PDFObject, error) {
 	if oStreamDict.ObjArray == nil {
 		return nil, errors.Errorf("IndexedObject(%d): object not available", index)
 	}

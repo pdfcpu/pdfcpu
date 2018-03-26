@@ -93,7 +93,7 @@ func validateUCR2Entry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName
 	return err
 }
 
-func validateTransferFunction(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateTransferFunction(xRefTable *types.XRefTable, obj types.PDFObject) (err error) {
 
 	switch obj := obj.(type) {
 
@@ -150,7 +150,7 @@ func validateTransferFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDi
 	return validateTransferFunction(xRefTable, obj)
 }
 
-func validateTR2(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateTR2(xRefTable *types.XRefTable, obj types.PDFObject) (err error) {
 
 	switch obj := obj.(type) {
 
@@ -826,7 +826,7 @@ func validateExtGStateDictPart3(xRefTable *types.XRefTable, dict *types.PDFDict,
 	return err
 }
 
-func validateExtGStateDict(xRefTable *types.XRefTable, obj interface{}) error {
+func validateExtGStateDict(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	// 8.4.5 Graphics State Parameter Dictionaries
 
@@ -856,7 +856,7 @@ func validateExtGStateDict(xRefTable *types.XRefTable, obj interface{}) error {
 	return validateExtGStateDictPart3(xRefTable, dict, dictName)
 }
 
-func validateExtGStateResourceDict(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
+func validateExtGStateResourceDict(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error {
 
 	dict, err := xRefTable.DereferenceDict(obj)
 	if err != nil || dict == nil {

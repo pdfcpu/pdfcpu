@@ -183,7 +183,7 @@ func processFunctionStreamDict(xRefTable *types.XRefTable, sd *types.PDFStreamDi
 	return err
 }
 
-func processFunction(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func processFunction(xRefTable *types.XRefTable, obj types.PDFObject) (err error) {
 
 	// Function dict: dict or stream dict with required entry "FunctionType" (integer):
 	// 0: Sampled function (stream dict)
@@ -210,7 +210,7 @@ func processFunction(xRefTable *types.XRefTable, obj interface{}) (err error) {
 	return err
 }
 
-func validateFunction(xRefTable *types.XRefTable, obj interface{}) error {
+func validateFunction(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil {

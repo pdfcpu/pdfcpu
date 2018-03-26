@@ -15,11 +15,11 @@ func patchIndRef(indRef *types.PDFIndirectRef, lookup map[int]int) {
 	indRef.ObjectNumber = types.PDFInteger(lookup[i])
 }
 
-func patchObject(o interface{}, lookup map[int]int) interface{} {
+func patchObject(o types.PDFObject, lookup map[int]int) types.PDFObject {
 
 	log.Debug.Printf("patchObject before: %v\n", o)
 
-	var ob interface{}
+	var ob types.PDFObject
 
 	switch obj := o.(type) {
 

@@ -5,7 +5,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateDestinationArrayFirstElement(xRefTable *types.XRefTable, arr *types.PDFArray) (interface{}, error) {
+func validateDestinationArrayFirstElement(xRefTable *types.XRefTable, arr *types.PDFArray) (types.PDFObject, error) {
 
 	obj, err := xRefTable.Dereference((*arr)[0])
 	if err != nil || obj == nil {
@@ -95,7 +95,7 @@ func validateDestinationDict(xRefTable *types.XRefTable, dict *types.PDFDict) er
 	return validateDestinationArray(xRefTable, arr)
 }
 
-func validateDestination(xRefTable *types.XRefTable, obj interface{}) error {
+func validateDestination(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {

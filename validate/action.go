@@ -430,7 +430,7 @@ func validateMovieActionDict(xRefTable *types.XRefTable, dict *types.PDFDict, di
 	return err
 }
 
-func validateHideActionDictEntryT(xRefTable *types.XRefTable, obj interface{}) error {
+func validateHideActionDictEntryT(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	switch obj := obj.(type) {
 

@@ -5,7 +5,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateSignatureDict(xRefTable *types.XRefTable, obj interface{}) error {
+func validateSignatureDict(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	dict, err := xRefTable.DereferenceDict(obj)
 	if err != nil || dict == nil {
@@ -35,7 +35,7 @@ func validateAppearanceSubDict(xRefTable *types.XRefTable, subDict *types.PDFDic
 	return nil
 }
 
-func validateAppearanceDictEntry(xRefTable *types.XRefTable, obj interface{}) error {
+func validateAppearanceDictEntry(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	// stream or dict
 	// single appearance stream or subdict
@@ -61,7 +61,7 @@ func validateAppearanceDictEntry(xRefTable *types.XRefTable, obj interface{}) er
 	return err
 }
 
-func validateAppearanceDict(xRefTable *types.XRefTable, obj interface{}) error {
+func validateAppearanceDict(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	// see 12.5.5 Appearance Streams
 
@@ -231,7 +231,7 @@ func validateAcroFieldDict(xRefTable *types.XRefTable, indRef *types.PDFIndirect
 	return err
 }
 
-func validateAcroFormFields(xRefTable *types.XRefTable, obj interface{}) error {
+func validateAcroFormFields(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	arr, err := xRefTable.DereferenceArray(obj)
 	if err != nil || arr == nil {
@@ -255,7 +255,7 @@ func validateAcroFormFields(xRefTable *types.XRefTable, obj interface{}) error {
 	return nil
 }
 
-func validateAcroFormCO(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
+func validateAcroFormCO(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error {
 
 	// see 12.6.3 Trigger Events
 	// Array of indRefs to field dicts with calculation actions, since V1.3
@@ -323,9 +323,7 @@ func validateAcroFormXFA(xRefTable *types.XRefTable, dict *types.PDFDict, sinceV
 				return errors.New("validateAcroFormXFA: array entry is nil")
 			}
 
-			var o interface{}
-
-			o, err = xRefTable.Dereference(v)
+			o, err := xRefTable.Dereference(v)
 			if err != nil {
 				return err
 			}

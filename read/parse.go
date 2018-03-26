@@ -340,7 +340,7 @@ func parseArray(line *string) (*types.PDFArray, error) {
 	return &arr, nil
 }
 
-func parseStringLiteral(line *string) (interface{}, error) {
+func parseStringLiteral(line *string) (types.PDFObject, error) {
 
 	// Balanced pairs of parenthesis are allowed.
 	// Empty literals are allowed.
@@ -397,7 +397,7 @@ func parseStringLiteral(line *string) (interface{}, error) {
 	return stringLiteral, nil
 }
 
-func parseHexLiteral(line *string) (interface{}, error) {
+func parseHexLiteral(line *string) (types.PDFObject, error) {
 
 	// hexliterals have no whitespace and can't be empty.
 
@@ -549,7 +549,7 @@ func noBuf(l *string) bool {
 	return l == nil || len(*l) == 0
 }
 
-func parseNumericOrIndRef(line *string) (interface{}, error) {
+func parseNumericOrIndRef(line *string) (types.PDFObject, error) {
 
 	if noBuf(line) {
 		return nil, errBufNotAvailable
@@ -662,7 +662,7 @@ func parseNumericOrIndRef(line *string) (interface{}, error) {
 	return types.PDFInteger(i), nil
 }
 
-func parseHexLiteralOrDict(l *string) (val interface{}, err error) {
+func parseHexLiteralOrDict(l *string) (val types.PDFObject, err error) {
 
 	if len(*l) < 2 {
 		return nil, errBufNotAvailable
@@ -687,7 +687,7 @@ func parseHexLiteralOrDict(l *string) (val interface{}, err error) {
 	return val, nil
 }
 
-func parseBoolean(l string) (val interface{}, s string, ok bool) {
+func parseBoolean(l string) (val types.PDFObject, s string, ok bool) {
 
 	// null, absent object
 	if strings.HasPrefix(l, "null") {
@@ -711,7 +711,7 @@ func parseBoolean(l string) (val interface{}, s string, ok bool) {
 }
 
 // parseObject parses next PDFObject from string buffer.
-func parseObject(line *string) (interface{}, error) {
+func parseObject(line *string) (types.PDFObject, error) {
 
 	if noBuf(line) {
 		return nil, errBufNotAvailable
@@ -728,7 +728,7 @@ func parseObject(line *string) (interface{}, error) {
 		return nil, errBufNotAvailable
 	}
 
-	var value interface{}
+	var value types.PDFObject
 	var err error
 
 	switch l[0] {

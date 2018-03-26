@@ -20,8 +20,6 @@ import (
 // Write root entry to disk.
 func writeRootEntry(ctx *types.PDFContext, dict *types.PDFDict, dictName, entryName string, statsAttr int) error {
 
-	var obj interface{}
-
 	obj, err := writeEntry(ctx, dict, dictName, entryName)
 	if err != nil {
 		return err

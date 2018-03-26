@@ -510,7 +510,7 @@ func writePDFStreamDictObject(ctx *types.PDFContext, objNumber, genNumber int, s
 	return nil
 }
 
-func writeDirectObject(ctx *types.PDFContext, o interface{}) error {
+func writeDirectObject(ctx *types.PDFContext, o types.PDFObject) error {
 
 	switch o := o.(type) {
 
@@ -611,7 +611,7 @@ func writeDeepPDFArray(ctx *types.PDFContext, arr types.PDFArray, objNr, genNr i
 	return nil
 }
 
-func writeIndirectObject(ctx *types.PDFContext, indRef types.PDFIndirectRef) (interface{}, error) {
+func writeIndirectObject(ctx *types.PDFContext, indRef types.PDFIndirectRef) (types.PDFObject, error) {
 
 	objNumber := int(indRef.ObjectNumber)
 	genNumber := int(indRef.GenerationNumber)
@@ -676,7 +676,7 @@ func writeIndirectObject(ctx *types.PDFContext, indRef types.PDFIndirectRef) (in
 	return nil, err
 }
 
-func writeDeepObject(ctx *types.PDFContext, objIn interface{}) (objOut interface{}, written bool, err error) {
+func writeDeepObject(ctx *types.PDFContext, objIn types.PDFObject) (objOut types.PDFObject, written bool, err error) {
 
 	log.Debug.Printf("writeDeepObject: begin offset=%d\n%s\n", ctx.Write.Offset, objIn)
 
@@ -696,7 +696,7 @@ func writeDeepObject(ctx *types.PDFContext, objIn interface{}) (objOut interface
 	return objOut, written, err
 }
 
-func writeEntry(ctx *types.PDFContext, dict *types.PDFDict, dictName, entryName string) (interface{}, error) {
+func writeEntry(ctx *types.PDFContext, dict *types.PDFDict, dictName, entryName string) (types.PDFObject, error) {
 
 	obj, found := dict.Find(entryName)
 	if !found || obj == nil {

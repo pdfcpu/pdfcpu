@@ -64,7 +64,14 @@ func processPageDict(ctx *types.PDFContext, objNumber, genNumber int, dict *type
 		// process array of content stream dicts.
 		for i, obj := range obj {
 
-			streamDict, _ := ctx.DereferenceStreamDict(obj)
+			streamDict, err := ctx.DereferenceStreamDict(obj)
+			if err != nil {
+				return err
+			}
+
+			if streamDict == nil {
+				continue
+			}
 
 			err = writeContent(ctx, streamDict, pageNumber, i)
 			if err != nil {

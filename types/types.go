@@ -17,9 +17,10 @@ const (
 	EolLF   = "\x0A"
 	EolCR   = "\x0D"
 	EolCRLF = "\x0D\x0A"
-
-	FreeHeadGeneration = 65535
 )
+
+// FreeHeadGeneration is the predefined generation number for the head of the free list.
+const FreeHeadGeneration = 65535
 
 // ByteSize represents the various terms for storage space.
 type ByteSize float64
@@ -51,6 +52,13 @@ type IntSet map[int]bool
 
 // StringSet is a set of strings.
 type StringSet map[string]bool
+
+// PDFObject defines an interface for all PDFObjects.
+type PDFObject interface {
+	fmt.Stringer
+	PDFString() string
+	//Value()
+}
 
 // PDFBoolean represents a PDF boolean object.
 type PDFBoolean bool
@@ -213,17 +221,17 @@ func NewPDFIndirectRef(objectNumber, generationNumber int) *PDFIndirectRef {
 		GenerationNumber: PDFInteger(generationNumber)}
 }
 
-func (indirectRef PDFIndirectRef) String() string {
-	return fmt.Sprintf("(%d %d R)", indirectRef.ObjectNumber, indirectRef.GenerationNumber)
+func (ir PDFIndirectRef) String() string {
+	return fmt.Sprintf("(%s)", ir.PDFString())
 }
 
 // PDFString returns a string representation as found in and written to a PDF file.
-func (indirectRef PDFIndirectRef) PDFString() string {
-	return fmt.Sprintf("%d %d R", indirectRef.ObjectNumber, indirectRef.GenerationNumber)
+func (ir PDFIndirectRef) PDFString() string {
+	return fmt.Sprintf("%d %d R", ir.ObjectNumber, ir.GenerationNumber)
 }
 
 // Equals returns true if two indirect References refer to the same object.
-func (indirectRef PDFIndirectRef) Equals(indRef PDFIndirectRef) bool {
-	return indirectRef.ObjectNumber == indRef.ObjectNumber &&
-		indirectRef.GenerationNumber == indRef.GenerationNumber
+func (ir PDFIndirectRef) Equals(indRef PDFIndirectRef) bool {
+	return ir.ObjectNumber == indRef.ObjectNumber &&
+		ir.GenerationNumber == indRef.GenerationNumber
 }

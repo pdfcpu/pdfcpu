@@ -61,7 +61,7 @@ func validateEmbeddedFileStreamMacParameterDict(xRefTable *types.XRefTable, dict
 	return err
 }
 
-func validateEmbeddedFileStreamParameterDict(xRefTable *types.XRefTable, obj interface{}) error {
+func validateEmbeddedFileStreamParameterDict(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	dict, err := xRefTable.DereferenceDict(obj)
 	if err != nil || obj == nil {
@@ -385,7 +385,7 @@ func validateFileSpecDict(xRefTable *types.XRefTable, dict *types.PDFDict) error
 	return err
 }
 
-func validateFileSpecification(xRefTable *types.XRefTable, obj interface{}) (interface{}, error) {
+func validateFileSpecification(xRefTable *types.XRefTable, obj types.PDFObject) (types.PDFObject, error) {
 
 	// See 7.11.4
 
@@ -422,7 +422,7 @@ func validateFileSpecification(xRefTable *types.XRefTable, obj interface{}) (int
 	return obj, nil
 }
 
-func validateURLSpecification(xRefTable *types.XRefTable, obj interface{}) (interface{}, error) {
+func validateURLSpecification(xRefTable *types.XRefTable, obj types.PDFObject) (types.PDFObject, error) {
 
 	// See 7.11.4
 
@@ -449,7 +449,7 @@ func validateURLSpecification(xRefTable *types.XRefTable, obj interface{}) (inte
 	return obj, err
 }
 
-func validateFileSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (interface{}, error) {
+func validateFileSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (types.PDFObject, error) {
 
 	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required, sinceVersion)
 	if err != nil || obj == nil {
@@ -464,7 +464,7 @@ func validateFileSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dict
 	return validateFileSpecification(xRefTable, obj)
 }
 
-func validateURLSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (interface{}, error) {
+func validateURLSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (types.PDFObject, error) {
 
 	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required, sinceVersion)
 	if err != nil || obj == nil {
@@ -479,7 +479,7 @@ func validateURLSpecEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictN
 	return validateURLSpecification(xRefTable, obj)
 }
 
-func validateFileSpecificationOrFormObject(xRefTable *types.XRefTable, obj interface{}) error {
+func validateFileSpecificationOrFormObject(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	sd, ok := obj.(types.PDFStreamDict)
 	if ok {

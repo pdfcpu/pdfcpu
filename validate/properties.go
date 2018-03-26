@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validatePropertiesDict(xRefTable *types.XRefTable, obj interface{}) error {
+func validatePropertiesDict(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	// see 14.6.2
 	// a dictionary containing private information meaningful to the conforming writer creating marked content.
@@ -85,7 +85,7 @@ func validatePropertiesDict(xRefTable *types.XRefTable, obj interface{}) error {
 	return nil
 }
 
-func validatePropertiesResourceDict(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
+func validatePropertiesResourceDict(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error {
 
 	// Version check
 	err := xRefTable.ValidateVersion("PropertiesResourceDict", sinceVersion)

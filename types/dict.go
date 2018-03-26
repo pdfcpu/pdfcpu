@@ -13,12 +13,12 @@ import (
 
 // PDFDict represents a PDF dict object.
 type PDFDict struct {
-	Dict map[string]interface{}
+	Dict map[string]PDFObject
 }
 
 // NewPDFDict returns a new PDFDict object.
 func NewPDFDict() PDFDict {
-	return PDFDict{Dict: map[string]interface{}{}}
+	return PDFDict{Dict: map[string]PDFObject{}}
 }
 
 // Len returns the length of this PDFDict.
@@ -27,7 +27,7 @@ func (d *PDFDict) Len() int {
 }
 
 // Insert adds a new entry to this PDFDict.
-func (d *PDFDict) Insert(key string, value interface{}) (ok bool) {
+func (d *PDFDict) Insert(key string, value PDFObject) (ok bool) {
 	if _, found := d.Find(key); found {
 		return false
 	}
@@ -56,20 +56,20 @@ func (d *PDFDict) InsertName(key, value string) {
 }
 
 // Update modifies an existing entry of this PDFDict.
-func (d *PDFDict) Update(key string, value interface{}) {
+func (d *PDFDict) Update(key string, value PDFObject) {
 	if value != nil {
 		d.Dict[key] = value
 	}
 }
 
 // Find returns the PDFObject for given key and PDFDict.
-func (d PDFDict) Find(key string) (value interface{}, found bool) {
+func (d PDFDict) Find(key string) (value PDFObject, found bool) {
 	value, found = d.Dict[key]
 	return
 }
 
 // Delete deletes the PDFObject for given key.
-func (d *PDFDict) Delete(key string) (value interface{}) {
+func (d *PDFDict) Delete(key string) (value PDFObject) {
 
 	value, found := d.Find(key)
 	if !found {
@@ -82,7 +82,7 @@ func (d *PDFDict) Delete(key string) (value interface{}) {
 }
 
 // Entry returns the value for given key.
-func (d *PDFDict) Entry(dictName, key string, required bool) (interface{}, error) {
+func (d *PDFDict) Entry(dictName, key string, required bool) (PDFObject, error) {
 	obj, found := d.Find(key)
 	if !found || obj == nil {
 		if required {
@@ -363,10 +363,10 @@ func (d PDFDict) IsLinearizationParmDict() bool {
 	return d.IntEntry("Linearized") != nil
 }
 
-func (d PDFDict) string(ident int) string {
+func (d PDFDict) indentedString(level int) string {
 
 	logstr := []string{"<<\n"}
-	tabstr := strings.Repeat("\t", ident)
+	tabstr := strings.Repeat("\t", level)
 
 	var keys []string
 	for k := range d.Dict {
@@ -379,13 +379,13 @@ func (d PDFDict) string(ident int) string {
 		v := d.Dict[k]
 
 		if subdict, ok := v.(PDFDict); ok {
-			dictStr := subdict.string(ident + 1)
+			dictStr := subdict.indentedString(level + 1)
 			logstr = append(logstr, fmt.Sprintf("%s<%s, %s>\n", tabstr, k, dictStr))
 			continue
 		}
 
 		if array, ok := v.(PDFArray); ok {
-			arrStr := array.string(ident + 1)
+			arrStr := array.indentedString(level + 1)
 			logstr = append(logstr, fmt.Sprintf("%s<%s, %s>\n", tabstr, k, arrStr))
 			continue
 		}
@@ -394,7 +394,7 @@ func (d PDFDict) string(ident int) string {
 
 	}
 
-	logstr = append(logstr, fmt.Sprintf("%s%s", strings.Repeat("\t", ident-1), ">>"))
+	logstr = append(logstr, fmt.Sprintf("%s%s", strings.Repeat("\t", level-1), ">>"))
 
 	return strings.Join(logstr, "")
 }
@@ -486,7 +486,7 @@ func (d PDFDict) PDFString() string {
 }
 
 func (d PDFDict) String() string {
-	return d.string(1)
+	return d.indentedString(1)
 }
 
 // StringEntryBytes returns the byte slice representing the string value for key.

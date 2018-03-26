@@ -158,7 +158,7 @@ func validateICCBasedColorSpace(xRefTable *types.XRefTable, arr *types.PDFArray,
 	return err
 }
 
-func validateIndexedColorSpaceLookuptable(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
+func validateIndexedColorSpaceLookuptable(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error {
 
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
@@ -355,7 +355,7 @@ func validateDeviceNColorSpaceMixingHintsDict(xRefTable *types.XRefTable, dict *
 	return nil
 }
 
-func validateDeviceNColorSpaceAttributesDict(xRefTable *types.XRefTable, obj interface{}) error {
+func validateDeviceNColorSpaceAttributesDict(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	dict, err := xRefTable.DereferenceDict(obj)
 	if err != nil || dict == nil {
@@ -557,7 +557,7 @@ func validateColorSpaceArray(xRefTable *types.XRefTable, arr *types.PDFArray, ex
 	return err
 }
 
-func validateColorSpace(xRefTable *types.XRefTable, obj interface{}, excludePatternCS bool) error {
+func validateColorSpace(xRefTable *types.XRefTable, obj types.PDFObject, excludePatternCS bool) error {
 
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
@@ -608,7 +608,7 @@ func validateColorSpaceEntry(xRefTable *types.XRefTable, dict *types.PDFDict, di
 	return err
 }
 
-func validateColorSpaceResourceDict(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
+func validateColorSpaceResourceDict(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error {
 
 	// see 8.6 Color Spaces
 

@@ -17,7 +17,7 @@ const (
 	OPTIONAL = false
 )
 
-func validateEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) (interface{}, error) {
+func validateEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) (types.PDFObject, error) {
 
 	obj, found := dict.Find(entryName)
 	if !found || obj == nil {
@@ -48,7 +48,7 @@ func validateEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, en
 	return obj, nil
 }
 
-func validateArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (*types.PDFArray, error) {
+func validateArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (*types.PDFArray, error) {
 
 	log.Debug.Printf("validateArrayEntry begin: entry=%s\n", entryName)
 
@@ -90,7 +90,7 @@ func validateArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictNam
 	return &arr, nil
 }
 
-func validateBooleanEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion, validate func(bool) bool) (*types.PDFBoolean, error) {
+func validateBooleanEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion, validate func(bool) bool) (*types.PDFBoolean, error) {
 
 	log.Debug.Printf("validateBooleanEntry begin: entry=%s\n", entryName)
 
@@ -132,7 +132,7 @@ func validateBooleanEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictN
 	return &b, nil
 }
 
-func validateBooleanArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (*types.PDFArray, error) {
+func validateBooleanArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (*types.PDFArray, error) {
 
 	log.Debug.Printf("validateBooleanArrayEntry begin: entry=%s\n", entryName)
 
@@ -163,11 +163,11 @@ func validateBooleanArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, 
 	return arr, nil
 }
 
-func validateDateObject(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) (types.PDFStringLiteral, error) {
+func validateDateObject(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) (types.PDFStringLiteral, error) {
 	return xRefTable.DereferenceStringLiteral(obj, sinceVersion, validateDate)
 }
 
-func validateDateEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (*types.PDFStringLiteral, error) {
+func validateDateEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) (*types.PDFStringLiteral, error) {
 
 	log.Debug.Printf("validateDateEntry begin: entry=%s\n", entryName)
 
@@ -209,7 +209,7 @@ func validateDateEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName
 	return &date, nil
 }
 
-func validateDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFDict) bool) (*types.PDFDict, error) {
+func validateDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFDict) bool) (*types.PDFDict, error) {
 
 	log.Debug.Printf("validateDictEntry begin: entry=%s\n", entryName)
 
@@ -251,7 +251,7 @@ func validateDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName
 	return &d, nil
 }
 
-func validateFloat(xRefTable *types.XRefTable, obj interface{}, validate func(float64) bool) (*types.PDFFloat, error) {
+func validateFloat(xRefTable *types.XRefTable, obj types.PDFObject, validate func(float64) bool) (*types.PDFFloat, error) {
 
 	log.Debug.Println("validateFloat begin")
 
@@ -278,7 +278,7 @@ func validateFloat(xRefTable *types.XRefTable, obj interface{}, validate func(fl
 	return &f, nil
 }
 
-func validateFloatEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion, validate func(float64) bool) (*types.PDFFloat, error) {
+func validateFloatEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion, validate func(float64) bool) (*types.PDFFloat, error) {
 
 	log.Debug.Printf("validateFloatEntry begin: entry=%s\n", entryName)
 
@@ -320,7 +320,7 @@ func validateFloatEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictNam
 	return &f, nil
 }
 
-func validateFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) error {
+func validateFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
 	log.Debug.Printf("validateFunctionEntry begin: entry=%s\n", entryName)
 
@@ -344,7 +344,7 @@ func validateFunctionEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dict
 	return nil
 }
 
-func validateFunctionArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (*types.PDFArray, error) {
+func validateFunctionArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (*types.PDFArray, error) {
 
 	log.Debug.Printf("validateFunctionArrayEntry begin: entry=%s\n", entryName)
 
@@ -421,7 +421,7 @@ func validateFunctionOrArrayOfFunctionsEntry(xRefTable *types.XRefTable, dict *t
 	return nil
 }
 
-func validateIndRefEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion) (*types.PDFIndirectRef, error) {
+func validateIndRefEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) (*types.PDFIndirectRef, error) {
 
 	log.Debug.Printf("validateIndRefEntry begin: entry=%s\n", entryName)
 
@@ -446,7 +446,7 @@ func validateIndRefEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictNa
 	return &indRef, nil
 }
 
-func validateIndRefArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (*types.PDFArray, error) {
+func validateIndRefArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (*types.PDFArray, error) {
 
 	log.Debug.Printf("validateIndRefArrayEntry begin: entry=%s\n", entryName)
 
@@ -467,7 +467,7 @@ func validateIndRefArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, d
 	return arr, nil
 }
 
-func validateInteger(xRefTable *types.XRefTable, obj interface{}, validate func(int) bool) (*types.PDFInteger, error) {
+func validateInteger(xRefTable *types.XRefTable, obj types.PDFObject, validate func(int) bool) (*types.PDFInteger, error) {
 
 	log.Debug.Println("validateInteger begin")
 
@@ -495,7 +495,7 @@ func validateInteger(xRefTable *types.XRefTable, obj interface{}, validate func(
 	return &i, nil
 }
 
-func validateIntegerEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion, validate func(int) bool) (*types.PDFInteger, error) {
+func validateIntegerEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion, validate func(int) bool) (*types.PDFInteger, error) {
 
 	log.Debug.Printf("validateIntegerEntry begin: entry=%s\n", entryName)
 
@@ -537,7 +537,7 @@ func validateIntegerEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictN
 	return &i, nil
 }
 
-func validateIntegerArray(xRefTable *types.XRefTable, obj interface{}) (*types.PDFArray, error) {
+func validateIntegerArray(xRefTable *types.XRefTable, obj types.PDFObject) (*types.PDFArray, error) {
 
 	log.Debug.Println("validateIntegerArray begin")
 
@@ -573,7 +573,7 @@ func validateIntegerArray(xRefTable *types.XRefTable, obj interface{}) (*types.P
 	return a, nil
 }
 
-func validateIntegerArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (*types.PDFArray, error) {
+func validateIntegerArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (*types.PDFArray, error) {
 
 	log.Debug.Printf("validateIntegerArrayEntry begin: entry=%s\n", entryName)
 
@@ -605,7 +605,7 @@ func validateIntegerArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, 
 	return arr, nil
 }
 
-func validateName(xRefTable *types.XRefTable, obj interface{}, validate func(string) bool) (*types.PDFName, error) {
+func validateName(xRefTable *types.XRefTable, obj types.PDFObject, validate func(string) bool) (*types.PDFName, error) {
 
 	log.Debug.Println("validateName begin")
 
@@ -632,7 +632,7 @@ func validateName(xRefTable *types.XRefTable, obj interface{}, validate func(str
 	return &name, nil
 }
 
-func validateNameEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion, validate func(string) bool) (*types.PDFName, error) {
+func validateNameEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion, validate func(string) bool) (*types.PDFName, error) {
 
 	log.Debug.Printf("validateNameEntry begin: entry=%s\n", entryName)
 
@@ -674,7 +674,7 @@ func validateNameEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName
 	return &name, nil
 }
 
-func validateNameArray(xRefTable *types.XRefTable, obj interface{}) (*types.PDFArray, error) {
+func validateNameArray(xRefTable *types.XRefTable, obj types.PDFObject) (*types.PDFArray, error) {
 
 	log.Debug.Println("validateNameArray begin")
 
@@ -706,7 +706,7 @@ func validateNameArray(xRefTable *types.XRefTable, obj interface{}) (*types.PDFA
 	return arr, nil
 }
 
-func validateNameArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion, validate func(a types.PDFArray) bool) (*types.PDFArray, error) {
+func validateNameArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion, validate func(a types.PDFArray) bool) (*types.PDFArray, error) {
 
 	log.Debug.Printf("validateNameArrayEntry begin: entry=%s\n", entryName)
 
@@ -738,7 +738,7 @@ func validateNameArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dic
 	return arr, nil
 }
 
-func validateNumber(xRefTable *types.XRefTable, obj interface{}) (interface{}, error) {
+func validateNumber(xRefTable *types.XRefTable, obj types.PDFObject) (types.PDFObject, error) {
 
 	log.Debug.Println("validateNumber begin")
 
@@ -768,7 +768,7 @@ func validateNumber(xRefTable *types.XRefTable, obj interface{}) (interface{}, e
 	return n, nil
 }
 
-func validateNumberEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion, validate func(f float64) bool) (interface{}, error) {
+func validateNumberEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion, validate func(f float64) bool) (types.PDFObject, error) {
 
 	log.Debug.Printf("validateNumberEntry begin: entry=%s\n", entryName)
 
@@ -809,7 +809,7 @@ func validateNumberEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictNa
 	return obj, nil
 }
 
-func validateNumberArray(xRefTable *types.XRefTable, obj interface{}) (*types.PDFArray, error) {
+func validateNumberArray(xRefTable *types.XRefTable, obj types.PDFObject) (*types.PDFArray, error) {
 
 	log.Debug.Println("validateNumberArray begin")
 
@@ -848,7 +848,7 @@ func validateNumberArray(xRefTable *types.XRefTable, obj interface{}) (*types.PD
 	return nil, err
 }
 
-func validateNumberArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (*types.PDFArray, error) {
+func validateNumberArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (*types.PDFArray, error) {
 
 	log.Debug.Printf("validateNumberArrayEntry begin: entry=%s\n", entryName)
 
@@ -887,7 +887,7 @@ func validateNumberArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, d
 	return arr, nil
 }
 
-func validateRectangleEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (*types.PDFArray, error) {
+func validateRectangleEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (*types.PDFArray, error) {
 
 	log.Debug.Printf("validateRectangleEntry begin: entry=%s\n", entryName)
 
@@ -905,7 +905,7 @@ func validateRectangleEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dic
 	return arr, nil
 }
 
-func validateStreamDict(xRefTable *types.XRefTable, obj interface{}) (*types.PDFStreamDict, error) {
+func validateStreamDict(xRefTable *types.XRefTable, obj types.PDFObject) (*types.PDFStreamDict, error) {
 
 	log.Debug.Println("validateStreamDict begin")
 
@@ -927,7 +927,7 @@ func validateStreamDict(xRefTable *types.XRefTable, obj interface{}) (*types.PDF
 	return &sd, nil
 }
 
-func validateStreamDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFStreamDict) bool) (*types.PDFStreamDict, error) {
+func validateStreamDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFStreamDict) bool) (*types.PDFStreamDict, error) {
 
 	log.Debug.Printf("validateStreamDictEntry begin: entry=%s\n", entryName)
 
@@ -969,7 +969,7 @@ func validateStreamDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, di
 	return &sd, nil
 }
 
-func validateString(xRefTable *types.XRefTable, obj interface{}, validate func(string) bool) (*string, error) {
+func validateString(xRefTable *types.XRefTable, obj types.PDFObject, validate func(string) bool) (*string, error) {
 
 	//log.Debug.Println("validateString begin")
 
@@ -1005,7 +1005,7 @@ func validateString(xRefTable *types.XRefTable, obj interface{}, validate func(s
 	return &s, nil
 }
 
-func validateStringEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion, validate func(string) bool) (*string, error) {
+func validateStringEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion, validate func(string) bool) (*string, error) {
 
 	log.Debug.Printf("validateStringEntry begin: entry=%s\n", entryName)
 
@@ -1056,7 +1056,7 @@ func validateStringEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictNa
 	return &s, nil
 }
 
-func validateStringArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (*types.PDFArray, error) {
+func validateStringArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (*types.PDFArray, error) {
 
 	log.Debug.Printf("validateStringArrayEntry begin: entry=%s\n", entryName)
 
@@ -1095,7 +1095,7 @@ func validateStringArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, d
 	return arr, nil
 }
 
-func validateArrayArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (*types.PDFArray, error) {
+func validateArrayArrayEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion, validate func(types.PDFArray) bool) (*types.PDFArray, error) {
 
 	log.Debug.Printf("validateArrayArrayEntry begin: entry=%s\n", entryName)
 
@@ -1336,7 +1336,6 @@ func validateBooleanOrStreamEntry(xRefTable *types.XRefTable, dict *types.PDFDic
 	return nil
 }
 
-// TODO move to 3D annotation.
 func validateStreamDictOrDictEntry(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
 
 	log.Debug.Printf("validateStreamDictOrDictEntry begin: entry=%s\n", entryName)

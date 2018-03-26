@@ -74,11 +74,9 @@ Required build version: go1.8 and up
 
 ## Status
 
-Version: 0.1.7
+Version: 0.1.8
 
-* go1.10 compatible release
-
-* flexible logging (fixes issue #8)
+* introduces the interface PDFObject
 
 
 ## Contributing

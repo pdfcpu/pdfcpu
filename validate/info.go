@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateCreationDate(xRefTable *types.XRefTable, o interface{}) (err error) {
+func validateCreationDate(xRefTable *types.XRefTable, o types.PDFObject) (err error) {
 
 	if xRefTable.ValidationMode == types.ValidationRelaxed {
 		_, err = validateString(xRefTable, o, nil)
@@ -17,7 +17,7 @@ func validateCreationDate(xRefTable *types.XRefTable, o interface{}) (err error)
 	return err
 }
 
-func handleDefault(xRefTable *types.XRefTable, o interface{}) (err error) {
+func handleDefault(xRefTable *types.XRefTable, o types.PDFObject) (err error) {
 
 	if xRefTable.ValidationMode == types.ValidationStrict {
 		_, err = xRefTable.DereferenceStringOrHexLiteral(o, types.V10, nil)
@@ -28,7 +28,7 @@ func handleDefault(xRefTable *types.XRefTable, o interface{}) (err error) {
 	return err
 }
 
-func validateDocumentInfoDict(xRefTable *types.XRefTable, obj interface{}) (hasModDate bool, err error) {
+func validateDocumentInfoDict(xRefTable *types.XRefTable, obj types.PDFObject) (hasModDate bool, err error) {
 
 	// Document info object is optional.
 

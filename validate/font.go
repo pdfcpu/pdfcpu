@@ -408,7 +408,7 @@ func validateTrueTypeFontDict(xRefTable *types.XRefTable, dict *types.PDFDict) e
 	return err
 }
 
-func validateCIDToGIDMap(xRefTable *types.XRefTable, obj interface{}) error {
+func validateCIDToGIDMap(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
@@ -915,7 +915,7 @@ func validateType3FontDict(xRefTable *types.XRefTable, dict *types.PDFDict) erro
 	return err
 }
 
-func validateFontDict(xRefTable *types.XRefTable, obj interface{}) (err error) {
+func validateFontDict(xRefTable *types.XRefTable, obj types.PDFObject) (err error) {
 
 	dict, err := xRefTable.DereferenceDict(obj)
 	if err != nil || dict == nil {
@@ -956,7 +956,7 @@ func validateFontDict(xRefTable *types.XRefTable, obj interface{}) (err error) {
 	return err
 }
 
-func validateFontResourceDict(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
+func validateFontResourceDict(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error {
 
 	// Version check
 	err := xRefTable.ValidateVersion("fontResourceDict", sinceVersion)

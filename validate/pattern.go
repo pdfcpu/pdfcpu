@@ -111,7 +111,7 @@ func validateShadingPatternDict(xRefTable *types.XRefTable, dict *types.PDFDict,
 	return validateShading(xRefTable, obj)
 }
 
-func validatePattern(xRefTable *types.XRefTable, obj interface{}) error {
+func validatePattern(xRefTable *types.XRefTable, obj types.PDFObject) error {
 
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
@@ -134,7 +134,7 @@ func validatePattern(xRefTable *types.XRefTable, obj interface{}) error {
 	return err
 }
 
-func validatePatternResourceDict(xRefTable *types.XRefTable, obj interface{}, sinceVersion types.PDFVersion) error {
+func validatePatternResourceDict(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error {
 
 	// see 8.7 Patterns
 
