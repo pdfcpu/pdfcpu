@@ -10,10 +10,10 @@ import (
 type Logger interface {
 
 	// Printf logs a formatted string.
-	Printf(format string, v ...interface{})
+	Printf(format string, args ...interface{})
 
 	// Println logs a line.
-	Println(v ...interface{})
+	Println(args ...interface{})
 }
 
 type logger struct {
@@ -72,21 +72,21 @@ func DisableLoggers() {
 }
 
 // Printf writes a formatted message to the log.
-func (l *logger) Printf(format string, v ...interface{}) {
+func (l *logger) Printf(format string, args ...interface{}) {
 
 	if l.log == nil {
 		return
 	}
 
-	l.log.Printf(format, v...)
+	l.log.Printf(format, args...)
 }
 
 // Println writes a line to the log.
-func (l *logger) Println(v ...interface{}) {
+func (l *logger) Println(args ...interface{}) {
 
 	if l.log == nil {
 		return
 	}
 
-	l.log.Println(v...)
+	l.log.Println(args...)
 }

@@ -47,7 +47,7 @@ Required build version: go1.8 and up
 
 
 ## Usage
-
+    
     pdfcpu validate [-verbose] [-mode strict|relaxed] [-upw userpw] [-opw ownerpw] inFile
     pdfcpu optimize [-verbose] [-stats csvFile] [-upw userpw] [-opw ownerpw] inFile [outFile]
     pdfcpu split [-verbose] [-upw userpw] [-opw ownerpw] inFile outDir
@@ -74,9 +74,20 @@ Required build version: go1.8 and up
 
 ## Status
 
-Version: 0.1.8
+Version: 0.1.9
 
-* introduces the interface PDFObject
+* Redesigned extraction API with focus on returning the extracted data rather than writing it somewhere.
+* It is up to the API consumer how to process the extracted data.
+
+```
+func ImageData(ctx *types.PDFContext, objNr int) (*types.ImageObject, error)
+func FontData(ctx *types.PDFContext, objNr int) (*types.FontObject, error)
+func ContentData(ctx *types.PDFContext, objNr int) (data []byte, err error)
+```
+
+
+
+
 
 
 ## Contributing

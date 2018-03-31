@@ -180,7 +180,10 @@ func parseFlagsAndGetCommand() (command string) {
 	}
 
 	// Parse commandline flags.
-	flag.CommandLine.Parse(os.Args[i:])
+	err := flag.CommandLine.Parse(os.Args[i:])
+	if err != nil {
+		os.Exit(1)
+	}
 
 	return
 }
@@ -285,7 +288,6 @@ func prepareExtractCommand(config *types.Configuration) *pdfcpu.Command {
 
 	dirnameOut := flag.Arg(1)
 
-	var err error
 	pages, err := pdfcpu.ParsePageSelection(pageSelection)
 	if err != nil {
 		log.Fatalf("extract: problem with flag pageSelection: %v", err)
@@ -318,7 +320,6 @@ func prepareTrimCommand(config *types.Configuration) *pdfcpu.Command {
 		os.Exit(1)
 	}
 
-	var err error
 	pages, err := pdfcpu.ParsePageSelection(pageSelection)
 	if err != nil {
 		log.Fatalf("trim: problem with flag pageSelection: %v", err)

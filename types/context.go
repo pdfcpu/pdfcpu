@@ -95,10 +95,10 @@ func (ctx *PDFContext) String() string {
 		logStr = append(logStr, fmt.Sprintf("           Encrypt object: %s\n", *ctx.Encrypt))
 	}
 
-	if len(*ctx.AdditionalStreams) > 0 {
+	if ctx.AdditionalStreams != nil && len(*ctx.AdditionalStreams) > 0 {
 
 		var objectNumbers []string
-		for _, k := range *(ctx.AdditionalStreams) {
+		for _, k := range *ctx.AdditionalStreams {
 			indRef, _ := k.(PDFIndirectRef)
 			objectNumbers = append(objectNumbers, fmt.Sprintf("%d", int(indRef.ObjectNumber)))
 		}

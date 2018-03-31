@@ -11,6 +11,8 @@ type FontObject struct {
 	Prefix        string
 	FontName      string
 	FontDict      *PDFDict
+	Data          []byte
+	Extension     string
 }
 
 // AddResourceName adds a resourceName referring to this font.
@@ -31,6 +33,11 @@ func (fo FontObject) ResourceNamesString() string {
 	}
 	return strings.Join(resNames, ",")
 }
+
+// Data returns the raw data belonging to this image object.
+// func (fo FontObject) Data() []byte {
+// 	return nil
+// }
 
 // SubType returns the SubType of this font.
 func (fo FontObject) SubType() string {
@@ -79,6 +86,7 @@ func (fo FontObject) String() string {
 type ImageObject struct {
 	ResourceNames []string
 	ImageDict     *PDFStreamDict
+	Extension     string
 }
 
 // AddResourceName adds a resourceName to this imageObject's ResourceNames dict.
@@ -98,4 +106,9 @@ func (io ImageObject) ResourceNamesString() string {
 		resNames = append(resNames, resName)
 	}
 	return strings.Join(resNames, ",")
+}
+
+// Data returns the raw data belonging to this image object.
+func (io ImageObject) Data() []byte {
+	return io.ImageDict.Raw
 }

@@ -510,19 +510,23 @@ func TestTrimCommand(t *testing.T) {
 
 func TestExtractImagesCommand(t *testing.T) {
 
-	cmd := ExtractImagesCommand("", outputDir, nil, types.NewDefaultConfiguration())
-	var err error
+	c := types.NewDefaultConfiguration()
+
+	cmd := ExtractImagesCommand("", outputDir, nil, c)
 
 	for _, fn := range []string{"go.pdf", "golang.pdf", "Wonderwall.pdf", "testImage.pdf"} {
+
 		fn = "testdata/" + fn
 		cmd.InFile = &fn
-		_, err = Process(cmd)
+
+		_, err := Process(cmd)
 		if err != nil {
 			t.Fatalf("TestExtractImageCommand: %v\n", err)
 		}
+
 	}
 
-	_, err = Process(ExtractImagesCommand("testdata/testImage.pdf", outputDir, []string{"1-"}, types.NewDefaultConfiguration()))
+	_, err := Process(ExtractImagesCommand("testdata/testImage.pdf", outputDir, []string{"1-"}, types.NewDefaultConfiguration()))
 	if err != nil {
 		t.Fatalf("TestExtractImageCommand: %v\n", err)
 	}
@@ -532,18 +536,20 @@ func TestExtractImagesCommand(t *testing.T) {
 func TestExtractFontsCommand(t *testing.T) {
 
 	cmd := ExtractFontsCommand("", outputDir, nil, types.NewDefaultConfiguration())
-	var err error
 
 	for _, fn := range []string{"5116.DCT_Filter.pdf", "testImage.pdf", "go.pdf"} {
+
 		fn = "testdata/" + fn
 		cmd.InFile = &fn
-		_, err = Process(cmd)
+
+		_, err := Process(cmd)
 		if err != nil {
 			t.Fatalf("TestExtractFontsCommand: %v\n", err)
 		}
+
 	}
 
-	_, err = Process(ExtractFontsCommand("testdata/go.pdf", outputDir, []string{"1-3"}, types.NewDefaultConfiguration()))
+	_, err := Process(ExtractFontsCommand("testdata/go.pdf", outputDir, []string{"1-3"}, types.NewDefaultConfiguration()))
 	if err != nil {
 		t.Fatalf("TestExtractFontsCommand: %v\n", err)
 	}

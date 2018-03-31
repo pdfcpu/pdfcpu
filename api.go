@@ -2,6 +2,8 @@ package pdfcpu
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -438,7 +440,7 @@ func setPageSelection(pageCount int, pageSelection []string) (selectedPages type
 func pagesForPageSelection(pageCount int, pageSelection []string) (selectedPages types.IntSet, err error) {
 
 	if pageSelection == nil || len(pageSelection) == 0 {
-		log.Info.Println("pagesForPageSelection: invalid pageSelection")
+		log.Info.Println("pagesForPageSelection: empty pageSelection")
 		return nil, nil
 	}
 
@@ -549,6 +551,79 @@ func Merge(filesIn []string, fileOut string, config *types.Configuration) error 
 	return nil
 }
 
+func ensureSelectedPages(ctx *types.PDFContext, selectedPages *types.IntSet) {
+
+	if selectedPages != nil && len(*selectedPages) > 0 {
+		return
+	}
+
+	m := types.IntSet{}
+	for i := 1; i <= ctx.PageCount; i++ {
+		m[i] = true
+	}
+
+	*selectedPages = m
+}
+
+func imageObjNrs(ctx *types.PDFContext, page int) []int {
+
+	o := []int{}
+
+	for k, v := range ctx.Optimize.PageImages[page-1] {
+		if v {
+			o = append(o, k)
+		}
+	}
+
+	return o
+}
+
+func doExtractImages(ctx *types.PDFContext, selectedPages types.IntSet) error {
+
+	ensureSelectedPages(ctx, &selectedPages)
+
+	visited := types.IntSet{}
+
+	for p, v := range selectedPages {
+
+		if v {
+
+			log.Info.Printf("writing images for page %d\n", p)
+
+			for _, objNr := range imageObjNrs(ctx, p) {
+
+				if visited[objNr] {
+					continue
+				}
+
+				visited[objNr] = true
+
+				io, err := extract.ImageData(ctx, objNr)
+				if err != nil {
+					return err
+				}
+
+				if io == nil {
+					continue
+				}
+
+				fileName := fmt.Sprintf("%s/%s_%d_%d.%s", ctx.Write.DirName, io.ResourceNamesString(), p, objNr, io.Extension)
+				fmt.Printf("writing %s\n", fileName)
+
+				err = ioutil.WriteFile(fileName, io.Data(), os.ModePerm)
+				if err != nil {
+					return err
+				}
+
+			}
+
+		}
+
+	}
+
+	return nil
+}
+
 // ExtractImages dumps embedded image resources from fileIn into dirOut for selected pages.
 func ExtractImages(fileIn, dirOut string, pageSelection []string, config *types.Configuration) error {
 
@@ -569,7 +644,7 @@ func ExtractImages(fileIn, dirOut string, pageSelection []string, config *types.
 	}
 
 	ctx.Write.DirName = dirOut
-	err = extract.Images(ctx, pages)
+	err = doExtractImages(ctx, pages)
 	if err != nil {
 		return err
 	}
@@ -584,6 +659,64 @@ func ExtractImages(fileIn, dirOut string, pageSelection []string, config *types.
 	log.Stats.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
 	log.Stats.Printf("write images         : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
 	log.Stats.Printf("total processing time: %6.3fs\n\n", durTotal)
+
+	return nil
+}
+
+func fontObjNrs(ctx *types.PDFContext, page int) []int {
+
+	o := []int{}
+
+	for k, v := range ctx.Optimize.PageFonts[page-1] {
+		if v {
+			o = append(o, k)
+		}
+	}
+
+	return o
+}
+
+func doExtractFonts(ctx *types.PDFContext, selectedPages types.IntSet) error {
+
+	ensureSelectedPages(ctx, &selectedPages)
+
+	visited := types.IntSet{}
+
+	for p, v := range selectedPages {
+
+		if v {
+
+			log.Info.Printf("writing fonts for page %d\n", p)
+
+			for _, objNr := range fontObjNrs(ctx, p) {
+
+				if visited[objNr] {
+					continue
+				}
+
+				visited[objNr] = true
+
+				fo, err := extract.FontData(ctx, objNr)
+				if err != nil {
+					return err
+				}
+
+				if fo == nil {
+					continue
+				}
+
+				fileName := fmt.Sprintf("%s/%s_%d_%d.%s", ctx.Write.DirName, fo.ResourceNamesString(), p, objNr, fo.Extension)
+
+				err = ioutil.WriteFile(fileName, fo.Data, os.ModePerm)
+				if err != nil {
+					return err
+				}
+
+			}
+
+		}
+
+	}
 
 	return nil
 }
@@ -608,7 +741,7 @@ func ExtractFonts(fileIn, dirOut string, pageSelection []string, config *types.C
 	}
 
 	ctx.Write.DirName = dirOut
-	err = extract.Fonts(ctx, pages)
+	err = doExtractFonts(ctx, pages)
 	if err != nil {
 		return err
 	}
@@ -667,6 +800,123 @@ func ExtractPages(fileIn, dirOut string, pageSelection []string, config *types.C
 	return nil
 }
 
+func contentObjNrs(ctx *types.PDFContext, page int) ([]int, error) {
+
+	objNrs := []int{}
+
+	d, err := ctx.PageDict(page)
+	if err != nil {
+		return nil, err
+	}
+
+	obj, found := d.Find("Contents")
+	if !found || obj == nil {
+		return nil, nil
+	}
+
+	var objNr int
+
+	indRef, ok := obj.(types.PDFIndirectRef)
+	if ok {
+		objNr = indRef.ObjectNumber.Value()
+	}
+
+	obj, err = ctx.Dereference(obj)
+	if err != nil {
+		return nil, err
+	}
+
+	if obj == nil {
+		return nil, nil
+	}
+
+	switch obj := obj.(type) {
+
+	case types.PDFStreamDict:
+
+		objNrs = append(objNrs, objNr)
+
+	case types.PDFArray:
+
+		for _, obj := range obj {
+
+			indRef, ok := obj.(types.PDFIndirectRef)
+			if !ok {
+				return nil, errors.Errorf("missing indref for page tree dict content no page %d", page)
+			}
+
+			sd, err := ctx.DereferenceStreamDict(obj)
+			if err != nil {
+				return nil, err
+			}
+
+			if sd == nil {
+				continue
+			}
+
+			objNrs = append(objNrs, indRef.ObjectNumber.Value())
+
+		}
+
+	}
+
+	return objNrs, nil
+}
+
+func doExtractContent(ctx *types.PDFContext, selectedPages types.IntSet) error {
+
+	ensureSelectedPages(ctx, &selectedPages)
+
+	visited := types.IntSet{}
+
+	for p, v := range selectedPages {
+
+		if v {
+
+			log.Info.Printf("writing content for page %d\n", p)
+
+			objNrs, err := contentObjNrs(ctx, p)
+			if err != nil {
+				return err
+			}
+
+			if objNrs == nil {
+				continue
+			}
+
+			for _, objNr := range objNrs {
+
+				if visited[objNr] {
+					continue
+				}
+
+				visited[objNr] = true
+
+				b, err := extract.ContentData(ctx, objNr)
+				if err != nil {
+					return err
+				}
+
+				if b == nil {
+					continue
+				}
+
+				fileName := fmt.Sprintf("%s/%d_%d.txt", ctx.Write.DirName, p, objNr)
+
+				err = ioutil.WriteFile(fileName, b, os.ModePerm)
+				if err != nil {
+					return err
+				}
+
+			}
+
+		}
+
+	}
+
+	return nil
+}
+
 // ExtractContent dumps "PDF source" files from fileIn into dirOut for selected pages.
 func ExtractContent(fileIn, dirOut string, pageSelection []string, config *types.Configuration) error {
 
@@ -687,7 +937,7 @@ func ExtractContent(fileIn, dirOut string, pageSelection []string, config *types
 	}
 
 	ctx.Write.DirName = dirOut
-	err = extract.Content(ctx, pages)
+	err = doExtractContent(ctx, pages)
 	if err != nil {
 		return err
 	}

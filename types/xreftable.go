@@ -197,6 +197,17 @@ func (xRefTable *XRefTable) Find(objNumber int) (*XRefTableEntry, bool) {
 	return e, true
 }
 
+// FindObject returns the object of the XRefTableEntry for a specific object number.
+func (xRefTable *XRefTable) FindObject(objNumber int) (PDFObject, error) {
+
+	entry, ok := xRefTable.Find(objNumber)
+	if !ok {
+		return nil, errors.Errorf("FindObject: obj#%d not registered in xRefTable", objNumber)
+	}
+
+	return entry.Object, nil
+}
+
 // Free returns the cross ref table entry for given number of a free object.
 func (xRefTable *XRefTable) Free(objNumber int) (*XRefTableEntry, error) {
 
@@ -1308,4 +1319,76 @@ func (xRefTable *XRefTable) IDFirstElement() (id []byte, err error) {
 	}
 
 	return id, nil
+}
+
+func (xRefTable *XRefTable) processPageTree(root *PDFIndirectRef, p *int, page int) (*PDFDict, error) {
+
+	dict, err := xRefTable.DereferenceDict(*root)
+	if err != nil {
+		return nil, err
+	}
+
+	// Iterate over page tree.
+	kids := dict.PDFArrayEntry("Kids")
+
+	for _, obj := range *kids {
+
+		if obj == nil {
+			continue
+		}
+
+		// Dereference next page node dict.
+		indRef, ok := obj.(PDFIndirectRef)
+		if !ok {
+			return nil, errors.Errorf("processPageTree: corrupt page node dict")
+		}
+
+		pageNodeDict, err := xRefTable.DereferenceDict(indRef)
+		if err != nil {
+			return nil, err
+		}
+
+		if pageNodeDict == nil {
+			return nil, errors.New("processPagesDict: pageNodeDict is null")
+		}
+
+		switch *pageNodeDict.Type() {
+
+		case "Pages":
+			// Recurse over sub pagetree.
+			d, err := xRefTable.processPageTree(&indRef, p, page)
+			if err != nil {
+				return nil, err
+			}
+
+			if d != nil {
+				return d, nil
+			}
+
+		case "Page":
+			*p++
+			// page found.
+			if *p == page {
+				return pageNodeDict, nil
+			}
+
+		}
+
+	}
+
+	return nil, nil
+}
+
+// PageDict returns a specific page dict.
+func (xRefTable *XRefTable) PageDict(page int) (*PDFDict, error) {
+
+	// Get an indirect reference to the root page dict.
+	root, err := xRefTable.Pages()
+	if err != nil {
+		return nil, err
+	}
+
+	pageCount := 0
+
+	return xRefTable.processPageTree(root, &pageCount, page)
 }
