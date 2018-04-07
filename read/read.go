@@ -26,6 +26,49 @@ const (
 	unknownDelimiter = byte(0)
 )
 
+// PDFFile reads in a PDFFile and generates a PDFContext, an in-memory representation containing a cross reference table.
+func PDFFile(fileName string, config *types.Configuration) (*types.PDFContext, error) {
+
+	log.Debug.Println("PDFFile: begin")
+
+	file, err := os.Open(fileName)
+	if err != nil {
+		return nil, errors.Wrapf(err, "can't open %q", fileName)
+	}
+
+	defer func() {
+		file.Close()
+	}()
+
+	ctx, err := types.NewPDFContext(fileName, file, config)
+	if err != nil {
+		return nil, err
+	}
+
+	if ctx.Reader15 {
+		log.Info.Println("PDF Version 1.5 conforming reader")
+	} else {
+		log.Info.Println("PDF Version 1.4 conforming reader - no object streams or xrefstreams allowed")
+	}
+
+	// Populate xRefTable.
+	err = readXRefTable(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "xRefTable failed")
+	}
+
+	// Make all objects explicitly available (load into memory) in corresponding xRefTable entries.
+	// Also decode any involved object streams.
+	err = dereferenceXRefTable(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debug.Println("PDFFile: end")
+
+	return ctx, nil
+}
+
 // ScanLines is a split function for a Scanner that returns each line of
 // text, stripped of any trailing end-of-line marker. The returned line may
 // be empty. The end-of-line marker is one carriage return followed
@@ -2093,47 +2136,4 @@ func checkForEncryption(ctx *types.PDFContext) error {
 
 	// We need to decrypt this file in order to read it.
 	return setupEncryptionKey(ctx, indRef.ObjectNumber.Value())
-}
-
-// PDFFile reads in a PDFFile and generates a PDFContext, an in-memory representation containing a cross reference table.
-func PDFFile(fileName string, config *types.Configuration) (*types.PDFContext, error) {
-
-	log.Debug.Println("PDFFile: begin")
-
-	file, err := os.Open(fileName)
-	if err != nil {
-		return nil, errors.Wrapf(err, "can't open %q", fileName)
-	}
-
-	defer func() {
-		file.Close()
-	}()
-
-	ctx, err := types.NewPDFContext(fileName, file, config)
-	if err != nil {
-		return nil, err
-	}
-
-	if ctx.Reader15 {
-		log.Info.Println("PDF Version 1.5 conforming reader")
-	} else {
-		log.Info.Println("PDF Version 1.4 conforming reader - no object streams or xrefstreams allowed")
-	}
-
-	// Populate xRefTable.
-	err = readXRefTable(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "xRefTable failed")
-	}
-
-	// Make all objects explicitly available (load into memory) in corresponding xRefTable entries.
-	// Also decode any involved object streams.
-	err = dereferenceXRefTable(ctx, config)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Debug.Println("PDFFile: end")
-
-	return ctx, nil
 }

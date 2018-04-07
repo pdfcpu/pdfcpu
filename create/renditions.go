@@ -2,6 +2,8 @@ package create
 
 import "github.com/hhrutter/pdfcpu/types"
 
+// Functions needed to create a test.pdf that gets used for validation testing (see process_test.go)
+
 func createMHBEDict() *types.PDFDict {
 
 	softwareIdentDict := types.PDFDict{

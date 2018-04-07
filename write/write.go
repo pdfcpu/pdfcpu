@@ -17,6 +17,107 @@ import (
 	"github.com/pkg/errors"
 )
 
+// PDFFile generates a PDF file for the cross reference table contained in PDFContext.
+func PDFFile(ctx *types.PDFContext) error {
+
+	fileName := ctx.Write.DirName + ctx.Write.FileName
+
+	log.Info.Printf("writing to %s\n", fileName)
+
+	file, err := os.Create(fileName)
+	if err != nil {
+		return errors.Wrapf(err, "can't create %s\n%s", fileName, err)
+	}
+
+	ctx.Write.Writer = bufio.NewWriter(file)
+
+	defer func() {
+
+		// The underlying bufio.Writer has already been flushed.
+
+		// Processing error takes precedence.
+		if err != nil {
+			file.Close()
+			return
+		}
+
+		// Do not miss out on closing errors.
+		err = file.Close()
+
+	}()
+
+	err = handleEncryption(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Since we support PDF Collections (since V1.7) for file attachments
+	// we need to always generate V1.7 PDF filess.
+	err = writeHeader(ctx.Write, types.V17)
+	if err != nil {
+		return err
+	}
+
+	log.Debug.Printf("offset after writeHeader: %d\n", ctx.Write.Offset)
+
+	// Write root object(aka the document catalog) and page tree.
+	err = writeRootObject(ctx)
+	if err != nil {
+		return err
+	}
+
+	log.Debug.Printf("offset after writeRootObject: %d\n", ctx.Write.Offset)
+
+	// Write document information dictionary.
+	err = writeDocumentInfoDict(ctx)
+	if err != nil {
+		return err
+	}
+
+	log.Debug.Printf("offset after writeInfoObject: %d\n", ctx.Write.Offset)
+
+	// Write offspec additional streams as declared in pdf trailer.
+	if ctx.AdditionalStreams != nil {
+		_, _, err = writeDeepObject(ctx, ctx.AdditionalStreams)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = writeEncryptDict(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Mark redundant objects as free.
+	// eg. duplicate resources, compressed objects, linearization dicts..
+	deleteRedundantObjects(ctx)
+
+	err = writeXRef(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Write pdf trailer.
+	_, err = writeTrailer(ctx.Write)
+	if err != nil {
+		return err
+	}
+
+	err = setFileSizeOfWrittenFile(ctx.Write, file)
+	if err != nil {
+		return err
+	}
+
+	if ctx.Read != nil {
+		ctx.Write.BinaryImageSize = ctx.Read.BinaryImageSize
+		ctx.Write.BinaryFontSize = ctx.Read.BinaryFontSize
+		logWriteStats(ctx)
+	}
+
+	return nil
+}
+
 // Write root entry to disk.
 func writeRootEntry(ctx *types.PDFContext, dict *types.PDFDict, dictName, entryName string, statsAttr int) error {
 
@@ -849,115 +950,6 @@ func setFileSizeOfWrittenFile(w *types.WriteContext, f *os.File) error {
 	}
 
 	w.FileSize = fileInfo.Size()
-
-	return nil
-}
-
-// PDFFile generates a PDF file for the cross reference table contained in PDFContext.
-func PDFFile(ctx *types.PDFContext) error {
-
-	fileName := ctx.Write.DirName + ctx.Write.FileName
-
-	log.Info.Printf("writing to %s\n", fileName)
-
-	file, err := os.Create(fileName)
-	if err != nil {
-		return errors.Wrapf(err, "can't create %s\n%s", fileName, err)
-	}
-
-	ctx.Write.Writer = bufio.NewWriter(file)
-
-	defer func() {
-
-		// The underlying bufio.Writer has already been flushed.
-
-		// Processing error takes precedence.
-		if err != nil {
-			file.Close()
-			return
-		}
-
-		// Do not miss out on closing errors.
-		err = file.Close()
-
-	}()
-
-	err = handleEncryption(ctx)
-	if err != nil {
-		return err
-	}
-
-	// Write a PDF file header stating the version of the used conforming writer.
-	// This has to be the source version or any version higher.
-	// For using objectstreams and xrefstreams we need at least PDF V1.5.
-	//v := ctx.Version()
-	//if ctx.Version() < types.V15 {
-	//v := types.V15
-	//log.Info.Println("Ensure V1.5 for writing object & xref streams")
-	//}
-
-	// For using Collections we need PDF 1.7.
-	err = writeHeader(ctx.Write, types.V17)
-	if err != nil {
-		return err
-	}
-
-	log.Debug.Printf("offset after writeHeader: %d\n", ctx.Write.Offset)
-
-	// Write root object(aka the document catalog) and page tree.
-	err = writeRootObject(ctx)
-	if err != nil {
-		return err
-	}
-
-	log.Debug.Printf("offset after writeRootObject: %d\n", ctx.Write.Offset)
-
-	// Write document information dictionary.
-	err = writeDocumentInfoDict(ctx)
-	if err != nil {
-		return err
-	}
-
-	log.Debug.Printf("offset after writeInfoObject: %d\n", ctx.Write.Offset)
-
-	// Write offspec additional streams as declared in pdf trailer.
-	if ctx.AdditionalStreams != nil {
-		_, _, err = writeDeepObject(ctx, ctx.AdditionalStreams)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = writeEncryptDict(ctx)
-	if err != nil {
-		return err
-	}
-
-	// Mark redundant objects as free.
-	// eg. duplicate resources, compressed objects, linearization dicts..
-	deleteRedundantObjects(ctx)
-
-	err = writeXRef(ctx)
-	if err != nil {
-		return err
-	}
-
-	// Write pdf trailer.
-	_, err = writeTrailer(ctx.Write)
-	if err != nil {
-		return err
-	}
-
-	err = setFileSizeOfWrittenFile(ctx.Write, file)
-	if err != nil {
-		return err
-	}
-
-	if ctx.Read != nil {
-		ctx.Write.BinaryImageSize = ctx.Read.BinaryImageSize
-		ctx.Write.BinaryFontSize = ctx.Read.BinaryFontSize
-		logWriteStats(ctx)
-	}
 
 	return nil
 }

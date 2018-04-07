@@ -6,6 +6,38 @@ import (
 	"github.com/pkg/errors"
 )
 
+// XRefTable validates a PDF cross reference table obeying the validation mode.
+func XRefTable(xRefTable *types.XRefTable) error {
+
+	log.Info.Println("validating")
+	log.Debug.Println("*** validateXRefTable begin ***")
+
+	// Validate root object(aka the document catalog) and page tree.
+	err := validateRootObject(xRefTable)
+	if err != nil {
+		return err
+	}
+
+	// Validate document information dictionary.
+	err = validateDocumentInfoObject(xRefTable)
+	if err != nil {
+		return err
+	}
+
+	// Validate offspec additional streams as declared in pdf trailer.
+	err = validateAdditionalStreams(xRefTable)
+	if err != nil {
+		return err
+	}
+
+	xRefTable.Valid = true
+
+	log.Debug.Println("*** validateXRefTable end ***")
+
+	return nil
+
+}
+
 func validateRootVersion(xRefTable *types.XRefTable, rootDict *types.PDFDict, required bool, sinceVersion types.PDFVersion) error {
 
 	_, err := validateNameEntry(xRefTable, rootDict, "rootDict", "Version", OPTIONAL, types.V14, nil)
@@ -56,8 +88,6 @@ func validateNames(xRefTable *types.XRefTable, rootDict *types.PDFDict, required
 
 	// => 7.7.4 Name Dictionary
 
-	// all values are name trees or indirect refs.
-
 	/*
 		<Kids, [(86 0 R)]>
 
@@ -65,8 +95,6 @@ func validateNames(xRefTable *types.XRefTable, rootDict *types.PDFDict, required
 		<Limits, [(F1) (P.9)]>
 		<Names, [(F1) (87 0 R) (F2) ...
 
-		87: named destination dict
-		<D, [(158 0 R) XYZ]>
 	*/
 
 	dict, err := validateDictEntry(xRefTable, rootDict, "rootDict", "Names", required, sinceVersion, nil)
@@ -874,36 +902,4 @@ func validateAdditionalStreams(xRefTable *types.XRefTable) error {
 
 	// Out of spec scope.
 	return nil
-}
-
-// XRefTable validates a PDF cross reference table obeying the validation mode.
-func XRefTable(xRefTable *types.XRefTable) error {
-
-	log.Info.Println("validating")
-	log.Debug.Println("*** validateXRefTable begin ***")
-
-	// Validate root object(aka the document catalog) and page tree.
-	err := validateRootObject(xRefTable)
-	if err != nil {
-		return err
-	}
-
-	// Validate document information dictionary.
-	err = validateDocumentInfoObject(xRefTable)
-	if err != nil {
-		return err
-	}
-
-	// Validate offspec additional streams as declared in pdf trailer.
-	err = validateAdditionalStreams(xRefTable)
-	if err != nil {
-		return err
-	}
-
-	xRefTable.Valid = true
-
-	log.Debug.Println("*** validateXRefTable end ***")
-
-	return nil
-
 }

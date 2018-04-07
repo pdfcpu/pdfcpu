@@ -1,6 +1,8 @@
 // Package create contains primitives for generating a PDF file.
 package create
 
+// Functions needed to create a test.pdf that gets used for validation testing (see process_test.go)
+
 import (
 	"bytes"
 	"fmt"

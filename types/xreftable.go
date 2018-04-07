@@ -14,7 +14,7 @@ import (
 
 // XRefTableEntry represents an entry in the PDF cross reference table.
 //
-// This may be a free object, a compressed object or any in use PDF object:
+// This may wrap a free object, a compressed object or any in use PDF object:
 //
 // PDFDict, PDFStreamDict, PDFObjectStreamDict, PDFXRefStreamDict,
 // PDFArray, PDFInteger, PDFFloat, PDFName, PDFStringLiteral, PDFHexLiteral, PDFBoolean
@@ -365,7 +365,6 @@ func (xRefTable *XRefTable) NewEmbeddedFileStreamDict(filename string) (*PDFStre
 	}
 
 	sd.InsertName("Type", "EmbeddedFile")
-	//sd.InsertName("Subtype", "audio#2Fmpeg")
 
 	d := NewPDFDict()
 	d.InsertInt("Size", int(fi.Size()))

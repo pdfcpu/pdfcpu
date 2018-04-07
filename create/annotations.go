@@ -9,6 +9,8 @@ import (
 	"github.com/hhrutter/pdfcpu/types"
 )
 
+// Functions needed to create a test.pdf that gets used for validation testing (see process_test.go)
+
 func createTextAnnotation(xRefTable *types.XRefTable, pageIndRef *types.PDFIndirectRef, annotRect *types.PDFArray) (*types.PDFIndirectRef, error) {
 
 	d := types.PDFDict{

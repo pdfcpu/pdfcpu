@@ -19,6 +19,56 @@ type Command struct {
 	PWNew         *string              //    -         -        -      -       -      -      -       -       -      -       -        -         *          *       -     -
 }
 
+// Process executes a pdfcpu command.
+func Process(cmd *Command) (out []string, err error) {
+
+	cmd.Config.Mode = cmd.Mode
+
+	switch cmd.Mode {
+
+	case types.VALIDATE:
+		err = Validate(*cmd.InFile, cmd.Config)
+
+	case types.OPTIMIZE:
+		err = Optimize(*cmd.InFile, *cmd.OutFile, cmd.Config)
+
+	case types.SPLIT:
+		err = Split(*cmd.InFile, *cmd.OutDir, cmd.Config)
+
+	case types.MERGE:
+		err = Merge(cmd.InFiles, *cmd.OutFile, cmd.Config)
+
+	case types.EXTRACTIMAGES:
+		err = ExtractImages(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Config)
+
+	case types.EXTRACTFONTS:
+		err = ExtractFonts(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Config)
+
+	case types.EXTRACTPAGES:
+		err = ExtractPages(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Config)
+
+	case types.EXTRACTCONTENT:
+		err = ExtractContent(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Config)
+
+	case types.TRIM:
+		err = Trim(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Config)
+
+	case types.LISTATTACHMENTS, types.ADDATTACHMENTS, types.REMOVEATTACHMENTS, types.EXTRACTATTACHMENTS:
+		out, err = processAttachments(cmd)
+
+	case types.ENCRYPT, types.DECRYPT, types.CHANGEUPW, types.CHANGEOPW:
+		err = processEncryption(cmd)
+
+	case types.LISTPERMISSIONS, types.ADDPERMISSIONS:
+		out, err = processPermissions(cmd)
+
+	default:
+		err = errors.Errorf("Process: Unknown command mode %d\n", cmd.Mode)
+	}
+
+	return out, err
+}
+
 // ValidateCommand creates a new ValidateCommand.
 func ValidateCommand(pdfFileName string, config *types.Configuration) *Command {
 	return &Command{
@@ -249,56 +299,6 @@ func processPermissions(cmd *Command) (out []string, err error) {
 
 	case types.ADDPERMISSIONS:
 		err = AddPermissions(*cmd.InFile, cmd.Config)
-	}
-
-	return out, err
-}
-
-// Process executes a pdfcpu command.
-func Process(cmd *Command) (out []string, err error) {
-
-	cmd.Config.Mode = cmd.Mode
-
-	switch cmd.Mode {
-
-	case types.VALIDATE:
-		err = Validate(*cmd.InFile, cmd.Config)
-
-	case types.OPTIMIZE:
-		err = Optimize(*cmd.InFile, *cmd.OutFile, cmd.Config)
-
-	case types.SPLIT:
-		err = Split(*cmd.InFile, *cmd.OutDir, cmd.Config)
-
-	case types.MERGE:
-		err = Merge(cmd.InFiles, *cmd.OutFile, cmd.Config)
-
-	case types.EXTRACTIMAGES:
-		err = ExtractImages(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Config)
-
-	case types.EXTRACTFONTS:
-		err = ExtractFonts(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Config)
-
-	case types.EXTRACTPAGES:
-		err = ExtractPages(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Config)
-
-	case types.EXTRACTCONTENT:
-		err = ExtractContent(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Config)
-
-	case types.TRIM:
-		err = Trim(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Config)
-
-	case types.LISTATTACHMENTS, types.ADDATTACHMENTS, types.REMOVEATTACHMENTS, types.EXTRACTATTACHMENTS:
-		out, err = processAttachments(cmd)
-
-	case types.ENCRYPT, types.DECRYPT, types.CHANGEUPW, types.CHANGEOPW:
-		err = processEncryption(cmd)
-
-	case types.LISTPERMISSIONS, types.ADDPERMISSIONS:
-		out, err = processPermissions(cmd)
-
-	default:
-		err = errors.Errorf("Process: Unknown command mode %d\n", cmd.Mode)
 	}
 
 	return out, err
