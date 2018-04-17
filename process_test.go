@@ -322,6 +322,27 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
+func TestGetPageCount(t *testing.T) {
+
+	config := types.NewDefaultConfiguration()
+	fileIn := "testdata/CenterOfWhy.pdf"
+
+	ctx, err := Read(fileIn, config)
+	if err != nil {
+		t.Fatalf("TestGetPageCount:  %v\n", err)
+	}
+
+	err = validate.XRefTable(ctx.XRefTable)
+	if err != nil {
+		t.Fatalf("TestGetPageCount: %v\n", err)
+	}
+
+	if ctx.PageCount != 25 {
+		t.Fatalf("TestGetPageCount: pageCount should be %d but is %d\n", 25, ctx.PageCount)
+	}
+
+}
+
 // Validate all PDFs in testdata.
 func TestValidateCommand(t *testing.T) {
 
@@ -375,7 +396,7 @@ func TestOptimizeCommandWithLF(t *testing.T) {
 
 	files, err := ioutil.ReadDir("testdata")
 	if err != nil {
-		t.Fatalf("TestOptimizeCommmand: %v\n", err)
+		t.Fatalf("TestOptimizeCommandWithLF: %v\n", err)
 	}
 
 	config := types.NewDefaultConfiguration()
@@ -386,10 +407,12 @@ func TestOptimizeCommandWithLF(t *testing.T) {
 
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), "pdf") {
+
 			_, err = Process(OptimizeCommand("testdata/"+file.Name(), outputDir+"/test.pdf", config))
 			if err != nil {
-				t.Fatalf("TestOptimizeCommand: %v\n", err)
+				t.Fatalf("TestOptimizeCommandWithLF: %v\n", err)
 			}
+
 		}
 	}
 
@@ -402,7 +425,7 @@ func TestOptimizeCommandWithCR(t *testing.T) {
 
 	files, err := ioutil.ReadDir("testdata")
 	if err != nil {
-		t.Fatalf("TestOptimizeCommmand: %v\n", err)
+		t.Fatalf("TestOptimizeCommandWithCR: %v\n", err)
 	}
 
 	config := types.NewDefaultConfiguration()
@@ -410,10 +433,17 @@ func TestOptimizeCommandWithCR(t *testing.T) {
 
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), "pdf") {
+
 			_, err = Process(OptimizeCommand("testdata/"+file.Name(), outputDir+"/test.pdf", config))
 			if err != nil {
-				t.Fatalf("TestOptimizeCommand: %v\n", err)
+				t.Fatalf("TestOptimizeCommandWithCR: %v\n", err)
 			}
+
+			_, err = Process(ValidateCommand(outputDir+"/test.pdf", config))
+			if err != nil {
+				t.Fatalf("TestOptimizeCommandWithCR validation: %v\n", err)
+			}
+
 		}
 	}
 
@@ -425,7 +455,7 @@ func TestOptimizeCommandWithCRAndNoXrefStream(t *testing.T) {
 
 	files, err := ioutil.ReadDir("testdata")
 	if err != nil {
-		t.Fatalf("TestOptimizeCommmand: %v\n", err)
+		t.Fatalf("TestOptimizeCommandWithCRAndNoXrefStream: %v\n", err)
 	}
 
 	config := types.NewDefaultConfiguration()
@@ -437,7 +467,7 @@ func TestOptimizeCommandWithCRAndNoXrefStream(t *testing.T) {
 		if strings.HasSuffix(file.Name(), "pdf") {
 			_, err = Process(OptimizeCommand("testdata/"+file.Name(), outputDir+"/test.pdf", config))
 			if err != nil {
-				t.Fatalf("TestOptimizeCommand: %v\n", err)
+				t.Fatalf("TestOptimizeCommandWithCRAndNoXrefStream: %v\n", err)
 			}
 		}
 	}
@@ -575,6 +605,9 @@ func TestExtractPagesCommand(t *testing.T) {
 }
 
 func TestEncryptUPWOnly(t *testing.T) {
+
+	// Test for setting only the user password.
+
 	t.Log("running TestEncryptUPWOnly..")
 
 	f := outputDir + "/test.pdf"
@@ -710,6 +743,8 @@ func TestEncryptUPWOnly(t *testing.T) {
 }
 
 func TestEncryptOPWOnly(t *testing.T) {
+
+	// Test for setting only the owner password.
 
 	t.Log("running TestEncryptOPWOnly..")
 
@@ -1006,6 +1041,7 @@ func encryptDecrypt(fileName string, config *types.Configuration, t *testing.T) 
 	config = types.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	config.OwnerPW = "opwWrong"
+	// pageSelection = nil, writes w/o trimming anything, but sufficient for testing.
 	_, err = Process(TrimCommand(f, f, nil, config))
 	if err == nil {
 		t.Fatalf("TestEncryptDecrypt - trim %s using wrong ownerPW should fail: \n", f)
@@ -1161,6 +1197,18 @@ func prepareForAttachmentTest(testDir string) (err error) {
 		return
 	}
 
+	testFile = testDir + "/go-lecture.pdf"
+	err = copyFile(testFile, outputDir+"/go-lecture.pdf")
+	if err != nil {
+		return
+	}
+
+	testFile = testDir + "/test.wav"
+	err = copyFile(testFile, outputDir+"/test.wav")
+	if err != nil {
+		return
+	}
+
 	return
 }
 func TestAttachments(t *testing.T) {
@@ -1185,19 +1233,25 @@ func TestAttachments(t *testing.T) {
 		t.Fatalf("TestAttachments - list attachments %s: should have 0 attachments\n", fileName)
 	}
 
-	// attach add 2 files
-	_, err = Process(AddAttachmentsCommand(fileName, []string{outputDir + "/golang.pdf", outputDir + "/T4.pdf"}, config))
+	// attach add 4 files
+	_, err = Process(AddAttachmentsCommand(fileName,
+		[]string{outputDir + "/golang.pdf",
+			outputDir + "/T4.pdf",
+			outputDir + "/go-lecture.pdf",
+			outputDir + "/test.wav"},
+		config))
+
 	if err != nil {
 		t.Fatalf("TestAttachments - add attachments to %s: %v\n", fileName, err)
 	}
 
-	// attach list must be 2
+	// attach list must be 4
 	list, err = Process(ListAttachmentsCommand(fileName, config))
 	if err != nil {
 		t.Fatalf("TestAttachments - list attachments %s: %v\n", fileName, err)
 	}
-	if len(list) != 2 {
-		t.Fatalf("TestAttachments - list attachments %s: should have 0 attachments\n", fileName)
+	if len(list) != 4 {
+		t.Fatalf("TestAttachments - list attachments %s: should have 4 attachments\n", fileName)
 	}
 
 	// attach extract all
@@ -1223,8 +1277,8 @@ func TestAttachments(t *testing.T) {
 	if err != nil {
 		t.Fatalf("TestAttachments - list attachments %s: %v\n", fileName, err)
 	}
-	if len(list) != 1 {
-		t.Fatalf("TestAttachments - list attachments %s: should have 0 attachments\n", fileName)
+	if len(list) != 3 {
+		t.Fatalf("TestAttachments - list attachments %s: should have 3 attachments\n", fileName)
 	}
 
 	// attach remove all

@@ -429,7 +429,7 @@ func logP(enc *types.Enc) {
 
 }
 
-func getMaskExtract(mode types.CommandMode, secHandlerRev int) int {
+func maskExtract(mode types.CommandMode, secHandlerRev int) int {
 
 	p, ok := perm[mode]
 
@@ -447,7 +447,7 @@ func getMaskExtract(mode types.CommandMode, secHandlerRev int) int {
 	return 0x0010 // need bit 5
 }
 
-func getMaskModify(mode types.CommandMode, secHandlerRev int) int {
+func maskModify(mode types.CommandMode, secHandlerRev int) int {
 
 	p, ok := perm[mode]
 
@@ -472,14 +472,14 @@ func HasNeededPermissions(mode types.CommandMode, enc *types.Enc) bool {
 
 	logP(enc)
 
-	m := getMaskExtract(mode, enc.R)
+	m := maskExtract(mode, enc.R)
 	if m > 0 {
 		if enc.P&m == 0 {
 			return false
 		}
 	}
 
-	m = getMaskModify(mode, enc.R)
+	m = maskModify(mode, enc.R)
 	if m > 0 {
 		if enc.P&m == 0 {
 			return false
@@ -494,7 +494,7 @@ func getV(dict *types.PDFDict) (*int, error) {
 	v := dict.IntEntry("V")
 
 	if v == nil || (*v != 1 && *v != 2 && *v != 4) {
-		return nil, errors.Errorf("checkV: \"V\" must be one of 1,2,4")
+		return nil, errors.Errorf("getV: \"V\" must be one of 1,2,4")
 	}
 
 	return v, nil
@@ -582,7 +582,7 @@ func length(dict *types.PDFDict) (int, error) {
 	}
 
 	if *l < 40 || *l > 128 || *l%8 > 0 {
-		return 0, errors.Errorf("getLength: \"Length\" %d not supported\n", *l)
+		return 0, errors.Errorf("length: \"Length\" %d not supported\n", *l)
 	}
 
 	return *l, nil

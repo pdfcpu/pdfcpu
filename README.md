@@ -74,21 +74,13 @@ Required build version: go1.8 and up
 
 ## Status
 
-Version: 0.1.9
+Version: 0.1.10
 
-* Redesigned extraction API with focus on returning the extracted data rather than writing it somewhere.
-* It is up to the API consumer how to process the extracted data.
+* Name trees are cached into an internal tree structure after validation to speed up name tree manipulation.
 
-```
-func ImageData(ctx *types.PDFContext, objNr int) (*types.ImageObject, error)
-func FontData(ctx *types.PDFContext, objNr int) (*types.FontObject, error)
-func ContentData(ctx *types.PDFContext, objNr int) (data []byte, err error)
-```
+* added ```TestGetPageCount()``` to demonstrate how to get the page count for a PDF file (fixes #17).
 
-
-
-
-
+* bugfix for #18
 
 ## Contributing
 

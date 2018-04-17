@@ -477,7 +477,7 @@ func validateIDTreeValue(xRefTable *types.XRefTable, obj types.PDFObject, sinceV
 	return nil
 }
 
-func validateNameTreeByName(name string, xRefTable *types.XRefTable, obj types.PDFObject) (err error) {
+func validateNameTreeValue(name string, xRefTable *types.XRefTable, obj types.PDFObject) (err error) {
 
 	for k, v := range map[string]struct {
 		validate     func(xRefTable *types.XRefTable, obj types.PDFObject, sinceVersion types.PDFVersion) error
@@ -510,7 +510,7 @@ func validateNameTreeByName(name string, xRefTable *types.XRefTable, obj types.P
 	return errors.Errorf("validateNameTreeDictNamesEntry: unknown dict name: %s", name)
 }
 
-func validateNameTreeDictNamesEntry(xRefTable *types.XRefTable, dict *types.PDFDict, name string) (firstKey, lastKey string, err error) {
+func validateNameTreeDictNamesEntry(xRefTable *types.XRefTable, dict *types.PDFDict, name string, node *types.Node) (firstKey, lastKey string, err error) {
 
 	// Names: array of the form [key1 value1 key2 value2 ... key n value n]
 	obj, found := dict.Find("Names")
@@ -531,6 +531,7 @@ func validateNameTreeDictNamesEntry(xRefTable *types.XRefTable, dict *types.PDFD
 		return "", "", errors.Errorf("validateNameTreeDictNamesEntry: Names array entry length needs to be even, length=%d\n", len(*arr))
 	}
 
+	var key string
 	for i, obj := range *arr {
 
 		if i%2 == 0 {
@@ -545,20 +546,23 @@ func validateNameTreeDictNamesEntry(xRefTable *types.XRefTable, dict *types.PDFD
 				return "", "", errors.Errorf("validateNameTreeDictNamesEntry: corrupt key <%v>\n", obj)
 			}
 
+			key = s.Value()
+
 			if firstKey == "" {
-				firstKey = s.Value()
+				firstKey = key
 			}
 
-			lastKey = s.Value()
+			lastKey = key
 
 			continue
 		}
 
-		err = validateNameTreeByName(name, xRefTable, obj)
+		err = validateNameTreeValue(name, xRefTable, obj)
 		if err != nil {
 			return "", "", err
 		}
 
+		node.AddToLeaf(key, obj)
 	}
 
 	return firstKey, lastKey, nil
@@ -583,17 +587,20 @@ func validateNameTreeDictLimitsEntry(xRefTable *types.XRefTable, dict *types.PDF
 	return nil
 }
 
-func validateNameTree(xRefTable *types.XRefTable, name string, indRef types.PDFIndirectRef, root bool) (firstKey, lastKey string, err error) {
+func validateNameTree(xRefTable *types.XRefTable, name string, indRef types.PDFIndirectRef, root bool) (string, string, *types.Node, error) {
 
 	// see 7.7.4
 
 	// A node has "Kids" or "Names" entry.
 
+	node := &types.Node{IndRef: &indRef}
+	var kmin, kmax string
+
 	var dict *types.PDFDict
 
-	dict, err = xRefTable.DereferenceDict(indRef)
+	dict, err := xRefTable.DereferenceDict(indRef)
 	if err != nil || dict == nil {
-		return
+		return "", "", nil, err
 	}
 
 	// Kids: array of indirect references to the immediate children of this node.
@@ -606,47 +613,54 @@ func validateNameTree(xRefTable *types.XRefTable, name string, indRef types.PDFI
 
 		arr, err = xRefTable.DereferenceArray(obj)
 		if err != nil {
-			return "", "", err
+			return "", "", nil, err
 		}
 
 		if arr == nil {
-			return "", "", errors.New("validateNameTree: missing \"Kids\" array")
+			return "", "", nil, errors.New("validateNameTree: missing \"Kids\" array")
 		}
 
 		for _, obj := range *arr {
 
 			kid, ok := obj.(types.PDFIndirectRef)
 			if !ok {
-				return "", "", errors.New("validateNameTree: corrupt kid, should be indirect reference")
+				return "", "", nil, errors.New("validateNameTree: corrupt kid, should be indirect reference")
 			}
 
-			var fk string
-			fk, lastKey, err = validateNameTree(xRefTable, name, kid, false)
+			var kminKid string
+			var kidNode *types.Node
+			kminKid, kmax, kidNode, err = validateNameTree(xRefTable, name, kid, false)
 			if err != nil {
-				return "", "", err
+				return "", "", nil, err
 			}
-			if firstKey == "" {
-				firstKey = fk
+			if kmin == "" {
+				kmin = kminKid
 			}
+
+			node.Kids = append(node.Kids, kidNode)
 		}
 
 	} else {
 
 		// Leaf node
-		firstKey, lastKey, err = validateNameTreeDictNamesEntry(xRefTable, dict, name)
+		kmin, kmax, err = validateNameTreeDictNamesEntry(xRefTable, dict, name, node)
 		if err != nil {
-			return "", "", err
+			return "", "", nil, err
 		}
 	}
 
 	if !root {
 
-		err = validateNameTreeDictLimitsEntry(xRefTable, dict, firstKey, lastKey)
+		// Verify calculated key range.
+		err = validateNameTreeDictLimitsEntry(xRefTable, dict, kmin, kmax)
 		if err != nil {
-			return "", "", err
+			return "", "", nil, err
 		}
-
 	}
 
-	return firstKey, lastKey, nil
+	// We track limits for all nodes internally.
+	node.Kmin = kmin
+	node.Kmax = kmax
+
+	return kmin, kmax, node, nil
 }

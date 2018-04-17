@@ -1,648 +1,442 @@
 package types
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/hhrutter/pdfcpu/log"
-	"github.com/pkg/errors"
 )
 
-// PDFNameTree represents a PDF name tree.
-// See 7.9.6
-type PDFNameTree struct {
-	PDFIndirectRef
+const maxEntries = 3
+
+// Node is an opiniated implementation of the PDF name tree.
+// pdfcpu caches all name trees found in the PDF catalog with this data structure.
+// The PDF spec does not impose any rules regarding a strategy for the creation of nodes.
+// A binary tree was chosen where each leaf node has a limited number of entries (maxEntries).
+// Once maxEntries has been reached a leaf node turns into an intermediary node with two kids,
+// which are leaf nodes each of them holding half of the sorted entries of the original leaf node.
+type Node struct {
+	Kids       []*Node         // Mirror of the name tree's Kids array.
+	Names      []entry         // Mirror of the name tree's Names array.
+	Kmin, Kmax string          // Mirror of the name tree's Limit array[Kmin,Kmax].
+	IndRef     *PDFIndirectRef // Pointer to the PDF object representing this name tree node.
 }
 
-// NewNameTree creates a new nameTree.
-func NewNameTree(root PDFIndirectRef) *PDFNameTree {
-	return &PDFNameTree{root}
+// entry is a key value pair.
+type entry struct {
+	k string
+	v PDFObject
 }
 
-func (nameTree PDFNameTree) rootObjNr() int {
-	return nameTree.ObjectNumber.Value()
+func (n Node) leaf() bool {
+	return n.Kids == nil
 }
 
-func (nameTree PDFNameTree) namesArray(xRefTable *XRefTable) (*PDFArray, error) {
+func (n Node) withinLimits(k string) bool {
 
-	dict, err := xRefTable.DereferenceDict(nameTree.PDFIndirectRef)
-	if err != nil || dict == nil {
-		return nil, err
+	if n.leaf() {
+		return n.Kmin <= k && k <= n.Kmax
 	}
 
-	obj, ok := dict.Find("Names")
-	if !ok {
-		return nil, errors.Errorf("namesArray: missing \"Names\" entry in <%v>\n", obj)
+	for _, v := range n.Kids {
+		if v.withinLimits(k) {
+			return true
+		}
 	}
 
-	arr, err := xRefTable.DereferenceArray(obj)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(*arr)%2 > 0 {
-		return nil, errors.Errorf("limitsArray: corrupt \"Names\" entry in %v\n", *arr)
-	}
-
-	return arr, nil
+	return false
 }
 
-func (nameTree PDFNameTree) limits(arr *PDFArray) (min, max string, err error) {
+// Value returns the value given key
+func (n Node) Value(k string) (PDFObject, bool) {
 
-	if len(*arr) != 2 {
-		return "", "", errors.Errorf("limits: corrupt \"Limits\" entry in %v\n", *arr)
-	}
+	if n.leaf() {
 
-	sl, ok := (*arr)[0].(PDFStringLiteral)
-	if !ok {
-		err = errors.Errorf("limits: corrupt min key <%v>\n", (*arr)[0])
-		return "", "", err
-	}
-	min, err = StringLiteralToString(sl.Value())
-	if err != nil {
-		return "", "", err
-	}
-
-	sl, ok = (*arr)[1].(PDFStringLiteral)
-	if !ok {
-		return "", "", errors.Errorf("limits: corrupt max key <%v>\n", (*arr)[1])
-	}
-
-	max, err = StringLiteralToString(sl.Value())
-	if err != nil {
-		return "", "", err
-	}
-
-	return min, max, nil
-}
-
-func (nameTree PDFNameTree) limitsArray(xRefTable *XRefTable) (arr *PDFArray, min, max string, err error) {
-
-	var dict *PDFDict
-	dict, err = xRefTable.DereferenceDict(nameTree.PDFIndirectRef)
-	if err != nil || dict == nil {
-		return nil, "", "", err
-	}
-
-	obj, ok := dict.Find("Limits")
-	if !ok {
-		return nil, "", "", errors.Errorf("limitsArray: missing \"Limits\" entry in <%v>\n", dict)
-	}
-
-	arr, err = xRefTable.DereferenceArray(obj)
-	if err != nil {
-		return nil, "", "", err
-	}
-
-	min, max, err = nameTree.limits(arr)
-
-	return arr, min, max, err
-}
-
-// LeafNode retrieves the leaf node dict for a given key which may be a new one.
-// last is true for the right most kid assuming strict left to right tree traversal.
-func (nameTree *PDFNameTree) LeafNode(xRefTable *XRefTable, last bool, key string) (leaf *PDFNameTree, err error) {
-
-	log.Debug.Printf("LeafNode: obj#%d key=%s\n", nameTree.rootObjNr(), key)
-
-	// A node has "Kids" or "Names" entry.
-
-	var dict *PDFDict
-	dict, err = xRefTable.DereferenceDict(nameTree.PDFIndirectRef)
-	if err != nil || dict == nil {
-		return nil, err
-	}
-
-	// Kids: array of indirect references to the immediate children of this node.
-	// if Kids present then recurse
-	if obj, found := dict.Find("Kids"); found {
-
-		var arr *PDFArray
-
-		// Check Limits array if present (intermediate nodes).
-		if o, found := dict.Find("Limits"); found {
-
-			arr, err = xRefTable.DereferenceArray(o)
-			if err != nil {
-				return nil, err
-			}
-			if len(*arr) != 2 {
-				return nil, errors.Errorf("LeafNode: corrupt \"Limits\" entry: %v\n", *arr)
-			}
-
-			maxKey := (*arr)[1].(PDFStringLiteral).Value()
-			// If key > maxKey skip this subtree unless it is the last one.
-			if !last && key > maxKey {
-				return nil, nil
-			}
-
+		if k < n.Kmin || n.Kmax < k {
+			return nil, false
 		}
 
-		arr, err = xRefTable.DereferenceArray(obj)
-		if err != nil {
-			return nil, err
-		}
-		if arr == nil {
-			return nil, errors.New("LeafNode: missing \"Kids\" array")
-		}
+		// names are sorted by key.
+		for _, v := range n.Names {
 
-		kidCount := len(*arr)
-
-		for i, obj := range *arr {
-
-			log.Debug.Printf("LeafNode: processing kid: %v\n", obj)
-
-			kid, ok := obj.(PDFIndirectRef)
-			if !ok {
-				return nil, errors.New("LeafNode: corrupt kid")
+			if v.k < k {
+				continue
 			}
 
-			leaf, err = NewNameTree(kid).LeafNode(xRefTable, i == kidCount-1, key)
-			if err != nil {
-				return nil, err
-			}
-			if leaf != nil {
-				return leaf, nil
+			if v.k == k {
+				return v.v, true
 			}
 
+			return nil, false
 		}
 
-		log.Debug.Println("LeafNode end")
-
-		return nil, nil
 	}
 
-	// Leaf node
-	leaf = nameTree
+	// kids are sorted by key ranges.
+	for _, v := range n.Kids {
+		if v.withinLimits(k) {
+			return v.Value(k)
+		}
+	}
 
-	log.Debug.Println("LeafNode end")
-
-	return leaf, nil
+	return nil, false
 }
 
-func (nameTree *PDFNameTree) key(xRefTable *XRefTable, o PDFObject) (string, error) {
+// AddToLeaf adds an entry to a leaf.
+func (n *Node) AddToLeaf(k string, v PDFObject) {
 
-	o, err := xRefTable.Dereference(o)
-	if err != nil {
-		return "", err
+	if n.Names == nil {
+		n.Names = make([]entry, 0, maxEntries)
 	}
 
-	sl, ok := o.(PDFStringLiteral)
-	if !ok {
-		return "", errors.Errorf("corrupt key <%v>\n", o)
-	}
-
-	return StringLiteralToString(sl.Value())
+	n.Names = append(n.Names, entry{k, v})
 }
 
-// LeafNodeValue retrieves the indRef value for a given key of a leaf node.
-// Will return nil if key not found.
-func (nameTree *PDFNameTree) LeafNodeValue(xRefTable *XRefTable, key string) (*PDFIndirectRef, error) {
+// Add adds an entry to a name tree.
+func (n *Node) Add(xRefTable *XRefTable, k string, v PDFObject) error {
 
-	log.Debug.Printf("LeafNodeValue: obj#%d key=%s\n", nameTree.rootObjNr(), key)
-
-	arr, err := nameTree.namesArray(xRefTable)
-	if err != nil {
-		return nil, err
+	if n.Names == nil {
+		n.Names = make([]entry, 0, maxEntries)
 	}
 
-	log.Debug.Printf("arr = %v\n", arr)
+	if n.leaf() {
 
-	var getValue bool
+		// A leaf node contains up to maxEntries names.
+		// Any number of entries greater than maxEntries will be delegated to kid nodes.
 
-	for i, obj := range *arr {
+		if len(n.Names) == 0 {
+			n.Names = append(n.Names, entry{k, v})
+			n.Kmin, n.Kmax = k, k
+			log.Debug.Printf("first key=%s\n", k)
+			return nil
+		}
 
-		if i%2 == 0 {
+		log.Debug.Printf("kmin=%s kmax=%s\n", n.Kmin, n.Kmax)
 
-			//var k string
-			k, err := nameTree.key(xRefTable, obj)
-			if err != nil {
-				return nil, err
+		if k < n.Kmin {
+			// Insert (k,v) at the beginning.
+			log.Debug.Printf("Insert k:%s at beginning\n", k)
+			n.Kmin = k
+			n.Names = append(n.Names, entry{})
+			copy(n.Names[1:], n.Names[0:])
+			n.Names[0] = entry{k, v}
+		} else if k > n.Kmax {
+			// Insert (k,v) at the end.
+			log.Debug.Printf("Insert k:%s at end\n", k)
+			n.Kmax = k
+			n.Names = append(n.Names, entry{k, v})
+		} else {
+			// Insert (k,v) somewhere in the middle.
+			log.Debug.Printf("Insert k:%s in the middle\n", k)
+			for i, e := range n.Names {
+
+				if e.k < k {
+					continue
+				}
+
+				// Adding an already existing key updates its value.
+				if e.k == k {
+
+					// Free up all objs referred to by old values.
+					if xRefTable != nil {
+						err := xRefTable.DeleteObjectGraph(n.Names[i].v)
+						if err != nil {
+							return err
+						}
+					}
+
+					n.Names[i].v = v
+					break
+				}
+
+				// Insert entry(k,v) at i
+				n.Names = append(n.Names, entry{})
+				copy(n.Names[i+1:], n.Names[i:]) // ?
+				n.Names[i] = entry{k, v}
+				break
 			}
+		}
 
-			//logErrorTypes.Printf("<%s> <%s> %0X %0x\n", s, key, s, key)
+		// if len was already > maxEntries we know we are dealing with somebody elses name tree.
+		// In that case we do not know the branching strategy and therefore just add to Names and do not create kids.
+		// If len is within maxEntries we do not create kids either way.
+		if len(n.Names) != maxEntries+1 {
+			return nil
+		}
 
-			if key == k {
-				getValue = true
-			}
+		// turn leaf into intermediate node with 2 kids/leafs (binary tree)
+		c := maxEntries + 1
+		k1 := &Node{Names: make([]entry, c/2, maxEntries)}
+		copy(k1.Names, n.Names[:c/2])
+		k1.Kmin = n.Names[0].k
+		k1.Kmax = n.Names[c/2-1].k
 
+		k2 := &Node{Names: make([]entry, len(n.Names)-c/2, maxEntries)}
+		copy(k2.Names, n.Names[c/2:])
+		k2.Kmin = n.Names[c/2].k
+		k2.Kmax = n.Names[c-1].k
+
+		n.Kids = []*Node{k1, k2}
+		n.Names = nil
+
+		return nil
+	}
+
+	// For intermediary nodes we delegate to the corresponding subtree.
+	for _, a := range n.Kids {
+		if k < a.Kmin || a.withinLimits(k) {
+			return a.Add(xRefTable, k, v)
+		}
+	}
+
+	// Insert k into last (right most) subtree.
+	last := n.Kids[len(n.Kids)-1]
+
+	return last.Add(xRefTable, k, v)
+}
+
+func (n *Node) removeFromNames(xRefTable *XRefTable, k string) (ok bool, err error) {
+
+	for i, v := range n.Names {
+
+		if v.k < k {
 			continue
 		}
 
-		if getValue {
-			iRef, ok := obj.(PDFIndirectRef)
-			if !ok {
-				return nil, errors.Errorf("LeafNodeValue: corrupt value <%v>\n", obj)
+		if v.k == k {
+
+			if xRefTable != nil {
+				// Remove object graph of value.
+				log.Debug.Println("removeFromNames: deleting object graph of v")
+				err := xRefTable.DeleteObjectGraph(v.v)
+				if err != nil {
+					return false, err
+				}
 			}
-			log.Debug.Println("LeafNodeValue end")
-			return &iRef, nil
+
+			n.Names = append(n.Names[:i], n.Names[i+1:]...)
+			return true, nil
 		}
 
 	}
 
-	log.Debug.Println("LeafNodeValue end: not found")
-	return nil, nil
+	return false, nil
 }
 
-// LeafNodeSetValue adds or updates a key value pair.
-func (nameTree *PDFNameTree) LeafNodeSetValue(xRefTable *XRefTable, key string, val PDFIndirectRef) error {
+func (n *Node) removeFromLeaf(xRefTable *XRefTable, k string) (empty, ok bool, err error) {
 
-	log.Debug.Printf("LeafNodeSetValue: obj#%d key=%s val=%v\n", nameTree.rootObjNr(), key, val)
-
-	dict, err := xRefTable.DereferenceDict(nameTree.PDFIndirectRef)
-	if err != nil || dict == nil {
-		return err
+	if k < n.Kmin || n.Kmax < k {
+		return false, false, nil
 	}
 
-	obj, ok := dict.Find("Names")
-	if !ok {
-		return errors.Errorf("LeafNodeSetValue: missing \"Names\" entry in <%v>\n", obj)
-	}
+	// kmin < k < kmax
 
-	arr, err := xRefTable.DereferenceArray(obj)
-	if err != nil {
-		return err
-	}
-
-	if len(*arr)%2 > 0 {
-		return errors.Errorf("LeafNodeSetValue: corrupt \"Names\" entry in %v\n", *arr)
-	}
-
-	a := *arr
-
-	newArr := PDFArray{}
-
-	var found bool
-	for i := 0; i < len(a)/2; i++ {
-
-		keyObj := a[i*2]
-		valObj := a[i*2+1]
-
-		var k string
-		k, err = nameTree.key(xRefTable, keyObj)
-		if err != nil {
-			return err
-		}
-
-		if !found {
-
-			if key < k {
-
-				newArr = append(newArr, PDFStringLiteral(key))
-				newArr = append(newArr, val)
-				newArr = append(newArr, keyObj)
-				newArr = append(newArr, valObj)
-
-				found = true
-				continue
+	// If sole entry gets deleted, remove this node from parent.
+	if len(n.Names) == 1 {
+		if xRefTable != nil {
+			// Remove object graph of value.
+			log.Debug.Println("removeFromLeaf: deleting object graph of v")
+			err := xRefTable.DeleteObjectGraph(n.Names[0].v)
+			if err != nil {
+				return false, false, err
 			}
+		}
+		n.Kmin, n.Kmax = "", ""
+		n.Names = nil
+		return true, true, nil
+	}
 
-			if key == k {
+	if k == n.Kmin {
 
-				// Free up possible obj for original key.
-				err = xRefTable.DeleteObjectGraph(keyObj)
-				if err != nil {
-					return err
-				}
-
-				// Free up all objs referred by val.
-				err = xRefTable.DeleteObjectGraph(valObj)
-				if err != nil {
-					return err
-				}
-
-				newArr = append(newArr, PDFStringLiteral(key))
-				newArr = append(newArr, val)
-
-				found = true
-				continue
+		if xRefTable != nil {
+			// Remove object graph of value.
+			log.Debug.Println("removeFromLeaf: deleting object graph of v")
+			err := xRefTable.DeleteObjectGraph(n.Names[0].v)
+			if err != nil {
+				return false, false, err
 			}
-
 		}
 
-		newArr = append(newArr, keyObj)
-		newArr = append(newArr, valObj)
+		n.Names = n.Names[1:]
+		n.Kmin = n.Names[0].k
+		return false, true, nil
 	}
 
-	if !found {
-		newArr = append(newArr, PDFStringLiteral(key))
-		newArr = append(newArr, val)
-	}
+	if k == n.Kmax {
 
-	dict.Update("Names", newArr)
-
-	log.Debug.Println("LeafNodeSetValue end")
-	return nil
-}
-
-// LeafNodeRemoveValue removes a key/value pair that is assumed to live in leaf.
-// found returns true on successful removal.
-// deadLeaf is an indicator for having to remove leaf after leaf's last key/value pair gets deleted.
-func (nameTree *PDFNameTree) LeafNodeRemoveValue(xRefTable *XRefTable, root bool, key string) (found, deadLeaf bool, err error) {
-
-	log.Debug.Printf("LeafNodeRemoveValue begin: obj#%d key=%s\n", nameTree.rootObjNr(), key)
-
-	var larr *PDFArray
-
-	if !root {
-
-		var minKey, maxKey string
-		larr, minKey, maxKey, err = nameTree.limitsArray(xRefTable)
-		if err != nil {
-			return false, false, err
+		if xRefTable != nil {
+			// Remove object graph of value.
+			log.Debug.Println("removeFromLeaf: deleting object graph of v")
+			err := xRefTable.DeleteObjectGraph(n.Names[len(n.Names)-1].v)
+			if err != nil {
+				return false, false, err
+			}
 		}
 
-		if key < minKey || key > maxKey {
-			return false, false, errors.Errorf("LeafNodeRemoveValue: key=%s corrupt leaf node: %v\n", key, nameTree)
-		}
-
+		n.Names = n.Names[:len(n.Names)-1]
+		n.Kmax = n.Names[len(n.Names)-1].k
+		return false, true, nil
 	}
 
-	narr, err := nameTree.namesArray(xRefTable)
+	ok, err = n.removeFromNames(xRefTable, k)
 	if err != nil {
 		return false, false, err
 	}
 
-	a := *narr
+	return false, ok, nil
+}
 
-	// Iterate over contents of Names array - a sequence of key value pairs.
-	for i := 0; i < len(a)/2; i++ {
+func (n *Node) removeFromKids(xRefTable *XRefTable, k string) (ok bool, err error) {
 
-		var k string
-		k, err = nameTree.key(xRefTable, a[i*2])
-		v := a[i*2+1]
+	// Locate the kid to recurse into, then remove k from that subtree.
+	for i, kid := range n.Kids {
 
-		log.Debug.Printf("LeafNodeRemoveValue: k=%s v=%v i=%d\n", k, v, i)
+		if !kid.withinLimits(k) {
+			continue
+		}
 
-		if key == k {
+		empty, ok, err := kid.Remove(xRefTable, k)
+		if err != nil {
+			return false, err
+		}
+		if !ok {
+			return false, nil
+		}
 
-			log.Debug.Println("LeafNodeRemoveValue: we have a match!")
+		if empty {
 
-			// Remove obj graph of key
-			log.Debug.Println("LeafNodeRemoveValue: deleting object graph of k")
-			err = xRefTable.DeleteObjectGraph(a[i*2])
-			if err != nil {
-				return false, false, err
-			}
+			// This kid is now empty and needs to be removed.
 
-			// Remove object graph of val
-			log.Debug.Println("LeafNodeRemoveValue: deleting object graph of v")
-			err = xRefTable.DeleteObjectGraph(v)
-			if err != nil {
-				return false, false, err
-			}
-
-			log.Debug.Printf("LeafNodeRemoveValue: Names array=%v\n", a)
-			// Remove key/value pair from narr
-			if 2*i == len(a)-2 {
-				a = a[:len(a)-2]
-			} else {
-				a = append(a[:2*i], a[2*i+2:]...)
-			}
-
-			log.Debug.Printf("LeafNodeRemoveValue: updated Names array=%v\n", a)
-
-			dict, _ := xRefTable.DereferenceDict(nameTree.PDFIndirectRef)
-			dict.Update("Names", a)
-
-			if len(a) == 0 {
-				deadLeaf = true
-			} else {
-				// Update Limits
-				if !root {
-					(*larr)[0] = a[0]
-					(*larr)[1] = a[len(a)-2]
-					//dict.Update("Limits", a)
+			if xRefTable != nil {
+				err := xRefTable.DeleteObjectGraph(*n.Kids[i].IndRef)
+				if err != nil {
+					return false, err
 				}
 			}
 
-			found = true
-			log.Debug.Println("LeafNodeRemoveValue end")
-			return found, deadLeaf, nil
+			if i == 0 {
+				// Remove first kid.
+				log.Debug.Println("removeFromKids: remove first kid.")
+				n.Kids = n.Kids[1:]
+			} else if i == len(n.Kids)-1 {
+				log.Debug.Println("removeFromKids: remove last kid.")
+				// Remove last kid.
+				n.Kids = n.Kids[:len(n.Kids)-1]
+			} else {
+				// Remove kid from the middle.
+				log.Debug.Println("removeFromKids: remove kid form the middle.")
+				n.Kids = append(n.Kids[:i], n.Kids[i+1:]...)
+			}
+
+			if len(n.Kids) == 1 {
+
+				// If only one kid remains we can merge it with its parent.
+				// By doing this we get rid of a redundant intermediary node.
+				log.Debug.Println("removeFromKids: only 1 kid")
+
+				if xRefTable != nil {
+					err = xRefTable.DeleteObject(n.IndRef.ObjectNumber.Value())
+					if err != nil {
+						return false, err
+					}
+				}
+
+				*n = *n.Kids[0]
+
+				log.Debug.Printf("removeFromKids: new n = %s\n", n)
+				log.Debug.Printf("removeFromKids: n.IndRef = %v\n", n.IndRef)
+
+				return true, nil
+			}
+
 		}
 
+		// Update kMin, kMax for n.
+		n.Kmin = n.Kids[0].Kmin
+		n.Kmax = n.Kids[len(n.Kids)-1].Kmax
+
+		return true, nil
 	}
 
-	log.Debug.Println("LeafNodeRemoveValue end: not found")
-	return false, false, nil
+	return false, nil
 }
 
-// Value returns the value for a given key.
-func (nameTree PDFNameTree) Value(xRefTable *XRefTable, key string) (*PDFIndirectRef, error) {
+// Remove removes an entry from a name tree.
+// empty returns true if this node is an empty leaf node after removal.
+// ok returns true if removal was successful.
+func (n *Node) Remove(xRefTable *XRefTable, k string) (empty, ok bool, err error) {
 
-	log.Debug.Printf("Value: obj#%d key=%s\n", nameTree.rootObjNr(), key)
+	if n.leaf() {
+		return n.removeFromLeaf(xRefTable, k)
+	}
 
-	var leafNode *PDFNameTree
+	ok, err = n.removeFromKids(xRefTable, k)
+	if err != nil {
+		return false, false, err
+	}
 
-	leafNode, err := nameTree.LeafNode(xRefTable, true, key)
+	return false, ok, nil
+
+}
+
+// Process traverses the nametree applying a handler to each entry (key-value pair).
+func (n Node) Process(xRefTable *XRefTable, handler func(*XRefTable, string, PDFObject) error) error {
+
+	if !n.leaf() {
+		for _, v := range n.Kids {
+			err := v.Process(xRefTable, handler)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	for _, n := range n.Names {
+		err := handler(xRefTable, n.k, n.v)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// KeyList returns a sorted list of all keys.
+func (n Node) KeyList() ([]string, error) {
+
+	list := []string{}
+
+	keys := func(xRefTable *XRefTable, k string, v PDFObject) error {
+		list = append(list, k)
+		return nil
+	}
+
+	err := n.Process(nil, keys)
 	if err != nil {
 		return nil, err
 	}
 
-	return leafNode.LeafNodeValue(xRefTable, key)
+	return list, nil
+
 }
 
-// SetValue add or updates a key value pair.
-func (nameTree *PDFNameTree) SetValue(xRefTable *XRefTable, key string, val PDFIndirectRef) error {
+func (n Node) String() string {
 
-	log.Debug.Printf("SetValueValue: obj#%d key=%s val=%v\n", nameTree.rootObjNr(), key, val)
+	a := []string{}
 
-	var leafNode *PDFNameTree
-
-	leafNode, err := nameTree.LeafNode(xRefTable, true, key)
-	if err != nil {
-		return err
+	if n.leaf() {
+		a = append(a, "[")
+		for _, n := range n.Names {
+			a = append(a, fmt.Sprintf("(%s,%s)", n.k, n.v))
+		}
+		a = append(a, fmt.Sprintf("{%s,%s}]", n.Kmin, n.Kmax))
+		return strings.Join(a, "")
 	}
 
-	return leafNode.LeafNodeSetValue(xRefTable, key, val)
-}
-
-func (nameTree *PDFNameTree) removeKid(xRefTable *XRefTable, dict *PDFDict, arr *PDFArray, pos int) (deadKid bool, err error) {
-
-	if len(*arr) > 1 {
-
-		// Remove kid i
-		a := *arr
-		if pos == len(a)-1 {
-			a = a[:pos]
-		} else {
-			a = append(a[:pos], a[:pos+1]...)
-		}
-		dict.Update("Kids", arr)
-
-		// Update Limits after kid removal.
-		var lFirst, lLast, l *PDFArray
-
-		lFirst, _, _, err = NewNameTree(a[0].(PDFIndirectRef)).limitsArray(xRefTable)
-		if err != nil {
-			return false, err
-		}
-
-		lLast, _, _, err = NewNameTree(a[len(a)-1].(PDFIndirectRef)).limitsArray(xRefTable)
-		if err != nil {
-			return false, err
-		}
-
-		l, _, _, err = nameTree.limitsArray(xRefTable)
-		if err != nil {
-			return false, err
-		}
-
-		// min = first kid limits min
-		(*l)[0] = (*lFirst)[0]
-
-		// max = last kid limits max
-		(*l)[1] = (*lLast)[1]
-
-		deadKid = false
-
-	} else {
-		err = xRefTable.DeleteObject(nameTree.rootObjNr())
-		if err != nil {
-			return
-		}
-
-		deadKid = true
+	for _, v := range n.Kids {
+		a = append(a, v.String())
 	}
 
-	return deadKid, nil
-}
-
-func (nameTree *PDFNameTree) checkLimits(xRefTable *XRefTable, dict *PDFDict, key string) (skip, ok bool, err error) {
-
-	o, found := dict.Find("Limits")
-	if !found {
-		return false, false, nil
-	}
-
-	arr, err := xRefTable.DereferenceArray(o)
-	if err != nil {
-		return false, false, err
-	}
-
-	var minKey, maxKey string
-	minKey, maxKey, err = nameTree.limits(arr)
-	if err != nil {
-		return false, false, err
-	}
-
-	if key < minKey {
-		// name tree does not contain key, nothing removed.
-		ok = true
-		skip = true
-		log.Debug.Println("RemoveKeyValuePair end: name does not contain key, nothing removed")
-		return skip, ok, nil
-	}
-
-	// Skip this subtree
-	if key > maxKey {
-		skip = true
-		log.Debug.Println("RemoveKeyValuePair end: skip this subtree")
-		return skip, false, nil
-	}
-
-	// We are in the correct subtree.
-	return false, false, nil
-}
-
-// RemoveKeyValuePair removes a key value pair.
-// ok is an indicator for stopping recursion.
-// found returns true on successful removal.
-// deadLeaf is an indicator for having to remove a kid after a leaf's last key/value pair got deleted.
-func (nameTree *PDFNameTree) RemoveKeyValuePair(xRefTable *XRefTable, root bool, key string) (ok, found, deadKid bool, err error) {
-
-	objNumber := nameTree.rootObjNr()
-
-	log.Debug.Printf("RemoveKeyValuePair: obj#%d key=%s\n", objNumber, key)
-
-	// A node has "Kids" or "Names" entry.
-
-	var dict *PDFDict
-	dict, err = xRefTable.DereferenceDict(nameTree.PDFIndirectRef)
-	if err != nil || dict == nil {
-		return false, false, false, err
-	}
-
-	// Kids: array of indirect references to the immediate children of this node.
-	// if Kids present then recurse
-	if obj, foundKids := dict.Find("Kids"); foundKids {
-
-		// Check Limits array if present (intermediate nodes).
-		var skip bool
-		skip, ok, err = nameTree.checkLimits(xRefTable, dict, key)
-		if err != nil || skip {
-			return ok, false, false, err
-		}
-
-		// We are in the correct subtree.
-		var arr *PDFArray
-		arr, err = xRefTable.DereferenceArray(obj)
-		if err != nil {
-			return false, false, false, err
-		}
-		if arr == nil {
-			return false, false, false, errors.New("RemoveKeyValuePair: missing \"Kids\" array")
-		}
-
-		for i, obj := range *arr {
-
-			log.Debug.Printf("RemoveKeyValuePair: processing kid: %v\n", obj)
-
-			var kid PDFIndirectRef
-			kid, ok = obj.(PDFIndirectRef)
-			if !ok {
-				return false, false, false, errors.New("RemoveKeyValuePair: corrupt kid")
-			}
-
-			ok, found, deadKid, err = NewNameTree(kid).RemoveKeyValuePair(xRefTable, false, key)
-			if err != nil {
-				return false, false, false, err
-			}
-
-			if !ok {
-				continue
-			}
-
-			// operation completed.
-
-			if found {
-
-				// key found.
-
-				log.Debug.Printf("RemoveKeyValuePair: key:%s found", key)
-
-				if deadKid {
-
-					// sole key removed, need to remove corresponding kid.
-					log.Debug.Printf("RemoveKeyValuePair: deadKid, will remove kid %d from len=%d\n", i, len(*arr))
-
-					deadKid, err = nameTree.removeKid(xRefTable, dict, arr, i)
-					if err != nil {
-						return false, false, false, err
-					}
-
-					log.Debug.Println("RemoveKeyValuePair end")
-					return ok, found, deadKid, nil
-				}
-
-			} else {
-				// key not found in proper subtree, nothing removed.
-				log.Debug.Printf("RemoveKeyValuePair: key:%s not found", key)
-			}
-
-			// Recursion stops here.
-			log.Debug.Println("RemoveKeyValuePair end1")
-			return ok, found, deadKid, nil
-		}
-
-		log.Debug.Println("RemoveKeyValuePair end")
-		return ok, found, deadKid, nil
-	}
-
-	// Leaf node
-
-	found, deadKid, err = nameTree.LeafNodeRemoveValue(xRefTable, root, key)
-
-	ok = true
-
-	log.Debug.Println("RemoveKeyValuePair end: leaf")
-
-	return ok, found, deadKid, err
+	return strings.Join(a, ",")
 }

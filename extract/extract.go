@@ -8,7 +8,7 @@ import (
 	"github.com/hhrutter/pdfcpu/log"
 	"github.com/hhrutter/pdfcpu/optimize"
 	"github.com/hhrutter/pdfcpu/types"
-	"github.com/hhrutter/upspin/errors"
+	"github.com/pkg/errors"
 )
 
 // ImageData extracts image data for objNr.

@@ -57,7 +57,6 @@ type StringSet map[string]bool
 type PDFObject interface {
 	fmt.Stringer
 	PDFString() string
-	//Value()
 }
 
 // PDFBoolean represents a PDF boolean object.

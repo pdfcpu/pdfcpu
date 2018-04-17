@@ -18,6 +18,7 @@ func createXRefTableWithRootDict() (*types.XRefTable, error) {
 
 	xRefTable := &types.XRefTable{
 		Table: map[int]*types.XRefTableEntry{},
+		Names: map[string]*types.Node{},
 		Stats: types.NewPDFStats(),
 	}
 

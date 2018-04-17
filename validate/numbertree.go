@@ -116,7 +116,7 @@ func validateNumberTreeDictNumsEntry(xRefTable *types.XRefTable, dict *types.PDF
 
 func validateNumberTreeDictLimitsEntry(xRefTable *types.XRefTable, dict *types.PDFDict, firstKey, lastKey int) error {
 
-	arr, err := validateStringArrayEntry(xRefTable, dict, "numberTreeDict", "Limits", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
+	arr, err := validateIntegerArrayEntry(xRefTable, dict, "numberTreeDict", "Limits", REQUIRED, types.V10, func(a types.PDFArray) bool { return len(a) == 2 })
 	if err != nil {
 		return err
 	}
@@ -182,6 +182,7 @@ func validateNumberTree(xRefTable *types.XRefTable, name string, indRef types.PD
 
 	if !root {
 
+		// Verify calculated key range.
 		err = validateNumberTreeDictLimitsEntry(xRefTable, dict, firstKey, lastKey)
 		if err != nil {
 			return 0, 0, err

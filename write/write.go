@@ -188,6 +188,14 @@ func writeRootObject(ctx *types.PDFContext) error {
 
 	log.Debug.Printf("*** writeRootObject: begin offset=%d *** %s\n", ctx.Write.Offset, catalog)
 
+	// Ensure corresponding and accurate name tree object graphs.
+	if !ctx.Write.ReducedFeatureSet() {
+		err := ctx.XRefTable.BindNameTrees()
+		if err != nil {
+			return err
+		}
+	}
+
 	var dict *types.PDFDict
 
 	dict, err := xRefTable.DereferenceDict(catalog)

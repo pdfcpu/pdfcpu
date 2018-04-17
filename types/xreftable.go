@@ -59,12 +59,12 @@ type Enc struct {
 // XRefTable represents a PDF cross reference table plus stats for a PDF file.
 type XRefTable struct {
 	Table               map[int]*XRefTableEntry
-	Size                *int            // Object count from PDF trailer dict.
-	PageCount           int             // Number of pages.
-	Root                *PDFIndirectRef // Pointer to catalog (reference to root object).
-	RootDict            *PDFDict        // Catalog
-	EmbeddedFiles       *PDFNameTree    // EmbeddedFiles name tree.
-	Encrypt             *PDFIndirectRef // Encrypt dict.
+	Size                *int             // Object count from PDF trailer dict.
+	PageCount           int              // Number of pages, set during validation.
+	Root                *PDFIndirectRef  // Pointer to catalog (reference to root object).
+	RootDict            *PDFDict         // Catalog
+	Names               map[string]*Node // Cache for name trees as found in catalog.
+	Encrypt             *PDFIndirectRef  // Encrypt dict.
 	E                   *Enc
 	EncKey              []byte // Encrypt key.
 	AES4Strings         bool
@@ -106,6 +106,7 @@ type XRefTable struct {
 func newXRefTable(validationMode int) (xRefTable *XRefTable) {
 	return &XRefTable{
 		Table:             map[int]*XRefTableEntry{},
+		Names:             map[string]*Node{},
 		LinearizationObjs: IntSet{},
 		Stats:             NewPDFStats(),
 		ValidationMode:    validationMode,
@@ -524,13 +525,13 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 
 func (xRefTable *XRefTable) deleteObject(obj PDFObject) error {
 
-	log.Debug.Println("deleteObject: begin")
-
 	indRef, ok := obj.(PDFIndirectRef)
 	if ok {
 
+		var err error
+
 		objNumber := int(indRef.ObjectNumber)
-		obj, err := xRefTable.Dereference(indRef)
+		obj, err = xRefTable.Dereference(indRef)
 		if err != nil {
 			return err
 		}
@@ -574,7 +575,6 @@ func (xRefTable *XRefTable) deleteObject(obj PDFObject) error {
 
 	}
 
-	log.Debug.Println("deleteObject: end")
 	return nil
 }
 
@@ -689,6 +689,7 @@ func (xRefTable *XRefTable) indRefToObject(indObjRef *PDFIndirectRef) (PDFObject
 	}
 
 	if entry.Free {
+		// TODO return err
 		return nil, nil
 	}
 
@@ -1086,24 +1087,108 @@ func (xRefTable *XRefTable) freeList(logStr []string) ([]string, error) {
 	return logStr, nil
 }
 
+func (xRefTable *XRefTable) bindNameTreeNode(name string, n *Node, root bool) error {
+
+	var dict PDFDict
+
+	if n.IndRef == nil {
+		d := NewPDFDict()
+		indRef, err := xRefTable.IndRefForNewObject(d)
+		if err != nil {
+			return err
+		}
+		n.IndRef = indRef
+		dict = d
+	} else {
+		if root {
+			// Update root object after possible tree modification after removal of empty kid.
+			namesDict, err := xRefTable.NamesDict()
+			if err != nil {
+				return err
+			}
+			if namesDict == nil {
+				return errors.New("Root entry \"Names\" corrupt")
+			}
+			namesDict.Update(name, *n.IndRef)
+		}
+		log.Debug.Printf("bind IndRef = %v\n", n.IndRef)
+		d, err := xRefTable.DereferenceDict(*n.IndRef)
+		if err != nil {
+			return err
+		}
+		if d == nil {
+			return errors.Errorf("name tree node dict is nil for node: %v\n", n)
+		}
+		dict = *d
+	}
+
+	if !root {
+		dict.Update("Limits", NewStringArray(n.Kmin, n.Kmax))
+	} else {
+		dict.Delete("Limits")
+	}
+
+	if n.leaf() {
+		a := PDFArray{}
+		for _, e := range n.Names {
+			a = append(a, PDFStringLiteral(e.k))
+			a = append(a, e.v)
+		}
+		dict.Update("Names", a)
+		log.Debug.Printf("bound nametree node(leaf): %s/n", dict)
+		return nil
+	}
+
+	kids := PDFArray{}
+	for _, k := range n.Kids {
+		err := xRefTable.bindNameTreeNode(name, k, false)
+		if err != nil {
+			return err
+		}
+		kids = append(kids, *k.IndRef)
+	}
+
+	dict.Update("Kids", kids)
+	dict.Delete("Names")
+
+	log.Debug.Printf("bound nametree node(intermediary): %s/n", dict)
+
+	return nil
+}
+
+// BindNameTrees syncs up the internal name tree cache with the xreftable.
+func (xRefTable *XRefTable) BindNameTrees() error {
+
+	log.Debug.Println("BindNameTrees..")
+	for k, v := range xRefTable.Names {
+		log.Debug.Printf("bindNameTree: %s\n", k)
+		err := xRefTable.bindNameTreeNode(k, v, true)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // LocateNameTree locates/ensures a specific name tree.
-func (xRefTable *XRefTable) LocateNameTree(nameTreeName string, ensure bool) (*PDFNameTree, error) {
+func (xRefTable *XRefTable) LocateNameTree(nameTreeName string, ensure bool) error {
 
 	d, err := xRefTable.Catalog()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	obj, found := d.Find("Names")
 	if !found {
 		if !ensure {
-			return nil, nil
+			return nil
 		}
 		dict := NewPDFDict()
 
 		indRef, err := xRefTable.IndRefForNewObject(dict)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		d.Insert("Names", *indRef)
 
@@ -1111,51 +1196,61 @@ func (xRefTable *XRefTable) LocateNameTree(nameTreeName string, ensure bool) (*P
 	} else {
 		d, err = xRefTable.DereferenceDict(obj)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	obj, found = d.Find(nameTreeName)
 	if !found {
 		if !ensure {
-			return nil, nil
+			return nil
 		}
 		dict := NewPDFDict()
 		dict.Insert("Names", PDFArray{})
 
 		indRef, err := xRefTable.IndRefForNewObject(dict)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		d.Insert(nameTreeName, *indRef)
 
-		return NewNameTree(*indRef), nil
+		xRefTable.Names[nameTreeName] = &Node{IndRef: indRef}
+
+		return nil
 	}
 
 	indRef, ok := obj.(PDFIndirectRef)
 	if !ok {
-		return nil, errors.New("LocateNameTree: name tree must be indirect ref")
+		return errors.New("LocateNameTree: name tree must be indirect ref")
 	}
 
-	return NewNameTree(indRef), nil
+	xRefTable.Names[nameTreeName] = &Node{IndRef: &indRef}
+
+	return nil
+}
+
+// NamesDict returns the dict that contains all name trees.
+func (xRefTable *XRefTable) NamesDict() (*PDFDict, error) {
+
+	rootDict, err := xRefTable.Catalog()
+	if err != nil {
+		return nil, err
+	}
+
+	obj, found := rootDict.Find("Names")
+	if !found {
+		return nil, errors.New("NamesDict: root entry \"Names\" missing")
+	}
+
+	return xRefTable.DereferenceDict(obj)
 }
 
 // RemoveNameTree removes a specific name tree.
 // Also removes a resulting empty names dict.
 func (xRefTable *XRefTable) RemoveNameTree(nameTreeName string) error {
 
-	rootDict, err := xRefTable.Catalog()
-	if err != nil {
-		return err
-	}
-
-	obj, found := rootDict.Find("Names")
-	if !found {
-		return errors.New("RemoveNameTree: root entry \"Names\" missing")
-	}
-
-	namesDict, err := xRefTable.DereferenceDict(obj)
+	namesDict, err := xRefTable.NamesDict()
 	if err != nil {
 		return err
 	}
@@ -1182,6 +1277,11 @@ func (xRefTable *XRefTable) RemoveNameTree(nameTreeName string) error {
 
 	// Remove empty names dict.
 
+	rootDict, err := xRefTable.Catalog()
+	if err != nil {
+		return err
+	}
+
 	if indRef := rootDict.IndirectRefEntry("Names"); indRef != nil {
 		err = xRefTable.DeleteObject(indRef.ObjectNumber.Value())
 		if err != nil {
@@ -1190,6 +1290,8 @@ func (xRefTable *XRefTable) RemoveNameTree(nameTreeName string) error {
 	}
 
 	rootDict.Delete("Names")
+
+	log.Debug.Printf("Deleted Names from root: %s\n", rootDict)
 
 	return nil
 }
@@ -1210,12 +1312,13 @@ func (xRefTable *XRefTable) RemoveCollection() error {
 	}
 
 	rootDict.Delete("Collection")
+	log.Debug.Printf("deleted collection from root: %s\n", rootDict)
 
 	return nil
 }
 
 // EnsureCollection makes sure there is a Collection entry in the catalog.
-// Needed for portfolio / portable collections.
+// Needed for portfolio / portable collections eg. for file attachments.
 func (xRefTable *XRefTable) EnsureCollection() error {
 
 	rootDict, err := xRefTable.Catalog()
@@ -1234,13 +1337,6 @@ func (xRefTable *XRefTable) EnsureCollection() error {
 
 	schemaDict := NewPDFDict()
 	schemaDict.Insert("Type", PDFName("CollectionSchema"))
-
-	// indexCFDict := NewPDFDict()
-	// indexCFDict.Insert("Type", PDFName("CollectionField"))
-	// indexCFDict.Insert("Subtype", PDFName("S"))
-	// indexCFDict.Insert("N", PDFStringLiteral("Id"))
-	// indexCFDict.Insert("O", PDFInteger(1))
-	// schemaDict.Insert("ID", indexCFDict)
 
 	fileNameCFDict := NewPDFDict()
 	fileNameCFDict.Insert("Type", PDFName("CollectionField"))
@@ -1294,6 +1390,8 @@ func (xRefTable *XRefTable) EnsureCollection() error {
 
 // RemoveEmbeddedFilesNameTree removes both the embedded files name tree and the Collection dict.
 func (xRefTable *XRefTable) RemoveEmbeddedFilesNameTree() error {
+
+	delete(xRefTable.Names, "EmbeddedFiles")
 
 	err := xRefTable.RemoveNameTree("EmbeddedFiles")
 	if err != nil {

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	//"github.com/hhrutter/pdfcpu/attach"
 	"github.com/hhrutter/pdfcpu/attach"
 	"github.com/hhrutter/pdfcpu/crypto"
 	"github.com/hhrutter/pdfcpu/extract"
@@ -161,6 +162,7 @@ func writeSinglePagePDFs(ctx *types.PDFContext, selectedPages types.IntSet, dirO
 	}
 
 	if len(selectedPages) == 0 {
+		// All pages selected.
 		for i := 1; i <= ctx.PageCount; i++ {
 			selectedPages[i] = true
 		}
@@ -352,7 +354,7 @@ func negation(c byte) bool {
 	return c == '!' || c == 'n'
 }
 
-func setPageSelection(pageCount int, pageSelection []string) (selectedPages types.IntSet, err error) {
+func selectedPages(pageCount int, pageSelection []string) (selectedPages types.IntSet, err error) {
 
 	selectedPages = types.IntSet{}
 
@@ -437,14 +439,14 @@ func setPageSelection(pageCount int, pageSelection []string) (selectedPages type
 	return selectedPages, nil
 }
 
-func pagesForPageSelection(pageCount int, pageSelection []string) (selectedPages types.IntSet, err error) {
+func pagesForPageSelection(pageCount int, pageSelection []string) (types.IntSet, error) {
 
 	if pageSelection == nil || len(pageSelection) == 0 {
 		log.Info.Println("pagesForPageSelection: empty pageSelection")
 		return nil, nil
 	}
 
-	return setPageSelection(pageCount, pageSelection)
+	return selectedPages(pageCount, pageSelection)
 }
 
 // Split generates a sequence of single page PDF files in dirOut creating one file for every page of inFile.

@@ -118,13 +118,15 @@ func validateNames(xRefTable *types.XRefTable, rootDict *types.PDFDict, required
 			return errors.New("validateNames: name tree must be indirect ref")
 		}
 
-		_, _, err = validateNameTree(xRefTable, treeName, indRef, true)
+		_, _, tree, err := validateNameTree(xRefTable, treeName, indRef, true)
 		if err != nil {
 			return err
 		}
-		if treeName == "EmbeddedFiles" {
-			xRefTable.EmbeddedFiles = types.NewNameTree(indRef)
+
+		if tree != nil {
+			xRefTable.Names[treeName] = tree
 		}
+
 	}
 
 	return nil
