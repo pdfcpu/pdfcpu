@@ -502,7 +502,7 @@ func xRefStreamDict(ctx *types.PDFContext, o types.PDFObject, objNr int, streamO
 	}
 
 	// Decode xrefstream content
-	if err = setDecodedStreamContent(nil, &pdfStreamDict, 0, 0, true); err != nil {
+	if err = saveDecodedStreamContent(nil, &pdfStreamDict, 0, 0, true); err != nil {
 		return nil, errors.Wrapf(err, "xRefStreamDict: cannot decode stream for obj#:%d\n", objNr)
 	}
 
@@ -1517,9 +1517,9 @@ func LoadEncodedStreamContent(ctx *types.PDFContext, streamDict *types.PDFStream
 }
 
 // Decodes the raw encoded stream content and saves it to streamDict.Content.
-func setDecodedStreamContent(ctx *types.PDFContext, streamDict *types.PDFStreamDict, objNr, genNr int, decode bool) (err error) {
+func saveDecodedStreamContent(ctx *types.PDFContext, streamDict *types.PDFStreamDict, objNr, genNr int, decode bool) (err error) {
 
-	log.Debug.Printf("setDecodedStreamContent: begin decode=%t\n", decode)
+	log.Debug.Printf("saveDecodedStreamContent: begin decode=%t\n", decode)
 
 	//  If the "Identity" crypt filter is used we do not need to decrypt.
 	if ctx != nil && ctx.EncKey != nil {
@@ -1546,11 +1546,14 @@ func setDecodedStreamContent(ctx *types.PDFContext, streamDict *types.PDFStreamD
 
 	// Actual decoding of content stream.
 	err = filter.DecodeStream(streamDict)
+	if err == filter.ErrUnsupportedFilter {
+		err = nil
+	}
 	if err != nil {
 		return err
 	}
 
-	log.Debug.Println("setDecodedStreamContent: end")
+	log.Debug.Println("saveDecodedStreamContent: end")
 
 	return nil
 }
@@ -1669,7 +1672,7 @@ func decodeObjectStreams(ctx *types.PDFContext) error {
 		}
 
 		// Save decoded stream content to xRefTable.
-		if err = setDecodedStreamContent(ctx, &pdfStreamDict, objectNumber, *entry.Generation, true); err != nil {
+		if err = saveDecodedStreamContent(ctx, &pdfStreamDict, objectNumber, *entry.Generation, true); err != nil {
 			log.Debug.Printf("obj %d: %s", objectNumber, err)
 			return err
 		}
@@ -1769,7 +1772,7 @@ func loadPDFStreamDict(ctx *types.PDFContext, sd *types.PDFStreamDict, objNr, ge
 	ctx.Read.BinaryTotalSize += *sd.StreamLength
 
 	// Decode stream content.
-	return setDecodedStreamContent(ctx, sd, objNr, genNr, ctx.DecodeAllStreams)
+	return saveDecodedStreamContent(ctx, sd, objNr, genNr, ctx.DecodeAllStreams)
 }
 
 func updateBinaryTotalSize(ctx *types.PDFContext, o types.PDFObject) {

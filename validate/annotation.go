@@ -1279,26 +1279,6 @@ func validateMarkupAnnotation(xRefTable *types.XRefTable, dict *types.PDFDict) e
 	return nil
 }
 
-func validateOptionalContent(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
-
-	d, err := validateDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
-	if err != nil || d == nil {
-		return err
-	}
-
-	validate := func(s string) bool { return s == "OCG" || s == "OCMD" }
-	t, err := validateNameEntry(xRefTable, d, "optionalContent", "Type", REQUIRED, sinceVersion, validate)
-	if err != nil {
-		return err
-	}
-
-	if *t == "OCG" {
-		return validateOptionalContentGroupDict(xRefTable, d, sinceVersion)
-	}
-
-	return validateOptionalContentMembershipDict(xRefTable, d, sinceVersion)
-}
-
 func validateEntryP(xRefTable *types.XRefTable, dict *types.PDFDict, dictName string, required bool, sinceVersion types.PDFVersion) error {
 
 	indRef, err := validateIndRefEntry(xRefTable, dict, dictName, "P", required, sinceVersion)
@@ -1421,7 +1401,7 @@ func validateAnnotationDictGeneral(xRefTable *types.XRefTable, dict *types.PDFDi
 		return nil, err
 	}
 
-	// OC, optional, content group dict or content membership dict, since V1.3
+	// OC, optional, content group dict or content membership dict, since V1.5
 	// Specifying the optional content properties for the annotation.
 	err = validateOptionalContent(xRefTable, dict, dictName, "OC", OPTIONAL, types.V15)
 	if err != nil {

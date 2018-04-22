@@ -51,7 +51,8 @@ func encodeDecodeUsingFilterNamed(t *testing.T, filterName string) {
 
 func TestEncodeDecode(t *testing.T) {
 
-	for _, f := range []string{"FlateDecode", "ASCII85Decode", "ASCIIHexDecode"} {
+	// TODO Test filters with io.Pipe
+	for _, f := range []string{"FlateDecode", "ASCII85Decode", "ASCIIHexDecode", "LZWDecode"} {
 		encodeDecodeUsingFilterNamed(t, f)
 	}
 

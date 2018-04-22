@@ -25,7 +25,7 @@ func ExampleProcess_validate() {
 	//config.OwnerPW = "opw"
 
 	// Set relaxed validation mode.
-	config.SetValidationRelaxed()
+	config.ValidationMode = types.ValidationRelaxed
 
 	_, err := Process(ValidateCommand("in.pdf", config))
 	if err != nil {
@@ -352,7 +352,7 @@ func TestValidateCommand(t *testing.T) {
 	}
 
 	config := types.NewDefaultConfiguration()
-	config.SetValidationRelaxed()
+	config.ValidationMode = types.ValidationRelaxed
 
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), "pdf") {
@@ -368,7 +368,7 @@ func TestValidateCommand(t *testing.T) {
 func TestValidateOneFile(t *testing.T) {
 
 	config := types.NewDefaultConfiguration()
-	config.SetValidationStrict()
+	config.ValidationMode = types.ValidationRelaxed
 
 	_, err := Process(ValidateCommand("testdata/gobook.0.pdf", config))
 	if err != nil {
@@ -380,7 +380,7 @@ func TestValidateOneFile(t *testing.T) {
 func BenchmarkValidateCommand(b *testing.B) {
 
 	config := types.NewDefaultConfiguration()
-	config.SetValidationRelaxed()
+	config.ValidationMode = types.ValidationRelaxed
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
@@ -1379,7 +1379,7 @@ func TestAnnotationDemoPDF(t *testing.T) {
 	}
 
 	config := types.NewDefaultConfiguration()
-	config.SetValidationRelaxed()
+	config.ValidationMode = types.ValidationRelaxed
 
 	_, err = Process(ValidateCommand(dir+"/"+"annotationDemo.pdf", config))
 	if err != nil {
@@ -1404,7 +1404,7 @@ func TestAcroformDemoPDF(t *testing.T) {
 	}
 
 	config := types.NewDefaultConfiguration()
-	config.SetValidationRelaxed()
+	config.ValidationMode = types.ValidationRelaxed
 
 	_, err = Process(ValidateCommand(dir+"/"+"acroFormDemo.pdf", config))
 	if err != nil {

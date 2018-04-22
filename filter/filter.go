@@ -38,7 +38,9 @@ func NewFilter(filterName string, decodeParms, encodeParms *types.PDFDict) (filt
 	case "ASCIIHexDecode":
 		filter = asciiHexDecode{baseFilter{decodeParms, encodeParms}}
 
-	// LZWDecode
+	case "LZWDecode":
+		filter = lzwDecode{baseFilter{decodeParms, encodeParms}}
+
 	// RunLengthDecode
 	// CCITTFaxDecode
 	// JBIG2Decode
@@ -46,7 +48,7 @@ func NewFilter(filterName string, decodeParms, encodeParms *types.PDFDict) (filt
 	// JPXDecode
 
 	default:
-		log.Info.Printf("Filter not supported: %s", filterName)
+		log.Info.Printf("Filter not supported: <%s>", filterName)
 		err = ErrUnsupportedFilter
 	}
 

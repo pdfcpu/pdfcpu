@@ -130,13 +130,3 @@ func (c *Configuration) ValidationModeString() string {
 
 	return ""
 }
-
-// SetValidationStrict sets strict validation.
-func (c *Configuration) SetValidationStrict() {
-	c.ValidationMode = ValidationStrict
-}
-
-// SetValidationRelaxed sets relaxed validation.
-func (c *Configuration) SetValidationRelaxed() {
-	c.ValidationMode = ValidationRelaxed
-}

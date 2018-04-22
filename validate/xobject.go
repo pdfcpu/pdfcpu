@@ -691,8 +691,9 @@ func validateFormStreamDictPart2(xRefTable *types.XRefTable, dict *types.PDFDict
 		return err
 	}
 
-	// OC, dict, optional, since V1.5
-	err = validateEntryOC(xRefTable, dict, dictName, "OC", OPTIONAL, types.V15)
+	// OC, optional, content group dict or content membership dict, since V1.5
+	// Specifying the optional content properties for the annotation.
+	err = validateOptionalContent(xRefTable, dict, dictName, "OC", OPTIONAL, types.V15)
 	if err != nil {
 		return err
 	}

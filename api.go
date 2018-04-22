@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	//"github.com/hhrutter/pdfcpu/attach"
 	"github.com/hhrutter/pdfcpu/attach"
 	"github.com/hhrutter/pdfcpu/crypto"
 	"github.com/hhrutter/pdfcpu/extract"

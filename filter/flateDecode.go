@@ -30,16 +30,13 @@ func (f flate) Encode(r io.Reader) (*bytes.Buffer, error) {
 
 	var b bytes.Buffer
 	w := zlib.NewWriter(&b)
+	defer w.Close()
 
 	written, err := io.Copy(w, r)
 	if err != nil {
 		return nil, err
 	}
-	log.Debug.Printf("EncodeFlate: %d bytes written\n", written)
-
-	w.Close()
-
-	log.Debug.Println("EncodeFlate end")
+	log.Debug.Printf("EncodeFlate end: %d bytes written\n", written)
 
 	return &b, nil
 }
@@ -53,6 +50,7 @@ func (f flate) Decode(r io.Reader) (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rc.Close()
 
 	var b bytes.Buffer
 	written, err := io.Copy(&b, rc)
@@ -61,17 +59,24 @@ func (f flate) Decode(r io.Reader) (*bytes.Buffer, error) {
 	}
 	log.Debug.Printf("DecodeFlate: decoded %d bytes.\n", written)
 
-	rc.Close()
-
 	if f.decodeParms == nil {
 		log.Debug.Println("DecodeFlate end w/o decodeParms")
 		return &b, nil
 	}
 
-	log.Debug.Println("DecodeFlate end w/o decodeParms")
+	log.Debug.Println("DecodeFlate with decodeParms")
 
 	// Optional decode parameters need postprocessing.
 	return f.decodePostProcess(&b)
+}
+
+func passThru(rin io.Reader) (*bytes.Buffer, error) {
+	var b bytes.Buffer
+	_, err := io.Copy(&b, rin)
+	if err != nil {
+		return nil, err
+	}
+	return &b, nil
 }
 
 // decodePostProcess
@@ -81,7 +86,7 @@ func (f flate) decodePostProcess(rin io.Reader) (*bytes.Buffer, error) {
 
 	const PredictorNo = 1
 	const PredictorTIFF = 2
-	const PredictorNone = 10
+	const PredictorNone = 10 // implemented
 	const PredictorSub = 11
 	const PredictorUp = 12 // implemented
 	const PredictorAverage = 13
@@ -103,10 +108,20 @@ func (f flate) decodePostProcess(rin io.Reader) (*bytes.Buffer, error) {
 
 	p := f.decodeParms.IntEntry("Predictor")
 	if p == nil {
-		return nil, errFlateMissingDecodeParmPredictor
+		// eg.
+		// <BitsPerComponent, 8>
+		// <Colors, 3>
+		// <Columns, 1000>
+		// TODO implement
+		return passThru(rin)
+		//return nil, errFlateMissingDecodeParmPredictor
 	}
 
 	predictor := *p
+
+	if predictor == PredictorNone {
+		return passThru(rin)
+	}
 
 	// PredictorUp is a popular predictor used for flate encoded stream dicts.
 	if predictor != PredictorUp {

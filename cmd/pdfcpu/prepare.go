@@ -27,9 +27,9 @@ func prepareValidateCommand(config *types.Configuration) *pdfcpu.Command {
 
 	switch mode {
 	case "strict", "s":
-		config.SetValidationStrict()
+		config.ValidationMode = types.ValidationStrict
 	case "relaxed", "r":
-		config.SetValidationRelaxed()
+		config.ValidationMode = types.ValidationRelaxed
 	}
 
 	return pdfcpu.ValidateCommand(filenameIn, config)

@@ -222,6 +222,26 @@ func validateOptionalContentMembershipDict(xRefTable *types.XRefTable, dict *typ
 	return err
 }
 
+func validateOptionalContent(xRefTable *types.XRefTable, dict *types.PDFDict, dictName, entryName string, required bool, sinceVersion types.PDFVersion) error {
+
+	d, err := validateDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
+	if err != nil || d == nil {
+		return err
+	}
+
+	validate := func(s string) bool { return s == "OCG" || s == "OCMD" }
+	t, err := validateNameEntry(xRefTable, d, "optionalContent", "Type", REQUIRED, sinceVersion, validate)
+	if err != nil {
+		return err
+	}
+
+	if *t == "OCG" {
+		return validateOptionalContentGroupDict(xRefTable, d, sinceVersion)
+	}
+
+	return validateOptionalContentMembershipDict(xRefTable, d, sinceVersion)
+}
+
 func validateUsageApplicationDict(xRefTable *types.XRefTable, dict *types.PDFDict, sinceVersion types.PDFVersion) error {
 
 	dictName := "usageAppDict"
