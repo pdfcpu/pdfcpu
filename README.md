@@ -74,13 +74,12 @@ Required build version: go1.8 and up
 
 ## Status
 
-Version: 0.1.10
+Version: 0.1.11
 
-* Name trees are cached into an internal tree structure after validation to speed up name tree manipulation.
+* Reorganized package structure
 
-* added ```TestGetPageCount()``` to demonstrate how to get the page count for a PDF file (fixes #17).
+* Filter implementation for LZWDecode & extended filter_test.go.
 
-* bugfix for #18
 
 ## Contributing
 

@@ -4,12 +4,12 @@ import (
 	"flag"
 	"fmt"
 	"log"
+
 	"os"
 	"strings"
 
 	"github.com/hhrutter/pdfcpu"
 	PDFCPULog "github.com/hhrutter/pdfcpu/log"
-	"github.com/hhrutter/pdfcpu/types"
 )
 
 var (
@@ -55,7 +55,7 @@ func main() {
 
 	setupLogging(verbose)
 
-	config := types.NewDefaultConfiguration()
+	config := pdfcpu.NewDefaultConfiguration()
 	config.UserPW = upw
 	config.OwnerPW = opw
 
@@ -131,7 +131,7 @@ func version() {
 		os.Exit(1)
 	}
 
-	fmt.Fprintf(os.Stderr, "pdfcpu version %s\n", types.PDFCPUVersion)
+	fmt.Fprintf(os.Stderr, "pdfcpu version %s\n", pdfcpu.PDFCPUVersion)
 }
 
 func helpString(topic string) string {

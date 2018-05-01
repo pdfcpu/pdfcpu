@@ -10,16 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hhrutter/pdfcpu/attach"
-	"github.com/hhrutter/pdfcpu/crypto"
-	"github.com/hhrutter/pdfcpu/extract"
 	"github.com/hhrutter/pdfcpu/log"
-	"github.com/hhrutter/pdfcpu/merge"
-	"github.com/hhrutter/pdfcpu/optimize"
-	"github.com/hhrutter/pdfcpu/read"
-	"github.com/hhrutter/pdfcpu/types"
-	"github.com/hhrutter/pdfcpu/validate"
-	"github.com/hhrutter/pdfcpu/write"
 
 	"github.com/pkg/errors"
 )
@@ -28,9 +19,9 @@ var (
 	selectedPagesRegExp *regexp.Regexp
 )
 
-func stringSet(slice []string) types.StringSet {
+func stringSet(slice []string) StringSet {
 
-	strSet := types.StringSet{}
+	strSet := StringSet{}
 
 	if slice == nil {
 		return strSet
@@ -60,11 +51,11 @@ func init() {
 }
 
 // Read reads in a PDF file and builds an internal structure holding its cross reference table aka the PDFContext.
-func Read(fileIn string, config *types.Configuration) (*types.PDFContext, error) {
+func Read(fileIn string, config *Configuration) (*PDFContext, error) {
 
 	//logInfoAPI.Printf("reading %s..\n", fileIn)
 
-	ctx, err := read.PDFFile(fileIn, config)
+	ctx, err := readPDFFile(fileIn, config)
 	if err != nil {
 		return nil, errors.Wrap(err, "Read failed.")
 	}
@@ -73,7 +64,7 @@ func Read(fileIn string, config *types.Configuration) (*types.PDFContext, error)
 }
 
 // Validate validates a PDF file against ISO-32000-1:2008.
-func Validate(fileIn string, config *types.Configuration) error {
+func Validate(fileIn string, config *Configuration) error {
 
 	from1 := time.Now()
 
@@ -89,7 +80,7 @@ func Validate(fileIn string, config *types.Configuration) error {
 
 	from2 := time.Now()
 
-	err = validate.XRefTable(ctx.XRefTable)
+	err = validateXRefTable(ctx.XRefTable)
 	if err != nil {
 		err = errors.Wrap(err, "validation error (try -mode=relaxed)")
 	} else {
@@ -112,18 +103,18 @@ func Validate(fileIn string, config *types.Configuration) error {
 }
 
 // Write generates a PDF file for a given PDFContext.
-func Write(ctx *types.PDFContext) error {
+func Write(ctx *PDFContext) error {
 
 	fmt.Printf("writing %s ...\n", ctx.Write.DirName+ctx.Write.FileName)
 	//logInfoAPI.Printf("writing to %s..\n", fileName)
 
-	err := write.PDFFile(ctx)
+	err := writePDFFile(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Write failed.")
 	}
 
 	if ctx.StatsFileName != "" {
-		err = write.AppendStatsFile(ctx)
+		err = appendStatsFile(ctx)
 		if err != nil {
 			return errors.Wrap(err, "Write stats failed.")
 		}
@@ -133,14 +124,14 @@ func Write(ctx *types.PDFContext) error {
 }
 
 // singlePageFileName generates a filename for a PDFContext and a specific page number.
-func singlePageFileName(ctx *types.PDFContext, pageNr int) string {
+func singlePageFileName(ctx *PDFContext, pageNr int) string {
 
 	baseFileName := filepath.Base(ctx.Read.FileName)
 	fileName := strings.TrimSuffix(baseFileName, ".pdf")
 	return fileName + "_" + strconv.Itoa(pageNr) + ".pdf"
 }
 
-func writeSinglePagePDF(ctx *types.PDFContext, pageNr int, dirOut string) error {
+func writeSinglePagePDF(ctx *PDFContext, pageNr int, dirOut string) error {
 
 	ctx.ResetWriteContext()
 
@@ -151,13 +142,13 @@ func writeSinglePagePDF(ctx *types.PDFContext, pageNr int, dirOut string) error 
 	w.FileName = singlePageFileName(ctx, pageNr)
 	fmt.Printf("writing %s ...\n", w.DirName+w.FileName)
 
-	return write.PDFFile(ctx)
+	return writePDFFile(ctx)
 }
 
-func writeSinglePagePDFs(ctx *types.PDFContext, selectedPages types.IntSet, dirOut string) error {
+func writeSinglePagePDFs(ctx *PDFContext, selectedPages IntSet, dirOut string) error {
 
 	if selectedPages == nil {
-		selectedPages = types.IntSet{}
+		selectedPages = IntSet{}
 	}
 
 	if len(selectedPages) == 0 {
@@ -179,7 +170,7 @@ func writeSinglePagePDFs(ctx *types.PDFContext, selectedPages types.IntSet, dirO
 	return nil
 }
 
-func readAndValidate(fileIn string, config *types.Configuration, from1 time.Time) (ctx *types.PDFContext, dur1, dur2 float64, err error) {
+func readAndValidate(fileIn string, config *Configuration, from1 time.Time) (ctx *PDFContext, dur1, dur2 float64, err error) {
 
 	ctx, err = Read(fileIn, config)
 	if err != nil {
@@ -190,7 +181,7 @@ func readAndValidate(fileIn string, config *types.Configuration, from1 time.Time
 	from2 := time.Now()
 	//fmt.Printf("validating %s ...\n", fileIn)
 	//logInfoAPI.Printf("validating %s..\n", fileIn)
-	err = validate.XRefTable(ctx.XRefTable)
+	err = validateXRefTable(ctx.XRefTable)
 	if err != nil {
 		return nil, 0, 0, err
 	}
@@ -199,7 +190,7 @@ func readAndValidate(fileIn string, config *types.Configuration, from1 time.Time
 	return ctx, dur1, dur2, nil
 }
 
-func readValidateAndOptimize(fileIn string, config *types.Configuration, from1 time.Time) (ctx *types.PDFContext, dur1, dur2, dur3 float64, err error) {
+func readValidateAndOptimize(fileIn string, config *Configuration, from1 time.Time) (ctx *PDFContext, dur1, dur2, dur3 float64, err error) {
 
 	ctx, dur1, dur2, err = readAndValidate(fileIn, config, from1)
 	if err != nil {
@@ -208,7 +199,7 @@ func readValidateAndOptimize(fileIn string, config *types.Configuration, from1 t
 
 	from3 := time.Now()
 	//fmt.Printf("optimizing %s ...\n", fileIn)
-	err = optimize.XRefTable(ctx)
+	err = optimizeXRefTable(ctx)
 	if err != nil {
 		return nil, 0, 0, 0, err
 	}
@@ -218,7 +209,7 @@ func readValidateAndOptimize(fileIn string, config *types.Configuration, from1 t
 }
 
 // Optimize reads in fileIn, does validation, optimization and writes the result to fileOut.
-func Optimize(fileIn, fileOut string, config *types.Configuration) error {
+func Optimize(fileIn, fileOut string, config *Configuration) error {
 
 	fromStart := time.Now()
 
@@ -285,7 +276,7 @@ func ParsePageSelection(s string) ([]string, error) {
 	return strings.Split(s, ","), nil
 }
 
-func handlePrefix(v string, negated bool, pageCount int, selectedPages types.IntSet) error {
+func handlePrefix(v string, negated bool, pageCount int, selectedPages IntSet) error {
 
 	i, err := strconv.Atoi(v)
 	if err != nil {
@@ -307,7 +298,7 @@ func handlePrefix(v string, negated bool, pageCount int, selectedPages types.Int
 	return nil
 }
 
-func handleSuffix(v string, negated bool, pageCount int, selectedPages types.IntSet) error {
+func handleSuffix(v string, negated bool, pageCount int, selectedPages IntSet) error {
 
 	// must be #- ... select all pages from here until the end.
 	// or !#- ... deselect all pages from here until the end.
@@ -329,7 +320,7 @@ func handleSuffix(v string, negated bool, pageCount int, selectedPages types.Int
 	return nil
 }
 
-func handleSpecificPage(s string, negated bool, pageCount int, selectedPages types.IntSet) error {
+func handleSpecificPage(s string, negated bool, pageCount int, selectedPages IntSet) error {
 
 	// must be # ... select a specific page
 	// or !# ... deselect a specific page
@@ -353,9 +344,9 @@ func negation(c byte) bool {
 	return c == '!' || c == 'n'
 }
 
-func selectedPages(pageCount int, pageSelection []string) (selectedPages types.IntSet, err error) {
+func selectedPages(pageCount int, pageSelection []string) (selectedPages IntSet, err error) {
 
-	selectedPages = types.IntSet{}
+	selectedPages = IntSet{}
 
 	for _, v := range pageSelection {
 
@@ -438,7 +429,7 @@ func selectedPages(pageCount int, pageSelection []string) (selectedPages types.I
 	return selectedPages, nil
 }
 
-func pagesForPageSelection(pageCount int, pageSelection []string) (types.IntSet, error) {
+func pagesForPageSelection(pageCount int, pageSelection []string) (IntSet, error) {
 
 	if pageSelection == nil || len(pageSelection) == 0 {
 		log.Info.Println("pagesForPageSelection: empty pageSelection")
@@ -449,7 +440,7 @@ func pagesForPageSelection(pageCount int, pageSelection []string) (types.IntSet,
 }
 
 // Split generates a sequence of single page PDF files in dirOut creating one file for every page of inFile.
-func Split(fileIn, dirOut string, config *types.Configuration) error {
+func Split(fileIn, dirOut string, config *Configuration) error {
 
 	fromStart := time.Now()
 
@@ -484,7 +475,7 @@ func Split(fileIn, dirOut string, config *types.Configuration) error {
 }
 
 // appendTo appends fileIn to ctxDest's page tree.
-func appendTo(fileIn string, ctxDest *types.PDFContext) error {
+func appendTo(fileIn string, ctxDest *PDFContext) error {
 
 	log.Stats.Printf("appendTo: appending %s to %s\n", fileIn, ctxDest.Read.FileName)
 
@@ -496,13 +487,13 @@ func appendTo(fileIn string, ctxDest *types.PDFContext) error {
 
 	// Merge the source context into the dest context.
 	fmt.Printf("merging in %s ...\n", fileIn)
-	return merge.XRefTables(ctxSource, ctxDest)
+	return mergeXRefTables(ctxSource, ctxDest)
 }
 
 // Merge some PDF files together and write the result to fileOut.
 // This corresponds to concatenating these files in the order specified by filesIn.
 // The first entry of filesIn serves as the destination xRefTable where all the remaining files gets merged into.
-func Merge(filesIn []string, fileOut string, config *types.Configuration) error {
+func Merge(filesIn []string, fileOut string, config *Configuration) error {
 
 	fmt.Printf("merging into %s: %v\n", fileOut, filesIn)
 	//logErrorAPI.Printf("Merge: filesIn: %v\n", filesIn)
@@ -512,8 +503,8 @@ func Merge(filesIn []string, fileOut string, config *types.Configuration) error 
 		return err
 	}
 
-	if ctxDest.XRefTable.Version() < types.V15 {
-		v, _ := types.Version("1.5")
+	if ctxDest.XRefTable.Version() < V15 {
+		v, _ := Version("1.5")
 		ctxDest.XRefTable.RootVersion = &v
 		log.Stats.Println("Ensure V1.5 for writing object & xref streams")
 	}
@@ -526,12 +517,12 @@ func Merge(filesIn []string, fileOut string, config *types.Configuration) error 
 		}
 	}
 
-	err = optimize.XRefTable(ctxDest)
+	err = optimizeXRefTable(ctxDest)
 	if err != nil {
 		return err
 	}
 
-	err = validate.XRefTable(ctxDest.XRefTable)
+	err = validateXRefTable(ctxDest.XRefTable)
 	if err != nil {
 		return err
 	}
@@ -552,13 +543,13 @@ func Merge(filesIn []string, fileOut string, config *types.Configuration) error 
 	return nil
 }
 
-func ensureSelectedPages(ctx *types.PDFContext, selectedPages *types.IntSet) {
+func ensureSelectedPages(ctx *PDFContext, selectedPages *IntSet) {
 
 	if selectedPages != nil && len(*selectedPages) > 0 {
 		return
 	}
 
-	m := types.IntSet{}
+	m := IntSet{}
 	for i := 1; i <= ctx.PageCount; i++ {
 		m[i] = true
 	}
@@ -566,7 +557,7 @@ func ensureSelectedPages(ctx *types.PDFContext, selectedPages *types.IntSet) {
 	*selectedPages = m
 }
 
-func imageObjNrs(ctx *types.PDFContext, page int) []int {
+func imageObjNrs(ctx *PDFContext, page int) []int {
 
 	o := []int{}
 
@@ -579,11 +570,11 @@ func imageObjNrs(ctx *types.PDFContext, page int) []int {
 	return o
 }
 
-func doExtractImages(ctx *types.PDFContext, selectedPages types.IntSet) error {
+func doExtractImages(ctx *PDFContext, selectedPages IntSet) error {
 
 	ensureSelectedPages(ctx, &selectedPages)
 
-	visited := types.IntSet{}
+	visited := IntSet{}
 
 	for p, v := range selectedPages {
 
@@ -599,7 +590,7 @@ func doExtractImages(ctx *types.PDFContext, selectedPages types.IntSet) error {
 
 				visited[objNr] = true
 
-				io, err := extract.ImageData(ctx, objNr)
+				io, err := extractImageData(ctx, objNr)
 				if err != nil {
 					return err
 				}
@@ -626,7 +617,7 @@ func doExtractImages(ctx *types.PDFContext, selectedPages types.IntSet) error {
 }
 
 // ExtractImages dumps embedded image resources from fileIn into dirOut for selected pages.
-func ExtractImages(fileIn, dirOut string, pageSelection []string, config *types.Configuration) error {
+func ExtractImages(fileIn, dirOut string, pageSelection []string, config *Configuration) error {
 
 	fromStart := time.Now()
 
@@ -664,7 +655,7 @@ func ExtractImages(fileIn, dirOut string, pageSelection []string, config *types.
 	return nil
 }
 
-func fontObjNrs(ctx *types.PDFContext, page int) []int {
+func fontObjNrs(ctx *PDFContext, page int) []int {
 
 	o := []int{}
 
@@ -677,11 +668,11 @@ func fontObjNrs(ctx *types.PDFContext, page int) []int {
 	return o
 }
 
-func doExtractFonts(ctx *types.PDFContext, selectedPages types.IntSet) error {
+func doExtractFonts(ctx *PDFContext, selectedPages IntSet) error {
 
 	ensureSelectedPages(ctx, &selectedPages)
 
-	visited := types.IntSet{}
+	visited := IntSet{}
 
 	for p, v := range selectedPages {
 
@@ -697,7 +688,7 @@ func doExtractFonts(ctx *types.PDFContext, selectedPages types.IntSet) error {
 
 				visited[objNr] = true
 
-				fo, err := extract.FontData(ctx, objNr)
+				fo, err := extractFontData(ctx, objNr)
 				if err != nil {
 					return err
 				}
@@ -723,7 +714,7 @@ func doExtractFonts(ctx *types.PDFContext, selectedPages types.IntSet) error {
 }
 
 // ExtractFonts dumps embedded fontfiles from fileIn into dirOut for selected pages.
-func ExtractFonts(fileIn, dirOut string, pageSelection []string, config *types.Configuration) error {
+func ExtractFonts(fileIn, dirOut string, pageSelection []string, config *Configuration) error {
 
 	fromStart := time.Now()
 
@@ -762,7 +753,7 @@ func ExtractFonts(fileIn, dirOut string, pageSelection []string, config *types.C
 }
 
 // ExtractPages generates single page PDF files from fileIn in dirOut for selected pages.
-func ExtractPages(fileIn, dirOut string, pageSelection []string, config *types.Configuration) error {
+func ExtractPages(fileIn, dirOut string, pageSelection []string, config *Configuration) error {
 
 	fromStart := time.Now()
 
@@ -801,7 +792,7 @@ func ExtractPages(fileIn, dirOut string, pageSelection []string, config *types.C
 	return nil
 }
 
-func contentObjNrs(ctx *types.PDFContext, page int) ([]int, error) {
+func contentObjNrs(ctx *PDFContext, page int) ([]int, error) {
 
 	objNrs := []int{}
 
@@ -817,7 +808,7 @@ func contentObjNrs(ctx *types.PDFContext, page int) ([]int, error) {
 
 	var objNr int
 
-	indRef, ok := obj.(types.PDFIndirectRef)
+	indRef, ok := obj.(PDFIndirectRef)
 	if ok {
 		objNr = indRef.ObjectNumber.Value()
 	}
@@ -833,15 +824,15 @@ func contentObjNrs(ctx *types.PDFContext, page int) ([]int, error) {
 
 	switch obj := obj.(type) {
 
-	case types.PDFStreamDict:
+	case PDFStreamDict:
 
 		objNrs = append(objNrs, objNr)
 
-	case types.PDFArray:
+	case PDFArray:
 
 		for _, obj := range obj {
 
-			indRef, ok := obj.(types.PDFIndirectRef)
+			indRef, ok := obj.(PDFIndirectRef)
 			if !ok {
 				return nil, errors.Errorf("missing indref for page tree dict content no page %d", page)
 			}
@@ -864,11 +855,11 @@ func contentObjNrs(ctx *types.PDFContext, page int) ([]int, error) {
 	return objNrs, nil
 }
 
-func doExtractContent(ctx *types.PDFContext, selectedPages types.IntSet) error {
+func doExtractContent(ctx *PDFContext, selectedPages IntSet) error {
 
 	ensureSelectedPages(ctx, &selectedPages)
 
-	visited := types.IntSet{}
+	visited := IntSet{}
 
 	for p, v := range selectedPages {
 
@@ -893,7 +884,7 @@ func doExtractContent(ctx *types.PDFContext, selectedPages types.IntSet) error {
 
 				visited[objNr] = true
 
-				b, err := extract.ContentData(ctx, objNr)
+				b, err := extractContentData(ctx, objNr)
 				if err != nil {
 					return err
 				}
@@ -919,7 +910,7 @@ func doExtractContent(ctx *types.PDFContext, selectedPages types.IntSet) error {
 }
 
 // ExtractContent dumps "PDF source" files from fileIn into dirOut for selected pages.
-func ExtractContent(fileIn, dirOut string, pageSelection []string, config *types.Configuration) error {
+func ExtractContent(fileIn, dirOut string, pageSelection []string, config *Configuration) error {
 
 	fromStart := time.Now()
 
@@ -958,7 +949,7 @@ func ExtractContent(fileIn, dirOut string, pageSelection []string, config *types
 }
 
 // Trim generates a trimmed version of fileIn containing all pages selected.
-func Trim(fileIn, fileOut string, pageSelection []string, config *types.Configuration) error {
+func Trim(fileIn, fileOut string, pageSelection []string, config *Configuration) error {
 
 	// pageSelection points to an empty slice if flag pages was omitted.
 
@@ -1007,31 +998,31 @@ func Trim(fileIn, fileOut string, pageSelection []string, config *types.Configur
 }
 
 // Encrypt fileIn and write result to fileOut.
-func Encrypt(fileIn, fileOut string, config *types.Configuration) error {
+func Encrypt(fileIn, fileOut string, config *Configuration) error {
 	return Optimize(fileIn, fileOut, config)
 }
 
 // Decrypt fileIn and write result to fileOut.
-func Decrypt(fileIn, fileOut string, config *types.Configuration) error {
+func Decrypt(fileIn, fileOut string, config *Configuration) error {
 	return Optimize(fileIn, fileOut, config)
 }
 
 // ChangeUserPassword of fileIn and write result to fileOut.
-func ChangeUserPassword(fileIn, fileOut string, config *types.Configuration, pwOld, pwNew *string) error {
+func ChangeUserPassword(fileIn, fileOut string, config *Configuration, pwOld, pwNew *string) error {
 	config.UserPW = *pwOld
 	config.UserPWNew = pwNew
 	return Optimize(fileIn, fileOut, config)
 }
 
 // ChangeOwnerPassword of fileIn and write result to fileOut.
-func ChangeOwnerPassword(fileIn, fileOut string, config *types.Configuration, pwOld, pwNew *string) error {
+func ChangeOwnerPassword(fileIn, fileOut string, config *Configuration, pwOld, pwNew *string) error {
 	config.OwnerPW = *pwOld
 	config.OwnerPWNew = pwNew
 	return Optimize(fileIn, fileOut, config)
 }
 
 // ListAttachments returns a list of embedded file attachments.
-func ListAttachments(fileIn string, config *types.Configuration) ([]string, error) {
+func ListAttachments(fileIn string, config *Configuration) ([]string, error) {
 
 	fromStart := time.Now()
 
@@ -1044,7 +1035,7 @@ func ListAttachments(fileIn string, config *types.Configuration) ([]string, erro
 
 	fromWrite := time.Now()
 
-	list, err := attach.List(ctx.XRefTable)
+	list, err := attachList(ctx.XRefTable)
 	if err != nil {
 		return nil, err
 	}
@@ -1064,7 +1055,7 @@ func ListAttachments(fileIn string, config *types.Configuration) ([]string, erro
 }
 
 // AddAttachments embeds files into a PDF.
-func AddAttachments(fileIn string, files []string, config *types.Configuration) error {
+func AddAttachments(fileIn string, files []string, config *Configuration) error {
 
 	fromStart := time.Now()
 
@@ -1078,7 +1069,7 @@ func AddAttachments(fileIn string, files []string, config *types.Configuration) 
 	from := time.Now()
 	var ok bool
 
-	ok, err = attach.Add(ctx.XRefTable, stringSet(files))
+	ok, err = attachAdd(ctx.XRefTable, stringSet(files))
 	if err != nil {
 		return err
 	}
@@ -1119,7 +1110,7 @@ func AddAttachments(fileIn string, files []string, config *types.Configuration) 
 }
 
 // RemoveAttachments deletes embedded files from a PDF.
-func RemoveAttachments(fileIn string, files []string, config *types.Configuration) error {
+func RemoveAttachments(fileIn string, files []string, config *Configuration) error {
 
 	fromStart := time.Now()
 
@@ -1137,7 +1128,7 @@ func RemoveAttachments(fileIn string, files []string, config *types.Configuratio
 	from := time.Now()
 
 	var ok bool
-	ok, err = attach.Remove(ctx.XRefTable, stringSet(files))
+	ok, err = attachRemove(ctx.XRefTable, stringSet(files))
 	if err != nil {
 		return err
 	}
@@ -1178,7 +1169,7 @@ func RemoveAttachments(fileIn string, files []string, config *types.Configuratio
 }
 
 // ExtractAttachments extracts embedded files from a PDF.
-func ExtractAttachments(fileIn, dirOut string, files []string, config *types.Configuration) error {
+func ExtractAttachments(fileIn, dirOut string, files []string, config *Configuration) error {
 
 	fromStart := time.Now()
 
@@ -1192,7 +1183,7 @@ func ExtractAttachments(fileIn, dirOut string, files []string, config *types.Con
 	fromWrite := time.Now()
 
 	ctx.Write.DirName = dirOut
-	err = attach.Extract(ctx, stringSet(files))
+	err = attachExtract(ctx, stringSet(files))
 	if err != nil {
 		return err
 	}
@@ -1212,7 +1203,7 @@ func ExtractAttachments(fileIn, dirOut string, files []string, config *types.Con
 }
 
 // ListPermissions returns a list of user access permissions.
-func ListPermissions(fileIn string, config *types.Configuration) ([]string, error) {
+func ListPermissions(fileIn string, config *Configuration) ([]string, error) {
 
 	fromStart := time.Now()
 
@@ -1224,7 +1215,7 @@ func ListPermissions(fileIn string, config *types.Configuration) ([]string, erro
 	}
 
 	fromList := time.Now()
-	list := crypto.ListPermissions(ctx)
+	list := permissions(ctx)
 	durList := time.Since(fromList).Seconds()
 
 	durTotal := time.Since(fromStart).Seconds()
@@ -1241,7 +1232,7 @@ func ListPermissions(fileIn string, config *types.Configuration) ([]string, erro
 }
 
 // AddPermissions sets the user access permissions.
-func AddPermissions(fileIn string, config *types.Configuration) error {
+func AddPermissions(fileIn string, config *Configuration) error {
 
 	fromStart := time.Now()
 

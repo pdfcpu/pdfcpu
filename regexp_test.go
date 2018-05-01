@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	"strings"
-
-	"github.com/hhrutter/pdfcpu/types"
 )
 
 var r *regexp.Regexp
@@ -46,7 +44,7 @@ func TestPageSelectionSyntax(t *testing.T) {
 
 }
 
-func selectedPagesString(sp types.IntSet, pageCount int) string {
+func selectedPagesString(sp IntSet, pageCount int) string {
 
 	s := []string{}
 	var t string

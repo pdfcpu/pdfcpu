@@ -59,7 +59,7 @@ func (f flate) Decode(r io.Reader) (*bytes.Buffer, error) {
 	}
 	log.Debug.Printf("DecodeFlate: decoded %d bytes.\n", written)
 
-	if f.decodeParms == nil {
+	if len(f.parms) == 0 {
 		log.Debug.Println("DecodeFlate end w/o decodeParms")
 		return &b, nil
 	}
@@ -73,10 +73,7 @@ func (f flate) Decode(r io.Reader) (*bytes.Buffer, error) {
 func passThru(rin io.Reader) (*bytes.Buffer, error) {
 	var b bytes.Buffer
 	_, err := io.Copy(&b, rin)
-	if err != nil {
-		return nil, err
-	}
-	return &b, nil
+	return &b, err
 }
 
 // decodePostProcess
@@ -99,15 +96,13 @@ func (f flate) decodePostProcess(rin io.Reader) (*bytes.Buffer, error) {
 	const PngAverage = 0x03
 	const PngPaeth = 0x04
 
-	c := f.decodeParms.IntEntry("Columns")
-	if c == nil {
+	columns, found := f.parms["Columns"]
+	if !found {
 		return nil, errFlateMissingDecodeParmColumn
 	}
 
-	columns := *c
-
-	p := f.decodeParms.IntEntry("Predictor")
-	if p == nil {
+	predictor, found := f.parms["Predictor"]
+	if !found {
 		// eg.
 		// <BitsPerComponent, 8>
 		// <Colors, 3>
@@ -116,8 +111,6 @@ func (f flate) decodePostProcess(rin io.Reader) (*bytes.Buffer, error) {
 		return passThru(rin)
 		//return nil, errFlateMissingDecodeParmPredictor
 	}
-
-	predictor := *p
 
 	if predictor == PredictorNone {
 		return passThru(rin)
@@ -130,16 +123,16 @@ func (f flate) decodePostProcess(rin io.Reader) (*bytes.Buffer, error) {
 
 	// BitsPerComponent optional, integer: 1,2,4,8,16 (Default:8)
 	// The number of bits used to represent each colour component in a sample.
-	bpc := f.decodeParms.IntEntry("BitsPerComponents")
-	if bpc != nil {
-		return nil, errors.Errorf("Filter FlateDecode: Unexpected \"BitsPerComponent\": %d", *bpc)
+	bpc, found := f.parms["BitsPerComponents"]
+	if found {
+		return nil, errors.Errorf("Filter FlateDecode: Unexpected \"BitsPerComponent\": %d", bpc)
 	}
 
 	// Colors, optional, integer: 1,2,3,4 (Default:1)
 	// The number of interleaved colour components per sample.
-	colors := f.decodeParms.IntEntry("Colors")
-	if colors != nil {
-		return nil, errors.Errorf("Filter FlateDecode: Unexpected \"Colors\": %d", *colors)
+	colors, found := f.parms["Colors"]
+	if found {
+		return nil, errors.Errorf("Filter FlateDecode: Unexpected \"Colors\": %d", colors)
 	}
 
 	buf := new(bytes.Buffer)

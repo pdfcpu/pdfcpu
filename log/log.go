@@ -14,6 +14,12 @@ type Logger interface {
 
 	// Println logs a line.
 	Println(args ...interface{})
+
+	// Fatalf is equivalent to Printf() followed by a program abort.
+	Fatalf(format string, args ...interface{})
+
+	// Fatalln is equivalent to Println() followed by a progam abort.
+	Fatalln(args ...interface{})
 }
 
 type logger struct {
@@ -89,4 +95,22 @@ func (l *logger) Println(args ...interface{}) {
 	}
 
 	l.log.Println(args...)
+}
+
+func (l *logger) Fatalf(format string, args ...interface{}) {
+
+	if l.log == nil {
+		return
+	}
+
+	l.log.Fatalf(format, args)
+}
+
+func (l *logger) Fatalln(args ...interface{}) {
+
+	if l.log == nil {
+		return
+	}
+
+	l.log.Fatalln(args)
 }

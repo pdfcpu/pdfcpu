@@ -1,7 +1,10 @@
 package filter
 
 import (
+	"bufio"
 	"bytes"
+	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -9,7 +12,7 @@ import (
 // then decode the result twice to get to the original string.
 func encodeDecodeUsingFilterNamed(t *testing.T, filterName string) {
 
-	filter, err := NewFilter(filterName, nil, nil)
+	filter, err := NewFilter(filterName, nil)
 	if err != nil {
 		t.Fatalf("Problem: %v\n", err)
 	}
@@ -51,9 +54,81 @@ func encodeDecodeUsingFilterNamed(t *testing.T, filterName string) {
 
 func TestEncodeDecode(t *testing.T) {
 
-	// TODO Test filters with io.Pipe
-	for _, f := range []string{"FlateDecode", "ASCII85Decode", "ASCIIHexDecode", "LZWDecode"} {
+	for _, f := range List() {
 		encodeDecodeUsingFilterNamed(t, f)
 	}
 
+}
+
+var filenames = []string{
+	"testdata/gettysburg.txt",
+	"testdata/e.txt",
+	"testdata/pi.txt",
+	"testdata/Mark.Twain-Tom.Sawyer.txt",
+}
+
+// testFile tests that encoding and then decoding the given file with
+// the given filter yields a file that is an exact match with the original file.
+func testFile(t *testing.T, filterName, fileName string) {
+
+	t.Logf("testFile: %s with filter:%s\n", fileName, filterName)
+
+	f, err := NewFilter(filterName, nil)
+	if err != nil {
+		t.Errorf("Problem: %v\n", err)
+	}
+
+	raw, err := os.Open(fileName)
+	if err != nil {
+		t.Errorf("%s: %v", fileName, err)
+		return
+	}
+	defer raw.Close()
+
+	enc, err := f.Encode(bufio.NewReader(raw))
+	if err != nil {
+		t.Errorf("Problem encoding: %v\n", err)
+	}
+
+	dec, err := f.Decode(enc)
+	if err != nil {
+		t.Errorf("Problem decoding: %v\n", err)
+	}
+
+	// Compare decoded bytes with original bytes.
+	golden, err := os.Open(fileName)
+	if err != nil {
+		t.Errorf("%s: %v", fileName, err)
+		return
+	}
+	defer golden.Close()
+
+	g, err := ioutil.ReadAll(golden)
+	if err != nil {
+		t.Errorf("%s: %v", fileName, err)
+		return
+	}
+
+	d := dec.Bytes()
+
+	if len(d) != len(g) {
+		t.Errorf("%s: length mismatch %d != %d", fileName, len(d), len(g))
+		return
+	}
+
+	for i := 0; i < len(d); i++ {
+		if d[i] != g[i] {
+			t.Errorf("%s: mismatch at %d, 0x%02x != 0x%02x\n", fileName, i, d[i], g[i])
+			return
+		}
+	}
+
+}
+
+func TestWriter(t *testing.T) {
+	for _, filterName := range List() {
+		for _, filename := range filenames {
+			testFile(t, filterName, filename)
+		}
+	}
 }
