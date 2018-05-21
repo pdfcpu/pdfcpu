@@ -114,14 +114,14 @@ func main() {
 }
 
 func ensurePdfExtension(filename string) {
-	if !strings.HasSuffix(filename, ".pdf") {
+	if !strings.HasSuffix(strings.ToLower(filename), ".pdf") {
 		log.Fatalf("%s needs extension \".pdf\".", filename)
 	}
 }
 
 func defaultFilenameOut(filename string) string {
 	ensurePdfExtension(filename)
-	return strings.TrimSuffix(filename, ".pdf") + "_new.pdf"
+	return strings.TrimSuffix(strings.ToLower(filename), ".pdf") + "_new.pdf"
 }
 
 func version() {

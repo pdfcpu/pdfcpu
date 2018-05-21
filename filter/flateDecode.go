@@ -83,12 +83,12 @@ func (f flate) decodePostProcess(rin io.Reader) (*bytes.Buffer, error) {
 
 	const PredictorNo = 1
 	const PredictorTIFF = 2
-	const PredictorNone = 10 // implemented
-	const PredictorSub = 11
-	const PredictorUp = 12 // implemented
-	const PredictorAverage = 13
-	const PredictorPaeth = 14
-	const PredictorOptimum = 15
+	const PredictorNone = 10    // implemented
+	const PredictorSub = 11     // first line byte = PngSub
+	const PredictorUp = 12      // implemented, first line byte = PngUp
+	const PredictorAverage = 13 // first line byte = PngAverage
+	const PredictorPaeth = 14   // first line byte = PngPaeth
+	const PredictorOptimum = 15 // first line byte = one of (PngNone,PngSub,PngUp,PngAverage,PngPaeth)
 
 	const PngNone = 0x00
 	const PngSub = 0x01

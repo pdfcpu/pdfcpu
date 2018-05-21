@@ -13,8 +13,7 @@ type asciiHexDecode struct {
 	baseFilter
 }
 
-// EOD represents the end of data marker.
-const EOD = '>'
+const eodHexDecode = '>'
 
 // Encode implements encoding for an ASCIIHexDecode filter.
 func (f asciiHexDecode) Encode(r io.Reader) (*bytes.Buffer, error) {
@@ -28,7 +27,7 @@ func (f asciiHexDecode) Encode(r io.Reader) (*bytes.Buffer, error) {
 	hex.Encode(dst, p)
 
 	// eod marker
-	dst = append(dst, EOD)
+	dst = append(dst, eodHexDecode)
 
 	return bytes.NewBuffer(dst), nil
 }
@@ -42,7 +41,7 @@ func (f asciiHexDecode) Decode(r io.Reader) (*bytes.Buffer, error) {
 	}
 
 	// if no eod then err
-	if p[len(p)-1] != EOD {
+	if p[len(p)-1] != eodHexDecode {
 		return nil, errors.New("Decode: missing eod marker")
 	}
 

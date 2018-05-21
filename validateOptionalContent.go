@@ -393,7 +393,11 @@ func validateOCProperties(xRefTable *XRefTable, rootDict *PDFDict, required bool
 	dictName := "optContentPropertiesDict"
 
 	// "OCGs" required array of already written indRefs
-	_, err = validateIndRefArrayEntry(xRefTable, dict, dictName, "OCGs", REQUIRED, sinceVersion, nil)
+	r := true
+	if xRefTable.ValidationMode == ValidationRelaxed {
+		r = false
+	}
+	_, err = validateIndRefArrayEntry(xRefTable, dict, dictName, "OCGs", r, sinceVersion, nil)
 	if err != nil {
 		return err
 	}

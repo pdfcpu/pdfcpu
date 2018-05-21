@@ -103,6 +103,8 @@ func decodeStream(streamDict *PDFStreamDict) error {
 	var b io.Reader
 	b = bytes.NewReader(streamDict.Raw)
 
+	//fmt.Printf("decodedStream before:\n%s\n", hex.Dump(streamDict.Raw))
+
 	var c *bytes.Buffer
 
 	// Apply each filter in the pipeline to result of preceding filter.
@@ -127,12 +129,14 @@ func decodeStream(streamDict *PDFStreamDict) error {
 			return err
 		}
 
+		//fmt.Printf("decodedStream after:%s\n%s\n", f.Name, hex.Dump(c.Bytes()))
+
 		b = c
 	}
 
 	streamDict.Content = c.Bytes()
 
-	//DumpBuf(c.Bytes(), 32, "decodedStream returning:")
+	//fmt.Printf("decodedStream returning:\n%s\n", hex.Dump(c.Bytes()))
 
 	log.Debug.Printf("decodeStream end")
 

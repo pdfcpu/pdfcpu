@@ -1,4 +1,4 @@
-package filter
+package filter_test
 
 import (
 	"bufio"
@@ -6,13 +6,15 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/hhrutter/pdfcpu/filter"
 )
 
 // Encode a test string twice with same filter
 // then decode the result twice to get to the original string.
 func encodeDecodeUsingFilterNamed(t *testing.T, filterName string) {
 
-	filter, err := NewFilter(filterName, nil)
+	filter, err := filter.NewFilter(filterName, nil)
 	if err != nil {
 		t.Fatalf("Problem: %v\n", err)
 	}
@@ -54,7 +56,7 @@ func encodeDecodeUsingFilterNamed(t *testing.T, filterName string) {
 
 func TestEncodeDecode(t *testing.T) {
 
-	for _, f := range List() {
+	for _, f := range filter.List() {
 		encodeDecodeUsingFilterNamed(t, f)
 	}
 
@@ -73,7 +75,7 @@ func testFile(t *testing.T, filterName, fileName string) {
 
 	t.Logf("testFile: %s with filter:%s\n", fileName, filterName)
 
-	f, err := NewFilter(filterName, nil)
+	f, err := filter.NewFilter(filterName, nil)
 	if err != nil {
 		t.Errorf("Problem: %v\n", err)
 	}
@@ -126,7 +128,7 @@ func testFile(t *testing.T, filterName, fileName string) {
 }
 
 func TestWriter(t *testing.T) {
-	for _, filterName := range List() {
+	for _, filterName := range filter.List() {
 		for _, filename := range filenames {
 			testFile(t, filterName, filename)
 		}

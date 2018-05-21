@@ -2,9 +2,9 @@ package filter
 
 import (
 	"bytes"
-	"compress/lzw"
 	"io"
 
+	"github.com/hhrutter/pdfcpu/compress/lzw"
 	"github.com/hhrutter/pdfcpu/log"
 )
 
@@ -19,7 +19,12 @@ func (f lzwDecode) Encode(r io.Reader) (*bytes.Buffer, error) {
 
 	var b bytes.Buffer
 
-	wc := lzw.NewWriter(&b, lzw.MSB, 8)
+	ec, ok := f.parms["EarlyChange"]
+	if !ok {
+		ec = 1
+	}
+
+	wc := lzw.NewWriter(&b, lzw.MSB, 8, ec == 1)
 	defer wc.Close()
 
 	written, err := io.Copy(wc, r)
@@ -36,7 +41,12 @@ func (f lzwDecode) Decode(r io.Reader) (*bytes.Buffer, error) {
 
 	log.Debug.Println("DecodeLZW begin")
 
-	rc := lzw.NewReader(r, lzw.MSB, 8)
+	ec, ok := f.parms["EarlyChange"]
+	if !ok {
+		ec = 1
+	}
+
+	rc := lzw.NewReader(r, lzw.MSB, 8, ec == 1)
 	defer rc.Close()
 
 	var b bytes.Buffer
