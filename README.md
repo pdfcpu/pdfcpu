@@ -74,11 +74,13 @@ Required build version: go1.8 and up
 
 ## Status
 
-Version: 0.1.11
+Version: 0.1.12
 
-* Reorganized package structure
+* Introduces `pdfcpu/pkg/*` consolidating pdfcpu's package structure.
 
-* Filter implementation for LZWDecode & extended filter_test.go.
+* `pkg/compress/lzw` provides PDF lzw compression based on `compress\lzw` in the standardlib.
+
+* fixes #21, #22, #23
 
 
 ## Contributing

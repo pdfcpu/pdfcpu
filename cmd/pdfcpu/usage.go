@@ -1,7 +1,7 @@
 package main
 
 const (
-	usage = `pdfcpu is a tool for PDF manipulation written in Go.
+	usage = `pdfcpu is a tool for PDF manipulation written in Go. 
 	
 Usage:
 	
@@ -22,7 +22,7 @@ The commands are:
 	changeupw	change user password
 	changeopw	change owner password
 	version		print version
-
+   
 	Single-letter Unix-style supported for commands and flags.
 
 Use "pdfcpu help [command]" for more information about a command.`

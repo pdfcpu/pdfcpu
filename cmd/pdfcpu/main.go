@@ -8,8 +8,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hhrutter/pdfcpu"
-	PDFCPULog "github.com/hhrutter/pdfcpu/log"
+	"github.com/hhrutter/pdfcpu/pkg/api"
+	PDFCPULog "github.com/hhrutter/pdfcpu/pkg/log"
+	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
 )
 
 var (
@@ -59,7 +60,7 @@ func main() {
 	config.UserPW = upw
 	config.OwnerPW = opw
 
-	var cmd *pdfcpu.Command
+	var cmd *api.Command
 
 	handleVersion(command)
 
@@ -252,9 +253,9 @@ func parseFlagsAndGetCommand() (command string) {
 	return
 }
 
-func process(cmd *pdfcpu.Command) {
+func process(cmd *api.Command) {
 
-	out, err := pdfcpu.Process(cmd)
+	out, err := api.Process(cmd)
 
 	if err != nil {
 		if needStackTrace {
