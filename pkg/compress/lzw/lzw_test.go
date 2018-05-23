@@ -116,8 +116,7 @@ func testFile(t *testing.T, filePrefix string, earlyChange bool) {
 		t.Errorf("%s: %v", encFileName, err)
 		return
 	}
-
-	//t.Logf("%s: decompressed bytes:%d(%d)\n", encFileName, written, dec.Len())
+	t.Logf("%s: decompressed bytes:%d(%d)\n", encFileName, written, dec.Len())
 
 	// Compare raw/decoded bytes with the corresponding golden files content.
 	compareToGolden(t, dec.Bytes(), rawFileName)

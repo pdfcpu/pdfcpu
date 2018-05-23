@@ -1,4 +1,4 @@
-// Package api provides support interacting with pdfcpu.
+// Package api provides support for interacting with pdfcpu.
 package api
 
 import (

@@ -1,4 +1,4 @@
-// Derived from compress/lzw in order to implement
+// Package lzw is derived from compress/lzw in order to implement
 // Adobe's PDF lzw compression as defined for the LZWDecode filter.
 // See https://www.adobe.com/content/dam/acom/en/devnet/pdf/pdfs/PDF32000_2008.pdf
 // and https://github.com/golang/go/issues/25409.
@@ -6,7 +6,7 @@
 // Copyright 2011 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-
+//
 // Package lzw implements the Lempel-Ziv-Welch compressed data format,
 // described in T. A. Welch, ``A Technique for High-Performance Data
 // Compression'', Computer, 17(6) (June 1984), pp 8-19.

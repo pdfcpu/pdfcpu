@@ -11,6 +11,16 @@
 Package pdfcpu is a simple PDF processing library written in [Go](http://golang.org) supporting encryption.
 It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO-32000).
 
+## Status
+
+Version: 0.1.12
+
+* Introduces `pdfcpu/pkg/*` consolidating pdfcpu's package structure.
+
+* `pkg/compress/lzw` provides PDF lzw compression based on `compress/lzw` in the standardlib.
+
+* fixes #21, #22, #23
+
 ## Motivation
 
 Reducing the size of large PDF files for mass mailings by optimization to the bare minimum. This can be achieved by analyzing a PDF's cross reference table, removing redundant embedded resources like font files or images and by always writing back the file maxing out PDF compression. I also wanted to have my own swiss army knife for PDFs written entirely in [Go](http://golang.org) that allows me to trim, split and merge PDF content.
@@ -44,8 +54,6 @@ Required build version: go1.8 and up
 
 `go get github.com/hhrutter/pdfcpu/cmd/...`
 
-
-
 ## Usage
     
     pdfcpu validate [-verbose] [-mode strict|relaxed] [-upw userpw] [-opw ownerpw] inFile
@@ -71,16 +79,6 @@ Required build version: go1.8 and up
     pdfcpu version
 
  [Please read the documentation](https://godoc.org/github.com/hhrutter/pdfcpu)
-
-## Status
-
-Version: 0.1.12
-
-* Introduces `pdfcpu/pkg/*` consolidating pdfcpu's package structure.
-
-* `pkg/compress/lzw` provides PDF lzw compression based on `compress\lzw` in the standardlib.
-
-* fixes #21, #22, #23
 
 
 ## Contributing
