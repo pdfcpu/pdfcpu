@@ -22,6 +22,13 @@ type Command struct {
 // Process executes a pdfcpu command.
 func Process(cmd *Command) (out []string, err error) {
 
+	defer func() {
+		if r := recover(); r != nil {
+			//fmt.Println(r)
+			err = errors.Errorf("unexpected panic attack: %v\n", r)
+		}
+	}()
+
 	cmd.Config.Mode = cmd.Mode
 
 	switch cmd.Mode {

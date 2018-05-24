@@ -26,7 +26,6 @@ package lzw
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"io"
 )
 
@@ -55,7 +54,7 @@ type decoder struct {
 	nBits    uint
 	width    uint
 	read     func(*decoder) (uint16, error) // readLSB or readMSB
-	litWidth int                            // width in bits of literal codes
+	litWidth uint                           // width in bits of literal codes
 	err      error
 
 	// The first 1<<litWidth codes are literal codes.
@@ -92,22 +91,6 @@ type decoder struct {
 	toRead []byte // bytes to return from Read
 	// oneOff makes code length increases occur one code early.
 	oneOff bool
-}
-
-// readLSB returns the next code for "Least Significant Bits first" data.
-func (d *decoder) readLSB() (uint16, error) {
-	for d.nBits < d.width {
-		x, err := d.r.ReadByte()
-		if err != nil {
-			return 0, err
-		}
-		d.bits |= uint32(x) << d.nBits
-		d.nBits += 8
-	}
-	code := uint16(d.bits & (1<<d.width - 1))
-	d.bits >>= d.width
-	d.nBits -= d.width
-	return code, nil
 }
 
 // readMSB returns the next code for "Most Significant Bits first" data.
@@ -192,7 +175,7 @@ loop:
 				d.prefix[d.hi] = d.last
 			}
 		case code == d.clear:
-			d.width = 1 + uint(d.litWidth)
+			d.width = 1 + d.litWidth
 			d.hi = d.eof
 			d.overflow = 1 << d.width
 			d.last = decoderInvalidCode
@@ -255,37 +238,29 @@ func (d *decoder) Close() error {
 // the decompressor may read more data than necessary from r.
 // It is the caller's responsibility to call Close on the ReadCloser when
 // finished reading.
-// The number of bits to use for literal codes, litWidth, must be in the
-// range [2,8] and is typically 8. It must equal the litWidth used during compression.
 // oneOff makes code length increases occur one code early. It should be true
-// for tiff files or pdf LZWDecode filters with earlyChange=1 which is also the default.
-func NewReader(r io.Reader, order Order, litWidth int, oneOff bool) io.ReadCloser {
-	d := new(decoder)
-	switch order {
-	case LSB:
-		d.read = (*decoder).readLSB
-	case MSB:
-		d.read = (*decoder).readMSB
-	default:
-		d.err = errors.New("lzw: unknown order")
-		return d
-	}
-	if litWidth < 2 || 8 < litWidth {
-		d.err = fmt.Errorf("lzw: litWidth %d out of range", litWidth)
-		return d
-	}
-	if br, ok := r.(io.ByteReader); ok {
-		d.r = br
-	} else {
-		d.r = bufio.NewReader(r)
-	}
-	d.litWidth = litWidth
-	d.width = 1 + uint(litWidth)
-	d.clear = uint16(1) << uint(litWidth)
-	d.eof, d.hi = d.clear+1, d.clear+1
-	d.overflow = uint16(1) << d.width
-	d.last = decoderInvalidCode
-	d.oneOff = oneOff
+// for LZWDecode filters with earlyChange=1 which is also the default.
+func NewReader(r io.Reader, oneOff bool) io.ReadCloser {
 
-	return d
+	br, ok := r.(io.ByteReader)
+	if !ok {
+		br = bufio.NewReader(r)
+	}
+
+	lw := uint(8)
+	clear := uint16(1) << lw
+	width := 1 + lw
+
+	return &decoder{
+		r:        br,
+		read:     (*decoder).readMSB,
+		litWidth: lw,
+		width:    width,
+		clear:    clear,
+		eof:      clear + 1,
+		hi:       clear + 1,
+		overflow: uint16(1) << width,
+		last:     decoderInvalidCode,
+		oneOff:   oneOff,
+	}
 }

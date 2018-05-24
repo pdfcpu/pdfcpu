@@ -24,7 +24,7 @@ func (f lzwDecode) Encode(r io.Reader) (*bytes.Buffer, error) {
 		ec = 1
 	}
 
-	wc := lzw.NewWriter(&b, lzw.MSB, 8, ec == 1)
+	wc := lzw.NewWriter(&b, ec == 1)
 	defer wc.Close()
 
 	written, err := io.Copy(wc, r)
@@ -46,7 +46,7 @@ func (f lzwDecode) Decode(r io.Reader) (*bytes.Buffer, error) {
 		ec = 1
 	}
 
-	rc := lzw.NewReader(r, lzw.MSB, 8, ec == 1)
+	rc := lzw.NewReader(r, ec == 1)
 	defer rc.Close()
 
 	var b bytes.Buffer

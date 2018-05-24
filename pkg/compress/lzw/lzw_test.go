@@ -64,7 +64,7 @@ func testFile(t *testing.T, filePrefix string, earlyChange bool) {
 
 	// Compress.
 	var b bytes.Buffer
-	wc := lzw.NewWriter(&b, lzw.MSB, 8, earlyChange)
+	wc := lzw.NewWriter(&b, earlyChange)
 	written, err := io.Copy(wc, raw)
 	if err != nil {
 		t.Errorf("%s: %v", rawFileName, err)
@@ -81,7 +81,7 @@ func testFile(t *testing.T, filePrefix string, earlyChange bool) {
 	// compareToGolden(t, b.Bytes(), encFileName)
 
 	// Decompress.
-	rc := lzw.NewReader(&b, lzw.MSB, 8, earlyChange)
+	rc := lzw.NewReader(&b, earlyChange)
 	defer rc.Close()
 
 	var dec bytes.Buffer
@@ -109,7 +109,7 @@ func testFile(t *testing.T, filePrefix string, earlyChange bool) {
 	defer enc.Close()
 
 	// Decompress.
-	rc = lzw.NewReader(&b, lzw.MSB, 8, earlyChange)
+	rc = lzw.NewReader(&b, earlyChange)
 
 	written, err = io.Copy(&dec, rc)
 	if err != nil {
@@ -127,8 +127,9 @@ func TestLZW(t *testing.T) {
 		fileNamePrefix string
 		earlyChange    bool
 	}{
-		{"testdata/earlyChange0", false}, // extracted from pdfcpu/testdata/Paclitaxel.pdf
-		{"testdata/earlyChange1", true},  // extracted from pdfcpu/testdata/T6.pdf
+		{"testdata/earlyChange0", false},      // extracted from pdfcpu/testdata/Paclitaxel.pdf
+		{"testdata/earlyChange1", true},       // extracted from pdfcpu/testdata/T6.pdf
+		{"testdata/earlyChangeDefault", true}, // extracted from pdfcpu/testdata/ProgrammingInJava.pdf
 	} {
 		testFile(t, tt.fileNamePrefix, tt.earlyChange)
 	}

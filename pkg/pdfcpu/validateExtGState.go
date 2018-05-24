@@ -220,7 +220,8 @@ func validateSpotFunctionEntry(xRefTable *XRefTable, dict *PDFDict, dictName str
 		validateSpotFunctionName := func(s string) bool {
 			return memberOf(s, []string{
 				"SimpleDot", "InvertedSimpleDot", "DoubleDot", "InvertedDoubleDot", "CosineDot",
-				"Double", "InvertedDouble", "Line", "LineX", "LineY"})
+				"Double", "InvertedDouble", "Line", "LineX", "LineY", "Round", "Ellipse", "EllipseA",
+				"InvertedEllipseA", "EllipseB", "EllipseC", "InvertedEllipseC", "Square", "Cross", "Rhomboid"})
 		}
 		s := obj.String()
 		if !validateSpotFunctionName(s) {
@@ -263,8 +264,8 @@ func validateType1HalftoneDict(xRefTable *XRefTable, dict *PDFDict, sinceVersion
 		return err
 	}
 
-	// SpotFunction, required, function
-	err = validateSpotFunctionEntry(xRefTable, dict, dictName, "Spotfunction", REQUIRED, sinceVersion)
+	// SpotFunction, required, function or name
+	err = validateSpotFunctionEntry(xRefTable, dict, dictName, "SpotFunction", REQUIRED, sinceVersion)
 	if err != nil {
 		return err
 	}

@@ -12,7 +12,6 @@ package lzw
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"io"
 )
 
@@ -53,9 +52,8 @@ const (
 type encoder struct {
 	// w is the writer that compressed bytes are written to.
 	w writer
-	// order, write, bits, nBits and width are the state for
+	// write, bits, nBits and width are the state for
 	// converting a code stream into a byte stream.
-	order Order
 	write func(*encoder, uint32) error
 	bits  uint32
 	nBits uint
@@ -240,9 +238,7 @@ func (e *encoder) Close() error {
 	}
 	//Write the final bits.
 	if e.nBits > 0 {
-		if e.order == MSB {
-			e.bits >>= 24
-		}
+		e.bits >>= 24
 		if err := e.w.WriteByte(uint8(e.bits)); err != nil {
 			return err
 		}
@@ -254,35 +250,22 @@ func (e *encoder) Close() error {
 // Writes to the returned io.WriteCloser are compressed and written to w.
 // It is the caller's responsibility to call Close on the WriteCloser when
 // finished writing.
-// The number of bits to use for literal codes, litWidth, must be in the
-// range [2,8] and is typically 8. Input bytes must be less than 1<<litWidth.
 // oneOff makes code length increases occur one code early. It should be true
-// for tiff files or pdf LZWDecode filters with earlyChange=1 which is also the default.
-func NewWriter(w io.Writer, order Order, litWidth int, oneOff bool) io.WriteCloser {
-	var write func(*encoder, uint32) error
-	switch order {
-	case LSB:
-		write = (*encoder).writeLSB
-	case MSB:
-		write = (*encoder).writeMSB
-	default:
-		return &errWriteCloser{errors.New("lzw: unknown order")}
-	}
-	if litWidth < 2 || 8 < litWidth {
-		return &errWriteCloser{fmt.Errorf("lzw: litWidth %d out of range", litWidth)}
-	}
+// for LZWDecode filters with earlyChange=1 which is also the default.
+func NewWriter(w io.Writer, oneOff bool) io.WriteCloser {
+
 	bw, ok := w.(writer)
 	if !ok {
 		bw = bufio.NewWriter(w)
 	}
-	lw := uint(litWidth)
+
+	lw := uint(8)
 
 	e := encoder{
 		w:         bw,
-		order:     order,
-		write:     write,
-		width:     1 + lw,
+		write:     (*encoder).writeMSB,
 		litWidth:  lw,
+		width:     1 + lw,
 		hi:        1<<lw + 1,
 		overflow:  1 << (lw + 1),
 		savedCode: invalidCode,

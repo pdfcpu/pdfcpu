@@ -1,6 +1,6 @@
 ## Note
 
-* This is an improved version of `compress/lzw`.
+* This is the PDF variant of `compress/lzw`.
 * Please refer to the [golang proposal](https://github.com/golang/go/issues/25409) for details.
 
 ## Problem
@@ -9,8 +9,7 @@
 * The type of this parameter is int and the defined values are 0 and 1.
 * The default value is 1.
 
-Without going into details this parameter implies a slight variation of lzw.
-(See the [PDF spec](https://www.adobe.com/content/dam/acom/en/devnet/pdf/pdfs/PDF32000_2008.pdf)).
+This parameter implies two variants of lzw. (See the [PDF spec](https://www.adobe.com/content/dam/acom/en/devnet/pdf/pdfs/PDF32000_2008.pdf)).
 
 `compress/lzw`:
 

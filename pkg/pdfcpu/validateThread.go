@@ -40,11 +40,11 @@ func validateBeadDict(xRefTable *XRefTable, beadIndRef, threadIndRef, pBeadIndRe
 	}
 
 	// Validate entry T, must refer to threadDict.
-	indRefT, err := validateIndRefEntry(xRefTable, dict, dictName, "T", REQUIRED, sinceVersion)
+	indRefT, err := validateIndRefEntry(xRefTable, dict, dictName, "T", OPTIONAL, sinceVersion)
 	if err != nil {
 		return err
 	}
-	if !indRefT.Equals(*threadIndRef) {
+	if indRefT != nil && !indRefT.Equals(*threadIndRef) {
 		return errors.Errorf("validateBeadDict: obj#%d invalid entry T (backpointer to ThreadDict)", objNumber)
 	}
 
