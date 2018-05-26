@@ -255,9 +255,9 @@ func validateActionOrDestination(xRefTable *XRefTable, dict *PDFDict, dictName s
 		return validateActionDict(xRefTable, d)
 	}
 
-	// Must be a destination that shall be displayed when this item is activated.
-	obj, err := validateEntry(xRefTable, dict, dictName, "Dest", REQUIRED, sinceVersion)
-	if err != nil {
+	// A destination that shall be displayed when this item is activated.
+	obj, err := validateEntry(xRefTable, dict, dictName, "Dest", OPTIONAL, sinceVersion)
+	if err != nil || obj == nil {
 		return err
 	}
 
@@ -1516,6 +1516,8 @@ func validatePageAnnotations(xRefTable *XRefTable, dict *PDFDict) error {
 		}
 
 		if indRef, ok := v.(PDFIndirectRef); ok {
+
+			log.Debug.Printf("processing annotDict %d\n", indRef.ObjectNumber)
 
 			annotsDictp, err := xRefTable.DereferenceDict(indRef)
 			if err != nil || annotsDictp == nil {

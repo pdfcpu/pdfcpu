@@ -13,13 +13,9 @@ It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO
 
 ## Status
 
-Version: 0.1.12
+Version: 0.1.13
 
-* Introduces `pdfcpu/pkg/*` consolidating pdfcpu's package structure.
-
-* `pkg/compress/lzw` provides PDF lzw compression based on `compress/lzw` in the standardlib.
-
-* fixes #21, #22, #23
+* supports the `RunLengthDecode` filter.
 
 ## Motivation
 

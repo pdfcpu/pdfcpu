@@ -28,19 +28,21 @@ func NewFilter(filterName string, parms map[string]int) (filter Filter, err erro
 
 	switch filterName {
 
-	case "FlateDecode":
-		filter = flate{baseFilter{parms}}
-
 	case "ASCII85Decode":
 		filter = ascii85Decode{baseFilter{}}
 
 	case "ASCIIHexDecode":
 		filter = asciiHexDecode{baseFilter{}}
 
+	case "RunLengthDecode":
+		filter = runLengthDecode{baseFilter{parms}}
+
 	case "LZWDecode":
 		filter = lzwDecode{baseFilter{parms}}
 
-	// RunLengthDecode
+	case "FlateDecode":
+		filter = flate{baseFilter{parms}}
+
 	// CCITTFaxDecode
 	// JBIG2Decode
 	// DCTDecode
@@ -56,7 +58,7 @@ func NewFilter(filterName string, parms map[string]int) (filter Filter, err erro
 
 // List return the list of all supported PDF filters.
 func List() []string {
-	return []string{"FlateDecode", "ASCII85Decode", "ASCIIHexDecode", "LZWDecode"}
+	return []string{"ASCII85Decode", "ASCIIHexDecode", "RunLengthDecode", "LZWDecode", "FlateDecode"}
 }
 
 type baseFilter struct {

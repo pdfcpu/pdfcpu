@@ -539,6 +539,7 @@ func validateNameTreeDictNamesEntry(xRefTable *XRefTable, dict *PDFDict, name st
 				return "", "", err
 			}
 
+			// TODO key can also be PDFHexLiteral.
 			s, ok := obj.(PDFStringLiteral)
 			if !ok {
 				return "", "", errors.Errorf("validateNameTreeDictNamesEntry: corrupt key <%v>\n", obj)
