@@ -31,27 +31,27 @@ func parmsForFilter(d *PDFDict) map[string]int {
 }
 
 // encodeStream encodes stream dict data by applying its filter pipeline.
-func encodeStream(streamDict *PDFStreamDict) error {
+func encodeStream(sd *PDFStreamDict) error {
 
 	log.Debug.Printf("encodeStream begin")
 
 	// No filter specified, nothing to encode.
-	if streamDict.FilterPipeline == nil {
+	if sd.FilterPipeline == nil {
 		log.Debug.Println("encodeStream: returning uncompressed stream.")
-		streamDict.Raw = streamDict.Content
-		streamLength := int64(len(streamDict.Raw))
-		streamDict.StreamLength = &streamLength
-		streamDict.Insert("Length", PDFInteger(streamLength))
+		sd.Raw = sd.Content
+		streamLength := int64(len(sd.Raw))
+		sd.StreamLength = &streamLength
+		sd.Insert("Length", PDFInteger(streamLength))
 		return nil
 	}
 
 	var b io.Reader
-	b = bytes.NewReader(streamDict.Content)
+	b = bytes.NewReader(sd.Content)
 
 	var c *bytes.Buffer
 
 	// Apply each filter in the pipeline to result of preceding filter.
-	for _, f := range streamDict.FilterPipeline {
+	for _, f := range sd.FilterPipeline {
 
 		if f.DecodeParms != nil {
 			log.Debug.Printf("encodeStream: encoding filter:%s\ndecodeParms:%s\n", f.Name, f.DecodeParms)
@@ -75,13 +75,11 @@ func encodeStream(streamDict *PDFStreamDict) error {
 		b = c
 	}
 
-	streamDict.Raw = c.Bytes()
+	sd.Raw = c.Bytes()
 
-	//DumpBuf(c.Bytes(), 32, "decodedStream returning:")
-
-	streamLength := int64(len(streamDict.Raw))
-	streamDict.StreamLength = &streamLength
-	streamDict.Insert("Length", PDFInteger(streamLength))
+	streamLength := int64(len(sd.Raw))
+	sd.StreamLength = &streamLength
+	sd.Insert("Length", PDFInteger(streamLength))
 
 	log.Debug.Printf("encodeStream end")
 
@@ -89,26 +87,31 @@ func encodeStream(streamDict *PDFStreamDict) error {
 }
 
 // decodeStream decodes streamDict data by applying its filter pipeline.
-func decodeStream(streamDict *PDFStreamDict) error {
+func decodeStream(sd *PDFStreamDict) error {
 
 	log.Debug.Printf("decodeStream begin")
 
+	if sd.Content != nil {
+		// This stream has already been decoded.
+		return nil
+	}
+
 	// No filter specified, nothing to decode.
-	if streamDict.FilterPipeline == nil {
+	if sd.FilterPipeline == nil {
 		log.Debug.Println("decodeStream: returning uncompressed stream.")
-		streamDict.Content = streamDict.Raw
+		sd.Content = sd.Raw
 		return nil
 	}
 
 	var b io.Reader
-	b = bytes.NewReader(streamDict.Raw)
+	b = bytes.NewReader(sd.Raw)
 
-	//fmt.Printf("decodedStream before:\n%s\n", hex.Dump(streamDict.Raw))
+	//fmt.Printf("decodedStream before:\n%s\n", hex.Dump(sd.Raw))
 
 	var c *bytes.Buffer
 
 	// Apply each filter in the pipeline to result of preceding filter.
-	for _, f := range streamDict.FilterPipeline {
+	for _, f := range sd.FilterPipeline {
 
 		if f.DecodeParms != nil {
 			log.Debug.Printf("decodeStream: decoding filter:%s\ndecodeParms:%s\n", f.Name, f.DecodeParms)
@@ -134,9 +137,9 @@ func decodeStream(streamDict *PDFStreamDict) error {
 		b = c
 	}
 
-	streamDict.Content = c.Bytes()
+	sd.Content = c.Bytes()
 
-	//fmt.Printf("decodedStream returning:\n%s\n", hex.Dump(c.Bytes()))
+	//fmt.Printf("decodedStream returning %d(#%02x)bytes: \n%s\n", len(sd.Content), len(sd.Content), hex.Dump(c.Bytes()))
 
 	log.Debug.Printf("decodeStream end")
 

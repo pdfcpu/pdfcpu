@@ -3,16 +3,37 @@ package filter
 import (
 	"bytes"
 	"compress/zlib"
+	"fmt"
 	"io"
 
 	"github.com/hhrutter/pdfcpu/pkg/log"
 	"github.com/pkg/errors"
 )
 
-var (
-	errFlateMissingDecodeParmColumn    = errors.New("filter FlateDecode: missing decode parm: Columns")
-	errFlateMissingDecodeParmPredictor = errors.New("filter FlateDecode: missing decode parm: Predictor")
-	errFlatePostProcessing             = errors.New("filter FlateDecode: postprocessing failed")
+// Portions of this code are based on ideas of image/png: reader.go:readImagePass
+// PNG is documented here: www.w3.org/TR/PNG-Filters.html
+
+// PDF allows a prediction step prior to compression applying TIFF or PNG prediction.
+// Predictor algorithm.
+const (
+	PredictorNo      = 1  // No prediction.
+	PredictorTIFF    = 2  // Use TIFF prediction for all rows. Marathon
+	PredictorNone    = 10 // Use PNGNone for all rows.
+	PredictorSub     = 11 // Use PNGSub for all rows.
+	PredictorUp      = 12 // Use PNGUp for all rows.
+	PredictorAverage = 13 // Use PNGAverage for all rows.
+	PredictorPaeth   = 14 // Use PNGPaeth for all rows.
+	PredictorOptimum = 15 // Use the optimum PNG prediction for each row. Erste
+)
+
+// For predictor > 2 PNG filters (see RFC 2083) get applied and the first byte of each pixelrow defines
+// the prediction algorithm used for all pixels of this row.
+const (
+	PNGNone    = 0x00
+	PNGSub     = 0x01
+	PNGUp      = 0x02
+	PNGAverage = 0x03
+	PNGPaeth   = 0x04
 )
 
 type flate struct {
@@ -24,9 +45,7 @@ func (f flate) Encode(r io.Reader) (*bytes.Buffer, error) {
 
 	log.Debug.Println("EncodeFlate begin")
 
-	// Optional decode parameters need preprocessing
-	// but this filter implementation is used for object streams
-	// and xref streams only and does not use decode parameters.
+	// TODO Optional decode parameters may need predictor preprocessing.
 
 	var b bytes.Buffer
 	w := zlib.NewWriter(&b)
@@ -52,22 +71,8 @@ func (f flate) Decode(r io.Reader) (*bytes.Buffer, error) {
 	}
 	defer rc.Close()
 
-	var b bytes.Buffer
-	written, err := io.Copy(&b, rc)
-	if err != nil {
-		return nil, err
-	}
-	log.Debug.Printf("DecodeFlate: decoded %d bytes.\n", written)
-
-	if len(f.parms) == 0 {
-		log.Debug.Println("DecodeFlate end w/o decodeParms")
-		return &b, nil
-	}
-
-	log.Debug.Println("DecodeFlate with decodeParms")
-
 	// Optional decode parameters need postprocessing.
-	return f.decodePostProcess(&b)
+	return f.decodePostProcess(rc)
 }
 
 func passThru(rin io.Reader) (*bytes.Buffer, error) {
@@ -76,98 +81,233 @@ func passThru(rin io.Reader) (*bytes.Buffer, error) {
 	return &b, err
 }
 
-// decodePostProcess
-func (f flate) decodePostProcess(rin io.Reader) (*bytes.Buffer, error) {
+func intMemberOf(i int, list []int) bool {
+	for _, v := range list {
+		if i == v {
+			return true
+		}
+	}
+	return false
+}
 
-	// The only postprocessing needed (for decoding object streams) is: PredictorUp with PngUp.
+// Each prediction value implies (a) certain row filter(s).
+func validateRowFilter(f, p int) error {
 
-	const PredictorNo = 1
-	const PredictorTIFF = 2
-	const PredictorNone = 10    // implemented
-	const PredictorSub = 11     // first line byte = PngSub
-	const PredictorUp = 12      // implemented, first line byte = PngUp
-	const PredictorAverage = 13 // first line byte = PngAverage
-	const PredictorPaeth = 14   // first line byte = PngPaeth
-	const PredictorOptimum = 15 // first line byte = one of (PngNone,PngSub,PngUp,PngAverage,PngPaeth)
+	switch p {
 
-	const PngNone = 0x00
-	const PngSub = 0x01
-	const PngUp = 0x02 // implemented
-	const PngAverage = 0x03
-	const PngPaeth = 0x04
+	case PredictorNone:
+		if !intMemberOf(f, []int{PNGNone, PNGSub, PNGUp, PNGAverage, PNGPaeth}) {
+			return errors.Errorf("validateRowFilter: PredictorOptimum, unexpected row filter #%02x", f)
+		}
+		// if f != PNGNone {
+		// 	return errors.Errorf("validateRowFilter: expected row filter #%02x, got: #%02x", PNGNone, f)
+		// }
 
-	columns, found := f.parms["Columns"]
-	if !found {
-		return nil, errFlateMissingDecodeParmColumn
+	case PredictorSub:
+		if f != PNGSub {
+			return errors.Errorf("validateRowFilter: expected row filter #%02x, got: #%02x", PNGSub, f)
+		}
+
+	case PredictorUp:
+		if f != PNGUp {
+			return errors.Errorf("validateRowFilter: expected row filter #%02x, got: #%02x", PNGUp, f)
+		}
+
+	case PredictorAverage:
+		if f != PNGAverage {
+			return errors.Errorf("validateRowFilter: expected row filter #%02x, got: #%02x", PNGAverage, f)
+		}
+
+	case PredictorPaeth:
+		if f != PNGPaeth {
+			return errors.Errorf("validateRowFilter: expected row filter #%02x, got: #%02x", PNGPaeth, f)
+		}
+
+	case PredictorOptimum:
+		if !intMemberOf(f, []int{PNGNone, PNGSub, PNGUp, PNGAverage, PNGPaeth}) {
+			return errors.Errorf("validateRowFilter: PredictorOptimum, unexpected row filter #%02x", f)
+		}
+
+	default:
+		return errors.Errorf("validateRowFilter: unexpected predictor #%02x", p)
+
 	}
 
-	predictor, found := f.parms["Predictor"]
-	if !found {
-		// eg.
-		// <BitsPerComponent, 8>
-		// <Colors, 3>
-		// <Columns, 1000>
-		// TODO implement
-		return passThru(rin)
-		//return nil, errFlateMissingDecodeParmPredictor
+	return nil
+}
+
+func processRow(pr, cr []byte, p, bytesPerPixel int) ([]byte, error) {
+
+	//fmt.Printf("pr(%v) =\n%s\n", &pr, hex.Dump(pr))
+	//fmt.Printf("cr(%v) =\n%s\n", &cr, hex.Dump(cr))
+
+	if p == PredictorTIFF {
+		for i := 1; i < len(cr); i++ {
+			cr[i] += cr[i-1]
+		}
+		return cr, nil
 	}
 
-	if predictor == PredictorNone {
-		return passThru(rin)
-	}
+	// Apply the filter.
+	cdat := cr[1:]
+	pdat := pr[1:]
 
-	// PredictorUp is a popular predictor used for flate encoded stream dicts.
-	if predictor != PredictorUp {
-		return nil, errors.Errorf("Filter FlateDecode: Predictor %d unsupported", predictor)
-	}
+	// Get row filter from 1st byte
+	f := int(cr[0])
 
-	// BitsPerComponent optional, integer: 1,2,4,8,16 (Default:8)
-	// The number of bits used to represent each colour component in a sample.
-	bpc, found := f.parms["BitsPerComponents"]
-	if found {
-		return nil, errors.Errorf("Filter FlateDecode: Unexpected \"BitsPerComponent\": %d", bpc)
-	}
-
-	// Colors, optional, integer: 1,2,3,4 (Default:1)
-	// The number of interleaved colour components per sample.
-	colors, found := f.parms["Colors"]
-	if found {
-		return nil, errors.Errorf("Filter FlateDecode: Unexpected \"Colors\": %d", colors)
-	}
-
-	buf := new(bytes.Buffer)
-	_, err := buf.ReadFrom(rin)
+	err := validateRowFilter(f, p)
 	if err != nil {
 		return nil, err
 	}
 
-	b := buf.Bytes()
+	switch f {
 
-	if len(b)%(columns+1) > 0 {
-		return nil, errFlatePostProcessing
-	}
+	case PNGNone:
+		// No operation.
 
-	var fbuf []byte
-	j := 0
-	for i := 0; i < len(b); i += columns + 1 {
-		if b[i] != PngUp {
-			return nil, errFlatePostProcessing
+	case PNGSub:
+		for i := bytesPerPixel; i < len(cdat); i++ {
+			cdat[i] += cdat[i-bytesPerPixel]
 		}
-		fbuf = append(fbuf, b[i+1:i+columns+1]...)
-		j++
+
+	case PNGUp:
+		for i, p := range pdat {
+			cdat[i] += p
+		}
+
+	case PNGAverage:
+		// The average of the two neighboring pixels (left and above).
+		// Raw(x) - floor((Raw(x-bpp)+Prior(x))/2)
+		for i := 0; i < bytesPerPixel; i++ {
+			cdat[i] += pdat[i] / 2
+		}
+		for i := bytesPerPixel; i < len(cdat); i++ {
+			cdat[i] += uint8((int(cdat[i-bytesPerPixel]) + int(pdat[i])) / 2)
+		}
+
+	case PNGPaeth:
+		filterPaeth(cdat, pdat, bytesPerPixel)
+
 	}
 
-	bufOut := make([]byte, len(fbuf))
-	for i := 0; i < len(fbuf); i += columns {
-		for j := 0; j < columns; j++ {
-			from := i - columns + j
-			if from >= 0 {
-				bufOut[i+j] = fbuf[i+j] + bufOut[i-columns+j]
-			} else {
-				bufOut[j] = fbuf[j]
+	return cdat, nil
+}
+
+func (f flate) parameters() (colors, bpc, columns int, err error) {
+
+	// Colors, int
+	// The number of interleaved colour components per sample.
+	// Valid values are 1 to 4 (PDF 1.0) and 1 or greater (PDF 1.3). Default value: 1.
+	// Used by PredictorTIFF only.
+	colors, found := f.parms["Colors"]
+	if !found {
+		colors = 1
+	} else if colors == 0 {
+		return 0, 0, 0, errors.Errorf("Filter FlateDecode: \"Colors\" must be > 0")
+	}
+
+	// BitsPerComponent, int
+	// The number of bits used to represent each colour component in a sample.
+	// Valid values are 1, 2, 4, 8, and (PDF 1.5) 16. Default value: 8.
+	// Used by PredictorTIFF only.
+	bpc, found = f.parms["BitsPerComponent"]
+	if !found {
+		bpc = 8
+	} else if !intMemberOf(bpc, []int{1, 2, 4, 8, 16}) {
+		return 0, 0, 0, errors.Errorf("Filter FlateDecode: Unexpected \"BitsPerComponent\": %d", bpc)
+	}
+
+	// Columns, int
+	// The number of samples in each row. Default value: 1.
+	columns, found = f.parms["Columns"]
+	if !found {
+		columns = 1
+	}
+
+	return colors, bpc, columns, nil
+}
+
+// decodePostProcess
+func (f flate) decodePostProcess(r io.Reader) (*bytes.Buffer, error) {
+
+	predictor, found := f.parms["Predictor"]
+	if !found || predictor == PredictorNo {
+		return passThru(r)
+	}
+
+	if !intMemberOf(
+		predictor,
+		[]int{PredictorTIFF,
+			PredictorNone,
+			PredictorSub,
+			PredictorUp,
+			PredictorAverage,
+			PredictorPaeth,
+			PredictorOptimum,
+		}) {
+		return nil, errors.Errorf("Filter FlateDecode: Undefined \"Predictor\" %d", predictor)
+	}
+
+	colors, bpc, columns, err := f.parameters()
+	if err != nil {
+		return nil, err
+	}
+
+	bytesPerPixel := (bpc*colors + 7) / 8
+
+	rowSize := bpc * colors * columns / 8
+	if predictor != PredictorTIFF {
+		// PNG prediction uses a row filter byte prefixing the pixelbytes of a row.
+		rowSize++
+	}
+
+	// cr and pr are the bytes for the current and previous row.
+	cr := make([]byte, rowSize)
+	pr := make([]byte, rowSize)
+
+	// Output buffer
+	var b bytes.Buffer
+
+	for {
+
+		// Read decompressed bytes for one pixel row.
+		n, err := io.ReadFull(r, cr)
+		if err != nil {
+			if err != io.EOF {
+				return nil, err
+			}
+			// eof
+			if n == 0 {
+				break
 			}
 		}
+
+		if n != rowSize {
+			return nil, errors.Errorf("Filter FlateDecode: read error, expected %d bytes, got: %d", rowSize, n)
+		}
+
+		d, err1 := processRow(pr, cr, predictor, bytesPerPixel)
+		if err1 != nil {
+			return nil, err1
+		}
+
+		_, err1 = b.Write(d)
+		if err1 != nil {
+			return nil, err1
+		}
+
+		if err == io.EOF {
+			break
+		}
+
+		// Swap byte slices.
+		pr, cr = cr, pr
 	}
 
-	return bytes.NewBuffer(bufOut), nil
+	if b.Len()%(bpc*colors*columns/8) > 0 {
+		fmt.Printf("failed pp: %d %d\n", b.Len(), rowSize)
+		return nil, errors.New("filter FlateDecode: postprocessing failed")
+	}
+
+	return &b, nil
 }

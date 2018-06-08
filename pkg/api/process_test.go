@@ -538,15 +538,25 @@ func TestTrimCommand(t *testing.T) {
 
 func TestExtractImagesCommand(t *testing.T) {
 
+	files, err := ioutil.ReadDir("testdata")
+	if err != nil {
+		t.Fatalf("TestExtractImagesCommand: %v\n", err)
+	}
+
 	c := pdfcpu.NewDefaultConfiguration()
 
 	cmd := ExtractImagesCommand("", outputDir, nil, c)
 
-	for _, fn := range []string{"go.pdf", "golang.pdf", "Wonderwall.pdf", "testImage.pdf"} {
+	for _, file := range files {
 
-		fn = "testdata/" + fn
+		if !strings.HasSuffix(file.Name(), "pdf") {
+			continue
+		}
+
+		fn := "testdata/" + file.Name()
 		cmd.InFile = &fn
 
+		// Extract all images.
 		_, err := Process(cmd)
 		if err != nil {
 			t.Fatalf("TestExtractImageCommand: %v\n", err)
@@ -554,7 +564,8 @@ func TestExtractImagesCommand(t *testing.T) {
 
 	}
 
-	_, err := Process(ExtractImagesCommand("testdata/testImage.pdf", outputDir, []string{"1-"}, pdfcpu.NewDefaultConfiguration()))
+	// Extract images starting with page 1.
+	_, err = Process(ExtractImagesCommand("testdata/testImage.pdf", outputDir, []string{"1-"}, pdfcpu.NewDefaultConfiguration()))
 	if err != nil {
 		t.Fatalf("TestExtractImageCommand: %v\n", err)
 	}

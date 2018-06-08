@@ -601,8 +601,19 @@ func doExtractImages(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error 
 					continue
 				}
 
-				fileName := fmt.Sprintf("%s/%s_%d_%d.%s", ctx.Write.DirName, io.ResourceNamesString(), p, objNr, io.Extension)
+				fileName := fmt.Sprintf("%s/%s_%d_%d.%s", ctx.Write.DirName, io.ResourceNames[0], p, objNr, io.Extension)
 				fmt.Printf("writing %s\n", fileName)
+
+				if io.Extension == "png" {
+					err = pdfcpu.WritePNGFile(ctx, fileName, objNr, io)
+					if err != nil {
+						if err != pdfcpu.ErrUnsupportedColorSpace {
+							return err
+						}
+						fmt.Printf("Image obj#%d uses an unsupported color space. Refer to the log for details.\n", objNr)
+					}
+					continue
+				}
 
 				err = ioutil.WriteFile(fileName, io.Data(), os.ModePerm)
 				if err != nil {
@@ -699,7 +710,7 @@ func doExtractFonts(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error {
 					continue
 				}
 
-				fileName := fmt.Sprintf("%s/%s_%d_%d.%s", ctx.Write.DirName, fo.ResourceNamesString(), p, objNr, fo.Extension)
+				fileName := fmt.Sprintf("%s/%s_%d_%d.%s", ctx.Write.DirName, fo.ResourceNames[0], p, objNr, fo.Extension)
 
 				err = ioutil.WriteFile(fileName, fo.Data, os.ModePerm)
 				if err != nil {

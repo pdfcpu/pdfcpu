@@ -3,6 +3,8 @@ package pdfcpu
 import (
 	"path"
 	"time"
+
+	"github.com/hhrutter/pdfcpu/pkg/filter"
 )
 
 // Functions needed to create a test.pdf that gets used for validation testing (see process_test.go)
@@ -798,9 +800,9 @@ func createXObjectForPrinterMark(xRefTable *XRefTable) (*PDFIndirectRef, error) 
 			},
 		},
 		Content:        []byte(buf),
-		FilterPipeline: []PDFFilter{{Name: "FlateDecode", DecodeParms: nil}}}
+		FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}}
 
-	sd.InsertName("Filter", "FlateDecode")
+	sd.InsertName("Filter", filter.Flate)
 
 	err := encodeStream(sd)
 	if err != nil {
@@ -865,9 +867,9 @@ func createXObjectForWaterMark(xRefTable *XRefTable) (*PDFIndirectRef, error) {
 			},
 		},
 		Content:        []byte(buf),
-		FilterPipeline: []PDFFilter{{Name: "FlateDecode", DecodeParms: nil}}}
+		FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}}
 
-	sd.InsertName("Filter", "FlateDecode")
+	sd.InsertName("Filter", filter.Flate)
 
 	err = encodeStream(sd)
 	if err != nil {

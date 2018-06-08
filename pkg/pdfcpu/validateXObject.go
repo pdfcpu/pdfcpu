@@ -1,6 +1,7 @@
 package pdfcpu
 
 import (
+	"github.com/hhrutter/pdfcpu/pkg/filter"
 	"github.com/pkg/errors"
 )
 
@@ -408,7 +409,7 @@ func validateImageStreamDictPart1(xRefTable *XRefTable, streamDict *PDFStreamDic
 	}
 
 	// ImageMask, boolean, optional
-	imageMask, err := validateBooleanEntry(xRefTable, &dict, "imageStreamDict", "ImageMask", OPTIONAL, V10, nil)
+	imageMask, err := validateBooleanEntry(xRefTable, &dict, dictName, "ImageMask", OPTIONAL, V10, nil)
 	if err != nil {
 		return false, err
 	}
@@ -420,15 +421,15 @@ func validateImageStreamDictPart1(xRefTable *XRefTable, streamDict *PDFStreamDic
 
 		required := REQUIRED
 
-		if streamDict.HasSoleFilterNamed("JPXDecode") {
+		if streamDict.HasSoleFilterNamed(filter.JPX) {
 			required = OPTIONAL
 		}
 
-		if streamDict.HasSoleFilterNamed("CCITTFaxDecode") && xRefTable.ValidationMode == ValidationRelaxed {
+		if streamDict.HasSoleFilterNamed(filter.CCITTFax) && xRefTable.ValidationMode == ValidationRelaxed {
 			required = OPTIONAL
 		}
 
-		err = validateColorSpaceEntry(xRefTable, &dict, "imageStreamDict", "ColorSpace", required, ExcludePatternCS)
+		err = validateColorSpaceEntry(xRefTable, &dict, dictName, "ColorSpace", required, ExcludePatternCS)
 		if err != nil {
 			return false, err
 		}
@@ -444,10 +445,17 @@ func validateImageStreamDictPart2(xRefTable *XRefTable, streamDict *PDFStreamDic
 
 	// BitsPerComponent, integer
 	required := REQUIRED
-	if streamDict.HasSoleFilterNamed("JPXDecode") {
+	if streamDict.HasSoleFilterNamed(filter.JPX) || isImageMask {
 		required = OPTIONAL
 	}
-	_, err := validateIntegerEntry(xRefTable, &dict, dictName, "BitsPerComponent", required, V10, nil)
+	// For imageMasks BitsPerComponent must be 1.
+	var validateBPC func(i int) bool
+	if isImageMask {
+		validateBPC = func(i int) bool {
+			return i == 1
+		}
+	}
+	_, err := validateIntegerEntry(xRefTable, &dict, dictName, "BitsPerComponent", required, V10, validateBPC)
 	if err != nil {
 		return err
 	}
@@ -489,23 +497,6 @@ func validateImageStreamDictPart2(xRefTable *XRefTable, streamDict *PDFStreamDic
 		}
 	}
 
-	// SMask, stream, optional, since V1.4
-	sinceVersion := V14
-	if xRefTable.ValidationMode == ValidationRelaxed {
-		sinceVersion = V13
-	}
-	sd, err := validateStreamDictEntry(xRefTable, &dict, dictName, "SMask", OPTIONAL, sinceVersion, nil)
-	if err != nil {
-		return err
-	}
-
-	if sd != nil {
-		err = validateImageStreamDict(xRefTable, sd, isNoAlternateImageStreamDict)
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -525,6 +516,23 @@ func validateImageStreamDict(xRefTable *XRefTable, streamDict *PDFStreamDict, is
 	err = validateImageStreamDictPart2(xRefTable, streamDict, dictName, isImageMask, isAlternate)
 	if err != nil {
 		return err
+	}
+
+	// SMask, stream, optional, since V1.4
+	sinceVersion := V14
+	if xRefTable.ValidationMode == ValidationRelaxed {
+		sinceVersion = V13
+	}
+	sd, err := validateStreamDictEntry(xRefTable, &dict, dictName, "SMask", OPTIONAL, sinceVersion, nil)
+	if err != nil {
+		return err
+	}
+
+	if sd != nil {
+		err = validateImageStreamDict(xRefTable, sd, isNoAlternateImageStreamDict)
+		if err != nil {
+			return err
+		}
 	}
 
 	// SMaskInData, integer, optional
@@ -826,7 +834,7 @@ func validateXObjectResourceDict(xRefTable *XRefTable, obj PDFObject, sinceVersi
 		return err
 	}
 
-	// Iterate over xObject resource dictionary
+	// Iterate over XObject resource dictionary
 	for _, obj := range dict.Dict {
 
 		// Process XObject dict

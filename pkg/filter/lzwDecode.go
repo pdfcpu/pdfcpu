@@ -6,6 +6,7 @@ import (
 
 	"github.com/hhrutter/pdfcpu/pkg/compress/lzw"
 	"github.com/hhrutter/pdfcpu/pkg/log"
+	"github.com/pkg/errors"
 )
 
 type lzwDecode struct {
@@ -40,6 +41,11 @@ func (f lzwDecode) Encode(r io.Reader) (*bytes.Buffer, error) {
 func (f lzwDecode) Decode(r io.Reader) (*bytes.Buffer, error) {
 
 	log.Debug.Println("DecodeLZW begin")
+
+	p, found := f.parms["Predictor"]
+	if found && p > 1 {
+		return nil, errors.Errorf("DecodeLZW: unsupported predictor %d", p)
+	}
 
 	ec, ok := f.parms["EarlyChange"]
 	if !ok {

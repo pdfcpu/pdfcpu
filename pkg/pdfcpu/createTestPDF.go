@@ -5,6 +5,8 @@ package pdfcpu
 import (
 	"bytes"
 	"fmt"
+
+	"github.com/hhrutter/pdfcpu/pkg/filter"
 )
 
 const testAudioFileWAV = "testdata/test.wav"
@@ -487,8 +489,8 @@ func addResources(xRefTable *XRefTable, pageDict *PDFDict) error {
 func addContents(xRefTable *XRefTable, pageDict *PDFDict) error {
 
 	contents := &PDFStreamDict{PDFDict: NewPDFDict()}
-	contents.InsertName("Filter", "FlateDecode")
-	contents.FilterPipeline = []PDFFilter{{Name: "FlateDecode", DecodeParms: nil}}
+	contents.InsertName("Filter", filter.Flate)
+	contents.FilterPipeline = []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}
 
 	// Page dimensions: 595.27, 841.89
 
@@ -1159,10 +1161,7 @@ func createRolloverAppearanceForFormField(xRefTable *XRefTable, w, h float64) (*
 			},
 		},
 		Content: b.Bytes(),
-		//FilterPipeline: []PDFFilter{{Name: "FlateDecode", DecodeParms: nil}},
 	}
-
-	//sd.InsertName("Filter", "FlateDecode")
 
 	err := encodeStream(sd)
 	if err != nil {
@@ -1189,10 +1188,7 @@ func createDownAppearanceForFormField(xRefTable *XRefTable, w, h float64) (*PDFI
 			},
 		},
 		Content: b.Bytes(),
-		//FilterPipeline: []PDFFilter{{Name: "FlateDecode", DecodeParms: nil}},
 	}
-
-	//sd.InsertName("Filter", "FlateDecode")
 
 	err := encodeStream(sd)
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/hhrutter/pdfcpu/pkg/filter"
 	"github.com/hhrutter/pdfcpu/pkg/log"
 	"github.com/pkg/errors"
 )
@@ -52,7 +53,7 @@ func decodedFileSpecStreamDict(xRefTable *XRefTable, fileName string, o PDFObjec
 		}
 
 		// Only FlateDecode supported.
-		if fpl[0].Name != "FlateDecode" {
+		if fpl[0].Name != filter.Flate {
 			log.Debug.Printf("writeFile: ignore %s, %s filter unsupported.\n", fileName, fpl[0].Name)
 			return nil, nil
 		}

@@ -11,6 +11,19 @@ import (
 	"github.com/pkg/errors"
 )
 
+// PDF defines the following filters.
+const (
+	ASCII85   = "ASCII85Decode"
+	ASCIIHex  = "ASCIIHexDecode"
+	RunLength = "RunLengthDecode"
+	LZW       = "LZWDecode"
+	Flate     = "FlateDecode"
+	CCITTFax  = "CCITTFaxDecode"
+	JBIG2     = "JBIG2Decode"
+	DCT       = "DCTDecode"
+	JPX       = "JPXDecode"
+)
+
 var (
 
 	// ErrUnsupportedFilter signals an unsupported filter type.
@@ -28,25 +41,25 @@ func NewFilter(filterName string, parms map[string]int) (filter Filter, err erro
 
 	switch filterName {
 
-	case "ASCII85Decode":
+	case ASCII85:
 		filter = ascii85Decode{baseFilter{}}
 
-	case "ASCIIHexDecode":
+	case ASCIIHex:
 		filter = asciiHexDecode{baseFilter{}}
 
-	case "RunLengthDecode":
+	case RunLength:
 		filter = runLengthDecode{baseFilter{parms}}
 
-	case "LZWDecode":
+	case LZW:
 		filter = lzwDecode{baseFilter{parms}}
 
-	case "FlateDecode":
+	case Flate:
 		filter = flate{baseFilter{parms}}
 
-	// CCITTFaxDecode
-	// JBIG2Decode
-	// DCTDecode
-	// JPXDecode
+	// CCITTFax
+	// JBIG2
+	// DCT
+	// JPX
 
 	default:
 		log.Info.Printf("Filter not supported: <%s>", filterName)
@@ -58,7 +71,7 @@ func NewFilter(filterName string, parms map[string]int) (filter Filter, err erro
 
 // List return the list of all supported PDF filters.
 func List() []string {
-	return []string{"ASCII85Decode", "ASCIIHexDecode", "RunLengthDecode", "LZWDecode", "FlateDecode"}
+	return []string{ASCII85, ASCIIHex, RunLength, LZW, Flate}
 }
 
 type baseFilter struct {

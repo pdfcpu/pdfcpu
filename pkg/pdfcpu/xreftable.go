@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hhrutter/pdfcpu/pkg/filter"
 	"github.com/hhrutter/pdfcpu/pkg/log"
 	"github.com/pkg/errors"
 )
@@ -343,9 +344,9 @@ func (xRefTable *XRefTable) NewPDFStreamDict(filename string) (*PDFStreamDict, e
 		&PDFStreamDict{
 			PDFDict:        NewPDFDict(),
 			Content:        buf,
-			FilterPipeline: []PDFFilter{{Name: "FlateDecode", DecodeParms: nil}}}
+			FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}}
 
-	sd.InsertName("Filter", "FlateDecode")
+	sd.InsertName("Filter", filter.Flate)
 
 	return sd, nil
 }

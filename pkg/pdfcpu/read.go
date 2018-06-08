@@ -1514,12 +1514,18 @@ func saveDecodedStreamContent(ctx *PDFContext, streamDict *PDFStreamDict, objNr,
 
 	log.Debug.Printf("saveDecodedStreamContent: begin decode=%t\n", decode)
 
-	//  If the "Identity" crypt filter is used we do not need to decrypt.
+	// If the "Identity" crypt filter is used we do not need to decrypt.
 	if ctx != nil && ctx.EncKey != nil {
 		if len(streamDict.FilterPipeline) == 1 && streamDict.FilterPipeline[0].Name == "Crypt" {
 			streamDict.Content = streamDict.Raw
 			return nil
 		}
+	}
+
+	// If the length of the encoded data is 0, we do not need to decode anything.
+	if len(streamDict.Raw) == 0 {
+		streamDict.Content = streamDict.Raw
+		return nil
 	}
 
 	// ctx gets created after XRefStream parsing.

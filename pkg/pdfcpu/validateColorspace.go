@@ -4,8 +4,23 @@ import (
 	"github.com/pkg/errors"
 )
 
+// PDF defines the following Color Spaces:
+const (
+	DeviceGrayCS = "DeviceGray"
+	DeviceRGBCS  = "DeviceRGB"
+	DeviceCMYKCS = "DeviceCMYK"
+	CalGrayCS    = "CalGray"
+	CalRGBCS     = "CalRGB"
+	LabCS        = "Lab"
+	ICCBasedCS   = "ICCBased"
+	IndexedCS    = "Indexed"
+	PatternCS    = "Pattern"
+	SeparationCS = "Separation"
+	DeviceNCS    = "DeviceN"
+)
+
 func validateDeviceColorSpaceName(s string) bool {
-	return memberOf(s, []string{"DeviceGray", "DeviceRGB", "DeviceCMYK"})
+	return memberOf(s, []string{DeviceGrayCS, DeviceRGBCS, DeviceCMYKCS})
 }
 
 func validateCalGrayColorSpace(xRefTable *XRefTable, arr *PDFArray, sinceVersion PDFVersion) error {
@@ -193,7 +208,7 @@ func validateIndexedColorSpace(xRefTable *XRefTable, arr *PDFArray, sinceVersion
 		return errors.Errorf("validateIndexedColorSpace: invalid array length %d (expected 4) \n.", len(*arr))
 	}
 
-	// arr[1] base: basecolorspace
+	// arr[1] base: base colorspace
 	err = validateColorSpace(xRefTable, (*arr)[1], ExcludePatternCS)
 	if err != nil {
 		return err
@@ -462,29 +477,29 @@ func validateCSArray(xRefTable *XRefTable, arr *PDFArray, csName string) error {
 	switch csName {
 
 	// CIE-based
-	case "CalGray":
+	case CalGrayCS:
 		return validateCalGrayColorSpace(xRefTable, arr, V11)
 
-	case "CalRGB":
+	case CalRGBCS:
 		return validateCalRGBColorSpace(xRefTable, arr, V11)
 
-	case "Lab":
+	case LabCS:
 		return validateLabColorSpace(xRefTable, arr, V11)
 
-	case "ICCBased":
+	case ICCBasedCS:
 		return validateICCBasedColorSpace(xRefTable, arr, V13)
 
 	// Special
-	case "Indexed":
+	case IndexedCS:
 		return validateIndexedColorSpace(xRefTable, arr, V11)
 
-	case "Pattern":
+	case PatternCS:
 		return validatePatternColorSpace(xRefTable, arr, V12)
 
-	case "Separation":
+	case SeparationCS:
 		return validateSeparationColorSpace(xRefTable, arr, V12)
 
-	case "DeviceN":
+	case DeviceNCS:
 		return validateDeviceNColorSpace(xRefTable, arr, V13)
 
 	default:
@@ -521,32 +536,32 @@ func validateColorSpaceArray(xRefTable *XRefTable, arr *PDFArray, excludePattern
 	switch name {
 
 	// CIE-based
-	case "CalGray":
+	case CalGrayCS:
 		err = validateCalGrayColorSpace(xRefTable, arr, V11)
 
-	case "CalRGB":
+	case CalRGBCS:
 		err = validateCalRGBColorSpace(xRefTable, arr, V11)
 
-	case "Lab":
+	case LabCS:
 		err = validateLabColorSpace(xRefTable, arr, V11)
 
-	case "ICCBased":
+	case ICCBasedCS:
 		err = validateICCBasedColorSpace(xRefTable, arr, V13)
 
 	// Special
-	case "Indexed":
+	case IndexedCS:
 		err = validateIndexedColorSpace(xRefTable, arr, V11)
 
-	case "Pattern":
+	case PatternCS:
 		if excludePatternCS {
 			return errors.New("validateColorSpaceArray: Pattern color space not allowed")
 		}
 		err = validatePatternColorSpace(xRefTable, arr, V12)
 
-	case "Separation":
+	case SeparationCS:
 		err = validateSeparationColorSpace(xRefTable, arr, V12)
 
-	case "DeviceN":
+	case DeviceNCS:
 		err = validateDeviceNColorSpace(xRefTable, arr, V13)
 
 	default:

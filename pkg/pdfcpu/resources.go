@@ -110,5 +110,8 @@ func (io ImageObject) ResourceNamesString() string {
 
 // Data returns the raw data belonging to this image object.
 func (io ImageObject) Data() []byte {
+	if io.Extension == "png" {
+		return io.ImageDict.Content
+	}
 	return io.ImageDict.Raw
 }

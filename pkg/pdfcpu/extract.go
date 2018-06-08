@@ -35,18 +35,37 @@ func ExtractImageData(ctx *PDFContext, objNr int) (*ImageObject, error) {
 		return nil, nil
 	}
 
-	// Ignore imageMasks
+	// Ignore imageMasks.
 	if im := imageDict.BooleanEntry("ImageMask"); im != nil && *im {
 		log.Info.Printf("extractImageData: ignore obj# %d, imageMask\n", objNr)
 		return nil, nil
 	}
 
+	// Ignore if image has a soft mask defined.
+	// if sm, _ := imageDict.Find("SMask"); sm != nil {
+	// 	log.Info.Printf("extractImageData: ignore obj# %d, unsupported \"SMask\"\n", objNr)
+	// 	return nil, nil
+	// }
+
+	// Ignore if image has a Mask defined.
+	if sm, _ := imageDict.Find("Mask"); sm != nil {
+		log.Info.Printf("extractImageData: ignore obj# %d, unsupported \"Mask\"\n", objNr)
+		return nil, nil
+	}
+
 	switch fpl[0].Name {
 
-	case "DCTDecode":
+	case filter.Flate:
+		imageObj.Extension = "png"
+		err := decodeStream(imageDict)
+		if err != nil {
+			return nil, err
+		}
+
+	case filter.DCT:
 		imageObj.Extension = "jpg"
 
-	case "JPXDecode":
+	case filter.JPX:
 		imageObj.Extension = "jpx"
 
 	default:
@@ -102,7 +121,7 @@ func ExtractFontData(ctx *PDFContext, objNr int) (*FontObject, error) {
 		}
 
 		// Decode streamDict if used filter is supported only.
-		err = encodeStream(sd)
+		err = decodeStream(sd)
 		if err == filter.ErrUnsupportedFilter {
 			return nil, nil
 		}

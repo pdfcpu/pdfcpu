@@ -539,13 +539,16 @@ func validateNameTreeDictNamesEntry(xRefTable *XRefTable, dict *PDFDict, name st
 				return "", "", err
 			}
 
-			// TODO key can also be PDFHexLiteral.
 			s, ok := obj.(PDFStringLiteral)
 			if !ok {
-				return "", "", errors.Errorf("validateNameTreeDictNamesEntry: corrupt key <%v>\n", obj)
+				s, ok := obj.(PDFHexLiteral)
+				if !ok {
+					return "", "", errors.Errorf("validateNameTreeDictNamesEntry: corrupt key <%v>\n", obj)
+				}
+				key = s.Value()
+			} else {
+				key = s.Value()
 			}
-
-			key = s.Value()
 
 			if firstKey == "" {
 				firstKey = key
@@ -576,10 +579,25 @@ func validateNameTreeDictLimitsEntry(xRefTable *XRefTable, dict *PDFDict, firstK
 		return err
 	}
 
-	fk, _ := (*arr)[0].(PDFStringLiteral)
-	lk, _ := (*arr)[1].(PDFStringLiteral)
+	var fkv, lkv string
 
-	if firstKey != fk.Value() || lastKey != lk.Value() {
+	fk, ok := (*arr)[0].(PDFStringLiteral)
+	if !ok {
+		fk, _ := (*arr)[0].(PDFHexLiteral)
+		fkv = fk.Value()
+	} else {
+		fkv = fk.Value()
+	}
+
+	lk, ok := (*arr)[1].(PDFStringLiteral)
+	if !ok {
+		lk, _ := (*arr)[1].(PDFHexLiteral)
+		lkv = lk.Value()
+	} else {
+		lkv = lk.Value()
+	}
+
+	if firstKey != fkv || lastKey != lkv {
 		return errors.Errorf("validateNameTreeDictLimitsEntry: leaf node corrupted\n")
 	}
 

@@ -3,6 +3,7 @@ package pdfcpu
 import (
 	"fmt"
 
+	"github.com/hhrutter/pdfcpu/pkg/filter"
 	"github.com/hhrutter/pdfcpu/pkg/log"
 	"github.com/pkg/errors"
 )
@@ -63,9 +64,9 @@ func NewPDFObjectStreamDict() *PDFObjectStreamDict {
 	streamDict := PDFStreamDict{PDFDict: NewPDFDict()}
 
 	streamDict.Insert("Type", PDFName("ObjStm"))
-	streamDict.Insert("Filter", PDFName("FlateDecode"))
+	streamDict.Insert("Filter", PDFName(filter.Flate))
 
-	streamDict.FilterPipeline = []PDFFilter{{Name: "FlateDecode", DecodeParms: nil}}
+	streamDict.FilterPipeline = []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}
 
 	return &PDFObjectStreamDict{PDFStreamDict: streamDict}
 }
@@ -155,8 +156,8 @@ func NewPDFXRefStreamDict(ctx *PDFContext) *PDFXRefStreamDict {
 	streamDict := PDFStreamDict{PDFDict: NewPDFDict()}
 
 	streamDict.Insert("Type", PDFName("XRef"))
-	streamDict.Insert("Filter", PDFName("FlateDecode"))
-	streamDict.FilterPipeline = []PDFFilter{{Name: "FlateDecode", DecodeParms: nil}}
+	streamDict.Insert("Filter", PDFName(filter.Flate))
+	streamDict.FilterPipeline = []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}
 
 	streamDict.Insert("Root", *ctx.Root)
 

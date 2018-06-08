@@ -13,9 +13,10 @@ It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO
 
 ## Status
 
-Version: 0.1.13
+Version: 0.1.14
 
-* supports the `RunLengthDecode` filter.
+* Improved image extraction (Flate encoded images get written as PNG)
+* Bug fixes
 
 ## Motivation
 
