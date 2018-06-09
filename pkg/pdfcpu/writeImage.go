@@ -11,8 +11,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ErrUnsupportedColorSpace indicates an unsupported color space.
-var ErrUnsupportedColorSpace = errors.New("unsupported color space")
+// Errors to be identified.
+var (
+	ErrUnsupportedColorSpace = errors.New("unsupported color space")
+	ErrUnsupportedBPC        = errors.New("unsupported bitsPerComponent")
+)
 
 func writeImgToPNG(fileName string, img image.Image) error {
 
@@ -57,27 +60,16 @@ func softMask(ctx *PDFContext, d *PDFStreamDict, w, h, objNr int) ([]byte, error
 	return sm, nil
 }
 
-func writeDeviceGrayToPNGFile(ctx *PDFContext, fileName string, objNr int, io *ImageObject) error {
-
-	w := *io.ImageDict.IntEntry("Width")
-	h := *io.ImageDict.IntEntry("Height")
-	bpc := *io.ImageDict.IntEntry("BitsPerComponent")
-
-	// TODO Handle SMask with DeviceGrayCS (eg. ekanna.pdf)
+func writeDeviceGrayToPNGFile(ctx *PDFContext, fileName string, objNr int, io *ImageObject, bpc, w, h int) error {
 
 	b := io.Data()
 	log.Debug.Printf("writeDeviceGrayToPNGFile: objNr=%d w=%d h=%d bpc=%d buflen=%d\n", objNr, w, h, bpc, len(b))
 
 	// Validate buflen.
-	// Sometimes there is a trailing 0x0A in addition to the imagebytes.
+	// For streams not using compression there is a trailing 0x0A in addition to the imagebytes.
 	//if bpc*len(b) < bpc*w*h {
 	if len(b) < (bpc*w*h+7)/8 {
 		return errors.Errorf("writeDeviceGrayToPNGFile: objNr=%d corrupt image object %v\n", objNr, *io)
-	}
-
-	// We support 8 bits per component/color only.
-	if bpc != 8 {
-		return errors.Errorf("writeDeviceGrayToPNGFile: objNr=%d, must be 8 bits per component, got: %d\n", objNr, bpc)
 	}
 
 	img := image.NewGray(image.Rect(0, 0, w, h))
@@ -93,13 +85,7 @@ func writeDeviceGrayToPNGFile(ctx *PDFContext, fileName string, objNr int, io *I
 	return writeImgToPNG(fileName, img)
 }
 
-func writeDeviceRGBToPNGFile(ctx *PDFContext, fileName string, objNr int, io *ImageObject) error {
-
-	w := *io.ImageDict.IntEntry("Width")
-	h := *io.ImageDict.IntEntry("Height")
-	bpc := *io.ImageDict.IntEntry("BitsPerComponent")
-
-	// TODO Handle SMask with DeviceGrayCS (eg. ekanna.pdf)
+func writeDeviceRGBToPNGFile(ctx *PDFContext, fileName string, objNr int, io *ImageObject, bpc, w, h int) error {
 
 	b := io.Data()
 	log.Debug.Printf("writeDeviceRGBToPNGFile: objNr=%d w=%d h=%d bpc=%d buflen=%d\n", objNr, w, h, bpc, len(b))
@@ -108,11 +94,6 @@ func writeDeviceRGBToPNGFile(ctx *PDFContext, fileName string, objNr int, io *Im
 	// Sometimes there is a trailing 0x0A in addition to the imagebytes.
 	if bpc*len(b) < 3*bpc*w*h {
 		return errors.Errorf("writeDeviceRGBToPNGFile: objNr=%d corrupt image object %v\n", objNr, *io)
-	}
-
-	// We support 8 bits per component/color only.
-	if bpc != 8 {
-		return errors.Errorf("writeDeviceRGBToPNGFile: objNr=%d, must be 8 bits per component, got: %d\n", objNr, bpc)
 	}
 
 	sm, err := softMask(ctx, io.ImageDict, w, h, objNr)
@@ -137,11 +118,7 @@ func writeDeviceRGBToPNGFile(ctx *PDFContext, fileName string, objNr int, io *Im
 	return writeImgToPNG(fileName, img)
 }
 
-func writeDeviceCMYKToPNGFile(ctx *PDFContext, fileName string, objNr int, io *ImageObject) error {
-
-	w := *io.ImageDict.IntEntry("Width")
-	h := *io.ImageDict.IntEntry("Height")
-	bpc := *io.ImageDict.IntEntry("BitsPerComponent")
+func writeDeviceCMYKToPNGFile(ctx *PDFContext, fileName string, objNr int, io *ImageObject, bpc, w, h int) error {
 
 	b := io.Data()
 	log.Debug.Printf("writeDeviceCMYKToPNGFile: objNr=%d w=%d h=%d bpc=%d buflen=%d\n", objNr, w, h, bpc, len(b))
@@ -150,11 +127,6 @@ func writeDeviceCMYKToPNGFile(ctx *PDFContext, fileName string, objNr int, io *I
 	// Sometimes there is a trailing 0x0A in addition to the imagebytes.
 	if bpc*len(b) < 4*bpc*w*h {
 		return errors.Errorf("writeDeviceCMYKToPNGFile: objNr=%d corrupt image object %v\n", objNr, *io)
-	}
-
-	// We support 8 bits per component/color only.
-	if bpc != 8 {
-		return errors.Errorf("writeDeviceCMYKToPNGFile: objNr=%d, must be 8 bits per component, got: %d\n", objNr, bpc)
 	}
 
 	img := image.NewCMYK(image.Rect(0, 0, w, h))
@@ -190,7 +162,11 @@ func streamBytes(sd *PDFStreamDict) ([]byte, error) {
 	fpl := sd.FilterPipeline
 	if fpl == nil {
 		log.Info.Printf("streamBytes: no filter pipeline\n")
-		return nil, nil
+		err := decodeStream(sd)
+		if err != nil {
+			return nil, err
+		}
+		return sd.Content, nil
 	}
 
 	// Ignore filter chains with length > 1
@@ -208,29 +184,20 @@ func streamBytes(sd *PDFStreamDict) ([]byte, error) {
 		}
 
 	default:
-		log.Debug.Printf("streamBytes: filter not \"Flate\"\n")
+		log.Debug.Printf("streamBytes: filter not \"Flate\": %s\n", fpl[0].Name)
 		return nil, nil
 	}
 
 	return sd.Content, nil
 }
 
-func writeCalRGBToPNGFile(ctx *PDFContext, fileName string, objNr int, io *ImageObject) error {
-
-	w := *io.ImageDict.IntEntry("Width")
-	h := *io.ImageDict.IntEntry("Height")
-	bpc := *io.ImageDict.IntEntry("BitsPerComponent")
+func writeCalRGBToPNGFile(ctx *PDFContext, fileName string, objNr int, io *ImageObject, bpc, w, h int) error {
 
 	b := io.Data()
 	log.Debug.Printf("writeICCBasedToPNGFile: objNr=%d w=%d h=%d bpc=%d buflen=%d\n", objNr, w, h, bpc, len(b))
 
 	if bpc*len(b) < 3*bpc*w*h {
 		return errors.Errorf("writeICCBasedToPNGFile: objNr=%d corrupt image object %v\n", objNr, *io)
-	}
-
-	// We support 8 bits per component/color only.
-	if bpc != 8 {
-		return errors.Errorf("writeICCBasedToPNGFile: objNr=%d, must be 8 bits per component, got: %d\n", objNr, bpc)
 	}
 
 	// Optional int array "Range", length 2*N specifies min,max values of color components.
@@ -252,14 +219,10 @@ func writeCalRGBToPNGFile(ctx *PDFContext, fileName string, objNr int, io *Image
 	return writeImgToPNG(fileName, img)
 }
 
-func writeICCBasedToPNGFile(ctx *PDFContext, fileName string, objNr int, io *ImageObject, iccProfileStream *PDFStreamDict) error {
+func writeICCBasedToPNGFile(ctx *PDFContext, fileName string, objNr int, io *ImageObject, iccProfileStream *PDFStreamDict, bpc, w, h int) error {
 
 	//  Any ICC profile >= ICC.1:2004:10 is sufficient for any PDF version <= 1.7
 	//  If the embedded ICC profile version is newer than the one used by the Reader, substitute with Alternate color space.
-
-	w := *io.ImageDict.IntEntry("Width")
-	h := *io.ImageDict.IntEntry("Height")
-	bpc := *io.ImageDict.IntEntry("BitsPerComponent")
 
 	b := io.Data()
 	log.Debug.Printf("writeICCBasedToPNGFile: objNr=%d w=%d h=%d bpc=%d buflen=%d\n", objNr, w, h, bpc, len(b))
@@ -298,11 +261,6 @@ func writeICCBasedToPNGFile(ctx *PDFContext, fileName string, objNr int, io *Ima
 	// Sometimes there is a trailing 0x0A in addition to the imagebytes.
 	if bpc*len(b) < n*bpc*w*h {
 		return errors.Errorf("writeICCBasedToPNGFile: objNr=%d corrupt image object %v\n", objNr, *io)
-	}
-
-	// We support 8 bits per component/color only.
-	if bpc != 8 {
-		return errors.Errorf("writeICCBasedToPNGFile: objNr=%d, must be 8 bits per component, got: %d\n", objNr, bpc)
 	}
 
 	// Optional int array "Range", length 2*N specifies min,max values of color components.
@@ -362,8 +320,6 @@ func writeICCBasedToPNGFile(ctx *PDFContext, fileName string, objNr int, io *Ima
 
 func writeIndexedNameCS(cs PDFName, objNr, w, h int, b, lookup, sm []byte, fileName string) error {
 
-	var err error
-
 	switch cs {
 
 	case DeviceRGBCS:
@@ -380,7 +336,7 @@ func writeIndexedNameCS(cs PDFName, objNr, w, h int, b, lookup, sm []byte, fileN
 				i++
 			}
 		}
-		err = writeImgToPNG(fileName, img)
+		return writeImgToPNG(fileName, img)
 
 	case DeviceCMYKCS:
 		img := image.NewCMYK(image.Rect(0, 0, w, h))
@@ -392,13 +348,13 @@ func writeIndexedNameCS(cs PDFName, objNr, w, h int, b, lookup, sm []byte, fileN
 				i++
 			}
 		}
-		err = writeImgToPNG(fileName, img)
+		return writeImgToPNG(fileName, img)
 
-	default:
-		err = errors.Errorf("writeIndexedToPNGFile: objNr=%d unsupported base colorspace %s\n", objNr, cs.String())
 	}
 
-	return err
+	log.Info.Printf("writeIndexedToPNGFile: objNr=%d, unsupported base colorspace %s\n", objNr, cs.String())
+
+	return ErrUnsupportedColorSpace
 }
 
 func writeIndexedArrayCS(ctx *PDFContext, csa PDFArray, objNr, w, h, bpc int, b, lookup, sm []byte, fileName string) error {
@@ -418,14 +374,14 @@ func writeIndexedArrayCS(ctx *PDFContext, csa PDFArray, objNr, w, h, bpc int, b,
 		}
 
 		// TODO: Transform linear XYZ to RGB according to ICC profile.
-		var alternateDeviceRGBCS bool
-		o, found := iccProfileStream.Find("Alternate")
-		if found {
-			alternateDeviceRGBCS = ensureDeviceRGBCS(ctx, o)
-		}
-		if !alternateDeviceRGBCS {
-			return errors.Errorf("writeIndexedToPNGFile: objNr=%d, missing alternative DeviceRGB color space\n", objNr)
-		}
+		// var alternateDeviceRGBCS bool
+		// o, found := iccProfileStream.Find("Alternate")
+		// if found {
+		// 	alternateDeviceRGBCS = ensureDeviceRGBCS(ctx, o)
+		// }
+		// if !alternateDeviceRGBCS {
+		// 	return errors.Errorf("writeIndexedToPNGFile: objNr=%d, missing alternative DeviceRGB color space\n", objNr)
+		// }
 
 		if n == 1 {
 			// Gray
@@ -472,32 +428,26 @@ func writeIndexedArrayCS(ctx *PDFContext, csa PDFArray, objNr, w, h, bpc int, b,
 
 	}
 
-	return errors.Errorf("writeIndexedToPNGFile: objNr=%d, unsupported base colorspace %s\n", objNr, csa)
+	log.Info.Printf("writeIndexedToPNGFile: objNr=%d, unsupported base colorspace %s\n", objNr, csa)
+
+	return ErrUnsupportedColorSpace
+
 }
 
-func writeIndexedToPNGFile(ctx *PDFContext, fileName string, objNr int, io *ImageObject, baseCS PDFObject, maxInd int, lookup []byte) error {
-
-	w := *io.ImageDict.IntEntry("Width")
-	h := *io.ImageDict.IntEntry("Height")
-	bpc := *io.ImageDict.IntEntry("BitsPerComponent")
+func writeIndexedToPNGFile(ctx *PDFContext, fileName string, objNr int, io *ImageObject, baseCS PDFObject, maxInd int, lookup []byte, bpc, w, h int) error {
 
 	b := io.Data()
-	log.Debug.Printf("writeIndexedToPNGFile: objNr=%d w=%d h=%d bpc=%d buflen=%d\n", objNr, w, h, bpc, len(b))
+	log.Debug.Printf("writeIndexedToPNGFile: objNr=%d w=%d h=%d bpc=%d buflen=%d maxInd=%d\n", objNr, w, h, bpc, len(b), maxInd)
 
 	// Validate buflen.
 	// The image data is a sequence of index values for pixels.
 	// Sometimes there is a trailing 0x0A.
-	if len(b) < w*h {
+	if len(b) < bpc*w*h/8 {
 		return errors.Errorf("writeIndexedToPNGFile: objNr=%d corrupt image object %v\n", objNr, *io)
 	}
 
-	// We support 8 bits per component/color only.
-	if bpc != 8 {
-		return errors.Errorf("writeIndexedToPNGFile: objNr=%d, must be 8 bits per component, got: %d\n", objNr, bpc)
-	}
-
 	// Validate the lookup table.
-	if len(lookup) != 3*(maxInd+1) {
+	if len(lookup) < 3*(maxInd+1) {
 		return errors.Errorf("writeIndexedToPNGFile: objNr=%d, corrupt lookup table\n", objNr)
 	}
 
@@ -549,6 +499,16 @@ func lookup(ctx *PDFContext, o PDFObject) ([]byte, error) {
 // WritePNGFile creates a PNG file for an image object.
 func WritePNGFile(ctx *PDFContext, fileName string, objNr int, io *ImageObject) error {
 
+	bpc := *io.ImageDict.IntEntry("BitsPerComponent")
+	// We support 8 bits per component/color only.
+	if bpc != 8 {
+		log.Info.Printf("WritePNGFile: objNr=%d, must be 8 bits per component, got: %d\n", objNr, bpc)
+		return ErrUnsupportedBPC
+	}
+
+	w := *io.ImageDict.IntEntry("Width")
+	h := *io.ImageDict.IntEntry("Height")
+
 	o, _ := io.ImageDict.Find("ColorSpace")
 	o, err := ctx.Dereference(o)
 	if err != nil {
@@ -561,13 +521,13 @@ func WritePNGFile(ctx *PDFContext, fileName string, objNr int, io *ImageObject) 
 		switch cs {
 
 		case DeviceGrayCS:
-			err = writeDeviceGrayToPNGFile(ctx, fileName, objNr, io)
+			err = writeDeviceGrayToPNGFile(ctx, fileName, objNr, io, bpc, w, h)
 
 		case DeviceRGBCS:
-			err = writeDeviceRGBToPNGFile(ctx, fileName, objNr, io)
+			err = writeDeviceRGBToPNGFile(ctx, fileName, objNr, io, bpc, w, h)
 
 		case DeviceCMYKCS:
-			err = writeDeviceCMYKToPNGFile(ctx, fileName, objNr, io)
+			err = writeDeviceCMYKToPNGFile(ctx, fileName, objNr, io, bpc, w, h)
 
 		default:
 			log.Info.Printf("WritePNGFile: objNr=%d, unsupported name colorspace %s\n", objNr, cs.String())
@@ -580,12 +540,11 @@ func WritePNGFile(ctx *PDFContext, fileName string, objNr int, io *ImageObject) 
 		switch csn {
 
 		case CalRGBCS:
-			// TODO Buggy? Erste.pdf
-			err = writeCalRGBToPNGFile(ctx, fileName, objNr, io)
+			err = writeCalRGBToPNGFile(ctx, fileName, objNr, io, bpc, w, h)
 
 		case ICCBasedCS:
 			iccProfile, _ := ctx.DereferenceStreamDict(cs[1])
-			err = writeICCBasedToPNGFile(ctx, fileName, objNr, io, iccProfile)
+			err = writeICCBasedToPNGFile(ctx, fileName, objNr, io, iccProfile, bpc, w, h)
 
 		case IndexedCS:
 			baseCS, _ := ctx.Dereference(cs[1])
@@ -597,8 +556,12 @@ func WritePNGFile(ctx *PDFContext, fileName string, objNr int, io *ImageObject) 
 			if err != nil {
 				return err
 			}
+			if l == nil {
+				return errors.Errorf("WritePNGFile: objNr=%d IndexedCS with corrupt lookup table %s\n", objNr, csn)
+			}
+			//fmt.Printf("lookup: \n%s\n", hex.Dump(l))
 
-			err = writeIndexedToPNGFile(ctx, fileName, objNr, io, baseCS, maxInd.Value(), l)
+			err = writeIndexedToPNGFile(ctx, fileName, objNr, io, baseCS, maxInd.Value(), l, bpc, w, h)
 
 		default:
 			log.Info.Printf("WritePNGFile: objNr=%d, unsupported array colorspace %s\n", objNr, csn)

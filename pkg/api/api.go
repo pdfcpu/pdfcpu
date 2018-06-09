@@ -607,10 +607,15 @@ func doExtractImages(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error 
 				if io.Extension == "png" {
 					err = pdfcpu.WritePNGFile(ctx, fileName, objNr, io)
 					if err != nil {
-						if err != pdfcpu.ErrUnsupportedColorSpace {
-							return err
+						if err == pdfcpu.ErrUnsupportedColorSpace {
+							fmt.Printf("Image obj#%d uses an unsupported color space. Please see the logfile for details.\n", objNr)
+							continue
 						}
-						fmt.Printf("Image obj#%d uses an unsupported color space. Refer to the log for details.\n", objNr)
+						if err == pdfcpu.ErrUnsupportedBPC {
+							fmt.Printf("Image obj#%d uses an unsupported bitsPerComponent. Please see the logfile for details.\n", objNr)
+							continue
+						}
+						return err
 					}
 					continue
 				}

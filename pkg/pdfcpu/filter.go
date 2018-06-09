@@ -89,7 +89,7 @@ func encodeStream(sd *PDFStreamDict) error {
 // decodeStream decodes streamDict data by applying its filter pipeline.
 func decodeStream(sd *PDFStreamDict) error {
 
-	log.Debug.Printf("decodeStream begin")
+	log.Debug.Printf("decodeStream begin \n%s\n", sd)
 
 	if sd.Content != nil {
 		// This stream has already been decoded.

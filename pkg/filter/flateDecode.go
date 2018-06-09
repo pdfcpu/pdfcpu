@@ -3,7 +3,6 @@ package filter
 import (
 	"bytes"
 	"compress/zlib"
-	"fmt"
 	"io"
 
 	"github.com/hhrutter/pdfcpu/pkg/log"
@@ -305,7 +304,7 @@ func (f flate) decodePostProcess(r io.Reader) (*bytes.Buffer, error) {
 	}
 
 	if b.Len()%(bpc*colors*columns/8) > 0 {
-		fmt.Printf("failed pp: %d %d\n", b.Len(), rowSize)
+		log.Info.Printf("failed postprocessing: %d %d\n", b.Len(), rowSize)
 		return nil, errors.New("filter FlateDecode: postprocessing failed")
 	}
 
