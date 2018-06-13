@@ -5,8 +5,6 @@ import (
 	"encoding/hex"
 	"io"
 	"io/ioutil"
-
-	"github.com/pkg/errors"
 )
 
 type asciiHexDecode struct {
@@ -18,13 +16,13 @@ const eodHexDecode = '>'
 // Encode implements encoding for an ASCIIHexDecode filter.
 func (f asciiHexDecode) Encode(r io.Reader) (*bytes.Buffer, error) {
 
-	p, err := ioutil.ReadAll(r)
+	bb, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
 
-	dst := make([]byte, hex.EncodedLen(len(p)))
-	hex.Encode(dst, p)
+	dst := make([]byte, hex.EncodedLen(len(bb)))
+	hex.Encode(dst, bb)
 
 	// eod marker
 	dst = append(dst, eodHexDecode)
@@ -35,18 +33,22 @@ func (f asciiHexDecode) Encode(r io.Reader) (*bytes.Buffer, error) {
 // Decode implements decoding for an ASCIIHexDecode filter.
 func (f asciiHexDecode) Decode(r io.Reader) (*bytes.Buffer, error) {
 
-	p, err := ioutil.ReadAll(r)
+	bb, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
 
-	// if no eod then err
-	if p[len(p)-1] != eodHexDecode {
-		return nil, errors.New("Decode: missing eod marker")
-	}
+	var p []byte
 
-	// remove eod,
-	p = p[:len(p)-1]
+	// Remove any white space and cut off on eod
+	for i := 0; i < len(bb); i++ {
+		if bb[i] == eodHexDecode {
+			break
+		}
+		if !bytes.ContainsRune([]byte{0x09, 0x0A, 0x0C, 0x0D, 0x20}, rune(bb[i])) {
+			p = append(p, bb[i])
+		}
+	}
 
 	// if len == odd add "0"
 	if len(p)%2 == 1 {

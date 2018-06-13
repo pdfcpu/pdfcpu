@@ -382,7 +382,9 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, xRefStreamDict PDFXRefStr
 	log.Debug.Printf("extractXRefTableEntriesFromXRefStream: objCount:%d %v\n", objCount, xRefStreamDict.Objects)
 
 	log.Debug.Printf("extractXRefTableEntriesFromXRefStream: len(buf):%d objCount*xrefEntryLen:%d\n", len(buf), objCount*xrefEntryLen)
-	if len(buf) != objCount*xrefEntryLen {
+	if len(buf) < objCount*xrefEntryLen {
+		// Sometimes there is an additional xref entry not accounted for by "Index".
+		// We ignore such a entries and do not treat this as an error.
 		return errors.New("extractXRefTableEntriesFromXRefStream: corrupt xrefstream")
 	}
 
@@ -1522,7 +1524,7 @@ func saveDecodedStreamContent(ctx *PDFContext, streamDict *PDFStreamDict, objNr,
 		}
 	}
 
-	// If the length of the encoded data is 0, we do not need to decode anything.
+	// Special case: If the length of the encoded data is 0, we do not need to decode anything.
 	if len(streamDict.Raw) == 0 {
 		streamDict.Content = streamDict.Raw
 		return nil

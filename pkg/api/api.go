@@ -611,10 +611,6 @@ func doExtractImages(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error 
 							fmt.Printf("Image obj#%d uses an unsupported color space. Please see the logfile for details.\n", objNr)
 							continue
 						}
-						if err == pdfcpu.ErrUnsupportedBPC {
-							fmt.Printf("Image obj#%d uses an unsupported bitsPerComponent. Please see the logfile for details.\n", objNr)
-							continue
-						}
 						return err
 					}
 					continue
