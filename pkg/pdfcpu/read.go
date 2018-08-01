@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"io"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -24,7 +23,7 @@ func ReadPDFFile(fileName string, config *Configuration) (*PDFContext, error) {
 
 	log.Debug.Println("readPDFFile: begin")
 
-	file, err := os.Open(fileName)
+	file, err := config.FileSystem.Open(fileName)
 	if err != nil {
 		return nil, errors.Wrapf(err, "can't open %q", fileName)
 	}

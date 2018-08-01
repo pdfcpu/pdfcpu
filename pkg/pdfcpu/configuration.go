@@ -1,5 +1,9 @@
 package pdfcpu
 
+import (
+	"github.com/spf13/afero"
+)
+
 const (
 
 	// ValidationStrict ensures 100% compliance with the spec (PDF 32000-1:2008).
@@ -96,6 +100,9 @@ type Configuration struct {
 	// Supplied user access permissions, see Table 22
 	UserAccessPermissions int16
 
+	// Afero FileSystem to use
+	FileSystem afero.Fs
+
 	// Command being executed.
 	Mode CommandMode
 }
@@ -114,6 +121,25 @@ func NewDefaultConfiguration() *Configuration {
 		EncryptUsingAES:       true,
 		EncryptUsing128BitKey: true,
 		UserAccessPermissions: PermissionsNone,
+		FileSystem:            afero.NewOsFs(),
+	}
+}
+
+// NewInMemoryConfiguration returns a pdfcpu configuration with an in-memory filesystem.
+func NewInMemoryConfiguration() *Configuration {
+
+	return &Configuration{
+		Reader15:              true,
+		DecodeAllStreams:      false,
+		ValidationMode:        ValidationRelaxed,
+		Eol:                   EolLF,
+		WriteObjectStream:     true,
+		WriteXRefStream:       true,
+		CollectStats:          true,
+		EncryptUsingAES:       true,
+		EncryptUsing128BitKey: true,
+		UserAccessPermissions: PermissionsNone,
+		FileSystem:            afero.NewMemMapFs(),
 	}
 }
 

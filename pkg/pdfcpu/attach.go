@@ -1,12 +1,15 @@
 package pdfcpu
 
 import (
-	"io/ioutil"
 	"os"
 
 	"github.com/hhrutter/pdfcpu/pkg/filter"
 	"github.com/hhrutter/pdfcpu/pkg/log"
 	"github.com/pkg/errors"
+)
+
+import (
+	"github.com/spf13/afero"
 )
 
 func decodedFileSpecStreamDict(xRefTable *XRefTable, fileName string, o PDFObject) (*PDFStreamDict, error) {
@@ -86,7 +89,7 @@ func extractAttachedFiles(ctx *PDFContext, files StringSet) error {
 
 		// TODO Refactor into returning only stream object numbers for files to be extracted.
 		// No writing to file in library!
-		err = ioutil.WriteFile(path, sd.Content, os.ModePerm)
+		err = afero.WriteFile(ctx.FileSystem, path, sd.Content, os.ModePerm)
 		if err != nil {
 			return err
 		}

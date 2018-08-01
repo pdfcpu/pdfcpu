@@ -3,13 +3,14 @@ package api
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/hhrutter/pdfcpu/pkg/log"
 	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
+
+	"github.com/spf13/afero"
 )
 
 const outputDir = "testdata/out"
@@ -344,13 +345,13 @@ func TestGetPageCount(t *testing.T) {
 // Validate all PDFs in testdata.
 func TestValidateCommand(t *testing.T) {
 
-	files, err := ioutil.ReadDir("testdata")
+	config := pdfcpu.NewDefaultConfiguration()
+	config.ValidationMode = pdfcpu.ValidationRelaxed
+
+	files, err := afero.ReadDir(config.FileSystem, "testdata")
 	if err != nil {
 		t.Fatalf("TestValidateCommand: %v\n", err)
 	}
-
-	config := pdfcpu.NewDefaultConfiguration()
-	config.ValidationMode = pdfcpu.ValidationRelaxed
 
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), "pdf") {
@@ -392,12 +393,13 @@ func BenchmarkValidateCommand(b *testing.B) {
 // Optimize all PDFs in testdata and write with (default) end of line sequence "\n".
 func TestOptimizeCommandWithLF(t *testing.T) {
 
-	files, err := ioutil.ReadDir("testdata")
+	config := pdfcpu.NewDefaultConfiguration()
+
+	files, err := afero.ReadDir(config.FileSystem, "testdata")
 	if err != nil {
 		t.Fatalf("TestOptimizeCommandWithLF: %v\n", err)
 	}
 
-	config := pdfcpu.NewDefaultConfiguration()
 	log.SetDefaultLoggers()
 
 	// this is not necessary but to make it clearer.
@@ -421,12 +423,13 @@ func TestOptimizeCommandWithLF(t *testing.T) {
 // Optimize all PDFs in testdata and write with end of line sequence "\r".
 func TestOptimizeCommandWithCR(t *testing.T) {
 
-	files, err := ioutil.ReadDir("testdata")
+	config := pdfcpu.NewDefaultConfiguration()
+
+	files, err := afero.ReadDir(config.FileSystem, "testdata")
 	if err != nil {
 		t.Fatalf("TestOptimizeCommandWithCR: %v\n", err)
 	}
 
-	config := pdfcpu.NewDefaultConfiguration()
 	config.Eol = pdfcpu.EolCR
 
 	for _, file := range files {
@@ -451,15 +454,15 @@ func TestOptimizeCommandWithCR(t *testing.T) {
 // This test writes out the cross reference table the old way without using object streams and an xref stream.
 func TestOptimizeCommandWithCRAndNoXrefStream(t *testing.T) {
 
-	files, err := ioutil.ReadDir("testdata")
-	if err != nil {
-		t.Fatalf("TestOptimizeCommandWithCRAndNoXrefStream: %v\n", err)
-	}
-
 	config := pdfcpu.NewDefaultConfiguration()
 	config.Eol = pdfcpu.EolCR
 	config.WriteObjectStream = false
 	config.WriteXRefStream = false
+
+	files, err := afero.ReadDir(config.FileSystem, "testdata")
+	if err != nil {
+		t.Fatalf("TestOptimizeCommandWithCRAndNoXrefStream: %v\n", err)
+	}
 
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), "pdf") {
@@ -475,14 +478,14 @@ func TestOptimizeCommandWithCRAndNoXrefStream(t *testing.T) {
 // Optimize all PDFs in testdata and write with end of line sequence "\r\n".
 func TestOptimizeCommandWithCRLF(t *testing.T) {
 
-	files, err := ioutil.ReadDir("testdata")
-	if err != nil {
-		t.Fatalf("TestOptimizeCommmand: %v\n", err)
-	}
-
 	config := pdfcpu.NewDefaultConfiguration()
 	config.Eol = pdfcpu.EolCRLF
 	config.StatsFileName = outputDir + "/testStats.csv"
+
+	files, err := afero.ReadDir(config.FileSystem, "testdata")
+	if err != nil {
+		t.Fatalf("TestOptimizeCommmand: %v\n", err)
+	}
 
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), "pdf") {
@@ -507,7 +510,9 @@ func TestSplitCommand(t *testing.T) {
 // Merge all PDFs in testdir into out/test.pdf.
 func TestMergeCommand(t *testing.T) {
 
-	files, err := ioutil.ReadDir("testdata")
+	config := pdfcpu.NewDefaultConfiguration()
+
+	files, err := afero.ReadDir(config.FileSystem, "testdata")
 	if err != nil {
 		t.Fatalf("TestMergeCommmand: %v\n", err)
 	}
@@ -519,7 +524,7 @@ func TestMergeCommand(t *testing.T) {
 		}
 	}
 
-	_, err = Process(MergeCommand(inFiles, outputDir+"/test.pdf", pdfcpu.NewDefaultConfiguration()))
+	_, err = Process(MergeCommand(inFiles, outputDir+"/test.pdf", config))
 	if err != nil {
 		t.Fatalf("TestMergeCommand: %v\n", err)
 	}
@@ -538,14 +543,14 @@ func TestTrimCommand(t *testing.T) {
 
 func TestExtractImagesCommand(t *testing.T) {
 
-	files, err := ioutil.ReadDir("testdata")
+	config := pdfcpu.NewDefaultConfiguration()
+
+	files, err := afero.ReadDir(config.FileSystem, "testdata")
 	if err != nil {
 		t.Fatalf("TestExtractImagesCommand: %v\n", err)
 	}
 
-	c := pdfcpu.NewDefaultConfiguration()
-
-	cmd := ExtractImagesCommand("", outputDir, nil, c)
+	cmd := ExtractImagesCommand("", outputDir, nil, config)
 
 	for _, file := range files {
 

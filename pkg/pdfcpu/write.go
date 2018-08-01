@@ -5,22 +5,22 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
 	"github.com/hhrutter/pdfcpu/pkg/log"
 	"github.com/pkg/errors"
+	"github.com/spf13/afero"
 )
 
 // WritePDFFile generates a PDF file for the cross reference table contained in PDFContext.
-func WritePDFFile(ctx *PDFContext) error {
+func WritePDFFile(ctx *PDFContext, config *Configuration) error {
 
 	fileName := ctx.Write.DirName + ctx.Write.FileName
 
 	log.Info.Printf("writing to %s\n", fileName)
 
-	file, err := os.Create(fileName)
+	file, err := config.FileSystem.Create(fileName)
 	if err != nil {
 		return errors.Wrapf(err, "can't create %s\n%s", fileName, err)
 	}
@@ -939,7 +939,7 @@ func writeXRef(ctx *PDFContext) error {
 	return writeXRefTable(ctx)
 }
 
-func setFileSizeOfWrittenFile(w *WriteContext, f *os.File) error {
+func setFileSizeOfWrittenFile(w *WriteContext, f afero.File) error {
 
 	// Get file info for file just written but flush first to get correct file size.
 

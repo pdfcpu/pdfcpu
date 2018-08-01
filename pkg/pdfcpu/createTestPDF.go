@@ -1750,5 +1750,5 @@ func CreateDemoPDF(xRefTable *XRefTable, dirName, fileName string) error {
 	ctx.Write.DirName = dirName
 	ctx.Write.FileName = fileName
 
-	return WritePDFFile(ctx)
+	return WritePDFFile(ctx, config)
 }

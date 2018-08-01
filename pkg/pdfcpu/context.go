@@ -3,11 +3,12 @@ package pdfcpu
 import (
 	"bufio"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
 	"github.com/hhrutter/pdfcpu/pkg/log"
+
+	"github.com/spf13/afero"
 )
 
 // PDFContext represents the context for processing PDF files.
@@ -20,7 +21,7 @@ type PDFContext struct {
 }
 
 // NewPDFContext initializes a new PDFContext.
-func NewPDFContext(fileName string, file *os.File, config *Configuration) (*PDFContext, error) {
+func NewPDFContext(fileName string, file afero.File, config *Configuration) (*PDFContext, error) {
 
 	if config == nil {
 		config = NewDefaultConfiguration()
@@ -141,7 +142,7 @@ type ReadContext struct {
 
 	// The PDF-File which gets processed.
 	FileName string
-	File     *os.File
+	File     afero.File
 	FileSize int64
 
 	BinaryTotalSize     int64 // total stream data
@@ -160,7 +161,7 @@ type ReadContext struct {
 	XRefStreams      IntSet // All object numbers of any xref streams found.
 }
 
-func newReadContext(fileName string, file *os.File, fileSize int64) *ReadContext {
+func newReadContext(fileName string, file afero.File, fileSize int64) *ReadContext {
 	return &ReadContext{
 		FileName:      fileName,
 		File:          file,

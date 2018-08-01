@@ -3,7 +3,6 @@ package api
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -15,6 +14,8 @@ import (
 	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
 
 	"github.com/pkg/errors"
+
+	"github.com/spf13/afero"
 )
 
 var (
@@ -105,12 +106,12 @@ func Validate(fileIn string, config *pdfcpu.Configuration) error {
 }
 
 // Write generates a PDF file for a given PDFContext.
-func Write(ctx *pdfcpu.PDFContext) error {
+func Write(ctx *pdfcpu.PDFContext, config *pdfcpu.Configuration) error {
 
 	fmt.Printf("writing %s ...\n", ctx.Write.DirName+ctx.Write.FileName)
 	//logInfoAPI.Printf("writing to %s..\n", fileName)
 
-	err := pdfcpu.WritePDFFile(ctx)
+	err := pdfcpu.WritePDFFile(ctx, config)
 	if err != nil {
 		return errors.Wrap(err, "Write failed.")
 	}
@@ -133,7 +134,7 @@ func singlePageFileName(ctx *pdfcpu.PDFContext, pageNr int) string {
 	return fileName + "_" + strconv.Itoa(pageNr) + ".pdf"
 }
 
-func writeSinglePagePDF(ctx *pdfcpu.PDFContext, pageNr int, dirOut string) error {
+func writeSinglePagePDF(ctx *pdfcpu.PDFContext, pageNr int, dirOut string, config *pdfcpu.Configuration) error {
 
 	ctx.ResetWriteContext()
 
@@ -144,10 +145,10 @@ func writeSinglePagePDF(ctx *pdfcpu.PDFContext, pageNr int, dirOut string) error
 	w.FileName = singlePageFileName(ctx, pageNr)
 	fmt.Printf("writing %s ...\n", w.DirName+w.FileName)
 
-	return pdfcpu.WritePDFFile(ctx)
+	return pdfcpu.WritePDFFile(ctx, config)
 }
 
-func writeSinglePagePDFs(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet, dirOut string) error {
+func writeSinglePagePDFs(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet, dirOut string, config *pdfcpu.Configuration) error {
 
 	if selectedPages == nil {
 		selectedPages = pdfcpu.IntSet{}
@@ -162,7 +163,7 @@ func writeSinglePagePDFs(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet, di
 
 	for i, v := range selectedPages {
 		if v {
-			err := writeSinglePagePDF(ctx, i, dirOut)
+			err := writeSinglePagePDF(ctx, i, dirOut, config)
 			if err != nil {
 				return err
 			}
@@ -228,7 +229,7 @@ func Optimize(fileIn, fileOut string, config *pdfcpu.Configuration) error {
 	ctx.Write.DirName = dirName
 	ctx.Write.FileName = fileName
 
-	err = Write(ctx)
+	err = Write(ctx, config)
 	if err != nil {
 		return err
 	}
@@ -455,7 +456,7 @@ func Split(fileIn, dirOut string, config *pdfcpu.Configuration) error {
 
 	fromWrite := time.Now()
 
-	err = writeSinglePagePDFs(ctx, nil, dirOut)
+	err = writeSinglePagePDFs(ctx, nil, dirOut, config)
 	if err != nil {
 		return err
 	}
@@ -535,7 +536,7 @@ func Merge(filesIn []string, fileOut string, config *pdfcpu.Configuration) error
 	ctxDest.Write.DirName = dirName
 	ctxDest.Write.FileName = fileName
 
-	err = Write(ctxDest)
+	err = Write(ctxDest, config)
 	if err != nil {
 		return err
 	}
@@ -616,7 +617,7 @@ func doExtractImages(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error 
 					continue
 				}
 
-				err = ioutil.WriteFile(fileName, io.Data(), os.ModePerm)
+				err = afero.WriteFile(ctx.FileSystem, fileName, io.Data(), os.ModePerm)
 				if err != nil {
 					return err
 				}
@@ -713,7 +714,7 @@ func doExtractFonts(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error {
 
 				fileName := fmt.Sprintf("%s/%s_%d_%d.%s", ctx.Write.DirName, fo.ResourceNames[0], p, objNr, fo.Extension)
 
-				err = ioutil.WriteFile(fileName, fo.Data, os.ModePerm)
+				err = afero.WriteFile(ctx.FileSystem, fileName, fo.Data, os.ModePerm)
 				if err != nil {
 					return err
 				}
@@ -785,7 +786,7 @@ func ExtractPages(fileIn, dirOut string, pageSelection []string, config *pdfcpu.
 		return err
 	}
 
-	err = writeSinglePagePDFs(ctx, pages, dirOut)
+	err = writeSinglePagePDFs(ctx, pages, dirOut, config)
 	if err != nil {
 		return err
 	}
@@ -909,7 +910,7 @@ func doExtractContent(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error
 
 				fileName := fmt.Sprintf("%s/%d_%d.txt", ctx.Write.DirName, p, objNr)
 
-				err = ioutil.WriteFile(fileName, b, os.ModePerm)
+				err = afero.WriteFile(ctx.FileSystem, fileName, b, os.ModePerm)
 				if err != nil {
 					return err
 				}
@@ -990,7 +991,7 @@ func Trim(fileIn, fileOut string, pageSelection []string, config *pdfcpu.Configu
 	ctx.Write.DirName = dirName
 	ctx.Write.FileName = fileName
 
-	err = Write(ctx)
+	err = Write(ctx, config)
 	if err != nil {
 		return err
 	}
@@ -1101,7 +1102,7 @@ func AddAttachments(fileIn string, files []string, config *pdfcpu.Configuration)
 	ctx.Write.DirName = dirName
 	ctx.Write.FileName = fileName
 
-	err = Write(ctx)
+	err = Write(ctx, config)
 	if err != nil {
 		return err
 	}
@@ -1160,7 +1161,7 @@ func RemoveAttachments(fileIn string, files []string, config *pdfcpu.Configurati
 	ctx.Write.DirName = dirName
 	ctx.Write.FileName = fileName
 
-	err = Write(ctx)
+	err = Write(ctx, config)
 	if err != nil {
 		return err
 	}
@@ -1264,7 +1265,7 @@ func AddPermissions(fileIn string, config *pdfcpu.Configuration) error {
 	ctx.Write.DirName = dirName
 	ctx.Write.FileName = fileName
 
-	err = Write(ctx)
+	err = Write(ctx, config)
 	if err != nil {
 		return err
 	}
