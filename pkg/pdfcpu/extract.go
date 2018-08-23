@@ -3,8 +3,8 @@ package pdfcpu
 import (
 	"strings"
 
-	"github.com/hhrutter/pdfcpu/pkg/filter"
-	"github.com/hhrutter/pdfcpu/pkg/log"
+	"github.com/trussworks/pdfcpu/pkg/filter"
+	"github.com/trussworks/pdfcpu/pkg/log"
 	"github.com/pkg/errors"
 )
 

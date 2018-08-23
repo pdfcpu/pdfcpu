@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hhrutter/pdfcpu/pkg/log"
+	"github.com/trussworks/pdfcpu/pkg/log"
 	"github.com/pkg/errors"
 )
 

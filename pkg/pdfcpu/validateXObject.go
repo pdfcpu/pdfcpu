@@ -1,7 +1,7 @@
 package pdfcpu
 
 import (
-	"github.com/hhrutter/pdfcpu/pkg/filter"
+	"github.com/trussworks/pdfcpu/pkg/filter"
 	"github.com/pkg/errors"
 )
 

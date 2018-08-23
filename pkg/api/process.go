@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
+	"github.com/trussworks/pdfcpu/pkg/pdfcpu"
 	"github.com/pkg/errors"
 )
 

@@ -10,7 +10,7 @@ function internalDeps {
 
     for p in $(go list -f '{{.Deps}}' $1)
     do
-        if [[ $p == github.com/hhrutter/pdfcpu* ]]; then
+        if [[ $p == github.com/trussworks/pdfcpu* ]]; then
             idep=$idep,$p 
         fi
     done

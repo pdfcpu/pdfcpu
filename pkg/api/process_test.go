@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hhrutter/pdfcpu/pkg/log"
-	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
+	"github.com/trussworks/pdfcpu/pkg/log"
+	"github.com/trussworks/pdfcpu/pkg/pdfcpu"
 
 	"github.com/spf13/afero"
 )

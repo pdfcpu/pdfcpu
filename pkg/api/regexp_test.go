@@ -6,7 +6,7 @@ import (
 
 	"strings"
 
-	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
+	"github.com/trussworks/pdfcpu/pkg/pdfcpu"
 )
 
 var r *regexp.Regexp

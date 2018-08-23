@@ -4,7 +4,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/hhrutter/pdfcpu/pkg/filter"
+	"github.com/trussworks/pdfcpu/pkg/filter"
 )
 
 // Functions needed to create a test.pdf that gets used for validation testing (see process_test.go)

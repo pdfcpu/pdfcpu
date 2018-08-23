@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"io"
 
-	"github.com/hhrutter/pdfcpu/pkg/compress/lzw"
-	"github.com/hhrutter/pdfcpu/pkg/log"
+	"github.com/trussworks/pdfcpu/pkg/compress/lzw"
+	"github.com/trussworks/pdfcpu/pkg/log"
 	"github.com/pkg/errors"
 )
 

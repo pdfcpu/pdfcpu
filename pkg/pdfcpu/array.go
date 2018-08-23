@@ -5,7 +5,7 @@ import (
 
 	"strings"
 
-	"github.com/hhrutter/pdfcpu/pkg/log"
+	"github.com/trussworks/pdfcpu/pkg/log"
 )
 
 // PDFArray represents a PDF array object.

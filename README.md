@@ -1,9 +1,9 @@
 # pdfcpu: a golang pdf processor
 
 [![Build Status](https://travis-ci.org/hhrutter/pdfcpu.svg?branch=master)](https://travis-ci.org/hhrutter/pdfcpu)
-[![GoDoc](https://godoc.org/github.com/hhrutter/pdfcpu?status.svg)](https://godoc.org/github.com/hhrutter/pdfcpu)
+[![GoDoc](https://godoc.org/github.com/trussworks/pdfcpu?status.svg)](https://godoc.org/github.com/trussworks/pdfcpu)
 [![Coverage Status](https://coveralls.io/repos/github/hhrutter/pdfcpu/badge.svg?branch=master)](https://coveralls.io/github/hhrutter/pdfcpu?branch=master)
-[![Go Report Card](https://goreportcard.com/badge/github.com/hhrutter/pdfcpu)](https://goreportcard.com/report/github.com/hhrutter/pdfcpu)
+[![Go Report Card](https://goreportcard.com/badge/github.com/trussworks/pdfcpu)](https://goreportcard.com/report/github.com/trussworks/pdfcpu)
 [![License: MIT](https://img.shields.io/github/license/mashape/apistatus.svg)](https://opensource.org/licenses/MIT)
 
 ![logo](resources/pdfchip3.png)
@@ -49,7 +49,7 @@ Reducing the size of large PDF files for mass mailings by optimization to the ba
 
 Required build version: go1.8 and up
 
-`go get github.com/hhrutter/pdfcpu/cmd/...`
+`go get github.com/trussworks/pdfcpu/cmd/...`
 
 ## Usage
     
@@ -75,7 +75,7 @@ Required build version: go1.8 and up
 
     pdfcpu version
 
- [Please read the documentation](https://godoc.org/github.com/hhrutter/pdfcpu)
+ [Please read the documentation](https://godoc.org/github.com/trussworks/pdfcpu)
 
 
 ## Contributing
