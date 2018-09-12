@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The pdfcpu Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package api
 
 import (
@@ -32,13 +48,13 @@ func doTestPageSelectionSyntaxFail(s string, t *testing.T) {
 func TestPageSelectionSyntax(t *testing.T) {
 
 	psOk := []string{"1", "!1", "n1", "1-", "!1-", "n1-", "-5", "!-5", "n-5", "3-5", "!3-5", "n3-5",
-		"1,2,3", "!-5,10-15,30-", "1-,n4"}
+		"1,2,3", "!-5,10-15,30-", "1-,n4", "odd", "even", " 1"}
 
 	for _, s := range psOk {
 		doTestPageSelectionSyntaxOk(s, t)
 	}
 
-	psFail := []string{"1,", "1 ", "-", " -", " !", " 1"}
+	psFail := []string{"1,", "1 ", "-", " -", " !"}
 
 	for _, s := range psFail {
 		doTestPageSelectionSyntaxFail(s, t)
@@ -78,7 +94,7 @@ func doTestPageSelection(s string, pageCount int, compareString string, t *testi
 	resultString := selectedPagesString(selectedPages, pageCount)
 
 	if resultString != compareString {
-		t.Errorf("TestPageSelection(%s)\n", s)
+		t.Fatalf("TestPageSelection(%s) expected:%s got%s\n", s, compareString, resultString)
 	}
 
 }
@@ -86,6 +102,15 @@ func doTestPageSelection(s string, pageCount int, compareString string, t *testi
 func TestPageSelection(t *testing.T) {
 
 	pageCount := 5
+
+	doTestPageSelection("even", pageCount, "01010", t)
+	doTestPageSelection("even,even", pageCount, "01010", t)
+	doTestPageSelection("odd", pageCount, "10101", t)
+	doTestPageSelection("odd,odd", pageCount, "10101", t)
+	doTestPageSelection("even,odd", pageCount, "11111", t)
+	doTestPageSelection("odd,!1", pageCount, "00101", t)
+	doTestPageSelection("!1,odd", pageCount, "00101", t)
+	doTestPageSelection("!1,odd,even", pageCount, "01111", t)
 
 	doTestPageSelection("1", pageCount, "10000", t)
 	doTestPageSelection("2", pageCount, "01000", t)

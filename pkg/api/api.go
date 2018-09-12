@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The pdfcpu Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 // Package api provides support for interacting with pdfcpu.
 package api
 
@@ -6,7 +22,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -15,10 +30,6 @@ import (
 	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
 
 	"github.com/pkg/errors"
-)
-
-var (
-	selectedPagesRegExp *regexp.Regexp
 )
 
 func stringSet(slice []string) pdfcpu.StringSet {
@@ -36,22 +47,6 @@ func stringSet(slice []string) pdfcpu.StringSet {
 	return strSet
 }
 
-func setupRegExpForPageSelection() *regexp.Regexp {
-
-	e := "[!n]?((-\\d+)|(\\d+(-(\\d+)?)?))"
-
-	exp := "^" + e + "(," + e + ")*$"
-
-	re, _ := regexp.Compile(exp)
-
-	return re
-}
-
-func init() {
-
-	selectedPagesRegExp = setupRegExpForPageSelection()
-}
-
 // Read reads in a PDF file and builds an internal structure holding its cross reference table aka the PDFContext.
 func Read(fileIn string, config *pdfcpu.Configuration) (*pdfcpu.PDFContext, error) {
 
@@ -66,7 +61,10 @@ func Read(fileIn string, config *pdfcpu.Configuration) (*pdfcpu.PDFContext, erro
 }
 
 // Validate validates a PDF file against ISO-32000-1:2008.
-func Validate(fileIn string, config *pdfcpu.Configuration) error {
+func Validate(cmd *Command) ([]string, error) {
+
+	config := cmd.Config
+	fileIn := *cmd.InFile
 
 	from1 := time.Now()
 
@@ -75,7 +73,7 @@ func Validate(fileIn string, config *pdfcpu.Configuration) error {
 
 	ctx, err := Read(fileIn, config)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	dur1 := time.Since(from1).Seconds()
@@ -101,7 +99,7 @@ func Validate(fileIn string, config *pdfcpu.Configuration) error {
 	// at this stage: no binary breakup available!
 	ctx.Read.LogStats(ctx.Optimized)
 
-	return err
+	return nil, err
 }
 
 // Write generates a PDF file for a given PDFContext.
@@ -149,16 +147,7 @@ func writeSinglePagePDF(ctx *pdfcpu.PDFContext, pageNr int, dirOut string) error
 
 func writeSinglePagePDFs(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet, dirOut string) error {
 
-	if selectedPages == nil {
-		selectedPages = pdfcpu.IntSet{}
-	}
-
-	if len(selectedPages) == 0 {
-		// All pages selected.
-		for i := 1; i <= ctx.PageCount; i++ {
-			selectedPages[i] = true
-		}
-	}
+	ensureSelectedPages(ctx, &selectedPages)
 
 	for i, v := range selectedPages {
 		if v {
@@ -211,13 +200,17 @@ func readValidateAndOptimize(fileIn string, config *pdfcpu.Configuration, from1 
 }
 
 // Optimize reads in fileIn, does validation, optimization and writes the result to fileOut.
-func Optimize(fileIn, fileOut string, config *pdfcpu.Configuration) error {
+func Optimize(cmd *Command) ([]string, error) {
+
+	fileIn := *cmd.InFile
+	fileOut := *cmd.OutFile
+	config := cmd.Config
 
 	fromStart := time.Now()
 
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
@@ -230,7 +223,7 @@ func Optimize(fileIn, fileOut string, config *pdfcpu.Configuration) error {
 
 	err = Write(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	durWrite := time.Since(fromWrite).Seconds()
@@ -246,203 +239,15 @@ func Optimize(fileIn, fileOut string, config *pdfcpu.Configuration) error {
 	ctx.Read.LogStats(ctx.Optimized)
 	ctx.Write.LogStats()
 
-	return nil
-}
-
-// ParsePageSelection ensures a correct page selection expression.
-func ParsePageSelection(s string) ([]string, error) {
-
-	if s == "" {
-		return nil, nil
-	}
-
-	// Ensure valid comma separated expression of: {!}{-}# or {!}#-{#}
-	//
-	// Negated expressions:
-	// '!' negates an expression
-	// since '!' needs to be part of a single quoted string in bash
-	// as an alternative also 'n' works instead of "!"
-	//
-	// Extract all but page 4 may be expressed as: "1-,!4" or "1-,n4"
-	//
-	// The pageSelection is evaluated strictly from left to right!
-	// e.g. "!3,1-5" extracts pages 1-5 whereas "1-5,!3" extracts pages 1,2,4,5
-	//
-
-	if !selectedPagesRegExp.MatchString(s) {
-		return nil, errors.Errorf("-pages \"%s\" => syntax error\n", s)
-	}
-
-	//fmt.Printf("pageSelection: <%s>\n", pageSelection)
-
-	return strings.Split(s, ","), nil
-}
-
-func handlePrefix(v string, negated bool, pageCount int, selectedPages pdfcpu.IntSet) error {
-
-	i, err := strconv.Atoi(v)
-	if err != nil {
-		return err
-	}
-
-	// Handle overflow gracefully
-	if i > pageCount {
-		i = pageCount
-	}
-
-	// identified
-	// -# ... select all pages up to and including #
-	// or !-# ... deselect all pages up to and including #
-	for j := 1; j <= i; j++ {
-		selectedPages[j] = !negated
-	}
-
-	return nil
-}
-
-func handleSuffix(v string, negated bool, pageCount int, selectedPages pdfcpu.IntSet) error {
-
-	// must be #- ... select all pages from here until the end.
-	// or !#- ... deselect all pages from here until the end.
-
-	i, err := strconv.Atoi(v)
-	if err != nil {
-		return err
-	}
-
-	// Handle overflow gracefully
-	if i > pageCount {
-		return nil
-	}
-
-	for j := i; j <= pageCount; j++ {
-		selectedPages[j] = !negated
-	}
-
-	return nil
-}
-
-func handleSpecificPage(s string, negated bool, pageCount int, selectedPages pdfcpu.IntSet) error {
-
-	// must be # ... select a specific page
-	// or !# ... deselect a specific page
-
-	i, err := strconv.Atoi(s)
-	if err != nil {
-		return err
-	}
-
-	// Handle overflow gracefully
-	if i > pageCount {
-		return nil
-	}
-
-	selectedPages[i] = !negated
-
-	return nil
-}
-
-func negation(c byte) bool {
-	return c == '!' || c == 'n'
-}
-
-func selectedPages(pageCount int, pageSelection []string) (selectedPages pdfcpu.IntSet, err error) {
-
-	selectedPages = pdfcpu.IntSet{}
-
-	for _, v := range pageSelection {
-
-		//log.Stats.Printf("pageExp: <%s>\n", v)
-
-		var negated bool
-		if negation(v[0]) {
-			negated = true
-			//logInfoAPI.Printf("is a negated exp\n")
-			v = v[1:]
-		}
-
-		if v[0] == '-' {
-
-			v = v[1:]
-
-			err = handlePrefix(v, negated, pageCount, selectedPages)
-			if err != nil {
-				return nil, err
-			}
-
-			continue
-		}
-
-		if strings.HasSuffix(v, "-") {
-
-			err = handleSuffix(v[:len(v)-1], negated, pageCount, selectedPages)
-			if err != nil {
-				return nil, err
-			}
-
-			continue
-		}
-
-		// if v contains '-' somewhere in the middle
-		// this must be #-# ... select a page range
-		// or !#-# ... deselect a page range
-
-		pr := strings.Split(v, "-")
-		if len(pr) == 2 {
-
-			from, err := strconv.Atoi(pr[0])
-			if err != nil {
-				return nil, err
-			}
-
-			// Handle overflow gracefully
-			if from > pageCount {
-				continue
-			}
-
-			thru, err := strconv.Atoi(pr[1])
-			if err != nil {
-				return nil, err
-			}
-
-			// Handle overflow gracefully
-			if thru < from {
-				continue
-			}
-
-			if thru > pageCount {
-				thru = pageCount
-			}
-
-			for i := from; i <= thru; i++ {
-				selectedPages[i] = !negated
-			}
-
-			continue
-		}
-
-		err = handleSpecificPage(pr[0], negated, pageCount, selectedPages)
-		if err != nil {
-			return nil, err
-		}
-
-	}
-
-	return selectedPages, nil
-}
-
-func pagesForPageSelection(pageCount int, pageSelection []string) (pdfcpu.IntSet, error) {
-
-	if pageSelection == nil || len(pageSelection) == 0 {
-		log.Info.Println("pagesForPageSelection: empty pageSelection")
-		return nil, nil
-	}
-
-	return selectedPages(pageCount, pageSelection)
+	return nil, nil
 }
 
 // Split generates a sequence of single page PDF files in dirOut creating one file for every page of inFile.
-func Split(fileIn, dirOut string, config *pdfcpu.Configuration) error {
+func Split(cmd *Command) ([]string, error) {
+
+	fileIn := *cmd.InFile
+	dirOut := *cmd.OutDir
+	config := cmd.Config
 
 	fromStart := time.Now()
 
@@ -450,14 +255,14 @@ func Split(fileIn, dirOut string, config *pdfcpu.Configuration) error {
 
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	fromWrite := time.Now()
 
 	err = writeSinglePagePDFs(ctx, nil, dirOut)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	durWrite := time.Since(fromWrite).Seconds()
@@ -473,7 +278,7 @@ func Split(fileIn, dirOut string, config *pdfcpu.Configuration) error {
 	ctx.Read.LogStats(ctx.Optimized)
 	ctx.Write.LogStats()
 
-	return nil
+	return nil, nil
 }
 
 // appendTo appends fileIn to ctxDest's page tree.
@@ -495,14 +300,18 @@ func appendTo(fileIn string, ctxDest *pdfcpu.PDFContext) error {
 // Merge some PDF files together and write the result to fileOut.
 // This corresponds to concatenating these files in the order specified by filesIn.
 // The first entry of filesIn serves as the destination xRefTable where all the remaining files gets merged into.
-func Merge(filesIn []string, fileOut string, config *pdfcpu.Configuration) error {
+func Merge(cmd *Command) ([]string, error) {
+
+	filesIn := cmd.InFiles
+	fileOut := *cmd.OutFile
+	config := cmd.Config
 
 	fmt.Printf("merging into %s: %v\n", fileOut, filesIn)
 	//logErrorAPI.Printf("Merge: filesIn: %v\n", filesIn)
 
 	ctxDest, _, _, err := readAndValidate(filesIn[0], config, time.Now())
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if ctxDest.XRefTable.Version() < pdfcpu.V15 {
@@ -515,18 +324,18 @@ func Merge(filesIn []string, fileOut string, config *pdfcpu.Configuration) error
 	for _, f := range filesIn[1:] {
 		err = appendTo(f, ctxDest)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	err = pdfcpu.OptimizeXRefTable(ctxDest)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = pdfcpu.ValidateXRefTable(ctxDest.XRefTable)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ctxDest.Write.Command = "Merge"
@@ -537,29 +346,17 @@ func Merge(filesIn []string, fileOut string, config *pdfcpu.Configuration) error
 
 	err = Write(ctxDest)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Stats.Printf("XRefTable:\n%s\n", ctxDest)
 
-	return nil
-}
-
-func ensureSelectedPages(ctx *pdfcpu.PDFContext, selectedPages *pdfcpu.IntSet) {
-
-	if selectedPages != nil && len(*selectedPages) > 0 {
-		return
-	}
-
-	m := pdfcpu.IntSet{}
-	for i := 1; i <= ctx.PageCount; i++ {
-		m[i] = true
-	}
-
-	*selectedPages = m
+	return nil, nil
 }
 
 func imageObjNrs(ctx *pdfcpu.PDFContext, page int) []int {
+
+	// TODO Exclude SMask image objects.
 
 	o := []int{}
 
@@ -572,19 +369,21 @@ func imageObjNrs(ctx *pdfcpu.PDFContext, page int) []int {
 	return o
 }
 
-func doExtractImages(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error {
+func imageFilenameWithoutExtension(dir, resID string, pageNr, objNr int) string {
+	return filepath.Join(dir, fmt.Sprintf("%s_%d_%d", resID, pageNr, objNr))
+}
 
-	ensureSelectedPages(ctx, &selectedPages)
+func doExtractImages(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error {
 
 	visited := pdfcpu.IntSet{}
 
-	for p, v := range selectedPages {
+	for pageNr, v := range selectedPages {
 
 		if v {
 
-			log.Info.Printf("writing images for page %d\n", p)
+			log.Info.Printf("writing images for page %d\n", pageNr)
 
-			for _, objNr := range imageObjNrs(ctx, p) {
+			for _, objNr := range imageObjNrs(ctx, pageNr) {
 
 				if visited[objNr] {
 					continue
@@ -601,22 +400,9 @@ func doExtractImages(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error 
 					continue
 				}
 
-				fileName := fmt.Sprintf("%s/%s_%d_%d.%s", ctx.Write.DirName, io.ResourceNames[0], p, objNr, io.Extension)
-				fmt.Printf("writing %s\n", fileName)
+				filename := imageFilenameWithoutExtension(ctx.Write.DirName, io.ResourceNames[0], pageNr, objNr)
 
-				if io.Extension == "png" {
-					err = pdfcpu.WritePNGFile(ctx, fileName, objNr, io)
-					if err != nil {
-						if err == pdfcpu.ErrUnsupportedColorSpace {
-							fmt.Printf("Image obj#%d uses an unsupported color space. Please see the logfile for details.\n", objNr)
-							continue
-						}
-						return err
-					}
-					continue
-				}
-
-				err = ioutil.WriteFile(fileName, io.Data(), os.ModePerm)
+				_, err = pdfcpu.WriteImage(ctx.XRefTable, filename, io.ImageDict, objNr)
 				if err != nil {
 					return err
 				}
@@ -631,7 +417,12 @@ func doExtractImages(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error 
 }
 
 // ExtractImages dumps embedded image resources from fileIn into dirOut for selected pages.
-func ExtractImages(fileIn, dirOut string, pageSelection []string, config *pdfcpu.Configuration) error {
+func ExtractImages(cmd *Command) ([]string, error) {
+
+	fileIn := *cmd.InFile
+	dirOut := *cmd.OutDir
+	pageSelection := cmd.PageSelection
+	config := cmd.Config
 
 	fromStart := time.Now()
 
@@ -639,20 +430,22 @@ func ExtractImages(fileIn, dirOut string, pageSelection []string, config *pdfcpu
 
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	fromWrite := time.Now()
 
 	pages, err := pagesForPageSelection(ctx.PageCount, pageSelection)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	ensureSelectedPages(ctx, &pages)
 
 	ctx.Write.DirName = dirOut
 	err = doExtractImages(ctx, pages)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	durWrite := time.Since(fromWrite).Seconds()
@@ -666,7 +459,7 @@ func ExtractImages(fileIn, dirOut string, pageSelection []string, config *pdfcpu
 	log.Stats.Printf("write images         : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
 	log.Stats.Printf("total processing time: %6.3fs\n\n", durTotal)
 
-	return nil
+	return nil, nil
 }
 
 func fontObjNrs(ctx *pdfcpu.PDFContext, page int) []int {
@@ -683,8 +476,6 @@ func fontObjNrs(ctx *pdfcpu.PDFContext, page int) []int {
 }
 
 func doExtractFonts(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error {
-
-	ensureSelectedPages(ctx, &selectedPages)
 
 	visited := pdfcpu.IntSet{}
 
@@ -728,7 +519,12 @@ func doExtractFonts(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error {
 }
 
 // ExtractFonts dumps embedded fontfiles from fileIn into dirOut for selected pages.
-func ExtractFonts(fileIn, dirOut string, pageSelection []string, config *pdfcpu.Configuration) error {
+func ExtractFonts(cmd *Command) ([]string, error) {
+
+	fileIn := *cmd.InFile
+	dirOut := *cmd.OutDir
+	pageSelection := cmd.PageSelection
+	config := cmd.Config
 
 	fromStart := time.Now()
 
@@ -736,20 +532,22 @@ func ExtractFonts(fileIn, dirOut string, pageSelection []string, config *pdfcpu.
 
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	fromWrite := time.Now()
 
 	pages, err := pagesForPageSelection(ctx.PageCount, pageSelection)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	ensureSelectedPages(ctx, &pages)
 
 	ctx.Write.DirName = dirOut
 	err = doExtractFonts(ctx, pages)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	durWrite := time.Since(fromWrite).Seconds()
@@ -763,11 +561,16 @@ func ExtractFonts(fileIn, dirOut string, pageSelection []string, config *pdfcpu.
 	log.Stats.Printf("write fonts          : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
 	log.Stats.Printf("total processing time: %6.3fs\n\n", durTotal)
 
-	return nil
+	return nil, nil
 }
 
 // ExtractPages generates single page PDF files from fileIn in dirOut for selected pages.
-func ExtractPages(fileIn, dirOut string, pageSelection []string, config *pdfcpu.Configuration) error {
+func ExtractPages(cmd *Command) ([]string, error) {
+
+	fileIn := *cmd.InFile
+	dirOut := *cmd.OutDir
+	pageSelection := cmd.PageSelection
+	config := cmd.Config
 
 	fromStart := time.Now()
 
@@ -775,19 +578,19 @@ func ExtractPages(fileIn, dirOut string, pageSelection []string, config *pdfcpu.
 
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	fromWrite := time.Now()
 
 	pages, err := pagesForPageSelection(ctx.PageCount, pageSelection)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = writeSinglePagePDFs(ctx, pages, dirOut)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	durWrite := time.Since(fromWrite).Seconds()
@@ -803,14 +606,14 @@ func ExtractPages(fileIn, dirOut string, pageSelection []string, config *pdfcpu.
 	ctx.Read.LogStats(ctx.Optimized)
 	ctx.Write.LogStats()
 
-	return nil
+	return nil, nil
 }
 
 func contentObjNrs(ctx *pdfcpu.PDFContext, page int) ([]int, error) {
 
 	objNrs := []int{}
 
-	d, err := ctx.PageDict(page)
+	d, _, _, _, _, err := ctx.PageDict(page)
 	if err != nil {
 		return nil, err
 	}
@@ -871,8 +674,6 @@ func contentObjNrs(ctx *pdfcpu.PDFContext, page int) ([]int, error) {
 
 func doExtractContent(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error {
 
-	ensureSelectedPages(ctx, &selectedPages)
-
 	visited := pdfcpu.IntSet{}
 
 	for p, v := range selectedPages {
@@ -924,7 +725,12 @@ func doExtractContent(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error
 }
 
 // ExtractContent dumps "PDF source" files from fileIn into dirOut for selected pages.
-func ExtractContent(fileIn, dirOut string, pageSelection []string, config *pdfcpu.Configuration) error {
+func ExtractContent(cmd *Command) ([]string, error) {
+
+	fileIn := *cmd.InFile
+	dirOut := *cmd.OutDir
+	pageSelection := cmd.PageSelection
+	config := cmd.Config
 
 	fromStart := time.Now()
 
@@ -932,20 +738,22 @@ func ExtractContent(fileIn, dirOut string, pageSelection []string, config *pdfcp
 
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	fromWrite := time.Now()
 
 	pages, err := pagesForPageSelection(ctx.PageCount, pageSelection)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	ensureSelectedPages(ctx, &pages)
 
 	ctx.Write.DirName = dirOut
 	err = doExtractContent(ctx, pages)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	durWrite := time.Since(fromWrite).Seconds()
@@ -959,11 +767,16 @@ func ExtractContent(fileIn, dirOut string, pageSelection []string, config *pdfcp
 	log.Stats.Printf("write content        : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
 	log.Stats.Printf("total processing time: %6.3fs\n\n", durTotal)
 
-	return nil
+	return nil, nil
 }
 
 // Trim generates a trimmed version of fileIn containing all pages selected.
-func Trim(fileIn, fileOut string, pageSelection []string, config *pdfcpu.Configuration) error {
+func Trim(cmd *Command) ([]string, error) {
+
+	fileIn := *cmd.InFile
+	fileOut := *cmd.OutFile
+	pageSelection := cmd.PageSelection
+	config := cmd.Config
 
 	// pageSelection points to an empty slice if flag pages was omitted.
 
@@ -973,14 +786,14 @@ func Trim(fileIn, fileOut string, pageSelection []string, config *pdfcpu.Configu
 
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	fromWrite := time.Now()
 
 	pages, err := pagesForPageSelection(ctx.PageCount, pageSelection)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ctx.Write.Command = "Trim"
@@ -992,7 +805,7 @@ func Trim(fileIn, fileOut string, pageSelection []string, config *pdfcpu.Configu
 
 	err = Write(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	durWrite := time.Since(fromWrite).Seconds()
@@ -1008,31 +821,31 @@ func Trim(fileIn, fileOut string, pageSelection []string, config *pdfcpu.Configu
 	ctx.Read.LogStats(ctx.Optimized)
 	ctx.Write.LogStats()
 
-	return nil
+	return nil, nil
 }
 
 // Encrypt fileIn and write result to fileOut.
-func Encrypt(fileIn, fileOut string, config *pdfcpu.Configuration) error {
-	return Optimize(fileIn, fileOut, config)
+func Encrypt(cmd *Command) ([]string, error) {
+	return Optimize(cmd)
 }
 
 // Decrypt fileIn and write result to fileOut.
-func Decrypt(fileIn, fileOut string, config *pdfcpu.Configuration) error {
-	return Optimize(fileIn, fileOut, config)
+func Decrypt(cmd *Command) ([]string, error) {
+	return Optimize(cmd)
 }
 
 // ChangeUserPassword of fileIn and write result to fileOut.
-func ChangeUserPassword(fileIn, fileOut string, config *pdfcpu.Configuration, pwOld, pwNew *string) error {
-	config.UserPW = *pwOld
-	config.UserPWNew = pwNew
-	return Optimize(fileIn, fileOut, config)
+func ChangeUserPassword(cmd *Command) ([]string, error) {
+	cmd.Config.UserPW = *cmd.PWOld
+	cmd.Config.UserPWNew = cmd.PWNew
+	return Optimize(cmd)
 }
 
 // ChangeOwnerPassword of fileIn and write result to fileOut.
-func ChangeOwnerPassword(fileIn, fileOut string, config *pdfcpu.Configuration, pwOld, pwNew *string) error {
-	config.OwnerPW = *pwOld
-	config.OwnerPWNew = pwNew
-	return Optimize(fileIn, fileOut, config)
+func ChangeOwnerPassword(cmd *Command) ([]string, error) {
+	cmd.Config.OwnerPW = *cmd.PWOld
+	cmd.Config.OwnerPWNew = cmd.PWNew
+	return Optimize(cmd)
 }
 
 // ListAttachments returns a list of embedded file attachments.
@@ -1283,4 +1096,66 @@ func AddPermissions(fileIn string, config *pdfcpu.Configuration) error {
 	ctx.Write.LogStats()
 
 	return nil
+}
+
+// AddWatermarks adds watermarks to all pages selected.
+func AddWatermarks(cmd *Command) ([]string, error) {
+
+	fileIn := *cmd.InFile
+	fileOut := *cmd.OutFile
+	pageSelection := cmd.PageSelection
+	wm := cmd.Watermark
+	config := cmd.Config
+
+	fromStart := time.Now()
+
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Printf("%sing %s ...\n", wm.OnTopString(), fileIn)
+
+	from := time.Now()
+
+	pages, err := pagesForPageSelection(ctx.PageCount, pageSelection)
+	if err != nil {
+		return nil, err
+	}
+
+	ensureSelectedPages(ctx, &pages)
+
+	err = pdfcpu.AddWatermarks(ctx.XRefTable, pages, wm)
+	if err != nil {
+		return nil, err
+	}
+
+	durStamp := time.Since(from).Seconds()
+
+	fromWrite := time.Now()
+
+	dirName, fileName := filepath.Split(fileOut)
+	ctx.Write.DirName = dirName
+	ctx.Write.FileName = fileName
+
+	err = Write(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	durWrite := time.Since(fromWrite).Seconds()
+	durTotal := time.Since(fromStart).Seconds()
+
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	log.Stats.Println("Timing:")
+	log.Stats.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	log.Stats.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	log.Stats.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	log.Stats.Printf("watermark            : %6.3fs  %4.1f%%\n", durStamp, durStamp/durTotal*100)
+	log.Stats.Printf("write                : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
+	log.Stats.Printf("total processing time: %6.3fs\n\n", durTotal)
+	ctx.Read.LogStats(ctx.Optimized)
+	ctx.Write.LogStats()
+
+	return nil, nil
 }

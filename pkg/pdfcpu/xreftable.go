@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The pdfcpu Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package pdfcpu
 
 import (
@@ -23,7 +39,7 @@ type XRefTableEntry struct {
 	Free            bool
 	Offset          *int64
 	Generation      *int
-	Object          PDFObject
+	Object          PDFObject // maybe *PDFObject ??
 	Compressed      bool
 	ObjectStream    *int
 	ObjectStreamInd *int
@@ -245,7 +261,11 @@ func (xRefTable *XRefTable) FindTableEntryLight(objNumber int) (*XRefTableEntry,
 
 // FindTableEntry returns the XRefTable entry for given object and generation numbers.
 func (xRefTable *XRefTable) FindTableEntry(objNumber int, generationNumber int) (*XRefTableEntry, bool) {
+	//fmt.Printf("FindTableEntry: obj#:%d gen:%d \n", objNumber, generationNumber)
 	entry, found := xRefTable.Find(objNumber)
+	if found && entry == nil {
+		fmt.Printf("FindTableEntry(%d,%d) finds entry = nil!\n", objNumber, generationNumber)
+	}
 	if found && *entry.Generation == generationNumber {
 		return entry, found
 	}
@@ -728,6 +748,27 @@ func (xRefTable *XRefTable) DereferenceInteger(obj PDFObject) (*PDFInteger, erro
 	return &i, nil
 }
 
+// DereferenceNumber resolves a number object, which may be an indirect reference and returns a float64
+// It is assumed this func is called on a validated xRefTable.
+func (xRefTable *XRefTable) DereferenceNumber(obj PDFObject) (f float64) {
+
+	o, _ := xRefTable.Dereference(obj)
+
+	switch o := o.(type) {
+
+	case PDFInteger:
+		f = float64(o.Value())
+
+	case PDFFloat:
+		f = o.Value()
+
+		// TODO default: error
+
+	}
+
+	return f
+}
+
 // DereferenceName resolves and validates a name object, which may be an indirect reference.
 func (xRefTable *XRefTable) DereferenceName(obj PDFObject, sinceVersion PDFVersion, validate func(string) bool) (n PDFName, err error) {
 
@@ -879,6 +920,17 @@ func (xRefTable *XRefTable) DereferenceStreamDict(obj PDFObject) (*PDFStreamDict
 	}
 
 	return &streamDict, nil
+}
+
+// DereferenceDictEntry returns a dereferenced dict entry.
+func (xRefTable *XRefTable) DereferenceDictEntry(dict *PDFDict, entryName string) (PDFObject, error) {
+
+	obj, found := dict.Find(entryName)
+	if !found || obj == nil {
+		return nil, errors.Errorf("dict=%s entry=%s missing.", dict, entryName)
+	}
+
+	return xRefTable.Dereference(obj)
 }
 
 // Catalog returns a pointer to the root object / catalog.
@@ -1405,27 +1457,74 @@ func (xRefTable *XRefTable) IDFirstElement() (id []byte, err error) {
 
 	hl, ok := ((*xRefTable.ID)[0]).(PDFHexLiteral)
 	if ok {
-		id, err = hl.Bytes()
-	} else {
-		sl, ok := ((*xRefTable.ID)[0]).(PDFStringLiteral)
-		if !ok {
-			return nil, errors.New("ID must contain PDFHexLiterals or PDFStringLiterals")
-		}
-		id, err = Unescape(sl.Value())
+		return hl.Bytes()
 	}
 
-	return id, nil
+	sl, ok := ((*xRefTable.ID)[0]).(PDFStringLiteral)
+	if !ok {
+		return nil, errors.New("ID must contain PDFHexLiterals or PDFStringLiterals")
+	}
+
+	return Unescape(sl.Value())
 }
 
-func (xRefTable *XRefTable) processPageTree(root *PDFIndirectRef, p *int, page int) (*PDFDict, error) {
+func (xRefTable *XRefTable) processPageTree(root *PDFIndirectRef, resources *PDFDict, mediaBox, cropBox *PDFArray, rotate *float64, p *int, page int) (*PDFDict, *PDFDict, *PDFArray, *PDFArray, *float64, error) {
+
+	//fmt.Printf("entering processPage: p=%d obj#%d\n", *p, root.ObjectNumber.Value())
 
 	dict, err := xRefTable.DereferenceDict(*root)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, nil, nil, err
+	}
+
+	pageCount := dict.IntEntry("Count")
+	if pageCount != nil {
+		if *p+*pageCount < page {
+			// Skip sub pagetree.
+			*p += *pageCount
+			return nil, resources, mediaBox, cropBox, rotate, nil
+		}
+	}
+
+	obj, found := dict.Find("Resources")
+	if found {
+		resources, err = xRefTable.DereferenceDict(obj)
+		if err != nil {
+			return nil, nil, nil, nil, nil, err
+		}
+	}
+
+	obj, found = dict.Find("MediaBox")
+	if found {
+		mediaBox, err = xRefTable.DereferenceArray(obj)
+		if err != nil {
+			return nil, nil, nil, nil, nil, err
+		}
+	}
+
+	obj, found = dict.Find("CropBox")
+	if found {
+		cropBox, err = xRefTable.DereferenceArray(obj)
+		if err != nil {
+			return nil, nil, nil, nil, nil, err
+		}
+	}
+
+	obj, found = dict.Find("Rotate")
+	if found {
+		//fmt.Printf("found Rotate: %v %T\n", obj, obj)
+		r := xRefTable.DereferenceNumber(obj)
+		//fmt.Printf("r=%v %T\n", r, r)
+		rotate = &r
+		//fmt.Printf("found rotate(%f) for page %d\n", *rotate, *p)
 	}
 
 	// Iterate over page tree.
 	kids := dict.PDFArrayEntry("Kids")
+	if kids == nil {
+		//fmt.Println("returning from leaf node")
+		return dict, resources, mediaBox, cropBox, rotate, nil
+	}
 
 	for _, obj := range *kids {
 
@@ -1436,55 +1535,53 @@ func (xRefTable *XRefTable) processPageTree(root *PDFIndirectRef, p *int, page i
 		// Dereference next page node dict.
 		indRef, ok := obj.(PDFIndirectRef)
 		if !ok {
-			return nil, errors.Errorf("processPageTree: corrupt page node dict")
+			return nil, nil, nil, nil, nil, errors.Errorf("processPageTree: corrupt page node dict")
 		}
 
 		pageNodeDict, err := xRefTable.DereferenceDict(indRef)
 		if err != nil {
-			return nil, err
+			return nil, nil, nil, nil, nil, err
 		}
 
 		if pageNodeDict == nil {
-			return nil, errors.New("processPagesDict: pageNodeDict is null")
+			return nil, nil, nil, nil, nil, errors.New("processPagesDict: pageNodeDict is null")
 		}
 
 		switch *pageNodeDict.Type() {
 
 		case "Pages":
 			// Recurse over sub pagetree.
-			d, err := xRefTable.processPageTree(&indRef, p, page)
+			pageNodeDict, resources, mediaBox, cropBox, rotate, err = xRefTable.processPageTree(&indRef, resources, mediaBox, cropBox, rotate, p, page)
 			if err != nil {
-				return nil, err
+				return nil, nil, nil, nil, nil, err
 			}
-
-			if d != nil {
-				return d, nil
+			if pageNodeDict != nil {
+				return pageNodeDict, resources, mediaBox, cropBox, rotate, nil
 			}
 
 		case "Page":
-			*p++
 			// page found.
+			*p++
 			if *p == page {
-				return pageNodeDict, nil
+				return xRefTable.processPageTree(&indRef, resources, mediaBox, cropBox, rotate, p, page)
 			}
 
 		}
 
 	}
 
-	return nil, nil
+	return nil, nil, nil, nil, nil, nil
 }
 
-// PageDict returns a specific page dict.
-func (xRefTable *XRefTable) PageDict(page int) (*PDFDict, error) {
+// PageDict returns a specific page dict along with the resources, mediaBox and CropBox in effect.
+func (xRefTable *XRefTable) PageDict(page int) (pageDict, resources *PDFDict, mediaBox, cropBox *PDFArray, rotate *float64, err error) {
 
-	// Get an indirect reference to the root page dict.
+	// Get an indirect reference to the page tree root dict.
 	root, err := xRefTable.Pages()
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 
 	pageCount := 0
-
-	return xRefTable.processPageTree(root, &pageCount, page)
+	return xRefTable.processPageTree(root, nil, nil, nil, nil, &pageCount, page)
 }

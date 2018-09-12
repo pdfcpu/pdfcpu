@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The pdfcpu Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package pdfcpu
 
 import (
@@ -989,11 +1005,11 @@ func growBufBy(buf []byte, size int, rd io.Reader) ([]byte, error) {
 
 	b := make([]byte, size)
 
-	n, err := rd.Read(b)
+	_, err := rd.Read(b)
 	if err != nil {
 		return nil, err
 	}
-	log.Debug.Printf("growBufBy: Read %d bytes\n", n)
+	//log.Debug.Printf("growBufBy: Read %d bytes\n", n)
 
 	return append(buf, b...), nil
 }
@@ -1056,7 +1072,7 @@ func buffer(rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffset i
 	//                                    streamInd                            endInd
 	//                                  -1 if absent                        -1 if absent
 
-	log.Debug.Println(" buffer: begin")
+	//log.Debug.Println("buffer: begin")
 
 	endInd, streamInd = -1, -1
 
@@ -1105,7 +1121,7 @@ func buffer(rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffset i
 		}
 	}
 
-	log.Debug.Printf("buffer: end, returned bufsize=%d streamOffset=%d\n", len(buf), streamOffset)
+	//log.Debug.Printf("buffer: end, returned bufsize=%d streamOffset=%d\n", len(buf), streamOffset)
 
 	return buf, endInd, streamInd, streamOffset, nil
 }
@@ -1113,7 +1129,7 @@ func buffer(rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffset i
 // return true if 'stream' follows end of dict: >>{whitespace}stream
 func keywordStreamRightAfterEndOfDict(buf string, streamInd int) bool {
 
-	log.Debug.Println("keywordStreamRightAfterEndOfDict: begin")
+	//log.Debug.Println("keywordStreamRightAfterEndOfDict: begin")
 
 	// Get a slice of the chunk right in front of 'stream'.
 	b := buf[:streamInd]
@@ -1128,9 +1144,43 @@ func keywordStreamRightAfterEndOfDict(buf string, streamInd int) bool {
 	// We found the last >>. Return true if after end of dict only whitespace.
 	ok := strings.TrimSpace(b[eod:]) == ">>"
 
-	log.Debug.Printf("keywordStreamRightAfterEndOfDict: end, %v\n", ok)
+	//log.Debug.Printf("keywordStreamRightAfterEndOfDict: end, %v\n", ok)
 
 	return ok
+}
+
+func buildFilterPipeline(ctx *PDFContext, filterArray, decodeParmsArr PDFArray, decodeParms PDFObject) ([]PDFFilter, error) {
+
+	var filterPipeline []PDFFilter
+
+	for i, f := range filterArray {
+
+		filterName, ok := f.(PDFName)
+		if !ok {
+			return nil, errors.New("buildFilterPipeline: FilterArray elements corrupt")
+		}
+		if decodeParms == nil || decodeParmsArr[i] == nil {
+			filterPipeline = append(filterPipeline, PDFFilter{Name: filterName.String(), DecodeParms: nil})
+			continue
+		}
+
+		dict, ok := decodeParmsArr[i].(PDFDict)
+		if !ok {
+			indRef, ok := decodeParmsArr[i].(PDFIndirectRef)
+			if !ok {
+				return nil, errors.Errorf("buildFilterPipeline: corrupt PDFDict: %s\n", dict)
+			}
+			d, err := dereferencedDict(ctx, indRef.ObjectNumber.Value())
+			if err != nil {
+				return nil, err
+			}
+			dict = *d
+		}
+
+		filterPipeline = append(filterPipeline, PDFFilter{Name: filterName.String(), DecodeParms: &dict})
+	}
+
+	return filterPipeline, nil
 }
 
 // Return the filter pipeline associated with this stream dict.
@@ -1156,6 +1206,8 @@ func pdfFilterPipeline(ctx *PDFContext, pdfDict PDFDict) ([]PDFFilter, error) {
 		}
 	}
 
+	//fmt.Printf("dereferenced filter obj: %s\n", obj)
+
 	if name, ok := obj.(PDFName); ok {
 
 		// single filter.
@@ -1171,7 +1223,15 @@ func pdfFilterPipeline(ctx *PDFContext, pdfDict PDFDict) ([]PDFFilter, error) {
 
 		dict, ok := obj.(PDFDict)
 		if !ok {
-			return nil, errors.New("pdfFilterPipeline: DecodeParms corrupt")
+			indRef, ok := obj.(PDFIndirectRef)
+			if !ok {
+				return nil, errors.Errorf("pdfFilterPipeline: corrupt PDFDict: %s\n", obj)
+			}
+			d, err := dereferencedDict(ctx, indRef.ObjectNumber.Value())
+			if err != nil {
+				return nil, err
+			}
+			dict = *d
 		}
 
 		// with decode parameters.
@@ -1197,26 +1257,13 @@ func pdfFilterPipeline(ctx *PDFContext, pdfDict PDFDict) ([]PDFFilter, error) {
 		}
 	}
 
-	for i, f := range filterArray {
-		filterName, ok := f.(PDFName)
-		if !ok {
-			return nil, errors.New("pdfFilterPipeline: FilterArray elements corrupt")
-		}
-		if decodeParms == nil || decodeParmsArr[i] == nil {
-			filterPipeline = append(filterPipeline, PDFFilter{Name: filterName.String(), DecodeParms: nil})
-			continue
-		}
+	//fmt.Printf("decodeParmsArr: %s\n", decodeParmsArr)
 
-		decodeParmsDict, ok := decodeParmsArr[i].(PDFDict) // can be NULL if there are no DecodeParms!
-		if !ok {
-			return nil, errors.New("pdfFilterPipeline: Expected DecodeParms Array corrupt")
-		}
-		filterPipeline = append(filterPipeline, PDFFilter{Name: filterName.String(), DecodeParms: &decodeParmsDict})
-	}
+	filterPipeline, err := buildFilterPipeline(ctx, filterArray, decodeParmsArr, decodeParms)
 
 	log.Debug.Println("pdfFilterPipeline: end")
 
-	return filterPipeline, nil
+	return filterPipeline, err
 }
 
 func streamDict(ctx *PDFContext, pdfDict PDFDict, objNr, streamInd int, streamOffset, offset int64) (sd PDFStreamDict, err error) {
@@ -1267,7 +1314,7 @@ func object(ctx *PDFContext, offset int64, objNr, genNr int) (o PDFObject, endIn
 		return nil, 0, 0, 0, err
 	}
 
-	log.Debug.Printf("object: seeked to offset:%d\n", offset)
+	//log.Debug.Printf("object: seeked to offset:%d\n", offset)
 
 	// process: # gen obj ... obj dict ... {stream ... data ... endstream} endobj
 	//                                    streamInd                        endInd
@@ -1342,9 +1389,10 @@ func pdfObject(ctx *PDFContext, offset int64, objNr, genNr int) (PDFObject, erro
 	case PDFDict:
 		d, err := dict(ctx, o, objNr, genNr, endInd, streamInd)
 		if err != nil || d != nil {
+			// PDFDict
 			return *d, err
 		}
-		// Parse associated stream data into a PDFStreamDict.
+		// PDFStreamDict.
 		return streamDict(ctx, o, objNr, streamInd, streamOffset, offset)
 
 	case PDFArray:
@@ -1411,6 +1459,42 @@ func dereferencedObject(ctx *PDFContext, objectNumber int) (PDFObject, error) {
 	}
 
 	return entry.Object, nil
+}
+
+func dereferencedDict(ctx *PDFContext, objectNumber int) (*PDFDict, error) {
+
+	entry, ok := ctx.Find(objectNumber)
+	if !ok {
+		return nil, errors.New("dereferencedDict: object not registered in xRefTable")
+	}
+
+	if entry.Compressed {
+		decompressXRefTableEntry(ctx.XRefTable, objectNumber, entry)
+	}
+
+	if entry.Object == nil {
+
+		// dereference this object!
+
+		log.Debug.Printf("dereferencedDict: dereferencing object %d\n", objectNumber)
+
+		obj, err := pdfObject(ctx, *entry.Offset, objectNumber, *entry.Generation)
+		if err != nil {
+			return nil, errors.Wrapf(err, "dereferencedDict: problem dereferencing object %d", objectNumber)
+		}
+
+		if obj == nil {
+			return nil, errors.New("dereferencedDict: object is nil")
+		}
+
+		entry.Object = obj
+	}
+
+	dict, ok := entry.Object.(PDFDict)
+	if !ok {
+		return nil, errors.New("dereferencedDict: corrupt PDFDict")
+	}
+	return &dict, nil
 }
 
 // dereference a PDFInteger object representing an int64 value.
@@ -1796,17 +1880,14 @@ func updateBinaryTotalSize(ctx *PDFContext, o PDFObject) {
 func dereferenceObject(ctx *PDFContext, objNr int) error {
 
 	xRefTable := ctx.XRefTable
-
-	log.Debug.Println("dereferenceObject: begin")
-
 	xRefTableSize := len(xRefTable.Table)
 
-	log.Debug.Printf("dereferenceObject: dereferencing object %d\n", objNr)
+	log.Debug.Printf("dereferenceObject: begin, dereferencing object %d\n", objNr)
 
 	entry := xRefTable.Table[objNr]
 
 	if entry.Free {
-		//log.Debug.Printf("free object %d\n", objectNumber)
+		log.Debug.Printf("free object %d\n", objNr)
 		return nil
 	}
 
@@ -1815,11 +1896,12 @@ func dereferenceObject(ctx *PDFContext, objNr int) error {
 		if err != nil {
 			return err
 		}
-		log.Debug.Printf("dereferenceObject: decompressed entry, Compressed=%v\n%s\n", entry.Compressed, entry.Object)
+		//log.Debug.Printf("dereferenceObject: decompressed entry, Compressed=%v\n%s\n", entry.Compressed, entry.Object)
 		return nil
 	}
 
 	// entry is in use.
+	log.Debug.Printf("in use object %d\n", objNr)
 
 	if entry.Offset == nil || *entry.Offset == 0 {
 		log.Debug.Printf("dereferenceObject: already decompressed or used object w/o offset -> ignored")
@@ -1840,7 +1922,7 @@ func dereferenceObject(ctx *PDFContext, objNr int) error {
 
 	log.Debug.Printf("dereferenceObject: dereferencing object %d\n", objNr)
 
-	// Parse object from file: anything goes dict,array,integer,float,streamdicts..
+	// Parse object from file: anything goes dict, array, integer, float, streamdicts...
 	obj, err := pdfObject(ctx, *entry.Offset, objNr, *entry.Generation)
 	if err != nil {
 		return errors.Wrapf(err, "dereferenceObject: problem dereferencing object %d", objNr)
@@ -1887,6 +1969,7 @@ func dereferenceObjects(ctx *PDFContext) error {
 	log.Debug.Println("dereferenceObjects: begin")
 
 	// Get sorted slice of object numbers.
+	// TODO Skip sorting for performance gain.
 	var keys []int
 	for k := range ctx.XRefTable.Table {
 		keys = append(keys, k)

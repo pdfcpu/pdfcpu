@@ -3,6 +3,8 @@
 // See https://www.adobe.com/content/dam/acom/en/devnet/pdf/pdfs/PDF32000_2008.pdf
 // and https://github.com/golang/go/issues/25409.
 //
+// It is also compatible with the TIFF file format.
+//
 // Copyright 2011 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.

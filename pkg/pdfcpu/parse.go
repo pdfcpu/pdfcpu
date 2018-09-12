@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The pdfcpu Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package pdfcpu
 
 import (
@@ -516,9 +532,13 @@ func parseDict(line *string) (*PDFDict, error) {
 			return nil, err
 		}
 
-		logDebugParse.Printf("ParseDict: dict[%s]=%v\n", key, obj)
-		if ok := dict.Insert(string(*key), obj); !ok {
-			return nil, errDictionaryDuplicateKey
+		// Specifying the null object as the value of a dictionary entry (7.3.7, "Dictionary Objects")
+		// shall be equivalent to omitting the entry entirely.
+		if obj != nil {
+			logDebugParse.Printf("ParseDict: dict[%s]=%v\n", key, obj)
+			if ok := dict.Insert(string(*key), obj); !ok {
+				return nil, errDictionaryDuplicateKey
+			}
 		}
 
 		// we are positioned on the char behind the last parsed dict value.
@@ -686,7 +706,7 @@ func parseHexLiteralOrDict(l *string) (val PDFObject, err error) {
 	return val, nil
 }
 
-func parseBoolean(l string) (val PDFObject, s string, ok bool) {
+func parseBooleanOrNull(l string) (val PDFObject, s string, ok bool) {
 
 	// null, absent object
 	if strings.HasPrefix(l, "null") {
@@ -763,7 +783,7 @@ func parseObject(line *string) (PDFObject, error) {
 	default:
 		var valStr string
 		var ok bool
-		value, valStr, ok = parseBoolean(l)
+		value, valStr, ok = parseBooleanOrNull(l)
 		if ok {
 			l = forwardParseBuf(l, len(valStr))
 			break

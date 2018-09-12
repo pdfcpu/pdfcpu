@@ -1,3 +1,14 @@
+// Derived from compress/lzw in order to implement
+// Adobe's PDF lzw compression as defined for the LZWDecode filter.
+// See https://www.adobe.com/content/dam/acom/en/devnet/pdf/pdfs/PDF32000_2008.pdf
+// and https://github.com/golang/go/issues/25409.
+//
+// It is also compatible with the TIFF file format.
+//
+// Copyright 2011 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package lzw_test
 
 import (
@@ -9,7 +20,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hhrutter/pdfcpu/pkg/compress/lzw"
+	"github.com/hhrutter/pdfcpu/lzw"
 )
 
 func compareToGolden(t *testing.T, b []byte, fileName string) {
@@ -65,7 +76,7 @@ func testFile(t *testing.T, filePrefix string, earlyChange bool) {
 	// Compress.
 	var b bytes.Buffer
 	wc := lzw.NewWriter(&b, earlyChange)
-	written, err := io.Copy(wc, raw)
+	_, err = io.Copy(wc, raw)
 	if err != nil {
 		t.Errorf("%s: %v", rawFileName, err)
 		return
@@ -74,7 +85,7 @@ func testFile(t *testing.T, filePrefix string, earlyChange bool) {
 
 	// The available test data implies some PDF Writers
 	// do not write the final bits after eof during Close().
-	// This is why do not compare these compressed results to known compressed bytes.
+	// This is why we do not compare these compressed results to known compressed bytes.
 	// See extra step below.
 	//
 	// Compare compressed bytes with the corresponding golden files content.
@@ -85,7 +96,7 @@ func testFile(t *testing.T, filePrefix string, earlyChange bool) {
 	defer rc.Close()
 
 	var dec bytes.Buffer
-	written, err = io.Copy(&dec, rc)
+	written, err := io.Copy(&dec, rc)
 	if err != nil {
 		t.Errorf("%s: %v", encFileName, err)
 		return

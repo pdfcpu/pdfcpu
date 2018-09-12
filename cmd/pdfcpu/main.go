@@ -1,3 +1,20 @@
+/*
+Copyright 2018 The pdfcpu Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+// Package main provides the command line for interacting with pdfcpu.
 package main
 
 import (
@@ -64,54 +81,45 @@ func main() {
 
 	handleVersion(command)
 
-	switch command {
-
-	case "validate":
-		cmd = prepareValidateCommand(config)
-
-	case "optimize", "o":
-		// Always write using 0x0A end of line sequence default.
-		cmd = prepareOptimizeCommand(config)
-
-	case "split", "s":
-		cmd = prepareSplitCommand(config)
-
-	case "merge", "m":
-		cmd = prepareMergeCommand(config)
-
-	case "extract", "ext":
-		cmd = prepareExtractCommand(config)
-
-	case "trim", "t":
-		cmd = prepareTrimCommand(config)
-
-	case "attach":
-		cmd = prepareAttachmentCommand(config)
-
-	case "decrypt", "d", "dec":
-		cmd = prepareDecryptCommand(config)
-
-	case "encrypt", "enc":
-		cmd = prepareEncryptCommand(config)
-
-	case "changeupw", "changeopw":
-		cmd = prepareChangePasswordCommand(config, command)
-
-	case "perm":
-		cmd = preparePermissionsCommand(config)
-
-	case "help", "h":
+	if command == "h" || command == "help" {
 		help()
 		os.Exit(1)
-
-	default:
-		fmt.Fprintf(os.Stderr, "pdfcpu unknown subcommand \"%s\"\n", command)
-		fmt.Fprintln(os.Stderr, "Run 'pdfcpu help' for usage.")
-		os.Exit(1)
-
 	}
 
-	process(cmd)
+	for k, v := range map[string]func(config *pdfcpu.Configuration) *api.Command{
+		"validate":  prepareValidateCommand,
+		"optimize":  prepareOptimizeCommand,
+		"o":         prepareOptimizeCommand,
+		"split":     prepareSplitCommand,
+		"s":         prepareSplitCommand,
+		"merge":     prepareMergeCommand,
+		"m":         prepareMergeCommand,
+		"extract":   prepareExtractCommand,
+		"ext":       prepareExtractCommand,
+		"trim":      prepareTrimCommand,
+		"t":         prepareTrimCommand,
+		"attach":    prepareAttachmentCommand,
+		"decrypt":   prepareDecryptCommand,
+		"d":         prepareDecryptCommand,
+		"dec":       prepareDecryptCommand,
+		"encrypt":   prepareEncryptCommand,
+		"enc":       prepareEncryptCommand,
+		"changeupw": prepareChangeUserPasswordCommand,
+		"changeopw": prepareChangeOwnerPasswordCommand,
+		"perm":      preparePermissionsCommand,
+		"stamp":     prepareAddStampsCommand,
+		"watermark": prepareAddWatermarksCommand,
+	} {
+		if command == k {
+			cmd = v(config)
+			process(cmd)
+			os.Exit(0)
+		}
+	}
+
+	fmt.Fprintf(os.Stderr, "pdfcpu unknown subcommand \"%s\"\n", command)
+	fmt.Fprintln(os.Stderr, "Run 'pdfcpu help' for usage.")
+	os.Exit(1)
 }
 
 func ensurePdfExtension(filename string) {
@@ -122,7 +130,7 @@ func ensurePdfExtension(filename string) {
 
 func defaultFilenameOut(filename string) string {
 	ensurePdfExtension(filename)
-	return strings.TrimSuffix(strings.ToLower(filename), ".pdf") + "_new.pdf"
+	return filename[:len(filename)-4] + "_new.pdf"
 }
 
 func version() {
@@ -137,52 +145,35 @@ func version() {
 
 func helpString(topic string) string {
 
-	switch topic {
-
-	case "validate":
-		return fmt.Sprintf("%s\n\n%s\n", usageValidate, usageLongValidate)
-
-	case "optimize":
-		return fmt.Sprintf("%s\n\n%s\n", usageOptimize, usageLongOptimize)
-
-	case "split":
-		return fmt.Sprintf("%s\n\n%s\n", usageSplit, usageLongSplit)
-
-	case "merge":
-		return fmt.Sprintf("%s\n\n%s\n", usageMerge, usageLongMerge)
-
-	case "extract":
-		return fmt.Sprintf("%s\n\n%s\n\n%s\n", usageExtract, usageLongExtract, usagePageSelection)
-
-	case "trim":
-		return fmt.Sprintf("%s\n\n%s\n\n%s\n", usageTrim, usageLongTrim, usagePageSelection)
-
-	case "attach":
-		return fmt.Sprintf("%s\n\n%s\n", usageAttach, usageLongAttach)
-
-	case "perm":
-		return fmt.Sprintf("%s\n\n%s\n", usagePerm, usageLongPerm)
-
-	case "encrypt":
-		return fmt.Sprintf("%s\n\n%s\n", usageEncrypt, usageLongEncrypt)
-
-	case "decrypt":
-		return fmt.Sprintf("%s\n\n%s\n", usageDecrypt, usageLongDecrypt)
-
-	case "changeupw":
-		return fmt.Sprintf("%s\n\n%s\n", usageChangeUserPW, usageLongChangeUserPW)
-
-	case "changeopw":
-		return fmt.Sprintf("%s\n\n%s\n", usageChangeOwnerPW, usageLongChangeOwnerPW)
-
-	case "version":
-		return fmt.Sprintf("%s\n\n%s\n", usageVersion, usageLongVersion)
-
-	default:
-		return fmt.Sprintf("Unknown help topic `%s`.  Run 'pdfcpu help'.\n", topic)
-
+	for k, v := range map[string]struct {
+		usageShort, usageLong string
+		usagePageSelection    bool
+	}{
+		"validate":  {usageValidate, usageLongValidate, false},
+		"optimize":  {usageOptimize, usageLongOptimize, false},
+		"split":     {usageSplit, usageLongSplit, false},
+		"merge":     {usageMerge, usageLongMerge, false},
+		"extract":   {usageValidate, usageLongValidate, false},
+		"trim":      {usageTrim, usageLongTrim, true},
+		"attach":    {usageAttach, usageLongAttach, false},
+		"perm":      {usagePerm, usageLongPerm, false},
+		"encrypt":   {usageEncrypt, usageLongEncrypt, false},
+		"decrypt":   {usageDecrypt, usageLongDecrypt, false},
+		"changeupw": {usageChangeUserPW, usageLongChangeUserPW, false},
+		"changeopw": {usageChangeOwnerPW, usageLongChangeOwnerPW, false},
+		"stamp":     {usageStamp, usageLongStamp, true},
+		"watermark": {usageWatermark, usageLongWatermark, true},
+		"version":   {usageVersion, usageLongVersion, false},
+	} {
+		if topic == k {
+			if v.usagePageSelection {
+				return fmt.Sprintf("%s\n\n%s\n\n%s\n", v.usageShort, v.usageLong, usagePageSelection)
+			}
+			return fmt.Sprintf("%s\n\n%s\n", v.usageShort, v.usageLong)
+		}
 	}
 
+	return fmt.Sprintf("Unknown help topic `%s`.  Run 'pdfcpu help'.\n", topic)
 }
 
 func help() {
@@ -227,6 +218,7 @@ func parseFlagsAndGetCommand() (command string) {
 	command = os.Args[1]
 
 	i := 2
+
 	// The attach command uses a subcommand and is therefore a special case => start flag processing after 3rd argument.
 	if command == "attach" {
 		if len(os.Args) == 2 {
@@ -236,6 +228,7 @@ func parseFlagsAndGetCommand() (command string) {
 		i = 3
 	}
 
+	// The perm command uses a subcommand and is therefore a special case => start flag processing after 3rd argument.
 	if command == "perm" {
 		if len(os.Args) == 2 {
 			fmt.Fprintln(os.Stderr, usagePerm)

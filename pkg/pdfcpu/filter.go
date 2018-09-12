@@ -1,9 +1,27 @@
+/*
+Copyright 2018 The pdfcpu Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package pdfcpu
 
 // See 7.4 for a list of the defined filters.
 
 import (
 	"bytes"
+	"encoding/hex"
+	"fmt"
 	"io"
 
 	"github.com/hhrutter/pdfcpu/pkg/filter"
@@ -41,7 +59,10 @@ func encodeStream(sd *PDFStreamDict) error {
 		sd.Raw = sd.Content
 		streamLength := int64(len(sd.Raw))
 		sd.StreamLength = &streamLength
-		sd.Insert("Length", PDFInteger(streamLength))
+		ok := sd.Insert("Length", PDFInteger(streamLength))
+		if !ok {
+			sd.Update("Length", PDFInteger(streamLength))
+		}
 		return nil
 	}
 
@@ -79,7 +100,11 @@ func encodeStream(sd *PDFStreamDict) error {
 
 	streamLength := int64(len(sd.Raw))
 	sd.StreamLength = &streamLength
-	sd.Insert("Length", PDFInteger(streamLength))
+
+	ok := sd.Insert("Length", PDFInteger(streamLength))
+	if !ok {
+		sd.Update("Length", PDFInteger(streamLength))
+	}
 
 	log.Debug.Printf("encodeStream end")
 
@@ -99,7 +124,7 @@ func decodeStream(sd *PDFStreamDict) error {
 	// No filter specified, nothing to decode.
 	if sd.FilterPipeline == nil {
 		sd.Content = sd.Raw
-		//fmt.Printf("decodedStream returning %d(#%02x)bytes: \n%s\n", len(sd.Content), len(sd.Content), hex.Dump(sd.Content))
+		fmt.Printf("decodedStream returning %d(#%02x)bytes: \n%s\n", len(sd.Content), len(sd.Content), hex.Dump(sd.Content))
 		return nil
 	}
 

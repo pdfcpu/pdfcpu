@@ -11,6 +11,8 @@ The available commands are:
 	merge		concatenate 2 or more PDFs
 	extract		extract images, fonts, content or pages
 	trim		create trimmed version
+	stamp		add text or image stamp to selected pages
+	watermark	add texrt or image watermark for selected pages
 	attach		list, add, remove, extract embedded file attachments
 	perm		list, add user access permissions
 	encrypt		set password protection

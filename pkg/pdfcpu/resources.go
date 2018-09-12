@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The pdfcpu Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package pdfcpu
 
 import (
@@ -86,7 +102,7 @@ func (fo FontObject) String() string {
 type ImageObject struct {
 	ResourceNames []string
 	ImageDict     *PDFStreamDict
-	Extension     string
+	//Extension     string
 }
 
 // AddResourceName adds a resourceName to this imageObject's ResourceNames dict.
@@ -109,9 +125,9 @@ func (io ImageObject) ResourceNamesString() string {
 }
 
 // Data returns the raw data belonging to this image object.
-func (io ImageObject) Data() []byte {
-	if io.Extension == "png" {
-		return io.ImageDict.Content
-	}
-	return io.ImageDict.Raw
-}
+// func (io ImageObject) Data() []byte {
+// 	if io.Extension == "png" {
+// 		return io.ImageDict.Content
+// 	}
+// 	return io.ImageDict.Raw
+// }

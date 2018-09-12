@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The pdfcpu Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package pdfcpu
 
 import (
@@ -75,7 +91,7 @@ func validateOPIDictV13Part1(xRefTable *XRefTable, dict *PDFDict, dictName strin
 	}
 
 	// Version, required, number
-	_, err = validateFloatEntry(xRefTable, dict, dictName, "Version", REQUIRED, V10, func(f float64) bool { return f == 1.3 })
+	_, err = validateNumberEntry(xRefTable, dict, dictName, "Version", REQUIRED, V10, func(f float64) bool { return f == 1.3 })
 	if err != nil {
 		return err
 	}
@@ -229,7 +245,7 @@ func validateOPIDictV20(xRefTable *XRefTable, dict *PDFDict) error {
 		return err
 	}
 
-	_, err = validateFloatEntry(xRefTable, dict, dictName, "Version", REQUIRED, V10, func(f float64) bool { return f == 2.0 })
+	_, err = validateNumberEntry(xRefTable, dict, dictName, "Version", REQUIRED, V10, func(f float64) bool { return f == 2.0 })
 	if err != nil {
 		return err
 	}
@@ -598,6 +614,9 @@ func validateFormStreamDictPart1(xRefTable *XRefTable, streamDict *PDFStreamDict
 	// Resources, dict, optional, since V1.2
 	if obj, ok := streamDict.Find("Resources"); ok {
 		_, err = validateResourceDict(xRefTable, obj)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Group, dict, optional, since V1.4

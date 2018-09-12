@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The pdfcpu Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package pdfcpu
 
 // Functions needed to create a test.pdf that gets used for validation testing (see process_test.go)
@@ -48,11 +64,31 @@ func createXRefTableWithRootDict() (*XRefTable, error) {
 	return xRefTable, nil
 }
 
+// CreateDemoXRef creates a minimal PDF file for demo purposes.
+func CreateDemoXRef() (*XRefTable, error) {
+
+	xRefTable, err := createXRefTableWithRootDict()
+	if err != nil {
+		return nil, err
+	}
+
+	rootDict, err := xRefTable.Catalog()
+	if err != nil {
+		return nil, err
+	}
+
+	err = addPageTree(xRefTable, rootDict)
+	if err != nil {
+		return nil, err
+	}
+
+	return xRefTable, nil
+}
+
 func createFontDict(xRefTable *XRefTable) (*PDFIndirectRef, error) {
 
 	d := NewPDFDict()
 	d.InsertName("Type", "Font")
-	//d.InsertName("Name", "Helvetica")
 	d.InsertName("Subtype", "Type1")
 	d.InsertName("BaseFont", "Helvetica")
 
@@ -486,21 +522,57 @@ func addResources(xRefTable *XRefTable, pageDict *PDFDict) error {
 	return nil
 }
 
-func addContents(xRefTable *XRefTable, pageDict *PDFDict) error {
+func addContents(xRefTable *XRefTable, pageDict *PDFDict, mediaBox *PDFArray) error {
 
 	contents := &PDFStreamDict{PDFDict: NewPDFDict()}
 	contents.InsertName("Filter", filter.Flate)
 	contents.FilterPipeline = []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}
 
-	// Page dimensions: 595.27, 841.89
+	mb := rect(xRefTable, *mediaBox)
+
+	// Page dimensions: 595.27, 841.89 xcxcvxcv
 
 	var b bytes.Buffer
 
-	b.WriteString("BT /F1 12 Tf 0 1 Td 0 Tr 0.5 g (lower left) Tj ET ")
-	b.WriteString("BT /F1 12 Tf 0 832 Td 0 Tr (upper left) Tj ET ")
-	b.WriteString("BT /F1 12 Tf 537 832 Td 0 Tr (upper right) Tj ET ")
-	b.WriteString("BT /F1 12 Tf 540 1 Td 0 Tr (lower right) Tj ET ")
-	b.WriteString("BT /F1 12 Tf 297.55 420.5 Td (X) Tj ET ")
+	b.WriteString("[3]0 d 0 w ")
+
+	fmt.Fprintf(&b, "0 0 m %f %f l s %f 0 m 0 %f l s ", mb.Width(), mb.Height(), mb.Width(), mb.Height())
+	fmt.Fprintf(&b, "%f 0 m %f %f l s 0 %f m %f %f l s ", mb.Width()/2, mb.Width()/2, mb.Height(), mb.Height()/2, mb.Width(), mb.Height()/2)
+
+	// // Horizontal guides
+	b.WriteString("0 500 m 400 500 l s ")
+	b.WriteString("0 400 m 400 400 l s ")
+	b.WriteString("0 200 m 400 200 l s ")
+	b.WriteString("0 100 m 400 100 l s ")
+
+	// // Vertical guides
+	b.WriteString("100 0 m 100 600 l s ")
+	b.WriteString("300 0 m 300 600 l s ")
+	// b.WriteString("267.64 0 m 267.64 841.89 l s ")
+	// b.WriteString("257.64 0 m 257.64 841.89 l s ")
+	// b.WriteString("247.64 0 m 247.64 841.89 l s ")
+	// b.WriteString("237.64 0 m 237.64 841.89 l s ")
+	// b.WriteString("227.64 0 m 227.64 841.89 l s ")
+	// b.WriteString("217.64 0 m 217.64 841.89 l s ")
+	// b.WriteString("207.64 0 m 207.64 841.89 l s ")
+	// b.WriteString("197.64 0 m 197.64 841.89 l s ")
+
+	// b.WriteString("307.64 0 m 307.64 841.89 l s ")
+	// b.WriteString("317.64 0 m 317.64 841.89 l s ")
+	// b.WriteString("327.64 0 m 327.64 841.89 l s ")
+	// b.WriteString("337.64 0 m 337.64 841.89 l s ")
+	// b.WriteString("347.64 0 m 347.64 841.89 l s ")
+	// b.WriteString("357.64 0 m 357.64 841.89 l s ")
+	// b.WriteString("367.64 0 m 367.64 841.89 l s ")
+	// b.WriteString("377.64 0 m 377.64 841.89 l s ")
+	// b.WriteString("387.64 0 m 387.64 841.89 l s ")
+	// b.WriteString("397.64 0 m 397.64 841.89 l s ")
+
+	// b.WriteString("BT /F1 12 Tf 0 1 Td 0 Tr (lower left) Tj ET ")
+	// b.WriteString("BT /F1 12 Tf 0 832 Td 0 Tr (upper left) Tj ET ")
+	// b.WriteString("BT /F1 12 Tf 537 832 Td 0 Tr (upper right) Tj ET ")
+	// b.WriteString("BT /F1 12 Tf 540 1 Td 0 Tr (lower right) Tj ET ")
+	// b.WriteString("BT /F1 12 Tf 297.55 420.5 Td (pdfcpu powered by Go) Tj ET ")
 
 	// t := `BT /F1 12 Tf 0 1 Td 0 Tr 0.5 g (lower left) Tj ET `
 	// t += "BT /F1 12 Tf 0 832 Td 0 Tr (upper left) Tj ET "
@@ -736,7 +808,7 @@ func createPageWithAnnotations(xRefTable *XRefTable, parentPageIndRef *PDFIndire
 		return nil, err
 	}
 
-	err = addContents(xRefTable, pageDict)
+	err = addContents(xRefTable, pageDict, mediaBox)
 	if err != nil {
 		return nil, err
 	}
@@ -799,7 +871,7 @@ func createPageWithAcroForm(xRefTable *XRefTable, parentPageIndRef *PDFIndirectR
 		return nil, err
 	}
 
-	err = addContents(xRefTable, pageDict)
+	err = addContents(xRefTable, pageDict, mediaBox)
 	if err != nil {
 		return nil, err
 	}
@@ -807,6 +879,78 @@ func createPageWithAcroForm(xRefTable *XRefTable, parentPageIndRef *PDFIndirectR
 	pageDict.Insert("Annots", *annotsArray)
 
 	return xRefTable.IndRefForNewObject(*pageDict)
+}
+
+func createPage(xRefTable *XRefTable, parentPageIndRef *PDFIndirectRef, mediaBox *PDFArray) (*PDFIndirectRef, error) {
+
+	pageDict := &PDFDict{
+		Dict: map[string]PDFObject{
+			"Type":   PDFName("Page"),
+			"Parent": *parentPageIndRef,
+		},
+	}
+
+	fIndRef, err := createFontDict(xRefTable)
+	if err != nil {
+		return nil, err
+	}
+
+	fontResources := PDFDict{
+		Dict: map[string]PDFObject{
+			"F1": *fIndRef,
+		},
+	}
+
+	resourceDict := PDFDict{
+		Dict: map[string]PDFObject{
+			"Font": fontResources,
+		},
+	}
+
+	pageDict.Insert("Resources", resourceDict)
+
+	err = addContents(xRefTable, pageDict, mediaBox)
+	if err != nil {
+		return nil, err
+	}
+
+	pageIndRef, err := xRefTable.IndRefForNewObject(*pageDict)
+	if err != nil {
+		return nil, err
+	}
+
+	return pageIndRef, nil
+}
+
+func addPageTree(xRefTable *XRefTable, rootDict *PDFDict) error {
+
+	// mediabox = physical page dimensions
+	//mediaBox := NewRectangle(0, 0, 595.27, 841.89)
+	mediaBox := NewRectangle(0, 0, 400, 600)
+
+	pagesDict := PDFDict{
+		Dict: map[string]PDFObject{
+			"Type":     PDFName("Pages"),
+			"Count":    PDFInteger(1),
+			"MediaBox": mediaBox,
+		},
+	}
+
+	parentPageIndRef, err := xRefTable.IndRefForNewObject(pagesDict)
+	if err != nil {
+		return err
+	}
+
+	pageIndRef, err := createPage(xRefTable, parentPageIndRef, &mediaBox)
+	if err != nil {
+		return err
+	}
+
+	pagesDict.Insert("Kids", PDFArray{*pageIndRef})
+
+	rootDict.Insert("Pages", *parentPageIndRef)
+
+	return nil
 }
 
 func addPageTreeWithAnnotations(xRefTable *XRefTable, rootDict *PDFDict) (*PDFIndirectRef, error) {
@@ -1736,8 +1880,8 @@ func CreateAcroFormDemoXRef() (*XRefTable, error) {
 	return xRefTable, nil
 }
 
-// CreateDemoPDF creates a demo PDF file for testing validation.
-func CreateDemoPDF(xRefTable *XRefTable, dirName, fileName string) error {
+// CreatePDF creates a PDF file for an xRefTable.
+func CreatePDF(xRefTable *XRefTable, dirName, fileName string) error {
 
 	config := NewDefaultConfiguration()
 

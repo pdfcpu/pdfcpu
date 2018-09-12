@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The pdfcpu Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package pdfcpu
 
 import (
@@ -9,9 +25,8 @@ import (
 )
 
 // ExtractImageData extracts image data for objNr.
-// Supported imgTypes: DCTDecode, JPXDecode
-// Note: This is a naive implementation that just returns encoded image bytes.
-// Hence TODO: Implementation and usage of these filters: DCTDecode and JPXDecode.
+// Supported imgTypes: FlateDecode, DCTDecode, JPXDecode
+// TODO: Implementation and usage of these filters: DCTDecode and JPXDecode.
 func ExtractImageData(ctx *PDFContext, objNr int) (*ImageObject, error) {
 
 	imageObj := ctx.Optimize.ImageObjects[objNr]
@@ -56,20 +71,24 @@ func ExtractImageData(ctx *PDFContext, objNr int) (*ImageObject, error) {
 	switch fpl[0].Name {
 
 	case filter.Flate:
-		imageObj.Extension = "png"
+		//imageObj.Extension = "png"
+		// If color space is CMYK then write .tif else write .png
 		err := decodeStream(imageDict)
 		if err != nil {
 			return nil, err
 		}
 
 	case filter.DCT:
-		imageObj.Extension = "jpg"
+		//imageObj.Extension = "jpg"
 
 	case filter.JPX:
-		imageObj.Extension = "jpx"
+		//imageObj.Extension = "jpx"
+
+	//case filter.CCITTFax:
+	// use 	T6.pdf
 
 	default:
-		log.Debug.Printf("extractImageData: ignore obj# %d filter neither \"DCTDecode\" nor \"JPXDecode\"\n%s", objNr, filters)
+		log.Debug.Printf("extractImageData: ignore obj# %d filter %s unsupported\n", objNr, filters)
 		return nil, nil
 	}
 

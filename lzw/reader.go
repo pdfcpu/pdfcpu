@@ -3,6 +3,8 @@
 // See https://www.adobe.com/content/dam/acom/en/devnet/pdf/pdfs/PDF32000_2008.pdf
 // and https://github.com/golang/go/issues/25409.
 //
+// It is also compatible with the TIFF file format.
+//
 // Copyright 2011 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
@@ -14,30 +16,12 @@
 // In particular, it implements LZW as used by the GIF and PDF file
 // formats, which means variable-width codes up to 12 bits and the first
 // two non-literal codes are a clear code and an EOF code.
-//
-// The TIFF file format uses a similar but incompatible version of the LZW
-// algorithm. See the golang.org/x/image/tiff/lzw package for an
-// implementation.
 package lzw
-
-// TODO(nigeltao): check that PDF uses LZW in the same way as GIF,
-// modulo LSB/MSB packing order.
 
 import (
 	"bufio"
 	"errors"
 	"io"
-)
-
-// Order specifies the bit ordering in an LZW data stream.
-type Order int
-
-const (
-	// LSB means Least Significant Bits first, as used in the GIF file format.
-	LSB Order = iota
-	// MSB means Most Significant Bits first, as used in the TIFF and PDF
-	// file formats.
-	MSB
 )
 
 const (
@@ -53,7 +37,7 @@ type decoder struct {
 	bits     uint32
 	nBits    uint
 	width    uint
-	read     func(*decoder) (uint16, error) // readLSB or readMSB
+	read     func(*decoder) (uint16, error) // readMSB always for PDF and TIFF
 	litWidth uint                           // width in bits of literal codes
 	err      error
 

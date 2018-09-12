@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The pdfcpu Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package pdfcpu
 
 import (
@@ -52,6 +68,11 @@ func WritePDFFile(ctx *PDFContext) error {
 	err = writeHeader(ctx.Write, V17)
 	if err != nil {
 		return err
+	}
+
+	// Ensure there is no root version.
+	if ctx.RootVersion != nil {
+		ctx.RootDict.Delete("Version")
 	}
 
 	log.Debug.Printf("offset after writeHeader: %d\n", ctx.Write.Offset)
@@ -433,8 +454,8 @@ func deleteRedundantObjects(ctx *PDFContext) {
 
 		// Object not written
 
-		if ctx.Read.Linearized {
-
+		if ctx.Read.Linearized && entry.Offset != nil {
+			// This block applies to pre existing objects only.
 			// Since there is no type entry for stream dicts associated with linearization dicts
 			// we have to check every PDFStreamDict that has not been written.
 			if _, ok := entry.Object.(PDFStreamDict); ok {

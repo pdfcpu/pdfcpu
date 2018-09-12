@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The pdfcpu Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 const (
@@ -21,6 +37,8 @@ The commands are:
 	decrypt		remove password protection
 	changeupw	change user password
 	changeopw	change owner password
+	stamp		add stamps
+	watermark	add watermarks
 	version		print version
    
 	Single-letter Unix-style supported for commands and flags.
@@ -81,38 +99,37 @@ verbose ... extensive log output
 
  The extraction modes are:
 
-  image ... extract images (supported PDF filters: DCTDecode, JPXDecode)
+  image ... extract images (supported PDF filters: Flate, DCTDecode, JPXDecode)
    font ... extract font files (supported font types: TrueType)
 content ... extract raw page content
    page ... extract single page PDFs`
 
-	usageTrim     = "usage: pdfcpu trim [-verbose] -pages pageSelection [-upw userpw] [-opw ownerpw] inFile outFile"
-	usageLongTrim = `Trim generates a trimmed version of inFile for selectedPages.
+	usageTrim     = "usage: pdfcpu trim [-verbose] -pages pageSelection [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageLongTrim = `Trim generates a trimmed version of inFile for selected pages.
 
 verbose ... extensive log output
   pages ... page selection
     upw ... user password
     opw ... owner password
- inFile ... input pdf file 
-outFile ... output pdf file, the trimmed version of inFile`
+ inFile ... input pdf file
+outFile ... output pdf file (default: inFile-new.pdf)`
 
-	usagePageSelection = `pageSelection selects pages for processing and is a comma separated list of expressions:
+	usagePageSelection = `<pages> selects pages for processing and is a comma separated list of expressions:
 
-Valid expressions are:
+	Valid expressions are:
 
-  # ... include page #               #-# ... include page range
- !# ... exclude page #              !#-# ... exclude page range
- n# ... exclude page #              n#-# ... exclude page range
+	even ... include even pages           odd ... include odd pages
+  	   # ... include page #               #-# ... include page range
+ 	  !# ... exclude page #              !#-# ... exclude page range
+ 	  n# ... exclude page #              n#-# ... exclude page range
 
- #- ... include page # - last page    -# ... include first page - page #
-!#- ... exclude page # - last page   !-# ... exclude first page - page #
-n#- ... exclude page # - last page   n-# ... exclude first page - page #
+	  #- ... include page # - last page    -# ... include first page - page #
+ 	 !#- ... exclude page # - last page   !-# ... exclude first page - page #
+ 	 n#- ... exclude page # - last page   n-# ... exclude first page - page #
 
-n serves as an alternative for !, since ! needs to be escaped with single quotes on the cmd line.
+	n serves as an alternative for !, since ! needs to be escaped with single quotes on the cmd line.
 
-Valid pageSelections e.g. -3,5,7- or 4-7,!6 or 1-,!5
-
-A missing pageSelection means all pages are selected for generation.`
+e.g. -3,5,7- or 4-7,!6 or 1-,!5 or odd,n1`
 
 	usageAttachList    = "pdfcpu attach list [-verbose] [-upw userpw] [-opw ownerpw] inFile"
 	usageAttachAdd     = "pdfcpu attach add [-verbose] [-upw userpw] [-opw ownerpw] inFile file..."
@@ -136,7 +153,8 @@ verbose ... extensive log output
 	usagePermList = "pdfcpu perm list [-verbose] [-upw userpw] [-opw ownerpw] inFile"
 	usagePermAdd  = "pdfcpu perm add [-verbose] [-perm none|all] [-upw userpw] -opw ownerpw inFile"
 
-	usagePerm = "usage: " + usagePermList + "\n       " + usagePermAdd
+	usagePerm = "usage: " + usagePermList +
+		"\n       " + usagePermAdd
 
 	usageLongPerm = `Perm manages user access permissions.
 	
@@ -184,6 +202,54 @@ verbose ... extensive log output
  inFile ... input pdf file
  opwOld ... old owner password (supply user password on initial changeopw)
  opwNew ... new owner password`
+
+	usageWMDescription = `<description> is a comma separated configuration string containing:
+	
+    1st entry: display text string or image file name with extension png
+
+    optional entries:
+	
+         (defaults: 'f:Helvetica, p:24, s:0.5 rel, c:0.5 0.5 0.5, d:1, o:1, m:0')
+	
+      f: fontname, a basefont, supported are: Helvetica, Times-Roman, Courier
+      p: fontsize in points
+      s: scale factor, 0.0 <= x <= 1.0 followed by optional 'abs|rel'
+      c: color: 3 fill color intensities, where 0.0 < i < 1.0, eg 1.0, 0.0 0.0 = red (default:0.5 0.5 0.5 = gray)
+      r: rotation, where -180.0 <= x <= 180.0
+      d: render along diagonal, 1..lower left to upper right, 2..upper left to lower right
+      o: opacity, where 0.0 <= x <= 1.0
+      m: render mode: 0 ... fill
+                      1 ... stroke
+                      2 ... fill & stroke
+
+    Only one of rotation and diagonal is allowed.
+
+e.g. 'Draft'                                                  'logo.png'
+     'Draft, d:2'                                             'logo.png, o:0,5, s:0.5 abs, r:0'
+     'Intentionally left blank, p:48'
+     'Confidental, f:Courier, s:0.75, c: 0.5 0.0 0.0, r:20'`
+
+	usageStamp     = "usage: pdfcpu stamp [-verbose] -pages pageSelection description inFile [outFile]"
+	usageLongStamp = `Stamp adds stamps for selected pages. 
+
+    verbose ... extensive log output
+      pages ... page selection
+description ... font, text, color, rotation
+     inFile ... input pdf file
+    outFile ... output pdf file (default: inFile-new.pdf)
+
+` + usageWMDescription
+
+	usageWatermark     = "usage: pdfcpu watermark [-verbose] -pages pageSelection description inFile [outFile]"
+	usageLongWatermark = `Watermark adds watermarks for selected pages. 
+
+    verbose ... extensive log output
+      pages ... page selection
+description ... font, text, color, rotation
+     inFile ... input pdf file
+    outFile ... output pdf file (default: inFile-new.pdf)
+
+` + usageWMDescription
 
 	usageVersion     = "usage: pdfcpu version"
 	usageLongVersion = "Version prints the pdfcpu version"

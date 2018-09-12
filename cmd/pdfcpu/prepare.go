@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The pdfcpu Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
@@ -441,4 +457,42 @@ func prepareChangePasswordCommand(config *pdfcpu.Configuration, s string) *api.C
 	}
 
 	return cmd
+}
+
+func prepareWatermarksCommand(config *pdfcpu.Configuration, onTop bool) *api.Command {
+
+	if len(flag.Args()) < 2 || len(flag.Args()) > 3 {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageStamp)
+		os.Exit(1)
+	}
+
+	pages, err := api.ParsePageSelection(pageSelection)
+	if err != nil {
+		log.Fatalf("problem with flag pageSelection: %v", err)
+	}
+
+	//fmt.Printf("details: <%s>\n", flag.Arg(0))
+	wm, err := pdfcpu.ParseWatermarkDetails(flag.Arg(0), onTop)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+
+	filenameIn := flag.Arg(1)
+	ensurePdfExtension(filenameIn)
+
+	filenameOut := defaultFilenameOut(filenameIn)
+	if len(flag.Args()) == 3 {
+		filenameOut = flag.Arg(2)
+		ensurePdfExtension(filenameOut)
+	}
+
+	return api.AddWatermarksCommand(filenameIn, filenameOut, pages, wm, config)
+}
+
+func prepareAddStampsCommand(config *pdfcpu.Configuration) *api.Command {
+	return prepareWatermarksCommand(config, true)
+}
+
+func prepareAddWatermarksCommand(config *pdfcpu.Configuration) *api.Command {
+	return prepareWatermarksCommand(config, false)
 }

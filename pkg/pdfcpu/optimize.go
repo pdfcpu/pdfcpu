@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The pdfcpu Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package pdfcpu
 
 import (
@@ -100,7 +116,7 @@ func handleDuplicateFontObject(ctx *PDFContext, font *PDFDict, fontName, resourc
 
 		log.Debug.Printf("handleDuplicateFontObject: comparing with fontDict Obj %d\n", fontObjectNumber)
 
-		ok, err := equalFontDicts(fontObject.FontDict, font, ctx)
+		ok, err := equalFontDicts(fontObject.FontDict, font, ctx.XRefTable)
 		if err != nil {
 			return nil, err
 		}
@@ -281,7 +297,7 @@ func handleDuplicateImageObject(ctx *PDFContext, image *PDFStreamDict, resourceN
 
 		log.Debug.Printf("handleDuplicateImageObject: comparing with imagedict Obj %d\n", imageObjectNumber)
 
-		ok, err := equalPDFStreamDicts(imageObject.ImageDict, image, ctx)
+		ok, err := equalPDFStreamDicts(imageObject.ImageDict, image, ctx.XRefTable)
 		if err != nil {
 			return nil, err
 		}
