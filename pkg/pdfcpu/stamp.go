@@ -949,14 +949,14 @@ func watermarkPage(xRefTable *XRefTable, i int, wm *Watermark) error {
 
 	fmt.Printf("watermark page %d\n", i)
 
-	d, resources, mediaBox, cropBox, rotate, err := xRefTable.PageDict(i)
+	d, inhPAttrs, err := xRefTable.PageDict(i)
 	if err != nil {
 		return err
 	}
 
-	visibleRegion := mediaBox
-	if cropBox != nil {
-		visibleRegion = cropBox
+	visibleRegion := inhPAttrs.mediaBox
+	if inhPAttrs.cropBox != nil {
+		visibleRegion = inhPAttrs.cropBox
 	}
 	vp := rect(xRefTable, *visibleRegion)
 	if err != nil {
@@ -971,10 +971,11 @@ func watermarkPage(xRefTable *XRefTable, i int, wm *Watermark) error {
 		return err
 	}
 
-	wm.pageRot = 0
-	if rotate != nil && *rotate != 0 {
-		wm.pageRot = *rotate
-	}
+	wm.pageRot = inhPAttrs.rotate
+	// wm.pageRot = 0
+	// if inhPAttrs.rotate != nil && *rotate != 0 {
+	// 	wm.pageRot = *rotate
+	// }
 
 	// if resources != nil {
 	// 	fmt.Printf("resourceDict: %s\n", *resources)
@@ -984,10 +985,10 @@ func watermarkPage(xRefTable *XRefTable, i int, wm *Watermark) error {
 	gsID := "GS0"
 	xoID := "Fm0"
 
-	if resources == nil {
+	if inhPAttrs.resources == nil {
 		err = insertPageResourcesForWM(xRefTable, d, wm, gsID, xoID)
 	} else {
-		err = updatePageResourcesForWM(xRefTable, resources, wm, &gsID, &xoID)
+		err = updatePageResourcesForWM(xRefTable, inhPAttrs.resources, wm, &gsID, &xoID)
 	}
 	if err != nil {
 		return err

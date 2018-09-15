@@ -94,7 +94,7 @@ type XRefTable struct {
 
 	// Document information section
 	Info     *PDFIndirectRef // Infodict (reference to info dict object)
-	ID       *PDFArray       // from info dict (or trailer?)
+	ID       *PDFArray       // from trailer
 	Author   string
 	Creator  string
 	Producer string
@@ -1468,13 +1468,61 @@ func (xRefTable *XRefTable) IDFirstElement() (id []byte, err error) {
 	return Unescape(sl.Value())
 }
 
-func (xRefTable *XRefTable) processPageTree(root *PDFIndirectRef, resources *PDFDict, mediaBox, cropBox *PDFArray, rotate *float64, p *int, page int) (*PDFDict, *PDFDict, *PDFArray, *PDFArray, *float64, error) {
+// InheritedPageAttrs represents all inherited page attributes.
+type InheritedPageAttrs struct {
+	resources *PDFDict
+	mediaBox  *PDFArray
+	cropBox   *PDFArray
+	rotate    float64
+}
+
+func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict *PDFDict, pAttrs *InheritedPageAttrs) error {
+
+	var err error
+
+	obj, found := pageDict.Find("Resources")
+	if found {
+		pAttrs.resources, err = xRefTable.DereferenceDict(obj)
+		if err != nil {
+			return err
+		}
+	}
+
+	obj, found = pageDict.Find("MediaBox")
+	if found {
+		pAttrs.mediaBox, err = xRefTable.DereferenceArray(obj)
+		if err != nil {
+			return err
+		}
+	}
+
+	obj, found = pageDict.Find("CropBox")
+	if found {
+		pAttrs.cropBox, err = xRefTable.DereferenceArray(obj)
+		if err != nil {
+			return err
+		}
+	}
+
+	obj, found = pageDict.Find("Rotate")
+	if found {
+		//fmt.Printf("found Rotate: %v %T\n", obj, obj)
+		pAttrs.rotate = xRefTable.DereferenceNumber(obj)
+		//fmt.Printf("r=%v %T\n", r, r)
+		//pAttrs.rotate = &r
+		//fmt.Printf("found rotate(%f) for page %d\n", *rotate, *p)
+	}
+
+	return nil
+}
+
+func (xRefTable *XRefTable) processPageTree(root *PDFIndirectRef, pAttrs *InheritedPageAttrs, p *int, page int) (*PDFDict, error) {
 
 	//fmt.Printf("entering processPage: p=%d obj#%d\n", *p, root.ObjectNumber.Value())
 
 	dict, err := xRefTable.DereferenceDict(*root)
 	if err != nil {
-		return nil, nil, nil, nil, nil, err
+		return nil, err
 	}
 
 	pageCount := dict.IntEntry("Count")
@@ -1482,48 +1530,20 @@ func (xRefTable *XRefTable) processPageTree(root *PDFIndirectRef, resources *PDF
 		if *p+*pageCount < page {
 			// Skip sub pagetree.
 			*p += *pageCount
-			return nil, resources, mediaBox, cropBox, rotate, nil
+			return nil, nil
 		}
 	}
 
-	obj, found := dict.Find("Resources")
-	if found {
-		resources, err = xRefTable.DereferenceDict(obj)
-		if err != nil {
-			return nil, nil, nil, nil, nil, err
-		}
-	}
-
-	obj, found = dict.Find("MediaBox")
-	if found {
-		mediaBox, err = xRefTable.DereferenceArray(obj)
-		if err != nil {
-			return nil, nil, nil, nil, nil, err
-		}
-	}
-
-	obj, found = dict.Find("CropBox")
-	if found {
-		cropBox, err = xRefTable.DereferenceArray(obj)
-		if err != nil {
-			return nil, nil, nil, nil, nil, err
-		}
-	}
-
-	obj, found = dict.Find("Rotate")
-	if found {
-		//fmt.Printf("found Rotate: %v %T\n", obj, obj)
-		r := xRefTable.DereferenceNumber(obj)
-		//fmt.Printf("r=%v %T\n", r, r)
-		rotate = &r
-		//fmt.Printf("found rotate(%f) for page %d\n", *rotate, *p)
+	err = xRefTable.checkInheritedPageAttrs(dict, pAttrs)
+	if err != nil {
+		return nil, err
 	}
 
 	// Iterate over page tree.
 	kids := dict.PDFArrayEntry("Kids")
 	if kids == nil {
 		//fmt.Println("returning from leaf node")
-		return dict, resources, mediaBox, cropBox, rotate, nil
+		return dict, nil
 	}
 
 	for _, obj := range *kids {
@@ -1535,53 +1555,57 @@ func (xRefTable *XRefTable) processPageTree(root *PDFIndirectRef, resources *PDF
 		// Dereference next page node dict.
 		indRef, ok := obj.(PDFIndirectRef)
 		if !ok {
-			return nil, nil, nil, nil, nil, errors.Errorf("processPageTree: corrupt page node dict")
+			return nil, errors.Errorf("processPageTree: corrupt page node dict")
 		}
 
 		pageNodeDict, err := xRefTable.DereferenceDict(indRef)
 		if err != nil {
-			return nil, nil, nil, nil, nil, err
-		}
-
-		if pageNodeDict == nil {
-			return nil, nil, nil, nil, nil, errors.New("processPagesDict: pageNodeDict is null")
+			return nil, err
 		}
 
 		switch *pageNodeDict.Type() {
 
 		case "Pages":
 			// Recurse over sub pagetree.
-			pageNodeDict, resources, mediaBox, cropBox, rotate, err = xRefTable.processPageTree(&indRef, resources, mediaBox, cropBox, rotate, p, page)
+			pageNodeDict, err = xRefTable.processPageTree(&indRef, pAttrs, p, page)
 			if err != nil {
-				return nil, nil, nil, nil, nil, err
+				return nil, err
 			}
 			if pageNodeDict != nil {
-				return pageNodeDict, resources, mediaBox, cropBox, rotate, nil
+				return pageNodeDict, nil
 			}
 
 		case "Page":
 			// page found.
 			*p++
 			if *p == page {
-				return xRefTable.processPageTree(&indRef, resources, mediaBox, cropBox, rotate, p, page)
+				return xRefTable.processPageTree(&indRef, pAttrs, p, page)
 			}
 
 		}
 
 	}
 
-	return nil, nil, nil, nil, nil, nil
+	return nil, nil
 }
 
 // PageDict returns a specific page dict along with the resources, mediaBox and CropBox in effect.
-func (xRefTable *XRefTable) PageDict(page int) (pageDict, resources *PDFDict, mediaBox, cropBox *PDFArray, rotate *float64, err error) {
+func (xRefTable *XRefTable) PageDict(page int) (*PDFDict, *InheritedPageAttrs, error) {
 
 	// Get an indirect reference to the page tree root dict.
 	root, err := xRefTable.Pages()
 	if err != nil {
-		return nil, nil, nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	pageCount := 0
-	return xRefTable.processPageTree(root, nil, nil, nil, nil, &pageCount, page)
+
+	inhPAttrs := &InheritedPageAttrs{}
+
+	pageDict, err := xRefTable.processPageTree(root, inhPAttrs, &pageCount, page)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return pageDict, inhPAttrs, nil
 }

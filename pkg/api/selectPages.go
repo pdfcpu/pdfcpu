@@ -164,6 +164,39 @@ func selectOddPages(selectedPages *pdfcpu.IntSet, pageCount int) {
 	}
 }
 
+func parsePageRange(pr []string, pageCount int, negated bool, selectedPages pdfcpu.IntSet) error {
+
+	from, err := strconv.Atoi(pr[0])
+	if err != nil {
+		return err
+	}
+
+	// Handle overflow gracefully
+	if from > pageCount {
+		return nil
+	}
+
+	thru, err := strconv.Atoi(pr[1])
+	if err != nil {
+		return err
+	}
+
+	// Handle overflow gracefully
+	if thru < from {
+		return nil
+	}
+
+	if thru > pageCount {
+		thru = pageCount
+	}
+
+	for i := from; i <= thru; i++ {
+		selectedPages[i] = !negated
+	}
+
+	return nil
+}
+
 func selectedPages(pageCount int, pageSelection []string) (pdfcpu.IntSet, error) {
 
 	selectedPages := pdfcpu.IntSet{}
@@ -220,32 +253,9 @@ func selectedPages(pageCount int, pageSelection []string) (pdfcpu.IntSet, error)
 		pr := strings.Split(v, "-")
 		if len(pr) == 2 {
 
-			from, err := strconv.Atoi(pr[0])
+			err := parsePageRange(pr, pageCount, negated, selectedPages)
 			if err != nil {
 				return nil, err
-			}
-
-			// Handle overflow gracefully
-			if from > pageCount {
-				continue
-			}
-
-			thru, err := strconv.Atoi(pr[1])
-			if err != nil {
-				return nil, err
-			}
-
-			// Handle overflow gracefully
-			if thru < from {
-				continue
-			}
-
-			if thru > pageCount {
-				thru = pageCount
-			}
-
-			for i := from; i <= thru; i++ {
-				selectedPages[i] = !negated
 			}
 
 			continue

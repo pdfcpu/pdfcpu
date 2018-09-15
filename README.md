@@ -20,12 +20,16 @@ Version: 0.1.15
 * Additional watermark configuration for fontname/size/color, absolute/relative scaling, render mode, opacity and rotation is also supported.
 * Optional intelligent rotation aligns the rotation angle with one of two page diagonals.
 * `-pages` now also supports `odd/even`. (You can even say `-pages odd,n1` if you want to stamp all odd pages other than the title page.)
-* `extract -mode image` is now natively supporting PNG and TIFF with optional lzw compression (There are 2 proposals for golang coming out of this regarding TIFF support and compress/lzw).
+* `extract -mode image` is now natively supporting PNG and TIFF with optional lzw compression.
+* [github.com/hhrutter/pdfcpu/lzw](https://github.com/hhrutter/pdfcpu/lzw) is an improved version of `compress/lzw`. (There is a [golang proposal](https://github.com/golang/go/issues/25409).)
+* [github.com/hhrutter/pdfcpu/tiff](https://github.com/hhrutter/pdfcpu/tiff) is an improved version of golang.org/x/image/tiff.
 * Bug fixes.
 
 ## Motivation
 
-This is an effort to build a PDF processing library from the ground up written in Go with strong support for batch processing via a rich command line. Over time pdfcpu aims to support the standard range of PDF processing features and also any interesting use cases that may present themselves along the way. One example is to reduce the size of large PDF files for mass mailings by optimization to the bare minimum. This can be achieved by analyzing a PDF's cross reference table, removing redundant embedded resources like font files or images and by always writing back the file maxing out PDF compression. I also wanted to have my own swiss army knife for PDFs written entirely in [Go](http://golang.org) that allows me to trim, split, stamp and merge PDF content.
+This is an effort to build a PDF processing library from the ground up written in Go with strong support for batch processing via a rich command line. Over time `pdfcpu` aims to support the standard range of PDF processing features and also any interesting use cases that may present themselves along the way.
+
+One example is reducing the size of large PDF files for mass mailings by optimization to the bare minimum. This can be achieved by analyzing a PDF's cross reference table, removing redundant embedded resources like font files or images and by always writing back the file maxing out PDF compression. I also wanted to have my own swiss army knife for PDFs written entirely in [Go](http://golang.org) that allows me to trim, split, stamp and merge PDF content.
 
 ## Features
 
@@ -40,7 +44,7 @@ This is an effort to build a PDF processing library from the ground up written i
 * Extract Pages (extract specific pages into a given dir)
 * Extract Content (extract the PDF-Source into given dir)
 * Trim (generate a custom version of a PDF file)
-* Stamp/watermark selected pages.
+* Stamp/Watermark selected pages.
 * Manage (add,remove,list,extract) embedded file attachments
 * Encrypt (sets password protection)
 * Decrypt (removes password protection)
@@ -90,11 +94,11 @@ Required build version: go1.9 and up
 * Please open an issue if you find a bug or want to propose a change.
 * Feature requests - always welcome
 * Bug fixes - always welcome
-* PRs - also welcome, although I can't promise a merge-in right now since pdfcpu is stable but still _alpha_ and occasionally undergoing heavy changes.
+* PRs - also welcome, although I can't promise a merge-in right now since `pdfcpu` is stable but still _alpha_ and occasionally undergoing heavy changes.
 
 ## Disclaimer
 
-Usage of pdfcpu assumes you know about and respect all copyrights of any PDF content you may be processing. This applies to the PDF files as such, their content and in particular all embedded resources like font files or images. Credit goes to [Renee French](https://instagram.com/reneefrench) for creating our beloved Gopher.
+Usage of `pdfcpu` assumes you know about and respect all copyrights of any PDF content you may be processing. This applies to the PDF files as such, their content and in particular all embedded resources like font files or images. Credit goes to [Renee French](https://instagram.com/reneefrench) for creating our beloved Gopher.
 
 ## License
 

@@ -613,7 +613,7 @@ func contentObjNrs(ctx *pdfcpu.PDFContext, page int) ([]int, error) {
 
 	objNrs := []int{}
 
-	d, _, _, _, _, err := ctx.PageDict(page)
+	d, _, err := ctx.PageDict(page)
 	if err != nil {
 		return nil, err
 	}
