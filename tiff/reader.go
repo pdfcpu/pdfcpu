@@ -18,7 +18,6 @@ import (
 	"math"
 
 	"github.com/hhrutter/pdfcpu/lzw"
-	//"github.com/hhrutter/pdfcpu/tiff/lzw"
 )
 
 // A FormatError reports that the input is not a valid TIFF image.
@@ -391,7 +390,6 @@ func (d *decoder) decode(dst image.Image, xmin, ymin, xmax, ymax int) error {
 	case mCMYK:
 		// Horst Rutter:
 		// d.bpp must be 8
-		// Test with d.bpp == 16 ???
 		img := dst.(*image.CMYK)
 		for y := ymin; y < rMaxY; y++ {
 			min := img.PixOffset(xmin, y)
@@ -463,7 +461,6 @@ func newDecoder(r io.Reader) (*decoder, error) {
 	switch d.bpp {
 	case 0:
 		return nil, FormatError("BitsPerSample must not be 0")
-	// Horst Rutter: 1 bit per pixel ???
 	case 1, 8, 16:
 		// Nothing to do, these are accepted by this implementation.
 	default:

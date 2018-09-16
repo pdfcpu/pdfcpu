@@ -94,8 +94,8 @@ type Watermark struct {
 	form    *PDFIndirectRef // Forms are dependent on given page dimensions.
 
 	// house keeping
-	objs   IntSet // Objects for which wm has been applied already.
-	fCache formCache
+	objs   IntSet    // objects for which wm has been applied already.
+	fCache formCache // form cache.
 }
 
 func (wm Watermark) String() string {
@@ -263,7 +263,7 @@ func oneWatermarkOnlyError(onTop bool) error {
 
 func setWatermarkType(s string, wm *Watermark) {
 	ext := filepath.Ext(s)
-	if ext == ".png" {
+	if ext == ".png" || ext == ".tif" || ext == ".tiff" {
 		wm.imageFileName = s
 	} else {
 		wm.text = s
@@ -534,7 +534,12 @@ func createFontResForWM(xRefTable *XRefTable, wm *Watermark) error {
 
 func createImageResForWM(xRefTable *XRefTable, wm *Watermark) error {
 
-	sd, err := ReadPNGFile(xRefTable, wm.imageFileName)
+	f := ReadTIFFFile
+	if filepath.Ext(wm.imageFileName) == ".png" {
+		f = ReadPNGFile
+	}
+
+	sd, err := f(xRefTable, wm.imageFileName)
 	if err != nil {
 		return err
 	}
@@ -964,12 +969,13 @@ func watermarkPage(xRefTable *XRefTable, i int, wm *Watermark) error {
 	}
 	//fmt.Printf("vp = %f %f %f %f\n", vp.Llx, vp.Lly, vp.Urx, vp.Ury)
 	wm.vp = vp
-	//fmt.Println(wm)
 
-	err = createForm(xRefTable, wm, false)
+	err = createForm(xRefTable, wm, true)
 	if err != nil {
 		return err
 	}
+
+	//fmt.Println(wm)
 
 	wm.pageRot = inhPAttrs.rotate
 	// wm.pageRot = 0

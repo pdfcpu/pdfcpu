@@ -197,10 +197,7 @@ func imgToImageDict(xRefTable *XRefTable, img image.Image) (*PDFStreamDict, erro
 	h := img.Bounds().Dy()
 
 	var buf []byte
-
-	//i := 0
 	var sm []byte
-	//var softMask bool
 	var cs string
 
 	switch img.ColorModel() {
@@ -210,17 +207,6 @@ func imgToImageDict(xRefTable *XRefTable, img image.Image) (*PDFStreamDict, erro
 		//fmt.Println("RGBA")
 		cs = DeviceRGBCS
 		buf = writeRGBAImageBuf(img)
-		// buf = make([]byte, w*h*3)
-		// for y := 0; y < h; y++ {
-		// 	for x := 0; x < w; x++ {
-		// 		c := img.At(x, y).(color.RGBA)
-		// 		buf[i] = c.R
-		// 		buf[i+1] = c.G
-		// 		buf[i+2] = c.B
-		// 		i += 3
-		// 		//fmt.Printf("x:%3d y:%3d r:#%02x g:#%02x b:#%02x a:#%02x\n", x, y, c.R, c.G, c.B, c.A)
-		// 	}
-		// }
 
 	case color.RGBA64Model:
 		//fmt.Println("RGBA64")
@@ -231,30 +217,6 @@ func imgToImageDict(xRefTable *XRefTable, img image.Image) (*PDFStreamDict, erro
 		//fmt.Println("NRGBA")
 		cs = DeviceRGBCS
 		buf, sm = writeNRGBAImageBuf(xRefTable, img)
-		// buf = make([]byte, w*h*3)
-		// for y := 0; y < h; y++ {
-		// 	for x := 0; x < w; x++ {
-		// 		c := img.At(x, y).(color.NRGBA)
-		// 		if !softMask {
-		// 			if xRefTable != nil && c.A != 0xFF {
-		// 				softMask = true
-		// 				sm = []byte{}
-		// 				for index := 0; index < y*h+x; index++ {
-		// 					sm = append(sm, 0xFF)
-		// 				}
-		// 				sm = append(sm, c.A)
-		// 			}
-		// 		} else {
-		// 			sm = append(sm, c.A)
-		// 		}
-
-		// 		buf[i] = c.R
-		// 		buf[i+1] = c.G
-		// 		buf[i+2] = c.B
-		// 		i += 3
-		// 		//fmt.Printf("x:%3d y:%3d r:#%02x g:#%02x b:#%02x a:#%02x\n", x, y, c.R, c.G, c.B, c.A)
-		// 	}
-		// }
 
 	case color.NRGBA64Model:
 		//fmt.Println("NRGBA64")
@@ -280,19 +242,6 @@ func imgToImageDict(xRefTable *XRefTable, img image.Image) (*PDFStreamDict, erro
 	case color.CMYKModel:
 		cs = DeviceCMYKCS
 		buf = writeCMYKImageBuf(img)
-
-		// buf = make([]byte, w*h*4)
-		// for y := 0; y < h; y++ {
-		// 	for x := 0; x < w; x++ {
-		// 		c := img.At(x, y).(color.CMYK)
-		// 		buf[i] = c.C
-		// 		buf[i+1] = c.M
-		// 		buf[i+2] = c.Y
-		// 		buf[i+3] = c.K
-		// 		i += 4
-		// 		//fmt.Printf("x:%3d y:%3d r:#%02x g:#%02x b:#%02x a:#%02x\n", x, y, c.R, c.G, c.B, c.A)
-		// 	}
-		// }
 
 	default:
 		//fmt.Println("unknown")
