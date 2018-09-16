@@ -21,8 +21,8 @@ Version: 0.1.15
 * Optional intelligent rotation aligns the rotation angle with one of two page diagonals.
 * `-pages` now also supports `odd/even`. (You can even say `-pages odd,n1` if you want to stamp all odd pages other than the title page.)
 * `extract -mode image` is now natively supporting PNG and TIFF with optional lzw compression.
-* [github.com/hhrutter/pdfcpu/lzw](https://github.com/hhrutter/pdfcpu/lzw) is an improved version of `compress/lzw`. (There is a [golang proposal](https://github.com/golang/go/issues/25409).)
-* [github.com/hhrutter/pdfcpu/tiff](https://github.com/hhrutter/pdfcpu/tiff) is an improved version of golang.org/x/image/tiff.
+* [github.com/hhrutter/pdfcpu/lzw](https://github.com/hhrutter/pdfcpu/tree/master/lzw) is an improved version of `compress/lzw`. (There is a [golang proposal](https://github.com/golang/go/issues/25409).)
+* [github.com/hhrutter/pdfcpu/tiff](https://github.com/hhrutter/pdfcpu/tree/master/tiff) is an improved version of golang.org/x/image/tiff.
 * Bug fixes.
 
 ## Motivation
