@@ -153,7 +153,7 @@ func helpString(topic string) string {
 		"optimize":  {usageOptimize, usageLongOptimize, false},
 		"split":     {usageSplit, usageLongSplit, false},
 		"merge":     {usageMerge, usageLongMerge, false},
-		"extract":   {usageValidate, usageLongValidate, false},
+		"extract":   {usageExtract, usageLongExtract, false},
 		"trim":      {usageTrim, usageLongTrim, true},
 		"attach":    {usageAttach, usageLongAttach, false},
 		"perm":      {usagePerm, usageLongPerm, false},

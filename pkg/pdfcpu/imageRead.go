@@ -182,7 +182,7 @@ func writeCMYKImageBuf(img image.Image) []byte {
 			buf[i+2] = c.Y
 			buf[i+3] = c.K
 			i += 4
-			//fmt.Printf("x:%3d y:%3d r:#%02x g:#%02x b:#%02x a:#%02x\n", x, y, c.R, c.G, c.B, c.A)
+			//fmt.Printf("x:%3d(%3d) y:%3d(%3d) c:#%02x m:#%02x y:#%02x k:#%02x\n", x1, x, y1, y, c.C, c.M, c.Y, c.K)
 		}
 	}
 
@@ -192,6 +192,8 @@ func writeCMYKImageBuf(img image.Image) []byte {
 func imgToImageDict(xRefTable *XRefTable, img image.Image) (*PDFStreamDict, error) {
 
 	// Supporting 8 bits per component.
+
+	// TODO if dpi != 72 resample (applies to PNG,JPG,TIFF)
 
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
@@ -240,14 +242,17 @@ func imgToImageDict(xRefTable *XRefTable, img image.Image) (*PDFStreamDict, erro
 		return nil, ErrUnsupportedColorSpace
 
 	case color.CMYKModel:
+		//fmt.Println("CMYK")
 		cs = DeviceCMYKCS
 		buf = writeCMYKImageBuf(img)
 
 	default:
-		//fmt.Println("unknown")
+		//fmt.Println("unknown color model")
 		return nil, ErrUnsupportedColorSpace
 
 	}
+
+	//fmt.Printf("old w:%3d, h:%3d, new w:%3d, h:%3d\n", img.Bounds().Dx(), img.Bounds().Dy(), w, h)
 
 	return createImageObject(xRefTable, buf, sm, w, h, cs)
 }
