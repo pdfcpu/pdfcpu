@@ -25,11 +25,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-func equalPDFObjects(o1, o2 PDFObject, xRefTable *XRefTable) (ok bool, err error) {
+func equalObjects(o1, o2 Object, xRefTable *XRefTable) (ok bool, err error) {
 
 	o1Type := fmt.Sprintf("%T", o1)
 	o2Type := fmt.Sprintf("%T", o2)
-	log.Debug.Printf("equalPDFObjects: comparing %s with %s \n", o1Type, o2Type)
+	log.Debug.Printf("equalObjects: comparing %s with %s \n", o1Type, o2Type)
 
 	o1, err = xRefTable.Dereference(o1)
 	if err != nil {
@@ -43,7 +43,7 @@ func equalPDFObjects(o1, o2 PDFObject, xRefTable *XRefTable) (ok bool, err error
 
 	o1Type = fmt.Sprintf("%T", o1)
 	o2Type = fmt.Sprintf("%T", o2)
-	log.Debug.Printf("equalPDFObjects: comparing dereferenced %s with %s \n", o1Type, o2Type)
+	log.Debug.Printf("equalObjects: comparing dereferenced %s with %s \n", o1Type, o2Type)
 
 	if o1Type != o2Type {
 		return false, nil
@@ -51,8 +51,8 @@ func equalPDFObjects(o1, o2 PDFObject, xRefTable *XRefTable) (ok bool, err error
 
 	switch o1.(type) {
 
-	case PDFName, PDFStringLiteral, PDFHexLiteral,
-		PDFInteger, PDFFloat, PDFBoolean:
+	case Name, StringLiteral, HexLiteral,
+		Integer, Float, Boolean:
 		ok = o1 == o2
 
 	case PDFDict:
@@ -61,26 +61,26 @@ func equalPDFObjects(o1, o2 PDFObject, xRefTable *XRefTable) (ok bool, err error
 		d2 := o2.(PDFDict)
 		ok, err = equalPDFDicts(&d1, &d2, xRefTable)
 
-	case PDFStreamDict:
+	case StreamDict:
 
-		sd1 := o1.(PDFStreamDict)
-		sd2 := o2.(PDFStreamDict)
-		ok, err = equalPDFStreamDicts(&sd1, &sd2, xRefTable)
+		sd1 := o1.(StreamDict)
+		sd2 := o2.(StreamDict)
+		ok, err = equalStreamDicts(&sd1, &sd2, xRefTable)
 
-	case PDFArray:
+	case Array:
 
-		arr1 := o1.(PDFArray)
-		arr2 := o2.(PDFArray)
-		ok, err = equalPDFArrays(&arr1, &arr2, xRefTable)
+		arr1 := o1.(Array)
+		arr2 := o2.(Array)
+		ok, err = equalArrays(&arr1, &arr2, xRefTable)
 
 	default:
-		err = errors.Errorf("equalPDFObjects: unhandled compare for type %s\n", o1Type)
+		err = errors.Errorf("equalObjects: unhandled compare for type %s\n", o1Type)
 	}
 
 	return ok, err
 }
 
-func equalPDFArrays(arr1, arr2 *PDFArray, xRefTable *XRefTable) (bool, error) {
+func equalArrays(arr1, arr2 *Array, xRefTable *XRefTable) (bool, error) {
 
 	if len(*arr1) != len(*arr2) {
 		return false, nil
@@ -97,7 +97,7 @@ func equalPDFArrays(arr1, arr2 *PDFArray, xRefTable *XRefTable) (bool, error) {
 			return false, nil
 		}
 
-		ok, err := equalPDFObjects(o1, o2, xRefTable)
+		ok, err := equalObjects(o1, o2, xRefTable)
 		if err != nil {
 			return false, err
 		}
@@ -110,7 +110,7 @@ func equalPDFArrays(arr1, arr2 *PDFArray, xRefTable *XRefTable) (bool, error) {
 	return true, nil
 }
 
-func equalPDFStreamDicts(sd1, sd2 *PDFStreamDict, xRefTable *XRefTable) (bool, error) {
+func equalStreamDicts(sd1, sd2 *StreamDict, xRefTable *XRefTable) (bool, error) {
 
 	ok, err := equalPDFDicts(&sd1.PDFDict, &sd2.PDFDict, xRefTable)
 	if err != nil {
@@ -122,7 +122,7 @@ func equalPDFStreamDicts(sd1, sd2 *PDFStreamDict, xRefTable *XRefTable) (bool, e
 	}
 
 	if sd1.Raw == nil || sd2 == nil {
-		return false, errors.New("equalPDFStreamDicts: stream dict not loaded")
+		return false, errors.New("equalStreamDicts: stream dict not loaded")
 	}
 
 	return bytes.Equal(sd1.Raw, sd2.Raw), nil
@@ -140,13 +140,13 @@ func equalPDFStreamDicts(sd1, sd2 *PDFStreamDict, xRefTable *XRefTable) (bool, e
 	// return bytes.Equal(encodedStream1, encodedStream2), nil
 }
 
-func equalFontNames(v1, v2 PDFObject, xRefTable *XRefTable) (bool, error) {
+func equalFontNames(v1, v2 Object, xRefTable *XRefTable) (bool, error) {
 
 	v1, err := xRefTable.Dereference(v1)
 	if err != nil {
 		return false, err
 	}
-	bf1, ok := v1.(PDFName)
+	bf1, ok := v1.(Name)
 	if !ok {
 		return false, errors.Errorf("equalFontNames: type cast problem")
 	}
@@ -155,7 +155,7 @@ func equalFontNames(v1, v2 PDFObject, xRefTable *XRefTable) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	bf2 := v2.(PDFName)
+	bf2 := v2.(Name)
 	if !ok {
 		return false, errors.Errorf("equalFontNames: type cast problem")
 	}
@@ -209,7 +209,7 @@ func equalPDFDicts(d1, d2 *PDFDict, xRefTable *XRefTable) (bool, error) {
 			continue
 		}
 
-		ok, err := equalPDFObjects(v1, v2, xRefTable)
+		ok, err := equalObjects(v1, v2, xRefTable)
 		if err != nil {
 			log.Debug.Printf("equalPDFDict: return4 false, key=%s v1=%v\nv2=%v\n%v\n", key, v1, v2, err)
 			return false, err

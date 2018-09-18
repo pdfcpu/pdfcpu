@@ -14,47 +14,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pdfcpu
+package validate
 
 import (
 	"github.com/hhrutter/pdfcpu/pkg/log"
+	pdf "github.com/hhrutter/pdfcpu/pkg/pdfcpu"
 	"github.com/pkg/errors"
 )
 
-func memberOf(s string, list []string) bool {
+func validateCreationDate(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
 
-	for _, v := range list {
-		if s == v {
-			return true
-		}
-	}
-	return false
-}
-
-func intMemberOf(i int, list []int) bool {
-	for _, v := range list {
-		if i == v {
-			return true
-		}
-	}
-	return false
-}
-
-func validateCreationDate(xRefTable *XRefTable, o PDFObject) (err error) {
-
-	if xRefTable.ValidationMode == ValidationRelaxed {
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
 		_, err = validateString(xRefTable, o, nil)
 	} else {
-		_, err = validateDateObject(xRefTable, o, V10)
+		_, err = validateDateObject(xRefTable, o, pdf.V10)
 	}
 
 	return err
 }
 
-func handleDefault(xRefTable *XRefTable, o PDFObject) (err error) {
+func handleDefault(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
 
-	if xRefTable.ValidationMode == ValidationStrict {
-		_, err = xRefTable.DereferenceStringOrHexLiteral(o, V10, nil)
+	if xRefTable.ValidationMode == pdf.ValidationStrict {
+		_, err = xRefTable.DereferenceStringOrHexLiteral(o, pdf.V10, nil)
 	} else {
 		_, err = xRefTable.Dereference(o)
 	}
@@ -62,7 +44,7 @@ func handleDefault(xRefTable *XRefTable, o PDFObject) (err error) {
 	return err
 }
 
-func validateDocumentInfoDict(xRefTable *XRefTable, obj PDFObject) (hasModDate bool, err error) {
+func validateDocumentInfoDict(xRefTable *pdf.XRefTable, obj pdf.Object) (hasModDate bool, err error) {
 
 	// Document info object is optional.
 
@@ -77,27 +59,27 @@ func validateDocumentInfoDict(xRefTable *XRefTable, obj PDFObject) (hasModDate b
 
 		// text string, opt, since V1.1
 		case "Title":
-			_, err = xRefTable.DereferenceStringOrHexLiteral(v, V11, nil)
+			_, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V11, nil)
 
 		// text string, optional
 		case "Author":
-			_, err = xRefTable.DereferenceStringOrHexLiteral(v, V10, nil)
+			_, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V10, nil)
 
 		// text string, optional, since V1.1
 		case "Subject":
-			_, err = xRefTable.DereferenceStringOrHexLiteral(v, V11, nil)
+			_, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V11, nil)
 
 		// text string, optional, since V1.1
 		case "Keywords":
-			_, err = xRefTable.DereferenceStringOrHexLiteral(v, V11, nil)
+			_, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V11, nil)
 
 		// text string, optional
 		case "Creator":
-			_, err = xRefTable.DereferenceStringOrHexLiteral(v, V10, nil)
+			_, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V10, nil)
 
 		// text string, optional
 		case "Producer":
-			_, err = xRefTable.DereferenceStringOrHexLiteral(v, V10, nil)
+			_, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V10, nil)
 
 		// date, optional
 		case "CreationDate":
@@ -106,12 +88,12 @@ func validateDocumentInfoDict(xRefTable *XRefTable, obj PDFObject) (hasModDate b
 		// date, required if PieceInfo is present in document catalog.
 		case "ModDate":
 			hasModDate = true
-			_, err = validateDateObject(xRefTable, v, V10)
+			_, err = validateDateObject(xRefTable, v, pdf.V10)
 
 		// name, optional, since V1.3
 		case "Trapped":
-			validate := func(s string) bool { return memberOf(s, []string{"True", "False", "Unknown"}) }
-			_, err = xRefTable.DereferenceName(v, V13, validate)
+			validate := func(s string) bool { return pdf.MemberOf(s, []string{"True", "False", "Unknown"}) }
+			_, err = xRefTable.DereferenceName(v, pdf.V13, validate)
 
 		// text string, optional
 		default:
@@ -128,7 +110,7 @@ func validateDocumentInfoDict(xRefTable *XRefTable, obj PDFObject) (hasModDate b
 	return hasModDate, nil
 }
 
-func validateDocumentInfoObject(xRefTable *XRefTable) error {
+func validateDocumentInfoObject(xRefTable *pdf.XRefTable) error {
 
 	// Document info object is optional.
 	if xRefTable.Info == nil {

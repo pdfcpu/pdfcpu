@@ -70,7 +70,7 @@ func (fo FontObject) Encoding() string {
 	pdfObject, found := fo.FontDict.Find("Encoding")
 	if found {
 		switch enc := pdfObject.(type) {
-		case PDFName:
+		case Name:
 			encoding = enc.String()
 		default:
 			encoding = "Custom"
@@ -101,7 +101,7 @@ func (fo FontObject) String() string {
 // ImageObject represents an image used in a PDF file.
 type ImageObject struct {
 	ResourceNames []string
-	ImageDict     *PDFStreamDict
+	ImageDict     *StreamDict
 	//Extension     string
 }
 

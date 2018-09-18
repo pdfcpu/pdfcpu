@@ -98,9 +98,9 @@ func statsLine(ctx *PDFContext) *string {
 
 	xRefTable := ctx.XRefTable
 
-	version := VersionString(*xRefTable.HeaderVersion)
+	version := xRefTable.HeaderVersion.String()
 	if xRefTable.RootVersion != nil {
-		version = fmt.Sprintf("%s,%s", version, VersionString(*xRefTable.RootVersion))
+		version = fmt.Sprintf("%s,%s", version, xRefTable.RootVersion.String())
 	}
 
 	sourceFileSize := ctx.Read.FileSize

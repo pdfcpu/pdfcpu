@@ -14,13 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pdfcpu
+package validate
 
 import (
+	pdf "github.com/hhrutter/pdfcpu/pkg/pdfcpu"
 	"github.com/pkg/errors"
 )
 
-func validateDestinationArrayFirstElement(xRefTable *XRefTable, arr *PDFArray) (PDFObject, error) {
+func validateDestinationArrayFirstElement(xRefTable *pdf.XRefTable, arr *pdf.Array) (pdf.Object, error) {
 
 	obj, err := xRefTable.Dereference((*arr)[0])
 	if err != nil || obj == nil {
@@ -29,9 +30,9 @@ func validateDestinationArrayFirstElement(xRefTable *XRefTable, arr *PDFArray) (
 
 	switch obj := obj.(type) {
 
-	case PDFInteger: // no further processing
+	case pdf.Integer: // no further processing
 
-	case PDFDict:
+	case pdf.PDFDict:
 		if obj.Type() == nil || *obj.Type() != "Page" {
 			err = errors.New("validateDestinationArrayFirstElement: first element refers to invalid destination page dict")
 		}
@@ -43,12 +44,12 @@ func validateDestinationArrayFirstElement(xRefTable *XRefTable, arr *PDFArray) (
 	return obj, err
 }
 
-func validateDestinationArrayLength(arr PDFArray) bool {
+func validateDestinationArrayLength(arr pdf.Array) bool {
 	l := len(arr)
 	return l == 2 || l == 3 || l == 5 || l == 6
 }
 
-func validateDestinationArray(xRefTable *XRefTable, arr *PDFArray) error {
+func validateDestinationArray(xRefTable *pdf.XRefTable, arr *pdf.Array) error {
 
 	// Validate first element: indRef of page dict or pageNumber(int) of remote doc for remote Go-to Action or nil.
 
@@ -63,7 +64,7 @@ func validateDestinationArray(xRefTable *XRefTable, arr *PDFArray) error {
 
 	// Validate rest of array elements.
 
-	name, ok := (*arr)[1].(PDFName)
+	name, ok := (*arr)[1].(pdf.Name)
 	if !ok {
 		return errors.New("validateDestinationArray: second element must be a name")
 	}
@@ -73,10 +74,10 @@ func validateDestinationArray(xRefTable *XRefTable, arr *PDFArray) error {
 	switch len(*arr) {
 
 	case 2:
-		if xRefTable.ValidationMode == ValidationRelaxed {
-			nameErr = !memberOf(name.Value(), []string{"Fit", "FitB", "FitH"})
+		if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+			nameErr = !pdf.MemberOf(name.Value(), []string{"Fit", "FitB", "FitH"})
 		} else {
-			nameErr = !memberOf(name.Value(), []string{"Fit", "FitB"})
+			nameErr = !pdf.MemberOf(name.Value(), []string{"Fit", "FitB"})
 		}
 
 	case 3:
@@ -99,10 +100,10 @@ func validateDestinationArray(xRefTable *XRefTable, arr *PDFArray) error {
 	return nil
 }
 
-func validateDestinationDict(xRefTable *XRefTable, dict *PDFDict) error {
+func validateDestinationDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
 
 	// D, required, array
-	arr, err := validateArrayEntry(xRefTable, dict, "DestinationDict", "D", REQUIRED, V10, nil)
+	arr, err := validateArrayEntry(xRefTable, dict, "DestinationDict", "D", REQUIRED, pdf.V10, nil)
 	if err != nil || arr == nil {
 		return err
 	}
@@ -110,7 +111,7 @@ func validateDestinationDict(xRefTable *XRefTable, dict *PDFDict) error {
 	return validateDestinationArray(xRefTable, arr)
 }
 
-func validateDestination(xRefTable *XRefTable, obj PDFObject) error {
+func validateDestination(xRefTable *pdf.XRefTable, obj pdf.Object) error {
 
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
@@ -119,16 +120,16 @@ func validateDestination(xRefTable *XRefTable, obj PDFObject) error {
 
 	switch obj := obj.(type) {
 
-	case PDFName:
+	case pdf.Name:
 		// no further processing.
 
-	case PDFStringLiteral:
+	case pdf.StringLiteral:
 		// no further processing.
 
-	case PDFDict:
+	case pdf.PDFDict:
 		err = validateDestinationDict(xRefTable, &obj)
 
-	case PDFArray:
+	case pdf.Array:
 		err = validateDestinationArray(xRefTable, &obj)
 
 	default:
@@ -139,7 +140,7 @@ func validateDestination(xRefTable *XRefTable, obj PDFObject) error {
 	return err
 }
 
-func validateDestinationEntry(xRefTable *XRefTable, dict *PDFDict, dictName string, entryName string, required bool, sinceVersion PDFVersion) error {
+func validateDestinationEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	// see 12.3.2
 

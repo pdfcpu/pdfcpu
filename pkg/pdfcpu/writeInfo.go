@@ -24,12 +24,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-func textString(ctx *PDFContext, obj PDFObject) (string, error) {
+func textString(ctx *PDFContext, obj Object) (string, error) {
 
 	var s string
 	var err error
 
-	if indRef, ok := obj.(PDFIndirectRef); ok {
+	if indRef, ok := obj.(IndirectRef); ok {
 		obj, err = ctx.Dereference(indRef)
 		if err != nil {
 			return s, err
@@ -43,13 +43,13 @@ func textString(ctx *PDFContext, obj PDFObject) (string, error) {
 
 	switch obj := obj.(type) {
 
-	case PDFStringLiteral:
+	case StringLiteral:
 		s, err = StringLiteralToString(obj.Value())
 		if err != nil {
 			return s, err
 		}
 
-	case PDFHexLiteral:
+	case HexLiteral:
 		s, err = HexLiteralToString(obj.Value())
 		if err != nil {
 			return s, err
@@ -94,7 +94,7 @@ func writeInfoDict(ctx *PDFContext, dict *PDFDict) (err error) {
 
 		case "Producer", "CreationDate", "ModDate":
 			log.Debug.Printf("found %s", key)
-			if indRef, ok := value.(PDFIndirectRef); ok {
+			if indRef, ok := value.(IndirectRef); ok {
 				// Do not write indRef, will be modified by pdfcpu.
 				ctx.Optimize.DuplicateInfoObjects[int(indRef.ObjectNumber)] = true
 			}
@@ -158,7 +158,7 @@ func writeDocumentInfoDict(ctx *PDFContext) error {
 
 	dict.Update("CreationDate", dateStringLiteral)
 	dict.Update("ModDate", dateStringLiteral)
-	dict.Update("Producer", PDFStringLiteral(PDFCPULongVersion))
+	dict.Update("Producer", StringLiteral(PDFCPULongVersion))
 
 	_, _, err = writeDeepObject(ctx, obj)
 	if err != nil {

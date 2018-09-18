@@ -331,7 +331,7 @@ func writeTrailerDict(ctx *PDFContext) error {
 	}
 
 	dict := NewPDFDict()
-	dict.Insert("Size", PDFInteger(*xRefTable.Size))
+	dict.Insert("Size", Integer(*xRefTable.Size))
 	dict.Insert("Root", *xRefTable.Root)
 
 	if xRefTable.Info != nil {
@@ -457,8 +457,8 @@ func deleteRedundantObjects(ctx *PDFContext) {
 		if ctx.Read.Linearized && entry.Offset != nil {
 			// This block applies to pre existing objects only.
 			// Since there is no type entry for stream dicts associated with linearization dicts
-			// we have to check every PDFStreamDict that has not been written.
-			if _, ok := entry.Object.(PDFStreamDict); ok {
+			// we have to check every StreamDict that has not been written.
+			if _, ok := entry.Object.(StreamDict); ok {
 
 				if *entry.Offset == *xRefTable.OffsetPrimaryHintTable {
 					xRefTable.LinearizationObjs[i] = true
@@ -599,7 +599,7 @@ func int64ToBuf(i int64, byteCount int) (buf []byte) {
 	return
 }
 
-func createXRefStream(ctx *PDFContext, i1, i2, i3 int) ([]byte, *PDFArray, error) {
+func createXRefStream(ctx *PDFContext, i1, i2, i3 int) ([]byte, *Array, error) {
 
 	log.Debug.Println("createXRefStream begin")
 
@@ -607,7 +607,7 @@ func createXRefStream(ctx *PDFContext, i1, i2, i3 int) ([]byte, *PDFArray, error
 
 	var (
 		buf []byte
-		arr PDFArray
+		arr Array
 	)
 
 	var keys []int
@@ -672,8 +672,8 @@ func createXRefStream(ctx *PDFContext, i1, i2, i3 int) ([]byte, *PDFArray, error
 
 		if i > 0 && (keys[i]-keys[i-1] > 1) {
 
-			arr = append(arr, PDFInteger(start))
-			arr = append(arr, PDFInteger(size))
+			arr = append(arr, Integer(start))
+			arr = append(arr, Integer(size))
 
 			start = keys[i]
 			size = 1
@@ -683,8 +683,8 @@ func createXRefStream(ctx *PDFContext, i1, i2, i3 int) ([]byte, *PDFArray, error
 		size++
 	}
 
-	arr = append(arr, PDFInteger(start))
-	arr = append(arr, PDFInteger(size))
+	arr = append(arr, Integer(start))
+	arr = append(arr, Integer(size))
 
 	log.Debug.Println("createXRefStream end")
 
@@ -696,7 +696,7 @@ func writeXRefStream(ctx *PDFContext) error {
 	log.Debug.Println("writeXRefStream begin")
 
 	xRefTable := ctx.XRefTable
-	xRefStreamDict := NewPDFXRefStreamDict(ctx)
+	xRefStreamDict := NewXRefStreamDict(ctx)
 	xRefTableEntry := NewXRefTableEntryGen0(*xRefStreamDict)
 
 	// Reuse free objects (including recycled objects from this run).
@@ -712,7 +712,7 @@ func writeXRefStream(ctx *PDFContext) error {
 		return err
 	}
 
-	xRefStreamDict.Insert("Size", PDFInteger(*xRefTable.Size))
+	xRefStreamDict.Insert("Size", Integer(*xRefTable.Size))
 
 	offset := ctx.Write.Offset
 
@@ -733,7 +733,7 @@ func writeXRefStream(ctx *PDFContext) error {
 
 	i3 := 2 // scale for max objectstream index <= 0x ff ff
 
-	wArr := PDFArray{PDFInteger(i1), PDFInteger(i2), PDFInteger(i3)}
+	wArr := Array{Integer(i1), Integer(i2), Integer(i3)}
 	xRefStreamDict.Insert("W", wArr)
 
 	// Generate xRefStreamDict data = xref entries -> xRefStreamDict.Content
@@ -746,14 +746,14 @@ func writeXRefStream(ctx *PDFContext) error {
 	xRefStreamDict.Insert("Index", *indArr)
 
 	// Encode xRefStreamDict.Content -> xRefStreamDict.Raw
-	err = encodeStream(&xRefStreamDict.PDFStreamDict)
+	err = encodeStream(&xRefStreamDict.StreamDict)
 	if err != nil {
 		return err
 	}
 
 	log.Debug.Printf("writeXRefStream: xRefStreamDict: %s\n", xRefStreamDict)
 
-	err = writePDFStreamDictObject(ctx, objNumber, 0, xRefStreamDict.PDFStreamDict)
+	err = writeStreamDictObject(ctx, objNumber, 0, xRefStreamDict.StreamDict)
 	if err != nil {
 		return err
 	}
@@ -808,7 +808,7 @@ func writeEncryptDict(ctx *PDFContext) error {
 		return err
 	}
 
-	return writePDFObject(ctx, objNumber, genNumber, dict.PDFString())
+	return writeObject(ctx, objNumber, genNumber, dict.PDFString())
 }
 
 func setupEncryption(ctx *PDFContext) error {
@@ -849,8 +849,8 @@ func setupEncryption(ctx *PDFContext) error {
 	//fmt.Printf("upw after: length:%d <%s> %0X\n", len(ctx.E.U), ctx.E.U, ctx.E.U)
 	//fmt.Printf("encKey = %0X\n", ctx.EncKey)
 
-	dict.Update("U", PDFHexLiteral(hex.EncodeToString(ctx.E.U)))
-	dict.Update("O", PDFHexLiteral(hex.EncodeToString(ctx.E.O)))
+	dict.Update("U", HexLiteral(hex.EncodeToString(ctx.E.U)))
+	dict.Update("O", HexLiteral(hex.EncodeToString(ctx.E.O)))
 
 	xRefTableEntry := NewXRefTableEntryGen0(*dict)
 
@@ -861,7 +861,7 @@ func setupEncryption(ctx *PDFContext) error {
 		return err
 	}
 
-	ctx.Encrypt = NewPDFIndirectRef(objNumber, 0)
+	ctx.Encrypt = NewIndirectRef(objNumber, 0)
 
 	return nil
 }
@@ -876,7 +876,7 @@ func updateEncryption(ctx *PDFContext) error {
 	if ctx.Mode == ADDPERMISSIONS {
 		//fmt.Printf("updating permissions to: %v\n", ctx.UserAccessPermissions)
 		ctx.E.P = int(ctx.UserAccessPermissions)
-		d.Update("P", PDFInteger(ctx.E.P))
+		d.Update("P", Integer(ctx.E.P))
 		// and moving on, U is dependent on P
 	}
 
@@ -899,7 +899,7 @@ func updateEncryption(ctx *PDFContext) error {
 		return err
 	}
 	//fmt.Printf("opw after: length:%d <%s> %0X\n", len(ctx.E.O), ctx.E.O, ctx.E.O)
-	d.Update("O", PDFHexLiteral(hex.EncodeToString(ctx.E.O)))
+	d.Update("O", HexLiteral(hex.EncodeToString(ctx.E.O)))
 
 	//fmt.Printf("upw before: length:%d <%s>\n", len(ctx.E.U), ctx.E.U)
 	ctx.E.U, ctx.EncKey, err = u(ctx)
@@ -908,7 +908,7 @@ func updateEncryption(ctx *PDFContext) error {
 	}
 	//fmt.Printf("upw after: length:%d <%s> %0X\n", len(ctx.E.U), ctx.E.U, ctx.E.U)
 	//fmt.Printf("encKey = %0X\n", ctx.EncKey)
-	d.Update("U", PDFHexLiteral(hex.EncodeToString(ctx.E.U)))
+	d.Update("U", HexLiteral(hex.EncodeToString(ctx.E.U)))
 
 	return nil
 }

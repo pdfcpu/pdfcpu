@@ -26,7 +26,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func decodedFileSpecStreamDict(xRefTable *XRefTable, fileName string, o PDFObject) (*PDFStreamDict, error) {
+func decodedFileSpecStreamDict(xRefTable *XRefTable, fileName string, o Object) (*StreamDict, error) {
 
 	d, err := xRefTable.DereferenceDict(o)
 	if err != nil {
@@ -88,7 +88,7 @@ func decodedFileSpecStreamDict(xRefTable *XRefTable, fileName string, o PDFObjec
 
 func extractAttachedFiles(ctx *PDFContext, files StringSet) error {
 
-	writeFile := func(xRefTable *XRefTable, fileName string, o PDFObject) error {
+	writeFile := func(xRefTable *XRefTable, fileName string, o Object) error {
 
 		path := ctx.Write.DirName + "/" + fileName
 
@@ -137,7 +137,7 @@ func extractAttachedFiles(ctx *PDFContext, files StringSet) error {
 	return ctx.Names["EmbeddedFiles"].Process(ctx.XRefTable, writeFile)
 }
 
-func fileSpectDict(xRefTable *XRefTable, filename string) (*PDFIndirectRef, error) {
+func fileSpectDict(xRefTable *XRefTable, filename string) (*IndirectRef, error) {
 
 	sd, err := xRefTable.NewEmbeddedFileStreamDict(filename)
 	if err != nil {

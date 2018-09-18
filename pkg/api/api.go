@@ -28,6 +28,7 @@ import (
 
 	"github.com/hhrutter/pdfcpu/pkg/log"
 	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
+	"github.com/hhrutter/pdfcpu/pkg/pdfcpu/validate"
 
 	"github.com/pkg/errors"
 )
@@ -80,7 +81,7 @@ func Validate(cmd *Command) ([]string, error) {
 
 	from2 := time.Now()
 
-	err = pdfcpu.ValidateXRefTable(ctx.XRefTable)
+	err = validate.XRefTable(ctx.XRefTable)
 	if err != nil {
 		err = errors.Wrap(err, "validation error (try -mode=relaxed)")
 	} else {
@@ -172,7 +173,7 @@ func readAndValidate(fileIn string, config *pdfcpu.Configuration, from1 time.Tim
 	from2 := time.Now()
 	//fmt.Printf("validating %s ...\n", fileIn)
 	//logInfoAPI.Printf("validating %s..\n", fileIn)
-	err = pdfcpu.ValidateXRefTable(ctx.XRefTable)
+	err = validate.XRefTable(ctx.XRefTable)
 	if err != nil {
 		return nil, 0, 0, err
 	}
@@ -315,7 +316,7 @@ func Merge(cmd *Command) ([]string, error) {
 	}
 
 	if ctxDest.XRefTable.Version() < pdfcpu.V15 {
-		v, _ := pdfcpu.Version("1.5")
+		v, _ := pdfcpu.PDFVersion("1.5")
 		ctxDest.XRefTable.RootVersion = &v
 		log.Stats.Println("Ensure V1.5 for writing object & xref streams")
 	}
@@ -333,7 +334,7 @@ func Merge(cmd *Command) ([]string, error) {
 		return nil, err
 	}
 
-	err = pdfcpu.ValidateXRefTable(ctxDest.XRefTable)
+	err = validate.XRefTable(ctxDest.XRefTable)
 	if err != nil {
 		return nil, err
 	}
@@ -625,7 +626,7 @@ func contentObjNrs(ctx *pdfcpu.PDFContext, page int) ([]int, error) {
 
 	var objNr int
 
-	indRef, ok := obj.(pdfcpu.PDFIndirectRef)
+	indRef, ok := obj.(pdfcpu.IndirectRef)
 	if ok {
 		objNr = indRef.ObjectNumber.Value()
 	}
@@ -641,15 +642,15 @@ func contentObjNrs(ctx *pdfcpu.PDFContext, page int) ([]int, error) {
 
 	switch obj := obj.(type) {
 
-	case pdfcpu.PDFStreamDict:
+	case pdfcpu.StreamDict:
 
 		objNrs = append(objNrs, objNr)
 
-	case pdfcpu.PDFArray:
+	case pdfcpu.Array:
 
 		for _, obj := range obj {
 
-			indRef, ok := obj.(pdfcpu.PDFIndirectRef)
+			indRef, ok := obj.(pdfcpu.IndirectRef)
 			if !ok {
 				return nil, errors.Errorf("missing indref for page tree dict content no page %d", page)
 			}

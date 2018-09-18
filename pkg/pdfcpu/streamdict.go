@@ -30,8 +30,8 @@ type PDFFilter struct {
 	DecodeParms *PDFDict
 }
 
-// PDFStreamDict represents a PDF stream dict object.
-type PDFStreamDict struct {
+// StreamDict represents a PDF stream dict object.
+type StreamDict struct {
 	PDFDict
 	StreamOffset      int64
 	StreamLength      *int64
@@ -42,14 +42,14 @@ type PDFStreamDict struct {
 	IsPageContent     bool
 }
 
-// NewPDFStreamDict creates a new PDFStreamDict for given PDFDict, stream offset and length.
-func NewPDFStreamDict(pdfDict PDFDict, streamOffset int64, streamLength *int64, streamLengthObjNr *int,
-	filterPipeline []PDFFilter) PDFStreamDict {
-	return PDFStreamDict{pdfDict, streamOffset, streamLength, streamLengthObjNr, filterPipeline, nil, nil, false}
+// NewStreamDict creates a new PDFStreamDict for given PDFDict, stream offset and length.
+func NewStreamDict(pdfDict PDFDict, streamOffset int64, streamLength *int64, streamLengthObjNr *int,
+	filterPipeline []PDFFilter) StreamDict {
+	return StreamDict{pdfDict, streamOffset, streamLength, streamLengthObjNr, filterPipeline, nil, nil, false}
 }
 
 // HasSoleFilterNamed returns true if there is exactly one filter defined for a stream dict.
-func (streamDict PDFStreamDict) HasSoleFilterNamed(filterName string) bool {
+func (streamDict StreamDict) HasSoleFilterNamed(filterName string) bool {
 
 	fpl := streamDict.FilterPipeline
 	if fpl == nil {
@@ -65,30 +65,30 @@ func (streamDict PDFStreamDict) HasSoleFilterNamed(filterName string) bool {
 	return soleFilter.Name == filterName
 }
 
-// PDFObjectStreamDict represents a object stream dictionary.
-type PDFObjectStreamDict struct {
-	PDFStreamDict
+// ObjectStreamDict represents a object stream dictionary.
+type ObjectStreamDict struct {
+	StreamDict
 	Prolog         []byte
 	ObjCount       int
 	FirstObjOffset int
-	ObjArray       PDFArray
+	ObjArray       Array
 }
 
-// NewPDFObjectStreamDict creates a new PDFObjectStreamDict object.
-func NewPDFObjectStreamDict() *PDFObjectStreamDict {
+// NewObjectStreamDict creates a new ObjectStreamDict object.
+func NewObjectStreamDict() *ObjectStreamDict {
 
-	streamDict := PDFStreamDict{PDFDict: NewPDFDict()}
+	streamDict := StreamDict{PDFDict: NewPDFDict()}
 
-	streamDict.Insert("Type", PDFName("ObjStm"))
-	streamDict.Insert("Filter", PDFName(filter.Flate))
+	streamDict.Insert("Type", Name("ObjStm"))
+	streamDict.Insert("Filter", Name(filter.Flate))
 
 	streamDict.FilterPipeline = []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}
 
-	return &PDFObjectStreamDict{PDFStreamDict: streamDict}
+	return &ObjectStreamDict{StreamDict: streamDict}
 }
 
-// IndexedObject returns the object at given index from a PDFObjectStreamDict.
-func (oStreamDict *PDFObjectStreamDict) IndexedObject(index int) (PDFObject, error) {
+// IndexedObject returns the object at given index from a ObjectStreamDict.
+func (oStreamDict *ObjectStreamDict) IndexedObject(index int) (Object, error) {
 	if oStreamDict.ObjArray == nil {
 		return nil, errors.Errorf("IndexedObject(%d): object not available", index)
 	}
@@ -97,7 +97,7 @@ func (oStreamDict *PDFObjectStreamDict) IndexedObject(index int) (PDFObject, err
 
 // AddObject adds another object to this object stream.
 // Relies on decoded content!
-func (oStreamDict *PDFObjectStreamDict) AddObject(objNumber int, entry *XRefTableEntry) error {
+func (oStreamDict *ObjectStreamDict) AddObject(objNumber int, entry *XRefTableEntry) error {
 
 	offset := len(oStreamDict.Content)
 
@@ -116,25 +116,25 @@ func (oStreamDict *PDFObjectStreamDict) AddObject(objNumber int, entry *XRefTabl
 	case PDFDict:
 		pdfString = obj.PDFString()
 
-	case PDFArray:
+	case Array:
 		pdfString = obj.PDFString()
 
-	case PDFInteger:
+	case Integer:
 		pdfString = obj.PDFString()
 
-	case PDFFloat:
+	case Float:
 		pdfString = obj.PDFString()
 
-	case PDFStringLiteral:
+	case StringLiteral:
 		pdfString = obj.PDFString()
 
-	case PDFHexLiteral:
+	case HexLiteral:
 		pdfString = obj.PDFString()
 
-	case PDFBoolean:
+	case Boolean:
 		pdfString = obj.PDFString()
 
-	case PDFName:
+	case Name:
 		pdfString = obj.PDFString()
 
 	default:
@@ -151,28 +151,28 @@ func (oStreamDict *PDFObjectStreamDict) AddObject(objNumber int, entry *XRefTabl
 }
 
 // Finalize prepares the final content of the objectstream.
-func (oStreamDict *PDFObjectStreamDict) Finalize() {
+func (oStreamDict *ObjectStreamDict) Finalize() {
 	oStreamDict.Content = append(oStreamDict.Prolog, oStreamDict.Content...)
 	oStreamDict.FirstObjOffset = len(oStreamDict.Prolog)
 	log.Debug.Printf("Finalize : firstObjOffset:%d Content = <%s>\n", oStreamDict.FirstObjOffset, oStreamDict.Content)
 }
 
-// PDFXRefStreamDict represents a cross reference stream dictionary.
-type PDFXRefStreamDict struct {
-	PDFStreamDict
+// XRefStreamDict represents a cross reference stream dictionary.
+type XRefStreamDict struct {
+	StreamDict
 	Size           int
 	Objects        []int
 	W              [3]int
 	PreviousOffset *int64
 }
 
-// NewPDFXRefStreamDict creates a new PDFXRefStreamDict object.
-func NewPDFXRefStreamDict(ctx *PDFContext) *PDFXRefStreamDict {
+// NewXRefStreamDict creates a new PDFXRefStreamDict object.
+func NewXRefStreamDict(ctx *PDFContext) *XRefStreamDict {
 
-	streamDict := PDFStreamDict{PDFDict: NewPDFDict()}
+	streamDict := StreamDict{PDFDict: NewPDFDict()}
 
-	streamDict.Insert("Type", PDFName("XRef"))
-	streamDict.Insert("Filter", PDFName(filter.Flate))
+	streamDict.Insert("Type", Name("XRef"))
+	streamDict.Insert("Filter", Name(filter.Flate))
 	streamDict.FilterPipeline = []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}
 
 	streamDict.Insert("Root", *ctx.Root)
@@ -189,5 +189,5 @@ func NewPDFXRefStreamDict(ctx *PDFContext) *PDFXRefStreamDict {
 		streamDict.Insert("Encrypt", *ctx.Encrypt)
 	}
 
-	return &PDFXRefStreamDict{PDFStreamDict: streamDict}
+	return &XRefStreamDict{StreamDict: streamDict}
 }

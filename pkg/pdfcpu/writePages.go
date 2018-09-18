@@ -36,7 +36,7 @@ func writePageEntry(ctx *PDFContext, dict *PDFDict, dictName, entryName string, 
 	return nil
 }
 
-func writePageDict(ctx *PDFContext, indRef *PDFIndirectRef, pageDict *PDFDict) error {
+func writePageDict(ctx *PDFContext, indRef *IndirectRef, pageDict *PDFDict) error {
 
 	objNumber := indRef.ObjectNumber.Value()
 	genNumber := indRef.GenerationNumber.Value()
@@ -105,7 +105,7 @@ func writePageDict(ctx *PDFContext, indRef *PDFIndirectRef, pageDict *PDFDict) e
 	return nil
 }
 
-func locateKidForPageNumber(ctx *PDFContext, kidsArray *PDFArray, pageCount *int, pageNumber int) (kid PDFObject, err error) {
+func locateKidForPageNumber(ctx *PDFContext, kidsArray *Array, pageCount *int, pageNumber int) (kid Object, err error) {
 
 	for _, obj := range *kidsArray {
 
@@ -115,7 +115,7 @@ func locateKidForPageNumber(ctx *PDFContext, kidsArray *PDFArray, pageCount *int
 		}
 
 		// Dereference next page node dict.
-		indRef, ok := obj.(PDFIndirectRef)
+		indRef, ok := obj.(IndirectRef)
 		if !ok {
 			return nil, errors.New("locateKidForPageNumber: missing indirect reference for kid")
 		}
@@ -144,7 +144,7 @@ func locateKidForPageNumber(ctx *PDFContext, kidsArray *PDFArray, pageCount *int
 			if !ok {
 				return nil, errors.New("locateKidForPageNumber: missing \"Count\"")
 			}
-			pCount := int(count.(PDFInteger))
+			pCount := int(count.(Integer))
 
 			if *pageCount+pCount < ctx.Write.ExtractPageNr {
 				*pageCount += pCount
@@ -172,7 +172,7 @@ func locateKidForPageNumber(ctx *PDFContext, kidsArray *PDFArray, pageCount *int
 	return nil, errors.Errorf("locateKidForPageNumber: Unable to locate kid: pageCount:%d extractPageNr:%d\n", *pageCount, pageNumber)
 }
 
-func pageNodeDict(ctx *PDFContext, o PDFObject) (d *PDFDict, indRef *PDFIndirectRef, err error) {
+func pageNodeDict(ctx *PDFContext, o Object) (d *PDFDict, indRef *IndirectRef, err error) {
 
 	if o == nil {
 		log.Debug.Println("pageNodeDict: is nil")
@@ -180,7 +180,7 @@ func pageNodeDict(ctx *PDFContext, o PDFObject) (d *PDFDict, indRef *PDFIndirect
 	}
 
 	// Dereference next page node dict.
-	iRef, ok := o.(PDFIndirectRef)
+	iRef, ok := o.(IndirectRef)
 	if !ok {
 		return nil, nil, errors.New("pageNodeDict: missing indirect reference")
 	}
@@ -210,7 +210,7 @@ func pageNodeDict(ctx *PDFContext, o PDFObject) (d *PDFDict, indRef *PDFIndirect
 	return d, &iRef, nil
 }
 
-func prepareSinglePageWrite(ctx *PDFContext, dict *PDFDict, kids *PDFArray, pageCount *int) error {
+func prepareSinglePageWrite(ctx *PDFContext, dict *PDFDict, kids *Array, pageCount *int) error {
 
 	kid, err := locateKidForPageNumber(ctx, kids, pageCount, ctx.Write.ExtractPageNr)
 	if err != nil {
@@ -226,15 +226,15 @@ func prepareSinglePageWrite(ctx *PDFContext, dict *PDFDict, kids *PDFArray, page
 	}
 
 	// Modify KidsArray to hold a single entry for this kid
-	dict.Update("Kids", PDFArray{kid})
+	dict.Update("Kids", Array{kid})
 
 	// Set Count =1
-	dict.Update("Count", PDFInteger(1))
+	dict.Update("Count", Integer(1))
 
 	return nil
 }
 
-func writeKids(ctx *PDFContext, arr *PDFArray, pageCount int) error {
+func writeKids(ctx *PDFContext, arr *Array, pageCount int) error {
 
 	for _, obj := range *arr {
 
@@ -269,7 +269,7 @@ func writeKids(ctx *PDFContext, arr *PDFArray, pageCount int) error {
 	return nil
 }
 
-func writePagesDict(ctx *PDFContext, indRef *PDFIndirectRef, pageCount int) error {
+func writePagesDict(ctx *PDFContext, indRef *IndirectRef, pageCount int) error {
 
 	log.Debug.Printf("*** writePagesDict begin: obj#%d offset=%d ***\n", indRef.ObjectNumber, ctx.Write.Offset)
 
@@ -298,7 +298,7 @@ func writePagesDict(ctx *PDFContext, indRef *PDFIndirectRef, pageCount int) erro
 		return errors.New("writePagesDict: missing \"Count\"")
 	}
 
-	c := int(count.(PDFInteger))
+	c := int(count.(Integer))
 	log.Debug.Printf("writePagesDict: This page node has %d pages\n", c)
 
 	if c == 0 {
@@ -306,7 +306,7 @@ func writePagesDict(ctx *PDFContext, indRef *PDFIndirectRef, pageCount int) erro
 		return nil
 	}
 
-	kidsArrayOrig := dict.PDFArrayEntry("Kids")
+	kidsArrayOrig := dict.ArrayEntry("Kids")
 	if kidsArrayOrig == nil {
 		return errors.New("writePagesDict: corrupt \"Kids\" entry")
 	}
@@ -348,7 +348,7 @@ func writePagesDict(ctx *PDFContext, indRef *PDFIndirectRef, pageCount int) erro
 	}
 
 	// Iterate over page tree.
-	kidsArray := dict.PDFArrayEntry("Kids")
+	kidsArray := dict.ArrayEntry("Kids")
 	if kidsArray == nil {
 		return errors.New("writePagesDict: corrupt \"Kids\" entry")
 	}
@@ -367,7 +367,7 @@ func writePagesDict(ctx *PDFContext, indRef *PDFIndirectRef, pageCount int) erro
 	return nil
 }
 
-func trimPagesDict(ctx *PDFContext, indRef *PDFIndirectRef, pageCount *int) (count int, err error) {
+func trimPagesDict(ctx *PDFContext, indRef *IndirectRef, pageCount *int) (count int, err error) {
 
 	xRefTable := ctx.XRefTable
 	objNumber := int(indRef.ObjectNumber)
@@ -392,15 +392,15 @@ func trimPagesDict(ctx *PDFContext, indRef *PDFIndirectRef, pageCount *int) (cou
 		return 0, errors.New("trimPagesDict: missing \"Count\"")
 	}
 
-	log.Debug.Printf("trimPagesDict: This page node has %d pages\n", int(c.(PDFInteger)))
+	log.Debug.Printf("trimPagesDict: This page node has %d pages\n", int(c.(Integer)))
 
 	// Iterate over page tree.
-	kidsArray := dict.PDFArrayEntry("Kids")
+	kidsArray := dict.ArrayEntry("Kids")
 	if kidsArray == nil {
 		return 0, errors.New("trimPagesDict: corrupt \"Kids\" entry")
 	}
 
-	arr := PDFArray{}
+	arr := Array{}
 
 	for _, obj := range *kidsArray {
 
@@ -441,7 +441,7 @@ func trimPagesDict(ctx *PDFContext, indRef *PDFIndirectRef, pageCount *int) (cou
 	}
 
 	log.Debug.Printf("trimPagesDict end: This page node is trimmed to %d pages\n", count)
-	dict.Update("Count", PDFInteger(count))
+	dict.Update("Count", Integer(count))
 
 	log.Debug.Printf("trimPagesDict end: updated kids: %s\n", arr)
 	dict.Update("Kids", arr)

@@ -14,13 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pdfcpu
+package validate
 
 import (
+	pdf "github.com/hhrutter/pdfcpu/pkg/pdfcpu"
 	"github.com/pkg/errors"
 )
 
-func validateEntryV(xRefTable *XRefTable, dict *PDFDict, dictName string, required bool, sinceVersion PDFVersion, pBeadIndRef *PDFIndirectRef, objNumber int) error {
+func validateEntryV(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string, required bool, sinceVersion pdf.Version, pBeadIndRef *pdf.IndirectRef, objNumber int) error {
 
 	previousBeadIndRef, err := validateIndRefEntry(xRefTable, dict, dictName, "V", required, sinceVersion)
 	if err != nil {
@@ -34,12 +35,12 @@ func validateEntryV(xRefTable *XRefTable, dict *PDFDict, dictName string, requir
 	return nil
 }
 
-func validateBeadDict(xRefTable *XRefTable, beadIndRef, threadIndRef, pBeadIndRef, lBeadIndRef *PDFIndirectRef) error {
+func validateBeadDict(xRefTable *pdf.XRefTable, beadIndRef, threadIndRef, pBeadIndRef, lBeadIndRef *pdf.IndirectRef) error {
 
 	objNumber := beadIndRef.ObjectNumber.Value()
 
 	dictName := "beadDict"
-	sinceVersion := V10
+	sinceVersion := pdf.V10
 
 	dict, err := xRefTable.DereferenceDict(*beadIndRef)
 	if err != nil {
@@ -99,19 +100,19 @@ func validateBeadDict(xRefTable *XRefTable, beadIndRef, threadIndRef, pBeadIndRe
 	return nil
 }
 
-func soleBeadDict(beadIndRef, pBeadIndRef, nBeadIndRef *PDFIndirectRef) bool {
+func soleBeadDict(beadIndRef, pBeadIndRef, nBeadIndRef *pdf.IndirectRef) bool {
 	// if N and V reference this bead dict, must be the first and only one.
 	return pBeadIndRef.Equals(*nBeadIndRef) && beadIndRef.Equals(*pBeadIndRef)
 }
 
-func validateBeadChainIntegrity(beadIndRef, pBeadIndRef, nBeadIndRef *PDFIndirectRef) bool {
+func validateBeadChainIntegrity(beadIndRef, pBeadIndRef, nBeadIndRef *pdf.IndirectRef) bool {
 	return !pBeadIndRef.Equals(*beadIndRef) && !nBeadIndRef.Equals(*beadIndRef)
 }
 
-func validateFirstBeadDict(xRefTable *XRefTable, beadIndRef, threadIndRef *PDFIndirectRef) error {
+func validateFirstBeadDict(xRefTable *pdf.XRefTable, beadIndRef, threadIndRef *pdf.IndirectRef) error {
 
 	dictName := "firstBeadDict"
-	sinceVersion := V10
+	sinceVersion := pdf.V10
 
 	dict, err := xRefTable.DereferenceDict(*beadIndRef)
 	if err != nil {
@@ -167,11 +168,11 @@ func validateFirstBeadDict(xRefTable *XRefTable, beadIndRef, threadIndRef *PDFIn
 	return validateBeadDict(xRefTable, nBeadIndRef, threadIndRef, beadIndRef, pBeadIndRef)
 }
 
-func validateThreadDict(xRefTable *XRefTable, obj PDFObject, sinceVersion PDFVersion) error {
+func validateThreadDict(xRefTable *pdf.XRefTable, obj pdf.Object, sinceVersion pdf.Version) error {
 
 	dictName := "threadDict"
 
-	threadIndRef, ok := obj.(PDFIndirectRef)
+	threadIndRef, ok := obj.(pdf.IndirectRef)
 	if !ok {
 		return errors.New("validateThreadDict: not an indirect ref")
 	}
@@ -206,7 +207,7 @@ func validateThreadDict(xRefTable *XRefTable, obj PDFObject, sinceVersion PDFVer
 	return validateFirstBeadDict(xRefTable, fBeadIndRef, &threadIndRef)
 }
 
-func validateThreads(xRefTable *XRefTable, rootDict *PDFDict, required bool, sinceVersion PDFVersion) error {
+func validateThreads(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
 
 	// => 12.4.3 Articles
 

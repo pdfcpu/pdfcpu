@@ -32,16 +32,16 @@ const maxEntries = 3
 // Once maxEntries has been reached a leaf node turns into an intermediary node with two kids,
 // which are leaf nodes each of them holding half of the sorted entries of the original leaf node.
 type Node struct {
-	Kids       []*Node         // Mirror of the name tree's Kids array.
-	Names      []entry         // Mirror of the name tree's Names array.
-	Kmin, Kmax string          // Mirror of the name tree's Limit array[Kmin,Kmax].
-	IndRef     *PDFIndirectRef // Pointer to the PDF object representing this name tree node.
+	Kids       []*Node      // Mirror of the name tree's Kids array.
+	Names      []entry      // Mirror of the name tree's Names array.
+	Kmin, Kmax string       // Mirror of the name tree's Limit array[Kmin,Kmax].
+	IndRef     *IndirectRef // Pointer to the PDF object representing this name tree node.
 }
 
 // entry is a key value pair.
 type entry struct {
 	k string
-	v PDFObject
+	v Object
 }
 
 func (n Node) leaf() bool {
@@ -64,7 +64,7 @@ func (n Node) withinLimits(k string) bool {
 }
 
 // Value returns the value given key
-func (n Node) Value(k string) (PDFObject, bool) {
+func (n Node) Value(k string) (Object, bool) {
 
 	if n.leaf() {
 
@@ -99,7 +99,7 @@ func (n Node) Value(k string) (PDFObject, bool) {
 }
 
 // AddToLeaf adds an entry to a leaf.
-func (n *Node) AddToLeaf(k string, v PDFObject) {
+func (n *Node) AddToLeaf(k string, v Object) {
 
 	if n.Names == nil {
 		n.Names = make([]entry, 0, maxEntries)
@@ -109,7 +109,7 @@ func (n *Node) AddToLeaf(k string, v PDFObject) {
 }
 
 // Add adds an entry to a name tree.
-func (n *Node) Add(xRefTable *XRefTable, k string, v PDFObject) error {
+func (n *Node) Add(xRefTable *XRefTable, k string, v Object) error {
 
 	if n.Names == nil {
 		n.Names = make([]entry, 0, maxEntries)
@@ -396,7 +396,7 @@ func (n *Node) Remove(xRefTable *XRefTable, k string) (empty, ok bool, err error
 }
 
 // Process traverses the nametree applying a handler to each entry (key-value pair).
-func (n Node) Process(xRefTable *XRefTable, handler func(*XRefTable, string, PDFObject) error) error {
+func (n Node) Process(xRefTable *XRefTable, handler func(*XRefTable, string, Object) error) error {
 
 	if !n.leaf() {
 		for _, v := range n.Kids {
@@ -423,7 +423,7 @@ func (n Node) KeyList() ([]string, error) {
 
 	list := []string{}
 
-	keys := func(xRefTable *XRefTable, k string, v PDFObject) error {
+	keys := func(xRefTable *XRefTable, k string, v Object) error {
 		list = append(list, k)
 		return nil
 	}

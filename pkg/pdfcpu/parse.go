@@ -291,7 +291,7 @@ func parseObjectAttributes(line *string) (objectNumber *int, generationNumber *i
 	return objectNumber, generationNumber, nil
 }
 
-func parseArray(line *string) (*PDFArray, error) {
+func parseArray(line *string) (*Array, error) {
 
 	if line == nil || len(*line) == 0 {
 		return nil, errNoArray
@@ -321,7 +321,7 @@ func parseArray(line *string) (*PDFArray, error) {
 		return nil, errArrayNotTerminated
 	}
 
-	arr := PDFArray{}
+	arr := Array{}
 
 	for !strings.HasPrefix(l, "]") {
 
@@ -355,7 +355,7 @@ func parseArray(line *string) (*PDFArray, error) {
 	return &arr, nil
 }
 
-func parseStringLiteral(line *string) (PDFObject, error) {
+func parseStringLiteral(line *string) (Object, error) {
 
 	// Balanced pairs of parenthesis are allowed.
 	// Empty literals are allowed.
@@ -406,13 +406,13 @@ func parseStringLiteral(line *string) (PDFObject, error) {
 	// position behind ')'
 	*line = forwardParseBuf(l[i:], 1)
 
-	stringLiteral := PDFStringLiteral(balParStr)
+	stringLiteral := StringLiteral(balParStr)
 	logDebugParse.Printf("parseStringLiteral: end <%s>\n", stringLiteral)
 
 	return stringLiteral, nil
 }
 
-func parseHexLiteral(line *string) (PDFObject, error) {
+func parseHexLiteral(line *string) (Object, error) {
 
 	// hexliterals have no whitespace and can't be empty.
 
@@ -444,10 +444,10 @@ func parseHexLiteral(line *string) (PDFObject, error) {
 	// position behind '>'
 	*line = forwardParseBuf(l[eov:], 1)
 
-	return PDFHexLiteral(*hexStr), nil
+	return HexLiteral(*hexStr), nil
 }
 
-func parseName(line *string) (*PDFName, error) {
+func parseName(line *string) (*Name, error) {
 
 	// see 7.3.5
 
@@ -478,7 +478,7 @@ func parseName(line *string) (*PDFName, error) {
 		*line = ""
 	}
 
-	nameObj := PDFName(l)
+	nameObj := Name(l)
 
 	return &nameObj, nil
 }
@@ -568,7 +568,7 @@ func noBuf(l *string) bool {
 	return l == nil || len(*l) == 0
 }
 
-func parseNumericOrIndRef(line *string) (PDFObject, error) {
+func parseNumericOrIndRef(line *string) (Object, error) {
 
 	if noBuf(line) {
 		return nil, errBufNotAvailable
@@ -606,7 +606,7 @@ func parseNumericOrIndRef(line *string) (PDFObject, error) {
 		// We have a Float!
 		logDebugParse.Printf("parseNumericOrIndRef: value is numeric float: %f\n", f)
 		*line = l1
-		return PDFFloat(f), nil
+		return Float(f), nil
 	}
 
 	// We have an Int!
@@ -615,7 +615,7 @@ func parseNumericOrIndRef(line *string) (PDFObject, error) {
 	if i1 == 0 || delimiter(l[i1]) {
 		logDebugParse.Printf("parseNumericOrIndRef: value is numeric int: %d\n", i)
 		*line = l1
-		return PDFInteger(i), nil
+		return Integer(i), nil
 	}
 
 	// Must be indirect reference. (123 0 R)
@@ -628,7 +628,7 @@ func parseNumericOrIndRef(line *string) (PDFObject, error) {
 	if len(l) == 0 {
 		// only whitespace
 		*line = l1
-		return PDFInteger(i), nil
+		return Integer(i), nil
 	}
 
 	i2, _ := positionToNextWhitespaceOrChar(l, "/<([]>")
@@ -638,7 +638,7 @@ func parseNumericOrIndRef(line *string) (PDFObject, error) {
 	if i2 == 0 || delimiter(l[i2]) {
 		logDebugParse.Printf("parseNumericOrIndRef: 2 objects => value is numeric int: %d\n", i)
 		*line = l1
-		return PDFInteger(i), nil
+		return Integer(i), nil
 	}
 
 	str = l
@@ -652,7 +652,7 @@ func parseNumericOrIndRef(line *string) (PDFObject, error) {
 		// Can't be an indirect reference.
 		logDebugParse.Printf("parseNumericOrIndRef: 3 objects, 2nd no int, value is no indirect ref but numeric int: %d\n", i)
 		*line = l1
-		return PDFInteger(i), nil
+		return Integer(i), nil
 	}
 
 	// We have the 2nd int(generation number).
@@ -664,13 +664,13 @@ func parseNumericOrIndRef(line *string) (PDFObject, error) {
 	if len(l) == 0 {
 		// only whitespace
 		l = l1
-		return PDFInteger(i), nil
+		return Integer(i), nil
 	}
 
 	if l[0] == 'R' {
 		// We have all 3 components to create an indirect reference.
 		*line = forwardParseBuf(l, 1)
-		return *NewPDFIndirectRef(iref1, iref2), nil
+		return *NewIndirectRef(iref1, iref2), nil
 	}
 
 	// 'R' not available.
@@ -678,10 +678,10 @@ func parseNumericOrIndRef(line *string) (PDFObject, error) {
 	logDebugParse.Printf("parseNumericOrIndRef: value is no indirect ref(no 'R') but numeric int: %d\n", i)
 	*line = l1
 
-	return PDFInteger(i), nil
+	return Integer(i), nil
 }
 
-func parseHexLiteralOrDict(l *string) (val PDFObject, err error) {
+func parseHexLiteralOrDict(l *string) (val Object, err error) {
 
 	if len(*l) < 2 {
 		return nil, errBufNotAvailable
@@ -706,7 +706,7 @@ func parseHexLiteralOrDict(l *string) (val PDFObject, err error) {
 	return val, nil
 }
 
-func parseBooleanOrNull(l string) (val PDFObject, s string, ok bool) {
+func parseBooleanOrNull(l string) (val Object, s string, ok bool) {
 
 	// null, absent object
 	if strings.HasPrefix(l, "null") {
@@ -717,20 +717,20 @@ func parseBooleanOrNull(l string) (val PDFObject, s string, ok bool) {
 	// boolean true
 	if strings.HasPrefix(l, "true") {
 		logDebugParse.Println("parseBoolean: value = true")
-		return PDFBoolean(true), "true", true
+		return Boolean(true), "true", true
 	}
 
 	// boolean false
 	if strings.HasPrefix(l, "false") {
 		logDebugParse.Println("parseBoolean: value = false")
-		return PDFBoolean(false), "false", true
+		return Boolean(false), "false", true
 	}
 
 	return nil, "", false
 }
 
-// parseObject parses next PDFObject from string buffer.
-func parseObject(line *string) (PDFObject, error) {
+// parseObject parses next Object from string buffer.
+func parseObject(line *string) (Object, error) {
 
 	if noBuf(line) {
 		return nil, errBufNotAvailable
@@ -747,18 +747,18 @@ func parseObject(line *string) (PDFObject, error) {
 		return nil, errBufNotAvailable
 	}
 
-	var value PDFObject
+	var value Object
 	var err error
 
 	switch l[0] {
 
 	case '[': // array
 		logDebugParse.Println("ParseObject: value = Array")
-		pdfArray, err := parseArray(&l)
+		Array, err := parseArray(&l)
 		if err != nil {
 			return nil, err
 		}
-		value = *pdfArray
+		value = *Array
 
 	case '/': // name
 		logDebugParse.Println("ParseObject: value = Name Object")
@@ -805,19 +805,19 @@ func parseObject(line *string) (PDFObject, error) {
 	return value, nil
 }
 
-// parseXRefStreamDict creates a PDFXRefStreamDict out of a PDFStreamDict.
-func parseXRefStreamDict(pdfStreamDict PDFStreamDict) (*PDFXRefStreamDict, error) {
+// parseXRefStreamDict creates a XRefStreamDict out of a StreamDict.
+func parseXRefStreamDict(StreamDict StreamDict) (*XRefStreamDict, error) {
 
 	logDebugParse.Println("ParseXRefStreamDict: begin")
 
-	if pdfStreamDict.Size() == nil {
+	if StreamDict.Size() == nil {
 		return nil, errors.New("ParseXRefStreamDict: \"Size\" not available")
 	}
 
 	objs := []int{}
 
 	//	Read optional parameter Index
-	pIndArr := pdfStreamDict.Index()
+	pIndArr := StreamDict.Index()
 	if pIndArr != nil {
 		logDebugParse.Println("ParseXRefStreamDict: using index dict")
 
@@ -828,12 +828,12 @@ func parseXRefStreamDict(pdfStreamDict PDFStreamDict) (*PDFXRefStreamDict, error
 
 		for i := 0; i < len(indArr)/2; i++ {
 
-			startObj, ok := indArr[i*2].(PDFInteger)
+			startObj, ok := indArr[i*2].(Integer)
 			if !ok {
 				return nil, errXrefStreamCorruptIndex
 			}
 
-			count, ok := indArr[i*2+1].(PDFInteger)
+			count, ok := indArr[i*2+1].(Integer)
 			if !ok {
 				return nil, errXrefStreamCorruptIndex
 			}
@@ -845,7 +845,7 @@ func parseXRefStreamDict(pdfStreamDict PDFStreamDict) (*PDFXRefStreamDict, error
 
 	} else {
 		logDebugParse.Println("ParseXRefStreamDict: no index dict")
-		for i := 0; i < *pdfStreamDict.Size(); i++ {
+		for i := 0; i < *StreamDict.Size(); i++ {
 			objs = append(objs, i)
 
 		}
@@ -856,7 +856,7 @@ func parseXRefStreamDict(pdfStreamDict PDFStreamDict) (*PDFXRefStreamDict, error
 
 	var wIntArr [3]int
 
-	w := pdfStreamDict.W()
+	w := StreamDict.W()
 	if w == nil {
 		return nil, errXrefStreamMissingW
 	}
@@ -871,51 +871,51 @@ func parseXRefStreamDict(pdfStreamDict PDFStreamDict) (*PDFXRefStreamDict, error
 		return !ok || i < 0
 	}
 
-	i1, ok := arr[0].(PDFInteger)
+	i1, ok := arr[0].(Integer)
 	if f(ok, i1.Value()) {
 		return nil, errXrefStreamCorruptW
 	}
 	wIntArr[0] = int(i1)
 
-	i2, ok := arr[1].(PDFInteger)
+	i2, ok := arr[1].(Integer)
 	if f(ok, i2.Value()) {
 		return nil, errXrefStreamCorruptW
 	}
 	wIntArr[1] = int(i2)
 
-	i3, ok := arr[2].(PDFInteger)
+	i3, ok := arr[2].(Integer)
 	if f(ok, i3.Value()) {
 		return nil, errXrefStreamCorruptW
 	}
 	wIntArr[2] = int(i3)
 
-	xsd := &PDFXRefStreamDict{
-		PDFStreamDict:  pdfStreamDict,
-		Size:           *pdfStreamDict.Size(),
+	xsd := &XRefStreamDict{
+		StreamDict:     StreamDict,
+		Size:           *StreamDict.Size(),
 		Objects:        objs,
 		W:              wIntArr,
-		PreviousOffset: pdfStreamDict.Prev()}
+		PreviousOffset: StreamDict.Prev()}
 
 	logDebugParse.Println("ParseXRefStreamDict: end")
 
 	return xsd, nil
 }
 
-// objectStreamDict creates a PDFObjectStreamDict out of a PDFStreamDict.
-func objectStreamDict(pdfStreamDict PDFStreamDict) (*PDFObjectStreamDict, error) {
+// objectStreamDict creates a ObjectStreamDict out of a StreamDict.
+func objectStreamDict(StreamDict StreamDict) (*ObjectStreamDict, error) {
 
-	if pdfStreamDict.First() == nil {
+	if StreamDict.First() == nil {
 		return nil, errObjStreamMissingFirst
 	}
 
-	if pdfStreamDict.N() == nil {
+	if StreamDict.N() == nil {
 		return nil, errObjStreamMissingN
 	}
 
-	osd := &PDFObjectStreamDict{
-		PDFStreamDict:  pdfStreamDict,
-		ObjCount:       *pdfStreamDict.N(),
-		FirstObjOffset: *pdfStreamDict.First(),
+	osd := &ObjectStreamDict{
+		StreamDict:     StreamDict,
+		ObjCount:       *StreamDict.N(),
+		FirstObjOffset: *StreamDict.First(),
 		ObjArray:       nil}
 
 	return osd, nil

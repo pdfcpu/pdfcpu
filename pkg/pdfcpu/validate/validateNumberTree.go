@@ -14,13 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pdfcpu
+package validate
 
 import (
+	pdf "github.com/hhrutter/pdfcpu/pkg/pdfcpu"
 	"github.com/pkg/errors"
 )
 
-func validatePageLabelDict(xRefTable *XRefTable, obj PDFObject) error {
+func validatePageLabelDict(xRefTable *pdf.XRefTable, obj pdf.Object) error {
 
 	// see 12.4.2 Page Labels
 
@@ -32,34 +33,34 @@ func validatePageLabelDict(xRefTable *XRefTable, obj PDFObject) error {
 	dictName := "pageLabelDict"
 
 	// Type, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, V10, func(s string) bool { return s == "PageLabel" })
+	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, pdf.V10, func(s string) bool { return s == "PageLabel" })
 	if err != nil {
 		return err
 	}
 
 	// Optional name entry S
 	// The numbering style that shall be used for the numeric portion of each page label.
-	validate := func(s string) bool { return memberOf(s, []string{"D", "R", "r", "A", "a"}) }
-	_, err = validateNameEntry(xRefTable, dict, dictName, "S", OPTIONAL, V10, validate)
+	validate := func(s string) bool { return pdf.MemberOf(s, []string{"D", "R", "r", "A", "a"}) }
+	_, err = validateNameEntry(xRefTable, dict, dictName, "S", OPTIONAL, pdf.V10, validate)
 	if err != nil {
 		return err
 	}
 
 	// Optional string entry P
 	// Label prefix for page labels in this range.
-	_, err = validateStringEntry(xRefTable, dict, dictName, "P", OPTIONAL, V10, nil)
+	_, err = validateStringEntry(xRefTable, dict, dictName, "P", OPTIONAL, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// Optional integer entry St
 	// The value of the numeric portion for the first page label in the range.
-	_, err = validateIntegerEntry(xRefTable, dict, dictName, "St", OPTIONAL, V10, func(i int) bool { return i >= 1 })
+	_, err = validateIntegerEntry(xRefTable, dict, dictName, "St", OPTIONAL, pdf.V10, func(i int) bool { return i >= 1 })
 
 	return err
 }
 
-func validateNumberTreeDictNumsEntry(xRefTable *XRefTable, dict *PDFDict, name string) (firstKey, lastKey int, err error) {
+func validateNumberTreeDictNumsEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, name string) (firstKey, lastKey int, err error) {
 
 	// Nums: array of the form [key1 value1 key2 value2 ... key n value n]
 	obj, found := dict.Find("Nums")
@@ -94,7 +95,7 @@ func validateNumberTreeDictNumsEntry(xRefTable *XRefTable, dict *PDFDict, name s
 				return 0, 0, err
 			}
 
-			i, ok := obj.(PDFInteger)
+			i, ok := obj.(pdf.Integer)
 			if !ok {
 				return 0, 0, errors.Errorf("validateNumberTreeDictNumsEntry: corrupt key <%v>\n", obj)
 			}
@@ -128,15 +129,15 @@ func validateNumberTreeDictNumsEntry(xRefTable *XRefTable, dict *PDFDict, name s
 	return firstKey, lastKey, nil
 }
 
-func validateNumberTreeDictLimitsEntry(xRefTable *XRefTable, dict *PDFDict, firstKey, lastKey int) error {
+func validateNumberTreeDictLimitsEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, firstKey, lastKey int) error {
 
-	arr, err := validateIntegerArrayEntry(xRefTable, dict, "numberTreeDict", "Limits", REQUIRED, V10, func(a PDFArray) bool { return len(a) == 2 })
+	arr, err := validateIntegerArrayEntry(xRefTable, dict, "numberTreeDict", "Limits", REQUIRED, pdf.V10, func(a pdf.Array) bool { return len(a) == 2 })
 	if err != nil {
 		return err
 	}
 
-	fk, _ := (*arr)[0].(PDFInteger)
-	lk, _ := (*arr)[1].(PDFInteger)
+	fk, _ := (*arr)[0].(pdf.Integer)
+	lk, _ := (*arr)[1].(pdf.Integer)
 
 	if firstKey != fk.Value() || lastKey != lk.Value() {
 		return errors.Errorf("validateNumberTreeDictLimitsEntry: leaf node corrupted\n")
@@ -145,7 +146,7 @@ func validateNumberTreeDictLimitsEntry(xRefTable *XRefTable, dict *PDFDict, firs
 	return nil
 }
 
-func validateNumberTree(xRefTable *XRefTable, name string, indRef PDFIndirectRef, root bool) (firstKey, lastKey int, err error) {
+func validateNumberTree(xRefTable *pdf.XRefTable, name string, indRef pdf.IndirectRef, root bool) (firstKey, lastKey int, err error) {
 
 	// A node has "Kids" or "Nums" entry.
 
@@ -158,7 +159,7 @@ func validateNumberTree(xRefTable *XRefTable, name string, indRef PDFIndirectRef
 	// if Kids present then recurse
 	if obj, found := dict.Find("Kids"); found {
 
-		var arr *PDFArray
+		var arr *pdf.Array
 
 		arr, err = xRefTable.DereferenceArray(obj)
 		if err != nil {
@@ -170,7 +171,7 @@ func validateNumberTree(xRefTable *XRefTable, name string, indRef PDFIndirectRef
 
 		for _, obj := range *arr {
 
-			kid, ok := obj.(PDFIndirectRef)
+			kid, ok := obj.(pdf.IndirectRef)
 			if !ok {
 				return 0, 0, errors.New("validateNumberTree: corrupt kid, should be indirect reference")
 			}

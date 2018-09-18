@@ -38,7 +38,7 @@ func parmsForFilter(d *PDFDict) map[string]int {
 
 	for k, v := range d.Dict {
 
-		i, ok := v.(PDFInteger)
+		i, ok := v.(Integer)
 		if !ok {
 			continue
 		}
@@ -49,7 +49,7 @@ func parmsForFilter(d *PDFDict) map[string]int {
 }
 
 // encodeStream encodes stream dict data by applying its filter pipeline.
-func encodeStream(sd *PDFStreamDict) error {
+func encodeStream(sd *StreamDict) error {
 
 	log.Debug.Printf("encodeStream begin")
 
@@ -59,9 +59,9 @@ func encodeStream(sd *PDFStreamDict) error {
 		sd.Raw = sd.Content
 		streamLength := int64(len(sd.Raw))
 		sd.StreamLength = &streamLength
-		ok := sd.Insert("Length", PDFInteger(streamLength))
+		ok := sd.Insert("Length", Integer(streamLength))
 		if !ok {
-			sd.Update("Length", PDFInteger(streamLength))
+			sd.Update("Length", Integer(streamLength))
 		}
 		return nil
 	}
@@ -101,9 +101,9 @@ func encodeStream(sd *PDFStreamDict) error {
 	streamLength := int64(len(sd.Raw))
 	sd.StreamLength = &streamLength
 
-	ok := sd.Insert("Length", PDFInteger(streamLength))
+	ok := sd.Insert("Length", Integer(streamLength))
 	if !ok {
-		sd.Update("Length", PDFInteger(streamLength))
+		sd.Update("Length", Integer(streamLength))
 	}
 
 	log.Debug.Printf("encodeStream end")
@@ -112,7 +112,7 @@ func encodeStream(sd *PDFStreamDict) error {
 }
 
 // decodeStream decodes streamDict data by applying its filter pipeline.
-func decodeStream(sd *PDFStreamDict) error {
+func decodeStream(sd *StreamDict) error {
 
 	log.Debug.Printf("decodeStream begin \n%s\n", sd)
 

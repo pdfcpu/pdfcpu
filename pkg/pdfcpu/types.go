@@ -64,86 +64,86 @@ type IntSet map[int]bool
 // StringSet is a set of strings.
 type StringSet map[string]bool
 
-// PDFObject defines an interface for all PDFObjects.
-type PDFObject interface {
+// Object defines an interface for all Objects.
+type Object interface {
 	fmt.Stringer
 	PDFString() string
 }
 
-// PDFBoolean represents a PDF boolean object.
-type PDFBoolean bool
+// Boolean represents a PDF boolean object.
+type Boolean bool
 
-func (boolean PDFBoolean) String() string {
+func (boolean Boolean) String() string {
 	return fmt.Sprintf("%v", bool(boolean))
 }
 
 // PDFString returns a string representation as found in and written to a PDF file.
-func (boolean PDFBoolean) PDFString() string {
+func (boolean Boolean) PDFString() string {
 	return boolean.String()
 }
 
 // Value returns a bool value for this PDF object.
-func (boolean PDFBoolean) Value() bool {
+func (boolean Boolean) Value() bool {
 	return bool(boolean)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
 
-// PDFFloat represents a PDF float object.
-type PDFFloat float64
+// Float represents a PDF float object.
+type Float float64
 
-func (f PDFFloat) String() string {
+func (f Float) String() string {
 	// strconv may be faster.
 	return fmt.Sprintf("%.2f", float64(f))
 }
 
 // PDFString returns a string representation as found in and written to a PDF file.
-func (f PDFFloat) PDFString() string {
+func (f Float) PDFString() string {
 	return f.String()
 }
 
 // Value returns a float64 value for this PDF object.
-func (f PDFFloat) Value() float64 {
+func (f Float) Value() float64 {
 	return float64(f)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
 
-// PDFInteger represents a PDF integer object.
-type PDFInteger int
+// Integer represents a PDF integer object.
+type Integer int
 
-func (i PDFInteger) String() string {
+func (i Integer) String() string {
 	return strconv.Itoa(int(i))
 }
 
 // PDFString returns a string representation as found in and written to a PDF file.
-func (i PDFInteger) PDFString() string {
+func (i Integer) PDFString() string {
 	return i.String()
 }
 
 // Value returns an int value for this PDF object.
-func (i PDFInteger) Value() int {
+func (i Integer) Value() int {
 	return int(i)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
 
 // NewRectangle creates a rectangle array
-func NewRectangle(llx, lly, urx, ury float64) PDFArray {
+func NewRectangle(llx, lly, urx, ury float64) Array {
 	return NewNumberArray(llx, lly, urx, ury)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
 
-// PDFName represents a PDF name object.
-type PDFName string
+// Name represents a PDF name object.
+type Name string
 
-func (nameObject PDFName) String() string {
+func (nameObject Name) String() string {
 	return fmt.Sprintf("%s", string(nameObject))
 }
 
 // PDFString returns a string representation as found in and written to a PDF file.
-func (nameObject PDFName) PDFString() string {
+func (nameObject Name) PDFString() string {
 	s := " "
 	if len(nameObject) > 0 {
 		s = string(nameObject)
@@ -152,31 +152,31 @@ func (nameObject PDFName) PDFString() string {
 }
 
 // Value returns a string value for this PDF object.
-func (nameObject PDFName) Value() string {
+func (nameObject Name) Value() string {
 	return string(nameObject)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
 
-// PDFStringLiteral represents a PDF string literal object.
-type PDFStringLiteral string
+// StringLiteral represents a PDF string literal object.
+type StringLiteral string
 
-func (stringliteral PDFStringLiteral) String() string {
+func (stringliteral StringLiteral) String() string {
 	return fmt.Sprintf("(%s)", string(stringliteral))
 }
 
 // PDFString returns a string representation as found in and written to a PDF file.
-func (stringliteral PDFStringLiteral) PDFString() string {
+func (stringliteral StringLiteral) PDFString() string {
 	return stringliteral.String()
 }
 
 // Value returns a string value for this PDF object.
-func (stringliteral PDFStringLiteral) Value() string {
+func (stringliteral StringLiteral) Value() string {
 	return string(stringliteral)
 }
 
 // DateStringLiteral returns a PDFStringLiteral for time.
-func DateStringLiteral(t time.Time) PDFStringLiteral {
+func DateStringLiteral(t time.Time) StringLiteral {
 
 	_, tz := t.Zone()
 
@@ -185,30 +185,30 @@ func DateStringLiteral(t time.Time) PDFStringLiteral {
 		t.Hour(), t.Minute(), t.Second(),
 		tz/60/60, tz/60%60)
 
-	return PDFStringLiteral(dateStr)
+	return StringLiteral(dateStr)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
 
-// PDFHexLiteral represents a PDF hex literal object.
-type PDFHexLiteral string
+// HexLiteral represents a PDF hex literal object.
+type HexLiteral string
 
-func (hexliteral PDFHexLiteral) String() string {
+func (hexliteral HexLiteral) String() string {
 	return fmt.Sprintf("<%s>", string(hexliteral))
 }
 
 // PDFString returns the string representation as found in and written to a PDF file.
-func (hexliteral PDFHexLiteral) PDFString() string {
+func (hexliteral HexLiteral) PDFString() string {
 	return hexliteral.String()
 }
 
 // Value returns a string value for this PDF object.
-func (hexliteral PDFHexLiteral) Value() string {
+func (hexliteral HexLiteral) Value() string {
 	return string(hexliteral)
 }
 
 // Bytes returns the byte representation.
-func (hexliteral PDFHexLiteral) Bytes() ([]byte, error) {
+func (hexliteral HexLiteral) Bytes() ([]byte, error) {
 	b, err := hex.DecodeString(hexliteral.Value())
 	if err != nil {
 		return nil, err
@@ -218,30 +218,30 @@ func (hexliteral PDFHexLiteral) Bytes() ([]byte, error) {
 
 ///////////////////////////////////////////////////////////////////////////////////
 
-// PDFIndirectRef represents a PDF indirect object.
-type PDFIndirectRef struct {
-	ObjectNumber     PDFInteger
-	GenerationNumber PDFInteger
+// IndirectRef represents a PDF indirect object.
+type IndirectRef struct {
+	ObjectNumber     Integer
+	GenerationNumber Integer
 }
 
-// NewPDFIndirectRef returns a new PDFIndirectRef object.
-func NewPDFIndirectRef(objectNumber, generationNumber int) *PDFIndirectRef {
-	return &PDFIndirectRef{
-		ObjectNumber:     PDFInteger(objectNumber),
-		GenerationNumber: PDFInteger(generationNumber)}
+// NewIndirectRef returns a new PDFIndirectRef object.
+func NewIndirectRef(objectNumber, generationNumber int) *IndirectRef {
+	return &IndirectRef{
+		ObjectNumber:     Integer(objectNumber),
+		GenerationNumber: Integer(generationNumber)}
 }
 
-func (ir PDFIndirectRef) String() string {
+func (ir IndirectRef) String() string {
 	return fmt.Sprintf("(%s)", ir.PDFString())
 }
 
 // PDFString returns a string representation as found in and written to a PDF file.
-func (ir PDFIndirectRef) PDFString() string {
+func (ir IndirectRef) PDFString() string {
 	return fmt.Sprintf("%d %d R", ir.ObjectNumber, ir.GenerationNumber)
 }
 
 // Equals returns true if two indirect References refer to the same object.
-func (ir PDFIndirectRef) Equals(indRef PDFIndirectRef) bool {
+func (ir IndirectRef) Equals(indRef IndirectRef) bool {
 	return ir.ObjectNumber == indRef.ObjectNumber &&
 		ir.GenerationNumber == indRef.GenerationNumber
 }

@@ -14,26 +14,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pdfcpu
+package validate
 
 import (
+	pdf "github.com/hhrutter/pdfcpu/pkg/pdfcpu"
 	"github.com/pkg/errors"
 )
 
-func validateOutlineItemDict(xRefTable *XRefTable, dict *PDFDict) error {
+func validateOutlineItemDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
 
 	dictName := "outlineItemDict"
 
-	var indRef *PDFIndirectRef
+	var indRef *pdf.IndirectRef
 
 	// Title, required, text string
-	_, err := validateStringEntry(xRefTable, dict, dictName, "Title", REQUIRED, V10, nil)
+	_, err := validateStringEntry(xRefTable, dict, dictName, "Title", REQUIRED, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// Parent, required, dict indRef
-	indRef, err = validateIndRefEntry(xRefTable, dict, dictName, "Parent", REQUIRED, V10)
+	indRef, err = validateIndRefEntry(xRefTable, dict, dictName, "Parent", REQUIRED, pdf.V10)
 	if err != nil {
 		return err
 	}
@@ -43,13 +44,13 @@ func validateOutlineItemDict(xRefTable *XRefTable, dict *PDFDict) error {
 	}
 
 	// Count, optional, int
-	_, err = validateIntegerEntry(xRefTable, dict, dictName, "Count", OPTIONAL, V10, nil)
+	_, err = validateIntegerEntry(xRefTable, dict, dictName, "Count", OPTIONAL, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// SE, optional, dict indRef, since V1.3
-	indRef, err = validateIndRefEntry(xRefTable, dict, dictName, "SE", OPTIONAL, V13)
+	indRef, err = validateIndRefEntry(xRefTable, dict, dictName, "SE", OPTIONAL, pdf.V13)
 	if err != nil {
 		return err
 	}
@@ -61,25 +62,25 @@ func validateOutlineItemDict(xRefTable *XRefTable, dict *PDFDict) error {
 	}
 
 	// C, optional, array of 3 numbers, since V1.4
-	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "C", OPTIONAL, V14, func(a PDFArray) bool { return len(a) == 3 })
+	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "C", OPTIONAL, pdf.V14, func(a pdf.Array) bool { return len(a) == 3 })
 	if err != nil {
 		return err
 	}
 
 	// F, optional integer, since V1.4
-	_, err = validateIntegerEntry(xRefTable, dict, dictName, "F", OPTIONAL, V14, nil)
+	_, err = validateIntegerEntry(xRefTable, dict, dictName, "F", OPTIONAL, pdf.V14, nil)
 	if err != nil {
 		return err
 	}
 
 	// Optional A or Dest, since V1.1
-	return validateActionOrDestination(xRefTable, dict, dictName, V11)
+	return validateActionOrDestination(xRefTable, dict, dictName, pdf.V11)
 }
 
-func validateOutlineTree(xRefTable *XRefTable, first, last *PDFIndirectRef) error {
+func validateOutlineTree(xRefTable *pdf.XRefTable, first, last *pdf.IndirectRef) error {
 
 	var (
-		dict      *PDFDict
+		dict      *pdf.PDFDict
 		objNumber int
 		err       error
 	)
@@ -125,14 +126,14 @@ func validateOutlineTree(xRefTable *XRefTable, first, last *PDFIndirectRef) erro
 	}
 
 	// Relaxed validation
-	if objNumber != last.ObjectNumber.Value() && xRefTable.ValidationMode == ValidationStrict {
+	if objNumber != last.ObjectNumber.Value() && xRefTable.ValidationMode == pdf.ValidationStrict {
 		return errors.Errorf("validateOutlineTree: corrupted child list %d <> %d\n", objNumber, last.ObjectNumber)
 	}
 
 	return nil
 }
 
-func validateOutlines(xRefTable *XRefTable, rootDict *PDFDict, required bool, sinceVersion PDFVersion) error {
+func validateOutlines(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
 
 	// => 12.3.3 Document Outline
 
@@ -147,7 +148,7 @@ func validateOutlines(xRefTable *XRefTable, rootDict *PDFDict, required bool, si
 	}
 
 	// Type, optional, name
-	_, err = validateNameEntry(xRefTable, dict, "outlineDict", "Type", OPTIONAL, V10, func(s string) bool { return s == "Outlines" })
+	_, err = validateNameEntry(xRefTable, dict, "outlineDict", "Type", OPTIONAL, pdf.V10, func(s string) bool { return s == "Outlines" })
 	if err != nil {
 		return err
 	}

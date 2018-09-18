@@ -73,7 +73,7 @@ func checkRemoveResult(t *testing.T, r *Node, k string, empty, ok bool, exp stri
 
 func buildNameTree(t *testing.T, r *Node) {
 
-	r.Add(nil, "b", PDFStringLiteral("bv"))
+	r.Add(nil, "b", StringLiteral("bv"))
 	checkAddResult(t, r, "[(b,(bv)){b,b}]", true)
 
 	_, ok, _ := r.Remove(nil, "x")
@@ -81,7 +81,7 @@ func buildNameTree(t *testing.T, r *Node) {
 		t.Fatal("should not be able to Remove x")
 	}
 
-	r.Add(nil, "f", PDFStringLiteral("fv"))
+	r.Add(nil, "f", StringLiteral("fv"))
 	checkAddResult(t, r, "[(b,(bv))(f,(fv)){b,f}]", true)
 
 	_, ok, _ = r.Remove(nil, "c")
@@ -89,7 +89,7 @@ func buildNameTree(t *testing.T, r *Node) {
 		t.Fatal("should not be able to Remove c")
 	}
 
-	r.Add(nil, "d", PDFStringLiteral("dv"))
+	r.Add(nil, "d", StringLiteral("dv"))
 	checkAddResult(t, r, "[(b,(bv))(d,(dv))(f,(fv)){b,f}]", true)
 
 	_, ok = r.Value("c")
@@ -97,16 +97,16 @@ func buildNameTree(t *testing.T, r *Node) {
 		t.Fatal("should not find Value for c")
 	}
 
-	r.Add(nil, "h", PDFStringLiteral("hv"))
+	r.Add(nil, "h", StringLiteral("hv"))
 	checkAddResult(t, r, "[(b,(bv))(d,(dv)){b,d}],[(f,(fv))(h,(hv)){f,h}]", false)
 
-	r.Add(nil, "a", PDFStringLiteral("av"))
+	r.Add(nil, "a", StringLiteral("av"))
 	checkAddResult(t, r, "[(a,(av))(b,(bv))(d,(dv)){a,d}],[(f,(fv))(h,(hv)){f,h}]", false)
 
-	r.Add(nil, "i", PDFStringLiteral("iv"))
+	r.Add(nil, "i", StringLiteral("iv"))
 	checkAddResult(t, r, "[(a,(av))(b,(bv))(d,(dv)){a,d}],[(f,(fv))(h,(hv))(i,(iv)){f,i}]", false)
 
-	r.Add(nil, "c", PDFStringLiteral("cv"))
+	r.Add(nil, "c", StringLiteral("cv"))
 	checkAddResult(t, r, "[(a,(av))(b,(bv)){a,b}],[(c,(cv))(d,(dv)){c,d}],[(f,(fv))(h,(hv))(i,(iv)){f,i}]", false)
 }
 
@@ -168,7 +168,7 @@ func destroyNameTreet(t *testing.T, r *Node) {
 		t.Fatal("should not find Value for x")
 	}
 
-	r.Add(nil, "c", PDFStringLiteral("cvv"))
+	r.Add(nil, "c", StringLiteral("cvv"))
 	l := r.String()
 	exp := "[(c,(cvv))(d,(dv)){c,d}]"
 	if l != exp {

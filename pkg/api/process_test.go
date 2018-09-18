@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
+	"github.com/hhrutter/pdfcpu/pkg/pdfcpu/validate"
 )
 
 var inDir, outDir string
@@ -64,7 +65,7 @@ func TestGetPageCount(t *testing.T) {
 		t.Fatalf("TestGetPageCount:  %v\n", err)
 	}
 
-	err = pdfcpu.ValidateXRefTable(ctx.XRefTable)
+	err = validate.XRefTable(ctx.XRefTable)
 	if err != nil {
 		t.Fatalf("TestGetPageCount: %v\n", err)
 	}
@@ -1171,7 +1172,7 @@ func xxxTestDemoXRef(t *testing.T) {
 		t.Fatal("testDemoXRef: xRefTable == nil")
 	}
 
-	err = pdfcpu.ValidateXRefTable(xRefTable)
+	err = validate.XRefTable(xRefTable)
 	if err != nil {
 		t.Fatalf("testDemoXRef %v\n", err)
 	}

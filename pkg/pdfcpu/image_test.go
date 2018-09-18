@@ -163,7 +163,7 @@ func TestReadWritePNG(t *testing.T) {
 }
 
 // Read in a device gray image stream dump from disk.
-func read1BPCDeviceGrayFlateStreamDump(xRefTable *XRefTable, fileName string) (*PDFStreamDict, error) {
+func read1BPCDeviceGrayFlateStreamDump(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
 
 	f, err := os.Open(fileName)
 	if err != nil {
@@ -177,15 +177,15 @@ func read1BPCDeviceGrayFlateStreamDump(xRefTable *XRefTable, fileName string) (*
 		return nil, err
 	}
 
-	sd := &PDFStreamDict{
+	sd := &StreamDict{
 		PDFDict: PDFDict{
-			Dict: map[string]PDFObject{
-				"Type":             PDFName("XObject"),
-				"Subtype":          PDFName("Image"),
-				"Width":            PDFInteger(1161),
-				"Height":           PDFInteger(392),
-				"BitsPerComponent": PDFInteger(1),
-				"ColorSpace":       PDFName(DeviceGrayCS),
+			Dict: map[string]Object{
+				"Type":             Name("XObject"),
+				"Subtype":          Name("Image"),
+				"Width":            Integer(1161),
+				"Height":           Integer(392),
+				"BitsPerComponent": Integer(1),
+				"ColorSpace":       Name(DeviceGrayCS),
 				"Decode":           NewNumberArray(1, 0),
 			},
 		},
@@ -257,7 +257,7 @@ func TestReadImageStreamWritePNG(t *testing.T) {
 }
 
 // Read in a device CMYK image stream dump from disk.
-func read8BPCDeviceCMYKFlateStreamDump(xRefTable *XRefTable, fileName string) (*PDFStreamDict, error) {
+func read8BPCDeviceCMYKFlateStreamDump(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
 
 	f, err := os.Open(fileName)
 	if err != nil {
@@ -271,22 +271,22 @@ func read8BPCDeviceCMYKFlateStreamDump(xRefTable *XRefTable, fileName string) (*
 	}
 
 	decodeParms := &PDFDict{
-		Dict: map[string]PDFObject{
-			"BitsPerComponent": PDFInteger(8),
-			"Colors":           PDFInteger(4),
-			"Columns":          PDFInteger(340),
+		Dict: map[string]Object{
+			"BitsPerComponent": Integer(8),
+			"Colors":           Integer(4),
+			"Columns":          Integer(340),
 		},
 	}
 
-	sd := &PDFStreamDict{
+	sd := &StreamDict{
 		PDFDict: PDFDict{
-			Dict: map[string]PDFObject{
-				"Type":             PDFName("XObject"),
-				"Subtype":          PDFName("Image"),
-				"Width":            PDFInteger(340),
-				"Height":           PDFInteger(216),
-				"BitsPerComponent": PDFInteger(8),
-				"ColorSpace":       PDFName(DeviceCMYKCS),
+			Dict: map[string]Object{
+				"Type":             Name("XObject"),
+				"Subtype":          Name("Image"),
+				"Width":            Integer(340),
+				"Height":           Integer(216),
+				"BitsPerComponent": Integer(8),
+				"ColorSpace":       Name(DeviceCMYKCS),
 			},
 		},
 		Raw:            buf,

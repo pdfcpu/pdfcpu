@@ -22,20 +22,20 @@ import (
 	"github.com/hhrutter/pdfcpu/pkg/log"
 )
 
-func patchIndRef(indRef *PDFIndirectRef, lookup map[int]int) {
+func patchIndRef(indRef *IndirectRef, lookup map[int]int) {
 	i := indRef.ObjectNumber.Value()
-	indRef.ObjectNumber = PDFInteger(lookup[i])
+	indRef.ObjectNumber = Integer(lookup[i])
 }
 
-func patchObject(o PDFObject, lookup map[int]int) PDFObject {
+func patchObject(o Object, lookup map[int]int) Object {
 
 	log.Debug.Printf("patchObject before: %v\n", o)
 
-	var ob PDFObject
+	var ob Object
 
 	switch obj := o.(type) {
 
-	case PDFIndirectRef:
+	case IndirectRef:
 		patchIndRef(&obj, lookup)
 		ob = obj
 
@@ -43,19 +43,19 @@ func patchObject(o PDFObject, lookup map[int]int) PDFObject {
 		patchDict(&obj, lookup)
 		ob = obj
 
-	case PDFStreamDict:
+	case StreamDict:
 		patchDict(&obj.PDFDict, lookup)
 		ob = obj
 
-	case PDFObjectStreamDict:
+	case ObjectStreamDict:
 		patchDict(&obj.PDFDict, lookup)
 		ob = obj
 
-	case PDFXRefStreamDict:
+	case XRefStreamDict:
 		patchDict(&obj.PDFDict, lookup)
 		ob = obj
 
-	case PDFArray:
+	case Array:
 		patchArray(&obj, lookup)
 		ob = obj
 
@@ -80,7 +80,7 @@ func patchDict(dict *PDFDict, lookup map[int]int) {
 	log.Debug.Printf("patchDict after: %v\n", dict)
 }
 
-func patchArray(arr *PDFArray, lookup map[int]int) {
+func patchArray(arr *Array, lookup map[int]int) {
 
 	log.Debug.Printf("patchArray begin: %v\n", arr)
 
@@ -230,7 +230,7 @@ func appendSourcePageTreeToDestPageTree(ctxSource, ctxDest *PDFContext) error {
 	pageTreeRootDictDest, _ := ctxDest.XRefTable.DereferenceDict(*indRefPageTreeRootDictDest)
 	pageCountDest := pageTreeRootDictDest.IntEntry("Count")
 
-	arr := pageTreeRootDictDest.PDFArrayEntry("Kids")
+	arr := pageTreeRootDictDest.ArrayEntry("Kids")
 	log.Debug.Printf("Kids before: %v\n", *arr)
 
 	pageTreeRootDictSource.Insert("Parent", *indRefPageTreeRootDictDest)
@@ -239,7 +239,7 @@ func appendSourcePageTreeToDestPageTree(ctxSource, ctxDest *PDFContext) error {
 	*arr = append(*arr, *indRefPageTreeRootDictSource)
 	log.Debug.Printf("Kids after: %v\n", *arr)
 
-	pageTreeRootDictDest.Update("Count", PDFInteger(*pageCountDest+*pageCountSource))
+	pageTreeRootDictDest.Update("Count", Integer(*pageCountDest+*pageCountSource))
 	pageTreeRootDictDest.Update("Kids", *arr)
 
 	ctxDest.PageCount += ctxSource.PageCount

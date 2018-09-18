@@ -25,89 +25,89 @@ import (
 
 // Functions needed to create a test.pdf that gets used for validation testing (see process_test.go)
 
-func createTextAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createTextAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Text"),
-			"Contents": PDFStringLiteral("Text Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Text"),
+			"Contents": StringLiteral("Text Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 5),
 			"C":        NewNumberArray(1, 0, 0),
-			"Name":     PDFName("Note"),
+			"Name":     Name("Note"),
 		},
 	}
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createLinkAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createLinkAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	usageDict := PDFDict{
-		Dict: map[string]PDFObject{
+		Dict: map[string]Object{
 			"CreatorInfo": PDFDict{
-				Dict: map[string]PDFObject{
-					"Creator": PDFStringLiteral("pdfcpu"),
-					"Subtype": PDFName("Technical"),
+				Dict: map[string]Object{
+					"Creator": StringLiteral("pdfcpu"),
+					"Subtype": Name("Technical"),
 				},
 			},
 			"Language": PDFDict{
-				Dict: map[string]PDFObject{
-					"Lang":      PDFStringLiteral("en-us"),
-					"Preferred": PDFName("ON"),
+				Dict: map[string]Object{
+					"Lang":      StringLiteral("en-us"),
+					"Preferred": Name("ON"),
 				},
 			},
 			"Export": PDFDict{
-				Dict: map[string]PDFObject{
-					"ExportState": PDFName("ON"),
+				Dict: map[string]Object{
+					"ExportState": Name("ON"),
 				},
 			},
 			"Zoom": PDFDict{
-				Dict: map[string]PDFObject{
-					"min": PDFFloat(0),
+				Dict: map[string]Object{
+					"min": Float(0),
 				},
 			},
 			"Print": PDFDict{
-				Dict: map[string]PDFObject{
-					"Subtype":    PDFName("Watermark"),
-					"PrintState": PDFName("ON"),
+				Dict: map[string]Object{
+					"Subtype":    Name("Watermark"),
+					"PrintState": Name("ON"),
 				},
 			},
 			"View": PDFDict{
-				Dict: map[string]PDFObject{
-					"ViewState": PDFName("Ind"),
+				Dict: map[string]Object{
+					"ViewState": Name("Ind"),
 				},
 			},
 			"User": PDFDict{
-				Dict: map[string]PDFObject{
-					"Type": PDFName("ON"),
-					"Name": PDFStringLiteral("Horst Rutter"),
+				Dict: map[string]Object{
+					"Type": Name("ON"),
+					"Name": StringLiteral("Horst Rutter"),
 				},
 			},
 			"PageElement": PDFDict{
-				Dict: map[string]PDFObject{
-					"Subtype": PDFName("FG"),
+				Dict: map[string]Object{
+					"Subtype": Name("FG"),
 				},
 			},
 		},
 	}
 
 	optionalContentGroupDict := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":   PDFName("OCG"),
-			"Name":   PDFStringLiteral("OCG"),
-			"Intent": PDFName("Design"),
+		Dict: map[string]Object{
+			"Type":   Name("OCG"),
+			"Name":   StringLiteral("OCG"),
+			"Intent": Name("Design"),
 			"Usage":  usageDict,
 		},
 	}
 
 	uriActionDict := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type": PDFName("Action"),
-			"S":    PDFName("URI"),
-			"URI":  PDFStringLiteral("https://golang.org"),
+		Dict: map[string]Object{
+			"Type": Name("Action"),
+			"S":    Name("URI"),
+			"URI":  StringLiteral("https://golang.org"),
 		},
 	}
 
@@ -117,16 +117,16 @@ func createLinkAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, anno
 	}
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Link"),
-			"Contents": PDFStringLiteral("Link Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Link"),
+			"Contents": StringLiteral("Link Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 5),
 			"C":        NewNumberArray(0, 0, 1),
 			"A":        *indRef,
-			"H":        PDFName("I"),
+			"H":        Name("I"),
 			"PA":       *indRef,
 			"OC":       optionalContentGroupDict,
 		},
@@ -135,33 +135,33 @@ func createLinkAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, anno
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createFreeTextAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createFreeTextAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("FreeText"),
-			"Contents": PDFStringLiteral("FreeText Annotation"),
-			"F":        PDFInteger(128), // Lock
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("FreeText"),
+			"Contents": StringLiteral("FreeText Annotation"),
+			"F":        Integer(128), // Lock
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 1),
 			"C":        NewNumberArray(0, 1, 0),
-			"DA":       PDFStringLiteral("DA"),
+			"DA":       StringLiteral("DA"),
 		},
 	}
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createLineAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createLineAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Line"),
-			"Contents": PDFStringLiteral("Line Annotation"),
-			"F":        PDFInteger(128), // Lock
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Line"),
+			"Contents": StringLiteral("Line Annotation"),
+			"F":        Integer(128), // Lock
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 1),
@@ -173,14 +173,14 @@ func createLineAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, anno
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createSquareAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createSquareAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Square"),
-			"Contents": PDFStringLiteral("Square Annotation"),
-			"F":        PDFInteger(128), // Lock
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Square"),
+			"Contents": StringLiteral("Square Annotation"),
+			"F":        Integer(128), // Lock
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 1),
@@ -192,14 +192,14 @@ func createSquareAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, an
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createCircleAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createCircleAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Circle"),
-			"Contents": PDFStringLiteral("Circle Annotation"),
-			"F":        PDFInteger(128), // Lock
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Circle"),
+			"Contents": StringLiteral("Circle Annotation"),
+			"F":        Integer(128), // Lock
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 10),
@@ -211,19 +211,19 @@ func createCircleAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, an
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createPolygonAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createPolygonAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	// Construct a polyline using the annot rects both lower corners and the upper right corner.
-	v := PDFArray{nil, nil, nil, nil}
+	v := Array{nil, nil, nil, nil}
 	copy(v, *annotRect)
 	v = append(v, (*annotRect)[2])
 	v = append(v, (*annotRect)[1])
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Polygon"),
-			"Contents": PDFStringLiteral("Polygon Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Polygon"),
+			"Contents": StringLiteral("Polygon Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 1),
@@ -231,46 +231,46 @@ func createPolygonAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, a
 			"Vertices": v,
 			"IC":       NewNumberArray(0.3, 0.5, 0.0),
 			"BS": PDFDict{
-				Dict: map[string]PDFObject{
-					"Type": PDFName("Border"),
-					"W":    PDFFloat(0.5),
-					"S":    PDFName("D"),
+				Dict: map[string]Object{
+					"Type": Name("Border"),
+					"W":    Float(0.5),
+					"S":    Name("D"),
 				},
 			},
 			"BE": PDFDict{
-				Dict: map[string]PDFObject{
-					"S": PDFName("C"),
-					"I": PDFFloat(1),
+				Dict: map[string]Object{
+					"S": Name("C"),
+					"I": Float(1),
 				},
 			},
-			"IT": PDFName("PolygonCloud"),
+			"IT": Name("PolygonCloud"),
 		},
 	}
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createPolyLineAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createPolyLineAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	// Construct a polyline using the annot rects both lower corners and the upper right corner.
-	v := PDFArray{nil, nil, nil, nil}
+	v := Array{nil, nil, nil, nil}
 	copy(v, *annotRect)
 	v = append(v, (*annotRect)[2])
 	v = append(v, (*annotRect)[1])
 
 	optionalContentGroupDict := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":   PDFName("OCG"),
-			"Name":   PDFStringLiteral("OCG"),
+		Dict: map[string]Object{
+			"Type":   Name("OCG"),
+			"Name":   StringLiteral("OCG"),
 			"Intent": NewNameArray("Design", "View"),
 		},
 	}
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("PolyLine"),
-			"Contents": PDFStringLiteral("PolyLine Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("PolyLine"),
+			"Contents": StringLiteral("PolyLine Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 1),
@@ -279,24 +279,24 @@ func createPolyLineAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, 
 			"OC":       optionalContentGroupDict,
 			"IC":       NewNumberArray(0.3, 0.5, 0.0),
 			"BS": PDFDict{
-				Dict: map[string]PDFObject{
-					"Type": PDFName("Border"),
-					"W":    PDFFloat(0.5),
-					"S":    PDFName("D"),
+				Dict: map[string]Object{
+					"Type": Name("Border"),
+					"W":    Float(0.5),
+					"S":    Name("D"),
 				},
 			},
-			"IT": PDFName("PolygonCloud"),
+			"IT": Name("PolygonCloud"),
 		},
 	}
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createHighlightAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createHighlightAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	// Create a quad points array corresponding to the annot rect.
 	ar := *annotRect
-	qp := PDFArray{}
+	qp := Array{}
 	qp = append(qp, ar[0])
 	qp = append(qp, ar[1])
 	qp = append(qp, ar[2])
@@ -307,46 +307,46 @@ func createHighlightAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef,
 	qp = append(qp, ar[3])
 
 	optionalContentGroupDict := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type": PDFName("OCG"),
-			"Name": PDFStringLiteral("OCG"),
+		Dict: map[string]Object{
+			"Type": Name("OCG"),
+			"Name": StringLiteral("OCG"),
 		},
 	}
 
 	optionalContentMembershipDict := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type": PDFName("OCMD"),
-			"OCGs": PDFArray{nil, optionalContentGroupDict},
-			"P":    PDFName("AllOn"),
-			"VE":   PDFArray{},
+		Dict: map[string]Object{
+			"Type": Name("OCMD"),
+			"OCGs": Array{nil, optionalContentGroupDict},
+			"P":    Name("AllOn"),
+			"VE":   Array{},
 		},
 	}
 
 	_ = optionalContentMembershipDict
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":       PDFName("Annot"),
-			"Subtype":    PDFName("Highlight"),
-			"Contents":   PDFStringLiteral("Highlight Annotation"),
+		Dict: map[string]Object{
+			"Type":       Name("Annot"),
+			"Subtype":    Name("Highlight"),
+			"Contents":   StringLiteral("Highlight Annotation"),
 			"Rect":       *annotRect,
 			"P":          *pageIndRef,
 			"Border":     NewIntegerArray(0, 0, 1),
 			"C":          NewNumberArray(.2, 0, 0),
 			"OC":         optionalContentMembershipDict,
 			"QuadPoints": qp,
-			"T":          PDFStringLiteral("MyTitle"),
+			"T":          StringLiteral("MyTitle"),
 		},
 	}
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createUnderlineAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createUnderlineAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	// Create a quad points array corresponding to annot rect.
 	ar := *annotRect
-	qp := PDFArray{}
+	qp := Array{}
 	qp = append(qp, ar[0])
 	qp = append(qp, ar[1])
 	qp = append(qp, ar[2])
@@ -357,10 +357,10 @@ func createUnderlineAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef,
 	qp = append(qp, ar[3])
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":       PDFName("Annot"),
-			"Subtype":    PDFName("Underline"),
-			"Contents":   PDFStringLiteral("Underline Annotation"),
+		Dict: map[string]Object{
+			"Type":       Name("Annot"),
+			"Subtype":    Name("Underline"),
+			"Contents":   StringLiteral("Underline Annotation"),
 			"Rect":       *annotRect,
 			"P":          *pageIndRef,
 			"Border":     NewIntegerArray(0, 0, 1),
@@ -372,11 +372,11 @@ func createUnderlineAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef,
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createSquigglyAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createSquigglyAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	// Create a quad points array corresponding to annot rect.
 	ar := *annotRect
-	qp := PDFArray{}
+	qp := Array{}
 	qp = append(qp, ar[0])
 	qp = append(qp, ar[1])
 	qp = append(qp, ar[2])
@@ -387,10 +387,10 @@ func createSquigglyAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, 
 	qp = append(qp, ar[3])
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":       PDFName("Annot"),
-			"Subtype":    PDFName("Squiggly"),
-			"Contents":   PDFStringLiteral("Squiggly Annotation"),
+		Dict: map[string]Object{
+			"Type":       Name("Annot"),
+			"Subtype":    Name("Squiggly"),
+			"Contents":   StringLiteral("Squiggly Annotation"),
 			"Rect":       *annotRect,
 			"P":          *pageIndRef,
 			"Border":     NewIntegerArray(0, 0, 1),
@@ -402,11 +402,11 @@ func createSquigglyAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createStrikeOutAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createStrikeOutAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	// Create a quad points array corresponding to annot rect.
 	ar := *annotRect
-	qp := PDFArray{}
+	qp := Array{}
 	qp = append(qp, ar[0])
 	qp = append(qp, ar[1])
 	qp = append(qp, ar[2])
@@ -417,10 +417,10 @@ func createStrikeOutAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef,
 	qp = append(qp, ar[3])
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":       PDFName("Annot"),
-			"Subtype":    PDFName("StrikeOut"),
-			"Contents":   PDFStringLiteral("StrikeOut Annotation"),
+		Dict: map[string]Object{
+			"Type":       Name("Annot"),
+			"Subtype":    Name("StrikeOut"),
+			"Contents":   StringLiteral("StrikeOut Annotation"),
 			"Rect":       *annotRect,
 			"P":          *pageIndRef,
 			"Border":     NewIntegerArray(0, 0, 1),
@@ -432,68 +432,68 @@ func createStrikeOutAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef,
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createCaretAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createCaretAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Caret"),
-			"Contents": PDFStringLiteral("Caret Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Caret"),
+			"Contents": StringLiteral("Caret Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 1),
 			"C":        NewNumberArray(0.5, 0.5, 0),
 			"RD":       NewRectangle(0, 0, 0, 0),
-			"Sy":       PDFName("None"),
+			"Sy":       Name("None"),
 		},
 	}
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createStampAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createStampAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Stamp"),
-			"Contents": PDFStringLiteral("Stamp Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Stamp"),
+			"Contents": StringLiteral("Stamp Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 1),
 			"C":        NewNumberArray(0.5, 0.5, 0.9),
-			"Name":     PDFName("Approved"),
+			"Name":     Name("Approved"),
 		},
 	}
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createInkAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createInkAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	ar := *annotRect
 
-	l := PDFArray{
-		PDFArray{ar[0], ar[1], ar[2], ar[1]},
-		PDFArray{ar[2], ar[1], ar[2], ar[3]},
-		PDFArray{ar[2], ar[3], ar[0], ar[3]},
-		PDFArray{ar[0], ar[3], ar[0], ar[1]},
+	l := Array{
+		Array{ar[0], ar[1], ar[2], ar[1]},
+		Array{ar[2], ar[1], ar[2], ar[3]},
+		Array{ar[2], ar[3], ar[0], ar[3]},
+		Array{ar[0], ar[3], ar[0], ar[1]},
 	}
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Ink"),
-			"Contents": PDFStringLiteral("Ink Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Ink"),
+			"Contents": StringLiteral("Ink Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 1),
 			"C":        NewNumberArray(0.5, 0, 0.3),
 			"InkList":  l,
 			"ExData": PDFDict{
-				Dict: map[string]PDFObject{
-					"Type":    PDFName("ExData"),
-					"Subtype": PDFName("Markup3D"),
+				Dict: map[string]Object{
+					"Type":    Name("ExData"),
+					"Subtype": Name("Markup3D"),
 				},
 			},
 		},
@@ -502,13 +502,13 @@ func createInkAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annot
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createPopupAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createPopupAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Popup"),
-			"Contents": PDFStringLiteral("Ink Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Popup"),
+			"Contents": StringLiteral("Ink Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 1),
@@ -519,7 +519,7 @@ func createPopupAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, ann
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createFileAttachmentAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createFileAttachmentAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	// Mac starts up iTunes for FileAttachments.
 
@@ -551,21 +551,21 @@ func createFileAttachmentAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirec
 	}
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":         PDFName("Annot"),
-			"Subtype":      PDFName("FileAttachment"),
-			"Contents":     PDFStringLiteral("FileAttachment Annotation"),
+		Dict: map[string]Object{
+			"Type":         Name("Annot"),
+			"Subtype":      Name("FileAttachment"),
+			"Contents":     StringLiteral("FileAttachment Annotation"),
 			"Rect":         *annotRect,
 			"P":            *pageIndRef,
 			"M":            DateStringLiteral(time.Now()),
-			"F":            PDFInteger(0),
+			"F":            Integer(0),
 			"Border":       NewIntegerArray(0, 0, 1),
 			"C":            NewNumberArray(0.5, 0.0, 0.5),
-			"CA":           PDFFloat(0.95),
+			"CA":           Float(0.95),
 			"CreationDate": DateStringLiteral(time.Now()),
-			"Name":         PDFName("Paperclip"),
+			"Name":         Name("Paperclip"),
 			"FS":           *indRef,
-			"NM":           PDFStringLiteral("SoundFileAttachmentAnnot"),
+			"NM":           StringLiteral("SoundFileAttachmentAnnot"),
 		},
 	}
 
@@ -592,7 +592,7 @@ func createFileSpecDict(xRefTable *XRefTable, fileName string) (*PDFDict, error)
 	return xRefTable.NewFileSpecDict(path.Base(fileName), *indRef)
 }
 
-func createSoundObject(xRefTable *XRefTable) (*PDFIndirectRef, error) {
+func createSoundObject(xRefTable *XRefTable) (*IndirectRef, error) {
 
 	fileName := testAudioFileWAV
 
@@ -614,7 +614,7 @@ func createSoundObject(xRefTable *XRefTable) (*PDFIndirectRef, error) {
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createSoundAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createSoundAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	indRef, err := createSoundObject(xRefTable)
 	if err != nil {
@@ -622,23 +622,23 @@ func createSoundAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, ann
 	}
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Sound"),
-			"Contents": PDFStringLiteral("Sound Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Sound"),
+			"Contents": StringLiteral("Sound Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 1),
 			"C":        NewNumberArray(0, 0.5, 0.5),
 			"Sound":    *indRef,
-			"Name":     PDFName("Speaker"),
+			"Name":     Name("Speaker"),
 		},
 	}
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createMovieDict(xRefTable *XRefTable) (*PDFIndirectRef, error) {
+func createMovieDict(xRefTable *XRefTable) (*IndirectRef, error) {
 
 	// not supported: mp3,mp4,m4a
 
@@ -648,18 +648,18 @@ func createMovieDict(xRefTable *XRefTable) (*PDFIndirectRef, error) {
 	}
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
+		Dict: map[string]Object{
 			"F":      *fileSpecDict,
 			"Aspect": NewIntegerArray(200, 200),
-			"Rotate": PDFInteger(0),
-			"Poster": PDFBoolean(true),
+			"Rotate": Integer(0),
+			"Poster": Boolean(true),
 		},
 	}
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createMovieAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createMovieAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	indRef, err := createMovieDict(xRefTable)
 	if err != nil {
@@ -667,28 +667,28 @@ func createMovieAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, ann
 	}
 
 	movieActivationDict := PDFDict{
-		Dict: map[string]PDFObject{
-			"Start":        PDFInteger(10),
-			"Duration":     PDFInteger(60),
-			"Rate":         PDFFloat(1.0),
-			"Volume":       PDFFloat(1.0),
-			"ShowControls": PDFBoolean(true),
-			"Mode":         PDFName("Once"),
-			"Synchronous":  PDFBoolean(false),
+		Dict: map[string]Object{
+			"Start":        Integer(10),
+			"Duration":     Integer(60),
+			"Rate":         Float(1.0),
+			"Volume":       Float(1.0),
+			"ShowControls": Boolean(true),
+			"Mode":         Name("Once"),
+			"Synchronous":  Boolean(false),
 		},
 	}
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Movie"),
-			"Contents": PDFStringLiteral("Movie Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Movie"),
+			"Contents": StringLiteral("Movie Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 3), // rounded corners don't work
 			"C":        NewNumberArray(0.3, 0.5, 0.5),
 			"Movie":    *indRef,
-			"T":        PDFStringLiteral("Sample Movie"),
+			"T":        StringLiteral("Sample Movie"),
 			"A":        movieActivationDict,
 		},
 	}
@@ -696,37 +696,37 @@ func createMovieAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, ann
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createMediaRenditionAction(xRefTable *XRefTable, mediaClipDataDict *PDFIndirectRef) *PDFDict {
+func createMediaRenditionAction(xRefTable *XRefTable, mediaClipDataDict *IndirectRef) *PDFDict {
 
 	r := createMediaRendition(xRefTable, mediaClipDataDict)
 
 	return &PDFDict{
-		Dict: map[string]PDFObject{
-			"Type": PDFName("Action"),
-			"S":    PDFName("Rendition"),
-			"R":    *r,            // rendition object
-			"OP":   PDFInteger(0), // Play
+		Dict: map[string]Object{
+			"Type": Name("Action"),
+			"S":    Name("Rendition"),
+			"R":    *r,         // rendition object
+			"OP":   Integer(0), // Play
 		},
 	}
 
 }
 
-func createSelectorRenditionAction(mediaClipDataDict *PDFIndirectRef) *PDFDict {
+func createSelectorRenditionAction(mediaClipDataDict *IndirectRef) *PDFDict {
 
 	r := createSelectorRendition(mediaClipDataDict)
 
 	return &PDFDict{
-		Dict: map[string]PDFObject{
-			"Type": PDFName("Action"),
-			"S":    PDFName("Rendition"),
-			"R":    *r,            // rendition object
-			"OP":   PDFInteger(0), // Play
+		Dict: map[string]Object{
+			"Type": Name("Action"),
+			"S":    Name("Rendition"),
+			"R":    *r,         // rendition object
+			"OP":   Integer(0), // Play
 		},
 	}
 
 }
 
-func createScreenAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createScreenAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	indRef, err := createMediaClipDataDict(xRefTable)
 	if err != nil {
@@ -738,17 +738,17 @@ func createScreenAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, an
 	selectorRenditionAction := createSelectorRenditionAction(indRef)
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Screen"),
-			"Contents": PDFStringLiteral("Screen Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Screen"),
+			"Contents": StringLiteral("Screen Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 3),
 			"C":        NewNumberArray(0.2, 0.8, 0.5),
 			"A":        *mediaRenditionAction,
 			"AA": PDFDict{
-				Dict: map[string]PDFObject{
+				Dict: map[string]Object{
 					"D": *selectorRenditionAction,
 				},
 			},
@@ -767,29 +767,29 @@ func createScreenAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, an
 	return indRef, nil
 }
 
-func createWidgetAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createWidgetAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	appearanceCharacteristicsDict := PDFDict{
-		Dict: map[string]PDFObject{
-			"R":  PDFInteger(0),
+		Dict: map[string]Object{
+			"R":  Integer(0),
 			"BC": NewNumberArray(0.0, 0.0, 0.0),
 			"BG": NewNumberArray(0.5, 0.0, 0.5),
-			"RC": PDFStringLiteral("Rollover caption"),
+			"RC": StringLiteral("Rollover caption"),
 			"IF": PDFDict{
-				Dict: map[string]PDFObject{
-					"SW": PDFName("A"),
-					"S":  PDFName("A"),
-					"FB": PDFBoolean(true),
+				Dict: map[string]Object{
+					"SW": Name("A"),
+					"S":  Name("A"),
+					"FB": Boolean(true),
 				},
 			},
 		},
 	}
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Widget"),
-			"Contents": PDFStringLiteral("Widget Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Widget"),
+			"Contents": StringLiteral("Widget Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 3),
@@ -801,16 +801,16 @@ func createWidgetAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, an
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createXObjectForPrinterMark(xRefTable *XRefTable) (*PDFIndirectRef, error) {
+func createXObjectForPrinterMark(xRefTable *XRefTable) (*IndirectRef, error) {
 
 	buf := `0 0 m 0 25 l 25 25 l 25 0 l s`
 
-	sd := &PDFStreamDict{
+	sd := &StreamDict{
 		PDFDict: PDFDict{
-			Dict: map[string]PDFObject{
-				"Type":     PDFName("XObject"),
-				"Subtype":  PDFName("Form"),
-				"FormType": PDFInteger(1),
+			Dict: map[string]Object{
+				"Type":     Name("XObject"),
+				"Subtype":  Name("Form"),
+				"FormType": Integer(1),
 				"BBox":     NewRectangle(0, 0, 25, 25),
 				"Matrix":   NewIntegerArray(1, 0, 0, 1, 0, 0),
 			},
@@ -828,7 +828,7 @@ func createXObjectForPrinterMark(xRefTable *XRefTable) (*PDFIndirectRef, error) 
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createPrinterMarkAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createPrinterMarkAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	indRef, err := createXObjectForPrinterMark(xRefTable)
 	if err != nil {
@@ -836,28 +836,28 @@ func createPrinterMarkAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRe
 	}
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("PrinterMark"),
-			"Contents": PDFStringLiteral("PrinterMark Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("PrinterMark"),
+			"Contents": StringLiteral("PrinterMark Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 3),
 			"C":        NewNumberArray(0.2, 0.8, 0.5),
-			"F":        PDFInteger(0),
+			"F":        Integer(0),
 			"AP": PDFDict{
-				Dict: map[string]PDFObject{
+				Dict: map[string]Object{
 					"N": *indRef,
 				},
 			},
-			"MN": PDFName("ColorBar"),
+			"MN": Name("ColorBar"),
 		},
 	}
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createXObjectForWaterMark(xRefTable *XRefTable) (*PDFIndirectRef, error) {
+func createXObjectForWaterMark(xRefTable *XRefTable) (*IndirectRef, error) {
 
 	fIndRef, err := createFontDict(xRefTable)
 	if err != nil {
@@ -871,12 +871,12 @@ func createXObjectForWaterMark(xRefTable *XRefTable) (*PDFIndirectRef, error) {
 
 	buf := `0 0 m 0 200 l 200 200 l 200 0 l s BT /F1 48 Tf 0.7 0.7 -0.7 0.7 30 10 Tm 1 Tr 2 w (Watermark) Tj ET`
 
-	sd := &PDFStreamDict{
+	sd := &StreamDict{
 		PDFDict: PDFDict{
-			Dict: map[string]PDFObject{
-				"Type":      PDFName("XObject"),
-				"Subtype":   PDFName("Form"),
-				"FormType":  PDFInteger(1),
+			Dict: map[string]Object{
+				"Type":      Name("XObject"),
+				"Subtype":   Name("Form"),
+				"FormType":  Integer(1),
 				"BBox":      NewRectangle(0, 0, 200, 200),
 				"Matrix":    NewIntegerArray(1, 0, 0, 1, 0, 0),
 				"Resources": resourceDict,
@@ -895,7 +895,7 @@ func createXObjectForWaterMark(xRefTable *XRefTable) (*PDFIndirectRef, error) {
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createWaterMarkAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createWaterMarkAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	indRef, err := createXObjectForWaterMark(xRefTable)
 	if err != nil {
@@ -903,26 +903,26 @@ func createWaterMarkAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef,
 	}
 
 	d1 := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":   PDFName("FixedPrint"),
+		Dict: map[string]Object{
+			"Type":   Name("FixedPrint"),
 			"Matrix": NewIntegerArray(1, 0, 0, 1, 72, -72),
-			"H":      PDFFloat(0),
-			"V":      PDFFloat(0),
+			"H":      Float(0),
+			"V":      Float(0),
 		},
 	}
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Watermark"),
-			"Contents": PDFStringLiteral("Watermark Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Watermark"),
+			"Contents": StringLiteral("Watermark Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 3),
 			"C":        NewNumberArray(0.2, 0.8, 0.5),
-			"F":        PDFInteger(0),
+			"F":        Integer(0),
 			"AP": PDFDict{
-				Dict: map[string]PDFObject{
+				Dict: map[string]Object{
 					"N": *indRef,
 				},
 			},
@@ -933,33 +933,33 @@ func createWaterMarkAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef,
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func create3DAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func create3DAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("3D"),
-			"Contents": PDFStringLiteral("3D Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("3D"),
+			"Contents": StringLiteral("3D Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 3),
 			"C":        NewNumberArray(0.2, 0.8, 0.5),
-			"F":        PDFInteger(0),
+			"F":        Integer(0),
 			"3DD":      NewPDFDict(), // stream or 3D reference dict
-			"3DV":      PDFName("F"),
+			"3DV":      Name("F"),
 			"3DA":      NewPDFDict(), // activation dict
-			"3DI":      PDFBoolean(true),
+			"3DI":      Boolean(true),
 		},
 	}
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createRedactAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createRedactAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	// Create a quad points array corresponding to annot rect.
 	ar := *annotRect
-	qp := PDFArray{}
+	qp := Array{}
 	qp = append(qp, ar[0])
 	qp = append(qp, ar[1])
 	qp = append(qp, ar[2])
@@ -970,42 +970,42 @@ func createRedactAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, an
 	qp = append(qp, ar[3])
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":        PDFName("Annot"),
-			"Subtype":     PDFName("Redact"),
-			"Contents":    PDFStringLiteral("Redact Annotation"),
+		Dict: map[string]Object{
+			"Type":        Name("Annot"),
+			"Subtype":     Name("Redact"),
+			"Contents":    StringLiteral("Redact Annotation"),
 			"Rect":        *annotRect,
 			"P":           *pageIndRef,
 			"Border":      NewIntegerArray(0, 0, 3),
 			"C":           NewNumberArray(0.2, 0.8, 0.5),
-			"F":           PDFInteger(0),
+			"F":           Integer(0),
 			"QuadPoints":  qp,
 			"IC":          NewNumberArray(0.5, 0.0, 0.9),
-			"OverlayText": PDFStringLiteral("An overlay"),
-			"Repeat":      PDFBoolean(true),
-			"DA":          PDFStringLiteral("x"),
-			"Q":           PDFInteger(1),
+			"OverlayText": StringLiteral("An overlay"),
+			"Repeat":      Boolean(true),
+			"DA":          StringLiteral("x"),
+			"Q":           Integer(1),
 		}}
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createRemoteGoToAction(xRefTable *XRefTable) (*PDFIndirectRef, error) {
+func createRemoteGoToAction(xRefTable *XRefTable) (*IndirectRef, error) {
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":      PDFName("Action"),
-			"S":         PDFName("GoToR"),
-			"F":         PDFStringLiteral(".\\/go.pdf"),
-			"D":         PDFArray{PDFInteger(0), PDFName("Fit")},
-			"NewWindow": PDFBoolean(true),
+		Dict: map[string]Object{
+			"Type":      Name("Action"),
+			"S":         Name("GoToR"),
+			"F":         StringLiteral(".\\/go.pdf"),
+			"D":         Array{Integer(0), Name("Fit")},
+			"NewWindow": Boolean(true),
 		},
 	}
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createLinkAnnotationWithRemoteGoToAction(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createLinkAnnotationWithRemoteGoToAction(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	indRef, err := createRemoteGoToAction(xRefTable)
 	if err != nil {
@@ -1013,23 +1013,23 @@ func createLinkAnnotationWithRemoteGoToAction(xRefTable *XRefTable, pageIndRef *
 	}
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Link"),
-			"Contents": PDFStringLiteral("Link Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Link"),
+			"Contents": StringLiteral("Link Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 1),
 			"C":        NewNumberArray(0, 0, 1),
 			"A":        *indRef,
-			"H":        PDFName("I"),
+			"H":        Name("I"),
 		},
 	}
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createEmbeddedGoToAction(xRefTable *XRefTable) (*PDFIndirectRef, error) {
+func createEmbeddedGoToAction(xRefTable *XRefTable) (*IndirectRef, error) {
 
 	// fileSpecDict, err := createFileSpecDict(xRefTable, "testdata/go.pdf")
 	// if err != nil {
@@ -1042,16 +1042,16 @@ func createEmbeddedGoToAction(xRefTable *XRefTable) (*PDFIndirectRef, error) {
 	}
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type": PDFName("Action"),
-			"S":    PDFName("GoToE"),
+		Dict: map[string]Object{
+			"Type": Name("Action"),
+			"S":    Name("GoToE"),
 			//"F":         *fileSpecDict,
-			"D":         PDFArray{PDFInteger(0), PDFName("Fit")},
-			"NewWindow": PDFBoolean(true), // not honored by Acrobat Reader.
+			"D":         Array{Integer(0), Name("Fit")},
+			"NewWindow": Boolean(true), // not honored by Acrobat Reader.
 			"T": PDFDict{
-				Dict: map[string]PDFObject{
-					"R": PDFName("C"),
-					"N": PDFStringLiteral("testdata/go.pdf"),
+				Dict: map[string]Object{
+					"R": Name("C"),
+					"N": StringLiteral("testdata/go.pdf"),
 				},
 			},
 		},
@@ -1060,7 +1060,7 @@ func createEmbeddedGoToAction(xRefTable *XRefTable) (*PDFIndirectRef, error) {
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createLinkAnnotationWithEmbeddedGoToAction(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createLinkAnnotationWithEmbeddedGoToAction(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	indRef, err := createEmbeddedGoToAction(xRefTable)
 	if err != nil {
@@ -1068,81 +1068,81 @@ func createLinkAnnotationWithEmbeddedGoToAction(xRefTable *XRefTable, pageIndRef
 	}
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Link"),
-			"Contents": PDFStringLiteral("Link Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Link"),
+			"Contents": StringLiteral("Link Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 1),
 			"C":        NewNumberArray(0, 0, 1),
 			"A":        *indRef,
-			"H":        PDFName("I"),
+			"H":        Name("I"),
 		},
 	}
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createLinkAnnotationDictWithLaunchAction(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createLinkAnnotationDictWithLaunchAction(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Link"),
-			"Contents": PDFStringLiteral("Link Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Link"),
+			"Contents": StringLiteral("Link Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 1),
 			"C":        NewNumberArray(0, 0, 1),
 			"A": PDFDict{
-				Dict: map[string]PDFObject{
-					"Type": PDFName("Action"),
-					"S":    PDFName("Launch"),
-					"F":    PDFStringLiteral(".\\/golang.pdf"), // e.g pdf, wav..
+				Dict: map[string]Object{
+					"Type": Name("Action"),
+					"S":    Name("Launch"),
+					"F":    StringLiteral(".\\/golang.pdf"), // e.g pdf, wav..
 					"Win": PDFDict{
-						Dict: map[string]PDFObject{
-							"F": PDFStringLiteral("golang.pdf"),
-							"O": PDFStringLiteral("O"),
+						Dict: map[string]Object{
+							"F": StringLiteral("golang.pdf"),
+							"O": StringLiteral("O"),
 						},
 					},
-					"NewWindow": PDFBoolean(true),
+					"NewWindow": Boolean(true),
 				},
 			},
-			"H": PDFName("I"),
+			"H": Name("I"),
 		},
 	}
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createLinkAnnotationDictWithThreadAction(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createLinkAnnotationDictWithThreadAction(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Link"),
-			"Contents": PDFStringLiteral("Link Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Link"),
+			"Contents": StringLiteral("Link Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 1),
 			"C":        NewNumberArray(0, 0, 1),
 			"A": PDFDict{
-				Dict: map[string]PDFObject{
-					"Type": PDFName("Action"),
-					"S":    PDFName("Thread"),
-					"D":    PDFInteger(0), // jump to first article thread
-					"B":    PDFInteger(0), // jump to first bead
+				Dict: map[string]Object{
+					"Type": Name("Action"),
+					"S":    Name("Thread"),
+					"D":    Integer(0), // jump to first article thread
+					"B":    Integer(0), // jump to first bead
 				},
 			},
-			"H": PDFName("I"),
+			"H": Name("I"),
 		},
 	}
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createLinkAnnotationDictWithSoundAction(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createLinkAnnotationDictWithSoundAction(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	indRef, err := createSoundObject(xRefTable)
 	if err != nil {
@@ -1150,78 +1150,78 @@ func createLinkAnnotationDictWithSoundAction(xRefTable *XRefTable, pageIndRef *P
 	}
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Link"),
-			"Contents": PDFStringLiteral("Link Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Link"),
+			"Contents": StringLiteral("Link Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 1),
 			"C":        NewNumberArray(0, 0, 1),
 			"A": PDFDict{
-				Dict: map[string]PDFObject{
-					"Type":        PDFName("Action"),
-					"S":           PDFName("Sound"),
+				Dict: map[string]Object{
+					"Type":        Name("Action"),
+					"S":           Name("Sound"),
 					"Sound":       *indRef,
-					"Synchronous": PDFBoolean(false),
-					"Repeat":      PDFBoolean(false),
-					"Mix":         PDFBoolean(false),
+					"Synchronous": Boolean(false),
+					"Repeat":      Boolean(false),
+					"Mix":         Boolean(false),
 				},
 			},
-			"H": PDFName("I"),
+			"H": Name("I"),
 		},
 	}
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createLinkAnnotationDictWithMovieAction(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createLinkAnnotationDictWithMovieAction(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Link"),
-			"Contents": PDFStringLiteral("Link Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Link"),
+			"Contents": StringLiteral("Link Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 1),
 			"C":        NewNumberArray(0, 0, 1),
 			"A": PDFDict{
-				Dict: map[string]PDFObject{
-					"Type":      PDFName("Action"),
-					"S":         PDFName("Movie"),
-					"T":         PDFStringLiteral("Sample Movie"),
-					"Operation": PDFName("Play"),
+				Dict: map[string]Object{
+					"Type":      Name("Action"),
+					"S":         Name("Movie"),
+					"T":         StringLiteral("Sample Movie"),
+					"Operation": Name("Play"),
 				},
 			},
-			"H": PDFName("I"),
+			"H": Name("I"),
 		},
 	}
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createLinkAnnotationDictWithHideAction(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createLinkAnnotationDictWithHideAction(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	hideActionDict := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type": PDFName("Action"),
-			"S":    PDFName("Hide"),
-			"H":    PDFBoolean(true),
+		Dict: map[string]Object{
+			"Type": Name("Action"),
+			"S":    Name("Hide"),
+			"H":    Boolean(true),
 		},
 	}
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":     PDFName("Annot"),
-			"Subtype":  PDFName("Link"),
-			"Contents": PDFStringLiteral("Link Annotation"),
+		Dict: map[string]Object{
+			"Type":     Name("Annot"),
+			"Subtype":  Name("Link"),
+			"Contents": StringLiteral("Link Annotation"),
 			"Rect":     *annotRect,
 			"P":        *pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 1),
 			"C":        NewNumberArray(0, 0, 1),
 			"A":        hideActionDict,
-			"H":        PDFName("I"),
+			"H":        Name("I"),
 		},
 	}
 
@@ -1236,7 +1236,7 @@ func createLinkAnnotationDictWithHideAction(xRefTable *XRefTable, pageIndRef *PD
 	return indRef, nil
 }
 
-func createTrapNetAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, annotRect *PDFArray) (*PDFIndirectRef, error) {
+func createTrapNetAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, annotRect *Array) (*IndirectRef, error) {
 
 	indRef, err := createFontDict(xRefTable)
 	if err != nil {
@@ -1244,17 +1244,17 @@ func createTrapNetAnnotation(xRefTable *XRefTable, pageIndRef *PDFIndirectRef, a
 	}
 
 	d := PDFDict{
-		Dict: map[string]PDFObject{
-			"Type":         PDFName("Annot"),
-			"Subtype":      PDFName("TrapNet"),
-			"Contents":     PDFStringLiteral("TrapNet Annotation"),
+		Dict: map[string]Object{
+			"Type":         Name("Annot"),
+			"Subtype":      Name("TrapNet"),
+			"Contents":     StringLiteral("TrapNet Annotation"),
 			"Rect":         *annotRect,
 			"P":            *pageIndRef,
 			"Border":       NewIntegerArray(0, 0, 3),
 			"C":            NewNumberArray(0.2, 0.8, 0.5),
-			"F":            PDFInteger(0),
+			"F":            Integer(0),
 			"LastModified": DateStringLiteral(time.Now()),
-			"FontFauxing":  PDFArray{*indRef},
+			"FontFauxing":  Array{*indRef},
 		},
 	}
 

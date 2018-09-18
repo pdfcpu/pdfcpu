@@ -14,14 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pdfcpu
+package validate
 
 import (
 	"github.com/hhrutter/pdfcpu/pkg/log"
+	pdf "github.com/hhrutter/pdfcpu/pkg/pdfcpu"
 	"github.com/pkg/errors"
 )
 
-func validatePropertiesDict(xRefTable *XRefTable, obj PDFObject) error {
+func validatePropertiesDict(xRefTable *pdf.XRefTable, obj pdf.Object) error {
 
 	// see 14.6.2
 	// a dictionary containing private information meaningful to the conforming writer creating marked content.
@@ -46,7 +47,7 @@ func validatePropertiesDict(xRefTable *XRefTable, obj PDFObject) error {
 		return err
 	}
 
-	err = validateMetadata(xRefTable, dict, OPTIONAL, V14)
+	err = validateMetadata(xRefTable, dict, OPTIONAL, pdf.V14)
 	if err != nil {
 		return err
 	}
@@ -100,7 +101,7 @@ func validatePropertiesDict(xRefTable *XRefTable, obj PDFObject) error {
 	return nil
 }
 
-func validatePropertiesResourceDict(xRefTable *XRefTable, obj PDFObject, sinceVersion PDFVersion) error {
+func validatePropertiesResourceDict(xRefTable *pdf.XRefTable, obj pdf.Object, sinceVersion pdf.Version) error {
 
 	// Version check
 	err := xRefTable.ValidateVersion("PropertiesResourceDict", sinceVersion)

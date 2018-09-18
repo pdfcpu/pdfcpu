@@ -26,17 +26,17 @@ import (
 	"github.com/hhrutter/pdfcpu/tiff"
 )
 
-func createSMaskObject(xRefTable *XRefTable, buf []byte, w, h int) (*PDFIndirectRef, error) {
+func createSMaskObject(xRefTable *XRefTable, buf []byte, w, h int) (*IndirectRef, error) {
 
-	sd := &PDFStreamDict{
+	sd := &StreamDict{
 		PDFDict: PDFDict{
-			Dict: map[string]PDFObject{
-				"Type":             PDFName("XObject"),
-				"Subtype":          PDFName("Image"),
-				"BitsPerComponent": PDFInteger(8),
-				"ColorSpace":       PDFName(DeviceGrayCS),
-				"Width":            PDFInteger(w),
-				"Height":           PDFInteger(h),
+			Dict: map[string]Object{
+				"Type":             Name("XObject"),
+				"Subtype":          Name("Image"),
+				"BitsPerComponent": Integer(8),
+				"ColorSpace":       Name(DeviceGrayCS),
+				"Width":            Integer(w),
+				"Height":           Integer(h),
 			},
 		},
 		Content:        buf,
@@ -52,9 +52,9 @@ func createSMaskObject(xRefTable *XRefTable, buf []byte, w, h int) (*PDFIndirect
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createImageObject(xRefTable *XRefTable, buf, sm []byte, w, h int, cs string) (*PDFStreamDict, error) {
+func createImageObject(xRefTable *XRefTable, buf, sm []byte, w, h int, cs string) (*StreamDict, error) {
 
-	var softMaskIndRef *PDFIndirectRef
+	var softMaskIndRef *IndirectRef
 
 	if sm != nil {
 		var err error
@@ -64,15 +64,15 @@ func createImageObject(xRefTable *XRefTable, buf, sm []byte, w, h int, cs string
 		}
 	}
 
-	sd := &PDFStreamDict{
+	sd := &StreamDict{
 		PDFDict: PDFDict{
-			Dict: map[string]PDFObject{
-				"Type":             PDFName("XObject"),
-				"Subtype":          PDFName("Image"),
-				"Width":            PDFInteger(w),
-				"Height":           PDFInteger(h),
-				"BitsPerComponent": PDFInteger(8),
-				"ColorSpace":       PDFName(cs),
+			Dict: map[string]Object{
+				"Type":             Name("XObject"),
+				"Subtype":          Name("Image"),
+				"Width":            Integer(w),
+				"Height":           Integer(h),
+				"BitsPerComponent": Integer(8),
+				"ColorSpace":       Name(cs),
 			},
 		},
 		Content:        buf,
@@ -189,7 +189,7 @@ func writeCMYKImageBuf(img image.Image) []byte {
 	return buf
 }
 
-func imgToImageDict(xRefTable *XRefTable, img image.Image) (*PDFStreamDict, error) {
+func imgToImageDict(xRefTable *XRefTable, img image.Image) (*StreamDict, error) {
 
 	// Supporting 8 bits per component.
 
@@ -259,7 +259,7 @@ func imgToImageDict(xRefTable *XRefTable, img image.Image) (*PDFStreamDict, erro
 
 // ReadPNGFile generates a PDF image object for a PNG file
 // and appends this object to the cross reference table.
-func ReadPNGFile(xRefTable *XRefTable, fileName string) (*PDFStreamDict, error) {
+func ReadPNGFile(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
 
 	f, err := os.Open(fileName)
 	if err != nil {
@@ -277,7 +277,7 @@ func ReadPNGFile(xRefTable *XRefTable, fileName string) (*PDFStreamDict, error) 
 
 // ReadTIFFFile generates a PDF image object for a TIFF file
 // and appends this object to the cross reference table.
-func ReadTIFFFile(xRefTable *XRefTable, fileName string) (*PDFStreamDict, error) {
+func ReadTIFFFile(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
 
 	f, err := os.Open(fileName)
 	if err != nil {

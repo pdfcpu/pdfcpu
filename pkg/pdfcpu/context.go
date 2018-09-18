@@ -69,10 +69,10 @@ func (ctx *PDFContext) String() string {
 	var logStr []string
 
 	logStr = append(logStr, "*************************************************************************************************\n")
-	logStr = append(logStr, fmt.Sprintf("HeaderVersion: %s\n", VersionString(*ctx.HeaderVersion)))
+	logStr = append(logStr, fmt.Sprintf("HeaderVersion: %s\n", ctx.HeaderVersion))
 
 	if ctx.RootVersion != nil {
-		logStr = append(logStr, fmt.Sprintf("RootVersion: %s\n", VersionString(*ctx.RootVersion)))
+		logStr = append(logStr, fmt.Sprintf("RootVersion: %s\n", ctx.RootVersion))
 	}
 
 	logStr = append(logStr, fmt.Sprintf("has %d pages\n", ctx.PageCount))
@@ -117,7 +117,7 @@ func (ctx *PDFContext) String() string {
 
 		var objectNumbers []string
 		for _, k := range *ctx.AdditionalStreams {
-			indRef, _ := k.(PDFIndirectRef)
+			indRef, _ := k.(IndirectRef)
 			objectNumbers = append(objectNumbers, fmt.Sprintf("%d", int(indRef.ObjectNumber)))
 		}
 		sort.Strings(objectNumbers)
@@ -280,7 +280,7 @@ type OptimizationContext struct {
 	PageImages         []IntSet
 	ImageObjects       map[int]*ImageObject
 	DuplicateImageObjs IntSet
-	DuplicateImages    map[int]*PDFStreamDict
+	DuplicateImages    map[int]*StreamDict
 
 	DuplicateInfoObjects IntSet // Possible result of manual info dict modification.
 
@@ -295,7 +295,7 @@ func newOptimizationContext() *OptimizationContext {
 		DuplicateFonts:       map[int]*PDFDict{},
 		ImageObjects:         map[int]*ImageObject{},
 		DuplicateImageObjs:   IntSet{},
-		DuplicateImages:      map[int]*PDFStreamDict{},
+		DuplicateImages:      map[int]*StreamDict{},
 		DuplicateInfoObjects: IntSet{},
 	}
 }

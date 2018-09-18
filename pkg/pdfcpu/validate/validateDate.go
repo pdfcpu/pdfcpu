@@ -14,19 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pdfcpu
+package validate
 
 import (
 	"strconv"
 	"strings"
 	"time"
+
+	pdf "github.com/hhrutter/pdfcpu/pkg/pdfcpu"
 )
 
 func prevalidateDate(s string) (string, bool) {
 
 	// utf16 conversion if applicable.
-	if IsStringUTF16BE(s) {
-		utf16s, err := DecodeUTF16String(s)
+	if pdf.IsStringUTF16BE(s) {
+		utf16s, err := pdf.DecodeUTF16String(s)
 		if err != nil {
 			return "", false
 		}

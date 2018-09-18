@@ -46,14 +46,14 @@ type colValRange struct {
 // PDFImage represents a XObject of subtype image.
 type PDFImage struct {
 	objNr    int
-	sd       *PDFStreamDict
+	sd       *StreamDict
 	bpc      int
 	w, h     int
 	softMask []byte
 	decode   []colValRange
 }
 
-func decodeArr(arr *PDFArray) []colValRange {
+func decodeArr(arr *Array) []colValRange {
 
 	if arr == nil {
 		//println("decodearr == nil")
@@ -65,9 +65,9 @@ func decodeArr(arr *PDFArray) []colValRange {
 
 	for i, f := range *arr {
 		switch o := f.(type) {
-		case PDFInteger:
+		case Integer:
 			f64 = float64(o.Value())
-		case PDFFloat:
+		case Float:
 			f64 = o.Value()
 		}
 		if i%2 == 0 {
@@ -86,7 +86,7 @@ func decodeArr(arr *PDFArray) []colValRange {
 	return decode
 }
 
-func pdfImage(xRefTable *XRefTable, sd *PDFStreamDict, objNr int) (*PDFImage, error) {
+func pdfImage(xRefTable *XRefTable, sd *StreamDict, objNr int) (*PDFImage, error) {
 
 	bpc := *sd.IntEntry("BitsPerComponent")
 	if bpc == 16 {
@@ -96,7 +96,7 @@ func pdfImage(xRefTable *XRefTable, sd *PDFStreamDict, objNr int) (*PDFImage, er
 	w := *sd.IntEntry("Width")
 	h := *sd.IntEntry("Height")
 
-	decode := decodeArr(sd.PDFArrayEntry("Decode"))
+	decode := decodeArr(sd.ArrayEntry("Decode"))
 	//fmt.Printf("decode: %v\n", decode)
 
 	sm, err := softMask(xRefTable, sd, w, h, objNr)
@@ -116,7 +116,7 @@ func pdfImage(xRefTable *XRefTable, sd *PDFStreamDict, objNr int) (*PDFImage, er
 }
 
 // Identify the color lookup table for an Indexed color space.
-func colorLookupTable(xRefTable *XRefTable, o PDFObject) ([]byte, error) {
+func colorLookupTable(xRefTable *XRefTable, o Object) ([]byte, error) {
 
 	var lookup []byte
 	var err error
@@ -125,16 +125,16 @@ func colorLookupTable(xRefTable *XRefTable, o PDFObject) ([]byte, error) {
 
 	switch o := o.(type) {
 
-	case PDFStringLiteral:
+	case StringLiteral:
 		lookup = []byte(o.String())
 
-	case PDFHexLiteral:
+	case HexLiteral:
 		lookup, err = o.Bytes()
 		if err != nil {
 			return nil, err
 		}
 
-	case PDFStreamDict:
+	case StreamDict:
 		lookup, err = streamBytes(&o)
 		if err != nil || lookup == nil {
 			return nil, err
@@ -170,7 +170,7 @@ func decodePixelColorValue(p uint8, bpc, c int, decode []colValRange) uint8 {
 	return uint8(v * 255)
 }
 
-func streamBytes(sd *PDFStreamDict) ([]byte, error) {
+func streamBytes(sd *StreamDict) ([]byte, error) {
 
 	fpl := sd.FilterPipeline
 	if fpl == nil {
@@ -205,7 +205,7 @@ func streamBytes(sd *PDFStreamDict) ([]byte, error) {
 }
 
 // Return the soft mask for this image or nil.
-func softMask(xRefTable *XRefTable, d *PDFStreamDict, w, h, objNr int) ([]byte, error) {
+func softMask(xRefTable *XRefTable, d *StreamDict, w, h, objNr int) ([]byte, error) {
 
 	// TODO Process optional "Matte".
 
@@ -250,7 +250,7 @@ func softMask(xRefTable *XRefTable, d *PDFStreamDict, w, h, objNr int) ([]byte, 
 	return sm, nil
 }
 
-func writeImgToJPG(filename string, sd *PDFStreamDict) (string, error) {
+func writeImgToJPG(filename string, sd *StreamDict) (string, error) {
 
 	filename += ".jpg"
 	//fmt.Printf("writing %s\n", filename)
@@ -260,7 +260,7 @@ func writeImgToJPG(filename string, sd *PDFStreamDict) (string, error) {
 	return filename, ioutil.WriteFile(filename, sd.Raw, os.ModePerm)
 }
 
-func writeImgToJPX(filename string, sd *PDFStreamDict) (string, error) {
+func writeImgToJPX(filename string, sd *StreamDict) (string, error) {
 
 	filename += ".jpx"
 	//fmt.Printf("writing %s\n", filename)
@@ -390,7 +390,7 @@ func writeDeviceRGBToPNG(filename string, im *PDFImage) (string, error) {
 	return writeImgToPNG(filename, img)
 }
 
-func ensureDeviceRGBCS(xRefTable *XRefTable, o PDFObject) bool {
+func ensureDeviceRGBCS(xRefTable *XRefTable, o Object) bool {
 
 	o, err := xRefTable.Dereference(o)
 	if err != nil {
@@ -398,7 +398,7 @@ func ensureDeviceRGBCS(xRefTable *XRefTable, o PDFObject) bool {
 	}
 
 	switch altCS := o.(type) {
-	case PDFName:
+	case Name:
 		return altCS == DeviceRGBCS
 	}
 
@@ -431,7 +431,7 @@ func writeCalRGBToPNG(filename string, im *PDFImage) (string, error) {
 	return writeImgToPNG(filename, img)
 }
 
-func writeICCBased(xRefTable *XRefTable, filename string, im *PDFImage, cs PDFArray) (string, error) {
+func writeICCBased(xRefTable *XRefTable, filename string, im *PDFImage, cs Array) (string, error) {
 
 	//  Any ICC profile >= ICC.1:2004:10 is sufficient for any PDF version <= 1.7
 	//  If the embedded ICC profile version is newer than the one used by the Reader, substitute with Alternate color space.
@@ -445,7 +445,7 @@ func writeICCBased(xRefTable *XRefTable, filename string, im *PDFImage, cs PDFAr
 	// 1,3 or 4 color components.
 	n := *iccProfileStream.IntEntry("N")
 
-	if !intMemberOf(n, []int{1, 3, 4}) {
+	if !IntMemberOf(n, []int{1, 3, 4}) {
 		return "", errors.Errorf("writeICCBasedToPNGFile: objNr=%d, N must be 1,3 or 4, got:%d\n", im.objNr, n)
 	}
 
@@ -534,7 +534,7 @@ func writeIndexedCMYKToTIFF(filename string, im *PDFImage, lookup []byte) (strin
 	return writeImgToTIFF(filename, img)
 }
 
-func writeIndexedNameCS(filename string, im *PDFImage, cs PDFName, maxInd int, lookup []byte) (string, error) {
+func writeIndexedNameCS(filename string, im *PDFImage, cs Name, maxInd int, lookup []byte) (string, error) {
 
 	switch cs {
 
@@ -560,11 +560,11 @@ func writeIndexedNameCS(filename string, im *PDFImage, cs PDFName, maxInd int, l
 	return "", ErrUnsupportedColorSpace
 }
 
-func writeIndexedArrayCS(xRefTable *XRefTable, filename string, im *PDFImage, csa PDFArray, maxInd int, lookup []byte) (string, error) {
+func writeIndexedArrayCS(xRefTable *XRefTable, filename string, im *PDFImage, csa Array, maxInd int, lookup []byte) (string, error) {
 
 	b := im.sd.Content
 
-	cs, _ := csa[0].(PDFName)
+	cs, _ := csa[0].(Name)
 
 	switch cs {
 
@@ -574,7 +574,7 @@ func writeIndexedArrayCS(xRefTable *XRefTable, filename string, im *PDFImage, cs
 
 		// 1,3 or 4 color components.
 		n := *iccProfileStream.IntEntry("N")
-		if !intMemberOf(n, []int{1, 3, 4}) {
+		if !IntMemberOf(n, []int{1, 3, 4}) {
 			return "", errors.Errorf("writeIndexedArrayCS: objNr=%d, N must be 1,3 or 4, got:%d\n", im.objNr, n)
 		}
 
@@ -618,7 +618,7 @@ func writeIndexedArrayCS(xRefTable *XRefTable, filename string, im *PDFImage, cs
 	return "", ErrUnsupportedColorSpace
 }
 
-func writeIndexed(xRefTable *XRefTable, filename string, im *PDFImage, cs PDFArray) (string, error) {
+func writeIndexed(xRefTable *XRefTable, filename string, im *PDFImage, cs Array) (string, error) {
 
 	// Identify the base color space.
 	baseCS, _ := xRefTable.Dereference(cs[1])
@@ -649,17 +649,17 @@ func writeIndexed(xRefTable *XRefTable, filename string, im *PDFImage, cs PDFArr
 	}
 
 	switch cs := baseCS.(type) {
-	case PDFName:
+	case Name:
 		return writeIndexedNameCS(filename, im, cs, maxInd.Value(), lookup)
 
-	case PDFArray:
+	case Array:
 		return writeIndexedArrayCS(xRefTable, filename, im, cs, maxInd.Value(), lookup)
 	}
 
 	return "", nil
 }
 
-func writeFlateEncodedImage(xRefTable *XRefTable, filename string, sd *PDFStreamDict, objNr int) (string, error) {
+func writeFlateEncodedImage(xRefTable *XRefTable, filename string, sd *StreamDict, objNr int) (string, error) {
 
 	pdfImage, err := pdfImage(xRefTable, sd, objNr)
 	if err != nil {
@@ -675,7 +675,7 @@ func writeFlateEncodedImage(xRefTable *XRefTable, filename string, sd *PDFStream
 
 	switch cs := o.(type) {
 
-	case PDFName:
+	case Name:
 		switch cs {
 
 		case DeviceGrayCS:
@@ -692,8 +692,8 @@ func writeFlateEncodedImage(xRefTable *XRefTable, filename string, sd *PDFStream
 			err = ErrUnsupportedColorSpace
 		}
 
-	case PDFArray:
-		csn, _ := cs[0].(PDFName)
+	case Array:
+		csn, _ := cs[0].(Name)
 
 		switch csn {
 
@@ -718,7 +718,7 @@ func writeFlateEncodedImage(xRefTable *XRefTable, filename string, sd *PDFStream
 }
 
 // WriteImage writes a PDF image object to disk.
-func WriteImage(xRefTable *XRefTable, filename string, sd *PDFStreamDict, objNr int) (string, error) {
+func WriteImage(xRefTable *XRefTable, filename string, sd *StreamDict, objNr int) (string, error) {
 
 	switch sd.FilterPipeline[0].Name {
 
