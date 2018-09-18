@@ -666,7 +666,7 @@ func writeFlateEncodedImage(xRefTable *XRefTable, filename string, sd *StreamDic
 		return "", err
 	}
 
-	o, err := xRefTable.DereferenceDictEntry(&sd.PDFDict, "ColorSpace")
+	o, err := xRefTable.DereferenceDictEntry(&sd.Dict, "ColorSpace")
 	if err != nil {
 		return "", err
 	}

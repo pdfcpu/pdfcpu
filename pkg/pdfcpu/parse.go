@@ -483,7 +483,7 @@ func parseName(line *string) (*Name, error) {
 	return &nameObj, nil
 }
 
-func parseDict(line *string) (*PDFDict, error) {
+func parseDict(line *string) (*Dict, error) {
 
 	if line == nil || len(*line) == 0 {
 		return nil, errNoDictionary
@@ -508,7 +508,7 @@ func parseDict(line *string) (*PDFDict, error) {
 		return nil, errDictionaryNotTerminated
 	}
 
-	dict := NewPDFDict()
+	dict := NewDict()
 
 	for !strings.HasPrefix(l, ">>") {
 
@@ -690,11 +690,11 @@ func parseHexLiteralOrDict(l *string) (val Object, err error) {
 	// if next char = '<' parseDict.
 	if (*l)[1] == '<' {
 		logDebugParse.Println("parseHexLiteralOrDict: value = Dictionary")
-		pdfDict, err := parseDict(l)
+		Dict, err := parseDict(l)
 		if err != nil {
 			return nil, err
 		}
-		val = *pdfDict
+		val = *Dict
 	} else {
 		// hex literals
 		logDebugParse.Println("parseHexLiteralOrDict: value = Hex Literal")

@@ -51,7 +51,7 @@ func createXRefTableWithRootDict() (*XRefTable, error) {
 	// Additional streams not implemented.
 	xRefTable.AdditionalStreams = nil
 
-	rootDict := NewPDFDict()
+	rootDict := NewDict()
 	rootDict.InsertName("Type", "Catalog")
 
 	indRef, err := xRefTable.IndRefForNewObject(rootDict)
@@ -87,7 +87,7 @@ func CreateDemoXRef() (*XRefTable, error) {
 
 func createFontDict(xRefTable *XRefTable) (*IndirectRef, error) {
 
-	d := NewPDFDict()
+	d := NewDict()
 	d.InsertName("Type", "Font")
 	d.InsertName("Subtype", "Type1")
 	d.InsertName("BaseFont", "Helvetica")
@@ -97,7 +97,7 @@ func createFontDict(xRefTable *XRefTable) (*IndirectRef, error) {
 
 func createZapfDingbatsFontDict(xRefTable *XRefTable) (*IndirectRef, error) {
 
-	d := NewPDFDict()
+	d := NewDict()
 	d.InsertName("Type", "Font")
 	d.InsertName("Subtype", "Type1")
 	d.InsertName("BaseFont", "ZapfDingbats")
@@ -105,43 +105,43 @@ func createZapfDingbatsFontDict(xRefTable *XRefTable) (*IndirectRef, error) {
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createFunctionalShadingDict(xRefTable *XRefTable) *PDFDict {
+func createFunctionalShadingDict(xRefTable *XRefTable) *Dict {
 
-	f := PDFDict{
-		Dict: map[string]Object{
+	f := Dict(
+		map[string]Object{
 			"FunctionType": Integer(2),
 			"Domain":       NewNumberArray(1.0, 1.2, 1.4, 1.6, 1.8, 2.0),
 			"N":            Float(1),
 		},
-	}
+	)
 
-	d := PDFDict{
-		Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
 			"ShadingType": Integer(1),
 			"Function":    Array{f},
 		},
-	}
+	)
 
 	return &d
 }
 
-func createRadialShadingDict(xRefTable *XRefTable) *PDFDict {
+func createRadialShadingDict(xRefTable *XRefTable) *Dict {
 
-	f := PDFDict{
-		Dict: map[string]Object{
+	f := Dict(
+		map[string]Object{
 			"FunctionType": Integer(2),
 			"Domain":       NewNumberArray(1.0, 1.2, 1.4, 1.6, 1.8, 2.0),
 			"N":            Float(1),
 		},
-	}
+	)
 
-	d := PDFDict{
-		Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
 			"ShadingType": Integer(3),
 			"Coords":      NewNumberArray(0, 0, 50, 10, 10, 100),
 			"Function":    Array{f},
 		},
-	}
+	)
 
 	return &d
 }
@@ -149,15 +149,15 @@ func createRadialShadingDict(xRefTable *XRefTable) *PDFDict {
 func createStreamObjForHalftoneDictType6(xRefTable *XRefTable) (*IndirectRef, error) {
 
 	sd := &StreamDict{
-		PDFDict: PDFDict{
-			Dict: map[string]Object{
+		Dict: Dict(
+			map[string]Object{
 				"Type":             Name("Halftone"),
 				"HalftoneType":     Integer(6),
 				"Width":            Integer(100),
 				"Height":           Integer(100),
 				"TransferFunction": Name("Identity"),
 			},
-		},
+		),
 		Content: []byte{},
 	}
 
@@ -172,14 +172,14 @@ func createStreamObjForHalftoneDictType6(xRefTable *XRefTable) (*IndirectRef, er
 func createStreamObjForHalftoneDictType10(xRefTable *XRefTable) (*IndirectRef, error) {
 
 	sd := &StreamDict{
-		PDFDict: PDFDict{
-			Dict: map[string]Object{
+		Dict: Dict(
+			map[string]Object{
 				"Type":         Name("Halftone"),
 				"HalftoneType": Integer(10),
 				"Xsquare":      Integer(100),
 				"Ysquare":      Integer(100),
 			},
-		},
+		),
 		Content: []byte{},
 	}
 
@@ -194,14 +194,14 @@ func createStreamObjForHalftoneDictType10(xRefTable *XRefTable) (*IndirectRef, e
 func createStreamObjForHalftoneDictType16(xRefTable *XRefTable) (*IndirectRef, error) {
 
 	sd := &StreamDict{
-		PDFDict: PDFDict{
-			Dict: map[string]Object{
+		Dict: Dict(
+			map[string]Object{
 				"Type":         Name("Halftone"),
 				"HalftoneType": Integer(16),
 				"Width":        Integer(100),
 				"Height":       Integer(100),
 			},
-		},
+		),
 		Content: []byte{},
 	}
 
@@ -216,13 +216,13 @@ func createStreamObjForHalftoneDictType16(xRefTable *XRefTable) (*IndirectRef, e
 func createPostScriptCalculatorFunctionStreamDict(xRefTable *XRefTable) (*IndirectRef, error) {
 
 	sd := &StreamDict{
-		PDFDict: PDFDict{
-			Dict: map[string]Object{
+		Dict: Dict(
+			map[string]Object{
 				"FunctionType": Integer(4),
 				"Domain":       NewNumberArray(100.),
 				"Range":        NewNumberArray(100.),
 			},
-		},
+		),
 		Content: []byte{},
 	}
 
@@ -234,7 +234,7 @@ func createPostScriptCalculatorFunctionStreamDict(xRefTable *XRefTable) (*Indire
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func addResources(xRefTable *XRefTable, pageDict *PDFDict) error {
+func addResources(xRefTable *XRefTable, pageDict *Dict) error {
 
 	fIndRef, err := createFontDict(xRefTable)
 	if err != nil {
@@ -245,89 +245,89 @@ func addResources(xRefTable *XRefTable, pageDict *PDFDict) error {
 
 	radialShDict := createRadialShadingDict(xRefTable)
 
-	f := PDFDict{
-		Dict: map[string]Object{
+	f := Dict(
+		map[string]Object{
 			"FunctionType": Integer(2),
 			"Domain":       NewNumberArray(0.0, 1.0),
 			"C0":           NewNumberArray(0.0),
 			"C1":           NewNumberArray(1.0),
 			"N":            Float(1),
 		},
-	}
+	)
 
-	fontResources := PDFDict{
-		Dict: map[string]Object{
+	fontResources := Dict(
+		map[string]Object{
 			"F1": *fIndRef,
 		},
-	}
+	)
 
-	shadingResources := PDFDict{
-		Dict: map[string]Object{
+	shadingResources := Dict(
+		map[string]Object{
 			"S1": *functionalBasedShDict,
 			"S3": *radialShDict,
 		},
-	}
+	)
 
-	colorSpaceResources := PDFDict{
-		Dict: map[string]Object{
+	colorSpaceResources := Dict(
+		map[string]Object{
 			"CSCalGray": Array{
 				Name("CalGray"),
-				PDFDict{
-					Dict: map[string]Object{
+				Dict(
+					map[string]Object{
 						"WhitePoint": NewNumberArray(0.9505, 1.0000, 1.0890),
 					},
-				},
+				),
 			},
 			"CSCalRGB": Array{
 				Name("CalRGB"),
-				PDFDict{
-					Dict: map[string]Object{
+				Dict(
+					map[string]Object{
 						"WhitePoint": NewNumberArray(0.9505, 1.0000, 1.0890),
 					},
-				},
+				),
 			},
 			"CSLab": Array{
 				Name("Lab"),
-				PDFDict{
-					Dict: map[string]Object{
+				Dict(
+					map[string]Object{
 						"WhitePoint": NewNumberArray(0.9505, 1.0000, 1.0890),
 					},
-				},
+				),
 			},
 			"CS4DeviceN": Array{
 				Name("DeviceN"),
 				NewNameArray("Orange", "Green", "None"),
 				Name("DeviceCMYK"),
 				f,
-				PDFDict{
-					Dict: map[string]Object{
+				Dict(
+					map[string]Object{
 						"SubType": Name("DeviceN"),
 					},
-				},
+				),
 			},
 			"CS6DeviceN": Array{
 				Name("DeviceN"),
 				NewNameArray("L", "a", "b", "Spot1"),
 				Name("DeviceCMYK"),
 				f,
-				PDFDict{
-					Dict: map[string]Object{
+				Dict(
+					map[string]Object{
 						"SubType": Name("NChannel"),
-						"Process": PDFDict{
-							Dict: map[string]Object{
+						"Process": Dict(
+							map[string]Object{
 								"ColorSpace": Array{
 									Name("Lab"),
-									PDFDict{
-										Dict: map[string]Object{
+									Dict(
+										map[string]Object{
 											"WhitePoint": NewNumberArray(0.9505, 1.0000, 1.0890),
 										},
-									},
+									),
 								},
 								"Components": NewNameArray("L", "a", "b"),
 							},
-						},
-						"Colorants": PDFDict{
-							Dict: map[string]Object{
+						),
+						"Colorants": Dict(
+							map[string]Object{
 								"Spot1": Array{
 									Name("Separation"),
 									Name("Spot1"),
@@ -335,29 +335,29 @@ func addResources(xRefTable *XRefTable, pageDict *PDFDict) error {
 									f,
 								},
 							},
-						},
-						"MixingHints": PDFDict{
-							Dict: map[string]Object{
-								"Solidities": PDFDict{
-									Dict: map[string]Object{
+						),
+						"MixingHints": Dict(
+							map[string]Object{
+								"Solidities": Dict(
+									map[string]Object{
 										"Spot1": Float(1.0),
 									},
-								},
-								"DotGain": PDFDict{
-									Dict: map[string]Object{
+								),
+								"DotGain": Dict(
+									map[string]Object{
 										"Spot1":   f,
 										"Magenta": f,
 										"Yellow":  f,
 									},
-								},
+								),
 								"PrintingOrder": NewNameArray("Magenta", "Yellow", "Spot1"),
 							},
-						},
+						),
 					},
-				},
+				),
 			},
 		},
-	}
+	)
 
 	anyXObject, err := createNormalAppearanceForFormField(xRefTable, 20., 20.)
 	if err != nil {
@@ -384,13 +384,13 @@ func addResources(xRefTable *XRefTable, pageDict *PDFDict) error {
 		return err
 	}
 
-	graphicStateResources := PDFDict{
-		Dict: map[string]Object{
-			"GS1": PDFDict{
-				Dict: map[string]Object{
+	graphicStateResources := Dict(
+		map[string]Object{
+			"GS1": Dict(
+				map[string]Object{
 					"Type": Name("ExtGState"),
-					"HT": PDFDict{
-						Dict: map[string]Object{
+					"HT": Dict(
+						map[string]Object{
 							"Type":             Name("Halftone"),
 							"HalftoneType":     Integer(1),
 							"Frequency":        Integer(120),
@@ -398,29 +398,29 @@ func addResources(xRefTable *XRefTable, pageDict *PDFDict) error {
 							"SpotFunction":     Name("CosineDot"),
 							"TransferFunction": Name("Identity"),
 						},
-					},
+					),
 					"BM": NewNameArray("Overlay", "Darken", "Normal"),
-					"SMask": PDFDict{
-						Dict: map[string]Object{
+					"SMask": Dict(
+						map[string]Object{
 							"Type": Name("Mask"),
 							"S":    Name("Alpha"),
 							"G":    *anyXObject,
 							"TR":   f,
 						},
-					},
+					),
 					"TR":  f,
 					"TR2": f,
 				},
-			},
-			"GS2": PDFDict{
-				Dict: map[string]Object{
+			),
+			"GS2": Dict(
+				map[string]Object{
 					"Type": Name("ExtGState"),
-					"HT": PDFDict{
-						Dict: map[string]Object{
+					"HT": Dict(
+						map[string]Object{
 							"Type":         Name("Halftone"),
 							"HalftoneType": Integer(5),
-							"Default": PDFDict{
-								Dict: map[string]Object{
+							"Default": Dict(
+								map[string]Object{
 									"Type":             Name("Halftone"),
 									"HalftoneType":     Integer(1),
 									"Frequency":        Integer(120),
@@ -428,103 +428,103 @@ func addResources(xRefTable *XRefTable, pageDict *PDFDict) error {
 									"SpotFunction":     Name("CosineDot"),
 									"TransferFunction": Name("Identity"),
 								},
-							},
+							),
 						},
-					},
+					),
 					"BM": NewNameArray("Overlay", "Darken", "Normal"),
-					"SMask": PDFDict{
-						Dict: map[string]Object{
+					"SMask": Dict(
+						map[string]Object{
 							"Type": Name("Mask"),
 							"S":    Name("Alpha"),
 							"G":    *anyXObject,
 							"TR":   Name("Identity"),
 						},
-					},
+					),
 					"TR":   Array{f, f, f, f},
 					"TR2":  Array{f, f, f, f},
 					"BG2":  f,
 					"UCR2": f,
 					"D":    Array{Array{}, Integer(0)},
 				},
-			},
-			"GS3": PDFDict{
-				Dict: map[string]Object{
+			),
+			"GS3": Dict(
+				map[string]Object{
 					"Type": Name("ExtGState"),
 					"HT":   *indRefHalfToneType6,
-					"SMask": PDFDict{
-						Dict: map[string]Object{
+					"SMask": Dict(
+						map[string]Object{
 							"Type": Name("Mask"),
 							"S":    Name("Alpha"),
 							"G":    *anyXObject,
 							"TR":   *indRefFunctionStream,
 						},
-					},
+					),
 					"BG2":  *indRefFunctionStream,
 					"UCR2": *indRefFunctionStream,
 					"TR":   *indRefFunctionStream,
 					"TR2":  *indRefFunctionStream,
 				},
-			},
-			"GS4": PDFDict{
-				Dict: map[string]Object{
+			),
+			"GS4": Dict(
+				map[string]Object{
 					"Type": Name("ExtGState"),
 					"HT":   *indRefHalfToneType10,
 				},
-			},
-			"GS5": PDFDict{
-				Dict: map[string]Object{
+			),
+			"GS5": Dict(
+				map[string]Object{
 					"Type": Name("ExtGState"),
 					"HT":   *indRefHalfToneType16,
 				},
-			},
-			"GS6": PDFDict{
-				Dict: map[string]Object{
+			),
+			"GS6": Dict(
+				map[string]Object{
 					"Type": Name("ExtGState"),
-					"HT": PDFDict{
-						Dict: map[string]Object{
+					"HT": Dict(
+						map[string]Object{
 							"Type":         Name("Halftone"),
 							"HalftoneType": Integer(1),
 							"Frequency":    Integer(120),
 							"Angle":        Integer(30),
 							"SpotFunction": *indRefFunctionStream,
 						},
-					},
+					),
 				},
-			},
-			"GS7": PDFDict{
-				Dict: map[string]Object{
+			),
+			"GS7": Dict(
+				map[string]Object{
 					"Type": Name("ExtGState"),
-					"HT": PDFDict{
-						Dict: map[string]Object{
+					"HT": Dict(
+						map[string]Object{
 							"Type":         Name("Halftone"),
 							"HalftoneType": Integer(1),
 							"Frequency":    Integer(120),
 							"Angle":        Integer(30),
 							"SpotFunction": f,
 						},
-					},
+					),
 				},
-			},
+			),
 		},
-	}
+	)
 
-	resourceDict := PDFDict{
-		Dict: map[string]Object{
+	resourceDict := Dict(
+		map[string]Object{
 			"Font":       fontResources,
 			"Shading":    shadingResources,
 			"ColorSpace": colorSpaceResources,
 			"ExtGState":  graphicStateResources,
 		},
-	}
+	)
 
 	pageDict.Insert("Resources", resourceDict)
 
 	return nil
 }
 
-func addContents(xRefTable *XRefTable, pageDict *PDFDict, mediaBox *Array) error {
+func addContents(xRefTable *XRefTable, pageDict *Dict, mediaBox *Array) error {
 
-	contents := &StreamDict{PDFDict: NewPDFDict()}
+	contents := &StreamDict{Dict: NewDict()}
 	contents.InsertName("Filter", filter.Flate)
 	contents.FilterPipeline = []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}
 
@@ -597,115 +597,117 @@ func addContents(xRefTable *XRefTable, pageDict *PDFDict, mediaBox *Array) error
 	return nil
 }
 
-func createBoxColorDict() *PDFDict {
+func createBoxColorDict() *Dict {
 
-	cropBoxColorInfoDict := PDFDict{
-		Dict: map[string]Object{
+	cropBoxColorInfoDict := Dict(
+		map[string]Object{
 			"C": NewNumberArray(1.0, 1.0, 0.0),
 			"W": Float(1.0),
 			"S": Name("D"),
 			"D": NewIntegerArray(3, 2),
 		},
-	}
+	)
 
-	bleedBoxColorInfoDict := PDFDict{
-		Dict: map[string]Object{
+	bleedBoxColorInfoDict := Dict(
+		map[string]Object{
 			"C": NewNumberArray(1.0, 0.0, 0.0),
 			"W": Float(3.0),
 			"S": Name("S"),
 		},
-	}
+	)
 
-	trimBoxColorInfoDict := PDFDict{
-		Dict: map[string]Object{
+	trimBoxColorInfoDict := Dict(
+		map[string]Object{
 			"C": NewNumberArray(0.0, 1.0, 0.0),
 			"W": Float(1.0),
 			"S": Name("D"),
 			"D": NewIntegerArray(3, 2),
 		},
-	}
+	)
 
-	artBoxColorInfoDict := PDFDict{
-		Dict: map[string]Object{
+	artBoxColorInfoDict := Dict(
+		map[string]Object{
 			"C": NewNumberArray(0.0, 0.0, 1.0),
 			"W": Float(1.0),
 			"S": Name("S"),
 		},
-	}
+	)
 
-	return &PDFDict{
-		Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
 			"CropBox":  cropBoxColorInfoDict,
 			"BleedBox": bleedBoxColorInfoDict,
 			"Trim":     trimBoxColorInfoDict,
 			"ArtBox":   artBoxColorInfoDict,
 		},
-	}
+	)
 
+	return &d
 }
 
-func addViewportDict(pageDict *PDFDict) {
+func addViewportDict(pageDict *Dict) {
 
-	measureDict := PDFDict{
-		Dict: map[string]Object{
+	measureDict := Dict(
+		map[string]Object{
 			"Type":    Name("Measure"),
 			"Subtype": Name("RL"),
 			"R":       StringLiteral("1in = 0.1m"),
 			"X": Array{
-				PDFDict{
-					Dict: map[string]Object{
+				Dict(
+					map[string]Object{
 						"Type": Name("NumberFormat"),
 						"U":    StringLiteral("mi"),
 						"C":    Float(0.00139),
 						"D":    Integer(100000),
 					},
-				},
+				),
 			},
 			"D": Array{
-				PDFDict{
-					Dict: map[string]Object{
+				Dict(
+					map[string]Object{
 						"Type": Name("NumberFormat"),
 						"U":    StringLiteral("mi"),
 						"C":    Float(1),
 					},
-				},
-				PDFDict{
-					Dict: map[string]Object{
+				),
+				Dict(
+					map[string]Object{
 						"Type": Name("NumberFormat"),
 						"U":    StringLiteral("feet"),
 						"C":    Float(5280),
 					},
-				},
-				PDFDict{
-					Dict: map[string]Object{
+				),
+				Dict(
+					map[string]Object{
 						"Type": Name("NumberFormat"),
 						"U":    StringLiteral("inch"),
 						"C":    Float(12),
 						"F":    Name("F"),
 						"D":    Integer(8),
 					},
-				},
+				),
 			},
 			"A": Array{
-				PDFDict{
-					Dict: map[string]Object{
+				Dict(
+					map[string]Object{
 						"Type": Name("NumberFormat"),
 						"U":    StringLiteral("acres"),
 						"C":    Float(640),
 					},
-				},
+				),
 			},
 			"O": NewIntegerArray(0, 1),
-		}}
+		},
+	)
 
-	vpDict := PDFDict{
-		Dict: map[string]Object{
+	vpDict := Dict(
+		map[string]Object{
 			"Type":    Name("Viewport"),
 			"BBox":    NewRectangle(10, 10, 60, 60),
 			"Name":    StringLiteral("viewPort"),
 			"Measure": measureDict,
 		},
-	}
+	)
 
 	pageDict.Insert("VP", Array{vpDict})
 }
@@ -792,8 +794,8 @@ func createAnnotsArray(xRefTable *XRefTable, pageIndRef *IndirectRef, mediaBox *
 
 func createPageWithAnnotations(xRefTable *XRefTable, parentPageIndRef *IndirectRef, mediaBox *Array) (*IndirectRef, error) {
 
-	pageDict := &PDFDict{
-		Dict: map[string]Object{
+	pageDict := Dict(
+		map[string]Object{
 			"Type":         Name("Page"),
 			"Parent":       *parentPageIndRef,
 			"BleedBox":     *mediaBox,
@@ -801,44 +803,44 @@ func createPageWithAnnotations(xRefTable *XRefTable, parentPageIndRef *IndirectR
 			"ArtBox":       *mediaBox,
 			"BoxColorInfo": *createBoxColorDict(),
 			"UserUnit":     Float(1.5)}, // Note: not honored by Apple Preview
-	}
+	)
 
-	err := addResources(xRefTable, pageDict)
+	err := addResources(xRefTable, &pageDict)
 	if err != nil {
 		return nil, err
 	}
 
-	err = addContents(xRefTable, pageDict, mediaBox)
+	err = addContents(xRefTable, &pageDict, mediaBox)
 	if err != nil {
 		return nil, err
 	}
 
-	pageIndRef, err := xRefTable.IndRefForNewObject(*pageDict)
+	pageIndRef, err := xRefTable.IndRefForNewObject(pageDict)
 	if err != nil {
 		return nil, err
 	}
 
 	// Fake SeparationInfo related to a single page only.
-	separationInfoDict := PDFDict{
-		Dict: map[string]Object{
+	separationInfoDict := Dict(
+		map[string]Object{
 			"Pages":          Array{*pageIndRef},
 			"DeviceColorant": Name("Cyan"),
 			"ColorSpace": Array{
 				Name("Separation"),
 				Name("Green"),
 				Name("DeviceCMYK"),
-				PDFDict{
-					Dict: map[string]Object{
+				Dict(
+					map[string]Object{
 						"FunctionType": Integer(2),
 						"Domain":       NewNumberArray(0.0, 1.0),
 						"C0":           NewNumberArray(0.0),
 						"C1":           NewNumberArray(1.0),
 						"N":            Float(1),
 					},
-				},
+				),
 			},
 		},
-	}
+	)
 	pageDict.Insert("SeparationInfo", separationInfoDict)
 
 	annotsArray, err := createAnnotsArray(xRefTable, pageIndRef, mediaBox)
@@ -847,15 +849,15 @@ func createPageWithAnnotations(xRefTable *XRefTable, parentPageIndRef *IndirectR
 	}
 	pageDict.Insert("Annots", *annotsArray)
 
-	addViewportDict(pageDict)
+	addViewportDict(&pageDict)
 
 	return pageIndRef, nil
 }
 
 func createPageWithAcroForm(xRefTable *XRefTable, parentPageIndRef *IndirectRef, annotsArray *Array, mediaBox *Array) (*IndirectRef, error) {
 
-	pageDict := &PDFDict{
-		Dict: map[string]Object{
+	pageDict := Dict(
+		map[string]Object{
 			"Type":         Name("Page"),
 			"Parent":       *parentPageIndRef,
 			"BleedBox":     *mediaBox,
@@ -864,57 +866,57 @@ func createPageWithAcroForm(xRefTable *XRefTable, parentPageIndRef *IndirectRef,
 			"BoxColorInfo": *createBoxColorDict(),
 			"UserUnit":     Float(1.0), // Note: not honored by Apple Preview
 		},
-	}
+	)
 
-	err := addResources(xRefTable, pageDict)
+	err := addResources(xRefTable, &pageDict)
 	if err != nil {
 		return nil, err
 	}
 
-	err = addContents(xRefTable, pageDict, mediaBox)
+	err = addContents(xRefTable, &pageDict, mediaBox)
 	if err != nil {
 		return nil, err
 	}
 
 	pageDict.Insert("Annots", *annotsArray)
 
-	return xRefTable.IndRefForNewObject(*pageDict)
+	return xRefTable.IndRefForNewObject(pageDict)
 }
 
 func createPage(xRefTable *XRefTable, parentPageIndRef *IndirectRef, mediaBox *Array) (*IndirectRef, error) {
 
-	pageDict := &PDFDict{
-		Dict: map[string]Object{
+	pageDict := Dict(
+		map[string]Object{
 			"Type":   Name("Page"),
 			"Parent": *parentPageIndRef,
 		},
-	}
+	)
 
 	fIndRef, err := createFontDict(xRefTable)
 	if err != nil {
 		return nil, err
 	}
 
-	fontResources := PDFDict{
-		Dict: map[string]Object{
+	fontResources := Dict(
+		map[string]Object{
 			"F1": *fIndRef,
 		},
-	}
+	)
 
-	resourceDict := PDFDict{
-		Dict: map[string]Object{
+	resourceDict := Dict(
+		map[string]Object{
 			"Font": fontResources,
 		},
-	}
+	)
 
 	pageDict.Insert("Resources", resourceDict)
 
-	err = addContents(xRefTable, pageDict, mediaBox)
+	err = addContents(xRefTable, &pageDict, mediaBox)
 	if err != nil {
 		return nil, err
 	}
 
-	pageIndRef, err := xRefTable.IndRefForNewObject(*pageDict)
+	pageIndRef, err := xRefTable.IndRefForNewObject(pageDict)
 	if err != nil {
 		return nil, err
 	}
@@ -922,19 +924,19 @@ func createPage(xRefTable *XRefTable, parentPageIndRef *IndirectRef, mediaBox *A
 	return pageIndRef, nil
 }
 
-func addPageTree(xRefTable *XRefTable, rootDict *PDFDict) error {
+func addPageTree(xRefTable *XRefTable, rootDict *Dict) error {
 
 	// mediabox = physical page dimensions
 	//mediaBox := NewRectangle(0, 0, 595.27, 841.89)
 	mediaBox := NewRectangle(0, 0, 400, 600)
 
-	pagesDict := PDFDict{
-		Dict: map[string]Object{
+	pagesDict := Dict(
+		map[string]Object{
 			"Type":     Name("Pages"),
 			"Count":    Integer(1),
 			"MediaBox": mediaBox,
 		},
-	}
+	)
 
 	parentPageIndRef, err := xRefTable.IndRefForNewObject(pagesDict)
 	if err != nil {
@@ -953,19 +955,19 @@ func addPageTree(xRefTable *XRefTable, rootDict *PDFDict) error {
 	return nil
 }
 
-func addPageTreeWithAnnotations(xRefTable *XRefTable, rootDict *PDFDict) (*IndirectRef, error) {
+func addPageTreeWithAnnotations(xRefTable *XRefTable, rootDict *Dict) (*IndirectRef, error) {
 
 	// mediabox = physical page dimensions
 	mediaBox := NewRectangle(0, 0, 595.27, 841.89)
 
-	pagesDict := PDFDict{
-		Dict: map[string]Object{
+	pagesDict := Dict(
+		map[string]Object{
 			"Type":     Name("Pages"),
 			"Count":    Integer(1),
 			"MediaBox": mediaBox,
 			"CropBox":  mediaBox,
 		},
-	}
+	)
 
 	parentPageIndRef, err := xRefTable.IndRefForNewObject(pagesDict)
 	if err != nil {
@@ -984,19 +986,19 @@ func addPageTreeWithAnnotations(xRefTable *XRefTable, rootDict *PDFDict) (*Indir
 	return pageIndRef, nil
 }
 
-func addPageTreeWithAcroFields(xRefTable *XRefTable, rootDict *PDFDict, annotsArray *Array) (*IndirectRef, error) {
+func addPageTreeWithAcroFields(xRefTable *XRefTable, rootDict *Dict, annotsArray *Array) (*IndirectRef, error) {
 
 	// mediabox = physical page dimensions
 	mediaBox := NewRectangle(0, 0, 595.27, 841.89)
 
-	pagesDict := PDFDict{
-		Dict: map[string]Object{
+	pagesDict := Dict(
+		map[string]Object{
 			"Type":     Name("Pages"),
 			"Count":    Integer(1),
 			"MediaBox": mediaBox,
 			"CropBox":  mediaBox,
 		},
-	}
+	)
 
 	parentPageIndRef, err := xRefTable.IndRefForNewObject(pagesDict)
 	if err != nil {
@@ -1018,15 +1020,15 @@ func addPageTreeWithAcroFields(xRefTable *XRefTable, rootDict *PDFDict, annotsAr
 // create a thread with 2 beads.
 func createThreadDict(xRefTable *XRefTable, pageIndRef *IndirectRef) (*IndirectRef, error) {
 
-	infoDict := NewPDFDict()
+	infoDict := NewDict()
 	infoDict.InsertString("Title", "DummyArticle")
 
-	d := PDFDict{
-		Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
 			"Type": Name("Thread"),
 			"I":    infoDict,
 		},
-	}
+	)
 
 	dIndRef, err := xRefTable.IndRefForNewObject(d)
 	if err != nil {
@@ -1034,14 +1036,14 @@ func createThreadDict(xRefTable *XRefTable, pageIndRef *IndirectRef) (*IndirectR
 	}
 
 	// create first bead
-	d1 := PDFDict{
-		Dict: map[string]Object{
+	d1 := Dict(
+		map[string]Object{
 			"Type": Name("Bead"),
 			"T":    *dIndRef,
 			"P":    *pageIndRef,
 			"R":    NewRectangle(0, 0, 100, 100),
 		},
-	}
+	)
 
 	d1IndRef, err := xRefTable.IndRefForNewObject(d1)
 	if err != nil {
@@ -1051,8 +1053,8 @@ func createThreadDict(xRefTable *XRefTable, pageIndRef *IndirectRef) (*IndirectR
 	d.Insert("F", *d1IndRef)
 
 	// create last bead
-	d2 := PDFDict{
-		Dict: map[string]Object{
+	d2 := Dict(
+		map[string]Object{
 			"Type": Name("Bead"),
 			"T":    *dIndRef,
 			"N":    *d1IndRef,
@@ -1060,7 +1062,7 @@ func createThreadDict(xRefTable *XRefTable, pageIndRef *IndirectRef) (*IndirectR
 			"P":    *pageIndRef,
 			"R":    NewRectangle(0, 100, 200, 100),
 		},
-	}
+	)
 
 	d2IndRef, err := xRefTable.IndRefForNewObject(d2)
 	if err != nil {
@@ -1073,7 +1075,7 @@ func createThreadDict(xRefTable *XRefTable, pageIndRef *IndirectRef) (*IndirectR
 	return dIndRef, nil
 }
 
-func addThreads(xRefTable *XRefTable, rootDict *PDFDict, pageIndRef *IndirectRef) error {
+func addThreads(xRefTable *XRefTable, rootDict *Dict, pageIndRef *IndirectRef) error {
 
 	indRef, err := createThreadDict(xRefTable, pageIndRef)
 	if err != nil {
@@ -1090,51 +1092,51 @@ func addThreads(xRefTable *XRefTable, rootDict *PDFDict, pageIndRef *IndirectRef
 	return nil
 }
 
-func addOpenAction(xRefTable *XRefTable, rootDict *PDFDict) error {
+func addOpenAction(xRefTable *XRefTable, rootDict *Dict) error {
 
-	nextActionDict := PDFDict{
-		Dict: map[string]Object{
+	nextActionDict := Dict(
+		map[string]Object{
 			"Type": Name("Action"),
 			"S":    Name("Movie"),
 			"T":    StringLiteral("Sample Movie"),
 		},
-	}
+	)
 
 	script := `app.alert('Hello Gopher!');`
 
-	d := PDFDict{
-		Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
 			"Type": Name("Action"),
 			"S":    Name("JavaScript"),
 			"JS":   StringLiteral(script),
 			"Next": nextActionDict,
 		},
-	}
+	)
 
 	rootDict.Insert("OpenAction", d)
 
 	return nil
 }
 
-func addURI(xRefTable *XRefTable, rootDict *PDFDict) {
+func addURI(xRefTable *XRefTable, rootDict *Dict) {
 
-	d := NewPDFDict()
+	d := NewDict()
 	d.InsertString("Base", "http://www.adobe.com")
 
 	rootDict.Insert("URI", d)
 }
 
-func addSpiderInfo(xRefTable *XRefTable, rootDict *PDFDict) error {
+func addSpiderInfo(xRefTable *XRefTable, rootDict *Dict) error {
 
 	// webCaptureInfoDict
-	webCaptureInfoDict := NewPDFDict()
+	webCaptureInfoDict := NewDict()
 	webCaptureInfoDict.InsertInt("V", 1.0)
 
 	arr := Array{}
-	captureCmdDict := NewPDFDict()
+	captureCmdDict := NewDict()
 	captureCmdDict.InsertString("URL", (""))
 
-	cmdSettingsDict := NewPDFDict()
+	cmdSettingsDict := NewDict()
 	captureCmdDict.Insert("S", cmdSettingsDict)
 
 	indRef, err := xRefTable.IndRefForNewObject(captureCmdDict)
@@ -1156,18 +1158,18 @@ func addSpiderInfo(xRefTable *XRefTable, rootDict *PDFDict) error {
 	return nil
 }
 
-func addOCProperties(xRefTable *XRefTable, rootDict *PDFDict) error {
+func addOCProperties(xRefTable *XRefTable, rootDict *Dict) error {
 
-	usageAppDict := PDFDict{
-		Dict: map[string]Object{
+	usageAppDict := Dict(
+		map[string]Object{
 			"Event":    Name("View"),
 			"OCGs":     Array{}, // of indRefs
 			"Category": NewNameArray("Language"),
 		},
-	}
+	)
 
-	optionalContentConfigDict := PDFDict{
-		Dict: map[string]Object{
+	optionalContentConfigDict := Dict(
+		map[string]Object{
 			"Name":      StringLiteral("OCConf"),
 			"Creator":   StringLiteral("Horst Rutter"),
 			"BaseState": Name("ON"),
@@ -1179,24 +1181,24 @@ func addOCProperties(xRefTable *XRefTable, rootDict *PDFDict) error {
 			"RBGroups":  Array{},
 			"Locked":    Array{},
 		},
-	}
+	)
 
-	d := PDFDict{
-		Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
 			"OCGs":    Array{}, // of indRefs
 			"D":       optionalContentConfigDict,
 			"Configs": Array{optionalContentConfigDict},
 		},
-	}
+	)
 
 	rootDict.Insert("OCProperties", d)
 
 	return nil
 }
 
-func addRequirements(xRefTable *XRefTable, rootDict *PDFDict) {
+func addRequirements(xRefTable *XRefTable, rootDict *Dict) {
 
-	d := NewPDFDict()
+	d := NewDict()
 	d.InsertName("Type", "Requirement")
 	d.InsertName("S", "EnableJavaScripts")
 
@@ -1268,15 +1270,15 @@ func createNormalAppearanceForFormField(xRefTable *XRefTable, w, h float64) (*In
 	fmt.Fprintf(&b, "0 0 m 0 %f l %f %f l %f 0 l s", h, w, h, w)
 
 	sd := &StreamDict{
-		PDFDict: PDFDict{
-			Dict: map[string]Object{
+		Dict: Dict(
+			map[string]Object{
 				"Type":     Name("XObject"),
 				"Subtype":  Name("Form"),
 				"FormType": Integer(1),
 				"BBox":     NewRectangle(0, 0, w, h),
 				"Matrix":   NewIntegerArray(1, 0, 0, 1, 0, 0),
 			},
-		},
+		),
 		Content: b.Bytes(),
 	}
 
@@ -1295,15 +1297,15 @@ func createRolloverAppearanceForFormField(xRefTable *XRefTable, w, h float64) (*
 	fmt.Fprintf(&b, "1 0 0 RG 0 0 m 0 %f l %f %f l %f 0 l s", h, w, h, w)
 
 	sd := &StreamDict{
-		PDFDict: PDFDict{
-			Dict: map[string]Object{
+		Dict: Dict(
+			map[string]Object{
 				"Type":     Name("XObject"),
 				"Subtype":  Name("Form"),
 				"FormType": Integer(1),
 				"BBox":     NewRectangle(0, 0, w, h),
 				"Matrix":   NewIntegerArray(1, 0, 0, 1, 0, 0),
 			},
-		},
+		),
 		Content: b.Bytes(),
 	}
 
@@ -1322,15 +1324,15 @@ func createDownAppearanceForFormField(xRefTable *XRefTable, w, h float64) (*Indi
 	fmt.Fprintf(&b, "0 0 m 0 %f l %f %f l %f 0 l s", h, w, h, w)
 
 	sd := &StreamDict{
-		PDFDict: PDFDict{
-			Dict: map[string]Object{
+		Dict: Dict(
+			map[string]Object{
 				"Type":     Name("XObject"),
 				"Subtype":  Name("Form"),
 				"FormType": Integer(1),
 				"BBox":     NewRectangle(0, 0, w, h),
 				"Matrix":   NewIntegerArray(1, 0, 0, 1, 0, 0),
 			},
-		},
+		),
 		Content: b.Bytes(),
 	}
 
@@ -1374,25 +1376,25 @@ func createTextField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectRef, err
 		return nil, err
 	}
 
-	resourceDict := PDFDict{
-		Dict: map[string]Object{
-			"Font": PDFDict{
-				Dict: map[string]Object{
+	resourceDict := Dict(
+		map[string]Object{
+			"Font": Dict(
+				map[string]Object{
 					"Helvetica": *fontDict,
 				},
-			},
+			),
 		},
-	}
+	)
 
-	d := PDFDict{
-		Dict: map[string]Object{
-			"AP": PDFDict{
-				Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
+			"AP": Dict(
+				map[string]Object{
 					"N": *fN,
 					"R": *fR,
 					"D": *fD,
 				},
-			},
+			),
 			"DA":      StringLiteral("/Helvetica 12 Tf 0 g"),
 			"DR":      resourceDict,
 			"FT":      Name("Tx"),
@@ -1405,7 +1407,7 @@ func createTextField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectRef, err
 			"DV":      StringLiteral("Default value"),
 			"V":       StringLiteral("Default value"),
 		},
-	}
+	)
 
 	indRef, err := xRefTable.IndRefForNewObject(d)
 	if err != nil {
@@ -1417,37 +1419,37 @@ func createTextField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectRef, err
 	return indRef, nil
 }
 
-func createYesAppearance(xRefTable *XRefTable, resourceDict *PDFDict, w, h float64) (*IndirectRef, error) {
+func createYesAppearance(xRefTable *XRefTable, resourceDict *Dict, w, h float64) (*IndirectRef, error) {
 
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "q 0 0 1 rg BT /ZaDb 12 Tf 0 0 Td (8) Tj ET Q")
 
 	sd := &StreamDict{
-		PDFDict: PDFDict{
-			Dict: map[string]Object{
+		Dict: Dict(
+			map[string]Object{
 				"Resources": *resourceDict,
 				"Subtype":   Name("Form"),
 				"BBox":      NewRectangle(0, 0, w, h),
-				"OPI": PDFDict{
-					Dict: map[string]Object{
-						"2.0": PDFDict{
-							Dict: map[string]Object{
+				"OPI": Dict(
+					map[string]Object{
+						"2.0": Dict(
+							map[string]Object{
 								"Type":    Name("OPI"),
 								"Version": Float(2.0),
 								"F":       StringLiteral("Proxy"),
 								"Inks":    Name("full_color"),
 							},
-						},
+						),
 					},
-				},
-				"Ref": PDFDict{
-					Dict: map[string]Object{
+				),
+				"Ref": Dict(
+					map[string]Object{
 						"F":    StringLiteral("Proxy"),
 						"Page": Integer(1),
 					},
-				},
+				),
 			},
-		},
+		),
 		Content: b.Bytes(),
 	}
 
@@ -1459,21 +1461,21 @@ func createYesAppearance(xRefTable *XRefTable, resourceDict *PDFDict, w, h float
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createOffAppearance(xRefTable *XRefTable, resourceDict *PDFDict, w, h float64) (*IndirectRef, error) {
+func createOffAppearance(xRefTable *XRefTable, resourceDict *Dict, w, h float64) (*IndirectRef, error) {
 
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "q 0 0 1 rg BT /ZaDb 12 Tf 0 0 Td (4) Tj ET Q")
 
 	sd := &StreamDict{
-		PDFDict: PDFDict{
-			Dict: map[string]Object{
+		Dict: Dict(
+			map[string]Object{
 				"Resources": *resourceDict,
 				"Subtype":   Name("Form"),
 				"BBox":      NewRectangle(0, 0, w, h),
-				"OPI": PDFDict{
-					Dict: map[string]Object{
-						"1.3": PDFDict{
-							Dict: map[string]Object{
+				"OPI": Dict(
+					map[string]Object{
+						"1.3": Dict(
+							map[string]Object{
 								"Type":     Name("OPI"),
 								"Version":  Float(1.3),
 								"F":        StringLiteral("Proxy"),
@@ -1481,11 +1483,11 @@ func createOffAppearance(xRefTable *XRefTable, resourceDict *PDFDict, w, h float
 								"CropRect": NewIntegerArray(0, 400, 400, 0),
 								"Position": NewNumberArray(0, 0, 0, 400, 400, 400, 400, 0),
 							},
-						},
+						),
 					},
-				},
+				),
 			},
-		},
+		),
 		Content: b.Bytes(),
 	}
 
@@ -1504,15 +1506,15 @@ func createCheckBoxButtonField(xRefTable *XRefTable, pageAnnots *Array) (*Indire
 		return nil, err
 	}
 
-	resDict := PDFDict{
-		Dict: map[string]Object{
-			"Font": PDFDict{
-				Dict: map[string]Object{
+	resDict := Dict(
+		map[string]Object{
+			"Font": Dict(
+				map[string]Object{
 					"ZaDb": *fontDict,
 				},
-			},
+			),
 		},
-	}
+	)
 
 	yesForm, err := createYesAppearance(xRefTable, &resDict, 20.0, 20.0)
 	if err != nil {
@@ -1524,19 +1526,19 @@ func createCheckBoxButtonField(xRefTable *XRefTable, pageAnnots *Array) (*Indire
 		return nil, err
 	}
 
-	apDict := PDFDict{
-		Dict: map[string]Object{
-			"N": PDFDict{
-				Dict: map[string]Object{
+	apDict := Dict(
+		map[string]Object{
+			"N": Dict(
+				map[string]Object{
 					"Yes": *yesForm,
 					"Off": *offForm,
 				},
-			},
+			),
 		},
-	}
+	)
 
-	d := PDFDict{
-		Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
 			"FT":      Name("Btn"),
 			"Rect":    NewRectangle(250, 300, 270, 320),
 			"Type":    Name("Annot"),
@@ -1547,7 +1549,7 @@ func createCheckBoxButtonField(xRefTable *XRefTable, pageAnnots *Array) (*Indire
 			"AS":      Name("Yes"),
 			"AP":      apDict,
 		},
-	}
+	)
 
 	indRef, err := xRefTable.IndRefForNewObject(d)
 	if err != nil {
@@ -1564,8 +1566,8 @@ func createRadioButtonField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectR
 	var flags uint32
 	flags = setBit(flags, 16)
 
-	d := PDFDict{
-		Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
 			"FT":   Name("Btn"),
 			"Ff":   Integer(flags),
 			"Rect": NewRectangle(250, 400, 280, 420),
@@ -1574,7 +1576,7 @@ func createRadioButtonField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectR
 			"T": StringLiteral("Credit card"),
 			"V": Name("card1"),
 		},
-	}
+	)
 
 	indRef, err := xRefTable.IndRefForNewObject(d)
 	if err != nil {
@@ -1586,15 +1588,15 @@ func createRadioButtonField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectR
 		return nil, err
 	}
 
-	resDict := PDFDict{
-		Dict: map[string]Object{
-			"Font": PDFDict{
-				Dict: map[string]Object{
+	resDict := Dict(
+		map[string]Object{
+			"Font": Dict(
+				map[string]Object{
 					"ZaDb": *fontDict,
 				},
-			},
+			),
 		},
-	}
+	)
 
 	selectedForm, err := createYesAppearance(xRefTable, &resDict, 20.0, 20.0)
 	if err != nil {
@@ -1606,8 +1608,8 @@ func createRadioButtonField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectR
 		return nil, err
 	}
 
-	r1 := PDFDict{
-		Dict: map[string]Object{
+	r1 := Dict(
+		map[string]Object{
 			"Rect":    NewRectangle(250, 400, 280, 420),
 			"Type":    Name("Annot"),
 			"Subtype": Name("Widget"),
@@ -1615,26 +1617,26 @@ func createRadioButtonField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectR
 			"T":       StringLiteral("Radio1"),
 			"TU":      StringLiteral("Radio1"),
 			"AS":      Name("card1"),
-			"AP": PDFDict{
-				Dict: map[string]Object{
-					"N": PDFDict{
-						Dict: map[string]Object{
+			"AP": Dict(
+				map[string]Object{
+					"N": Dict(
+						map[string]Object{
 							"card1": *selectedForm,
 							"Off":   *offForm,
 						},
-					},
+					),
 				},
-			},
+			),
 		},
-	}
+	)
 
 	indRefR1, err := xRefTable.IndRefForNewObject(r1)
 	if err != nil {
 		return nil, err
 	}
 
-	r2 := PDFDict{
-		Dict: map[string]Object{
+	r2 := Dict(
+		map[string]Object{
 			"Rect":    NewRectangle(300, 400, 330, 420),
 			"Type":    Name("Annot"),
 			"Subtype": Name("Widget"),
@@ -1642,18 +1644,18 @@ func createRadioButtonField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectR
 			"T":       StringLiteral("Radio2"),
 			"TU":      StringLiteral("Radio2"),
 			"AS":      Name("Off"),
-			"AP": PDFDict{
-				Dict: map[string]Object{
-					"N": PDFDict{
-						Dict: map[string]Object{
+			"AP": Dict(
+				map[string]Object{
+					"N": Dict(
+						map[string]Object{
 							"card2": *selectedForm,
 							"Off":   *offForm,
 						},
-					},
+					),
 				},
-			},
+			),
 		},
-	}
+	)
 
 	indRefR2, err := xRefTable.IndRefForNewObject(r2)
 	if err != nil {
@@ -1678,28 +1680,28 @@ func createResetButton(xRefTable *XRefTable, pageAnnots *Array) (*IndirectRef, e
 		return nil, err
 	}
 
-	resetFormActionDict := PDFDict{
-		Dict: map[string]Object{
+	resetFormActionDict := Dict(
+		map[string]Object{
 			"Type":   Name("Action"),
 			"S":      Name("ResetForm"),
 			"Fields": NewStringArray("inputField"),
 			"Flags":  Integer(0),
 		},
-	}
+	)
 
-	d := PDFDict{
-		Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
 			"FT":      Name("Btn"),
 			"Ff":      Integer(flags),
 			"Rect":    NewRectangle(100, 400, 120, 420),
 			"Type":    Name("Annot"),
 			"Subtype": Name("Widget"),
-			"AP":      PDFDict{Dict: map[string]Object{"N": *fN}},
+			"AP":      Dict(map[string]Object{"N": *fN}),
 			"T":       StringLiteral("Reset"),
 			"TU":      StringLiteral("Reset"),
 			"A":       resetFormActionDict,
 		},
-	}
+	)
 
 	indRef, err := xRefTable.IndRefForNewObject(d)
 	if err != nil {
@@ -1721,36 +1723,36 @@ func createSubmitButton(xRefTable *XRefTable, pageAnnots *Array) (*IndirectRef, 
 		return nil, err
 	}
 
-	urlSpec := PDFDict{
-		Dict: map[string]Object{
+	urlSpec := Dict(
+		map[string]Object{
 			"FS": Name("URL"),
 			"F":  StringLiteral("http://www.me.com"),
 		},
-	}
+	)
 
-	submitFormActionDict := PDFDict{
-		Dict: map[string]Object{
+	submitFormActionDict := Dict(
+		map[string]Object{
 			"Type":   Name("Action"),
 			"S":      Name("SubmitForm"),
 			"F":      urlSpec,
 			"Fields": NewStringArray("inputField"),
 			"Flags":  Integer(0),
 		},
-	}
+	)
 
-	d := PDFDict{
-		Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
 			"FT":      Name("Btn"),
 			"Ff":      Integer(flags),
 			"Rect":    NewRectangle(140, 400, 160, 420),
 			"Type":    Name("Annot"),
 			"Subtype": Name("Widget"),
-			"AP":      PDFDict{Dict: map[string]Object{"N": *fN}},
+			"AP":      Dict(map[string]Object{"N": *fN}),
 			"T":       StringLiteral("Submit"),
 			"TU":      StringLiteral("Submit"),
 			"A":       submitFormActionDict,
 		},
-	}
+	)
 
 	indRef, err := xRefTable.IndRefForNewObject(d)
 	if err != nil {
@@ -1765,9 +1767,7 @@ func createSubmitButton(xRefTable *XRefTable, pageAnnots *Array) (*IndirectRef, 
 func streamObjForXFAElement(xRefTable *XRefTable, s string) (*IndirectRef, error) {
 
 	sd := &StreamDict{
-		PDFDict: PDFDict{
-			Dict: map[string]Object{},
-		},
+		Dict:    Dict(map[string]Object{}),
 		Content: []byte(s),
 	}
 
@@ -1797,7 +1797,7 @@ func createXFAArray(xRefTable *XRefTable) (*Array, error) {
 	}, nil
 }
 
-func createAcroFormDict(xRefTable *XRefTable) (*PDFDict, *Array, error) {
+func createAcroFormDict(xRefTable *XRefTable) (*Dict, *Array, error) {
 
 	pageAnnots := Array{}
 
@@ -1831,14 +1831,14 @@ func createAcroFormDict(xRefTable *XRefTable) (*PDFDict, *Array, error) {
 		return nil, nil, err
 	}
 
-	d := PDFDict{
-		Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
 			"Fields":          Array{*text, *checkBox, *radioButton, *resetButton, *submitButton}, // indRefs of fieldDicts
 			"NeedAppearances": Boolean(true),
 			"CO":              Array{*text},
 			"XFA":             *xfaArr,
 		},
-	}
+	)
 
 	return &d, &pageAnnots, nil
 }
@@ -1869,12 +1869,12 @@ func CreateAcroFormDemoXRef() (*XRefTable, error) {
 	}
 
 	rootDict.Insert("ViewerPreferences",
-		PDFDict{
-			Dict: map[string]Object{
+		Dict(
+			map[string]Object{
 				"FitWindow":    Boolean(true),
 				"CenterWindow": Boolean(true),
 			},
-		},
+		),
 	)
 
 	return xRefTable, nil

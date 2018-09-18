@@ -67,9 +67,9 @@ var (
 )
 
 // NewEncryptDict creates a new EncryptDict using the standard security handler.
-func newEncryptDict(needAES, need128BitKey bool, permissions int16) *PDFDict {
+func newEncryptDict(needAES, need128BitKey bool, permissions int16) *Dict {
 
-	d := NewPDFDict()
+	d := NewDict()
 
 	//d.Insert("Type", Name("Encrypt"))
 
@@ -90,7 +90,7 @@ func newEncryptDict(needAES, need128BitKey bool, permissions int16) *PDFDict {
 	d.Insert("StmF", Name("StdCF"))
 	d.Insert("StrF", Name("StdCF"))
 
-	d1 := NewPDFDict()
+	d1 := NewDict()
 	d1.Insert("AuthEvent", Name("DocOpen"))
 
 	if needAES {
@@ -105,7 +105,7 @@ func newEncryptDict(needAES, need128BitKey bool, permissions int16) *PDFDict {
 		d1.Insert("Length", Integer(5))
 	}
 
-	d2 := NewPDFDict()
+	d2 := NewDict()
 	d2.Insert("StdCF", d1)
 
 	d.Insert("CF", d2)
@@ -392,7 +392,7 @@ func validateOwnerPassword(ctx *PDFContext) (ok bool, k []byte, err error) {
 }
 
 // SupportedCFEntry returns true if all entries found are supported.
-func supportedCFEntry(d *PDFDict) (bool, error) {
+func supportedCFEntry(d *Dict) (bool, error) {
 
 	cfm := d.NameEntry("CFM")
 	if cfm != nil && *cfm != "V2" && *cfm != "AESV2" {
@@ -505,7 +505,7 @@ func hasNeededPermissions(mode CommandMode, enc *Enc) bool {
 	return true
 }
 
-func getV(dict *PDFDict) (*int, error) {
+func getV(dict *Dict) (*int, error) {
 
 	v := dict.IntEntry("V")
 
@@ -515,11 +515,11 @@ func getV(dict *PDFDict) (*int, error) {
 
 	return v, nil
 }
-func checkStmf(ctx *PDFContext, stmf *string, cfDict *PDFDict) error {
+func checkStmf(ctx *PDFContext, stmf *string, cfDict *Dict) error {
 
 	if stmf != nil && *stmf != "Identity" {
 
-		d := cfDict.PDFDictEntry(*stmf)
+		d := cfDict.DictEntry(*stmf)
 		if d == nil {
 			return errors.Errorf("checkStmf: entry \"%s\" missing in \"CF\"", *stmf)
 		}
@@ -534,7 +534,7 @@ func checkStmf(ctx *PDFContext, stmf *string, cfDict *PDFDict) error {
 	return nil
 }
 
-func checkV(ctx *PDFContext, dict *PDFDict) (*int, error) {
+func checkV(ctx *PDFContext, dict *Dict) (*int, error) {
 
 	v, err := getV(dict)
 	if err != nil {
@@ -547,7 +547,7 @@ func checkV(ctx *PDFContext, dict *PDFDict) (*int, error) {
 	}
 
 	// CF
-	cfDict := dict.PDFDictEntry("CF")
+	cfDict := dict.DictEntry("CF")
 	if cfDict == nil {
 		return nil, errors.Errorf("checkV: required entry \"CF\" missing.")
 	}
@@ -562,7 +562,7 @@ func checkV(ctx *PDFContext, dict *PDFDict) (*int, error) {
 	// StrF
 	strf := dict.NameEntry("StrF")
 	if strf != nil && *strf != "Identity" {
-		d := cfDict.PDFDictEntry(*strf)
+		d := cfDict.DictEntry(*strf)
 		if d == nil {
 			return nil, errors.Errorf("checkV: entry \"%s\" missing in \"CF\"", *strf)
 		}
@@ -576,7 +576,7 @@ func checkV(ctx *PDFContext, dict *PDFDict) (*int, error) {
 	// EFF
 	eff := dict.NameEntry("EFF")
 	if eff != nil && *strf != "Identity" {
-		d := cfDict.PDFDictEntry(*eff)
+		d := cfDict.DictEntry(*eff)
 		if d == nil {
 			return nil, errors.Errorf("checkV: entry \"%s\" missing in \"CF\"", *eff)
 		}
@@ -590,7 +590,7 @@ func checkV(ctx *PDFContext, dict *PDFDict) (*int, error) {
 	return v, nil
 }
 
-func length(dict *PDFDict) (int, error) {
+func length(dict *Dict) (int, error) {
 
 	l := dict.IntEntry("Length")
 	if l == nil {
@@ -604,7 +604,7 @@ func length(dict *PDFDict) (int, error) {
 	return *l, nil
 }
 
-func getR(dict *PDFDict) (int, error) {
+func getR(dict *Dict) (int, error) {
 
 	r := dict.IntEntry("R")
 	if r == nil || (*r != 2 && *r != 3 && *r != 4) {
@@ -616,7 +616,7 @@ func getR(dict *PDFDict) (int, error) {
 
 // SupportedEncryption returns true if used encryption is supported by pdfcpu
 // Also returns a pointer to a struct encapsulating used encryption.
-func supportedEncryption(ctx *PDFContext, dict *PDFDict) (*Enc, error) {
+func supportedEncryption(ctx *PDFContext, dict *Dict) (*Enc, error) {
 
 	// Filter
 	filter := dict.NameEntry("Filter")
@@ -815,9 +815,9 @@ func encryptDeepObject(objIn Object, objNr, genNr int, key []byte, aes bool) (*S
 			}
 		}
 
-	case PDFDict:
-		for k, v := range obj.Dict {
-			err := encrypt(obj.Dict, k, v, objNr, genNr, key, aes)
+	case Dict:
+		for k, v := range obj {
+			err := encrypt(obj, k, v, objNr, genNr, key, aes)
 			if err != nil {
 				return nil, err
 			}
@@ -861,14 +861,14 @@ func decryptDeepObject(objIn Object, objNr, genNr int, key []byte, aes bool) (*S
 
 	switch obj := objIn.(type) {
 
-	case PDFDict:
-		for k, v := range obj.Dict {
+	case Dict:
+		for k, v := range obj {
 			s, err := decryptDeepObject(v, objNr, genNr, key, aes)
 			if err != nil {
 				return nil, err
 			}
 			if s != nil {
-				obj.Dict[k] = *s
+				obj[k] = *s
 			}
 		}
 

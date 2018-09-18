@@ -21,7 +21,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateEntryV(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string, required bool, sinceVersion pdf.Version, pBeadIndRef *pdf.IndirectRef, objNumber int) error {
+func validateEntryV(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string, required bool, sinceVersion pdf.Version, pBeadIndRef *pdf.IndirectRef, objNumber int) error {
 
 	previousBeadIndRef, err := validateIndRefEntry(xRefTable, dict, dictName, "V", required, sinceVersion)
 	if err != nil {
@@ -207,7 +207,7 @@ func validateThreadDict(xRefTable *pdf.XRefTable, obj pdf.Object, sinceVersion p
 	return validateFirstBeadDict(xRefTable, fBeadIndRef, &threadIndRef)
 }
 
-func validateThreads(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateThreads(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	// => 12.4.3 Articles
 

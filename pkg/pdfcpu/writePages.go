@@ -22,7 +22,7 @@ import (
 )
 
 // Write page entry to disk.
-func writePageEntry(ctx *PDFContext, dict *PDFDict, dictName, entryName string, statsAttr int) error {
+func writePageEntry(ctx *PDFContext, dict *Dict, dictName, entryName string, statsAttr int) error {
 
 	obj, err := writeEntry(ctx, dict, dictName, entryName)
 	if err != nil {
@@ -36,7 +36,7 @@ func writePageEntry(ctx *PDFContext, dict *PDFDict, dictName, entryName string, 
 	return nil
 }
 
-func writePageDict(ctx *PDFContext, indRef *IndirectRef, pageDict *PDFDict) error {
+func writePageDict(ctx *PDFContext, indRef *IndirectRef, pageDict *Dict) error {
 
 	objNumber := indRef.ObjectNumber.Value()
 	genNumber := indRef.GenerationNumber.Value()
@@ -50,7 +50,7 @@ func writePageDict(ctx *PDFContext, indRef *IndirectRef, pageDict *PDFDict) erro
 		pageDict.Delete("Annots")
 	}
 
-	err := writePDFDictObject(ctx, objNumber, genNumber, *pageDict)
+	err := writeDictObject(ctx, objNumber, genNumber, *pageDict)
 	if err != nil {
 		return err
 	}
@@ -172,7 +172,7 @@ func locateKidForPageNumber(ctx *PDFContext, kidsArray *Array, pageCount *int, p
 	return nil, errors.Errorf("locateKidForPageNumber: Unable to locate kid: pageCount:%d extractPageNr:%d\n", *pageCount, pageNumber)
 }
 
-func pageNodeDict(ctx *PDFContext, o Object) (d *PDFDict, indRef *IndirectRef, err error) {
+func pageNodeDict(ctx *PDFContext, o Object) (d *Dict, indRef *IndirectRef, err error) {
 
 	if o == nil {
 		log.Debug.Println("pageNodeDict: is nil")
@@ -210,7 +210,7 @@ func pageNodeDict(ctx *PDFContext, o Object) (d *PDFDict, indRef *IndirectRef, e
 	return d, &iRef, nil
 }
 
-func prepareSinglePageWrite(ctx *PDFContext, dict *PDFDict, kids *Array, pageCount *int) error {
+func prepareSinglePageWrite(ctx *PDFContext, dict *Dict, kids *Array, pageCount *int) error {
 
 	kid, err := locateKidForPageNumber(ctx, kids, pageCount, ctx.Write.ExtractPageNr)
 	if err != nil {
@@ -325,7 +325,7 @@ func writePagesDict(ctx *PDFContext, indRef *IndirectRef, pageCount int) error {
 		log.Debug.Printf("kidsArrayOrig after: %v", kidsArrayOrig)
 	}
 
-	err = writePDFDictObject(ctx, objNumber, genNumber, *dict)
+	err = writeDictObject(ctx, objNumber, genNumber, *dict)
 	if err != nil {
 		return err
 	}
@@ -381,7 +381,7 @@ func trimPagesDict(ctx *PDFContext, indRef *IndirectRef, pageCount *int) (count 
 		return 0, errors.Errorf("trimPagesDict end: obj#%d offset=%d *** nil or already written", indRef.ObjectNumber, ctx.Write.Offset)
 	}
 
-	dict, ok := obj.(PDFDict)
+	dict, ok := obj.(Dict)
 	if !ok {
 		return 0, errors.Errorf("trimPagesDict: corrupt pages dict, obj#%d", objNumber)
 	}

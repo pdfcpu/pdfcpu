@@ -63,9 +63,9 @@ func textString(ctx *PDFContext, obj Object) (string, error) {
 	return strings.Replace(s, ";", ",", -1), nil
 }
 
-func writeInfoDict(ctx *PDFContext, dict *PDFDict) (err error) {
+func writeInfoDict(ctx *PDFContext, dict *Dict) (err error) {
 
-	for key, value := range dict.Dict {
+	for key, value := range *dict {
 
 		switch key {
 

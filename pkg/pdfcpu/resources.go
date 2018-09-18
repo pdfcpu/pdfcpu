@@ -26,7 +26,7 @@ type FontObject struct {
 	ResourceNames []string
 	Prefix        string
 	FontName      string
-	FontDict      *PDFDict
+	FontDict      *Dict
 	Data          []byte
 	Extension     string
 }

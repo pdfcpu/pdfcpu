@@ -22,7 +22,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateAAPLAKExtrasDictEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateAAPLAKExtrasDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	// No documentation for this PDF-Extension - purely speculative implementation.
 
@@ -53,7 +53,7 @@ func validateAAPLAKExtrasDictEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, 
 	return nil
 }
 
-func validateBorderEffectDictEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateBorderEffectDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	// see 12.5.4
 
@@ -79,7 +79,7 @@ func validateBorderEffectDictEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, 
 	return nil
 }
 
-func validateBorderStyleDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateBorderStyleDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	// see 12.5.4
 
@@ -115,7 +115,7 @@ func validateBorderStyleDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictNa
 	return err
 }
 
-func validateIconFitDictEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateIconFitDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	// see table 247
 
@@ -154,7 +154,7 @@ func validateIconFitDictEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictN
 	return nil
 }
 
-func validateAppearanceCharacteristicsDictEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateAppearanceCharacteristicsDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	// see 12.5.6.19
 
@@ -231,7 +231,7 @@ func validateAppearanceCharacteristicsDictEntry(xRefTable *pdf.XRefTable, dict *
 	return err
 }
 
-func validateAnnotationDictText(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateAnnotationDictText(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.5.6.4
 
@@ -261,7 +261,7 @@ func validateAnnotationDictText(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dic
 	return err
 }
 
-func validateActionOrDestination(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string, sinceVersion pdf.Version) error {
+func validateActionOrDestination(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string, sinceVersion pdf.Version) error {
 
 	// The action that shall be performed when this item is activated.
 	d, err := validateDictEntry(xRefTable, dict, dictName, "A", OPTIONAL, sinceVersion, nil)
@@ -281,7 +281,7 @@ func validateActionOrDestination(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, di
 	return validateDestination(xRefTable, obj)
 }
 
-func validateURIActionDictEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateURIActionDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	d, err := validateDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
 	if err != nil || d == nil {
@@ -305,7 +305,7 @@ func validateURIActionDictEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dic
 	return validateURIActionDict(xRefTable, d, dictName)
 }
 
-func validateAnnotationDictLink(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateAnnotationDictLink(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.5.6.5
 
@@ -342,7 +342,7 @@ func validateAnnotationDictLink(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dic
 	return validateBorderStyleDict(xRefTable, dict, dictName, "BS", OPTIONAL, sinceVersion)
 }
 
-func validateAnnotationDictFreeTextPart1(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string, sinceVersion pdf.Version) error {
+func validateAnnotationDictFreeTextPart1(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string, sinceVersion pdf.Version) error {
 
 	// DA, required, string
 	_, err := validateStringEntry(xRefTable, dict, dictName, "DA", REQUIRED, pdf.V10, nil)
@@ -387,7 +387,7 @@ func validateAnnotationDictFreeTextPart1(xRefTable *pdf.XRefTable, dict *pdf.PDF
 	return err
 }
 
-func validateAnnotationDictFreeTextPart2(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string, sinceVersion pdf.Version) error {
+func validateAnnotationDictFreeTextPart2(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string, sinceVersion pdf.Version) error {
 
 	// IT, optional, name, since V1.6
 	sinceVersion = pdf.V16
@@ -438,7 +438,7 @@ func validateAnnotationDictFreeTextPart2(xRefTable *pdf.XRefTable, dict *pdf.PDF
 	return err
 }
 
-func validateAnnotationDictFreeText(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateAnnotationDictFreeText(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.5.6.6
 
@@ -450,7 +450,7 @@ func validateAnnotationDictFreeText(xRefTable *pdf.XRefTable, dict *pdf.PDFDict,
 	return validateAnnotationDictFreeTextPart2(xRefTable, dict, dictName, pdf.V13)
 }
 
-func validateEntryMeasure(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string, required bool, sinceVersion pdf.Version) error {
+func validateEntryMeasure(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string, required bool, sinceVersion pdf.Version) error {
 
 	d, err := validateDictEntry(xRefTable, dict, dictName, "Measure", required, sinceVersion, nil)
 	if err != nil {
@@ -469,7 +469,7 @@ func validateEntryMeasure(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName 
 
 func validateCP(s string) bool { return s == "Inline" || s == "Top" }
 
-func validateAnnotationDictLine(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateAnnotationDictLine(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.5.6.7
 
@@ -549,7 +549,7 @@ func validateAnnotationDictLine(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dic
 	return err
 }
 
-func validateAnnotationDictCircleOrSquare(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateAnnotationDictCircleOrSquare(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.5.6.8
 
@@ -581,7 +581,7 @@ func validateAnnotationDictCircleOrSquare(xRefTable *pdf.XRefTable, dict *pdf.PD
 	return err
 }
 
-func validateEntryIT(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string, required bool, sinceVersion pdf.Version) error {
+func validateEntryIT(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string, required bool, sinceVersion pdf.Version) error {
 
 	// IT, optional, name, since V1.6
 	validateIntent := func(s string) bool {
@@ -605,7 +605,7 @@ func validateEntryIT(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName strin
 	return err
 }
 
-func validateAnnotationDictPolyLine(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateAnnotationDictPolyLine(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.5.6.9
 
@@ -654,7 +654,7 @@ func validateAnnotationDictPolyLine(xRefTable *pdf.XRefTable, dict *pdf.PDFDict,
 	return validateEntryIT(xRefTable, dict, dictName, OPTIONAL, pdf.V16)
 }
 
-func validateTextMarkupAnnotation(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateTextMarkupAnnotation(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.5.6.10
 
@@ -664,7 +664,7 @@ func validateTextMarkupAnnotation(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, d
 	return err
 }
 
-func validateAnnotationDictStamp(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateAnnotationDictStamp(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.5.6.12
 
@@ -674,7 +674,7 @@ func validateAnnotationDictStamp(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, di
 	return err
 }
 
-func validateAnnotationDictCaret(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateAnnotationDictCaret(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.5.6.11
 
@@ -690,7 +690,7 @@ func validateAnnotationDictCaret(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, di
 	return err
 }
 
-func validateAnnotationDictInk(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateAnnotationDictInk(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.5.6.13
 
@@ -706,7 +706,7 @@ func validateAnnotationDictInk(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dict
 	return err
 }
 
-func validateAnnotationDictPopup(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateAnnotationDictPopup(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.5.6.14
 
@@ -728,7 +728,7 @@ func validateAnnotationDictPopup(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, di
 	return err
 }
 
-func validateAnnotationDictFileAttachment(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateAnnotationDictFileAttachment(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.5.6.15
 
@@ -744,7 +744,7 @@ func validateAnnotationDictFileAttachment(xRefTable *pdf.XRefTable, dict *pdf.PD
 	return err
 }
 
-func validateAnnotationDictSound(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateAnnotationDictSound(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.5.6.16
 
@@ -760,7 +760,7 @@ func validateAnnotationDictSound(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, di
 	return err
 }
 
-func validateMovieDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateMovieDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "movieDict"
 
@@ -786,7 +786,7 @@ func validateMovieDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
 	return validateBooleanOrStreamEntry(xRefTable, dict, dictName, "Poster", OPTIONAL, pdf.V10)
 }
 
-func validateAnnotationDictMovie(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateAnnotationDictMovie(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.5.6.17 Movie Annotations
 	// 13.4 Movies
@@ -825,7 +825,7 @@ func validateAnnotationDictMovie(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, di
 			case pdf.Boolean:
 				// no further processing
 
-			case pdf.PDFDict:
+			case pdf.Dict:
 				err = validateMovieActivationDict(xRefTable, &obj)
 				if err != nil {
 					return err
@@ -838,7 +838,7 @@ func validateAnnotationDictMovie(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, di
 	return nil
 }
 
-func validateAnnotationDictWidget(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateAnnotationDictWidget(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.5.6.19
 
@@ -892,7 +892,7 @@ func validateAnnotationDictWidget(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, d
 	return err
 }
 
-func validateAnnotationDictScreen(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateAnnotationDictScreen(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.5.6.18
 
@@ -924,7 +924,7 @@ func validateAnnotationDictScreen(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, d
 	return validateAdditionalActions(xRefTable, dict, dictName, "AA", OPTIONAL, pdf.V12, "fieldOrAnnot")
 }
 
-func validateAnnotationDictPrinterMark(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateAnnotationDictPrinterMark(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.5.6.20
 
@@ -944,7 +944,7 @@ func validateAnnotationDictPrinterMark(xRefTable *pdf.XRefTable, dict *pdf.PDFDi
 	return validateAppearDictEntry(xRefTable, dict, dictName, REQUIRED, pdf.V12)
 }
 
-func validateAnnotationDictTrapNet(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateAnnotationDictTrapNet(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.5.6.21
 
@@ -1007,13 +1007,13 @@ func validateAnnotationDictTrapNet(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, 
 	return err
 }
 
-func validateAnnotationDictWatermark(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateAnnotationDictWatermark(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.5.6.22
 
 	// FixedPrint, optional, dict
 
-	validateFixedPrintDict := func(dict pdf.PDFDict) bool {
+	validateFixedPrintDict := func(dict pdf.Dict) bool {
 
 		dictName := "fixedPrintDict"
 
@@ -1049,7 +1049,7 @@ func validateAnnotationDictWatermark(xRefTable *pdf.XRefTable, dict *pdf.PDFDict
 	return err
 }
 
-func validateAnnotationDict3D(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateAnnotationDict3D(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 13.6.2
 
@@ -1079,7 +1079,7 @@ func validateAnnotationDict3D(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictN
 	return err
 }
 
-func validateEntryIC(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string, required bool, sinceVersion pdf.Version) error {
+func validateEntryIC(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string, required bool, sinceVersion pdf.Version) error {
 
 	// IC, optional, number array, length:3 [0.0 .. 1.0]
 	validateICArray := func(arr pdf.Array) bool {
@@ -1116,7 +1116,7 @@ func validateEntryIC(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName strin
 	return err
 }
 
-func validateAnnotationDictRedact(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateAnnotationDictRedact(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.5.6.23
 
@@ -1162,7 +1162,7 @@ func validateAnnotationDictRedact(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, d
 	return err
 }
 
-func validateExDataDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateExDataDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "ExData"
 
@@ -1176,7 +1176,7 @@ func validateExDataDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
 	return err
 }
 
-func validatePopupEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validatePopupEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	d, err := validateDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
 	if err != nil {
@@ -1200,7 +1200,7 @@ func validatePopupEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, e
 	return nil
 }
 
-func validateIRTEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateIRTEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	d, err := validateDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
 	if err != nil {
@@ -1217,7 +1217,7 @@ func validateIRTEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, ent
 	return nil
 }
 
-func validateMarkupAnnotation(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateMarkupAnnotation(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "markupAnnot"
 
@@ -1295,7 +1295,7 @@ func validateMarkupAnnotation(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error
 	return nil
 }
 
-func validateEntryP(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string, required bool, sinceVersion pdf.Version) error {
+func validateEntryP(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string, required bool, sinceVersion pdf.Version) error {
 
 	indRef, err := validateIndRefEntry(xRefTable, dict, dictName, "P", required, sinceVersion)
 	if err != nil || indRef == nil {
@@ -1318,7 +1318,7 @@ func validateEntryP(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string
 	return err
 }
 
-func validateAppearDictEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string, required bool, sinceVersion pdf.Version) error {
+func validateAppearDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string, required bool, sinceVersion pdf.Version) error {
 
 	d, err := validateDictEntry(xRefTable, dict, dictName, "AP", required, sinceVersion, nil)
 	if err != nil {
@@ -1336,7 +1336,7 @@ func validateBorderArrayLength(a pdf.Array) bool {
 	return len(a) == 3 || len(a) == 4
 }
 
-func validateAnnotationDictGeneral(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) (*pdf.Name, error) {
+func validateAnnotationDictGeneral(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) (*pdf.Name, error) {
 
 	// Type, optional, name
 	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, pdf.V10, func(s string) bool { return s == "Annot" })
@@ -1427,12 +1427,12 @@ func validateAnnotationDictGeneral(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, 
 	return subtype, nil
 }
 
-func validateAnnotationDictConcrete(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, subtype pdf.Name) error {
+func validateAnnotationDictConcrete(xRefTable *pdf.XRefTable, dict *pdf.Dict, subtype pdf.Name) error {
 
 	// see table 169
 
 	for k, v := range map[string]struct {
-		validate     func(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error
+		validate     func(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error
 		sinceVersion pdf.Version
 		markup       bool
 	}{
@@ -1484,14 +1484,14 @@ func validateAnnotationDictConcrete(xRefTable *pdf.XRefTable, dict *pdf.PDFDict,
 	return errors.Errorf("validateAnnotationDictConcrete: unsupported annotation subtype:%s\n", subtype)
 }
 
-func validateAnnotationDictSpecial(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateAnnotationDictSpecial(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// AAPL:AKExtras
 	// No documentation for this PDF-Extension - this is a speculative implementation.
 	return validateAAPLAKExtrasDictEntry(xRefTable, dict, dictName, "AAPL:AKExtras", OPTIONAL, pdf.V10)
 }
 
-func validateAnnotationDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) (isTrapNet bool, err error) {
+func validateAnnotationDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) (isTrapNet bool, err error) {
 
 	dictName := "annotDict"
 
@@ -1513,7 +1513,7 @@ func validateAnnotationDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) (isTrap
 	return *subtype == "TrapNet", nil
 }
 
-func validatePageAnnotations(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validatePageAnnotations(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	arr, err := validateArrayEntry(xRefTable, dict, "pageDict", "Annots", OPTIONAL, pdf.V10, nil)
 	if err != nil || arr == nil {
@@ -1521,7 +1521,7 @@ func validatePageAnnotations(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error 
 	}
 
 	// array of indrefs to annotation dicts.
-	var annotsDict pdf.PDFDict
+	var annotsDict pdf.Dict
 
 	// an optional TrapNetAnnotation has to be the final entry in this list.
 	hasTrapNet := false
@@ -1543,7 +1543,7 @@ func validatePageAnnotations(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error 
 
 			annotsDict = *annotsDictp
 
-		} else if annotsDict, ok = v.(pdf.PDFDict); !ok {
+		} else if annotsDict, ok = v.(pdf.Dict); !ok {
 			return errors.New("validatePageAnnotations: corrupted array of indrefs")
 		}
 
@@ -1557,7 +1557,7 @@ func validatePageAnnotations(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error 
 	return nil
 }
 
-func validatePagesAnnotations(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validatePagesAnnotations(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	// Get number of pages of this PDF file.
 	pageCount := dict.IntEntry("Count")

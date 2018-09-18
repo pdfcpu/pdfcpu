@@ -27,12 +27,12 @@ import (
 // PDFFilter represents a PDF stream filter object.
 type PDFFilter struct {
 	Name        string
-	DecodeParms *PDFDict
+	DecodeParms *Dict
 }
 
 // StreamDict represents a PDF stream dict object.
 type StreamDict struct {
-	PDFDict
+	Dict
 	StreamOffset      int64
 	StreamLength      *int64
 	StreamLengthObjNr *int
@@ -43,9 +43,9 @@ type StreamDict struct {
 }
 
 // NewStreamDict creates a new PDFStreamDict for given PDFDict, stream offset and length.
-func NewStreamDict(pdfDict PDFDict, streamOffset int64, streamLength *int64, streamLengthObjNr *int,
+func NewStreamDict(dict Dict, streamOffset int64, streamLength *int64, streamLengthObjNr *int,
 	filterPipeline []PDFFilter) StreamDict {
-	return StreamDict{pdfDict, streamOffset, streamLength, streamLengthObjNr, filterPipeline, nil, nil, false}
+	return StreamDict{dict, streamOffset, streamLength, streamLengthObjNr, filterPipeline, nil, nil, false}
 }
 
 // HasSoleFilterNamed returns true if there is exactly one filter defined for a stream dict.
@@ -77,7 +77,7 @@ type ObjectStreamDict struct {
 // NewObjectStreamDict creates a new ObjectStreamDict object.
 func NewObjectStreamDict() *ObjectStreamDict {
 
-	streamDict := StreamDict{PDFDict: NewPDFDict()}
+	streamDict := StreamDict{Dict: NewDict()}
 
 	streamDict.Insert("Type", Name("ObjStm"))
 	streamDict.Insert("Filter", Name(filter.Flate))
@@ -113,7 +113,7 @@ func (oStreamDict *ObjectStreamDict) AddObject(objNumber int, entry *XRefTableEn
 
 	switch obj := entry.Object.(type) {
 
-	case PDFDict:
+	case Dict:
 		pdfString = obj.PDFString()
 
 	case Array:
@@ -169,7 +169,7 @@ type XRefStreamDict struct {
 // NewXRefStreamDict creates a new PDFXRefStreamDict object.
 func NewXRefStreamDict(ctx *PDFContext) *XRefStreamDict {
 
-	streamDict := StreamDict{PDFDict: NewPDFDict()}
+	streamDict := StreamDict{Dict: NewDict()}
 
 	streamDict.Insert("Type", Name("XRef"))
 	streamDict.Insert("Filter", Name(filter.Flate))

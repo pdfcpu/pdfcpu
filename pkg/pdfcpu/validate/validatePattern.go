@@ -31,7 +31,7 @@ func validateTilingPatternDict(xRefTable *pdf.XRefTable, streamDict *pdf.StreamD
 		return err
 	}
 
-	dict := streamDict.PDFDict
+	dict := streamDict.Dict
 
 	_, err = validateNameEntry(xRefTable, &dict, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Pattern" })
 	if err != nil {
@@ -82,7 +82,7 @@ func validateTilingPatternDict(xRefTable *pdf.XRefTable, streamDict *pdf.StreamD
 	return err
 }
 
-func validateShadingPatternDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, sinceVersion pdf.Version) error {
+func validateShadingPatternDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, sinceVersion pdf.Version) error {
 
 	dictName := "shadingPatternDict"
 
@@ -136,7 +136,7 @@ func validatePattern(xRefTable *pdf.XRefTable, obj pdf.Object) error {
 
 	switch obj := obj.(type) {
 
-	case pdf.PDFDict:
+	case pdf.Dict:
 		err = validateShadingPatternDict(xRefTable, &obj, pdf.V13)
 
 	case pdf.StreamDict:
@@ -166,7 +166,7 @@ func validatePatternResourceDict(xRefTable *pdf.XRefTable, obj pdf.Object, since
 	}
 
 	// Iterate over pattern resource dictionary
-	for _, obj := range dict.Dict {
+	for _, obj := range *dict {
 
 		// Process pattern
 		err = validatePattern(xRefTable, obj)

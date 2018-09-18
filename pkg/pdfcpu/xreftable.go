@@ -33,7 +33,7 @@ import (
 //
 // This may wrap a free object, a compressed object or any in use PDF object:
 //
-// PDFDict, StreamDict, ObjectStreamDict, PDFXRefStreamDict,
+// Dict, StreamDict, ObjectStreamDict, PDFXRefStreamDict,
 // Array, Integer, Float, Name, StringLiteral, HexLiteral, Boolean
 type XRefTableEntry struct {
 	Free            bool
@@ -79,7 +79,7 @@ type XRefTable struct {
 	Size                *int             // Object count from PDF trailer dict.
 	PageCount           int              // Number of pages, set during validation.
 	Root                *IndirectRef     // Pointer to catalog (reference to root object).
-	RootDict            *PDFDict         // Catalog
+	RootDict            *Dict            // Catalog
 	Names               map[string]*Node // Cache for name trees as found in catalog.
 	Encrypt             *IndirectRef     // Encrypt dict.
 	E                   *Enc
@@ -357,7 +357,7 @@ func (xRefTable *XRefTable) NewStreamDict(filename string) (*StreamDict, error) 
 
 	sd :=
 		&StreamDict{
-			PDFDict:        NewPDFDict(),
+			Dict:           NewDict(),
 			Content:        buf,
 			FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}}
 
@@ -381,7 +381,7 @@ func (xRefTable *XRefTable) NewEmbeddedFileStreamDict(filename string) (*StreamD
 
 	sd.InsertName("Type", "EmbeddedFile")
 
-	d := NewPDFDict()
+	d := NewDict()
 	d.InsertInt("Size", int(fi.Size()))
 	d.Insert("ModDate", DateStringLiteral(fi.ModTime()))
 	sd.Insert("Params", d)
@@ -390,7 +390,7 @@ func (xRefTable *XRefTable) NewEmbeddedFileStreamDict(filename string) (*StreamD
 }
 
 // NewSoundStreamDict returns a new sound stream dict.
-func (xRefTable *XRefTable) NewSoundStreamDict(filename string, samplingRate int, fileSpecDict *PDFDict) (*StreamDict, error) {
+func (xRefTable *XRefTable) NewSoundStreamDict(filename string, samplingRate int, fileSpecDict *Dict) (*StreamDict, error) {
 
 	sd, err := xRefTable.NewStreamDict(filename)
 	if err != nil {
@@ -413,15 +413,15 @@ func (xRefTable *XRefTable) NewSoundStreamDict(filename string, samplingRate int
 }
 
 // NewFileSpecDict creates and returns a new fileSpec dictionary.
-func (xRefTable *XRefTable) NewFileSpecDict(filename string, indRefStreamDict IndirectRef) (*PDFDict, error) {
+func (xRefTable *XRefTable) NewFileSpecDict(filename string, indRefStreamDict IndirectRef) (*Dict, error) {
 
-	d := NewPDFDict()
+	d := NewDict()
 	d.InsertName("Type", "Filespec")
 	d.InsertString("F", filename)
 	d.InsertString("UF", filename)
 	// TODO d.Insert("UF", utf16.Encode([]rune(filename)))
 
-	efDict := NewPDFDict()
+	efDict := NewDict()
 	efDict.Insert("F", indRefStreamDict)
 	efDict.Insert("UF", indRefStreamDict)
 	d.Insert("EF", efDict)
@@ -430,7 +430,7 @@ func (xRefTable *XRefTable) NewFileSpecDict(filename string, indRefStreamDict In
 
 	// CI, optional, collection item dict, since V1.7
 	// a corresponding collection schema dict in a collection.
-	ciDict := NewPDFDict()
+	ciDict := NewDict()
 	//add contextual meta info here.
 	d.Insert("CI", ciDict)
 
@@ -563,8 +563,8 @@ func (xRefTable *XRefTable) deleteObject(obj Object) error {
 
 	switch obj := obj.(type) {
 
-	case PDFDict:
-		for _, v := range obj.Dict {
+	case Dict:
+		for _, v := range obj {
 			err := xRefTable.deleteObject(v)
 			if err != nil {
 				return err
@@ -886,14 +886,14 @@ func (xRefTable *XRefTable) DereferenceArray(obj Object) (*Array, error) {
 }
 
 // DereferenceDict resolves and validates a dictionary object, which may be an indirect reference.
-func (xRefTable *XRefTable) DereferenceDict(obj Object) (*PDFDict, error) {
+func (xRefTable *XRefTable) DereferenceDict(obj Object) (*Dict, error) {
 
 	obj, err := xRefTable.Dereference(obj)
 	if err != nil || obj == nil {
 		return nil, err
 	}
 
-	dict, ok := obj.(PDFDict)
+	dict, ok := obj.(Dict)
 	if !ok {
 		return nil, errors.Errorf("DereferenceDict: wrong type %T <%v>", obj, obj)
 	}
@@ -918,7 +918,7 @@ func (xRefTable *XRefTable) DereferenceStreamDict(obj Object) (*StreamDict, erro
 }
 
 // DereferenceDictEntry returns a dereferenced dict entry.
-func (xRefTable *XRefTable) DereferenceDictEntry(dict *PDFDict, entryName string) (Object, error) {
+func (xRefTable *XRefTable) DereferenceDictEntry(dict *Dict, entryName string) (Object, error) {
 
 	obj, found := dict.Find(entryName)
 	if !found || obj == nil {
@@ -929,7 +929,7 @@ func (xRefTable *XRefTable) DereferenceDictEntry(dict *PDFDict, entryName string
 }
 
 // Catalog returns a pointer to the root object / catalog.
-func (xRefTable *XRefTable) Catalog() (*PDFDict, error) {
+func (xRefTable *XRefTable) Catalog() (*Dict, error) {
 
 	if xRefTable.RootDict != nil {
 		return xRefTable.RootDict, nil
@@ -944,7 +944,7 @@ func (xRefTable *XRefTable) Catalog() (*PDFDict, error) {
 		return nil, err
 	}
 
-	dict, ok := o.(PDFDict)
+	dict, ok := o.(Dict)
 	if !ok {
 		return nil, errors.New("Catalog: corrupt root catalog")
 	}
@@ -955,19 +955,19 @@ func (xRefTable *XRefTable) Catalog() (*PDFDict, error) {
 }
 
 // EncryptDict returns a pointer to the root object / catalog.
-func (xRefTable *XRefTable) EncryptDict() (*PDFDict, error) {
+func (xRefTable *XRefTable) EncryptDict() (*Dict, error) {
 
 	Object, err := xRefTable.indRefToObject(xRefTable.Encrypt)
 	if err != nil || Object == nil {
 		return nil, err
 	}
 
-	pdfDict, ok := Object.(PDFDict)
+	Dict, ok := Object.(Dict)
 	if !ok {
 		return nil, errors.New("EncryptDict: corrupt encrypt dict")
 	}
 
-	return &pdfDict, nil
+	return &Dict, nil
 }
 
 // CatalogHasPieceInfo returns true if the root has an entry for \"PieceInfo\".
@@ -1040,14 +1040,14 @@ func (xRefTable *XRefTable) list(logStr []string) []string {
 
 				typeStr := fmt.Sprintf("%T", entry.Object)
 
-				pdfDict, ok := entry.Object.(PDFDict)
+				Dict, ok := entry.Object.(Dict)
 
 				if ok {
-					if pdfDict.Type() != nil {
-						typeStr += fmt.Sprintf(" type=%s", *pdfDict.Type())
+					if Dict.Type() != nil {
+						typeStr += fmt.Sprintf(" type=%s", *Dict.Type())
 					}
-					if pdfDict.Subtype() != nil {
-						typeStr += fmt.Sprintf(" subType=%s", *pdfDict.Subtype())
+					if Dict.Subtype() != nil {
+						typeStr += fmt.Sprintf(" subType=%s", *Dict.Subtype())
 					}
 				}
 
@@ -1135,10 +1135,10 @@ func (xRefTable *XRefTable) freeList(logStr []string) ([]string, error) {
 
 func (xRefTable *XRefTable) bindNameTreeNode(name string, n *Node, root bool) error {
 
-	var dict PDFDict
+	var dict Dict
 
 	if n.IndRef == nil {
-		d := NewPDFDict()
+		d := NewDict()
 		indRef, err := xRefTable.IndRefForNewObject(d)
 		if err != nil {
 			return err
@@ -1230,7 +1230,7 @@ func (xRefTable *XRefTable) LocateNameTree(nameTreeName string, ensure bool) err
 		if !ensure {
 			return nil
 		}
-		dict := NewPDFDict()
+		dict := NewDict()
 
 		indRef, err := xRefTable.IndRefForNewObject(dict)
 		if err != nil {
@@ -1251,7 +1251,7 @@ func (xRefTable *XRefTable) LocateNameTree(nameTreeName string, ensure bool) err
 		if !ensure {
 			return nil
 		}
-		dict := NewPDFDict()
+		dict := NewDict()
 		dict.Insert("Names", Array{})
 
 		indRef, err := xRefTable.IndRefForNewObject(dict)
@@ -1277,7 +1277,7 @@ func (xRefTable *XRefTable) LocateNameTree(nameTreeName string, ensure bool) err
 }
 
 // NamesDict returns the dict that contains all name trees.
-func (xRefTable *XRefTable) NamesDict() (*PDFDict, error) {
+func (xRefTable *XRefTable) NamesDict() (*Dict, error) {
 
 	rootDict, err := xRefTable.Catalog()
 	if err != nil {
@@ -1377,35 +1377,35 @@ func (xRefTable *XRefTable) EnsureCollection() error {
 		return nil
 	}
 
-	dict := NewPDFDict()
+	dict := NewDict()
 	dict.Insert("Type", Name("Collection"))
 	dict.Insert("View", Name("D"))
 
-	schemaDict := NewPDFDict()
+	schemaDict := NewDict()
 	schemaDict.Insert("Type", Name("CollectionSchema"))
 
-	fileNameCFDict := NewPDFDict()
+	fileNameCFDict := NewDict()
 	fileNameCFDict.Insert("Type", Name("CollectionField"))
 	fileNameCFDict.Insert("Subtype", Name("F"))
 	fileNameCFDict.Insert("N", StringLiteral("Filename"))
 	fileNameCFDict.Insert("O", Integer(1))
 	schemaDict.Insert("FileName", fileNameCFDict)
 
-	descCFDict := NewPDFDict()
+	descCFDict := NewDict()
 	descCFDict.Insert("Type", Name("CollectionField"))
 	descCFDict.Insert("Subtype", Name("Desc"))
 	descCFDict.Insert("N", StringLiteral("Description"))
 	descCFDict.Insert("O", Integer(2))
 	schemaDict.Insert("Description", descCFDict)
 
-	sizeCFDict := NewPDFDict()
+	sizeCFDict := NewDict()
 	sizeCFDict.Insert("Type", Name("CollectionField"))
 	sizeCFDict.Insert("Subtype", Name("Size"))
 	sizeCFDict.Insert("N", StringLiteral("Size"))
 	sizeCFDict.Insert("O", Integer(3))
 	schemaDict.Insert("Size", sizeCFDict)
 
-	modDateCFDict := NewPDFDict()
+	modDateCFDict := NewDict()
 	modDateCFDict.Insert("Type", Name("CollectionField"))
 	modDateCFDict.Insert("Subtype", Name("ModDate"))
 	modDateCFDict.Insert("N", StringLiteral("Last Modification"))
@@ -1420,7 +1420,7 @@ func (xRefTable *XRefTable) EnsureCollection() error {
 	}
 	dict.Insert("Schema", *indRef)
 
-	sortDict := NewPDFDict()
+	sortDict := NewDict()
 	sortDict.Insert("S", Name("ModDate"))
 	sortDict.Insert("A", Boolean(false))
 	dict.Insert("Sort", sortDict)
@@ -1465,13 +1465,13 @@ func (xRefTable *XRefTable) IDFirstElement() (id []byte, err error) {
 
 // InheritedPageAttrs represents all inherited page attributes.
 type InheritedPageAttrs struct {
-	resources *PDFDict
+	resources *Dict
 	mediaBox  *Array
 	cropBox   *Array
 	rotate    float64
 }
 
-func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict *PDFDict, pAttrs *InheritedPageAttrs) error {
+func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict *Dict, pAttrs *InheritedPageAttrs) error {
 
 	var err error
 
@@ -1511,7 +1511,7 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict *PDFDict, pAttrs *I
 	return nil
 }
 
-func (xRefTable *XRefTable) processPageTree(root *IndirectRef, pAttrs *InheritedPageAttrs, p *int, page int) (*PDFDict, error) {
+func (xRefTable *XRefTable) processPageTree(root *IndirectRef, pAttrs *InheritedPageAttrs, p *int, page int) (*Dict, error) {
 
 	//fmt.Printf("entering processPage: p=%d obj#%d\n", *p, root.ObjectNumber.Value())
 
@@ -1585,7 +1585,7 @@ func (xRefTable *XRefTable) processPageTree(root *IndirectRef, pAttrs *Inherited
 }
 
 // PageDict returns a specific page dict along with the resources, mediaBox and CropBox in effect.
-func (xRefTable *XRefTable) PageDict(page int) (*PDFDict, *InheritedPageAttrs, error) {
+func (xRefTable *XRefTable) PageDict(page int) (*Dict, *InheritedPageAttrs, error) {
 
 	// Get an indirect reference to the page tree root dict.
 	root, err := xRefTable.Pages()

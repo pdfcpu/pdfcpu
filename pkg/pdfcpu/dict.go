@@ -25,78 +25,76 @@ import (
 	"github.com/pkg/errors"
 )
 
-// PDFDict represents a PDF dict object.
-type PDFDict struct {
-	Dict map[string]Object
-}
+// Dict represents a PDF dict object.
+type Dict map[string]Object
 
-// NewPDFDict returns a new PDFDict object.
-func NewPDFDict() PDFDict {
-	return PDFDict{Dict: map[string]Object{}}
+// NewDict returns a new PDFDict object.
+func NewDict() Dict {
+	return map[string]Object{}
 }
 
 // Len returns the length of this PDFDict.
-func (d *PDFDict) Len() int {
-	return len(d.Dict)
+func (d Dict) Len() int {
+	return len(d)
 }
 
 // Insert adds a new entry to this PDFDict.
-func (d *PDFDict) Insert(key string, value Object) (ok bool) {
+func (d Dict) Insert(key string, value Object) (ok bool) {
 	if _, found := d.Find(key); found {
 		return false
 	}
-	d.Dict[key] = value
+	d[key] = value
 	return true
 }
 
 // InsertInt adds a new int entry to this PDFDict.
-func (d *PDFDict) InsertInt(key string, value int) {
+func (d Dict) InsertInt(key string, value int) {
 	d.Insert(key, Integer(value))
 }
 
 // InsertFloat adds a new float entry to this PDFDict.
-func (d *PDFDict) InsertFloat(key string, value float32) {
+func (d Dict) InsertFloat(key string, value float32) {
 	d.Insert(key, Float(value))
 }
 
 // InsertString adds a new string entry to this PDFDict.
-func (d *PDFDict) InsertString(key, value string) {
+func (d Dict) InsertString(key, value string) {
 	d.Insert(key, StringLiteral(value))
 }
 
 // InsertName adds a new name entry to this PDFDict.
-func (d *PDFDict) InsertName(key, value string) {
+func (d Dict) InsertName(key, value string) {
 	d.Insert(key, Name(value))
 }
 
 // Update modifies an existing entry of this PDFDict.
-func (d *PDFDict) Update(key string, value Object) {
+func (d Dict) Update(key string, value Object) {
 	if value != nil {
-		d.Dict[key] = value
+		d[key] = value
 	}
 }
 
 // Find returns the Object for given key and PDFDict.
-func (d PDFDict) Find(key string) (value Object, found bool) {
-	value, found = d.Dict[key]
+func (d Dict) Find(key string) (value Object, found bool) {
+	value, found = d[key]
 	return
 }
 
 // Delete deletes the Object for given key.
-func (d *PDFDict) Delete(key string) (value Object) {
+func (d Dict) Delete(key string) (value Object) {
 
 	value, found := d.Find(key)
 	if !found {
 		return nil
 	}
 
-	delete(d.Dict, key)
+	delete(d, key)
 
 	return
 }
 
 // Entry returns the value for given key.
-func (d *PDFDict) Entry(dictName, key string, required bool) (Object, error) {
+func (d Dict) Entry(dictName, key string, required bool) (Object, error) {
 	obj, found := d.Find(key)
 	if !found || obj == nil {
 		if required {
@@ -109,7 +107,7 @@ func (d *PDFDict) Entry(dictName, key string, required bool) (Object, error) {
 }
 
 // BooleanEntry expects and returns a BooleanEntry for given key.
-func (d PDFDict) BooleanEntry(key string) *bool {
+func (d Dict) BooleanEntry(key string) *bool {
 
 	value, found := d.Find(key)
 	if !found {
@@ -127,7 +125,7 @@ func (d PDFDict) BooleanEntry(key string) *bool {
 
 // StringEntry expects and returns a StringLiteral entry for given key.
 // Unused.
-func (d PDFDict) StringEntry(key string) *string {
+func (d Dict) StringEntry(key string) *string {
 
 	value, found := d.Find(key)
 	if !found {
@@ -144,7 +142,7 @@ func (d PDFDict) StringEntry(key string) *string {
 }
 
 // NameEntry expects and returns a Name entry for given key.
-func (d PDFDict) NameEntry(key string) *string {
+func (d Dict) NameEntry(key string) *string {
 
 	value, found := d.Find(key)
 	if !found {
@@ -161,7 +159,7 @@ func (d PDFDict) NameEntry(key string) *string {
 }
 
 // IntEntry expects and returns a Integer entry for given key.
-func (d PDFDict) IntEntry(key string) *int {
+func (d Dict) IntEntry(key string) *int {
 
 	value, found := d.Find(key)
 	if !found {
@@ -178,7 +176,7 @@ func (d PDFDict) IntEntry(key string) *int {
 }
 
 // Int64Entry expects and returns a Integer entry representing an int64 value for given key.
-func (d PDFDict) Int64Entry(key string) *int64 {
+func (d Dict) Int64Entry(key string) *int64 {
 
 	value, found := d.Find(key)
 	if !found {
@@ -195,7 +193,7 @@ func (d PDFDict) Int64Entry(key string) *int64 {
 }
 
 // IndirectRefEntry returns an indirectRefEntry for given key for this dictionary.
-func (d PDFDict) IndirectRefEntry(key string) *IndirectRef {
+func (d Dict) IndirectRefEntry(key string) *IndirectRef {
 
 	value, found := d.Find(key)
 	if !found {
@@ -211,8 +209,8 @@ func (d PDFDict) IndirectRefEntry(key string) *IndirectRef {
 	return nil
 }
 
-// PDFDictEntry expects and returns a PDFDict entry for given key.
-func (d PDFDict) PDFDictEntry(key string) *PDFDict {
+// DictEntry expects and returns a PDFDict entry for given key.
+func (d Dict) DictEntry(key string) *Dict {
 
 	value, found := d.Find(key)
 	if !found {
@@ -221,7 +219,7 @@ func (d PDFDict) PDFDictEntry(key string) *PDFDict {
 
 	// TODO resolve indirect ref.
 
-	dict, ok := value.(PDFDict)
+	dict, ok := value.(Dict)
 	if ok {
 		return &dict
 	}
@@ -231,7 +229,7 @@ func (d PDFDict) PDFDictEntry(key string) *PDFDict {
 
 // StreamDictEntry expects and returns a StreamDict entry for given key.
 // unused.
-func (d PDFDict) StreamDictEntry(key string) *StreamDict {
+func (d Dict) StreamDictEntry(key string) *StreamDict {
 
 	value, found := d.Find(key)
 	if !found {
@@ -247,7 +245,7 @@ func (d PDFDict) StreamDictEntry(key string) *StreamDict {
 }
 
 // ArrayEntry expects and returns a Array entry for given key.
-func (d PDFDict) ArrayEntry(key string) *Array {
+func (d Dict) ArrayEntry(key string) *Array {
 
 	value, found := d.Find(key)
 	if !found {
@@ -263,7 +261,7 @@ func (d PDFDict) ArrayEntry(key string) *Array {
 }
 
 // StringLiteralEntry returns a StringLiteral object for given key.
-func (d PDFDict) StringLiteralEntry(key string) *StringLiteral {
+func (d Dict) StringLiteralEntry(key string) *StringLiteral {
 
 	value, found := d.Find(key)
 	if !found {
@@ -279,7 +277,7 @@ func (d PDFDict) StringLiteralEntry(key string) *StringLiteral {
 }
 
 // HexLiteralEntry returns a HexLiteral object for given key.
-func (d PDFDict) HexLiteralEntry(key string) *HexLiteral {
+func (d Dict) HexLiteralEntry(key string) *HexLiteral {
 
 	value, found := d.Find(key)
 	if !found {
@@ -294,25 +292,9 @@ func (d PDFDict) HexLiteralEntry(key string) *HexLiteral {
 	return nil
 }
 
-// NameEntry returns a Name object for given key.
-// func (d PDFDict) NameEntry(key string) *Name {
-
-// 	value, found := d.Find(key)
-// 	if !found {
-// 		return nil
-// 	}
-
-// 	s, ok := value.(Name)
-// 	if ok {
-// 		return &s
-// 	}
-
-// 	return nil
-// }
-
 // Length returns a *int64 for entry with key "Length".
 // Stream length may be referring to an indirect object.
-func (d PDFDict) Length() (*int64, *int) {
+func (d Dict) Length() (*int64, *int) {
 
 	val := d.Int64Entry("Length")
 	if val != nil {
@@ -330,71 +312,71 @@ func (d PDFDict) Length() (*int64, *int) {
 }
 
 // Type returns the value of the name entry for key "Type".
-func (d PDFDict) Type() *string {
+func (d Dict) Type() *string {
 	return d.NameEntry("Type")
 }
 
 // Subtype returns the value of the name entry for key "Subtype".
-func (d PDFDict) Subtype() *string {
+func (d Dict) Subtype() *string {
 	return d.NameEntry("Subtype")
 }
 
 // Size returns the value of the int entry for key "Size"
-func (d PDFDict) Size() *int {
+func (d Dict) Size() *int {
 	return d.IntEntry("Size")
 }
 
 // IsObjStm returns true if given PDFDict is an object stream.
-func (d PDFDict) IsObjStm() bool {
+func (d Dict) IsObjStm() bool {
 	return d.Type() != nil && *d.Type() == "ObjStm"
 }
 
 // W returns a *Array for key "W".
-func (d PDFDict) W() *Array {
+func (d Dict) W() *Array {
 	return d.ArrayEntry("W")
 }
 
 // Prev returns the previous offset.
-func (d PDFDict) Prev() *int64 {
+func (d Dict) Prev() *int64 {
 	return d.Int64Entry("Prev")
 }
 
 // Index returns a *Array for key "Index".
-func (d PDFDict) Index() *Array {
+func (d Dict) Index() *Array {
 	return d.ArrayEntry("Index")
 }
 
 // N returns a *int for key "N".
-func (d PDFDict) N() *int {
+func (d Dict) N() *int {
 	return d.IntEntry("N")
 }
 
 // First returns a *int for key "First".
-func (d PDFDict) First() *int {
+func (d Dict) First() *int {
 	return d.IntEntry("First")
 }
 
 // IsLinearizationParmDict returns true if this dict has an int entry for key "Linearized".
-func (d PDFDict) IsLinearizationParmDict() bool {
+func (d Dict) IsLinearizationParmDict() bool {
 	return d.IntEntry("Linearized") != nil
 }
 
-func (d PDFDict) indentedString(level int) string {
+func (d Dict) indentedString(level int) string {
 
 	logstr := []string{"<<\n"}
 	tabstr := strings.Repeat("\t", level)
 
 	var keys []string
-	for k := range d.Dict {
+	for k := range d {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
 	for _, k := range keys {
 
-		v := d.Dict[k]
+		v := d[k]
 
-		if subdict, ok := v.(PDFDict); ok {
+		if subdict, ok := v.(Dict); ok {
 			dictStr := subdict.indentedString(level + 1)
 			logstr = append(logstr, fmt.Sprintf("%s<%s, %s>\n", tabstr, k, dictStr))
 			continue
@@ -416,27 +398,27 @@ func (d PDFDict) indentedString(level int) string {
 }
 
 // PDFString returns a string representation as found in and written to a PDF file.
-func (d PDFDict) PDFString() string {
+func (d Dict) PDFString() string {
 
 	logstr := []string{} //make([]string, 20)
 	logstr = append(logstr, "<<")
 
 	var keys []string
-	for k := range d.Dict {
+	for k := range d {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
 	for _, k := range keys {
 
-		v := d.Dict[k]
+		v := d[k]
 
 		if v == nil {
 			logstr = append(logstr, fmt.Sprintf("/%s null", k))
 			continue
 		}
 
-		subdict, ok := v.(PDFDict)
+		subdict, ok := v.(Dict)
 		if ok {
 			dictStr := subdict.PDFString()
 			logstr = append(logstr, fmt.Sprintf("/%s%s", k, dictStr))
@@ -501,12 +483,12 @@ func (d PDFDict) PDFString() string {
 	return strings.Join(logstr, "")
 }
 
-func (d PDFDict) String() string {
+func (d Dict) String() string {
 	return d.indentedString(1)
 }
 
 // StringEntryBytes returns the byte slice representing the string value for key.
-func (d PDFDict) StringEntryBytes(key string) ([]byte, error) {
+func (d Dict) StringEntryBytes(key string) ([]byte, error) {
 
 	s := d.StringLiteralEntry(key)
 	if s != nil {

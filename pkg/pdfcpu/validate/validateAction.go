@@ -21,7 +21,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateGoToActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateGoToActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.6.4.2 Go-To Actions
 
@@ -29,7 +29,7 @@ func validateGoToActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictNam
 	return validateDestinationEntry(xRefTable, dict, dictName, "D", REQUIRED, pdf.V10)
 }
 
-func validateGoToRActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateGoToRActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.6.4.3 Remote Go-To Actions
 
@@ -51,7 +51,7 @@ func validateGoToRActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictNa
 	return err
 }
 
-func validateTargetDictEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateTargetDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	// table 202
 
@@ -90,7 +90,7 @@ func validateTargetDictEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictNa
 	return validateTargetDictEntry(xRefTable, d, dictName, "T", OPTIONAL, pdf.V10)
 }
 
-func validateGoToEActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateGoToEActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.6.4.4 Embedded Go-To Actions
 
@@ -116,7 +116,7 @@ func validateGoToEActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictNa
 	return validateTargetDictEntry(xRefTable, dict, dictName, "T", f == nil, pdf.V10)
 }
 
-func validateWinDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateWinDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	// see table 204
 
@@ -146,7 +146,7 @@ func validateWinDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
 	return err
 }
 
-func validateLaunchActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateLaunchActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.6.4.5
 
@@ -172,7 +172,7 @@ func validateLaunchActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictN
 	return err
 }
 
-func validateDestinationThreadEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateDestinationThreadEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	// The destination thread (table 205)
 
@@ -183,7 +183,7 @@ func validateDestinationThreadEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict,
 
 	switch obj.(type) {
 
-	case pdf.PDFDict, pdf.StringLiteral, pdf.Integer:
+	case pdf.Dict, pdf.StringLiteral, pdf.Integer:
 		// an indRef to a thread dictionary
 		// or an index of the thread within the roots Threads array
 		// or the title of the thread as specified in its thread info dict
@@ -195,7 +195,7 @@ func validateDestinationThreadEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict,
 	return nil
 }
 
-func validateDestinationBeadEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateDestinationBeadEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	// The bead in the destination thread (table 205)
 
@@ -206,7 +206,7 @@ func validateDestinationBeadEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, d
 
 	switch obj.(type) {
 
-	case pdf.PDFDict, pdf.Integer:
+	case pdf.Dict, pdf.Integer:
 		// an indRef to a bead dictionary of a thread in the current file
 		// or an index of the thread within its thread
 
@@ -217,7 +217,7 @@ func validateDestinationBeadEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, d
 	return nil
 }
 
-func validateThreadActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateThreadActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	//see 12.6.4.6
 
@@ -237,7 +237,7 @@ func validateThreadActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictN
 	return validateDestinationBeadEntry(xRefTable, dict, dictName, "B", OPTIONAL, pdf.V10)
 }
 
-func validateURIActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateURIActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.6.4.7
 
@@ -253,7 +253,7 @@ func validateURIActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName
 	return err
 }
 
-func validateSoundDictEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateSoundDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	sd, err := validateStreamDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
 	if err != nil || sd == nil {
@@ -261,7 +261,7 @@ func validateSoundDictEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictNam
 	}
 
 	dictName = "soundDict"
-	dict = &sd.PDFDict
+	dict = &sd.Dict
 
 	// Type, optional, name
 	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, pdf.V10, func(s string) bool { return s == "Sound" })
@@ -296,7 +296,7 @@ func validateSoundDictEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictNam
 	return err
 }
 
-func validateSoundActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateSoundActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.6.4.8
 
@@ -330,7 +330,7 @@ func validateSoundActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictNa
 	return err
 }
 
-func validateMovieStartOrDurationEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateMovieStartOrDurationEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required, sinceVersion)
 	if err != nil || obj == nil {
@@ -351,7 +351,7 @@ func validateMovieStartOrDurationEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDi
 	return nil
 }
 
-func validateMovieActivationDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateMovieActivationDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "movieActivationDict"
 
@@ -412,7 +412,7 @@ func validateMovieActivationDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) er
 	return err
 }
 
-func validateMovieActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateMovieActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.6.4.9
 
@@ -457,7 +457,7 @@ func validateHideActionDictEntryT(xRefTable *pdf.XRefTable, obj pdf.Object) erro
 			return err
 		}
 
-	case pdf.PDFDict:
+	case pdf.Dict:
 		// annotDict,  Check for required name Subtype
 		_, err := validateNameEntry(xRefTable, &obj, "annotDict", "Subtype", REQUIRED, pdf.V10, nil)
 		if err != nil {
@@ -486,7 +486,7 @@ func validateHideActionDictEntryT(xRefTable *pdf.XRefTable, obj pdf.Object) erro
 					return err
 				}
 
-			case pdf.PDFDict:
+			case pdf.Dict:
 				// annotDict,  Check for required name Subtype
 				_, err = validateNameEntry(xRefTable, &o, "annotDict", "Subtype", REQUIRED, pdf.V10, nil)
 				if err != nil {
@@ -503,7 +503,7 @@ func validateHideActionDictEntryT(xRefTable *pdf.XRefTable, obj pdf.Object) erro
 	return nil
 }
 
-func validateHideActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateHideActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.6.4.10
 
@@ -529,7 +529,7 @@ func validateHideActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictNam
 	return err
 }
 
-func validateNamedActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateNamedActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.6.4.11
 
@@ -552,7 +552,7 @@ func validateNamedActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictNa
 	return err
 }
 
-func validateSubmitFormActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateSubmitFormActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.7.5.2
 
@@ -588,7 +588,7 @@ func validateSubmitFormActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, d
 	return err
 }
 
-func validateResetFormActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateResetFormActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.7.5.3
 
@@ -618,7 +618,7 @@ func validateResetFormActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, di
 	return err
 }
 
-func validateImportDataActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateImportDataActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.7.5.4
 
@@ -628,7 +628,7 @@ func validateImportDataActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, d
 	return err
 }
 
-func validateJavaScript(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entryName string, required bool) error {
+func validateJavaScript(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool) error {
 
 	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required, pdf.V13)
 	if err != nil || obj == nil {
@@ -656,7 +656,7 @@ func validateJavaScript(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, e
 	return err
 }
 
-func validateJavaScriptActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateJavaScriptActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.6.4.16
 
@@ -664,7 +664,7 @@ func validateJavaScriptActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, d
 	return validateJavaScript(xRefTable, dict, dictName, "JS", REQUIRED)
 }
 
-func validateSetOCGStateActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateSetOCGStateActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.6.4.12
 
@@ -680,7 +680,7 @@ func validateSetOCGStateActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, 
 	return err
 }
 
-func validateRenditionActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateRenditionActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.6.4.13
 
@@ -733,7 +733,7 @@ func validateRenditionActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, di
 	return nil
 }
 
-func validateTransActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateTransActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.6.4.14
 
@@ -746,7 +746,7 @@ func validateTransActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictNa
 	return validateTransitionDict(xRefTable, d)
 }
 
-func validateGoTo3DViewActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateGoTo3DViewActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// see 12.6.4.15
 
@@ -768,10 +768,10 @@ func validateGoTo3DViewActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, d
 	return err
 }
 
-func validateActionDictCore(xRefTable *pdf.XRefTable, n *pdf.Name, dict *pdf.PDFDict) error {
+func validateActionDictCore(xRefTable *pdf.XRefTable, n *pdf.Name, dict *pdf.Dict) error {
 
 	for k, v := range map[string]struct {
-		validate     func(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error
+		validate     func(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error
 		sinceVersion pdf.Version
 	}{
 		"GoTo":        {validateGoToActionDict, pdf.V10},
@@ -807,7 +807,7 @@ func validateActionDictCore(xRefTable *pdf.XRefTable, n *pdf.Name, dict *pdf.PDF
 	return errors.Errorf("validateActionDictCore: unsupported action type: %s\n", *n)
 }
 
-func validateActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "actionDict"
 
@@ -868,12 +868,12 @@ func validateActionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
 	return nil
 }
 
-func validateRootAdditionalActions(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateRootAdditionalActions(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	return validateAdditionalActions(xRefTable, rootDict, "rootDict", "AA", required, sinceVersion, "root")
 }
 
-func validateAdditionalActions(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entryName string, required bool, sinceVersion pdf.Version, source string) error {
+func validateAdditionalActions(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, source string) error {
 
 	d, err := validateDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
 	if err != nil || d == nil {
@@ -908,7 +908,7 @@ func validateAdditionalActions(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dict
 		return false
 	}
 
-	for k, v := range d.Dict {
+	for k, v := range *d {
 
 		if !validateAdditionalAction(k, source) {
 			return errors.Errorf("validateAdditionalActions: action %s not allowed for source %s", k, source)

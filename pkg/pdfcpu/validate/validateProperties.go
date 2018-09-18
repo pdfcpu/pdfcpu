@@ -52,7 +52,7 @@ func validatePropertiesDict(xRefTable *pdf.XRefTable, obj pdf.Object) error {
 		return err
 	}
 
-	for key, val := range dict.Dict {
+	for key, val := range *dict {
 
 		log.Debug.Printf("validatePropertiesDict: key=%s val=%v\n", key, val)
 
@@ -115,7 +115,7 @@ func validatePropertiesResourceDict(xRefTable *pdf.XRefTable, obj pdf.Object, si
 	}
 
 	// Iterate over properties resource dict
-	for _, obj := range dict.Dict {
+	for _, obj := range *dict {
 
 		// Process propDict
 		err = validatePropertiesDict(xRefTable, obj)

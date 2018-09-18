@@ -21,7 +21,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateOutlineItemDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateOutlineItemDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "outlineItemDict"
 
@@ -80,7 +80,7 @@ func validateOutlineItemDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error 
 func validateOutlineTree(xRefTable *pdf.XRefTable, first, last *pdf.IndirectRef) error {
 
 	var (
-		dict      *pdf.PDFDict
+		dict      *pdf.Dict
 		objNumber int
 		err       error
 	)
@@ -133,7 +133,7 @@ func validateOutlineTree(xRefTable *pdf.XRefTable, first, last *pdf.IndirectRef)
 	return nil
 }
 
-func validateOutlines(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateOutlines(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	// => 12.3.3 Document Outline
 

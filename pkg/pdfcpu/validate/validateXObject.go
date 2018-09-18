@@ -54,7 +54,7 @@ func validateReferenceDictPageEntry(xRefTable *pdf.XRefTable, obj pdf.Object) er
 	return nil
 }
 
-func validateReferenceDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateReferenceDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	// see 8.10.4 Reference XObjects
 
@@ -83,7 +83,7 @@ func validateReferenceDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
 	return err
 }
 
-func validateOPIDictV13Part1(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateOPIDictV13Part1(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// Type, optional, name
 	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, pdf.V10, func(s string) bool { return s == "OPI" })
@@ -140,7 +140,7 @@ func validateOPIDictV13Part1(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictNa
 	return err
 }
 
-func validateOPIDictV13Part2(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateOPIDictV13Part2(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// Resolution, optional, array of numbers, len 2
 	_, err := validateNumberArrayEntry(xRefTable, dict, dictName, "Resolution", OPTIONAL, pdf.V10, func(a pdf.Array) bool { return len(a) == 2 })
@@ -196,7 +196,7 @@ func validateOPIDictV13Part2(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictNa
 	return err
 }
 
-func validateOPIDictV13(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateOPIDictV13(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	// 14.11.7 Open Prepresse interface (OPI)
 
@@ -235,7 +235,7 @@ func validateOPIDictInks(xRefTable *pdf.XRefTable, obj pdf.Object) error {
 	return nil
 }
 
-func validateOPIDictV20(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateOPIDictV20(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	// 14.11.7 Open Prepresse interface (OPI)
 
@@ -298,7 +298,7 @@ func validateOPIDictV20(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
 	return err
 }
 
-func validateOPIVersionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateOPIVersionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	// 14.11.7 Open Prepresse interface (OPI)
 
@@ -308,7 +308,7 @@ func validateOPIVersionDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
 
 	validateOPIVersion := func(s string) bool { return pdf.MemberOf(s, []string{"1.3", "2.0"}) }
 
-	for opiVersion, obj := range dict.Dict {
+	for opiVersion, obj := range *dict {
 
 		if !validateOPIVersion(opiVersion) {
 			return errors.New("validateOPIVersionDict: invalid OPI version")
@@ -347,7 +347,7 @@ func validateMaskStreamDict(xRefTable *pdf.XRefTable, streamDict *pdf.StreamDict
 	return validateImageStreamDict(xRefTable, streamDict, isNoAlternateImageStreamDict)
 }
 
-func validateMaskEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateMaskEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	// stream ("explicit masking", another Image XObject) or array of colors ("color key masking")
 
@@ -376,7 +376,7 @@ func validateMaskEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, en
 	return nil
 }
 
-func validateAlternateImageStreamDicts(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateAlternateImageStreamDicts(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	arr, err := validateArrayEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
 	if err != nil {
@@ -411,7 +411,7 @@ func validateAlternateImageStreamDicts(xRefTable *pdf.XRefTable, dict *pdf.PDFDi
 
 func validateImageStreamDictPart1(xRefTable *pdf.XRefTable, streamDict *pdf.StreamDict, dictName string) (isImageMask bool, err error) {
 
-	dict := streamDict.PDFDict
+	dict := streamDict.Dict
 
 	// Width, integer, required
 	_, err = validateIntegerEntry(xRefTable, &dict, dictName, "Width", REQUIRED, pdf.V10, nil)
@@ -458,7 +458,7 @@ func validateImageStreamDictPart1(xRefTable *pdf.XRefTable, streamDict *pdf.Stre
 
 func validateImageStreamDictPart2(xRefTable *pdf.XRefTable, streamDict *pdf.StreamDict, dictName string, isImageMask, isAlternate bool) error {
 
-	dict := streamDict.PDFDict
+	dict := streamDict.Dict
 
 	// BitsPerComponent, integer
 	required := REQUIRED
@@ -519,7 +519,7 @@ func validateImageStreamDictPart2(xRefTable *pdf.XRefTable, streamDict *pdf.Stre
 
 func validateImageStreamDict(xRefTable *pdf.XRefTable, streamDict *pdf.StreamDict, isAlternate bool) error {
 
-	dict := streamDict.PDFDict
+	dict := streamDict.Dict
 
 	dictName := "imageStreamDict"
 
@@ -584,7 +584,7 @@ func validateImageStreamDict(xRefTable *pdf.XRefTable, streamDict *pdf.StreamDic
 	}
 
 	// Metadata, stream, optional since V1.4
-	err = validateMetadata(xRefTable, &streamDict.PDFDict, OPTIONAL, pdf.V14)
+	err = validateMetadata(xRefTable, &streamDict.Dict, OPTIONAL, pdf.V14)
 	if err != nil {
 		return err
 	}
@@ -595,7 +595,7 @@ func validateImageStreamDict(xRefTable *pdf.XRefTable, streamDict *pdf.StreamDic
 
 func validateFormStreamDictPart1(xRefTable *pdf.XRefTable, streamDict *pdf.StreamDict, dictName string) error {
 
-	dict := streamDict.PDFDict
+	dict := streamDict.Dict
 
 	_, err := validateIntegerEntry(xRefTable, &dict, dictName, "FormType", OPTIONAL, pdf.V10, func(i int) bool { return i == 1 })
 	if err != nil {
@@ -642,9 +642,9 @@ func validateFormStreamDictPart1(xRefTable *pdf.XRefTable, streamDict *pdf.Strea
 	return validateMetadata(xRefTable, &dict, OPTIONAL, pdf.V14)
 }
 
-func validateEntryOC(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateEntryOC(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
-	var d *pdf.PDFDict
+	var d *pdf.Dict
 
 	d, err := validateDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
 	if err != nil {
@@ -661,7 +661,7 @@ func validateEntryOC(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entr
 	return nil
 }
 
-func validateEntryOPI(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateEntryOPI(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	d, err := validateDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
 	if err != nil {
@@ -678,7 +678,7 @@ func validateEntryOPI(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, ent
 	return nil
 }
 
-func validateFormStreamDictPart2(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string) error {
+func validateFormStreamDictPart2(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
 
 	// PieceInfo, dict, optional, since V1.3
 	hasPieceInfo, err := validatePieceInfo(xRefTable, dict, dictName, "PieceInfo", OPTIONAL, pdf.V13)
@@ -746,7 +746,7 @@ func validateFormStreamDict(xRefTable *pdf.XRefTable, streamDict *pdf.StreamDict
 		return err
 	}
 
-	return validateFormStreamDictPart2(xRefTable, &streamDict.PDFDict, dictName)
+	return validateFormStreamDictPart2(xRefTable, &streamDict.Dict, dictName)
 }
 
 func validateXObjectStreamDict(xRefTable *pdf.XRefTable, obj pdf.Object) error {
@@ -758,7 +758,7 @@ func validateXObjectStreamDict(xRefTable *pdf.XRefTable, obj pdf.Object) error {
 		return err
 	}
 
-	d := sd.PDFDict
+	d := sd.Dict
 	dictName := "xObjectStreamDict"
 
 	_, err = validateNameEntry(xRefTable, &d, dictName, "Type", OPTIONAL, pdf.V10, func(s string) bool { return s == "XObject" })
@@ -855,7 +855,7 @@ func validateXObjectResourceDict(xRefTable *pdf.XRefTable, obj pdf.Object, since
 	}
 
 	// Iterate over XObject resource dictionary
-	for _, obj := range dict.Dict {
+	for _, obj := range *dict {
 
 		// Process XObject dict
 		err = validateXObjectStreamDict(xRefTable, obj)

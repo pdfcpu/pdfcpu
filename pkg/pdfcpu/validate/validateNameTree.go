@@ -81,7 +81,7 @@ func validateTemplatesNameTreeValue(xRefTable *pdf.XRefTable, obj pdf.Object, si
 	return err
 }
 
-func validateURLAliasDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateURLAliasDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "urlAliasDict"
 
@@ -97,7 +97,7 @@ func validateURLAliasDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
 	return err
 }
 
-func validateCommandSettingsDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateCommandSettingsDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	// see 14.10.5.4
 
@@ -115,7 +115,7 @@ func validateCommandSettingsDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) er
 	return err
 }
 
-func validateCaptureCommandDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateCaptureCommandDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "captureCommandDict"
 
@@ -170,7 +170,7 @@ func validateCaptureCommandDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) err
 	return nil
 }
 
-func validateSourceInfoDictEntryAU(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateSourceInfoDictEntryAU(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required, sinceVersion)
 	if err != nil || obj == nil {
@@ -182,7 +182,7 @@ func validateSourceInfoDictEntryAU(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, 
 	case pdf.StringLiteral, pdf.HexLiteral:
 		// no further processing
 
-	case pdf.PDFDict:
+	case pdf.Dict:
 		err = validateURLAliasDict(xRefTable, &obj)
 		if err != nil {
 			return err
@@ -196,7 +196,7 @@ func validateSourceInfoDictEntryAU(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, 
 	return nil
 }
 
-func validateSourceInfoDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateSourceInfoDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "sourceInfoDict"
 
@@ -241,7 +241,7 @@ func validateSourceInfoDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
 	return nil
 }
 
-func validateEntrySI(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateEntrySI(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	// see 14.10.5, table 355, source information dictionary
 
@@ -252,7 +252,7 @@ func validateEntrySI(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entr
 
 	switch obj := obj.(type) {
 
-	case pdf.PDFDict:
+	case pdf.Dict:
 		err = validateSourceInfoDict(xRefTable, &obj)
 		if err != nil {
 			return err
@@ -283,7 +283,7 @@ func validateEntrySI(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entr
 	return nil
 }
 
-func validateWebCaptureContentSetDict(XRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateWebCaptureContentSetDict(XRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	// see 14.10.4
 
@@ -402,7 +402,7 @@ func validateEmbeddedFilesNameTreeValue(xRefTable *pdf.XRefTable, obj pdf.Object
 	return err
 }
 
-func validateSlideShowDict(XRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateSlideShowDict(XRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	// see 13.5, table 297
 
@@ -528,7 +528,7 @@ func validateNameTreeValue(name string, xRefTable *pdf.XRefTable, obj pdf.Object
 	return errors.Errorf("validateNameTreeDictNamesEntry: unknown dict name: %s", name)
 }
 
-func validateNameTreeDictNamesEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, name string, node *pdf.Node) (firstKey, lastKey string, err error) {
+func validateNameTreeDictNamesEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, name string, node *pdf.Node) (firstKey, lastKey string, err error) {
 
 	// Names: array of the form [key1 value1 key2 value2 ... key n value n]
 	obj, found := dict.Find("Names")
@@ -590,7 +590,7 @@ func validateNameTreeDictNamesEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict,
 	return firstKey, lastKey, nil
 }
 
-func validateNameTreeDictLimitsEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, firstKey, lastKey string) error {
+func validateNameTreeDictLimitsEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, firstKey, lastKey string) error {
 
 	var arr *pdf.Array
 
@@ -633,7 +633,7 @@ func validateNameTree(xRefTable *pdf.XRefTable, name string, indRef pdf.Indirect
 	node := &pdf.Node{IndRef: &indRef}
 	var kmin, kmax string
 
-	var dict *pdf.PDFDict
+	var dict *pdf.Dict
 
 	dict, err := xRefTable.DereferenceDict(indRef)
 	if err != nil || dict == nil {

@@ -136,7 +136,7 @@ func WritePDFFile(ctx *PDFContext) error {
 }
 
 // Write root entry to disk.
-func writeRootEntry(ctx *PDFContext, dict *PDFDict, dictName, entryName string, statsAttr int) error {
+func writeRootEntry(ctx *PDFContext, dict *Dict, dictName, entryName string, statsAttr int) error {
 
 	obj, err := writeEntry(ctx, dict, dictName, entryName)
 	if err != nil {
@@ -151,7 +151,7 @@ func writeRootEntry(ctx *PDFContext, dict *PDFDict, dictName, entryName string, 
 }
 
 // Write root entry to object stream.
-func writeRootEntryToObjStream(ctx *PDFContext, dict *PDFDict, dictName, entryName string, statsAttr int) error {
+func writeRootEntryToObjStream(ctx *PDFContext, dict *Dict, dictName, entryName string, statsAttr int) error {
 
 	ctx.Write.WriteToObjectStream = true
 
@@ -164,7 +164,7 @@ func writeRootEntryToObjStream(ctx *PDFContext, dict *PDFDict, dictName, entryNa
 }
 
 // Write page tree.
-func writePages(ctx *PDFContext, rootDict *PDFDict) error {
+func writePages(ctx *PDFContext, rootDict *Dict) error {
 
 	// Page tree root (the top "Pages" dict) must be indirect reference.
 	indRef := rootDict.IndirectRefEntry("Pages")
@@ -213,7 +213,7 @@ func writeRootObject(ctx *PDFContext) error {
 		}
 	}
 
-	var dict *PDFDict
+	var dict *Dict
 
 	dict, err := xRefTable.DereferenceDict(catalog)
 	if err != nil {
@@ -237,7 +237,7 @@ func writeRootObject(ctx *PDFContext) error {
 		dict.Delete("OCProperties")
 	}
 
-	err = writePDFDictObject(ctx, objNumber, genNumber, *dict)
+	err = writeDictObject(ctx, objNumber, genNumber, *dict)
 	if err != nil {
 		return err
 	}
@@ -330,7 +330,7 @@ func writeTrailerDict(ctx *PDFContext) error {
 		return err
 	}
 
-	dict := NewPDFDict()
+	dict := NewDict()
 	dict.Insert("Size", Integer(*xRefTable.Size))
 	dict.Insert("Root", *xRefTable.Root)
 
@@ -801,7 +801,7 @@ func writeEncryptDict(ctx *PDFContext) error {
 	objNumber := int(indRef.ObjectNumber)
 	genNumber := int(indRef.GenerationNumber)
 
-	var dict *PDFDict
+	var dict *Dict
 
 	dict, err := ctx.DereferenceDict(indRef)
 	if err != nil {

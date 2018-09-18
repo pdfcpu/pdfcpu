@@ -29,8 +29,8 @@ import (
 func createSMaskObject(xRefTable *XRefTable, buf []byte, w, h int) (*IndirectRef, error) {
 
 	sd := &StreamDict{
-		PDFDict: PDFDict{
-			Dict: map[string]Object{
+		Dict: Dict(
+			map[string]Object{
 				"Type":             Name("XObject"),
 				"Subtype":          Name("Image"),
 				"BitsPerComponent": Integer(8),
@@ -38,7 +38,7 @@ func createSMaskObject(xRefTable *XRefTable, buf []byte, w, h int) (*IndirectRef
 				"Width":            Integer(w),
 				"Height":           Integer(h),
 			},
-		},
+		),
 		Content:        buf,
 		FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}}
 
@@ -65,8 +65,8 @@ func createImageObject(xRefTable *XRefTable, buf, sm []byte, w, h int, cs string
 	}
 
 	sd := &StreamDict{
-		PDFDict: PDFDict{
-			Dict: map[string]Object{
+		Dict: Dict(
+			map[string]Object{
 				"Type":             Name("XObject"),
 				"Subtype":          Name("Image"),
 				"Width":            Integer(w),
@@ -74,7 +74,7 @@ func createImageObject(xRefTable *XRefTable, buf, sm []byte, w, h int, cs string
 				"BitsPerComponent": Integer(8),
 				"ColorSpace":       Name(cs),
 			},
-		},
+		),
 		Content:        buf,
 		FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}}
 

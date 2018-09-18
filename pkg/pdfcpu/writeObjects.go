@@ -355,7 +355,7 @@ func writeFloatObject(ctx *PDFContext, objNumber, genNumber int, float Float) er
 	return writeObject(ctx, objNumber, genNumber, float.PDFString())
 }
 
-func writePDFDictObject(ctx *PDFContext, objNumber, genNumber int, dict PDFDict) error {
+func writeDictObject(ctx *PDFContext, objNumber, genNumber int, dict Dict) error {
 
 	ok, err := writeToObjectStream(ctx, objNumber, genNumber)
 	if err != nil {
@@ -521,8 +521,8 @@ func writeDirectObject(ctx *PDFContext, o Object) error {
 
 	switch o := o.(type) {
 
-	case PDFDict:
-		for _, v := range o.Dict {
+	case Dict:
+		for _, v := range o {
 			_, _, err := writeDeepObject(ctx, v)
 			if err != nil {
 				return err
@@ -560,14 +560,14 @@ func writeNullObject(ctx *PDFContext, objNumber, genNumber int) error {
 	return ctx.UndeleteObject(objNumber)
 }
 
-func writeDeepPDFDict(ctx *PDFContext, d PDFDict, objNr, genNr int) error {
+func writeDeepDict(ctx *PDFContext, d Dict, objNr, genNr int) error {
 
-	err := writePDFDictObject(ctx, objNr, genNr, d)
+	err := writeDictObject(ctx, objNr, genNr, d)
 	if err != nil {
 		return err
 	}
 
-	for _, v := range d.Dict {
+	for _, v := range d {
 		_, _, err = writeDeepObject(ctx, v)
 		if err != nil {
 			return err
@@ -648,8 +648,8 @@ func writeIndirectObject(ctx *PDFContext, indRef IndirectRef) (Object, error) {
 
 	switch obj := o.(type) {
 
-	case PDFDict:
-		err = writeDeepPDFDict(ctx, obj, objNumber, genNumber)
+	case Dict:
+		err = writeDeepDict(ctx, obj, objNumber, genNumber)
 
 	case StreamDict:
 		err = writeDeepStreamDict(ctx, &obj, objNumber, genNumber)
@@ -703,7 +703,7 @@ func writeDeepObject(ctx *PDFContext, objIn Object) (objOut Object, written bool
 	return objOut, written, err
 }
 
-func writeEntry(ctx *PDFContext, dict *PDFDict, dictName, entryName string) (Object, error) {
+func writeEntry(ctx *PDFContext, dict *Dict, dictName, entryName string) (Object, error) {
 
 	obj, found := dict.Find(entryName)
 	if !found || obj == nil {

@@ -150,7 +150,7 @@ func validateICCBasedColorSpace(xRefTable *pdf.XRefTable, arr *pdf.Array, sinceV
 		return err
 	}
 
-	dict := sd.PDFDict
+	dict := sd.Dict
 
 	validate := func(i int) bool { return pdf.IntMemberOf(i, []int{1, 3, 4}) }
 	N, err := validateIntegerEntry(xRefTable, &dict, dictName, "N", REQUIRED, sinceVersion, validate)
@@ -277,9 +277,9 @@ func validateSeparationColorSpace(xRefTable *pdf.XRefTable, arr *pdf.Array, sinc
 	return validateFunction(xRefTable, (*arr)[3])
 }
 
-func validateDeviceNColorSpaceColorantsDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateDeviceNColorSpaceColorantsDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
-	for _, obj := range dict.Dict {
+	for _, obj := range *dict {
 
 		arr, err := xRefTable.DereferenceArray(obj)
 		if err != nil {
@@ -298,7 +298,7 @@ func validateDeviceNColorSpaceColorantsDict(xRefTable *pdf.XRefTable, dict *pdf.
 	return nil
 }
 
-func validateDeviceNColorSpaceProcessDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateDeviceNColorSpaceProcessDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "DeviceNCSProcessDict"
 
@@ -312,9 +312,9 @@ func validateDeviceNColorSpaceProcessDict(xRefTable *pdf.XRefTable, dict *pdf.PD
 	return err
 }
 
-func validateDeviceNColorSpaceSoliditiesDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateDeviceNColorSpaceSoliditiesDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
-	for _, obj := range dict.Dict {
+	for _, obj := range *dict {
 		_, err := validateFloat(xRefTable, obj, func(f float64) bool { return f >= 0.0 && f <= 1.0 })
 		if err != nil {
 			return err
@@ -324,9 +324,9 @@ func validateDeviceNColorSpaceSoliditiesDict(xRefTable *pdf.XRefTable, dict *pdf
 	return nil
 }
 
-func validateDeviceNColorSpaceDotGainDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateDeviceNColorSpaceDotGainDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
-	for _, obj := range dict.Dict {
+	for _, obj := range *dict {
 		err := validateFunction(xRefTable, obj)
 		if err != nil {
 			return err
@@ -336,7 +336,7 @@ func validateDeviceNColorSpaceDotGainDict(xRefTable *pdf.XRefTable, dict *pdf.PD
 	return nil
 }
 
-func validateDeviceNColorSpaceMixingHintsDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateDeviceNColorSpaceMixingHintsDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "deviceNCSMixingHintsDict"
 
@@ -599,7 +599,7 @@ func validateColorSpace(xRefTable *pdf.XRefTable, obj pdf.Object, excludePattern
 	return err
 }
 
-func validateColorSpaceEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string, entryName string, required bool, excludePatternCS bool) error {
+func validateColorSpaceEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string, entryName string, required bool, excludePatternCS bool) error {
 
 	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required, pdf.V10)
 	if err != nil || obj == nil {
@@ -640,7 +640,7 @@ func validateColorSpaceResourceDict(xRefTable *pdf.XRefTable, obj pdf.Object, si
 	}
 
 	// Iterate over colorspace resource dictionary
-	for _, obj := range dict.Dict {
+	for _, obj := range *dict {
 
 		// Process colorspace
 		err = validateColorSpace(xRefTable, obj, IncludePatternCS)

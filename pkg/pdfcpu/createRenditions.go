@@ -18,110 +18,114 @@ package pdfcpu
 
 // Functions needed to create a test.pdf that gets used for validation testing (see process_test.go)
 
-func createMHBEDict() *PDFDict {
+func createMHBEDict() *Dict {
 
-	softwareIdentDict := PDFDict{
-		Dict: map[string]Object{
+	softwareIdentDict := Dict(
+		map[string]Object{
 			"Type": Name("SoftwareIdentifier"),
 			"U":    StringLiteral("vnd.adobe.swname:ADBE_Acrobat"),
 			"L":    NewIntegerArray(0),
 			"H":    NewIntegerArray(),
 			"OS":   NewStringArray(),
 		},
-	}
+	)
 
-	mediaCriteriaDict := PDFDict{
-		Dict: map[string]Object{
+	mediaCriteriaDict := Dict(
+		map[string]Object{
 			"Type": Name("MediaCriteria"),
 			"A":    Boolean(false),
 			"C":    Boolean(false),
 			"O":    Boolean(false),
 			"S":    Boolean(false),
 			"R":    Integer(0),
-			"D": PDFDict{
-				Dict: map[string]Object{
+			"D": Dict(
+				map[string]Object{
 					"Type": Name("MinBitDepth"),
 					"V":    Integer(0),
 					"M":    Integer(0),
 				},
-			},
+			),
 			"V": Array{softwareIdentDict},
-			"Z": PDFDict{
-				Dict: map[string]Object{
+			"Z": Dict(
+				map[string]Object{
 					"Type": Name("MinScreenSize"),
 					"V":    NewIntegerArray(640, 480),
 					"M":    Integer(0),
 				},
-			},
+			),
 			"P": NewNameArray("1.3"),
 			"L": NewStringArray("en-US"),
 		},
-	}
+	)
 
-	mhbe := NewPDFDict()
+	mhbe := NewDict()
 	mhbe.Insert("C", mediaCriteriaDict)
 
 	return &mhbe
 }
 
-func createMediaPlayersDict() *PDFDict {
+func createMediaPlayersDict() *Dict {
 
-	softwareIdentDict := PDFDict{
-		Dict: map[string]Object{
+	softwareIdentDict := Dict(
+		map[string]Object{
 			"Type": Name("SoftwareIdentifier"),
 			"U":    StringLiteral("vnd.adobe.swname:ADBE_Acrobat"),
 			"L":    NewIntegerArray(0),
 			"H":    NewIntegerArray(),
 			"OS":   NewStringArray(),
 		},
-	}
+	)
 
-	mediaPlayerInfoDict := PDFDict{
-		Dict: map[string]Object{
+	mediaPlayerInfoDict := Dict(
+		map[string]Object{
 			"Type": Name("MediaPlayerInfo"),
 			"PID":  softwareIdentDict,
 		},
-	}
+	)
 
-	return &PDFDict{
-		Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
 			"Type": Name("MediaPlayers"),
 			"MU":   Array{mediaPlayerInfoDict},
 		},
-	}
+	)
 
+	return &d
 }
 
-func createMediaOffsetDict() *PDFDict {
+func createMediaOffsetDict() *Dict {
 
-	timeSpanDict := PDFDict{
-		Dict: map[string]Object{
+	timeSpanDict := Dict(
+		map[string]Object{
 			"Type": Name("Timespan"),
 			"S":    Name("S"),
 			"V":    Integer(1),
 		},
-	}
+	)
 
-	return &PDFDict{
-		Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
 			"Type": Name("MediaOffset"),
 			"S":    Name("T"),
 			"T":    timeSpanDict,
 		},
-	}
+	)
 
+	return &d
 }
 
-func createSectionMHBEDict() *PDFDict {
+func createSectionMHBEDict() *Dict {
 
 	d := createMediaOffsetDict()
 
-	return &PDFDict{
-		Dict: map[string]Object{
+	d1 := Dict(
+		map[string]Object{
 			"B": *d,
 			"E": *d,
 		},
-	}
+	)
+
+	return &d1
 }
 
 func createMediaClipDataDict(xRefTable *XRefTable) (*IndirectRef, error) {
@@ -133,19 +137,19 @@ func createMediaClipDataDict(xRefTable *XRefTable) (*IndirectRef, error) {
 		return nil, err
 	}
 
-	mediaPermissionsDict := PDFDict{
-		Dict: map[string]Object{
+	mediaPermissionsDict := Dict(
+		map[string]Object{
 			"Type": Name("MediaPermissions"),
 			"TF":   StringLiteral("TEMPNEVER"), //TEMPALWAYS
 		},
-	}
+	)
 
 	mediaPlayersDict := createMediaPlayersDict()
 
-	mhbe := PDFDict{Dict: map[string]Object{"BU": nil}}
+	mhbe := Dict(map[string]Object{"BU": nil})
 
-	d := PDFDict{
-		Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
 			"Type": Name("MediaClip"),
 			"S":    Name("MCD"), // media clip data
 			"N":    StringLiteral("Sample Audio"),
@@ -159,31 +163,31 @@ func createMediaClipDataDict(xRefTable *XRefTable) (*IndirectRef, error) {
 			"MH":  mhbe,
 			"BE":  mhbe,
 		},
-	}
+	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createMediaPlayParamsMHBE() *PDFDict {
+func createMediaPlayParamsMHBE() *Dict {
 
-	timeSpanDict := PDFDict{
-		Dict: map[string]Object{
+	timeSpanDict := Dict(
+		map[string]Object{
 			"Type": Name("Timespan"),
 			"S":    Name("S"),
 			"V":    Float(10.0),
 		},
-	}
+	)
 
-	mediaDurationDict := PDFDict{
-		Dict: map[string]Object{
+	mediaDurationDict := Dict(
+		map[string]Object{
 			"Type": Name("MediaDuration"),
 			"S":    Name("T"),
 			"T":    timeSpanDict,
 		},
-	}
+	)
 
-	return &PDFDict{
-		Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
 			"V":  Integer(100),
 			"C":  Boolean(false),
 			"F":  Integer(5),
@@ -191,30 +195,32 @@ func createMediaPlayParamsMHBE() *PDFDict {
 			"A":  Boolean(true),
 			"RC": Float(1.0),
 		},
-	}
+	)
 
+	return &d
 }
 
-func createMediaPlayParamsDict() *PDFDict {
+func createMediaPlayParamsDict() *Dict {
 
 	d := createMediaPlayersDict()
 	mhbe := createMediaPlayParamsMHBE()
 
-	return &PDFDict{
-		Dict: map[string]Object{
+	d1 := Dict(
+		map[string]Object{
 			"Type": Name("MediaPlayParams"),
 			"PL":   *d,
 			"MH":   *mhbe,
 			"BE":   *mhbe,
 		},
-	}
+	)
 
+	return &d1
 }
 
-func createFloatingWindowsParamsDict() *PDFDict {
+func createFloatingWindowsParamsDict() *Dict {
 
-	return &PDFDict{
-		Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
 			"Type": Name("FWParams"),
 			"D":    NewIntegerArray(200, 200),
 			"RT":   Integer(0),
@@ -225,15 +231,17 @@ func createFloatingWindowsParamsDict() *PDFDict {
 			"R":    Integer(0),
 			"TT":   NewStringArray("en-US", "Special title", "de", "Spezieller Titel", "default title"),
 		},
-	}
+	)
+
+	return &d
 }
 
-func createScreenParamsDict() *PDFDict {
+func createScreenParamsDict() *Dict {
 
 	d := createFloatingWindowsParamsDict()
 
-	mhbe := PDFDict{
-		Dict: map[string]Object{
+	mhbe := Dict(
+		map[string]Object{
 			"Type": Name("MediaScreenParams"),
 			"W":    Integer(0),
 			"B":    NewNumberArray(1.0, 0.0, 0.0),
@@ -241,26 +249,28 @@ func createScreenParamsDict() *PDFDict {
 			"M":    Integer(0),
 			"F":    *d,
 		},
-	}
+	)
 
-	return &PDFDict{
-		Dict: map[string]Object{
+	d1 := Dict(
+		map[string]Object{
 			"Type": Name("MediaScreenParams"),
 			"MH":   mhbe,
 			"BE":   mhbe,
 		},
-	}
+	)
+
+	return &d1
 }
 
-func createMediaRendition(xRefTable *XRefTable, mediaClipDataDict *IndirectRef) *PDFDict {
+func createMediaRendition(xRefTable *XRefTable, mediaClipDataDict *IndirectRef) *Dict {
 
 	mhbe := createMHBEDict()
 
 	d1 := createMediaPlayParamsDict()
 	d2 := createScreenParamsDict()
 
-	return &PDFDict{
-		Dict: map[string]Object{
+	d3 := Dict(
+		map[string]Object{
 			"Type": Name("Rendition"),
 			"S":    Name("MR"),
 			"MH":   *mhbe,
@@ -269,16 +279,17 @@ func createMediaRendition(xRefTable *XRefTable, mediaClipDataDict *IndirectRef) 
 			"P":    *d1,
 			"SP":   *d2,
 		},
-	}
+	)
 
+	return &d3
 }
 
-func createSectionMediaRendition(mediaClipDataDict *IndirectRef) *PDFDict {
+func createSectionMediaRendition(mediaClipDataDict *IndirectRef) *Dict {
 
 	mhbe := createSectionMHBEDict()
 
-	mediaClipSectionDict := PDFDict{
-		Dict: map[string]Object{
+	mediaClipSectionDict := Dict(
+		map[string]Object{
 			"Type": Name("MediaClip"),
 			"S":    Name("MCS"), // media clip section
 			"N":    StringLiteral("Sample movie"),
@@ -287,36 +298,38 @@ func createSectionMediaRendition(mediaClipDataDict *IndirectRef) *PDFDict {
 			"MH":   *mhbe,
 			"BE":   *mhbe,
 		},
-	}
+	)
 
 	mhbe = createMHBEDict()
 
-	return &PDFDict{
-		Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
 			"Type": Name("Rendition"),
 			"S":    Name("MR"),
 			"MH":   *mhbe,
 			"BE":   *mhbe,
 			"C":    mediaClipSectionDict,
 		},
-	}
+	)
 
+	return &d
 }
 
-func createSelectorRendition(mediaClipDataDict *IndirectRef) *PDFDict {
+func createSelectorRendition(mediaClipDataDict *IndirectRef) *Dict {
 
 	mhbe := createMHBEDict()
 
 	r := createSectionMediaRendition(mediaClipDataDict)
 
-	return &PDFDict{
-		Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
 			"Type": Name("Rendition"),
 			"S":    Name("SR"),
 			"MH":   *mhbe,
 			"BE":   *mhbe,
 			"R":    Array{*r},
 		},
-	}
+	)
 
+	return &d
 }

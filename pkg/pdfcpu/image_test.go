@@ -178,8 +178,8 @@ func read1BPCDeviceGrayFlateStreamDump(xRefTable *XRefTable, fileName string) (*
 	}
 
 	sd := &StreamDict{
-		PDFDict: PDFDict{
-			Dict: map[string]Object{
+		Dict: Dict(
+			map[string]Object{
 				"Type":             Name("XObject"),
 				"Subtype":          Name("Image"),
 				"Width":            Integer(1161),
@@ -188,7 +188,7 @@ func read1BPCDeviceGrayFlateStreamDump(xRefTable *XRefTable, fileName string) (*
 				"ColorSpace":       Name(DeviceGrayCS),
 				"Decode":           NewNumberArray(1, 0),
 			},
-		},
+		),
 		Raw:            buf,
 		FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}}
 
@@ -270,17 +270,17 @@ func read8BPCDeviceCMYKFlateStreamDump(xRefTable *XRefTable, fileName string) (*
 		return nil, err
 	}
 
-	decodeParms := &PDFDict{
-		Dict: map[string]Object{
+	decodeParms := Dict(
+		map[string]Object{
 			"BitsPerComponent": Integer(8),
 			"Colors":           Integer(4),
 			"Columns":          Integer(340),
 		},
-	}
+	)
 
 	sd := &StreamDict{
-		PDFDict: PDFDict{
-			Dict: map[string]Object{
+		Dict: Dict(
+			map[string]Object{
 				"Type":             Name("XObject"),
 				"Subtype":          Name("Image"),
 				"Width":            Integer(340),
@@ -288,9 +288,9 @@ func read8BPCDeviceCMYKFlateStreamDump(xRefTable *XRefTable, fileName string) (*
 				"BitsPerComponent": Integer(8),
 				"ColorSpace":       Name(DeviceCMYKCS),
 			},
-		},
+		),
 		Raw:            buf,
-		FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: decodeParms}}}
+		FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: &decodeParms}}}
 
 	sd.InsertName("Filter", filter.Flate)
 

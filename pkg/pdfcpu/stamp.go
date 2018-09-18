@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package pdfcpu
 
 import (
@@ -532,7 +533,7 @@ func ParseWatermarkDetails(s string, onTop bool) (*Watermark, error) {
 
 func createFontResForWM(xRefTable *XRefTable, wm *Watermark) error {
 
-	d := NewPDFDict()
+	d := NewDict()
 	d.InsertName("Type", "Font")
 	d.InsertName("Subtype", "Type1")
 	d.InsertName("BaseFont", wm.fontName)
@@ -632,20 +633,20 @@ func createOCG(xRefTable *XRefTable, wm *Watermark) error {
 		subt = "FG"
 	}
 
-	d := PDFDict{
-		Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
 			"Name": StringLiteral(name),
 			"Type": Name("OCG"),
-			"Usage": PDFDict{
-				Dict: map[string]Object{
-					"PageElement": PDFDict{Dict: map[string]Object{"Subtype": Name(subt)}},
-					"View":        PDFDict{Dict: map[string]Object{"ViewState": Name("ON")}},
-					"Print":       PDFDict{Dict: map[string]Object{"PrintState": Name("ON")}},
-					"Export":      PDFDict{Dict: map[string]Object{"ExportState": Name("ON")}},
+			"Usage": Dict(
+				map[string]Object{
+					"PageElement": Dict(map[string]Object{"Subtype": Name(subt)}),
+					"View":        Dict(map[string]Object{"ViewState": Name("ON")}),
+					"Print":       Dict(map[string]Object{"PrintState": Name("ON")}),
+					"Export":      Dict(map[string]Object{"ExportState": Name("ON")}),
 				},
-			},
+			),
 		},
-	}
+	)
 
 	indRef, err := xRefTable.IndRefForNewObject(d)
 	if err != nil {
@@ -657,45 +658,45 @@ func createOCG(xRefTable *XRefTable, wm *Watermark) error {
 	return nil
 }
 
-func prepareOCPropertiesInRoot(rootDict *PDFDict, wm *Watermark) error {
+func prepareOCPropertiesInRoot(rootDict *Dict, wm *Watermark) error {
 
-	optionalContentConfigDict := PDFDict{
-		Dict: map[string]Object{
+	optionalContentConfigDict := Dict(
+		map[string]Object{
 			"AS": Array{
-				PDFDict{
-					Dict: map[string]Object{
+				Dict(
+					map[string]Object{
 						"Category": NewNameArray("View"),
 						"Event":    Name("View"),
 						"OCGs":     Array{*wm.ocg},
 					},
-				},
-				PDFDict{
-					Dict: map[string]Object{
+				),
+				Dict(
+					map[string]Object{
 						"Category": NewNameArray("Print"),
 						"Event":    Name("Print"),
 						"OCGs":     Array{*wm.ocg},
 					},
-				},
-				PDFDict{
-					Dict: map[string]Object{
+				),
+				Dict(
+					map[string]Object{
 						"Category": NewNameArray("Export"),
 						"Event":    Name("Export"),
 						"OCGs":     Array{*wm.ocg},
 					},
-				},
+				),
 			},
 			"ON":       Array{*wm.ocg},
 			"Order":    Array{},
 			"RBGroups": Array{},
 		},
-	}
+	)
 
-	d := PDFDict{
-		Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
 			"OCGs": Array{*wm.ocg},
 			"D":    optionalContentConfigDict,
 		},
-	}
+	)
 
 	_, ok := rootDict.Find("OCProperties")
 	if !ok {
@@ -706,21 +707,28 @@ func prepareOCPropertiesInRoot(rootDict *PDFDict, wm *Watermark) error {
 	return oneWatermarkOnlyError(wm.onTop)
 }
 
-func createFormResDict(xRefTable *XRefTable, wm *Watermark) *PDFDict {
+func createFormResDict(xRefTable *XRefTable, wm *Watermark) *Dict {
 
 	if wm.IsImage() {
-		return &PDFDict{
-			Dict: map[string]Object{
+
+		d := Dict(
+			map[string]Object{
 				"ProcSet": NewNameArray("PDF", "ImageC"),
-				"XObject": PDFDict{Dict: map[string]Object{"Im0": *wm.image}},
-			}}
+				"XObject": Dict(map[string]Object{"Im0": *wm.image}),
+			},
+		)
+
+		return &d
 	}
 
-	return &PDFDict{
-		Dict: map[string]Object{
-			"Font":    PDFDict{Dict: map[string]Object{wm.fontName: *wm.font}},
+	d := Dict(
+		map[string]Object{
+			"Font":    Dict(map[string]Object{wm.fontName: *wm.font}),
 			"ProcSet": NewNameArray("PDF", "Text"),
-		}}
+		},
+	)
+
+	return &d
 }
 
 func createForm(xRefTable *XRefTable, wm *Watermark, withBB bool) error {
@@ -759,8 +767,8 @@ func createForm(xRefTable *XRefTable, wm *Watermark, withBB bool) error {
 	}
 
 	sd := &StreamDict{
-		PDFDict: PDFDict{
-			Dict: map[string]Object{
+		Dict: Dict(
+			map[string]Object{
 				"Type":      Name("XObject"),
 				"Subtype":   Name("Form"),
 				"BBox":      NewRectangle(bb.LL.X, bb.LL.Y, bb.UR.X, bb.UR.Y),
@@ -768,7 +776,7 @@ func createForm(xRefTable *XRefTable, wm *Watermark, withBB bool) error {
 				"OC":        *wm.ocg,
 				"Resources": *createFormResDict(xRefTable, wm),
 			},
-		},
+		),
 		Content: b.Bytes(),
 	}
 
@@ -792,13 +800,13 @@ func createForm(xRefTable *XRefTable, wm *Watermark, withBB bool) error {
 
 func createExtGStateForStamp(xRefTable *XRefTable, wm *Watermark) error {
 
-	d := PDFDict{
-		Dict: map[string]Object{
+	d := Dict(
+		map[string]Object{
 			"Type": Name("ExtGState"),
 			"CA":   Float(wm.opacity),
 			"ca":   Float(wm.opacity),
 		},
-	}
+	)
 
 	indRef, err := xRefTable.IndRefForNewObject(d)
 	if err != nil {
@@ -818,25 +826,25 @@ func rect(xRefTable *XRefTable, rect Array) types.Rectangle {
 	return types.NewRectangle(llx, lly, urx, ury)
 }
 
-func insertPageResourcesForWM(xRefTable *XRefTable, pageDict *PDFDict, wm *Watermark, gsID, xoID string) error {
+func insertPageResourcesForWM(xRefTable *XRefTable, pageDict *Dict, wm *Watermark, gsID, xoID string) error {
 
-	resourceDict := PDFDict{
-		Dict: map[string]Object{
-			"ExtGState": PDFDict{Dict: map[string]Object{gsID: *wm.extGState}},
-			"XObject":   PDFDict{Dict: map[string]Object{xoID: *wm.form}},
+	resourceDict := Dict(
+		map[string]Object{
+			"ExtGState": Dict(map[string]Object{gsID: *wm.extGState}),
+			"XObject":   Dict(map[string]Object{xoID: *wm.form}),
 		},
-	}
+	)
 
 	pageDict.Insert("Resources", resourceDict)
 
 	return nil
 }
 
-func updatePageResourcesForWM(xRefTable *XRefTable, resDict *PDFDict, wm *Watermark, gsID, xoID *string) error {
+func updatePageResourcesForWM(xRefTable *XRefTable, resDict *Dict, wm *Watermark, gsID, xoID *string) error {
 
 	o, ok := resDict.Find("ExtGState")
 	if !ok {
-		resDict.Insert("ExtGState", PDFDict{Dict: map[string]Object{*gsID: *wm.extGState}})
+		resDict.Insert("ExtGState", Dict(map[string]Object{*gsID: *wm.extGState}))
 	} else {
 		d, _ := xRefTable.DereferenceDict(o)
 		for i := 0; i < 1000; i++ {
@@ -851,7 +859,7 @@ func updatePageResourcesForWM(xRefTable *XRefTable, resDict *PDFDict, wm *Waterm
 
 	o, ok = resDict.Find("XObject")
 	if !ok {
-		resDict.Insert("XObject", PDFDict{Dict: map[string]Object{*xoID: *wm.form}})
+		resDict.Insert("XObject", Dict(map[string]Object{*xoID: *wm.form}))
 	} else {
 		d, _ := xRefTable.DereferenceDict(o)
 		for i := 0; i < 1000; i++ {
@@ -879,9 +887,9 @@ func wmContent(wm *Watermark, gsID, xoID string) []byte {
 	return b.Bytes()
 }
 
-func insertPageContentsForWM(xRefTable *XRefTable, pageDict *PDFDict, wm *Watermark, gsID, xoID string) error {
+func insertPageContentsForWM(xRefTable *XRefTable, pageDict *Dict, wm *Watermark, gsID, xoID string) error {
 
-	sd := &StreamDict{PDFDict: NewPDFDict()}
+	sd := &StreamDict{Dict: NewDict()}
 
 	sd.Content = wmContent(wm, gsID, xoID)
 

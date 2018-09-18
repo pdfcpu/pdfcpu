@@ -274,7 +274,7 @@ type OptimizationContext struct {
 	FontObjects       map[int]*FontObject
 	Fonts             map[string][]int
 	DuplicateFontObjs IntSet
-	DuplicateFonts    map[int]*PDFDict
+	DuplicateFonts    map[int]*Dict
 
 	// Image section
 	PageImages         []IntSet
@@ -292,7 +292,7 @@ func newOptimizationContext() *OptimizationContext {
 		FontObjects:          map[int]*FontObject{},
 		Fonts:                map[string][]int{},
 		DuplicateFontObjs:    IntSet{},
-		DuplicateFonts:       map[int]*PDFDict{},
+		DuplicateFonts:       map[int]*Dict{},
 		ImageObjects:         map[int]*ImageObject{},
 		DuplicateImageObjs:   IntSet{},
 		DuplicateImages:      map[int]*StreamDict{},

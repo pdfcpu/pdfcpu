@@ -55,14 +55,14 @@ func XRefTable(xRefTable *pdf.XRefTable) error {
 
 }
 
-func validateRootVersion(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateRootVersion(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	_, err := validateNameEntry(xRefTable, rootDict, "rootDict", "Version", OPTIONAL, pdf.V14, nil)
 
 	return err
 }
 
-func validateExtensions(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateExtensions(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	// => 7.12 Extensions Dictionary
 
@@ -73,12 +73,12 @@ func validateExtensions(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, require
 	return err
 }
 
-func validatePageLabels(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validatePageLabels(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	// optional since PDF 1.3
 	// => 7.9.7 Number Trees, 12.4.2 Page Labels
 
-	// PDFDict or indirect ref to PDFDict
+	// Dict or indirect ref to Dict
 
 	indRef := rootDict.IndirectRefEntry("PageLabels")
 	if indRef == nil {
@@ -101,7 +101,7 @@ func validatePageLabels(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, require
 	return err
 }
 
-func validateNames(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateNames(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	// => 7.7.4 Name Dictionary
 
@@ -124,7 +124,7 @@ func validateNames(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required boo
 			"URLS", "EmbeddedFiles", "AlternatePresentations", "Renditions"})
 	}
 
-	for treeName, value := range dict.Dict {
+	for treeName, value := range *dict {
 
 		if ok := validateNameTreeName(treeName); !ok {
 			return errors.Errorf("validateNames: unknown name tree name: %s\n", treeName)
@@ -149,7 +149,7 @@ func validateNames(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required boo
 	return nil
 }
 
-func validateNamedDestinations(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateNamedDestinations(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	// => 12.3.2.3 Named Destinations
 
@@ -160,7 +160,7 @@ func validateNamedDestinations(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, 
 		return err
 	}
 
-	for _, value := range dict.Dict {
+	for _, value := range *dict {
 		err = validateDestination(xRefTable, value)
 		if err != nil {
 			return err
@@ -170,7 +170,7 @@ func validateNamedDestinations(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, 
 	return nil
 }
 
-func validateViewerPreferences(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateViewerPreferences(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	// => 12.2 Viewer Preferences
 
@@ -234,21 +234,21 @@ func validateViewerPreferences(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, 
 	return err
 }
 
-func validatePageLayout(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validatePageLayout(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	_, err := validateNameEntry(xRefTable, rootDict, "rootDict", "PageLayout", required, sinceVersion, nil)
 
 	return err
 }
 
-func validatePageMode(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validatePageMode(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	_, err := validateNameEntry(xRefTable, rootDict, "rootDict", "PageMode", required, sinceVersion, nil)
 
 	return err
 }
 
-func validateOpenAction(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateOpenAction(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	// => 12.3.2 Destinations, 12.6 Actions
 
@@ -267,7 +267,7 @@ func validateOpenAction(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, require
 
 	switch obj := obj.(type) {
 
-	case pdf.PDFDict:
+	case pdf.Dict:
 		err = validateActionDict(xRefTable, &obj)
 
 	case pdf.Array:
@@ -280,7 +280,7 @@ func validateOpenAction(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, require
 	return err
 }
 
-func validateURI(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateURI(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	// => 12.6.4.7 URI Actions
 
@@ -297,12 +297,12 @@ func validateURI(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool,
 	return err
 }
 
-func validateRootMetadata(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateRootMetadata(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	return validateMetadata(xRefTable, rootDict, required, sinceVersion)
 }
 
-func validateMetadata(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateMetadata(xRefTable *pdf.XRefTable, dict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	// => 14.3 Metadata
 	// In general, any PDF stream or dictionary may have metadata attached to it
@@ -321,17 +321,17 @@ func validateMetadata(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, required bool
 
 	dictName := "metaDataDict"
 
-	_, err = validateNameEntry(xRefTable, &streamDict.PDFDict, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Metadata" })
+	_, err = validateNameEntry(xRefTable, &streamDict.Dict, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Metadata" })
 	if err != nil {
 		return err
 	}
 
-	_, err = validateNameEntry(xRefTable, &streamDict.PDFDict, dictName, "SubType", OPTIONAL, sinceVersion, func(s string) bool { return s == "XML" })
+	_, err = validateNameEntry(xRefTable, &streamDict.Dict, dictName, "SubType", OPTIONAL, sinceVersion, func(s string) bool { return s == "XML" })
 
 	return err
 }
 
-func validateMarkInfo(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateMarkInfo(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	// => 14.7 Logical Structure
 
@@ -371,7 +371,7 @@ func validateMarkInfo(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required 
 	return err
 }
 
-func validateLang(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateLang(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	_, err := validateStringEntry(xRefTable, rootDict, "rootDict", "Lang", required, sinceVersion, nil)
 
@@ -401,7 +401,7 @@ func validateCaptureCommandDictArray(xRefTable *pdf.XRefTable, arr *pdf.Array) e
 	return nil
 }
 
-func validateWebCaptureInfoDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateWebCaptureInfoDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "webCaptureInfoDict"
 
@@ -424,7 +424,7 @@ func validateWebCaptureInfoDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) err
 	return err
 }
 
-func validateSpiderInfo(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateSpiderInfo(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	// 14.10.2 Web Capture Information Dictionary
 
@@ -436,7 +436,7 @@ func validateSpiderInfo(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, require
 	return validateWebCaptureInfoDict(xRefTable, dict)
 }
 
-func validateOutputIntentDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateOutputIntentDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "outputIntentDict"
 
@@ -485,7 +485,7 @@ func validateOutputIntentDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error
 	return nil
 }
 
-func validateOutputIntents(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateOutputIntents(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	// => 14.11.5 Output Intents
 
@@ -518,11 +518,11 @@ func validateOutputIntents(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, requ
 	return nil
 }
 
-func validatePieceDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validatePieceDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "pieceDict"
 
-	for _, obj := range dict.Dict {
+	for _, obj := range *dict {
 
 		dict, err := xRefTable.DereferenceDict(obj)
 		if err != nil {
@@ -548,14 +548,14 @@ func validatePieceDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
 	return nil
 }
 
-func validateRootPieceInfo(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateRootPieceInfo(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	_, err := validatePieceInfo(xRefTable, rootDict, "rootDict", "PieceInfo", required, sinceVersion)
 
 	return err
 }
 
-func validatePieceInfo(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, entryName string, required bool, sinceVersion pdf.Version) (hasPieceInfo bool, err error) {
+func validatePieceInfo(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) (hasPieceInfo bool, err error) {
 
 	// 14.5 Page-Piece Dictionaries
 
@@ -573,7 +573,7 @@ func validatePieceInfo(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName, en
 }
 
 // TODO implement
-func validatePermissions(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validatePermissions(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	// => 12.8.4 Permissions
 
@@ -586,7 +586,7 @@ func validatePermissions(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, requir
 }
 
 // TODO implement
-func validateLegal(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateLegal(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	// => 12.8.5 Legal Content Attestations
 
@@ -598,7 +598,7 @@ func validateLegal(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required boo
 	return errors.New("*** validateLegal: not supported ***")
 }
 
-func validateRequirementDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, sinceVersion pdf.Version) error {
+func validateRequirementDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, sinceVersion pdf.Version) error {
 
 	dictName := "requirementDict"
 
@@ -619,7 +619,7 @@ func validateRequirementDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, sinceV
 	return nil
 }
 
-func validateRequirements(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateRequirements(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	// => 12.10 Document Requirements
 
@@ -649,7 +649,7 @@ func validateRequirements(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, requi
 	return nil
 }
 
-func validateCollectionFieldDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateCollectionFieldDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "colFlddict"
 
@@ -694,9 +694,9 @@ func validateCollectionFieldDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) er
 	return nil
 }
 
-func validateCollectionSchemaDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateCollectionSchemaDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
-	for k, v := range dict.Dict {
+	for k, v := range *dict {
 
 		if k == "Type" {
 
@@ -732,7 +732,7 @@ func validateCollectionSchemaDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) e
 	return nil
 }
 
-func validateCollectionSortDict(xRefTable *pdf.XRefTable, d *pdf.PDFDict) error {
+func validateCollectionSortDict(xRefTable *pdf.XRefTable, d *pdf.Dict) error {
 
 	dictName := "colSortDict"
 
@@ -753,7 +753,7 @@ func validateCollectionSortDict(xRefTable *pdf.XRefTable, d *pdf.PDFDict) error 
 
 func validateInitialView(s string) bool { return s == "D" || s == "T" || s == "H" }
 
-func validateCollection(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateCollection(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	// => 12.3.5 Collections
 
@@ -808,7 +808,7 @@ func validateCollection(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, require
 	return nil
 }
 
-func validateNeedsRendering(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateNeedsRendering(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	_, err := validateBooleanEntry(xRefTable, rootDict, "rootDict", "NeedsRendering", required, sinceVersion, nil)
 
@@ -871,7 +871,7 @@ func validateRootObject(xRefTable *pdf.XRefTable) error {
 	}
 
 	for _, f := range []struct {
-		validate     func(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) (err error)
+		validate     func(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) (err error)
 		required     bool
 		sinceVersion pdf.Version
 	}{

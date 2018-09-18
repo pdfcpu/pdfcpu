@@ -39,20 +39,20 @@ func patchObject(o Object, lookup map[int]int) Object {
 		patchIndRef(&obj, lookup)
 		ob = obj
 
-	case PDFDict:
+	case Dict:
 		patchDict(&obj, lookup)
 		ob = obj
 
 	case StreamDict:
-		patchDict(&obj.PDFDict, lookup)
+		patchDict(&obj.Dict, lookup)
 		ob = obj
 
 	case ObjectStreamDict:
-		patchDict(&obj.PDFDict, lookup)
+		patchDict(&obj.Dict, lookup)
 		ob = obj
 
 	case XRefStreamDict:
-		patchDict(&obj.PDFDict, lookup)
+		patchDict(&obj.Dict, lookup)
 		ob = obj
 
 	case Array:
@@ -66,14 +66,16 @@ func patchObject(o Object, lookup map[int]int) Object {
 	return ob
 }
 
-func patchDict(dict *PDFDict, lookup map[int]int) {
+func patchDict(dict *Dict, lookup map[int]int) {
 
 	log.Debug.Printf("patchDict before: %v\n", dict)
 
-	for k, obj := range dict.Dict {
+	d1 := *dict
+
+	for k, obj := range d1 {
 		o := patchObject(obj, lookup)
 		if o != nil {
-			dict.Dict[k] = o
+			d1[k] = o
 		}
 	}
 

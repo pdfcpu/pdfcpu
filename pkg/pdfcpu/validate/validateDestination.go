@@ -32,7 +32,7 @@ func validateDestinationArrayFirstElement(xRefTable *pdf.XRefTable, arr *pdf.Arr
 
 	case pdf.Integer: // no further processing
 
-	case pdf.PDFDict:
+	case pdf.Dict:
 		if obj.Type() == nil || *obj.Type() != "Page" {
 			err = errors.New("validateDestinationArrayFirstElement: first element refers to invalid destination page dict")
 		}
@@ -100,7 +100,7 @@ func validateDestinationArray(xRefTable *pdf.XRefTable, arr *pdf.Array) error {
 	return nil
 }
 
-func validateDestinationDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateDestinationDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	// D, required, array
 	arr, err := validateArrayEntry(xRefTable, dict, "DestinationDict", "D", REQUIRED, pdf.V10, nil)
@@ -126,7 +126,7 @@ func validateDestination(xRefTable *pdf.XRefTable, obj pdf.Object) error {
 	case pdf.StringLiteral:
 		// no further processing.
 
-	case pdf.PDFDict:
+	case pdf.Dict:
 		err = validateDestinationDict(xRefTable, &obj)
 
 	case pdf.Array:
@@ -140,7 +140,7 @@ func validateDestination(xRefTable *pdf.XRefTable, obj pdf.Object) error {
 	return err
 }
 
-func validateDestinationEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, dictName string, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateDestinationEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	// see 12.3.2
 

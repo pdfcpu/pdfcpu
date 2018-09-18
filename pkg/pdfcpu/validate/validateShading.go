@@ -29,7 +29,7 @@ func validateBitsPerCoordinate(i int) bool {
 	return pdf.IntMemberOf(i, []int{1, 2, 4, 8, 12, 16, 24, 32})
 }
 
-func validateShadingDictCommonEntries(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) (shadType int, err error) {
+func validateShadingDictCommonEntries(xRefTable *pdf.XRefTable, dict *pdf.Dict) (shadType int, err error) {
 
 	dictName := "shadingDictCommonEntries"
 
@@ -58,7 +58,7 @@ func validateShadingDictCommonEntries(xRefTable *pdf.XRefTable, dict *pdf.PDFDic
 	return shadingType.Value(), err
 }
 
-func validateFunctionBasedShadingDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateFunctionBasedShadingDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "functionBasedShadingDict"
 
@@ -75,7 +75,7 @@ func validateFunctionBasedShadingDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDic
 	return validateFunctionOrArrayOfFunctionsEntry(xRefTable, dict, dictName, "Function", REQUIRED, pdf.V10)
 }
 
-func validateAxialShadingDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateAxialShadingDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "axialShadingDict"
 
@@ -99,7 +99,7 @@ func validateAxialShadingDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error
 	return err
 }
 
-func validateRadialShadingDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateRadialShadingDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "radialShadingDict"
 
@@ -123,7 +123,7 @@ func validateRadialShadingDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) erro
 	return err
 }
 
-func validateShadingDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateShadingDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	// Shading 1-3
 
@@ -149,7 +149,7 @@ func validateShadingDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
 	return err
 }
 
-func validateFreeFormGouroudShadedTriangleMeshesDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateFreeFormGouroudShadedTriangleMeshesDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "freeFormGouraudShadedTriangleMeshesDict"
 
@@ -176,7 +176,7 @@ func validateFreeFormGouroudShadedTriangleMeshesDict(xRefTable *pdf.XRefTable, d
 	return validateFunctionOrArrayOfFunctionsEntry(xRefTable, dict, dictName, "Function", OPTIONAL, pdf.V10)
 }
 
-func validateLatticeFormGouraudShadedTriangleMeshesDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateLatticeFormGouraudShadedTriangleMeshesDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "latticeFormGouraudShadedTriangleMeshesDict"
 
@@ -203,7 +203,7 @@ func validateLatticeFormGouraudShadedTriangleMeshesDict(xRefTable *pdf.XRefTable
 	return validateFunctionOrArrayOfFunctionsEntry(xRefTable, dict, dictName, "Function", OPTIONAL, pdf.V10)
 }
 
-func validateCoonsPatchMeshesDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateCoonsPatchMeshesDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "coonsPatchMeshesDict"
 
@@ -234,7 +234,7 @@ func validateCoonsPatchMeshesDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) e
 	return validateFunctionOrArrayOfFunctionsEntry(xRefTable, dict, dictName, "Function", OPTIONAL, pdf.V10)
 }
 
-func validateTensorProductPatchMeshesDict(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateTensorProductPatchMeshesDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	dictName := "tensorProductPatchMeshesDict"
 
@@ -269,7 +269,7 @@ func validateShadingStreamDict(xRefTable *pdf.XRefTable, streamDict *pdf.StreamD
 
 	// Shading 4-7
 
-	dict := streamDict.PDFDict
+	dict := streamDict.Dict
 
 	shadingType, err := validateShadingDictCommonEntries(xRefTable, &dict)
 	if err != nil {
@@ -308,7 +308,7 @@ func validateShading(xRefTable *pdf.XRefTable, obj pdf.Object) error {
 
 	switch obj := obj.(type) {
 
-	case pdf.PDFDict:
+	case pdf.Dict:
 		err = validateShadingDict(xRefTable, &obj)
 
 	case pdf.StreamDict:
@@ -338,7 +338,7 @@ func validateShadingResourceDict(xRefTable *pdf.XRefTable, obj pdf.Object, since
 	}
 
 	// Iterate over shading resource dictionary
-	for _, obj := range dict.Dict {
+	for _, obj := range *dict {
 
 		// Process shading
 		err = validateShading(xRefTable, obj)

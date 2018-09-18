@@ -104,7 +104,7 @@ func (array Array) indentedString(level int) string {
 			sepstr = " "
 		}
 
-		if subdict, ok := entry.(PDFDict); ok {
+		if subdict, ok := entry.(Dict); ok {
 			dictstr := subdict.indentedString(level + 1)
 			logstr = append(logstr, fmt.Sprintf("\n%[1]s%[2]s\n%[1]s", tabstr, dictstr))
 			first = true
@@ -151,7 +151,7 @@ func (array Array) PDFString() string {
 			continue
 		}
 
-		subdict, ok := entry.(PDFDict)
+		subdict, ok := entry.(Dict)
 		if ok {
 			dictStr := subdict.PDFString()
 			logstr = append(logstr, fmt.Sprintf("%s", dictStr))

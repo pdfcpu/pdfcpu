@@ -36,10 +36,10 @@ func validateSignatureDict(xRefTable *pdf.XRefTable, obj pdf.Object) error {
 	return err
 }
 
-func validateAppearanceSubDict(xRefTable *pdf.XRefTable, subDict *pdf.PDFDict) error {
+func validateAppearanceSubDict(xRefTable *pdf.XRefTable, subDict *pdf.Dict) error {
 
 	// dict of xobjects
-	for _, obj := range subDict.Dict {
+	for _, obj := range *subDict {
 
 		err := validateXObjectStreamDict(xRefTable, obj)
 		if err != nil {
@@ -63,7 +63,7 @@ func validateAppearanceDictEntry(xRefTable *pdf.XRefTable, obj pdf.Object) error
 
 	switch obj := obj.(type) {
 
-	case pdf.PDFDict:
+	case pdf.Dict:
 		err = validateAppearanceSubDict(xRefTable, &obj)
 
 	case pdf.StreamDict:
@@ -118,7 +118,7 @@ func validateAppearanceDict(xRefTable *pdf.XRefTable, obj pdf.Object) error {
 	return nil
 }
 
-func validateAcroFieldDictEntries(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, terminalNode bool, inFieldType *pdf.Name) (outFieldType *pdf.Name, err error) {
+func validateAcroFieldDictEntries(xRefTable *pdf.XRefTable, dict *pdf.Dict, terminalNode bool, inFieldType *pdf.Name) (outFieldType *pdf.Name, err error) {
 
 	dictName := "acroFieldDict"
 
@@ -308,7 +308,7 @@ func validateAcroFormCO(xRefTable *pdf.XRefTable, obj pdf.Object, sinceVersion p
 	return nil
 }
 
-func validateAcroFormXFA(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, sinceVersion pdf.Version) error {
+func validateAcroFormXFA(xRefTable *pdf.XRefTable, dict *pdf.Dict, sinceVersion pdf.Version) error {
 
 	// see 12.7.8
 
@@ -372,7 +372,7 @@ func validateAcroFormXFA(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, sinceVersi
 
 func validateQ(i int) bool { return i >= 0 && i <= 2 }
 
-func validateAcroFormEntryCO(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, sinceVersion pdf.Version) error {
+func validateAcroFormEntryCO(xRefTable *pdf.XRefTable, dict *pdf.Dict, sinceVersion pdf.Version) error {
 
 	obj, ok := dict.Find("CO")
 	if !ok {
@@ -382,7 +382,7 @@ func validateAcroFormEntryCO(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, sinceV
 	return validateAcroFormCO(xRefTable, obj, sinceVersion)
 }
 
-func validateAcroFormEntryDR(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error {
+func validateAcroFormEntryDR(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 
 	obj, ok := dict.Find("DR")
 	if !ok {
@@ -394,7 +394,7 @@ func validateAcroFormEntryDR(xRefTable *pdf.XRefTable, dict *pdf.PDFDict) error 
 	return err
 }
 
-func validateAcroForm(xRefTable *pdf.XRefTable, rootDict *pdf.PDFDict, required bool, sinceVersion pdf.Version) error {
+func validateAcroForm(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	// => 12.7.2 Interactive Form Dictionary
 

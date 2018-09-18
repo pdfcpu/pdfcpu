@@ -60,7 +60,7 @@ func validatePageLabelDict(xRefTable *pdf.XRefTable, obj pdf.Object) error {
 	return err
 }
 
-func validateNumberTreeDictNumsEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, name string) (firstKey, lastKey int, err error) {
+func validateNumberTreeDictNumsEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, name string) (firstKey, lastKey int, err error) {
 
 	// Nums: array of the form [key1 value1 key2 value2 ... key n value n]
 	obj, found := dict.Find("Nums")
@@ -129,7 +129,7 @@ func validateNumberTreeDictNumsEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict
 	return firstKey, lastKey, nil
 }
 
-func validateNumberTreeDictLimitsEntry(xRefTable *pdf.XRefTable, dict *pdf.PDFDict, firstKey, lastKey int) error {
+func validateNumberTreeDictLimitsEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, firstKey, lastKey int) error {
 
 	arr, err := validateIntegerArrayEntry(xRefTable, dict, "numberTreeDict", "Limits", REQUIRED, pdf.V10, func(a pdf.Array) bool { return len(a) == 2 })
 	if err != nil {

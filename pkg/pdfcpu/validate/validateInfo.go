@@ -53,7 +53,7 @@ func validateDocumentInfoDict(xRefTable *pdf.XRefTable, obj pdf.Object) (hasModD
 		return false, err
 	}
 
-	for k, v := range dict.Dict {
+	for k, v := range *dict {
 
 		switch k {
 
