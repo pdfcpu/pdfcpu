@@ -266,6 +266,14 @@ func (rc *ReadContext) LogStats(optimized bool) {
 	}
 }
 
+// ReadFileSize returns the size of the input file, if there is one.
+func (rc *ReadContext) ReadFileSize() int {
+	if rc == nil {
+		return 0
+	}
+	return int(rc.FileSize)
+}
+
 // OptimizationContext represents the context for the optimiziation of a PDF file.
 type OptimizationContext struct {
 

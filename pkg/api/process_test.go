@@ -320,7 +320,7 @@ func TestStampCommand(t *testing.T) {
 		t.Fatalf("TestStampCommand: %v\n", err)
 	}
 
-	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"1-"}, wm, pdfcpu.NewDefaultConfiguration()))
+	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"2-"}, wm, pdfcpu.NewDefaultConfiguration()))
 	if err != nil {
 		t.Fatalf("TestStampCommand: %v\n", err)
 	}

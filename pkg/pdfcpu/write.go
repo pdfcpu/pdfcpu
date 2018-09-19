@@ -58,6 +58,11 @@ func WritePDFFile(ctx *PDFContext) error {
 
 	}()
 
+	err = ensureInfoDictAndFileID(ctx)
+	if err != nil {
+		return err
+	}
+
 	err = handleEncryption(ctx)
 	if err != nil {
 		return err
@@ -85,7 +90,7 @@ func WritePDFFile(ctx *PDFContext) error {
 
 	log.Debug.Printf("offset after writeRootObject: %d\n", ctx.Write.Offset)
 
-	// Write document information dictionary.
+	// Modify and write document information dictionary.
 	err = writeDocumentInfoDict(ctx)
 	if err != nil {
 		return err
@@ -133,6 +138,40 @@ func WritePDFFile(ctx *PDFContext) error {
 	}
 
 	return nil
+}
+
+func ensureFileID(ctx *PDFContext) error {
+
+	fid, err := fileID(ctx)
+	if err != nil {
+		return err
+	}
+
+	if ctx.ID == nil {
+		// Ensure ctx.ID
+		ctx.ID = &Array{fid, fid}
+		return nil
+	}
+
+	// Update ctx.ID
+	arr := *ctx.ID
+	if len(arr) != 2 {
+		return errors.New("ID must be an array with 2 elements")
+	}
+
+	arr[1] = fid
+
+	return nil
+}
+
+func ensureInfoDictAndFileID(ctx *PDFContext) error {
+
+	err := ensureInfoDict(ctx)
+	if err != nil {
+		return err
+	}
+
+	return ensureFileID(ctx)
 }
 
 // Write root entry to disk.

@@ -1024,25 +1024,41 @@ func decryptAESBytes(b, key []byte) ([]byte, error) {
 	return data, nil
 }
 
-func fileID(ctx *PDFContext) HexLiteral {
+func fileID(ctx *PDFContext) (HexLiteral, error) {
 
 	// see also 14.4 File Identifiers.
 
+	// The calculation of the file identifier need not be reproducible;
+	// all that matters is that the identifier is likely to be unique.
+	// For example, two implementations of the preceding algorithm might use different formats for the current time,
+	// causing them to produce different file identifiers for the same file created at the same time,
+	// but the uniqueness of the identifier is not affected.
+
 	h := md5.New()
-	h.Write([]byte(time.Now().String())) // current timestamp.
-	//h.Write() file location - ignore, we don't have this.
-	h.Write([]byte(strconv.Itoa(int(ctx.Read.FileSize)))) // file size.
-	// h.Write(allValuesOfTheInfoDict) - ignore, does not make sense in this case because we patch the info dict.
+
+	// Current timestamp.
+	h.Write([]byte(time.Now().String()))
+
+	// File location - ignore, we don't have this.
+
+	// File size.
+	h.Write([]byte(strconv.Itoa(ctx.Read.ReadFileSize())))
+
+	// All values of the info dict which is assumed to be there at this point.
+	dict, err := ctx.DereferenceDict(*ctx.Info)
+	if err != nil {
+		return "", err
+	}
+
+	for _, v := range *dict {
+		o, err := ctx.Dereference(v)
+		if err != nil {
+			return "", err
+		}
+		h.Write([]byte(o.String()))
+	}
+
 	m := h.Sum(nil)
 
-	return HexLiteral(hex.EncodeToString(m))
-}
-
-// ID generates the ID element for this file.
-func id(ctx *PDFContext) *Array {
-
-	// Generate a Array for the ID element.
-
-	fid := fileID(ctx)
-	return &Array{fid, fid}
+	return HexLiteral(hex.EncodeToString(m)), nil
 }

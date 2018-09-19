@@ -548,6 +548,8 @@ func createFileAttachmentAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRe
 		return nil, err
 	}
 
+	now := StringLiteral(DateString(time.Now()))
+
 	d := Dict(
 		map[string]Object{
 			"Type":         Name("Annot"),
@@ -555,12 +557,12 @@ func createFileAttachmentAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRe
 			"Contents":     StringLiteral("FileAttachment Annotation"),
 			"Rect":         *annotRect,
 			"P":            *pageIndRef,
-			"M":            DateStringLiteral(time.Now()),
+			"M":            now,
 			"F":            Integer(0),
 			"Border":       NewIntegerArray(0, 0, 1),
 			"C":            NewNumberArray(0.5, 0.0, 0.5),
 			"CA":           Float(0.95),
-			"CreationDate": DateStringLiteral(time.Now()),
+			"CreationDate": now,
 			"Name":         Name("Paperclip"),
 			"FS":           *indRef,
 			"NM":           StringLiteral("SoundFileAttachmentAnnot"),
@@ -1254,7 +1256,7 @@ func createTrapNetAnnotation(xRefTable *XRefTable, pageIndRef *IndirectRef, anno
 			"Border":       NewIntegerArray(0, 0, 3),
 			"C":            NewNumberArray(0.2, 0.8, 0.5),
 			"F":            Integer(0),
-			"LastModified": DateStringLiteral(time.Now()),
+			"LastModified": StringLiteral(DateString(time.Now())),
 			"FontFauxing":  Array{*indRef},
 		},
 	)

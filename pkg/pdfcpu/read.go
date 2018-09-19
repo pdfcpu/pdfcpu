@@ -2080,18 +2080,6 @@ func handleUnencryptedFile(ctx *PDFContext) error {
 		return errors.New("encrypt: user or/and owner password missing")
 	}
 
-	// Ensure ctx.ID
-	if ctx.ID == nil {
-		ctx.ID = id(ctx)
-	}
-
-	// Must be array of length 2
-	arr := *ctx.ID
-
-	if len(arr) != 2 {
-		return errors.New("encrypt: ID must be array with 2 elements")
-	}
-
 	return nil
 }
 

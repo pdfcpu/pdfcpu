@@ -383,7 +383,7 @@ func (xRefTable *XRefTable) NewEmbeddedFileStreamDict(filename string) (*StreamD
 
 	d := NewDict()
 	d.InsertInt("Size", int(fi.Size()))
-	d.Insert("ModDate", DateStringLiteral(fi.ModTime()))
+	d.Insert("ModDate", StringLiteral(DateString(fi.ModTime())))
 	sd.Insert("Params", d)
 
 	return sd, nil
@@ -869,6 +869,37 @@ func (xRefTable *XRefTable) DereferenceStringOrHexLiteral(obj Object, sinceVersi
 	return o, nil
 }
 
+// DereferenceText resolves and validates a string or hex literal object to a string.
+func (xRefTable *XRefTable) DereferenceText(obj Object) (string, error) {
+
+	var s string
+
+	o, err := xRefTable.Dereference(obj)
+	if err != nil {
+		return s, err
+	}
+
+	switch obj := o.(type) {
+
+	case StringLiteral:
+		s, err = StringLiteralToString(obj.Value())
+		if err != nil {
+			return s, err
+		}
+
+	case HexLiteral:
+		s, err = HexLiteralToString(obj.Value())
+		if err != nil {
+			return s, err
+		}
+
+	default:
+		return s, errors.Errorf("textString: corrupt -  %v\n", obj)
+	}
+
+	return s, nil
+}
+
 // DereferenceArray resolves and validates an array object, which may be an indirect reference.
 func (xRefTable *XRefTable) DereferenceArray(obj Object) (*Array, error) {
 
@@ -957,12 +988,12 @@ func (xRefTable *XRefTable) Catalog() (*Dict, error) {
 // EncryptDict returns a pointer to the root object / catalog.
 func (xRefTable *XRefTable) EncryptDict() (*Dict, error) {
 
-	Object, err := xRefTable.indRefToObject(xRefTable.Encrypt)
-	if err != nil || Object == nil {
+	o, err := xRefTable.indRefToObject(xRefTable.Encrypt)
+	if err != nil || o == nil {
 		return nil, err
 	}
 
-	Dict, ok := Object.(Dict)
+	Dict, ok := o.(Dict)
 	if !ok {
 		return nil, errors.New("EncryptDict: corrupt encrypt dict")
 	}

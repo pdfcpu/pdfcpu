@@ -21,49 +21,13 @@ import (
 	"time"
 
 	"github.com/hhrutter/pdfcpu/pkg/log"
-	"github.com/pkg/errors"
 )
 
-func textString(ctx *PDFContext, obj Object) (string, error) {
-
-	var s string
-	var err error
-
-	if indRef, ok := obj.(IndirectRef); ok {
-		obj, err = ctx.Dereference(indRef)
-		if err != nil {
-			return s, err
-		}
-	}
-
-	obj, err = ctx.Dereference(obj)
-	if err != nil {
-		return s, err
-	}
-
-	switch obj := obj.(type) {
-
-	case StringLiteral:
-		s, err = StringLiteralToString(obj.Value())
-		if err != nil {
-			return s, err
-		}
-
-	case HexLiteral:
-		s, err = HexLiteralToString(obj.Value())
-		if err != nil {
-			return s, err
-		}
-
-	default:
-		return s, errors.Errorf("textString: corrupt -  %v\n", obj)
-	}
-
-	// Return a csv safe string.
-	return strings.Replace(s, ";", ",", -1), nil
+func csvSafeString(s string) string {
+	return strings.Replace(s, ";", ",", -1)
 }
 
-func writeInfoDict(ctx *PDFContext, dict *Dict) (err error) {
+func handleInfoDict(ctx *PDFContext, dict *Dict) (err error) {
 
 	for key, value := range *dict {
 
@@ -74,10 +38,12 @@ func writeInfoDict(ctx *PDFContext, dict *Dict) (err error) {
 
 		case "Author":
 			log.Debug.Println("found Author")
-			ctx.Author, err = textString(ctx, value)
+			// Record for stats.
+			ctx.Author, err = ctx.DereferenceText(value)
 			if err != nil {
 				return err
 			}
+			ctx.Author = csvSafeString(ctx.Author)
 
 		case "Subject":
 			log.Debug.Println("found Subject")
@@ -87,15 +53,18 @@ func writeInfoDict(ctx *PDFContext, dict *Dict) (err error) {
 
 		case "Creator":
 			log.Debug.Println("found Creator")
-			ctx.Creator, err = textString(ctx, value)
+			// Record for stats.
+			ctx.Creator, err = ctx.DereferenceText(value)
 			if err != nil {
 				return err
 			}
+			ctx.Creator = csvSafeString(ctx.Creator)
 
 		case "Producer", "CreationDate", "ModDate":
+			// pdfcpu will modify these as direct dict entries.
 			log.Debug.Printf("found %s", key)
 			if indRef, ok := value.(IndirectRef); ok {
-				// Do not write indRef, will be modified by pdfcpu.
+				// Get rid of these extra objects.
 				ctx.Optimize.DuplicateInfoObjects[int(indRef.ObjectNumber)] = true
 			}
 
@@ -111,9 +80,7 @@ func writeInfoDict(ctx *PDFContext, dict *Dict) (err error) {
 	return nil
 }
 
-// Write the document info object for this PDF file.
-// Add pdfcpu as Producer with proper creation date and mod date.
-func writeDocumentInfoDict(ctx *PDFContext) error {
+func ensureInfoDict(ctx *PDFContext) error {
 
 	// => 14.3.3 Document Information Dictionary
 
@@ -128,12 +95,51 @@ func writeDocumentInfoDict(ctx *PDFContext) error {
 	// ModDate		        modified by pdfcpu
 	// Trapped              -
 
+	now := DateString(time.Now())
+
+	if ctx.Info == nil {
+
+		d := NewDict()
+		d.InsertString("Producer", PDFCPULongVersion)
+		d.InsertString("CreationDate", now)
+		d.InsertString("ModDate", now)
+
+		indRef, err := ctx.IndRefForNewObject(d)
+		if err != nil {
+			return err
+		}
+
+		ctx.Info = indRef
+
+		return nil
+	}
+
+	dict, err := ctx.DereferenceDict(*ctx.Info)
+	if err != nil || dict == nil {
+		return err
+	}
+
+	err = handleInfoDict(ctx, dict)
+	if err != nil {
+		return err
+	}
+
+	dict.Update("CreationDate", StringLiteral(now))
+	dict.Update("ModDate", StringLiteral(now))
+	dict.Update("Producer", StringLiteral(PDFCPULongVersion))
+
+	return nil
+}
+
+// Write the document info object for this PDF file.
+func writeDocumentInfoDict(ctx *PDFContext) error {
+
 	log.Debug.Printf("*** writeDocumentInfoDict begin: offset=%d ***\n", ctx.Write.Offset)
 
-	// Document info object is optional.
+	// Note: The document info object is optional but pdfcpu ensures one.
+
 	if ctx.Info == nil {
 		log.Debug.Printf("writeDocumentInfoObject end: No info object present, offset=%d\n", ctx.Write.Offset)
-		// Note: We could generate an info object from scratch in this scenario.
 		return nil
 	}
 
@@ -145,20 +151,6 @@ func writeDocumentInfoDict(ctx *PDFContext) error {
 	if err != nil || dict == nil {
 		return err
 	}
-
-	// TODO Refactor - for stats only.
-	err = writeInfoDict(ctx, dict)
-	if err != nil {
-		return err
-	}
-
-	// These are the modifications for the info dict of this PDF file:
-
-	dateStringLiteral := DateStringLiteral(time.Now())
-
-	dict.Update("CreationDate", dateStringLiteral)
-	dict.Update("ModDate", dateStringLiteral)
-	dict.Update("Producer", StringLiteral(PDFCPULongVersion))
 
 	_, _, err = writeDeepObject(ctx, obj)
 	if err != nil {

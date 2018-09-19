@@ -175,17 +175,15 @@ func (stringliteral StringLiteral) Value() string {
 	return string(stringliteral)
 }
 
-// DateStringLiteral returns a PDFStringLiteral for time.
-func DateStringLiteral(t time.Time) StringLiteral {
+// DateString returns a string representation of t.
+func DateString(t time.Time) string {
 
 	_, tz := t.Zone()
 
-	dateStr := fmt.Sprintf("D:%d%02d%02d%02d%02d%02d+%02d'%02d'",
+	return fmt.Sprintf("D:%d%02d%02d%02d%02d%02d+%02d'%02d'",
 		t.Year(), t.Month(), t.Day(),
 		t.Hour(), t.Minute(), t.Second(),
 		tz/60/60, tz/60%60)
-
-	return StringLiteral(dateStr)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
