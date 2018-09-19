@@ -9,7 +9,7 @@ The available commands are:
 	optimize	optimize PDF by getting rid of redundant page resources
 	split		split multi-page PDF into several single-page PDFs
 	merge		concatenate 2 or more PDFs
-	extract		extract images, fonts, content or pages
+	extract		extract images, fonts, content, pages or metadata
 	trim		create trimmed version
 	stamp		add text or image stamp to selected pages
 	watermark	add text or image watermark for selected pages

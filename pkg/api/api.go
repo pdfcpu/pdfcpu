@@ -700,7 +700,7 @@ func doExtractContent(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error
 
 				visited[objNr] = true
 
-				b, err := pdfcpu.ExtractContentData(ctx, objNr)
+				b, err := pdfcpu.ExtractStreamData(ctx, objNr)
 				if err != nil {
 					return err
 				}
@@ -766,6 +766,118 @@ func ExtractContent(cmd *Command) ([]string, error) {
 	log.Stats.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
 	log.Stats.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
 	log.Stats.Printf("write content        : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
+	log.Stats.Printf("total processing time: %6.3fs\n\n", durTotal)
+
+	return nil, nil
+}
+
+func extractMetadataStream(ctx *pdfcpu.PDFContext, obj pdfcpu.Object, objNr int, dt string) error {
+
+	indRef, _ := obj.(pdfcpu.IndirectRef)
+	sObjNr := indRef.ObjectNumber.Value()
+	b, err := pdfcpu.ExtractStreamData(ctx, sObjNr)
+	if err != nil {
+		return err
+	}
+
+	if b == nil {
+		return nil
+	}
+
+	fileName := fmt.Sprintf("%s/%d_%s.txt", ctx.Write.DirName, objNr, dt)
+
+	return ioutil.WriteFile(fileName, b, os.ModePerm)
+}
+
+func doExtractMetadata(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error {
+
+	for k, v := range ctx.XRefTable.Table {
+		if v.Free || v.Compressed {
+			continue
+		}
+		switch d := v.Object.(type) {
+
+		case pdfcpu.Dict:
+
+			obj, found := d.Find("Metadata")
+			if !found || obj == nil {
+				continue
+			}
+
+			dt := "unknown"
+			if d.Type() != nil {
+				dt = *d.Type()
+			}
+
+			err := extractMetadataStream(ctx, obj, k, dt)
+			if err != nil {
+				return err
+			}
+
+		case pdfcpu.StreamDict:
+
+			obj, found := d.Find("Metadata")
+			if !found || obj == nil {
+				continue
+			}
+
+			dt := "unknown"
+			if d.Type() != nil {
+				dt = *d.Type()
+			}
+
+			err := extractMetadataStream(ctx, obj, k, dt)
+			if err != nil {
+				return err
+			}
+
+		}
+	}
+
+	return nil
+}
+
+// ExtractMetadata dumps all metadata dict entries for fileIn into dirOut.
+func ExtractMetadata(cmd *Command) ([]string, error) {
+
+	fileIn := *cmd.InFile
+	dirOut := *cmd.OutDir
+	pageSelection := cmd.PageSelection
+	config := cmd.Config
+
+	fromStart := time.Now()
+
+	fmt.Printf("extracting metadata from %s into %s ...\n", fileIn, dirOut)
+
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
+	if err != nil {
+		return nil, err
+	}
+
+	fromWrite := time.Now()
+
+	pages, err := pagesForPageSelection(ctx.PageCount, pageSelection)
+	if err != nil {
+		return nil, err
+	}
+
+	ensureSelectedPages(ctx, &pages)
+
+	ctx.Write.DirName = dirOut
+	err = doExtractMetadata(ctx, pages)
+	if err != nil {
+		return nil, err
+	}
+
+	durWrite := time.Since(fromWrite).Seconds()
+	durTotal := time.Since(fromStart).Seconds()
+
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	log.Stats.Println("Timing:")
+	log.Stats.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	log.Stats.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	log.Stats.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	log.Stats.Printf("write metadata       : %6.3fs  %4.1f%%\n", durWrite, durWrite/durTotal*100)
 	log.Stats.Printf("total processing time: %6.3fs\n\n", durTotal)
 
 	return nil, nil

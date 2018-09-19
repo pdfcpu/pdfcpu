@@ -56,6 +56,7 @@ var (
 		EXTRACTFONTS:       {1, 0},
 		EXTRACTPAGES:       {1, 0},
 		EXTRACTCONTENT:     {1, 0},
+		EXTRACTMETADATA:    {1, 0},
 		TRIM:               {0, 1},
 		LISTATTACHMENTS:    {0, 0},
 		EXTRACTATTACHMENTS: {1, 0},
@@ -63,6 +64,7 @@ var (
 		REMOVEATTACHMENTS:  {0, 1},
 		LISTPERMISSIONS:    {0, 0},
 		ADDPERMISSIONS:     {0, 0},
+		ADDWATERMARKS:      {1, 0},
 	}
 )
 

@@ -29,7 +29,7 @@ The commands are:
 	optimize	optimize PDF by getting rid of redundant page resources
 	split		split multi-page PDF into several single-page PDFs
 	merge		concatenate 2 or more PDFs
-	extract		extract images, fonts, content or pages
+	extract		extract images, fonts, content, pages, metadata
 	trim		create trimmed version
 	attach		list, add, remove, extract embedded file attachments
 	perm		list, add user access permissions
@@ -86,7 +86,7 @@ verbose ... extensive log output
 outFile	... output pdf file
 inFiles ... a list of at least 2 pdf files subject to concatenation.`
 
-	usageExtract     = "usage: pdfcpu extract [-verbose] -mode image|font|content|page [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile outDir"
+	usageExtract     = "usage: pdfcpu extract [-verbose] -mode image|font|content|page|meta [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile outDir"
 	usageLongExtract = `Extract exports inFile's images, fonts, content or pages into outDir.
 
 verbose ... extensive log output
@@ -102,7 +102,8 @@ verbose ... extensive log output
   image ... extract images (supported PDF filters: Flate, DCTDecode, JPXDecode)
    font ... extract font files (supported font types: TrueType)
 content ... extract raw page content
-   page ... extract single page PDFs`
+   page ... extract single page PDFs
+   meta ... extract all metadata (page selection does not apply)`
 
 	usageTrim     = "usage: pdfcpu trim [-verbose] -pages pageSelection [-upw userpw] [-opw ownerpw] inFile [outFile]"
 	usageLongTrim = `Trim generates a trimmed version of inFile for selected pages.

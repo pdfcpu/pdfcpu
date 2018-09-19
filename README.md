@@ -43,6 +43,7 @@ One example is reducing the size of large PDF files for mass mailings by optimiz
 * Extract Fonts (extract all embedded fonts of a PDF file into a given dir)
 * Extract Pages (extract specific pages into a given dir)
 * Extract Content (extract the PDF-Source into given dir)
+* Extract Metadata (extract XML metadata)
 * Trim (generate a custom version of a PDF file)
 * Stamp/Watermark selected pages.
 * Manage (add,remove,list,extract) embedded file attachments
@@ -67,7 +68,7 @@ Required build version: go1.9 and up
     pdfcpu optimize [-verbose] [-stats csvFile] [-upw userpw] [-opw ownerpw] inFile [outFile]
     pdfcpu split [-verbose] [-upw userpw] [-opw ownerpw] inFile outDir
     pdfcpu merge [-verbose] outFile inFile...
-    pdfcpu extract [-verbose] -mode image|font|content|page [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile outDir
+    pdfcpu extract [-verbose] -mode image|font|content|page|meta [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile outDir
     pdfcpu trim [-verbose] -pages pageSelection [-upw userpw] [-opw ownerpw] inFile outFile
     pdfcpu stamp [-verbose] -pages pageSelection description inFile [outFile]
     pdfcpu watermark [-verbose] -pages pageSelection description inFile [outFile]

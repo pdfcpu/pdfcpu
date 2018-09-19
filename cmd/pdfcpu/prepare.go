@@ -115,8 +115,8 @@ func prepareMergeCommand(config *pdfcpu.Configuration) *api.Command {
 func prepareExtractCommand(config *pdfcpu.Configuration) *api.Command {
 
 	if len(flag.Args()) != 2 || mode == "" ||
-		(mode != "image" && mode != "font" && mode != "page" && mode != "content") &&
-			(mode != "i" && mode != "p" && mode != "c") {
+		(mode != "image" && mode != "font" && mode != "page" && mode != "content" && mode != "meta") &&
+			(mode != "i" && mode != "p" && mode != "c" && mode != "m") {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageExtract)
 		os.Exit(1)
 	}
@@ -146,6 +146,9 @@ func prepareExtractCommand(config *pdfcpu.Configuration) *api.Command {
 
 	case "content", "c":
 		cmd = api.ExtractContentCommand(filenameIn, dirnameOut, pages, config)
+
+	case "meta", "m":
+		cmd = api.ExtractMetadataCommand(filenameIn, dirnameOut, config)
 	}
 
 	return cmd

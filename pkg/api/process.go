@@ -57,6 +57,7 @@ func Process(cmd *Command) (out []string, err error) {
 		pdfcpu.EXTRACTFONTS:       ExtractFonts,
 		pdfcpu.EXTRACTPAGES:       ExtractPages,
 		pdfcpu.EXTRACTCONTENT:     ExtractContent,
+		pdfcpu.EXTRACTMETADATA:    ExtractMetadata,
 		pdfcpu.TRIM:               Trim,
 		pdfcpu.ADDWATERMARKS:      AddWatermarks,
 		pdfcpu.LISTATTACHMENTS:    processAttachments,
@@ -154,6 +155,15 @@ func ExtractContentCommand(pdfFileNameIn, dirNameOut string, pageSelection []str
 		OutDir:        &dirNameOut,
 		PageSelection: pageSelection,
 		Config:        config}
+}
+
+// ExtractMetadataCommand creates a new command to extract metadata streams.
+func ExtractMetadataCommand(pdfFileNameIn, dirNameOut string, config *pdfcpu.Configuration) *Command {
+	return &Command{
+		Mode:   pdfcpu.EXTRACTMETADATA,
+		InFile: &pdfFileNameIn,
+		OutDir: &dirNameOut,
+		Config: config}
 }
 
 // TrimCommand creates a new command to trim the pages of a file.

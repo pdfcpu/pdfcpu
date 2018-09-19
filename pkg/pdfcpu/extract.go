@@ -159,8 +159,8 @@ func ExtractFontData(ctx *PDFContext, objNr int) (*FontObject, error) {
 	return fontObject, nil
 }
 
-// ExtractContentData extracts page content in PDF notation for objNr.
-func ExtractContentData(ctx *PDFContext, objNr int) (data []byte, err error) {
+// ExtractStreamData extracts the content of a stream dict for a specific objNr.
+func ExtractStreamData(ctx *PDFContext, objNr int) (data []byte, err error) {
 
 	// Get object for objNr.
 	obj, err := ctx.FindObject(objNr)
@@ -168,7 +168,6 @@ func ExtractContentData(ctx *PDFContext, objNr int) (data []byte, err error) {
 		return nil, err
 	}
 
-	// Content stream must be a stream dict.
 	sd, err := ctx.DereferenceStreamDict(obj)
 	if err != nil {
 		return nil, err
