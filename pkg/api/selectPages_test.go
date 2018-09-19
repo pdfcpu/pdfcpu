@@ -109,7 +109,9 @@ func TestPageSelection(t *testing.T) {
 	doTestPageSelection("odd,odd", pageCount, "10101", t)
 	doTestPageSelection("even,odd", pageCount, "11111", t)
 	doTestPageSelection("odd,!1", pageCount, "00101", t)
+	doTestPageSelection("odd,n1", pageCount, "00101", t)
 	doTestPageSelection("!1,odd", pageCount, "00101", t)
+	doTestPageSelection("n1,odd", pageCount, "00101", t)
 	doTestPageSelection("!1,odd,even", pageCount, "01111", t)
 
 	doTestPageSelection("1", pageCount, "10000", t)

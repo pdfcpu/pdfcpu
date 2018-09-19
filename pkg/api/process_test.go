@@ -308,7 +308,7 @@ func TestWatermark(t *testing.T) {
 
 }
 
-// Stamp all but page 1.
+// Stamp all odd pages other than page 1.
 func TestStampCommand(t *testing.T) {
 
 	inFile := filepath.Join(inDir, "pike-stanford.pdf")
@@ -320,7 +320,7 @@ func TestStampCommand(t *testing.T) {
 		t.Fatalf("TestStampCommand: %v\n", err)
 	}
 
-	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"2-"}, wm, pdfcpu.NewDefaultConfiguration()))
+	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"odd", "!1"}, wm, pdfcpu.NewDefaultConfiguration()))
 	if err != nil {
 		t.Fatalf("TestStampCommand: %v\n", err)
 	}
