@@ -14,25 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# eg: ./stampDir.sh ~/pdf/big ~/pdf/out
+# eg: ./extractPagesDir.sh ~/pdf/big ~/pdf/out
 
 if [ $# -ne 2 ]; then
-    echo "usage: ./stampDir.sh inDir outDir"
-    echo "stamp files as Draft with opacity 0.9"
+    echo "usage: ./extractMetadataDir.sh inDir outDir"
+    echo "extracts XML metadata into corresponding dirs."
     exit 1
 fi
 
 out=$2
 
-#rm -drf $out/*
-
-#set -e
-
-new=_st
-
 for pdf in $1/*.pdf
 do
-	#echo $pdf
 	
 	f=${pdf##*/}
 	#echo f = $f
@@ -40,25 +33,16 @@ do
 	f1=${f%.*}
 	#echo f1 = $f1
 	
-	cp $pdf $out/$f
-	
-	out1=$out/$f1$new.pdf
-	pdfcpu stamp -verbose "Draft, o:.9" $out/$f $out1 &> $out/$f1.log
-	if [ $? -eq 1 ]; then
-        echo "stamp error: $pdf -> $out1"
+    mkdir $out/$f1
+    cp $pdf $out/$f1
+
+    pdfcpu extract -verbose -mode=meta $out/$f1/$f $out/$f1 &> $out/$f1/$f1.log
+    if [ $? -eq 1 ]; then
+        echo "metadata extraction error: $pdf -> $out/$f1"
         echo
 		continue
     else
-        echo "stamp success: $pdf -> $out1"
-		pdfcpu validate -verbose -mode=relaxed $out1 >> $out/$f1.log 2>&1
-       	if [ $? -eq 1 ]; then
-        	echo "validation error: $out"
-            exit $?
-        else
-            echo "validation success: $out"
-        fi
+        echo "metadata extraction success: $pdf -> $out/$f1"
     fi
-	
-	echo
-	
+
 done

@@ -14,10 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#: ./extractImagesFile.sh ~/pdf/1mb/a.pdf ~/pdf/out
+#: ./extractMetadataFile.sh ~/pdf/1mb/a.pdf ~/pdf/out
 
 if [ $# -ne 2 ]; then
-    echo "usage: ./extractImagesFile.sh inFile outDir"
+    echo "usage: ./extractMetadataFile.sh inFile outDir"
+    echo "extracts XML metadata as text files into outDir."
     exit 1
 fi
 
@@ -26,14 +27,14 @@ f1=${f%.*}
 out=$2
 
 mkdir $out/$f1
-cp $1 $out/$f1 
+cp $1 $out/$f1
 
-pdfcpu extract -verbose -mode=image $out/$f1/$f $out/$f1 &> $out/$f1/$f1.log
+pdfcpu extract -verbose -mode=meta $out/$f1/$f $out/$f1 &> $out/$f1/$f1.log
 if [ $? -eq 1 ]; then
-    echo "image extraction error: $1 -> $out/$f1"
+    echo "metadata extraction error: $1 -> $out/$f1"
     exit $?
 else
-    echo "image extraction success: $1 -> $out/$f1"
+    echo "metadata extraction success: $1 -> $out/$f1"
 fi
 	
 

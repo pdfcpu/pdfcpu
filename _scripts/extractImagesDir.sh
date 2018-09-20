@@ -23,10 +23,6 @@ fi
 
 out=$2
 
-#rm -drf $out/*
-
-#set -e
-
 for pdf in $1/*.pdf
 do
 	

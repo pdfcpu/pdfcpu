@@ -16,6 +16,11 @@
 
 # eg: ./watermarkDir.sh ~/pdf/big ~/pdf/out
  
+if [ $# -ne 2 ]; then
+    echo "usage: ./watermarkDir.sh inDir outDir"
+    echo "adds image watermarks with rotation angle of 0 degrees"
+    exit 1
+fi
 
 out=$2
 
