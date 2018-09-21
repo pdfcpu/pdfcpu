@@ -26,7 +26,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func logWriteStats(ctx *PDFContext) {
+func logWriteStats(ctx *Context) {
 
 	xRefTable := ctx.XRefTable
 
@@ -94,7 +94,7 @@ func statsHeadLine() *string {
 	return &hl
 }
 
-func statsLine(ctx *PDFContext) *string {
+func statsLine(ctx *Context) *string {
 
 	xRefTable := ctx.XRefTable
 
@@ -231,7 +231,7 @@ func statsLine(ctx *PDFContext) *string {
 }
 
 // AppendStatsFile appends a stats line for this xRefTable to the configured csv file name.
-func AppendStatsFile(ctx *PDFContext) error {
+func AppendStatsFile(ctx *Context) error {
 
 	fileName := ctx.StatsFileName
 

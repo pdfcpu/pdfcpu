@@ -112,11 +112,15 @@ func prepareMergeCommand(config *pdfcpu.Configuration) *api.Command {
 	return api.MergeCommand(filenamesIn, filenameOut, config)
 }
 
+func allowedExtracMode(s string) bool {
+
+	return mode == "image" || mode == "font" || mode == "page" || mode == "content" || mode == "meta" ||
+		mode == "i" || mode == "p" || mode == "c" || mode == "m"
+}
+
 func prepareExtractCommand(config *pdfcpu.Configuration) *api.Command {
 
-	if len(flag.Args()) != 2 || mode == "" ||
-		(mode != "image" && mode != "font" && mode != "page" && mode != "content" && mode != "meta") &&
-			(mode != "i" && mode != "p" && mode != "c" && mode != "m") {
+	if len(flag.Args()) != 2 || mode == "" || !allowedExtracMode(mode) {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageExtract)
 		os.Exit(1)
 	}

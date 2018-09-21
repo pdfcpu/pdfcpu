@@ -27,7 +27,7 @@ import (
 // ExtractImageData extracts image data for objNr.
 // Supported imgTypes: FlateDecode, DCTDecode, JPXDecode
 // TODO: Implementation and usage of these filters: DCTDecode and JPXDecode.
-func ExtractImageData(ctx *PDFContext, objNr int) (*ImageObject, error) {
+func ExtractImageData(ctx *Context, objNr int) (*ImageObject, error) {
 
 	imageObj := ctx.Optimize.ImageObjects[objNr]
 
@@ -97,7 +97,7 @@ func ExtractImageData(ctx *PDFContext, objNr int) (*ImageObject, error) {
 
 // ExtractFontData extracts font data (the "fontfile") for objNr.
 // Supported fontTypes: TrueType
-func ExtractFontData(ctx *PDFContext, objNr int) (*FontObject, error) {
+func ExtractFontData(ctx *Context, objNr int) (*FontObject, error) {
 
 	fontObject := ctx.Optimize.FontObjects[objNr]
 
@@ -160,7 +160,7 @@ func ExtractFontData(ctx *PDFContext, objNr int) (*FontObject, error) {
 }
 
 // ExtractStreamData extracts the content of a stream dict for a specific objNr.
-func ExtractStreamData(ctx *PDFContext, objNr int) (data []byte, err error) {
+func ExtractStreamData(ctx *Context, objNr int) (data []byte, err error) {
 
 	// Get object for objNr.
 	obj, err := ctx.FindObject(objNr)
@@ -186,7 +186,7 @@ func ExtractStreamData(ctx *PDFContext, objNr int) (data []byte, err error) {
 }
 
 // TextData extracts text out of the page content for objNr.
-// func TextData(ctx *PDFContext, objNr int) (data []byte, err error) {
+// func TextData(ctx *Context, objNr int) (data []byte, err error) {
 // 	// TODO
 // 	return nil, nil
 // }

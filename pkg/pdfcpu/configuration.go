@@ -64,7 +64,7 @@ const (
 	ADDWATERMARKS
 )
 
-// Configuration of a PDFContext.
+// Configuration of a Context.
 type Configuration struct {
 
 	// Enables PDF V1.5 compatible processing of object streams, xref streams, hybrid PDF files.

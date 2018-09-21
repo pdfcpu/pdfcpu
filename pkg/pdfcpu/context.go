@@ -26,8 +26,8 @@ import (
 	"github.com/hhrutter/pdfcpu/pkg/log"
 )
 
-// PDFContext represents the context for processing PDF files.
-type PDFContext struct {
+// Context represents an environment for processing PDF files.
+type Context struct {
 	*Configuration
 	*XRefTable
 	Read     *ReadContext
@@ -35,8 +35,8 @@ type PDFContext struct {
 	Write    *WriteContext
 }
 
-// NewPDFContext initializes a new PDFContext.
-func NewPDFContext(fileName string, file *os.File, config *Configuration) (*PDFContext, error) {
+// NewContext initializes a new Context.
+func NewContext(fileName string, file *os.File, config *Configuration) (*Context, error) {
 
 	if config == nil {
 		config = NewDefaultConfiguration()
@@ -47,7 +47,7 @@ func NewPDFContext(fileName string, file *os.File, config *Configuration) (*PDFC
 		return nil, err
 	}
 
-	ctx := &PDFContext{
+	ctx := &Context{
 		config,
 		newXRefTable(config.ValidationMode),
 		newReadContext(fileName, file, fileInfo.Size()),
@@ -59,12 +59,12 @@ func NewPDFContext(fileName string, file *os.File, config *Configuration) (*PDFC
 }
 
 // ResetWriteContext prepares an existing WriteContext for a new file to be written.
-func (ctx *PDFContext) ResetWriteContext() {
+func (ctx *Context) ResetWriteContext() {
 
 	ctx.Write = NewWriteContext(ctx.Write.Eol)
 }
 
-func (ctx *PDFContext) String() string {
+func (ctx *Context) String() string {
 
 	var logStr []string
 

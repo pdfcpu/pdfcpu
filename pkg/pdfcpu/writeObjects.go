@@ -62,7 +62,7 @@ func writeObjectTrailer(w *WriteContext) (int, error) {
 	return w.WriteString(fmt.Sprintf("%sendobj%s", w.Eol, w.Eol))
 }
 
-func startObjectStream(ctx *PDFContext) error {
+func startObjectStream(ctx *Context) error {
 
 	// See 7.5.7 Object streams
 	// When new object streams and compressed objects are created, they shall always be assigned new object numbers.
@@ -83,7 +83,7 @@ func startObjectStream(ctx *PDFContext) error {
 	return nil
 }
 
-func stopObjectStream(ctx *PDFContext) error {
+func stopObjectStream(ctx *Context) error {
 
 	log.Debug.Println("stopObjectStream begin")
 
@@ -137,7 +137,7 @@ func stopObjectStream(ctx *PDFContext) error {
 	return nil
 }
 
-func writeToObjectStream(ctx *PDFContext, objNumber, genNumber int) (ok bool, err error) {
+func writeToObjectStream(ctx *Context, objNumber, genNumber int) (ok bool, err error) {
 
 	log.Debug.Printf("addToObjectStream begin, obj#:%d gen#:%d\n", objNumber, genNumber)
 
@@ -198,7 +198,7 @@ func writeToObjectStream(ctx *PDFContext, objNumber, genNumber int) (ok bool, er
 	return ok, nil
 }
 
-func writeObject(ctx *PDFContext, objNumber, genNumber int, s string) error {
+func writeObject(ctx *Context, objNumber, genNumber int, s string) error {
 
 	log.Debug.Printf("writeObject begin, obj#:%d gen#:%d <%s>\n", objNumber, genNumber, s)
 
@@ -235,7 +235,7 @@ func writeObject(ctx *PDFContext, objNumber, genNumber int, s string) error {
 	return nil
 }
 
-func writePDFNullObject(ctx *PDFContext, objNumber, genNumber int) error {
+func writePDFNullObject(ctx *Context, objNumber, genNumber int) error {
 
 	ok, err := writeToObjectStream(ctx, objNumber, genNumber)
 	if err != nil {
@@ -249,7 +249,7 @@ func writePDFNullObject(ctx *PDFContext, objNumber, genNumber int) error {
 	return writeObject(ctx, objNumber, genNumber, "null")
 }
 
-func writeBooleanObject(ctx *PDFContext, objNumber, genNumber int, boolean Boolean) error {
+func writeBooleanObject(ctx *Context, objNumber, genNumber int, boolean Boolean) error {
 
 	ok, err := writeToObjectStream(ctx, objNumber, genNumber)
 	if err != nil {
@@ -263,7 +263,7 @@ func writeBooleanObject(ctx *PDFContext, objNumber, genNumber int, boolean Boole
 	return writeObject(ctx, objNumber, genNumber, boolean.PDFString())
 }
 
-func writeNameObject(ctx *PDFContext, objNumber, genNumber int, name Name) error {
+func writeNameObject(ctx *Context, objNumber, genNumber int, name Name) error {
 
 	ok, err := writeToObjectStream(ctx, objNumber, genNumber)
 	if err != nil {
@@ -277,7 +277,7 @@ func writeNameObject(ctx *PDFContext, objNumber, genNumber int, name Name) error
 	return writeObject(ctx, objNumber, genNumber, name.PDFString())
 }
 
-func writeStringLiteralObject(ctx *PDFContext, objNumber, genNumber int, stringLiteral StringLiteral) error {
+func writeStringLiteralObject(ctx *Context, objNumber, genNumber int, stringLiteral StringLiteral) error {
 
 	ok, err := writeToObjectStream(ctx, objNumber, genNumber)
 	if err != nil {
@@ -302,7 +302,7 @@ func writeStringLiteralObject(ctx *PDFContext, objNumber, genNumber int, stringL
 	return writeObject(ctx, objNumber, genNumber, sl.PDFString())
 }
 
-func writeHexLiteralObject(ctx *PDFContext, objNumber, genNumber int, hexLiteral HexLiteral) error {
+func writeHexLiteralObject(ctx *Context, objNumber, genNumber int, hexLiteral HexLiteral) error {
 
 	ok, err := writeToObjectStream(ctx, objNumber, genNumber)
 	if err != nil {
@@ -327,7 +327,7 @@ func writeHexLiteralObject(ctx *PDFContext, objNumber, genNumber int, hexLiteral
 	return writeObject(ctx, objNumber, genNumber, hl.PDFString())
 }
 
-func writeIntegerObject(ctx *PDFContext, objNumber, genNumber int, integer Integer) error {
+func writeIntegerObject(ctx *Context, objNumber, genNumber int, integer Integer) error {
 
 	ok, err := writeToObjectStream(ctx, objNumber, genNumber)
 	if err != nil {
@@ -341,7 +341,7 @@ func writeIntegerObject(ctx *PDFContext, objNumber, genNumber int, integer Integ
 	return writeObject(ctx, objNumber, genNumber, integer.PDFString())
 }
 
-func writeFloatObject(ctx *PDFContext, objNumber, genNumber int, float Float) error {
+func writeFloatObject(ctx *Context, objNumber, genNumber int, float Float) error {
 
 	ok, err := writeToObjectStream(ctx, objNumber, genNumber)
 	if err != nil {
@@ -355,7 +355,7 @@ func writeFloatObject(ctx *PDFContext, objNumber, genNumber int, float Float) er
 	return writeObject(ctx, objNumber, genNumber, float.PDFString())
 }
 
-func writeDictObject(ctx *PDFContext, objNumber, genNumber int, dict Dict) error {
+func writeDictObject(ctx *Context, objNumber, genNumber int, dict Dict) error {
 
 	ok, err := writeToObjectStream(ctx, objNumber, genNumber)
 	if err != nil {
@@ -376,7 +376,7 @@ func writeDictObject(ctx *PDFContext, objNumber, genNumber int, dict Dict) error
 	return writeObject(ctx, objNumber, genNumber, dict.PDFString())
 }
 
-func writeArrayObject(ctx *PDFContext, objNumber, genNumber int, array Array) error {
+func writeArrayObject(ctx *Context, objNumber, genNumber int, array Array) error {
 
 	ok, err := writeToObjectStream(ctx, objNumber, genNumber)
 	if err != nil {
@@ -422,7 +422,7 @@ func writeStream(w *WriteContext, streamDict StreamDict) (int64, error) {
 	return written, nil
 }
 
-func handleIndirectLength(ctx *PDFContext, indRef *IndirectRef) error {
+func handleIndirectLength(ctx *Context, indRef *IndirectRef) error {
 
 	objNumber := int(indRef.ObjectNumber)
 	genNumber := int(indRef.GenerationNumber)
@@ -443,7 +443,7 @@ func handleIndirectLength(ctx *PDFContext, indRef *IndirectRef) error {
 	return nil
 }
 
-func writeStreamDictObject(ctx *PDFContext, objNumber, genNumber int, streamDict StreamDict) error {
+func writeStreamDictObject(ctx *Context, objNumber, genNumber int, streamDict StreamDict) error {
 
 	log.Debug.Printf("writeStreamDictObject begin: object #%d\n%v", objNumber, streamDict)
 
@@ -517,7 +517,7 @@ func writeStreamDictObject(ctx *PDFContext, objNumber, genNumber int, streamDict
 	return nil
 }
 
-func writeDirectObject(ctx *PDFContext, o Object) error {
+func writeDirectObject(ctx *Context, o Object) error {
 
 	switch o := o.(type) {
 
@@ -547,7 +547,7 @@ func writeDirectObject(ctx *PDFContext, o Object) error {
 	return nil
 }
 
-func writeNullObject(ctx *PDFContext, objNumber, genNumber int) error {
+func writeNullObject(ctx *Context, objNumber, genNumber int) error {
 
 	// An indirect reference to nil is a corner case.
 	// Still, it is an object that will be written.
@@ -560,7 +560,7 @@ func writeNullObject(ctx *PDFContext, objNumber, genNumber int) error {
 	return ctx.UndeleteObject(objNumber)
 }
 
-func writeDeepDict(ctx *PDFContext, d Dict, objNr, genNr int) error {
+func writeDeepDict(ctx *Context, d Dict, objNr, genNr int) error {
 
 	err := writeDictObject(ctx, objNr, genNr, d)
 	if err != nil {
@@ -577,7 +577,7 @@ func writeDeepDict(ctx *PDFContext, d Dict, objNr, genNr int) error {
 	return nil
 }
 
-func writeDeepStreamDict(ctx *PDFContext, sd *StreamDict, objNr, genNr int) error {
+func writeDeepStreamDict(ctx *Context, sd *StreamDict, objNr, genNr int) error {
 
 	if ctx.EncKey != nil {
 		_, err := encryptDeepObject(*sd, objNr, genNr, ctx.EncKey, ctx.AES4Strings)
@@ -601,7 +601,7 @@ func writeDeepStreamDict(ctx *PDFContext, sd *StreamDict, objNr, genNr int) erro
 	return nil
 }
 
-func writeDeepArray(ctx *PDFContext, arr Array, objNr, genNr int) error {
+func writeDeepArray(ctx *Context, arr Array, objNr, genNr int) error {
 
 	err := writeArrayObject(ctx, objNr, genNr, arr)
 	if err != nil {
@@ -618,7 +618,7 @@ func writeDeepArray(ctx *PDFContext, arr Array, objNr, genNr int) error {
 	return nil
 }
 
-func writeIndirectObject(ctx *PDFContext, indRef IndirectRef) (Object, error) {
+func writeIndirectObject(ctx *Context, indRef IndirectRef) (Object, error) {
 
 	objNumber := int(indRef.ObjectNumber)
 	genNumber := int(indRef.GenerationNumber)
@@ -683,7 +683,7 @@ func writeIndirectObject(ctx *PDFContext, indRef IndirectRef) (Object, error) {
 	return nil, err
 }
 
-func writeDeepObject(ctx *PDFContext, objIn Object) (objOut Object, written bool, err error) {
+func writeDeepObject(ctx *Context, objIn Object) (objOut Object, written bool, err error) {
 
 	log.Debug.Printf("writeDeepObject: begin offset=%d\n%s\n", ctx.Write.Offset, objIn)
 
@@ -703,7 +703,7 @@ func writeDeepObject(ctx *PDFContext, objIn Object) (objOut Object, written bool
 	return objOut, written, err
 }
 
-func writeEntry(ctx *PDFContext, dict *Dict, dictName, entryName string) (Object, error) {
+func writeEntry(ctx *Context, dict *Dict, dictName, entryName string) (Object, error) {
 
 	obj, found := dict.Find(entryName)
 	if !found || obj == nil {

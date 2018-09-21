@@ -167,7 +167,7 @@ type XRefStreamDict struct {
 }
 
 // NewXRefStreamDict creates a new PDFXRefStreamDict object.
-func NewXRefStreamDict(ctx *PDFContext) *XRefStreamDict {
+func NewXRefStreamDict(ctx *Context) *XRefStreamDict {
 
 	streamDict := StreamDict{Dict: NewDict()}
 

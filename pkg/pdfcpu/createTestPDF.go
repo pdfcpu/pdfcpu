@@ -1885,7 +1885,7 @@ func CreatePDF(xRefTable *XRefTable, dirName, fileName string) error {
 
 	config := NewDefaultConfiguration()
 
-	ctx := &PDFContext{
+	ctx := &Context{
 		Configuration: config,
 		XRefTable:     xRefTable,
 		Write:         NewWriteContext(config.Eol),

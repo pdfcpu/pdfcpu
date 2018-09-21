@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package api provides support for interacting with pdfcpu.
+// Package api provides support for interacting with pdf.
 package api
 
 import (
@@ -27,15 +27,15 @@ import (
 	"time"
 
 	"github.com/hhrutter/pdfcpu/pkg/log"
-	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
+	pdf "github.com/hhrutter/pdfcpu/pkg/pdfcpu"
 	"github.com/hhrutter/pdfcpu/pkg/pdfcpu/validate"
 
 	"github.com/pkg/errors"
 )
 
-func stringSet(slice []string) pdfcpu.StringSet {
+func stringSet(slice []string) pdf.StringSet {
 
-	strSet := pdfcpu.StringSet{}
+	strSet := pdf.StringSet{}
 
 	if slice == nil {
 		return strSet
@@ -48,12 +48,12 @@ func stringSet(slice []string) pdfcpu.StringSet {
 	return strSet
 }
 
-// Read reads in a PDF file and builds an internal structure holding its cross reference table aka the PDFContext.
-func Read(fileIn string, config *pdfcpu.Configuration) (*pdfcpu.PDFContext, error) {
+// Read reads in a PDF file and builds an internal structure holding its cross reference table aka the Context.
+func Read(fileIn string, config *pdf.Configuration) (*pdf.Context, error) {
 
 	//logInfoAPI.Printf("reading %s..\n", fileIn)
 
-	ctx, err := pdfcpu.ReadPDFFile(fileIn, config)
+	ctx, err := pdf.ReadPDFFile(fileIn, config)
 	if err != nil {
 		return nil, errors.Wrap(err, "Read failed.")
 	}
@@ -103,19 +103,19 @@ func Validate(cmd *Command) ([]string, error) {
 	return nil, err
 }
 
-// Write generates a PDF file for a given PDFContext.
-func Write(ctx *pdfcpu.PDFContext) error {
+// Write generates a PDF file for a given Context.
+func Write(ctx *pdf.Context) error {
 
 	fmt.Printf("writing %s ...\n", ctx.Write.DirName+ctx.Write.FileName)
 	//logInfoAPI.Printf("writing to %s..\n", fileName)
 
-	err := pdfcpu.WritePDFFile(ctx)
+	err := pdf.WritePDFFile(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Write failed.")
 	}
 
 	if ctx.StatsFileName != "" {
-		err = pdfcpu.AppendStatsFile(ctx)
+		err = pdf.AppendStatsFile(ctx)
 		if err != nil {
 			return errors.Wrap(err, "Write stats failed.")
 		}
@@ -124,15 +124,15 @@ func Write(ctx *pdfcpu.PDFContext) error {
 	return nil
 }
 
-// singlePageFileName generates a filename for a PDFContext and a specific page number.
-func singlePageFileName(ctx *pdfcpu.PDFContext, pageNr int) string {
+// singlePageFileName generates a filename for a Context and a specific page number.
+func singlePageFileName(ctx *pdf.Context, pageNr int) string {
 
 	baseFileName := filepath.Base(ctx.Read.FileName)
 	fileName := strings.TrimSuffix(baseFileName, ".pdf")
 	return fileName + "_" + strconv.Itoa(pageNr) + ".pdf"
 }
 
-func writeSinglePagePDF(ctx *pdfcpu.PDFContext, pageNr int, dirOut string) error {
+func writeSinglePagePDF(ctx *pdf.Context, pageNr int, dirOut string) error {
 
 	ctx.ResetWriteContext()
 
@@ -143,10 +143,10 @@ func writeSinglePagePDF(ctx *pdfcpu.PDFContext, pageNr int, dirOut string) error
 	w.FileName = singlePageFileName(ctx, pageNr)
 	fmt.Printf("writing %s ...\n", w.DirName+w.FileName)
 
-	return pdfcpu.WritePDFFile(ctx)
+	return pdf.WritePDFFile(ctx)
 }
 
-func writeSinglePagePDFs(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet, dirOut string) error {
+func writeSinglePagePDFs(ctx *pdf.Context, selectedPages pdf.IntSet, dirOut string) error {
 
 	ensureSelectedPages(ctx, &selectedPages)
 
@@ -162,7 +162,7 @@ func writeSinglePagePDFs(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet, di
 	return nil
 }
 
-func readAndValidate(fileIn string, config *pdfcpu.Configuration, from1 time.Time) (ctx *pdfcpu.PDFContext, dur1, dur2 float64, err error) {
+func readAndValidate(fileIn string, config *pdf.Configuration, from1 time.Time) (ctx *pdf.Context, dur1, dur2 float64, err error) {
 
 	ctx, err = Read(fileIn, config)
 	if err != nil {
@@ -182,7 +182,7 @@ func readAndValidate(fileIn string, config *pdfcpu.Configuration, from1 time.Tim
 	return ctx, dur1, dur2, nil
 }
 
-func readValidateAndOptimize(fileIn string, config *pdfcpu.Configuration, from1 time.Time) (ctx *pdfcpu.PDFContext, dur1, dur2, dur3 float64, err error) {
+func readValidateAndOptimize(fileIn string, config *pdf.Configuration, from1 time.Time) (ctx *pdf.Context, dur1, dur2, dur3 float64, err error) {
 
 	ctx, dur1, dur2, err = readAndValidate(fileIn, config, from1)
 	if err != nil {
@@ -191,7 +191,7 @@ func readValidateAndOptimize(fileIn string, config *pdfcpu.Configuration, from1 
 
 	from3 := time.Now()
 	//fmt.Printf("optimizing %s ...\n", fileIn)
-	err = pdfcpu.OptimizeXRefTable(ctx)
+	err = pdf.OptimizeXRefTable(ctx)
 	if err != nil {
 		return nil, 0, 0, 0, err
 	}
@@ -283,11 +283,11 @@ func Split(cmd *Command) ([]string, error) {
 }
 
 // appendTo appends fileIn to ctxDest's page tree.
-func appendTo(fileIn string, ctxDest *pdfcpu.PDFContext) error {
+func appendTo(fileIn string, ctxDest *pdf.Context) error {
 
 	log.Stats.Printf("appendTo: appending %s to %s\n", fileIn, ctxDest.Read.FileName)
 
-	// Build a PDFContext for fileIn.
+	// Build a Context for fileIn.
 	ctxSource, _, _, err := readAndValidate(fileIn, ctxDest.Configuration, time.Now())
 	if err != nil {
 		return err
@@ -295,7 +295,7 @@ func appendTo(fileIn string, ctxDest *pdfcpu.PDFContext) error {
 
 	// Merge the source context into the dest context.
 	fmt.Printf("merging in %s ...\n", fileIn)
-	return pdfcpu.MergeXRefTables(ctxSource, ctxDest)
+	return pdf.MergeXRefTables(ctxSource, ctxDest)
 }
 
 // Merge some PDF files together and write the result to fileOut.
@@ -315,8 +315,8 @@ func Merge(cmd *Command) ([]string, error) {
 		return nil, err
 	}
 
-	if ctxDest.XRefTable.Version() < pdfcpu.V15 {
-		v, _ := pdfcpu.PDFVersion("1.5")
+	if ctxDest.XRefTable.Version() < pdf.V15 {
+		v, _ := pdf.PDFVersion("1.5")
 		ctxDest.XRefTable.RootVersion = &v
 		log.Stats.Println("Ensure V1.5 for writing object & xref streams")
 	}
@@ -329,7 +329,7 @@ func Merge(cmd *Command) ([]string, error) {
 		}
 	}
 
-	err = pdfcpu.OptimizeXRefTable(ctxDest)
+	err = pdf.OptimizeXRefTable(ctxDest)
 	if err != nil {
 		return nil, err
 	}
@@ -355,7 +355,7 @@ func Merge(cmd *Command) ([]string, error) {
 	return nil, nil
 }
 
-func imageObjNrs(ctx *pdfcpu.PDFContext, page int) []int {
+func imageObjNrs(ctx *pdf.Context, page int) []int {
 
 	// TODO Exclude SMask image objects.
 
@@ -374,9 +374,9 @@ func imageFilenameWithoutExtension(dir, resID string, pageNr, objNr int) string 
 	return filepath.Join(dir, fmt.Sprintf("%s_%d_%d", resID, pageNr, objNr))
 }
 
-func doExtractImages(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error {
+func doExtractImages(ctx *pdf.Context, selectedPages pdf.IntSet) error {
 
-	visited := pdfcpu.IntSet{}
+	visited := pdf.IntSet{}
 
 	for pageNr, v := range selectedPages {
 
@@ -392,7 +392,7 @@ func doExtractImages(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error 
 
 				visited[objNr] = true
 
-				io, err := pdfcpu.ExtractImageData(ctx, objNr)
+				io, err := pdf.ExtractImageData(ctx, objNr)
 				if err != nil {
 					return err
 				}
@@ -403,7 +403,7 @@ func doExtractImages(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error 
 
 				filename := imageFilenameWithoutExtension(ctx.Write.DirName, io.ResourceNames[0], pageNr, objNr)
 
-				_, err = pdfcpu.WriteImage(ctx.XRefTable, filename, io.ImageDict, objNr)
+				_, err = pdf.WriteImage(ctx.XRefTable, filename, io.ImageDict, objNr)
 				if err != nil {
 					return err
 				}
@@ -463,7 +463,7 @@ func ExtractImages(cmd *Command) ([]string, error) {
 	return nil, nil
 }
 
-func fontObjNrs(ctx *pdfcpu.PDFContext, page int) []int {
+func fontObjNrs(ctx *pdf.Context, page int) []int {
 
 	o := []int{}
 
@@ -476,9 +476,9 @@ func fontObjNrs(ctx *pdfcpu.PDFContext, page int) []int {
 	return o
 }
 
-func doExtractFonts(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error {
+func doExtractFonts(ctx *pdf.Context, selectedPages pdf.IntSet) error {
 
-	visited := pdfcpu.IntSet{}
+	visited := pdf.IntSet{}
 
 	for p, v := range selectedPages {
 
@@ -494,7 +494,7 @@ func doExtractFonts(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error {
 
 				visited[objNr] = true
 
-				fo, err := pdfcpu.ExtractFontData(ctx, objNr)
+				fo, err := pdf.ExtractFontData(ctx, objNr)
 				if err != nil {
 					return err
 				}
@@ -610,7 +610,7 @@ func ExtractPages(cmd *Command) ([]string, error) {
 	return nil, nil
 }
 
-func contentObjNrs(ctx *pdfcpu.PDFContext, page int) ([]int, error) {
+func contentObjNrs(ctx *pdf.Context, page int) ([]int, error) {
 
 	objNrs := []int{}
 
@@ -626,7 +626,7 @@ func contentObjNrs(ctx *pdfcpu.PDFContext, page int) ([]int, error) {
 
 	var objNr int
 
-	indRef, ok := obj.(pdfcpu.IndirectRef)
+	indRef, ok := obj.(pdf.IndirectRef)
 	if ok {
 		objNr = indRef.ObjectNumber.Value()
 	}
@@ -642,15 +642,15 @@ func contentObjNrs(ctx *pdfcpu.PDFContext, page int) ([]int, error) {
 
 	switch obj := obj.(type) {
 
-	case pdfcpu.StreamDict:
+	case pdf.StreamDict:
 
 		objNrs = append(objNrs, objNr)
 
-	case pdfcpu.Array:
+	case pdf.Array:
 
 		for _, obj := range obj {
 
-			indRef, ok := obj.(pdfcpu.IndirectRef)
+			indRef, ok := obj.(pdf.IndirectRef)
 			if !ok {
 				return nil, errors.Errorf("missing indref for page tree dict content no page %d", page)
 			}
@@ -673,9 +673,9 @@ func contentObjNrs(ctx *pdfcpu.PDFContext, page int) ([]int, error) {
 	return objNrs, nil
 }
 
-func doExtractContent(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error {
+func doExtractContent(ctx *pdf.Context, selectedPages pdf.IntSet) error {
 
-	visited := pdfcpu.IntSet{}
+	visited := pdf.IntSet{}
 
 	for p, v := range selectedPages {
 
@@ -700,7 +700,7 @@ func doExtractContent(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error
 
 				visited[objNr] = true
 
-				b, err := pdfcpu.ExtractStreamData(ctx, objNr)
+				b, err := pdf.ExtractStreamData(ctx, objNr)
 				if err != nil {
 					return err
 				}
@@ -771,11 +771,11 @@ func ExtractContent(cmd *Command) ([]string, error) {
 	return nil, nil
 }
 
-func extractMetadataStream(ctx *pdfcpu.PDFContext, obj pdfcpu.Object, objNr int, dt string) error {
+func extractMetadataStream(ctx *pdf.Context, obj pdf.Object, objNr int, dt string) error {
 
-	indRef, _ := obj.(pdfcpu.IndirectRef)
+	indRef, _ := obj.(pdf.IndirectRef)
 	sObjNr := indRef.ObjectNumber.Value()
-	b, err := pdfcpu.ExtractStreamData(ctx, sObjNr)
+	b, err := pdf.ExtractStreamData(ctx, sObjNr)
 	if err != nil {
 		return err
 	}
@@ -789,7 +789,7 @@ func extractMetadataStream(ctx *pdfcpu.PDFContext, obj pdfcpu.Object, objNr int,
 	return ioutil.WriteFile(fileName, b, os.ModePerm)
 }
 
-func doExtractMetadata(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) error {
+func doExtractMetadata(ctx *pdf.Context, selectedPages pdf.IntSet) error {
 
 	for k, v := range ctx.XRefTable.Table {
 		if v.Free || v.Compressed {
@@ -797,7 +797,7 @@ func doExtractMetadata(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) erro
 		}
 		switch d := v.Object.(type) {
 
-		case pdfcpu.Dict:
+		case pdf.Dict:
 
 			obj, found := d.Find("Metadata")
 			if !found || obj == nil {
@@ -814,7 +814,7 @@ func doExtractMetadata(ctx *pdfcpu.PDFContext, selectedPages pdfcpu.IntSet) erro
 				return err
 			}
 
-		case pdfcpu.StreamDict:
+		case pdf.StreamDict:
 
 			obj, found := d.Find("Metadata")
 			if !found || obj == nil {
@@ -962,7 +962,7 @@ func ChangeOwnerPassword(cmd *Command) ([]string, error) {
 }
 
 // ListAttachments returns a list of embedded file attachments.
-func ListAttachments(fileIn string, config *pdfcpu.Configuration) ([]string, error) {
+func ListAttachments(fileIn string, config *pdf.Configuration) ([]string, error) {
 
 	fromStart := time.Now()
 
@@ -975,7 +975,7 @@ func ListAttachments(fileIn string, config *pdfcpu.Configuration) ([]string, err
 
 	fromWrite := time.Now()
 
-	list, err := pdfcpu.AttachList(ctx.XRefTable)
+	list, err := pdf.AttachList(ctx.XRefTable)
 	if err != nil {
 		return nil, err
 	}
@@ -995,7 +995,7 @@ func ListAttachments(fileIn string, config *pdfcpu.Configuration) ([]string, err
 }
 
 // AddAttachments embeds files into a PDF.
-func AddAttachments(fileIn string, files []string, config *pdfcpu.Configuration) error {
+func AddAttachments(fileIn string, files []string, config *pdf.Configuration) error {
 
 	fromStart := time.Now()
 
@@ -1009,7 +1009,7 @@ func AddAttachments(fileIn string, files []string, config *pdfcpu.Configuration)
 	from := time.Now()
 	var ok bool
 
-	ok, err = pdfcpu.AttachAdd(ctx.XRefTable, stringSet(files))
+	ok, err = pdf.AttachAdd(ctx.XRefTable, stringSet(files))
 	if err != nil {
 		return err
 	}
@@ -1050,7 +1050,7 @@ func AddAttachments(fileIn string, files []string, config *pdfcpu.Configuration)
 }
 
 // RemoveAttachments deletes embedded files from a PDF.
-func RemoveAttachments(fileIn string, files []string, config *pdfcpu.Configuration) error {
+func RemoveAttachments(fileIn string, files []string, config *pdf.Configuration) error {
 
 	fromStart := time.Now()
 
@@ -1068,7 +1068,7 @@ func RemoveAttachments(fileIn string, files []string, config *pdfcpu.Configurati
 	from := time.Now()
 
 	var ok bool
-	ok, err = pdfcpu.AttachRemove(ctx.XRefTable, stringSet(files))
+	ok, err = pdf.AttachRemove(ctx.XRefTable, stringSet(files))
 	if err != nil {
 		return err
 	}
@@ -1109,7 +1109,7 @@ func RemoveAttachments(fileIn string, files []string, config *pdfcpu.Configurati
 }
 
 // ExtractAttachments extracts embedded files from a PDF.
-func ExtractAttachments(fileIn, dirOut string, files []string, config *pdfcpu.Configuration) error {
+func ExtractAttachments(fileIn, dirOut string, files []string, config *pdf.Configuration) error {
 
 	fromStart := time.Now()
 
@@ -1123,7 +1123,7 @@ func ExtractAttachments(fileIn, dirOut string, files []string, config *pdfcpu.Co
 	fromWrite := time.Now()
 
 	ctx.Write.DirName = dirOut
-	err = pdfcpu.AttachExtract(ctx, stringSet(files))
+	err = pdf.AttachExtract(ctx, stringSet(files))
 	if err != nil {
 		return err
 	}
@@ -1143,7 +1143,7 @@ func ExtractAttachments(fileIn, dirOut string, files []string, config *pdfcpu.Co
 }
 
 // ListPermissions returns a list of user access permissions.
-func ListPermissions(fileIn string, config *pdfcpu.Configuration) ([]string, error) {
+func ListPermissions(fileIn string, config *pdf.Configuration) ([]string, error) {
 
 	fromStart := time.Now()
 
@@ -1155,7 +1155,7 @@ func ListPermissions(fileIn string, config *pdfcpu.Configuration) ([]string, err
 	}
 
 	fromList := time.Now()
-	list := pdfcpu.Permissions(ctx)
+	list := pdf.Permissions(ctx)
 	durList := time.Since(fromList).Seconds()
 
 	durTotal := time.Since(fromStart).Seconds()
@@ -1172,7 +1172,7 @@ func ListPermissions(fileIn string, config *pdfcpu.Configuration) ([]string, err
 }
 
 // AddPermissions sets the user access permissions.
-func AddPermissions(fileIn string, config *pdfcpu.Configuration) error {
+func AddPermissions(fileIn string, config *pdf.Configuration) error {
 
 	fromStart := time.Now()
 
@@ -1238,7 +1238,7 @@ func AddWatermarks(cmd *Command) ([]string, error) {
 
 	ensureSelectedPages(ctx, &pages)
 
-	err = pdfcpu.AddWatermarks(ctx.XRefTable, pages, wm)
+	err = pdf.AddWatermarks(ctx.XRefTable, pages, wm)
 	if err != nil {
 		return nil, err
 	}

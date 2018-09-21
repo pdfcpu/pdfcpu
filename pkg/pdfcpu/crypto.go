@@ -171,7 +171,7 @@ func encKey(userpw string, e *Enc) (key []byte) {
 }
 
 // ValidateUserPassword validates the user password aka document open password.
-func validateUserPassword(ctx *PDFContext) (ok bool, key []byte, err error) {
+func validateUserPassword(ctx *Context) (ok bool, key []byte, err error) {
 
 	// Alg.4/5 p63
 	// 4a/5a create encryption key using Alg.2 p61
@@ -226,7 +226,7 @@ func key(ownerpw, userpw string, r, l int) (key []byte) {
 }
 
 // O calculates the owner password digest.
-func o(ctx *PDFContext) ([]byte, error) {
+func o(ctx *Context) ([]byte, error) {
 
 	ownerpw := ctx.OwnerPW
 	userpw := ctx.UserPW
@@ -275,7 +275,7 @@ func o(ctx *PDFContext) ([]byte, error) {
 }
 
 // U calculates the user password digest.
-func u(ctx *PDFContext) (u []byte, key []byte, err error) {
+func u(ctx *Context) (u []byte, key []byte, err error) {
 
 	userpw := ctx.UserPW
 	//fmt.Printf("U userpw=ctx.UserPW=%s\n", userpw)
@@ -335,7 +335,7 @@ func u(ctx *PDFContext) (u []byte, key []byte, err error) {
 }
 
 // ValidateOwnerPassword validates the owner password aka change permissions password.
-func validateOwnerPassword(ctx *PDFContext) (ok bool, k []byte, err error) {
+func validateOwnerPassword(ctx *Context) (ok bool, k []byte, err error) {
 
 	ownerpw := ctx.OwnerPW
 	userpw := ctx.UserPW
@@ -430,7 +430,7 @@ func perms(p int) (list []string) {
 }
 
 // Permissions returns a list of set permissions.
-func Permissions(ctx *PDFContext) (list []string) {
+func Permissions(ctx *Context) (list []string) {
 
 	if ctx.E == nil {
 		return append(list, "full access")
@@ -517,7 +517,7 @@ func getV(dict *Dict) (*int, error) {
 
 	return v, nil
 }
-func checkStmf(ctx *PDFContext, stmf *string, cfDict *Dict) error {
+func checkStmf(ctx *Context, stmf *string, cfDict *Dict) error {
 
 	if stmf != nil && *stmf != "Identity" {
 
@@ -536,7 +536,7 @@ func checkStmf(ctx *PDFContext, stmf *string, cfDict *Dict) error {
 	return nil
 }
 
-func checkV(ctx *PDFContext, dict *Dict) (*int, error) {
+func checkV(ctx *Context, dict *Dict) (*int, error) {
 
 	v, err := getV(dict)
 	if err != nil {
@@ -618,7 +618,7 @@ func getR(dict *Dict) (int, error) {
 
 // SupportedEncryption returns true if used encryption is supported by pdfcpu
 // Also returns a pointer to a struct encapsulating used encryption.
-func supportedEncryption(ctx *PDFContext, dict *Dict) (*Enc, error) {
+func supportedEncryption(ctx *Context, dict *Dict) (*Enc, error) {
 
 	// Filter
 	filter := dict.NameEntry("Filter")
@@ -1026,7 +1026,7 @@ func decryptAESBytes(b, key []byte) ([]byte, error) {
 	return data, nil
 }
 
-func fileID(ctx *PDFContext) (HexLiteral, error) {
+func fileID(ctx *Context) (HexLiteral, error) {
 
 	// see also 14.4 File Identifiers.
 

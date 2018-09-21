@@ -101,7 +101,7 @@ func resourcesDictForPageDict(xRefTable *XRefTable, pageDict *Dict, pageObjNumbe
 	return xRefTable.DereferenceDict(obj)
 }
 
-func handleDuplicateFontObject(ctx *PDFContext, font *Dict, fontName, resourceName string, objNr, pageNumber int) (*int, error) {
+func handleDuplicateFontObject(ctx *Context, font *Dict, fontName, resourceName string, objNr, pageNumber int) (*int, error) {
 
 	fontObjectNumbers, found := ctx.Optimize.Fonts[fontName]
 	if !found {
@@ -140,7 +140,7 @@ func handleDuplicateFontObject(ctx *PDFContext, font *Dict, fontName, resourceNa
 	return nil, nil
 }
 
-func pageFonts(ctx *PDFContext, pageNumber int) (pageFonts IntSet) {
+func pageFonts(ctx *Context, pageNumber int) (pageFonts IntSet) {
 
 	pageFonts = ctx.Optimize.PageFonts[pageNumber]
 
@@ -152,7 +152,7 @@ func pageFonts(ctx *PDFContext, pageNumber int) (pageFonts IntSet) {
 	return
 }
 
-func fontName(ctx *PDFContext, fontDict *Dict, objNumber int) (fontName string, err error) {
+func fontName(ctx *Context, fontDict *Dict, objNumber int) (fontName string, err error) {
 
 	var found bool
 	var o Object
@@ -192,7 +192,7 @@ func fontName(ctx *PDFContext, fontDict *Dict, objNumber int) (fontName string, 
 }
 
 // Get rid of redundant fonts for given fontResources dictionary.
-func optimizeFontResourcesDict(ctx *PDFContext, fontResourcesDict *Dict, pageNumber, pageObjNumber int) error {
+func optimizeFontResourcesDict(ctx *Context, fontResourcesDict *Dict, pageNumber, pageObjNumber int) error {
 
 	log.Debug.Printf("optimizeFontResourcesDict begin: page=%d pageObjNumber=%d %s\nPageFonts=%v\n", pageNumber, pageObjNumber, *fontResourcesDict, ctx.Optimize.PageFonts)
 
@@ -288,7 +288,7 @@ func optimizeFontResourcesDict(ctx *PDFContext, fontResourcesDict *Dict, pageNum
 	return nil
 }
 
-func handleDuplicateImageObject(ctx *PDFContext, image *StreamDict, resourceName string, objNr, pageNumber int) (*int, error) {
+func handleDuplicateImageObject(ctx *Context, image *StreamDict, resourceName string, objNr, pageNumber int) (*int, error) {
 
 	pageImages := ctx.Optimize.PageImages[pageNumber]
 
@@ -324,7 +324,7 @@ func handleDuplicateImageObject(ctx *PDFContext, image *StreamDict, resourceName
 }
 
 // Get rid of redundant XObjects e.g. embedded images.
-func optimizeXObjectResourcesDict(ctx *PDFContext, xObjectResourcesDict *Dict, pageNumber, pageObjNumber int) error {
+func optimizeXObjectResourcesDict(ctx *Context, xObjectResourcesDict *Dict, pageNumber, pageObjNumber int) error {
 
 	log.Debug.Printf("optimizeXObjectResourcesDict begin: %s\n", *xObjectResourcesDict)
 
@@ -414,7 +414,7 @@ func optimizeXObjectResourcesDict(ctx *PDFContext, xObjectResourcesDict *Dict, p
 }
 
 // Optimize given resource dictionary by removing redundant fonts and images.
-func optimizeResources(ctx *PDFContext, resourcesDict *Dict, pageNumber, pageObjNumber int) error {
+func optimizeResources(ctx *Context, resourcesDict *Dict, pageNumber, pageObjNumber int) error {
 
 	log.Debug.Printf("optimizeResources begin: pageNumber=%d pageObjNumber=%d\n", pageNumber, pageObjNumber)
 
@@ -471,7 +471,7 @@ func optimizeResources(ctx *PDFContext, resourcesDict *Dict, pageNumber, pageObj
 }
 
 // Process the resources dictionary for given page number and optimize by removing redundant resources.
-func parseResourcesDict(ctx *PDFContext, pageDict *Dict, pageNumber, pageObjNumber int) error {
+func parseResourcesDict(ctx *Context, pageDict *Dict, pageNumber, pageObjNumber int) error {
 
 	log.Debug.Printf("parseResourcesDict begin page: %d, object:%d\n", pageNumber+1, pageObjNumber)
 
@@ -498,7 +498,7 @@ func parseResourcesDict(ctx *PDFContext, pageDict *Dict, pageNumber, pageObjNumb
 }
 
 // Iterate over all pages and optimize resources.
-func parsePagesDict(ctx *PDFContext, pagesDict *Dict, pageNumber int) (int, error) {
+func parsePagesDict(ctx *Context, pagesDict *Dict, pageNumber int) (int, error) {
 
 	log.Debug.Printf("parsePagesDict begin (next page=%d): %s\n", pageNumber+1, *pagesDict)
 
@@ -629,7 +629,7 @@ func traverseObjectGraphAndMarkDuplicates(xRefTable *XRefTable, obj Object, dupl
 }
 
 // Identify and mark all potential duplicate objects.
-func calcRedundantObjects(ctx *PDFContext) error {
+func calcRedundantObjects(ctx *Context) error {
 
 	log.Debug.Println("calcRedundantObjects begin")
 
@@ -658,7 +658,7 @@ func calcRedundantObjects(ctx *PDFContext) error {
 
 // Iterate over all pages and optimize resources.
 // Get rid of duplicate embedded fonts and images.
-func optimizeFontAndImages(ctx *PDFContext) error {
+func optimizeFontAndImages(ctx *Context) error {
 
 	log.Debug.Println("optimizeFontAndImages begin")
 
@@ -733,7 +733,7 @@ func streamLengthFontFile(xRefTable *XRefTable, indirectRef *IndirectRef) (*int6
 }
 
 // Calculate amount of memory used by embedded fonts for stats.
-func calcEmbeddedFontsMemoryUsage(ctx *PDFContext) error {
+func calcEmbeddedFontsMemoryUsage(ctx *Context) error {
 
 	log.Debug.Printf("calcEmbeddedFontsMemoryUsage begin: %d fontObjects\n", len(ctx.Optimize.FontObjects))
 
@@ -923,7 +923,7 @@ func processFontFilesForFontDict(xRefTable *XRefTable, fontDict *Dict, objectNum
 }
 
 // Calculate amount of memory used by duplicate embedded fonts for stats.
-func calcRedundantEmbeddedFontsMemoryUsage(ctx *PDFContext) error {
+func calcRedundantEmbeddedFontsMemoryUsage(ctx *Context) error {
 
 	log.Debug.Println("calcRedundantEmbeddedFontsMemoryUsage begin")
 
@@ -956,7 +956,7 @@ func calcRedundantEmbeddedFontsMemoryUsage(ctx *PDFContext) error {
 }
 
 // Calculate amount of memory used by embedded fonts and duplicate embedded fonts for stats.
-func calcFontBinarySizes(ctx *PDFContext) error {
+func calcFontBinarySizes(ctx *Context) error {
 
 	log.Debug.Println("calcFontBinarySizes begin")
 
@@ -976,7 +976,7 @@ func calcFontBinarySizes(ctx *PDFContext) error {
 }
 
 // Calculate amount of memory used by images and duplicate images for stats.
-func calcImageBinarySizes(ctx *PDFContext) {
+func calcImageBinarySizes(ctx *Context) {
 
 	log.Debug.Println("calcImageBinarySizes begin")
 
@@ -994,7 +994,7 @@ func calcImageBinarySizes(ctx *PDFContext) {
 }
 
 // Calculate memory usage of binary data for stats.
-func calcBinarySizes(ctx *PDFContext) error {
+func calcBinarySizes(ctx *Context) error {
 
 	log.Debug.Println("calcBinarySizes begin")
 
@@ -1015,7 +1015,7 @@ func calcBinarySizes(ctx *PDFContext) error {
 }
 
 // OptimizeXRefTable optimizes an xRefTable by locating and getting rid of redundant embedded fonts and images.
-func OptimizeXRefTable(ctx *PDFContext) error {
+func OptimizeXRefTable(ctx *Context) error {
 
 	log.Info.Println("optimizing fonts & images")
 

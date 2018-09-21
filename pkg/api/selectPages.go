@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/hhrutter/pdfcpu/pkg/log"
-	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
+	pdf "github.com/hhrutter/pdfcpu/pkg/pdfcpu"
 	"github.com/pkg/errors"
 )
 
@@ -78,7 +78,7 @@ func ParsePageSelection(s string) ([]string, error) {
 	return strings.Split(s, ","), nil
 }
 
-func handlePrefix(v string, negated bool, pageCount int, selectedPages pdfcpu.IntSet) error {
+func handlePrefix(v string, negated bool, pageCount int, selectedPages pdf.IntSet) error {
 
 	i, err := strconv.Atoi(v)
 	if err != nil {
@@ -100,7 +100,7 @@ func handlePrefix(v string, negated bool, pageCount int, selectedPages pdfcpu.In
 	return nil
 }
 
-func handleSuffix(v string, negated bool, pageCount int, selectedPages pdfcpu.IntSet) error {
+func handleSuffix(v string, negated bool, pageCount int, selectedPages pdf.IntSet) error {
 
 	// must be #- ... select all pages from here until the end.
 	// or !#- ... deselect all pages from here until the end.
@@ -122,7 +122,7 @@ func handleSuffix(v string, negated bool, pageCount int, selectedPages pdfcpu.In
 	return nil
 }
 
-func handleSpecificPage(s string, negated bool, pageCount int, selectedPages pdfcpu.IntSet) error {
+func handleSpecificPage(s string, negated bool, pageCount int, selectedPages pdf.IntSet) error {
 
 	// must be # ... select a specific page
 	// or !# ... deselect a specific page
@@ -146,7 +146,7 @@ func negation(c byte) bool {
 	return c == '!' || c == 'n'
 }
 
-func selectEvenPages(selectedPages *pdfcpu.IntSet, pageCount int) {
+func selectEvenPages(selectedPages *pdf.IntSet, pageCount int) {
 	for i := 2; i <= pageCount; i += 2 {
 		_, found := (*selectedPages)[i]
 		if !found {
@@ -155,7 +155,7 @@ func selectEvenPages(selectedPages *pdfcpu.IntSet, pageCount int) {
 	}
 }
 
-func selectOddPages(selectedPages *pdfcpu.IntSet, pageCount int) {
+func selectOddPages(selectedPages *pdf.IntSet, pageCount int) {
 	for i := 1; i <= pageCount; i += 2 {
 		_, found := (*selectedPages)[i]
 		if !found {
@@ -164,7 +164,7 @@ func selectOddPages(selectedPages *pdfcpu.IntSet, pageCount int) {
 	}
 }
 
-func parsePageRange(pr []string, pageCount int, negated bool, selectedPages pdfcpu.IntSet) error {
+func parsePageRange(pr []string, pageCount int, negated bool, selectedPages pdf.IntSet) error {
 
 	from, err := strconv.Atoi(pr[0])
 	if err != nil {
@@ -197,9 +197,9 @@ func parsePageRange(pr []string, pageCount int, negated bool, selectedPages pdfc
 	return nil
 }
 
-func selectedPages(pageCount int, pageSelection []string) (pdfcpu.IntSet, error) {
+func selectedPages(pageCount int, pageSelection []string) (pdf.IntSet, error) {
 
-	selectedPages := pdfcpu.IntSet{}
+	selectedPages := pdf.IntSet{}
 
 	for _, v := range pageSelection {
 
@@ -271,7 +271,7 @@ func selectedPages(pageCount int, pageSelection []string) (pdfcpu.IntSet, error)
 	return selectedPages, nil
 }
 
-func pagesForPageSelection(pageCount int, pageSelection []string) (pdfcpu.IntSet, error) {
+func pagesForPageSelection(pageCount int, pageSelection []string) (pdf.IntSet, error) {
 
 	if pageSelection == nil || len(pageSelection) == 0 {
 		log.Info.Println("pagesForPageSelection: empty pageSelection")
@@ -283,13 +283,13 @@ func pagesForPageSelection(pageCount int, pageSelection []string) (pdfcpu.IntSet
 
 // Split, Extract, Stamp, Watermark: No page selection means all pages are selected.
 // EnsureSelectedPages selects all pages.
-func ensureSelectedPages(ctx *pdfcpu.PDFContext, selectedPages *pdfcpu.IntSet) {
+func ensureSelectedPages(ctx *pdf.Context, selectedPages *pdf.IntSet) {
 
 	if selectedPages != nil && len(*selectedPages) > 0 {
 		return
 	}
 
-	m := pdfcpu.IntSet{}
+	m := pdf.IntSet{}
 	for i := 1; i <= ctx.PageCount; i++ {
 		m[i] = true
 	}

@@ -96,7 +96,7 @@ func patchArray(arr *Array, lookup map[int]int) {
 	log.Debug.Printf("patchArray end: %v\n", arr)
 }
 
-func sortedKeys(ctx *PDFContext) []int {
+func sortedKeys(ctx *Context) []int {
 
 	var keys []int
 
@@ -138,7 +138,7 @@ func patchObjects(s IntSet, lookup map[int]int) IntSet {
 	return t
 }
 
-func patchSourceObjectNumbers(ctxSource, ctxDest *PDFContext) {
+func patchSourceObjectNumbers(ctxSource, ctxDest *Context) {
 
 	log.Debug.Printf("patchSourceObjectNumbers: ctxSource: xRefTableSize:%d trailer.Size:%d - %s\n", len(ctxSource.Table), *ctxSource.Size, ctxSource.Read.FileName)
 	log.Debug.Printf("patchSourceObjectNumbers:   ctxDest: xRefTableSize:%d trailer.Size:%d - %s\n", len(ctxDest.Table), *ctxDest.Size, ctxDest.Read.FileName)
@@ -212,7 +212,7 @@ func patchSourceObjectNumbers(ctxSource, ctxDest *PDFContext) {
 	log.Debug.Printf("patchSourceObjectNumbers end")
 }
 
-func appendSourcePageTreeToDestPageTree(ctxSource, ctxDest *PDFContext) error {
+func appendSourcePageTreeToDestPageTree(ctxSource, ctxDest *Context) error {
 
 	log.Debug.Println("appendSourcePageTreeToDestPageTree begin")
 
@@ -251,7 +251,7 @@ func appendSourcePageTreeToDestPageTree(ctxSource, ctxDest *PDFContext) error {
 	return nil
 }
 
-func appendSourceObjectsToDest(ctxSource, ctxDest *PDFContext) {
+func appendSourceObjectsToDest(ctxSource, ctxDest *Context) {
 
 	log.Debug.Println("appendSourceObjectsToDest begin")
 
@@ -280,7 +280,7 @@ func mergeIntSets(src, dest IntSet) {
 	}
 }
 
-func mergeDuplicateObjNumberIntSets(ctxSource, ctxDest *PDFContext) {
+func mergeDuplicateObjNumberIntSets(ctxSource, ctxDest *Context) {
 
 	log.Debug.Println("mergeDuplicateObjNumberIntSets begin")
 
@@ -292,8 +292,8 @@ func mergeDuplicateObjNumberIntSets(ctxSource, ctxDest *PDFContext) {
 	log.Debug.Println("mergeDuplicateObjNumberIntSets end")
 }
 
-// MergeXRefTables merges PDFContext ctxSource into ctxDest by appending its page tree.
-func MergeXRefTables(ctxSource, ctxDest *PDFContext) (err error) {
+// MergeXRefTables merges Context ctxSource into ctxDest by appending its page tree.
+func MergeXRefTables(ctxSource, ctxDest *Context) (err error) {
 
 	// Sweep over ctxSource cross ref table and ensure valid object numbers in ctxDest's space.
 	patchSourceObjectNumbers(ctxSource, ctxDest)

@@ -29,8 +29,18 @@ import (
 	"github.com/pkg/errors"
 )
 
-// WritePDFFile generates a PDF file for the cross reference table contained in PDFContext.
-func WritePDFFile(ctx *PDFContext) error {
+func prepareContextForWriting(ctx *Context) error {
+
+	err := ensureInfoDictAndFileID(ctx)
+	if err != nil {
+		return err
+	}
+
+	return handleEncryption(ctx)
+}
+
+// WritePDFFile generates a PDF file for the cross reference table contained in Context.
+func WritePDFFile(ctx *Context) error {
 
 	fileName := ctx.Write.DirName + ctx.Write.FileName
 
@@ -58,12 +68,7 @@ func WritePDFFile(ctx *PDFContext) error {
 
 	}()
 
-	err = ensureInfoDictAndFileID(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = handleEncryption(ctx)
+	err = prepareContextForWriting(ctx)
 	if err != nil {
 		return err
 	}
@@ -90,7 +95,7 @@ func WritePDFFile(ctx *PDFContext) error {
 
 	log.Debug.Printf("offset after writeRootObject: %d\n", ctx.Write.Offset)
 
-	// Modify and write document information dictionary.
+	// Write document information dictionary.
 	err = writeDocumentInfoDict(ctx)
 	if err != nil {
 		return err
@@ -140,7 +145,7 @@ func WritePDFFile(ctx *PDFContext) error {
 	return nil
 }
 
-func ensureFileID(ctx *PDFContext) error {
+func ensureFileID(ctx *Context) error {
 
 	fid, err := fileID(ctx)
 	if err != nil {
@@ -164,7 +169,7 @@ func ensureFileID(ctx *PDFContext) error {
 	return nil
 }
 
-func ensureInfoDictAndFileID(ctx *PDFContext) error {
+func ensureInfoDictAndFileID(ctx *Context) error {
 
 	err := ensureInfoDict(ctx)
 	if err != nil {
@@ -175,7 +180,7 @@ func ensureInfoDictAndFileID(ctx *PDFContext) error {
 }
 
 // Write root entry to disk.
-func writeRootEntry(ctx *PDFContext, dict *Dict, dictName, entryName string, statsAttr int) error {
+func writeRootEntry(ctx *Context, dict *Dict, dictName, entryName string, statsAttr int) error {
 
 	obj, err := writeEntry(ctx, dict, dictName, entryName)
 	if err != nil {
@@ -190,7 +195,7 @@ func writeRootEntry(ctx *PDFContext, dict *Dict, dictName, entryName string, sta
 }
 
 // Write root entry to object stream.
-func writeRootEntryToObjStream(ctx *PDFContext, dict *Dict, dictName, entryName string, statsAttr int) error {
+func writeRootEntryToObjStream(ctx *Context, dict *Dict, dictName, entryName string, statsAttr int) error {
 
 	ctx.Write.WriteToObjectStream = true
 
@@ -203,7 +208,7 @@ func writeRootEntryToObjStream(ctx *PDFContext, dict *Dict, dictName, entryName 
 }
 
 // Write page tree.
-func writePages(ctx *PDFContext, rootDict *Dict) error {
+func writePages(ctx *Context, rootDict *Dict) error {
 
 	// Page tree root (the top "Pages" dict) must be indirect reference.
 	indRef := rootDict.IndirectRefEntry("Pages")
@@ -232,7 +237,7 @@ func writePages(ctx *PDFContext, rootDict *Dict) error {
 	return stopObjectStream(ctx)
 }
 
-func writeRootObject(ctx *PDFContext) error {
+func writeRootObject(ctx *Context) error {
 
 	// => 7.7.2 Document Catalog
 
@@ -352,7 +357,7 @@ func writeRootObject(ctx *PDFContext) error {
 	return nil
 }
 
-func writeTrailerDict(ctx *PDFContext) error {
+func writeTrailerDict(ctx *Context) error {
 
 	log.Debug.Printf("writeTrailerDict begin\n")
 
@@ -395,7 +400,7 @@ func writeTrailerDict(ctx *PDFContext) error {
 	return nil
 }
 
-func writeXRefSubsection(ctx *PDFContext, start int, size int) error {
+func writeXRefSubsection(ctx *Context, start int, size int) error {
 
 	log.Debug.Printf("writeXRefSubsection: start=%d size=%d\n", start, size)
 
@@ -443,7 +448,7 @@ func writeXRefSubsection(ctx *PDFContext, start int, size int) error {
 	return nil
 }
 
-func deleteRedundantObject(ctx *PDFContext, objNr int) {
+func deleteRedundantObject(ctx *Context, objNr int) {
 
 	if ctx.Write.ExtractPageNr == 0 &&
 		(ctx.Optimize.IsDuplicateFontObject(objNr) || ctx.Optimize.IsDuplicateImageObject(objNr)) {
@@ -456,7 +461,7 @@ func deleteRedundantObject(ctx *PDFContext, objNr int) {
 	}
 
 }
-func deleteRedundantObjects(ctx *PDFContext) {
+func deleteRedundantObjects(ctx *Context) {
 
 	if ctx.Optimize == nil {
 		return
@@ -521,7 +526,7 @@ func deleteRedundantObjects(ctx *PDFContext) {
 	log.Debug.Println("deleteRedundantObjects end")
 }
 
-func sortedWritableKeys(ctx *PDFContext) []int {
+func sortedWritableKeys(ctx *Context) []int {
 
 	var keys []int
 
@@ -537,7 +542,7 @@ func sortedWritableKeys(ctx *PDFContext) []int {
 }
 
 // After inserting the last object write the cross reference table to disk.
-func writeXRefTable(ctx *PDFContext) error {
+func writeXRefTable(ctx *Context) error {
 
 	err := ctx.EnsureValidFreeList()
 	if err != nil {
@@ -638,7 +643,7 @@ func int64ToBuf(i int64, byteCount int) (buf []byte) {
 	return
 }
 
-func createXRefStream(ctx *PDFContext, i1, i2, i3 int) ([]byte, *Array, error) {
+func createXRefStream(ctx *Context, i1, i2, i3 int) ([]byte, *Array, error) {
 
 	log.Debug.Println("createXRefStream begin")
 
@@ -730,7 +735,7 @@ func createXRefStream(ctx *PDFContext, i1, i2, i3 int) ([]byte, *Array, error) {
 	return buf, &arr, nil
 }
 
-func writeXRefStream(ctx *PDFContext) error {
+func writeXRefStream(ctx *Context) error {
 
 	log.Debug.Println("writeXRefStream begin")
 
@@ -829,7 +834,7 @@ func writeXRefStream(ctx *PDFContext) error {
 	return nil
 }
 
-func writeEncryptDict(ctx *PDFContext) error {
+func writeEncryptDict(ctx *Context) error {
 
 	// Bail out unless we really have to write encrypted.
 	if ctx.Encrypt == nil || ctx.EncKey == nil {
@@ -850,7 +855,7 @@ func writeEncryptDict(ctx *PDFContext) error {
 	return writeObject(ctx, objNumber, genNumber, dict.PDFString())
 }
 
-func setupEncryption(ctx *PDFContext) error {
+func setupEncryption(ctx *Context) error {
 
 	var err error
 
@@ -905,7 +910,7 @@ func setupEncryption(ctx *PDFContext) error {
 	return nil
 }
 
-func updateEncryption(ctx *PDFContext) error {
+func updateEncryption(ctx *Context) error {
 
 	d, err := ctx.EncryptDict()
 	if err != nil {
@@ -952,7 +957,7 @@ func updateEncryption(ctx *PDFContext) error {
 	return nil
 }
 
-func handleEncryption(ctx *PDFContext) error {
+func handleEncryption(ctx *Context) error {
 
 	if ctx.Mode == ENCRYPT || ctx.Mode == DECRYPT {
 
@@ -988,7 +993,7 @@ func handleEncryption(ctx *PDFContext) error {
 	return nil
 }
 
-func writeXRef(ctx *PDFContext) error {
+func writeXRef(ctx *Context) error {
 
 	if ctx.WriteXRefStream {
 		// Write cross reference stream and generate objectstreams.

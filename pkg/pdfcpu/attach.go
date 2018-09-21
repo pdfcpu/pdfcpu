@@ -86,7 +86,7 @@ func decodedFileSpecStreamDict(xRefTable *XRefTable, fileName string, o Object) 
 	return sd, nil
 }
 
-func extractAttachedFiles(ctx *PDFContext, files StringSet) error {
+func extractAttachedFiles(ctx *Context, files StringSet) error {
 
 	writeFile := func(xRefTable *XRefTable, fileName string, o Object) error {
 
@@ -278,7 +278,7 @@ func AttachList(xRefTable *XRefTable) (list []string, err error) {
 
 // AttachExtract exports specified embedded files.
 // If no files specified extract all embedded files.
-func AttachExtract(ctx *PDFContext, files StringSet) (err error) {
+func AttachExtract(ctx *Context, files StringSet) (err error) {
 
 	log.Debug.Println("Extract begin")
 

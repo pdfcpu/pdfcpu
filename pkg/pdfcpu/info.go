@@ -27,7 +27,7 @@ func csvSafeString(s string) string {
 	return strings.Replace(s, ";", ",", -1)
 }
 
-func handleInfoDict(ctx *PDFContext, dict *Dict) (err error) {
+func handleInfoDict(ctx *Context, dict *Dict) (err error) {
 
 	for key, value := range *dict {
 
@@ -80,7 +80,7 @@ func handleInfoDict(ctx *PDFContext, dict *Dict) (err error) {
 	return nil
 }
 
-func ensureInfoDict(ctx *PDFContext) error {
+func ensureInfoDict(ctx *Context) error {
 
 	// => 14.3.3 Document Information Dictionary
 
@@ -132,7 +132,7 @@ func ensureInfoDict(ctx *PDFContext) error {
 }
 
 // Write the document info object for this PDF file.
-func writeDocumentInfoDict(ctx *PDFContext) error {
+func writeDocumentInfoDict(ctx *Context) error {
 
 	log.Debug.Printf("*** writeDocumentInfoDict begin: offset=%d ***\n", ctx.Write.Offset)
 
