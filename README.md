@@ -57,7 +57,7 @@ One example is reducing the size of large PDF files for mass mailings by optimiz
 
 ## Installation
 
-Required build version: go1.9 and up
+Required build version: [go1.9](https://golang.org/doc/go1.9) and above
 
 `go get github.com/hhrutter/pdfcpu/cmd/...`
 
