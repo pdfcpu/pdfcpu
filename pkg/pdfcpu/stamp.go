@@ -993,7 +993,7 @@ func watermarkPage(xRefTable *XRefTable, i int, wm *Watermark) error {
 	//fmt.Printf("vp = %f %f %f %f\n", vp.Llx, vp.Lly, vp.Urx, vp.Ury)
 	wm.vp = vp
 
-	err = createForm(xRefTable, wm, true)
+	err = createForm(xRefTable, wm, false)
 	if err != nil {
 		return err
 	}

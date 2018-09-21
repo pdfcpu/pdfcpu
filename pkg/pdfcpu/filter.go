@@ -20,8 +20,6 @@ package pdfcpu
 
 import (
 	"bytes"
-	"encoding/hex"
-	"fmt"
 	"io"
 
 	"github.com/hhrutter/pdfcpu/pkg/filter"
@@ -124,7 +122,7 @@ func decodeStream(sd *StreamDict) error {
 	// No filter specified, nothing to decode.
 	if sd.FilterPipeline == nil {
 		sd.Content = sd.Raw
-		fmt.Printf("decodedStream returning %d(#%02x)bytes: \n%s\n", len(sd.Content), len(sd.Content), hex.Dump(sd.Content))
+		//fmt.Printf("decodedStream returning %d(#%02x)bytes: \n%s\n", len(sd.Content), len(sd.Content), hex.Dump(sd.Content))
 		return nil
 	}
 
