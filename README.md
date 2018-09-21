@@ -17,7 +17,7 @@ Version: 0.1.15
 
 * Marks the first release under the Apache-2.0 license.
 * Comes with a new command for adding stamps/watermarks for selected pages supporting text and images.
-* Additional watermark configuration for fontname/size/color, absolute/relative scaling, render mode, opacity and rotation is also supported.
+* Additional watermark configuration for fontName/size/color, absolute/relative scaling, render mode, opacity and rotation is also supported.
 * Optional intelligent rotation aligns the rotation angle with one of two page diagonals.
 * `-pages` now also supports `odd/even`. (You can even say `-pages odd,n1` if you want to stamp all odd pages other than the title page.)
 * `extract -mode image` is now natively supporting PNG and TIFF with optional lzw compression.
@@ -29,7 +29,7 @@ Version: 0.1.15
 
 This is an effort to build a PDF processing library from the ground up written in Go with strong support for batch processing via a rich command line. Over time `pdfcpu` aims to support the standard range of PDF processing features and also any interesting use cases that may present themselves along the way.
 
-One example is reducing the size of large PDF files for mass mailings by optimization to the bare minimum. This can be achieved by analyzing a PDF's cross reference table, removing redundant embedded resources like font files or images and by always writing back the file maxing out PDF compression. I also wanted to have my own swiss army knife for PDFs written entirely in [Go](http://golang.org) that allows me to trim, split, stamp and merge PDF content.
+One example is reducing the size of large PDF files for mass mailings by optimization to the bare minimum. This can be achieved by analyzing a PDF's cross reference table, removing redundant embedded resources like font files or images and by always writing back the file maxing out PDF compression. I also wanted to have my own _swiss army knife_ for PDFs written entirely in [Go](http://golang.org) that allows me to trim, split, stamp and merge PDF content.
 
 ## Features
 
