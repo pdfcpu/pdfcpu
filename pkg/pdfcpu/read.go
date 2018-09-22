@@ -289,23 +289,23 @@ func compressedObject(s string) (Object, error) {
 
 	log.Debug.Println("compressedObject: begin")
 
-	Object, err := parseObject(&s)
+	obj, err := parseObject(&s)
 	if err != nil {
 		return nil, err
 	}
 
-	Dict, ok := Object.(Dict)
+	dict, ok := obj.(Dict)
 	if !ok {
 		// return trivial Object: Integer, Array, etc.
 		log.Debug.Println("compressedObject: end, any other than dict")
-		return Object, nil
+		return obj, nil
 	}
 
-	streamLength, streamLengthRef := Dict.Length()
+	streamLength, streamLengthRef := dict.Length()
 	if streamLength == nil && streamLengthRef == nil {
 		// return Dict
 		log.Debug.Println("compressedObject: end, dict")
-		return Dict, nil
+		return dict, nil
 	}
 
 	return nil, errors.New("compressedObject: Stream objects are not to be stored in an object stream")
@@ -342,25 +342,25 @@ func parseObjectStream(objectStreamDict *ObjectStreamDict) error {
 		if i > 0 {
 			dstr := string(decodedContent[offsetOld:offset])
 			log.Debug.Printf("parseObjectStream: objString = %s\n", dstr)
-			Object, err := compressedObject(dstr)
+			obj, err := compressedObject(dstr)
 			if err != nil {
 				return err
 			}
 
-			log.Debug.Printf("parseObjectStream: [%d] = obj %s:\n%s\n", i/2-1, objs[i-2], Object)
-			objArray = append(objArray, Object)
+			log.Debug.Printf("parseObjectStream: [%d] = obj %s:\n%s\n", i/2-1, objs[i-2], obj)
+			objArray = append(objArray, obj)
 		}
 
 		if i == len(objs)-2 {
 			dstr := string(decodedContent[offset:])
 			log.Debug.Printf("parseObjectStream: objString = %s\n", dstr)
-			Object, err := compressedObject(dstr)
+			obj, err := compressedObject(dstr)
 			if err != nil {
 				return err
 			}
 
-			log.Debug.Printf("parseObjectStream: [%d] = obj %s:\n%s\n", i/2, objs[i], Object)
-			objArray = append(objArray, Object)
+			log.Debug.Printf("parseObjectStream: [%d] = obj %s:\n%s\n", i/2, objs[i], obj)
+			objArray = append(objArray, obj)
 		}
 
 		offsetOld = offset
@@ -374,7 +374,7 @@ func parseObjectStream(objectStreamDict *ObjectStreamDict) error {
 }
 
 // For each object embedded in this xRefStream create the corresponding xRef table entry.
-func extractXRefTableEntriesFromXRefStream(buf []byte, xRefStreamDict XRefStreamDict, ctx *Context) error {
+func extractXRefTableEntriesFromXRefStream(buf []byte, sd XRefStreamDict, ctx *Context) error {
 
 	log.Debug.Printf("extractXRefTableEntriesFromXRefStream begin")
 
@@ -383,9 +383,9 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, xRefStreamDict XRefStream
 	// and the default value shall be used, if there is one.
 	// If the first element is zero, the type field shall not be present, and shall default to type 1.
 
-	i1 := xRefStreamDict.W[0]
-	i2 := xRefStreamDict.W[1]
-	i3 := xRefStreamDict.W[2]
+	i1 := sd.W[0]
+	i2 := sd.W[1]
+	i3 := sd.W[2]
 
 	xrefEntryLen := i1 + i2 + i3
 	log.Debug.Printf("extractXRefTableEntriesFromXRefStream: begin xrefEntryLen = %d\n", xrefEntryLen)
@@ -394,8 +394,8 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, xRefStreamDict XRefStream
 		return errors.New("extractXRefTableEntriesFromXRefStream: corrupt xrefstream")
 	}
 
-	objCount := len(xRefStreamDict.Objects)
-	log.Debug.Printf("extractXRefTableEntriesFromXRefStream: objCount:%d %v\n", objCount, xRefStreamDict.Objects)
+	objCount := len(sd.Objects)
+	log.Debug.Printf("extractXRefTableEntriesFromXRefStream: objCount:%d %v\n", objCount, sd.Objects)
 
 	log.Debug.Printf("extractXRefTableEntriesFromXRefStream: len(buf):%d objCount*xrefEntryLen:%d\n", len(buf), objCount*xrefEntryLen)
 	if len(buf) < objCount*xrefEntryLen {
@@ -417,9 +417,9 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, xRefStreamDict XRefStream
 		return
 	}
 
-	for i := 0; i < len(buf) && j < len(xRefStreamDict.Objects); i += xrefEntryLen {
+	for i := 0; i < len(buf) && j < len(sd.Objects); i += xrefEntryLen {
 
-		objectNumber := xRefStreamDict.Objects[j]
+		objectNumber := sd.Objects[j]
 
 		i2Start := i + i1
 		c2 := bufToInt64(buf[i2Start : i2Start+i2])
@@ -551,27 +551,27 @@ func parseXRefStream(rd io.Reader, offset *int64, ctx *Context) (prevOffset *int
 	// parse this object
 	log.Debug.Printf("parseXRefStream: xrefstm obj#:%d gen:%d\n", *objectNumber, *generationNumber)
 	log.Debug.Printf("parseXRefStream: dereferencing object %d\n", *objectNumber)
-	Object, err := parseObject(&l)
+	obj, err := parseObject(&l)
 	if err != nil {
-		return nil, errors.Wrapf(err, "parseXRefStream: no Object")
+		return nil, errors.Wrapf(err, "parseXRefStream: no object")
 	}
 
-	log.Debug.Printf("parseXRefStream: we have a Object: %s\n", Object)
+	log.Debug.Printf("parseXRefStream: we have an object: %s\n", obj)
 
 	streamOffset += *offset
-	XRefStreamDict, err := xRefStreamDict(ctx, Object, *objectNumber, streamOffset)
+	sd, err := xRefStreamDict(ctx, obj, *objectNumber, streamOffset)
 	if err != nil {
 		return nil, err
 	}
 	// We have an xref stream object
 
-	err = parseTrailerInfo(XRefStreamDict.Dict, ctx.XRefTable)
+	err = parseTrailerInfo(sd.Dict, ctx.XRefTable)
 	if err != nil {
 		return nil, err
 	}
 
 	// Parse xRefStream and create xRefTable entries for embedded objects.
-	err = extractXRefTableEntriesFromXRefStream(XRefStreamDict.Content, *XRefStreamDict, ctx)
+	err = extractXRefTableEntriesFromXRefStream(sd.Content, *sd, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -582,13 +582,13 @@ func parseXRefStream(rd io.Reader, offset *int64, ctx *Context) (prevOffset *int
 			Free:       false,
 			Offset:     offset,
 			Generation: generationNumber,
-			Object:     *XRefStreamDict}
+			Object:     *sd}
 
 	log.Debug.Printf("parseXRefStream: Insert new xRefTable entry for Object %d\n", *objectNumber)
 
 	ctx.Table[*objectNumber] = &entry
 	ctx.Read.XRefStreams[*objectNumber] = true
-	prevOffset = XRefStreamDict.PreviousOffset
+	prevOffset = sd.PreviousOffset
 
 	log.Debug.Println("parseXRefStream: end")
 
@@ -846,12 +846,12 @@ func parseXRefSection(s *bufio.Scanner, ctx *Context) (*int64, error) {
 
 	log.Debug.Printf("parseXRefSection: trailerString: (len:%d) <%s>\n", len(trailerString), trailerString)
 
-	Object, err := parseObject(&trailerString)
+	obj, err := parseObject(&trailerString)
 	if err != nil {
 		return nil, err
 	}
 
-	trailerDict, ok := Object.(Dict)
+	trailerDict, ok := obj.(Dict)
 	if !ok {
 		return nil, errors.New("parseXRefSection: corrupt trailer dict")
 	}
@@ -1655,13 +1655,13 @@ func decompressXRefTableEntry(xRefTable *XRefTable, objectNumber int, entry *XRe
 	}
 
 	// Object of this entry has to be a ObjectStreamDict.
-	ObjectStreamDict, ok := objectStreamXRefTableEntry.Object.(ObjectStreamDict)
+	sd, ok := objectStreamXRefTableEntry.Object.(ObjectStreamDict)
 	if !ok {
 		return errors.Errorf("decompressXRefTableEntry: problem dereferencing object stream %d, no object stream", *entry.ObjectStream)
 	}
 
 	// Get indexed object from ObjectStreamDict.
-	Object, err := ObjectStreamDict.IndexedObject(*entry.ObjectStreamInd)
+	Object, err := sd.IndexedObject(*entry.ObjectStreamInd)
 	if err != nil {
 		return errors.Wrapf(err, "decompressXRefTableEntry: problem dereferencing object stream %d", *entry.ObjectStream)
 	}
@@ -1773,7 +1773,7 @@ func decodeObjectStreams(ctx *Context) error {
 		ctx.Read.UsingObjectStreams = true
 
 		// Create new object stream dict.
-		ObjectStreamDict, err := objectStreamDict(StreamDict)
+		sd, err := objectStreamDict(StreamDict)
 		if err != nil {
 			return errors.Wrapf(err, "decodeObjectStreams: problem dereferencing object stream %d", objectNumber)
 		}
@@ -1781,18 +1781,18 @@ func decodeObjectStreams(ctx *Context) error {
 		log.Debug.Printf("decodeObjectStreams: decoding object stream %d:\n", objectNumber)
 
 		// Parse all objects of this object stream and save them to ObjectStreamDict.ObjArray.
-		if err = parseObjectStream(ObjectStreamDict); err != nil {
+		if err = parseObjectStream(sd); err != nil {
 			return errors.Wrapf(err, "decodeObjectStreams: problem decoding object stream %d\n", objectNumber)
 		}
 
-		if ObjectStreamDict.ObjArray == nil {
+		if sd.ObjArray == nil {
 			return errors.Wrap(err, "decodeObjectStreams: objArray should be set!")
 		}
 
 		log.Debug.Printf("decodeObjectStreams: decoded object stream %d:\n", objectNumber)
 
 		// Save object stream dict to xRefTableEntry.
-		entry.Object = *ObjectStreamDict
+		entry.Object = *sd
 	}
 
 	log.Debug.Println("decodeObjectStreams: end")
@@ -1946,14 +1946,14 @@ func dereferenceObject(ctx *Context, objNr int) error {
 		return errors.Errorf("dereferenceObject: xref stream should already be dereferenced at obj:%d", objNr)
 	}
 
-	if StreamDict, ok := obj.(StreamDict); ok {
+	if sd, ok := obj.(StreamDict); ok {
 
-		err = loadStreamDict(ctx, &StreamDict, objNr, *entry.Generation)
+		err = loadStreamDict(ctx, &sd, objNr, *entry.Generation)
 		if err != nil {
 			return err
 		}
 
-		entry.Object = StreamDict
+		entry.Object = sd
 	}
 
 	log.Debug.Printf("dereferenceObject: end obj %d of %d\n<%s>\n", objNr, xRefTableSize, entry.Object)
