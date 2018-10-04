@@ -197,57 +197,55 @@ func removeAttachedFiles(xRefTable *XRefTable, files StringSet) (ok bool, err er
 
 	log.Debug.Println("removeAttachedFiles begin")
 
-	if len(files) > 0 {
+	// If no files specified, remove all embedded files.
+	if len(files) == 0 {
+		err = xRefTable.RemoveEmbeddedFilesNameTree()
+		if err != nil {
+			return false, err
+		}
+		return true, nil
+	}
 
-		var removed bool
+	removed := false
 
-		for fileName := range files {
+	for fileName := range files {
 
-			log.Debug.Printf("removeAttachedFiles: removing %s\n", fileName)
+		log.Debug.Printf("removeAttachedFiles: removing %s\n", fileName)
 
-			// Any remove operation may be deleting the only key value pair of this name tree.
-			if xRefTable.Names["EmbeddedFiles"] == nil {
-				//logErrorAttach.Printf("removeAttachedFiles: no attachments, can't remove %s\n", fileName)
-				continue
-			}
+		// Any remove operation may be deleting the only key value pair of this name tree.
+		if xRefTable.Names["EmbeddedFiles"] == nil {
+			//logErrorAttach.Printf("removeAttachedFiles: no attachments, can't remove %s\n", fileName)
+			continue
+		}
 
-			// EmbeddedFiles name tree containing at least one key value pair.
+		// EmbeddedFiles name tree containing at least one key value pair.
 
-			empty, ok, err := xRefTable.Names["EmbeddedFiles"].Remove(xRefTable, fileName)
+		empty, ok, err := xRefTable.Names["EmbeddedFiles"].Remove(xRefTable, fileName)
+		if err != nil {
+			return false, err
+		}
+
+		if !ok {
+			log.Info.Printf("removeAttachedFiles: %s not found\n", fileName)
+			continue
+		}
+
+		log.Debug.Printf("removeAttachedFiles: removed key value pair for %s - empty=%t\n", fileName, empty)
+
+		if empty {
+			// Delete name tree root object.
+			// Clean up root.Names entry and delete if EmbeddedFiles was the only Names entry.
+			err = xRefTable.RemoveEmbeddedFilesNameTree()
 			if err != nil {
 				return false, err
 			}
 
-			if !ok {
-				log.Info.Printf("removeAttachedFiles: %s not found\n", fileName)
-				continue
-			}
-
-			log.Debug.Printf("removeAttachedFiles: removed key value pair for %s - empty=%t\n", fileName, empty)
-
-			if empty {
-				// Delete name tree root object.
-				// Clean up root.Names entry and delete if EmbeddedFiles was the only Names entry.
-				err = xRefTable.RemoveEmbeddedFilesNameTree()
-				if err != nil {
-					return false, err
-				}
-
-			}
-
-			removed = true
 		}
 
-		return removed, nil
+		removed = true
 	}
 
-	// If no files specified, remove all embedded files.
-	err = xRefTable.RemoveEmbeddedFilesNameTree()
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
+	return removed, nil
 }
 
 // AttachList returns a list of embedded files.
