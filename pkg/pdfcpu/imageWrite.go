@@ -150,7 +150,7 @@ func decodePixelColorValue(p uint8, bpc, c int, decode []colValRange) uint8 {
 	// c ...applicable index of a color component in the decode array for this pixel.
 
 	if decode == nil {
-		return p
+		decode = []colValRange{colValRange{min: 0, max: 255}}
 	}
 
 	min := decode[c].min
@@ -161,13 +161,13 @@ func decodePixelColorValue(p uint8, bpc, c int, decode []colValRange) uint8 {
 		q = 2*q + 1
 	}
 
-	v := min + (float64(p) * (max - min) / float64(q))
+	v := uint8(min + (float64(p) * (max - min) / float64(q)))
 
 	if decode[c].inv {
-		v = 1 - v
+		v = v ^ 0xff
 	}
 
-	return uint8(v * 255)
+	return v
 }
 
 func streamBytes(sd *StreamDict) ([]byte, error) {
@@ -722,7 +722,7 @@ func WriteImage(xRefTable *XRefTable, filename string, sd *StreamDict, objNr int
 
 	switch sd.FilterPipeline[0].Name {
 
-	case filter.Flate:
+	case filter.Flate, filter.CCITTFax:
 		// If color space is CMYK then write .tif else write .png
 		fn, err := writeFlateEncodedImage(xRefTable, filename, sd, objNr)
 		if err != nil {
@@ -730,10 +730,6 @@ func WriteImage(xRefTable *XRefTable, filename string, sd *StreamDict, objNr int
 				log.Info.Printf("Image obj#%d uses an unsupported color space. Please see the logfile for details.\n", objNr)
 				err = nil
 			}
-			// if err == ErrUnsupportedTIFFCreation {
-			// 	log.Info.Printf("Image obj#%d uses a CMYK color space. TIFF file creation is unsupported.\n", objNr)
-			// 	err = nil
-			// }
 		}
 		return fn, err
 

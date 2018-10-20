@@ -70,7 +70,7 @@ func ExtractImageData(ctx *Context, objNr int) (*ImageObject, error) {
 
 	switch fpl[0].Name {
 
-	case filter.Flate:
+	case filter.Flate, filter.CCITTFax:
 		//imageObj.Extension = "png"
 		// If color space is CMYK then write .tif else write .png
 		err := decodeStream(imageDict)
@@ -83,9 +83,6 @@ func ExtractImageData(ctx *Context, objNr int) (*ImageObject, error) {
 
 	case filter.JPX:
 		//imageObj.Extension = "jpx"
-
-	//case filter.CCITTFax:
-	// use 	T6.pdf
 
 	default:
 		log.Debug.Printf("extractImageData: ignore obj# %d filter %s unsupported\n", objNr, filters)

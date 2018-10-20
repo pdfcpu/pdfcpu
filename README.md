@@ -13,17 +13,15 @@ It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO
 
 ## Status
 
-Version: 0.1.15
+Version: 0.1.16
 
-* Marks the first release under the Apache-2.0 license.
-* Comes with a new command for adding stamps/watermarks for selected pages supporting text and images.
-* Additional watermark configuration for fontname/size/color, absolute/relative scaling, render mode, opacity and rotation is also supported.
-* Optional intelligent rotation aligns the rotation angle with one of two page diagonals.
-* `-pages` now also supports `odd/even`. (You can even say `-pages odd,n1` if you want to stamp all odd pages other than the title page.)
-* `extract -mode image` is now natively supporting PNG and TIFF with optional lzw compression.
-* [github.com/hhrutter/pdfcpu/lzw](https://github.com/hhrutter/pdfcpu/tree/master/lzw) is an improved version of `compress/lzw`. (There is a [golang proposal](https://github.com/golang/go/issues/25409).)
-* [github.com/hhrutter/pdfcpu/tiff](https://github.com/hhrutter/pdfcpu/tree/master/tiff) is an improved version of golang.org/x/image/tiff.
-* Bug fixes.
+* Introducing preliminary support for the CCITTFaxDecode filter.
+* Supported is the decoding of CCITTGroup 4 compressed data (K < 0) - encoding and group 3 support yet to come.
+* pdfcpu now extracts group 4 compressed black and white images to PNG.
+* pdfcpu's tiff reader is also supporting group 4 compressed images as of this release.
+* #38 extraction of metadata: `pdfcpu extract -mode meta` extracts optional XML metadata.
+* Refactored package structure.
+* Bugfixes #40, #41.
 
 ## Motivation
 
@@ -104,7 +102,6 @@ Usage of `pdfcpu` assumes you know about and respect all copyrights of any PDF c
 ## License
 
 Apache-2.0
-
 
 ## Powered By
 

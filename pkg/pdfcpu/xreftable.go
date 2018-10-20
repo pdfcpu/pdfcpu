@@ -993,12 +993,12 @@ func (xRefTable *XRefTable) EncryptDict() (*Dict, error) {
 		return nil, err
 	}
 
-	Dict, ok := o.(Dict)
+	dict, ok := o.(Dict)
 	if !ok {
 		return nil, errors.New("EncryptDict: corrupt encrypt dict")
 	}
 
-	return &Dict, nil
+	return &dict, nil
 }
 
 // CatalogHasPieceInfo returns true if the root has an entry for \"PieceInfo\".

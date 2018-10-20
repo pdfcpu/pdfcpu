@@ -111,6 +111,7 @@ func (oStreamDict *ObjectStreamDict) AddObject(objNumber int, entry *XRefTableEn
 
 	var pdfString string
 
+	// TODO Use fallthrough ?
 	switch obj := entry.Object.(type) {
 
 	case Dict:

@@ -7,6 +7,7 @@ package tiff
 import (
 	"bytes"
 	"image"
+	"image/png"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -16,6 +17,8 @@ var roundtripTests = []struct {
 	filename string
 	opts     *Options
 }{
+	{"compression4_1.tiff", nil},
+	{"compression4_2.tiff", nil},
 	{"video-001.tiff", nil},
 	{"video-001-16bit.tiff", nil},
 	{"video-001-gray.tiff", nil},
@@ -47,12 +50,26 @@ func openImage(filename string) (image.Image, error) {
 	return Decode(f)
 }
 
+func writeImgToPNG(filename string, img image.Image) (string, error) {
+
+	filename += ".png"
+
+	f, err := os.Create(filename)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	return filename, png.Encode(f, img)
+}
+
 func TestRoundtrip(t *testing.T) {
 	for _, rt := range roundtripTests {
 		img, err := openImage(rt.filename)
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		out := new(bytes.Buffer)
 		err = Encode(out, img, rt.opts)
 		if err != nil {

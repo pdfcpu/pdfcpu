@@ -37,10 +37,21 @@ func parmsForFilter(d *Dict) map[string]int {
 	for k, v := range *d {
 
 		i, ok := v.(Integer)
-		if !ok {
+		if ok {
+			m[k] = i.Value()
 			continue
 		}
-		m[k] = i.Value()
+
+		// Encode boolean values: false -> 0, true -> 1
+		b, ok := v.(Boolean)
+		if ok {
+			m[k] = 0
+			if b.Value() {
+				m[k] = 1
+			}
+			continue
+		}
+
 	}
 
 	return m

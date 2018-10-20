@@ -42,10 +42,15 @@ const (
 	tCompression               = 259
 	tPhotometricInterpretation = 262
 
+	tFillOrder = 266
+
 	tStripOffsets    = 273
 	tSamplesPerPixel = 277
 	tRowsPerStrip    = 278
 	tStripByteCounts = 279
+
+	tT4Options = 292 // CCITT Group 3 options, a set of 32 flag bits.
+	tT6Options = 293 // CCITT Group 4 options, a set of 32 flag bits.
 
 	tTileWidth      = 322
 	tTileLength     = 323

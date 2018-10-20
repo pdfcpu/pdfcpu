@@ -488,36 +488,36 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, sd XRefStreamDict, ctx *C
 func xRefStreamDict(ctx *Context, o Object, objNr int, streamOffset int64) (*XRefStreamDict, error) {
 
 	// must be Dict
-	Dict, ok := o.(Dict)
+	dict, ok := o.(Dict)
 	if !ok {
 		return nil, errors.New("xRefStreamDict: no Dict")
 	}
 
 	// Parse attributes for stream object.
-	streamLength, streamLengthObjNr := Dict.Length()
+	streamLength, streamLengthObjNr := dict.Length()
 	if streamLength == nil && streamLengthObjNr == nil {
 		return nil, errors.New("xRefStreamDict: no \"Length\" entry")
 	}
 
-	filterPipeline, err := pdfFilterPipeline(ctx, Dict)
+	filterPipeline, err := pdfFilterPipeline(ctx, dict)
 	if err != nil {
 		return nil, err
 	}
 
 	// We have a stream object.
 	log.Debug.Printf("xRefStreamDict: streamobject #%d\n", objNr)
-	StreamDict := NewStreamDict(Dict, streamOffset, streamLength, streamLengthObjNr, filterPipeline)
+	streamDict := NewStreamDict(dict, streamOffset, streamLength, streamLengthObjNr, filterPipeline)
 
-	if _, err = loadEncodedStreamContent(ctx, &StreamDict); err != nil {
+	if _, err = loadEncodedStreamContent(ctx, &streamDict); err != nil {
 		return nil, err
 	}
 
 	// Decode xrefstream content
-	if err = saveDecodedStreamContent(nil, &StreamDict, 0, 0, true); err != nil {
+	if err = saveDecodedStreamContent(nil, &streamDict, 0, 0, true); err != nil {
 		return nil, errors.Wrapf(err, "xRefStreamDict: cannot decode stream for obj#:%d\n", objNr)
 	}
 
-	return parseXRefStreamDict(StreamDict)
+	return parseXRefStreamDict(streamDict)
 }
 
 // Parse xRef stream and setup xrefTable entries for all embedded objects and the xref stream dict.
@@ -1379,12 +1379,12 @@ func ParseObject(ctx *Context, offset int64, objNr, genNr int) (Object, error) {
 
 	log.Debug.Printf("ParseObject: begin, obj#%d, offset:%d\n", objNr, offset)
 
-	Object, endInd, streamInd, streamOffset, err := object(ctx, offset, objNr, genNr)
+	obj, endInd, streamInd, streamOffset, err := object(ctx, offset, objNr, genNr)
 	if err != nil {
 		return nil, err
 	}
 
-	switch o := Object.(type) {
+	switch o := obj.(type) {
 
 	case Dict:
 		d, err := dict(ctx, o, objNr, genNr, endInd, streamInd)
@@ -1661,18 +1661,18 @@ func decompressXRefTableEntry(xRefTable *XRefTable, objectNumber int, entry *XRe
 	}
 
 	// Get indexed object from ObjectStreamDict.
-	Object, err := sd.IndexedObject(*entry.ObjectStreamInd)
+	obj, err := sd.IndexedObject(*entry.ObjectStreamInd)
 	if err != nil {
 		return errors.Wrapf(err, "decompressXRefTableEntry: problem dereferencing object stream %d", *entry.ObjectStream)
 	}
 
 	// Save object to XRefRableEntry.
 	g := 0
-	entry.Object = Object
+	entry.Object = obj
 	entry.Generation = &g
 	entry.Compressed = false
 
-	log.Debug.Printf("decompressXRefTableEntry: end, Obj %d[%d]:\n<%s>\n", *entry.ObjectStream, *entry.ObjectStreamInd, Object)
+	log.Debug.Printf("decompressXRefTableEntry: end, Obj %d[%d]:\n<%s>\n", *entry.ObjectStream, *entry.ObjectStreamInd, obj)
 
 	return nil
 }
@@ -1746,24 +1746,24 @@ func decodeObjectStreams(ctx *Context) error {
 		}
 
 		// Ensure StreamDict
-		StreamDict, ok := obj.(StreamDict)
+		streamDict, ok := obj.(StreamDict)
 		if !ok {
 			return errors.New("decodeObjectStreams: corrupt object stream")
 		}
 
 		// Load encoded stream content to xRefTable.
-		if _, err = loadEncodedStreamContent(ctx, &StreamDict); err != nil {
+		if _, err = loadEncodedStreamContent(ctx, &streamDict); err != nil {
 			return errors.Wrapf(err, "decodeObjectStreams: problem dereferencing object stream %d", objectNumber)
 		}
 
 		// Save decoded stream content to xRefTable.
-		if err = saveDecodedStreamContent(ctx, &StreamDict, objectNumber, *entry.Generation, true); err != nil {
+		if err = saveDecodedStreamContent(ctx, &streamDict, objectNumber, *entry.Generation, true); err != nil {
 			log.Debug.Printf("obj %d: %s", objectNumber, err)
 			return err
 		}
 
 		// Ensure decoded objectArray for object stream dicts.
-		if !StreamDict.IsObjStm() {
+		if !streamDict.IsObjStm() {
 			return errors.New("decodeObjectStreams: corrupt object stream")
 		}
 
@@ -1773,7 +1773,7 @@ func decodeObjectStreams(ctx *Context) error {
 		ctx.Read.UsingObjectStreams = true
 
 		// Create new object stream dict.
-		sd, err := objectStreamDict(StreamDict)
+		sd, err := objectStreamDict(streamDict)
 		if err != nil {
 			return errors.Wrapf(err, "decodeObjectStreams: problem dereferencing object stream %d", objectNumber)
 		}
