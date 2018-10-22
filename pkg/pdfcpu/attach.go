@@ -207,6 +207,7 @@ func removeAttachedFiles(xRefTable *XRefTable, files StringSet) (ok bool, err er
 	}
 
 	var removed bool
+	removed = false
 
 	for fileName := range files {
 
