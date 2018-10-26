@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package tiff implements a TIFF image decoder and encoder.
+// Package tiff is an enhanced version of x/image/tiff that implements a TIFF image decoder and encoder.
 //
 // The TIFF specification is at http://partners.adobe.com/public/developer/en/tiff/TIFF6.pdf
 package tiff
@@ -685,14 +685,21 @@ func Decode(r io.Reader) (img image.Image, err error) {
 					d.buf = make([]byte, n)
 					_, err = d.r.ReadAt(d.buf, offset)
 				}
+			case cG3:
+				// Horst Rutter
+				inversePixel := true
+				r := ccitt.NewReader(io.NewSectionReader(d.r, offset, n), ccitt.Group3, d.config.Width, inversePixel, false)
+				d.buf, err = ioutil.ReadAll(r)
+				r.Close()
 			case cG4:
 				// Horst Rutter
 				inversePixel := true
-				r := ccitt.NewReader(io.NewSectionReader(d.r, offset, n), d.config.Width, inversePixel, false)
-				//d.buf, err = ioutil.ReadAll(io.NewSectionReader(d.r, offset, n))
-				//ioutil.WriteFile("mytest.gr4", d.buf, os.ModePerm)
+				r := ccitt.NewReader(io.NewSectionReader(d.r, offset, n), ccitt.Group4, d.config.Width, inversePixel, false)
 				d.buf, err = ioutil.ReadAll(r)
 				r.Close()
+				// Use the following 2 lines in order to write the encoded bytes to disk:
+				//d.buf, err = ioutil.ReadAll(io.NewSectionReader(d.r, offset, n))
+				//ioutil.WriteFile("mytest.gr4", d.buf, os.ModePerm)
 			case cLZW:
 				// Horst Rutter
 				r := lzw.NewReader(io.NewSectionReader(d.r, offset, n), true)

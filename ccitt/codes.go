@@ -17,17 +17,18 @@ limitations under the License.
 package ccitt
 
 const (
-	mP   = "0001"                     // pass mode
-	mH   = "001"                      // horizontal mode
-	mV0  = "1"                        // vertical mode, a1 = b1
-	mVR1 = "011"                      // vertical mode, a1 = b1 + 1
-	mVR2 = "000011"                   // vertical mode, a1 = b1 + 2
-	mVR3 = "0000011"                  // vertical mode, a1 = b1 + 3
-	mVL1 = "010"                      // vertical mode, a1 = b1 - 1
-	mVL2 = "000010"                   // vertical mode, a1 = b1 - 2
-	mVL3 = "0000010"                  // vertical mode, a1 = b1 - 3
-	ext  = "0000001111"               // extension mode, enter uncompressed mode
-	eofb = "000000000001000000000001" // end of facsimile block
+	mP   = "0001"         // pass mode
+	mH   = "001"          // horizontal mode
+	mV0  = "1"            // vertical mode, a1 = b1
+	mVR1 = "011"          // vertical mode, a1 = b1 + 1
+	mVR2 = "000011"       // vertical mode, a1 = b1 + 2
+	mVR3 = "0000011"      // vertical mode, a1 = b1 + 3
+	mVL1 = "010"          // vertical mode, a1 = b1 - 1
+	mVL2 = "000010"       // vertical mode, a1 = b1 - 2
+	mVL3 = "0000010"      // vertical mode, a1 = b1 - 3
+	ext  = "0000001111"   // extension mode, enter uncompressed mode
+	eol  = "000000000001" // end of line
+	eofb = eol + eol      // end of facsimile block
 )
 
 var codes = []string{mP, mH, mV0, mVR1, mVR2, mVR3, mVL1, mVL2, mVL3, ext, eofb}

@@ -46,12 +46,15 @@ func (f ccittDecode) Decode(r io.Reader) (*bytes.Buffer, error) {
 	// >0 : Mixed one- and two-dimensional encoding (Group 3, 2-D)
 	k := 0
 	k, ok = f.parms["K"]
-	if ok && k >= 0 {
-		return nil, errors.New("DecodeCCITT: K >= 0 currently unsupported")
+	if ok && k > 0 {
+		return nil, errors.New("DecodeCCITT: K > 0 currently unsupported")
 	}
 
 	columns := 1728
-	columns, ok = f.parms["Columns"]
+	col, ok := f.parms["Columns"]
+	if ok {
+		columns = col
+	}
 
 	blackIs1 := false
 	v, ok := f.parms["BlackIs1"]
@@ -65,7 +68,11 @@ func (f ccittDecode) Decode(r io.Reader) (*bytes.Buffer, error) {
 		encodedByteAlign = true
 	}
 
-	rc := ccitt.NewReader(r, columns, blackIs1, encodedByteAlign)
+	mode := ccitt.Group3
+	if k < 0 {
+		mode = ccitt.Group4
+	}
+	rc := ccitt.NewReader(r, mode, columns, blackIs1, encodedByteAlign)
 	defer rc.Close()
 
 	var b bytes.Buffer

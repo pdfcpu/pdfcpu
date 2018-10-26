@@ -150,7 +150,7 @@ func decodePixelColorValue(p uint8, bpc, c int, decode []colValRange) uint8 {
 	// c ...applicable index of a color component in the decode array for this pixel.
 
 	if decode == nil {
-		decode = []colValRange{colValRange{min: 0, max: 255}}
+		decode = []colValRange{{min: 0, max: 255}}
 	}
 
 	min := decode[c].min

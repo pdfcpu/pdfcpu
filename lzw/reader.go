@@ -1,4 +1,4 @@
-// Package lzw is derived from compress/lzw in order to implement
+// Package lzw is an enhanced version of compress/lzw that implements
 // Adobe's PDF lzw compression as defined for the LZWDecode filter.
 // See https://www.adobe.com/content/dam/acom/en/devnet/pdf/pdfs/PDF32000_2008.pdf
 // and https://github.com/golang/go/issues/25409.

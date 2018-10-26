@@ -96,7 +96,7 @@ func compare(t *testing.T, fileName string, img1, img2 image.Image) {
 	}
 }
 
-func testFile(t *testing.T, fileName string, w, h int, inverse, align bool) {
+func testFile(t *testing.T, fileName string, mode, w, h int, inverse, align bool) {
 
 	f, err := os.Open(fileName)
 	if err != nil {
@@ -105,8 +105,8 @@ func testFile(t *testing.T, fileName string, w, h int, inverse, align bool) {
 	}
 	defer f.Close()
 
-	// Read & decode CCITT Group 4 file into buf.
-	r := NewReader(f, w, inverse, align)
+	// Read a CCITT encoded file and decode it into buf.
+	r := NewReader(f, mode, w, inverse, align)
 	buf, err := ioutil.ReadAll(r)
 	if err != nil {
 		t.Errorf("%s: %v", fileName, err)
@@ -126,32 +126,37 @@ func testFile(t *testing.T, fileName string, w, h int, inverse, align bool) {
 		return
 	}
 
-	// Compare images
+	// Compare images.
 	compare(t, fnNoExt, img1, img2)
 }
 
 func TestCCITT(t *testing.T) {
 
-	// Test Group 4 encoding
-
 	for _, tt := range []struct {
 		fileName string
+		mode     int
 		w, h     int
 		inverse  bool
 		align    bool
 	}{
-		{"testdata/amt.gr4", 43, 38, false, false},
-		{"testdata/lc.gr4", 154, 154, false, false},
-		{"testdata/do.gr4", 613, 373, true, false}, // <BlackIs1, true>
-		{"testdata/t6diagram.gr4", 1163, 2433, false, false},
-		{"testdata/Wonderwall.gr4", 2312, 3307, false, false}, // extracted from pdfcpu/pkg/api/testdata/Wonderwall.pdf
-		{"testdata/hoare.gr4", 2550, 3300, false, false},
-		{"testdata/jphys.gr4", 3440, 5200, false, false},
-		{"testdata/hl.gr4", 2548, 3300, false, true}, // <EncodedByteAlign, true> <EndOfLine, false>
-		{"testdata/ho2.gr4", 2040, 2640, false, false},
-		{"testdata/sie.gr4", 3310, 8672, false, false},
+
+		// Test Group 3 decoding
+		{"testdata/scan1.gr3", Group3, 2480, 3508, false, false},
+		{"testdata/scan2.gr3", Group3, 1656, 2339, false, false},
+
+		// // Test Group 4 decoding
+		{"testdata/amt.gr4", Group4, 43, 38, false, false},
+		{"testdata/lc.gr4", Group4, 154, 154, false, false},
+		{"testdata/do.gr4", Group4, 613, 373, true, false}, // <BlackIs1, true>
+		{"testdata/t6diagram.gr4", Group4, 1163, 2433, false, false},
+		{"testdata/Wonderwall.gr4", Group4, 2312, 3307, false, false},
+		{"testdata/hoare.gr4", Group4, 2550, 3300, false, false},
+		{"testdata/jphys.gr4", Group4, 3440, 5200, false, false},
+		{"testdata/hl.gr4", Group4, 2548, 3300, false, true}, // <EncodedByteAlign, true>
+		{"testdata/ho2.gr4", Group4, 2040, 2640, false, false},
+		{"testdata/sie.gr4", Group4, 3310, 8672, false, false},
 	} {
-		testFile(t, tt.fileName, tt.w, tt.h, tt.inverse, tt.align)
+		testFile(t, tt.fileName, tt.mode, tt.w, tt.h, tt.inverse, tt.align)
 	}
 
 }

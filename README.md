@@ -13,15 +13,14 @@ It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO
 
 ## Status
 
-Version: 0.1.16
+Version: 0.1.17
 
-* Introducing preliminary support for the CCITTFaxDecode filter.
-* Supported is the decoding of CCITTGroup 4 compressed data (K < 0) - encoding and group 3 support yet to come.
-* pdfcpu now extracts group 4 compressed black and white images to PNG.
-* pdfcpu's tiff reader is also supporting group 4 compressed images as of this release.
-* #38 extraction of metadata: `pdfcpu extract -mode meta` extracts optional XML metadata.
-* Refactored package structure.
-* Bugfixes #40, #41.
+* Improved support for the CCITTFaxDecode filter.
+* Supported is the decoding of CCITTGroup 4 compressed data (for K<0)
+* Supported is also the 1D decoding of CCITTGroup 3 compressed data (for K=0)
+* CCITT Group3 2D(mixed) decoding is pending available test images (K>0).
+* pdfcpu now extracts group 3 and 4 encoded black and white images to PNG.
+* pdfcpu's tiff reader is also supporting CCITT group 3-1D and group 4 encoded images as of this release.
 
 ## Motivation
 

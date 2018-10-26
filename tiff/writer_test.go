@@ -17,8 +17,8 @@ var roundtripTests = []struct {
 	filename string
 	opts     *Options
 }{
-	{"compression4_1.tiff", nil},
-	{"compression4_2.tiff", nil},
+	{"g4test_1.tiff", nil},
+	{"g4test_2.tiff", nil},
 	{"video-001.tiff", nil},
 	{"video-001-16bit.tiff", nil},
 	{"video-001-gray.tiff", nil},

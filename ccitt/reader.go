@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package ccitt implements a CCITT Fax image decoder and encoder.
+// Package ccitt implements a CCITT Fax image decoder.
 package ccitt
 
 import (
@@ -22,6 +22,14 @@ import (
 	"io"
 	"io/ioutil"
 )
+
+// The supported CCITT encoding modes.
+const (
+	Group3 = iota
+	Group4
+)
+
+var errMissingTermCode = errors.New("ccitt: missing terminating code")
 
 // 1 bit deep pixel buffer
 type pixelBuf struct {
@@ -104,7 +112,7 @@ func shiftFor(a, b int) uint8 {
 	return uint8(shift)
 }
 
-// getBitBuf provides the next 24 Bits starting at pos
+// getBitBuf provides the next 24 bits starting at pos
 func (b buf) getBitBuf(pos int) (*bitBuf, error) {
 
 	bit := pos % 8
@@ -173,6 +181,7 @@ func (b bitBuf) hasPrefix(code string) bool {
 }
 
 type decoder struct {
+	mode   int
 	r      io.Reader
 	raw    buf
 	pos    int
@@ -198,6 +207,7 @@ func (d *decoder) nextMode() (mode string, err error) {
 		}
 	}
 
+	// Get next 24 encoded bits.
 	bb, err := d.raw.getBitBuf(d.pos)
 	if err != nil {
 		return "", err
@@ -288,7 +298,7 @@ func (d *decoder) nextRunLength() (int, error) {
 	}
 
 	if !ok {
-		err = errors.New("group4: missing terminating code")
+		err = errMissingTermCode
 	}
 
 	return c, err
@@ -309,6 +319,7 @@ func (d *decoder) calcb2(a0 int) int {
 }
 
 func (d *decoder) handlePass() {
+	//fmt.Printf("begin Pass\n")
 	b2 := d.calcb2(d.a0)
 	d.pb.addRun(d.row, d.a0, b2-d.a0, d.white)
 	d.a0 = b2
@@ -316,6 +327,8 @@ func (d *decoder) handlePass() {
 }
 
 func (d *decoder) handleHorizontal() {
+
+	//fmt.Printf("begin Horiz\n")
 
 	if d.a0 == -1 {
 		d.a0++
@@ -336,8 +349,12 @@ func (d *decoder) handleHorizontal() {
 	d.white = !d.white
 	r2, err := d.nextRunLength()
 	if err != nil {
-		d.err = err
-		return
+		// Note: group3 encoding skips trailing black runs for a line.
+		if err != nil && (d.mode == Group4 || d.mode == Group3 && err != errMissingTermCode) {
+			d.err = err
+			return
+		}
+		r2 = d.w - d.a0
 	}
 	d.pb.addRun(d.row, d.a0, r2, d.white)
 	d.a0 += r2
@@ -368,6 +385,45 @@ func (d *decoder) handleVertical(offa1b1 int) {
 	}
 }
 
+func (d *decoder) handleV0() {
+	//fmt.Println("V(0)")
+	d.handleVertical(0)
+}
+
+func (d *decoder) handleVL1() {
+	//fmt.Println("VL(1)")
+	d.handleVertical(-1)
+}
+
+func (d *decoder) handleVL2() {
+	//fmt.Println("VL(2)")
+	d.handleVertical(-2)
+}
+
+func (d *decoder) handleVL3() {
+	//fmt.Println("VL(3)")
+	d.handleVertical(-3)
+}
+
+func (d *decoder) handleVR1() {
+	//fmt.Println("VR(1)")
+	d.handleVertical(1)
+}
+
+func (d *decoder) handleVR2() {
+	//fmt.Println("VR(2)")
+	d.handleVertical(2)
+}
+
+func (d *decoder) handleVR3() {
+	//fmt.Println("VR(3)")
+	d.handleVertical(3)
+}
+
+func (d *decoder) handleExt() {
+	d.err = errors.New("ccitt: uncompressed mode not supported")
+}
+
 func (d *decoder) initBufs() {
 
 	// Prepare raw buf.
@@ -387,8 +443,108 @@ func (d *decoder) initBufs() {
 	// fmt.Printf("len(d.pb.buf)=%d stride=%d\n", len(d.pb.buf), stride)
 }
 
+func (d *decoder) readEOL() (bool, error) {
+
+	// Get next 24 compressed Bits.
+	bb, err := d.raw.getBitBuf(d.pos)
+	if err != nil {
+		return false, err
+	}
+
+	if !bb.hasPrefix(eol) {
+		return false, nil
+	}
+	d.pos += len(eol)
+
+	return true, nil
+}
+
+func (d *decoder) decodeGroup3OneDimensional() {
+
+	d.initBufs()
+
+	//fmt.Printf("%d(#%02x)bytes: \n%s\n", len(d.raw), len(d.raw), hex.Dump(d.raw))
+
+	// Check for leading eol.
+
+	ok, err := d.readEOL()
+	if err != nil {
+		d.err = err
+		return
+	}
+	if !ok {
+		d.err = errors.New("group3: missing eol page prefix")
+		return
+	}
+
+	for {
+
+		// fmt.Printf("\nrow=%d a0=%d white=%t\n", d.row, d.a0, d.white)
+
+		if d.a0 == d.w {
+			d.a0 = -1
+			d.row++
+			d.pb.addRow()
+			d.white = true
+
+			// Check for eol.
+
+			ok, err := d.readEOL()
+			if err != nil {
+				d.err = err
+				return
+			}
+			if !ok {
+				d.err = errors.New("group3: missing eol")
+				return
+			}
+
+			// Check for rtc.
+
+			ok, err = d.readEOL()
+			if err != nil {
+				d.err = err
+				return
+			}
+
+			if ok {
+				// Processed 2 eol's.
+				// Need another 4 eol's to complete rtc sequence.
+				for i := 0; i < 4; i++ {
+					ok, err = d.readEOL()
+					if err != nil {
+						d.err = err
+						return
+					}
+					if !ok {
+						d.err = errors.New("group3: corrupt rtc")
+						return
+					}
+				}
+				// Successfully parsed rtc.
+				break
+			}
+
+			// Move on to process next line.
+		}
+
+		d.handleHorizontal()
+		if d.err != nil {
+			return
+		}
+
+	}
+
+	if d.inv {
+		d.pb.invertBuf()
+	}
+
+	d.toRead = d.pb.buf
+	d.err = io.EOF
+}
+
 // decode decompresses bytes from r and leaves them in d.toRead.
-func (d *decoder) decode() {
+func (d *decoder) decodeGroup4() {
 
 	d.initBufs()
 
@@ -409,51 +565,22 @@ func (d *decoder) decode() {
 			return
 		}
 
-		switch mode {
-
-		case mP: // a0 to b2 keeps color, a0 = b2
-			// fmt.Printf("begin Pass\n")
-			d.handlePass()
-
-		case mH: // a0 to a1-1 keeps color, change color on a1, a1-a2-1 keeps color, change color on a2, a0 = a2
-			// fmt.Printf("begin Horiz\n")
-			d.handleHorizontal()
-
-		case mV0: // a0 to a1-1 keeps color, change color on a1, a0 = a1
-			// fmt.Println("V(0)")
-			d.handleVertical(0)
-
-		case mVL1:
-			// fmt.Println("VL(1)")
-			d.handleVertical(-1)
-
-		case mVL2:
-			// fmt.Println("VL(2)")
-			d.handleVertical(-2)
-
-		case mVL3:
-			// fmt.Println("VL(3)")
-			d.handleVertical(-3)
-
-		case mVR1:
-			// fmt.Println("VR(1)")
-			d.handleVertical(1)
-
-		case mVR2:
-			// fmt.Println("VR(2)")
-			d.handleVertical(2)
-
-		case mVR3:
-			// fmt.Println("VR(3)")
-			d.handleVertical(3)
-
-		case eofb:
-			//fmt.Println("eofb")
-
-		case ext:
-			//fmt.Println("ccitt: uncompressed mode not supported")
-			d.err = errors.New("ccitt: uncompressed mode not supported")
-
+		for k, v := range map[string]func(){
+			mP:   d.handlePass,
+			mH:   d.handleHorizontal,
+			mV0:  d.handleV0,
+			mVL1: d.handleVL1,
+			mVL2: d.handleVL2,
+			mVL3: d.handleVL3,
+			mVR1: d.handleVR1,
+			mVR2: d.handleVR2,
+			mVR3: d.handleVR3,
+			ext:  d.handleExt,
+		} {
+			if k == mode {
+				v()
+				break
+			}
 		}
 
 		if d.err != nil {
@@ -472,6 +599,15 @@ func (d *decoder) decode() {
 
 	d.toRead = d.pb.buf
 	d.err = io.EOF
+}
+
+func (d *decoder) decode() {
+	switch d.mode {
+	case Group3:
+		d.decodeGroup3OneDimensional()
+	case Group4:
+		d.decodeGroup4()
+	}
 }
 
 func (d *decoder) Read(b []byte) (int, error) {
@@ -501,6 +637,6 @@ func (d *decoder) Close() error {
 // the decompressor may read more data than necessary from r.
 // It is the caller's responsibility to call Close on the ReadCloser when
 // finished reading.
-func NewReader(r io.Reader, w int, inverse, align bool) io.ReadCloser {
-	return &decoder{r: r, white: true, w: w, inv: inverse, align: align}
+func NewReader(r io.Reader, mode, width int, inverse, align bool) io.ReadCloser {
+	return &decoder{r: r, mode: mode, white: true, w: width, inv: inverse, align: align}
 }

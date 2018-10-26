@@ -24,7 +24,7 @@ import (
 
 const (
 	// PDFCPUVersion returns the current pdfcpu version.
-	PDFCPUVersion = "0.1.15"
+	PDFCPUVersion = "0.1.17"
 
 	// PDFCPULongVersion returns pdfcpu's signature.
 	PDFCPULongVersion = "golang pdfcpu v" + PDFCPUVersion

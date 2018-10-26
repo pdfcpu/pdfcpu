@@ -128,6 +128,8 @@ const (
 	Uncompressed CompressionType = iota
 	Deflate
 	LZW
+	CCITTGroup3
+	CCITTGroup4
 )
 
 // specValue returns the compression type constant from the TIFF spec that
@@ -138,6 +140,10 @@ func (c CompressionType) specValue() uint32 {
 		return cLZW
 	case Deflate:
 		return cDeflate
+	case CCITTGroup3:
+		return cG3
+	case CCITTGroup4:
+		return cG4
 	}
 	return cNone
 }
