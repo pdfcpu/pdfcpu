@@ -84,15 +84,8 @@ func ExtractImageData(ctx *Context, objNr int) (*ImageObject, error) {
 
 	switch f {
 
-	case filter.Flate:
+	case filter.Flate, filter.CCITTFax:
 		// If color space is CMYK then write .tif else write .png
-		err := decodeStream(imageDict)
-		if err != nil {
-			return nil, err
-		}
-
-	case filter.CCITTFax:
-		// write .png
 		err := decodeStream(imageDict)
 		if err != nil {
 			return nil, err
