@@ -144,7 +144,7 @@ func TestCCITT(t *testing.T) {
 		{"testdata/scan1.gr3", Group3, 2480, 3508, false, false},
 		{"testdata/scan2.gr3", Group3, 1656, 2339, false, false},
 
-		// // Test Group 4 decoding
+		// Test Group 4 decoding
 		{"testdata/amt.gr4", Group4, 43, 38, false, false},
 		{"testdata/lc.gr4", Group4, 154, 154, false, false},
 		{"testdata/do.gr4", Group4, 613, 373, true, false}, // <BlackIs1, true>

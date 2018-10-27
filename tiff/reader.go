@@ -180,7 +180,6 @@ func (d *decoder) readBits(n uint) (v uint32, ok bool) {
 	for d.nbits < n {
 		d.v <<= 8
 		if d.off >= len(d.buf) {
-			fmt.Printf("d.off=%d len(d.buf)=%d\n", d.off, len(d.buf))
 			return 0, false
 		}
 		d.v |= uint32(d.buf[d.off])
@@ -280,7 +279,6 @@ func (d *decoder) decode(dst image.Image, xmin, ymin, xmax, ymax int) error {
 				for x := xmin; x < rMaxX; x++ {
 					v, ok := d.readBits(d.bpp)
 					if !ok {
-						fmt.Printf("Gray complaining: x=%d y=%d d.bpp=%d ymin=%d rMaxY=%d xmin=%d rMaxX=%d\n", x, y, d.bpp, ymin, rMaxY, xmin, rMaxX)
 						return errNoPixels
 					}
 					v = v * 0xff / max
@@ -459,7 +457,6 @@ func newDecoder(r io.Reader) (*decoder, error) {
 
 	d.config.Width = int(d.firstVal(tImageWidth))
 	d.config.Height = int(d.firstVal(tImageLength))
-	fmt.Printf("imgW:%d imgH:%d\n", d.config.Width, d.config.Height)
 
 	if _, ok := d.features[tBitsPerSample]; !ok {
 		return nil, FormatError("BitsPerSample tag missing")
@@ -473,7 +470,6 @@ func newDecoder(r io.Reader) (*decoder, error) {
 	default:
 		return nil, UnsupportedError(fmt.Sprintf("BitsPerSample of %v", d.bpp))
 	}
-	fmt.Printf("bpp:%d\n", d.bpp)
 
 	// Determine the image mode.
 	switch d.firstVal(tPhotometricInterpretation) {
@@ -531,7 +527,6 @@ func newDecoder(r io.Reader) (*decoder, error) {
 		d.mode = mPaletted
 		d.config.ColorModel = color.Palette(d.palette)
 	case pWhiteIsZero:
-		fmt.Println("whiteIsZero")
 		d.mode = mGrayInvert
 		if d.bpp == 16 {
 			d.config.ColorModel = color.Gray16Model
@@ -539,14 +534,12 @@ func newDecoder(r io.Reader) (*decoder, error) {
 			d.config.ColorModel = color.GrayModel
 		}
 	case pBlackIsZero:
-		fmt.Println("blackIsZero")
 		d.mode = mGray
 		if d.bpp == 16 {
 			d.config.ColorModel = color.Gray16Model
 		} else {
 			d.config.ColorModel = color.GrayModel
 		}
-	// Horst Rutter
 	case pCMYK:
 		d.mode = mCMYK
 		if d.bpp == 16 {
@@ -575,8 +568,6 @@ func DecodeConfig(r io.Reader) (image.Config, error) {
 // The type of Image returned depends on the contents of the TIFF.
 func Decode(r io.Reader) (img image.Image, err error) {
 
-	fmt.Println("Decode...")
-
 	d, err := newDecoder(r)
 	if err != nil {
 		return
@@ -602,7 +593,6 @@ func Decode(r io.Reader) (img image.Image, err error) {
 
 		blockWidth = int(d.firstVal(tTileWidth))
 		blockHeight = int(d.firstVal(tTileLength))
-		fmt.Printf("w:%d h:%d\n", blockWidth, blockHeight)
 
 		if blockWidth != 0 {
 			blocksAcross = (d.config.Width + blockWidth - 1) / blockWidth
@@ -622,11 +612,9 @@ func Decode(r io.Reader) (img image.Image, err error) {
 		if blockHeight != 0 {
 			blocksDown = (d.config.Height + blockHeight - 1) / blockHeight
 		}
-		fmt.Printf("h:%d d:%d\n", blockHeight, blocksDown)
 
 		blockOffsets = d.features[tStripOffsets]
 		blockCounts = d.features[tStripByteCounts]
-		fmt.Printf("o:%d c:%d\n", blockOffsets, blockCounts)
 	}
 
 	// Check if we have the right number of strips/tiles, offsets and counts.
@@ -656,7 +644,6 @@ func Decode(r io.Reader) (img image.Image, err error) {
 		} else {
 			img = image.NewRGBA(imgRect)
 		}
-	// Horst Rutter
 	case mCMYK:
 		img = image.NewCMYK(imgRect)
 	}
@@ -686,22 +673,14 @@ func Decode(r io.Reader) (img image.Image, err error) {
 					_, err = d.r.ReadAt(d.buf, offset)
 				}
 			case cG3:
-				// Horst Rutter
-				inversePixel := true
-				r := ccitt.NewReader(io.NewSectionReader(d.r, offset, n), ccitt.Group3, d.config.Width, inversePixel, false)
+				r := ccitt.NewReader(io.NewSectionReader(d.r, offset, n), ccitt.Group3, d.config.Width, true, false)
 				d.buf, err = ioutil.ReadAll(r)
 				r.Close()
 			case cG4:
-				// Horst Rutter
-				inversePixel := true
-				r := ccitt.NewReader(io.NewSectionReader(d.r, offset, n), ccitt.Group4, d.config.Width, inversePixel, false)
+				r := ccitt.NewReader(io.NewSectionReader(d.r, offset, n), ccitt.Group4, d.config.Width, true, false)
 				d.buf, err = ioutil.ReadAll(r)
 				r.Close()
-				// Use the following 2 lines in order to write the encoded bytes to disk:
-				//d.buf, err = ioutil.ReadAll(io.NewSectionReader(d.r, offset, n))
-				//ioutil.WriteFile("mytest.gr4", d.buf, os.ModePerm)
 			case cLZW:
-				// Horst Rutter
 				r := lzw.NewReader(io.NewSectionReader(d.r, offset, n), true)
 				d.buf, err = ioutil.ReadAll(r)
 				r.Close()

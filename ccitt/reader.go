@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package ccitt implements a CCITT Fax image decoder.
+// Package ccitt implements a CCITT Fax image decoder for Group3/1d and Group4.
 package ccitt
 
 import (
@@ -198,7 +198,7 @@ type decoder struct {
 
 func (d *decoder) nextMode() (mode string, err error) {
 
-	//fmt.Printf("d.align=%t\n", d.align)
+	//fmt.Printf("nextMode: d.align=%t\n", d.align)
 
 	if d.align && d.a0 < 0 {
 		// Skip bits until next byte boundary.
@@ -212,6 +212,7 @@ func (d *decoder) nextMode() (mode string, err error) {
 	if err != nil {
 		return "", err
 	}
+	//fmt.Printf("%032b\n", *bb)
 
 	for _, v := range codes {
 		if !bb.hasPrefix(v) {
@@ -241,6 +242,7 @@ func (d *decoder) nextRunLength() (int, error) {
 		if err != nil {
 			return c, err
 		}
+		//fmt.Printf("%032b\n", *bb)
 
 		for k, v := range makeupBig {
 			if !bb.hasPrefix(k) {
@@ -264,6 +266,7 @@ func (d *decoder) nextRunLength() (int, error) {
 	if err != nil {
 		return c, err
 	}
+	//fmt.Printf("%032b\n", *bb)
 
 	for k, v := range makeup {
 		if !bb.hasPrefix(k) {
@@ -285,6 +288,7 @@ func (d *decoder) nextRunLength() (int, error) {
 	if err != nil {
 		return c, err
 	}
+	//fmt.Printf("%032b\n", *bb)
 
 	ok = false
 	for k, v := range term {
@@ -361,11 +365,12 @@ func (d *decoder) handleHorizontal() {
 
 	d.white = !d.white
 
-	// fmt.Printf("end Horiz(%d,%d) a0=%d\n", r1, r2, d.a0)
+	//fmt.Printf("end Horiz(%d,%d) a0=%d\n", r1, r2, d.a0)
 }
 
 func (d *decoder) handleVertical(offa1b1 int) {
 	b1 := d.calcb1(d.a0)
+	//fmt.Printf("handleVertical: b1=%d\n", b1)
 	if b1 == 0 {
 		// at row start
 		a1 := b1 + offa1b1
@@ -548,15 +553,18 @@ func (d *decoder) decodeGroup4() {
 
 	d.initBufs()
 
+	//fmt.Printf("%d(#%02x)bytes: \n%s\n", len(d.raw), len(d.raw), hex.Dump(d.raw))
+
 	for {
 
-		// fmt.Printf("\nrow=%d a0=%d white=%t\n", d.row, d.a0, d.white)
+		//fmt.Printf("\nrow=%d a0=%d white=%t\n", d.row, d.a0, d.white)
 
 		if d.a0 == d.w {
 			d.a0 = -1
 			d.row++
 			d.pb.addRow()
 			d.white = true
+			//fmt.Printf("row=%d a0=%d white=%t\n", d.row, d.a0, d.white)
 		}
 
 		mode, err := d.nextMode()

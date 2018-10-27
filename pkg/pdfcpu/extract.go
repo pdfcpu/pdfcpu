@@ -50,10 +50,14 @@ func ExtractImageData(ctx *Context, objNr int) (*ImageObject, error) {
 		return nil, nil
 	}
 
-	// Ignore imageMasks.
+	f := fpl[0].Name
+
+	// We do not extract imageMasks with the exception of CCITTDecoded images
 	if im := imageDict.BooleanEntry("ImageMask"); im != nil && *im {
-		log.Info.Printf("extractImageData: ignore obj# %d, imageMask\n", objNr)
-		return nil, nil
+		if f != filter.CCITTFax {
+			log.Info.Printf("extractImageData: ignore obj# %d, imageMask\n", objNr)
+			return nil, nil
+		}
 	}
 
 	// Ignore if image has a soft mask defined.
@@ -68,11 +72,27 @@ func ExtractImageData(ctx *Context, objNr int) (*ImageObject, error) {
 		return nil, nil
 	}
 
-	switch fpl[0].Name {
+	// CCITTDecoded images sometimes don't have a ColorSpace attribute.
+	if f == filter.CCITTFax {
+		_, err := ctx.DereferenceDictEntry(&imageDict.Dict, "ColorSpace")
+		if err != nil {
+			imageDict.InsertName("ColorSpace", DeviceGrayCS)
+		}
+	} else {
+		return nil, nil
+	}
 
-	case filter.Flate, filter.CCITTFax:
-		//imageObj.Extension = "png"
+	switch f {
+
+	case filter.Flate:
 		// If color space is CMYK then write .tif else write .png
+		err := decodeStream(imageDict)
+		if err != nil {
+			return nil, err
+		}
+
+	case filter.CCITTFax:
+		// write .png
 		err := decodeStream(imageDict)
 		if err != nil {
 			return nil, err
