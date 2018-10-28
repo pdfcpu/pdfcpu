@@ -20,8 +20,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
-
 	"os"
 	"strings"
 
@@ -124,7 +122,8 @@ func main() {
 
 func ensurePdfExtension(filename string) {
 	if !strings.HasSuffix(strings.ToLower(filename), ".pdf") {
-		log.Fatalf("%s needs extension \".pdf\".", filename)
+		fmt.Fprintf(os.Stderr, "%s needs extension \".pdf\".", filename)
+		os.Exit(1)
 	}
 }
 
@@ -202,6 +201,9 @@ func setupLogging(verbose bool) {
 		PDFCPULog.SetDefaultDebugLogger()
 		PDFCPULog.SetDefaultInfoLogger()
 		PDFCPULog.SetDefaultStatsLogger()
+		PDFCPULog.SetDefaultTraceLogger()
+
+		//PDFCPULog.SetTraceLogger(log.New(os.Stderr, "TRACE: ", log.Ldate|log.Ltime))
 	}
 
 	needStackTrace = verbose

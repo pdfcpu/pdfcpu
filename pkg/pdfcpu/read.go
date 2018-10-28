@@ -19,6 +19,8 @@ package pdfcpu
 import (
 	"bufio"
 	"bytes"
+	"encoding/hex"
+	"fmt"
 	"io"
 	"os"
 	"sort"
@@ -127,7 +129,7 @@ func scanLines(data []byte, atEOF bool) (advance int, token []byte, err error) {
 
 func newPositionedReader(rs io.ReadSeeker, offset *int64) (*bufio.Reader, error) {
 
-	if _, err := rs.Seek(*offset, 0); err != nil {
+	if _, err := rs.Seek(*offset, io.SeekStart); err != nil {
 		return nil, err
 	}
 
@@ -138,22 +140,33 @@ func newPositionedReader(rs io.ReadSeeker, offset *int64) (*bufio.Reader, error)
 
 // Get the file offset of the last XRefSection.
 // Go to end of file and search backwards for the first occurrence of startxref {offset} %%EOF
-func offsetLastXRefSection(ra io.ReaderAt, fileSize int64) (*int64, error) {
+func offsetLastXRefSection(rs io.ReadSeeker) (*int64, error) {
 
 	var bufSize int64 = defaultBufSize
 
-	off := fileSize - defaultBufSize
-	if off < 0 {
-		off = 0
-		bufSize = fileSize
-	}
-	buf := make([]byte, bufSize)
-
-	log.Debug.Printf("offsetLastXRefSection at %d\n", off)
-
-	if _, err := ra.ReadAt(buf, off); err != nil {
+	off, err := rs.Seek(-bufSize, io.SeekEnd)
+	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("positioned to offset: %d\n", off)
+
+	// off := fileSize - defaultBufSize
+	// if off < 0 {
+	// 	off = 0
+	// 	bufSize = fileSize
+	// }
+	buf := make([]byte, bufSize)
+
+	//log.Debug.Printf("offsetLastXRefSection at %d\n", off)
+
+	n, err := rs.Read(buf)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("read last block with %d bytes buflen=%d\n%s\n", n, len(buf), hex.Dump(buf))
+	// if _, err := ra.ReadAt(buf, off); err != nil {
+	// 	return nil, err
+	// }
 
 	i := strings.LastIndex(string(buf), "startxref")
 	if i == -1 {
@@ -974,7 +987,7 @@ func readXRefTable(ctx *Context) (err error) {
 
 	log.Debug.Println("readXRefTable: begin")
 
-	offset, err := offsetLastXRefSection(ctx.Read.File, ctx.Read.FileSize)
+	offset, err := offsetLastXRefSection(ctx.Read.File)
 	if err != nil {
 		return
 	}

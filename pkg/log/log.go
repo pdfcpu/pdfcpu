@@ -18,6 +18,7 @@ limitations under the License.
 package log
 
 import (
+	"io/ioutil"
 	"log"
 	"os"
 )
@@ -47,6 +48,7 @@ var (
 	Debug = &logger{}
 	Info  = &logger{}
 	Stats = &logger{}
+	Trace = &logger{}
 )
 
 // SetDebugLogger sets the debug logger.
@@ -64,6 +66,11 @@ func SetStatsLogger(log Logger) {
 	Stats.log = log
 }
 
+// SetTraceLogger sets the stats logger.
+func SetTraceLogger(log Logger) {
+	Trace.log = log
+}
+
 // SetDefaultDebugLogger sets the default debug logger.
 func SetDefaultDebugLogger() {
 	SetDebugLogger(log.New(os.Stderr, "DEBUG: ", log.Ldate|log.Ltime))
@@ -79,11 +86,17 @@ func SetDefaultStatsLogger() {
 	SetStatsLogger(log.New(os.Stderr, "STATS: ", log.Ldate|log.Ltime))
 }
 
+// SetDefaultTraceLogger sets the default stats logger.
+func SetDefaultTraceLogger() {
+	SetTraceLogger(log.New(ioutil.Discard, "TRACE: ", log.Ldate|log.Ltime))
+}
+
 // SetDefaultLoggers sets all loggers to their default logger.
 func SetDefaultLoggers() {
 	SetDefaultDebugLogger()
 	SetDefaultInfoLogger()
 	SetDefaultStatsLogger()
+	SetDefaultTraceLogger()
 }
 
 // DisableLoggers turns off all logging.
@@ -91,6 +104,7 @@ func DisableLoggers() {
 	SetDebugLogger(nil)
 	SetInfoLogger(nil)
 	SetStatsLogger(nil)
+	SetTraceLogger(nil)
 }
 
 // Printf writes a formatted message to the log.
