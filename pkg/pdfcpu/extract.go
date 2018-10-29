@@ -27,6 +27,7 @@ import (
 // ExtractImageData extracts image data for objNr.
 // Supported imgTypes: FlateDecode, DCTDecode, JPXDecode
 // TODO: Implementation and usage of these filters: DCTDecode and JPXDecode.
+// TODO: Should an error be returned instead of nil, nil when filters are not supported?
 func ExtractImageData(ctx *Context, objNr int) (*ImageObject, error) {
 
 	imageObj := ctx.Optimize.ImageObjects[objNr]
@@ -78,8 +79,6 @@ func ExtractImageData(ctx *Context, objNr int) (*ImageObject, error) {
 		if err != nil {
 			imageDict.InsertName("ColorSpace", DeviceGrayCS)
 		}
-	} else {
-		return nil, nil
 	}
 
 	switch f {
