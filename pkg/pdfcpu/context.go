@@ -19,7 +19,7 @@ package pdfcpu
 import (
 	"bufio"
 	"fmt"
-	"os"
+	"io"
 	"sort"
 	"strings"
 
@@ -36,21 +36,16 @@ type Context struct {
 }
 
 // NewContext initializes a new Context.
-func NewContext(fileName string, file *os.File, config *Configuration) (*Context, error) {
+func NewContext(rs io.ReadSeeker, fileName string, fileSize int64, config *Configuration) (*Context, error) {
 
 	if config == nil {
 		config = NewDefaultConfiguration()
 	}
 
-	fileInfo, err := file.Stat()
-	if err != nil {
-		return nil, err
-	}
-
 	ctx := &Context{
 		config,
 		newXRefTable(config.ValidationMode),
-		newReadContext(fileName, file, fileInfo.Size()),
+		newReadContext(rs, fileName, fileSize),
 		newOptimizationContext(),
 		NewWriteContext(config.Eol),
 	}
@@ -157,8 +152,8 @@ type ReadContext struct {
 
 	// The PDF-File which gets processed.
 	FileName string
-	File     *os.File
 	FileSize int64
+	rs       io.ReadSeeker
 
 	BinaryTotalSize     int64 // total stream data
 	BinaryImageSize     int64 // total image stream data
@@ -176,10 +171,10 @@ type ReadContext struct {
 	XRefStreams      IntSet // All object numbers of any xref streams found.
 }
 
-func newReadContext(fileName string, file *os.File, fileSize int64) *ReadContext {
+func newReadContext(rs io.ReadSeeker, fileName string, fileSize int64) *ReadContext {
 	return &ReadContext{
+		rs:            rs,
 		FileName:      fileName,
-		File:          file,
 		FileSize:      fileSize,
 		ObjectStreams: IntSet{},
 		XRefStreams:   IntSet{},

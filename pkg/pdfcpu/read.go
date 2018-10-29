@@ -19,10 +19,7 @@ package pdfcpu
 import (
 	"bufio"
 	"bytes"
-	"encoding/hex"
-	"fmt"
 	"io"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -33,25 +30,17 @@ import (
 )
 
 const (
-	defaultBufSize   = 1024
-	unknownDelimiter = byte(0)
+	defaultBufSize = 1024
+	//unknownDelimiter = byte(0)
 )
 
-// ReadPDFFile reads in a PDFFile and generates a Context, an in-memory representation containing a cross reference table.
-func ReadPDFFile(fileName string, config *Configuration) (*Context, error) {
+// ReadPDFFile takes a readSeeker and generates a Context,
+// an in-memory representation containing a cross reference table.
+func ReadPDFFile(rs io.ReadSeeker, fileName string, fileSize int64, config *Configuration) (*Context, error) {
 
 	log.Debug.Println("readPDFFile: begin")
 
-	file, err := os.Open(fileName)
-	if err != nil {
-		return nil, errors.Wrapf(err, "can't open %q", fileName)
-	}
-
-	defer func() {
-		file.Close()
-	}()
-
-	ctx, err := NewContext(fileName, file, config)
+	ctx, err := NewContext(rs, fileName, fileSize, config)
 	if err != nil {
 		return nil, err
 	}
@@ -140,33 +129,24 @@ func newPositionedReader(rs io.ReadSeeker, offset *int64) (*bufio.Reader, error)
 
 // Get the file offset of the last XRefSection.
 // Go to end of file and search backwards for the first occurrence of startxref {offset} %%EOF
-func offsetLastXRefSection(rs io.ReadSeeker) (*int64, error) {
+func offsetLastXRefSection(ctx *Context) (*int64, error) {
 
-	var bufSize int64 = defaultBufSize
+	rs := ctx.Read.rs
+	var bufSize int64 = 512
 
 	off, err := rs.Seek(-bufSize, io.SeekEnd)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("positioned to offset: %d\n", off)
 
-	// off := fileSize - defaultBufSize
-	// if off < 0 {
-	// 	off = 0
-	// 	bufSize = fileSize
-	// }
 	buf := make([]byte, bufSize)
 
-	//log.Debug.Printf("offsetLastXRefSection at %d\n", off)
+	log.Debug.Printf("offsetLastXRefSection at %d\n", off)
 
-	n, err := rs.Read(buf)
+	_, err = rs.Read(buf)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("read last block with %d bytes buflen=%d\n%s\n", n, len(buf), hex.Dump(buf))
-	// if _, err := ra.ReadAt(buf, off); err != nil {
-	// 	return nil, err
-	// }
 
 	i := strings.LastIndex(string(buf), "startxref")
 	if i == -1 {
@@ -613,7 +593,7 @@ func parseHybridXRefStream(offset *int64, ctx *Context) error {
 
 	log.Debug.Println("parseHybridXRefStream: begin")
 
-	rd, err := newPositionedReader(ctx.Read.File, offset)
+	rd, err := newPositionedReader(ctx.Read.rs, offset)
 	if err != nil {
 		return err
 	}
@@ -887,15 +867,21 @@ func parseXRefSection(s *bufio.Scanner, ctx *Context) (*int64, error) {
 // if present, shall be used instead of the version specified in the Header.
 // Save PDF Version from header to xRefTable.
 // The header version comes as the first line of the file.
-func headerVersion(ra io.ReaderAt) (*Version, error) {
+func headerVersion(rs io.ReadSeeker) (*Version, error) {
 
 	log.Debug.Println("headerVersion begin")
 
 	// Get first line of file which holds the version of this PDFFile.
 	// We call this the header version.
 
+	_, err := rs.Seek(0, io.SeekStart)
+	if err != nil {
+		return nil, err
+	}
+
 	buf := make([]byte, 10)
-	if _, err := ra.ReadAt(buf, 0); err != nil {
+	_, err = rs.Read(buf)
+	if err != nil {
 		return nil, err
 	}
 
@@ -924,9 +910,9 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 
 	log.Debug.Println("buildXRefTableStartingAt: begin")
 
-	file := ctx.Read.File
+	rs := ctx.Read.rs
 
-	hv, err := headerVersion(file)
+	hv, err := headerVersion(rs)
 	if err != nil {
 		return err
 	}
@@ -935,7 +921,7 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 
 	for offset != nil {
 
-		rd, err := newPositionedReader(file, offset)
+		rd, err := newPositionedReader(rs, offset)
 		if err != nil {
 			return err
 		}
@@ -954,7 +940,7 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 
 			log.Debug.Println("buildXRefTableStartingAt: found xref stream")
 			ctx.Read.UsingXRefStreams = true
-			rd, err = newPositionedReader(file, offset)
+			rd, err = newPositionedReader(rs, offset)
 			if err != nil {
 				return err
 			}
@@ -987,7 +973,7 @@ func readXRefTable(ctx *Context) (err error) {
 
 	log.Debug.Println("readXRefTable: begin")
 
-	offset, err := offsetLastXRefSection(ctx.Read.File)
+	offset, err := offsetLastXRefSection(ctx)
 	if err != nil {
 		return
 	}
@@ -1322,7 +1308,7 @@ func dict(ctx *Context, Dict Dict, objNr, genNr, endInd, streamInd int) (d *Dict
 func object(ctx *Context, offset int64, objNr, genNr int) (o Object, endInd, streamInd int, streamOffset int64, err error) {
 
 	var rd io.Reader
-	rd, err = newPositionedReader(ctx.Read.File, &offset)
+	rd, err = newPositionedReader(ctx.Read.rs, &offset)
 	if err != nil {
 		return nil, 0, 0, 0, err
 	}
@@ -1583,7 +1569,7 @@ func loadEncodedStreamContent(ctx *Context, streamDict *StreamDict) ([]byte, err
 	}
 
 	newOffset := streamDict.StreamOffset
-	rd, err := newPositionedReader(ctx.Read.File, &newOffset)
+	rd, err := newPositionedReader(ctx.Read.rs, &newOffset)
 	if err != nil {
 		return nil, err
 	}

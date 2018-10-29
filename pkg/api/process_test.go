@@ -55,12 +55,74 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
+func TestReadSeekerWriter(t *testing.T) {
+
+	config := pdfcpu.NewDefaultConfiguration()
+	fileIn := filepath.Join(inDir, "CenterOfWhy.pdf")
+	fileOut := filepath.Join(outDir, "test.pdf")
+
+	rs, err := os.Open(fileIn)
+	if err != nil {
+		t.Fatalf("TestReadSeekerWriter Open:  %v\n", err)
+	}
+
+	defer func() {
+		rs.Close()
+	}()
+
+	fileInfo, err := rs.Stat()
+	if err != nil {
+		t.Fatalf("TestReadSeekerWriter Stat:  %v\n", err)
+	}
+
+	ctx, err := ReaderContext(rs, fileIn, fileInfo.Size(), config)
+	if err != nil {
+		t.Fatalf("TestReadSeekerWriter Read:  %v\n", err)
+	}
+
+	err = ValidateContext(ctx)
+	if err != nil {
+		t.Fatalf("TestReadSeekerWriter Validate:  %v\n", err)
+	}
+
+	err = OptimizeContext(ctx)
+	if err != nil {
+		t.Fatalf("TestReadSeekerWriter Optimize:  %v\n", err)
+	}
+
+	w, err := os.Create(fileOut)
+	if err != nil {
+		t.Fatalf("TestReadSeekerWriter Create:  %v\n", err)
+
+	}
+
+	defer func() {
+
+		// The underlying bufio.Writer has already been flushed.
+
+		// Processing error takes precedence.
+		if err != nil {
+			w.Close()
+			return
+		}
+
+		// Do not miss out on closing errors.
+		err = w.Close()
+
+	}()
+
+	err = WriteContext(ctx, w)
+	if err != nil {
+		t.Fatalf("TestReadSeekerWriter Write:  %v\n", err)
+	}
+
+}
 func TestGetPageCount(t *testing.T) {
 
 	config := pdfcpu.NewDefaultConfiguration()
 	inFile := filepath.Join(inDir, "CenterOfWhy.pdf")
 
-	ctx, err := Read(inFile, config)
+	ctx, err := ReadContext(inFile, config)
 	if err != nil {
 		t.Fatalf("TestGetPageCount:  %v\n", err)
 	}

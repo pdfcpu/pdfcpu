@@ -42,31 +42,39 @@ func prepareContextForWriting(ctx *Context) error {
 // WritePDFFile generates a PDF file for the cross reference table contained in Context.
 func WritePDFFile(ctx *Context) error {
 
-	fileName := ctx.Write.DirName + ctx.Write.FileName
+	var file *os.File
+	var err error
 
-	log.Info.Printf("writing to %s\n", fileName)
+	// Create a writer for dirname and filename if not already supplied.
+	if ctx.Write.Writer == nil {
 
-	file, err := os.Create(fileName)
-	if err != nil {
-		return errors.Wrapf(err, "can't create %s\n%s", fileName, err)
-	}
+		fileName := ctx.Write.DirName + ctx.Write.FileName
 
-	ctx.Write.Writer = bufio.NewWriter(file)
+		log.Info.Printf("writing to %s\n", fileName)
 
-	defer func() {
-
-		// The underlying bufio.Writer has already been flushed.
-
-		// Processing error takes precedence.
+		file, err = os.Create(fileName)
 		if err != nil {
-			file.Close()
-			return
+			return errors.Wrapf(err, "can't create %s\n%s", fileName, err)
 		}
 
-		// Do not miss out on closing errors.
-		err = file.Close()
+		ctx.Write.Writer = bufio.NewWriter(file)
 
-	}()
+		defer func() {
+
+			// The underlying bufio.Writer has already been flushed.
+
+			// Processing error takes precedence.
+			if err != nil {
+				file.Close()
+				return
+			}
+
+			// Do not miss out on closing errors.
+			err = file.Close()
+
+		}()
+
+	}
 
 	err = prepareContextForWriting(ctx)
 	if err != nil {
@@ -1007,6 +1015,11 @@ func writeXRef(ctx *Context) error {
 func setFileSizeOfWrittenFile(w *WriteContext, f *os.File) error {
 
 	// Get file info for file just written but flush first to get correct file size.
+
+	// If writing is Writer based then f is nil.
+	if f == nil {
+		return nil
+	}
 
 	err := w.Flush()
 	if err != nil {
