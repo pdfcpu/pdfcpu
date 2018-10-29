@@ -50,7 +50,7 @@ func stringSet(slice []string) pdf.StringSet {
 	return strSet
 }
 
-// ReaderContext uses a readseeker to build an internal structure holding its cross reference table aka the Context.
+// ReaderContext uses an io.Readseeker to build an internal structure holding its cross reference table aka the Context.
 func ReaderContext(rs io.ReadSeeker, fileIn string, fileSize int64, config *pdf.Configuration) (*pdf.Context, error) {
 	return pdf.ReadPDFFile(rs, fileIn, fileSize, config)
 }

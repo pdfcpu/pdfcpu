@@ -55,6 +55,72 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
+func ExampleReaderContext() {
+
+	// This example shows calling into the API with ReadSeeker/Writer.
+
+	// This allows to run pdfcpu as a backend to an http server for on the fly pdf processing.
+
+	config := pdfcpu.NewDefaultConfiguration()
+	fileIn := filepath.Join(inDir, "CenterOfWhy.pdf")
+	fileOut := filepath.Join(outDir, "test.pdf")
+
+	rs, err := os.Open(fileIn)
+	if err != nil {
+		return
+	}
+
+	defer func() {
+		rs.Close()
+	}()
+
+	fileInfo, err := rs.Stat()
+	if err != nil {
+		return
+	}
+
+	ctx, err := ReaderContext(rs, fileIn, fileInfo.Size(), config)
+	if err != nil {
+		return
+	}
+
+	err = ValidateContext(ctx)
+	if err != nil {
+		return
+	}
+
+	err = OptimizeContext(ctx)
+	if err != nil {
+		return
+	}
+
+	w, err := os.Create(fileOut)
+	if err != nil {
+		return
+	}
+
+	defer func() {
+
+		// The underlying bufio.Writer has already been flushed.
+
+		// Processing error takes precedence.
+		if err != nil {
+			w.Close()
+			return
+		}
+
+		// Do not miss out on closing errors.
+		err = w.Close()
+
+	}()
+
+	err = WriteContext(ctx, w)
+	if err != nil {
+		return
+	}
+
+}
+
 func TestReadSeekerWriter(t *testing.T) {
 
 	config := pdfcpu.NewDefaultConfiguration()
