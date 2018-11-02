@@ -1436,64 +1436,59 @@ func dereferencedObject(ctx *Context, objectNumber int) (Object, error) {
 	}
 
 	if entry.Compressed {
-		decompressXRefTableEntry(ctx.XRefTable, objectNumber, entry)
+		err := decompressXRefTableEntry(ctx.XRefTable, objectNumber, entry)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if entry.Object == nil {
 
-		// dereference this object!
-
 		log.Debug.Printf("dereferencedObject: dereferencing object %d\n", objectNumber)
 
-		obj, err := ParseObject(ctx, *entry.Offset, objectNumber, *entry.Generation)
+		o, err := ParseObject(ctx, *entry.Offset, objectNumber, *entry.Generation)
 		if err != nil {
 			return nil, errors.Wrapf(err, "dereferencedObject: problem dereferencing object %d", objectNumber)
 		}
 
-		if obj == nil {
+		if o == nil {
 			return nil, errors.New("dereferencedObject: object is nil")
 		}
 
-		entry.Object = obj
+		entry.Object = o
 	}
 
 	return entry.Object, nil
 }
 
+func dereferencedInteger(ctx *Context, objectNumber int) (*Integer, error) {
+
+	o, err := dereferencedObject(ctx, objectNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	i, ok := o.(Integer)
+	if !ok {
+		return nil, errors.New("dereferencedInteger: corrupt Integer")
+	}
+
+	return &i, nil
+}
+
 func dereferencedDict(ctx *Context, objectNumber int) (*Dict, error) {
 
-	entry, ok := ctx.Find(objectNumber)
-	if !ok {
-		return nil, errors.New("dereferencedDict: object not registered in xRefTable")
+	o, err := dereferencedObject(ctx, objectNumber)
+	if err != nil {
+		return nil, err
 	}
 
-	if entry.Compressed {
-		decompressXRefTableEntry(ctx.XRefTable, objectNumber, entry)
-	}
-
-	if entry.Object == nil {
-
-		// dereference this object!
-
-		log.Debug.Printf("dereferencedDict: dereferencing object %d\n", objectNumber)
-
-		obj, err := ParseObject(ctx, *entry.Offset, objectNumber, *entry.Generation)
-		if err != nil {
-			return nil, errors.Wrapf(err, "dereferencedDict: problem dereferencing object %d", objectNumber)
-		}
-
-		if obj == nil {
-			return nil, errors.New("dereferencedDict: object is nil")
-		}
-
-		entry.Object = obj
-	}
-
-	dict, ok := entry.Object.(Dict)
+	d, ok := o.(Dict)
 	if !ok {
 		return nil, errors.New("dereferencedDict: corrupt Dict")
 	}
-	return &dict, nil
+
+	return &d, nil
 }
 
 // dereference a Integer object representing an int64 value.
@@ -1501,14 +1496,9 @@ func int64Object(ctx *Context, objectNumber int) (*int64, error) {
 
 	log.Debug.Printf("int64Object begin: %d\n", objectNumber)
 
-	obj, err := dereferencedObject(ctx, objectNumber)
+	i, err := dereferencedInteger(ctx, objectNumber)
 	if err != nil {
 		return nil, err
-	}
-
-	i, ok := obj.(Integer)
-	if !ok {
-		return nil, errors.New("int64Object: object is not Integer")
 	}
 
 	i64 := int64(i.Value())
@@ -2082,21 +2072,6 @@ func handleUnencryptedFile(ctx *Context) error {
 	return nil
 }
 
-func dereferenceEncryptDict(ctx *Context, encryptDictObjNr int) (*Dict, error) {
-
-	obj, err := dereferencedObject(ctx, encryptDictObjNr)
-	if err != nil {
-		return nil, err
-	}
-
-	dict, ok := obj.(Dict)
-	if !ok {
-		return nil, errors.New("corrupt encrypt dict")
-	}
-
-	return &dict, nil
-}
-
 func idBytes(ctx *Context) (id []byte, err error) {
 
 	if ctx.ID == nil {
@@ -2131,7 +2106,7 @@ func needsOwnerAndUserPassword(cmd CommandMode) bool {
 func setupEncryptionKey(ctx *Context, encryptDictObjNr int) error {
 
 	// Dereference encryptDict.
-	encryptDict, err := dereferenceEncryptDict(ctx, encryptDictObjNr)
+	encryptDict, err := dereferencedDict(ctx, encryptDictObjNr)
 	if err != nil {
 		return err
 	}
