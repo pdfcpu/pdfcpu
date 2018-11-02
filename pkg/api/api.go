@@ -18,7 +18,9 @@ limitations under the License.
 package api
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -48,17 +50,47 @@ func stringSet(slice []string) pdf.StringSet {
 	return strSet
 }
 
-// Read reads in a PDF file and builds an internal structure holding its cross reference table aka the Context.
-func Read(fileIn string, config *pdf.Configuration) (*pdf.Context, error) {
+// ReaderContext uses an io.Readseeker to build an internal structure holding its cross reference table aka the Context.
+func ReaderContext(rs io.ReadSeeker, fileIn string, fileSize int64, config *pdf.Configuration) (*pdf.Context, error) {
+	return pdf.ReadPDFFile(rs, fileIn, fileSize, config)
+}
+
+// ValidateContext validates a PDF context.
+func ValidateContext(ctx *pdf.Context) error {
+	return validate.XRefTable(ctx.XRefTable)
+}
+
+// OptimizeContext optimizes a PDF context.
+func OptimizeContext(ctx *pdf.Context) error {
+	return pdf.OptimizeXRefTable(ctx)
+}
+
+// WriteContext writes a PDF context.
+func WriteContext(ctx *pdf.Context, w io.Writer) error {
+	ctx.Write.Writer = bufio.NewWriter(w)
+	return pdf.WritePDFFile(ctx)
+}
+
+// ReadContext reads in a PDF file and builds an internal structure holding its cross reference table aka the Context.
+func ReadContext(fileIn string, config *pdf.Configuration) (*pdf.Context, error) {
 
 	//logInfoAPI.Printf("reading %s..\n", fileIn)
 
-	ctx, err := pdf.ReadPDFFile(fileIn, config)
+	file, err := os.Open(fileIn)
 	if err != nil {
-		return nil, errors.Wrap(err, "Read failed.")
+		return nil, errors.Wrapf(err, "can't open %q", fileIn)
 	}
 
-	return ctx, nil
+	defer func() {
+		file.Close()
+	}()
+
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	return ReaderContext(file, fileIn, fileInfo.Size(), config)
 }
 
 // Validate validates a PDF file against ISO-32000-1:2008.
@@ -72,7 +104,7 @@ func Validate(cmd *Command) ([]string, error) {
 	fmt.Printf("validating(mode=%s) %s ...\n", config.ValidationModeString(), fileIn)
 	//logInfoAPI.Printf("validating(mode=%s) %s..\n", config.ValidationModeString(), fileIn)
 
-	ctx, err := Read(fileIn, config)
+	ctx, err := ReadContext(fileIn, config)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +113,7 @@ func Validate(cmd *Command) ([]string, error) {
 
 	from2 := time.Now()
 
-	err = validate.XRefTable(ctx.XRefTable)
+	err = ValidateContext(ctx)
 	if err != nil {
 		err = errors.Wrap(err, "validation error (try -mode=relaxed)")
 	} else {
@@ -164,7 +196,7 @@ func writeSinglePagePDFs(ctx *pdf.Context, selectedPages pdf.IntSet, dirOut stri
 
 func readAndValidate(fileIn string, config *pdf.Configuration, from1 time.Time) (ctx *pdf.Context, dur1, dur2 float64, err error) {
 
-	ctx, err = Read(fileIn, config)
+	ctx, err = ReadContext(fileIn, config)
 	if err != nil {
 		return nil, 0, 0, err
 	}
@@ -191,7 +223,7 @@ func readValidateAndOptimize(fileIn string, config *pdf.Configuration, from1 tim
 
 	from3 := time.Now()
 	//fmt.Printf("optimizing %s ...\n", fileIn)
-	err = pdf.OptimizeXRefTable(ctx)
+	err = OptimizeContext(ctx)
 	if err != nil {
 		return nil, 0, 0, 0, err
 	}

@@ -39,7 +39,7 @@ type XRefTableEntry struct {
 	Free            bool
 	Offset          *int64
 	Generation      *int
-	Object          Object // maybe *Object ??
+	Object          Object
 	Compressed      bool
 	ObjectStream    *int
 	ObjectStreamInd *int

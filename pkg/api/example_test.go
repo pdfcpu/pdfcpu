@@ -22,6 +22,10 @@ import (
 	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
 )
 
+func ExampleProcess() {
+	// Please refer to the following examples.
+}
+
 func exampleProcessValidate() {
 
 	config := pdfcpu.NewDefaultConfiguration()
