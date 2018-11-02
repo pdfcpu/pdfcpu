@@ -506,7 +506,7 @@ func xRefStreamDict(ctx *Context, o Object, objNr int, streamOffset int64) (*XRe
 	}
 
 	// Decode xrefstream content
-	if err = saveDecodedStreamContent(nil, &streamDict, 0, 0, true); err != nil {
+	if err = saveDecodedStreamContent(nil, &streamDict, 0, 0); err != nil {
 		return nil, errors.Wrapf(err, "xRefStreamDict: cannot decode stream for obj#:%d\n", objNr)
 	}
 
@@ -1595,17 +1595,9 @@ func loadEncodedStreamContent(ctx *Context, streamDict *StreamDict) ([]byte, err
 }
 
 // Decodes the raw encoded stream content and saves it to streamDict.Content.
-func saveDecodedStreamContent(ctx *Context, streamDict *StreamDict, objNr, genNr int, decode bool) (err error) {
+func saveDecodedStreamContent(ctx *Context, streamDict *StreamDict, objNr, genNr int) (err error) {
 
-	log.Debug.Printf("saveDecodedStreamContent: begin decode=%t\n", decode)
-
-	// If the "Identity" crypt filter is used we do not need to decrypt.
-	if ctx != nil && ctx.EncKey != nil {
-		if len(streamDict.FilterPipeline) == 1 && streamDict.FilterPipeline[0].Name == "Crypt" {
-			streamDict.Content = streamDict.Raw
-			return nil
-		}
-	}
+	log.Debug.Println("saveDecodedStreamContent: begin")
 
 	// Special case: If the length of the encoded data is 0, we do not need to decode anything.
 	if len(streamDict.Raw) == 0 {
@@ -1613,19 +1605,21 @@ func saveDecodedStreamContent(ctx *Context, streamDict *StreamDict, objNr, genNr
 		return nil
 	}
 
-	// ctx gets created after XRefStream parsing.
-	// XRefStreams are not encrypted.
+	// If the "Identity" crypt filter is used we do not need to decrypt.
 	if ctx != nil && ctx.EncKey != nil {
+
+		if len(streamDict.FilterPipeline) == 1 && streamDict.FilterPipeline[0].Name == "Crypt" {
+			streamDict.Content = streamDict.Raw
+			return nil
+		}
+
 		streamDict.Raw, err = decryptStream(ctx.AES4Streams, streamDict.Raw, objNr, genNr, ctx.EncKey)
 		if err != nil {
 			return err
 		}
 		l := int64(len(streamDict.Raw))
 		streamDict.StreamLength = &l
-	}
 
-	if !decode {
-		return nil
 	}
 
 	// Actual decoding of content stream.
@@ -1756,7 +1750,7 @@ func decodeObjectStreams(ctx *Context) error {
 		}
 
 		// Save decoded stream content to xRefTable.
-		if err = saveDecodedStreamContent(ctx, &streamDict, objectNumber, *entry.Generation, true); err != nil {
+		if err = saveDecodedStreamContent(ctx, &streamDict, objectNumber, *entry.Generation); err != nil {
 			log.Debug.Printf("obj %d: %s", objectNumber, err)
 			return err
 		}
@@ -1848,15 +1842,21 @@ func handleLinearizationParmDict(ctx *Context, obj Object, objNr int) error {
 
 func loadStreamDict(ctx *Context, sd *StreamDict, objNr, genNr int) error {
 
+	var err error
+
 	// Load encoded stream content for stream dicts into xRefTable entry.
-	if _, err := loadEncodedStreamContent(ctx, sd); err != nil {
+	if _, err = loadEncodedStreamContent(ctx, sd); err != nil {
 		return errors.Wrapf(err, "dereferenceObject: problem dereferencing stream %d", objNr)
 	}
 
 	ctx.Read.BinaryTotalSize += *sd.StreamLength
 
 	// Decode stream content.
-	return saveDecodedStreamContent(ctx, sd, objNr, genNr, ctx.DecodeAllStreams)
+	if ctx.DecodeAllStreams {
+		err = saveDecodedStreamContent(ctx, sd, objNr, genNr)
+	}
+
+	return err
 }
 
 func updateBinaryTotalSize(ctx *Context, o Object) {

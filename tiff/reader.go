@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package tiff is an enhanced version of x/image/tiff that implements a TIFF image decoder and encoder.
+// Package tiff is an enhanced version of x/image/tiff.
 //
-// The TIFF specification is at http://partners.adobe.com/public/developer/en/tiff/TIFF6.pdf
+// It uses a consolidated version of compress/lzw (https://github.com/hhrutter/pdfcpu/tree/master/lzw) for compression and also adds support for CMYK.
+//
+// More information: https://github.com/hhrutter/pdfcpu/tree/master/tiff
 package tiff
 
 import (

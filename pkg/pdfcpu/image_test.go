@@ -101,6 +101,16 @@ func compare(t *testing.T, fn1, fn2 string) {
 
 }
 
+func printOptionalSMask(t *testing.T, sd *StreamDict) {
+	o := sd.IndirectRefEntry("SMask")
+	if o != nil {
+		sm, err := xRefTable.Dereference(*o)
+		if err != nil {
+			t.Fatalf("err: %v\n", err)
+		}
+		fmt.Printf("SMask %s: %s\n", o, sm)
+	}
+}
 func TestReadWritePNG(t *testing.T) {
 
 	for _, filename := range []string{
@@ -119,14 +129,7 @@ func TestReadWritePNG(t *testing.T) {
 		fmt.Printf("created imageObj: %s\n", sd)
 
 		// Print the optional SMask.
-		o := sd.IndirectRefEntry("SMask")
-		if o != nil {
-			sm, err := xRefTable.Dereference(*o)
-			if err != nil {
-				t.Fatalf("err: %v\n", err)
-			}
-			fmt.Printf("SMask %s: %s\n", o, sm)
-		}
+		printOptionalSMask(t, sd)
 
 		// The file type and its extension gets decided during the call to WriteImage!
 		// These testcases all produce PNG files.
@@ -315,14 +318,9 @@ func TestReadImageStreamWriteTIFF(t *testing.T) {
 
 	// Print the image object.
 	fmt.Printf("created imageObj: %s\n", sd)
-	o := sd.IndirectRefEntry("SMask")
-	if o != nil {
-		sm, err := xRefTable.Dereference(*o)
-		if err != nil {
-			t.Errorf("err: %v\n", err)
-		}
-		fmt.Printf("SMask %s: %s\n", o, sm)
-	}
+
+	// Print the optional SMask.
+	printOptionalSMask(t, sd)
 
 	// The file type and its extension gets decided during WriteImage.
 	// These testcases all produce TIFF files.
@@ -373,14 +371,7 @@ func TestReadTIFFWritePNG(t *testing.T) {
 		fmt.Printf("created imageObj: %s\n", sd)
 
 		// Print the optional SMask.
-		o := sd.IndirectRefEntry("SMask")
-		if o != nil {
-			sm, err := xRefTable.Dereference(*o)
-			if err != nil {
-				t.Fatalf("err: %v\n", err)
-			}
-			fmt.Printf("SMask %s: %s\n", o, sm)
-		}
+		printOptionalSMask(t, sd)
 
 		// The file type and its extension gets decided during the call to WriteImage!
 		// These testcases all produce PNG files.

@@ -1,21 +1,15 @@
-// Package lzw is an enhanced version of compress/lzw that implements
-// Adobe's PDF lzw compression as defined for the LZWDecode filter.
-// See https://www.adobe.com/content/dam/acom/en/devnet/pdf/pdfs/PDF32000_2008.pdf
-// and https://github.com/golang/go/issues/25409.
-//
-// It is also compatible with the TIFF file format.
-//
 // Copyright 2011 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+
+// Package lzw is an enhanced version of compress/lzw.
 //
-// Package lzw implements the Lempel-Ziv-Welch compressed data format,
-// described in T. A. Welch, ``A Technique for High-Performance Data
-// Compression'', Computer, 17(6) (June 1984), pp 8-19.
+// It implements Adobe's PDF lzw compression as defined for the LZWDecode filter
+// and is also compatible with the TIFF file format.
 //
-// In particular, it implements LZW as used by the GIF and PDF file
-// formats, which means variable-width codes up to 12 bits and the first
-// two non-literal codes are a clear code and an EOF code.
+// See the golang proposal: https://github.com/golang/go/issues/25409.
+//
+// More information: https://github.com/hhrutter/pdfcpu/tree/master/lzw
 package lzw
 
 import (

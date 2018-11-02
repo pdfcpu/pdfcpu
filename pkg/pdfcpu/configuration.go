@@ -89,6 +89,7 @@ type Configuration struct {
 	WriteXRefStream bool
 
 	// Turns on stats collection.
+	// TODO Decision - unused.
 	CollectStats bool
 
 	// A CSV-filename holding the statistics.

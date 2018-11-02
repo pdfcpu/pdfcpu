@@ -16,6 +16,8 @@ limitations under the License.
 
 package pdfcpu
 
+import "github.com/hhrutter/pdfcpu/pkg/log"
+
 // The PDF root object fields.
 const (
 	RootVersion = iota
@@ -110,4 +112,22 @@ func (stats PDFStats) AddPageAttr(name int) {
 // UsesPageAttr returns true if a field with given name is contained in the pageAttrs set.
 func (stats PDFStats) UsesPageAttr(name int) bool {
 	return stats.pageAttrs[name]
+}
+
+// ValidationTimingStats prints processing time stats for validation.
+func ValidationTimingStats(dur1, dur2, dur float64) {
+	log.Stats.Println("Timing:")
+	log.Stats.Printf("read                 : %6.3fs  %4.1f%%\n", dur1, dur1/dur*100)
+	log.Stats.Printf("validate             : %6.3fs  %4.1f%%\n", dur2, dur2/dur*100)
+	log.Stats.Printf("total processing time: %6.3fs\n\n", dur)
+}
+
+// TimingStats prints processing time stats for an operation.
+func TimingStats(op string, durRead, durVal, durOpt, durWrite, durTotal float64) {
+	log.Stats.Println("Timing:")
+	log.Stats.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
+	log.Stats.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)
+	log.Stats.Printf("optimize             : %6.3fs  %4.1f%%\n", durOpt, durOpt/durTotal*100)
+	log.Stats.Printf("%-21s: %6.3fs  %4.1f%%\n", op, durWrite, durWrite/durTotal*100)
+	log.Stats.Printf("total processing time: %6.3fs\n\n", durTotal)
 }
