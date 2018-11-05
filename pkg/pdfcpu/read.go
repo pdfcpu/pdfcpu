@@ -141,7 +141,7 @@ func offsetLastXRefSection(ctx *Context) (*int64, error) {
 
 	buf := make([]byte, bufSize)
 
-	log.Debug.Printf("offsetLastXRefSection at %d\n", off)
+	log.Debug.Printf("scanning for offsetLastXRefSection starting at %d\n", off)
 
 	_, err = rs.Read(buf)
 	if err != nil {

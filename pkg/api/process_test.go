@@ -121,7 +121,7 @@ func ExampleReaderContext() {
 
 }
 
-func TestReadSeekerWriter(t *testing.T) {
+func TestReadSeekerAndWriter(t *testing.T) {
 
 	config := pdfcpu.NewDefaultConfiguration()
 	fileIn := filepath.Join(inDir, "CenterOfWhy.pdf")
@@ -129,7 +129,7 @@ func TestReadSeekerWriter(t *testing.T) {
 
 	rs, err := os.Open(fileIn)
 	if err != nil {
-		t.Fatalf("TestReadSeekerWriter Open:  %v\n", err)
+		t.Fatalf("TestReadSeekerAndWriter Open:  %v\n", err)
 	}
 
 	defer func() {
@@ -138,27 +138,27 @@ func TestReadSeekerWriter(t *testing.T) {
 
 	fileInfo, err := rs.Stat()
 	if err != nil {
-		t.Fatalf("TestReadSeekerWriter Stat:  %v\n", err)
+		t.Fatalf("TestReadSeekerAndWriter Stat:  %v\n", err)
 	}
 
 	ctx, err := ReaderContext(rs, fileIn, fileInfo.Size(), config)
 	if err != nil {
-		t.Fatalf("TestReadSeekerWriter Read:  %v\n", err)
+		t.Fatalf("TestReadSeekerAndWriter Read:  %v\n", err)
 	}
 
 	err = ValidateContext(ctx)
 	if err != nil {
-		t.Fatalf("TestReadSeekerWriter Validate:  %v\n", err)
+		t.Fatalf("TestReadSeekerAndWriter Validate:  %v\n", err)
 	}
 
 	err = OptimizeContext(ctx)
 	if err != nil {
-		t.Fatalf("TestReadSeekerWriter Optimize:  %v\n", err)
+		t.Fatalf("TestReadSeekerAndWriter Optimize:  %v\n", err)
 	}
 
 	w, err := os.Create(fileOut)
 	if err != nil {
-		t.Fatalf("TestReadSeekerWriter Create:  %v\n", err)
+		t.Fatalf("TestReadSeekerAndWriter Create:  %v\n", err)
 
 	}
 
@@ -179,10 +179,69 @@ func TestReadSeekerWriter(t *testing.T) {
 
 	err = WriteContext(ctx, w)
 	if err != nil {
-		t.Fatalf("TestReadSeekerWriter Write:  %v\n", err)
+		t.Fatalf("TestReadSeekerAndWriter Write:  %v\n", err)
 	}
 
 }
+
+func TestMergeUsingReadSeekerCloser(t *testing.T) {
+
+	rr := []pdfcpu.ReadSeekerCloser{}
+
+	for _, f := range []string{"annotTest.pdf", "go.pdf", "t6.pdf"} {
+
+		fileIn := filepath.Join(inDir, f)
+
+		f, err := os.Open(fileIn)
+		if err != nil {
+			t.Fatalf("TestMergeUsingReadSeekerCloser Open:  %v\n", err)
+		}
+
+		rr = append(rr, f)
+	}
+
+	defer func() {
+		for _, rsc := range rr {
+			rsc.Close()
+		}
+	}()
+
+	config := pdfcpu.NewDefaultConfiguration()
+
+	ctx, err := MergeContexts(rr, config)
+	if err != nil {
+		t.Fatalf("TestMergeUsingReadSeekerCloser Open:  %v\n", err)
+	}
+
+	fileOut := filepath.Join(outDir, "test.pdf")
+
+	w, err := os.Create(fileOut)
+	if err != nil {
+		t.Fatalf("TestMergeUsingReadSeekerCloser create output file: %v\n", err)
+	}
+
+	defer func() {
+
+		// The underlying bufio.Writer has already been flushed.
+
+		// Processing error takes precedence.
+		if err != nil {
+			w.Close()
+			return
+		}
+
+		// Do not miss out on closing errors.
+		err = w.Close()
+
+	}()
+
+	err = WriteContext(ctx, w)
+	if err != nil {
+		t.Fatalf("TestMergeUsingReadSeekerCloser Write output: %v\n", err)
+	}
+
+}
+
 func TestGetPageCount(t *testing.T) {
 
 	config := pdfcpu.NewDefaultConfiguration()

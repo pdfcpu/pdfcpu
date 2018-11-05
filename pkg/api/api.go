@@ -71,6 +71,57 @@ func WriteContext(ctx *pdf.Context, w io.Writer) error {
 	return pdf.WritePDFFile(ctx)
 }
 
+// MergeContexts merges a sequence of PDF's represented by a slice of ReadSeekerCloser.
+func MergeContexts(rsc []pdf.ReadSeekerCloser, config *pdf.Configuration) (*pdf.Context, error) {
+
+	ctxDest, err := ReaderContext(rsc[0], "", 0, config)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ValidateContext(ctxDest)
+	if err != nil {
+		return nil, err
+	}
+
+	if ctxDest.XRefTable.Version() < pdf.V15 {
+		v, _ := pdf.PDFVersion("1.5")
+		ctxDest.XRefTable.RootVersion = &v
+		log.Stats.Println("Ensure V1.5 for writing object & xref streams")
+	}
+
+	// Merge in all readSeekerWriters.
+	for _, r := range rsc[1:] {
+
+		ctxSource, err := ReaderContext(r, "", 0, config)
+		if err != nil {
+			return nil, err
+		}
+
+		err = ValidateContext(ctxSource)
+		if err != nil {
+			return nil, err
+		}
+
+		// Merge the source context into the dest context.
+		fmt.Println("merging in another readSeekerCloser...")
+		err = pdf.MergeXRefTables(ctxSource, ctxDest)
+		if err != nil {
+			return nil, err
+		}
+
+	}
+
+	err = OptimizeContext(ctxDest)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ValidateContext(ctxDest)
+
+	return ctxDest, err
+}
+
 // ReadContext reads in a PDF file and builds an internal structure holding its cross reference table aka the Context.
 func ReadContext(fileIn string, config *pdf.Configuration) (*pdf.Context, error) {
 

@@ -19,6 +19,7 @@ package pdfcpu
 import (
 	"encoding/hex"
 	"fmt"
+	"io"
 	"strconv"
 	"time"
 )
@@ -29,6 +30,12 @@ const (
 	EolCR   = "\x0D"
 	EolCRLF = "\x0D\x0A"
 )
+
+// ReadSeekerCloser is the interface that groups the ReadSeeker and Close interfaces.
+type ReadSeekerCloser interface {
+	io.ReadSeeker
+	io.Closer
+}
 
 // FreeHeadGeneration is the predefined generation number for the head of the free list.
 const FreeHeadGeneration = 65535

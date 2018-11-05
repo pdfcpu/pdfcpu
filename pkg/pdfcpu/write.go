@@ -1023,17 +1023,17 @@ func writeXRef(ctx *Context) error {
 
 func setFileSizeOfWrittenFile(w *WriteContext, f *os.File) error {
 
-	// Get file info for file just written but flush first to get correct file size.
+	err := w.Flush()
+	if err != nil {
+		return err
+	}
 
 	// If writing is Writer based then f is nil.
 	if f == nil {
 		return nil
 	}
 
-	err := w.Flush()
-	if err != nil {
-		return err
-	}
+	// Writing is file based.
 
 	fileInfo, err := f.Stat()
 	if err != nil {
