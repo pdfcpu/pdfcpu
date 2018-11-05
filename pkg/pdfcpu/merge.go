@@ -22,9 +22,9 @@ import (
 	"github.com/hhrutter/pdfcpu/pkg/log"
 )
 
-func patchIndRef(indRef *IndirectRef, lookup map[int]int) {
-	i := indRef.ObjectNumber.Value()
-	indRef.ObjectNumber = Integer(lookup[i])
+func patchIndRef(ir *IndirectRef, lookup map[int]int) {
+	i := ir.ObjectNumber.Value()
+	ir.ObjectNumber = Integer(lookup[i])
 }
 
 func patchObject(o Object, lookup map[int]int) Object {
@@ -40,23 +40,23 @@ func patchObject(o Object, lookup map[int]int) Object {
 		ob = obj
 
 	case Dict:
-		patchDict(&obj, lookup)
+		patchDict(obj, lookup)
 		ob = obj
 
 	case StreamDict:
-		patchDict(&obj.Dict, lookup)
+		patchDict(obj.Dict, lookup)
 		ob = obj
 
 	case ObjectStreamDict:
-		patchDict(&obj.Dict, lookup)
+		patchDict(obj.Dict, lookup)
 		ob = obj
 
 	case XRefStreamDict:
-		patchDict(&obj.Dict, lookup)
+		patchDict(obj.Dict, lookup)
 		ob = obj
 
 	case Array:
-		patchArray(&obj, lookup)
+		patchArray(obj, lookup)
 		ob = obj
 
 	}
@@ -66,34 +66,32 @@ func patchObject(o Object, lookup map[int]int) Object {
 	return ob
 }
 
-func patchDict(dict *Dict, lookup map[int]int) {
+func patchDict(d Dict, lookup map[int]int) {
 
-	log.Debug.Printf("patchDict before: %v\n", dict)
+	log.Debug.Printf("patchDict before: %v\n", d)
 
-	d1 := *dict
-
-	for k, obj := range d1 {
+	for k, obj := range d {
 		o := patchObject(obj, lookup)
 		if o != nil {
-			d1[k] = o
+			d[k] = o
 		}
 	}
 
-	log.Debug.Printf("patchDict after: %v\n", dict)
+	log.Debug.Printf("patchDict after: %v\n", d)
 }
 
-func patchArray(arr *Array, lookup map[int]int) {
+func patchArray(a Array, lookup map[int]int) {
 
-	log.Debug.Printf("patchArray begin: %v\n", arr)
+	log.Debug.Printf("patchArray begin: %v\n", a)
 
-	for i, obj := range *arr {
+	for i, obj := range a {
 		o := patchObject(obj, lookup)
 		if o != nil {
-			(*arr)[i] = o
+			a[i] = o
 		}
 	}
 
-	log.Debug.Printf("patchArray end: %v\n", arr)
+	log.Debug.Printf("patchArray end: %v\n", a)
 }
 
 func sortedKeys(ctx *Context) []int {
@@ -232,17 +230,17 @@ func appendSourcePageTreeToDestPageTree(ctxSource, ctxDest *Context) error {
 	pageTreeRootDictDest, _ := ctxDest.XRefTable.DereferenceDict(*indRefPageTreeRootDictDest)
 	pageCountDest := pageTreeRootDictDest.IntEntry("Count")
 
-	arr := pageTreeRootDictDest.ArrayEntry("Kids")
-	log.Debug.Printf("Kids before: %v\n", *arr)
+	a := pageTreeRootDictDest.ArrayEntry("Kids")
+	log.Debug.Printf("Kids before: %v\n", a)
 
 	pageTreeRootDictSource.Insert("Parent", *indRefPageTreeRootDictDest)
 
 	// The source page tree gets appended on to the dest page tree.
-	*arr = append(*arr, *indRefPageTreeRootDictSource)
-	log.Debug.Printf("Kids after: %v\n", *arr)
+	a = append(a, *indRefPageTreeRootDictSource)
+	log.Debug.Printf("Kids after: %v\n", a)
 
 	pageTreeRootDictDest.Update("Count", Integer(*pageCountDest+*pageCountSource))
-	pageTreeRootDictDest.Update("Kids", *arr)
+	pageTreeRootDictDest.Update("Kids", a)
 
 	ctxDest.PageCount += ctxSource.PageCount
 

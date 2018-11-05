@@ -210,7 +210,7 @@ func (d Dict) IndirectRefEntry(key string) *IndirectRef {
 }
 
 // DictEntry expects and returns a PDFDict entry for given key.
-func (d Dict) DictEntry(key string) *Dict {
+func (d Dict) DictEntry(key string) Dict {
 
 	value, found := d.Find(key)
 	if !found {
@@ -219,9 +219,9 @@ func (d Dict) DictEntry(key string) *Dict {
 
 	// TODO resolve indirect ref.
 
-	dict, ok := value.(Dict)
+	d, ok := value.(Dict)
 	if ok {
-		return &dict
+		return d
 	}
 
 	return nil
@@ -236,25 +236,25 @@ func (d Dict) StreamDictEntry(key string) *StreamDict {
 		return nil
 	}
 
-	dict, ok := value.(StreamDict)
+	sd, ok := value.(StreamDict)
 	if ok {
-		return &dict
+		return &sd
 	}
 
 	return nil
 }
 
 // ArrayEntry expects and returns a Array entry for given key.
-func (d Dict) ArrayEntry(key string) *Array {
+func (d Dict) ArrayEntry(key string) Array {
 
 	value, found := d.Find(key)
 	if !found {
 		return nil
 	}
 
-	array, ok := value.(Array)
+	a, ok := value.(Array)
 	if ok {
-		return &array
+		return a
 	}
 
 	return nil
@@ -332,7 +332,7 @@ func (d Dict) IsObjStm() bool {
 }
 
 // W returns a *Array for key "W".
-func (d Dict) W() *Array {
+func (d Dict) W() Array {
 	return d.ArrayEntry("W")
 }
 
@@ -342,7 +342,7 @@ func (d Dict) Prev() *int64 {
 }
 
 // Index returns a *Array for key "Index".
-func (d Dict) Index() *Array {
+func (d Dict) Index() Array {
 	return d.ArrayEntry("Index")
 }
 
@@ -382,8 +382,8 @@ func (d Dict) indentedString(level int) string {
 			continue
 		}
 
-		if array, ok := v.(Array); ok {
-			arrStr := array.indentedString(level + 1)
+		if a, ok := v.(Array); ok {
+			arrStr := a.indentedString(level + 1)
 			logstr = append(logstr, fmt.Sprintf("%s<%s, %s>\n", tabstr, k, arrStr))
 			continue
 		}
@@ -425,9 +425,9 @@ func (d Dict) PDFString() string {
 			continue
 		}
 
-		array, ok := v.(Array)
+		a, ok := v.(Array)
 		if ok {
-			arrStr := array.PDFString()
+			arrStr := a.PDFString()
 			logstr = append(logstr, fmt.Sprintf("/%s%s", k, arrStr))
 			continue
 		}

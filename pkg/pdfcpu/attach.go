@@ -149,17 +149,17 @@ func fileSpectDict(xRefTable *XRefTable, filename string) (*IndirectRef, error) 
 		return nil, err
 	}
 
-	indRef, err := xRefTable.IndRefForNewObject(*sd)
+	ir, err := xRefTable.IndRefForNewObject(*sd)
 	if err != nil {
 		return nil, err
 	}
 
-	dict, err := xRefTable.NewFileSpecDict(filename, *indRef)
+	d, err := xRefTable.NewFileSpecDict(filename, *ir)
 	if err != nil {
 		return nil, err
 	}
 
-	return xRefTable.IndRefForNewObject(*dict)
+	return xRefTable.IndRefForNewObject(d)
 }
 
 // ok returns true if at least one attachment was added.
@@ -173,14 +173,14 @@ func addAttachedFiles(xRefTable *XRefTable, files StringSet) (ok bool, err error
 
 	for fileName := range files {
 
-		indRef, err := fileSpectDict(xRefTable, fileName)
+		ir, err := fileSpectDict(xRefTable, fileName)
 		if err != nil {
 			return false, err
 		}
 
 		_, fn := filepath.Split(fileName)
 
-		xRefTable.Names["EmbeddedFiles"].Add(xRefTable, fn, *indRef)
+		xRefTable.Names["EmbeddedFiles"].Add(xRefTable, fn, *ir)
 		if err != nil {
 			return false, err
 		}
@@ -207,7 +207,6 @@ func removeAttachedFiles(xRefTable *XRefTable, files StringSet) (ok bool, err er
 	}
 
 	var removed bool
-	removed = false
 
 	for fileName := range files {
 

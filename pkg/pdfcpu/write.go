@@ -29,16 +29,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-func prepareContextForWriting(ctx *Context) error {
-
-	err := ensureInfoDictAndFileID(ctx)
-	if err != nil {
-		return err
-	}
-
-	return handleEncryption(ctx)
-}
-
 // WritePDFFile generates a PDF file for the cross reference table contained in Context.
 func WritePDFFile(ctx *Context) error {
 
@@ -112,11 +102,9 @@ func WritePDFFile(ctx *Context) error {
 	log.Debug.Printf("offset after writeInfoObject: %d\n", ctx.Write.Offset)
 
 	// Write offspec additional streams as declared in pdf trailer.
-	if ctx.AdditionalStreams != nil {
-		_, _, err = writeDeepObject(ctx, ctx.AdditionalStreams)
-		if err != nil {
-			return err
-		}
+	err = writeAdditionalStreams(ctx)
+	if err != nil {
+		return err
 	}
 
 	err = writeEncryptDict(ctx)
@@ -153,6 +141,30 @@ func WritePDFFile(ctx *Context) error {
 	return nil
 }
 
+func prepareContextForWriting(ctx *Context) error {
+
+	err := ensureInfoDictAndFileID(ctx)
+	if err != nil {
+		return err
+	}
+
+	return handleEncryption(ctx)
+}
+
+func writeAdditionalStreams(ctx *Context) error {
+
+	if ctx.AdditionalStreams == nil {
+		return nil
+	}
+
+	_, _, err := writeDeepObject(ctx, ctx.AdditionalStreams)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func ensureFileID(ctx *Context) error {
 
 	fid, err := fileID(ctx)
@@ -162,17 +174,17 @@ func ensureFileID(ctx *Context) error {
 
 	if ctx.ID == nil {
 		// Ensure ctx.ID
-		ctx.ID = &Array{fid, fid}
+		ctx.ID = Array{fid, fid}
 		return nil
 	}
 
 	// Update ctx.ID
-	arr := *ctx.ID
-	if len(arr) != 2 {
+	a := ctx.ID
+	if len(a) != 2 {
 		return errors.New("ID must be an array with 2 elements")
 	}
 
-	arr[1] = fid
+	a[1] = fid
 
 	return nil
 }
@@ -188,14 +200,14 @@ func ensureInfoDictAndFileID(ctx *Context) error {
 }
 
 // Write root entry to disk.
-func writeRootEntry(ctx *Context, dict *Dict, dictName, entryName string, statsAttr int) error {
+func writeRootEntry(ctx *Context, d Dict, dictName, entryName string, statsAttr int) error {
 
-	obj, err := writeEntry(ctx, dict, dictName, entryName)
+	o, err := writeEntry(ctx, d, dictName, entryName)
 	if err != nil {
 		return err
 	}
 
-	if obj != nil {
+	if o != nil {
 		ctx.Stats.AddRootAttr(statsAttr)
 	}
 
@@ -203,11 +215,11 @@ func writeRootEntry(ctx *Context, dict *Dict, dictName, entryName string, statsA
 }
 
 // Write root entry to object stream.
-func writeRootEntryToObjStream(ctx *Context, dict *Dict, dictName, entryName string, statsAttr int) error {
+func writeRootEntryToObjStream(ctx *Context, d Dict, dictName, entryName string, statsAttr int) error {
 
 	ctx.Write.WriteToObjectStream = true
 
-	err := writeRootEntry(ctx, dict, dictName, entryName, statsAttr)
+	err := writeRootEntry(ctx, d, dictName, entryName, statsAttr)
 	if err != nil {
 		return err
 	}
@@ -216,18 +228,18 @@ func writeRootEntryToObjStream(ctx *Context, dict *Dict, dictName, entryName str
 }
 
 // Write page tree.
-func writePages(ctx *Context, rootDict *Dict) error {
+func writePages(ctx *Context, rootDict Dict) error {
 
 	// Page tree root (the top "Pages" dict) must be indirect reference.
-	indRef := rootDict.IndirectRefEntry("Pages")
-	if indRef == nil {
+	ir := rootDict.IndirectRefEntry("Pages")
+	if ir == nil {
 		return errors.New("writePages: missing indirect obj for pages dict")
 	}
 
 	// Manipulate page tree as needed for splitting, trimming or page extraction.
 	if ctx.Write.ExtractPages != nil && len(ctx.Write.ExtractPages) > 0 {
 		p := 0
-		_, err := trimPagesDict(ctx, indRef, &p)
+		_, err := trimPagesDict(ctx, ir, &p)
 		if err != nil {
 			return err
 		}
@@ -237,7 +249,7 @@ func writePages(ctx *Context, rootDict *Dict) error {
 	ctx.Write.WriteToObjectStream = true
 
 	// Write page tree.
-	err := writePagesDict(ctx, indRef, 0)
+	err := writePagesDict(ctx, ir, 0)
 	if err != nil {
 		return err
 	}
@@ -250,7 +262,6 @@ func writeRootObject(ctx *Context) error {
 	// => 7.7.2 Document Catalog
 
 	xRefTable := ctx.XRefTable
-
 	catalog := *xRefTable.Root
 	objNumber := int(catalog.ObjectNumber)
 	genNumber := int(catalog.GenerationNumber)
@@ -265,14 +276,12 @@ func writeRootObject(ctx *Context) error {
 		}
 	}
 
-	var dict *Dict
-
-	dict, err := xRefTable.DereferenceDict(catalog)
+	d, err := xRefTable.DereferenceDict(catalog)
 	if err != nil {
 		return err
 	}
 
-	if dict == nil {
+	if d == nil {
 		return errors.Errorf("writeRootObject: unable to dereference root dict")
 	}
 
@@ -280,16 +289,16 @@ func writeRootObject(ctx *Context) error {
 
 	if ctx.Write.ReducedFeatureSet() {
 		log.Debug.Println("writeRootObject: exclude complex entries on split,trim and page extraction.")
-		dict.Delete("Names")
-		dict.Delete("Dests")
-		dict.Delete("Outlines")
-		dict.Delete("OpenAction")
-		dict.Delete("AcroForm")
-		dict.Delete("StructTreeRoot")
-		dict.Delete("OCProperties")
+		d.Delete("Names")
+		d.Delete("Dests")
+		d.Delete("Outlines")
+		d.Delete("OpenAction")
+		d.Delete("AcroForm")
+		d.Delete("StructTreeRoot")
+		d.Delete("OCProperties")
 	}
 
-	err = writeDictObject(ctx, objNumber, genNumber, *dict)
+	err = writeDictObject(ctx, objNumber, genNumber, d)
 	if err != nil {
 		return err
 	}
@@ -298,12 +307,12 @@ func writeRootObject(ctx *Context) error {
 
 	log.Debug.Printf("writeRootObject: new offset after rootDict = %d\n", ctx.Write.Offset)
 
-	err = writeRootEntry(ctx, dict, dictName, "Version", RootVersion)
+	err = writeRootEntry(ctx, d, dictName, "Version", RootVersion)
 	if err != nil {
 		return err
 	}
 
-	err = writePages(ctx, dict)
+	err = writePages(ctx, d)
 	if err != nil {
 		return err
 	}
@@ -327,13 +336,13 @@ func writeRootObject(ctx *Context) error {
 		{"AcroForm", RootAcroForm},
 		{"Metadata", RootMetadata},
 	} {
-		err = writeRootEntry(ctx, dict, dictName, e.entryName, e.statsAttr)
+		err = writeRootEntry(ctx, d, dictName, e.entryName, e.statsAttr)
 		if err != nil {
 			return err
 		}
 	}
 
-	err = writeRootEntryToObjStream(ctx, dict, dictName, "StructTreeRoot", RootStructTreeRoot)
+	err = writeRootEntryToObjStream(ctx, d, dictName, "StructTreeRoot", RootStructTreeRoot)
 	if err != nil {
 		return err
 	}
@@ -354,7 +363,7 @@ func writeRootObject(ctx *Context) error {
 		{"Collection", RootCollection},
 		{"NeedsRendering", RootNeedsRendering},
 	} {
-		err = writeRootEntry(ctx, dict, dictName, e.entryName, e.statsAttr)
+		err = writeRootEntry(ctx, d, dictName, e.entryName, e.statsAttr)
 		if err != nil {
 			return err
 		}
@@ -382,23 +391,23 @@ func writeTrailerDict(ctx *Context) error {
 		return err
 	}
 
-	dict := NewDict()
-	dict.Insert("Size", Integer(*xRefTable.Size))
-	dict.Insert("Root", *xRefTable.Root)
+	d := NewDict()
+	d.Insert("Size", Integer(*xRefTable.Size))
+	d.Insert("Root", *xRefTable.Root)
 
 	if xRefTable.Info != nil {
-		dict.Insert("Info", *xRefTable.Info)
+		d.Insert("Info", *xRefTable.Info)
 	}
 
 	if ctx.Encrypt != nil && ctx.EncKey != nil {
-		dict.Insert("Encrypt", *ctx.Encrypt)
+		d.Insert("Encrypt", *ctx.Encrypt)
 	}
 
 	if xRefTable.ID != nil {
-		dict.Insert("ID", *xRefTable.ID)
+		d.Insert("ID", xRefTable.ID)
 	}
 
-	_, err = w.WriteString(dict.PDFString())
+	_, err = w.WriteString(d.PDFString())
 	if err != nil {
 		return err
 	}
@@ -659,7 +668,7 @@ func createXRefStream(ctx *Context, i1, i2, i3 int) ([]byte, *Array, error) {
 
 	var (
 		buf []byte
-		arr Array
+		a   Array
 	)
 
 	var keys []int
@@ -724,8 +733,8 @@ func createXRefStream(ctx *Context, i1, i2, i3 int) ([]byte, *Array, error) {
 
 		if i > 0 && (keys[i]-keys[i-1] > 1) {
 
-			arr = append(arr, Integer(start))
-			arr = append(arr, Integer(size))
+			a = append(a, Integer(start))
+			a = append(a, Integer(size))
 
 			start = keys[i]
 			size = 1
@@ -735,12 +744,12 @@ func createXRefStream(ctx *Context, i1, i2, i3 int) ([]byte, *Array, error) {
 		size++
 	}
 
-	arr = append(arr, Integer(start))
-	arr = append(arr, Integer(size))
+	a = append(a, Integer(start))
+	a = append(a, Integer(size))
 
 	log.Debug.Println("createXRefStream end")
 
-	return buf, &arr, nil
+	return buf, &a, nil
 }
 
 func writeXRefStream(ctx *Context) error {
@@ -752,7 +761,6 @@ func writeXRefStream(ctx *Context) error {
 	xRefTableEntry := NewXRefTableEntryGen0(*xRefStreamDict)
 
 	// Reuse free objects (including recycled objects from this run).
-	var objNumber int
 	objNumber, err := xRefTable.InsertAndUseRecycled(*xRefTableEntry)
 	if err != nil {
 		return err
@@ -849,27 +857,29 @@ func writeEncryptDict(ctx *Context) error {
 		return nil
 	}
 
-	indRef := *ctx.Encrypt
-	objNumber := int(indRef.ObjectNumber)
-	genNumber := int(indRef.GenerationNumber)
+	ir := *ctx.Encrypt
+	objNumber := int(ir.ObjectNumber)
+	genNumber := int(ir.GenerationNumber)
 
-	var dict *Dict
-
-	dict, err := ctx.DereferenceDict(indRef)
+	d, err := ctx.DereferenceDict(ir)
 	if err != nil {
 		return err
 	}
 
-	return writeObject(ctx, objNumber, genNumber, dict.PDFString())
+	return writeObject(ctx, objNumber, genNumber, d.PDFString())
 }
 
 func setupEncryption(ctx *Context) error {
 
 	var err error
 
-	dict := newEncryptDict(ctx.EncryptUsingAES, ctx.EncryptUsing128BitKey, ctx.UserAccessPermissions)
+	d := newEncryptDict(
+		ctx.EncryptUsingAES,
+		ctx.EncryptUsing128BitKey,
+		ctx.UserAccessPermissions,
+	)
 
-	ctx.E, err = supportedEncryption(ctx, dict)
+	ctx.E, err = supportedEncryption(ctx, d)
 	if err != nil {
 		return err
 	}
@@ -901,14 +911,13 @@ func setupEncryption(ctx *Context) error {
 	//fmt.Printf("upw after: length:%d <%s> %0X\n", len(ctx.E.U), ctx.E.U, ctx.E.U)
 	//fmt.Printf("encKey = %0X\n", ctx.EncKey)
 
-	dict.Update("U", HexLiteral(hex.EncodeToString(ctx.E.U)))
-	dict.Update("O", HexLiteral(hex.EncodeToString(ctx.E.O)))
+	d.Update("U", HexLiteral(hex.EncodeToString(ctx.E.U)))
+	d.Update("O", HexLiteral(hex.EncodeToString(ctx.E.O)))
 
-	xRefTableEntry := NewXRefTableEntryGen0(*dict)
+	xRefTableEntry := NewXRefTableEntryGen0(d)
 
 	// Reuse free objects (including recycled objects from this run).
-	var objNumber int
-	objNumber, err = ctx.InsertAndUseRecycled(*xRefTableEntry)
+	objNumber, err := ctx.InsertAndUseRecycled(*xRefTableEntry)
 	if err != nil {
 		return err
 	}

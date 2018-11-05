@@ -153,7 +153,7 @@ func createMediaClipDataDict(xRefTable *XRefTable) (*IndirectRef, error) {
 			"Type": Name("MediaClip"),
 			"S":    Name("MCD"), // media clip data
 			"N":    StringLiteral("Sample Audio"),
-			"D":    *fileSpecDict,
+			"D":    fileSpecDict,
 			"CT":   StringLiteral("audio/x-wav"),
 			//"CT": StringLiteral("audio/mp4"),
 			//"CT":   StringLiteral("video/mp4"),

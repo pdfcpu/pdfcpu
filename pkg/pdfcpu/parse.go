@@ -307,7 +307,7 @@ func parseArray(line *string) (*Array, error) {
 		return nil, errArrayNotTerminated
 	}
 
-	arr := Array{}
+	a := Array{}
 
 	for !strings.HasPrefix(l, "]") {
 
@@ -316,7 +316,7 @@ func parseArray(line *string) (*Array, error) {
 			return nil, err
 		}
 		log.Trace.Printf("ParseArray: new array obj=%v\n", obj)
-		arr = append(arr, obj)
+		a = append(a, obj)
 
 		// we are positioned on the char behind the last parsed array entry.
 		if len(l) == 0 {
@@ -335,9 +335,9 @@ func parseArray(line *string) (*Array, error) {
 
 	*line = l
 
-	log.Trace.Printf("ParseArray: returning array (len=%d): %v\n", len(arr), arr)
+	log.Trace.Printf("ParseArray: returning array (len=%d): %v\n", len(a), a)
 
-	return &arr, nil
+	return &a, nil
 }
 
 func parseStringLiteral(line *string) (Object, error) {
@@ -493,7 +493,7 @@ func parseDict(line *string) (*Dict, error) {
 		return nil, errDictionaryNotTerminated
 	}
 
-	dict := NewDict()
+	d := NewDict()
 
 	for !strings.HasPrefix(l, ">>") {
 
@@ -521,7 +521,7 @@ func parseDict(line *string) (*Dict, error) {
 		// shall be equivalent to omitting the entry entirely.
 		if obj != nil {
 			log.Trace.Printf("ParseDict: dict[%s]=%v\n", key, obj)
-			if ok := dict.Insert(string(*key), obj); !ok {
+			if ok := d.Insert(string(*key), obj); !ok {
 				return nil, errDictionaryDuplicateKey
 			}
 		}
@@ -544,9 +544,9 @@ func parseDict(line *string) (*Dict, error) {
 
 	*line = l
 
-	log.Trace.Printf("ParseDict: returning dict at: %v\n", dict)
+	log.Trace.Printf("ParseDict: returning dict at: %v\n", d)
 
-	return &dict, nil
+	return &d, nil
 }
 
 func noBuf(l *string) bool {
@@ -675,11 +675,11 @@ func parseHexLiteralOrDict(l *string) (val Object, err error) {
 	// if next char = '<' parseDict.
 	if (*l)[1] == '<' {
 		log.Trace.Println("parseHexLiteralOrDict: value = Dictionary")
-		dict, err := parseDict(l)
+		d, err := parseDict(l)
 		if err != nil {
 			return nil, err
 		}
-		val = *dict
+		val = *d
 	} else {
 		// hex literals
 		log.Trace.Println("parseHexLiteralOrDict: value = Hex Literal")
@@ -739,11 +739,11 @@ func parseObject(line *string) (Object, error) {
 
 	case '[': // array
 		log.Trace.Println("ParseObject: value = Array")
-		array, err := parseArray(&l)
+		a, err := parseArray(&l)
 		if err != nil {
 			return nil, err
 		}
-		value = *array
+		value = *a
 
 	case '/': // name
 		log.Trace.Println("ParseObject: value = Name Object")
@@ -791,22 +791,22 @@ func parseObject(line *string) (Object, error) {
 }
 
 // parseXRefStreamDict creates a XRefStreamDict out of a StreamDict.
-func parseXRefStreamDict(streamDict StreamDict) (*XRefStreamDict, error) {
+func parseXRefStreamDict(sd *StreamDict) (*XRefStreamDict, error) {
 
 	log.Trace.Println("ParseXRefStreamDict: begin")
 
-	if streamDict.Size() == nil {
+	if sd.Size() == nil {
 		return nil, errors.New("ParseXRefStreamDict: \"Size\" not available")
 	}
 
 	objs := []int{}
 
 	//	Read optional parameter Index
-	pIndArr := streamDict.Index()
-	if pIndArr != nil {
+	indArr := sd.Index()
+	if indArr != nil {
 		log.Trace.Println("ParseXRefStreamDict: using index dict")
 
-		indArr := *pIndArr
+		//indArr := *pIndArr
 		if len(indArr)%2 > 1 {
 			return nil, errXrefStreamCorruptIndex
 		}
@@ -830,7 +830,7 @@ func parseXRefStreamDict(streamDict StreamDict) (*XRefStreamDict, error) {
 
 	} else {
 		log.Trace.Println("ParseXRefStreamDict: no index dict")
-		for i := 0; i < *streamDict.Size(); i++ {
+		for i := 0; i < *sd.Size(); i++ {
 			objs = append(objs, i)
 
 		}
@@ -841,14 +841,14 @@ func parseXRefStreamDict(streamDict StreamDict) (*XRefStreamDict, error) {
 
 	var wIntArr [3]int
 
-	w := streamDict.W()
-	if w == nil {
+	a := sd.W()
+	if a == nil {
 		return nil, errXrefStreamMissingW
 	}
 
-	arr := *w
+	//arr := *w
 	// validate array with 3 positive integers
-	if len(arr) != 3 {
+	if len(a) != 3 {
 		return nil, errXrefStreamCorruptW
 	}
 
@@ -856,52 +856,53 @@ func parseXRefStreamDict(streamDict StreamDict) (*XRefStreamDict, error) {
 		return !ok || i < 0
 	}
 
-	i1, ok := arr[0].(Integer)
+	i1, ok := a[0].(Integer)
 	if f(ok, i1.Value()) {
 		return nil, errXrefStreamCorruptW
 	}
 	wIntArr[0] = int(i1)
 
-	i2, ok := arr[1].(Integer)
+	i2, ok := a[1].(Integer)
 	if f(ok, i2.Value()) {
 		return nil, errXrefStreamCorruptW
 	}
 	wIntArr[1] = int(i2)
 
-	i3, ok := arr[2].(Integer)
+	i3, ok := a[2].(Integer)
 	if f(ok, i3.Value()) {
 		return nil, errXrefStreamCorruptW
 	}
 	wIntArr[2] = int(i3)
 
-	xsd := &XRefStreamDict{
-		StreamDict:     streamDict,
-		Size:           *streamDict.Size(),
+	xsd := XRefStreamDict{
+		StreamDict:     *sd,
+		Size:           *sd.Size(),
 		Objects:        objs,
 		W:              wIntArr,
-		PreviousOffset: streamDict.Prev()}
+		PreviousOffset: sd.Prev(),
+	}
 
 	log.Trace.Println("ParseXRefStreamDict: end")
 
-	return xsd, nil
+	return &xsd, nil
 }
 
 // objectStreamDict creates a ObjectStreamDict out of a StreamDict.
-func objectStreamDict(streamDict StreamDict) (*ObjectStreamDict, error) {
+func objectStreamDict(sd *StreamDict) (*ObjectStreamDict, error) {
 
-	if streamDict.First() == nil {
+	if sd.First() == nil {
 		return nil, errObjStreamMissingFirst
 	}
 
-	if streamDict.N() == nil {
+	if sd.N() == nil {
 		return nil, errObjStreamMissingN
 	}
 
-	osd := &ObjectStreamDict{
-		StreamDict:     streamDict,
-		ObjCount:       *streamDict.N(),
-		FirstObjOffset: *streamDict.First(),
+	osd := ObjectStreamDict{
+		StreamDict:     *sd,
+		ObjCount:       *sd.N(),
+		FirstObjOffset: *sd.First(),
 		ObjArray:       nil}
 
-	return osd, nil
+	return &osd, nil
 }

@@ -617,43 +617,45 @@ func contentObjNrs(ctx *pdf.Context, page int) ([]int, error) {
 		return nil, err
 	}
 
-	obj, found := d.Find("Contents")
-	if !found || obj == nil {
+	o, found := d.Find("Contents")
+	if !found || o == nil {
 		return nil, nil
 	}
 
+	fmt.Printf("found pd for %d\n%s\n", page, o)
+
 	var objNr int
 
-	indRef, ok := obj.(pdf.IndirectRef)
+	ir, ok := o.(pdf.IndirectRef)
 	if ok {
-		objNr = indRef.ObjectNumber.Value()
+		objNr = ir.ObjectNumber.Value()
 	}
 
-	obj, err = ctx.Dereference(obj)
+	o, err = ctx.Dereference(o)
 	if err != nil {
 		return nil, err
 	}
 
-	if obj == nil {
+	if o == nil {
 		return nil, nil
 	}
 
-	switch obj := obj.(type) {
+	switch o := o.(type) {
 
-	case *pdf.StreamDict:
+	case pdf.StreamDict:
 
 		objNrs = append(objNrs, objNr)
 
-	case *pdf.Array:
+	case pdf.Array:
 
-		for _, obj := range *obj {
+		for _, o := range o {
 
-			indRef, ok := obj.(pdf.IndirectRef)
+			ir, ok := o.(pdf.IndirectRef)
 			if !ok {
 				return nil, errors.Errorf("missing indref for page tree dict content no page %d", page)
 			}
 
-			sd, err := ctx.DereferenceStreamDict(obj)
+			sd, err := ctx.DereferenceStreamDict(ir)
 			if err != nil {
 				return nil, err
 			}
@@ -662,7 +664,7 @@ func contentObjNrs(ctx *pdf.Context, page int) ([]int, error) {
 				continue
 			}
 
-			objNrs = append(objNrs, indRef.ObjectNumber.Value())
+			objNrs = append(objNrs, ir.ObjectNumber.Value())
 
 		}
 
@@ -765,8 +767,8 @@ func ExtractContent(cmd *Command) ([]string, error) {
 
 func extractMetadataStream(ctx *pdf.Context, obj pdf.Object, objNr int, dt string) error {
 
-	indRef, _ := obj.(pdf.IndirectRef)
-	sObjNr := indRef.ObjectNumber.Value()
+	ir, _ := obj.(pdf.IndirectRef)
+	sObjNr := ir.ObjectNumber.Value()
 	b, err := pdf.ExtractStreamData(ctx, sObjNr)
 	if err != nil {
 		return err
@@ -789,10 +791,10 @@ func doExtractMetadata(ctx *pdf.Context, selectedPages pdf.IntSet) error {
 		}
 		switch d := v.Object.(type) {
 
-		case *pdf.Dict:
+		case pdf.Dict:
 
-			obj, found := d.Find("Metadata")
-			if !found || obj == nil {
+			o, found := d.Find("Metadata")
+			if !found || o == nil {
 				continue
 			}
 
@@ -801,15 +803,15 @@ func doExtractMetadata(ctx *pdf.Context, selectedPages pdf.IntSet) error {
 				dt = *d.Type()
 			}
 
-			err := extractMetadataStream(ctx, obj, k, dt)
+			err := extractMetadataStream(ctx, o, k, dt)
 			if err != nil {
 				return err
 			}
 
-		case *pdf.StreamDict:
+		case pdf.StreamDict:
 
-			obj, found := d.Find("Metadata")
-			if !found || obj == nil {
+			o, found := d.Find("Metadata")
+			if !found || o == nil {
 				continue
 			}
 
@@ -818,7 +820,7 @@ func doExtractMetadata(ctx *pdf.Context, selectedPages pdf.IntSet) error {
 				dt = *d.Type()
 			}
 
-			err := extractMetadataStream(ctx, obj, k, dt)
+			err := extractMetadataStream(ctx, o, k, dt)
 			if err != nil {
 				return err
 			}

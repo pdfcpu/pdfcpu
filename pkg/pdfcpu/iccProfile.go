@@ -24,7 +24,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ICC profiles are not yet supported.
+// ICC profiles are not yet supported!
+//
 // We fall back to the alternate color space and if there is none to whatever color space makes sense.
 
 //ICC profiles use big endian always.

@@ -21,91 +21,89 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateOutlineItemDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
+func validateOutlineItemDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 
 	dictName := "outlineItemDict"
 
-	var indRef *pdf.IndirectRef
-
 	// Title, required, text string
-	_, err := validateStringEntry(xRefTable, dict, dictName, "Title", REQUIRED, pdf.V10, nil)
+	_, err := validateStringEntry(xRefTable, d, dictName, "Title", REQUIRED, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// Parent, required, dict indRef
-	indRef, err = validateIndRefEntry(xRefTable, dict, dictName, "Parent", REQUIRED, pdf.V10)
+	ir, err := validateIndRefEntry(xRefTable, d, dictName, "Parent", REQUIRED, pdf.V10)
 	if err != nil {
 		return err
 	}
-	_, err = xRefTable.DereferenceDict(*indRef)
+	_, err = xRefTable.DereferenceDict(*ir)
 	if err != nil {
 		return err
 	}
 
 	// Count, optional, int
-	_, err = validateIntegerEntry(xRefTable, dict, dictName, "Count", OPTIONAL, pdf.V10, nil)
+	_, err = validateIntegerEntry(xRefTable, d, dictName, "Count", OPTIONAL, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// SE, optional, dict indRef, since V1.3
-	indRef, err = validateIndRefEntry(xRefTable, dict, dictName, "SE", OPTIONAL, pdf.V13)
+	ir, err = validateIndRefEntry(xRefTable, d, dictName, "SE", OPTIONAL, pdf.V13)
 	if err != nil {
 		return err
 	}
-	if indRef != nil {
-		_, err = xRefTable.DereferenceDict(*indRef)
+	if ir != nil {
+		_, err = xRefTable.DereferenceDict(*ir)
 		if err != nil {
 			return err
 		}
 	}
 
 	// C, optional, array of 3 numbers, since V1.4
-	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "C", OPTIONAL, pdf.V14, func(a pdf.Array) bool { return len(a) == 3 })
+	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "C", OPTIONAL, pdf.V14, func(a pdf.Array) bool { return len(a) == 3 })
 	if err != nil {
 		return err
 	}
 
 	// F, optional integer, since V1.4
-	_, err = validateIntegerEntry(xRefTable, dict, dictName, "F", OPTIONAL, pdf.V14, nil)
+	_, err = validateIntegerEntry(xRefTable, d, dictName, "F", OPTIONAL, pdf.V14, nil)
 	if err != nil {
 		return err
 	}
 
 	// Optional A or Dest, since V1.1
-	return validateActionOrDestination(xRefTable, dict, dictName, pdf.V11)
+	return validateActionOrDestination(xRefTable, d, dictName, pdf.V11)
 }
 
 func validateOutlineTree(xRefTable *pdf.XRefTable, first, last *pdf.IndirectRef) error {
 
 	var (
-		dict      *pdf.Dict
+		d         pdf.Dict
 		objNumber int
 		err       error
 	)
 
 	// Process linked list of outline items.
-	for indRef := first; indRef != nil; indRef = dict.IndirectRefEntry("Next") {
+	for ir := first; ir != nil; ir = d.IndirectRefEntry("Next") {
 
-		objNumber = indRef.ObjectNumber.Value()
+		objNumber = ir.ObjectNumber.Value()
 
 		// outline item dict
-		dict, err = xRefTable.DereferenceDict(*indRef)
+		d, err = xRefTable.DereferenceDict(*ir)
 		if err != nil {
 			return err
 		}
-		if dict == nil {
+		if d == nil {
 			return errors.Errorf("validateOutlineTree: object #%d is nil.", objNumber)
 		}
 
-		err = validateOutlineItemDict(xRefTable, dict)
+		err = validateOutlineItemDict(xRefTable, d)
 		if err != nil {
 			return err
 		}
 
-		firstChild := dict.IndirectRefEntry("First")
-		lastChild := dict.IndirectRefEntry("Last")
+		firstChild := d.IndirectRefEntry("First")
+		lastChild := d.IndirectRefEntry("Last")
 
 		if firstChild == nil && lastChild == nil {
 			// Leaf
@@ -133,28 +131,28 @@ func validateOutlineTree(xRefTable *pdf.XRefTable, first, last *pdf.IndirectRef)
 	return nil
 }
 
-func validateOutlines(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
+func validateOutlines(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	// => 12.3.3 Document Outline
 
-	indRef, err := validateIndRefEntry(xRefTable, rootDict, "rootDict", "Outlines", OPTIONAL, sinceVersion)
-	if err != nil || indRef == nil {
+	ir, err := validateIndRefEntry(xRefTable, rootDict, "rootDict", "Outlines", OPTIONAL, sinceVersion)
+	if err != nil || ir == nil {
 		return err
 	}
 
-	dict, err := xRefTable.DereferenceDict(*indRef)
-	if err != nil || dict == nil {
+	d, err := xRefTable.DereferenceDict(*ir)
+	if err != nil || d == nil {
 		return err
 	}
 
 	// Type, optional, name
-	_, err = validateNameEntry(xRefTable, dict, "outlineDict", "Type", OPTIONAL, pdf.V10, func(s string) bool { return s == "Outlines" })
+	_, err = validateNameEntry(xRefTable, d, "outlineDict", "Type", OPTIONAL, pdf.V10, func(s string) bool { return s == "Outlines" })
 	if err != nil {
 		return err
 	}
 
-	first := dict.IndirectRefEntry("First")
-	last := dict.IndirectRefEntry("Last")
+	first := d.IndirectRefEntry("First")
+	last := d.IndirectRefEntry("Last")
 
 	if first == nil {
 		if last != nil {

@@ -27,9 +27,7 @@ import (
 
 func equalObjects(o1, o2 Object, xRefTable *XRefTable) (ok bool, err error) {
 
-	o1Type := fmt.Sprintf("%T", o1)
-	o2Type := fmt.Sprintf("%T", o2)
-	log.Debug.Printf("equalObjects: comparing %s with %s \n", o1Type, o2Type)
+	log.Debug.Printf("equalObjects: comparing %T with %T \n", o1, o2)
 
 	o1, err = xRefTable.Dereference(o1)
 	if err != nil {
@@ -41,8 +39,8 @@ func equalObjects(o1, o2 Object, xRefTable *XRefTable) (ok bool, err error) {
 		return false, err
 	}
 
-	o1Type = fmt.Sprintf("%T", o1)
-	o2Type = fmt.Sprintf("%T", o2)
+	o1Type := fmt.Sprintf("%T", o1)
+	o2Type := fmt.Sprintf("%T", o2)
 	log.Debug.Printf("equalObjects: comparing dereferenced %s with %s \n", o1Type, o2Type)
 
 	if o1Type != o2Type {
@@ -56,22 +54,15 @@ func equalObjects(o1, o2 Object, xRefTable *XRefTable) (ok bool, err error) {
 		ok = o1 == o2
 
 	case Dict:
-
-		d1 := o1.(Dict)
-		d2 := o2.(Dict)
-		ok, err = equalDicts(&d1, &d2, xRefTable)
+		ok, err = equalDicts(o1.(Dict), o2.(Dict), xRefTable)
 
 	case StreamDict:
-
 		sd1 := o1.(StreamDict)
 		sd2 := o2.(StreamDict)
 		ok, err = equalStreamDicts(&sd1, &sd2, xRefTable)
 
 	case Array:
-
-		arr1 := o1.(Array)
-		arr2 := o2.(Array)
-		ok, err = equalArrays(&arr1, &arr2, xRefTable)
+		ok, err = equalArrays(o1.(Array), o2.(Array), xRefTable)
 
 	default:
 		err = errors.Errorf("equalObjects: unhandled compare for type %s\n", o1Type)
@@ -80,24 +71,15 @@ func equalObjects(o1, o2 Object, xRefTable *XRefTable) (ok bool, err error) {
 	return ok, err
 }
 
-func equalArrays(arr1, arr2 *Array, xRefTable *XRefTable) (bool, error) {
+func equalArrays(a1, a2 Array, xRefTable *XRefTable) (bool, error) {
 
-	if len(*arr1) != len(*arr2) {
+	if len(a1) != len(a2) {
 		return false, nil
 	}
 
-	for i, o1 := range *arr1 {
+	for i, o1 := range a1 {
 
-		o2 := (*arr2)[i]
-
-		o1r := fmt.Sprintf("%T", o1)
-		o2r := fmt.Sprintf("%T", o2)
-
-		if o1r != o2r {
-			return false, nil
-		}
-
-		ok, err := equalObjects(o1, o2, xRefTable)
+		ok, err := equalObjects(o1, a2[i], xRefTable)
 		if err != nil {
 			return false, err
 		}
@@ -112,7 +94,7 @@ func equalArrays(arr1, arr2 *Array, xRefTable *XRefTable) (bool, error) {
 
 func equalStreamDicts(sd1, sd2 *StreamDict, xRefTable *XRefTable) (bool, error) {
 
-	ok, err := equalDicts(&sd1.Dict, &sd2.Dict, xRefTable)
+	ok, err := equalDicts(sd1.Dict, sd2.Dict, xRefTable)
 	if err != nil {
 		return false, err
 	}
@@ -126,18 +108,6 @@ func equalStreamDicts(sd1, sd2 *StreamDict, xRefTable *XRefTable) (bool, error) 
 	}
 
 	return bytes.Equal(sd1.Raw, sd2.Raw), nil
-
-	// encodedStream1, err := loadEncodedStreamContent(ctx, sd1)
-	// if err != nil {
-	// 	return false, err
-	// }
-
-	// encodedStream2, err := loadEncodedStreamContent(ctx, sd2)
-	// if err != nil {
-	// 	return false, err
-	// }
-
-	// return bytes.Equal(encodedStream1, encodedStream2), nil
 }
 
 func equalFontNames(v1, v2 Object, xRefTable *XRefTable) (bool, error) {
@@ -176,7 +146,7 @@ func equalFontNames(v1, v2 Object, xRefTable *XRefTable) (bool, error) {
 	return bf1 == bf2, nil
 }
 
-func equalDicts(d1, d2 *Dict, xRefTable *XRefTable) (bool, error) {
+func equalDicts(d1, d2 Dict, xRefTable *XRefTable) (bool, error) {
 
 	log.Debug.Printf("equalDicts: %v\n%v\n", d1, d2)
 
@@ -184,9 +154,9 @@ func equalDicts(d1, d2 *Dict, xRefTable *XRefTable) (bool, error) {
 		return false, nil
 	}
 
-	for key, v1 := range *d1 {
+	for key, v1 := range d1 {
 
-		v2, found := (*d2)[key]
+		v2, found := d2[key]
 		if !found {
 			log.Debug.Printf("equalDict: return false, key=%s\n", key)
 			return false, nil
@@ -227,13 +197,9 @@ func equalDicts(d1, d2 *Dict, xRefTable *XRefTable) (bool, error) {
 	return true, nil
 }
 
-func equalFontDicts(fd1, fd2 *Dict, xRefTable *XRefTable) (bool, error) {
+func equalFontDicts(fd1, fd2 Dict, xRefTable *XRefTable) (bool, error) {
 
 	log.Debug.Printf("equalFontDicts: %v\n%v\n", fd1, fd2)
-
-	if fd1 == fd2 {
-		return true, nil
-	}
 
 	if fd1 == nil {
 		return fd2 == nil, nil

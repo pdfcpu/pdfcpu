@@ -54,12 +54,12 @@ func createXRefTableWithRootDict() (*XRefTable, error) {
 	rootDict := NewDict()
 	rootDict.InsertName("Type", "Catalog")
 
-	indRef, err := xRefTable.IndRefForNewObject(rootDict)
+	ir, err := xRefTable.IndRefForNewObject(rootDict)
 	if err != nil {
 		return nil, err
 	}
 
-	xRefTable.Root = indRef
+	xRefTable.Root = ir
 
 	return xRefTable, nil
 }
@@ -105,7 +105,7 @@ func createZapfDingbatsFontDict(xRefTable *XRefTable) (*IndirectRef, error) {
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createFunctionalShadingDict(xRefTable *XRefTable) *Dict {
+func createFunctionalShadingDict(xRefTable *XRefTable) Dict {
 
 	f := Dict(
 		map[string]Object{
@@ -122,10 +122,10 @@ func createFunctionalShadingDict(xRefTable *XRefTable) *Dict {
 		},
 	)
 
-	return &d
+	return d
 }
 
-func createRadialShadingDict(xRefTable *XRefTable) *Dict {
+func createRadialShadingDict(xRefTable *XRefTable) Dict {
 
 	f := Dict(
 		map[string]Object{
@@ -143,7 +143,7 @@ func createRadialShadingDict(xRefTable *XRefTable) *Dict {
 		},
 	)
 
-	return &d
+	return d
 }
 
 func createStreamObjForHalftoneDictType6(xRefTable *XRefTable) (*IndirectRef, error) {
@@ -234,7 +234,7 @@ func createPostScriptCalculatorFunctionStreamDict(xRefTable *XRefTable) (*Indire
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func addResources(xRefTable *XRefTable, pageDict *Dict) error {
+func addResources(xRefTable *XRefTable, pageDict Dict) error {
 
 	fIndRef, err := createFontDict(xRefTable)
 	if err != nil {
@@ -263,8 +263,8 @@ func addResources(xRefTable *XRefTable, pageDict *Dict) error {
 
 	shadingResources := Dict(
 		map[string]Object{
-			"S1": *functionalBasedShDict,
-			"S3": *radialShDict,
+			"S1": functionalBasedShDict,
+			"S3": radialShDict,
 		},
 	)
 
@@ -522,13 +522,13 @@ func addResources(xRefTable *XRefTable, pageDict *Dict) error {
 	return nil
 }
 
-func addContents(xRefTable *XRefTable, pageDict *Dict, mediaBox *Array) error {
+func addContents(xRefTable *XRefTable, pageDict Dict, mediaBox Array) error {
 
 	contents := &StreamDict{Dict: NewDict()}
 	contents.InsertName("Filter", filter.Flate)
 	contents.FilterPipeline = []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}
 
-	mb := rect(xRefTable, *mediaBox)
+	mb := rect(xRefTable, mediaBox)
 
 	// Page dimensions: 595.27, 841.89 xcxcvxcv
 
@@ -587,17 +587,17 @@ func addContents(xRefTable *XRefTable, pageDict *Dict, mediaBox *Array) error {
 		return err
 	}
 
-	indRef, err := xRefTable.IndRefForNewObject(*contents)
+	ir, err := xRefTable.IndRefForNewObject(*contents)
 	if err != nil {
 		return err
 	}
 
-	pageDict.Insert("Contents", *indRef)
+	pageDict.Insert("Contents", *ir)
 
 	return nil
 }
 
-func createBoxColorDict() *Dict {
+func createBoxColorDict() Dict {
 
 	cropBoxColorInfoDict := Dict(
 		map[string]Object{
@@ -642,10 +642,10 @@ func createBoxColorDict() *Dict {
 		},
 	)
 
-	return &d
+	return d
 }
 
-func addViewportDict(pageDict *Dict) {
+func addViewportDict(pageDict Dict) {
 
 	measureDict := Dict(
 		map[string]Object{
@@ -735,16 +735,16 @@ func annotRect(i int, w, h, d, l float64) Array {
 	return NewRectangle(llx, lly, urx, ury)
 }
 
-func createAnnotsArray(xRefTable *XRefTable, pageIndRef *IndirectRef, mediaBox *Array) (*Array, error) {
+func createAnnotsArray(xRefTable *XRefTable, pageIndRef IndirectRef, mediaBox Array) (Array, error) {
 
 	// Generate side by side lined up annotations starting in the lower left corner of the page.
 
-	pageWidth := (*mediaBox)[2].(Float)
-	pageHeight := (*mediaBox)[3].(Float)
+	pageWidth := mediaBox[2].(Float)
+	pageHeight := mediaBox[3].(Float)
 
-	arr := Array{}
+	a := Array{}
 
-	for i, f := range []func(*XRefTable, *IndirectRef, *Array) (*IndirectRef, error){
+	for i, f := range []func(*XRefTable, IndirectRef, Array) (*IndirectRef, error){
 		createTextAnnotation,
 		createLinkAnnotation,
 		createFreeTextAnnotation,
@@ -781,36 +781,36 @@ func createAnnotsArray(xRefTable *XRefTable, pageIndRef *IndirectRef, mediaBox *
 	} {
 		r := annotRect(i, pageWidth.Value(), pageHeight.Value(), 30, 80)
 
-		indRef, err := f(xRefTable, pageIndRef, &r)
+		ir, err := f(xRefTable, pageIndRef, r)
 		if err != nil {
 			return nil, err
 		}
 
-		arr = append(arr, *indRef)
+		a = append(a, *ir)
 	}
 
-	return &arr, nil
+	return a, nil
 }
 
-func createPageWithAnnotations(xRefTable *XRefTable, parentPageIndRef *IndirectRef, mediaBox *Array) (*IndirectRef, error) {
+func createPageWithAnnotations(xRefTable *XRefTable, parentPageIndRef IndirectRef, mediaBox Array) (*IndirectRef, error) {
 
 	pageDict := Dict(
 		map[string]Object{
 			"Type":         Name("Page"),
-			"Parent":       *parentPageIndRef,
-			"BleedBox":     *mediaBox,
-			"TrimBox":      *mediaBox,
-			"ArtBox":       *mediaBox,
-			"BoxColorInfo": *createBoxColorDict(),
+			"Parent":       parentPageIndRef,
+			"BleedBox":     mediaBox,
+			"TrimBox":      mediaBox,
+			"ArtBox":       mediaBox,
+			"BoxColorInfo": createBoxColorDict(),
 			"UserUnit":     Float(1.5)}, // Note: not honored by Apple Preview
 	)
 
-	err := addResources(xRefTable, &pageDict)
+	err := addResources(xRefTable, pageDict)
 	if err != nil {
 		return nil, err
 	}
 
-	err = addContents(xRefTable, &pageDict, mediaBox)
+	err = addContents(xRefTable, pageDict, mediaBox)
 	if err != nil {
 		return nil, err
 	}
@@ -843,52 +843,52 @@ func createPageWithAnnotations(xRefTable *XRefTable, parentPageIndRef *IndirectR
 	)
 	pageDict.Insert("SeparationInfo", separationInfoDict)
 
-	annotsArray, err := createAnnotsArray(xRefTable, pageIndRef, mediaBox)
+	annotsArray, err := createAnnotsArray(xRefTable, *pageIndRef, mediaBox)
 	if err != nil {
 		return nil, err
 	}
-	pageDict.Insert("Annots", *annotsArray)
+	pageDict.Insert("Annots", annotsArray)
 
-	addViewportDict(&pageDict)
+	addViewportDict(pageDict)
 
 	return pageIndRef, nil
 }
 
-func createPageWithAcroForm(xRefTable *XRefTable, parentPageIndRef *IndirectRef, annotsArray *Array, mediaBox *Array) (*IndirectRef, error) {
+func createPageWithAcroForm(xRefTable *XRefTable, parentPageIndRef IndirectRef, annotsArray Array, mediaBox Array) (*IndirectRef, error) {
 
 	pageDict := Dict(
 		map[string]Object{
 			"Type":         Name("Page"),
-			"Parent":       *parentPageIndRef,
-			"BleedBox":     *mediaBox,
-			"TrimBox":      *mediaBox,
-			"ArtBox":       *mediaBox,
-			"BoxColorInfo": *createBoxColorDict(),
+			"Parent":       parentPageIndRef,
+			"BleedBox":     mediaBox,
+			"TrimBox":      mediaBox,
+			"ArtBox":       mediaBox,
+			"BoxColorInfo": createBoxColorDict(),
 			"UserUnit":     Float(1.0), // Note: not honored by Apple Preview
 		},
 	)
 
-	err := addResources(xRefTable, &pageDict)
+	err := addResources(xRefTable, pageDict)
 	if err != nil {
 		return nil, err
 	}
 
-	err = addContents(xRefTable, &pageDict, mediaBox)
+	err = addContents(xRefTable, pageDict, mediaBox)
 	if err != nil {
 		return nil, err
 	}
 
-	pageDict.Insert("Annots", *annotsArray)
+	pageDict.Insert("Annots", annotsArray)
 
 	return xRefTable.IndRefForNewObject(pageDict)
 }
 
-func createPage(xRefTable *XRefTable, parentPageIndRef *IndirectRef, mediaBox *Array) (*IndirectRef, error) {
+func createPage(xRefTable *XRefTable, parentPageIndRef IndirectRef, mediaBox Array) (*IndirectRef, error) {
 
 	pageDict := Dict(
 		map[string]Object{
 			"Type":   Name("Page"),
-			"Parent": *parentPageIndRef,
+			"Parent": parentPageIndRef,
 		},
 	)
 
@@ -911,20 +911,15 @@ func createPage(xRefTable *XRefTable, parentPageIndRef *IndirectRef, mediaBox *A
 
 	pageDict.Insert("Resources", resourceDict)
 
-	err = addContents(xRefTable, &pageDict, mediaBox)
+	err = addContents(xRefTable, pageDict, mediaBox)
 	if err != nil {
 		return nil, err
 	}
 
-	pageIndRef, err := xRefTable.IndRefForNewObject(pageDict)
-	if err != nil {
-		return nil, err
-	}
-
-	return pageIndRef, nil
+	return xRefTable.IndRefForNewObject(pageDict)
 }
 
-func addPageTree(xRefTable *XRefTable, rootDict *Dict) error {
+func addPageTree(xRefTable *XRefTable, rootDict Dict) error {
 
 	// mediabox = physical page dimensions
 	//mediaBox := NewRectangle(0, 0, 595.27, 841.89)
@@ -943,7 +938,7 @@ func addPageTree(xRefTable *XRefTable, rootDict *Dict) error {
 		return err
 	}
 
-	pageIndRef, err := createPage(xRefTable, parentPageIndRef, &mediaBox)
+	pageIndRef, err := createPage(xRefTable, *parentPageIndRef, mediaBox)
 	if err != nil {
 		return err
 	}
@@ -955,7 +950,7 @@ func addPageTree(xRefTable *XRefTable, rootDict *Dict) error {
 	return nil
 }
 
-func addPageTreeWithAnnotations(xRefTable *XRefTable, rootDict *Dict) (*IndirectRef, error) {
+func addPageTreeWithAnnotations(xRefTable *XRefTable, rootDict Dict) (*IndirectRef, error) {
 
 	// mediabox = physical page dimensions
 	mediaBox := NewRectangle(0, 0, 595.27, 841.89)
@@ -974,7 +969,7 @@ func addPageTreeWithAnnotations(xRefTable *XRefTable, rootDict *Dict) (*Indirect
 		return nil, err
 	}
 
-	pageIndRef, err := createPageWithAnnotations(xRefTable, parentPageIndRef, &mediaBox)
+	pageIndRef, err := createPageWithAnnotations(xRefTable, *parentPageIndRef, mediaBox)
 	if err != nil {
 		return nil, err
 	}
@@ -986,7 +981,7 @@ func addPageTreeWithAnnotations(xRefTable *XRefTable, rootDict *Dict) (*Indirect
 	return pageIndRef, nil
 }
 
-func addPageTreeWithAcroFields(xRefTable *XRefTable, rootDict *Dict, annotsArray *Array) (*IndirectRef, error) {
+func addPageTreeWithAcroFields(xRefTable *XRefTable, rootDict Dict, annotsArray Array) (*IndirectRef, error) {
 
 	// mediabox = physical page dimensions
 	mediaBox := NewRectangle(0, 0, 595.27, 841.89)
@@ -1005,7 +1000,7 @@ func addPageTreeWithAcroFields(xRefTable *XRefTable, rootDict *Dict, annotsArray
 		return nil, err
 	}
 
-	pageIndRef, err := createPageWithAcroForm(xRefTable, parentPageIndRef, annotsArray, &mediaBox)
+	pageIndRef, err := createPageWithAcroForm(xRefTable, *parentPageIndRef, annotsArray, mediaBox)
 	if err != nil {
 		return nil, err
 	}
@@ -1018,7 +1013,7 @@ func addPageTreeWithAcroFields(xRefTable *XRefTable, rootDict *Dict, annotsArray
 }
 
 // create a thread with 2 beads.
-func createThreadDict(xRefTable *XRefTable, pageIndRef *IndirectRef) (*IndirectRef, error) {
+func createThreadDict(xRefTable *XRefTable, pageIndRef IndirectRef) (*IndirectRef, error) {
 
 	infoDict := NewDict()
 	infoDict.InsertString("Title", "DummyArticle")
@@ -1040,7 +1035,7 @@ func createThreadDict(xRefTable *XRefTable, pageIndRef *IndirectRef) (*IndirectR
 		map[string]Object{
 			"Type": Name("Bead"),
 			"T":    *dIndRef,
-			"P":    *pageIndRef,
+			"P":    pageIndRef,
 			"R":    NewRectangle(0, 0, 100, 100),
 		},
 	)
@@ -1059,7 +1054,7 @@ func createThreadDict(xRefTable *XRefTable, pageIndRef *IndirectRef) (*IndirectR
 			"T":    *dIndRef,
 			"N":    *d1IndRef,
 			"V":    *d1IndRef,
-			"P":    *pageIndRef,
+			"P":    pageIndRef,
 			"R":    NewRectangle(0, 100, 200, 100),
 		},
 	)
@@ -1075,24 +1070,24 @@ func createThreadDict(xRefTable *XRefTable, pageIndRef *IndirectRef) (*IndirectR
 	return dIndRef, nil
 }
 
-func addThreads(xRefTable *XRefTable, rootDict *Dict, pageIndRef *IndirectRef) error {
+func addThreads(xRefTable *XRefTable, rootDict Dict, pageIndRef IndirectRef) error {
 
-	indRef, err := createThreadDict(xRefTable, pageIndRef)
+	ir, err := createThreadDict(xRefTable, pageIndRef)
 	if err != nil {
 		return err
 	}
 
-	indRef, err = xRefTable.IndRefForNewObject(Array{*indRef})
+	ir, err = xRefTable.IndRefForNewObject(Array{*ir})
 	if err != nil {
 		return err
 	}
 
-	rootDict.Insert("Threads", *indRef)
+	rootDict.Insert("Threads", *ir)
 
 	return nil
 }
 
-func addOpenAction(xRefTable *XRefTable, rootDict *Dict) error {
+func addOpenAction(xRefTable *XRefTable, rootDict Dict) error {
 
 	nextActionDict := Dict(
 		map[string]Object{
@@ -1118,7 +1113,7 @@ func addOpenAction(xRefTable *XRefTable, rootDict *Dict) error {
 	return nil
 }
 
-func addURI(xRefTable *XRefTable, rootDict *Dict) {
+func addURI(xRefTable *XRefTable, rootDict Dict) {
 
 	d := NewDict()
 	d.InsertString("Base", "http://www.adobe.com")
@@ -1126,39 +1121,39 @@ func addURI(xRefTable *XRefTable, rootDict *Dict) {
 	rootDict.Insert("URI", d)
 }
 
-func addSpiderInfo(xRefTable *XRefTable, rootDict *Dict) error {
+func addSpiderInfo(xRefTable *XRefTable, rootDict Dict) error {
 
 	// webCaptureInfoDict
 	webCaptureInfoDict := NewDict()
 	webCaptureInfoDict.InsertInt("V", 1.0)
 
-	arr := Array{}
+	a := Array{}
 	captureCmdDict := NewDict()
 	captureCmdDict.InsertString("URL", (""))
 
 	cmdSettingsDict := NewDict()
 	captureCmdDict.Insert("S", cmdSettingsDict)
 
-	indRef, err := xRefTable.IndRefForNewObject(captureCmdDict)
+	ir, err := xRefTable.IndRefForNewObject(captureCmdDict)
 	if err != nil {
 		return err
 	}
 
-	arr = append(arr, *indRef)
+	a = append(a, *ir)
 
-	webCaptureInfoDict.Insert("C", arr)
+	webCaptureInfoDict.Insert("C", a)
 
-	indRef, err = xRefTable.IndRefForNewObject(webCaptureInfoDict)
+	ir, err = xRefTable.IndRefForNewObject(webCaptureInfoDict)
 	if err != nil {
 		return err
 	}
 
-	rootDict.Insert("SpiderInfo", *indRef)
+	rootDict.Insert("SpiderInfo", *ir)
 
 	return nil
 }
 
-func addOCProperties(xRefTable *XRefTable, rootDict *Dict) error {
+func addOCProperties(xRefTable *XRefTable, rootDict Dict) error {
 
 	usageAppDict := Dict(
 		map[string]Object{
@@ -1196,7 +1191,7 @@ func addOCProperties(xRefTable *XRefTable, rootDict *Dict) error {
 	return nil
 }
 
-func addRequirements(xRefTable *XRefTable, rootDict *Dict) {
+func addRequirements(xRefTable *XRefTable, rootDict Dict) {
 
 	d := NewDict()
 	d.InsertName("Type", "Requirement")
@@ -1223,7 +1218,7 @@ func CreateAnnotationDemoXRef() (*XRefTable, error) {
 		return nil, err
 	}
 
-	err = addThreads(xRefTable, rootDict, pageIndRef)
+	err = addThreads(xRefTable, rootDict, *pageIndRef)
 	if err != nil {
 		return nil, err
 	}
@@ -1409,17 +1404,17 @@ func createTextField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectRef, err
 		},
 	)
 
-	indRef, err := xRefTable.IndRefForNewObject(d)
+	ir, err := xRefTable.IndRefForNewObject(d)
 	if err != nil {
 		return nil, err
 	}
 
-	*pageAnnots = append(*pageAnnots, *indRef)
+	*pageAnnots = append(*pageAnnots, *ir)
 
-	return indRef, nil
+	return ir, nil
 }
 
-func createYesAppearance(xRefTable *XRefTable, resourceDict *Dict, w, h float64) (*IndirectRef, error) {
+func createYesAppearance(xRefTable *XRefTable, resourceDict Dict, w, h float64) (*IndirectRef, error) {
 
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "q 0 0 1 rg BT /ZaDb 12 Tf 0 0 Td (8) Tj ET Q")
@@ -1427,7 +1422,7 @@ func createYesAppearance(xRefTable *XRefTable, resourceDict *Dict, w, h float64)
 	sd := &StreamDict{
 		Dict: Dict(
 			map[string]Object{
-				"Resources": *resourceDict,
+				"Resources": resourceDict,
 				"Subtype":   Name("Form"),
 				"BBox":      NewRectangle(0, 0, w, h),
 				"OPI": Dict(
@@ -1461,7 +1456,7 @@ func createYesAppearance(xRefTable *XRefTable, resourceDict *Dict, w, h float64)
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createOffAppearance(xRefTable *XRefTable, resourceDict *Dict, w, h float64) (*IndirectRef, error) {
+func createOffAppearance(xRefTable *XRefTable, resourceDict Dict, w, h float64) (*IndirectRef, error) {
 
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "q 0 0 1 rg BT /ZaDb 12 Tf 0 0 Td (4) Tj ET Q")
@@ -1469,7 +1464,7 @@ func createOffAppearance(xRefTable *XRefTable, resourceDict *Dict, w, h float64)
 	sd := &StreamDict{
 		Dict: Dict(
 			map[string]Object{
-				"Resources": *resourceDict,
+				"Resources": resourceDict,
 				"Subtype":   Name("Form"),
 				"BBox":      NewRectangle(0, 0, w, h),
 				"OPI": Dict(
@@ -1516,12 +1511,12 @@ func createCheckBoxButtonField(xRefTable *XRefTable, pageAnnots *Array) (*Indire
 		},
 	)
 
-	yesForm, err := createYesAppearance(xRefTable, &resDict, 20.0, 20.0)
+	yesForm, err := createYesAppearance(xRefTable, resDict, 20.0, 20.0)
 	if err != nil {
 		return nil, err
 	}
 
-	offForm, err := createOffAppearance(xRefTable, &resDict, 20.0, 20.0)
+	offForm, err := createOffAppearance(xRefTable, resDict, 20.0, 20.0)
 	if err != nil {
 		return nil, err
 	}
@@ -1551,14 +1546,14 @@ func createCheckBoxButtonField(xRefTable *XRefTable, pageAnnots *Array) (*Indire
 		},
 	)
 
-	indRef, err := xRefTable.IndRefForNewObject(d)
+	ir, err := xRefTable.IndRefForNewObject(d)
 	if err != nil {
 		return nil, err
 	}
 
-	*pageAnnots = append(*pageAnnots, *indRef)
+	*pageAnnots = append(*pageAnnots, *ir)
 
-	return indRef, nil
+	return ir, nil
 }
 
 func createRadioButtonField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectRef, error) {
@@ -1598,12 +1593,12 @@ func createRadioButtonField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectR
 		},
 	)
 
-	selectedForm, err := createYesAppearance(xRefTable, &resDict, 20.0, 20.0)
+	selectedForm, err := createYesAppearance(xRefTable, resDict, 20.0, 20.0)
 	if err != nil {
 		return nil, err
 	}
 
-	offForm, err := createOffAppearance(xRefTable, &resDict, 20.0, 20.0)
+	offForm, err := createOffAppearance(xRefTable, resDict, 20.0, 20.0)
 	if err != nil {
 		return nil, err
 	}
@@ -1703,14 +1698,14 @@ func createResetButton(xRefTable *XRefTable, pageAnnots *Array) (*IndirectRef, e
 		},
 	)
 
-	indRef, err := xRefTable.IndRefForNewObject(d)
+	ir, err := xRefTable.IndRefForNewObject(d)
 	if err != nil {
 		return nil, err
 	}
 
-	*pageAnnots = append(*pageAnnots, *indRef)
+	*pageAnnots = append(*pageAnnots, *ir)
 
-	return indRef, nil
+	return ir, nil
 }
 
 func createSubmitButton(xRefTable *XRefTable, pageAnnots *Array) (*IndirectRef, error) {
@@ -1754,14 +1749,14 @@ func createSubmitButton(xRefTable *XRefTable, pageAnnots *Array) (*IndirectRef, 
 		},
 	)
 
-	indRef, err := xRefTable.IndRefForNewObject(d)
+	ir, err := xRefTable.IndRefForNewObject(d)
 	if err != nil {
 		return nil, err
 	}
 
-	*pageAnnots = append(*pageAnnots, *indRef)
+	*pageAnnots = append(*pageAnnots, *ir)
 
-	return indRef, nil
+	return ir, nil
 }
 
 func streamObjForXFAElement(xRefTable *XRefTable, s string) (*IndirectRef, error) {
@@ -1779,7 +1774,7 @@ func streamObjForXFAElement(xRefTable *XRefTable, s string) (*IndirectRef, error
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createXFAArray(xRefTable *XRefTable) (*Array, error) {
+func createXFAArray(xRefTable *XRefTable) (Array, error) {
 
 	sd1, err := streamObjForXFAElement(xRefTable, "<xdp:xdp xmlns:xdp=\"http://ns.adobe.com/xdp/\">")
 	if err != nil {
@@ -1791,13 +1786,13 @@ func createXFAArray(xRefTable *XRefTable) (*Array, error) {
 		return nil, err
 	}
 
-	return &Array{
+	return Array{
 		StringLiteral("xdp:xdp"), *sd1,
 		StringLiteral("/xdp:xdp"), *sd3,
 	}, nil
 }
 
-func createAcroFormDict(xRefTable *XRefTable) (*Dict, *Array, error) {
+func createAcroFormDict(xRefTable *XRefTable) (Dict, Array, error) {
 
 	pageAnnots := Array{}
 
@@ -1836,11 +1831,11 @@ func createAcroFormDict(xRefTable *XRefTable) (*Dict, *Array, error) {
 			"Fields":          Array{*text, *checkBox, *radioButton, *resetButton, *submitButton}, // indRefs of fieldDicts
 			"NeedAppearances": Boolean(true),
 			"CO":              Array{*text},
-			"XFA":             *xfaArr,
+			"XFA":             xfaArr,
 		},
 	)
 
-	return &d, &pageAnnots, nil
+	return d, pageAnnots, nil
 }
 
 // CreateAcroFormDemoXRef creates a PDF file with an AcroForm example.
@@ -1861,7 +1856,7 @@ func CreateAcroFormDemoXRef() (*XRefTable, error) {
 		return nil, err
 	}
 
-	rootDict.Insert("AcroForm", *acroFormDict)
+	rootDict.Insert("AcroForm", acroFormDict)
 
 	_, err = addPageTreeWithAcroFields(xRefTable, rootDict, annotsArray)
 	if err != nil {

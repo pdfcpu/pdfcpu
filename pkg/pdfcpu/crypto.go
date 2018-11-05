@@ -69,7 +69,7 @@ var (
 )
 
 // NewEncryptDict creates a new EncryptDict using the standard security handler.
-func newEncryptDict(needAES, need128BitKey bool, permissions int16) *Dict {
+func newEncryptDict(needAES, need128BitKey bool, permissions int16) Dict {
 
 	d := NewDict()
 
@@ -116,7 +116,7 @@ func newEncryptDict(needAES, need128BitKey bool, permissions int16) *Dict {
 	d.Insert("U", HexLiteral(h))
 	d.Insert("O", HexLiteral(h))
 
-	return &d
+	return d
 }
 
 func encKey(userpw string, e *Enc) (key []byte) {
@@ -394,7 +394,7 @@ func validateOwnerPassword(ctx *Context) (ok bool, k []byte, err error) {
 }
 
 // SupportedCFEntry returns true if all entries found are supported.
-func supportedCFEntry(d *Dict) (bool, error) {
+func supportedCFEntry(d Dict) (bool, error) {
 
 	cfm := d.NameEntry("CFM")
 	if cfm != nil && *cfm != "V2" && *cfm != "AESV2" {
@@ -507,9 +507,9 @@ func hasNeededPermissions(mode CommandMode, enc *Enc) bool {
 	return true
 }
 
-func getV(dict *Dict) (*int, error) {
+func getV(d Dict) (*int, error) {
 
-	v := dict.IntEntry("V")
+	v := d.IntEntry("V")
 
 	if v == nil || (*v != 1 && *v != 2 && *v != 4) {
 		return nil, errors.Errorf("getV: \"V\" must be one of 1,2,4")
@@ -517,7 +517,7 @@ func getV(dict *Dict) (*int, error) {
 
 	return v, nil
 }
-func checkStmf(ctx *Context, stmf *string, cfDict *Dict) error {
+func checkStmf(ctx *Context, stmf *string, cfDict Dict) error {
 
 	if stmf != nil && *stmf != "Identity" {
 
@@ -536,9 +536,9 @@ func checkStmf(ctx *Context, stmf *string, cfDict *Dict) error {
 	return nil
 }
 
-func checkV(ctx *Context, dict *Dict) (*int, error) {
+func checkV(ctx *Context, d Dict) (*int, error) {
 
-	v, err := getV(dict)
+	v, err := getV(d)
 	if err != nil {
 		return nil, err
 	}
@@ -549,26 +549,26 @@ func checkV(ctx *Context, dict *Dict) (*int, error) {
 	}
 
 	// CF
-	cfDict := dict.DictEntry("CF")
+	cfDict := d.DictEntry("CF")
 	if cfDict == nil {
 		return nil, errors.Errorf("checkV: required entry \"CF\" missing.")
 	}
 
 	// StmF
-	stmf := dict.NameEntry("StmF")
+	stmf := d.NameEntry("StmF")
 	err = checkStmf(ctx, stmf, cfDict)
 	if err != nil {
 		return nil, err
 	}
 
 	// StrF
-	strf := dict.NameEntry("StrF")
+	strf := d.NameEntry("StrF")
 	if strf != nil && *strf != "Identity" {
-		d := cfDict.DictEntry(*strf)
-		if d == nil {
+		d1 := cfDict.DictEntry(*strf)
+		if d1 == nil {
 			return nil, errors.Errorf("checkV: entry \"%s\" missing in \"CF\"", *strf)
 		}
-		aes, err := supportedCFEntry(d)
+		aes, err := supportedCFEntry(d1)
 		if err != nil {
 			return nil, errors.Wrapf(err, "checkV: unsupported \"%s\" entry in \"CF\"", *strf)
 		}
@@ -576,7 +576,7 @@ func checkV(ctx *Context, dict *Dict) (*int, error) {
 	}
 
 	// EFF
-	eff := dict.NameEntry("EFF")
+	eff := d.NameEntry("EFF")
 	if eff != nil && *strf != "Identity" {
 		d := cfDict.DictEntry(*eff)
 		if d == nil {
@@ -592,9 +592,9 @@ func checkV(ctx *Context, dict *Dict) (*int, error) {
 	return v, nil
 }
 
-func length(dict *Dict) (int, error) {
+func length(d Dict) (int, error) {
 
-	l := dict.IntEntry("Length")
+	l := d.IntEntry("Length")
 	if l == nil {
 		return 40, nil
 	}
@@ -606,9 +606,9 @@ func length(dict *Dict) (int, error) {
 	return *l, nil
 }
 
-func getR(dict *Dict) (int, error) {
+func getR(d Dict) (int, error) {
 
-	r := dict.IntEntry("R")
+	r := d.IntEntry("R")
 	if r == nil || (*r != 2 && *r != 3 && *r != 4) {
 		return 0, errors.New("getR: \"R\" must be 2,3,4")
 	}
@@ -618,39 +618,39 @@ func getR(dict *Dict) (int, error) {
 
 // SupportedEncryption returns true if used encryption is supported by pdfcpu
 // Also returns a pointer to a struct encapsulating used encryption.
-func supportedEncryption(ctx *Context, dict *Dict) (*Enc, error) {
+func supportedEncryption(ctx *Context, d Dict) (*Enc, error) {
 
 	// Filter
-	filter := dict.NameEntry("Filter")
+	filter := d.NameEntry("Filter")
 	if filter == nil || *filter != "Standard" {
 		return nil, errors.New("unsupported encryption: filter must be \"Standard\"")
 	}
 
 	// SubFilter
-	if dict.NameEntry("SubFilter") != nil {
+	if d.NameEntry("SubFilter") != nil {
 		return nil, errors.New("unsupported encryption: \"SubFilter\" not supported")
 	}
 
 	// V
-	v, err := checkV(ctx, dict)
+	v, err := checkV(ctx, d)
 	if err != nil {
 		return nil, err
 	}
 
 	// Length
-	l, err := length(dict)
+	l, err := length(d)
 	if err != nil {
 		return nil, err
 	}
 
 	// R
-	r, err := getR(dict)
+	r, err := getR(d)
 	if err != nil {
 		return nil, err
 	}
 
 	// O
-	o, err := dict.StringEntryBytes("O")
+	o, err := d.StringEntryBytes("O")
 	if err != nil {
 		return nil, err
 	}
@@ -659,7 +659,7 @@ func supportedEncryption(ctx *Context, dict *Dict) (*Enc, error) {
 	}
 
 	// U
-	u, err := dict.StringEntryBytes("U")
+	u, err := d.StringEntryBytes("U")
 	if err != nil {
 		return nil, err
 	}
@@ -668,14 +668,14 @@ func supportedEncryption(ctx *Context, dict *Dict) (*Enc, error) {
 	}
 
 	// P
-	p := dict.IntEntry("P")
+	p := d.IntEntry("P")
 	if p == nil {
 		return nil, errors.New("unsupported encryption: required entry \"P\" missing")
 	}
 
 	// EncryptMetadata
 	encMeta := true
-	emd := dict.BooleanEntry("EncryptMetadata")
+	emd := d.BooleanEntry("EncryptMetadata")
 	if emd != nil {
 		encMeta = *emd
 	}
@@ -1047,12 +1047,12 @@ func fileID(ctx *Context) (HexLiteral, error) {
 	h.Write([]byte(strconv.Itoa(ctx.Read.ReadFileSize())))
 
 	// All values of the info dict which is assumed to be there at this point.
-	dict, err := ctx.DereferenceDict(*ctx.Info)
+	d, err := ctx.DereferenceDict(*ctx.Info)
 	if err != nil {
 		return "", err
 	}
 
-	for _, v := range *dict {
+	for _, v := range d {
 		o, err := ctx.Dereference(v)
 		if err != nil {
 			return "", err

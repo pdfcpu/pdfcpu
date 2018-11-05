@@ -21,57 +21,57 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateDestinationArrayFirstElement(xRefTable *pdf.XRefTable, arr *pdf.Array) (pdf.Object, error) {
+func validateDestinationArrayFirstElement(xRefTable *pdf.XRefTable, a pdf.Array) (pdf.Object, error) {
 
-	obj, err := xRefTable.Dereference((*arr)[0])
-	if err != nil || obj == nil {
+	o, err := xRefTable.Dereference(a[0])
+	if err != nil || o == nil {
 		return nil, err
 	}
 
-	switch obj := obj.(type) {
+	switch o := o.(type) {
 
 	case pdf.Integer: // no further processing
 
 	case pdf.Dict:
-		if obj.Type() == nil || *obj.Type() != "Page" {
+		if o.Type() == nil || *o.Type() != "Page" {
 			err = errors.New("validateDestinationArrayFirstElement: first element refers to invalid destination page dict")
 		}
 
 	default:
-		err = errors.Errorf("validateDestinationArrayFirstElement: first element must be a pageDict indRef or an integer: %v", obj)
+		err = errors.Errorf("validateDestinationArrayFirstElement: first element must be a pageDict indRef or an integer: %v", o)
 	}
 
-	return obj, err
+	return o, err
 }
 
-func validateDestinationArrayLength(arr pdf.Array) bool {
-	l := len(arr)
+func validateDestinationArrayLength(a pdf.Array) bool {
+	l := len(a)
 	return l == 2 || l == 3 || l == 5 || l == 6
 }
 
-func validateDestinationArray(xRefTable *pdf.XRefTable, arr *pdf.Array) error {
+func validateDestinationArray(xRefTable *pdf.XRefTable, a pdf.Array) error {
 
 	// Validate first element: indRef of page dict or pageNumber(int) of remote doc for remote Go-to Action or nil.
 
-	obj, err := validateDestinationArrayFirstElement(xRefTable, arr)
-	if err != nil || obj == nil {
+	o, err := validateDestinationArrayFirstElement(xRefTable, a)
+	if err != nil || o == nil {
 		return err
 	}
 
-	if !validateDestinationArrayLength(*arr) {
+	if !validateDestinationArrayLength(a) {
 		return errors.New("validateDestinationArray: invalid length")
 	}
 
 	// Validate rest of array elements.
 
-	name, ok := (*arr)[1].(pdf.Name)
+	name, ok := a[1].(pdf.Name)
 	if !ok {
 		return errors.New("validateDestinationArray: second element must be a name")
 	}
 
 	var nameErr bool
 
-	switch len(*arr) {
+	switch len(a) {
 
 	case 2:
 		if xRefTable.ValidationMode == pdf.ValidationRelaxed {
@@ -90,7 +90,7 @@ func validateDestinationArray(xRefTable *pdf.XRefTable, arr *pdf.Array) error {
 		nameErr = name.Value() != "FitR"
 
 	default:
-		return errors.Errorf("validateDestinationArray: array length %d not allowed: %v", len(*arr), arr)
+		return errors.Errorf("validateDestinationArray: array length %d not allowed: %v", len(a), a)
 	}
 
 	if nameErr {
@@ -100,25 +100,25 @@ func validateDestinationArray(xRefTable *pdf.XRefTable, arr *pdf.Array) error {
 	return nil
 }
 
-func validateDestinationDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
+func validateDestinationDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 
 	// D, required, array
-	arr, err := validateArrayEntry(xRefTable, dict, "DestinationDict", "D", REQUIRED, pdf.V10, nil)
-	if err != nil || arr == nil {
+	a, err := validateArrayEntry(xRefTable, d, "DestinationDict", "D", REQUIRED, pdf.V10, nil)
+	if err != nil || a == nil {
 		return err
 	}
 
-	return validateDestinationArray(xRefTable, arr)
+	return validateDestinationArray(xRefTable, a)
 }
 
-func validateDestination(xRefTable *pdf.XRefTable, obj pdf.Object) error {
+func validateDestination(xRefTable *pdf.XRefTable, o pdf.Object) error {
 
-	obj, err := xRefTable.Dereference(obj)
-	if err != nil || obj == nil {
+	o, err := xRefTable.Dereference(o)
+	if err != nil || o == nil {
 		return err
 	}
 
-	switch obj := obj.(type) {
+	switch o := o.(type) {
 
 	case pdf.Name:
 		// no further processing.
@@ -127,10 +127,10 @@ func validateDestination(xRefTable *pdf.XRefTable, obj pdf.Object) error {
 		// no further processing.
 
 	case pdf.Dict:
-		err = validateDestinationDict(xRefTable, &obj)
+		err = validateDestinationDict(xRefTable, o)
 
 	case pdf.Array:
-		err = validateDestinationArray(xRefTable, &obj)
+		err = validateDestinationArray(xRefTable, o)
 
 	default:
 		err = errors.New("validateDestination: unsupported PDF object")
@@ -140,14 +140,14 @@ func validateDestination(xRefTable *pdf.XRefTable, obj pdf.Object) error {
 	return err
 }
 
-func validateDestinationEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateDestinationEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	// see 12.3.2
 
-	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required, sinceVersion)
+	o, err := validateEntry(xRefTable, d, dictName, entryName, required, sinceVersion)
 	if err != nil {
 		return err
 	}
 
-	return validateDestination(xRefTable, obj)
+	return validateDestination(xRefTable, o)
 }

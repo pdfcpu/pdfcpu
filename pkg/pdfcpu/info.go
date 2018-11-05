@@ -27,9 +27,10 @@ func csvSafeString(s string) string {
 	return strings.Replace(s, ";", ",", -1)
 }
 
-func handleInfoDict(ctx *Context, dict *Dict) (err error) {
+// handleInfoDict extracts relevant infoDict fields into the context.
+func handleInfoDict(ctx *Context, d Dict) (err error) {
 
-	for key, value := range *dict {
+	for key, value := range d {
 
 		switch key {
 
@@ -72,7 +73,7 @@ func handleInfoDict(ctx *Context, dict *Dict) (err error) {
 			log.Debug.Println("found Trapped")
 
 		default:
-			log.Debug.Printf("writeInfoDict: found out of spec entry %s %v\n", key, value)
+			log.Debug.Printf("handleInfoDict: found out of spec entry %s %v\n", key, value)
 
 		}
 	}
@@ -104,29 +105,29 @@ func ensureInfoDict(ctx *Context) error {
 		d.InsertString("CreationDate", now)
 		d.InsertString("ModDate", now)
 
-		indRef, err := ctx.IndRefForNewObject(d)
+		ir, err := ctx.IndRefForNewObject(d)
 		if err != nil {
 			return err
 		}
 
-		ctx.Info = indRef
+		ctx.Info = ir
 
 		return nil
 	}
 
-	dict, err := ctx.DereferenceDict(*ctx.Info)
-	if err != nil || dict == nil {
+	d, err := ctx.DereferenceDict(*ctx.Info)
+	if err != nil || d == nil {
 		return err
 	}
 
-	err = handleInfoDict(ctx, dict)
+	err = handleInfoDict(ctx, d)
 	if err != nil {
 		return err
 	}
 
-	dict.Update("CreationDate", StringLiteral(now))
-	dict.Update("ModDate", StringLiteral(now))
-	dict.Update("Producer", StringLiteral(PDFCPULongVersion))
+	d.Update("CreationDate", StringLiteral(now))
+	d.Update("ModDate", StringLiteral(now))
+	d.Update("Producer", StringLiteral(PDFCPULongVersion))
 
 	return nil
 }
@@ -145,14 +146,14 @@ func writeDocumentInfoDict(ctx *Context) error {
 
 	log.Debug.Printf("writeDocumentInfoObject: %s\n", *ctx.Info)
 
-	obj := *ctx.Info
+	o := *ctx.Info
 
-	dict, err := ctx.DereferenceDict(obj)
-	if err != nil || dict == nil {
+	d, err := ctx.DereferenceDict(o)
+	if err != nil || d == nil {
 		return err
 	}
 
-	_, _, err = writeDeepObject(ctx, obj)
+	_, _, err = writeDeepObject(ctx, o)
 	if err != nil {
 		return err
 	}

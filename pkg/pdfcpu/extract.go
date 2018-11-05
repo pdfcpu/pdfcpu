@@ -75,7 +75,7 @@ func ExtractImageData(ctx *Context, objNr int) (*ImageObject, error) {
 
 	// CCITTDecoded images sometimes don't have a ColorSpace attribute.
 	if f == filter.CCITTFax {
-		_, err := ctx.DereferenceDictEntry(&imageDict.Dict, "ColorSpace")
+		_, err := ctx.DereferenceDictEntry(imageDict.Dict, "ColorSpace")
 		if err != nil {
 			imageDict.InsertName("ColorSpace", DeviceGrayCS)
 		}
@@ -116,18 +116,18 @@ func ExtractFontData(ctx *Context, objNr int) (*FontObject, error) {
 		return nil, nil
 	}
 
-	dict, err := fontDescriptor(ctx.XRefTable, fontObject.FontDict, objNr)
+	d, err := fontDescriptor(ctx.XRefTable, fontObject.FontDict, objNr)
 	if err != nil {
 		return nil, err
 	}
 
-	if dict == nil {
+	if d == nil {
 		log.Debug.Printf("extractFontData: ignoring obj#%d - no fontDescriptor available for font: %s\n", objNr, fontObject.FontName)
 		return nil, nil
 	}
 
-	indRef := fontDescriptorFontFileIndirectObjectRef(dict)
-	if indRef == nil {
+	ir := fontDescriptorFontFileIndirectObjectRef(d)
+	if ir == nil {
 		log.Debug.Printf("extractFontData: ignoring obj#%d - no font file available for font: %s\n", objNr, fontObject.FontName)
 		return nil, nil
 	}
@@ -140,7 +140,7 @@ func ExtractFontData(ctx *Context, objNr int) (*FontObject, error) {
 		// ttf ... true type file
 		// ttc ... true type collection
 		// This is just me guessing..
-		sd, err := ctx.DereferenceStreamDict(*indRef)
+		sd, err := ctx.DereferenceStreamDict(*ir)
 		if err != nil {
 			return nil, err
 		}
@@ -172,12 +172,12 @@ func ExtractFontData(ctx *Context, objNr int) (*FontObject, error) {
 func ExtractStreamData(ctx *Context, objNr int) (data []byte, err error) {
 
 	// Get object for objNr.
-	obj, err := ctx.FindObject(objNr)
+	o, err := ctx.FindObject(objNr)
 	if err != nil {
 		return nil, err
 	}
 
-	sd, err := ctx.DereferenceStreamDict(obj)
+	sd, err := ctx.DereferenceStreamDict(o)
 	if err != nil {
 		return nil, err
 	}

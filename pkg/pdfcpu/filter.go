@@ -26,7 +26,7 @@ import (
 	"github.com/hhrutter/pdfcpu/pkg/log"
 )
 
-func parmsForFilter(d *Dict) map[string]int {
+func parmsForFilter(d Dict) map[string]int {
 
 	m := map[string]int{}
 
@@ -34,7 +34,7 @@ func parmsForFilter(d *Dict) map[string]int {
 		return m
 	}
 
-	for k, v := range *d {
+	for k, v := range d {
 
 		i, ok := v.(Integer)
 		if ok {

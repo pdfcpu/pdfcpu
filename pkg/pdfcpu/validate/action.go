@@ -21,148 +21,148 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateGoToActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
+func validateGoToActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	// see 12.6.4.2 Go-To Actions
 
 	// D, required, name, byte string or array
-	return validateDestinationEntry(xRefTable, dict, dictName, "D", REQUIRED, pdf.V10)
+	return validateDestinationEntry(xRefTable, d, dictName, "D", REQUIRED, pdf.V10)
 }
 
-func validateGoToRActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
+func validateGoToRActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	// see 12.6.4.3 Remote Go-To Actions
 
 	// F, required, file specification
-	_, err := validateFileSpecEntry(xRefTable, dict, dictName, "F", REQUIRED, pdf.V11)
+	_, err := validateFileSpecEntry(xRefTable, d, dictName, "F", REQUIRED, pdf.V11)
 	if err != nil {
 		return err
 	}
 
 	// D, required, name, byte string or array
-	err = validateDestinationEntry(xRefTable, dict, dictName, "D", REQUIRED, pdf.V10)
+	err = validateDestinationEntry(xRefTable, d, dictName, "D", REQUIRED, pdf.V10)
 	if err != nil {
 		return err
 	}
 
 	// NewWindow, optional, boolean, since V1.2
-	_, err = validateBooleanEntry(xRefTable, dict, dictName, "NewWindow", OPTIONAL, pdf.V12, nil)
+	_, err = validateBooleanEntry(xRefTable, d, dictName, "NewWindow", OPTIONAL, pdf.V12, nil)
 
 	return err
 }
 
-func validateTargetDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateTargetDictEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	// table 202
 
-	d, err := validateDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
-	if err != nil || d == nil {
+	d1, err := validateDictEntry(xRefTable, d, dictName, entryName, required, sinceVersion, nil)
+	if err != nil || d1 == nil {
 		return err
 	}
 
 	dictName = "targetDict"
 
 	// R, required, name
-	_, err = validateNameEntry(xRefTable, d, dictName, "R", REQUIRED, pdf.V10, func(s string) bool { return s == "P" || s == "C" })
+	_, err = validateNameEntry(xRefTable, d1, dictName, "R", REQUIRED, pdf.V10, func(s string) bool { return s == "P" || s == "C" })
 	if err != nil {
 		return err
 	}
 
 	// N, optional, byte string
-	_, err = validateStringEntry(xRefTable, d, dictName, "N", OPTIONAL, pdf.V10, nil)
+	_, err = validateStringEntry(xRefTable, d1, dictName, "N", OPTIONAL, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// P, optional, integer or byte string
-	err = validateIntOrStringEntry(xRefTable, d, dictName, "P", OPTIONAL, pdf.V10)
+	err = validateIntOrStringEntry(xRefTable, d1, dictName, "P", OPTIONAL, pdf.V10)
 	if err != nil {
 		return err
 	}
 
 	// A, optional, integer or text string
-	err = validateIntOrStringEntry(xRefTable, d, dictName, "A", OPTIONAL, pdf.V10)
+	err = validateIntOrStringEntry(xRefTable, d1, dictName, "A", OPTIONAL, pdf.V10)
 	if err != nil {
 		return err
 	}
 
 	// T, optional, target dict
-	return validateTargetDictEntry(xRefTable, d, dictName, "T", OPTIONAL, pdf.V10)
+	return validateTargetDictEntry(xRefTable, d1, dictName, "T", OPTIONAL, pdf.V10)
 }
 
-func validateGoToEActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
+func validateGoToEActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	// see 12.6.4.4 Embedded Go-To Actions
 
 	// F, optional, file specification
-	f, err := validateFileSpecEntry(xRefTable, dict, dictName, "F", OPTIONAL, pdf.V11)
+	f, err := validateFileSpecEntry(xRefTable, d, dictName, "F", OPTIONAL, pdf.V11)
 	if err != nil {
 		return err
 	}
 
 	// D, required, name, byte string or array
-	err = validateDestinationEntry(xRefTable, dict, dictName, "D", REQUIRED, pdf.V10)
+	err = validateDestinationEntry(xRefTable, d, dictName, "D", REQUIRED, pdf.V10)
 	if err != nil {
 		return err
 	}
 
 	// NewWindow, optional, boolean, since V1.2
-	_, err = validateBooleanEntry(xRefTable, dict, dictName, "NewWindow", OPTIONAL, pdf.V12, nil)
+	_, err = validateBooleanEntry(xRefTable, d, dictName, "NewWindow", OPTIONAL, pdf.V12, nil)
 	if err != nil {
 		return err
 	}
 
 	// T, required unless entry F is present, target dict
-	return validateTargetDictEntry(xRefTable, dict, dictName, "T", f == nil, pdf.V10)
+	return validateTargetDictEntry(xRefTable, d, dictName, "T", f == nil, pdf.V10)
 }
 
-func validateWinDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
+func validateWinDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 
 	// see table 204
 
 	dictName := "winDict"
 
 	// F, required, byte string
-	_, err := validateStringEntry(xRefTable, dict, dictName, "F", REQUIRED, pdf.V10, nil)
+	_, err := validateStringEntry(xRefTable, d, dictName, "F", REQUIRED, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// D, optional, byte string
-	_, err = validateStringEntry(xRefTable, dict, dictName, "D", OPTIONAL, pdf.V10, nil)
+	_, err = validateStringEntry(xRefTable, d, dictName, "D", OPTIONAL, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// O, optional, ASCII string
-	_, err = validateStringEntry(xRefTable, dict, dictName, "O", OPTIONAL, pdf.V10, nil)
+	_, err = validateStringEntry(xRefTable, d, dictName, "O", OPTIONAL, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// P, optional, byte string
-	_, err = validateStringEntry(xRefTable, dict, dictName, "P", OPTIONAL, pdf.V10, nil)
+	_, err = validateStringEntry(xRefTable, d, dictName, "P", OPTIONAL, pdf.V10, nil)
 
 	return err
 }
 
-func validateLaunchActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
+func validateLaunchActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	// see 12.6.4.5
 
 	// F, optional, file specification
-	_, err := validateFileSpecEntry(xRefTable, dict, dictName, "F", OPTIONAL, pdf.V11)
+	_, err := validateFileSpecEntry(xRefTable, d, dictName, "F", OPTIONAL, pdf.V11)
 	if err != nil {
 		return err
 	}
 
 	// Win, optional, dict
-	winDict, err := validateDictEntry(xRefTable, dict, dictName, "Win", OPTIONAL, pdf.V10, nil)
+	d1, err := validateDictEntry(xRefTable, d, dictName, "Win", OPTIONAL, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
-	if winDict != nil {
-		err = validateWinDict(xRefTable, winDict)
+	if d1 != nil {
+		err = validateWinDict(xRefTable, d1)
 	}
 
 	// Mac, optional, undefined dict
@@ -172,16 +172,16 @@ func validateLaunchActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName
 	return err
 }
 
-func validateDestinationThreadEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateDestinationThreadEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	// The destination thread (table 205)
 
-	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required, sinceVersion)
-	if err != nil || obj == nil {
+	o, err := validateEntry(xRefTable, d, dictName, entryName, required, sinceVersion)
+	if err != nil || o == nil {
 		return err
 	}
 
-	switch obj.(type) {
+	switch o.(type) {
 
 	case pdf.Dict, pdf.StringLiteral, pdf.Integer:
 		// an indRef to a thread dictionary
@@ -195,16 +195,16 @@ func validateDestinationThreadEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, di
 	return nil
 }
 
-func validateDestinationBeadEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateDestinationBeadEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	// The bead in the destination thread (table 205)
 
-	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required, sinceVersion)
-	if err != nil || obj == nil {
+	o, err := validateEntry(xRefTable, d, dictName, entryName, required, sinceVersion)
+	if err != nil || o == nil {
 		return err
 	}
 
-	switch obj.(type) {
+	switch o.(type) {
 
 	case pdf.Dict, pdf.Integer:
 		// an indRef to a bead dictionary of a thread in the current file
@@ -217,72 +217,71 @@ func validateDestinationBeadEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dict
 	return nil
 }
 
-func validateThreadActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
+func validateThreadActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	//see 12.6.4.6
 
 	// F, optional, file specification
-	_, err := validateFileSpecEntry(xRefTable, dict, dictName, "F", OPTIONAL, pdf.V11)
+	_, err := validateFileSpecEntry(xRefTable, d, dictName, "F", OPTIONAL, pdf.V11)
 	if err != nil {
 		return err
 	}
 
 	// D, required, indRef to thread dict, integer or text string.
-	err = validateDestinationThreadEntry(xRefTable, dict, dictName, "D", REQUIRED, pdf.V10)
+	err = validateDestinationThreadEntry(xRefTable, d, dictName, "D", REQUIRED, pdf.V10)
 	if err != nil {
 		return err
 	}
 
 	// B, optional, indRef to bead dict or integer.
-	return validateDestinationBeadEntry(xRefTable, dict, dictName, "B", OPTIONAL, pdf.V10)
+	return validateDestinationBeadEntry(xRefTable, d, dictName, "B", OPTIONAL, pdf.V10)
 }
 
-func validateURIActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
+func validateURIActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	// see 12.6.4.7
 
 	// URI, required, string
-	_, err := validateStringEntry(xRefTable, dict, dictName, "URI", REQUIRED, pdf.V10, nil)
+	_, err := validateStringEntry(xRefTable, d, dictName, "URI", REQUIRED, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// IsMap, optional, boolean
-	_, err = validateBooleanEntry(xRefTable, dict, dictName, "IsMap", OPTIONAL, pdf.V10, nil)
+	_, err = validateBooleanEntry(xRefTable, d, dictName, "IsMap", OPTIONAL, pdf.V10, nil)
 
 	return err
 }
 
-func validateSoundDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateSoundDictEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
-	sd, err := validateStreamDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
+	sd, err := validateStreamDictEntry(xRefTable, d, dictName, entryName, required, sinceVersion, nil)
 	if err != nil || sd == nil {
 		return err
 	}
 
 	dictName = "soundDict"
-	dict = &sd.Dict
 
 	// Type, optional, name
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, pdf.V10, func(s string) bool { return s == "Sound" })
+	_, err = validateNameEntry(xRefTable, sd.Dict, dictName, "Type", OPTIONAL, pdf.V10, func(s string) bool { return s == "Sound" })
 	if err != nil {
 		return err
 	}
 
 	// R, required, number - sampling rate
-	_, err = validateNumberEntry(xRefTable, dict, dictName, "R", OPTIONAL, pdf.V10, nil)
+	_, err = validateNumberEntry(xRefTable, sd.Dict, dictName, "R", OPTIONAL, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// C, required, integer - # of sound channels
-	_, err = validateIntegerEntry(xRefTable, dict, dictName, "C", OPTIONAL, pdf.V10, nil)
+	_, err = validateIntegerEntry(xRefTable, sd.Dict, dictName, "C", OPTIONAL, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// B, required, integer - bits per sample value per channel
-	_, err = validateIntegerEntry(xRefTable, dict, dictName, "B", OPTIONAL, pdf.V10, nil)
+	_, err = validateIntegerEntry(xRefTable, sd.Dict, dictName, "B", OPTIONAL, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -291,53 +290,53 @@ func validateSoundDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, 
 	validateSampleDataEncoding := func(s string) bool {
 		return pdf.MemberOf(s, []string{"Raw", "Signed", "muLaw", "ALaw"})
 	}
-	_, err = validateNameEntry(xRefTable, dict, dictName, "E", OPTIONAL, pdf.V10, validateSampleDataEncoding)
+	_, err = validateNameEntry(xRefTable, sd.Dict, dictName, "E", OPTIONAL, pdf.V10, validateSampleDataEncoding)
 
 	return err
 }
 
-func validateSoundActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
+func validateSoundActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	// see 12.6.4.8
 
 	// Sound, required, stream dict
-	err := validateSoundDictEntry(xRefTable, dict, dictName, "Sound", REQUIRED, pdf.V10)
+	err := validateSoundDictEntry(xRefTable, d, dictName, "Sound", REQUIRED, pdf.V10)
 	if err != nil {
 		return err
 	}
 
 	// Volume, optional, number: -1.0 .. +1.0
-	_, err = validateNumberEntry(xRefTable, dict, dictName, "Volume", OPTIONAL, pdf.V10, func(f float64) bool { return -1.0 <= f && f <= 1.0 })
+	_, err = validateNumberEntry(xRefTable, d, dictName, "Volume", OPTIONAL, pdf.V10, func(f float64) bool { return -1.0 <= f && f <= 1.0 })
 	if err != nil {
 		return err
 	}
 
 	// Synchronous, optional, boolean
-	_, err = validateBooleanEntry(xRefTable, dict, dictName, "Synchronous", OPTIONAL, pdf.V10, nil)
+	_, err = validateBooleanEntry(xRefTable, d, dictName, "Synchronous", OPTIONAL, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// Repeat, optional, boolean
-	_, err = validateBooleanEntry(xRefTable, dict, dictName, "Repeat", OPTIONAL, pdf.V10, nil)
+	_, err = validateBooleanEntry(xRefTable, d, dictName, "Repeat", OPTIONAL, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// Mix, optional, boolean
-	_, err = validateBooleanEntry(xRefTable, dict, dictName, "Mix", OPTIONAL, pdf.V10, nil)
+	_, err = validateBooleanEntry(xRefTable, d, dictName, "Mix", OPTIONAL, pdf.V10, nil)
 
 	return err
 }
 
-func validateMovieStartOrDurationEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateMovieStartOrDurationEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
-	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required, sinceVersion)
-	if err != nil || obj == nil {
+	o, err := validateEntry(xRefTable, d, dictName, entryName, required, sinceVersion)
+	if err != nil || o == nil {
 		return err
 	}
 
-	switch o := obj.(type) {
+	switch o := o.(type) {
 
 	case pdf.Integer, pdf.StringLiteral:
 		// no further processing
@@ -351,36 +350,36 @@ func validateMovieStartOrDurationEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict,
 	return nil
 }
 
-func validateMovieActivationDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
+func validateMovieActivationDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 
 	dictName := "movieActivationDict"
 
 	// Start, optional
-	err := validateMovieStartOrDurationEntry(xRefTable, dict, dictName, "Start", OPTIONAL, pdf.V10)
+	err := validateMovieStartOrDurationEntry(xRefTable, d, dictName, "Start", OPTIONAL, pdf.V10)
 	if err != nil {
 		return err
 	}
 
 	// Duration, optional
-	err = validateMovieStartOrDurationEntry(xRefTable, dict, dictName, "Duration", OPTIONAL, pdf.V10)
+	err = validateMovieStartOrDurationEntry(xRefTable, d, dictName, "Duration", OPTIONAL, pdf.V10)
 	if err != nil {
 		return err
 	}
 
 	// Rate, optional, number
-	_, err = validateNumberEntry(xRefTable, dict, dictName, "Rate", OPTIONAL, pdf.V10, nil)
+	_, err = validateNumberEntry(xRefTable, d, dictName, "Rate", OPTIONAL, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// Volume, optional, number
-	_, err = validateNumberEntry(xRefTable, dict, dictName, "Volume", OPTIONAL, pdf.V10, nil)
+	_, err = validateNumberEntry(xRefTable, d, dictName, "Volume", OPTIONAL, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// ShowControls, optional, boolean
-	_, err = validateBooleanEntry(xRefTable, dict, dictName, "ShowControls", OPTIONAL, pdf.V10, nil)
+	_, err = validateBooleanEntry(xRefTable, d, dictName, "ShowControls", OPTIONAL, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -389,35 +388,35 @@ func validateMovieActivationDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error
 	validatePlayMode := func(s string) bool {
 		return pdf.MemberOf(s, []string{"Once", "Open", "Repeat", "Palindrome"})
 	}
-	_, err = validateNameEntry(xRefTable, dict, dictName, "Mode", OPTIONAL, pdf.V10, validatePlayMode)
+	_, err = validateNameEntry(xRefTable, d, dictName, "Mode", OPTIONAL, pdf.V10, validatePlayMode)
 	if err != nil {
 		return err
 	}
 
 	// Synchronous, optional, boolean
-	_, err = validateBooleanEntry(xRefTable, dict, dictName, "Synchronous", OPTIONAL, pdf.V10, nil)
+	_, err = validateBooleanEntry(xRefTable, d, dictName, "Synchronous", OPTIONAL, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// FWScale, optional, array of 2 positive integers
-	_, err = validateIntegerArrayEntry(xRefTable, dict, dictName, "FWScale", OPTIONAL, pdf.V10, func(a pdf.Array) bool { return len(a) == 2 })
+	_, err = validateIntegerArrayEntry(xRefTable, d, dictName, "FWScale", OPTIONAL, pdf.V10, func(a pdf.Array) bool { return len(a) == 2 })
 	if err != nil {
 		return err
 	}
 
 	// FWPosition, optional, array of 2 numbers [0.0 .. 1.0]
-	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "FWPosition", OPTIONAL, pdf.V10, func(a pdf.Array) bool { return len(a) == 2 })
+	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "FWPosition", OPTIONAL, pdf.V10, func(a pdf.Array) bool { return len(a) == 2 })
 
 	return err
 }
 
-func validateMovieActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
+func validateMovieActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	// see 12.6.4.9
 
 	// is a movie activation dict
-	err := validateMovieActivationDict(xRefTable, dict)
+	err := validateMovieActivationDict(xRefTable, d)
 	if err != nil {
 		return err
 	}
@@ -425,18 +424,18 @@ func validateMovieActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName 
 	// Needs either Annotation or T entry but not both.
 
 	// T, text string
-	_, err = validateStringEntry(xRefTable, dict, dictName, "T", OPTIONAL, pdf.V10, nil)
+	_, err = validateStringEntry(xRefTable, d, dictName, "T", OPTIONAL, pdf.V10, nil)
 	if err == nil {
 		return nil
 	}
 
 	// Annotation, indRef of movie annotation dict
-	indRef, err := validateIndRefEntry(xRefTable, dict, dictName, "Annotation", REQUIRED, pdf.V10)
-	if err != nil || indRef == nil {
+	ir, err := validateIndRefEntry(xRefTable, d, dictName, "Annotation", REQUIRED, pdf.V10)
+	if err != nil || ir == nil {
 		return err
 	}
 
-	d, err := xRefTable.DereferenceDict(*indRef)
+	d, err = xRefTable.DereferenceDict(*ir)
 	if err != nil || d == nil {
 		return errors.New("validateMovieActionDict: missing required entry \"T\" or \"Annotation\"")
 	}
@@ -446,27 +445,27 @@ func validateMovieActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName 
 	return err
 }
 
-func validateHideActionDictEntryT(xRefTable *pdf.XRefTable, obj pdf.Object) error {
+func validateHideActionDictEntryT(xRefTable *pdf.XRefTable, o pdf.Object) error {
 
-	switch obj := obj.(type) {
+	switch o := o.(type) {
 
 	case pdf.StringLiteral:
 		// Ensure UTF16 correctness.
-		_, err := pdf.StringLiteralToString(obj.Value())
+		_, err := pdf.StringLiteralToString(o.Value())
 		if err != nil {
 			return err
 		}
 
 	case pdf.Dict:
 		// annotDict,  Check for required name Subtype
-		_, err := validateNameEntry(xRefTable, &obj, "annotDict", "Subtype", REQUIRED, pdf.V10, nil)
+		_, err := validateNameEntry(xRefTable, o, "annotDict", "Subtype", REQUIRED, pdf.V10, nil)
 		if err != nil {
 			return err
 		}
 
 	case pdf.Array:
 		// mixed array of annotationDict indRefs and strings
-		for _, v := range obj {
+		for _, v := range o {
 
 			o, err := xRefTable.Dereference(v)
 			if err != nil {
@@ -488,7 +487,7 @@ func validateHideActionDictEntryT(xRefTable *pdf.XRefTable, obj pdf.Object) erro
 
 			case pdf.Dict:
 				// annotDict,  Check for required name Subtype
-				_, err = validateNameEntry(xRefTable, &o, "annotDict", "Subtype", REQUIRED, pdf.V10, nil)
+				_, err = validateNameEntry(xRefTable, o, "annotDict", "Subtype", REQUIRED, pdf.V10, nil)
 				if err != nil {
 					return err
 				}
@@ -503,33 +502,33 @@ func validateHideActionDictEntryT(xRefTable *pdf.XRefTable, obj pdf.Object) erro
 	return nil
 }
 
-func validateHideActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
+func validateHideActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	// see 12.6.4.10
 
 	// T, required, dict, text string or array
-	obj, found := dict.Find("T")
-	if !found || obj == nil {
+	o, found := d.Find("T")
+	if !found || o == nil {
 		return errors.New("validateHideActionDict: missing required entry \"T\"")
 	}
 
-	obj, err := xRefTable.Dereference(obj)
-	if err != nil || obj == nil {
+	o, err := xRefTable.Dereference(o)
+	if err != nil || o == nil {
 		return err
 	}
 
-	err = validateHideActionDictEntryT(xRefTable, obj)
+	err = validateHideActionDictEntryT(xRefTable, o)
 	if err != nil {
 		return err
 	}
 
 	// H, optional, boolean
-	_, err = validateBooleanEntry(xRefTable, dict, dictName, "H", OPTIONAL, pdf.V10, nil)
+	_, err = validateBooleanEntry(xRefTable, d, dictName, "H", OPTIONAL, pdf.V10, nil)
 
 	return err
 }
 
-func validateNamedActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
+func validateNamedActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	// see 12.6.4.11
 
@@ -547,17 +546,17 @@ func validateNamedActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName 
 		return false
 	}
 
-	_, err := validateNameEntry(xRefTable, dict, dictName, "N", REQUIRED, pdf.V10, validate)
+	_, err := validateNameEntry(xRefTable, d, dictName, "N", REQUIRED, pdf.V10, validate)
 
 	return err
 }
 
-func validateSubmitFormActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
+func validateSubmitFormActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	// see 12.7.5.2
 
 	// F, required, URL specification
-	_, err := validateURLSpecEntry(xRefTable, dict, dictName, "F", REQUIRED, pdf.V10)
+	_, err := validateURLSpecEntry(xRefTable, d, dictName, "F", REQUIRED, pdf.V10)
 	if err != nil {
 		return err
 	}
@@ -565,13 +564,13 @@ func validateSubmitFormActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dict
 	// Fields, optional, array
 	// Each element of the array shall be either an indirect reference to a field dictionary
 	// or (PDF 1.3) a text string representing the fully qualified name of a field.
-	arr, err := validateArrayEntry(xRefTable, dict, dictName, "Fields", OPTIONAL, pdf.V10, nil)
+	a, err := validateArrayEntry(xRefTable, d, dictName, "Fields", OPTIONAL, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
-	if arr != nil {
-		for _, v := range *arr {
+	if a != nil {
+		for _, v := range a {
 			switch v.(type) {
 			case pdf.StringLiteral, pdf.IndirectRef:
 				// no further processing
@@ -583,25 +582,25 @@ func validateSubmitFormActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dict
 	}
 
 	// Flags, optional, integer
-	_, err = validateIntegerEntry(xRefTable, dict, dictName, "Flags", OPTIONAL, pdf.V10, nil)
+	_, err = validateIntegerEntry(xRefTable, d, dictName, "Flags", OPTIONAL, pdf.V10, nil)
 
 	return err
 }
 
-func validateResetFormActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
+func validateResetFormActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	// see 12.7.5.3
 
 	// Fields, optional, array
 	// Each element of the array shall be either an indirect reference to a field dictionary
 	// or (PDF 1.3) a text string representing the fully qualified name of a field.
-	arr, err := validateArrayEntry(xRefTable, dict, dictName, "Fields", OPTIONAL, pdf.V10, nil)
+	a, err := validateArrayEntry(xRefTable, d, dictName, "Fields", OPTIONAL, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
-	if arr != nil {
-		for _, v := range *arr {
+	if a != nil {
+		for _, v := range a {
 			switch v.(type) {
 			case pdf.StringLiteral, pdf.IndirectRef:
 				// no further processing
@@ -613,37 +612,37 @@ func validateResetFormActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictN
 	}
 
 	// Flags, optional, integer
-	_, err = validateIntegerEntry(xRefTable, dict, dictName, "Flags", OPTIONAL, pdf.V10, nil)
+	_, err = validateIntegerEntry(xRefTable, d, dictName, "Flags", OPTIONAL, pdf.V10, nil)
 
 	return err
 }
 
-func validateImportDataActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
+func validateImportDataActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	// see 12.7.5.4
 
 	// F, required, file specification
-	_, err := validateFileSpecEntry(xRefTable, dict, dictName, "F", OPTIONAL, pdf.V11)
+	_, err := validateFileSpecEntry(xRefTable, d, dictName, "F", OPTIONAL, pdf.V11)
 
 	return err
 }
 
-func validateJavaScript(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool) error {
+func validateJavaScript(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool) error {
 
-	obj, err := validateEntry(xRefTable, dict, dictName, entryName, required, pdf.V13)
-	if err != nil || obj == nil {
+	o, err := validateEntry(xRefTable, d, dictName, entryName, required, pdf.V13)
+	if err != nil || o == nil {
 		return err
 	}
 
-	switch s := obj.(type) {
+	switch o := o.(type) {
 
 	case pdf.StringLiteral:
 		// Ensure UTF16 correctness.
-		_, err = pdf.StringLiteralToString(s.Value())
+		_, err = pdf.StringLiteralToString(o.Value())
 
 	case pdf.HexLiteral:
 		// Ensure UTF16 correctness.
-		_, err = pdf.HexLiteralToString(s.Value())
+		_, err = pdf.HexLiteralToString(o.Value())
 
 	case pdf.StreamDict:
 		// no further processing
@@ -656,44 +655,44 @@ func validateJavaScript(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entr
 	return err
 }
 
-func validateJavaScriptActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
+func validateJavaScriptActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	// see 12.6.4.16
 
 	// JS, required, text string or stream
-	return validateJavaScript(xRefTable, dict, dictName, "JS", REQUIRED)
+	return validateJavaScript(xRefTable, d, dictName, "JS", REQUIRED)
 }
 
-func validateSetOCGStateActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
+func validateSetOCGStateActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	// see 12.6.4.12
 
 	// State, required, array
-	_, err := validateArrayEntry(xRefTable, dict, dictName, "State", REQUIRED, pdf.V10, nil)
+	_, err := validateArrayEntry(xRefTable, d, dictName, "State", REQUIRED, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// PreserveRB, optional, boolean
-	_, err = validateBooleanEntry(xRefTable, dict, dictName, "PreserveRB", OPTIONAL, pdf.V10, nil)
+	_, err = validateBooleanEntry(xRefTable, d, dictName, "PreserveRB", OPTIONAL, pdf.V10, nil)
 
 	return err
 }
 
-func validateRenditionActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
+func validateRenditionActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	// see 12.6.4.13
 
 	// OP or JS need to be present.
 
 	// OP, integer
-	op, err := validateIntegerEntry(xRefTable, dict, dictName, "OP", OPTIONAL, pdf.V15, func(i int) bool { return 0 <= i && i <= 4 })
+	op, err := validateIntegerEntry(xRefTable, d, dictName, "OP", OPTIONAL, pdf.V15, func(i int) bool { return 0 <= i && i <= 4 })
 	if err != nil {
 		return err
 	}
 
 	// JS, text string or stream
-	err = validateJavaScript(xRefTable, dict, dictName, "JS", op == nil)
+	err = validateJavaScript(xRefTable, d, dictName, "JS", op == nil)
 	if err != nil {
 		return err
 	}
@@ -707,24 +706,24 @@ func validateRenditionActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictN
 		return v == 0 || v == 4
 	}(op)
 
-	d, err := validateDictEntry(xRefTable, dict, dictName, "R", required, pdf.V15, nil)
+	d1, err := validateDictEntry(xRefTable, d, dictName, "R", required, pdf.V15, nil)
 	if err != nil {
 		return err
 	}
-	if d != nil {
-		err = validateRenditionDict(xRefTable, d, pdf.V15)
+	if d1 != nil {
+		err = validateRenditionDict(xRefTable, d1, pdf.V15)
 		if err != nil {
 			return err
 		}
 	}
 
 	// AN, required for any OP 0..4, indRef of screen annotation dict
-	d, err = validateDictEntry(xRefTable, dict, dictName, "AN", op != nil, pdf.V10, nil)
+	d1, err = validateDictEntry(xRefTable, d, dictName, "AN", op != nil, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
-	if d != nil {
-		_, err = validateNameEntry(xRefTable, d, dictName, "Subtype", REQUIRED, pdf.V10, func(s string) bool { return s == "Screen" })
+	if d1 != nil {
+		_, err = validateNameEntry(xRefTable, d1, dictName, "Subtype", REQUIRED, pdf.V10, func(s string) bool { return s == "Screen" })
 		if err != nil {
 			return err
 		}
@@ -733,45 +732,45 @@ func validateRenditionActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictN
 	return nil
 }
 
-func validateTransActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
+func validateTransActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	// see 12.6.4.14
 
 	// Trans, required, transitionDict
-	d, err := validateDictEntry(xRefTable, dict, dictName, "Trans", REQUIRED, pdf.V10, nil)
+	d1, err := validateDictEntry(xRefTable, d, dictName, "Trans", REQUIRED, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
-	return validateTransitionDict(xRefTable, d)
+	return validateTransitionDict(xRefTable, d1)
 }
 
-func validateGoTo3DViewActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error {
+func validateGoTo3DViewActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	// see 12.6.4.15
 
 	// TA, required, target annotation
-	d, err := validateDictEntry(xRefTable, dict, dictName, "TA", REQUIRED, pdf.V16, nil)
+	d1, err := validateDictEntry(xRefTable, d, dictName, "TA", REQUIRED, pdf.V16, nil)
 	if err != nil {
 		return err
 	}
 
-	_, err = validateAnnotationDict(xRefTable, d)
+	_, err = validateAnnotationDict(xRefTable, d1)
 	if err != nil {
 		return err
 	}
 
 	// V, required, the view to use: 3DViewDict or integer or text string or name
 	// TODO Validation.
-	_, err = validateEntry(xRefTable, dict, dictName, "V", REQUIRED, pdf.V16)
+	_, err = validateEntry(xRefTable, d, dictName, "V", REQUIRED, pdf.V16)
 
 	return err
 }
 
-func validateActionDictCore(xRefTable *pdf.XRefTable, n *pdf.Name, dict *pdf.Dict) error {
+func validateActionDictCore(xRefTable *pdf.XRefTable, n *pdf.Name, d pdf.Dict) error {
 
 	for k, v := range map[string]struct {
-		validate     func(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName string) error
+		validate     func(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error
 		sinceVersion pdf.Version
 	}{
 		"GoTo":        {validateGoToActionDict, pdf.V10},
@@ -800,53 +799,49 @@ func validateActionDictCore(xRefTable *pdf.XRefTable, n *pdf.Name, dict *pdf.Dic
 				return err
 			}
 
-			return v.validate(xRefTable, dict, k)
+			return v.validate(xRefTable, d, k)
 		}
 	}
 
 	return errors.Errorf("validateActionDictCore: unsupported action type: %s\n", *n)
 }
 
-func validateActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
+func validateActionDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 
 	dictName := "actionDict"
 
 	// Type, optional, name
-	_, err := validateNameEntry(xRefTable, dict, dictName, "Type", OPTIONAL, pdf.V10, func(s string) bool { return s == "Action" })
+	_, err := validateNameEntry(xRefTable, d, dictName, "Type", OPTIONAL, pdf.V10, func(s string) bool { return s == "Action" })
 	if err != nil {
 		return err
 	}
 
 	// S, required, name, action Type
-	s, err := validateNameEntry(xRefTable, dict, dictName, "S", REQUIRED, pdf.V10, nil)
+	s, err := validateNameEntry(xRefTable, d, dictName, "S", REQUIRED, pdf.V10, nil)
 	if err != nil {
 		return err
 	}
 
-	err = validateActionDictCore(xRefTable, s, dict)
+	err = validateActionDictCore(xRefTable, s, d)
 	if err != nil {
 		return err
 	}
 
-	if obj, ok := dict.Find("Next"); ok {
+	if o, ok := d.Find("Next"); ok {
 
 		// either optional action dict
-		d, err := xRefTable.DereferenceDict(obj)
+		d, err := xRefTable.DereferenceDict(o)
 		if err == nil {
-			err = validateActionDict(xRefTable, d)
-			if err != nil {
-				return err
-			}
-			return nil
+			return validateActionDict(xRefTable, d)
 		}
 
 		// or optional array of action dicts
-		arr, err := xRefTable.DereferenceArray(obj)
+		a, err := xRefTable.DereferenceArray(o)
 		if err != nil {
 			return err
 		}
 
-		for _, v := range *arr {
+		for _, v := range a {
 
 			d, err := xRefTable.DereferenceDict(v)
 			if err != nil {
@@ -868,12 +863,12 @@ func validateActionDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 	return nil
 }
 
-func validateRootAdditionalActions(xRefTable *pdf.XRefTable, rootDict *pdf.Dict, required bool, sinceVersion pdf.Version) error {
+func validateRootAdditionalActions(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	return validateAdditionalActions(xRefTable, rootDict, "rootDict", "AA", required, sinceVersion, "root")
 }
 
-func validateAdditionalActions(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, source string) error {
+func validateAdditionalActions(xRefTable *pdf.XRefTable, dict pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, source string) error {
 
 	d, err := validateDictEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, nil)
 	if err != nil || d == nil {
@@ -908,7 +903,7 @@ func validateAdditionalActions(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictNam
 		return false
 	}
 
-	for k, v := range *d {
+	for k, v := range d {
 
 		if !validateAdditionalAction(k, source) {
 			return errors.Errorf("validateAdditionalActions: action %s not allowed for source %s", k, source)

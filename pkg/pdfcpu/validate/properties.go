@@ -22,7 +22,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validatePropertiesDict(xRefTable *pdf.XRefTable, obj pdf.Object) error {
+func validatePropertiesDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
 
 	// see 14.6.2
 	// a dictionary containing private information meaningful to the conforming writer creating marked content.
@@ -42,17 +42,17 @@ func validatePropertiesDict(xRefTable *pdf.XRefTable, obj pdf.Object) error {
 	// Optional E see since 1.4 14.9.5
 	// Optional Lang string RFC 3066 see 14.9.2
 
-	dict, err := xRefTable.DereferenceDict(obj)
-	if err != nil || obj == nil {
+	d, err := xRefTable.DereferenceDict(o)
+	if err != nil || d == nil {
 		return err
 	}
 
-	err = validateMetadata(xRefTable, dict, OPTIONAL, pdf.V14)
+	err = validateMetadata(xRefTable, d, OPTIONAL, pdf.V14)
 	if err != nil {
 		return err
 	}
 
-	for key, val := range *dict {
+	for key, val := range d {
 
 		log.Debug.Printf("validatePropertiesDict: key=%s val=%v\n", key, val)
 
@@ -101,7 +101,7 @@ func validatePropertiesDict(xRefTable *pdf.XRefTable, obj pdf.Object) error {
 	return nil
 }
 
-func validatePropertiesResourceDict(xRefTable *pdf.XRefTable, obj pdf.Object, sinceVersion pdf.Version) error {
+func validatePropertiesResourceDict(xRefTable *pdf.XRefTable, o pdf.Object, sinceVersion pdf.Version) error {
 
 	// Version check
 	err := xRefTable.ValidateVersion("PropertiesResourceDict", sinceVersion)
@@ -109,16 +109,16 @@ func validatePropertiesResourceDict(xRefTable *pdf.XRefTable, obj pdf.Object, si
 		return err
 	}
 
-	dict, err := xRefTable.DereferenceDict(obj)
-	if err != nil || dict == nil {
+	d, err := xRefTable.DereferenceDict(o)
+	if err != nil || d == nil {
 		return err
 	}
 
 	// Iterate over properties resource dict
-	for _, obj := range *dict {
+	for _, o := range d {
 
 		// Process propDict
-		err = validatePropertiesDict(xRefTable, obj)
+		err = validatePropertiesDict(xRefTable, o)
 		if err != nil {
 			return err
 		}

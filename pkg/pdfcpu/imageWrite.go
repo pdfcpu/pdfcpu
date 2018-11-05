@@ -17,7 +17,6 @@ limitations under the License.
 package pdfcpu
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"image/png"
@@ -53,9 +52,9 @@ type PDFImage struct {
 	decode   []colValRange
 }
 
-func decodeArr(arr *Array) []colValRange {
+func decodeArr(a Array) []colValRange {
 
-	if arr == nil {
+	if a == nil {
 		//println("decodearr == nil")
 		return nil
 	}
@@ -63,7 +62,7 @@ func decodeArr(arr *Array) []colValRange {
 	var decode []colValRange
 	var min, max, f64 float64
 
-	for i, f := range *arr {
+	for i, f := range a {
 		switch o := f.(type) {
 		case Integer:
 			f64 = float64(o.Value())
@@ -273,7 +272,7 @@ func writeImgToJPX(filename string, sd *StreamDict) (string, error) {
 func writeImgToTIFF(filename string, img *image.CMYK) (string, error) {
 
 	filename += ".tif"
-	fmt.Printf("writing %s\n", filename)
+	//fmt.Printf("writing %s\n", filename)
 
 	f, err := os.Create(filename)
 	if err != nil {
@@ -284,7 +283,7 @@ func writeImgToTIFF(filename string, img *image.CMYK) (string, error) {
 	// TODO softmask handling.
 	err = tiff.Encode(f, img, nil)
 
-	fmt.Println("tif written")
+	//fmt.Println("tif written")
 
 	return filename, err
 }
@@ -450,7 +449,7 @@ func writeICCBased(xRefTable *XRefTable, filename string, im *PDFImage, cs Array
 	}
 
 	// TODO: Transform linear XYZ to RGB according to ICC profile.
-	// For now we fall back to approriate color spaces for n
+	// For now we fall back to appropriate color spaces for n
 	// regardless of a specified alternate color space.
 
 	// Validate buflen.
@@ -666,7 +665,7 @@ func writeFlateEncodedImage(xRefTable *XRefTable, filename string, sd *StreamDic
 		return "", err
 	}
 
-	o, err := xRefTable.DereferenceDictEntry(&sd.Dict, "ColorSpace")
+	o, err := xRefTable.DereferenceDictEntry(sd.Dict, "ColorSpace")
 	if err != nil {
 		return "", err
 	}

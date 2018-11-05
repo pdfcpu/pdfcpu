@@ -26,6 +26,7 @@ import (
 
 	"github.com/hhrutter/pdfcpu/pkg/filter"
 	"github.com/hhrutter/pdfcpu/pkg/fonts/metrics"
+	"github.com/hhrutter/pdfcpu/pkg/log"
 	"github.com/hhrutter/pdfcpu/pkg/types"
 
 	"github.com/pkg/errors"
@@ -452,7 +453,7 @@ func ParseWatermarkDetails(s string, onTop bool) (*Watermark, error) {
 	//fmt.Printf("watermark details: <%s>\n", s)
 
 	// Set default watermark
-	wm := &Watermark{
+	wm := Watermark{
 		onTop:      onTop,
 		fontName:   "Helvetica",
 		fontSize:   24,
@@ -468,10 +469,10 @@ func ParseWatermarkDetails(s string, onTop bool) (*Watermark, error) {
 
 	ss := strings.Split(s, ",")
 
-	setWatermarkType(ss[0], wm)
+	setWatermarkType(ss[0], &wm)
 
 	if len(ss) == 1 {
-		return wm, nil
+		return &wm, nil
 	}
 
 	var setDiag, setRot bool
@@ -497,27 +498,27 @@ func ParseWatermarkDetails(s string, onTop bool) (*Watermark, error) {
 			wm.fontName = v
 
 		case "p": // font size in points
-			err = parseWatermarkFontSize(v, wm)
+			err = parseWatermarkFontSize(v, &wm)
 
 		case "s": // scale factor
-			err = parseWatermarkScaleFactor(v, wm)
+			err = parseWatermarkScaleFactor(v, &wm)
 
 		case "c": // color
-			err = parseWatermarkColor(v, wm)
+			err = parseWatermarkColor(v, &wm)
 
 		case "r": // rotation
-			err = parseWatermarkRotation(v, setDiag, wm)
+			err = parseWatermarkRotation(v, setDiag, &wm)
 			setRot = true
 
 		case "d": // diagonal
-			err = parseWatermarkDiagonal(v, setRot, wm)
+			err = parseWatermarkDiagonal(v, setRot, &wm)
 			setDiag = true
 
 		case "o": // opacity
-			err = parseWatermarkOpacity(v, wm)
+			err = parseWatermarkOpacity(v, &wm)
 
 		case "m": // render mode
-			err = parseWatermarkRenderMode(v, wm)
+			err = parseWatermarkRenderMode(v, &wm)
 
 		default:
 			err = parseWatermarkError(onTop)
@@ -528,7 +529,7 @@ func ParseWatermarkDetails(s string, onTop bool) (*Watermark, error) {
 		}
 	}
 
-	return wm, nil
+	return &wm, nil
 }
 
 func createFontResForWM(xRefTable *XRefTable, wm *Watermark) error {
@@ -658,7 +659,7 @@ func createOCG(xRefTable *XRefTable, wm *Watermark) error {
 	return nil
 }
 
-func prepareOCPropertiesInRoot(rootDict *Dict, wm *Watermark) error {
+func prepareOCPropertiesInRoot(rootDict Dict, wm *Watermark) error {
 
 	optionalContentConfigDict := Dict(
 		map[string]Object{
@@ -707,28 +708,26 @@ func prepareOCPropertiesInRoot(rootDict *Dict, wm *Watermark) error {
 	return oneWatermarkOnlyError(wm.onTop)
 }
 
-func createFormResDict(xRefTable *XRefTable, wm *Watermark) *Dict {
+func createFormResDict(xRefTable *XRefTable, wm *Watermark) Dict {
 
 	if wm.IsImage() {
 
-		d := Dict(
+		return Dict(
 			map[string]Object{
 				"ProcSet": NewNameArray("PDF", "ImageC"),
 				"XObject": Dict(map[string]Object{"Im0": *wm.image}),
 			},
 		)
 
-		return &d
 	}
 
-	d := Dict(
+	return Dict(
 		map[string]Object{
 			"Font":    Dict(map[string]Object{wm.fontName: *wm.font}),
 			"ProcSet": NewNameArray("PDF", "Text"),
 		},
 	)
 
-	return &d
 }
 
 func createForm(xRefTable *XRefTable, wm *Watermark, withBB bool) error {
@@ -766,7 +765,7 @@ func createForm(xRefTable *XRefTable, wm *Watermark, withBB bool) error {
 		)
 	}
 
-	sd := &StreamDict{
+	sd := StreamDict{
 		Dict: Dict(
 			map[string]Object{
 				"Type":      Name("XObject"),
@@ -774,18 +773,18 @@ func createForm(xRefTable *XRefTable, wm *Watermark, withBB bool) error {
 				"BBox":      NewRectangle(bb.LL.X, bb.LL.Y, bb.UR.X, bb.UR.Y),
 				"Matrix":    NewIntegerArray(1, 0, 0, 1, 0, 0),
 				"OC":        *wm.ocg,
-				"Resources": *createFormResDict(xRefTable, wm),
+				"Resources": createFormResDict(xRefTable, wm),
 			},
 		),
 		Content: b.Bytes(),
 	}
 
-	err := encodeStream(sd)
+	err := encodeStream(&sd)
 	if err != nil {
 		return err
 	}
 
-	indRef, err = xRefTable.IndRefForNewObject(*sd)
+	indRef, err = xRefTable.IndRefForNewObject(sd)
 	if err != nil {
 		return err
 	}
@@ -826,7 +825,7 @@ func rect(xRefTable *XRefTable, rect Array) types.Rectangle {
 	return types.NewRectangle(llx, lly, urx, ury)
 }
 
-func insertPageResourcesForWM(xRefTable *XRefTable, pageDict *Dict, wm *Watermark, gsID, xoID string) error {
+func insertPageResourcesForWM(xRefTable *XRefTable, pageDict Dict, wm *Watermark, gsID, xoID string) error {
 
 	resourceDict := Dict(
 		map[string]Object{
@@ -840,7 +839,7 @@ func insertPageResourcesForWM(xRefTable *XRefTable, pageDict *Dict, wm *Watermar
 	return nil
 }
 
-func updatePageResourcesForWM(xRefTable *XRefTable, resDict *Dict, wm *Watermark, gsID, xoID *string) error {
+func updatePageResourcesForWM(xRefTable *XRefTable, resDict Dict, wm *Watermark, gsID, xoID *string) error {
 
 	o, ok := resDict.Find("ExtGState")
 	if !ok {
@@ -887,7 +886,7 @@ func wmContent(wm *Watermark, gsID, xoID string) []byte {
 	return b.Bytes()
 }
 
-func insertPageContentsForWM(xRefTable *XRefTable, pageDict *Dict, wm *Watermark, gsID, xoID string) error {
+func insertPageContentsForWM(xRefTable *XRefTable, pageDict Dict, wm *Watermark, gsID, xoID string) error {
 
 	sd := &StreamDict{Dict: NewDict()}
 
@@ -975,7 +974,7 @@ func updatePageContentsForWM(xRefTable *XRefTable, obj Object, wm *Watermark, gs
 
 func watermarkPage(xRefTable *XRefTable, i int, wm *Watermark) error {
 
-	fmt.Printf("watermark page %d\n", i)
+	//fmt.Printf("watermark page %d\n", i)
 
 	d, inhPAttrs, err := xRefTable.PageDict(i)
 	if err != nil {
@@ -986,7 +985,7 @@ func watermarkPage(xRefTable *XRefTable, i int, wm *Watermark) error {
 	if inhPAttrs.cropBox != nil {
 		visibleRegion = inhPAttrs.cropBox
 	}
-	vp := rect(xRefTable, *visibleRegion)
+	vp := rect(xRefTable, visibleRegion)
 	if err != nil {
 		return err
 	}
@@ -1036,7 +1035,7 @@ func patchContentForWM(sd *StreamDict, gsID, xoID string, wm *Watermark) error {
 	// Decode streamDict for supported filters only.
 	err := decodeStream(sd)
 	if err == filter.ErrUnsupportedFilter {
-		fmt.Println("unsupported filter")
+		log.Info.Println("unsupported filter: unable to patch content with watermark.")
 		return nil
 	}
 	if err != nil {

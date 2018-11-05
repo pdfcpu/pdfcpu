@@ -33,22 +33,22 @@ const (
 	OPTIONAL = false
 )
 
-func validateEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) (pdf.Object, error) {
+func validateEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) (pdf.Object, error) {
 
-	obj, found := dict.Find(entryName)
-	if !found || obj == nil {
+	o, found := d.Find(entryName)
+	if !found || o == nil {
 		if required {
 			return nil, errors.Errorf("dict=%s required entry=%s missing.", dictName, entryName)
 		}
 		return nil, nil
 	}
 
-	obj, err := xRefTable.Dereference(obj)
+	o, err := xRefTable.Dereference(o)
 	if err != nil {
 		return nil, err
 	}
 
-	if obj == nil {
+	if o == nil {
 		if required {
 			return nil, errors.Errorf("dict=%s required entry=%s missing.", dictName, entryName)
 		}
@@ -61,23 +61,23 @@ func validateEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName
 		return nil, err
 	}
 
-	return obj, nil
+	return o, nil
 }
 
-func validateArrayEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.Array) bool) (*pdf.Array, error) {
+func validateArrayEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.Array) bool) (pdf.Array, error) {
 
 	log.Debug.Printf("validateArrayEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return nil, err
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	o, err = xRefTable.Dereference(o)
 	if err != nil {
 		return nil, err
 	}
-	if obj == nil {
+	if o == nil {
 		if required {
 			return nil, errors.Errorf("validateArrayEntry: dict=%s required entry=%s is nil", dictName, entryName)
 		}
@@ -91,35 +91,35 @@ func validateArrayEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entr
 		return nil, err
 	}
 
-	arr, ok := obj.(pdf.Array)
+	a, ok := o.(pdf.Array)
 	if !ok {
 		return nil, errors.Errorf("validateArrayEntry: dict=%s entry=%s invalid type", dictName, entryName)
 	}
 
 	// Validation
-	if validate != nil && !validate(arr) {
+	if validate != nil && !validate(a) {
 		return nil, errors.Errorf("validateArrayEntry: dict=%s entry=%s invalid dict entry", dictName, entryName)
 	}
 
 	log.Debug.Printf("validateArrayEntry end: entry=%s\n", entryName)
 
-	return &arr, nil
+	return a, nil
 }
 
-func validateBooleanEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(bool) bool) (*pdf.Boolean, error) {
+func validateBooleanEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(bool) bool) (*pdf.Boolean, error) {
 
 	log.Debug.Printf("validateBooleanEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return nil, err
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	o, err = xRefTable.Dereference(o)
 	if err != nil {
 		return nil, err
 	}
-	if obj == nil {
+	if o == nil {
 		if required {
 			return nil, errors.Errorf("validateBooleanEntry: dict=%s required entry=%s missing", dictName, entryName)
 		}
@@ -133,7 +133,7 @@ func validateBooleanEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, en
 		return nil, err
 	}
 
-	b, ok := obj.(pdf.Boolean)
+	b, ok := o.(pdf.Boolean)
 	if !ok {
 		return nil, errors.Errorf("validateBooleanEntry: dict=%s entry=%s invalid type", dictName, entryName)
 	}
@@ -148,26 +148,26 @@ func validateBooleanEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, en
 	return &b, nil
 }
 
-func validateBooleanArrayEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.Array) bool) (*pdf.Array, error) {
+func validateBooleanArrayEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.Array) bool) (pdf.Array, error) {
 
 	log.Debug.Printf("validateBooleanArrayEntry begin: entry=%s\n", entryName)
 
-	arr, err := validateArrayEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, validate)
-	if err != nil || arr == nil {
+	a, err := validateArrayEntry(xRefTable, d, dictName, entryName, required, sinceVersion, validate)
+	if err != nil || a == nil {
 		return nil, err
 	}
 
-	for i, obj := range *arr {
+	for i, o := range a {
 
-		obj, err := xRefTable.Dereference(obj)
+		o, err := xRefTable.Dereference(o)
 		if err != nil {
 			return nil, err
 		}
-		if obj == nil {
+		if o == nil {
 			continue
 		}
 
-		_, ok := obj.(pdf.Boolean)
+		_, ok := o.(pdf.Boolean)
 		if !ok {
 			return nil, errors.Errorf("validateBooleanArrayEntry: dict=%s entry=%s invalid type at index %d\n", dictName, entryName, i)
 		}
@@ -176,27 +176,27 @@ func validateBooleanArrayEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictNam
 
 	log.Debug.Printf("validateBooleanArrayEntry end: entry=%s\n", entryName)
 
-	return arr, nil
+	return a, nil
 }
 
-func validateDateObject(xRefTable *pdf.XRefTable, obj pdf.Object, sinceVersion pdf.Version) (pdf.StringLiteral, error) {
-	return xRefTable.DereferenceStringLiteral(obj, sinceVersion, validateDate)
+func validateDateObject(xRefTable *pdf.XRefTable, o pdf.Object, sinceVersion pdf.Version) (pdf.StringLiteral, error) {
+	return xRefTable.DereferenceStringLiteral(o, sinceVersion, validateDate)
 }
 
-func validateDateEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) (*pdf.StringLiteral, error) {
+func validateDateEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) (*pdf.StringLiteral, error) {
 
 	log.Debug.Printf("validateDateEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return nil, err
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	o, err = xRefTable.Dereference(o)
 	if err != nil {
 		return nil, err
 	}
-	if obj == nil {
+	if o == nil {
 		if required {
 			return nil, errors.Errorf("validateDateEntry: dict=%s required entry=%s is nil", dictName, entryName)
 		}
@@ -210,7 +210,7 @@ func validateDateEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entry
 		return nil, err
 	}
 
-	date, ok := obj.(pdf.StringLiteral)
+	date, ok := o.(pdf.StringLiteral)
 	if !ok {
 		return nil, errors.Errorf("validateDateEntry: dict=%s entry=%s invalid type", dictName, entryName)
 	}
@@ -225,20 +225,20 @@ func validateDateEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entry
 	return &date, nil
 }
 
-func validateDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.Dict) bool) (*pdf.Dict, error) {
+func validateDictEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.Dict) bool) (pdf.Dict, error) {
 
 	log.Debug.Printf("validateDictEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return nil, err
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	o, err = xRefTable.Dereference(o)
 	if err != nil {
 		return nil, err
 	}
-	if obj == nil {
+	if o == nil {
 		if required {
 			return nil, errors.Errorf("validateDictEntry: dict=%s required entry=%s is nil", dictName, entryName)
 		}
@@ -252,7 +252,7 @@ func validateDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entry
 		return nil, err
 	}
 
-	d, ok := obj.(pdf.Dict)
+	d, ok := o.(pdf.Dict)
 	if !ok {
 		return nil, errors.Errorf("validateDictEntry: dict=%s entry=%s invalid type", dictName, entryName)
 	}
@@ -264,22 +264,22 @@ func validateDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entry
 
 	log.Debug.Printf("validateDictEntry end: entry=%s\n", entryName)
 
-	return &d, nil
+	return d, nil
 }
 
-func validateFloat(xRefTable *pdf.XRefTable, obj pdf.Object, validate func(float64) bool) (*pdf.Float, error) {
+func validateFloat(xRefTable *pdf.XRefTable, o pdf.Object, validate func(float64) bool) (*pdf.Float, error) {
 
 	log.Debug.Println("validateFloat begin")
 
-	obj, err := xRefTable.Dereference(obj)
+	o, err := xRefTable.Dereference(o)
 	if err != nil {
 		return nil, err
 	}
-	if obj == nil {
+	if o == nil {
 		return nil, errors.New("validateFloat: missing object")
 	}
 
-	f, ok := obj.(pdf.Float)
+	f, ok := o.(pdf.Float)
 	if !ok {
 		return nil, errors.New("validateFloat: invalid type")
 	}
@@ -294,20 +294,20 @@ func validateFloat(xRefTable *pdf.XRefTable, obj pdf.Object, validate func(float
 	return &f, nil
 }
 
-func validateFloatEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(float64) bool) (*pdf.Float, error) {
+func validateFloatEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(float64) bool) (*pdf.Float, error) {
 
 	log.Debug.Printf("validateFloatEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return nil, err
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	o, err = xRefTable.Dereference(o)
 	if err != nil {
 		return nil, err
 	}
-	if obj == nil {
+	if o == nil {
 		if required {
 			return nil, errors.Errorf("validateFloatEntry: dict=%s required entry=%s is nil", dictName, entryName)
 		}
@@ -321,7 +321,7 @@ func validateFloatEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entr
 		return nil, err
 	}
 
-	f, ok := obj.(pdf.Float)
+	f, ok := o.(pdf.Float)
 	if !ok {
 		return nil, errors.Errorf("validateFloatEntry: dict=%s entry=%s invalid type", dictName, entryName)
 	}
@@ -336,12 +336,12 @@ func validateFloatEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entr
 	return &f, nil
 }
 
-func validateFunctionEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateFunctionEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	log.Debug.Printf("validateFunctionEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return err
 	}
 
@@ -350,7 +350,7 @@ func validateFunctionEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, e
 		return err
 	}
 
-	err = validateFunction(xRefTable, obj)
+	err = validateFunction(xRefTable, o)
 	if err != nil {
 		return err
 	}
@@ -360,17 +360,17 @@ func validateFunctionEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, e
 	return nil
 }
 
-func validateFunctionArrayEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.Array) bool) (*pdf.Array, error) {
+func validateFunctionArrayEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.Array) bool) (pdf.Array, error) {
 
 	log.Debug.Printf("validateFunctionArrayEntry begin: entry=%s\n", entryName)
 
-	arr, err := validateArrayEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, validate)
-	if err != nil || arr == nil {
+	a, err := validateArrayEntry(xRefTable, d, dictName, entryName, required, sinceVersion, validate)
+	if err != nil || a == nil {
 		return nil, err
 	}
 
-	for _, obj := range *arr {
-		err = validateFunction(xRefTable, obj)
+	for _, o := range a {
+		err = validateFunction(xRefTable, o)
 		if err != nil {
 			return nil, err
 		}
@@ -378,23 +378,23 @@ func validateFunctionArrayEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictNa
 
 	log.Debug.Printf("validateFunctionArrayEntry end: entry=%s\n", entryName)
 
-	return arr, nil
+	return a, nil
 }
 
-func validateFunctionOrArrayOfFunctionsEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateFunctionOrArrayOfFunctionsEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	log.Debug.Printf("validateFunctionOrArrayOfFunctionsEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return err
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	o, err = xRefTable.Dereference(o)
 	if err != nil {
 		return err
 	}
-	if obj == nil {
+	if o == nil {
 		if required {
 			return errors.Errorf("validateFunctionOrArrayOfFunctionsEntry: dict=%s required entry=%s is nil", dictName, entryName)
 		}
@@ -402,17 +402,17 @@ func validateFunctionOrArrayOfFunctionsEntry(xRefTable *pdf.XRefTable, dict *pdf
 		return nil
 	}
 
-	switch obj := obj.(type) {
+	switch o := o.(type) {
 
 	case pdf.Array:
 
-		for _, obj := range obj {
+		for _, o := range o {
 
-			if obj == nil {
+			if o == nil {
 				continue
 			}
 
-			err = validateFunction(xRefTable, obj)
+			err = validateFunction(xRefTable, o)
 			if err != nil {
 				return err
 			}
@@ -420,7 +420,7 @@ func validateFunctionOrArrayOfFunctionsEntry(xRefTable *pdf.XRefTable, dict *pdf
 		}
 
 	default:
-		err = validateFunction(xRefTable, obj)
+		err = validateFunction(xRefTable, o)
 		if err != nil {
 			return err
 		}
@@ -437,16 +437,16 @@ func validateFunctionOrArrayOfFunctionsEntry(xRefTable *pdf.XRefTable, dict *pdf
 	return nil
 }
 
-func validateIndRefEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) (*pdf.IndirectRef, error) {
+func validateIndRefEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) (*pdf.IndirectRef, error) {
 
 	log.Debug.Printf("validateIndRefEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return nil, err
 	}
 
-	indRef, ok := obj.(pdf.IndirectRef)
+	ir, ok := o.(pdf.IndirectRef)
 	if !ok {
 		return nil, errors.Errorf("validateIndRefEntry: dict=%s entry=%s invalid type", dictName, entryName)
 	}
@@ -459,20 +459,20 @@ func validateIndRefEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, ent
 
 	log.Debug.Printf("validateIndRefEntry end: entry=%s\n", entryName)
 
-	return &indRef, nil
+	return &ir, nil
 }
 
-func validateIndRefArrayEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.Array) bool) (*pdf.Array, error) {
+func validateIndRefArrayEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.Array) bool) (pdf.Array, error) {
 
 	log.Debug.Printf("validateIndRefArrayEntry begin: entry=%s\n", entryName)
 
-	arr, err := validateArrayEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, validate)
-	if err != nil || arr == nil {
+	a, err := validateArrayEntry(xRefTable, d, dictName, entryName, required, sinceVersion, validate)
+	if err != nil || a == nil {
 		return nil, err
 	}
 
-	for i, obj := range *arr {
-		_, ok := obj.(pdf.IndirectRef)
+	for i, o := range a {
+		_, ok := o.(pdf.IndirectRef)
 		if !ok {
 			return nil, errors.Errorf("validateIndRefArrayEntry: invalid type at index %d\n", i)
 		}
@@ -480,23 +480,23 @@ func validateIndRefArrayEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName
 
 	log.Debug.Printf("validateIndRefArrayEntry end: entry=%s \n", entryName)
 
-	return arr, nil
+	return a, nil
 }
 
-func validateInteger(xRefTable *pdf.XRefTable, obj pdf.Object, validate func(int) bool) (*pdf.Integer, error) {
+func validateInteger(xRefTable *pdf.XRefTable, o pdf.Object, validate func(int) bool) (*pdf.Integer, error) {
 
 	log.Debug.Println("validateInteger begin")
 
-	obj, err := xRefTable.Dereference(obj)
+	o, err := xRefTable.Dereference(o)
 	if err != nil {
 		return nil, err
 	}
 
-	if obj == nil {
+	if o == nil {
 		return nil, errors.New("validateInteger: missing object")
 	}
 
-	i, ok := obj.(pdf.Integer)
+	i, ok := o.(pdf.Integer)
 	if !ok {
 		return nil, errors.New("validateInteger: invalid type")
 	}
@@ -511,20 +511,20 @@ func validateInteger(xRefTable *pdf.XRefTable, obj pdf.Object, validate func(int
 	return &i, nil
 }
 
-func validateIntegerEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(int) bool) (*pdf.Integer, error) {
+func validateIntegerEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(int) bool) (*pdf.Integer, error) {
 
 	log.Debug.Printf("validateIntegerEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return nil, err
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	o, err = xRefTable.Dereference(o)
 	if err != nil {
 		return nil, err
 	}
-	if obj == nil {
+	if o == nil {
 		if required {
 			return nil, errors.Errorf("validateIntegerEntry: dict=%s required entry=%s is nil", dictName, entryName)
 		}
@@ -538,7 +538,7 @@ func validateIntegerEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, en
 		return nil, err
 	}
 
-	i, ok := obj.(pdf.Integer)
+	i, ok := o.(pdf.Integer)
 	if !ok {
 		return nil, errors.Errorf("validateIntegerEntry: dict=%s entry=%s invalid type", dictName, entryName)
 	}
@@ -553,27 +553,27 @@ func validateIntegerEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, en
 	return &i, nil
 }
 
-func validateIntegerArray(xRefTable *pdf.XRefTable, obj pdf.Object) (*pdf.Array, error) {
+func validateIntegerArray(xRefTable *pdf.XRefTable, o pdf.Object) (pdf.Array, error) {
 
 	log.Debug.Println("validateIntegerArray begin")
 
-	a, err := xRefTable.DereferenceArray(obj)
+	a, err := xRefTable.DereferenceArray(o)
 	if err != nil || a == nil {
 		return nil, err
 	}
 
-	for i, obj := range *a {
+	for i, o := range a {
 
-		obj, err = xRefTable.Dereference(obj)
+		o, err := xRefTable.Dereference(o)
 		if err != nil {
 			return nil, err
 		}
 
-		if obj == nil {
+		if o == nil {
 			continue
 		}
 
-		switch obj.(type) {
+		switch o.(type) {
 
 		case pdf.Integer:
 			// no further processing.
@@ -589,27 +589,27 @@ func validateIntegerArray(xRefTable *pdf.XRefTable, obj pdf.Object) (*pdf.Array,
 	return a, nil
 }
 
-func validateIntegerArrayEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.Array) bool) (*pdf.Array, error) {
+func validateIntegerArrayEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.Array) bool) (pdf.Array, error) {
 
 	log.Debug.Printf("validateIntegerArrayEntry begin: entry=%s\n", entryName)
 
-	arr, err := validateArrayEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, validate)
-	if err != nil || arr == nil {
+	a, err := validateArrayEntry(xRefTable, d, dictName, entryName, required, sinceVersion, validate)
+	if err != nil || a == nil {
 		return nil, err
 	}
 
-	for i, obj := range *arr {
+	for i, o := range a {
 
-		obj, err = xRefTable.Dereference(obj)
+		o, err := xRefTable.Dereference(o)
 		if err != nil {
 			return nil, err
 		}
 
-		if obj == nil {
+		if o == nil {
 			continue
 		}
 
-		_, ok := obj.(pdf.Integer)
+		_, ok := o.(pdf.Integer)
 		if !ok {
 			return nil, errors.Errorf("validateIntegerArrayEntry: dict=%s entry=%s invalid type at index %d\n", dictName, entryName, i)
 		}
@@ -618,22 +618,22 @@ func validateIntegerArrayEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictNam
 
 	log.Debug.Printf("validateIntegerArrayEntry end: entry=%s\n", entryName)
 
-	return arr, nil
+	return a, nil
 }
 
-func validateName(xRefTable *pdf.XRefTable, obj pdf.Object, validate func(string) bool) (*pdf.Name, error) {
+func validateName(xRefTable *pdf.XRefTable, o pdf.Object, validate func(string) bool) (*pdf.Name, error) {
 
 	log.Debug.Println("validateName begin")
 
-	obj, err := xRefTable.Dereference(obj)
+	o, err := xRefTable.Dereference(o)
 	if err != nil {
 		return nil, err
 	}
-	if obj == nil {
+	if o == nil {
 		return nil, errors.New("validateName: missing object")
 	}
 
-	name, ok := obj.(pdf.Name)
+	name, ok := o.(pdf.Name)
 	if !ok {
 		return nil, errors.New("validateName: invalid type")
 	}
@@ -648,20 +648,20 @@ func validateName(xRefTable *pdf.XRefTable, obj pdf.Object, validate func(string
 	return &name, nil
 }
 
-func validateNameEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(string) bool) (*pdf.Name, error) {
+func validateNameEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(string) bool) (*pdf.Name, error) {
 
 	log.Debug.Printf("validateNameEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return nil, err
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	o, err = xRefTable.Dereference(o)
 	if err != nil {
 		return nil, err
 	}
-	if obj == nil {
+	if o == nil {
 		if required {
 			return nil, errors.Errorf("validateNameEntry: dict=%s required entry=%s is nil", dictName, entryName)
 		}
@@ -675,7 +675,7 @@ func validateNameEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entry
 		return nil, err
 	}
 
-	name, ok := obj.(pdf.Name)
+	name, ok := o.(pdf.Name)
 	if !ok {
 		return nil, errors.Errorf("validateNameEntry: dict=%s entry=%s invalid type", dictName, entryName)
 	}
@@ -690,27 +690,27 @@ func validateNameEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entry
 	return &name, nil
 }
 
-func validateNameArray(xRefTable *pdf.XRefTable, obj pdf.Object) (*pdf.Array, error) {
+func validateNameArray(xRefTable *pdf.XRefTable, o pdf.Object) (pdf.Array, error) {
 
 	log.Debug.Println("validateNameArray begin")
 
-	arr, err := xRefTable.DereferenceArray(obj)
-	if err != nil || arr == nil {
+	a, err := xRefTable.DereferenceArray(o)
+	if err != nil || a == nil {
 		return nil, err
 	}
 
-	for i, obj := range *arr {
+	for i, o := range a {
 
-		obj, err = xRefTable.Dereference(obj)
+		o, err := xRefTable.Dereference(o)
 		if err != nil {
 			return nil, err
 		}
 
-		if obj == nil {
+		if o == nil {
 			continue
 		}
 
-		_, ok := obj.(pdf.Name)
+		_, ok := o.(pdf.Name)
 		if !ok {
 			return nil, errors.Errorf("validateNameArray: invalid type at index %d\n", i)
 		}
@@ -719,30 +719,30 @@ func validateNameArray(xRefTable *pdf.XRefTable, obj pdf.Object) (*pdf.Array, er
 
 	log.Debug.Println("validateNameArray end")
 
-	return arr, nil
+	return a, nil
 }
 
-func validateNameArrayEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(a pdf.Array) bool) (*pdf.Array, error) {
+func validateNameArrayEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(a pdf.Array) bool) (pdf.Array, error) {
 
 	log.Debug.Printf("validateNameArrayEntry begin: entry=%s\n", entryName)
 
-	arr, err := validateArrayEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, validate)
-	if err != nil || arr == nil {
+	a, err := validateArrayEntry(xRefTable, d, dictName, entryName, required, sinceVersion, validate)
+	if err != nil || a == nil {
 		return nil, err
 	}
 
-	for i, obj := range *arr {
+	for i, o := range a {
 
-		obj, err = xRefTable.Dereference(obj)
+		o, err := xRefTable.Dereference(o)
 		if err != nil {
 			return nil, err
 		}
 
-		if obj == nil {
+		if o == nil {
 			continue
 		}
 
-		_, ok := obj.(pdf.Name)
+		_, ok := o.(pdf.Name)
 		if !ok {
 			return nil, errors.Errorf("validateNameArrayEntry: dict=%s entry=%s invalid type at index %d\n", dictName, entryName, i)
 		}
@@ -751,22 +751,22 @@ func validateNameArrayEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, 
 
 	log.Debug.Printf("validateNameArrayEntry end: entry=%s\n", entryName)
 
-	return arr, nil
+	return a, nil
 }
 
-func validateNumber(xRefTable *pdf.XRefTable, obj pdf.Object) (pdf.Object, error) {
+func validateNumber(xRefTable *pdf.XRefTable, o pdf.Object) (pdf.Object, error) {
 
 	log.Debug.Println("validateNumber begin")
 
-	n, err := xRefTable.Dereference(obj)
+	o, err := xRefTable.Dereference(o)
 	if err != nil {
 		return nil, err
 	}
-	if n == nil {
+	if o == nil {
 		return nil, errors.New("validateNumber: missing object")
 	}
 
-	switch n.(type) {
+	switch o.(type) {
 
 	case pdf.Integer:
 		// no further processing.
@@ -781,15 +781,15 @@ func validateNumber(xRefTable *pdf.XRefTable, obj pdf.Object) (pdf.Object, error
 
 	log.Debug.Println("validateNumber end ")
 
-	return n, nil
+	return o, nil
 }
 
-func validateNumberEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(f float64) bool) (pdf.Object, error) {
+func validateNumberEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(f float64) bool) (pdf.Object, error) {
 
 	log.Debug.Printf("validateNumberEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return nil, err
 	}
 
@@ -799,7 +799,7 @@ func validateNumberEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, ent
 		return nil, err
 	}
 
-	obj, err = validateNumber(xRefTable, obj)
+	o, err = validateNumber(xRefTable, o)
 	if err != nil {
 		return nil, err
 	}
@@ -807,7 +807,7 @@ func validateNumberEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, ent
 	var f float64
 
 	// Validation
-	switch o := obj.(type) {
+	switch o := o.(type) {
 
 	case pdf.Integer:
 		f = float64(o.Value())
@@ -822,30 +822,30 @@ func validateNumberEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, ent
 
 	log.Debug.Printf("validateNumberEntry end: entry=%s\n", entryName)
 
-	return obj, nil
+	return o, nil
 }
 
-func validateNumberArray(xRefTable *pdf.XRefTable, obj pdf.Object) (*pdf.Array, error) {
+func validateNumberArray(xRefTable *pdf.XRefTable, o pdf.Object) (pdf.Array, error) {
 
 	log.Debug.Println("validateNumberArray begin")
 
-	arrp, err := xRefTable.DereferenceArray(obj)
-	if err != nil || arrp == nil {
+	a, err := xRefTable.DereferenceArray(o)
+	if err != nil || a == nil {
 		return nil, err
 	}
 
-	for i, obj := range *arrp {
+	for i, o := range a {
 
-		obj, err = xRefTable.Dereference(obj)
+		o, err := xRefTable.Dereference(o)
 		if err != nil {
 			return nil, err
 		}
 
-		if obj == nil {
+		if o == nil {
 			continue
 		}
 
-		switch obj.(type) {
+		switch o.(type) {
 
 		case pdf.Integer:
 			// no further processing.
@@ -861,30 +861,30 @@ func validateNumberArray(xRefTable *pdf.XRefTable, obj pdf.Object) (*pdf.Array, 
 
 	log.Debug.Println("validateNumberArray end")
 
-	return nil, err
+	return a, err
 }
 
-func validateNumberArrayEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.Array) bool) (*pdf.Array, error) {
+func validateNumberArrayEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.Array) bool) (pdf.Array, error) {
 
 	log.Debug.Printf("validateNumberArrayEntry begin: entry=%s\n", entryName)
 
-	arr, err := validateArrayEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, validate)
-	if err != nil || arr == nil {
+	a, err := validateArrayEntry(xRefTable, d, dictName, entryName, required, sinceVersion, validate)
+	if err != nil || a == nil {
 		return nil, err
 	}
 
-	for i, obj := range *arr {
+	for i, o := range a {
 
-		obj, err = xRefTable.Dereference(obj)
+		o, err := xRefTable.Dereference(o)
 		if err != nil {
 			return nil, err
 		}
 
-		if obj == nil {
+		if o == nil {
 			continue
 		}
 
-		switch obj.(type) {
+		switch o.(type) {
 
 		case pdf.Integer:
 			// no further processing.
@@ -900,40 +900,40 @@ func validateNumberArrayEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName
 
 	log.Debug.Printf("validateNumberArrayEntry end: entry=%s\n", entryName)
 
-	return arr, nil
+	return a, nil
 }
 
-func validateRectangleEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.Array) bool) (*pdf.Array, error) {
+func validateRectangleEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.Array) bool) (pdf.Array, error) {
 
 	log.Debug.Printf("validateRectangleEntry begin: entry=%s\n", entryName)
 
-	arr, err := validateNumberArrayEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, func(arr pdf.Array) bool { return len(arr) == 4 })
-	if err != nil || arr == nil {
+	a, err := validateNumberArrayEntry(xRefTable, d, dictName, entryName, required, sinceVersion, func(a pdf.Array) bool { return len(a) == 4 })
+	if err != nil || a == nil {
 		return nil, err
 	}
 
-	if validate != nil && !validate(*arr) {
+	if validate != nil && !validate(a) {
 		return nil, errors.Errorf("validateRectangleEntry: dict=%s entry=%s invalid rectangle entry", dictName, entryName)
 	}
 
 	log.Debug.Printf("validateRectangleEntry end: entry=%s\n", entryName)
 
-	return arr, nil
+	return a, nil
 }
 
-func validateStreamDict(xRefTable *pdf.XRefTable, obj pdf.Object) (*pdf.StreamDict, error) {
+func validateStreamDict(xRefTable *pdf.XRefTable, o pdf.Object) (*pdf.StreamDict, error) {
 
 	log.Debug.Println("validateStreamDict begin")
 
-	obj, err := xRefTable.Dereference(obj)
+	o, err := xRefTable.Dereference(o)
 	if err != nil {
 		return nil, err
 	}
-	if obj == nil {
+	if o == nil {
 		return nil, errors.New("validateStreamDict: missing object")
 	}
 
-	sd, ok := obj.(pdf.StreamDict)
+	sd, ok := o.(pdf.StreamDict)
 	if !ok {
 		return nil, errors.New("validateStreamDict: invalid type")
 	}
@@ -943,20 +943,20 @@ func validateStreamDict(xRefTable *pdf.XRefTable, obj pdf.Object) (*pdf.StreamDi
 	return &sd, nil
 }
 
-func validateStreamDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.StreamDict) bool) (*pdf.StreamDict, error) {
+func validateStreamDictEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.StreamDict) bool) (*pdf.StreamDict, error) {
 
 	log.Debug.Printf("validateStreamDictEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return nil, err
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	o, err = xRefTable.Dereference(o)
 	if err != nil {
 		return nil, err
 	}
-	if obj == nil {
+	if o == nil {
 		if required {
 			return nil, errors.Errorf("validateStreamDictEntry: dict=%s required entry=%s is nil", dictName, entryName)
 		}
@@ -970,7 +970,7 @@ func validateStreamDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName,
 		return nil, err
 	}
 
-	sd, ok := obj.(pdf.StreamDict)
+	sd, ok := o.(pdf.StreamDict)
 	if !ok {
 		return nil, errors.Errorf("validateStreamDictEntry: dict=%s entry=%s invalid type", dictName, entryName)
 	}
@@ -985,27 +985,27 @@ func validateStreamDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName,
 	return &sd, nil
 }
 
-func validateString(xRefTable *pdf.XRefTable, obj pdf.Object, validate func(string) bool) (*string, error) {
+func validateString(xRefTable *pdf.XRefTable, o pdf.Object, validate func(string) bool) (*string, error) {
 
 	//log.Debug.Println("validateString begin")
 
-	obj, err := xRefTable.Dereference(obj)
+	o, err := xRefTable.Dereference(o)
 	if err != nil {
 		return nil, err
 	}
-	if obj == nil {
+	if o == nil {
 		return nil, errors.New("validateString: missing object")
 	}
 
 	var s string
 
-	switch obj := obj.(type) {
+	switch o := o.(type) {
 
 	case pdf.StringLiteral:
-		s = obj.Value()
+		s = o.Value()
 
 	case pdf.HexLiteral:
-		s = obj.Value()
+		s = o.Value()
 
 	default:
 		return nil, errors.New("validateString: invalid type")
@@ -1021,20 +1021,20 @@ func validateString(xRefTable *pdf.XRefTable, obj pdf.Object, validate func(stri
 	return &s, nil
 }
 
-func validateStringEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(string) bool) (*string, error) {
+func validateStringEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(string) bool) (*string, error) {
 
 	log.Debug.Printf("validateStringEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return nil, err
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	o, err = xRefTable.Dereference(o)
 	if err != nil {
 		return nil, err
 	}
-	if obj == nil {
+	if o == nil {
 		if required {
 			return nil, errors.Errorf("validateStringEntry: dict=%s required entry=%s is nil", dictName, entryName)
 		}
@@ -1050,13 +1050,13 @@ func validateStringEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, ent
 
 	var s string
 
-	switch obj := obj.(type) {
+	switch o := o.(type) {
 
 	case pdf.StringLiteral:
-		s = obj.Value()
+		s = o.Value()
 
 	case pdf.HexLiteral:
-		s = obj.Value()
+		s = o.Value()
 
 	default:
 		return nil, errors.Errorf("validateStringEntry: dict=%s entry=%s invalid type", dictName, entryName)
@@ -1072,27 +1072,27 @@ func validateStringEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, ent
 	return &s, nil
 }
 
-func validateStringArrayEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.Array) bool) (*pdf.Array, error) {
+func validateStringArrayEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.Array) bool) (pdf.Array, error) {
 
 	log.Debug.Printf("validateStringArrayEntry begin: entry=%s\n", entryName)
 
-	arr, err := validateArrayEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, validate)
-	if err != nil || arr == nil {
+	a, err := validateArrayEntry(xRefTable, d, dictName, entryName, required, sinceVersion, validate)
+	if err != nil || a == nil {
 		return nil, err
 	}
 
-	for i, obj := range *arr {
+	for i, o := range a {
 
-		obj, err = xRefTable.Dereference(obj)
+		o, err := xRefTable.Dereference(o)
 		if err != nil {
 			return nil, err
 		}
 
-		if obj == nil {
+		if o == nil {
 			continue
 		}
 
-		switch obj.(type) {
+		switch o.(type) {
 
 		case pdf.StringLiteral:
 			// no further processing.
@@ -1108,30 +1108,30 @@ func validateStringArrayEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName
 
 	log.Debug.Printf("validateStringArrayEntry end: entry=%s\n", entryName)
 
-	return arr, nil
+	return a, nil
 }
 
-func validateArrayArrayEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.Array) bool) (*pdf.Array, error) {
+func validateArrayArrayEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.Array) bool) (pdf.Array, error) {
 
 	log.Debug.Printf("validateArrayArrayEntry begin: entry=%s\n", entryName)
 
-	arr, err := validateArrayEntry(xRefTable, dict, dictName, entryName, required, sinceVersion, validate)
-	if err != nil || arr == nil {
+	a, err := validateArrayEntry(xRefTable, d, dictName, entryName, required, sinceVersion, validate)
+	if err != nil || a == nil {
 		return nil, err
 	}
 
-	for i, obj := range *arr {
+	for i, o := range a {
 
-		obj, err = xRefTable.Dereference(obj)
+		o, err := xRefTable.Dereference(o)
 		if err != nil {
 			return nil, err
 		}
 
-		if obj == nil {
+		if o == nil {
 			continue
 		}
 
-		switch obj.(type) {
+		switch o.(type) {
 
 		case pdf.Array:
 			// no further processing.
@@ -1144,23 +1144,23 @@ func validateArrayArrayEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName,
 
 	log.Debug.Printf("validateArrayArrayEntry end: entry=%s\n", entryName)
 
-	return arr, nil
+	return a, nil
 }
 
-func validateStringOrStreamEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateStringOrStreamEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	log.Debug.Printf("validateStringOrStreamEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return err
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	o, err = xRefTable.Dereference(o)
 	if err != nil {
 		return err
 	}
-	if obj == nil {
+	if o == nil {
 		if required {
 			return errors.Errorf("validateStringOrStreamEntry: dict=%s required entry=%s is nil", dictName, entryName)
 		}
@@ -1174,7 +1174,7 @@ func validateStringOrStreamEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictN
 		return err
 	}
 
-	switch obj.(type) {
+	switch o.(type) {
 
 	case pdf.StringLiteral, pdf.HexLiteral, pdf.StreamDict:
 		// no further processing
@@ -1188,20 +1188,20 @@ func validateStringOrStreamEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictN
 	return nil
 }
 
-func validateNameOrStringEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateNameOrStringEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	log.Debug.Printf("validateNameOrStringEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return err
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	o, err = xRefTable.Dereference(o)
 	if err != nil {
 		return err
 	}
-	if obj == nil {
+	if o == nil {
 		if required {
 			return errors.Errorf("validateNameOrStringEntry: dict=%s required entry=%s is nil", dictName, entryName)
 		}
@@ -1215,7 +1215,7 @@ func validateNameOrStringEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictNam
 		return err
 	}
 
-	switch obj.(type) {
+	switch o.(type) {
 
 	case pdf.StringLiteral, pdf.Name:
 		// no further processing
@@ -1229,20 +1229,20 @@ func validateNameOrStringEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictNam
 	return nil
 }
 
-func validateIntOrStringEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateIntOrStringEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	log.Debug.Printf("validateIntOrStringEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return err
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	o, err = xRefTable.Dereference(o)
 	if err != nil {
 		return err
 	}
-	if obj == nil {
+	if o == nil {
 		if required {
 			return errors.Errorf("validateIntOrStringEntry: dict=%s required entry=%s is nil", dictName, entryName)
 		}
@@ -1256,7 +1256,7 @@ func validateIntOrStringEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName
 		return err
 	}
 
-	switch obj.(type) {
+	switch o.(type) {
 
 	case pdf.StringLiteral, pdf.HexLiteral, pdf.Integer:
 		// no further processing
@@ -1270,20 +1270,20 @@ func validateIntOrStringEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName
 	return nil
 }
 
-func validateIntOrDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateIntOrDictEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	log.Debug.Printf("validateIntOrDictEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return err
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	o, err = xRefTable.Dereference(o)
 	if err != nil {
 		return err
 	}
-	if obj == nil {
+	if o == nil {
 		if required {
 			return errors.Errorf("validateIntOrDictEntry: dict=%s required entry=%s is nil", dictName, entryName)
 		}
@@ -1297,7 +1297,7 @@ func validateIntOrDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, 
 		return err
 	}
 
-	switch obj.(type) {
+	switch o.(type) {
 
 	case pdf.Integer, pdf.Dict:
 		// no further processing
@@ -1311,20 +1311,20 @@ func validateIntOrDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, 
 	return nil
 }
 
-func validateBooleanOrStreamEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateBooleanOrStreamEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	log.Debug.Printf("validateBooleanOrStreamEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return err
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	o, err = xRefTable.Dereference(o)
 	if err != nil {
 		return err
 	}
-	if obj == nil {
+	if o == nil {
 		if required {
 			return errors.Errorf("validateBooleanOrStreamEntry: dict=%s required entry=%s is nil", dictName, entryName)
 		}
@@ -1338,7 +1338,7 @@ func validateBooleanOrStreamEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dict
 		return err
 	}
 
-	switch obj.(type) {
+	switch o.(type) {
 
 	case pdf.Boolean, pdf.StreamDict:
 		// no further processing
@@ -1352,20 +1352,20 @@ func validateBooleanOrStreamEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dict
 	return nil
 }
 
-func validateStreamDictOrDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateStreamDictOrDictEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	log.Debug.Printf("validateStreamDictOrDictEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return err
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	o, err = xRefTable.Dereference(o)
 	if err != nil {
 		return err
 	}
-	if obj == nil {
+	if o == nil {
 		if required {
 			return errors.Errorf("validateStreamDictOrDictEntry: dict=%s required entry=%s is nil", dictName, entryName)
 		}
@@ -1379,7 +1379,7 @@ func validateStreamDictOrDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dic
 		return err
 	}
 
-	switch obj.(type) {
+	switch o.(type) {
 
 	case pdf.StreamDict:
 		// TODO validate 3D stream dict
@@ -1396,20 +1396,20 @@ func validateStreamDictOrDictEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dic
 	return nil
 }
 
-func validateIntegerOrArrayOfIntegerEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateIntegerOrArrayOfIntegerEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	log.Debug.Printf("validateIntegerOrArrayOfIntegerEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return err
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	o, err = xRefTable.Dereference(o)
 	if err != nil {
 		return err
 	}
-	if obj == nil {
+	if o == nil {
 		if required {
 			return errors.Errorf("validateIntegerOrArrayOfIntegerEntry: dict=%s required entry=%s is nil", dictName, entryName)
 		}
@@ -1423,25 +1423,25 @@ func validateIntegerOrArrayOfIntegerEntry(xRefTable *pdf.XRefTable, dict *pdf.Di
 		return err
 	}
 
-	switch obj := obj.(type) {
+	switch o := o.(type) {
 
 	case pdf.Integer:
 		// no further processing
 
 	case pdf.Array:
 
-		for i, obj := range obj {
+		for i, o := range o {
 
-			obj, err = xRefTable.Dereference(obj)
+			o, err := xRefTable.Dereference(o)
 			if err != nil {
 				return err
 			}
 
-			if obj == nil {
+			if o == nil {
 				continue
 			}
 
-			_, ok := obj.(pdf.Integer)
+			_, ok := o.(pdf.Integer)
 			if !ok {
 				return errors.Errorf("validateIntegerOrArrayOfIntegerEntry: dict=%s entry=%s invalid type at index %d\n", dictName, entryName, i)
 			}
@@ -1457,20 +1457,20 @@ func validateIntegerOrArrayOfIntegerEntry(xRefTable *pdf.XRefTable, dict *pdf.Di
 	return nil
 }
 
-func validateNameOrArrayOfNameEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateNameOrArrayOfNameEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	log.Debug.Printf("validateNameOrArrayOfNameEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return err
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	o, err = xRefTable.Dereference(o)
 	if err != nil {
 		return err
 	}
-	if obj == nil {
+	if o == nil {
 		if required {
 			return errors.Errorf("validateNameOrArrayOfNameEntry: dict=%s required entry=%s is nil", dictName, entryName)
 		}
@@ -1484,25 +1484,25 @@ func validateNameOrArrayOfNameEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, di
 		return err
 	}
 
-	switch obj := obj.(type) {
+	switch o := o.(type) {
 
 	case pdf.Name:
 		// no further processing
 
 	case pdf.Array:
 
-		for i, obj := range obj {
+		for i, o := range o {
 
-			obj, err = xRefTable.Dereference(obj)
+			o, err := xRefTable.Dereference(o)
 			if err != nil {
 				return err
 			}
 
-			if obj == nil {
+			if o == nil {
 				continue
 			}
 
-			_, ok := obj.(pdf.Name)
+			_, ok := o.(pdf.Name)
 			if !ok {
 				err = errors.Errorf("validateNameOrArrayOfNameEntry: dict=%s entry=%s invalid type at index %d\n", dictName, entryName, i)
 				return err
@@ -1519,20 +1519,20 @@ func validateNameOrArrayOfNameEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, di
 	return nil
 }
 
-func validateBooleanOrArrayOfBooleanEntry(xRefTable *pdf.XRefTable, dict *pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateBooleanOrArrayOfBooleanEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	log.Debug.Printf("validateBooleanOrArrayOfBooleanEntry begin: entry=%s\n", entryName)
 
-	obj, err := dict.Entry(dictName, entryName, required)
-	if err != nil || obj == nil {
+	o, err := d.Entry(dictName, entryName, required)
+	if err != nil || o == nil {
 		return err
 	}
 
-	obj, err = xRefTable.Dereference(obj)
+	o, err = xRefTable.Dereference(o)
 	if err != nil {
 		return err
 	}
-	if obj == nil {
+	if o == nil {
 		if required {
 			return errors.Errorf("validateBooleanOrArrayOfBooleanEntry: dict=%s required entry=%s is nil", dictName, entryName)
 		}
@@ -1546,25 +1546,25 @@ func validateBooleanOrArrayOfBooleanEntry(xRefTable *pdf.XRefTable, dict *pdf.Di
 		return err
 	}
 
-	switch obj := obj.(type) {
+	switch o := o.(type) {
 
 	case pdf.Boolean:
 		// no further processing
 
 	case pdf.Array:
 
-		for i, obj := range obj {
+		for i, o := range o {
 
-			obj, err = xRefTable.Dereference(obj)
+			o, err := xRefTable.Dereference(o)
 			if err != nil {
 				return err
 			}
 
-			if obj == nil {
+			if o == nil {
 				continue
 			}
 
-			_, ok := obj.(pdf.Boolean)
+			_, ok := o.(pdf.Boolean)
 			if !ok {
 				return errors.Errorf("validateBooleanOrArrayOfBooleanEntry: dict=%s entry=%s invalid type at index %d\n", dictName, entryName, i)
 			}

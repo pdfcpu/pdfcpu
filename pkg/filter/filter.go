@@ -50,6 +50,8 @@ var (
 type Filter interface {
 	Encode(r io.Reader) (*bytes.Buffer, error)
 	Decode(r io.Reader) (*bytes.Buffer, error)
+	//Encode(r io.Reader, w io.Writer) error
+	//Decode(r io.Reader, w io.Writer) error
 }
 
 // NewFilter returns a filter for given filterName and an optional parameter dictionary.

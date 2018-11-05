@@ -75,8 +75,8 @@ func NewIntegerArray(fVars ...int) Array {
 	return a
 }
 
-func (array Array) contains(o Object, xRefTable *XRefTable) (bool, error) {
-	for _, e := range array {
+func (a Array) contains(o Object, xRefTable *XRefTable) (bool, error) {
+	for _, e := range a {
 		ok, err := equalObjects(e, o, xRefTable)
 		if err != nil {
 			return false, err
@@ -88,14 +88,14 @@ func (array Array) contains(o Object, xRefTable *XRefTable) (bool, error) {
 	return false, nil
 }
 
-func (array Array) indentedString(level int) string {
+func (a Array) indentedString(level int) string {
 
 	logstr := []string{"["}
 	tabstr := strings.Repeat("\t", level)
 	first := true
 	sepstr := ""
 
-	for _, entry := range array {
+	for _, entry := range a {
 
 		if first {
 			first = false
@@ -125,19 +125,19 @@ func (array Array) indentedString(level int) string {
 	return strings.Join(logstr, "")
 }
 
-func (array Array) String() string {
-	return array.indentedString(1)
+func (a Array) String() string {
+	return a.indentedString(1)
 }
 
 // PDFString returns a string representation as found in and written to a PDF file.
-func (array Array) PDFString() string {
+func (a Array) PDFString() string {
 
 	logstr := []string{}
 	logstr = append(logstr, "[")
 	first := true
 	var sepstr string
 
-	for _, entry := range array {
+	for _, entry := range a {
 
 		if first {
 			first = false
@@ -158,16 +158,16 @@ func (array Array) PDFString() string {
 			continue
 		}
 
-		array, ok := entry.(Array)
+		a, ok := entry.(Array)
 		if ok {
-			arrstr := array.PDFString()
+			arrstr := a.PDFString()
 			logstr = append(logstr, fmt.Sprintf("%s", arrstr))
 			continue
 		}
 
-		indRef, ok := entry.(IndirectRef)
+		ir, ok := entry.(IndirectRef)
 		if ok {
-			indRefstr := indRef.PDFString()
+			indRefstr := ir.PDFString()
 			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, indRefstr))
 			continue
 		}

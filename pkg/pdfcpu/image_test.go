@@ -293,7 +293,7 @@ func read8BPCDeviceCMYKFlateStreamDump(xRefTable *XRefTable, fileName string) (*
 			},
 		),
 		Raw:            buf,
-		FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: &decodeParms}}}
+		FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: decodeParms}}}
 
 	sd.InsertName("Filter", filter.Flate)
 

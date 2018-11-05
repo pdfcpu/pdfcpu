@@ -48,12 +48,12 @@ func validateDocumentInfoDict(xRefTable *pdf.XRefTable, obj pdf.Object) (hasModD
 
 	// Document info object is optional.
 
-	dict, err := xRefTable.DereferenceDict(obj)
-	if err != nil || dict == nil {
+	d, err := xRefTable.DereferenceDict(obj)
+	if err != nil || d == nil {
 		return false, err
 	}
 
-	for k, v := range *dict {
+	for k, v := range d {
 
 		switch k {
 

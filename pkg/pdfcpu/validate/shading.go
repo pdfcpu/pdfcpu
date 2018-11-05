@@ -29,7 +29,7 @@ func validateBitsPerCoordinate(i int) bool {
 	return pdf.IntMemberOf(i, []int{1, 2, 4, 8, 12, 16, 24, 32})
 }
 
-func validateShadingDictCommonEntries(xRefTable *pdf.XRefTable, dict *pdf.Dict) (shadType int, err error) {
+func validateShadingDictCommonEntries(xRefTable *pdf.XRefTable, dict pdf.Dict) (shadType int, err error) {
 
 	dictName := "shadingDictCommonEntries"
 
@@ -58,16 +58,16 @@ func validateShadingDictCommonEntries(xRefTable *pdf.XRefTable, dict *pdf.Dict) 
 	return shadingType.Value(), err
 }
 
-func validateFunctionBasedShadingDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
+func validateFunctionBasedShadingDict(xRefTable *pdf.XRefTable, dict pdf.Dict) error {
 
 	dictName := "functionBasedShadingDict"
 
-	_, err := validateNumberArrayEntry(xRefTable, dict, dictName, "Domain", OPTIONAL, pdf.V10, func(arr pdf.Array) bool { return len(arr) == 4 })
+	_, err := validateNumberArrayEntry(xRefTable, dict, dictName, "Domain", OPTIONAL, pdf.V10, func(a pdf.Array) bool { return len(a) == 4 })
 	if err != nil {
 		return err
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "Matrix", OPTIONAL, pdf.V10, func(arr pdf.Array) bool { return len(arr) == 6 })
+	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "Matrix", OPTIONAL, pdf.V10, func(a pdf.Array) bool { return len(a) == 6 })
 	if err != nil {
 		return err
 	}
@@ -75,16 +75,16 @@ func validateFunctionBasedShadingDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) 
 	return validateFunctionOrArrayOfFunctionsEntry(xRefTable, dict, dictName, "Function", REQUIRED, pdf.V10)
 }
 
-func validateAxialShadingDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
+func validateAxialShadingDict(xRefTable *pdf.XRefTable, dict pdf.Dict) error {
 
 	dictName := "axialShadingDict"
 
-	_, err := validateNumberArrayEntry(xRefTable, dict, dictName, "Coords", REQUIRED, pdf.V10, func(arr pdf.Array) bool { return len(arr) == 4 })
+	_, err := validateNumberArrayEntry(xRefTable, dict, dictName, "Coords", REQUIRED, pdf.V10, func(a pdf.Array) bool { return len(a) == 4 })
 	if err != nil {
 		return err
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "Domain", OPTIONAL, pdf.V10, func(arr pdf.Array) bool { return len(arr) == 2 })
+	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "Domain", OPTIONAL, pdf.V10, func(a pdf.Array) bool { return len(a) == 2 })
 	if err != nil {
 		return err
 	}
@@ -94,21 +94,21 @@ func validateAxialShadingDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 		return err
 	}
 
-	_, err = validateBooleanArrayEntry(xRefTable, dict, dictName, "Extend", OPTIONAL, pdf.V10, func(arr pdf.Array) bool { return len(arr) == 2 })
+	_, err = validateBooleanArrayEntry(xRefTable, dict, dictName, "Extend", OPTIONAL, pdf.V10, func(a pdf.Array) bool { return len(a) == 2 })
 
 	return err
 }
 
-func validateRadialShadingDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
+func validateRadialShadingDict(xRefTable *pdf.XRefTable, dict pdf.Dict) error {
 
 	dictName := "radialShadingDict"
 
-	_, err := validateNumberArrayEntry(xRefTable, dict, dictName, "Coords", REQUIRED, pdf.V10, func(arr pdf.Array) bool { return len(arr) == 6 })
+	_, err := validateNumberArrayEntry(xRefTable, dict, dictName, "Coords", REQUIRED, pdf.V10, func(a pdf.Array) bool { return len(a) == 6 })
 	if err != nil {
 		return err
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "Domain", OPTIONAL, pdf.V10, func(arr pdf.Array) bool { return len(arr) == 2 })
+	_, err = validateNumberArrayEntry(xRefTable, dict, dictName, "Domain", OPTIONAL, pdf.V10, func(a pdf.Array) bool { return len(a) == 2 })
 	if err != nil {
 		return err
 	}
@@ -118,12 +118,12 @@ func validateRadialShadingDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 		return err
 	}
 
-	_, err = validateBooleanArrayEntry(xRefTable, dict, dictName, "Extend", OPTIONAL, pdf.V10, func(arr pdf.Array) bool { return len(arr) == 2 })
+	_, err = validateBooleanArrayEntry(xRefTable, dict, dictName, "Extend", OPTIONAL, pdf.V10, func(a pdf.Array) bool { return len(a) == 2 })
 
 	return err
 }
 
-func validateShadingDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
+func validateShadingDict(xRefTable *pdf.XRefTable, dict pdf.Dict) error {
 
 	// Shading 1-3
 
@@ -149,7 +149,7 @@ func validateShadingDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
 	return err
 }
 
-func validateFreeFormGouroudShadedTriangleMeshesDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
+func validateFreeFormGouroudShadedTriangleMeshesDict(xRefTable *pdf.XRefTable, dict pdf.Dict) error {
 
 	dictName := "freeFormGouraudShadedTriangleMeshesDict"
 
@@ -176,7 +176,7 @@ func validateFreeFormGouroudShadedTriangleMeshesDict(xRefTable *pdf.XRefTable, d
 	return validateFunctionOrArrayOfFunctionsEntry(xRefTable, dict, dictName, "Function", OPTIONAL, pdf.V10)
 }
 
-func validateLatticeFormGouraudShadedTriangleMeshesDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
+func validateLatticeFormGouraudShadedTriangleMeshesDict(xRefTable *pdf.XRefTable, dict pdf.Dict) error {
 
 	dictName := "latticeFormGouraudShadedTriangleMeshesDict"
 
@@ -203,7 +203,7 @@ func validateLatticeFormGouraudShadedTriangleMeshesDict(xRefTable *pdf.XRefTable
 	return validateFunctionOrArrayOfFunctionsEntry(xRefTable, dict, dictName, "Function", OPTIONAL, pdf.V10)
 }
 
-func validateCoonsPatchMeshesDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
+func validateCoonsPatchMeshesDict(xRefTable *pdf.XRefTable, dict pdf.Dict) error {
 
 	dictName := "coonsPatchMeshesDict"
 
@@ -234,7 +234,7 @@ func validateCoonsPatchMeshesDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) erro
 	return validateFunctionOrArrayOfFunctionsEntry(xRefTable, dict, dictName, "Function", OPTIONAL, pdf.V10)
 }
 
-func validateTensorProductPatchMeshesDict(xRefTable *pdf.XRefTable, dict *pdf.Dict) error {
+func validateTensorProductPatchMeshesDict(xRefTable *pdf.XRefTable, dict pdf.Dict) error {
 
 	dictName := "tensorProductPatchMeshesDict"
 
@@ -265,13 +265,13 @@ func validateTensorProductPatchMeshesDict(xRefTable *pdf.XRefTable, dict *pdf.Di
 	return validateFunctionOrArrayOfFunctionsEntry(xRefTable, dict, dictName, "Function", OPTIONAL, pdf.V10)
 }
 
-func validateShadingStreamDict(xRefTable *pdf.XRefTable, streamDict *pdf.StreamDict) error {
+func validateShadingStreamDict(xRefTable *pdf.XRefTable, sd *pdf.StreamDict) error {
 
 	// Shading 4-7
 
-	dict := streamDict.Dict
+	dict := sd.Dict
 
-	shadingType, err := validateShadingDictCommonEntries(xRefTable, &dict)
+	shadingType, err := validateShadingDictCommonEntries(xRefTable, dict)
 	if err != nil {
 		return err
 	}
@@ -279,16 +279,16 @@ func validateShadingStreamDict(xRefTable *pdf.XRefTable, streamDict *pdf.StreamD
 	switch shadingType {
 
 	case 4:
-		err = validateFreeFormGouroudShadedTriangleMeshesDict(xRefTable, &dict)
+		err = validateFreeFormGouroudShadedTriangleMeshesDict(xRefTable, dict)
 
 	case 5:
-		err = validateLatticeFormGouraudShadedTriangleMeshesDict(xRefTable, &dict)
+		err = validateLatticeFormGouraudShadedTriangleMeshesDict(xRefTable, dict)
 
 	case 6:
-		err = validateCoonsPatchMeshesDict(xRefTable, &dict)
+		err = validateCoonsPatchMeshesDict(xRefTable, dict)
 
 	case 7:
-		err = validateTensorProductPatchMeshesDict(xRefTable, &dict)
+		err = validateTensorProductPatchMeshesDict(xRefTable, dict)
 
 	default:
 		return errors.Errorf("validateShadingStreamDict: unexpected shadingType: %d\n", shadingType)
@@ -309,7 +309,7 @@ func validateShading(xRefTable *pdf.XRefTable, obj pdf.Object) error {
 	switch obj := obj.(type) {
 
 	case pdf.Dict:
-		err = validateShadingDict(xRefTable, &obj)
+		err = validateShadingDict(xRefTable, obj)
 
 	case pdf.StreamDict:
 		err = validateShadingStreamDict(xRefTable, &obj)
@@ -332,13 +332,13 @@ func validateShadingResourceDict(xRefTable *pdf.XRefTable, obj pdf.Object, since
 		return err
 	}
 
-	dict, err := xRefTable.DereferenceDict(obj)
-	if err != nil || dict == nil {
+	d, err := xRefTable.DereferenceDict(obj)
+	if err != nil || d == nil {
 		return err
 	}
 
 	// Iterate over shading resource dictionary
-	for _, obj := range *dict {
+	for _, obj := range d {
 
 		// Process shading
 		err = validateShading(xRefTable, obj)
