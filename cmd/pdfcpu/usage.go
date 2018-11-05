@@ -226,7 +226,7 @@ verbose ... extensive log output
     Only one of rotation and diagonal is allowed.
 
 e.g. 'Draft'                                                  'logo.png'
-     'Draft, d:2'                                             'logo.png, o:0,5, s:0.5 abs, r:0'
+     'Draft, d:2'                                             'logo.png, o:0.5, s:0.5 abs, r:0'
      'Intentionally left blank, p:48'
      'Confidental, f:Courier, s:0.75, c: 0.5 0.0 0.0, r:20'`
 

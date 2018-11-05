@@ -125,7 +125,7 @@ func MergeContexts(rsc []pdf.ReadSeekerCloser, config *pdf.Configuration) (*pdf.
 // ReadContext reads in a PDF file and builds an internal structure holding its cross reference table aka the Context.
 func ReadContext(fileIn string, config *pdf.Configuration) (*pdf.Context, error) {
 
-	//logInfoAPI.Printf("reading %s..\n", fileIn)
+	log.Info.Printf("reading %s..\n", fileIn)
 
 	file, err := os.Open(fileIn)
 	if err != nil {

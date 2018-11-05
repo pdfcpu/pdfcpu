@@ -21,13 +21,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hhrutter/pdfcpu/pkg/log"
 	"github.com/pkg/errors"
 )
 
 func equalObjects(o1, o2 Object, xRefTable *XRefTable) (ok bool, err error) {
 
-	log.Debug.Printf("equalObjects: comparing %T with %T \n", o1, o2)
+	//log.Debug.Printf("equalObjects: comparing %T with %T \n", o1, o2)
 
 	o1, err = xRefTable.Dereference(o1)
 	if err != nil {
@@ -41,7 +40,7 @@ func equalObjects(o1, o2 Object, xRefTable *XRefTable) (ok bool, err error) {
 
 	o1Type := fmt.Sprintf("%T", o1)
 	o2Type := fmt.Sprintf("%T", o2)
-	log.Debug.Printf("equalObjects: comparing dereferenced %s with %s \n", o1Type, o2Type)
+	//log.Debug.Printf("equalObjects: comparing dereferenced %s with %s \n", o1Type, o2Type)
 
 	if o1Type != o2Type {
 		return false, nil
@@ -141,14 +140,14 @@ func equalFontNames(v1, v2 Object, xRefTable *XRefTable) (bool, error) {
 		bf2 = bf2[i+1:]
 	}
 
-	log.Debug.Printf("equalFontNames: bf1=%s fb2=%s\n", bf1, bf2)
+	//log.Debug.Printf("equalFontNames: bf1=%s fb2=%s\n", bf1, bf2)
 
 	return bf1 == bf2, nil
 }
 
 func equalDicts(d1, d2 Dict, xRefTable *XRefTable) (bool, error) {
 
-	log.Debug.Printf("equalDicts: %v\n%v\n", d1, d2)
+	//log.Debug.Printf("equalDicts: %v\n%v\n", d1, d2)
 
 	if d1.Len() != d2.Len() {
 		return false, nil
@@ -158,7 +157,7 @@ func equalDicts(d1, d2 Dict, xRefTable *XRefTable) (bool, error) {
 
 		v2, found := d2[key]
 		if !found {
-			log.Debug.Printf("equalDict: return false, key=%s\n", key)
+			//log.Debug.Printf("equalDict: return false, key=%s\n", key)
 			return false, nil
 		}
 
@@ -167,12 +166,12 @@ func equalDicts(d1, d2 Dict, xRefTable *XRefTable) (bool, error) {
 
 			ok, err := equalFontNames(v1, v2, xRefTable)
 			if err != nil {
-				log.Debug.Printf("equalDict: return2 false, key=%s v1=%v\nv2=%v\n", key, v1, v2)
+				//log.Debug.Printf("equalDict: return2 false, key=%s v1=%v\nv2=%v\n", key, v1, v2)
 				return false, err
 			}
 
 			if !ok {
-				log.Debug.Printf("equalDict: return3 false, key=%s v1=%v\nv2=%v\n", key, v1, v2)
+				//log.Debug.Printf("equalDict: return3 false, key=%s v1=%v\nv2=%v\n", key, v1, v2)
 				return false, nil
 			}
 
@@ -181,25 +180,25 @@ func equalDicts(d1, d2 Dict, xRefTable *XRefTable) (bool, error) {
 
 		ok, err := equalObjects(v1, v2, xRefTable)
 		if err != nil {
-			log.Debug.Printf("equalDict: return4 false, key=%s v1=%v\nv2=%v\n%v\n", key, v1, v2, err)
+			//log.Debug.Printf("equalDict: return4 false, key=%s v1=%v\nv2=%v\n%v\n", key, v1, v2, err)
 			return false, err
 		}
 
 		if !ok {
-			log.Debug.Printf("equalDict: return5 false, key=%s v1=%v\nv2=%v\n", key, v1, v2)
+			//log.Debug.Printf("equalDict: return5 false, key=%s v1=%v\nv2=%v\n", key, v1, v2)
 			return false, nil
 		}
 
 	}
 
-	log.Debug.Println("equalDict: return true")
+	//log.Debug.Println("equalDict: return true")
 
 	return true, nil
 }
 
 func equalFontDicts(fd1, fd2 Dict, xRefTable *XRefTable) (bool, error) {
 
-	log.Debug.Printf("equalFontDicts: %v\n%v\n", fd1, fd2)
+	//log.Debug.Printf("equalFontDicts: %v\n%v\n", fd1, fd2)
 
 	if fd1 == nil {
 		return fd2 == nil, nil
