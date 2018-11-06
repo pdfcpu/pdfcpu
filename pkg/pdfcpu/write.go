@@ -29,8 +29,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// WritePDFFile generates a PDF file for the cross reference table contained in Context.
-func WritePDFFile(ctx *Context) error {
+// Write generates a PDF file for the cross reference table contained in Context.
+func Write(ctx *Context) error {
 
 	var file *os.File
 	var err error

@@ -50,9 +50,9 @@ func stringSet(slice []string) pdf.StringSet {
 	return strSet
 }
 
-// ReaderContext uses an io.Readseeker to build an internal structure holding its cross reference table aka the Context.
-func ReaderContext(rs io.ReadSeeker, fileIn string, fileSize int64, config *pdf.Configuration) (*pdf.Context, error) {
-	return pdf.ReadPDFFile(rs, fileIn, fileSize, config)
+// ReadContext uses an io.Readseeker to build an internal structure holding its cross reference table aka the Context.
+func ReadContext(rs io.ReadSeeker, fileIn string, fileSize int64, config *pdf.Configuration) (*pdf.Context, error) {
+	return pdf.Read(rs, fileIn, fileSize, config)
 }
 
 // ValidateContext validates a PDF context.
@@ -68,13 +68,13 @@ func OptimizeContext(ctx *pdf.Context) error {
 // WriteContext writes a PDF context.
 func WriteContext(ctx *pdf.Context, w io.Writer) error {
 	ctx.Write.Writer = bufio.NewWriter(w)
-	return pdf.WritePDFFile(ctx)
+	return pdf.Write(ctx)
 }
 
 // MergeContexts merges a sequence of PDF's represented by a slice of ReadSeekerCloser.
 func MergeContexts(rsc []pdf.ReadSeekerCloser, config *pdf.Configuration) (*pdf.Context, error) {
 
-	ctxDest, err := ReaderContext(rsc[0], "", 0, config)
+	ctxDest, err := ReadContext(rsc[0], "", 0, config)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func MergeContexts(rsc []pdf.ReadSeekerCloser, config *pdf.Configuration) (*pdf.
 	// Merge in all readSeekerWriters.
 	for _, r := range rsc[1:] {
 
-		ctxSource, err := ReaderContext(r, "", 0, config)
+		ctxSource, err := ReadContext(r, "", 0, config)
 		if err != nil {
 			return nil, err
 		}
@@ -122,26 +122,9 @@ func MergeContexts(rsc []pdf.ReadSeekerCloser, config *pdf.Configuration) (*pdf.
 	return ctxDest, err
 }
 
-// ReadContext reads in a PDF file and builds an internal structure holding its cross reference table aka the Context.
-func ReadContext(fileIn string, config *pdf.Configuration) (*pdf.Context, error) {
-
-	log.Info.Printf("reading %s..\n", fileIn)
-
-	file, err := os.Open(fileIn)
-	if err != nil {
-		return nil, errors.Wrapf(err, "can't open %q", fileIn)
-	}
-
-	defer func() {
-		file.Close()
-	}()
-
-	fileInfo, err := file.Stat()
-	if err != nil {
-		return nil, err
-	}
-
-	return ReaderContext(file, fileIn, fileInfo.Size(), config)
+// ReadContextFromFile reads in a PDF file and builds an internal structure holding its cross reference table aka the Context.
+func ReadContextFromFile(fileIn string, config *pdf.Configuration) (*pdf.Context, error) {
+	return pdf.ReadFile(fileIn, config)
 }
 
 // Validate validates a PDF file against ISO-32000-1:2008.
@@ -155,7 +138,7 @@ func Validate(cmd *Command) ([]string, error) {
 	fmt.Printf("validating(mode=%s) %s ...\n", config.ValidationModeString(), fileIn)
 	//logInfoAPI.Printf("validating(mode=%s) %s..\n", config.ValidationModeString(), fileIn)
 
-	ctx, err := ReadContext(fileIn, config)
+	ctx, err := ReadContextFromFile(fileIn, config)
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +172,7 @@ func Write(ctx *pdf.Context) error {
 	fmt.Printf("writing %s ...\n", ctx.Write.DirName+ctx.Write.FileName)
 	//logInfoAPI.Printf("writing to %s..\n", fileName)
 
-	err := pdf.WritePDFFile(ctx)
+	err := pdf.Write(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Write failed.")
 	}
@@ -223,7 +206,7 @@ func writeSinglePagePDF(ctx *pdf.Context, pageNr int, dirOut string) error {
 	w.FileName = singlePageFileName(ctx, pageNr)
 	fmt.Printf("writing %s ...\n", w.DirName+w.FileName)
 
-	return pdf.WritePDFFile(ctx)
+	return pdf.Write(ctx)
 }
 
 func writeSinglePagePDFs(ctx *pdf.Context, selectedPages pdf.IntSet, dirOut string) error {
@@ -244,7 +227,7 @@ func writeSinglePagePDFs(ctx *pdf.Context, selectedPages pdf.IntSet, dirOut stri
 
 func readAndValidate(fileIn string, config *pdf.Configuration, from1 time.Time) (ctx *pdf.Context, dur1, dur2 float64, err error) {
 
-	ctx, err = ReadContext(fileIn, config)
+	ctx, err = ReadContextFromFile(fileIn, config)
 	if err != nil {
 		return nil, 0, 0, err
 	}

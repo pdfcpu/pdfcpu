@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -34,11 +35,33 @@ const (
 	//unknownDelimiter = byte(0)
 )
 
-// ReadPDFFile takes a readSeeker and generates a Context,
-// an in-memory representation containing a cross reference table.
-func ReadPDFFile(rs io.ReadSeeker, fileName string, fileSize int64, config *Configuration) (*Context, error) {
+// ReadFile reads in a PDF file and builds an internal structure holding its cross reference table aka the Context.
+func ReadFile(fileIn string, config *Configuration) (*Context, error) {
 
-	log.Debug.Println("readPDFFile: begin")
+	log.Info.Printf("reading %s..\n", fileIn)
+
+	f, err := os.Open(fileIn)
+	if err != nil {
+		return nil, errors.Wrapf(err, "can't open %q", fileIn)
+	}
+
+	defer func() {
+		f.Close()
+	}()
+
+	fileInfo, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	return Read(f, fileIn, fileInfo.Size(), config)
+}
+
+// Read takes a readSeeker and generates a Context,
+// an in-memory representation containing a cross reference table.
+func Read(rs io.ReadSeeker, fileName string, fileSize int64, config *Configuration) (*Context, error) {
+
+	log.Debug.Println("Read: begin")
 
 	ctx, err := NewContext(rs, fileName, fileSize, config)
 	if err != nil {
@@ -54,7 +77,7 @@ func ReadPDFFile(rs io.ReadSeeker, fileName string, fileSize int64, config *Conf
 	// Populate xRefTable.
 	err = readXRefTable(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "xRefTable failed")
+		return nil, errors.Wrap(err, "Read: xRefTable failed")
 	}
 
 	// Make all objects explicitly available (load into memory) in corresponding xRefTable entries.
@@ -64,7 +87,7 @@ func ReadPDFFile(rs io.ReadSeeker, fileName string, fileSize int64, config *Conf
 		return nil, err
 	}
 
-	log.Debug.Println("readPDFFile: end")
+	log.Debug.Println("Read: end")
 
 	return ctx, nil
 }

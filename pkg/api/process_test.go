@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The pdfcpu Authors.
+Copyright 2018 The pdf Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
+	pdf "github.com/hhrutter/pdfcpu/pkg/pdfcpu"
 	"github.com/hhrutter/pdfcpu/pkg/pdfcpu/validate"
 )
 
@@ -37,7 +37,7 @@ func TestMain(m *testing.M) {
 
 	var err error
 
-	outDir, err = ioutil.TempDir("", "pdfcpu_apiTests")
+	outDir, err = ioutil.TempDir("", "pdf_apiTests")
 	//fmt.Printf("outDir = %s\n", outDir)
 	if err != nil {
 		fmt.Printf("%v", err)
@@ -55,13 +55,13 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-func ExampleReaderContext() {
+func ExampleReadContext() {
 
 	// This example shows calling into the API with ReadSeeker/Writer.
 
-	// This allows to run pdfcpu as a backend to an http server for on the fly pdf processing.
+	// This allows to run pdf as a backend to an http server for on the fly pdf processing.
 
-	config := pdfcpu.NewDefaultConfiguration()
+	config := pdf.NewDefaultConfiguration()
 	fileIn := filepath.Join(inDir, "CenterOfWhy.pdf")
 	fileOut := filepath.Join(outDir, "test.pdf")
 
@@ -79,7 +79,7 @@ func ExampleReaderContext() {
 		return
 	}
 
-	ctx, err := ReaderContext(rs, fileIn, fileInfo.Size(), config)
+	ctx, err := ReadContext(rs, fileIn, fileInfo.Size(), config)
 	if err != nil {
 		return
 	}
@@ -123,25 +123,25 @@ func ExampleReaderContext() {
 
 func TestReadSeekerAndWriter(t *testing.T) {
 
-	config := pdfcpu.NewDefaultConfiguration()
+	config := pdf.NewDefaultConfiguration()
 	fileIn := filepath.Join(inDir, "CenterOfWhy.pdf")
 	fileOut := filepath.Join(outDir, "test.pdf")
 
-	rs, err := os.Open(fileIn)
+	f, err := os.Open(fileIn)
 	if err != nil {
 		t.Fatalf("TestReadSeekerAndWriter Open:  %v\n", err)
 	}
 
 	defer func() {
-		rs.Close()
+		f.Close()
 	}()
 
-	fileInfo, err := rs.Stat()
+	fileInfo, err := f.Stat()
 	if err != nil {
 		t.Fatalf("TestReadSeekerAndWriter Stat:  %v\n", err)
 	}
 
-	ctx, err := ReaderContext(rs, fileIn, fileInfo.Size(), config)
+	ctx, err := ReadContext(f, fileIn, fileInfo.Size(), config)
 	if err != nil {
 		t.Fatalf("TestReadSeekerAndWriter Read:  %v\n", err)
 	}
@@ -186,7 +186,7 @@ func TestReadSeekerAndWriter(t *testing.T) {
 
 func TestMergeUsingReadSeekerCloser(t *testing.T) {
 
-	rr := []pdfcpu.ReadSeekerCloser{}
+	rr := []pdf.ReadSeekerCloser{}
 
 	for _, f := range []string{"annotTest.pdf", "go.pdf", "t6.pdf"} {
 
@@ -206,7 +206,7 @@ func TestMergeUsingReadSeekerCloser(t *testing.T) {
 		}
 	}()
 
-	config := pdfcpu.NewDefaultConfiguration()
+	config := pdf.NewDefaultConfiguration()
 
 	ctx, err := MergeContexts(rr, config)
 	if err != nil {
@@ -244,10 +244,10 @@ func TestMergeUsingReadSeekerCloser(t *testing.T) {
 
 func TestGetPageCount(t *testing.T) {
 
-	config := pdfcpu.NewDefaultConfiguration()
+	config := pdf.NewDefaultConfiguration()
 	inFile := filepath.Join(inDir, "CenterOfWhy.pdf")
 
-	ctx, err := ReadContext(inFile, config)
+	ctx, err := ReadContextFromFile(inFile, config)
 	if err != nil {
 		t.Fatalf("TestGetPageCount:  %v\n", err)
 	}
@@ -271,8 +271,8 @@ func TestValidateCommand(t *testing.T) {
 		t.Fatalf("TestValidateCommand: %v\n", err)
 	}
 
-	config := pdfcpu.NewDefaultConfiguration()
-	config.ValidationMode = pdfcpu.ValidationRelaxed
+	config := pdf.NewDefaultConfiguration()
+	config.ValidationMode = pdf.ValidationRelaxed
 
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), "pdf") {
@@ -288,8 +288,8 @@ func TestValidateCommand(t *testing.T) {
 
 func TestValidateOneFile(t *testing.T) {
 
-	config := pdfcpu.NewDefaultConfiguration()
-	config.ValidationMode = pdfcpu.ValidationRelaxed
+	config := pdf.NewDefaultConfiguration()
+	config.ValidationMode = pdf.ValidationRelaxed
 
 	inFile := filepath.Join(inDir, "gobook.0.pdf")
 	_, err := Process(ValidateCommand(inFile, config))
@@ -301,8 +301,8 @@ func TestValidateOneFile(t *testing.T) {
 
 func BenchmarkValidateCommand(b *testing.B) {
 
-	config := pdfcpu.NewDefaultConfiguration()
-	config.ValidationMode = pdfcpu.ValidationRelaxed
+	config := pdf.NewDefaultConfiguration()
+	config.ValidationMode = pdf.ValidationRelaxed
 
 	inFile := filepath.Join(inDir, "gobook.0.pdf")
 
@@ -323,10 +323,10 @@ func TestOptimizeCommandWithLF(t *testing.T) {
 		t.Fatalf("TestOptimizeCommandWithLF: %v\n", err)
 	}
 
-	config := pdfcpu.NewDefaultConfiguration()
+	config := pdf.NewDefaultConfiguration()
 
 	// this is not necessary but to make it clearer.
-	config.Eol = pdfcpu.EolLF
+	config.Eol = pdf.EolLF
 	outFile := filepath.Join(outDir, "test.pdf")
 
 	for _, file := range files {
@@ -352,8 +352,8 @@ func TestOptimizeCommandWithCR(t *testing.T) {
 		t.Fatalf("TestOptimizeCommandWithCR: %v\n", err)
 	}
 
-	config := pdfcpu.NewDefaultConfiguration()
-	config.Eol = pdfcpu.EolCR
+	config := pdf.NewDefaultConfiguration()
+	config.Eol = pdf.EolCR
 
 	outFile := filepath.Join(outDir, "test.pdf")
 
@@ -386,8 +386,8 @@ func TestOptimizeCommandWithCRAndNoXrefStream(t *testing.T) {
 		t.Fatalf("TestOptimizeCommandWithCRAndNoXrefStream: %v\n", err)
 	}
 
-	config := pdfcpu.NewDefaultConfiguration()
-	config.Eol = pdfcpu.EolCR
+	config := pdf.NewDefaultConfiguration()
+	config.Eol = pdf.EolCR
 	config.WriteObjectStream = false
 	config.WriteXRefStream = false
 
@@ -413,8 +413,8 @@ func TestOptimizeCommandWithCRLF(t *testing.T) {
 		t.Fatalf("TestOptimizeCommmand: %v\n", err)
 	}
 
-	config := pdfcpu.NewDefaultConfiguration()
-	config.Eol = pdfcpu.EolCRLF
+	config := pdf.NewDefaultConfiguration()
+	config.Eol = pdf.EolCRLF
 	config.StatsFileName = outDir + "/testStats.csv"
 
 	outFile := filepath.Join(outDir, "test.pdf")
@@ -434,7 +434,7 @@ func TestOptimizeCommandWithCRLF(t *testing.T) {
 // Split a test PDF file up into single page PDFs.
 func TestSplitCommand(t *testing.T) {
 
-	_, err := Process(SplitCommand("testdata/Acroforms2.pdf", outDir, pdfcpu.NewDefaultConfiguration()))
+	_, err := Process(SplitCommand("testdata/Acroforms2.pdf", outDir, pdf.NewDefaultConfiguration()))
 	if err != nil {
 		t.Fatalf("TestSplitCommand: %v\n", err)
 	}
@@ -457,7 +457,7 @@ func TestMergeCommand(t *testing.T) {
 	}
 
 	outFile := filepath.Join(outDir, "test.pdf")
-	_, err = Process(MergeCommand(inFiles, outFile, pdfcpu.NewDefaultConfiguration()))
+	_, err = Process(MergeCommand(inFiles, outFile, pdf.NewDefaultConfiguration()))
 	if err != nil {
 		t.Fatalf("TestMergeCommand: %v\n", err)
 	}
@@ -470,7 +470,7 @@ func TestTrimCommand(t *testing.T) {
 	inFile := filepath.Join(inDir, "pike-stanford.pdf")
 	outFile := filepath.Join(outDir, "test.pdf")
 
-	_, err := Process(TrimCommand(inFile, outFile, []string{"-2"}, pdfcpu.NewDefaultConfiguration()))
+	_, err := Process(TrimCommand(inFile, outFile, []string{"-2"}, pdf.NewDefaultConfiguration()))
 	if err != nil {
 		t.Fatalf("TestTrimCommand: %v\n", err)
 	}
@@ -483,12 +483,12 @@ func TestWatermark(t *testing.T) {
 	outFile := filepath.Join(outDir, "testwm.pdf")
 
 	onTop := false
-	wm, err := pdfcpu.ParseWatermarkDetails("Draft, s:0.7, r:20", onTop)
+	wm, err := pdf.ParseWatermarkDetails("Draft, s:0.7, r:20", onTop)
 	if err != nil {
 		t.Fatalf("TestWatermark: %v\n", err)
 	}
 
-	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"1-"}, wm, pdfcpu.NewDefaultConfiguration()))
+	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"1-"}, wm, pdf.NewDefaultConfiguration()))
 	if err != nil {
 		t.Fatalf("TestWatermark: %v\n", err)
 	}
@@ -502,12 +502,12 @@ func TestStampCommand(t *testing.T) {
 	outFile := filepath.Join(outDir, "teststamp.pdf")
 
 	onTop := true
-	wm, err := pdfcpu.ParseWatermarkDetails("Demo, f:Courier, c: 0 .8 0, o:0.8", onTop)
+	wm, err := pdf.ParseWatermarkDetails("Demo, f:Courier, c: 0 .8 0, o:0.8", onTop)
 	if err != nil {
 		t.Fatalf("TestStampCommand: %v\n", err)
 	}
 
-	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"odd", "!1"}, wm, pdfcpu.NewDefaultConfiguration()))
+	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"odd", "!1"}, wm, pdf.NewDefaultConfiguration()))
 	if err != nil {
 		t.Fatalf("TestStampCommand: %v\n", err)
 	}
@@ -520,12 +520,12 @@ func TestWatermarkImage(t *testing.T) {
 	outFile := filepath.Join(outDir, "testWMImage.pdf")
 
 	onTop := false
-	wm, err := pdfcpu.ParseWatermarkDetails("../../resources/pdfchip3.png, r:0", onTop)
+	wm, err := pdf.ParseWatermarkDetails("../../resources/pdfchip3.png, r:0", onTop)
 	if err != nil {
 		t.Fatalf("TestWatermarkImage: %v\n", err)
 	}
 
-	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"1-"}, wm, pdfcpu.NewDefaultConfiguration()))
+	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"1-"}, wm, pdf.NewDefaultConfiguration()))
 	if err != nil {
 		t.Fatalf("TestWatermarkImage: %v\n", err)
 	}
@@ -539,7 +539,7 @@ func TestExtractImagesCommand(t *testing.T) {
 		t.Fatalf("TestExtractImagesCommand: %v\n", err)
 	}
 
-	c := pdfcpu.NewDefaultConfiguration()
+	c := pdf.NewDefaultConfiguration()
 
 	cmd := ExtractImagesCommand("", outDir, nil, c)
 
@@ -562,7 +562,7 @@ func TestExtractImagesCommand(t *testing.T) {
 
 	// Extract images starting with page 1.
 	inFile := filepath.Join(inDir, "testImage.pdf")
-	_, err = Process(ExtractImagesCommand(inFile, outDir, []string{"1-"}, pdfcpu.NewDefaultConfiguration()))
+	_, err = Process(ExtractImagesCommand(inFile, outDir, []string{"1-"}, pdf.NewDefaultConfiguration()))
 	if err != nil {
 		t.Fatalf("TestExtractImageCommand: %v\n", err)
 	}
@@ -571,7 +571,7 @@ func TestExtractImagesCommand(t *testing.T) {
 
 func TestExtractFontsCommand(t *testing.T) {
 
-	cmd := ExtractFontsCommand("", outDir, nil, pdfcpu.NewDefaultConfiguration())
+	cmd := ExtractFontsCommand("", outDir, nil, pdf.NewDefaultConfiguration())
 
 	for _, fn := range []string{"5116.DCT_Filter.pdf", "testImage.pdf", "go.pdf"} {
 
@@ -586,7 +586,7 @@ func TestExtractFontsCommand(t *testing.T) {
 	}
 
 	inFile := filepath.Join(inDir, "go.pdf")
-	_, err := Process(ExtractFontsCommand(inFile, outDir, []string{"1-3"}, pdfcpu.NewDefaultConfiguration()))
+	_, err := Process(ExtractFontsCommand(inFile, outDir, []string{"1-3"}, pdf.NewDefaultConfiguration()))
 	if err != nil {
 		t.Fatalf("TestExtractFontsCommand: %v\n", err)
 	}
@@ -597,7 +597,7 @@ func TestExtractContentCommand(t *testing.T) {
 
 	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
 
-	_, err := Process(ExtractContentCommand(inFile, outDir, nil, pdfcpu.NewDefaultConfiguration()))
+	_, err := Process(ExtractContentCommand(inFile, outDir, nil, pdf.NewDefaultConfiguration()))
 	if err != nil {
 		t.Fatalf("TestExtractContentCommand: %v\n", err)
 	}
@@ -608,7 +608,7 @@ func TestExtractPagesCommand(t *testing.T) {
 
 	inFile := filepath.Join(inDir, "TheGoProgrammingLanguageCh1.pdf")
 
-	_, err := Process(ExtractPagesCommand(inFile, outDir, []string{"1"}, pdfcpu.NewDefaultConfiguration()))
+	_, err := Process(ExtractPagesCommand(inFile, outDir, []string{"1"}, pdf.NewDefaultConfiguration()))
 	if err != nil {
 		t.Fatalf("TestExtractPagesCommand: %v\n", err)
 	}
@@ -626,7 +626,7 @@ func TestEncryptUPWOnly(t *testing.T) {
 
 	// Encrypt upw only
 	t.Log("Encrypt upw only")
-	config := pdfcpu.NewDefaultConfiguration()
+	config := pdf.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	_, err := Process(EncryptCommand(inFile, outFile, config))
 	if err != nil {
@@ -635,7 +635,7 @@ func TestEncryptUPWOnly(t *testing.T) {
 
 	// Validate wrong upw
 	t.Log("Validate wrong upw fails")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upwWrong"
 	_, err = Process(ValidateCommand(outFile, config))
 	if err == nil {
@@ -644,7 +644,7 @@ func TestEncryptUPWOnly(t *testing.T) {
 
 	// Validate wrong opw
 	t.Log("Validate wrong opw fails")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.OwnerPW = "opwWrong"
 	_, err = Process(ValidateCommand(outFile, config))
 	if err == nil {
@@ -653,7 +653,7 @@ func TestEncryptUPWOnly(t *testing.T) {
 
 	// Validate default opw=upw (if there is no ownerpw set)
 	t.Log("Validate default opw")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.OwnerPW = "upw"
 	_, err = Process(ValidateCommand(outFile, config))
 	if err != nil {
@@ -662,7 +662,7 @@ func TestEncryptUPWOnly(t *testing.T) {
 
 	// Validate upw
 	t.Log("Validate upw")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	_, err = Process(ValidateCommand(outFile, config))
 	if err != nil {
@@ -671,7 +671,7 @@ func TestEncryptUPWOnly(t *testing.T) {
 
 	// Optimize wrong opw
 	t.Log("Optimize wrong opw fails")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.OwnerPW = "opwWrong"
 	_, err = Process(OptimizeCommand(outFile, outFile, config))
 	if err == nil {
@@ -680,7 +680,7 @@ func TestEncryptUPWOnly(t *testing.T) {
 
 	// Optimize empty opw
 	t.Log("Optimize empty opw fails")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.OwnerPW = ""
 	_, err = Process(OptimizeCommand(outFile, outFile, config))
 	if err == nil {
@@ -689,7 +689,7 @@ func TestEncryptUPWOnly(t *testing.T) {
 
 	// Optimize wrong upw
 	t.Log("Optimize wrong upw fails")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upwWrong"
 	_, err = Process(OptimizeCommand(outFile, outFile, config))
 	if err == nil {
@@ -698,7 +698,7 @@ func TestEncryptUPWOnly(t *testing.T) {
 
 	// Optimize upw
 	t.Log("Optimize upw")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	_, err = Process(OptimizeCommand(outFile, outFile, config))
 	if err != nil {
@@ -707,7 +707,7 @@ func TestEncryptUPWOnly(t *testing.T) {
 
 	//Change upw wrong upwOld
 	t.Log("ChangeUserPW wrong upwOld fails")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	pwOld := "upwWrong"
 	pwNew := "upwNew"
 	_, err = Process(ChangeUserPWCommand(outFile, outFile, config, &pwOld, &pwNew))
@@ -717,7 +717,7 @@ func TestEncryptUPWOnly(t *testing.T) {
 
 	// Change upw
 	t.Log("ChangeUserPW")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	pwOld = "upw"
 	pwNew = "upwNew"
 	_, err = Process(ChangeUserPWCommand(outFile, outFile, config, &pwOld, &pwNew))
@@ -727,7 +727,7 @@ func TestEncryptUPWOnly(t *testing.T) {
 
 	// Decrypt wrong opw
 	t.Log("Decrypt wrong opw fails")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.OwnerPW = "opwWrong"
 	_, err = Process(DecryptCommand(outFile, outFile, config))
 	if err == nil {
@@ -736,7 +736,7 @@ func TestEncryptUPWOnly(t *testing.T) {
 
 	// Decrypt wrong upw
 	t.Log("Decrypt wrong upw fails")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	_, err = Process(DecryptCommand(outFile, outFile, config))
 	if err == nil {
@@ -745,7 +745,7 @@ func TestEncryptUPWOnly(t *testing.T) {
 
 	// Decrypt upw
 	t.Log("Decrypt upw")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upwNew"
 	_, err = Process(DecryptCommand(outFile, outFile, config))
 	if err != nil {
@@ -765,7 +765,7 @@ func TestEncryptOPWOnly(t *testing.T) {
 
 	// Encrypt opw only
 	t.Log("Encrypt opw only")
-	config := pdfcpu.NewDefaultConfiguration()
+	config := pdf.NewDefaultConfiguration()
 	config.OwnerPW = "opw"
 	_, err := Process(EncryptCommand(inFile, outFile, config))
 	if err != nil {
@@ -774,7 +774,7 @@ func TestEncryptOPWOnly(t *testing.T) {
 
 	// Validate wrong opw succeeds with fallback to empty upw
 	t.Log("Validate wrong opw succeeds with fallback to empty upw")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.OwnerPW = "opwWrong"
 	_, err = Process(ValidateCommand(outFile, config))
 	if err != nil {
@@ -783,7 +783,7 @@ func TestEncryptOPWOnly(t *testing.T) {
 
 	// Validate opw
 	t.Log("Validate opw")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.OwnerPW = "opw"
 	_, err = Process(ValidateCommand(outFile, config))
 	if err != nil {
@@ -792,7 +792,7 @@ func TestEncryptOPWOnly(t *testing.T) {
 
 	// Validate wrong upw
 	t.Log("Validate wrong upw fails")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upwWrong"
 	_, err = Process(ValidateCommand(outFile, config))
 	if err == nil {
@@ -801,7 +801,7 @@ func TestEncryptOPWOnly(t *testing.T) {
 
 	// Validate no pw using empty upw
 	t.Log("Validate no pw using empty upw")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	_, err = Process(ValidateCommand(outFile, config))
 	if err != nil {
 		t.Fatalf("TestEncryptOPWOnly - validate %s no pw using empty upw: %v\n", outFile, err)
@@ -809,7 +809,7 @@ func TestEncryptOPWOnly(t *testing.T) {
 
 	// Optimize wrong opw, succeeds with fallback to empty upw
 	t.Log("Optimize wrong opw succeeds with fallback to empty upw")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.OwnerPW = "opwWrong"
 	_, err = Process(OptimizeCommand(outFile, outFile, config))
 	if err != nil {
@@ -818,7 +818,7 @@ func TestEncryptOPWOnly(t *testing.T) {
 
 	// Optimize opw
 	t.Log("Optimize opw")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.OwnerPW = "opw"
 	_, err = Process(OptimizeCommand(outFile, outFile, config))
 	if err != nil {
@@ -827,7 +827,7 @@ func TestEncryptOPWOnly(t *testing.T) {
 
 	// Optimize wrong upw
 	t.Log("Optimize wrong upw fails")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upwWrong"
 	_, err = Process(OptimizeCommand(outFile, outFile, config))
 	if err == nil {
@@ -836,7 +836,7 @@ func TestEncryptOPWOnly(t *testing.T) {
 
 	// Optimize empty upw
 	t.Log("Optimize empty upw")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = ""
 	_, err = Process(OptimizeCommand(outFile, outFile, config))
 	if err != nil {
@@ -845,7 +845,7 @@ func TestEncryptOPWOnly(t *testing.T) {
 
 	// Change opw wrong upw
 	t.Log("ChangeOwnerPW wrong upw fails")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	pwOld := "opw"
 	pwNew := "opwNew"
@@ -856,7 +856,7 @@ func TestEncryptOPWOnly(t *testing.T) {
 
 	// Change opw wrong opwOld
 	t.Log("ChangeOwnerPW wrong opwOld fails")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = ""
 	pwOld = "opwOldWrong"
 	pwNew = "opwNew"
@@ -867,7 +867,7 @@ func TestEncryptOPWOnly(t *testing.T) {
 
 	// Change opw
 	t.Log("ChangeOwnerPW")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = ""
 	pwOld = "opw"
 	pwNew = "opwNew"
@@ -878,7 +878,7 @@ func TestEncryptOPWOnly(t *testing.T) {
 
 	// Decrypt wrong upw
 	t.Log("Decrypt wrong upw fails")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upwWrong"
 	_, err = Process(DecryptCommand(outFile, outFile, config))
 	if err == nil {
@@ -887,7 +887,7 @@ func TestEncryptOPWOnly(t *testing.T) {
 
 	// Decrypt wrong opw succeeds because of fallback to empty upw.
 	t.Log("Decrypt wrong opw succeeds because of fallback to empty upw")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.OwnerPW = "opw"
 	_, err = Process(DecryptCommand(outFile, outFile, config))
 	if err != nil {
@@ -905,7 +905,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Encrypt opw and upw
 	t.Log("Encrypt")
-	config := pdfcpu.NewDefaultConfiguration()
+	config := pdf.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	config.OwnerPW = "opw"
 	_, err := Process(EncryptCommand(inFile, outFile, config))
@@ -915,7 +915,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Validate wrong opw
 	t.Log("Validate wrong opw fails")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.OwnerPW = "opwWrong"
 	_, err = Process(ValidateCommand(outFile, config))
 	if err == nil {
@@ -924,7 +924,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Validate opw
 	t.Log("Validate opw")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.OwnerPW = "opw"
 	_, err = Process(ValidateCommand(outFile, config))
 	if err != nil {
@@ -933,7 +933,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Validate wrong upw
 	t.Log("Validate wrong upw fails")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upwWrong"
 	_, err = Process(ValidateCommand(outFile, config))
 	if err == nil {
@@ -942,7 +942,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Validate upw
 	t.Log("Validate upw")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	_, err = Process(ValidateCommand(outFile, config))
 	if err != nil {
@@ -951,7 +951,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Change upw to "" = remove document open password.
 	t.Log("ChangeUserPW to \"\"")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.OwnerPW = "opw"
 	pwOld := "upw"
 	pwNew := ""
@@ -962,7 +962,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Validate upw
 	t.Log("Validate upw")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = ""
 	_, err = Process(ValidateCommand(outFile, config))
 	if err != nil {
@@ -971,7 +971,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Validate no pw
 	t.Log("Validate upw")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	_, err = Process(ValidateCommand(outFile, config))
 	if err != nil {
 		t.Fatalf("TestEncrypt - validate %s: %v\n", outFile, err)
@@ -979,7 +979,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Change opw
 	t.Log("ChangeOwnerPW")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = ""
 	pwOld = "opw"
 	pwNew = "opwNew"
@@ -990,7 +990,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Decrypt wrong upw
 	t.Log("Decrypt wrong upw fails")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upwWrong"
 	_, err = Process(DecryptCommand(outFile, outFile, config))
 	if err == nil {
@@ -999,7 +999,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Decrypt wrong opw succeeds on empty upw
 	t.Log("Decrypt wrong opw succeeds on empty upw")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.OwnerPW = "opwWrong"
 	_, err = Process(DecryptCommand(outFile, outFile, config))
 	if err != nil {
@@ -1007,7 +1007,7 @@ func TestEncrypt(t *testing.T) {
 	}
 }
 
-func encryptDecrypt(fileName string, config *pdfcpu.Configuration, t *testing.T) {
+func encryptDecrypt(fileName string, config *pdf.Configuration, t *testing.T) {
 
 	inFile := filepath.Join(inDir, fileName)
 	outFile := filepath.Join(outDir, "test.pdf")
@@ -1023,7 +1023,7 @@ func encryptDecrypt(fileName string, config *pdfcpu.Configuration, t *testing.T)
 
 	// Encrypt already encrypted
 	t.Log("Encrypt already encrypted")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	config.OwnerPW = "opw"
 	_, err = Process(EncryptCommand(outFile, outFile, config))
@@ -1033,7 +1033,7 @@ func encryptDecrypt(fileName string, config *pdfcpu.Configuration, t *testing.T)
 
 	// Validate using wrong owner pw
 	t.Log("Validate wrong ownerPW")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	config.OwnerPW = "opwWrong"
 	_, err = Process(ValidateCommand(outFile, config))
@@ -1043,7 +1043,7 @@ func encryptDecrypt(fileName string, config *pdfcpu.Configuration, t *testing.T)
 
 	// Optimize using wrong owner pw
 	t.Log("Optimize wrong ownerPW")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	config.OwnerPW = "opwWrong"
 	_, err = Process(OptimizeCommand(outFile, outFile, config))
@@ -1053,7 +1053,7 @@ func encryptDecrypt(fileName string, config *pdfcpu.Configuration, t *testing.T)
 
 	// Trim using wrong owner pw, falls back to upw and fails with insufficient permissions.
 	t.Log("Trim wrong ownerPW, fallback to upw and fail with insufficient permissions.")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	config.OwnerPW = "opwWrong"
 	// pageSelection = nil, writes w/o trimming anything, but sufficient for testing.
@@ -1064,7 +1064,7 @@ func encryptDecrypt(fileName string, config *pdfcpu.Configuration, t *testing.T)
 
 	// Split using wrong owner pw, falls back to upw and fails with insufficient permissions.
 	t.Log("Split wrong ownerPW, fallback to upw and fail with insufficient permissions.")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	config.OwnerPW = "opwWrong"
 	_, err = Process(SplitCommand(outFile, outDir, config))
@@ -1074,10 +1074,10 @@ func encryptDecrypt(fileName string, config *pdfcpu.Configuration, t *testing.T)
 
 	// Add permissions
 	t.Log("Add user access permissions")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	config.OwnerPW = "opw"
-	config.UserAccessPermissions = pdfcpu.PermissionsAll
+	config.UserAccessPermissions = pdf.PermissionsAll
 	_, err = Process(AddPermissionsCommand(outFile, config))
 	if err != nil {
 		t.Fatalf("TestEncryptDecrypt - %s add permissions: %v\n", outFile, err)
@@ -1085,7 +1085,7 @@ func encryptDecrypt(fileName string, config *pdfcpu.Configuration, t *testing.T)
 
 	// Split using wrong owner pw, falls back to upw
 	t.Log("Split wrong ownerPW")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	config.OwnerPW = "opwWrong"
 	_, err = Process(SplitCommand(outFile, outDir, config))
@@ -1095,7 +1095,7 @@ func encryptDecrypt(fileName string, config *pdfcpu.Configuration, t *testing.T)
 
 	// Validate
 	t.Log("Validate")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	config.OwnerPW = "opw"
 	_, err = Process(ValidateCommand(outFile, config))
@@ -1105,7 +1105,7 @@ func encryptDecrypt(fileName string, config *pdfcpu.Configuration, t *testing.T)
 
 	// ChangeUserPW using wrong userpw
 	t.Log("ChangeUserPW wrong userpw")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.OwnerPW = "opw"
 	pwOld := "upwWrong"
 	pwNew := "upwNew"
@@ -1116,7 +1116,7 @@ func encryptDecrypt(fileName string, config *pdfcpu.Configuration, t *testing.T)
 
 	// ChangeUserPW
 	t.Log("ChangeUserPW")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.OwnerPW = "opw"
 	pwOld = "upw"
 	pwNew = "upwNew"
@@ -1127,7 +1127,7 @@ func encryptDecrypt(fileName string, config *pdfcpu.Configuration, t *testing.T)
 
 	// ChangeOwnerPW
 	t.Log("ChangeOwnerPW")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upwNew"
 	pwOld = "opw"
 	pwNew = "opwNew"
@@ -1138,7 +1138,7 @@ func encryptDecrypt(fileName string, config *pdfcpu.Configuration, t *testing.T)
 
 	// Decrypt using wrong pw
 	t.Log("\nDecrypt using wrong pw")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upwWrong"
 	config.OwnerPW = "opwWrong"
 	_, err = Process(DecryptCommand(outFile, outFile, config))
@@ -1148,7 +1148,7 @@ func encryptDecrypt(fileName string, config *pdfcpu.Configuration, t *testing.T)
 
 	// Decrypt
 	t.Log("\nDecrypt")
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upwNew"
 	config.OwnerPW = "opwNew"
 	_, err = Process(DecryptCommand(outFile, outFile, config))
@@ -1160,12 +1160,12 @@ func encryptDecrypt(fileName string, config *pdfcpu.Configuration, t *testing.T)
 
 func TestEncryptDecrypt(t *testing.T) {
 
-	config := pdfcpu.NewDefaultConfiguration()
+	config := pdf.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	config.OwnerPW = "opw"
 	encryptDecrypt("5116.DCT_Filter.pdf", config, t)
 
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	config.OwnerPW = "opw"
 	config.EncryptUsingAES = false
@@ -1206,7 +1206,7 @@ func prepareForAttachmentTest() (err error) {
 	return
 }
 
-func testAttachmentsStage1(fileName string, config *pdfcpu.Configuration, t *testing.T) {
+func testAttachmentsStage1(fileName string, config *pdf.Configuration, t *testing.T) {
 
 	// attach list must be 0
 	list, err := Process(ListAttachmentsCommand(fileName, config))
@@ -1243,7 +1243,7 @@ func testAttachmentsStage1(fileName string, config *pdfcpu.Configuration, t *tes
 
 }
 
-func testAttachmentsStage2(fileName string, config *pdfcpu.Configuration, t *testing.T) {
+func testAttachmentsStage2(fileName string, config *pdf.Configuration, t *testing.T) {
 
 	// attach extract all
 	_, err := Process(ExtractAttachmentsCommand(fileName, outDir, nil, config))
@@ -1296,7 +1296,7 @@ func TestAttachments(t *testing.T) {
 		t.Fatalf("prepare for attachments: %v\n", err)
 	}
 
-	config := pdfcpu.NewDefaultConfiguration()
+	config := pdf.NewDefaultConfiguration()
 
 	fileName := filepath.Join(outDir, "go.pdf")
 
@@ -1309,12 +1309,12 @@ func TestListPermissionsCommand(t *testing.T) {
 	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
 	outFile := filepath.Join(outDir, "test.pdf")
 
-	_, err := Process(ListPermissionsCommand(inFile, pdfcpu.NewDefaultConfiguration()))
+	_, err := Process(ListPermissionsCommand(inFile, pdf.NewDefaultConfiguration()))
 	if err != nil {
 		t.Fatalf("TestListPermissionsCommand: for unencrypted %s: %v\n", inFile, err)
 	}
 
-	config := pdfcpu.NewDefaultConfiguration()
+	config := pdf.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	config.OwnerPW = "opw"
 	_, err = Process(EncryptCommand(inFile, outFile, config))
@@ -1322,7 +1322,7 @@ func TestListPermissionsCommand(t *testing.T) {
 		t.Fatalf("TestEncryptDecrypt - encrypt %s: %v\n", outFile, err)
 	}
 
-	config = pdfcpu.NewDefaultConfiguration()
+	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	config.OwnerPW = "opw"
 	_, err = Process(ListPermissionsCommand(outFile, config))
@@ -1334,7 +1334,7 @@ func TestListPermissionsCommand(t *testing.T) {
 
 func TestUnknownCommand(t *testing.T) {
 
-	config := pdfcpu.NewDefaultConfiguration()
+	config := pdf.NewDefaultConfiguration()
 	inFile := filepath.Join(outDir, "go.pdf")
 
 	cmd := &Command{
@@ -1351,7 +1351,7 @@ func TestUnknownCommand(t *testing.T) {
 
 func xxxTestDemoXRef(t *testing.T) {
 
-	xRefTable, err := pdfcpu.CreateAnnotationDemoXRef()
+	xRefTable, err := pdf.CreateAnnotationDemoXRef()
 	if err != nil {
 		t.Fatalf("testDemoXRef %v\n", err)
 	}
@@ -1371,18 +1371,18 @@ func xxxTestDemoXRef(t *testing.T) {
 
 func TestCreateDemoPDF(t *testing.T) {
 
-	xRefTable, err := pdfcpu.CreateDemoXRef()
+	xRefTable, err := pdf.CreateDemoXRef()
 	if err != nil {
 		t.Fatalf("testCreateDemoPDF %v\n", err)
 	}
 
-	err = pdfcpu.CreatePDF(xRefTable, outDir+"/", "demo.pdf")
+	err = pdf.CreatePDF(xRefTable, outDir+"/", "demo.pdf")
 	if err != nil {
 		t.Fatalf("testCreateDemoPDF %v\n", err)
 	}
 
-	config := pdfcpu.NewDefaultConfiguration()
-	config.ValidationMode = pdfcpu.ValidationRelaxed
+	config := pdf.NewDefaultConfiguration()
+	config.ValidationMode = pdf.ValidationRelaxed
 
 	outFile := filepath.Join(outDir, "demo.pdf")
 	_, err = Process(ValidateCommand(outFile, config))
@@ -1393,18 +1393,18 @@ func TestCreateDemoPDF(t *testing.T) {
 
 func TestAnnotationDemoPDF(t *testing.T) {
 
-	xRefTable, err := pdfcpu.CreateAnnotationDemoXRef()
+	xRefTable, err := pdf.CreateAnnotationDemoXRef()
 	if err != nil {
 		t.Fatalf("testAnnotationDemoPDF %v\n", err)
 	}
 
-	err = pdfcpu.CreatePDF(xRefTable, outDir+"/", "annotationDemo.pdf")
+	err = pdf.CreatePDF(xRefTable, outDir+"/", "annotationDemo.pdf")
 	if err != nil {
 		t.Fatalf("testAnnotationDemoPDF %v\n", err)
 	}
 
-	config := pdfcpu.NewDefaultConfiguration()
-	config.ValidationMode = pdfcpu.ValidationRelaxed
+	config := pdf.NewDefaultConfiguration()
+	config.ValidationMode = pdf.ValidationRelaxed
 
 	outFile := filepath.Join(outDir, "annotationDemo.pdf")
 	_, err = Process(ValidateCommand(outFile, config))
@@ -1416,18 +1416,18 @@ func TestAnnotationDemoPDF(t *testing.T) {
 
 func TestAcroformDemoPDF(t *testing.T) {
 
-	xRefTable, err := pdfcpu.CreateAcroFormDemoXRef()
+	xRefTable, err := pdf.CreateAcroFormDemoXRef()
 	if err != nil {
 		t.Fatalf("testAcroformDemoPDF %v\n", err)
 	}
 
-	err = pdfcpu.CreatePDF(xRefTable, outDir+"/", "acroFormDemo.pdf")
+	err = pdf.CreatePDF(xRefTable, outDir+"/", "acroFormDemo.pdf")
 	if err != nil {
 		t.Fatalf("testAcroformDemoPDF %v\n", err)
 	}
 
-	config := pdfcpu.NewDefaultConfiguration()
-	config.ValidationMode = pdfcpu.ValidationRelaxed
+	config := pdf.NewDefaultConfiguration()
+	config.ValidationMode = pdf.ValidationRelaxed
 
 	outFile := filepath.Join(outDir, "acroFormDemo.pdf")
 	_, err = Process(ValidateCommand(outFile, config))
