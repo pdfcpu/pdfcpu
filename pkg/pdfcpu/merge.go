@@ -146,7 +146,8 @@ func patchSourceObjectNumbers(ctxSource, ctxDest *Context) {
 
 	keys := sortedKeys(ctxSource)
 
-	// Create lookup table for obj numbers.
+	// Create lookup table for object numbers.
+	// The first number is the successor of the last number in ctxDest.
 	lookup := lookupTable(keys, *ctxDest.Size)
 
 	// Patch pointer to root object

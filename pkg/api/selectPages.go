@@ -146,20 +146,20 @@ func negation(c byte) bool {
 	return c == '!' || c == 'n'
 }
 
-func selectEvenPages(selectedPages *pdf.IntSet, pageCount int) {
+func selectEvenPages(selectedPages pdf.IntSet, pageCount int) {
 	for i := 2; i <= pageCount; i += 2 {
-		_, found := (*selectedPages)[i]
+		_, found := selectedPages[i]
 		if !found {
-			(*selectedPages)[i] = true
+			selectedPages[i] = true
 		}
 	}
 }
 
-func selectOddPages(selectedPages *pdf.IntSet, pageCount int) {
+func selectOddPages(selectedPages pdf.IntSet, pageCount int) {
 	for i := 1; i <= pageCount; i += 2 {
-		_, found := (*selectedPages)[i]
+		_, found := selectedPages[i]
 		if !found {
-			(*selectedPages)[i] = true
+			selectedPages[i] = true
 		}
 	}
 }
@@ -207,13 +207,13 @@ func selectedPages(pageCount int, pageSelection []string) (pdf.IntSet, error) {
 
 		// Special case "even" only for len(pageSelection) == 1
 		if v == "even" {
-			selectEvenPages(&selectedPages, pageCount)
+			selectEvenPages(selectedPages, pageCount)
 			continue
 		}
 
 		// Special case "odd" only for len(pageSelection) == 1
 		if v == "odd" {
-			selectOddPages(&selectedPages, pageCount)
+			selectOddPages(selectedPages, pageCount)
 			continue
 		}
 
@@ -283,9 +283,9 @@ func pagesForPageSelection(pageCount int, pageSelection []string) (pdf.IntSet, e
 
 // Split, Extract, Stamp, Watermark: No page selection means all pages are selected.
 // EnsureSelectedPages selects all pages.
-func ensureSelectedPages(ctx *pdf.Context, selectedPages *pdf.IntSet) {
+func ensureSelectedPages(ctx *pdf.Context, selectedPages pdf.IntSet) {
 
-	if selectedPages != nil && len(*selectedPages) > 0 {
+	if selectedPages != nil && len(selectedPages) > 0 {
 		return
 	}
 
@@ -294,5 +294,5 @@ func ensureSelectedPages(ctx *pdf.Context, selectedPages *pdf.IntSet) {
 		m[i] = true
 	}
 
-	*selectedPages = m
+	selectedPages = m
 }

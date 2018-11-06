@@ -211,7 +211,7 @@ func writeSinglePagePDF(ctx *pdf.Context, pageNr int, dirOut string) error {
 
 func writeSinglePagePDFs(ctx *pdf.Context, selectedPages pdf.IntSet, dirOut string) error {
 
-	ensureSelectedPages(ctx, &selectedPages)
+	ensureSelectedPages(ctx, selectedPages)
 
 	for i, v := range selectedPages {
 		if v {
@@ -493,7 +493,7 @@ func ExtractImages(cmd *Command) ([]string, error) {
 		return nil, err
 	}
 
-	ensureSelectedPages(ctx, &pages)
+	ensureSelectedPages(ctx, pages)
 
 	ctx.Write.DirName = dirOut
 	err = doExtractImages(ctx, pages)
@@ -589,7 +589,7 @@ func ExtractFonts(cmd *Command) ([]string, error) {
 		return nil, err
 	}
 
-	ensureSelectedPages(ctx, &pages)
+	ensureSelectedPages(ctx, pages)
 
 	ctx.Write.DirName = dirOut
 	err = doExtractFonts(ctx, pages)
@@ -783,7 +783,7 @@ func ExtractContent(cmd *Command) ([]string, error) {
 		return nil, err
 	}
 
-	ensureSelectedPages(ctx, &pages)
+	ensureSelectedPages(ctx, pages)
 
 	ctx.Write.DirName = dirOut
 	err = doExtractContent(ctx, pages)
@@ -889,7 +889,7 @@ func ExtractMetadata(cmd *Command) ([]string, error) {
 		return nil, err
 	}
 
-	ensureSelectedPages(ctx, &pages)
+	ensureSelectedPages(ctx, pages)
 
 	ctx.Write.DirName = dirOut
 	err = doExtractMetadata(ctx, pages)
@@ -1202,7 +1202,7 @@ func AddWatermarks(cmd *Command) ([]string, error) {
 		return nil, err
 	}
 
-	ensureSelectedPages(ctx, &pages)
+	ensureSelectedPages(ctx, pages)
 
 	err = pdf.AddWatermarks(ctx.XRefTable, pages, wm)
 	if err != nil {
