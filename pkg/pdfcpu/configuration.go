@@ -117,6 +117,9 @@ type Configuration struct {
 
 	// Command being executed.
 	Mode CommandMode
+
+	// PDF Version
+	Version Version
 }
 
 // NewDefaultConfiguration returns the default pdfcpu configuration.
@@ -133,6 +136,7 @@ func NewDefaultConfiguration() *Configuration {
 		EncryptUsingAES:       true,
 		EncryptUsing128BitKey: true,
 		UserAccessPermissions: PermissionsNone,
+		Version:               V17,
 	}
 }
 

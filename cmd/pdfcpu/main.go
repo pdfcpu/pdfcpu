@@ -21,7 +21,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-
 	"os"
 	"strings"
 
@@ -33,6 +32,7 @@ import (
 var (
 	fileStats, mode, pageSelection string
 	upw, opw, key, perm            string
+	pdfVersion                     string
 	verbose                        bool
 
 	needStackTrace = true
@@ -55,6 +55,10 @@ func init() {
 	permUsage := "encrypt, perm set: none|all"
 	flag.StringVar(&perm, "perm", "none", permUsage)
 
+	pdfVersionUsage := "pdfVersion: 1.7|1.6|1.5|1.4|1.3|1.2|1.1|1.0"
+	flag.StringVar(&pdfVersion, "pdfVersion", "1.7", pdfVersionUsage)
+	flag.StringVar(&pdfVersion, "pv", "1.7", pdfVersionUsage)
+
 	pageSelectionUsage := "a comma separated list of pages or page ranges, see pdfcpu help split/extract"
 	flag.StringVar(&pageSelection, "pages", "", pageSelectionUsage)
 	flag.StringVar(&pageSelection, "p", "", pageSelectionUsage)
@@ -76,6 +80,8 @@ func main() {
 	config := pdfcpu.NewDefaultConfiguration()
 	config.UserPW = upw
 	config.OwnerPW = opw
+	v, _ := pdfcpu.PDFVersion(pdfVersion)
+	config.Version = v
 
 	var cmd *api.Command
 

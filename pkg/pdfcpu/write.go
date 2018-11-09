@@ -75,7 +75,7 @@ func WritePDFFile(ctx *Context) error {
 
 	// Since we support PDF Collections (since V1.7) for file attachments
 	// we need to always generate V1.7 PDF filess.
-	err = writeHeader(ctx.Write, V17)
+	err = writeHeader(ctx.Write, ctx.Configuration.Version)
 	if err != nil {
 		return err
 	}
