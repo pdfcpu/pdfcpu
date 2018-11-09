@@ -105,7 +105,7 @@ content ... extract raw page content
    page ... extract single page PDFs
    meta ... extract all metadata (page selection does not apply)`
 
-	usageTrim     = "usage: pdfcpu trim [-verbose] -pages pageSelection [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageTrim     = "usage: pdfcpu trim [-verbose] [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile [outFile]"
 	usageLongTrim = `Trim generates a trimmed version of inFile for selected pages.
 
 verbose ... extensive log output
@@ -206,18 +206,20 @@ verbose ... extensive log output
 
 	usageWMDescription = `<description> is a comma separated configuration string containing:
 	
-    1st entry: display text string or image file name with extension png
+    1st entry: the display string
+               or an image file name with one the of extensions '.png', '.tif' or '.tiff' 
+               or a PDF file name with extension .pdf followed by an optional page number (default=1) seperated by ':'
 
     optional entries:
-	
-         (defaults: 'f:Helvetica, p:24, s:0.5 rel, c:0.5 0.5 0.5, d:1, o:1, m:0')
-	
+
+         (defaults: 'f:Helvetica, p:24, s:0.5 rel, c:0.5 0.5 0.5, r:0, d:1, o:1, m:0')
+
       f: fontname, a basefont, supported are: Helvetica, Times-Roman, Courier
-      p: fontsize in points
-      s: scale factor, 0.0 <= x <= 1.0 followed by optional 'abs|rel'
+      p: fontsize in points, in combination with absolute scaling only.
+      s: scale factor, 0.0 <= x <= 1.0 followed by optional 'abs|rel' or 'a|r'.
       c: color: 3 fill color intensities, where 0.0 < i < 1.0, eg 1.0, 0.0 0.0 = red (default:0.5 0.5 0.5 = gray)
       r: rotation, where -180.0 <= x <= 180.0
-      d: render along diagonal, 1..lower left to upper right, 2..upper left to lower right
+      d: render along diagonal, 1..lower left to upper right, 2..upper left to lower right (if present overrules r!)
       o: opacity, where 0.0 <= x <= 1.0
       m: render mode: 0 ... fill
                       1 ... stroke
@@ -226,27 +228,27 @@ verbose ... extensive log output
     Only one of rotation and diagonal is allowed.
 
 e.g. 'Draft'                                                  'logo.png'
-     'Draft, d:2'                                             'logo.png, o:0.5, s:0.5 abs, r:0'
-     'Intentionally left blank, p:48'
-     'Confidental, f:Courier, s:0.75, c: 0.5 0.0 0.0, r:20'`
+     'Draft, d:2'                                             'logo.tif, o:0.5, s:0.5 abs, r:0'
+     'Intentionally left blank, p:48'                         'some.pdf, r:45' 
+     'Confidental, f:Courier, s:0.75, c: 0.5 0.0 0.0, r:20'   'some.pdf:3, r:-90, s:0.75'`
 
-	usageStamp     = "usage: pdfcpu stamp [-verbose] -pages pageSelection description inFile [outFile]"
+	usageStamp     = "usage: pdfcpu stamp [-verbose] [-pages pageSelection] description inFile [outFile]"
 	usageLongStamp = `Stamp adds stamps for selected pages. 
 
     verbose ... extensive log output
       pages ... page selection
-description ... font, text, color, rotation
+description ... font, font size, text, color, image/pdf file name, pdf page#, rotation, opacity, scale factor, render mode
      inFile ... input pdf file
     outFile ... output pdf file (default: inFile-new.pdf)
 
 ` + usageWMDescription
 
-	usageWatermark     = "usage: pdfcpu watermark [-verbose] -pages pageSelection description inFile [outFile]"
+	usageWatermark     = "usage: pdfcpu watermark [-verbose] [-pages pageSelection] description inFile [outFile]"
 	usageLongWatermark = `Watermark adds watermarks for selected pages. 
 
     verbose ... extensive log output
       pages ... page selection
-description ... font, text, color, rotation
+description ... font, font size, text, color, image/pdf file name, pdf page#, rotation, opacity, scale factor, render mode
      inFile ... input pdf file
     outFile ... output pdf file (default: inFile-new.pdf)
 

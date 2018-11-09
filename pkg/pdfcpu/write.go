@@ -303,7 +303,7 @@ func writeRootObject(ctx *Context) error {
 		return err
 	}
 
-	log.Debug.Printf("writeRootObject: %s\n", dict)
+	log.Debug.Printf("writeRootObject: %s\n", d)
 
 	log.Debug.Printf("writeRootObject: new offset after rootDict = %d\n", ctx.Write.Offset)
 

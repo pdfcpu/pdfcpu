@@ -1627,12 +1627,12 @@ func (xRefTable *XRefTable) PageDict(page int) (Dict, *InheritedPageAttrs, error
 
 	pageCount := 0
 
-	inhPAttrs := &InheritedPageAttrs{}
+	inhPAttrs := InheritedPageAttrs{}
 
-	pageDict, err := xRefTable.processPageTree(root, inhPAttrs, &pageCount, page)
+	pageDict, err := xRefTable.processPageTree(root, &inhPAttrs, &pageCount, page)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return pageDict, inhPAttrs, nil
+	return pageDict, &inhPAttrs, nil
 }

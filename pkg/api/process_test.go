@@ -29,11 +29,13 @@ import (
 	"github.com/hhrutter/pdfcpu/pkg/pdfcpu/validate"
 )
 
-var inDir, outDir string
+var inDir, outDir, resDir string
 
 func TestMain(m *testing.M) {
 
 	inDir = "testdata"
+
+	resDir = filepath.Join(inDir, "resources")
 
 	var err error
 
@@ -477,7 +479,8 @@ func TestTrimCommand(t *testing.T) {
 
 }
 
-func TestWatermark(t *testing.T) {
+// Add text watermark to all pages of inFile starting at page 1 using a rotation angle of 20 degrees.
+func TestWatermarkText(t *testing.T) {
 
 	inFile := filepath.Join(inDir, "Acroforms2.pdf")
 	outFile := filepath.Join(outDir, "testwm.pdf")
@@ -485,42 +488,66 @@ func TestWatermark(t *testing.T) {
 	onTop := false
 	wm, err := pdf.ParseWatermarkDetails("Draft, s:0.7, r:20", onTop)
 	if err != nil {
-		t.Fatalf("TestWatermark: %v\n", err)
+		t.Fatalf("TestWatermarkText: %v\n", err)
 	}
 
 	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"1-"}, wm, pdf.NewDefaultConfiguration()))
 	if err != nil {
-		t.Fatalf("TestWatermark: %v\n", err)
+		t.Fatalf("TestWatermarkText: %v\n", err)
 	}
 
 }
 
-// Stamp all odd pages other than page 1.
-func TestStampCommand(t *testing.T) {
+// Add a greenish, slightly transparent stroked and filled text stamp to all odd pages of inFile other than page 1
+// using the default rotation which is aligned along the first diagonal running from lower left to upper right corner.
+func TestStampText(t *testing.T) {
 
 	inFile := filepath.Join(inDir, "pike-stanford.pdf")
-	outFile := filepath.Join(outDir, "teststamp.pdf")
+	outFile := filepath.Join(outDir, "testStampText1.pdf")
 
 	onTop := true
-	wm, err := pdf.ParseWatermarkDetails("Demo, f:Courier, c: 0 .8 0, o:0.8", onTop)
+	wm, err := pdf.ParseWatermarkDetails("Demo, f:Courier, c: 0 .8 0, o:0.8, m:2", onTop)
 	if err != nil {
-		t.Fatalf("TestStampCommand: %v\n", err)
+		t.Fatalf("TestStampText: %v\n", err)
 	}
 
 	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"odd", "!1"}, wm, pdf.NewDefaultConfiguration()))
 	if err != nil {
-		t.Fatalf("TestStampCommand: %v\n", err)
+		t.Fatalf("TestStampText: %v\n", err)
 	}
 
 }
 
+// Add a red filled text stamp to all odd pages of inFile other than page 1 using a font size of 48 points
+// and the default rotation which is aligned along the first diagonal running from lower left to upper right corner.
+
+func TestStampTextUsingFontsize(t *testing.T) {
+
+	inFile := filepath.Join(inDir, "pike-stanford.pdf")
+	outFile := filepath.Join(outDir, "testStampText2.pdf")
+
+	onTop := true
+	wm, err := pdf.ParseWatermarkDetails("Demo, f:Courier, c: 1 0 0, o:1, s:1 abs, p:48", onTop)
+	if err != nil {
+		t.Fatalf("TestStampText: %v\n", err)
+	}
+
+	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"odd", "!1"}, wm, pdf.NewDefaultConfiguration()))
+	if err != nil {
+		t.Fatalf("TestStampText: %v\n", err)
+	}
+
+}
+
+// Add image watermark to inFile starting at page 1 using no rotation.
 func TestWatermarkImage(t *testing.T) {
 
 	inFile := filepath.Join(inDir, "Acroforms2.pdf")
-	outFile := filepath.Join(outDir, "testWMImage.pdf")
+	outFile := filepath.Join(outDir, "testWMImageRel.pdf")
+	imageFile := filepath.Join(resDir, "pdfchip3.png")
 
 	onTop := false
-	wm, err := pdf.ParseWatermarkDetails("../../resources/pdfchip3.png, r:0", onTop)
+	wm, err := pdf.ParseWatermarkDetails(imageFile+", r:0", onTop)
 	if err != nil {
 		t.Fatalf("TestWatermarkImage: %v\n", err)
 	}
@@ -528,6 +555,47 @@ func TestWatermarkImage(t *testing.T) {
 	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"1-"}, wm, pdf.NewDefaultConfiguration()))
 	if err != nil {
 		t.Fatalf("TestWatermarkImage: %v\n", err)
+	}
+
+}
+
+// Add image stamp to inFile using absolute scaling and a a negative rotation of 90.
+func TestStampImageAbsScaling(t *testing.T) {
+
+	inFile := filepath.Join(inDir, "Acroforms2.pdf")
+	outFile := filepath.Join(outDir, "testWMImageAbs.pdf")
+	imageFile := filepath.Join(resDir, "pdfchip3.png")
+
+	onTop := true
+	wm, err := pdf.ParseWatermarkDetails(imageFile+", s:.5 a, r:-90", onTop)
+	if err != nil {
+		t.Fatalf("TestStampImageAbsScaling: %v\n", err)
+	}
+
+	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"1-"}, wm, pdf.NewDefaultConfiguration()))
+	if err != nil {
+		t.Fatalf("TestStampImageAbsScaling: %v\n", err)
+	}
+
+}
+
+// Add PDF stamp to all pages of inFile using the 2nd page of pdfFile
+// and rotate along the 2nd diagonal running from upper left to lower right corner.
+func TestStampPDF(t *testing.T) {
+
+	inFile := filepath.Join(inDir, "Acroforms2.pdf")
+	pdfFile := filepath.Join(inDir, "Wonderwall.pdf")
+	outFile := filepath.Join(outDir, "testStampPDF.pdf")
+
+	onTop := true
+	wm, err := pdf.ParseWatermarkDetails(pdfFile+":2, d:2", onTop)
+	if err != nil {
+		t.Fatalf("TestStampPDF: %v\n", err)
+	}
+
+	_, err = Process(AddWatermarksCommand(inFile, outFile, nil, wm, pdf.NewDefaultConfiguration()))
+	if err != nil {
+		t.Fatalf("TestStampPDF: %v\n", err)
 	}
 
 }

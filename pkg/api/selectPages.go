@@ -283,9 +283,9 @@ func pagesForPageSelection(pageCount int, pageSelection []string) (pdf.IntSet, e
 
 // Split, Extract, Stamp, Watermark: No page selection means all pages are selected.
 // EnsureSelectedPages selects all pages.
-func ensureSelectedPages(ctx *pdf.Context, selectedPages pdf.IntSet) {
+func ensureSelectedPages(ctx *pdf.Context, selectedPages *pdf.IntSet) {
 
-	if selectedPages != nil && len(selectedPages) > 0 {
+	if selectedPages != nil && len(*selectedPages) > 0 {
 		return
 	}
 
@@ -294,5 +294,5 @@ func ensureSelectedPages(ctx *pdf.Context, selectedPages pdf.IntSet) {
 		m[i] = true
 	}
 
-	selectedPages = m
+	*selectedPages = m
 }

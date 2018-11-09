@@ -49,6 +49,9 @@ var (
 	Info  = &logger{}
 	Stats = &logger{}
 	Trace = &logger{}
+	//Validate = &logger{}
+	//Write    = &logger{}
+	//Stats    = &logger{}
 )
 
 // SetDebugLogger sets the debug logger.
