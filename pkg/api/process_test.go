@@ -40,7 +40,9 @@ func TestMain(m *testing.M) {
 	var err error
 
 	outDir, err = ioutil.TempDir("", "pdf_apiTests")
+
 	//fmt.Printf("outDir = %s\n", outDir)
+
 	if err != nil {
 		fmt.Printf("%v", err)
 		os.Exit(1)
@@ -458,8 +460,15 @@ func TestMergeCommand(t *testing.T) {
 		}
 	}
 
+	config := pdf.NewDefaultConfiguration()
+
 	outFile := filepath.Join(outDir, "test.pdf")
-	_, err = Process(MergeCommand(inFiles, outFile, pdf.NewDefaultConfiguration()))
+	_, err = Process(MergeCommand(inFiles, outFile, config))
+	if err != nil {
+		t.Fatalf("TestMergeCommand: %v\n", err)
+	}
+
+	_, err = Process(ValidateCommand(outFile, config))
 	if err != nil {
 		t.Fatalf("TestMergeCommand: %v\n", err)
 	}
@@ -472,7 +481,14 @@ func TestTrimCommand(t *testing.T) {
 	inFile := filepath.Join(inDir, "pike-stanford.pdf")
 	outFile := filepath.Join(outDir, "test.pdf")
 
-	_, err := Process(TrimCommand(inFile, outFile, []string{"-2"}, pdf.NewDefaultConfiguration()))
+	config := pdf.NewDefaultConfiguration()
+
+	_, err := Process(TrimCommand(inFile, outFile, []string{"-2"}, config))
+	if err != nil {
+		t.Fatalf("TestTrimCommand: %v\n", err)
+	}
+
+	_, err = Process(ValidateCommand(outFile, config))
 	if err != nil {
 		t.Fatalf("TestTrimCommand: %v\n", err)
 	}
@@ -491,7 +507,14 @@ func TestWatermarkText(t *testing.T) {
 		t.Fatalf("TestWatermarkText: %v\n", err)
 	}
 
-	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"1-"}, wm, pdf.NewDefaultConfiguration()))
+	config := pdf.NewDefaultConfiguration()
+
+	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"1-"}, wm, config))
+	if err != nil {
+		t.Fatalf("TestWatermarkText: %v\n", err)
+	}
+
+	_, err = Process(ValidateCommand(outFile, config))
 	if err != nil {
 		t.Fatalf("TestWatermarkText: %v\n", err)
 	}
@@ -511,7 +534,14 @@ func TestStampText(t *testing.T) {
 		t.Fatalf("TestStampText: %v\n", err)
 	}
 
-	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"odd", "!1"}, wm, pdf.NewDefaultConfiguration()))
+	config := pdf.NewDefaultConfiguration()
+
+	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"odd", "!1"}, wm, config))
+	if err != nil {
+		t.Fatalf("TestStampText: %v\n", err)
+	}
+
+	_, err = Process(ValidateCommand(outFile, config))
 	if err != nil {
 		t.Fatalf("TestStampText: %v\n", err)
 	}
@@ -529,12 +559,19 @@ func TestStampTextUsingFontsize(t *testing.T) {
 	onTop := true
 	wm, err := pdf.ParseWatermarkDetails("Demo, f:Courier, c: 1 0 0, o:1, s:1 abs, p:48", onTop)
 	if err != nil {
-		t.Fatalf("TestStampText: %v\n", err)
+		t.Fatalf("TestStampTextUsingFontsize: %v\n", err)
 	}
 
-	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"odd", "!1"}, wm, pdf.NewDefaultConfiguration()))
+	config := pdf.NewDefaultConfiguration()
+
+	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"odd", "!1"}, wm, config))
 	if err != nil {
-		t.Fatalf("TestStampText: %v\n", err)
+		t.Fatalf("TestStampTextUsingFontsize: %v\n", err)
+	}
+
+	_, err = Process(ValidateCommand(outFile, config))
+	if err != nil {
+		t.Fatalf("TestStampTextUsingFontsize: %v\n", err)
 	}
 
 }
@@ -552,7 +589,14 @@ func TestWatermarkImage(t *testing.T) {
 		t.Fatalf("TestWatermarkImage: %v\n", err)
 	}
 
-	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"1-"}, wm, pdf.NewDefaultConfiguration()))
+	config := pdf.NewDefaultConfiguration()
+
+	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"1-"}, wm, config))
+	if err != nil {
+		t.Fatalf("TestWatermarkImage: %v\n", err)
+	}
+
+	_, err = Process(ValidateCommand(outFile, config))
 	if err != nil {
 		t.Fatalf("TestWatermarkImage: %v\n", err)
 	}
@@ -572,7 +616,14 @@ func TestStampImageAbsScaling(t *testing.T) {
 		t.Fatalf("TestStampImageAbsScaling: %v\n", err)
 	}
 
-	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"1-"}, wm, pdf.NewDefaultConfiguration()))
+	config := pdf.NewDefaultConfiguration()
+
+	_, err = Process(AddWatermarksCommand(inFile, outFile, []string{"1-"}, wm, config))
+	if err != nil {
+		t.Fatalf("TestStampImageAbsScaling: %v\n", err)
+	}
+
+	_, err = Process(ValidateCommand(outFile, config))
 	if err != nil {
 		t.Fatalf("TestStampImageAbsScaling: %v\n", err)
 	}
@@ -593,7 +644,14 @@ func TestStampPDF(t *testing.T) {
 		t.Fatalf("TestStampPDF: %v\n", err)
 	}
 
-	_, err = Process(AddWatermarksCommand(inFile, outFile, nil, wm, pdf.NewDefaultConfiguration()))
+	config := pdf.NewDefaultConfiguration()
+
+	_, err = Process(AddWatermarksCommand(inFile, outFile, nil, wm, config))
+	if err != nil {
+		t.Fatalf("TestStampPDF: %v\n", err)
+	}
+
+	_, err = Process(ValidateCommand(outFile, config))
 	if err != nil {
 		t.Fatalf("TestStampPDF: %v\n", err)
 	}
@@ -1262,13 +1320,18 @@ func copyFile(srcFileName, destFileName string) (err error) {
 
 func prepareForAttachmentTest() (err error) {
 
-	for _, fileName := range []string{"go.pdf", "golang.pdf", "T4.pdf", "go-lecture.pdf", "test.wav"} {
+	for _, fileName := range []string{"go.pdf", "golang.pdf", "T4.pdf", "go-lecture.pdf"} {
 		inFile := filepath.Join(inDir, fileName)
 		outFile := filepath.Join(outDir, fileName)
 		err = copyFile(inFile, outFile)
 		if err != nil {
 			return
 		}
+	}
+
+	err = copyFile(filepath.Join(resDir, "test.wav"), filepath.Join(outDir, "test.wav"))
+	if err != nil {
+		return
 	}
 
 	return
@@ -1355,6 +1418,11 @@ func testAttachmentsStage2(fileName string, config *pdf.Configuration, t *testin
 	if len(list) > 0 {
 		t.Fatalf("TestAttachments - list attachments %s: should have 0 attachments\n", fileName)
 	}
+
+	_, err = Process(ValidateCommand(fileName, config))
+	if err != nil {
+		t.Fatalf("TestAttachments: %v\n", err)
+	}
 }
 
 func TestAttachments(t *testing.T) {
@@ -1415,26 +1483,6 @@ func TestUnknownCommand(t *testing.T) {
 		t.Fatal("TestUnknowncommand - should have failed")
 	}
 
-}
-
-func xxxTestDemoXRef(t *testing.T) {
-
-	xRefTable, err := pdf.CreateAnnotationDemoXRef()
-	if err != nil {
-		t.Fatalf("testDemoXRef %v\n", err)
-	}
-	if xRefTable == nil {
-		t.Fatal("testDemoXRef: xRefTable == nil")
-	}
-
-	err = validate.XRefTable(xRefTable)
-	if err != nil {
-		t.Fatalf("testDemoXRef %v\n", err)
-	}
-
-	// var logStr []string
-	// logStr = xRefTable.List(logStr)
-	// t.Logf("XRefTable:\n%s\n", strings.Join(logStr, ""))
 }
 
 func TestCreateDemoPDF(t *testing.T) {

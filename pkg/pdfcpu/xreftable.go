@@ -296,7 +296,7 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 
 	// see 7.5.4 Cross-Reference Table
 
-	log.Debug.Println("InsertAndUseRecycled: begin")
+	log.Write.Println("InsertAndUseRecycled: begin")
 
 	// Get Next free object from freelist.
 	freeListHeadEntry, err := xRefTable.Free(0)
@@ -307,7 +307,7 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 	// If none available, add new object & return.
 	if *freeListHeadEntry.Offset == 0 {
 		objNr = xRefTable.InsertNew(xRefTableEntry)
-		log.Debug.Printf("InsertAndUseRecycled: end, new objNr=%d\n", objNr)
+		log.Write.Printf("InsertAndUseRecycled: end, new objNr=%d\n", objNr)
 		return objNr, nil
 	}
 
@@ -329,7 +329,7 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 	// TODO use entrys generation.
 	xRefTable.Table[objNr] = &xRefTableEntry
 
-	log.Debug.Printf("InsertAndUseRecycled: end, recycled objNr=%d\n", objNr)
+	log.Write.Printf("InsertAndUseRecycled: end, recycled objNr=%d\n", objNr)
 
 	return objNr, nil
 }
@@ -458,7 +458,7 @@ func (xRefTable *XRefTable) freeObjects() IntSet {
 // See 7.5.4 Cross-Reference Table
 func (xRefTable *XRefTable) EnsureValidFreeList() error {
 
-	log.Debug.Println("EnsureValidFreeList begin")
+	log.Trace.Println("EnsureValidFreeList begin")
 
 	m := xRefTable.freeObjects()
 
@@ -483,7 +483,7 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 			*head.Offset = 0
 		}
 
-		log.Debug.Println("EnsureValidFreeList: empty free list.")
+		log.Trace.Println("EnsureValidFreeList: empty free list.")
 		return nil
 	}
 
@@ -492,7 +492,7 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 	// until we have found the last free object which should point to obj 0.
 	for f != 0 {
 
-		log.Debug.Printf("EnsureValidFreeList: validating obj #%d %v\n", f, m)
+		log.Trace.Printf("EnsureValidFreeList: validating obj #%d %v\n", f, m)
 		// verify if obj f is one of the free objects recorded.
 		if !m[f] {
 			return errors.New("EnsureValidFreeList: freelist corrupted")
@@ -507,7 +507,7 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 	}
 
 	if len(m) == 0 {
-		log.Debug.Println("EnsureValidFreeList: end, regular linked list")
+		log.Trace.Println("EnsureValidFreeList: end, regular linked list")
 		return nil
 	}
 
@@ -536,7 +536,7 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 		head.Offset = &next
 	}
 
-	log.Debug.Println("EnsureValidFreeList: end, linked list plus some dangling free objects.")
+	log.Trace.Println("EnsureValidFreeList: end, linked list plus some dangling free objects.")
 
 	return nil
 }
@@ -1101,7 +1101,7 @@ func (xRefTable *XRefTable) list(logStr []string) []string {
 				sd, ok := entry.Object.(StreamDict)
 				if ok {
 					str += fmt.Sprintf("stream content length = %d\n", len(sd.Content))
-					if sd.IsPageContent && len(sd.Content) > 0 {
+					if log.IsTraceLoggerEnabled() && sd.IsPageContent && len(sd.Content) > 0 {
 						str += fmt.Sprintf("content: <%s>\n", sd.Content)
 					}
 				}
@@ -1127,7 +1127,7 @@ func (xRefTable *XRefTable) list(logStr []string) []string {
 // At this point the free list is assumed to be a linked list with its last node linked to the beginning.
 func (xRefTable *XRefTable) freeList(logStr []string) ([]string, error) {
 
-	log.Debug.Printf("freeList begin")
+	log.Trace.Printf("freeList begin")
 
 	head, err := xRefTable.Free(0)
 	if err != nil {
@@ -1160,6 +1160,8 @@ func (xRefTable *XRefTable) freeList(logStr []string) ([]string, error) {
 
 		f = next
 	}
+
+	log.Trace.Printf("freeList end")
 
 	return logStr, nil
 }
@@ -1236,10 +1238,10 @@ func (xRefTable *XRefTable) bindNameTreeNode(name string, n *Node, root bool) er
 // BindNameTrees syncs up the internal name tree cache with the xreftable.
 func (xRefTable *XRefTable) BindNameTrees() error {
 
-	log.Debug.Println("BindNameTrees..")
+	log.Write.Println("BindNameTrees..")
 
 	for k, v := range xRefTable.Names {
-		log.Debug.Printf("bindNameTree: %s\n", k)
+		log.Write.Printf("bindNameTree: %s\n", k)
 		err := xRefTable.bindNameTreeNode(k, v, true)
 		if err != nil {
 			return err

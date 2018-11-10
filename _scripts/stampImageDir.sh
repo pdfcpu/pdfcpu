@@ -14,11 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# eg: ./watermarkDir.sh ~/pdf/big ~/pdf/out
+# eg: ./stampImageDir.sh ~/pdf/big ~/pdf/out
  
 if [ $# -ne 2 ]; then
-    echo "usage: ./watermarkDir.sh inDir outDir"
-    echo "adds image watermarks with rotation angle of 0 degrees"
+    echo "usage: ./stampImageDir.sh inDir outDir"
+    echo "adds image stamps with rotation angle of 0 degrees"
     exit 1
 fi
 
@@ -43,13 +43,13 @@ do
 	cp $pdf $out/$f
 	
 	out1=$out/$f1$new.pdf
-	pdfcpu watermark -verbose "GC2018.png, r:0" $out/$f $out1 &> $out/$f1.log
+	pdfcpu stamp -verbose "resources/GC2018.png, r:0" $out/$f $out1 &> $out/$f1.log
 	if [ $? -eq 1 ]; then
-        echo "watermark error: $pdf -> $out1"
+        echo "stamp error: $pdf -> $out1"
         echo
 		continue
     else
-        echo "watermark success: $pdf -> $out1"
+        echo "stamp success: $pdf -> $out1"
 		pdfcpu validate -verbose -mode=relaxed $out1 >> $out/$f1.log 2>&1
        	if [ $? -eq 1 ]; then
         	echo "validation error: $out"

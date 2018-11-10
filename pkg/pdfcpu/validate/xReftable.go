@@ -27,7 +27,7 @@ import (
 func XRefTable(xRefTable *pdf.XRefTable) error {
 
 	log.Info.Println("validating")
-	log.Debug.Println("*** validateXRefTable begin ***")
+	log.Validate.Println("*** validateXRefTable begin ***")
 
 	// Validate root object(aka the document catalog) and page tree.
 	err := validateRootObject(xRefTable)
@@ -49,7 +49,7 @@ func XRefTable(xRefTable *pdf.XRefTable) error {
 
 	xRefTable.Valid = true
 
-	log.Debug.Println("*** validateXRefTable end ***")
+	log.Validate.Println("*** validateXRefTable end ***")
 
 	return nil
 }
@@ -804,7 +804,7 @@ func validateNeedsRendering(xRefTable *pdf.XRefTable, rootDict pdf.Dict, require
 
 func validateRootObject(xRefTable *pdf.XRefTable) error {
 
-	log.Debug.Println("*** validateRootObject begin ***")
+	log.Validate.Println("*** validateRootObject begin ***")
 
 	// => 7.7.2 Document Catalog
 
@@ -899,7 +899,7 @@ func validateRootObject(xRefTable *pdf.XRefTable) error {
 	// Validate remainder of annotations after AcroForm validation only.
 	err = validatePagesAnnotations(xRefTable, rootPageNodeDict)
 
-	log.Debug.Println("*** validateRootObject end ***")
+	log.Validate.Println("*** validateRootObject end ***")
 
 	return err
 }

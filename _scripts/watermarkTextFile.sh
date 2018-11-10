@@ -14,10 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#: ./watermarkFile.sh ~/pdf/1mb/a.pdf ~/pdf/out
+#: ./watermarkTextFile.sh ~/pdf/1mb/a.pdf ~/pdf/out
 
 if [ $# -ne 2 ]; then
-    echo "usage: ./watermarkFile.sh inFile outDir"
+    echo "usage: ./watermarkTextFile.sh inFile outDir"
     echo "add a Draft watermark to all pages"
     exit 1
 fi
@@ -37,10 +37,10 @@ cp $1 $out/$f
 out1=$out/$f1$new.pdf
 pdfcpu watermark -verbose "Draft" $out/$f $out1 &> $out/$f1.log
 if [ $? -eq 1 ]; then
-    echo "stamp error: $1 -> $out1"
+    echo "watermark error: $1 -> $out1"
     exit $?
 else
-    echo "stamp success: $1 -> $out1"
+    echo "watermark success: $1 -> $out1"
     pdfcpu validate -verbose -mode=relaxed $out1 >> $out/$f1.log 2>&1
     if [ $? -eq 1 ]; then
         echo "validation error: $out1"

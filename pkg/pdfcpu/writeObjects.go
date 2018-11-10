@@ -67,7 +67,7 @@ func startObjectStream(ctx *Context) error {
 	// See 7.5.7 Object streams
 	// When new object streams and compressed objects are created, they shall always be assigned new object numbers.
 
-	log.Debug.Println("startObjectStream begin")
+	log.Write.Println("startObjectStream begin")
 
 	objStreamDict := NewObjectStreamDict()
 
@@ -78,14 +78,14 @@ func startObjectStream(ctx *Context) error {
 
 	ctx.Write.CurrentObjStream = &objNr
 
-	log.Debug.Printf("startObjectStream end: %d\n", objNr)
+	log.Write.Printf("startObjectStream end: %d\n", objNr)
 
 	return nil
 }
 
 func stopObjectStream(ctx *Context) error {
 
-	log.Debug.Println("stopObjectStream begin")
+	log.Write.Println("stopObjectStream begin")
 
 	xRefTable := ctx.XRefTable
 
@@ -95,7 +95,7 @@ func stopObjectStream(ctx *Context) error {
 
 	if ctx.Write.CurrentObjStream == nil {
 		ctx.Write.WriteToObjectStream = false
-		log.Debug.Println("stopObjectStream end (no content)")
+		log.Write.Println("stopObjectStream end (no content)")
 		return nil
 	}
 
@@ -119,7 +119,7 @@ func stopObjectStream(ctx *Context) error {
 	osd.StreamDict.Insert("N", Integer(osd.ObjCount))
 
 	// for each objStream execute at the end right before xRefStreamDict gets written.
-	log.Debug.Printf("stopObjectStream: objStreamDict: %s\n", osd)
+	log.Write.Printf("stopObjectStream: objStreamDict: %s\n", osd)
 
 	err = writeStreamDictObject(ctx, *ctx.Write.CurrentObjStream, 0, osd.StreamDict)
 	if err != nil {
@@ -132,14 +132,14 @@ func stopObjectStream(ctx *Context) error {
 	ctx.Write.CurrentObjStream = nil
 	ctx.Write.WriteToObjectStream = false
 
-	log.Debug.Println("stopObjectStream end")
+	log.Write.Println("stopObjectStream end")
 
 	return nil
 }
 
 func writeToObjectStream(ctx *Context, objNumber, genNumber int) (ok bool, err error) {
 
-	log.Debug.Printf("addToObjectStream begin, obj#:%d gen#:%d\n", objNumber, genNumber)
+	log.Write.Printf("addToObjectStream begin, obj#:%d gen#:%d\n", objNumber, genNumber)
 
 	w := ctx.Write
 
@@ -179,7 +179,7 @@ func writeToObjectStream(ctx *Context, objNumber, genNumber int) (ok bool, err e
 
 		objStrEntry.Object = objStreamDict
 
-		log.Debug.Printf("writeObject end, obj#%d written to objectStream #%d\n", objNumber, *ctx.Write.CurrentObjStream)
+		log.Write.Printf("writeObject end, obj#%d written to objectStream #%d\n", objNumber, *ctx.Write.CurrentObjStream)
 
 		if objStreamDict.ObjCount == ObjectStreamMaxObjects {
 			err = stopObjectStream(ctx)
@@ -193,14 +193,14 @@ func writeToObjectStream(ctx *Context, objNumber, genNumber int) (ok bool, err e
 
 	}
 
-	log.Debug.Printf("addToObjectStream end, obj#:%d gen#:%d\n", objNumber, genNumber)
+	log.Write.Printf("addToObjectStream end, obj#:%d gen#:%d\n", objNumber, genNumber)
 
 	return ok, nil
 }
 
 func writeObject(ctx *Context, objNumber, genNumber int, s string) error {
 
-	log.Debug.Printf("writeObject begin, obj#:%d gen#:%d <%s>\n", objNumber, genNumber, s)
+	log.Write.Printf("writeObject begin, obj#:%d gen#:%d <%s>\n", objNumber, genNumber, s)
 
 	w := ctx.Write
 
@@ -230,7 +230,7 @@ func writeObject(ctx *Context, objNumber, genNumber int, s string) error {
 	// Write-offset for next object.
 	w.Offset += int64(written + i + j)
 
-	log.Debug.Printf("writeObject end, %d bytes written\n", written+i+j)
+	log.Write.Printf("writeObject end, %d bytes written\n", written+i+j)
 
 	return nil
 }
@@ -428,7 +428,7 @@ func handleIndirectLength(ctx *Context, ir *IndirectRef) error {
 	genNr := int(ir.GenerationNumber)
 
 	if ctx.Write.HasWriteOffset(objNr) {
-		log.Debug.Printf("*** handleIndirectLength: object #%d already written offset=%d ***\n", objNr, ctx.Write.Offset)
+		log.Write.Printf("*** handleIndirectLength: object #%d already written offset=%d ***\n", objNr, ctx.Write.Offset)
 	} else {
 		length, err := ctx.DereferenceInteger(*ir)
 		if err != nil || length == nil {
@@ -445,7 +445,7 @@ func handleIndirectLength(ctx *Context, ir *IndirectRef) error {
 
 func writeStreamDictObject(ctx *Context, objNumber, genNumber int, sd StreamDict) error {
 
-	log.Debug.Printf("writeStreamDictObject begin: object #%d\n%v", objNumber, sd)
+	log.Write.Printf("writeStreamDictObject begin: object #%d\n%v", objNumber, sd)
 
 	var inObjStream bool
 
@@ -513,7 +513,7 @@ func writeStreamDictObject(ctx *Context, objNumber, genNumber int, sd StreamDict
 		ctx.Write.WriteToObjectStream = true
 	}
 
-	log.Debug.Printf("writeStreamDictObject end: object #%d written=%d\n", objNumber, written)
+	log.Write.Printf("writeStreamDictObject end: object #%d written=%d\n", objNumber, written)
 
 	return nil
 }
@@ -529,7 +529,7 @@ func writeDirectObject(ctx *Context, o Object) error {
 				return err
 			}
 		}
-		log.Debug.Printf("writeDirectObject: end offset=%d\n", ctx.Write.Offset)
+		log.Write.Printf("writeDirectObject: end offset=%d\n", ctx.Write.Offset)
 
 	case Array:
 		for _, v := range o {
@@ -538,10 +538,10 @@ func writeDirectObject(ctx *Context, o Object) error {
 				return err
 			}
 		}
-		log.Debug.Printf("writeDirectObject: end offset=%d\n", ctx.Write.Offset)
+		log.Write.Printf("writeDirectObject: end offset=%d\n", ctx.Write.Offset)
 
 	default:
-		log.Debug.Printf("writeDirectObject: end, direct obj - nothing written: offset=%d\n%v\n", ctx.Write.Offset, o)
+		log.Write.Printf("writeDirectObject: end, direct obj - nothing written: offset=%d\n%v\n", ctx.Write.Offset, o)
 
 	}
 
@@ -625,7 +625,7 @@ func writeIndirectObject(ctx *Context, ir IndirectRef) (Object, error) {
 	genNr := int(ir.GenerationNumber)
 
 	if ctx.Write.HasWriteOffset(objNr) {
-		log.Debug.Printf("writeIndirectObject end: object #%d already written.\n", objNr)
+		log.Write.Printf("writeIndirectObject end: object #%d already written.\n", objNr)
 		return nil, nil
 	}
 
@@ -634,7 +634,7 @@ func writeIndirectObject(ctx *Context, ir IndirectRef) (Object, error) {
 		return nil, errors.Wrapf(err, "writeIndirectObject: unable to dereference indirect object #%d", objNr)
 	}
 
-	log.Debug.Printf("writeIndirectObject: object #%d gets writeoffset: %d\n", objNr, ctx.Write.Offset)
+	log.Write.Printf("writeIndirectObject: object #%d gets writeoffset: %d\n", objNr, ctx.Write.Offset)
 
 	if o == nil {
 
@@ -643,7 +643,7 @@ func writeIndirectObject(ctx *Context, ir IndirectRef) (Object, error) {
 			return nil, err
 		}
 
-		log.Debug.Printf("writeIndirectObject: end, obj#%d resolved to nil, offset=%d\n", objNr, ctx.Write.Offset)
+		log.Write.Printf("writeIndirectObject: end, obj#%d resolved to nil, offset=%d\n", objNr, ctx.Write.Offset)
 		return nil, nil
 	}
 
@@ -686,7 +686,7 @@ func writeIndirectObject(ctx *Context, ir IndirectRef) (Object, error) {
 
 func writeDeepObject(ctx *Context, objIn Object) (objOut Object, written bool, err error) {
 
-	log.Debug.Printf("writeDeepObject: begin offset=%d\n%s\n", ctx.Write.Offset, objIn)
+	log.Write.Printf("writeDeepObject: begin offset=%d\n%s\n", ctx.Write.Offset, objIn)
 
 	ir, ok := objIn.(IndirectRef)
 	if !ok {
@@ -696,7 +696,7 @@ func writeDeepObject(ctx *Context, objIn Object) (objOut Object, written bool, e
 	objOut, err = writeIndirectObject(ctx, ir)
 	if err == nil {
 		written = true
-		log.Debug.Printf("writeDeepObject: end offset=%d\n", ctx.Write.Offset)
+		log.Write.Printf("writeDeepObject: end offset=%d\n", ctx.Write.Offset)
 	}
 
 	return objOut, written, err
@@ -706,11 +706,11 @@ func writeEntry(ctx *Context, d Dict, dictName, entryName string) (Object, error
 
 	o, found := d.Find(entryName)
 	if !found || o == nil {
-		log.Debug.Printf("writeEntry end: entry %s is nil\n", entryName)
+		log.Write.Printf("writeEntry end: entry %s is nil\n", entryName)
 		return nil, nil
 	}
 
-	log.Debug.Printf("writeEntry begin: dict=%s entry=%s offset=%d\n", dictName, entryName, ctx.Write.Offset)
+	log.Write.Printf("writeEntry begin: dict=%s entry=%s offset=%d\n", dictName, entryName, ctx.Write.Offset)
 
 	o, _, err := writeDeepObject(ctx, o)
 	if err != nil {
@@ -718,11 +718,11 @@ func writeEntry(ctx *Context, d Dict, dictName, entryName string) (Object, error
 	}
 
 	if o == nil {
-		log.Debug.Printf("writeEntry end: dict=%s entry=%s resolved to nil, offset=%d\n", dictName, entryName, ctx.Write.Offset)
+		log.Write.Printf("writeEntry end: dict=%s entry=%s resolved to nil, offset=%d\n", dictName, entryName, ctx.Write.Offset)
 		return nil, nil
 	}
 
-	log.Debug.Printf("writeEntry end: dict=%s entry=%s offset=%d\n", dictName, entryName, ctx.Write.Offset)
+	log.Write.Printf("writeEntry end: dict=%s entry=%s offset=%d\n", dictName, entryName, ctx.Write.Offset)
 
 	return o, nil
 }

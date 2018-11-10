@@ -18,7 +18,6 @@ limitations under the License.
 package log
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 )
@@ -45,12 +44,18 @@ type logger struct {
 
 // pdfcpu's 3 defined loggers.
 var (
+	// Horizontal loggers
 	Debug = &logger{}
 	Info  = &logger{}
 	Stats = &logger{}
 	Trace = &logger{}
-	//Validate = &logger{}
-	//Write    = &logger{}
+
+	// Vertical loggers
+	Parse    = &logger{}
+	Read     = &logger{}
+	Validate = &logger{}
+	Optimize = &logger{}
+	Write    = &logger{}
 	//Stats    = &logger{}
 )
 
@@ -69,9 +74,34 @@ func SetStatsLogger(log Logger) {
 	Stats.log = log
 }
 
-// SetTraceLogger sets the stats logger.
+// SetTraceLogger sets the trace logger.
 func SetTraceLogger(log Logger) {
 	Trace.log = log
+}
+
+// SetParseLogger sets the parse logger.
+func SetParseLogger(log Logger) {
+	Parse.log = log
+}
+
+// SetReadLogger sets the read logger.
+func SetReadLogger(log Logger) {
+	Read.log = log
+}
+
+// SetValidateLogger sets the validate logger.
+func SetValidateLogger(log Logger) {
+	Validate.log = log
+}
+
+// SetOptimizeLogger sets the optimize logger.
+func SetOptimizeLogger(log Logger) {
+	Optimize.log = log
+}
+
+// SetWriteLogger sets the write logger.
+func SetWriteLogger(log Logger) {
+	Write.log = log
 }
 
 // SetDefaultDebugLogger sets the default debug logger.
@@ -81,7 +111,7 @@ func SetDefaultDebugLogger() {
 
 // SetDefaultInfoLogger sets the default info logger.
 func SetDefaultInfoLogger() {
-	SetInfoLogger(log.New(os.Stderr, "INFO: ", log.Ldate|log.Ltime))
+	SetInfoLogger(log.New(os.Stderr, " INFO: ", log.Ldate|log.Ltime))
 }
 
 // SetDefaultStatsLogger sets the default stats logger.
@@ -89,9 +119,34 @@ func SetDefaultStatsLogger() {
 	SetStatsLogger(log.New(os.Stderr, "STATS: ", log.Ldate|log.Ltime))
 }
 
-// SetDefaultTraceLogger sets the default stats logger.
+// SetDefaultTraceLogger sets the default trace logger.
 func SetDefaultTraceLogger() {
-	SetTraceLogger(log.New(ioutil.Discard, "TRACE: ", log.Ldate|log.Ltime))
+	SetTraceLogger(log.New(os.Stderr, "TRACE: ", log.Ldate|log.Ltime))
+}
+
+// SetDefaultParseLogger sets the default parse logger.
+func SetDefaultParseLogger() {
+	SetParseLogger(log.New(os.Stderr, "PARSE: ", log.Ldate|log.Ltime))
+}
+
+// SetDefaultReadLogger sets the default read logger.
+func SetDefaultReadLogger() {
+	SetReadLogger(log.New(os.Stderr, " READ: ", log.Ldate|log.Ltime))
+}
+
+// SetDefaultValidateLogger sets the default validate logger.
+func SetDefaultValidateLogger() {
+	SetValidateLogger(log.New(os.Stderr, "VALID: ", log.Ldate|log.Ltime))
+}
+
+// SetDefaultOptimizeLogger sets the default optimize logger.
+func SetDefaultOptimizeLogger() {
+	SetOptimizeLogger(log.New(os.Stderr, "  OPT: ", log.Ldate|log.Ltime))
+}
+
+// SetDefaultWriteLogger sets the default write logger.
+func SetDefaultWriteLogger() {
+	SetWriteLogger(log.New(os.Stderr, "WRITE: ", log.Ldate|log.Ltime))
 }
 
 // SetDefaultLoggers sets all loggers to their default logger.
@@ -100,6 +155,11 @@ func SetDefaultLoggers() {
 	SetDefaultInfoLogger()
 	SetDefaultStatsLogger()
 	SetDefaultTraceLogger()
+	SetDefaultParseLogger()
+	SetDefaultReadLogger()
+	SetDefaultValidateLogger()
+	SetDefaultOptimizeLogger()
+	SetDefaultWriteLogger()
 }
 
 // DisableLoggers turns off all logging.
@@ -108,6 +168,16 @@ func DisableLoggers() {
 	SetInfoLogger(nil)
 	SetStatsLogger(nil)
 	SetTraceLogger(nil)
+	SetParseLogger(nil)
+	SetReadLogger(nil)
+	SetValidateLogger(nil)
+	SetOptimizeLogger(nil)
+	SetWriteLogger(nil)
+}
+
+// IsTraceLoggerEnabled returns true if the Trace Logger is enabled.
+func IsTraceLoggerEnabled() bool {
+	return Trace.log != nil
 }
 
 // Printf writes a formatted message to the log.
@@ -130,6 +200,7 @@ func (l *logger) Println(args ...interface{}) {
 	l.log.Println(args...)
 }
 
+// Fatalf is equivalent to Printf() followed by a program abort.
 func (l *logger) Fatalf(format string, args ...interface{}) {
 
 	if l.log == nil {
@@ -139,6 +210,7 @@ func (l *logger) Fatalf(format string, args ...interface{}) {
 	l.log.Fatalf(format, args)
 }
 
+// Fatalf is equivalent to Println() followed by a program abort.
 func (l *logger) Fatalln(args ...interface{}) {
 
 	if l.log == nil {

@@ -58,7 +58,7 @@ type flate struct {
 // Encode implements encoding for a Flate filter.
 func (f flate) Encode(r io.Reader) (*bytes.Buffer, error) {
 
-	log.Debug.Println("EncodeFlate begin")
+	log.Trace.Println("EncodeFlate begin")
 
 	// TODO Optional decode parameters may need predictor preprocessing.
 
@@ -70,7 +70,7 @@ func (f flate) Encode(r io.Reader) (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Debug.Printf("EncodeFlate end: %d bytes written\n", written)
+	log.Trace.Printf("EncodeFlate end: %d bytes written\n", written)
 
 	return &b, nil
 }
@@ -78,7 +78,7 @@ func (f flate) Encode(r io.Reader) (*bytes.Buffer, error) {
 // Decode implements decoding for a Flate filter.
 func (f flate) Decode(r io.Reader) (*bytes.Buffer, error) {
 
-	log.Debug.Println("DecodeFlate begin")
+	log.Trace.Println("DecodeFlate begin")
 
 	rc, err := zlib.NewReader(r)
 	if err != nil {

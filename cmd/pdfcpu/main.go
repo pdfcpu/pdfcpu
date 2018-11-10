@@ -31,7 +31,7 @@ import (
 var (
 	fileStats, mode, pageSelection string
 	upw, opw, key, perm            string
-	verbose                        bool
+	verbose, veryVerbose           bool
 
 	needStackTrace = true
 )
@@ -59,6 +59,7 @@ func init() {
 
 	flag.BoolVar(&verbose, "verbose", false, "")
 	flag.BoolVar(&verbose, "v", false, "")
+	flag.BoolVar(&veryVerbose, "vv", false, "")
 
 	flag.StringVar(&upw, "upw", "", "user password")
 	flag.StringVar(&opw, "opw", "", "owner password")
@@ -69,7 +70,7 @@ func main() {
 
 	command := parseFlagsAndGetCommand()
 
-	setupLogging(verbose)
+	setupLogging(verbose, veryVerbose)
 
 	config := pdfcpu.NewDefaultConfiguration()
 	config.UserPW = upw
@@ -192,21 +193,25 @@ func help() {
 
 }
 
-func setupLogging(verbose bool) {
+func setupLogging(verbose, veryVerbose bool) {
 
-	if verbose {
+	needStackTrace = verbose || veryVerbose
 
-		//PDFCPULog.SetDefaultLoggers()
-
+	if verbose || veryVerbose {
 		PDFCPULog.SetDefaultDebugLogger()
 		PDFCPULog.SetDefaultInfoLogger()
 		PDFCPULog.SetDefaultStatsLogger()
-		PDFCPULog.SetDefaultTraceLogger()
-
-		//PDFCPULog.SetTraceLogger(log.New(os.Stderr, "TRACE: ", log.Ldate|log.Ltime))
 	}
 
-	needStackTrace = verbose
+	if veryVerbose {
+		PDFCPULog.SetDefaultTraceLogger()
+		//PDFCPULog.SetDefaultParseLogger()
+		PDFCPULog.SetDefaultReadLogger()
+		PDFCPULog.SetDefaultValidateLogger()
+		PDFCPULog.SetDefaultOptimizeLogger()
+		PDFCPULog.SetDefaultWriteLogger()
+	}
+
 }
 
 func parseFlagsAndGetCommand() (command string) {

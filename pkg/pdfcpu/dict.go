@@ -100,7 +100,7 @@ func (d Dict) Entry(dictName, key string, required bool) (Object, error) {
 		if required {
 			return nil, errors.Errorf("dict=%s required entry=%s missing", dictName, key)
 		}
-		log.Debug.Printf("dict=%s entry %s is nil\n", dictName, key)
+		//log.Trace.Printf("dict=%s entry %s is nil\n", dictName, key)
 		return nil, nil
 	}
 	return obj, nil

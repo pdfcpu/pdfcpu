@@ -865,7 +865,7 @@ func validateResources(xRefTable *pdf.XRefTable, d pdf.Dict) (hasResources bool,
 		xRefTable.PageCount = *pageCount
 	}
 
-	log.Debug.Printf("validateResources: This page node has %d pages\n", *pageCount)
+	log.Validate.Printf("validateResources: This page node has %d pages\n", *pageCount)
 
 	// Resources: optional, dict
 	o, ok := d.Find("Resources")
@@ -911,7 +911,7 @@ func validatePagesDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNumber, genNumbe
 			return errors.New("validatePagesDict: missing indirect reference for kid")
 		}
 
-		log.Debug.Printf("validatePagesDict: PageNode: %s\n", ir)
+		log.Validate.Printf("validatePagesDict: PageNode: %s\n", ir)
 
 		objNumber := ir.ObjectNumber.Value()
 		genNumber := ir.GenerationNumber.Value()

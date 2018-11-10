@@ -117,7 +117,7 @@ func validateDocumentInfoObject(xRefTable *pdf.XRefTable) error {
 		return nil
 	}
 
-	log.Debug.Println("*** validateDocumentInfoObject begin ***")
+	log.Validate.Println("*** validateDocumentInfoObject begin ***")
 
 	hasModDate, err := validateDocumentInfoDict(xRefTable, *xRefTable.Info)
 	if err != nil {
@@ -133,7 +133,7 @@ func validateDocumentInfoObject(xRefTable *pdf.XRefTable) error {
 		return errors.Errorf("validateDocumentInfoObject: missing required entry \"ModDate\"")
 	}
 
-	log.Debug.Println("*** validateDocumentInfoObject end ***")
+	log.Validate.Println("*** validateDocumentInfoObject end ***")
 
 	return nil
 }

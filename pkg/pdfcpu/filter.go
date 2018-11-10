@@ -20,6 +20,7 @@ package pdfcpu
 
 import (
 	"bytes"
+	"encoding/hex"
 	"io"
 
 	"github.com/hhrutter/pdfcpu/pkg/filter"
@@ -60,11 +61,11 @@ func parmsForFilter(d Dict) map[string]int {
 // encodeStream encodes stream dict data by applying its filter pipeline.
 func encodeStream(sd *StreamDict) error {
 
-	log.Debug.Printf("encodeStream begin")
+	log.Trace.Printf("encodeStream begin")
 
 	// No filter specified, nothing to encode.
 	if sd.FilterPipeline == nil {
-		log.Debug.Println("encodeStream: returning uncompressed stream.")
+		log.Trace.Println("encodeStream: returning uncompressed stream.")
 		sd.Raw = sd.Content
 		streamLength := int64(len(sd.Raw))
 		sd.StreamLength = &streamLength
@@ -84,9 +85,9 @@ func encodeStream(sd *StreamDict) error {
 	for _, f := range sd.FilterPipeline {
 
 		if f.DecodeParms != nil {
-			log.Debug.Printf("encodeStream: encoding filter:%s\ndecodeParms:%s\n", f.Name, f.DecodeParms)
+			log.Trace.Printf("encodeStream: encoding filter:%s\ndecodeParms:%s\n", f.Name, f.DecodeParms)
 		} else {
-			log.Debug.Printf("encodeStream: encoding filter:%s\n", f.Name)
+			log.Trace.Printf("encodeStream: encoding filter:%s\n", f.Name)
 		}
 
 		// make parms map[string]int
@@ -115,7 +116,7 @@ func encodeStream(sd *StreamDict) error {
 		sd.Update("Length", Integer(streamLength))
 	}
 
-	log.Debug.Printf("encodeStream end")
+	log.Trace.Printf("encodeStream end")
 
 	return nil
 }
@@ -123,7 +124,7 @@ func encodeStream(sd *StreamDict) error {
 // decodeStream decodes streamDict data by applying its filter pipeline.
 func decodeStream(sd *StreamDict) error {
 
-	log.Debug.Printf("decodeStream begin \n%s\n", sd)
+	log.Trace.Printf("decodeStream begin \n%s\n", sd)
 
 	if sd.Content != nil {
 		// This stream has already been decoded.
@@ -133,7 +134,7 @@ func decodeStream(sd *StreamDict) error {
 	// No filter specified, nothing to decode.
 	if sd.FilterPipeline == nil {
 		sd.Content = sd.Raw
-		//fmt.Printf("decodedStream returning %d(#%02x)bytes: \n%s\n", len(sd.Content), len(sd.Content), hex.Dump(sd.Content))
+		log.Trace.Printf("decodedStream returning %d(#%02x)bytes: \n%s\n", len(sd.Content), len(sd.Content), hex.Dump(sd.Content))
 		return nil
 	}
 
@@ -148,9 +149,9 @@ func decodeStream(sd *StreamDict) error {
 	for _, f := range sd.FilterPipeline {
 
 		if f.DecodeParms != nil {
-			log.Debug.Printf("decodeStream: decoding filter:%s\ndecodeParms:%s\n", f.Name, f.DecodeParms)
+			log.Trace.Printf("decodeStream: decoding filter:%s\ndecodeParms:%s\n", f.Name, f.DecodeParms)
 		} else {
-			log.Debug.Printf("decodeStream: decoding filter:%s\n", f.Name)
+			log.Trace.Printf("decodeStream: decoding filter:%s\n", f.Name)
 		}
 
 		// make parms map[string]int
@@ -173,9 +174,9 @@ func decodeStream(sd *StreamDict) error {
 
 	sd.Content = c.Bytes()
 
-	//fmt.Printf("decodedStream returning %d(#%02x)bytes: \n%s\n", len(sd.Content), len(sd.Content), hex.Dump(c.Bytes()))
+	log.Trace.Printf("decodedStream returning %d(#%02x)bytes: \n%s\n", len(sd.Content), len(sd.Content), hex.Dump(c.Bytes()))
 
-	log.Debug.Printf("decodeStream end")
+	//log.Trace.Printf("decodeStream end")
 
 	return nil
 }

@@ -61,7 +61,7 @@ func ReadFile(fileIn string, config *Configuration) (*Context, error) {
 // an in-memory representation containing a cross reference table.
 func Read(rs io.ReadSeeker, fileName string, fileSize int64, config *Configuration) (*Context, error) {
 
-	log.Debug.Println("Read: begin")
+	log.Read.Println("Read: begin")
 
 	ctx, err := NewContext(rs, fileName, fileSize, config)
 	if err != nil {
@@ -87,7 +87,7 @@ func Read(rs io.ReadSeeker, fileName string, fileSize int64, config *Configurati
 		return nil, err
 	}
 
-	log.Debug.Println("Read: end")
+	log.Read.Println("Read: end")
 
 	return ctx, nil
 }
@@ -145,7 +145,7 @@ func newPositionedReader(rs io.ReadSeeker, offset *int64) (*bufio.Reader, error)
 		return nil, err
 	}
 
-	log.Debug.Printf("newPositionedReader: positioned to offset: %d\n", *offset)
+	log.Read.Printf("newPositionedReader: positioned to offset: %d\n", *offset)
 
 	return bufio.NewReader(rs), nil
 }
@@ -164,7 +164,7 @@ func offsetLastXRefSection(ctx *Context) (*int64, error) {
 
 	buf := make([]byte, bufSize)
 
-	log.Debug.Printf("scanning for offsetLastXRefSection starting at %d\n", off)
+	log.Read.Printf("scanning for offsetLastXRefSection starting at %d\n", off)
 
 	_, err = rs.Read(buf)
 	if err != nil {
@@ -188,7 +188,7 @@ func offsetLastXRefSection(ctx *Context) (*int64, error) {
 		return nil, errors.New("corrupted xref section")
 	}
 
-	log.Debug.Printf("Offset last xrefsection: %d\n", offset)
+	log.Read.Printf("Offset last xrefsection: %d\n", offset)
 
 	return &offset, nil
 }
@@ -196,7 +196,7 @@ func offsetLastXRefSection(ctx *Context) (*int64, error) {
 // Read next subsection entry and generate corresponding xref table entry.
 func parseXRefTableEntry(s *bufio.Scanner, xRefTable *XRefTable, objectNumber int) error {
 
-	log.Debug.Println("parseXRefTableEntry: begin")
+	log.Read.Println("parseXRefTableEntry: begin")
 
 	line, err := scanLine(s)
 	if err != nil {
@@ -204,7 +204,7 @@ func parseXRefTableEntry(s *bufio.Scanner, xRefTable *XRefTable, objectNumber in
 	}
 
 	if xRefTable.Exists(objectNumber) {
-		log.Debug.Printf("parseXRefTableEntry: end - Skip entry %d - already assigned\n", objectNumber)
+		log.Read.Printf("parseXRefTableEntry: end - Skip entry %d - already assigned\n", objectNumber)
 		return nil
 	}
 
@@ -235,7 +235,7 @@ func parseXRefTableEntry(s *bufio.Scanner, xRefTable *XRefTable, objectNumber in
 
 		// in use object
 
-		log.Debug.Printf("parseXRefTableEntry: Object #%d is in use at offset=%d, generation=%d\n", objectNumber, offset, generation)
+		log.Read.Printf("parseXRefTableEntry: Object #%d is in use at offset=%d, generation=%d\n", objectNumber, offset, generation)
 
 		if offset == 0 {
 			log.Info.Printf("parseXRefTableEntry: Skip entry for in use object #%d with offset 0\n", objectNumber)
@@ -252,7 +252,7 @@ func parseXRefTableEntry(s *bufio.Scanner, xRefTable *XRefTable, objectNumber in
 
 		// free object
 
-		log.Debug.Printf("parseXRefTableEntry: Object #%d is unused, next free is object#%d, generation=%d\n", objectNumber, offset, generation)
+		log.Read.Printf("parseXRefTableEntry: Object #%d is unused, next free is object#%d, generation=%d\n", objectNumber, offset, generation)
 
 		xRefTableEntry =
 			XRefTableEntry{
@@ -262,11 +262,11 @@ func parseXRefTableEntry(s *bufio.Scanner, xRefTable *XRefTable, objectNumber in
 
 	}
 
-	log.Debug.Printf("parseXRefTableEntry: Insert new xreftable entry for Object %d\n", objectNumber)
+	log.Read.Printf("parseXRefTableEntry: Insert new xreftable entry for Object %d\n", objectNumber)
 
 	xRefTable.Table[objectNumber] = &xRefTableEntry
 
-	log.Debug.Println("parseXRefTableEntry: end")
+	log.Read.Println("parseXRefTableEntry: end")
 
 	return nil
 }
@@ -274,7 +274,7 @@ func parseXRefTableEntry(s *bufio.Scanner, xRefTable *XRefTable, objectNumber in
 // Process xRef table subsection and create corrresponding xRef table entries.
 func parseXRefTableSubSection(s *bufio.Scanner, xRefTable *XRefTable, fields []string) error {
 
-	log.Debug.Println("parseXRefTableSubSection: begin")
+	log.Read.Println("parseXRefTableSubSection: begin")
 
 	startObjNumber, err := strconv.Atoi(fields[0])
 	if err != nil {
@@ -286,7 +286,7 @@ func parseXRefTableSubSection(s *bufio.Scanner, xRefTable *XRefTable, fields []s
 		return err
 	}
 
-	log.Debug.Printf("detected xref subsection, startObj=%d length=%d\n", startObjNumber, objCount)
+	log.Read.Printf("detected xref subsection, startObj=%d length=%d\n", startObjNumber, objCount)
 
 	// Process all entries of this subsection into xRefTable entries.
 	for i := 0; i < objCount; i++ {
@@ -295,7 +295,7 @@ func parseXRefTableSubSection(s *bufio.Scanner, xRefTable *XRefTable, fields []s
 		}
 	}
 
-	log.Debug.Println("parseXRefTableSubSection: end")
+	log.Read.Println("parseXRefTableSubSection: end")
 
 	return nil
 }
@@ -303,7 +303,7 @@ func parseXRefTableSubSection(s *bufio.Scanner, xRefTable *XRefTable, fields []s
 // Parse compressed object.
 func compressedObject(s string) (Object, error) {
 
-	log.Debug.Println("compressedObject: begin")
+	log.Read.Println("compressedObject: begin")
 
 	o, err := parseObject(&s)
 	if err != nil {
@@ -313,14 +313,14 @@ func compressedObject(s string) (Object, error) {
 	d, ok := o.(Dict)
 	if !ok {
 		// return trivial Object: Integer, Array, etc.
-		log.Debug.Println("compressedObject: end, any other than dict")
+		log.Read.Println("compressedObject: end, any other than dict")
 		return o, nil
 	}
 
 	streamLength, streamLengthRef := d.Length()
 	if streamLength == nil && streamLengthRef == nil {
 		// return Dict
-		log.Debug.Println("compressedObject: end, dict")
+		log.Read.Println("compressedObject: end, dict")
 		return d, nil
 	}
 
@@ -330,7 +330,7 @@ func compressedObject(s string) (Object, error) {
 // Parse all objects of an object stream and save them into objectStreamDict.ObjArray.
 func parseObjectStream(osd *ObjectStreamDict) error {
 
-	log.Debug.Printf("parseObjectStream begin: decoding %d objects.\n", osd.ObjCount)
+	log.Read.Printf("parseObjectStream begin: decoding %d objects.\n", osd.ObjCount)
 
 	decodedContent := osd.Content
 	prolog := decodedContent[:osd.FirstObjOffset]
@@ -357,25 +357,25 @@ func parseObjectStream(osd *ObjectStreamDict) error {
 
 		if i > 0 {
 			dstr := string(decodedContent[offsetOld:offset])
-			log.Debug.Printf("parseObjectStream: objString = %s\n", dstr)
+			log.Read.Printf("parseObjectStream: objString = %s\n", dstr)
 			o, err := compressedObject(dstr)
 			if err != nil {
 				return err
 			}
 
-			log.Debug.Printf("parseObjectStream: [%d] = obj %s:\n%s\n", i/2-1, objs[i-2], o)
+			log.Read.Printf("parseObjectStream: [%d] = obj %s:\n%s\n", i/2-1, objs[i-2], o)
 			objArray = append(objArray, o)
 		}
 
 		if i == len(objs)-2 {
 			dstr := string(decodedContent[offset:])
-			log.Debug.Printf("parseObjectStream: objString = %s\n", dstr)
+			log.Read.Printf("parseObjectStream: objString = %s\n", dstr)
 			o, err := compressedObject(dstr)
 			if err != nil {
 				return err
 			}
 
-			log.Debug.Printf("parseObjectStream: [%d] = obj %s:\n%s\n", i/2, objs[i], o)
+			log.Read.Printf("parseObjectStream: [%d] = obj %s:\n%s\n", i/2, objs[i], o)
 			objArray = append(objArray, o)
 		}
 
@@ -384,7 +384,7 @@ func parseObjectStream(osd *ObjectStreamDict) error {
 
 	osd.ObjArray = objArray
 
-	log.Debug.Println("parseObjectStream end")
+	log.Read.Println("parseObjectStream end")
 
 	return nil
 }
@@ -392,7 +392,7 @@ func parseObjectStream(osd *ObjectStreamDict) error {
 // For each object embedded in this xRefStream create the corresponding xRef table entry.
 func extractXRefTableEntriesFromXRefStream(buf []byte, xsd *XRefStreamDict, ctx *Context) error {
 
-	log.Debug.Printf("extractXRefTableEntriesFromXRefStream begin")
+	log.Read.Printf("extractXRefTableEntriesFromXRefStream begin")
 
 	// Note:
 	// A value of zero for an element in the W array indicates that the corresponding field shall not be present in the stream,
@@ -404,16 +404,16 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, xsd *XRefStreamDict, ctx 
 	i3 := xsd.W[2]
 
 	xrefEntryLen := i1 + i2 + i3
-	log.Debug.Printf("extractXRefTableEntriesFromXRefStream: begin xrefEntryLen = %d\n", xrefEntryLen)
+	log.Read.Printf("extractXRefTableEntriesFromXRefStream: begin xrefEntryLen = %d\n", xrefEntryLen)
 
 	if len(buf)%xrefEntryLen > 0 {
 		return errors.New("extractXRefTableEntriesFromXRefStream: corrupt xrefstream")
 	}
 
 	objCount := len(xsd.Objects)
-	log.Debug.Printf("extractXRefTableEntriesFromXRefStream: objCount:%d %v\n", objCount, xsd.Objects)
+	log.Read.Printf("extractXRefTableEntriesFromXRefStream: objCount:%d %v\n", objCount, xsd.Objects)
 
-	log.Debug.Printf("extractXRefTableEntriesFromXRefStream: len(buf):%d objCount*xrefEntryLen:%d\n", len(buf), objCount*xrefEntryLen)
+	log.Read.Printf("extractXRefTableEntriesFromXRefStream: len(buf):%d objCount*xrefEntryLen:%d\n", len(buf), objCount*xrefEntryLen)
 	if len(buf) < objCount*xrefEntryLen {
 		// Sometimes there is an additional xref entry not accounted for by "Index".
 		// We ignore such a entries and do not treat this as an error.
@@ -447,7 +447,7 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, xsd *XRefStreamDict, ctx 
 
 		case 0x00:
 			// free object
-			log.Debug.Printf("extractXRefTableEntriesFromXRefStream: Object #%d is unused, next free is object#%d, generation=%d\n", objectNumber, c2, c3)
+			log.Read.Printf("extractXRefTableEntriesFromXRefStream: Object #%d is unused, next free is object#%d, generation=%d\n", objectNumber, c2, c3)
 			g := int(c3)
 
 			xRefTableEntry =
@@ -459,7 +459,7 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, xsd *XRefStreamDict, ctx 
 
 		case 0x01:
 			// in use object
-			log.Debug.Printf("extractXRefTableEntriesFromXRefStream: Object #%d is in use at offset=%d, generation=%d\n", objectNumber, c2, c3)
+			log.Read.Printf("extractXRefTableEntriesFromXRefStream: Object #%d is in use at offset=%d, generation=%d\n", objectNumber, c2, c3)
 			g := int(c3)
 
 			xRefTableEntry =
@@ -472,7 +472,7 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, xsd *XRefStreamDict, ctx 
 		case 0x02:
 			// compressed object
 			// generation always 0.
-			log.Debug.Printf("extractXRefTableEntriesFromXRefStream: Object #%d is compressed at obj %5d[%d]\n", objectNumber, c2, c3)
+			log.Read.Printf("extractXRefTableEntriesFromXRefStream: Object #%d is compressed at obj %5d[%d]\n", objectNumber, c2, c3)
 			objNumberRef := int(c2)
 			objIndex := int(c3)
 
@@ -488,7 +488,7 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, xsd *XRefStreamDict, ctx 
 		}
 
 		if ctx.XRefTable.Exists(objectNumber) {
-			log.Debug.Printf("extractXRefTableEntriesFromXRefStream: Skip entry %d - already assigned\n", objectNumber)
+			log.Read.Printf("extractXRefTableEntriesFromXRefStream: Skip entry %d - already assigned\n", objectNumber)
 		} else {
 			ctx.Table[objectNumber] = &xRefTableEntry
 		}
@@ -496,7 +496,7 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, xsd *XRefStreamDict, ctx 
 		j++
 	}
 
-	log.Debug.Println("extractXRefTableEntriesFromXRefStream: end")
+	log.Read.Println("extractXRefTableEntriesFromXRefStream: end")
 
 	return nil
 }
@@ -521,7 +521,7 @@ func xRefStreamDict(ctx *Context, o Object, objNr int, streamOffset int64) (*XRe
 	}
 
 	// We have a stream object.
-	log.Debug.Printf("xRefStreamDict: streamobject #%d\n", objNr)
+	log.Read.Printf("xRefStreamDict: streamobject #%d\n", objNr)
 	sd := NewStreamDict(d, streamOffset, streamLength, streamLengthObjNr, filterPipeline)
 
 	if _, err = loadEncodedStreamContent(ctx, &sd); err != nil {
@@ -539,14 +539,14 @@ func xRefStreamDict(ctx *Context, o Object, objNr int, streamOffset int64) (*XRe
 // Parse xRef stream and setup xrefTable entries for all embedded objects and the xref stream dict.
 func parseXRefStream(rd io.Reader, offset *int64, ctx *Context) (prevOffset *int64, err error) {
 
-	log.Debug.Printf("parseXRefStream: begin at offset %d\n", *offset)
+	log.Read.Printf("parseXRefStream: begin at offset %d\n", *offset)
 
 	buf, endInd, streamInd, streamOffset, err := buffer(rd)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Debug.Printf("parseXRefStream: endInd=%[1]d(%[1]x) streamInd=%[2]d(%[2]x)\n", endInd, streamInd)
+	log.Read.Printf("parseXRefStream: endInd=%[1]d(%[1]x) streamInd=%[2]d(%[2]x)\n", endInd, streamInd)
 
 	line := string(buf)
 
@@ -565,14 +565,14 @@ func parseXRefStream(rd io.Reader, offset *int64, ctx *Context) (prevOffset *int
 	}
 
 	// parse this object
-	log.Debug.Printf("parseXRefStream: xrefstm obj#:%d gen:%d\n", *objectNumber, *generationNumber)
-	log.Debug.Printf("parseXRefStream: dereferencing object %d\n", *objectNumber)
+	log.Read.Printf("parseXRefStream: xrefstm obj#:%d gen:%d\n", *objectNumber, *generationNumber)
+	log.Read.Printf("parseXRefStream: dereferencing object %d\n", *objectNumber)
 	o, err := parseObject(&l)
 	if err != nil {
 		return nil, errors.Wrapf(err, "parseXRefStream: no object")
 	}
 
-	log.Debug.Printf("parseXRefStream: we have an object: %s\n", o)
+	log.Read.Printf("parseXRefStream: we have an object: %s\n", o)
 
 	streamOffset += *offset
 	sd, err := xRefStreamDict(ctx, o, *objectNumber, streamOffset)
@@ -600,13 +600,13 @@ func parseXRefStream(rd io.Reader, offset *int64, ctx *Context) (prevOffset *int
 			Generation: generationNumber,
 			Object:     *sd}
 
-	log.Debug.Printf("parseXRefStream: Insert new xRefTable entry for Object %d\n", *objectNumber)
+	log.Read.Printf("parseXRefStream: Insert new xRefTable entry for Object %d\n", *objectNumber)
 
 	ctx.Table[*objectNumber] = &entry
 	ctx.Read.XRefStreams[*objectNumber] = true
 	prevOffset = sd.PreviousOffset
 
-	log.Debug.Println("parseXRefStream: end")
+	log.Read.Println("parseXRefStream: end")
 
 	return prevOffset, nil
 }
@@ -614,7 +614,7 @@ func parseXRefStream(rd io.Reader, offset *int64, ctx *Context) (prevOffset *int
 // Parse an xRefStream for a hybrid PDF file.
 func parseHybridXRefStream(offset *int64, ctx *Context) error {
 
-	log.Debug.Println("parseHybridXRefStream: begin")
+	log.Read.Println("parseHybridXRefStream: begin")
 
 	rd, err := newPositionedReader(ctx.Read.rs, offset)
 	if err != nil {
@@ -630,7 +630,7 @@ func parseHybridXRefStream(offset *int64, ctx *Context) error {
 		return errors.New("parseHybridXRefStream: previous xref stream not allowed")
 	}
 
-	log.Debug.Println("parseHybridXRefStream: end")
+	log.Read.Println("parseHybridXRefStream: end")
 
 	return nil
 }
@@ -638,13 +638,13 @@ func parseHybridXRefStream(offset *int64, ctx *Context) error {
 // Parse trailer dict and return any offset of a previous xref section.
 func parseTrailerInfo(d Dict, xRefTable *XRefTable) error {
 
-	log.Debug.Println("parseTrailerInfo begin")
+	log.Read.Println("parseTrailerInfo begin")
 
 	if _, found := d.Find("Encrypt"); found {
 		encryptObjRef := d.IndirectRefEntry("Encrypt")
 		if encryptObjRef != nil {
 			xRefTable.Encrypt = encryptObjRef
-			log.Debug.Printf("parseTrailerInfo: Encrypt object: %s\n", *xRefTable.Encrypt)
+			log.Read.Printf("parseTrailerInfo: Encrypt object: %s\n", *xRefTable.Encrypt)
 		}
 	}
 
@@ -662,14 +662,14 @@ func parseTrailerInfo(d Dict, xRefTable *XRefTable) error {
 			return errors.New("parseTrailerInfo: missing entry \"Root\"")
 		}
 		xRefTable.Root = rootObjRef
-		log.Debug.Printf("parseTrailerInfo: Root object: %s\n", *xRefTable.Root)
+		log.Read.Printf("parseTrailerInfo: Root object: %s\n", *xRefTable.Root)
 	}
 
 	if xRefTable.Info == nil {
 		infoObjRef := d.IndirectRefEntry("Info")
 		if infoObjRef != nil {
 			xRefTable.Info = infoObjRef
-			log.Debug.Printf("parseTrailerInfo: Info object: %s\n", *xRefTable.Info)
+			log.Read.Printf("parseTrailerInfo: Info object: %s\n", *xRefTable.Info)
 		}
 	}
 
@@ -677,20 +677,20 @@ func parseTrailerInfo(d Dict, xRefTable *XRefTable) error {
 		idArray := d.ArrayEntry("ID")
 		if idArray != nil {
 			xRefTable.ID = idArray
-			log.Debug.Printf("parseTrailerInfo: ID object: %s\n", xRefTable.ID)
+			log.Read.Printf("parseTrailerInfo: ID object: %s\n", xRefTable.ID)
 		} else if xRefTable.Encrypt != nil {
 			return errors.New("parseTrailerInfo: missing entry \"ID\"")
 		}
 	}
 
-	log.Debug.Println("parseTrailerInfo end")
+	log.Read.Println("parseTrailerInfo end")
 
 	return nil
 }
 
 func parseTrailerDict(trailerDict Dict, ctx *Context) (*int64, error) {
 
-	log.Debug.Println("parseTrailerDict begin")
+	log.Read.Println("parseTrailerDict begin")
 
 	xRefTable := ctx.XRefTable
 
@@ -700,7 +700,7 @@ func parseTrailerDict(trailerDict Dict, ctx *Context) (*int64, error) {
 	}
 
 	if arr := trailerDict.ArrayEntry("AdditionalStreams"); arr != nil {
-		log.Debug.Printf("parseTrailerInfo: found AdditionalStreams: %s\n", arr)
+		log.Read.Printf("parseTrailerInfo: found AdditionalStreams: %s\n", arr)
 		a := Array{}
 		for _, value := range arr {
 			if indRef, ok := value.(IndirectRef); ok {
@@ -712,7 +712,7 @@ func parseTrailerDict(trailerDict Dict, ctx *Context) (*int64, error) {
 
 	offset := trailerDict.Prev()
 	if offset != nil {
-		log.Debug.Printf("parseTrailerDict: previous xref table section offset:%d\n", *offset)
+		log.Read.Printf("parseTrailerDict: previous xref table section offset:%d\n", *offset)
 	}
 
 	offsetXRefStream := trailerDict.Int64Entry("XRefStm")
@@ -721,7 +721,7 @@ func parseTrailerDict(trailerDict Dict, ctx *Context) (*int64, error) {
 		if !ctx.Reader15 && xRefTable.Version() >= V14 && !ctx.Read.Hybrid {
 			return nil, errors.Errorf("parseTrailerDict: PDF1.4 conformant reader: found incompatible version: %s", xRefTable.VersionString())
 		}
-		log.Debug.Println("parseTrailerDict end")
+		log.Read.Println("parseTrailerDict end")
 		// continue to parse previous xref section, if there is any.
 		return offset, nil
 	}
@@ -743,7 +743,7 @@ func parseTrailerDict(trailerDict Dict, ctx *Context) (*int64, error) {
 		}
 	}
 
-	log.Debug.Println("parseTrailerDict end")
+	log.Read.Println("parseTrailerDict end")
 
 	return offset, nil
 }
@@ -798,14 +798,14 @@ func scanTrailerDict(s *bufio.Scanner, startTag bool) (string, error) {
 // Parse xRef section into corresponding number of xRef table entries.
 func parseXRefSection(s *bufio.Scanner, ctx *Context) (*int64, error) {
 
-	log.Debug.Println("parseXRefSection begin")
+	log.Read.Println("parseXRefSection begin")
 
 	line, err := scanLine(s)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Debug.Printf("parseXRefSection: <%s>\n", line)
+	log.Read.Printf("parseXRefSection: <%s>\n", line)
 
 	fields := strings.Fields(line)
 
@@ -831,21 +831,21 @@ func parseXRefSection(s *bufio.Scanner, ctx *Context) (*int64, error) {
 		fields = strings.Fields(line)
 	}
 
-	log.Debug.Println("parseXRefSection: All subsections read!")
+	log.Read.Println("parseXRefSection: All subsections read!")
 
 	if !strings.HasPrefix(line, "trailer") {
 		return nil, errors.Errorf("xrefsection: missing trailer dict, line = <%s>", line)
 	}
 
-	log.Debug.Println("parseXRefSection: parsing trailer dict..")
+	log.Read.Println("parseXRefSection: parsing trailer dict..")
 
 	var trailerString string
 
 	if line != "trailer" {
 		trailerString = line[7:]
-		log.Debug.Printf("parseXRefSection: trailer leftover: <%s>\n", trailerString)
+		log.Read.Printf("parseXRefSection: trailer leftover: <%s>\n", trailerString)
 	} else {
-		log.Debug.Printf("line (len %d) <%s>\n", len(line), line)
+		log.Read.Printf("line (len %d) <%s>\n", len(line), line)
 	}
 
 	// Unless trailerDict already scanned into trailerString
@@ -860,7 +860,7 @@ func parseXRefSection(s *bufio.Scanner, ctx *Context) (*int64, error) {
 		trailerString += trailerDictString
 	}
 
-	log.Debug.Printf("parseXRefSection: trailerString: (len:%d) <%s>\n", len(trailerString), trailerString)
+	log.Read.Printf("parseXRefSection: trailerString: (len:%d) <%s>\n", len(trailerString), trailerString)
 
 	o, err := parseObject(&trailerString)
 	if err != nil {
@@ -872,14 +872,14 @@ func parseXRefSection(s *bufio.Scanner, ctx *Context) (*int64, error) {
 		return nil, errors.New("parseXRefSection: corrupt trailer dict")
 	}
 
-	log.Debug.Printf("parseXRefSection: trailerDict:\n%s\n", trailerDict)
+	log.Read.Printf("parseXRefSection: trailerDict:\n%s\n", trailerDict)
 
 	offset, err := parseTrailerDict(trailerDict, ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Debug.Println("parseXRefSection end")
+	log.Read.Println("parseXRefSection end")
 
 	return offset, nil
 }
@@ -892,7 +892,7 @@ func parseXRefSection(s *bufio.Scanner, ctx *Context) (*int64, error) {
 // The header version comes as the first line of the file.
 func headerVersion(rs io.ReadSeeker) (*Version, error) {
 
-	log.Debug.Println("headerVersion begin")
+	log.Read.Println("headerVersion begin")
 
 	// Get first line of file which holds the version of this PDFFile.
 	// We call this the header version.
@@ -923,7 +923,7 @@ func headerVersion(rs io.ReadSeeker) (*Version, error) {
 		return nil, errors.Wrapf(err, "headerVersion: unknown PDF Header Version")
 	}
 
-	log.Debug.Printf("headerVersion: end, found header version: %s\n", pdfVersion)
+	log.Read.Printf("headerVersion: end, found header version: %s\n", pdfVersion)
 
 	return &pdfVersion, nil
 }
@@ -931,7 +931,7 @@ func headerVersion(rs io.ReadSeeker) (*Version, error) {
 // Build XRefTable by reading XRef streams or XRef sections.
 func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 
-	log.Debug.Println("buildXRefTableStartingAt: begin")
+	log.Read.Println("buildXRefTableStartingAt: begin")
 
 	rs := ctx.Read.rs
 
@@ -957,11 +957,11 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 			return err
 		}
 
-		log.Debug.Printf("line: <%s>\n", line)
+		log.Read.Printf("line: <%s>\n", line)
 
 		if line != "xref" {
 
-			log.Debug.Println("buildXRefTableStartingAt: found xref stream")
+			log.Read.Println("buildXRefTableStartingAt: found xref stream")
 			ctx.Read.UsingXRefStreams = true
 			rd, err = newPositionedReader(rs, offset)
 			if err != nil {
@@ -974,7 +974,7 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 
 		} else {
 
-			log.Debug.Println("buildXRefTableStartingAt: found xref section")
+			log.Read.Println("buildXRefTableStartingAt: found xref section")
 			if offset, err = parseXRefSection(s, ctx); err != nil {
 				return err
 			}
@@ -982,7 +982,7 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 		}
 	}
 
-	log.Debug.Println("buildXRefTableStartingAt: end")
+	log.Read.Println("buildXRefTableStartingAt: end")
 
 	return nil
 }
@@ -994,7 +994,7 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 // and build up the xref table along the way.
 func readXRefTable(ctx *Context) (err error) {
 
-	log.Debug.Println("readXRefTable: begin")
+	log.Read.Println("readXRefTable: begin")
 
 	offset, err := offsetLastXRefSection(ctx)
 	if err != nil {
@@ -1010,7 +1010,7 @@ func readXRefTable(ctx *Context) (err error) {
 	}
 
 	// Log list of free objects (not the "free list").
-	//log.Debug.Printf("freelist: %v\n", ctx.FreeObjects)
+	//log.Read.Printf("freelist: %v\n", ctx.FreeObjects)
 
 	// Ensure valid freelist of objects.
 	err = ctx.EnsureValidFreeList()
@@ -1018,7 +1018,7 @@ func readXRefTable(ctx *Context) (err error) {
 		return
 	}
 
-	log.Debug.Println("readXRefTable: end")
+	log.Read.Println("readXRefTable: end")
 
 	return
 }
@@ -1031,7 +1031,7 @@ func growBufBy(buf []byte, size int, rd io.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	//log.Debug.Printf("growBufBy: Read %d bytes\n", n)
+	//log.Read.Printf("growBufBy: Read %d bytes\n", n)
 
 	return append(buf, b...), nil
 }
@@ -1094,7 +1094,7 @@ func buffer(rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffset i
 	//                                    streamInd                            endInd
 	//                                  -1 if absent                        -1 if absent
 
-	//log.Debug.Println("buffer: begin")
+	//log.Read.Println("buffer: begin")
 
 	endInd, streamInd = -1, -1
 
@@ -1120,7 +1120,7 @@ func buffer(rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffset i
 			lastStreamMarker(&streamInd, endInd, line)
 		}
 
-		log.Debug.Printf("buffer: endInd=%d streamInd=%d\n", endInd, streamInd)
+		log.Read.Printf("buffer: endInd=%d streamInd=%d\n", endInd, streamInd)
 
 		if streamInd > 0 {
 
@@ -1143,7 +1143,7 @@ func buffer(rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffset i
 		}
 	}
 
-	//log.Debug.Printf("buffer: end, returned bufsize=%d streamOffset=%d\n", len(buf), streamOffset)
+	//log.Read.Printf("buffer: end, returned bufsize=%d streamOffset=%d\n", len(buf), streamOffset)
 
 	return buf, endInd, streamInd, streamOffset, nil
 }
@@ -1151,7 +1151,7 @@ func buffer(rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffset i
 // return true if 'stream' follows end of dict: >>{whitespace}stream
 func keywordStreamRightAfterEndOfDict(buf string, streamInd int) bool {
 
-	//log.Debug.Println("keywordStreamRightAfterEndOfDict: begin")
+	//log.Read.Println("keywordStreamRightAfterEndOfDict: begin")
 
 	// Get a slice of the chunk right in front of 'stream'.
 	b := buf[:streamInd]
@@ -1166,7 +1166,7 @@ func keywordStreamRightAfterEndOfDict(buf string, streamInd int) bool {
 	// We found the last >>. Return true if after end of dict only whitespace.
 	ok := strings.TrimSpace(b[eod:]) == ">>"
 
-	//log.Debug.Printf("keywordStreamRightAfterEndOfDict: end, %v\n", ok)
+	//log.Read.Printf("keywordStreamRightAfterEndOfDict: end, %v\n", ok)
 
 	return ok
 }
@@ -1208,7 +1208,7 @@ func buildFilterPipeline(ctx *Context, filterArray, decodeParmsArr Array, decode
 // Return the filter pipeline associated with this stream dict.
 func pdfFilterPipeline(ctx *Context, dict Dict) ([]PDFFilter, error) {
 
-	log.Debug.Println("pdfFilterPipeline: begin")
+	log.Read.Println("pdfFilterPipeline: begin")
 
 	var err error
 
@@ -1240,7 +1240,7 @@ func pdfFilterPipeline(ctx *Context, dict Dict) ([]PDFFilter, error) {
 		o, found := dict.Find("DecodeParms")
 		if !found {
 			// w/o decode parameters.
-			log.Debug.Println("pdfFilterPipeline: end w/o decode parms")
+			log.Read.Println("pdfFilterPipeline: end w/o decode parms")
 			return append(filterPipeline, PDFFilter{Name: filterName, DecodeParms: nil}), nil
 		}
 
@@ -1257,7 +1257,7 @@ func pdfFilterPipeline(ctx *Context, dict Dict) ([]PDFFilter, error) {
 		}
 
 		// with decode parameters.
-		log.Debug.Println("pdfFilterPipeline: end with decode parms")
+		log.Read.Println("pdfFilterPipeline: end with decode parms")
 		return append(filterPipeline, PDFFilter{Name: filterName, DecodeParms: d}), nil
 	}
 
@@ -1283,7 +1283,7 @@ func pdfFilterPipeline(ctx *Context, dict Dict) ([]PDFFilter, error) {
 
 	filterPipeline, err = buildFilterPipeline(ctx, filterArray, decodeParmsArr, decodeParms)
 
-	log.Debug.Println("pdfFilterPipeline: end")
+	log.Read.Println("pdfFilterPipeline: end")
 
 	return filterPipeline, err
 }
@@ -1306,7 +1306,7 @@ func streamDictForObject(ctx *Context, Dict Dict, objNr, streamInd int, streamOf
 	// We have a stream object.
 	sd = NewStreamDict(Dict, streamOffset, streamLength, streamLengthRef, filterPipeline)
 
-	log.Debug.Printf("streamDictForObject: end, Streamobject #%d\n", objNr)
+	log.Read.Printf("streamDictForObject: end, Streamobject #%d\n", objNr)
 
 	return sd, nil
 }
@@ -1321,7 +1321,7 @@ func dict(ctx *Context, d1 Dict, objNr, genNr, endInd, streamInd int) (d2 Dict, 
 	}
 
 	if endInd >= 0 && (streamInd < 0 || streamInd > endInd) {
-		log.Debug.Printf("dict: end, #%d\n", objNr)
+		log.Read.Printf("dict: end, #%d\n", objNr)
 		d2 = d1
 	}
 
@@ -1336,7 +1336,7 @@ func object(ctx *Context, offset int64, objNr, genNr int) (o Object, endInd, str
 		return nil, 0, 0, 0, err
 	}
 
-	//log.Debug.Printf("object: seeked to offset:%d\n", offset)
+	//log.Read.Printf("object: seeked to offset:%d\n", offset)
 
 	// process: # gen obj ... obj dict ... {stream ... data ... endstream} endobj
 	//                                    streamInd                        endInd
@@ -1347,8 +1347,8 @@ func object(ctx *Context, offset int64, objNr, genNr int) (o Object, endInd, str
 		return nil, 0, 0, 0, err
 	}
 
-	//log.Debug.Printf("streamInd:%d(#%x) streamOffset:%d(#%x) endInd:%d(#%x)\n", streamInd, streamInd, streamOffset, streamOffset, endInd, endInd)
-	//log.Debug.Printf("buflen=%d\n%s", len(buf), hex.Dump(buf))
+	//log.Read.Printf("streamInd:%d(#%x) streamOffset:%d(#%x) endInd:%d(#%x)\n", streamInd, streamInd, streamOffset, streamOffset, endInd, endInd)
+	//log.Read.Printf("buflen=%d\n%s", len(buf), hex.Dump(buf))
 
 	line := string(buf)
 
@@ -1358,25 +1358,25 @@ func object(ctx *Context, offset int64, objNr, genNr int) (o Object, endInd, str
 		// buf: # gen obj ... obj dict ... stream ... data
 		// implies we detected no endobj and a stream starting at streamInd.
 		// big stream, we parse object until "stream"
-		log.Debug.Println("object: big stream, we parse object until stream")
+		log.Read.Println("object: big stream, we parse object until stream")
 		l = line[:streamInd]
 	} else if streamInd < 0 { // dict
 		// buf: # gen obj ... obj dict ... endobj
 		// implies we detected endobj and no stream.
 		// small object w/o stream, parse until "endobj"
-		log.Debug.Println("object: small object w/o stream, parse until endobj")
+		log.Read.Println("object: small object w/o stream, parse until endobj")
 		l = line[:endInd]
 	} else if streamInd < endInd { // streamdict
 		// buf: # gen obj ... obj dict ... stream ... data ... endstream endobj
 		// implies we detected endobj and stream.
 		// small stream within buffer, parse until "stream"
-		log.Debug.Println("object: small stream within buffer, parse until stream")
+		log.Read.Println("object: small stream within buffer, parse until stream")
 		l = line[:streamInd]
 	} else { // dict
 		// buf: # gen obj ... obj dict ... endobj # gen obj ... obj dict ... stream
 		// small obj w/o stream, parse until "endobj"
 		// stream in buf belongs to subsequent object.
-		log.Debug.Println("object: small obj w/o stream, parse until endobj")
+		log.Read.Println("object: small obj w/o stream, parse until endobj")
 		l = line[:endInd]
 	}
 
@@ -1399,7 +1399,7 @@ func object(ctx *Context, offset int64, objNr, genNr int) (o Object, endInd, str
 // ParseObject parses an object from file at given offset.
 func ParseObject(ctx *Context, offset int64, objNr, genNr int) (Object, error) {
 
-	log.Debug.Printf("ParseObject: begin, obj#%d, offset:%d\n", objNr, offset)
+	log.Read.Printf("ParseObject: begin, obj#%d, offset:%d\n", objNr, offset)
 
 	obj, endInd, streamInd, streamOffset, err := object(ctx, offset, objNr, genNr)
 	if err != nil {
@@ -1467,7 +1467,7 @@ func dereferencedObject(ctx *Context, objectNumber int) (Object, error) {
 
 	if entry.Object == nil {
 
-		log.Debug.Printf("dereferencedObject: dereferencing object %d\n", objectNumber)
+		log.Read.Printf("dereferencedObject: dereferencing object %d\n", objectNumber)
 
 		o, err := ParseObject(ctx, *entry.Offset, objectNumber, *entry.Generation)
 		if err != nil {
@@ -1517,7 +1517,7 @@ func dereferencedDict(ctx *Context, objectNumber int) (Dict, error) {
 // dereference a Integer object representing an int64 value.
 func int64Object(ctx *Context, objectNumber int) (*int64, error) {
 
-	log.Debug.Printf("int64Object begin: %d\n", objectNumber)
+	log.Read.Printf("int64Object begin: %d\n", objectNumber)
 
 	i, err := dereferencedInteger(ctx, objectNumber)
 	if err != nil {
@@ -1526,7 +1526,7 @@ func int64Object(ctx *Context, objectNumber int) (*int64, error) {
 
 	i64 := int64(i.Value())
 
-	log.Debug.Printf("int64Object end: %d\n", objectNumber)
+	log.Read.Printf("int64Object end: %d\n", objectNumber)
 
 	return &i64, nil
 
@@ -1535,7 +1535,7 @@ func int64Object(ctx *Context, objectNumber int) (*int64, error) {
 // Reads and returns a file buffer with length = stream length using provided reader positioned at offset.
 func readContentStream(rd io.Reader, streamLength int) ([]byte, error) {
 
-	log.Debug.Printf("readContentStream: begin streamLength:%d\n", streamLength)
+	log.Read.Printf("readContentStream: begin streamLength:%d\n", streamLength)
 
 	buf := make([]byte, streamLength)
 
@@ -1544,11 +1544,11 @@ func readContentStream(rd io.Reader, streamLength int) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		log.Debug.Printf("readContentStream: count=%d, buflen=%d(%X)\n", count, len(buf), len(buf))
+		log.Read.Printf("readContentStream: count=%d, buflen=%d(%X)\n", count, len(buf), len(buf))
 		totalCount += count
 	}
 
-	log.Debug.Printf("readContentStream: end\n")
+	log.Read.Printf("readContentStream: end\n")
 
 	return buf, nil
 }
@@ -1556,13 +1556,13 @@ func readContentStream(rd io.Reader, streamLength int) ([]byte, error) {
 // LoadEncodedStreamContent loads the encoded stream content from file into StreamDict.
 func loadEncodedStreamContent(ctx *Context, sd *StreamDict) ([]byte, error) {
 
-	log.Debug.Printf("LoadEncodedStreamContent: begin\n%v\n", sd)
+	log.Read.Printf("LoadEncodedStreamContent: begin\n%v\n", sd)
 
 	var err error
 
 	// Return saved decoded content.
 	if sd.Raw != nil {
-		log.Debug.Println("LoadEncodedStreamContent: end, already in memory.")
+		log.Read.Println("LoadEncodedStreamContent: end, already in memory.")
 		return sd.Raw, nil
 	}
 
@@ -1578,7 +1578,7 @@ func loadEncodedStreamContent(ctx *Context, sd *StreamDict) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		log.Debug.Printf("LoadEncodedStreamContent: new indirect streamLength:%d\n", *sd.StreamLength)
+		log.Read.Printf("LoadEncodedStreamContent: new indirect streamLength:%d\n", *sd.StreamLength)
 	}
 
 	newOffset := sd.StreamOffset
@@ -1587,7 +1587,7 @@ func loadEncodedStreamContent(ctx *Context, sd *StreamDict) ([]byte, error) {
 		return nil, err
 	}
 
-	log.Debug.Printf("LoadEncodedStreamContent: seeked to offset:%d\n", newOffset)
+	log.Read.Printf("LoadEncodedStreamContent: seeked to offset:%d\n", newOffset)
 
 	// Buffer stream contents.
 	// Read content from disk.
@@ -1596,12 +1596,12 @@ func loadEncodedStreamContent(ctx *Context, sd *StreamDict) ([]byte, error) {
 		return nil, err
 	}
 
-	//log.Debug.Printf("rawContent buflen=%d(#%x)\n%s", len(rawContent), len(rawContent), hex.Dump(rawContent))
+	//log.Read.Printf("rawContent buflen=%d(#%x)\n%s", len(rawContent), len(rawContent), hex.Dump(rawContent))
 
 	// Save encoded content.
 	sd.Raw = rawContent
 
-	log.Debug.Printf("LoadEncodedStreamContent: end: len(streamDictRaw)=%d\n", len(sd.Raw))
+	log.Read.Printf("LoadEncodedStreamContent: end: len(streamDictRaw)=%d\n", len(sd.Raw))
 
 	// Return encoded content.
 	return rawContent, nil
@@ -1610,7 +1610,7 @@ func loadEncodedStreamContent(ctx *Context, sd *StreamDict) ([]byte, error) {
 // Decodes the raw encoded stream content and saves it to streamDict.Content.
 func saveDecodedStreamContent(ctx *Context, sd *StreamDict, objNr, genNr int, decode bool) (err error) {
 
-	log.Debug.Printf("saveDecodedStreamContent: begin decode=%t\n", decode)
+	log.Read.Printf("saveDecodedStreamContent: begin decode=%t\n", decode)
 
 	// If the "Identity" crypt filter is used we do not need to decrypt.
 	if ctx != nil && ctx.EncKey != nil {
@@ -1650,7 +1650,7 @@ func saveDecodedStreamContent(ctx *Context, sd *StreamDict, objNr, genNr int, de
 		return err
 	}
 
-	log.Debug.Println("saveDecodedStreamContent: end")
+	log.Read.Println("saveDecodedStreamContent: end")
 
 	return nil
 }
@@ -1658,7 +1658,7 @@ func saveDecodedStreamContent(ctx *Context, sd *StreamDict, objNr, genNr int, de
 // Resolve compressed xRefTableEntry
 func decompressXRefTableEntry(xRefTable *XRefTable, objectNumber int, entry *XRefTableEntry) error {
 
-	log.Debug.Printf("decompressXRefTableEntry: compressed object %d at %d[%d]\n", objectNumber, *entry.ObjectStream, *entry.ObjectStreamInd)
+	log.Read.Printf("decompressXRefTableEntry: compressed object %d at %d[%d]\n", objectNumber, *entry.ObjectStream, *entry.ObjectStreamInd)
 
 	// Resolve xRefTable entry of referenced object stream.
 	objectStreamXRefTableEntry, ok := xRefTable.Find(*entry.ObjectStream)
@@ -1684,7 +1684,7 @@ func decompressXRefTableEntry(xRefTable *XRefTable, objectNumber int, entry *XRe
 	entry.Generation = &g
 	entry.Compressed = false
 
-	log.Debug.Printf("decompressXRefTableEntry: end, Obj %d[%d]:\n<%s>\n", *entry.ObjectStream, *entry.ObjectStreamInd, o)
+	log.Read.Printf("decompressXRefTableEntry: end, Obj %d[%d]:\n<%s>\n", *entry.ObjectStream, *entry.ObjectStreamInd, o)
 
 	return nil
 }
@@ -1697,29 +1697,29 @@ func logStream(o Object) {
 	case StreamDict:
 
 		if o.Content == nil {
-			log.Debug.Println("logStream: no stream content")
+			log.Read.Println("logStream: no stream content")
 		}
 
 		if o.IsPageContent {
-			//log.Debug.Printf("content <%s>\n", StreamDict.Content)
+			//log.Read.Printf("content <%s>\n", StreamDict.Content)
 		}
 
 	case ObjectStreamDict:
 
 		if o.Content == nil {
-			log.Debug.Println("logStream: no object stream content")
+			log.Read.Println("logStream: no object stream content")
 		} else {
-			log.Debug.Printf("logStream: objectStream content = %s\n", o.Content)
+			log.Read.Printf("logStream: objectStream content = %s\n", o.Content)
 		}
 
 		if o.ObjArray == nil {
-			log.Debug.Println("logStream: no object stream obj arr")
+			log.Read.Println("logStream: no object stream obj arr")
 		} else {
-			log.Debug.Printf("logStream: objectStream objArr = %s\n", o.ObjArray)
+			log.Read.Printf("logStream: objectStream objArr = %s\n", o.ObjArray)
 		}
 
 	default:
-		log.Debug.Println("logStream: no ObjectStreamDict")
+		log.Read.Println("logStream: no ObjectStreamDict")
 
 	}
 
@@ -1732,7 +1732,7 @@ func decodeObjectStreams(ctx *Context) error {
 	// Entry "Extends" intentionally left out.
 	// No object stream collection validation necessary.
 
-	log.Debug.Println("decodeObjectStreams: begin")
+	log.Read.Println("decodeObjectStreams: begin")
 
 	// Get sorted slice of object numbers.
 	var keys []int
@@ -1749,7 +1749,7 @@ func decodeObjectStreams(ctx *Context) error {
 			return errors.Errorf("decodeObjectStream: missing entry for obj#%d\n", objectNumber)
 		}
 
-		log.Debug.Printf("decodeObjectStreams: parsing object stream for obj#%d\n", objectNumber)
+		log.Read.Printf("decodeObjectStreams: parsing object stream for obj#%d\n", objectNumber)
 
 		// Parse object stream from file.
 		o, err := ParseObject(ctx, *entry.Offset, objectNumber, *entry.Generation)
@@ -1770,7 +1770,7 @@ func decodeObjectStreams(ctx *Context) error {
 
 		// Save decoded stream content to xRefTable.
 		if err = saveDecodedStreamContent(ctx, &sd, objectNumber, *entry.Generation, true); err != nil {
-			log.Debug.Printf("obj %d: %s", objectNumber, err)
+			log.Read.Printf("obj %d: %s", objectNumber, err)
 			return err
 		}
 
@@ -1780,7 +1780,7 @@ func decodeObjectStreams(ctx *Context) error {
 		}
 
 		// We have an object stream.
-		log.Debug.Printf("decodeObjectStreams: object stream #%d\n", objectNumber)
+		log.Read.Printf("decodeObjectStreams: object stream #%d\n", objectNumber)
 
 		ctx.Read.UsingObjectStreams = true
 
@@ -1790,7 +1790,7 @@ func decodeObjectStreams(ctx *Context) error {
 			return errors.Wrapf(err, "decodeObjectStreams: problem dereferencing object stream %d", objectNumber)
 		}
 
-		log.Debug.Printf("decodeObjectStreams: decoding object stream %d:\n", objectNumber)
+		log.Read.Printf("decodeObjectStreams: decoding object stream %d:\n", objectNumber)
 
 		// Parse all objects of this object stream and save them to ObjectStreamDict.ObjArray.
 		if err = parseObjectStream(osd); err != nil {
@@ -1801,13 +1801,13 @@ func decodeObjectStreams(ctx *Context) error {
 			return errors.Wrap(err, "decodeObjectStreams: objArray should be set!")
 		}
 
-		log.Debug.Printf("decodeObjectStreams: decoded object stream %d:\n", objectNumber)
+		log.Read.Printf("decodeObjectStreams: decoded object stream %d:\n", objectNumber)
 
 		// Save object stream dict to xRefTableEntry.
 		entry.Object = *osd
 	}
 
-	log.Debug.Println("decodeObjectStreams: end")
+	log.Read.Println("decodeObjectStreams: end")
 
 	return nil
 }
@@ -1824,7 +1824,7 @@ func handleLinearizationParmDict(ctx *Context, obj Object, objNr int) error {
 
 		ctx.Read.Linearized = true
 		ctx.LinearizationObjs[objNr] = true
-		log.Debug.Printf("handleLinearizationParmDict: identified linearizationObj #%d\n", objNr)
+		log.Read.Printf("handleLinearizationParmDict: identified linearizationObj #%d\n", objNr)
 
 		a := d.ArrayEntry("H")
 
@@ -1898,12 +1898,12 @@ func dereferenceObject(ctx *Context, objNr int) error {
 	xRefTable := ctx.XRefTable
 	xRefTableSize := len(xRefTable.Table)
 
-	log.Debug.Printf("dereferenceObject: begin, dereferencing object %d\n", objNr)
+	log.Read.Printf("dereferenceObject: begin, dereferencing object %d\n", objNr)
 
 	entry := xRefTable.Table[objNr]
 
 	if entry.Free {
-		log.Debug.Printf("free object %d\n", objNr)
+		log.Read.Printf("free object %d\n", objNr)
 		return nil
 	}
 
@@ -1912,15 +1912,15 @@ func dereferenceObject(ctx *Context, objNr int) error {
 		if err != nil {
 			return err
 		}
-		//log.Debug.Printf("dereferenceObject: decompressed entry, Compressed=%v\n%s\n", entry.Compressed, entry.Object)
+		//log.Read.Printf("dereferenceObject: decompressed entry, Compressed=%v\n%s\n", entry.Compressed, entry.Object)
 		return nil
 	}
 
 	// entry is in use.
-	log.Debug.Printf("in use object %d\n", objNr)
+	log.Read.Printf("in use object %d\n", objNr)
 
 	if entry.Offset == nil || *entry.Offset == 0 {
-		log.Debug.Printf("dereferenceObject: already decompressed or used object w/o offset -> ignored")
+		log.Read.Printf("dereferenceObject: already decompressed or used object w/o offset -> ignored")
 		return nil
 	}
 
@@ -1930,13 +1930,13 @@ func dereferenceObject(ctx *Context, objNr int) error {
 	if o != nil {
 		logStream(entry.Object)
 		updateBinaryTotalSize(ctx, o)
-		log.Debug.Printf("handleCachedStreamDict: using cached object %d of %d\n<%s>\n", objNr, xRefTableSize, entry.Object)
+		log.Read.Printf("handleCachedStreamDict: using cached object %d of %d\n<%s>\n", objNr, xRefTableSize, entry.Object)
 		return nil
 	}
 
 	// Dereference (load from disk into memory).
 
-	log.Debug.Printf("dereferenceObject: dereferencing object %d\n", objNr)
+	log.Read.Printf("dereferenceObject: dereferencing object %d\n", objNr)
 
 	// Parse object from file: anything goes dict, array, integer, float, streamdicts...
 	o, err := ParseObject(ctx, *entry.Offset, objNr, *entry.Generation)
@@ -1972,7 +1972,7 @@ func dereferenceObject(ctx *Context, objNr int) error {
 		entry.Object = sd
 	}
 
-	log.Debug.Printf("dereferenceObject: end obj %d of %d\n<%s>\n", objNr, xRefTableSize, entry.Object)
+	log.Read.Printf("dereferenceObject: end obj %d of %d\n<%s>\n", objNr, xRefTableSize, entry.Object)
 
 	logStream(entry.Object)
 
@@ -1982,7 +1982,7 @@ func dereferenceObject(ctx *Context, objNr int) error {
 // Dereferences all objects including compressed objects from object streams.
 func dereferenceObjects(ctx *Context) error {
 
-	log.Debug.Println("dereferenceObjects: begin")
+	log.Read.Println("dereferenceObjects: begin")
 
 	// Get sorted slice of object numbers.
 	// TODO Skip sorting for performance gain.
@@ -1999,7 +1999,7 @@ func dereferenceObjects(ctx *Context) error {
 		}
 	}
 
-	log.Debug.Println("dereferenceObjects: end")
+	log.Read.Println("dereferenceObjects: end")
 
 	return nil
 }
@@ -2008,7 +2008,7 @@ func dereferenceObjects(ctx *Context) error {
 // and record this as rootVersion (as opposed to headerVersion).
 func identifyRootVersion(xRefTable *XRefTable) error {
 
-	log.Debug.Println("identifyRootVersion: begin")
+	log.Read.Println("identifyRootVersion: begin")
 
 	// Try to get Version from Root.
 	rootVersionStr, err := xRefTable.ParseRootVersion()
@@ -2034,7 +2034,7 @@ func identifyRootVersion(xRefTable *XRefTable) error {
 			xRefTable.HeaderVersion, *rootVersionStr)
 	}
 
-	log.Debug.Println("identifyRootVersion: end")
+	log.Read.Println("identifyRootVersion: end")
 
 	return nil
 }
@@ -2043,7 +2043,7 @@ func identifyRootVersion(xRefTable *XRefTable) error {
 // This includes processing of object streams and linearization dicts.
 func dereferenceXRefTable(ctx *Context, config *Configuration) error {
 
-	log.Debug.Println("dereferenceXRefTable: begin")
+	log.Read.Println("dereferenceXRefTable: begin")
 
 	xRefTable := ctx.XRefTable
 
@@ -2075,7 +2075,7 @@ func dereferenceXRefTable(ctx *Context, config *Configuration) error {
 		return err
 	}
 
-	log.Debug.Println("dereferenceXRefTable: end")
+	log.Read.Println("dereferenceXRefTable: end")
 
 	return nil
 }
@@ -2138,7 +2138,7 @@ func setupEncryptionKey(ctx *Context, encryptDictObjNr int) error {
 		return err
 	}
 
-	log.Debug.Printf("%s\n", encryptDict)
+	log.Read.Printf("%s\n", encryptDict)
 
 	enc, err := supportedEncryption(ctx, encryptDict)
 	if err != nil {

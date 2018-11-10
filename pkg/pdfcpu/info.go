@@ -35,10 +35,10 @@ func handleInfoDict(ctx *Context, d Dict) (err error) {
 		switch key {
 
 		case "Title":
-			log.Debug.Println("found Title")
+			log.Write.Println("found Title")
 
 		case "Author":
-			log.Debug.Println("found Author")
+			log.Write.Println("found Author")
 			// Record for stats.
 			ctx.Author, err = ctx.DereferenceText(value)
 			if err != nil {
@@ -47,13 +47,13 @@ func handleInfoDict(ctx *Context, d Dict) (err error) {
 			ctx.Author = csvSafeString(ctx.Author)
 
 		case "Subject":
-			log.Debug.Println("found Subject")
+			log.Write.Println("found Subject")
 
 		case "Keywords":
-			log.Debug.Println("found Keywords")
+			log.Write.Println("found Keywords")
 
 		case "Creator":
-			log.Debug.Println("found Creator")
+			log.Write.Println("found Creator")
 			// Record for stats.
 			ctx.Creator, err = ctx.DereferenceText(value)
 			if err != nil {
@@ -63,17 +63,17 @@ func handleInfoDict(ctx *Context, d Dict) (err error) {
 
 		case "Producer", "CreationDate", "ModDate":
 			// pdfcpu will modify these as direct dict entries.
-			log.Debug.Printf("found %s", key)
+			log.Write.Printf("found %s", key)
 			if indRef, ok := value.(IndirectRef); ok {
 				// Get rid of these extra objects.
 				ctx.Optimize.DuplicateInfoObjects[int(indRef.ObjectNumber)] = true
 			}
 
 		case "Trapped":
-			log.Debug.Println("found Trapped")
+			log.Write.Println("found Trapped")
 
 		default:
-			log.Debug.Printf("handleInfoDict: found out of spec entry %s %v\n", key, value)
+			log.Write.Printf("handleInfoDict: found out of spec entry %s %v\n", key, value)
 
 		}
 	}
@@ -135,16 +135,16 @@ func ensureInfoDict(ctx *Context) error {
 // Write the document info object for this PDF file.
 func writeDocumentInfoDict(ctx *Context) error {
 
-	log.Debug.Printf("*** writeDocumentInfoDict begin: offset=%d ***\n", ctx.Write.Offset)
+	log.Write.Printf("*** writeDocumentInfoDict begin: offset=%d ***\n", ctx.Write.Offset)
 
 	// Note: The document info object is optional but pdfcpu ensures one.
 
 	if ctx.Info == nil {
-		log.Debug.Printf("writeDocumentInfoObject end: No info object present, offset=%d\n", ctx.Write.Offset)
+		log.Write.Printf("writeDocumentInfoObject end: No info object present, offset=%d\n", ctx.Write.Offset)
 		return nil
 	}
 
-	log.Debug.Printf("writeDocumentInfoObject: %s\n", *ctx.Info)
+	log.Write.Printf("writeDocumentInfoObject: %s\n", *ctx.Info)
 
 	o := *ctx.Info
 
@@ -158,7 +158,7 @@ func writeDocumentInfoDict(ctx *Context) error {
 		return err
 	}
 
-	log.Debug.Printf("*** writeDocumentInfoDict end: offset=%d ***\n", ctx.Write.Offset)
+	log.Write.Printf("*** writeDocumentInfoDict end: offset=%d ***\n", ctx.Write.Offset)
 
 	return nil
 }

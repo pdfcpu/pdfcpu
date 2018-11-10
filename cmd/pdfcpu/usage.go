@@ -45,57 +45,62 @@ The commands are:
 
 Use "pdfcpu help [command]" for more information about a command.`
 
-	usageValidate     = "usage: pdfcpu validate [-verbose] [-mode strict|relaxed] [-upw userpw] [-opw ownerpw] inFile"
+	usageValidate     = "usage: pdfcpu validate [-v(erbose)|vv] [-mode strict|relaxed] [-upw userpw] [-opw ownerpw] inFile"
 	usageLongValidate = `Validate checks inFile for specification compliance.
 
-verbose ... extensive log output
-   mode ... validation mode
-    upw ... user password
-    opw ... owner password
- inFile ... input pdf file
+verbose, v ... turn on logging
+        vv ... verbose logging
+      mode ... validation mode
+       upw ... user password
+       opw ... owner password
+    inFile ... input pdf file
 		
 The validation modes are:
 
  strict ... (default) validates against PDF 32000-1:2008 (PDF 1.7)
 relaxed ... like strict but doesn't complain about common seen spec violations.`
 
-	usageOptimize     = "usage: pdfcpu optimize [-verbose] [-stats csvFile] [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageOptimize     = "usage: pdfcpu optimize [-v(erbose)|vv] [-stats csvFile] [-upw userpw] [-opw ownerpw] inFile [outFile]"
 	usageLongOptimize = `Optimize reads inFile, removes redundant page resources like embedded fonts and images and writes the result to outFile.
 
-verbose ... extensive log output
-  stats ... appends a stats line to a csv file with information about the usage of root and page entries.
-            useful for batch optimization and debugging PDFs.
-    upw ... user password
-    opw ... owner password
- inFile ... input pdf file
-outFile ... output pdf file (default: inFile-new.pdf)`
+verbose, v ... turn on logging
+        vv ... verbose logging
+     stats ... appends a stats line to a csv file with information about the usage of root and page entries.
+               useful for batch optimization and debugging PDFs.
+       upw ... user password
+       opw ... owner password
+    inFile ... input pdf file
+   outFile ... output pdf file (default: inFile-new.pdf)`
 
-	usageSplit     = "usage: pdfcpu split [-verbose] [-upw userpw] [-opw ownerpw] inFile outDir"
+	usageSplit     = "usage: pdfcpu split [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile outDir"
 	usageLongSplit = `Split generates a set of single page PDFs for the input file in outDir.
 
-verbose ... extensive log output
-    upw ... user password
-    opw ... owner password
- inFile ... input pdf file
- outDir ... output directory`
+verbose, v ... turn on logging
+        vv ... verbose logging
+       upw ... user password
+       opw ... owner password
+    inFile ... input pdf file
+    outDir ... output directory`
 
-	usageMerge     = "usage: pdfcpu merge [-verbose] outFile inFile..."
+	usageMerge     = "usage: pdfcpu merge [-v(erbose)|vv] outFile inFile..."
 	usageLongMerge = `Merge concatenates a sequence of PDFs/inFiles to outFile.
 
-verbose ... extensive log output
-outFile	... output pdf file
-inFiles ... a list of at least 2 pdf files subject to concatenation.`
+verbose, v ... turn on logging
+        vv ... verbose logging
+   outFile ... output pdf file
+   inFiles ... a list of at least 2 pdf files subject to concatenation.`
 
-	usageExtract     = "usage: pdfcpu extract [-verbose] -mode image|font|content|page|meta [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile outDir"
+	usageExtract     = "usage: pdfcpu extract [-v(erbose)|vv] -mode image|font|content|page|meta [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile outDir"
 	usageLongExtract = `Extract exports inFile's images, fonts, content or pages into outDir.
 
-verbose ... extensive log output
-   mode ... extraction mode
-  pages ... page selection
-    upw ... user password
-    opw ... owner password
- inFile ... input pdf file
- outDir ... output directory
+verbose, v ... turn on logging
+        vv ... verbose logging
+      mode ... extraction mode
+     pages ... page selection
+       upw ... user password
+       opw ... owner password
+    inFile ... input pdf file
+    outDir ... output directory
 
  The extraction modes are:
 
@@ -105,15 +110,16 @@ content ... extract raw page content
    page ... extract single page PDFs
    meta ... extract all metadata (page selection does not apply)`
 
-	usageTrim     = "usage: pdfcpu trim [-verbose] [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageTrim     = "usage: pdfcpu trim [-v(erbose)|vv] [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile [outFile]"
 	usageLongTrim = `Trim generates a trimmed version of inFile for selected pages.
 
-verbose ... extensive log output
-  pages ... page selection
-    upw ... user password
-    opw ... owner password
- inFile ... input pdf file
-outFile ... output pdf file (default: inFile-new.pdf)`
+verbose, v ... turn on logging
+        vv ... verbose logging
+     pages ... page selection
+       upw ... user password
+       opw ... owner password
+    inFile ... input pdf file
+   outFile ... output pdf file (default: inFile-new.pdf)`
 
 	usagePageSelection = `<pages> selects pages for processing and is a comma separated list of expressions:
 
@@ -132,10 +138,10 @@ outFile ... output pdf file (default: inFile-new.pdf)`
 
 e.g. -3,5,7- or 4-7,!6 or 1-,!5 or odd,n1`
 
-	usageAttachList    = "pdfcpu attach list [-verbose] [-upw userpw] [-opw ownerpw] inFile"
-	usageAttachAdd     = "pdfcpu attach add [-verbose] [-upw userpw] [-opw ownerpw] inFile file..."
-	usageAttachRemove  = "pdfcpu attach remove [-verbose] [-upw userpw] [-opw ownerpw] inFile [file...]"
-	usageAttachExtract = "pdfcpu attach extract [-verbose] [-upw userpw] [-opw ownerpw] inFile outDir [file...]"
+	usageAttachList    = "pdfcpu attach list [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile"
+	usageAttachAdd     = "pdfcpu attach add [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile file..."
+	usageAttachRemove  = "pdfcpu attach remove [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile [file...]"
+	usageAttachExtract = "pdfcpu attach extract [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile outDir [file...]"
 
 	usageAttach = "usage: " + usageAttachList +
 		"\n       " + usageAttachAdd +
@@ -144,65 +150,71 @@ e.g. -3,5,7- or 4-7,!6 or 1-,!5 or odd,n1`
 
 	usageLongAttach = `Attach manages embedded file attachments.
 	
-verbose ... extensive log output
-   perm ... user access permissions
-    upw ... user password
-    opw ... owner password
- inFile ... input pdf file
- outDir ... output directory`
+verbose, v ... turn on logging
+        vv ... verbose logging
+      perm ... user access permissions
+       upw ... user password
+       opw ... owner password
+    inFile ... input pdf file
+    outDir ... output directory`
 
-	usagePermList = "pdfcpu perm list [-verbose] [-upw userpw] [-opw ownerpw] inFile"
-	usagePermAdd  = "pdfcpu perm add [-verbose] [-perm none|all] [-upw userpw] -opw ownerpw inFile"
+	usagePermList = "pdfcpu perm list [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile"
+	usagePermAdd  = "pdfcpu perm add [-v(erbose)|vv] [-perm none|all] [-upw userpw] -opw ownerpw inFile"
 
 	usagePerm = "usage: " + usagePermList +
 		"\n       " + usagePermAdd
 
 	usageLongPerm = `Perm manages user access permissions.
 	
-verbose ... extensive log output
-   perm ... user access permissions
-    upw ... user password
-    opw ... owner password
- inFile ... input pdf file`
+verbose, v ... turn on logging
+        vv ... verbose logging
+      perm ... user access permissions
+       upw ... user password
+       opw ... owner password
+    sinFile ... input pdf file`
 
-	usageEncrypt     = "usage: pdfcpu encrypt [-verbose] [-mode rc4|aes] [-key 40|128] [perm none|all] [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageEncrypt     = "usage: pdfcpu encrypt [-v(erbose)|vv] [-mode rc4|aes] [-key 40|128] [perm none|all] [-upw userpw] [-opw ownerpw] inFile [outFile]"
 	usageLongEncrypt = `Encrypt sets a password protection based on user and owner password.
 
-verbose ... extensive log output
-   mode ... algorithm (default=aes)
-    key ... key length in bits (default=128)
-   perm ... user access permissions
-    upw ... user password
-    opw ... owner password
- inFile ... input pdf file
-outFile ... output pdf file`
+verbose, v ... turn on logging
+        vv ... verbose logging
+      mode ... algorithm (default=aes)
+       key ... key length in bits (default=128)
+      perm ... user access permissions
+       upw ... user password
+       opw ... owner password
+    inFile ... input pdf file
+   outFile ... output pdf file`
 
-	usageDecrypt     = "usage: pdfcpu decrypt [-verbose] [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageDecrypt     = "usage: pdfcpu decrypt [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile [outFile]"
 	usageLongDecrypt = `Decrypt removes a password protection.
 
-verbose ... extensive log output
-    upw ... user password
-    opw ... owner password
- inFile ... input pdf file
-outFile ... output pdf file`
+verbose, v ... turn on logging
+        vv ... verbose logging
+       upw ... user password
+       opw ... owner password
+    inFile ... input pdf file
+   outFile ... output pdf file`
 
-	usageChangeUserPW     = "usage: pdfcpu changeupw [-verbose] [-opw ownerpw] inFile upwOld upwNew"
+	usageChangeUserPW     = "usage: pdfcpu changeupw [-v(erbose)|vv] [-opw ownerpw] inFile upwOld upwNew"
 	usageLongChangeUserPW = `Changeupw changes the user password.
 	
-verbose ... extensive log output
-    opw ... owner password, required unless = ""
- inFile ... input pdf file
- upwOld ... old user password
- upwNew ... new user password`
+verbose, v ... turn on logging
+        vv ... verbose logging
+       opw ... owner password, required unless = ""
+    inFile ... input pdf file
+    upwOld ... old user password
+    upwNew ... new user password`
 
-	usageChangeOwnerPW     = "usage: pdfcpu changeopw [-verbose] [-upw userpw] inFile opwOld opwNew"
+	usageChangeOwnerPW     = "usage: pdfcpu changeopw [-v(erbose)|vv] [-upw userpw] inFile opwOld opwNew"
 	usageLongChangeOwnerPW = `Changeopw changes the owner password.
 	
-verbose ... extensive log output
-    upw ... user password, required unless = ""
- inFile ... input pdf file
- opwOld ... old owner password (supply user password on initial changeopw)
- opwNew ... new owner password`
+verbose, v ... turn on logging
+        vv ... verbose logging
+       upw ... user password, required unless = ""
+    inFile ... input pdf file
+    opwOld ... old owner password (supply user password on initial changeopw)
+    opwNew ... new owner password`
 
 	usageWMDescription = `<description> is a comma separated configuration string containing:
 	
@@ -232,10 +244,11 @@ e.g. 'Draft'                                                  'logo.png'
      'Intentionally left blank, p:48'                         'some.pdf, r:45' 
      'Confidental, f:Courier, s:0.75, c: 0.5 0.0 0.0, r:20'   'some.pdf:3, r:-90, s:0.75'`
 
-	usageStamp     = "usage: pdfcpu stamp [-verbose] [-pages pageSelection] description inFile [outFile]"
+	usageStamp     = "usage: pdfcpu stamp [-v(erbose)|vv] [-pages pageSelection] description inFile [outFile]"
 	usageLongStamp = `Stamp adds stamps for selected pages. 
 
-    verbose ... extensive log output
+ verbose, v ... turn on logging
+         vv ... verbose logging
       pages ... page selection
 description ... font, font size, text, color, image/pdf file name, pdf page#, rotation, opacity, scale factor, render mode
      inFile ... input pdf file
@@ -243,10 +256,11 @@ description ... font, font size, text, color, image/pdf file name, pdf page#, ro
 
 ` + usageWMDescription
 
-	usageWatermark     = "usage: pdfcpu watermark [-verbose] [-pages pageSelection] description inFile [outFile]"
+	usageWatermark     = "usage: pdfcpu watermark [-v(erbose)|vv] [-pages pageSelection] description inFile [outFile]"
 	usageLongWatermark = `Watermark adds watermarks for selected pages. 
 
-    verbose ... extensive log output
+ verbose, v ... turn on logging
+         vv ... verbose logging
       pages ... page selection
 description ... font, font size, text, color, image/pdf file name, pdf page#, rotation, opacity, scale factor, render mode
      inFile ... input pdf file

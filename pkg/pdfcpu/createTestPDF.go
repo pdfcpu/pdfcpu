@@ -21,11 +21,12 @@ package pdfcpu
 import (
 	"bytes"
 	"fmt"
+	"path/filepath"
 
 	"github.com/hhrutter/pdfcpu/pkg/filter"
 )
 
-const testAudioFileWAV = "testdata/test.wav"
+var testAudioFileWAV = filepath.Join("testdata", "resources", "test.wav")
 
 func createXRefTableWithRootDict() (*XRefTable, error) {
 

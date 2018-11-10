@@ -116,45 +116,11 @@ func (osd *ObjectStreamDict) AddObject(objNumber int, entry *XRefTableEntry) err
 	osd.Prolog = append(osd.Prolog, []byte(s)...)
 
 	pdfString := entry.Object.PDFString()
-
-	// var pdfString string
-
-	// // TODO Use fallthrough ?
-	// switch obj := entry.Object.(type) {
-
-	// case Dict:
-	// 	pdfString = obj.PDFString()
-
-	// case Array:
-	// 	pdfString = obj.PDFString()
-
-	// case Integer:
-	// 	pdfString = obj.PDFString()
-
-	// case Float:
-	// 	pdfString = obj.PDFString()
-
-	// case StringLiteral:
-	// 	pdfString = obj.PDFString()
-
-	// case HexLiteral:
-	// 	pdfString = obj.PDFString()
-
-	// case Boolean:
-	// 	pdfString = obj.PDFString()
-
-	// case Name:
-	// 	pdfString = obj.PDFString()
-
-	// default:
-	// 	return errors.Errorf("AddObject: undefined PDF object #%d\n", objNumber)
-
-	// }
-
 	osd.Content = append(osd.Content, []byte(pdfString)...)
+
 	osd.ObjCount++
 
-	log.Debug.Printf("AddObject end : ObjCount:%d prolog = <%s> Content = <%s>\n", osd.ObjCount, osd.Prolog, osd.Content)
+	log.Trace.Printf("AddObject end : ObjCount:%d prolog = <%s> Content = <%s>\n", osd.ObjCount, osd.Prolog, osd.Content)
 
 	return nil
 }
@@ -163,7 +129,7 @@ func (osd *ObjectStreamDict) AddObject(objNumber int, entry *XRefTableEntry) err
 func (osd *ObjectStreamDict) Finalize() {
 	osd.Content = append(osd.Prolog, osd.Content...)
 	osd.FirstObjOffset = len(osd.Prolog)
-	log.Debug.Printf("Finalize : firstObjOffset:%d Content = <%s>\n", osd.FirstObjOffset, osd.Content)
+	log.Trace.Printf("Finalize : firstObjOffset:%d Content = <%s>\n", osd.FirstObjOffset, osd.Content)
 }
 
 // XRefStreamDict represents a cross reference stream dictionary.

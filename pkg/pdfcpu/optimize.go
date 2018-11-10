@@ -28,11 +28,11 @@ import (
 // Mark all content streams for a page dictionary (for stats).
 func identifyPageContent(xRefTable *XRefTable, pageDict Dict, pageNumber, pageObjNumber int) error {
 
-	log.Debug.Println("identifyPageContent begin")
+	log.Optimize.Println("identifyPageContent begin")
 
 	o, found := pageDict.Find("Contents")
 	if !found {
-		log.Debug.Println("identifyPageContent end: no \"Contents\"")
+		log.Optimize.Println("identifyPageContent end: no \"Contents\"")
 		return nil
 	}
 
@@ -49,7 +49,7 @@ func identifyPageContent(xRefTable *XRefTable, pageDict Dict, pageNumber, pageOb
 		if ok {
 			contentStreamDict.IsPageContent = true
 			entry.Object = contentStreamDict
-			log.Debug.Printf("identifyPageContent end: ok obj#%d\n", ir.ObjectNumber.Value())
+			log.Optimize.Printf("identifyPageContent end: ok obj#%d\n", ir.ObjectNumber.Value())
 			return nil
 		}
 
@@ -81,10 +81,10 @@ func identifyPageContent(xRefTable *XRefTable, pageDict Dict, pageNumber, pageOb
 
 		contentStreamDict.IsPageContent = true
 		entry.Object = contentStreamDict
-		log.Debug.Printf("identifyPageContent: ok obj#%d\n", ir.GenerationNumber.Value())
+		log.Optimize.Printf("identifyPageContent: ok obj#%d\n", ir.GenerationNumber.Value())
 	}
 
-	log.Debug.Println("identifyPageContent end")
+	log.Optimize.Println("identifyPageContent end")
 
 	return nil
 }
@@ -94,7 +94,7 @@ func resourcesDictForPageDict(xRefTable *XRefTable, pageDict Dict, pageObjNumber
 
 	o, found := pageDict.Find("Resources")
 	if !found {
-		log.Debug.Printf("resourcesDictForPageDict end: No resources dict for page object %d, may be inheritated\n", pageObjNumber)
+		log.Optimize.Printf("resourcesDictForPageDict end: No resources dict for page object %d, may be inheritated\n", pageObjNumber)
 		return nil, nil
 	}
 
@@ -121,7 +121,7 @@ func handleDuplicateFontObject(ctx *Context, fontDict Dict, fName, rName string,
 		// Get the font object from the lookup table.
 		fontObject := ctx.Optimize.FontObjects[fontObjNr]
 
-		log.Debug.Printf("handleDuplicateFontObject: comparing with fontDict Obj %d\n", fontObjNr)
+		log.Optimize.Printf("handleDuplicateFontObject: comparing with fontDict Obj %d\n", fontObjNr)
 
 		// Check if the input fontDict matches the fontDict of this fontObject.
 		ok, err := equalFontDicts(fontObject.FontDict, fontDict, ctx.XRefTable)
@@ -135,7 +135,7 @@ func handleDuplicateFontObject(ctx *Context, fontDict Dict, fName, rName string,
 		}
 
 		// We have detected a redundant font dict!
-		log.Debug.Printf("handleDuplicateFontObject: redundant fontObj#:%d basefont %s already registered with obj#:%d !\n", objNr, fName, fontObjNr)
+		log.Optimize.Printf("handleDuplicateFontObject: redundant fontObj#:%d basefont %s already registered with obj#:%d !\n", objNr, fName, fontObjNr)
 
 		// Register new page font with pageNumber.
 		// The font for font object number is used instead of objNr.
@@ -232,7 +232,7 @@ func fontName(ctx *Context, fontDict Dict, objNumber int) (prefix, fontName stri
 // Get rid of redundant fonts for given fontResources dictionary.
 func optimizeFontResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjNumber int) error {
 
-	log.Debug.Printf("optimizeFontResourcesDict begin: page=%d pageObjNumber=%d %s\nPageFonts=%v\n", pageNumber, pageObjNumber, rDict, ctx.Optimize.PageFonts)
+	log.Optimize.Printf("optimizeFontResourcesDict begin: page=%d pageObjNumber=%d %s\nPageFonts=%v\n", pageNumber, pageObjNumber, rDict, ctx.Optimize.PageFonts)
 
 	pageFonts := pageFonts(ctx, pageNumber)
 
@@ -244,9 +244,9 @@ func optimizeFontResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjNumb
 			return errors.Errorf("optimizeFontResourcesDict: missing indirect object ref for Font: %s\n", rName)
 		}
 
-		log.Debug.Printf("optimizeFontResourcesDict: processing font: %s, %s\n", rName, indRef)
+		log.Optimize.Printf("optimizeFontResourcesDict: processing font: %s, %s\n", rName, indRef)
 		objNr := int(indRef.ObjectNumber)
-		log.Debug.Printf("optimizeFontResourcesDict: objectNumber = %d\n", objNr)
+		log.Optimize.Printf("optimizeFontResourcesDict: objectNumber = %d\n", objNr)
 
 		if _, found := ctx.Optimize.FontObjects[objNr]; found {
 			// This font has already been registered.
@@ -262,7 +262,7 @@ func optimizeFontResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjNumb
 			return err
 		}
 
-		log.Debug.Printf("optimizeFontResourcesDict: fontDict: %s\n", fontDict)
+		log.Optimize.Printf("optimizeFontResourcesDict: fontDict: %s\n", fontDict)
 
 		if fontDict.Type() == nil {
 			return errors.Errorf("optimizeFontResourcesDict: missing dict type %s\n", v)
@@ -277,7 +277,7 @@ func optimizeFontResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjNumb
 		if err != nil {
 			return err
 		}
-		log.Debug.Printf("optimizeFontResourcesDict: baseFont: prefix=%s name=%s\n", prefix, fName)
+		log.Optimize.Printf("optimizeFontResourcesDict: baseFont: prefix=%s name=%s\n", prefix, fName)
 
 		// Check if fontDict is a duplicate and if so return the object number of the original.
 		originalObjNr, err := handleDuplicateFontObject(ctx, fontDict, fName, rName, objNr, pageNumber)
@@ -293,11 +293,11 @@ func optimizeFontResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjNumb
 		}
 
 		// Register new font dict.
-		log.Debug.Printf("optimizeFontResourcesDict: adding new font %s obj#%d\n", fName, objNr)
+		log.Optimize.Printf("optimizeFontResourcesDict: adding new font %s obj#%d\n", fName, objNr)
 
 		fontObjNrs, found := ctx.Optimize.Fonts[fName]
 		if found {
-			log.Debug.Printf("optimizeFontResourcesDict: appending %d to %s\n", objNr, fName)
+			log.Optimize.Printf("optimizeFontResourcesDict: appending %d to %s\n", objNr, fName)
 			ctx.Optimize.Fonts[fName] = append(fontObjNrs, objNr)
 		} else {
 			ctx.Optimize.Fonts[fName] = []int{objNr}
@@ -315,7 +315,7 @@ func optimizeFontResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjNumb
 
 	}
 
-	log.Debug.Println("optimizeFontResourcesDict end:")
+	log.Optimize.Println("optimizeFontResourcesDict end:")
 
 	return nil
 }
@@ -329,7 +329,7 @@ func handleDuplicateImageObject(ctx *Context, imageDict *StreamDict, resourceNam
 	// Process image dict, check if this is a duplicate.
 	for imageObjNr, imageObject := range ctx.Optimize.ImageObjects {
 
-		log.Debug.Printf("handleDuplicateImageObject: comparing with imagedict Obj %d\n", imageObjNr)
+		log.Optimize.Printf("handleDuplicateImageObject: comparing with imagedict Obj %d\n", imageObjNr)
 
 		// Check if the input imageDict matches the imageDict of this imageObject.
 		ok, err := equalStreamDicts(imageObject.ImageDict, imageDict, ctx.XRefTable)
@@ -343,7 +343,7 @@ func handleDuplicateImageObject(ctx *Context, imageDict *StreamDict, resourceNam
 		}
 
 		// We have detected a redundant image dict.
-		log.Debug.Printf("handleDuplicateImageObject: redundant imageObj#:%d already registered with obj#:%d !\n", objNr, imageObjNr)
+		log.Optimize.Printf("handleDuplicateImageObject: redundant imageObj#:%d already registered with obj#:%d !\n", objNr, imageObjNr)
 
 		// Register new page image for pageNumber.
 		// The image for image object number is used instead of objNr.
@@ -365,7 +365,7 @@ func handleDuplicateImageObject(ctx *Context, imageDict *StreamDict, resourceNam
 // Get rid of redundant XObjects e.g. embedded images.
 func optimizeXObjectResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjNumber int) error {
 
-	log.Debug.Printf("optimizeXObjectResourcesDict begin: %s\n", rDict)
+	log.Optimize.Printf("optimizeXObjectResourcesDict begin: %s\n", rDict)
 
 	pageImages := pageImages(ctx, pageNumber)
 
@@ -377,9 +377,9 @@ func optimizeXObjectResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjN
 			return errors.Errorf("optimizeXObjectResourcesDict: missing indirect object ref for resourceId: %s", rName)
 		}
 
-		log.Debug.Printf("optimizeXObjectResourcesDict: processing xobject: %s, %s\n", rName, indRef)
+		log.Optimize.Printf("optimizeXObjectResourcesDict: processing xobject: %s, %s\n", rName, indRef)
 		objNr := int(indRef.ObjectNumber)
-		log.Debug.Printf("optimizeXObjectResourcesDict: objectNumber = %d\n", objNr)
+		log.Optimize.Printf("optimizeXObjectResourcesDict: objectNumber = %d\n", objNr)
 
 		// We are dealing with a new XObject..
 		// Dereference the XObject stream dict.
@@ -388,7 +388,7 @@ func optimizeXObjectResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjN
 			return err
 		}
 
-		log.Debug.Printf("optimizeXObjectResourcesDict: dereferenced obj:%d\n%s", objNr, o)
+		log.Optimize.Printf("optimizeXObjectResourcesDict: dereferenced obj:%d\n%s", objNr, o)
 
 		if osd.Dict.Subtype() == nil {
 			return errors.Errorf("optimizeXObjectResourcesDict: missing stream dict Subtype %s\n", v)
@@ -399,7 +399,7 @@ func optimizeXObjectResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjN
 			// Already registered image object that appears in different resources dicts.
 			if _, found := ctx.Optimize.ImageObjects[objNr]; found {
 				// This image has already been registered.
-				//log.Debug.Printf("optimizeXObjectResourcesDict: Imageobject %d already registered\n", objNr)
+				//log.Optimize.Printf("optimizeXObjectResourcesDict: Imageobject %d already registered\n", objNr)
 				pageImages[objNr] = true
 				continue
 			}
@@ -418,7 +418,7 @@ func optimizeXObjectResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjN
 			}
 
 			// Register new image dict.
-			log.Debug.Printf("optimizeXObjectResourcesDict: adding new image obj#%d\n", objNr)
+			log.Optimize.Printf("optimizeXObjectResourcesDict: adding new image obj#%d\n", objNr)
 
 			ctx.Optimize.ImageObjects[objNr] =
 				&ImageObject{
@@ -431,16 +431,16 @@ func optimizeXObjectResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjN
 		}
 
 		if *osd.Subtype() != "Form" {
-			log.Debug.Printf("optimizeXObjectResourcesDict: unexpected stream dict Subtype %s\n", *osd.Dict.Subtype())
+			log.Optimize.Printf("optimizeXObjectResourcesDict: unexpected stream dict Subtype %s\n", *osd.Dict.Subtype())
 			continue
 		}
 
 		// Process form dict
-		log.Debug.Printf("optimizeXObjectResourcesDict: parsing form dict obj:%d\n", objNr)
+		log.Optimize.Printf("optimizeXObjectResourcesDict: parsing form dict obj:%d\n", objNr)
 		parseResourcesDict(ctx, osd.Dict, pageNumber, objNr)
 	}
 
-	log.Debug.Println("optimizeXObjectResourcesDict end")
+	log.Optimize.Println("optimizeXObjectResourcesDict end")
 
 	return nil
 }
@@ -448,10 +448,10 @@ func optimizeXObjectResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjN
 // Optimize given resource dictionary by removing redundant fonts and images.
 func optimizeResources(ctx *Context, resourcesDict Dict, pageNumber, pageObjNumber int) error {
 
-	log.Debug.Printf("optimizeResources begin: pageNumber=%d pageObjNumber=%d\n", pageNumber, pageObjNumber)
+	log.Optimize.Printf("optimizeResources begin: pageNumber=%d pageObjNumber=%d\n", pageNumber, pageObjNumber)
 
 	if resourcesDict == nil {
-		log.Debug.Printf("optimizeResources end: No resources dict available")
+		log.Optimize.Printf("optimizeResources end: No resources dict available")
 		return nil
 	}
 
@@ -497,7 +497,7 @@ func optimizeResources(ctx *Context, resourcesDict Dict, pageNumber, pageObjNumb
 
 	}
 
-	log.Debug.Println("optimizeResources end")
+	log.Optimize.Println("optimizeResources end")
 
 	return nil
 }
@@ -505,7 +505,7 @@ func optimizeResources(ctx *Context, resourcesDict Dict, pageNumber, pageObjNumb
 // Process the resources dictionary for given page number and optimize by removing redundant resources.
 func parseResourcesDict(ctx *Context, pageDict Dict, pageNumber, pageObjNumber int) error {
 
-	log.Debug.Printf("parseResourcesDict begin page: %d, object:%d\n", pageNumber+1, pageObjNumber)
+	log.Optimize.Printf("parseResourcesDict begin page: %d, object:%d\n", pageNumber+1, pageObjNumber)
 
 	// Get resources dict for this page.
 	d, err := resourcesDictForPageDict(ctx.XRefTable, pageDict, pageObjNumber)
@@ -524,7 +524,7 @@ func parseResourcesDict(ctx *Context, pageDict Dict, pageNumber, pageObjNumber i
 
 	}
 
-	log.Debug.Printf("parseResourcesDict end page: %d, object:%d\n", pageNumber+1, pageObjNumber)
+	log.Optimize.Printf("parseResourcesDict end page: %d, object:%d\n", pageNumber+1, pageObjNumber)
 
 	return nil
 }
@@ -532,7 +532,7 @@ func parseResourcesDict(ctx *Context, pageDict Dict, pageNumber, pageObjNumber i
 // Iterate over all pages and optimize resources.
 func parsePagesDict(ctx *Context, pagesDict Dict, pageNumber int) (int, error) {
 
-	log.Debug.Printf("parsePagesDict begin (next page=%d): %s\n", pageNumber+1, pagesDict)
+	log.Optimize.Printf("parsePagesDict begin (next page=%d): %s\n", pageNumber+1, pagesDict)
 
 	// Get number of pages of this PDF file.
 	count, found := pagesDict.Find("Count")
@@ -540,7 +540,7 @@ func parsePagesDict(ctx *Context, pagesDict Dict, pageNumber int) (int, error) {
 		return 0, errors.New("parsePagesDict: missing Count")
 	}
 
-	log.Debug.Printf("parsePagesDict: This page node has %d pages\n", int(count.(Integer)))
+	log.Optimize.Printf("parsePagesDict: This page node has %d pages\n", int(count.(Integer)))
 
 	// Iterate over page tree.
 	//kidsArray := pagesDict.ArrayEntry("Kids")
@@ -548,7 +548,7 @@ func parsePagesDict(ctx *Context, pagesDict Dict, pageNumber int) (int, error) {
 
 		// Dereference next page node dict.
 		ir, _ := v.(IndirectRef)
-		log.Debug.Printf("parsePagesDict PageNode: %s\n", ir)
+		log.Optimize.Printf("parsePagesDict PageNode: %s\n", ir)
 		o, err := ctx.Dereference(ir)
 		if err != nil {
 			return 0, errors.Wrap(err, "parsePagesDict: can't locate Pagedict or Pagesdict")
@@ -592,7 +592,7 @@ func parsePagesDict(ctx *Context, pagesDict Dict, pageNumber int) (int, error) {
 		pageNumber++
 	}
 
-	log.Debug.Printf("parsePagesDict end: %s\n", pagesDict)
+	log.Optimize.Printf("parsePagesDict end: %s\n", pagesDict)
 
 	return pageNumber, nil
 }
@@ -623,12 +623,12 @@ func traverse(xRefTable *XRefTable, value Object, duplObjs IntSet) error {
 // Traverse the object graph for a Object and mark all objects as potential duplicates.
 func traverseObjectGraphAndMarkDuplicates(xRefTable *XRefTable, obj Object, duplObjs IntSet) error {
 
-	log.Debug.Printf("traverseObjectGraphAndMarkDuplicates begin type=%T\n", obj)
+	log.Optimize.Printf("traverseObjectGraphAndMarkDuplicates begin type=%T\n", obj)
 
 	switch x := obj.(type) {
 
 	case Dict:
-		log.Debug.Println("traverseObjectGraphAndMarkDuplicates: dict.")
+		log.Optimize.Println("traverseObjectGraphAndMarkDuplicates: dict.")
 		for _, value := range x {
 			err := traverse(xRefTable, value, duplObjs)
 			if err != nil {
@@ -637,7 +637,7 @@ func traverseObjectGraphAndMarkDuplicates(xRefTable *XRefTable, obj Object, dupl
 		}
 
 	case StreamDict:
-		log.Debug.Println("traverseObjectGraphAndMarkDuplicates: streamDict.")
+		log.Optimize.Println("traverseObjectGraphAndMarkDuplicates: streamDict.")
 		for _, value := range x.Dict {
 			err := traverse(xRefTable, value, duplObjs)
 			if err != nil {
@@ -646,7 +646,7 @@ func traverseObjectGraphAndMarkDuplicates(xRefTable *XRefTable, obj Object, dupl
 		}
 
 	case Array:
-		log.Debug.Println("traverseObjectGraphAndMarkDuplicates: arr.")
+		log.Optimize.Println("traverseObjectGraphAndMarkDuplicates: arr.")
 		for _, value := range x {
 			err := traverse(xRefTable, value, duplObjs)
 			if err != nil {
@@ -655,7 +655,7 @@ func traverseObjectGraphAndMarkDuplicates(xRefTable *XRefTable, obj Object, dupl
 		}
 	}
 
-	log.Debug.Println("traverseObjectGraphAndMarkDuplicates end")
+	log.Optimize.Println("traverseObjectGraphAndMarkDuplicates end")
 
 	return nil
 }
@@ -663,7 +663,7 @@ func traverseObjectGraphAndMarkDuplicates(xRefTable *XRefTable, obj Object, dupl
 // Identify and mark all potential duplicate objects.
 func calcRedundantObjects(ctx *Context) error {
 
-	log.Debug.Println("calcRedundantObjects begin")
+	log.Optimize.Println("calcRedundantObjects begin")
 
 	for i, fontDict := range ctx.Optimize.DuplicateFonts {
 		ctx.Optimize.DuplicateFontObjs[i] = true
@@ -683,7 +683,7 @@ func calcRedundantObjects(ctx *Context) error {
 		}
 	}
 
-	log.Debug.Println("calcRedundantObjects end")
+	log.Optimize.Println("calcRedundantObjects end")
 
 	return nil
 }
@@ -692,7 +692,7 @@ func calcRedundantObjects(ctx *Context) error {
 // Get rid of duplicate embedded fonts and images.
 func optimizeFontAndImages(ctx *Context) error {
 
-	log.Debug.Println("optimizeFontAndImages begin")
+	log.Optimize.Println("optimizeFontAndImages begin")
 
 	// Get a reference to the PDF indirect reference of the page tree root dict.
 	indRefPages, err := ctx.Pages()
@@ -738,7 +738,7 @@ func optimizeFontAndImages(ctx *Context) error {
 		return err
 	}
 
-	log.Debug.Println("optimizeFontAndImages end")
+	log.Optimize.Println("optimizeFontAndImages end")
 
 	return nil
 }
@@ -746,7 +746,7 @@ func optimizeFontAndImages(ctx *Context) error {
 // Return stream length for font file object.
 func streamLengthFontFile(xRefTable *XRefTable, indirectRef *IndirectRef) (*int64, error) {
 
-	log.Debug.Println("streamLengthFontFile begin")
+	log.Optimize.Println("streamLengthFontFile begin")
 
 	objectNumber := indirectRef.ObjectNumber
 
@@ -759,7 +759,7 @@ func streamLengthFontFile(xRefTable *XRefTable, indirectRef *IndirectRef) (*int6
 		return nil, errors.Errorf("streamLengthFontFile: fontFile Streamlength is nil for object %d\n", objectNumber)
 	}
 
-	log.Debug.Println("streamLengthFontFile end")
+	log.Optimize.Println("streamLengthFontFile end")
 
 	return (*sd).StreamLength, nil
 }
@@ -767,7 +767,7 @@ func streamLengthFontFile(xRefTable *XRefTable, indirectRef *IndirectRef) (*int6
 // Calculate amount of memory used by embedded fonts for stats.
 func calcEmbeddedFontsMemoryUsage(ctx *Context) error {
 
-	log.Debug.Printf("calcEmbeddedFontsMemoryUsage begin: %d fontObjects\n", len(ctx.Optimize.FontObjects))
+	log.Optimize.Printf("calcEmbeddedFontsMemoryUsage begin: %d fontObjects\n", len(ctx.Optimize.FontObjects))
 
 	fontFileIndRefs := map[IndirectRef]bool{}
 
@@ -804,7 +804,7 @@ func calcEmbeddedFontsMemoryUsage(ctx *Context) error {
 		ctx.Read.BinaryFontSize += *streamLength
 	}
 
-	log.Debug.Println("calcEmbeddedFontsMemoryUsage end")
+	log.Optimize.Println("calcEmbeddedFontsMemoryUsage end")
 
 	return nil
 }
@@ -812,7 +812,7 @@ func calcEmbeddedFontsMemoryUsage(ctx *Context) error {
 // fontDescriptorFontFileIndirectObjectRef returns the indirect object for the font file for given font descriptor.
 func fontDescriptorFontFileIndirectObjectRef(fontDescriptorDict Dict) *IndirectRef {
 
-	log.Debug.Println("fontDescriptorFontFileIndirectObjectRef begin")
+	log.Optimize.Println("fontDescriptorFontFileIndirectObjectRef begin")
 
 	ir := fontDescriptorDict.IndirectRefEntry("FontFile")
 
@@ -828,7 +828,7 @@ func fontDescriptorFontFileIndirectObjectRef(fontDescriptorDict Dict) *IndirectR
 		//logInfoReader.Printf("FontDescriptorFontFileLength: FontDescriptor dict without fontFile: \n%s\n", fontDescriptorDict)
 	}
 
-	log.Debug.Println("FontDescriptorFontFileIndirectObjectRef end")
+	log.Optimize.Println("FontDescriptorFontFileIndirectObjectRef end")
 
 	return ir
 }
@@ -861,7 +861,7 @@ func trivialFontDescriptor(xRefTable *XRefTable, fontDict Dict, objNr int) (Dict
 // FontDescriptor gets the font descriptor for this font.
 func fontDescriptor(xRefTable *XRefTable, fontDict Dict, objNr int) (Dict, error) {
 
-	log.Debug.Println("fontDescriptor begin")
+	log.Optimize.Println("fontDescriptor begin")
 
 	d, err := trivialFontDescriptor(xRefTable, fontDict, objNr)
 	if err != nil {
@@ -904,7 +904,7 @@ func fontDescriptor(xRefTable *XRefTable, fontDict Dict, objNr int) (Dict, error
 
 	o, ok = d.Find("FontDescriptor")
 	if !ok {
-		log.Debug.Printf("fontDescriptor: descendant font not embedded %s\n", d)
+		log.Optimize.Printf("fontDescriptor: descendant font not embedded %s\n", d)
 		return nil, nil
 	}
 
@@ -922,7 +922,7 @@ func fontDescriptor(xRefTable *XRefTable, fontDict Dict, objNr int) (Dict, error
 		return nil, errors.Errorf("fontDescriptor: FontDescriptor dict incorrect dict type for font object %d\n", objNr)
 	}
 
-	log.Debug.Println("fontDescriptor end")
+	log.Optimize.Println("fontDescriptor end")
 
 	return d, nil
 }
@@ -930,7 +930,7 @@ func fontDescriptor(xRefTable *XRefTable, fontDict Dict, objNr int) (Dict, error
 // Record font file objects referenced by this fonts font descriptor for stats and size calculation.
 func processFontFilesForFontDict(xRefTable *XRefTable, fontDict Dict, objectNumber int, indRefsMap map[IndirectRef]bool) error {
 
-	log.Debug.Println("processFontFilesForFontDict begin")
+	log.Optimize.Println("processFontFilesForFontDict begin")
 
 	// Note:
 	// "ToUnicode" is also an entry containing binary content that could be inspected for duplicate content.
@@ -946,7 +946,7 @@ func processFontFilesForFontDict(xRefTable *XRefTable, fontDict Dict, objectNumb
 		}
 	}
 
-	log.Debug.Println("processFontFilesForFontDict end")
+	log.Optimize.Println("processFontFilesForFontDict end")
 
 	return nil
 }
@@ -954,7 +954,7 @@ func processFontFilesForFontDict(xRefTable *XRefTable, fontDict Dict, objectNumb
 // Calculate amount of memory used by duplicate embedded fonts for stats.
 func calcRedundantEmbeddedFontsMemoryUsage(ctx *Context) error {
 
-	log.Debug.Println("calcRedundantEmbeddedFontsMemoryUsage begin")
+	log.Optimize.Println("calcRedundantEmbeddedFontsMemoryUsage begin")
 
 	fontFileIndRefs := map[IndirectRef]bool{}
 
@@ -979,7 +979,7 @@ func calcRedundantEmbeddedFontsMemoryUsage(ctx *Context) error {
 		ctx.Read.BinaryFontDuplSize += *streamLength
 	}
 
-	log.Debug.Println("calcRedundantEmbeddedFontsMemoryUsage end")
+	log.Optimize.Println("calcRedundantEmbeddedFontsMemoryUsage end")
 
 	return nil
 }
@@ -987,7 +987,7 @@ func calcRedundantEmbeddedFontsMemoryUsage(ctx *Context) error {
 // Calculate amount of memory used by embedded fonts and duplicate embedded fonts for stats.
 func calcFontBinarySizes(ctx *Context) error {
 
-	log.Debug.Println("calcFontBinarySizes begin")
+	log.Optimize.Println("calcFontBinarySizes begin")
 
 	err := calcEmbeddedFontsMemoryUsage(ctx)
 	if err != nil {
@@ -999,7 +999,7 @@ func calcFontBinarySizes(ctx *Context) error {
 		return err
 	}
 
-	log.Debug.Println("calcFontBinarySizes end")
+	log.Optimize.Println("calcFontBinarySizes end")
 
 	return nil
 }
@@ -1007,7 +1007,7 @@ func calcFontBinarySizes(ctx *Context) error {
 // Calculate amount of memory used by images and duplicate images for stats.
 func calcImageBinarySizes(ctx *Context) {
 
-	log.Debug.Println("calcImageBinarySizes begin")
+	log.Optimize.Println("calcImageBinarySizes begin")
 
 	// Calc memory usage for images.
 	for _, imageObject := range ctx.Optimize.ImageObjects {
@@ -1019,13 +1019,13 @@ func calcImageBinarySizes(ctx *Context) {
 		ctx.Read.BinaryImageDuplSize += *imageDict.StreamLength
 	}
 
-	log.Debug.Println("calcImageBinarySizes end")
+	log.Optimize.Println("calcImageBinarySizes end")
 }
 
 // Calculate memory usage of binary data for stats.
 func calcBinarySizes(ctx *Context) error {
 
-	log.Debug.Println("calcBinarySizes begin")
+	log.Optimize.Println("calcBinarySizes begin")
 
 	// Calculate font memory usage for stats.
 	err := calcFontBinarySizes(ctx)
@@ -1038,7 +1038,7 @@ func calcBinarySizes(ctx *Context) error {
 
 	// Note: Content streams also represent binary content.
 
-	log.Debug.Println("calcBinarySizes end")
+	log.Optimize.Println("calcBinarySizes end")
 
 	return nil
 }
@@ -1048,7 +1048,7 @@ func OptimizeXRefTable(ctx *Context) error {
 
 	log.Info.Println("optimizing fonts & images")
 
-	log.Debug.Println("optimizeXRefTable begin")
+	log.Optimize.Println("optimizeXRefTable begin")
 
 	// Get rid of duplicate embedded fonts and images.
 	err := optimizeFontAndImages(ctx)
@@ -1064,7 +1064,7 @@ func OptimizeXRefTable(ctx *Context) error {
 
 	ctx.Optimized = true
 
-	log.Debug.Println("optimizeXRefTable end")
+	log.Optimize.Println("optimizeXRefTable end")
 
 	return nil
 }

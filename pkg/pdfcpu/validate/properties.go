@@ -54,23 +54,23 @@ func validatePropertiesDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
 
 	for key, val := range d {
 
-		log.Debug.Printf("validatePropertiesDict: key=%s val=%v\n", key, val)
+		log.Validate.Printf("validatePropertiesDict: key=%s val=%v\n", key, val)
 
 		switch key {
 
 		case "Metadata":
-			log.Debug.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
+			log.Validate.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
 			// see above
 
 		case "Contents":
-			log.Debug.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
+			log.Validate.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
 			_, err = validateStreamDict(xRefTable, val)
 			if err != nil {
 				return err
 			}
 
 		case "Resources":
-			log.Debug.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
+			log.Validate.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
 			_, err = validateResourceDict(xRefTable, val)
 			if err != nil {
 				return err
@@ -89,7 +89,7 @@ func validatePropertiesDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
 		//case "Lang": -> default
 
 		default:
-			log.Debug.Printf("validatePropertiesDict: processing unrecognized key \"%s\"\n", key)
+			log.Validate.Printf("validatePropertiesDict: processing unrecognized key \"%s\"\n", key)
 			_, err = xRefTable.Dereference(val)
 			if err != nil {
 				return err

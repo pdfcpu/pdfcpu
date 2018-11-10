@@ -523,7 +523,7 @@ func createPopupAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRe
 
 func createFileAttachmentAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
 
-	// Mac starts up iTunes for FileAttachments.
+	// macOS starts up iTunes for FileAttachments.
 
 	fileName := testAudioFileWAV
 

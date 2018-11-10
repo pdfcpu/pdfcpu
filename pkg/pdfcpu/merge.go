@@ -27,7 +27,7 @@ func patchIndRef(ir *IndirectRef, lookup map[int]int) {
 
 func patchObject(o Object, lookup map[int]int) Object {
 
-	log.Debug.Printf("patchObject before: %v\n", o)
+	log.Trace.Printf("patchObject before: %v\n", o)
 
 	var ob Object
 
@@ -59,14 +59,14 @@ func patchObject(o Object, lookup map[int]int) Object {
 
 	}
 
-	log.Debug.Printf("patchObject end: %v\n", ob)
+	log.Trace.Printf("patchObject end: %v\n", ob)
 
 	return ob
 }
 
 func patchDict(d Dict, lookup map[int]int) {
 
-	log.Debug.Printf("patchDict before: %v\n", d)
+	log.Trace.Printf("patchDict before: %v\n", d)
 
 	for k, obj := range d {
 		o := patchObject(obj, lookup)
@@ -75,12 +75,12 @@ func patchDict(d Dict, lookup map[int]int) {
 		}
 	}
 
-	log.Debug.Printf("patchDict after: %v\n", d)
+	log.Trace.Printf("patchDict after: %v\n", d)
 }
 
 func patchArray(a Array, lookup map[int]int) {
 
-	log.Debug.Printf("patchArray begin: %v\n", a)
+	log.Trace.Printf("patchArray begin: %v\n", a)
 
 	for i, obj := range a {
 		o := patchObject(obj, lookup)
@@ -89,7 +89,7 @@ func patchArray(a Array, lookup map[int]int) {
 		}
 	}
 
-	log.Debug.Printf("patchArray end: %v\n", a)
+	log.Trace.Printf("patchArray end: %v\n", a)
 }
 
 func objNrsIntSet(ctx *Context) IntSet {
