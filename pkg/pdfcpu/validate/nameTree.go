@@ -258,11 +258,11 @@ func validateSourceInfoDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 			return err
 		}
 
-		err = validateCaptureCommandDict(xRefTable, d1)
+		return validateCaptureCommandDict(xRefTable, d1)
 
 	}
 
-	return err
+	return nil
 }
 
 func validateEntrySI(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {

@@ -388,7 +388,7 @@ func optimizeXObjectResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjN
 			return err
 		}
 
-		log.Optimize.Printf("optimizeXObjectResourcesDict: dereferenced obj:%d\n%s", objNr, o)
+		log.Optimize.Printf("optimizeXObjectResourcesDict: dereferenced obj:%d\n%s", objNr, osd)
 
 		if osd.Dict.Subtype() == nil {
 			return errors.Errorf("optimizeXObjectResourcesDict: missing stream dict Subtype %s\n", v)

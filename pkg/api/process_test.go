@@ -192,7 +192,7 @@ func TestMergeUsingReadSeekerCloser(t *testing.T) {
 
 	rr := []pdf.ReadSeekerCloser{}
 
-	for _, f := range []string{"annotTest.pdf", "go.pdf", "t6.pdf"} {
+	for _, f := range []string{"annotTest.pdf", "go.pdf", "T6.pdf"} {
 
 		fileIn := filepath.Join(inDir, f)
 

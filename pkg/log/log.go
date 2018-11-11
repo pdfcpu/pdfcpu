@@ -42,7 +42,7 @@ type logger struct {
 	log Logger
 }
 
-// pdfcpu's 3 defined loggers.
+// pdfcpu's loggers.
 var (
 	// Horizontal loggers
 	Debug = &logger{}

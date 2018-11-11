@@ -17,6 +17,9 @@ Version: 0.1.18
 
 * Extended API to support webserver scenarios using Readseeker and Writer.
 * Support for watermarking/stamping with a specific page of another PDF file.
+* Extended logging into horizontal (Info, Debug, Trace etc.) vs. vertical logging (Read, Validate, Write etc).
+* The CLI will produce regular logging if you use -verbose, or -v.
+* The CLI will produce verbose logging if you use -vv.
 * More tests in `api/process_test.go`
 * More examples in `api/example_test.go`
 * More scripts under `_scripts/*`

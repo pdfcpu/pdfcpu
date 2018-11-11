@@ -969,12 +969,12 @@ func validateRenditionDictEntryMH(xRefTable *pdf.XRefTable, d pdf.Dict, dictName
 		}
 
 		if d2 != nil {
-			err = validateMediaCriteriaDict(xRefTable, d2, sinceVersion)
+			return validateMediaCriteriaDict(xRefTable, d2, sinceVersion)
 		}
 
 	}
 
-	return err
+	return nil
 }
 
 func validateRenditionDictEntryBE(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, sinceVersion pdf.Version) (err error) {
@@ -991,11 +991,11 @@ func validateRenditionDictEntryBE(xRefTable *pdf.XRefTable, d pdf.Dict, dictName
 			return err
 		}
 
-		err = validateMediaCriteriaDict(xRefTable, d2, sinceVersion)
+		return validateMediaCriteriaDict(xRefTable, d2, sinceVersion)
 
 	}
 
-	return err
+	return nil
 }
 
 func validateRenditionDict(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion pdf.Version) (err error) {

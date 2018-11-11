@@ -220,7 +220,7 @@ verbose, v ... turn on logging
 	
     1st entry: the display string
                or an image file name with one the of extensions '.png', '.tif' or '.tiff' 
-               or a PDF file name with extension .pdf followed by an optional page number (default=1) seperated by ':'
+               or a PDF file name with extension .pdf followed by an optional page number (default=1) separated by ':'
 
     optional entries:
 
