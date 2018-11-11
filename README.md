@@ -13,14 +13,20 @@ It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO
 
 ## Status
 
-Version: 0.1.17
+Version: 0.1.18
 
-* Improved support for the CCITTFaxDecode filter.
-* Supported is the decoding of CCITTGroup 4 compressed data (for K<0)
-* Supported is also the 1D decoding of CCITTGroup 3 compressed data (for K=0)
-* CCITT Group3 2D(mixed) decoding is pending available test images (K>0).
-* pdfcpu now extracts group 3 and 4 encoded black and white images to PNG.
-* pdfcpu's tiff reader is also supporting CCITT group 3-1D and group 4 encoded images as of this release.
+* Extended API to support webserver scenarios using Readseeker and Writer.
+* Support for watermarking/stamping with a specific page of another PDF file.
+* More tests in `api/process_test.go`
+* More examples in `api/example_test.go`
+* More scripts under `_scripts/*`
+* Fixed #5, #39, #44
+
+<p align="center">
+  <img src="resources/wmTextSample.png" height="254">&nbsp;&nbsp;&nbsp;
+  <img src="resources/wmImageSample.jpg" width="180">&nbsp;&nbsp;&nbsp;
+  <img src="resources/wmPDFSample.jpg" width="180">
+</p>
 
 ## Motivation
 
@@ -42,7 +48,7 @@ One example is reducing the size of large PDF files for mass mailings by optimiz
 * Extract Content (extract the PDF-Source into given dir)
 * Extract Metadata (extract XML metadata)
 * Trim (generate a custom version of a PDF file)
-* Stamp/Watermark selected pages.
+* Stamp/Watermark selected pages with text, image or PDF page
 * Manage (add,remove,list,extract) embedded file attachments
 * Encrypt (sets password protection)
 * Decrypt (removes password protection)
