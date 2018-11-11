@@ -14,11 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# eg: ./stampDir.sh ~/pdf/big ~/pdf/out
+# eg: ./stampTextDir.sh ~/pdf/big ~/pdf/out
 
 if [ $# -ne 2 ]; then
-    echo "usage: ./stampDir.sh inDir outDir"
-    echo "stamp files as Draft with opacity 0.9"
+    echo "usage: ./stampTextDir.sh inDir outDir"
+    echo "stamp all files as Draft with opacity 0.9"
     exit 1
 fi
 

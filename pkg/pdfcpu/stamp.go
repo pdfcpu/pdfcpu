@@ -963,7 +963,7 @@ func createForm(xRefTable *XRefTable, wm *Watermark, withBB bool) error {
 	//fmt.Printf("bb = %s\n", wm.bb)
 
 	// Cache the form for every bounding box encountered.
-	ir, ok := wm.fCache[wm.bb]
+	ir, ok := wm.fCache[bb]
 	if ok {
 		//fmt.Printf("reusing form obj#%d\n", ir.ObjectNumber)
 		wm.form = ir
@@ -1168,7 +1168,7 @@ func updatePageContentsForWM(xRefTable *XRefTable, obj Object, wm *Watermark, gs
 		//fmt.Printf("%T %T\n", &o, o)
 		//fmt.Printf("Content obj#%d addr:%v\n%s\n", objNr, &o, o)
 
-		err := patchContentForWM(&o, gsID, xoID, wm)
+		err := patchContentForWM(&o, gsID, xoID, wm, true)
 		if err != nil {
 			return err
 		}
@@ -1180,13 +1180,8 @@ func updatePageContentsForWM(xRefTable *XRefTable, obj Object, wm *Watermark, gs
 
 	case Array:
 
-		var o1 Object
-		if wm.onTop {
-			o1 = o[len(o)-1] // patch last content stream
-		} else {
-			o1 = o[0] // patch first content stream
-		}
-
+		// Get stream dict for first element.
+		o1 := o[0]
 		ir, _ := o1.(IndirectRef)
 		objNr = ir.ObjectNumber.Value()
 		if wm.objs[objNr] {
@@ -1194,10 +1189,56 @@ func updatePageContentsForWM(xRefTable *XRefTable, obj Object, wm *Watermark, gs
 			return nil
 		}
 
-		generationNumber := ir.GenerationNumber.Value()
-		entry, _ := xRefTable.FindTableEntry(objNr, generationNumber)
+		genNr := ir.GenerationNumber.Value()
+		entry, _ := xRefTable.FindTableEntry(objNr, genNr)
 		sd, _ := (entry.Object).(StreamDict)
-		err := patchContentForWM(&sd, gsID, xoID, wm)
+
+		if len(o) == 1 || !wm.onTop {
+
+			err := patchContentForWM(&sd, gsID, xoID, wm, true)
+			if err != nil {
+				return err
+			}
+			entry.Object = sd
+			wm.objs[objNr] = true
+			return nil
+		}
+
+		// Patch first content stream.
+		err := decodeStream(&sd)
+		if err == filter.ErrUnsupportedFilter {
+			log.Info.Println("unsupported filter: unable to patch content with watermark.")
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+
+		sd.Content = append([]byte("q "), sd.Content...)
+
+		err = encodeStream(&sd)
+		if err != nil {
+			return err
+		}
+
+		entry.Object = sd
+		wm.objs[objNr] = true
+
+		// Patch last content stream.
+		o1 = o[len(o)-1]
+
+		ir, _ = o1.(IndirectRef)
+		objNr = ir.ObjectNumber.Value()
+		if wm.objs[objNr] {
+			// wm already applied to this content stream.
+			return nil
+		}
+
+		genNr = ir.GenerationNumber.Value()
+		entry, _ = xRefTable.FindTableEntry(objNr, genNr)
+		sd, _ = (entry.Object).(StreamDict)
+
+		err = patchContentForWM(&sd, gsID, xoID, wm, false)
 		if err != nil {
 			return err
 		}
@@ -1229,16 +1270,17 @@ func watermarkPage(xRefTable *XRefTable, i int, wm *Watermark) error {
 	}
 
 	wm.vp = viewPort(xRefTable, inhPAttrs)
-	//fmt.Printf("watermarkPage: vp = %s\n", wm.vp)
+	//log.Debug.Printf("watermarkPage: vp = %s\n", wm.vp)
 
 	err = createForm(xRefTable, wm, false)
 	if err != nil {
 		return err
 	}
 
-	//fmt.Println(wm)
-
 	wm.pageRot = inhPAttrs.rotate
+
+	log.Debug.Printf("wm: %s\n", wm)
+
 	//fmt.Printf("wm.pageRot=%f\n", wm.pageRot)
 	// wm.pageRot = 0
 	// if inhPAttrs.rotate != nil && *rotate != 0 {
@@ -1270,7 +1312,7 @@ func watermarkPage(xRefTable *XRefTable, i int, wm *Watermark) error {
 	return updatePageContentsForWM(xRefTable, obj, wm, gsID, xoID)
 }
 
-func patchContentForWM(sd *StreamDict, gsID, xoID string, wm *Watermark) error {
+func patchContentForWM(sd *StreamDict, gsID, xoID string, wm *Watermark, saveGState bool) error {
 
 	// Decode streamDict for supported filters only.
 	err := decodeStream(sd)
@@ -1285,20 +1327,17 @@ func patchContentForWM(sd *StreamDict, gsID, xoID string, wm *Watermark) error {
 	bb := wmContent(wm, gsID, xoID)
 
 	if wm.onTop {
+		if saveGState {
+			sd.Content = append([]byte("q "), sd.Content...)
+		}
+		sd.Content = append(sd.Content, []byte(" Q")...)
 		sd.Content = append(sd.Content, bb...)
 	} else {
 		sd.Content = append(bb, sd.Content...)
 	}
 	//fmt.Printf("patched content:\n%s\n", hex.Dump(sd.Content))
 
-	// Manipulate sd.Content
-	err = encodeStream(sd)
-	if err != nil {
-		return err
-	}
-
-	return nil
-
+	return encodeStream(sd)
 }
 
 // AddWatermarks adds watermarks to all pages selected.

@@ -14,11 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#: ./stampFile.sh ~/pdf/1mb/a.pdf ~/pdf/out
+#: ./stampTextFile.sh ~/pdf/1mb/a.pdf ~/pdf/out
 
 if [ $# -ne 2 ]; then
-    echo "usage: ./stampFile.sh inFile outDir"
-    echo "stamp all pages Draft"
+    echo "usage: ./stampTextFile.sh inFile outDir"
+    echo "stamp all pages as Draft"
     exit 1
 fi
 
