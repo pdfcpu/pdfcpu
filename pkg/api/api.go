@@ -104,7 +104,7 @@ func MergeContexts(rsc []pdf.ReadSeekerCloser, config *pdf.Configuration) (*pdf.
 		}
 
 		// Merge the source context into the dest context.
-		fmt.Println("merging in another readSeekerCloser...")
+		//fmt.Println("merging in another readSeekerCloser...")
 		err = pdf.MergeXRefTables(ctxSource, ctxDest)
 		if err != nil {
 			return nil, err
@@ -656,7 +656,7 @@ func contentObjNrs(ctx *pdf.Context, page int) ([]int, error) {
 		return nil, nil
 	}
 
-	fmt.Printf("found pd for %d\n%s\n", page, o)
+	//fmt.Printf("found pd for %d\n%s\n", page, o)
 
 	var objNr int
 

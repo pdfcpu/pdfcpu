@@ -1040,6 +1040,11 @@ func nextStreamOffset(line string, streamInd int) (off int) {
 
 	off = streamInd + len("stream")
 
+	// Skip optional blanks.
+	// TODO Should be skip optional whitespace instead?
+	for ; line[off] == 0x20; off++ {
+	}
+
 	// Skip 0A eol.
 	if line[off] == '\n' {
 		off++
@@ -1126,7 +1131,9 @@ func buffer(rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffset i
 
 			// streamOffset ... the offset where the actual stream data begins.
 			//                  is right after the eol after "stream".
-			need := streamInd + len("stream") + 2 // 2 = maxLen(eol)
+
+			slack := 10 // for optional whitespace + eol (max 2 chars)
+			need := streamInd + len("stream") + slack
 
 			if len(line) < need {
 
@@ -1288,15 +1295,15 @@ func pdfFilterPipeline(ctx *Context, dict Dict) ([]PDFFilter, error) {
 	return filterPipeline, err
 }
 
-func streamDictForObject(ctx *Context, Dict Dict, objNr, streamInd int, streamOffset, offset int64) (sd StreamDict, err error) {
+func streamDictForObject(ctx *Context, d Dict, objNr, streamInd int, streamOffset, offset int64) (sd StreamDict, err error) {
 
-	streamLength, streamLengthRef := Dict.Length()
+	streamLength, streamLengthRef := d.Length()
 
 	if streamInd <= 0 {
 		return sd, errors.New("streamDictForObject: stream object without streamOffset")
 	}
 
-	filterPipeline, err := pdfFilterPipeline(ctx, Dict)
+	filterPipeline, err := pdfFilterPipeline(ctx, d)
 	if err != nil {
 		return sd, err
 	}
@@ -1304,7 +1311,7 @@ func streamDictForObject(ctx *Context, Dict Dict, objNr, streamInd int, streamOf
 	streamOffset += offset
 
 	// We have a stream object.
-	sd = NewStreamDict(Dict, streamOffset, streamLength, streamLengthRef, filterPipeline)
+	sd = NewStreamDict(d, streamOffset, streamLength, streamLengthRef, filterPipeline)
 
 	log.Read.Printf("streamDictForObject: end, Streamobject #%d\n", objNr)
 
