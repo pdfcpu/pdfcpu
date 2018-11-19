@@ -45,7 +45,7 @@ func (r Rectangle) AspectRatio() float64 {
 }
 
 func (r Rectangle) String() string {
-	return fmt.Sprintf("(%3.2f, %3.2f, %3.2f, %3.2f) w=%f h=%f ar=%f", r.LL.X, r.LL.Y, r.UR.X, r.UR.Y, r.Width(), r.Height(), r.AspectRatio())
+	return fmt.Sprintf("(%3.2f, %3.2f, %3.2f, %3.2f) w=%.2f h=%.2f ar=%.2f", r.LL.X, r.LL.Y, r.UR.X, r.UR.Y, r.Width(), r.Height(), r.AspectRatio())
 }
 
 // NewRectangle returns a new rectangle for given corner coordinates.

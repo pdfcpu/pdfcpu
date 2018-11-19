@@ -122,6 +122,16 @@ type Watermark struct {
 	fCache formCache // form cache.
 }
 
+func (wm Watermark) typ() string {
+	if wm.isImage() {
+		return "image"
+	}
+	if wm.isPDF() {
+		return "pdf"
+	}
+	return "text"
+}
+
 func (wm Watermark) String() string {
 
 	var s string
@@ -139,19 +149,19 @@ func (wm Watermark) String() string {
 		sc = "absolute"
 	}
 
-	return fmt.Sprintf("Watermark: <%s> is %son top\n"+
+	return fmt.Sprintf("Watermark: <%s> is %son top, typ:%s\n"+
 		"%s %d points\n"+
 		"PDFpage#: %d\n"+
-		"scaling: %f %s\n"+
+		"scaling: %.1f %s\n"+
 		"color: %s\n"+
-		"rotation: %f\n"+
+		"rotation: %.1f\n"+
 		"diagonal: %d\n"+
-		"opacity: %f\n"+
+		"opacity: %.1f\n"+
 		"renderMode: %d\n"+
 		"bbox:%s\n"+
 		"vp:%s\n"+
-		"pageRotation: %f\n",
-		t, s,
+		"pageRotation: %.1f\n",
+		t, s, wm.typ(),
 		wm.fontName, wm.fontSize,
 		wm.page,
 		wm.scale, sc,
@@ -960,7 +970,6 @@ func createForm(xRefTable *XRefTable, wm *Watermark, withBB bool) error {
 	// The forms bounding box is dependent on the page dimensions.
 	wm.calcBoundingBox()
 	bb := wm.bb
-	//fmt.Printf("bb = %s\n", wm.bb)
 
 	// Cache the form for every bounding box encountered.
 	ir, ok := wm.fCache[bb]
@@ -1154,6 +1163,7 @@ func updatePageContentsForWM(xRefTable *XRefTable, obj Object, wm *Watermark, gs
 		objNr = ir.ObjectNumber.Value()
 		if wm.objs[objNr] {
 			// wm already applied to this content stream.
+			fmt.Printf("wm already applied to content stream obj: %d\n", objNr)
 			return nil
 		}
 		genNr := ir.GenerationNumber.Value()
@@ -1167,6 +1177,7 @@ func updatePageContentsForWM(xRefTable *XRefTable, obj Object, wm *Watermark, gs
 
 		//fmt.Printf("%T %T\n", &o, o)
 		//fmt.Printf("Content obj#%d addr:%v\n%s\n", objNr, &o, o)
+		fmt.Printf("patching content stream obj:%d\n", objNr)
 
 		err := patchContentForWM(&o, gsID, xoID, wm, true)
 		if err != nil {
@@ -1184,17 +1195,19 @@ func updatePageContentsForWM(xRefTable *XRefTable, obj Object, wm *Watermark, gs
 		o1 := o[0]
 		ir, _ := o1.(IndirectRef)
 		objNr = ir.ObjectNumber.Value()
-		if wm.objs[objNr] {
-			// wm already applied to this content stream.
-			return nil
-		}
-
 		genNr := ir.GenerationNumber.Value()
 		entry, _ := xRefTable.FindTableEntry(objNr, genNr)
 		sd, _ := (entry.Object).(StreamDict)
 
 		if len(o) == 1 || !wm.onTop {
 
+			if wm.objs[objNr] {
+				// wm already applied to this content stream.
+				fmt.Printf("wm already applied to first=last content stream obj: %d\n", objNr)
+				return nil
+			}
+
+			fmt.Printf("patching first=last content stream obj:%d\n", objNr)
 			err := patchContentForWM(&sd, gsID, xoID, wm, true)
 			if err != nil {
 				return err
@@ -1204,25 +1217,32 @@ func updatePageContentsForWM(xRefTable *XRefTable, obj Object, wm *Watermark, gs
 			return nil
 		}
 
-		// Patch first content stream.
-		err := decodeStream(&sd)
-		if err == filter.ErrUnsupportedFilter {
-			log.Info.Println("unsupported filter: unable to patch content with watermark.")
-			return nil
-		}
-		if err != nil {
-			return err
-		}
+		if wm.objs[objNr] {
+			// wm already applied to this content stream.
+			fmt.Printf("wm already applied to first content stream obj: %d\n", objNr)
+		} else {
 
-		sd.Content = append([]byte("q "), sd.Content...)
+			// Patch first content stream.
+			fmt.Printf("patching first content stream obj:%d\n", objNr)
+			err := decodeStream(&sd)
+			if err == filter.ErrUnsupportedFilter {
+				log.Info.Println("unsupported filter: unable to patch content with watermark.")
+				return nil
+			}
+			if err != nil {
+				return err
+			}
 
-		err = encodeStream(&sd)
-		if err != nil {
-			return err
+			sd.Content = append([]byte("q "), sd.Content...)
+
+			err = encodeStream(&sd)
+			if err != nil {
+				return err
+			}
+
+			entry.Object = sd
+			wm.objs[objNr] = true
 		}
-
-		entry.Object = sd
-		wm.objs[objNr] = true
 
 		// Patch last content stream.
 		o1 = o[len(o)-1]
@@ -1231,14 +1251,16 @@ func updatePageContentsForWM(xRefTable *XRefTable, obj Object, wm *Watermark, gs
 		objNr = ir.ObjectNumber.Value()
 		if wm.objs[objNr] {
 			// wm already applied to this content stream.
+			fmt.Printf("wm already applied to last content stream obj:%d\n", objNr)
 			return nil
 		}
 
+		fmt.Printf("patching last content stream obj:%d\n", objNr)
 		genNr = ir.GenerationNumber.Value()
 		entry, _ = xRefTable.FindTableEntry(objNr, genNr)
 		sd, _ = (entry.Object).(StreamDict)
 
-		err = patchContentForWM(&sd, gsID, xoID, wm, false)
+		err := patchContentForWM(&sd, gsID, xoID, wm, false)
 		if err != nil {
 			return err
 		}
@@ -1262,7 +1284,7 @@ func viewPort(xRefTable *XRefTable, a *InheritedPageAttrs) types.Rectangle {
 
 func watermarkPage(xRefTable *XRefTable, i int, wm *Watermark) error {
 
-	log.Debug.Printf("watermarkPage %d\n", i)
+	log.Debug.Printf("watermark page:%d\n", i)
 
 	d, inhPAttrs, err := xRefTable.PageDict(i)
 	if err != nil {
@@ -1279,7 +1301,7 @@ func watermarkPage(xRefTable *XRefTable, i int, wm *Watermark) error {
 
 	wm.pageRot = inhPAttrs.rotate
 
-	log.Debug.Printf("wm: %s\n", wm)
+	log.Debug.Printf("\n%s\n", wm)
 
 	//fmt.Printf("wm.pageRot=%f\n", wm.pageRot)
 	// wm.pageRot = 0

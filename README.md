@@ -26,9 +26,10 @@ Version: 0.1.18
 * Fixed #5, #39, #44
 
 <p align="center">
-  <img src="resources/wmTextSample.png" height="254">&nbsp;&nbsp;&nbsp;
-  <img src="resources/wmImageSample.jpg" width="180">&nbsp;&nbsp;&nbsp;
-  <img src="resources/wmPDFSample.jpg" width="180">
+  <img border="1" src="resources/wmTextSample.png" height="254">&nbsp;&nbsp;&nbsp;
+  <img border="1" src="resources/wmText2Sample.png" height="254">&nbsp;&nbsp;&nbsp;
+  <img border="1" src="resources/wmImageSample.png" height="254">&nbsp;&nbsp;&nbsp;
+  <img border="1" src="resources/wmPDFSample.jpg" height="254">
 </p>
 
 ## Motivation
@@ -98,10 +99,21 @@ Required build version: go1.9 and up
 
 ## Contributing
 
+* By participating in any form or contributing to `pdfcpu` you are are expected to uphold our [Code of Conduct](CODE_OF_CONDUCT.md).
 * Please open an issue if you find a bug or want to propose a change.
-* Feature requests - always welcome
-* Bug fixes - always welcome
+* Feature requests - always welcome.
+* Bug fixes - always welcome.
 * PRs - also welcome, although I can't promise a merge-in right now since `pdfcpu` is stable but still _alpha_ and occasionally undergoing heavy changes.
+* Please sign your commits.
+
+## Contributors
+
+Thanks goes to these wonderful people:
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+| [<img src="https://avatars1.githubusercontent.com/u/11322155?v=4" width="100px;"/><br /><sub><b>Horst Rutter</b></sub>](https://github.com/hhrutter)<br /> |[<img src="https://avatars0.githubusercontent.com/u/5140211?v=4" width="100px;"/><br /><sub><b>haldyr</b></sub>](https://github.com/haldyr)<br /> | [<img src="https://avatars3.githubusercontent.com/u/20608155?v=4" width="100px;"/><br /><sub><b>Vyacheslav</b></sub>](https://github.com/SimePel)<br /> | [<img src="https://avatars1.githubusercontent.com/u/617459?v=4" width="100px;"/><br /><sub><b>Erik Unger</b></sub>](https://github.com/ungerik)<br /> ||||
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+<!-- ALL-CONTRIBUTORS-LIST:END - Do not remove or modify this section -->
+
 
 ## Disclaimer
 

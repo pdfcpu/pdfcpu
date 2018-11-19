@@ -241,7 +241,7 @@ verbose, v ... turn on logging
 
 e.g. 'Draft'                                                  'logo.png'
      'Draft, d:2'                                             'logo.tif, o:0.5, s:0.5 abs, r:0'
-     'Intentionally left blank, p:48'                         'some.pdf, r:45' 
+     'Intentionally left blank, s:.75 abs, p:48'              'some.pdf, r:45' 
      'Confidental, f:Courier, s:0.75, c: 0.5 0.0 0.0, r:20'   'some.pdf:3, r:-90, s:0.75'`
 
 	usageStamp     = "usage: pdfcpu stamp [-v(erbose)|vv] [-pages pageSelection] description inFile [outFile]"
