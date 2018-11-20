@@ -1163,7 +1163,7 @@ func updatePageContentsForWM(xRefTable *XRefTable, obj Object, wm *Watermark, gs
 		objNr = ir.ObjectNumber.Value()
 		if wm.objs[objNr] {
 			// wm already applied to this content stream.
-			fmt.Printf("wm already applied to content stream obj: %d\n", objNr)
+			log.Debug.Printf("wm already applied to content stream obj: %d\n", objNr)
 			return nil
 		}
 		genNr := ir.GenerationNumber.Value()
@@ -1177,7 +1177,7 @@ func updatePageContentsForWM(xRefTable *XRefTable, obj Object, wm *Watermark, gs
 
 		//fmt.Printf("%T %T\n", &o, o)
 		//fmt.Printf("Content obj#%d addr:%v\n%s\n", objNr, &o, o)
-		fmt.Printf("patching content stream obj:%d\n", objNr)
+		log.Debug.Printf("patching content stream obj:%d\n", objNr)
 
 		err := patchContentForWM(&o, gsID, xoID, wm, true)
 		if err != nil {
@@ -1203,11 +1203,11 @@ func updatePageContentsForWM(xRefTable *XRefTable, obj Object, wm *Watermark, gs
 
 			if wm.objs[objNr] {
 				// wm already applied to this content stream.
-				fmt.Printf("wm already applied to first=last content stream obj: %d\n", objNr)
+				log.Debug.Printf("wm already applied to first=last content stream obj: %d\n", objNr)
 				return nil
 			}
 
-			fmt.Printf("patching first=last content stream obj:%d\n", objNr)
+			log.Debug.Printf("patching first=last content stream obj:%d\n", objNr)
 			err := patchContentForWM(&sd, gsID, xoID, wm, true)
 			if err != nil {
 				return err
@@ -1219,11 +1219,11 @@ func updatePageContentsForWM(xRefTable *XRefTable, obj Object, wm *Watermark, gs
 
 		if wm.objs[objNr] {
 			// wm already applied to this content stream.
-			fmt.Printf("wm already applied to first content stream obj: %d\n", objNr)
+			log.Debug.Printf("wm already applied to first content stream obj: %d\n", objNr)
 		} else {
 
 			// Patch first content stream.
-			fmt.Printf("patching first content stream obj:%d\n", objNr)
+			log.Debug.Printf("patching first content stream obj:%d\n", objNr)
 			err := decodeStream(&sd)
 			if err == filter.ErrUnsupportedFilter {
 				log.Info.Println("unsupported filter: unable to patch content with watermark.")
@@ -1251,11 +1251,11 @@ func updatePageContentsForWM(xRefTable *XRefTable, obj Object, wm *Watermark, gs
 		objNr = ir.ObjectNumber.Value()
 		if wm.objs[objNr] {
 			// wm already applied to this content stream.
-			fmt.Printf("wm already applied to last content stream obj:%d\n", objNr)
+			log.Debug.Printf("wm already applied to last content stream obj:%d\n", objNr)
 			return nil
 		}
 
-		fmt.Printf("patching last content stream obj:%d\n", objNr)
+		log.Debug.Printf("patching last content stream obj:%d\n", objNr)
 		genNr = ir.GenerationNumber.Value()
 		entry, _ = xRefTable.FindTableEntry(objNr, genNr)
 		sd, _ = (entry.Object).(StreamDict)
