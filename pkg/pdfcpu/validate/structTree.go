@@ -626,7 +626,11 @@ func validateStructTreeRootDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 	// A name tree that maps element identifiers to the structure elements they denote.
 	ir := d.IndirectRefEntry("IDTree")
 	if ir != nil {
-		_, _, _, err := validateNameTree(xRefTable, "IDTree", *ir, true)
+		d, err := xRefTable.DereferenceDict(*ir)
+		if err != nil {
+			return err
+		}
+		_, _, _, err = validateNameTree(xRefTable, "IDTree", d, true)
 		if err != nil {
 			return err
 		}

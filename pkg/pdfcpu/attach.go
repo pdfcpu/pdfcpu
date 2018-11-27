@@ -253,7 +253,7 @@ func AttachList(xRefTable *XRefTable) (list []string, err error) {
 
 	log.Debug.Println("List begin")
 
-	if !xRefTable.Valid && xRefTable.Names["EmbeddedFiles"] == nil {
+	if !xRefTable.Valid {
 		err = xRefTable.LocateNameTree("EmbeddedFiles", false)
 		if err != nil {
 			return nil, err
@@ -280,7 +280,7 @@ func AttachExtract(ctx *Context, files StringSet) (err error) {
 
 	log.Debug.Println("Extract begin")
 
-	if !ctx.Valid && ctx.Names["EmbeddedFiles"] == nil {
+	if !ctx.Valid {
 		err = ctx.LocateNameTree("EmbeddedFiles", false)
 		if err != nil {
 			return err
@@ -308,11 +308,9 @@ func AttachAdd(xRefTable *XRefTable, files StringSet) (ok bool, err error) {
 
 	log.Debug.Println("Add begin")
 
-	if xRefTable.Names["EmbeddedFiles"] == nil {
-		err := xRefTable.LocateNameTree("EmbeddedFiles", true)
-		if err != nil {
-			return false, err
-		}
+	err = xRefTable.LocateNameTree("EmbeddedFiles", true)
+	if err != nil {
+		return false, err
 	}
 
 	ok, err = addAttachedFiles(xRefTable, files)
@@ -328,7 +326,7 @@ func AttachRemove(xRefTable *XRefTable, files StringSet) (ok bool, err error) {
 
 	log.Debug.Println("Remove begin")
 
-	if !xRefTable.Valid && xRefTable.Names["EmbeddedFiles"] == nil {
+	if !xRefTable.Valid {
 		err = xRefTable.LocateNameTree("EmbeddedFiles", false)
 		if err != nil {
 			return false, err

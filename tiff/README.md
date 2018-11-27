@@ -1,6 +1,6 @@
 # Note
 
-This package is an improved version of golang.org/x/image/tiff. It uses a consolidated version of `compress/lzw` (hosted at: [github.com/hhrutter/pdfcpu/lzw](https://github.com/hhrutter/pdfcpu/lzw)) for compression and also adds support for CMYK.
+This package is an improved version of golang.org/x/image/tiff. It uses a consolidated version of `compress/lzw` (hosted at: [github.com/hhrutter/pdfcpu/lzw](https://github.com/hhrutter/pdfcpu/tree/master/lzw)) for compression and also adds support for CMYK.
 
 ## Background
 

@@ -2,7 +2,7 @@
 
 * This is a consolidated version of `compress/lzw` that supports GIF, TIFF and PDF.
 * Please refer to this [golang proposal](https://github.com/golang/go/issues/25409) for details.
-* `pdfcpu` also hosts an improved version of Go's TIFF package at [github.com/hhrutter/pdfcpu/tiff](https://github.com/hhrutter/pdfcpu/tiff) leveraging the improved `compress/lzw`.
+* `pdfcpu` also hosts an improved version of Go's TIFF package at [github.com/hhrutter/pdfcpu/tiff](https://github.com/hhrutter/pdfcpu/tree/master/tiff) leveraging the improved `compress/lzw`.
 
 ## Background
 

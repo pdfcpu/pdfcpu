@@ -99,7 +99,6 @@ Required build version: go1.9 and up
 
 ## Contributing
 
-* By participating in any form or contributing to `pdfcpu` you are are expected to uphold our [Code of Conduct](CODE_OF_CONDUCT.md).
 * Please open an issue if you find a bug or want to propose a change.
 * Feature requests - always welcome.
 * Bug fixes - always welcome.
@@ -114,6 +113,9 @@ Thanks goes to these wonderful people:
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 <!-- ALL-CONTRIBUTORS-LIST:END - Do not remove or modify this section -->
 
+## Code of Conduct
+
+Please note that this project is released with a Contributor [Code of Conduct](CODE_OF_CONDUCT.md). By participating in this project you agree to abide by its terms.
 
 ## Disclaimer
 

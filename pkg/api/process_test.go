@@ -343,6 +343,11 @@ func TestOptimizeCommandWithLF(t *testing.T) {
 				t.Fatalf("TestOptimizeCommandWithLF: %v\n", err)
 			}
 
+			_, err = Process(ValidateCommand(outFile, config))
+			if err != nil {
+				t.Fatalf("TestOptimizeCommandWithLF validation: %v\n", err)
+			}
+
 		}
 	}
 

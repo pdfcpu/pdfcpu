@@ -32,10 +32,10 @@ const maxEntries = 3
 // Once maxEntries has been reached a leaf node turns into an intermediary node with two kids,
 // which are leaf nodes each of them holding half of the sorted entries of the original leaf node.
 type Node struct {
-	Kids       []*Node      // Mirror of the name tree's Kids array.
-	Names      []entry      // Mirror of the name tree's Names array.
-	Kmin, Kmax string       // Mirror of the name tree's Limit array[Kmin,Kmax].
-	IndRef     *IndirectRef // Pointer to the PDF object representing this name tree node.
+	Kids       []*Node // Mirror of the name tree's Kids array, an array of indirect references.
+	Names      []entry // Mirror of the name tree's Names array.
+	Kmin, Kmax string  // Mirror of the name tree's Limit array[Kmin,Kmax].
+	D          *Dict   // Pointer to the PDF dict representing this name tree node.
 }
 
 // entry is a key value pair.
@@ -110,6 +110,11 @@ func (n *Node) AddToLeaf(k string, v Object) {
 
 // Add adds an entry to a name tree.
 func (n *Node) Add(xRefTable *XRefTable, k string, v Object) error {
+
+	// The values associated with the keys may be objects of any type.
+	// Stream objects shall be specified by indirect object references.
+	// Dictionary, array, and string objects should be specified by indirect object references.
+	// Other PDF objects (nulls, numbers, booleans, and names) should be specified as direct objects.
 
 	if n.Names == nil {
 		n.Names = make([]entry, 0, maxEntries)
@@ -324,7 +329,7 @@ func (n *Node) removeFromKids(xRefTable *XRefTable, k string) (ok bool, err erro
 			// This kid is now empty and needs to be removed.
 
 			if xRefTable != nil {
-				err := xRefTable.DeleteObjectGraph(*n.Kids[i].IndRef)
+				err = xRefTable.deleteObject(*kid.D)
 				if err != nil {
 					return false, err
 				}
@@ -351,7 +356,7 @@ func (n *Node) removeFromKids(xRefTable *XRefTable, k string) (ok bool, err erro
 				log.Debug.Println("removeFromKids: only 1 kid")
 
 				if xRefTable != nil {
-					err = xRefTable.DeleteObject(n.IndRef.ObjectNumber.Value())
+					err = xRefTable.deleteObject(*n.D)
 					if err != nil {
 						return false, err
 					}
@@ -360,7 +365,6 @@ func (n *Node) removeFromKids(xRefTable *XRefTable, k string) (ok bool, err erro
 				*n = *n.Kids[0]
 
 				log.Debug.Printf("removeFromKids: new n = %s\n", n)
-				log.Debug.Printf("removeFromKids: n.IndRef = %v\n", n.IndRef)
 
 				return true, nil
 			}

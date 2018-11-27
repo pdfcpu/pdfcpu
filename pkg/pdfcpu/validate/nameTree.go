@@ -548,6 +548,12 @@ func validateIDTreeValue(xRefTable *pdf.XRefTable, o pdf.Object, sinceVersion pd
 
 func validateNameTreeValue(name string, xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
 
+	// TODO
+	// The values associated with the keys may be objects of any type.
+	// Stream objects shall be specified by indirect object references.
+	// Dictionary, array, and string objects should be specified by indirect object references.
+	// Other PDF objects (nulls, numbers, booleans, and names) should be specified as direct objects.
+
 	for k, v := range map[string]struct {
 		validate     func(xRefTable *pdf.XRefTable, o pdf.Object, sinceVersion pdf.Version) error
 		sinceVersion pdf.Version
@@ -673,19 +679,15 @@ func validateNameTreeDictLimitsEntry(xRefTable *pdf.XRefTable, d pdf.Dict, first
 	return nil
 }
 
-func validateNameTree(xRefTable *pdf.XRefTable, name string, ir pdf.IndirectRef, root bool) (string, string, *pdf.Node, error) {
+func validateNameTree(xRefTable *pdf.XRefTable, name string, d pdf.Dict, root bool) (string, string, *pdf.Node, error) {
 
 	// see 7.7.4
 
 	// A node has "Kids" or "Names" entry.
 
-	node := &pdf.Node{IndRef: &ir}
+	node := &pdf.Node{D: &d}
 	var kmin, kmax string
-
-	d, err := xRefTable.DereferenceDict(ir)
-	if err != nil || d == nil {
-		return "", "", nil, err
-	}
+	var err error
 
 	// Kids: array of indirect references to the immediate children of this node.
 	// if Kids present then recurse
@@ -709,9 +711,14 @@ func validateNameTree(xRefTable *pdf.XRefTable, name string, ir pdf.IndirectRef,
 				return "", "", nil, errors.New("validateNameTree: corrupt kid, should be indirect reference")
 			}
 
+			d, err := xRefTable.DereferenceDict(kid)
+			if err != nil {
+				return "", "", nil, err
+			}
+
 			var kminKid string
 			var kidNode *pdf.Node
-			kminKid, kmax, kidNode, err = validateNameTree(xRefTable, name, kid, false)
+			kminKid, kmax, kidNode, err = validateNameTree(xRefTable, name, d, false)
 			if err != nil {
 				return "", "", nil, err
 			}

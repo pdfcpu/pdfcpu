@@ -1167,14 +1167,9 @@ func (xRefTable *XRefTable) bindNameTreeNode(name string, n *Node, root bool) er
 
 	var dict Dict
 
-	if n.IndRef == nil {
-		d := NewDict()
-		indRef, err := xRefTable.IndRefForNewObject(d)
-		if err != nil {
-			return err
-		}
-		n.IndRef = indRef
-		dict = d
+	if n.D == nil {
+		dict = NewDict()
+		n.D = &dict
 	} else {
 		if root {
 			// Update root object after possible tree modification after removal of empty kid.
@@ -1185,17 +1180,10 @@ func (xRefTable *XRefTable) bindNameTreeNode(name string, n *Node, root bool) er
 			if namesDict == nil {
 				return errors.New("Root entry \"Names\" corrupt")
 			}
-			namesDict.Update(name, *n.IndRef)
+			namesDict.Update(name, *n.D)
 		}
-		log.Debug.Printf("bind IndRef = %v\n", n.IndRef)
-		d, err := xRefTable.DereferenceDict(*n.IndRef)
-		if err != nil {
-			return err
-		}
-		if d == nil {
-			return errors.Errorf("name tree node dict is nil for node: %v\n", n)
-		}
-		dict = d
+		log.Debug.Printf("bind dict = %v\n", *n.D)
+		dict = *n.D
 	}
 
 	if !root {
@@ -1221,7 +1209,11 @@ func (xRefTable *XRefTable) bindNameTreeNode(name string, n *Node, root bool) er
 		if err != nil {
 			return err
 		}
-		kids = append(kids, *k.IndRef)
+		indRef, err := xRefTable.IndRefForNewObject(*k.D)
+		if err != nil {
+			return err
+		}
+		kids = append(kids, *indRef)
 	}
 
 	dict.Update("Kids", kids)
@@ -1237,6 +1229,7 @@ func (xRefTable *XRefTable) BindNameTrees() error {
 
 	log.Write.Println("BindNameTrees..")
 
+	// Iterate over internal name tree rep.
 	for k, v := range xRefTable.Names {
 		log.Write.Printf("bindNameTree: %s\n", k)
 		err := xRefTable.bindNameTreeNode(k, v, true)
@@ -1250,6 +1243,10 @@ func (xRefTable *XRefTable) BindNameTrees() error {
 
 // LocateNameTree locates/ensures a specific name tree.
 func (xRefTable *XRefTable) LocateNameTree(nameTreeName string, ensure bool) error {
+
+	if xRefTable.Names[nameTreeName] != nil {
+		return nil
+	}
 
 	d, err := xRefTable.Catalog()
 	if err != nil {
@@ -1292,17 +1289,17 @@ func (xRefTable *XRefTable) LocateNameTree(nameTreeName string, ensure bool) err
 
 		d.Insert(nameTreeName, *ir)
 
-		xRefTable.Names[nameTreeName] = &Node{IndRef: ir}
+		xRefTable.Names[nameTreeName] = &Node{D: &dict}
 
 		return nil
 	}
 
-	ir, ok := o.(IndirectRef)
-	if !ok {
-		return errors.New("LocateNameTree: name tree must be indirect ref")
+	d1, err := xRefTable.DereferenceDict(o)
+	if err != nil {
+		return err
 	}
 
-	xRefTable.Names[nameTreeName] = &Node{IndRef: &ir}
+	xRefTable.Names[nameTreeName] = &Node{D: &d1}
 
 	return nil
 }
@@ -1339,8 +1336,9 @@ func (xRefTable *XRefTable) RemoveNameTree(nameTreeName string) error {
 	// We have an existing name dict.
 
 	// Delete the name tree.
-	if ir := namesDict.IndirectRefEntry(nameTreeName); ir != nil {
-		err = xRefTable.DeleteObjectGraph(*ir)
+	o, found := namesDict.Find(nameTreeName)
+	if found {
+		err = xRefTable.deleteObject(o)
 		if err != nil {
 			return err
 		}

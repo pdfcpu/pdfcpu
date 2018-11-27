@@ -104,15 +104,6 @@ func validateNames(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool, s
 
 	// => 7.7.4 Name Dictionary
 
-	/*
-		<Kids, [(86 0 R)]>
-
-		86:
-		<Limits, [(F1) (P.9)]>
-		<Names, [(F1) (87 0 R) (F2) ...
-
-	*/
-
 	d, err := validateDictEntry(xRefTable, rootDict, "rootDict", "Names", required, sinceVersion, nil)
 	if err != nil || d == nil {
 		return err
@@ -129,16 +120,19 @@ func validateNames(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool, s
 			return errors.Errorf("validateNames: unknown name tree name: %s\n", treeName)
 		}
 
-		ir, ok := value.(pdf.IndirectRef)
-		if !ok {
-			return errors.New("validateNames: name tree must be indirect ref")
-		}
-
-		_, _, tree, err := validateNameTree(xRefTable, treeName, ir, true)
+		d, err := xRefTable.DereferenceDict(value)
 		if err != nil {
 			return err
 		}
 
+		_, _, tree, err := validateNameTree(xRefTable, treeName, d, true)
+		if err != nil {
+			return err
+		}
+
+		// Internalize this name tree.
+		// If no validation takes place, name trees have to be internalized via xRefTable.LocateNameTree
+		// TODO Move this out of validation into Read.
 		if tree != nil {
 			xRefTable.Names[treeName] = tree
 		}
