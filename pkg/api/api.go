@@ -149,7 +149,13 @@ func Validate(cmd *Command) ([]string, error) {
 
 	err = ValidateContext(ctx)
 	if err != nil {
-		err = errors.Wrap(err, "validation error (try -mode=relaxed)")
+
+		s := ""
+		if config.ValidationMode == pdf.ValidationStrict {
+			s = " (try -mode=relaxed)"
+		}
+
+		err = errors.Wrap(err, "validation error"+s)
 	} else {
 		fmt.Println("validation ok")
 		//logInfoAPI.Println("validation ok")
@@ -200,7 +206,7 @@ func writeSinglePagePDF(ctx *pdf.Context, pageNr int, dirOut string) error {
 	ctx.ResetWriteContext()
 
 	w := ctx.Write
-	w.Command = "Split"
+	w.Command = "Split" // Note: also used by extract pages.
 	w.ExtractPageNr = pageNr
 	w.DirName = dirOut + "/"
 	w.FileName = singlePageFileName(ctx, pageNr)
@@ -210,6 +216,8 @@ func writeSinglePagePDF(ctx *pdf.Context, pageNr int, dirOut string) error {
 }
 
 func writeSinglePagePDFs(ctx *pdf.Context, selectedPages pdf.IntSet, dirOut string) error {
+
+	// used by extract pages and split.
 
 	ensureSelectedPages(ctx, &selectedPages)
 

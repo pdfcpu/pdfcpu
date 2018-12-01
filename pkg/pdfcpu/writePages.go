@@ -310,7 +310,7 @@ func writePagesDict(ctx *Context, ir *IndirectRef, pageCount int) error {
 		return errors.New("writePagesDict: corrupt \"Kids\" entry")
 	}
 
-	// This is for Split and Extract when all we generate is a single page.
+	// This is for Split and Extract pages when all we generate is a single page.
 	if ctx.Write.ExtractPageNr > 0 {
 		// Identify the kid containing the leaf for the page we are looking for aka the ExtractPageNr.
 		// pageCount is either already the number of the page we are looking for and we have identified the kid for its page dict

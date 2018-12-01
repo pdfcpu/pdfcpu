@@ -236,7 +236,7 @@ func writePages(ctx *Context, rootDict Dict) error {
 		return errors.New("writePages: missing indirect obj for pages dict")
 	}
 
-	// Manipulate page tree as needed for splitting, trimming or page extraction.
+	// Manipulate page tree as needed for trimming.
 	if ctx.Write.ExtractPages != nil && len(ctx.Write.ExtractPages) > 0 {
 		p := 0
 		_, err := trimPagesDict(ctx, ir, &p)

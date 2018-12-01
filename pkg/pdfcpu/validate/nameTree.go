@@ -571,14 +571,7 @@ func validateNameTreeValue(name string, xRefTable *pdf.XRefTable, o pdf.Object) 
 		"IDTree":                 {validateIDTreeValue, pdf.V13},
 	} {
 		if name == k {
-
-			err := xRefTable.ValidateVersion(name, v.sinceVersion)
-			if err != nil {
-				return err
-			}
-
 			return v.validate(xRefTable, o, v.sinceVersion)
-
 		}
 	}
 

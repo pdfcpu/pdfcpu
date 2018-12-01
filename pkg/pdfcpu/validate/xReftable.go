@@ -893,7 +893,9 @@ func validateRootObject(xRefTable *pdf.XRefTable) error {
 	// Validate remainder of annotations after AcroForm validation only.
 	err = validatePagesAnnotations(xRefTable, rootPageNodeDict)
 
-	log.Validate.Println("*** validateRootObject end ***")
+	if err == nil {
+		log.Validate.Println("*** validateRootObject end ***")
+	}
 
 	return err
 }
