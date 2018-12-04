@@ -895,11 +895,13 @@ func validateType3FontDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 	}
 
 	// FontDescriptor, required since version 1.5 for tagged PDF documents, dict
-	if xRefTable.Tagged {
-		err = validateFontDescriptor(xRefTable, d, dictName, "Type3", REQUIRED, pdf.V15)
-		if err != nil {
-			return err
-		}
+	sinceVersion := pdf.V15
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		sinceVersion = pdf.V13
+	}
+	err = validateFontDescriptor(xRefTable, d, dictName, "Type3", xRefTable.Tagged, sinceVersion)
+	if err != nil {
+		return err
 	}
 
 	// Resources, optional, dict, since V1.2
