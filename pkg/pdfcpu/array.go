@@ -151,60 +151,56 @@ func (a Array) PDFString() string {
 			continue
 		}
 
-		subdict, ok := entry.(Dict)
+		d, ok := entry.(Dict)
 		if ok {
-			dictStr := subdict.PDFString()
-			logstr = append(logstr, fmt.Sprintf("%s", dictStr))
+			logstr = append(logstr, fmt.Sprintf("%s", d.PDFString()))
 			continue
 		}
 
 		a, ok := entry.(Array)
 		if ok {
-			arrstr := a.PDFString()
-			logstr = append(logstr, fmt.Sprintf("%s", arrstr))
+			logstr = append(logstr, fmt.Sprintf("%s", a.PDFString()))
 			continue
 		}
 
 		ir, ok := entry.(IndirectRef)
 		if ok {
-			indRefstr := ir.PDFString()
-			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, indRefstr))
+			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, ir.PDFString()))
 			continue
 		}
 
-		name, ok := entry.(Name)
+		n, ok := entry.(Name)
 		if ok {
-			namestr := name.PDFString()
-			logstr = append(logstr, fmt.Sprintf("%s", namestr))
+			logstr = append(logstr, fmt.Sprintf("%s", n.PDFString()))
 			continue
 		}
 
 		i, ok := entry.(Integer)
 		if ok {
-			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, i.String()))
+			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, i.PDFString()))
 			continue
 		}
 
 		f, ok := entry.(Float)
 		if ok {
-			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, f.String()))
+			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, f.PDFString()))
 			continue
 		}
 
 		b, ok := entry.(Boolean)
 		if ok {
-			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, b.String()))
+			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, b.PDFString()))
 			continue
 		}
 		sl, ok := entry.(StringLiteral)
 		if ok {
-			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, sl.String()))
+			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, sl.PDFString()))
 			continue
 		}
 
 		hl, ok := entry.(HexLiteral)
 		if ok {
-			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, hl.String()))
+			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, hl.PDFString()))
 			continue
 		}
 

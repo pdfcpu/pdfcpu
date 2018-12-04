@@ -17,6 +17,7 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -1099,8 +1100,13 @@ func (xRefTable *XRefTable) list(logStr []string) []string {
 				}
 
 				sd, ok := entry.Object.(StreamDict)
-				if ok && log.IsTraceLoggerEnabled() && sd.IsPageContent {
-					str += fmt.Sprintf("decoded stream content (length = %d)\n<%s>\n", len(sd.Content), sd.Content)
+				if ok && log.IsTraceLoggerEnabled() { //&& sd.IsPageContent {
+					s := "decoded stream content (length = %d)\n<%s>\n"
+					if sd.IsPageContent {
+						str += fmt.Sprintf(s, len(sd.Content), sd.Content)
+					} else {
+						str += fmt.Sprintf(s, len(sd.Content), hex.Dump(sd.Content))
+					}
 				}
 
 				osd, ok := entry.Object.(ObjectStreamDict)

@@ -100,13 +100,14 @@ func (boolean Boolean) Value() bool {
 type Float float64
 
 func (f Float) String() string {
-	// strconv may be faster.
+	// Use a precision of 2 for logging readability.
 	return fmt.Sprintf("%.2f", float64(f))
 }
 
 // PDFString returns a string representation as found in and written to a PDF file.
 func (f Float) PDFString() string {
-	return f.String()
+	// The max precision encountered so far has been 11 (fontType3 fontmatrix components).
+	return strconv.FormatFloat(f.Value(), 'f', 12, 64)
 }
 
 // Value returns a float64 value for this PDF object.

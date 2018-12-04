@@ -418,61 +418,57 @@ func (d Dict) PDFString() string {
 			continue
 		}
 
-		subdict, ok := v.(Dict)
+		d, ok := v.(Dict)
 		if ok {
-			dictStr := subdict.PDFString()
-			logstr = append(logstr, fmt.Sprintf("/%s%s", k, dictStr))
+			logstr = append(logstr, fmt.Sprintf("/%s%s", k, d.PDFString()))
 			continue
 		}
 
 		a, ok := v.(Array)
 		if ok {
-			arrStr := a.PDFString()
-			logstr = append(logstr, fmt.Sprintf("/%s%s", k, arrStr))
+			logstr = append(logstr, fmt.Sprintf("/%s%s", k, a.PDFString()))
 			continue
 		}
 
-		indRef, ok := v.(IndirectRef)
+		ir, ok := v.(IndirectRef)
 		if ok {
-			indRefstr := indRef.PDFString()
-			logstr = append(logstr, fmt.Sprintf("/%s %s", k, indRefstr))
+			logstr = append(logstr, fmt.Sprintf("/%s %s", k, ir.PDFString()))
 			continue
 		}
 
-		name, ok := v.(Name)
+		n, ok := v.(Name)
 		if ok {
-			namestr := name.PDFString()
-			logstr = append(logstr, fmt.Sprintf("/%s%s", k, namestr))
+			logstr = append(logstr, fmt.Sprintf("/%s%s", k, n.PDFString()))
 			continue
 		}
 
 		i, ok := v.(Integer)
 		if ok {
-			logstr = append(logstr, fmt.Sprintf("/%s %s", k, i))
+			logstr = append(logstr, fmt.Sprintf("/%s %s", k, i.PDFString()))
 			continue
 		}
 
 		f, ok := v.(Float)
 		if ok {
-			logstr = append(logstr, fmt.Sprintf("/%s %s", k, f))
+			logstr = append(logstr, fmt.Sprintf("/%s %s", k, f.PDFString()))
 			continue
 		}
 
 		b, ok := v.(Boolean)
 		if ok {
-			logstr = append(logstr, fmt.Sprintf("/%s %s", k, b))
+			logstr = append(logstr, fmt.Sprintf("/%s %s", k, b.PDFString()))
 			continue
 		}
 
 		sl, ok := v.(StringLiteral)
 		if ok {
-			logstr = append(logstr, fmt.Sprintf("/%s%s", k, sl))
+			logstr = append(logstr, fmt.Sprintf("/%s%s", k, sl.PDFString()))
 			continue
 		}
 
 		hl, ok := v.(HexLiteral)
 		if ok {
-			logstr = append(logstr, fmt.Sprintf("/%s%s", k, hl))
+			logstr = append(logstr, fmt.Sprintf("/%s%s", k, hl.PDFString()))
 			continue
 		}
 

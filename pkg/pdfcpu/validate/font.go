@@ -255,6 +255,8 @@ func validateFontDescriptorFontFile(xRefTable *pdf.XRefTable, d pdf.Dict, dictNa
 	case "OpenType":
 		err = validateFontFile(xRefTable, d, dictName, "FontFile3", fontDictType, OPTIONAL, pdf.V16)
 
+	case "Type3": // No fontfile.
+
 	default:
 		return errors.Errorf("unknown fontDictType: %s\n", fontDictType)
 
