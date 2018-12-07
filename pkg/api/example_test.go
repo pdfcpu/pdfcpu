@@ -76,17 +76,28 @@ func exampleProcessMerge() {
 	}
 
 }
+
 func exampleProcessSplit() {
-
-	config := pdfcpu.NewDefaultConfiguration()
-
-	// Set optional password(s).
-	//config.UserPW = "upw"
-	//config.OwnerPW = "opw"
 
 	// Split into single-page PDFs.
 
-	_, err := Process(SplitCommand("in.pdf", "outDir", config))
+	config := pdfcpu.NewDefaultConfiguration()
+
+	_, err := Process(SplitCommand("in.pdf", "outDir", 1, config))
+	if err != nil {
+		return
+	}
+
+}
+
+func exampleProcessSplitWithSpan() {
+
+	// Split into PDFs using a split span of 2
+	// Each generated file has 2 pages.
+
+	config := pdfcpu.NewDefaultConfiguration()
+
+	_, err := Process(SplitCommand("in.pdf", "outDir", 2, config))
 	if err != nil {
 		return
 	}

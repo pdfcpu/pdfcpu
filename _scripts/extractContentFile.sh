@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#: ./extractContentFile.sh ~/pdf/1mb/a.pdf ~/pdf/out
+# eg: ./extractContentFile.sh ~/pdf/1mb/a.pdf ~/pdf/out
 
 if [ $# -ne 2 ]; then
     echo "usage: ./extractContentFile.sh inFile outDir"

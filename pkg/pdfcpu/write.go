@@ -236,20 +236,12 @@ func writePages(ctx *Context, rootDict Dict) error {
 		return errors.New("writePages: missing indirect obj for pages dict")
 	}
 
-	// Manipulate page tree as needed for trimming.
-	if ctx.Write.ExtractPages != nil && len(ctx.Write.ExtractPages) > 0 {
-		p := 0
-		_, err := trimPagesDict(ctx, ir, &p)
-		if err != nil {
-			return err
-		}
-	}
-
 	// Embed all page tree objects into objects stream.
 	ctx.Write.WriteToObjectStream = true
 
 	// Write page tree.
-	err := writePagesDict(ctx, ir, 0)
+	p := 0
+	_, _, err := writePagesDict(ctx, ir, &p)
 	if err != nil {
 		return err
 	}
@@ -467,7 +459,7 @@ func writeXRefSubsection(ctx *Context, start int, size int) error {
 
 func deleteRedundantObject(ctx *Context, objNr int) {
 
-	if ctx.Write.ExtractPageNr == 0 &&
+	if len(ctx.Write.SelectedPages) == 0 &&
 		(ctx.Optimize.IsDuplicateFontObject(objNr) || ctx.Optimize.IsDuplicateImageObject(objNr)) {
 		ctx.DeleteObject(objNr)
 	}

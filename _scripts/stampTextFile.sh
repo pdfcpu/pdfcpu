@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#: ./stampTextFile.sh ~/pdf/1mb/a.pdf ~/pdf/out
+# eg: ./stampTextFile.sh ~/pdf/1mb/a.pdf ~/pdf/out
 
 if [ $# -ne 2 ]; then
     echo "usage: ./stampTextFile.sh inFile outDir"

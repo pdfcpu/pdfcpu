@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#: ./trimFile.sh ~/pdf/1mb/a.pdf ~/pdf/1mb/a.
+# eg: ./trimFile.sh ~/pdf/1mb/a.pdf ~/pdf/1mb/a.
 
 if [ $# -ne 2 ]; then
     echo "usage: ./trimFile.sh inFile outFile"

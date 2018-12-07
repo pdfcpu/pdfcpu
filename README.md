@@ -13,17 +13,12 @@ It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO
 
 ## Status
 
-Version: 0.1.18
+Version: 0.1.19
 
-* Extended API to support webserver scenarios using Readseeker and Writer.
-* Support for watermarking/stamping with a specific page of another PDF file.
-* Extended logging into horizontal (Info, Debug, Trace etc.) vs. vertical logging (Read, Validate, Write etc).
-* The CLI will produce regular logging if you use -verbose, or -v.
-* The CLI will produce verbose logging if you use -vv.
-* More tests in `api/process_test.go`
-* More examples in `api/example_test.go`
-* More scripts under `_scripts/*`
-* Fixed #5, #39, #44
+* JPEG support across the board for watermarking, stamping and image extraction.
+* Extended `split` functionality now supporting a `span` parameter.
+* API console output is now using a Logger that can be disabled for embedded projects.
+* Fixed #52, #54, #56
 
 <p align="center">
   <img border="1" src="resources/wmTextSample.png" height="254">&nbsp;&nbsp;&nbsp;
@@ -44,7 +39,7 @@ One example is reducing the size of large PDF files for mass mailings by optimiz
 * Read (builds xref table from PDF file)
 * Write (writes xref table to PDF file)
 * Optimize (gets rid of redundancies like duplicate fonts, images)
-* Split (split a multi page PDF file into single page PDF files)
+* Split (split multi-page PDF into several PDFs according to split span)
 * Merge (a set of PDF files into one consolidated PDF file)
 * Extract Images (extract all embedded images of a PDF file into a given dir)
 * Extract Fonts (extract all embedded fonts of a PDF file into a given dir)
@@ -73,7 +68,7 @@ Required build version: go1.9 and up
 
     pdfcpu validate [-verbose] [-mode strict|relaxed] [-upw userpw] [-opw ownerpw] inFile
     pdfcpu optimize [-verbose] [-stats csvFile] [-upw userpw] [-opw ownerpw] inFile [outFile]
-    pdfcpu split [-verbose] [-upw userpw] [-opw ownerpw] inFile outDir
+    pdfcpu split [-verbose] [-upw userpw] [-opw ownerpw] inFile outDir [span]
     pdfcpu merge [-verbose] outFile inFile...
     pdfcpu extract [-verbose] -mode image|font|content|page|meta [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile outDir
     pdfcpu trim [-verbose] -pages pageSelection [-upw userpw] [-opw ownerpw] inFile outFile

@@ -140,7 +140,7 @@ func version() {
 		os.Exit(1)
 	}
 
-	fmt.Fprintf(os.Stderr, "pdfcpu version %s\n", pdfcpu.PDFCPUVersion)
+	fmt.Fprintf(os.Stdout, "pdfcpu version %s\n", pdfcpu.PDFCPUVersion)
 }
 
 func helpString(topic string) string {
@@ -196,6 +196,8 @@ func help() {
 func setupLogging(verbose, veryVerbose bool) {
 
 	needStackTrace = verbose || veryVerbose
+
+	PDFCPULog.SetDefaultAPILogger()
 
 	if verbose || veryVerbose {
 		PDFCPULog.SetDefaultDebugLogger()

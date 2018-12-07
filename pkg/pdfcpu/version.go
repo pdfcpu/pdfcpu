@@ -24,10 +24,10 @@ import (
 
 const (
 	// PDFCPUVersion returns the current pdfcpu version.
-	PDFCPUVersion = "0.1.18"
+	PDFCPUVersion = "0.1.19"
 
 	// PDFCPULongVersion returns pdfcpu's signature.
-	PDFCPULongVersion = "golang pdfcpu v" + PDFCPUVersion
+	PDFCPULongVersion = "pdfcpu v" + PDFCPUVersion
 )
 
 // Version is a type for the internal representation of PDF versions.

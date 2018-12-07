@@ -25,21 +25,21 @@ Usage:
 		
 The commands are:
 	
-	validate	validate PDF against PDF 32000-1:2008 (PDF 1.7)
-	optimize	optimize PDF by getting rid of redundant page resources
-	split		split multi-page PDF into several single-page PDFs
-	merge		concatenate 2 or more PDFs
-	extract		extract images, fonts, content, pages, metadata
-	trim		create trimmed version
-	attach		list, add, remove, extract embedded file attachments
-	perm		list, add user access permissions
-	encrypt		set password protection		
-	decrypt		remove password protection
-	changeupw	change user password
-	changeopw	change owner password
-	stamp		add stamps
-	watermark	add watermarks
-	version		print version
+	validate    validate PDF against PDF 32000-1:2008 (PDF 1.7)
+	optimize    optimize PDF by getting rid of redundant page resources
+	split       split multi-page PDF into several PDFs according to split span.
+	merge       concatenate 2 or more PDFs
+	extract     extract images, fonts, content, pages, metadata
+	trim        create trimmed version
+	attach      list, add, remove, extract embedded file attachments
+	perm        list, add user access permissions
+	encrypt     set password protection		
+	decrypt     remove password protection
+	changeupw   change user password
+	changeopw   change owner password
+	stamp       add stamps
+	watermark   add watermarks
+	version     print version
    
 	Single-letter Unix-style supported for commands and flags.
 
@@ -72,15 +72,16 @@ verbose, v ... turn on logging
     inFile ... input pdf file
    outFile ... output pdf file (default: inFile-new.pdf)`
 
-	usageSplit     = "usage: pdfcpu split [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile outDir"
-	usageLongSplit = `Split generates a set of single page PDFs for the input file in outDir.
+	usageSplit     = "usage: pdfcpu split [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile outDir [span]"
+	usageLongSplit = `Split generates a set of PDFs for the input file in outDir according to given span value.
 
 verbose, v ... turn on logging
         vv ... verbose logging
        upw ... user password
        opw ... owner password
     inFile ... input pdf file
-    outDir ... output directory`
+    outDir ... output directory
+      span ... split span in pages (default: 1)`
 
 	usageMerge     = "usage: pdfcpu merge [-v(erbose)|vv] outFile inFile..."
 	usageLongMerge = `Merge concatenates a sequence of PDFs/inFiles to outFile.
@@ -110,7 +111,7 @@ content ... extract raw page content
    page ... extract single page PDFs
    meta ... extract all metadata (page selection does not apply)`
 
-	usageTrim     = "usage: pdfcpu trim [-v(erbose)|vv] [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageTrim     = "usage: pdfcpu trim [-v(erbose)|vv] -pages pageSelection [-upw userpw] [-opw ownerpw] inFile [outFile]"
 	usageLongTrim = `Trim generates a trimmed version of inFile for selected pages.
 
 verbose, v ... turn on logging
@@ -219,7 +220,7 @@ verbose, v ... turn on logging
 	usageWMDescription = `<description> is a comma separated configuration string containing:
 	
     1st entry: the display string
-               or an image file name with one the of extensions '.png', '.tif' or '.tiff' 
+               or an image file name with one the of extensions '.jpg', .png', '.tif' or '.tiff' 
                or a PDF file name with extension .pdf followed by an optional page number (default=1) separated by ':'
 
     optional entries:

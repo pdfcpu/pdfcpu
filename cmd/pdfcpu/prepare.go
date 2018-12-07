@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/hhrutter/pdfcpu/pkg/api"
 	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
@@ -77,7 +78,7 @@ func prepareOptimizeCommand(config *pdfcpu.Configuration) *api.Command {
 
 func prepareSplitCommand(config *pdfcpu.Configuration) *api.Command {
 
-	if len(flag.Args()) != 2 || pageSelection != "" {
+	if len(flag.Args()) < 2 || len(flag.Args()) > 3 || pageSelection != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageSplit)
 		os.Exit(1)
 	}
@@ -87,7 +88,17 @@ func prepareSplitCommand(config *pdfcpu.Configuration) *api.Command {
 
 	dirnameOut := flag.Arg(1)
 
-	return api.SplitCommand(filenameIn, dirnameOut, config)
+	span := 1
+	var err error
+	if len(flag.Args()) == 3 {
+		span, err = strconv.Atoi(flag.Arg(2))
+		if err != nil || span < 1 {
+			fmt.Fprintln(os.Stderr, "split: span is a numeric value >= 1")
+			os.Exit(1)
+		}
+	}
+
+	return api.SplitCommand(filenameIn, dirnameOut, span, config)
 }
 
 func prepareMergeCommand(config *pdfcpu.Configuration) *api.Command {

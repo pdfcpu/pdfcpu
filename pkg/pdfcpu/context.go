@@ -545,8 +545,7 @@ type WriteContext struct {
 	FileName            string
 	FileSize            int64
 	Command             string        // The processing command in effect.
-	ExtractPageNr       int           // page to be generated for rendering a single-page/PDF.
-	ExtractPages        IntSet        // pages to be generated for a trimmed PDF.
+	SelectedPages       IntSet        // For split, trim and extract.
 	BinaryTotalSize     int64         // total stream data, counts 100% all stream data written.
 	BinaryImageSize     int64         // total image stream data written = Read.BinaryImageSize.
 	BinaryFontSize      int64         // total font stream data (fontfiles) = copy of Read.BinaryFontSize.
@@ -559,7 +558,7 @@ type WriteContext struct {
 
 // NewWriteContext returns a new WriteContext.
 func NewWriteContext(eol string) *WriteContext {
-	return &WriteContext{Table: map[int]int64{}, Eol: eol}
+	return &WriteContext{SelectedPages: IntSet{}, Table: map[int]int64{}, Eol: eol}
 }
 
 // SetWriteOffset saves the current write offset to the PDFDestination.
@@ -577,22 +576,22 @@ func (wc *WriteContext) HasWriteOffset(objNumber int) bool {
 // Don't confuse with pdfcpu commands, these are internal triggers.
 func (wc *WriteContext) ReducedFeatureSet() bool {
 	switch wc.Command {
-	case "Split", "Trim", "Merge":
+	case "Split", "Trim", "ExtractPages", "Merge":
 		return true
 	}
 	return false
 }
 
 // ExtractPage returns true if page i needs to be generated.
-func (wc *WriteContext) ExtractPage(i int) bool {
+// func (wc *WriteContext) ExtractPage(i int) bool {
 
-	if wc.ExtractPages == nil {
-		return false
-	}
+// 	if wc.ExtractPages == nil {
+// 		return false
+// 	}
 
-	return wc.ExtractPages[i]
+// 	return wc.ExtractPages[i]
 
-}
+// }
 
 // LogStats logs stats for written file.
 func (wc *WriteContext) LogStats() {

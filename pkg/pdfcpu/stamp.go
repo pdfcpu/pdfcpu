@@ -1221,25 +1221,12 @@ func updatePageContentsForWM(xRefTable *XRefTable, obj Object, wm *Watermark, gs
 			// wm already applied to this content stream.
 			log.Debug.Printf("wm already applied to first content stream obj: %d\n", objNr)
 		} else {
-
 			// Patch first content stream.
 			log.Debug.Printf("patching first content stream obj:%d\n", objNr)
-			err := decodeStream(&sd)
-			if err == filter.ErrUnsupportedFilter {
-				log.Info.Println("unsupported filter: unable to patch content with watermark.")
-				return nil
-			}
+			err := patchFirstContentForWM(&sd)
 			if err != nil {
 				return err
 			}
-
-			sd.Content = append([]byte("q "), sd.Content...)
-
-			err = encodeStream(&sd)
-			if err != nil {
-				return err
-			}
-
 			entry.Object = sd
 			wm.objs[objNr] = true
 		}
@@ -1358,6 +1345,22 @@ func patchContentForWM(sd *StreamDict, gsID, xoID string, wm *Watermark, saveGSt
 		sd.Content = append(bb, sd.Content...)
 	}
 	//fmt.Printf("patched content:\n%s\n", hex.Dump(sd.Content))
+
+	return encodeStream(sd)
+}
+
+func patchFirstContentForWM(sd *StreamDict) error {
+
+	err := decodeStream(sd)
+	if err == filter.ErrUnsupportedFilter {
+		log.Info.Println("unsupported filter: unable to patch content with watermark.")
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	sd.Content = append([]byte("q "), sd.Content...)
 
 	return encodeStream(sd)
 }

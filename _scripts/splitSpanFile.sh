@@ -14,15 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# eg: ./stampImageFile.sh ~/pdf/1mb/a.pdf ~/pdf/out
+# eg: ./splitSpanFile.sh ~/pdf/1mb/a.pdf ~/pdf/out
 
 if [ $# -ne 2 ]; then
-    echo "usage: ./stampImageFile.sh inFile outDir"
-    echo "stamp all pages with an image"
+    echo "usage: ./splitSpanFile.sh inFile outDir"
     exit 1
 fi
-
-new=_st
 
 f=${1##*/}
 f1=${f%.*}
@@ -32,22 +29,30 @@ out=$2
 
 #set -e
 
-cp $1 $out/$f
+mkdir $out/$f1
+cp $1 $out/$f1 
 
-out1=$out/$f1$new.pdf
-pdfcpu stamp -verbose "resources/GC2018.png:1" $out/$f $out1 &> $out/$f1.log
+# Split this file up by generating a new PDF for every 2 pages. 
+span=2
+
+pdfcpu split -verbose $out/$f1/$f $out/$f1 $span &> $out/$f1/$f1.log
 if [ $? -eq 1 ]; then
-    echo "stamp error: $1 -> $out1"
+    echo "split error: $1 -> $out"
     exit $?
 else
-    echo "stamp success: $1 -> $out1"
-    pdfcpu validate -verbose -mode=relaxed $out1 >> $out/$f1.log 2>&1
-    if [ $? -eq 1 ]; then
-        echo "validation error: $out1"
-        exit $?
-    else
-        echo "validation success: $out1"
-    fi    
+    echo "split success: $1 -> $out"
+    for pdf in $out/$f1/*_*.pdf
+    do
+        echo "validating: $pdf"
+        pdfcpu validate -verbose -mode=relaxed $pdf >> $out/$f1/$f1.log 2>&1
+        if [ $? -eq 1 ]; then
+            echo "validation error: $pdf"
+            exit $?
+        #else
+            #echo "validation success: $pdf"
+        fi
+    done
 fi
+	
 
 	

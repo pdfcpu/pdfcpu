@@ -34,6 +34,7 @@ type Command struct {
 	PWOld         *string            //    -         -        -      -       -      -      -       -       -      -       -        -         *          *       -     -       -
 	PWNew         *string            //    -         -        -      -       -      -      -       -       -      -       -        -         *          *       -     -       -
 	Watermark     *pdf.Watermark     //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -       -
+	Span          int                //    -         -        *      -       -      -      -       -       -      -       -        -         -          -       -     -       -
 }
 
 // Process executes a pdfcpu command.
@@ -97,11 +98,12 @@ func OptimizeCommand(pdfFileNameIn, pdfFileNameOut string, config *pdf.Configura
 }
 
 // SplitCommand creates a new command to split a file into single page file.
-func SplitCommand(pdfFileNameIn, dirNameOut string, config *pdf.Configuration) *Command {
+func SplitCommand(pdfFileNameIn, dirNameOut string, span int, config *pdf.Configuration) *Command {
 	return &Command{
 		Mode:   pdf.SPLIT,
 		InFile: &pdfFileNameIn,
 		OutDir: &dirNameOut,
+		Span:   span,
 		Config: config}
 }
 

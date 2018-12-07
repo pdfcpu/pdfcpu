@@ -44,6 +44,7 @@ type logger struct {
 
 // pdfcpu's loggers.
 var (
+
 	// Horizontal loggers
 	Debug = &logger{}
 	Info  = &logger{}
@@ -56,7 +57,7 @@ var (
 	Validate = &logger{}
 	Optimize = &logger{}
 	Write    = &logger{}
-	//Stats    = &logger{}
+	API      = &logger{}
 )
 
 // SetDebugLogger sets the debug logger.
@@ -104,6 +105,11 @@ func SetWriteLogger(log Logger) {
 	Write.log = log
 }
 
+// SetAPILogger sets the api logger.
+func SetAPILogger(log Logger) {
+	API.log = log
+}
+
 // SetDefaultDebugLogger sets the default debug logger.
 func SetDefaultDebugLogger() {
 	SetDebugLogger(log.New(os.Stderr, "DEBUG: ", log.Ldate|log.Ltime))
@@ -149,6 +155,11 @@ func SetDefaultWriteLogger() {
 	SetWriteLogger(log.New(os.Stderr, "WRITE: ", log.Ldate|log.Ltime))
 }
 
+// SetDefaultAPILogger sets the default api logger.
+func SetDefaultAPILogger() {
+	SetAPILogger(log.New(os.Stdout, "", 0))
+}
+
 // SetDefaultLoggers sets all loggers to their default logger.
 func SetDefaultLoggers() {
 	SetDefaultDebugLogger()
@@ -160,6 +171,7 @@ func SetDefaultLoggers() {
 	SetDefaultValidateLogger()
 	SetDefaultOptimizeLogger()
 	SetDefaultWriteLogger()
+	SetDefaultAPILogger()
 }
 
 // DisableLoggers turns off all logging.
@@ -173,6 +185,7 @@ func DisableLoggers() {
 	SetValidateLogger(nil)
 	SetOptimizeLogger(nil)
 	SetWriteLogger(nil)
+	SetAPILogger(nil)
 }
 
 // IsTraceLoggerEnabled returns true if the Trace Logger is enabled.

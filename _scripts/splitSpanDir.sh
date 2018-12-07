@@ -14,15 +14,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# eg: ./extractMetadataDir.sh ~/pdf/big ~/pdf/out
+# eg: ./splitDir.sh ~/pdf/big ~/pdf/out
 
 if [ $# -ne 2 ]; then
-    echo "usage: ./extractMetadataDir.sh inDir outDir"
-    echo "extracts XML metadata into corresponding dirs."
+    echo "usage: ./splitDir.sh inDir outDir"
     exit 1
 fi
 
 out=$2
+
+#rm -drf $out/*
+
+#set -e
+
+# Split all files up by generating a new PDF for every 2 pages. 
+span=2
 
 for pdf in $1/*.pdf
 do
@@ -36,13 +42,23 @@ do
     mkdir $out/$f1
     cp $pdf $out/$f1
 
-    pdfcpu extract -verbose -mode=meta $out/$f1/$f $out/$f1 &> $out/$f1/$f1.log
+    pdfcpu split -verbose $out/$f1/$f $out/$f1 $span &> $out/$f1/$f1.log
     if [ $? -eq 1 ]; then
-        echo "metadata extraction error: $pdf -> $out/$f1"
+        echo "split error: $pdf -> $out/$f1"
         echo
 		continue
     else
-        echo "metadata extraction success: $pdf -> $out/$f1"
+        echo "split success: $pdf -> $out/$f1"
+        for subpdf in $out/$f1/*_*.pdf
+        do
+            pdfcpu validate -verbose -mode=relaxed $subpdf >> $out/$f1/$f1.log 2>&1
+            if [ $? -eq 1 ]; then
+                echo "validation error: $subpdf"
+                exit $?
+            #else
+                #echo "validation success: $subpdf"
+            fi
+        done
     fi
 
 done

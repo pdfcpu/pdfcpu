@@ -440,12 +440,25 @@ func TestOptimizeCommandWithCRLF(t *testing.T) {
 
 }
 
-// Split a test PDF file up into single page PDFs.
+// Split a test PDF file up into single page PDFs (using a split span of 1).
 func TestSplitCommand(t *testing.T) {
 
-	_, err := Process(SplitCommand("testdata/Acroforms2.pdf", outDir, pdf.NewDefaultConfiguration()))
+	span := 1
+
+	_, err := Process(SplitCommand("testdata/Acroforms2.pdf", outDir, span, pdf.NewDefaultConfiguration()))
 	if err != nil {
-		t.Fatalf("TestSplitCommand: %v\n", err)
+		t.Fatalf("TestSplitCommand (using span=1): %v\n", err)
+	}
+}
+
+// Split a test PDF file up into PDFs with 3 pages each (using a split span of 3).
+func TestSplitSpanCommand(t *testing.T) {
+
+	span := 3
+
+	_, err := Process(SplitCommand("testdata/CenterOfWhy.pdf", outDir, span, pdf.NewDefaultConfiguration()))
+	if err != nil {
+		t.Fatalf("TestSplitCommand (using span=3): %v\n", err)
 	}
 }
 
@@ -1198,7 +1211,7 @@ func encryptDecrypt(fileName string, config *pdf.Configuration, t *testing.T) {
 	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	config.OwnerPW = "opwWrong"
-	_, err = Process(SplitCommand(outFile, outDir, config))
+	_, err = Process(SplitCommand(outFile, outDir, 1, config))
 	if err == nil {
 		t.Fatalf("TestEncryptDecrypt - split %s using wrong ownerPW should fail: \n", outFile)
 	}
@@ -1219,7 +1232,7 @@ func encryptDecrypt(fileName string, config *pdf.Configuration, t *testing.T) {
 	config = pdf.NewDefaultConfiguration()
 	config.UserPW = "upw"
 	config.OwnerPW = "opwWrong"
-	_, err = Process(SplitCommand(outFile, outDir, config))
+	_, err = Process(SplitCommand(outFile, outDir, 1, config))
 	if err != nil {
 		t.Fatalf("TestEncryptDecrypt - split %s using wrong ownerPW: %v\n", outFile, err)
 	}

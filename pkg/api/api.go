@@ -104,7 +104,7 @@ func MergeContexts(rsc []pdf.ReadSeekerCloser, config *pdf.Configuration) (*pdf.
 		}
 
 		// Merge the source context into the dest context.
-		//fmt.Println("merging in another readSeekerCloser...")
+		//log.API.Println("merging in another readSeekerCloser...")
 		err = pdf.MergeXRefTables(ctxSource, ctxDest)
 		if err != nil {
 			return nil, err
@@ -135,7 +135,7 @@ func Validate(cmd *Command) ([]string, error) {
 
 	from1 := time.Now()
 
-	fmt.Printf("validating(mode=%s) %s ...\n", config.ValidationModeString(), fileIn)
+	log.API.Printf("validating(mode=%s) %s ...\n", config.ValidationModeString(), fileIn)
 	//logInfoAPI.Printf("validating(mode=%s) %s..\n", config.ValidationModeString(), fileIn)
 
 	ctx, err := ReadContextFromFile(fileIn, config)
@@ -157,7 +157,7 @@ func Validate(cmd *Command) ([]string, error) {
 
 		err = errors.Wrap(err, "validation error"+s)
 	} else {
-		fmt.Println("validation ok")
+		log.API.Println("validation ok")
 		//logInfoAPI.Println("validation ok")
 	}
 
@@ -175,7 +175,7 @@ func Validate(cmd *Command) ([]string, error) {
 // Write generates a PDF file for a given Context.
 func Write(ctx *pdf.Context) error {
 
-	fmt.Printf("writing %s ...\n", ctx.Write.DirName+ctx.Write.FileName)
+	log.API.Printf("writing %s ...\n", ctx.Write.DirName+ctx.Write.FileName)
 	//logInfoAPI.Printf("writing to %s..\n", fileName)
 
 	err := pdf.Write(ctx)
@@ -206,18 +206,16 @@ func writeSinglePagePDF(ctx *pdf.Context, pageNr int, dirOut string) error {
 	ctx.ResetWriteContext()
 
 	w := ctx.Write
-	w.Command = "Split" // Note: also used by extract pages.
-	w.ExtractPageNr = pageNr
+	w.Command = "ExtractPages"
+	w.SelectedPages[pageNr] = true
 	w.DirName = dirOut + "/"
 	w.FileName = singlePageFileName(ctx, pageNr)
-	fmt.Printf("writing %s ...\n", w.DirName+w.FileName)
+	log.API.Printf("writing %s ...\n", w.DirName+w.FileName)
 
 	return pdf.Write(ctx)
 }
 
 func writeSinglePagePDFs(ctx *pdf.Context, selectedPages pdf.IntSet, dirOut string) error {
-
-	// used by extract pages and split.
 
 	ensureSelectedPages(ctx, &selectedPages)
 
@@ -242,8 +240,7 @@ func readAndValidate(fileIn string, config *pdf.Configuration, from1 time.Time) 
 	dur1 = time.Since(from1).Seconds()
 
 	from2 := time.Now()
-	//fmt.Printf("validating %s ...\n", fileIn)
-	//logInfoAPI.Printf("validating %s..\n", fileIn)
+	//log.API.Printf("validating %s ...\n", fileIn)
 	err = validate.XRefTable(ctx.XRefTable)
 	if err != nil {
 		return nil, 0, 0, err
@@ -261,7 +258,7 @@ func readValidateAndOptimize(fileIn string, config *pdf.Configuration, from1 tim
 	}
 
 	from3 := time.Now()
-	//fmt.Printf("optimizing %s ...\n", fileIn)
+	//log.API.Printf("optimizing %s ...\n", fileIn)
 	err = OptimizeContext(ctx)
 	if err != nil {
 		return nil, 0, 0, 0, err
@@ -312,16 +309,77 @@ func Optimize(cmd *Command) ([]string, error) {
 	return nil, nil
 }
 
-// Split generates a sequence of single page PDF files in dirOut creating one file for every page of inFile.
+func selectedPageRange(from, thru int) pdf.IntSet {
+	s := pdf.IntSet{}
+	for i := from; i <= thru; i++ {
+		s[i] = true
+	}
+	return s
+}
+
+func pageRangeFileName(ctx *pdf.Context, from, thru int) string {
+	if from == thru {
+		return singlePageFileName(ctx, from)
+	}
+	baseFileName := filepath.Base(ctx.Read.FileName)
+	fileName := strings.TrimSuffix(baseFileName, ".pdf")
+	return fileName + "_" + strconv.Itoa(from) + "-" + strconv.Itoa(thru) + ".pdf"
+}
+
+func writeSpan(ctx *pdf.Context, from, thru int, dirOut string) error {
+	ctx.ResetWriteContext()
+	w := ctx.Write
+	w.Command = "Split"
+	w.SelectedPages = selectedPageRange(from, thru)
+	w.DirName = dirOut + "/"
+	w.FileName = pageRangeFileName(ctx, from, thru)
+	log.API.Printf("writing %s ...\n", w.DirName+w.FileName)
+	return pdf.Write(ctx)
+}
+
+func writePDFSequence(ctx *pdf.Context, span int, dirOut string) error {
+
+	for i := 0; i < ctx.PageCount/span; i++ {
+
+		start := i * span
+		from := start + 1
+		thru := start + span
+
+		err := writeSpan(ctx, from, thru, dirOut)
+		if err != nil {
+			return err
+		}
+
+	}
+
+	if ctx.PageCount%span > 0 {
+
+		start := (ctx.PageCount / span) * span
+		from := start + 1
+		thru := start + ctx.PageCount%span
+
+		err := writeSpan(ctx, from, thru, dirOut)
+		if err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+}
+
+// Split generates a sequence of PDF files in dirOut obeying given split span.
+// The default span 1 creates a sequence of single page PDFs.
 func Split(cmd *Command) ([]string, error) {
 
 	fileIn := *cmd.InFile
 	dirOut := *cmd.OutDir
 	config := cmd.Config
+	span := cmd.Span
 
 	fromStart := time.Now()
 
-	fmt.Printf("splitting %s into %s ...\n", fileIn, dirOut)
+	log.API.Printf("splitting %s into %s (span=%d)...\n", fileIn, dirOut, span)
 
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
@@ -330,7 +388,7 @@ func Split(cmd *Command) ([]string, error) {
 
 	fromWrite := time.Now()
 
-	err = writeSinglePagePDFs(ctx, nil, dirOut)
+	err = writePDFSequence(ctx, span, dirOut)
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +412,7 @@ func appendTo(fileIn string, ctxDest *pdf.Context) error {
 	}
 
 	// Merge the source context into the dest context.
-	fmt.Printf("merging in %s ...\n", fileIn)
+	log.API.Printf("merging in %s ...\n", fileIn)
 	return pdf.MergeXRefTables(ctxSource, ctxDest)
 }
 
@@ -367,8 +425,7 @@ func Merge(cmd *Command) ([]string, error) {
 	fileOut := *cmd.OutFile
 	config := cmd.Config
 
-	fmt.Printf("merging into %s: %v\n", fileOut, filesIn)
-	//logErrorAPI.Printf("Merge: filesIn: %v\n", filesIn)
+	log.API.Printf("merging into %s: %v\n", fileOut, filesIn)
 
 	ctxDest, _, _, err := readAndValidate(filesIn[0], config, time.Now())
 	if err != nil {
@@ -487,7 +544,7 @@ func ExtractImages(cmd *Command) ([]string, error) {
 
 	fromStart := time.Now()
 
-	fmt.Printf("extracting images from %s into %s ...\n", fileIn, dirOut)
+	log.API.Printf("extracting images from %s into %s ...\n", fileIn, dirOut)
 
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
@@ -583,7 +640,7 @@ func ExtractFonts(cmd *Command) ([]string, error) {
 
 	fromStart := time.Now()
 
-	fmt.Printf("extracting fonts from %s into %s ...\n", fileIn, dirOut)
+	log.API.Printf("extracting fonts from %s into %s ...\n", fileIn, dirOut)
 
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
@@ -623,7 +680,7 @@ func ExtractPages(cmd *Command) ([]string, error) {
 
 	fromStart := time.Now()
 
-	fmt.Printf("extracting pages from %s into %s ...\n", fileIn, dirOut)
+	log.API.Printf("extracting pages from %s into %s ...\n", fileIn, dirOut)
 
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
@@ -663,8 +720,6 @@ func contentObjNrs(ctx *pdf.Context, page int) ([]int, error) {
 	if !found || o == nil {
 		return nil, nil
 	}
-
-	//fmt.Printf("found pd for %d\n%s\n", page, o)
 
 	var objNr int
 
@@ -777,7 +832,7 @@ func ExtractContent(cmd *Command) ([]string, error) {
 
 	fromStart := time.Now()
 
-	fmt.Printf("extracting content from %s into %s ...\n", fileIn, dirOut)
+	log.API.Printf("extracting content from %s into %s ...\n", fileIn, dirOut)
 
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
@@ -883,7 +938,7 @@ func ExtractMetadata(cmd *Command) ([]string, error) {
 
 	fromStart := time.Now()
 
-	fmt.Printf("extracting metadata from %s into %s ...\n", fileIn, dirOut)
+	log.API.Printf("extracting metadata from %s into %s ...\n", fileIn, dirOut)
 
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
@@ -925,7 +980,7 @@ func Trim(cmd *Command) ([]string, error) {
 
 	fromStart := time.Now()
 
-	fmt.Printf("trimming %s ...\n", fileIn)
+	log.API.Printf("trimming %s ...\n", fileIn)
 
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
@@ -940,7 +995,7 @@ func Trim(cmd *Command) ([]string, error) {
 	}
 
 	ctx.Write.Command = "Trim"
-	ctx.Write.ExtractPages = pages
+	ctx.Write.SelectedPages = pages
 
 	dirName, fileName := filepath.Split(fileOut)
 	ctx.Write.DirName = dirName
@@ -987,7 +1042,7 @@ func ListAttachments(fileIn string, config *pdf.Configuration) ([]string, error)
 
 	fromStart := time.Now()
 
-	//fmt.Println("Attachments:")
+	//log.API.Println("Attachments:")
 
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
@@ -1019,7 +1074,7 @@ func AddAttachments(fileIn string, files []string, config *pdf.Configuration) er
 		return err
 	}
 
-	fmt.Printf("adding %d attachments to %s ...\n", len(files), fileIn)
+	log.API.Printf("adding %d attachments to %s ...\n", len(files), fileIn)
 
 	from := time.Now()
 	var ok bool
@@ -1029,7 +1084,7 @@ func AddAttachments(fileIn string, files []string, config *pdf.Configuration) er
 		return err
 	}
 	if !ok {
-		fmt.Println("no attachment added.")
+		log.API.Println("no attachment added.")
 		return nil
 	}
 
@@ -1065,9 +1120,9 @@ func RemoveAttachments(fileIn string, files []string, config *pdf.Configuration)
 	}
 
 	if len(files) > 0 {
-		fmt.Printf("removing %d attachments from %s ...\n", len(files), fileIn)
+		log.API.Printf("removing %d attachments from %s ...\n", len(files), fileIn)
 	} else {
-		fmt.Printf("removing all attachments from %s ...\n", fileIn)
+		log.API.Printf("removing all attachments from %s ...\n", fileIn)
 	}
 
 	from := time.Now()
@@ -1078,7 +1133,7 @@ func RemoveAttachments(fileIn string, files []string, config *pdf.Configuration)
 		return err
 	}
 	if !ok {
-		fmt.Println("no attachment removed.")
+		log.API.Println("no attachment removed.")
 		return nil
 	}
 
@@ -1108,7 +1163,7 @@ func ExtractAttachments(fileIn, dirOut string, files []string, config *pdf.Confi
 
 	fromStart := time.Now()
 
-	fmt.Printf("extracting attachments from %s into %s ...\n", fileIn, dirOut)
+	log.API.Printf("extracting attachments from %s into %s ...\n", fileIn, dirOut)
 
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
@@ -1136,7 +1191,7 @@ func ListPermissions(fileIn string, config *pdf.Configuration) ([]string, error)
 
 	fromStart := time.Now()
 
-	//fmt.Println("User access permissions:")
+	//log.API.Println("User access permissions:")
 
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
 	if err != nil {
@@ -1164,7 +1219,7 @@ func AddPermissions(fileIn string, config *pdf.Configuration) error {
 		return err
 	}
 
-	fmt.Printf("adding permissions to %s ...\n", fileIn)
+	log.API.Printf("adding permissions to %s ...\n", fileIn)
 
 	fromWrite := time.Now()
 
@@ -1201,7 +1256,7 @@ func AddWatermarks(cmd *Command) ([]string, error) {
 		return nil, err
 	}
 
-	fmt.Printf("%sing %s ...\n", wm.OnTopString(), fileIn)
+	log.API.Printf("%sing %s ...\n", wm.OnTopString(), fileIn)
 
 	from := time.Now()
 
