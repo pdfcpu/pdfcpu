@@ -22,7 +22,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateCreationDate(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
+func validateInfoDictDate(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
 
 	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
 		_, err = validateString(xRefTable, o, nil)
@@ -83,12 +83,12 @@ func validateDocumentInfoDict(xRefTable *pdf.XRefTable, obj pdf.Object) (hasModD
 
 		// date, optional
 		case "CreationDate":
-			err = validateCreationDate(xRefTable, v)
+			err = validateInfoDictDate(xRefTable, v)
 
 		// date, required if PieceInfo is present in document catalog.
 		case "ModDate":
 			hasModDate = true
-			_, err = validateDateObject(xRefTable, v, pdf.V10)
+			err = validateInfoDictDate(xRefTable, v)
 
 		// name, optional, since V1.3
 		case "Trapped":
