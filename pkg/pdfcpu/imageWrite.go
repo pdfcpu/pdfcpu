@@ -88,9 +88,9 @@ func decodeArr(a Array) []colValRange {
 func pdfImage(xRefTable *XRefTable, sd *StreamDict, objNr int) (*PDFImage, error) {
 
 	bpc := *sd.IntEntry("BitsPerComponent")
-	if bpc == 16 {
-		return nil, ErrUnsupported16BPC
-	}
+	//if bpc == 16 {
+	//	return nil, ErrUnsupported16BPC
+	//}
 
 	w := *sd.IntEntry("Width")
 	h := *sd.IntEntry("Height")
@@ -252,27 +252,18 @@ func softMask(xRefTable *XRefTable, d *StreamDict, w, h, objNr int) ([]byte, err
 func writeImgToJPG(filename string, sd *StreamDict) (string, error) {
 
 	filename += ".jpg"
-	//fmt.Printf("writing %s\n", filename)
-
-	// TODO WriteJPG(fileName, img)
-
 	return filename, ioutil.WriteFile(filename, sd.Raw, os.ModePerm)
 }
 
 func writeImgToJPX(filename string, sd *StreamDict) (string, error) {
 
 	filename += ".jpx"
-	//fmt.Printf("writing %s\n", filename)
-
-	// TODO WriteJPX(fileName, img)
-
 	return filename, ioutil.WriteFile(filename, sd.Raw, os.ModePerm)
 }
 
 func writeImgToTIFF(filename string, img *image.CMYK) (string, error) {
 
 	filename += ".tif"
-	//fmt.Printf("writing %s\n", filename)
 
 	f, err := os.Create(filename)
 	if err != nil {
@@ -281,11 +272,8 @@ func writeImgToTIFF(filename string, img *image.CMYK) (string, error) {
 	defer f.Close()
 
 	// TODO softmask handling.
-	err = tiff.Encode(f, img, nil)
 
-	//fmt.Println("tif written")
-
-	return filename, err
+	return filename, tiff.Encode(f, img, nil)
 }
 
 func writeDeviceCMYKToTIFF(filename string, im *PDFImage) (string, error) {
@@ -319,8 +307,6 @@ func writeImgToPNG(filename string, img image.Image) (string, error) {
 		return "", err
 	}
 	defer f.Close()
-
-	//fmt.Println("png written")
 
 	return filename, png.Encode(f, img)
 }
@@ -717,7 +703,7 @@ func writeFlateEncodedImage(xRefTable *XRefTable, filename string, sd *StreamDic
 }
 
 // WriteImage writes a PDF image object to disk.
-func WriteImage(xRefTable *XRefTable, filename string, sd *StreamDict, objNr int) (string, error) {
+func WriteImage(xRefTable *XRefTable, filename string, sd *StreamDict, objNr int) (fileName string, err error) {
 
 	switch sd.FilterPipeline[0].Name {
 

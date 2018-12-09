@@ -50,12 +50,6 @@ func TestMain(m *testing.M) {
 
 	exitCode := m.Run()
 
-	err = os.RemoveAll(outDir)
-	if err != nil {
-		fmt.Printf("%v", err)
-		os.Exit(1)
-	}
-
 	os.Exit(exitCode)
 }
 
@@ -358,7 +352,8 @@ func TestReadTIFFWritePNG(t *testing.T) {
 
 	for _, filename := range []string{
 		"video-001.tiff",
-		// more tiffs
+		"24bit_1800dpi.tif",
+		"48bit_1800dpi.tif",
 	} {
 
 		// Read a TIFF file and create an image object which is a stream dict.
@@ -405,4 +400,42 @@ func TestReadTIFFWritePNG(t *testing.T) {
 		compare(t, fn1, fn2)
 	}
 
+}
+
+func TestReadWriteJPEG(t *testing.T) {
+
+	for _, filename := range []string{
+		"video-001.221212.jpeg",
+		"video-001.cmyk.jpeg",
+		"video-001.jpeg",
+		"video-001.progressive.jpeg",
+		"video-005.gray.jpeg",
+	} {
+
+		// Read a JPEG file and create an image object which is a stream dict.
+		sd, err := ReadJPEGFile(xRefTable, filepath.Join(inDir, filename))
+		if err != nil {
+			t.Fatalf("err: %v\n", err)
+		}
+
+		// Print the image object.
+		fmt.Printf("created imageObj: %s\n", sd)
+
+		// Print the optional SMask.
+		printOptionalSMask(t, sd)
+
+		// The file type and its extension gets decided during the call to WriteImage!
+		// These testcases all produce PNG files.
+		fnNoExt := strings.TrimSuffix(filename, filepath.Ext(filename))
+		tmpFileName1 := filepath.Join(outDir, fnNoExt)
+		fmt.Printf("tmpFileName: %s\n", tmpFileName1)
+
+		// Write the image object (as .jpg file) to disk.
+		// fn is the resulting fileName path including the suffix (aka filetype extension).
+		fn, err := WriteImage(xRefTable, tmpFileName1, sd, 0)
+		if err != nil {
+			t.Fatalf("err: %v\n", err)
+		}
+		fmt.Printf("fileName: %s\n", fn)
+	}
 }

@@ -187,12 +187,12 @@ func (wm Watermark) OnTopString() string {
 
 // IsPDF returns whether the watermark content is an image or text.
 func (wm Watermark) isPDF() bool {
-	return len(wm.fileName) > 0 && filepath.Ext(wm.fileName) == ".pdf"
+	return len(wm.fileName) > 0 && strings.ToLower(filepath.Ext(wm.fileName)) == ".pdf"
 }
 
 // IsImage returns whether the watermark content is an image or text.
 func (wm Watermark) isImage() bool {
-	return len(wm.fileName) > 0 && filepath.Ext(wm.fileName) != ".pdf"
+	return len(wm.fileName) > 0 && strings.ToLower(filepath.Ext(wm.fileName)) != ".pdf"
 }
 
 func (wm *Watermark) calcBoundingBox() {
@@ -317,11 +317,10 @@ func setWatermarkType(s string, wm *Watermark) error {
 
 	ss := strings.Split(s, ":")
 
-	ext := filepath.Ext(ss[0])
-	if ext == ".png" || ext == ".tif" || ext == ".tiff" || ext == ".pdf" {
+	wm.text = ss[0]
+	ext := strings.ToLower(filepath.Ext(ss[0]))
+	if MemberOf(ext, []string{".jpg", "jpeg", ".png", ".tif", ".tiff", ".pdf"}) {
 		wm.fileName = ss[0]
-	} else {
-		wm.text = ss[0]
 	}
 
 	if len(ss) > 1 {
@@ -765,12 +764,6 @@ func createPDFResForWM(ctx *Context, wm *Watermark) error {
 		return errors.Errorf("unknown page number: %d\n", wm.page)
 	}
 
-	// fmt.Printf("detected pageDict=%s\n", d)
-	// fmt.Printf("detected resDict= %s\n", inhPAttrs.resources)
-	// fmt.Printf("detected rotate= %f\n", inhPAttrs.rotate)
-	// fmt.Printf("detected mediaBox= %s\n", inhPAttrs.mediaBox)
-	// fmt.Printf("detected cropBox= %s\n", inhPAttrs.cropBox)
-
 	// Retrieve content stream bytes.
 
 	o, found := d.Find("Contents")
@@ -810,9 +803,18 @@ func createPDFResForWM(ctx *Context, wm *Watermark) error {
 
 func createImageResForWM(xRefTable *XRefTable, wm *Watermark) error {
 
-	f := ReadTIFFFile
-	if filepath.Ext(wm.fileName) == ".png" {
+	ext := strings.ToLower(filepath.Ext(wm.fileName))
+	var f func(xRefTable *XRefTable, fileName string) (*StreamDict, error)
+
+	switch ext {
+	case ".png":
 		f = ReadPNGFile
+	case ".jpg", ".jpeg":
+		f = ReadJPEGFile
+	case ".tif", ".tiff":
+		f = ReadTIFFFile
+	default:
+		return errors.Errorf("unsupported extension: %s", ext)
 	}
 
 	sd, err := f(xRefTable, wm.fileName)
@@ -1289,17 +1291,6 @@ func watermarkPage(xRefTable *XRefTable, i int, wm *Watermark) error {
 	wm.pageRot = inhPAttrs.rotate
 
 	log.Debug.Printf("\n%s\n", wm)
-
-	//fmt.Printf("wm.pageRot=%f\n", wm.pageRot)
-	// wm.pageRot = 0
-	// if inhPAttrs.rotate != nil && *rotate != 0 {
-	// 	wm.pageRot = *rotate
-	// }
-
-	// if resources != nil {
-	// 	fmt.Printf("resourceDict: %s\n", *resources)
-	// }
-	// fmt.Printf("%s\n", *d)
 
 	gsID := "GS0"
 	xoID := "Fm0"

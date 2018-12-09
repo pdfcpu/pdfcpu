@@ -77,8 +77,8 @@ func NewFilter(filterName string, parms map[string]int) (filter Filter, err erro
 	case CCITTFax:
 		filter = ccittDecode{baseFilter{parms}}
 
-	// JBIG2
 	// DCT
+	// JBIG2
 	// JPX
 
 	default:
@@ -91,7 +91,7 @@ func NewFilter(filterName string, parms map[string]int) (filter Filter, err erro
 
 // List return the list of all supported PDF filters.
 func List() []string {
-	// Exclude CCITTFax since it only makes sense in an image context.
+	// Exclude CCITTFax, DCT, JBIG2 & JPX since they only makes sense in the context of image processing.
 	return []string{ASCII85, ASCIIHex, RunLength, LZW, Flate}
 }
 

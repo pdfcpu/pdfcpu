@@ -17,13 +17,17 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"fmt"
 	"image"
 	"image/color"
+	"image/jpeg"
 	"image/png"
+	"io/ioutil"
 	"os"
 
 	"github.com/hhrutter/pdfcpu/pkg/filter"
 	"github.com/hhrutter/pdfcpu/tiff"
+	"github.com/pkg/errors"
 )
 
 func createSMaskObject(xRefTable *XRefTable, buf []byte, w, h int) (*IndirectRef, error) {
@@ -52,7 +56,47 @@ func createSMaskObject(xRefTable *XRefTable, buf []byte, w, h int) (*IndirectRef
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createImageObject(xRefTable *XRefTable, buf, sm []byte, w, h int, cs string) (*StreamDict, error) {
+func createFlateImageObject(xRefTable *XRefTable, buf, sm []byte, w, h, bpc int, cs string) (*StreamDict, error) {
+
+	var softMaskIndRef *IndirectRef
+
+	if sm != nil {
+		var err error
+		softMaskIndRef, err = createSMaskObject(xRefTable, sm, w, h)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	sd := &StreamDict{
+		Dict: Dict(
+			map[string]Object{
+				"Type":             Name("XObject"),
+				"Subtype":          Name("Image"),
+				"Width":            Integer(w),
+				"Height":           Integer(h),
+				"BitsPerComponent": Integer(bpc),
+				"ColorSpace":       Name(cs),
+			},
+		),
+		Content:        buf,
+		FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}}
+
+	sd.InsertName("Filter", filter.Flate)
+
+	if softMaskIndRef != nil {
+		sd.Insert("SMask", *softMaskIndRef)
+	}
+
+	err := encodeStream(sd)
+	if err != nil {
+		return nil, err
+	}
+
+	return sd, nil
+}
+
+func createDCTImageObject(xRefTable *XRefTable, buf, sm []byte, w, h int, cs string) (*StreamDict, error) {
 
 	var softMaskIndRef *IndirectRef
 
@@ -76,9 +120,10 @@ func createImageObject(xRefTable *XRefTable, buf, sm []byte, w, h int, cs string
 			},
 		),
 		Content:        buf,
-		FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}}
+		FilterPipeline: nil,
+	}
 
-	sd.InsertName("Filter", filter.Flate)
+	sd.InsertName("Filter", filter.DCT)
 
 	if softMaskIndRef != nil {
 		sd.Insert("SMask", *softMaskIndRef)
@@ -88,6 +133,8 @@ func createImageObject(xRefTable *XRefTable, buf, sm []byte, w, h int, cs string
 	if err != nil {
 		return nil, err
 	}
+
+	sd.FilterPipeline = []PDFFilter{{Name: filter.DCT, DecodeParms: nil}}
 
 	return sd, nil
 }
@@ -106,13 +153,55 @@ func writeRGBAImageBuf(img image.Image) []byte {
 			buf[i+1] = c.G
 			buf[i+2] = c.B
 			i += 3
-			//fmt.Printf("x:%3d y:%3d r:#%02x g:#%02x b:#%02x a:#%02x\n", x, y, c.R, c.G, c.B, c.A)
 		}
 	}
 
 	return buf
 }
 
+func writeRGBA64ImageBuf(img image.Image) []byte {
+
+	w := img.Bounds().Dx()
+	h := img.Bounds().Dy()
+	i := 0
+	buf := make([]byte, w*h*6)
+
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			c := img.At(x, y).(color.RGBA64)
+			buf[i] = uint8(c.R >> 8)
+			buf[i+1] = uint8(c.R & 0x00FF)
+			buf[i+2] = uint8(c.G >> 8)
+			buf[i+3] = uint8(c.G & 0x00FF)
+			buf[i+4] = uint8(c.B >> 8)
+			buf[i+5] = uint8(c.B & 0x00FF)
+			i += 6
+		}
+	}
+
+	return buf
+}
+
+func writeYCbCrToRGBAImageBuf(img image.Image) []byte {
+
+	w := img.Bounds().Dx()
+	h := img.Bounds().Dy()
+	i := 0
+	buf := make([]byte, w*h*3)
+
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			c := img.At(x, y).(color.YCbCr)
+			r, g, b, _ := c.RGBA()
+			buf[i] = uint8(r >> 8 & 0xFF)
+			buf[i+1] = uint8(g >> 8 & 0xFF)
+			buf[i+2] = uint8(b >> 8 & 0xFF)
+			i += 3
+		}
+	}
+
+	return buf
+}
 func writeNRGBAImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte) {
 
 	w := img.Bounds().Dx()
@@ -142,7 +231,6 @@ func writeNRGBAImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte) 
 			buf[i+1] = c.G
 			buf[i+2] = c.B
 			i += 3
-			//fmt.Printf("x:%3d y:%3d r:#%02x g:#%02x b:#%02x a:#%02x\n", x, y, c.R, c.G, c.B, c.A)
 		}
 	}
 
@@ -191,7 +279,7 @@ func writeCMYKImageBuf(img image.Image) []byte {
 
 func imgToImageDict(xRefTable *XRefTable, img image.Image) (*StreamDict, error) {
 
-	// Supporting 8 bits per component.
+	bpc := 8
 
 	// TODO if dpi != 72 resample (applies to PNG,JPG,TIFF)
 
@@ -205,56 +293,105 @@ func imgToImageDict(xRefTable *XRefTable, img image.Image) (*StreamDict, error) 
 	switch img.ColorModel() {
 
 	case color.RGBAModel:
-		// Represents a traditional 32-bit alpha-premultiplied color, having 8 bits for each of red, green, blue and alpha.
-		//fmt.Println("RGBA")
+		// A 32-bit alpha-premultiplied color, having 8 bits for each of red, green, blue and alpha.
+		// An alpha-premultiplied color component C has been scaled by alpha (A), so it has valid values 0 <= C <= A.
 		cs = DeviceRGBCS
 		buf = writeRGBAImageBuf(img)
 
 	case color.RGBA64Model:
-		//fmt.Println("RGBA64")
-		return nil, ErrUnsupportedColorSpace
+		// A 64-bit alpha-premultiplied color, having 16 bits for each of red, green, blue and alpha.
+		// An alpha-premultiplied color component C has been scaled by alpha (A), so it has valid values 0 <= C <= A.
+		cs = DeviceRGBCS
+		bpc = 16
+		buf = writeRGBA64ImageBuf(img)
 
 	case color.NRGBAModel:
 		// Non-alpha-premultiplied 32-bit color.
-		//fmt.Println("NRGBA")
 		cs = DeviceRGBCS
 		buf, sm = writeNRGBAImageBuf(xRefTable, img)
 
-	case color.NRGBA64Model:
-		//fmt.Println("NRGBA64")
-		return nil, ErrUnsupportedColorSpace
+	//case color.NRGBA64Model:
+	//	return nil, ErrUnsupportedColorSpace
 
-	case color.AlphaModel:
-		//fmt.Println("Alpha")
-		return nil, ErrUnsupportedColorSpace
+	//case color.AlphaModel:
+	//	return nil, ErrUnsupportedColorSpace
 
-	case color.Alpha16Model:
-		//fmt.Println("Alpha16")
-		return nil, ErrUnsupportedColorSpace
+	//case color.Alpha16Model:
+	//	return nil, ErrUnsupportedColorSpace
 
 	case color.GrayModel:
-		//fmt.Println("Gray")
+		// An 8-bit grayscale color.
 		cs = DeviceGrayCS
 		buf = writeGrayImageBuf(img)
 
-	case color.Gray16Model:
-		//fmt.Println("Gray16")
-		return nil, ErrUnsupportedColorSpace
+	//case color.Gray16Model:
+	//	return nil, ErrUnsupportedColorSpace
 
 	case color.CMYKModel:
-		//fmt.Println("CMYK")
+		// A fully opaque CMYK color, having 8 bits for each of cyan, magenta, yellow and black.
 		cs = DeviceCMYKCS
 		buf = writeCMYKImageBuf(img)
 
+	//case color.YCbCrModel:
+	//	fmt.Println("YCbCr")
+
+	//case color.NYCbCrAModel:
+	//	fmt.Println("YCbCr")
+
 	default:
-		//fmt.Println("unknown color model")
+		fmt.Printf("unknown color model: %T\n", img)
 		return nil, ErrUnsupportedColorSpace
 
 	}
 
 	//fmt.Printf("old w:%3d, h:%3d, new w:%3d, h:%3d\n", img.Bounds().Dx(), img.Bounds().Dy(), w, h)
 
-	return createImageObject(xRefTable, buf, sm, w, h, cs)
+	return createFlateImageObject(xRefTable, buf, sm, w, h, bpc, cs)
+}
+
+// ReadJPEGFile generates a PDF image object for a JPEG file
+// and appends this object to the cross reference table.
+func ReadJPEGFile(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
+
+	// JPEG compression is not an idempotent operation.
+	// We will not decompress a JPG file only to recompress it internally,
+	// hence we just copy the compressed bytes into the image streamdict.
+
+	f, err := os.Open(fileName)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	c, err := jpeg.DecodeConfig(f)
+	if err != nil {
+		return nil, err
+	}
+
+	var cs string
+
+	switch c.ColorModel {
+
+	case color.GrayModel:
+		cs = DeviceGrayCS
+
+	case color.YCbCrModel:
+		cs = DeviceRGBCS
+
+	case color.CMYKModel:
+		cs = DeviceCMYKCS
+
+	default:
+		return nil, errors.New("unexpected color model for JPEG")
+
+	}
+
+	buf, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return nil, err
+	}
+
+	return createDCTImageObject(xRefTable, buf, nil, c.Width, c.Height, cs)
 }
 
 // ReadPNGFile generates a PDF image object for a PNG file

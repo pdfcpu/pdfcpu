@@ -105,7 +105,7 @@ verbose, v ... turn on logging
 
  The extraction modes are:
 
-  image ... extract images (supported PDF filters: Flate, DCTDecode, JPXDecode)
+  image ... extract images
    font ... extract font files (supported font types: TrueType)
 content ... extract raw page content
    page ... extract single page PDFs
@@ -220,8 +220,8 @@ verbose, v ... turn on logging
 	usageWMDescription = `<description> is a comma separated configuration string containing:
 	
     1st entry: the display string
-               or an image file name with one the of extensions '.jpg', .png', '.tif' or '.tiff' 
-               or a PDF file name with extension .pdf followed by an optional page number (default=1) separated by ':'
+               or an image file name with one the of extensions '.jpg', 'jpeg', .png', '.tif' or '.tiff' 
+               or a PDF file name with extension '.pdf' followed by an optional page number (default=1) separated by ':'
 
     optional entries:
 

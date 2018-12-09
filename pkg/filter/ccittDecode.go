@@ -31,6 +31,7 @@ type ccittDecode struct {
 
 // Encode implements encoding for an CCITTDecode filter.
 func (f ccittDecode) Encode(r io.Reader) (*bytes.Buffer, error) {
+	// TODO
 	return nil, nil
 }
 

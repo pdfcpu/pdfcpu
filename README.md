@@ -18,7 +18,7 @@ Version: 0.1.19
 * JPEG support across the board for watermarking, stamping and image extraction.
 * Extended `split` functionality now supporting a `span` parameter.
 * API console output is now using a Logger that can be disabled for embedded projects.
-* Fixed #52, #54, #56
+* Fixed #52, #53, #54, #56
 
 <p align="center">
   <img border="1" src="resources/wmTextSample.png" height="254">&nbsp;&nbsp;&nbsp;
@@ -94,11 +94,20 @@ Required build version: go1.9 and up
 
 ## Contributing
 
+### What
+
 * Please open an issue if you find a bug or want to propose a change.
-* Feature requests - always welcome.
-* Bug fixes - always welcome.
-* PRs - also welcome, although I can't promise a merge-in right now since `pdfcpu` is stable but still _alpha_ and occasionally undergoing heavy changes.
+* Feature requests - always welcome!
+* Bug fixes - always welcome!
+* PRs - also welcome, although I can't promise a merge-in right now.
+* `pdfcpu` is stable but still _alpha_ and occasionally undergoing heavy changes.
+
+### How
+
+* If you want to report a bug please attach the *very verbose* (`pdfcpu cmd -vv ...`) output and ideally a test PDF that you can share.
+* Always make sure your contribution is based on the latest commit.
 * Please sign your commits.
+* Please sign the [CLA](https://cla-assistant.io/hhrutter/pdfcpu) before you submit a PR.
 
 ## Contributors
 
