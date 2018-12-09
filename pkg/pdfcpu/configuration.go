@@ -62,6 +62,7 @@ const (
 	CHANGEOPW
 	STAMP
 	ADDWATERMARKS
+	IMPORTIMAGES
 )
 
 // Configuration of a Context.

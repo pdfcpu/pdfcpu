@@ -71,6 +71,7 @@ func Process(cmd *Command) (out []string, err error) {
 		pdf.CHANGEOPW:          processEncryption,
 		pdf.LISTPERMISSIONS:    processPermissions,
 		pdf.ADDPERMISSIONS:     processPermissions,
+		pdf.IMPORTIMAGES:       ImportImages,
 	} {
 		if cmd.Mode == k {
 			return v(cmd)
@@ -110,8 +111,7 @@ func SplitCommand(pdfFileNameIn, dirNameOut string, span int, config *pdf.Config
 // MergeCommand creates a new command to merge files.
 func MergeCommand(pdfFileNamesIn []string, pdfFileNameOut string, config *pdf.Configuration) *Command {
 	return &Command{
-		Mode: pdf.MERGE,
-		//InFile:  &pdfFileNameIn,
+		Mode:    pdf.MERGE,
 		InFiles: pdfFileNamesIn,
 		OutFile: &pdfFileNameOut,
 		Config:  config}
@@ -327,7 +327,6 @@ func processPermissions(cmd *Command) (out []string, err error) {
 
 // AddWatermarksCommand creates a new command to add Watermarks to a file.
 func AddWatermarksCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []string, wm *pdf.Watermark, config *pdf.Configuration) *Command {
-
 	return &Command{
 		Mode:          pdf.ADDWATERMARKS,
 		InFile:        &pdfFileNameIn,
@@ -335,4 +334,13 @@ func AddWatermarksCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []
 		PageSelection: pageSelection,
 		Watermark:     wm,
 		Config:        config}
+}
+
+// ImportImagesCommand creates a new command to import images.
+func ImportImagesCommand(imageFileNamesIn []string, pdfFileNameOut string, config *pdf.Configuration) *Command {
+	return &Command{
+		Mode:    pdf.IMPORTIMAGES,
+		InFiles: imageFileNamesIn,
+		OutFile: &pdfFileNameOut,
+		Config:  config}
 }

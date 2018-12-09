@@ -108,6 +108,7 @@ func main() {
 		"perm":      preparePermissionsCommand,
 		"stamp":     prepareAddStampsCommand,
 		"watermark": prepareAddWatermarksCommand,
+		"import":    prepareImportImagesCommand,
 	} {
 		if command == k {
 			cmd = v(config)
@@ -163,6 +164,7 @@ func helpString(topic string) string {
 		"changeopw": {usageChangeOwnerPW, usageLongChangeOwnerPW, false},
 		"stamp":     {usageStamp, usageLongStamp, true},
 		"watermark": {usageWatermark, usageLongWatermark, true},
+		"import":    {usageImportImages, usageLongImportImages, false},
 		"version":   {usageVersion, usageLongVersion, false},
 	} {
 		if topic == k {

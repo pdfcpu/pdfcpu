@@ -24,24 +24,25 @@ Usage:
 	pdfcpu command [arguments]
 		
 The commands are:
-	
-	validate    validate PDF against PDF 32000-1:2008 (PDF 1.7)
-	optimize    optimize PDF by getting rid of redundant page resources
-	split       split multi-page PDF into several PDFs according to split span.
-	merge       concatenate 2 or more PDFs
-	extract     extract images, fonts, content, pages, metadata
-	trim        create trimmed version
-	attach      list, add, remove, extract embedded file attachments
-	perm        list, add user access permissions
-	encrypt     set password protection		
-	decrypt     remove password protection
-	changeupw   change user password
-	changeopw   change owner password
-	stamp       add stamps
-	watermark   add watermarks
-	version     print version
-   
-	Single-letter Unix-style supported for commands and flags.
+
+   validate    validate PDF against PDF 32000-1:2008 (PDF 1.7)
+   optimize    optimize PDF by getting rid of redundant page resources
+   split       split multi-page PDF into several PDFs according to split span.
+   merge       concatenate 2 or more PDFs
+   extract     extract images, fonts, content, pages, metadata
+   trim        create trimmed version
+   attach      list, add, remove, extract embedded file attachments
+   perm        list, add user access permissions
+   encrypt     set password protection		
+   decrypt     remove password protection
+   changeupw   change user password
+   changeopw   change owner password
+   stamp       add stamps
+   watermark   add watermarks
+   import      insert images
+   version     print version
+
+   Single-letter Unix-style supported for commands and flags.
 
 Use "pdfcpu help [command]" for more information about a command.`
 
@@ -268,6 +269,15 @@ description ... font, font size, text, color, image/pdf file name, pdf page#, ro
     outFile ... output pdf file (default: inFile-new.pdf)
 
 ` + usageWMDescription
+
+	usageImportImages     = "usage: pdfcpu import [-v(erbose)|vv] outFile inFile..."
+	usageLongImportImages = `Import appends a sequence of images to outFile, which will be created if necessary.
+A new page is created for every image during this operation.
+
+ verbose, v ... turn on logging
+         vv ... verbose logging
+    outFile ... output pdf file
+     inFile ... a list of image files`
 
 	usageVersion     = "usage: pdfcpu version"
 	usageLongVersion = "Version prints the pdfcpu version"

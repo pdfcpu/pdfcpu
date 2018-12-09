@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/hhrutter/pdfcpu/pkg/api"
 	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
@@ -480,7 +482,11 @@ func prepareChangePasswordCommand(config *pdfcpu.Configuration, s string) *api.C
 func prepareWatermarksCommand(config *pdfcpu.Configuration, onTop bool) *api.Command {
 
 	if len(flag.Args()) < 2 || len(flag.Args()) > 3 {
-		fmt.Fprintf(os.Stderr, "%s\n\n", usageStamp)
+		s := usageWatermark
+		if onTop {
+			s = usageStamp
+		}
+		fmt.Fprintf(os.Stderr, "%s\n\n", s)
 		os.Exit(1)
 	}
 
@@ -513,4 +519,34 @@ func prepareAddStampsCommand(config *pdfcpu.Configuration) *api.Command {
 
 func prepareAddWatermarksCommand(config *pdfcpu.Configuration) *api.Command {
 	return prepareWatermarksCommand(config, false)
+}
+
+func ensureImageExtension(filename string) {
+	s := strings.ToLower(filepath.Ext(filename))
+	if !pdfcpu.MemberOf(s, []string{".jpg", ".jpeg", ".png", ".tif", ".tiff", ".pdf"}) {
+		fmt.Fprintf(os.Stderr, "%s needs an image extension (.jpg, .jpeg, .png, .tif, .tiff)\n", filename)
+		os.Exit(1)
+	}
+}
+
+func prepareImportImagesCommand(config *pdfcpu.Configuration) *api.Command {
+
+	if len(flag.Args()) < 2 || pageSelection != "" {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageImportImages)
+		os.Exit(1)
+	}
+
+	var filenameOut string
+	filenamesIn := []string{}
+	for i, arg := range flag.Args() {
+		if i == 0 {
+			filenameOut = arg
+			ensurePdfExtension(filenameOut)
+			continue
+		}
+		ensureImageExtension(arg)
+		filenamesIn = append(filenamesIn, arg)
+	}
+
+	return api.ImportImagesCommand(filenamesIn, filenameOut, config)
 }

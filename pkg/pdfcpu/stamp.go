@@ -319,7 +319,7 @@ func setWatermarkType(s string, wm *Watermark) error {
 
 	wm.text = ss[0]
 	ext := strings.ToLower(filepath.Ext(ss[0]))
-	if MemberOf(ext, []string{".jpg", "jpeg", ".png", ".tif", ".tiff", ".pdf"}) {
+	if MemberOf(ext, []string{".jpg", ".jpeg", ".png", ".tif", ".tiff", ".pdf"}) {
 		wm.fileName = ss[0]
 	}
 

@@ -1,6 +1,6 @@
 /*
 	Copyright 2018 The pdfcpu Authors.
-
+f
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
 	You may obtain a copy of the License at
@@ -1292,4 +1292,54 @@ func AddWatermarks(cmd *Command) ([]string, error) {
 	logOperationStats(ctx, "watermark, write", durRead, durVal, durOpt, durWrite, durTotal)
 
 	return nil, nil
+}
+
+// ImportImages appends a sequence of images via a page each.
+func ImportImages(cmd *Command) ([]string, error) {
+
+	filesIn := cmd.InFiles
+	fileOut := *cmd.OutFile
+	//config := cmd.Config
+
+	log.API.Printf("importing images into %s: %v\n", fileOut, filesIn)
+
+	xRefTable, err := pdf.CreateDemoXRef()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, fn := range filesIn {
+		// create ImageDict
+		// create ResourceDicr for XObject
+		// create Contentstream for Im0
+		// create PageDict
+		// add PageDict
+		_ = fn
+	}
+
+	err = pdf.CreatePDF(xRefTable, "/", "demo.pdf")
+	return nil, err
+
+	// err = OptimizeContext(ctxDest)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// err = ValidateContext(ctxDest)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// ctxDest.Write.Command = "Merge"
+
+	// dirName, fileName := filepath.Split(fileOut)
+	// ctxDest.Write.DirName = dirName
+	// ctxDest.Write.FileName = fileName
+
+	// err = Write(ctxDest)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// log.Stats.Printf("XRefTable:\n%s\n", ctxDest)
 }
