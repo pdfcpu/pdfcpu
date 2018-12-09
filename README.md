@@ -46,7 +46,7 @@ One example is reducing the size of large PDF files for mass mailings by optimiz
 * Extract Pages (extract specific pages into a given dir)
 * Extract Content (extract the PDF-Source into given dir)
 * Extract Metadata (extract XML metadata)
-* Trim (generate a custom version of a PDF file)
+* Trim (generate a custom version of a PDF file including selected pages)
 * Stamp/Watermark selected pages with text, image or PDF page
 * Manage (add,remove,list,extract) embedded file attachments
 * Encrypt (sets password protection)

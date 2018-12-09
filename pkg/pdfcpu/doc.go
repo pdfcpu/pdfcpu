@@ -7,10 +7,10 @@ The available commands are:
 
 	validate	validate PDF against PDF 32000-1:2008 (PDF 1.7)
 	optimize	optimize PDF by getting rid of redundant page resources
-	split		split multi-page PDF into several single-page PDFs
+	split		split multi-page PDF into several PDFs according to split span
 	merge		concatenate 2 or more PDFs
 	extract		extract images, fonts, content, pages or metadata
-	trim		create trimmed version
+	trim		create trimmed version with selected pages.
 	stamp		add text or image stamp to selected pages
 	watermark	add text or image watermark for selected pages
 	attach		list, add, remove, extract embedded file attachments
