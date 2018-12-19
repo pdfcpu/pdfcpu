@@ -576,7 +576,7 @@ func (wc *WriteContext) HasWriteOffset(objNumber int) bool {
 // Don't confuse with pdfcpu commands, these are internal triggers.
 func (wc *WriteContext) ReducedFeatureSet() bool {
 	switch wc.Command {
-	case "Split", "Trim", "ExtractPages", "Merge":
+	case "Split", "Trim", "ExtractPages", "Merge", "Import":
 		return true
 	}
 	return false

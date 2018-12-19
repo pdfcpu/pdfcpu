@@ -361,6 +361,22 @@ func (d Dict) IsLinearizationParmDict() bool {
 	return d.IntEntry("Linearized") != nil
 }
 
+// IncrementBy increments the integer value for given key by i.
+func (d *Dict) IncrementBy(key string, i int) error {
+	v := d.IntEntry(key)
+	if v == nil {
+		return errors.Errorf("IncrementBy: unknown key: %s", key)
+	}
+	*v += i
+	d.Update(key, Integer(*v))
+	return nil
+}
+
+// Increment increments the integer value for given key.
+func (d *Dict) Increment(key string) error {
+	return d.IncrementBy(key, 1)
+}
+
 func (d Dict) indentedString(level int) string {
 
 	logstr := []string{"<<\n"}

@@ -17,7 +17,6 @@ limitations under the License.
 package api
 
 import (
-	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -73,7 +72,7 @@ func ParsePageSelection(s string) ([]string, error) {
 		return nil, errors.Errorf("-pages \"%s\" => syntax error\n", s)
 	}
 
-	fmt.Printf("pageSelection: <%s>\n", s)
+	log.API.Printf("pageSelection: <%s>\n", s)
 
 	return strings.Split(s, ","), nil
 }
@@ -281,7 +280,7 @@ func pagesForPageSelection(pageCount int, pageSelection []string) (pdf.IntSet, e
 	return selectedPages(pageCount, pageSelection)
 }
 
-// Split, Extract, Stamp, Watermark: No page selection means all pages are selected.
+// Split, Extract, Stamp, Watermark, Rotate: No page selection means all pages are selected.
 // EnsureSelectedPages selects all pages.
 func ensureSelectedPages(ctx *pdf.Context, selectedPages *pdf.IntSet) {
 

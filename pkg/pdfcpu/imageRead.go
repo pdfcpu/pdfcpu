@@ -88,6 +88,10 @@ func createFlateImageObject(xRefTable *XRefTable, buf, sm []byte, w, h, bpc int,
 		sd.Insert("SMask", *softMaskIndRef)
 	}
 
+	if w < 1000 || h < 1000 {
+		sd.Insert("Interpolate", Boolean(true))
+	}
+
 	err := encodeStream(sd)
 	if err != nil {
 		return nil, err
@@ -121,6 +125,14 @@ func createDCTImageObject(xRefTable *XRefTable, buf, sm []byte, w, h int, cs str
 		),
 		Content:        buf,
 		FilterPipeline: nil,
+	}
+
+	if cs == DeviceCMYKCS {
+		sd.Insert("Decode", NewIntegerArray(1, 0, 1, 0, 1, 0, 1, 0))
+	}
+
+	if w < 1000 || h < 1000 {
+		sd.Insert("Interpolate", Boolean(true))
 	}
 
 	sd.InsertName("Filter", filter.DCT)

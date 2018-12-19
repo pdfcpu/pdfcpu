@@ -23,18 +23,20 @@ import (
 
 // Command represents an execution context.
 type Command struct {
-	Mode          pdf.CommandMode    // VALIDATE  OPTIMIZE  SPLIT  MERGE  EXTRACT  TRIM  LISTATT ADDATT REMATT EXTATT  ENCRYPT  DECRYPT  CHANGEUPW  CHANGEOPW LISTP ADDP  WATERMARK
-	InFile        *string            //    *         *        *      -       *      *      *       *       *      *       *        *         *          *       *     *       *
-	InFiles       []string           //    -         -        -      *       -      -      -       *       *      *       -        -         -          -       -     -       -
-	InDir         *string            //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -       -
-	OutFile       *string            //    -         *        -      *       -      *      -       -       -      -       *        *         *          *       -     -       *
-	OutDir        *string            //    -         -        *      -       *      -      -       -       -      *       -        -         -          -       -     -       -
-	PageSelection []string           //    -         -        -      -       *      *      -       -       -      -       -        -         -          -       -     -       *
-	Config        *pdf.Configuration //    *         *        *      *       *      *      *       *       *      *       *        *         *          *       *     *       *
-	PWOld         *string            //    -         -        -      -       -      -      -       -       -      -       -        -         *          *       -     -       -
-	PWNew         *string            //    -         -        -      -       -      -      -       -       -      -       -        -         *          *       -     -       -
-	Watermark     *pdf.Watermark     //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -       -
-	Span          int                //    -         -        *      -       -      -      -       -       -      -       -        -         -          -       -     -       -
+	Mode          pdf.CommandMode    // VALIDATE  OPTIMIZE  SPLIT  MERGE  EXTRACT  TRIM  LISTATT ADDATT REMATT EXTATT  ENCRYPT  DECRYPT  CHANGEUPW  CHANGEOPW LISTP ADDP  WATERMARK  IMPORT  ROTATE
+	InFile        *string            //    *         *        *      -       *      *      *       *       *      *       *        *         *          *       *     *       *         -       *
+	InFiles       []string           //    -         -        -      *       -      -      -       *       *      *       -        -         -          -       -     -       -         *       -
+	InDir         *string            //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -       -         -       -
+	OutFile       *string            //    -         *        -      *       -      *      -       -       -      -       *        *         *          *       -     -       *         *       -
+	OutDir        *string            //    -         -        *      -       *      -      -       -       -      *       -        -         -          -       -     -       -         -       -
+	PageSelection []string           //    -         -        -      -       *      *      -       -       -      -       -        -         -          -       -     -       *         -       -
+	Config        *pdf.Configuration //    *         *        *      *       *      *      *       *       *      *       *        *         *          *       *     *       *         *       *
+	PWOld         *string            //    -         -        -      -       -      -      -       -       -      -       -        -         *          *       -     -       -         -       -
+	PWNew         *string            //    -         -        -      -       -      -      -       -       -      -       -        -         *          *       -     -       -         -       -
+	Watermark     *pdf.Watermark     //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -       -         -       -
+	Span          int                //    -         -        *      -       -      -      -       -       -      -       -        -         -          -       -     -       -         -       -
+	Import        *pdf.Import        //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -       -         *       -
+	Rotation      int                //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -       -         -       *
 }
 
 // Process executes a pdfcpu command.
@@ -72,6 +74,7 @@ func Process(cmd *Command) (out []string, err error) {
 		pdf.LISTPERMISSIONS:    processPermissions,
 		pdf.ADDPERMISSIONS:     processPermissions,
 		pdf.IMPORTIMAGES:       ImportImages,
+		pdf.ROTATE:             Rotate,
 	} {
 		if cmd.Mode == k {
 			return v(cmd)
@@ -337,10 +340,21 @@ func AddWatermarksCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []
 }
 
 // ImportImagesCommand creates a new command to import images.
-func ImportImagesCommand(imageFileNamesIn []string, pdfFileNameOut string, config *pdf.Configuration) *Command {
+func ImportImagesCommand(imageFileNamesIn []string, pdfFileNameOut string, imp *pdf.Import, config *pdf.Configuration) *Command {
 	return &Command{
 		Mode:    pdf.IMPORTIMAGES,
 		InFiles: imageFileNamesIn,
 		OutFile: &pdfFileNameOut,
+		Import:  imp,
 		Config:  config}
+}
+
+// RotateCommand creates a new command to rotate pages.
+func RotateCommand(pdfFileNameIn string, rotation int, pageSelection []string, config *pdf.Configuration) *Command {
+	return &Command{
+		Mode:          pdf.ROTATE,
+		InFile:        &pdfFileNameIn,
+		PageSelection: pageSelection,
+		Rotation:      rotation,
+		Config:        config}
 }

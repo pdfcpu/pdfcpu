@@ -78,7 +78,7 @@ func CreateDemoXRef() (*XRefTable, error) {
 		return nil, err
 	}
 
-	err = addPageTree(xRefTable, rootDict)
+	err = addPageTreeWithSamplePage(xRefTable, rootDict)
 	if err != nil {
 		return nil, err
 	}
@@ -531,8 +531,6 @@ func addContents(xRefTable *XRefTable, pageDict Dict, mediaBox Array) error {
 
 	mb := rect(xRefTable, mediaBox)
 
-	// Page dimensions: 595.27, 841.89 xcxcvxcv
-
 	var b bytes.Buffer
 
 	b.WriteString("[3]0 d 0 w ")
@@ -920,7 +918,32 @@ func createPage(xRefTable *XRefTable, parentPageIndRef IndirectRef, mediaBox Arr
 	return xRefTable.IndRefForNewObject(pageDict)
 }
 
-func addPageTree(xRefTable *XRefTable, rootDict Dict) error {
+func addPageTreeWithoutPage(xRefTable *XRefTable, rootDict Dict, d dim) error {
+
+	// maybe modified later on.
+	mediaBox := NewRectangle(0, 0, float64(d.w), float64(d.h))
+
+	pagesDict := Dict(
+		map[string]Object{
+			"Type":     Name("Pages"),
+			"Count":    Integer(0),
+			"MediaBox": mediaBox,
+		},
+	)
+
+	pagesDict.Insert("Kids", Array{})
+
+	pagesRootIndRef, err := xRefTable.IndRefForNewObject(pagesDict)
+	if err != nil {
+		return err
+	}
+
+	rootDict.Insert("Pages", *pagesRootIndRef)
+
+	return nil
+}
+
+func addPageTreeWithSamplePage(xRefTable *XRefTable, rootDict Dict) error {
 
 	// mediabox = physical page dimensions
 	//mediaBox := NewRectangle(0, 0, 595.27, 841.89)
@@ -1839,7 +1862,7 @@ func createAcroFormDict(xRefTable *XRefTable) (Dict, Array, error) {
 	return d, pageAnnots, nil
 }
 
-// CreateAcroFormDemoXRef creates a PDF file with an AcroForm example.
+// CreateAcroFormDemoXRef creates an xRefTable with an AcroForm example.
 func CreateAcroFormDemoXRef() (*XRefTable, error) {
 
 	xRefTable, err := createXRefTableWithRootDict()
@@ -1876,16 +1899,42 @@ func CreateAcroFormDemoXRef() (*XRefTable, error) {
 	return xRefTable, nil
 }
 
-// CreatePDF creates a PDF file for an xRefTable.
-func CreatePDF(xRefTable *XRefTable, dirName, fileName string) error {
+// CreateContext creates a Context for given cross reference table and configuration.
+func CreateContext(xRefTable *XRefTable, config *Configuration) *Context {
 
-	config := NewDefaultConfiguration()
-
-	ctx := &Context{
+	return &Context{
 		Configuration: config,
 		XRefTable:     xRefTable,
 		Write:         NewWriteContext(config.Eol),
 	}
+
+}
+
+// CreateContextWithXRefTable creates a Context with an xRefTable without pages for given configuration.
+func CreateContextWithXRefTable(config *Configuration, imp *Import) (*Context, error) {
+
+	xRefTable, err := createXRefTableWithRootDict()
+	if err != nil {
+		return nil, err
+	}
+
+	rootDict, err := xRefTable.Catalog()
+	if err != nil {
+		return nil, err
+	}
+
+	err = addPageTreeWithoutPage(xRefTable, rootDict, imp.pageDim)
+	if err != nil {
+		return nil, err
+	}
+
+	return CreateContext(xRefTable, config), nil
+}
+
+// CreatePDF creates a PDF file for an xRefTable.
+func CreatePDF(xRefTable *XRefTable, dirName, fileName string) error {
+
+	ctx := CreateContext(xRefTable, NewDefaultConfiguration())
 
 	ctx.Write.DirName = dirName
 	ctx.Write.FileName = fileName

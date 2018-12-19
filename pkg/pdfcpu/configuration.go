@@ -63,6 +63,7 @@ const (
 	STAMP
 	ADDWATERMARKS
 	IMPORTIMAGES
+	ROTATE
 )
 
 // Configuration of a Context.

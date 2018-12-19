@@ -676,6 +676,97 @@ func TestStampPDF(t *testing.T) {
 
 }
 
+func TestConvertImageToPDF(t *testing.T) {
+
+	// Convert an image into a single page PDF.
+	// The page dimensions match the image dimensions.
+
+	outFile := filepath.Join(outDir, "testConvertImage.pdf")
+	imageFile := filepath.Join(resDir, "pdfchip3.png")
+	config := pdf.NewDefaultConfiguration()
+
+	// We are using the special pos:full argument of the default import config
+	// which overrides all other import config parms.
+	imp := pdf.DefaultImportConfig()
+
+	_, err := Process(ImportImagesCommand([]string{imageFile}, outFile, imp, config))
+	if err != nil {
+		t.Fatalf("TestConvertImageToPDF: %v\n", err)
+	}
+
+	_, err = Process(ValidateCommand(outFile, config))
+	if err != nil {
+		t.Fatalf("TestConvertImageToPDF: %v\n", err)
+	}
+
+}
+
+func TestImportImage(t *testing.T) {
+
+	// Import an image as a new page of the existing output file.
+	outFile := filepath.Join(outDir, "Acroforms2.pdf")
+	imageFile := filepath.Join(resDir, "pdfchip3.png")
+	config := pdf.NewDefaultConfiguration()
+
+	// We are using the special pos:full argument of the default import config
+	// which overrides all other import config parms.
+	imp := pdf.DefaultImportConfig()
+
+	_, err := Process(ImportImagesCommand([]string{imageFile}, outFile, imp, config))
+	if err != nil {
+		t.Fatalf("TestConvertImageToPDF: %v\n", err)
+	}
+
+	_, err = Process(ValidateCommand(outFile, config))
+	if err != nil {
+		t.Fatalf("TestConvertImageToPDF: %v\n", err)
+	}
+
+}
+
+func TestCenteredImportImage(t *testing.T) {
+
+	// Import an image as a new page of the existing output file.
+	outFile := filepath.Join(outDir, "Acroforms2.pdf")
+	imageFile := filepath.Join(resDir, "pdfchip3.png")
+	config := pdf.NewDefaultConfiguration()
+
+	// Import images by creating an A3 page for each image.
+	// Images are centered at the middle of the page with 1.0 relative scaling.
+	imp, err := pdf.ParseImportDetails("f:A3, p:c, s:1.0")
+	if err != nil {
+		t.Fatalf("TestCenteredImportImage: %v\n", err)
+	}
+
+	_, err = Process(ImportImagesCommand([]string{imageFile}, outFile, imp, config))
+	if err != nil {
+		t.Fatalf("TestCenteredImportImage: %v\n", err)
+	}
+
+	_, err = Process(ValidateCommand(outFile, config))
+	if err != nil {
+		t.Fatalf("TestCenteredImportImage: %v\n", err)
+	}
+}
+
+func TestRotate(t *testing.T) {
+
+	inFile := filepath.Join(inDir, "Acroforms2.pdf")
+	config := pdf.NewDefaultConfiguration()
+	rotation := 90
+
+	// Rotate the first 2 pages clockwise by 90 degrees.
+	_, err := Process(RotateCommand(inFile, rotation, []string{"1-2"}, config))
+	if err != nil {
+		t.Fatalf("TestRotate: %v\n", err)
+	}
+
+	_, err = Process(ValidateCommand(inFile, config))
+	if err != nil {
+		t.Fatalf("TestRotate: %v\n", err)
+	}
+}
+
 func TestExtractImagesCommand(t *testing.T) {
 
 	files, err := ioutil.ReadDir(inDir)

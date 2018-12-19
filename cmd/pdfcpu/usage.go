@@ -31,15 +31,16 @@ The commands are:
    merge       concatenate 2 or more PDFs
    extract     extract images, fonts, content, pages, metadata
    trim        create trimmed version
+   stamp       add stamps
+   watermark   add watermarks
+   import      convert/import images to PDF
+   rotate      rotate pages
    attach      list, add, remove, extract embedded file attachments
    perm        list, add user access permissions
    encrypt     set password protection		
    decrypt     remove password protection
    changeupw   change user password
    changeopw   change owner password
-   stamp       add stamps
-   watermark   add watermarks
-   import      insert images
    version     print version
 
    Single-letter Unix-style supported for commands and flags.
@@ -270,14 +271,45 @@ description ... font, font size, text, color, image/pdf file name, pdf page#, ro
 
 ` + usageWMDescription
 
-	usageImportImages     = "usage: pdfcpu import [-v(erbose)|vv] outFile inFile..."
-	usageLongImportImages = `Import appends a sequence of images to outFile, which will be created if necessary.
-A new page is created for every image during this operation.
+	usageImportImages     = "usage: pdfcpu import [-v(erbose)|vv] [description] outFile imageFile..."
+	usageLongImportImages = `Import turns image files into a page sequence and writes the result to outFile.
+If outFile already exists the page sequence will be appended.
+Each imageFile will be rendered to a separate page.
+In its simplest form this converts an image into a PDF: pdfcpu import img.pdf img.jpg
 
  verbose, v ... turn on logging
          vv ... verbose logging
+description ... dimensions, format, position, offset, scale factor
     outFile ... output pdf file
-     inFile ... a list of image files`
+  imageFile ... a list of image files
+  
+  <description> is a comma separated configuration string containing:
+
+  optional entries:
+
+      (defaults: d:595 842, f:A4, p:full, o:0 0, s:0.5 rel)
+
+  d: dimensions (width,height) in user units eg. 400,200 
+  f: (paper) format, one of A0,A1,A2,A3,A4,A5,A6,A7,A8,Letter,Legal,Ledger,Tabloid,Executive,ANSIC,ANSID,ANSIE
+  p: position: one of 'full' or the anchors: tl,tc,tr, l,c,r, bl,bc,br
+  o: offset (dx,dy) in user units eg. 15,20
+  s: scale factor, 0.0 <= x <= 1.0 followed by optional 'abs|rel' or 'a|r'
+  
+  Only one of dimensions or format is allowed.
+  position: full, image dimensions imply page dimensions, takes priority over dimension or format.
+  
+  e.g. 'f:A5, p:c                            ... render the image centered on A5 with relative scaling 0.5.'
+       'd:300 600, p:bl, o:20 20, s:1.0 abs' ... render the image anchored to bottom left corner with offset 20,20 and abs. scaling 1.0.
+       'p:full'                              ... render the image to a page with corresponding dimensions.`
+
+	usageRotate     = "usage: pdfcpu rotate [-v(erbose)|vv] [-pages pageSelection] inFile rotation"
+	usageLongRotate = `Rotate rotates selected pages. 
+
+ verbose, v ... turn on logging
+         vv ... verbose logging
+      pages ... page selection
+     inFile ... input pdf file
+   rotation ... a multiple of 90 degrees for clockwise rotation.`
 
 	usageVersion     = "usage: pdfcpu version"
 	usageLongVersion = "Version prints the pdfcpu version"

@@ -13,6 +13,8 @@ The available commands are:
 	trim		create trimmed version with selected pages.
 	stamp		add text or image stamp to selected pages
 	watermark	add text or image watermark for selected pages
+	import		import/convert images
+	rotate		rotate pages
 	attach		list, add, remove, extract embedded file attachments
 	perm		list, add user access permissions
 	encrypt		set password protection

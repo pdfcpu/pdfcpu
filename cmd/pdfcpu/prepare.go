@@ -536,17 +536,77 @@ func prepareImportImagesCommand(config *pdfcpu.Configuration) *api.Command {
 		os.Exit(1)
 	}
 
-	var filenameOut string
-	filenamesIn := []string{}
-	for i, arg := range flag.Args() {
-		if i == 0 {
-			filenameOut = arg
-			ensurePdfExtension(filenameOut)
-			continue
+	filenameOut := flag.Arg(0)
+	if hasPdfExtension(filenameOut) {
+		// pdfcpu import outFile imageFile...
+		// No optional 'description' argument provided.
+		// We use the default import configuration.
+		imp := pdfcpu.DefaultImportConfig()
+		filenamesIn := []string{}
+		for i := 1; i < len(flag.Args()); i++ {
+			arg := flag.Arg(i)
+			ensureImageExtension(arg)
+			filenamesIn = append(filenamesIn, arg)
 		}
+		return api.ImportImagesCommand(filenamesIn, filenameOut, imp, config)
+	}
+
+	// pdfcpu import outFile imageFile
+	// Possibly unexpected 'description'
+	if len(flag.Args()) == 2 {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageImportImages)
+		os.Exit(1)
+	}
+
+	// pdfcpu import description outFile imageFile...
+	//fmt.Printf("details: <%s>\n", flag.Arg(0))
+	imp, err := pdfcpu.ParseImportDetails(flag.Arg(0))
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+	if imp == nil {
+		log.Fatal("missing import description")
+	}
+
+	filenameOut = flag.Arg(1)
+	ensurePdfExtension(filenameOut)
+
+	filenamesIn := []string{}
+	for i := 2; i < len(flag.Args()); i++ {
+		arg := flag.Args()[i]
 		ensureImageExtension(arg)
 		filenamesIn = append(filenamesIn, arg)
 	}
 
-	return api.ImportImagesCommand(filenamesIn, filenameOut, config)
+	return api.ImportImagesCommand(filenamesIn, filenameOut, imp, config)
+}
+
+func abs(i int) int {
+	if i < 0 {
+		return -i
+	}
+	return i
+}
+
+func prepareRotateCommand(config *pdfcpu.Configuration) *api.Command {
+
+	if len(flag.Args()) < 2 {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageRotate)
+		os.Exit(1)
+	}
+
+	pages, err := api.ParsePageSelection(pageSelection)
+	if err != nil {
+		log.Fatalf("problem with flag pageSelection: %v", err)
+	}
+
+	filenameIn := flag.Arg(0)
+	ensurePdfExtension(filenameIn)
+
+	r, err := strconv.Atoi(flag.Arg(1))
+	if err != nil || abs(r)%90 > 0 {
+		log.Fatalf("rotation must be a multiple of 90: %s\n", flag.Arg(1))
+	}
+
+	return api.RotateCommand(filenameIn, r, pages, config)
 }

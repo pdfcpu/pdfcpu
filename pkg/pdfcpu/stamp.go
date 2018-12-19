@@ -87,9 +87,9 @@ type formCache map[types.Rectangle]*IndirectRef
 type Watermark struct {
 
 	// configuration
-	text       string      // display text
-	fileName   string      // display pdf page or png image
-	page       int         // the page number of a PDF file
+	text       string      // display text.
+	fileName   string      // display pdf page or png image.
+	page       int         // the page number of a PDF file.
 	onTop      bool        // if true this is a STAMP else this is a WATERMARK.
 	fontName   string      // supported are Adobe base fonts only. (as of now: Helvetica, Times-Roman, Courier)
 	fontSize   int         // font scaling factor.
@@ -99,7 +99,7 @@ type Watermark struct {
 	opacity    float64     // opacity the displayed text. 0 <= x <= 1
 	renderMode int         // fill=0, stroke=1 fill&stroke=2
 	scale      float64     // relative scale factor. 0 <= x <= 1
-	scaleAbs   bool        // true for absolute scaling
+	scaleAbs   bool        // true for absolute scaling.
 
 	// resources
 	ocg, extGState, font, image *IndirectRef
@@ -343,9 +343,9 @@ func supportedWatermarkFont(fn string) bool {
 	return false
 }
 
-func parseWatermarkFontSize(v string, wm *Watermark) error {
+func parseWatermarkFontSize(s string, wm *Watermark) error {
 
-	fs, err := strconv.Atoi(v)
+	fs, err := strconv.Atoi(s)
 	if err != nil {
 		return err
 	}
@@ -355,89 +355,88 @@ func parseWatermarkFontSize(v string, wm *Watermark) error {
 	return nil
 }
 
-func parseWatermarkScaleFactor(v string, wm *Watermark) error {
+func parseScaleFactor(s string) (float64, bool, error) {
 
-	sc := strings.Split(v, " ")
-	if len(sc) > 2 {
-		return errors.Errorf("illegal scale string: 0.0 <= i <= 1.0 {abs|rel}, %s\n", v)
+	ss := strings.Split(s, " ")
+	if len(ss) > 2 {
+		return 0, false, errors.Errorf("illegal scale string: 0.0 <= i <= 1.0 {abs|rel}, %s\n", s)
 	}
 
-	s, err := strconv.ParseFloat(sc[0], 64)
+	sc, err := strconv.ParseFloat(ss[0], 64)
 	if err != nil {
-		return errors.Errorf("scale factor must be a float value: %s\n", v)
+		return 0, false, errors.Errorf("scale factor must be a float value: %s\n", ss[0])
+	}
+	if sc < 0 || sc > 1 {
+		return 0, false, errors.Errorf("illegal scale factor: 0.0 <= s <= 1.0, %s\n", ss[0])
 	}
 
-	if s < 0 || s > 1 {
-		return errors.Errorf("illegal scale factor: 0.0 <= s <= 1.0, %s\n", v)
-	}
+	var scaleAbs bool
 
-	wm.scale = s
-
-	if len(sc) == 2 {
-		switch sc[1] {
+	if len(ss) == 2 {
+		switch ss[1] {
 		case "a", "abs":
-			wm.scaleAbs = true
+			scaleAbs = true
 
 		case "r", "rel":
-			wm.scaleAbs = false
+			scaleAbs = false
 
 		default:
-			return errors.Errorf("illegal scale mode: abs|rel, %s\n", v)
+			return 0, false, errors.Errorf("illegal scale mode: abs|rel, %s\n", ss[1])
 		}
 	}
 
-	return nil
+	return sc, scaleAbs, nil
 }
 
-func parseWatermarkColor(v string, wm *Watermark) error {
+func parseWatermarkColor(s string, wm *Watermark) error {
 
-	cs := strings.Split(v, " ")
+	cs := strings.Split(s, " ")
 	if len(cs) != 3 {
-		return errors.Errorf("illegal color string: 3 intensities 0.0 <= i <= 1.0, %s\n", v)
+		return errors.Errorf("illegal color string: 3 intensities 0.0 <= i <= 1.0, %s\n", s)
 	}
 
 	r, err := strconv.ParseFloat(cs[0], 32)
 	if err != nil {
-		return errors.Errorf("red must be a float value: %s\n", v)
+		return errors.Errorf("red must be a float value: %s\n", cs[0])
 	}
 	if r < 0 || r > 1 {
-		return errors.New("a color value is an intensity between 0.0 and 1.0")
+		return errors.New("red: a color value is an intensity between 0.0 and 1.0")
 	}
 	wm.color.r = float32(r)
 
 	g, err := strconv.ParseFloat(cs[1], 32)
 	if err != nil {
-		return errors.Errorf("green must be a float value: %s\n", v)
+		return errors.Errorf("green must be a float value: %s\n", cs[1])
 	}
 	if g < 0 || g > 1 {
-		return errors.New("a color value is an intensity between 0.0 and 1.0")
+		return errors.New("green: a color value is an intensity between 0.0 and 1.0")
 	}
 	wm.color.g = float32(g)
 
 	b, err := strconv.ParseFloat(cs[2], 32)
 	if err != nil {
-		return errors.Errorf("blue must be a float value: %s\n", v)
+		return errors.Errorf("blue must be a float value: %s\n", cs[2])
 	}
 	if b < 0 || b > 1 {
-		return errors.New("a color value is an intensity between 0.0 and 1.0")
+		return errors.New("blue: a color value is an intensity between 0.0 and 1.0")
 	}
 	wm.color.b = float32(b)
 
 	return nil
 }
 
-func parseWatermarkRotation(v string, setDiag bool, wm *Watermark) error {
+func parseWatermarkRotation(s string, setDiag bool, wm *Watermark) error {
 
 	if setDiag {
 		return errors.New("Please specify rotation or diagonal (r or d)")
 	}
 
-	r, err := strconv.ParseFloat(v, 64)
+	r, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		return errors.Errorf("rotation must be a float value: %s\n", v)
+		return errors.Errorf("rotation must be a float value: %s\n", s)
 	}
 	if r < -180 || r > 180 {
-		return errors.Errorf("illegal rotation: -180 <= r <= 180 degrees, %s\n", v)
+		return errors.Errorf("illegal rotation: -180 <= r <= 180 degrees, %s\n", s)
 	}
 
 	wm.rotation = r
@@ -446,15 +445,15 @@ func parseWatermarkRotation(v string, setDiag bool, wm *Watermark) error {
 	return nil
 }
 
-func parseWatermarkDiagonal(v string, setRot bool, wm *Watermark) error {
+func parseWatermarkDiagonal(s string, setRot bool, wm *Watermark) error {
 
 	if setRot {
 		return errors.New("Please specify rotation or diagonal (r or d)")
 	}
 
-	d, err := strconv.Atoi(v)
+	d, err := strconv.Atoi(s)
 	if err != nil {
-		return errors.Errorf("illegal diagonal value: allowed 1 or 2, %s\n", v)
+		return errors.Errorf("illegal diagonal value: allowed 1 or 2, %s\n", s)
 	}
 	if d != diagonalLLToUR && d != diagonalULToLR {
 		return errors.New("diagonal: 1..lower left to upper right, 2..upper left to lower right")
@@ -466,25 +465,25 @@ func parseWatermarkDiagonal(v string, setRot bool, wm *Watermark) error {
 	return nil
 }
 
-func parseWatermarkOpacity(v string, wm *Watermark) error {
+func parseWatermarkOpacity(s string, wm *Watermark) error {
 
-	o, err := strconv.ParseFloat(v, 64)
+	o, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		return errors.Errorf("opacity must be a float value: %s\n", v)
+		return errors.Errorf("opacity must be a float value: %s\n", s)
 	}
 	if o < 0 || o > 1 {
-		return errors.Errorf("illegal opacity: 0.0 <= r <= 1.0, %s\n", v)
+		return errors.Errorf("illegal opacity: 0.0 <= r <= 1.0, %s\n", s)
 	}
 	wm.opacity = o
 
 	return nil
 }
 
-func parseWatermarkRenderMode(v string, wm *Watermark) error {
+func parseWatermarkRenderMode(s string, wm *Watermark) error {
 
-	m, err := strconv.Atoi(v)
+	m, err := strconv.Atoi(s)
 	if err != nil {
-		return errors.Errorf("illegal mode value: allowed 0,1,2, %s\n", v)
+		return errors.Errorf("illegal mode value: allowed 0,1,2, %s\n", s)
 	}
 	if m != rmFill && m != rmStroke && m != rmFillAndStroke {
 		return errors.New("Valid rendermodes: 0..fill, 1..stroke, 2..fill&stroke")
@@ -549,7 +548,7 @@ func ParseWatermarkDetails(s string, onTop bool) (*Watermark, error) {
 			err = parseWatermarkFontSize(v, &wm)
 
 		case "s": // scale factor
-			err = parseWatermarkScaleFactor(v, &wm)
+			wm.scale, wm.scaleAbs, err = parseScaleFactor(v)
 
 		case "c": // color
 			err = parseWatermarkColor(v, &wm)
@@ -801,9 +800,9 @@ func createPDFResForWM(ctx *Context, wm *Watermark) error {
 	return nil
 }
 
-func createImageResForWM(xRefTable *XRefTable, wm *Watermark) error {
+func createImageResource(xRefTable *XRefTable, fileName string) (*IndirectRef, int, int, error) {
 
-	ext := strings.ToLower(filepath.Ext(wm.fileName))
+	ext := strings.ToLower(filepath.Ext(fileName))
 	var f func(xRefTable *XRefTable, fileName string) (*StreamDict, error)
 
 	switch ext {
@@ -814,27 +813,30 @@ func createImageResForWM(xRefTable *XRefTable, wm *Watermark) error {
 	case ".tif", ".tiff":
 		f = ReadTIFFFile
 	default:
-		return errors.Errorf("unsupported extension: %s", ext)
+		return nil, 0, 0, errors.Errorf("unsupported imagefile extension: %s", ext)
 	}
 
-	sd, err := f(xRefTable, wm.fileName)
+	sd, err := f(xRefTable, fileName)
 	if err != nil {
-		return err
+		return nil, 0, 0, err
 	}
-	//fmt.Println("image loaded!")
 
-	wm.width = *sd.IntEntry("Width")
-	wm.height = *sd.IntEntry("Height")
-	//fmt.Printf("w:%d h%d\n", wm.imgwidth, wm.height)
+	w := *sd.IntEntry("Width")
+	h := *sd.IntEntry("Height")
 
-	ir, err := xRefTable.IndRefForNewObject(*sd)
+	indRef, err := xRefTable.IndRefForNewObject(*sd)
 	if err != nil {
-		return err
+		return nil, 0, 0, err
 	}
 
-	wm.image = ir
+	return indRef, w, h, nil
+}
 
-	return nil
+func createImageResForWM(xRefTable *XRefTable, wm *Watermark) (err error) {
+
+	wm.image, wm.width, wm.height, err = createImageResource(xRefTable, wm.fileName)
+
+	return err
 }
 
 func createResourcesForWM(ctx *Context, wm *Watermark) error {

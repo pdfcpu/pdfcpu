@@ -1294,52 +1294,137 @@ func AddWatermarks(cmd *Command) ([]string, error) {
 	return nil, nil
 }
 
-// ImportImages appends a sequence of images via a page each.
+func fileExists(filename string) bool {
+	f, err := os.Open(filename)
+	if err != nil {
+		return false
+	}
+	f.Close()
+	return true
+}
+
+// ImportImages turns image files into a page sequence and writes the result to outFile.
+// In its simplest form this operation converts an image into a PDF.
 func ImportImages(cmd *Command) ([]string, error) {
 
-	filesIn := cmd.InFiles
+	config := cmd.Config
 	fileOut := *cmd.OutFile
-	//config := cmd.Config
+	filesIn := cmd.InFiles
+	imp := cmd.Import
 
-	log.API.Printf("importing images into %s: %v\n", fileOut, filesIn)
+	//log.API.Printf("importing images into %s: %v\n%s", fileOut, filesIn, imp)
+	fmt.Printf("importing images into %s: %v\n%s\n", fileOut, filesIn, imp)
 
-	xRefTable, err := pdf.CreateDemoXRef()
+	var (
+		ctx *pdf.Context
+		err error
+	)
+
+	if fileExists(fileOut) {
+		fmt.Printf("%s already exists..\n", fileOut)
+		ctx, _, _, err = readAndValidate(fileOut, config, time.Now())
+	} else {
+		fmt.Printf("%s will be created\n", fileOut)
+		ctx, err = pdf.CreateContextWithXRefTable(config, imp)
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	for _, fn := range filesIn {
-		// create ImageDict
-		// create ResourceDicr for XObject
-		// create Contentstream for Im0
-		// create PageDict
-		// add PageDict
-		_ = fn
+	pagesIndRef, err := ctx.Pages()
+	if err != nil {
+		return nil, err
 	}
 
-	err = pdf.CreatePDF(xRefTable, "/", "demo.pdf")
-	return nil, err
+	// This is the page tree root.
+	pagesDict, err := ctx.DereferenceDict(*pagesIndRef)
+	if err != nil {
+		return nil, err
+	}
 
-	// err = OptimizeContext(ctxDest)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	for _, imgFilename := range filesIn {
 
-	// err = ValidateContext(ctxDest)
-	// if err != nil {
-	// 	return nil, err
-	// }
+		indRef, err := pdf.NewPageForImage(ctx.XRefTable, imgFilename, pagesIndRef, imp)
+		if err != nil {
+			return nil, err
+		}
 
-	// ctxDest.Write.Command = "Merge"
+		err = pdf.AppendPageTree(indRef, 1, &pagesDict)
+		if err != nil {
+			return nil, err
+		}
 
-	// dirName, fileName := filepath.Split(fileOut)
-	// ctxDest.Write.DirName = dirName
-	// ctxDest.Write.FileName = fileName
+		ctx.PageCount++
+	}
 
-	// err = Write(ctxDest)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	err = ValidateContext(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-	// log.Stats.Printf("XRefTable:\n%s\n", ctxDest)
+	ctx.Write.Command = "Import"
+	dirName, fileName := filepath.Split(fileOut)
+	ctx.Write.DirName = dirName
+	ctx.Write.FileName = fileName
+
+	err = Write(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+
+	return nil, nil
+}
+
+// Rotate rotates selected pages clockwise.
+func Rotate(cmd *Command) ([]string, error) {
+
+	fileIn := *cmd.InFile
+	pageSelection := cmd.PageSelection
+	config := cmd.Config
+
+	fromStart := time.Now()
+
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
+	if err != nil {
+		return nil, err
+	}
+
+	log.API.Printf("rotating %s ...\n", fileIn)
+
+	from := time.Now()
+
+	pages, err := pagesForPageSelection(ctx.PageCount, pageSelection)
+	if err != nil {
+		return nil, err
+	}
+
+	ensureSelectedPages(ctx, &pages)
+
+	err = pdf.RotatePages(ctx, pages, cmd.Rotation)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+
+	durStamp := time.Since(from).Seconds()
+
+	fromWrite := time.Now()
+
+	dirName, fileName := filepath.Split(fileIn)
+	ctx.Write.DirName = dirName
+	ctx.Write.FileName = fileName
+
+	err = Write(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	durWrite := durStamp + time.Since(fromWrite).Seconds()
+	durTotal := time.Since(fromStart).Seconds()
+	logOperationStats(ctx, "rotate, write", durRead, durVal, durOpt, durWrite, durTotal)
+
+	return nil, nil
 }

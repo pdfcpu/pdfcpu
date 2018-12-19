@@ -109,6 +109,7 @@ func main() {
 		"stamp":     prepareAddStampsCommand,
 		"watermark": prepareAddWatermarksCommand,
 		"import":    prepareImportImagesCommand,
+		"rotate":    prepareRotateCommand,
 	} {
 		if command == k {
 			cmd = v(config)
@@ -122,8 +123,12 @@ func main() {
 	os.Exit(1)
 }
 
+func hasPdfExtension(filename string) bool {
+	return strings.HasSuffix(strings.ToLower(filename), ".pdf")
+}
+
 func ensurePdfExtension(filename string) {
-	if !strings.HasSuffix(strings.ToLower(filename), ".pdf") {
+	if !hasPdfExtension(filename) {
 		fmt.Fprintf(os.Stderr, "%s needs extension \".pdf\".", filename)
 		os.Exit(1)
 	}
@@ -165,6 +170,7 @@ func helpString(topic string) string {
 		"stamp":     {usageStamp, usageLongStamp, true},
 		"watermark": {usageWatermark, usageLongWatermark, true},
 		"import":    {usageImportImages, usageLongImportImages, false},
+		"rotate":    {usageRotate, usageLongRotate, true},
 		"version":   {usageVersion, usageLongVersion, false},
 	} {
 		if topic == k {
