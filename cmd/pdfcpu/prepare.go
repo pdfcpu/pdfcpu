@@ -521,9 +521,13 @@ func prepareAddWatermarksCommand(config *pdfcpu.Configuration) *api.Command {
 	return prepareWatermarksCommand(config, false)
 }
 
-func ensureImageExtension(filename string) {
+func hasImageExtension(filename string) bool {
 	s := strings.ToLower(filepath.Ext(filename))
-	if !pdfcpu.MemberOf(s, []string{".jpg", ".jpeg", ".png", ".tif", ".tiff", ".pdf"}) {
+	return pdfcpu.MemberOf(s, []string{".jpg", ".jpeg", ".png", ".tif", ".tiff", ".pdf"})
+}
+
+func ensureImageExtension(filename string) {
+	if !hasImageExtension(filename) {
 		fmt.Fprintf(os.Stderr, "%s needs an image extension (.jpg, .jpeg, .png, .tif, .tiff)\n", filename)
 		os.Exit(1)
 	}
@@ -609,4 +613,72 @@ func prepareRotateCommand(config *pdfcpu.Configuration) *api.Command {
 	}
 
 	return api.RotateCommand(filenameIn, r, pages, config)
+}
+
+func prepareNUpCommand(config *pdfcpu.Configuration) *api.Command {
+
+	if len(flag.Args()) < 2 || len(flag.Args()) > 4 {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageNUp)
+		os.Exit(1)
+	}
+
+	nup := pdfcpu.DefaultNUpConfig()
+
+	filenameIn := flag.Arg(0)
+	if hasPdfExtension(filenameIn) || hasImageExtension(filenameIn) {
+		// pdfcpu nup inFile n|mxn {outFile}
+		// No optional 'description' argument provided.
+		// We use the default nup configuration.
+		if hasImageExtension(filenameIn) {
+			nup.ImgInputFile = true
+		}
+
+		err := pdfcpu.ParseNUpGridDefinition(flag.Arg(1), nup)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+			os.Exit(1)
+		}
+
+		filenameOut := defaultFilenameOut(filenameIn)
+		if len(flag.Args()) == 3 {
+			filenameOut = flag.Arg(2)
+			ensurePdfExtension(filenameOut)
+		}
+
+		return api.NUpCommand(filenameIn, filenameOut, nup, config)
+	}
+
+	// pdfcpu nup description inFile n|mxn {outFile}
+	//fmt.Printf("details: <%s>\n", flag.Arg(0))
+	err := pdfcpu.ParseNUpDetails(flag.Arg(0), nup)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+	if nup == nil {
+		log.Fatal("missing nup description")
+	}
+
+	filenameIn = flag.Arg(1)
+	if !hasPdfExtension(filenameIn) && !hasImageExtension(filenameIn) {
+		log.Fatalf("Inputfile has to be a PDF or an image file: %s\n", filenameIn)
+	}
+
+	nUp := pdfcpu.DefaultNUpConfig()
+	if hasImageExtension(filenameIn) {
+		nUp.ImgInputFile = true
+	}
+
+	err = pdfcpu.ParseNUpGridDefinition(flag.Arg(1), nUp)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(1)
+	}
+
+	filenameOut := defaultFilenameOut(filenameIn)
+	if len(flag.Args()) == 3 {
+		filenameOut = flag.Arg(2)
+		ensurePdfExtension(filenameOut)
+	}
+
+	return api.NUpCommand(filenameIn, filenameOut, nUp, config)
 }

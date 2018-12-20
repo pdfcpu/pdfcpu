@@ -34,7 +34,7 @@ var errInvalidImportConfig = errors.New("Invalid import configuration string. Pl
 // Import represents the command details for the command "ImportImage".
 type Import struct {
 	pageDim  dim     // page dimensions in user units.
-	pageSize string  // one of A5,A4,A3,Letter,Legal,Tabloid.
+	pageSize string  // one of A0,A1,A2,A3,A4(=default),A5,A6,A7,A8,Letter,Legal,Ledger,Tabloid,Executive,ANSIC,ANSID,ANSIE.
 	pos      anchor  // position anchor, one of tl,tc,tr,l,c,r,bl,bc,br,full.
 	dx, dy   int     // anchor offset.
 	scale    float64 // relative scale factor. 0 <= x <= 1
@@ -52,48 +52,48 @@ func (imp Import) String() string {
 		imp.pageSize, imp.pageDim, imp.pos, imp.dx, imp.dy, imp.scale, sc)
 }
 
-func parseImportFormat(v string, setDim bool, imp *Import) error {
+func parsePageFormat(v string, setDim bool) (dim, string, error) {
+
+	var d dim
 
 	if setDim {
-		return errors.New("Only one of format('f') or dimensions('d') allowed")
+		return d, v, errors.New("Only one of format('f') or dimensions('d') allowed")
 	}
 
 	d, ok := PaperSize[v]
 	if !ok {
-		return errors.Errorf("Page format %s is unsupported.\n", v)
+		return d, v, errors.Errorf("Page format %s is unsupported.\n", v)
 	}
 
-	imp.pageDim = d
-	imp.pageSize = v
-
-	return nil
+	return d, v, nil
 }
 
-func parseImportDim(v string, setFormat bool, imp *Import) error {
+func parsePageDim(v string, setFormat bool) (dim, string, error) {
+
+	var d dim
 
 	if setFormat {
-		return errors.New("Only one of format('f') or dimensions('d') allowed")
+		return d, v, errors.New("Only one of format('f') or dimensions('d') allowed")
 	}
 
-	d := strings.Split(v, " ")
-	if len(d) != 2 {
-		return errors.Errorf("illegal dimension string: need 2 positive values, %s\n", v)
+	ss := strings.Split(v, " ")
+	if len(ss) != 2 {
+		return d, v, errors.Errorf("illegal dimension string: need 2 positive values, %s\n", v)
 	}
 
-	w, err := strconv.Atoi(d[0])
+	w, err := strconv.Atoi(ss[0])
 	if err != nil || w <= 0 {
-		return errors.Errorf("dimension X must be a positiv numeric value: %s\n", d[0])
+		return d, v, errors.Errorf("dimension X must be a positiv numeric value: %s\n", ss[0])
 	}
 
-	h, err := strconv.Atoi(d[1])
+	h, err := strconv.Atoi(ss[1])
 	if err != nil || h <= 0 {
-		return errors.Errorf("dimension Y must be a positiv numeric value: %s\n", d[1])
+		return d, v, errors.Errorf("dimension Y must be a positiv numeric value: %s\n", ss[1])
 	}
 
-	imp.pageDim = dim{w, h}
-	imp.pageSize = ""
+	d = dim{w, h}
 
-	return nil
+	return d, "", nil
 }
 
 type anchor int
@@ -239,11 +239,11 @@ func ParseImportDetails(s string) (*Import, error) {
 
 		switch k {
 		case "f": // page format
-			err = parseImportFormat(v, setDim, imp)
+			imp.pageDim, imp.pageSize, err = parsePageFormat(v, setDim)
 			setFormat = true
 
 		case "d": // page dimensions
-			err = parseImportDim(v, setFormat, imp)
+			imp.pageDim, imp.pageSize, err = parsePageDim(v, setFormat)
 			setDim = true
 
 		case "p": // position

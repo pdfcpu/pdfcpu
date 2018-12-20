@@ -1428,3 +1428,8 @@ func Rotate(cmd *Command) ([]string, error) {
 
 	return nil, nil
 }
+
+// NUp rearranges pages or images into page grids.
+func NUp(cmd *Command) ([]string, error) {
+	return nil, nil
+}

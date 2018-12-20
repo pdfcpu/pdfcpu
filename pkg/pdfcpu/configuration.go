@@ -64,6 +64,7 @@ const (
 	ADDWATERMARKS
 	IMPORTIMAGES
 	ROTATE
+	NUP
 )
 
 // Configuration of a Context.

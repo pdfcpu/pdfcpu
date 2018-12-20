@@ -110,6 +110,8 @@ func main() {
 		"watermark": prepareAddWatermarksCommand,
 		"import":    prepareImportImagesCommand,
 		"rotate":    prepareRotateCommand,
+		"nup":       prepareNUpCommand,
+		"n-up":      prepareNUpCommand,
 	} {
 		if command == k {
 			cmd = v(config)
@@ -171,6 +173,8 @@ func helpString(topic string) string {
 		"watermark": {usageWatermark, usageLongWatermark, true},
 		"import":    {usageImportImages, usageLongImportImages, false},
 		"rotate":    {usageRotate, usageLongRotate, true},
+		"nup":       {usageNUp, usageLongNUp, false},
+		"n-up":      {usageNUp, usageLongNUp, false},
 		"version":   {usageVersion, usageLongVersion, false},
 	} {
 		if topic == k {

@@ -311,6 +311,64 @@ description ... dimensions, format, position, offset, scale factor
      inFile ... input pdf file
    rotation ... a multiple of 90 degrees for clockwise rotation.`
 
+	usageNUp     = "usage: pdfcpu nup [-v(erbose)|vv] [description] inFile|imageFile n|mxn [outFile]"
+	usageLongNUp = `N-up rearranges existing pages into a grid page layout.
+This reduces the number of pages and therefore the required print time.
+All pages of inFile are required to use the same page size.
+In case of an image file a single page PDF gets generated. 
+
+ verbose, v ... turn on logging
+         vv ... verbose logging
+description ... dimensions, format, orientation
+     inFile ... input pdf file
+  imageFile ... input image file
+          n ... grid definition (n x n) preserving input page size
+        mxn ... grid definition (m x n) output poster size = m x n PDF input pages
+    outFile ... output pdf file
+
+    <description> is a comma separated configuration string containing:
+
+    optional entries:
+  
+        (defaults: d:595 842, f:A4, o:rd)
+  
+    d: dimensions (width,height) in user units eg. 400,200 
+    f: (paper) format, one of A0,A1,A2,A3,A4,A5,A6,A7,A8,Letter,Legal,Ledger,Tabloid,Executive,ANSIC,ANSID,ANSIE
+    o: orientation one of rd ... right down (=default)
+                          dr ... down right
+                          ld ... left down
+                          dl ... down left
+    
+    Only one of dimensions or format is allowed and applies to image files only.
+    Orientation applies to PDF input files only.
+
+    Possible values for n: 2 ...1x2
+                           4 ...2x2
+                           9 ...3x3
+                          16 ...4x4
+
+Examples: pdfcpu nup in.pdf 4
+          Rearrange pages of in.pdf into 2x2 grids and write result to in_new.pdf using the default orientation.
+          in.pdf's page size will be preserved.
+                                 
+          pdfcpu nup in.pdf 1x10 out.pdf
+          Rearrange pages of in.pdf into 1x10 grids and write result to out.pdf using the default orientation.
+          The output page size is the result of a 1(hor)x10(vert) page grid using in.pdf's page size.
+
+          pdfcpu nup in.pdf 2x2 out.pdf 
+          Rearrange pages of in.pdf into 2x2 grids and write result to out.pdf using the default orientation.
+          The output page size is the result of a 2(hor)x2(vert) page grid using in.pdf's page size.
+
+          pdfcpu nup 'o:rd' in.pdf 3x2 out.pdf 
+          Rearrange pages of in.pdf into 3x2 grids and write result to out.pdf using orientation 'right down'.
+          The output page size is the result of a 3(hor)x2(vert) page grid using in.pdf's page size.
+
+          pdfcpu nup logo.jpg 9 out.pdf 
+          Arrange instances of logo.jpg into a 3x3 grid and write result to out.pdf using the A4 default format.
+          
+          pdfcpu nup 'f:A3' logo.jpg 9 out.pdf 
+          Arrange instances of logo.jpg into a 3x3 grid and write result to out.pdf using the A3 format.`
+
 	usageVersion     = "usage: pdfcpu version"
 	usageLongVersion = "Version prints the pdfcpu version"
 )
