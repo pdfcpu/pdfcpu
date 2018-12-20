@@ -220,7 +220,7 @@ func (l *logger) Fatalf(format string, args ...interface{}) {
 		return
 	}
 
-	l.log.Fatalf(format, args)
+	l.log.Fatalf(format, args...)
 }
 
 // Fatalf is equivalent to Println() followed by a program abort.
@@ -230,5 +230,5 @@ func (l *logger) Fatalln(args ...interface{}) {
 		return
 	}
 
-	l.log.Fatalln(args)
+	l.log.Fatalln(args...)
 }
