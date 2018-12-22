@@ -13,18 +13,50 @@ It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO
 
 ## Status
 
-Version: 0.1.19
+Version: 0.1.20
 
-* JPEG support across the board for watermarking, stamping and image extraction.
-* Extended `split` functionality now supporting a `span` parameter.
-* API console output is now using a Logger that can be disabled for embedded projects.
-* Fixed #52, #53, #54, #56
+The Xmas release is here bringing you something to play with over the holidays with two new commands:
+
+* Import 
+* Rotate
+
+The <i>Import</i>  command converts images to PDF or creates a PDF photo album tailored to your specific needs:
+
+
+Create a quick single page PDF containing an image:<br>
+`pdfcpu import photo.pdf photo.png`<br>
+By using the implied default positioning parameter `p:full` the page size is going to be equal to the image size.
+
+
+Generate a PDF gallery of image files assuming the folder pics contains jpg,png or tif files only:<br>
+`pdfcpu import album.pdf pics/*`<br>
+This is my favorite one :green_heart:
+
+Generate a PDF gallery of image files each of them centered on its page with the default relative scaling 0.5:<br>
+`pdfcpu import 'p:c' album.pdf pics/*`<br>
+
+The following command also generates a PDF gallery but additionally configures the <i>Letter</i> output format and positioning anchored to the bottom left corner with a horizontal offset of 10 and a vertical offset of 15 points in PDF user space with a scaling of 0.3 relative to page dimensions:<br>
+`pdfcpu import 'f:Letter, p:bl, o:10 20, s:0.3' album.pdf *.jpg`
+
+<i>Import</i> will create the output file if it does not exist otherwise it will append the new pages to an existing PDF.<br>This is a nice feature enabling to append the gallery to a prepared cover page.<br>
+Please refer to `pdfcpu help import` for details about this command including the <i>description</i> string and available positioning anchors.<br><br>
+
+If a gallery created by <i>Import</i> ends up having some pages with images not in upright position <i>Rotate</i> comes to the rescue.<br>
+The Rotate command rotates selected pages clockwise by a multiple of 90 degrees:<br>
+
+
+Rotate all pages clockwise by 90 degrees:<br>
+`pdfcpu rotate test.pdf 90`
+
+Rotate the first two pages counter clockwise by 90 degrees:<br>
+`pdfcpu rotate -pages 1-2 -90`
 
 <p align="center">
-  <img border="1" src="resources/wmTextSample.png" height="254">&nbsp;&nbsp;&nbsp;
-  <img border="1" src="resources/wmText2Sample.png" height="254">&nbsp;&nbsp;&nbsp;
-  <img border="1" src="resources/wmImageSample.png" height="254">&nbsp;&nbsp;&nbsp;
-  <img border="1" src="resources/wmPDFSample.jpg" height="254">
+  <img border="2" src="resources/wmTextSample.png" height="254">&nbsp;&nbsp;&nbsp;
+  <img border="2" src="resources/wmText2Sample.png" height="254">&nbsp;&nbsp;&nbsp;
+  <img border="2" src="resources/snow.jpg" height="254">&nbsp;&nbsp;&nbsp;
+  <img border="2" src="resources/wmImageSample.png" height="254">&nbsp;&nbsp;&nbsp;
+  <img border="2" src="resources/wmPDFSample.jpg" height="254">
 </p>
 
 ## Motivation
@@ -48,6 +80,8 @@ One example is reducing the size of large PDF files for mass mailings by optimiz
 * Extract Metadata (extract XML metadata)
 * Trim (generate a custom version of a PDF file including selected pages)
 * Stamp/Watermark selected pages with text, image or PDF page
+* Import convert/import images into PDF
+* Rotate selected pages
 * Manage (add,remove,list,extract) embedded file attachments
 * Encrypt (sets password protection)
 * Decrypt (removes password protection)
@@ -72,8 +106,11 @@ Required build version: go1.9 and up
     pdfcpu merge [-verbose] outFile inFile...
     pdfcpu extract [-verbose] -mode image|font|content|page|meta [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile outDir
     pdfcpu trim [-verbose] -pages pageSelection [-upw userpw] [-opw ownerpw] inFile outFile
+    
     pdfcpu stamp [-verbose] -pages pageSelection description inFile [outFile]
     pdfcpu watermark [-verbose] -pages pageSelection description inFile [outFile]
+    pdfcpu import [-v(erbose)|vv] [description] outFile imageFile...
+    pdfcpu rotate [-v(erbose)|vv] [-pages pageSelection] inFile rotation
 
     pdfcpu attach list [-verbose] [-upw userpw] [-opw ownerpw] inFile
     pdfcpu attach add [-verbose] [-upw userpw] [-opw ownerpw] inFile file...
