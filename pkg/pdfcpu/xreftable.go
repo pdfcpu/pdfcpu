@@ -27,6 +27,7 @@ import (
 
 	"github.com/hhrutter/pdfcpu/pkg/filter"
 	"github.com/hhrutter/pdfcpu/pkg/log"
+	"github.com/hhrutter/pdfcpu/pkg/types"
 	"github.com/pkg/errors"
 )
 
@@ -1630,7 +1631,7 @@ func (xRefTable *XRefTable) PageDict(page int) (Dict, *InheritedPageAttrs, error
 
 	pageCount := 0
 
-	inhPAttrs := InheritedPageAttrs{}
+	var inhPAttrs InheritedPageAttrs
 
 	pageDict, err := xRefTable.processPageTree(root, &inhPAttrs, &pageCount, page)
 	if err != nil {
@@ -1638,4 +1639,27 @@ func (xRefTable *XRefTable) PageDict(page int) (Dict, *InheritedPageAttrs, error
 	}
 
 	return pageDict, &inhPAttrs, nil
+}
+
+// PageDim returns the page dimensions.
+func (xRefTable *XRefTable) PageDim(i int) (dim, error) {
+
+	var d dim
+
+	_, inhPAttrs, err := xRefTable.PageDict(i)
+	if err != nil {
+		return d, err
+	}
+
+	w := inhPAttrs.mediaBox[2].(Float).Value() - inhPAttrs.mediaBox[0].(Float).Value()
+	h := inhPAttrs.mediaBox[3].(Float).Value() - inhPAttrs.mediaBox[1].(Float).Value()
+
+	mediaBox := types.NewRectangle(0, 0, w, h)
+
+	d.h = int(mediaBox.Height())
+	d.w = int(mediaBox.Width())
+	//d.w = (inhPAttrs.mediaBox[2].(Integer)).Value()
+	//d.h = (inhPAttrs.mediaBox[3].(Integer)).Value()
+
+	return d, nil
 }

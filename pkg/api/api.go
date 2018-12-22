@@ -1325,7 +1325,7 @@ func ImportImages(cmd *Command) ([]string, error) {
 		ctx, _, _, err = readAndValidate(fileOut, config, time.Now())
 	} else {
 		fmt.Printf("%s will be created\n", fileOut)
-		ctx, err = pdf.CreateContextWithXRefTable(config, imp)
+		ctx, err = pdf.CreateContextWithXRefTable(config, imp.PageDim)
 	}
 	if err != nil {
 		return nil, err
@@ -1431,5 +1431,64 @@ func Rotate(cmd *Command) ([]string, error) {
 
 // NUp rearranges pages or images into page grids.
 func NUp(cmd *Command) ([]string, error) {
+
+	fileIn := *cmd.InFile
+	fileOut := *cmd.OutFile
+	config := cmd.Config
+	nup := cmd.NUp
+
+	log.Info.Printf("%s", nup)
+
+	var (
+		ctx *pdf.Context
+		err error
+	)
+
+	if nup.ImgInputFile {
+
+		ctx, err = pdf.NUpFromImage(config, fileIn, nup)
+
+	} else {
+
+		ctx, _, _, err := readAndValidate(fileIn, config, time.Now())
+		if err != nil {
+			return nil, err
+		}
+
+		// Check for constant page dimensions.
+		ok, err := pdf.ConstantPageDimension(ctx.XRefTable)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, errors.New("nup: assumes all pages have the same size")
+		}
+
+		// New pages get added to ctx while old pages get deleted.
+		// This way we avoid migrating objects between two contexts.
+		err = pdf.NUpFromPDF(ctx.XRefTable, nup)
+		if err != nil {
+			return nil, err
+		}
+
+	}
+
+	err = ValidateContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx.Write.Command = "N-Up"
+	dirName, fileName := filepath.Split(fileOut)
+	ctx.Write.DirName = dirName
+	ctx.Write.FileName = fileName
+
+	err = Write(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+
 	return nil, nil
 }

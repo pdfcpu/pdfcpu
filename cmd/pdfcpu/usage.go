@@ -311,7 +311,7 @@ description ... dimensions, format, position, offset, scale factor
      inFile ... input pdf file
    rotation ... a multiple of 90 degrees for clockwise rotation.`
 
-	usageNUp     = "usage: pdfcpu nup [-v(erbose)|vv] [description] inFile|imageFile n|mxn [outFile]"
+	usageNUp     = "usage: pdfcpu nup [-v(erbose)|vv] [description] (inFile n|mxn) | (imageFile n) [outFile]"
 	usageLongNUp = `N-up rearranges existing pages into a grid page layout.
 This reduces the number of pages and therefore the required print time.
 All pages of inFile are required to use the same page size.

@@ -137,7 +137,7 @@ func ensurePdfExtension(filename string) {
 }
 
 func defaultFilenameOut(filename string) string {
-	ensurePdfExtension(filename)
+	//ensurePdfExtension(filename)
 	return filename[:len(filename)-4] + "_new.pdf"
 }
 

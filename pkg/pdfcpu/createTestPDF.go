@@ -1911,7 +1911,7 @@ func CreateContext(xRefTable *XRefTable, config *Configuration) *Context {
 }
 
 // CreateContextWithXRefTable creates a Context with an xRefTable without pages for given configuration.
-func CreateContextWithXRefTable(config *Configuration, imp *Import) (*Context, error) {
+func CreateContextWithXRefTable(config *Configuration, pageDim dim) (*Context, error) {
 
 	xRefTable, err := createXRefTableWithRootDict()
 	if err != nil {
@@ -1923,7 +1923,7 @@ func CreateContextWithXRefTable(config *Configuration, imp *Import) (*Context, e
 		return nil, err
 	}
 
-	err = addPageTreeWithoutPage(xRefTable, rootDict, imp.pageDim)
+	err = addPageTreeWithoutPage(xRefTable, rootDict, pageDim)
 	if err != nil {
 		return nil, err
 	}

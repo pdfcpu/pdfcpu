@@ -523,7 +523,7 @@ func prepareAddWatermarksCommand(config *pdfcpu.Configuration) *api.Command {
 
 func hasImageExtension(filename string) bool {
 	s := strings.ToLower(filepath.Ext(filename))
-	return pdfcpu.MemberOf(s, []string{".jpg", ".jpeg", ".png", ".tif", ".tiff", ".pdf"})
+	return pdfcpu.MemberOf(s, []string{".jpg", ".jpeg", ".png", ".tif", ".tiff"})
 }
 
 func ensureImageExtension(filename string) {
@@ -626,6 +626,12 @@ func prepareNUpCommand(config *pdfcpu.Configuration) *api.Command {
 
 	filenameIn := flag.Arg(0)
 	if hasPdfExtension(filenameIn) || hasImageExtension(filenameIn) {
+
+		if len(flag.Args()) > 3 {
+			fmt.Fprintf(os.Stderr, "%s\n\n", usageNUp)
+			os.Exit(1)
+		}
+
 		// pdfcpu nup inFile n|mxn {outFile}
 		// No optional 'description' argument provided.
 		// We use the default nup configuration.
@@ -663,22 +669,21 @@ func prepareNUpCommand(config *pdfcpu.Configuration) *api.Command {
 		log.Fatalf("Inputfile has to be a PDF or an image file: %s\n", filenameIn)
 	}
 
-	nUp := pdfcpu.DefaultNUpConfig()
 	if hasImageExtension(filenameIn) {
-		nUp.ImgInputFile = true
+		nup.ImgInputFile = true
 	}
 
-	err = pdfcpu.ParseNUpGridDefinition(flag.Arg(1), nUp)
+	err = pdfcpu.ParseNUpGridDefinition(flag.Arg(2), nup)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}
 
 	filenameOut := defaultFilenameOut(filenameIn)
-	if len(flag.Args()) == 3 {
-		filenameOut = flag.Arg(2)
+	if len(flag.Args()) == 4 {
+		filenameOut = flag.Arg(3)
 		ensurePdfExtension(filenameOut)
 	}
 
-	return api.NUpCommand(filenameIn, filenameOut, nUp, config)
+	return api.NUpCommand(filenameIn, filenameOut, nup, config)
 }
