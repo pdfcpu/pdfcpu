@@ -52,7 +52,6 @@ Rotate the first two pages counter clockwise by 90 degrees:<br>
 `pdfcpu rotate -pages 1-2 -90`
 
 <p align="center">
-  <img border="2" src="resources/wmTextSample.png" height="254">&nbsp;&nbsp;&nbsp;
   <img border="2" src="resources/wmText2Sample.png" height="254">&nbsp;&nbsp;&nbsp;
   <img border="2" src="resources/snow.jpg" height="254">&nbsp;&nbsp;&nbsp;
   <img border="2" src="resources/wmImageSample.png" height="254">&nbsp;&nbsp;&nbsp;
