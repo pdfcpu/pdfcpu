@@ -106,7 +106,7 @@ func testFile(t *testing.T, fileName string, mode, w, h int, inverse, align bool
 	defer f.Close()
 
 	// Read a CCITT encoded file and decode it into buf.
-	r := NewReader(f, mode, w, inverse, align)
+	r := NewReader(f, mode, w, inverse, align, false)
 	buf, err := ioutil.ReadAll(r)
 	if err != nil {
 		t.Errorf("%s: %v", fileName, err)

@@ -457,6 +457,8 @@ func newDecoder(r io.Reader) (*decoder, error) {
 		prevTag = tag
 	}
 
+	//fmt.Printf("tags: %v\n", d.features)
+
 	d.config.Width = int(d.firstVal(tImageWidth))
 	d.config.Height = int(d.firstVal(tImageLength))
 
@@ -662,6 +664,7 @@ func Decode(r io.Reader) (img image.Image, err error) {
 			}
 			offset := int64(blockOffsets[j*blocksAcross+i])
 			n := int64(blockCounts[j*blocksAcross+i])
+			LSBToMSB := d.firstVal(tFillOrder) == 2
 			switch d.firstVal(tCompression) {
 
 			// According to the spec, Compression does not have a default value,
@@ -675,11 +678,11 @@ func Decode(r io.Reader) (img image.Image, err error) {
 					_, err = d.r.ReadAt(d.buf, offset)
 				}
 			case cG3:
-				r := ccitt.NewReader(io.NewSectionReader(d.r, offset, n), ccitt.Group3, d.config.Width, true, false)
+				r := ccitt.NewReader(io.NewSectionReader(d.r, offset, n), ccitt.Group3, d.config.Width, true, false, LSBToMSB)
 				d.buf, err = ioutil.ReadAll(r)
 				r.Close()
 			case cG4:
-				r := ccitt.NewReader(io.NewSectionReader(d.r, offset, n), ccitt.Group4, d.config.Width, true, false)
+				r := ccitt.NewReader(io.NewSectionReader(d.r, offset, n), ccitt.Group4, d.config.Width, true, false, LSBToMSB)
 				d.buf, err = ioutil.ReadAll(r)
 				r.Close()
 			case cLZW:

@@ -73,7 +73,7 @@ func (f ccittDecode) Decode(r io.Reader) (*bytes.Buffer, error) {
 	if k < 0 {
 		mode = ccitt.Group4
 	}
-	rc := ccitt.NewReader(r, mode, columns, blackIs1, encodedByteAlign)
+	rc := ccitt.NewReader(r, mode, columns, blackIs1, encodedByteAlign, false)
 	defer rc.Close()
 
 	var b bytes.Buffer

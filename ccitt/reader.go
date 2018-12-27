@@ -21,6 +21,7 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"math/bits"
 )
 
 // The supported CCITT encoding modes.
@@ -80,9 +81,8 @@ func (pb *pixelBuf) setPix(row, x int) {
 	bit := uint8(7 - (x % 8))
 	off := row*pb.stride + x/8
 	mask := uint8(0x01 << bit)
-	// fmt.Printf("setPix(%d,%d): off=%d mask=%d (bit=%d)\n", row, x, off, mask, bit)
+	//fmt.Printf("setPix(%d,%d): off=%d mask=%d (bit=%d)\n", row, x, off, mask, bit)
 	pb.buf[off] |= mask
-	//fmt.Printf("i=%d off=%d mask=%d (bit=%d) %08b\n", pb.i, off, mask, bit, pb.buf[off])
 }
 
 func (pb *pixelBuf) addRun(row, a0, l int, white bool) {
@@ -118,7 +118,7 @@ func (b buf) getBitBuf(pos int) (*bitBuf, error) {
 	bit := pos % 8
 	off := pos / 8
 
-	// fmt.Printf("getBitBuf(%d) off=%d bit=%d\n", pos, off, bit)
+	//fmt.Printf("getBitBuf(%d) off=%d bit=%d\n", pos, off, bit)
 
 	if off >= len(b) {
 		// fmt.Printf("off=%d len=%d\n", off, len(b))
@@ -181,19 +181,20 @@ func (b bitBuf) hasPrefix(code string) bool {
 }
 
 type decoder struct {
-	mode   int
-	r      io.Reader
-	raw    buf
-	pos    int
-	err    error
-	pb     *pixelBuf
-	w      int    // image width = row length
-	white  bool   // current color, true for set pixel bit.
-	align  bool   // pad last row byte with 0s
-	inv    bool   // invert all pixels
-	row    int    // current row number 0..h-1
-	a0     int    // current horizontal scan position -1..w
-	toRead []byte // bytes to return from Read prepared after decoding
+	r        io.Reader
+	raw      buf
+	pos      int
+	err      error
+	pb       *pixelBuf
+	mode     int    // Group3 or Group4
+	w        int    // image width = row length
+	white    bool   // current color, true for set pixel bit.
+	align    bool   // pad last row byte with 0s
+	LSBToMSB bool   // fill order is lsb to msb
+	inv      bool   // invert all pixels
+	row      int    // current row number 0..h-1
+	a0       int    // current horizontal scan position -1..w
+	toRead   []byte // bytes to return from Read prepared after decoding
 }
 
 func (d *decoder) nextMode() (mode string, err error) {
@@ -327,7 +328,7 @@ func (d *decoder) handlePass() {
 	b2 := d.calcb2(d.a0)
 	d.pb.addRun(d.row, d.a0, b2-d.a0, d.white)
 	d.a0 = b2
-	// fmt.Printf("end Pass a0=%d (b2=%d)\n", d.a0, b2)
+	//fmt.Printf("end Pass a0=%d (b2=%d)\n", d.a0, b2)
 }
 
 func (d *decoder) handleHorizontal() {
@@ -339,7 +340,7 @@ func (d *decoder) handleHorizontal() {
 	}
 
 	// One run using the current color.
-	// fmt.Println("nextRunLength")
+	//fmt.Println("nextRunLength")
 	r1, err := d.nextRunLength()
 	if err != nil {
 		d.err = err
@@ -439,13 +440,19 @@ func (d *decoder) initBufs() {
 		return
 	}
 
+	if d.LSBToMSB {
+		for i := 0; i < len(d.raw); i++ {
+			d.raw[i] = bits.Reverse8(d.raw[i])
+		}
+	}
+
 	// Prepare pixelbuf.
 	stride := d.w / 8
 	if d.w%8 > 0 {
 		stride++
 	}
 	d.pb = &pixelBuf{buf: make([]uint8, stride), stride: stride, w: d.w}
-	// fmt.Printf("len(d.pb.buf)=%d stride=%d\n", len(d.pb.buf), stride)
+	//fmt.Printf("len(d.pb.buf)=%d stride=%d\n", len(d.pb.buf), stride)
 }
 
 func (d *decoder) readEOL() (bool, error) {
@@ -484,7 +491,7 @@ func (d *decoder) decodeGroup3OneDimensional() {
 
 	for {
 
-		// fmt.Printf("\nrow=%d a0=%d white=%t\n", d.row, d.a0, d.white)
+		//fmt.Printf("\nrow=%d a0=%d white=%t\n", d.row, d.a0, d.white)
 
 		if d.a0 == d.w {
 			d.a0 = -1
@@ -645,6 +652,6 @@ func (d *decoder) Close() error {
 // the decompressor may read more data than necessary from r.
 // It is the caller's responsibility to call Close on the ReadCloser when
 // finished reading.
-func NewReader(r io.Reader, mode, width int, inverse, align bool) io.ReadCloser {
-	return &decoder{r: r, mode: mode, white: true, w: width, inv: inverse, align: align}
+func NewReader(r io.Reader, mode, width int, inverse, align, LSBToMSB bool) io.ReadCloser {
+	return &decoder{r: r, mode: mode, white: true, w: width, inv: inverse, align: align, LSBToMSB: LSBToMSB}
 }
