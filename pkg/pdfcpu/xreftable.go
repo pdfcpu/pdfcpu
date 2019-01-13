@@ -27,7 +27,6 @@ import (
 
 	"github.com/hhrutter/pdfcpu/pkg/filter"
 	"github.com/hhrutter/pdfcpu/pkg/log"
-	"github.com/hhrutter/pdfcpu/pkg/types"
 	"github.com/pkg/errors"
 )
 
@@ -1502,9 +1501,17 @@ func (xRefTable *XRefTable) IDFirstElement() (id []byte, err error) {
 // InheritedPageAttrs represents all inherited page attributes.
 type InheritedPageAttrs struct {
 	resources Dict
-	mediaBox  Array
-	cropBox   Array
+	mediaBox  *Rectangle
+	cropBox   *Rectangle
 	rotate    float64
+}
+
+func rect(xRefTable *XRefTable, a Array) *Rectangle {
+	llx := xRefTable.DereferenceNumber(a[0])
+	lly := xRefTable.DereferenceNumber(a[1])
+	urx := xRefTable.DereferenceNumber(a[2])
+	ury := xRefTable.DereferenceNumber(a[3])
+	return Rect(llx, lly, urx, ury)
 }
 
 func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict Dict, pAttrs *InheritedPageAttrs) error {
@@ -1521,18 +1528,21 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict Dict, pAttrs *Inher
 
 	obj, found = pageDict.Find("MediaBox")
 	if found {
-		pAttrs.mediaBox, err = xRefTable.DereferenceArray(obj)
+
+		a, err := xRefTable.DereferenceArray(obj)
 		if err != nil {
 			return err
 		}
+		pAttrs.mediaBox = rect(xRefTable, a)
 	}
 
 	obj, found = pageDict.Find("CropBox")
 	if found {
-		pAttrs.cropBox, err = xRefTable.DereferenceArray(obj)
+		a, err := xRefTable.DereferenceArray(obj)
 		if err != nil {
 			return err
 		}
+		pAttrs.cropBox = rect(xRefTable, a)
 	}
 
 	obj, found = pageDict.Find("Rotate")
@@ -1641,25 +1651,10 @@ func (xRefTable *XRefTable) PageDict(page int) (Dict, *InheritedPageAttrs, error
 	return pageDict, &inhPAttrs, nil
 }
 
-// PageDim returns the page dimensions.
-func (xRefTable *XRefTable) PageDim(i int) (dim, error) {
-
-	var d dim
+// PageMediaBox returns the Mediabox in effect for page i.
+func (xRefTable *XRefTable) PageMediaBox(i int) (*Rectangle, error) {
 
 	_, inhPAttrs, err := xRefTable.PageDict(i)
-	if err != nil {
-		return d, err
-	}
 
-	w := inhPAttrs.mediaBox[2].(Float).Value() - inhPAttrs.mediaBox[0].(Float).Value()
-	h := inhPAttrs.mediaBox[3].(Float).Value() - inhPAttrs.mediaBox[1].(Float).Value()
-
-	mediaBox := types.NewRectangle(0, 0, w, h)
-
-	d.h = int(mediaBox.Height())
-	d.w = int(mediaBox.Width())
-	//d.w = (inhPAttrs.mediaBox[2].(Integer)).Value()
-	//d.h = (inhPAttrs.mediaBox[3].(Integer)).Value()
-
-	return d, nil
+	return inhPAttrs.mediaBox, err
 }

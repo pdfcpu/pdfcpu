@@ -25,9 +25,8 @@ import (
 	"strings"
 
 	"github.com/hhrutter/pdfcpu/pkg/filter"
-	"github.com/hhrutter/pdfcpu/pkg/fonts/metrics"
 	"github.com/hhrutter/pdfcpu/pkg/log"
-	"github.com/hhrutter/pdfcpu/pkg/types"
+	"github.com/hhrutter/pdfcpu/pkg/pdfcpu/fonts/metrics"
 
 	"github.com/pkg/errors"
 )
@@ -38,6 +37,8 @@ const (
 )
 
 type matrix [3][3]float64
+
+var errNoContent = errors.New("PDF page has no content")
 
 var identMatrix = matrix{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}
 
@@ -81,7 +82,7 @@ const (
 	rmFillAndStroke
 )
 
-type formCache map[types.Rectangle]*IndirectRef
+type formCache map[*Rectangle]*IndirectRef
 
 // Watermark represents the basic structure and command details for the commands "Stamp" and "Watermark".
 type Watermark struct {
@@ -112,10 +113,10 @@ type Watermark struct {
 	cs      []byte       // page content stream.
 
 	// page specific
-	bb      types.Rectangle // bounding box of the form representing this watermark.
-	vp      types.Rectangle // page dimensions for text alignment.
-	pageRot float64         // page rotation in effect.
-	form    *IndirectRef    // Forms are dependent on given page dimensions.
+	bb      *Rectangle   // bounding box of the form representing this watermark.
+	vp      *Rectangle   // page dimensions for text alignment.
+	pageRot float64      // page rotation in effect.
+	form    *IndirectRef // Forms are dependent on given page dimensions.
 
 	// house keeping
 	objs   IntSet    // objects for which wm has been applied already.
@@ -170,8 +171,8 @@ func (wm Watermark) String() string {
 		wm.diagonal,
 		wm.opacity,
 		wm.renderMode,
-		wm.bb,
-		wm.vp,
+		*wm.bb,
+		*wm.vp,
 		wm.pageRot,
 	)
 }
@@ -199,11 +200,11 @@ func (wm *Watermark) calcBoundingBox() {
 
 	//fmt.Println("calcBoundingBox:")
 
-	var bb types.Rectangle
+	var bb *Rectangle
 
 	if wm.isImage() || wm.isPDF() {
 
-		bb = types.NewRectangle(0, 0, float64(wm.width), float64(wm.height))
+		bb = RectForDim(wm.width, wm.height)
 		ar := bb.AspectRatio()
 		//fmt.Printf("calcBB: ar:%f scale:%f\n", ar, wm.scale)
 		//fmt.Printf("vp: %s\n", wm.vp)
@@ -240,9 +241,7 @@ func (wm *Watermark) calcBoundingBox() {
 		w = wm.scale * wm.vp.Width()
 		wm.fontSize = metrics.FontSize(wm.text, wm.fontName, w)
 	}
-	bb = types.NewRectangle(0, -float64(wm.fontSize), w, float64(wm.fontSize)/10)
-
-	wm.bb = bb
+	wm.bb = Rect(0, -float64(wm.fontSize), w, float64(wm.fontSize)/10)
 
 	return
 }
@@ -649,7 +648,7 @@ func contentStream(xRefTable *XRefTable, o Object) ([]byte, error) {
 	}
 
 	if len(bb) == 0 {
-		return nil, errors.New("PDF page has no content")
+		return nil, errNoContent
 	}
 
 	return bb, nil
@@ -1020,7 +1019,7 @@ func createForm(xRefTable *XRefTable, wm *Watermark, withBB bool) error {
 			map[string]Object{
 				"Type":      Name("XObject"),
 				"Subtype":   Name("Form"),
-				"BBox":      NewRectangle(bb.LL.X, bb.LL.Y, bb.UR.X, bb.UR.Y),
+				"BBox":      bb.Array(),
 				"Matrix":    NewIntegerArray(1, 0, 0, 1, 0, 0),
 				"OC":        *wm.ocg,
 				"Resources": *ir,
@@ -1067,14 +1066,6 @@ func createExtGStateForStamp(xRefTable *XRefTable, wm *Watermark) error {
 	wm.extGState = ir
 
 	return nil
-}
-
-func rect(xRefTable *XRefTable, rect Array) types.Rectangle {
-	llx := xRefTable.DereferenceNumber(rect[0])
-	lly := xRefTable.DereferenceNumber(rect[1])
-	urx := xRefTable.DereferenceNumber(rect[2])
-	ury := xRefTable.DereferenceNumber(rect[3])
-	return types.NewRectangle(llx, lly, urx, ury)
 }
 
 func insertPageResourcesForWM(xRefTable *XRefTable, pageDict Dict, wm *Watermark, gsID, xoID string) error {
@@ -1263,14 +1254,14 @@ func updatePageContentsForWM(xRefTable *XRefTable, obj Object, wm *Watermark, gs
 	return nil
 }
 
-func viewPort(xRefTable *XRefTable, a *InheritedPageAttrs) types.Rectangle {
+func viewPort(xRefTable *XRefTable, a *InheritedPageAttrs) *Rectangle {
 
 	visibleRegion := a.mediaBox
 	if a.cropBox != nil {
 		visibleRegion = a.cropBox
 	}
 
-	return rect(xRefTable, visibleRegion)
+	return visibleRegion
 }
 
 func watermarkPage(xRefTable *XRefTable, i int, wm *Watermark) error {

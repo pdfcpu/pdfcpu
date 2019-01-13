@@ -27,13 +27,15 @@ The commands are:
 
    validate    validate PDF against PDF 32000-1:2008 (PDF 1.7)
    optimize    optimize PDF by getting rid of redundant page resources
-   split       split multi-page PDF into several PDFs according to split span.
+   split       split multi-page PDF into several PDFs according to split span
    merge       concatenate 2 or more PDFs
    extract     extract images, fonts, content, pages, metadata
    trim        create trimmed version
    stamp       add stamps
    watermark   add watermarks
    import      convert/import images to PDF
+   nup         rearrange pages/images into grid page layout for reduced number of pages
+   grid        rearrange pages/images into grid page layout for enhanced browsing experience
    rotate      rotate pages
    attach      list, add, remove, extract embedded file attachments
    perm        list, add user access permissions
@@ -124,7 +126,7 @@ verbose, v ... turn on logging
     inFile ... input pdf file
    outFile ... output pdf file (default: inFile-new.pdf)`
 
-	usagePageSelection = `<pages> selects pages for processing and is a comma separated list of expressions:
+	usagePageSelection = `'-pages' selects pages for processing and is a comma separated list of expressions:
 
 	Valid expressions are:
 
@@ -275,7 +277,7 @@ description ... font, font size, text, color, image/pdf file name, pdf page#, ro
 	usageLongImportImages = `Import turns image files into a page sequence and writes the result to outFile.
 If outFile already exists the page sequence will be appended.
 Each imageFile will be rendered to a separate page.
-In its simplest form this converts an image into a PDF: pdfcpu import img.pdf img.jpg
+In its simplest form this converts an image into a PDF: "pdfcpu import img.pdf img.jpg"
 
  verbose, v ... turn on logging
          vv ... verbose logging
@@ -289,14 +291,19 @@ description ... dimensions, format, position, offset, scale factor
 
       (defaults: d:595 842, f:A4, p:full, o:0 0, s:0.5 rel)
 
-  d: dimensions (width,height) in user units eg. 400,200 
-  f: (paper) format, one of A0,A1,A2,A3,A4,A5,A6,A7,A8,Letter,Legal,Ledger,Tabloid,Executive,ANSIC,ANSID,ANSIE
+  d: dimensions (width,height) in user units eg. '400 200'
+
+  f: form/paper size, eg. A4, Letter, Legal...
+                           Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
+                           An appended 'L' enforces landscape mode. (eg. A3L)
+                           An appended 'P' enforces portrait mode. (eg. TabloidP)
+
   p: position: one of 'full' or the anchors: tl,tc,tr, l,c,r, bl,bc,br
   o: offset (dx,dy) in user units eg. 15,20
   s: scale factor, 0.0 <= x <= 1.0 followed by optional 'abs|rel' or 'a|r'
   
   Only one of dimensions or format is allowed.
-  position: full, image dimensions imply page dimensions, takes priority over dimension or format.
+  position: full => image dimensions equal page dimensions.
   
   e.g. 'f:A5, p:c                            ... render the image centered on A5 with relative scaling 0.5.'
        'd:300 600, p:bl, o:20 20, s:1.0 abs' ... render the image anchored to bottom left corner with offset 20,20 and abs. scaling 1.0.
@@ -311,63 +318,183 @@ description ... dimensions, format, position, offset, scale factor
      inFile ... input pdf file
    rotation ... a multiple of 90 degrees for clockwise rotation.`
 
-	usageNUp     = "usage: pdfcpu nup [-v(erbose)|vv] [description] (inFile n|mxn) | (imageFile n) [outFile]"
-	usageLongNUp = `N-up rearranges existing pages into a grid page layout.
+	usageNUp     = "usage: pdfcpu nup [-v(erbose)|vv] [-pages pageSelection] [description] outFile n inFile|imageFiles..."
+	usageLongNUp = `N-up rearranges existing PDF pages or images into a sequence of grids.
 This reduces the number of pages and therefore the required print time.
-All pages of inFile are required to use the same page size.
-In case of an image file a single page PDF gets generated. 
+If the input is one imageFile a single page n-up PDF gets generated.
 
  verbose, v ... turn on logging
          vv ... verbose logging
+      pages ... page selection for inFile only
 description ... dimensions, format, orientation
-     inFile ... input pdf file
-  imageFile ... input image file
-          n ... grid definition (n x n) preserving input page size
-        mxn ... grid definition (m x n) output poster size = m x n PDF input pages
     outFile ... output pdf file
+          n ... the n-Up value (see below for details)
+     inFile ... input pdf file
+ imageFiles ... input image file(s)
+
+                             portrait landscape
+ Possible values for n: 2 ...  1x2       2x1
+                        3 ...  1x3       3x1
+                        4 ...  2x2
+                        8 ...  2x4       4x2
+                        9 ...  3x3
+                       12 ...  3x4       4x3
+                       16 ...  4x4
 
     <description> is a comma separated configuration string containing:
 
     optional entries:
   
-        (defaults: d:595 842, f:A4, o:rd)
+        (defaults: d:595 842, f:A4, o:rd, b:on, m:3)
   
-    d: dimensions (width,height) in user units eg. 400,200 
-    f: (paper) format, one of A0,A1,A2,A3,A4,A5,A6,A7,A8,Letter,Legal,Ledger,Tabloid,Executive,ANSIC,ANSID,ANSIE
-    o: orientation one of rd ... right down (=default)
-                          dr ... down right
-                          ld ... left down
-                          dl ... down left
+    d: dimensions (width,height) in user units eg. '400 200'
     
-    Only one of dimensions or format is allowed and applies to image files only.
-    Orientation applies to PDF input files only.
+    f: form/paper size, eg. A4, Letter, Legal...
+                           Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
+                           Appended 'L' enforces landscape mode. (eg. A3L)
+                           Appended 'P' enforces portrait mode. (eg. TabloidP)
+                           Only one of dimensions or format is allowed.
+    
+    o: orientation, one of rd ... right down (=default)
+                           dr ... down right
+                           ld ... left down
+                           dl ... down left
+                           Orientation applies to PDF input files only.
 
-    Possible values for n: 2 ...1x2
-                           4 ...2x2
-                           9 ...3x3
-                          16 ...4x4
-
-Examples: pdfcpu nup in.pdf 4
-          Rearrange pages of in.pdf into 2x2 grids and write result to in_new.pdf using the default orientation.
-          in.pdf's page size will be preserved.
+    b: draw border ... on/off true/false
+    
+    m: margin for n-up content: int >= 0
+    
+Examples: "pdfcpu nup out.pdf 4 in.pdf"
+          Rearrange pages of in.pdf into 2x2 grids and write result to out.pdf using the default orientation
+          and default paper size A4. in.pdf's page size will be preserved.
                                  
-          pdfcpu nup in.pdf 1x10 out.pdf
+          "pdfcpu nup -pages=3- out.pdf 6 in.pdf"
+          Rearrange selected pages of in.pdf (all pages starting with page 3) into 3x2 grids and write result to out.pdf using the default orientation
+          and default paper size A4. in.pdf's page size will be preserved.
+
+          "pdfcpu nup out.pdf 9 logo.jpg"
+          Arrange instances of logo.jpg into a 3x3 grid and write result to out.pdf using the A4 default format.
+          
+          "pdfcpu nup 'f:Tabloid' out.pdf 4 *.jpg" 
+          Rearrange all jpg files into 2x2 grids and write result to out.pdf using the Tabloid format
+          and the default orientation.`
+
+	usageGrid     = "usage: pdfcpu grid [-v(erbose)|vv] [-pages pageSelection] [description] outFile m n inFile|imageFiles..."
+	usageLongGrid = `Grid rearranges PDF pages or images for enhanced browsing experience.
+For a PDF inputfile each output page represents a grid of input pages.
+For image inputfiles each output page shows all images layed out onto grids of given paper size. 
+This command produces poster like PDF pages convenient for page and image browsing. 
+
+ verbose, v ... turn on logging
+         vv ... verbose logging
+      pages ... page selection for inFile only
+description ... dimensions, format, orientation
+    outFile ... output pdf file
+          m ... grid columns
+          n ... grid lines
+     inFile ... input pdf file
+ imageFiles ... input image file(s)
+
+    <description> is a comma separated configuration string containing:
+
+    optional entries:
+  
+        (defaults: d:595 842, f:A4, o:rd, b:on, m:3)
+  
+    d: dimensions (width,height) in user units eg. '400 200'
+
+    f: form/paper size, eg. A4, Letter, Legal...
+                           Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
+                           Appended 'L' enforces landscape mode. (eg. A3L)
+                           Appended 'P' enforces portrait mode. (eg. TabloidP)
+                           Only one of dimensions or format is allowed.
+
+    o: orientation, one of rd ... right down (=default)
+                           dr ... down right
+                           ld ... left down
+                           dl ... down left
+                           Orientation applies to PDF input files only.
+
+    b: draw border ... on/off true/false
+    
+    m: margin for n-up content: int >= 0
+
+Examples: "pdfcpu nup out.pdf 1 10 in.pdf"
           Rearrange pages of in.pdf into 1x10 grids and write result to out.pdf using the default orientation.
           The output page size is the result of a 1(hor)x10(vert) page grid using in.pdf's page size.
 
-          pdfcpu nup in.pdf 2x2 out.pdf 
+          "pdfcpu nup 'LegalL' out.pdf 2 2 in.pdf" 
           Rearrange pages of in.pdf into 2x2 grids and write result to out.pdf using the default orientation.
-          The output page size is the result of a 2(hor)x2(vert) page grid using in.pdf's page size.
+          The output page size is the result of a 2(hor)x2(vert) page grid using page size Legal in landscape mode.
 
-          pdfcpu nup 'o:rd' in.pdf 3x2 out.pdf 
+          "pdfcpu nup 'o:rd' out.pdf 3 2 in.pdf" 
           Rearrange pages of in.pdf into 3x2 grids and write result to out.pdf using orientation 'right down'.
           The output page size is the result of a 3(hor)x2(vert) page grid using in.pdf's page size.
 
-          pdfcpu nup logo.jpg 9 out.pdf 
-          Arrange instances of logo.jpg into a 3x3 grid and write result to out.pdf using the A4 default format.
-          
-          pdfcpu nup 'f:A3' logo.jpg 9 out.pdf 
-          Arrange instances of logo.jpg into a 3x3 grid and write result to out.pdf using the A3 format.`
+          "pdfcpu nup 'd:400 400' out.pdf 6 8 *.jpg"
+          Arrange imagefiles onto a 6x8 page grid and write result to out.pdf using a grid cell size of 400x400.`
+
+	paperSizes = `This is a list of predefined paper sizes:
+   
+   ISO 216:1975 A:
+      4A0, 2A0, A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10
+   
+   ISO 216:1975 B:
+      B0+, B0, B1+, B1, B2+, B2, B3, B4, B5, B6, B7, B8, B9, B10
+   
+   ISO 269:1985 C:
+      C0, C1, C2, C3, C4, C5, C6, C7, C8, C9, C10 
+   
+   ISO 217:2013 untrimmed:
+      RA0, RA1, RA2, RA3, RA4, SRA0, SRA1, SRA2, SRA3, SRA4, SRA1+, SRA2+, SRA3+, SRA3++
+   
+   American:
+      SuperB(=B+),
+      Tabloid (=ANSIB, DobleCarta), Ledger(=ANSIB, DobleCarta),
+      Legal, GovLegal(=Oficio, Folio),
+      Letter (=ANSIA, Carta, AmericanQuarto), GovLetter, Executive,
+      HalfLetter (=Memo, Statement, Stationary),
+      JuniorLegal (=IndexCard),
+      Photo
+   
+   ANSI/ASME Y14.1:
+      ANSIA (=Letter, Carta, AmericanQuarto),
+      ANSIB (=Ledger, Tabloid, DobleCarta),
+      ANSIC, ANSID, ANSIE, ANSIF
+   
+   ANSI/ASME Y14.1 Architectural series:
+      ARCHA (=ARCH1),
+      ARCHB (=ARCH2, ExtraTabloide),
+      ARCHC (=ARCH3),
+      ARCHD (=ARCH4),
+      ARCHE (=ARCH6),
+      ARCHE1 (=ARCH5),
+      ARCHE2,
+      ARCHE3
+   
+   American uncut:
+      Bond, Book, Cover, Index, NewsPrint (=Tissue), Offset (=Text)
+   
+   English uncut:
+      Crown, DoubleCrown, Quad, Demy, DoubleDemy, Medium, Royal, SuperRoyal,
+      DoublePott, DoublePost, Foolscap, DoubleFoolscap   
+   
+   F4
+
+   China GB/T 148-1997 D Series:
+      D0, D1, D2, D3, D4, D5, D6,
+      RD0, RD1, RD2, RD3, RD4, RD5, RD6
+
+   Japan:
+   
+   B-series variant:
+      JIS-B0, JIS-B1, JIS-B2, JIS-B3, JIS-B4, JIS-B5, JIS-B6,
+      JIS-B7, JIS-B8, JIS-B9, JIS-B10, JIS-B11, JIS-B12
+   
+   Shirokuban4, Shirokuban5, Shirokuban6
+   Kiku4, Kiku5
+   AB, B40, Shikisen`
 
 	usageVersion     = "usage: pdfcpu version"
 	usageLongVersion = "Version prints the pdfcpu version"

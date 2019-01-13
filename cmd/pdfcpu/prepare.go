@@ -615,75 +615,128 @@ func prepareRotateCommand(config *pdfcpu.Configuration) *api.Command {
 	return api.RotateCommand(filenameIn, r, pages, config)
 }
 
-func prepareNUpCommand(config *pdfcpu.Configuration) *api.Command {
+func parseAfterNUpDetails(nup *pdfcpu.NUp, argInd int, filenameOut string) []string {
 
-	if len(flag.Args()) < 2 || len(flag.Args()) > 4 {
-		fmt.Fprintf(os.Stderr, "%s\n\n", usageNUp)
-		os.Exit(1)
+	var err error
+
+	if nup.PageGrid {
+		err = pdfcpu.ParseNUpGridDefinition(flag.Arg(argInd), flag.Arg(argInd+1), nup)
+		argInd += 2
+	} else {
+		err = pdfcpu.ParseNUpValue(flag.Arg(argInd), nup)
+		argInd++
 	}
-
-	nup := pdfcpu.DefaultNUpConfig()
-
-	filenameIn := flag.Arg(0)
-	if hasPdfExtension(filenameIn) || hasImageExtension(filenameIn) {
-
-		if len(flag.Args()) > 3 {
-			fmt.Fprintf(os.Stderr, "%s\n\n", usageNUp)
-			os.Exit(1)
-		}
-
-		// pdfcpu nup inFile n|mxn {outFile}
-		// No optional 'description' argument provided.
-		// We use the default nup configuration.
-		if hasImageExtension(filenameIn) {
-			nup.ImgInputFile = true
-		}
-
-		err := pdfcpu.ParseNUpGridDefinition(flag.Arg(1), nup)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err)
-			os.Exit(1)
-		}
-
-		filenameOut := defaultFilenameOut(filenameIn)
-		if len(flag.Args()) == 3 {
-			filenameOut = flag.Arg(2)
-			ensurePdfExtension(filenameOut)
-		}
-
-		return api.NUpCommand(filenameIn, filenameOut, nup, config)
-	}
-
-	// pdfcpu nup description inFile n|mxn {outFile}
-	//fmt.Printf("details: <%s>\n", flag.Arg(0))
-	err := pdfcpu.ParseNUpDetails(flag.Arg(0), nup)
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
-	if nup == nil {
-		log.Fatal("missing nup description")
-	}
-
-	filenameIn = flag.Arg(1)
-	if !hasPdfExtension(filenameIn) && !hasImageExtension(filenameIn) {
-		log.Fatalf("Inputfile has to be a PDF or an image file: %s\n", filenameIn)
-	}
-
-	if hasImageExtension(filenameIn) {
-		nup.ImgInputFile = true
-	}
-
-	err = pdfcpu.ParseNUpGridDefinition(flag.Arg(2), nup)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}
 
-	filenameOut := defaultFilenameOut(filenameIn)
-	if len(flag.Args()) == 4 {
-		filenameOut = flag.Arg(3)
-		ensurePdfExtension(filenameOut)
+	filenameIn := flag.Arg(argInd)
+	if !hasPdfExtension(filenameIn) && !hasImageExtension(filenameIn) {
+		fmt.Fprintf(os.Stderr, "Inputfile has to be a PDF or one or a sequence of image files: %s\n", filenameIn)
+		os.Exit(1)
 	}
 
-	return api.NUpCommand(filenameIn, filenameOut, nup, config)
+	filenamesIn := []string{filenameIn}
+
+	if hasPdfExtension(filenameIn) {
+		if len(flag.Args()) > argInd+1 {
+			usage := usageNUp
+			if nup.PageGrid {
+				usage = usageGrid
+			}
+			fmt.Fprintf(os.Stderr, "%s\n\n", usage)
+			os.Exit(1)
+		}
+		if filenameIn == filenameOut {
+			fmt.Fprintln(os.Stderr, "input and output pdf should be different.")
+			os.Exit(1)
+		}
+	} else {
+		nup.ImgInputFile = true
+		for i := argInd + 1; i < len(flag.Args()); i++ {
+			arg := flag.Args()[i]
+			ensureImageExtension(arg)
+			filenamesIn = append(filenamesIn, arg)
+		}
+	}
+
+	return filenamesIn
+}
+
+func prepareNUpCommand(config *pdfcpu.Configuration) *api.Command {
+
+	if len(flag.Args()) < 3 {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageNUp)
+		os.Exit(1)
+	}
+
+	pages, err := api.ParsePageSelection(pageSelection)
+	if err != nil {
+		log.Fatalf("problem with flag pageSelection: %v", err)
+	}
+
+	nup := pdfcpu.DefaultNUpConfig()
+
+	filenameOut := flag.Arg(0)
+	if hasPdfExtension(filenameOut) {
+		// pdfcpu nup outFile n inFile|imageFiles...
+		// No optional 'description' argument provided.
+		// We use the default nup configuration.
+		filenamesIn := parseAfterNUpDetails(nup, 1, filenameOut)
+		return api.NUpCommand(filenamesIn, filenameOut, pages, nup, config)
+	}
+
+	// pdfcpu nup description outFile n inFile|imageFiles...
+	//fmt.Printf("details: <%s>\n", flag.Arg(0))
+	err = pdfcpu.ParseNUpDetails(flag.Arg(0), nup)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(1)
+	}
+
+	filenameOut = flag.Arg(1)
+	ensurePdfExtension(filenameOut)
+
+	filenamesIn := parseAfterNUpDetails(nup, 2, filenameOut)
+	return api.NUpCommand(filenamesIn, filenameOut, pages, nup, config)
+}
+
+func prepareGridCommand(config *pdfcpu.Configuration) *api.Command {
+
+	if len(flag.Args()) < 4 {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageGrid)
+		os.Exit(1)
+	}
+
+	pages, err := api.ParsePageSelection(pageSelection)
+	if err != nil {
+		log.Fatalf("problem with flag pageSelection: %v", err)
+	}
+
+	nup := pdfcpu.DefaultNUpConfig()
+	nup.PageGrid = true
+
+	filenameOut := flag.Arg(0)
+	if hasPdfExtension(filenameOut) {
+		// pdfcpu grid outFile m n inFile|imageFiles...
+		// No optional 'description' argument provided.
+		// We use the default nup configuration.
+		filenamesIn := parseAfterNUpDetails(nup, 1, filenameOut)
+		return api.NUpCommand(filenamesIn, filenameOut, pages, nup, config)
+	}
+
+	// pdfcpu grid description outFile m n inFile|imageFiles...
+	//fmt.Printf("details: <%s>\n", flag.Arg(0))
+	err = pdfcpu.ParseNUpDetails(flag.Arg(0), nup)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(1)
+	}
+
+	filenameOut = flag.Arg(1)
+	ensurePdfExtension(filenameOut)
+
+	filenamesIn := parseAfterNUpDetails(nup, 2, filenameOut)
+	return api.NUpCommand(filenamesIn, filenameOut, pages, nup, config)
 }

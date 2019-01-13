@@ -1312,8 +1312,8 @@ func ImportImages(cmd *Command) ([]string, error) {
 	filesIn := cmd.InFiles
 	imp := cmd.Import
 
-	//log.API.Printf("importing images into %s: %v\n%s", fileOut, filesIn, imp)
-	fmt.Printf("importing images into %s: %v\n%s\n", fileOut, filesIn, imp)
+	log.API.Printf("importing images into %s: %v\n%s", fileOut, filesIn, imp)
+	//fmt.Printf("importing images into %s: %v\n%s\n", fileOut, filesIn, imp)
 
 	var (
 		ctx *pdf.Context
@@ -1321,10 +1321,10 @@ func ImportImages(cmd *Command) ([]string, error) {
 	)
 
 	if fileExists(fileOut) {
-		fmt.Printf("%s already exists..\n", fileOut)
+		//fmt.Printf("%s already exists..\n", fileOut)
 		ctx, _, _, err = readAndValidate(fileOut, config, time.Now())
 	} else {
-		fmt.Printf("%s will be created\n", fileOut)
+		//fmt.Printf("%s will be created\n", fileOut)
 		ctx, err = pdf.CreateContextWithXRefTable(config, imp.PageDim)
 	}
 	if err != nil {
@@ -1432,8 +1432,9 @@ func Rotate(cmd *Command) ([]string, error) {
 // NUp rearranges pages or images into page grids.
 func NUp(cmd *Command) ([]string, error) {
 
-	fileIn := *cmd.InFile
+	filesIn := cmd.InFiles
 	fileOut := *cmd.OutFile
+	pageSelection := cmd.PageSelection
 	config := cmd.Config
 	nup := cmd.NUp
 
@@ -1446,33 +1447,32 @@ func NUp(cmd *Command) ([]string, error) {
 
 	if nup.ImgInputFile {
 
-		ctx, err = pdf.NUpFromImage(config, fileIn, nup)
+		ctx, err = pdf.NUpFromImage(config, filesIn, nup)
 
 	} else {
 
-		ctx, _, _, err := readAndValidate(fileIn, config, time.Now())
+		ctx, _, _, err = readAndValidate(filesIn[0], config, time.Now())
 		if err != nil {
 			return nil, err
 		}
 
-		// Check for constant page dimensions.
-		ok, err := pdf.ConstantPageDimension(ctx.XRefTable)
+		pages, err := pagesForPageSelection(ctx.PageCount, pageSelection)
 		if err != nil {
 			return nil, err
 		}
-		if !ok {
-			return nil, errors.New("nup: assumes all pages have the same size")
-		}
+
+		ensureSelectedPages(ctx, &pages)
 
 		// New pages get added to ctx while old pages get deleted.
-		// This way we avoid migrating objects between two contexts.
-		err = pdf.NUpFromPDF(ctx.XRefTable, nup)
+		// This way we avoid migrating objects between contexts.
+		err = pdf.NUpFromPDF(ctx, pages, nup)
 		if err != nil {
 			return nil, err
 		}
 
 	}
 
+	// Optional
 	err = ValidateContext(ctx)
 	if err != nil {
 		return nil, err

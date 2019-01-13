@@ -24,6 +24,10 @@ type Point struct {
 	X, Y float64
 }
 
+func (p Point) String() string {
+	return fmt.Sprintf("(%.2f,%.2f)\n", p.X, p.Y)
+}
+
 // Rectangle represents a rectangular region in userspace.
 type Rectangle struct {
 	LL, UR Point
@@ -34,7 +38,7 @@ func (r Rectangle) Width() float64 {
 	return r.UR.X - r.LL.X
 }
 
-// Height returns the vertical span of a rectangle un userspace.
+// Height returns the vertical span of a rectangle in userspace.
 func (r Rectangle) Height() float64 {
 	return r.UR.Y - r.LL.Y
 }
@@ -44,11 +48,31 @@ func (r Rectangle) AspectRatio() float64 {
 	return r.Width() / r.Height()
 }
 
+// Landscape returns true if r is in landscape mode.
+func (r Rectangle) Landscape() bool {
+	return r.AspectRatio() > 1
+}
+
+// Portrait returns true if r is in portrait mode.
+func (r Rectangle) Portrait() bool {
+	return r.AspectRatio() < 1
+}
+
+// Center returns the center point of a rectangle.
+func (r Rectangle) Center() Point {
+	return Point{(r.UR.X - r.Width()/2), (r.UR.Y - r.Height()/2)}
+}
+
+// Contains returns true if rectangle r contains point p.
+func (r Rectangle) Contains(p Point) bool {
+	return p.X >= r.LL.X && p.X <= r.UR.X && p.Y >= r.LL.Y && p.Y <= r.LL.Y
+}
+
 func (r Rectangle) String() string {
 	return fmt.Sprintf("(%3.2f, %3.2f, %3.2f, %3.2f) w=%.2f h=%.2f ar=%.2f", r.LL.X, r.LL.Y, r.UR.X, r.UR.Y, r.Width(), r.Height(), r.AspectRatio())
 }
 
 // NewRectangle returns a new rectangle for given corner coordinates.
-func NewRectangle(llx, lly, urx, ury float64) Rectangle {
-	return Rectangle{LL: Point{llx, lly}, UR: Point{urx, ury}}
+func NewRectangle(llx, lly, urx, ury float64) *Rectangle {
+	return &Rectangle{LL: Point{llx, lly}, UR: Point{urx, ury}}
 }

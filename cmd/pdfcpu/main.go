@@ -112,6 +112,7 @@ func main() {
 		"rotate":    prepareRotateCommand,
 		"nup":       prepareNUpCommand,
 		"n-up":      prepareNUpCommand,
+		"grid":      prepareGridCommand,
 	} {
 		if command == k {
 			cmd = v(config)
@@ -173,8 +174,10 @@ func helpString(topic string) string {
 		"watermark": {usageWatermark, usageLongWatermark, true},
 		"import":    {usageImportImages, usageLongImportImages, false},
 		"rotate":    {usageRotate, usageLongRotate, true},
-		"nup":       {usageNUp, usageLongNUp, false},
-		"n-up":      {usageNUp, usageLongNUp, false},
+		"nup":       {usageNUp, usageLongNUp, true},
+		"n-up":      {usageNUp, usageLongNUp, true},
+		"grid":      {usageGrid, usageLongGrid, true},
+		"paper":     {paperSizes, "", false},
 		"version":   {usageVersion, usageLongVersion, false},
 	} {
 		if topic == k {

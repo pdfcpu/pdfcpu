@@ -33,7 +33,7 @@ var errInvalidImportConfig = errors.New("Invalid import configuration string. Pl
 
 // Import represents the command details for the command "ImportImage".
 type Import struct {
-	PageDim  dim     // page dimensions in user units.
+	PageDim  *dim    // page dimensions in user units.
 	PageSize string  // one of A0,A1,A2,A3,A4(=default),A5,A6,A7,A8,Letter,Legal,Ledger,Tabloid,Executive,ANSIC,ANSID,ANSIE.
 	Pos      anchor  // position anchor, one of tl,tc,tr,l,c,r,bl,bc,br,full.
 	Dx, Dy   int     // anchor offset.
@@ -49,51 +49,66 @@ func (imp Import) String() string {
 	}
 
 	return fmt.Sprintf("Import config: %s %s, pos=%s, dx=%d, dy=%d, scaling: %.1f %s\n",
-		imp.PageSize, imp.PageDim, imp.Pos, imp.Dx, imp.Dy, imp.Scale, sc)
+		imp.PageSize, *imp.PageDim, imp.Pos, imp.Dx, imp.Dy, imp.Scale, sc)
 }
 
-func parsePageFormat(v string, setDim bool) (dim, string, error) {
-
-	var d dim
+func parsePageFormat(v string, setDim bool) (*dim, string, error) {
 
 	if setDim {
-		return d, v, errors.New("Only one of format('f') or dimensions('d') allowed")
+		return nil, v, errors.New("Only one of format('f') or dimensions('d') allowed")
+	}
+
+	// Optional: appended last letter L indicates landscape mode.
+	// Optional: appended last letter P indicates portrait mode.
+	// eg. A4L means A4 in landscape mode whereas A4 defaults to A4P
+	// The default mode is defined implicitly via PaperSize dimensions.
+
+	var land, port bool
+
+	if strings.HasSuffix(v, "L") {
+		v = v[:len(v)-1]
+		land = true
+	} else if strings.HasSuffix(v, "P") {
+		v = v[:len(v)-1]
+		port = true
 	}
 
 	d, ok := PaperSize[v]
 	if !ok {
-		return d, v, errors.Errorf("Page format %s is unsupported.\n", v)
+		return nil, v, errors.Errorf("Page format %s is unsupported.\n", v)
+	}
+
+	if d.Portrait() && land || d.Landscape() && port {
+		d.w, d.h = d.h, d.w
 	}
 
 	return d, v, nil
 }
 
-func parsePageDim(v string, setFormat bool) (dim, string, error) {
-
-	var d dim
+func parsePageDim(v string, setFormat bool) (*dim, string, error) {
 
 	if setFormat {
-		return d, v, errors.New("Only one of format('f') or dimensions('d') allowed")
+		return nil, v, errors.New("Only one of format('f') or dimensions('d') allowed")
 	}
 
 	ss := strings.Split(v, " ")
 	if len(ss) != 2 {
-		return d, v, errors.Errorf("illegal dimension string: need 2 positive values, %s\n", v)
+		return nil, v, errors.Errorf("illegal dimension string: need 2 positive values, %s\n", v)
 	}
 
 	w, err := strconv.Atoi(ss[0])
 	if err != nil || w <= 0 {
-		return d, v, errors.Errorf("dimension X must be a positiv numeric value: %s\n", ss[0])
+		return nil, v, errors.Errorf("dimension X must be a positiv numeric value: %s\n", ss[0])
 	}
 
 	h, err := strconv.Atoi(ss[1])
 	if err != nil || h <= 0 {
-		return d, v, errors.Errorf("dimension Y must be a positiv numeric value: %s\n", ss[1])
+		return nil, v, errors.Errorf("dimension Y must be a positiv numeric value: %s\n", ss[1])
 	}
 
-	d = dim{w, h}
+	d := dim{w, h}
 
-	return d, "", nil
+	return &d, "", nil
 }
 
 type anchor int
@@ -332,7 +347,7 @@ func lowerLeftCorner(vpw, vph, bbw, bbh float64, a anchor) types.Point {
 	return p
 }
 
-func importImagePDFBytes(wr io.Writer, pageDim dim, imgWidth, imgHeight float64, imp *Import) {
+func importImagePDFBytes(wr io.Writer, pageDim *dim, imgWidth, imgHeight float64, imp *Import) {
 
 	vpw := float64(pageDim.w)
 	vph := float64(pageDim.h)
@@ -406,12 +421,12 @@ func NewPageForImage(xRefTable *XRefTable, fileName string, parentIndRef *Indire
 	contents.InsertName("Filter", filter.Flate)
 	contents.FilterPipeline = []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}
 
-	dim := dim{w, h}
+	dim := &dim{w, h}
 	if imp.Pos != Full {
 		dim = imp.PageDim
 	}
 	// mediabox = physical page dimensions
-	mediaBox := NewRectangle(0, 0, float64(dim.w), float64(dim.h))
+	mediaBox := RectForDim(dim.w, dim.h)
 
 	var buf bytes.Buffer
 	importImagePDFBytes(&buf, dim, float64(w), float64(h), imp)
@@ -431,7 +446,7 @@ func NewPageForImage(xRefTable *XRefTable, fileName string, parentIndRef *Indire
 		map[string]Object{
 			"Type":      Name("Page"),
 			"Parent":    *parentIndRef,
-			"MediaBox":  mediaBox,
+			"MediaBox":  mediaBox.Array(),
 			"Resources": *resIndRef,
 			"Contents":  *contentsIndRef,
 		},
