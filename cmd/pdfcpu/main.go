@@ -110,6 +110,9 @@ func main() {
 		"watermark": prepareAddWatermarksCommand,
 		"import":    prepareImportImagesCommand,
 		"rotate":    prepareRotateCommand,
+		"nup":       prepareNUpCommand,
+		"n-up":      prepareNUpCommand,
+		"grid":      prepareGridCommand,
 	} {
 		if command == k {
 			cmd = v(config)
@@ -135,7 +138,7 @@ func ensurePdfExtension(filename string) {
 }
 
 func defaultFilenameOut(filename string) string {
-	ensurePdfExtension(filename)
+	//ensurePdfExtension(filename)
 	return filename[:len(filename)-4] + "_new.pdf"
 }
 
@@ -171,6 +174,10 @@ func helpString(topic string) string {
 		"watermark": {usageWatermark, usageLongWatermark, true},
 		"import":    {usageImportImages, usageLongImportImages, false},
 		"rotate":    {usageRotate, usageLongRotate, true},
+		"nup":       {usageNUp, usageLongNUp, true},
+		"n-up":      {usageNUp, usageLongNUp, true},
+		"grid":      {usageGrid, usageLongGrid, true},
+		"paper":     {paperSizes, "", false},
 		"version":   {usageVersion, usageLongVersion, false},
 	} {
 		if topic == k {

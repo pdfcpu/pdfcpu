@@ -22,6 +22,8 @@ import (
 	"io"
 	"strconv"
 	"time"
+
+	"github.com/hhrutter/pdfcpu/pkg/types"
 )
 
 // Supported line delimiters
@@ -136,9 +138,74 @@ func (i Integer) Value() int {
 
 ///////////////////////////////////////////////////////////////////////////////////
 
-// NewRectangle creates a rectangle array
-func NewRectangle(llx, lly, urx, ury float64) Array {
-	return NewNumberArray(llx, lly, urx, ury)
+// Point represents a user space location.
+type Point struct {
+	X, Y float64
+}
+
+// Rectangle represents a rectangular region in userspace.
+type Rectangle struct {
+	*types.Rectangle
+}
+
+func (r Rectangle) equals(r2 Rectangle) bool {
+	return r.LL == r2.LL && r.UR == r2.UR
+}
+
+// FitsWithin returns true if rectangle r fits within rectangle r2.
+func (r Rectangle) FitsWithin(r2 *Rectangle) bool {
+	return r.Width() <= r2.Width() && r.Height() <= r2.Height()
+}
+
+// ScaledWidth returns the width for given height according to r's aspect ratio.
+func (r Rectangle) ScaledWidth(h float64) float64 {
+	return r.AspectRatio() * h
+}
+
+// ScaledHeight returns the height for given width according to r's aspect ratio.
+func (r Rectangle) ScaledHeight(w float64) float64 {
+	return w / r.AspectRatio()
+}
+
+// Array returns the PDF representation of a rectangle.
+func (r Rectangle) Array() Array {
+	return NewNumberArray(r.LL.X, r.LL.Y, r.UR.X, r.UR.Y)
+}
+
+// CroppedCopy returns a copy of r with applied margin..
+func (r Rectangle) CroppedCopy(margin float64) *Rectangle {
+	return Rect(
+		r.LL.X+margin,
+		r.LL.Y+margin,
+		r.UR.X-margin,
+		r.UR.Y-margin,
+	)
+}
+
+// Rect returns a new rectangle for given lower left and upper right corners.
+func Rect(llx, lly, urx, ury float64) *Rectangle {
+	return &Rectangle{types.NewRectangle(llx, lly, urx, ury)}
+}
+
+// RectForArray returns a new rectangle for given Array.
+func RectForArray(a Array) *Rectangle {
+	return Rect(
+		a[0].(Float).Value(),
+		a[1].(Float).Value(),
+		a[2].(Float).Value(),
+		a[3].(Float).Value(),
+	)
+}
+
+// RectForDim returns a new rectangle for given dimensions.
+func RectForDim(width, height int) *Rectangle {
+	return Rect(0.0, 0.0, float64(width), float64(height))
+}
+
+// RectForFormat returns a new rectangle for given format.
+func RectForFormat(f string) *Rectangle {
+	d := PaperSize[f]
+	return RectForDim(d.w, d.h)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////

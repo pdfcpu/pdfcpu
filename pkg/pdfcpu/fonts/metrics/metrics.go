@@ -18,7 +18,7 @@ limitations under the License.
 package metrics
 
 import (
-	"github.com/hhrutter/pdfcpu/pkg/fonts/metrics/standard"
+	"github.com/hhrutter/pdfcpu/pkg/pdfcpu/fonts/metrics/standard"
 	"github.com/hhrutter/pdfcpu/pkg/types"
 )
 
@@ -40,7 +40,7 @@ import (
 // Courier-BoldOblique
 
 // FontBoundingBox returns the font bounding box for a given font as specified in the corresponding AFM file.
-func FontBoundingBox(fontName string) types.Rectangle {
+func FontBoundingBox(fontName string) *types.Rectangle {
 	return standardFonts[fontName].bbox
 }
 
@@ -105,7 +105,7 @@ func FontSize(text, fontName string, width float64) int {
 }
 
 // UserSpaceFontBBox returns the font box for given font name and font size in user space coordinates.
-func UserSpaceFontBBox(fontName string, fontSize int) types.Rectangle {
+func UserSpaceFontBBox(fontName string, fontSize int) *types.Rectangle {
 	fontBBox := FontBoundingBox(fontName)
 	llx := userSpaceUnits(fontBBox.LL.X, fontSize)
 	lly := userSpaceUnits(fontBBox.LL.Y, fontSize)
@@ -131,7 +131,7 @@ func FontNames() []string {
 var standardFonts = map[string]struct {
 	charWidths   map[int]int
 	averageWidth int
-	bbox         types.Rectangle
+	bbox         *types.Rectangle
 }{
 	"Helvetica":   {standard.FontWidthHelvetica, 0, types.NewRectangle(-166, -225, 1000, 931)},
 	"Times-Roman": {standard.FontWidthTimesRoman, 0, types.NewRectangle(-168, -218, 1000, 898)},

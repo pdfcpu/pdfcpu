@@ -23,20 +23,21 @@ import (
 
 // Command represents an execution context.
 type Command struct {
-	Mode          pdf.CommandMode    // VALIDATE  OPTIMIZE  SPLIT  MERGE  EXTRACT  TRIM  LISTATT ADDATT REMATT EXTATT  ENCRYPT  DECRYPT  CHANGEUPW  CHANGEOPW LISTP ADDP  WATERMARK  IMPORT  ROTATE
-	InFile        *string            //    *         *        *      -       *      *      *       *       *      *       *        *         *          *       *     *       *         -       *
-	InFiles       []string           //    -         -        -      *       -      -      -       *       *      *       -        -         -          -       -     -       -         *       -
-	InDir         *string            //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -       -         -       -
-	OutFile       *string            //    -         *        -      *       -      *      -       -       -      -       *        *         *          *       -     -       *         *       -
-	OutDir        *string            //    -         -        *      -       *      -      -       -       -      *       -        -         -          -       -     -       -         -       -
-	PageSelection []string           //    -         -        -      -       *      *      -       -       -      -       -        -         -          -       -     -       *         -       -
-	Config        *pdf.Configuration //    *         *        *      *       *      *      *       *       *      *       *        *         *          *       *     *       *         *       *
-	PWOld         *string            //    -         -        -      -       -      -      -       -       -      -       -        -         *          *       -     -       -         -       -
-	PWNew         *string            //    -         -        -      -       -      -      -       -       -      -       -        -         *          *       -     -       -         -       -
-	Watermark     *pdf.Watermark     //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -       -         -       -
-	Span          int                //    -         -        *      -       -      -      -       -       -      -       -        -         -          -       -     -       -         -       -
-	Import        *pdf.Import        //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -       -         *       -
-	Rotation      int                //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -       -         -       *
+	Mode          pdf.CommandMode    // VALIDATE  OPTIMIZE  SPLIT  MERGE  EXTRACT  TRIM  LISTATT ADDATT REMATT EXTATT  ENCRYPT  DECRYPT  CHANGEUPW  CHANGEOPW LISTP ADDP  WATERMARK  IMPORT  ROTATE  NUP
+	InFile        *string            //    *         *        *      -       *      *      *       *       *      *       *        *         *          *       *     *       *         -       *     -
+	InFiles       []string           //    -         -        -      *       -      -      -       *       *      *       -        -         -          -       -     -       -         *       -     *
+	InDir         *string            //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -       -         -       -     -
+	OutFile       *string            //    -         *        -      *       -      *      -       -       -      -       *        *         *          *       -     -       *         *       -     *
+	OutDir        *string            //    -         -        *      -       *      -      -       -       -      *       -        -         -          -       -     -       -         -       -     -
+	PageSelection []string           //    -         -        -      -       *      *      -       -       -      -       -        -         -          -       -     -       *         -       -     *
+	Config        *pdf.Configuration //    *         *        *      *       *      *      *       *       *      *       *        *         *          *       *     *       *         *       *     *
+	PWOld         *string            //    -         -        -      -       -      -      -       -       -      -       -        -         *          *       -     -       -         -       -     -
+	PWNew         *string            //    -         -        -      -       -      -      -       -       -      -       -        -         *          *       -     -       -         -       -     -
+	Watermark     *pdf.Watermark     //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -       -         -       -     -
+	Span          int                //    -         -        *      -       -      -      -       -       -      -       -        -         -          -       -     -       -         -       -     -
+	Import        *pdf.Import        //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -       -         *       -     -
+	Rotation      int                //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -       -         -       *     -
+	NUp           *pdf.NUp           //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -       -         -       -     *
 }
 
 // Process executes a pdfcpu command.
@@ -75,6 +76,7 @@ func Process(cmd *Command) (out []string, err error) {
 		pdf.ADDPERMISSIONS:     processPermissions,
 		pdf.IMPORTIMAGES:       ImportImages,
 		pdf.ROTATE:             Rotate,
+		pdf.NUP:                NUp,
 	} {
 		if cmd.Mode == k {
 			return v(cmd)
@@ -356,5 +358,16 @@ func RotateCommand(pdfFileNameIn string, rotation int, pageSelection []string, c
 		InFile:        &pdfFileNameIn,
 		PageSelection: pageSelection,
 		Rotation:      rotation,
+		Config:        config}
+}
+
+// NUpCommand creates a new command to render PDFs or image files in n-up fashion.
+func NUpCommand(fileNamesIn []string, pdfFileNameOut string, pageSelection []string, nUp *pdf.NUp, config *pdf.Configuration) *Command {
+	return &Command{
+		Mode:          pdf.NUP,
+		InFiles:       fileNamesIn,
+		OutFile:       &pdfFileNameOut,
+		PageSelection: pageSelection,
+		NUp:           nUp,
 		Config:        config}
 }

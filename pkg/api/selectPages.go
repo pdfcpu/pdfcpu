@@ -72,7 +72,7 @@ func ParsePageSelection(s string) ([]string, error) {
 		return nil, errors.Errorf("-pages \"%s\" => syntax error\n", s)
 	}
 
-	log.API.Printf("pageSelection: <%s>\n", s)
+	log.API.Printf("pageSelection: %s\n", s)
 
 	return strings.Split(s, ","), nil
 }

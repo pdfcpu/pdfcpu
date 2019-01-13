@@ -752,18 +752,114 @@ func TestCenteredImportImage(t *testing.T) {
 func TestRotate(t *testing.T) {
 
 	inFile := filepath.Join(inDir, "Acroforms2.pdf")
-	config := pdf.NewDefaultConfiguration()
-	rotation := 90
-
-	// Rotate the first 2 pages clockwise by 90 degrees.
-	_, err := Process(RotateCommand(inFile, rotation, []string{"1-2"}, config))
+	outFile := filepath.Join(outDir, "Acroforms3.pdf")
+	err := copyFile(inFile, outFile)
 	if err != nil {
 		t.Fatalf("TestRotate: %v\n", err)
 	}
 
-	_, err = Process(ValidateCommand(inFile, config))
+	config := pdf.NewDefaultConfiguration()
+	rotation := 90
+
+	// Rotate the first 2 pages clockwise by 90 degrees.
+	_, err = Process(RotateCommand(outFile, rotation, []string{"1-2"}, config))
 	if err != nil {
 		t.Fatalf("TestRotate: %v\n", err)
+	}
+
+	_, err = Process(ValidateCommand(outFile, config))
+	if err != nil {
+		t.Fatalf("TestRotate: %v\n", err)
+	}
+}
+
+func TestNUpPDF(t *testing.T) {
+
+	inFiles := []string{filepath.Join(inDir, "Acroforms2.pdf")}
+	outFile := filepath.Join(outDir, "Acroforms2.pdf")
+	config := pdf.NewDefaultConfiguration()
+
+	nup := pdf.DefaultNUpConfig()
+	pdf.ParseNUpValue("4", nup)
+
+	_, err := Process(NUpCommand(inFiles, outFile, nil, nup, config))
+	if err != nil {
+		t.Fatalf("TestNUpPDF: %v\n", err)
+	}
+
+	_, err = Process(ValidateCommand(outFile, config))
+	if err != nil {
+		t.Fatalf("TestNUpPDF: %v\n", err)
+	}
+}
+
+func TestNUpSingleImage(t *testing.T) {
+
+	inFiles := []string{filepath.Join(resDir, "pdfchip3.png")}
+	outFile := filepath.Join(outDir, "out.pdf")
+	config := pdf.NewDefaultConfiguration()
+
+	nup := pdf.DefaultNUpConfig()
+	nup.ImgInputFile = true
+	pdf.ParseNUpDetails("f:A3L", nup)
+	pdf.ParseNUpValue("9", nup)
+
+	_, err := Process(NUpCommand(inFiles, outFile, nil, nup, config))
+	if err != nil {
+		t.Fatalf("TestNUpSingleImage: %v\n", err)
+	}
+
+	_, err = Process(ValidateCommand(outFile, config))
+	if err != nil {
+		t.Fatalf("TestNUpSingleImage: %v\n", err)
+	}
+}
+
+func TestNUpImages(t *testing.T) {
+
+	inFiles := []string{
+		filepath.Join(resDir, "pdfchip3.png"),
+		filepath.Join(resDir, "demo.png"),
+		filepath.Join(resDir, "snow.jpg"),
+	}
+
+	outFile := filepath.Join(outDir, "out1.pdf")
+	config := pdf.NewDefaultConfiguration()
+
+	nup := pdf.DefaultNUpConfig()
+	nup.ImgInputFile = true
+	pdf.ParseNUpDetails("f:Tabloid, b:off, m:0", nup)
+	pdf.ParseNUpValue("6", nup)
+
+	_, err := Process(NUpCommand(inFiles, outFile, nil, nup, config))
+	if err != nil {
+		t.Fatalf("TestNUpImages: %v\n", err)
+	}
+
+	_, err = Process(ValidateCommand(outFile, config))
+	if err != nil {
+		t.Fatalf("TestNUpImages: %v\n", err)
+	}
+}
+
+func TestGridPDF(t *testing.T) {
+
+	inFiles := []string{filepath.Join(inDir, "Acroforms2.pdf")}
+	outFile := filepath.Join(outDir, "Acroforms2.pdf")
+	config := pdf.NewDefaultConfiguration()
+
+	nup := pdf.DefaultNUpConfig()
+	nup.PageGrid = true
+	pdf.ParseNUpGridDefinition("1", "3", nup)
+
+	_, err := Process(NUpCommand(inFiles, outFile, nil, nup, config))
+	if err != nil {
+		t.Fatalf("TestGridPDF: %v\n", err)
+	}
+
+	_, err = Process(ValidateCommand(outFile, config))
+	if err != nil {
+		t.Fatalf("TestGridPDF: %v\n", err)
 	}
 }
 
@@ -1408,42 +1504,37 @@ func TestEncryptDecrypt(t *testing.T) {
 	encryptDecrypt("networkProgr.pdf", config, t)
 }
 
-func copyFile(srcFileName, destFileName string) (err error) {
+func copyFile(srcFileName, destFileName string) error {
 
 	from, err := os.Open(srcFileName)
 	if err != nil {
-		return
+		return err
 	}
 	defer from.Close()
 
 	to, err := os.OpenFile(destFileName, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
-		return
+		return err
 	}
 	defer to.Close()
 
 	_, err = io.Copy(to, from)
 
-	return
+	return err
 }
 
-func prepareForAttachmentTest() (err error) {
+func prepareForAttachmentTest() error {
 
 	for _, fileName := range []string{"go.pdf", "golang.pdf", "T4.pdf", "go-lecture.pdf"} {
 		inFile := filepath.Join(inDir, fileName)
 		outFile := filepath.Join(outDir, fileName)
-		err = copyFile(inFile, outFile)
+		err := copyFile(inFile, outFile)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
-	err = copyFile(filepath.Join(resDir, "test.wav"), filepath.Join(outDir, "test.wav"))
-	if err != nil {
-		return
-	}
-
-	return
+	return copyFile(filepath.Join(resDir, "test.wav"), filepath.Join(outDir, "test.wav"))
 }
 
 func testAttachmentsStage1(fileName string, config *pdf.Configuration, t *testing.T) {

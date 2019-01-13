@@ -14,6 +14,8 @@ The available commands are:
 	stamp		add text or image stamp to selected pages
 	watermark	add text or image watermark for selected pages
 	import		import/convert images
+	nup         rearrange pages/images into grid page layout for reduced number of pages
+    grid        rearrange pages/images into grid page layout for enhanced browsing experience
 	rotate		rotate pages
 	attach		list, add, remove, extract embedded file attachments
 	perm		list, add user access permissions

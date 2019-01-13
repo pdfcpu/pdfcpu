@@ -1501,9 +1501,17 @@ func (xRefTable *XRefTable) IDFirstElement() (id []byte, err error) {
 // InheritedPageAttrs represents all inherited page attributes.
 type InheritedPageAttrs struct {
 	resources Dict
-	mediaBox  Array
-	cropBox   Array
+	mediaBox  *Rectangle
+	cropBox   *Rectangle
 	rotate    float64
+}
+
+func rect(xRefTable *XRefTable, a Array) *Rectangle {
+	llx := xRefTable.DereferenceNumber(a[0])
+	lly := xRefTable.DereferenceNumber(a[1])
+	urx := xRefTable.DereferenceNumber(a[2])
+	ury := xRefTable.DereferenceNumber(a[3])
+	return Rect(llx, lly, urx, ury)
 }
 
 func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict Dict, pAttrs *InheritedPageAttrs) error {
@@ -1520,18 +1528,21 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict Dict, pAttrs *Inher
 
 	obj, found = pageDict.Find("MediaBox")
 	if found {
-		pAttrs.mediaBox, err = xRefTable.DereferenceArray(obj)
+
+		a, err := xRefTable.DereferenceArray(obj)
 		if err != nil {
 			return err
 		}
+		pAttrs.mediaBox = rect(xRefTable, a)
 	}
 
 	obj, found = pageDict.Find("CropBox")
 	if found {
-		pAttrs.cropBox, err = xRefTable.DereferenceArray(obj)
+		a, err := xRefTable.DereferenceArray(obj)
 		if err != nil {
 			return err
 		}
+		pAttrs.cropBox = rect(xRefTable, a)
 	}
 
 	obj, found = pageDict.Find("Rotate")
@@ -1630,7 +1641,7 @@ func (xRefTable *XRefTable) PageDict(page int) (Dict, *InheritedPageAttrs, error
 
 	pageCount := 0
 
-	inhPAttrs := InheritedPageAttrs{}
+	var inhPAttrs InheritedPageAttrs
 
 	pageDict, err := xRefTable.processPageTree(root, &inhPAttrs, &pageCount, page)
 	if err != nil {
@@ -1638,4 +1649,12 @@ func (xRefTable *XRefTable) PageDict(page int) (Dict, *InheritedPageAttrs, error
 	}
 
 	return pageDict, &inhPAttrs, nil
+}
+
+// PageMediaBox returns the Mediabox in effect for page i.
+func (xRefTable *XRefTable) PageMediaBox(i int) (*Rectangle, error) {
+
+	_, inhPAttrs, err := xRefTable.PageDict(i)
+
+	return inhPAttrs.mediaBox, err
 }

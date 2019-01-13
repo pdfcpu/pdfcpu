@@ -33,67 +33,82 @@ var errInvalidImportConfig = errors.New("Invalid import configuration string. Pl
 
 // Import represents the command details for the command "ImportImage".
 type Import struct {
-	pageDim  dim     // page dimensions in user units.
-	pageSize string  // one of A5,A4,A3,Letter,Legal,Tabloid.
-	pos      anchor  // position anchor, one of tl,tc,tr,l,c,r,bl,bc,br,full.
-	dx, dy   int     // anchor offset.
-	scale    float64 // relative scale factor. 0 <= x <= 1
-	scaleAbs bool    // true for absolute scaling.
+	PageDim  *dim    // page dimensions in user units.
+	PageSize string  // one of A0,A1,A2,A3,A4(=default),A5,A6,A7,A8,Letter,Legal,Ledger,Tabloid,Executive,ANSIC,ANSID,ANSIE.
+	Pos      anchor  // position anchor, one of tl,tc,tr,l,c,r,bl,bc,br,full.
+	Dx, Dy   int     // anchor offset.
+	Scale    float64 // relative scale factor. 0 <= x <= 1
+	ScaleAbs bool    // true for absolute scaling.
 }
 
 func (imp Import) String() string {
 
 	sc := "relative"
-	if imp.scaleAbs {
+	if imp.ScaleAbs {
 		sc = "absolute"
 	}
 
 	return fmt.Sprintf("Import config: %s %s, pos=%s, dx=%d, dy=%d, scaling: %.1f %s\n",
-		imp.pageSize, imp.pageDim, imp.pos, imp.dx, imp.dy, imp.scale, sc)
+		imp.PageSize, *imp.PageDim, imp.Pos, imp.Dx, imp.Dy, imp.Scale, sc)
 }
 
-func parseImportFormat(v string, setDim bool, imp *Import) error {
+func parsePageFormat(v string, setDim bool) (*dim, string, error) {
 
 	if setDim {
-		return errors.New("Only one of format('f') or dimensions('d') allowed")
+		return nil, v, errors.New("Only one of format('f') or dimensions('d') allowed")
+	}
+
+	// Optional: appended last letter L indicates landscape mode.
+	// Optional: appended last letter P indicates portrait mode.
+	// eg. A4L means A4 in landscape mode whereas A4 defaults to A4P
+	// The default mode is defined implicitly via PaperSize dimensions.
+
+	var land, port bool
+
+	if strings.HasSuffix(v, "L") {
+		v = v[:len(v)-1]
+		land = true
+	} else if strings.HasSuffix(v, "P") {
+		v = v[:len(v)-1]
+		port = true
 	}
 
 	d, ok := PaperSize[v]
 	if !ok {
-		return errors.Errorf("Page format %s is unsupported.\n", v)
+		return nil, v, errors.Errorf("Page format %s is unsupported.\n", v)
 	}
 
-	imp.pageDim = d
-	imp.pageSize = v
+	if d.Portrait() && land || d.Landscape() && port {
+		d.w, d.h = d.h, d.w
+	}
 
-	return nil
+	return d, v, nil
 }
 
-func parseImportDim(v string, setFormat bool, imp *Import) error {
+func parsePageDim(v string, setFormat bool) (*dim, string, error) {
 
 	if setFormat {
-		return errors.New("Only one of format('f') or dimensions('d') allowed")
+		return nil, v, errors.New("Only one of format('f') or dimensions('d') allowed")
 	}
 
-	d := strings.Split(v, " ")
-	if len(d) != 2 {
-		return errors.Errorf("illegal dimension string: need 2 positive values, %s\n", v)
+	ss := strings.Split(v, " ")
+	if len(ss) != 2 {
+		return nil, v, errors.Errorf("illegal dimension string: need 2 positive values, %s\n", v)
 	}
 
-	w, err := strconv.Atoi(d[0])
+	w, err := strconv.Atoi(ss[0])
 	if err != nil || w <= 0 {
-		return errors.Errorf("dimension X must be a positiv numeric value: %s\n", d[0])
+		return nil, v, errors.Errorf("dimension X must be a positiv numeric value: %s\n", ss[0])
 	}
 
-	h, err := strconv.Atoi(d[1])
+	h, err := strconv.Atoi(ss[1])
 	if err != nil || h <= 0 {
-		return errors.Errorf("dimension Y must be a positiv numeric value: %s\n", d[1])
+		return nil, v, errors.Errorf("dimension Y must be a positiv numeric value: %s\n", ss[1])
 	}
 
-	imp.pageDim = dim{w, h}
-	imp.pageSize = ""
+	d := dim{w, h}
 
-	return nil
+	return &d, "", nil
 }
 
 type anchor int
@@ -202,10 +217,10 @@ func parsePositionOffset(s string) (int, int, error) {
 // DefaultImportConfig returns the default configuration.
 func DefaultImportConfig() *Import {
 	return &Import{
-		pageDim:  PaperSize["A4"],
-		pageSize: "A4",
-		pos:      Full,
-		scale:    0.5,
+		PageDim:  PaperSize["A4"],
+		PageSize: "A4",
+		Pos:      Full,
+		Scale:    0.5,
 	}
 }
 
@@ -239,21 +254,21 @@ func ParseImportDetails(s string) (*Import, error) {
 
 		switch k {
 		case "f": // page format
-			err = parseImportFormat(v, setDim, imp)
+			imp.PageDim, imp.PageSize, err = parsePageFormat(v, setDim)
 			setFormat = true
 
 		case "d": // page dimensions
-			err = parseImportDim(v, setFormat, imp)
+			imp.PageDim, imp.PageSize, err = parsePageDim(v, setFormat)
 			setDim = true
 
 		case "p": // position
-			imp.pos, err = parseAnchorPosition(v)
+			imp.Pos, err = parseAnchorPosition(v)
 
 		case "o": // offset
-			imp.dx, imp.dy, err = parsePositionOffset(v)
+			imp.Dx, imp.Dy, err = parsePositionOffset(v)
 
 		case "s": // scale factor
-			imp.scale, imp.scaleAbs, err = parseScaleFactor(v)
+			imp.Scale, imp.ScaleAbs, err = parseScaleFactor(v)
 
 		default:
 			err = errInvalidImportConfig
@@ -332,12 +347,12 @@ func lowerLeftCorner(vpw, vph, bbw, bbh float64, a anchor) types.Point {
 	return p
 }
 
-func importImagePDFBytes(wr io.Writer, pageDim dim, imgWidth, imgHeight float64, imp *Import) {
+func importImagePDFBytes(wr io.Writer, pageDim *dim, imgWidth, imgHeight float64, imp *Import) {
 
 	vpw := float64(pageDim.w)
 	vph := float64(pageDim.h)
 
-	if imp.pos == Full {
+	if imp.Pos == Full {
 		// The bounding box equals the page dimensions.
 		bb := types.NewRectangle(0, 0, vpw, vph)
 		bb.UR.X = bb.Width()
@@ -349,15 +364,15 @@ func importImagePDFBytes(wr io.Writer, pageDim dim, imgWidth, imgHeight float64,
 	bb := types.NewRectangle(0, 0, imgWidth, imgHeight)
 	ar := bb.AspectRatio()
 
-	if imp.scaleAbs {
-		bb.UR.X = imp.scale * bb.Width()
+	if imp.ScaleAbs {
+		bb.UR.X = imp.Scale * bb.Width()
 		bb.UR.Y = bb.UR.X / ar
 	} else {
 		if ar >= 1 {
-			bb.UR.X = imp.scale * vpw
+			bb.UR.X = imp.Scale * vpw
 			bb.UR.Y = bb.UR.X / ar
 		} else {
-			bb.UR.Y = imp.scale * vph
+			bb.UR.Y = imp.Scale * vph
 			bb.UR.X = bb.UR.Y * ar
 		}
 	}
@@ -371,9 +386,9 @@ func importImagePDFBytes(wr io.Writer, pageDim dim, imgWidth, imgHeight float64,
 	m[1][1] = bb.Height()
 
 	// Translate
-	ll := lowerLeftCorner(vpw, vph, bb.Width(), bb.Height(), imp.pos)
-	m[2][0] = ll.X + float64(imp.dx)
-	m[2][1] = ll.Y + float64(imp.dy)
+	ll := lowerLeftCorner(vpw, vph, bb.Width(), bb.Height(), imp.Pos)
+	m[2][0] = ll.X + float64(imp.Dx)
+	m[2][1] = ll.Y + float64(imp.Dy)
 
 	fmt.Fprintf(wr, "q %.2f %.2f %.2f %.2f %.2f %.2f cm /Im0 Do Q",
 		m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
@@ -406,12 +421,12 @@ func NewPageForImage(xRefTable *XRefTable, fileName string, parentIndRef *Indire
 	contents.InsertName("Filter", filter.Flate)
 	contents.FilterPipeline = []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}
 
-	dim := dim{w, h}
-	if imp.pos != Full {
-		dim = imp.pageDim
+	dim := &dim{w, h}
+	if imp.Pos != Full {
+		dim = imp.PageDim
 	}
 	// mediabox = physical page dimensions
-	mediaBox := NewRectangle(0, 0, float64(dim.w), float64(dim.h))
+	mediaBox := RectForDim(dim.w, dim.h)
 
 	var buf bytes.Buffer
 	importImagePDFBytes(&buf, dim, float64(w), float64(h), imp)
@@ -431,7 +446,7 @@ func NewPageForImage(xRefTable *XRefTable, fileName string, parentIndRef *Indire
 		map[string]Object{
 			"Type":      Name("Page"),
 			"Parent":    *parentIndRef,
-			"MediaBox":  mediaBox,
+			"MediaBox":  mediaBox.Array(),
 			"Resources": *resIndRef,
 			"Contents":  *contentsIndRef,
 		},

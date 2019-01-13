@@ -13,50 +13,73 @@ It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO
 
 ## Status
 
-Version: 0.1.20
+Version: 0.1.21
 
-The Xmas release is here bringing you something to play with over the holidays with two new commands:
+Fixes: #51, #58
 
-* Import 
-* Rotate
+This release features two new commands:
 
-The <i>Import</i>  command converts images to PDF or creates a PDF photo album tailored to your specific needs:
+* N-up
+* Grid
 
+The *N-up* command rearranges the pages of a PDF file in order to reduce its page count.<br>
+This is achieved by rendering the input pages onto a grid which dimensions are defined by the supplied [N-up](https://en.wikipedia.org/wiki/N-up) value (2, 3, 4, 6, 8, 9, 12, 16).<br>
+Supported are various n-Up orientations: rd(right,down)=default, dr(down,right), ld(left,down), dl(down,left)<br>
+Proper rotation based on involved aspect ratios will be applied during the process. 
 
-Create a quick single page PDF containing an image:<br>
-`pdfcpu import photo.pdf photo.png`<br>
-By using the implied default positioning parameter `p:full` the page size is going to be equal to the image size.
-
-
-Generate a PDF gallery of image files assuming the folder pics contains jpg,png or tif files only:<br>
-`pdfcpu import album.pdf pics/*`<br>
-This is my favorite one :green_heart:
-
-Generate a PDF gallery of image files each of them centered on its page with the default relative scaling 0.5:<br>
-`pdfcpu import 'p:c' album.pdf pics/*`<br>
-
-The following command also generates a PDF gallery but additionally configures the <i>Letter</i> output format and positioning anchored to the bottom left corner with a horizontal offset of 10 and a vertical offset of 15 points in PDF user space with a scaling of 0.3 relative to page dimensions:<br>
-`pdfcpu import 'f:Letter, p:bl, o:10 20, s:0.3' album.pdf *.jpg`
-
-<i>Import</i> will create the output file if it does not exist otherwise it will append the new pages to an existing PDF.<br>This is a nice feature enabling to append the gallery to a prepared cover page.<br>
-Please refer to `pdfcpu help import` for details about this command including the <i>description</i> string and available positioning anchors.<br><br>
-
-If a gallery created by <i>Import</i> ends up having some pages with images not in upright position <i>Rotate</i> comes to the rescue.<br>
-The Rotate command rotates selected pages clockwise by a multiple of 90 degrees:<br>
-
-
-Rotate all pages clockwise by 90 degrees:<br>
-`pdfcpu rotate test.pdf 90`
-
-Rotate the first two pages counter clockwise by 90 degrees:<br>
-`pdfcpu rotate -pages 1-2 -90`
+`pdfcpu nup out.pdf 4 in.pdf` produces a PDF-file where each page fits 4 original pages into a 2x2 grid:<br>
 
 <p align="center">
-  <img border="2" src="resources/wmText2Sample.png" height="254">&nbsp;&nbsp;&nbsp;
-  <img border="2" src="resources/snow.jpg" height="254">&nbsp;&nbsp;&nbsp;
-  <img border="2" src="resources/wmImageSample.png" height="254">&nbsp;&nbsp;&nbsp;
-  <img border="2" src="resources/wmPDFSample.jpg" height="254">
+  <img border="2" src="resources/nup4pdf.png" height="200">
 </p>
+
+The output file will use the page size of the input file unless explicitly declared by a description string like so:<br>
+`pdfcpu nup 'f:A4' out.pdf 9 in.pdf`<br>
+
+<p align="center">
+  <img border="2" src="resources/nup9pdf.png" width="145">
+</p>
+
+Please refer to `pdfcpu help paper` for a list of supported paper formats.
+Most well known paper size standards are supported.
+
+`nup` also accepts a list of image files with the result of rendering all images
+in N-up fashion into a PDF file using the specified paper size (default=A4):<br>
+
+`pdfcpu nup 'f:A4L' out.pdf 4 *.jpg *.png *.tif`<br>
+generates a PDF file using *A4 Landscape* where each page fits 4 images onto a 2x2 grid.
+Grid border lines are rendered by default:
+<p align="center">
+  <img border="2" src="resources/nup4img.png" height="200">
+</p>
+
+A single image input file will produce a single page PDF with the image N-up'ed accordingly, eg.<br>
+`pdfcpu nup 'f:Ledger, b:off, m:0' out.pdf 16 logo.jpg`<br>
+Both grid borders and margins are suppressed in this example and the output format is *Ledger*:
+<p align="center">
+  <img border="2" src="resources/nup16img.png" height="200">
+</p>
+<br>
+
+The *grid* command rearranges the pages of a PDF file for enhanced reading experience.
+The page size of the output file is a grid of specified dimensions in original page units.
+Pages may be big but that's ok since they are not supposed to be printed. One use case mentioned by the
+community was to produce PDF files for source code listings eg. in the form of 10x1 grid pages:
+
+`pdfcpu grid 'b:off' out.pdf 1 4 in.pdf`<br>
+rearranges pages of in.pdf into 1x4 grids and writes the result to out.pdf using the default orientation.<br>
+The output page size is the result of a 1(hor)x4(vert) page grid using in.pdf's page size:
+<p align="center">
+  <img border="1" src="resources/gridpdf.png" height="200">
+</p>
+
+When applied to image files this command produces photo galleries of arbitrary dimensions in PDF form.<br>
+`pdfcpu grid 'd:500 500, m:20, b:off' out.pdf 5 2 *.jpg`<br>
+arranges imagefiles onto a 5x2 page grid and writes the result to out.pdf using a grid cell size of 500x500:
+<p align="center">
+  <img border="1" src="resources/gridimg.png" height="200">
+</p>
+
 
 ## Motivation
 
@@ -80,6 +103,8 @@ One example is reducing the size of large PDF files for mass mailings by optimiz
 * Trim (generate a custom version of a PDF file including selected pages)
 * Stamp/Watermark selected pages with text, image or PDF page
 * Import convert/import images into PDF
+* N-up (rearrange pages/images into grid page layout for reduced number of pages)
+* Grid (rearrange pages/images into grid page layout for enhanced browsing experience)
 * Rotate selected pages
 * Manage (add,remove,list,extract) embedded file attachments
 * Encrypt (sets password protection)
@@ -109,6 +134,8 @@ Required build version: go1.9 and up
     pdfcpu stamp [-verbose] -pages pageSelection description inFile [outFile]
     pdfcpu watermark [-verbose] -pages pageSelection description inFile [outFile]
     pdfcpu import [-v(erbose)|vv] [description] outFile imageFile...
+    pdfcpu nup [-v(erbose)|vv] [-pages pageSelection] [description] outFile n inFile|imageFiles...
+    pdfcpu grid [-v(erbose)|vv] [-pages pageSelection] [description] outFile m n inFile|imageFiles...
     pdfcpu rotate [-v(erbose)|vv] [-pages pageSelection] inFile rotation
 
     pdfcpu attach list [-verbose] [-upw userpw] [-opw ownerpw] inFile
