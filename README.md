@@ -118,9 +118,26 @@ One example is reducing the size of large PDF files for mass mailings by optimiz
 
 ## Installation
 
-Required build version: go1.9 and up
+There are no dependencies outside the Go standard library other than `pkg/errors`.<br>
+Required build version: go1.9 and up.
 
-`go get github.com/hhrutter/pdfcpu/cmd/...`
+### Using GOPATH
+
+```
+go get github.com/hhrutter/pdfcpu/cmd/...
+cd $GOPATH/src/github.com/hhrutter/pdfcpu/cmd/pdfcpu
+go install
+pdfcpu version
+```
+
+### Using Go Modules
+
+```
+git clone https://github.com/hhrutter/pdfcpu
+cd pdfcpu/cmd/pdfcpu
+go install
+pdfcpu v
+```
 
 ## Usage
 
