@@ -43,9 +43,11 @@ The commands are:
    decrypt     remove password protection
    changeupw   change user password
    changeopw   change owner password
+   paper       print list of supported paper sizes
    version     print version
 
-   Single-letter Unix-style supported for commands and flags.
+   Completion supported for commands.
+   One letter Unix style abbreviations supported for flags.
 
 Use "pdfcpu help [command]" for more information about a command.`
 
@@ -95,6 +97,23 @@ verbose, v ... turn on logging
    outFile ... output pdf file
    inFiles ... a list of at least 2 pdf files subject to concatenation.`
 
+	usagePageSelection = `'-pages' selects pages for processing and is a comma separated list of expressions:
+
+	Valid expressions are:
+
+	even ... include even pages           odd ... include odd pages
+  	   # ... include page #               #-# ... include page range
+ 	  !# ... exclude page #              !#-# ... exclude page range
+ 	  n# ... exclude page #              n#-# ... exclude page range
+
+	  #- ... include page # - last page    -# ... include first page - page #
+ 	 !#- ... exclude page # - last page   !-# ... exclude first page - page #
+ 	 n#- ... exclude page # - last page   n-# ... exclude first page - page #
+
+	n serves as an alternative for !, since ! needs to be escaped with single quotes on the cmd line.
+
+e.g. -3,5,7- or 4-7,!6 or 1-,!5 or odd,n1`
+
 	usageExtract     = "usage: pdfcpu extract [-v(erbose)|vv] -mode image|font|content|page|meta [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile outDir"
 	usageLongExtract = `Extract exports inFile's images, fonts, content or pages into outDir.
 
@@ -113,7 +132,9 @@ verbose, v ... turn on logging
    font ... extract font files (supported font types: TrueType)
 content ... extract raw page content
    page ... extract single page PDFs
-   meta ... extract all metadata (page selection does not apply)`
+   meta ... extract all metadata (page selection does not apply)
+   
+` + usagePageSelection
 
 	usageTrim     = "usage: pdfcpu trim [-v(erbose)|vv] -pages pageSelection [-upw userpw] [-opw ownerpw] inFile [outFile]"
 	usageLongTrim = `Trim generates a trimmed version of inFile for selected pages.
@@ -124,24 +145,9 @@ verbose, v ... turn on logging
        upw ... user password
        opw ... owner password
     inFile ... input pdf file
-   outFile ... output pdf file (default: inFile-new.pdf)`
-
-	usagePageSelection = `'-pages' selects pages for processing and is a comma separated list of expressions:
-
-	Valid expressions are:
-
-	even ... include even pages           odd ... include odd pages
-  	   # ... include page #               #-# ... include page range
- 	  !# ... exclude page #              !#-# ... exclude page range
- 	  n# ... exclude page #              n#-# ... exclude page range
-
-	  #- ... include page # - last page    -# ... include first page - page #
- 	 !#- ... exclude page # - last page   !-# ... exclude first page - page #
- 	 n#- ... exclude page # - last page   n-# ... exclude first page - page #
-
-	n serves as an alternative for !, since ! needs to be escaped with single quotes on the cmd line.
-
-e.g. -3,5,7- or 4-7,!6 or 1-,!5 or odd,n1`
+   outFile ... output pdf file (default: inFile-new.pdf)
+   
+` + usagePageSelection
 
 	usageAttachList    = "pdfcpu attach list [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile"
 	usageAttachAdd     = "pdfcpu attach add [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile file..."
@@ -247,7 +253,9 @@ verbose, v ... turn on logging
 e.g. 'Draft'                                                  'logo.png'
      'Draft, d:2'                                             'logo.tif, o:0.5, s:0.5 abs, r:0'
      'Intentionally left blank, s:.75 abs, p:48'              'some.pdf, r:45' 
-     'Confidental, f:Courier, s:0.75, c: 0.5 0.0 0.0, r:20'   'some.pdf:3, r:-90, s:0.75'`
+     'Confidental, f:Courier, s:0.75, c: 0.5 0.0 0.0, r:20'   'some.pdf:3, r:-90, s:0.75'
+     
+` + usagePageSelection
 
 	usageStamp     = "usage: pdfcpu stamp [-v(erbose)|vv] [-pages pageSelection] description inFile [outFile]"
 	usageLongStamp = `Stamp adds stamps for selected pages. 
@@ -316,7 +324,9 @@ description ... dimensions, format, position, offset, scale factor
          vv ... verbose logging
       pages ... page selection
      inFile ... input pdf file
-   rotation ... a multiple of 90 degrees for clockwise rotation.`
+   rotation ... a multiple of 90 degrees for clockwise rotation.
+
+` + usagePageSelection
 
 	usageNUp     = "usage: pdfcpu nup [-v(erbose)|vv] [-pages pageSelection] [description] outFile n inFile|imageFiles..."
 	usageLongNUp = `N-up rearranges existing PDF pages or images into a sequence of grids.
@@ -378,7 +388,9 @@ Examples: "pdfcpu nup out.pdf 4 in.pdf"
           
           "pdfcpu nup 'f:Tabloid' out.pdf 4 *.jpg" 
           Rearrange all jpg files into 2x2 grids and write result to out.pdf using the Tabloid format
-          and the default orientation.`
+          and the default orientation.
+
+` + usagePageSelection
 
 	usageGrid     = "usage: pdfcpu grid [-v(erbose)|vv] [-pages pageSelection] [description] outFile m n inFile|imageFiles..."
 	usageLongGrid = `Grid rearranges PDF pages or images for enhanced browsing experience.
@@ -418,22 +430,24 @@ description ... dimensions, format, orientation
 
     b: draw border ... on/off true/false
     
-    m: margin for n-up content: int >= 0
+    m: margin for content: int >= 0
 
-Examples: "pdfcpu nup out.pdf 1 10 in.pdf"
+Examples: "pdfcpu grid out.pdf 1 10 in.pdf"
           Rearrange pages of in.pdf into 1x10 grids and write result to out.pdf using the default orientation.
           The output page size is the result of a 1(hor)x10(vert) page grid using in.pdf's page size.
 
-          "pdfcpu nup 'LegalL' out.pdf 2 2 in.pdf" 
+          "pdfcpu grid 'LegalL' out.pdf 2 2 in.pdf" 
           Rearrange pages of in.pdf into 2x2 grids and write result to out.pdf using the default orientation.
           The output page size is the result of a 2(hor)x2(vert) page grid using page size Legal in landscape mode.
 
-          "pdfcpu nup 'o:rd' out.pdf 3 2 in.pdf" 
+          "pdfcpu grid 'o:rd' out.pdf 3 2 in.pdf" 
           Rearrange pages of in.pdf into 3x2 grids and write result to out.pdf using orientation 'right down'.
           The output page size is the result of a 3(hor)x2(vert) page grid using in.pdf's page size.
 
-          "pdfcpu nup 'd:400 400' out.pdf 6 8 *.jpg"
-          Arrange imagefiles onto a 6x8 page grid and write result to out.pdf using a grid cell size of 400x400.`
+          "pdfcpu grid 'd:400 400' out.pdf 6 8 *.jpg"
+          Arrange imagefiles onto a 6x8 page grid and write result to out.pdf using a grid cell size of 400x400.
+
+` + usagePageSelection
 
 	paperSizes = `This is a list of predefined paper sizes:
    
@@ -497,5 +511,8 @@ Examples: "pdfcpu nup out.pdf 1 10 in.pdf"
    AB, B40, Shikisen`
 
 	usageVersion     = "usage: pdfcpu version"
-	usageLongVersion = "Version prints the pdfcpu version"
+	usageLongVersion = "prints the pdfcpu version"
+
+	usagePaper     = "usage: pdfcpu paper"
+	usageLongPaper = "prints a list of supported paper sizes"
 )

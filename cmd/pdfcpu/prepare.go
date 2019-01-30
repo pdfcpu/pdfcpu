@@ -29,6 +29,58 @@ import (
 	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
 )
 
+func hasPdfExtension(filename string) bool {
+	return strings.HasSuffix(strings.ToLower(filename), ".pdf")
+}
+
+func ensurePdfExtension(filename string) {
+	if !hasPdfExtension(filename) {
+		fmt.Fprintf(os.Stderr, "%s needs extension \".pdf\".\n", filename)
+		os.Exit(1)
+	}
+}
+
+func defaultFilenameOut(filename string) string {
+	return filename[:len(filename)-4] + "_new.pdf"
+}
+
+func printHelp(config *pdfcpu.Configuration) *api.Command {
+
+	switch len(flag.Args()) {
+
+	case 0:
+		fmt.Fprintln(os.Stderr, usage)
+
+	case 1:
+		fmt.Fprintln(os.Stderr, cmdMap.HelpString(flag.Arg(0)))
+
+	default:
+		fmt.Fprintln(os.Stderr, "usage: pdfcpu help command\n\nToo many arguments.")
+
+	}
+
+	return nil
+}
+
+func printPaperSizes(config *pdfcpu.Configuration) *api.Command {
+
+	fmt.Fprintln(os.Stderr, paperSizes)
+
+	return nil
+}
+
+func printVersion(config *pdfcpu.Configuration) *api.Command {
+
+	if len(flag.Args()) != 0 {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageVersion)
+		os.Exit(1)
+	}
+
+	fmt.Fprintf(os.Stdout, "pdfcpu version %s\n", pdfcpu.PDFCPUVersion)
+
+	return nil
+}
+
 func prepareValidateCommand(config *pdfcpu.Configuration) *api.Command {
 
 	if len(flag.Args()) == 0 || len(flag.Args()) > 1 || pageSelection != "" {
@@ -125,15 +177,28 @@ func prepareMergeCommand(config *pdfcpu.Configuration) *api.Command {
 	return api.MergeCommand(filenamesIn, filenameOut, config)
 }
 
-func allowedExtracMode(s string) bool {
+func extractModeCompletion(modePrefix string) string {
 
-	return mode == "image" || mode == "font" || mode == "page" || mode == "content" || mode == "meta" ||
-		mode == "i" || mode == "p" || mode == "c" || mode == "m"
+	var modeStr string
+
+	for _, mode := range []string{"image", "font", "page", "content", "meta"} {
+		if !strings.HasPrefix(mode, modePrefix) {
+			continue
+		}
+		if len(modeStr) > 0 {
+			return ""
+		}
+		modeStr = mode
+	}
+
+	return modeStr
 }
 
 func prepareExtractCommand(config *pdfcpu.Configuration) *api.Command {
 
-	if len(flag.Args()) != 2 || mode == "" || !allowedExtracMode(mode) {
+	mode = extractModeCompletion(mode)
+
+	if len(flag.Args()) != 2 || mode == "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageExtract)
 		os.Exit(1)
 	}
@@ -152,19 +217,19 @@ func prepareExtractCommand(config *pdfcpu.Configuration) *api.Command {
 
 	switch mode {
 
-	case "image", "i":
+	case "image":
 		cmd = api.ExtractImagesCommand(filenameIn, dirnameOut, pages, config)
 
 	case "font":
 		cmd = api.ExtractFontsCommand(filenameIn, dirnameOut, pages, config)
 
-	case "page", "p":
+	case "page":
 		cmd = api.ExtractPagesCommand(filenameIn, dirnameOut, pages, config)
 
-	case "content", "c":
+	case "content":
 		cmd = api.ExtractContentCommand(filenameIn, dirnameOut, pages, config)
 
-	case "meta", "m":
+	case "meta":
 		cmd = api.ExtractMetadataCommand(filenameIn, dirnameOut, config)
 	}
 
@@ -278,39 +343,6 @@ func prepareExtractAttachmentsCommand(config *pdfcpu.Configuration) *api.Command
 	return api.ExtractAttachmentsCommand(filenameIn, dirnameOut, filenames, config)
 }
 
-func prepareAttachmentCommand(config *pdfcpu.Configuration) *api.Command {
-
-	if len(os.Args) == 2 {
-		fmt.Fprintln(os.Stderr, usageAttach)
-		os.Exit(1)
-	}
-
-	var cmd *api.Command
-
-	subCmd := os.Args[2]
-
-	switch subCmd {
-
-	case "list":
-		cmd = prepareListAttachmentsCommand(config)
-
-	case "add":
-		cmd = prepareAddAttachmentsCommand(config)
-
-	case "remove":
-		cmd = prepareRemoveAttachmentsCommand(config)
-
-	case "extract":
-		cmd = prepareExtractAttachmentsCommand(config)
-
-	default:
-		fmt.Fprintln(os.Stderr, usageAttach)
-		os.Exit(1)
-	}
-
-	return cmd
-}
-
 func prepareListPermissionsCommand(config *pdfcpu.Configuration) *api.Command {
 
 	if len(flag.Args()) != 1 || pageSelection != "" {
@@ -324,7 +356,28 @@ func prepareListPermissionsCommand(config *pdfcpu.Configuration) *api.Command {
 	return api.ListPermissionsCommand(filenameIn, config)
 }
 
+func permCompletion(permPrefix string) string {
+
+	var permStr string
+
+	for _, perm := range []string{"none", "all"} {
+		if !strings.HasPrefix(perm, permPrefix) {
+			continue
+		}
+		if len(permStr) > 0 {
+			return ""
+		}
+		permStr = mode
+	}
+
+	return permStr
+}
+
 func prepareAddPermissionsCommand(config *pdfcpu.Configuration) *api.Command {
+
+	if perm != "" {
+		perm = permCompletion(perm)
+	}
 
 	if len(flag.Args()) != 1 || pageSelection != "" ||
 		!(perm == "" || perm == "none" || perm == "all") {
@@ -340,34 +393,6 @@ func prepareAddPermissionsCommand(config *pdfcpu.Configuration) *api.Command {
 	}
 
 	return api.AddPermissionsCommand(filenameIn, config)
-}
-
-func preparePermissionsCommand(config *pdfcpu.Configuration) *api.Command {
-
-	if len(os.Args) == 2 {
-		fmt.Fprintln(os.Stderr, usagePerm)
-		os.Exit(1)
-	}
-
-	var cmd *api.Command
-
-	subCmd := os.Args[2]
-
-	switch subCmd {
-
-	case "list":
-		cmd = prepareListPermissionsCommand(config)
-
-	case "add":
-		cmd = prepareAddPermissionsCommand(config)
-
-	default:
-		fmt.Fprintln(os.Stderr, usagePerm)
-		os.Exit(1)
-	}
-
-	return cmd
-
 }
 
 func prepareDecryptCommand(config *pdfcpu.Configuration) *api.Command {

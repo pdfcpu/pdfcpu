@@ -140,6 +140,14 @@ func NewDefaultConfiguration() *Configuration {
 	}
 }
 
+// NewConfiguration returns a default configuration for userPW and ownerPW.
+func NewConfiguration(userPW, ownerPW string) *Configuration {
+	c := NewDefaultConfiguration()
+	c.UserPW = userPW
+	c.OwnerPW = ownerPW
+	return c
+}
+
 // ValidationModeString returns a string rep for the validation mode in effect.
 func (c *Configuration) ValidationModeString() string {
 

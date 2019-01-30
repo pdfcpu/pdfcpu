@@ -21,7 +21,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/hhrutter/pdfcpu/pkg/api"
 	PDFCPULog "github.com/hhrutter/pdfcpu/pkg/log"
@@ -32,11 +31,11 @@ var (
 	fileStats, mode, pageSelection string
 	upw, opw, key, perm            string
 	verbose, veryVerbose           bool
-
-	needStackTrace = true
+	needStackTrace                 = true
+	cmdMap                         CommandMap
 )
 
-func init() {
+func initFlags() {
 
 	statsUsage := "optimize: a csv file for stats appending"
 	flag.StringVar(&fileStats, "stats", "", statsUsage)
@@ -63,152 +62,59 @@ func init() {
 
 	flag.StringVar(&upw, "upw", "", "user password")
 	flag.StringVar(&opw, "opw", "", "owner password")
-
 }
 
-func main() {
+func initCommandMap() {
 
-	command := parseFlagsAndGetCommand()
-
-	setupLogging(verbose, veryVerbose)
-
-	config := pdfcpu.NewDefaultConfiguration()
-	config.UserPW = upw
-	config.OwnerPW = opw
-
-	var cmd *api.Command
-
-	handleVersion(command)
-
-	if command == "h" || command == "help" {
-		help()
-		os.Exit(1)
-	}
-
-	for k, v := range map[string]func(config *pdfcpu.Configuration) *api.Command{
-		"validate":  prepareValidateCommand,
-		"optimize":  prepareOptimizeCommand,
-		"o":         prepareOptimizeCommand,
-		"split":     prepareSplitCommand,
-		"s":         prepareSplitCommand,
-		"merge":     prepareMergeCommand,
-		"m":         prepareMergeCommand,
-		"extract":   prepareExtractCommand,
-		"ext":       prepareExtractCommand,
-		"trim":      prepareTrimCommand,
-		"t":         prepareTrimCommand,
-		"attach":    prepareAttachmentCommand,
-		"decrypt":   prepareDecryptCommand,
-		"d":         prepareDecryptCommand,
-		"dec":       prepareDecryptCommand,
-		"encrypt":   prepareEncryptCommand,
-		"enc":       prepareEncryptCommand,
-		"changeupw": prepareChangeUserPasswordCommand,
-		"changeopw": prepareChangeOwnerPasswordCommand,
-		"perm":      preparePermissionsCommand,
-		"stamp":     prepareAddStampsCommand,
-		"watermark": prepareAddWatermarksCommand,
-		"import":    prepareImportImagesCommand,
-		"rotate":    prepareRotateCommand,
-		"nup":       prepareNUpCommand,
-		"n-up":      prepareNUpCommand,
-		"grid":      prepareGridCommand,
+	attachCmdMap := NewCommandMap()
+	for k, v := range map[string]Command{
+		"list":    {prepareListAttachmentsCommand, nil, "", ""},
+		"add":     {prepareAddAttachmentsCommand, nil, "", ""},
+		"remove":  {prepareRemoveAttachmentsCommand, nil, "", ""},
+		"extract": {prepareExtractAttachmentsCommand, nil, "", ""},
 	} {
-		if command == k {
-			cmd = v(config)
-			process(cmd)
-			os.Exit(0)
-		}
+		attachCmdMap.Register(k, v)
 	}
 
-	fmt.Fprintf(os.Stderr, "pdfcpu unknown subcommand \"%s\"\n", command)
-	fmt.Fprintln(os.Stderr, "Run 'pdfcpu help' for usage.")
-	os.Exit(1)
-}
-
-func hasPdfExtension(filename string) bool {
-	return strings.HasSuffix(strings.ToLower(filename), ".pdf")
-}
-
-func ensurePdfExtension(filename string) {
-	if !hasPdfExtension(filename) {
-		fmt.Fprintf(os.Stderr, "%s needs extension \".pdf\".", filename)
-		os.Exit(1)
-	}
-}
-
-func defaultFilenameOut(filename string) string {
-	//ensurePdfExtension(filename)
-	return filename[:len(filename)-4] + "_new.pdf"
-}
-
-func version() {
-
-	if len(flag.Args()) != 0 {
-		fmt.Fprintf(os.Stderr, "%s\n\n", usageVersion)
-		os.Exit(1)
-	}
-
-	fmt.Fprintf(os.Stdout, "pdfcpu version %s\n", pdfcpu.PDFCPUVersion)
-}
-
-func helpString(topic string) string {
-
-	for k, v := range map[string]struct {
-		usageShort, usageLong string
-		usagePageSelection    bool
-	}{
-		"validate":  {usageValidate, usageLongValidate, false},
-		"optimize":  {usageOptimize, usageLongOptimize, false},
-		"split":     {usageSplit, usageLongSplit, false},
-		"merge":     {usageMerge, usageLongMerge, false},
-		"extract":   {usageExtract, usageLongExtract, false},
-		"trim":      {usageTrim, usageLongTrim, true},
-		"attach":    {usageAttach, usageLongAttach, false},
-		"perm":      {usagePerm, usageLongPerm, false},
-		"encrypt":   {usageEncrypt, usageLongEncrypt, false},
-		"decrypt":   {usageDecrypt, usageLongDecrypt, false},
-		"changeupw": {usageChangeUserPW, usageLongChangeUserPW, false},
-		"changeopw": {usageChangeOwnerPW, usageLongChangeOwnerPW, false},
-		"stamp":     {usageStamp, usageLongStamp, true},
-		"watermark": {usageWatermark, usageLongWatermark, true},
-		"import":    {usageImportImages, usageLongImportImages, false},
-		"rotate":    {usageRotate, usageLongRotate, true},
-		"nup":       {usageNUp, usageLongNUp, true},
-		"n-up":      {usageNUp, usageLongNUp, true},
-		"grid":      {usageGrid, usageLongGrid, true},
-		"paper":     {paperSizes, "", false},
-		"version":   {usageVersion, usageLongVersion, false},
+	permissionsCmdMap := NewCommandMap()
+	for k, v := range map[string]Command{
+		"list": {prepareListPermissionsCommand, nil, "", ""},
+		"add":  {prepareAddPermissionsCommand, nil, "", ""},
 	} {
-		if topic == k {
-			if v.usagePageSelection {
-				return fmt.Sprintf("%s\n\n%s\n\n%s\n", v.usageShort, v.usageLong, usagePageSelection)
-			}
-			return fmt.Sprintf("%s\n\n%s\n", v.usageShort, v.usageLong)
-		}
+		permissionsCmdMap.Register(k, v)
 	}
 
-	return fmt.Sprintf("Unknown help topic `%s`.  Run 'pdfcpu help'.\n", topic)
-}
+	cmdMap = NewCommandMap()
 
-func help() {
-
-	switch len(flag.Args()) {
-
-	case 0:
-		fmt.Fprintln(os.Stderr, usage)
-
-	case 1:
-		fmt.Fprintln(os.Stderr, helpString(flag.Arg(0)))
-
-	default:
-		fmt.Fprintln(os.Stderr, "usage: pdfcpu help command\n\nToo many arguments given.")
-
+	for k, v := range map[string]Command{
+		"attach":    {nil, attachCmdMap, usageAttach, usageLongAttach},
+		"changeopw": {prepareChangeOwnerPasswordCommand, nil, usageChangeOwnerPW, usageLongChangeUserPW},
+		"changeupw": {prepareChangeUserPasswordCommand, nil, usageChangeUserPW, usageLongChangeUserPW},
+		"decrypt":   {prepareDecryptCommand, nil, usageDecrypt, usageLongDecrypt},
+		"encrypt":   {prepareEncryptCommand, nil, usageEncrypt, usageLongEncrypt},
+		"extract":   {prepareExtractCommand, nil, usageExtract, usageLongExtract},
+		"grid":      {prepareGridCommand, nil, usageGrid, usageLongGrid},
+		"help":      {printHelp, nil, "", ""},
+		"import":    {prepareImportImagesCommand, nil, usageImportImages, usageLongImportImages},
+		"merge":     {prepareMergeCommand, nil, usageMerge, usageLongMerge},
+		"nup":       {prepareNUpCommand, nil, usageNUp, usageLongNUp},
+		"n-up":      {prepareNUpCommand, nil, usageNUp, usageLongNUp},
+		"optimize":  {prepareOptimizeCommand, nil, usageOptimize, usageLongOptimize},
+		"paper":     {printPaperSizes, nil, usagePaper, usageLongPaper},
+		"perm":      {nil, permissionsCmdMap, usagePerm, usageLongPerm},
+		"rotate":    {prepareRotateCommand, nil, usageRotate, usageLongRotate},
+		"split":     {prepareSplitCommand, nil, usageSplit, usageLongSplit},
+		"stamp":     {prepareAddStampsCommand, nil, usageStamp, usageLongStamp},
+		"trim":      {prepareTrimCommand, nil, usageTrim, usageLongTrim},
+		"validate":  {prepareValidateCommand, nil, usageValidate, usageLongValidate},
+		"watermark": {prepareAddWatermarksCommand, nil, usageWatermark, usageLongWatermark},
+		"version":   {printVersion, nil, usageVersion, usageLongVersion},
+	} {
+		cmdMap.Register(k, v)
 	}
-
 }
 
-func setupLogging(verbose, veryVerbose bool) {
+func initLogging(verbose, veryVerbose bool) {
 
 	needStackTrace = verbose || veryVerbose
 
@@ -231,40 +137,66 @@ func setupLogging(verbose, veryVerbose bool) {
 
 }
 
-func parseFlagsAndGetCommand() (command string) {
+func init() {
+	initFlags()
+	initCommandMap()
+}
+
+func main() {
 
 	if len(os.Args) == 1 {
 		fmt.Fprintln(os.Stderr, usage)
+		os.Exit(0)
+	}
+
+	// The first argument is the pdfcpu command
+	cmdStr := os.Args[1]
+
+	config := pdfcpu.NewConfiguration(upw, opw)
+
+	cmd, err := cmdMap.Handle(cmdStr, config)
+	if err != nil {
+		if err == errUnknownCmd {
+			fmt.Fprintf(os.Stderr, "pdfcpu unknown command \"%s\"\n", cmdStr)
+		}
+		if err == errAmbiguousCmd {
+			fmt.Fprintf(os.Stderr, "pdfcpu ambiguous command \"%s\"\n", cmdStr)
+		}
+		fmt.Fprintln(os.Stderr, "Run 'pdfcpu help' for usage.")
 		os.Exit(1)
 	}
 
-	// The first argument is the pdfcpu command => start flag processing after 2nd argument.
-	command = os.Args[1]
+	if cmd != nil {
+		process(cmd)
+	}
+
+	os.Exit(0)
+}
+
+func parseFlags(cmd *Command) {
+
+	// Execute after command completion.
 
 	i := 2
 
-	// The attach command uses a subcommand and is therefore a special case => start flag processing after 3rd argument.
-	if command == "attach" {
+	// This command uses a subcommand and is therefore a special case => start flag processing after 3rd argument.
+	if cmd.handler == nil {
 		if len(os.Args) == 2 {
-			fmt.Fprintln(os.Stderr, usageAttach)
-			os.Exit(1)
-		}
-		i = 3
-	}
-
-	// The perm command uses a subcommand and is therefore a special case => start flag processing after 3rd argument.
-	if command == "perm" {
-		if len(os.Args) == 2 {
-			fmt.Fprintln(os.Stderr, usagePerm)
+			fmt.Fprintln(os.Stderr, cmd.usageShort)
 			os.Exit(1)
 		}
 		i = 3
 	}
 
 	// Parse commandline flags.
-	err := flag.CommandLine.Parse(os.Args[i:])
-	if err != nil {
-		os.Exit(1)
+	if !flag.CommandLine.Parsed() {
+
+		err := flag.CommandLine.Parse(os.Args[i:])
+		if err != nil {
+			os.Exit(1)
+		}
+
+		initLogging(verbose, veryVerbose)
 	}
 
 	return
@@ -288,11 +220,6 @@ func process(cmd *api.Command) {
 			fmt.Fprintln(os.Stdout, l)
 		}
 	}
-}
 
-func handleVersion(command string) {
-	if (command == "v" || command == "version") && len(flag.Args()) == 0 {
-		version()
-		os.Exit(0)
-	}
+	os.Exit(0)
 }
