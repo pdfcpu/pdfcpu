@@ -155,37 +155,53 @@ func newPositionedReader(rs io.ReadSeeker, offset *int64) (*bufio.Reader, error)
 func offsetLastXRefSection(ctx *Context) (*int64, error) {
 
 	rs := ctx.Read.rs
-	var bufSize int64 = 512
 
-	off, err := rs.Seek(-bufSize, io.SeekEnd)
-	if err != nil {
-		return nil, err
-	}
+	var (
+		prevBuf, workBuf []byte
+		bufSize          int64 = 512
+		offset           int64
+	)
 
-	buf := make([]byte, bufSize)
+	for i := 1; offset == 0; i++ {
 
-	log.Read.Printf("scanning for offsetLastXRefSection starting at %d\n", off)
+		off, err := rs.Seek(-int64(i)*bufSize, io.SeekEnd)
+		if err != nil {
+			return nil, errors.New("can't find last xref section")
+		}
 
-	_, err = rs.Read(buf)
-	if err != nil {
-		return nil, err
-	}
+		log.Read.Printf("scanning for offsetLastXRefSection starting at %d\n", off)
 
-	i := strings.LastIndex(string(buf), "startxref")
-	if i == -1 {
-		return nil, errors.New("cannot find last xrefsection pointer")
-	}
+		curBuf := make([]byte, bufSize)
 
-	buf = buf[i+len("startxref"):]
-	posEOF := strings.Index(string(buf), "%%EOF")
-	if posEOF == -1 {
-		return nil, errors.New("no matching %%EOF for startxref")
-	}
+		_, err = rs.Read(curBuf)
+		if err != nil {
+			return nil, err
+		}
 
-	buf = buf[:posEOF]
-	offset, err := strconv.ParseInt(strings.TrimSpace(string(buf)), 10, 64)
-	if err != nil {
-		return nil, errors.New("corrupted xref section")
+		workBuf = curBuf
+		if prevBuf != nil {
+			workBuf = append(curBuf, prevBuf...)
+		}
+
+		j := strings.LastIndex(string(workBuf), "startxref")
+		if j == -1 {
+			//return nil, errors.New("cannot find last xrefsection pointer")
+			prevBuf = curBuf
+			continue
+		}
+
+		p := workBuf[j+len("startxref"):]
+		posEOF := strings.Index(string(p), "%%EOF")
+		if posEOF == -1 {
+			return nil, errors.New("no matching %%EOF for startxref")
+		}
+
+		p = p[:posEOF]
+		offset, err = strconv.ParseInt(strings.TrimSpace(string(p)), 10, 64)
+		if err != nil {
+			return nil, errors.New("corrupted last xref section")
+		}
+
 	}
 
 	log.Read.Printf("Offset last xrefsection: %d\n", offset)
