@@ -163,7 +163,6 @@ verbose, v ... turn on logging
 	
 verbose, v ... turn on logging
         vv ... verbose logging
-      perm ... user access permissions
        upw ... user password
        opw ... owner password
     inFile ... input pdf file
