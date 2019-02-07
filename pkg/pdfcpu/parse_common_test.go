@@ -16,24 +16,28 @@ limitations under the License.
 
 package pdfcpu
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func doTestParseObjectOK(parseString string, t *testing.T) {
-	//str := parseString
-	_, err := parseObject(&parseString)
+	str := parseString
+	o, err := parseObject(&parseString)
 	if err != nil {
 		t.Errorf("parseObject failed: <%v>\n", err)
 		return
 	}
 
-	// var nextParseString string
-	// if &parseString == nil {
-	// 	nextParseString = "end of parseString.\n"
-	// } else {
-	// 	nextParseString = fmt.Sprintf("next parseString: <%s>\n\n", parseString)
-	// }
+	var nextParseString string
+	if &parseString == nil {
+		nextParseString = "end of parseString.\n"
+	} else {
+		nextParseString = fmt.Sprintf("next parseString: <%s>\n\n", parseString)
+	}
 
-	// t.Logf("\nparseString: <%s>\nparsed Object: %v\n%s", str, pdfObject, nextParseString)
+	//t.Logf("\nparseString: <%s>\nparsed Object: %v\n%s", str, o, nextParseString)
+	fmt.Printf("\nparseString: <%s>\nparsed Object: <%v>\n%s", str, o, nextParseString)
 }
 
 func doTestParseObjectFail(parseString string, t *testing.T) {
@@ -48,7 +52,7 @@ func doTestParseObjectFail(parseString string, t *testing.T) {
 
 func TestParseObject(t *testing.T) {
 
-	doTestParseObjectOK("null     ", t)
+	doTestParseObjectOK("null      ", t)
 	doTestParseObjectOK("true     ", t)
 	doTestParseObjectOK("[true%comment\x0Anull]", t)
 	doTestParseObjectOK("[[%comment\x0dnull][%empty\x0A\x0Dtrue]false%comment\x0A]", t)
@@ -59,6 +63,13 @@ func TestParseObject(t *testing.T) {
 	doTestParseObjectOK("[<</k1[/name1]>><</k1[false true null]>>]", t)
 	doTestParseObjectOK("/Name", t)
 	doTestParseObjectOK("[null]abc", t)
+
+	doTestParseObjectFail("/", t)
+	doTestParseObjectOK("/(", t)
+	doTestParseObjectOK("//", t)
+	doTestParseObjectOK("/abc/", t)
+	doTestParseObjectOK("/abc", t)
+	doTestParseObjectOK("/abc/def", t)
 
 	doTestParseObjectOK("%comment\x0D<c0c>%\x0a", t)
 	doTestParseObjectOK("[<0ab>%comment\x0a]", t)

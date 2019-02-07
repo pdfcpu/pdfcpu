@@ -56,22 +56,22 @@ func positionToNextWhitespace(s string) (int, string) {
 }
 
 // PositionToNextWhitespaceOrChar trims a string to next whitespace or one of given chars.
+// Returns the index of the position or -1 if no match.
 func positionToNextWhitespaceOrChar(s, chars string) (int, string) {
 
 	if len(chars) == 0 {
 		return positionToNextWhitespace(s)
 	}
 
-	if len(chars) > 0 {
-		for i, c := range s {
-			for _, m := range chars {
-				if c == m || unicode.IsSpace(c) {
-					return i, s[i:]
-				}
+	for i, c := range s {
+		for _, m := range chars {
+			if c == m || unicode.IsSpace(c) {
+				return i, s[i:]
 			}
 		}
 	}
-	return 0, s
+
+	return -1, s
 }
 
 func positionToNextEOL(s string) string {
@@ -243,7 +243,7 @@ func parseObjectAttributes(line *string) (objectNumber *int, generationNumber *i
 	}
 
 	i, _ = positionToNextWhitespaceOrChar(l, "%")
-	if i == 0 {
+	if i <= 0 {
 		return nil, nil, errors.New("ParseObjectAttributes: can't find end of object number")
 	}
 
@@ -261,7 +261,7 @@ func parseObjectAttributes(line *string) (objectNumber *int, generationNumber *i
 	}
 
 	i, _ = positionToNextWhitespaceOrChar(l, "%")
-	if i == 0 {
+	if i <= 0 {
 		return nil, nil, errors.New("ParseObjectAttributes: can't find end of generation number")
 	}
 
@@ -453,18 +453,15 @@ func parseName(line *string) (*Name, error) {
 
 	// cut off on whitespace or delimiter
 	eok, _ := positionToNextWhitespaceOrChar(l, "/<>()[]")
-
-	if eok > 0 || unicode.IsSpace(rune(l[0])) {
-		log.Parse.Printf("parseNameObject: wants to cut off at %d\n", eok)
+	if eok < 0 {
+		// Name terminated by eol.
+		*line = ""
+	} else {
 		*line = l[eok:]
 		l = l[:eok]
-	} else {
-		log.Parse.Println("parseNameObject: nothing to cut off")
-		*line = ""
 	}
 
 	nameObj := Name(l)
-
 	return &nameObj, nil
 }
 
@@ -597,7 +594,7 @@ func parseNumericOrIndRef(line *string) (Object, error) {
 	// We have an Int!
 
 	// if not followed by whitespace return sole integer value.
-	if i1 == 0 || delimiter(l[i1]) {
+	if i1 <= 0 || delimiter(l[i1]) {
 		log.Parse.Printf("parseNumericOrIndRef: value is numeric int: %d\n", i)
 		*line = l1
 		return Integer(i), nil
@@ -620,7 +617,7 @@ func parseNumericOrIndRef(line *string) (Object, error) {
 
 	// if only 2 token, can't be indirect reference.
 	// if not followed by whitespace return sole integer value.
-	if i2 == 0 || delimiter(l[i2]) {
+	if i2 <= 0 || delimiter(l[i2]) {
 		log.Parse.Printf("parseNumericOrIndRef: 2 objects => value is numeric int: %d\n", i)
 		*line = l1
 		return Integer(i), nil
@@ -714,7 +711,7 @@ func parseBooleanOrNull(l string) (val Object, s string, ok bool) {
 	return nil, "", false
 }
 
-// parseObject parses next Object from string buffer.
+// parseObject parses next Object from string buffer and returns the updated (left clipped) buffer.
 func parseObject(line *string) (Object, error) {
 
 	if noBuf(line) {
@@ -723,7 +720,7 @@ func parseObject(line *string) (Object, error) {
 
 	l := *line
 
-	log.Parse.Printf("ParseObject: buf=<%s>\n", l)
+	log.Parse.Printf("ParseObject: buf= <%s>\n", l)
 
 	// position to first non whitespace char
 	l, _ = trimLeftSpace(l)
