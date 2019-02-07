@@ -21,30 +21,18 @@ import (
 )
 
 func doTestParseDictOK(parseString string, t *testing.T) {
-	//str := parseString
 	_, err := parseObject(&parseString)
 	if err != nil {
 		t.Errorf("parseDict failed: <%v>\n", err)
 		return
 	}
-
-	//var nextParseString string
-	//if &parseString == nil {
-	//	nextParseString = "end of parseString.\n"
-	//} else {
-	//	nextParseString = fmt.Sprintf("next parseString: %s\n\n", parseString)
-	//}
-
-	//t.Logf("parseString: %s parsed Dict: %v\n%s", str, pdfDict, nextParseString)
 }
 
 func doTestParseDictFail(parseString string, t *testing.T) {
 	s := parseString
-	_, err := parseObject(&parseString)
+	o, err := parseObject(&parseString)
 	if err == nil {
-		t.Errorf("parseDict should have returned an error for %s\n", s)
-	} else {
-		//t.Logf("parseString: %s parsed Dict, expected error: <%v>\n", parseString, err)
+		t.Errorf("parseDict should have returned an error for %s\n%v\n", s, o)
 	}
 }
 
@@ -71,12 +59,13 @@ func doTestParseDictGeneral(t *testing.T) {
 
 func doTestParseDictNameObjects(t *testing.T) {
 	// Name Objects
-	doTestParseDictOK("<</K1 / /K2 /Name2>>", t)
-	doTestParseDictOK("<</Key/Value>>", t)
-	doTestParseDictOK("<< /Key	/Value>>", t)
-	doTestParseDictOK("<<	/Key/Value	>>", t)
-	doTestParseDictOK("<<	/Key	/Value	>>", t)
-	doTestParseDictOK("<</Key1/Value1/Key2/Value2>>", t)
+	doTestParseDictOK("<</S/A>>", t) // empty name
+	// doTestParseDictOK("<</K1 / /K2 /Name2>>", t)
+	// doTestParseDictOK("<</Key/Value>>", t)
+	// doTestParseDictOK("<< /Key	/Value>>", t)
+	// doTestParseDictOK("<<	/Key/Value	>>", t)
+	// doTestParseDictOK("<<	/Key	/Value	>>", t)
+	// doTestParseDictOK("<</Key1/Value1/Key2/Value2>>", t)
 }
 
 func doTestParseDictStringLiteral(t *testing.T) {

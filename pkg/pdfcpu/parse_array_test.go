@@ -18,32 +18,12 @@ package pdfcpu
 
 import "testing"
 
-// func printParseString(t *testing.T, str *string) {
-// 	if str == nil {
-// 		t.Logf("end of parseString.\n")
-// 	} else {
-// 		t.Logf("next parseString: <%s>\n\n", *str)
-// 	}
-// }
-
 func doTestParseArrayOK(parseString string, t *testing.T) {
-	//str := parseString
 	_, err := parseObject(&parseString)
 	if err != nil {
 		t.Errorf("parseArray failed: <%v> <%s>\n", err, parseString)
 		return
 	}
-
-	// arr, _ := pdfArray.(PDFArray)
-
-	// var nextParseString string
-	// if &parseString == nil {
-	// 	nextParseString = "end of parseString.\n"
-	// } else {
-	// 	nextParseString = fmt.Sprintf("next parseString: <%s>\n\n", parseString)
-	// }
-
-	// t.Logf("parseString: <%s>\nparsed Array(len=%d): %v\n%s", str, len(arr), arr, nextParseString)
 }
 
 func doTestParseArrayFail(parseString string, t *testing.T) {
@@ -51,8 +31,6 @@ func doTestParseArrayFail(parseString string, t *testing.T) {
 	_, err := parseObject(&parseString)
 	if err == nil {
 		t.Errorf("parseArray should have returned an error for %s\n", s)
-	} else {
-		//t.Logf("parseString: <%s> parsed Array, expected error: <%v>\n", parseString, err)
 	}
 }
 
@@ -162,9 +140,6 @@ func TestParseArray(t *testing.T) {
 
 	s1 := "15538 0 R 15538 0 R 15538 0 R 15538 0 R 15538 0 R 15538 0 R 15539 0 R 15539 0 R 15539 0 R 15539 0 R 15540 0 R 15540 0 R 15540 0 R 15541 0 R 15541 0 R 15541 0 R 15541 0 R 15541 0 R 15541 0 R null 15541 0 R 15541 0 R 15542 0 R 15542 0 R 17468 0 R 17469 0 R 15543 0 R 17466 0 R 17467 0 R 15545 0 R 15545 0 R 15545 0 R 15545 0 R 15545 0 R 15545 0 R 15546 0 R 15546 0 R 15546 0 R 15546 0 R 15546 0 R 15546 0 R 15547 0 R 15548 0 R"
 
-	//10000 null objs
-	//doTestParseArrayOK("["+s+"15538 0 R]", t)
-
 	//30000 null objs
 	doTestParseArrayOK("["+s+s+s+s1+"]", t)
 
@@ -228,7 +203,7 @@ func TestParseArray(t *testing.T) {
 	doTestParseArrayOK("[/CalRGB<</Matrix[0.41239 0.21264]/Gamma[2.22 2.22 2.22]/WhitePoint[0.95043 1 1.09]>>]", t)
 
 	// Name objects
-	doTestParseArrayFail("[/]", t)
+	doTestParseArrayOK("[/]", t)
 	doTestParseArrayOK("[/ ]", t)
 	doTestParseArrayOK("[/N]", t)
 	doTestParseArrayOK("[/Name]", t)
