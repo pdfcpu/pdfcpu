@@ -1,1 +1,1 @@
-#pdfcpu docs
+## This is the documentation for pdfcpu.
