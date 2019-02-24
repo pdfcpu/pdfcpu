@@ -61,6 +61,8 @@ func writePageDict(ctx *Context, ir *IndirectRef, pageDict Dict, pageNr int) err
 		return errors.New("writePageDict: missing parent")
 	}
 
+	ctx.writingPages = true
+
 	for _, e := range []struct {
 		entryName string
 		statsAttr int
@@ -99,6 +101,8 @@ func writePageDict(ctx *Context, ir *IndirectRef, pageDict Dict, pageNr int) err
 			return err
 		}
 	}
+
+	ctx.writingPages = false
 
 	log.Write.Printf("*** writePageDict end: obj#%d offset=%d ***\n", objNr, ctx.Write.Offset)
 
@@ -253,6 +257,7 @@ func writePagesDict(ctx *Context, ir *IndirectRef, pageNr *int) (skip bool, writ
 	d.Update("Kids", kidsNew)
 	d.Update("Count", Integer(countNew))
 	log.Write.Printf("writePagesDict: writing pageDict for obj=%d page=%d\n%s", objNr, *pageNr, d)
+
 	err = writeDictObject(ctx, objNr, genNr, d)
 	if err != nil {
 		return false, 0, err

@@ -93,6 +93,11 @@ func validateDocumentInfoDict(xRefTable *pdf.XRefTable, obj pdf.Object) (hasModD
 		// name, optional, since V1.3
 		case "Trapped":
 			validate := func(s string) bool { return pdf.MemberOf(s, []string{"True", "False", "Unknown"}) }
+			if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+				validate = func(s string) bool {
+					return pdf.MemberOf(s, []string{"True", "False", "Unknown", "true", "false", "unknown"})
+				}
+			}
 			_, err = xRefTable.DereferenceName(v, pdf.V13, validate)
 
 		// text string, optional

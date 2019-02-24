@@ -19,6 +19,7 @@ package pdfcpu
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"sort"
@@ -780,6 +781,98 @@ func scanLine(s *bufio.Scanner) (string, error) {
 	return s.Text(), nil
 }
 
+func scanTrailer(s *bufio.Scanner, line string) (string, error) {
+
+	var buf bytes.Buffer
+	var err error
+	var i, j, k int
+
+	log.Read.Printf("line: <%s>\n", line)
+
+	// Scan for dict start tag "<<".
+	for {
+		i = strings.Index(line, "<<")
+		if i >= 0 {
+			break
+		}
+		line, err = scanLine(s)
+		log.Read.Printf("line: <%s>\n", line)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	line = line[i:]
+	buf.WriteString(line)
+	buf.WriteString(" ")
+	log.Read.Printf("scanTrailer dictBuf after start tag: <%s>\n", line)
+
+	// Scan for dict end tag ">>" but account for inner dicts.
+	line = line[2:]
+
+	for {
+
+		if len(line) == 0 {
+			line, err = scanLine(s)
+			if err != nil {
+				return "", err
+			}
+			buf.WriteString(line)
+			buf.WriteString(" ")
+			log.Read.Printf("scanTrailer dictBuf next line: <%s>\n", line)
+		}
+
+		i = strings.Index(line, "<<")
+		if i < 0 {
+			// No <<
+			j = strings.Index(line, ">>")
+			if j >= 0 {
+				// Yes >>
+				if k == 0 {
+					return buf.String(), nil
+				}
+				k--
+				println(k)
+				line = line[j+2:]
+				continue
+			}
+			// No >>
+			line, err = scanLine(s)
+			if err != nil {
+				return "", err
+			}
+			buf.WriteString(line)
+			buf.WriteString(" ")
+			log.Read.Printf("scanTrailer dictBuf next line: <%s>\n", line)
+		} else {
+			// Yes <<
+			j = strings.Index(line, ">>")
+			if j < 0 {
+				// No >>
+				k++
+				println(k)
+				line = line[i+2:]
+			} else {
+				// Yes >>
+				if i < j {
+					// handle <<
+					k++
+					println(k)
+					line = line[i+2:]
+				} else {
+					// handle >>
+					if k == 0 {
+						return buf.String(), nil
+					}
+					k--
+					println(k)
+					line = line[j+2:]
+				}
+			}
+		}
+	}
+}
+
 func scanTrailerDict(s *bufio.Scanner, startTag bool) (string, error) {
 
 	var buf bytes.Buffer
@@ -864,16 +957,9 @@ func parseXRefSection(s *bufio.Scanner, ctx *Context) (*int64, error) {
 		log.Read.Printf("line (len %d) <%s>\n", len(line), line)
 	}
 
-	// Unless trailerDict already scanned into trailerString
-	if strings.Index(trailerString, ">>") == -1 {
-
-		// scan lines until we have the complete trailer dict:  << ... >>
-		trailerDictString, err := scanTrailerDict(s, strings.Index(trailerString, "<<") > 0)
-		if err != nil {
-			return nil, err
-		}
-
-		trailerString += trailerDictString
+	trailerString, err = scanTrailer(s, trailerString)
+	if err != nil {
+		return nil, err
 	}
 
 	log.Read.Printf("parseXRefSection: trailerString: (len:%d) <%s>\n", len(trailerString), trailerString)
@@ -2179,6 +2265,7 @@ func setupEncryptionKey(ctx *Context, encryptDictObjNr int) error {
 	if err != nil {
 		return err
 	}
+	fmt.Printf("read: id = %0X\n", enc.ID)
 
 	var ok bool
 
@@ -2189,7 +2276,7 @@ func setupEncryptionKey(ctx *Context, encryptDictObjNr int) error {
 	}
 
 	// If the owner password does not match we generally move on if the user password is correct
-	// unless we need to insist on a correct owner password.
+	// unless we need to insist on a correct owner password due to the specific command in progress.
 	if !ok && needsOwnerAndUserPassword(ctx.Mode) {
 		return errors.New("owner password authentication error")
 	}

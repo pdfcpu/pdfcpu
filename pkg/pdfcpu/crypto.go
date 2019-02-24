@@ -340,7 +340,7 @@ func validateOwnerPassword(ctx *Context) (ok bool, k []byte, err error) {
 	ownerpw := ctx.OwnerPW
 	userpw := ctx.UserPW
 
-	//fmt.Printf("ValidateOwnerPassword: ownerpw=ctx.OwnerPW=%s userpw=ctx.UserPW=%s\n", ownerpw, userpw)
+	//fmt.Printf("ValidateOwnerPassword: ownerpw=ctx.OwnerPW:<%s> userpw=ctx.UserPW:<%s>\n", ownerpw, userpw)
 
 	e := ctx.E
 
