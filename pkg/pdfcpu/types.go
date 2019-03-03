@@ -266,6 +266,11 @@ func DateString(t time.Time) string {
 // HexLiteral represents a PDF hex literal object.
 type HexLiteral string
 
+// NewHexLiteral creates a new HexLiteral for b..
+func NewHexLiteral(b []byte) HexLiteral {
+	return HexLiteral(hex.EncodeToString(b))
+}
+
 func (hexliteral HexLiteral) String() string {
 	return fmt.Sprintf("<%s>", string(hexliteral))
 }

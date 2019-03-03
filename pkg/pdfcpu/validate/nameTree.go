@@ -647,11 +647,15 @@ func validateNameTreeDictLimitsEntry(xRefTable *pdf.XRefTable, d pdf.Dict, first
 		return err
 	}
 
+	//fmt.Printf("validateNameTreeDictLimitsEntry: firstKey=%s lastKey=%s limits:%v\n", firstKey, lastKey, a)
+
 	var fkv, lkv string
 
 	fk, ok := a[0].(pdf.StringLiteral)
 	if !ok {
 		fk, _ := a[0].(pdf.HexLiteral)
+		//bb, _ := fk.Bytes()
+		//	fmt.Printf("fk: %v %s\n", bb, string(bb))
 		fkv = fk.Value()
 	} else {
 		fkv = fk.Value()
@@ -660,6 +664,8 @@ func validateNameTreeDictLimitsEntry(xRefTable *pdf.XRefTable, d pdf.Dict, first
 	lk, ok := a[1].(pdf.StringLiteral)
 	if !ok {
 		lk, _ := a[1].(pdf.HexLiteral)
+		//bb, _ := lk.Bytes()
+		//fmt.Printf("lk: %v %s\n", bb, string(bb))
 		lkv = lk.Value()
 	} else {
 		lkv = lk.Value()
@@ -677,6 +683,8 @@ func validateNameTree(xRefTable *pdf.XRefTable, name string, d pdf.Dict, root bo
 	// see 7.7.4
 
 	// A node has "Kids" or "Names" entry.
+
+	//fmt.Printf("validateNameTree %s\n", name)
 
 	node := &pdf.Node{D: &d}
 	var kmin, kmax string
