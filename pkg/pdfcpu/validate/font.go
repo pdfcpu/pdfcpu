@@ -342,7 +342,7 @@ func validateFontEncoding(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string,
 	switch o := o.(type) {
 
 	case pdf.Name:
-		s := o.String()
+		s := o.Value()
 		validateFontEncodingName := func(s string) bool {
 			return pdf.MemberOf(s, []string{"MacRomanEncoding", "MacExpertEncoding", "WinAnsiEncoding"})
 		}
@@ -436,7 +436,7 @@ func validateCIDToGIDMap(xRefTable *pdf.XRefTable, o pdf.Object) error {
 	switch o := o.(type) {
 
 	case pdf.Name:
-		s := o.String()
+		s := o.Value()
 		if s != "Identity" {
 			return errors.Errorf("validateCIDToGIDMap: invalid name: %s - must be \"Identity\"\n", s)
 		}
@@ -660,9 +660,9 @@ func validateType1FontDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 		return err
 	}
 
-	required := xRefTable.Version() >= pdf.V15 || !validateStandardType1Font((*fontName).String())
+	required := xRefTable.Version() >= pdf.V15 || !validateStandardType1Font((*fontName).Value())
 	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
-		required = !validateStandardType1Font((*fontName).String())
+		required = !validateStandardType1Font((*fontName).Value())
 	}
 	// FirstChar,  required except for standard 14 fonts. since 1.5 always required, integer
 	fc, err := validateIntegerEntry(xRefTable, d, dictName, "FirstChar", required, pdf.V10, nil)

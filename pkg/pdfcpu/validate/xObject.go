@@ -220,7 +220,7 @@ func validateOPIDictInks(xRefTable *pdf.XRefTable, o pdf.Object) error {
 	switch o := o.(type) {
 
 	case pdf.Name:
-		if colorant := o.String(); colorant != "full_color" && colorant != "registration" {
+		if colorant := o.Value(); colorant != "full_color" && colorant != "registration" {
 			return errors.New("validateOPIDictInks: corrupt colorant name")
 		}
 

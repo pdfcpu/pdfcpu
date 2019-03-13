@@ -1286,7 +1286,7 @@ func buildFilterPipeline(ctx *Context, filterArray, decodeParmsArr Array, decode
 			return nil, errors.New("buildFilterPipeline: FilterArray elements corrupt")
 		}
 		if decodeParms == nil || decodeParmsArr[i] == nil {
-			filterPipeline = append(filterPipeline, PDFFilter{Name: filterName.String(), DecodeParms: nil})
+			filterPipeline = append(filterPipeline, PDFFilter{Name: filterName.Value(), DecodeParms: nil})
 			continue
 		}
 

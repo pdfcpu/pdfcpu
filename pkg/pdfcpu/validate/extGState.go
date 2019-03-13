@@ -59,7 +59,7 @@ func validateBG2Entry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, ent
 	switch o := o.(type) {
 
 	case pdf.Name:
-		s := o.String()
+		s := o.Value()
 		if s != "Default" {
 			err = errors.New("writeBG2Entry: corrupt name")
 		}
@@ -88,7 +88,7 @@ func validateUCR2Entry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, en
 	switch o := o.(type) {
 
 	case pdf.Name:
-		s := o.String()
+		s := o.Value()
 		if s != "Default" {
 			err = errors.New("writeUCR2Entry: corrupt name")
 		}
@@ -112,7 +112,7 @@ func validateTransferFunction(xRefTable *pdf.XRefTable, o pdf.Object) (err error
 	switch o := o.(type) {
 
 	case pdf.Name:
-		s := o.String()
+		s := o.Value()
 		if s != "Identity" {
 			return errors.New("validateTransferFunction: corrupt name")
 		}
@@ -169,7 +169,7 @@ func validateTR2(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
 	switch o := o.(type) {
 
 	case pdf.Name:
-		s := o.String()
+		s := o.Value()
 		if s != "Identity" && s != "Default" {
 			return errors.Errorf("validateTR2: corrupt name\n")
 		}
@@ -238,7 +238,7 @@ func validateSpotFunctionEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName st
 				"Double", "InvertedDouble", "Line", "LineX", "LineY", "Round", "Ellipse", "EllipseA",
 				"InvertedEllipseA", "EllipseB", "EllipseC", "InvertedEllipseC", "Square", "Cross", "Rhomboid"})
 		}
-		s := o.String()
+		s := o.Value()
 		if !validateSpotFunctionName(s) {
 			return errors.Errorf("validateSpotFunctionEntry: corrupt name\n")
 		}
@@ -470,7 +470,7 @@ func validateHalfToneEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string
 	switch o := o.(type) {
 
 	case pdf.Name:
-		if o.String() != "Default" {
+		if o.Value() != "Default" {
 			return errors.Errorf("validateHalfToneEntry: undefined name: %s\n", o)
 		}
 
@@ -528,7 +528,7 @@ func validateSoftMaskTransferFunctionEntry(xRefTable *pdf.XRefTable, d pdf.Dict,
 	switch o := o.(type) {
 
 	case pdf.Name:
-		s := o.String()
+		s := o.Value()
 		if s != "Identity" {
 			return errors.New("validateSoftMaskTransferFunctionEntry: corrupt name")
 		}
@@ -609,7 +609,7 @@ func validateSoftMaskEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string
 	switch o := o.(type) {
 
 	case pdf.Name:
-		s := o.String()
+		s := o.Value()
 		if !validateBlendMode(s) {
 			return errors.Errorf("validateSoftMaskEntry: invalid soft mask: %s\n", s)
 		}
