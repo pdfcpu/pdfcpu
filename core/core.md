@@ -2,4 +2,4 @@
 layout: default
 ---
 
-# Extract
+# Core Commands

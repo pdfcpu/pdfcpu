@@ -4,12 +4,13 @@ layout: default
 
 # Papersizes
 
+Commands like [Import](generate/import.md), [N-up](core/nup.md) and [Grid](core/grid.md) rely on the output paper size for PDF rendering. This is also known as the *page format* and may be specified via the `f` parameter of the *command description string* and defaults to **A4**. Append P or L to enforce portrait or landscape mode.
+
+Print the list of supported paper sizes:
+
 ```sh
 pdfcpu paper
 ```
-
-[Generate commands](generate.md) like `import`, `n-up` and `grid` rely on an output paper size. This (page format) may be specified via the `f` parameter of the *command description string* and defaults to **A4**.
-
 
 ## Supported Paper Sizes
 
@@ -93,4 +94,4 @@ Japan:
 
 - Shirokuban4, Shirokuban5, Shirokuban6
    Kiku4, Kiku5
-   AB, B40, Shikisen`
+   AB, B40, Shikisen

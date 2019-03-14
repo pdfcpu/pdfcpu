@@ -2,4 +2,4 @@
 layout: default
 ---
 
-# Getting Started
+# Generate Commands

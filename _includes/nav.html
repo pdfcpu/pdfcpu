@@ -1,22 +1,12 @@
 <nav class="{{include.navclass}}">
-    <a href="{{site.baseurl}}/about" class="{% if page.name == 'about.md' %}current{% endif %}">About</a><br/>
-    <a href="{{site.baseurl}}/news" class="{% if page.name == 'news.md' %}current{% endif %}">News</a><br/>
-    <a href="{{site.baseurl}}/getting_started" class="{% if page.name == 'getting_started.md' %}current{% endif %}">Getting Started</a><br/>
-    <a href="{{site.baseurl}}/core" class="{% if page.name == 'core.md' or page.name == 'optimize.md' or page.name == 'merge.md' or page.name == 'split.md' or page.name == 'trim.md' or page.name == 'rotate.md' or page.name == 'stamp.md' or page.name == 'nup.md' or page.name == 'grid.md' or page.name == 'validate.md' %}current{% endif %}">Core Commands</a><br/>
-    <a href="{{site.baseurl}}/generate" class="{% if page.name == 'generate.md' or page.name == 'import.md' %}current{% endif %}">Generate Commands</a><br/>
-    <a href="{{site.baseurl}}/extract" class="{% if page.name == 'extract.md' %}current{% endif %}">Extraction</a><br/>
-    <a href="{{site.baseurl}}/attach" class="{% if page.name == 'attach.md' %}current{% endif %}">Attachments</a><br/>
-    <a href="{{site.baseurl}}/encrypt" class="{% if page.name == 'encrypt.md' %}current{% endif %}">Encryption</a><br/>
-    <a href="{{site.baseurl}}/paper" class="{% if page.name == 'paper.md' %}current{% endif %}">Papersize</a><br/>
-    <a href="{{site.baseurl}}/changelog" class="{% if page.name == 'changelog.md' %}current{% endif %}">Changelog</a><br/>
+    <a href="{{site.baseurl}}/about/about" class="{% if page.name == 'about.md' or page.name == 'features.md' %}current{% endif %}">About</a><br/>
+    <a href="{{site.baseurl}}/getting_started/getting_started" class="{% if page.name == 'getting_started.md' %}current{% endif %}">Getting Started</a><br/>
+    <a href="{{site.baseurl}}/core/core" class="{% if page.name == 'core.md' or page.name == 'optimize.md' or page.name == 'merge.md' or page.name == 'split.md' or page.name == 'trim.md' or page.name == 'rotate.md' or page.name == 'stamp.md' or page.name == 'nup.md' or page.name == 'grid.md' or page.name == 'validate.md' %}current{% endif %}">Core Commands</a><br/>
+    <a href="{{site.baseurl}}/generate/generate" class="{% if page.name == 'generate.md' or page.name == 'import.md' %}current{% endif %}">Generate Commands</a><br/>
+    <a href="{{site.baseurl}}/extract/extract" class="{% if page.name == 'extract.md' or page.name == 'extract_content.md' or page.name == 'extract_fonts.md' or page.name == 'extract_images.md' or page.name == 'extract_metadata.md' or page.name == 'extract_pages.md' %}current{% endif %}">Extraction</a><br/>
+    <a href="{{site.baseurl}}/attach/attach" class="{% if page.name == 'attach.md' or page.name == 'attach_add.md' or page.name == 'attach_remove.md' or page.name == 'attach_list.md' or page.name == 'attach_extract.md' %}current{% endif %}">Attachments</a><br/>
+    <a href="{{site.baseurl}}/encrypt/encrypt" class="{% if page.name == 'encrypt.md' or page.name == 'change_opw.md' or page.name == 'change_upw.md' or page.name == 'decryptPDF.md' or page.name == 'encryptPDF.md' or page.name == 'perm_add.md' or page.name == 'perm_list.md' %}current{% endif %}">Encryption</a><br/>
+    <a href="{{site.baseurl}}/paper" class="{% if page.name == 'paper.md' %}current{% endif %}">Papersizes</a><br/>
 </nav>
-
-<pre>
-    site: {{ site | jsonify | escape }}
-    page: {{ page | jsonify | escape }}
-    layout: {{ layout | jsonify | escape }}
-    content: {{ content | jsonify | escape }}
-    paginator: {{ paginator | jsonify | escape }}
-</pre>
 
 <br>

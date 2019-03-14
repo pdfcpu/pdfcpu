@@ -39,7 +39,26 @@
         </ul>
         {% endif %}
 
-        {% include nav.html navclass='nav-top' %}
+        {% if page.dir == '/about/' %}
+          {% include nav_about.html navclass='nav-top' %}
+        {% elsif page.dir == '/getting_started/' %}
+          {% include nav_getting_started.html navclass='nav-top' %}
+        {% elsif page.dir == '/core/' %}
+          {% include nav_core.html navclass='nav-top' %}
+        {% elsif page.dir == '/generate/' %}
+          {% include nav_generate.html navclass='nav-top' %}
+        {% elsif page.dir == '/extract/' %}
+          {% include nav_extract.html navclass='nav-top' %}
+        {% elsif page.dir == '/attach/' %}
+          {% include nav_attach.html navclass='nav-top' %}
+        {% elsif page.dir == '/encrypt/' %}
+          {% include nav_encrypt.html navclass='nav-top' %}
+        {% else %}
+          {% include nav.html navclass='nav-top' %}
+        {% endif %}
+
+        <!-- a href="{{site.baseurl}}/news" class="{% if page.name == 'news.md' %}current{% endif %}">News</a><br/ -->
+        <a href="{{site.baseurl}}/changelog" class="{% if page.name == 'changelog.md' %}current{% endif %}">Changelog</a><br/>
            
       </header>
       <section>

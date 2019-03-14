@@ -1,3 +1,4 @@
 theme: jekyll-theme-minimal
 baseurl: /pdfcpu
 exclude: ['README.md']
+show_downloads: false
