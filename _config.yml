@@ -1,5 +1,5 @@
 theme: jekyll-theme-minimal
-baseurl: /pdfcpu
+#baseurl: /pdfcpu
 url: "http://pdfcpu.io"
 exclude: ['README.md']
 show_downloads: false
