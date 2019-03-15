@@ -8,8 +8,16 @@
 
 ![logo](resources/pdfchip3.png)
 
-Package pdfcpu is a simple PDF processing library written in [Go](http://golang.org) supporting encryption.
-It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO-32000).
+Package `pdfcpu` is a simple PDF processing library written in [Go](http://golang.org) supporting encryption.
+It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO-32000). The current command set includes *validate*, *optimize*, *split*, *merge*, *extract*, *trim*, *stamp*, *watermark*, *import*, *nup*, *grid*, *rotate*, *attach*, *perm*, *encrypt*, *decrypt*, *changeupw*, *changeopw* and the list keeps growing.
+
+Documentation is live at [pdfcpu.io](https://pdfcpu.io). If you go there you will also find examples for every command.
+
+## Motivation
+
+Document interchange is essential in the world we live in. PDF is everywhere and it is not going away anytime soon.<br>
+This is an effort to build a PDF processing library from the ground up written in Go with strong support for batch processing via a rich command line. Over time `pdfcpu` aims to support the standard range of PDF processing features and also any interesting use cases that may present themselves along the way.
+
 
 ## Status
 
