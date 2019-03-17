@@ -8,16 +8,62 @@
 
 ![logo](resources/pdfchip3.png)
 
-Package `pdfcpu` is a simple PDF processing library written in [Go](http://golang.org) supporting encryption.
-It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO-32000). The current command set includes *validate*, *optimize*, *split*, *merge*, *extract*, *trim*, *stamp*, *watermark*, *import*, *nup*, *grid*, *rotate*, *attach*, *perm*, *encrypt*, *decrypt*, *changeupw*, *changeopw* and the list keeps growing.
-
-Documentation is live at [pdfcpu.io](https://pdfcpu.io). If you go there you will also find examples for every command.
+pdfcpu is a simple PDF processing library written in [Go](http://golang.org) supporting encryption.
+It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO-32000).
 
 ## Motivation
 
-Document interchange is essential in the world we live in. PDF is everywhere and it is not going away anytime soon.<br>
-This is an effort to build a PDF processing library from the ground up written in Go with strong support for batch processing via a rich command line. Over time `pdfcpu` aims to support the standard range of PDF processing features and also any interesting use cases that may present themselves along the way.
+This is an effort to build a comprehensive PDF processing library from the ground up written in Go. Over time pdfcpu aims to support the standard range of PDF processing features and also any interesting use cases that may present themselves along the way.
 
+<p align="center">
+  <kbd><img src="resources/gridpdf.png" height="150"></kbd>&nbsp;
+  <kbd><img src="resources/wmi1abs.png" height="150"></kbd>&nbsp;
+  <kbd><img src="resources/nup9pdf.png" height="150"></kbd>&nbsp;
+  <kbd><img src="resources/wmText2Sample.png" height="150"></kbd><br><br>
+  <kbd><img src="resources/stt31.png" height="150"></kbd>&nbsp;
+  <kbd><img src="resources/nup4pdf.png" height="150"></kbd>&nbsp;
+  <kbd><img src="resources/wmi4.png" height="150"></kbd>&nbsp;
+  <kbd><img src="resources/sti.png" height="150"></kbd><br><br>
+  <kbd><img src="resources/stp.png" height="150"></kbd>&nbsp;
+  <kbd><img src="resources/gridimg.png" height="150"></kbd>
+</p>
+
+## Focus
+
+The main focus lies on strong support for batch processing and scripting via a rich command line. At the same time pdfcpu wants to make it easy to integrate PDF processing into your Go based backend system by providing a robust command set.
+
+## Command Set
+
+* [validate](https://pdfcpu.io/core/validate)
+* [optimize](https://pdfcpu.io/core/optimize)
+* [split](https://pdfcpu.io/core/split)
+* [merge](https://pdfcpu.io/core/merge)
+* [extract](https://pdfcpu.io/extract/extract)
+* [trim](https://pdfcpu.io/core/trim)
+* [stamp](https://pdfcpu.io/core/stamp)
+* [watermark](https://pdfcpu.io/core/watermark)
+* [import](https://pdfcpu.io/generate/import)
+* [nup](https://pdfcpu.io/core/nup)
+* [grid](https://pdfcpu.io/core/grid)
+* [rotate](https://pdfcpu.io/core/rotate)
+* [attachments](https://pdfcpu.io/attach/attach)
+* [permissions](https://pdfcpu.io/encrypt/perm_add)
+* [encrypt](https://pdfcpu.io/encrypt/encryptPDF)
+* [decrypt](https://pdfcpu.io/encrypt/decryptPDF)
+* [change user password](https://pdfcpu.io/encrypt/change_upw)
+* [change owner password](https://pdfcpu.io/encrypt/change_opw)
+
+## Documentation
+
+The main entry point is [pdfcpu.io](https://pdfcpu.io).
+
+There you will find explanations of all the commands, their parameters and examples which use the CLI because this makes it easier to understand how the commands work.
+Even if you want to dive right into pdfcpu backend integration it is highly recommended to [read the docs](https://pdfcpu.io) first.
+
+### GoDoc
+
+* [pdfcpu package](https://godoc.org/github.com/hhrutter/pdfcpu)
+* [pdfcpu api](https://godoc.org/github.com/hhrutter/pdfcpu/pkg/api)
 
 ## Status
 
@@ -43,7 +89,7 @@ Required build version: go1.9 and up
 * Feature requests - always welcome!
 * Bug fixes - always welcome!
 * PRs - also welcome, although I can't promise a merge-in right now.
-* `pdfcpu` is stable but still _alpha_ and occasionally undergoing heavy changes.
+* pdfcpu is stable but still alpha and occasionally undergoing heavy changes.
 
 ### How
 
@@ -66,7 +112,7 @@ Please note that this project is released with a Contributor [Code of Conduct](C
 
 ## Disclaimer
 
-Usage of `pdfcpu` assumes you know about and respect all copyrights of any PDF content you may be processing. This applies to the PDF files as such, their content and in particular all embedded resources like font files or images. Credit goes to [Renee French](https://instagram.com/reneefrench) for creating our beloved Gopher.
+Usage of pdfcpu assumes you know about and respect all copyrights of any PDF content you may be processing. This applies to the PDF files as such, their content and in particular all embedded resources like font files or images. Credit goes to [Renee French](https://instagram.com/reneefrench) for creating our beloved Gopher.
 
 ## License
 
