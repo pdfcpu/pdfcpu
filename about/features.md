@@ -14,9 +14,9 @@ layout: default
 * Rotate selected pages
 * Stamp/Watermark selected pages with text, an image or a PDF page
 * N-up (rearrange pages into grid page layout for reduced number of pages)
-* Grid (rearrange pages into grid page layout for enhanced browsing experience)
+* Grid (rearrange pages into grid page layout for enhanced browsing)
 * Import convert/import images into PDF
-* Extract Images (extract all embedded images of a PDF into a given dir)
+* Extract Images (extract embedded images of a PDF into a given dir)
 * Extract Fonts (extract all embedded fonts of a PDF file into a given dir)
 * Extract Content (extract the PDF-Source into given dir)
 * Extract Pages (extract specific pages into a given dir)
