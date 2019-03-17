@@ -2,7 +2,7 @@
 layout: default
 ---
 
-# Features
+# Command Set
 
 * Read (builds xref table from PDF file)
 * Validate (validates PDF files up to version 7.0)
@@ -13,8 +13,8 @@ layout: default
 * Trim (generate a custom version of a PDF  including selected pages)
 * Rotate selected pages
 * Stamp/Watermark selected pages with text, an image or a PDF page
-* N-up (rearrange pages into grid page layout for reduced number of pages)
-* Grid (rearrange pages into grid page layout for enhanced browsing)
+* N-up (rearrange pages into grid layout for reduced number of pages)
+* Grid (rearrange pages into grid layout for enhanced browsing)
 * Import convert/import images into PDF
 * Extract Images (extract embedded images of a PDF into a given dir)
 * Extract Fonts (extract all embedded fonts of a PDF file into a given dir)
