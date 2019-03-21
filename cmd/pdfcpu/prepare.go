@@ -414,19 +414,32 @@ func prepareDecryptCommand(config *pdfcpu.Configuration) *api.Command {
 	return api.DecryptCommand(filenameIn, filenameOut, config)
 }
 
-func validEncryptOptions() bool {
-	return pageSelection == "" &&
-		(mode == "" || mode == "rc4" || mode == "aes") &&
-		(key == "" || key == "40" || key == "128") &&
-		(perm == "" || perm == "none" || perm == "all")
+func validateEncryptFlags() {
+
+	if mode != "rc4" && mode != "aes" && mode != "" {
+		fmt.Fprintf(os.Stderr, "%s\n\n", "valid modes: rc4,aes default:aes")
+		os.Exit(1)
+	}
+
+	if key != "40" && key != "128" && key != "" {
+		fmt.Fprintf(os.Stderr, "%s\n\n", "supported key lengths: 40,128 default:128")
+		os.Exit(1)
+	}
+
+	if perm != "none" && perm != "all" && perm != "" {
+		fmt.Fprintf(os.Stderr, "%s\n\n", "supported permissions: none,all default:none (viewing is always allowed!)")
+		os.Exit(1)
+	}
 }
 
 func prepareEncryptCommand(config *pdfcpu.Configuration) *api.Command {
 
-	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || !validEncryptOptions() {
+	if len(flag.Args()) == 0 || len(flag.Args()) > 2 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageEncrypt)
 		os.Exit(1)
 	}
+
+	validateEncryptFlags()
 
 	if mode == "rc4" {
 		config.EncryptUsingAES = false

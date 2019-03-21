@@ -523,16 +523,23 @@ func writeDirectObject(ctx *Context, o Object) error {
 	switch o := o.(type) {
 
 	case Dict:
-		for _, v := range o {
+		for k, v := range o {
+			if ctx.writingPages && (k == "Dest" || k == "D") {
+				ctx.dest = true
+			}
 			_, _, err := writeDeepObject(ctx, v)
 			if err != nil {
 				return err
 			}
+			ctx.dest = false
 		}
 		log.Write.Printf("writeDirectObject: end offset=%d\n", ctx.Write.Offset)
 
 	case Array:
-		for _, v := range o {
+		for i, v := range o {
+			if ctx.dest && i == 0 {
+				continue
+			}
 			_, _, err := writeDeepObject(ctx, v)
 			if err != nil {
 				return err
@@ -568,11 +575,15 @@ func writeDeepDict(ctx *Context, d Dict, objNr, genNr int) error {
 		return err
 	}
 
-	for _, v := range d {
+	for k, v := range d {
+		if ctx.writingPages && (k == "Dest" || k == "D") {
+			ctx.dest = true
+		}
 		_, _, err = writeDeepObject(ctx, v)
 		if err != nil {
 			return err
 		}
+		ctx.dest = false
 	}
 
 	return nil
@@ -609,7 +620,10 @@ func writeDeepArray(ctx *Context, a Array, objNr, genNr int) error {
 		return err
 	}
 
-	for _, v := range a {
+	for i, v := range a {
+		if ctx.dest && i == 0 {
+			continue
+		}
 		_, _, err = writeDeepObject(ctx, v)
 		if err != nil {
 			return err

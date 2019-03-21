@@ -150,6 +150,16 @@ func (wm Watermark) String() string {
 		sc = "absolute"
 	}
 
+	bbox := ""
+	if wm.bb != nil {
+		bbox = (*wm.bb).String()
+	}
+
+	vp := ""
+	if wm.vp != nil {
+		vp = (*wm.vp).String()
+	}
+
 	return fmt.Sprintf("Watermark: <%s> is %son top, typ:%s\n"+
 		"%s %d points\n"+
 		"PDFpage#: %d\n"+
@@ -171,8 +181,8 @@ func (wm Watermark) String() string {
 		wm.diagonal,
 		wm.opacity,
 		wm.renderMode,
-		*wm.bb,
-		*wm.vp,
+		bbox,
+		vp,
 		wm.pageRot,
 	)
 }
@@ -287,8 +297,8 @@ func (wm *Watermark) calcTransformMatrix() *matrix {
 		dy = wm.bb.LL.Y
 	}
 
-	m2[2][0] = wm.vp.Width()/2 + sin*(wm.bb.Height()/2+dy) - cos*wm.bb.Width()/2
-	m2[2][1] = wm.vp.Height()/2 - cos*(wm.bb.Height()/2+dy) - sin*wm.bb.Width()/2
+	m2[2][0] = wm.vp.LL.X + wm.vp.Width()/2 + sin*(wm.bb.Height()/2+dy) - cos*wm.bb.Width()/2
+	m2[2][1] = wm.vp.LL.Y + wm.vp.Height()/2 - cos*(wm.bb.Height()/2+dy) - sin*wm.bb.Width()/2
 
 	m := m1.multiply(m2)
 	return &m

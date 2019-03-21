@@ -102,7 +102,7 @@ func parseBorder(s string) (bool, error) {
 	case "off", "false":
 		return false, nil
 	default:
-		return false, errors.New("nUp border, Please supply one of: on/off true/false")
+		return false, errors.New("nUp border, Please provide one of: on/off true/false")
 	}
 }
 
@@ -114,7 +114,7 @@ func parseMargin(s string) (int, error) {
 	}
 
 	if n < 0 {
-		return 0, errors.New("nUp margin, Please supply a positive int value")
+		return 0, errors.New("nUp margin, Please provide a positive int value")
 	}
 
 	return n, nil

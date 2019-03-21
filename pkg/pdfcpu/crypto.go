@@ -65,6 +65,7 @@ var (
 		LISTPERMISSIONS:    {0, 0},
 		ADDPERMISSIONS:     {0, 0},
 		ADDWATERMARKS:      {1, 0},
+		//DECRYPT:            {1, 0},
 	}
 )
 
@@ -185,7 +186,18 @@ func validateUserPassword(ctx *Context) (ok bool, key []byte, err error) {
 
 	//fmt.Printf("validateUserPassword: u =\n%v\n", u)
 
-	return bytes.HasPrefix(ctx.E.U, u), key, nil
+	match := false
+
+	switch ctx.E.R {
+
+	case 2:
+		match = bytes.Equal(ctx.E.U, u)
+
+	case 3, 4:
+		match = bytes.HasPrefix(ctx.E.U, u[:16])
+	}
+
+	return match, key, nil
 }
 
 func key(ownerpw, userpw string, r, l int) (key []byte) {
@@ -340,7 +352,7 @@ func validateOwnerPassword(ctx *Context) (ok bool, k []byte, err error) {
 	ownerpw := ctx.OwnerPW
 	userpw := ctx.UserPW
 
-	//fmt.Printf("ValidateOwnerPassword: ownerpw=ctx.OwnerPW=%s userpw=ctx.UserPW=%s\n", ownerpw, userpw)
+	//fmt.Printf("ValidateOwnerPassword: ownerpw=ctx.OwnerPW:<%s> userpw=ctx.UserPW:<%s>\n", ownerpw, userpw)
 
 	e := ctx.E
 
@@ -416,7 +428,7 @@ func supportedCFEntry(d Dict) (bool, error) {
 
 func perms(p int) (list []string) {
 
-	list = append(list, fmt.Sprintf("%0b", uint32(p)&0x0F3C))
+	list = append(list, fmt.Sprintf("permission bits: %12b", uint32(p)&0x0F3C))
 	list = append(list, fmt.Sprintf("Bit  3: %t (print(rev2), print quality(rev>=3))", p&0x0004 > 0))
 	list = append(list, fmt.Sprintf("Bit  4: %t (modify other than controlled by bits 6,9,11)", p&0x0008 > 0))
 	list = append(list, fmt.Sprintf("Bit  5: %t (extract(rev2), extract other than controlled by bit 10(rev>=3))", p&0x0010 > 0))
@@ -717,32 +729,59 @@ func decryptKey(objNumber, generation int, key []byte, aes bool) []byte {
 	return dk
 }
 
-// EncryptString encrypts s using RC4 or AES.
-func encryptString(needAES bool, s string, objNr, genNr int, key []byte) (*string, error) {
+// EncryptBytes encrypts s using RC4 or AES.
+func encryptBytes(needAES bool, b []byte, objNr, genNr int, key []byte) ([]byte, error) {
 
-	log.Debug.Printf("EncryptString begin obj:%d gen:%d key:%X aes:%t\n<%s>\n", objNr, genNr, key, needAES, s)
+	log.Debug.Printf("EncryptBytes begin obj:%d gen:%d key:%X aes:%t\n<%v>\n", objNr, genNr, key, needAES, b)
 
-	var s1 *string
-	var err error
 	k := decryptKey(objNr, genNr, key, needAES)
 	//logInfoCrypto.Printf("EncryptString k = %v\n", k)
 
 	if needAES {
-		b, err := encryptAESBytes([]byte(s), k)
+		bb, err := encryptAESBytes(b, k)
 		if err != nil {
 			return nil, err
 		}
-		sb := string(b)
-		s1 = &sb
-
-	} else {
-		s1, err = applyRC4Cipher([]byte(s), objNr, genNr, key, needAES)
-		if err != nil {
-			return nil, err
-		}
+		return bb, nil
 	}
 
-	return Escape(*s1)
+	return applyRC4CipherBytes(b, objNr, genNr, key, needAES)
+}
+
+// EncryptString encrypts s using RC4 or AES.
+func encryptString(needAES bool, s string, objNr, genNr int, key []byte) (*string, error) {
+
+	log.Debug.Printf("encryptString begin obj:%d gen:%d key:%X aes:%t\n<%s>\n", objNr, genNr, key, needAES, s)
+
+	b, err := encryptBytes(needAES, []byte(s), objNr, genNr, key)
+	if err != nil {
+		return nil, err
+	}
+
+	s1, err := Escape(string(b))
+	if err != nil {
+		return nil, err
+	}
+
+	return s1, err
+}
+
+// DecryptBytes decrypts bb using RC4 or AES.
+func decryptBytes(needAES bool, b []byte, objNr, genNr int, key []byte) ([]byte, error) {
+
+	log.Debug.Printf("DecryptBytes begin obj:%d gen:%d key:%X aes:%t bb:%v\n", objNr, genNr, key, needAES, b)
+
+	k := decryptKey(objNr, genNr, key, needAES)
+
+	if needAES {
+		bb, err := decryptAESBytes(b, k)
+		if err != nil {
+			return nil, err
+		}
+		return bb, nil
+	}
+
+	return applyRC4CipherBytes(b, objNr, genNr, key, needAES)
 }
 
 // DecryptString decrypts s using RC4 or AES.
@@ -755,18 +794,29 @@ func decryptString(needAES bool, s string, objNr, genNr int, key []byte) (*strin
 		return nil, err
 	}
 
-	k := decryptKey(objNr, genNr, key, needAES)
-
-	if needAES {
-		b, err = decryptAESBytes(b, k)
-		if err != nil {
-			return nil, err
-		}
-		s1 := string(b)
-		return &s1, nil
+	b, err = decryptBytes(needAES, b, objNr, genNr, key)
+	if err != nil {
+		return nil, err
 	}
 
-	return applyRC4Cipher(b, objNr, genNr, key, needAES)
+	s1 := string(b)
+	return &s1, nil
+}
+
+func applyRC4CipherBytes(b []byte, objNr, genNr int, key []byte, needAES bool) ([]byte, error) {
+
+	log.Debug.Printf("applyRC4CipherBytes begin b:<%v> %d %d key:%X aes:%t\n", b, objNr, genNr, key, needAES)
+
+	c, err := rc4.NewCipher(decryptKey(objNr, genNr, key, needAES))
+	if err != nil {
+		return nil, err
+	}
+
+	c.XORKeyStream(b, b)
+
+	log.Debug.Printf("applyRC4Cipher end, rc4 returning: <%v>\n", b)
+
+	return b, nil
 }
 
 func applyRC4Cipher(b []byte, objNr, genNr int, key []byte, needAES bool) (*string, error) {
@@ -799,8 +849,20 @@ func encrypt(m map[string]Object, k string, v Object, objNr, genNr int, key []by
 	return nil
 }
 
+func encryptDict(d Dict, objNr, genNr int, key []byte, aes bool) error {
+
+	for k, v := range d {
+		err := encrypt(d, k, v, objNr, genNr, key, aes)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // EncryptDeepObject recurses over non trivial PDF objects and encrypts all strings encountered.
-func encryptDeepObject(objIn Object, objNr, genNr int, key []byte, aes bool) (*StringLiteral, error) {
+func encryptDeepObject(objIn Object, objNr, genNr int, key []byte, aes bool) (*HexLiteral, error) {
 
 	_, ok := objIn.(IndirectRef)
 	if ok {
@@ -810,19 +872,15 @@ func encryptDeepObject(objIn Object, objNr, genNr int, key []byte, aes bool) (*S
 	switch obj := objIn.(type) {
 
 	case StreamDict:
-		for k, v := range obj.Dict {
-			err := encrypt(obj.Dict, k, v, objNr, genNr, key, aes)
-			if err != nil {
-				return nil, err
-			}
+		err := encryptDict(obj.Dict, objNr, genNr, key, aes)
+		if err != nil {
+			return nil, err
 		}
 
 	case Dict:
-		for k, v := range obj {
-			err := encrypt(obj, k, v, objNr, genNr, key, aes)
-			if err != nil {
-				return nil, err
-			}
+		err := encryptDict(obj, objNr, genNr, key, aes)
+		if err != nil {
+			return nil, err
 		}
 
 	case Array:
@@ -837,14 +895,21 @@ func encryptDeepObject(objIn Object, objNr, genNr int, key []byte, aes bool) (*S
 		}
 
 	case StringLiteral:
-		s, err := encryptString(aes, obj.Value(), objNr, genNr, key)
+		s := obj.Value()
+		b, err := encryptBytes(aes, []byte(s), objNr, genNr, key)
 		if err != nil {
 			return nil, err
 		}
+		hl := NewHexLiteral(b)
+		return &hl, nil
 
-		sl := StringLiteral(*s)
-
-		return &sl, nil
+	case HexLiteral:
+		bb, err := encryptHexLiteral(obj, aes, objNr, genNr, key)
+		if err != nil {
+			return nil, err
+		}
+		hl := NewHexLiteral(bb)
+		return &hl, nil
 
 	default:
 
@@ -890,9 +955,15 @@ func decryptDeepObject(objIn Object, objNr, genNr int, key []byte, aes bool) (*S
 		if err != nil {
 			return nil, err
 		}
-
 		sl := StringLiteral(*s)
+		return &sl, nil
 
+	case HexLiteral:
+		bb, err := decryptHexLiteral(obj, aes, objNr, genNr, key)
+		if err != nil {
+			return nil, err
+		}
+		sl := StringLiteral(string(bb))
 		return &sl, nil
 
 	default:
@@ -985,7 +1056,7 @@ func encryptAESBytes(b, key []byte) ([]byte, error) {
 	mode := cipher.NewCBCEncrypter(cb, iv)
 	mode.CryptBlocks(data[aes.BlockSize:], b)
 
-	//fmt.Printf("encryptAESBytes after:\n%s\n", hex.Dump(data))
+	//fmt.Printf("encryptAESBytes after:\nlen=%d %s\n", len(data), hex.Dump(data))
 
 	return data, nil
 }
@@ -1063,4 +1134,24 @@ func fileID(ctx *Context) (HexLiteral, error) {
 	m := h.Sum(nil)
 
 	return HexLiteral(hex.EncodeToString(m)), nil
+}
+
+func encryptHexLiteral(hl HexLiteral, needAES bool, objNr, genNr int, key []byte) ([]byte, error) {
+
+	bb, err := hl.Bytes()
+	if err != nil {
+		return nil, err
+	}
+
+	return encryptBytes(needAES, bb, objNr, genNr, key)
+}
+
+func decryptHexLiteral(hl HexLiteral, needAES bool, objNr, genNr int, key []byte) ([]byte, error) {
+
+	bb, err := hl.Bytes()
+	if err != nil {
+		return nil, err
+	}
+
+	return decryptBytes(needAES, bb, objNr, genNr, key)
 }

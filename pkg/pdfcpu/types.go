@@ -17,6 +17,7 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -228,7 +229,27 @@ func (nameObject Name) PDFString() string {
 
 // Value returns a string value for this PDF object.
 func (nameObject Name) Value() string {
-	return string(nameObject)
+
+	s := string(nameObject)
+	var b bytes.Buffer
+
+	for i := 0; i < len(s); {
+		c := s[i]
+		if c != '#' {
+			b.WriteByte(c)
+			i++
+			continue
+		}
+
+		// # detected, next 2 chars have to exist.
+		// This gets checked during parsing.
+		s1 := s[i+1 : i+3]
+		b1, _ := hex.DecodeString(s1)
+		b.WriteByte(b1[0])
+		i += 3
+	}
+
+	return b.String()
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -265,6 +286,11 @@ func DateString(t time.Time) string {
 
 // HexLiteral represents a PDF hex literal object.
 type HexLiteral string
+
+// NewHexLiteral creates a new HexLiteral for b..
+func NewHexLiteral(b []byte) HexLiteral {
+	return HexLiteral(hex.EncodeToString(b))
+}
 
 func (hexliteral HexLiteral) String() string {
 	return fmt.Sprintf("<%s>", string(hexliteral))

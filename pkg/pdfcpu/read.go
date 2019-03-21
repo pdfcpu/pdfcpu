@@ -780,6 +780,94 @@ func scanLine(s *bufio.Scanner) (string, error) {
 	return s.Text(), nil
 }
 
+func scanTrailer(s *bufio.Scanner, line string) (string, error) {
+
+	var buf bytes.Buffer
+	var err error
+	var i, j, k int
+
+	log.Read.Printf("line: <%s>\n", line)
+
+	// Scan for dict start tag "<<".
+	for {
+		i = strings.Index(line, "<<")
+		if i >= 0 {
+			break
+		}
+		line, err = scanLine(s)
+		log.Read.Printf("line: <%s>\n", line)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	line = line[i:]
+	buf.WriteString(line)
+	buf.WriteString(" ")
+	log.Read.Printf("scanTrailer dictBuf after start tag: <%s>\n", line)
+
+	// Scan for dict end tag ">>" but account for inner dicts.
+	line = line[2:]
+
+	for {
+
+		if len(line) == 0 {
+			line, err = scanLine(s)
+			if err != nil {
+				return "", err
+			}
+			buf.WriteString(line)
+			buf.WriteString(" ")
+			log.Read.Printf("scanTrailer dictBuf next line: <%s>\n", line)
+		}
+
+		i = strings.Index(line, "<<")
+		if i < 0 {
+			// No <<
+			j = strings.Index(line, ">>")
+			if j >= 0 {
+				// Yes >>
+				if k == 0 {
+					return buf.String(), nil
+				}
+				k--
+				line = line[j+2:]
+				continue
+			}
+			// No >>
+			line, err = scanLine(s)
+			if err != nil {
+				return "", err
+			}
+			buf.WriteString(line)
+			buf.WriteString(" ")
+			log.Read.Printf("scanTrailer dictBuf next line: <%s>\n", line)
+		} else {
+			// Yes <<
+			j = strings.Index(line, ">>")
+			if j < 0 {
+				// No >>
+				k++
+				line = line[i+2:]
+			} else {
+				// Yes >>
+				if i < j {
+					// handle <<
+					k++
+					line = line[i+2:]
+				} else {
+					// handle >>
+					if k == 0 {
+						return buf.String(), nil
+					}
+					k--
+					line = line[j+2:]
+				}
+			}
+		}
+	}
+}
+
 func scanTrailerDict(s *bufio.Scanner, startTag bool) (string, error) {
 
 	var buf bytes.Buffer
@@ -864,16 +952,9 @@ func parseXRefSection(s *bufio.Scanner, ctx *Context) (*int64, error) {
 		log.Read.Printf("line (len %d) <%s>\n", len(line), line)
 	}
 
-	// Unless trailerDict already scanned into trailerString
-	if strings.Index(trailerString, ">>") == -1 {
-
-		// scan lines until we have the complete trailer dict:  << ... >>
-		trailerDictString, err := scanTrailerDict(s, strings.Index(trailerString, "<<") > 0)
-		if err != nil {
-			return nil, err
-		}
-
-		trailerString += trailerDictString
+	trailerString, err = scanTrailer(s, trailerString)
+	if err != nil {
+		return nil, err
 	}
 
 	log.Read.Printf("parseXRefSection: trailerString: (len:%d) <%s>\n", len(trailerString), trailerString)
@@ -1205,7 +1286,7 @@ func buildFilterPipeline(ctx *Context, filterArray, decodeParmsArr Array, decode
 			return nil, errors.New("buildFilterPipeline: FilterArray elements corrupt")
 		}
 		if decodeParms == nil || decodeParmsArr[i] == nil {
-			filterPipeline = append(filterPipeline, PDFFilter{Name: filterName.String(), DecodeParms: nil})
+			filterPipeline = append(filterPipeline, PDFFilter{Name: filterName.Value(), DecodeParms: nil})
 			continue
 		}
 
@@ -1460,18 +1541,17 @@ func ParseObject(ctx *Context, offset int64, objNr, genNr int) (Object, error) {
 
 	case HexLiteral:
 		if ctx.EncKey != nil {
-			s1, err := decryptString(ctx.AES4Strings, o.Value(), objNr, genNr, ctx.EncKey)
+			bb, err := decryptHexLiteral(o, ctx.AES4Strings, objNr, genNr, ctx.EncKey)
 			if err != nil {
 				return nil, err
 			}
-			return HexLiteral(*s1), nil
+			return StringLiteral(string(bb)), nil
 		}
+		return o, nil
 
 	default:
 		return o, nil
 	}
-
-	return nil, nil
 }
 
 func dereferencedObject(ctx *Context, objectNumber int) (Object, error) {
@@ -2071,9 +2151,9 @@ func dereferenceXRefTable(ctx *Context, config *Configuration) error {
 	xRefTable := ctx.XRefTable
 
 	// Note for encrypted files:
-	// Mandatory supply userpw to open & display file.
+	// Mandatory provide userpw to open & display file.
 	// Access may be restricted (Decode access privileges).
-	// Optionally supply ownerpw in order to gain unrestricted access.
+	// Optionally provide ownerpw in order to gain unrestricted access.
 	err := checkForEncryption(ctx)
 	if err != nil {
 		return err
@@ -2106,7 +2186,7 @@ func dereferenceXRefTable(ctx *Context, config *Configuration) error {
 func handleUnencryptedFile(ctx *Context) error {
 
 	if ctx.Mode == DECRYPT || ctx.Mode == ADDPERMISSIONS {
-		return errors.New("decrypt: this file is not encrypted")
+		return errors.New("This file is not encrypted")
 	}
 
 	if ctx.Mode != ENCRYPT {
@@ -2116,7 +2196,7 @@ func handleUnencryptedFile(ctx *Context) error {
 	// Encrypt subcommand found.
 
 	if len(ctx.UserPW) == 0 && len(ctx.OwnerPW) == 0 {
-		return errors.New("encrypt: user or/and owner password missing")
+		return errors.New("Please provide a user password, owner password or both")
 	}
 
 	return nil
@@ -2168,12 +2248,10 @@ func setupEncryptionKey(ctx *Context, encryptDictObjNr int) error {
 		return err
 	}
 	if enc == nil {
-		return errors.New("This encryption is not supported")
+		return errors.New("Unsupported encryption mode")
 	}
 
 	ctx.E = enc
-	//fmt.Printf("read: O = %0X\n", enc.O)
-	//fmt.Printf("read: U = %0X\n", enc.U)
 
 	enc.ID, err = idBytes(ctx)
 	if err != nil {
@@ -2183,19 +2261,30 @@ func setupEncryptionKey(ctx *Context, encryptDictObjNr int) error {
 	var ok bool
 
 	//fmt.Println("checking opw")
+	// = permissions password
 	ok, ctx.EncKey, err = validateOwnerPassword(ctx)
 	if err != nil {
 		return err
 	}
 
 	// If the owner password does not match we generally move on if the user password is correct
-	// unless we need to insist on a correct owner password.
+	// unless we need to insist on a correct owner password due to the specific command in progress.
 	if !ok && needsOwnerAndUserPassword(ctx.Mode) {
-		return errors.New("owner password authentication error")
+
+		if ctx.Mode == CHANGEOPW {
+			return errors.New("Please provide the user password with -upw")
+		}
+
+		if ctx.Mode == CHANGEUPW {
+			return errors.New("Please provide the owner password with -opw")
+		}
+
+		//return errors.New("Please provide both owner and user password")
+		return errors.New("Please provide all non-empty passwords")
 	}
 
 	// Generally the owner password, which is also regarded as the master password or set permissions password
-	// is sufficient for moving on. A password change is an exception since it requires both passwords authenticated.
+	// is sufficient for moving on. A password change is an exception since it requires both current passwords.
 	if ok && !needsOwnerAndUserPassword(ctx.Mode) {
 		return nil
 	}
@@ -2206,9 +2295,10 @@ func setupEncryptionKey(ctx *Context, encryptDictObjNr int) error {
 		return err
 	}
 	if !ok {
-		return errors.New("user password authentication error")
+		return errors.New("Please provide the correct password")
 	}
 
+	// Double check minimum permissions for pdfcpu processing.
 	if !hasNeededPermissions(ctx.Mode, ctx.E) {
 		return errors.New("Insufficient access permissions")
 	}

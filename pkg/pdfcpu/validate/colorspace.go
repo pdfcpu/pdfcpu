@@ -571,7 +571,7 @@ func validateColorSpace(xRefTable *pdf.XRefTable, o pdf.Object, excludePatternCS
 
 	case pdf.Name:
 		validateSpecialColorSpaceName := func(s string) bool { return pdf.MemberOf(s, []string{"Pattern"}) }
-		if ok := validateDeviceColorSpaceName(o.String()) || validateSpecialColorSpaceName(o.String()); !ok {
+		if ok := validateDeviceColorSpaceName(o.Value()) || validateSpecialColorSpaceName(o.Value()); !ok {
 			err = errors.Errorf("validateColorSpace: invalid device color space name: %v\n", o)
 		}
 
@@ -596,8 +596,8 @@ func validateColorSpaceEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName stri
 	switch o := o.(type) {
 
 	case pdf.Name:
-		if ok := validateDeviceColorSpaceName(o.String()); !ok {
-			err = errors.Errorf("validateColorSpaceEntry: Name:%s\n", o.String())
+		if ok := validateDeviceColorSpaceName(o.Value()); !ok {
+			err = errors.Errorf("validateColorSpaceEntry: Name:%s\n", o.Value())
 		}
 
 	case pdf.Array:

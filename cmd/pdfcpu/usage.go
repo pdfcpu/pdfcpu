@@ -223,7 +223,7 @@ verbose, v ... turn on logging
         vv ... verbose logging
        upw ... user password, required unless = ""
     inFile ... input pdf file
-    opwOld ... old owner password (supply user password on initial changeopw)
+    opwOld ... old owner password (provide user password on initial changeopw)
     opwNew ... new owner password`
 
 	usageWMDescription = `<description> is a comma separated configuration string containing:
@@ -256,24 +256,28 @@ e.g. 'Draft'                                                  'logo.png'
      
 ` + usagePageSelection
 
-	usageStamp     = "usage: pdfcpu stamp [-v(erbose)|vv] [-pages pageSelection] description inFile [outFile]"
+	usageStamp     = "usage: pdfcpu stamp [-v(erbose)|vv] [-pages pageSelection] [-upw userpw] [-opw ownerpw] description inFile [outFile]"
 	usageLongStamp = `Stamp adds stamps for selected pages. 
 
  verbose, v ... turn on logging
          vv ... verbose logging
       pages ... page selection
+        upw ... user password
+        opw ... owner password
 description ... font, font size, text, color, image/pdf file name, pdf page#, rotation, opacity, scale factor, render mode
      inFile ... input pdf file
     outFile ... output pdf file (default: inFile-new.pdf)
 
 ` + usageWMDescription
 
-	usageWatermark     = "usage: pdfcpu watermark [-v(erbose)|vv] [-pages pageSelection] description inFile [outFile]"
+	usageWatermark     = "usage: pdfcpu watermark [-v(erbose)|vv] [-pages pageSelection] [-upw userpw] [-opw ownerpw] description inFile [outFile]"
 	usageLongWatermark = `Watermark adds watermarks for selected pages. 
 
  verbose, v ... turn on logging
          vv ... verbose logging
       pages ... page selection
+        upw ... user password
+        opw ... owner password
 description ... font, font size, text, color, image/pdf file name, pdf page#, rotation, opacity, scale factor, render mode
      inFile ... input pdf file
     outFile ... output pdf file (default: inFile-new.pdf)
@@ -316,12 +320,14 @@ description ... dimensions, format, position, offset, scale factor
        'd:300 600, p:bl, o:20 20, s:1.0 abs' ... render the image anchored to bottom left corner with offset 20,20 and abs. scaling 1.0.
        'p:full'                              ... render the image to a page with corresponding dimensions.`
 
-	usageRotate     = "usage: pdfcpu rotate [-v(erbose)|vv] [-pages pageSelection] inFile rotation"
+	usageRotate     = "usage: pdfcpu rotate [-v(erbose)|vv] [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile rotation"
 	usageLongRotate = `Rotate rotates selected pages. 
 
  verbose, v ... turn on logging
          vv ... verbose logging
       pages ... page selection
+        upw ... user password
+        opw ... owner password
      inFile ... input pdf file
    rotation ... a multiple of 90 degrees for clockwise rotation.
 

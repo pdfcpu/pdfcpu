@@ -30,9 +30,11 @@ import (
 type Context struct {
 	*Configuration
 	*XRefTable
-	Read     *ReadContext
-	Optimize *OptimizationContext
-	Write    *WriteContext
+	Read         *ReadContext
+	Optimize     *OptimizationContext
+	Write        *WriteContext
+	writingPages bool // true, when writing page dicts.
+	dest         bool // true when writing a destination within a page.
 }
 
 // NewContext initializes a new Context.
@@ -48,6 +50,8 @@ func NewContext(rs io.ReadSeeker, fileName string, fileSize int64, config *Confi
 		newReadContext(rs, fileName, fileSize),
 		newOptimizationContext(),
 		NewWriteContext(config.Eol),
+		false,
+		false,
 	}
 
 	return ctx, nil
@@ -572,7 +576,7 @@ func (wc *WriteContext) HasWriteOffset(objNumber int) bool {
 	return found
 }
 
-// ReducedFeatureSet returns true for Split,Trim,Merge,ExtractPages.
+// ReducedFeatureSet returns true for some operations.
 // Don't confuse with pdfcpu commands, these are internal triggers.
 func (wc *WriteContext) ReducedFeatureSet() bool {
 	switch wc.Command {

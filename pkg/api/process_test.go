@@ -188,6 +188,73 @@ func TestReadSeekerAndWriter(t *testing.T) {
 
 }
 
+func TestTrimUsingReadSeekerCloser(t *testing.T) {
+
+	config := pdf.NewDefaultConfiguration()
+	fileIn := filepath.Join(inDir, "pike-stanford.pdf")
+	fileOut := filepath.Join(outDir, "test.pdf")
+	pageSelection := []string{"-2"}
+
+	f, err := os.Open(fileIn)
+	if err != nil {
+		t.Fatalf("TestTrimUsingReadSeekerCloser Open:  %v\n", err)
+	}
+
+	defer func() {
+		f.Close()
+	}()
+
+	ctx, err := ReadContext(f, "", 0, config)
+	if err != nil {
+		t.Fatalf("TestTrimUsingReadSeekerCloser Read:  %v\n", err)
+	}
+
+	err = ValidateContext(ctx)
+	if err != nil {
+		t.Fatalf("TestTrimUsingReadSeekerCloser Validate:  %v\n", err)
+	}
+
+	err = OptimizeContext(ctx)
+	if err != nil {
+		t.Fatalf("TestTrimUsingReadSeekerCloser Optimize:  %v\n", err)
+	}
+
+	w, err := os.Create(fileOut)
+	if err != nil {
+		t.Fatalf("TestTrimUsingReadSeekerCloser Create:  %v\n", err)
+
+	}
+
+	defer func() {
+
+		// The underlying bufio.Writer has already been flushed.
+
+		// Processing error takes precedence.
+		if err != nil {
+			w.Close()
+			return
+		}
+
+		// Do not miss out on closing errors.
+		err = w.Close()
+
+	}()
+
+	ctx.Write.Command = "Trim"
+
+	pages, err := pagesForPageSelection(ctx.PageCount, pageSelection)
+	if err != nil {
+		t.Fatalf("TestTrimUsingReadSeekerCloser pageSelection:  %v\n", err)
+	}
+	ctx.Write.SelectedPages = pages
+
+	err = WriteContext(ctx, w)
+	if err != nil {
+		t.Fatalf("TestTrimUsingReadSeekerCloser Write:  %v\n", err)
+	}
+
+}
+
 func TestMergeUsingReadSeekerCloser(t *testing.T) {
 
 	rr := []pdf.ReadSeekerCloser{}

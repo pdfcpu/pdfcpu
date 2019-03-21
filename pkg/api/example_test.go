@@ -267,7 +267,7 @@ func exampleProcessChangeUserPW() {
 
 	config := pdfcpu.NewDefaultConfiguration()
 
-	// supply existing owner pw like so
+	// Provide existing owner pw like so
 	config.OwnerPW = "opw"
 
 	pwOld := "pwOld"
@@ -283,7 +283,7 @@ func exampleProcessChangeOwnerPW() {
 
 	config := pdfcpu.NewDefaultConfiguration()
 
-	// supply existing user pw like so
+	// Provide existing user pw like so
 	config.UserPW = "upw"
 
 	// old and new owner pw

@@ -337,7 +337,7 @@ func validateOptionalContentConfigurationDict(xRefTable *pdf.XRefTable, d pdf.Di
 
 	if baseState != nil {
 
-		if baseState.String() != "ON" {
+		if baseState.Value() != "ON" {
 			// ON, optional, content group array
 			err = validateOptionalContentGroupArray(xRefTable, d, dictName, "ON", sinceVersion)
 			if err != nil {
@@ -345,7 +345,7 @@ func validateOptionalContentConfigurationDict(xRefTable *pdf.XRefTable, d pdf.Di
 			}
 		}
 
-		if baseState.String() != "OFF" {
+		if baseState.Value() != "OFF" {
 			// OFF, optional, content group array
 			err = validateOptionalContentGroupArray(xRefTable, d, dictName, "OFF", sinceVersion)
 			if err != nil {

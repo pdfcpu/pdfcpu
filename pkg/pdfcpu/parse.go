@@ -17,6 +17,7 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"encoding/hex"
 	"strconv"
 	"strings"
 	"unicode"
@@ -432,6 +433,34 @@ func parseHexLiteral(line *string) (Object, error) {
 	return HexLiteral(*hexStr), nil
 }
 
+func validateNameHexSequence(s string) error {
+
+	for i := 0; i < len(s); {
+		c := s[i]
+		if c != '#' {
+			i++
+			continue
+		}
+
+		// # detected, next 2 chars have to exist.
+		if len(s) < i+3 {
+			return errNameObjectCorrupt
+		}
+
+		s1 := s[i+1 : i+3]
+
+		// And they have to be hex characters.
+		_, err := hex.DecodeString(s1)
+		if err != nil {
+			return errNameObjectCorrupt
+		}
+
+		i += 3
+	}
+
+	return nil
+}
+
 func parseName(line *string) (*Name, error) {
 
 	// see 7.3.5
@@ -459,6 +488,12 @@ func parseName(line *string) (*Name, error) {
 	} else {
 		*line = l[eok:]
 		l = l[:eok]
+	}
+
+	// Validate optional #xx sequences
+	err := validateNameHexSequence(l)
+	if err != nil {
+		return nil, err
 	}
 
 	nameObj := Name(l)

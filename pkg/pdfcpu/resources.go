@@ -71,7 +71,7 @@ func (fo FontObject) Encoding() string {
 	if found {
 		switch enc := pdfObject.(type) {
 		case Name:
-			encoding = enc.String()
+			encoding = enc.Value()
 		default:
 			encoding = "Custom"
 		}

@@ -639,7 +639,7 @@ func validateName(xRefTable *pdf.XRefTable, o pdf.Object, validate func(string) 
 	}
 
 	// Validation
-	if validate != nil && !validate(name.String()) {
+	if validate != nil && !validate(name.Value()) {
 		return nil, errors.Errorf("validateName: invalid name: %s\n", name)
 	}
 
@@ -681,8 +681,8 @@ func validateNameEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName
 	}
 
 	// Validation
-	if validate != nil && !validate(name.String()) {
-		return nil, errors.Errorf("validateNameEntry: dict=%s entry=%s invalid dict entry: %s", dictName, entryName, name.String())
+	if validate != nil && !validate(name.Value()) {
+		return nil, errors.Errorf("validateNameEntry: dict=%s entry=%s invalid dict entry: %s", dictName, entryName, name.Value())
 	}
 
 	log.Validate.Printf("validateNameEntry end: entry=%s\n", entryName)

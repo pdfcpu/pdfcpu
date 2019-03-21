@@ -22,6 +22,17 @@ import (
 	"github.com/pkg/errors"
 )
 
+func handleDefault(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
+
+	if xRefTable.ValidationMode == pdf.ValidationStrict {
+		_, err = xRefTable.DereferenceStringOrHexLiteral(o, pdf.V10, nil)
+	} else {
+		_, err = xRefTable.Dereference(o)
+	}
+
+	return err
+}
+
 func validateInfoDictDate(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
 
 	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
@@ -33,13 +44,17 @@ func validateInfoDictDate(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
 	return err
 }
 
-func handleDefault(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
+func validateInfoDictTrapped(o pdf.Object, xRefTable *pdf.XRefTable) error {
 
-	if xRefTable.ValidationMode == pdf.ValidationStrict {
-		_, err = xRefTable.DereferenceStringOrHexLiteral(o, pdf.V10, nil)
-	} else {
-		_, err = xRefTable.Dereference(o)
+	validate := func(s string) bool { return pdf.MemberOf(s, []string{"True", "False", "Unknown"}) }
+
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		validate = func(s string) bool {
+			return pdf.MemberOf(s, []string{"True", "False", "Unknown", "true", "false", "unknown"})
+		}
 	}
+
+	_, err := xRefTable.DereferenceName(o, pdf.V13, validate)
 
 	return err
 }
@@ -92,8 +107,7 @@ func validateDocumentInfoDict(xRefTable *pdf.XRefTable, obj pdf.Object) (hasModD
 
 		// name, optional, since V1.3
 		case "Trapped":
-			validate := func(s string) bool { return pdf.MemberOf(s, []string{"True", "False", "Unknown"}) }
-			_, err = xRefTable.DereferenceName(v, pdf.V13, validate)
+			err = validateInfoDictTrapped(v, xRefTable)
 
 		// text string, optional
 		default:
