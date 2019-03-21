@@ -427,7 +427,7 @@ func validateEncryptFlags() {
 	}
 
 	if perm != "none" && perm != "all" && perm != "" {
-		fmt.Fprintf(os.Stderr, "%s\n\n", "supported permissions: none,all default:none (viewing is always allowed!)")
+		fmt.Fprintf(os.Stderr, "%s\n\n", "supported permissions: none,all default:none (viewing always allowed!)")
 		os.Exit(1)
 	}
 }

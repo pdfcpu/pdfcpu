@@ -30,15 +30,15 @@ The commands are:
    split       split multi-page PDF into several PDFs according to split span
    merge       concatenate 2 or more PDFs
    extract     extract images, fonts, content, pages, metadata
-   trim        create trimmed version
-   stamp       add stamps
-   watermark   add watermarks
-   import      convert/import images to PDF
-   nup         rearrange pages/images into grid page layout for reduced number of pages
-   grid        rearrange pages/images into grid page layout for enhanced browsing experience
+   trim        create trimmed version with selected pages
+   stamp       add text or image stamp to selected pages
+   watermark   add text or image watermark for selected pages
+   import      import/convert images
+   nup         rearrange pages/images for reduced number of pages
+   grid        rearrange pages/images for enhanced browsing experience
    rotate      rotate pages
    attach      list, add, remove, extract embedded file attachments
-   perm        list, add user access permissions
+   permissions list, add user access permissions
    encrypt     set password protection		
    decrypt     remove password protection
    changeupw   change user password
@@ -168,20 +168,20 @@ verbose, v ... turn on logging
     inFile ... input pdf file
     outDir ... output directory`
 
-	usagePermList = "pdfcpu perm list [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile"
-	usagePermAdd  = "pdfcpu perm add [-v(erbose)|vv] [-perm none|all] [-upw userpw] -opw ownerpw inFile"
+	usagePermList = "pdfcpu permissions list [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile"
+	usagePermAdd  = "pdfcpu permissions add [-v(erbose)|vv] [-perm none|all] [-upw userpw] -opw ownerpw inFile"
 
 	usagePerm = "usage: " + usagePermList +
 		"\n       " + usagePermAdd
 
-	usageLongPerm = `Perm manages user access permissions.
+	usageLongPerm = `Permissions manages user access permissions.
 	
 verbose, v ... turn on logging
         vv ... verbose logging
       perm ... user access permissions
        upw ... user password
        opw ... owner password
-    sinFile ... input pdf file`
+    inFile ... input pdf file`
 
 	usageEncrypt     = "usage: pdfcpu encrypt [-v(erbose)|vv] [-mode rc4|aes] [-key 40|128] [perm none|all] [-upw userpw] [-opw ownerpw] inFile [outFile]"
 	usageLongEncrypt = `Encrypt sets a password protection based on user and owner password.
