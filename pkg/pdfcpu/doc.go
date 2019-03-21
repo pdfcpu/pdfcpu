@@ -17,7 +17,7 @@ The commands are:
 	nup			rearrange pages/images for reduced number of pages
 	grid		rearrange pages/images for enhanced browsing experience
 	rotate		rotate pages
-	attach		list, add, remove, extract embedded file attachments
+	attachments	list, add, remove, extract embedded file attachments
 	permissions	list, add user access permissions
 	encrypt		set password protection
 	decrypt		remove password protection

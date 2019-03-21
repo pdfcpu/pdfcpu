@@ -78,7 +78,7 @@ Even if you want to dive right into pdfcpu backend integration it is highly reco
 ## Installation
 
 There are no dependencies outside the Go standard library other than `pkg/errors`.<br>
-Required build version: go1.9 and up.
+Required go version for building: go1.9 and up
 
 ### Using GOPATH
 
@@ -89,13 +89,13 @@ go install
 pdfcpu version
 ```
 
-### Using Go Modules
+### Using Go Modules (go1.11 and up)
 
 ```
 git clone https://github.com/hhrutter/pdfcpu
 cd pdfcpu/cmd/pdfcpu
 go install
-pdfcpu v
+pdfcpu ve
 ```
 
 ## Contributing
