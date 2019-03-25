@@ -9,7 +9,7 @@ This command embeds one or more files by attaching them to a PDF input file. Hav
 ## Usage
 
 ```
-pdfcpu attach add [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile file...
+pdfcpu attachments add [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile file...
 ```
 
 <br>

@@ -10,7 +10,7 @@ This command prints the current permission set. Have a look at some [examples](#
 ## Usage
 
 ```
-pdfcpu perm list [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile
+pdfcpu permissions list [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile
 ```
 
 <br>

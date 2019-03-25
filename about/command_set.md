@@ -26,3 +26,4 @@ layout: default
 * Decrypt (removes password protection)
 * Change user/owner password
 * Manage (add,list) user access permissions
+* Manage (insert, remove) pages

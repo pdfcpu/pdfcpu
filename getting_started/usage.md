@@ -15,27 +15,30 @@ Usage:
 
 The commands are:
 
-   validate    validate PDF against PDF 32000-1:2008 (PDF 1.7)
-   optimize    optimize PDF by getting rid of redundant page resources
-   split       split multi-page PDF into several PDFs according to split span
-   merge       concatenate 2 or more PDFs
-   extract     extract images, fonts, content, pages, metadata
-   trim        create trimmed version
-   stamp       add stamps
-   watermark   add watermarks
-   import      convert/import images to PDF
-   nup         rearrange pages/images into grid page layout for reduced number of pages
-   grid        rearrange pages/images into grid page layout for enhanced browsing experience
-   rotate      rotate pages
-   attach      list, add, remove, extract embedded file attachments
-   perm        list, add user access permissions
-   encrypt     set password protection
-   decrypt     remove password protection
-   changeupw   change user password
+   attachments list, add, remove, extract embedded file attachments
    changeopw   change owner password
+   changeupw   change user password
+   decrypt     remove password protection
+   encrypt     set password protection
+   extract     extract images, fonts, content, pages, metadata
+   grid        rearrange pages/images into grid page layout for enhanced browsing experience
+   import      convert/import images to PDF
+   merge       concatenate 2 or more PDFs
+   nup         rearrange pages/images into grid page layout for reduced number of pages
+   optimize    optimize PDF by getting rid of redundant page resources
+   pages       insert, remove pages
+   paper       print list of supported paper sizes
+   permissions list, add user access permissions
+   rotate      rotate pages
+   split       split multi-page PDF into several PDFs according to split span
+   stamp       add stamps
+   trim        create trimmed version
+   validate    validate PDF against PDF 32000-1:2008 (PDF 1.7)
    version     print version
+   watermark   add watermarks
 
-   Single-letter Unix-style supported for commands and flags.
+   Completion supported for all commands.
+   One letter Unix style abbreviations supported for flags.
 
 Use "pdfcpu help [command]" for more information about a command.
 ```
@@ -69,6 +72,16 @@ pdfcpu import [-v(erbose)|vv] [description] outFile imageFile...
 
 <br>
 
+## Pages
+
+Insert and remove pages:
+```sh
+pdfcpu pages insert [-v(erbose)|vv] [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile [outFile]
+pdfcpu pages remove [-v(erbose)|vv]  -pages pageSelection  [-upw userpw] [-opw ownerpw] inFile [outFile]
+```
+
+<br>
+
 ## Extraction
 
 Extract components and resources:
@@ -82,10 +95,10 @@ pdfcpu extract [-verbose] -mode image|font|content|page|meta [-pages pageSelecti
 
 Manage your PDF attachments:
 ```sh
-pdfcpu attach list [-verbose] [-upw userpw] [-opw ownerpw] inFile
-pdfcpu attach add [-verbose] [-upw userpw] [-opw ownerpw] inFile file...
-pdfcpu attach remove [-verbose] [-upw userpw] [-opw ownerpw] inFile [file...]
-pdfcpu attach extract [-verbose] [-upw userpw] [-opw ownerpw] inFile outDir [file...]
+pdfcpu attachments list [-verbose] [-upw userpw] [-opw ownerpw] inFile
+pdfcpu attachments add [-verbose] [-upw userpw] [-opw ownerpw] inFile file...
+pdfcpu attachments remove [-verbose] [-upw userpw] [-opw ownerpw] inFile [file...]
+pdfcpu attachments extract [-verbose] [-upw userpw] [-opw ownerpw] inFile outDir [file...]
 ```
 
 <br>
@@ -98,8 +111,8 @@ pdfcpu encrypt [-verbose] [-mode rc4|aes] [-key 40|128] [-perm none|all] [-upw u
 pdfcpu decrypt [-verbose] [-upw userpw] [-opw ownerpw] inFile [outFile]
 pdfcpu changeopw [-verbose] [-upw userpw] inFile opwOld opwNew
 pdfcpu changeupw [-verbose] [-opw ownerpw] inFile upwOld upwNew
-pdfcpu perm add [-verbose] [-perm none|all] [-upw userpw] -opw ownerpw inFile
-pdfcpu perm list [-verbose] [-upw userpw] [-opw ownerpw] inFile
+pdfcpu permissions add [-verbose] [-perm none|all] [-upw userpw] -opw ownerpw inFile
+pdfcpu permissions list [-verbose] [-upw userpw] [-opw ownerpw] inFile
 ```
 
 <br>
@@ -109,7 +122,7 @@ pdfcpu perm list [-verbose] [-upw userpw] [-opw ownerpw] inFile
 ### Print Supported Papersizes
 
 ```sh
-pdfcpu help paper
+pdfcpu paper
 ```
 
 <br>

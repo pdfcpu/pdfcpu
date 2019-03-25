@@ -10,7 +10,7 @@ If you want to remove an extracted document you can do this using [attach remove
 ## Usage
 
 ```
-pdfcpu attach extract [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile outDir [file...]
+pdfcpu attachments extract [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile outDir [file...]
 ```
 
 <br>

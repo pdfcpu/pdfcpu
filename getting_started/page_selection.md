@@ -12,6 +12,7 @@ The `-pages ` flag allows you to select specific pages for processing when using
 * [stamp/watermark](../core/stamp.md)
 * [grid](../core/grid.md)
 * [nup](../core/nup.md)
+* [pages](../pages/pages.md)
 
 ## Syntax
 

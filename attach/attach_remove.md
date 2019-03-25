@@ -9,7 +9,7 @@ This command removes previously attached files from a PDF document. Have a look 
 ## Usage
 
 ```
-pdfcpu attach remove [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile [file...]
+pdfcpu attachments remove [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile [file...]
 ```
 
 <br>

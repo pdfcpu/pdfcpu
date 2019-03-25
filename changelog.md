@@ -14,3 +14,4 @@ layout: default
 |2019-02-24 | [6e1af9e](https://github.com/hhrutter/pdfcpu/commit/6e1af9ed3b76f0306a469ed50e64e737c9f752f7) | Fix stamp transform calc
 |2019-02-02 |[769b2e4](https://github.com/hhrutter/pdfcpu/commit/769b2e488b07ebcc0cd4f33c651bed67d03db84e) | Fix locating lastxref (#64)
 |2019-01-13 | [v0.1.21](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.21) |
+|2019-03-24 | [v0.1.22](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.22) |

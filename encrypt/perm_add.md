@@ -13,7 +13,7 @@ Providing the *owner password* which is also known as the *set permissions passw
 ## Usage
 
 ```
-pdfcpu perm add [-v(erbose)|vv] [-perm none|all] [-upw userpw] -opw ownerpw inFile
+pdfcpu permissions add [-v(erbose)|vv] [-perm none|all] [-upw userpw] -opw ownerpw inFile
 ```
 
 <br>

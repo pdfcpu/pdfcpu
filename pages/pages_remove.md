@@ -2,14 +2,15 @@
 layout: default
 ---
 
-# List Attachments
+# Remove Pages
 
-A PDF attachment is any file previously attached to a PDF document. This command outputs a list of all attachments. Have a look at some [examples](#examples).
+This command removes all selected pages from a PDF file.
+Have a look at some [examples](#examples).
 
 ## Usage
 
 ```
-pdfcpu attachments list [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile
+pdfcpu pages remove [-v(erbose)|vv] -pages pageSelection [-upw userpw] [-opw ownerpw] inFile [outFile]
 ```
 
 <br>
@@ -20,6 +21,7 @@ pdfcpu attachments list [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile
 |:---------------------------------|:------------------|:--------
 | [verbose](../getting_started.md) | turn on logging   | no
 | [vv](../getting_started.md)      | verbose logging   | no
+| [pages](../getting_started/page_selection) | page selection  | yes
 | [upw](../getting_started.md)     | user password     | no
 | [opw](../getting_started.md)     | owner password    | no
 
@@ -30,16 +32,16 @@ pdfcpu attachments list [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile
 | name         | description         | required
 |:-------------|:--------------------|:--------
 | inFile       | PDF input file      | yes
+| outFile...   | PDF output file     | no
 
 <br>
 
 ## Examples
 
- List all attachments embedded into `container.pdf`. You may attach any file to a PDF document:
+Remove pages 1-3 and 5 from `notes.pdf`:
 
 ```sh
-pdfcpu attach list container.pdf
-forest.jpg
-pdfcpu.zip
-invoice.pdf
+pdfcpu pag rem -pages 1-3,5 notes.pdf
+removing pages from notes.pdf ...
+writing notes_new.pdf ...
 ```
