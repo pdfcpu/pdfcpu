@@ -261,8 +261,8 @@ func writeRootObject(ctx *Context) error {
 	log.Write.Printf("*** writeRootObject: begin offset=%d *** %s\n", ctx.Write.Offset, catalog)
 
 	// Ensure corresponding and accurate name tree object graphs.
-	if !ctx.Write.ReducedFeatureSet() {
-		err := ctx.XRefTable.BindNameTrees()
+	if !ctx.ReducedFeatureSet() {
+		err := ctx.BindNameTrees()
 		if err != nil {
 			return err
 		}
@@ -279,8 +279,8 @@ func writeRootObject(ctx *Context) error {
 
 	dictName := "rootDict"
 
-	if ctx.Write.ReducedFeatureSet() {
-		log.Write.Println("writeRootObject: exclude complex entries on split,trim and page extraction.")
+	if ctx.ReducedFeatureSet() {
+		log.Write.Println("writeRootObject - reducedFeatureSet:exclude complex entries.")
 		d.Delete("Names")
 		d.Delete("Dests")
 		d.Delete("Outlines")
@@ -926,7 +926,7 @@ func updateEncryption(ctx *Context) error {
 		return err
 	}
 
-	if ctx.Mode == ADDPERMISSIONS {
+	if ctx.Cmd == ADDPERMISSIONS {
 		//fmt.Printf("updating permissions to: %v\n", ctx.UserAccessPermissions)
 		ctx.E.P = int(ctx.UserAccessPermissions)
 		d.Update("P", Integer(ctx.E.P))
@@ -968,9 +968,9 @@ func updateEncryption(ctx *Context) error {
 
 func handleEncryption(ctx *Context) error {
 
-	if ctx.Mode == ENCRYPT || ctx.Mode == DECRYPT {
+	if ctx.Cmd == ENCRYPT || ctx.Cmd == DECRYPT {
 
-		if ctx.Mode == DECRYPT {
+		if ctx.Cmd == DECRYPT {
 
 			// Remove encryption.
 			ctx.EncKey = nil
@@ -984,7 +984,7 @@ func handleEncryption(ctx *Context) error {
 
 		}
 
-	} else if ctx.UserPWNew != nil || ctx.OwnerPWNew != nil || ctx.Mode == ADDPERMISSIONS {
+	} else if ctx.UserPWNew != nil || ctx.OwnerPWNew != nil || ctx.Cmd == ADDPERMISSIONS {
 
 		err := updateEncryption(ctx)
 		if err != nil {

@@ -58,7 +58,7 @@ func (m CommandMap) Register(cmdStr string, cmd Command) {
 
 // Handle applies command completion and if successful
 // executes the correct prepare function and processes the resulting command.
-func (m CommandMap) Handle(cmdPrefix string, config *pdfcpu.Configuration) (*api.Command, error) {
+func (m CommandMap) Handle(cmdPrefix string, command string, config *pdfcpu.Configuration) (*api.Command, string, error) {
 
 	var cmdStr string
 
@@ -67,19 +67,19 @@ func (m CommandMap) Handle(cmdPrefix string, config *pdfcpu.Configuration) (*api
 			continue
 		}
 		if len(cmdStr) > 0 {
-			return nil, errAmbiguousCmd
+			return nil, command, errAmbiguousCmd
 		}
 		cmdStr = k
 	}
 
 	if cmdStr == "" {
-		return nil, errUnknownCmd
+		return nil, command, errUnknownCmd
 	}
 
 	parseFlags(m[cmdStr])
 
 	if m[cmdStr].handler != nil {
-		return m[cmdStr].handler(config), nil
+		return m[cmdStr].handler(config), command, nil
 	}
 
 	if len(os.Args) == 2 {
@@ -87,7 +87,7 @@ func (m CommandMap) Handle(cmdPrefix string, config *pdfcpu.Configuration) (*api
 		os.Exit(1)
 	}
 
-	return m[cmdStr].cmdMap.Handle(os.Args[2], config)
+	return m[cmdStr].cmdMap.Handle(os.Args[2], cmdStr, config)
 }
 
 // HelpString returns documentation for a topic.

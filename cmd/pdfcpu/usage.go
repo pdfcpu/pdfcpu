@@ -25,28 +25,29 @@ Usage:
 		
 The commands are:
 
-   validate    validate PDF against PDF 32000-1:2008 (PDF 1.7)
-   optimize    optimize PDF by getting rid of redundant page resources
-   split       split multi-page PDF into several PDFs according to split span
-   merge       concatenate 2 or more PDFs
-   extract     extract images, fonts, content, pages, metadata
-   trim        create trimmed version with selected pages
-   stamp       add text or image stamp to selected pages
-   watermark   add text or image watermark for selected pages
-   import      import/convert images
-   nup         rearrange pages/images for reduced number of pages
-   grid        rearrange pages/images for enhanced browsing experience
-   rotate      rotate pages
    attachments list, add, remove, extract embedded file attachments
-   permissions list, add user access permissions
-   encrypt     set password protection		
-   decrypt     remove password protection
-   changeupw   change user password
    changeopw   change owner password
+   changeupw   change user password
+   decrypt     remove password protection
+   encrypt     set password protection		
+   extract     extract images, fonts, content, pages, metadata
+   grid        rearrange pages orimages for enhanced browsing experience
+   import      import/convert images
+   merge       concatenate 2 or more PDFs
+   nup         rearrange pages or images for reduced number of pages
+   optimize    optimize PDF by getting rid of redundant page resources
+   pages       insert, remove selected pages
    paper       print list of supported paper sizes
+   permissions list, add user access permissions
+   rotate      rotate pages
+   split       split multi-page PDF into several PDFs according to split span
+   stamp       add text, image or PDF stamp to selected pages
+   trim        create trimmed version with selected pages
+   validate    validate PDF against PDF 32000-1:2008 (PDF 1.7)
    version     print version
+   watermark   add text, image or PDF watermark to selected pages
 
-   Completion supported for commands.
+   Completion supported for all commands.
    One letter Unix style abbreviations supported for flags.
 
 Use "pdfcpu help [command]" for more information about a command.`
@@ -319,6 +320,24 @@ description ... dimensions, format, position, offset, scale factor
   e.g. 'f:A5, p:c                            ... render the image centered on A5 with relative scaling 0.5.'
        'd:300 600, p:bl, o:20 20, s:1.0 abs' ... render the image anchored to bottom left corner with offset 20,20 and abs. scaling 1.0.
        'p:full'                              ... render the image to a page with corresponding dimensions.`
+
+	usagePagesInsert = "pdfcpu pages insert [-v(erbose)|vv] [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usagePagesRemove = "pdfcpu pages remove [-v(erbose)|vv]  -pages pageSelection  [-upw userpw] [-opw ownerpw] inFile [outFile]"
+
+	usagePages = "usage: " + usagePagesInsert +
+		"\n       " + usagePagesRemove
+
+	usageLongPages = `Manage pages.
+
+ verbose, v ... turn on logging
+         vv ... verbose logging
+      pages ... page selection
+        upw ... user password
+        opw ... owner password
+     inFile ... input pdf file
+    outFile ... output pdf file
+
+` + usagePageSelection
 
 	usageRotate     = "usage: pdfcpu rotate [-v(erbose)|vv] [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile rotation"
 	usageLongRotate = `Rotate selected pages by a multiple of 90 degrees. 

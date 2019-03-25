@@ -84,6 +84,14 @@ func initCommandMap() {
 		permissionsCmdMap.Register(k, v)
 	}
 
+	pagesCmdMap := NewCommandMap()
+	for k, v := range map[string]Command{
+		"insert": {prepareInsertPagesCommand, nil, "", ""},
+		"remove": {prepareRemovePagesCommand, nil, "", ""},
+	} {
+		pagesCmdMap.Register(k, v)
+	}
+
 	cmdMap = NewCommandMap()
 
 	for k, v := range map[string]Command{
@@ -100,6 +108,7 @@ func initCommandMap() {
 		"nup":         {prepareNUpCommand, nil, usageNUp, usageLongNUp},
 		"n-up":        {prepareNUpCommand, nil, usageNUp, usageLongNUp},
 		"optimize":    {prepareOptimizeCommand, nil, usageOptimize, usageLongOptimize},
+		"pages":       {nil, pagesCmdMap, usagePages, usageLongPages},
 		"paper":       {printPaperSizes, nil, usagePaper, usageLongPaper},
 		"permissions": {nil, permissionsCmdMap, usagePerm, usageLongPerm},
 		"rotate":      {prepareRotateCommand, nil, usageRotate, usageLongRotate},
@@ -154,8 +163,11 @@ func main() {
 
 	config := pdfcpu.NewConfiguration(upw, opw)
 
-	cmd, err := cmdMap.Handle(cmdStr, config)
+	cmd, command, err := cmdMap.Handle(cmdStr, "", config)
 	if err != nil {
+		if len(command) > 0 {
+			cmdStr = fmt.Sprintf("%s %s", command, os.Args[2])
+		}
 		if err == errUnknownCmd {
 			fmt.Fprintf(os.Stderr, "pdfcpu unknown command \"%s\"\n", cmdStr)
 		}

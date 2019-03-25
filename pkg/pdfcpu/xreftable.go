@@ -1528,7 +1528,6 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict Dict, pAttrs *Inher
 
 	obj, found = pageDict.Find("MediaBox")
 	if found {
-
 		a, err := xRefTable.DereferenceArray(obj)
 		if err != nil {
 			return err
@@ -1617,7 +1616,6 @@ func (xRefTable *XRefTable) processPageTree(root *IndirectRef, pAttrs *Inherited
 			}
 
 		case "Page":
-			// page found.
 			*p++
 			if *p == page {
 				return xRefTable.processPageTree(&ir, pAttrs, p, page)
@@ -1657,4 +1655,132 @@ func (xRefTable *XRefTable) PageMediaBox(i int) (*Rectangle, error) {
 	_, inhPAttrs, err := xRefTable.PageDict(i)
 
 	return inhPAttrs.mediaBox, err
+}
+
+func (xRefTable *XRefTable) emptyPage(parentIndRef *IndirectRef, mediaBox *Rectangle) (*IndirectRef, error) {
+
+	contents := &StreamDict{Dict: NewDict()}
+	contents.InsertName("Filter", filter.Flate)
+	contents.FilterPipeline = []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}
+
+	err := encodeStream(contents)
+	if err != nil {
+		return nil, err
+	}
+
+	contentsIndRef, err := xRefTable.IndRefForNewObject(*contents)
+	if err != nil {
+		return nil, err
+	}
+
+	pageDict := Dict(
+		map[string]Object{
+			"Type":     Name("Page"),
+			"Parent":   *parentIndRef,
+			"MediaBox": mediaBox.Array(),
+			"Contents": *contentsIndRef,
+		},
+	)
+
+	return xRefTable.IndRefForNewObject(pageDict)
+}
+
+func (xRefTable *XRefTable) insertIntoPageTree(root *IndirectRef, pAttrs *InheritedPageAttrs, p *int, selectedPages IntSet) (int, error) {
+
+	d, err := xRefTable.DereferenceDict(*root)
+	if err != nil {
+		return 0, err
+	}
+
+	err = xRefTable.checkInheritedPageAttrs(d, pAttrs)
+	if err != nil {
+		return 0, err
+	}
+
+	// Iterate over page tree.
+	kids := d.ArrayEntry("Kids")
+	if kids == nil {
+		//fmt.Println("returning from leaf node")
+		return 0, nil
+	}
+
+	i := 0
+	a := Array{}
+
+	for _, o := range kids {
+
+		if o == nil {
+			continue
+		}
+
+		// Dereference next page node dict.
+		ir, ok := o.(IndirectRef)
+		if !ok {
+			return 0, errors.Errorf("insertIntoPageTree: corrupt page node dict")
+		}
+
+		pageNodeDict, err := xRefTable.DereferenceDict(ir)
+		if err != nil {
+			return 0, err
+		}
+
+		switch *pageNodeDict.Type() {
+
+		case "Pages":
+			// Recurse over sub pagetree.
+			j, err := xRefTable.insertIntoPageTree(&ir, pAttrs, p, selectedPages)
+			if err != nil {
+				return 0, err
+			}
+			a = append(a, ir)
+			i += j
+
+		case "Page":
+			*p++
+			if selectedPages[*p] {
+				// Insert empty page.
+				mediaBox := pAttrs.mediaBox
+				if mediaBox == nil {
+					o1, _ := pageNodeDict.Find("MediaBox")
+					a1, err := xRefTable.DereferenceArray(o1)
+					if err != nil {
+						return 0, err
+					}
+					mediaBox = rect(xRefTable, a1)
+				}
+
+				indRef, err := xRefTable.emptyPage(root, mediaBox)
+				if err != nil {
+					return 0, err
+				}
+
+				a = append(a, *indRef)
+				i++
+			}
+			a = append(a, ir)
+			i++
+
+		}
+
+	}
+
+	d.Update("Kids", a)
+
+	return i, d.IncrementBy("Count", i)
+}
+
+// InsertPages inserts a blank page before each selected page.
+func (xRefTable *XRefTable) InsertPages(pages IntSet) error {
+
+	root, err := xRefTable.Pages()
+	if err != nil {
+		return err
+	}
+
+	var inhPAttrs InheritedPageAttrs
+	p := 0
+
+	_, err = xRefTable.insertIntoPageTree(root, &inhPAttrs, &p, pages)
+
+	return err
 }

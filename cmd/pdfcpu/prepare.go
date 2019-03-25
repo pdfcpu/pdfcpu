@@ -19,7 +19,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -210,7 +209,8 @@ func prepareExtractCommand(config *pdfcpu.Configuration) *api.Command {
 
 	pages, err := api.ParsePageSelection(pageSelection)
 	if err != nil {
-		log.Fatalf("extract: problem with flag pageSelection: %v", err)
+		fmt.Fprintf(os.Stderr, "problem with flag pageSelection: %v\n", err)
+		os.Exit(1)
 	}
 
 	var cmd *api.Command
@@ -245,7 +245,8 @@ func prepareTrimCommand(config *pdfcpu.Configuration) *api.Command {
 
 	pages, err := api.ParsePageSelection(pageSelection)
 	if err != nil {
-		log.Fatalf("trim: problem with flag pageSelection: %v", err)
+		fmt.Fprintf(os.Stderr, "problem with flag pageSelection: %v\n", err)
+		os.Exit(1)
 	}
 
 	filenameIn := flag.Arg(0)
@@ -530,13 +531,15 @@ func prepareWatermarksCommand(config *pdfcpu.Configuration, onTop bool) *api.Com
 
 	pages, err := api.ParsePageSelection(pageSelection)
 	if err != nil {
-		log.Fatalf("problem with flag pageSelection: %v", err)
+		fmt.Fprintf(os.Stderr, "problem with flag pageSelection: %v", err)
+		os.Exit(1)
 	}
 
 	//fmt.Printf("details: <%s>\n", flag.Arg(0))
 	wm, err := pdfcpu.ParseWatermarkDetails(flag.Arg(0), onTop)
 	if err != nil {
-		log.Fatalf("%v", err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
 	}
 
 	filenameIn := flag.Arg(1)
@@ -604,10 +607,12 @@ func prepareImportImagesCommand(config *pdfcpu.Configuration) *api.Command {
 	//fmt.Printf("details: <%s>\n", flag.Arg(0))
 	imp, err := pdfcpu.ParseImportDetails(flag.Arg(0))
 	if err != nil {
-		log.Fatalf("%v", err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
 	}
 	if imp == nil {
-		log.Fatal("missing import description")
+		fmt.Fprintf(os.Stderr, "missing import description\n")
+		os.Exit(1)
 	}
 
 	filenameOut = flag.Arg(1)
@@ -621,6 +626,60 @@ func prepareImportImagesCommand(config *pdfcpu.Configuration) *api.Command {
 	}
 
 	return api.ImportImagesCommand(filenamesIn, filenameOut, imp, config)
+}
+
+func prepareInsertPagesCommand(config *pdfcpu.Configuration) *api.Command {
+
+	if len(flag.Args()) == 0 || len(flag.Args()) > 2 {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usagePagesInsert)
+		os.Exit(1)
+	}
+
+	filenameIn := flag.Arg(0)
+	ensurePdfExtension(filenameIn)
+
+	filenameOut := defaultFilenameOut(filenameIn)
+	if len(flag.Args()) == 2 {
+		filenameOut = flag.Arg(1)
+		ensurePdfExtension(filenameOut)
+	}
+
+	pages, err := api.ParsePageSelection(pageSelection)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem with flag pageSelection: %v\n", err)
+		os.Exit(1)
+	}
+
+	return api.InsertPagesCommand(filenameIn, filenameOut, pages, config)
+}
+
+func prepareRemovePagesCommand(config *pdfcpu.Configuration) *api.Command {
+
+	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || pageSelection == "" {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usagePagesRemove)
+		os.Exit(1)
+	}
+
+	filenameIn := flag.Arg(0)
+	ensurePdfExtension(filenameIn)
+
+	filenameOut := defaultFilenameOut(filenameIn)
+	if len(flag.Args()) == 2 {
+		filenameOut = flag.Arg(1)
+		ensurePdfExtension(filenameOut)
+	}
+
+	pages, err := api.ParsePageSelection(pageSelection)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem with flag pageSelection: %v\n", err)
+		os.Exit(1)
+	}
+	if pages == nil {
+		fmt.Fprintf(os.Stderr, "missing page selection\n")
+		os.Exit(1)
+	}
+
+	return api.RemovePagesCommand(filenameIn, filenameOut, pages, config)
 }
 
 func abs(i int) int {
@@ -639,7 +698,8 @@ func prepareRotateCommand(config *pdfcpu.Configuration) *api.Command {
 
 	pages, err := api.ParsePageSelection(pageSelection)
 	if err != nil {
-		log.Fatalf("problem with flag pageSelection: %v", err)
+		fmt.Fprintf(os.Stderr, "problem with flag pageSelection: %v\n", err)
+		os.Exit(1)
 	}
 
 	filenameIn := flag.Arg(0)
@@ -647,7 +707,8 @@ func prepareRotateCommand(config *pdfcpu.Configuration) *api.Command {
 
 	r, err := strconv.Atoi(flag.Arg(1))
 	if err != nil || abs(r)%90 > 0 {
-		log.Fatalf("rotation must be a multiple of 90: %s\n", flag.Arg(1))
+		fmt.Fprintf(os.Stderr, "rotation must be a multiple of 90: %s\n", flag.Arg(1))
+		os.Exit(1)
 	}
 
 	return api.RotateCommand(filenameIn, r, pages, config)
@@ -711,7 +772,8 @@ func prepareNUpCommand(config *pdfcpu.Configuration) *api.Command {
 
 	pages, err := api.ParsePageSelection(pageSelection)
 	if err != nil {
-		log.Fatalf("problem with flag pageSelection: %v", err)
+		fmt.Fprintf(os.Stderr, "problem with flag pageSelection: %v\n", err)
+		os.Exit(1)
 	}
 
 	nup := pdfcpu.DefaultNUpConfig()
@@ -749,7 +811,8 @@ func prepareGridCommand(config *pdfcpu.Configuration) *api.Command {
 
 	pages, err := api.ParsePageSelection(pageSelection)
 	if err != nil {
-		log.Fatalf("problem with flag pageSelection: %v", err)
+		fmt.Fprintf(os.Stderr, "problem with flag pageSelection: %v\n", err)
+		os.Exit(1)
 	}
 
 	nup := pdfcpu.DefaultNUpConfig()

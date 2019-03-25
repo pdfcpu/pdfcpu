@@ -63,6 +63,8 @@ const (
 	STAMP
 	ADDWATERMARKS
 	IMPORTIMAGES
+	INSERTPAGES
+	REMOVEPAGES
 	ROTATE
 	NUP
 )
@@ -120,7 +122,7 @@ type Configuration struct {
 	UserAccessPermissions int16
 
 	// Command being executed.
-	Mode CommandMode
+	Cmd CommandMode
 }
 
 // NewDefaultConfiguration returns the default pdfcpu configuration.
@@ -160,4 +162,13 @@ func (c *Configuration) ValidationModeString() string {
 	}
 
 	return ""
+}
+
+// ReducedFeatureSet returns true if complex entries like annotations shall not be written.
+func (c *Configuration) ReducedFeatureSet() bool {
+	switch c.Cmd {
+	case SPLIT, TRIM, EXTRACTPAGES, MERGE, IMPORTIMAGES:
+		return true
+	}
+	return false
 }

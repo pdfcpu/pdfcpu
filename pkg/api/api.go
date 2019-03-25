@@ -183,6 +183,7 @@ func Write(ctx *pdf.Context) error {
 		return errors.Wrap(err, "Write failed.")
 	}
 
+	// For the Optimize command only.
 	if ctx.StatsFileName != "" {
 		err = pdf.AppendStatsFile(ctx)
 		if err != nil {
@@ -1373,6 +1374,101 @@ func ImportImages(cmd *Command) ([]string, error) {
 	}
 
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+
+	return nil, nil
+}
+
+// InsertPages inserts a blank page at every page selected.
+func InsertPages(cmd *Command) ([]string, error) {
+
+	fileIn := *cmd.InFile
+	fileOut := *cmd.OutFile
+	pageSelection := cmd.PageSelection
+	config := cmd.Config
+
+	fromStart := time.Now()
+
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
+	if err != nil {
+		return nil, err
+	}
+
+	log.API.Printf("inserting pages into %s ...\n", fileIn)
+
+	from := time.Now()
+
+	pages, err := pagesForPageSelection(ctx.PageCount, pageSelection)
+	if err != nil {
+		return nil, err
+	}
+
+	ensureSelectedPages(ctx, &pages)
+
+	err = ctx.InsertPages(pages)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+
+	durStamp := time.Since(from).Seconds()
+
+	fromWrite := time.Now()
+
+	dirName, fileName := filepath.Split(fileOut)
+	ctx.Write.DirName = dirName
+	ctx.Write.FileName = fileName
+
+	err = Write(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	durWrite := durStamp + time.Since(fromWrite).Seconds()
+	durTotal := time.Since(fromStart).Seconds()
+	logOperationStats(ctx, "insert pages, write", durRead, durVal, durOpt, durWrite, durTotal)
+
+	return nil, nil
+}
+
+// RemovePages removes selected pages.
+func RemovePages(cmd *Command) ([]string, error) {
+
+	fileIn := *cmd.InFile
+	fileOut := *cmd.OutFile
+	pageSelection := cmd.PageSelection
+	config := cmd.Config
+
+	fromStart := time.Now()
+
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(fileIn, config, fromStart)
+	if err != nil {
+		return nil, err
+	}
+
+	log.API.Printf("removing pages from %s ...\n", fileIn)
+
+	fromWrite := time.Now()
+
+	pages, err := pagesForPageSelection(ctx.PageCount, pageSelection)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx.Write.SelectedPages = pages
+
+	dirName, fileName := filepath.Split(fileOut)
+	ctx.Write.DirName = dirName
+	ctx.Write.FileName = fileName
+
+	err = Write(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	durWrite := time.Since(fromWrite).Seconds()
+	durTotal := time.Since(fromStart).Seconds()
+	logOperationStats(ctx, "remove pages, write", durRead, durVal, durOpt, durWrite, durTotal)
 
 	return nil, nil
 }

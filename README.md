@@ -34,24 +34,25 @@ The main focus lies on strong support for batch processing and scripting via a r
 
 ## Command Set
 
-* [validate](https://pdfcpu.io/core/validate)
-* [optimize](https://pdfcpu.io/core/optimize)
-* [split](https://pdfcpu.io/core/split)
-* [merge](https://pdfcpu.io/core/merge)
-* [extract](https://pdfcpu.io/extract/extract)
-* [trim](https://pdfcpu.io/core/trim)
-* [stamp](https://pdfcpu.io/core/stamp)
-* [watermark](https://pdfcpu.io/core/watermark)
-* [import](https://pdfcpu.io/generate/import)
-* [nup](https://pdfcpu.io/core/nup)
-* [grid](https://pdfcpu.io/core/grid)
-* [rotate](https://pdfcpu.io/core/rotate)
 * [attachments](https://pdfcpu.io/attach/attach)
-* [permissions](https://pdfcpu.io/encrypt/perm_add)
-* [encrypt](https://pdfcpu.io/encrypt/encryptPDF)
-* [decrypt](https://pdfcpu.io/encrypt/decryptPDF)
-* [change user password](https://pdfcpu.io/encrypt/change_upw)
 * [change owner password](https://pdfcpu.io/encrypt/change_opw)
+* [change user password](https://pdfcpu.io/encrypt/change_upw)
+* [decrypt](https://pdfcpu.io/encrypt/decryptPDF)
+* [encrypt](https://pdfcpu.io/encrypt/encryptPDF)
+* [extract](https://pdfcpu.io/extract/extract)
+* [grid](https://pdfcpu.io/core/grid)
+* [import](https://pdfcpu.io/generate/import)
+* [merge](https://pdfcpu.io/core/merge)
+* [nup](https://pdfcpu.io/core/nup)
+* [optimize](https://pdfcpu.io/core/optimize)
+* [pages](https://pdfcpu.io/pages/pages)
+* [permissions](https://pdfcpu.io/encrypt/perm_add)
+* [split](https://pdfcpu.io/core/split)
+* [rotate](https://pdfcpu.io/core/rotate)
+* [stamp](https://pdfcpu.io/core/stamp)
+* [trim](https://pdfcpu.io/core/trim)
+* [validate](https://pdfcpu.io/core/validate)
+* [watermark](https://pdfcpu.io/core/watermark)
 
 ## Documentation
 
@@ -67,7 +68,12 @@ Even if you want to dive right into pdfcpu backend integration it is highly reco
 
 ## Status
 
-[Version: 0.1.21](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.21)
+[Version: 0.1.22](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.22)
+* Support for `go mod`
+* Command completion
+* `pages insert` inserts empty pages before all selected pages
+* `pages remove` removes all selected pages
+* Bug fixes #64, #65, #68, #69
 
 ## Demo Screencast
 
@@ -78,7 +84,7 @@ Even if you want to dive right into pdfcpu backend integration it is highly reco
 ## Installation
 
 There are no dependencies outside the Go standard library other than `pkg/errors`.<br>
-Required go version for building: go1.9 and up
+Required go version for building: go1.10 and up
 
 ### Using GOPATH
 

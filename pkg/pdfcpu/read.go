@@ -2185,11 +2185,11 @@ func dereferenceXRefTable(ctx *Context, config *Configuration) error {
 
 func handleUnencryptedFile(ctx *Context) error {
 
-	if ctx.Mode == DECRYPT || ctx.Mode == ADDPERMISSIONS {
+	if ctx.Cmd == DECRYPT || ctx.Cmd == ADDPERMISSIONS {
 		return errors.New("This file is not encrypted")
 	}
 
-	if ctx.Mode != ENCRYPT {
+	if ctx.Cmd != ENCRYPT {
 		return nil
 	}
 
@@ -2269,13 +2269,13 @@ func setupEncryptionKey(ctx *Context, encryptDictObjNr int) error {
 
 	// If the owner password does not match we generally move on if the user password is correct
 	// unless we need to insist on a correct owner password due to the specific command in progress.
-	if !ok && needsOwnerAndUserPassword(ctx.Mode) {
+	if !ok && needsOwnerAndUserPassword(ctx.Cmd) {
 
-		if ctx.Mode == CHANGEOPW {
+		if ctx.Cmd == CHANGEOPW {
 			return errors.New("Please provide the user password with -upw")
 		}
 
-		if ctx.Mode == CHANGEUPW {
+		if ctx.Cmd == CHANGEUPW {
 			return errors.New("Please provide the owner password with -opw")
 		}
 
@@ -2285,7 +2285,7 @@ func setupEncryptionKey(ctx *Context, encryptDictObjNr int) error {
 
 	// Generally the owner password, which is also regarded as the master password or set permissions password
 	// is sufficient for moving on. A password change is an exception since it requires both current passwords.
-	if ok && !needsOwnerAndUserPassword(ctx.Mode) {
+	if ok && !needsOwnerAndUserPassword(ctx.Cmd) {
 		return nil
 	}
 
@@ -2299,7 +2299,7 @@ func setupEncryptionKey(ctx *Context, encryptDictObjNr int) error {
 	}
 
 	// Double check minimum permissions for pdfcpu processing.
-	if !hasNeededPermissions(ctx.Mode, ctx.E) {
+	if !hasNeededPermissions(ctx.Cmd, ctx.E) {
 		return errors.New("Insufficient access permissions")
 	}
 
@@ -2318,7 +2318,7 @@ func checkForEncryption(ctx *Context) error {
 	// This file is encrypted.
 	log.Info.Printf("Encryption: %v\n", ir)
 
-	if ctx.Mode == ENCRYPT {
+	if ctx.Cmd == ENCRYPT {
 		// We want to encrypt this file.
 		return errors.New("encrypt: This file is already encrypted")
 	}

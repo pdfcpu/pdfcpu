@@ -50,7 +50,7 @@ func Process(cmd *Command) (out []string, err error) {
 		}
 	}()
 
-	cmd.Config.Mode = cmd.Mode
+	cmd.Config.Cmd = cmd.Mode
 
 	for k, v := range map[pdf.CommandMode]func(cmd *Command) ([]string, error){
 		pdf.VALIDATE:           Validate,
@@ -75,6 +75,8 @@ func Process(cmd *Command) (out []string, err error) {
 		pdf.LISTPERMISSIONS:    processPermissions,
 		pdf.ADDPERMISSIONS:     processPermissions,
 		pdf.IMPORTIMAGES:       ImportImages,
+		pdf.INSERTPAGES:        InsertPages,
+		pdf.REMOVEPAGES:        RemovePages,
 		pdf.ROTATE:             Rotate,
 		pdf.NUP:                NUp,
 	} {
@@ -349,6 +351,26 @@ func ImportImagesCommand(imageFileNamesIn []string, pdfFileNameOut string, imp *
 		OutFile: &pdfFileNameOut,
 		Import:  imp,
 		Config:  config}
+}
+
+// InsertPagesCommand creates a new command to insert a blank page before selected pages.
+func InsertPagesCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []string, config *pdf.Configuration) *Command {
+	return &Command{
+		Mode:          pdf.INSERTPAGES,
+		InFile:        &pdfFileNameIn,
+		OutFile:       &pdfFileNameOut,
+		PageSelection: pageSelection,
+		Config:        config}
+}
+
+// RemovePagesCommand creates a new command to remove selected pages.
+func RemovePagesCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []string, config *pdf.Configuration) *Command {
+	return &Command{
+		Mode:          pdf.REMOVEPAGES,
+		InFile:        &pdfFileNameIn,
+		OutFile:       &pdfFileNameOut,
+		PageSelection: pageSelection,
+		Config:        config}
 }
 
 // RotateCommand creates a new command to rotate pages.

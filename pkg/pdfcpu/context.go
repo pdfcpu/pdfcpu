@@ -576,27 +576,6 @@ func (wc *WriteContext) HasWriteOffset(objNumber int) bool {
 	return found
 }
 
-// ReducedFeatureSet returns true for some operations.
-// Don't confuse with pdfcpu commands, these are internal triggers.
-func (wc *WriteContext) ReducedFeatureSet() bool {
-	switch wc.Command {
-	case "Split", "Trim", "ExtractPages", "Merge", "Import":
-		return true
-	}
-	return false
-}
-
-// ExtractPage returns true if page i needs to be generated.
-// func (wc *WriteContext) ExtractPage(i int) bool {
-
-// 	if wc.ExtractPages == nil {
-// 		return false
-// 	}
-
-// 	return wc.ExtractPages[i]
-
-// }
-
 // LogStats logs stats for written file.
 func (wc *WriteContext) LogStats() {
 
