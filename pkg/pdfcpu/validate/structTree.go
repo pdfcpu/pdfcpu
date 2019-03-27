@@ -88,8 +88,12 @@ func validateObjectReferenceDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 
 	// Obj: required, indirect reference
 	ir := d.IndirectRefEntry("Obj")
-	if ir == nil {
+	if xRefTable.ValidationMode == pdf.ValidationStrict && ir == nil {
 		return errors.New("validateObjectReferenceDict: missing required entry \"Obj\"")
+	}
+
+	if ir == nil {
+		return nil
 	}
 
 	obj, err := xRefTable.Dereference(*ir)

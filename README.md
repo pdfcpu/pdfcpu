@@ -69,11 +69,17 @@ Even if you want to dive right into pdfcpu backend integration it is highly reco
 ## Status
 
 [Version: 0.1.22](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.22)
+
 * Support for `go mod`
 * Command completion
 * `pages insert` inserts empty pages before all selected pages
 * `pages remove` removes all selected pages
 * Bug fixes #64, #65, #68, #69
+
+## Reminder
+
+Always make sure your work is based on the latest commit!<br>
+pdfcpu is still *Alpha* - bugfixes are committed on the fly and will be mentioned on the next release notes.<br>
 
 ## Demo Screencast
 
@@ -112,7 +118,7 @@ pdfcpu ve
 * Feature requests - always welcome!
 * Bug fixes - always welcome!
 * PRs - also welcome, although I can't promise a merge-in right now.
-* pdfcpu is stable but still alpha and occasionally undergoing heavy changes.
+* pdfcpu is stable but still *Alpha* and occasionally undergoing heavy changes.
 
 ### How
 

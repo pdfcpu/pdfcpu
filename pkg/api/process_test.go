@@ -66,6 +66,8 @@ func ExampleReadContext() {
 	// This allows to run pdf as a backend to an http server for on the fly pdf processing.
 
 	config := pdf.NewDefaultConfiguration()
+	config.Cmd = pdf.OPTIMIZE
+
 	fileIn := filepath.Join(inDir, "CenterOfWhy.pdf")
 	fileOut := filepath.Join(outDir, "test.pdf")
 
@@ -125,15 +127,17 @@ func ExampleReadContext() {
 
 }
 
-func TestReadSeekerAndWriter(t *testing.T) {
+func TestOptimizeUsingReadSeekerAndWriter(t *testing.T) {
 
 	config := pdf.NewDefaultConfiguration()
+	config.Cmd = pdf.OPTIMIZE
+
 	fileIn := filepath.Join(inDir, "CenterOfWhy.pdf")
 	fileOut := filepath.Join(outDir, "test.pdf")
 
 	f, err := os.Open(fileIn)
 	if err != nil {
-		t.Fatalf("TestReadSeekerAndWriter Open:  %v\n", err)
+		t.Fatalf("TestOptimizeUsingReadSeekerAndWriter Open:  %v\n", err)
 	}
 
 	defer func() {
@@ -142,27 +146,27 @@ func TestReadSeekerAndWriter(t *testing.T) {
 
 	fileInfo, err := f.Stat()
 	if err != nil {
-		t.Fatalf("TestReadSeekerAndWriter Stat:  %v\n", err)
+		t.Fatalf("TestOptimizeUsingReadSeekerAndWriter Stat:  %v\n", err)
 	}
 
 	ctx, err := ReadContext(f, fileIn, fileInfo.Size(), config)
 	if err != nil {
-		t.Fatalf("TestReadSeekerAndWriter Read:  %v\n", err)
+		t.Fatalf("TestOptimizeUsingReadSeekerAndWriter Read:  %v\n", err)
 	}
 
 	err = ValidateContext(ctx)
 	if err != nil {
-		t.Fatalf("TestReadSeekerAndWriter Validate:  %v\n", err)
+		t.Fatalf("TestOptimizeUsingReadSeekerAndWriter Validate:  %v\n", err)
 	}
 
 	err = OptimizeContext(ctx)
 	if err != nil {
-		t.Fatalf("TestReadSeekerAndWriter Optimize:  %v\n", err)
+		t.Fatalf("TestOptimizeUsingReadSeekerAndWriter Optimize:  %v\n", err)
 	}
 
 	w, err := os.Create(fileOut)
 	if err != nil {
-		t.Fatalf("TestReadSeekerAndWriter Create:  %v\n", err)
+		t.Fatalf("TestOptimizeUsingReadSeekerAndWriter Create:  %v\n", err)
 
 	}
 
@@ -183,21 +187,23 @@ func TestReadSeekerAndWriter(t *testing.T) {
 
 	err = WriteContext(ctx, w)
 	if err != nil {
-		t.Fatalf("TestReadSeekerAndWriter Write:  %v\n", err)
+		t.Fatalf("TestOptimizeUsingReadSeekerAndWriter Write:  %v\n", err)
 	}
 
 }
 
-func TestTrimUsingReadSeekerCloser(t *testing.T) {
+func TestTrimUsingReadSeekerAndWriter(t *testing.T) {
 
 	config := pdf.NewDefaultConfiguration()
+	config.Cmd = pdf.TRIM
+
 	fileIn := filepath.Join(inDir, "pike-stanford.pdf")
 	fileOut := filepath.Join(outDir, "test.pdf")
 	pageSelection := []string{"-2"}
 
 	f, err := os.Open(fileIn)
 	if err != nil {
-		t.Fatalf("TestTrimUsingReadSeekerCloser Open:  %v\n", err)
+		t.Fatalf("TestTrimUsingReadSeekerAndWriter Open:  %v\n", err)
 	}
 
 	defer func() {
@@ -206,22 +212,22 @@ func TestTrimUsingReadSeekerCloser(t *testing.T) {
 
 	ctx, err := ReadContext(f, "", 0, config)
 	if err != nil {
-		t.Fatalf("TestTrimUsingReadSeekerCloser Read:  %v\n", err)
+		t.Fatalf("TestTrimUsingReadSeekerAndWriter Read:  %v\n", err)
 	}
 
 	err = ValidateContext(ctx)
 	if err != nil {
-		t.Fatalf("TestTrimUsingReadSeekerCloser Validate:  %v\n", err)
+		t.Fatalf("TestTrimUsingReadSeekerAndWriter Validate:  %v\n", err)
 	}
 
 	err = OptimizeContext(ctx)
 	if err != nil {
-		t.Fatalf("TestTrimUsingReadSeekerCloser Optimize:  %v\n", err)
+		t.Fatalf("TestTrimUsingReadSeekerAndWriter Optimize:  %v\n", err)
 	}
 
 	w, err := os.Create(fileOut)
 	if err != nil {
-		t.Fatalf("TestTrimUsingReadSeekerCloser Create:  %v\n", err)
+		t.Fatalf("TestTrimUsingReadSeekerAndWriter Create:  %v\n", err)
 
 	}
 
@@ -240,22 +246,20 @@ func TestTrimUsingReadSeekerCloser(t *testing.T) {
 
 	}()
 
-	ctx.Write.Command = "Trim"
-
 	pages, err := pagesForPageSelection(ctx.PageCount, pageSelection)
 	if err != nil {
-		t.Fatalf("TestTrimUsingReadSeekerCloser pageSelection:  %v\n", err)
+		t.Fatalf("TestTrimUsingReadSeekerAndWriter pageSelection:  %v\n", err)
 	}
 	ctx.Write.SelectedPages = pages
 
 	err = WriteContext(ctx, w)
 	if err != nil {
-		t.Fatalf("TestTrimUsingReadSeekerCloser Write:  %v\n", err)
+		t.Fatalf("TestTrimUsingReadSeekerAndWriter Write:  %v\n", err)
 	}
 
 }
 
-func TestMergeUsingReadSeekerCloser(t *testing.T) {
+func TestMergeUsingReadSeekerAndWriter(t *testing.T) {
 
 	rr := []pdf.ReadSeekerCloser{}
 
@@ -265,7 +269,7 @@ func TestMergeUsingReadSeekerCloser(t *testing.T) {
 
 		f, err := os.Open(fileIn)
 		if err != nil {
-			t.Fatalf("TestMergeUsingReadSeekerCloser Open:  %v\n", err)
+			t.Fatalf("TestMergeUsingReadSeekerAndWriter Open:  %v\n", err)
 		}
 
 		rr = append(rr, f)
@@ -278,17 +282,18 @@ func TestMergeUsingReadSeekerCloser(t *testing.T) {
 	}()
 
 	config := pdf.NewDefaultConfiguration()
+	config.Cmd = pdf.MERGE
 
 	ctx, err := MergeContexts(rr, config)
 	if err != nil {
-		t.Fatalf("TestMergeUsingReadSeekerCloser Open:  %v\n", err)
+		t.Fatalf("TestMergeUsingReadSeekerAndWriter Open:  %v\n", err)
 	}
 
 	fileOut := filepath.Join(outDir, "test.pdf")
 
 	w, err := os.Create(fileOut)
 	if err != nil {
-		t.Fatalf("TestMergeUsingReadSeekerCloser create output file: %v\n", err)
+		t.Fatalf("TestMergeUsingReadSeekerAndWriter create output file: %v\n", err)
 	}
 
 	defer func() {
@@ -308,7 +313,7 @@ func TestMergeUsingReadSeekerCloser(t *testing.T) {
 
 	err = WriteContext(ctx, w)
 	if err != nil {
-		t.Fatalf("TestMergeUsingReadSeekerCloser Write output: %v\n", err)
+		t.Fatalf("TestMergeUsingReadSeekerAndWriter write output: %v\n", err)
 	}
 
 }

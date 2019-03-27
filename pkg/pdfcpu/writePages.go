@@ -182,7 +182,7 @@ func writeKids(ctx *Context, a Array, pageNr *int) (Array, int, error) {
 				if ctx.Cmd == REMOVEPAGES {
 					writePage = !writePage
 				}
-				if ctx.Write.SelectedPages[*pageNr] {
+				if writePage {
 					log.Write.Printf("writeKids: writing page:%d\n", *pageNr)
 					err = writePageDict(ctx, ir, d, *pageNr)
 					kids = append(kids, o)

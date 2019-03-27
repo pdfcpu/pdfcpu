@@ -207,7 +207,6 @@ func writeSinglePagePDF(ctx *pdf.Context, pageNr int, dirOut string) error {
 	ctx.ResetWriteContext()
 
 	w := ctx.Write
-	w.Command = "ExtractPages"
 	w.SelectedPages[pageNr] = true
 	w.DirName = dirOut + "/"
 	w.FileName = singlePageFileName(ctx, pageNr)
@@ -330,7 +329,6 @@ func pageRangeFileName(ctx *pdf.Context, from, thru int) string {
 func writeSpan(ctx *pdf.Context, from, thru int, dirOut string) error {
 	ctx.ResetWriteContext()
 	w := ctx.Write
-	w.Command = "Split"
 	w.SelectedPages = selectedPageRange(from, thru)
 	w.DirName = dirOut + "/"
 	w.FileName = pageRangeFileName(ctx, from, thru)
@@ -456,8 +454,6 @@ func Merge(cmd *Command) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	ctxDest.Write.Command = "Merge"
 
 	dirName, fileName := filepath.Split(fileOut)
 	ctxDest.Write.DirName = dirName
@@ -995,7 +991,6 @@ func Trim(cmd *Command) ([]string, error) {
 		return nil, err
 	}
 
-	ctx.Write.Command = "Trim"
 	ctx.Write.SelectedPages = pages
 
 	dirName, fileName := filepath.Split(fileOut)
@@ -1363,7 +1358,6 @@ func ImportImages(cmd *Command) ([]string, error) {
 		return nil, err
 	}
 
-	ctx.Write.Command = "Import"
 	dirName, fileName := filepath.Split(fileOut)
 	ctx.Write.DirName = dirName
 	ctx.Write.FileName = fileName
@@ -1577,7 +1571,6 @@ func NUp(cmd *Command) ([]string, error) {
 		return nil, err
 	}
 
-	ctx.Write.Command = "N-Up"
 	dirName, fileName := filepath.Split(fileOut)
 	ctx.Write.DirName = dirName
 	ctx.Write.FileName = fileName

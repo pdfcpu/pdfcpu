@@ -548,7 +548,6 @@ type WriteContext struct {
 	DirName             string
 	FileName            string
 	FileSize            int64
-	Command             string        // The processing command in effect.
 	SelectedPages       IntSet        // For split, trim and extract.
 	BinaryTotalSize     int64         // total stream data, counts 100% all stream data written.
 	BinaryImageSize     int64         // total image stream data written = Read.BinaryImageSize.

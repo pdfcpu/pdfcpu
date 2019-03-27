@@ -777,7 +777,14 @@ func scanLine(s *bufio.Scanner) (string, error) {
 			break
 		}
 	}
-	return s.Text(), nil
+	// Remove comment.
+	s1 := s.Text()
+	i := strings.Index(s1, "%")
+	if i >= 0 {
+		s1 = s1[:i]
+	}
+
+	return s1, nil
 }
 
 func scanTrailer(s *bufio.Scanner, line string) (string, error) {
