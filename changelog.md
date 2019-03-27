@@ -13,5 +13,6 @@ layout: default
 |2019-03-03 | [067897d](https://github.com/hhrutter/pdfcpu/commit/067897de8ea2ff18ef6a86bf7b2da43f264c0991) | Cleanup encryption
 |2019-02-24 | [6e1af9e](https://github.com/hhrutter/pdfcpu/commit/6e1af9ed3b76f0306a469ed50e64e737c9f752f7) | Fix stamp transform calc
 |2019-02-02 |[769b2e4](https://github.com/hhrutter/pdfcpu/commit/769b2e488b07ebcc0cd4f33c651bed67d03db84e) | Fix locating lastxref (#64)
-|2019-01-13 | [v0.1.21](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.21) |
-|2019-03-24 | [v0.1.22](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.22) |
+|2019-01-13 | [v0.1.21](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.21) | N-Up, Grid, Fix #51, #58
+|2019-03-24 | [v0.1.22](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.22) | Insert & Remove Pages, go mod support
+|2918-03-28 | [80aa62c](https://github.com/hhrutter/pdfcpu/commit/80aa62c9dd3076f631a9f903cb7c9779d40fd3db) | Fix #71, #72
