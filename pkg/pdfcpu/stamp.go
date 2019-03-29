@@ -88,19 +88,21 @@ type formCache map[*Rectangle]*IndirectRef
 type Watermark struct {
 
 	// configuration
-	text       string      // display text.
-	fileName   string      // display pdf page or png image.
-	page       int         // the page number of a PDF file.
-	onTop      bool        // if true this is a STAMP else this is a WATERMARK.
-	fontName   string      // supported are Adobe base fonts only. (as of now: Helvetica, Times-Roman, Courier)
-	fontSize   int         // font scaling factor.
-	color      simpleColor // fill color(=non stroking color).
-	rotation   float64     // rotation to apply in degrees. -180 <= x <= 180
-	diagonal   int         // paint along the diagonal.
-	opacity    float64     // opacity the displayed text. 0 <= x <= 1
-	renderMode int         // fill=0, stroke=1 fill&stroke=2
-	scale      float64     // relative scale factor. 0 <= x <= 1
-	scaleAbs   bool        // true for absolute scaling.
+	textString     string      // raw display text.
+	textLines      []string    // display multiple lines of text.
+	fileName       string      // display pdf page or png image.
+	page           int         // the page number of a PDF file.
+	onTop          bool        // if true this is a STAMP else this is a WATERMARK.
+	fontName       string      // supported are Adobe base fonts only. (as of now: Helvetica, Times-Roman, Courier)
+	fontSize       int         // font scaling factor.
+	scaledFontSize int         // font scaling factor for a specific page
+	color          simpleColor // fill color(=non stroking color).
+	rotation       float64     // rotation to apply in degrees. -180 <= x <= 180
+	diagonal       int         // paint along the diagonal.
+	opacity        float64     // opacity the displayed text. 0 <= x <= 1
+	renderMode     int         // fill=0, stroke=1 fill&stroke=2
+	scale          float64     // relative scale factor. 0 <= x <= 1
+	scaleAbs       bool        // true for absolute scaling.
 
 	// resources
 	ocg, extGState, font, image *IndirectRef
@@ -140,7 +142,7 @@ func (wm Watermark) String() string {
 		s = "not "
 	}
 
-	t := wm.text
+	t := wm.textString
 	if len(t) == 0 {
 		t = wm.fileName
 	}
@@ -196,6 +198,20 @@ func (wm Watermark) OnTopString() string {
 	return s
 }
 
+func (wm Watermark) textWidth() float64 {
+
+	var maxWidth float64
+
+	for _, l := range wm.textLines {
+		w := metrics.TextWidth(l, wm.fontName, wm.scaledFontSize)
+		if w > maxWidth {
+			maxWidth = w
+		}
+	}
+
+	return maxWidth
+}
+
 // IsPDF returns whether the watermark content is an image or text.
 func (wm Watermark) isPDF() bool {
 	return len(wm.fileName) > 0 && strings.ToLower(filepath.Ext(wm.fileName)) == ".pdf"
@@ -245,13 +261,17 @@ func (wm *Watermark) calcBoundingBox() {
 
 	var w float64
 	if wm.scaleAbs {
-		wm.fontSize = int(float64(wm.fontSize) * wm.scale)
-		w = metrics.TextWidth(wm.text, wm.fontName, wm.fontSize)
+		wm.scaledFontSize = int(float64(wm.fontSize) * wm.scale)
+		//w = metrics.TextWidth(wm.text, wm.fontName, wm.fontSize)
+		w = wm.textWidth()
 	} else {
 		w = wm.scale * wm.vp.Width()
-		wm.fontSize = metrics.FontSize(wm.text, wm.fontName, w)
+		wm.scaledFontSize = metrics.FontSize(wm.textLines[0], wm.fontName, w)
 	}
-	wm.bb = Rect(0, -float64(wm.fontSize), w, float64(wm.fontSize)/10)
+	//wm.bb = Rect(0, -float64(wm.fontSize), w, float64(wm.fontSize)/10)
+	h := float64(len(wm.textLines)) * float64(wm.scaledFontSize)
+	fmt.Printf("wm.bb: w=%.2f h=%.2f\n", w, h)
+	wm.bb = Rect(0, 0, w, h)
 
 	return
 }
@@ -326,13 +346,24 @@ func setWatermarkType(s string, wm *Watermark) error {
 
 	ss := strings.Split(s, ":")
 
-	wm.text = ss[0]
+	wm.textString = ss[0]
+
+	for _, l := range strings.Split(ss[0], "\n") {
+		wm.textLines = append(wm.textLines, l)
+	}
+
+	if len(wm.textLines) > 1 {
+		// Multiline text watermark.
+		return nil
+	}
+
 	ext := strings.ToLower(filepath.Ext(ss[0]))
 	if MemberOf(ext, []string{".jpg", ".jpeg", ".png", ".tif", ".tiff", ".pdf"}) {
-		wm.fileName = ss[0]
+		wm.fileName = wm.textString
 	}
 
 	if len(ss) > 1 {
+		// Parse page number for PDF watermarks.
 		var err error
 		wm.page, err = strconv.Atoi(ss[1])
 		if err != nil {
@@ -521,6 +552,7 @@ func ParseWatermarkDetails(s string, onTop bool) (*Watermark, error) {
 		renderMode: rmFill,
 		objs:       IntSet{},
 		fCache:     formCache{},
+		textLines:  []string{},
 	}
 
 	ss := strings.Split(s, ",")
@@ -985,7 +1017,7 @@ func createForm(xRefTable *XRefTable, wm *Watermark, withBB bool) error {
 	bb := wm.bb
 
 	// Cache the form for every bounding box encountered.
-	ir, ok := wm.fCache[bb]
+	ir, ok := wm.fCache[bb] // *bb ??
 	if ok {
 		//fmt.Printf("reusing form obj#%d\n", ir.ObjectNumber)
 		wm.form = ir
@@ -1004,9 +1036,9 @@ func createForm(xRefTable *XRefTable, wm *Watermark, withBB bool) error {
 		fmt.Fprintf(&b, "q %f 0 0 %f 0 0 cm /Im0 Do Q", bb.Width(), bb.Height())
 	} else {
 		// 12 font points result in a vertical displacement of 9.47
-		dy := -float64(wm.fontSize) / 12 * 9.47
+		//dy := -float64(wm.fontSize) / 12 * 9.47
 		wmForm := "0 g 0 G 0 i 0 J []0 d 0 j 1 w 10 M 0 Tc 0 Tw 100 Tz 0 TL %d Tr 0 Ts BT /%s %d Tf %f %f %f rg 0 %f Td (%s)Tj ET"
-		fmt.Fprintf(&b, wmForm, wm.renderMode, wm.fontName, wm.fontSize, wm.color.r, wm.color.g, wm.color.b, dy, wm.text)
+		fmt.Fprintf(&b, wmForm, wm.renderMode, wm.fontName, wm.scaledFontSize, wm.color.r, wm.color.g, wm.color.b, 0.0, wm.textLines[0])
 	}
 
 	// Paint bounding box
@@ -1286,7 +1318,7 @@ func watermarkPage(xRefTable *XRefTable, i int, wm *Watermark) error {
 	wm.vp = viewPort(xRefTable, inhPAttrs)
 	//log.Debug.Printf("watermarkPage: vp = %s\n", wm.vp)
 
-	err = createForm(xRefTable, wm, false)
+	err = createForm(xRefTable, wm, true)
 	if err != nil {
 		return err
 	}
