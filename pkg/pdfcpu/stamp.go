@@ -198,7 +198,7 @@ func (wm Watermark) OnTopString() string {
 	return s
 }
 
-func (wm Watermark) textWidth() float64 {
+func (wm Watermark) calcMaxTextWidth() float64 {
 
 	var maxWidth float64
 
@@ -210,6 +210,23 @@ func (wm Watermark) textWidth() float64 {
 	}
 
 	return maxWidth
+}
+
+func (wm Watermark) calcMinFontSize(w float64) int {
+
+	var minSize int
+
+	for _, l := range wm.textLines {
+		w := metrics.FontSize(l, wm.fontName, w)
+		if minSize == 0.0 {
+			minSize = w
+		}
+		if w < minSize {
+			minSize = w
+		}
+	}
+
+	return minSize
 }
 
 // IsPDF returns whether the watermark content is an image or text.
@@ -262,15 +279,12 @@ func (wm *Watermark) calcBoundingBox() {
 	var w float64
 	if wm.scaleAbs {
 		wm.scaledFontSize = int(float64(wm.fontSize) * wm.scale)
-		//w = metrics.TextWidth(wm.text, wm.fontName, wm.fontSize)
-		w = wm.textWidth()
+		w = wm.calcMaxTextWidth()
 	} else {
 		w = wm.scale * wm.vp.Width()
-		wm.scaledFontSize = metrics.FontSize(wm.textLines[0], wm.fontName, w)
+		wm.scaledFontSize = wm.calcMinFontSize(w)
 	}
-	//wm.bb = Rect(0, -float64(wm.fontSize), w, float64(wm.fontSize)/10)
 	h := float64(len(wm.textLines)) * float64(wm.scaledFontSize)
-	fmt.Printf("wm.bb: w=%.2f h=%.2f\n", w, h)
 	wm.bb = Rect(0, 0, w, h)
 
 	return
@@ -348,7 +362,7 @@ func setWatermarkType(s string, wm *Watermark) error {
 
 	wm.textString = ss[0]
 
-	for _, l := range strings.Split(ss[0], "\n") {
+	for _, l := range strings.Split(ss[0], `\n`) {
 		wm.textLines = append(wm.textLines, l)
 	}
 
@@ -574,7 +588,6 @@ func ParseWatermarkDetails(s string, onTop bool) (*Watermark, error) {
 
 		k := strings.TrimSpace(ss1[0])
 		v := strings.TrimSpace(ss1[1])
-		//fmt.Printf("key:<%s> value<%s>\n", k, v)
 
 		var err error
 
@@ -1033,12 +1046,26 @@ func createForm(xRefTable *XRefTable, wm *Watermark, withBB bool) error {
 			return err
 		}
 	} else if wm.isImage() {
-		fmt.Fprintf(&b, "q %f 0 0 %f 0 0 cm /Im0 Do Q", bb.Width(), bb.Height())
+		fmt.Fprintf(&b, "q %f 0 0 %f 0 0 cm /Im0 Do Q", bb.Width(), bb.Height()) // TODO dont need Q
 	} else {
+
 		// 12 font points result in a vertical displacement of 9.47
-		//dy := -float64(wm.fontSize) / 12 * 9.47
-		wmForm := "0 g 0 G 0 i 0 J []0 d 0 j 1 w 10 M 0 Tc 0 Tw 100 Tz 0 TL %d Tr 0 Ts BT /%s %d Tf %f %f %f rg 0 %f Td (%s)Tj ET"
-		fmt.Fprintf(&b, wmForm, wm.renderMode, wm.fontName, wm.scaledFontSize, wm.color.r, wm.color.g, wm.color.b, 0.0, wm.textLines[0])
+		dy := -float64(wm.scaledFontSize) / 12 * 9.47
+
+		wmForm := "0 g 0 G 0 i 0 J []0 d 0 j 1 w 10 M 0 Tc 0 Tw 100 Tz 0 TL %d Tr 0 Ts "
+		fmt.Fprintf(&b, wmForm, wm.renderMode)
+
+		j := 1
+		for i := len(wm.textLines) - 1; i >= 0; i-- {
+
+			sw := metrics.TextWidth(wm.textLines[i], wm.fontName, wm.scaledFontSize)
+			dx := wm.bb.Width()/2 - sw/2
+
+			fmt.Fprintf(&b, "BT /%s %d Tf %f %f %f rg %f %f Td (%s) Tj ET ",
+				wm.fontName, wm.scaledFontSize, wm.color.r, wm.color.g, wm.color.b, dx, dy+float64(j*wm.scaledFontSize), wm.textLines[i])
+			j++
+		}
+
 	}
 
 	// Paint bounding box
@@ -1318,7 +1345,7 @@ func watermarkPage(xRefTable *XRefTable, i int, wm *Watermark) error {
 	wm.vp = viewPort(xRefTable, inhPAttrs)
 	//log.Debug.Printf("watermarkPage: vp = %s\n", wm.vp)
 
-	err = createForm(xRefTable, wm, true)
+	err = createForm(xRefTable, wm, false)
 	if err != nil {
 		return err
 	}
