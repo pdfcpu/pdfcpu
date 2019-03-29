@@ -6,6 +6,7 @@ layout: default
 
 | Date      | Tag / Commit | Description  
 |:----------|:-------------|:--------
+|2019-03-29 | [eca8f35](https://github.com/hhrutter/pdfcpu/commit/eca8f35ebe5f99da5862212e050824680f23016f) | Fix #73 
 |2019-03-28 | [80aa62c](https://github.com/hhrutter/pdfcpu/commit/80aa62c9dd3076f631a9f903cb7c9779d40fd3db) | Fix #71, #72
 |2019-03-24 | [v0.1.22](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.22) | Insert & Remove Pages, go mod support
 |2019-03-17 | [b112077  ](https://github.com/hhrutter/pdfcpu/commit/b112077a350f920d21423d55ea26f8ab15a3d1ae) | Update README
