@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"compress/zlib"
 	"encoding/binary"
+	"fmt"
 	"image"
 	"io"
 	"sort"
@@ -348,6 +349,7 @@ func Encode(w io.Writer, m image.Image, opt *Options) error {
 	var imageLen int
 
 	switch compression {
+
 	case cNone:
 		dst = w
 		// Write IFD offset before outputting pixel data.
@@ -369,13 +371,20 @@ func Encode(w io.Writer, m image.Image, opt *Options) error {
 			imageLen = d.X * d.Y * 4
 		}
 		err = binary.Write(w, enc, uint32(imageLen+8))
-		if err != nil {
-			return err
-		}
+
 	case cLZW:
 		dst = lzw.NewWriter(&buf, true)
+
 	case cDeflate:
 		dst = zlib.NewWriter(&buf)
+
+	default:
+		err = UnsupportedError(fmt.Sprintf("compression value %d", compression))
+
+	}
+
+	if err != nil {
+		return err
 	}
 
 	pr := uint32(prNone)

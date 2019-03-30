@@ -24,7 +24,6 @@ import (
 
 	"strings"
 
-	"github.com/hhrutter/pdfcpu/pkg/log"
 	"github.com/pkg/errors"
 )
 
@@ -60,7 +59,7 @@ func IsUTF16BE(b []byte) (ok bool, err error) {
 
 func decodeUTF16String(b []byte) (s string, err error) {
 
-	log.Debug.Printf("decodeUTF16String: begin %v\n", b)
+	//log.Debug.Printf("decodeUTF16String: begin %v\n", b)
 
 	// Check for Big Endian UTF-16.
 	isUTF16BE, err := IsUTF16BE(b)
@@ -83,13 +82,13 @@ func decodeUTF16String(b []byte) (s string, err error) {
 	// Collect code points.
 	for i := 0; i < len(b); {
 
-		log.Debug.Printf("i=%d\n", i)
+		//log.Debug.Printf("i=%d\n", i)
 
 		val := (uint16(b[i]) << 8) + uint16(b[i+1])
 
 		if val <= 0xD7FF || val > 0xE000 && val <= 0xFFFF {
 			// Basic Multilingual Plane
-			log.Debug.Println("decodeUTF16String: Basic Multilingual Plane detected")
+			//log.Debug.Println("decodeUTF16String: Basic Multilingual Plane detected")
 			u16 = append(u16, val)
 			i += 2
 			continue
@@ -108,7 +107,7 @@ func decodeUTF16String(b []byte) (s string, err error) {
 		}
 
 		// Supplementary Planes
-		log.Debug.Println("decodeUTF16String: Supplementary Planes detected")
+		//log.Debug.Println("decodeUTF16String: Supplementary Planes detected")
 		u16 = append(u16, val)
 		val = (uint16(b[i+2]) << 8) + uint16(b[i+3])
 		if val < 0xDC00 || val > 0xDFFF {
@@ -131,7 +130,7 @@ func decodeUTF16String(b []byte) (s string, err error) {
 
 	s = string(decb)
 
-	log.Debug.Printf("decodeUTF16String: end %s %s %s\n", s, hex.Dump(decb), hex.Dump([]byte(s)))
+	//log.Debug.Printf("decodeUTF16String: end %s %s %s\n", s, hex.Dump(decb), hex.Dump([]byte(s)))
 
 	return
 }

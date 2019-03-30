@@ -68,13 +68,10 @@ Even if you want to dive right into pdfcpu backend integration it is highly reco
 
 ## Status
 
-[Version: 0.1.22](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.22)
+[Version: 0.1.23](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.23)
 
-* Support for `go mod`
-* Command completion
-* `pages insert` inserts empty pages before all selected pages
-* `pages remove` removes all selected pages
-* Bug fixes #64, #65, #68, #69
+* Support for multiline stamps/watermarks such as in `pdfcpu stamp 'This\nis a\nmultiline stamp' test.pdf`
+* Fixes #27, #61, #63
 
 ## Reminder
 

@@ -45,11 +45,6 @@ func writePageDict(ctx *Context, ir *IndirectRef, pageDict Dict, pageNr int) err
 
 	dictName := "pageDict"
 
-	// For extracted pages we do not generate Annotations.
-	if ctx.ReducedFeatureSet() {
-		pageDict.Delete("Annots")
-	}
-
 	err := writeDictObject(ctx, objNr, genNr, pageDict)
 	if err != nil {
 		return err
@@ -238,11 +233,11 @@ func writePagesDict(ctx *Context, ir *IndirectRef, pageNr *int) (skip bool, writ
 	kidsOrig := d.ArrayEntry("Kids")
 
 	if len(ctx.Write.SelectedPages) > 0 {
-		// TRIM, REMOVEPAGES
+		// EXTRACTPAGES, SPLIT, TRIM, REMOVEPAGES
 		c := int(countOrig.(Integer))
 		log.Write.Printf("writePagesDict: checking page range %d - %d \n", *pageNr+1, *pageNr+c)
 		if ctx.Cmd == REMOVEPAGES ||
-			ctx.Cmd == TRIM && containsSelectedPages(ctx, *pageNr+1, *pageNr+c) {
+			((ctx.Cmd == EXTRACTPAGES || ctx.Cmd == TRIM || ctx.Cmd == SPLIT) && containsSelectedPages(ctx, *pageNr+1, *pageNr+c)) {
 			log.Write.Println("writePagesDict: process this subtree")
 		} else {
 			log.Write.Println("writePagesDict: skip this subtree")
