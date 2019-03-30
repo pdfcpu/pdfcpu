@@ -6,7 +6,7 @@ layout: default
 
 | Date      | Tag / Commit | Description  
 |:----------|:-------------|:--------
-|2019-03-30 | [v0.1.23](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.23) | Multiline watermarks, merge links, Fix #27, #61, #63
+|2019-03-30 | [v0.1.23](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.23) | Multiline watermarks, Fix #27, #61, #63
 |2019-03-29 | [eca8f35](https://github.com/hhrutter/pdfcpu/commit/eca8f35ebe5f99da5862212e050824680f23016f) | Fix #73 
 |2019-03-28 | [80aa62c](https://github.com/hhrutter/pdfcpu/commit/80aa62c9dd3076f631a9f903cb7c9779d40fd3db) | Fix #71, #72
 |2019-03-24 | [v0.1.22](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.22) | Insert & Remove Pages, go mod support
