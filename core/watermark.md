@@ -65,7 +65,7 @@ A configuration string to specify watermark parameters.
 
 The first entry of the description configures the type. It is one of the following:
 
-* text string
+* text string (Use \n for a multiline watermark)
 * image file name
 * PDF file name followed by an optional page number
 

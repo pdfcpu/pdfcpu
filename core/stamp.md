@@ -59,7 +59,7 @@ A configuration string to specify the stamp parameters.
 
 The first entry of the description configures the type. It is one of the following:
 
-* text string
+* text string (Use \n for a multiline stamp)
 * image file name
 * PDF file name followed by an optional page number
 
