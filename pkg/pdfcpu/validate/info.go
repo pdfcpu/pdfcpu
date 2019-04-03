@@ -46,6 +46,8 @@ func validateInfoDictDate(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
 
 func validateInfoDictTrapped(o pdf.Object, xRefTable *pdf.XRefTable) error {
 
+	sinceVersion := pdf.V13
+
 	validate := func(s string) bool { return pdf.MemberOf(s, []string{"True", "False", "Unknown"}) }
 
 	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
@@ -54,7 +56,14 @@ func validateInfoDictTrapped(o pdf.Object, xRefTable *pdf.XRefTable) error {
 		}
 	}
 
-	_, err := xRefTable.DereferenceName(o, pdf.V13, validate)
+	_, err := xRefTable.DereferenceName(o, sinceVersion, validate)
+	if err == nil {
+		return nil
+	}
+
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		_, err = xRefTable.DereferenceBoolean(o, sinceVersion)
+	}
 
 	return err
 }

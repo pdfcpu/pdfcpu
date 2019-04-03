@@ -728,6 +728,28 @@ func (xRefTable *XRefTable) Dereference(o Object) (Object, error) {
 	return xRefTable.indRefToObject(&ir)
 }
 
+// DereferenceBoolean resolves and validates a boolean object, which may be an indirect reference.
+func (xRefTable *XRefTable) DereferenceBoolean(o Object, sinceVersion Version) (*Boolean, error) {
+
+	o, err := xRefTable.Dereference(o)
+	if err != nil || o == nil {
+		return nil, err
+	}
+
+	b, ok := o.(Boolean)
+	if !ok {
+		return nil, errors.Errorf("DereferenceBoolean: wrong type <%v>", o)
+	}
+
+	// Version check
+	err = xRefTable.ValidateVersion("DereferenceBoolean", sinceVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	return &b, nil
+}
+
 // DereferenceInteger resolves and validates an integer object, which may be an indirect reference.
 func (xRefTable *XRefTable) DereferenceInteger(o Object) (*Integer, error) {
 
