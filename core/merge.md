@@ -36,7 +36,6 @@ pdfcpu merge [-v(erbose)|vv] outFile inFile...
 
 The following PDF elements are not carried over into the merged document:
 
-* Annotations
 * Outlines
 * Struct Trees
 * Forms
