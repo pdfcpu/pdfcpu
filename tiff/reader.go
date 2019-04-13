@@ -463,7 +463,8 @@ func newDecoder(r io.Reader) (*decoder, error) {
 	d.config.Height = int(d.firstVal(tImageLength))
 
 	if _, ok := d.features[tBitsPerSample]; !ok {
-		return nil, FormatError("BitsPerSample tag missing")
+		// Default is 1 per specification.
+		d.features[tBitsPerSample] = []uint{1}
 	}
 	d.bpp = d.firstVal(tBitsPerSample)
 	switch d.bpp {

@@ -576,8 +576,13 @@ func (d *decoder) decodeGroup4() {
 
 		mode, err := d.nextMode()
 		if err != nil {
-			d.err = err
-			return
+			// Check for aligned 3 bytes eofb.
+			d.align = true
+			mode, err = d.nextMode()
+			if err != nil {
+				d.err = err
+				return
+			}
 		}
 
 		for k, v := range map[string]func(){
