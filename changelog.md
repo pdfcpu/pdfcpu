@@ -6,8 +6,9 @@ layout: default
 
 | Date      | Tag / Commit | Description  
 |:----------|:-------------|:--------
+|2019-04-13 | [14e74ba](https://github.com/hhrutter/pdfcpu/commit/14e74ba2c2ebe2ade2aa4c8506c5e9cec2a5fbd8) | Fix #75, #76
 |2019-04-04 | [40f60a0](https://github.com/hhrutter/pdfcpu/commit/40f60a0a25c5359e3d44c06138404079ae272622) | Fix #74
-|2019-03-30 | [v0.1.23](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.23) | Multiline watermarks, Fix #27, #61, #63
+|2019-03-30 | [v0.1.23](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.23) | Multiline watermarks, fix #27, #61, #63
 |2019-03-29 | [eca8f35](https://github.com/hhrutter/pdfcpu/commit/eca8f35ebe5f99da5862212e050824680f23016f) | Fix #73 
 |2019-03-28 | [80aa62c](https://github.com/hhrutter/pdfcpu/commit/80aa62c9dd3076f631a9f903cb7c9779d40fd3db) | Fix #71, #72
 |2019-03-24 | [v0.1.22](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.22) | Insert & Remove Pages, go mod support
@@ -18,4 +19,6 @@ layout: default
 |2019-03-03 | [067897d](https://github.com/hhrutter/pdfcpu/commit/067897de8ea2ff18ef6a86bf7b2da43f264c0991) | Cleanup encryption
 |2019-02-24 | [6e1af9e](https://github.com/hhrutter/pdfcpu/commit/6e1af9ed3b76f0306a469ed50e64e737c9f752f7) | Fix stamp transform calc
 |2019-02-02 |[769b2e4](https://github.com/hhrutter/pdfcpu/commit/769b2e488b07ebcc0cd4f33c651bed67d03db84e) | Fix locating lastxref (#64)
-|2019-01-13 | [v0.1.21](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.21) | N-Up, Grid, Fix #51, #58
+|2019-01-13 | [v0.1.21](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.21) | N-Up, Grid, fix #51, #58
+|2018-12-23 | [v0.1.20](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.20) | Import, Rotate
+|2018-12-09 | [v0.1.19](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.19) | JPEG support, split scan, fix #52, #53, #54, #56
