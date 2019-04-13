@@ -21,4 +21,4 @@ layout: default
 |2019-02-02 |[769b2e4](https://github.com/hhrutter/pdfcpu/commit/769b2e488b07ebcc0cd4f33c651bed67d03db84e) | Fix locating lastxref (#64)
 |2019-01-13 | [v0.1.21](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.21) | N-Up, Grid, fix #51, #58
 |2018-12-23 | [v0.1.20](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.20) | Import, Rotate
-|2018-12-09 | [v0.1.19](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.19) | JPEG support, split scan, fix #52, #53, #54, #56
+|2018-12-09 | [v0.1.19](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.19) | JPEG support, fix #52,#53,#54,#56
