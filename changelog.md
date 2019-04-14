@@ -23,3 +23,4 @@ layout: default
 |2018-12-23 | [v0.1.20](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.20) | Import, Rotate
 |2018-12-09 | [v0.1.19](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.19) | JPEG support, fix #52,#53,#54,#56
 |2018-11-14 | [v0.1.18](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.18) | ReadSeeker support, fix #5,#39,#44
+|2018-10-26 | [v0.1.17](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.17) | CCITT group3/4 decoding
