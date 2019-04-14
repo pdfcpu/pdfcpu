@@ -20,15 +20,15 @@ layout: default
 |2019-02-24 | [6e1af9e](https://github.com/hhrutter/pdfcpu/commit/6e1af9ed3b76f0306a469ed50e64e737c9f752f7) | Fix stamp transform calc.
 |2019-02-02 | [769b2e4](https://github.com/hhrutter/pdfcpu/commit/769b2e488b07ebcc0cd4f33c651bed67d03db84e) | Fix #64: locating lastxref.
 |2019-01-13 | [v0.1.21](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.21) | N-Up, Grid, fix #51, #58.
-|2018-12-23 | [v0.1.20](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.20) | Add Import and Rotate commands. 
+|2018-12-23 | [v0.1.20](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.20) | Add Import and Rotate commands.
 |2018-12-09 | [v0.1.19](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.19) | JPEG support, fix #52,#53,#54,#56.
 |2018-11-14 | [v0.1.18](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.18) | ReadSeeker support, fix #5,#39,#44.
 |2018-10-26 | [v0.1.17](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.17) | TIFF Add support for CCITT decoding.
 |2018-10-21 | [v0.1.16](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.16) | CCITT fax decoding, fix #38, #40, #41.
-|2018-09-16 | [v0.1.15](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.15) | Add Stamp, Watermark cmd, Fix #29, #36.
+|2018-09-16 | [0v.1.15](https://github.com/hhrutter/pdfcpu/releases/tag/0.1.15)  | Stamp cmd, fork `x/image/tiff`, fix 29,36.
 |2018-06-09 | [v0.1.14](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.14) | Extract: Write Flate as PNG, Fix #25.
 |2018-05-27 | [v0.1.13](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.13) | Add Runlength filter support.
-|2018-05-22 | [v0.1.12](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.12) | Enhance `compress/lzw`, fix #21-#23.
+|2018-05-22 | [v0.1.12](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.12) | Fork `compress/lzw`, fix #21-#23.
 |2018-05-01 | [v0.1.11](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.11) | Add LZWDecode filter support.
 |2018-04-17 | [v0.1.10](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.10) | Add name tree caching, fix #18.
 |2018-04-01 | [v0.1.9](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.9)   | Redesign extraction API, fix #7.
@@ -36,7 +36,7 @@ layout: default
 |2018-03-19 | [v0.1.7](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.7)   | Add logging interface, Merge PR #15.
 |2018-01-14 | [v0.1.6](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.6)   | Add List/Add permissions command.
 |2018-01-08 | [v0.1.5](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.5)   | Add Encrypt/Decrypt command.
-|2017-12-21 | [v0.1.4](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.4)   | Cleanup, fix object freelist management.
+|2017-12-21 | [v0.1.4](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.4)   | Fix object freelist management.
 |2017-12-12 | [v0.1.3](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.3)   | Add Attachments command, fix #9.
 |2017-11-27 | [v0.1.2](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.2)   | Fix #11.
 |2017-11-05 | [v0.1.1](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.1)   | Add examples, Fix #10.
