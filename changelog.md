@@ -25,7 +25,7 @@ layout: default
 |2018-11-14 | [v0.1.18](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.18) | ReadSeeker support, fix #5,#39,#44.
 |2018-10-26 | [v0.1.17](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.17) | TIFF Add support for CCITT decoding.
 |2018-10-21 | [v0.1.16](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.16) | CCITT fax decoding, fix #38, #40, #41.
-|2018-09-16 | [0v.1.15](https://github.com/hhrutter/pdfcpu/releases/tag/0.1.15)  | Stamp cmd, fork `x/image/tiff`, fix 29,36.
+|2018-09-16 | [v0.1.15](https://github.com/hhrutter/pdfcpu/releases/tag/0.1.15)  | Add Stamp cmd, fork `x/image/tiff`.
 |2018-06-09 | [v0.1.14](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.14) | Extract: Write Flate as PNG, Fix #25.
 |2018-05-27 | [v0.1.13](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.13) | Add Runlength filter support.
 |2018-05-22 | [v0.1.12](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.12) | Fork `compress/lzw`, fix #21-#23.
