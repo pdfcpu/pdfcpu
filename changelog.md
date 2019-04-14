@@ -23,4 +23,9 @@ layout: default
 |2018-12-23 | [v0.1.20](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.20) | Import, Rotate
 |2018-12-09 | [v0.1.19](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.19) | JPEG support, fix #52,#53,#54,#56
 |2018-11-14 | [v0.1.18](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.18) | ReadSeeker support, fix #5,#39,#44
-|2018-10-26 | [v0.1.17](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.17) | CCITT group3/4 decoding
+|2018-10-26 | [v0.1.17](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.17) | TIFF Add support for CCITT decoding.
+|2018-10-21 | [v0.1.16](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.16) | CCITT group3/4 decoding, fix #38, #40, #41
+2018-09-16 | [v0.1.15](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.15) | Stamp, Watermark, Fix #29, #36
+2018-06-09 | [v0.1.14](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.14) | Extract: Write Flate as PNG, Fix #25
+2018-05-27 | [v0.1.13](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.13) | Add Runlength Decode filter support.
+2018-05-22 | [v0.1.12](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.12) | Enhance compress/lzw, fix #21,#22,#23
