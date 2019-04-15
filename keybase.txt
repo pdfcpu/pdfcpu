@@ -1,0 +1,56 @@
+==================================================================
+https://keybase.io/hhrutter
+--------------------------------------------------------------------
+
+I hereby claim:
+
+  * I am an admin of https://pdfcpu.io
+  * I am hhrutter (https://keybase.io/hhrutter) on keybase.
+  * I have a public key ASDH1Sb2EXOzXGlndsRUseF_pEr0NRqLoEnyEqojB8IDKgo
+
+To do so, I am signing this object:
+
+{
+  "body": {
+    "key": {
+      "eldest_kid": "0101d2eccae77cbe54d2e6d1c22cce35d77644d81c713947acab2c6ae28204390e640a",
+      "host": "keybase.io",
+      "kid": "0120c7d526f61173b35c696776c454b1e17fa44af4351a8ba049f212aa2307c2032a0a",
+      "uid": "5f4c1dcaeeb5c59fb8d32b7393297619",
+      "username": "hhrutter"
+    },
+    "merkle_root": {
+      "ctime": 1555320149,
+      "hash": "cf580ca664e5ad1dae6e7c77192ab8cacf9771bf32ce1e00546f9bb74d6e1cd743492d1da121d020d834d88c9cb1c509efe60e1aaa9368f6a1d2e302d8a20e36",
+      "hash_meta": "6905399bbc8497339eec0de4150dd8f424c213c22f04da8578eee49b2f99983d",
+      "seqno": 5169020
+    },
+    "service": {
+      "entropy": "OrqCtknex6mb+VcHXFjiqbDQ",
+      "hostname": "pdfcpu.io",
+      "protocol": "https:"
+    },
+    "type": "web_service_binding",
+    "version": 2
+  },
+  "client": {
+    "name": "keybase.io go client",
+    "version": "3.2.2"
+  },
+  "ctime": 1555320173,
+  "expire_in": 504576000,
+  "prev": "0ad087fe8894a632d7a0af9cce10aa07cff37c5f123c936d1534d44e0fe07312",
+  "seqno": 36,
+  "tag": "signature"
+}
+
+which yields the signature:
+
+hKRib2R5hqhkZXRhY2hlZMOpaGFzaF90eXBlCqNrZXnEIwEgx9Um9hFzs1xpZ3bEVLHhf6RK9DUai6BJ8hKqIwfCAyoKp3BheWxvYWTESpcCJMQgCtCH/oiUpjLXoK+czhCqB8/zfF8SPJNtFTTUTg/gcxLEIHl9OKuZKkjEsZ9NdLWwceMFbt3KG7eq0DWDRF28MvAuAgHCo3NpZ8RALzw5M+hZ7S9wBV15+lLYbzRFNd0NDcxAtZbu34lRJec2+efJglwlvIAFROGlWosXjJErTE4uWFWc7x0zX/SECahzaWdfdHlwZSCkaGFzaIKkdHlwZQildmFsdWXEIHMlQ2iz476LWvYiOxi8p+WJ+JfIr5xFsoU/D2H6IAnvo3RhZ80CAqd2ZXJzaW9uAQ==
+
+And finally, I am proving ownership of this host by posting or
+appending to this document.
+
+View my publicly-auditable identity here: https://keybase.io/hhrutter
+
+==================================================================
