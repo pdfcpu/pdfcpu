@@ -18,7 +18,7 @@ package pdfcpu
 
 import "github.com/hhrutter/pdfcpu/pkg/log"
 
-func rotatePage(xRefTable *XRefTable, i, rotation int) error {
+func rotatePage(xRefTable *XRefTable, i, j int) error {
 
 	log.Debug.Printf("rotate page:%d\n", i)
 
@@ -27,7 +27,7 @@ func rotatePage(xRefTable *XRefTable, i, rotation int) error {
 		return err
 	}
 
-	d.Update("Rotate", Integer(inhPAttrs.rotate+float64(rotation)))
+	d.Update("Rotate", Integer((inhPAttrs.rotate+j)%360))
 
 	return nil
 }

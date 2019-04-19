@@ -760,15 +760,19 @@ func (xRefTable *XRefTable) DereferenceInteger(o Object) (*Integer, error) {
 
 	i, ok := o.(Integer)
 	if !ok {
-		return nil, errors.Errorf("ValidateInteger: wrong type <%v>", o)
+		return nil, errors.Errorf("DereferenceInteger: wrong type <%v>", o)
 	}
 
 	return &i, nil
 }
 
-// DereferenceNumber resolves a number object, which may be an indirect reference and returns a float64
-// It is assumed this func is called on a validated xRefTable.
-func (xRefTable *XRefTable) DereferenceNumber(o Object) (f float64) {
+// DereferenceNumber resolves a number object, which may be an indirect reference and returns a float64.
+func (xRefTable *XRefTable) DereferenceNumber(o Object) (float64, error) {
+
+	var (
+		f   float64
+		err error
+	)
 
 	o, _ = xRefTable.Dereference(o)
 
@@ -780,11 +784,12 @@ func (xRefTable *XRefTable) DereferenceNumber(o Object) (f float64) {
 	case Float:
 		f = o.Value()
 
-		// TODO default: error
+	default:
+		err = errors.Errorf("DereferenceNumber: wrong type <%v>", o)
 
 	}
 
-	return f
+	return f, err
 }
 
 // DereferenceName resolves and validates a name object, which may be an indirect reference.
@@ -1525,15 +1530,32 @@ type InheritedPageAttrs struct {
 	resources Dict
 	mediaBox  *Rectangle
 	cropBox   *Rectangle
-	rotate    float64
+	rotate    int
 }
 
-func rect(xRefTable *XRefTable, a Array) *Rectangle {
-	llx := xRefTable.DereferenceNumber(a[0])
-	lly := xRefTable.DereferenceNumber(a[1])
-	urx := xRefTable.DereferenceNumber(a[2])
-	ury := xRefTable.DereferenceNumber(a[3])
-	return Rect(llx, lly, urx, ury)
+func rect(xRefTable *XRefTable, a Array) (*Rectangle, error) {
+
+	llx, err := xRefTable.DereferenceNumber(a[0])
+	if err != nil {
+		return nil, err
+	}
+
+	lly, err := xRefTable.DereferenceNumber(a[1])
+	if err != nil {
+		return nil, err
+	}
+
+	urx, err := xRefTable.DereferenceNumber(a[2])
+	if err != nil {
+		return nil, err
+	}
+
+	ury, err := xRefTable.DereferenceNumber(a[3])
+	if err != nil {
+		return nil, err
+	}
+
+	return Rect(llx, lly, urx, ury), nil
 }
 
 func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict Dict, pAttrs *InheritedPageAttrs) error {
@@ -1554,7 +1576,10 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict Dict, pAttrs *Inher
 		if err != nil {
 			return err
 		}
-		pAttrs.mediaBox = rect(xRefTable, a)
+		pAttrs.mediaBox, err = rect(xRefTable, a)
+		if err != nil {
+			return err
+		}
 	}
 
 	obj, found = pageDict.Find("CropBox")
@@ -1563,13 +1588,22 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict Dict, pAttrs *Inher
 		if err != nil {
 			return err
 		}
-		pAttrs.cropBox = rect(xRefTable, a)
+		pAttrs.cropBox, err = rect(xRefTable, a)
+		if err != nil {
+			return err
+		}
 	}
 
 	obj, found = pageDict.Find("Rotate")
 	if found {
 		//fmt.Printf("found Rotate: %v %T\n", obj, obj)
-		pAttrs.rotate = xRefTable.DereferenceNumber(obj)
+		i, err := xRefTable.DereferenceInteger(obj)
+		if err != nil {
+			return err
+		}
+
+		pAttrs.rotate = i.Value()
+
 		//fmt.Printf("r=%v %T\n", r, r)
 		//pAttrs.rotate = &r
 		//fmt.Printf("found rotate(%f) for page %d\n", *rotate, *p)
@@ -1707,6 +1741,21 @@ func (xRefTable *XRefTable) emptyPage(parentIndRef *IndirectRef, mediaBox *Recta
 	return xRefTable.IndRefForNewObject(pageDict)
 }
 
+func (xRefTable *XRefTable) pageMediaBox(d *Dict) (*Rectangle, error) {
+
+	o, found := d.Find("MediaBox")
+	if !found {
+		return nil, errors.Errorf("pageMediaBox: missing mediaBox")
+	}
+
+	a, err := xRefTable.DereferenceArray(o)
+	if err != nil {
+		return nil, err
+	}
+
+	return rect(xRefTable, a)
+}
+
 func (xRefTable *XRefTable) insertIntoPageTree(root *IndirectRef, pAttrs *InheritedPageAttrs, p *int, selectedPages IntSet) (int, error) {
 
 	d, err := xRefTable.DereferenceDict(*root)
@@ -1763,12 +1812,10 @@ func (xRefTable *XRefTable) insertIntoPageTree(root *IndirectRef, pAttrs *Inheri
 				// Insert empty page.
 				mediaBox := pAttrs.mediaBox
 				if mediaBox == nil {
-					o1, _ := pageNodeDict.Find("MediaBox")
-					a1, err := xRefTable.DereferenceArray(o1)
+					mediaBox, err = xRefTable.pageMediaBox(&pageNodeDict)
 					if err != nil {
 						return 0, err
 					}
-					mediaBox = rect(xRefTable, a1)
 				}
 
 				indRef, err := xRefTable.emptyPage(root, mediaBox)

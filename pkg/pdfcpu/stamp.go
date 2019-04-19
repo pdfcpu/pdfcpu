@@ -1350,7 +1350,7 @@ func watermarkPage(xRefTable *XRefTable, i int, wm *Watermark) error {
 		return err
 	}
 
-	wm.pageRot = inhPAttrs.rotate
+	wm.pageRot = float64(inhPAttrs.rotate)
 
 	log.Debug.Printf("\n%s\n", wm)
 
