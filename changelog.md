@@ -6,6 +6,7 @@ layout: default
 
 | Date      | Tag / Commit | Description  
 |:----------|:-------------|:--------
+|2019-04-19 | [9d476dd](https://github.com/hhrutter/pdfcpu/commit/9d476ddd92a1ed83f384f8da076ef8b5d242dc3c) | Fix #77.
 |2019-04-13 | [14e74ba](https://github.com/hhrutter/pdfcpu/commit/14e74ba2c2ebe2ade2aa4c8506c5e9cec2a5fbd8) | Fix #75, #76.
 |2019-04-04 | [40f60a0](https://github.com/hhrutter/pdfcpu/commit/40f60a0a25c5359e3d44c06138404079ae272622) | Fix #74.
 |2019-03-30 | [v0.1.23](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.23) | Multiline watermarks, fix #27, #61, #63.
