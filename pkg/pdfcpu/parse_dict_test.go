@@ -43,29 +43,19 @@ func doTestParseDictGeneral(t *testing.T) {
 	doTestParseDictFail("<<>", t)
 	doTestParseDictOK("<<>>", t)
 	doTestParseDictOK("<<     >>", t)
-	doTestParseDictFail("<</Key1/Value1/Key1/Value2>>", t)
 	doTestParseDictOK("<</Key1/Value1/key1/Value2>>", t)
-
 	doTestParseDictOK("<</Type/Page/Parent 2 0 R/Resources<</Font<</F1 5 0 R/F2 7 0 R/F3 9 0 R>>/XObject<</Image11 11 0 R>>/ProcSet[/PDF/Text/ImageB/ImageC/ImageI]>>/MediaBox[ 0 0 595.32 841.92]/Contents 4 0 R/Group<</Type/Group/S/Transparency/CS/DeviceRGB>>/Tabs/S/StructParents 0>>", t)
-	doTestParseDictOK("<</Type /Pages /Count 24 /Kids [6 0 R 16 0 R 21 0 R 27 0 R 30 0 R 32 0 R 34 0 R 36 0 R 38 0 R 40 0 R 42 0 R 44 0 R 46 0 R 48 0 R 50 0 R 52 0 R 54 0 R 56 0 R 58 0 R 60 0 R 62 0 R 64 0 R 69 0 R 71 0 R] /MediaBox [0 0 595.2756 841.8898]>>", t)
-	doTestParseDictOK("<< /Key1 <abc> /Key2 <d> >>", t)
-	doTestParseDictFail("<<", t)
-	doTestParseDictFail("<<>", t)
-	doTestParseDictOK("<<>>", t)
-	doTestParseDictOK("<<     >>", t)
-	doTestParseDictFail("<</Key1/Value1/Key1/Value2>>", t)
-	doTestParseDictOK("<</Key1/Value1/key1/Value2>>", t)
 }
 
 func doTestParseDictNameObjects(t *testing.T) {
 	// Name Objects
 	doTestParseDictOK("<</S/A>>", t) // empty name
-	// doTestParseDictOK("<</K1 / /K2 /Name2>>", t)
-	// doTestParseDictOK("<</Key/Value>>", t)
-	// doTestParseDictOK("<< /Key	/Value>>", t)
-	// doTestParseDictOK("<<	/Key/Value	>>", t)
-	// doTestParseDictOK("<<	/Key	/Value	>>", t)
-	// doTestParseDictOK("<</Key1/Value1/Key2/Value2>>", t)
+	doTestParseDictOK("<</K1 / /K2 /Name2>>", t)
+	doTestParseDictOK("<</Key/Value>>", t)
+	doTestParseDictOK("<< /Key	/Value>>", t)
+	doTestParseDictOK("<<	/Key/Value	>>", t)
+	doTestParseDictOK("<<	/Key	/Value	>>", t)
+	doTestParseDictOK("<</Key1/Value1/Key2/Value2>>", t)
 }
 
 func doTestParseDictStringLiteral(t *testing.T) {

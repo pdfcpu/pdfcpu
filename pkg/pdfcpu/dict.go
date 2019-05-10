@@ -40,12 +40,10 @@ func (d Dict) Len() int {
 
 // Insert adds a new entry to this PDFDict.
 func (d Dict) Insert(key string, value Object) (ok bool) {
-	if o, found := d.Find(key); found {
-		if o.PDFString() != value.PDFString() {
-			return false
-		}
+	_, found := d.Find(key)
+	if !found {
+		d[key] = value
 	}
-	d[key] = value
 	return true
 }
 
