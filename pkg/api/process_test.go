@@ -25,6 +25,7 @@ import (
 	"strings"
 	"testing"
 
+	PDFCPULog "github.com/hhrutter/pdfcpu/pkg/log"
 	pdf "github.com/hhrutter/pdfcpu/pkg/pdfcpu"
 	"github.com/hhrutter/pdfcpu/pkg/pdfcpu/validate"
 )
@@ -1821,6 +1822,26 @@ func TestAcroformDemoPDF(t *testing.T) {
 	_, err = Process(ValidateCommand(outFile, config))
 	if err != nil {
 		t.Fatalf("testAcroformDemoPDF %v\n", err)
+	}
+
+}
+
+// Enable this test for debugging of a specicif file.
+func XTestValidateCommand(t *testing.T) {
+
+	PDFCPULog.SetDefaultTraceLogger()
+	//PDFCPULog.SetDefaultParseLogger()
+	PDFCPULog.SetDefaultReadLogger()
+	PDFCPULog.SetDefaultValidateLogger()
+	PDFCPULog.SetDefaultOptimizeLogger()
+	PDFCPULog.SetDefaultWriteLogger()
+
+	config := pdf.NewDefaultConfiguration()
+	config.ValidationMode = pdf.ValidationRelaxed
+
+	_, err := Process(ValidateCommand("testdata/test.pdf", config))
+	if err != nil {
+		t.Fatalf("TestValidateCommand: %v\n", err)
 	}
 
 }

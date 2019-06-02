@@ -1063,7 +1063,7 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 
 		log.Read.Printf("line: <%s>\n", line)
 
-		if line != "xref" {
+		if strings.TrimSpace(line) != "xref" {
 
 			log.Read.Println("buildXRefTableStartingAt: found xref stream")
 			ctx.Read.UsingXRefStreams = true
