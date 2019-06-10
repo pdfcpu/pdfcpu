@@ -764,7 +764,38 @@ func parseTrailerDict(trailerDict Dict, ctx *Context) (*int64, error) {
 	return offset, nil
 }
 
-func scanLine(s *bufio.Scanner) (string, error) {
+func scanLineRaw(s *bufio.Scanner) (string, error) {
+	if ok := s.Scan(); !ok {
+		if s.Err() != nil {
+			return "", s.Err()
+		}
+		return "", errors.New("scanner: returning nothing")
+	}
+	return s.Text(), nil
+}
+
+func scanLine(s *bufio.Scanner) (s1 string, err error) {
+	for i := 0; i <= 1; i++ {
+		s1, err = scanLineRaw(s)
+		if err != nil {
+			return "", err
+		}
+		if len(s1) > 0 {
+			break
+		}
+	}
+
+	// Remove comment.
+	i := strings.Index(s1, "%")
+	if i >= 0 {
+		s1 = s1[:i]
+	}
+
+	return s1, nil
+}
+
+// scanLine ignores comments and empty lines.
+func scanLineOrig(s *bufio.Scanner) (string, error) {
 	for i := 0; i <= 1; i++ {
 		if ok := s.Scan(); !ok {
 			err := s.Err()
@@ -906,6 +937,39 @@ func scanTrailerDict(s *bufio.Scanner, startTag bool) (string, error) {
 	return buf.String(), nil
 }
 
+func processTrailer(ctx *Context, s *bufio.Scanner, line string) (*int64, error) {
+
+	var trailerString string
+
+	if line != "trailer" {
+		trailerString = line[7:]
+		log.Read.Printf("processTrailer: trailer leftover: <%s>\n", trailerString)
+	} else {
+		log.Read.Printf("line (len %d) <%s>\n", len(line), line)
+	}
+
+	trailerString, err := scanTrailer(s, trailerString)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Read.Printf("processTrailer: trailerString: (len:%d) <%s>\n", len(trailerString), trailerString)
+
+	o, err := parseObject(&trailerString)
+	if err != nil {
+		return nil, err
+	}
+
+	trailerDict, ok := o.(Dict)
+	if !ok {
+		return nil, errors.New("processTrailer: corrupt trailer dict")
+	}
+
+	log.Read.Printf("processTrailer: trailerDict:\n%s\n", trailerDict)
+
+	return parseTrailerDict(trailerDict, ctx)
+}
+
 // Parse xRef section into corresponding number of xRef table entries.
 func parseXRefSection(s *bufio.Scanner, ctx *Context) (*int64, error) {
 
@@ -950,42 +1014,7 @@ func parseXRefSection(s *bufio.Scanner, ctx *Context) (*int64, error) {
 
 	log.Read.Println("parseXRefSection: parsing trailer dict..")
 
-	var trailerString string
-
-	if line != "trailer" {
-		trailerString = line[7:]
-		log.Read.Printf("parseXRefSection: trailer leftover: <%s>\n", trailerString)
-	} else {
-		log.Read.Printf("line (len %d) <%s>\n", len(line), line)
-	}
-
-	trailerString, err = scanTrailer(s, trailerString)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Read.Printf("parseXRefSection: trailerString: (len:%d) <%s>\n", len(trailerString), trailerString)
-
-	o, err := parseObject(&trailerString)
-	if err != nil {
-		return nil, err
-	}
-
-	trailerDict, ok := o.(Dict)
-	if !ok {
-		return nil, errors.New("parseXRefSection: corrupt trailer dict")
-	}
-
-	log.Read.Printf("parseXRefSection: trailerDict:\n%s\n", trailerDict)
-
-	offset, err := parseTrailerDict(trailerDict, ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Read.Println("parseXRefSection end")
-
-	return offset, nil
+	return processTrailer(ctx, s, line)
 }
 
 // Get version from first line of file.
@@ -994,22 +1023,40 @@ func parseXRefSection(s *bufio.Scanner, ctx *Context) (*int64, error) {
 // if present, shall be used instead of the version specified in the Header.
 // Save PDF Version from header to xRefTable.
 // The header version comes as the first line of the file.
-func headerVersion(rs io.ReadSeeker) (*Version, error) {
+// eolCount is the number of characters used for eol (1 or 2).
+func headerVersion(rs io.ReadSeeker) (v *Version, eolCount int, err error) {
 
 	log.Read.Println("headerVersion begin")
+
+	var errCorruptHeader = errors.New("headerVersion: corrupt pfd file - no header version available")
 
 	// Get first line of file which holds the version of this PDFFile.
 	// We call this the header version.
 
-	_, err := rs.Seek(0, io.SeekStart)
+	_, err = rs.Seek(0, io.SeekStart)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	buf := make([]byte, 10)
+	buf := make([]byte, 20)
 	_, err = rs.Read(buf)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+
+	b := string(buf)
+
+	// Detect the used eol which should be 1 (0x00, 0x0D) or 2 chars (0x0D0A)long.
+	// %PDF-1.x{eol}
+	if b[8] == 0x0A {
+		eolCount = 1
+	} else if b[8] == 0x0D {
+		eolCount = 1
+		if b[9] == 0x0A {
+			eolCount = 2
+		}
+	} else {
+		return nil, 0, errCorruptHeader
 	}
 
 	// Parse the PDF-Version.
@@ -1019,17 +1066,113 @@ func headerVersion(rs io.ReadSeeker) (*Version, error) {
 	s := strings.TrimSpace(string(buf))
 
 	if len(s) < 8 || !strings.HasPrefix(s, prefix) {
-		return nil, errors.New("headerVersion: corrupt pfd file - no header version available")
+		return nil, 0, errCorruptHeader
 	}
 
 	pdfVersion, err := PDFVersion(s[len(prefix) : len(prefix)+3])
 	if err != nil {
-		return nil, errors.Wrapf(err, "headerVersion: unknown PDF Header Version")
+		return nil, 0, errors.Wrapf(err, "headerVersion: unknown PDF Header Version")
 	}
 
 	log.Read.Printf("headerVersion: end, found header version: %s\n", pdfVersion)
 
-	return &pdfVersion, nil
+	return &pdfVersion, eolCount, nil
+}
+
+// bypassXrefSection is a hack for digesting corrupt xref sections.
+// It populates the xRefTable by reading in all indirect objects line by line
+// and works on the assumption of a single xref section - meaning no incremental updates have been made.
+func bypassXrefSection(ctx *Context) error {
+	var z int64
+	g := FreeHeadGeneration
+	ctx.Table[0] = &XRefTableEntry{
+		Free:       true,
+		Offset:     &z,
+		Generation: &g}
+
+	rs := ctx.Read.rs
+	eolCount := ctx.Read.EolCount
+	var off, offset int64
+
+	rd, err := newPositionedReader(rs, &offset)
+	if err != nil {
+		return err
+	}
+
+	s := bufio.NewScanner(rd)
+	s.Split(scanLines)
+
+	bb := []byte{}
+	var (
+		withinObj     bool
+		withinXref    bool
+		withinTrailer bool
+	)
+
+	for {
+		line, err := scanLineRaw(s)
+		if err != nil {
+			break
+		}
+		if withinXref {
+			offset += int64(len(line) + eolCount)
+			if withinTrailer {
+				bb = append(bb, ' ')
+				bb = append(bb, line...)
+				i := strings.Index(line, "startxref")
+				if i >= 0 {
+					// Parse trailer.
+					_, err = processTrailer(ctx, s, string(bb))
+					return err
+				}
+				continue
+			}
+			// Ignore all until "trailer".
+			i := strings.Index(line, "trailer")
+			if i >= 0 {
+				bb = append(bb, line...)
+				withinTrailer = true
+			}
+			continue
+		}
+		i := strings.Index(line, "xref")
+		if i >= 0 {
+			offset += int64(len(line) + eolCount)
+			withinXref = true
+			continue
+		}
+		if !withinObj {
+			i := strings.Index(line, "obj")
+			if i >= 0 {
+				withinObj = true
+				off = offset
+				bb = append(bb, line[:i+3]...)
+			}
+			offset += int64(len(line) + eolCount)
+			continue
+		}
+
+		// within obj
+		offset += int64(len(line) + eolCount)
+		bb = append(bb, ' ')
+		bb = append(bb, line...)
+		i = strings.Index(line, "endobj")
+		if i >= 0 {
+			l := string(bb)
+			objNr, generation, err := parseObjectAttributes(&l)
+			if err != nil {
+				return err
+			}
+			of := off
+			ctx.Table[*objNr] = &XRefTableEntry{
+				Free:       false,
+				Offset:     &of,
+				Generation: generation}
+			bb = nil
+			withinObj = false
+		}
+	}
+	return nil
 }
 
 // Build XRefTable by reading XRef streams or XRef sections.
@@ -1039,12 +1182,13 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 
 	rs := ctx.Read.rs
 
-	hv, err := headerVersion(rs)
+	hv, eolCount, err := headerVersion(rs)
 	if err != nil {
 		return err
 	}
 
 	ctx.HeaderVersion = hv
+	ctx.Read.EolCount = eolCount
 
 	for offset != nil {
 
@@ -1063,7 +1207,12 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 
 		log.Read.Printf("line: <%s>\n", line)
 
-		if strings.TrimSpace(line) != "xref" {
+		if strings.TrimSpace(line) == "xref" {
+			log.Read.Println("buildXRefTableStartingAt: found xref section")
+			if offset, err = parseXRefSection(s, ctx); err != nil {
+				return err
+			}
+		} else {
 
 			log.Read.Println("buildXRefTableStartingAt: found xref stream")
 			ctx.Read.UsingXRefStreams = true
@@ -1071,18 +1220,10 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 			if err != nil {
 				return err
 			}
-
 			if offset, err = parseXRefStream(rd, offset, ctx); err != nil {
-				return err
+				// Try fix for corrupt single xref section.
+				return bypassXrefSection(ctx)
 			}
-
-		} else {
-
-			log.Read.Println("buildXRefTableStartingAt: found xref section")
-			if offset, err = parseXRefSection(s, ctx); err != nil {
-				return err
-			}
-
 		}
 	}
 

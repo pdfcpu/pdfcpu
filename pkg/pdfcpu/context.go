@@ -156,6 +156,7 @@ type ReadContext struct {
 	FileName            string // The input PDF-File.
 	FileSize            int64
 	rs                  io.ReadSeeker
+	EolCount            int    // 1 or 2 characters used for eol.
 	BinaryTotalSize     int64  // total stream data
 	BinaryImageSize     int64  // total image stream data
 	BinaryFontSize      int64  // total font stream data (fontfiles)
