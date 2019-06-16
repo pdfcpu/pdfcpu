@@ -9,7 +9,7 @@ This command encrypts `inFile` using the standard security handler as defined in
 ## Usage
 
 ```
-usage: pdfcpu encrypt [-v(erbose)|vv] [-mode rc4|aes] [-key 40|128] [perm none|all] [-upw userpw] [-opw ownerpw] inFile [outFile]
+usage: pdfcpu encrypt [-v(erbose)|vv] [-mode rc4|aes] [-key 40|128|256] [perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]
 ```
 
 <br>
@@ -18,13 +18,13 @@ usage: pdfcpu encrypt [-v(erbose)|vv] [-mode rc4|aes] [-key 40|128] [perm none|a
 
 | name                             | description     | required | values         |default
 |:---------------------------------|:----------------|:---------|:---------------|:------
-| [verbose](../getting_started.md) | turn on logging | no       |
-| [vv](../getting_started.md)      | verbose logging | no       |
+| [verbose](../getting_started/common_flags.md) | turn on logging | no       |
+| [vv](../getting_started/common_flags.md)      | verbose logging | no       |
 | mode                             | encryption      | no       | rc4, aes       | aes
-| key                              | key length      | no       | 40,128         | 128
+| key                              | key length      | no       | rc4:40,128 aes:40,128,256        | 256
 | perm                             | permissions     | no       | none, all      | none
-| [upw](../getting_started.md)     | user password   | no
-| [opw](../getting_started.md)     | owner password  | no
+| [upw](../getting_started/common_flags.md)     | user password   | no
+| [opw](../getting_started/common_flags.md)     | owner password  | yes, must not be empty!
 
 <br>
 
@@ -49,16 +49,22 @@ NOTE: RC4 is considered to be insecure!
 The default mode for `pdfcpu` is AES.<br>
 As of 2019 AES is still considered secure and an effective federal US government standard.
 
-NOTE: As AES/128 is the most recent algorithm the PDF 1.7 specification defines, more secure algorithms will be needed and provided in a future release.
+NOTE: As AES-256 is the most recent algorithm the PDF 1.7 specification defines, more secure algorithms will be needed and provided in a future release.
 
 #### key
 
 The length of the [cryptographic key](https://en.wikipedia.org/wiki/Key_(cryptography)) used for encryption and decryption.
 
-Possible values:
+Possible values for RC4:
 
 * 40
 * 128
+
+Possible values for AES:
+
+* 40
+* 128
+* 256
 
 #### perm
 
@@ -75,7 +81,7 @@ NOTE: These quick primitives will be followed up by finer grained control over t
 
 ## Examples
 
-Encrypt `test.pdf` using the default encryption AES with a 128-bit key and the [default permissions]().
+Encrypt `test.pdf` using the default encryption AES with a 256-bit key and the [default permissions]().
 Set the owner password to `opw`. This password also known as the *master password* or the *set permissions password* may be used to change the [permissions](). Since there is no user password set any PDF Reader may open this document:
 
 ```sh
@@ -85,28 +91,19 @@ writing test.pdf ...
 
 <br>
 
-Encrypt `test.pdf` using the default encryption AES with a 128-bit key and the [default permissions]().
-Set the user password to `upw`. This password must be used to open the decrypted file. It is also known as the *open doc password*:
+Encrypt `test.pdf` using the default encryption AES with a 256-bit key and the [default permissions]().
+Set the user password to `upw`. This password must be used to open the decrypted file. It is also known as the *open doc password*, then
+set the owner password to `opw`:
 
 ```sh
-pdfcpu encrypt -upw upw test.pdf
-writing test.pdf ...
-```
-
-<br>
-
-Encrypt `test.pdf` using the default encryption AES with a 128-bit key and the [default permissions]().
-Set the owner password to `opw` and the user password to `upw`:
-
-```sh
-pdfcpu encrypt -opw opw -upw upw test.pdf
+pdfcpu encrypt -upw upw -opw opw test.pdf
 writing test.pdf ...
 ```
 
 <br>
 
 Encrypt `test.pdf` and write the encrypted output file to `test_enc.pdf`. Use AES with a 40-bit key and [default permissions]().
-Set the owner password to `opw` which will be needed to change the permissions of `test_enc.pdf`:
+Set the mandatory owner password to `opw` which will also be needed to change the permissions of `test_enc.pdf`:
 
 ```sh
 pdfcpu encrypt -opw opw -mode aes -key 40 test.pdf test_enc.pdf
@@ -116,9 +113,9 @@ writing test_enc.pdf ...
 <br>
 
 Encrypt `test.pdf` and write the encrypted output file to `test_enc.pdf`. Use RC4 with a 128-bit key and set all permissions for full access.
-Set the user password to `upw` which will be needed to open `test_enc.pdf`:
+Set the user password to `upw` which will be needed to open `test_enc.pdf`, also set the owner password to `opw`:
 
 ```sh
-pdfcpu encrypt -upw upw -mode rc4 -key 128 -perm all test.pdf test_enc.pdf
+pdfcpu encrypt -upw upw -opw opw -mode rc4 -key 128 -perm all test.pdf test_enc.pdf
 writing test_enc.pdf ...
 ```
