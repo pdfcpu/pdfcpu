@@ -184,16 +184,16 @@ verbose, v ... turn on logging
        opw ... owner password
     inFile ... input pdf file`
 
-	usageEncrypt     = "usage: pdfcpu encrypt [-v(erbose)|vv] [-mode rc4|aes] [-key 40|128] [perm none|all] [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageEncrypt     = "usage: pdfcpu encrypt [-v(erbose)|vv] [-mode rc4|aes] [-key 40|128|256] [perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]"
 	usageLongEncrypt = `Setup password protection based on user and owner password.
 
 verbose, v ... turn on logging
         vv ... verbose logging
       mode ... algorithm (default=aes)
-       key ... key length in bits (default=128)
+       key ... key length in bits (default=256)
       perm ... user access permissions
        upw ... user password
-       opw ... owner password
+       opw ... owner password (must not be empty!)
     inFile ... input pdf file
    outFile ... output pdf file`
 

@@ -1019,297 +1019,24 @@ func TestExtractPagesCommand(t *testing.T) {
 
 }
 
-func TestEncryptUPWOnly(t *testing.T) {
-
-	// Test for setting only the user password.
-
-	t.Log("running TestEncryptUPWOnly..")
-
-	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
-	outFile := filepath.Join(outDir, "test.pdf")
-
-	// Encrypt upw only
-	t.Log("Encrypt upw only")
-	config := pdf.NewDefaultConfiguration()
-	config.UserPW = "upw"
-	_, err := Process(EncryptCommand(inFile, outFile, config))
-	if err != nil {
-		t.Fatalf("TestEncryptUPWOnly - encrypt with upw only to %s: %v\n", outFile, err)
-	}
-
-	// Validate wrong upw
-	t.Log("Validate wrong upw fails")
-	config = pdf.NewDefaultConfiguration()
-	config.UserPW = "upwWrong"
-	_, err = Process(ValidateCommand(outFile, config))
-	if err == nil {
-		t.Fatalf("TestEncryptUPWOnly - validate %s using wrong upw should fail!\n", outFile)
-	}
-
-	// Validate wrong opw
-	t.Log("Validate wrong opw fails")
-	config = pdf.NewDefaultConfiguration()
-	config.OwnerPW = "opwWrong"
-	_, err = Process(ValidateCommand(outFile, config))
-	if err == nil {
-		t.Fatalf("TestEncryptUPWOnly - validate %s using wrong opw should fail!\n", outFile)
-	}
-
-	// Validate default opw=upw (if there is no ownerpw set)
-	t.Log("Validate default opw")
-	config = pdf.NewDefaultConfiguration()
-	config.OwnerPW = "upw"
-	_, err = Process(ValidateCommand(outFile, config))
-	if err != nil {
-		t.Fatalf("TestEncryptUPWOnly - validate %s using default opw: %s!\n", outFile, err)
-	}
-
-	// Validate upw
-	t.Log("Validate upw")
-	config = pdf.NewDefaultConfiguration()
-	config.UserPW = "upw"
-	_, err = Process(ValidateCommand(outFile, config))
-	if err != nil {
-		t.Fatalf("TestEncryptUPWOnly - validate %s using upw: %v\n", outFile, err)
-	}
-
-	// Optimize wrong opw
-	t.Log("Optimize wrong opw fails")
-	config = pdf.NewDefaultConfiguration()
-	config.OwnerPW = "opwWrong"
-	_, err = Process(OptimizeCommand(outFile, outFile, config))
-	if err == nil {
-		t.Fatalf("TestEncryptUPWOnly - optimize %s using wrong opw should fail!\n", outFile)
-	}
-
-	// Optimize empty opw
-	t.Log("Optimize empty opw fails")
-	config = pdf.NewDefaultConfiguration()
-	config.OwnerPW = ""
-	_, err = Process(OptimizeCommand(outFile, outFile, config))
-	if err == nil {
-		t.Fatalf("TestEncryptUPWOnly - optimize %s using empty opw should fail!\n", outFile)
-	}
-
-	// Optimize wrong upw
-	t.Log("Optimize wrong upw fails")
-	config = pdf.NewDefaultConfiguration()
-	config.UserPW = "upwWrong"
-	_, err = Process(OptimizeCommand(outFile, outFile, config))
-	if err == nil {
-		t.Fatalf("TestEncryptUPWOnly - optimize %s using wrong upw should fail!\n", outFile)
-	}
-
-	// Optimize upw
-	t.Log("Optimize upw")
-	config = pdf.NewDefaultConfiguration()
-	config.UserPW = "upw"
-	_, err = Process(OptimizeCommand(outFile, outFile, config))
-	if err != nil {
-		t.Fatalf("TestEncryptUPWOnly - optimize %s using upw: %v\n", outFile, err)
-	}
-
-	//Change upw wrong upwOld
-	t.Log("ChangeUserPW wrong upwOld fails")
-	config = pdf.NewDefaultConfiguration()
-	pwOld := "upwWrong"
-	pwNew := "upwNew"
-	_, err = Process(ChangeUserPWCommand(outFile, outFile, config, &pwOld, &pwNew))
-	if err == nil {
-		t.Fatalf("TestEncryptUPWOnly - %s change userPW using wrong upwOld should fail\n", outFile)
-	}
-
-	// Change upw
-	t.Log("ChangeUserPW")
-	config = pdf.NewDefaultConfiguration()
-	pwOld = "upw"
-	pwNew = "upwNew"
-	_, err = Process(ChangeUserPWCommand(outFile, outFile, config, &pwOld, &pwNew))
-	if err != nil {
-		t.Fatalf("TestEncryptUPWOnly - %s change userPW: %v\n", outFile, err)
-	}
-
-	// Decrypt wrong opw
-	t.Log("Decrypt wrong opw fails")
-	config = pdf.NewDefaultConfiguration()
-	config.OwnerPW = "opwWrong"
-	_, err = Process(DecryptCommand(outFile, outFile, config))
-	if err == nil {
-		t.Fatalf("TestEncryptUPWOnly - %s decrypt using wrong opw should fail\n", outFile)
-	}
-
-	// Decrypt wrong upw
-	t.Log("Decrypt wrong upw fails")
-	config = pdf.NewDefaultConfiguration()
-	config.UserPW = "upw"
-	_, err = Process(DecryptCommand(outFile, outFile, config))
-	if err == nil {
-		t.Fatalf("TestEncryptUPWOnly - %s decrypt using wrong upw should fail\n", outFile)
-	}
-
-	// Decrypt upw
-	t.Log("Decrypt upw")
-	config = pdf.NewDefaultConfiguration()
-	config.UserPW = "upwNew"
-	_, err = Process(DecryptCommand(outFile, outFile, config))
-	if err != nil {
-		t.Fatalf("TestEncryptUPWOnly - %s decrypt using upw: %v\n", outFile, err)
-	}
-
+func configForAlgorithm(aes bool, keyLength int) *pdf.Configuration {
+	c := pdf.NewDefaultConfiguration()
+	c.EncryptUsingAES = aes
+	c.EncryptKeyLength = keyLength
+	return c
 }
 
-func TestEncryptOPWOnly(t *testing.T) {
+func encryptDecryptUseCase1(t *testing.T, fileName string, aes bool, keyLength int) {
 
-	// Test for setting only the owner password.
+	t.Helper()
 
-	t.Log("running TestEncryptOPWOnly..")
-
-	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
+	inFile := filepath.Join(inDir, fileName)
 	outFile := filepath.Join(outDir, "test.pdf")
-
-	// Encrypt opw only
-	t.Log("Encrypt opw only")
-	config := pdf.NewDefaultConfiguration()
-	config.OwnerPW = "opw"
-	_, err := Process(EncryptCommand(inFile, outFile, config))
-	if err != nil {
-		t.Fatalf("TestEncryptOPWOnly - encrypt with opw only to %s: %v\n", outFile, err)
-	}
-
-	// Validate wrong opw succeeds with fallback to empty upw
-	t.Log("Validate wrong opw succeeds with fallback to empty upw")
-	config = pdf.NewDefaultConfiguration()
-	config.OwnerPW = "opwWrong"
-	_, err = Process(ValidateCommand(outFile, config))
-	if err != nil {
-		t.Fatalf("TestEncryptOPWOnly - validate %s using wrong opw succeeds falling back to empty upw!: %v\n", outFile, err)
-	}
-
-	// Validate opw
-	t.Log("Validate opw")
-	config = pdf.NewDefaultConfiguration()
-	config.OwnerPW = "opw"
-	_, err = Process(ValidateCommand(outFile, config))
-	if err != nil {
-		t.Fatalf("TestEncryptOPWOnly - validate %s using opw: %v\n", outFile, err)
-	}
-
-	// Validate wrong upw
-	t.Log("Validate wrong upw fails")
-	config = pdf.NewDefaultConfiguration()
-	config.UserPW = "upwWrong"
-	_, err = Process(ValidateCommand(outFile, config))
-	if err == nil {
-		t.Fatalf("TestEncryptOPWOnly - validate %s using wrong upw should fail!\n", outFile)
-	}
-
-	// Validate no pw using empty upw
-	t.Log("Validate no pw using empty upw")
-	config = pdf.NewDefaultConfiguration()
-	_, err = Process(ValidateCommand(outFile, config))
-	if err != nil {
-		t.Fatalf("TestEncryptOPWOnly - validate %s no pw using empty upw: %v\n", outFile, err)
-	}
-
-	// Optimize wrong opw, succeeds with fallback to empty upw
-	t.Log("Optimize wrong opw succeeds with fallback to empty upw")
-	config = pdf.NewDefaultConfiguration()
-	config.OwnerPW = "opwWrong"
-	_, err = Process(OptimizeCommand(outFile, outFile, config))
-	if err != nil {
-		t.Fatalf("TestEncryptOPWOnly - optimize %s using wrong opw succeeds falling back to empty upw: %v\n", outFile, err)
-	}
-
-	// Optimize opw
-	t.Log("Optimize opw")
-	config = pdf.NewDefaultConfiguration()
-	config.OwnerPW = "opw"
-	_, err = Process(OptimizeCommand(outFile, outFile, config))
-	if err != nil {
-		t.Fatalf("TestEncryptOPWOnly - optimize %s using opw: %v\n", outFile, err)
-	}
-
-	// Optimize wrong upw
-	t.Log("Optimize wrong upw fails")
-	config = pdf.NewDefaultConfiguration()
-	config.UserPW = "upwWrong"
-	_, err = Process(OptimizeCommand(outFile, outFile, config))
-	if err == nil {
-		t.Fatalf("TestEncryptOPWOnly - optimize %s using wrong upw should fail!\n", outFile)
-	}
-
-	// Optimize empty upw
-	t.Log("Optimize empty upw")
-	config = pdf.NewDefaultConfiguration()
-	config.UserPW = ""
-	_, err = Process(OptimizeCommand(outFile, outFile, config))
-	if err != nil {
-		t.Fatalf("TestEncryptOPWOnly - optimize %s using upw: %v\n", outFile, err)
-	}
-
-	// Change opw wrong upw
-	t.Log("ChangeOwnerPW wrong upw fails")
-	config = pdf.NewDefaultConfiguration()
-	config.UserPW = "upw"
-	pwOld := "opw"
-	pwNew := "opwNew"
-	_, err = Process(ChangeOwnerPWCommand(outFile, outFile, config, &pwOld, &pwNew))
-	if err == nil {
-		t.Fatalf("TestEncryptOPWOnly - %s change opw using wrong upw should fail\n", outFile)
-	}
-
-	// Change opw wrong opwOld
-	t.Log("ChangeOwnerPW wrong opwOld fails")
-	config = pdf.NewDefaultConfiguration()
-	config.UserPW = ""
-	pwOld = "opwOldWrong"
-	pwNew = "opwNew"
-	_, err = Process(ChangeOwnerPWCommand(outFile, outFile, config, &pwOld, &pwNew))
-	if err == nil {
-		t.Fatalf("TestEncryptOPWOnly - %s change opw using wrong opwOld should fail\n", outFile)
-	}
-
-	// Change opw
-	t.Log("ChangeOwnerPW")
-	config = pdf.NewDefaultConfiguration()
-	config.UserPW = ""
-	pwOld = "opw"
-	pwNew = "opwNew"
-	_, err = Process(ChangeOwnerPWCommand(outFile, outFile, config, &pwOld, &pwNew))
-	if err != nil {
-		t.Fatalf("TestEncryptOPWOnly - %s change opw: %v\n", outFile, err)
-	}
-
-	// Decrypt wrong upw
-	t.Log("Decrypt wrong upw fails")
-	config = pdf.NewDefaultConfiguration()
-	config.UserPW = "upwWrong"
-	_, err = Process(DecryptCommand(outFile, outFile, config))
-	if err == nil {
-		t.Fatalf("TestEncryptOPWOnly - %s decrypt using wrong upw should fail \n", outFile)
-	}
-
-	// Decrypt wrong opw succeeds because of fallback to empty upw.
-	t.Log("Decrypt wrong opw succeeds because of fallback to empty upw")
-	config = pdf.NewDefaultConfiguration()
-	config.OwnerPW = "opw"
-	_, err = Process(DecryptCommand(outFile, outFile, config))
-	if err != nil {
-		t.Fatalf("TestEncryptOPWOnly - %s decrypt using opw: %v\n", outFile, err)
-	}
-
-}
-
-func TestEncrypt(t *testing.T) {
-
-	t.Log("running TestEncrypt..")
-
-	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
-	outFile := filepath.Join(outDir, "test.pdf")
+	t.Log(inFile)
 
 	// Encrypt opw and upw
 	t.Log("Encrypt")
-	config := pdf.NewDefaultConfiguration()
+	config := configForAlgorithm(aes, keyLength)
 	config.UserPW = "upw"
 	config.OwnerPW = "opw"
 	_, err := Process(EncryptCommand(inFile, outFile, config))
@@ -1319,7 +1046,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Validate wrong opw
 	t.Log("Validate wrong opw fails")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.OwnerPW = "opwWrong"
 	_, err = Process(ValidateCommand(outFile, config))
 	if err == nil {
@@ -1328,7 +1055,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Validate opw
 	t.Log("Validate opw")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.OwnerPW = "opw"
 	_, err = Process(ValidateCommand(outFile, config))
 	if err != nil {
@@ -1337,7 +1064,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Validate wrong upw
 	t.Log("Validate wrong upw fails")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.UserPW = "upwWrong"
 	_, err = Process(ValidateCommand(outFile, config))
 	if err == nil {
@@ -1346,7 +1073,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Validate upw
 	t.Log("Validate upw")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.UserPW = "upw"
 	_, err = Process(ValidateCommand(outFile, config))
 	if err != nil {
@@ -1355,7 +1082,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Change upw to "" = remove document open password.
 	t.Log("ChangeUserPW to \"\"")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.OwnerPW = "opw"
 	pwOld := "upw"
 	pwNew := ""
@@ -1366,7 +1093,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Validate upw
 	t.Log("Validate upw")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.UserPW = ""
 	_, err = Process(ValidateCommand(outFile, config))
 	if err != nil {
@@ -1375,7 +1102,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Validate no pw
 	t.Log("Validate upw")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	_, err = Process(ValidateCommand(outFile, config))
 	if err != nil {
 		t.Fatalf("TestEncrypt - validate %s: %v\n", outFile, err)
@@ -1383,7 +1110,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Change opw
 	t.Log("ChangeOwnerPW")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.UserPW = ""
 	pwOld = "opw"
 	pwNew = "opwNew"
@@ -1394,7 +1121,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Decrypt wrong upw
 	t.Log("Decrypt wrong upw fails")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.UserPW = "upwWrong"
 	_, err = Process(DecryptCommand(outFile, outFile, config))
 	if err == nil {
@@ -1403,7 +1130,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Decrypt wrong opw succeeds on empty upw
 	t.Log("Decrypt wrong opw succeeds on empty upw")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.OwnerPW = "opwWrong"
 	_, err = Process(DecryptCommand(outFile, outFile, config))
 	if err != nil {
@@ -1411,15 +1138,19 @@ func TestEncrypt(t *testing.T) {
 	}
 }
 
-func encryptDecrypt(fileName string, config *pdf.Configuration, t *testing.T) {
+func encryptDecryptUseCase2(t *testing.T, fileName string, aes bool, keyLength int) {
+
+	t.Helper()
 
 	inFile := filepath.Join(inDir, fileName)
 	outFile := filepath.Join(outDir, "test.pdf")
-
 	t.Log(inFile)
 
 	// Encrypt
 	t.Log("Encrypt")
+	config := configForAlgorithm(aes, keyLength)
+	config.UserPW = "upw"
+	config.OwnerPW = "opw"
 	_, err := Process(EncryptCommand(inFile, outFile, config))
 	if err != nil {
 		t.Fatalf("TestEncryptDecrypt - encrypt %s: %v\n", outFile, err)
@@ -1427,7 +1158,7 @@ func encryptDecrypt(fileName string, config *pdf.Configuration, t *testing.T) {
 
 	// Encrypt already encrypted
 	t.Log("Encrypt already encrypted")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.UserPW = "upw"
 	config.OwnerPW = "opw"
 	_, err = Process(EncryptCommand(outFile, outFile, config))
@@ -1437,7 +1168,7 @@ func encryptDecrypt(fileName string, config *pdf.Configuration, t *testing.T) {
 
 	// Validate using wrong owner pw
 	t.Log("Validate wrong ownerPW")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.UserPW = "upw"
 	config.OwnerPW = "opwWrong"
 	_, err = Process(ValidateCommand(outFile, config))
@@ -1447,7 +1178,7 @@ func encryptDecrypt(fileName string, config *pdf.Configuration, t *testing.T) {
 
 	// Optimize using wrong owner pw
 	t.Log("Optimize wrong ownerPW")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.UserPW = "upw"
 	config.OwnerPW = "opwWrong"
 	_, err = Process(OptimizeCommand(outFile, outFile, config))
@@ -1457,7 +1188,7 @@ func encryptDecrypt(fileName string, config *pdf.Configuration, t *testing.T) {
 
 	// Trim using wrong owner pw, falls back to upw and fails with insufficient permissions.
 	t.Log("Trim wrong ownerPW, fallback to upw and fail with insufficient permissions.")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.UserPW = "upw"
 	config.OwnerPW = "opwWrong"
 	// pageSelection = nil, writes w/o trimming anything, but sufficient for testing.
@@ -1468,7 +1199,7 @@ func encryptDecrypt(fileName string, config *pdf.Configuration, t *testing.T) {
 
 	// Split using wrong owner pw, falls back to upw and fails with insufficient permissions.
 	t.Log("Split wrong ownerPW, fallback to upw and fail with insufficient permissions.")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.UserPW = "upw"
 	config.OwnerPW = "opwWrong"
 	_, err = Process(SplitCommand(outFile, outDir, 1, config))
@@ -1478,7 +1209,7 @@ func encryptDecrypt(fileName string, config *pdf.Configuration, t *testing.T) {
 
 	// Add permissions
 	t.Log("Add user access permissions")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.UserPW = "upw"
 	config.OwnerPW = "opw"
 	config.UserAccessPermissions = pdf.PermissionsAll
@@ -1489,7 +1220,7 @@ func encryptDecrypt(fileName string, config *pdf.Configuration, t *testing.T) {
 
 	// Split using wrong owner pw, falls back to upw
 	t.Log("Split wrong ownerPW")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.UserPW = "upw"
 	config.OwnerPW = "opwWrong"
 	_, err = Process(SplitCommand(outFile, outDir, 1, config))
@@ -1499,7 +1230,7 @@ func encryptDecrypt(fileName string, config *pdf.Configuration, t *testing.T) {
 
 	// Validate
 	t.Log("Validate")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.UserPW = "upw"
 	config.OwnerPW = "opw"
 	_, err = Process(ValidateCommand(outFile, config))
@@ -1509,7 +1240,7 @@ func encryptDecrypt(fileName string, config *pdf.Configuration, t *testing.T) {
 
 	// ChangeUserPW using wrong userpw
 	t.Log("ChangeUserPW wrong userpw")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.OwnerPW = "opw"
 	pwOld := "upwWrong"
 	pwNew := "upwNew"
@@ -1520,7 +1251,7 @@ func encryptDecrypt(fileName string, config *pdf.Configuration, t *testing.T) {
 
 	// ChangeUserPW
 	t.Log("ChangeUserPW")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.OwnerPW = "opw"
 	pwOld = "upw"
 	pwNew = "upwNew"
@@ -1531,7 +1262,7 @@ func encryptDecrypt(fileName string, config *pdf.Configuration, t *testing.T) {
 
 	// ChangeOwnerPW
 	t.Log("ChangeOwnerPW")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.UserPW = "upwNew"
 	pwOld = "opw"
 	pwNew = "opwNew"
@@ -1542,7 +1273,7 @@ func encryptDecrypt(fileName string, config *pdf.Configuration, t *testing.T) {
 
 	// Decrypt using wrong pw
 	t.Log("\nDecrypt using wrong pw")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.UserPW = "upwWrong"
 	config.OwnerPW = "opwWrong"
 	_, err = Process(DecryptCommand(outFile, outFile, config))
@@ -1552,7 +1283,7 @@ func encryptDecrypt(fileName string, config *pdf.Configuration, t *testing.T) {
 
 	// Decrypt
 	t.Log("\nDecrypt")
-	config = pdf.NewDefaultConfiguration()
+	config = configForAlgorithm(aes, keyLength)
 	config.UserPW = "upwNew"
 	config.OwnerPW = "opwNew"
 	_, err = Process(DecryptCommand(outFile, outFile, config))
@@ -1562,19 +1293,167 @@ func encryptDecrypt(fileName string, config *pdf.Configuration, t *testing.T) {
 
 }
 
+func encryptDecryptUseCase3(t *testing.T, fileName string, aes bool, keyLength int) {
+
+	// Test for setting only the owner password.
+
+	t.Helper()
+
+	inFile := filepath.Join(inDir, fileName)
+	outFile := filepath.Join(outDir, "test.pdf")
+
+	// Encrypt opw only
+	t.Log("Encrypt opw only")
+	config := configForAlgorithm(aes, keyLength)
+	config.OwnerPW = "opw"
+	_, err := Process(EncryptCommand(inFile, outFile, config))
+	if err != nil {
+		t.Fatalf("TestEncryptOPWOnly - encrypt with opw only to %s: %v\n", outFile, err)
+	}
+
+	// Validate wrong opw succeeds with fallback to empty upw
+	t.Log("Validate wrong opw succeeds with fallback to empty upw")
+	config = configForAlgorithm(aes, keyLength)
+	config.OwnerPW = "opwWrong"
+	_, err = Process(ValidateCommand(outFile, config))
+	if err != nil {
+		t.Fatalf("TestEncryptOPWOnly - validate %s using wrong opw succeeds falling back to empty upw!: %v\n", outFile, err)
+	}
+
+	// Validate opw
+	t.Log("Validate opw")
+	config = configForAlgorithm(aes, keyLength)
+	config.OwnerPW = "opw"
+	_, err = Process(ValidateCommand(outFile, config))
+	if err != nil {
+		t.Fatalf("TestEncryptOPWOnly - validate %s using opw: %v\n", outFile, err)
+	}
+
+	// Validate wrong upw
+	t.Log("Validate wrong upw fails")
+	config = configForAlgorithm(aes, keyLength)
+	config.UserPW = "upwWrong"
+	_, err = Process(ValidateCommand(outFile, config))
+	if err == nil {
+		t.Fatalf("TestEncryptOPWOnly - validate %s using wrong upw should fail!\n", outFile)
+	}
+
+	// Validate no pw using empty upw
+	t.Log("Validate no pw using empty upw")
+	config = configForAlgorithm(aes, keyLength)
+	_, err = Process(ValidateCommand(outFile, config))
+	if err != nil {
+		t.Fatalf("TestEncryptOPWOnly - validate %s no pw using empty upw: %v\n", outFile, err)
+	}
+
+	// Optimize wrong opw, succeeds with fallback to empty upw
+	t.Log("Optimize wrong opw succeeds with fallback to empty upw")
+	config = configForAlgorithm(aes, keyLength)
+	config.OwnerPW = "opwWrong"
+	_, err = Process(OptimizeCommand(outFile, outFile, config))
+	if err != nil {
+		t.Fatalf("TestEncryptOPWOnly - optimize %s using wrong opw succeeds falling back to empty upw: %v\n", outFile, err)
+	}
+
+	// Optimize opw
+	t.Log("Optimize opw")
+	config = configForAlgorithm(aes, keyLength)
+	config.OwnerPW = "opw"
+	_, err = Process(OptimizeCommand(outFile, outFile, config))
+	if err != nil {
+		t.Fatalf("TestEncryptOPWOnly - optimize %s using opw: %v\n", outFile, err)
+	}
+
+	// Optimize wrong upw
+	t.Log("Optimize wrong upw fails")
+	config = configForAlgorithm(aes, keyLength)
+	config.UserPW = "upwWrong"
+	_, err = Process(OptimizeCommand(outFile, outFile, config))
+	if err == nil {
+		t.Fatalf("TestEncryptOPWOnly - optimize %s using wrong upw should fail!\n", outFile)
+	}
+
+	// Optimize empty upw
+	t.Log("Optimize empty upw")
+	config = configForAlgorithm(aes, keyLength)
+	config.UserPW = ""
+	_, err = Process(OptimizeCommand(outFile, outFile, config))
+	if err != nil {
+		t.Fatalf("TestEncryptOPWOnly - optimize %s using upw: %v\n", outFile, err)
+	}
+
+	// Change opw wrong upw
+	t.Log("ChangeOwnerPW wrong upw fails")
+	config = configForAlgorithm(aes, keyLength)
+	config.UserPW = "upw"
+	pwOld := "opw"
+	pwNew := "opwNew"
+	_, err = Process(ChangeOwnerPWCommand(outFile, outFile, config, &pwOld, &pwNew))
+	if err == nil {
+		t.Fatalf("TestEncryptOPWOnly - %s change opw using wrong upw should fail\n", outFile)
+	}
+
+	// Change opw wrong opwOld
+	t.Log("ChangeOwnerPW wrong opwOld fails")
+	config = configForAlgorithm(aes, keyLength)
+	config.UserPW = ""
+	pwOld = "opwOldWrong"
+	pwNew = "opwNew"
+	_, err = Process(ChangeOwnerPWCommand(outFile, outFile, config, &pwOld, &pwNew))
+	if err == nil {
+		t.Fatalf("TestEncryptOPWOnly - %s change opw using wrong opwOld should fail\n", outFile)
+	}
+
+	// Change opw
+	t.Log("ChangeOwnerPW")
+	config = configForAlgorithm(aes, keyLength)
+	config.UserPW = ""
+	pwOld = "opw"
+	pwNew = "opwNew"
+	_, err = Process(ChangeOwnerPWCommand(outFile, outFile, config, &pwOld, &pwNew))
+	if err != nil {
+		t.Fatalf("TestEncryptOPWOnly - %s change opw: %v\n", outFile, err)
+	}
+
+	// Decrypt wrong upw
+	t.Log("Decrypt wrong upw fails")
+	config = configForAlgorithm(aes, keyLength)
+	config.UserPW = "upwWrong"
+	_, err = Process(DecryptCommand(outFile, outFile, config))
+	if err == nil {
+		t.Fatalf("TestEncryptOPWOnly - %s decrypt using wrong upw should fail \n", outFile)
+	}
+
+	// Decrypt wrong opw succeeds because of fallback to empty upw.
+	t.Log("Decrypt wrong opw succeeds because of fallback to empty upw")
+	config = configForAlgorithm(aes, keyLength)
+	config.OwnerPW = "opw"
+	_, err = Process(DecryptCommand(outFile, outFile, config))
+	if err != nil {
+		t.Fatalf("TestEncryptOPWOnly - %s decrypt using opw: %v\n", outFile, err)
+	}
+
+}
+
+func encryptDecryptFile(t *testing.T, fileName string, mode string, keyLength int) {
+	encryptDecryptUseCase1(t, fileName, mode == "aes", keyLength)
+	encryptDecryptUseCase2(t, fileName, mode == "aes", keyLength)
+	encryptDecryptUseCase3(t, fileName, mode == "aes", keyLength)
+}
 func TestEncryptDecrypt(t *testing.T) {
 
-	config := pdf.NewDefaultConfiguration()
-	config.UserPW = "upw"
-	config.OwnerPW = "opw"
-	encryptDecrypt("5116.DCT_Filter.pdf", config, t)
+	for _, fileName := range []string{
+		"5116.DCT_Filter.pdf",
+		"networkProgr.pdf",
+	} {
+		encryptDecryptFile(t, fileName, "rc4", 40)
+		encryptDecryptFile(t, fileName, "rc4", 128)
 
-	config = pdf.NewDefaultConfiguration()
-	config.UserPW = "upw"
-	config.OwnerPW = "opw"
-	config.EncryptUsingAES = false
-	config.EncryptUsing128BitKey = false
-	encryptDecrypt("networkProgr.pdf", config, t)
+		encryptDecryptFile(t, fileName, "aes", 40)
+		encryptDecryptFile(t, fileName, "aes", 128)
+		encryptDecryptFile(t, fileName, "aes", 256)
+	}
+
 }
 
 func copyFile(srcFileName, destFileName string) error {
@@ -1612,6 +1491,8 @@ func prepareForAttachmentTest() error {
 
 func testAttachmentsStage1(fileName string, config *pdf.Configuration, t *testing.T) {
 
+	t.Helper()
+
 	// attach list must be 0
 	list, err := Process(ListAttachmentsCommand(fileName, config))
 	if err != nil {
@@ -1648,6 +1529,8 @@ func testAttachmentsStage1(fileName string, config *pdf.Configuration, t *testin
 }
 
 func testAttachmentsStage2(fileName string, config *pdf.Configuration, t *testing.T) {
+
+	t.Helper()
 
 	// attach extract all
 	_, err := Process(ExtractAttachmentsCommand(fileName, outDir, nil, config))
@@ -1827,7 +1710,7 @@ func TestAcroformDemoPDF(t *testing.T) {
 }
 
 // Enable this test for debugging of a specicif file.
-func XTestValidateCommand(t *testing.T) {
+func XTest1ValidateCommand(t *testing.T) {
 
 	PDFCPULog.SetDefaultTraceLogger()
 	//PDFCPULog.SetDefaultParseLogger()
@@ -1837,9 +1720,10 @@ func XTestValidateCommand(t *testing.T) {
 	PDFCPULog.SetDefaultWriteLogger()
 
 	config := pdf.NewDefaultConfiguration()
-	config.ValidationMode = pdf.ValidationRelaxed
+	config.UserPW = "upw"
+	config.OwnerPW = "opw"
 
-	_, err := Process(ValidateCommand("testdata/test.pdf", config))
+	_, err := Process(EncryptCommand("testdata/upc.pdf", "testdata/upcenc.pdf", config))
 	if err != nil {
 		t.Fatalf("TestValidateCommand: %v\n", err)
 	}

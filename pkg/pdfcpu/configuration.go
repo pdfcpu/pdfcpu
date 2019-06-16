@@ -112,10 +112,8 @@ type Configuration struct {
 	// false: RC4 encryption.
 	EncryptUsingAES bool
 
-	// EncryptUsing128BitKey ensures 128 bit key length.
-	// true: use 128 bit key
-	// false: use 40 bit key
-	EncryptUsing128BitKey bool
+	// AES:40,128,256 RC4:40,128
+	EncryptKeyLength int
 
 	// Supplied user access permissions, see Table 22
 	UserAccessPermissions int16
@@ -136,7 +134,7 @@ func NewDefaultConfiguration() *Configuration {
 		WriteXRefStream:       true,
 		CollectStats:          true,
 		EncryptUsingAES:       true,
-		EncryptUsing128BitKey: true,
+		EncryptKeyLength:      256,
 		UserAccessPermissions: PermissionsNone,
 	}
 }

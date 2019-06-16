@@ -25,6 +25,8 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"crypto/rc4"
+	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -41,10 +43,7 @@ var (
 		0x2E, 0x2E, 0x00, 0xB6, 0xD0, 0x68, 0x3E, 0x80, 0x2F, 0x0C, 0xA9, 0xFE, 0x64, 0x53, 0x69, 0x7A,
 	}
 
-	nullPad = []byte{
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	}
+	nullPad32 = make([]byte, 32)
 
 	// Needed permission bits for pdfcpu commands.
 	perm = map[CommandMode]struct{ extract, modify int }{
@@ -70,18 +69,20 @@ var (
 )
 
 // NewEncryptDict creates a new EncryptDict using the standard security handler.
-func newEncryptDict(needAES, need128BitKey bool, permissions int16) Dict {
+func newEncryptDict(needAES bool, keyLength int, permissions int16) Dict {
 
 	d := NewDict()
 
-	//d.Insert("Type", Name("Encrypt"))
-
 	d.Insert("Filter", Name("Standard"))
 
-	if need128BitKey {
-		d.Insert("Length", Integer(128))
-		d.Insert("R", Integer(4))
-		d.Insert("V", Integer(4))
+	if keyLength >= 128 {
+		d.Insert("Length", Integer(keyLength))
+		i := 4
+		if keyLength == 256 {
+			i = 5
+		}
+		d.Insert("R", Integer(i))
+		d.Insert("V", Integer(i))
 	} else {
 		d.Insert("R", Integer(2))
 		d.Insert("V", Integer(1))
@@ -97,25 +98,32 @@ func newEncryptDict(needAES, need128BitKey bool, permissions int16) Dict {
 	d1.Insert("AuthEvent", Name("DocOpen"))
 
 	if needAES {
-		d1.Insert("CFM", Name("AESV2"))
+		n := "AESV2"
+		if keyLength == 256 {
+			n = "AESV3"
+		}
+		d1.Insert("CFM", Name(n))
 	} else {
 		d1.Insert("CFM", Name("V2"))
 	}
 
-	if need128BitKey {
-		d1.Insert("Length", Integer(16))
-	} else {
-		d1.Insert("Length", Integer(5))
-	}
+	d1.Insert("Length", Integer(keyLength/8))
 
 	d2 := NewDict()
 	d2.Insert("StdCF", d1)
 
 	d.Insert("CF", d2)
 
-	h := "0000000000000000000000000000000000000000000000000000000000000000"
-	d.Insert("U", HexLiteral(h))
-	d.Insert("O", HexLiteral(h))
+	if keyLength == 256 {
+		d.Insert("U", NewHexLiteral(make([]byte, 48)))
+		d.Insert("O", NewHexLiteral(make([]byte, 48)))
+		d.Insert("UE", NewHexLiteral(make([]byte, 32)))
+		d.Insert("OE", NewHexLiteral(make([]byte, 32)))
+		d.Insert("Perms", NewHexLiteral(make([]byte, 16)))
+	} else {
+		d.Insert("U", NewHexLiteral(make([]byte, 32)))
+		d.Insert("O", NewHexLiteral(make([]byte, 32)))
+	}
 
 	return d
 }
@@ -171,33 +179,33 @@ func encKey(userpw string, e *Enc) (key []byte) {
 	return key
 }
 
-// ValidateUserPassword validates the user password aka document open password.
-func validateUserPassword(ctx *Context) (ok bool, key []byte, err error) {
+// validateUserPassword validates the user password aka document open password.
+func validateUserPassword(ctx *Context) (ok bool, err error) {
+
+	if ctx.E.R == 5 {
+		return validateUserPasswordAES256(ctx)
+	}
 
 	// Alg.4/5 p63
 	// 4a/5a create encryption key using Alg.2 p61
 
-	//fmt.Printf("validateUserPassword: ctx.E.U =\n%v\n", ctx.E.U)
-
 	u, key, err := u(ctx)
 	if err != nil {
-		return false, nil, err
+		return false, err
 	}
 
-	//fmt.Printf("validateUserPassword: u =\n%v\n", u)
-
-	match := false
+	ctx.EncKey = key
 
 	switch ctx.E.R {
 
 	case 2:
-		match = bytes.Equal(ctx.E.U, u)
+		ok = bytes.Equal(ctx.E.U, u)
 
 	case 3, 4:
-		match = bytes.HasPrefix(ctx.E.U, u[:16])
+		ok = bytes.HasPrefix(ctx.E.U, u[:16])
 	}
 
-	return match, key, nil
+	return ok, nil
 }
 
 func key(ownerpw, userpw string, r, l int) (key []byte) {
@@ -243,8 +251,6 @@ func o(ctx *Context) ([]byte, error) {
 	ownerpw := ctx.OwnerPW
 	userpw := ctx.UserPW
 
-	//fmt.Printf("O: opw=<%s> upw=<%s>\n", ownerpw, userpw)
-
 	e := ctx.E
 
 	// 3a-d
@@ -289,6 +295,9 @@ func o(ctx *Context) ([]byte, error) {
 // U calculates the user password digest.
 func u(ctx *Context) (u []byte, key []byte, err error) {
 
+	// The PW string is generated from OS codepage characters by first converting the string to
+	// PDFDocEncoding. If input is Unicode, first convert to a codepage encoding , and then to
+	// PDFDocEncoding for backward compatibility.
 	userpw := ctx.UserPW
 	//fmt.Printf("U userpw=ctx.UserPW=%s\n", userpw)
 
@@ -340,21 +349,107 @@ func u(ctx *Context) (u []byte, key []byte, err error) {
 	}
 
 	if len(u) < 32 {
-		u = append(u, nullPad[:32-len(u)]...)
+		u = append(u, nullPad32[:32-len(u)]...)
 	}
 
 	return u, key, nil
 }
 
+func validationSalt(bb []byte) []byte {
+	return bb[32:40]
+}
+
+func keySalt(bb []byte) []byte {
+	return bb[40:]
+}
+
+func validateOwnerPasswordAES256(ctx *Context) (ok bool, err error) {
+
+	if len(ctx.OwnerPW) == 0 {
+		return false, nil
+	}
+
+	// TODO Process PW with SASLPrep profile (RFC 4013) of stringprep (RFC 3454).
+	opw := []byte(ctx.OwnerPW)
+	if len(opw) > 127 {
+		opw = opw[:127]
+	}
+	//fmt.Printf("opw <%s> isValidUTF8String: %t\n", opw, utf8.Valid(opw))
+
+	// Algorithm 3.2a 3.
+	b := append(opw, validationSalt(ctx.E.O)...)
+	b = append(b, ctx.E.U...)
+	s := sha256.Sum256(b)
+
+	if !bytes.HasPrefix(ctx.E.O, s[:]) {
+		return false, nil
+	}
+
+	b = append(opw, keySalt(ctx.E.O)...)
+	b = append(b, ctx.E.U...)
+	key := sha256.Sum256(b)
+
+	cb, err := aes.NewCipher(key[:])
+	if err != nil {
+		return false, err
+	}
+
+	iv := make([]byte, 16)
+	ctx.EncKey = make([]byte, 32)
+
+	mode := cipher.NewCBCDecrypter(cb, iv)
+	mode.CryptBlocks(ctx.EncKey, ctx.E.OE)
+
+	return true, nil
+}
+
+func validateUserPasswordAES256(ctx *Context) (ok bool, err error) {
+
+	// TODO Process PW with SASLPrep profile (RFC 4013) of stringprep (RFC 3454).
+	upw := []byte(ctx.UserPW)
+	if len(upw) > 127 {
+		upw = upw[:127]
+	}
+	//fmt.Printf("upw <%s> isValidUTF8String: %t\n", upw, utf8.Valid(upw))
+
+	// Algorithm 3.2a 4,
+	s := sha256.Sum256(append(upw, validationSalt(ctx.E.U)...))
+
+	if !bytes.HasPrefix(ctx.E.U, s[:]) {
+		return false, nil
+	}
+
+	key := sha256.Sum256(append(upw, keySalt(ctx.E.U)...))
+
+	cb, err := aes.NewCipher(key[:])
+	if err != nil {
+		return false, err
+	}
+
+	iv := make([]byte, 16)
+	ctx.EncKey = make([]byte, 32)
+
+	mode := cipher.NewCBCDecrypter(cb, iv)
+	mode.CryptBlocks(ctx.EncKey, ctx.E.UE)
+
+	return true, nil
+}
+
 // ValidateOwnerPassword validates the owner password aka change permissions password.
-func validateOwnerPassword(ctx *Context) (ok bool, k []byte, err error) {
+func validateOwnerPassword(ctx *Context) (ok bool, err error) {
+
+	e := ctx.E
+
+	if e.R == 5 {
+		return validateOwnerPasswordAES256(ctx)
+	}
+
+	// The PW string is generated from OS codepage characters by first converting the string to
+	// PDFDocEncoding. If input is Unicode, first convert to a codepage encoding , and then to
+	// PDFDocEncoding for backward compatibility.
 
 	ownerpw := ctx.OwnerPW
 	userpw := ctx.UserPW
-
-	//fmt.Printf("ValidateOwnerPassword: ownerpw=ctx.OwnerPW:<%s> userpw=ctx.UserPW:<%s>\n", ownerpw, userpw)
-
-	e := ctx.E
 
 	// 7a: Alg.3 p62 a-d
 	key := key(ownerpw, userpw, e.R, e.L)
@@ -386,7 +481,7 @@ func validateOwnerPassword(ctx *Context) (ok bool, k []byte, err error) {
 
 			c, err = rc4.NewCipher(keynew)
 			if err != nil {
-				return false, nil, err
+				return false, err
 			}
 
 			c.XORKeyStream(upw, upw)
@@ -397,19 +492,19 @@ func validateOwnerPassword(ctx *Context) (ok bool, k []byte, err error) {
 	upws := ctx.UserPW
 
 	ctx.UserPW = string(upw)
-	ok, k, err = validateUserPassword(ctx)
+	ok, err = validateUserPassword(ctx)
 
 	// Restore user pw
 	ctx.UserPW = upws
 
-	return ok, k, err
+	return ok, err
 }
 
 // SupportedCFEntry returns true if all entries found are supported.
 func supportedCFEntry(d Dict) (bool, error) {
 
 	cfm := d.NameEntry("CFM")
-	if cfm != nil && *cfm != "V2" && *cfm != "AESV2" {
+	if cfm != nil && *cfm != "V2" && *cfm != "AESV2" && *cfm != "AESV3" {
 		return false, errors.New("supportedCFEntry: invalid entry \"CFM\"")
 	}
 
@@ -419,11 +514,11 @@ func supportedCFEntry(d Dict) (bool, error) {
 	}
 
 	l := d.IntEntry("Length")
-	if l != nil && (*l < 8 || *l > 128 || *l%8 > 1) {
+	if l != nil && (*l < 5 || *l > 16) && *l != 32 {
 		return false, errors.New("supportedCFEntry: invalid entry \"Length\"")
 	}
 
-	return cfm != nil && *cfm == "AESV2", nil
+	return cfm != nil && (*cfm == "AESV2" || *cfm == "AESV3"), nil
 }
 
 func perms(p int) (list []string) {
@@ -449,6 +544,66 @@ func Permissions(ctx *Context) (list []string) {
 	}
 
 	return perms(ctx.E.P)
+}
+
+func validatePermissions(ctx *Context) (bool, error) {
+
+	// Algorithm 3.2a 5.
+
+	if ctx.E.R != 5 {
+		return true, nil
+	}
+
+	cb, err := aes.NewCipher(ctx.EncKey[:])
+	if err != nil {
+		return false, err
+	}
+
+	p := make([]byte, len(ctx.E.Perms))
+	cb.Decrypt(p, ctx.E.Perms)
+	if string(p[9:12]) != "adb" {
+		return false, nil
+	}
+
+	b := binary.LittleEndian.Uint32(p[:4])
+	return int32(b) == int32(ctx.E.P), nil
+}
+
+func writePermissions(ctx *Context, d Dict) error {
+
+	// Algorithm 3.10
+
+	if ctx.E.R != 5 {
+		return nil
+	}
+
+	b := make([]byte, 16)
+	binary.LittleEndian.PutUint64(b, uint64(ctx.E.P))
+
+	b[4] = 0xFF
+	b[5] = 0xFF
+	b[6] = 0xFF
+	b[7] = 0xFF
+
+	var c byte = 'F'
+	if ctx.E.Emd {
+		c = 'T'
+	}
+	b[8] = c
+
+	b[9] = 'a'
+	b[10] = 'd'
+	b[11] = 'b'
+
+	cb, err := aes.NewCipher(ctx.EncKey[:])
+	if err != nil {
+		return err
+	}
+
+	cb.Encrypt(ctx.E.Perms, b)
+	d.Update("Perms", HexLiteral(hex.EncodeToString(ctx.E.Perms)))
+
+	return nil
 }
 
 func logP(enc *Enc) {
@@ -523,8 +678,8 @@ func getV(d Dict) (*int, error) {
 
 	v := d.IntEntry("V")
 
-	if v == nil || (*v != 1 && *v != 2 && *v != 4) {
-		return nil, errors.Errorf("getV: \"V\" must be one of 1,2,4")
+	if v == nil || (*v != 1 && *v != 2 && *v != 4 && *v != 5) {
+		return nil, errors.Errorf("getV: \"V\" must be one of 1,2,4,5")
 	}
 
 	return v, nil
@@ -555,8 +710,7 @@ func checkV(ctx *Context, d Dict) (*int, error) {
 		return nil, err
 	}
 
-	// Right now we support only 4
-	if *v != 4 {
+	if *v != 4 && *v != 5 {
 		return v, nil
 	}
 
@@ -611,7 +765,7 @@ func length(d Dict) (int, error) {
 		return 40, nil
 	}
 
-	if *l < 40 || *l > 128 || *l%8 > 0 {
+	if (*l < 40 || *l > 128 || *l%8 > 0) && *l != 256 {
 		return 0, errors.Errorf("length: \"Length\" %d not supported\n", *l)
 	}
 
@@ -621,16 +775,102 @@ func length(d Dict) (int, error) {
 func getR(d Dict) (int, error) {
 
 	r := d.IntEntry("R")
-	if r == nil || (*r != 2 && *r != 3 && *r != 4) {
-		return 0, errors.New("getR: \"R\" must be 2,3,4")
+	if r == nil || *r < 2 || *r > 5 {
+		if *r > 5 {
+			return 0, errors.New("PDF 2.0 encryption not supported")
+		}
+		return 0, errors.New("encryption: \"R\" must be 2,3,4,5")
 	}
 
 	return *r, nil
 }
 
-// SupportedEncryption returns true if used encryption is supported by pdfcpu
-// Also returns a pointer to a struct encapsulating used encryption.
+func validateAlgorithm(ctx *Context) (ok bool) {
+
+	k := ctx.EncryptKeyLength
+
+	if ctx.EncryptUsingAES {
+		return k == 40 || k == 128 || k == 256
+	}
+
+	return k == 40 || k == 128
+}
+
+func validateAES256Parameters(d Dict) (oe, ue, perms []byte, err error) {
+
+	for {
+
+		// OE
+		oe, err = d.StringEntryBytes("OE")
+		if err != nil {
+			break
+		}
+		if oe == nil || len(oe) != 32 {
+			err = errors.New("unsupported encryption: required entry \"OE\" missing or invalid")
+			break
+		}
+
+		// UE
+		ue, err = d.StringEntryBytes("UE")
+		if err != nil {
+			break
+		}
+		if ue == nil || len(ue) != 32 {
+			err = errors.New("unsupported encryption: required entry \"UE\" missing or invalid")
+			break
+		}
+
+		// Perms
+		perms, err = d.StringEntryBytes("Perms")
+		if err != nil {
+			break
+		}
+		if perms == nil || len(perms) != 16 {
+			err = errors.New("unsupported encryption: required entry \"Perms\" missing or invalid")
+		}
+
+		break
+	}
+
+	return oe, ue, perms, err
+}
+
+func validateOAndU(d Dict) (o, u []byte, err error) {
+
+	for {
+
+		// O
+		o, err = d.StringEntryBytes("O")
+		if err != nil {
+			break
+		}
+		if o == nil || len(o) != 32 && len(o) != 48 {
+			err = errors.New("unsupported encryption: required entry \"O\" missing or invalid")
+			break
+		}
+
+		// U
+		u, err = d.StringEntryBytes("U")
+		if err != nil {
+			break
+		}
+		if u == nil || len(u) != 32 && len(u) != 48 {
+			err = errors.Errorf("unsupported encryption: required entry \"U\" missing or invalid %d", len(u))
+		}
+
+		break
+	}
+
+	return o, u, err
+}
+
+// SupportedEncryption returns a pointer to a struct encapsulating used encryption.
 func supportedEncryption(ctx *Context, d Dict) (*Enc, error) {
+
+	// Algorithm
+	if ok := validateAlgorithm(ctx); !ok {
+		return nil, errors.New("unsupported encryption algorithm")
+	}
 
 	// Filter
 	filter := d.NameEntry("Filter")
@@ -661,22 +901,17 @@ func supportedEncryption(ctx *Context, d Dict) (*Enc, error) {
 		return nil, err
 	}
 
-	// O
-	o, err := d.StringEntryBytes("O")
+	o, u, err := validateOAndU(d)
 	if err != nil {
 		return nil, err
-	}
-	if o == nil || len(o) != 32 {
-		return nil, errors.New("unsupported encryption: required entry \"O\" missing or invalid")
 	}
 
-	// U
-	u, err := d.StringEntryBytes("U")
-	if err != nil {
-		return nil, err
-	}
-	if u == nil || len(u) != 32 {
-		return nil, errors.Errorf("unsupported encryption: required entry \"U\" missing or invalid %d", len(u))
+	var oe, ue, perms []byte
+	if r == 5 {
+		oe, ue, perms, err = validateAES256Parameters(d)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// P
@@ -692,12 +927,21 @@ func supportedEncryption(ctx *Context, d Dict) (*Enc, error) {
 		encMeta = *emd
 	}
 
-	return &Enc{O: o, U: u, L: l, P: *p, R: r, V: *v, Emd: encMeta}, nil
+	return &Enc{
+			O:     o,
+			OE:    oe,
+			U:     u,
+			UE:    ue,
+			L:     l,
+			P:     *p,
+			Perms: perms,
+			R:     r,
+			V:     *v,
+			Emd:   encMeta},
+		nil
 }
 
 func decryptKey(objNumber, generation int, key []byte, aes bool) []byte {
-
-	log.Debug.Printf("decryptKey: obj:%d gen:%d key:%x aes:%t\n", objNumber, generation, key, aes)
 
 	m := md5.New()
 
@@ -708,8 +952,6 @@ func decryptKey(objNumber, generation int, key []byte, aes bool) []byte {
 	gen := uint16(generation)
 	b2 := []byte{byte(gen), byte(gen >> 8)}
 	b = append(b, b2...)
-
-	//logDebugCrypto.Printf("b: %X\n", b)
 
 	m.Write(b)
 
@@ -724,18 +966,16 @@ func decryptKey(objNumber, generation int, key []byte, aes bool) []byte {
 		dk = dk[:l]
 	}
 
-	log.Debug.Printf("decryptKey returning: %X\n", dk)
-
 	return dk
 }
 
 // EncryptBytes encrypts s using RC4 or AES.
-func encryptBytes(needAES bool, b []byte, objNr, genNr int, key []byte) ([]byte, error) {
+func encryptBytes(b []byte, objNr, genNr int, encKey []byte, needAES bool, r int) ([]byte, error) {
 
-	log.Debug.Printf("EncryptBytes begin obj:%d gen:%d key:%X aes:%t\n<%v>\n", objNr, genNr, key, needAES, b)
-
-	k := decryptKey(objNr, genNr, key, needAES)
-	//logInfoCrypto.Printf("EncryptString k = %v\n", k)
+	k := encKey
+	if r != 5 {
+		k = decryptKey(objNr, genNr, encKey, needAES)
+	}
 
 	if needAES {
 		bb, err := encryptAESBytes(b, k)
@@ -745,15 +985,13 @@ func encryptBytes(needAES bool, b []byte, objNr, genNr int, key []byte) ([]byte,
 		return bb, nil
 	}
 
-	return applyRC4CipherBytes(b, objNr, genNr, key, needAES)
+	return applyRC4CipherBytes(b, objNr, genNr, k, needAES)
 }
 
 // EncryptString encrypts s using RC4 or AES.
-func encryptString(needAES bool, s string, objNr, genNr int, key []byte) (*string, error) {
+func encryptString(s string, objNr, genNr int, key []byte, needAES bool, r int) (*string, error) {
 
-	log.Debug.Printf("encryptString begin obj:%d gen:%d key:%X aes:%t\n<%s>\n", objNr, genNr, key, needAES, s)
-
-	b, err := encryptBytes(needAES, []byte(s), objNr, genNr, key)
+	b, err := encryptBytes([]byte(s), objNr, genNr, key, needAES, r)
 	if err != nil {
 		return nil, err
 	}
@@ -766,12 +1004,13 @@ func encryptString(needAES bool, s string, objNr, genNr int, key []byte) (*strin
 	return s1, err
 }
 
-// DecryptBytes decrypts bb using RC4 or AES.
-func decryptBytes(needAES bool, b []byte, objNr, genNr int, key []byte) ([]byte, error) {
+// decryptBytes decrypts bb using RC4 or AES.
+func decryptBytes(b []byte, objNr, genNr int, encKey []byte, needAES bool, r int) ([]byte, error) {
 
-	log.Debug.Printf("DecryptBytes begin obj:%d gen:%d key:%X aes:%t bb:%v\n", objNr, genNr, key, needAES, b)
-
-	k := decryptKey(objNr, genNr, key, needAES)
+	k := encKey
+	if r != 5 {
+		k = decryptKey(objNr, genNr, encKey, needAES)
+	}
 
 	if needAES {
 		bb, err := decryptAESBytes(b, k)
@@ -781,20 +1020,18 @@ func decryptBytes(needAES bool, b []byte, objNr, genNr int, key []byte) ([]byte,
 		return bb, nil
 	}
 
-	return applyRC4CipherBytes(b, objNr, genNr, key, needAES)
+	return applyRC4CipherBytes(b, objNr, genNr, k, needAES)
 }
 
-// DecryptString decrypts s using RC4 or AES.
-func decryptString(needAES bool, s string, objNr, genNr int, key []byte) (*string, error) {
-
-	log.Debug.Printf("DecryptString begin obj:%d gen:%d key:%X aes:%t s:<%s>\n", objNr, genNr, key, needAES, s)
+// decryptString decrypts s using RC4 or AES.
+func decryptString(s string, objNr, genNr int, key []byte, needAES bool, r int) (*string, error) {
 
 	b, err := Unescape(s)
 	if err != nil {
 		return nil, err
 	}
 
-	b, err = decryptBytes(needAES, b, objNr, genNr, key)
+	b, err = decryptBytes(b, objNr, genNr, key, needAES, r)
 	if err != nil {
 		return nil, err
 	}
@@ -805,8 +1042,6 @@ func decryptString(needAES bool, s string, objNr, genNr int, key []byte) (*strin
 
 func applyRC4CipherBytes(b []byte, objNr, genNr int, key []byte, needAES bool) ([]byte, error) {
 
-	log.Debug.Printf("applyRC4CipherBytes begin b:<%v> %d %d key:%X aes:%t\n", b, objNr, genNr, key, needAES)
-
 	c, err := rc4.NewCipher(decryptKey(objNr, genNr, key, needAES))
 	if err != nil {
 		return nil, err
@@ -814,14 +1049,10 @@ func applyRC4CipherBytes(b []byte, objNr, genNr int, key []byte, needAES bool) (
 
 	c.XORKeyStream(b, b)
 
-	log.Debug.Printf("applyRC4Cipher end, rc4 returning: <%v>\n", b)
-
 	return b, nil
 }
 
 func applyRC4Cipher(b []byte, objNr, genNr int, key []byte, needAES bool) (*string, error) {
-
-	log.Debug.Printf("applyRC4Cipher begin s:<%v> %d %d key:%X aes:%t\n", b, objNr, genNr, key, needAES)
 
 	c, err := rc4.NewCipher(decryptKey(objNr, genNr, key, needAES))
 	if err != nil {
@@ -830,14 +1061,13 @@ func applyRC4Cipher(b []byte, objNr, genNr int, key []byte, needAES bool) (*stri
 
 	c.XORKeyStream(b, b)
 	s1 := string(b)
-	log.Debug.Printf("applyRC4Cipher end, rc4 returning: <%s>\n", s1)
 
 	return &s1, nil
 }
 
-func encrypt(m map[string]Object, k string, v Object, objNr, genNr int, key []byte, aes bool) error {
+func encrypt(m map[string]Object, k string, v Object, objNr, genNr int, key []byte, needAES bool, r int) error {
 
-	s, err := encryptDeepObject(v, objNr, genNr, key, aes)
+	s, err := encryptDeepObject(v, objNr, genNr, key, needAES, r)
 	if err != nil {
 		return err
 	}
@@ -849,10 +1079,10 @@ func encrypt(m map[string]Object, k string, v Object, objNr, genNr int, key []by
 	return nil
 }
 
-func encryptDict(d Dict, objNr, genNr int, key []byte, aes bool) error {
+func encryptDict(d Dict, objNr, genNr int, key []byte, needAES bool, r int) error {
 
 	for k, v := range d {
-		err := encrypt(d, k, v, objNr, genNr, key, aes)
+		err := encrypt(d, k, v, objNr, genNr, key, needAES, r)
 		if err != nil {
 			return err
 		}
@@ -862,7 +1092,7 @@ func encryptDict(d Dict, objNr, genNr int, key []byte, aes bool) error {
 }
 
 // EncryptDeepObject recurses over non trivial PDF objects and encrypts all strings encountered.
-func encryptDeepObject(objIn Object, objNr, genNr int, key []byte, aes bool) (*HexLiteral, error) {
+func encryptDeepObject(objIn Object, objNr, genNr int, key []byte, needAES bool, r int) (*HexLiteral, error) {
 
 	_, ok := objIn.(IndirectRef)
 	if ok {
@@ -872,20 +1102,20 @@ func encryptDeepObject(objIn Object, objNr, genNr int, key []byte, aes bool) (*H
 	switch obj := objIn.(type) {
 
 	case StreamDict:
-		err := encryptDict(obj.Dict, objNr, genNr, key, aes)
+		err := encryptDict(obj.Dict, objNr, genNr, key, needAES, r)
 		if err != nil {
 			return nil, err
 		}
 
 	case Dict:
-		err := encryptDict(obj, objNr, genNr, key, aes)
+		err := encryptDict(obj, objNr, genNr, key, needAES, r)
 		if err != nil {
 			return nil, err
 		}
 
 	case Array:
 		for i, v := range obj {
-			s, err := encryptDeepObject(v, objNr, genNr, key, aes)
+			s, err := encryptDeepObject(v, objNr, genNr, key, needAES, r)
 			if err != nil {
 				return nil, err
 			}
@@ -896,7 +1126,7 @@ func encryptDeepObject(objIn Object, objNr, genNr int, key []byte, aes bool) (*H
 
 	case StringLiteral:
 		s := obj.Value()
-		b, err := encryptBytes(aes, []byte(s), objNr, genNr, key)
+		b, err := encryptBytes([]byte(s), objNr, genNr, key, needAES, r)
 		if err != nil {
 			return nil, err
 		}
@@ -904,7 +1134,7 @@ func encryptDeepObject(objIn Object, objNr, genNr int, key []byte, aes bool) (*H
 		return &hl, nil
 
 	case HexLiteral:
-		bb, err := encryptHexLiteral(obj, aes, objNr, genNr, key)
+		bb, err := encryptHexLiteral(obj, objNr, genNr, key, needAES, r)
 		if err != nil {
 			return nil, err
 		}
@@ -919,7 +1149,7 @@ func encryptDeepObject(objIn Object, objNr, genNr int, key []byte, aes bool) (*H
 }
 
 // DecryptDeepObject recurses over non trivial PDF objects and decrypts all strings encountered.
-func decryptDeepObject(objIn Object, objNr, genNr int, key []byte, aes bool) (*StringLiteral, error) {
+func decryptDeepObject(objIn Object, objNr, genNr int, key []byte, needAES bool, r int) (*StringLiteral, error) {
 
 	_, ok := objIn.(IndirectRef)
 	if ok {
@@ -930,7 +1160,7 @@ func decryptDeepObject(objIn Object, objNr, genNr int, key []byte, aes bool) (*S
 
 	case Dict:
 		for k, v := range obj {
-			s, err := decryptDeepObject(v, objNr, genNr, key, aes)
+			s, err := decryptDeepObject(v, objNr, genNr, key, needAES, r)
 			if err != nil {
 				return nil, err
 			}
@@ -941,7 +1171,7 @@ func decryptDeepObject(objIn Object, objNr, genNr int, key []byte, aes bool) (*S
 
 	case Array:
 		for i, v := range obj {
-			s, err := decryptDeepObject(v, objNr, genNr, key, aes)
+			s, err := decryptDeepObject(v, objNr, genNr, key, needAES, r)
 			if err != nil {
 				return nil, err
 			}
@@ -951,7 +1181,7 @@ func decryptDeepObject(objIn Object, objNr, genNr int, key []byte, aes bool) (*S
 		}
 
 	case StringLiteral:
-		s, err := decryptString(aes, obj.Value(), objNr, genNr, key)
+		s, err := decryptString(obj.Value(), objNr, genNr, key, needAES, r)
 		if err != nil {
 			return nil, err
 		}
@@ -959,7 +1189,7 @@ func decryptDeepObject(objIn Object, objNr, genNr int, key []byte, aes bool) (*S
 		return &sl, nil
 
 	case HexLiteral:
-		bb, err := decryptHexLiteral(obj, aes, objNr, genNr, key)
+		bb, err := decryptHexLiteral(obj, objNr, genNr, key, needAES, r)
 		if err != nil {
 			return nil, err
 		}
@@ -974,11 +1204,12 @@ func decryptDeepObject(objIn Object, objNr, genNr int, key []byte, aes bool) (*S
 }
 
 // EncryptStream encrypts a stream buffer using RC4 or AES.
-func encryptStream(needAES bool, buf []byte, objNr, genNr int, key []byte) ([]byte, error) {
+func encryptStream(buf []byte, objNr, genNr int, encKey []byte, needAES bool, r int) ([]byte, error) {
 
-	log.Debug.Printf("EncryptStream begin obj:%d gen:%d key:%X aes:%t\n", objNr, genNr, key, needAES)
-
-	k := decryptKey(objNr, genNr, key, needAES)
+	k := encKey
+	if r != 5 {
+		k = decryptKey(objNr, genNr, encKey, needAES)
+	}
 
 	if needAES {
 		return encryptAESBytes(buf, k)
@@ -987,12 +1218,13 @@ func encryptStream(needAES bool, buf []byte, objNr, genNr int, key []byte) ([]by
 	return applyRC4Bytes(buf, k)
 }
 
-// DecryptStream decrypts a stream buffer using RC4 or AES.
-func decryptStream(needAES bool, buf []byte, objNr, genNr int, key []byte) ([]byte, error) {
+// decryptStream decrypts a stream buffer using RC4 or AES.
+func decryptStream(buf []byte, objNr, genNr int, encKey []byte, needAES bool, r int) ([]byte, error) {
 
-	log.Debug.Printf("DecryptStream begin obj:%d gen:%d key:%X aes:%t\n", objNr, genNr, key, needAES)
-
-	k := decryptKey(objNr, genNr, key, needAES)
+	k := encKey
+	if r != 5 {
+		k = decryptKey(objNr, genNr, encKey, needAES)
+	}
 
 	if needAES {
 		return decryptAESBytes(buf, k)
@@ -1021,8 +1253,6 @@ func applyRC4Bytes(buf, key []byte) ([]byte, error) {
 }
 
 func encryptAESBytes(b, key []byte) ([]byte, error) {
-
-	//fmt.Printf("encryptAESBytes before:\n%s\n", hex.Dump(b))
 
 	// pad b to aes.Blocksize
 	l := len(b) % aes.BlockSize
@@ -1056,14 +1286,10 @@ func encryptAESBytes(b, key []byte) ([]byte, error) {
 	mode := cipher.NewCBCEncrypter(cb, iv)
 	mode.CryptBlocks(data[aes.BlockSize:], b)
 
-	//fmt.Printf("encryptAESBytes after:\nlen=%d %s\n", len(data), hex.Dump(data))
-
 	return data, nil
 }
 
 func decryptAESBytes(b, key []byte) ([]byte, error) {
-
-	//fmt.Printf("decryptAESBytes before:\n%s\n", hex.Dump(b))
 
 	if len(b) < aes.BlockSize {
 		return nil, errors.New("decryptAESBytes: Ciphertext too short")
@@ -1091,8 +1317,6 @@ func decryptAESBytes(b, key []byte) ([]byte, error) {
 		e := len(data) - int(data[len(data)-1])
 		data = data[:e]
 	}
-
-	//fmt.Printf("decryptAESBytes after:\n%s\n", hex.Dump(data))
 
 	return data, nil
 }
@@ -1136,22 +1360,163 @@ func fileID(ctx *Context) (HexLiteral, error) {
 	return HexLiteral(hex.EncodeToString(m)), nil
 }
 
-func encryptHexLiteral(hl HexLiteral, needAES bool, objNr, genNr int, key []byte) ([]byte, error) {
+func encryptHexLiteral(hl HexLiteral, objNr, genNr int, key []byte, needAES bool, r int) ([]byte, error) {
 
 	bb, err := hl.Bytes()
 	if err != nil {
 		return nil, err
 	}
 
-	return encryptBytes(needAES, bb, objNr, genNr, key)
+	return encryptBytes(bb, objNr, genNr, key, needAES, r)
 }
 
-func decryptHexLiteral(hl HexLiteral, needAES bool, objNr, genNr int, key []byte) ([]byte, error) {
+func decryptHexLiteral(hl HexLiteral, objNr, genNr int, key []byte, needAES bool, r int) ([]byte, error) {
 
 	bb, err := hl.Bytes()
 	if err != nil {
 		return nil, err
 	}
 
-	return decryptBytes(needAES, bb, objNr, genNr, key)
+	return decryptBytes(bb, objNr, genNr, key, needAES, r)
+}
+
+func calcFileEncKeyFromUE(ctx *Context) (k []byte, err error) {
+
+	upw := []byte(ctx.OwnerPW)
+	key := sha256.Sum256(append(upw, keySalt(ctx.E.U)...))
+
+	cb, err := aes.NewCipher(key[:])
+	if err != nil {
+		return nil, err
+	}
+
+	iv := make([]byte, 16)
+	k = make([]byte, 32)
+
+	mode := cipher.NewCBCDecrypter(cb, iv)
+	mode.CryptBlocks(k, ctx.E.UE)
+
+	return k, nil
+}
+
+func calcFileEncKeyFromOE(ctx *Context) (k []byte, err error) {
+
+	opw := []byte(ctx.OwnerPW)
+	b := append(opw, keySalt(ctx.E.O)...)
+	b = append(b, ctx.E.U...)
+	key := sha256.Sum256(b)
+
+	cb, err := aes.NewCipher(key[:])
+	if err != nil {
+		return nil, err
+	}
+
+	iv := make([]byte, 16)
+	k = make([]byte, 32)
+
+	mode := cipher.NewCBCDecrypter(cb, iv)
+	mode.CryptBlocks(k, ctx.E.OE)
+
+	return k, nil
+}
+
+func calcFileEncKey(ctx *Context, d Dict) (err error) {
+
+	// Calc Random UE (32 bytes)
+	ue := make([]byte, 32)
+	_, err = io.ReadFull(rand.Reader, ue)
+	if err != nil {
+		return err
+	}
+
+	ctx.E.UE = ue
+	d.Update("UE", HexLiteral(hex.EncodeToString(ctx.E.UE)))
+
+	// Calc file encryption key.
+	ctx.EncKey, err = calcFileEncKeyFromUE(ctx)
+
+	return err
+}
+
+func calcOAndUAES256(ctx *Context, d Dict) (err error) {
+
+	// 1) Calc U.
+	b := make([]byte, 16)
+	_, err = io.ReadFull(rand.Reader, b)
+	if err != nil {
+		return err
+	}
+
+	u := append(make([]byte, 32), b...)
+	upw := []byte(ctx.UserPW)
+	h := sha256.Sum256(append(upw, validationSalt(u)...))
+	ctx.E.U = append(h[:], b...)
+	d.Update("U", HexLiteral(hex.EncodeToString(ctx.E.U)))
+
+	// 2) Calc O (depends on U).
+	b = make([]byte, 16)
+	_, err = io.ReadFull(rand.Reader, b)
+	if err != nil {
+		return err
+	}
+
+	o := append(make([]byte, 32), b...)
+	opw := []byte(ctx.OwnerPW)
+	c := append(opw, validationSalt(o)...)
+	h = sha256.Sum256(append(c, ctx.E.U...))
+	ctx.E.O = append(h[:], b...)
+	d.Update("O", HexLiteral(hex.EncodeToString(ctx.E.O)))
+
+	err = calcFileEncKey(ctx, d)
+	if err != nil {
+		return err
+	}
+
+	// Encrypt file encryption key into UE.
+	h = sha256.Sum256(append(upw, keySalt(u)...))
+	cb, err := aes.NewCipher(h[:])
+	if err != nil {
+		return err
+	}
+
+	iv := make([]byte, 16)
+	mode := cipher.NewCBCEncrypter(cb, iv)
+	mode.CryptBlocks(ctx.E.UE, ctx.EncKey)
+	d.Update("UE", HexLiteral(hex.EncodeToString(ctx.E.UE)))
+
+	// Encrypt file encryption key into OE.
+	c = append(opw, keySalt(o)...)
+	h = sha256.Sum256(append(c, ctx.E.U...))
+	cb, err = aes.NewCipher(h[:])
+	if err != nil {
+		return err
+	}
+
+	mode = cipher.NewCBCEncrypter(cb, iv)
+	mode.CryptBlocks(ctx.E.OE, ctx.EncKey)
+	d.Update("OE", HexLiteral(hex.EncodeToString(ctx.E.OE)))
+
+	return nil
+}
+
+func calcOAndU(ctx *Context, d Dict) (err error) {
+
+	if ctx.E.R == 5 {
+		return calcOAndUAES256(ctx, d)
+	}
+
+	ctx.E.O, err = o(ctx)
+	if err != nil {
+		return err
+	}
+
+	ctx.E.U, ctx.EncKey, err = u(ctx)
+	if err != nil {
+		return err
+	}
+
+	d.Update("U", HexLiteral(hex.EncodeToString(ctx.E.U)))
+	d.Update("O", HexLiteral(hex.EncodeToString(ctx.E.O)))
+
+	return nil
 }

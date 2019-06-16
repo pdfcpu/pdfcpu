@@ -867,7 +867,7 @@ func setupEncryption(ctx *Context) error {
 
 	d := newEncryptDict(
 		ctx.EncryptUsingAES,
-		ctx.EncryptUsing128BitKey,
+		ctx.EncryptKeyLength,
 		ctx.UserAccessPermissions,
 	)
 
@@ -888,23 +888,15 @@ func setupEncryption(ctx *Context) error {
 
 	ctx.E.ID = id
 
-	//fmt.Printf("opw before: length:%d <%s>\n", len(ctx.E.O), ctx.E.O)
-	ctx.E.O, err = o(ctx)
+	err = calcOAndU(ctx, d)
 	if err != nil {
 		return err
 	}
-	//fmt.Printf("opw after: length:%d <%s> %0X\n", len(ctx.E.O), ctx.E.O, ctx.E.O)
 
-	//fmt.Printf("upw before: length:%d <%s>\n", len(ctx.E.U), ctx.E.U)
-	ctx.E.U, ctx.EncKey, err = u(ctx)
+	err = writePermissions(ctx, d)
 	if err != nil {
 		return err
 	}
-	//fmt.Printf("upw after: length:%d <%s> %0X\n", len(ctx.E.U), ctx.E.U, ctx.E.U)
-	//fmt.Printf("encKey = %0X\n", ctx.EncKey)
-
-	d.Update("U", HexLiteral(hex.EncodeToString(ctx.E.U)))
-	d.Update("O", HexLiteral(hex.EncodeToString(ctx.E.O)))
 
 	xRefTableEntry := NewXRefTableEntryGen0(d)
 
@@ -933,8 +925,7 @@ func updateEncryption(ctx *Context) error {
 		// and moving on, U is dependent on P
 	}
 
-	// Change user or owner password.
-	//fmt.Println("change upw or opw")
+	// ctx.Cmd == CHANGEUPW or CHANGE OPW
 
 	if ctx.UserPWNew != nil {
 		//fmt.Printf("change upw from <%s> to <%s>\n", ctx.UserPW, *ctx.UserPWNew)
@@ -944,6 +935,21 @@ func updateEncryption(ctx *Context) error {
 	if ctx.OwnerPWNew != nil {
 		//fmt.Printf("change opw from <%s> to <%s>\n", ctx.OwnerPW, *ctx.OwnerPWNew)
 		ctx.OwnerPW = *ctx.OwnerPWNew
+	}
+
+	if ctx.E.R == 5 {
+
+		err = calcOAndU(ctx, d)
+		if err != nil {
+			return err
+		}
+
+		err = writePermissions(ctx, d)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 
 	//fmt.Printf("opw before: length:%d <%s>\n", len(ctx.E.O), ctx.E.O)

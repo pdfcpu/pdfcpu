@@ -69,6 +69,8 @@ func NewFreeHeadXRefTableEntry() *XRefTableEntry {
 // Enc wraps around all defined encryption attributes.
 type Enc struct {
 	O, U       []byte
+	OE, UE     []byte
+	Perms      []byte
 	L, P, R, V int
 	Emd        bool // encrypt meta data
 	ID         []byte

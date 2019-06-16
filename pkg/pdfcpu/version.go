@@ -24,7 +24,7 @@ import (
 
 const (
 	// PDFCPUVersion returns the current pdfcpu version.
-	PDFCPUVersion = "0.1.23"
+	PDFCPUVersion = "0.1.24"
 
 	// PDFCPULongVersion returns pdfcpu's signature.
 	PDFCPULongVersion = "pdfcpu v" + PDFCPUVersion

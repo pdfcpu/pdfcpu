@@ -415,21 +415,44 @@ func prepareDecryptCommand(config *pdfcpu.Configuration) *api.Command {
 	return api.DecryptCommand(filenameIn, filenameOut, config)
 }
 
-func validateEncryptFlags() {
+func validateEncryptModeFlag() {
 
 	if mode != "rc4" && mode != "aes" && mode != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", "valid modes: rc4,aes default:aes")
 		os.Exit(1)
 	}
 
-	if key != "40" && key != "128" && key != "" {
-		fmt.Fprintf(os.Stderr, "%s\n\n", "supported key lengths: 40,128 default:128")
-		os.Exit(1)
+	if mode == "rc4" {
+		if key != "40" && key != "128" && key != "" {
+			fmt.Fprintf(os.Stderr, "%s\n\n", "supported RC4 key lengths: 40,128 default:128")
+			os.Exit(1)
+		}
 	}
+
+	if mode == "aes" {
+		if key != "40" && key != "128" && key != "256" && key != "" {
+			fmt.Fprintf(os.Stderr, "%s\n\n", "supported AES key lengths: 40,128,256 default:256")
+			os.Exit(1)
+		}
+	}
+}
+func validateEncryptFlags() {
+
+	fmt.Printf("mode:<%s> key:<%s>\n", mode, key)
+
+	validateEncryptModeFlag()
 
 	if perm != "none" && perm != "all" && perm != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", "supported permissions: none,all default:none (viewing always allowed!)")
 		os.Exit(1)
+	}
+
+	if key == "" {
+		d := "128"
+		if mode == "aes" {
+			d = "256"
+		}
+		key = d
 	}
 }
 
@@ -440,15 +463,18 @@ func prepareEncryptCommand(config *pdfcpu.Configuration) *api.Command {
 		os.Exit(1)
 	}
 
+	if config.OwnerPW == "" {
+		fmt.Fprintf(os.Stderr, "missing non-empty owner password")
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageEncrypt)
+		os.Exit(1)
+	}
+
 	validateEncryptFlags()
 
-	if mode == "rc4" {
-		config.EncryptUsingAES = false
-	}
+	config.EncryptUsingAES = mode != "rc4"
 
-	if key == "40" {
-		config.EncryptUsing128BitKey = false
-	}
+	kl, _ := strconv.Atoi(key)
+	config.EncryptKeyLength = kl
 
 	if perm == "all" {
 		config.UserAccessPermissions = pdfcpu.PermissionsAll
@@ -492,6 +518,11 @@ func prepareChangeOwnerPasswordCommand(config *pdfcpu.Configuration) *api.Comman
 
 	pwOld := flag.Arg(1)
 	pwNew := flag.Arg(2)
+	if pwNew == "" {
+		fmt.Fprintf(os.Stderr, "owner password cannot be empty")
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageChangeOwnerPW)
+		os.Exit(1)
+	}
 
 	filenameIn := flag.Arg(0)
 	ensurePdfExtension(filenameIn)

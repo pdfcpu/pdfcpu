@@ -45,9 +45,9 @@ func initFlags() {
 	flag.StringVar(&mode, "mode", "", modeUsage)
 	flag.StringVar(&mode, "m", "", modeUsage)
 
-	keyUsage := "encrypt: 40|128"
-	flag.StringVar(&key, "key", "128", keyUsage)
-	flag.StringVar(&key, "k", "128", keyUsage)
+	keyUsage := "encrypt: 40|128|256"
+	flag.StringVar(&key, "key", "256", keyUsage)
+	flag.StringVar(&key, "k", "256", keyUsage)
 
 	permUsage := "encrypt, perm set: none|all"
 	flag.StringVar(&perm, "perm", "none", permUsage)
@@ -161,7 +161,7 @@ func main() {
 	// The first argument is the pdfcpu command
 	cmdStr := os.Args[1]
 
-	config := pdfcpu.NewConfiguration(upw, opw)
+	config := pdfcpu.NewDefaultConfiguration()
 
 	cmd, command, err := cmdMap.Handle(cmdStr, "", config)
 	if err != nil {
@@ -177,6 +177,9 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Run 'pdfcpu help' for usage.")
 		os.Exit(1)
 	}
+
+	config.OwnerPW = opw
+	config.UserPW = upw
 
 	if cmd != nil {
 		process(cmd)

@@ -291,7 +291,7 @@ func writeStringLiteralObject(ctx *Context, objNumber, genNumber int, stringLite
 	sl := stringLiteral
 
 	if ctx.EncKey != nil {
-		s1, err := encryptString(ctx.AES4Strings, stringLiteral.Value(), objNumber, genNumber, ctx.EncKey)
+		s1, err := encryptString(stringLiteral.Value(), objNumber, genNumber, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
 		if err != nil {
 			return err
 		}
@@ -316,7 +316,7 @@ func writeHexLiteralObject(ctx *Context, objNumber, genNumber int, hexLiteral He
 	hl := hexLiteral
 
 	if ctx.EncKey != nil {
-		s1, err := encryptString(ctx.AES4Strings, hexLiteral.Value(), objNumber, genNumber, ctx.EncKey)
+		s1, err := encryptString(hexLiteral.Value(), objNumber, genNumber, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
 		if err != nil {
 			return err
 		}
@@ -367,7 +367,7 @@ func writeDictObject(ctx *Context, objNumber, genNumber int, d Dict) error {
 	}
 
 	if ctx.EncKey != nil {
-		_, err := encryptDeepObject(d, objNumber, genNumber, ctx.EncKey, ctx.AES4Strings)
+		_, err := encryptDeepObject(d, objNumber, genNumber, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
 		if err != nil {
 			return err
 		}
@@ -388,7 +388,7 @@ func writeArrayObject(ctx *Context, objNumber, genNumber int, a Array) error {
 	}
 
 	if ctx.EncKey != nil {
-		_, err := encryptDeepObject(a, objNumber, genNumber, ctx.EncKey, ctx.AES4Strings)
+		_, err := encryptDeepObject(a, objNumber, genNumber, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
 		if err != nil {
 			return err
 		}
@@ -470,7 +470,7 @@ func writeStreamDictObject(ctx *Context, objNumber, genNumber int, sd StreamDict
 		!isXRefStreamDict &&
 		!(len(sd.FilterPipeline) == 1 && sd.FilterPipeline[0].Name == "Crypt") {
 
-		sd.Raw, err = encryptStream(ctx.AES4Streams, sd.Raw, objNumber, genNumber, ctx.EncKey)
+		sd.Raw, err = encryptStream(sd.Raw, objNumber, genNumber, ctx.EncKey, ctx.AES4Streams, ctx.E.R)
 		if err != nil {
 			return err
 		}
@@ -592,7 +592,7 @@ func writeDeepDict(ctx *Context, d Dict, objNr, genNr int) error {
 func writeDeepStreamDict(ctx *Context, sd *StreamDict, objNr, genNr int) error {
 
 	if ctx.EncKey != nil {
-		_, err := encryptDeepObject(*sd, objNr, genNr, ctx.EncKey, ctx.AES4Strings)
+		_, err := encryptDeepObject(*sd, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
 		if err != nil {
 			return err
 		}

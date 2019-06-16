@@ -1566,7 +1566,7 @@ func streamDictForObject(ctx *Context, d Dict, objNr, streamInd int, streamOffse
 func dict(ctx *Context, d1 Dict, objNr, genNr, endInd, streamInd int) (d2 Dict, err error) {
 
 	if ctx.EncKey != nil {
-		_, err := decryptDeepObject(d1, objNr, genNr, ctx.EncKey, ctx.AES4Strings)
+		_, err := decryptDeepObject(d1, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
 		if err != nil {
 			return nil, err
 		}
@@ -1671,7 +1671,7 @@ func ParseObject(ctx *Context, offset int64, objNr, genNr int) (Object, error) {
 
 	case Array:
 		if ctx.EncKey != nil {
-			if _, err = decryptDeepObject(o, objNr, genNr, ctx.EncKey, ctx.AES4Strings); err != nil {
+			if _, err = decryptDeepObject(o, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R); err != nil {
 				return nil, err
 			}
 		}
@@ -1679,7 +1679,7 @@ func ParseObject(ctx *Context, offset int64, objNr, genNr int) (Object, error) {
 
 	case StringLiteral:
 		if ctx.EncKey != nil {
-			s1, err := decryptString(ctx.AES4Strings, o.Value(), objNr, genNr, ctx.EncKey)
+			s1, err := decryptString(o.Value(), objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
 			if err != nil {
 				return nil, err
 			}
@@ -1689,7 +1689,7 @@ func ParseObject(ctx *Context, offset int64, objNr, genNr int) (Object, error) {
 
 	case HexLiteral:
 		if ctx.EncKey != nil {
-			bb, err := decryptHexLiteral(o, ctx.AES4Strings, objNr, genNr, ctx.EncKey)
+			bb, err := decryptHexLiteral(o, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
 			if err != nil {
 				return nil, err
 			}
@@ -1880,7 +1880,7 @@ func saveDecodedStreamContent(ctx *Context, sd *StreamDict, objNr, genNr int, de
 	// ctx gets created after XRefStream parsing.
 	// XRefStreams are not encrypted.
 	if ctx != nil && ctx.EncKey != nil {
-		sd.Raw, err = decryptStream(ctx.AES4Streams, sd.Raw, objNr, genNr, ctx.EncKey)
+		sd.Raw, err = decryptStream(sd.Raw, objNr, genNr, ctx.EncKey, ctx.AES4Streams, ctx.E.R)
 		if err != nil {
 			return err
 		}
@@ -2343,8 +2343,8 @@ func handleUnencryptedFile(ctx *Context) error {
 
 	// Encrypt subcommand found.
 
-	if len(ctx.UserPW) == 0 && len(ctx.OwnerPW) == 0 {
-		return errors.New("Please provide a user password, owner password or both")
+	if ctx.OwnerPW == "" {
+		return errors.New("Please provide an owner password and an optional user password")
 	}
 
 	return nil
@@ -2381,43 +2381,51 @@ func needsOwnerAndUserPassword(cmd CommandMode) bool {
 	return cmd == CHANGEOPW || cmd == CHANGEUPW || cmd == ADDPERMISSIONS
 }
 
-func setupEncryptionKey(ctx *Context, encryptDictObjNr int) error {
+func handlePermissions(ctx *Context) error {
 
-	// Dereference encryptDict.
-	encryptDict, err := dereferencedDict(ctx, encryptDictObjNr)
+	// AES256 Validate permissions
+	ok, err := validatePermissions(ctx)
 	if err != nil {
 		return err
 	}
 
-	log.Read.Printf("%s\n", encryptDict)
+	if !ok {
+		return errors.New("Corrupted permissions after upw ok")
+	}
 
-	enc, err := supportedEncryption(ctx, encryptDict)
+	// Double check minimum permissions for pdfcpu processing.
+	if !hasNeededPermissions(ctx.Cmd, ctx.E) {
+		return errors.New("Insufficient access permissions")
+	}
+
+	return nil
+}
+
+func setupEncryptionKey(ctx *Context, d Dict) (err error) {
+
+	ctx.E, err = supportedEncryption(ctx, d)
 	if err != nil {
 		return err
 	}
-	if enc == nil {
-		return errors.New("Unsupported encryption mode")
-	}
 
-	ctx.E = enc
-
-	enc.ID, err = idBytes(ctx)
+	ctx.E.ID, err = idBytes(ctx)
 	if err != nil {
 		return err
 	}
 
 	var ok bool
 
-	//fmt.Println("checking opw")
-	// = permissions password
-	ok, ctx.EncKey, err = validateOwnerPassword(ctx)
+	//fmt.Printf("opw: <%s> upw: <%s> \n", ctx.OwnerPW, ctx.UserPW)
+
+	// Validate the owner password aka. permissions/master password.
+	ok, err = validateOwnerPassword(ctx)
 	if err != nil {
 		return err
 	}
 
 	// If the owner password does not match we generally move on if the user password is correct
 	// unless we need to insist on a correct owner password due to the specific command in progress.
-	if !ok && needsOwnerAndUserPassword(ctx.Cmd) {
+	if !ok && ctx.OwnerPW != "" && needsOwnerAndUserPassword(ctx.Cmd) {
 
 		if ctx.Cmd == CHANGEOPW {
 			return errors.New("Please provide the user password with -upw")
@@ -2427,18 +2435,25 @@ func setupEncryptionKey(ctx *Context, encryptDictObjNr int) error {
 			return errors.New("Please provide the owner password with -opw")
 		}
 
-		//return errors.New("Please provide both owner and user password")
 		return errors.New("Please provide all non-empty passwords")
 	}
 
 	// Generally the owner password, which is also regarded as the master password or set permissions password
 	// is sufficient for moving on. A password change is an exception since it requires both current passwords.
 	if ok && !needsOwnerAndUserPassword(ctx.Cmd) {
+		// AES256 Validate permissions
+		ok, err = validatePermissions(ctx)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return errors.New("Corrupted permissions after opw ok")
+		}
 		return nil
 	}
 
-	//fmt.Println("checking upw")
-	ok, ctx.EncKey, err = validateUserPassword(ctx)
+	// Validate the user password aka. document open password.
+	ok, err = validateUserPassword(ctx)
 	if err != nil {
 		return err
 	}
@@ -2446,12 +2461,9 @@ func setupEncryptionKey(ctx *Context, encryptDictObjNr int) error {
 		return errors.New("Please provide the correct password")
 	}
 
-	// Double check minimum permissions for pdfcpu processing.
-	if !hasNeededPermissions(ctx.Cmd, ctx.E) {
-		return errors.New("Insufficient access permissions")
-	}
+	//fmt.Printf("upw ok: %t\n", ok)
 
-	return nil
+	return handlePermissions(ctx)
 }
 
 func checkForEncryption(ctx *Context) error {
@@ -2464,13 +2476,20 @@ func checkForEncryption(ctx *Context) error {
 	}
 
 	// This file is encrypted.
-	log.Info.Printf("Encryption: %v\n", ir)
+	log.Read.Printf("Encryption: %v\n", ir)
 
 	if ctx.Cmd == ENCRYPT {
 		// We want to encrypt this file.
 		return errors.New("encrypt: This file is already encrypted")
 	}
 
+	// Dereference encryptDict.
+	d, err := dereferencedDict(ctx, ir.ObjectNumber.Value())
+	if err != nil {
+		return err
+	}
+	log.Read.Printf("%s\n", d)
+
 	// We need to decrypt this file in order to read it.
-	return setupEncryptionKey(ctx, ir.ObjectNumber.Value())
+	return setupEncryptionKey(ctx, d)
 }
