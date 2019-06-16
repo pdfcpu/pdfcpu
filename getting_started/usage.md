@@ -107,7 +107,7 @@ pdfcpu attachments extract [-verbose] [-upw userpw] [-opw ownerpw] inFile outDir
 
 Secure your PDFs:
 ```sh
-pdfcpu encrypt [-verbose] [-mode rc4|aes] [-key 40|128] [-perm none|all] [-upw userpw] [-opw ownerpw] inFile [outFile]
+pdfcpu encrypt [-verbose] [-mode rc4|aes] [-key 40|128|256] [-perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]
 pdfcpu decrypt [-verbose] [-upw userpw] [-opw ownerpw] inFile [outFile]
 pdfcpu changeopw [-verbose] [-upw userpw] inFile opwOld opwNew
 pdfcpu changeupw [-verbose] [-opw ownerpw] inFile upwOld upwNew
