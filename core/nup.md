@@ -32,8 +32,8 @@ pdfcpu nup|n-up [-v(erbose)|vv] [-pages pageSelection] [description] outFile n i
 
 | flag                             | description     | required
 |:---------------------------------|:----------------|---------
-| [verbose](../getting_started.md) | turn on logging | no
-| [vv](../getting_started.md)      | verbose logging | no
+| [verbose](../getting_started/common_flags.md) | turn on logging | no
+| [vv](../getting_started/common_flags.md)      | verbose logging | no
 | [pages](../getting_started/page_selection) | page selection  | no
 
 <br>

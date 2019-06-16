@@ -31,6 +31,7 @@ Please refer to [validate](../core/validate.md), [extract](../extract/extract.md
 *Owner password*<br>
 This is the password needed to change the access permissions.
 It is commonly also referred to as the *master password* or the *permissions password*.
+Since some PDF readers skip over blank owner passwords pdfcpu makes this mandatory and non empty if you want to encrypt your documents with pdfcpu.
 
 ## upw
 

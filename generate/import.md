@@ -27,8 +27,8 @@ pdfcpu import [-v(erbose)|vv] [description] outFile imageFile...
 
 | flag                             | description
 |:---------------------------------|:---------------
-| [verbose](../getting_started.md) | turn on logging   | no
-| [vv](../getting_started.md)      | verbose logging   | no
+| [verbose](../getting_started/common_flags.md) | turn on logging   | no
+| [vv](../getting_started/common_flags.md)      | verbose logging   | no
 
 <br>
 

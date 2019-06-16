@@ -18,9 +18,9 @@ usage: pdfcpu changeupw [-v(erbose)|vv] [-opw ownerpw] inFile upwOld upwNew
 
 | name                             | description     | required
 |:---------------------------------|:----------------|:--------
-| [verbose](../getting_started.md) | turn on logging | no
-| [vv](../getting_started.md)      | verbose logging | no
-| [opw](../getting_started.md)     | owner password  | if set
+| [verbose](../getting_started/common_flags.md) | turn on logging | no
+| [vv](../getting_started/common_flags.md)      | verbose logging | no
+| [opw](../getting_started/common_flags.md)    | owner password  | if set
 
 <br>
 

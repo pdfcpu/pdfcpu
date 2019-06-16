@@ -22,11 +22,11 @@ pdfcpu permissions add [-v(erbose)|vv] [-perm none|all] [-upw userpw] -opw owner
 
 | name                             | description     | required | values    | default
 |:---------------------------------|:----------------|:---------|:----------|:-------
-| [verbose](../getting_started.md) | turn on logging | no
-| [vv](../getting_started.md)      | verbose logging | no
+| [verbose](../getting_started/common_flags.md) | turn on logging | no
+| [vv](../getting_started/common_flags.md)      | verbose logging | no
 | perm                             | permissions     | no       | none, all | none
-| [upw](../getting_started.md)     | user password   | if set
-| [opw](../getting_started.md)     | owner password  | if set
+| [upw](../getting_started/common_flags.md)     | user password   | if set
+| [opw](../getting_started/common_flags.md)     | owner password  | if set
 
 <br>
 
