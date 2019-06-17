@@ -78,6 +78,9 @@ func (m CommandMap) Handle(cmdPrefix string, command string, config *pdfcpu.Conf
 
 	parseFlags(m[cmdStr])
 
+	config.OwnerPW = opw
+	config.UserPW = upw
+
 	if m[cmdStr].handler != nil {
 		return m[cmdStr].handler(config), command, nil
 	}

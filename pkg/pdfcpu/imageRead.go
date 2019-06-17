@@ -17,7 +17,6 @@ limitations under the License.
 package pdfcpu
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -351,7 +350,7 @@ func imgToImageDict(xRefTable *XRefTable, img image.Image) (*StreamDict, error) 
 	//	fmt.Println("YCbCr")
 
 	default:
-		fmt.Printf("unknown color model: %T\n", img)
+		//fmt.Printf("unknown color model: %T\n", img)
 		return nil, ErrUnsupportedColorSpace
 
 	}

@@ -68,11 +68,11 @@ Even if you want to dive right into pdfcpu backend integration it is highly reco
 
 ## Status
 
-[Version: 0.1.24](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.24)
+[Version: 0.1.25](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.25)
 
 * Rudimentory support for AES-256 encryption as laid out in [Adobe® Supplement to the ISO 32000
 BaseVersion: 1.7 ExtensionLevel: 3](https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/adobe_supplement_iso32000.pdf)
-* Fixes #74-#77, #80-#83, #85, #86
+* Fixes #88
 
 ## Reminder
 

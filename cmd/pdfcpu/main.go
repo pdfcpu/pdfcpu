@@ -178,9 +178,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	config.OwnerPW = opw
-	config.UserPW = upw
-
 	if cmd != nil {
 		process(cmd)
 	}

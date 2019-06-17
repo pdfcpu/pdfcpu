@@ -438,8 +438,6 @@ func validateEncryptModeFlag() {
 }
 func validateEncryptFlags() {
 
-	fmt.Printf("mode:<%s> key:<%s>\n", mode, key)
-
 	validateEncryptModeFlag()
 
 	if perm != "none" && perm != "all" && perm != "" {
@@ -464,7 +462,7 @@ func prepareEncryptCommand(config *pdfcpu.Configuration) *api.Command {
 	}
 
 	if config.OwnerPW == "" {
-		fmt.Fprintf(os.Stderr, "missing non-empty owner password")
+		fmt.Fprintln(os.Stderr, "missing non-empty owner password!")
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageEncrypt)
 		os.Exit(1)
 	}
@@ -566,7 +564,6 @@ func prepareWatermarksCommand(config *pdfcpu.Configuration, onTop bool) *api.Com
 		os.Exit(1)
 	}
 
-	//fmt.Printf("details: <%s>\n", flag.Arg(0))
 	wm, err := pdfcpu.ParseWatermarkDetails(flag.Arg(0), onTop)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -635,7 +632,6 @@ func prepareImportImagesCommand(config *pdfcpu.Configuration) *api.Command {
 	}
 
 	// pdfcpu import description outFile imageFile...
-	//fmt.Printf("details: <%s>\n", flag.Arg(0))
 	imp, err := pdfcpu.ParseImportDetails(flag.Arg(0))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -819,7 +815,6 @@ func prepareNUpCommand(config *pdfcpu.Configuration) *api.Command {
 	}
 
 	// pdfcpu nup description outFile n inFile|imageFiles...
-	//fmt.Printf("details: <%s>\n", flag.Arg(0))
 	err = pdfcpu.ParseNUpDetails(flag.Arg(0), nup)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
@@ -859,7 +854,6 @@ func prepareGridCommand(config *pdfcpu.Configuration) *api.Command {
 	}
 
 	// pdfcpu grid description outFile m n inFile|imageFiles...
-	//fmt.Printf("details: <%s>\n", flag.Arg(0))
 	err = pdfcpu.ParseNUpDetails(flag.Arg(0), nup)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
