@@ -6,6 +6,7 @@ layout: default
 
 | Date      | Tag / Commit | Description  
 |:----------|:-------------|:--------
+|2019-06-17 | [v0.1.25](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.25) | Fix #88
 |2019-06-16 | [v0.1.24](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.24) | Add AES-256 encryption
 |2019-06-10 | [86b3445](https://github.com/hhrutter/pdfcpu/commit/86b344515ab4f12e80ea26f3c0e519e28047274f) | Fix #82, #86 repairs corrupt xref sections.
 |2019-06-03 | [33da2dd](https://github.com/hhrutter/pdfcpu/commit/33da2ddb3686ab98567f1abefbc62e8d15ed2720) | Fix #85.
