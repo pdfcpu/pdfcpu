@@ -90,6 +90,7 @@ func Process(cmd *Command) (out []string, err error) {
 
 // ValidateCommand creates a new command to validate a file.
 func ValidateCommand(pdfFileName string, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.VALIDATE
 	return &Command{
 		Mode:   pdf.VALIDATE,
 		InFile: &pdfFileName,
@@ -98,6 +99,7 @@ func ValidateCommand(pdfFileName string, config *pdf.Configuration) *Command {
 
 // OptimizeCommand creates a new command to optimize a file.
 func OptimizeCommand(pdfFileNameIn, pdfFileNameOut string, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.OPTIMIZE
 	return &Command{
 		Mode:    pdf.OPTIMIZE,
 		InFile:  &pdfFileNameIn,
@@ -107,6 +109,7 @@ func OptimizeCommand(pdfFileNameIn, pdfFileNameOut string, config *pdf.Configura
 
 // SplitCommand creates a new command to split a file into single page file.
 func SplitCommand(pdfFileNameIn, dirNameOut string, span int, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.SPLIT
 	return &Command{
 		Mode:   pdf.SPLIT,
 		InFile: &pdfFileNameIn,
@@ -117,6 +120,7 @@ func SplitCommand(pdfFileNameIn, dirNameOut string, span int, config *pdf.Config
 
 // MergeCommand creates a new command to merge files.
 func MergeCommand(pdfFileNamesIn []string, pdfFileNameOut string, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.MERGE
 	return &Command{
 		Mode:    pdf.MERGE,
 		InFiles: pdfFileNamesIn,
@@ -127,6 +131,7 @@ func MergeCommand(pdfFileNamesIn []string, pdfFileNameOut string, config *pdf.Co
 // ExtractImagesCommand creates a new command to extract embedded images.
 // (experimental
 func ExtractImagesCommand(pdfFileNameIn, dirNameOut string, pageSelection []string, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.EXTRACTIMAGES
 	return &Command{
 		Mode:          pdf.EXTRACTIMAGES,
 		InFile:        &pdfFileNameIn,
@@ -138,6 +143,7 @@ func ExtractImagesCommand(pdfFileNameIn, dirNameOut string, pageSelection []stri
 // ExtractFontsCommand creates a new command to extract embedded fonts.
 // (experimental)
 func ExtractFontsCommand(pdfFileNameIn, dirNameOut string, pageSelection []string, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.EXTRACTFONTS
 	return &Command{
 		Mode:          pdf.EXTRACTFONTS,
 		InFile:        &pdfFileNameIn,
@@ -148,6 +154,7 @@ func ExtractFontsCommand(pdfFileNameIn, dirNameOut string, pageSelection []strin
 
 // ExtractPagesCommand creates a new command to extract specific pages of a file.
 func ExtractPagesCommand(pdfFileNameIn, dirNameOut string, pageSelection []string, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.EXTRACTPAGES
 	return &Command{
 		Mode:          pdf.EXTRACTPAGES,
 		InFile:        &pdfFileNameIn,
@@ -158,6 +165,7 @@ func ExtractPagesCommand(pdfFileNameIn, dirNameOut string, pageSelection []strin
 
 // ExtractContentCommand creates a new command to extract page content streams.
 func ExtractContentCommand(pdfFileNameIn, dirNameOut string, pageSelection []string, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.EXTRACTCONTENT
 	return &Command{
 		Mode:          pdf.EXTRACTCONTENT,
 		InFile:        &pdfFileNameIn,
@@ -168,6 +176,7 @@ func ExtractContentCommand(pdfFileNameIn, dirNameOut string, pageSelection []str
 
 // ExtractMetadataCommand creates a new command to extract metadata streams.
 func ExtractMetadataCommand(pdfFileNameIn, dirNameOut string, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.EXTRACTMETADATA
 	return &Command{
 		Mode:   pdf.EXTRACTMETADATA,
 		InFile: &pdfFileNameIn,
@@ -178,6 +187,7 @@ func ExtractMetadataCommand(pdfFileNameIn, dirNameOut string, config *pdf.Config
 // TrimCommand creates a new command to trim the pages of a file.
 func TrimCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []string, config *pdf.Configuration) *Command {
 	// A slice parameter may be called with nil => empty slice.
+	config.Cmd = pdf.TRIM
 	return &Command{
 		Mode:          pdf.TRIM,
 		InFile:        &pdfFileNameIn,
@@ -188,6 +198,7 @@ func TrimCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []string, c
 
 // ListAttachmentsCommand create a new command to list attachments.
 func ListAttachmentsCommand(pdfFileNameIn string, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.LISTATTACHMENTS
 	return &Command{
 		Mode:   pdf.LISTATTACHMENTS,
 		InFile: &pdfFileNameIn,
@@ -196,6 +207,7 @@ func ListAttachmentsCommand(pdfFileNameIn string, config *pdf.Configuration) *Co
 
 // AddAttachmentsCommand creates a new command to add attachments.
 func AddAttachmentsCommand(pdfFileNameIn string, fileNamesIn []string, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.ADDATTACHMENTS
 	return &Command{
 		Mode:    pdf.ADDATTACHMENTS,
 		InFile:  &pdfFileNameIn,
@@ -205,6 +217,7 @@ func AddAttachmentsCommand(pdfFileNameIn string, fileNamesIn []string, config *p
 
 // RemoveAttachmentsCommand creates a new command to remove attachments.
 func RemoveAttachmentsCommand(pdfFileNameIn string, fileNamesIn []string, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.REMOVEATTACHMENTS
 	return &Command{
 		Mode:    pdf.REMOVEATTACHMENTS,
 		InFile:  &pdfFileNameIn,
@@ -214,6 +227,7 @@ func RemoveAttachmentsCommand(pdfFileNameIn string, fileNamesIn []string, config
 
 // ExtractAttachmentsCommand creates a new command to extract attachments.
 func ExtractAttachmentsCommand(pdfFileNameIn, dirNameOut string, fileNamesIn []string, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.EXTRACTATTACHMENTS
 	return &Command{
 		Mode:    pdf.EXTRACTATTACHMENTS,
 		InFile:  &pdfFileNameIn,
@@ -224,6 +238,7 @@ func ExtractAttachmentsCommand(pdfFileNameIn, dirNameOut string, fileNamesIn []s
 
 // EncryptCommand creates a new command to encrypt a file.
 func EncryptCommand(pdfFileNameIn, pdfFileNameOut string, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.ENCRYPT
 	return &Command{
 		Mode:    pdf.ENCRYPT,
 		InFile:  &pdfFileNameIn,
@@ -233,6 +248,7 @@ func EncryptCommand(pdfFileNameIn, pdfFileNameOut string, config *pdf.Configurat
 
 // DecryptCommand creates a new command to decrypt a file.
 func DecryptCommand(pdfFileNameIn, pdfFileNameOut string, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.DECRYPT
 	return &Command{
 		Mode:    pdf.DECRYPT,
 		InFile:  &pdfFileNameIn,
@@ -242,6 +258,7 @@ func DecryptCommand(pdfFileNameIn, pdfFileNameOut string, config *pdf.Configurat
 
 // ChangeUserPWCommand creates a new command to change the user password.
 func ChangeUserPWCommand(pdfFileNameIn, pdfFileNameOut string, config *pdf.Configuration, pwOld, pwNew *string) *Command {
+	config.Cmd = pdf.CHANGEUPW
 	return &Command{
 		Mode:    pdf.CHANGEUPW,
 		InFile:  &pdfFileNameIn,
@@ -253,6 +270,7 @@ func ChangeUserPWCommand(pdfFileNameIn, pdfFileNameOut string, config *pdf.Confi
 
 // ChangeOwnerPWCommand creates a new command to change the owner password.
 func ChangeOwnerPWCommand(pdfFileNameIn, pdfFileNameOut string, config *pdf.Configuration, pwOld, pwNew *string) *Command {
+	config.Cmd = pdf.CHANGEOPW
 	return &Command{
 		Mode:    pdf.CHANGEOPW,
 		InFile:  &pdfFileNameIn,
@@ -264,6 +282,7 @@ func ChangeOwnerPWCommand(pdfFileNameIn, pdfFileNameOut string, config *pdf.Conf
 
 // ListPermissionsCommand create a new command to list permissions.
 func ListPermissionsCommand(pdfFileNameIn string, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.LISTPERMISSIONS
 	return &Command{
 		Mode:   pdf.LISTPERMISSIONS,
 		InFile: &pdfFileNameIn,
@@ -272,6 +291,7 @@ func ListPermissionsCommand(pdfFileNameIn string, config *pdf.Configuration) *Co
 
 // AddPermissionsCommand creates a new command to add permissions.
 func AddPermissionsCommand(pdfFileNameIn string, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.ADDPERMISSIONS
 	return &Command{
 		Mode:   pdf.ADDPERMISSIONS,
 		InFile: &pdfFileNameIn,
@@ -334,6 +354,7 @@ func processPermissions(cmd *Command) (out []string, err error) {
 
 // AddWatermarksCommand creates a new command to add Watermarks to a file.
 func AddWatermarksCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []string, wm *pdf.Watermark, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.ADDWATERMARKS
 	return &Command{
 		Mode:          pdf.ADDWATERMARKS,
 		InFile:        &pdfFileNameIn,
@@ -345,6 +366,7 @@ func AddWatermarksCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []
 
 // ImportImagesCommand creates a new command to import images.
 func ImportImagesCommand(imageFileNamesIn []string, pdfFileNameOut string, imp *pdf.Import, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.IMPORTIMAGES
 	return &Command{
 		Mode:    pdf.IMPORTIMAGES,
 		InFiles: imageFileNamesIn,
@@ -355,6 +377,7 @@ func ImportImagesCommand(imageFileNamesIn []string, pdfFileNameOut string, imp *
 
 // InsertPagesCommand creates a new command to insert a blank page before selected pages.
 func InsertPagesCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []string, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.INSERTPAGES
 	return &Command{
 		Mode:          pdf.INSERTPAGES,
 		InFile:        &pdfFileNameIn,
@@ -365,6 +388,7 @@ func InsertPagesCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []st
 
 // RemovePagesCommand creates a new command to remove selected pages.
 func RemovePagesCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []string, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.REMOVEPAGES
 	return &Command{
 		Mode:          pdf.REMOVEPAGES,
 		InFile:        &pdfFileNameIn,
@@ -375,6 +399,7 @@ func RemovePagesCommand(pdfFileNameIn, pdfFileNameOut string, pageSelection []st
 
 // RotateCommand creates a new command to rotate pages.
 func RotateCommand(pdfFileNameIn string, rotation int, pageSelection []string, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.ROTATE
 	return &Command{
 		Mode:          pdf.ROTATE,
 		InFile:        &pdfFileNameIn,
@@ -385,6 +410,7 @@ func RotateCommand(pdfFileNameIn string, rotation int, pageSelection []string, c
 
 // NUpCommand creates a new command to render PDFs or image files in n-up fashion.
 func NUpCommand(fileNamesIn []string, pdfFileNameOut string, pageSelection []string, nUp *pdf.NUp, config *pdf.Configuration) *Command {
+	config.Cmd = pdf.NUP
 	return &Command{
 		Mode:          pdf.NUP,
 		InFiles:       fileNamesIn,
