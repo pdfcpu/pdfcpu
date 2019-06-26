@@ -637,13 +637,9 @@ func parseHybridXRefStream(offset *int64, ctx *Context) error {
 		return err
 	}
 
-	prevOffset, err := parseXRefStream(rd, offset, ctx)
+	_, err = parseXRefStream(rd, offset, ctx)
 	if err != nil {
 		return err
-	}
-
-	if prevOffset != nil {
-		return errors.New("parseHybridXRefStream: previous xref stream not allowed")
 	}
 
 	log.Read.Println("parseHybridXRefStream: end")

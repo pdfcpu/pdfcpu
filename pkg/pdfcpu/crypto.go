@@ -710,6 +710,7 @@ func checkV(ctx *Context, d Dict) (*int, error) {
 		return nil, err
 	}
 
+	// v == 2 implies RC4
 	if *v != 4 && *v != 5 {
 		return v, nil
 	}
@@ -867,11 +868,6 @@ func validateOAndU(d Dict) (o, u []byte, err error) {
 // SupportedEncryption returns a pointer to a struct encapsulating used encryption.
 func supportedEncryption(ctx *Context, d Dict) (*Enc, error) {
 
-	// Algorithm
-	if ok := validateAlgorithm(ctx); !ok {
-		return nil, errors.New("unsupported encryption algorithm")
-	}
-
 	// Filter
 	filter := d.NameEntry("Filter")
 	if filter == nil || *filter != "Standard" {
@@ -972,12 +968,11 @@ func decryptKey(objNumber, generation int, key []byte, aes bool) []byte {
 // EncryptBytes encrypts s using RC4 or AES.
 func encryptBytes(b []byte, objNr, genNr int, encKey []byte, needAES bool, r int) ([]byte, error) {
 
-	k := encKey
-	if r != 5 {
-		k = decryptKey(objNr, genNr, encKey, needAES)
-	}
-
 	if needAES {
+		k := encKey
+		if r != 5 {
+			k = decryptKey(objNr, genNr, encKey, needAES)
+		}
 		bb, err := encryptAESBytes(b, k)
 		if err != nil {
 			return nil, err
@@ -985,7 +980,7 @@ func encryptBytes(b []byte, objNr, genNr int, encKey []byte, needAES bool, r int
 		return bb, nil
 	}
 
-	return applyRC4CipherBytes(b, objNr, genNr, k, needAES)
+	return applyRC4CipherBytes(b, objNr, genNr, encKey, needAES)
 }
 
 // EncryptString encrypts s using RC4 or AES.
@@ -1007,12 +1002,11 @@ func encryptString(s string, objNr, genNr int, key []byte, needAES bool, r int) 
 // decryptBytes decrypts bb using RC4 or AES.
 func decryptBytes(b []byte, objNr, genNr int, encKey []byte, needAES bool, r int) ([]byte, error) {
 
-	k := encKey
-	if r != 5 {
-		k = decryptKey(objNr, genNr, encKey, needAES)
-	}
-
 	if needAES {
+		k := encKey
+		if r != 5 {
+			k = decryptKey(objNr, genNr, encKey, needAES)
+		}
 		bb, err := decryptAESBytes(b, k)
 		if err != nil {
 			return nil, err
@@ -1020,7 +1014,7 @@ func decryptBytes(b []byte, objNr, genNr int, encKey []byte, needAES bool, r int
 		return bb, nil
 	}
 
-	return applyRC4CipherBytes(b, objNr, genNr, k, needAES)
+	return applyRC4CipherBytes(b, objNr, genNr, encKey, needAES)
 }
 
 // decryptString decrypts s using RC4 or AES.
@@ -1050,19 +1044,6 @@ func applyRC4CipherBytes(b []byte, objNr, genNr int, key []byte, needAES bool) (
 	c.XORKeyStream(b, b)
 
 	return b, nil
-}
-
-func applyRC4Cipher(b []byte, objNr, genNr int, key []byte, needAES bool) (*string, error) {
-
-	c, err := rc4.NewCipher(decryptKey(objNr, genNr, key, needAES))
-	if err != nil {
-		return nil, err
-	}
-
-	c.XORKeyStream(b, b)
-	s1 := string(b)
-
-	return &s1, nil
 }
 
 func encrypt(m map[string]Object, k string, v Object, objNr, genNr int, key []byte, needAES bool, r int) error {

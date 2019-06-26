@@ -1709,8 +1709,8 @@ func TestAcroformDemoPDF(t *testing.T) {
 
 }
 
-// Enable this test for debugging of a specicif file.
-func XTest1ValidateCommand(t *testing.T) {
+// Enable this test for debugging of a specific file.
+func XTestSomeCommand(t *testing.T) {
 
 	PDFCPULog.SetDefaultTraceLogger()
 	//PDFCPULog.SetDefaultParseLogger()
@@ -1720,10 +1720,8 @@ func XTest1ValidateCommand(t *testing.T) {
 	PDFCPULog.SetDefaultWriteLogger()
 
 	config := pdf.NewDefaultConfiguration()
-	config.UserPW = "upw"
-	config.OwnerPW = "opw"
 
-	_, err := Process(EncryptCommand("testdata/upc.pdf", "testdata/upcenc.pdf", config))
+	_, err := Process(ValidateCommand("testdata/test.pdf", config))
 	if err != nil {
 		t.Fatalf("TestValidateCommand: %v\n", err)
 	}

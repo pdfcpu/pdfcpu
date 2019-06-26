@@ -865,6 +865,10 @@ func setupEncryption(ctx *Context) error {
 
 	var err error
 
+	if ok := validateAlgorithm(ctx); !ok {
+		return errors.New("unsupported encryption algorithm")
+	}
+
 	d := newEncryptDict(
 		ctx.EncryptUsingAES,
 		ctx.EncryptKeyLength,

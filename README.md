@@ -5,6 +5,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/hhrutter/pdfcpu/badge.svg?branch=master)](https://coveralls.io/github/hhrutter/pdfcpu?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/hhrutter/pdfcpu)](https://goreportcard.com/report/github.com/hhrutter/pdfcpu)
 [![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Latest release](https://img.shields.io/github/release/hhrutter/pdfcpu.svg)](https://github.com/hhrutter/pdfcpu/releases)
 
 ![logo](resources/pdfchip3.png)
 
