@@ -17,12 +17,17 @@ limitations under the License.
 package pdfcpu
 
 const (
-
 	// ValidationStrict ensures 100% compliance with the spec (PDF 32000-1:2008).
-	ValidationStrict = 0
+	ValidationStrict int = iota
 
 	// ValidationRelaxed ensures PDF compliance based on frequently encountered validation errors.
-	ValidationRelaxed = 1
+	ValidationRelaxed
+
+	// ValidationNone bypasses validation.
+	ValidationNone
+)
+
+const (
 
 	// StatsFileNameDefault is the standard stats filename.
 	StatsFileNameDefault = "stats.csv"

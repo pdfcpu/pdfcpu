@@ -133,6 +133,10 @@ func Validate(cmd *Command) ([]string, error) {
 	config := cmd.Config
 	fileIn := *cmd.InFile
 
+	if config.ValidationMode == pdf.ValidationNone {
+		return nil, errors.New("Validate: mode == ValidationNone")
+	}
+
 	from1 := time.Now()
 
 	log.API.Printf("validating(mode=%s) %s ...\n", config.ValidationModeString(), fileIn)
@@ -239,8 +243,13 @@ func readAndValidate(fileIn string, config *pdf.Configuration, from1 time.Time) 
 	}
 	dur1 = time.Since(from1).Seconds()
 
+	if config.ValidationMode == pdf.ValidationNone {
+		// Bypass validation
+		return ctx, 0, 0, nil
+	}
+
 	from2 := time.Now()
-	//log.API.Printf("validating %s ...\n", fileIn)
+
 	err = validate.XRefTable(ctx.XRefTable)
 	if err != nil {
 		return nil, 0, 0, err

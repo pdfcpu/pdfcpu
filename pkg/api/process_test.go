@@ -517,8 +517,12 @@ func TestOptimizeCommandWithCRLF(t *testing.T) {
 func TestSplitCommand(t *testing.T) {
 
 	span := 1
+	conf := pdf.NewDefaultConfiguration()
 
-	_, err := Process(SplitCommand("testdata/Acroforms2.pdf", outDir, span, pdf.NewDefaultConfiguration()))
+	// Skip validation to boost processing.
+	conf.ValidationMode = pdf.ValidationNone
+
+	_, err := Process(SplitCommand("testdata/Acroforms2.pdf", outDir, span, conf))
 	if err != nil {
 		t.Fatalf("TestSplitCommand (using span=1): %v\n", err)
 	}
