@@ -1028,38 +1028,17 @@ func headerVersion(rs io.ReadSeeker) (v *Version, eolCount int, err error) {
 
 	// Get first line of file which holds the version of this PDFFile.
 	// We call this the header version.
-
-	_, err = rs.Seek(0, io.SeekStart)
-	if err != nil {
+	if _, err = rs.Seek(0, io.SeekStart); err != nil {
 		return nil, 0, err
 	}
 
 	buf := make([]byte, 20)
-	_, err = rs.Read(buf)
-	if err != nil {
+	if _, err = rs.Read(buf); err != nil {
 		return nil, 0, err
 	}
 
-	b := string(buf)
-
-	// Detect the used eol which should be 1 (0x00, 0x0D) or 2 chars (0x0D0A)long.
-	// %PDF-1.x{eol}
-	if b[8] == 0x0A {
-		eolCount = 1
-	} else if b[8] == 0x0D {
-		eolCount = 1
-		if b[9] == 0x0A {
-			eolCount = 2
-		}
-	} else {
-		return nil, 0, errCorruptHeader
-	}
-
-	// Parse the PDF-Version.
-
+	s := string(buf)
 	prefix := "%PDF-"
-
-	s := strings.TrimSpace(string(buf))
 
 	if len(s) < 8 || !strings.HasPrefix(s, prefix) {
 		return nil, 0, errCorruptHeader
@@ -1068,6 +1047,22 @@ func headerVersion(rs io.ReadSeeker) (v *Version, eolCount int, err error) {
 	pdfVersion, err := PDFVersion(s[len(prefix) : len(prefix)+3])
 	if err != nil {
 		return nil, 0, errors.Wrapf(err, "headerVersion: unknown PDF Header Version")
+	}
+
+	s = s[8:]
+	s = strings.TrimLeft(s, "\t\f ")
+
+	// Detect the used eol which should be 1 (0x00, 0x0D) or 2 chars (0x0D0A)long.
+	// %PDF-1.x{whiteSpace}{eol}
+	if s[0] == 0x0A {
+		eolCount = 1
+	} else if s[0] == 0x0D {
+		eolCount = 1
+		if s[9] == 0x0A {
+			eolCount = 2
+		}
+	} else {
+		return nil, 0, errCorruptHeader
 	}
 
 	log.Read.Printf("headerVersion: end, found header version: %s\n", pdfVersion)
