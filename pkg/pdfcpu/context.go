@@ -38,18 +38,18 @@ type Context struct {
 }
 
 // NewContext initializes a new Context.
-func NewContext(rs io.ReadSeeker, fileName string, fileSize int64, config *Configuration) (*Context, error) {
+func NewContext(rs io.ReadSeeker, conf *Configuration) (*Context, error) {
 
-	if config == nil {
-		config = NewDefaultConfiguration()
+	if conf == nil {
+		conf = NewDefaultConfiguration()
 	}
 
 	ctx := &Context{
-		config,
-		newXRefTable(config.ValidationMode),
-		newReadContext(rs, fileName, fileSize),
+		conf,
+		newXRefTable(conf.ValidationMode),
+		newReadContext(rs),
 		newOptimizationContext(),
-		NewWriteContext(config.Eol),
+		NewWriteContext(conf.Eol),
 		false,
 		false,
 	}
@@ -151,6 +151,82 @@ func (ctx *Context) String() string {
 	return strings.Join(logStr, "")
 }
 
+// InfoDigest returns info about ctx.
+func (ctx *Context) InfoDigest() []string {
+	var ss []string
+
+	v := ctx.HeaderVersion
+	if ctx.RootVersion != nil {
+		v = ctx.RootVersion
+	}
+	ss = append(ss, fmt.Sprintf("%20s: %s", "PDF version", v))
+	ss = append(ss, fmt.Sprintf("%20s: %d", "Page count", ctx.PageCount))
+	//ss = append(ss, fmt.Sprintf("%20s: %d x %d cm", "Page size", 0, 0))
+	ss = append(ss, fmt.Sprintf(".........................................."))
+	ss = append(ss, fmt.Sprintf("%20s: %s", "Title", ctx.Title))
+	ss = append(ss, fmt.Sprintf("%20s: %s", "Author", ctx.Author))
+	ss = append(ss, fmt.Sprintf("%20s: %s", "Subject", ctx.Subject))
+	ss = append(ss, fmt.Sprintf("%20s: %s", "PDF Producer", ctx.Producer))
+	ss = append(ss, fmt.Sprintf("%20s: %s", "Content creator", ctx.Creator))
+	ss = append(ss, fmt.Sprintf("%20s: %s", "Creation date", ctx.CreationDate))
+	ss = append(ss, fmt.Sprintf("%20s: %s", "Modification date", ctx.ModDate))
+	ss = append(ss, fmt.Sprintf(".........................................."))
+
+	s := "No"
+	if ctx.Tagged {
+		s = "Yes"
+	}
+	ss = append(ss, fmt.Sprintf("              Tagged: %s", s))
+
+	s = "No"
+	if ctx.Read.Hybrid {
+		s = "Yes"
+	}
+	ss = append(ss, fmt.Sprintf("              Hybrid: %s", s))
+
+	s = "No"
+	if ctx.Read.Linearized {
+		s = "Yes"
+	}
+	ss = append(ss, fmt.Sprintf("          Linearized: %s", s))
+
+	s = "No"
+	if ctx.Read.UsingXRefStreams {
+		s = "Yes"
+	}
+	ss = append(ss, fmt.Sprintf("  Using XRef streams: %s", s))
+
+	s = "No"
+	if ctx.Read.UsingObjectStreams {
+		s = "Yes"
+	}
+	ss = append(ss, fmt.Sprintf("Using object streams: %s", s))
+
+	ss = append(ss, fmt.Sprintf(".........................................."))
+
+	s = "No"
+	if ctx.Encrypt != nil {
+		s = "Yes"
+	}
+	ss = append(ss, fmt.Sprintf("%20s: %s", "Encrypted", s))
+
+	l := Permissions(ctx)
+	if len(l) == 1 {
+		ss = append(ss, fmt.Sprintf("%20s: %s", "Permissions", l[0]))
+	} else {
+		ss = append(ss, fmt.Sprintf("%20s:", "Permissions"))
+		for _, s := range l {
+			ss = append(ss, s)
+		}
+	}
+
+	//if ctx.ID != nil {
+	//	ss = append(ss, fmt.Sprintf("Id: %s", ctx.ID))
+	//}
+
+	return ss
+}
+
 // ReadContext represents the context for reading a PDF file.
 type ReadContext struct {
 	FileName            string // The input PDF-File.
@@ -170,11 +246,9 @@ type ReadContext struct {
 	XRefStreams         IntSet // All object numbers of any xref streams found.
 }
 
-func newReadContext(rs io.ReadSeeker, fileName string, fileSize int64) *ReadContext {
+func newReadContext(rs io.ReadSeeker) *ReadContext {
 	return &ReadContext{
 		rs:            rs,
-		FileName:      fileName,
-		FileSize:      fileSize,
 		ObjectStreams: IntSet{},
 		XRefStreams:   IntSet{},
 	}

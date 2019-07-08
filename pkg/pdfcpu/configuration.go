@@ -59,7 +59,7 @@ const (
 	REMOVEATTACHMENTS
 	EXTRACTATTACHMENTS
 	LISTATTACHMENTS
-	ADDPERMISSIONS
+	SETPERMISSIONS
 	LISTPERMISSIONS
 	ENCRYPT
 	DECRYPT
@@ -71,6 +71,7 @@ const (
 	REMOVEPAGES
 	ROTATE
 	NUP
+	INFO
 )
 
 // Configuration of a Context.
@@ -121,7 +122,7 @@ type Configuration struct {
 	EncryptKeyLength int
 
 	// Supplied user access permissions, see Table 22
-	UserAccessPermissions int16
+	Permissions int16
 
 	// Command being executed.
 	Cmd CommandMode
@@ -131,24 +132,36 @@ type Configuration struct {
 func NewDefaultConfiguration() *Configuration {
 
 	return &Configuration{
-		Reader15:              true,
-		DecodeAllStreams:      false,
-		ValidationMode:        ValidationRelaxed,
-		Eol:                   EolLF,
-		WriteObjectStream:     true,
-		WriteXRefStream:       true,
-		CollectStats:          true,
-		EncryptUsingAES:       true,
-		EncryptKeyLength:      256,
-		UserAccessPermissions: PermissionsNone,
+		Reader15:          true,
+		DecodeAllStreams:  false,
+		ValidationMode:    ValidationRelaxed,
+		Eol:               EolLF,
+		WriteObjectStream: true,
+		WriteXRefStream:   true,
+		CollectStats:      true,
+		EncryptUsingAES:   true,
+		EncryptKeyLength:  256,
+		Permissions:       PermissionsNone,
 	}
 }
 
-// NewConfiguration returns a default configuration for userPW and ownerPW.
-func NewConfiguration(userPW, ownerPW string) *Configuration {
+// NewAESConfiguration returns a default configuration for AES encrpytion.
+func NewAESConfiguration(userPW, ownerPW string, keyLength int) *Configuration {
 	c := NewDefaultConfiguration()
 	c.UserPW = userPW
 	c.OwnerPW = ownerPW
+	c.EncryptUsingAES = true
+	c.EncryptKeyLength = keyLength
+	return c
+}
+
+// NewRC4Configuration returns a default configuration for RC4 encryption.
+func NewRC4Configuration(userPW, ownerPW string, keyLength int) *Configuration {
+	c := NewDefaultConfiguration()
+	c.UserPW = userPW
+	c.OwnerPW = ownerPW
+	c.EncryptUsingAES = false
+	c.EncryptKeyLength = keyLength
 	return c
 }
 

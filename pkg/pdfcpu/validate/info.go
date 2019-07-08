@@ -33,15 +33,11 @@ func handleDefault(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
 	return err
 }
 
-func validateInfoDictDate(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
-
+func validateInfoDictDate(xRefTable *pdf.XRefTable, o pdf.Object) (s string, err error) {
 	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
-		_, err = validateString(xRefTable, o, nil)
-	} else {
-		_, err = validateDateObject(xRefTable, o, pdf.V10)
+		return validateString(xRefTable, o, nil)
 	}
-
-	return err
+	return validateDateObject(xRefTable, o, pdf.V10)
 }
 
 func validateInfoDictTrapped(o pdf.Object, xRefTable *pdf.XRefTable) error {
@@ -83,36 +79,36 @@ func validateDocumentInfoDict(xRefTable *pdf.XRefTable, obj pdf.Object) (hasModD
 
 		// text string, opt, since V1.1
 		case "Title":
-			_, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V11, nil)
+			xRefTable.Title, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V11, nil)
 
 		// text string, optional
 		case "Author":
-			_, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V10, nil)
+			xRefTable.Author, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V10, nil)
 
 		// text string, optional, since V1.1
 		case "Subject":
-			_, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V11, nil)
+			xRefTable.Subject, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V11, nil)
 
 		// text string, optional, since V1.1
 		case "Keywords":
-			_, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V11, nil)
+			xRefTable.Keywords, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V11, nil)
 
 		// text string, optional
 		case "Creator":
-			_, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V10, nil)
+			xRefTable.Creator, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V10, nil)
 
 		// text string, optional
 		case "Producer":
-			_, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V10, nil)
+			xRefTable.Producer, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V10, nil)
 
 		// date, optional
 		case "CreationDate":
-			err = validateInfoDictDate(xRefTable, v)
+			xRefTable.CreationDate, err = validateInfoDictDate(xRefTable, v)
 
 		// date, required if PieceInfo is present in document catalog.
 		case "ModDate":
 			hasModDate = true
-			err = validateInfoDictDate(xRefTable, v)
+			xRefTable.ModDate, err = validateInfoDictDate(xRefTable, v)
 
 		// name, optional, since V1.3
 		case "Trapped":

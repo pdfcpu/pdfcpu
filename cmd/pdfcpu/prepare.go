@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/hhrutter/pdfcpu/pkg/api"
+	"github.com/hhrutter/pdfcpu/pkg/cli"
 	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
 )
 
@@ -43,8 +44,7 @@ func defaultFilenameOut(filename string) string {
 	return filename[:len(filename)-4] + "_new.pdf"
 }
 
-func printHelp(config *pdfcpu.Configuration) *api.Command {
-
+func printHelp(conf *pdfcpu.Configuration) {
 	switch len(flag.Args()) {
 
 	case 0:
@@ -57,38 +57,29 @@ func printHelp(config *pdfcpu.Configuration) *api.Command {
 		fmt.Fprintln(os.Stderr, "usage: pdfcpu help command\n\nToo many arguments.")
 
 	}
-
-	return nil
 }
 
-func printPaperSizes(config *pdfcpu.Configuration) *api.Command {
-
+func printPaperSizes(conf *pdfcpu.Configuration) {
 	fmt.Fprintln(os.Stderr, paperSizes)
-
-	return nil
 }
 
-func printVersion(config *pdfcpu.Configuration) *api.Command {
-
+func printVersion(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) != 0 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageVersion)
 		os.Exit(1)
 	}
 
 	fmt.Fprintf(os.Stdout, "pdfcpu version %s\n", pdfcpu.PDFCPUVersion)
-
-	return nil
 }
 
-func prepareValidateCommand(config *pdfcpu.Configuration) *api.Command {
-
-	if len(flag.Args()) == 0 || len(flag.Args()) > 1 || pageSelection != "" {
+func handleValidateCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) == 0 || len(flag.Args()) > 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageValidate)
 		os.Exit(1)
 	}
 
-	filenameIn := flag.Arg(0)
-	ensurePdfExtension(filenameIn)
+	inFile := flag.Arg(0)
+	ensurePdfExtension(inFile)
 
 	if mode != "" && mode != "strict" && mode != "s" && mode != "relaxed" && mode != "r" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageValidate)
@@ -97,49 +88,47 @@ func prepareValidateCommand(config *pdfcpu.Configuration) *api.Command {
 
 	switch mode {
 	case "strict", "s":
-		config.ValidationMode = pdfcpu.ValidationStrict
+		conf.ValidationMode = pdfcpu.ValidationStrict
 	case "relaxed", "r":
-		config.ValidationMode = pdfcpu.ValidationRelaxed
+		conf.ValidationMode = pdfcpu.ValidationRelaxed
 	}
 
-	return api.ValidateCommand(filenameIn, config)
+	process(cli.ValidateCommand(inFile, conf))
 }
 
-func prepareOptimizeCommand(config *pdfcpu.Configuration) *api.Command {
-
-	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || pageSelection != "" {
+func handleOptimizeCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageOptimize)
 		os.Exit(1)
 	}
 
-	filenameIn := flag.Arg(0)
-	ensurePdfExtension(filenameIn)
+	inFile := flag.Arg(0)
+	ensurePdfExtension(inFile)
 
-	filenameOut := defaultFilenameOut(filenameIn)
+	outFile := inFile
 	if len(flag.Args()) == 2 {
-		filenameOut = flag.Arg(1)
-		ensurePdfExtension(filenameOut)
+		outFile = flag.Arg(1)
+		ensurePdfExtension(outFile)
 	}
 
-	config.StatsFileName = fileStats
+	conf.StatsFileName = fileStats
 	if len(fileStats) > 0 {
 		fmt.Fprintf(os.Stdout, "stats will be appended to %s\n", fileStats)
 	}
 
-	return api.OptimizeCommand(filenameIn, filenameOut, config)
+	process(cli.OptimizeCommand(inFile, outFile, conf))
 }
 
-func prepareSplitCommand(config *pdfcpu.Configuration) *api.Command {
-
-	if len(flag.Args()) < 2 || len(flag.Args()) > 3 || pageSelection != "" {
+func handleSplitCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) < 2 || len(flag.Args()) > 3 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageSplit)
 		os.Exit(1)
 	}
 
-	filenameIn := flag.Arg(0)
-	ensurePdfExtension(filenameIn)
+	inFile := flag.Arg(0)
+	ensurePdfExtension(inFile)
 
-	dirnameOut := flag.Arg(1)
+	outDir := flag.Arg(1)
 
 	span := 1
 	var err error
@@ -151,35 +140,31 @@ func prepareSplitCommand(config *pdfcpu.Configuration) *api.Command {
 		}
 	}
 
-	return api.SplitCommand(filenameIn, dirnameOut, span, config)
+	process(cli.SplitCommand(inFile, outDir, span, conf))
 }
 
-func prepareMergeCommand(config *pdfcpu.Configuration) *api.Command {
-
-	if len(flag.Args()) < 3 || pageSelection != "" {
+func handleMergeCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) < 3 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageMerge)
 		os.Exit(1)
 	}
 
-	var filenameOut string
-	filenamesIn := []string{}
+	filesIn := []string{}
+	outFile := ""
 	for i, arg := range flag.Args() {
+		ensurePdfExtension(arg)
 		if i == 0 {
-			filenameOut = arg
-			ensurePdfExtension(filenameOut)
+			outFile = arg
 			continue
 		}
-		ensurePdfExtension(arg)
-		filenamesIn = append(filenamesIn, arg)
+		filesIn = append(filesIn, arg)
 	}
 
-	return api.MergeCommand(filenamesIn, filenameOut, config)
+	process(cli.MergeCommand(filesIn, outFile, conf))
 }
 
 func extractModeCompletion(modePrefix string) string {
-
 	var modeStr string
-
 	for _, mode := range []string{"image", "font", "page", "content", "meta"} {
 		if !strings.HasPrefix(mode, modePrefix) {
 			continue
@@ -189,176 +174,170 @@ func extractModeCompletion(modePrefix string) string {
 		}
 		modeStr = mode
 	}
-
 	return modeStr
 }
 
-func prepareExtractCommand(config *pdfcpu.Configuration) *api.Command {
-
+func handleExtractCommand(conf *pdfcpu.Configuration) {
 	mode = extractModeCompletion(mode)
-
 	if len(flag.Args()) != 2 || mode == "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageExtract)
 		os.Exit(1)
 	}
 
-	filenameIn := flag.Arg(0)
-	ensurePdfExtension(filenameIn)
+	inFile := flag.Arg(0)
+	ensurePdfExtension(inFile)
+	outDir := flag.Arg(1)
 
-	dirnameOut := flag.Arg(1)
-
-	pages, err := api.ParsePageSelection(pageSelection)
+	pages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "problem with flag pageSelection: %v\n", err)
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
 		os.Exit(1)
 	}
 
-	var cmd *api.Command
+	var cmd *cli.Command
 
 	switch mode {
 
 	case "image":
-		cmd = api.ExtractImagesCommand(filenameIn, dirnameOut, pages, config)
+		cmd = cli.ExtractImagesCommand(inFile, outDir, pages, conf)
 
 	case "font":
-		cmd = api.ExtractFontsCommand(filenameIn, dirnameOut, pages, config)
+		cmd = cli.ExtractFontsCommand(inFile, outDir, pages, conf)
 
 	case "page":
-		cmd = api.ExtractPagesCommand(filenameIn, dirnameOut, pages, config)
+		cmd = cli.ExtractPagesCommand(inFile, outDir, pages, conf)
 
 	case "content":
-		cmd = api.ExtractContentCommand(filenameIn, dirnameOut, pages, config)
+		cmd = cli.ExtractContentCommand(inFile, outDir, pages, conf)
 
 	case "meta":
-		cmd = api.ExtractMetadataCommand(filenameIn, dirnameOut, config)
+		cmd = cli.ExtractMetadataCommand(inFile, outDir, conf)
+
+	default:
+		fmt.Fprintf(os.Stderr, "unknown extract mode: %s\n", mode)
+		os.Exit(1)
+
 	}
 
-	return cmd
+	process(cmd)
 }
 
-func prepareTrimCommand(config *pdfcpu.Configuration) *api.Command {
-
-	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || pageSelection == "" {
+func handleTrimCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || selectedPages == "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageTrim)
 		os.Exit(1)
 	}
 
-	pages, err := api.ParsePageSelection(pageSelection)
+	pages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "problem with flag pageSelection: %v\n", err)
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
 		os.Exit(1)
 	}
 
-	filenameIn := flag.Arg(0)
-	ensurePdfExtension(filenameIn)
+	inFile := flag.Arg(0)
+	ensurePdfExtension(inFile)
 
-	filenameOut := defaultFilenameOut(filenameIn)
+	outFile := ""
 	if len(flag.Args()) == 2 {
-		filenameOut = flag.Arg(1)
-		ensurePdfExtension(filenameOut)
+		outFile = flag.Arg(1)
+		ensurePdfExtension(outFile)
 	}
 
-	return api.TrimCommand(filenameIn, filenameOut, pages, config)
+	process(cli.TrimCommand(inFile, outFile, pages, conf))
 }
 
-func prepareListAttachmentsCommand(config *pdfcpu.Configuration) *api.Command {
-
-	if len(flag.Args()) != 1 || pageSelection != "" {
+func handleListAttachmentsCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) != 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usageAttachList)
 		os.Exit(1)
 	}
 
-	filenameIn := flag.Arg(0)
-	ensurePdfExtension(filenameIn)
-
-	return api.ListAttachmentsCommand(filenameIn, config)
+	inFile := flag.Arg(0)
+	ensurePdfExtension(inFile)
+	process(cli.ListAttachmentsCommand(inFile, conf))
 }
 
-func prepareAddAttachmentsCommand(config *pdfcpu.Configuration) *api.Command {
-
-	if len(flag.Args()) < 2 || pageSelection != "" {
+func handleAddAttachmentsCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageAttachAdd)
 		os.Exit(1)
 	}
 
-	var filenameIn string
-	filenames := []string{}
+	var inFile string
+	fileNames := []string{}
 
 	for i, arg := range flag.Args() {
 		if i == 0 {
-			filenameIn = arg
-			ensurePdfExtension(filenameIn)
+			inFile = arg
+			ensurePdfExtension(inFile)
 			continue
 		}
-		filenames = append(filenames, arg)
+		fileNames = append(fileNames, arg)
 	}
 
-	return api.AddAttachmentsCommand(filenameIn, filenames, config)
+	process(cli.AddAttachmentsCommand(inFile, "", fileNames, conf))
 }
 
-func prepareRemoveAttachmentsCommand(config *pdfcpu.Configuration) *api.Command {
-
-	if len(flag.Args()) < 1 || pageSelection != "" {
+func handleRemoveAttachmentsCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) < 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageAttachRemove)
 		os.Exit(1)
 	}
 
-	var filenameIn string
-	filenames := []string{}
+	var inFile string
+	fileNames := []string{}
 
 	for i, arg := range flag.Args() {
 		if i == 0 {
-			filenameIn = arg
-			ensurePdfExtension(filenameIn)
+			inFile = arg
+			ensurePdfExtension(inFile)
 			continue
 		}
-		filenames = append(filenames, arg)
+		fileNames = append(fileNames, arg)
 	}
 
-	return api.RemoveAttachmentsCommand(filenameIn, filenames, config)
+	process(cli.RemoveAttachmentsCommand(inFile, "", fileNames, conf))
 }
 
-func prepareExtractAttachmentsCommand(config *pdfcpu.Configuration) *api.Command {
-
-	if len(flag.Args()) < 2 || pageSelection != "" {
+func handleExtractAttachmentsCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageAttachExtract)
 		os.Exit(1)
 	}
 
-	var filenameIn, dirnameOut string
-	filenames := []string{}
+	var inFile string
+	fileNames := []string{}
+	var outDir string
 
 	for i, arg := range flag.Args() {
 		if i == 0 {
-			filenameIn = arg
-			ensurePdfExtension(filenameIn)
+			inFile = arg
+			ensurePdfExtension(inFile)
 			continue
 		}
 		if i == 1 {
-			dirnameOut = arg
+			outDir = arg
 			continue
 		}
-		filenames = append(filenames, arg)
+		fileNames = append(fileNames, arg)
 	}
 
-	return api.ExtractAttachmentsCommand(filenameIn, dirnameOut, filenames, config)
+	process(cli.ExtractAttachmentsCommand(inFile, outDir, fileNames, conf))
 }
 
-func prepareListPermissionsCommand(config *pdfcpu.Configuration) *api.Command {
-
-	if len(flag.Args()) != 1 || pageSelection != "" {
+func handleListPermissionsCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) != 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usagePermList)
 		os.Exit(1)
 	}
 
-	filenameIn := flag.Arg(0)
-	ensurePdfExtension(filenameIn)
+	inFile := flag.Arg(0)
+	ensurePdfExtension(inFile)
 
-	return api.ListPermissionsCommand(filenameIn, config)
+	process(cli.ListPermissionsCommand(inFile, conf))
 }
 
 func permCompletion(permPrefix string) string {
-
 	var permStr string
 
 	for _, perm := range []string{"none", "all"} {
@@ -368,58 +347,63 @@ func permCompletion(permPrefix string) string {
 		if len(permStr) > 0 {
 			return ""
 		}
-		permStr = mode
+		permStr = perm
 	}
 
 	return permStr
 }
 
-func prepareAddPermissionsCommand(config *pdfcpu.Configuration) *api.Command {
-
+func handleSetPermissionsCommand(conf *pdfcpu.Configuration) {
 	if perm != "" {
 		perm = permCompletion(perm)
 	}
-
-	if len(flag.Args()) != 1 || pageSelection != "" ||
-		!(perm == "" || perm == "none" || perm == "all") {
-		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePermAdd)
+	if len(flag.Args()) != 1 || selectedPages != "" ||
+		!(perm == "none" || perm == "all") {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePermSet)
 		os.Exit(1)
 	}
 
-	filenameIn := flag.Arg(0)
-	ensurePdfExtension(filenameIn)
+	inFile := flag.Arg(0)
+	ensurePdfExtension(inFile)
 
 	if perm == "all" {
-		config.UserAccessPermissions = pdfcpu.PermissionsAll
+		conf.Permissions = pdfcpu.PermissionsAll
 	}
 
-	return api.AddPermissionsCommand(filenameIn, config)
+	process(cli.SetPermissionsCommand(inFile, "", conf))
 }
 
-func prepareDecryptCommand(config *pdfcpu.Configuration) *api.Command {
-
-	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || pageSelection != "" {
+func handleDecryptCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageDecrypt)
 		os.Exit(1)
 	}
 
-	filenameIn := flag.Arg(0)
-	ensurePdfExtension(filenameIn)
+	inFile := flag.Arg(0)
+	ensurePdfExtension(inFile)
 
-	filenameOut := filenameIn
+	outFile := inFile
 	if len(flag.Args()) == 2 {
-		filenameOut = flag.Arg(1)
-		ensurePdfExtension(filenameOut)
+		outFile = flag.Arg(1)
+		ensurePdfExtension(outFile)
 	}
 
-	return api.DecryptCommand(filenameIn, filenameOut, config)
+	process(cli.DecryptCommand(inFile, outFile, conf))
 }
 
 func validateEncryptModeFlag() {
-
-	if mode != "rc4" && mode != "aes" && mode != "" {
+	if !pdfcpu.MemberOf(mode, []string{"rc4", "aes", ""}) {
 		fmt.Fprintf(os.Stderr, "%s\n\n", "valid modes: rc4,aes default:aes")
 		os.Exit(1)
+	}
+
+	// Default to AES encryption.
+	if mode == "" {
+		mode = "aes"
+	}
+
+	if key == "256" && mode == "rc4" {
+		key = "128"
 	}
 
 	if mode == "rc4" {
@@ -435,33 +419,24 @@ func validateEncryptModeFlag() {
 			os.Exit(1)
 		}
 	}
+
 }
+
 func validateEncryptFlags() {
-
 	validateEncryptModeFlag()
-
 	if perm != "none" && perm != "all" && perm != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", "supported permissions: none,all default:none (viewing always allowed!)")
 		os.Exit(1)
 	}
-
-	if key == "" {
-		d := "128"
-		if mode == "aes" {
-			d = "256"
-		}
-		key = d
-	}
 }
 
-func prepareEncryptCommand(config *pdfcpu.Configuration) *api.Command {
-
+func handleEncryptCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageEncrypt)
 		os.Exit(1)
 	}
 
-	if config.OwnerPW == "" {
+	if conf.OwnerPW == "" {
 		fmt.Fprintln(os.Stderr, "missing non-empty owner password!")
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageEncrypt)
 		os.Exit(1)
@@ -469,49 +444,62 @@ func prepareEncryptCommand(config *pdfcpu.Configuration) *api.Command {
 
 	validateEncryptFlags()
 
-	config.EncryptUsingAES = mode != "rc4"
+	conf.EncryptUsingAES = mode != "rc4"
 
 	kl, _ := strconv.Atoi(key)
-	config.EncryptKeyLength = kl
+	conf.EncryptKeyLength = kl
 
 	if perm == "all" {
-		config.UserAccessPermissions = pdfcpu.PermissionsAll
+		conf.Permissions = pdfcpu.PermissionsAll
 	}
 
-	filenameIn := flag.Arg(0)
-	ensurePdfExtension(filenameIn)
-	filenameOut := filenameIn
+	inFile := flag.Arg(0)
+	ensurePdfExtension(inFile)
+
+	outFile := inFile
 	if len(flag.Args()) == 2 {
-		filenameOut = flag.Arg(1)
-		ensurePdfExtension(filenameOut)
+		outFile = flag.Arg(1)
+		ensurePdfExtension(outFile)
 	}
 
-	return api.EncryptCommand(filenameIn, filenameOut, config)
+	process(cli.EncryptCommand(inFile, outFile, conf))
 }
 
-func prepareChangeUserPasswordCommand(config *pdfcpu.Configuration) *api.Command {
-
+func handleChangeUserPasswordCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) != 3 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageChangeUserPW)
 		os.Exit(1)
 	}
 
+	inFile := flag.Arg(0)
+	ensurePdfExtension(inFile)
+
+	outFile := inFile
+	if len(flag.Args()) == 2 {
+		outFile = flag.Arg(1)
+		ensurePdfExtension(outFile)
+
+	}
+
 	pwOld := flag.Arg(1)
 	pwNew := flag.Arg(2)
 
-	filenameIn := flag.Arg(0)
-	ensurePdfExtension(filenameIn)
-
-	filenameOut := filenameIn
-
-	return api.ChangeUserPWCommand(filenameIn, filenameOut, config, &pwOld, &pwNew)
+	process(cli.ChangeUserPWCommand(inFile, outFile, &pwOld, &pwNew, conf))
 }
 
-func prepareChangeOwnerPasswordCommand(config *pdfcpu.Configuration) *api.Command {
-
+func handleChangeOwnerPasswordCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) != 3 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageChangeOwnerPW)
 		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	ensurePdfExtension(inFile)
+
+	outFile := inFile
+	if len(flag.Args()) == 2 {
+		outFile = flag.Arg(1)
+		ensurePdfExtension(outFile)
 	}
 
 	pwOld := flag.Arg(1)
@@ -522,33 +510,10 @@ func prepareChangeOwnerPasswordCommand(config *pdfcpu.Configuration) *api.Comman
 		os.Exit(1)
 	}
 
-	filenameIn := flag.Arg(0)
-	ensurePdfExtension(filenameIn)
-
-	filenameOut := filenameIn
-
-	return api.ChangeOwnerPWCommand(filenameIn, filenameOut, config, &pwOld, &pwNew)
+	process(cli.ChangeOwnerPWCommand(inFile, outFile, &pwOld, &pwNew, conf))
 }
 
-func prepareChangePasswordCommand(config *pdfcpu.Configuration, s string) *api.Command {
-
-	var cmd *api.Command
-
-	switch s {
-
-	case "changeupw":
-		cmd = prepareChangeUserPasswordCommand(config)
-
-	case "changeopw":
-		cmd = prepareChangeOwnerPasswordCommand(config)
-
-	}
-
-	return cmd
-}
-
-func prepareWatermarksCommand(config *pdfcpu.Configuration, onTop bool) *api.Command {
-
+func handleWatermarksCommand(conf *pdfcpu.Configuration, onTop bool) {
 	if len(flag.Args()) < 2 || len(flag.Args()) > 3 {
 		s := usageWatermark
 		if onTop {
@@ -558,9 +523,9 @@ func prepareWatermarksCommand(config *pdfcpu.Configuration, onTop bool) *api.Com
 		os.Exit(1)
 	}
 
-	pages, err := api.ParsePageSelection(pageSelection)
+	selectedPages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "problem with flag pageSelection: %v", err)
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v", err)
 		os.Exit(1)
 	}
 
@@ -570,24 +535,24 @@ func prepareWatermarksCommand(config *pdfcpu.Configuration, onTop bool) *api.Com
 		os.Exit(1)
 	}
 
-	filenameIn := flag.Arg(1)
-	ensurePdfExtension(filenameIn)
+	inFile := flag.Arg(1)
+	ensurePdfExtension(inFile)
 
-	filenameOut := defaultFilenameOut(filenameIn)
+	outFile := ""
 	if len(flag.Args()) == 3 {
-		filenameOut = flag.Arg(2)
-		ensurePdfExtension(filenameOut)
+		outFile = flag.Arg(2)
+		ensurePdfExtension(outFile)
 	}
 
-	return api.AddWatermarksCommand(filenameIn, filenameOut, pages, wm, config)
+	process(cli.AddWatermarksCommand(inFile, outFile, selectedPages, wm, conf))
 }
 
-func prepareAddStampsCommand(config *pdfcpu.Configuration) *api.Command {
-	return prepareWatermarksCommand(config, true)
+func handleAddStampsCommand(conf *pdfcpu.Configuration) {
+	handleWatermarksCommand(conf, true)
 }
 
-func prepareAddWatermarksCommand(config *pdfcpu.Configuration) *api.Command {
-	return prepareWatermarksCommand(config, false)
+func handleAddWatermarksCommand(conf *pdfcpu.Configuration) {
+	handleWatermarksCommand(conf, false)
 }
 
 func hasImageExtension(filename string) bool {
@@ -602,33 +567,24 @@ func ensureImageExtension(filename string) {
 	}
 }
 
-func prepareImportImagesCommand(config *pdfcpu.Configuration) *api.Command {
-
-	if len(flag.Args()) < 2 || pageSelection != "" {
+func handleImportImagesCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageImportImages)
 		os.Exit(1)
 	}
 
-	filenameOut := flag.Arg(0)
-	if hasPdfExtension(filenameOut) {
+	var outFile string
+	outFile = flag.Arg(0)
+	if hasPdfExtension(outFile) {
 		// pdfcpu import outFile imageFile...
-		// No optional 'description' argument provided.
-		// We use the default import configuration.
 		imp := pdfcpu.DefaultImportConfig()
-		filenamesIn := []string{}
+		imageFileNames := []string{}
 		for i := 1; i < len(flag.Args()); i++ {
 			arg := flag.Arg(i)
 			ensureImageExtension(arg)
-			filenamesIn = append(filenamesIn, arg)
+			imageFileNames = append(imageFileNames, arg)
 		}
-		return api.ImportImagesCommand(filenamesIn, filenameOut, imp, config)
-	}
-
-	// pdfcpu import outFile imageFile
-	// Possibly unexpected 'description'
-	if len(flag.Args()) == 2 {
-		fmt.Fprintf(os.Stderr, "%s\n\n", usageImportImages)
-		os.Exit(1)
+		process(cli.ImportImagesCommand(imageFileNames, outFile, imp, conf))
 	}
 
 	// pdfcpu import description outFile imageFile...
@@ -642,63 +598,59 @@ func prepareImportImagesCommand(config *pdfcpu.Configuration) *api.Command {
 		os.Exit(1)
 	}
 
-	filenameOut = flag.Arg(1)
-	ensurePdfExtension(filenameOut)
+	outFile = flag.Arg(1)
+	ensurePdfExtension(outFile)
 
-	filenamesIn := []string{}
+	imageFileNames := []string{}
 	for i := 2; i < len(flag.Args()); i++ {
 		arg := flag.Args()[i]
 		ensureImageExtension(arg)
-		filenamesIn = append(filenamesIn, arg)
+		imageFileNames = append(imageFileNames, arg)
 	}
 
-	return api.ImportImagesCommand(filenamesIn, filenameOut, imp, config)
+	process(cli.ImportImagesCommand(imageFileNames, outFile, imp, conf))
 }
 
-func prepareInsertPagesCommand(config *pdfcpu.Configuration) *api.Command {
-
+func handleInsertPagesCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usagePagesInsert)
 		os.Exit(1)
 	}
 
-	filenameIn := flag.Arg(0)
-	ensurePdfExtension(filenameIn)
-
-	filenameOut := defaultFilenameOut(filenameIn)
+	inFile := flag.Arg(0)
+	ensurePdfExtension(inFile)
+	outFile := ""
 	if len(flag.Args()) == 2 {
-		filenameOut = flag.Arg(1)
-		ensurePdfExtension(filenameOut)
+		outFile = flag.Arg(1)
+		ensurePdfExtension(outFile)
 	}
 
-	pages, err := api.ParsePageSelection(pageSelection)
+	pages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "problem with flag pageSelection: %v\n", err)
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
 		os.Exit(1)
 	}
 
-	return api.InsertPagesCommand(filenameIn, filenameOut, pages, config)
+	process(cli.InsertPagesCommand(inFile, outFile, pages, conf))
 }
 
-func prepareRemovePagesCommand(config *pdfcpu.Configuration) *api.Command {
-
-	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || pageSelection == "" {
+func handleRemovePagesCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || selectedPages == "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usagePagesRemove)
 		os.Exit(1)
 	}
 
-	filenameIn := flag.Arg(0)
-	ensurePdfExtension(filenameIn)
-
-	filenameOut := defaultFilenameOut(filenameIn)
+	inFile := flag.Arg(0)
+	ensurePdfExtension(inFile)
+	outFile := ""
 	if len(flag.Args()) == 2 {
-		filenameOut = flag.Arg(1)
-		ensurePdfExtension(filenameOut)
+		outFile = flag.Arg(1)
+		ensurePdfExtension(outFile)
 	}
 
-	pages, err := api.ParsePageSelection(pageSelection)
+	pages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "problem with flag pageSelection: %v\n", err)
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
 		os.Exit(1)
 	}
 	if pages == nil {
@@ -706,7 +658,7 @@ func prepareRemovePagesCommand(config *pdfcpu.Configuration) *api.Command {
 		os.Exit(1)
 	}
 
-	return api.RemovePagesCommand(filenameIn, filenameOut, pages, config)
+	process(cli.RemovePagesCommand(inFile, outFile, pages, conf))
 }
 
 func abs(i int) int {
@@ -716,29 +668,28 @@ func abs(i int) int {
 	return i
 }
 
-func prepareRotateCommand(config *pdfcpu.Configuration) *api.Command {
-
+func handleRotateCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) < 2 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageRotate)
 		os.Exit(1)
 	}
 
-	pages, err := api.ParsePageSelection(pageSelection)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "problem with flag pageSelection: %v\n", err)
-		os.Exit(1)
-	}
+	inFile := flag.Arg(0)
+	ensurePdfExtension(inFile)
 
-	filenameIn := flag.Arg(0)
-	ensurePdfExtension(filenameIn)
-
-	r, err := strconv.Atoi(flag.Arg(1))
-	if err != nil || abs(r)%90 > 0 {
+	rotation, err := strconv.Atoi(flag.Arg(1))
+	if err != nil || abs(rotation)%90 > 0 {
 		fmt.Fprintf(os.Stderr, "rotation must be a multiple of 90: %s\n", flag.Arg(1))
 		os.Exit(1)
 	}
 
-	return api.RotateCommand(filenameIn, r, pages, config)
+	selectedPages, err := api.ParsePageSelection(selectedPages)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
+		os.Exit(1)
+	}
+
+	process(cli.RotateCommand(inFile, "", rotation, selectedPages, conf))
 }
 
 func parseAfterNUpDetails(nup *pdfcpu.NUp, argInd int, filenameOut string) []string {
@@ -746,10 +697,22 @@ func parseAfterNUpDetails(nup *pdfcpu.NUp, argInd int, filenameOut string) []str
 	var err error
 
 	if nup.PageGrid {
-		err = pdfcpu.ParseNUpGridDefinition(flag.Arg(argInd), flag.Arg(argInd+1), nup)
+		cols, err := strconv.Atoi(flag.Arg(argInd))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+		}
+		rows, err := strconv.Atoi(flag.Arg(argInd + 1))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+		}
+		err = pdfcpu.ParseNUpGridDefinition(cols, rows, nup)
 		argInd += 2
 	} else {
-		err = pdfcpu.ParseNUpValue(flag.Arg(argInd), nup)
+		n, err := strconv.Atoi(flag.Arg(argInd))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+		}
+		err = pdfcpu.ParseNUpValue(n, nup)
 		argInd++
 	}
 	if err != nil {
@@ -759,7 +722,7 @@ func parseAfterNUpDetails(nup *pdfcpu.NUp, argInd int, filenameOut string) []str
 
 	filenameIn := flag.Arg(argInd)
 	if !hasPdfExtension(filenameIn) && !hasImageExtension(filenameIn) {
-		fmt.Fprintf(os.Stderr, "Inputfile has to be a PDF or one or a sequence of image files: %s\n", filenameIn)
+		fmt.Fprintf(os.Stderr, "inFile has to be a PDF or one or a sequence of image files: %s\n", filenameIn)
 		os.Exit(1)
 	}
 
@@ -775,7 +738,7 @@ func parseAfterNUpDetails(nup *pdfcpu.NUp, argInd int, filenameOut string) []str
 			os.Exit(1)
 		}
 		if filenameIn == filenameOut {
-			fmt.Fprintln(os.Stderr, "input and output pdf should be different.")
+			fmt.Fprintln(os.Stderr, "inFile and outFile can't be the same.")
 			os.Exit(1)
 		}
 	} else {
@@ -790,67 +753,63 @@ func parseAfterNUpDetails(nup *pdfcpu.NUp, argInd int, filenameOut string) []str
 	return filenamesIn
 }
 
-func prepareNUpCommand(config *pdfcpu.Configuration) *api.Command {
-
+func handleNUpCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) < 3 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageNUp)
 		os.Exit(1)
 	}
 
-	pages, err := api.ParsePageSelection(pageSelection)
+	pages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "problem with flag pageSelection: %v\n", err)
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
 		os.Exit(1)
 	}
 
 	nup := pdfcpu.DefaultNUpConfig()
 
-	filenameOut := flag.Arg(0)
-	if hasPdfExtension(filenameOut) {
+	outFile := flag.Arg(0)
+	if hasPdfExtension(outFile) {
 		// pdfcpu nup outFile n inFile|imageFiles...
 		// No optional 'description' argument provided.
 		// We use the default nup configuration.
-		filenamesIn := parseAfterNUpDetails(nup, 1, filenameOut)
-		return api.NUpCommand(filenamesIn, filenameOut, pages, nup, config)
+		inFiles := parseAfterNUpDetails(nup, 1, outFile)
+		process(cli.NUpCommand(inFiles, outFile, pages, nup, conf))
 	}
 
 	// pdfcpu nup description outFile n inFile|imageFiles...
-	err = pdfcpu.ParseNUpDetails(flag.Arg(0), nup)
-	if err != nil {
+	if err = pdfcpu.ParseNUpDetails(flag.Arg(0), nup); err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}
 
-	filenameOut = flag.Arg(1)
-	ensurePdfExtension(filenameOut)
-
-	filenamesIn := parseAfterNUpDetails(nup, 2, filenameOut)
-	return api.NUpCommand(filenamesIn, filenameOut, pages, nup, config)
+	outFile = flag.Arg(1)
+	ensurePdfExtension(outFile)
+	inFiles := parseAfterNUpDetails(nup, 2, outFile)
+	process(cli.NUpCommand(inFiles, outFile, pages, nup, conf))
 }
 
-func prepareGridCommand(config *pdfcpu.Configuration) *api.Command {
-
+func handleGridCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) < 4 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageGrid)
 		os.Exit(1)
 	}
 
-	pages, err := api.ParsePageSelection(pageSelection)
+	pages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "problem with flag pageSelection: %v\n", err)
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
 		os.Exit(1)
 	}
 
 	nup := pdfcpu.DefaultNUpConfig()
-	nup.PageGrid = true
 
-	filenameOut := flag.Arg(0)
-	if hasPdfExtension(filenameOut) {
+	nup.PageGrid = true
+	outFile := flag.Arg(0)
+	if hasPdfExtension(outFile) {
 		// pdfcpu grid outFile m n inFile|imageFiles...
 		// No optional 'description' argument provided.
 		// We use the default nup configuration.
-		filenamesIn := parseAfterNUpDetails(nup, 1, filenameOut)
-		return api.NUpCommand(filenamesIn, filenameOut, pages, nup, config)
+		inFiles := parseAfterNUpDetails(nup, 1, outFile)
+		process(cli.NUpCommand(inFiles, outFile, pages, nup, conf))
 	}
 
 	// pdfcpu grid description outFile m n inFile|imageFiles...
@@ -860,9 +819,20 @@ func prepareGridCommand(config *pdfcpu.Configuration) *api.Command {
 		os.Exit(1)
 	}
 
-	filenameOut = flag.Arg(1)
-	ensurePdfExtension(filenameOut)
+	outFile = flag.Arg(1)
+	ensurePdfExtension(outFile)
+	inFiles := parseAfterNUpDetails(nup, 2, outFile)
+	process(cli.NUpCommand(inFiles, outFile, pages, nup, conf))
+}
 
-	filenamesIn := parseAfterNUpDetails(nup, 2, filenameOut)
-	return api.NUpCommand(filenamesIn, filenameOut, pages, nup, config)
+func handleInfoCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) == 0 || len(flag.Args()) > 1 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageInfo)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	ensurePdfExtension(inFile)
+
+	process(cli.InfoCommand(inFile, conf))
 }

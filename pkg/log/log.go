@@ -57,7 +57,7 @@ var (
 	Validate = &logger{}
 	Optimize = &logger{}
 	Write    = &logger{}
-	API      = &logger{}
+	CLI      = &logger{}
 )
 
 // SetDebugLogger sets the debug logger.
@@ -105,9 +105,9 @@ func SetWriteLogger(log Logger) {
 	Write.log = log
 }
 
-// SetAPILogger sets the api logger.
-func SetAPILogger(log Logger) {
-	API.log = log
+// SetCLILogger sets the api logger.
+func SetCLILogger(log Logger) {
+	CLI.log = log
 }
 
 // SetDefaultDebugLogger sets the default debug logger.
@@ -155,9 +155,9 @@ func SetDefaultWriteLogger() {
 	SetWriteLogger(log.New(os.Stderr, "WRITE: ", log.Ldate|log.Ltime))
 }
 
-// SetDefaultAPILogger sets the default api logger.
-func SetDefaultAPILogger() {
-	SetAPILogger(log.New(os.Stdout, "", 0))
+// SetDefaultCLILogger sets the default cli logger.
+func SetDefaultCLILogger() {
+	SetCLILogger(log.New(os.Stdout, "", 0))
 }
 
 // SetDefaultLoggers sets all loggers to their default logger.
@@ -171,7 +171,7 @@ func SetDefaultLoggers() {
 	SetDefaultValidateLogger()
 	SetDefaultOptimizeLogger()
 	SetDefaultWriteLogger()
-	SetDefaultAPILogger()
+	SetDefaultCLILogger()
 }
 
 // DisableLoggers turns off all logging.
@@ -185,7 +185,7 @@ func DisableLoggers() {
 	SetValidateLogger(nil)
 	SetOptimizeLogger(nil)
 	SetWriteLogger(nil)
-	SetAPILogger(nil)
+	SetCLILogger(nil)
 }
 
 // IsTraceLoggerEnabled returns true if the Trace Logger is enabled.

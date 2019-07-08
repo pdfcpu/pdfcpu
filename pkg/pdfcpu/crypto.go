@@ -62,7 +62,7 @@ var (
 		ADDATTACHMENTS:     {0, 1},
 		REMOVEATTACHMENTS:  {0, 1},
 		LISTPERMISSIONS:    {0, 0},
-		ADDPERMISSIONS:     {0, 0},
+		SETPERMISSIONS:     {0, 0},
 		ADDWATERMARKS:      {1, 0},
 		//DECRYPT:            {1, 0},
 	}
@@ -540,7 +540,7 @@ func perms(p int) (list []string) {
 func Permissions(ctx *Context) (list []string) {
 
 	if ctx.E == nil {
-		return append(list, "full access")
+		return append(list, "Full access")
 	}
 
 	return perms(ctx.E.P)

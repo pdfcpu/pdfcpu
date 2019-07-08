@@ -21,7 +21,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hhrutter/pdfcpu/pkg/log"
 	pdf "github.com/hhrutter/pdfcpu/pkg/pdfcpu"
 	"github.com/pkg/errors"
 )
@@ -31,26 +30,19 @@ var (
 )
 
 func setupRegExpForPageSelection() *regexp.Regexp {
-
 	e := "[!n]?((-\\d+)|(\\d+(-(\\d+)?)?))"
-
 	e = "\\Qeven\\E|\\Qodd\\E|" + e
-
 	exp := "^" + e + "(," + e + ")*$"
-
 	re, _ := regexp.Compile(exp)
-
 	return re
 }
 
 func init() {
-
 	selectedPagesRegExp = setupRegExpForPageSelection()
 }
 
 // ParsePageSelection ensures a correct page selection expression.
 func ParsePageSelection(s string) ([]string, error) {
-
 	if s == "" {
 		return nil, nil
 	}
@@ -72,13 +64,12 @@ func ParsePageSelection(s string) ([]string, error) {
 		return nil, errors.Errorf("-pages \"%s\" => syntax error\n", s)
 	}
 
-	log.API.Printf("pageSelection: %s\n", s)
+	//log.CLI.Printf("pageSelection: %s\n", s)
 
 	return strings.Split(s, ","), nil
 }
 
 func handlePrefix(v string, negated bool, pageCount int, selectedPages pdf.IntSet) error {
-
 	i, err := strconv.Atoi(v)
 	if err != nil {
 		return err
@@ -100,7 +91,6 @@ func handlePrefix(v string, negated bool, pageCount int, selectedPages pdf.IntSe
 }
 
 func handleSuffix(v string, negated bool, pageCount int, selectedPages pdf.IntSet) error {
-
 	// must be #- ... select all pages from here until the end.
 	// or !#- ... deselect all pages from here until the end.
 
@@ -122,7 +112,6 @@ func handleSuffix(v string, negated bool, pageCount int, selectedPages pdf.IntSe
 }
 
 func handleSpecificPage(s string, negated bool, pageCount int, selectedPages pdf.IntSet) error {
-
 	// must be # ... select a specific page
 	// or !# ... deselect a specific page
 
@@ -164,7 +153,6 @@ func selectOddPages(selectedPages pdf.IntSet, pageCount int) {
 }
 
 func parsePageRange(pr []string, pageCount int, negated bool, selectedPages pdf.IntSet) error {
-
 	from, err := strconv.Atoi(pr[0])
 	if err != nil {
 		return err
@@ -196,8 +184,9 @@ func parsePageRange(pr []string, pageCount int, negated bool, selectedPages pdf.
 	return nil
 }
 
+// selectedPages returns a set of used page numbers.
+// key==page# => key 0 unused!
 func selectedPages(pageCount int, pageSelection []string) (pdf.IntSet, error) {
-
 	selectedPages := pdf.IntSet{}
 
 	for _, v := range pageSelection {
@@ -270,28 +259,16 @@ func selectedPages(pageCount int, pageSelection []string) (pdf.IntSet, error) {
 	return selectedPages, nil
 }
 
-func pagesForPageSelection(pageCount int, pageSelection []string) (pdf.IntSet, error) {
-
-	if pageSelection == nil || len(pageSelection) == 0 {
-		log.Info.Println("pagesForPageSelection: empty pageSelection")
+func pagesForPageSelection(pageCount int, pageSelection []string, ensureAllforNone bool) (pdf.IntSet, error) {
+	if pageSelection != nil && len(pageSelection) > 0 {
+		return selectedPages(pageCount, pageSelection)
+	}
+	if !ensureAllforNone {
 		return nil, nil
 	}
-
-	return selectedPages(pageCount, pageSelection)
-}
-
-// Split, Extract, Stamp, Watermark, Rotate: No page selection means all pages are selected.
-// EnsureSelectedPages selects all pages.
-func ensureSelectedPages(ctx *pdf.Context, selectedPages *pdf.IntSet) {
-
-	if selectedPages != nil && len(*selectedPages) > 0 {
-		return
-	}
-
 	m := pdf.IntSet{}
-	for i := 1; i <= ctx.PageCount; i++ {
+	for i := 1; i <= pageCount; i++ {
 		m[i] = true
 	}
-
-	*selectedPages = m
+	return m, nil
 }

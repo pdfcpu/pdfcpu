@@ -96,11 +96,16 @@ type XRefTable struct {
 	RootVersion   *Version // Optional PDF version taking precedence over the header version.
 
 	// Document information section
-	Info     *IndirectRef // Infodict (reference to info dict object)
-	ID       Array        // from trailer
-	Author   string
-	Creator  string
-	Producer string
+	ID           Array        // from trailer
+	Info         *IndirectRef // Infodict (reference to info dict object)
+	Title        string
+	Subject      string
+	Keywords     string
+	Author       string
+	Creator      string
+	Producer     string
+	CreationDate string
+	ModDate      string
 
 	// Linearization section (not yet supported)
 	OffsetPrimaryHintTable  *int64
@@ -855,48 +860,43 @@ func (xRefTable *XRefTable) DereferenceStringLiteral(o Object, sinceVersion Vers
 }
 
 // DereferenceStringOrHexLiteral resolves and validates a string or hex literal object, which may be an indirect reference.
-func (xRefTable *XRefTable) DereferenceStringOrHexLiteral(obj Object, sinceVersion Version, validate func(string) bool) (o Object, err error) {
+func (xRefTable *XRefTable) DereferenceStringOrHexLiteral(obj Object, sinceVersion Version, validate func(string) bool) (s string, err error) {
 
-	o, err = xRefTable.Dereference(obj)
+	o, err := xRefTable.Dereference(obj)
 	if err != nil || o == nil {
-		return nil, err
+		return "", err
 	}
-
-	var s string
 
 	switch str := o.(type) {
 
 	case StringLiteral:
 		// Ensure UTF16 correctness.
-		s, err = StringLiteralToString(str.Value())
-		if err != nil {
-			return nil, err
+		if s, err = StringLiteralToString(str.Value()); err != nil {
+			return "", err
 		}
 
 	case HexLiteral:
 		// Ensure UTF16 correctness.
-		s, err = HexLiteralToString(str.Value())
-		if err != nil {
-			return nil, err
+		if s, err = HexLiteralToString(str.Value()); err != nil {
+			return "", err
 		}
 
 	default:
-		return nil, errors.Errorf("DereferenceStringOrHexLiteral: wrong type <%v>", obj)
+		return "", errors.Errorf("DereferenceStringOrHexLiteral: wrong type <%v>", obj)
 
 	}
 
 	// Version check
-	err = xRefTable.ValidateVersion("DereferenceStringOrHexLiteral", sinceVersion)
-	if err != nil {
-		return nil, err
+	if err = xRefTable.ValidateVersion("DereferenceStringOrHexLiteral", sinceVersion); err != nil {
+		return "", err
 	}
 
 	// Validation
 	if validate != nil && !validate(s) {
-		return nil, errors.Errorf("DereferenceStringOrHexLiteral: invalid <%s>", s)
+		return "", errors.Errorf("DereferenceStringOrHexLiteral: invalid <%s>", s)
 	}
 
-	return o, nil
+	return s, nil
 }
 
 // DereferenceText resolves and validates a string or hex literal object to a string.
@@ -928,6 +928,15 @@ func (xRefTable *XRefTable) DereferenceText(o Object) (string, error) {
 	}
 
 	return s, nil
+}
+
+// DereferenceCSVSafeText resolves and validates a string or hex literal object to a string.
+func (xRefTable *XRefTable) DereferenceCSVSafeText(o Object) (string, error) {
+	s, err := xRefTable.DereferenceText(o)
+	if err != nil {
+		return "", err
+	}
+	return csvSafeString(s), nil
 }
 
 // DereferenceArray resolves and validates an array object, which may be an indirect reference.
@@ -1598,17 +1607,11 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict Dict, pAttrs *Inher
 
 	obj, found = pageDict.Find("Rotate")
 	if found {
-		//fmt.Printf("found Rotate: %v %T\n", obj, obj)
 		i, err := xRefTable.DereferenceInteger(obj)
 		if err != nil {
 			return err
 		}
-
 		pAttrs.rotate = i.Value()
-
-		//fmt.Printf("r=%v %T\n", r, r)
-		//pAttrs.rotate = &r
-		//fmt.Printf("found rotate(%f) for page %d\n", *rotate, *p)
 	}
 
 	return nil
@@ -1733,10 +1736,11 @@ func (xRefTable *XRefTable) emptyPage(parentIndRef *IndirectRef, mediaBox *Recta
 
 	pageDict := Dict(
 		map[string]Object{
-			"Type":     Name("Page"),
-			"Parent":   *parentIndRef,
-			"MediaBox": mediaBox.Array(),
-			"Contents": *contentsIndRef,
+			"Type":      Name("Page"),
+			"Parent":    *parentIndRef,
+			"Resources": NewDict(),
+			"MediaBox":  mediaBox.Array(),
+			"Contents":  *contentsIndRef,
 		},
 	)
 
@@ -1770,10 +1774,8 @@ func (xRefTable *XRefTable) insertIntoPageTree(root *IndirectRef, pAttrs *Inheri
 		return 0, err
 	}
 
-	// Iterate over page tree.
 	kids := d.ArrayEntry("Kids")
 	if kids == nil {
-		//fmt.Println("returning from leaf node")
 		return 0, nil
 	}
 

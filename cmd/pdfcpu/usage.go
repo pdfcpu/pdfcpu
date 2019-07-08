@@ -21,8 +21,8 @@ const (
 	
 Usage:
 	
-	pdfcpu command [arguments]
-		
+   pdfcpu command [arguments]
+   
 The commands are:
 
    attachments list, add, remove, extract embedded file attachments
@@ -31,18 +31,19 @@ The commands are:
    decrypt     remove password protection
    encrypt     set password protection		
    extract     extract images, fonts, content, pages, metadata
-   grid        rearrange pages orimages for enhanced browsing experience
-   import      import/convert images
+   grid        rearrange pages or images for enhanced browsing experience
+   import      import/convert images to PDF
+   info        print file info
    merge       concatenate 2 or more PDFs
    nup         rearrange pages or images for reduced number of pages
    optimize    optimize PDF by getting rid of redundant page resources
    pages       insert, remove selected pages
    paper       print list of supported paper sizes
-   permissions list, add user access permissions
+   permissions list, set user access permissions
    rotate      rotate pages
    split       split multi-page PDF into several PDFs according to split span
    stamp       add text, image or PDF stamp to selected pages
-   trim        create trimmed version with selected pages
+   trim        create trimmed version of selected pages
    validate    validate PDF against PDF 32000-1:2008 (PDF 1.7)
    version     print version
    watermark   add text, image or PDF watermark to selected pages
@@ -52,11 +53,12 @@ The commands are:
 
 Use "pdfcpu help [command]" for more information about a command.`
 
-	usageValidate     = "usage: pdfcpu validate [-v(erbose)|vv] [-mode strict|relaxed] [-upw userpw] [-opw ownerpw] inFile"
+	usageValidate     = "usage: pdfcpu validate [-v(erbose)|vv] [-q(uiet)] [-mode strict|relaxed] [-upw userpw] [-opw ownerpw] inFile"
 	usageLongValidate = `Check inFile for specification compliance.
 
 verbose, v ... turn on logging
         vv ... verbose logging
+  quiet, q ... disable output
       mode ... validation mode
        upw ... user password
        opw ... owner password
@@ -67,11 +69,12 @@ The validation modes are:
  strict ... (default) validates against PDF 32000-1:2008 (PDF 1.7)
 relaxed ... like strict but doesn't complain about common seen spec violations.`
 
-	usageOptimize     = "usage: pdfcpu optimize [-v(erbose)|vv] [-stats csvFile] [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageOptimize     = "usage: pdfcpu optimize [-v(erbose)|vv] [-q(uiet)] [-stats csvFile] [-upw userpw] [-opw ownerpw] inFile [outFile]"
 	usageLongOptimize = `Read inFile, remove redundant page resources like embedded fonts and images and write the result to outFile.
 
 verbose, v ... turn on logging
         vv ... verbose logging
+  quiet, q ... disable output
      stats ... appends a stats line to a csv file with information about the usage of root and page entries.
                useful for batch optimization and debugging PDFs.
        upw ... user password
@@ -79,22 +82,24 @@ verbose, v ... turn on logging
     inFile ... input pdf file
    outFile ... output pdf file (default: inFile-new.pdf)`
 
-	usageSplit     = "usage: pdfcpu split [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile outDir [span]"
+	usageSplit     = "usage: pdfcpu split [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile outDir [span]"
 	usageLongSplit = `Generate a set of PDFs for the input file in outDir according to given span value.
 
 verbose, v ... turn on logging
         vv ... verbose logging
+  quiet, q ... disable output
        upw ... user password
        opw ... owner password
     inFile ... input pdf file
     outDir ... output directory
       span ... split span in pages (default: 1)`
 
-	usageMerge     = "usage: pdfcpu merge [-v(erbose)|vv] outFile inFile..."
+	usageMerge     = "usage: pdfcpu merge [-v(erbose)|vv] [-q(uiet)] outFile inFile..."
 	usageLongMerge = `Concatenate a sequence of PDFs/inFiles into outFile.
 
 verbose, v ... turn on logging
         vv ... verbose logging
+  quiet, q ... disable output
    outFile ... output pdf file
    inFiles ... a list of at least 2 pdf files subject to concatenation.`
 
@@ -115,13 +120,14 @@ verbose, v ... turn on logging
 
 e.g. -3,5,7- or 4-7,!6 or 1-,!5 or odd,n1`
 
-	usageExtract     = "usage: pdfcpu extract [-v(erbose)|vv] -mode image|font|content|page|meta [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile outDir"
+	usageExtract     = "usage: pdfcpu extract [-v(erbose)|vv] [-q(uiet)] -mode image|font|content|page|meta [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile outDir"
 	usageLongExtract = `Export inFile's images, fonts, content or pages into outDir.
 
 verbose, v ... turn on logging
         vv ... verbose logging
+  quiet, q ... disable output
       mode ... extraction mode
-     pages ... page selection
+     pages ... selected pages
        upw ... user password
        opw ... owner password
     inFile ... input pdf file
@@ -137,12 +143,13 @@ content ... extract raw page content
    
 ` + usagePageSelection
 
-	usageTrim     = "usage: pdfcpu trim [-v(erbose)|vv] -pages pageSelection [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageTrim     = "usage: pdfcpu trim [-v(erbose)|vv] [-q(uiet)] -pages selectedPages [-upw userpw] [-opw ownerpw] inFile [outFile]"
 	usageLongTrim = `Generate a trimmed version of inFile for selected pages.
 
 verbose, v ... turn on logging
         vv ... verbose logging
-     pages ... page selection
+  quiet, q ... disable output
+     pages ... selected pages
        upw ... user password
        opw ... owner password
     inFile ... input pdf file
@@ -150,10 +157,10 @@ verbose, v ... turn on logging
    
 ` + usagePageSelection
 
-	usageAttachList    = "pdfcpu attachments list [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile"
-	usageAttachAdd     = "pdfcpu attachments add [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile file..."
-	usageAttachRemove  = "pdfcpu attachments remove [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile [file...]"
-	usageAttachExtract = "pdfcpu attachments extract [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile outDir [file...]"
+	usageAttachList    = "pdfcpu attachments list    [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile"
+	usageAttachAdd     = "pdfcpu attachments add     [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile file..."
+	usageAttachRemove  = "pdfcpu attachments remove  [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [file...]"
+	usageAttachExtract = "pdfcpu attachments extract [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile outDir [file...]"
 
 	usageAttach = "usage: " + usageAttachList +
 		"\n       " + usageAttachAdd +
@@ -164,31 +171,34 @@ verbose, v ... turn on logging
 	
 verbose, v ... turn on logging
         vv ... verbose logging
+  quiet, q ... disable output
        upw ... user password
        opw ... owner password
     inFile ... input pdf file
     outDir ... output directory`
 
-	usagePermList = "pdfcpu permissions list [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile"
-	usagePermAdd  = "pdfcpu permissions add [-v(erbose)|vv] [-perm none|all] [-upw userpw] -opw ownerpw inFile"
+	usagePermList = "pdfcpu permissions list [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile"
+	usagePermSet  = "pdfcpu permissions set  [-v(erbose)|vv] [-q(uiet)] [-perm none|all] [-upw userpw] -opw ownerpw inFile"
 
 	usagePerm = "usage: " + usagePermList +
-		"\n       " + usagePermAdd
+		"\n       " + usagePermSet
 
 	usageLongPerm = `Manage user access permissions.
 	
 verbose, v ... turn on logging
         vv ... verbose logging
+  quiet, q ... disable output
       perm ... user access permissions
        upw ... user password
        opw ... owner password
     inFile ... input pdf file`
 
-	usageEncrypt     = "usage: pdfcpu encrypt [-v(erbose)|vv] [-mode rc4|aes] [-key 40|128|256] [perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]"
+	usageEncrypt     = "usage: pdfcpu encrypt [-v(erbose)|vv] [-q(uiet)] [-mode rc4|aes] [-key 40|128|256] [perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]"
 	usageLongEncrypt = `Setup password protection based on user and owner password.
 
 verbose, v ... turn on logging
         vv ... verbose logging
+  quiet, q ... disable output
       mode ... algorithm (default=aes)
        key ... key length in bits (default=256)
       perm ... user access permissions
@@ -197,31 +207,34 @@ verbose, v ... turn on logging
     inFile ... input pdf file
    outFile ... output pdf file`
 
-	usageDecrypt     = "usage: pdfcpu decrypt [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageDecrypt     = "usage: pdfcpu decrypt [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [outFile]"
 	usageLongDecrypt = `Remove password protection and reset permissions.
 
 verbose, v ... turn on logging
         vv ... verbose logging
+  quiet, q ... disable output
        upw ... user password
        opw ... owner password
     inFile ... input pdf file
    outFile ... output pdf file`
 
-	usageChangeUserPW     = "usage: pdfcpu changeupw [-v(erbose)|vv] [-opw ownerpw] inFile upwOld upwNew"
+	usageChangeUserPW     = "usage: pdfcpu changeupw [-v(erbose)|vv] [-q(uiet)] [-opw ownerpw] inFile upwOld upwNew"
 	usageLongChangeUserPW = `Change the user password also known as the open doc password.
 	
 verbose, v ... turn on logging
         vv ... verbose logging
+  quiet, q ... disable output
        opw ... owner password, required unless = ""
     inFile ... input pdf file
     upwOld ... old user password
     upwNew ... new user password`
 
-	usageChangeOwnerPW     = "usage: pdfcpu changeopw [-v(erbose)|vv] [-upw userpw] inFile opwOld opwNew"
+	usageChangeOwnerPW     = "usage: pdfcpu changeopw [-v(erbose)|vv] [-q(uiet)] [-upw userpw] inFile opwOld opwNew"
 	usageLongChangeOwnerPW = `Change the owner password also known as the set permissions password.
 	
 verbose, v ... turn on logging
         vv ... verbose logging
+  quiet, q ... disable output
        upw ... user password, required unless = ""
     inFile ... input pdf file
     opwOld ... old owner password (provide user password on initial changeopw)
@@ -257,12 +270,13 @@ e.g. 'Draft'                                                  'logo.png'
      
 ` + usagePageSelection
 
-	usageStamp     = "usage: pdfcpu stamp [-v(erbose)|vv] [-pages pageSelection] [-upw userpw] [-opw ownerpw] description inFile [outFile]"
+	usageStamp     = "usage: pdfcpu stamp [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]"
 	usageLongStamp = `Add stamps for selected pages. 
 
  verbose, v ... turn on logging
          vv ... verbose logging
-      pages ... page selection
+   quiet, q ... disable output
+      pages ... selected pages
         upw ... user password
         opw ... owner password
 description ... font, font size, text, color, image/pdf file name, pdf page#, rotation, opacity, scale factor, render mode
@@ -271,12 +285,13 @@ description ... font, font size, text, color, image/pdf file name, pdf page#, ro
 
 ` + usageWMDescription
 
-	usageWatermark     = "usage: pdfcpu watermark [-v(erbose)|vv] [-pages pageSelection] [-upw userpw] [-opw ownerpw] description inFile [outFile]"
+	usageWatermark     = "usage: pdfcpu watermark [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]"
 	usageLongWatermark = `Add watermarks for selected pages. 
 
  verbose, v ... turn on logging
          vv ... verbose logging
-      pages ... page selection
+   quiet, q ... disable output
+      pages ... selected pages
         upw ... user password
         opw ... owner password
 description ... font, font size, text, color, image/pdf file name, pdf page#, rotation, opacity, scale factor, render mode
@@ -285,7 +300,7 @@ description ... font, font size, text, color, image/pdf file name, pdf page#, ro
 
 ` + usageWMDescription
 
-	usageImportImages     = "usage: pdfcpu import [-v(erbose)|vv] [description] outFile imageFile..."
+	usageImportImages     = "usage: pdfcpu import [-v(erbose)|vv] [-q(uiet)] [description] outFile imageFile..."
 	usageLongImportImages = `Turn image files into a PDF page sequence and write the result to outFile.
 If outFile already exists the page sequence will be appended.
 Each imageFile will be rendered to a separate page.
@@ -293,6 +308,7 @@ In its simplest form this converts an image into a PDF: "pdfcpu import img.pdf i
 
  verbose, v ... turn on logging
          vv ... verbose logging
+   quiet, q ... disable output
 description ... dimensions, format, position, offset, scale factor
     outFile ... output pdf file
   imageFile ... a list of image files
@@ -321,8 +337,8 @@ description ... dimensions, format, position, offset, scale factor
        'd:300 600, p:bl, o:20 20, s:1.0 abs' ... render the image anchored to bottom left corner with offset 20,20 and abs. scaling 1.0.
        'p:full'                              ... render the image to a page with corresponding dimensions.`
 
-	usagePagesInsert = "pdfcpu pages insert [-v(erbose)|vv] [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile [outFile]"
-	usagePagesRemove = "pdfcpu pages remove [-v(erbose)|vv]  -pages pageSelection  [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usagePagesInsert = "pdfcpu pages insert [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usagePagesRemove = "pdfcpu pages remove [-v(erbose)|vv] [-q(uiet)] -pages selectedPages  [-upw userpw] [-opw ownerpw] inFile [outFile]"
 
 	usagePages = "usage: " + usagePagesInsert +
 		"\n       " + usagePagesRemove
@@ -331,7 +347,8 @@ description ... dimensions, format, position, offset, scale factor
 
  verbose, v ... turn on logging
          vv ... verbose logging
-      pages ... page selection
+   quiet, q ... disable output
+      pages ... selected pages
         upw ... user password
         opw ... owner password
      inFile ... input pdf file
@@ -339,12 +356,13 @@ description ... dimensions, format, position, offset, scale factor
 
 ` + usagePageSelection
 
-	usageRotate     = "usage: pdfcpu rotate [-v(erbose)|vv] [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile rotation"
+	usageRotate     = "usage: pdfcpu rotate [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile rotation"
 	usageLongRotate = `Rotate selected pages by a multiple of 90 degrees. 
 
  verbose, v ... turn on logging
          vv ... verbose logging
-      pages ... page selection
+   quiet, q ... disable output
+      pages ... selected pages
         upw ... user password
         opw ... owner password
      inFile ... input pdf file
@@ -352,14 +370,15 @@ description ... dimensions, format, position, offset, scale factor
 
 ` + usagePageSelection
 
-	usageNUp     = "usage: pdfcpu nup [-v(erbose)|vv] [-pages pageSelection] [description] outFile n inFile|imageFiles..."
+	usageNUp     = "usage: pdfcpu nup [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [description] outFile n inFile|imageFiles..."
 	usageLongNUp = `Rearrange existing PDF pages or images into a sequence of page grids.
 This reduces the number of pages and therefore the required print time.
 If the input is one imageFile a single page n-up PDF gets generated.
 
  verbose, v ... turn on logging
          vv ... verbose logging
-      pages ... page selection for inFile only
+   quiet, q ... disable output
+      pages ... selected pages for inFile only
 description ... dimensions, format, orientation
     outFile ... output pdf file
           n ... the n-Up value (see below for details)
@@ -416,7 +435,7 @@ Examples: "pdfcpu nup out.pdf 4 in.pdf"
 
 ` + usagePageSelection
 
-	usageGrid     = "usage: pdfcpu grid [-v(erbose)|vv] [-pages pageSelection] [description] outFile m n inFile|imageFiles..."
+	usageGrid     = "usage: pdfcpu grid [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [description] outFile m n inFile|imageFiles..."
 	usageLongGrid = `Rearrange PDF pages or images for enhanced browsing experience.
 For a PDF inputfile each output page represents a grid of input pages.
 For image inputfiles each output page shows all images laid out onto grids of given paper size. 
@@ -424,7 +443,8 @@ This command produces poster like PDF pages convenient for page and image browsi
 
  verbose, v ... turn on logging
          vv ... verbose logging
-      pages ... page selection for inFile only
+   quiet, q ... disable output
+      pages ... selected pages for inFile only
 description ... dimensions, format, orientation
     outFile ... output pdf file
           m ... grid columns
@@ -539,4 +559,7 @@ Examples: "pdfcpu grid out.pdf 1 10 in.pdf"
 
 	usagePaper     = "usage: pdfcpu paper"
 	usageLongPaper = "prints a list of supported paper sizes"
+
+	usageInfo     = "usage: pdfcpu info inFile"
+	usageLongInfo = usageInfo
 )

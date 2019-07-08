@@ -26,7 +26,10 @@ import (
 	"github.com/hhrutter/pdfcpu/pkg/filter"
 )
 
-var testAudioFileWAV = filepath.Join("testdata", "resources", "test.wav")
+var (
+	testDir          = "../testdata"
+	testAudioFileWAV = filepath.Join(testDir, "resources", "test.wav")
+)
 
 func createXRefTableWithRootDict() (*XRefTable, error) {
 
@@ -1911,18 +1914,21 @@ func CreateAcroFormDemoXRef() (*XRefTable, error) {
 }
 
 // CreateContext creates a Context for given cross reference table and configuration.
-func CreateContext(xRefTable *XRefTable, config *Configuration) *Context {
+func CreateContext(xRefTable *XRefTable, conf *Configuration) *Context {
 
+	if conf == nil {
+		conf = NewDefaultConfiguration()
+	}
 	return &Context{
-		Configuration: config,
+		Configuration: conf,
 		XRefTable:     xRefTable,
-		Write:         NewWriteContext(config.Eol),
+		Write:         NewWriteContext(conf.Eol),
 	}
 
 }
 
 // CreateContextWithXRefTable creates a Context with an xRefTable without pages for given configuration.
-func CreateContextWithXRefTable(config *Configuration, pageDim *dim) (*Context, error) {
+func CreateContextWithXRefTable(conf *Configuration, pageDim *dim) (*Context, error) {
 
 	xRefTable, err := createXRefTableWithRootDict()
 	if err != nil {
@@ -1939,16 +1945,21 @@ func CreateContextWithXRefTable(config *Configuration, pageDim *dim) (*Context, 
 		return nil, err
 	}
 
-	return CreateContext(xRefTable, config), nil
+	return CreateContext(xRefTable, conf), nil
 }
 
 // CreatePDF creates a PDF file for an xRefTable.
-func CreatePDF(xRefTable *XRefTable, dirName, fileName string) error {
+// func CreatePDF(xRefTable *XRefTable, outFile string) error {
+// 	f, err := os.Create(outFile)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	ctx := CreateContext(xRefTable, NewDefaultConfiguration())
+// 	ctx := CreateContext(xRefTable, NewDefaultConfiguration())
 
-	ctx.Write.DirName = dirName
-	ctx.Write.FileName = fileName
+// 	if err = WriteContext(ctx, f); err != nil {
+// 		return err
+// 	}
 
-	return Write(ctx)
-}
+// 	return Write(ctx)
+// }

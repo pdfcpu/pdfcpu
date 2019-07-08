@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -38,8 +39,7 @@ func Write(ctx *Context) error {
 	// Create a writer for dirname and filename if not already supplied.
 	if ctx.Write.Writer == nil {
 
-		fileName := ctx.Write.DirName + ctx.Write.FileName
-
+		fileName := filepath.Join(ctx.Write.DirName, ctx.Write.FileName)
 		log.Info.Printf("writing to %s\n", fileName)
 
 		file, err = os.Create(fileName)
@@ -872,7 +872,7 @@ func setupEncryption(ctx *Context) error {
 	d := newEncryptDict(
 		ctx.EncryptUsingAES,
 		ctx.EncryptKeyLength,
-		ctx.UserAccessPermissions,
+		ctx.Permissions,
 	)
 
 	ctx.E, err = supportedEncryption(ctx, d)
@@ -922,9 +922,9 @@ func updateEncryption(ctx *Context) error {
 		return err
 	}
 
-	if ctx.Cmd == ADDPERMISSIONS {
+	if ctx.Cmd == SETPERMISSIONS {
 		//fmt.Printf("updating permissions to: %v\n", ctx.UserAccessPermissions)
-		ctx.E.P = int(ctx.UserAccessPermissions)
+		ctx.E.P = int(ctx.Permissions)
 		d.Update("P", Integer(ctx.E.P))
 		// and moving on, U is dependent on P
 	}
@@ -978,12 +978,16 @@ func updateEncryption(ctx *Context) error {
 
 func handleEncryption(ctx *Context) error {
 
+	action := "writing"
+
 	if ctx.Cmd == ENCRYPT || ctx.Cmd == DECRYPT {
 
 		if ctx.Cmd == DECRYPT {
 
 			// Remove encryption.
 			ctx.EncKey = nil
+
+			action = "decrypting"
 
 		} else {
 
@@ -992,9 +996,14 @@ func handleEncryption(ctx *Context) error {
 				return err
 			}
 
+			alg := "RC4"
+			if ctx.EncryptUsingAES {
+				alg = "AES"
+			}
+			action = fmt.Sprintf("encrypting(%s-%d)", alg, ctx.EncryptKeyLength)
 		}
 
-	} else if ctx.UserPWNew != nil || ctx.OwnerPWNew != nil || ctx.Cmd == ADDPERMISSIONS {
+	} else if ctx.UserPWNew != nil || ctx.OwnerPWNew != nil || ctx.Cmd == SETPERMISSIONS {
 
 		err := updateEncryption(ctx)
 		if err != nil {
@@ -1008,6 +1017,12 @@ func handleEncryption(ctx *Context) error {
 		ctx.WriteObjectStream = false
 		ctx.WriteXRefStream = false
 	}
+
+	s := filepath.Join(ctx.Write.DirName, ctx.Write.FileName)
+	if len(s) > 0 {
+		s = " " + s
+	}
+	log.CLI.Printf("%s%s...\n", action, s)
 
 	return nil
 }

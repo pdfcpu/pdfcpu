@@ -22,18 +22,17 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hhrutter/pdfcpu/pkg/api"
 	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
 )
 
 var (
-	errUnknownCmd   = errors.New("Unknown command")
-	errAmbiguousCmd = errors.New("Ambiguous command")
+	errUnknownCmd   = errors.New("pdfcpu: unknown command")
+	errAmbiguousCmd = errors.New("pdfcpu: ambiguous command")
 )
 
 // Command represents command meta information and command details wrapped into api.Command.
 type Command struct {
-	handler    func(config *pdfcpu.Configuration) *api.Command
+	handler    func(conf *pdfcpu.Configuration)
 	cmdMap     CommandMap // Optional sub commands.
 	usageShort string     // Short command description.
 	usageLong  string     // Long command description.
@@ -57,32 +56,34 @@ func (m CommandMap) Register(cmdStr string, cmd Command) {
 }
 
 // Handle applies command completion and if successful
-// executes the correct prepare function and processes the resulting command.
-func (m CommandMap) Handle(cmdPrefix string, command string, config *pdfcpu.Configuration) (*api.Command, string, error) {
+// executes the resulting command.
+func (m CommandMap) Handle(cmdPrefix string, command string, conf *pdfcpu.Configuration) (string, error) {
 
 	var cmdStr string
 
+	// Support command completion.
 	for k := range m {
 		if !strings.HasPrefix(k, cmdPrefix) {
 			continue
 		}
 		if len(cmdStr) > 0 {
-			return nil, command, errAmbiguousCmd
+			return command, errAmbiguousCmd
 		}
 		cmdStr = k
 	}
 
 	if cmdStr == "" {
-		return nil, command, errUnknownCmd
+		return command, errUnknownCmd
 	}
 
 	parseFlags(m[cmdStr])
 
-	config.OwnerPW = opw
-	config.UserPW = upw
+	conf.OwnerPW = opw
+	conf.UserPW = upw
 
 	if m[cmdStr].handler != nil {
-		return m[cmdStr].handler(config), command, nil
+		m[cmdStr].handler(conf)
+		return command, nil
 	}
 
 	if len(os.Args) == 2 {
@@ -90,7 +91,7 @@ func (m CommandMap) Handle(cmdPrefix string, command string, config *pdfcpu.Conf
 		os.Exit(1)
 	}
 
-	return m[cmdStr].cmdMap.Handle(os.Args[2], cmdStr, config)
+	return m[cmdStr].cmdMap.Handle(os.Args[2], cmdStr, conf)
 }
 
 // HelpString returns documentation for a topic.

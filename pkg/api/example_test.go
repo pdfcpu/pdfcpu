@@ -20,346 +20,263 @@ import (
 	"fmt"
 
 	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
+	pdf "github.com/hhrutter/pdfcpu/pkg/pdfcpu"
 )
 
-func ExampleProcess() {
-	// Please refer to the following examples.
+func ExampleValidateFile() {
+
+	// Use the default configuration to validate in.pdf.
+	ValidateFile("in.pdf", nil)
 }
 
-func exampleProcessValidate() {
+func ExampleOptimizeFile() {
 
-	config := pdfcpu.NewDefaultConfiguration()
+	conf := pdfcpu.NewDefaultConfiguration()
 
-	// Set optional password(s).
-	//config.UserPW = "upw"
-	//config.OwnerPW = "opw"
-
-	// Set relaxed validation mode.
-	config.ValidationMode = pdfcpu.ValidationRelaxed
-
-	_, err := Process(ValidateCommand("in.pdf", config))
-	if err != nil {
-		return
-	}
-
-}
-
-func exampleProcessOptimize() {
-
-	config := pdfcpu.NewDefaultConfiguration()
-
-	// Set optional password(s).
-	//config.UserPW = "upw"
-	//config.OwnerPW = "opw"
-
-	// Generate optional stats.
-	config.StatsFileName = "stats.csv"
+	// Set passwords for encrypted files.
+	conf.UserPW = "upw"
+	conf.OwnerPW = "opw"
 
 	// Configure end of line sequence for writing.
-	config.Eol = pdfcpu.EolLF
+	conf.Eol = pdfcpu.EolLF
 
-	_, err := Process(OptimizeCommand("in.pdf", "out.pdf", config))
-	if err != nil {
-		return
-	}
+	// Create an optimized version of in.pdf and write it to out.pdf.
+	OptimizeFile("in.pdf", "out.pdf", conf)
 
+	// Create an optimized version of inFile.
+	// If you want to modify the original file, pass an empty string for outFile.
+	// Use nil for a default configuration.
+	OptimizeFile("in.pdf", "", nil)
 }
 
-func exampleProcessMerge() {
+func ExampleTrimFile() {
 
-	// Concatenate this sequence of PDF files:
-	filenamesIn := []string{"in1.pdf", "in2.pdf", "in3.pdf"}
+	// Create a trimmed version of in.pdf containing odd page numbers only.
+	TrimFile("in.pdf", "outFile", []string{"odd"}, nil)
 
-	_, err := Process(MergeCommand(filenamesIn, "out.pdf", pdfcpu.NewDefaultConfiguration()))
-	if err != nil {
-		return
-	}
-
+	// Create a trimmed version of in.pdf containing the first two pages only.
+	// If you want to modify the original file, pass an empty string for outFile.
+	TrimFile("in.pdf", "", []string{"1-2"}, nil)
 }
 
-func exampleProcessSplit() {
+func ExampleSplitFile() {
 
-	// Split into single-page PDFs.
+	// Create single page PDFs for in.pdf in outDir using the default configuration.
+	SplitFile("in.pdf", "outDir", 1, nil)
 
-	config := pdfcpu.NewDefaultConfiguration()
-
-	_, err := Process(SplitCommand("in.pdf", "outDir", 1, config))
-	if err != nil {
-		return
-	}
-
+	// Create dual page PDFs for in.pdf in outDir using the default configuration.
+	SplitFile("in.pdf", "outDir", 2, nil)
 }
 
-func exampleProcessSplitWithSpan() {
+func ExampleRotateFile() {
 
-	// Split into PDFs using a split span of 2
-	// Each generated file has 2 pages.
+	// Rotate all pages of in.pdf, clockwise by 90 degrees and write the result to out.pdf.
+	RotateFile("in.pdf", "out.pdf", 90, nil, nil)
 
-	config := pdfcpu.NewDefaultConfiguration()
-
-	_, err := Process(SplitCommand("in.pdf", "outDir", 2, config))
-	if err != nil {
-		return
-	}
-
+	// Rotate the first page of in.pdf by 180 degrees.
+	// If you want to modify the original file, pass an empty string as outFile.
+	RotateFile("in.pdf", "", 180, []string{"1"}, nil)
 }
 
-func exampleProcessTrim() {
+func ExampleMergeFile() {
 
-	// Trim to first three pages.
-	selectedPages := []string{"-3"}
-
-	config := pdfcpu.NewDefaultConfiguration()
-
-	// Set optional password(s).
-	//config.UserPW = "upw"
-	//config.OwnerPW = "opw"
-
-	_, err := Process(TrimCommand("in.pdf", "out.pdf", selectedPages, config))
-	if err != nil {
-		return
-	}
-
+	// Merge inFiles by concatenation in the order specified and write the result to out.pdf.
+	inFiles := []string{"in1.pdf", "in2.pdf"}
+	MergeFile(inFiles, "out.pdf", nil)
 }
 
-func exampleProcessExtractPages() {
+func ExampleInsertPagesFile() {
 
-	// Extract single-page PDFs for pages 3, 4 and 5.
-	selectedPages := []string{"3..5"}
+	// Insert a blank page into in.pdf before page #3.
+	InsertPagesFile("in.pdf", "", []string{"3"}, nil)
 
-	config := pdfcpu.NewDefaultConfiguration()
-
-	// Set optional password(s).
-	//config.UserPW = "upw"
-	//config.OwnerPW = "opw"
-
-	_, err := Process(ExtractPagesCommand("in.pdf", "dirOut", selectedPages, config))
-	if err != nil {
-		return
-	}
-
+	// Insert a blank page into in.pdf before every page.
+	InsertPagesFile("in.pdf", "", nil, nil)
 }
 
-func exampleProcessExtractImages() {
+func ExampleRemovePagesFile() {
 
-	// Extract all embedded images for first 5 and last 5 pages but not for page 4.
-	selectedPages := []string{"-5", "5-", "!4"}
+	// Remove pages 2 and 8 of in.pdf.
+	RemovePagesFile("in.pdf", "", []string{"2", "8"}, nil)
 
-	config := pdfcpu.NewDefaultConfiguration()
+	// Remove first 2 pages of in.pdf.
+	RemovePagesFile("in.pdf", "", []string{"-2"}, nil)
 
-	// Set optional password(s).
-	//config.UserPW = "upw"
-	//config.OwnerPW = "opw"
-
-	_, err := Process(ExtractImagesCommand("in.pdf", "dirOut", selectedPages, config))
-	if err != nil {
-		return
-	}
-
+	// Remove all pages >= 10 of in.pdf.
+	RemovePagesFile("in.pdf", "", []string{"10-"}, nil)
 }
 
-func exampleProcessListAttachments() {
+func ExampleAddWatermarksFile() {
 
-	config := pdfcpu.NewDefaultConfiguration()
+	// Add a "Demo" watermark to all pages of in.pdf along the diagonal running from lower left to upper right.
+	onTop := false
+	wm, _ := pdfcpu.ParseWatermarkDetails("Demo", onTop)
+	AddWatermarksFile("in.pdf", "", nil, wm, nil)
 
-	// Set optional password(s).
-	//config.UserPW = "upw"
-	//config.OwnerPW = opw"
+	// Stamp all odd pages of in.pdf in red "Confidential" in 48 point Courier using a rotation angle of 45 degrees.
+	onTop = true
+	wm, _ = pdfcpu.ParseWatermarkDetails("Confidential, f:Courier, c: 1 0 0, r:45, s:1 abs, p:48", onTop)
+	AddWatermarksFile("in.pdf", "", []string{"odd"}, wm, nil)
 
-	list, err := Process(ListAttachmentsCommand("in.pdf", config))
-	if err != nil {
-		return
-	}
+	// Add image stamps to in.pdf using absolute scaling and a negative rotation of 90 degrees.
+	onTop = true
+	wm, _ = pdfcpu.ParseWatermarkDetails("image.png, s:.5 a, r:-90", onTop)
+	AddWatermarksFile("in.pdf", "", nil, wm, nil)
 
-	// Print attachment list.
-	for _, l := range list {
-		fmt.Println(l)
-	}
-
+	// Add a PDF stamp to all pages of in.pdf using the 2nd page of stamp.pdf, use absolute scaling of 0.5
+	// and rotate along the 2nd diagonal running from upper left to lower right corner.
+	onTop = true
+	wm, _ = pdfcpu.ParseWatermarkDetails("stamp.pdf:2, s:.5 a, d:2", onTop)
+	AddWatermarksFile("in.pdf", "", nil, wm, nil)
 }
 
-func exampleProcessAddAttachments() {
+func ExampleImportImagesFile() {
 
-	config := pdfcpu.NewDefaultConfiguration()
+	// Convert an image into a single page of out.pdf which will be created if necessary.
+	// The page dimensions will match the image dimensions.
+	// If out.pdf already exists, append a new page.
+	// Use the default import configuration.
+	ImportImagesFile([]string{"image.png"}, "out.pdf", nil, nil)
 
-	// Set optional password(s).
-	//config.UserPW = "upw"
-	//config.OwnerPW = "opw"
-
-	_, err := Process(AddAttachmentsCommand("in.pdf", []string{"a.csv", "b.jpg", "c.pdf"}, config))
-	if err != nil {
-		return
-	}
+	// Import images by creating an A3 page for each image.
+	// Images are page centered with 1.0 relative scaling.
+	// Import an image as a new page of the existing out.pdf.
+	imp, _ := pdf.ParseImportDetails("f:A3, p:c, s:1.0")
+	ImportImagesFile([]string{"a1.png", "a2.jpg", "a3.tiff"}, "out.pdf", imp, nil)
 }
 
-func exampleProcessRemoveAttachments() {
+func ExampleNUpFile() {
 
-	config := pdfcpu.NewDefaultConfiguration()
+	// 4-Up in.pdf and write result to out.pdf.
+	nup, _ := pdf.PDFNUpConfig(4, "")
+	inFiles := []string{"in.pdf"}
+	NUpFile(inFiles, "out.pdf", nil, nup, nil)
 
-	// Set optional password(s).
-	//config.UserPW = "upw"
-	//config.OwnerPW = "opw"
+	// 9-Up a sequence of images using format Tabloid w/o borders and no margins.
+	nup, _ = pdf.ImageNUpConfig(9, "f:Tabloid, b:off, m:0")
+	inFiles = []string{"in1.png", "in2.jpg", "in3.tiff"}
+	NUpFile(inFiles, "out.pdf", nil, nup, nil)
 
-	// Not to be confused with the ExtractAttachmentsCommand!
+	// TestGridFromPDF
+	nup, _ = pdf.PDFGridConfig(1, 3, "f:LegalL")
+	inFiles = []string{"in.pdf"}
+	NUpFile(inFiles, "out.pdf", nil, nup, nil)
 
-	// Remove all attachments.
-	_, err := Process(RemoveAttachmentsCommand("in.pdf", nil, config))
-	if err != nil {
-		return
-	}
-
-	// Remove specific attachments.
-	_, err = Process(RemoveAttachmentsCommand("in.pdf", []string{"a.csv", "b.jpg"}, config))
-	if err != nil {
-		return
-	}
-
+	// TestGridFromImages
+	nup, _ = pdf.ImageGridConfig(4, 2, "d:500 500, m:20, b:off")
+	inFiles = []string{"in1.png", "in2.jpg", "in3.tiff"}
+	NUpFile(inFiles, "out.pdf", nil, nup, nil)
 }
 
-func exampleProcessExtractAttachments() {
+func ExampleListPermissionsFile() {
 
-	config := pdfcpu.NewDefaultConfiguration()
-
-	// Set optional password(s).
-	//config.UserPW = "upw"
-	//config.OwnerPW = "opw"
-
-	// Extract all attachments.
-	_, err := Process(ExtractAttachmentsCommand("in.pdf", "dirOut", nil, config))
-	if err != nil {
-		return
-	}
-
-	// Extract specific attachments.
-	_, err = Process(ExtractAttachmentsCommand("in.pdf", "dirOut", []string{"a.csv", "b.pdf"}, config))
-	if err != nil {
-		return
+	// Output the current permissions of in.pdf.
+	list, _ := ListPermissionsFile("in.pdf", nil)
+	for _, s := range list {
+		fmt.Println(s)
 	}
 }
 
-func exampleProcessEncrypt() {
+func ExampleSetPermissionsFile() {
 
-	config := pdfcpu.NewDefaultConfiguration()
+	// Setting all permissions for the AES-256 encrypted in.pdf.
+	conf := pdf.NewAESConfiguration("upw", "opw", 256)
+	conf.Permissions = pdfcpu.PermissionsAll
+	SetPermissionsFile("in.pdf", "", conf)
 
-	config.UserPW = "upw"
-	config.OwnerPW = "opw"
+	// Restricting permissions for the AES-256 encrypted in.pdf.
+	conf = pdf.NewAESConfiguration("upw", "opw", 256)
+	conf.Permissions = pdfcpu.PermissionsNone
+	SetPermissionsFile("in.pdf", "", conf)
+}
 
-	_, err := Process(EncryptCommand("in.pdf", "out.pdf", config))
-	if err != nil {
-		return
+func ExampleEncryptFile() {
+
+	// Encrypting a file using AES-256.
+	conf := pdf.NewAESConfiguration("upw", "opw", 256)
+	EncryptFile("in.pdf", "", conf)
+}
+
+func ExampleDecryptFile() {
+
+	// Decrypting an AES-256 encrypted file.
+	conf := pdf.NewAESConfiguration("upw", "opw", 256)
+	DecryptFile("in.pdf", "", conf)
+}
+
+func ExampleChangeUserPasswordFile() {
+
+	// Changing the user password for an AES-256 encrypted file.
+	conf := pdf.NewAESConfiguration("upw", "opw", 256)
+	ChangeUserPasswordFile("in.pdf", "", "upw", "upwNew", conf)
+}
+
+func ExampleChangeOwnerPasswordFile() {
+
+	// Changing the owner password for an AES-256 encrypted file.
+	conf := pdf.NewAESConfiguration("upw", "opw", 256)
+	ChangeOwnerPasswordFile("in.pdf", "", "opw", "opwNew", conf)
+}
+
+func ExampleListAttachmentsFile() {
+
+	// Output a list of attachments of in.pdf.
+	list, _ := ListAttachmentsFile("in.pdf", nil)
+	for _, s := range list {
+		fmt.Println(s)
 	}
 }
 
-func exampleProcessDecrypt() {
+func ExampleAddAttachmentsFile() {
 
-	config := pdfcpu.NewDefaultConfiguration()
-
-	config.UserPW = "upw"
-	config.OwnerPW = "opw"
-
-	_, err := Process(DecryptCommand("in.pdf", "out.pdf", config))
-	if err != nil {
-		return
-	}
+	// Attach 3 files to in.pdf.
+	AddAttachmentsFile("in.pdf", "", []string{"img.jpg", "attach.pdf", "test.zip"}, nil)
 }
 
-func exampleProcessChangeUserPW() {
+func ExampleRemoveAttachmentsFile() {
 
-	config := pdfcpu.NewDefaultConfiguration()
+	// Remove 1 attachment from in.pdf.
+	RemoveAttachmentsFile("in.pdf", "", []string{"img.jpg"}, nil)
 
-	// Provide existing owner pw like so
-	config.OwnerPW = "opw"
-
-	pwOld := "pwOld"
-	pwNew := "pwNew"
-
-	_, err := Process(ChangeUserPWCommand("in.pdf", "out.pdf", config, &pwOld, &pwNew))
-	if err != nil {
-		return
-	}
+	// Remove all attachments from in.pdf
+	RemoveAttachmentsFile("in.pdf", "", nil, nil)
 }
 
-func exampleProcessChangeOwnerPW() {
+func ExampleExtractAttachmentsFile() {
 
-	config := pdfcpu.NewDefaultConfiguration()
+	// Extract 1 attachment from in.pdf into outDir.
+	ExtractAttachmentsFile("in.pdf", "outDir", []string{"img.jpg"}, nil)
 
-	// Provide existing user pw like so
-	config.UserPW = "upw"
-
-	// old and new owner pw
-	pwOld := "pwOld"
-	pwNew := "pwNew"
-
-	_, err := Process(ChangeOwnerPWCommand("in.pdf", "out.pdf", config, &pwOld, &pwNew))
-	if err != nil {
-		return
-	}
+	// Extract all attachments from in.pdf into outDir
+	ExtractAttachmentsFile("in.pdf", "outDir", nil, nil)
 }
 
-func exampleProcesslistPermissions() {
+func ExampleExtractImagesFile() {
 
-	config := pdfcpu.NewDefaultConfiguration()
-	config.UserPW = "upw"
-	config.OwnerPW = "opw"
-
-	list, err := Process(ListPermissionsCommand("in.pdf", config))
-	if err != nil {
-		return
-	}
-
-	// Print permissions list.
-	for _, l := range list {
-		fmt.Println(l)
-	}
+	// Extract embedded images from in.pdf into outDir.
+	ExtractImagesFile("in.pdf", "outDir", nil, nil)
 }
 
-func exampleProcessAddPermissions() {
+func ExampleExtractFontsFile() {
 
-	config := pdfcpu.NewDefaultConfiguration()
-	config.UserPW = "upw"
-	config.OwnerPW = "opw"
-
-	config.UserAccessPermissions = pdfcpu.PermissionsAll
-
-	_, err := Process(AddPermissionsCommand("in.pdf", config))
-	if err != nil {
-		return
-	}
-
+	// Extract embedded fonts for pages 1-3 from in.pdf into outDir.
+	ExtractFontsFile("in.pdf", outDir, []string{"1-3"}, nil)
 }
 
-func exampleProcessStamp() {
+func ExampleExtractContentFile() {
 
-	// Stamp all but the first page.
-	selectedPages := []string{"odd,!1"}
-	var watermark *pdfcpu.Watermark
-
-	config := pdfcpu.NewDefaultConfiguration()
-	// Set optional password(s).
-	//config.UserPW = "upw"
-	//config.OwnerPW = "opw"
-
-	_, err := Process(AddWatermarksCommand("in.pdf", "out.pdf", selectedPages, watermark, config))
-	if err != nil {
-		return
-	}
-
+	// Extract content for all pages in PDF syntax from in.pdf into outDir.
+	ExtractContentFile("in.pdf", "outDir", nil, nil)
 }
 
-func exampleProcessWatermark() {
+func ExampleExtractPagesFile() {
 
-	// Stamp all but the first page.
-	selectedPages := []string{"even"}
-	var watermark *pdfcpu.Watermark
+	// Extract all even numbered pages from in.pdf into outDir.
+	ExtractPagesFile("in.pdf", outDir, []string{"even"}, nil)
+}
 
-	config := pdfcpu.NewDefaultConfiguration()
-	// Set optional password(s).
-	//config.UserPW = "upw"
-	//config.OwnerPW = "opw"
+func ExampleExtractMetadataFile() {
 
-	_, err := Process(AddWatermarksCommand("in.pdf", "out.pdf", selectedPages, watermark, config))
-	if err != nil {
-		return
-	}
-
+	// Extract all metadata from in.pdf into outDir.
+	ExtractMetadataFile("in.pdf", "outDir", nil, nil)
 }

@@ -61,11 +61,12 @@ func (m matrix) String() string {
 		m[2][0], m[2][1], m[2][2])
 }
 
-type simpleColor struct {
+// SimpleColor is a simple rgb wrapper.
+type SimpleColor struct {
 	r, g, b float32 // intensities between 0 and 1.
 }
 
-func (sc simpleColor) String() string {
+func (sc SimpleColor) String() string {
 	return fmt.Sprintf("r=%1.1f g=%1.1f b=%1.1f", sc.r, sc.g, sc.b)
 }
 
@@ -88,21 +89,21 @@ type formCache map[*Rectangle]*IndirectRef
 type Watermark struct {
 
 	// configuration
-	textString     string      // raw display text.
-	textLines      []string    // display multiple lines of text.
-	fileName       string      // display pdf page or png image.
-	page           int         // the page number of a PDF file.
-	onTop          bool        // if true this is a STAMP else this is a WATERMARK.
-	fontName       string      // supported are Adobe base fonts only. (as of now: Helvetica, Times-Roman, Courier)
-	fontSize       int         // font scaling factor.
-	scaledFontSize int         // font scaling factor for a specific page
-	color          simpleColor // fill color(=non stroking color).
-	rotation       float64     // rotation to apply in degrees. -180 <= x <= 180
-	diagonal       int         // paint along the diagonal.
-	opacity        float64     // opacity the displayed text. 0 <= x <= 1
-	renderMode     int         // fill=0, stroke=1 fill&stroke=2
-	scale          float64     // relative scale factor. 0 <= x <= 1
-	scaleAbs       bool        // true for absolute scaling.
+	TextString     string      // raw display text.
+	TextLines      []string    // display multiple lines of text.
+	FileName       string      // display pdf page or png image.
+	Page           int         // the page number of a PDF file.
+	OnTop          bool        // if true this is a STAMP else this is a WATERMARK.
+	FontName       string      // supported are Adobe base fonts only. (as of now: Helvetica, Times-Roman, Courier)
+	FontSize       int         // font scaling factor.
+	ScaledFontSize int         // font scaling factor for a specific page
+	Color          SimpleColor // fill color(=non stroking color).
+	Rotation       float64     // rotation to apply in degrees. -180 <= x <= 180
+	Diagonal       int         // paint along the diagonal.
+	Opacity        float64     // opacity the displayed text. 0 <= x <= 1
+	RenderMode     int         // fill=0, stroke=1 fill&stroke=2
+	Scale          float64     // relative scale factor. 0 <= x <= 1
+	ScaleAbs       bool        // true for absolute scaling.
 
 	// resources
 	ocg, extGState, font, image *IndirectRef
@@ -138,17 +139,17 @@ func (wm Watermark) typ() string {
 func (wm Watermark) String() string {
 
 	var s string
-	if !wm.onTop {
+	if !wm.OnTop {
 		s = "not "
 	}
 
-	t := wm.textString
+	t := wm.TextString
 	if len(t) == 0 {
-		t = wm.fileName
+		t = wm.FileName
 	}
 
 	sc := "relative"
-	if wm.scaleAbs {
+	if wm.ScaleAbs {
 		sc = "absolute"
 	}
 
@@ -175,14 +176,14 @@ func (wm Watermark) String() string {
 		"vp:%s\n"+
 		"pageRotation: %.1f\n",
 		t, s, wm.typ(),
-		wm.fontName, wm.fontSize,
-		wm.page,
-		wm.scale, sc,
-		wm.color,
-		wm.rotation,
-		wm.diagonal,
-		wm.opacity,
-		wm.renderMode,
+		wm.FontName, wm.FontSize,
+		wm.Page,
+		wm.Scale, sc,
+		wm.Color,
+		wm.Rotation,
+		wm.Diagonal,
+		wm.Opacity,
+		wm.RenderMode,
 		bbox,
 		vp,
 		wm.pageRot,
@@ -192,7 +193,7 @@ func (wm Watermark) String() string {
 // OnTopString returns "watermark" or "stamp" whichever applies.
 func (wm Watermark) OnTopString() string {
 	s := "watermark"
-	if wm.onTop {
+	if wm.OnTop {
 		s = "stamp"
 	}
 	return s
@@ -202,8 +203,8 @@ func (wm Watermark) calcMaxTextWidth() float64 {
 
 	var maxWidth float64
 
-	for _, l := range wm.textLines {
-		w := metrics.TextWidth(l, wm.fontName, wm.scaledFontSize)
+	for _, l := range wm.TextLines {
+		w := metrics.TextWidth(l, wm.FontName, wm.ScaledFontSize)
 		if w > maxWidth {
 			maxWidth = w
 		}
@@ -216,8 +217,8 @@ func (wm Watermark) calcMinFontSize(w float64) int {
 
 	var minSize int
 
-	for _, l := range wm.textLines {
-		w := metrics.FontSize(l, wm.fontName, w)
+	for _, l := range wm.TextLines {
+		w := metrics.FontSize(l, wm.FontName, w)
 		if minSize == 0.0 {
 			minSize = w
 		}
@@ -231,12 +232,12 @@ func (wm Watermark) calcMinFontSize(w float64) int {
 
 // IsPDF returns whether the watermark content is an image or text.
 func (wm Watermark) isPDF() bool {
-	return len(wm.fileName) > 0 && strings.ToLower(filepath.Ext(wm.fileName)) == ".pdf"
+	return len(wm.FileName) > 0 && strings.ToLower(filepath.Ext(wm.FileName)) == ".pdf"
 }
 
 // IsImage returns whether the watermark content is an image or text.
 func (wm Watermark) isImage() bool {
-	return len(wm.fileName) > 0 && strings.ToLower(filepath.Ext(wm.fileName)) != ".pdf"
+	return len(wm.FileName) > 0 && strings.ToLower(filepath.Ext(wm.FileName)) != ".pdf"
 }
 
 func (wm *Watermark) calcBoundingBox() {
@@ -252,8 +253,8 @@ func (wm *Watermark) calcBoundingBox() {
 		//fmt.Printf("calcBB: ar:%f scale:%f\n", ar, wm.scale)
 		//fmt.Printf("vp: %s\n", wm.vp)
 
-		if wm.scaleAbs {
-			bb.UR.X = wm.scale * bb.Width()
+		if wm.ScaleAbs {
+			bb.UR.X = wm.Scale * bb.Width()
 			bb.UR.Y = bb.UR.X / ar
 
 			wm.bb = bb
@@ -261,11 +262,11 @@ func (wm *Watermark) calcBoundingBox() {
 		}
 
 		if ar >= 1 {
-			bb.UR.X = wm.scale * wm.vp.Width()
+			bb.UR.X = wm.Scale * wm.vp.Width()
 			bb.UR.Y = bb.UR.X / ar
 			//fmt.Printf("ar>1: %s\n", bb)
 		} else {
-			bb.UR.Y = wm.scale * wm.vp.Height()
+			bb.UR.Y = wm.Scale * wm.vp.Height()
 			bb.UR.X = bb.UR.Y * ar
 			//fmt.Printf("ar<=1: %s\n", bb)
 		}
@@ -277,14 +278,14 @@ func (wm *Watermark) calcBoundingBox() {
 	// font watermark
 
 	var w float64
-	if wm.scaleAbs {
-		wm.scaledFontSize = int(float64(wm.fontSize) * wm.scale)
+	if wm.ScaleAbs {
+		wm.ScaledFontSize = int(float64(wm.FontSize) * wm.Scale)
 		w = wm.calcMaxTextWidth()
 	} else {
-		w = wm.scale * wm.vp.Width()
-		wm.scaledFontSize = wm.calcMinFontSize(w)
+		w = wm.Scale * wm.vp.Width()
+		wm.ScaledFontSize = wm.calcMinFontSize(w)
 	}
-	h := float64(len(wm.textLines)) * float64(wm.scaledFontSize)
+	h := float64(len(wm.TextLines)) * float64(wm.ScaledFontSize)
 	wm.bb = Rect(0, 0, w, h)
 
 	return
@@ -293,9 +294,9 @@ func (wm *Watermark) calcBoundingBox() {
 func (wm *Watermark) calcTransformMatrix() *matrix {
 
 	var sin, cos float64
-	r := wm.rotation
+	r := wm.Rotation
 
-	if wm.diagonal != noDiagonal {
+	if wm.Diagonal != noDiagonal {
 
 		// Calculate the angle of the diagonal with respect of the aspect ratio of the bounding box.
 		r = math.Atan(wm.vp.Height()/wm.vp.Width()) * float64(radToDeg)
@@ -304,7 +305,7 @@ func (wm *Watermark) calcTransformMatrix() *matrix {
 			r -= 90
 		}
 
-		if wm.diagonal == diagonalULToLR {
+		if wm.Diagonal == diagonalULToLR {
 			r = -r
 		}
 
@@ -360,26 +361,26 @@ func setWatermarkType(s string, wm *Watermark) error {
 
 	ss := strings.Split(s, ":")
 
-	wm.textString = ss[0]
+	wm.TextString = ss[0]
 
 	for _, l := range strings.Split(ss[0], `\n`) {
-		wm.textLines = append(wm.textLines, l)
+		wm.TextLines = append(wm.TextLines, l)
 	}
 
-	if len(wm.textLines) > 1 {
+	if len(wm.TextLines) > 1 {
 		// Multiline text watermark.
 		return nil
 	}
 
 	ext := strings.ToLower(filepath.Ext(ss[0]))
 	if MemberOf(ext, []string{".jpg", ".jpeg", ".png", ".tif", ".tiff", ".pdf"}) {
-		wm.fileName = wm.textString
+		wm.FileName = wm.TextString
 	}
 
 	if len(ss) > 1 {
 		// Parse page number for PDF watermarks.
 		var err error
-		wm.page, err = strconv.Atoi(ss[1])
+		wm.Page, err = strconv.Atoi(ss[1])
 		if err != nil {
 			return errors.Errorf("illegal page number value: %s\n", ss[1])
 		}
@@ -404,7 +405,7 @@ func parseWatermarkFontSize(s string, wm *Watermark) error {
 		return err
 	}
 
-	wm.fontSize = fs
+	wm.FontSize = fs
 
 	return nil
 }
@@ -456,7 +457,7 @@ func parseWatermarkColor(s string, wm *Watermark) error {
 	if r < 0 || r > 1 {
 		return errors.New("red: a color value is an intensity between 0.0 and 1.0")
 	}
-	wm.color.r = float32(r)
+	wm.Color.r = float32(r)
 
 	g, err := strconv.ParseFloat(cs[1], 32)
 	if err != nil {
@@ -465,7 +466,7 @@ func parseWatermarkColor(s string, wm *Watermark) error {
 	if g < 0 || g > 1 {
 		return errors.New("green: a color value is an intensity between 0.0 and 1.0")
 	}
-	wm.color.g = float32(g)
+	wm.Color.g = float32(g)
 
 	b, err := strconv.ParseFloat(cs[2], 32)
 	if err != nil {
@@ -474,7 +475,7 @@ func parseWatermarkColor(s string, wm *Watermark) error {
 	if b < 0 || b > 1 {
 		return errors.New("blue: a color value is an intensity between 0.0 and 1.0")
 	}
-	wm.color.b = float32(b)
+	wm.Color.b = float32(b)
 
 	return nil
 }
@@ -493,8 +494,8 @@ func parseWatermarkRotation(s string, setDiag bool, wm *Watermark) error {
 		return errors.Errorf("illegal rotation: -180 <= r <= 180 degrees, %s\n", s)
 	}
 
-	wm.rotation = r
-	wm.diagonal = noDiagonal
+	wm.Rotation = r
+	wm.Diagonal = noDiagonal
 
 	return nil
 }
@@ -513,8 +514,8 @@ func parseWatermarkDiagonal(s string, setRot bool, wm *Watermark) error {
 		return errors.New("diagonal: 1..lower left to upper right, 2..upper left to lower right")
 	}
 
-	wm.diagonal = d
-	wm.rotation = 0
+	wm.Diagonal = d
+	wm.Rotation = 0
 
 	return nil
 }
@@ -528,7 +529,7 @@ func parseWatermarkOpacity(s string, wm *Watermark) error {
 	if o < 0 || o > 1 {
 		return errors.Errorf("illegal opacity: 0.0 <= r <= 1.0, %s\n", s)
 	}
-	wm.opacity = o
+	wm.Opacity = o
 
 	return nil
 }
@@ -542,7 +543,7 @@ func parseWatermarkRenderMode(s string, wm *Watermark) error {
 	if m != rmFill && m != rmStroke && m != rmFillAndStroke {
 		return errors.New("Valid rendermodes: 0..fill, 1..stroke, 2..fill&stroke")
 	}
-	wm.renderMode = m
+	wm.RenderMode = m
 
 	return nil
 }
@@ -554,19 +555,19 @@ func ParseWatermarkDetails(s string, onTop bool) (*Watermark, error) {
 
 	// Set default watermark
 	wm := Watermark{
-		onTop:      onTop,
-		page:       1,
-		fontName:   "Helvetica",
-		fontSize:   24,
-		scale:      0.5,
-		scaleAbs:   false,
-		color:      simpleColor{0.5, 0.5, 0.5}, // gray
-		diagonal:   diagonalLLToUR,
-		opacity:    1.0,
-		renderMode: rmFill,
+		OnTop:      onTop,
+		Page:       1,
+		FontName:   "Helvetica",
+		FontSize:   24,
+		Scale:      0.5,
+		ScaleAbs:   false,
+		Color:      SimpleColor{0.5, 0.5, 0.5}, // gray
+		Diagonal:   diagonalLLToUR,
+		Opacity:    1.0,
+		RenderMode: rmFill,
 		objs:       IntSet{},
 		fCache:     formCache{},
-		textLines:  []string{},
+		TextLines:  []string{},
 	}
 
 	ss := strings.Split(s, ",")
@@ -596,13 +597,13 @@ func ParseWatermarkDetails(s string, onTop bool) (*Watermark, error) {
 			if !supportedWatermarkFont(v) {
 				err = errors.Errorf("%s is unsupported, try one of Helvetica, Times-Roman, Courier.\n", v)
 			}
-			wm.fontName = v
+			wm.FontName = v
 
 		case "p": // font size in points
 			err = parseWatermarkFontSize(v, &wm)
 
 		case "s": // scale factor
-			wm.scale, wm.scaleAbs, err = parseScaleFactor(v)
+			wm.Scale, wm.ScaleAbs, err = parseScaleFactor(v)
 
 		case "c": // color
 			err = parseWatermarkColor(v, &wm)
@@ -638,7 +639,7 @@ func createFontResForWM(xRefTable *XRefTable, wm *Watermark) error {
 	d := NewDict()
 	d.InsertName("Type", "Font")
 	d.InsertName("Subtype", "Type1")
-	d.InsertName("BaseFont", wm.fontName)
+	d.InsertName("BaseFont", wm.FontName)
 
 	ir, err := xRefTable.IndRefForNewObject(d)
 	if err != nil {
@@ -802,19 +803,19 @@ func createPDFResForWM(ctx *Context, wm *Watermark) error {
 	xRefTable := ctx.XRefTable
 
 	// This PDF file is assumed to be valid.
-	otherCtx, err := ReadFile(wm.fileName, NewDefaultConfiguration())
+	otherCtx, err := ReadFile(wm.FileName, NewDefaultConfiguration())
 	if err != nil {
 		return err
 	}
 
 	otherXRefTable := otherCtx.XRefTable
 
-	d, inhPAttrs, err := otherXRefTable.PageDict(wm.page)
+	d, inhPAttrs, err := otherXRefTable.PageDict(wm.Page)
 	if err != nil {
 		return err
 	}
 	if d == nil {
-		return errors.Errorf("unknown page number: %d\n", wm.page)
+		return errors.Errorf("unknown page number: %d\n", wm.Page)
 	}
 
 	// Retrieve content stream bytes.
@@ -888,7 +889,7 @@ func createImageResource(xRefTable *XRefTable, fileName string) (*IndirectRef, i
 
 func createImageResForWM(xRefTable *XRefTable, wm *Watermark) (err error) {
 
-	wm.image, wm.width, wm.height, err = createImageResource(xRefTable, wm.fileName)
+	wm.image, wm.width, wm.height, err = createImageResource(xRefTable, wm.FileName)
 
 	return err
 }
@@ -914,7 +915,7 @@ func createOCG(xRefTable *XRefTable, wm *Watermark) error {
 
 	name := "Background"
 	subt := "BG"
-	if wm.onTop {
+	if wm.OnTop {
 		name = "Watermark"
 		subt = "FG"
 	}
@@ -990,7 +991,7 @@ func prepareOCPropertiesInRoot(rootDict Dict, wm *Watermark) error {
 		return nil
 	}
 
-	return oneWatermarkOnlyError(wm.onTop)
+	return oneWatermarkOnlyError(wm.OnTop)
 }
 
 func createFormResDict(xRefTable *XRefTable, wm *Watermark) (*IndirectRef, error) {
@@ -1015,7 +1016,7 @@ func createFormResDict(xRefTable *XRefTable, wm *Watermark) (*IndirectRef, error
 
 	d := Dict(
 		map[string]Object{
-			"Font":    Dict(map[string]Object{wm.fontName: *wm.font}),
+			"Font":    Dict(map[string]Object{wm.FontName: *wm.font}),
 			"ProcSet": NewNameArray("PDF", "Text"),
 		},
 	)
@@ -1050,19 +1051,19 @@ func createForm(xRefTable *XRefTable, wm *Watermark, withBB bool) error {
 	} else {
 
 		// 12 font points result in a vertical displacement of 9.47
-		dy := -float64(wm.scaledFontSize) / 12 * 9.47
+		dy := -float64(wm.ScaledFontSize) / 12 * 9.47
 
 		wmForm := "0 g 0 G 0 i 0 J []0 d 0 j 1 w 10 M 0 Tc 0 Tw 100 Tz 0 TL %d Tr 0 Ts "
-		fmt.Fprintf(&b, wmForm, wm.renderMode)
+		fmt.Fprintf(&b, wmForm, wm.RenderMode)
 
 		j := 1
-		for i := len(wm.textLines) - 1; i >= 0; i-- {
+		for i := len(wm.TextLines) - 1; i >= 0; i-- {
 
-			sw := metrics.TextWidth(wm.textLines[i], wm.fontName, wm.scaledFontSize)
+			sw := metrics.TextWidth(wm.TextLines[i], wm.FontName, wm.ScaledFontSize)
 			dx := wm.bb.Width()/2 - sw/2
 
 			fmt.Fprintf(&b, "BT /%s %d Tf %f %f %f rg %f %f Td (%s) Tj ET ",
-				wm.fontName, wm.scaledFontSize, wm.color.r, wm.color.g, wm.color.b, dx, dy+float64(j*wm.scaledFontSize), wm.textLines[i])
+				wm.FontName, wm.ScaledFontSize, wm.Color.r, wm.Color.g, wm.Color.b, dx, dy+float64(j*wm.ScaledFontSize), wm.TextLines[i])
 			j++
 		}
 
@@ -1122,8 +1123,8 @@ func createExtGStateForStamp(xRefTable *XRefTable, wm *Watermark) error {
 	d := Dict(
 		map[string]Object{
 			"Type": Name("ExtGState"),
-			"CA":   Float(wm.opacity),
-			"ca":   Float(wm.opacity),
+			"CA":   Float(wm.Opacity),
+			"ca":   Float(wm.Opacity),
 		},
 	)
 
@@ -1263,7 +1264,7 @@ func updatePageContentsForWM(xRefTable *XRefTable, obj Object, wm *Watermark, gs
 		entry, _ := xRefTable.FindTableEntry(objNr, genNr)
 		sd, _ := (entry.Object).(StreamDict)
 
-		if len(o) == 1 || !wm.onTop {
+		if len(o) == 1 || !wm.OnTop {
 
 			if wm.objs[objNr] {
 				// wm already applied to this content stream.
@@ -1388,7 +1389,7 @@ func patchContentForWM(sd *StreamDict, gsID, xoID string, wm *Watermark, saveGSt
 
 	bb := wmContent(wm, gsID, xoID)
 
-	if wm.onTop {
+	if wm.OnTop {
 		if saveGState {
 			sd.Content = append([]byte("q "), sd.Content...)
 		}

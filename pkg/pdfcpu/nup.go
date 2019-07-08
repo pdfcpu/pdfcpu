@@ -134,7 +134,7 @@ type NUp struct {
 
 func (nup NUp) String() string {
 
-	return fmt.Sprintf("N-Up config: %s %s, orient=%s, grid=%s, pageGrid=%t, isImage=%t\n",
+	return fmt.Sprintf("N-Up conf: %s %s, orient=%s, grid=%s, pageGrid=%t, isImage=%t\n",
 		nup.PageSize, *nup.PageDim, nup.Orient, *nup.Grid, nup.PageGrid, nup.ImgInputFile)
 }
 
@@ -148,11 +148,55 @@ func DefaultNUpConfig() *NUp {
 	}
 }
 
-// ParseNUpValue parses the NUp value into an internal structure.
-func ParseNUpValue(s string, nUp *NUp) error {
+// PDFNUpConfig returns an NUp configuration for Nup-ing PDF files.
+func PDFNUpConfig(val int, desc string) (*NUp, error) {
+	nup := DefaultNUpConfig()
+	if err := ParseNUpValue(val, nup); err != nil {
+		return nil, err
+	}
+	if desc != "" {
+		if err := ParseNUpDetails(desc, nup); err != nil {
+			return nil, err
+		}
+	}
+	return nup, nil
+}
 
-	n, err := strconv.Atoi(s)
-	if err != nil || !IntMemberOf(n, nUpValues) {
+// ImageNUpConfig returns an NUp configuration for Nup-ing image files.
+func ImageNUpConfig(val int, desc string) (*NUp, error) {
+	nup, err := PDFNUpConfig(val, desc)
+	if err != nil {
+		return nil, err
+	}
+	nup.ImgInputFile = true
+	return nup, nil
+}
+
+// PDFGridConfig returns a grid configuration for Nup-ing PDF files.
+func PDFGridConfig(rows, cols int, desc string) (*NUp, error) {
+	nup := DefaultNUpConfig()
+	nup.PageGrid = true
+	if desc != "" {
+		if err := ParseNUpDetails(desc, nup); err != nil {
+			return nil, err
+		}
+	}
+	return nup, ParseNUpGridDefinition(rows, cols, nup)
+}
+
+// ImageGridConfig returns a grid configuration for Nup-ing image files.
+func ImageGridConfig(rows, cols int, desc string) (*NUp, error) {
+	nup, err := PDFGridConfig(rows, cols, desc)
+	if err != nil {
+		return nil, err
+	}
+	nup.ImgInputFile = true
+	return nup, nil
+}
+
+// ParseNUpValue parses the NUp value into an internal structure.
+func ParseNUpValue(n int, nUp *NUp) error {
+	if !IntMemberOf(n, nUpValues) {
 		return errInvalidGridID
 	}
 
@@ -177,15 +221,15 @@ func ParseNUpValue(s string, nUp *NUp) error {
 }
 
 // ParseNUpGridDefinition parses NUp grid dimensions into an internal structure.
-func ParseNUpGridDefinition(s1, s2 string, nUp *NUp) error {
+func ParseNUpGridDefinition(cols, rows int, nUp *NUp) error {
 
-	m, err := strconv.Atoi(s1)
-	if err != nil || m <= 0 {
+	m := cols
+	if m <= 0 {
 		return errInvalidGridDims
 	}
 
-	n, err := strconv.Atoi(s2)
-	if err != nil || m <= 0 {
+	n := rows
+	if m <= 0 {
 		return errInvalidGridDims
 	}
 
@@ -465,7 +509,7 @@ func createNUpFormForPDFResource(xRefTable *XRefTable, resDict *IndirectRef, con
 	return xRefTable.IndRefForNewObject(sd)
 }
 
-// NewNUpPageForImage creates a new page dict in xRefTable for given image filename and n-up config.
+// NewNUpPageForImage creates a new page dict in xRefTable for given image filename and n-up conf.
 func NewNUpPageForImage(xRefTable *XRefTable, fileName string, parentIndRef *IndirectRef, nup *NUp) (*IndirectRef, error) {
 
 	// create image dict.
@@ -658,14 +702,14 @@ func nupFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict
 
 // NUpFromImage creates a single page n-up PDF for one image
 // or a sequence of n-up pages for more than one image.
-func NUpFromImage(config *Configuration, imageFileNames []string, nup *NUp) (*Context, error) {
+func NUpFromImage(conf *Configuration, imageFileNames []string, nup *NUp) (*Context, error) {
 
 	if nup.PageDim == nil {
 		// Set default paper size.
 		nup.PageDim = PaperSize[nup.PageSize]
 	}
 
-	ctx, err := CreateContextWithXRefTable(config, nup.PageDim)
+	ctx, err := CreateContextWithXRefTable(conf, nup.PageDim)
 	if err != nil {
 		return nil, err
 	}

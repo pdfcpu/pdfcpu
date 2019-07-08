@@ -27,16 +27,16 @@ import (
 
 var r *regexp.Regexp
 
-func doTestPageSelectionSyntaxOk(s string, t *testing.T) {
-
+func testPageSelectionSyntaxOk(t *testing.T, s string) {
+	t.Helper()
 	_, err := ParsePageSelection(s)
 	if err != nil {
 		t.Errorf("doTestPageSelectionSyntaxOk(%s)\n", s)
 	}
 }
 
-func doTestPageSelectionSyntaxFail(s string, t *testing.T) {
-
+func testPageSelectionSyntaxFail(t *testing.T, s string) {
+	t.Helper()
 	_, err := ParsePageSelection(s)
 	if err == nil {
 		t.Errorf("doTestPageSelectionSyntaxFail(%s)\n", s)
@@ -46,24 +46,21 @@ func doTestPageSelectionSyntaxFail(s string, t *testing.T) {
 // Test the pageSelection string.
 // This is used to select specific pages for extraction and trimming.
 func TestPageSelectionSyntax(t *testing.T) {
-
 	psOk := []string{"1", "!1", "n1", "1-", "!1-", "n1-", "-5", "!-5", "n-5", "3-5", "!3-5", "n3-5",
 		"1,2,3", "!-5,10-15,30-", "1-,n4", "odd", "even", " 1"}
 
 	for _, s := range psOk {
-		doTestPageSelectionSyntaxOk(s, t)
+		testPageSelectionSyntaxOk(t, s)
 	}
 
 	psFail := []string{"1,", "1 ", "-", " -", " !"}
 
 	for _, s := range psFail {
-		doTestPageSelectionSyntaxFail(s, t)
+		testPageSelectionSyntaxFail(t, s)
 	}
-
 }
 
 func selectedPagesString(sp pdfcpu.IntSet, pageCount int) string {
-
 	s := []string{}
 	var t string
 
@@ -79,57 +76,54 @@ func selectedPagesString(sp pdfcpu.IntSet, pageCount int) string {
 	return strings.Join(s, "")
 }
 
-func doTestPageSelection(s string, pageCount int, compareString string, t *testing.T) {
-
+func testSelectedPages(s string, pageCount int, compareString string, t *testing.T) {
 	pageSelection, err := ParsePageSelection(s)
 	if err != nil {
-		t.Fatalf("TestPageSelection(%s) %v\n", s, err)
+		t.Fatalf("testSelectedPages(%s) %v\n", s, err)
 	}
 
-	selectedPages, err := pagesForPageSelection(pageCount, pageSelection)
+	selectedPages, err := pagesForPageSelection(pageCount, pageSelection, false)
 	if err != nil {
-		t.Fatalf("TestPageSelection(%s) %v\n", s, err)
+		t.Fatalf("testSelectedPages(%s) %v\n", s, err)
 	}
 
 	resultString := selectedPagesString(selectedPages, pageCount)
 
 	if resultString != compareString {
-		t.Fatalf("TestPageSelection(%s) expected:%s got%s\n", s, compareString, resultString)
+		t.Fatalf("testSelectedPages(%s) expected:%s got%s\n", s, compareString, resultString)
 	}
-
 }
 
-func TestPageSelection(t *testing.T) {
-
+func TestSelectedPages(t *testing.T) {
 	pageCount := 5
 
-	doTestPageSelection("even", pageCount, "01010", t)
-	doTestPageSelection("even,even", pageCount, "01010", t)
-	doTestPageSelection("odd", pageCount, "10101", t)
-	doTestPageSelection("odd,odd", pageCount, "10101", t)
-	doTestPageSelection("even,odd", pageCount, "11111", t)
-	doTestPageSelection("odd,!1", pageCount, "00101", t)
-	doTestPageSelection("odd,n1", pageCount, "00101", t)
-	doTestPageSelection("!1,odd", pageCount, "00101", t)
-	doTestPageSelection("n1,odd", pageCount, "00101", t)
-	doTestPageSelection("!1,odd,even", pageCount, "01111", t)
+	testSelectedPages("even", pageCount, "01010", t)
+	testSelectedPages("even,even", pageCount, "01010", t)
+	testSelectedPages("odd", pageCount, "10101", t)
+	testSelectedPages("odd,odd", pageCount, "10101", t)
+	testSelectedPages("even,odd", pageCount, "11111", t)
+	testSelectedPages("odd,!1", pageCount, "00101", t)
+	testSelectedPages("odd,n1", pageCount, "00101", t)
+	testSelectedPages("!1,odd", pageCount, "00101", t)
+	testSelectedPages("n1,odd", pageCount, "00101", t)
+	testSelectedPages("!1,odd,even", pageCount, "01111", t)
 
-	doTestPageSelection("1", pageCount, "10000", t)
-	doTestPageSelection("2", pageCount, "01000", t)
-	doTestPageSelection("3", pageCount, "00100", t)
-	doTestPageSelection("4", pageCount, "00010", t)
-	doTestPageSelection("5", pageCount, "00001", t)
-	doTestPageSelection("6", pageCount, "00000", t)
+	testSelectedPages("1", pageCount, "10000", t)
+	testSelectedPages("2", pageCount, "01000", t)
+	testSelectedPages("3", pageCount, "00100", t)
+	testSelectedPages("4", pageCount, "00010", t)
+	testSelectedPages("5", pageCount, "00001", t)
+	testSelectedPages("6", pageCount, "00000", t)
 
-	doTestPageSelection("-3", pageCount, "11100", t)
-	doTestPageSelection("3-", pageCount, "00111", t)
-	doTestPageSelection("2-4", pageCount, "01110", t)
+	testSelectedPages("-3", pageCount, "11100", t)
+	testSelectedPages("3-", pageCount, "00111", t)
+	testSelectedPages("2-4", pageCount, "01110", t)
 
-	doTestPageSelection("-2,4-", pageCount, "11011", t)
-	doTestPageSelection("2-4,!3", pageCount, "01010", t)
-	doTestPageSelection("-4,n2", pageCount, "10110", t)
+	testSelectedPages("-2,4-", pageCount, "11011", t)
+	testSelectedPages("2-4,!3", pageCount, "01010", t)
+	testSelectedPages("-4,n2", pageCount, "10110", t)
 
-	doTestPageSelection("5-7", pageCount, "00001", t)
-	doTestPageSelection("4-", pageCount, "00011", t)
-	doTestPageSelection("5-", pageCount, "00001", t)
+	testSelectedPages("5-7", pageCount, "00001", t)
+	testSelectedPages("4-", pageCount, "00011", t)
+	testSelectedPages("5-", pageCount, "00001", t)
 }

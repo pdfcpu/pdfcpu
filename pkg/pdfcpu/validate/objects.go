@@ -179,8 +179,12 @@ func validateBooleanArrayEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, e
 	return a, nil
 }
 
-func validateDateObject(xRefTable *pdf.XRefTable, o pdf.Object, sinceVersion pdf.Version) (pdf.StringLiteral, error) {
-	return xRefTable.DereferenceStringLiteral(o, sinceVersion, validateDate)
+func validateDateObject(xRefTable *pdf.XRefTable, o pdf.Object, sinceVersion pdf.Version) (string, error) {
+	s, err := xRefTable.DereferenceStringLiteral(o, sinceVersion, validateDate)
+	if err != nil {
+		return "", err
+	}
+	return s.Value(), nil
 }
 
 func validateDateEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) (*pdf.StringLiteral, error) {
@@ -985,16 +989,16 @@ func validateStreamDictEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, ent
 	return &sd, nil
 }
 
-func validateString(xRefTable *pdf.XRefTable, o pdf.Object, validate func(string) bool) (*string, error) {
+func validateString(xRefTable *pdf.XRefTable, o pdf.Object, validate func(string) bool) (string, error) {
 
 	//log.Validate.Println("validateString begin")
 
 	o, err := xRefTable.Dereference(o)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	if o == nil {
-		return nil, errors.New("validateString: missing object")
+		return "", errors.New("validateString: missing object")
 	}
 
 	var s string
@@ -1008,17 +1012,17 @@ func validateString(xRefTable *pdf.XRefTable, o pdf.Object, validate func(string
 		s = o.Value()
 
 	default:
-		return nil, errors.New("validateString: invalid type")
+		return "", errors.New("validateString: invalid type")
 	}
 
 	// Validation
 	if validate != nil && !validate(s) {
-		return nil, errors.Errorf("validateString: %s invalid", s)
+		return "", errors.Errorf("validateString: %s invalid", s)
 	}
 
 	//log.Validate.Println("validateString end")
 
-	return &s, nil
+	return s, nil
 }
 
 func validateStringEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(string) bool) (*string, error) {

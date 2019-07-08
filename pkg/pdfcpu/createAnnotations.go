@@ -18,6 +18,7 @@ package pdfcpu
 
 import (
 	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/hhrutter/pdfcpu/pkg/filter"
@@ -1042,7 +1043,7 @@ func createEmbeddedGoToAction(xRefTable *XRefTable) (*IndirectRef, error) {
 	// 	return nil, err
 	// }
 
-	_, err := AttachAdd(xRefTable, StringSet{"testdata/go.pdf": true})
+	_, err := AttachAdd(xRefTable, StringSet{filepath.Join(testDir, "go.pdf"): true})
 	if err != nil {
 		return nil, err
 	}
@@ -1057,7 +1058,7 @@ func createEmbeddedGoToAction(xRefTable *XRefTable) (*IndirectRef, error) {
 			"T": Dict(
 				map[string]Object{
 					"R": Name("C"),
-					"N": StringLiteral("testdata/go.pdf"),
+					"N": StringLiteral(filepath.Join(testDir, "go.pdf")),
 				},
 			),
 		},

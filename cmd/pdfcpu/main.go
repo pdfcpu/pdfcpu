@@ -22,15 +22,16 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hhrutter/pdfcpu/pkg/api"
+	"github.com/hhrutter/pdfcpu/pkg/cli"
 	PDFCPULog "github.com/hhrutter/pdfcpu/pkg/log"
 	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
 )
 
 var (
-	fileStats, mode, pageSelection string
+	fileStats, mode, selectedPages string
 	upw, opw, key, perm            string
 	verbose, veryVerbose           bool
+	quiet                          bool
 	needStackTrace                 = true
 	cmdMap                         CommandMap
 )
@@ -52,9 +53,12 @@ func initFlags() {
 	permUsage := "encrypt, perm set: none|all"
 	flag.StringVar(&perm, "perm", "none", permUsage)
 
-	pageSelectionUsage := "a comma separated list of pages or page ranges, see pdfcpu help split/extract"
-	flag.StringVar(&pageSelection, "pages", "", pageSelectionUsage)
-	flag.StringVar(&pageSelection, "p", "", pageSelectionUsage)
+	selectedPagesUsage := "a comma separated list of pages or page ranges, see pdfcpu help split/extract"
+	flag.StringVar(&selectedPages, "pages", "", selectedPagesUsage)
+	flag.StringVar(&selectedPages, "p", "", selectedPagesUsage)
+
+	flag.BoolVar(&quiet, "quiet", false, "")
+	flag.BoolVar(&quiet, "q", false, "")
 
 	flag.BoolVar(&verbose, "verbose", false, "")
 	flag.BoolVar(&verbose, "v", false, "")
@@ -68,26 +72,26 @@ func initCommandMap() {
 
 	attachCmdMap := NewCommandMap()
 	for k, v := range map[string]Command{
-		"list":    {prepareListAttachmentsCommand, nil, "", ""},
-		"add":     {prepareAddAttachmentsCommand, nil, "", ""},
-		"remove":  {prepareRemoveAttachmentsCommand, nil, "", ""},
-		"extract": {prepareExtractAttachmentsCommand, nil, "", ""},
+		"list":    {handleListAttachmentsCommand, nil, "", ""},
+		"add":     {handleAddAttachmentsCommand, nil, "", ""},
+		"remove":  {handleRemoveAttachmentsCommand, nil, "", ""},
+		"extract": {handleExtractAttachmentsCommand, nil, "", ""},
 	} {
 		attachCmdMap.Register(k, v)
 	}
 
 	permissionsCmdMap := NewCommandMap()
 	for k, v := range map[string]Command{
-		"list": {prepareListPermissionsCommand, nil, "", ""},
-		"add":  {prepareAddPermissionsCommand, nil, "", ""},
+		"list": {handleListPermissionsCommand, nil, "", ""},
+		"set":  {handleSetPermissionsCommand, nil, "", ""},
 	} {
 		permissionsCmdMap.Register(k, v)
 	}
 
 	pagesCmdMap := NewCommandMap()
 	for k, v := range map[string]Command{
-		"insert": {prepareInsertPagesCommand, nil, "", ""},
-		"remove": {prepareRemovePagesCommand, nil, "", ""},
+		"insert": {handleInsertPagesCommand, nil, "", ""},
+		"remove": {handleRemovePagesCommand, nil, "", ""},
 	} {
 		pagesCmdMap.Register(k, v)
 	}
@@ -96,27 +100,28 @@ func initCommandMap() {
 
 	for k, v := range map[string]Command{
 		"attachments": {nil, attachCmdMap, usageAttach, usageLongAttach},
-		"changeopw":   {prepareChangeOwnerPasswordCommand, nil, usageChangeOwnerPW, usageLongChangeUserPW},
-		"changeupw":   {prepareChangeUserPasswordCommand, nil, usageChangeUserPW, usageLongChangeUserPW},
-		"decrypt":     {prepareDecryptCommand, nil, usageDecrypt, usageLongDecrypt},
-		"encrypt":     {prepareEncryptCommand, nil, usageEncrypt, usageLongEncrypt},
-		"extract":     {prepareExtractCommand, nil, usageExtract, usageLongExtract},
-		"grid":        {prepareGridCommand, nil, usageGrid, usageLongGrid},
+		"changeopw":   {handleChangeOwnerPasswordCommand, nil, usageChangeOwnerPW, usageLongChangeUserPW},
+		"changeupw":   {handleChangeUserPasswordCommand, nil, usageChangeUserPW, usageLongChangeUserPW},
+		"decrypt":     {handleDecryptCommand, nil, usageDecrypt, usageLongDecrypt},
+		"encrypt":     {handleEncryptCommand, nil, usageEncrypt, usageLongEncrypt},
+		"extract":     {handleExtractCommand, nil, usageExtract, usageLongExtract},
+		"grid":        {handleGridCommand, nil, usageGrid, usageLongGrid},
 		"help":        {printHelp, nil, "", ""},
-		"import":      {prepareImportImagesCommand, nil, usageImportImages, usageLongImportImages},
-		"merge":       {prepareMergeCommand, nil, usageMerge, usageLongMerge},
-		"nup":         {prepareNUpCommand, nil, usageNUp, usageLongNUp},
-		"n-up":        {prepareNUpCommand, nil, usageNUp, usageLongNUp},
-		"optimize":    {prepareOptimizeCommand, nil, usageOptimize, usageLongOptimize},
+		"info":        {handleInfoCommand, nil, usageInfo, usageLongInfo},
+		"import":      {handleImportImagesCommand, nil, usageImportImages, usageLongImportImages},
+		"merge":       {handleMergeCommand, nil, usageMerge, usageLongMerge},
+		"nup":         {handleNUpCommand, nil, usageNUp, usageLongNUp},
+		"n-up":        {handleNUpCommand, nil, usageNUp, usageLongNUp},
+		"optimize":    {handleOptimizeCommand, nil, usageOptimize, usageLongOptimize},
 		"pages":       {nil, pagesCmdMap, usagePages, usageLongPages},
 		"paper":       {printPaperSizes, nil, usagePaper, usageLongPaper},
 		"permissions": {nil, permissionsCmdMap, usagePerm, usageLongPerm},
-		"rotate":      {prepareRotateCommand, nil, usageRotate, usageLongRotate},
-		"split":       {prepareSplitCommand, nil, usageSplit, usageLongSplit},
-		"stamp":       {prepareAddStampsCommand, nil, usageStamp, usageLongStamp},
-		"trim":        {prepareTrimCommand, nil, usageTrim, usageLongTrim},
-		"validate":    {prepareValidateCommand, nil, usageValidate, usageLongValidate},
-		"watermark":   {prepareAddWatermarksCommand, nil, usageWatermark, usageLongWatermark},
+		"rotate":      {handleRotateCommand, nil, usageRotate, usageLongRotate},
+		"split":       {handleSplitCommand, nil, usageSplit, usageLongSplit},
+		"stamp":       {handleAddStampsCommand, nil, usageStamp, usageLongStamp},
+		"trim":        {handleTrimCommand, nil, usageTrim, usageLongTrim},
+		"validate":    {handleValidateCommand, nil, usageValidate, usageLongValidate},
+		"watermark":   {handleAddWatermarksCommand, nil, usageWatermark, usageLongWatermark},
 		"version":     {printVersion, nil, usageVersion, usageLongVersion},
 	} {
 		cmdMap.Register(k, v)
@@ -127,7 +132,11 @@ func initLogging(verbose, veryVerbose bool) {
 
 	needStackTrace = verbose || veryVerbose
 
-	PDFCPULog.SetDefaultAPILogger()
+	if quiet {
+		return
+	}
+
+	PDFCPULog.SetDefaultCLILogger()
 
 	if verbose || veryVerbose {
 		PDFCPULog.SetDefaultDebugLogger()
@@ -161,25 +170,16 @@ func main() {
 	// The first argument is the pdfcpu command
 	cmdStr := os.Args[1]
 
-	config := pdfcpu.NewDefaultConfiguration()
+	conf := pdfcpu.NewDefaultConfiguration()
 
-	cmd, command, err := cmdMap.Handle(cmdStr, "", config)
+	str, err := cmdMap.Handle(cmdStr, "", conf)
 	if err != nil {
-		if len(command) > 0 {
-			cmdStr = fmt.Sprintf("%s %s", command, os.Args[2])
+		if len(str) > 0 {
+			cmdStr = fmt.Sprintf("%s %s", str, os.Args[2])
 		}
-		if err == errUnknownCmd {
-			fmt.Fprintf(os.Stderr, "pdfcpu unknown command \"%s\"\n", cmdStr)
-		}
-		if err == errAmbiguousCmd {
-			fmt.Fprintf(os.Stderr, "pdfcpu ambiguous command \"%s\"\n", cmdStr)
-		}
+		fmt.Fprintf(os.Stderr, "%v \"%s\"\n", err, cmdStr)
 		fmt.Fprintln(os.Stderr, "Run 'pdfcpu help' for usage.")
 		os.Exit(1)
-	}
-
-	if cmd != nil {
-		process(cmd)
 	}
 
 	os.Exit(0)
@@ -214,9 +214,9 @@ func parseFlags(cmd *Command) {
 	return
 }
 
-func process(cmd *api.Command) {
+func process(cmd *cli.Command) {
 
-	out, err := api.Process(cmd)
+	out, err := cli.Process(cmd)
 
 	if err != nil {
 		if needStackTrace {
@@ -227,9 +227,9 @@ func process(cmd *api.Command) {
 		os.Exit(1)
 	}
 
-	if out != nil {
-		for _, l := range out {
-			fmt.Fprintln(os.Stdout, l)
+	if out != nil && !quiet {
+		for _, s := range out {
+			fmt.Fprintln(os.Stdout, s)
 		}
 	}
 

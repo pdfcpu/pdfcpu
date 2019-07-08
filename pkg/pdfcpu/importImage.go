@@ -48,7 +48,7 @@ func (imp Import) String() string {
 		sc = "absolute"
 	}
 
-	return fmt.Sprintf("Import config: %s %s, pos=%s, dx=%d, dy=%d, scaling: %.1f %s\n",
+	return fmt.Sprintf("Import conf: %s %s, pos=%s, dx=%d, dy=%d, scaling: %.1f %s\n",
 		imp.PageSize, *imp.PageDim, imp.Pos, imp.Dx, imp.Dy, imp.Scale, sc)
 }
 
