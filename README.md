@@ -43,6 +43,7 @@ The main focus lies on strong support for batch processing and scripting via a r
 * [extract](https://pdfcpu.io/extract/extract)
 * [grid](https://pdfcpu.io/core/grid)
 * [import](https://pdfcpu.io/generate/import)
+* [info](https://pdfcpu.io/generate/info)
 * [merge](https://pdfcpu.io/core/merge)
 * [nup](https://pdfcpu.io/core/nup)
 * [optimize](https://pdfcpu.io/core/optimize)
@@ -57,10 +58,9 @@ The main focus lies on strong support for batch processing and scripting via a r
 
 ## Documentation
 
-The main entry point is [pdfcpu.io](https://pdfcpu.io).
-
-There you will find explanations of all the commands, their parameters and examples which use the CLI because this makes it easier to understand how the commands work.
-Even if you want to dive right into pdfcpu backend integration it is highly recommended to [read the docs](https://pdfcpu.io) first.
+* The main entry point is [pdfcpu.io](https://pdfcpu.io).
+* For CLI examples also go to [pdfcpu.io](https://pdfcpu.io). There you will find explanations of all the commands and their parameters.
+* For API examples of all pdfcpu operations please refer to [GoDoc](https://godoc.org/github.com/hhrutter/pdfcpu/pkg/api).
 
 ### GoDoc
 
@@ -69,11 +69,12 @@ Even if you want to dive right into pdfcpu backend integration it is highly reco
 
 ## Status
 
-[Version: 0.1.25](https://github.com/hhrutter/pdfcpu/releases/tag/v0.1.25)
+[Version: 0.2](https://github.com/hhrutter/pdfcpu/releases/tag/v0.2)
 
-* Rudimentory support for AES-256 encryption as laid out in [Adobe® Supplement to the ISO 32000
-BaseVersion: 1.7 ExtensionLevel: 3](https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/adobe_supplement_iso32000.pdf)
-* Fixes #88
+* Redesigned API with full support for io.ReadSeeker/io.Writer for all commands.
+* The new `info` command prints what pdfcpu knows about a PDF file.
+* Add `-q` or `-quiet` to disable output during command execution.
+* Fixes #87-#91.
 
 ## Reminder
 
