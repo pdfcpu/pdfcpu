@@ -9,18 +9,19 @@ This command changes the password which is also known as the *open doc password*
 ## Usage
 
 ```
-usage: pdfcpu changeupw [-v(erbose)|vv] [-opw ownerpw] inFile upwOld upwNew
+usage: pdfcpu changeupw [-v(erbose)|vv] [-q(uiet)] [-opw ownerpw] inFile upwOld upwNew
 ````
 
 <br>
 
 ### Flags
 
-| name                             | description     | required
-|:---------------------------------|:----------------|:--------
+| name                                          | description     | required
+|:----------------------------------------------|:----------------|:--------
 | [verbose](../getting_started/common_flags.md) | turn on logging | no
 | [vv](../getting_started/common_flags.md)      | verbose logging | no
-| [opw](../getting_started/common_flags.md)    | owner password  | if set
+| [quiet](../getting_started/common_flags.md)   | quiet mode      | no
+| [opw](../getting_started/common_flags.md)     | owner password  | if set
 
 <br>
 

@@ -17,6 +17,10 @@ Enables logging on the standard output.
 Enables verbose logging on the standard output.<br>
 Please use this flag to [report a bug](https://github.com/hhrutter/pdfcpu/issues).
 
+## quiet, q
+
+Disables all output to the stdOut.
+
 ## pages, p
 
 A comma separated list of expressions defining the [selected pages](page_selection.md) of a PDF input file.

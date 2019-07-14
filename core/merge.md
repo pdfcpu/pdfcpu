@@ -9,7 +9,7 @@ Merge 2 or more PDF files into `outFile`. Have a look at some [examples](#exampl
 ## Usage
 
 ```
-pdfcpu merge [-v(erbose)|vv] outFile inFile...
+pdfcpu merge [-v(erbose)|vv] [-q(uiet)] outFile inFile...
 ```
 
 <br>
@@ -20,6 +20,8 @@ pdfcpu merge [-v(erbose)|vv] outFile inFile...
 |:---------------------------------|:----------------|:--------
 | [verbose](../getting_started/common_flags.md) | turn on logging | no
 | [vv](../getting_started/common_flags.md)      | verbose logging | no
+| [quiet](../getting_started/common_flags.md)   | quiet mode      | no
+
 
 <br>
 

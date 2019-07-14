@@ -16,12 +16,13 @@ usage: pdfcpu decrypt [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile [outFi
 
 ### Flags
 
-| name                             | description     | required
-|:---------------------------------|:----------------|:--------
+| name                                          | description     | required
+|:----------------------------------------------|:----------------|:--------
 | [verbose](../getting_started/common_flags.md) | turn on logging | no
-| [vv](../getting_started/common_flags.md)     | verbose logging | no
+| [vv](../getting_started/common_flags.md)      | verbose logging | no
+| [quiet](../getting_started/common_flags.md)   | quiet mode      | no
 | [upw](../getting_started/common_flags.md)     | user password   | no
-| [opw](../getting_started/common_flags.md)    | owner password  | no
+| [opw](../getting_started/common_flags.md)     | owner password  | no
 
 <br>
 

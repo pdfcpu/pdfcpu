@@ -10,7 +10,7 @@ This command prints the current permission set. Have a look at some [examples](#
 ## Usage
 
 ```
-pdfcpu permissions list [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile
+pdfcpu permissions list [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile
 ```
 
 <br>
@@ -21,6 +21,7 @@ pdfcpu permissions list [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile
 |:---------------------------------|:----------------|:--------
 | [verbose](../getting_started/common_flags.md) | turn on logging | no
 | [vv](../getting_started/common_flags.md)      | verbose logging | no
+| [quiet](../getting_started/common_flags.md)   | quiet mode      | no
 | [upw](../getting_started/common_flags.md)     | user password   | no
 | [opw](../getting_started/common_flags.md)     | owner password  | no
 

@@ -23,7 +23,7 @@ For a single image file create a single page PDF file and fill the grid with cop
 ## Usage
 
 ```
-pdfcpu nup|n-up [-v(erbose)|vv] [-pages pageSelection] [description] outFile n inFile|imageFile...
+pdfcpu nup|n-up [-v(erbose)|vv] [-q(uiet)] [-pages pageSelection] [description] outFile n inFile|imageFile...
 ```
 
 <br>
@@ -34,6 +34,7 @@ pdfcpu nup|n-up [-v(erbose)|vv] [-pages pageSelection] [description] outFile n i
 |:---------------------------------|:----------------|---------
 | [verbose](../getting_started/common_flags.md) | turn on logging | no
 | [vv](../getting_started/common_flags.md)      | verbose logging | no
+| [quiet](../getting_started/common_flags.md)   | quiet mode      | no
 | [pages](../getting_started/page_selection) | page selection  | no
 
 <br>

@@ -10,17 +10,18 @@ If you want to remove an extracted document you can do this using [attach remove
 ## Usage
 
 ```
-pdfcpu attachments extract [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile outDir [file...]
+pdfcpu attachments extract [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile outDir [file...]
 ```
 
 <br>
 
 ### Flags
 
-| name                             | description       | required
-|:---------------------------------|:------------------|:--------
+| name                                          | description       | required
+|:----------------------------------------------|:------------------|:--------
 | [verbose](../getting_started/common_flags.md) | turn on logging   | no
 | [vv](../getting_started/common_flags.md)      | verbose logging   | no
+| [quiet](../getting_started/common_flags.md)   | quiet mode        | no
 | [upw](../getting_started/common_flags.md)     | user password     | no
 | [opw](../getting_started/common_flags.md)     | owner password    | no
 

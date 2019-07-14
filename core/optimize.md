@@ -9,7 +9,7 @@ Optimize `inFile` by getting rid of redundant page resources like embedded fonts
 ## Usage
 
 ```
-pdfcpu optimize [-v(erbose)|vv] [-stats csvFile] [-upw userpw] [-opw ownerpw] inFile [outFile]
+pdfcpu optimize [-v(erbose)|vv] [-q(uiet)] [-stats csvFile] [-upw userpw] [-opw ownerpw] inFile [outFile]
 ```
 
 <br>
@@ -20,6 +20,7 @@ pdfcpu optimize [-v(erbose)|vv] [-stats csvFile] [-upw userpw] [-opw ownerpw] in
 |:---------------------------------|:------------------|:--------
 | [verbose](../getting_started/common_flags.md) | turn on logging   | no
 | [vv](../getting_started/common_flags.md)      | verbose logging   | no
+| [quiet](../getting_started/common_flags.md)   | quiet mode      | no
 | stats                            | CSV output file   | no
 | [upw](../getting_started/common_flags.md)     | user password     | no
 | [opw](../getting_started/common_flags.md)     | owner password    | no

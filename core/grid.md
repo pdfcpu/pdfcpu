@@ -14,7 +14,7 @@ layout: default
 ## Usage
 
 ```
-pdfcpu grid [-v(erbose)|vv] [-pages pageSelection] [description] outFile m n inFile|imageFiles...
+pdfcpu grid [-v(erbose)|vv] [-q(uiet)] [-pages pageSelection] [description] outFile m n inFile|imageFiles...
 ```
 
 <br>
@@ -25,7 +25,8 @@ pdfcpu grid [-v(erbose)|vv] [-pages pageSelection] [description] outFile m n inF
 |:---------------------------------|:----------------|:--------
 | [verbose](../getting_started/common_flags.md) | turn on logging | no
 | [vv](../getting_started/common_flags.md)      | verbose logging | no
-| [pages](../getting_started/page_selection) | page selection  | no
+| [quiet](../getting_started/common_flags.md)   | quiet mode      | no
+| [pages](../getting_started/page_selection)    | page selection  | no
 
 <br>
 

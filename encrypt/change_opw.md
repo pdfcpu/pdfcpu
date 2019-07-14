@@ -9,17 +9,18 @@ This command changes the password which is also known as the *set permissions pa
 ## Usage
 
 ```
-usage: pdfcpu changeopw [-v(erbose)|vv] [-upw userpw] inFile opwOld opwNew
+usage: pdfcpu changeopw [-v(erbose)|vv] [-q(uiet)] [-upw userpw] inFile opwOld opwNew
 ```
 
 <br>
 
 ### Flags
 
-| name                             | description     | required
-|:---------------------------------|:----------------|:--------
+| name                                          | description     | required
+|:----------------------------------------------|:----------------|:--------
 | [verbose](../getting_started/common_flags.md) | turn on logging | no
 | [vv](../getting_started/common_flags.md)      | verbose logging | no
+| [quiet](../getting_started/common_flags.md)   | quiet mode      | no
 | [upw](../getting_started/common_flags.md)     | user password   | if set
 
 <br>

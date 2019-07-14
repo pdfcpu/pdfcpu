@@ -13,7 +13,7 @@ Providing the *owner password* which is also known as the *set permissions passw
 ## Usage
 
 ```
-pdfcpu permissions add [-v(erbose)|vv] [-perm none|all] [-upw userpw] -opw ownerpw inFile
+pdfcpu permissions add [-v(erbose)|vv] [-q(uiet)] [-perm none|all] [-upw userpw] -opw ownerpw inFile
 ```
 
 <br>
@@ -24,6 +24,7 @@ pdfcpu permissions add [-v(erbose)|vv] [-perm none|all] [-upw userpw] -opw owner
 |:---------------------------------|:----------------|:---------|:----------|:-------
 | [verbose](../getting_started/common_flags.md) | turn on logging | no
 | [vv](../getting_started/common_flags.md)      | verbose logging | no
+| [quiet](../getting_started/common_flags.md)   | quiet mode      | no
 | perm                             | permissions     | no       | none, all | none
 | [upw](../getting_started/common_flags.md)     | user password   | if set
 | [opw](../getting_started/common_flags.md)     | owner password  | if set

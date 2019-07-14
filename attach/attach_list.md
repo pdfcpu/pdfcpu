@@ -9,17 +9,18 @@ A PDF attachment is any file previously attached to a PDF document. This command
 ## Usage
 
 ```
-pdfcpu attachments list [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile
+pdfcpu attachments list [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile
 ```
 
 <br>
 
 ### Flags
 
-| name                             | description       | required
-|:---------------------------------|:------------------|:--------
+| name                                          | description       | required
+|:----------------------------------------------|:------------------|:--------
 | [verbose](../getting_started/common_flags.md) | turn on logging   | no
-| [vv](../getting_started/common_flags.md)     | verbose logging   | no
+| [vv](../getting_started/common_flags.md)      | verbose logging   | no
+| [quiet](../getting_started/common_flags.md)   | verbose logging   | no
 | [upw](../getting_started/common_flags.md)     | user password     | no
 | [opw](../getting_started/common_flags.md)     | owner password    | no
 

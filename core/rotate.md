@@ -9,7 +9,7 @@ Rotate selected pages of `inFile` clockwise by a multiple of 90 degrees. Have a 
 ## Usage
 
 ```
-pdfcpu rotate [-v(erbose)|vv] [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile rotation
+pdfcpu rotate [-v(erbose)|vv] [-q(uiet)] [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile rotation
 ```
 
 <br>
@@ -20,6 +20,7 @@ pdfcpu rotate [-v(erbose)|vv] [-pages pageSelection] [-upw userpw] [-opw ownerpw
 |:---------------------------------|:----------------|:---------|:------
 | [verbose](../getting_started/common_flags.md) | turn on logging | no
 | [vv](../getting_started/common_flags.md)      | verbose logging | no
+| [quiet](../getting_started/common_flags.md)   | quiet mode      | no
 | [pages](../getting_started/page_selection) | page selection  | no | all pages
 | [upw](../getting_started/common_flags.md)     | user password   | no
 | [opw](../getting_started/common_flags.md)     | owner password  | no

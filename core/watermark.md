@@ -18,7 +18,7 @@ A watermark resides in the background of a page. How much of the watermark will 
 ## Usage
 
 ```
-pdfcpu watermark [-v(erbose)|vv] [-pages pageSelection] [-upw userpw] [-opw ownerpw] description inFile [outFile]
+pdfcpu watermark [-v(erbose)|vv] [-q(uiet)] [-pages pageSelection] [-upw userpw] [-opw ownerpw] description inFile [outFile]
 ```
 
 
@@ -43,6 +43,7 @@ where *content* may be text, an image or a PDF page.
 |:---------------------------------|:---------------------|:--------
 | [verbose](../getting_started/common_flags.md) | turn on logging      | no
 | [vv](../getting_started/common_flags.md)      | verbose logging      | no
+| [quiet](../getting_started/common_flags.md)   | quiet mode      | no
 | [pages](../getting_started/page_selection) | page selection  | no
 | [upw](../getting_started/common_flags.md)     | user password        | no
 | [opw](../getting_started/common_flags.md)     | owner password       | no

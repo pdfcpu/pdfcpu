@@ -9,7 +9,7 @@ This command checks `inFile` for compliance with the specification [PDF 32000-1:
 ## Usage
 
 ```
-pdfcpu validate [-v(erbose)|vv] [-mode strict|relaxed] [-upw userpw] [-opw ownerpw] inFile
+pdfcpu validate [-v(erbose)|vv] [-q(uiet)] [-mode strict|relaxed] [-upw userpw] [-opw ownerpw] inFile
 ```
 
 <br>
@@ -20,6 +20,7 @@ pdfcpu validate [-v(erbose)|vv] [-mode strict|relaxed] [-upw userpw] [-opw owner
 |:---------------------------------|:----------------|:---------|:----------------|:------
 | [verbose](../getting_started/common_flags.md) | turn on logging | no       |
 | [vv](../getting_started/common_flags.md)      | verbose logging | no       |
+| [quiet](../getting_started/common_flags.md)   | quiet mode      | no
 | mode                             | validation mode | no       | strict, relaxed | relaxed
 | [upw](../getting_started/common_flags.md)     | user password   | no
 | [opw](../getting_started/common_flags.md)    | owner password  | no

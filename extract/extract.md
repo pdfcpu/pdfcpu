@@ -15,7 +15,7 @@ This command lets you extract the following from a PDF file:
 ## Usage
 
 ```
-pdfcpu extract [-v(erbose)|vv] -mode image|font|content|page|meta [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile outDir
+pdfcpu extract [-v(erbose)|vv] [-q(uiet)] -mode image|font|content|page|meta [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile outDir
 ````
 
 <br>
@@ -26,6 +26,7 @@ pdfcpu extract [-v(erbose)|vv] -mode image|font|content|page|meta [-pages pageSe
 |:---------------------------------|:--------------------------|:-----------|:-
 | [verbose](../getting_started/common_flags.md) | turn on logging           | no
 | [vv](../getting_started/common_flags.md)      | verbose logging           | no
+| [quiet](../getting_started/common_flags.md)   | quiet mode      | no
 | mode                             | component to be extracted | yes | [image](extract_images.md), [font](extract_fonts.md), [content](extract_content.md), [page](extract_pages.md), [meta](extract_metadata.md)
 | [pages](../getting_started/page_selection) | page selection  | yes
 | [upw](../getting_started/common_flags.md)     | user password             | no

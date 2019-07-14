@@ -16,15 +16,16 @@ usage: pdfcpu encrypt [-v(erbose)|vv] [-mode rc4|aes] [-key 40|128|256] [perm no
 
 ### Flags
 
-| name                             | description     | required | values         |default
-|:---------------------------------|:----------------|:---------|:---------------|:------
-| [verbose](../getting_started/common_flags.md) | turn on logging | no       |
-| [vv](../getting_started/common_flags.md)      | verbose logging | no       |
-| mode                             | encryption      | no       | rc4, aes       | aes
-| key                              | key length      | no       | rc4:40,128 aes:40,128,256        | 256
-| perm                             | permissions     | no       | none, all      | none
-| [upw](../getting_started/common_flags.md)     | user password   | no
-| [opw](../getting_started/common_flags.md)     | owner password  | yes, must not be empty!
+| name                                            | description     | required | values         |default
+|:------------------------------------------------|:----------------|:---------|:---------------|:------
+| [verbose](../getting_started/common_flags.md)   | turn on logging | no       |
+| [vv](../getting_started/common_flags.md)        | verbose logging | no       |
+| [quiet](../getting_started/common_flags.md)     | quiet mode      | no
+| mode                             | encryption   | no              | rc4, aes | aes
+| key                              | key length   | no              | rc4:40,128 aes:40,128,256        | 256
+| perm                             | permissions  | no              | none, all | none
+| [upw](../getting_started/common_flags.md)       | user password   | no
+| [opw](../getting_started/common_flags.md)       | owner password  | yes, must not be empty!
 
 <br>
 

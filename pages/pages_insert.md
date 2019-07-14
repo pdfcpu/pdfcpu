@@ -10,7 +10,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu pages insert [-v(erbose)|vv] [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile [outFile]
+pdfcpu pages insert [-v(erbose)|vv] [-q(uiet)] [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile [outFile]
 ```
 
 <br>
@@ -21,6 +21,7 @@ pdfcpu pages insert [-v(erbose)|vv] [-pages pageSelection] [-upw userpw] [-opw o
 |:---------------------------------|:------------------|:--------
 | [verbose](../getting_started/common_flags.md) | turn on logging   | no
 | [vv](../getting_started/common_flags.md)      | verbose logging   | no
+| [quiet](../getting_started/common_flags.md)   | quiet mode      | no
 | [pages](../getting_started/page_selection) | page selection  | no 
 | [upw](../getting_started/common_flags.md)     | user password     | no
 | [opw](../getting_started/common_flags.md)     | owner password    | no

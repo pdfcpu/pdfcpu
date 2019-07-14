@@ -134,3 +134,11 @@ pdfcpu paper
 ```sh
 pdfcpu version
 ```
+
+<br>
+
+### Print Info
+
+```sh
+pdfcpu info
+```

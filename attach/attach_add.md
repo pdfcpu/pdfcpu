@@ -9,19 +9,20 @@ This command embeds one or more files by attaching them to a PDF input file. Hav
 ## Usage
 
 ```
-pdfcpu attachments add [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile file...
+pdfcpu attachments add [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile file...
 ```
 
 <br>
 
 ### Flags
 
-| name                             | description       | required
-|:---------------------------------|:------------------|:--------
+| name                                          | description       | required
+|:----------------------------------------------|:------------------|:--------
 | [verbose](../getting_started/common_flags.md) | turn on logging   | no
 | [vv](../getting_started/common_flags.md)      | verbose logging   | no
+| [quiet](../getting_started/common_flags.md)   | quiet mode        | no
 | [upw](../getting_started/common_flags.md)     | user password     | no
-| [opw](../getting_started/common_flags.md)        | owner password    | no
+| [opw](../getting_started/common_flags.md)     | owner password    | no
 
 <br>
 
