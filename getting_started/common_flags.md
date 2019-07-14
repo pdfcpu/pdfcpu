@@ -19,7 +19,7 @@ Please use this flag to [report a bug](https://github.com/hhrutter/pdfcpu/issues
 
 ## quiet, q
 
-Disables all output to the stdOut.
+Disables all output to stdOut.
 
 ## pages, p
 

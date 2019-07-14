@@ -9,7 +9,7 @@ This command encrypts `inFile` using the standard security handler as defined in
 ## Usage
 
 ```
-usage: pdfcpu encrypt [-v(erbose)|vv] [-mode rc4|aes] [-key 40|128|256] [perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]
+usage: pdfcpu encrypt [-v(erbose)|vv] [-q(uiet)] [-mode rc4|aes] [-key 40|128|256] [perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]
 ```
 
 <br>

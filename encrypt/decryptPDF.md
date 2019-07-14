@@ -9,7 +9,7 @@ This command decrypts `inFile` and removes password protection. If provided the 
 ## Usage
 
 ```
-usage: pdfcpu decrypt [-v(erbose)|vv] [-upw userpw] [-opw ownerpw] inFile [outFile]
+usage: pdfcpu decrypt [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [outFile]
 ```
 
 <br>

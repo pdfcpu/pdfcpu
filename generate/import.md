@@ -19,7 +19,7 @@ Convert one or more image files into a PDF file. Have a look at some [examples](
 ## Usage
 
 ```
-pdfcpu import [-v(erbose)|vv] [-q()uiet] [description] outFile imageFile...
+pdfcpu import [-v(erbose)|vv] [-q(uiet)] [description] outFile imageFile...
 ```
 <br>
 
