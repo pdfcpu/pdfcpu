@@ -560,6 +560,6 @@ Examples: "pdfcpu grid out.pdf 1 10 in.pdf"
 	usagePaper     = "usage: pdfcpu paper"
 	usageLongPaper = "prints a list of supported paper sizes"
 
-	usageInfo     = "usage: pdfcpu info inFile"
+	usageInfo     = "usage: pdfcpu info [-upw userpw] [-opw ownerpw] inFile"
 	usageLongInfo = usageInfo
 )
