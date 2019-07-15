@@ -56,7 +56,7 @@ func XRefTable(xRefTable *pdf.XRefTable) error {
 
 func validateRootVersion(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
-	_, err := validateNameEntry(xRefTable, rootDict, "rootDict", "Version", OPTIONAL, pdf.V14, nil)
+	_, err := validateNameEntry(xRefTable, rootDict, "rootDict", "Version", OPTIONAL, sinceVersion, nil)
 
 	return err
 }
@@ -887,6 +887,11 @@ func validateRootObject(xRefTable *pdf.XRefTable) error {
 		{validateCollection, OPTIONAL, pdf.V17},
 		{validateNeedsRendering, OPTIONAL, pdf.V17},
 	} {
+		if !f.required && xRefTable.Version() < f.sinceVersion {
+			// Ignore optional fields if currentVersion < sinceVersion
+			// This is really a workaround for explicitly extending relaxed validation.
+			continue
+		}
 		err = f.validate(xRefTable, d, f.required, f.sinceVersion)
 		if err != nil {
 			return err

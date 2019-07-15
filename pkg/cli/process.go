@@ -20,7 +20,7 @@ import (
 	"io"
 
 	pdf "github.com/hhrutter/pdfcpu/pkg/pdfcpu"
-	"github.com/hhrutter/upspin/errors"
+	"github.com/pkg/errors"
 )
 
 // Command represents an execution context.

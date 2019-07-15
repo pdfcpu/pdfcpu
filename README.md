@@ -69,12 +69,12 @@ The main focus lies on strong support for batch processing and scripting via a r
 
 ## Status
 
-[Version: 0.2](https://github.com/hhrutter/pdfcpu/releases/tag/v0.2)
+[Version: 0.2.1](https://github.com/hhrutter/pdfcpu/releases/tag/v0.2.1)
 
 * Redesigned API with full support for io.ReadSeeker/io.Writer for all commands.
 * The new `info` command prints what pdfcpu knows about a PDF file.
 * Add `-q` or `-quiet` to disable output during command execution.
-* Fixes #87-#91.
+* Fixes #87-#93.
 
 ## Reminder
 
