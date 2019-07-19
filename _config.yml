@@ -3,3 +3,4 @@ theme: jekyll-theme-minimal
 url: "https://pdfcpu.io"
 exclude: ['README.md']
 show_downloads: false
+logo: "/resources/logoSmall.png"
