@@ -204,9 +204,12 @@ func writeObject(ctx *Context, objNumber, genNumber int, s string) error {
 
 	w := ctx.Write
 
-	// Cleanup entry (nexessary for split command)
-	entry, _ := ctx.FindTableEntry(objNumber, genNumber)
-	entry.Compressed = false
+	// Cleanup entry (necessary for split command)
+	// TODO This is not the right place to check for an existing obj since we maybe writing NULL.
+	entry, ok := ctx.FindTableEntry(objNumber, genNumber)
+	if ok {
+		entry.Compressed = false
+	}
 
 	// Set write-offset for this object.
 	w.SetWriteOffset(objNumber)

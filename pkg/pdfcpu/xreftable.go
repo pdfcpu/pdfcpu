@@ -266,17 +266,11 @@ func (xRefTable *XRefTable) FindTableEntryLight(objNr int) (*XRefTableEntry, boo
 func (xRefTable *XRefTable) FindTableEntry(objNr int, genNr int) (*XRefTableEntry, bool) {
 
 	//fmt.Printf("FindTableEntry: obj#:%d gen:%d \n", objNumber, generationNumber)
-
 	entry, found := xRefTable.Find(objNr)
-	// if found && entry == nil {
-	// 	fmt.Printf("FindTableEntry(%d,%d) finds entry = nil!\n", objNr, genNr)
-	// }
-
-	if found && *entry.Generation == genNr {
-		return entry, found
+	if !found || *entry.Generation != genNr {
+		return nil, false
 	}
-
-	return nil, false
+	return entry, found
 }
 
 // FindTableEntryForIndRef returns the XRefTable entry for given indirect reference.
