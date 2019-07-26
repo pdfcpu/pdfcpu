@@ -703,7 +703,7 @@ func validateFormStreamDictPart2(xRefTable *pdf.XRefTable, d pdf.Dict, dictName 
 	// Specifying the optional content properties for the annotation.
 	sinceVersion := pdf.V15
 	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
-		sinceVersion = pdf.V14
+		sinceVersion = pdf.V13
 	}
 	err = validateOptionalContent(xRefTable, d, dictName, "OC", OPTIONAL, sinceVersion)
 	if err != nil {

@@ -40,7 +40,7 @@ func validateAPNameTreeValue(xRefTable *pdf.XRefTable, o pdf.Object, sinceVersio
 		return err
 	}
 
-	return validateAppearanceDict(xRefTable, o)
+	return validateXObjectStreamDict(xRefTable, o)
 }
 
 func validateJavaScriptNameTreeValue(xRefTable *pdf.XRefTable, o pdf.Object, sinceVersion pdf.Version) error {

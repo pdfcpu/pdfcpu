@@ -1414,7 +1414,11 @@ func validateAnnotationDictGeneral(xRefTable *pdf.XRefTable, d pdf.Dict, dictNam
 
 	// OC, optional, content group dict or content membership dict, since V1.5
 	// Specifying the optional content properties for the annotation.
-	err = validateOptionalContent(xRefTable, d, dictName, "OC", OPTIONAL, pdf.V15)
+	sinceVersion := pdf.V15
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		sinceVersion = pdf.V13
+	}
+	err = validateOptionalContent(xRefTable, d, dictName, "OC", OPTIONAL, sinceVersion)
 	if err != nil {
 		return nil, err
 	}

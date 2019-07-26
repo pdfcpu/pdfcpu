@@ -1180,7 +1180,7 @@ func (xRefTable *XRefTable) freeList(logStr []string) ([]string, error) {
 
 	for f != 0 {
 
-		log.Debug.Printf("freeList validating free object %d\n", f)
+		log.Trace.Printf("freeList validating free object %d\n", f)
 
 		entry, err := xRefTable.Free(f)
 		if err != nil {
@@ -1191,7 +1191,7 @@ func (xRefTable *XRefTable) freeList(logStr []string) ([]string, error) {
 		generation := *entry.Generation
 		s := fmt.Sprintf("%5d %5d %5d\n", f, next, generation)
 		logStr = append(logStr, s)
-		log.Debug.Printf("freeList: %s", s)
+		log.Trace.Printf("freeList: %s", s)
 
 		f = next
 	}
