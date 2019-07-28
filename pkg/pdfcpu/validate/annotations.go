@@ -1412,21 +1412,20 @@ func validateAnnotationDictGeneral(xRefTable *pdf.XRefTable, d pdf.Dict, dictNam
 		return nil, err
 	}
 
+	return subtype, nil
+}
+
+func validateAnnotationDictConcrete(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, subtype pdf.Name) error {
+
 	// OC, optional, content group dict or content membership dict, since V1.5
 	// Specifying the optional content properties for the annotation.
 	sinceVersion := pdf.V15
 	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
 		sinceVersion = pdf.V13
 	}
-	err = validateOptionalContent(xRefTable, d, dictName, "OC", OPTIONAL, sinceVersion)
-	if err != nil {
-		return nil, err
+	if err := validateOptionalContent(xRefTable, d, dictName, "OC", OPTIONAL, sinceVersion); err != nil {
+		return err
 	}
-
-	return subtype, nil
-}
-
-func validateAnnotationDictConcrete(xRefTable *pdf.XRefTable, d pdf.Dict, subtype pdf.Name) error {
 
 	// see table 169
 
@@ -1499,7 +1498,7 @@ func validateAnnotationDict(xRefTable *pdf.XRefTable, d pdf.Dict) (isTrapNet boo
 		return false, err
 	}
 
-	err = validateAnnotationDictConcrete(xRefTable, d, *subtype)
+	err = validateAnnotationDictConcrete(xRefTable, d, dictName, *subtype)
 	if err != nil {
 		return false, err
 	}

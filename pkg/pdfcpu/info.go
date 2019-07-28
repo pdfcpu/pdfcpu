@@ -98,10 +98,12 @@ func ensureInfoDict(ctx *Context) error {
 
 	now := DateString(time.Now())
 
+	v := "pdfcpu " + version
+
 	if ctx.Info == nil {
 
 		d := NewDict()
-		d.InsertString("Producer", PDFCPULongVersion)
+		d.InsertString("Producer", v)
 		d.InsertString("CreationDate", now)
 		d.InsertString("ModDate", now)
 
@@ -127,7 +129,7 @@ func ensureInfoDict(ctx *Context) error {
 
 	d.Update("CreationDate", StringLiteral(now))
 	d.Update("ModDate", StringLiteral(now))
-	d.Update("Producer", StringLiteral(PDFCPULongVersion))
+	d.Update("Producer", StringLiteral(v))
 
 	return nil
 }

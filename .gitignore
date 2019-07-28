@@ -10,3 +10,6 @@ c.out
 
 # Stats
 _scripts/*.csv
+
+# GoReleaser
+dist/*

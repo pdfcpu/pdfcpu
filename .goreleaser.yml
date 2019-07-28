@@ -1,0 +1,31 @@
+builds:
+- main: ./cmd/pdfcpu
+  env:
+    - CGO_ENABLED=0
+  ldflags:
+     - '-s -w -X main.version={{.Version}} -X github.com/hhrutter/pdfcpu/pkg/pdfcpu.version={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.Date}} -X main.builtBy=goreleaser'
+  goos:
+    - linux
+    - darwin
+    - windows
+  goarch:
+    - 386
+    - amd64
+dist: ./dist
+archives:
+- replacements:
+    darwin: Darwin
+    linux: Linux
+    windows: Windows
+    386: i386
+    amd64: x86_64
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'

@@ -134,6 +134,20 @@ func testEncryptDecryptUseCase1(t *testing.T, fileName string, aes bool, keyLeng
 	}
 }
 
+func ensurePermissionsNone(t *testing.T, listPermOutput []string) {
+	t.Helper()
+	if len(listPermOutput) == 0 || !strings.HasPrefix(listPermOutput[0], "permission bits:            0") {
+		t.Fail()
+	}
+}
+
+func ensurePermissionsAll(t *testing.T, listPermOutput []string) {
+	t.Helper()
+	if len(listPermOutput) == 0 || listPermOutput[0] != "permission bits: 111100111100" {
+		t.Fail()
+	}
+}
+
 func testEncryptDecryptUseCase2(t *testing.T, fileName string, aes bool, keyLength int) {
 	t.Helper()
 	msg := "testEncryptDecryptUseCase2"
@@ -188,15 +202,6 @@ func testEncryptDecryptUseCase2(t *testing.T, fileName string, aes bool, keyLeng
 		t.Fatalf("%s: trim %s using wrong ownerPW should fail: \n", msg, outFile)
 	}
 
-	// Split using wrong owner pw, falls back to upw and fails with insufficient permissions.
-	t.Log("Split wrong ownerPW, fallback to upw and fail with insufficient permissions.")
-	conf = confForAlgorithm(aes, keyLength)
-	conf.UserPW = "upw"
-	conf.OwnerPW = "opwWrong"
-	if _, err := Process(SplitCommand(outFile, outDir, 1, conf)); err == nil {
-		t.Fatalf("%s: trim %s using wrong ownerPW should fail: \n", msg, outFile)
-	}
-
 	// Set permissions
 	t.Log("Add user access permissions")
 	conf = confForAlgorithm(aes, keyLength)
@@ -214,9 +219,7 @@ func testEncryptDecryptUseCase2(t *testing.T, fileName string, aes bool, keyLeng
 	if err != nil {
 		t.Fatalf("%s: list permissions for %s: %v\n", msg, outFile, err)
 	}
-	if len(list) == 0 || list[0] != "permission bits: 111100111100" {
-		t.Fail()
-	}
+	ensurePermissionsAll(t, list)
 
 	// Split using wrong owner pw, falls back to upw
 	t.Log("Split wrong ownerPW")
@@ -437,9 +440,7 @@ func testPermissionsOPWOnly(t *testing.T, fileName string, aes bool, keyLength i
 	if list, err = Process(ListPermissionsCommand(outFile, nil)); err != nil {
 		t.Fatalf("%s: list permissions %s: %v\n", msg, outFile, err)
 	}
-	if len(list) == 0 || !strings.HasPrefix(list[0], "permission bits:            0") {
-		t.Fail()
-	}
+	ensurePermissionsNone(t, list)
 
 	conf = confForAlgorithm(aes, keyLength)
 	conf.OwnerPW = "opw"
@@ -451,9 +452,7 @@ func testPermissionsOPWOnly(t *testing.T, fileName string, aes bool, keyLength i
 	if list, err = Process(ListPermissionsCommand(outFile, nil)); err != nil {
 		t.Fatalf("%s: list permissions for %s: %v\n", msg, outFile, err)
 	}
-	if len(list) == 0 || list[0] != "permission bits: 111100111100" {
-		t.Fail()
-	}
+	ensurePermissionsAll(t, list)
 
 	conf = confForAlgorithm(aes, keyLength)
 	conf.Permissions = pdfcpu.PermissionsNone
@@ -501,18 +500,14 @@ func testPermissions(t *testing.T, fileName string, aes bool, keyLength int) {
 	if list, err = Process(ListPermissionsCommand(outFile, conf)); err != nil {
 		t.Fatalf("%s: list permissions %s: %v\n", msg, outFile, err)
 	}
-	if len(list) == 0 || !strings.HasPrefix(list[0], "permission bits:            0") {
-		t.Fail()
-	}
+	ensurePermissionsNone(t, list)
 
 	conf = pdf.NewDefaultConfiguration()
 	conf.OwnerPW = "opw"
 	if list, err = Process(ListPermissionsCommand(outFile, conf)); err != nil {
 		t.Fatalf("%s: list permissions %s: %v\n", msg, outFile, err)
 	}
-	if len(list) == 0 || !strings.HasPrefix(list[0], "permission bits:            0") {
-		t.Fail()
-	}
+	ensurePermissionsNone(t, list)
 
 	conf = confForAlgorithm(aes, keyLength)
 	conf.Permissions = pdfcpu.PermissionsAll
@@ -551,9 +546,7 @@ func testPermissions(t *testing.T, fileName string, aes bool, keyLength int) {
 	if list, err = Process(ListPermissionsCommand(outFile, conf)); err != nil {
 		t.Fatalf("%s: list permissions for %s: %v\n", msg, outFile, err)
 	}
-	if len(list) == 0 || list[0] != "permission bits: 111100111100" {
-		t.Fail()
-	}
+	ensurePermissionsAll(t, list)
 }
 
 func testEncryptDecryptFile(t *testing.T, fileName string, mode string, keyLength int) {

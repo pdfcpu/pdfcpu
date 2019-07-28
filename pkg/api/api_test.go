@@ -494,6 +494,27 @@ func confForAlgorithm(aes bool, keyLength int, upw, opw string) *pdf.Configurati
 	return pdf.NewRC4Configuration(upw, opw, keyLength)
 }
 
+func ensureFullAccess(t *testing.T, listPermOutput []string) {
+	t.Helper()
+	if len(listPermOutput) == 0 || listPermOutput[0] != "Full access" {
+		t.Fail()
+	}
+}
+
+func ensurePermissionsNone(t *testing.T, listPermOutput []string) {
+	t.Helper()
+	if len(listPermOutput) == 0 || !strings.HasPrefix(listPermOutput[0], "permission bits:            0") {
+		t.Fail()
+	}
+}
+
+func ensurePermissionsAll(t *testing.T, listPermOutput []string) {
+	t.Helper()
+	if len(listPermOutput) == 0 || listPermOutput[0] != "permission bits: 111100111100" {
+		t.Fail()
+	}
+}
+
 func testEncryption(t *testing.T, fileName string, alg string, keyLength int) {
 	msg := "testEncryption"
 
@@ -507,9 +528,7 @@ func testEncryption(t *testing.T, fileName string, alg string, keyLength int) {
 	if err != nil {
 		t.Fatalf("%s: list permissions %s: %v\n", msg, inFile, err)
 	}
-	if len(list) == 0 || list[0] != "Full access" {
-		t.Fail()
-	}
+	ensureFullAccess(t, list)
 
 	// Encrypt file.
 	conf := confForAlgorithm(aes, keyLength, "upw", "opw")
@@ -527,18 +546,14 @@ func testEncryption(t *testing.T, fileName string, alg string, keyLength int) {
 	if list, err = ListPermissionsFile(outFile, conf); err != nil {
 		t.Fatalf("%s: list permissions %s: %v\n", msg, outFile, err)
 	}
-	if len(list) == 0 || !strings.HasPrefix(list[0], "permission bits:            0") {
-		t.Fail()
-	}
+	ensurePermissionsNone(t, list)
 
 	// List permissions of encrypted file using the owner password.
 	conf = confForAlgorithm(aes, keyLength, "", "opw")
 	if list, err = ListPermissionsFile(outFile, conf); err != nil {
 		t.Fatalf("%s: list permissions %s: %v\n", msg, outFile, err)
 	}
-	if len(list) == 0 || !strings.HasPrefix(list[0], "permission bits:            0") {
-		t.Fail()
-	}
+	ensurePermissionsNone(t, list)
 
 	// Set all permissions of encrypted file w/o passwords should fail.
 	conf = confForAlgorithm(aes, keyLength, "", "")
@@ -568,19 +583,12 @@ func testEncryption(t *testing.T, fileName string, alg string, keyLength int) {
 		t.Fatalf("%s: set all permissions for %s: %v\n", msg, outFile, err)
 	}
 
-	// List permissions w/o password should fail.
-	if list, err = ListPermissionsFile(outFile, nil); err == nil {
-		t.Fatalf("%s: list permissions w/o pw %s: %v\n", msg, outFile, list)
-	}
-
 	// List permissions using the owner password.
 	conf = confForAlgorithm(aes, keyLength, "", "opw")
 	if list, err = ListPermissionsFile(outFile, conf); err != nil {
 		t.Fatalf("%s: list permissions for %s: %v\n", msg, outFile, err)
 	}
-	if len(list) == 0 || list[0] != "permission bits: 111100111100" {
-		t.Fail()
-	}
+	ensurePermissionsAll(t, list)
 
 	// Change user password.
 	conf = confForAlgorithm(aes, keyLength, "upw", "opw")

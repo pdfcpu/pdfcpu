@@ -22,13 +22,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	// PDFCPUVersion returns the current pdfcpu version.
-	PDFCPUVersion = "0.2.1"
-
-	// PDFCPULongVersion returns pdfcpu's signature.
-	PDFCPULongVersion = "pdfcpu v" + PDFCPUVersion
-)
+// version is set by Goreleaser.
+var version = "dev"
 
 // Version is a type for the internal representation of PDF versions.
 type Version int

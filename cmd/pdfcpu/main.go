@@ -36,6 +36,13 @@ var (
 	cmdMap                         CommandMap
 )
 
+// Set by Goreleaser.
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func initFlags() {
 
 	statsUsage := "optimize: a csv file for stats appending"
