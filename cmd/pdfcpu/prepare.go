@@ -69,7 +69,7 @@ func printVersion(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
-	fmt.Fprintf(os.Stdout, "pdfcpu: %v\n build: %v\ncommit: %v\n", version, date, commit)
+	fmt.Fprintf(os.Stdout, "pdfcpu: %v\n build: %v\ncommit: %v\n", pdfcpu.VersionStr, date, commit)
 }
 
 func handleValidateCommand(conf *pdfcpu.Configuration) {

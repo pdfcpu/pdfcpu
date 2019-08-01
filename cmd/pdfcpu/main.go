@@ -38,9 +38,8 @@ var (
 
 // Set by Goreleaser.
 var (
-	version = "dev"
-	commit  = "none"
-	date    = "unknown"
+	commit = "none"
+	date   = "unknown"
 )
 
 func initFlags() {

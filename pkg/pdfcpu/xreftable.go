@@ -432,7 +432,7 @@ func (xRefTable *XRefTable) NewFileSpecDict(filename string, indRefStreamDict In
 	efDict.Insert("UF", indRefStreamDict)
 	d.Insert("EF", efDict)
 
-	d.InsertString("Desc", "attached by pdfcpu "+version)
+	d.InsertString("Desc", "attached by pdfcpu "+VersionStr)
 
 	// CI, optional, collection item dict, since V1.7
 	// a corresponding collection schema dict in a collection.

@@ -1210,7 +1210,7 @@ type ReadSeekerCloser interface {
 }
 
 // Merge merges a sequence of PDF streams and writes the result to w.
-func Merge(rsc []ReadSeekerCloser, w io.Writer, conf *pdf.Configuration) error {
+func Merge(rsc []io.ReadSeeker, w io.Writer, conf *pdf.Configuration) error {
 	if conf == nil {
 		conf = pdf.NewDefaultConfiguration()
 	}
@@ -1258,13 +1258,13 @@ func Merge(rsc []ReadSeekerCloser, w io.Writer, conf *pdf.Configuration) error {
 // This operation corresponds to file concatenation in the order specified by inFiles.
 // The first entry of inFiles serves as the destination context where all remaining files get merged into.
 func MergeFile(inFiles []string, outFile string, conf *pdf.Configuration) error {
-	rscs := []ReadSeekerCloser(nil)
+	ff := []*os.File(nil)
 	for _, f := range inFiles {
 		f, err := os.Open(f)
 		if err != nil {
 			return err
 		}
-		rscs = append(rscs, f)
+		ff = append(ff, f)
 	}
 	f, err := os.Create(outFile)
 	if err != nil {
@@ -1272,11 +1272,17 @@ func MergeFile(inFiles []string, outFile string, conf *pdf.Configuration) error 
 	}
 	defer func() {
 		f.Close()
-		for _, rsc := range rscs {
-			rsc.Close()
+		for _, f := range ff {
+			f.Close()
 		}
 	}()
-	return Merge(rscs, f, conf)
+
+	rs := make([]io.ReadSeeker, len(ff))
+	for i, f := range ff {
+		rs[i] = f
+	}
+
+	return Merge(rs, f, conf)
 }
 
 // Info returns information about rs.

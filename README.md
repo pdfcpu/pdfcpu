@@ -67,15 +67,6 @@ The main focus lies on strong support for batch processing and scripting via a r
 * [pdfcpu API](https://godoc.org/github.com/hhrutter/pdfcpu/pkg/api)
 * [pdfcpu CLI](https://godoc.org/github.com/hhrutter/pdfcpu/pkg/cli)
 
-## Status
-
-[Version: 0.2.1](https://github.com/hhrutter/pdfcpu/releases/tag/v0.2.1)
-
-* Redesigned API with full support for io.ReadSeeker/io.Writer for all commands.
-* The new `info` command prints what pdfcpu knows about a PDF file.
-* Add `-q` or `-quiet` to disable output during command execution.
-* Fixes #87-#93.
-
 ## Reminder
 
 Always make sure your work is based on the latest commit!<br>
