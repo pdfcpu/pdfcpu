@@ -6,6 +6,7 @@ layout: default
 
 | Date      | Tag / Commit | Description  
 |:----------|:-------------|:--------
+|2019-08-01 | [v0.2.2](https://github.com/hhrutter/pdfcpu/releases/tag/v0.2.2) | Fix #95-#97
 |2019-07-22 | [18994fd](https://github.com/hhrutter/pdfcpu/commit/18994fd6776f425631cc195b28db99fd91d7c76f) | Fix #94
 |2019-07-15 | [v0.2.1](https://github.com/hhrutter/pdfcpu/releases/tag/v0.2.1) | Fix #92, #93
 |2019-07-14 | [v0.2](https://github.com/hhrutter/pdfcpu/releases/tag/v0.2) | Redesign API, info cmd, Fix #87,#89-#91
