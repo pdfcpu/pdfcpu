@@ -17,7 +17,10 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"bytes"
 	"fmt"
+	"image"
+	"image/png"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -25,6 +28,7 @@ import (
 	"testing"
 
 	"github.com/hhrutter/pdfcpu/pkg/filter"
+	"github.com/hhrutter/pdfcpu/tiff"
 )
 
 var inDir, outDir string
@@ -51,6 +55,59 @@ func TestMain(m *testing.M) {
 	exitCode := m.Run()
 
 	os.Exit(exitCode)
+}
+
+// readJPEGFile generates a PDF image object for a JPEG file
+// and appends this object to the cross reference table.
+func readJPEGFile(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
+
+	bb, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return nil, err
+	}
+
+	c, _, err := image.DecodeConfig(bytes.NewReader(bb))
+	if err != nil {
+		return nil, err
+	}
+
+	return ReadJPEG(xRefTable, bb, c)
+}
+
+// readPNGFile generates a PDF image object for a PNG file
+// and appends this object to the cross reference table.
+func readPNGFile(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
+
+	f, err := os.Open(fileName)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	img, err := png.Decode(f)
+	if err != nil {
+		return nil, err
+	}
+
+	return imgToImageDict(xRefTable, img)
+}
+
+// readTIFFFile generates a PDF image object for a TIFF file
+// and appends this object to the cross reference table.
+func readTIFFFile(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
+
+	f, err := os.Open(fileName)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	img, err := tiff.Decode(f)
+	if err != nil {
+		return nil, err
+	}
+
+	return imgToImageDict(xRefTable, img)
 }
 
 func compare(t *testing.T, fn1, fn2 string) {
@@ -114,7 +171,7 @@ func TestReadWritePNG(t *testing.T) {
 	} {
 
 		// Read a PNG file and create an image object which is a stream dict.
-		sd, err := ReadPNGFile(xRefTable, filepath.Join(inDir, filename))
+		sd, err := readPNGFile(xRefTable, filepath.Join(inDir, filename))
 		if err != nil {
 			t.Fatalf("err: %v\n", err)
 		}
@@ -142,7 +199,7 @@ func TestReadWritePNG(t *testing.T) {
 		// we can only compare against a PNG file which resulted from using image/png.
 
 		// Read in a PNG file created by pdfcpu and create an image object.
-		sd, err = ReadPNGFile(xRefTable, fn1)
+		sd, err = readPNGFile(xRefTable, fn1)
 		if err != nil {
 			t.Fatalf("err: %v\n", err)
 		}
@@ -234,7 +291,7 @@ func TestReadImageStreamWritePNG(t *testing.T) {
 	// we can only compare against a PNG file which resulted from using image/png.
 
 	// Read in a PNG file created by pdfcpu and create an image object.
-	sd, err = ReadPNGFile(xRefTable, fn1)
+	sd, err = readPNGFile(xRefTable, fn1)
 	if err != nil || sd == nil {
 		t.Fatalf("err: %v\n", err)
 	}
@@ -327,7 +384,7 @@ func TestReadImageStreamWriteTIFF(t *testing.T) {
 	}
 
 	// Read in a TIFF file created by pdfcpu and create an image object.
-	sd, err = ReadTIFFFile(xRefTable, fn1)
+	sd, err = readTIFFFile(xRefTable, fn1)
 	if err != nil || sd == nil {
 		t.Errorf("err: %v\n", err)
 	}
@@ -357,7 +414,7 @@ func TestReadTIFFWritePNG(t *testing.T) {
 	} {
 
 		// Read a TIFF file and create an image object which is a stream dict.
-		sd, err := ReadTIFFFile(xRefTable, filepath.Join(inDir, filename))
+		sd, err := readTIFFFile(xRefTable, filepath.Join(inDir, filename))
 		if err != nil {
 			t.Fatalf("err: %v\n", err)
 		}
@@ -385,7 +442,7 @@ func TestReadTIFFWritePNG(t *testing.T) {
 		// we can only compare against a PNG file which resulted from using image/png.
 
 		// Read in a PNG file created by pdfcpu and create an image object.
-		sd, err = ReadPNGFile(xRefTable, fn1)
+		sd, err = readPNGFile(xRefTable, fn1)
 		if err != nil {
 			t.Fatalf("err: %v\n", err)
 		}
@@ -413,7 +470,7 @@ func TestReadWriteJPEG(t *testing.T) {
 	} {
 
 		// Read a JPEG file and create an image object which is a stream dict.
-		sd, err := ReadJPEGFile(xRefTable, filepath.Join(inDir, filename))
+		sd, err := readJPEGFile(xRefTable, filepath.Join(inDir, filename))
 		if err != nil {
 			t.Fatalf("err: %v\n", err)
 		}

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -512,8 +513,14 @@ func createNUpFormForPDFResource(xRefTable *XRefTable, resDict *IndirectRef, con
 // NewNUpPageForImage creates a new page dict in xRefTable for given image filename and n-up conf.
 func NewNUpPageForImage(xRefTable *XRefTable, fileName string, parentIndRef *IndirectRef, nup *NUp) (*IndirectRef, error) {
 
+	f, err := os.Open(fileName)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
 	// create image dict.
-	imgIndRef, w, h, err := createImageResource(xRefTable, fileName)
+	imgIndRef, w, h, err := createImageResource(xRefTable, f)
 	if err != nil {
 		return nil, err
 	}
@@ -679,8 +686,17 @@ func nupFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict
 			formsResDict = NewDict()
 		}
 
-		imgIndRef, w, h, err := createImageResource(xRefTable, fileName)
+		f, err := os.Open(fileName)
 		if err != nil {
+			return err
+		}
+
+		imgIndRef, w, h, err := createImageResource(xRefTable, f)
+		if err != nil {
+			return err
+		}
+
+		if err := f.Close(); err != nil {
 			return err
 		}
 
@@ -693,7 +709,6 @@ func nupFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict
 		formsResDict.Insert(formResID, *formIndRef)
 
 		nUpTilePDFBytes(&buf, RectForDim(w, h), rr[i%len(rr)], formResID, nup)
-
 	}
 
 	// Wrap incomplete nUp page.

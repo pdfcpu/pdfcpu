@@ -899,9 +899,9 @@ func NUpFile(inFiles []string, outFile string, selectedPages []string, nup *pdf.
 	return NUp(f1, f2, inFiles, selectedPages, nup, conf)
 }
 
-// ImportImages appends PDF pages containing images to outFile which will be created if necessary.
-// If rs == nil then a new file will be written to w.
-func ImportImages(rs io.ReadSeeker, w io.Writer, imgFiles []string, imp *pdf.Import, conf *pdf.Configuration) error {
+// ImportImages appends PDF pages containing images to rs and writes the result to w.
+// If rs == nil a new PDF file will be written to w.
+func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdf.Import, conf *pdf.Configuration) error {
 	if conf == nil {
 		conf = pdf.NewDefaultConfiguration()
 	}
@@ -936,9 +936,9 @@ func ImportImages(rs io.ReadSeeker, w io.Writer, imgFiles []string, imp *pdf.Imp
 		return err
 	}
 
-	for _, imgFilename := range imgFiles {
+	for _, r := range imgs {
 
-		indRef, err := pdf.NewPageForImage(ctx.XRefTable, imgFilename, pagesIndRef, imp)
+		indRef, err := pdf.NewPageForImage(ctx.XRefTable, r, pagesIndRef, imp)
 		if err != nil {
 			return err
 		}
@@ -986,6 +986,17 @@ func ImportImagesFile(imgFiles []string, outFile string, imp *pdf.Import, conf *
 		tmpFile += ".tmp"
 	}
 
+	rc := make([]io.ReadCloser, len(imgFiles))
+	rr := make([]io.Reader, len(imgFiles))
+	for i, fn := range imgFiles {
+		f, err := os.Open(fn)
+		if err != nil {
+			return err
+		}
+		rc[i] = f
+		rr[i] = bufio.NewReader(f)
+	}
+
 	if f2, err = os.Create(tmpFile); err != nil {
 		return err
 	}
@@ -997,6 +1008,12 @@ func ImportImagesFile(imgFiles []string, outFile string, imp *pdf.Import, conf *
 				f1.Close()
 				os.Remove(tmpFile)
 			}
+			for _, f := range rc {
+				if err = f.Close(); err != nil {
+					return
+				}
+			}
+			return
 		}
 		if err = f2.Close(); err != nil {
 			return
@@ -1011,7 +1028,7 @@ func ImportImagesFile(imgFiles []string, outFile string, imp *pdf.Import, conf *
 		}
 	}()
 
-	return ImportImages(rs, f2, imgFiles, imp, conf)
+	return ImportImages(rs, f2, rr, imp, conf)
 }
 
 // InsertPages inserts a blank page at every page selected of rs and writes the result to w.

@@ -19,7 +19,11 @@ package pdfcpu
 import (
 	"bytes"
 	"fmt"
+	"image"
+	"io"
+	"io/ioutil"
 	"math"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -855,25 +859,41 @@ func createPDFResForWM(ctx *Context, wm *Watermark) error {
 	return nil
 }
 
-func createImageResource(xRefTable *XRefTable, fileName string) (*IndirectRef, int, int, error) {
+func createImageResource(xRefTable *XRefTable, r io.Reader) (*IndirectRef, int, int, error) {
 
-	ext := strings.ToLower(filepath.Ext(fileName))
-	var f func(xRefTable *XRefTable, fileName string) (*StreamDict, error)
-
-	switch ext {
-	case ".png":
-		f = ReadPNGFile
-	case ".jpg", ".jpeg":
-		f = ReadJPEGFile
-	case ".tif", ".tiff":
-		f = ReadTIFFFile
-	default:
-		return nil, 0, 0, errors.Errorf("unsupported imagefile extension: %s", ext)
-	}
-
-	sd, err := f(xRefTable, fileName)
+	bb, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, 0, 0, err
+	}
+
+	var sd *StreamDict
+	r = bytes.NewReader(bb)
+
+	// We identify JPG via its magic bytes.
+	if bytes.HasPrefix(bb, []byte("\xff\xd8")) {
+		// Process JPG by wrapping byte stream into DCTEncoded object stream.
+		c, _, err := image.DecodeConfig(r)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+
+		sd, err = ReadJPEG(xRefTable, bb, c)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+
+	} else {
+		// Process other formats by decoding into an image
+		// and subsequent object stream encoding,
+		img, _, err := image.Decode(r)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+
+		sd, err = imgToImageDict(xRefTable, img)
+		if err != nil {
+			return nil, 0, 0, err
+		}
 	}
 
 	w := *sd.IntEntry("Width")
@@ -889,7 +909,13 @@ func createImageResource(xRefTable *XRefTable, fileName string) (*IndirectRef, i
 
 func createImageResForWM(xRefTable *XRefTable, wm *Watermark) (err error) {
 
-	wm.image, wm.width, wm.height, err = createImageResource(xRefTable, wm.FileName)
+	f, err := os.Open(wm.FileName)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	wm.image, wm.width, wm.height, err = createImageResource(xRefTable, f)
 
 	return err
 }

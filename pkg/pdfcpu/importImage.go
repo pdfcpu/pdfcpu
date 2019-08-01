@@ -394,11 +394,11 @@ func importImagePDFBytes(wr io.Writer, pageDim *dim, imgWidth, imgHeight float64
 		m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 }
 
-// NewPageForImage creates a new page dict in xRefTable for given image filename.
-func NewPageForImage(xRefTable *XRefTable, fileName string, parentIndRef *IndirectRef, imp *Import) (*IndirectRef, error) {
+// NewPageForImage creates a new page dict in xRefTable for given image reader r.
+func NewPageForImage(xRefTable *XRefTable, r io.Reader, parentIndRef *IndirectRef, imp *Import) (*IndirectRef, error) {
 
 	// create image dict.
-	imgIndRef, w, h, err := createImageResource(xRefTable, fileName)
+	imgIndRef, w, h, err := createImageResource(xRefTable, r)
 	if err != nil {
 		return nil, err
 	}

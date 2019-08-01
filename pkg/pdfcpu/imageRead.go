@@ -19,13 +19,10 @@ package pdfcpu
 import (
 	"image"
 	"image/color"
-	"image/jpeg"
-	"image/png"
-	"io/ioutil"
-	"os"
+	_ "image/jpeg"
+	_ "image/png"
 
 	"github.com/hhrutter/pdfcpu/pkg/filter"
-	"github.com/hhrutter/pdfcpu/tiff"
 	"github.com/pkg/errors"
 )
 
@@ -336,17 +333,17 @@ func imgToImageDict(xRefTable *XRefTable, img image.Image) (*StreamDict, error) 
 		buf = writeGrayImageBuf(img)
 
 	//case color.Gray16Model:
-	//	return nil, ErrUnsupportedColorSpace
+	//  return nil, ErrUnsupportedColorSpace
 
 	case color.CMYKModel:
 		// A fully opaque CMYK color, having 8 bits for each of cyan, magenta, yellow and black.
 		cs = DeviceCMYKCS
 		buf = writeCMYKImageBuf(img)
 
-	//case color.YCbCrModel:
+	// case color.YCbCrModel:
 	//	fmt.Println("YCbCr")
 
-	//case color.NYCbCrAModel:
+	// case color.NYCbCrAModel:
 	//	fmt.Println("YCbCr")
 
 	default:
@@ -360,24 +357,9 @@ func imgToImageDict(xRefTable *XRefTable, img image.Image) (*StreamDict, error) 
 	return createFlateImageObject(xRefTable, buf, sm, w, h, bpc, cs)
 }
 
-// ReadJPEGFile generates a PDF image object for a JPEG file
+// ReadJPEG generates a PDF image object for a JPEG stream
 // and appends this object to the cross reference table.
-func ReadJPEGFile(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
-
-	// JPEG compression is not an idempotent operation.
-	// We will not decompress a JPG file only to recompress it internally,
-	// hence we just copy the compressed bytes into the image streamdict.
-
-	f, err := os.Open(fileName)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	c, err := jpeg.DecodeConfig(f)
-	if err != nil {
-		return nil, err
-	}
+func ReadJPEG(xRefTable *XRefTable, buf []byte, c image.Config) (*StreamDict, error) {
 
 	var cs string
 
@@ -397,46 +379,5 @@ func ReadJPEGFile(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
 
 	}
 
-	buf, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		return nil, err
-	}
-
 	return createDCTImageObject(xRefTable, buf, nil, c.Width, c.Height, cs)
-}
-
-// ReadPNGFile generates a PDF image object for a PNG file
-// and appends this object to the cross reference table.
-func ReadPNGFile(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
-
-	f, err := os.Open(fileName)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	img, err := png.Decode(f)
-	if err != nil {
-		return nil, err
-	}
-
-	return imgToImageDict(xRefTable, img)
-}
-
-// ReadTIFFFile generates a PDF image object for a TIFF file
-// and appends this object to the cross reference table.
-func ReadTIFFFile(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
-
-	f, err := os.Open(fileName)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	img, err := tiff.Decode(f)
-	if err != nil {
-		return nil, err
-	}
-
-	return imgToImageDict(xRefTable, img)
 }
