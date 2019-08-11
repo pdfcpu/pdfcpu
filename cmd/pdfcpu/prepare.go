@@ -24,9 +24,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hhrutter/pdfcpu/pkg/api"
-	"github.com/hhrutter/pdfcpu/pkg/cli"
-	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/cli"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 func hasPdfExtension(filename string) bool {

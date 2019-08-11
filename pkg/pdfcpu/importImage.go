@@ -23,9 +23,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hhrutter/pdfcpu/pkg/filter"
-	"github.com/hhrutter/pdfcpu/pkg/log"
-	"github.com/hhrutter/pdfcpu/pkg/types"
+	"github.com/pdfcpu/pdfcpu/pkg/filter"
+	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/types"
 	"github.com/pkg/errors"
 )
 

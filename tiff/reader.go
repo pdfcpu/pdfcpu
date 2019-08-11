@@ -4,9 +4,9 @@
 
 // Package tiff is an enhanced version of x/image/tiff.
 //
-// It uses a consolidated version of compress/lzw (https://github.com/hhrutter/pdfcpu/tree/master/lzw) for compression and also adds support for CMYK.
+// It uses a consolidated version of compress/lzw (https://github.com/pdfcpu/pdfcpu/tree/master/lzw) for compression and also adds support for CMYK.
 //
-// More information: https://github.com/hhrutter/pdfcpu/tree/master/tiff
+// More information: https://github.com/pdfcpu/pdfcpu/tree/master/tiff
 package tiff
 
 import (
@@ -19,8 +19,8 @@ import (
 	"io/ioutil"
 	"math"
 
-	"github.com/hhrutter/pdfcpu/ccitt"
-	"github.com/hhrutter/pdfcpu/lzw"
+	"github.com/pdfcpu/pdfcpu/ccitt"
+	"github.com/pdfcpu/pdfcpu/lzw"
 )
 
 // A FormatError reports that the input is not a valid TIFF image.

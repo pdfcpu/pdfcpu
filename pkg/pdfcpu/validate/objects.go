@@ -19,8 +19,8 @@ package validate
 import (
 	"fmt"
 
-	"github.com/hhrutter/pdfcpu/pkg/log"
-	pdf "github.com/hhrutter/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/log"
+	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pkg/errors"
 )
 

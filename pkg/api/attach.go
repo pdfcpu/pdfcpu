@@ -21,8 +21,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/hhrutter/pdfcpu/pkg/log"
-	pdf "github.com/hhrutter/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/log"
+	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 // ListAttachments returns a list of embedded file attachments of rs.

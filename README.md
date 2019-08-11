@@ -1,11 +1,11 @@
 # pdfcpu: a Go PDF processor
 
-[![Build Status](https://travis-ci.org/hhrutter/pdfcpu.svg?branch=master)](https://travis-ci.org/hhrutter/pdfcpu)
-[![GoDoc](https://godoc.org/github.com/hhrutter/pdfcpu?status.svg)](https://godoc.org/github.com/hhrutter/pdfcpu)
-[![Coverage Status](https://coveralls.io/repos/github/hhrutter/pdfcpu/badge.svg?branch=master)](https://coveralls.io/github/hhrutter/pdfcpu?branch=master)
-[![Go Report Card](https://goreportcard.com/badge/github.com/hhrutter/pdfcpu)](https://goreportcard.com/report/github.com/hhrutter/pdfcpu)
+[![Build Status](https://travis-ci.org/pdfcpu/pdfcpu.svg?branch=master)](https://travis-ci.org/pdfcpu/pdfcpu)
+[![GoDoc](https://godoc.org/github.com/pdfcpu/pdfcpu?status.svg)](https://godoc.org/github.com/pdfcpu/pdfcpu)
+[![Coverage Status](https://coveralls.io/repos/github/pdfcpu/pdfcpu/badge.svg?branch=master)](https://coveralls.io/github/pdfcpu/pdfcpu?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/pdfcpu/pdfcpu)](https://goreportcard.com/report/github.com/pdfcpu/pdfcpu)
 [![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Latest release](https://img.shields.io/github/release/hhrutter/pdfcpu.svg)](https://github.com/hhrutter/pdfcpu/releases)
+[![Latest release](https://img.shields.io/github/release/pdfcpu/pdfcpu.svg)](https://github.com/pdfcpu/pdfcpu/releases)
 
 <img src="resources/logoSmall.png" width="150">
 
@@ -59,13 +59,13 @@ The main focus lies on strong support for batch processing and scripting via a r
 
 * The main entry point is [pdfcpu.io](https://pdfcpu.io).
 * For CLI examples also go to [pdfcpu.io](https://pdfcpu.io). There you will find explanations of all the commands and their parameters.
-* For API examples of all pdfcpu operations please refer to [GoDoc](https://godoc.org/github.com/hhrutter/pdfcpu/pkg/api).
+* For API examples of all pdfcpu operations please refer to [GoDoc](https://godoc.org/github.com/pdfcpu/pdfcpu/pkg/api).
 
 ### GoDoc
 
-* [pdfcpu package](https://godoc.org/github.com/hhrutter/pdfcpu)
-* [pdfcpu API](https://godoc.org/github.com/hhrutter/pdfcpu/pkg/api)
-* [pdfcpu CLI](https://godoc.org/github.com/hhrutter/pdfcpu/pkg/cli)
+* [pdfcpu package](https://godoc.org/github.com/pdfcpu/pdfcpu)
+* [pdfcpu API](https://godoc.org/github.com/pdfcpu/pdfcpu/pkg/api)
+* [pdfcpu CLI](https://godoc.org/github.com/pdfcpu/pdfcpu/pkg/cli)
 
 ## Reminder
 
@@ -80,14 +80,18 @@ pdfcpu is still *Alpha* - bugfixes are committed on the fly and will be mentione
 
 ## Installation
 
-There are no dependencies outside the Go standard library other than `pkg/errors`.<br>
-Required go version for building: go1.10 and up
+### Download
+Get the latest binary [here](https://github.com/pdfcpu/pdfcpu/releases).
+
 
 ### Using GOPATH
 
+There are no dependencies outside the Go standard library other than `pkg/errors`.<br>
+Required go version for building: go1.10 and up
+
 ```
-go get github.com/hhrutter/pdfcpu/cmd/...
-cd $GOPATH/src/github.com/hhrutter/pdfcpu/cmd/pdfcpu
+go get github.com/pdfcpu/pdfcpu/cmd/...
+cd $GOPATH/src/github.com/pdfcpu/pdfcpu/cmd/pdfcpu
 go install
 pdfcpu version
 ```
@@ -95,11 +99,20 @@ pdfcpu version
 ### Using Go Modules (go1.11 and up)
 
 ```
-git clone https://github.com/hhrutter/pdfcpu
+git clone https://github.com/pdfcpu/pdfcpu
 cd pdfcpu/cmd/pdfcpu
 go install
 pdfcpu ve
 ```
+
+## Note
+We recently transfered this repo to the pdfcpu organisation.
+All links to the previous repository location are automatically redirected to the new location.
+However, to avoid confusion, we strongly recommend updating any existing local clones to point to the new repository URL. You can do this by using git remote on the command line:
+```
+git remote set-url origin https://github.com/pdfcpu/pdfcpu
+```
+
 
 ## Contributing
 
@@ -116,7 +129,6 @@ pdfcpu ve
 * If you want to report a bug please attach the *very verbose* (`pdfcpu cmd -vv ...`) output and ideally a test PDF that you can share.
 * Always make sure your contribution is based on the latest commit.
 * Please sign your commits.
-* Please sign the [CLA](https://cla-assistant.io/hhrutter/pdfcpu) before you submit a PR.
 
 ## Contributors
 

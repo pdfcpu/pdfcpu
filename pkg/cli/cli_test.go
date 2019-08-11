@@ -25,9 +25,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hhrutter/pdfcpu/pkg/api"
-	PDFCPULog "github.com/hhrutter/pdfcpu/pkg/log"
-	pdf "github.com/hhrutter/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/api"
+	PDFCPULog "github.com/pdfcpu/pdfcpu/pkg/log"
+	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 var inDir, outDir, resDir string

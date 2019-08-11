@@ -23,8 +23,8 @@ import (
 	"encoding/hex"
 	"io"
 
-	"github.com/hhrutter/pdfcpu/pkg/filter"
-	"github.com/hhrutter/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/filter"
+	"github.com/pdfcpu/pdfcpu/pkg/log"
 )
 
 func parmsForFilter(d Dict) map[string]int {

@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/hhrutter/pdfcpu/pkg/filter"
+	"github.com/pdfcpu/pdfcpu/pkg/filter"
 )
 
 var (

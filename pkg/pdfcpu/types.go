@@ -23,7 +23,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hhrutter/pdfcpu/pkg/types"
+	"github.com/pdfcpu/pdfcpu/pkg/types"
 )
 
 // Supported line delimiters

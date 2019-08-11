@@ -40,10 +40,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hhrutter/pdfcpu/pkg/log"
-	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
-	pdf "github.com/hhrutter/pdfcpu/pkg/pdfcpu"
-	"github.com/hhrutter/pdfcpu/pkg/pdfcpu/validate"
+	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/validate"
 	"github.com/pkg/errors"
 )
 

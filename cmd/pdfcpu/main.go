@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hhrutter/pdfcpu/pkg/cli"
-	PDFCPULog "github.com/hhrutter/pdfcpu/pkg/log"
-	"github.com/hhrutter/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/cli"
+	PDFCPULog "github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 var (

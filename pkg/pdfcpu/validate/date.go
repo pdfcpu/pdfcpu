@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	pdf "github.com/hhrutter/pdfcpu/pkg/pdfcpu"
+	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 func prevalidateDate(s string) (string, bool) {

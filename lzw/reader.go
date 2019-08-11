@@ -9,7 +9,7 @@
 //
 // See the golang proposal: https://github.com/golang/go/issues/25409.
 //
-// More information: https://github.com/hhrutter/pdfcpu/tree/master/lzw
+// More information: https://github.com/pdfcpu/pdfcpu/tree/master/lzw
 package lzw
 
 import (

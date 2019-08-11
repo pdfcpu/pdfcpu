@@ -20,8 +20,8 @@ import (
 	"bytes"
 	"io"
 
-	"github.com/hhrutter/pdfcpu/lzw"
-	"github.com/hhrutter/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/lzw"
+	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pkg/errors"
 )
 

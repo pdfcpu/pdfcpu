@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	pdf "github.com/hhrutter/pdfcpu/pkg/pdfcpu"
+	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 func createAndValidate(t *testing.T, xRefTable *pdf.XRefTable, outFile, msg string) {
