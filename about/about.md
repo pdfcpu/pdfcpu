@@ -23,4 +23,4 @@ and interface based (typically using io.ReadSeeker/io.Writer):
 func Optimize(rs io.ReadSeeker, w io.Writer, conf *pdf.Configuration) error
 ```
 
-Learn more about the API including examples for all operations at [GoDoc](https://godoc.org/github.com/hhrutter/pdfcpu/pkg/api).
+Learn more about the API including examples for all operations at [GoDoc](https://godoc.org/github.com/pdfcpu/pdfcpu/pkg/api).
