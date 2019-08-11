@@ -145,7 +145,7 @@ func NewDefaultConfiguration() *Configuration {
 	}
 }
 
-// NewAESConfiguration returns a default configuration for AES encrpytion.
+// NewAESConfiguration returns a default configuration for AES encryption.
 func NewAESConfiguration(userPW, ownerPW string, keyLength int) *Configuration {
 	c := NewDefaultConfiguration()
 	c.UserPW = userPW

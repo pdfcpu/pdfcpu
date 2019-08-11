@@ -694,30 +694,33 @@ func handleRotateCommand(conf *pdfcpu.Configuration) {
 
 func parseAfterNUpDetails(nup *pdfcpu.NUp, argInd int, filenameOut string) []string {
 
-	var err error
-
 	if nup.PageGrid {
 		cols, err := strconv.Atoi(flag.Arg(argInd))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err)
+			os.Exit(1)
 		}
 		rows, err := strconv.Atoi(flag.Arg(argInd + 1))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err)
+			os.Exit(1)
 		}
-		err = pdfcpu.ParseNUpGridDefinition(cols, rows, nup)
+		if err = pdfcpu.ParseNUpGridDefinition(cols, rows, nup); err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+			os.Exit(1)
+		}
 		argInd += 2
 	} else {
 		n, err := strconv.Atoi(flag.Arg(argInd))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err)
+			os.Exit(1)
 		}
-		err = pdfcpu.ParseNUpValue(n, nup)
+		if err = pdfcpu.ParseNUpValue(n, nup); err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+			os.Exit(1)
+		}
 		argInd++
-	}
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		os.Exit(1)
 	}
 
 	filenameIn := flag.Arg(argInd)
