@@ -356,7 +356,7 @@ description ... dimensions, format, position, offset, scale factor
 
 ` + usagePageSelection
 
-	usageRotate     = "usage: pdfcpu rotate [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile rotation"
+	usageRotate     = "usage: pdfcpu rotate [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile rotation [outFile]"
 	usageLongRotate = `Rotate selected pages by a multiple of 90 degrees. 
 
  verbose, v ... turn on logging
@@ -366,7 +366,8 @@ description ... dimensions, format, position, offset, scale factor
         upw ... user password
         opw ... owner password
      inFile ... input pdf file
-   rotation ... a multiple of 90 degrees for clockwise rotation.
+   rotation ... a multiple of 90 degrees for clockwise rotation
+    outFile ... output pdf file
 
 ` + usagePageSelection
 

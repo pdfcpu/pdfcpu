@@ -375,7 +375,7 @@ func ReadJPEG(xRefTable *XRefTable, buf []byte, c image.Config) (*StreamDict, er
 		cs = DeviceCMYKCS
 
 	default:
-		return nil, errors.New("unexpected color model for JPEG")
+		return nil, errors.New("pdfcpu: unexpected color model for JPEG")
 
 	}
 

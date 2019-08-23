@@ -65,7 +65,7 @@ func validateNumberTreeDictNumsEntry(xRefTable *pdf.XRefTable, d pdf.Dict, name 
 	// Nums: array of the form [key1 value1 key2 value2 ... key n value n]
 	o, found := d.Find("Nums")
 	if !found {
-		return 0, 0, errors.New("writeNumberTreeDictNumsEntry: missing \"Kids\" or \"Nums\" entry")
+		return 0, 0, errors.New("pdfcpu: validateNumberTreeDictNumsEntry: missing \"Kids\" or \"Nums\" entry")
 	}
 
 	a, err := xRefTable.DereferenceArray(o)
@@ -73,12 +73,12 @@ func validateNumberTreeDictNumsEntry(xRefTable *pdf.XRefTable, d pdf.Dict, name 
 		return 0, 0, err
 	}
 	if a == nil {
-		return 0, 0, errors.New("validateNumberTreeDictNumsEntry: missing \"Nums\" array")
+		return 0, 0, errors.New("pdfcpu: validateNumberTreeDictNumsEntry: missing \"Nums\" array")
 	}
 
 	// arr length needs to be even because of contained key value pairs.
 	if len(a)%2 == 1 {
-		return 0, 0, errors.Errorf("validateNumberTreeDictNumsEntry: Nums array entry length needs to be even, length=%d\n", len(a))
+		return 0, 0, errors.Errorf("pdfcpu: validateNumberTreeDictNumsEntry: Nums array entry length needs to be even, length=%d\n", len(a))
 	}
 
 	// every other entry is a value
@@ -97,7 +97,7 @@ func validateNumberTreeDictNumsEntry(xRefTable *pdf.XRefTable, d pdf.Dict, name 
 
 			i, ok := o.(pdf.Integer)
 			if !ok {
-				return 0, 0, errors.Errorf("validateNumberTreeDictNumsEntry: corrupt key <%v>\n", o)
+				return 0, 0, errors.Errorf("pdfcpu: validateNumberTreeDictNumsEntry: corrupt key <%v>\n", o)
 			}
 
 			if firstKey == 0 {
@@ -140,7 +140,7 @@ func validateNumberTreeDictLimitsEntry(xRefTable *pdf.XRefTable, d pdf.Dict, fir
 	lk, _ := a[1].(pdf.Integer)
 
 	if firstKey != fk.Value() || lastKey != lk.Value() {
-		return errors.Errorf("validateNumberTreeDictLimitsEntry: leaf node corrupted\n")
+		return errors.Errorf("pdfcpu: validateNumberTreeDictLimitsEntry: leaf node corrupted\n")
 	}
 
 	return nil
@@ -164,14 +164,14 @@ func validateNumberTree(xRefTable *pdf.XRefTable, name string, ir pdf.IndirectRe
 			return 0, 0, err
 		}
 		if a == nil {
-			return 0, 0, errors.New("validateNumberTree: missing \"Kids\" array")
+			return 0, 0, errors.New("pdfcpu: validateNumberTree: missing \"Kids\" array")
 		}
 
 		for _, o := range a {
 
 			kid, ok := o.(pdf.IndirectRef)
 			if !ok {
-				return 0, 0, errors.New("validateNumberTree: corrupt kid, should be indirect reference")
+				return 0, 0, errors.New("pdfcpu: validateNumberTree: corrupt kid, should be indirect reference")
 			}
 
 			var fk int

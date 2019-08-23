@@ -343,7 +343,7 @@ func validateMovieStartOrDurationEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dic
 
 	case pdf.Array:
 		if len(o) != 2 {
-			return errors.New("validateMovieStartOrDurationEntry: array length <> 2")
+			return errors.New("pdfcpu: validateMovieStartOrDurationEntry: array length <> 2")
 		}
 	}
 
@@ -437,7 +437,7 @@ func validateMovieActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName stri
 
 	d, err = xRefTable.DereferenceDict(*ir)
 	if err != nil || d == nil {
-		return errors.New("validateMovieActionDict: missing required entry \"T\" or \"Annotation\"")
+		return errors.New("pdfcpu: validateMovieActionDict: missing required entry \"T\" or \"Annotation\"")
 	}
 
 	_, err = validateNameEntry(xRefTable, d, "annotDict", "Subtype", REQUIRED, pdf.V10, func(s string) bool { return s == "Movie" })
@@ -509,7 +509,7 @@ func validateHideActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName strin
 	// T, required, dict, text string or array
 	o, found := d.Find("T")
 	if !found || o == nil {
-		return errors.New("validateHideActionDict: missing required entry \"T\"")
+		return errors.New("pdfcpu: validateHideActionDict: missing required entry \"T\"")
 	}
 
 	o, err := xRefTable.Dereference(o)
@@ -576,7 +576,7 @@ func validateSubmitFormActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName
 				// no further processing
 
 			default:
-				return errors.New("validateSubmitFormActionDict: unknown Fields entry")
+				return errors.New("pdfcpu: validateSubmitFormActionDict: unknown Fields entry")
 			}
 		}
 	}
@@ -606,7 +606,7 @@ func validateResetFormActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName 
 				// no further processing
 
 			default:
-				return errors.New("validateResetFormActionDict: unknown Fields entry")
+				return errors.New("pdfcpu: validateResetFormActionDict: unknown Fields entry")
 			}
 		}
 	}

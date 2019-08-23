@@ -47,7 +47,7 @@ func validateReferenceDictPageEntry(xRefTable *pdf.XRefTable, o pdf.Object) erro
 		// no further processing
 
 	default:
-		return errors.New("validateReferenceDictPageEntry: corrupt type")
+		return errors.New("pdfcpu: validateReferenceDictPageEntry: corrupt type")
 
 	}
 
@@ -69,7 +69,7 @@ func validateReferenceDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 	// Page, integer or text string, required
 	o, ok := d.Find("Page")
 	if !ok {
-		return errors.New("validateReferenceDict: missing required entry \"Page\"")
+		return errors.New("pdfcpu: validateReferenceDict: missing required entry \"Page\"")
 	}
 
 	err = validateReferenceDictPageEntry(xRefTable, o)
@@ -221,14 +221,14 @@ func validateOPIDictInks(xRefTable *pdf.XRefTable, o pdf.Object) error {
 
 	case pdf.Name:
 		if colorant := o.Value(); colorant != "full_color" && colorant != "registration" {
-			return errors.New("validateOPIDictInks: corrupt colorant name")
+			return errors.New("pdfcpu: validateOPIDictInks: corrupt colorant name")
 		}
 
 	case pdf.Array:
 		// no further processing
 
 	default:
-		return errors.New("validateOPIDictInks: corrupt type")
+		return errors.New("pdfcpu: validateOPIDictInks: corrupt type")
 
 	}
 
@@ -303,7 +303,7 @@ func validateOPIVersionDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 	// 14.11.7 Open Prepresse interface (OPI)
 
 	if d.Len() != 1 {
-		return errors.New("validateOPIVersionDict: must have exactly one entry keyed 1.3 or 2.0")
+		return errors.New("pdfcpu: validateOPIVersionDict: must have exactly one entry keyed 1.3 or 2.0")
 	}
 
 	validateOPIVersion := func(s string) bool { return pdf.MemberOf(s, []string{"1.3", "2.0"}) }
@@ -311,7 +311,7 @@ func validateOPIVersionDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 	for opiVersion, obj := range d {
 
 		if !validateOPIVersion(opiVersion) {
-			return errors.New("validateOPIVersionDict: invalid OPI version")
+			return errors.New("pdfcpu: validateOPIVersionDict: invalid OPI version")
 		}
 
 		d, err := xRefTable.DereferenceDict(obj)
@@ -337,11 +337,11 @@ func validateOPIVersionDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 func validateMaskStreamDict(xRefTable *pdf.XRefTable, sd *pdf.StreamDict) error {
 
 	if sd.Type() != nil && *sd.Type() != "XObject" {
-		return errors.New("validateMaskStreamDict: corrupt imageStreamDict type")
+		return errors.New("pdfcpu: validateMaskStreamDict: corrupt imageStreamDict type")
 	}
 
 	if sd.Subtype() == nil || *sd.Subtype() != "Image" {
-		return errors.New("validateMaskStreamDict: corrupt imageStreamDict subtype")
+		return errors.New("pdfcpu: validateMaskStreamDict: corrupt imageStreamDict subtype")
 	}
 
 	return validateImageStreamDict(xRefTable, sd, isNoAlternateImageStreamDict)
@@ -369,7 +369,7 @@ func validateMaskEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName
 
 	default:
 
-		return errors.Errorf("validateMaskEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+		return errors.Errorf("pdfcpu: validateMaskEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 
 	}
 
@@ -384,7 +384,7 @@ func validateAlternateImageStreamDicts(xRefTable *pdf.XRefTable, d pdf.Dict, dic
 	}
 	if a == nil {
 		if required {
-			return errors.Errorf("validateAlternateImageStreamDicts: dict=%s required entry \"%s\" missing.", dictName, entryName)
+			return errors.Errorf("pdfcpu: validateAlternateImageStreamDicts: dict=%s required entry \"%s\" missing.", dictName, entryName)
 		}
 		return nil
 	}
@@ -674,7 +674,7 @@ func validateFormStreamDictPart2(xRefTable *pdf.XRefTable, d pdf.Dict, dictName 
 	}
 
 	if hasPieceInfo && lm == nil {
-		err = errors.New("validateFormStreamDictPart2: missing \"LastModified\" (required by \"PieceInfo\")")
+		err = errors.New("pdfcpu: validateFormStreamDictPart2: missing \"LastModified\" (required by \"PieceInfo\")")
 		return err
 	}
 
@@ -690,7 +690,7 @@ func validateFormStreamDictPart2(xRefTable *pdf.XRefTable, d pdf.Dict, dictName 
 		return err
 	}
 	if sp != nil && sps != nil {
-		return errors.New("validateFormStreamDictPart2: only \"StructParent\" or \"StructParents\" allowed")
+		return errors.New("pdfcpu: validateFormStreamDictPart2: only \"StructParent\" or \"StructParents\" allowed")
 	}
 
 	// OPI, dict, optional, since V1.2
@@ -777,10 +777,10 @@ func validateXObjectStreamDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
 		err = validateImageStreamDict(xRefTable, sd, isNoAlternateImageStreamDict)
 
 	case "PS":
-		err = errors.Errorf("validateXObjectStreamDict: PostScript XObjects should not be used")
+		err = errors.Errorf("pdfcpu: validateXObjectStreamDict: PostScript XObjects should not be used")
 
 	default:
-		return errors.Errorf("validateXObjectStreamDict: unknown Subtype: %s\n", *subtype)
+		return errors.Errorf("pdfcpu: validateXObjectStreamDict: unknown Subtype: %s\n", *subtype)
 
 	}
 

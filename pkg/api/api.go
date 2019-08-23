@@ -160,7 +160,7 @@ func Validate(rs io.ReadSeeker, conf *pdf.Configuration) error {
 	conf.Cmd = pdf.VALIDATE
 
 	if conf.ValidationMode == pdf.ValidationNone {
-		return errors.New("validate: mode == ValidationNone")
+		return errors.New("pdfcpu: validate: mode == ValidationNone")
 	}
 
 	from1 := time.Now()
@@ -269,7 +269,11 @@ func OptimizeFile(inFile, outFile string, conf *pdf.Configuration) (err error) {
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
+		log.CLI.Printf("writing %s...\n", outFile)
+	} else {
+		log.CLI.Printf("writing %s...\n", inFile)
 	}
+
 	if f2, err = os.Create(tmpFile); err != nil {
 		return err
 	}
@@ -303,7 +307,7 @@ func OptimizeFile(inFile, outFile string, conf *pdf.Configuration) (err error) {
 // A configuration containing the current passwords is required.
 func EncryptFile(inFile, outFile string, conf *pdf.Configuration) error {
 	if conf == nil {
-		return errors.New("missing configuration for encryption")
+		return errors.New("pdfcpu: missing configuration for encryption")
 	}
 	conf.Cmd = pdf.ENCRYPT
 	return OptimizeFile(inFile, outFile, conf)
@@ -313,7 +317,7 @@ func EncryptFile(inFile, outFile string, conf *pdf.Configuration) error {
 // A configuration containing the current passwords is required.
 func DecryptFile(inFile, outFile string, conf *pdf.Configuration) error {
 	if conf == nil {
-		return errors.New("missing configuration for decryption")
+		return errors.New("pdfcpu: missing configuration for decryption")
 	}
 	conf.Cmd = pdf.DECRYPT
 	return OptimizeFile(inFile, outFile, conf)
@@ -323,7 +327,7 @@ func DecryptFile(inFile, outFile string, conf *pdf.Configuration) error {
 // A configuration containing the current passwords is required.
 func ChangeUserPasswordFile(inFile, outFile string, pwOld, pwNew string, conf *pdf.Configuration) error {
 	if conf == nil {
-		return errors.New("missing configuration for change user password")
+		return errors.New("pdfcpu: missing configuration for change user password")
 	}
 	conf.Cmd = pdf.CHANGEUPW
 	conf.UserPW = pwOld
@@ -335,7 +339,7 @@ func ChangeUserPasswordFile(inFile, outFile string, pwOld, pwNew string, conf *p
 // A configuration containing the current passwords is required.
 func ChangeOwnerPasswordFile(inFile, outFile string, pwOld, pwNew string, conf *pdf.Configuration) error {
 	if conf == nil {
-		return errors.New("missing configuration for change owner password")
+		return errors.New("pdfcpu: missing configuration for change owner password")
 	}
 	conf.Cmd = pdf.CHANGEOPW
 	conf.OwnerPW = pwOld
@@ -386,7 +390,7 @@ func ListPermissionsFile(inFile string, conf *pdf.Configuration) ([]string, erro
 // A configuration containing the current passwords is required.
 func SetPermissions(rs io.ReadSeeker, w io.Writer, conf *pdf.Configuration) error {
 	if conf == nil {
-		return errors.New("missing configuration for setting permissions")
+		return errors.New("pdfcpu: missing configuration for setting permissions")
 	}
 	conf.Cmd = pdf.SETPERMISSIONS
 
@@ -413,7 +417,7 @@ func SetPermissions(rs io.ReadSeeker, w io.Writer, conf *pdf.Configuration) erro
 // A configuration containing the current passwords is required.
 func SetPermissionsFile(inFile, outFile string, conf *pdf.Configuration) (err error) {
 	if conf == nil {
-		return errors.New("missing configuration for setting permissions")
+		return errors.New("pdfcpu: missing configuration for setting permissions")
 	}
 
 	var f1, f2 *os.File
@@ -425,6 +429,9 @@ func SetPermissionsFile(inFile, outFile string, conf *pdf.Configuration) (err er
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
+		log.CLI.Printf("writing %s...\n", outFile)
+	} else {
+		log.CLI.Printf("writing %s...\n", inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
 		return err
@@ -546,6 +553,7 @@ func SplitFile(inFile, outDir string, span int, conf *pdf.Configuration) error {
 	if err != nil {
 		return err
 	}
+	log.CLI.Printf("splitting %s to %s/...\n", inFile, outDir)
 
 	defer func() {
 		f.Close()
@@ -603,6 +611,9 @@ func TrimFile(inFile, outFile string, selectedPages []string, conf *pdf.Configur
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
+		log.CLI.Printf("writing %s...\n", outFile)
+	} else {
+		log.CLI.Printf("writing %s...\n", inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
 		return err
@@ -688,6 +699,9 @@ func RotateFile(inFile, outFile string, rotation int, selectedPages []string, co
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
+		log.CLI.Printf("writing %s...\n", outFile)
+	} else {
+		log.CLI.Printf("writing %s...\n", inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
 		return err
@@ -726,7 +740,7 @@ func AddWatermarks(rs io.ReadSeeker, w io.Writer, selectedPages []string, wm *pd
 	conf.Cmd = pdf.ADDWATERMARKS
 
 	if wm == nil {
-		return errors.New("missing watermark configuration")
+		return errors.New("pdfcpu: missing watermark configuration")
 	}
 
 	fromStart := time.Now()
@@ -778,6 +792,9 @@ func AddWatermarksFile(inFile, outFile string, selectedPages []string, wm *pdf.W
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
+		log.CLI.Printf("writing %s...\n", outFile)
+	} else {
+		log.CLI.Printf("writing %s...\n", inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
 		return err
@@ -877,6 +894,7 @@ func NUpFile(inFiles []string, outFile string, selectedPages []string, nup *pdf.
 	if f2, err = os.Create(outFile); err != nil {
 		return err
 	}
+	log.CLI.Printf("writing %s...\n", outFile)
 
 	defer func() {
 		if err != nil {
@@ -984,6 +1002,9 @@ func ImportImagesFile(imgFiles []string, outFile string, imp *pdf.Import, conf *
 		}
 		rs = f1
 		tmpFile += ".tmp"
+		log.CLI.Printf("appending to %s...\n", outFile)
+	} else {
+		log.CLI.Printf("writing %s...\n", outFile)
 	}
 
 	rc := make([]io.ReadCloser, len(imgFiles))
@@ -1081,6 +1102,9 @@ func InsertPagesFile(inFile, outFile string, selectedPages []string, conf *pdf.C
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
+		log.CLI.Printf("writing %s...\n", outFile)
+	} else {
+		log.CLI.Printf("writing %s...\n", inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
 		return err
@@ -1136,7 +1160,7 @@ func RemovePages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *pd
 
 	// ctx.Pagecount gets set during validation.
 	if len(pages) >= ctx.PageCount {
-		return errors.New("operation invalid")
+		return errors.New("pdfcpu: operation invalid")
 	}
 
 	ctx.Write.SelectedPages = pages
@@ -1162,6 +1186,9 @@ func RemovePagesFile(inFile, outFile string, selectedPages []string, conf *pdf.C
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
+		log.CLI.Printf("writing %s...\n", outFile)
+	} else {
+		log.CLI.Printf("writing %s...\n", inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
 		return err
@@ -1282,6 +1309,7 @@ func MergeFile(inFiles []string, outFile string, conf *pdf.Configuration) error 
 		rs[i] = f
 	}
 
+	log.CLI.Printf("writing %s...\n", outFile)
 	return Merge(rs, f, conf)
 }
 

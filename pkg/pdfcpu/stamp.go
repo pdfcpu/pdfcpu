@@ -42,7 +42,7 @@ const (
 
 type matrix [3][3]float64
 
-var errNoContent = errors.New("PDF page has no content")
+var errNoContent = errors.New("pdfcpu: stamp: PDF page has no content")
 
 var identMatrix = matrix{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}
 
@@ -451,7 +451,7 @@ func parseWatermarkColor(s string, wm *Watermark) error {
 
 	cs := strings.Split(s, " ")
 	if len(cs) != 3 {
-		return errors.Errorf("illegal color string: 3 intensities 0.0 <= i <= 1.0, %s\n", s)
+		return errors.Errorf("pdfcpu: illegal color string: 3 intensities 0.0 <= i <= 1.0, %s\n", s)
 	}
 
 	r, err := strconv.ParseFloat(cs[0], 32)
@@ -459,25 +459,25 @@ func parseWatermarkColor(s string, wm *Watermark) error {
 		return errors.Errorf("red must be a float value: %s\n", cs[0])
 	}
 	if r < 0 || r > 1 {
-		return errors.New("red: a color value is an intensity between 0.0 and 1.0")
+		return errors.New("pdfcpu: red: a color value is an intensity between 0.0 and 1.0")
 	}
 	wm.Color.r = float32(r)
 
 	g, err := strconv.ParseFloat(cs[1], 32)
 	if err != nil {
-		return errors.Errorf("green must be a float value: %s\n", cs[1])
+		return errors.Errorf("pdfcpu: green must be a float value: %s\n", cs[1])
 	}
 	if g < 0 || g > 1 {
-		return errors.New("green: a color value is an intensity between 0.0 and 1.0")
+		return errors.New("pdfcpu: green: a color value is an intensity between 0.0 and 1.0")
 	}
 	wm.Color.g = float32(g)
 
 	b, err := strconv.ParseFloat(cs[2], 32)
 	if err != nil {
-		return errors.Errorf("blue must be a float value: %s\n", cs[2])
+		return errors.Errorf("pdfcpu: blue must be a float value: %s\n", cs[2])
 	}
 	if b < 0 || b > 1 {
-		return errors.New("blue: a color value is an intensity between 0.0 and 1.0")
+		return errors.New("pdfcpu: blue: a color value is an intensity between 0.0 and 1.0")
 	}
 	wm.Color.b = float32(b)
 
@@ -487,15 +487,15 @@ func parseWatermarkColor(s string, wm *Watermark) error {
 func parseWatermarkRotation(s string, setDiag bool, wm *Watermark) error {
 
 	if setDiag {
-		return errors.New("Please specify rotation or diagonal (r or d)")
+		return errors.New("pdfcpu: please specify rotation or diagonal (r or d)")
 	}
 
 	r, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		return errors.Errorf("rotation must be a float value: %s\n", s)
+		return errors.Errorf("pdfcpu: rotation must be a float value: %s\n", s)
 	}
 	if r < -180 || r > 180 {
-		return errors.Errorf("illegal rotation: -180 <= r <= 180 degrees, %s\n", s)
+		return errors.Errorf("pdfcpu: illegal rotation: -180 <= r <= 180 degrees, %s\n", s)
 	}
 
 	wm.Rotation = r
@@ -507,15 +507,15 @@ func parseWatermarkRotation(s string, setDiag bool, wm *Watermark) error {
 func parseWatermarkDiagonal(s string, setRot bool, wm *Watermark) error {
 
 	if setRot {
-		return errors.New("Please specify rotation or diagonal (r or d)")
+		return errors.New("pdfcpu: please specify rotation or diagonal (r or d)")
 	}
 
 	d, err := strconv.Atoi(s)
 	if err != nil {
-		return errors.Errorf("illegal diagonal value: allowed 1 or 2, %s\n", s)
+		return errors.Errorf("pdfcpu: illegal diagonal value: allowed 1 or 2, %s\n", s)
 	}
 	if d != diagonalLLToUR && d != diagonalULToLR {
-		return errors.New("diagonal: 1..lower left to upper right, 2..upper left to lower right")
+		return errors.New("pdfcpu: diagonal: 1..lower left to upper right, 2..upper left to lower right")
 	}
 
 	wm.Diagonal = d
@@ -528,10 +528,10 @@ func parseWatermarkOpacity(s string, wm *Watermark) error {
 
 	o, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		return errors.Errorf("opacity must be a float value: %s\n", s)
+		return errors.Errorf("pdfcpu: opacity must be a float value: %s\n", s)
 	}
 	if o < 0 || o > 1 {
-		return errors.Errorf("illegal opacity: 0.0 <= r <= 1.0, %s\n", s)
+		return errors.Errorf("pdfcpu: illegal opacity: 0.0 <= r <= 1.0, %s\n", s)
 	}
 	wm.Opacity = o
 
@@ -542,10 +542,10 @@ func parseWatermarkRenderMode(s string, wm *Watermark) error {
 
 	m, err := strconv.Atoi(s)
 	if err != nil {
-		return errors.Errorf("illegal mode value: allowed 0,1,2, %s\n", s)
+		return errors.Errorf("pdfcpu: illegal mode value: allowed 0,1,2, %s\n", s)
 	}
 	if m != rmFill && m != rmStroke && m != rmFillAndStroke {
-		return errors.New("Valid rendermodes: 0..fill, 1..stroke, 2..fill&stroke")
+		return errors.New("pdfcpu: valid rendermodes: 0..fill, 1..stroke, 2..fill&stroke")
 	}
 	wm.RenderMode = m
 
@@ -599,7 +599,7 @@ func ParseWatermarkDetails(s string, onTop bool) (*Watermark, error) {
 		switch k {
 		case "f": // font name
 			if !supportedWatermarkFont(v) {
-				err = errors.Errorf("%s is unsupported, try one of Helvetica, Times-Roman, Courier.\n", v)
+				err = errors.Errorf("pdfcpu: %s is unsupported, try one of Helvetica, Times-Roman, Courier.\n", v)
 			}
 			wm.FontName = v
 
@@ -671,7 +671,7 @@ func contentStream(xRefTable *XRefTable, o Object) ([]byte, error) {
 		// Decode streamDict for supported filters only.
 		err := decodeStream(&o)
 		if err == filter.ErrUnsupportedFilter {
-			return nil, errors.New("unsupported filter: unable to decode content for PDF watermark")
+			return nil, errors.New("pdfcpu: unsupported filter: unable to decode content for PDF watermark")
 		}
 		if err != nil {
 			return nil, err
@@ -695,7 +695,7 @@ func contentStream(xRefTable *XRefTable, o Object) ([]byte, error) {
 			// Decode streamDict for supported filters only.
 			err = decodeStream(sd)
 			if err == filter.ErrUnsupportedFilter {
-				return nil, errors.New("unsupported filter: unable to decode content for PDF watermark")
+				return nil, errors.New("pdfcpu: unsupported filter: unable to decode content for PDF watermark")
 			}
 			if err != nil {
 				return nil, err
@@ -819,14 +819,14 @@ func createPDFResForWM(ctx *Context, wm *Watermark) error {
 		return err
 	}
 	if d == nil {
-		return errors.Errorf("unknown page number: %d\n", wm.Page)
+		return errors.Errorf("pdfcpu: unknown page number: %d\n", wm.Page)
 	}
 
 	// Retrieve content stream bytes.
 
 	o, found := d.Find("Contents")
 	if !found {
-		return errors.New("PDF page has no content")
+		return errors.New("pdfcpu: PDF page has no content")
 	}
 
 	wm.cs, err = contentStream(otherXRefTable, o)

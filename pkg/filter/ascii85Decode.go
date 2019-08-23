@@ -59,7 +59,7 @@ func (f ascii85Decode) Decode(r io.Reader) (*bytes.Buffer, error) {
 	}
 
 	if !bytes.HasSuffix(p, []byte(eodASCII85)) {
-		return nil, errors.New("Decode: missing eod marker")
+		return nil, errors.New("pdfcpu: Decode: missing eod marker")
 	}
 
 	// Strip eod sequence: "~>"

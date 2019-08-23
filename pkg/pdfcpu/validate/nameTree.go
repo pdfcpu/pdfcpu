@@ -78,7 +78,7 @@ func validatePagesNameTreeValue(xRefTable *pdf.XRefTable, o pdf.Object, sinceVer
 	}
 
 	if d == nil {
-		return errors.New("validatePagesNameTreeValue: value is nil")
+		return errors.New("pdfcpu: validatePagesNameTreeValue: value is nil")
 	}
 
 	_, err = validateNameEntry(xRefTable, d, "pageDict", "Type", REQUIRED, pdf.V10, func(s string) bool { return s == "Page" })
@@ -103,7 +103,7 @@ func validateTemplatesNameTreeValue(xRefTable *pdf.XRefTable, o pdf.Object, sinc
 		return err
 	}
 	if d == nil {
-		return errors.New("validatePagesNameTreeValue: value is nil")
+		return errors.New("pdfcpu: validatePagesNameTreeValue: value is nil")
 	}
 
 	_, err = validateNameEntry(xRefTable, d, "templateDict", "Type", REQUIRED, pdf.V10, func(s string) bool { return s == "Template" })
@@ -216,7 +216,7 @@ func validateSourceInfoDictEntryAU(xRefTable *pdf.XRefTable, d pdf.Dict, dictNam
 		}
 
 	default:
-		return errors.New("validateSourceInfoDict: entry \"AU\" must be string or dict")
+		return errors.New("pdfcpu: validateSourceInfoDict: entry \"AU\" must be string or dict")
 
 	}
 
@@ -540,7 +540,7 @@ func validateIDTreeValue(xRefTable *pdf.XRefTable, o pdf.Object, sinceVersion pd
 			return err
 		}
 	} else {
-		return errors.Errorf("validateIDTreeValue: invalid dictType %s (should be \"StructElem\")\n", *dictType)
+		return errors.Errorf("pdfcpu: validateIDTreeValue: invalid dictType %s (should be \"StructElem\")\n", *dictType)
 	}
 
 	return nil
@@ -575,7 +575,7 @@ func validateNameTreeValue(name string, xRefTable *pdf.XRefTable, o pdf.Object) 
 		}
 	}
 
-	return errors.Errorf("validateNameTreeDictNamesEntry: unknown dict name: %s", name)
+	return errors.Errorf("pdfcpu: validateNameTreeDictNamesEntry: unknown dict name: %s", name)
 }
 
 func validateNameTreeDictNamesEntry(xRefTable *pdf.XRefTable, d pdf.Dict, name string, node *pdf.Node) (firstKey, lastKey string, err error) {
@@ -583,7 +583,7 @@ func validateNameTreeDictNamesEntry(xRefTable *pdf.XRefTable, d pdf.Dict, name s
 	// Names: array of the form [key1 value1 key2 value2 ... key n value n]
 	o, found := d.Find("Names")
 	if !found {
-		return "", "", errors.Errorf("validateNameTreeDictNamesEntry: missing \"Kids\" or \"Names\" entry.")
+		return "", "", errors.Errorf("pdfcpu: validateNameTreeDictNamesEntry: missing \"Kids\" or \"Names\" entry.")
 	}
 
 	a, err := xRefTable.DereferenceArray(o)
@@ -591,12 +591,12 @@ func validateNameTreeDictNamesEntry(xRefTable *pdf.XRefTable, d pdf.Dict, name s
 		return "", "", err
 	}
 	if a == nil {
-		return "", "", errors.Errorf("validateNameTreeDictNamesEntry: missing \"Names\" array.")
+		return "", "", errors.Errorf("pdfcpu: validateNameTreeDictNamesEntry: missing \"Names\" array.")
 	}
 
 	// arr length needs to be even because of contained key value pairs.
 	if len(a)%2 == 1 {
-		return "", "", errors.Errorf("validateNameTreeDictNamesEntry: Names array entry length needs to be even, length=%d\n", len(a))
+		return "", "", errors.Errorf("pdfcpu: validateNameTreeDictNamesEntry: Names array entry length needs to be even, length=%d\n", len(a))
 	}
 
 	var key string
@@ -613,7 +613,7 @@ func validateNameTreeDictNamesEntry(xRefTable *pdf.XRefTable, d pdf.Dict, name s
 			if !ok {
 				s, ok := o.(pdf.HexLiteral)
 				if !ok {
-					return "", "", errors.Errorf("validateNameTreeDictNamesEntry: corrupt key <%v>\n", o)
+					return "", "", errors.Errorf("pdfcpu: validateNameTreeDictNamesEntry: corrupt key <%v>\n", o)
 				}
 				key = s.Value()
 			} else {
@@ -672,7 +672,7 @@ func validateNameTreeDictLimitsEntry(xRefTable *pdf.XRefTable, d pdf.Dict, first
 	}
 
 	if firstKey != fkv || lastKey != lkv {
-		return errors.Errorf("validateNameTreeDictLimitsEntry: leaf node corrupted\n")
+		return errors.Errorf("pdfcpu: validateNameTreeDictLimitsEntry: leaf node corrupted\n")
 	}
 
 	return nil
@@ -702,14 +702,14 @@ func validateNameTree(xRefTable *pdf.XRefTable, name string, d pdf.Dict, root bo
 		}
 
 		if a == nil {
-			return "", "", nil, errors.New("validateNameTree: missing \"Kids\" array")
+			return "", "", nil, errors.New("pdfcpu: validateNameTree: missing \"Kids\" array")
 		}
 
 		for _, o := range a {
 
 			kid, ok := o.(pdf.IndirectRef)
 			if !ok {
-				return "", "", nil, errors.New("validateNameTree: corrupt kid, should be indirect reference")
+				return "", "", nil, errors.New("pdfcpu: validateNameTree: corrupt kid, should be indirect reference")
 			}
 
 			d, err := xRefTable.DereferenceDict(kid)

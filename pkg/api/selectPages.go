@@ -17,10 +17,13 @@ limitations under the License.
 package api
 
 import (
+	"fmt"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/pkg/log"
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pkg/errors"
 )
@@ -184,6 +187,17 @@ func parsePageRange(pr []string, pageCount int, negated bool, selectedPages pdf.
 	return nil
 }
 
+func sortedPages(selectedPages pdf.IntSet) []int {
+	p := []int(nil)
+	for i, v := range selectedPages {
+		if v {
+			p = append(p, i)
+		}
+	}
+	sort.Ints(p)
+	return p
+}
+
 // selectedPages returns a set of used page numbers.
 // key==page# => key 0 unused!
 func selectedPages(pageCount int, pageSelection []string) (pdf.IntSet, error) {
@@ -256,6 +270,17 @@ func selectedPages(pageCount int, pageSelection []string) (pdf.IntSet, error) {
 
 	}
 
+	var b strings.Builder
+	for _, i := range sortedPages(selectedPages) {
+		fmt.Fprintf(&b, "%d,", i)
+	}
+
+	s := b.String()
+	if len(s) > 1 {
+		s = s[:len(s)-1]
+	}
+	log.CLI.Printf("pages: %s\n", s)
+
 	return selectedPages, nil
 }
 
@@ -264,11 +289,13 @@ func pagesForPageSelection(pageCount int, pageSelection []string, ensureAllforNo
 		return selectedPages(pageCount, pageSelection)
 	}
 	if !ensureAllforNone {
+		log.CLI.Printf("pages: none\n")
 		return nil, nil
 	}
 	m := pdf.IntSet{}
 	for i := 1; i <= pageCount; i++ {
 		m[i] = true
 	}
+	log.CLI.Printf("pages: all\n")
 	return m, nil
 }

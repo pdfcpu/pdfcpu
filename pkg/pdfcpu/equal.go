@@ -103,7 +103,7 @@ func equalStreamDicts(sd1, sd2 *StreamDict, xRefTable *XRefTable) (bool, error) 
 	}
 
 	if sd1.Raw == nil || sd2 == nil {
-		return false, errors.New("equalStreamDicts: stream dict not loaded")
+		return false, errors.New("pdfcpu: equalStreamDicts: stream dict not loaded")
 	}
 
 	return bytes.Equal(sd1.Raw, sd2.Raw), nil

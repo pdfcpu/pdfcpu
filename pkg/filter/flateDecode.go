@@ -112,7 +112,7 @@ func validateRowFilter(f, p int) error {
 
 	case PredictorNone:
 		if !intMemberOf(f, []int{PNGNone, PNGSub, PNGUp, PNGAverage, PNGPaeth}) {
-			return errors.Errorf("validateRowFilter: PredictorOptimum, unexpected row filter #%02x", f)
+			return errors.Errorf("pdfcpu: validateRowFilter: PredictorOptimum, unexpected row filter #%02x", f)
 		}
 		// if f != PNGNone {
 		// 	return errors.Errorf("validateRowFilter: expected row filter #%02x, got: #%02x", PNGNone, f)
@@ -120,31 +120,31 @@ func validateRowFilter(f, p int) error {
 
 	case PredictorSub:
 		if f != PNGSub {
-			return errors.Errorf("validateRowFilter: expected row filter #%02x, got: #%02x", PNGSub, f)
+			return errors.Errorf("pdfcpu: validateRowFilter: expected row filter #%02x, got: #%02x", PNGSub, f)
 		}
 
 	case PredictorUp:
 		if f != PNGUp {
-			return errors.Errorf("validateRowFilter: expected row filter #%02x, got: #%02x", PNGUp, f)
+			return errors.Errorf("pdfcpu: validateRowFilter: expected row filter #%02x, got: #%02x", PNGUp, f)
 		}
 
 	case PredictorAverage:
 		if f != PNGAverage {
-			return errors.Errorf("validateRowFilter: expected row filter #%02x, got: #%02x", PNGAverage, f)
+			return errors.Errorf("pdfcpu: validateRowFilter: expected row filter #%02x, got: #%02x", PNGAverage, f)
 		}
 
 	case PredictorPaeth:
 		if f != PNGPaeth {
-			return errors.Errorf("validateRowFilter: expected row filter #%02x, got: #%02x", PNGPaeth, f)
+			return errors.Errorf("pdfcpu: validateRowFilter: expected row filter #%02x, got: #%02x", PNGPaeth, f)
 		}
 
 	case PredictorOptimum:
 		if !intMemberOf(f, []int{PNGNone, PNGSub, PNGUp, PNGAverage, PNGPaeth}) {
-			return errors.Errorf("validateRowFilter: PredictorOptimum, unexpected row filter #%02x", f)
+			return errors.Errorf("pdfcpu: validateRowFilter: PredictorOptimum, unexpected row filter #%02x", f)
 		}
 
 	default:
-		return errors.Errorf("validateRowFilter: unexpected predictor #%02x", p)
+		return errors.Errorf("pdfcpu: validateRowFilter: unexpected predictor #%02x", p)
 
 	}
 
@@ -218,7 +218,7 @@ func (f flate) parameters() (colors, bpc, columns int, err error) {
 	if !found {
 		colors = 1
 	} else if colors == 0 {
-		return 0, 0, 0, errors.Errorf("Filter FlateDecode: \"Colors\" must be > 0")
+		return 0, 0, 0, errors.Errorf("pdfcpu: filter FlateDecode: \"Colors\" must be > 0")
 	}
 
 	// BitsPerComponent, int
@@ -229,7 +229,7 @@ func (f flate) parameters() (colors, bpc, columns int, err error) {
 	if !found {
 		bpc = 8
 	} else if !intMemberOf(bpc, []int{1, 2, 4, 8, 16}) {
-		return 0, 0, 0, errors.Errorf("Filter FlateDecode: Unexpected \"BitsPerComponent\": %d", bpc)
+		return 0, 0, 0, errors.Errorf("pdfcpu: filter FlateDecode: Unexpected \"BitsPerComponent\": %d", bpc)
 	}
 
 	// Columns, int
@@ -260,7 +260,7 @@ func (f flate) decodePostProcess(r io.Reader) (*bytes.Buffer, error) {
 			PredictorPaeth,
 			PredictorOptimum,
 		}) {
-		return nil, errors.Errorf("Filter FlateDecode: Undefined \"Predictor\" %d", predictor)
+		return nil, errors.Errorf("pdfcpu: filter FlateDecode: undefined \"Predictor\" %d", predictor)
 	}
 
 	colors, bpc, columns, err := f.parameters()
@@ -298,7 +298,7 @@ func (f flate) decodePostProcess(r io.Reader) (*bytes.Buffer, error) {
 		}
 
 		if n != rowSize {
-			return nil, errors.Errorf("Filter FlateDecode: read error, expected %d bytes, got: %d", rowSize, n)
+			return nil, errors.Errorf("pdfcpu: filter FlateDecode: read error, expected %d bytes, got: %d", rowSize, n)
 		}
 
 		d, err1 := processRow(pr, cr, predictor, bytesPerPixel)
@@ -321,7 +321,7 @@ func (f flate) decodePostProcess(r io.Reader) (*bytes.Buffer, error) {
 
 	if b.Len()%(bpc*colors*columns/8) > 0 {
 		log.Info.Printf("failed postprocessing: %d %d\n", b.Len(), rowSize)
-		return nil, errors.New("filter FlateDecode: postprocessing failed")
+		return nil, errors.New("pdfcpu: filter FlateDecode: postprocessing failed")
 	}
 
 	return &b, nil

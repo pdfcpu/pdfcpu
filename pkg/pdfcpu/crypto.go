@@ -505,17 +505,17 @@ func supportedCFEntry(d Dict) (bool, error) {
 
 	cfm := d.NameEntry("CFM")
 	if cfm != nil && *cfm != "V2" && *cfm != "AESV2" && *cfm != "AESV3" {
-		return false, errors.New("supportedCFEntry: invalid entry \"CFM\"")
+		return false, errors.New("pdfcpu: supportedCFEntry: invalid entry \"CFM\"")
 	}
 
 	ae := d.NameEntry("AuthEvent")
 	if ae != nil && *ae != "DocOpen" {
-		return false, errors.New("supportedCFEntry: invalid entry \"AuthEvent\"")
+		return false, errors.New("pdfcpu: supportedCFEntry: invalid entry \"AuthEvent\"")
 	}
 
 	l := d.IntEntry("Length")
 	if l != nil && (*l < 5 || *l > 16) && *l != 32 {
-		return false, errors.New("supportedCFEntry: invalid entry \"Length\"")
+		return false, errors.New("pdfcpu: supportedCFEntry: invalid entry \"Length\"")
 	}
 
 	return cfm != nil && (*cfm == "AESV2" || *cfm == "AESV3"), nil
@@ -690,12 +690,12 @@ func checkStmf(ctx *Context, stmf *string, cfDict Dict) error {
 
 		d := cfDict.DictEntry(*stmf)
 		if d == nil {
-			return errors.Errorf("checkStmf: entry \"%s\" missing in \"CF\"", *stmf)
+			return errors.Errorf("pdfcpu: checkStmf: entry \"%s\" missing in \"CF\"", *stmf)
 		}
 
 		aes, err := supportedCFEntry(d)
 		if err != nil {
-			return errors.Wrapf(err, "checkStmv: unsupported \"%s\" entry in \"CF\"", *stmf)
+			return errors.Wrapf(err, "pdfcpu: checkStmv: unsupported \"%s\" entry in \"CF\"", *stmf)
 		}
 		ctx.AES4Streams = aes
 	}
@@ -718,7 +718,7 @@ func checkV(ctx *Context, d Dict) (*int, error) {
 	// CF
 	cfDict := d.DictEntry("CF")
 	if cfDict == nil {
-		return nil, errors.Errorf("checkV: required entry \"CF\" missing.")
+		return nil, errors.Errorf("pdfcpu: checkV: required entry \"CF\" missing.")
 	}
 
 	// StmF
@@ -733,7 +733,7 @@ func checkV(ctx *Context, d Dict) (*int, error) {
 	if strf != nil && *strf != "Identity" {
 		d1 := cfDict.DictEntry(*strf)
 		if d1 == nil {
-			return nil, errors.Errorf("checkV: entry \"%s\" missing in \"CF\"", *strf)
+			return nil, errors.Errorf("pdfcpu: checkV: entry \"%s\" missing in \"CF\"", *strf)
 		}
 		aes, err := supportedCFEntry(d1)
 		if err != nil {
@@ -747,7 +747,7 @@ func checkV(ctx *Context, d Dict) (*int, error) {
 	if eff != nil && *strf != "Identity" {
 		d := cfDict.DictEntry(*eff)
 		if d == nil {
-			return nil, errors.Errorf("checkV: entry \"%s\" missing in \"CF\"", *eff)
+			return nil, errors.Errorf("pdfcpu: checkV: entry \"%s\" missing in \"CF\"", *eff)
 		}
 		aes, err := supportedCFEntry(d)
 		if err != nil {
@@ -767,7 +767,7 @@ func length(d Dict) (int, error) {
 	}
 
 	if (*l < 40 || *l > 128 || *l%8 > 0) && *l != 256 {
-		return 0, errors.Errorf("length: \"Length\" %d not supported\n", *l)
+		return 0, errors.Errorf("pdfcpu: length: \"Length\" %d not supported\n", *l)
 	}
 
 	return *l, nil
@@ -778,9 +778,9 @@ func getR(d Dict) (int, error) {
 	r := d.IntEntry("R")
 	if r == nil || *r < 2 || *r > 5 {
 		if *r > 5 {
-			return 0, errors.New("PDF 2.0 encryption not supported")
+			return 0, errors.New("pdfcpu: PDF 2.0 encryption not supported")
 		}
-		return 0, errors.New("encryption: \"R\" must be 2,3,4,5")
+		return 0, errors.New("pdfcpu: encryption: \"R\" must be 2,3,4,5")
 	}
 
 	return *r, nil
@@ -807,7 +807,7 @@ func validateAES256Parameters(d Dict) (oe, ue, perms []byte, err error) {
 			break
 		}
 		if oe == nil || len(oe) != 32 {
-			err = errors.New("unsupported encryption: required entry \"OE\" missing or invalid")
+			err = errors.New("pdfcpu: unsupported encryption: required entry \"OE\" missing or invalid")
 			break
 		}
 
@@ -817,7 +817,7 @@ func validateAES256Parameters(d Dict) (oe, ue, perms []byte, err error) {
 			break
 		}
 		if ue == nil || len(ue) != 32 {
-			err = errors.New("unsupported encryption: required entry \"UE\" missing or invalid")
+			err = errors.New("pdfcpu: unsupported encryption: required entry \"UE\" missing or invalid")
 			break
 		}
 
@@ -827,7 +827,7 @@ func validateAES256Parameters(d Dict) (oe, ue, perms []byte, err error) {
 			break
 		}
 		if perms == nil || len(perms) != 16 {
-			err = errors.New("unsupported encryption: required entry \"Perms\" missing or invalid")
+			err = errors.New("pdfcpu: unsupported encryption: required entry \"Perms\" missing or invalid")
 		}
 
 		break
@@ -846,7 +846,7 @@ func validateOAndU(d Dict) (o, u []byte, err error) {
 			break
 		}
 		if o == nil || len(o) != 32 && len(o) != 48 {
-			err = errors.New("unsupported encryption: required entry \"O\" missing or invalid")
+			err = errors.New("pdfcpu: unsupported encryption: required entry \"O\" missing or invalid")
 			break
 		}
 
@@ -856,7 +856,7 @@ func validateOAndU(d Dict) (o, u []byte, err error) {
 			break
 		}
 		if u == nil || len(u) != 32 && len(u) != 48 {
-			err = errors.Errorf("unsupported encryption: required entry \"U\" missing or invalid %d", len(u))
+			err = errors.Errorf("pdfcpu: unsupported encryption: required entry \"U\" missing or invalid %d", len(u))
 		}
 
 		break
@@ -871,12 +871,12 @@ func supportedEncryption(ctx *Context, d Dict) (*Enc, error) {
 	// Filter
 	filter := d.NameEntry("Filter")
 	if filter == nil || *filter != "Standard" {
-		return nil, errors.New("unsupported encryption: filter must be \"Standard\"")
+		return nil, errors.New("pdfcpu: unsupported encryption: filter must be \"Standard\"")
 	}
 
 	// SubFilter
 	if d.NameEntry("SubFilter") != nil {
-		return nil, errors.New("unsupported encryption: \"SubFilter\" not supported")
+		return nil, errors.New("pdfcpu: unsupported encryption: \"SubFilter\" not supported")
 	}
 
 	// V
@@ -913,7 +913,7 @@ func supportedEncryption(ctx *Context, d Dict) (*Enc, error) {
 	// P
 	p := d.IntEntry("P")
 	if p == nil {
-		return nil, errors.New("unsupported encryption: required entry \"P\" missing")
+		return nil, errors.New("pdfcpu: unsupported encryption: required entry \"P\" missing")
 	}
 
 	// EncryptMetadata
@@ -1244,11 +1244,11 @@ func encryptAESBytes(b, key []byte) ([]byte, error) {
 	b = append(b, bytes.Repeat([]byte{byte(c)}, aes.BlockSize-l)...)
 
 	if len(b) < aes.BlockSize {
-		return nil, errors.New("encryptAESBytes: Ciphertext too short")
+		return nil, errors.New("pdfcpu: encryptAESBytes: Ciphertext too short")
 	}
 
 	if len(b)%aes.BlockSize > 0 {
-		return nil, errors.New("encryptAESBytes: Ciphertext not a multiple of block size")
+		return nil, errors.New("pdfcpu: encryptAESBytes: Ciphertext not a multiple of block size")
 	}
 
 	data := make([]byte, aes.BlockSize+len(b))
@@ -1273,11 +1273,11 @@ func encryptAESBytes(b, key []byte) ([]byte, error) {
 func decryptAESBytes(b, key []byte) ([]byte, error) {
 
 	if len(b) < aes.BlockSize {
-		return nil, errors.New("decryptAESBytes: Ciphertext too short")
+		return nil, errors.New("pdfcpu: decryptAESBytes: Ciphertext too short")
 	}
 
 	if len(b)%aes.BlockSize > 0 {
-		return nil, errors.New("decryptAESBytes: Ciphertext not a multiple of block size")
+		return nil, errors.New("pdfcpu: decryptAESBytes: Ciphertext not a multiple of block size")
 	}
 
 	cb, err := aes.NewCipher(key)

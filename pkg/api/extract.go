@@ -23,7 +23,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -131,6 +130,7 @@ func ExtractImagesFile(inFile, outDir string, selectedPages []string, conf *pdf.
 		return err
 	}
 	defer f.Close()
+	log.CLI.Printf("extracting images from %s into %s/ ...\n", inFile, outDir)
 	return ExtractImages(f, outDir, selectedPages, conf)
 }
 
@@ -228,14 +228,13 @@ func ExtractFontsFile(inFile, outDir string, selectedPages []string, conf *pdf.C
 		return err
 	}
 	defer f.Close()
+	log.CLI.Printf("extracting fonts from %s into %s/ ...\n", inFile, outDir)
 	return ExtractFonts(f, outDir, selectedPages, conf)
 }
 
 // singlePageFileName generates a filename for a Context and a specific page number.
-func singlePageFileName(fileName string, pageNr int) string {
-	baseFileName := filepath.Base(fileName)
-	fn := strings.TrimSuffix(baseFileName, ".pdf")
-	return fn + "_" + strconv.Itoa(pageNr) + ".pdf"
+func singlePageFileName(pageNr int) string {
+	return "page_" + strconv.Itoa(pageNr) + ".pdf"
 }
 
 func writeSinglePagePDF(ctx *pdf.Context, pageNr int, outDir string) error {
@@ -243,8 +242,9 @@ func writeSinglePagePDF(ctx *pdf.Context, pageNr int, outDir string) error {
 	w := ctx.Write
 	w.SelectedPages[pageNr] = true
 	w.DirName = outDir + "/"
-	w.FileName = singlePageFileName("fn", pageNr)
+	w.FileName = singlePageFileName(pageNr)
 	log.CLI.Printf("writing %s ...\n", w.DirName+w.FileName)
+
 	return pdf.Write(ctx)
 }
 
@@ -298,6 +298,7 @@ func ExtractPagesFile(inFile, outDir string, selectedPages []string, conf *pdf.C
 		return err
 	}
 	defer f.Close()
+	log.CLI.Printf("extracting pages from %s into %s/ ...\n", inFile, outDir)
 	return ExtractPages(f, outDir, selectedPages, conf)
 }
 
@@ -454,6 +455,7 @@ func ExtractContentFile(inFile, outDir string, selectedPages []string, conf *pdf
 		return err
 	}
 	defer f.Close()
+	log.CLI.Printf("extracting content from %s into %s/ ...\n", inFile, outDir)
 	return ExtractContent(f, outDir, selectedPages, conf)
 }
 
@@ -561,5 +563,6 @@ func ExtractMetadataFile(inFile, outDir string, selectedPages []string, conf *pd
 		return err
 	}
 	defer f.Close()
+	log.CLI.Printf("extracting metadata from %s into %s/ ...\n", inFile, outDir)
 	return ExtractMetadata(f, outDir, selectedPages, conf)
 }

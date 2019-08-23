@@ -20,9 +20,9 @@ import (
 	"bytes"
 	"io"
 
-	"github.com/pdfcpu/pdfcpu/ccitt"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pkg/errors"
+	"golang.org/x/image/ccitt"
 )
 
 type ccittDecode struct {
@@ -48,13 +48,18 @@ func (f ccittDecode) Decode(r io.Reader) (*bytes.Buffer, error) {
 	k := 0
 	k, ok = f.parms["K"]
 	if ok && k > 0 {
-		return nil, errors.New("DecodeCCITT: K > 0 currently unsupported")
+		return nil, errors.New("pdfcpu: filter CCITTFax k > 0 currently unsupported")
 	}
 
-	columns := 1728
+	cols := 1728
 	col, ok := f.parms["Columns"]
 	if ok {
-		columns = col
+		cols = col
+	}
+
+	rows, ok := f.parms["Rows"]
+	if !ok {
+		return nil, errors.New("pdfcpu: ccitt: missing DecodeParam \"Rows\"")
 	}
 
 	blackIs1 := false
@@ -69,15 +74,16 @@ func (f ccittDecode) Decode(r io.Reader) (*bytes.Buffer, error) {
 		encodedByteAlign = true
 	}
 
+	opts := &ccitt.Options{Invert: blackIs1, Align: encodedByteAlign}
+
 	mode := ccitt.Group3
 	if k < 0 {
 		mode = ccitt.Group4
 	}
-	rc := ccitt.NewReader(r, mode, columns, blackIs1, encodedByteAlign, false)
-	defer rc.Close()
+	rd := ccitt.NewReader(r, ccitt.MSB, mode, cols, rows, opts)
 
 	var b bytes.Buffer
-	written, err := io.Copy(&b, rc)
+	written, err := io.Copy(&b, rd)
 	if err != nil {
 		return nil, err
 	}

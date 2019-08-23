@@ -109,7 +109,7 @@ func validatePageResources(xRefTable *pdf.XRefTable, d pdf.Dict, hasResources, h
 	}
 
 	if !hasResources && hasContents {
-		return errors.New("validatePageResources: missing required entry \"Resources\" - should be inheritated")
+		return errors.New("pdfcpu: validatePageResources: missing required entry \"Resources\" - should be inheritated")
 	}
 
 	return nil
@@ -282,12 +282,12 @@ func validateTransitionDictEntryDi(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 	case pdf.Integer:
 		validate := func(i int) bool { return pdf.IntMemberOf(i, []int{0, 90, 180, 270, 315}) }
 		if !validate(o.Value()) {
-			return errors.New("validateTransitionDict: entry Di int value undefined")
+			return errors.New("pdfcpu: validateTransitionDict: entry Di int value undefined")
 		}
 
 	case pdf.Name:
 		if o.Value() != "None" {
-			return errors.New("validateTransitionDict: entry Di name value undefined")
+			return errors.New("pdfcpu: validateTransitionDict: entry Di name value undefined")
 		}
 	}
 
@@ -477,7 +477,7 @@ func validatePageEntryPresSteps(xRefTable *pdf.XRefTable, d pdf.Dict, required b
 		return err
 	}
 
-	return errors.New("*** validatePageEntryPresSteps: not supported ***")
+	return errors.New("pdfcpu: validatePageEntryPresSteps: not supported")
 }
 
 func validatePageEntryUserUnit(xRefTable *pdf.XRefTable, d pdf.Dict, required bool, sinceVersion pdf.Version) error {
@@ -728,7 +728,7 @@ func validatePageDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNumber, genNumber
 	dictName := "pageDict"
 
 	if ir := d.IndirectRefEntry("Parent"); ir == nil {
-		return errors.New("validatePageDict: missing parent")
+		return errors.New("pdfcpu: validatePageDict: missing parent")
 	}
 
 	// Contents
@@ -766,7 +766,7 @@ func validatePageDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNumber, genNumber
 	}
 
 	if hasPieceInfo && lm == nil && xRefTable.ValidationMode == pdf.ValidationStrict {
-		return errors.New("validatePageDict: missing \"LastModified\" (required by \"PieceInfo\")")
+		return errors.New("pdfcpu: validatePageDict: missing \"LastModified\" (required by \"PieceInfo\")")
 	}
 
 	// AA
@@ -844,12 +844,12 @@ func validatePagesDictGeneralEntries(xRefTable *pdf.XRefTable, d pdf.Dict) (hasR
 func dictTypeForPageNodeDict(d pdf.Dict) (string, error) {
 
 	if d == nil {
-		return "", errors.New("dictTypeForPageNodeDict: pageNodeDict is null")
+		return "", errors.New("pdfcpu: dictTypeForPageNodeDict: pageNodeDict is null")
 	}
 
 	dictType := d.Type()
 	if dictType == nil {
-		return "", errors.New("dictTypeForPageNodeDict: missing pageNodeDict type")
+		return "", errors.New("pdfcpu: dictTypeForPageNodeDict: missing pageNodeDict type")
 	}
 
 	return *dictType, nil
@@ -860,7 +860,7 @@ func validateResources(xRefTable *pdf.XRefTable, d pdf.Dict) (hasResources bool,
 	// Get number of pages of this PDF file.
 	pageCount := d.IntEntry("Count")
 	if pageCount == nil {
-		return false, errors.New("validateResources: missing \"Count\"")
+		return false, errors.New("pdfcpu: validateResources: missing \"Count\"")
 	}
 
 	// TODO not ideal - overall pageCount is only set during validation!
@@ -899,7 +899,7 @@ func validatePagesDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNumber, genNumbe
 	// Iterate over page tree.
 	kidsArray := d.ArrayEntry("Kids")
 	if kidsArray == nil {
-		return errors.New("validatePagesDict: corrupt \"Kids\" entry")
+		return errors.New("pdfcpu: validatePagesDict: corrupt \"Kids\" entry")
 	}
 
 	for _, o := range kidsArray {
@@ -911,7 +911,7 @@ func validatePagesDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNumber, genNumbe
 		// Dereference next page node dict.
 		ir, ok := o.(pdf.IndirectRef)
 		if !ok {
-			return errors.New("validatePagesDict: missing indirect reference for kid")
+			return errors.New("pdfcpu: validatePagesDict: missing indirect reference for kid")
 		}
 
 		log.Validate.Printf("validatePagesDict: PageNode: %s\n", ir)
@@ -945,7 +945,7 @@ func validatePagesDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNumber, genNumbe
 			}
 
 		default:
-			return errors.Errorf("validatePagesDict: Unexpected dict type: %s", dictType)
+			return errors.Errorf("pdfcpu: validatePagesDict: Unexpected dict type: %s", dictType)
 
 		}
 
@@ -960,7 +960,7 @@ func validatePages(xRefTable *pdf.XRefTable, rootDict pdf.Dict) (pdf.Dict, error
 
 	ir := rootDict.IndirectRefEntry("Pages")
 	if ir == nil {
-		return nil, errors.New("validatePages: missing indirect obj for pages dict")
+		return nil, errors.New("pdfcpu: validatePages: missing indirect obj for pages dict")
 	}
 
 	objNumber := ir.ObjectNumber.Value()
@@ -973,7 +973,7 @@ func validatePages(xRefTable *pdf.XRefTable, rootDict pdf.Dict) (pdf.Dict, error
 	}
 
 	if rootPageNodeDict == nil {
-		return nil, errors.New("validatePagesDict: cannot dereference pageNodeDict")
+		return nil, errors.New("pdfcpu: validatePagesDict: cannot dereference pageNodeDict")
 	}
 
 	// Process page node tree.

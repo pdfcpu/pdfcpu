@@ -219,7 +219,7 @@ func processFunction(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
 		err = processFunctionStreamDict(xRefTable, &o)
 
 	default:
-		return errors.New("processFunction: obj must be dict or stream dict")
+		return errors.New("pdfcpu: processFunction: obj must be dict or stream dict")
 	}
 
 	return err
@@ -232,7 +232,7 @@ func validateFunction(xRefTable *pdf.XRefTable, o pdf.Object) error {
 		return err
 	}
 	if o == nil {
-		return errors.New("writeFunction: missing object")
+		return errors.New("pdfcpu: validateFunction: missing object")
 	}
 
 	return processFunction(xRefTable, o)

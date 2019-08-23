@@ -43,7 +43,7 @@ const (
 var (
 
 	// ErrUnsupportedFilter signals an unsupported filter type.
-	ErrUnsupportedFilter = errors.New("Filter not supported")
+	ErrUnsupportedFilter = errors.New("pdfcpu: filter not supported")
 )
 
 // Filter defines an interface for encoding/decoding buffers.

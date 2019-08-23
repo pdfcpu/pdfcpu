@@ -36,10 +36,10 @@ var (
 	cmdMap                         CommandMap
 )
 
-// Set by Goreleaser.
+// These will be set by Goreleaser.
 var (
-	commit = "none"
-	date   = "unknown"
+	commit = "?"
+	date   = "?"
 )
 
 func initFlags() {

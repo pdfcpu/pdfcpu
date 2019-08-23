@@ -34,11 +34,11 @@ func validateDestinationArrayFirstElement(xRefTable *pdf.XRefTable, a pdf.Array)
 
 	case pdf.Dict:
 		if o.Type() == nil || *o.Type() != "Page" {
-			err = errors.New("validateDestinationArrayFirstElement: first element refers to invalid destination page dict")
+			err = errors.New("pdfcpu: validateDestinationArrayFirstElement: first element refers to invalid destination page dict")
 		}
 
 	default:
-		err = errors.Errorf("validateDestinationArrayFirstElement: first element must be a pageDict indRef or an integer: %v", o)
+		err = errors.Errorf("pdfcpu: validateDestinationArrayFirstElement: first element must be a pageDict indRef or an integer: %v", o)
 	}
 
 	return o, err
@@ -59,14 +59,14 @@ func validateDestinationArray(xRefTable *pdf.XRefTable, a pdf.Array) error {
 	}
 
 	if !validateDestinationArrayLength(a) {
-		return errors.New("validateDestinationArray: invalid length")
+		return errors.New("pdfcpu: validateDestinationArray: invalid length")
 	}
 
 	// Validate rest of array elements.
 
 	name, ok := a[1].(pdf.Name)
 	if !ok {
-		return errors.New("validateDestinationArray: second element must be a name")
+		return errors.New("pdfcpu: validateDestinationArray: second element must be a name")
 	}
 
 	var nameErr bool
@@ -94,7 +94,7 @@ func validateDestinationArray(xRefTable *pdf.XRefTable, a pdf.Array) error {
 	}
 
 	if nameErr {
-		return errors.New("validateDestinationArray: arr[1] corrupt")
+		return errors.New("pdfcpu: validateDestinationArray: arr[1] corrupt")
 	}
 
 	return nil
@@ -133,7 +133,7 @@ func validateDestination(xRefTable *pdf.XRefTable, o pdf.Object) error {
 		err = validateDestinationArray(xRefTable, o)
 
 	default:
-		err = errors.New("validateDestination: unsupported PDF object")
+		err = errors.New("pdfcpu: validateDestination: unsupported PDF object")
 
 	}
 

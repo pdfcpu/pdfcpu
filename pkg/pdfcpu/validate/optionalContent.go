@@ -51,16 +51,16 @@ func validateOptionalContentGroupIntent(xRefTable *pdf.XRefTable, d pdf.Dict, di
 
 			n, ok := v.(pdf.Name)
 			if !ok {
-				return errors.Errorf("validateOptionalContentGroupIntent: invalid type at index %d\n", i)
+				return errors.Errorf("pdfcpu: validateOptionalContentGroupIntent: invalid type at index %d\n", i)
 			}
 
 			if !validate(n.Value()) {
-				return errors.Errorf("validateOptionalContentGroupIntent: invalid intent: %s", n.Value())
+				return errors.Errorf("pdfcpu: validateOptionalContentGroupIntent: invalid intent: %s", n.Value())
 			}
 		}
 
 	default:
-		return errors.New("validateOptionalContentGroupIntent: invalid type")
+		return errors.New("pdfcpu: validateOptionalContentGroupIntent: invalid type")
 	}
 
 	return nil

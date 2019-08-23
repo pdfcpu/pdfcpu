@@ -70,7 +70,7 @@ func validateAppearanceDictEntry(xRefTable *pdf.XRefTable, o pdf.Object) error {
 		err = validateXObjectStreamDict(xRefTable, o)
 
 	default:
-		err = errors.New("validateAppearanceDictEntry: unsupported PDF object")
+		err = errors.New("pdfcpu: validateAppearanceDictEntry: unsupported PDF object")
 
 	}
 
@@ -90,7 +90,7 @@ func validateAppearanceDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
 	o, ok := d.Find("N")
 	if !ok {
 		if xRefTable.ValidationMode == pdf.ValidationStrict {
-			return errors.New("validateAppearanceDict: missing required entry \"N\"")
+			return errors.New("pdfcpu: validateAppearanceDict: missing required entry \"N\"")
 		}
 	} else {
 		err = validateAppearanceDictEntry(xRefTable, o)
@@ -195,7 +195,7 @@ func validateAcroFieldDict(xRefTable *pdf.XRefTable, ir pdf.IndirectRef, inField
 
 		// dict represents a non terminal field.
 		if d.Subtype() != nil && *d.Subtype() == "Widget" {
-			return errors.New("validateAcroFieldDict: non terminal field can not be widget annotation")
+			return errors.New("pdfcpu: validateAcroFieldDict: non terminal field can not be widget annotation")
 		}
 
 		// Write field entries.
@@ -215,7 +215,7 @@ func validateAcroFieldDict(xRefTable *pdf.XRefTable, ir pdf.IndirectRef, inField
 
 			ir, ok := value.(pdf.IndirectRef)
 			if !ok {
-				return errors.New("validateAcroFieldDict: corrupt kids array: entries must be indirect reference")
+				return errors.New("pdfcpu: validateAcroFieldDict: corrupt kids array: entries must be indirect reference")
 			}
 
 			err = validateAcroFieldDict(xRefTable, ir, xInFieldType)
@@ -257,7 +257,7 @@ func validateAcroFormFields(xRefTable *pdf.XRefTable, o pdf.Object) error {
 
 		ir, ok := value.(pdf.IndirectRef)
 		if !ok {
-			return errors.New("validateAcroFormFields: corrupt form field array entry")
+			return errors.New("pdfcpu: validateAcroFormFields: corrupt form field array entry")
 		}
 
 		err = validateAcroFieldDict(xRefTable, ir, nil)
@@ -335,7 +335,7 @@ func validateAcroFormXFA(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion pdf.
 		for _, v := range o {
 
 			if v == nil {
-				return errors.New("validateAcroFormXFA: array entry is nil")
+				return errors.New("pdfcpu: validateAcroFormXFA: array entry is nil")
 			}
 
 			o, err := xRefTable.Dereference(v)
@@ -347,14 +347,14 @@ func validateAcroFormXFA(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion pdf.
 
 				_, ok := o.(pdf.StringLiteral)
 				if !ok {
-					return errors.New("validateAcroFormXFA: even array must be a string")
+					return errors.New("pdfcpu: validateAcroFormXFA: even array must be a string")
 				}
 
 			} else {
 
 				_, ok := o.(pdf.StreamDict)
 				if !ok {
-					return errors.New("validateAcroFormXFA: odd array entry must be a streamDict")
+					return errors.New("pdfcpu: validateAcroFormXFA: odd array entry must be a streamDict")
 				}
 
 			}
@@ -363,7 +363,7 @@ func validateAcroFormXFA(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion pdf.
 		}
 
 	default:
-		return errors.New("validateAcroFormXFA: needs to be streamDict or array")
+		return errors.New("pdfcpu: validateAcroFormXFA: needs to be streamDict or array")
 	}
 
 	return xRefTable.ValidateVersion("AcroFormXFA", sinceVersion)
@@ -411,7 +411,7 @@ func validateAcroForm(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool
 	// Fields, required, array of indirect references
 	o, ok := d.Find("Fields")
 	if !ok {
-		return errors.New("validateAcroForm: missing required entry \"Fields\"")
+		return errors.New("pdfcpu: validateAcroForm: missing required entry \"Fields\"")
 	}
 
 	err = validateAcroFormFields(xRefTable, o)

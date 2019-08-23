@@ -180,7 +180,6 @@ func offsetLastXRefSection(ctx *Context) (*int64, error) {
 
 		j := strings.LastIndex(string(workBuf), "startxref")
 		if j == -1 {
-			//return nil, errors.New("cannot find last xrefsection pointer")
 			prevBuf = curBuf
 			continue
 		}
@@ -428,7 +427,7 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, xsd *XRefStreamDict, ctx 
 	if len(buf) < objCount*xrefEntryLen {
 		// Sometimes there is an additional xref entry not accounted for by "Index".
 		// We ignore such a entries and do not treat this as an error.
-		return errors.New("extractXRefTableEntriesFromXRefStream: corrupt xrefstream")
+		return errors.New("pdfcpu: extractXRefTableEntriesFromXRefStream: corrupt xrefstream")
 	}
 
 	j := 0
@@ -517,7 +516,7 @@ func xRefStreamDict(ctx *Context, o Object, objNr int, streamOffset int64) (*XRe
 	// must be Dict
 	d, ok := o.(Dict)
 	if !ok {
-		return nil, errors.New("pdfcpu: xRefStreamDict: no Dict")
+		return nil, errors.New("pdfcpu: xRefStreamDict: no dict")
 	}
 
 	// Parse attributes for stream object.
@@ -784,30 +783,6 @@ func scanLine(s *bufio.Scanner) (s1 string, err error) {
 
 	return s1, nil
 }
-
-// scanLine ignores comments and empty lines.
-// func scanLineOrig(s *bufio.Scanner) (string, error) {
-// 	for i := 0; i <= 1; i++ {
-// 		if ok := s.Scan(); !ok {
-// 			err := s.Err()
-// 			if err != nil {
-// 				return "", err
-// 			}
-// 			return "", errors.New("scanner: returning nothing")
-// 		}
-// 		if len(s.Text()) > 0 {
-// 			break
-// 		}
-// 	}
-// 	// Remove comment.
-// 	s1 := s.Text()
-// 	i := strings.Index(s1, "%")
-// 	if i >= 0 {
-// 		s1 = s1[:i]
-// 	}
-
-// 	return s1, nil
-// }
 
 func scanTrailer(s *bufio.Scanner, line string) (string, error) {
 
@@ -2330,7 +2305,7 @@ func handleUnencryptedFile(ctx *Context) error {
 	// Encrypt subcommand found.
 
 	if ctx.OwnerPW == "" {
-		return errors.New("Please provide an owner password and an optional user password")
+		return errors.New("pdfcpu: please provide owner password and optional user password")
 	}
 
 	return nil
@@ -2339,7 +2314,7 @@ func handleUnencryptedFile(ctx *Context) error {
 func idBytes(ctx *Context) (id []byte, err error) {
 
 	if ctx.ID == nil {
-		return nil, errors.New("missing ID entry")
+		return nil, errors.New("pdfcpu: missing ID entry")
 	}
 
 	hl, ok := ctx.ID[0].(HexLiteral)
@@ -2351,7 +2326,7 @@ func idBytes(ctx *Context) (id []byte, err error) {
 	} else {
 		sl, ok := ctx.ID[0].(StringLiteral)
 		if !ok {
-			return nil, errors.New("encryption: ID must contain HexLiterals or StringLiterals")
+			return nil, errors.New("pdfcpu: ID must contain hex literals or string literals")
 		}
 		id, err = Unescape(sl.Value())
 		if err != nil {
@@ -2376,12 +2351,12 @@ func handlePermissions(ctx *Context) error {
 	}
 
 	if !ok {
-		return errors.New("Corrupted permissions after upw ok")
+		return errors.New("pdfcpu: corrupted permissions after upw ok")
 	}
 
 	// Double check minimum permissions for pdfcpu processing.
 	if !hasNeededPermissions(ctx.Cmd, ctx.E) {
-		return errors.New("Insufficient access permissions")
+		return errors.New("pdfcpu: insufficient access permissions")
 	}
 
 	return nil
@@ -2412,7 +2387,7 @@ func setupEncryptionKey(ctx *Context, d Dict) (err error) {
 	// If the owner password does not match we generally move on if the user password is correct
 	// unless we need to insist on a correct owner password due to the specific command in progress.
 	if !ok && needsOwnerAndUserPassword(ctx.Cmd) {
-		return errors.New("Please provide the owner password with -opw")
+		return errors.New("pdfcpu: please provide the owner password with -opw")
 	}
 
 	// Generally the owner password, which is also regarded as the master password or set permissions password
@@ -2424,7 +2399,7 @@ func setupEncryptionKey(ctx *Context, d Dict) (err error) {
 			return err
 		}
 		if !ok {
-			return errors.New("Corrupted permissions after opw ok")
+			return errors.New("pdfcpu: corrupted permissions after opw ok")
 		}
 		return nil
 	}
@@ -2435,7 +2410,7 @@ func setupEncryptionKey(ctx *Context, d Dict) (err error) {
 		return err
 	}
 	if !ok {
-		return errors.New("Please provide the correct password")
+		return errors.New("pdfcpu: please provide the correct password")
 	}
 
 	//fmt.Printf("upw ok: %t\n", ok)
@@ -2457,7 +2432,7 @@ func checkForEncryption(ctx *Context) error {
 
 	if ctx.Cmd == ENCRYPT {
 		// We want to encrypt this file.
-		return errors.New("encrypt: This file is already encrypted")
+		return errors.New("pdfcpu: this file is already encrypted")
 	}
 
 	// Dereference encryptDict.

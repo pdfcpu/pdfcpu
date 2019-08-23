@@ -53,7 +53,7 @@ func writePageDict(ctx *Context, ir *IndirectRef, pageDict Dict, pageNr int) err
 	log.Write.Printf("writePageDict: new offset = %d\n", ctx.Write.Offset)
 
 	if ir := pageDict.IndirectRefEntry("Parent"); ir == nil {
-		return errors.New("writePageDict: missing parent")
+		return errors.New("pdfcpu: writePageDict: missing parent")
 	}
 
 	ctx.writingPages = true
@@ -114,7 +114,7 @@ func pageNodeDict(ctx *Context, o Object) (d Dict, indRef *IndirectRef, err erro
 	// Dereference next page node dict.
 	ir, ok := o.(IndirectRef)
 	if !ok {
-		return nil, nil, errors.New("pageNodeDict: missing indirect reference")
+		return nil, nil, errors.New("pdfcpu: pageNodeDict: missing indirect reference")
 	}
 	log.Write.Printf("pageNodeDict: PageNode: %s\n", ir)
 
@@ -127,15 +127,15 @@ func pageNodeDict(ctx *Context, o Object) (d Dict, indRef *IndirectRef, err erro
 
 	d, err = ctx.DereferenceDict(ir)
 	if err != nil {
-		return nil, nil, errors.New("pageNodeDict: cannot dereference, pageNodeDict")
+		return nil, nil, errors.New("pdfcpu: pageNodeDict: cannot dereference, pageNodeDict")
 	}
 	if d == nil {
-		return nil, nil, errors.New("pageNodeDict: pageNodeDict is null")
+		return nil, nil, errors.New("pdfcpu: pageNodeDict: pageNodeDict is null")
 	}
 
 	dictType := d.Type()
 	if dictType == nil {
-		return nil, nil, errors.New("pageNodeDict: missing pageNodeDict type")
+		return nil, nil, errors.New("pdfcpu: pageNodeDict: missing pageNodeDict type")
 	}
 
 	return d, &ir, nil
@@ -193,7 +193,7 @@ func writeKids(ctx *Context, a Array, pageNr *int) (Array, int, error) {
 			}
 
 		default:
-			err = errors.Errorf("writeKids: Unexpected dict type: %s", *d.Type())
+			err = errors.Errorf("pdfcpu: writeKids: Unexpected dict type: %s", *d.Type())
 
 		}
 

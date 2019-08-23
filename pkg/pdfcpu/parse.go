@@ -27,23 +27,23 @@ import (
 )
 
 var (
-	errArrayCorrupt            = errors.New("parse: corrupt array")
-	errArrayNotTerminated      = errors.New("parse: unterminated array")
-	errDictionaryCorrupt       = errors.New("parse: corrupt dictionary")
-	errDictionaryDuplicateKey  = errors.New("parse: duplicate key")
-	errDictionaryNotTerminated = errors.New("parse: unterminated dictionary")
-	errHexLiteralCorrupt       = errors.New("parse: corrupt hex literal")
-	errHexLiteralNotTerminated = errors.New("parse: hex literal not terminated")
-	errNameObjectCorrupt       = errors.New("parse: corrupt name object")
-	errNoArray                 = errors.New("parse: no array")
-	errNoDictionary            = errors.New("parse: no dictionary")
-	errStringLiteralCorrupt    = errors.New("parse: corrupt string literal, possibly unbalanced parenthesis")
-	errBufNotAvailable         = errors.New("parse: no buffer available")
-	errXrefStreamMissingW      = errors.New("parse: xref stream dict missing entry W")
-	errXrefStreamCorruptW      = errors.New("parse: xref stream dict corrupt entry W: expecting array of 3 int")
-	errXrefStreamCorruptIndex  = errors.New("parse: xref stream dict corrupt entry Index")
-	errObjStreamMissingN       = errors.New("parse: obj stream dict missing entry W")
-	errObjStreamMissingFirst   = errors.New("parse: obj stream dict missing entry First")
+	errArrayCorrupt            = errors.New("pdfcpu: parse: corrupt array")
+	errArrayNotTerminated      = errors.New("pdfcpu: parse: unterminated array")
+	errDictionaryCorrupt       = errors.New("pdfcpu: parse: corrupt dictionary")
+	errDictionaryDuplicateKey  = errors.New("pdfcpu: parse: duplicate key")
+	errDictionaryNotTerminated = errors.New("pdfcpu: parse: unterminated dictionary")
+	errHexLiteralCorrupt       = errors.New("pdfcpu: parse: corrupt hex literal")
+	errHexLiteralNotTerminated = errors.New("pdfcpu: parse: hex literal not terminated")
+	errNameObjectCorrupt       = errors.New("pdfcpu: parse: corrupt name object")
+	errNoArray                 = errors.New("pdfcpu: parse: no array")
+	errNoDictionary            = errors.New("pdfcpu: parse: no dictionary")
+	errStringLiteralCorrupt    = errors.New("pdfcpu: parse: corrupt string literal, possibly unbalanced parenthesis")
+	errBufNotAvailable         = errors.New("pdfcpu: parse: no buffer available")
+	errXrefStreamMissingW      = errors.New("pdfcpu: parse: xref stream dict missing entry W")
+	errXrefStreamCorruptW      = errors.New("pdfcpu: parse: xref stream dict corrupt entry W: expecting array of 3 int")
+	errXrefStreamCorruptIndex  = errors.New("pdfcpu: parse: xref stream dict corrupt entry Index")
+	errObjStreamMissingN       = errors.New("pdfcpu: parse: obj stream dict missing entry W")
+	errObjStreamMissingFirst   = errors.New("pdfcpu: parse: obj stream dict missing entry First")
 )
 
 func positionToNextWhitespace(s string) (int, string) {
@@ -222,7 +222,7 @@ func parseObjectAttributes(line *string) (objectNumber *int, generationNumber *i
 	log.Parse.Printf("ParseObjectAttributes: buf=<%s>\n", *line)
 
 	if line == nil || len(*line) == 0 {
-		return nil, nil, errors.New("ParseObjectAttributes: buf not available")
+		return nil, nil, errors.New("pdfcpu: ParseObjectAttributes: buf not available")
 	}
 
 	l := *line
@@ -230,7 +230,7 @@ func parseObjectAttributes(line *string) (objectNumber *int, generationNumber *i
 
 	i := strings.Index(l, "obj")
 	if i < 0 {
-		return nil, nil, errors.New("ParseObjectAttributes: can't find \"obj\"")
+		return nil, nil, errors.New("pdfcpu: ParseObjectAttributes: can't find \"obj\"")
 	}
 
 	remainder = l[i+len("obj"):]
@@ -240,12 +240,12 @@ func parseObjectAttributes(line *string) (objectNumber *int, generationNumber *i
 
 	l, _ = trimLeftSpace(l)
 	if len(l) == 0 {
-		return nil, nil, errors.New("ParseObjectAttributes: can't find object number")
+		return nil, nil, errors.New("pdfcpu: ParseObjectAttributes: can't find object number")
 	}
 
 	i, _ = positionToNextWhitespaceOrChar(l, "%")
 	if i <= 0 {
-		return nil, nil, errors.New("ParseObjectAttributes: can't find end of object number")
+		return nil, nil, errors.New("pdfcpu: ParseObjectAttributes: can't find end of object number")
 	}
 
 	objNr, err := strconv.Atoi(l[:i])
@@ -258,12 +258,12 @@ func parseObjectAttributes(line *string) (objectNumber *int, generationNumber *i
 	l = l[i:]
 	l, _ = trimLeftSpace(l)
 	if len(l) == 0 {
-		return nil, nil, errors.New("ParseObjectAttributes: can't find generation number")
+		return nil, nil, errors.New("pdfcpu: ParseObjectAttributes: can't find generation number")
 	}
 
 	i, _ = positionToNextWhitespaceOrChar(l, "%")
 	if i <= 0 {
-		return nil, nil, errors.New("ParseObjectAttributes: can't find end of generation number")
+		return nil, nil, errors.New("pdfcpu: ParseObjectAttributes: can't find end of generation number")
 	}
 
 	genNr, err := strconv.Atoi(l[:i])
@@ -828,7 +828,7 @@ func parseXRefStreamDict(sd *StreamDict) (*XRefStreamDict, error) {
 	log.Parse.Println("ParseXRefStreamDict: begin")
 
 	if sd.Size() == nil {
-		return nil, errors.New("ParseXRefStreamDict: \"Size\" not available")
+		return nil, errors.New("pdfcpu: ParseXRefStreamDict: \"Size\" not available")
 	}
 
 	objs := []int{}

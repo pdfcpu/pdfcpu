@@ -1527,7 +1527,7 @@ func validatePageAnnotations(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 	for _, v := range a {
 
 		if hasTrapNet {
-			return errors.New("validatePageAnnotations: corrupted page annotation list, \"TrapNet\" has to be the last entry")
+			return errors.New("pdfcpu: validatePageAnnotations: corrupted page annotation list, \"TrapNet\" has to be the last entry")
 		}
 
 		if ir, ok := v.(pdf.IndirectRef); ok {
@@ -1536,11 +1536,11 @@ func validatePageAnnotations(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 
 			annotsDict, err = xRefTable.DereferenceDict(ir)
 			if err != nil || annotsDict == nil {
-				return errors.New("validatePageAnnotations: corrupted annotation dict")
+				return errors.New("pdfcpu: validatePageAnnotations: corrupted annotation dict")
 			}
 
 		} else if annotsDict, ok = v.(pdf.Dict); !ok {
-			return errors.New("validatePageAnnotations: corrupted array of indrefs")
+			return errors.New("pdfcpu: validatePageAnnotations: corrupted array of indrefs")
 		}
 
 		hasTrapNet, err = validateAnnotationDict(xRefTable, annotsDict)
@@ -1558,7 +1558,7 @@ func validatePagesAnnotations(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 	// Get number of pages of this PDF file.
 	pageCount := d.IntEntry("Count")
 	if pageCount == nil {
-		return errors.New("validatePagesAnnotations: missing \"Count\"")
+		return errors.New("pdfcpu: validatePagesAnnotations: missing \"Count\"")
 	}
 
 	log.Validate.Printf("validatePagesAnnotations: This page node has %d pages\n", *pageCount)
@@ -1578,12 +1578,12 @@ func validatePagesAnnotations(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 			return err
 		}
 		if d == nil {
-			return errors.New("validatePagesAnnotations: pageNodeDict is null")
+			return errors.New("pdfcpu: validatePagesAnnotations: pageNodeDict is null")
 		}
 
 		dictType := d.Type()
 		if dictType == nil {
-			return errors.New("validatePagesAnnotations: missing pageNodeDict type")
+			return errors.New("pdfcpu: validatePagesAnnotations: missing pageNodeDict type")
 		}
 
 		switch *dictType {

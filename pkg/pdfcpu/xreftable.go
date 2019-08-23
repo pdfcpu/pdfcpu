@@ -497,7 +497,7 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 		log.Trace.Printf("EnsureValidFreeList: validating obj #%d %v\n", f, m)
 		// verify if obj f is one of the free objects recorded.
 		if !m[f] {
-			return errors.New("EnsureValidFreeList: freelist corrupted")
+			return errors.New("pdfcpu: ensureValidFreeList: freelist corrupted")
 		}
 
 		delete(m, f)
@@ -520,11 +520,11 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 
 		entry, found := xRefTable.FindTableEntryLight(i)
 		if !found {
-			return errors.Errorf("EnsureValidFreeList: no xref entry found for obj #%d\n", i)
+			return errors.Errorf("pdfcpu: ensureValidFreeList: no xref entry found for obj #%d\n", i)
 		}
 
 		if !entry.Free {
-			return errors.Errorf("EnsureValidFreeList: xref entry is not free for obj #%d\n", i)
+			return errors.Errorf("pdfcpu: ensureValidFreeList: xref entry is not free for obj #%d\n", i)
 		}
 
 		if *entry.Generation == FreeHeadGeneration {
@@ -632,7 +632,7 @@ func (xRefTable *XRefTable) DeleteObject(objNr int) error {
 
 	entry, found := xRefTable.FindTableEntryLight(objNr)
 	if !found {
-		return errors.Errorf("DeleteObject: no entry for obj #%d\n", objNr)
+		return errors.Errorf("pdfcpu: deleteObject: no entry for obj #%d\n", objNr)
 	}
 
 	if entry.Free {
@@ -696,7 +696,7 @@ func (xRefTable *XRefTable) UndeleteObject(objectNumber int) error {
 func (xRefTable *XRefTable) indRefToObject(ir *IndirectRef) (Object, error) {
 
 	if ir == nil {
-		return nil, errors.New("indRefToObject: input argument is nil")
+		return nil, errors.New("pdfcpu: indRefToObject: input argument is nil")
 	}
 
 	entry, found := xRefTable.FindTableEntryForIndRef(ir)
@@ -739,7 +739,7 @@ func (xRefTable *XRefTable) DereferenceBoolean(o Object, sinceVersion Version) (
 
 	b, ok := o.(Boolean)
 	if !ok {
-		return nil, errors.Errorf("DereferenceBoolean: wrong type <%v>", o)
+		return nil, errors.Errorf("pdfcpu: dereferenceBoolean: wrong type <%v>", o)
 	}
 
 	// Version check
@@ -761,7 +761,7 @@ func (xRefTable *XRefTable) DereferenceInteger(o Object) (*Integer, error) {
 
 	i, ok := o.(Integer)
 	if !ok {
-		return nil, errors.Errorf("DereferenceInteger: wrong type <%v>", o)
+		return nil, errors.Errorf("pdfcpu: dereferenceInteger: wrong type <%v>", o)
 	}
 
 	return &i, nil
@@ -786,7 +786,7 @@ func (xRefTable *XRefTable) DereferenceNumber(o Object) (float64, error) {
 		f = o.Value()
 
 	default:
-		err = errors.Errorf("DereferenceNumber: wrong type <%v>", o)
+		err = errors.Errorf("pdfcpu: dereferenceNumber: wrong type <%v>", o)
 
 	}
 
@@ -803,7 +803,7 @@ func (xRefTable *XRefTable) DereferenceName(o Object, sinceVersion Version, vali
 
 	n, ok := o.(Name)
 	if !ok {
-		return n, errors.Errorf("DereferenceName: wrong type <%v>", o)
+		return n, errors.Errorf("pdfcpu: dereferenceName: wrong type <%v>", o)
 	}
 
 	// Version check
@@ -814,7 +814,7 @@ func (xRefTable *XRefTable) DereferenceName(o Object, sinceVersion Version, vali
 
 	// Validation
 	if validate != nil && !validate(n.Value()) {
-		return n, errors.Errorf("DereferenceName: invalid <%s>", n.Value())
+		return n, errors.Errorf("pdfcpu: dereferenceName: invalid <%s>", n.Value())
 	}
 
 	return n, nil
@@ -830,7 +830,7 @@ func (xRefTable *XRefTable) DereferenceStringLiteral(o Object, sinceVersion Vers
 
 	s, ok := o.(StringLiteral)
 	if !ok {
-		return s, errors.Errorf("DereferenceStringLiteral: wrong type <%v>", o)
+		return s, errors.Errorf("pdfcpu: dereferenceStringLiteral: wrong type <%v>", o)
 	}
 
 	// Ensure UTF16 correctness.
@@ -847,7 +847,7 @@ func (xRefTable *XRefTable) DereferenceStringLiteral(o Object, sinceVersion Vers
 
 	// Validation
 	if validate != nil && !validate(s1) {
-		return s, errors.Errorf("DereferenceStringLiteral: invalid <%s>", s1)
+		return s, errors.Errorf("pdfcpu: dereferenceStringLiteral: invalid <%s>", s1)
 	}
 
 	return s, nil
@@ -876,7 +876,7 @@ func (xRefTable *XRefTable) DereferenceStringOrHexLiteral(obj Object, sinceVersi
 		}
 
 	default:
-		return "", errors.Errorf("DereferenceStringOrHexLiteral: wrong type <%v>", obj)
+		return "", errors.Errorf("pdfcpu: dereferenceStringOrHexLiteral: wrong type <%v>", obj)
 
 	}
 
@@ -887,7 +887,7 @@ func (xRefTable *XRefTable) DereferenceStringOrHexLiteral(obj Object, sinceVersi
 
 	// Validation
 	if validate != nil && !validate(s) {
-		return "", errors.Errorf("DereferenceStringOrHexLiteral: invalid <%s>", s)
+		return "", errors.Errorf("pdfcpu: dereferenceStringOrHexLiteral: invalid <%s>", s)
 	}
 
 	return s, nil
@@ -918,7 +918,7 @@ func (xRefTable *XRefTable) DereferenceText(o Object) (string, error) {
 		}
 
 	default:
-		return s, errors.Errorf("textString: corrupt -  %v\n", obj)
+		return s, errors.Errorf("pdfcpu: textString: corrupt -  %v\n", obj)
 	}
 
 	return s, nil
@@ -943,7 +943,7 @@ func (xRefTable *XRefTable) DereferenceArray(o Object) (Array, error) {
 
 	a, ok := o.(Array)
 	if !ok {
-		return nil, errors.Errorf("DereferenceArray: wrong type <%v>", o)
+		return nil, errors.Errorf("pdfcpu: dereferenceArray: wrong type <%v>", o)
 	}
 
 	return a, nil
@@ -959,7 +959,7 @@ func (xRefTable *XRefTable) DereferenceDict(o Object) (Dict, error) {
 
 	d, ok := o.(Dict)
 	if !ok {
-		return nil, errors.Errorf("DereferenceDict: wrong type %T <%v>", o, o)
+		return nil, errors.Errorf("pdfcpu: dereferenceDict: wrong type %T <%v>", o, o)
 	}
 
 	return d, nil
@@ -975,7 +975,7 @@ func (xRefTable *XRefTable) DereferenceStreamDict(o Object) (*StreamDict, error)
 
 	sd, ok := o.(StreamDict)
 	if !ok {
-		return nil, errors.Errorf("DereferenceStreamDict: wrong type <%v>", o)
+		return nil, errors.Errorf("pdfcpu: dereferenceStreamDict: wrong type <%v>", o)
 	}
 
 	return &sd, nil
@@ -986,7 +986,7 @@ func (xRefTable *XRefTable) DereferenceDictEntry(d Dict, entryName string) (Obje
 
 	o, found := d.Find(entryName)
 	if !found || o == nil {
-		return nil, errors.Errorf("dict=%s entry=%s missing.", d, entryName)
+		return nil, errors.Errorf("pdfcpu: dict=%s entry=%s missing.", d, entryName)
 	}
 
 	return xRefTable.Dereference(o)
@@ -1000,7 +1000,7 @@ func (xRefTable *XRefTable) Catalog() (Dict, error) {
 	}
 
 	if xRefTable.Root == nil {
-		return nil, errors.New("Catalog: missing root dict")
+		return nil, errors.New("pdfcpu: catalog: missing root dict")
 	}
 
 	o, err := xRefTable.indRefToObject(xRefTable.Root)
@@ -1010,7 +1010,7 @@ func (xRefTable *XRefTable) Catalog() (Dict, error) {
 
 	d, ok := o.(Dict)
 	if !ok {
-		return nil, errors.New("Catalog: corrupt root catalog")
+		return nil, errors.New("pdfcpu: catalog: corrupt root catalog")
 	}
 
 	xRefTable.RootDict = d
@@ -1028,7 +1028,7 @@ func (xRefTable *XRefTable) EncryptDict() (Dict, error) {
 
 	d, ok := o.(Dict)
 	if !ok {
-		return nil, errors.New("EncryptDict: corrupt encrypt dict")
+		return nil, errors.New("pdfcpu: encryptDict: corrupt encrypt dict")
 	}
 
 	return d, nil
@@ -1216,7 +1216,7 @@ func (xRefTable *XRefTable) bindNameTreeNode(name string, n *Node, root bool) er
 				return err
 			}
 			if namesDict == nil {
-				return errors.New("Root entry \"Names\" corrupt")
+				return errors.New("pdfcpu: root entry \"Names\" corrupt")
 			}
 			namesDict.Update(name, *n.D)
 		}
@@ -1352,7 +1352,7 @@ func (xRefTable *XRefTable) NamesDict() (Dict, error) {
 
 	o, found := rootDict.Find("Names")
 	if !found {
-		return nil, errors.New("NamesDict: root entry \"Names\" missing")
+		return nil, errors.New("pdfcpu: NamesDict: root entry \"Names\" missing")
 	}
 
 	return xRefTable.DereferenceDict(o)
@@ -1368,7 +1368,7 @@ func (xRefTable *XRefTable) RemoveNameTree(nameTreeName string) error {
 	}
 
 	if namesDict == nil {
-		return errors.New("RemoveNameTree: root entry \"Names\" corrupt")
+		return errors.New("pdfcpu: removeNameTree: root entry \"Names\" corrupt")
 	}
 
 	// We have an existing name dict.
@@ -1524,7 +1524,7 @@ func (xRefTable *XRefTable) IDFirstElement() (id []byte, err error) {
 
 	sl, ok := xRefTable.ID[0].(StringLiteral)
 	if !ok {
-		return nil, errors.New("ID must contain HexLiterals or StringLiterals")
+		return nil, errors.New("pdfcpu: ID must contain hex literals or string literals")
 	}
 
 	return Unescape(sl.Value())
@@ -1650,7 +1650,7 @@ func (xRefTable *XRefTable) processPageTree(root *IndirectRef, pAttrs *Inherited
 		// Dereference next page node dict.
 		ir, ok := o.(IndirectRef)
 		if !ok {
-			return nil, errors.Errorf("processPageTree: corrupt page node dict")
+			return nil, errors.Errorf("pdfcpu: processPageTree: corrupt page node dict")
 		}
 
 		pageNodeDict, err := xRefTable.DereferenceDict(ir)
@@ -1745,7 +1745,7 @@ func (xRefTable *XRefTable) pageMediaBox(d *Dict) (*Rectangle, error) {
 
 	o, found := d.Find("MediaBox")
 	if !found {
-		return nil, errors.Errorf("pageMediaBox: missing mediaBox")
+		return nil, errors.Errorf("pdfcpu: pageMediaBox: missing mediaBox")
 	}
 
 	a, err := xRefTable.DereferenceArray(o)
@@ -1785,7 +1785,7 @@ func (xRefTable *XRefTable) insertIntoPageTree(root *IndirectRef, pAttrs *Inheri
 		// Dereference next page node dict.
 		ir, ok := o.(IndirectRef)
 		if !ok {
-			return 0, errors.Errorf("insertIntoPageTree: corrupt page node dict")
+			return 0, errors.Errorf("pdfcpu: insertIntoPageTree: corrupt page node dict")
 		}
 
 		pageNodeDict, err := xRefTable.DereferenceDict(ir)

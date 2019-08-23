@@ -73,7 +73,7 @@ func validateTilingPatternDict(xRefTable *pdf.XRefTable, sd *pdf.StreamDict, sin
 
 	o, ok := sd.Find("Resources")
 	if !ok {
-		return errors.New("validateTilingPatternDict: missing required entry Resources")
+		return errors.New("pdfcpu: validateTilingPatternDict: missing required entry Resources")
 	}
 
 	_, err = validateResourceDict(xRefTable, o)
@@ -120,7 +120,7 @@ func validateShadingPatternDict(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersi
 	// Shading: required, dict or stream dict.
 	o, ok := d.Find("Shading")
 	if !ok {
-		return errors.Errorf("validateShadingPatternDict: missing required entry \"Shading\".")
+		return errors.Errorf("pdfcpu: validateShadingPatternDict: missing required entry \"Shading\".")
 	}
 
 	return validateShading(xRefTable, o)
@@ -142,7 +142,7 @@ func validatePattern(xRefTable *pdf.XRefTable, o pdf.Object) error {
 		err = validateTilingPatternDict(xRefTable, &o, pdf.V10)
 
 	default:
-		err = errors.New("validatePattern: corrupt obj typ, must be dict or stream dict")
+		err = errors.New("pdfcpu: validatePattern: corrupt obj typ, must be dict or stream dict")
 
 	}
 

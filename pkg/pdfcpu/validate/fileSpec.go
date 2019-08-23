@@ -181,13 +181,13 @@ func validateFileSpecDictEntryEFDict(xRefTable *pdf.XRefTable, d pdf.Dict) error
 func validateRFDictFilesArray(xRefTable *pdf.XRefTable, a pdf.Array) error {
 
 	if len(a)%2 > 0 {
-		return errors.New("validateRFDictFilesArray: rfDict array corrupt")
+		return errors.New("pdfcpu: validateRFDictFilesArray: rfDict array corrupt")
 	}
 
 	for k, v := range a {
 
 		if v == nil {
-			return errors.New("validateRFDictFilesArray: rfDict, array entry nil")
+			return errors.New("pdfcpu: validateRFDictFilesArray: rfDict, array entry nil")
 		}
 
 		o, err := xRefTable.Dereference(v)
@@ -196,14 +196,14 @@ func validateRFDictFilesArray(xRefTable *pdf.XRefTable, a pdf.Array) error {
 		}
 
 		if o == nil {
-			return errors.New("validateRFDictFilesArray: rfDict, array entry nil")
+			return errors.New("pdfcpu: validateRFDictFilesArray: rfDict, array entry nil")
 		}
 
 		if k%2 > 0 {
 
 			_, ok := o.(pdf.StringLiteral)
 			if !ok {
-				return errors.New("validateRFDictFilesArray: rfDict, array entry corrupt")
+				return errors.New("pdfcpu: validateRFDictFilesArray: rfDict, array entry corrupt")
 			}
 
 		} else {
@@ -231,7 +231,7 @@ func validateFileSpecDictEntriesEFAndRF(xRefTable *pdf.XRefTable, efDict, rfDict
 	// EF only or EF and RF
 
 	if efDict == nil {
-		return errors.Errorf("validateFileSpecEntriesEFAndRF: missing required efDict.")
+		return errors.Errorf("pdfcpu: validateFileSpecEntriesEFAndRF: missing required efDict.")
 	}
 
 	err := validateFileSpecDictEntryEFDict(xRefTable, efDict)
@@ -244,7 +244,7 @@ func validateFileSpecDictEntriesEFAndRF(xRefTable *pdf.XRefTable, efDict, rfDict
 		for k, val := range rfDict {
 
 			if _, ok := efDict.Find(k); !ok {
-				return errors.Errorf("validateFileSpecEntriesEFAndRF: rfDict entry=%s missing corresponding efDict entry\n", k)
+				return errors.Errorf("pdfcpu: validateFileSpecEntriesEFAndRF: rfDict entry=%s missing corresponding efDict entry\n", k)
 			}
 
 			// value must be related files array.
@@ -273,7 +273,7 @@ func validateFileSpecDictEntriesEFAndRF(xRefTable *pdf.XRefTable, efDict, rfDict
 func validateFileSpecDictType(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 
 	if d.Type() == nil || (*d.Type() != "Filespec" && (xRefTable.ValidationMode == pdf.ValidationRelaxed && *d.Type() != "F")) {
-		return errors.New("validateFileSpecDictType: missing type: FileSpec")
+		return errors.New("pdfcpu: validateFileSpecDictType: missing type: FileSpec")
 	}
 
 	return nil
@@ -408,13 +408,13 @@ func validateFileSpecification(xRefTable *pdf.XRefTable, o pdf.Object) (pdf.Obje
 	case pdf.StringLiteral:
 		s := o.Value()
 		if !validateFileSpecString(s) {
-			return nil, errors.Errorf("validateFileSpecification: invalid file spec string: %s", s)
+			return nil, errors.Errorf("pdfcpu: validateFileSpecification: invalid file spec string: %s", s)
 		}
 
 	case pdf.HexLiteral:
 		s := o.Value()
 		if !validateFileSpecString(s) {
-			return nil, errors.Errorf("validateFileSpecification: invalid file spec string: %s", s)
+			return nil, errors.Errorf("pdfcpu: validateFileSpecification: invalid file spec string: %s", s)
 		}
 
 	case pdf.Dict:
@@ -424,7 +424,7 @@ func validateFileSpecification(xRefTable *pdf.XRefTable, o pdf.Object) (pdf.Obje
 		}
 
 	default:
-		return nil, errors.Errorf("validateFileSpecification: invalid type")
+		return nil, errors.Errorf("pdfcpu: validateFileSpecification: invalid type")
 
 	}
 
@@ -441,7 +441,7 @@ func validateURLSpecification(xRefTable *pdf.XRefTable, o pdf.Object) (pdf.Objec
 	}
 
 	if d == nil {
-		return nil, errors.New("validateURLSpecification: missing dict")
+		return nil, errors.New("pdfcpu: validateURLSpecification: missing dict")
 	}
 
 	dictName := "urlSpec"

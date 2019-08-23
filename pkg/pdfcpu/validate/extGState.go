@@ -61,7 +61,7 @@ func validateBG2Entry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, ent
 	case pdf.Name:
 		s := o.Value()
 		if s != "Default" {
-			err = errors.New("writeBG2Entry: corrupt name")
+			err = errors.New("pdfcpu: validateBG2Entry: corrupt name")
 		}
 
 	case pdf.Dict:
@@ -71,7 +71,7 @@ func validateBG2Entry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, ent
 		err = processFunction(xRefTable, o)
 
 	default:
-		err = errors.Errorf("validateBG2Entry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+		err = errors.Errorf("pdfcpu: validateBG2Entry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 
 	}
 
@@ -90,7 +90,7 @@ func validateUCR2Entry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, en
 	case pdf.Name:
 		s := o.Value()
 		if s != "Default" {
-			err = errors.New("writeUCR2Entry: corrupt name")
+			err = errors.New("pdfcpu: writeUCR2Entry: corrupt name")
 		}
 
 	case pdf.Dict:
@@ -100,7 +100,7 @@ func validateUCR2Entry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, en
 		err = processFunction(xRefTable, o)
 
 	default:
-		err = errors.Errorf("validateUCR2Entry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+		err = errors.Errorf("pdfcpu: validateUCR2Entry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 
 	}
 
@@ -114,13 +114,13 @@ func validateTransferFunction(xRefTable *pdf.XRefTable, o pdf.Object) (err error
 	case pdf.Name:
 		s := o.Value()
 		if s != "Identity" {
-			return errors.New("validateTransferFunction: corrupt name")
+			return errors.New("pdfcpu: validateTransferFunction: corrupt name")
 		}
 
 	case pdf.Array:
 
 		if len(o) != 4 {
-			return errors.New("validateTransferFunction: corrupt function array")
+			return errors.New("pdfcpu: validateTransferFunction: corrupt function array")
 		}
 
 		for _, o := range o {
@@ -171,13 +171,13 @@ func validateTR2(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
 	case pdf.Name:
 		s := o.Value()
 		if s != "Identity" && s != "Default" {
-			return errors.Errorf("validateTR2: corrupt name\n")
+			return errors.Errorf("pdfcpu: validateTR2: corrupt name\n")
 		}
 
 	case pdf.Array:
 
 		if len(o) != 4 {
-			return errors.New("validateTR2: corrupt function array")
+			return errors.New("pdfcpu: validateTR2: corrupt function array")
 		}
 
 		for _, o := range o {
@@ -471,7 +471,7 @@ func validateHalfToneEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string
 
 	case pdf.Name:
 		if o.Value() != "Default" {
-			return errors.Errorf("validateHalfToneEntry: undefined name: %s\n", o)
+			return errors.Errorf("pdfcpu: validateHalfToneEntry: undefined name: %s\n", o)
 		}
 
 	case pdf.Dict:
@@ -481,7 +481,7 @@ func validateHalfToneEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string
 		err = validateHalfToneStreamDict(xRefTable, &o, sinceVersion)
 
 	default:
-		err = errors.New("validateHalfToneEntry: corrupt (stream)dict")
+		err = errors.New("pdfcpu: validateHalfToneEntry: corrupt (stream)dict")
 	}
 
 	return err
@@ -530,7 +530,7 @@ func validateSoftMaskTransferFunctionEntry(xRefTable *pdf.XRefTable, d pdf.Dict,
 	case pdf.Name:
 		s := o.Value()
 		if s != "Identity" {
-			return errors.New("validateSoftMaskTransferFunctionEntry: corrupt name")
+			return errors.New("pdfcpu: validateSoftMaskTransferFunctionEntry: corrupt name")
 		}
 
 	case pdf.Dict:
@@ -540,7 +540,7 @@ func validateSoftMaskTransferFunctionEntry(xRefTable *pdf.XRefTable, d pdf.Dict,
 		err = processFunction(xRefTable, o)
 
 	default:
-		return errors.Errorf("validateSoftMaskTransferFunctionEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+		return errors.Errorf("pdfcpu: validateSoftMaskTransferFunctionEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 
 	}
 
@@ -611,14 +611,14 @@ func validateSoftMaskEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string
 	case pdf.Name:
 		s := o.Value()
 		if !validateBlendMode(s) {
-			return errors.Errorf("validateSoftMaskEntry: invalid soft mask: %s\n", s)
+			return errors.Errorf("pdfcpu: validateSoftMaskEntry: invalid soft mask: %s\n", s)
 		}
 
 	case pdf.Dict:
 		err = validateSoftMaskDict(xRefTable, o)
 
 	default:
-		err = errors.Errorf("validateSoftMaskEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+		err = errors.Errorf("pdfcpu: validateSoftMaskEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 
 	}
 

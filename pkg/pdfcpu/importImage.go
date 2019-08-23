@@ -29,7 +29,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var errInvalidImportConfig = errors.New("Invalid import configuration string. Please consult pdfcpu help import")
+var errInvalidImportConfig = errors.New("pdfcpu: Invalid import configuration string. Please consult pdfcpu help import")
 
 // Import represents the command details for the command "ImportImage".
 type Import struct {
@@ -55,7 +55,7 @@ func (imp Import) String() string {
 func parsePageFormat(v string, setDim bool) (*dim, string, error) {
 
 	if setDim {
-		return nil, v, errors.New("Only one of format('f') or dimensions('d') allowed")
+		return nil, v, errors.New("pdfcpu: only one of format('f') or dimensions('d') allowed")
 	}
 
 	// Optional: appended last letter L indicates landscape mode.
@@ -75,7 +75,7 @@ func parsePageFormat(v string, setDim bool) (*dim, string, error) {
 
 	d, ok := PaperSize[v]
 	if !ok {
-		return nil, v, errors.Errorf("Page format %s is unsupported.\n", v)
+		return nil, v, errors.Errorf("pdfcpu: page format %s is unsupported.\n", v)
 	}
 
 	if d.Portrait() && land || d.Landscape() && port {
@@ -88,22 +88,22 @@ func parsePageFormat(v string, setDim bool) (*dim, string, error) {
 func parsePageDim(v string, setFormat bool) (*dim, string, error) {
 
 	if setFormat {
-		return nil, v, errors.New("Only one of format('f') or dimensions('d') allowed")
+		return nil, v, errors.New("pdfcpu: only one of format('f') or dimensions('d') allowed")
 	}
 
 	ss := strings.Split(v, " ")
 	if len(ss) != 2 {
-		return nil, v, errors.Errorf("illegal dimension string: need 2 positive values, %s\n", v)
+		return nil, v, errors.Errorf("pdfcpu: illegal dimension string: need 2 positive values, %s\n", v)
 	}
 
 	w, err := strconv.Atoi(ss[0])
 	if err != nil || w <= 0 {
-		return nil, v, errors.Errorf("dimension X must be a positiv numeric value: %s\n", ss[0])
+		return nil, v, errors.Errorf("pdfcpu: dimension X must be a positiv numeric value: %s\n", ss[0])
 	}
 
 	h, err := strconv.Atoi(ss[1])
 	if err != nil || h <= 0 {
-		return nil, v, errors.Errorf("dimension Y must be a positiv numeric value: %s\n", ss[1])
+		return nil, v, errors.Errorf("pdfcpu: dimension Y must be a positiv numeric value: %s\n", ss[1])
 	}
 
 	d := dim{w, h}
@@ -191,14 +191,14 @@ func parseAnchorPosition(s string) (anchor, error) {
 		return Full, nil
 	}
 
-	return 0, errors.Errorf("unknown position anchor: %s", s)
+	return 0, errors.Errorf("pdfcpu: unknown position anchor: %s", s)
 }
 
 func parsePositionOffset(s string) (int, int, error) {
 
 	d := strings.Split(s, " ")
 	if len(d) != 2 {
-		return 0, 0, errors.Errorf("illegal position offset string: need 2 numeric values, %s\n", s)
+		return 0, 0, errors.Errorf("pdfcpu: illegal position offset string: need 2 numeric values, %s\n", s)
 	}
 
 	dx, err := strconv.Atoi(d[0])

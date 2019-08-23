@@ -291,7 +291,7 @@ func validateShadingStreamDict(xRefTable *pdf.XRefTable, sd *pdf.StreamDict) err
 		err = validateTensorProductPatchMeshesDict(xRefTable, dict)
 
 	default:
-		return errors.Errorf("validateShadingStreamDict: unexpected shadingType: %d\n", shadingType)
+		return errors.Errorf("pdfcpu: validateShadingStreamDict: unexpected shadingType: %d\n", shadingType)
 	}
 
 	return err
@@ -315,7 +315,7 @@ func validateShading(xRefTable *pdf.XRefTable, obj pdf.Object) error {
 		err = validateShadingStreamDict(xRefTable, &obj)
 
 	default:
-		return errors.New("validateShading: corrupt obj typ, must be dict or stream dict")
+		return errors.New("pdfcpu: validateShading: corrupt obj typ, must be dict or stream dict")
 
 	}
 

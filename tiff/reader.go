@@ -19,8 +19,8 @@ import (
 	"io/ioutil"
 	"math"
 
-	"github.com/pdfcpu/pdfcpu/ccitt"
 	"github.com/pdfcpu/pdfcpu/lzw"
+	"golang.org/x/image/ccitt"
 )
 
 // A FormatError reports that the input is not a valid TIFF image.
@@ -666,6 +666,10 @@ func Decode(r io.Reader) (img image.Image, err error) {
 			offset := int64(blockOffsets[j*blocksAcross+i])
 			n := int64(blockCounts[j*blocksAcross+i])
 			LSBToMSB := d.firstVal(tFillOrder) == 2
+			order := ccitt.MSB
+			if LSBToMSB {
+				order = ccitt.LSB
+			}
 			switch d.firstVal(tCompression) {
 
 			// According to the spec, Compression does not have a default value,
@@ -679,13 +683,15 @@ func Decode(r io.Reader) (img image.Image, err error) {
 					_, err = d.r.ReadAt(d.buf, offset)
 				}
 			case cG3:
-				r := ccitt.NewReader(io.NewSectionReader(d.r, offset, n), ccitt.Group3, d.config.Width, true, false, LSBToMSB)
+				r := ccitt.NewReader(io.NewSectionReader(d.r, offset, n), order, ccitt.Group3, d.config.Width, d.config.Height, nil)
+				//r := ccitt.NewReader(io.NewSectionReader(d.r, offset, n), ccitt.Group3, d.config.Width, true, false, LSBToMSB)
 				d.buf, err = ioutil.ReadAll(r)
-				r.Close()
+				//r.Close()
 			case cG4:
-				r := ccitt.NewReader(io.NewSectionReader(d.r, offset, n), ccitt.Group4, d.config.Width, true, false, LSBToMSB)
+				r := ccitt.NewReader(io.NewSectionReader(d.r, offset, n), order, ccitt.Group4, d.config.Width, d.config.Height, nil)
+				//r := ccitt.NewReader(io.NewSectionReader(d.r, offset, n), ccitt.Group4, d.config.Width, true, false, LSBToMSB)
 				d.buf, err = ioutil.ReadAll(r)
-				r.Close()
+				//r.Close()
 			case cLZW:
 				r := lzw.NewReader(io.NewSectionReader(d.r, offset, n), true)
 				d.buf, err = ioutil.ReadAll(r)

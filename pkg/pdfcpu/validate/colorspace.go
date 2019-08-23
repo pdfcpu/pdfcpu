@@ -501,7 +501,7 @@ func validateColorSpaceArraySubset(xRefTable *pdf.XRefTable, a pdf.Array, cs []s
 
 	csName, ok := a[0].(pdf.Name)
 	if !ok {
-		return errors.New("validateColorSpaceArraySubset: corrupt Colorspace array")
+		return errors.New("pdfcpu: validateColorSpaceArraySubset: corrupt Colorspace array")
 	}
 
 	for _, v := range cs {
@@ -510,7 +510,7 @@ func validateColorSpaceArraySubset(xRefTable *pdf.XRefTable, a pdf.Array, cs []s
 		}
 	}
 
-	return errors.Errorf("validateColorSpaceArraySubset: invalid color space: %s\n", csName)
+	return errors.Errorf("pdfcpu: validateColorSpaceArraySubset: invalid color space: %s\n", csName)
 }
 
 func validateColorSpaceArray(xRefTable *pdf.XRefTable, a pdf.Array, excludePatternCS bool) (err error) {
@@ -519,7 +519,7 @@ func validateColorSpaceArray(xRefTable *pdf.XRefTable, a pdf.Array, excludePatte
 
 	name, ok := a[0].(pdf.Name)
 	if !ok {
-		return errors.New("validateColorSpaceArray: corrupt Colorspace array")
+		return errors.New("pdfcpu: validateColorSpaceArray: corrupt Colorspace array")
 	}
 
 	switch name {
@@ -543,7 +543,7 @@ func validateColorSpaceArray(xRefTable *pdf.XRefTable, a pdf.Array, excludePatte
 
 	case pdf.PatternCS:
 		if excludePatternCS {
-			return errors.New("validateColorSpaceArray: Pattern color space not allowed")
+			return errors.New("pdfcpu: validateColorSpaceArray: Pattern color space not allowed")
 		}
 		err = validatePatternColorSpace(xRefTable, a, pdf.V12)
 
@@ -554,7 +554,7 @@ func validateColorSpaceArray(xRefTable *pdf.XRefTable, a pdf.Array, excludePatte
 		err = validateDeviceNColorSpace(xRefTable, a, pdf.V13)
 
 	default:
-		err = errors.Errorf("validateColorSpaceArray: undefined color space: %s\n", name)
+		err = errors.Errorf("pdfcpu: validateColorSpaceArray: undefined color space: %s\n", name)
 	}
 
 	return err
@@ -579,7 +579,7 @@ func validateColorSpace(xRefTable *pdf.XRefTable, o pdf.Object, excludePatternCS
 		err = validateColorSpaceArray(xRefTable, o, excludePatternCS)
 
 	default:
-		err = errors.New("validateColorSpace: corrupt obj typ, must be Name or Array")
+		err = errors.New("pdfcpu: validateColorSpace: corrupt obj typ, must be Name or Array")
 
 	}
 
@@ -597,14 +597,14 @@ func validateColorSpaceEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName stri
 
 	case pdf.Name:
 		if ok := validateDeviceColorSpaceName(o.Value()); !ok {
-			err = errors.Errorf("validateColorSpaceEntry: Name:%s\n", o.Value())
+			err = errors.Errorf("pdfcpu: validateColorSpaceEntry: Name:%s\n", o.Value())
 		}
 
 	case pdf.Array:
 		err = validateColorSpaceArray(xRefTable, o, excludePatternCS)
 
 	default:
-		err = errors.Errorf("validateColorSpaceEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+		err = errors.Errorf("pdfcpu: validateColorSpaceEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 
 	}
 

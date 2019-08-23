@@ -69,7 +69,10 @@ func printVersion(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
-	fmt.Fprintf(os.Stdout, "pdfcpu: %v\n build: %v\ncommit: %v\n", pdfcpu.VersionStr, date, commit)
+	fmt.Fprintf(os.Stdout, "pdfcpu: %v\n", pdfcpu.VersionStr)
+	if date != "?" {
+		fmt.Fprintf(os.Stdout, "build : %v\ncommit: %v\n", date, commit)
+	}
 }
 
 func handleValidateCommand(conf *pdfcpu.Configuration) {
@@ -669,7 +672,7 @@ func abs(i int) int {
 }
 
 func handleRotateCommand(conf *pdfcpu.Configuration) {
-	if len(flag.Args()) < 2 {
+	if len(flag.Args()) < 2 || len(flag.Args()) > 3 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageRotate)
 		os.Exit(1)
 	}
@@ -683,13 +686,19 @@ func handleRotateCommand(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
+	outFile := ""
+	if len(flag.Args()) == 3 {
+		outFile = flag.Arg(2)
+		ensurePdfExtension(outFile)
+	}
+
 	selectedPages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
 		os.Exit(1)
 	}
 
-	process(cli.RotateCommand(inFile, "", rotation, selectedPages, conf))
+	process(cli.RotateCommand(inFile, outFile, rotation, selectedPages, conf))
 }
 
 func parseAfterNUpDetails(nup *pdfcpu.NUp, argInd int, filenameOut string) []string {

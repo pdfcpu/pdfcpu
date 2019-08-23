@@ -25,6 +25,7 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pkg/errors"
 )
 
 func parmsForFilter(d Dict) map[string]int {
@@ -156,6 +157,19 @@ func decodeStream(sd *StreamDict) error {
 
 		// make parms map[string]int
 		parms := parmsForFilter(f.DecodeParms)
+
+		if f.Name == filter.CCITTFax {
+			// x/image/ccitt needs the optional decode parameter "Rows"
+			// if not available we supply the image "Height".
+			_, ok := parms["Rows"]
+			if !ok {
+				ip := sd.IntEntry("Height")
+				if ip == nil {
+					return errors.New("pdfcpu: ccitt: \"Height\" required")
+				}
+				parms["Rows"] = *ip
+			}
+		}
 
 		fi, err := filter.NewFilter(f.Name, parms)
 		if err != nil {

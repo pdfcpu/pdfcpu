@@ -42,10 +42,10 @@ var (
 		12: {4, 3},
 		16: {4, 4},
 	}
-	errInvalidGridID     = errors.New("n: one of 2, 3, 4, 6, 8, 9, 12, 16")
-	errInvalidGridDims   = errors.New("grid dimensions: m >= 0, n >= 0")
-	errInvalidNUpConfig  = errors.New("Invalid configuration string. Please consult pdfcpu help nup")
-	errInvalidGridConfig = errors.New("Invalid configuration string. Please consult pdfcpu help grid")
+	errInvalidGridID     = errors.New("pdfcpu: nup: n: one of 2, 3, 4, 6, 8, 9, 12, 16")
+	errInvalidGridDims   = errors.New("pdfcpu: grid: dimensions: m >= 0, n >= 0")
+	errInvalidNUpConfig  = errors.New("pdfcpu: nup: invalid configuration string. Please consult pdfcpu help nup")
+	errInvalidGridConfig = errors.New("pdfcpu: nup: invalid configuration string. Please consult pdfcpu help grid")
 )
 
 type orientation int
@@ -92,7 +92,7 @@ func parseOrientation(s string) (orientation, error) {
 		return DownLeft, nil
 	}
 
-	return 0, errors.Errorf("unknown nUp orientation: %s", s)
+	return 0, errors.Errorf("pdfcpu: unknown nUp orientation: %s", s)
 }
 
 func parseBorder(s string) (bool, error) {
@@ -103,7 +103,7 @@ func parseBorder(s string) (bool, error) {
 	case "off", "false":
 		return false, nil
 	default:
-		return false, errors.New("nUp border, Please provide one of: on/off true/false")
+		return false, errors.New("pdfcpu: nUp border, please provide one of: on/off true/false")
 	}
 }
 
@@ -115,7 +115,7 @@ func parseMargin(s string) (int, error) {
 	}
 
 	if n < 0 {
-		return 0, errors.New("nUp margin, Please provide a positive int value")
+		return 0, errors.New("pdfcpu: nUp margin, Please provide a positive int value")
 	}
 
 	return n, nil
@@ -791,7 +791,7 @@ func nupPages(ctx *Context, selectedPages IntSet, nup *NUp, pagesDict *Dict, pag
 			return err
 		}
 		if d == nil {
-			return errors.Errorf("unknown page number: %d\n", i)
+			return errors.Errorf("pdfcpu: unknown page number: %d\n", i)
 		}
 
 		// Retrieve content stream bytes.

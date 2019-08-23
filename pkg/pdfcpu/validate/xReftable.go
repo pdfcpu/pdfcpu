@@ -270,7 +270,7 @@ func validateOpenAction(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bo
 		err = validateDestinationArray(xRefTable, o)
 
 	default:
-		err = errors.New("validateOpenAction: unexpected object")
+		err = errors.New("pdfcpu: validateOpenAction: unexpected object")
 	}
 
 	return err
@@ -572,7 +572,7 @@ func validatePermissions(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required b
 		return err
 	}
 
-	return errors.New("*** validatePermissions: not supported ***")
+	return errors.New("pdfcpu: validatePermissions: not supported")
 }
 
 // TODO implement
@@ -585,7 +585,7 @@ func validateLegal(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool, s
 		return err
 	}
 
-	return errors.New("*** validateLegal: not supported ***")
+	return errors.New("pdfcpu: validateLegal: not supported")
 }
 
 func validateRequirementDict(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion pdf.Version) error {
@@ -694,7 +694,7 @@ func validateCollectionSchemaDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 			}
 
 			if n != "CollectionSchema" {
-				return errors.New("validateCollectionSchemaDict: invalid entry \"Type\"")
+				return errors.New("pdfcpu: validateCollectionSchemaDict: invalid entry \"Type\"")
 			}
 
 			continue

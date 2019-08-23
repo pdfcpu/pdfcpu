@@ -189,7 +189,7 @@ func fontName(ctx *Context, fontDict Dict, objNumber int) (prefix, fontName stri
 		if !found {
 			o, found = fontDict.Find("Name")
 			if !found {
-				return "", "", errors.New("fontName: missing fontDict entries \"BaseFont\" and \"Name\"")
+				return "", "", errors.New("pdfcpu: fontName: missing fontDict entries \"BaseFont\" and \"Name\"")
 			}
 		}
 
@@ -211,7 +211,7 @@ func fontName(ctx *Context, fontDict Dict, objNumber int) (prefix, fontName stri
 
 	baseFont, ok := o.(Name)
 	if !ok {
-		return "", "", errors.New("fontName: corrupt fontDict entry BaseFont")
+		return "", "", errors.New("pdfcpu: fontName: corrupt fontDict entry BaseFont")
 	}
 
 	n := string(baseFont)
@@ -241,7 +241,7 @@ func optimizeFontResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjNumb
 
 		indRef, ok := v.(IndirectRef)
 		if !ok {
-			return errors.Errorf("optimizeFontResourcesDict: missing indirect object ref for Font: %s\n", rName)
+			return errors.Errorf("pdfcpu: optimizeFontResourcesDict: missing indirect object ref for Font: %s\n", rName)
 		}
 
 		log.Optimize.Printf("optimizeFontResourcesDict: processing font: %s, %s\n", rName, indRef)
@@ -265,11 +265,11 @@ func optimizeFontResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjNumb
 		log.Optimize.Printf("optimizeFontResourcesDict: fontDict: %s\n", fontDict)
 
 		if fontDict.Type() == nil {
-			return errors.Errorf("optimizeFontResourcesDict: missing dict type %s\n", v)
+			return errors.Errorf("pdfcpu: optimizeFontResourcesDict: missing dict type %s\n", v)
 		}
 
 		if *fontDict.Type() != "Font" {
-			return errors.Errorf("optimizeFontResourcesDict: expected Type=Font, unexpected Type: %s", *fontDict.Type())
+			return errors.Errorf("pdfcpu: optimizeFontResourcesDict: expected Type=Font, unexpected Type: %s", *fontDict.Type())
 		}
 
 		// Get the unique font name.
@@ -374,7 +374,7 @@ func optimizeXObjectResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjN
 
 		indRef, ok := v.(IndirectRef)
 		if !ok {
-			return errors.Errorf("optimizeXObjectResourcesDict: missing indirect object ref for resourceId: %s", rName)
+			return errors.Errorf("pdfcpu: optimizeXObjectResourcesDict: missing indirect object ref for resourceId: %s", rName)
 		}
 
 		log.Optimize.Printf("optimizeXObjectResourcesDict: processing xobject: %s, %s\n", rName, indRef)
@@ -391,7 +391,7 @@ func optimizeXObjectResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjN
 		log.Optimize.Printf("optimizeXObjectResourcesDict: dereferenced obj:%d\n%s", objNr, osd)
 
 		if osd.Dict.Subtype() == nil {
-			return errors.Errorf("optimizeXObjectResourcesDict: missing stream dict Subtype %s\n", v)
+			return errors.Errorf("pdfcpu: optimizeXObjectResourcesDict: missing stream dict Subtype %s\n", v)
 		}
 
 		if *osd.Dict.Subtype() == "Image" {
@@ -465,7 +465,7 @@ func optimizeResources(ctx *Context, resourcesDict Dict, pageNumber, pageObjNumb
 		}
 
 		if d == nil {
-			return errors.Errorf("optimizeResources: font resource dict is null for page %d pageObj %d\n", pageNumber, pageObjNumber)
+			return errors.Errorf("pdfcpu: optimizeResources: font resource dict is null for page %d pageObj %d\n", pageNumber, pageObjNumber)
 		}
 
 		err = optimizeFontResourcesDict(ctx, d, pageNumber, pageObjNumber)
@@ -487,7 +487,7 @@ func optimizeResources(ctx *Context, resourcesDict Dict, pageNumber, pageObjNumb
 		}
 
 		if d == nil {
-			return errors.Errorf("optimizeResources: xobject resource dict is null for page %d pageObj %d\n", pageNumber, pageObjNumber)
+			return errors.Errorf("pdfcpu: optimizeResources: xobject resource dict is null for page %d pageObj %d\n", pageNumber, pageObjNumber)
 		}
 
 		err = optimizeXObjectResourcesDict(ctx, d, pageNumber, pageObjNumber)
@@ -537,7 +537,7 @@ func parsePagesDict(ctx *Context, pagesDict Dict, pageNumber int) (int, error) {
 	// Get number of pages of this PDF file.
 	count, found := pagesDict.Find("Count")
 	if !found {
-		return 0, errors.New("parsePagesDict: missing Count")
+		return 0, errors.New("pdfcpu: parsePagesDict: missing Count")
 	}
 
 	log.Optimize.Printf("parsePagesDict: This page node has %d pages\n", int(count.(Integer)))
@@ -557,7 +557,7 @@ func parsePagesDict(ctx *Context, pagesDict Dict, pageNumber int) (int, error) {
 		pageNodeDict := o.(Dict)
 		dictType := pageNodeDict.Type()
 		if dictType == nil {
-			return 0, errors.New("parsePagesDict: Missing dict type")
+			return 0, errors.New("pdfcpu: parsePagesDict: Missing dict type")
 		}
 
 		// Note: Pages may contain a to be inheritated ResourcesDict.
@@ -574,7 +574,7 @@ func parsePagesDict(ctx *Context, pagesDict Dict, pageNumber int) (int, error) {
 		}
 
 		if *dictType != "Page" {
-			return 0, errors.Errorf("parsePagesDict: Unexpected dict type: %s\n", *dictType)
+			return 0, errors.Errorf("pdfcpu: parsePagesDict: Unexpected dict type: %s\n", *dictType)
 		}
 
 		// Mark page content streams for stats.
@@ -709,12 +709,12 @@ func optimizeFontAndImages(ctx *Context) error {
 	// Detect the number of pages of this PDF file.
 	pageCount := pageTreeRootDict.IntEntry("Count")
 	if pageCount == nil {
-		return errors.New("optimizeFontAndImagess: missing \"Count\" in page root dict")
+		return errors.New("pdfcpu: optimizeFontAndImagess: missing \"Count\" in page root dict")
 	}
 
 	// If PageCount already set by validation doublecheck.
 	if ctx.PageCount > 0 && ctx.PageCount != *pageCount {
-		return errors.New("optimizeFontAndImagess: unexpected page root dict pageCount discrepancy")
+		return errors.New("pdfcpu: optimizeFontAndImagess: unexpected page root dict pageCount discrepancy")
 	}
 
 	// If we optimize w/o prior validation, set PageCount.
@@ -756,7 +756,7 @@ func streamLengthFontFile(xRefTable *XRefTable, indirectRef *IndirectRef) (*int6
 	}
 
 	if sd == nil || (*sd).StreamLength == nil {
-		return nil, errors.Errorf("streamLengthFontFile: fontFile Streamlength is nil for object %d\n", objectNumber)
+		return nil, errors.Errorf("pdfcpu: streamLengthFontFile: fontFile Streamlength is nil for object %d\n", objectNumber)
 	}
 
 	log.Optimize.Println("streamLengthFontFile end")
@@ -848,11 +848,11 @@ func trivialFontDescriptor(xRefTable *XRefTable, fontDict Dict, objNr int) (Dict
 	}
 
 	if d == nil {
-		return nil, errors.Errorf("trivialFontDescriptor: FontDescriptor is null for font object %d\n", objNr)
+		return nil, errors.Errorf("pdfcpu: trivialFontDescriptor: FontDescriptor is null for font object %d\n", objNr)
 	}
 
 	if d.Type() != nil && *d.Type() != "FontDescriptor" {
-		return nil, errors.Errorf("trivialFontDescriptor: FontDescriptor dict incorrect dict type for font object %d\n", objNr)
+		return nil, errors.Errorf("pdfcpu: trivialFontDescriptor: FontDescriptor dict incorrect dict type for font object %d\n", objNr)
 	}
 
 	return d, nil
@@ -883,23 +883,23 @@ func fontDescriptor(xRefTable *XRefTable, fontDict Dict, objNr int) (Dict, error
 
 	a, err := xRefTable.DereferenceArray(o)
 	if err != nil || a == nil {
-		return nil, errors.Errorf("fontDescriptor: DescendantFonts: IndirectRef or Array wth length 1 expected for font object %d\n", objNr)
+		return nil, errors.Errorf("pdfcpu: fontDescriptor: DescendantFonts: IndirectRef or Array wth length 1 expected for font object %d\n", objNr)
 	}
 	if len(a) > 1 {
-		return nil, errors.Errorf("fontDescriptor: DescendantFonts Array length > 1 %v\n", a)
+		return nil, errors.Errorf("pdfcpu: fontDescriptor: DescendantFonts Array length > 1 %v\n", a)
 	}
 
 	// dict is the fontDict of the descendant font.
 	d, err = xRefTable.DereferenceDict(a[0])
 	if err != nil {
-		return nil, errors.Errorf("fontDescriptor: No descendant font dict for %v\n", a)
+		return nil, errors.Errorf("pdfcpu: fontDescriptor: No descendant font dict for %v\n", a)
 	}
 	if d == nil {
-		return nil, errors.Errorf("fontDescriptor: descendant font dict is null for %v\n", a)
+		return nil, errors.Errorf("pdfcpu: fontDescriptor: descendant font dict is null for %v\n", a)
 	}
 
 	if *d.Type() != "Font" {
-		return nil, errors.Errorf("fontDescriptor: font dict with incorrect dict type for %v\n", d)
+		return nil, errors.Errorf("pdfcpu: fontDescriptor: font dict with incorrect dict type for %v\n", d)
 	}
 
 	o, ok = d.Find("FontDescriptor")
@@ -910,16 +910,16 @@ func fontDescriptor(xRefTable *XRefTable, fontDict Dict, objNr int) (Dict, error
 
 	d, err = xRefTable.DereferenceDict(o)
 	if err != nil {
-		return nil, errors.Errorf("fontDescriptor: No FontDescriptor dict for font object %d\n", objNr)
+		return nil, errors.Errorf("pdfcpu: fontDescriptor: No FontDescriptor dict for font object %d\n", objNr)
 	}
 	if d == nil {
-		return nil, errors.Errorf("fontDescriptor: FontDescriptor dict is null for font object %d\n", objNr)
+		return nil, errors.Errorf("pdfcpu: fontDescriptor: FontDescriptor dict is null for font object %d\n", objNr)
 	}
 
 	if d.Type() == nil {
 		//logErrorOptimize.Printf("FontDescriptor: FontDescriptor without type \"FontDescriptor\" objNumber:%d\n", objNr)
 	} else if *d.Type() != "FontDescriptor" {
-		return nil, errors.Errorf("fontDescriptor: FontDescriptor dict incorrect dict type for font object %d\n", objNr)
+		return nil, errors.Errorf("pdfcpu: fontDescriptor: FontDescriptor dict incorrect dict type for font object %d\n", objNr)
 	}
 
 	log.Optimize.Println("fontDescriptor end")

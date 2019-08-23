@@ -90,7 +90,7 @@ func Process(cmd *Command) (out []string, err error) {
 		return f(cmd)
 	}
 
-	return nil, errors.Errorf("Process: Unknown command mode %d\n", cmd.Mode)
+	return nil, errors.Errorf("pdfcpu: process: Unknown command mode %d\n", cmd.Mode)
 }
 
 // ValidateCommand creates a new command to validate a file.

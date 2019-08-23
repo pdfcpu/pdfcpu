@@ -36,19 +36,19 @@ func validateFontFile3SubType(sd *pdf.StreamDict, fontType string) error {
 
 	if fontType == "Type1" || fontType == "MMType1" {
 		if dictSubType == nil || *dictSubType != "Type1C" {
-			return errors.New("validateFontFile3SubType: FontFile3 missing Subtype \"Type1C\"")
+			return errors.New("pdfcpu: validateFontFile3SubType: FontFile3 missing Subtype \"Type1C\"")
 		}
 	}
 
 	if fontType == "CIDFontType0" {
 		if dictSubType == nil || *dictSubType != "CIDFontType0C" {
-			return errors.New("validateFontFile3SubType: FontFile3 missing Subtype \"CIDFontType0C\"")
+			return errors.New("pdfcpu: validateFontFile3SubType: FontFile3 missing Subtype \"CIDFontType0C\"")
 		}
 	}
 
 	if fontType == "OpenType" {
 		if dictSubType == nil || *dictSubType != "OpenType" {
-			return errors.New("validateFontFile3SubType: FontFile3 missing Subtype \"OpenType\"")
+			return errors.New("pdfcpu: validateFontFile3SubType: FontFile3 missing Subtype \"OpenType\"")
 		}
 	}
 
@@ -105,13 +105,13 @@ func validateFontDescriptorType(xRefTable *pdf.XRefTable, d pdf.Dict) (err error
 		if xRefTable.ValidationMode == pdf.ValidationRelaxed {
 			log.Validate.Println("validateFontDescriptor: missing entry \"Type\"")
 		} else {
-			return errors.New("validateFontDescriptor: missing entry \"Type\"")
+			return errors.New("pdfcpu: validateFontDescriptor: missing entry \"Type\"")
 		}
 
 	}
 
 	if dictType != nil && *dictType != "FontDescriptor" {
-		return errors.New("writeFontDescriptor: corrupt font descriptor dict")
+		return errors.New("pdfcpu: validateFontDescriptor: corrupt font descriptor dict")
 	}
 
 	return nil
@@ -258,7 +258,7 @@ func validateFontDescriptorFontFile(xRefTable *pdf.XRefTable, d pdf.Dict, dictNa
 	case "Type3": // No fontfile.
 
 	default:
-		return errors.Errorf("unknown fontDictType: %s\n", fontDictType)
+		return errors.Errorf("pdfcpu: unknown fontDictType: %s\n", fontDictType)
 
 	}
 
@@ -438,14 +438,14 @@ func validateCIDToGIDMap(xRefTable *pdf.XRefTable, o pdf.Object) error {
 	case pdf.Name:
 		s := o.Value()
 		if s != "Identity" {
-			return errors.Errorf("validateCIDToGIDMap: invalid name: %s - must be \"Identity\"\n", s)
+			return errors.Errorf("pdfcpu: validateCIDToGIDMap: invalid name: %s - must be \"Identity\"\n", s)
 		}
 
 	case pdf.StreamDict:
 		// no further processing
 
 	default:
-		return errors.New("validateCIDToGIDMap: corrupt entry")
+		return errors.New("pdfcpu: validateCIDToGIDMap: corrupt entry")
 
 	}
 
@@ -509,7 +509,7 @@ func validateCIDFontDictEntryCIDToGIDMap(xRefTable *pdf.XRefTable, d pdf.Dict, i
 	if o, found := d.Find("CIDToGIDMap"); found {
 
 		if !isCIDFontType2 {
-			return errors.New("validateCIDFontDict: entry CIDToGIDMap not allowed - must be CIDFontType2")
+			return errors.New("pdfcpu: validateCIDFontDict: entry CIDToGIDMap not allowed - must be CIDFontType2")
 		}
 
 		err := validateCIDToGIDMap(xRefTable, o)
@@ -932,12 +932,12 @@ func validateFontDict(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
 	}
 
 	if d.Type() == nil || *d.Type() != "Font" {
-		return errors.New("validateFontDict: corrupt font dict")
+		return errors.New("pdfcpu: validateFontDict: corrupt font dict")
 	}
 
 	subtype := d.Subtype()
 	if subtype == nil {
-		return errors.New("validateFontDict: missing Subtype")
+		return errors.New("pdfcpu: validateFontDict: missing Subtype")
 	}
 
 	switch *subtype {
@@ -958,7 +958,7 @@ func validateFontDict(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
 		err = validateType3FontDict(xRefTable, d)
 
 	default:
-		return errors.Errorf("validateFontDict: unknown Subtype: %s\n", *subtype)
+		return errors.Errorf("pdfcpu: validateFontDict: unknown Subtype: %s\n", *subtype)
 
 	}
 

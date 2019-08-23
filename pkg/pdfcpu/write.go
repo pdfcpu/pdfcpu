@@ -181,7 +181,7 @@ func ensureFileID(ctx *Context) error {
 	// Update ctx.ID
 	a := ctx.ID
 	if len(a) != 2 {
-		return errors.New("ID must be an array with 2 elements")
+		return errors.New("pdfcpu: ID must be an array with 2 elements")
 	}
 
 	a[1] = fid
@@ -233,7 +233,7 @@ func writePages(ctx *Context, rootDict Dict) error {
 	// Page tree root (the top "Pages" dict) must be indirect reference.
 	ir := rootDict.IndirectRefEntry("Pages")
 	if ir == nil {
-		return errors.New("writePages: missing indirect obj for pages dict")
+		return errors.New("pdfcpu: writePages: missing indirect obj for pages dict")
 	}
 
 	// Embed all page tree objects into objects stream.
@@ -274,7 +274,7 @@ func writeRootObject(ctx *Context) error {
 	}
 
 	if d == nil {
-		return errors.Errorf("writeRootObject: unable to dereference root dict")
+		return errors.Errorf("pdfcpu: writeRootObject: unable to dereference root dict")
 	}
 
 	dictName := "rootDict"
@@ -427,7 +427,7 @@ func writeXRefSubsection(ctx *Context, start int, size int) error {
 		entry := ctx.XRefTable.Table[i]
 
 		if entry.Compressed {
-			return errors.New("writeXRefSubsection: compressed entries present")
+			return errors.New("pdfcpu: writeXRefSubsection: compressed entries present")
 		}
 
 		var s string
@@ -705,7 +705,7 @@ func createXRefStream(ctx *Context, i1, i2, i3 int) ([]byte, *Array, error) {
 
 			off, found := ctx.Write.Table[j]
 			if !found {
-				return nil, nil, errors.Errorf("createXRefStream: missing write offset for obj #%d\n", i)
+				return nil, nil, errors.Errorf("pdfcpu: createXRefStream: missing write offset for obj #%d\n", i)
 			}
 
 			// in use, uncompressed
@@ -866,7 +866,7 @@ func setupEncryption(ctx *Context) error {
 	var err error
 
 	if ok := validateAlgorithm(ctx); !ok {
-		return errors.New("unsupported encryption algorithm")
+		return errors.New("pdfcpu: unsupported encryption algorithm")
 	}
 
 	d := newEncryptDict(
@@ -881,7 +881,7 @@ func setupEncryption(ctx *Context) error {
 	}
 
 	if ctx.ID == nil {
-		return errors.New("encrypt: missing ID")
+		return errors.New("pdfcpu: encrypt: missing ID")
 	}
 
 	var id []byte
@@ -978,16 +978,12 @@ func updateEncryption(ctx *Context) error {
 
 func handleEncryption(ctx *Context) error {
 
-	action := "writing"
-
 	if ctx.Cmd == ENCRYPT || ctx.Cmd == DECRYPT {
 
 		if ctx.Cmd == DECRYPT {
 
 			// Remove encryption.
 			ctx.EncKey = nil
-
-			action = "decrypting"
 
 		} else {
 
@@ -1000,7 +996,7 @@ func handleEncryption(ctx *Context) error {
 			if ctx.EncryptUsingAES {
 				alg = "AES"
 			}
-			action = fmt.Sprintf("encrypting(%s-%d)", alg, ctx.EncryptKeyLength)
+			log.CLI.Printf("using %s-%d\n", alg, ctx.EncryptKeyLength)
 		}
 
 	} else if ctx.UserPWNew != nil || ctx.OwnerPWNew != nil || ctx.Cmd == SETPERMISSIONS {
@@ -1017,12 +1013,6 @@ func handleEncryption(ctx *Context) error {
 		ctx.WriteObjectStream = false
 		ctx.WriteXRefStream = false
 	}
-
-	s := filepath.Join(ctx.Write.DirName, ctx.Write.FileName)
-	if len(s) > 0 {
-		s = " " + s
-	}
-	log.CLI.Printf("%s%s...\n", action, s)
 
 	return nil
 }
