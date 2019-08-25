@@ -556,11 +556,23 @@ Examples: "pdfcpu grid out.pdf 1 10 in.pdf"
    AB, B40, Shikisen`
 
 	usageVersion     = "usage: pdfcpu version"
-	usageLongVersion = "prints the pdfcpu version"
+	usageLongVersion = "Print the pdfcpu version."
 
 	usagePaper     = "usage: pdfcpu paper"
-	usageLongPaper = "prints a list of supported paper sizes"
+	usageLongPaper = "Print a list of supported paper sizes."
 
-	usageInfo     = "usage: pdfcpu info [-upw userpw] [-opw ownerpw] inFile"
-	usageLongInfo = usageInfo
+	usageInfo     = "usage: pdfcpu info [-u(nits)] [-upw userpw] [-opw ownerpw] inFile"
+	usageLongInfo = `Print info about a PDF file.
+   
+units, u ... paper size display unit
+     upw ... user password
+     opw ... owner password
+  inFile ... input pdf file
+    
+Possible units are:
+   
+points, po ... (default) points
+inches, in ... inches
+        cm ... centimetres
+        mm ... millimetres`
 )

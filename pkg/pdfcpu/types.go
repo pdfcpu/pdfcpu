@@ -192,8 +192,8 @@ func RectForArray(a Array) *Rectangle {
 }
 
 // RectForDim returns a new rectangle for given dimensions.
-func RectForDim(width, height int) *Rectangle {
-	return Rect(0.0, 0.0, float64(width), float64(height))
+func RectForDim(width, height float64) *Rectangle {
+	return Rect(0.0, 0.0, width, height)
 }
 
 // RectForFormat returns a new rectangle for given format.

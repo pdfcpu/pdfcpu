@@ -846,5 +846,21 @@ func handleInfoCommand(conf *pdfcpu.Configuration) {
 	inFile := flag.Arg(0)
 	ensurePdfExtension(inFile)
 
+	if !pdfcpu.MemberOf(units, []string{"", "points", "po", "inches", "in", "cm", "mm"}) {
+		fmt.Fprintf(os.Stderr, "%s\n\n", "supported units: (po)ints, (in)ches, cm, mm")
+		os.Exit(1)
+	}
+
+	switch units {
+	case "points", "po":
+		conf.Units = pdfcpu.POINTS
+	case "inches", "in":
+		conf.Units = pdfcpu.INCHES
+	case "cm":
+		conf.Units = pdfcpu.CENTIMETRES
+	case "mm":
+		conf.Units = pdfcpu.MILLIMETRES
+	}
+
 	process(cli.InfoCommand(inFile, conf))
 }

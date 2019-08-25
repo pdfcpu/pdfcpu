@@ -930,7 +930,7 @@ func createPage(xRefTable *XRefTable, parentPageIndRef IndirectRef, mediaBox *Re
 	return xRefTable.IndRefForNewObject(pageDict)
 }
 
-func addPageTreeWithoutPage(xRefTable *XRefTable, rootDict Dict, d *dim) error {
+func addPageTreeWithoutPage(xRefTable *XRefTable, rootDict Dict, d *Dim) error {
 
 	// May be modified later on.
 	mediaBox := RectForDim(d.w, d.h)
@@ -1928,7 +1928,7 @@ func CreateContext(xRefTable *XRefTable, conf *Configuration) *Context {
 }
 
 // CreateContextWithXRefTable creates a Context with an xRefTable without pages for given configuration.
-func CreateContextWithXRefTable(conf *Configuration, pageDim *dim) (*Context, error) {
+func CreateContextWithXRefTable(conf *Configuration, pageDim *Dim) (*Context, error) {
 
 	xRefTable, err := createXRefTableWithRootDict()
 	if err != nil {

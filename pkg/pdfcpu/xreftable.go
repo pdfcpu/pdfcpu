@@ -80,7 +80,7 @@ type Enc struct {
 type XRefTable struct {
 	Table               map[int]*XRefTableEntry
 	Size                *int             // Object count from PDF trailer dict.
-	PageCount           int              // Number of pages, set during validation.
+	PageCount           int              // Number of pages.
 	Root                *IndirectRef     // Pointer to catalog (reference to root object).
 	RootDict            Dict             // Catalog
 	Names               map[string]*Node // Cache for name trees as found in catalog.
@@ -1704,12 +1704,127 @@ func (xRefTable *XRefTable) PageDict(page int) (Dict, *InheritedPageAttrs, error
 	return pageDict, &inhPAttrs, nil
 }
 
-// PageMediaBox returns the Mediabox in effect for page i.
-func (xRefTable *XRefTable) PageMediaBox(i int) (*Rectangle, error) {
+// EnsurePageCount evaluates the page count for xRefTable if necessary.
+func (xRefTable *XRefTable) EnsurePageCount() error {
 
-	_, inhPAttrs, err := xRefTable.PageDict(i)
+	if xRefTable.PageCount > 0 {
+		return nil
+	}
 
-	return inhPAttrs.mediaBox, err
+	pageRoot, err := xRefTable.Pages()
+	if err != nil {
+		return err
+	}
+
+	d, err := xRefTable.DereferenceDict(*pageRoot)
+	if err != nil {
+		return err
+	}
+
+	pageCount := d.IntEntry("Count")
+	if pageCount == nil {
+		return errors.New("pdfcpu: pageDict: missing \"Count\"")
+	}
+
+	xRefTable.PageCount = *pageCount
+
+	return nil
+}
+
+func (xRefTable *XRefTable) collectMediaBoxesForPageTree(root *IndirectRef, inhMediaBox *Rectangle, mediaBoxes []*Rectangle, p *int) (*Rectangle, error) {
+
+	d, err := xRefTable.DereferenceDict(*root)
+	if err != nil {
+		return nil, err
+	}
+
+	obj, found := d.Find("MediaBox")
+	if found {
+		a, err := xRefTable.DereferenceArray(obj)
+		if err != nil {
+			return nil, err
+		}
+		if inhMediaBox, err = rect(xRefTable, a); err != nil {
+			return nil, err
+		}
+	}
+
+	// Iterate over page tree.
+	kids := d.ArrayEntry("Kids")
+	if kids == nil {
+		return inhMediaBox, nil
+	}
+
+	for _, o := range kids {
+
+		if o == nil {
+			continue
+		}
+
+		// Dereference next page node dict.
+		ir, ok := o.(IndirectRef)
+		if !ok {
+			return nil, errors.Errorf("pdfcpu: collectMediaBoxesForPageTree: corrupt page node dict")
+		}
+
+		pageNodeDict, err := xRefTable.DereferenceDict(ir)
+		if err != nil {
+			return nil, err
+		}
+
+		switch *pageNodeDict.Type() {
+
+		case "Pages":
+			// Recurse over sub pagetree.
+			if _, err = xRefTable.collectMediaBoxesForPageTree(&ir, inhMediaBox, mediaBoxes, p); err != nil {
+				return nil, err
+			}
+
+		case "Page":
+			mediaBox, err := xRefTable.collectMediaBoxesForPageTree(&ir, inhMediaBox, mediaBoxes, p)
+			if err != nil {
+				return nil, err
+			}
+			if mediaBox == nil {
+				return nil, errors.New("pdfcpu: collectMediaBoxesForPageTree: mediaBox is nil")
+			}
+			mediaBoxes[*p] = mediaBox
+			*p++
+		}
+
+	}
+
+	return nil, nil
+}
+
+// PageDims returns a sorted slice with media box dimensions
+// for all pages sorted ascending by page number.
+func (xRefTable *XRefTable) PageDims() ([]Dim, error) {
+
+	if err := xRefTable.EnsurePageCount(); err != nil {
+		return nil, err
+	}
+
+	mediaBoxes := make([]*Rectangle, xRefTable.PageCount)
+
+	// Get an indirect reference to the page tree root dict.
+	root, err := xRefTable.Pages()
+	if err != nil {
+		return nil, err
+	}
+
+	i := 0
+	var mb Rectangle
+	if _, err := xRefTable.collectMediaBoxesForPageTree(root, &mb, mediaBoxes, &i); err != nil {
+		return nil, err
+	}
+
+	ps := make([]Dim, len(mediaBoxes))
+	for i, mb := range mediaBoxes {
+		ps[i] = Dim{mb.Width(), mb.Height()}
+	}
+
+	return ps, nil
 }
 
 func (xRefTable *XRefTable) emptyPage(parentIndRef *IndirectRef, mediaBox *Rectangle) (*IndirectRef, error) {

@@ -104,6 +104,10 @@ func ExtractImages(rs io.ReadSeeker, outDir string, selectedPages []string, conf
 		return err
 	}
 
+	if err := ctx.EnsurePageCount(); err != nil {
+		return err
+	}
+
 	fromWrite := time.Now()
 	pages, err := pagesForPageSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
@@ -202,6 +206,10 @@ func ExtractFonts(rs io.ReadSeeker, outDir string, selectedPages []string, conf 
 		return err
 	}
 
+	if err := ctx.EnsurePageCount(); err != nil {
+		return err
+	}
+
 	fromWrite := time.Now()
 	pages, err := pagesForPageSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
@@ -270,6 +278,10 @@ func ExtractPages(rs io.ReadSeeker, outDir string, selectedPages []string, conf 
 	fromStart := time.Now()
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
 	if err != nil {
+		return err
+	}
+
+	if err := ctx.EnsurePageCount(); err != nil {
 		return err
 	}
 
@@ -429,6 +441,10 @@ func ExtractContent(rs io.ReadSeeker, outDir string, selectedPages []string, con
 		return err
 	}
 
+	if err := ctx.EnsurePageCount(); err != nil {
+		return err
+	}
+
 	fromWrite := time.Now()
 	pages, err := pagesForPageSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
@@ -534,6 +550,10 @@ func ExtractMetadata(rs io.ReadSeeker, outDir string, selectedPages []string, co
 	fromStart := time.Now()
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
 	if err != nil {
+		return err
+	}
+
+	if err := ctx.EnsurePageCount(); err != nil {
 		return err
 	}
 

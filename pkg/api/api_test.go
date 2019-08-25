@@ -87,6 +87,36 @@ func BenchmarkValidateCommand(b *testing.B) {
 	}
 }
 
+func isPDF(filename string) bool {
+	return strings.HasSuffix(strings.ToLower(filename), ".pdf")
+}
+
+func AllPDFs(t *testing.T, dir string) []string {
+	t.Helper()
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("pdfFiles from %s: %v\n", dir, err)
+	}
+	ff := []string(nil)
+	for _, f := range files {
+		if isPDF(f.Name()) {
+			ff = append(ff, f.Name())
+		}
+	}
+	return ff
+}
+func TestPageDimensions(t *testing.T) {
+	msg := "TestPageDimensions"
+	for _, fn := range AllPDFs(t, inDir) {
+		inFile := filepath.Join(inDir, fn)
+		// Retrieve page dimensions for inFile.
+		_, err := PageDims(inFile)
+		if err != nil {
+			t.Fatalf("%s: %v\n", msg, err)
+		}
+	}
+}
+
 func TestValidate(t *testing.T) {
 	msg := "TestValidate"
 	inFile := filepath.Join(inDir, "Acroforms2.pdf")

@@ -29,7 +29,7 @@ import (
 
 var (
 	fileStats, mode, selectedPages string
-	upw, opw, key, perm            string
+	upw, opw, key, perm, units     string
 	verbose, veryVerbose           bool
 	quiet                          bool
 	needStackTrace                 = true
@@ -48,7 +48,7 @@ func initFlags() {
 	flag.StringVar(&fileStats, "stats", "", statsUsage)
 	flag.StringVar(&fileStats, "s", "", statsUsage)
 
-	modeUsage := "validate: strict|relaxed; extract: image|font|content|page; encrypt: rc4|aes"
+	modeUsage := "validate: strict|relaxed; extract: image|font|content|page|meta; encrypt: rc4|aes"
 	flag.StringVar(&mode, "mode", "", modeUsage)
 	flag.StringVar(&mode, "m", "", modeUsage)
 
@@ -58,6 +58,10 @@ func initFlags() {
 
 	permUsage := "encrypt, perm set: none|all"
 	flag.StringVar(&perm, "perm", "none", permUsage)
+
+	unitsUsage := "info: po|in|cm|mm"
+	flag.StringVar(&units, "units", "po", unitsUsage)
+	flag.StringVar(&units, "u", "po", unitsUsage)
 
 	selectedPagesUsage := "a comma separated list of pages or page ranges, see pdfcpu help split/extract"
 	flag.StringVar(&selectedPages, "pages", "", selectedPagesUsage)

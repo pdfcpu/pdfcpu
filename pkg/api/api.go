@@ -96,6 +96,22 @@ func PageCount(inFile string) (int, error) {
 	return ctx.PageCount, nil
 }
 
+// PageDims returns a sorted slice of mediaBox dimensions for inFile.
+func PageDims(inFile string) ([]pdf.Dim, error) {
+	ctx, err := ReadContextFile(inFile)
+	if err != nil {
+		return nil, err
+	}
+	pd, err := ctx.PageDims()
+	if err != nil {
+		return nil, err
+	}
+	if len(pd) != ctx.PageCount {
+		return nil, errors.New("pdfcpu: corrupt page dimensions")
+	}
+	return pd, nil
+}
+
 // ValidateContext validates a PDF context.
 func ValidateContext(ctx *pdf.Context) error {
 	return validate.XRefTable(ctx.XRefTable)
@@ -160,7 +176,7 @@ func Validate(rs io.ReadSeeker, conf *pdf.Configuration) error {
 	conf.Cmd = pdf.VALIDATE
 
 	if conf.ValidationMode == pdf.ValidationNone {
-		return errors.New("pdfcpu: validate: mode == ValidationNone")
+		return errors.New("pdfcpu: validate: mode ValidationNone not allowed")
 	}
 
 	from1 := time.Now()
@@ -533,6 +549,10 @@ func Split(rs io.ReadSeeker, outDir, fileName string, span int, conf *pdf.Config
 		return err
 	}
 
+	if err := ctx.EnsurePageCount(); err != nil {
+		return err
+	}
+
 	fromWrite := time.Now()
 
 	if err = writePDFSequence(ctx, span, outDir, fileName); err != nil {
@@ -573,6 +593,10 @@ func Trim(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *pdf.Confi
 	fromStart := time.Now()
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
 	if err != nil {
+		return err
+	}
+
+	if err := ctx.EnsurePageCount(); err != nil {
 		return err
 	}
 
@@ -654,6 +678,10 @@ func Rotate(rs io.ReadSeeker, w io.Writer, rotation int, selectedPages []string,
 	fromStart := time.Now()
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
 	if err != nil {
+		return err
+	}
+
+	if err := ctx.EnsurePageCount(); err != nil {
 		return err
 	}
 
@@ -746,6 +774,10 @@ func AddWatermarks(rs io.ReadSeeker, w io.Writer, selectedPages []string, wm *pd
 	fromStart := time.Now()
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
 	if err != nil {
+		return err
+	}
+
+	if err := ctx.EnsurePageCount(); err != nil {
 		return err
 	}
 
@@ -852,6 +884,10 @@ func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *p
 			return err
 		}
 
+		if err := ctx.EnsurePageCount(); err != nil {
+			return err
+		}
+
 		pages, err := pagesForPageSelection(ctx.PageCount, selectedPages, true)
 		if err != nil {
 			return err
@@ -940,6 +976,10 @@ func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdf.Impo
 		ctx, err = pdf.CreateContextWithXRefTable(conf, imp.PageDim)
 	}
 	if err != nil {
+		return err
+	}
+
+	if err := ctx.EnsurePageCount(); err != nil {
 		return err
 	}
 
@@ -1065,6 +1105,10 @@ func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *pd
 		return err
 	}
 
+	if err := ctx.EnsurePageCount(); err != nil {
+		return err
+	}
+
 	pages, err := pagesForPageSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return err
@@ -1142,12 +1186,13 @@ func RemovePages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *pd
 	}
 	conf.Cmd = pdf.REMOVEPAGES
 
-	// Validation has to be on in order to calc current page count.
-	conf.ValidationMode = pdf.ValidationRelaxed
-
 	fromStart := time.Now()
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
 	if err != nil {
+		return err
+	}
+
+	if err := ctx.EnsurePageCount(); err != nil {
 		return err
 	}
 
@@ -1323,9 +1368,8 @@ func Info(rs io.ReadSeeker, conf *pdf.Configuration) ([]string, error) {
 		return nil, err
 	}
 
-	s := ctx.InfoDigest()
+	return ctx.InfoDigest()
 
-	return s, nil
 }
 
 // InfoFile returns information about inFile.

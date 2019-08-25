@@ -252,7 +252,7 @@ func (wm *Watermark) calcBoundingBox() {
 
 	if wm.isImage() || wm.isPDF() {
 
-		bb = RectForDim(wm.width, wm.height)
+		bb = RectForDim(float64(wm.width), float64(wm.height))
 		ar := bb.AspectRatio()
 		//fmt.Printf("calcBB: ar:%f scale:%f\n", ar, wm.scale)
 		//fmt.Printf("vp: %s\n", wm.vp)

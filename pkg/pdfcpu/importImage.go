@@ -33,7 +33,7 @@ var errInvalidImportConfig = errors.New("pdfcpu: Invalid import configuration st
 
 // Import represents the command details for the command "ImportImage".
 type Import struct {
-	PageDim  *dim    // page dimensions in user units.
+	PageDim  *Dim    // page dimensions in user units.
 	PageSize string  // one of A0,A1,A2,A3,A4(=default),A5,A6,A7,A8,Letter,Legal,Ledger,Tabloid,Executive,ANSIC,ANSID,ANSIE.
 	Pos      anchor  // position anchor, one of tl,tc,tr,l,c,r,bl,bc,br,full.
 	Dx, Dy   int     // anchor offset.
@@ -52,7 +52,7 @@ func (imp Import) String() string {
 		imp.PageSize, *imp.PageDim, imp.Pos, imp.Dx, imp.Dy, imp.Scale, sc)
 }
 
-func parsePageFormat(v string, setDim bool) (*dim, string, error) {
+func parsePageFormat(v string, setDim bool) (*Dim, string, error) {
 
 	if setDim {
 		return nil, v, errors.New("pdfcpu: only one of format('f') or dimensions('d') allowed")
@@ -85,7 +85,7 @@ func parsePageFormat(v string, setDim bool) (*dim, string, error) {
 	return d, v, nil
 }
 
-func parsePageDim(v string, setFormat bool) (*dim, string, error) {
+func parsePageDim(v string, setFormat bool) (*Dim, string, error) {
 
 	if setFormat {
 		return nil, v, errors.New("pdfcpu: only one of format('f') or dimensions('d') allowed")
@@ -106,7 +106,7 @@ func parsePageDim(v string, setFormat bool) (*dim, string, error) {
 		return nil, v, errors.Errorf("pdfcpu: dimension Y must be a positiv numeric value: %s\n", ss[1])
 	}
 
-	d := dim{w, h}
+	d := Dim{float64(w), float64(h)}
 
 	return &d, "", nil
 }
@@ -347,7 +347,7 @@ func lowerLeftCorner(vpw, vph, bbw, bbh float64, a anchor) types.Point {
 	return p
 }
 
-func importImagePDFBytes(wr io.Writer, pageDim *dim, imgWidth, imgHeight float64, imp *Import) {
+func importImagePDFBytes(wr io.Writer, pageDim *Dim, imgWidth, imgHeight float64, imp *Import) {
 
 	vpw := float64(pageDim.w)
 	vph := float64(pageDim.h)
@@ -421,7 +421,7 @@ func NewPageForImage(xRefTable *XRefTable, r io.Reader, parentIndRef *IndirectRe
 	contents.InsertName("Filter", filter.Flate)
 	contents.FilterPipeline = []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}
 
-	dim := &dim{w, h}
+	dim := &Dim{float64(w), float64(h)}
 	if imp.Pos != Full {
 		dim = imp.PageDim
 	}

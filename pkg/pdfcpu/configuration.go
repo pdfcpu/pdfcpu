@@ -126,6 +126,9 @@ type Configuration struct {
 
 	// Command being executed.
 	Cmd CommandMode
+
+	// Chosen units for outputting paper sizes.
+	Units DisplayUnit
 }
 
 // NewDefaultConfiguration returns the default pdfcpu configuration.

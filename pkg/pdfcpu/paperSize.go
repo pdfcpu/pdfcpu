@@ -18,31 +18,59 @@ package pdfcpu
 
 import "fmt"
 
-type dim struct {
-	w, h int
+// DisplayUnit is the metric unit used to output paper sizes.
+type DisplayUnit int
+
+// The available display units.
+const (
+	POINTS DisplayUnit = iota
+	INCHES
+	CENTIMETRES
+	MILLIMETRES
+)
+
+// Dim represents the dimensions of a rectangular view medium
+// like a PDF page, a sheet of paper or an image grid.
+type Dim struct {
+	w, h float64
+}
+
+// ToInches converts d to inches.
+func (d Dim) ToInches() Dim {
+	return Dim{d.w / 72, d.h / 72}
+}
+
+// ToCentimetres converts d to centimetres.
+func (d Dim) ToCentimetres() Dim {
+	return Dim{d.w / 72 * 2.54, d.h / 72 * 2.54}
+}
+
+// ToMillimetres converts d to centimetres.
+func (d Dim) ToMillimetres() Dim {
+	return Dim{d.w / 72 * 25.4, d.h / 72 * 25.4}
 }
 
 // AspectRatio returns the relation between width and height.
-func (d dim) AspectRatio() float64 {
-	return float64(d.w) / float64(d.h)
+func (d Dim) AspectRatio() float64 {
+	return d.w / d.h
 }
 
 // Landscape returns true if d is in landscape mode.
-func (d dim) Landscape() bool {
+func (d Dim) Landscape() bool {
 	return d.AspectRatio() > 1
 }
 
 // Portrait returns true if d is in portrait mode.
-func (d dim) Portrait() bool {
+func (d Dim) Portrait() bool {
 	return d.AspectRatio() < 1
 }
 
-func (d dim) String() string {
-	return fmt.Sprintf("%dx%d points", d.w, d.h)
+func (d Dim) String() string {
+	return fmt.Sprintf("%fx%f points", d.w, d.h)
 }
 
 // PaperSize is a map of known paper sizes in user units (=72 dpi pixels).
-var PaperSize = map[string]*dim{
+var PaperSize = map[string]*Dim{
 
 	// ISO 216:1975 A
 	"4A0": {4768, 6741}, // 66 1/4" x 93 5/8"	1682 x 2378 mm

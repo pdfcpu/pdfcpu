@@ -32,7 +32,7 @@ import (
 
 var (
 	nUpValues = []int{2, 3, 4, 6, 8, 9, 12, 16}
-	nUpDims   = map[int]dim{
+	nUpDims   = map[int]Dim{
 		2:  {2, 1},
 		3:  {3, 1},
 		4:  {2, 2},
@@ -124,9 +124,9 @@ func parseMargin(s string) (int, error) {
 // NUp represents the command details for the command "NUp".
 type NUp struct {
 	PageSize     string      // Paper size eg. A4L, A4P, A4(=default=A4P), see paperSize.go
-	PageDim      *dim        // Page dimensions in user units.
+	PageDim      *Dim        // Page dimensions in user units.
 	Orient       orientation // One of rd(=default),dr,ld,dl
-	Grid         *dim        // Intra page grid dimensions eg (2,2)
+	Grid         *Dim        // Intra page grid dimensions eg (2,2)
 	PageGrid     bool        // Create a mxn grid of pages for PDF inputfiles only (think "extra page n-Up").
 	ImgInputFile bool        // Process image or PDF input files.
 	Margin       int         // Cropbox for n-Up content.
@@ -234,7 +234,7 @@ func ParseNUpGridDefinition(cols, rows int, nUp *NUp) error {
 		return errInvalidGridDims
 	}
 
-	nUp.Grid = &dim{m, n}
+	nUp.Grid = &Dim{float64(m), float64(n)}
 
 	return nil
 }
@@ -299,8 +299,8 @@ func ParseNUpDetails(s string, nup *NUp) error {
 
 func rectsForGrid(nup *NUp) []*Rectangle {
 
-	cols := nup.Grid.w
-	rows := nup.Grid.h
+	cols := int(nup.Grid.w)
+	rows := int(nup.Grid.h)
 
 	maxX := float64(nup.PageDim.w)
 	maxY := float64(nup.PageDim.h)
@@ -440,7 +440,7 @@ func nUpTilePDFBytes(wr io.Writer, r1, r2 *Rectangle, formResID string, nup *NUp
 
 func nUpImagePDFBytes(wr io.Writer, imgWidth, imgHeight int, nup *NUp, formResID string) {
 	for _, r := range rectsForGrid(nup) {
-		nUpTilePDFBytes(wr, RectForDim(imgWidth, imgHeight), r, formResID, nup)
+		nUpTilePDFBytes(wr, RectForDim(float64(imgWidth), float64(imgHeight)), r, formResID, nup)
 	}
 }
 
@@ -448,7 +448,7 @@ func createNUpForm(xRefTable *XRefTable, imgIndRef *IndirectRef, w, h, i int) (*
 
 	imgResID := fmt.Sprintf("Im%d", i)
 
-	bb := RectForDim(w, h)
+	bb := RectForDim(float64(w), float64(h))
 
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "/%s Do ", imgResID)
@@ -708,7 +708,7 @@ func nupFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict
 		formResID := fmt.Sprintf("Fm%d", i)
 		formsResDict.Insert(formResID, *formIndRef)
 
-		nUpTilePDFBytes(&buf, RectForDim(w, h), rr[i%len(rr)], formResID, nup)
+		nUpTilePDFBytes(&buf, RectForDim(float64(w), float64(h)), rr[i%len(rr)], formResID, nup)
 	}
 
 	// Wrap incomplete nUp page.
@@ -868,7 +868,7 @@ func NUpFromPDF(ctx *Context, selectedPages IntSet, nup *NUp) error {
 		return err
 	}
 
-	nup.PageDim = &dim{int(mb.Width()), int(mb.Height())}
+	nup.PageDim = &Dim{mb.Width(), mb.Height()}
 
 	err = nupPages(ctx, selectedPages, nup, &pagesDict, pagesIndRef)
 	if err != nil {

@@ -151,17 +151,59 @@ func (ctx *Context) String() string {
 	return strings.Join(logStr, "")
 }
 
-// InfoDigest returns info about ctx.
-func (ctx *Context) InfoDigest() []string {
-	var ss []string
+func (ctx *Context) units() string {
+	u := "points"
+	switch ctx.Units {
+	case INCHES:
+		u = "inches"
+	case CENTIMETRES:
+		u = "cm"
+	case MILLIMETRES:
+		u = "mm"
+	}
+	return u
+}
 
+func (ctx *Context) convertToUnits(d Dim) Dim {
+	switch ctx.Units {
+	case INCHES:
+		return d.ToInches()
+	case CENTIMETRES:
+		return d.ToCentimetres()
+	case MILLIMETRES:
+		return d.ToMillimetres()
+	}
+	return d
+}
+
+// InfoDigest returns info about ctx.
+func (ctx *Context) InfoDigest() ([]string, error) {
+	var ss []string
 	v := ctx.HeaderVersion
 	if ctx.RootVersion != nil {
 		v = ctx.RootVersion
 	}
 	ss = append(ss, fmt.Sprintf("%20s: %s", "PDF version", v))
 	ss = append(ss, fmt.Sprintf("%20s: %d", "Page count", ctx.PageCount))
-	//ss = append(ss, fmt.Sprintf("%20s: %d x %d cm", "Page size", 0, 0))
+
+	pd, err := ctx.PageDims()
+	if err != nil {
+		return nil, err
+	}
+
+	m := map[Dim]bool{}
+	for _, d := range pd {
+		m[d] = true
+	}
+
+	units := ctx.units()
+	s := "Page size:"
+	for d := range m {
+		dc := ctx.convertToUnits(d)
+		ss = append(ss, fmt.Sprintf("%21s %.2f x %.2f %s", s, dc.w, dc.h, units))
+		s = ""
+	}
+
 	ss = append(ss, fmt.Sprintf(".........................................."))
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Title", ctx.Title))
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Author", ctx.Author))
@@ -172,7 +214,7 @@ func (ctx *Context) InfoDigest() []string {
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Modification date", ctx.ModDate))
 	ss = append(ss, fmt.Sprintf(".........................................."))
 
-	s := "No"
+	s = "No"
 	if ctx.Tagged {
 		s = "Yes"
 	}
@@ -224,7 +266,7 @@ func (ctx *Context) InfoDigest() []string {
 	//	ss = append(ss, fmt.Sprintf("Id: %s", ctx.ID))
 	//}
 
-	return ss
+	return ss, nil
 }
 
 // ReadContext represents the context for reading a PDF file.
