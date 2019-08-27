@@ -6,6 +6,7 @@ layout: default
 
 | Date      | Tag / Commit | Description  
 |:----------|:-------------|:--------
+|2019-08-28 | [v0.2.4](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.4) | Fix #100, #104. Use x/image/ccitt.
 |2019-08-11 | [v0.2.3](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.3) | Transfer repo to org
 |2019-08-01 | [v0.2.2](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.2) | Fix #95-#97
 |2019-07-22 | [18994fd](https://github.com/pdfcpu/pdfcpu/commit/18994fd6776f425631cc195b28db99fd91d7c76f) | Fix #94
