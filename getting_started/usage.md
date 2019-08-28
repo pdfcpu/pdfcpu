@@ -137,8 +137,8 @@ pdfcpu version
 
 <br>
 
-### Print Info
+### Print PDF Info
 
 ```sh
-pdfcpu info
+pdfcpu info [-u(nits)] [-upw userpw] [-opw ownerpw] inFile
 ```
