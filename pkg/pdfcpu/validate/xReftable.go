@@ -526,7 +526,11 @@ func validatePieceDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 			continue
 		}
 
-		_, err = validateDateEntry(xRefTable, d1, dictName, "LastModified", REQUIRED, pdf.V10)
+		required := REQUIRED
+		if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+			required = OPTIONAL
+		}
+		_, err = validateDateEntry(xRefTable, d1, dictName, "LastModified", required, pdf.V10)
 		if err != nil {
 			return err
 		}
