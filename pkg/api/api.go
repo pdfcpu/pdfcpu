@@ -1305,11 +1305,7 @@ func Merge(rsc []io.ReadSeeker, w io.Writer, conf *pdf.Configuration) error {
 		return err
 	}
 
-	if ctxDest.XRefTable.Version() < pdf.V15 {
-		v, _ := pdf.PDFVersion("1.5")
-		ctxDest.XRefTable.RootVersion = &v
-		log.Stats.Println("Ensure V1.5 for writing object & xref streams")
-	}
+	ctxDest.EnsureVersionForWriting()
 
 	// Repeatedly merge files into fileDest's xref table.
 	for _, f := range rsc[1:] {

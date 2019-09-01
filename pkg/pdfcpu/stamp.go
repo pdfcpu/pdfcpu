@@ -937,7 +937,7 @@ func createResourcesForWM(ctx *Context, wm *Watermark) error {
 	return createFontResForWM(xRefTable, wm)
 }
 
-func createOCG(xRefTable *XRefTable, wm *Watermark) error {
+func ensureOCG(xRefTable *XRefTable, wm *Watermark) error {
 
 	name := "Background"
 	subt := "BG"
@@ -971,7 +971,16 @@ func createOCG(xRefTable *XRefTable, wm *Watermark) error {
 	return nil
 }
 
-func prepareOCPropertiesInRoot(rootDict Dict, wm *Watermark) error {
+func prepareOCPropertiesInRoot(ctx *Context, wm *Watermark) error {
+
+	rootDict, err := ctx.Catalog()
+	if err != nil {
+		return err
+	}
+
+	if _, ok := rootDict.Find("OCProperties"); ok {
+		return oneWatermarkOnlyError(wm.OnTop)
+	}
 
 	optionalContentConfigDict := Dict(
 		map[string]Object{
@@ -1011,13 +1020,8 @@ func prepareOCPropertiesInRoot(rootDict Dict, wm *Watermark) error {
 		},
 	)
 
-	_, ok := rootDict.Find("OCProperties")
-	if !ok {
-		rootDict.Insert("OCProperties", d)
-		return nil
-	}
-
-	return oneWatermarkOnlyError(wm.OnTop)
+	rootDict.Insert("OCProperties", d)
+	return nil
 }
 
 func createFormResDict(xRefTable *XRefTable, wm *Watermark) (*IndirectRef, error) {
@@ -1452,39 +1456,31 @@ func AddWatermarks(ctx *Context, selectedPages IntSet, wm *Watermark) error {
 
 	xRefTable := ctx.XRefTable
 
-	err := createOCG(xRefTable, wm)
-	if err != nil {
+	if err := ensureOCG(xRefTable, wm); err != nil {
 		return err
 	}
 
-	rootDict, err := xRefTable.Catalog()
-	if err != nil {
+	if err := prepareOCPropertiesInRoot(ctx, wm); err != nil {
 		return err
 	}
 
-	err = prepareOCPropertiesInRoot(rootDict, wm)
-	if err != nil {
+	if err := createResourcesForWM(ctx, wm); err != nil {
 		return err
 	}
 
-	err = createResourcesForWM(ctx, wm)
-	if err != nil {
-		return err
-	}
-
-	err = createExtGStateForStamp(xRefTable, wm)
-	if err != nil {
+	if err := createExtGStateForStamp(xRefTable, wm); err != nil {
 		return err
 	}
 
 	for k, v := range selectedPages {
 		if v {
-			err := watermarkPage(xRefTable, k, wm)
-			if err != nil {
+			if err := watermarkPage(xRefTable, k, wm); err != nil {
 				return err
 			}
 		}
 	}
+
+	xRefTable.EnsureVersionForWriting()
 
 	return nil
 }

@@ -179,6 +179,14 @@ func (xRefTable *XRefTable) ValidateVersion(element string, sinceVersion Version
 	return nil
 }
 
+// EnsureVersionForWriting sets the version to the highest supported PDF Version 1.7.
+// This is necessary to allow validation after adding features not supported
+// by the original version of a document as during watermarking.
+func (xRefTable *XRefTable) EnsureVersionForWriting() {
+	v := V17
+	xRefTable.RootVersion = &v
+}
+
 // IsLinearizationObject returns true if object #i is a a linearization object.
 func (xRefTable *XRefTable) IsLinearizationObject(i int) bool {
 	return xRefTable.LinearizationObjs[i]
