@@ -109,8 +109,9 @@ func TestPageDimensions(t *testing.T) {
 	msg := "TestPageDimensions"
 	for _, fn := range AllPDFs(t, inDir) {
 		inFile := filepath.Join(inDir, fn)
+
 		// Retrieve page dimensions for inFile.
-		_, err := PageDims(inFile)
+		_, err := PageDimsFile(inFile)
 		if err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}

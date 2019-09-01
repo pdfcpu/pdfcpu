@@ -41,7 +41,6 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/validate"
 	"github.com/pkg/errors"
@@ -96,12 +95,13 @@ func PageCount(inFile string) (int, error) {
 	return ctx.PageCount, nil
 }
 
-// PageDims returns a sorted slice of mediaBox dimensions for inFile.
-func PageDims(inFile string) ([]pdf.Dim, error) {
-	ctx, err := ReadContextFile(inFile)
+// PageDims returns a sorted slice of mediaBox dimensions for rs.
+func PageDims(rs io.ReadSeeker, conf *pdf.Configuration) ([]pdf.Dim, error) {
+	ctx, err := ReadContext(rs, conf)
 	if err != nil {
 		return nil, err
 	}
+
 	pd, err := ctx.PageDims()
 	if err != nil {
 		return nil, err
@@ -109,7 +109,19 @@ func PageDims(inFile string) ([]pdf.Dim, error) {
 	if len(pd) != ctx.PageCount {
 		return nil, errors.New("pdfcpu: corrupt page dimensions")
 	}
+
 	return pd, nil
+}
+
+// PageDimsFile returns a sorted slice of mediaBox dimensions for inFile.
+func PageDimsFile(inFile string) ([]pdf.Dim, error) {
+	f, err := os.Open(inFile)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	return PageDims(f, pdf.NewDefaultConfiguration())
 }
 
 // ValidateContext validates a PDF context.
@@ -962,7 +974,7 @@ func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdf.Impo
 	conf.Cmd = pdf.IMPORTIMAGES
 
 	if imp == nil {
-		imp = pdfcpu.DefaultImportConfig()
+		imp = pdf.DefaultImportConfig()
 	}
 
 	var (
