@@ -35,7 +35,7 @@ out=$2
 cp $1 $out/$f
 
 out1=$out/$f1$new.pdf
-pdfcpu watermark -verbose "Draft" $out/$f $out1 &> $out/$f1.log
+pdfcpu watermark add -verbose "Draft" $out/$f $out1 &> $out/$f1.log
 if [ $? -eq 1 ]; then
     echo "watermark error: $1 -> $out1"
     exit $?

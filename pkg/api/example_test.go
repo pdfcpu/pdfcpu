@@ -130,6 +130,29 @@ func ExampleAddWatermarksFile() {
 	AddWatermarksFile("in.pdf", "", nil, wm, nil)
 }
 
+func ExampleWatermarkLifecycle() {
+
+	// Add a "Demo" stamp to all pages of in.pdf along the diagonal running from lower left to upper right.
+	onTop := true
+	wm, _ := pdfcpu.ParseWatermarkDetails("Demo", onTop)
+	AddWatermarksFile("in.pdf", "", nil, wm, nil)
+
+	// Update stamp for correction:
+	wm, _ = pdfcpu.ParseWatermarkDetails("Confidential", onTop)
+	wm.Update = true
+	AddWatermarksFile("in.pdf", "", nil, wm, nil)
+
+	// Add another watermark on top of page 1
+	wm, _ = pdfcpu.ParseWatermarkDetails("Footer stamp, c:.5 1 1, p:bc", onTop)
+	AddWatermarksFile("in.pdf", "", nil, wm, nil)
+
+	// Remove watermark on page 1
+	RemoveWatermarksFile("in.pdf", "", []string{"1"}, nil)
+
+	// Remove all watermarks
+	RemoveWatermarksFile("in.pdf", "", nil, nil)
+}
+
 func ExampleImportImagesFile() {
 
 	// Convert an image into a single page of out.pdf which will be created if necessary.

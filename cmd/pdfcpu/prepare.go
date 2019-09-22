@@ -516,11 +516,11 @@ func handleChangeOwnerPasswordCommand(conf *pdfcpu.Configuration) {
 	process(cli.ChangeOwnerPWCommand(inFile, outFile, &pwOld, &pwNew, conf))
 }
 
-func handleWatermarksCommand(conf *pdfcpu.Configuration, onTop bool) {
+func addWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 	if len(flag.Args()) < 2 || len(flag.Args()) > 3 {
-		s := usageWatermark
+		s := usageWatermarkAdd
 		if onTop {
-			s = usageStamp
+			s = usageStampAdd
 		}
 		fmt.Fprintf(os.Stderr, "%s\n\n", s)
 		os.Exit(1)
@@ -551,11 +551,92 @@ func handleWatermarksCommand(conf *pdfcpu.Configuration, onTop bool) {
 }
 
 func handleAddStampsCommand(conf *pdfcpu.Configuration) {
-	handleWatermarksCommand(conf, true)
+	addWatermarks(conf, true)
 }
 
 func handleAddWatermarksCommand(conf *pdfcpu.Configuration) {
-	handleWatermarksCommand(conf, false)
+	addWatermarks(conf, false)
+}
+
+func updateWatermarks(conf *pdfcpu.Configuration, onTop bool) {
+	if len(flag.Args()) < 2 || len(flag.Args()) > 3 {
+		s := usageWatermarkUpdate
+		if onTop {
+			s = usageStampUpdate
+		}
+		fmt.Fprintf(os.Stderr, "%s\n\n", s)
+		os.Exit(1)
+	}
+
+	selectedPages, err := api.ParsePageSelection(selectedPages)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v", err)
+		os.Exit(1)
+	}
+
+	wm, err := pdfcpu.ParseWatermarkDetails(flag.Arg(0), onTop)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+
+	wm.Update = true
+
+	inFile := flag.Arg(1)
+	ensurePdfExtension(inFile)
+
+	outFile := ""
+	if len(flag.Args()) == 3 {
+		outFile = flag.Arg(2)
+		ensurePdfExtension(outFile)
+	}
+
+	process(cli.AddWatermarksCommand(inFile, outFile, selectedPages, wm, conf))
+}
+
+func handleUpdateStampsCommand(conf *pdfcpu.Configuration) {
+	updateWatermarks(conf, true)
+}
+
+func handleUpdateWatermarksCommand(conf *pdfcpu.Configuration) {
+	updateWatermarks(conf, false)
+}
+
+func removeWatermarks(conf *pdfcpu.Configuration, onTop bool) {
+
+	if len(flag.Args()) < 1 || len(flag.Args()) > 2 {
+		s := usageWatermarkRemove
+		if onTop {
+			s = usageStampRemove
+		}
+		fmt.Fprintf(os.Stderr, "%s\n\n", s)
+		os.Exit(1)
+	}
+
+	selectedPages, err := api.ParsePageSelection(selectedPages)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v", err)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	ensurePdfExtension(inFile)
+
+	outFile := ""
+	if len(flag.Args()) == 2 {
+		outFile = flag.Arg(1)
+		ensurePdfExtension(outFile)
+	}
+
+	process(cli.RemoveWatermarksCommand(inFile, outFile, selectedPages, conf))
+}
+
+func handleRemoveStampsCommand(conf *pdfcpu.Configuration) {
+	removeWatermarks(conf, true)
+}
+
+func handleRemoveWatermarksCommand(conf *pdfcpu.Configuration) {
+	removeWatermarks(conf, false)
 }
 
 func hasImageExtension(filename string) bool {
@@ -825,8 +906,7 @@ func handleGridCommand(conf *pdfcpu.Configuration) {
 	}
 
 	// pdfcpu grid description outFile m n inFile|imageFiles...
-	err = pdfcpu.ParseNUpDetails(flag.Arg(0), nup)
-	if err != nil {
+	if err = pdfcpu.ParseNUpDetails(flag.Arg(0), nup); err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}

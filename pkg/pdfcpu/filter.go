@@ -70,10 +70,8 @@ func encodeStream(sd *StreamDict) error {
 		sd.Raw = sd.Content
 		streamLength := int64(len(sd.Raw))
 		sd.StreamLength = &streamLength
-		ok := sd.Insert("Length", Integer(streamLength))
-		if !ok {
-			sd.Update("Length", Integer(streamLength))
-		}
+
+		sd.Update("Length", Integer(streamLength))
 		return nil
 	}
 
@@ -111,11 +109,7 @@ func encodeStream(sd *StreamDict) error {
 
 	streamLength := int64(len(sd.Raw))
 	sd.StreamLength = &streamLength
-
-	ok := sd.Insert("Length", Integer(streamLength))
-	if !ok {
-		sd.Update("Length", Integer(streamLength))
-	}
+	sd.Update("Length", Integer(streamLength))
 
 	log.Trace.Printf("encodeStream end")
 

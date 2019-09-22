@@ -2191,15 +2191,63 @@ func dereferenceObject(ctx *Context, objNr int) error {
 	return nil
 }
 
+func processDictRefCounts(xRefTable *XRefTable, d Dict) {
+	for _, e := range d {
+		switch o1 := e.(type) {
+		case IndirectRef:
+			entry, ok := xRefTable.FindTableEntryForIndRef(&o1)
+			if ok {
+				entry.RefCount++
+			}
+		case Dict:
+			processRefCounts(xRefTable, o1)
+		case Array:
+			processRefCounts(xRefTable, o1)
+		}
+	}
+}
+
+func processArrayRefCounts(xRefTable *XRefTable, a Array) {
+	for _, e := range a {
+		switch o1 := e.(type) {
+		case IndirectRef:
+			entry, ok := xRefTable.FindTableEntryForIndRef(&o1)
+			if ok {
+				entry.RefCount++
+			}
+		case Dict:
+			processRefCounts(xRefTable, o1)
+		case Array:
+			processRefCounts(xRefTable, o1)
+		}
+	}
+}
+
+func processRefCounts(xRefTable *XRefTable, o Object) {
+
+	switch o := o.(type) {
+	case Dict:
+		processDictRefCounts(xRefTable, o)
+
+	case StreamDict:
+		processDictRefCounts(xRefTable, o.Dict)
+
+	case Array:
+		processArrayRefCounts(xRefTable, o)
+	}
+}
+
 // Dereferences all objects including compressed objects from object streams.
 func dereferenceObjects(ctx *Context) error {
 
 	log.Read.Println("dereferenceObjects: begin")
 
+	xRefTable := ctx.XRefTable
+
 	// Get sorted slice of object numbers.
 	// TODO Skip sorting for performance gain.
 	var keys []int
-	for k := range ctx.XRefTable.Table {
+	for k := range xRefTable.Table {
 		keys = append(keys, k)
 	}
 	sort.Ints(keys)
@@ -2209,6 +2257,14 @@ func dereferenceObjects(ctx *Context) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	for _, objNr := range keys {
+		entry := xRefTable.Table[objNr]
+		if entry.Free || entry.Compressed {
+			continue
+		}
+		processRefCounts(xRefTable, entry.Object)
 	}
 
 	log.Read.Println("dereferenceObjects: end")

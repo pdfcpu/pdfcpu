@@ -187,7 +187,7 @@ func validateDateObject(xRefTable *pdf.XRefTable, o pdf.Object, sinceVersion pdf
 	return s.Value(), nil
 }
 
-func validateDateEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) (*pdf.StringLiteral, error) {
+func validateDateEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) (*string, error) {
 
 	log.Validate.Printf("validateDateEntry begin: entry=%s\n", entryName)
 
@@ -196,32 +196,16 @@ func validateDateEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName
 		return nil, err
 	}
 
-	o, err = xRefTable.Dereference(o)
+	date, err := xRefTable.DereferenceStringOrHexLiteral(o, sinceVersion, validateDate)
 	if err != nil {
 		return nil, err
 	}
-	if o == nil {
+	if date == "" {
 		if required {
 			return nil, errors.Errorf("validateDateEntry: dict=%s required entry=%s is nil", dictName, entryName)
 		}
 		log.Validate.Printf("validateDateEntry end: optional entry %s is nil\n", entryName)
 		return nil, nil
-	}
-
-	// Version check
-	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
-	if err != nil {
-		return nil, err
-	}
-
-	date, ok := o.(pdf.StringLiteral)
-	if !ok {
-		return nil, errors.Errorf("validateDateEntry: dict=%s entry=%s invalid type", dictName, entryName)
-	}
-
-	// Validation
-	if ok := validateDate(date.Value()); !ok {
-		return nil, errors.Errorf("validateDateEntry: dict=%s entry=%s invalid dict entry", dictName, entryName)
 	}
 
 	log.Validate.Printf("validateDateEntry end: entry=%s\n", entryName)

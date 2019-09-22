@@ -38,6 +38,10 @@ func equalObjects(o1, o2 Object, xRefTable *XRefTable) (ok bool, err error) {
 		return false, err
 	}
 
+	if o1 == nil {
+		return o2 != nil, nil
+	}
+
 	o1Type := fmt.Sprintf("%T", o1)
 	o2Type := fmt.Sprintf("%T", o2)
 	//log.Debug.Printf("equalObjects: comparing dereferenced %s with %s \n", o1Type, o2Type)

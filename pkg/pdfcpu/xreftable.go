@@ -40,6 +40,7 @@ type XRefTableEntry struct {
 	Free            bool
 	Offset          *int64
 	Generation      *int
+	RefCount        int
 	Object          Object
 	Compressed      bool
 	ObjectStream    *int
@@ -273,7 +274,7 @@ func (xRefTable *XRefTable) FindTableEntryLight(objNr int) (*XRefTableEntry, boo
 // FindTableEntry returns the XRefTable entry for given object and generation numbers.
 func (xRefTable *XRefTable) FindTableEntry(objNr int, genNr int) (*XRefTableEntry, bool) {
 
-	//fmt.Printf("FindTableEntry: obj#:%d gen:%d \n", objNumber, generationNumber)
+	//fmt.Printf("FindTableEntry: obj#:%d gen:%d \n", objNr, genNr)
 	entry, found := xRefTable.Find(objNr)
 	if !found || *entry.Generation != genNr {
 		return nil, false
@@ -306,6 +307,12 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 
 	// see 7.5.4 Cross-Reference Table
 
+	// Hacky:
+	// Although we increment the obj generation when recycling objects,
+	// we always use generation 0 when reusing recycled objects.
+	// This is because pdfcpu does not reuse objects
+	// in an incremental fashion like laid out in the PDF spec.
+
 	log.Write.Println("InsertAndUseRecycled: begin")
 
 	// Get Next free object from freelist.
@@ -316,6 +323,7 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 
 	// If none available, add new object & return.
 	if *freeListHeadEntry.Offset == 0 {
+		xRefTableEntry.RefCount = 1
 		objNr = xRefTable.InsertNew(xRefTableEntry)
 		log.Write.Printf("InsertAndUseRecycled: end, new objNr=%d\n", objNr)
 		return objNr, nil
@@ -337,6 +345,7 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 
 	// Create a new entry for the recycled object.
 	// TODO use entrys generation.
+	xRefTableEntry.RefCount = 1
 	xRefTable.Table[objNr] = &xRefTableEntry
 
 	log.Write.Printf("InsertAndUseRecycled: end, recycled objNr=%d\n", objNr)
@@ -347,18 +356,21 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 // InsertObject inserts an object into the xRefTable.
 func (xRefTable *XRefTable) InsertObject(obj Object) (objNr int, err error) {
 	xRefTableEntry := NewXRefTableEntryGen0(obj)
+	xRefTableEntry.RefCount = 1
 	return xRefTable.InsertNew(*xRefTableEntry), nil
 }
 
 // IndRefForNewObject inserts an object into the xRefTable and returns an indirect reference to it.
 func (xRefTable *XRefTable) IndRefForNewObject(obj Object) (*IndirectRef, error) {
 
-	objNr, err := xRefTable.InsertObject(obj)
+	xRefTableEntry := NewXRefTableEntryGen0(obj)
+
+	objNr, err := xRefTable.InsertAndUseRecycled(*xRefTableEntry)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewIndirectRef(objNr, 0), nil
+	return NewIndirectRef(objNr, *xRefTableEntry.Generation), nil
 }
 
 // NewStreamDict creates a streamDict for buf.
@@ -551,26 +563,43 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 	return nil
 }
 
+func (xRefTable *XRefTable) locateObjForIndRef(ir IndirectRef) (Object, error) {
+
+	var err error
+	objNr := int(ir.ObjectNumber)
+
+	entry, found := xRefTable.FindTableEntryLight(objNr)
+	if !found {
+		return nil, errors.Errorf("pdfcpu: locateObjForIndRef: no xref entry found for obj #%d\n", objNr)
+	}
+
+	if entry.RefCount > 1 {
+		entry.RefCount--
+		//fmt.Printf("locateObjForIndRef(%d): new refcount: %d\n", objNr, entry.RefCount)
+		return nil, nil
+	}
+
+	o, err := xRefTable.Dereference(ir)
+	if err != nil || o == nil {
+		return o, err
+	}
+
+	err = xRefTable.DeleteObject(objNr)
+	if err != nil {
+		return nil, err
+	}
+
+	return o, nil
+}
+
 func (xRefTable *XRefTable) deleteObject(o Object) error {
+
+	var err error
 
 	ir, ok := o.(IndirectRef)
 	if ok {
-
-		var err error
-
-		objNr := int(ir.ObjectNumber)
-		o, err = xRefTable.Dereference(ir)
-		if err != nil {
-			return err
-		}
-
-		err = xRefTable.DeleteObject(objNr)
-		if err != nil {
-			return err
-		}
-
-		if o == nil {
-			log.Debug.Println("deleteObject: end, obj == nil")
+		o, err = xRefTable.locateObjForIndRef(ir)
+		if err != nil || o == nil {
 			return err
 		}
 	}
@@ -653,6 +682,7 @@ func (xRefTable *XRefTable) DeleteObject(objNr int) error {
 	entry.Compressed = false
 	entry.Offset = freeListHeadEntry.Offset
 	entry.Object = nil
+	entry.RefCount = 0
 
 	next := int64(objNr)
 	freeListHeadEntry.Offset = &next
@@ -675,7 +705,6 @@ func (xRefTable *XRefTable) UndeleteObject(objectNumber int) error {
 
 	// until we have found the last free object which should point to obj 0.
 	for *f.Offset != 0 {
-
 		objNr := int(*f.Offset)
 
 		entry, err := xRefTable.Free(objNr)
@@ -687,12 +716,14 @@ func (xRefTable *XRefTable) UndeleteObject(objectNumber int) error {
 			log.Debug.Printf("UndeleteObject end: undeleting obj#%d\n", objectNumber)
 			*f.Offset = *entry.Offset
 			entry.Offset = nil
+			if *entry.Generation > 0 {
+				*entry.Generation--
+			}
 			entry.Free = false
 			return nil
 		}
 
 		f = entry
-
 	}
 
 	log.Debug.Printf("UndeleteObject: end: obj#%d not in free list.\n", objectNumber)
@@ -702,7 +733,6 @@ func (xRefTable *XRefTable) UndeleteObject(objectNumber int) error {
 
 // indRefToObject dereferences an indirect object from the xRefTable and returns the result.
 func (xRefTable *XRefTable) indRefToObject(ir *IndirectRef) (Object, error) {
-
 	if ir == nil {
 		return nil, errors.New("pdfcpu: indRefToObject: input argument is nil")
 	}
@@ -713,8 +743,7 @@ func (xRefTable *XRefTable) indRefToObject(ir *IndirectRef) (Object, error) {
 	}
 
 	if entry.Free {
-		// TODO return err
-		return nil, nil
+		return nil, errors.New("pdfcpu: indRefToObject: input argument is free obj")
 	}
 
 	if entry.Object == nil {
@@ -727,7 +756,6 @@ func (xRefTable *XRefTable) indRefToObject(ir *IndirectRef) (Object, error) {
 
 // Dereference resolves an indirect object and returns the resulting PDF object.
 func (xRefTable *XRefTable) Dereference(o Object) (Object, error) {
-
 	ir, ok := o.(IndirectRef)
 	if !ok {
 		// Nothing do dereference.

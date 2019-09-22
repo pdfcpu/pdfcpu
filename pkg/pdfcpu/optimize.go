@@ -288,7 +288,13 @@ func optimizeFontResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjNumb
 		if originalObjNr != nil {
 			// We have identified a redundant fontDict!
 			// Update font resource dict so that rName points to the original.
-			rDict[rName] = *NewIndirectRef(*originalObjNr, 0)
+			ir := NewIndirectRef(*originalObjNr, 0)
+			rDict[rName] = *ir
+			// Increase refCount for *originalObjNr
+			entry, ok := ctx.FindTableEntryForIndRef(ir)
+			if ok {
+				entry.RefCount++
+			}
 			continue
 		}
 
@@ -413,7 +419,13 @@ func optimizeXObjectResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjN
 			if originalObjNr != nil {
 				// We have identified a redundant image!
 				// Update xobject resource dict so that rName points to the original.
-				rDict[rName] = *NewIndirectRef(*originalObjNr, 0)
+				ir := NewIndirectRef(*originalObjNr, 0)
+				rDict[rName] = *ir
+				// Increase refCount for *originalObjNr
+				entry, ok := ctx.FindTableEntryForIndRef(ir)
+				if ok {
+					entry.RefCount++
+				}
 				continue
 			}
 

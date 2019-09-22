@@ -35,7 +35,7 @@ out=$2
 cp $1 $out/$f
 
 out1=$out/$f1$new.pdf
-pdfcpu stamp -verbose "Draft" $out/$f $out1 &> $out/$f1.log
+pdfcpu stamp add -verbose "Draft" $out/$f $out1 &> $out/$f1.log
 if [ $? -eq 1 ]; then
     echo "stamp error: $1 -> $out1"
     exit $?

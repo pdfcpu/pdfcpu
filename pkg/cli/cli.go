@@ -94,6 +94,11 @@ func AddWatermarks(cmd *Command) ([]string, error) {
 	return nil, api.AddWatermarksFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Watermark, cmd.Conf)
 }
 
+// RemoveWatermarks remove watermarks or stamps from selected pages of inFile and writes the result to outFile.
+func RemoveWatermarks(cmd *Command) ([]string, error) {
+	return nil, api.RemoveWatermarksFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
+}
+
 // NUp renders selected PDF pages or image files to outFile in n-up fashion.
 func NUp(cmd *Command) ([]string, error) {
 	return nil, api.NUpFile(cmd.InFiles, *cmd.OutFile, cmd.PageSelection, cmd.NUp, cmd.Conf)

@@ -240,7 +240,7 @@ func TestAddWatermarks(t *testing.T) {
 			"testwm.pdf",
 			[]string{"1-"},
 			false,
-			"Draft, s:0.7, r:20"},
+			"Draft, s:0.7, rot:20"},
 
 		// Add a greenish, slightly transparent stroked and filled text stamp to all odd pages of inFile other than page 1
 		// using the default rotation which is aligned along the first diagonal running from lower left to upper right corner.
@@ -249,7 +249,7 @@ func TestAddWatermarks(t *testing.T) {
 			"testStampText1.pdf",
 			[]string{"odd", "!1"},
 			true,
-			"Demo, f:Courier, c: 0 .8 0, o:0.8, m:2"},
+			"Demo, font:Courier, c: 0 .8 0, op:0.8, m:2"},
 
 		// Add a red filled text stamp to all odd pages of inFile other than page 1 using a font size of 48 points
 		// and the default rotation which is aligned along the first diagonal running from lower left to upper right corner.
@@ -258,14 +258,14 @@ func TestAddWatermarks(t *testing.T) {
 			"testStampText2.pdf",
 			[]string{"odd", "!1"},
 			true,
-			"Demo, f:Courier, c: 1 0 0, o:1, s:1 abs, p:48"},
+			"Demo, font:Courier, c: 1 0 0, op:1, s:1 abs, points:48"},
 
 		// Add image watermark to inFile starting at page 1 using no rotation.
 		{"TestWatermarkImage",
 			"Acroforms2.pdf", "testWMImageRel.pdf",
 			[]string{"1-"},
 			false,
-			filepath.Join(resDir, "pdfchip3.png") + ", r:0"},
+			filepath.Join(resDir, "pdfchip3.png") + ", rot:0"},
 
 		// Add image stamp to inFile using absolute scaling and a negative rotation of 90 degrees.
 		{"TestStampImageAbsScaling",
@@ -273,7 +273,7 @@ func TestAddWatermarks(t *testing.T) {
 			"testWMImageAbs.pdf",
 			[]string{"1-"},
 			true,
-			filepath.Join(resDir, "pdfchip3.png") + ", s:.5 a, r:-90"},
+			filepath.Join(resDir, "pdfchip3.png") + ", s:.5 a, rot:-90"},
 
 		// Add a PDF stamp to all pages of inFile using the 2nd page of pdfFile
 		// and rotate along the 2nd diagonal running from upper left to lower right corner.
@@ -285,6 +285,57 @@ func TestAddWatermarks(t *testing.T) {
 			filepath.Join(inDir, "Wonderwall.pdf") + ":2, d:2"},
 	} {
 		testAddWatermarks(t, tt.msg, tt.inFile, tt.outFile, tt.selectedPages, tt.wmConf, tt.onTop)
+	}
+}
+
+func TestStampingLifecyle(t *testing.T) {
+	msg := "TestStampingLifecyle"
+	inFile := filepath.Join(inDir, "Acroforms2.pdf")
+	outFile := filepath.Join(outDir, "stampLC.pdf")
+	onTop := true // we are testing stamps
+
+	// Stamp all pages.
+	wm, err := pdf.ParseWatermarkDetails("Demo", onTop)
+	if err != nil {
+		t.Fatalf("%s %s: %v\n", msg, outFile, err)
+	}
+	if _, err := Process(AddWatermarksCommand(inFile, outFile, nil, wm, nil)); err != nil {
+		t.Fatalf("%s %s: %v\n", msg, outFile, err)
+	}
+
+	// // Update stamp on page 1.
+	wm, err = pdf.ParseWatermarkDetails("Confidential", onTop)
+	if err != nil {
+		t.Fatalf("%s %s: %v\n", msg, outFile, err)
+	}
+	wm.Update = true
+	if _, err := Process(AddWatermarksCommand(outFile, "", []string{"1"}, wm, nil)); err != nil {
+		t.Fatalf("%s %s: %v\n", msg, outFile, err)
+	}
+
+	// Add another stamp on top for all pages.
+	// This is a redish transparent footer.
+	wm, err = pdf.ParseWatermarkDetails("Footer, pos:bc, c:0.8 0 0, op:.6, rot:0", onTop)
+	if err != nil {
+		t.Fatalf("%s %s: %v\n", msg, outFile, err)
+	}
+	if _, err := Process(AddWatermarksCommand(outFile, "", nil, wm, nil)); err != nil {
+		t.Fatalf("%s %s: %v\n", msg, outFile, err)
+	}
+
+	// Remove stamp on page 1.
+	if _, err := Process(RemoveWatermarksCommand(outFile, "", []string{"1"}, nil)); err != nil {
+		t.Fatalf("%s %s: %v\n", msg, outFile, err)
+	}
+
+	// Remove all stamps.
+	if _, err := Process(RemoveWatermarksCommand(outFile, "", nil, nil)); err != nil {
+		t.Fatalf("%s %s: %v\n", msg, outFile, err)
+	}
+
+	// Validate the result.
+	if err := validateFile(t, outFile, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
 
@@ -469,7 +520,7 @@ func TestImportImages(t *testing.T) {
 				filepath.Join(resDir, "snow.jpg"),
 			},
 			"Acroforms2.pdf",
-			"f:A3, p:c, s:1.0",
+			"f:A3, pos:c, s:1.0",
 			true},
 	} {
 		testImportImages(t, tt.msg, tt.imgFiles, tt.outFile, tt.impConf, tt.ensureOutFile)

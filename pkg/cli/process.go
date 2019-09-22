@@ -57,6 +57,7 @@ var cmdMap = map[pdf.CommandMode]func(cmd *Command) ([]string, error){
 	pdf.EXTRACTMETADATA:    ExtractMetadata,
 	pdf.TRIM:               Trim,
 	pdf.ADDWATERMARKS:      AddWatermarks,
+	pdf.REMOVEWATERMARKS:   RemoveWatermarks,
 	pdf.LISTATTACHMENTS:    processAttachments,
 	pdf.ADDATTACHMENTS:     processAttachments,
 	pdf.REMOVEATTACHMENTS:  processAttachments,
@@ -428,6 +429,20 @@ func AddWatermarksCommand(inFile, outFile string, pageSelection []string, wm *pd
 		OutFile:       &outFile,
 		PageSelection: pageSelection,
 		Watermark:     wm,
+		Conf:          conf}
+}
+
+// RemoveWatermarksCommand creates a new command to remove Watermarks from a file.
+func RemoveWatermarksCommand(inFile, outFile string, pageSelection []string, conf *pdf.Configuration) *Command {
+	if conf == nil {
+		conf = pdf.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdf.REMOVEWATERMARKS
+	return &Command{
+		Mode:          pdf.REMOVEWATERMARKS,
+		InFile:        &inFile,
+		OutFile:       &outFile,
+		PageSelection: pageSelection,
 		Conf:          conf}
 }
 

@@ -22,11 +22,11 @@ The commands are:
 	permissions	list, set user access permissions
 	rotate		rotate pages
 	split		split multi-page PDF into several PDFs according to split span
-	stamp		add text, image or PDF stamp to selected pages
+	stamp		add, remove, update text, image or PDF stamps for selected pages
 	trim		create trimmed version of selected pages
 	validate	validate PDF against PDF 32000-1:2008 (PDF 1.7)
 	version		print version
-	watermark	add text, image or PDF watermark to selected pages
+	watermark	add, remove, update text, image or PDF watermarks for selected pages
 
 */
 package pdfcpu

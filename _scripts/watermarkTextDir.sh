@@ -43,7 +43,7 @@ do
 	cp $pdf $out/$f
 	
 	out1=$out/$f1$new.pdf
-	pdfcpu watermark -verbose "Draft,m:1" $out/$f $out1 &> $out/$f1.log
+	pdfcpu watermark add -verbose "Draft, mode:1" $out/$f $out1 &> $out/$f1.log
 	if [ $? -eq 1 ]; then
         echo "watermark error: $pdf -> $out1"
         echo

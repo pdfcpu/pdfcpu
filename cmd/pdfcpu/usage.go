@@ -42,14 +42,14 @@ The commands are:
    permissions list, set user access permissions
    rotate      rotate pages
    split       split multi-page PDF into several PDFs according to split span
-   stamp       add text, image or PDF stamp to selected pages
+   stamp       add, remove, update text, image or PDF stamps for selected pages
    trim        create trimmed version of selected pages
    validate    validate PDF against PDF 32000-1:2008 (PDF 1.7)
    version     print version
-   watermark   add text, image or PDF watermark to selected pages
+   watermark   add, remove, update text, image or PDF watermarks for selected pages
 
    Completion supported for all commands.
-   One letter Unix style abbreviations supported for flags.
+   One letter Unix style abbreviations supported for flags and command parameters.
 
 Use "pdfcpu help [command]" for more information about a command.`
 
@@ -80,7 +80,7 @@ verbose, v ... turn on logging
        upw ... user password
        opw ... owner password
     inFile ... input pdf file
-   outFile ... output pdf file (default: inFile-new.pdf)`
+   outFile ... output pdf file`
 
 	usageSplit     = "usage: pdfcpu split [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile outDir [span]"
 	usageLongSplit = `Generate a set of PDFs for the input file in outDir according to given span value.
@@ -153,7 +153,7 @@ verbose, v ... turn on logging
        upw ... user password
        opw ... owner password
     inFile ... input pdf file
-   outFile ... output pdf file (default: inFile-new.pdf)
+   outFile ... output pdf file
    
 ` + usagePageSelection
 
@@ -178,7 +178,7 @@ verbose, v ... turn on logging
     outDir ... output directory`
 
 	usagePermList = "pdfcpu permissions list [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile"
-	usagePermSet  = "pdfcpu permissions set  [-v(erbose)|vv] [-q(uiet)] [-perm none|all] [-upw userpw] -opw ownerpw inFile"
+	usagePermSet  = "pdfcpu permissions set [-v(erbose)|vv] [-q(uiet)] [-perm none|all] [-upw userpw] -opw ownerpw inFile"
 
 	usagePerm = "usage: " + usagePermList +
 		"\n       " + usagePermSet
@@ -248,30 +248,41 @@ verbose, v ... turn on logging
 
     optional entries:
 
-         (defaults: 'f:Helvetica, p:24, s:0.5 rel, c:0.5 0.5 0.5, r:0, d:1, o:1, m:0')
+         (defaults: 'font:Helvetica, points:24, s:0.5 rel, c:0.5 0.5 0.5, rot:0, d:1, op:1, m:0')
 
-      f: fontname, a basefont, supported are: Helvetica, Times-Roman, Courier
-      p: fontsize in points, in combination with absolute scaling only.
-      s: scale factor, 0.0 <= x <= 1.0 followed by optional 'abs|rel' or 'a|r'.
-      c: color: 3 fill color intensities, where 0.0 < i < 1.0, eg 1.0, 0.0 0.0 = red (default:0.5 0.5 0.5 = gray)
-      r: rotation, where -180.0 <= x <= 180.0
-      d: render along diagonal, 1..lower left to upper right, 2..upper left to lower right (if present overrules r!)
-      o: opacity, where 0.0 <= x <= 1.0
-      m: render mode: 0 ... fill
-                      1 ... stroke
-                      2 ... fill & stroke
+      fontname:    a basefont, supported are: Helvetica, Times-Roman, Courier
+      points:      fontsize in points, in combination with absolute scaling only.
+      position:    one of 'full' or the anchors: tl,tc,tr, l,c,r, bl,bc,br
+      offset:      (dx dy) in user units eg. '15 20'
+      scalefactor: 0.0 <= x <= 1.0 followed by optional 'abs|rel' or 'a|r'.
+      color:       3 fill color intensities, where 0.0 < i < 1.0, eg 1.0, 0.0 0.0 = red (default:0.5 0.5 0.5 = gray)
+      rotation:    -180.0 <= x <= 180.0
+      diagonal:    render along diagonal, 1..lower left to upper right, 2..upper left to lower right (if present overrules r!)
+      opacity:     where 0.0 <= x <= 1.0
+      mode, rendermode: 0 ... fill
+                        1 ... stroke
+                        2 ... fill & stroke
 
     Only one of rotation and diagonal is allowed.
 
-e.g. 'Draft'                                                  'logo.png'
-     'Draft, d:2'                                             'logo.tif, o:0.5, s:0.5 abs, r:0'
-     'Intentionally left blank, s:.75 abs, p:48'              'some.pdf, r:45' 
-     'Confidental, f:Courier, s:0.75, c: 0.5 0.0 0.0, r:20'   'some.pdf:3, r:-90, s:0.75'
+    All configuration string parameters support completion.
+
+e.g. 'Draft'                                                  'logo.png, pos:bl, off: 20 5'
+     'Draft, d:2'                                             'logo.tif, op:0.5, s:0.5 abs, rot:0'
+     'Intentionally left blank, s:.75 abs, pointa:48'         'some.pdf, rot:45' 
+     'Confidental, f:Courier, s:0.75, c: 0.5 0.0 0.0, rot:20' 'some.pdf:3, rot:-90, s:0.75'
      
 ` + usagePageSelection
 
-	usageStamp     = "usage: pdfcpu stamp [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]"
-	usageLongStamp = `Add stamps for selected pages. 
+	usageStampAdd    = "pdfcpu stamp add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]"
+	usageStampRemove = "pdfcpu stamp remove [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageStampUpdate = "pdfcpu stamp update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]"
+
+	usageStamp = "usage: " + usageStampAdd +
+		"\n       " + usageStampRemove +
+		"\n       " + usageStampUpdate
+
+	usageLongStamp = `Process stamping for selected pages. 
 
  verbose, v ... turn on logging
          vv ... verbose logging
@@ -281,12 +292,19 @@ e.g. 'Draft'                                                  'logo.png'
         opw ... owner password
 description ... font, font size, text, color, image/pdf file name, pdf page#, rotation, opacity, scale factor, render mode
      inFile ... input pdf file
-    outFile ... output pdf file (default: inFile-new.pdf)
+    outFile ... output pdf file
 
 ` + usageWMDescription
 
-	usageWatermark     = "usage: pdfcpu watermark [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]"
-	usageLongWatermark = `Add watermarks for selected pages. 
+	usageWatermarkAdd    = "pdfcpu watermark add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]"
+	usageWatermarkRemove = "pdfcpu watermark remove [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageWatermarkUpdate = "pdfcpu watermark update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]"
+
+	usageWatermark = "usage: " + usageWatermarkAdd +
+		"\n       " + usageWatermarkRemove +
+		"\n       " + usageWatermarkUpdate
+
+	usageLongWatermark = `Process watermarking for selected pages. 
 
  verbose, v ... turn on logging
          vv ... verbose logging
@@ -296,7 +314,7 @@ description ... font, font size, text, color, image/pdf file name, pdf page#, ro
         opw ... owner password
 description ... font, font size, text, color, image/pdf file name, pdf page#, rotation, opacity, scale factor, render mode
      inFile ... input pdf file
-    outFile ... output pdf file (default: inFile-new.pdf)
+    outFile ... output pdf file
 
 ` + usageWMDescription
 
@@ -317,28 +335,33 @@ description ... dimensions, format, position, offset, scale factor
 
   optional entries:
 
-      (defaults: d:595 842, f:A4, p:full, o:0 0, s:0.5 rel)
+      (defaults: d:595 842, f:A4, pos:full, off:0 0, s:0.5 rel, dpi:72)
 
-  d: dimensions (width,height) in user units eg. '400 200'
+  dimensions: (width height) in user units eg. '400 200'
 
-  f: form/paper size, eg. A4, Letter, Legal...
+  formsize, papersize: eg. A4, Letter, Legal...
                            Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
                            An appended 'L' enforces landscape mode. (eg. A3L)
                            An appended 'P' enforces portrait mode. (eg. TabloidP)
 
-  p: position: one of 'full' or the anchors: tl,tc,tr, l,c,r, bl,bc,br
-  o: offset (dx,dy) in user units eg. 15,20
-  s: scale factor, 0.0 <= x <= 1.0 followed by optional 'abs|rel' or 'a|r'
+  position:    one of 'full' or the anchors: tl,tc,tr, l,c,r, bl,bc,br
+  offset:      (dx dy) in user units eg. '15 20'
+  scalefactor: 0.0 <= x <= 1.0 followed by optional 'abs|rel' or 'a|r'
+  dpi:         apply desired dpi
   
   Only one of dimensions or format is allowed.
   position: full => image dimensions equal page dimensions.
   
-  e.g. 'f:A5, p:c                            ... render the image centered on A5 with relative scaling 0.5.'
-       'd:300 600, p:bl, o:20 20, s:1.0 abs' ... render the image anchored to bottom left corner with offset 20,20 and abs. scaling 1.0.
-       'p:full'                              ... render the image to a page with corresponding dimensions.`
+  All configuration string parameters support completion.
+
+  e.g. 'f:A5, pos:c                              ... render the image centered on A5 with relative scaling 0.5.'
+       'd:300 600, pos:bl, off:20 20, s:1.0 abs' ... render the image anchored to bottom left corner with offset 20,20 and abs. scaling 1.0.
+       'pos:full'                                ... render the image to a page with corresponding dimensions.
+       'f:A4, pos:c, dpi:300'                    ... render the image centered on A4 respecting a destination resolution of 300 dpi.
+       `
 
 	usagePagesInsert = "pdfcpu pages insert [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]"
-	usagePagesRemove = "pdfcpu pages remove [-v(erbose)|vv] [-q(uiet)] -pages selectedPages  [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usagePagesRemove = "pdfcpu pages remove [-v(erbose)|vv] [-q(uiet)]  -pages selectedPages  [-upw userpw] [-opw ownerpw] inFile [outFile]"
 
 	usagePages = "usage: " + usagePagesInsert +
 		"\n       " + usagePagesRemove
@@ -401,23 +424,25 @@ description ... dimensions, format, orientation
   
         (defaults: d:595 842, f:A4, o:rd, b:on, m:3)
   
-    d: dimensions (width,height) in user units eg. '400 200'
+    dimensions: (width,height) in user units eg. '400 200'
     
-    f: form/paper size, eg. A4, Letter, Legal...
+    formsize, papersize, eg. A4, Letter, Legal...
                            Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
                            Appended 'L' enforces landscape mode. (eg. A3L)
                            Appended 'P' enforces portrait mode. (eg. TabloidP)
                            Only one of dimensions or format is allowed.
     
-    o: orientation, one of rd ... right down (=default)
+    orientation: one of rd ... right down (=default)
                            dr ... down right
                            ld ... left down
                            dl ... down left
                            Orientation applies to PDF input files only.
 
-    b: draw border ... on/off true/false
+    border:      on/off true/false
     
-    m: margin for n-up content: int >= 0
+    margin:      for n-up content: int >= 0
+
+All configuration string parameters support completion.
     
 Examples: "pdfcpu nup out.pdf 4 in.pdf"
           Rearrange pages of in.pdf into 2x2 grids and write result to out.pdf using the default orientation
@@ -459,23 +484,25 @@ description ... dimensions, format, orientation
   
         (defaults: d:595 842, f:A4, o:rd, b:on, m:3)
   
-    d: dimensions (width,height) in user units eg. '400 200'
+    dimensions: (width height) in user units eg. '400 200'
 
-    f: form/paper size, eg. A4, Letter, Legal...
+    formsize, papersize, eg. A4, Letter, Legal...
                            Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
                            Appended 'L' enforces landscape mode. (eg. A3L)
                            Appended 'P' enforces portrait mode. (eg. TabloidP)
                            Only one of dimensions or format is allowed.
 
-    o: orientation, one of rd ... right down (=default)
+    orientation: one of rd ... right down (=default)
                            dr ... down right
                            ld ... left down
                            dl ... down left
                            Orientation applies to PDF input files only.
 
-    b: draw border ... on/off true/false
+    border:      on/off true/false
     
-    m: margin for content: int >= 0
+    margin:      for content: int >= 0
+
+All configuration string parameters support completion.
 
 Examples: "pdfcpu grid out.pdf 1 10 in.pdf"
           Rearrange pages of in.pdf into 1x10 grids and write result to out.pdf using the default orientation.

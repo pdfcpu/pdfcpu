@@ -31,6 +31,13 @@ import (
 )
 
 var (
+	errInvalidGridID     = errors.New("pdfcpu: nup: n: one of 2, 3, 4, 6, 8, 9, 12, 16")
+	errInvalidGridDims   = errors.New("pdfcpu: grid: dimensions: m >= 0, n >= 0")
+	errInvalidNUpConfig  = errors.New("pdfcpu: nup: invalid configuration string. Please consult pdfcpu help nup")
+	errInvalidGridConfig = errors.New("pdfcpu: nup: invalid configuration string. Please consult pdfcpu help grid")
+)
+
+var (
 	nUpValues = []int{2, 3, 4, 6, 8, 9, 12, 16}
 	nUpDims   = map[int]Dim{
 		2:  {2, 1},
@@ -42,11 +49,70 @@ var (
 		12: {4, 3},
 		16: {4, 4},
 	}
-	errInvalidGridID     = errors.New("pdfcpu: nup: n: one of 2, 3, 4, 6, 8, 9, 12, 16")
-	errInvalidGridDims   = errors.New("pdfcpu: grid: dimensions: m >= 0, n >= 0")
-	errInvalidNUpConfig  = errors.New("pdfcpu: nup: invalid configuration string. Please consult pdfcpu help nup")
-	errInvalidGridConfig = errors.New("pdfcpu: nup: invalid configuration string. Please consult pdfcpu help grid")
 )
+
+type nUpParamMap map[string]func(string, *NUp) error
+
+var nupParamMap = nUpParamMap{
+	"dimensions":  parseDimensionsNUp,
+	"formsize":    parsePageFormatNUp,
+	"papersize":   parsePageFormatNUp,
+	"orientation": parseOrientation,
+	"border":      parseElementBorder,
+	"margin":      parseElementMargin,
+}
+
+// Handle applies parameter completion and if successful
+// parses the parameter values into import.
+func (m nUpParamMap) Handle(paramPrefix, paramValueStr string, nup *NUp) error {
+
+	var param string
+
+	// Completion support
+	for k := range m {
+		if !strings.HasPrefix(k, paramPrefix) {
+			continue
+		}
+		if len(param) > 0 {
+			return errors.Errorf("pdfcpu: ambiguous parameter prefix \"%s\"", paramPrefix)
+		}
+		param = k
+	}
+
+	if param == "" {
+		return errors.Errorf("pdfcpu: ambiguous parameter prefix \"%s\"", paramPrefix)
+	}
+
+	return m[param](paramValueStr, nup)
+}
+
+// NUp represents the command details for the command "NUp".
+type NUp struct {
+	PageDim      *Dim        // Page dimensions in user units.
+	PageSize     string      // Paper size eg. A4L, A4P, A4(=default=A4P), see paperSize.go
+	UserDim      bool        // true if one of dimensions or paperSize provided overriding the default.
+	Orient       orientation // One of rd(=default),dr,ld,dl
+	Grid         *Dim        // Intra page grid dimensions eg (2,2)
+	PageGrid     bool        // Create a mxn grid of pages for PDF inputfiles only (think "extra page n-Up").
+	ImgInputFile bool        // Process image or PDF input files.
+	Margin       int         // Cropbox for n-Up content.
+	Border       bool        // Draw bounding box.
+}
+
+// DefaultNUpConfig returns the default NUp configuration.
+func DefaultNUpConfig() *NUp {
+	return &NUp{
+		PageSize: "A4",
+		Orient:   RightDown,
+		Margin:   3,
+		Border:   true,
+	}
+}
+
+func (nup NUp) String() string {
+	return fmt.Sprintf("N-Up conf: %s %s, orient=%s, grid=%s, pageGrid=%t, isImage=%t\n",
+		nup.PageSize, *nup.PageDim, nup.Orient, *nup.Grid, nup.PageGrid, nup.ImgInputFile)
+}
 
 type orientation int
 
@@ -79,74 +145,102 @@ const (
 	DownLeft
 )
 
-func parseOrientation(s string) (orientation, error) {
+func parsePageFormatNUp(s string, nup *NUp) (err error) {
+	if nup.UserDim {
+		return errors.New("pdfcpu: only one of formsize(papersize) or dimensions allowed")
+	}
+	nup.PageDim, nup.PageSize, err = parsePageFormat(s)
+	nup.UserDim = true
+	return err
+}
+
+func parseDimensionsNUp(s string, nup *NUp) (err error) {
+	if nup.UserDim {
+		return errors.New("pdfcpu: only one of formsize(papersize) or dimensions allowed")
+	}
+	nup.PageDim, nup.PageSize, err = parsePageDim(s)
+	nup.UserDim = true
+	return err
+}
+
+func parseOrientation(s string, nup *NUp) error {
 
 	switch s {
 	case "rd":
-		return RightDown, nil
+		nup.Orient = RightDown
 	case "dr":
-		return DownRight, nil
+		nup.Orient = DownRight
 	case "ld":
-		return LeftDown, nil
+		nup.Orient = LeftDown
 	case "dl":
-		return DownLeft, nil
+		nup.Orient = DownLeft
+	default:
+		return errors.Errorf("pdfcpu: unknown nUp orientation: %s", s)
 	}
 
-	return 0, errors.Errorf("pdfcpu: unknown nUp orientation: %s", s)
+	return nil
 }
 
-func parseBorder(s string) (bool, error) {
+func parseElementBorder(s string, nup *NUp) error {
 
 	switch strings.ToLower(s) {
 	case "on", "true":
-		return true, nil
+		nup.Border = true
 	case "off", "false":
-		return false, nil
+		nup.Border = false
 	default:
-		return false, errors.New("pdfcpu: nUp border, please provide one of: on/off true/false")
+		return errors.New("pdfcpu: nUp border, please provide one of: on/off true/false")
 	}
+
+	return nil
 }
 
-func parseMargin(s string) (int, error) {
+func parseElementMargin(s string, nup *NUp) error {
 
-	n, err := strconv.Atoi(s)
+	i, err := strconv.Atoi(s)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
-	if n < 0 {
-		return 0, errors.New("pdfcpu: nUp margin, Please provide a positive int value")
+	if i < 0 {
+		return errors.New("pdfcpu: nUp margin, Please provide a positive int value")
 	}
 
-	return n, nil
+	nup.Margin = i
+
+	return nil
 }
 
-// NUp represents the command details for the command "NUp".
-type NUp struct {
-	PageSize     string      // Paper size eg. A4L, A4P, A4(=default=A4P), see paperSize.go
-	PageDim      *Dim        // Page dimensions in user units.
-	Orient       orientation // One of rd(=default),dr,ld,dl
-	Grid         *Dim        // Intra page grid dimensions eg (2,2)
-	PageGrid     bool        // Create a mxn grid of pages for PDF inputfiles only (think "extra page n-Up").
-	ImgInputFile bool        // Process image or PDF input files.
-	Margin       int         // Cropbox for n-Up content.
-	Border       bool        // Draw bounding box.
-}
+// ParseNUpDetails parses a NUp command string into an internal structure.
+func ParseNUpDetails(s string, nup *NUp) error {
 
-func (nup NUp) String() string {
-
-	return fmt.Sprintf("N-Up conf: %s %s, orient=%s, grid=%s, pageGrid=%t, isImage=%t\n",
-		nup.PageSize, *nup.PageDim, nup.Orient, *nup.Grid, nup.PageGrid, nup.ImgInputFile)
-}
-
-// DefaultNUpConfig returns the default NUp configuration.
-func DefaultNUpConfig() *NUp {
-	return &NUp{
-		PageSize: "A4",
-		Orient:   RightDown,
-		Margin:   3,
-		Border:   true,
+	err1 := errInvalidNUpConfig
+	if nup.PageGrid {
+		err1 = errInvalidGridConfig
 	}
+
+	if s == "" {
+		return err1
+	}
+
+	ss := strings.Split(s, ",")
+
+	for _, s := range ss {
+
+		ss1 := strings.Split(s, ":")
+		if len(ss1) != 2 {
+			return err1
+		}
+
+		paramPrefix := strings.TrimSpace(ss1[0])
+		paramValueStr := strings.TrimSpace(ss1[1])
+
+		if err := nupParamMap.Handle(paramPrefix, paramValueStr, nup); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // PDFNUpConfig returns an NUp configuration for Nup-ing PDF files.
@@ -235,64 +329,6 @@ func ParseNUpGridDefinition(cols, rows int, nUp *NUp) error {
 	}
 
 	nUp.Grid = &Dim{float64(m), float64(n)}
-
-	return nil
-}
-
-// ParseNUpDetails parses a NUp command string into an internal structure.
-func ParseNUpDetails(s string, nup *NUp) error {
-
-	err1 := errInvalidNUpConfig
-	if nup.PageGrid {
-		err1 = errInvalidGridConfig
-	}
-
-	if s == "" {
-		return err1
-	}
-
-	ss := strings.Split(s, ",")
-
-	var setDim, setFormat bool
-
-	for _, s := range ss {
-
-		ss1 := strings.Split(s, ":")
-		if len(ss1) != 2 {
-			return err1
-		}
-
-		k := strings.TrimSpace(ss1[0])
-		v := strings.TrimSpace(ss1[1])
-
-		var err error
-
-		switch k {
-		case "f": // page format
-			nup.PageDim, nup.PageSize, err = parsePageFormat(v, setDim)
-			setFormat = true
-
-		case "d": // page dimensions
-			nup.PageDim, nup.PageSize, err = parsePageDim(v, setFormat)
-			setDim = true
-
-		case "o": // n-Up layout orientation
-			nup.Orient, err = parseOrientation(v)
-
-		case "b": // border
-			nup.Border, err = parseBorder(v)
-
-		case "m": // margin
-			nup.Margin, err = parseMargin(v)
-
-		default:
-			err = err1
-		}
-
-		if err != nil {
-			return err
-		}
-	}
 
 	return nil
 }
@@ -452,7 +488,6 @@ func createNUpForm(xRefTable *XRefTable, imgIndRef *IndirectRef, w, h, i int) (*
 
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "/%s Do ", imgResID)
-	//b.WriteString("/Im0 Do ")
 
 	d := Dict(
 		map[string]Object{

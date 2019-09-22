@@ -23,7 +23,6 @@ import (
 	"os"
 
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
-	PDFCPULog "github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
@@ -36,134 +35,11 @@ var (
 	cmdMap                         CommandMap
 )
 
-// These will be set by Goreleaser.
+// Set by Goreleaser.
 var (
 	commit = "?"
 	date   = "?"
 )
-
-func initFlags() {
-
-	statsUsage := "optimize: a csv file for stats appending"
-	flag.StringVar(&fileStats, "stats", "", statsUsage)
-	flag.StringVar(&fileStats, "s", "", statsUsage)
-
-	modeUsage := "validate: strict|relaxed; extract: image|font|content|page|meta; encrypt: rc4|aes"
-	flag.StringVar(&mode, "mode", "", modeUsage)
-	flag.StringVar(&mode, "m", "", modeUsage)
-
-	keyUsage := "encrypt: 40|128|256"
-	flag.StringVar(&key, "key", "256", keyUsage)
-	flag.StringVar(&key, "k", "256", keyUsage)
-
-	permUsage := "encrypt, perm set: none|all"
-	flag.StringVar(&perm, "perm", "none", permUsage)
-
-	unitsUsage := "info: po|in|cm|mm"
-	flag.StringVar(&units, "units", "po", unitsUsage)
-	flag.StringVar(&units, "u", "po", unitsUsage)
-
-	selectedPagesUsage := "a comma separated list of pages or page ranges, see pdfcpu help split/extract"
-	flag.StringVar(&selectedPages, "pages", "", selectedPagesUsage)
-	flag.StringVar(&selectedPages, "p", "", selectedPagesUsage)
-
-	flag.BoolVar(&quiet, "quiet", false, "")
-	flag.BoolVar(&quiet, "q", false, "")
-
-	flag.BoolVar(&verbose, "verbose", false, "")
-	flag.BoolVar(&verbose, "v", false, "")
-	flag.BoolVar(&veryVerbose, "vv", false, "")
-
-	flag.StringVar(&upw, "upw", "", "user password")
-	flag.StringVar(&opw, "opw", "", "owner password")
-}
-
-func initCommandMap() {
-
-	attachCmdMap := NewCommandMap()
-	for k, v := range map[string]Command{
-		"list":    {handleListAttachmentsCommand, nil, "", ""},
-		"add":     {handleAddAttachmentsCommand, nil, "", ""},
-		"remove":  {handleRemoveAttachmentsCommand, nil, "", ""},
-		"extract": {handleExtractAttachmentsCommand, nil, "", ""},
-	} {
-		attachCmdMap.Register(k, v)
-	}
-
-	permissionsCmdMap := NewCommandMap()
-	for k, v := range map[string]Command{
-		"list": {handleListPermissionsCommand, nil, "", ""},
-		"set":  {handleSetPermissionsCommand, nil, "", ""},
-	} {
-		permissionsCmdMap.Register(k, v)
-	}
-
-	pagesCmdMap := NewCommandMap()
-	for k, v := range map[string]Command{
-		"insert": {handleInsertPagesCommand, nil, "", ""},
-		"remove": {handleRemovePagesCommand, nil, "", ""},
-	} {
-		pagesCmdMap.Register(k, v)
-	}
-
-	cmdMap = NewCommandMap()
-
-	for k, v := range map[string]Command{
-		"attachments": {nil, attachCmdMap, usageAttach, usageLongAttach},
-		"changeopw":   {handleChangeOwnerPasswordCommand, nil, usageChangeOwnerPW, usageLongChangeUserPW},
-		"changeupw":   {handleChangeUserPasswordCommand, nil, usageChangeUserPW, usageLongChangeUserPW},
-		"decrypt":     {handleDecryptCommand, nil, usageDecrypt, usageLongDecrypt},
-		"encrypt":     {handleEncryptCommand, nil, usageEncrypt, usageLongEncrypt},
-		"extract":     {handleExtractCommand, nil, usageExtract, usageLongExtract},
-		"grid":        {handleGridCommand, nil, usageGrid, usageLongGrid},
-		"help":        {printHelp, nil, "", ""},
-		"info":        {handleInfoCommand, nil, usageInfo, usageLongInfo},
-		"import":      {handleImportImagesCommand, nil, usageImportImages, usageLongImportImages},
-		"merge":       {handleMergeCommand, nil, usageMerge, usageLongMerge},
-		"nup":         {handleNUpCommand, nil, usageNUp, usageLongNUp},
-		"n-up":        {handleNUpCommand, nil, usageNUp, usageLongNUp},
-		"optimize":    {handleOptimizeCommand, nil, usageOptimize, usageLongOptimize},
-		"pages":       {nil, pagesCmdMap, usagePages, usageLongPages},
-		"paper":       {printPaperSizes, nil, usagePaper, usageLongPaper},
-		"permissions": {nil, permissionsCmdMap, usagePerm, usageLongPerm},
-		"rotate":      {handleRotateCommand, nil, usageRotate, usageLongRotate},
-		"split":       {handleSplitCommand, nil, usageSplit, usageLongSplit},
-		"stamp":       {handleAddStampsCommand, nil, usageStamp, usageLongStamp},
-		"trim":        {handleTrimCommand, nil, usageTrim, usageLongTrim},
-		"validate":    {handleValidateCommand, nil, usageValidate, usageLongValidate},
-		"watermark":   {handleAddWatermarksCommand, nil, usageWatermark, usageLongWatermark},
-		"version":     {printVersion, nil, usageVersion, usageLongVersion},
-	} {
-		cmdMap.Register(k, v)
-	}
-}
-
-func initLogging(verbose, veryVerbose bool) {
-
-	needStackTrace = verbose || veryVerbose
-
-	if quiet {
-		return
-	}
-
-	PDFCPULog.SetDefaultCLILogger()
-
-	if verbose || veryVerbose {
-		PDFCPULog.SetDefaultDebugLogger()
-		PDFCPULog.SetDefaultInfoLogger()
-		PDFCPULog.SetDefaultStatsLogger()
-	}
-
-	if veryVerbose {
-		PDFCPULog.SetDefaultTraceLogger()
-		//PDFCPULog.SetDefaultParseLogger()
-		PDFCPULog.SetDefaultReadLogger()
-		PDFCPULog.SetDefaultValidateLogger()
-		PDFCPULog.SetDefaultOptimizeLogger()
-		PDFCPULog.SetDefaultWriteLogger()
-	}
-
-}
 
 func init() {
 	initFlags()

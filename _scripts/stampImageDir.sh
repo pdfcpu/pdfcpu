@@ -43,7 +43,7 @@ do
 	cp $pdf $out/$f
 	
 	out1=$out/$f1$new.pdf
-	pdfcpu stamp -verbose "resources/GC2018.png, r:0" $out/$f $out1 &> $out/$f1.log
+	pdfcpu stamp add -verbose "resources/GC2018.png, rot:0" $out/$f $out1 &> $out/$f1.log
 	if [ $? -eq 1 ]; then
         echo "stamp error: $pdf -> $out1"
         echo

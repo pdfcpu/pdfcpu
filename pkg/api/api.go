@@ -869,6 +869,99 @@ func AddWatermarksFile(inFile, outFile string, selectedPages []string, wm *pdf.W
 	return AddWatermarks(f1, f2, selectedPages, wm, conf)
 }
 
+// RemoveWatermarks removes watermarks from all pages selected in rs and writes the result to w.
+func RemoveWatermarks(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *pdf.Configuration) error {
+	if conf == nil {
+		conf = pdf.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdf.ADDWATERMARKS
+
+	fromStart := time.Now()
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
+	if err != nil {
+		return err
+	}
+
+	if err := ctx.EnsurePageCount(); err != nil {
+		return err
+	}
+
+	from := time.Now()
+	pages, err := pagesForPageSelection(ctx.PageCount, selectedPages, true)
+	if err != nil {
+		return err
+	}
+
+	if err = pdf.RemoveWatermarks(ctx, pages); err != nil {
+		return err
+	}
+
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+
+	if conf.ValidationMode != pdf.ValidationNone {
+		if err = ValidateContext(ctx); err != nil {
+			return err
+		}
+	}
+
+	durStamp := time.Since(from).Seconds()
+	fromWrite := time.Now()
+
+	if err = WriteContext(ctx, w); err != nil {
+		return err
+	}
+
+	durWrite := durStamp + time.Since(fromWrite).Seconds()
+	durTotal := time.Since(fromStart).Seconds()
+	logOperationStats(ctx, "watermark, write", durRead, durVal, durOpt, durWrite, durTotal)
+
+	return nil
+}
+
+// RemoveWatermarksFile removes watermarks from all selected pages of inFile and writes the result to outFile.
+func RemoveWatermarksFile(inFile, outFile string, selectedPages []string, conf *pdf.Configuration) (err error) {
+	var f1, f2 *os.File
+
+	if f1, err = os.Open(inFile); err != nil {
+		return err
+	}
+
+	tmpFile := inFile + ".tmp"
+	if outFile != "" && inFile != outFile {
+		tmpFile = outFile
+		log.CLI.Printf("writing %s...\n", outFile)
+	} else {
+		log.CLI.Printf("writing %s...\n", inFile)
+	}
+	if f2, err = os.Create(tmpFile); err != nil {
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			f2.Close()
+			f1.Close()
+			if outFile == "" || inFile == outFile {
+				os.Remove(tmpFile)
+			}
+			return
+		}
+		if err = f2.Close(); err != nil {
+			return
+		}
+		if err = f1.Close(); err != nil {
+			return
+		}
+		if outFile == "" || inFile == outFile {
+			if err = os.Rename(tmpFile, inFile); err != nil {
+				return
+			}
+		}
+	}()
+
+	return RemoveWatermarks(f1, f2, selectedPages, conf)
+}
+
 // NUp rearranges PDF pages or images into page grids and writes the result to w.
 // Either rs or imgFiles will be used.
 func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *pdf.NUp, conf *pdf.Configuration) error {
@@ -1082,7 +1175,7 @@ func ImportImagesFile(imgFiles []string, outFile string, imp *pdf.Import, conf *
 				os.Remove(tmpFile)
 			}
 			for _, f := range rc {
-				if err = f.Close(); err != nil {
+				if err := f.Close(); err != nil {
 					return
 				}
 			}
