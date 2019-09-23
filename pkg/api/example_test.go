@@ -130,7 +130,7 @@ func ExampleAddWatermarksFile() {
 	AddWatermarksFile("in.pdf", "", nil, wm, nil)
 }
 
-func ExampleWatermarkLifecycle() {
+func ExampleRemoveWatermarksFile() {
 
 	// Add a "Demo" stamp to all pages of in.pdf along the diagonal running from lower left to upper right.
 	onTop := true
