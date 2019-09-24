@@ -71,13 +71,13 @@ The following table lists all supported values for `n` and the resulting grid la
 
 A configuration string to specify the details of the grid layout.
 
-| parameter | description     | values                                      | default
-|:----------|:----------------|:--------------------------------------------|:--
-| d         | dimensions      | (width, height) in user units eg. '400 200' | d: 595 842
-| f         | form/paper size | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode| f: A4
-| o         | orientation     | one of `rd, dr, ld, dl` for PDF input files | o: rd
-| b         | element border  | on/off true/false                           | b: on
-| m         | element margin  | integer >= 0                                | m: 0
+| parameter            | values                                      | default
+|:---------------------|:--------------------------------------------|:--
+| dimensions           | (width, height) in user units eg. '400 200' | d: 595 842
+| formsize, paper size | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode| f: A4
+| orientation          | one of `rd, dr, ld, dl` for PDF input files | o: rd
+| border               | on/off true/false                           | b: on
+| margin               | integer >= 0                                | m: 0
 
 <br>
 
@@ -103,6 +103,8 @@ This is usually associated with the writing direction used in the document to be
 * You only have to specify any parameter diverging from the default.
 
 * Only one of dimensions or format is allowed.
+
+* You may use parameter prefixes as long as the parameter can be identified.
 
 
 ## Examples

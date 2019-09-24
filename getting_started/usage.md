@@ -33,11 +33,11 @@ The commands are:
    permissions list, set user access permissions
    rotate      rotate pages
    split       split multi-page PDF into several PDFs according to split span
-   stamp       add text, image or PDF stamp to selected pages
+   stamp       add, update, remove text, image or PDF stamps to selected pages
    trim        create trimmed version of selected pages
    validate    validate PDF against PDF 32000-1:2008 (PDF 1.7)
    version     print version
-   watermark   add text, image or PDF watermark to selected pages
+   watermark   add, update, remove text, image or PDF watermarks to selected pages
 
    Completion supported for all commands.
    One letter Unix style abbreviations supported for flags.
@@ -70,6 +70,28 @@ pdfcpu grid [-v(erbose)|vv] [-pages pageSelection] [description] outFile m n inF
 Convert images (jpg, png, tiff) into PDF:
 ```sh
 pdfcpu import [-v(erbose)|vv] [description] outFile imageFile...
+```
+
+<br>
+
+## Stamps
+
+Manage stamps for selected pages:
+```sh
+pdfcpu stamp add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]
+pdfcpu stamp remove [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]
+pdfcpu stamp update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]
+```
+
+<br>
+
+## Watermarks
+
+Manage watermarks for selected pages:
+```sh
+pdfcpu watermark add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]
+pdfcpu watermark remove [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]
+pdfcpu watermark update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]
 ```
 
 <br>

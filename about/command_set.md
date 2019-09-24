@@ -12,7 +12,7 @@ layout: default
 * Split (split multi-page PDF into several PDFs according to split span)
 * Trim (generate a custom version of a PDF  including selected pages)
 * Rotate selected pages
-* Stamp/Watermark selected pages with text, an image or a PDF page
+* Manage (add,update,remove) stamps/watermarks for selected pages using text, images or PDF page content.
 * N-up (rearrange pages into grid layout for reduced number of pages)
 * Grid (rearrange pages into grid layout for enhanced browsing)
 * Import convert/import images into PDF

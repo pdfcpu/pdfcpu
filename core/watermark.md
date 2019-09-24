@@ -6,7 +6,10 @@ layout: default
 
 Add a watermark to selected pages of `inFile`. Have a look at some [examples](#examples).
 
-You can watermark `inFile` exactly once. The watermark is centered on the page and using `description` you can configure various aspects like rotation, scaling and opacity. For text based watermarks you can also configure font name, font size, fill color and render mode.
+Watermarks may be stacked on top of each other. 
+This allows for producing more complex page stamps - a mixture of text, images and foreign PDF page content.
+Using `description` you can configure various aspects like position, offset, rotation, scaling and opacity. For text based watermarks you can also configure font name, font size, fill color and render mode.
+
 
 ---
 WARNING<br>
@@ -18,7 +21,9 @@ A watermark resides in the background of a page. How much of the watermark will 
 ## Usage
 
 ```
-pdfcpu watermark [-v(erbose)|vv] [-q(uiet)] [-pages pageSelection] [-upw userpw] [-opw ownerpw] description inFile [outFile]
+pdfcpu watermark add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]
+pdfcpu watermark remove [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]
+pdfcpu watermark update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]
 ```
 
 
@@ -27,9 +32,9 @@ pdfcpu watermark [-v(erbose)|vv] [-q(uiet)] [-pages pageSelection] [-upw userpw]
 NOTE<br>
 In the Adobe world a watermark is text or an image that appears either in front of or behind existing document content, like a stamp comment aka stamp annotation that anybody reading the PDF can open, edit, move around and delete. The difference here is that a watermark is integrated into a PDF page as a fixed element. Within `pdfcpu` the meaning of these terms is slightly different:
 
-* `stamp` is any *content* that appears in front of the existing page content - sitting on top of everything else on a page
+* `stamp` is any accumulated *content* that appears in front of the existing page content - sitting on top of everything else on a page
 
-* `watermark` is any *content* that appears behind the existing page content - residing in the page background
+* `watermark` is any accumulated *content* that appears behind the existing page content - residing in the page background
 
 where *content* may be text, an image or a PDF page.
 
@@ -64,25 +69,32 @@ where *content* may be text, an image or a PDF page.
 
 A configuration string to specify watermark parameters.
 
+You may use parameter prefixes as long as the parameter can be identified.
+eg. `o: .7` is ambiguous because there is `opacity` and `offset`
+but `op: .7` will do the job.
+
 The first entry of the description configures the type. It is one of the following:
 
 * text string (Use \n for a multiline watermark)
 * image file name
 * PDF file name followed by an optional page number
 
-| parameter | description                     | values                                              | default
-|:----------|:--------------------------------|:----------------------------------------------------|:-
-| f         | fontname, a basefont            | Helvetica, Times-Roman, Courier                     | Helvetica
-| p         | fontsize in points              | in combination with absolute scaling only           | 24
-| s         | scale factor                    | 0.0 < i <= 1.0 followed by optional `abs` or `rel`  | 0.5 rel
-| c         | color, 3 fill color intensities | 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red         | 0.5 0.5 0.5 = gray
-| r         | rotation angle                  | -180.0 <= i <= 180.0                                | 0.0
-| d         | render along diagonal           | 1 .. lower left to upper right                      | 1
-|           |                                 | 2 .. upper left to lower right                      |
-| o         | opacity                         | 0.0 <= i <= 1.0                                     | 1
-| m         | render mode                     | 0 .. fill                                           | 0
-|           |                                 | 1 .. stroke                                         |
-|           |                                 | 2 .. fill & stroke                                  |
+| parameter | description                            | values                                              | default
+|:-----------------|:--------------------------------|:----------------------------------------------------|:---------
+| fontname         | a basefont                      | Helvetica, Times-Roman, Courier                     | font: Helvetica
+| points           | fontsize in points              | in combination with absolute scaling only           | points: 24
+| position         | the stamps lower left corner    | one of `full` or the anchors: `tl, tc, tr, l, c, r, bl, bc, br`| pos: c
+| offset           |                                 | (dx,dy) in user units eg. '15 20'                   | off: 0 0
+| scalefactor      |                                 | 0.0 < i <= 1.0 followed by optional `abs` or `rel`  | s: 0.5 rel
+| color            | 3 fill color intensities        | 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red         | c: 0.5 0.5 0.5 = gray
+| rotation         | rotation angle                  | -180.0 <= i <= 180.0                                | rot: 0.0
+| diagonal         | render along diagonal           | 1 .. lower left to upper right                      | d:1
+|                  |                                 | 2 .. upper left to lower right                      |
+| opacity          |                                 | 0.0 <= i <= 1.0                                     | op:1
+| mode, rendermode |                                 | 0 .. fill                                           | m:0
+|                  |                                 | 1 .. stroke                                         |
+|                  |                                 | 2 .. fill & stroke                                  |
+
 
 Only one of rotation and diagonal is allowed.
 
@@ -95,10 +107,21 @@ The following description parameters are for text based watermarks only:
 
 <br>
 
+#### Anchors for positioning
+
+|||||
+|-|-|-|-|
+|       | left | center |right
+|top    | `tl` | `tc`   | `tr`
+|       | `l`  | `c`    |  `r`
+|bottom | `bl` | `bc`   | `br`
+
+<br>
+
 #### Default description
 
 ```sh
-'f:Helvetica, p:24, s:0.5 rel, c:0.5 0.5 0.5, r:0, d:1, o:1, m:0'
+'f:Helvetica, points:24, s:0.5 rel, p:c, off:0 0, c:0.5 0.5 0.5, rot:0, d:1, o:1, m:0'
 ```
 
 The default watermark configuration is:
@@ -159,7 +182,7 @@ pdfcpu watermark 'This is a watermark, s:.9, d:2, c:.6 .2 .9' test.pdf out.pdf
 Create a watermark with 0 degree rotation using scale factor 0.9 and render mode `stroke`:
 
 ```sh
-pdfcpu watermark 'This is a watermark, s:.9, r:0, m:1' test.pdf out.pdf
+pdfcpu watermark 'This is a watermark, s:.9, rot:0, m:1' test.pdf out.pdf
 ```
 
 <p align="center">
@@ -171,7 +194,7 @@ pdfcpu watermark 'This is a watermark, s:.9, r:0, m:1' test.pdf out.pdf
 Create a watermark with a counterclockwise rotation of 45 degrees using scale factor 1, render mode `fill & stroke` and a fill color:
 
 ```sh
-pdfcpu watermark 'This is a watermark, s:1, r:45, m:2, c:.2 .7 .9' test.pdf out.pdf
+pdfcpu watermark 'This is a watermark, s:1, rot:45, m:2, c:.2 .7 .9' test.pdf out.pdf
 ```
 
 <p align="center">
@@ -183,7 +206,7 @@ pdfcpu watermark 'This is a watermark, s:1, r:45, m:2, c:.2 .7 .9' test.pdf out.
 Create a watermark with default rotation, using scale factor 1, font size 48, default render mode `fill`, a fill color and set opacity to 0.6:
 
 ```sh
-pdfcpu watermark 'Draft, p:48, s:1, c:.8 .8 .4, o:.6' test.pdf out.pdf
+pdfcpu watermark 'Draft, points:48, scale:1, color:.8 .8 .4, op:.6' test.pdf out.pdf
 ```
 
 <p align="center">
@@ -217,7 +240,7 @@ pdfcpu watermark 'pic.jpg' test.pdf out.pdf
 Create a watermark using 0 degree rotation and relative scaling of 1.0:
 
 ```sh
-pdfcpu watermark 'pic.jpg, s:1 rel, r:0' test.pdf out.pdf
+pdfcpu watermark 'pic.jpg, s:1 rel, rot:0' test.pdf out.pdf
 ```
 
 <p align="center">
@@ -229,7 +252,7 @@ pdfcpu watermark 'pic.jpg, s:1 rel, r:0' test.pdf out.pdf
 Create a watermark using 0 degree rotation and absolute scaling of 1.0:
 
 ```sh
-pdfcpu watermark 'pic.jpg, s:1 abs, r:0' test.pdf out.pdf
+pdfcpu watermark 'pic.jpg, s:1 abs, rot:0' test.pdf out.pdf
 ```
 
 <p align="center">
@@ -241,7 +264,7 @@ pdfcpu watermark 'pic.jpg, s:1 abs, r:0' test.pdf out.pdf
 Create a watermark using a clockwise rotation of 30 degrees and absolute scaling of 1.0:
 
 ```sh
-pdfcpu watermark 'pic.jpg, r:-30, s:1 abs' test.pdf out.pdf
+pdfcpu watermark 'pic.jpg, rotation:-30, scalefactor:1 abs' test.pdf out.pdf
 ```
 
 <p align="center">
@@ -253,7 +276,7 @@ pdfcpu watermark 'pic.jpg, r:-30, s:1 abs' test.pdf out.pdf
 Create a watermark using a clockwise rotation of 30 degrees and absolute scaling of 0.25:
 
 ```sh
-pdfcpu watermark 'pic.jpg, r:-30, s:.25 abs' test.pdf out.pdf
+pdfcpu watermark 'pic.jpg, rot:-30, s:.25 abs' test.pdf out.pdf
 ```
 
 <p align="center">

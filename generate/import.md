@@ -48,13 +48,14 @@ pdfcpu import [-v(erbose)|vv] [-q(uiet)] [description] outFile imageFile...
 
 A configuration string to specify the details of the image layout on the page.
 
-| parameter | description     | values | default
-|:----------|:----------------|:------|:-----------------------------------------------------------------
-| d         | dimensions      | (width, height) in user units eg. '400 200'                    | d: 595 842
-| f         | form/paper size | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode| f: A4
-| p         | position        | one of `full` or the anchors: `tl, tc, tr, l, c, r, bl, bc, br` | p: full
-| o         | offset          | (dx,dy) in user units eg. '15 20'                             | o: 0 0
-| s         | scale factor    | 0.0 <= s <= 1.0 followed by optional `abs` or `rel`           | s: 0.5 rel
+| parameter           | values                                                         | default
+|:--------------------|:---------------------------------------------------------------|:----------
+| dimensions          | (width, height) in user units eg. '400 200'                    | dim: 595 842
+| dpi                 | destination resolution in dots per inches                      | dpi: 72
+| formsize, papersize | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode| f: A4
+| position            | one of `full` or the anchors: `tl, tc, tr, l, c, r, bl, bc, br`| pos: full
+| offset              | (dx,dy) in user units eg. '15 20'                              | off: 0 0
+| scalefactor         | 0.0 <= s <= 1.0 followed by optional `abs` or `rel`            | s: 0.5 rel
 
 <br>
 
@@ -72,7 +73,7 @@ A configuration string to specify the details of the image layout on the page.
 #### Default description
 
 ```sh
-'f:A4, d:595 842, p:full, o:0 0, s:0.5 rel'
+'f:A4, dim:595 842, dpi:72, pos:full, off:0 0, s:0.5 rel'
 ```
 
 * You only have to specify any parameter diverging from the default.
@@ -85,7 +86,7 @@ A configuration string to specify the details of the image layout on the page.
 
 ## Examples
 
-Create a single page `photo.pdf` containing `photo.png` using the default positioning `p:full`. The page size dimensions will match the dimensions of the image:
+Create a single page `photo.pdf` containing `photo.png` using the default positioning `pos:full`. The page size dimensions will match the dimensions of the image:
 
 ```sh
 pdfcpu import photo.pdf photo.png
@@ -97,10 +98,10 @@ pdfcpu import photo.pdf photo.png
 
 <br>
 
-Create a single page PDF using paper size `f:A5` using the default orientation *portrait* which could also be expressed with `f:A5P`. Use the positioning parameter `p:c` to center the image on the page and the default relative scaling `s:0.5 rel`:
+Create a single page PDF using paper size `f:A5` using the default orientation *portrait* which could also be expressed with `f:A5P`. Use the positioning parameter `pos:c` to center the image on the page and the default relative scaling `s:0.5 rel`:
 
 ```sh
-pdfcpu import 'f:A5, p:c' photo.pdf photo.jpg
+pdfcpu import 'f:A5, pos:c' photo.pdf photo.jpg
 ```
 
 <p align="center">
@@ -109,10 +110,10 @@ pdfcpu import 'f:A5, p:c' photo.pdf photo.jpg
 
 <br>
 
-Create a single page PDF using paper size `f:A5L` using the orientation landscape. Use the positioning parameter `p:c` to center the image on the page and the default relative scaling `s:0.5 rel`:
+Create a single page PDF using paper size `f:A5L` using the orientation landscape. Use the positioning parameter `pos:c` to center the image on the page and the default relative scaling `s:0.5 rel`:
 
 ```sh
-pdfcpu import 'f:A5L, p:c' photo.pdf photo.jpg
+pdfcpu import 'f:A5L, pos:c' photo.pdf photo.jpg
 ```
 
 <p align="center">
@@ -121,10 +122,10 @@ pdfcpu import 'f:A5L, p:c' photo.pdf photo.jpg
 
 <br>
 
-Create a single page PDF using A5 landscape mode, a relative scaling of 0.5 and the positioning `p:bl` which anchors the picture to the bottom left page corner:
+Create a single page PDF using A5 landscape mode, a relative scaling of 0.5 and the positioning `pos:bl` which anchors the picture to the bottom left page corner:
 
 ```sh
-pdfcpu import 'f:A5L, p:bl' photo.pdf photo.jpg
+pdfcpu import 'form:A5L, pos:bl' photo.pdf photo.jpg
 ```
 
 <p align="center">
@@ -133,10 +134,10 @@ pdfcpu import 'f:A5L, p:bl' photo.pdf photo.jpg
 
 <br>
 
-Create a single page PDF using A5 landscape mode, relative scaling 0.5, positioning `p:r` which anchors the picture to the right side vertically centered. Use a negative horizontal offset `o:-20 0` to impose a margin:
+Create a single page PDF using A5 landscape mode, relative scaling 0.5, positioning `pos:r` which anchors the picture to the right side vertically centered. Use a negative horizontal offset `off:-20 0` to impose a margin:
 
 ```sh
-pdfcpu import 'f:A5L, p:r, o:-20 0' photo.pdf photo.jpg
+pdfcpu import 'form:A5L, pos:r, off:-20 0' photo.pdf photo.jpg
 ```
 
 <p align="center">
@@ -148,7 +149,7 @@ pdfcpu import 'f:A5L, p:r, o:-20 0' photo.pdf photo.jpg
 Import `photo.jpg` into a 500 x 500 single page PDF anchoring the image to the top left corner using a relative scaling of 0.3:
 
 ```sh
-pdfcpu import 'd:500 500, p:tl, s:0.3 rel' photo.pdf photo.jpg
+pdfcpu import 'd:500 500, pos:tl, s:0.3 rel' photo.pdf photo.jpg
 ```
 
 <p align="center">
@@ -157,10 +158,10 @@ pdfcpu import 'd:500 500, p:tl, s:0.3 rel' photo.pdf photo.jpg
 
 <br>
 
-Import `photo.jpg` into a 500 x 500 single page PDF anchoring the image to the top left corner using a scaling of 1:
+Import `photo.jpg` into a 500 x 500 single page PDF anchoring the image to the top left corner using a relative scaling of 1:
 
 ```sh
-pdfcpu import 'd:500 500, p:tl, s:1' photo.pdf photo.jpg
+pdfcpu import 'd:500 500, pos:tl, s:1' photo.pdf photo.jpg
 ```
 
 <p align="center">
@@ -179,14 +180,14 @@ pdfcpu import album.pdf pics/*
 Generate a PDF photo album with images centered on the page using the default relative scaling of 0.5:
 
 ```sh
-pdfcpu import 'p:c' album.pdf pics/*
+pdfcpu import 'pos:c' album.pdf pics/*
 ```
 <br>
 
 The following command also generates a PDF album but additionally configures the paper size *Letter* and positions the images to be anchored to the bottom left corner with a horizontal offset of 10 points and a vertical offset of 20 points with a scaling of 0.3 relative to page dimensions:
 
 ```sh
-pdfcpu import 'f:Letter, p:bl, o:10 20, s:0.3' album.pdf *.jpg *.png
+pdfcpu import 'f:Letter, pos:bl, off:10 20, scale:0.3' album.pdf *.jpg *.png
 ```
 <br>
 
