@@ -6,7 +6,7 @@ layout: default
 
 | Date      | Tag / Commit | Description  
 |:----------|:-------------|:--------
-|2019-09-23 | [v0.2.5](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.5) | Fix #101,#103,#107-#109, update&remove stamps
+|2019-09-23 | [v0.2.5](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.5) | Fix #101, #103, #107-#109
 |2019-08-28 | [v0.2.4](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.4) | Fix #100, #104. Use x/image/ccitt.
 |2019-08-11 | [v0.2.3](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.3) | Transfer repo to org
 |2019-08-01 | [v0.2.2](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.2) | Fix #95-#97
