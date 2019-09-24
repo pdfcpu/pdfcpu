@@ -138,7 +138,7 @@ You only have to specify parameters that differ from the default.
 
 Create a stamp using defaults only:
 ```sh
-pdfcpu stamp 'This is a stamp' test.pdf out.pdf
+pdfcpu stamp 'add This is a stamp' test.pdf out.pdf
 ```
 <p align="center">
   <img style="border-color:silver" border="1" src="resources/stt10.png" height="300">
@@ -148,7 +148,7 @@ pdfcpu stamp 'This is a stamp' test.pdf out.pdf
 Create a stamp using scale factor 1:
 
 ```sh
-pdfcpu stamp 'This is a stamp, s:1' test.pdf out.pdf
+pdfcpu stamp add 'This is a stamp, s:1' test.pdf out.pdf
 ```
 
 <p align="center">
@@ -161,7 +161,7 @@ pdfcpu stamp 'This is a stamp, s:1' test.pdf out.pdf
 Create a stamp along the second diagonale using scale factor 0.9, default render mode `fill` and a fill color:
 
 ```sh
-pdfcpu stamp 'This is a stamp, s:.9, d:2, c:.6 .2 .9' test.pdf out.pdf
+pdfcpu stamp add 'This is a stamp, s:.9, d:2, c:.6 .2 .9' test.pdf out.pdf
 ```
 
 <p align="center">
@@ -173,7 +173,7 @@ pdfcpu stamp 'This is a stamp, s:.9, d:2, c:.6 .2 .9' test.pdf out.pdf
 Create a stamp with 0 degree rotation using scale factor 0.9 and render mode `stroke`:
 
 ```sh
-pdfcpu stamp 'This is a stamp, s:.9, rot:0, m:1' test.pdf out.pdf
+pdfcpu stamp add 'This is a stamp, s:.9, rot:0, m:1' test.pdf out.pdf
 ```
 
 <p align="center">
@@ -185,7 +185,7 @@ pdfcpu stamp 'This is a stamp, s:.9, rot:0, m:1' test.pdf out.pdf
 Create a stamp with a counterclockwise rotation of 45 degrees using scale factor 1, render mode `fill & stroke` and a fill color:
 
 ```sh
-pdfcpu stamp 'This is a stamp, scale:1, rot:45, mode:2, color:.2 .7 .9' test.pdf out.pdf
+pdfcpu stamp add 'This is a stamp, scale:1, rot:45, mode:2, color:.2 .7 .9' test.pdf out.pdf
 ```
 
 <p align="center">
@@ -197,9 +197,9 @@ pdfcpu stamp 'This is a stamp, scale:1, rot:45, mode:2, color:.2 .7 .9' test.pdf
 Create a stamp with default rotation, using scale factor 1, font size 48, default render mode `fill`, a fill color and increasing opacity from 0.3 to 1. By setting an opacity < 1 you can fake a watermark. This may be useful in scenarios where `pdfcpu watermark` does not produce satisfying results for a particular PDF file:
 
 ```sh
-pdfcpu stamp 'Draft, points:48, s:1, c:.8 .8 .4, op:.3' test.pdf out1.pdf
-pdfcpu stamp 'Draft, points:48, s:1, c:.8 .8 .4, op:0.6' test.pdf out2.pdf
-pdfcpu stamp 'Draft, points:48, s:1, c:.8 .8 .4, op:1' test.pdf out3.pdf
+pdfcpu stamp add 'Draft, points:48, s:1, c:.8 .8 .4, op:.3' test.pdf out1.pdf
+pdfcpu stamp add 'Draft, points:48, s:1, c:.8 .8 .4, op:0.6' test.pdf out2.pdf
+pdfcpu stamp add 'Draft, points:48, s:1, c:.8 .8 .4, op:1' test.pdf out3.pdf
 ```
 
 <p align="center">
@@ -214,7 +214,7 @@ pdfcpu stamp 'Draft, points:48, s:1, c:.8 .8 .4, op:1' test.pdf out3.pdf
 
 Create a stamp using defaults only:
 ```sh
-pdfcpu stamp 'pic.jpg' test.pdf out.pdf
+pdfcpu stamp add 'pic.jpg' test.pdf out.pdf
 ```
 
 <p align="center">
@@ -226,7 +226,7 @@ pdfcpu stamp 'pic.jpg' test.pdf out.pdf
 Create a stamp using 0 degree rotation and relative scaling of 1.0:
 
 ```sh
-pdfcpu stamp 'pic.jpg, scalef:1 rel, rot:0' test.pdf out.pdf
+pdfcpu stamp add 'pic.jpg, scalef:1 rel, rot:0' test.pdf out.pdf
 ```
 
 <p align="center">
@@ -240,7 +240,7 @@ pdfcpu stamp 'pic.jpg, scalef:1 rel, rot:0' test.pdf out.pdf
 Create a stamp using defaults only. This will apply page 1 of `some.pdf`:
 
 ```sh
-pdfcpu stamp 'some.pdf' test.pdf out.pdf
+pdfcpu stamp add 'some.pdf' test.pdf out.pdf
 ```
 
 <p align="center">
@@ -252,9 +252,66 @@ pdfcpu stamp 'some.pdf' test.pdf out.pdf
 Create a stamp using defaults and page 2 of `some.pdf`, apply a 0 degree rotation and 0.3 relative scaling:
 
 ```sh
-pdfcpu stamp 'some.pdf:2, rot:0, scalef:.3' test.pdf out.pdf
+pdfcpu stamp add 'some.pdf:2, rot:0, scalef:.3' test.pdf out.pdf
 ```
 
 <p align="center">
   <img style="border-color:silver" border="1" src="resources/stp3.png" height="300">
 </p>
+
+<br>
+
+### Stamp Lifecycle
+
+Create a stamp using default.
+```sh
+pdfcpu stamp add 'Draft' template.pdf work.pdf
+```
+<p align="center">
+  <img style="border-color:silver" border="1" src="resources/1exp.png" height="300">
+</p>
+
+<br>
+
+Let's edit the stamps color, render mode and opacity
+```sh
+pdfcpu stamp update 'Draft, c: .2 .6 .5, m:2, op:.7' work.pdf
+```
+<p align="center">
+  <img style="border-color:silver" border="1" src="resources/2exp.png" height="300">
+</p>
+
+<br>
+
+We add a centered footer on the bottom of the page.
+```sh
+pdfcpu stamp add 'Footer, pos:bc, scale: 1.0 abs, rot:0, c: .5 .5 .9' work.pdf
+```
+<p align="center">
+  <img style="border-color:silver" border="1" src="resources/3exp.png" height="300">
+</p>
+
+<br>
+
+Let's add a logo in the top right corner.
+```sh
+pdfcpu stamp add 'logo.png, pos:tr, rot:0, s:.2' work.pdf
+```
+<p align="center">
+  <img style="border-color:silver" border="1" src="resources/4exp.png" height="300">
+</p>
+
+<br>
+
+Let's get rid of the stamp on page 1
+```
+pdfcpu stamp remove -pages 1 work.pdf
+```
+<p align="center">
+  <img style="border-color:silver" border="1" src="resources/t.png" height="300">
+</p>
+
+Finally let's remove all stamps of this file.
+```
+pdfcpu stamp remove work.pdf
+``` 
