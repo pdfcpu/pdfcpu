@@ -115,12 +115,12 @@ func ExampleAddWatermarksFile() {
 
 	// Stamp all odd pages of in.pdf in red "Confidential" in 48 point Courier using a rotation angle of 45 degrees.
 	onTop = true
-	wm, _ = pdfcpu.ParseWatermarkDetails("Confidential, f:Courier, c: 1 0 0, r:45, s:1 abs, p:48", onTop)
+	wm, _ = pdfcpu.ParseWatermarkDetails("Confidential, font:Courier, c: 1 0 0, rot:45, s:1 abs, points:48", onTop)
 	AddWatermarksFile("in.pdf", "", []string{"odd"}, wm, nil)
 
 	// Add image stamps to in.pdf using absolute scaling and a negative rotation of 90 degrees.
 	onTop = true
-	wm, _ = pdfcpu.ParseWatermarkDetails("image.png, s:.5 a, r:-90", onTop)
+	wm, _ = pdfcpu.ParseWatermarkDetails("image.png, s:.5 a, rot:-90", onTop)
 	AddWatermarksFile("in.pdf", "", nil, wm, nil)
 
 	// Add a PDF stamp to all pages of in.pdf using the 2nd page of stamp.pdf, use absolute scaling of 0.5
@@ -143,7 +143,7 @@ func ExampleRemoveWatermarksFile() {
 	AddWatermarksFile("in.pdf", "", nil, wm, nil)
 
 	// Add another watermark on top of page 1
-	wm, _ = pdfcpu.ParseWatermarkDetails("Footer stamp, c:.5 1 1, p:bc", onTop)
+	wm, _ = pdfcpu.ParseWatermarkDetails("Footer stamp, c:.5 1 1, pos:bc", onTop)
 	AddWatermarksFile("in.pdf", "", nil, wm, nil)
 
 	// Remove watermark on page 1
@@ -164,7 +164,7 @@ func ExampleImportImagesFile() {
 	// Import images by creating an A3 page for each image.
 	// Images are page centered with 1.0 relative scaling.
 	// Import an image as a new page of the existing out.pdf.
-	imp, _ := pdf.ParseImportDetails("f:A3, p:c, s:1.0")
+	imp, _ := pdf.ParseImportDetails("form:A3, pos:c, s:1.0")
 	ImportImagesFile([]string{"a1.png", "a2.jpg", "a3.tiff"}, "out.pdf", imp, nil)
 }
 
