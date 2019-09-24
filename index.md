@@ -14,6 +14,7 @@ layout: default
 
   <kbd><a href="{{site.baseurl}}/core/stamp"><img src="resources/stp.png" height="150"></a></kbd>&nbsp;
   <kbd><a href="{{site.baseurl}}/core/grid"><img src="resources/gridimg.png" height="150"></a></kbd>
-  Follow [pdfcpu](https://twitter.com/pdfcpu) on Twitter for news and release announcements!
+  <br>
+  Follow <a href="https://twitter.com/pdfcpu">pdfcpu</a> on Twitter for news and release announcements!
 </p>
 
