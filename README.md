@@ -10,7 +10,7 @@
 <img src="resources/logoSmall.png" width="150">
 
 pdfcpu is a simple PDF processing library written in [Go](http://golang.org) supporting encryption.
-It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO-32000).
+It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO-32000). Follow [pdfcpu](https://twitter.com/pdfcpu) on Twitter for news and release announcements.
 
 ## Motivation
 
@@ -20,7 +20,7 @@ This is an effort to build a comprehensive PDF processing library from the groun
   <kbd><a href="https://pdfcpu.io/core/grid"><img src="resources/gridpdf.png" height="150"></a></kbd>&nbsp;
   <kbd><a href="https://pdfcpu.io/core/watermark"><img src="resources/wmi1abs.png" height="150"></a></kbd>&nbsp;
   <kbd><a href="https://pdfcpu.io/core/nup"><img src="resources/nup9pdf.png" height="150"></a></kbd>&nbsp;
-  <kbd><a href="https://pdfcpu.io/core/stamp"><img src="resources/stt31.png" height="150"></a></kbd><br><br>
+  <kbd><a href="https://pdfcpu.io/core/stamp"><img src="resources/4exp.png" height="150"></a></kbd><br><br>
   <kbd><a href="https://pdfcpu.io/core/stamp"><img src="resources/sti.png" height="150"></a></kbd>&nbsp;
   <kbd><img src="resources/hold3.png" height="150"></kbd>&nbsp;
   <kbd><a href="https://pdfcpu.io/core/watermark"><img src="resources/wmi4.png" height="150"></a></kbd>&nbsp;<br><br>
