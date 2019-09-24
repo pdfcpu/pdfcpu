@@ -112,7 +112,7 @@ The following description parameters are for text based stamps only:
 #### Default description
 
 ```sh
-'f:Helvetica, points:24, s:0.5 rel, p:c, off: 0 0, c:0.5 0.5 0.5, rot:0, d:1, op:1, m:0'
+'f:Helvetica, points:24, s:0.5 rel, pos:c, off: 0 0, c:0.5 0.5 0.5, rot:0, d:1, op:1, m:0'
 ```
 The default stamp configuration is:
 
