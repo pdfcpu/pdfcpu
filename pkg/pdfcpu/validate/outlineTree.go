@@ -110,7 +110,8 @@ func validateOutlineTree(xRefTable *pdf.XRefTable, first, last *pdf.IndirectRef)
 			continue
 		}
 
-		if firstChild != nil && lastChild != nil {
+		if firstChild != nil && (xRefTable.ValidationMode == pdf.ValidationRelaxed ||
+			xRefTable.ValidationMode == pdf.ValidationStrict && lastChild != nil) {
 			// Recurse into subtree.
 			err = validateOutlineTree(xRefTable, firstChild, lastChild)
 			if err != nil {
@@ -123,8 +124,7 @@ func validateOutlineTree(xRefTable *pdf.XRefTable, first, last *pdf.IndirectRef)
 
 	}
 
-	// Relaxed validation
-	if objNumber != last.ObjectNumber.Value() && xRefTable.ValidationMode == pdf.ValidationStrict {
+	if xRefTable.ValidationMode == pdf.ValidationStrict && objNumber != last.ObjectNumber.Value() {
 		return errors.Errorf("pdfcpu: validateOutlineTree: corrupted child list %d <> %d\n", objNumber, last.ObjectNumber)
 	}
 
@@ -162,7 +162,7 @@ func validateOutlines(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool
 		return nil
 	}
 
-	if last == nil {
+	if xRefTable.ValidationMode == pdf.ValidationStrict && last == nil {
 		return errors.New("pdfcpu: validateOutlines: corrupted, root needs both first and last")
 	}
 

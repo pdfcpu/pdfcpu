@@ -86,7 +86,6 @@ Get the latest binary [here](https://github.com/pdfcpu/pdfcpu/releases).
 
 ### Using GOPATH
 
-There are no dependencies outside the Go standard library other than `pkg/errors`.<br>
 Required go version for building: go1.10 and up
 
 ```
