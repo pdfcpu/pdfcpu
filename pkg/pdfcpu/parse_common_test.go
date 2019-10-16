@@ -110,6 +110,7 @@ func TestParseObject(t *testing.T) {
 	doTestParseObjectOK("[1 0 R /n 2 0 R]", t)
 	doTestParseObjectOK("<</n 1 0 R>>", t)
 
+	doTestParseObjectOK("", t)
 	doTestParseObjectOK("    ", t)
 	doTestParseObjectOK("    \n", t)
 	doTestParseObjectOK("\n", t)
