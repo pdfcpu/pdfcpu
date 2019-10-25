@@ -42,16 +42,16 @@ const (
 
 // Rotation along one of 2 diagonals
 const (
-	noDiagonal = iota
-	diagonalLLToUR
-	diagonalULToLR
+	NoDiagonal = iota
+	DiagonalLLToUR
+	DiagonalULToLR
 )
 
 // Render mode
 const (
-	rmFill = iota
-	rmStroke
-	rmFillAndStroke
+	RMFill = iota
+	RMStroke
+	RMFillAndStroke
 )
 
 var (
@@ -188,9 +188,9 @@ func DefaultWatermarkConfig() *Watermark {
 		Scale:      0.5,
 		ScaleAbs:   false,
 		Color:      SimpleColor{0.5, 0.5, 0.5}, // gray
-		Diagonal:   diagonalLLToUR,
+		Diagonal:   DiagonalLLToUR,
 		Opacity:    1.0,
-		RenderMode: rmFill,
+		RenderMode: RMFill,
 		objs:       IntSet{},
 		fCache:     formCache{},
 		TextLines:  []string{},
@@ -444,7 +444,7 @@ func parseRotation(s string, wm *Watermark) error {
 	}
 
 	wm.Rotation = r
-	wm.Diagonal = noDiagonal
+	wm.Diagonal = NoDiagonal
 	wm.UserRotOrDiagonal = true
 
 	return nil
@@ -460,7 +460,7 @@ func parseDiagonal(s string, wm *Watermark) error {
 	if err != nil {
 		return errors.Errorf("pdfcpu: illegal diagonal value: allowed 1 or 2, %s\n", s)
 	}
-	if d != diagonalLLToUR && d != diagonalULToLR {
+	if d != DiagonalLLToUR && d != DiagonalULToLR {
 		return errors.New("pdfcpu: diagonal: 1..lower left to upper right, 2..upper left to lower right")
 	}
 
@@ -491,7 +491,7 @@ func parseRenderMode(s string, wm *Watermark) error {
 	if err != nil {
 		return errors.Errorf("pdfcpu: illegal render mode value: allowed 0,1,2, %s\n", s)
 	}
-	if m != rmFill && m != rmStroke && m != rmFillAndStroke {
+	if m != RMFill && m != RMStroke && m != RMFillAndStroke {
 		return errors.New("pdfcpu: valid rendermodes: 0..fill, 1..stroke, 2..fill&stroke")
 	}
 	wm.RenderMode = m
@@ -608,7 +608,7 @@ func (wm *Watermark) calcTransformMatrix() *matrix {
 	var sin, cos float64
 	r := wm.Rotation
 
-	if wm.Diagonal != noDiagonal {
+	if wm.Diagonal != NoDiagonal {
 
 		// Calculate the angle of the diagonal with respect of the aspect ratio of the bounding box.
 		r = math.Atan(wm.vp.Height()/wm.vp.Width()) * float64(radToDeg)
@@ -617,7 +617,7 @@ func (wm *Watermark) calcTransformMatrix() *matrix {
 			r -= 90
 		}
 
-		if wm.Diagonal == diagonalULToLR {
+		if wm.Diagonal == DiagonalULToLR {
 			r = -r
 		}
 
