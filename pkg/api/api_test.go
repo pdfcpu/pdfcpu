@@ -40,7 +40,7 @@ func TestMain(m *testing.M) {
 		fmt.Printf("%v", err)
 		os.Exit(1)
 	}
-	//fmt.Printf("outDir = %s\n", outDir)
+	// fmt.Printf("outDir = %s\n", outDir)
 
 	exitCode := m.Run()
 
@@ -105,6 +105,25 @@ func AllPDFs(t *testing.T, dir string) []string {
 	}
 	return ff
 }
+
+func TestPageCount(t *testing.T) {
+	msg := "TestPageCount"
+
+	fn := "5116.DCT_Filter.pdf"
+	wantPageCount := 52
+	inFile := filepath.Join(inDir, fn)
+
+	// Retrieve page count for inFile.
+	gotPageCount, err := PageCountFile(inFile)
+	if err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+
+	if wantPageCount != gotPageCount {
+		t.Fatalf("%s %s: pageCount want:%d got:%d\n", msg, inFile, wantPageCount, gotPageCount)
+	}
+}
+
 func TestPageDimensions(t *testing.T) {
 	msg := "TestPageDimensions"
 	for _, fn := range AllPDFs(t, inDir) {
@@ -215,7 +234,7 @@ func TestInsertRemovePages(t *testing.T) {
 	inFile := filepath.Join(inDir, "Acroforms2.pdf")
 	outFile := filepath.Join(outDir, "test.pdf")
 
-	n1, err := PageCount(inFile)
+	n1, err := PageCountFile(inFile)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
@@ -227,7 +246,7 @@ func TestInsertRemovePages(t *testing.T) {
 	if err := ValidateFile(outFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	n2, err := PageCount(outFile)
+	n2, err := PageCountFile(outFile)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
@@ -242,7 +261,7 @@ func TestInsertRemovePages(t *testing.T) {
 	if err := ValidateFile(outFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	n2, err = PageCount(outFile)
+	n2, err = PageCountFile(outFile)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
