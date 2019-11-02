@@ -348,6 +348,37 @@ func TestAddWatermarks(t *testing.T) {
 	}
 }
 
+func TestFontStamps(t *testing.T) {
+
+	inFile := filepath.Join(inDir, "empty.pdf")
+
+	var sb strings.Builder
+	for i := 32; i <= 255; i++ {
+		if i%8 == 0 {
+			sb.WriteString(fmt.Sprintf("\n%03o ", i))
+		}
+		if i == 44 || i == 58 {
+			sb.WriteString("?")
+		} else {
+			sb.WriteRune(rune(i))
+		}
+		sb.WriteString(" ")
+	}
+
+	a := sb.String()
+
+	wmConf := "Times-Roman\n\n" + a + ", font:Times-Roman, rot:0, scal:0.8 abs, pos:tl"
+	wm, err := pdf.ParseWatermarkDetails(wmConf, true)
+	if err != nil {
+		t.Fatalf("%v\n", err)
+	}
+	err = AddWatermarksFile(inFile, "", []string{}, wm, nil)
+	if err != nil {
+		t.Fatalf("%v\n", err)
+	}
+
+}
+
 func TestStampingLifecyle(t *testing.T) {
 	msg := "TestStampingLifecyle"
 	inFile := filepath.Join(inDir, "Acroforms2.pdf")
