@@ -531,7 +531,7 @@ func TestGetPageCount(t *testing.T) {
 	msg := "TestInsertRemovePages"
 	inFile := filepath.Join(inDir, "CenterOfWhy.pdf")
 
-	n, err := api.PageCount(inFile)
+	n, err := api.PageCountFile(inFile)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
@@ -545,7 +545,7 @@ func TestInsertRemovePages(t *testing.T) {
 	inFile := filepath.Join(inDir, "Acroforms2.pdf")
 	outFile := filepath.Join(outDir, "test.pdf")
 
-	n1, err := api.PageCount(inFile)
+	n1, err := api.PageCountFile(inFile)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
@@ -557,7 +557,7 @@ func TestInsertRemovePages(t *testing.T) {
 	if err := validateFile(t, outFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	n2, err := api.PageCount(outFile)
+	n2, err := api.PageCountFile(outFile)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
@@ -572,7 +572,7 @@ func TestInsertRemovePages(t *testing.T) {
 	if err := validateFile(t, outFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	n2, err = api.PageCount(outFile)
+	n2, err = api.PageCountFile(outFile)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}

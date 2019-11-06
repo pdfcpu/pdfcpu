@@ -64,7 +64,7 @@ func logOperationStats(ctx *pdf.Context, op string, durRead, durVal, durOpt, dur
 	ctx.Write.LogStats()
 }
 
-// ReadContext uses an io.Readseeker to build an internal structure holding its cross reference table aka the Context.
+// ReadContext uses an io.ReadSeeker to build an internal structure holding its cross reference table aka the Context.
 func ReadContext(rs io.ReadSeeker, conf *pdf.Configuration) (*pdf.Context, error) {
 	return pdf.Read(rs, conf)
 }
@@ -83,16 +83,30 @@ func ReadContextFile(inFile string) (*pdf.Context, error) {
 	if err = validate.XRefTable(ctx.XRefTable); err != nil {
 		return nil, err
 	}
-	return ctx, nil
+	return ctx, err
 }
 
-// PageCount returns inFile's page count.
-func PageCount(inFile string) (int, error) {
-	ctx, err := ReadContextFile(inFile)
+// PageCount returns rs's page count.
+func PageCount(rs io.ReadSeeker, conf *pdf.Configuration) (int, error) {
+	ctx, err := ReadContext(rs, conf)
 	if err != nil {
 		return 0, err
 	}
+	if err := ValidateContext(ctx); err != nil {
+		return 0, err
+	}
 	return ctx.PageCount, nil
+}
+
+// PageCountFile returns inFile's page count.
+func PageCountFile(inFile string) (int, error) {
+	f, err := os.Open(inFile)
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+
+	return PageCount(f, pdf.NewDefaultConfiguration())
 }
 
 // PageDims returns a sorted slice of mediaBox dimensions for rs.
