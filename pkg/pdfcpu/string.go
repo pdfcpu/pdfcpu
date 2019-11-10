@@ -18,23 +18,16 @@ package pdfcpu
 
 import (
 	"bytes"
-	"math"
+	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
 )
 
 // Convert a 1,2 or 3 digit unescaped octal string into the corresponding byte value.
-func byteForOctalString(octalBytes []byte) (b byte) {
-
-	var j float64
-
-	for i := len(octalBytes) - 1; i >= 0; i-- {
-		b += (octalBytes[i] - '0') * byte(math.Pow(8, j))
-		j++
-	}
-
-	return
+func byteForOctalString(octalBytes string) (b byte) {
+	i, _ := strconv.ParseInt(octalBytes, 8, 64)
+	return byte(i)
 }
 
 // Escape applies all defined escape sequences to s.
@@ -102,7 +95,7 @@ func Unescape(s string) ([]byte, error) {
 
 	var esc bool
 	var longEol bool
-	var octalCode []byte
+	var octalCode string
 	var b bytes.Buffer
 
 	for i := 0; i < len(s); i++ {
@@ -142,10 +135,10 @@ func Unescape(s string) ([]byte, error) {
 			if !strings.ContainsRune("01234567", rune(c)) {
 				return nil, errors.Errorf("Unescape: illegal octal sequence detected %X", octalCode)
 			}
-			octalCode = append(octalCode, c)
+			octalCode = octalCode + string(c)
 			if len(octalCode) == 3 {
 				b.WriteByte(byteForOctalString(octalCode))
-				octalCode = nil
+				octalCode = ""
 				esc = false
 			}
 			continue
@@ -169,7 +162,7 @@ func Unescape(s string) ([]byte, error) {
 		var octal bool
 		octal, c = escaped(c)
 		if octal {
-			octalCode = append(octalCode, c)
+			octalCode = octalCode + string(c)
 			continue
 		}
 
