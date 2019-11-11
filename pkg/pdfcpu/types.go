@@ -199,7 +199,7 @@ func RectForDim(width, height float64) *Rectangle {
 // RectForFormat returns a new rectangle for given format.
 func RectForFormat(f string) *Rectangle {
 	d := PaperSize[f]
-	return RectForDim(d.w, d.h)
+	return RectForDim(d.Width, d.Height)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////

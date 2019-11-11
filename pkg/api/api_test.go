@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -348,8 +349,9 @@ func TestAddWatermarks(t *testing.T) {
 	}
 }
 
-func TestFontStamps(t *testing.T) {
+func XXXTestFontTestPage(t *testing.T) {
 
+	// Generate a sample page for an Adobe Type 1 standard font.
 	inFile := filepath.Join(inDir, "empty.pdf")
 
 	var sb strings.Builder
@@ -367,14 +369,54 @@ func TestFontStamps(t *testing.T) {
 
 	a := sb.String()
 
-	wmConf := "Times-Roman\n\n" + a + ", font:Times-Roman, rot:0, scal:0.8 abs, pos:tl"
+	wmConf := "Symbol\n\n" + a + ", font:Symbol, rot:0, scal:0.8 abs, pos:tl"
 	wm, err := pdf.ParseWatermarkDetails(wmConf, true)
 	if err != nil {
 		t.Fatalf("%v\n", err)
 	}
-	err = AddWatermarksFile(inFile, "", []string{}, wm, nil)
+	err = AddWatermarksFile(inFile, filepath.Join(inDir, "Symbol.pdf"), []string{}, wm, nil)
 	if err != nil {
 		t.Fatalf("%v\n", err)
+	}
+
+}
+
+func XXXTestFontCatalog(t *testing.T) {
+
+	inFile := filepath.Join(inDir, "fonttest.pdf")
+	if err := copyFile(filepath.Join(inDir, "256.pdf"), inFile); err != nil {
+		t.Fatalf("%v\n", err)
+	}
+
+	for i := 32; i < 255; i++ {
+		selPages := []string{strconv.Itoa(i - 31)}
+		a := string(rune(i))
+		if a == "," || a == ":" {
+			a = "?"
+		}
+		wmConf := a + ", font:Symbol, rot:0"
+		wm, err := pdf.ParseWatermarkDetails(wmConf, true)
+		if err != nil {
+			t.Fatalf("%v\n", err)
+		}
+		err = AddWatermarksFile(inFile, "", selPages, wm, nil)
+		if err != nil {
+			t.Fatalf("%v\n", err)
+		}
+	}
+
+	for i := 32; i < 255; i++ {
+		selPages := []string{strconv.Itoa(i - 31)}
+		a := fmt.Sprintf("%d oktal=%0o", i, i)
+		wmConf := a + ", font:Times-Roman, rot:0, scal:1.0 abs, pos:tl"
+		wm, err := pdf.ParseWatermarkDetails(wmConf, true)
+		if err != nil {
+			t.Fatalf("%v\n", err)
+		}
+		err = AddWatermarksFile(inFile, "", selPages, wm, nil)
+		if err != nil {
+			t.Fatalf("%v\n", err)
+		}
 	}
 
 }

@@ -28,9 +28,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/font/metrics"
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fonts/metrics"
 
 	"github.com/pkg/errors"
 )
@@ -597,9 +597,14 @@ func (wm *Watermark) calcBoundingBox() {
 		w = wm.Scale * wm.vp.Width()
 		wm.ScaledFontSize = wm.calcMinFontSize(w)
 	}
-	h := (float64(wm.ScaledFontSize) * 1.156) + float64(len(wm.TextLines)-1)*float64(wm.ScaledFontSize)
-	wm.bb = Rect(0, 0, w, h)
 
+	fbb := metrics.FontBoundingBox(wm.FontName)
+	h := (float64(wm.ScaledFontSize) * fbb.Height() / 1000)
+	if len(wm.TextLines) > 1 {
+		h += float64(len(wm.TextLines)-1) * float64(wm.ScaledFontSize)
+	}
+
+	wm.bb = Rect(0, 0, w, h)
 	return
 }
 
@@ -673,15 +678,11 @@ func setWatermarkType(s string, wm *Watermark) error {
 
 	bb := []byte{}
 	for _, r := range ss[0] {
-		fmt.Printf("%#U %d %x %d %x %0o\n", r, r, r, byte(r), byte(r), byte(r))
 		bb = append(bb, byte(r))
 	}
-	fmt.Printf("% x\n", string(bb))
 
 	ss[0] = strings.ReplaceAll(string(bb), "\\n", "\n")
-	fmt.Printf("ss[0]: % x\n", ss[0])
 	for _, l := range strings.FieldsFunc(ss[0], func(c rune) bool { return c == 0x0a }) {
-		fmt.Printf("l: % x\n", l)
 		wm.TextLines = append(wm.TextLines, l)
 	}
 
@@ -718,19 +719,21 @@ func supportedWatermarkFont(fn string) bool {
 
 func createFontResForWM(xRefTable *XRefTable, wm *Watermark) error {
 
-	encDict := Dict(
-		map[string]Object{
-			"Type":         Name("Encoding"),
-			"BaseEncoding": Name("WinAnsiEncoding"),
-			"Differences":  Array{Integer(172), Name("Euro")},
-		},
-	)
-
 	d := NewDict()
 	d.InsertName("Type", "Font")
 	d.InsertName("Subtype", "Type1")
 	d.InsertName("BaseFont", wm.FontName)
-	d.Insert("Encoding", encDict)
+
+	if wm.FontName != "Symbol" && wm.FontName != "ZapfDingbats" {
+		encDict := Dict(
+			map[string]Object{
+				"Type":         Name("Encoding"),
+				"BaseEncoding": Name("WinAnsiEncoding"),
+				"Differences":  Array{Integer(172), Name("Euro")},
+			},
+		)
+		d.Insert("Encoding", encDict)
+	}
 
 	ir, err := xRefTable.IndRefForNewObject(d)
 	if err != nil {

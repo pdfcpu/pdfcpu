@@ -18,7 +18,6 @@ limitations under the License.
 package metrics
 
 import (
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fonts/metrics/standard"
 	"github.com/pdfcpu/pdfcpu/pkg/types"
 )
 
@@ -41,38 +40,32 @@ import (
 
 // FontBoundingBox returns the font bounding box for a given font as specified in the corresponding AFM file.
 func FontBoundingBox(fontName string) *types.Rectangle {
-	return standardFonts[fontName].bbox
+	return CoreFontMetrics[fontName].FBox
 }
 
 // CharWidth returns the character width for a char and font in glyph space units.
 func CharWidth(fontName string, c int) int {
 
-	f := standardFonts[fontName]
+	var m map[int]string
 
-	w, found := f.charWidths[c]
-	if !found {
-		w = averageCharWidth(fontName)
+	switch fontName {
+	case "Symbol":
+		m = SymbolGlyphMap
+	case "ZapfDingbats":
+		m = ZapfDingbatsGlyphMap
+	default:
+		m = WinAnsiGlyphMap
+	}
+
+	glyphName := m[c]
+	fm := CoreFontMetrics[fontName]
+
+	w, ok := fm.W[glyphName]
+	if !ok {
+		w = 1000 //m.W["bullet"]
 	}
 
 	return w
-}
-
-func averageCharWidth(fontName string) int {
-
-	f := standardFonts[fontName]
-
-	if f.averageWidth > 0 {
-		return f.averageWidth
-	}
-
-	totalWidth := 0
-	for _, w := range f.charWidths {
-		totalWidth += w
-	}
-
-	f.averageWidth = totalWidth / len(f.charWidths)
-
-	return f.averageWidth
 }
 
 func userSpaceUnits(glyphSpaceUnits float64, fontScalingFactor int) float64 {
@@ -86,9 +79,8 @@ func fontScalingFactor(glyphSpaceUnits, userSpaceUnits float64) int {
 // TextWidth represents the width in user space units for a given text string, font name and font size.
 func TextWidth(text, fontName string, fontSize int) float64 {
 	var width float64
-	for _, r := range text {
-		w := CharWidth(fontName, int(r))
-		//fmt.Printf("%d %c w=%d\n", r, r, w)
+	for i := 0; i < len(text); i++ {
+		w := CharWidth(fontName, int(text[i]))
 		width += userSpaceUnits(float64(w), fontSize)
 	}
 	return width
@@ -98,8 +90,8 @@ func TextWidth(text, fontName string, fontSize int) float64 {
 // for rendering a given text string using a given font name with a given user space width.
 func FontSize(text, fontName string, width float64) int {
 	var i int
-	for _, r := range text {
-		i += CharWidth(fontName, int(r))
+	for j := 0; j < len(text); j++ {
+		i += CharWidth(fontName, int(text[j]))
 	}
 	return fontScalingFactor(float64(i), width)
 }
@@ -116,24 +108,9 @@ func UserSpaceFontBBox(fontName string, fontSize int) *types.Rectangle {
 
 // FontNames returns the list of supported font names.
 func FontNames() []string {
-
-	ss := make([]string, len(standardFonts))
-
-	i := 0
-	for k := range standardFonts {
-		ss[i] = k
-		i++
+	ss := make([]string, len(CoreFontMetrics))
+	for fname := range CoreFontMetrics {
+		ss = append(ss, fname)
 	}
-
 	return ss
-}
-
-var standardFonts = map[string]struct {
-	charWidths   map[int]int
-	averageWidth int
-	bbox         *types.Rectangle
-}{
-	"Helvetica":   {standard.FontWidthHelvetica, 0, types.NewRectangle(-166, -225, 1000, 931)},
-	"Times-Roman": {standard.FontWidthTimesRoman, 0, types.NewRectangle(-168, -218, 1000, 898)},
-	"Courier":     {map[int]int{}, 600, types.NewRectangle(-23, -250, 715, 805)},
 }

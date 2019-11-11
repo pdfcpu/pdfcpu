@@ -302,12 +302,12 @@ func ParseNUpValue(n int, nUp *NUp) error {
 	if nUp.PageDim == nil {
 		portrait = PaperSize[nUp.PageSize].Portrait()
 	} else {
-		portrait = RectForDim(nUp.PageDim.w, nUp.PageDim.h).Portrait()
+		portrait = RectForDim(nUp.PageDim.Width, nUp.PageDim.Height).Portrait()
 	}
 
 	d := nUpDims[n]
 	if portrait {
-		d.w, d.h = d.h, d.w
+		d.Width, d.Height = d.Height, d.Width
 	}
 
 	nUp.Grid = &d
@@ -335,11 +335,11 @@ func ParseNUpGridDefinition(cols, rows int, nUp *NUp) error {
 
 func rectsForGrid(nup *NUp) []*Rectangle {
 
-	cols := int(nup.Grid.w)
-	rows := int(nup.Grid.h)
+	cols := int(nup.Grid.Width)
+	rows := int(nup.Grid.Height)
 
-	maxX := float64(nup.PageDim.w)
-	maxY := float64(nup.PageDim.h)
+	maxX := float64(nup.PageDim.Width)
+	maxY := float64(nup.PageDim.Height)
 
 	gw := maxX / float64(cols)
 	gh := maxY / float64(rows)
@@ -601,7 +601,7 @@ func NewNUpPageForImage(xRefTable *XRefTable, fileName string, parentIndRef *Ind
 
 	// mediabox = physical page dimensions
 	dim := nup.PageDim
-	mediaBox := RectForDim(dim.w, dim.h)
+	mediaBox := RectForDim(dim.Width, dim.Height)
 
 	pageDict := Dict(
 		map[string]Object{
@@ -666,7 +666,7 @@ func wrapUpPage(ctx *Context, nup *NUp, d Dict, buf bytes.Buffer, pagesDict *Dic
 
 	// mediabox = physical page dimensions
 	dim := nup.PageDim
-	mediaBox := RectForDim(dim.w, dim.h)
+	mediaBox := RectForDim(dim.Width, dim.Height)
 
 	pageDict := Dict(
 		map[string]Object{
@@ -696,8 +696,8 @@ func wrapUpPage(ctx *Context, nup *NUp, d Dict, buf bytes.Buffer, pagesDict *Dic
 func nupFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict *Dict, pagesIndRef *IndirectRef) error {
 
 	if nup.PageGrid {
-		nup.PageDim.w *= nup.Grid.w
-		nup.PageDim.h *= nup.Grid.h
+		nup.PageDim.Width *= nup.Grid.Width
+		nup.PageDim.Height *= nup.Grid.Height
 	}
 
 	xRefTable := ctx.XRefTable
@@ -882,12 +882,12 @@ func NUpFromPDF(ctx *Context, selectedPages IntSet, nup *NUp) error {
 		}
 		mb = inhPAttrs.mediaBox
 	} else {
-		mb = RectForDim(nup.PageDim.w, nup.PageDim.h)
+		mb = RectForDim(nup.PageDim.Width, nup.PageDim.Height)
 	}
 
 	if nup.PageGrid {
-		mb.UR.X = mb.LL.X + float64(nup.Grid.w)*mb.Width()
-		mb.UR.Y = mb.LL.Y + float64(nup.Grid.h)*mb.Height()
+		mb.UR.X = mb.LL.X + float64(nup.Grid.Width)*mb.Width()
+		mb.UR.Y = mb.LL.Y + float64(nup.Grid.Width)*mb.Height()
 	}
 
 	pagesDict := Dict(

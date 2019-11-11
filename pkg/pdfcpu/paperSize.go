@@ -16,7 +16,9 @@ limitations under the License.
 
 package pdfcpu
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // DisplayUnit is the metric unit used to output paper sizes.
 type DisplayUnit int
@@ -29,30 +31,37 @@ const (
 	MILLIMETRES
 )
 
+const (
+	userSpaceToInch = 1 / 72
+	userSpaceToCm   = 2.54 / 72
+	userSpaceToMm   = userSpaceToCm * 10
+)
+
 // Dim represents the dimensions of a rectangular view medium
-// like a PDF page, a sheet of paper or an image grid.
+// like a PDF page, a sheet of paper or an image grid
+// in user space, inches, centimetres or millimetres.
 type Dim struct {
-	w, h float64
+	Width, Height float64
 }
 
 // ToInches converts d to inches.
 func (d Dim) ToInches() Dim {
-	return Dim{d.w / 72, d.h / 72}
+	return Dim{d.Width * userSpaceToInch, d.Height * userSpaceToInch}
 }
 
 // ToCentimetres converts d to centimetres.
 func (d Dim) ToCentimetres() Dim {
-	return Dim{d.w / 72 * 2.54, d.h / 72 * 2.54}
+	return Dim{d.Width * userSpaceToCm, d.Height * userSpaceToCm}
 }
 
 // ToMillimetres converts d to centimetres.
 func (d Dim) ToMillimetres() Dim {
-	return Dim{d.w / 72 * 25.4, d.h / 72 * 25.4}
+	return Dim{d.Height * userSpaceToMm, d.Height * userSpaceToMm}
 }
 
 // AspectRatio returns the relation between width and height.
 func (d Dim) AspectRatio() float64 {
-	return d.w / d.h
+	return d.Width / d.Height
 }
 
 // Landscape returns true if d is in landscape mode.
@@ -66,7 +75,7 @@ func (d Dim) Portrait() bool {
 }
 
 func (d Dim) String() string {
-	return fmt.Sprintf("%fx%f points", d.w, d.h)
+	return fmt.Sprintf("%fx%f points", d.Width, d.Height)
 }
 
 // PaperSize is a map of known paper sizes in user units (=72 dpi pixels).

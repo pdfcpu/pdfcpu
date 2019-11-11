@@ -933,7 +933,7 @@ func createPage(xRefTable *XRefTable, parentPageIndRef IndirectRef, mediaBox *Re
 func addPageTreeWithoutPage(xRefTable *XRefTable, rootDict Dict, d *Dim) error {
 
 	// May be modified later on.
-	mediaBox := RectForDim(d.w, d.h)
+	mediaBox := RectForDim(d.Width, d.Height)
 
 	pagesDict := Dict(
 		map[string]Object{

@@ -200,7 +200,7 @@ func (ctx *Context) InfoDigest() ([]string, error) {
 	s := "Page size:"
 	for d := range m {
 		dc := ctx.convertToUnits(d)
-		ss = append(ss, fmt.Sprintf("%21s %.2f x %.2f %s", s, dc.w, dc.h, units))
+		ss = append(ss, fmt.Sprintf("%21s %.2f x %.2f %s", s, dc.Width, dc.Height, units))
 		s = ""
 	}
 

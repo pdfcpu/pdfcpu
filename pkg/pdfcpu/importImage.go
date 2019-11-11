@@ -121,7 +121,7 @@ func parsePageFormat(v string) (*Dim, string, error) {
 	}
 
 	if d.Portrait() && land || d.Landscape() && port {
-		d.w, d.h = d.h, d.w
+		d.Width, d.Height = d.Height, d.Width
 	}
 
 	return d, v, nil
@@ -380,8 +380,8 @@ func lowerLeftCorner(vpw, vph, bbw, bbh float64, a anchor) types.Point {
 
 func importImagePDFBytes(wr io.Writer, pageDim *Dim, imgWidth, imgHeight float64, imp *Import) {
 
-	vpw := float64(pageDim.w)
-	vph := float64(pageDim.h)
+	vpw := float64(pageDim.Width)
+	vph := float64(pageDim.Height)
 
 	if imp.Pos == Full {
 		// The bounding box equals the page dimensions.
@@ -461,7 +461,7 @@ func NewPageForImage(xRefTable *XRefTable, r io.Reader, parentIndRef *IndirectRe
 		dim = imp.PageDim
 	}
 	// mediabox = physical page dimensions
-	mediaBox := RectForDim(dim.w, dim.h)
+	mediaBox := RectForDim(dim.Width, dim.Height)
 
 	var buf bytes.Buffer
 	importImagePDFBytes(&buf, dim, float64(w), float64(h), imp)
