@@ -421,11 +421,25 @@ func XXXTestFontCatalog(t *testing.T) {
 
 }
 
+func hasWatermarks(inFile string, t *testing.T) bool {
+	t.Helper()
+	ok, err := HasWatermarksFile(inFile, nil)
+	if err != nil {
+		t.Fatalf("Checking for watermarks: %s: %v\n", inFile, err)
+	}
+	return ok
+}
+
 func TestStampingLifecyle(t *testing.T) {
 	msg := "TestStampingLifecyle"
 	inFile := filepath.Join(inDir, "Acroforms2.pdf")
 	outFile := filepath.Join(outDir, "stampLC.pdf")
 	onTop := true // we are testing stamps
+
+	// Check for existing stamps.
+	if ok := hasWatermarks(inFile, t); ok {
+		t.Fatalf("Watermarks found: %s\n", inFile)
+	}
 
 	// Stamp all pages.
 	wm, err := pdf.ParseWatermarkDetails("Demo", onTop)
@@ -434,6 +448,11 @@ func TestStampingLifecyle(t *testing.T) {
 	}
 	if err := AddWatermarksFile(inFile, outFile, nil, wm, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
+	}
+
+	// Check for existing stamps.
+	if ok := hasWatermarks(outFile, t); !ok {
+		t.Fatalf("No watermarks found: %s\n", outFile)
 	}
 
 	// // Update stamp on page 1.
@@ -461,6 +480,11 @@ func TestStampingLifecyle(t *testing.T) {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
+	// Check for existing stamps.
+	if ok := hasWatermarks(outFile, t); !ok {
+		t.Fatalf("No watermarks found: %s\n", outFile)
+	}
+
 	// Remove all stamps.
 	if err := RemoveWatermarksFile(outFile, "", nil, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
@@ -469,6 +493,11 @@ func TestStampingLifecyle(t *testing.T) {
 	// Validate the result.
 	if err := ValidateFile(outFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
+	}
+
+	// Check for existing stamps.
+	if ok := hasWatermarks(outFile, t); ok {
+		t.Fatalf("Watermarks found: %s\n", outFile)
 	}
 }
 

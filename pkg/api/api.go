@@ -976,6 +976,35 @@ func RemoveWatermarksFile(inFile, outFile string, selectedPages []string, conf *
 	return RemoveWatermarks(f1, f2, selectedPages, conf)
 }
 
+// HasWatermarks checks rs for watermarks.
+func HasWatermarks(rs io.ReadSeeker, conf *pdf.Configuration) (bool, error) {
+	ctx, err := ReadContext(rs, conf)
+	if err != nil {
+		return false, err
+	}
+	if err := pdf.DetectWatermarks(ctx); err != nil {
+		return false, err
+	}
+
+	return ctx.Watermarked, nil
+}
+
+// HasWatermarksFile checks inFile for watermarks.
+func HasWatermarksFile(inFile string, conf *pdf.Configuration) (bool, error) {
+	if conf == nil {
+		conf = pdf.NewDefaultConfiguration()
+	}
+
+	f, err := os.Open(inFile)
+	if err != nil {
+		return false, err
+	}
+
+	defer f.Close()
+
+	return HasWatermarks(f, conf)
+}
+
 // NUp rearranges PDF pages or images into page grids and writes the result to w.
 // Either rs or imgFiles will be used.
 func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *pdf.NUp, conf *pdf.Configuration) error {
@@ -1482,9 +1511,10 @@ func Info(rs io.ReadSeeker, conf *pdf.Configuration) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	if err := pdf.DetectWatermarks(ctx); err != nil {
+		return nil, err
+	}
 	return ctx.InfoDigest()
-
 }
 
 // InfoFile returns information about inFile.

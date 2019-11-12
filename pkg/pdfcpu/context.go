@@ -178,6 +178,7 @@ func (ctx *Context) convertToUnits(d Dim) Dim {
 
 // InfoDigest returns info about ctx.
 func (ctx *Context) InfoDigest() ([]string, error) {
+	var separator = "............................................"
 	var ss []string
 	v := ctx.HeaderVersion
 	if ctx.RootVersion != nil {
@@ -204,7 +205,7 @@ func (ctx *Context) InfoDigest() ([]string, error) {
 		s = ""
 	}
 
-	ss = append(ss, fmt.Sprintf(".........................................."))
+	ss = append(ss, fmt.Sprintf(separator))
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Title", ctx.Title))
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Author", ctx.Author))
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Subject", ctx.Subject))
@@ -212,7 +213,7 @@ func (ctx *Context) InfoDigest() ([]string, error) {
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Content creator", ctx.Creator))
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Creation date", ctx.CreationDate))
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Modification date", ctx.ModDate))
-	ss = append(ss, fmt.Sprintf(".........................................."))
+	ss = append(ss, fmt.Sprintf(separator))
 
 	s = "No"
 	if ctx.Tagged {
@@ -244,7 +245,13 @@ func (ctx *Context) InfoDigest() ([]string, error) {
 	}
 	ss = append(ss, fmt.Sprintf("Using object streams: %s", s))
 
-	ss = append(ss, fmt.Sprintf(".........................................."))
+	s = "No"
+	if ctx.Watermarked {
+		s = "Yes"
+	}
+	ss = append(ss, fmt.Sprintf("          Watermarks: %s", s))
+
+	ss = append(ss, fmt.Sprintf(separator))
 
 	s = "No"
 	if ctx.Encrypt != nil {

@@ -125,7 +125,8 @@ type XRefTable struct {
 	Valid          bool // true means successful validated against ISO 32000.
 	ValidationMode int  // see Configuration
 
-	Optimized bool
+	Optimized   bool
+	Watermarked bool
 }
 
 // NewXRefTable creates a new XRefTable.
@@ -2001,4 +2002,72 @@ func (xRefTable *XRefTable) InsertPages(pages IntSet) error {
 	_, err = xRefTable.insertIntoPageTree(root, &inhPAttrs, &p, pages)
 
 	return err
+}
+
+func (xRefTable *XRefTable) detectPageTreeWatermarks(root *IndirectRef) error {
+
+	d, err := xRefTable.DereferenceDict(*root)
+	if err != nil {
+		return err
+	}
+
+	kids := d.ArrayEntry("Kids")
+	if kids == nil {
+		return nil
+	}
+
+	for _, o := range kids {
+
+		if xRefTable.Watermarked {
+			return nil
+		}
+
+		if o == nil {
+			continue
+		}
+
+		// Dereference next page node dict.
+		ir, ok := o.(IndirectRef)
+		if !ok {
+			return errors.Errorf("pdfcpu: detectPageTreeWatermarks: corrupt page node dict")
+		}
+
+		pageNodeDict, err := xRefTable.DereferenceDict(ir)
+		if err != nil {
+			return err
+		}
+
+		switch *pageNodeDict.Type() {
+
+		case "Pages":
+			// Recurse over sub pagetree.
+			if err := xRefTable.detectPageTreeWatermarks(&ir); err != nil {
+				return err
+			}
+
+		case "Page":
+			found, err := findPageWatermarks(xRefTable, &ir)
+			if err != nil {
+				return err
+			}
+			if found {
+				xRefTable.Watermarked = true
+				return nil
+			}
+
+		}
+	}
+
+	return nil
+}
+
+// DetectPageTreeWatermarks checks xRefTable's page tree for watermarks.
+func (xRefTable *XRefTable) DetectPageTreeWatermarks() error {
+
+	root, err := xRefTable.Pages()
+	if err != nil {
+		return err
+	}
+
+	return xRefTable.detectPageTreeWatermarks(root)
 }

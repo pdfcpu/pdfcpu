@@ -1606,7 +1606,7 @@ func removeArtifacts(sd *StreamDict, i int) (ok bool, extGStates []string, forms
 
 	err = decodeStream(sd)
 	if err == filter.ErrUnsupportedFilter {
-		log.Info.Println("unsupported filter: unable to patch content with watermark.")
+		log.Info.Printf("unsupported filter: unable to patch content with watermark for page %d\n", i)
 		return false, nil, nil, nil
 	}
 	if err != nil {
@@ -1884,4 +1884,124 @@ func RemoveWatermarks(ctx *Context, selectedPages IntSet) error {
 	}
 
 	return nil
+}
+
+func detectArtifacts(xRefTable *XRefTable, sd *StreamDict) (bool, error) {
+
+	if err := decodeStream(sd); err != nil {
+		return false, err
+	}
+
+	// Watermarks may be at the beginning or at the end of the content stream.
+	i := strings.Index(string(sd.Content), "/Artifact <</Subtype /Watermark /Type /Pagination >>BDC")
+	return i >= 0, nil
+}
+
+func findPageWatermarks(xRefTable *XRefTable, pageDictIndRef *IndirectRef) (bool, error) {
+
+	d, err := xRefTable.DereferenceDict(*pageDictIndRef)
+	if err != nil {
+		return false, err
+	}
+
+	o, found := d.Find("Contents")
+	if !found {
+		return false, errors.New("missing page contents")
+	}
+
+	var entry *XRefTableEntry
+
+	ir, ok := o.(IndirectRef)
+	if ok {
+		objNr := ir.ObjectNumber.Value()
+		genNr := ir.GenerationNumber.Value()
+		entry, _ = xRefTable.FindTableEntry(objNr, genNr)
+		o = entry.Object
+	}
+
+	switch o := o.(type) {
+
+	case StreamDict:
+		return detectArtifacts(xRefTable, &o)
+
+	case Array:
+		// Get stream dict for first element.
+		o1 := o[0]
+		ir, _ := o1.(IndirectRef)
+		objNr := ir.ObjectNumber.Value()
+		genNr := ir.GenerationNumber.Value()
+		entry, _ := xRefTable.FindTableEntry(objNr, genNr)
+		sd, _ := (entry.Object).(StreamDict)
+
+		ok, err := detectArtifacts(xRefTable, &sd)
+		if err != nil {
+			return false, err
+		}
+		if ok {
+			return true, nil
+		}
+
+		if len(o) > 1 {
+			// Get stream dict for last element.
+			o1 := o[len(o)-1]
+			ir, _ := o1.(IndirectRef)
+			objNr = ir.ObjectNumber.Value()
+			genNr := ir.GenerationNumber.Value()
+			entry, _ := xRefTable.FindTableEntry(objNr, genNr)
+			sd, _ := (entry.Object).(StreamDict)
+			return detectArtifacts(xRefTable, &sd)
+		}
+
+	}
+
+	return false, nil
+}
+
+// DetectWatermarks checks ctx for watermarks.
+func DetectWatermarks(ctx *Context) error {
+
+	a, err := locateOCGs(ctx)
+	if err != nil {
+		if err == errNoWatermark {
+			ctx.Watermarked = false
+			return nil
+		}
+		return err
+	}
+
+	found := false
+
+	for _, o := range a {
+		d, err := ctx.DereferenceDict(o)
+		if err != nil {
+			return err
+		}
+
+		if o == nil {
+			continue
+		}
+
+		if *d.Type() != "OCG" {
+			continue
+		}
+
+		n := d.StringEntry("Name")
+		if n == nil {
+			continue
+		}
+
+		if *n != "Background" && *n != "Watermark" {
+			continue
+		}
+
+		found = true
+		break
+	}
+
+	if !found {
+		ctx.Watermarked = false
+		return nil
+	}
+
+	return ctx.DetectPageTreeWatermarks()
 }
