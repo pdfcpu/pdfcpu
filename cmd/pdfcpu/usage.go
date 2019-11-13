@@ -31,6 +31,7 @@ The commands are:
    decrypt     remove password protection
    encrypt     set password protection		
    extract     extract images, fonts, content, pages, metadata
+   fonts       print list of supported fonts
    grid        rearrange pages or images for enhanced browsing experience
    import      import/convert images to PDF
    info        print file info
@@ -250,7 +251,7 @@ verbose, v ... turn on logging
 
          (defaults: 'font:Helvetica, points:24, s:0.5 rel, c:0.5 0.5 0.5, rot:0, d:1, op:1, m:0')
 
-      fontname:    a basefont, supported are: Helvetica, Times-Roman, Courier
+      fontname:    Please refer to pdfcpu fonts
       points:      fontsize in points, in combination with absolute scaling only.
       position:    one of 'full' or the anchors: tl,tc,tr, l,c,r, bl,bc,br
       offset:      (dx dy) in user units eg. '15 20'
@@ -602,4 +603,7 @@ points, po ... (default) points
 inches, in ... inches
         cm ... centimetres
         mm ... millimetres`
+
+	usageFonts     = "usage: pdfcpu fonts"
+	usageLongFonts = `Print a list of supported fonts`
 )

@@ -918,7 +918,7 @@ func handleGridCommand(conf *pdfcpu.Configuration) {
 }
 
 func handleInfoCommand(conf *pdfcpu.Configuration) {
-	if len(flag.Args()) == 0 || len(flag.Args()) > 1 || selectedPages != "" {
+	if len(flag.Args()) != 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageInfo)
 		os.Exit(1)
 	}
@@ -943,4 +943,8 @@ func handleInfoCommand(conf *pdfcpu.Configuration) {
 	}
 
 	process(cli.InfoCommand(inFile, conf))
+}
+
+func handleFontsCommand(conf *pdfcpu.Configuration) {
+	process(cli.FontsCommand(conf))
 }

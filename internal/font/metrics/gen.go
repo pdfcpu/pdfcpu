@@ -165,7 +165,7 @@ func writeFontMetrics(w *bytes.Buffer, dir, fileName string) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			fmt.Fprintf(w, "\"%s\": %d,\n", ss[7], i)
+			fmt.Fprintf(w, "\"%s\": %d, ", ss[7], i)
 		case "EndCharMetrics":
 			w.WriteString("},\n")
 			break

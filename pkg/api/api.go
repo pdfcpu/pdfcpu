@@ -36,10 +36,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/internal/font/metrics"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/validate"
@@ -1525,4 +1527,11 @@ func InfoFile(inFile string, conf *pdf.Configuration) ([]string, error) {
 	}
 	defer f.Close()
 	return Info(f, conf)
+}
+
+// FontNames returns a list of supported fonts.
+func FontNames(conf *pdf.Configuration) ([]string, error) {
+	ss := metrics.FontNames()
+	sort.Strings(ss)
+	return ss, nil
 }

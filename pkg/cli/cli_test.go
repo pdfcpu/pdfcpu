@@ -687,6 +687,18 @@ func TestUnknownCommand(t *testing.T) {
 	}
 }
 
+func TestFontsCommand(t *testing.T) {
+	msg := "TestFontsCommand"
+	list, err := Process(FontsCommand(nil))
+	if err != nil {
+		t.Fatalf("%s list fonts: %v\n", msg, err)
+	}
+	want := 14 // Adobe standard (core type 1) font set.
+	if len(list) != want {
+		t.Fatalf("%s: list fonts: want %d got %d\n", msg, want, len(list))
+	}
+}
+
 // Enable this test for debugging of a specific file.
 func XTestSomeCommand(t *testing.T) {
 	msg := "TestSomeCommand"

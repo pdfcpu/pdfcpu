@@ -77,6 +77,7 @@ func initCommandMap() {
 		"decrypt":     {handleDecryptCommand, nil, usageDecrypt, usageLongDecrypt},
 		"encrypt":     {handleEncryptCommand, nil, usageEncrypt, usageLongEncrypt},
 		"extract":     {handleExtractCommand, nil, usageExtract, usageLongExtract},
+		"fonts":       {handleFontsCommand, nil, usageFonts, usageLongFonts},
 		"grid":        {handleGridCommand, nil, usageGrid, usageLongGrid},
 		"help":        {printHelp, nil, "", ""},
 		"info":        {handleInfoCommand, nil, usageInfo, usageLongInfo},

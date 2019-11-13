@@ -108,7 +108,7 @@ func UserSpaceFontBBox(fontName string, fontSize int) *types.Rectangle {
 
 // FontNames returns the list of supported font names.
 func FontNames() []string {
-	ss := make([]string, len(CoreFontMetrics))
+	ss := []string{}
 	for fname := range CoreFontMetrics {
 		ss = append(ss, fname)
 	}

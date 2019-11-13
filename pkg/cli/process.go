@@ -74,6 +74,7 @@ var cmdMap = map[pdf.CommandMode]func(cmd *Command) ([]string, error){
 	pdf.ROTATE:             Rotate,
 	pdf.NUP:                NUp,
 	pdf.INFO:               Info,
+	pdf.FONTS:              FontNames,
 }
 
 // Process executes a pdfcpu command.
@@ -528,4 +529,15 @@ func InfoCommand(inFile string, conf *pdf.Configuration) *Command {
 		Mode:   pdf.INFO,
 		InFile: &inFile,
 		Conf:   conf}
+}
+
+// FontsCommand returns a list of supported fonts.
+func FontsCommand(conf *pdf.Configuration) *Command {
+	if conf == nil {
+		conf = pdf.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdf.FONTS
+	return &Command{
+		Mode: pdf.FONTS,
+		Conf: conf}
 }

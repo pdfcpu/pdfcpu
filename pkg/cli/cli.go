@@ -175,3 +175,8 @@ func ExtractAttachments(cmd *Command) ([]string, error) {
 func Info(cmd *Command) ([]string, error) {
 	return api.InfoFile(*cmd.InFile, cmd.Conf)
 }
+
+// FontNames gathers information about supported fonts and returns the result as []string.
+func FontNames(cmd *Command) ([]string, error) {
+	return api.FontNames(cmd.Conf)
+}

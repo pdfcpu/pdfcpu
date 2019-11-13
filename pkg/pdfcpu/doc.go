@@ -11,6 +11,7 @@ The commands are:
 	decrypt		remove password protection
 	encrypt		set password protection
 	extract		extract images, fonts, content, pages or metadata
+	fonts		print list of supported fonts
 	grid		rearrange pages or images for enhanced browsing experience
 	import		import/convert images to PDF
 	info		print file info
