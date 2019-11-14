@@ -2061,7 +2061,8 @@ func (xRefTable *XRefTable) detectPageTreeWatermarks(root *IndirectRef) error {
 	return nil
 }
 
-// DetectPageTreeWatermarks checks xRefTable's page tree for watermarks.
+// DetectPageTreeWatermarks checks xRefTable's page tree for watermarks
+// and records the result to xRefTable.Watermarked.
 func (xRefTable *XRefTable) DetectPageTreeWatermarks() error {
 
 	root, err := xRefTable.Pages()

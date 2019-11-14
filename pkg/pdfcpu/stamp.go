@@ -40,6 +40,13 @@ const (
 	radToDeg = 180 / math.Pi
 )
 
+// Watermark mode
+const (
+	WMText int = iota
+	WMImage
+	WMPDF
+)
+
 // Rotation along one of 2 diagonals
 const (
 	NoDiagonal = iota
@@ -137,6 +144,7 @@ type formCache map[*Rectangle]*IndirectRef
 type Watermark struct {
 
 	// configuration
+	Mode              int         // WMText, WMImage or WMPDF
 	TextString        string      // raw display text.
 	TextLines         []string    // display multiple lines of text.
 	FileName          string      // display pdf page or png image.
@@ -499,21 +507,18 @@ func parseRenderMode(s string, wm *Watermark) error {
 	return nil
 }
 
-// ParseWatermarkDetails parses a Watermark/Stamp command string into an internal structure.
-func ParseWatermarkDetails(s string, onTop bool) (*Watermark, error) {
+func parseWatermarkDetails(mode int, modeParm, s string, onTop bool) (*Watermark, error) {
 
 	wm := DefaultWatermarkConfig()
 	wm.OnTop = onTop
+	setWatermarkType(mode, modeParm, wm)
 
 	ss := strings.Split(s, ",")
-
-	setWatermarkType(ss[0], wm)
-
-	if len(ss) == 1 {
+	if len(ss) < 1 || len(ss[0]) == 0 {
 		return wm, nil
 	}
 
-	for _, s := range ss[1:] {
+	for _, s := range ss {
 
 		ss1 := strings.Split(s, ":")
 		if len(ss1) != 2 {
@@ -529,6 +534,21 @@ func ParseWatermarkDetails(s string, onTop bool) (*Watermark, error) {
 	}
 
 	return wm, nil
+}
+
+// ParseTextWatermarkDetails parses a text Watermark/Stamp command string into an internal structure.
+func ParseTextWatermarkDetails(text, desc string, onTop bool) (*Watermark, error) {
+	return parseWatermarkDetails(WMText, text, desc, onTop)
+}
+
+// ParseImageWatermarkDetails parses a text Watermark/Stamp command string into an internal structure.
+func ParseImageWatermarkDetails(fileName, desc string, onTop bool) (*Watermark, error) {
+	return parseWatermarkDetails(WMImage, fileName, desc, onTop)
+}
+
+// ParsePDFWatermarkDetails parses a text Watermark/Stamp command string into an internal structure.
+func ParsePDFWatermarkDetails(fileName, desc string, onTop bool) (*Watermark, error) {
+	return parseWatermarkDetails(WMPDF, fileName, desc, onTop)
 }
 
 func (wm Watermark) calcMinFontSize(w float64) int {
@@ -670,39 +690,45 @@ func parseWatermarkError(onTop bool) error {
 	return errors.Errorf("Invalid %s configuration string. Please consult pdfcpu help %s.\n", s, s)
 }
 
-func setWatermarkType(s string, wm *Watermark) error {
+func setWatermarkType(mode int, s string, wm *Watermark) error {
 
-	ss := strings.Split(s, ":")
+	wm.Mode = mode
 
-	wm.TextString = ss[0]
-
-	bb := []byte{}
-	for _, r := range ss[0] {
-		bb = append(bb, byte(r))
-	}
-
-	ss[0] = strings.ReplaceAll(string(bb), "\\n", "\n")
-	for _, l := range strings.FieldsFunc(ss[0], func(c rune) bool { return c == 0x0a }) {
-		wm.TextLines = append(wm.TextLines, l)
-	}
-
-	if len(wm.TextLines) > 1 {
-		// Multiline text watermark.
-		return nil
-	}
-
-	ext := strings.ToLower(filepath.Ext(ss[0]))
-	if MemberOf(ext, []string{".jpg", ".jpeg", ".png", ".tif", ".tiff", ".pdf"}) {
-		wm.FileName = wm.TextString
-	}
-
-	if len(ss) > 1 {
-		// Parse page number for PDF watermarks.
-		var err error
-		wm.Page, err = strconv.Atoi(ss[1])
-		if err != nil {
-			return errors.Errorf("illegal page number value: %s\n", ss[1])
+	switch mode {
+	case WMText:
+		wm.TextString = s
+		bb := []byte{}
+		for _, r := range s {
+			bb = append(bb, byte(r))
 		}
+		s = strings.ReplaceAll(string(bb), "\\n", "\n")
+		for _, l := range strings.FieldsFunc(s, func(c rune) bool { return c == 0x0a }) {
+			wm.TextLines = append(wm.TextLines, l)
+		}
+
+	case WMImage:
+		ext := strings.ToLower(filepath.Ext(s))
+		if !MemberOf(ext, []string{".jpg", ".jpeg", ".png", ".tif", ".tiff"}) {
+			return errors.New("imageFileName has to have one of these extensions: jpg, jpeg, png, tif, tiff")
+		}
+		wm.FileName = s
+
+	case WMPDF:
+		ss := strings.Split(s, ":")
+		ext := strings.ToLower(filepath.Ext(ss[0]))
+		if !MemberOf(ext, []string{".pdf"}) {
+			return errors.Errorf("%s is not a PDF file", ss[0])
+		}
+		wm.FileName = ss[0]
+		if len(ss) > 1 {
+			// Parse page number for PDF watermarks.
+			var err error
+			wm.Page, err = strconv.Atoi(ss[1])
+			if err != nil {
+				return errors.Errorf("illegal PDF page number: %s\n", ss[1])
+			}
+		}
+
 	}
 
 	return nil
@@ -1551,9 +1577,16 @@ func AddWatermarks(ctx *Context, selectedPages IntSet, wm *Watermark) error {
 		return err
 	}
 
+	if selectedPages == nil || len(selectedPages) == 0 {
+		selectedPages = IntSet{}
+		for i := 1; i <= ctx.PageCount; i++ {
+			selectedPages[i] = true
+		}
+	}
+
 	for k, v := range selectedPages {
 		if v {
-			if err := addPageWatermark(xRefTable, k, wm); err != nil {
+			if err := addPageWatermark(ctx.XRefTable, k, wm); err != nil {
 				return err
 			}
 		}
@@ -1957,7 +1990,8 @@ func findPageWatermarks(xRefTable *XRefTable, pageDictIndRef *IndirectRef) (bool
 	return false, nil
 }
 
-// DetectWatermarks checks ctx for watermarks.
+// DetectWatermarks checks ctx for watermarks
+// and records the result to xRefTable.Watermarked.
 func DetectWatermarks(ctx *Context) error {
 
 	a, err := locateOCGs(ctx)

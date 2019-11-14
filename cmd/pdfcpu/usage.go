@@ -119,7 +119,7 @@ verbose, v ... turn on logging
 
 	n serves as an alternative for !, since ! needs to be escaped with single quotes on the cmd line.
 
-e.g. -3,5,7- or 4-7,!6 or 1-,!5 or odd,n1`
+        e.g. -3,5,7- or 4-7,!6 or 1-,!5 or odd,n1`
 
 	usageExtract     = "usage: pdfcpu extract [-v(erbose)|vv] [-q(uiet)] -mode image|font|content|page|meta [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile outDir"
 	usageLongExtract = `Export inFile's images, fonts, content or pages into outDir.
@@ -241,43 +241,56 @@ verbose, v ... turn on logging
     opwOld ... old owner password (provide user password on initial changeopw)
     opwNew ... new owner password`
 
-	usageWMDescription = `<description> is a comma separated configuration string containing:
+	usageWMMode = `There are 3 different kinds:
+
+   1) text based:
+      -mode text string			
+         eg. mode -text "Hello gopher!"
+   
+   2) image based
+      -mode image imageFileName
+         supported extensions: '.jpg', 'jpeg', .png', '.tif', '.tiff' 
+         eg. mode -image logo.png
+         
+   3) PDF based
+      -mode pdf pdfFileName[:page#]
+         where page# defaults to 1
+         eg. mode -pdf "test.pdf:3" ... use page 3 of test.pdf
+             mode -pdf test.pdf     ... use page 1 of test.pdf
+   `
+	usageWMDescription = `
+
+<description> is a comma separated configuration string containing these optional entries:
 	
-    1st entry: the display string
-               or an image file name with one the of extensions '.jpg', 'jpeg', .png', '.tif' or '.tiff' 
-               or a PDF file name with extension '.pdf' followed by an optional page number (default=1) separated by ':'
+   (defaults: 'font:Helvetica, points:24, pos:c, off:0,0 s:0.5 rel, c:0.5 0.5 0.5, rot:0, d:1, op:1, m:0')
 
-    optional entries:
+   fontname:    Please refer to pdfcpu fonts
+   points:      fontsize in points, in combination with absolute scaling only.
+   position:    one of 'full' or the anchors: tl,tc,tr, l,c,r, bl,bc,br
+   offset:      (dx dy) in user units eg. '15 20'
+   scalefactor: 0.0 <= x <= 1.0 followed by optional 'abs|rel' or 'a|r'.
+   color:       3 fill color intensities, where 0.0 < i < 1.0, eg 1.0, 0.0 0.0 = red (default:0.5 0.5 0.5 = gray)
+   rotation:    -180.0 <= x <= 180.0
+   diagonal:    render along diagonal, 1..lower left to upper right, 2..upper left to lower right (if present overrules r!)
+                Only one of rotation and diagonal is allowed!
+   opacity:     where 0.0 <= x <= 1.0
+   mode, rendermode: 0 ... fill
+                     1 ... stroke
+                     2 ... fill & stroke
 
-         (defaults: 'font:Helvetica, points:24, s:0.5 rel, c:0.5 0.5 0.5, rot:0, d:1, op:1, m:0')
 
-      fontname:    Please refer to pdfcpu fonts
-      points:      fontsize in points, in combination with absolute scaling only.
-      position:    one of 'full' or the anchors: tl,tc,tr, l,c,r, bl,bc,br
-      offset:      (dx dy) in user units eg. '15 20'
-      scalefactor: 0.0 <= x <= 1.0 followed by optional 'abs|rel' or 'a|r'.
-      color:       3 fill color intensities, where 0.0 < i < 1.0, eg 1.0, 0.0 0.0 = red (default:0.5 0.5 0.5 = gray)
-      rotation:    -180.0 <= x <= 180.0
-      diagonal:    render along diagonal, 1..lower left to upper right, 2..upper left to lower right (if present overrules r!)
-      opacity:     where 0.0 <= x <= 1.0
-      mode, rendermode: 0 ... fill
-                        1 ... stroke
-                        2 ... fill & stroke
+All configuration string parameters support completion.
 
-    Only one of rotation and diagonal is allowed.
-
-    All configuration string parameters support completion.
-
-e.g. 'Draft'                                                  'logo.png, pos:bl, off: 20 5'
-     'Draft, d:2'                                             'logo.tif, op:0.5, s:0.5 abs, rot:0'
-     'Intentionally left blank, s:.75 abs, pointa:48'         'some.pdf, rot:45' 
-     'Confidental, f:Courier, s:0.75, c: 0.5 0.0 0.0, rot:20' 'some.pdf:3, rot:-90, s:0.75'
+e.g. 'pos:bl, off: 20 5'   'rot:45'                 'op:0.5, s:0.5 abs, rot:0'
+     'd:2'                 's:.75 abs, points:48'   'rot:-90, scale:0.75 rel'
+     'f:Courier, s:0.75, c: 0.5 0.0 0.0, rot:20'  
+  
      
 ` + usagePageSelection
 
-	usageStampAdd    = "pdfcpu stamp add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]"
+	usageStampAdd    = "pdfcpu stamp add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]"
 	usageStampRemove = "pdfcpu stamp remove [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]"
-	usageStampUpdate = "pdfcpu stamp update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]"
+	usageStampUpdate = "pdfcpu stamp update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]"
 
 	usageStamp = "usage: " + usageStampAdd +
 		"\n       " + usageStampRemove +
@@ -291,15 +304,18 @@ e.g. 'Draft'                                                  'logo.png, pos:bl,
       pages ... selected pages
         upw ... user password
         opw ... owner password
-description ... font, font size, text, color, image/pdf file name, pdf page#, rotation, opacity, scale factor, render mode
+       mode ... text, image, pdf
+     string ... display string for text based watermarks
+       file ... image or pdf file
+description ... fontname, points, position, offset, scalefactor, color, rotation, diagonal, opacity, rendermode
      inFile ... input pdf file
     outFile ... output pdf file
 
-` + usageWMDescription
+` + usageWMMode + usageWMDescription
 
-	usageWatermarkAdd    = "pdfcpu watermark add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]"
+	usageWatermarkAdd    = "pdfcpu watermark add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]"
 	usageWatermarkRemove = "pdfcpu watermark remove [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]"
-	usageWatermarkUpdate = "pdfcpu watermark update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]"
+	usageWatermarkUpdate = "pdfcpu watermark update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]"
 
 	usageWatermark = "usage: " + usageWatermarkAdd +
 		"\n       " + usageWatermarkRemove +
@@ -313,11 +329,14 @@ description ... font, font size, text, color, image/pdf file name, pdf page#, ro
       pages ... selected pages
         upw ... user password
         opw ... owner password
-description ... font, font size, text, color, image/pdf file name, pdf page#, rotation, opacity, scale factor, render mode
+       mode ... text, image, pdf
+     string ... display string for text based watermarks
+       file ... image or pdf file
+description ... fontname, points, position, offset, scalefactor, color, rotation, diagonal, opacity, rendermode
      inFile ... input pdf file
     outFile ... output pdf file
 
-` + usageWMDescription
+` + usageWMMode + usageWMDescription
 
 	usageImportImages     = "usage: pdfcpu import [-v(erbose)|vv] [-q(uiet)] [description] outFile imageFile..."
 	usageLongImportImages = `Turn image files into a PDF page sequence and write the result to outFile.

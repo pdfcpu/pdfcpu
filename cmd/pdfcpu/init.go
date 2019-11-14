@@ -107,7 +107,7 @@ func initFlags() {
 	flag.StringVar(&fileStats, "stats", "", statsUsage)
 	flag.StringVar(&fileStats, "s", "", statsUsage)
 
-	modeUsage := "validate: strict|relaxed; extract: image|font|content|page|meta; encrypt: rc4|aes"
+	modeUsage := "validate: strict|relaxed; extract: image|font|content|page|meta; encrypt: rc4|aes, stamp:text|image/pdf"
 	flag.StringVar(&mode, "mode", "", modeUsage)
 	flag.StringVar(&mode, "m", "", modeUsage)
 

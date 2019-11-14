@@ -178,5 +178,5 @@ func Info(cmd *Command) ([]string, error) {
 
 // FontNames gathers information about supported fonts and returns the result as []string.
 func FontNames(cmd *Command) ([]string, error) {
-	return api.FontNames(cmd.Conf)
+	return api.FontNames(), nil
 }

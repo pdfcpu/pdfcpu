@@ -27,6 +27,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pkg/errors"
 )
 
 func hasPdfExtension(filename string) bool {
@@ -517,12 +518,41 @@ func handleChangeOwnerPasswordCommand(conf *pdfcpu.Configuration) {
 }
 
 func addWatermarks(conf *pdfcpu.Configuration, onTop bool) {
-	if len(flag.Args()) < 2 || len(flag.Args()) > 3 {
-		s := usageWatermarkAdd
-		if onTop {
-			s = usageStampAdd
-		}
-		fmt.Fprintf(os.Stderr, "%s\n\n", s)
+	u := usageWatermarkAdd
+	if onTop {
+		u = usageStampAdd
+	}
+
+	if len(flag.Args()) < 3 || len(flag.Args()) > 4 {
+		fmt.Fprintf(os.Stderr, "%s\n\n", u)
+		os.Exit(1)
+	}
+
+	if mode != "text" && mode != "image" && mode != "pdf" {
+		fmt.Fprintln(os.Stderr, "mode has to be one of: text, image or pdf")
+		os.Exit(1)
+	}
+
+	var (
+		wm  *pdfcpu.Watermark
+		err error
+	)
+
+	switch mode {
+	case "text":
+		wm, err = pdfcpu.ParseTextWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop)
+
+	case "image":
+		wm, err = pdfcpu.ParseImageWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop)
+
+	case "pdf":
+		wm, err = pdfcpu.ParsePDFWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop)
+	default:
+		err = errors.Errorf("unsupported wm type: %s\n", mode)
+	}
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 
@@ -532,18 +562,12 @@ func addWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 		os.Exit(1)
 	}
 
-	wm, err := pdfcpu.ParseWatermarkDetails(flag.Arg(0), onTop)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-
-	inFile := flag.Arg(1)
+	inFile := flag.Arg(2)
 	ensurePdfExtension(inFile)
 
 	outFile := ""
-	if len(flag.Args()) == 3 {
-		outFile = flag.Arg(2)
+	if len(flag.Args()) == 4 {
+		outFile = flag.Arg(3)
 		ensurePdfExtension(outFile)
 	}
 
@@ -559,12 +583,41 @@ func handleAddWatermarksCommand(conf *pdfcpu.Configuration) {
 }
 
 func updateWatermarks(conf *pdfcpu.Configuration, onTop bool) {
-	if len(flag.Args()) < 2 || len(flag.Args()) > 3 {
-		s := usageWatermarkUpdate
-		if onTop {
-			s = usageStampUpdate
-		}
-		fmt.Fprintf(os.Stderr, "%s\n\n", s)
+	u := usageWatermarkAdd
+	if onTop {
+		u = usageStampAdd
+	}
+
+	if len(flag.Args()) < 3 || len(flag.Args()) > 4 {
+		fmt.Fprintf(os.Stderr, "%s\n\n", u)
+		os.Exit(1)
+	}
+
+	if mode != "text" && mode != "image" && mode != "pdf" {
+		fmt.Fprintf(os.Stderr, "%s\n\n", u)
+		os.Exit(1)
+	}
+
+	var (
+		wm  *pdfcpu.Watermark
+		err error
+	)
+
+	switch mode {
+	case "text":
+		wm, err = pdfcpu.ParseTextWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop)
+
+	case "image":
+		wm, err = pdfcpu.ParseImageWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop)
+
+	case "pdf":
+		wm, err = pdfcpu.ParsePDFWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop)
+	default:
+		err = errors.Errorf("unsupported wm type: %s\n", mode)
+	}
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 
@@ -574,20 +627,14 @@ func updateWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 		os.Exit(1)
 	}
 
-	wm, err := pdfcpu.ParseWatermarkDetails(flag.Arg(0), onTop)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-
 	wm.Update = true
 
-	inFile := flag.Arg(1)
+	inFile := flag.Arg(2)
 	ensurePdfExtension(inFile)
 
 	outFile := ""
-	if len(flag.Args()) == 3 {
-		outFile = flag.Arg(2)
+	if len(flag.Args()) == 4 {
+		outFile = flag.Arg(3)
 		ensurePdfExtension(outFile)
 	}
 

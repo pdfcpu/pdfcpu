@@ -22,9 +22,9 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -271,14 +271,27 @@ func TestInsertRemovePages(t *testing.T) {
 	}
 }
 
-func testAddWatermarks(t *testing.T, msg, inFile, outFile string, selectedPages []string, wmConf string, onTop bool) {
+func testAddWatermarks(t *testing.T, msg, inFile, outFile string, selectedPages []string, mode, modeParam, desc string, onTop bool) {
 	t.Helper()
 	inFile = filepath.Join(inDir, inFile)
 	outFile = filepath.Join(outDir, outFile)
-	wm, err := pdf.ParseWatermarkDetails(wmConf, onTop)
+
+	var (
+		wm  *pdfcpu.Watermark
+		err error
+	)
+	switch mode {
+	case "text":
+		wm, err = pdf.ParseTextWatermarkDetails(modeParam, desc, onTop)
+	case "image":
+		wm, err = pdf.ParseImageWatermarkDetails(modeParam, desc, onTop)
+	case "pdf":
+		wm, err = pdf.ParsePDFWatermarkDetails(modeParam, desc, onTop)
+	}
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
+
 	if err := AddWatermarksFile(inFile, outFile, selectedPages, wm, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
@@ -293,6 +306,8 @@ func TestAddWatermarks(t *testing.T) {
 		inFile, outFile string
 		selectedPages   []string
 		onTop           bool
+		mode            string
+		modeParm        string
 		wmConf          string
 	}{
 		// Add text watermark to all pages of inFile starting at page 1 using a rotation angle of 20 degrees.
@@ -301,7 +316,9 @@ func TestAddWatermarks(t *testing.T) {
 			"testwm.pdf",
 			[]string{"1-"},
 			false,
-			"Draft, s:0.7, rot:20"},
+			"text",
+			"Line1\n \nLine3",
+			"s:0.5, rot:20"},
 
 		// Add a greenish, slightly transparent stroked and filled text stamp to all odd pages of inFile other than page 1
 		// using the default rotation which is aligned along the first diagonal running from lower left to upper right corner.
@@ -310,7 +327,9 @@ func TestAddWatermarks(t *testing.T) {
 			"testStampText1.pdf",
 			[]string{"odd", "!1"},
 			true,
-			"Demo, f:Courier, c: 0 .8 0, op:0.8, m:2"},
+			"text",
+			"Demo",
+			"f:Courier, c: 0 .8 0, op:0.8, m:2"},
 
 		// Add a red filled text stamp to all odd pages of inFile other than page 1 using a font size of 48 points
 		// and the default rotation which is aligned along the first diagonal running from lower left to upper right corner.
@@ -319,14 +338,18 @@ func TestAddWatermarks(t *testing.T) {
 			"testStampText2.pdf",
 			[]string{"odd", "!1"},
 			true,
-			"Demo, font:Courier, c: 1 0 0, op:1, s:1 abs, points:48"},
+			"text",
+			"Demo",
+			"font:Courier, c: 1 0 0, op:1, s:1 abs, points:48"},
 
 		// Add image watermark to inFile starting at page 1 using no rotation.
 		{"TestWatermarkImage",
 			"Acroforms2.pdf", "testWMImageRel.pdf",
 			[]string{"1-"},
 			false,
-			filepath.Join(resDir, "pdfchip3.png") + ", rot:0"},
+			"image",
+			filepath.Join(resDir, "pdfchip3.png"),
+			"rot:0"},
 
 		// Add image stamp to inFile using absolute scaling and a negative rotation of 90 degrees.
 		{"TestStampImageAbsScaling",
@@ -334,7 +357,9 @@ func TestAddWatermarks(t *testing.T) {
 			"testWMImageAbs.pdf",
 			[]string{"1-"},
 			true,
-			filepath.Join(resDir, "pdfchip3.png") + ", s:.5 a, rot:-90"},
+			"pdf",
+			filepath.Join(resDir, "pdfchip3.png"),
+			"s:.5 a, rot:-90"},
 
 		// Add a PDF stamp to all pages of inFile using the 2nd page of pdfFile
 		// and rotate along the 2nd diagonal running from upper left to lower right corner.
@@ -343,13 +368,83 @@ func TestAddWatermarks(t *testing.T) {
 			"testStampPDF.pdf",
 			nil,
 			true,
-			filepath.Join(inDir, "Wonderwall.pdf") + ":2, d:2"},
+			"pdf",
+			filepath.Join(inDir, "Wonderwall.pdf:2"),
+			"d:2"},
 	} {
-		testAddWatermarks(t, tt.msg, tt.inFile, tt.outFile, tt.selectedPages, tt.wmConf, tt.onTop)
+		testAddWatermarks(t, tt.msg, tt.inFile, tt.outFile, tt.selectedPages, tt.mode, tt.modeParm, tt.wmConf, tt.onTop)
 	}
 }
 
-func XXXTestFontTestPage(t *testing.T) {
+func createFontSample(fontName string, t *testing.T) {
+	t.Helper()
+	msg := "createFontSampleSpecial"
+	inFile := filepath.Join(inDir, "empty.pdf")
+	outFile := filepath.Join(inDir, "fontSamples", fontName+".pdf")
+
+	ctx, err := ReadContextFile(inFile)
+	if err != nil {
+		t.Fatalf("%s: ReadContextFile %s: %v\n", msg, inFile, err)
+	}
+
+	wm, err := pdf.ParseTextWatermarkDetails(fontName, "rot:0, scal:0.8 abs, pos:tl", true)
+	if err != nil {
+		t.Fatalf("%s: ParseTextWatermarkDetails: %v\n", msg, err)
+	}
+	if err := WatermarkContext(ctx, nil, wm); err != nil {
+		t.Fatalf("%s: WatermarkContext: %v\n", msg, err)
+	}
+
+	var sb strings.Builder
+	for i := 32; i <= 255; i++ {
+		if i%8 == 0 {
+			sb.WriteString(fmt.Sprintf("\n%3d (%03o): ", i, i))
+		}
+	}
+	a := sb.String()
+	wm, err = pdf.ParseTextWatermarkDetails(a, "rot:0, scal:0.8 abs, pos:tl, off:5 -40", true)
+	if err != nil {
+		t.Fatalf("%s: ParseTextWatermarkDetails: %v\n", msg, err)
+	}
+	if err := WatermarkContext(ctx, nil, wm); err != nil {
+		t.Fatalf("%s: WatermarkContext: %v\n", msg, err)
+	}
+
+	sb.Reset()
+	x := 100
+	y := -38
+	if fontName == "ZapfDingbats" {
+		y = -45
+	}
+	for i := 32; i <= 256; i++ {
+		if i > 32 && i%8 == 0 {
+			desc := fmt.Sprintf("font:%s, rot:0, scal:0.8 abs, pos:tl, off:%d %d", fontName, x, y)
+			wm, err = pdf.ParseTextWatermarkDetails(sb.String(), desc, true)
+			if err != nil {
+				t.Fatalf("%s: ParseTextWatermarkDetails: %v\n", msg, err)
+			}
+			if err := WatermarkContext(ctx, nil, wm); err != nil {
+				t.Fatalf("%s: WatermarkContext: %v\n", msg, err)
+			}
+			y -= 19
+			sb.Reset()
+		}
+		sb.WriteRune(rune(i))
+		sb.WriteString(" ")
+	}
+
+	if err := WriteContextFile(ctx, outFile); err != nil {
+		t.Fatalf("%s: WriteContextFile %s: %v\n", msg, outFile, err)
+	}
+}
+
+func TestCreateFontSamples(t *testing.T) {
+	for _, fn := range FontNames() {
+		createFontSample(fn, t)
+	}
+}
+
+func TestFontTestPage(t *testing.T) {
 
 	// Generate a sample page for an Adobe Type 1 standard font.
 	inFile := filepath.Join(inDir, "empty.pdf")
@@ -359,64 +454,20 @@ func XXXTestFontTestPage(t *testing.T) {
 		if i%8 == 0 {
 			sb.WriteString(fmt.Sprintf("\n%03o ", i))
 		}
-		if i == 44 || i == 58 {
-			sb.WriteString("?")
-		} else {
-			sb.WriteRune(rune(i))
-		}
+		sb.WriteRune(rune(i))
 		sb.WriteString(" ")
 	}
 
 	a := sb.String()
 
-	wmConf := "Symbol\n\n" + a + ", font:Symbol, rot:0, scal:0.8 abs, pos:tl"
-	wm, err := pdf.ParseWatermarkDetails(wmConf, true)
+	wmConf := "font:Symbol, rot:0, scal:0.8 abs, pos:tl"
+	wm, err := pdf.ParseTextWatermarkDetails("Symbol\n\n"+a, wmConf, true)
 	if err != nil {
 		t.Fatalf("%v\n", err)
 	}
 	err = AddWatermarksFile(inFile, filepath.Join(inDir, "Symbol.pdf"), []string{}, wm, nil)
 	if err != nil {
 		t.Fatalf("%v\n", err)
-	}
-
-}
-
-func XXXTestFontCatalog(t *testing.T) {
-
-	inFile := filepath.Join(inDir, "fonttest.pdf")
-	if err := copyFile(filepath.Join(inDir, "256.pdf"), inFile); err != nil {
-		t.Fatalf("%v\n", err)
-	}
-
-	for i := 32; i < 255; i++ {
-		selPages := []string{strconv.Itoa(i - 31)}
-		a := string(rune(i))
-		if a == "," || a == ":" {
-			a = "?"
-		}
-		wmConf := a + ", font:Symbol, rot:0"
-		wm, err := pdf.ParseWatermarkDetails(wmConf, true)
-		if err != nil {
-			t.Fatalf("%v\n", err)
-		}
-		err = AddWatermarksFile(inFile, "", selPages, wm, nil)
-		if err != nil {
-			t.Fatalf("%v\n", err)
-		}
-	}
-
-	for i := 32; i < 255; i++ {
-		selPages := []string{strconv.Itoa(i - 31)}
-		a := fmt.Sprintf("%d oktal=%0o", i, i)
-		wmConf := a + ", font:Times-Roman, rot:0, scal:1.0 abs, pos:tl"
-		wm, err := pdf.ParseWatermarkDetails(wmConf, true)
-		if err != nil {
-			t.Fatalf("%v\n", err)
-		}
-		err = AddWatermarksFile(inFile, "", selPages, wm, nil)
-		if err != nil {
-			t.Fatalf("%v\n", err)
-		}
 	}
 
 }
@@ -442,7 +493,7 @@ func TestStampingLifecyle(t *testing.T) {
 	}
 
 	// Stamp all pages.
-	wm, err := pdf.ParseWatermarkDetails("Demo", onTop)
+	wm, err := pdf.ParseTextWatermarkDetails("Demo", "", onTop)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
@@ -456,7 +507,7 @@ func TestStampingLifecyle(t *testing.T) {
 	}
 
 	// // Update stamp on page 1.
-	wm, err = pdf.ParseWatermarkDetails("Confidential", onTop)
+	wm, err = pdf.ParseTextWatermarkDetails("Confidential", "", onTop)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
@@ -467,7 +518,7 @@ func TestStampingLifecyle(t *testing.T) {
 
 	// Add another stamp on top for all pages.
 	// This is a redish transparent footer.
-	wm, err = pdf.ParseWatermarkDetails("Footer, pos:bc, c:0.8 0 0, op:.6, rot:0", onTop)
+	wm, err = pdf.ParseTextWatermarkDetails("Footer", "pos:bc, c:0.8 0 0, op:.6, rot:0", onTop)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
@@ -893,5 +944,33 @@ func TestExtractMetadataCommand(t *testing.T) {
 	inFile := filepath.Join(inDir, "TheGoProgrammingLanguageCh1.pdf")
 	if err := ExtractMetadataFile(inFile, outDir, nil, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
+	}
+}
+
+func TestManipulateContext(t *testing.T) {
+	msg := "TestManipulateContext"
+	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
+	outFile := filepath.Join(outDir, "abc.pdf")
+
+	// Read a PDF Context from inFile.
+	ctx, err := ReadContextFile(inFile)
+	if err != nil {
+		t.Fatalf("%s: ReadContextFile %s: %v\n", msg, inFile, err)
+	}
+
+	// Manipulate the PDF Context.
+	// Eg. Let's stamp all pages with pageCount and current timestamp.
+	text := fmt.Sprintf("Pages: %d \n Current time: %v", ctx.PageCount, time.Now())
+	wm, err := pdf.ParseTextWatermarkDetails(text, "font:Times-Italic, scale:.9", true)
+	if err != nil {
+		t.Fatalf("%s: ParseTextWatermarkDetails: %v\n", msg, err)
+	}
+	if err := WatermarkContext(ctx, nil, wm); err != nil {
+		t.Fatalf("%s: WatermarkContext: %v\n", msg, err)
+	}
+
+	// Write the manipulated PDF context to outFile.
+	if err := WriteContextFile(ctx, outFile); err != nil {
+		t.Fatalf("%s: WriteContextFile %s: %v\n", msg, outFile, err)
 	}
 }

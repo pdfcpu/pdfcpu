@@ -156,6 +156,16 @@ func WriteContext(ctx *pdf.Context, w io.Writer) error {
 	return pdf.Write(ctx)
 }
 
+// WriteContextFile writes a PDF context to outFile.
+func WriteContextFile(ctx *pdf.Context, outFile string) error {
+	f, err := os.Create(outFile)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return WriteContext(ctx, f)
+}
+
 func readAndValidate(rs io.ReadSeeker, conf *pdf.Configuration, from1 time.Time) (ctx *pdf.Context, dur1, dur2 float64, err error) {
 	if ctx, err = ReadContext(rs, conf); err != nil {
 		return nil, 0, 0, err
@@ -786,6 +796,11 @@ func RotateFile(inFile, outFile string, rotation int, selectedPages []string, co
 	}()
 
 	return Rotate(f1, f2, rotation, selectedPages, conf)
+}
+
+// WatermarkContext applies a watermark for selected pages,
+func WatermarkContext(ctx *pdf.Context, selectedPages pdf.IntSet, wm *pdf.Watermark) error {
+	return pdf.AddWatermarks(ctx, selectedPages, wm)
 }
 
 // AddWatermarks adds watermarks to all pages selected in rs and writes the result to w.
@@ -1530,8 +1545,8 @@ func InfoFile(inFile string, conf *pdf.Configuration) ([]string, error) {
 }
 
 // FontNames returns a list of supported fonts.
-func FontNames(conf *pdf.Configuration) ([]string, error) {
+func FontNames() []string {
 	ss := metrics.FontNames()
 	sort.Strings(ss)
-	return ss, nil
+	return ss
 }
