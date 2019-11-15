@@ -61,8 +61,8 @@ where *content* may be text, an image or a PDF page.
 
 | name         | description          | required |
 |:-------------|:---------------------|:---------|
-| string       | display string for text based watermarks | either string ot file
-| file         | image or pdf file name | either string ot file
+| string       | display string       | for text stamps
+| file         | file name            | for image or pdf stamps
 | description  | configuration string | yes
 | inFile       | PDF input file       | yes
 | outFile      | PDF output file      | no
