@@ -6,6 +6,7 @@ layout: default
 
 | Date      | Tag / Commit | Description  
 |:----------|:-------------|:--------
+|2019-11-15 | [v0.3](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3)     | Core font support, Fix #113,114,117,119,121,123,130
 |2019-09-23 | [v0.2.5](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.5) | Fix #101, #103, #107-#109
 |2019-08-28 | [v0.2.4](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.4) | Fix #100, #104. Use x/image/ccitt.
 |2019-08-11 | [v0.2.3](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.3) | Transfer repo to org
@@ -25,9 +26,6 @@ layout: default
 |2019-03-29 | [eca8f35](https://github.com/pdfcpu/pdfcpu/commit/eca8f35ebe5f99da5862212e050824680f23016f) | Fix #73.
 |2019-03-28 | [80aa62c](https://github.com/pdfcpu/pdfcpu/commit/80aa62c9dd3076f631a9f903cb7c9779d40fd3db) | Fix #71, #72.
 |2019-03-24 | [v0.1.22](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.1.22) | Insert & Remove Pages, go mod support.
-|2019-03-17 | [b112077](https://github.com/pdfcpu/pdfcpu/commit/b112077a350f920d21423d55ea26f8ab15a3d1ae) | Update README.
-|2019-03-15 | [f5087de](https://github.com/pdfcpu/pdfcpu/commit/f5087deb534155298a21f6ffcf1d711c0b9a5acf) | Update README.
-|2019-03-14 | [ca95cee](https://github.com/pdfcpu/pdfcpu/commit/ca95cee228a9837387adb72813f5df5652ec53b8) | Update README.
 |2019-03-13 | [967c250](https://github.com/pdfcpu/pdfcpu/commit/967c250e0cdf31441df1c79562a00a8df3ab4a52) | Fix #69: Correct name parsing.
 |2019-03-03 | [067897d](https://github.com/pdfcpu/pdfcpu/commit/067897de8ea2ff18ef6a86bf7b2da43f264c0991) | Cleanup encryption.
 |2019-02-24 | [6e1af9e](https://github.com/pdfcpu/pdfcpu/commit/6e1af9ed3b76f0306a469ed50e64e737c9f752f7) | Fix stamp transform calc.
