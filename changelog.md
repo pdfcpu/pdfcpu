@@ -6,26 +6,26 @@ layout: default
 
 | Date      | Tag / Commit | Description  
 |:----------|:-------------|:--------
-|2019-11-15 | [v0.3](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3)     | Core font support, Fix #113,114,117,119,121,123,130
-|2019-09-23 | [v0.2.5](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.5) | Fix #101, #103, #107-#109
-|2019-08-28 | [v0.2.4](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.4) | Fix #100, #104. Use x/image/ccitt.
-|2019-08-11 | [v0.2.3](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.3) | Transfer repo to org
-|2019-08-01 | [v0.2.2](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.2) | Fix #95-#97
+|2019-11-15 | [v0.3](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3)                                  | Fix #113, #114, #117, #119, #121, #123, #w130
+|2019-09-23 | [v0.2.5](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.5)                              | Fix #101, #103, #107-#109
+|2019-08-28 | [v0.2.4](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.4)                              | Fix #100, #104. Use x/image/ccitt.
+|2019-08-11 | [v0.2.3](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.3)                              | Transfer repo to org
+|2019-08-01 | [v0.2.2](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.2)                              | Fix #95-#97
 |2019-07-22 | [18994fd](https://github.com/pdfcpu/pdfcpu/commit/18994fd6776f425631cc195b28db99fd91d7c76f) | Fix #94
-|2019-07-15 | [v0.2.1](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.1) | Fix #92, #93
-|2019-07-14 | [v0.2](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2) | Redesign API, info cmd, Fix #87,#89-#91
-|2019-06-17 | [v0.1.25](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.1.25) | Fix #88
-|2019-06-16 | [v0.1.24](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.1.24) | Add AES-256 encryption
+|2019-07-15 | [v0.2.1](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.1)                              | Fix #92, #93
+|2019-07-14 | [v0.2](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2)                                  | Redesign API, info cmd, Fix #87,#89-#91
+|2019-06-17 | [v0.1.25](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.1.25)                            | Fix #88
+|2019-06-16 | [v0.1.24](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.1.24)                            | Add AES-256 encryption
 |2019-06-10 | [86b3445](https://github.com/pdfcpu/pdfcpu/commit/86b344515ab4f12e80ea26f3c0e519e28047274f) | Fix #82, #86 repairs corrupt xref sections.
 |2019-06-03 | [33da2dd](https://github.com/pdfcpu/pdfcpu/commit/33da2ddb3686ab98567f1abefbc62e8d15ed2720) | Fix #85.
 |2019-05-10 | [f9a4092](https://github.com/pdfcpu/pdfcpu/commit/f9a4092442562289304485a9d0867be7e29a8084) | Fix #80, #81.
 |2019-04-19 | [9d476dd](https://github.com/pdfcpu/pdfcpu/commit/9d476ddd92a1ed83f384f8da076ef8b5d242dc3c) | Fix #77.
 |2019-04-13 | [14e74ba](https://github.com/pdfcpu/pdfcpu/commit/14e74ba2c2ebe2ade2aa4c8506c5e9cec2a5fbd8) | Fix #75, #76.
 |2019-04-04 | [40f60a0](https://github.com/pdfcpu/pdfcpu/commit/40f60a0a25c5359e3d44c06138404079ae272622) | Fix #74.
-|2019-03-30 | [v0.1.23](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.1.23) | Multiline watermarks, fix #27, #61, #63.
+|2019-03-30 | [v0.1.23](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.1.23)                            | Multiline watermarks, fix #27, #61, #63.
 |2019-03-29 | [eca8f35](https://github.com/pdfcpu/pdfcpu/commit/eca8f35ebe5f99da5862212e050824680f23016f) | Fix #73.
 |2019-03-28 | [80aa62c](https://github.com/pdfcpu/pdfcpu/commit/80aa62c9dd3076f631a9f903cb7c9779d40fd3db) | Fix #71, #72.
-|2019-03-24 | [v0.1.22](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.1.22) | Insert & Remove Pages, go mod support.
+|2019-03-24 | [v0.1.22](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.1.22)                            | Insert & Remove Pages, go mod support.
 |2019-03-13 | [967c250](https://github.com/pdfcpu/pdfcpu/commit/967c250e0cdf31441df1c79562a00a8df3ab4a52) | Fix #69: Correct name parsing.
 |2019-03-03 | [067897d](https://github.com/pdfcpu/pdfcpu/commit/067897de8ea2ff18ef6a86bf7b2da43f264c0991) | Cleanup encryption.
 |2019-02-24 | [6e1af9e](https://github.com/pdfcpu/pdfcpu/commit/6e1af9ed3b76f0306a469ed50e64e737c9f752f7) | Fix stamp transform calc.
