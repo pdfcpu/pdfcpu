@@ -20,7 +20,7 @@ The Adobe Core Fontset consisting of the following 14 Type 1 fonts:
 , [Helvetica-BoldOblique](https://github.com/pdfcpu/pdfcpu/blob/master/pkg/testdata/fontSamples/Helvetica-BoldOblique.pdf)
 * [Times-Roman](https://github.com/pdfcpu/pdfcpu/blob/master/pkg/testdata/fontSamples/Times-Roman.pdf)
 , [Times-Bold](https://github.com/pdfcpu/pdfcpu/blob/master/pkg/testdata/fontSamples/Times-Bold.pdf)
-, [Times-Italic](https://github.com/pdfcpu/pdfcpu/blob/master/pkg/testdata/fontSamples/Times-Italicpdf)
+, [Times-Italic](https://github.com/pdfcpu/pdfcpu/blob/master/pkg/testdata/fontSamples/Times-Italic.pdf)
 , [Times-BoldItalic](https://github.com/pdfcpu/pdfcpu/blob/master/pkg/testdata/fontSamples/Times-BoldItalic.pdf)
 * [Courier](https://github.com/pdfcpu/pdfcpu/blob/master/pkg/testdata/fontSamples/Courier.pdf)
 , [Courier-Bold](https://github.com/pdfcpu/pdfcpu/blob/master/pkg/testdata/fontSamples/Courier-Bold.pdf)
