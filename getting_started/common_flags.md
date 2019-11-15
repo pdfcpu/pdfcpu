@@ -28,7 +28,7 @@ A comma separated list of expressions defining the [selected pages](page_selecti
 ## mode, m
 
 Used by various commands.<br>
-Please refer to [validate](../core/validate.md), [extract](../extract/extract.md) and [encrypt](../encrypt/encryptPDF.md) for more information. 
+Please refer to [validate](../core/validate.md), [extract](../extract/extract.md), [encrypt](../encrypt/encryptPDF.md), [stamp](../core/stamp.md) and [watermark](../core/watermark.md) for more information. 
 
 ## opw
 

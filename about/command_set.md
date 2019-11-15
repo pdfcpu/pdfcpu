@@ -4,10 +4,10 @@ layout: default
 
 # Command Set
 
-* Read (builds xref table from PDF file)
-* Validate (validates PDF files up to version 7.0)
-* Write (writes xref table to PDF file)
-* Optimize (gets rid of redundancies like duplicate fonts, images)
+* Read (build xref table from PDF file)
+* Validate (validate PDF files up to version 7.0)
+* Write (write xref table to PDF file)
+* Optimize (get rid of redundancies like duplicate fonts, images)
 * Merge (a set of PDF files into one consolidated PDF file)
 * Split (split multi-page PDF into several PDFs according to split span)
 * Trim (generate a custom version of a PDF  including selected pages)
@@ -22,9 +22,11 @@ layout: default
 * Extract Pages (extract specific pages into a given dir)
 * Extract Metadata (extract XML metadata)
 * Manage (add,remove,list,extract) embedded file attachments
-* Encrypt (sets password protection)
-* Decrypt (removes password protection)
+* Encrypt (set password protection)
+* Decrypt (remove password protection)
 * Change user/owner password
 * Manage (add,list) user access permissions
 * Manage (insert, remove) page
-* Info (prints file info)
+* Info (print file info)
+* Fonts (print list of supported fonts)
+* Paper (print list of supported papersizes)

@@ -45,6 +45,7 @@ pdfcpu info -u cm test.pdf
           Linearized: No
   Using XRef streams: Yes
 Using object streams: Yes
+          Watermarks: No
 ..........................................
            Encrypted: No
          Permissions: Full access

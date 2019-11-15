@@ -22,6 +22,7 @@ The commands are:
    decrypt     remove password protection
    encrypt     set password protection
    extract     extract images, fonts, content, pages, metadata
+   fonts       print list of supported fonts
    grid        rearrange pages or images for enhanced browsing experience
    import      import/convert images to PDF
    info        print file info
@@ -76,9 +77,9 @@ pdfcpu import [-v(erbose)|vv] [description] outFile imageFile...
 
 Manage stamps for selected pages:
 ```sh
-pdfcpu stamp add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]
-pdfcpu stamp remove [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]
-pdfcpu stamp update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]
+pdfcpu stamp add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]
+dfcpu stamp remove [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]
+pdfcpu stamp update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]
 ```
 
 <br>
@@ -87,9 +88,9 @@ pdfcpu stamp update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw user
 
 Manage watermarks for selected pages:
 ```sh
-pdfcpu watermark add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]
+pdfcpu watermark add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]
 pdfcpu watermark remove [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]
-pdfcpu watermark update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]
+spdfcpu watermark update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]
 ```
 
 <br>
@@ -161,4 +162,12 @@ pdfcpu version
 
 ```sh
 pdfcpu info [-u(nits)] [-upw userpw] [-opw ownerpw] inFile
+```
+
+<br>
+
+### Print List of Supported Fonts
+
+```sh
+pdfcpu fonts
 ```
