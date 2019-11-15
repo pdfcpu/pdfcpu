@@ -26,7 +26,7 @@ usage: pdfcpu info [-u(nits)] [-upw userpw] [-opw ownerpw] inFile
 
 ## Example
 
-```
+```sh
 pdfcpu info -u cm test.pdf
          PDF version: 1.7
           Page count: 1

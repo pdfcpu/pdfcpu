@@ -17,7 +17,7 @@ usage: pdfcpu fonts
 
 ## Example
 
-```
+```sh
 pdfcpu fonts
 Courier
 Courier-Bold

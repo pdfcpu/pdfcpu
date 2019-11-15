@@ -78,7 +78,7 @@ pdfcpu import [-v(erbose)|vv] [description] outFile imageFile...
 Manage stamps for selected pages:
 ```sh
 pdfcpu stamp add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]
-dfcpu stamp remove [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]
+pdfcpu stamp remove [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]
 pdfcpu stamp update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]
 ```
 
@@ -90,7 +90,7 @@ Manage watermarks for selected pages:
 ```sh
 pdfcpu watermark add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]
 pdfcpu watermark remove [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]
-spdfcpu watermark update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]
+pdfcpu watermark update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]
 ```
 
 <br>
