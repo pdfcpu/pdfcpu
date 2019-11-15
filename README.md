@@ -72,7 +72,7 @@ The main focus lies on strong support for batch processing and scripting via a r
 
 * Always make sure your work is based on the latest commit!<br>
 * pdfcpu is still *Alpha* - bugfixes are committed on the fly and will be mentioned on the next release notes.<br>
-* Follow [pdfcpu]("https://twitter.com/pdfcpu") for news and release announcements.
+* Follow [pdfcpu](https://twitter.com/pdfcpu) for news and release announcements.
 * For quick questions or discussions get in touch on the Gopher Slack: #pdfcpu
 
 
@@ -90,7 +90,7 @@ Get the latest binary [here](https://github.com/pdfcpu/pdfcpu/releases).
 
 ### Using GOPATH
 
-Required go version for building: go1.11 and up
+Required go version for building: go1.12 and up
 
 ```
 go get github.com/pdfcpu/pdfcpu/cmd/...
