@@ -114,7 +114,7 @@ The following description parameters are for text based stamps only:
 ```
 The default stamp configuration is:
 
-* fixed center page position (free positioning will be part of a future release)
+* fixed center page position (for 'free' positioning use pos:bl)
 * scale factor `0.5 rel`ative to page dimensions
 * positive rotation along the diagonale from the lower left to the upper right page corner (`d:1`).
 * fully opaque stamp by defining `op`acity `1`
