@@ -298,58 +298,60 @@ func imgToImageDict(xRefTable *XRefTable, img image.Image) (*StreamDict, error) 
 	var sm []byte
 	var cs string
 
-	switch img.ColorModel() {
-
-	case color.RGBAModel:
+	switch img.(type) {
+	case *image.RGBA:
 		// A 32-bit alpha-premultiplied color, having 8 bits for each of red, green, blue and alpha.
 		// An alpha-premultiplied color component C has been scaled by alpha (A), so it has valid values 0 <= C <= A.
 		cs = DeviceRGBCS
 		buf = writeRGBAImageBuf(img)
 
-	case color.RGBA64Model:
+	case *image.RGBA64:
 		// A 64-bit alpha-premultiplied color, having 16 bits for each of red, green, blue and alpha.
 		// An alpha-premultiplied color component C has been scaled by alpha (A), so it has valid values 0 <= C <= A.
 		cs = DeviceRGBCS
 		bpc = 16
 		buf = writeRGBA64ImageBuf(img)
 
-	case color.NRGBAModel:
+	case *image.NRGBA:
 		// Non-alpha-premultiplied 32-bit color.
 		cs = DeviceRGBCS
 		buf, sm = writeNRGBAImageBuf(xRefTable, img)
 
-	//case color.NRGBA64Model:
-	//	return nil, ErrUnsupportedColorSpace
+	case *image.NRGBA64:
+		return nil, errors.New("unsupported image type: NRGBA66")
 
-	//case color.AlphaModel:
-	//	return nil, ErrUnsupportedColorSpace
+	case *image.Alpha:
+		return nil, errors.New("unsupported image type: Alpha")
 
-	//case color.Alpha16Model:
-	//	return nil, ErrUnsupportedColorSpace
+	case *image.Alpha16:
+		return nil, errors.New("unsupported image type: Alpha16")
 
-	case color.GrayModel:
-		// An 8-bit grayscale color.
+	case *image.Gray:
+		// 8-bit grayscale color.
 		cs = DeviceGrayCS
 		buf = writeGrayImageBuf(img)
 
-	//case color.Gray16Model:
-	//  return nil, ErrUnsupportedColorSpace
+	case *image.Gray16:
+		return nil, errors.New("unsupported image type: Gray16")
 
-	case color.CMYKModel:
-		// A fully opaque CMYK color, having 8 bits for each of cyan, magenta, yellow and black.
+	case *image.CMYK:
+		// Opaque CMYK color, having 8 bits for each of cyan, magenta, yellow and black.
 		cs = DeviceCMYKCS
 		buf = writeCMYKImageBuf(img)
 
-	// case color.YCbCrModel:
-	//	fmt.Println("YCbCr")
+	case *image.YCbCr:
+		return nil, errors.New("unsupported image type: YCbCr")
 
-	// case color.NYCbCrAModel:
-	//	fmt.Println("YCbCr")
+	case *image.NYCbCrA:
+		return nil, errors.New("unsupported image type: NYCbCrA")
+
+	case *image.Paletted:
+		// uint8 indices into a given color palette.
+		cs = DeviceRGBCS
+		buf = writeRGBAImageBuf(img)
 
 	default:
-		//fmt.Printf("unknown color model: %T\n", img)
-		return nil, ErrUnsupportedColorSpace
-
+		return nil, errors.Errorf("unsupported image type: %T", img)
 	}
 
 	//fmt.Printf("old w:%3d, h:%3d, new w:%3d, h:%3d\n", img.Bounds().Dx(), img.Bounds().Dy(), w, h)

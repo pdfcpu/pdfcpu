@@ -313,7 +313,7 @@ func TestAddWatermarks(t *testing.T) {
 		// Add text watermark to all pages of inFile starting at page 1 using a rotation angle of 20 degrees.
 		{"TestWatermarkText",
 			"Acroforms2.pdf",
-			"testwm.pdf",
+			"TestWatermarkText.pdf",
 			[]string{"1-"},
 			false,
 			"text",
@@ -324,7 +324,7 @@ func TestAddWatermarks(t *testing.T) {
 		// using the default rotation which is aligned along the first diagonal running from lower left to upper right corner.
 		{"TestStampText",
 			"pike-stanford.pdf",
-			"testStampText1.pdf",
+			"TestStampText.pdf",
 			[]string{"odd", "!1"},
 			true,
 			"text",
@@ -335,7 +335,7 @@ func TestAddWatermarks(t *testing.T) {
 		// and the default rotation which is aligned along the first diagonal running from lower left to upper right corner.
 		{"TestStampTextUsingFontsize",
 			"pike-stanford.pdf",
-			"testStampText2.pdf",
+			"TestStampTextUsingFontsize.pdf",
 			[]string{"odd", "!1"},
 			true,
 			"text",
@@ -344,12 +344,23 @@ func TestAddWatermarks(t *testing.T) {
 
 		// Add image watermark to inFile starting at page 1 using no rotation.
 		{"TestWatermarkImage",
-			"Acroforms2.pdf", "testWMImageRel.pdf",
+			"Acroforms2.pdf",
+			"TestWatermarkImage.pdf",
 			[]string{"1-"},
 			false,
 			"image",
 			filepath.Join(resDir, "pdfchip3.png"),
 			"rot:0"},
+
+		// Add image watermark to inFile for all pages using defaults..
+		{"TestWatermarkImage2",
+			"empty.pdf",
+			"TestWatermarkImage2.pdf",
+			nil,
+			false,
+			"image",
+			filepath.Join(resDir, "qr.png"),
+			""},
 
 		// Add image stamp to inFile using absolute scaling and a negative rotation of 90 degrees.
 		{"TestStampImageAbsScaling",
@@ -444,7 +455,7 @@ func TestCreateFontSamples(t *testing.T) {
 	}
 }
 
-func TestFontTestPage(t *testing.T) {
+func XXXTestFontTestPage(t *testing.T) {
 
 	// Generate a sample page for an Adobe Type 1 standard font.
 	inFile := filepath.Join(inDir, "empty.pdf")
