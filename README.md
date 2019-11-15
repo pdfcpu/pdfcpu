@@ -9,8 +9,8 @@
 
 <img src="resources/logoSmall.png" width="150">
 
-pdfcpu is a simple PDF processing library written in [Go](http://golang.org) supporting encryption.
-It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO-32000). Follow [pdfcpu](https://twitter.com/pdfcpu) on Twitter for news and release announcements.
+pdfcpu is a PDF processing library written in [Go](http://golang.org) supporting encryption.
+It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO-32000).
 
 ## Motivation
 
@@ -40,6 +40,7 @@ The main focus lies on strong support for batch processing and scripting via a r
 * [decrypt](https://pdfcpu.io/encrypt/decryptPDF)
 * [encrypt](https://pdfcpu.io/encrypt/encryptPDF)
 * [extract](https://pdfcpu.io/extract/extract)
+* [fonts](https://pdfcpu.io/fonts)
 * [grid](https://pdfcpu.io/core/grid)
 * [import](https://pdfcpu.io/generate/import)
 * [info](https://pdfcpu.io/info)
@@ -69,8 +70,11 @@ The main focus lies on strong support for batch processing and scripting via a r
 
 ## Reminder
 
-Always make sure your work is based on the latest commit!<br>
-pdfcpu is still *Alpha* - bugfixes are committed on the fly and will be mentioned on the next release notes.<br>
+* Always make sure your work is based on the latest commit!<br>
+* pdfcpu is still *Alpha* - bugfixes are committed on the fly and will be mentioned on the next release notes.<br>
+* Follow [pdfcpu]("https://twitter.com/pdfcpu") for news and release announcements.
+* For quick questions or discussions get in touch on the Gopher Slack: #pdfcpu
+
 
 ## Demo Screencast
 
@@ -86,7 +90,7 @@ Get the latest binary [here](https://github.com/pdfcpu/pdfcpu/releases).
 
 ### Using GOPATH
 
-Required go version for building: go1.10 and up
+Required go version for building: go1.11 and up
 
 ```
 go get github.com/pdfcpu/pdfcpu/cmd/...
@@ -95,7 +99,7 @@ go install
 pdfcpu version
 ```
 
-### Using Go Modules (go1.11 and up)
+### Using Go Modules
 
 ```
 git clone https://github.com/pdfcpu/pdfcpu
@@ -105,7 +109,7 @@ pdfcpu ve
 ```
 
 ## Note
-We recently transfered this repo to the pdfcpu organisation.
+We transferred this repo to the [pdfcpu organisation](https://github.com/pdfcpu).
 All links to the previous repository location are automatically redirected to the new location.
 However, to avoid confusion, we strongly recommend updating any existing local clones to point to the new repository URL. You can do this by using git remote on the command line:
 ```
@@ -120,7 +124,7 @@ git remote set-url origin https://github.com/pdfcpu/pdfcpu
 * Please open an issue if you find a bug or want to propose a change.
 * Feature requests - always welcome!
 * Bug fixes - always welcome!
-* PRs - also welcome, although I can't promise a merge-in right now.
+* PRs - anytime!
 * pdfcpu is stable but still *Alpha* and occasionally undergoing heavy changes.
 
 ### How
