@@ -76,14 +76,18 @@ func NewFilter(filterName string, parms map[string]int) (filter Filter, err erro
 
 	case CCITTFax:
 		filter = ccittDecode{baseFilter{parms}}
-
-	// DCT
-	// JBIG2
-	// JPX
-
-	default:
+	case DCT:
+		// Unsupported
+		fallthrough
+	case JBIG2:
+		// Unsupported
+		fallthrough
+	case JPX:
+		// Unsupported
 		log.Info.Printf("Filter not supported: <%s>", filterName)
 		err = ErrUnsupportedFilter
+	default:
+		err = errors.Errorf("Invalid filter: <%s>", filterName)
 	}
 
 	return filter, err

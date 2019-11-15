@@ -19,6 +19,7 @@ package filter_test
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -68,6 +69,31 @@ func encodeDecodeUsingFilterNamed(t *testing.T, filterName string) {
 		t.Fatal("original content != decoded content")
 	}
 
+}
+
+func TestFilterSupport(t *testing.T) {
+	var filtersTests = []struct {
+		filterName string
+		expected   error
+	}{
+		{filter.ASCII85, nil},
+		{filter.ASCIIHex, nil},
+		{filter.RunLength, nil},
+		{filter.LZW, nil},
+		{filter.Flate, nil},
+		{filter.CCITTFax, nil},
+		{filter.DCT, filter.ErrUnsupportedFilter},
+		{filter.JBIG2, filter.ErrUnsupportedFilter},
+		{filter.JPX, filter.ErrUnsupportedFilter},
+		{"INVALID_FILTER", errors.New("Invalid filter: <INVALID_FILTER>")},
+	}
+	for _, tt := range filtersTests {
+		_, err := filter.NewFilter(tt.filterName, nil)
+		if (tt.expected != nil && err != nil && err.Error() != tt.expected.Error()) ||
+			((err == nil || tt.expected == nil) && err != tt.expected) {
+			t.Errorf("Problem: '%s' (expected '%s')\n", err.Error(), tt.expected.Error())
+		}
+	}
 }
 
 func TestEncodeDecode(t *testing.T) {
