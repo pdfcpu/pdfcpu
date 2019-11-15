@@ -4,18 +4,7 @@ layout: default
 
 # Fonts
 
-Print list of supported fonts.
-
-## Usage
-
-```
-usage: pdfcpu fonts
-```
-
-<br>
-
-
-## Example
+Print the list of supported fonts.
 
 ```sh
 pdfcpu fonts
