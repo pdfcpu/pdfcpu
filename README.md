@@ -73,7 +73,7 @@ The main focus lies on strong support for batch processing and scripting via a r
 * Always make sure your work is based on the latest commit!<br>
 * pdfcpu is still *Alpha* - bugfixes are committed on the fly and will be mentioned on the next release notes.<br>
 * Follow [pdfcpu](https://twitter.com/pdfcpu) for news and release announcements.
-* For quick questions or discussions get in touch on the Gopher Slack: #pdfcpu
+* For quick questions or discussions get in touch on the [Gopher Slack](https://invite.slack.golangbridge.org/) in the #pdfcpu channel.
 
 
 ## Demo Screencast
