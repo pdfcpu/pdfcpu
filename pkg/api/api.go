@@ -1524,7 +1524,7 @@ func Info(rs io.ReadSeeker, conf *pdf.Configuration) ([]string, error) {
 	if conf == nil {
 		conf = pdf.NewDefaultConfiguration()
 	}
-	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, time.Now())
+	ctx, _, _, err := readAndValidate(rs, conf, time.Now())
 	if err != nil {
 		return nil, err
 	}

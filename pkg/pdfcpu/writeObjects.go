@@ -240,15 +240,6 @@ func writeObject(ctx *Context, objNumber, genNumber int, s string) error {
 
 func writePDFNullObject(ctx *Context, objNumber, genNumber int) error {
 
-	ok, err := writeToObjectStream(ctx, objNumber, genNumber)
-	if err != nil {
-		return err
-	}
-
-	if ok {
-		return nil
-	}
-
 	return writeObject(ctx, objNumber, genNumber, "null")
 }
 

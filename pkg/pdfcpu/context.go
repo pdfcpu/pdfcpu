@@ -249,7 +249,7 @@ func (ctx *Context) InfoDigest() ([]string, error) {
 	if ctx.Watermarked {
 		s = "Yes"
 	}
-	ss = append(ss, fmt.Sprintf("          Watermarks: %s", s))
+	ss = append(ss, fmt.Sprintf("         Watermarked: %s", s))
 
 	ss = append(ss, fmt.Sprintf(separator))
 
@@ -409,6 +409,9 @@ type OptimizationContext struct {
 
 	DuplicateInfoObjects IntSet // Possible result of manual info dict modification.
 	NonReferencedObjs    []int  // Objects that are not referenced.
+
+	FixTable  map[int]bool // map for visited objects during xreftable traversal for fixing references to free objects.
+	NullObjNr *int         // objNr of a regular null object, to be used for fixing references to free objects.
 }
 
 func newOptimizationContext() *OptimizationContext {
@@ -421,6 +424,7 @@ func newOptimizationContext() *OptimizationContext {
 		DuplicateImages:      map[int]*StreamDict{},
 		DuplicateImageObjs:   IntSet{},
 		DuplicateInfoObjects: IntSet{},
+		FixTable:             map[int]bool{},
 	}
 }
 

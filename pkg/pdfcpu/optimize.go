@@ -261,6 +261,9 @@ func optimizeFontResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjNumb
 		if err != nil {
 			return err
 		}
+		if fontDict == nil {
+			continue
+		}
 
 		log.Optimize.Printf("optimizeFontResourcesDict: fontDict: %s\n", fontDict)
 
@@ -393,6 +396,9 @@ func optimizeXObjectResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjN
 		if err != nil {
 			return err
 		}
+		if osd == nil {
+			continue
+		}
 
 		log.Optimize.Printf("optimizeXObjectResourcesDict: dereferenced obj:%d\n%s", objNr, osd)
 
@@ -439,7 +445,7 @@ func optimizeXObjectResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjN
 				}
 
 			pageImages[objNr] = true
-
+			continue
 		}
 
 		if *osd.Subtype() != "Form" {
@@ -1055,6 +1061,134 @@ func calcBinarySizes(ctx *Context) error {
 	return nil
 }
 
+func fixDeepDict(ctx *Context, d Dict, objNr, genNr int) error {
+
+	for k, v := range d {
+		ir, err := fixDeepObject(ctx, v)
+		if err != nil {
+			return err
+		}
+		if ir != nil {
+			d[k] = *ir
+		}
+	}
+
+	return nil
+}
+
+func fixDeepArray(ctx *Context, a Array, objNr, genNr int) error {
+
+	for i, v := range a {
+		ir, err := fixDeepObject(ctx, v)
+		if err != nil {
+			return err
+		}
+		if ir != nil {
+			a[i] = *ir
+		}
+	}
+
+	return nil
+}
+
+func fixDirectObject(ctx *Context, o Object) error {
+
+	switch o := o.(type) {
+
+	case Dict:
+		for k, v := range o {
+			ir, err := fixDeepObject(ctx, v)
+			if err != nil {
+				return err
+			}
+			if ir != nil {
+				o[k] = *ir
+			}
+		}
+
+	case Array:
+		for i, v := range o {
+			ir, err := fixDeepObject(ctx, v)
+			if err != nil {
+				return err
+			}
+			if ir != nil {
+				o[i] = *ir
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func fixIndirectObject(ctx *Context, ir *IndirectRef) error {
+
+	objNr := int(ir.ObjectNumber)
+	genNr := int(ir.GenerationNumber)
+
+	if ctx.Optimize.FixTable[objNr] {
+		return nil
+	}
+	ctx.Optimize.FixTable[objNr] = true
+
+	entry, found := ctx.Find(objNr)
+	if !found {
+		return nil
+	}
+
+	if entry.Free {
+		// This is a reference to a free object that needs to be fixed.
+
+		//fmt.Printf("fixNullObject: #%d g%d\n", objNr, genNr)
+
+		if ctx.Optimize.NullObjNr == nil {
+			nr, err := ctx.InsertObject(nil)
+			if err != nil {
+				return err
+			}
+			ctx.Optimize.NullObjNr = &nr
+		}
+
+		ir.ObjectNumber = Integer(*ctx.Optimize.NullObjNr)
+
+		return nil
+	}
+
+	var err error
+
+	switch o := entry.Object.(type) {
+
+	case Dict:
+		err = fixDeepDict(ctx, o, objNr, genNr)
+
+	case StreamDict:
+		err = fixDeepDict(ctx, o.Dict, objNr, genNr)
+
+	case Array:
+		err = fixDeepArray(ctx, o, objNr, genNr)
+
+	}
+
+	return err
+}
+
+func fixDeepObject(ctx *Context, o Object) (*IndirectRef, error) {
+
+	ir, ok := o.(IndirectRef)
+	if !ok {
+		return nil, fixDirectObject(ctx, o)
+	}
+
+	err := fixIndirectObject(ctx, &ir)
+	return &ir, err
+}
+
+func fixReferencesToFreeObjects(ctx *Context) error {
+
+	return fixDirectObject(ctx, ctx.RootDict)
+}
+
 // OptimizeXRefTable optimizes an xRefTable by locating and getting rid of redundant embedded fonts and images.
 func OptimizeXRefTable(ctx *Context) error {
 
@@ -1062,15 +1196,18 @@ func OptimizeXRefTable(ctx *Context) error {
 
 	log.Optimize.Println("optimizeXRefTable begin")
 
+	// Replace references of free object with NULL objects.
+	if err := fixReferencesToFreeObjects(ctx); err != nil {
+		return err
+	}
+
 	// Get rid of duplicate embedded fonts and images.
-	err := optimizeFontAndImages(ctx)
-	if err != nil {
+	if err := optimizeFontAndImages(ctx); err != nil {
 		return err
 	}
 
 	// Calculate memory usage of binary content for stats.
-	err = calcBinarySizes(ctx)
-	if err != nil {
+	if err := calcBinarySizes(ctx); err != nil {
 		return err
 	}
 

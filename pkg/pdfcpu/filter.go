@@ -182,7 +182,7 @@ func decodeStream(sd *StreamDict) error {
 
 	sd.Content = c.Bytes()
 
-	log.Trace.Printf("decodedStream returning %d(#%02x)bytes: \n%s\n", len(sd.Content), len(sd.Content), hex.Dump(c.Bytes()))
+	//log.Trace.Printf("decodedStream returning %d(#%02x)bytes: \n%s\n", len(sd.Content), len(sd.Content), hex.Dump(c.Bytes()))
 
 	//log.Trace.Printf("decodeStream end")
 
