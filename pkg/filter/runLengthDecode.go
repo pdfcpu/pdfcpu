@@ -38,14 +38,14 @@ func (f runLengthDecode) decode(w io.ByteWriter, src []byte) {
 		if b < 0x80 {
 			c := int(b) + 1
 			for j := 0; j < c; j++ {
-				w.WriteByte(src[i])
+				_ = w.WriteByte(src[i])
 				i++
 			}
 			continue
 		}
 		c := 257 - int(b)
 		for j := 0; j < c; j++ {
-			w.WriteByte(src[i])
+			_ = w.WriteByte(src[i])
 		}
 		i++
 	}
@@ -71,10 +71,10 @@ func (f runLengthDecode) encode(w io.ByteWriter, src []byte) {
 		c := i - start
 		if c > 1 {
 			// Write constant run with length=c
-			w.WriteByte(byte(257 - c))
-			w.WriteByte(b)
+			_ = w.WriteByte(byte(257 - c))
+			_ = w.WriteByte(b)
 			if i == len(src) {
-				w.WriteByte(0x80)
+				_ = w.WriteByte(0x80)
 				return
 			}
 			b = src[i]
@@ -89,20 +89,20 @@ func (f runLengthDecode) encode(w io.ByteWriter, src []byte) {
 		}
 		if i == len(src) || i-start == maxLen {
 			c = i - start
-			w.WriteByte(byte(c - 1))
+			_ = w.WriteByte(byte(c - 1))
 			for j := 0; j < c; j++ {
-				w.WriteByte(src[start+j])
+				_ = w.WriteByte(src[start+j])
 			}
 			if i == len(src) {
-				w.WriteByte(0x80)
+				_ = w.WriteByte(0x80)
 				return
 			}
 		} else {
 			c = i - 1 - start
 			// Write variable run with length=c
-			w.WriteByte(byte(c - 1))
+			_ = w.WriteByte(byte(c - 1))
 			for j := 0; j < c; j++ {
-				w.WriteByte(src[start+j])
+				_ = w.WriteByte(src[start+j])
 			}
 			i--
 		}

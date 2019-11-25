@@ -60,7 +60,7 @@ func (r Rectangle) Portrait() bool {
 
 // Center returns the center point of a rectangle.
 func (r Rectangle) Center() Point {
-	return Point{(r.UR.X - r.Width()/2), (r.UR.Y - r.Height()/2)}
+	return Point{r.UR.X - r.Width()/2, r.UR.Y - r.Height()/2}
 }
 
 // Contains returns true if rectangle r contains point p.

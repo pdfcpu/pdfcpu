@@ -132,7 +132,7 @@ func (a Array) String() string {
 // PDFString returns a string representation as found in and written to a PDF file.
 func (a Array) PDFString() string {
 
-	logstr := []string{}
+	var logstr []string
 	logstr = append(logstr, "[")
 	first := true
 	var sepstr string

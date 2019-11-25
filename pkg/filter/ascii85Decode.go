@@ -41,8 +41,14 @@ func (f ascii85Decode) Encode(r io.Reader) (*bytes.Buffer, error) {
 
 	buf := &bytes.Buffer{}
 	encoder := ascii85.NewEncoder(buf)
-	encoder.Write(p)
-	encoder.Close()
+	_, err = encoder.Write(p)
+	if err != nil {
+		return nil, err
+	}
+	err = encoder.Close()
+	if err != nil {
+		return nil, err
+	}
 
 	// Add eod sequence
 	buf.WriteString(eodASCII85)

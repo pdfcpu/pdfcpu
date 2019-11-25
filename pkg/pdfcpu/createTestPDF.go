@@ -538,10 +538,10 @@ func addContents(xRefTable *XRefTable, pageDict Dict, mediaBox *Rectangle) error
 
 	b.WriteString("[3]0 d 0 w ")
 
-	fmt.Fprintf(&b, "0 0 m %f %f l s %f 0 m 0 %f l s ",
+	_, _ = fmt.Fprintf(&b, "0 0 m %f %f l s %f 0 m 0 %f l s ",
 		mediaBox.Width(), mediaBox.Height(), mediaBox.Width(), mediaBox.Height())
 
-	fmt.Fprintf(&b, "%f 0 m %f %f l s 0 %f m %f %f l s ",
+	_, _ = fmt.Fprintf(&b, "%f 0 m %f %f l s 0 %f m %f %f l s ",
 		mediaBox.Width()/2, mediaBox.Width()/2, mediaBox.Height(), mediaBox.Height()/2, mediaBox.Width(), mediaBox.Height()/2)
 
 	// // Horizontal guides
@@ -1455,7 +1455,7 @@ func createTextField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectRef, err
 func createYesAppearance(xRefTable *XRefTable, resourceDict Dict, w, h float64) (*IndirectRef, error) {
 
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "q 0 0 1 rg BT /ZaDb 12 Tf 0 0 Td (8) Tj ET Q")
+	_, _ = fmt.Fprintf(&b, "q 0 0 1 rg BT /ZaDb 12 Tf 0 0 Td (8) Tj ET Q")
 
 	sd := &StreamDict{
 		Dict: Dict(

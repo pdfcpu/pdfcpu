@@ -180,7 +180,7 @@ func addAttachedFiles(xRefTable *XRefTable, files StringSet) (ok bool, err error
 
 		_, fn := filepath.Split(fileName)
 
-		xRefTable.Names["EmbeddedFiles"].Add(xRefTable, fn, *ir)
+		err = xRefTable.Names["EmbeddedFiles"].Add(xRefTable, fn, *ir)
 		if err != nil {
 			return false, err
 		}
