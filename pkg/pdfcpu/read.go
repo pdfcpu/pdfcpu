@@ -784,6 +784,15 @@ func scanLine(s *bufio.Scanner) (s1 string, err error) {
 	return s1, nil
 }
 
+func isDict(s string) bool {
+	o, err := parseObject(&s)
+	if err != nil {
+		return false
+	}
+	_, ok := o.(Dict)
+	return ok
+}
+
 func scanTrailer(s *bufio.Scanner, line string) (string, error) {
 
 	var buf bytes.Buffer
@@ -832,9 +841,13 @@ func scanTrailer(s *bufio.Scanner, line string) (string, error) {
 			if j >= 0 {
 				// Yes >>
 				if k == 0 {
-					return buf.String(), nil
+					// Check for dict
+					if isDict(buf.String()) {
+						return buf.String(), nil
+					}
+				} else {
+					k--
 				}
-				k--
 				line = line[j+2:]
 				continue
 			}
@@ -862,45 +875,18 @@ func scanTrailer(s *bufio.Scanner, line string) (string, error) {
 				} else {
 					// handle >>
 					if k == 0 {
-						return buf.String(), nil
+						// Check for dict
+						if isDict(buf.String()) {
+							return buf.String(), nil
+						}
+					} else {
+						k--
 					}
-					k--
 					line = line[j+2:]
 				}
 			}
 		}
 	}
-}
-
-func scanTrailerDict(s *bufio.Scanner, startTag bool) (string, error) {
-
-	var buf bytes.Buffer
-	var line string
-	var err error
-
-	if !startTag {
-		// scan for dict start tag <<
-		for strings.Index(line, "<<") < 0 {
-			line, err = scanLine(s)
-			if err != nil {
-				return "", err
-			}
-			buf.WriteString(line)
-			buf.WriteString(" ")
-		}
-	}
-
-	// scan for dict end tag >>
-	for strings.Index(line, ">>") < 0 {
-		line, err = scanLine(s)
-		if err != nil {
-			return "", err
-		}
-		buf.WriteString(line)
-		buf.WriteString(" ")
-	}
-
-	return buf.String(), nil
 }
 
 func processTrailer(ctx *Context, s *bufio.Scanner, line string) (*int64, error) {
