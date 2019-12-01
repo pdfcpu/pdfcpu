@@ -239,6 +239,10 @@ func processStructElementDictPgEntry(xRefTable *pdf.XRefTable, ir pdf.IndirectRe
 
 	//logInfoWriter.Printf("known object for Pg: %v %s\n", obj, obj)
 
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed && o == nil {
+		return nil
+	}
+
 	pageDict, ok := o.(pdf.Dict)
 	if !ok {
 		return errors.Errorf("pdfcpu: processStructElementDictPgEntry: Pg object corrupt dict: %s\n", o)

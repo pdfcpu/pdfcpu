@@ -1182,6 +1182,7 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 				return err
 			}
 			if offset, err = parseXRefStream(rd, offset, ctx); err != nil {
+				log.Read.Printf("bypassXRefSection after %v\n", err)
 				// Try fix for corrupt single xref section.
 				return bypassXrefSection(ctx)
 			}

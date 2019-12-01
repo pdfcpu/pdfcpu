@@ -32,13 +32,13 @@ import (
 // Predictor algorithm.
 const (
 	PredictorNo      = 1  // No prediction.
-	PredictorTIFF    = 2  // Use TIFF prediction for all rows. Marathon
+	PredictorTIFF    = 2  // Use TIFF prediction for all rows.
 	PredictorNone    = 10 // Use PNGNone for all rows.
 	PredictorSub     = 11 // Use PNGSub for all rows.
 	PredictorUp      = 12 // Use PNGUp for all rows.
 	PredictorAverage = 13 // Use PNGAverage for all rows.
 	PredictorPaeth   = 14 // Use PNGPaeth for all rows.
-	PredictorOptimum = 15 // Use the optimum PNG prediction for each row. Erste
+	PredictorOptimum = 15 // Use the optimum PNG prediction for each row.
 )
 
 // For predictor > 2 PNG filters (see RFC 2083) get applied and the first byte of each pixelrow defines
@@ -170,10 +170,12 @@ func processRow(pr, cr []byte, p, bytesPerPixel int) ([]byte, error) {
 	// Get row filter from 1st byte
 	f := int(cr[0])
 
-	err := validateRowFilter(f, p)
-	if err != nil {
-		return nil, err
-	}
+	// The value of Predictor supplied by the decoding filter need not match the value
+	// used when the data was encoded if they are both greater than or equal to 10.
+	// err := validateRowFilter(f, p)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	switch f {
 
