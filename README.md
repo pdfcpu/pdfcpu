@@ -116,6 +116,13 @@ However, to avoid confusion, we strongly recommend updating any existing local c
 git remote set-url origin https://github.com/pdfcpu/pdfcpu
 ```
 
+### Using Docker
+
+```
+docker build -t pdfcpu .
+# mount current folder into container to process local files
+docker run -it --mount type=bind,source="$(pwd)",target=/app pdfcpu ./pdfcpu validate -mode strict /app/pdfs/a.pdf
+```
 
 ## Contributing
 
