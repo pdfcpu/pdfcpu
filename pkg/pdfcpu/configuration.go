@@ -73,7 +73,8 @@ const (
 	ROTATE
 	NUP
 	INFO
-	FONTS
+	INSTALLFONTS
+	LISTFONTS
 )
 
 // Configuration of a Context.

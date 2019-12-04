@@ -74,7 +74,8 @@ var cmdMap = map[pdf.CommandMode]func(cmd *Command) ([]string, error){
 	pdf.ROTATE:             Rotate,
 	pdf.NUP:                NUp,
 	pdf.INFO:               Info,
-	pdf.FONTS:              FontNames,
+	pdf.INSTALLFONTS:       InstallFonts,
+	pdf.LISTFONTS:          ListFonts,
 }
 
 // Process executes a pdfcpu command.
@@ -531,13 +532,25 @@ func InfoCommand(inFile string, conf *pdf.Configuration) *Command {
 		Conf:   conf}
 }
 
-// FontsCommand returns a list of supported fonts.
-func FontsCommand(conf *pdf.Configuration) *Command {
+// ListFontsCommand returns a list of supported fonts.
+func ListFontsCommand(conf *pdf.Configuration) *Command {
 	if conf == nil {
 		conf = pdf.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdf.FONTS
+	conf.Cmd = pdf.LISTFONTS
 	return &Command{
-		Mode: pdf.FONTS,
+		Mode: pdf.LISTFONTS,
 		Conf: conf}
+}
+
+// InstallFontsCommand installs true type fonts for embedding.
+func InstallFontsCommand(fontFiles []string, conf *pdf.Configuration) *Command {
+	if conf == nil {
+		conf = pdf.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdf.INSTALLFONTS
+	return &Command{
+		Mode:    pdf.INSTALLFONTS,
+		InFiles: fontFiles,
+		Conf:    conf}
 }

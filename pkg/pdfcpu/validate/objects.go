@@ -93,7 +93,7 @@ func validateArrayEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryNam
 
 	a, ok := o.(pdf.Array)
 	if !ok {
-		return nil, errors.Errorf("validateArrayEntry: dict=%s entry=%s invalid type", dictName, entryName)
+		return nil, errors.Errorf("validateArrayEntry: dict=%s entry=%s invalid type %T", dictName, entryName, o)
 	}
 
 	// Validation

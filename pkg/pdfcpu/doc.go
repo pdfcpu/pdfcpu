@@ -11,12 +11,12 @@ The commands are:
 	decrypt		remove password protection
 	encrypt		set password protection
 	extract		extract images, fonts, content, pages or metadata
-	fonts		print list of supported fonts
+	fonts		install, list supported fonts
 	grid		rearrange pages or images for enhanced browsing experience
 	import		import/convert images to PDF
 	info		print file info
 	merge		concatenate 2 or more PDFs
-	nup		rearrange pages or images for reduced number of pages
+	nup			rearrange pages or images for reduced number of pages
 	optimize	optimize PDF by getting rid of redundant page resources
 	pages		insert, remove selected pages
 	paper		print list of supported paper sizes

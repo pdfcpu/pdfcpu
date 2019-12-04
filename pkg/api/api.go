@@ -1544,9 +1544,29 @@ func InfoFile(inFile string, conf *pdf.Configuration) ([]string, error) {
 	return Info(f, conf)
 }
 
-// FontNames returns a list of supported fonts.
-func FontNames() []string {
-	ss := metrics.FontNames()
-	sort.Strings(ss)
-	return ss
+func isSupportedFontFile(filename string) bool {
+	return strings.HasSuffix(strings.ToLower(filename), ".gob")
+}
+
+// ListFonts returns a list of supported fonts.
+func ListFonts() ([]string, error) {
+
+	// Get list of PDF core fonts.
+	coreFonts := metrics.CoreFontNames()
+	for i, s := range coreFonts {
+		coreFonts[i] = s + " (core font)"
+	}
+	sort.Strings(coreFonts)
+
+	// Get installed fonts from pdfcpu config dir in users home dir
+	userFonts := metrics.UserFontNames()
+	sort.Strings(userFonts)
+
+	return append(coreFonts, userFonts...), nil
+}
+
+// InstallFonts installs true type fonts for embedding.
+func InstallFonts(fileNames []string) error {
+	log.CLI.Println("installing...")
+	return nil
 }

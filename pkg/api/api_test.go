@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/internal/font/metrics"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
@@ -318,70 +319,70 @@ func TestAddWatermarks(t *testing.T) {
 			false,
 			"text",
 			"Line1\n \nLine3",
-			"s:0.5, rot:20"},
+			"f:Geneva, s:0.5, rot:20"},
 
 		// Add a greenish, slightly transparent stroked and filled text stamp to all odd pages of inFile other than page 1
 		// using the default rotation which is aligned along the first diagonal running from lower left to upper right corner.
-		{"TestStampText",
-			"pike-stanford.pdf",
-			"TestStampText.pdf",
-			[]string{"odd", "!1"},
-			true,
-			"text",
-			"Demo",
-			"f:Courier, c: 0 .8 0, op:0.8, m:2"},
+		// {"TestStampText",
+		// 	"pike-stanford.pdf",
+		// 	"TestStampText.pdf",
+		// 	[]string{"odd", "!1"},
+		// 	true,
+		// 	"text",
+		// 	"Demo",
+		// 	"f:Courier, c: 0 .8 0, op:0.8, m:2"},
 
-		// Add a red filled text stamp to all odd pages of inFile other than page 1 using a font size of 48 points
-		// and the default rotation which is aligned along the first diagonal running from lower left to upper right corner.
-		{"TestStampTextUsingFontsize",
-			"pike-stanford.pdf",
-			"TestStampTextUsingFontsize.pdf",
-			[]string{"odd", "!1"},
-			true,
-			"text",
-			"Demo",
-			"font:Courier, c: 1 0 0, op:1, s:1 abs, points:48"},
+		// // Add a red filled text stamp to all odd pages of inFile other than page 1 using a font size of 48 points
+		// // and the default rotation which is aligned along the first diagonal running from lower left to upper right corner.
+		// {"TestStampTextUsingFontsize",
+		// 	"pike-stanford.pdf",
+		// 	"TestStampTextUsingFontsize.pdf",
+		// 	[]string{"odd", "!1"},
+		// 	true,
+		// 	"text",
+		// 	"Demo",
+		// 	"font:Courier, c: 1 0 0, op:1, s:1 abs, points:48"},
 
-		// Add image watermark to inFile starting at page 1 using no rotation.
-		{"TestWatermarkImage",
-			"Acroforms2.pdf",
-			"TestWatermarkImage.pdf",
-			[]string{"1-"},
-			false,
-			"image",
-			filepath.Join(resDir, "pdfchip3.png"),
-			"rot:0"},
+		// // Add image watermark to inFile starting at page 1 using no rotation.
+		// {"TestWatermarkImage",
+		// 	"Acroforms2.pdf",
+		// 	"TestWatermarkImage.pdf",
+		// 	[]string{"1-"},
+		// 	false,
+		// 	"image",
+		// 	filepath.Join(resDir, "pdfchip3.png"),
+		// 	"rot:0"},
 
-		// Add image watermark to inFile for all pages using defaults..
-		{"TestWatermarkImage2",
-			"empty.pdf",
-			"TestWatermarkImage2.pdf",
-			nil,
-			false,
-			"image",
-			filepath.Join(resDir, "qr.png"),
-			""},
+		// // Add image watermark to inFile for all pages using defaults..
+		// {"TestWatermarkImage2",
+		// 	"empty.pdf",
+		// 	"TestWatermarkImage2.pdf",
+		// 	nil,
+		// 	false,
+		// 	"image",
+		// 	filepath.Join(resDir, "qr.png"),
+		// 	""},
 
-		// Add image stamp to inFile using absolute scaling and a negative rotation of 90 degrees.
-		{"TestStampImageAbsScaling",
-			"Acroforms2.pdf",
-			"testWMImageAbs.pdf",
-			[]string{"1-"},
-			true,
-			"pdf",
-			filepath.Join(resDir, "pdfchip3.png"),
-			"s:.5 a, rot:-90"},
+		// // Add image stamp to inFile using absolute scaling and a negative rotation of 90 degrees.
+		// {"TestStampImageAbsScaling",
+		// 	"Acroforms2.pdf",
+		// 	"testWMImageAbs.pdf",
+		// 	[]string{"1-"},
+		// 	true,
+		// 	"pdf",
+		// 	filepath.Join(resDir, "pdfchip3.png"),
+		// 	"s:.5 a, rot:-90"},
 
-		// Add a PDF stamp to all pages of inFile using the 2nd page of pdfFile
-		// and rotate along the 2nd diagonal running from upper left to lower right corner.
-		{"TestWatermarkText",
-			"Acroforms2.pdf",
-			"testStampPDF.pdf",
-			nil,
-			true,
-			"pdf",
-			filepath.Join(inDir, "Wonderwall.pdf:2"),
-			"d:2"},
+		// // Add a PDF stamp to all pages of inFile using the 2nd page of pdfFile
+		// // and rotate along the 2nd diagonal running from upper left to lower right corner.
+		// {"TestWatermarkText",
+		// 	"Acroforms2.pdf",
+		// 	"testStampPDF.pdf",
+		// 	nil,
+		// 	true,
+		// 	"pdf",
+		// 	filepath.Join(inDir, "Wonderwall.pdf:2"),
+		// 	"d:2"},
 	} {
 		testAddWatermarks(t, tt.msg, tt.inFile, tt.outFile, tt.selectedPages, tt.mode, tt.modeParm, tt.wmConf, tt.onTop)
 	}
@@ -450,8 +451,15 @@ func createFontSample(fontName string, t *testing.T) {
 }
 
 func TestCreateFontSamples(t *testing.T) {
-	for _, fn := range FontNames() {
-		createFontSample(fn, t)
+	l, err := ListFonts()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	for _, fn := range l {
+		if metrics.IsCoreFont(fn) {
+			createFontSample(fn, t)
+		}
 	}
 }
 

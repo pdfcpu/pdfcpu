@@ -348,8 +348,8 @@ func parseScaleFactorWM(s string, wm *Watermark) (err error) {
 }
 
 func parseFontName(s string, wm *Watermark) error {
-	if !supportedWatermarkFont(s) {
-		return errors.Errorf("pdfcpu: %s is unsupported, try one of Helvetica, Times-Roman, Courier.\n", s)
+	if !metrics.IsSupportedFont(s) {
+		return errors.Errorf("pdfcpu: %s is unsupported, please refer to \"pdfcpu fonts list\".\n", s)
 	}
 	wm.FontName = s
 	return nil
@@ -734,23 +734,13 @@ func setWatermarkType(mode int, s string, wm *Watermark) error {
 	return nil
 }
 
-func supportedWatermarkFont(fn string) bool {
-	for _, s := range metrics.FontNames() {
-		if fn == s {
-			return true
-		}
-	}
-	return false
-}
-
-func createFontResForWM(xRefTable *XRefTable, wm *Watermark) error {
-
+func coreFontDict(fontName string) Dict {
 	d := NewDict()
 	d.InsertName("Type", "Font")
 	d.InsertName("Subtype", "Type1")
-	d.InsertName("BaseFont", wm.FontName)
+	d.InsertName("BaseFont", fontName)
 
-	if wm.FontName != "Symbol" && wm.FontName != "ZapfDingbats" {
+	if fontName != "Symbol" && fontName != "ZapfDingbats" {
 		encDict := Dict(
 			map[string]Object{
 				"Type":         Name("Encoding"),
@@ -759,6 +749,149 @@ func createFontResForWM(xRefTable *XRefTable, wm *Watermark) error {
 			},
 		)
 		d.Insert("Encoding", encDict)
+	}
+	return d
+}
+
+func ttfWidths(xRefTable *XRefTable, ttf metrics.TTFLight) (*IndirectRef, error) {
+
+	// we have tff firstchar, lastchar !
+
+	missingW := int(ttf.GlyphWidths[0])
+
+	w := make([]int, 256)
+
+	for i := 0; i < 256; i++ {
+		if i < 32 || metrics.WinAnsiGlyphMap[i] == ".notdef" {
+			w[i] = missingW
+			continue
+		}
+
+		pos, ok := ttf.Chars[uint16(i)]
+		if !ok {
+			fmt.Printf("Character %s missing\n", metrics.WinAnsiGlyphMap[i])
+			w[i] = missingW
+			continue
+		}
+
+		w[i] = int(ttf.GlyphWidths[pos])
+	}
+
+	a := make(Array, 256-32)
+	for i := 32; i < 256; i++ {
+		a[i-32] = Integer(w[i])
+	}
+
+	return xRefTable.IndRefForNewObject(a)
+}
+
+func ttfFontDescriptorFlags(ttf metrics.TTFLight) uint32 {
+
+	flags := uint32(0)
+
+	// Bit 7
+	if ttf.ItalicAngle != 0 {
+		flags = 0x40
+	}
+
+	// Bit 1
+	if ttf.FixedPitch {
+		flags++
+	}
+
+	return flags
+}
+
+func ttfFontFile(xRefTable *XRefTable, ttf metrics.TTFLight, fontName string) (*IndirectRef, error) {
+
+	sd := &StreamDict{Dict: NewDict()}
+	sd.InsertName("Filter", filter.Flate)
+	sd.FilterPipeline = []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}
+
+	bb, err := metrics.ReadFontFile(fontName)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("read %d fontfile bytes\n", len(bb))
+	sd.InsertInt("Length1", len(bb))
+
+	sd.Content = bb
+
+	if err := encodeStream(sd); err != nil {
+		return nil, err
+	}
+
+	return xRefTable.IndRefForNewObject(*sd)
+}
+
+func ttfFontDescriptor(xRefTable *XRefTable, ttf metrics.TTFLight, fontName string) (*IndirectRef, error) {
+
+	fontFile, err := ttfFontFile(xRefTable, ttf, fontName)
+	if err != nil {
+		return nil, err
+	}
+
+	d := Dict(
+		map[string]Object{
+			"Type":        Name("FontDescriptor"),
+			"FontName":    Name(ttf.PostscriptName),
+			"Flags":       Integer(ttfFontDescriptorFlags(ttf)),
+			"FontBBox":    NewNumberArray(ttf.LLx, ttf.LLy, ttf.URx, ttf.URy),
+			"ItalicAngle": Float(ttf.ItalicAngle),
+			"Ascent":      Integer(ttf.Ascent),
+			"Descent":     Integer(ttf.Descent),
+			//"Leading": // The spacing between baselines of consecutive lines of text.
+			"CapHeight": Integer(ttf.CapHeight),
+			"StemV":     Integer(70), // Irrelevant for embedded files.
+			"FontFile2": *fontFile,
+		},
+	)
+
+	return xRefTable.IndRefForNewObject(d)
+}
+
+func userFontDict(xRefTable *XRefTable, fontName string) (Dict, error) {
+
+	ttf := metrics.UserFontMetrics[fontName]
+
+	d := NewDict()
+	d.InsertName("Type", "Font")
+	d.InsertName("Subtype", "TrueType")
+	d.InsertName("BaseFont", ttf.PostscriptName)
+	d.InsertInt("FirstChar", 32)
+	d.InsertInt("LastChar", 255)
+
+	w, err := ttfWidths(xRefTable, ttf)
+	if err != nil {
+		return nil, err
+	}
+	d.Insert("Widths", *w)
+
+	fd, err := ttfFontDescriptor(xRefTable, ttf, fontName)
+	if err != nil {
+		return nil, err
+	}
+	d.Insert("FontDescriptor", *fd)
+
+	d.InsertName("Encoding", "WinAnsiEncoding")
+
+	return d, nil
+}
+
+func createFontResForWM(xRefTable *XRefTable, wm *Watermark) error {
+
+	var (
+		d   Dict
+		err error
+	)
+
+	if metrics.IsCoreFont(wm.FontName) {
+		d = coreFontDict(wm.FontName)
+	} else {
+		d, err = userFontDict(xRefTable, wm.FontName)
+		if err != nil {
+			return err
+		}
 	}
 
 	ir, err := xRefTable.IndRefForNewObject(d)

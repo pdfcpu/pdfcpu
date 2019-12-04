@@ -68,6 +68,14 @@ func initCommandMap() {
 		watermarkCmdMap.Register(k, v)
 	}
 
+	fontsCmdMap := NewCommandMap()
+	for k, v := range map[string]Command{
+		"install": {handleInstallFontsCommand, nil, "", ""},
+		"list":    {handleListFontsCommand, nil, "", ""},
+	} {
+		fontsCmdMap.Register(k, v)
+	}
+
 	cmdMap = NewCommandMap()
 
 	for k, v := range map[string]Command{
@@ -77,7 +85,7 @@ func initCommandMap() {
 		"decrypt":     {handleDecryptCommand, nil, usageDecrypt, usageLongDecrypt},
 		"encrypt":     {handleEncryptCommand, nil, usageEncrypt, usageLongEncrypt},
 		"extract":     {handleExtractCommand, nil, usageExtract, usageLongExtract},
-		"fonts":       {handleFontsCommand, nil, usageFonts, usageLongFonts},
+		"fonts":       {nil, fontsCmdMap, usageFonts, usageLongFonts},
 		"grid":        {handleGridCommand, nil, usageGrid, usageLongGrid},
 		"help":        {printHelp, nil, "", ""},
 		"info":        {handleInfoCommand, nil, usageInfo, usageLongInfo},

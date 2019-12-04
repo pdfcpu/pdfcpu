@@ -31,7 +31,7 @@ The commands are:
    decrypt     remove password protection
    encrypt     set password protection		
    extract     extract images, fonts, content, pages, metadata
-   fonts       print list of supported fonts
+   fonts       install, list supported fonts
    grid        rearrange pages or images for enhanced browsing experience
    import      import/convert images to PDF
    info        print file info
@@ -623,6 +623,11 @@ inches, in ... inches
         cm ... centimetres
         mm ... millimetres`
 
-	usageFonts     = "usage: pdfcpu fonts"
-	usageLongFonts = `Print a list of supported fonts`
+	usageFontsList    = "pdfcpu fonts list"
+	usageFontsInstall = "pdfcpu fonts install fontFiles..."
+
+	usageFonts = "usage: " + usageFontsList +
+		"\n       " + usageFontsInstall
+	usageLongFonts = `Print a list of supported fonts (includes the 14 PDF core fonts).
+Install given true type fonts (.ttf) from working directory for embedding in stamps/watermarks.`
 )

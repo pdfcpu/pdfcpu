@@ -176,7 +176,12 @@ func Info(cmd *Command) ([]string, error) {
 	return api.InfoFile(*cmd.InFile, cmd.Conf)
 }
 
-// FontNames gathers information about supported fonts and returns the result as []string.
-func FontNames(cmd *Command) ([]string, error) {
-	return api.FontNames(), nil
+// ListFonts gathers information about supported fonts and returns the result as []string.
+func ListFonts(cmd *Command) ([]string, error) {
+	return api.ListFonts()
+}
+
+// InstallFonts gathers information about supported fonts and returns the result as []string.
+func InstallFonts(cmd *Command) ([]string, error) {
+	return nil, api.InstallFonts(cmd.InFiles)
 }
