@@ -71,7 +71,7 @@ but `op: .7` will do the job.
 
 | parameter | description                            | values                                              | default
 |:-----------------|:--------------------------------|:----------------------------------------------------|:---------
-| fontname         | a basefont                      | Helvetica, Times-Roman, Courier                     | font: Helvetica
+| fontname         | a basefont                      | Please refer to `pdfcpu fonts list`                 | font: Helvetica
 | points           | fontsize in points              | in combination with absolute scaling only           | points: 24
 | position         | the stamps lower left corner    | one of `full` or the anchors: `tl, tc, tr, l, c, r, bl, bc, br`| pos: c
 | offset           |                                 | (dx,dy) in user units eg. '15 20'                   | off: 0 0
