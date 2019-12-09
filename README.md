@@ -40,7 +40,7 @@ The main focus lies on strong support for batch processing and scripting via a r
 * [decrypt](https://pdfcpu.io/encrypt/decryptPDF)
 * [encrypt](https://pdfcpu.io/encrypt/encryptPDF)
 * [extract](https://pdfcpu.io/extract/extract)
-* [fonts](https://pdfcpu.io/fonts)
+* [fonts](https://pdfcpu.io/fonts/fonts)
 * [grid](https://pdfcpu.io/core/grid)
 * [import](https://pdfcpu.io/generate/import)
 * [info](https://pdfcpu.io/info)
@@ -139,6 +139,27 @@ docker run -it --mount type=bind,source="$(pwd)",target=/app pdfcpu ./pdfcpu val
 * If you want to report a bug please attach the *very verbose* (`pdfcpu cmd -vv ...`) output and ideally a test PDF that you can share.
 * Always make sure your contribution is based on the latest commit.
 * Please sign your commits.
+
+### Reporting Crashes
+
+Unfortunately crashes do happen :(
+For the majority of the cases this is due to a diverse pool of PDF Writers out there and millions of PDF files using different versions waiting to be processed by pdfcpu. Sometimes these PDFs were written more than 20(!) years ago. Often there is an issue with validation - sometimes a bug in the parser. Many times even using relaxed validation with pdfcpu does not work. In these cases we need to extend relaxed validation and for this we are relying on your help. By reporting crashes you are helping to improve the stability of pdfcpu. If you happen to crash on any pdfcpu operation be it on the command line or in your Go backend these are the steps to report this:
+
+Regardless of the pdfcpu operation, please start using the pdfcpu command line to validate your file:
+
+``` sh
+pdfcpu validate -v &> crash.log
+```
+
+ or to produce very verbose output
+
+ ``` sh
+ pdfcpu validate -vv &> crash.log
+ ```
+
+will produce what's needed to investigate a crash. Then open an issue and post `crash.log` or its contents. Ideally post a test PDF you can share to reproduce this. You can also email to hhrutter@gmail.com or if you prefer Slack you can get in touch on the Gopher slack #pdfcpu channel.
+
+If processing your PDF with pdfcpu crashes during validation and can be opened by Adobe Reader and Mac Preview chances are we can extend relaxed validation and provide a fix. If the file in question cannot be opened by both Adobe Reader and Mac Preview we cannot help you!
 
 ## Contributors
 
