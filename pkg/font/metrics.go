@@ -14,8 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package metrics provides font metrics.
-package metrics
+package font
 
 import (
 	"encoding/gob"
@@ -26,13 +25,15 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/corefont/metrics"
 	"github.com/pdfcpu/pdfcpu/pkg/types"
 )
 
-// TTFLight represents a TrueType font.
+// TTFLight represents a TrueType font w/o font file.
 type TTFLight struct {
 	PostscriptName     string            // name: NameID 6
 	Protected          bool              // OS/2: fsType
+	UnitsPerEm         int               // head: unitsPerEm
 	Ascent             int               // OS/2: sTypoAscender
 	Descent            int               // OS/2: sTypoDescender
 	CapHeight          int               // OS/2: sCapHeight
@@ -44,7 +45,7 @@ type TTFLight struct {
 	Bold               bool              // OS/2: usWeightClass == 7
 	HorMetricsCount    int               // hhea: numOfLongHorMetrics
 	GlyphCount         int               // maxp: numGlyphs
-	GlyphWidths        []uint16          // hmtx: fd.HorMetricsCount.advanceWidth
+	GlyphWidths        []int             // hmtx: fd.HorMetricsCount.advanceWidth
 	Chars              map[uint16]uint16 // cmap
 }
 
@@ -52,6 +53,7 @@ func (fd TTFLight) String() string {
 	return fmt.Sprintf(`
  PostscriptName = %s
       Protected = %t
+     UnitsPerEm = %d
          Ascent = %d
         Descent = %d
       CapHeight = %d
@@ -65,6 +67,7 @@ HorMetricsCount = %d
      GlyphCount = %d`,
 		fd.PostscriptName,
 		fd.Protected,
+		fd.UnitsPerEm,
 		fd.Ascent,
 		fd.Descent,
 		fd.CapHeight,
@@ -82,7 +85,7 @@ HorMetricsCount = %d
 // UserFontMetrics represents font metrics for user installed TrueType fonts.
 var UserFontMetrics = map[string]TTFLight{}
 
-func readGob(fileName string, fd *TTFLight) error {
+func load(fileName string, fd *TTFLight) error {
 	//fmt.Printf("reading gob from: %s\n", fileName)
 	f, err := os.Open(fileName)
 	if err != nil {
@@ -93,14 +96,14 @@ func readGob(fileName string, fd *TTFLight) error {
 	return dec.Decode(fd)
 }
 
-// ReadFontFile reads in the font file bytes from gob
-func ReadFontFile(fileName string) ([]byte, error) {
-	dir, err := fontDir()
+// Read reads in the font file bytes from gob
+func Read(fileName string) ([]byte, error) {
+	dir, err := Dir()
 	if err != nil {
 		return nil, err
 	}
 	fn := filepath.Join(dir, fileName+".gob")
-	fmt.Printf("reading in fontFile from %s\n", fn)
+	//fmt.Printf("reading in fontFile from %s\n", fn)
 	f, err := os.Open(fn)
 	if err != nil {
 		return nil, err
@@ -116,71 +119,51 @@ func isSupportedFontFile(filename string) bool {
 	return strings.HasSuffix(strings.ToLower(filename), ".gob")
 }
 
-func fontDir() (string, error) {
-	// Get installed fonts from pdfcpu config dir in users home dir.
-	dir, err := os.UserHomeDir()
+// Dir returns the path where pdfcpu stores font info for embedding.
+func Dir() (string, error) {
+	userConfigDir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
 	}
-
-	return filepath.Join(dir, ".pdfcpu", "fonts"), nil
+	fontDir := filepath.Join(userConfigDir, "pdfcpu", "fonts")
+	return fontDir, os.MkdirAll(fontDir, os.ModePerm)
 }
 
 func init() {
-
-	//fmt.Println("metrics.init")
-
-	dir, err := fontDir()
+	//fmt.Println("metrics.init begin")
+	dir, err := Dir()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed access to user home dir: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed access to font dir: %v\n", err)
 		os.Exit(1)
 	}
-
-	//fmt.Printf("userDir = %s\n", dir)
+	//fmt.Printf("fontDir = %s\n", dir)
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed access to fonts dir: %v\n", err)
 		os.Exit(1)
 	}
-
 	for _, f := range files {
 		if isSupportedFontFile(f.Name()) {
-			// read gob
 			ttf := TTFLight{}
 			fn := filepath.Join(dir, f.Name())
-			if err := readGob(fn, &ttf); err != nil {
+			if err := load(fn, &ttf); err != nil {
 				fmt.Fprintf(os.Stderr, "Failed access to %s:  %v\n", f.Name(), err)
 				os.Exit(1)
 			}
 			fn = strings.TrimSuffix(f.Name(), path.Ext(f.Name()))
+			//fmt.Printf("loading %s.ttf...\n", fn)
 			//fmt.Printf("Loaded %s:\n%s", fn, ttf)
 			UserFontMetrics[fn] = ttf
-			//ttf = append(ttf, strings.TrimSuffix(f.Name(), path.Ext(f.Name())))
 		}
 	}
+	//fmt.Println()
+	//fmt.Println("metrics.init end")
 }
 
-// The PostScript names of 14 Type 1 fonts, known as the standard 14 fonts, are as follows:
-//
-// Times-Roman,
-// Helvetica,
-// Courier,
-// Symbol,
-// Times-Bold,
-// Helvetica-Bold,
-// Courier-Bold,
-// ZapfDingbats,
-// Times-Italic,
-// Helvetica- Oblique,
-// Courier-Oblique,
-// Times-BoldItalic,
-// Helvetica-BoldOblique,
-// Courier-BoldOblique
-
-// FontBoundingBox returns the font bounding box for a given font as specified in the corresponding AFM file.
-func FontBoundingBox(fontName string) *types.Rectangle {
+// BoundingBox returns the font bounding box for a given font as specified in the corresponding AFM file.
+func BoundingBox(fontName string) *types.Rectangle {
 	if IsCoreFont(fontName) {
-		return CoreFontMetrics[fontName].FBox
+		return metrics.CoreFontMetrics[fontName].FBox
 	}
 	llx := UserFontMetrics[fontName].LLx
 	lly := UserFontMetrics[fontName].LLy
@@ -191,44 +174,19 @@ func FontBoundingBox(fontName string) *types.Rectangle {
 
 // CharWidth returns the character width for a char and font in glyph space units.
 func CharWidth(fontName string, c int) int {
-
 	if IsCoreFont(fontName) {
-
-		var m map[int]string
-
-		switch fontName {
-		case "Symbol":
-			m = SymbolGlyphMap
-		case "ZapfDingbats":
-			m = ZapfDingbatsGlyphMap
-		default:
-			m = WinAnsiGlyphMap
-		}
-
-		glyphName := m[c]
-		fm := CoreFontMetrics[fontName]
-
-		w, ok := fm.W[glyphName]
-		if !ok {
-			w = 1000 //m.W["bullet"]
-		}
-
-		return w
+		return metrics.CoreFontCharWidth(fontName, c)
 	}
-
-	// UserFont
-
 	ttf := UserFontMetrics[fontName]
-	if WinAnsiGlyphMap[c] == ".notdef" {
+	if metrics.WinAnsiGlyphMap[c] == ".notdef" {
+		fmt.Printf("Character %d missing in WinAnsiGlyphMap\n", uint16(c))
 		return int(ttf.GlyphWidths[0])
 	}
-
 	pos, ok := ttf.Chars[uint16(c)]
 	if !ok {
-		fmt.Printf("Character %s missing\n", WinAnsiGlyphMap[c])
+		fmt.Printf("Character %s (%04x) missing\n", metrics.WinAnsiGlyphMap[c], uint16(c))
 		return int(ttf.GlyphWidths[0])
 	}
-
 	return int(ttf.GlyphWidths[pos])
 }
 
@@ -247,22 +205,24 @@ func TextWidth(text, fontName string, fontSize int) float64 {
 		w := CharWidth(fontName, int(text[i]))
 		width += userSpaceUnits(float64(w), fontSize)
 	}
+	//fmt.Printf("TextWidth:%.2f\n", width)
 	return width
 }
 
-// FontSize returns the needed font size (aka. font scaling factor) in points
+// Size returns the needed font size (aka. font scaling factor) in points
 // for rendering a given text string using a given font name with a given user space width.
-func FontSize(text, fontName string, width float64) int {
+func Size(text, fontName string, width float64) int {
 	var i int
 	for j := 0; j < len(text); j++ {
 		i += CharWidth(fontName, int(text[j]))
 	}
+	//fmt.Printf("FontSize:%d\n", fontScalingFactor(float64(i), width))
 	return fontScalingFactor(float64(i), width)
 }
 
 // UserSpaceFontBBox returns the font box for given font name and font size in user space coordinates.
 func UserSpaceFontBBox(fontName string, fontSize int) *types.Rectangle {
-	fontBBox := FontBoundingBox(fontName)
+	fontBBox := BoundingBox(fontName)
 	llx := userSpaceUnits(fontBBox.LL.X, fontSize)
 	lly := userSpaceUnits(fontBBox.LL.Y, fontSize)
 	urx := userSpaceUnits(fontBBox.UR.X, fontSize)
@@ -272,14 +232,14 @@ func UserSpaceFontBBox(fontName string, fontSize int) *types.Rectangle {
 
 // IsCoreFont returns true for the 14 PDF standard fonts.
 func IsCoreFont(fontName string) bool {
-	_, ok := CoreFontMetrics[fontName]
+	_, ok := metrics.CoreFontMetrics[fontName]
 	return ok
 }
 
 // CoreFontNames returns a list of the 14 PDF standard fonts.
 func CoreFontNames() []string {
 	ss := []string{}
-	for fname := range CoreFontMetrics {
+	for fname := range metrics.CoreFontMetrics {
 		ss = append(ss, fname)
 	}
 	return ss
@@ -300,7 +260,7 @@ func UserFontNames() []string {
 	return ss
 }
 
-// IsSupportedFont returns true for core fonts or user installed fonts.
-func IsSupportedFont(fontName string) bool {
+// SupportedFont returns true for core fonts or user installed fonts.
+func SupportedFont(fontName string) bool {
 	return IsCoreFont(fontName) || IsUserFont(fontName)
 }

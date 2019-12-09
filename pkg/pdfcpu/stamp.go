@@ -28,12 +28,15 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pdfcpu/pdfcpu/internal/font/metrics"
+	"github.com/pdfcpu/pdfcpu/internal/corefont/metrics"
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
+	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 
 	"github.com/pkg/errors"
 )
+
+const stampWithBBox = false
 
 const (
 	degToRad = math.Pi / 180
@@ -283,7 +286,7 @@ func (wm Watermark) calcMaxTextWidth() float64 {
 	var maxWidth float64
 
 	for _, l := range wm.TextLines {
-		w := metrics.TextWidth(l, wm.FontName, wm.ScaledFontSize)
+		w := font.TextWidth(l, wm.FontName, wm.ScaledFontSize)
 		if w > maxWidth {
 			maxWidth = w
 		}
@@ -348,7 +351,7 @@ func parseScaleFactorWM(s string, wm *Watermark) (err error) {
 }
 
 func parseFontName(s string, wm *Watermark) error {
-	if !metrics.IsSupportedFont(s) {
+	if !font.SupportedFont(s) {
 		return errors.Errorf("pdfcpu: %s is unsupported, please refer to \"pdfcpu fonts list\".\n", s)
 	}
 	wm.FontName = s
@@ -556,7 +559,7 @@ func (wm Watermark) calcMinFontSize(w float64) int {
 	var minSize int
 
 	for _, l := range wm.TextLines {
-		w := metrics.FontSize(l, wm.FontName, w)
+		w := font.Size(l, wm.FontName, w)
 		if minSize == 0.0 {
 			minSize = w
 		}
@@ -618,7 +621,7 @@ func (wm *Watermark) calcBoundingBox() {
 		wm.ScaledFontSize = wm.calcMinFontSize(w)
 	}
 
-	fbb := metrics.FontBoundingBox(wm.FontName)
+	fbb := font.BoundingBox(wm.FontName)
 	h := (float64(wm.ScaledFontSize) * fbb.Height() / 1000)
 	if len(wm.TextLines) > 1 {
 		h += float64(len(wm.TextLines)-1) * float64(wm.ScaledFontSize)
@@ -753,11 +756,11 @@ func coreFontDict(fontName string) Dict {
 	return d
 }
 
-func ttfWidths(xRefTable *XRefTable, ttf metrics.TTFLight) (*IndirectRef, error) {
+func ttfWidths(xRefTable *XRefTable, ttf font.TTFLight) (*IndirectRef, error) {
 
 	// we have tff firstchar, lastchar !
 
-	missingW := int(ttf.GlyphWidths[0])
+	missingW := ttf.GlyphWidths[0]
 
 	w := make([]int, 256)
 
@@ -769,12 +772,12 @@ func ttfWidths(xRefTable *XRefTable, ttf metrics.TTFLight) (*IndirectRef, error)
 
 		pos, ok := ttf.Chars[uint16(i)]
 		if !ok {
-			fmt.Printf("Character %s missing\n", metrics.WinAnsiGlyphMap[i])
+			//fmt.Printf("Character %s missing\n", metrics.WinAnsiGlyphMap[i])
 			w[i] = missingW
 			continue
 		}
 
-		w[i] = int(ttf.GlyphWidths[pos])
+		w[i] = ttf.GlyphWidths[pos]
 	}
 
 	a := make(Array, 256-32)
@@ -785,34 +788,51 @@ func ttfWidths(xRefTable *XRefTable, ttf metrics.TTFLight) (*IndirectRef, error)
 	return xRefTable.IndRefForNewObject(a)
 }
 
-func ttfFontDescriptorFlags(ttf metrics.TTFLight) uint32 {
+func ttfFontDescriptorFlags(ttf font.TTFLight) uint32 {
+
+	// Bits:
+	// 1 FixedPitch
+	// 2 Serif
+	// 3 Symbolic
+	// 4 Script/cursive
+	// 6 Nonsymbolic
+	// 7 Italic
+	// 17 AllCap
 
 	flags := uint32(0)
 
-	// Bit 7
-	if ttf.ItalicAngle != 0 {
-		flags = 0x40
+	// Bit 1
+	//fmt.Printf("fixedPitch: %t\n", ttf.FixedPitch)
+	if ttf.FixedPitch {
+		flags |= 0x01
 	}
 
-	// Bit 1
-	if ttf.FixedPitch {
-		flags++
+	// Bit 6 Set for non symbolic
+	// Note: Symbolic fonts are unsupported.
+	flags |= 0x20
+
+	// Bit 7
+	//fmt.Printf("italicAngle: %f\n", ttf.ItalicAngle)
+	if ttf.ItalicAngle != 0 {
+		flags |= 0x40
 	}
+
+	//fmt.Printf("flags: %08x\n", flags)
 
 	return flags
 }
 
-func ttfFontFile(xRefTable *XRefTable, ttf metrics.TTFLight, fontName string) (*IndirectRef, error) {
+func ttfFontFile(xRefTable *XRefTable, ttf font.TTFLight, fontName string) (*IndirectRef, error) {
 
 	sd := &StreamDict{Dict: NewDict()}
 	sd.InsertName("Filter", filter.Flate)
 	sd.FilterPipeline = []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}
 
-	bb, err := metrics.ReadFontFile(fontName)
+	bb, err := font.Read(fontName)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("read %d fontfile bytes\n", len(bb))
+	//fmt.Printf("read %d fontfile bytes\n", len(bb))
 	sd.InsertInt("Length1", len(bb))
 
 	sd.Content = bb
@@ -824,7 +844,7 @@ func ttfFontFile(xRefTable *XRefTable, ttf metrics.TTFLight, fontName string) (*
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func ttfFontDescriptor(xRefTable *XRefTable, ttf metrics.TTFLight, fontName string) (*IndirectRef, error) {
+func ttfFontDescriptor(xRefTable *XRefTable, ttf font.TTFLight, fontName string) (*IndirectRef, error) {
 
 	fontFile, err := ttfFontFile(xRefTable, ttf, fontName)
 	if err != nil {
@@ -834,7 +854,7 @@ func ttfFontDescriptor(xRefTable *XRefTable, ttf metrics.TTFLight, fontName stri
 	d := Dict(
 		map[string]Object{
 			"Type":        Name("FontDescriptor"),
-			"FontName":    Name(ttf.PostscriptName),
+			"FontName":    Name(fontName),
 			"Flags":       Integer(ttfFontDescriptorFlags(ttf)),
 			"FontBBox":    NewNumberArray(ttf.LLx, ttf.LLy, ttf.URx, ttf.URy),
 			"ItalicAngle": Float(ttf.ItalicAngle),
@@ -852,12 +872,12 @@ func ttfFontDescriptor(xRefTable *XRefTable, ttf metrics.TTFLight, fontName stri
 
 func userFontDict(xRefTable *XRefTable, fontName string) (Dict, error) {
 
-	ttf := metrics.UserFontMetrics[fontName]
+	ttf := font.UserFontMetrics[fontName]
 
 	d := NewDict()
 	d.InsertName("Type", "Font")
 	d.InsertName("Subtype", "TrueType")
-	d.InsertName("BaseFont", ttf.PostscriptName)
+	d.InsertName("BaseFont", fontName)
 	d.InsertInt("FirstChar", 32)
 	d.InsertInt("LastChar", 255)
 
@@ -885,7 +905,7 @@ func createFontResForWM(xRefTable *XRefTable, wm *Watermark) error {
 		err error
 	)
 
-	if metrics.IsCoreFont(wm.FontName) {
+	if font.IsCoreFont(wm.FontName) {
 		d = coreFontDict(wm.FontName)
 	} else {
 		d, err = userFontDict(xRefTable, wm.FontName)
@@ -1344,7 +1364,7 @@ func createForm(xRefTable *XRefTable, wm *Watermark, withBB bool) error {
 		j := 1
 		for i := len(wm.TextLines) - 1; i >= 0; i-- {
 
-			sw := metrics.TextWidth(wm.TextLines[i], wm.FontName, wm.ScaledFontSize)
+			sw := font.TextWidth(wm.TextLines[i], wm.FontName, wm.ScaledFontSize)
 			dx := wm.bb.Width()/2 - sw/2
 
 			fmt.Fprintf(&b, "BT /%s %d Tf %f %f %f rg %f %f Td (%s) Tj ET ",
@@ -1619,7 +1639,7 @@ func addPageWatermark(xRefTable *XRefTable, i int, wm *Watermark) error {
 
 	wm.vp = viewPort(xRefTable, inhPAttrs)
 
-	err = createForm(xRefTable, wm, false)
+	err = createForm(xRefTable, wm, stampWithBBox)
 	if err != nil {
 		return err
 	}

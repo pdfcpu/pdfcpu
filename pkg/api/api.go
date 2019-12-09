@@ -41,7 +41,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pdfcpu/pdfcpu/internal/font/metrics"
+	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/validate"
@@ -1552,14 +1552,14 @@ func isSupportedFontFile(filename string) bool {
 func ListFonts() ([]string, error) {
 
 	// Get list of PDF core fonts.
-	coreFonts := metrics.CoreFontNames()
+	coreFonts := font.CoreFontNames()
 	for i, s := range coreFonts {
 		coreFonts[i] = s + " (core font)"
 	}
 	sort.Strings(coreFonts)
 
 	// Get installed fonts from pdfcpu config dir in users home dir
-	userFonts := metrics.UserFontNames()
+	userFonts := font.UserFontNames()
 	sort.Strings(userFonts)
 
 	return append(coreFonts, userFonts...), nil
@@ -1567,6 +1567,19 @@ func ListFonts() ([]string, error) {
 
 // InstallFonts installs true type fonts for embedding.
 func InstallFonts(fileNames []string) error {
-	log.CLI.Println("installing...")
+	fontDir, err := font.Dir()
+	if err != nil {
+		return err
+	}
+	log.CLI.Printf("installing to %s...", fontDir)
+	for _, fn := range fileNames {
+		switch filepath.Ext(fn) {
+		case ".ttf":
+			log.CLI.Println(filepath.Base(fn))
+			if err := font.InstallTrueTypeFont(fontDir, fn); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }

@@ -31,11 +31,12 @@ import (
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
-var inDir, outDir, resDir string
+var inDir, outDir, resDir, fontDir string
 
 func TestMain(m *testing.M) {
 	inDir = "../testdata"
 	resDir = filepath.Join(inDir, "resources")
+	fontDir = filepath.Join(inDir, "fonts")
 	var err error
 
 	if outDir, err = ioutil.TempDir("", "pdfcpu_cli_tests"); err != nil {
@@ -715,15 +716,20 @@ func TestUnknownCommand(t *testing.T) {
 	}
 }
 
-func TestFontsCommand(t *testing.T) {
-	msg := "TestFontsCommand"
-	list, err := Process(FontsCommand(nil))
+func TestInstallFontsCommand(t *testing.T) {
+	msg := "TestInstallFontsCommand"
+	userFontName := filepath.Join(fontDir, "Geneva.ttf")
+	_, err := Process(InstallFontsCommand([]string{userFontName}, nil))
+	if err != nil {
+		t.Fatalf("%s install fonts: %v\n", msg, err)
+	}
+}
+
+func TestListFontsCommand(t *testing.T) {
+	msg := "TestListFontsCommand"
+	_, err := Process(ListFontsCommand(nil))
 	if err != nil {
 		t.Fatalf("%s list fonts: %v\n", msg, err)
-	}
-	want := 14 // Adobe standard (core type 1) font set.
-	if len(list) != want {
-		t.Fatalf("%s: list fonts: want %d got %d\n", msg, want, len(list))
 	}
 }
 

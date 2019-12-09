@@ -1002,10 +1002,15 @@ func handleInstallFontsCommand(conf *pdfcpu.Configuration) {
 		fmt.Fprintf(os.Stderr, "%s\n\n", "expecting a list of TrueType fonts(*.ttf) for installation.")
 		os.Exit(1)
 	}
-
 	for _, arg := range flag.Args() {
-		// Check for .ttf
+		if filepath.Ext(arg) != ".ttf" {
+			continue
+		}
 		fileNames = append(fileNames, arg)
+	}
+	if len(fileNames) == 0 {
+		fmt.Fprintln(os.Stderr, "Please supply a TrueType fontname!")
+		os.Exit(1)
 	}
 	process(cli.InstallFontsCommand(fileNames, conf))
 }

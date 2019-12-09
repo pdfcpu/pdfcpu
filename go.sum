@@ -1,13 +1,9 @@
-github.com/hhrutter/lzw v0.0.0-20190826233241-e4e67a6cc9b8 h1:U1DNFAgO5OSS70hFTvB7PN/Ex0mhqC7cZZ4FUaNJ8F0=
 github.com/hhrutter/lzw v0.0.0-20190827003112-58b82c5a41cc h1:crd+cScoxEqSOqClzjkNMNQNdMCF3SGXhPdDWBQfNZE=
 github.com/hhrutter/lzw v0.0.0-20190827003112-58b82c5a41cc/go.mod h1:yJBvOcu1wLQ9q9XZmfiPfur+3dQJuIhYQsMGLYcItZk=
-github.com/hhrutter/tiff v0.0.0-20190826235235-d3dafd449875 h1:wo5GVSkS6gb4h92KWyEaHTNJeeKUj0EEJukc85Aj7qI=
 github.com/hhrutter/tiff v0.0.0-20190827003322-d08e2ad45835 h1:8XqemC6WorzU92LW/+cMr8e+oCpRUobYuieBCpb7bLw=
 github.com/hhrutter/tiff v0.0.0-20190827003322-d08e2ad45835/go.mod h1:WkUxfS2JUu3qPo6tRld7ISb8HiC0gVSU91kooBMDVok=
 github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
-golang.org/x/image v0.0.0-20190802002840-cff245a6509b h1:+qEpEAPhDZ1o0x3tHzZTQDArnOixOzGD9HUJfcg0mb4=
-golang.org/x/image v0.0.0-20190802002840-cff245a6509b/go.mod h1:FeLwcggjj3mMvU+oOTbSwawSJRM1uh48EjtB4UJZlP0=
 golang.org/x/image v0.0.0-20190823064033-3a9bac650e44 h1:1/e6LjNi7iqpDTz8tCLSKoR5dqrX4C3ub4H31JJZM4U=
 golang.org/x/image v0.0.0-20190823064033-3a9bac650e44/go.mod h1:FeLwcggjj3mMvU+oOTbSwawSJRM1uh48EjtB4UJZlP0=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
