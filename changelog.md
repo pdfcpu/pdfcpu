@@ -6,6 +6,7 @@ layout: default
 
 | Date      | Tag / Commit | Description  
 |:----------|:-------------|:--------
+|2019-11-15 | [v0.3.1](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.1)                              | TrueType support, fix #126,#133,#137,#138
 |2019-11-15 | [v0.3](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3)                                  | Fix #113,#114,#117,#119,#121,#123,#130
 |2019-09-23 | [v0.2.5](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.5)                              | Fix #101, #103, #107-#109
 |2019-08-28 | [v0.2.4](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.4)                              | Fix #100, #104. Use x/image/ccitt.
