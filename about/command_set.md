@@ -28,5 +28,5 @@ layout: default
 * Manage (add,list) user access permissions
 * Manage (insert, remove) page
 * Info (print file info)
-* Fonts (print list of supported fonts)
+* Fonts (install, list supported fonts)
 * Paper (print list of supported papersizes)

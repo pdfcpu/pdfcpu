@@ -2,12 +2,12 @@
 layout: default
 ---
 
-# Fonts
+# List Fonts
 
-Print the list of supported fonts.
+Print the total list of supported fonts and user fonts.
 
 ```sh
-pdfcpu fonts
+pdfcpu fonts list
 ```
 
 ## Supported Fonts
@@ -31,3 +31,7 @@ The Adobe Core Fontset consisting of the following 14 Type 1 fonts:
 
 These fonts are supposed to be supported by PDF Readers and do not have to be embedded
 by pdfcpu eg. during stamping or watermarking.
+
+## User Fonts
+
+Any TrueType font installed via `pdfcpu fonts install`.
