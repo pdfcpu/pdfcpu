@@ -422,7 +422,7 @@ func parseHexLiteral(line *string) (Object, error) {
 		return nil, errHexLiteralNotTerminated
 	}
 
-	hexStr, ok := hexString(l[:eov])
+	hexStr, ok := hexString(strings.TrimSpace(l[:eov]))
 	if !ok {
 		return nil, errHexLiteralCorrupt
 	}

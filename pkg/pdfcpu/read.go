@@ -784,13 +784,13 @@ func scanLine(s *bufio.Scanner) (s1 string, err error) {
 	return s1, nil
 }
 
-func isDict(s string) bool {
+func isDict(s string) (bool, error) {
 	o, err := parseObject(&s)
 	if err != nil {
-		return false
+		return false, err
 	}
 	_, ok := o.(Dict)
-	return ok
+	return ok, nil
 }
 
 func scanTrailer(s *bufio.Scanner, line string) (string, error) {
@@ -842,7 +842,8 @@ func scanTrailer(s *bufio.Scanner, line string) (string, error) {
 				// Yes >>
 				if k == 0 {
 					// Check for dict
-					if isDict(buf.String()) {
+					ok, err := isDict(buf.String())
+					if err == nil && ok {
 						return buf.String(), nil
 					}
 				} else {
@@ -876,7 +877,8 @@ func scanTrailer(s *bufio.Scanner, line string) (string, error) {
 					// handle >>
 					if k == 0 {
 						// Check for dict
-						if isDict(buf.String()) {
+						ok, err := isDict(buf.String())
+						if err == nil && ok {
 							return buf.String(), nil
 						}
 					} else {
