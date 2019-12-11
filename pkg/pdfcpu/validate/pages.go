@@ -595,9 +595,19 @@ func validateMeasureDict(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion pdf.
 		return err
 	}
 
-	_, err = validateNameEntry(xRefTable, d, dictName, "Subtype", OPTIONAL, sinceVersion, func(s string) bool { return s == "RL" })
-	if err != nil {
+	// PDF 1.6 defines only a single type of coordinate system, a rectilinear coordinate system,
+	// that shall be specified by the value RL for the Subtype entry.
+	coordSys, err := validateNameEntry(xRefTable, d, dictName, "Subtype", OPTIONAL, sinceVersion, nil)
+	if err != nil || coordSys == nil {
 		return err
+	}
+
+	if *coordSys != "RL" {
+		if xRefTable.Version() > sinceVersion {
+			// unknown coord system
+			return nil
+		}
+		return errors.Errorf("validateMeasureDict dict=%s entry=%s invalid dict entry: %s", dictName, "Subtype", coordSys.Value())
 	}
 
 	// R, text string, required, scale ratio
