@@ -108,14 +108,17 @@ verbose, v ... turn on logging
 
 	Valid expressions are:
 
-	even ... include even pages           odd ... include odd pages
-  	   # ... include page #               #-# ... include page range
- 	  !# ... exclude page #              !#-# ... exclude page range
- 	  n# ... exclude page #              n#-# ... exclude page range
+   even ... include even pages           odd ... include odd pages
+      # ... include page #               #-# ... include page range
+     !# ... exclude page #              !#-# ... exclude page range
+     n# ... exclude page #              n#-# ... exclude page range
 
-	  #- ... include page # - last page    -# ... include first page - page #
- 	 !#- ... exclude page # - last page   !-# ... exclude first page - page #
- 	 n#- ... exclude page # - last page   n-# ... exclude first page - page #
+     #- ... include page # - last page    -# ... include first page - page #
+    !#- ... exclude page # - last page   !-# ... exclude first page - page #
+    n#- ... exclude page # - last page   n-# ... exclude first page - page #
+    
+   l-3- ... include last 3 pages         l-3 ... include page # last-3
+  -l-3  ... include all, but last 3    2-l-1 ... pages 2 up to "last-1"
 
 	n serves as an alternative for !, since ! needs to be escaped with single quotes on the cmd line.
 
@@ -264,7 +267,7 @@ verbose, v ... turn on logging
 	
    (defaults: 'font:Helvetica, points:24, pos:c, off:0,0 s:0.5 rel, c:0.5 0.5 0.5, rot:0, d:1, op:1, m:0')
 
-   fontname:    Please refer to pdfcpu fonts
+   fontname:    Please refer to pdfcpu fonts list
    points:      fontsize in points, in combination with absolute scaling only.
    position:    one of 'full' or the anchors: tl,tc,tr, l,c,r, bl,bc,br
    offset:      (dx dy) in user units eg. '15 20'

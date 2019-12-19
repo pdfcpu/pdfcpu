@@ -33,7 +33,8 @@ var (
 )
 
 func setupRegExpForPageSelection() *regexp.Regexp {
-	e := "[!n]?((-\\d+)|(\\d+(-(\\d+)?)?))"
+	e := "(\\d+)?-l(-\\d+)?|l(-(\\d+)-?)?"
+	e = "[!n]?((-\\d+)|(\\d+(-(\\d+)?)?)|" + e + ")"
 	e = "\\Qeven\\E|\\Qodd\\E|" + e
 	exp := "^" + e + "(," + e + ")*$"
 	re, _ := regexp.Compile(exp)
@@ -73,6 +74,30 @@ func ParsePageSelection(s string) ([]string, error) {
 }
 
 func handlePrefix(v string, negated bool, pageCount int, selectedPages pdf.IntSet) error {
+	// -l
+	if v == "l" {
+		for j := 1; j <= pageCount; j++ {
+			selectedPages[j] = !negated
+		}
+		return nil
+	}
+
+	// -l-#
+	if strings.HasPrefix(v, "l-") {
+		i, err := strconv.Atoi(v[2:])
+		if err != nil {
+			return err
+		}
+		if pageCount-i < 1 {
+			return nil
+		}
+		for j := 1; j <= pageCount-i; j++ {
+			selectedPages[j] = !negated
+		}
+		return nil
+	}
+
+	// -#
 	i, err := strconv.Atoi(v)
 	if err != nil {
 		return err
@@ -114,10 +139,38 @@ func handleSuffix(v string, negated bool, pageCount int, selectedPages pdf.IntSe
 	return nil
 }
 
-func handleSpecificPage(s string, negated bool, pageCount int, selectedPages pdf.IntSet) error {
+func handleSpecificPageOrLastXPages(s string, negated bool, pageCount int, selectedPages pdf.IntSet) error {
+
+	// l
+	if s == "l" {
+		selectedPages[pageCount] = !negated
+		return nil
+	}
+
+	// l-#
+	if strings.HasPrefix(s, "l-") {
+		pr := strings.Split(s[2:], "-")
+		i, err := strconv.Atoi(pr[0])
+		if err != nil {
+			return err
+		}
+		if pageCount-i < 1 {
+			return nil
+		}
+		j := pageCount - i
+
+		// l-#-
+		if strings.HasSuffix(s, "-") {
+			j = pageCount
+		}
+		for i := pageCount - i; i <= j; i++ {
+			selectedPages[i] = !negated
+		}
+		return nil
+	}
+
 	// must be # ... select a specific page
 	// or !# ... deselect a specific page
-
 	i, err := strconv.Atoi(s)
 	if err != nil {
 		return err
@@ -166,9 +219,25 @@ func parsePageRange(pr []string, pageCount int, negated bool, selectedPages pdf.
 		return nil
 	}
 
-	thru, err := strconv.Atoi(pr[1])
-	if err != nil {
-		return err
+	var thru int
+	if pr[1] == "l" {
+		// #-l
+		thru = pageCount
+		if len(pr) == 3 {
+			// #-l-#
+			i, err := strconv.Atoi(pr[2])
+			if err != nil {
+				return err
+			}
+			thru -= i
+		}
+	} else {
+		// #-#
+		var err error
+		thru, err = strconv.Atoi(pr[1])
+		if err != nil {
+			return err
+		}
 	}
 
 	// Handle overflow gracefully
@@ -207,13 +276,11 @@ func selectedPages(pageCount int, pageSelection []string) (pdf.IntSet, error) {
 
 		//log.Stats.Printf("pageExp: <%s>\n", v)
 
-		// Special case "even" only for len(pageSelection) == 1
 		if v == "even" {
 			selectEvenPages(selectedPages, pageCount)
 			continue
 		}
 
-		// Special case "odd" only for len(pageSelection) == 1
 		if v == "odd" {
 			selectOddPages(selectedPages, pageCount)
 			continue
@@ -226,45 +293,49 @@ func selectedPages(pageCount int, pageSelection []string) (pdf.IntSet, error) {
 			v = v[1:]
 		}
 
+		// -#
 		if v[0] == '-' {
 
 			v = v[1:]
 
-			err := handlePrefix(v, negated, pageCount, selectedPages)
-			if err != nil {
+			if err := handlePrefix(v, negated, pageCount, selectedPages); err != nil {
 				return nil, err
 			}
 
 			continue
 		}
 
-		if strings.HasSuffix(v, "-") {
+		// #-
+		if v[0] != 'l' && strings.HasSuffix(v, "-") {
 
-			err := handleSuffix(v[:len(v)-1], negated, pageCount, selectedPages)
-			if err != nil {
+			if err := handleSuffix(v[:len(v)-1], negated, pageCount, selectedPages); err != nil {
 				return nil, err
 			}
 
 			continue
 		}
 
-		// if v contains '-' somewhere in the middle
-		// this must be #-# ... select a page range
-		// or !#-# ... deselect a page range
+		// l l-# l-#-
+		if v[0] == 'l' {
+			if err := handleSpecificPageOrLastXPages(v, negated, pageCount, selectedPages); err != nil {
+				return nil, err
+			}
+			continue
+		}
 
 		pr := strings.Split(v, "-")
-		if len(pr) == 2 {
-
-			err := parsePageRange(pr, pageCount, negated, selectedPages)
-			if err != nil {
+		if len(pr) >= 2 {
+			// v contains '-' somewhere in the middle
+			// #-# #-l #-l-#
+			if err := parsePageRange(pr, pageCount, negated, selectedPages); err != nil {
 				return nil, err
 			}
 
 			continue
 		}
 
-		err := handleSpecificPage(pr[0], negated, pageCount, selectedPages)
-		if err != nil {
+		// #
+		if err := handleSpecificPageOrLastXPages(pr[0], negated, pageCount, selectedPages); err != nil {
 			return nil, err
 		}
 
