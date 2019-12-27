@@ -257,9 +257,9 @@ verbose, v ... turn on logging
          
    3) PDF based
       -mode pdf pdfFileName[:page#]
-         where page# defaults to 1
-         eg. mode -pdf "test.pdf:3" ... use page 3 of test.pdf
-             mode -pdf test.pdf     ... use page 1 of test.pdf
+         eg. pdfcpu stamp add mode -pdf 'stamp.pdf:3' '' in.pdf out.pdf ... stamp each page of in.pdf with page 3 of stamp.pdf
+         Omit page# for multistamping:
+         eg. pdfcpu stamp add mode -pdf 'stamp.pdf' '' in.pdf out.pdf   ... stamp each page of in.pdf with corresponding page of stamp.pdf
    `
 	usageWMDescription = `
 
@@ -269,7 +269,8 @@ verbose, v ... turn on logging
 
    fontname:    Please refer to pdfcpu fonts list
    points:      fontsize in points, in combination with absolute scaling only.
-   position:    one of 'full' or the anchors: tl,tc,tr, l,c,r, bl,bc,br
+   position:    one of the anchors: tl,tc,tr, l,c,r, bl,bc,br
+                Reliable with non rotated pages only!
    offset:      (dx dy) in user units eg. '15 20'
    scalefactor: 0.0 <= x <= 1.0 followed by optional 'abs|rel' or 'a|r'.
    color:       3 fill color intensities, where 0.0 < i < 1.0, eg 1.0, 0.0 0.0 = red (default:0.5 0.5 0.5 = gray)

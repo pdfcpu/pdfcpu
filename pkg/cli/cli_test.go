@@ -302,7 +302,7 @@ func TestAddWatermarks(t *testing.T) {
 			filepath.Join(resDir, "pdfchip3.png"),
 			"s:.5 a, rot:-90"},
 
-		// Add a PDF stamp to all pages of inFile using the 2nd page of pdfFile
+		// Add a PDF stamp to all pages of inFile using the 3rd page of pdfFile
 		// and rotate along the 2nd diagonal running from upper left to lower right corner.
 		{"TestWatermarkText",
 			"Acroforms2.pdf",
@@ -310,7 +310,18 @@ func TestAddWatermarks(t *testing.T) {
 			nil,
 			true,
 			"pdf",
-			filepath.Join(inDir, "Wonderwall.pdf:2"),
+			filepath.Join(inDir, "Wonderwall.pdf:3"),
+			"d:2"},
+
+		// Add a PDF multistamp to all pages of inFile
+		// and rotate along the 2nd diagonal running from upper left to lower right corner.
+		{"TestWatermarkText",
+			"Acroforms2.pdf",
+			"testMultistampPDF.pdf",
+			nil,
+			true,
+			"pdf",
+			filepath.Join(inDir, "Wonderwall.pdf"),
 			"d:2"},
 	} {
 		testAddWatermarks(t, tt.msg, tt.inFile, tt.outFile, tt.selectedPages, tt.mode, tt.modeParm, tt.wmConf, tt.onTop)

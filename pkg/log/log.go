@@ -193,6 +193,11 @@ func IsTraceLoggerEnabled() bool {
 	return Trace.log != nil
 }
 
+// IsCLILoggerEnabled returns true if the CLI Logger is enabled.
+func IsCLILoggerEnabled() bool {
+	return CLI.log != nil
+}
+
 // Printf writes a formatted message to the log.
 func (l *logger) Printf(format string, args ...interface{}) {
 

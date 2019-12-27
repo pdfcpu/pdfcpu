@@ -267,6 +267,21 @@ func sortedPages(selectedPages pdf.IntSet) []int {
 	return p
 }
 
+func logSelPages(selectedPages pdf.IntSet) {
+	if !log.IsCLILoggerEnabled() {
+		return
+	}
+	var b strings.Builder
+	for _, i := range sortedPages(selectedPages) {
+		fmt.Fprintf(&b, "%d,", i)
+	}
+	s := b.String()
+	if len(s) > 1 {
+		s = s[:len(s)-1]
+	}
+	log.CLI.Printf("pages: %s\n", s)
+}
+
 // selectedPages returns a set of used page numbers.
 // key==page# => key 0 unused!
 func selectedPages(pageCount int, pageSelection []string) (pdf.IntSet, error) {
@@ -341,17 +356,7 @@ func selectedPages(pageCount int, pageSelection []string) (pdf.IntSet, error) {
 
 	}
 
-	var b strings.Builder
-	for _, i := range sortedPages(selectedPages) {
-		fmt.Fprintf(&b, "%d,", i)
-	}
-
-	s := b.String()
-	if len(s) > 1 {
-		s = s[:len(s)-1]
-	}
-	log.CLI.Printf("pages: %s\n", s)
-
+	logSelPages(selectedPages)
 	return selectedPages, nil
 }
 

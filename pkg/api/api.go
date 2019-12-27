@@ -33,6 +33,7 @@ package api
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -1493,6 +1494,7 @@ func Merge(rsc []io.ReadSeeker, w io.Writer, conf *pdf.Configuration) error {
 func MergeFile(inFiles []string, outFile string, conf *pdf.Configuration) error {
 	ff := []*os.File(nil)
 	for _, f := range inFiles {
+		fmt.Println(f)
 		f, err := os.Open(f)
 		if err != nil {
 			return err

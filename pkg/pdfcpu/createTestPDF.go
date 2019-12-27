@@ -532,58 +532,37 @@ func addContents(xRefTable *XRefTable, pageDict Dict, mediaBox *Rectangle) error
 	contents.InsertName("Filter", filter.Flate)
 	contents.FilterPipeline = []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}
 
-	//mb := rect(xRefTable, mediaBox)
-
 	var b bytes.Buffer
 
 	b.WriteString("[3]0 d 0 w ")
 
+	// X
 	fmt.Fprintf(&b, "0 0 m %f %f l s %f 0 m 0 %f l s ",
 		mediaBox.Width(), mediaBox.Height(), mediaBox.Width(), mediaBox.Height())
 
-	fmt.Fprintf(&b, "%f 0 m %f %f l s 0 %f m %f %f l s ",
-		mediaBox.Width()/2, mediaBox.Width()/2, mediaBox.Height(), mediaBox.Height()/2, mediaBox.Width(), mediaBox.Height()/2)
+	// Horizontal guides
+	c := 6
+	if mediaBox.Landscape() {
+		c = 4
+	}
+	j := mediaBox.Height() / float64(c)
+	for i := 1; i < c; i++ {
+		k := mediaBox.Height() - float64(i)*j
+		s := fmt.Sprintf("0 %f m %f %f l s ", k, mediaBox.Width(), k)
+		b.WriteString(s)
+	}
 
-	// // Horizontal guides
-	b.WriteString("0 500 m 400 500 l s ")
-	b.WriteString("0 400 m 400 400 l s ")
-	b.WriteString("0 200 m 400 200 l s ")
-	b.WriteString("0 100 m 400 100 l s ")
-
-	// // Vertical guides
-	b.WriteString("100 0 m 100 600 l s ")
-	b.WriteString("300 0 m 300 600 l s ")
-	// b.WriteString("267.64 0 m 267.64 841.89 l s ")
-	// b.WriteString("257.64 0 m 257.64 841.89 l s ")
-	// b.WriteString("247.64 0 m 247.64 841.89 l s ")
-	// b.WriteString("237.64 0 m 237.64 841.89 l s ")
-	// b.WriteString("227.64 0 m 227.64 841.89 l s ")
-	// b.WriteString("217.64 0 m 217.64 841.89 l s ")
-	// b.WriteString("207.64 0 m 207.64 841.89 l s ")
-	// b.WriteString("197.64 0 m 197.64 841.89 l s ")
-
-	// b.WriteString("307.64 0 m 307.64 841.89 l s ")
-	// b.WriteString("317.64 0 m 317.64 841.89 l s ")
-	// b.WriteString("327.64 0 m 327.64 841.89 l s ")
-	// b.WriteString("337.64 0 m 337.64 841.89 l s ")
-	// b.WriteString("347.64 0 m 347.64 841.89 l s ")
-	// b.WriteString("357.64 0 m 357.64 841.89 l s ")
-	// b.WriteString("367.64 0 m 367.64 841.89 l s ")
-	// b.WriteString("377.64 0 m 377.64 841.89 l s ")
-	// b.WriteString("387.64 0 m 387.64 841.89 l s ")
-	// b.WriteString("397.64 0 m 397.64 841.89 l s ")
-
-	// b.WriteString("BT /F1 12 Tf 0 1 Td 0 Tr (lower left) Tj ET ")
-	// b.WriteString("BT /F1 12 Tf 0 832 Td 0 Tr (upper left) Tj ET ")
-	// b.WriteString("BT /F1 12 Tf 537 832 Td 0 Tr (upper right) Tj ET ")
-	// b.WriteString("BT /F1 12 Tf 540 1 Td 0 Tr (lower right) Tj ET ")
-	// b.WriteString("BT /F1 12 Tf 297.55 420.5 Td (pdfcpu powered by Go) Tj ET ")
-
-	// t := `BT /F1 12 Tf 0 1 Td 0 Tr 0.5 g (lower left) Tj ET `
-	// t += "BT /F1 12 Tf 0 832 Td 0 Tr (upper left) Tj ET "
-	// t += "BT /F1 12 Tf 537 832 Td 0 Tr (upper right) Tj ET "
-	// t += "BT /F1 12 Tf 540 1 Td 0 Tr (lower right) Tj ET "
-	// t += "BT /F1 12 Tf 297.55 420.5 Td (X) Tj ET "
+	// Vertical guides
+	c = 4
+	if mediaBox.Landscape() {
+		c = 6
+	}
+	j = mediaBox.Width() / float64(c)
+	for i := 1; i < c; i++ {
+		k := float64(i) * j
+		s := fmt.Sprintf("%f 0 m %f %f l s ", k, k, mediaBox.Height())
+		b.WriteString(s)
+	}
 
 	contents.Content = b.Bytes()
 
@@ -958,7 +937,7 @@ func addPageTreeWithoutPage(xRefTable *XRefTable, rootDict Dict, d *Dim) error {
 func addPageTreeWithSamplePage(xRefTable *XRefTable, rootDict Dict) error {
 
 	// mediabox = physical page dimensions
-	mediaBox := RectForDim(400, 600)
+	mediaBox := RectForDim(600, 400)
 	mba := mediaBox.Array()
 
 	pagesDict := Dict(

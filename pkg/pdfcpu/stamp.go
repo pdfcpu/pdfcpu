@@ -32,6 +32,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/types"
 
 	"github.com/pkg/errors"
 )
@@ -141,7 +142,14 @@ func (sc SimpleColor) String() string {
 	return fmt.Sprintf("r=%1.1f g=%1.1f b=%1.1f", sc.r, sc.g, sc.b)
 }
 
-type formCache map[*Rectangle]*IndirectRef
+type formCache map[types.Rectangle]*IndirectRef
+
+type pdfResources struct {
+	content []byte
+	resDict *IndirectRef
+	width   int
+	height  int
+}
 
 // Watermark represents the basic structure and command details for the commands "Stamp" and "Watermark".
 type Watermark struct {
@@ -151,9 +159,9 @@ type Watermark struct {
 	TextString        string      // raw display text.
 	TextLines         []string    // display multiple lines of text.
 	FileName          string      // display pdf page or png image.
-	Page              int         // the page number of a PDF file.
+	Page              int         // the page number of a PDF file. 0 means multistamp/multiwatermark.
 	OnTop             bool        // if true this is a STAMP else this is a WATERMARK.
-	Pos               anchor      // position anchor, one of tl,tc,tr,l,c,r,bl,bc,br,full.
+	Pos               anchor      // position anchor, one of tl,tc,tr,l,c,r,bl,bc,br.
 	Dx, Dy            int         // anchor offset.
 	FontName          string      // supported are Adobe base fonts only. (as of now: Helvetica, Times-Roman, Courier)
 	FontSize          int         // font scaling factor.
@@ -175,8 +183,7 @@ type Watermark struct {
 	width, height int // image or page dimensions.
 
 	// for a PDF watermark
-	resDict *IndirectRef // page resource dict.
-	cs      []byte       // page content stream.
+	pdfRes map[int]pdfResources
 
 	// page specific
 	bb      *Rectangle   // bounding box of the form representing this watermark.
@@ -192,7 +199,7 @@ type Watermark struct {
 // DefaultWatermarkConfig returns the default configuration.
 func DefaultWatermarkConfig() *Watermark {
 	return &Watermark{
-		Page:       1,
+		Page:       0,
 		FontName:   "Helvetica",
 		FontSize:   24,
 		Pos:        Center,
@@ -202,6 +209,7 @@ func DefaultWatermarkConfig() *Watermark {
 		Diagonal:   DiagonalLLToUR,
 		Opacity:    1.0,
 		RenderMode: RMFill,
+		pdfRes:     map[int]pdfResources{},
 		objs:       IntSet{},
 		fCache:     formCache{},
 		TextLines:  []string{},
@@ -281,6 +289,10 @@ func (wm Watermark) OnTopString() string {
 	return s
 }
 
+func (wm Watermark) multiStamp() bool {
+	return wm.Page == 0
+}
+
 func (wm Watermark) calcMaxTextWidth() float64 {
 
 	var maxWidth float64
@@ -296,7 +308,7 @@ func (wm Watermark) calcMaxTextWidth() float64 {
 }
 
 func parsePositionAnchorWM(s string, wm *Watermark) error {
-
+	// Note: Reliable with non rotated pages only!
 	switch s {
 	case "tl":
 		wm.Pos = TopLeft
@@ -581,11 +593,24 @@ func (wm Watermark) isImage() bool {
 	return len(wm.FileName) > 0 && strings.ToLower(filepath.Ext(wm.FileName)) != ".pdf"
 }
 
-func (wm *Watermark) calcBoundingBox() {
+func (wm *Watermark) calcBoundingBox(pageNr int) {
 
 	var bb *Rectangle
 
 	if wm.isImage() || wm.isPDF() {
+
+		if wm.isPDF() {
+			wm.width = wm.pdfRes[wm.Page].width
+			wm.height = wm.pdfRes[wm.Page].height
+			if wm.multiStamp() {
+				i := pageNr
+				if i > len(wm.pdfRes) {
+					i = len(wm.pdfRes)
+				}
+				wm.width = wm.pdfRes[i].width
+				wm.height = wm.pdfRes[i].height
+			}
+		}
 
 		bb = RectForDim(float64(wm.width), float64(wm.height))
 		ar := bb.AspectRatio()
@@ -610,7 +635,7 @@ func (wm *Watermark) calcBoundingBox() {
 		return
 	}
 
-	// font watermark
+	// Text watermark
 
 	var w float64
 	if wm.ScaleAbs {
@@ -650,9 +675,6 @@ func (wm *Watermark) calcTransformMatrix() *matrix {
 		}
 
 	}
-
-	// Apply negative page rotation.
-	r += wm.pageRot
 
 	sin = math.Sin(float64(r) * float64(degToRad))
 	cos = math.Cos(float64(r) * float64(degToRad))
@@ -980,27 +1002,30 @@ func contentStream(xRefTable *XRefTable, o Object) ([]byte, error) {
 	return bb, nil
 }
 
-func identifyObjNrs(ctx *Context, o Object, objNrs IntSet) error {
+func identifyObjNrs(ctx *Context, o Object, migrated map[int]int, objNrs IntSet) error {
 
 	switch o := o.(type) {
 
 	case IndirectRef:
-
-		objNrs[o.ObjectNumber.Value()] = true
+		objNr := o.ObjectNumber.Value()
+		if migrated[objNr] > 0 || objNr >= *ctx.Size {
+			return nil
+		}
+		objNrs[objNr] = true
 
 		o1, err := ctx.Dereference(o)
 		if err != nil {
 			return err
 		}
 
-		err = identifyObjNrs(ctx, o1, objNrs)
+		err = identifyObjNrs(ctx, o1, migrated, objNrs)
 		if err != nil {
 			return err
 		}
 
 	case Dict:
 		for _, v := range o {
-			err := identifyObjNrs(ctx, v, objNrs)
+			err := identifyObjNrs(ctx, v, migrated, objNrs)
 			if err != nil {
 				return err
 			}
@@ -1008,7 +1033,7 @@ func identifyObjNrs(ctx *Context, o Object, objNrs IntSet) error {
 
 	case StreamDict:
 		for _, v := range o.Dict {
-			err := identifyObjNrs(ctx, v, objNrs)
+			err := identifyObjNrs(ctx, v, migrated, objNrs)
 			if err != nil {
 				return err
 			}
@@ -1016,7 +1041,7 @@ func identifyObjNrs(ctx *Context, o Object, objNrs IntSet) error {
 
 	case Array:
 		for _, v := range o {
-			err := identifyObjNrs(ctx, v, objNrs)
+			err := identifyObjNrs(ctx, v, migrated, objNrs)
 			if err != nil {
 				return err
 			}
@@ -1027,87 +1052,110 @@ func identifyObjNrs(ctx *Context, o Object, objNrs IntSet) error {
 	return nil
 }
 
-func migrateObject(ctxSource, ctxDest *Context, o Object) error {
+func migrateObject(ctxSource, ctxDest *Context, migrated map[int]int, o Object) error {
 
-	// Identify involved objNrs.
+	// Identify involved objNrs of ctxSource.
 	objNrs := IntSet{}
-	err := identifyObjNrs(ctxSource, o, objNrs)
+	if err := identifyObjNrs(ctxSource, o, migrated, objNrs); err != nil {
+		return err
+	}
+
+	lookup := map[int]int{}
+	for k := range objNrs {
+		migrated[k] = *ctxDest.Size
+		lookup[k] = *ctxDest.Size
+		*ctxDest.Size++
+	}
+
+	// Patch indRefs of resourceDict.
+	patchObject(o, migrated)
+
+	// Patch all new involved indRefs.
+	for k, v := range lookup {
+		patchObject(ctxSource.Table[k].Object, migrated)
+		ctxDest.Table[v] = ctxSource.Table[k]
+	}
+
+	return nil
+}
+
+func createPDFRes(ctx, otherCtx *Context, pageNr int, migrated map[int]int, wm *Watermark) error {
+
+	pdfRes := pdfResources{}
+
+	xRefTable := ctx.XRefTable
+	otherXRefTable := otherCtx.XRefTable
+
+	// Locate page dict & resource dict of PDF stamp.
+	d, inhPAttrs, err := otherXRefTable.PageDict(pageNr)
+	if err != nil {
+		return err
+	}
+	if d == nil {
+		return errors.Errorf("pdfcpu: unknown page number: %d\n", pageNr)
+	}
+
+	// Retrieve content stream bytes of page dict.
+	o, found := d.Find("Contents")
+	if !found {
+		return errors.New("pdfcpu: PDF page has no content")
+	}
+	pdfRes.content, err = contentStream(otherXRefTable, o)
 	if err != nil {
 		return err
 	}
 
-	// Create a lookup table mapping objNrs from ctxSource to ctxDest.
-	// Create lookup table for object numbers.
-	// The first number is the successor of the last number in ctxDest.
-	lookup := lookupTable(objNrs, *ctxDest.Size)
-
-	// Patch indRefs of resourceDict.
-	patchObject(o, lookup)
-
-	// Patch all involved indRefs.
-	for i := range lookup {
-		patchObject(ctxSource.Table[i].Object, lookup)
+	// Migrate external resource dict into ctx.
+	if err = migrateObject(otherCtx, ctx, migrated, inhPAttrs.resources); err != nil {
+		return err
 	}
 
-	// Migrate xrefTableEntries.
-	for k, v := range lookup {
-		ctxDest.Table[v] = ctxSource.Table[k]
-		*ctxDest.Size++
+	// Create an object for resource dict in xRefTable.
+	ir, err := xRefTable.IndRefForNewObject(inhPAttrs.resources)
+	if err != nil {
+		return err
 	}
+
+	pdfRes.resDict = ir
+
+	vp := viewPort(xRefTable, inhPAttrs)
+	pdfRes.width = int(vp.Width())
+	pdfRes.height = int(vp.Height())
+
+	wm.pdfRes[pageNr] = pdfRes
 
 	return nil
 }
 
 func createPDFResForWM(ctx *Context, wm *Watermark) error {
 
-	xRefTable := ctx.XRefTable
-
-	// This PDF file is assumed to be valid.
+	// The stamp pdf is assumed to be valid.
 	otherCtx, err := ReadFile(wm.FileName, NewDefaultConfiguration())
 	if err != nil {
 		return err
 	}
 
-	otherXRefTable := otherCtx.XRefTable
-
-	d, inhPAttrs, err := otherXRefTable.PageDict(wm.Page)
-	if err != nil {
-		return err
-	}
-	if d == nil {
-		return errors.Errorf("pdfcpu: unknown page number: %d\n", wm.Page)
+	if err := otherCtx.EnsurePageCount(); err != nil {
+		return nil
 	}
 
-	// Retrieve content stream bytes.
+	migrated := map[int]int{}
 
-	o, found := d.Find("Contents")
-	if !found {
-		return errors.New("pdfcpu: PDF page has no content")
+	if !wm.multiStamp() {
+		if err := createPDFRes(ctx, otherCtx, wm.Page, migrated, wm); err != nil {
+			return err
+		}
+	} else {
+		j := otherCtx.PageCount
+		if ctx.PageCount < otherCtx.PageCount {
+			j = ctx.PageCount
+		}
+		for i := 1; i <= j; i++ {
+			if err := createPDFRes(ctx, otherCtx, i, migrated, wm); err != nil {
+				return err
+			}
+		}
 	}
-
-	wm.cs, err = contentStream(otherXRefTable, o)
-	if err != nil {
-		return err
-	}
-
-	// Migrate all objects referenced by this external resource dict into this context.
-	err = migrateObject(otherCtx, ctx, inhPAttrs.resources)
-	if err != nil {
-		return err
-	}
-
-	// Create an object for this resDict in xRefTable.
-	ir, err := xRefTable.IndRefForNewObject(inhPAttrs.resources)
-	if err != nil {
-		return err
-	}
-
-	wm.resDict = ir
-
-	vp := viewPort(xRefTable, inhPAttrs)
-
-	wm.width = int(vp.Width())
-	wm.height = int(vp.Height())
 
 	return nil
 }
@@ -1300,11 +1348,18 @@ func prepareOCPropertiesInRoot(ctx *Context, wm *Watermark) error {
 	return nil
 }
 
-func createFormResDict(xRefTable *XRefTable, wm *Watermark) (*IndirectRef, error) {
+func createFormResDict(xRefTable *XRefTable, pageNr int, wm *Watermark) (*IndirectRef, error) {
 
 	if wm.isPDF() {
-		//return consolidated ResDict of for PDF/PageBoxColorInfo
-		return wm.resDict, nil
+		i := wm.Page
+		if wm.multiStamp() {
+			maxStampPageNr := len(wm.pdfRes)
+			i = pageNr
+			if pageNr > maxStampPageNr {
+				i = maxStampPageNr
+			}
+		}
+		return wm.pdfRes[i].resDict, nil
 	}
 
 	if wm.isImage() {
@@ -1330,61 +1385,103 @@ func createFormResDict(xRefTable *XRefTable, wm *Watermark) (*IndirectRef, error
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createForm(xRefTable *XRefTable, wm *Watermark, withBB bool) error {
+func cachedForm(wm *Watermark) bool {
+	return !wm.isPDF() || !wm.multiStamp()
+}
+
+func pdfFormContent(w io.Writer, pageNr int, wm *Watermark) error {
+	cs := wm.pdfRes[wm.Page].content
+	if wm.multiStamp() {
+		maxStampPageNr := len(wm.pdfRes)
+		i := pageNr
+		if pageNr > maxStampPageNr {
+			i = maxStampPageNr
+		}
+		cs = wm.pdfRes[i].content
+	}
+	sc := wm.Scale
+	if !wm.ScaleAbs {
+		sc = wm.bb.Width() / float64(wm.width)
+	}
+	fmt.Fprintf(w, "%f 0 0 %f 0 0 cm ", sc, sc)
+	_, err := w.Write(cs)
+	return err
+}
+
+func imageFormContent(w io.Writer, pageNr int, wm *Watermark) {
+	fmt.Fprintf(w, "q %f 0 0 %f 0 0 cm /Im0 Do Q", wm.bb.Width(), wm.bb.Height()) // TODO dont need Q
+}
+
+func textFormContent(w io.Writer, pageNr int, wm *Watermark) {
+	// 12 font points result in a vertical displacement of 9.47
+	dy := -float64(wm.ScaledFontSize) / 12 * 9.47
+	wmForm := "0 g 0 G 0 i 0 J []0 d 0 j 1 w 10 M 0 Tc 0 Tw 100 Tz 0 TL %d Tr 0 Ts "
+	fmt.Fprintf(w, wmForm, wm.RenderMode)
+	j := 1
+	for i := len(wm.TextLines) - 1; i >= 0; i-- {
+
+		sw := font.TextWidth(wm.TextLines[i], wm.FontName, wm.ScaledFontSize)
+		dx := wm.bb.Width()/2 - sw/2
+
+		fmt.Fprintf(w, "BT /%s %d Tf %f %f %f rg %f %f Td (%s) Tj ET ",
+			wm.FontName, wm.ScaledFontSize, wm.Color.r, wm.Color.g, wm.Color.b, dx, dy+float64(j*wm.ScaledFontSize), wm.TextLines[i])
+		j++
+	}
+}
+
+func formContent(w io.Writer, pageNr int, wm *Watermark) error {
+	switch true {
+	case wm.isPDF():
+		return pdfFormContent(w, pageNr, wm)
+	case wm.isImage():
+		imageFormContent(w, pageNr, wm)
+	default:
+		textFormContent(w, pageNr, wm)
+	}
+	return nil
+}
+
+func createForm(xRefTable *XRefTable, pageNr int, wm *Watermark, withBB bool) error {
 
 	// The forms bounding box is dependent on the page dimensions.
-	wm.calcBoundingBox()
+	wm.calcBoundingBox(pageNr)
 	bb := wm.bb
 
-	// Cache the form for every bounding box encountered.
-	ir, ok := wm.fCache[bb] // *bb ??
-	if ok {
-		wm.form = ir
-		return nil
+	if cachedForm(wm) || pageNr > len(wm.pdfRes) {
+		// Use cached form.
+		ir, ok := wm.fCache[*bb.Rectangle]
+		if ok {
+			wm.form = ir
+			return nil
+		}
 	}
 
 	var b bytes.Buffer
-
-	if wm.isPDF() {
-		fmt.Fprintf(&b, "%f 0 0 %f 0 0 cm ", bb.Width()/wm.vp.Width(), bb.Height()/wm.vp.Height())
-		_, err := b.Write(wm.cs)
-		if err != nil {
-			return err
-		}
-	} else if wm.isImage() {
-		fmt.Fprintf(&b, "q %f 0 0 %f 0 0 cm /Im0 Do Q", bb.Width(), bb.Height()) // TODO dont need Q
-	} else {
-
-		// 12 font points result in a vertical displacement of 9.47
-		dy := -float64(wm.ScaledFontSize) / 12 * 9.47
-
-		wmForm := "0 g 0 G 0 i 0 J []0 d 0 j 1 w 10 M 0 Tc 0 Tw 100 Tz 0 TL %d Tr 0 Ts "
-		fmt.Fprintf(&b, wmForm, wm.RenderMode)
-
-		j := 1
-		for i := len(wm.TextLines) - 1; i >= 0; i-- {
-
-			sw := font.TextWidth(wm.TextLines[i], wm.FontName, wm.ScaledFontSize)
-			dx := wm.bb.Width()/2 - sw/2
-
-			fmt.Fprintf(&b, "BT /%s %d Tf %f %f %f rg %f %f Td (%s) Tj ET ",
-				wm.FontName, wm.ScaledFontSize, wm.Color.r, wm.Color.g, wm.Color.b, dx, dy+float64(j*wm.ScaledFontSize), wm.TextLines[i])
-			j++
-		}
-
+	if err := formContent(&b, pageNr, wm); err != nil {
+		return err
 	}
 
 	// Paint bounding box
 	if withBB {
-		fmt.Fprintf(&b, "[]0 d 2 w %f %f m %f %f l %f %f l %f %f l s ",
+		urx := bb.UR.X
+		ury := bb.UR.Y
+		if wm.isPDF() {
+			sc := wm.Scale
+			if !wm.ScaleAbs {
+				sc = bb.Width() / float64(wm.width)
+			}
+			urx /= sc
+			ury /= sc
+		}
+		fmt.Fprintf(&b, "[]0 d 2 w %.0f %.0f m %.0f %.0f l %.0f %.0f l %.0f %.0f l s ",
 			bb.LL.X, bb.LL.Y,
-			bb.UR.X, bb.LL.Y,
-			bb.UR.X, bb.UR.Y,
-			bb.LL.X, bb.UR.Y,
+			urx, bb.LL.Y,
+			urx, ury,
+			bb.LL.X, ury,
 		)
 	}
 
-	ir, err := createFormResDict(xRefTable, wm)
+	ir, err := createFormResDict(xRefTable, pageNr, wm)
 	if err != nil {
 		return err
 	}
@@ -1403,8 +1500,7 @@ func createForm(xRefTable *XRefTable, wm *Watermark, withBB bool) error {
 		Content: b.Bytes(),
 	}
 
-	err = encodeStream(&sd)
-	if err != nil {
+	if err = encodeStream(&sd); err != nil {
 		return err
 	}
 
@@ -1413,8 +1509,12 @@ func createForm(xRefTable *XRefTable, wm *Watermark, withBB bool) error {
 		return err
 	}
 
-	wm.fCache[wm.bb] = ir
 	wm.form = ir
+
+	if cachedForm(wm) || pageNr >= len(wm.pdfRes) {
+		// Cache form.
+		wm.fCache[*wm.bb.Rectangle] = ir
+	}
 
 	return nil
 }
@@ -1639,7 +1739,7 @@ func addPageWatermark(xRefTable *XRefTable, i int, wm *Watermark) error {
 
 	wm.vp = viewPort(xRefTable, inhPAttrs)
 
-	err = createForm(xRefTable, wm, stampWithBBox)
+	err = createForm(xRefTable, i, wm, stampWithBBox)
 	if err != nil {
 		return err
 	}
