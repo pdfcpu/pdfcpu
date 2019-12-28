@@ -762,7 +762,13 @@ func handleInsertPagesCommand(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
-	process(cli.InsertPagesCommand(inFile, outFile, pages, conf))
+	// Set default to insert pages before selected pages.
+	if mode != "" && mode != "before" && mode != "after" {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usagePagesInsert)
+		os.Exit(1)
+	}
+
+	process(cli.InsertPagesCommand(inFile, outFile, pages, conf, mode))
 }
 
 func handleRemovePagesCommand(conf *pdfcpu.Configuration) {

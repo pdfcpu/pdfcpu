@@ -69,8 +69,9 @@ var cmdMap = map[pdf.CommandMode]func(cmd *Command) ([]string, error){
 	pdf.LISTPERMISSIONS:    processPermissions,
 	pdf.SETPERMISSIONS:     processPermissions,
 	pdf.IMPORTIMAGES:       ImportImages,
-	pdf.INSERTPAGES:        InsertPages,
-	pdf.REMOVEPAGES:        RemovePages,
+	pdf.INSERTPAGESBEFORE:  processPages,
+	pdf.INSERTPAGESAFTER:   processPages,
+	pdf.REMOVEPAGES:        processPages,
 	pdf.ROTATE:             Rotate,
 	pdf.NUP:                NUp,
 	pdf.INFO:               Info,
@@ -462,14 +463,28 @@ func ImportImagesCommand(imageFiles []string, outFile string, imp *pdf.Import, c
 		Conf:    conf}
 }
 
-// InsertPagesCommand creates a new command to insert a blank page before selected pages.
-func InsertPagesCommand(inFile, outFile string, pageSelection []string, conf *pdf.Configuration) *Command {
+func processPages(cmd *Command) (out []string, err error) {
+	switch cmd.Mode {
+	case pdf.INSERTPAGESBEFORE, pdf.INSERTPAGESAFTER:
+		return InsertPages(cmd)
+	case pdf.REMOVEPAGES:
+		return RemovePages(cmd)
+	}
+	return nil, nil
+}
+
+// InsertPagesCommand creates a new command to insert a blank page before or after selected pages.
+func InsertPagesCommand(inFile, outFile string, pageSelection []string, conf *pdf.Configuration, mode string) *Command {
 	if conf == nil {
 		conf = pdf.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdf.INSERTPAGES
+	cmdMode := pdf.INSERTPAGESBEFORE
+	if mode == "after" {
+		cmdMode = pdf.INSERTPAGESAFTER
+	}
+	conf.Cmd = cmdMode
 	return &Command{
-		Mode:          pdf.INSERTPAGES,
+		Mode:          cmdMode,
 		InFile:        &inFile,
 		OutFile:       &outFile,
 		PageSelection: pageSelection,

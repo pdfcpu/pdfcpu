@@ -111,9 +111,13 @@ func ImportImages(cmd *Command) ([]string, error) {
 	return nil, api.ImportImagesFile(cmd.InFiles, *cmd.OutFile, cmd.Import, cmd.Conf)
 }
 
-// InsertPages inserts a blank page before each selected page.
+// InsertPages inserts a blank page before or after each selected page.
 func InsertPages(cmd *Command) ([]string, error) {
-	return nil, api.InsertPagesFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
+	before := true
+	if cmd.Mode == pdf.INSERTPAGESAFTER {
+		before = false
+	}
+	return nil, api.InsertPagesFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, before, cmd.Conf)
 }
 
 // RemovePages removes selected pages.

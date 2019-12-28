@@ -1908,7 +1908,7 @@ func (xRefTable *XRefTable) pageMediaBox(d *Dict) (*Rectangle, error) {
 	return rect(xRefTable, a)
 }
 
-func (xRefTable *XRefTable) insertIntoPageTree(root *IndirectRef, pAttrs *InheritedPageAttrs, p *int, selectedPages IntSet) (int, error) {
+func (xRefTable *XRefTable) insertIntoPageTree(root *IndirectRef, pAttrs *InheritedPageAttrs, p *int, selectedPages IntSet, before bool) (int, error) {
 
 	d, err := xRefTable.DereferenceDict(*root)
 	if err != nil {
@@ -1949,7 +1949,7 @@ func (xRefTable *XRefTable) insertIntoPageTree(root *IndirectRef, pAttrs *Inheri
 
 		case "Pages":
 			// Recurse over sub pagetree.
-			j, err := xRefTable.insertIntoPageTree(&ir, pAttrs, p, selectedPages)
+			j, err := xRefTable.insertIntoPageTree(&ir, pAttrs, p, selectedPages, before)
 			if err != nil {
 				return 0, err
 			}
@@ -1958,6 +1958,10 @@ func (xRefTable *XRefTable) insertIntoPageTree(root *IndirectRef, pAttrs *Inheri
 
 		case "Page":
 			*p++
+			if !before {
+				a = append(a, ir)
+				i++
+			}
 			if selectedPages[*p] {
 				// Insert empty page.
 				mediaBox := pAttrs.mediaBox
@@ -1976,8 +1980,10 @@ func (xRefTable *XRefTable) insertIntoPageTree(root *IndirectRef, pAttrs *Inheri
 				a = append(a, *indRef)
 				i++
 			}
-			a = append(a, ir)
-			i++
+			if before {
+				a = append(a, ir)
+				i++
+			}
 
 		}
 
@@ -1988,8 +1994,8 @@ func (xRefTable *XRefTable) insertIntoPageTree(root *IndirectRef, pAttrs *Inheri
 	return i, d.IncrementBy("Count", i)
 }
 
-// InsertPages inserts a blank page before each selected page.
-func (xRefTable *XRefTable) InsertPages(pages IntSet) error {
+// InsertPages inserts a blank page before or after each selected page.
+func (xRefTable *XRefTable) InsertPages(pages IntSet, before bool) error {
 
 	root, err := xRefTable.Pages()
 	if err != nil {
@@ -1999,7 +2005,7 @@ func (xRefTable *XRefTable) InsertPages(pages IntSet) error {
 	var inhPAttrs InheritedPageAttrs
 	p := 0
 
-	_, err = xRefTable.insertIntoPageTree(root, &inhPAttrs, &p, pages)
+	_, err = xRefTable.insertIntoPageTree(root, &inhPAttrs, &p, pages, before)
 
 	return err
 }

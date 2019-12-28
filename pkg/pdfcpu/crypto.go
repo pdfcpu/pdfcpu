@@ -65,7 +65,8 @@ var (
 		SETPERMISSIONS:     {0, 0},
 		ADDWATERMARKS:      {1, 0},
 		REMOVEWATERMARKS:   {1, 0},
-		INSERTPAGES:        {1, 0},
+		INSERTPAGESBEFORE:  {1, 0},
+		INSERTPAGESAFTER:   {1, 0},
 		REMOVEPAGES:        {1, 0},
 	}
 )

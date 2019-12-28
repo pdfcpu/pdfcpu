@@ -1258,12 +1258,15 @@ func ImportImagesFile(imgFiles []string, outFile string, imp *pdf.Import, conf *
 	return ImportImages(rs, f2, rr, imp, conf)
 }
 
-// InsertPages inserts a blank page at every page selected of rs and writes the result to w.
-func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *pdf.Configuration) error {
+// InsertPages inserts a blank page before or after every page selected of rs and writes the result to w.
+func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before bool, conf *pdf.Configuration) error {
 	if conf == nil {
 		conf = pdf.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdf.INSERTPAGES
+	conf.Cmd = pdf.INSERTPAGESAFTER
+	if before {
+		conf.Cmd = pdf.INSERTPAGESBEFORE
+	}
 
 	fromStart := time.Now()
 	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, fromStart)
@@ -1280,7 +1283,7 @@ func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *pd
 		return err
 	}
 
-	if err = ctx.InsertPages(pages); err != nil {
+	if err = ctx.InsertPages(pages, before); err != nil {
 		return err
 	}
 
@@ -1301,8 +1304,8 @@ func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *pd
 	return nil
 }
 
-// InsertPagesFile inserts a blank page at every inFile page selected and writes the result to w.
-func InsertPagesFile(inFile, outFile string, selectedPages []string, conf *pdf.Configuration) (err error) {
+// InsertPagesFile inserts a blank page before or after every inFile page selected and writes the result to w.
+func InsertPagesFile(inFile, outFile string, selectedPages []string, before bool, conf *pdf.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {
@@ -1342,7 +1345,7 @@ func InsertPagesFile(inFile, outFile string, selectedPages []string, conf *pdf.C
 		}
 	}()
 
-	return InsertPages(f1, f2, selectedPages, conf)
+	return InsertPages(f1, f2, selectedPages, before, conf)
 }
 
 // RemovePages removes selected pages from rs and writes the result to w.

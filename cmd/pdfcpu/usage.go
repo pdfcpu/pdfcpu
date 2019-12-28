@@ -384,7 +384,7 @@ description ... dimensions, format, position, offset, scale factor
        'f:A4, pos:c, dpi:300'                    ... render the image centered on A4 respecting a destination resolution of 300 dpi.
        `
 
-	usagePagesInsert = "pdfcpu pages insert [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usagePagesInsert = "pdfcpu pages insert [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] [-mode before|after] inFile [outFile]"
 	usagePagesRemove = "pdfcpu pages remove [-v(erbose)|vv] [-q(uiet)]  -pages selectedPages  [-upw userpw] [-opw ownerpw] inFile [outFile]"
 
 	usagePages = "usage: " + usagePagesInsert +
@@ -398,6 +398,7 @@ description ... dimensions, format, position, offset, scale factor
       pages ... selected pages
         upw ... user password
         opw ... owner password
+       mode ... before, after (default: before)
      inFile ... input pdf file
     outFile ... output pdf file
 
