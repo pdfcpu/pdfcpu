@@ -282,6 +282,27 @@ func handleAddAttachmentsCommand(conf *pdfcpu.Configuration) {
 	process(cli.AddAttachmentsCommand(inFile, "", fileNames, conf))
 }
 
+func handleAddAttachmentsPortfolioCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) < 2 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageAttachAdd)
+		os.Exit(1)
+	}
+
+	var inFile string
+	fileNames := []string{}
+
+	for i, arg := range flag.Args() {
+		if i == 0 {
+			inFile = arg
+			ensurePdfExtension(inFile)
+			continue
+		}
+		fileNames = append(fileNames, arg)
+	}
+
+	process(cli.AddAttachmentsPortfolioCommand(inFile, "", fileNames, conf))
+}
+
 func handleRemoveAttachmentsCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) < 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageAttachRemove)

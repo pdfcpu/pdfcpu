@@ -21,6 +21,7 @@ The commands are:
 	pages		insert, remove selected pages
 	paper		print list of supported paper sizes
 	permissions	list, set user access permissions
+	portfolio	list, add, remove, extract portfolio entries with optional description
 	rotate		rotate pages
 	split		split multi-page PDF into several PDFs according to split span
 	stamp		add, remove, update text, image or PDF stamps for selected pages

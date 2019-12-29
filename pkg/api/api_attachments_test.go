@@ -64,7 +64,62 @@ func TestAttachments(t *testing.T) {
 		outDir + "/go-lecture.pdf",
 		outDir + "/test.wav"}
 
-	if err := AddAttachmentsFile(fileName, "", files, nil); err != nil {
+	if err := AddAttachmentsFile(fileName, "", files, false, nil); err != nil {
+		t.Fatalf("%s add attachments: %v\n", msg, err)
+	}
+	list := listAttachments(t, msg, fileName, 4)
+	for _, s := range list {
+		t.Log(s)
+	}
+
+	// Extract all attachments.
+	if err := ExtractAttachmentsFile(fileName, outDir, nil, nil); err != nil {
+		t.Fatalf("%s extract all attachments: %v\n", msg, err)
+	}
+
+	// Extract 1 attachment.
+	if err := ExtractAttachmentsFile(fileName, outDir, []string{"golang.pdf"}, nil); err != nil {
+		t.Fatalf("%s extract one attachment: %v\n", msg, err)
+	}
+
+	// Remove 1 attachment.
+	if err := RemoveAttachmentsFile(fileName, "", []string{"golang.pdf"}, nil); err != nil {
+		t.Fatalf("%s remove one attachment: %v\n", msg, err)
+	}
+	listAttachments(t, msg, fileName, 3)
+
+	// Remove all attachments.
+	if err := RemoveAttachmentsFile(fileName, "", nil, nil); err != nil {
+		t.Fatalf("%s remove all attachments: %v\n", msg, err)
+	}
+	listAttachments(t, msg, fileName, 0)
+
+	// Validate the processed file.
+	if err := ValidateFile(fileName, nil); err != nil {
+		t.Fatalf("%s: validate: %v\n", msg, err)
+	}
+}
+
+func TestPortfolio(t *testing.T) {
+	msg := "testPortfolio"
+
+	if err := prepareForAttachmentTest(); err != nil {
+		t.Fatalf("%s prepare for portfolio: %v\n", msg, err)
+	}
+
+	fileName := filepath.Join(outDir, "go.pdf")
+
+	// # of attachments must be 0
+	listAttachments(t, msg, fileName, 0)
+
+	// attach add 4 files including descriptions
+	files := []string{
+		outDir + "/golang.pdf",
+		outDir + "/T4.pdf" + ", CCITT spec",
+		outDir + "/go-lecture.pdf",
+		outDir + "/test.wav" + ", test audio file"}
+
+	if err := AddAttachmentsFile(fileName, "", files, false, nil); err != nil {
 		t.Fatalf("%s add attachments: %v\n", msg, err)
 	}
 	list := listAttachments(t, msg, fileName, 4)

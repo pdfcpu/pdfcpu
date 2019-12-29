@@ -543,7 +543,7 @@ func createFileAttachmentAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef
 		return nil, err
 	}
 
-	fileSpecDict, err := xRefTable.NewFileSpecDict(path.Base(fileName), *ir)
+	fileSpecDict, err := xRefTable.NewFileSpecDict(path.Base(fileName), "attached by pdfcpu", *ir)
 	if err != nil {
 		return nil, err
 	}
@@ -594,7 +594,7 @@ func createFileSpecDict(xRefTable *XRefTable, fileName string) (Dict, error) {
 		return nil, err
 	}
 
-	return xRefTable.NewFileSpecDict(path.Base(fileName), *ir)
+	return xRefTable.NewFileSpecDict(path.Base(fileName), "attached by pdfcpu", *ir)
 }
 
 func createSoundObject(xRefTable *XRefTable) (*IndirectRef, error) {
@@ -1043,7 +1043,7 @@ func createEmbeddedGoToAction(xRefTable *XRefTable) (*IndirectRef, error) {
 	// 	return nil, err
 	// }
 
-	_, err := AttachAdd(xRefTable, StringSet{filepath.Join(testDir, "go.pdf"): true})
+	_, err := AttachAdd(xRefTable, StringSet{filepath.Join(testDir, "go.pdf"): true}, true)
 	if err != nil {
 		return nil, err
 	}

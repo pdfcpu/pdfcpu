@@ -440,7 +440,7 @@ func (xRefTable *XRefTable) NewSoundStreamDict(filename string, samplingRate int
 }
 
 // NewFileSpecDict creates and returns a new fileSpec dictionary.
-func (xRefTable *XRefTable) NewFileSpecDict(filename string, indRefStreamDict IndirectRef) (Dict, error) {
+func (xRefTable *XRefTable) NewFileSpecDict(filename, desc string, indRefStreamDict IndirectRef) (Dict, error) {
 
 	d := NewDict()
 	d.InsertName("Type", "Filespec")
@@ -453,7 +453,7 @@ func (xRefTable *XRefTable) NewFileSpecDict(filename string, indRefStreamDict In
 	efDict.Insert("UF", indRefStreamDict)
 	d.Insert("EF", efDict)
 
-	d.InsertString("Desc", "attached by pdfcpu "+VersionStr)
+	d.InsertString("Desc", desc)
 
 	// CI, optional, collection item dict, since V1.7
 	// a corresponding collection schema dict in a collection.
@@ -1543,8 +1543,7 @@ func (xRefTable *XRefTable) RemoveEmbeddedFilesNameTree() error {
 
 	delete(xRefTable.Names, "EmbeddedFiles")
 
-	err := xRefTable.RemoveNameTree("EmbeddedFiles")
-	if err != nil {
+	if err := xRefTable.RemoveNameTree("EmbeddedFiles"); err != nil {
 		return err
 	}
 
@@ -1908,6 +1907,18 @@ func (xRefTable *XRefTable) pageMediaBox(d *Dict) (*Rectangle, error) {
 	return rect(xRefTable, a)
 }
 
+func (xRefTable *XRefTable) insertEmptyPage(root *IndirectRef, pAttrs *InheritedPageAttrs, pageNodeDict Dict) (indRef *IndirectRef, err error) {
+	mediaBox := pAttrs.mediaBox
+	if mediaBox == nil {
+		mediaBox, err = xRefTable.pageMediaBox(&pageNodeDict)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return xRefTable.emptyPage(root, mediaBox)
+}
+
 func (xRefTable *XRefTable) insertIntoPageTree(root *IndirectRef, pAttrs *InheritedPageAttrs, p *int, selectedPages IntSet, before bool) (int, error) {
 
 	d, err := xRefTable.DereferenceDict(*root)
@@ -1964,15 +1975,7 @@ func (xRefTable *XRefTable) insertIntoPageTree(root *IndirectRef, pAttrs *Inheri
 			}
 			if selectedPages[*p] {
 				// Insert empty page.
-				mediaBox := pAttrs.mediaBox
-				if mediaBox == nil {
-					mediaBox, err = xRefTable.pageMediaBox(&pageNodeDict)
-					if err != nil {
-						return 0, err
-					}
-				}
-
-				indRef, err := xRefTable.emptyPage(root, mediaBox)
+				indRef, err := xRefTable.insertEmptyPage(root, pAttrs, pageNodeDict)
 				if err != nil {
 					return 0, err
 				}

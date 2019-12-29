@@ -62,7 +62,7 @@ func ListAttachmentsFile(inFile string, conf *pdf.Configuration) ([]string, erro
 }
 
 // AddAttachments embeds files into a PDF context read from rs and writes the result to w.
-func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, conf *pdf.Configuration) error {
+func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, conf *pdf.Configuration) error {
 	if conf == nil {
 		conf = pdf.NewDefaultConfiguration()
 	}
@@ -76,7 +76,7 @@ func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, conf *pdf.Con
 	from := time.Now()
 	var ok bool
 
-	if ok, err = pdf.AttachAdd(ctx.XRefTable, stringSet(files)); err != nil {
+	if ok, err = pdf.AttachAdd(ctx.XRefTable, stringSet(files), coll); err != nil {
 		return err
 	}
 	if !ok {
@@ -99,7 +99,7 @@ func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, conf *pdf.Con
 }
 
 // AddAttachmentsFile embeds files into a PDF context read from inFile and writes the result to outFile.
-func AddAttachmentsFile(inFile, outFile string, files []string, conf *pdf.Configuration) (err error) {
+func AddAttachmentsFile(inFile, outFile string, files []string, coll bool, conf *pdf.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {
@@ -136,7 +136,7 @@ func AddAttachmentsFile(inFile, outFile string, files []string, conf *pdf.Config
 		}
 	}()
 
-	return AddAttachments(f1, f2, files, conf)
+	return AddAttachments(f1, f2, files, coll, conf)
 }
 
 // RemoveAttachments deletes embedded files from a PDF context read from rs and writes the result to w.

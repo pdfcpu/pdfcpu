@@ -179,12 +179,12 @@ func CharWidth(fontName string, c int) int {
 	}
 	ttf := UserFontMetrics[fontName]
 	if metrics.WinAnsiGlyphMap[c] == ".notdef" {
-		fmt.Printf("Character %d missing in WinAnsiGlyphMap\n", uint16(c))
+		//fmt.Printf("Character %d missing in WinAnsiGlyphMap\n", uint16(c))
 		return int(ttf.GlyphWidths[0])
 	}
 	pos, ok := ttf.Chars[uint16(c)]
 	if !ok {
-		fmt.Printf("Character %s (%04x) missing\n", metrics.WinAnsiGlyphMap[c], uint16(c))
+		//fmt.Printf("Character %s (%04x) missing\n", metrics.WinAnsiGlyphMap[c], uint16(c))
 		return int(ttf.GlyphWidths[0])
 	}
 	return int(ttf.GlyphWidths[pos])

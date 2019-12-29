@@ -88,10 +88,10 @@ func ExampleMergeFile() {
 func ExampleInsertPagesFile() {
 
 	// Insert a blank page into in.pdf before page #3.
-	InsertPagesFile("in.pdf", "", []string{"3"}, nil)
+	InsertPagesFile("in.pdf", "", []string{"3"}, true, nil)
 
-	// Insert a blank page into in.pdf before every page.
-	InsertPagesFile("in.pdf", "", nil, nil)
+	// Insert a blank page into in.pdf after every page.
+	InsertPagesFile("in.pdf", "", nil, false, nil)
 }
 
 func ExampleRemovePagesFile() {
@@ -253,7 +253,7 @@ func ExampleListAttachmentsFile() {
 func ExampleAddAttachmentsFile() {
 
 	// Attach 3 files to in.pdf.
-	AddAttachmentsFile("in.pdf", "", []string{"img.jpg", "attach.pdf", "test.zip"}, nil)
+	AddAttachmentsFile("in.pdf", "", []string{"img.jpg", "attach.pdf", "test.zip"}, false, nil)
 }
 
 func ExampleRemoveAttachmentsFile() {

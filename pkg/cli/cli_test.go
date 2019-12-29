@@ -591,7 +591,7 @@ func TestInsertRemovePages(t *testing.T) {
 	}
 
 	// Insert an empty page before pages 1 and 2.
-	if _, err := Process(InsertPagesCommand(inFile, outFile, []string{"-2"}, nil)); err != nil {
+	if _, err := Process(InsertPagesCommand(inFile, outFile, []string{"-2"}, nil, "before")); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 	if err := validateFile(t, outFile, nil); err != nil {
@@ -729,7 +729,7 @@ func TestUnknownCommand(t *testing.T) {
 
 func TestInstallFontsCommand(t *testing.T) {
 	msg := "TestInstallFontsCommand"
-	userFontName := filepath.Join(fontDir, "Geneva.ttf")
+	userFontName := filepath.Join(fontDir, "Roboto-Regular.ttf")
 	_, err := Process(InstallFontsCommand([]string{userFontName}, nil))
 	if err != nil {
 		t.Fatalf("%s install fonts: %v\n", msg, err)

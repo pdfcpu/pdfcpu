@@ -46,37 +46,38 @@ type Command struct {
 }
 
 var cmdMap = map[pdf.CommandMode]func(cmd *Command) ([]string, error){
-	pdf.VALIDATE:           Validate,
-	pdf.OPTIMIZE:           Optimize,
-	pdf.SPLIT:              Split,
-	pdf.MERGE:              Merge,
-	pdf.EXTRACTIMAGES:      ExtractImages,
-	pdf.EXTRACTFONTS:       ExtractFonts,
-	pdf.EXTRACTPAGES:       ExtractPages,
-	pdf.EXTRACTCONTENT:     ExtractContent,
-	pdf.EXTRACTMETADATA:    ExtractMetadata,
-	pdf.TRIM:               Trim,
-	pdf.ADDWATERMARKS:      AddWatermarks,
-	pdf.REMOVEWATERMARKS:   RemoveWatermarks,
-	pdf.LISTATTACHMENTS:    processAttachments,
-	pdf.ADDATTACHMENTS:     processAttachments,
-	pdf.REMOVEATTACHMENTS:  processAttachments,
-	pdf.EXTRACTATTACHMENTS: processAttachments,
-	pdf.ENCRYPT:            processEncryption,
-	pdf.DECRYPT:            processEncryption,
-	pdf.CHANGEUPW:          processEncryption,
-	pdf.CHANGEOPW:          processEncryption,
-	pdf.LISTPERMISSIONS:    processPermissions,
-	pdf.SETPERMISSIONS:     processPermissions,
-	pdf.IMPORTIMAGES:       ImportImages,
-	pdf.INSERTPAGESBEFORE:  processPages,
-	pdf.INSERTPAGESAFTER:   processPages,
-	pdf.REMOVEPAGES:        processPages,
-	pdf.ROTATE:             Rotate,
-	pdf.NUP:                NUp,
-	pdf.INFO:               Info,
-	pdf.INSTALLFONTS:       InstallFonts,
-	pdf.LISTFONTS:          ListFonts,
+	pdf.VALIDATE:                Validate,
+	pdf.OPTIMIZE:                Optimize,
+	pdf.SPLIT:                   Split,
+	pdf.MERGE:                   Merge,
+	pdf.EXTRACTIMAGES:           ExtractImages,
+	pdf.EXTRACTFONTS:            ExtractFonts,
+	pdf.EXTRACTPAGES:            ExtractPages,
+	pdf.EXTRACTCONTENT:          ExtractContent,
+	pdf.EXTRACTMETADATA:         ExtractMetadata,
+	pdf.TRIM:                    Trim,
+	pdf.ADDWATERMARKS:           AddWatermarks,
+	pdf.REMOVEWATERMARKS:        RemoveWatermarks,
+	pdf.LISTATTACHMENTS:         processAttachments,
+	pdf.ADDATTACHMENTS:          processAttachments,
+	pdf.ADDATTACHMENTSPORTFOLIO: processAttachments,
+	pdf.REMOVEATTACHMENTS:       processAttachments,
+	pdf.EXTRACTATTACHMENTS:      processAttachments,
+	pdf.ENCRYPT:                 processEncryption,
+	pdf.DECRYPT:                 processEncryption,
+	pdf.CHANGEUPW:               processEncryption,
+	pdf.CHANGEOPW:               processEncryption,
+	pdf.LISTPERMISSIONS:         processPermissions,
+	pdf.SETPERMISSIONS:          processPermissions,
+	pdf.IMPORTIMAGES:            ImportImages,
+	pdf.INSERTPAGESBEFORE:       processPages,
+	pdf.INSERTPAGESAFTER:        processPages,
+	pdf.REMOVEPAGES:             processPages,
+	pdf.ROTATE:                  Rotate,
+	pdf.NUP:                     NUp,
+	pdf.INFO:                    Info,
+	pdf.INSTALLFONTS:            InstallFonts,
+	pdf.LISTFONTS:               ListFonts,
 }
 
 // Process executes a pdfcpu command.
@@ -260,6 +261,20 @@ func AddAttachmentsCommand(inFile, outFile string, fileNames []string, conf *pdf
 		Conf:    conf}
 }
 
+// AddAttachmentsPortfolioCommand creates a new command to add attachments to a portfolio.
+func AddAttachmentsPortfolioCommand(inFile, outFile string, fileNames []string, conf *pdf.Configuration) *Command {
+	if conf == nil {
+		conf = pdf.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdf.ADDATTACHMENTSPORTFOLIO
+	return &Command{
+		Mode:    pdf.ADDATTACHMENTSPORTFOLIO,
+		InFile:  &inFile,
+		OutFile: &outFile,
+		InFiles: fileNames,
+		Conf:    conf}
+}
+
 // RemoveAttachmentsCommand creates a new command to remove attachments.
 func RemoveAttachmentsCommand(inFile, outFile string, fileNames []string, conf *pdf.Configuration) *Command {
 	if conf == nil {
@@ -375,7 +390,7 @@ func processAttachments(cmd *Command) (out []string, err error) {
 	case pdf.LISTATTACHMENTS:
 		out, err = ListAttachments(cmd)
 
-	case pdf.ADDATTACHMENTS:
+	case pdf.ADDATTACHMENTS, pdf.ADDATTACHMENTSPORTFOLIO:
 		out, err = AddAttachments(cmd)
 
 	case pdf.REMOVEATTACHMENTS:

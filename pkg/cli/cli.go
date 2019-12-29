@@ -162,7 +162,7 @@ func ListAttachments(cmd *Command) ([]string, error) {
 
 // AddAttachments embeds inFiles into a PDF context read from inFile and writes the result to outFile.
 func AddAttachments(cmd *Command) ([]string, error) {
-	return nil, api.AddAttachmentsFile(*cmd.InFile, *cmd.OutFile, cmd.InFiles, cmd.Conf)
+	return nil, api.AddAttachmentsFile(*cmd.InFile, *cmd.OutFile, cmd.InFiles, cmd.Mode == pdf.ADDATTACHMENTSPORTFOLIO, cmd.Conf)
 }
 
 // RemoveAttachments deletes inFiles from a PDF context read from inFile and writes the result to outFile.

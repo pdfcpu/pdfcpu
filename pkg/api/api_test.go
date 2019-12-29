@@ -240,7 +240,7 @@ func TestInsertRemovePages(t *testing.T) {
 	}
 
 	// Insert an empty page before pages 1 and 2.
-	if err := InsertPagesFile(inFile, outFile, []string{"-2"}, nil); err != nil {
+	if err := InsertPagesFile(inFile, outFile, []string{"-2"}, true, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 	if err := ValidateFile(outFile, nil); err != nil {

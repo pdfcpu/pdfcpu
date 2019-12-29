@@ -41,6 +41,7 @@ The commands are:
    pages       insert, remove selected pages
    paper       print list of supported paper sizes
    permissions list, set user access permissions
+   portfolio   list, add, remove, extract portfolio entries with optional description
    rotate      rotate pages
    split       split multi-page PDF into several PDFs according to split span
    stamp       add, remove, update text, image or PDF stamps for selected pages
@@ -179,7 +180,37 @@ verbose, v ... turn on logging
        upw ... user password
        opw ... owner password
     inFile ... input pdf file
+      file ... attachment
     outDir ... output directory`
+
+	usagePortfolioList    = "pdfcpu portfolio list    [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile"
+	usagePortfolioAdd     = "pdfcpu portfolio add     [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile file[,desc]..."
+	usagePortfolioRemove  = "pdfcpu portfolio remove  [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [file...]"
+	usagePortfolioExtract = "pdfcpu portfolio extract [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile outDir [file...]"
+
+	usagePortfolio = "usage: " + usagePortfolioList +
+		"\n       " + usagePortfolioAdd +
+		"\n       " + usagePortfolioRemove +
+		"\n       " + usagePortfolioExtract
+
+	usageLongPortfolio = `Manage portfolio entries.
+	
+verbose, v ... turn on logging
+        vv ... verbose logging
+  quiet, q ... disable output
+       upw ... user password
+       opw ... owner password
+    inFile ... input pdf file
+      file ... attachment
+      desc ... description (optional)
+    outDir ... output directory
+    
+    Adding attachments to portfolio: 
+           pdfcpu portfolio add test.pdf test.mp3 test.mkv
+
+    Adding attachments to portfolio with description: 
+           pdfcpu portfolio add test.pdf 'test.mp3, Test sound file' 'test.mkv, Test video file'
+    `
 
 	usagePermList = "pdfcpu permissions list [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile"
 	usagePermSet  = "pdfcpu permissions set [-v(erbose)|vv] [-q(uiet)] [-perm none|all] [-upw userpw] -opw ownerpw inFile"

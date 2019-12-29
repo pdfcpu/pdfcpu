@@ -34,6 +34,16 @@ func initCommandMap() {
 		attachCmdMap.Register(k, v)
 	}
 
+	portfolioCmdMap := NewCommandMap()
+	for k, v := range map[string]Command{
+		"list":    {handleListAttachmentsCommand, nil, "", ""},
+		"add":     {handleAddAttachmentsPortfolioCommand, nil, "", ""},
+		"remove":  {handleRemoveAttachmentsCommand, nil, "", ""},
+		"extract": {handleExtractAttachmentsCommand, nil, "", ""},
+	} {
+		portfolioCmdMap.Register(k, v)
+	}
+
 	permissionsCmdMap := NewCommandMap()
 	for k, v := range map[string]Command{
 		"list": {handleListPermissionsCommand, nil, "", ""},
@@ -97,6 +107,7 @@ func initCommandMap() {
 		"pages":       {nil, pagesCmdMap, usagePages, usageLongPages},
 		"paper":       {printPaperSizes, nil, usagePaper, usageLongPaper},
 		"permissions": {nil, permissionsCmdMap, usagePerm, usageLongPerm},
+		"portfolio":   {nil, portfolioCmdMap, usagePortfolio, usageLongPortfolio},
 		"rotate":      {handleRotateCommand, nil, usageRotate, usageLongRotate},
 		"split":       {handleSplitCommand, nil, usageSplit, usageLongSplit},
 		"stamp":       {nil, stampCmdMap, usageStamp, usageLongStamp},
