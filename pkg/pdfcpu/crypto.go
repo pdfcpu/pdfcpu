@@ -69,6 +69,12 @@ var (
 		INSERTPAGESBEFORE:       {1, 0},
 		INSERTPAGESAFTER:        {1, 0},
 		REMOVEPAGES:             {1, 0},
+		LISTKEYWORDS:            {0, 0},
+		ADDKEYWORDS:             {0, 0},
+		REMOVEKEYWORDS:          {0, 0},
+		LISTPROPERTIES:          {0, 0},
+		ADDPROPERTIES:           {0, 0},
+		REMOVEPROPERTIES:        {0, 0},
 	}
 )
 

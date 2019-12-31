@@ -107,6 +107,7 @@ type XRefTable struct {
 	Producer     string
 	CreationDate string
 	ModDate      string
+	Properties   map[string]string
 
 	// Linearization section (not yet supported)
 	OffsetPrimaryHintTable  *int64
@@ -134,6 +135,7 @@ func newXRefTable(validationMode int) (xRefTable *XRefTable) {
 	return &XRefTable{
 		Table:             map[int]*XRefTableEntry{},
 		Names:             map[string]*Node{},
+		Properties:        map[string]string{},
 		LinearizationObjs: IntSet{},
 		Stats:             NewPDFStats(),
 		ValidationMode:    validationMode,

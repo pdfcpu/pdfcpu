@@ -35,6 +35,7 @@ The commands are:
    grid        rearrange pages or images for enhanced browsing experience
    import      import/convert images to PDF
    info        print file info
+   keywords    list, add, remove keywords
    merge       concatenate 2 or more PDFs
    nup         rearrange pages or images for reduced number of pages
    optimize    optimize PDF by getting rid of redundant page resources
@@ -42,6 +43,7 @@ The commands are:
    paper       print list of supported paper sizes
    permissions list, set user access permissions
    portfolio   list, add, remove, extract portfolio entries with optional description
+   properties  list, add, remove document properties
    rotate      rotate pages
    split       split multi-page PDF into several PDFs according to split span
    stamp       add, remove, update text, image or PDF stamps for selected pages
@@ -666,4 +668,50 @@ inches, in ... inches
 		"\n       " + usageFontsInstall
 	usageLongFonts = `Print a list of supported fonts (includes the 14 PDF core fonts).
 Install given true type fonts (.ttf) from working directory for embedding in stamps/watermarks.`
+
+	usageKeywordsList   = "pdfcpu keywords list    [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile"
+	usageKeywordsAdd    = "pdfcpu keywords add     [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile keyword..."
+	usageKeywordsRemove = "pdfcpu keywords remove  [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [keyword...]"
+
+	usageKeywords = "usage: " + usageKeywordsList +
+		"\n       " + usageKeywordsAdd +
+		"\n       " + usageKeywordsRemove
+
+	usageLongKeywords = `Manage keywords.
+	
+verbose, v ... turn on logging
+        vv ... verbose logging
+  quiet, q ... disable output
+       upw ... user password
+       opw ... owner password
+    inFile ... input pdf file
+   keyword ... search keyword
+    
+    Eg. adding two keywords: 
+           pdfcpu keywords add test.pdf music 'virtual instruments'
+    `
+
+	usagePropertiesList   = "pdfcpu properties list    [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile"
+	usagePropertiesAdd    = "pdfcpu properties add     [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile keyValuePair..."
+	usagePropertiesRemove = "pdfcpu properties remove  [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [key...]"
+
+	usageProperties = "usage: " + usagePropertiesList +
+		"\n       " + usagePropertiesAdd +
+		"\n       " + usagePropertiesRemove
+
+	usageLongProperties = `Manage document properties.
+    
+  verbose, v ... turn on logging
+          vv ... verbose logging
+    quiet, q ... disable output
+         upw ... user password
+         opw ... owner password
+      inFile ... input pdf file
+keyValuePair ... 'key = value'
+         key ... property name
+     
+     Eg. adding one property:   pdfcpu properties add test.pdf  key = value
+                                pdfcpu properties add test.pdf 'key = value'
+         adding two properties: pdfcpu properties add test.pdf 'key1 = val1' 'key2 = val2'
+     `
 )

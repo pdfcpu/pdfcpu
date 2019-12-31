@@ -143,8 +143,7 @@ func Write(ctx *Context) error {
 
 func prepareContextForWriting(ctx *Context) error {
 
-	err := ensureInfoDictAndFileID(ctx)
-	if err != nil {
+	if err := ensureInfoDictAndFileID(ctx); err != nil {
 		return err
 	}
 
@@ -191,8 +190,7 @@ func ensureFileID(ctx *Context) error {
 
 func ensureInfoDictAndFileID(ctx *Context) error {
 
-	err := ensureInfoDict(ctx)
-	if err != nil {
+	if err := ensureInfoDict(ctx); err != nil {
 		return err
 	}
 

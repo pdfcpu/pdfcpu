@@ -22,15 +22,24 @@ import (
 	"github.com/pkg/errors"
 )
 
-func handleDefault(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
+// DocumentProperty ensures a valid property name.
+func DocumentProperty(s string) bool {
+	return !pdf.MemberOf(s, []string{"Title", "Author", "Subject", "Keywords", "Creator", "Producer", "CreationDate", "ModDate", "Trapped"})
+}
 
-	if xRefTable.ValidationMode == pdf.ValidationStrict {
-		_, err = xRefTable.DereferenceStringOrHexLiteral(o, pdf.V10, nil)
-	} else {
-		_, err = xRefTable.Dereference(o)
+func handleDefault(xRefTable *pdf.XRefTable, o pdf.Object) (string, error) {
+
+	s, err := xRefTable.DereferenceStringOrHexLiteral(o, pdf.V10, nil)
+	if err == nil {
+		return s, nil
 	}
 
-	return err
+	if xRefTable.ValidationMode == pdf.ValidationStrict {
+		return "", err
+	}
+
+	_, err = xRefTable.Dereference(o)
+	return "", err
 }
 
 func validateInfoDictDate(xRefTable *pdf.XRefTable, o pdf.Object) (s string, err error) {
@@ -116,8 +125,11 @@ func validateDocumentInfoDict(xRefTable *pdf.XRefTable, obj pdf.Object) (hasModD
 
 		// text string, optional
 		default:
-			err = handleDefault(xRefTable, v)
-
+			var s string
+			s, err = handleDefault(xRefTable, v)
+			if s != "" {
+				xRefTable.Properties[k] = s
+			}
 		}
 
 		if err != nil {

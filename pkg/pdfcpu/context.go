@@ -213,6 +213,33 @@ func (ctx *Context) InfoDigest() ([]string, error) {
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Content creator", ctx.Creator))
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Creation date", ctx.CreationDate))
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Modification date", ctx.ModDate))
+
+	if len(ctx.Keywords) > 0 {
+		kwl, err := KeywordsList(ctx.XRefTable)
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range kwl {
+			if i == 0 {
+				ss = append(ss, fmt.Sprintf("%20s: %s", "Keywords", l))
+				continue
+			}
+			ss = append(ss, fmt.Sprintf("%20s  %s", "", l))
+		}
+	}
+
+	if len(ctx.Properties) > 0 {
+		first := true
+		for k, v := range ctx.Properties {
+			if first {
+				ss = append(ss, fmt.Sprintf("%20s: %s = %s", "Properties", k, v))
+				first = false
+				continue
+			}
+			ss = append(ss, fmt.Sprintf("%20s  %s = %s", "", k, v))
+		}
+	}
+
 	ss = append(ss, fmt.Sprintf(separator))
 
 	s = "No"

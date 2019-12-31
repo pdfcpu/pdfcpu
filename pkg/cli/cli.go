@@ -189,3 +189,33 @@ func ListFonts(cmd *Command) ([]string, error) {
 func InstallFonts(cmd *Command) ([]string, error) {
 	return nil, api.InstallFonts(cmd.InFiles)
 }
+
+// ListKeywords returns a list of keywords for inFile.
+func ListKeywords(cmd *Command) ([]string, error) {
+	return api.ListKeywordsFile(*cmd.InFile, cmd.Conf)
+}
+
+// AddKeywords adds keywords to inFile's document info dict and writes the result to outFile.
+func AddKeywords(cmd *Command) ([]string, error) {
+	return nil, api.AddKeywordsFile(*cmd.InFile, *cmd.OutFile, cmd.InFiles, cmd.Conf)
+}
+
+// RemoveKeywords deletes keywords from inFile's document info dict and writes the result to outFile.
+func RemoveKeywords(cmd *Command) ([]string, error) {
+	return nil, api.RemoveKeywordsFile(*cmd.InFile, *cmd.OutFile, cmd.InFiles, cmd.Conf)
+}
+
+// ListProperties returns inFile's properties.
+func ListProperties(cmd *Command) ([]string, error) {
+	return api.ListPropertiesFile(*cmd.InFile, cmd.Conf)
+}
+
+// AddProperties adds properties to inFile's document info dict and writes the result to outFile.
+func AddProperties(cmd *Command) ([]string, error) {
+	return nil, api.AddPropertiesFile(*cmd.InFile, *cmd.OutFile, cmd.StringMap, cmd.Conf)
+}
+
+// RemoveProperties deletes properties from inFile's document info dict and writes the result to outFile.
+func RemoveProperties(cmd *Command) ([]string, error) {
+	return nil, api.RemovePropertiesFile(*cmd.InFile, *cmd.OutFile, cmd.InFiles, cmd.Conf)
+}

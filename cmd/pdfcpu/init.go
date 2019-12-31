@@ -86,6 +86,24 @@ func initCommandMap() {
 		fontsCmdMap.Register(k, v)
 	}
 
+	keywordsCmdMap := NewCommandMap()
+	for k, v := range map[string]Command{
+		"list":   {handleListKeywordsCommand, nil, "", ""},
+		"add":    {handleAddKeywordsCommand, nil, "", ""},
+		"remove": {handleRemoveKeywordsCommand, nil, "", ""},
+	} {
+		keywordsCmdMap.Register(k, v)
+	}
+
+	propertiesCmdMap := NewCommandMap()
+	for k, v := range map[string]Command{
+		"list":   {handleListPropertiesCommand, nil, "", ""},
+		"add":    {handleAddPropertiesCommand, nil, "", ""},
+		"remove": {handleRemovePropertiesCommand, nil, "", ""},
+	} {
+		propertiesCmdMap.Register(k, v)
+	}
+
 	cmdMap = NewCommandMap()
 
 	for k, v := range map[string]Command{
@@ -100,6 +118,7 @@ func initCommandMap() {
 		"help":        {printHelp, nil, "", ""},
 		"info":        {handleInfoCommand, nil, usageInfo, usageLongInfo},
 		"import":      {handleImportImagesCommand, nil, usageImportImages, usageLongImportImages},
+		"keywords":    {nil, keywordsCmdMap, usageKeywords, usageLongKeywords},
 		"merge":       {handleMergeCommand, nil, usageMerge, usageLongMerge},
 		"nup":         {handleNUpCommand, nil, usageNUp, usageLongNUp},
 		"n-up":        {handleNUpCommand, nil, usageNUp, usageLongNUp},
@@ -108,6 +127,7 @@ func initCommandMap() {
 		"paper":       {printPaperSizes, nil, usagePaper, usageLongPaper},
 		"permissions": {nil, permissionsCmdMap, usagePerm, usageLongPerm},
 		"portfolio":   {nil, portfolioCmdMap, usagePortfolio, usageLongPortfolio},
+		"properties":  {nil, propertiesCmdMap, usageProperties, usageLongProperties},
 		"rotate":      {handleRotateCommand, nil, usageRotate, usageLongRotate},
 		"split":       {handleSplitCommand, nil, usageSplit, usageLongSplit},
 		"stamp":       {nil, stampCmdMap, usageStamp, usageLongStamp},

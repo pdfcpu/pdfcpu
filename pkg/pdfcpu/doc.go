@@ -1,6 +1,6 @@
 /*
 
-Package pdfcpu is a simple PDF processing library written in Go supporting encryption.
+Package pdfcpu is a PDF processing library written in Go supporting encryption.
 It provides an API and a command line interface. Supported are all versions up to PDF 1.7 (ISO-32000).
 
 The commands are:
@@ -15,6 +15,7 @@ The commands are:
 	grid		rearrange pages or images for enhanced browsing experience
 	import		import/convert images to PDF
 	info		print file info
+	keywords    list, add, remove keywords
 	merge		concatenate 2 or more PDFs
 	nup			rearrange pages or images for reduced number of pages
 	optimize	optimize PDF by getting rid of redundant page resources
@@ -22,6 +23,7 @@ The commands are:
 	paper		print list of supported paper sizes
 	permissions	list, set user access permissions
 	portfolio	list, add, remove, extract portfolio entries with optional description
+	properties  list, add, remove document properties
 	rotate		rotate pages
 	split		split multi-page PDF into several PDFs according to split span
 	stamp		add, remove, update text, image or PDF stamps for selected pages

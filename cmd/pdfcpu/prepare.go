@@ -27,6 +27,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/validate"
 	"github.com/pkg/errors"
 )
 
@@ -1040,4 +1041,124 @@ func handleInstallFontsCommand(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 	process(cli.InstallFontsCommand(fileNames, conf))
+}
+
+func handleListKeywordsCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) != 1 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usageKeywordsList)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	ensurePdfExtension(inFile)
+	process(cli.ListKeywordsCommand(inFile, conf))
+}
+
+func handleAddKeywordsCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) < 2 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageKeywordsAdd)
+		os.Exit(1)
+	}
+
+	var inFile string
+	keywords := []string{}
+
+	for i, arg := range flag.Args() {
+		if i == 0 {
+			inFile = arg
+			ensurePdfExtension(inFile)
+			continue
+		}
+		keywords = append(keywords, arg)
+	}
+
+	process(cli.AddKeywordsCommand(inFile, "", keywords, conf))
+}
+
+func handleRemoveKeywordsCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) < 1 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageKeywordsRemove)
+		os.Exit(1)
+	}
+
+	var inFile string
+	keywords := []string{}
+
+	for i, arg := range flag.Args() {
+		if i == 0 {
+			inFile = arg
+			ensurePdfExtension(inFile)
+			continue
+		}
+		keywords = append(keywords, arg)
+	}
+
+	process(cli.RemoveKeywordsCommand(inFile, "", keywords, conf))
+}
+
+func handleListPropertiesCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) != 1 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usageKeywordsList)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	ensurePdfExtension(inFile)
+	process(cli.ListPropertiesCommand(inFile, conf))
+}
+
+func handleAddPropertiesCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) < 2 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePropertiesAdd)
+		os.Exit(1)
+	}
+
+	var inFile string
+	properties := map[string]string{}
+
+	for i, arg := range flag.Args() {
+		if i == 0 {
+			inFile = arg
+			ensurePdfExtension(inFile)
+			continue
+		}
+		// Ensure key value pair.
+		ss := strings.Split(arg, "=")
+		if len(ss) != 2 {
+			fmt.Fprintf(os.Stderr, "keyValuePair = 'key = value'\n")
+			fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePropertiesAdd)
+			os.Exit(1)
+		}
+		k := strings.TrimSpace(ss[0])
+		if !validate.DocumentProperty(k) {
+			fmt.Fprintf(os.Stderr, "property name \"%s\" not allowed!\n", k)
+			fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePropertiesAdd)
+			os.Exit(1)
+		}
+		v := strings.TrimSpace(ss[1])
+		properties[k] = v
+	}
+
+	process(cli.AddPropertiesCommand(inFile, "", properties, conf))
+}
+
+func handleRemovePropertiesCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) < 1 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePropertiesRemove)
+		os.Exit(1)
+	}
+
+	var inFile string
+	keys := []string{}
+
+	for i, arg := range flag.Args() {
+		if i == 0 {
+			inFile = arg
+			ensurePdfExtension(inFile)
+			continue
+		}
+		keys = append(keys, arg)
+	}
+
+	process(cli.RemovePropertiesCommand(inFile, "", keys, conf))
 }

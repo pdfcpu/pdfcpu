@@ -17,6 +17,7 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -311,4 +312,134 @@ func AttachRemove(xRefTable *XRefTable, files StringSet) (bool, error) {
 	}
 
 	return removeAttachedFiles(xRefTable, files)
+}
+
+// KeywordsList returns a list of keywords as recorded in the document info dict.
+func KeywordsList(xRefTable *XRefTable) ([]string, error) {
+	ss := strings.FieldsFunc(xRefTable.Keywords, func(c rune) bool { return c == ',' || c == ';' || c == '\r' })
+	for i, s := range ss {
+		ss[i] = strings.TrimSpace(s)
+	}
+	return ss, nil
+}
+
+// KeywordsAdd adds keywords to the document info dict.
+// Returns true if at least one keyword was added.
+func KeywordsAdd(xRefTable *XRefTable, keywords []string) error {
+	// TODO Handle missing info dict.
+	if xRefTable.Keywords == "" {
+		xRefTable.Keywords = keywords[0]
+		keywords = keywords[1:]
+	}
+
+	for _, s := range keywords {
+		xRefTable.Keywords += ", " + s
+	}
+
+	d, err := xRefTable.DereferenceDict(*xRefTable.Info)
+	if err != nil || d == nil {
+		return err
+	}
+
+	d["Keywords"] = StringLiteral(xRefTable.Keywords)
+
+	return nil
+}
+
+// KeywordsRemove deletes keywords from the document info dict.
+// Returns true if at least one keyword was removed.
+func KeywordsRemove(xRefTable *XRefTable, keywords []string) (bool, error) {
+	// TODO Handle missing info dict.
+	d, err := xRefTable.DereferenceDict(*xRefTable.Info)
+	if err != nil || d == nil {
+		return false, err
+	}
+
+	if len(keywords) == 0 {
+		// Remove all keywords.
+		delete(d, "Keywords")
+		return true, nil
+	}
+
+	// Distil document keywords.
+	ss := strings.FieldsFunc(xRefTable.Keywords, func(c rune) bool { return c == ',' || c == ';' || c == '\r' })
+
+	xRefTable.Keywords = ""
+	var removed bool
+	first := true
+
+	for _, s := range ss {
+		s = strings.TrimSpace(s)
+		if MemberOf(s, keywords) {
+			removed = true
+			continue
+		}
+		if first {
+			xRefTable.Keywords = s
+			first = false
+			continue
+		}
+		xRefTable.Keywords += ", " + s
+	}
+
+	if removed {
+		d["Keywords"] = StringLiteral(xRefTable.Keywords)
+	}
+
+	return removed, nil
+}
+
+// PropertiesList returns a list of document properties as recorded in the document info dict.
+func PropertiesList(xRefTable *XRefTable) ([]string, error) {
+	list := make([]string, 0, len(xRefTable.Properties))
+	for k, v := range xRefTable.Properties {
+		list = append(list, fmt.Sprintf("%s = %s", k, v))
+	}
+	return list, nil
+}
+
+// PropertiesAdd adds properties into the document info dict.
+// Returns true if at least one property was added.
+func PropertiesAdd(xRefTable *XRefTable, properties map[string]string) error {
+	// TODO Handle missing info dict.
+	d, err := xRefTable.DereferenceDict(*xRefTable.Info)
+	if err != nil || d == nil {
+		return err
+	}
+	for k, v := range properties {
+		d[k] = StringLiteral(v)
+		xRefTable.Properties[k] = v
+	}
+	return nil
+}
+
+// PropertiesRemove deletes specified properties.
+// Returns true if at least one property was removed.
+func PropertiesRemove(xRefTable *XRefTable, properties []string) (bool, error) {
+	// TODO Handle missing info dict.
+	d, err := xRefTable.DereferenceDict(*xRefTable.Info)
+	if err != nil || d == nil {
+		return false, err
+	}
+
+	if len(properties) == 0 {
+		// Remove all properties.
+		for k := range xRefTable.Properties {
+			delete(d, k)
+		}
+		xRefTable.Properties = map[string]string{}
+		return true, nil
+	}
+
+	var removed bool
+	for _, k := range properties {
+		_, ok := d[k]
+		if ok && !removed {
+			delete(d, k)
+			delete(xRefTable.Properties, k)
+			removed = true
+		}
+	}
+
+	return removed, nil
 }

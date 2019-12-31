@@ -25,24 +25,25 @@ import (
 
 // Command represents an execution context.
 type Command struct {
-	Mode          pdf.CommandMode    // VALIDATE  OPTIMIZE  SPLIT  MERGE  EXTRACT  TRIM  LISTATT ADDATT REMATT EXTATT  ENCRYPT  DECRYPT  CHANGEUPW  CHANGEOPW LISTP ADDP  WATERMARK  IMPORT  INSERTP REMOVEP ROTATE  NUP
-	InFile        *string            //    *         *        *      -       *      *      *       *       *      *       *        *         *          *       *     *       *         -       *       *       *     -
-	InFiles       []string           //    -         -        -      *       -      -      -       *       *      *       -        -         -          -       -     -       -         *       -       -       -     *
-	InDir         *string            //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -       -         -       -       -       -     -
-	OutFile       *string            //    -         *        -      *       -      *      -       -       -      -       *        *         *          *       -     -       *         *       *       *       -     *
-	OutDir        *string            //    -         -        *      -       *      -      -       -       -      *       -        -         -          -       -     -       -         -       -       -       -     -
-	PageSelection []string           //    -         -        -      -       *      *      -       -       -      -       -        -         -          -       -     -       *         -       *       *       -     *
-	Conf          *pdf.Configuration //    *         *        *      *       *      *      *       *       *      *       *        *         *          *       *     *       *         *       *       *       *     *
-	PWOld         *string            //    -         -        -      -       -      -      -       -       -      -       -        -         *          *       -     -       -         -       -       -       -     -
-	PWNew         *string            //    -         -        -      -       -      -      -       -       -      -       -        -         *          *       -     -       -         -       -       -       -     -
-	Watermark     *pdf.Watermark     //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -       -         -       -       -       -     -
-	Span          int                //    -         -        *      -       -      -      -       -       -      -       -        -         -          -       -     -       -         -       -       -       -     -
-	Import        *pdf.Import        //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -       -         *       -       -       -     -
-	Rotation      int                //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -       -         -       -       -       *     -
-	NUp           *pdf.NUp           //    -         -        -      -       -      -      -       -       -      -       -        -         -          -       -     -       -         -       -       -       -     *
+	Mode          pdf.CommandMode
+	InFile        *string
+	InFiles       []string
+	InDir         *string
+	OutFile       *string
+	OutDir        *string
+	PageSelection []string
+	Conf          *pdf.Configuration
+	PWOld         *string
+	PWNew         *string
+	Watermark     *pdf.Watermark
+	Span          int
+	Import        *pdf.Import
+	Rotation      int
+	NUp           *pdf.NUp
 	Input         io.ReadSeeker
 	Inputs        []io.ReadSeeker
 	Output        io.Writer
+	StringMap     map[string]string
 }
 
 var cmdMap = map[pdf.CommandMode]func(cmd *Command) ([]string, error){
@@ -78,6 +79,12 @@ var cmdMap = map[pdf.CommandMode]func(cmd *Command) ([]string, error){
 	pdf.INFO:                    Info,
 	pdf.INSTALLFONTS:            InstallFonts,
 	pdf.LISTFONTS:               ListFonts,
+	pdf.LISTKEYWORDS:            processKeywords,
+	pdf.ADDKEYWORDS:             processKeywords,
+	pdf.REMOVEKEYWORDS:          processKeywords,
+	pdf.LISTPROPERTIES:          processProperties,
+	pdf.ADDPROPERTIES:           processProperties,
+	pdf.REMOVEPROPERTIES:        processProperties,
 }
 
 // Process executes a pdfcpu command.
@@ -403,6 +410,40 @@ func processAttachments(cmd *Command) (out []string, err error) {
 	return out, err
 }
 
+func processKeywords(cmd *Command) (out []string, err error) {
+	switch cmd.Mode {
+
+	case pdf.LISTKEYWORDS:
+		out, err = ListKeywords(cmd)
+
+	case pdf.ADDKEYWORDS:
+		out, err = AddKeywords(cmd)
+
+	case pdf.REMOVEKEYWORDS:
+		out, err = RemoveKeywords(cmd)
+
+	}
+
+	return out, err
+}
+
+func processProperties(cmd *Command) (out []string, err error) {
+	switch cmd.Mode {
+
+	case pdf.LISTPROPERTIES:
+		out, err = ListProperties(cmd)
+
+	case pdf.ADDPROPERTIES:
+		out, err = AddProperties(cmd)
+
+	case pdf.REMOVEPROPERTIES:
+		out, err = RemoveProperties(cmd)
+
+	}
+
+	return out, err
+}
+
 func processEncryption(cmd *Command) (out []string, err error) {
 	switch cmd.Mode {
 
@@ -582,5 +623,85 @@ func InstallFontsCommand(fontFiles []string, conf *pdf.Configuration) *Command {
 	return &Command{
 		Mode:    pdf.INSTALLFONTS,
 		InFiles: fontFiles,
+		Conf:    conf}
+}
+
+// ListKeywordsCommand create a new command to list keywords.
+func ListKeywordsCommand(inFile string, conf *pdf.Configuration) *Command {
+	if conf == nil {
+		conf = pdf.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdf.LISTKEYWORDS
+	return &Command{
+		Mode:   pdf.LISTKEYWORDS,
+		InFile: &inFile,
+		Conf:   conf}
+}
+
+// AddKeywordsCommand creates a new command to add keywords.
+func AddKeywordsCommand(inFile, outFile string, keywords []string, conf *pdf.Configuration) *Command {
+	if conf == nil {
+		conf = pdf.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdf.ADDKEYWORDS
+	return &Command{
+		Mode:    pdf.ADDKEYWORDS,
+		InFile:  &inFile,
+		OutFile: &outFile,
+		InFiles: keywords,
+		Conf:    conf}
+}
+
+// RemoveKeywordsCommand creates a new command to remove keywords.
+func RemoveKeywordsCommand(inFile, outFile string, keywords []string, conf *pdf.Configuration) *Command {
+	if conf == nil {
+		conf = pdf.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdf.REMOVEKEYWORDS
+	return &Command{
+		Mode:    pdf.REMOVEKEYWORDS,
+		InFile:  &inFile,
+		OutFile: &outFile,
+		InFiles: keywords,
+		Conf:    conf}
+}
+
+// ListPropertiesCommand creates a new command to list document properties.
+func ListPropertiesCommand(inFile string, conf *pdf.Configuration) *Command {
+	if conf == nil {
+		conf = pdf.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdf.LISTPROPERTIES
+	return &Command{
+		Mode:   pdf.LISTPROPERTIES,
+		InFile: &inFile,
+		Conf:   conf}
+}
+
+// AddPropertiesCommand creates a new command to add document properties.
+func AddPropertiesCommand(inFile, outFile string, properties map[string]string, conf *pdf.Configuration) *Command {
+	if conf == nil {
+		conf = pdf.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdf.ADDPROPERTIES
+	return &Command{
+		Mode:      pdf.ADDPROPERTIES,
+		InFile:    &inFile,
+		OutFile:   &outFile,
+		StringMap: properties,
+		Conf:      conf}
+}
+
+// RemovePropertiesCommand creates a new command to remove document properties.
+func RemovePropertiesCommand(inFile, outFile string, propKeys []string, conf *pdf.Configuration) *Command {
+	if conf == nil {
+		conf = pdf.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdf.REMOVEPROPERTIES
+	return &Command{
+		Mode:    pdf.REMOVEPROPERTIES,
+		InFile:  &inFile,
+		OutFile: &outFile,
+		InFiles: propKeys,
 		Conf:    conf}
 }
