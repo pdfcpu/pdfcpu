@@ -109,7 +109,7 @@ func ExtractImages(rs io.ReadSeeker, outDir string, selectedPages []string, conf
 	}
 
 	fromWrite := time.Now()
-	pages, err := pagesForPageSelection(ctx.PageCount, selectedPages, true)
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return err
 	}
@@ -211,7 +211,7 @@ func ExtractFonts(rs io.ReadSeeker, outDir string, selectedPages []string, conf 
 	}
 
 	fromWrite := time.Now()
-	pages, err := pagesForPageSelection(ctx.PageCount, selectedPages, true)
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return err
 	}
@@ -286,7 +286,7 @@ func ExtractPages(rs io.ReadSeeker, outDir string, selectedPages []string, conf 
 	}
 
 	fromWrite := time.Now()
-	pages, err := pagesForPageSelection(ctx.PageCount, selectedPages, true)
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return err
 	}
@@ -446,7 +446,7 @@ func ExtractContent(rs io.ReadSeeker, outDir string, selectedPages []string, con
 	}
 
 	fromWrite := time.Now()
-	pages, err := pagesForPageSelection(ctx.PageCount, selectedPages, true)
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return err
 	}
@@ -558,7 +558,7 @@ func ExtractMetadata(rs io.ReadSeeker, outDir string, selectedPages []string, co
 	}
 
 	fromWrite := time.Now()
-	pages, err := pagesForPageSelection(ctx.PageCount, selectedPages, true)
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return err
 	}

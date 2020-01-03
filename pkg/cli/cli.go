@@ -219,3 +219,8 @@ func AddProperties(cmd *Command) ([]string, error) {
 func RemoveProperties(cmd *Command) ([]string, error) {
 	return nil, api.RemovePropertiesFile(*cmd.InFile, *cmd.OutFile, cmd.InFiles, cmd.Conf)
 }
+
+// Collect creates a custom page sequence for selected pages of inFile and writes result to outFile.
+func Collect(cmd *Command) ([]string, error) {
+	return nil, api.CollectFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
+}

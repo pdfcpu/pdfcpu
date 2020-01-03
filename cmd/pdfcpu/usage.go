@@ -28,6 +28,7 @@ The commands are:
    attachments list, add, remove, extract embedded file attachments
    changeopw   change owner password
    changeupw   change user password
+   collect     create custom sequence of selected pages
    decrypt     remove password protection
    encrypt     set password protection		
    extract     extract images, fonts, content, pages, metadata
@@ -714,4 +715,17 @@ keyValuePair ... 'key = value'
                                 pdfcpu properties add test.pdf 'key = value'
          adding two properties: pdfcpu properties add test.pdf 'key1 = val1' 'key2 = val2'
      `
+	usageCollect     = "usage: pdfcpu collect [-v(erbose)|vv] [-q(uiet)] -pages selectedPages [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageLongCollect = `Create custom sequence of selected pages. 
+  
+   verbose, v ... turn on logging
+           vv ... verbose logging
+     quiet, q ... disable output
+        pages ... selected pages
+          upw ... user password
+          opw ... owner password
+       inFile ... input pdf file
+      outFile ... output pdf file
+  
+  ` + usagePageSelection
 )

@@ -1162,3 +1162,27 @@ func handleRemovePropertiesCommand(conf *pdfcpu.Configuration) {
 
 	process(cli.RemovePropertiesCommand(inFile, "", keys, conf))
 }
+
+func handleCollectCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) < 1 || len(flag.Args()) > 2 || selectedPages == "" {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageCollect)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	ensurePdfExtension(inFile)
+
+	outFile := ""
+	if len(flag.Args()) == 2 {
+		outFile = flag.Arg(1)
+		ensurePdfExtension(outFile)
+	}
+
+	selectedPages, err := api.ParsePageSelection(selectedPages)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
+		os.Exit(1)
+	}
+
+	process(cli.CollectCommand(inFile, outFile, selectedPages, conf))
+}

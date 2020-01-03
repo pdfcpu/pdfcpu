@@ -27,7 +27,7 @@ import (
 )
 
 var (
-	testDir          = "../testdata"
+	testDir          = "../../testdata"
 	testAudioFileWAV = filepath.Join(testDir, "resources", "test.wav")
 )
 
@@ -1894,16 +1894,15 @@ func CreateAcroFormDemoXRef() (*XRefTable, error) {
 
 // CreateContext creates a Context for given cross reference table and configuration.
 func CreateContext(xRefTable *XRefTable, conf *Configuration) *Context {
-
 	if conf == nil {
 		conf = NewDefaultConfiguration()
 	}
+	xRefTable.ValidationMode = conf.ValidationMode
 	return &Context{
 		Configuration: conf,
 		XRefTable:     xRefTable,
 		Write:         NewWriteContext(conf.Eol),
 	}
-
 }
 
 // CreateContextWithXRefTable creates a Context with an xRefTable without pages for given configuration.
@@ -1919,8 +1918,7 @@ func CreateContextWithXRefTable(conf *Configuration, pageDim *Dim) (*Context, er
 		return nil, err
 	}
 
-	err = addPageTreeWithoutPage(xRefTable, rootDict, pageDim)
-	if err != nil {
+	if err = addPageTreeWithoutPage(xRefTable, rootDict, pageDim); err != nil {
 		return nil, err
 	}
 

@@ -360,7 +360,7 @@ func selectedPages(pageCount int, pageSelection []string) (pdf.IntSet, error) {
 	return selectedPages, nil
 }
 
-func pagesForPageSelection(pageCount int, pageSelection []string, ensureAllforNone bool) (pdf.IntSet, error) {
+func PagesForPageSelection(pageCount int, pageSelection []string, ensureAllforNone bool) (pdf.IntSet, error) {
 	if pageSelection != nil && len(pageSelection) > 0 {
 		return selectedPages(pageCount, pageSelection)
 	}
@@ -374,4 +374,265 @@ func pagesForPageSelection(pageCount int, pageSelection []string, ensureAllforNo
 	}
 	log.CLI.Printf("pages: all\n")
 	return m, nil
+}
+
+func deletePageFromCollection(cp *[]int, p int) {
+	a := []int{}
+	for _, i := range *cp {
+		if i != p {
+			a = append(a, i)
+		}
+	}
+	*cp = a
+}
+
+func processPageForCollection(cp *[]int, negated bool, i int) {
+	if !negated {
+		*cp = append(*cp, i)
+	} else {
+		deletePageFromCollection(cp, i)
+	}
+}
+
+func collectEvenPages(cp *[]int, pageCount int) {
+	for i := 2; i <= pageCount; i += 2 {
+		*cp = append(*cp, i)
+	}
+}
+
+func collectOddPages(cp *[]int, pageCount int) {
+	for i := 1; i <= pageCount; i += 2 {
+		*cp = append(*cp, i)
+	}
+}
+
+func handlePrefixForCollection(v string, negated bool, pageCount int, cp *[]int) error {
+	// -l
+	if v == "l" {
+		for j := 1; j <= pageCount; j++ {
+			processPageForCollection(cp, negated, j)
+		}
+		return nil
+	}
+
+	// -l-#
+	if strings.HasPrefix(v, "l-") {
+		i, err := strconv.Atoi(v[2:])
+		if err != nil {
+			return err
+		}
+		if pageCount-i < 1 {
+			return nil
+		}
+		for j := 1; j <= pageCount-i; j++ {
+			processPageForCollection(cp, negated, j)
+		}
+		return nil
+	}
+
+	// -#
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		return err
+	}
+
+	// Handle overflow gracefully
+	if i > pageCount {
+		i = pageCount
+	}
+
+	// identified
+	// -# ... select all pages up to and including #
+	// or !-# ... deselect all pages up to and including #
+	for j := 1; j <= i; j++ {
+		processPageForCollection(cp, negated, j)
+	}
+
+	return nil
+}
+
+func handleSuffixForCollection(v string, negated bool, pageCount int, cp *[]int) error {
+	// must be #- ... select all pages from here until the end.
+	// or !#- ... deselect all pages from here until the end.
+
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		return err
+	}
+
+	// Handle overflow gracefully
+	if i > pageCount {
+		return nil
+	}
+
+	for j := i; j <= pageCount; j++ {
+		processPageForCollection(cp, negated, j)
+	}
+
+	return nil
+}
+
+func handleSpecificPageOrLastXPagesForCollection(s string, negated bool, pageCount int, cp *[]int) error {
+
+	// l
+	if s == "l" {
+		processPageForCollection(cp, negated, pageCount)
+		return nil
+	}
+
+	// l-#
+	if strings.HasPrefix(s, "l-") {
+		pr := strings.Split(s[2:], "-")
+		i, err := strconv.Atoi(pr[0])
+		if err != nil {
+			return err
+		}
+		if pageCount-i < 1 {
+			return nil
+		}
+		j := pageCount - i
+
+		// l-#-
+		if strings.HasSuffix(s, "-") {
+			j = pageCount
+		}
+		for i := pageCount - i; i <= j; i++ {
+			processPageForCollection(cp, negated, i)
+		}
+		return nil
+	}
+
+	// must be # ... select a specific page
+	// or !# ... deselect a specific page
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		return err
+	}
+
+	// Handle overflow gracefully
+	if i > pageCount {
+		return nil
+	}
+
+	processPageForCollection(cp, negated, i)
+
+	return nil
+}
+
+func parsePageRangeForCollection(pr []string, pageCount int, negated bool, cp *[]int) error {
+	from, err := strconv.Atoi(pr[0])
+	if err != nil {
+		return err
+	}
+
+	// Handle overflow gracefully
+	if from > pageCount {
+		return nil
+	}
+
+	var thru int
+	if pr[1] == "l" {
+		// #-l
+		thru = pageCount
+		if len(pr) == 3 {
+			// #-l-#
+			i, err := strconv.Atoi(pr[2])
+			if err != nil {
+				return err
+			}
+			thru -= i
+		}
+	} else {
+		// #-#
+		var err error
+		thru, err = strconv.Atoi(pr[1])
+		if err != nil {
+			return err
+		}
+	}
+
+	// Handle overflow gracefully
+	if thru < from {
+		return nil
+	}
+
+	if thru > pageCount {
+		thru = pageCount
+	}
+
+	for i := from; i <= thru; i++ {
+		processPageForCollection(cp, negated, i)
+	}
+
+	return nil
+}
+
+func PagesForPageCollection(pageCount int, pageSelection []string) ([]int, error) {
+	collectedPages := []int{}
+	for _, v := range pageSelection {
+
+		if v == "even" {
+			collectEvenPages(&collectedPages, pageCount)
+			continue
+		}
+
+		if v == "odd" {
+			collectOddPages(&collectedPages, pageCount)
+			continue
+		}
+
+		var negated bool
+		if negation(v[0]) {
+			negated = true
+			//logInfoAPI.Printf("is a negated exp\n")
+			v = v[1:]
+		}
+
+		// -#
+		if v[0] == '-' {
+
+			v = v[1:]
+
+			if err := handlePrefixForCollection(v, negated, pageCount, &collectedPages); err != nil {
+				return nil, err
+			}
+
+			continue
+		}
+
+		// #-
+		if v[0] != 'l' && strings.HasSuffix(v, "-") {
+
+			if err := handleSuffixForCollection(v[:len(v)-1], negated, pageCount, &collectedPages); err != nil {
+				return nil, err
+			}
+
+			continue
+		}
+
+		// l l-# l-#-
+		if v[0] == 'l' {
+			if err := handleSpecificPageOrLastXPagesForCollection(v, negated, pageCount, &collectedPages); err != nil {
+				return nil, err
+			}
+			continue
+		}
+
+		pr := strings.Split(v, "-")
+		if len(pr) >= 2 {
+			// v contains '-' somewhere in the middle
+			// #-# #-l #-l-#
+			if err := parsePageRangeForCollection(pr, pageCount, negated, &collectedPages); err != nil {
+				return nil, err
+			}
+
+			continue
+		}
+
+		// #
+		if err := handleSpecificPageOrLastXPagesForCollection(pr[0], negated, pageCount, &collectedPages); err != nil {
+			return nil, err
+		}
+	}
+	return collectedPages, nil
 }

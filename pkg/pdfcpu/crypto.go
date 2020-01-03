@@ -75,6 +75,7 @@ var (
 		LISTPROPERTIES:          {0, 0},
 		ADDPROPERTIES:           {0, 0},
 		REMOVEPROPERTIES:        {0, 0},
+		COLLECT:                 {1, 0},
 	}
 )
 

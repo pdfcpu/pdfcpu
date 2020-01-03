@@ -283,7 +283,7 @@ func ExampleExtractImagesFile() {
 func ExampleExtractFontsFile() {
 
 	// Extract embedded fonts for pages 1-3 from in.pdf into outDir.
-	ExtractFontsFile("in.pdf", outDir, []string{"1-3"}, nil)
+	ExtractFontsFile("in.pdf", "outDir", []string{"1-3"}, nil)
 }
 
 func ExampleExtractContentFile() {
@@ -295,7 +295,7 @@ func ExampleExtractContentFile() {
 func ExampleExtractPagesFile() {
 
 	// Extract all even numbered pages from in.pdf into outDir.
-	ExtractPagesFile("in.pdf", outDir, []string{"even"}, nil)
+	ExtractPagesFile("in.pdf", "outDir", []string{"even"}, nil)
 }
 
 func ExampleExtractMetadataFile() {

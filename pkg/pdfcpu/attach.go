@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
@@ -392,7 +393,15 @@ func KeywordsRemove(xRefTable *XRefTable, keywords []string) (bool, error) {
 // PropertiesList returns a list of document properties as recorded in the document info dict.
 func PropertiesList(xRefTable *XRefTable) ([]string, error) {
 	list := make([]string, 0, len(xRefTable.Properties))
-	for k, v := range xRefTable.Properties {
+	keys := make([]string, len(xRefTable.Properties))
+	i := 0
+	for k := range xRefTable.Properties {
+		keys[i] = k
+		i++
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		v := xRefTable.Properties[k]
 		list = append(list, fmt.Sprintf("%s = %s", k, v))
 	}
 	return list, nil

@@ -514,8 +514,7 @@ func createNUpForm(xRefTable *XRefTable, imgIndRef *IndirectRef, w, h, i int) (*
 		Content: b.Bytes(),
 	}
 
-	err = encodeStream(&sd)
-	if err != nil {
+	if err = encodeStream(&sd); err != nil {
 		return nil, err
 	}
 
@@ -537,8 +536,7 @@ func createNUpFormForPDFResource(xRefTable *XRefTable, resDict *IndirectRef, con
 		Content: content,
 	}
 
-	err := encodeStream(&sd)
-	if err != nil {
+	if err := encodeStream(&sd); err != nil {
 		return nil, err
 	}
 
@@ -589,8 +587,7 @@ func NewNUpPageForImage(xRefTable *XRefTable, fileName string, parentIndRef *Ind
 	nUpImagePDFBytes(&buf, w, h, nup, formResID)
 	contents.Content = buf.Bytes()
 
-	err = encodeStream(contents)
-	if err != nil {
+	if err = encodeStream(contents); err != nil {
 		return nil, err
 	}
 
@@ -616,7 +613,7 @@ func NewNUpPageForImage(xRefTable *XRefTable, fileName string, parentIndRef *Ind
 	return xRefTable.IndRefForNewObject(pageDict)
 }
 
-func nupFromOneImage(ctx *Context, fileName string, nup *NUp, pagesDict *Dict, pagesIndRef *IndirectRef) error {
+func nupFromOneImage(ctx *Context, fileName string, nup *NUp, pagesDict Dict, pagesIndRef *IndirectRef) error {
 
 	// Create one page with instances of one image.
 	indRef, err := NewNUpPageForImage(ctx.XRefTable, fileName, pagesIndRef, nup)
@@ -624,8 +621,7 @@ func nupFromOneImage(ctx *Context, fileName string, nup *NUp, pagesDict *Dict, p
 		return err
 	}
 
-	err = AppendPageTree(indRef, 1, pagesDict)
-	if err != nil {
+	if err = AppendPageTree(indRef, 1, pagesDict); err != nil {
 		return err
 	}
 
@@ -634,7 +630,7 @@ func nupFromOneImage(ctx *Context, fileName string, nup *NUp, pagesDict *Dict, p
 	return nil
 }
 
-func wrapUpPage(ctx *Context, nup *NUp, d Dict, buf bytes.Buffer, pagesDict *Dict, pagesIndRef *IndirectRef) error {
+func wrapUpPage(ctx *Context, nup *NUp, d Dict, buf bytes.Buffer, pagesDict Dict, pagesIndRef *IndirectRef) error {
 
 	xRefTable := ctx.XRefTable
 
@@ -654,8 +650,7 @@ func wrapUpPage(ctx *Context, nup *NUp, d Dict, buf bytes.Buffer, pagesDict *Dic
 	contents.FilterPipeline = []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}
 	contents.Content = buf.Bytes()
 
-	err = encodeStream(contents)
-	if err != nil {
+	if err = encodeStream(contents); err != nil {
 		return err
 	}
 
@@ -683,8 +678,7 @@ func wrapUpPage(ctx *Context, nup *NUp, d Dict, buf bytes.Buffer, pagesDict *Dic
 		return err
 	}
 
-	err = AppendPageTree(indRef, 1, pagesDict)
-	if err != nil {
+	if err = AppendPageTree(indRef, 1, pagesDict); err != nil {
 		return err
 	}
 
@@ -693,7 +687,7 @@ func wrapUpPage(ctx *Context, nup *NUp, d Dict, buf bytes.Buffer, pagesDict *Dic
 	return nil
 }
 
-func nupFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict *Dict, pagesIndRef *IndirectRef) error {
+func nupFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict Dict, pagesIndRef *IndirectRef) error {
 
 	if nup.PageGrid {
 		nup.PageDim.Width *= nup.Grid.Width
@@ -712,8 +706,7 @@ func nupFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict
 		if i > 0 && i%len(rr) == 0 {
 
 			// Wrap complete nUp page.
-			err := wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef)
-			if err != nil {
+			if err := wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef); err != nil {
 				return err
 			}
 
@@ -776,9 +769,9 @@ func NUpFromImage(conf *Configuration, imageFileNames []string, nup *NUp) (*Cont
 	}
 
 	if len(imageFileNames) == 1 {
-		err = nupFromOneImage(ctx, imageFileNames[0], nup, &pagesDict, pagesIndRef)
+		err = nupFromOneImage(ctx, imageFileNames[0], nup, pagesDict, pagesIndRef)
 	} else {
-		err = nupFromMultipleImages(ctx, imageFileNames, nup, &pagesDict, pagesIndRef)
+		err = nupFromMultipleImages(ctx, imageFileNames, nup, pagesDict, pagesIndRef)
 	}
 
 	return ctx, err
@@ -799,7 +792,7 @@ func sortedSelectedPages(selectedPages IntSet) []int {
 	return pageNumbers
 }
 
-func nupPages(ctx *Context, selectedPages IntSet, nup *NUp, pagesDict *Dict, pagesIndRef *IndirectRef) error {
+func nupPages(ctx *Context, selectedPages IntSet, nup *NUp, pagesDict Dict, pagesIndRef *IndirectRef) error {
 
 	var buf bytes.Buffer
 
@@ -812,8 +805,7 @@ func nupPages(ctx *Context, selectedPages IntSet, nup *NUp, pagesDict *Dict, pag
 		if i > 0 && i%len(rr) == 0 {
 
 			// Wrap complete nUp page.
-			err := wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef)
-			if err != nil {
+			if err := wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef); err != nil {
 				return err
 			}
 
@@ -905,8 +897,7 @@ func NUpFromPDF(ctx *Context, selectedPages IntSet, nup *NUp) error {
 
 	nup.PageDim = &Dim{mb.Width(), mb.Height()}
 
-	err = nupPages(ctx, selectedPages, nup, &pagesDict, pagesIndRef)
-	if err != nil {
+	if err = nupPages(ctx, selectedPages, nup, pagesDict, pagesIndRef); err != nil {
 		return err
 	}
 

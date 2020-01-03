@@ -8,6 +8,7 @@ The commands are:
 	attachments	list, add, remove, extract embedded file attachments
 	changeopw	change owner password
 	changeupw	change user password
+	collect     create custom sequence of selected pages
 	decrypt		remove password protection
 	encrypt		set password protection
 	extract		extract images, fonts, content, pages or metadata

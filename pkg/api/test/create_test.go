@@ -14,21 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package api
+package test
 
 import (
 	"path/filepath"
 	"testing"
 
+	"github.com/pdfcpu/pdfcpu/pkg/api"
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 func createAndValidate(t *testing.T, xRefTable *pdf.XRefTable, outFile, msg string) {
 	t.Helper()
-	if err := CreatePDFFile(xRefTable, outFile, nil); err != nil {
+	if err := api.CreatePDFFile(xRefTable, outFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	if err := ValidateFile(outFile, nil); err != nil {
+	if err := api.ValidateFile(outFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }

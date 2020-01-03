@@ -85,6 +85,7 @@ var cmdMap = map[pdf.CommandMode]func(cmd *Command) ([]string, error){
 	pdf.LISTPROPERTIES:          processProperties,
 	pdf.ADDPROPERTIES:           processProperties,
 	pdf.REMOVEPROPERTIES:        processProperties,
+	pdf.COLLECT:                 Collect,
 }
 
 // Process executes a pdfcpu command.
@@ -704,4 +705,18 @@ func RemovePropertiesCommand(inFile, outFile string, propKeys []string, conf *pd
 		OutFile: &outFile,
 		InFiles: propKeys,
 		Conf:    conf}
+}
+
+// CollectCommand creates a new command to create a custom PDF page sequence.
+func CollectCommand(inFile, outFile string, pageSelection []string, conf *pdf.Configuration) *Command {
+	if conf == nil {
+		conf = pdf.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdf.COLLECT
+	return &Command{
+		Mode:          pdf.COLLECT,
+		InFile:        &inFile,
+		OutFile:       &outFile,
+		PageSelection: pageSelection,
+		Conf:          conf}
 }

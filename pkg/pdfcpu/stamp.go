@@ -1052,12 +1052,15 @@ func identifyObjNrs(ctx *Context, o Object, migrated map[int]int, objNrs IntSet)
 	return nil
 }
 
-func migrateObject(ctxSource, ctxDest *Context, migrated map[int]int, o Object) error {
+func migrateObject(ctxSource, ctxDest *Context, migrated map[int]int, o Object) (Object, error) {
 
 	// Identify involved objNrs of ctxSource.
 	objNrs := IntSet{}
 	if err := identifyObjNrs(ctxSource, o, migrated, objNrs); err != nil {
-		return err
+		return nil, err
+	}
+	if len(objNrs) == 0 {
+		return o, nil
 	}
 
 	lookup := map[int]int{}
@@ -1068,7 +1071,7 @@ func migrateObject(ctxSource, ctxDest *Context, migrated map[int]int, o Object) 
 	}
 
 	// Patch indRefs of resourceDict.
-	patchObject(o, migrated)
+	o = patchObject(o, migrated)
 
 	// Patch all new involved indRefs.
 	for k, v := range lookup {
@@ -1076,7 +1079,7 @@ func migrateObject(ctxSource, ctxDest *Context, migrated map[int]int, o Object) 
 		ctxDest.Table[v] = ctxSource.Table[k]
 	}
 
-	return nil
+	return o, nil
 }
 
 func createPDFRes(ctx, otherCtx *Context, pageNr int, migrated map[int]int, wm *Watermark) error {
@@ -1106,7 +1109,7 @@ func createPDFRes(ctx, otherCtx *Context, pageNr int, migrated map[int]int, wm *
 	}
 
 	// Migrate external resource dict into ctx.
-	if err = migrateObject(otherCtx, ctx, migrated, inhPAttrs.resources); err != nil {
+	if _, err = migrateObject(otherCtx, ctx, migrated, inhPAttrs.resources); err != nil {
 		return err
 	}
 

@@ -110,6 +110,7 @@ func initCommandMap() {
 		"attachments": {nil, attachCmdMap, usageAttach, usageLongAttach},
 		"changeopw":   {handleChangeOwnerPasswordCommand, nil, usageChangeOwnerPW, usageLongChangeUserPW},
 		"changeupw":   {handleChangeUserPasswordCommand, nil, usageChangeUserPW, usageLongChangeUserPW},
+		"collect":     {handleCollectCommand, nil, usageCollect, usageLongCollect},
 		"decrypt":     {handleDecryptCommand, nil, usageDecrypt, usageLongDecrypt},
 		"encrypt":     {handleEncryptCommand, nil, usageEncrypt, usageLongEncrypt},
 		"extract":     {handleExtractCommand, nil, usageExtract, usageLongExtract},

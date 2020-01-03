@@ -49,7 +49,7 @@ func validateInfoDictDate(xRefTable *pdf.XRefTable, o pdf.Object) (s string, err
 	return validateDateObject(xRefTable, o, pdf.V10)
 }
 
-func validateInfoDictTrapped(o pdf.Object, xRefTable *pdf.XRefTable) error {
+func validateInfoDictTrapped(xRefTable *pdf.XRefTable, o pdf.Object) error {
 
 	sinceVersion := pdf.V13
 
@@ -71,6 +71,17 @@ func validateInfoDictTrapped(o pdf.Object, xRefTable *pdf.XRefTable) error {
 	}
 
 	return err
+}
+
+func handleProperties(xRefTable *pdf.XRefTable, key string, val pdf.Object) error {
+	s, err := handleDefault(xRefTable, val)
+	if err != nil {
+		return err
+	}
+	if s != "" {
+		xRefTable.Properties[key] = s
+	}
+	return nil
 }
 
 func validateDocumentInfoDict(xRefTable *pdf.XRefTable, obj pdf.Object) (hasModDate bool, err error) {
@@ -121,15 +132,11 @@ func validateDocumentInfoDict(xRefTable *pdf.XRefTable, obj pdf.Object) (hasModD
 
 		// name, optional, since V1.3
 		case "Trapped":
-			err = validateInfoDictTrapped(v, xRefTable)
+			err = validateInfoDictTrapped(xRefTable, v)
 
 		// text string, optional
 		default:
-			var s string
-			s, err = handleDefault(xRefTable, v)
-			if s != "" {
-				xRefTable.Properties[k] = s
-			}
+			err = handleProperties(xRefTable, k, v)
 		}
 
 		if err != nil {

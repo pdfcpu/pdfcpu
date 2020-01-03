@@ -33,7 +33,6 @@ package api
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -641,7 +640,7 @@ func Trim(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *pdf.Confi
 
 	fromWrite := time.Now()
 
-	pages, err := pagesForPageSelection(ctx.PageCount, selectedPages, false)
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, false)
 	if err != nil {
 		return err
 	}
@@ -725,7 +724,7 @@ func Rotate(rs io.ReadSeeker, w io.Writer, rotation int, selectedPages []string,
 	}
 
 	from := time.Now()
-	pages, err := pagesForPageSelection(ctx.PageCount, selectedPages, true)
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return err
 	}
@@ -826,7 +825,7 @@ func AddWatermarks(rs io.ReadSeeker, w io.Writer, selectedPages []string, wm *pd
 	}
 
 	from := time.Now()
-	pages, err := pagesForPageSelection(ctx.PageCount, selectedPages, true)
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return err
 	}
@@ -919,7 +918,7 @@ func RemoveWatermarks(rs io.ReadSeeker, w io.Writer, selectedPages []string, con
 	}
 
 	from := time.Now()
-	pages, err := pagesForPageSelection(ctx.PageCount, selectedPages, true)
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return err
 	}
@@ -1054,7 +1053,7 @@ func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *p
 			return err
 		}
 
-		pages, err := pagesForPageSelection(ctx.PageCount, selectedPages, true)
+		pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
 		if err != nil {
 			return err
 		}
@@ -1167,7 +1166,7 @@ func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdf.Impo
 			return err
 		}
 
-		if err = pdf.AppendPageTree(indRef, 1, &pagesDict); err != nil {
+		if err = pdf.AppendPageTree(indRef, 1, pagesDict); err != nil {
 			return err
 		}
 
@@ -1278,7 +1277,7 @@ func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before b
 		return err
 	}
 
-	pages, err := pagesForPageSelection(ctx.PageCount, selectedPages, true)
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return err
 	}
@@ -1367,7 +1366,7 @@ func RemovePages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *pd
 
 	fromWrite := time.Now()
 
-	pages, err := pagesForPageSelection(ctx.PageCount, selectedPages, false)
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, false)
 	if err != nil {
 		return err
 	}
@@ -1482,13 +1481,7 @@ func Merge(rsc []io.ReadSeeker, w io.Writer, conf *pdf.Configuration) error {
 		}
 	}
 
-	if err = WriteContext(ctxDest, w); err != nil {
-		return err
-	}
-
-	log.Stats.Printf("XRefTable:\n%s\n", ctxDest)
-
-	return nil
+	return WriteContext(ctxDest, w)
 }
 
 // MergeFile merges a sequence of inFiles and writes the result to outFile.
@@ -1497,7 +1490,7 @@ func Merge(rsc []io.ReadSeeker, w io.Writer, conf *pdf.Configuration) error {
 func MergeFile(inFiles []string, outFile string, conf *pdf.Configuration) error {
 	ff := []*os.File(nil)
 	for _, f := range inFiles {
-		fmt.Println(f)
+		log.CLI.Println(f)
 		f, err := os.Open(f)
 		if err != nil {
 			return err
@@ -1587,4 +1580,84 @@ func InstallFonts(fileNames []string) error {
 		}
 	}
 	return nil
+}
+
+// Collect creates a custom PDF page sequence for selected pages of rs and writes the result to w.
+func Collect(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *pdf.Configuration) error {
+	if conf == nil {
+		conf = pdf.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdf.COLLECT
+
+	fromStart := time.Now()
+	ctxSource, _, _, _, err := readValidateAndOptimize(rs, conf, fromStart)
+	if err != nil {
+		return err
+	}
+
+	if err := ctxSource.EnsurePageCount(); err != nil {
+		return err
+	}
+
+	pages, err := PagesForPageCollection(ctxSource.PageCount, selectedPages)
+	if err != nil {
+		return err
+	}
+
+	ctxDest, err := pdf.CollectPages(ctxSource, pages)
+	if err != nil {
+		return err
+	}
+
+	if conf.ValidationMode != pdf.ValidationNone {
+		if err = ValidateContext(ctxDest); err != nil {
+			return err
+		}
+	}
+
+	return WriteContext(ctxDest, w)
+}
+
+// CollectFile creates a custom PDF page sequence for inFile and writes the result to outFile.
+func CollectFile(inFile, outFile string, selectedPages []string, conf *pdf.Configuration) (err error) {
+	var f1, f2 *os.File
+
+	if f1, err = os.Open(inFile); err != nil {
+		return err
+	}
+
+	tmpFile := inFile + ".tmp"
+	if outFile != "" && inFile != outFile {
+		tmpFile = outFile
+		log.CLI.Printf("writing %s...\n", outFile)
+	} else {
+		log.CLI.Printf("writing %s...\n", inFile)
+	}
+	if f2, err = os.Create(tmpFile); err != nil {
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			f2.Close()
+			f1.Close()
+			if outFile == "" || inFile == outFile {
+				os.Remove(tmpFile)
+			}
+			return
+		}
+		if err = f2.Close(); err != nil {
+			return
+		}
+		if err = f1.Close(); err != nil {
+			return
+		}
+		if outFile == "" || inFile == outFile {
+			if err = os.Rename(tmpFile, inFile); err != nil {
+				return
+			}
+		}
+	}()
+
+	return Collect(f1, f2, selectedPages, conf)
 }

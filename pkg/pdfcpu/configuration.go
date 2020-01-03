@@ -83,6 +83,7 @@ const (
 	LISTPROPERTIES
 	ADDPROPERTIES
 	REMOVEPROPERTIES
+	COLLECT
 )
 
 // Configuration of a Context.

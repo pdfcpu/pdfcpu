@@ -41,12 +41,16 @@ func writePageDict(ctx *Context, ir *IndirectRef, pageDict Dict, pageNr int) err
 	objNr := ir.ObjectNumber.Value()
 	genNr := ir.GenerationNumber.Value()
 
+	if ctx.Write.HasWriteOffset(objNr) {
+		log.Write.Printf("writePageDict: object #%d already written.\n", objNr)
+		return nil
+	}
+
 	log.Write.Printf("writePageDict: logical pageNr=%d object #%d gets writeoffset: %d\n", pageNr, objNr, ctx.Write.Offset)
 
 	dictName := "pageDict"
 
-	err := writeDictObject(ctx, objNr, genNr, pageDict)
-	if err != nil {
+	if err := writeDictObject(ctx, objNr, genNr, pageDict); err != nil {
 		return err
 	}
 
@@ -91,8 +95,7 @@ func writePageDict(ctx *Context, ir *IndirectRef, pageDict Dict, pageNr int) err
 		{"UserUnit", PageUserUnit},
 		{"VP", PageVP},
 	} {
-		err = writePageEntry(ctx, pageDict, dictName, e.entryName, e.statsAttr)
-		if err != nil {
+		if err := writePageEntry(ctx, pageDict, dictName, e.entryName, e.statsAttr); err != nil {
 			return err
 		}
 	}
@@ -117,13 +120,6 @@ func pageNodeDict(ctx *Context, o Object) (d Dict, indRef *IndirectRef, err erro
 		return nil, nil, errors.New("pdfcpu: pageNodeDict: missing indirect reference")
 	}
 	log.Write.Printf("pageNodeDict: PageNode: %s\n", ir)
-
-	objNr := int(ir.ObjectNumber)
-
-	if ctx.Write.HasWriteOffset(objNr) {
-		log.Write.Printf("pageNodeDict: object #%d already written.\n", objNr)
-		return nil, nil, nil
-	}
 
 	d, err = ctx.DereferenceDict(ir)
 	if err != nil {
@@ -259,8 +255,7 @@ func writePagesDict(ctx *Context, ir *IndirectRef, pageNr *int) (skip bool, writ
 	d.Update("Count", Integer(countNew))
 	log.Write.Printf("writePagesDict: writing pageDict for obj=%d page=%d\n%s", objNr, *pageNr, d)
 
-	err = writeDictObject(ctx, objNr, genNr, d)
-	if err != nil {
+	if err = writeDictObject(ctx, objNr, genNr, d); err != nil {
 		return false, 0, err
 	}
 
@@ -274,8 +269,7 @@ func writePagesDict(ctx *Context, ir *IndirectRef, pageNr *int) (skip bool, writ
 		{"CropBox", PageCropBox},
 		{"Rotate", PageRotate},
 	} {
-		err = writePageEntry(ctx, d, dictName, e.entryName, e.statsAttr)
-		if err != nil {
+		if err = writePageEntry(ctx, d, dictName, e.entryName, e.statsAttr); err != nil {
 			return false, 0, err
 		}
 	}

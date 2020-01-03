@@ -24,7 +24,6 @@ import (
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/types"
 	"github.com/pkg/errors"
 )
@@ -314,22 +313,11 @@ func ParseImportDetails(s string) (*Import, error) {
 }
 
 // AppendPageTree appends a pagetree d1 to page tree d2.
-func AppendPageTree(d1 *IndirectRef, countd1 int, d2 *Dict) error {
-
+func AppendPageTree(d1 *IndirectRef, countd1 int, d2 Dict) error {
 	a := d2.ArrayEntry("Kids")
-	log.Debug.Printf("Kids before: %v\n", a)
-
 	a = append(a, *d1)
-	log.Debug.Printf("Kids after: %v\n", a)
-
 	d2.Update("Kids", a)
-
-	err := d2.IncrementBy("Count", countd1)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return d2.IncrementBy("Count", countd1)
 }
 
 func lowerLeftCorner(vpw, vph, bbw, bbh float64, a anchor) types.Point {

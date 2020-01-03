@@ -1667,8 +1667,7 @@ func (xRefTable *XRefTable) processPageTree(root *IndirectRef, pAttrs *Inherited
 		}
 	}
 
-	err = xRefTable.checkInheritedPageAttrs(d, pAttrs)
-	if err != nil {
+	if err = xRefTable.checkInheritedPageAttrs(d, pAttrs); err != nil {
 		return nil, err
 	}
 

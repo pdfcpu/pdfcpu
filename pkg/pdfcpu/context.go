@@ -176,6 +176,52 @@ func (ctx *Context) convertToUnits(d Dim) Dim {
 	return d
 }
 
+func (ctx *Context) addKeywordsToInfoDigest(ss *[]string) error {
+	if len(ctx.Keywords) == 0 {
+		return nil
+	}
+	kwl, err := KeywordsList(ctx.XRefTable)
+	if err != nil {
+		return err
+	}
+	for i, l := range kwl {
+		if i == 0 {
+			*ss = append(*ss, fmt.Sprintf("%20s: %s", "Keywords", l))
+			continue
+		}
+		*ss = append(*ss, fmt.Sprintf("%20s  %s", "", l))
+	}
+	return nil
+}
+
+func (ctx *Context) addPropertiesToInfoDigest(ss *[]string) error {
+	if len(ctx.Properties) == 0 {
+		return nil
+	}
+	first := true
+	for k, v := range ctx.Properties {
+		if first {
+			*ss = append(*ss, fmt.Sprintf("%20s: %s = %s", "Properties", k, v))
+			first = false
+			continue
+		}
+		*ss = append(*ss, fmt.Sprintf("%20s  %s = %s", "", k, v))
+	}
+	return nil
+}
+
+func (ctx *Context) addPermissionsToInfoDigest(ss *[]string) {
+	l := Permissions(ctx)
+	if len(l) == 1 {
+		*ss = append(*ss, fmt.Sprintf("%20s: %s", "Permissions", l[0]))
+	} else {
+		*ss = append(*ss, fmt.Sprintf("%20s:", "Permissions"))
+		for _, s := range l {
+			*ss = append(*ss, s)
+		}
+	}
+}
+
 // InfoDigest returns info about ctx.
 func (ctx *Context) InfoDigest() ([]string, error) {
 	var separator = "............................................"
@@ -214,30 +260,12 @@ func (ctx *Context) InfoDigest() ([]string, error) {
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Creation date", ctx.CreationDate))
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Modification date", ctx.ModDate))
 
-	if len(ctx.Keywords) > 0 {
-		kwl, err := KeywordsList(ctx.XRefTable)
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range kwl {
-			if i == 0 {
-				ss = append(ss, fmt.Sprintf("%20s: %s", "Keywords", l))
-				continue
-			}
-			ss = append(ss, fmt.Sprintf("%20s  %s", "", l))
-		}
+	if err := ctx.addKeywordsToInfoDigest(&ss); err != nil {
+		return nil, err
 	}
 
-	if len(ctx.Properties) > 0 {
-		first := true
-		for k, v := range ctx.Properties {
-			if first {
-				ss = append(ss, fmt.Sprintf("%20s: %s = %s", "Properties", k, v))
-				first = false
-				continue
-			}
-			ss = append(ss, fmt.Sprintf("%20s  %s = %s", "", k, v))
-		}
+	if err := ctx.addPropertiesToInfoDigest(&ss); err != nil {
+		return nil, err
 	}
 
 	ss = append(ss, fmt.Sprintf(separator))
@@ -286,15 +314,7 @@ func (ctx *Context) InfoDigest() ([]string, error) {
 	}
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Encrypted", s))
 
-	l := Permissions(ctx)
-	if len(l) == 1 {
-		ss = append(ss, fmt.Sprintf("%20s: %s", "Permissions", l[0]))
-	} else {
-		ss = append(ss, fmt.Sprintf("%20s:", "Permissions"))
-		for _, s := range l {
-			ss = append(ss, s)
-		}
-	}
+	ctx.addPermissionsToInfoDigest(&ss)
 
 	//if ctx.ID != nil {
 	//	ss = append(ss, fmt.Sprintf("Id: %s", ctx.ID))
