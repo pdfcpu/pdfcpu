@@ -2,14 +2,14 @@
 layout: default
 ---
 
-# Remove Attachments
+# Add Keywords
 
-This command removes previously attached files from a PDF document. Have a look at some [examples](#examples).
+This command adds keywords or key phrases to a PDF document. Have a look at some [examples](#examples).
 
 ## Usage
 
 ```
-pdfcpu attachments remove [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [file...]
+pdfcpu keywords add [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile keyword...
 ```
 
 <br>
@@ -20,7 +20,7 @@ pdfcpu attachments remove [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw
 |:----------------------------------------------|:------------------|:--------
 | [verbose](../getting_started/common_flags.md) | turn on logging   | no
 | [vv](../getting_started/common_flags.md)      | verbose logging   | no
-| [quiet](../getting_started/common_flags.md)   | verbose logging   | no
+| [quiet](../getting_started/common_flags.md)   | quiet mode        | no
 | [upw](../getting_started/common_flags.md)     | user password     | no
 | [opw](../getting_started/common_flags.md)     | owner password    | no
 
@@ -31,26 +31,16 @@ pdfcpu attachments remove [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw
 | name         | description         | required
 |:-------------|:--------------------|:--------
 | inFile       | PDF input file      | yes
-| file...      | one or more attachments to be removed | yes
+| file...      | one or more files to be attached | yes
+| keyword      | search keyword or keyphrase | yes
 
 <br>
 
 ## Examples
 
-Remove a specific attachment from `container.pdf`:
+Adding a key phrase and a keyword.
+Put key phrases under single quotes:
 
 ```sh
-pdfcpu attach remove container.pdf pdfcpu.zip
-removing 1 attachments from container.pdf ...
-writing container.pdf ...
-```
-
-<br>
-
-Remove all attachments:
-
-```sh
-pdfcpu attach remove container.pdf
-removing 9 attachments from container.pdf ...
-writing container.pdf ...
+pdfcpu keywords add in.pdf 'Tom Sawyer' classic
 ```

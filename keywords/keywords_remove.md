@@ -4,12 +4,12 @@ layout: default
 
 # Remove Attachments
 
-This command removes previously attached files from a PDF document. Have a look at some [examples](#examples).
+This command removes keywords from a PDF document. Have a look at some [examples](#examples).
 
 ## Usage
 
 ```
-pdfcpu attachments remove [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [file...]
+pdfcpu keywords remove [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [keyword...]
 ```
 
 <br>
@@ -31,26 +31,22 @@ pdfcpu attachments remove [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw
 | name         | description         | required
 |:-------------|:--------------------|:--------
 | inFile       | PDF input file      | yes
-| file...      | one or more attachments to be removed | yes
+| keyword...   | one or more search keywords or keyphrases | no
 
 <br>
 
 ## Examples
 
-Remove a specific attachment from `container.pdf`:
+Remove a specific keyword from `test.pdf`:
 
 ```sh
-pdfcpu attach remove container.pdf pdfcpu.zip
-removing 1 attachments from container.pdf ...
-writing container.pdf ...
+pdfcpu keyword remove test.pdf modern
 ```
 
 <br>
 
-Remove all attachments:
+Remove all keywords:
 
 ```sh
-pdfcpu attach remove container.pdf
-removing 9 attachments from container.pdf ...
-writing container.pdf ...
+pdfcpu key remove test.pdf
 ```

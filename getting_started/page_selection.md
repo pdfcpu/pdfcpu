@@ -53,7 +53,7 @@ Select the first three pages, page 5 and page 7 up to the end of the document:
 Select pages 4 to 7 but exclude page 6:
 
 ```sh
--pages "4-7,!6"
+-pages '4-7,!6'
 ``` 
 
 <br>
@@ -61,7 +61,7 @@ Select pages 4 to 7 but exclude page 6:
 Select all pages other than page 5:
 
 ```sh
--pages "1-,!5" 
+-pages '1-,!5' 
 ```
 
 <br>
