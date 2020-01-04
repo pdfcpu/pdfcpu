@@ -224,7 +224,7 @@ func validatePageBoxColorInfo(xRefTable *pdf.XRefTable, pageDict pdf.Dict, requi
 
 func validatePageEntryRotate(xRefTable *pdf.XRefTable, d pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
-	validate := func(i int) bool { return pdf.IntMemberOf(i, []int{0, 90, 180, 270}) }
+	validate := func(i int) bool { return i%90 == 0 }
 	_, err := validateIntegerEntry(xRefTable, d, "pagesDict", "Rotate", required, sinceVersion, validate)
 
 	return err
