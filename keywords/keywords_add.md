@@ -31,7 +31,6 @@ pdfcpu keywords add [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFi
 | name         | description         | required
 |:-------------|:--------------------|:--------
 | inFile       | PDF input file      | yes
-| file...      | one or more files to be attached | yes
 | keyword      | search keyword or keyphrase | yes
 
 <br>
