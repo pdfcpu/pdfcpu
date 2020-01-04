@@ -4,7 +4,7 @@ layout: default
 
 # Add Portfolio Entries
 
-This command embeds one or more files by attaching them to a PDF input file. Have a look at some [examples](#examples).
+This command adds one or more files to a PDF input file aka the PDF portfolio. Have a look at some [examples](#examples).
 
 ## Usage
 
