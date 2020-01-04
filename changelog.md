@@ -6,6 +6,10 @@ layout: default
 
 | Date      | Tag / Commit | Description  
 |:----------|:-------------|:--------
+|2020-01-04 | [v0.3.2](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.2)                              | Support multi-stamping
+|           |                                                                                             | Add new cmds: keywords, properties
+|           |                                                                                             | Add new cmds: collect, portfolio
+|           |                                                                                             | Fix #112,#140,#143,#144,#146,#148,#152
 |2019-11-15 | [v0.3.1](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.1)                              | TrueType support, fix #126,133,137,138
 |2019-11-15 | [v0.3](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3)                                  | Fix #113,#114,#117,#119,#121,#123,#130
 |2019-09-23 | [v0.2.5](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2.5)                              | Fix #101, #103, #107-#109

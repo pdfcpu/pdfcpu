@@ -7,6 +7,7 @@ layout: default
 The `-pages ` flag allows you to select specific pages for processing when using the following commands:
 
 * [trim](../core/split.md)
+* [collect](../core/collect.md)
 * [extract](../extract/extract.md)
 * [rotate](../core/rotate.md)
 * [stamp/watermark](../core/stamp.md)
@@ -30,6 +31,9 @@ The value of this flag is a string which is a comma separated list of expression
 | -#         | include first page - page #
 | !#-        | exclude page # - last page
 | !-#        | exclude first page - page #
+| l          | include last page
+| nl         | exclude last page
+| #-l-1      | include page # - (last page-1)
 
 You can use either `!` or `n` for negating an expression.<br>
 `!` needs to be escaped with single quotes on the command line.
@@ -62,8 +66,16 @@ Select all pages other than page 5:
 
 <br>
 
-Select all odd pages other than page 1:
+Select all odd pages and exclude page 1 and the last page:
 
 ```sh
--pages odd,n1
+-pages odd,n1,nl
+```
+
+<br>
+
+Select all even pages and ensure the last page:
+
+```sh
+-pages even,l
 ```

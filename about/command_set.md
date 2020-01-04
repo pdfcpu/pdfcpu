@@ -10,7 +10,8 @@ layout: default
 * Optimize (get rid of redundancies like duplicate fonts, images)
 * Merge (a set of PDF files into one consolidated PDF file)
 * Split (split multi-page PDF into several PDFs according to split span)
-* Trim (generate a custom version of a PDF  including selected pages)
+* Trim (generate a custom version of a PDF including selected pages)
+* Collect (generate a PDF page sequence, pages may appear multiple times in any order)
 * Rotate selected pages
 * Manage (add,update,remove) stamps/watermarks for selected pages using text, images or PDF page content.
 * N-up (rearrange pages into grid layout for reduced number of pages)
@@ -22,11 +23,14 @@ layout: default
 * Extract Pages (extract specific pages into a given dir)
 * Extract Metadata (extract XML metadata)
 * Manage (add,remove,list,extract) embedded file attachments
+* Manage (add,remove,list,extract) portfolio entries
 * Encrypt (set password protection)
 * Decrypt (remove password protection)
 * Change user/owner password
 * Manage (add,list) user access permissions
-* Manage (insert, remove) page
+* Manage (insert,remove) pages
+* Manage (add,remove,list) search keywords
+* Manage (add,remove,list) document properties
 * Info (print file info)
 * Fonts (install, list supported fonts)
 * Paper (print list of supported papersizes)

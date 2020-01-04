@@ -59,6 +59,20 @@ where *content* may be text, an image or a PDF page.
 | inFile       | PDF input file       | yes
 | outFile      | PDF output file      | no
 
+Special note for pdf stamps:
+
+If you want to use a specific page as your stamp,
+specify the page number after the stamp file and use ':' as separator:
+
+`pdfcpu stamp add -mode pdf 'stamp.pdf:1' in,.pdf out.pdf`
+
+You can also apply a `multi-stamp`.
+This means you repeatedly apply stamp.pdf's pages to stamp pages of in.pdf in an orderly fashion.
+If in.pdf has more pages than stamp.pdf, the last page of stamp.pdf gets applied for the remaining pages.
+Omit the stamp page number for multi stamping:
+
+`pdfcpu stamp add -mode pdf stamp.pdf in.pdf out.pdf`
+
 <br>
 
 ### Description
@@ -136,7 +150,7 @@ You only have to specify parameters that differ from the default.
 
 Create a stamp using defaults only:
 ```sh
-pdfcpu stamp add -mode text 'This is a stamp' '' test.pdf out.pdf
+pdfcpu stamp add -mode text 'This is a stamp' '' in.pdf out.pdf
 ```
 <p align="center">
   <img style="border-color:silver" border="1" src="resources/stt10.png" height="300">
@@ -146,7 +160,7 @@ pdfcpu stamp add -mode text 'This is a stamp' '' test.pdf out.pdf
 Create a stamp using scale factor 1:
 
 ```sh
-pdfcpu stamp add 'This is a stamp, s:1' test.pdf out.pdf
+pdfcpu stamp add 'This is a stamp, s:1' in.pdf out.pdf
 ```
 
 <p align="center">
@@ -159,7 +173,7 @@ pdfcpu stamp add 'This is a stamp, s:1' test.pdf out.pdf
 Create a stamp along the second diagonale using scale factor 0.9, default render mode `fill` and a fill color:
 
 ```sh
-pdfcpu stamp add -mode text 'This is a stamp' 's:.9, d:2, c:.6 .2 .9' test.pdf out.pdf
+pdfcpu stamp add -mode text 'This is a stamp' 's:.9, d:2, c:.6 .2 .9' in.pdf out.pdf
 ```
 
 <p align="center">
@@ -171,7 +185,7 @@ pdfcpu stamp add -mode text 'This is a stamp' 's:.9, d:2, c:.6 .2 .9' test.pdf o
 Create a stamp with 0 degree rotation using scale factor 0.9 and render mode `stroke`:
 
 ```sh
-pdfcpu stamp add -mode text 'This is a stamp' 's:.9, rot:0, m:1' test.pdf out.pdf
+pdfcpu stamp add -mode text 'This is a stamp' 's:.9, rot:0, m:1' in.pdf out.pdf
 ```
 
 <p align="center">
@@ -183,7 +197,7 @@ pdfcpu stamp add -mode text 'This is a stamp' 's:.9, rot:0, m:1' test.pdf out.pd
 Create a stamp with a counterclockwise rotation of 45 degrees using scale factor 1, render mode `fill & stroke` and a fill color:
 
 ```sh
-pdfcpu stamp add -mode text 'This is a stamp' 'scale:1, rot:45, mode:2, color:.2 .7 .9' test.pdf out.pdf
+pdfcpu stamp add -mode text 'This is a stamp' 'scale:1, rot:45, mode:2, color:.2 .7 .9' in.pdf out.pdf
 ```
 
 <p align="center">
@@ -195,9 +209,9 @@ pdfcpu stamp add -mode text 'This is a stamp' 'scale:1, rot:45, mode:2, color:.2
 Create a stamp with default rotation, using scale factor 1, font size 48, default render mode `fill`, a fill color and increasing opacity from 0.3 to 1. By setting an opacity < 1 you can fake a watermark. This may be useful in scenarios where `pdfcpu watermark` does not produce satisfying results for a particular PDF file:
 
 ```sh
-pdfcpu stamp add -mode text 'Draft' 'points:48, s:1, c:.8 .8 .4, op:.3' test.pdf out1.pdf
-pdfcpu stamp add -mode text 'Draft' 'points:48, s:1, c:.8 .8 .4, op:0.6' test.pdf out2.pdf
-pdfcpu stamp add -mode text 'Draft' 'points:48, s:1, c:.8 .8 .4, op:1' test.pdf out3.pdf
+pdfcpu stamp add -mode text 'Draft' 'points:48, s:1, c:.8 .8 .4, op:.3' in1.pdf out1.pdf
+pdfcpu stamp add -mode text 'Draft' 'points:48, s:1, c:.8 .8 .4, op:0.6' in2.pdf out2.pdf
+pdfcpu stamp add -mode text 'Draft' 'points:48, s:1, c:.8 .8 .4, op:1' in3.pdf out3.pdf
 ```
 
 <p align="center">
@@ -212,7 +226,7 @@ pdfcpu stamp add -mode text 'Draft' 'points:48, s:1, c:.8 .8 .4, op:1' test.pdf 
 
 Create a stamp using defaults only:
 ```sh
-pdfcpu stamp add -mode image 'pic.jpg' '' test.pdf out.pdf
+pdfcpu stamp add -mode image pic.jpg '' in.pdf out.pdf
 ```
 
 <p align="center">
@@ -224,7 +238,7 @@ pdfcpu stamp add -mode image 'pic.jpg' '' test.pdf out.pdf
 Create a stamp using 0 degree rotation and relative scaling of 1.0:
 
 ```sh
-pdfcpu stamp add -mode image 'pic.jpg' 'scalef:1 rel, rot:0' test.pdf out.pdf
+pdfcpu stamp add -mode image 'pic.jpg' 'scalef:1 rel, rot:0' in.pdf out.pdf
 ```
 
 <p align="center">
@@ -238,7 +252,7 @@ pdfcpu stamp add -mode image 'pic.jpg' 'scalef:1 rel, rot:0' test.pdf out.pdf
 Create a stamp using defaults only. This will apply page 1 of `some.pdf`:
 
 ```sh
-pdfcpu stamp add -mode pdf 'some.pdf' '' test.pdf out.pdf
+pdfcpu stamp add -mode pdf 'some.pdf:1' '' in.pdf out.pdf
 ```
 
 <p align="center">
@@ -247,10 +261,13 @@ pdfcpu stamp add -mode pdf 'some.pdf' '' test.pdf out.pdf
 
 <br>
 
-Create a stamp using defaults and page 2 of `some.pdf`, apply a 0 degree rotation and 0.3 relative scaling:
+Create a multi stamp using `stamp.pdf`, apply a 0 degree rotation and 0.3 relative scaling.
+
+Page 1 of in.pdf gets stamped with page 1 of stamp.pdf,
+page 2 of in.pdf gets stamped with page 2 of stamp.pdf and so forth.
 
 ```sh
-pdfcpu stamp add -mode pdf 'some.pdf:2' 'rot:0, scalef:.3' test.pdf out.pdf
+pdfcpu stamp add -mode pdf stamp.pdf 'rot:0, scale:.3 rel' in.pdf out.pdf
 ```
 
 <p align="center">
