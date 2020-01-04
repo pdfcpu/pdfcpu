@@ -29,11 +29,11 @@ pdfcpu rotate [-v(erbose)|vv] [-q(uiet)] [-pages pageSelection] [-upw userpw] [-
 
 ### Arguments
 
-| name         | description     | required | values | default
+| name         | description     | required | values
 |:-------------|:----------------|:---------|:-
-| inFile       | PDF input file  | yes      ||
-| rotation     | rotation angle  | yes      | -270, -180, -90, 90, 180, 270 |
-| outFile      | PDF output file | no       || inFile
+| inFile       | PDF input file  | yes      |
+| rotation     | rotation angle  | yes      | -270, -180, -90, 90, 180, 270
+| outFile      | PDF output file | no       |
 
 <br>
 
