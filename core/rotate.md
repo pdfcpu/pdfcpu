@@ -9,7 +9,7 @@ Rotate selected pages of `inFile` clockwise by a multiple of 90 degrees. Have a 
 ## Usage
 
 ```
-pdfcpu rotate [-v(erbose)|vv] [-q(uiet)] [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile rotation
+pdfcpu rotate [-v(erbose)|vv] [-q(uiet)] [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile rotation [outFile]
 ```
 
 <br>
@@ -29,10 +29,11 @@ pdfcpu rotate [-v(erbose)|vv] [-q(uiet)] [-pages pageSelection] [-upw userpw] [-
 
 ### Arguments
 
-| name         | description    | required | values
-|:-------------|:---------------|:---------|:-
-| inFile       | PDF input file | yes
-| rotation     | rotation angle | yes      | -270, -180, -90, 90, 180, 270
+| name         | description     | required | values | default
+|:-------------|:----------------|:---------|:-
+| inFile       | PDF input file  | yes      ||
+| rotation     | rotation angle  | yes      | -270, -180, -90, 90, 180, 270 |
+| outFile      | PDF output file | no       || inFile
 
 <br>
 

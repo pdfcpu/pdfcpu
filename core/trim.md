@@ -32,7 +32,7 @@ pdfcpu trim [-v(erbose)|vv] [-q(uiet)] -pages pageSelection [-upw userpw] [-opw 
 | name         | description         | required | default
 |:-------------|:--------------------|:---------|:-
 | inFile       | PDF input file      | yes
-| outFile      | PDF output file     | no       | inFile_new.pdf
+| outFile      | PDF output file     | no       | inFile
 
 <br>
 
