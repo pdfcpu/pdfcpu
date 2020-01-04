@@ -35,10 +35,14 @@ pdfcpu info -u cm test.pdf
                Title:
               Author:
              Subject:
-        PDF Producer: pdfcpu v0.2.4
+        PDF Producer: pdfcpu v0.3.2
      Content creator:
        Creation date: D:20190823010752+02'00'
    Modification date: D:20190823010752+02'00'
+            Keywords: key1
+                      key2
+          Properties: name1 = val1
+                      name2 = val2
 ..........................................
               Tagged: No
               Hybrid: No
