@@ -45,10 +45,10 @@ pdfcpu collect [-v(erbose)|vv] [-q(uiet)] -pages selectedPages [-upw userpw] [-o
 
 ## Examples
 
-Create a custom page collection from `test.pdf` and write the result to `sequ.pdf`.
+Create a custom page collection from `in.pdf` and write the result to `out.pdf`.
 Begin with 3 instances of page 1 then append the rest of the file excluding the last page:
 
 ```sh
-pdfcpu collect -pages 1,1,1,2-l-1 test.pdf sequ.pdf
+pdfcpu collect -pages 1,1,1,2-l-1 in.pdf out.pdf
 writing sequ.pdf ...
 ```
