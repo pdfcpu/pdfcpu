@@ -2,7 +2,7 @@
 layout: default
 ---
 
-# Remove Attachments
+# Remove Keywords
 
 This command removes keywords from a PDF document. Have a look at some [examples](#examples).
 

@@ -2,7 +2,7 @@
 layout: default
 ---
 
-# Remove Attachments
+# Remove Properties
 
 This command removes properties from a PDF document. Have a look at some [examples](#examples).
 
