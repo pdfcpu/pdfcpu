@@ -693,8 +693,8 @@ verbose, v ... turn on logging
     `
 
 	usagePropertiesList   = "pdfcpu properties list    [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile"
-	usagePropertiesAdd    = "pdfcpu properties add     [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile keyValuePair..."
-	usagePropertiesRemove = "pdfcpu properties remove  [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [key...]"
+	usagePropertiesAdd    = "pdfcpu properties add     [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile nameValuePair..."
+	usagePropertiesRemove = "pdfcpu properties remove  [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [name...]"
 
 	usageProperties = "usage: " + usagePropertiesList +
 		"\n       " + usagePropertiesAdd +
@@ -702,17 +702,16 @@ verbose, v ... turn on logging
 
 	usageLongProperties = `Manage document properties.
     
-  verbose, v ... turn on logging
-          vv ... verbose logging
-    quiet, q ... disable output
-         upw ... user password
-         opw ... owner password
-      inFile ... input pdf file
-keyValuePair ... 'key = value'
-         key ... property name
+   verbose, v ... turn on logging
+           vv ... verbose logging
+     quiet, q ... disable output
+          upw ... user password
+          opw ... owner password
+       inFile ... input pdf file
+nameValuePair ... 'name = value'
+         name ... property name
      
-     Eg. adding one property:   pdfcpu properties add test.pdf  key = value
-                                pdfcpu properties add test.pdf 'key = value'
+     Eg. adding one property:   pdfcpu properties add test.pdf 'key = value'
          adding two properties: pdfcpu properties add test.pdf 'key1 = val1' 'key2 = val2'
      `
 	usageCollect     = "usage: pdfcpu collect [-v(erbose)|vv] [-q(uiet)] -pages selectedPages [-upw userpw] [-opw ownerpw] inFile [outFile]"

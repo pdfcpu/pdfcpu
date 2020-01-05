@@ -327,14 +327,16 @@ func KeywordsList(xRefTable *XRefTable) ([]string, error) {
 // KeywordsAdd adds keywords to the document info dict.
 // Returns true if at least one keyword was added.
 func KeywordsAdd(xRefTable *XRefTable, keywords []string) error {
-	// TODO Handle missing info dict.
-	if xRefTable.Keywords == "" {
-		xRefTable.Keywords = keywords[0]
-		keywords = keywords[1:]
+
+	list, err := KeywordsList(xRefTable)
+	if err != nil {
+		return err
 	}
 
 	for _, s := range keywords {
-		xRefTable.Keywords += ", " + s
+		if !MemberOf(s, list) {
+			xRefTable.Keywords += ", " + s
+		}
 	}
 
 	d, err := xRefTable.DereferenceDict(*xRefTable.Info)
