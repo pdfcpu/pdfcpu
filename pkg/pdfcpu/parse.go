@@ -128,15 +128,25 @@ func hexString(s string) (*string, bool) {
 		return &s1, true
 	}
 
-	uc := strings.ToUpper(s)
+	var sb strings.Builder
 
-	for _, c := range uc {
+	i := 0
+	for _, c := range strings.ToUpper(s) {
+		if strings.IndexRune(" \x09\x0A\x0C\x0D", c) >= 0 {
+			if i%2 > 0 {
+				sb.WriteString("0")
+				i = 0
+			}
+			continue
+		}
 		log.Parse.Printf("checking <%c>\n", c)
 		isHexChar := false
 		for _, hexch := range "ABCDEF1234567890" {
 			log.Parse.Printf("checking against <%c>\n", hexch)
 			if c == hexch {
 				isHexChar = true
+				sb.WriteRune(c)
+				i++
 				break
 			}
 		}
@@ -150,11 +160,12 @@ func hexString(s string) (*string, bool) {
 
 	// If the final digit of a hexadecimal string is missing -
 	// that is, if there is an odd number of digits - the final digit shall be assumed to be 0.
-	if len(uc)%2 == 1 {
-		uc = uc + "0"
+	if i%2 > 0 {
+		sb.WriteString("0")
 	}
 
-	return &uc, true
+	ss := sb.String()
+	return &ss, true
 }
 
 // balancedParenthesesPrefix returns the index of the end position of the balanced parentheses prefix of s

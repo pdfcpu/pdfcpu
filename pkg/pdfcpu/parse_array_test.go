@@ -178,6 +178,8 @@ func TestParseArray(t *testing.T) {
 	doTestParseArrayOK("[<0ab>]", t)
 	doTestParseArrayOK("[<0abc>]", t)
 	doTestParseArrayOK("[<0abc> <345bca> <aaf>]", t)
+	doTestParseArrayOK("[<01 05 02 02 03 00 00 00 00 00 00 00>]", t)
+	doTestParseArrayOK("[< 0 0 2 6 6 6 5 6 5 2 2 4>]", t)
 
 	// String literals
 	doTestParseArrayOK("[(abc) (def) <20ff>]..", t)
