@@ -37,6 +37,9 @@ do
     #echo collecting coverage for $q
     idep=$q
     internalDeps $idep
+    if [[ $q == */test ]]; then
+        idep=${idep%/test}
+    fi
     go test -coverprofile=c1.out -coverpkg=$idep $q && tail -n +2 c1.out  >> c.out
 done
 

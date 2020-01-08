@@ -88,7 +88,11 @@ func createFontSample(fontName string, t *testing.T) {
 	}
 }
 
-func TestCreateFontSamples(t *testing.T) {
+func XXXTestCreateFontSamples(t *testing.T) {
+
+	// Enable this test to create sample PDFs for all installed fonts
+	// into pdfcpu/pkg/testdata/fontSamples/
+
 	l, err := api.ListFonts()
 	if err != nil {
 		t.Fatalf("%v", err)
