@@ -740,16 +740,11 @@ func (xRefTable *XRefTable) indRefToObject(ir *IndirectRef) (Object, error) {
 		return nil, errors.New("pdfcpu: indRefToObject: input argument is nil")
 	}
 
+	// 7.3.10
+	// An indirect reference to an undefined object shall not be considered an error by a conforming reader;
+	// it shall be treated as a reference to the null object.
 	entry, found := xRefTable.FindTableEntryForIndRef(ir)
-	if !found {
-		return nil, nil
-	}
-
-	if entry.Free {
-		return nil, errors.New("pdfcpu: indRefToObject: input argument is free obj")
-	}
-
-	if entry.Object == nil {
+	if !found || entry.Free {
 		return nil, nil
 	}
 

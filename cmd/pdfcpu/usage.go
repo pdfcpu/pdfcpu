@@ -106,7 +106,7 @@ verbose, v ... turn on logging
         vv ... verbose logging
   quiet, q ... disable output
    outFile ... output pdf file
-   inFiles ... a list of at least 2 pdf files subject to concatenation.`
+    inFile ... a list of at least 2 pdf files subject to concatenation.`
 
 	usagePageSelection = `'-pages' selects pages for processing and is a comma separated list of expressions:
 
