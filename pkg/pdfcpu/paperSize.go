@@ -49,14 +49,14 @@ func (d Dim) ToInches() Dim {
 	return Dim{d.Width * userSpaceToInch, d.Height * userSpaceToInch}
 }
 
-// ToCentimeters converts d to centimetres.
-func (d Dim) ToCentimeters() Dim {
+// ToCentimetres converts d to centimetres.
+func (d Dim) ToCentimetres() Dim {
 	return Dim{d.Width * userSpaceToCm, d.Height * userSpaceToCm}
 }
 
-// ToMillimeters converts d to centimetres.
-func (d Dim) ToMillimeters() Dim {
-	return Dim{d.Width * userSpaceToMm, d.Height * userSpaceToMm}
+// ToMillimetres converts d to centimetres.
+func (d Dim) ToMillimetres() Dim {
+	return Dim{d.Height * userSpaceToMm, d.Height * userSpaceToMm}
 }
 
 // AspectRatio returns the relation between width and height.
