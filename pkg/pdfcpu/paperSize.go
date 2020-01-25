@@ -56,7 +56,7 @@ func (d Dim) ToCentimetres() Dim {
 
 // ToMillimetres converts d to centimetres.
 func (d Dim) ToMillimetres() Dim {
-	return Dim{d.Height * userSpaceToMm, d.Height * userSpaceToMm}
+	return Dim{d.Width * userSpaceToMm, d.Height * userSpaceToMm}
 }
 
 // AspectRatio returns the relation between width and height.
