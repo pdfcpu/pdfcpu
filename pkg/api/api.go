@@ -336,9 +336,7 @@ func OptimizeFile(inFile, outFile string, conf *pdf.Configuration) (err error) {
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -495,9 +493,7 @@ func SetPermissionsFile(inFile, outFile string, conf *pdf.Configuration) (err er
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -685,9 +681,7 @@ func TrimFile(inFile, outFile string, selectedPages []string, conf *pdf.Configur
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -777,9 +771,7 @@ func RotateFile(inFile, outFile string, rotation int, selectedPages []string, co
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -879,9 +871,7 @@ func AddWatermarksFile(inFile, outFile string, selectedPages []string, wm *pdf.W
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -972,9 +962,7 @@ func RemoveWatermarksFile(inFile, outFile string, selectedPages []string, conf *
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -1326,9 +1314,7 @@ func InsertPagesFile(inFile, outFile string, selectedPages []string, before bool
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -1411,9 +1397,7 @@ func RemovePagesFile(inFile, outFile string, selectedPages []string, conf *pdf.C
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -1641,9 +1625,7 @@ func CollectFile(inFile, outFile string, selectedPages []string, conf *pdf.Confi
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {

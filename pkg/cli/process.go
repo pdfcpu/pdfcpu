@@ -159,7 +159,7 @@ func MergeCommand(inFiles []string, outFile string, conf *pdf.Configuration) *Co
 }
 
 // ExtractImagesCommand creates a new command to extract embedded images.
-// (experimental
+// (experimental)
 func ExtractImagesCommand(inFile string, outDir string, pageSelection []string, conf *pdf.Configuration) *Command {
 	if conf == nil {
 		conf = pdf.NewDefaultConfiguration()

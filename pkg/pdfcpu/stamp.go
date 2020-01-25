@@ -1008,7 +1008,11 @@ func identifyObjNrs(ctx *Context, o Object, migrated map[int]int, objNrs IntSet)
 
 	case IndirectRef:
 		objNr := o.ObjectNumber.Value()
-		if migrated[objNr] > 0 || objNr >= *ctx.Size {
+		if migrated[objNr] > 0 {
+			return nil
+		}
+		if objNr >= *ctx.Size {
+			//fmt.Printf("%d > %d(ctx.Size)\n", objNr, *ctx.Size)
 			return nil
 		}
 		objNrs[objNr] = true
@@ -1018,31 +1022,27 @@ func identifyObjNrs(ctx *Context, o Object, migrated map[int]int, objNrs IntSet)
 			return err
 		}
 
-		err = identifyObjNrs(ctx, o1, migrated, objNrs)
-		if err != nil {
+		if err = identifyObjNrs(ctx, o1, migrated, objNrs); err != nil {
 			return err
 		}
 
 	case Dict:
 		for _, v := range o {
-			err := identifyObjNrs(ctx, v, migrated, objNrs)
-			if err != nil {
+			if err := identifyObjNrs(ctx, v, migrated, objNrs); err != nil {
 				return err
 			}
 		}
 
 	case StreamDict:
 		for _, v := range o.Dict {
-			err := identifyObjNrs(ctx, v, migrated, objNrs)
-			if err != nil {
+			if err := identifyObjNrs(ctx, v, migrated, objNrs); err != nil {
 				return err
 			}
 		}
 
 	case Array:
 		for _, v := range o {
-			err := identifyObjNrs(ctx, v, migrated, objNrs)
-			if err != nil {
+			if err := identifyObjNrs(ctx, v, migrated, objNrs); err != nil {
 				return err
 			}
 		}
@@ -1052,30 +1052,29 @@ func identifyObjNrs(ctx *Context, o Object, migrated map[int]int, objNrs IntSet)
 	return nil
 }
 
+// migrateObject migrates o from ctxSource into ctxDest.
 func migrateObject(ctxSource, ctxDest *Context, migrated map[int]int, o Object) (Object, error) {
 
-	// Identify involved objNrs of ctxSource.
+	// Collect referenced objNrs of o in ctxSource that have not been migrated.
 	objNrs := IntSet{}
 	if err := identifyObjNrs(ctxSource, o, migrated, objNrs); err != nil {
 		return nil, err
 	}
-	if len(objNrs) == 0 {
-		return o, nil
-	}
 
-	lookup := map[int]int{}
+	// Create a mapping from migration candidates in ctxSource to new objs in ctxDest.
 	for k := range objNrs {
 		migrated[k] = *ctxDest.Size
-		lookup[k] = *ctxDest.Size
 		*ctxDest.Size++
 	}
 
-	// Patch indRefs of resourceDict.
-	o = patchObject(o, migrated)
+	// Patch indRefs reachable by o in ctxSource.
+	if po := patchObject(o, migrated); po != nil {
+		o = po
+	}
 
-	// Patch all new involved indRefs.
-	for k, v := range lookup {
+	for k := range objNrs {
 		patchObject(ctxSource.Table[k].Object, migrated)
+		v := migrated[k]
 		ctxDest.Table[v] = ctxSource.Table[k]
 	}
 
@@ -1085,7 +1084,6 @@ func migrateObject(ctxSource, ctxDest *Context, migrated map[int]int, o Object) 
 func createPDFRes(ctx, otherCtx *Context, pageNr int, migrated map[int]int, wm *Watermark) error {
 
 	pdfRes := pdfResources{}
-
 	xRefTable := ctx.XRefTable
 	otherXRefTable := otherCtx.XRefTable
 
