@@ -53,7 +53,7 @@ The commands are:
    version     print version
    watermark   add, remove, update text, image or PDF watermarks for selected pages
 
-   Completion supported for all commands.
+   All instantly recognizable command prefixes are supported eg. val for validation
    One letter Unix style abbreviations supported for flags and command parameters.
 
 Use "pdfcpu help [command]" for more information about a command.`
