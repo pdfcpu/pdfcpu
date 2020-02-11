@@ -25,7 +25,7 @@ import (
 
 const maxEntries = 3
 
-// Node is an opiniated implementation of the PDF name tree.
+// Node is an opinionated implementation of the PDF name tree.
 // pdfcpu caches all name trees found in the PDF catalog with this data structure.
 // The PDF spec does not impose any rules regarding a strategy for the creation of nodes.
 // A binary tree was chosen where each leaf node has a limited number of entries (maxEntries).
@@ -35,7 +35,7 @@ type Node struct {
 	Kids       []*Node // Mirror of the name tree's Kids array, an array of indirect references.
 	Names      []entry // Mirror of the name tree's Names array.
 	Kmin, Kmax string  // Mirror of the name tree's Limit array[Kmin,Kmax].
-	D          *Dict   // Pointer to the PDF dict representing this name tree node.
+	D          Dict    // The PDF dict representing this name tree node.
 }
 
 // entry is a key value pair.
@@ -63,7 +63,7 @@ func (n Node) withinLimits(k string) bool {
 	return false
 }
 
-// Value returns the value given key
+// Value returns the value for given key
 func (n Node) Value(k string) (Object, bool) {
 
 	if n.leaf() {
@@ -329,7 +329,7 @@ func (n *Node) removeFromKids(xRefTable *XRefTable, k string) (ok bool, err erro
 			// This kid is now empty and needs to be removed.
 
 			if xRefTable != nil {
-				err = xRefTable.deleteObject(*kid.D)
+				err = xRefTable.deleteObject(kid.D)
 				if err != nil {
 					return false, err
 				}
@@ -356,7 +356,7 @@ func (n *Node) removeFromKids(xRefTable *XRefTable, k string) (ok bool, err erro
 				log.Debug.Println("removeFromKids: only 1 kid")
 
 				if xRefTable != nil {
-					err = xRefTable.deleteObject(*n.D)
+					err = xRefTable.deleteObject(n.D)
 					if err != nil {
 						return false, err
 					}

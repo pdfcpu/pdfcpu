@@ -259,7 +259,7 @@ func writeRootObject(ctx *Context) error {
 	log.Write.Printf("*** writeRootObject: begin offset=%d *** %s\n", ctx.Write.Offset, catalog)
 
 	// Ensure corresponding and accurate name tree object graphs.
-	if !ctx.ReducedFeatureSet() {
+	if !ctx.ApplyReducedFeatureSet() {
 		err := ctx.BindNameTrees()
 		if err != nil {
 			return err
@@ -277,7 +277,7 @@ func writeRootObject(ctx *Context) error {
 
 	dictName := "rootDict"
 
-	if ctx.ReducedFeatureSet() {
+	if ctx.ApplyReducedFeatureSet() {
 		log.Write.Println("writeRootObject - reducedFeatureSet:exclude complex entries.")
 		d.Delete("Names")
 		d.Delete("Dests")

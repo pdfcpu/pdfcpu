@@ -990,10 +990,10 @@ func validateString(xRefTable *pdf.XRefTable, o pdf.Object, validate func(string
 	switch o := o.(type) {
 
 	case pdf.StringLiteral:
-		s = o.Value()
+		s, err = pdf.StringLiteralToString(o.Value())
 
 	case pdf.HexLiteral:
-		s = o.Value()
+		s, err = pdf.HexLiteralToString(o.Value())
 
 	default:
 		return "", errors.New("pdfcpu: validateString: invalid type")
@@ -1041,10 +1041,10 @@ func validateStringEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryNa
 	switch o := o.(type) {
 
 	case pdf.StringLiteral:
-		s = o.Value()
+		s, err = pdf.StringLiteralToString(o.Value())
 
 	case pdf.HexLiteral:
-		s = o.Value()
+		s, err = pdf.HexLiteralToString(o.Value())
 
 	default:
 		return nil, errors.Errorf("pdfcpu: validateStringEntry: dict=%s entry=%s invalid type", dictName, entryName)

@@ -194,8 +194,8 @@ func (c *Configuration) ValidationModeString() string {
 	return ""
 }
 
-// ReducedFeatureSet returns true if complex entries like annotations shall not be written.
-func (c *Configuration) ReducedFeatureSet() bool {
+// ApplyReducedFeatureSet returns true if complex entries like annotations shall not be written.
+func (c *Configuration) ApplyReducedFeatureSet() bool {
 	switch c.Cmd {
 	case SPLIT, TRIM, EXTRACTPAGES, MERGE, IMPORTIMAGES:
 		return true

@@ -701,11 +701,11 @@ func createMovieAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRe
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createMediaRenditionAction(xRefTable *XRefTable, mediaClipDataDict *IndirectRef) *Dict {
+func createMediaRenditionAction(xRefTable *XRefTable, mediaClipDataDict *IndirectRef) Dict {
 
 	r := createMediaRendition(xRefTable, mediaClipDataDict)
 
-	d := Dict(
+	return Dict(
 		map[string]Object{
 			"Type": Name("Action"),
 			"S":    Name("Rendition"),
@@ -713,15 +713,13 @@ func createMediaRenditionAction(xRefTable *XRefTable, mediaClipDataDict *Indirec
 			"OP":   Integer(0), // Play
 		},
 	)
-
-	return &d
 }
 
-func createSelectorRenditionAction(mediaClipDataDict *IndirectRef) *Dict {
+func createSelectorRenditionAction(mediaClipDataDict *IndirectRef) Dict {
 
 	r := createSelectorRendition(mediaClipDataDict)
 
-	d := Dict(
+	return Dict(
 		map[string]Object{
 			"Type": Name("Action"),
 			"S":    Name("Rendition"),
@@ -729,8 +727,6 @@ func createSelectorRenditionAction(mediaClipDataDict *IndirectRef) *Dict {
 			"OP":   Integer(0), // Play
 		},
 	)
-
-	return &d
 }
 
 func createScreenAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
@@ -753,10 +749,10 @@ func createScreenAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotR
 			"P":        pageIndRef,
 			"Border":   NewIntegerArray(0, 0, 3),
 			"C":        NewNumberArray(0.2, 0.8, 0.5),
-			"A":        *mediaRenditionAction,
+			"A":        mediaRenditionAction,
 			"AA": Dict(
 				map[string]Object{
-					"D": *selectorRenditionAction,
+					"D": selectorRenditionAction,
 				},
 			),
 		},

@@ -136,9 +136,11 @@ func (ctx *Context) String() string {
 	}
 
 	// Print list of any missing objects.
-	if len(ctx.XRefTable.Table) != *ctx.XRefTable.Size {
+	if len(ctx.XRefTable.Table) < *ctx.XRefTable.Size {
 		missing, s := ctx.MissingObjects()
-		logStr = append(logStr, fmt.Sprintf("%d missing objects: %s\n", missing, *s))
+		if missing > 0 {
+			logStr = append(logStr, fmt.Sprintf("%d missing objects: %s\n", missing, *s))
+		}
 	}
 
 	logStr = append(logStr, fmt.Sprintf("\nTotal pages: %d\n", ctx.PageCount))

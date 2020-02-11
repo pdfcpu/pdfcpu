@@ -171,3 +171,12 @@ func TestManipulateContext(t *testing.T) {
 		t.Fatalf("%s: WriteContextFile %s: %v\n", msg, outFile, err)
 	}
 }
+
+func TestInfo(t *testing.T) {
+	msg := "TestInfo"
+	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
+
+	if _, err := api.InfoFile(inFile, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+}

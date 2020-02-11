@@ -927,35 +927,25 @@ func (xRefTable *XRefTable) DereferenceStringOrHexLiteral(obj Object, sinceVersi
 	return s, nil
 }
 
+// Text returns a string based representation for String and Hexliterals.
+func Text(o Object) (string, error) {
+	switch obj := o.(type) {
+	case StringLiteral:
+		return StringLiteralToString(obj.Value())
+	case HexLiteral:
+		return HexLiteralToString(obj.Value())
+	default:
+		return "", errors.Errorf("pdfcpu: text: corrupt -  %v\n", obj)
+	}
+}
+
 // DereferenceText resolves and validates a string or hex literal object to a string.
 func (xRefTable *XRefTable) DereferenceText(o Object) (string, error) {
-
-	var s string
-
 	o, err := xRefTable.Dereference(o)
 	if err != nil {
-		return s, err
+		return "", err
 	}
-
-	switch obj := o.(type) {
-
-	case StringLiteral:
-		s, err = StringLiteralToString(obj.Value())
-		if err != nil {
-			return s, err
-		}
-
-	case HexLiteral:
-		s, err = HexLiteralToString(obj.Value())
-		if err != nil {
-			return s, err
-		}
-
-	default:
-		return s, errors.Errorf("pdfcpu: textString: corrupt -  %v\n", obj)
-	}
-
-	return s, nil
+	return Text(o)
 }
 
 // DereferenceCSVSafeText resolves and validates a string or hex literal object to a string.
@@ -976,11 +966,16 @@ func (xRefTable *XRefTable) DereferenceArray(o Object) (Array, error) {
 	}
 
 	a, ok := o.(Array)
-	if !ok {
-		return nil, errors.Errorf("pdfcpu: dereferenceArray: wrong type <%v>", o)
+	if ok {
+		return a, nil
 	}
 
-	return a, nil
+	d, ok := o.(Dict)
+	if !ok {
+		return nil, errors.Errorf("pdfcpu: dereferenceArray: dest of wrong type <%v>", o)
+	}
+
+	return d["D"].(Array), nil
 }
 
 // DereferenceDict resolves and validates a dictionary object, which may be an indirect reference.
@@ -1090,6 +1085,17 @@ func (xRefTable *XRefTable) Pages() (*IndirectRef, error) {
 	}
 
 	return rootDict.IndirectRefEntry("Pages"), nil
+}
+
+// Outlines returns the Outlines reference contained in the catalog.
+func (xRefTable *XRefTable) Outlines() (*IndirectRef, error) {
+
+	rootDict, err := xRefTable.Catalog()
+	if err != nil {
+		return nil, err
+	}
+
+	return rootDict.IndirectRefEntry("Outlines"), nil
 }
 
 // MissingObjects returns the number of objects that were not written
@@ -1241,7 +1247,7 @@ func (xRefTable *XRefTable) bindNameTreeNode(name string, n *Node, root bool) er
 
 	if n.D == nil {
 		dict = NewDict()
-		n.D = &dict
+		n.D = dict
 	} else {
 		if root {
 			// Update root object after possible tree modification after removal of empty kid.
@@ -1252,10 +1258,10 @@ func (xRefTable *XRefTable) bindNameTreeNode(name string, n *Node, root bool) er
 			if namesDict == nil {
 				return errors.New("pdfcpu: root entry \"Names\" corrupt")
 			}
-			namesDict.Update(name, *n.D)
+			namesDict.Update(name, n.D)
 		}
-		log.Debug.Printf("bind dict = %v\n", *n.D)
-		dict = *n.D
+		log.Debug.Printf("bind dict = %v\n", n.D)
+		dict = n.D
 	}
 
 	if !root {
@@ -1281,7 +1287,7 @@ func (xRefTable *XRefTable) bindNameTreeNode(name string, n *Node, root bool) er
 		if err != nil {
 			return err
 		}
-		indRef, err := xRefTable.IndRefForNewObject(*k.D)
+		indRef, err := xRefTable.IndRefForNewObject(k.D)
 		if err != nil {
 			return err
 		}
@@ -1304,8 +1310,7 @@ func (xRefTable *XRefTable) BindNameTrees() error {
 	// Iterate over internal name tree rep.
 	for k, v := range xRefTable.Names {
 		log.Write.Printf("bindNameTree: %s\n", k)
-		err := xRefTable.bindNameTreeNode(k, v, true)
-		if err != nil {
+		if err := xRefTable.bindNameTreeNode(k, v, true); err != nil {
 			return err
 		}
 	}
@@ -1361,7 +1366,7 @@ func (xRefTable *XRefTable) LocateNameTree(nameTreeName string, ensure bool) err
 
 		d.Insert(nameTreeName, *ir)
 
-		xRefTable.Names[nameTreeName] = &Node{D: &dict}
+		xRefTable.Names[nameTreeName] = &Node{D: dict}
 
 		return nil
 	}
@@ -1371,7 +1376,7 @@ func (xRefTable *XRefTable) LocateNameTree(nameTreeName string, ensure bool) err
 		return err
 	}
 
-	xRefTable.Names[nameTreeName] = &Node{D: &d1}
+	xRefTable.Names[nameTreeName] = &Node{D: d1}
 
 	return nil
 }
@@ -1644,9 +1649,9 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict Dict, pAttrs *Inher
 	return nil
 }
 
-func (xRefTable *XRefTable) processPageTree(root *IndirectRef, pAttrs *InheritedPageAttrs, p *int, page int) (Dict, error) {
+func (xRefTable *XRefTable) processPageTreeForPageDict(root *IndirectRef, pAttrs *InheritedPageAttrs, p *int, page int) (Dict, error) {
 
-	//fmt.Printf("entering processPage: p=%d obj#%d\n", *p, root.ObjectNumber.Value())
+	//fmt.Printf("entering processPageTreeForPageDict: p=%d obj#%d\n", *p, root.ObjectNumber.Value())
 
 	d, err := xRefTable.DereferenceDict(*root)
 	if err != nil {
@@ -1682,7 +1687,7 @@ func (xRefTable *XRefTable) processPageTree(root *IndirectRef, pAttrs *Inherited
 		// Dereference next page node dict.
 		ir, ok := o.(IndirectRef)
 		if !ok {
-			return nil, errors.Errorf("pdfcpu: processPageTree: corrupt page node dict")
+			return nil, errors.Errorf("pdfcpu: processPageTreeForPageDict: corrupt page node dict")
 		}
 
 		pageNodeDict, err := xRefTable.DereferenceDict(ir)
@@ -1694,7 +1699,7 @@ func (xRefTable *XRefTable) processPageTree(root *IndirectRef, pAttrs *Inherited
 
 		case "Pages":
 			// Recurse over sub pagetree.
-			pageNodeDict, err = xRefTable.processPageTree(&ir, pAttrs, p, page)
+			pageNodeDict, err = xRefTable.processPageTreeForPageDict(&ir, pAttrs, p, page)
 			if err != nil {
 				return nil, err
 			}
@@ -1705,7 +1710,7 @@ func (xRefTable *XRefTable) processPageTree(root *IndirectRef, pAttrs *Inherited
 		case "Page":
 			*p++
 			if *p == page {
-				return xRefTable.processPageTree(&ir, pAttrs, p, page)
+				return xRefTable.processPageTreeForPageDict(&ir, pAttrs, p, page)
 			}
 
 		}
@@ -1719,21 +1724,80 @@ func (xRefTable *XRefTable) processPageTree(root *IndirectRef, pAttrs *Inherited
 func (xRefTable *XRefTable) PageDict(page int) (Dict, *InheritedPageAttrs, error) {
 
 	// Get an indirect reference to the page tree root dict.
-	root, err := xRefTable.Pages()
-	if err != nil {
-		return nil, nil, err
-	}
+	pageRootDictIndRef, _ := xRefTable.Pages()
 
-	pageCount := 0
+	var (
+		inhPAttrs InheritedPageAttrs
+		pageCount int
+	)
 
-	var inhPAttrs InheritedPageAttrs
-
-	pageDict, err := xRefTable.processPageTree(root, &inhPAttrs, &pageCount, page)
+	pageDict, err := xRefTable.processPageTreeForPageDict(pageRootDictIndRef, &inhPAttrs, &pageCount, page)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	return pageDict, &inhPAttrs, nil
+}
+
+func (xRefTable *XRefTable) processPageTreeForPageNumber(root *IndirectRef, pageCount *int, pageObjNr int) (int, error) {
+
+	//fmt.Printf("entering processPageTreeForPageNumber: p=%d obj#%d\n", *p, root.ObjectNumber.Value())
+
+	d, err := xRefTable.DereferenceDict(*root)
+	if err != nil {
+		return 0, err
+	}
+
+	// Iterate over page tree.
+	for _, o := range d.ArrayEntry("Kids") {
+
+		if o == nil {
+			continue
+		}
+
+		// Dereference next page node dict.
+		ir, ok := o.(IndirectRef)
+		if !ok {
+			return 0, errors.Errorf("pdfcpu: processPageTreeForPageNumber: corrupt page node dict")
+		}
+
+		objNr := ir.ObjectNumber.Value()
+
+		pageNodeDict, err := xRefTable.DereferenceDict(ir)
+		if err != nil {
+			return 0, err
+		}
+
+		switch *pageNodeDict.Type() {
+
+		case "Pages":
+			// Recurse over sub pagetree.
+			pageNr, err := xRefTable.processPageTreeForPageNumber(&ir, pageCount, pageObjNr)
+			if err != nil {
+				return 0, err
+			}
+			if pageNr > 0 {
+				return pageNr, nil
+			}
+
+		case "Page":
+			*pageCount++
+			if objNr == pageObjNr {
+				return *pageCount, nil
+			}
+		}
+
+	}
+
+	return 0, nil
+}
+
+// PageNumber returns the logical page number for a page dict object number.
+func (xRefTable *XRefTable) PageNumber(pageObjNr int) (int, error) {
+	// Get an indirect reference to the page tree root dict.
+	pageRootDict, _ := xRefTable.Pages()
+	pageCount := 0
+	return xRefTable.processPageTreeForPageNumber(pageRootDict, &pageCount, pageObjNr)
 }
 
 // EnsurePageCount evaluates the page count for xRefTable if necessary.

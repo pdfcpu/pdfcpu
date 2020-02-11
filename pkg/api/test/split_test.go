@@ -33,3 +33,14 @@ func TestSplit(t *testing.T) {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
+
+func TestSplitByBookmarkCommand(t *testing.T) {
+	msg := "TestSplitByBookmarkCommand"
+	fileName := "5116.DCT_Filter.pdf"
+	inFile := filepath.Join(inDir, fileName)
+	span := 0 // This means we are going to split by bookmarks.
+
+	if err := api.SplitFile(inFile, outDir, span, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+}

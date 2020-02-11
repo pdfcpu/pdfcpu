@@ -118,6 +118,16 @@ func TestGetPageCount(t *testing.T) {
 	}
 }
 
+func TestInfoCommand(t *testing.T) {
+	msg := "TestInfoCommand"
+	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
+
+	cmd := cli.InfoCommand(inFile, nil)
+	if _, err := cli.Process(cmd); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+}
+
 func TestUnknownCommand(t *testing.T) {
 	msg := "TestUnknownCommand"
 	conf := pdf.NewDefaultConfiguration()
@@ -146,10 +156,9 @@ func XTestSomeCommand(t *testing.T) {
 	//PDFCPULog.SetDefaultStatsLogger()
 
 	conf := pdf.NewDefaultConfiguration()
-	inFile := filepath.Join(inDir, "upc.pdf")
+	inFile := filepath.Join(inDir, "test.pdf")
 
-	//cmd := cli.ValidateCommand(inFile, conf)
-	cmd := cli.CollectCommand(inFile, "", []string{"1", "1"}, conf)
+	cmd := cli.ValidateCommand(inFile, conf)
 
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)

@@ -530,36 +530,190 @@ func spanFileName(fileName string, from, thru int) string {
 	return fn + "-" + strconv.Itoa(thru) + ".pdf"
 }
 
-func writeSpan(ctx *pdf.Context, from, thru int, outDir, fileName string) error {
+func writeSpan(ctx *pdf.Context, from, thru int, outDir, fileName string, forBookmark bool) error {
 	ctx.ResetWriteContext()
 	w := ctx.Write
 	w.SelectedPages = selectedPageRange(from, thru)
 	w.DirName = outDir
-	w.FileName = spanFileName(fileName, from, thru)
-	// TODO Use io.Writer
+	w.FileName = fileName + ".pdf"
+	if !forBookmark {
+		w.FileName = spanFileName(fileName, from, thru)
+	}
 	return pdf.Write(ctx)
 }
 
+type bookmark struct {
+	title    string
+	pageFrom int
+	pageThru int // We assume, pageThru has to be at least pageFrom and reaches until before pageFrom of the next bookmark.
+}
+
+func dereferenceDestinationArray(ctx *pdf.Context, key string) (pdf.Array, error) {
+	o, ok := ctx.Names["Dests"].Value(key)
+	if !ok {
+		return nil, errors.New("Corrupt named destination")
+	}
+	return ctx.DereferenceArray(o)
+}
+
+func bookmarksForOutlineLevel1(ctx *pdf.Context) ([]bookmark, error) {
+
+	// Load Dests nametree.
+	if err := ctx.LocateNameTree("Dests", false); err != nil {
+		return nil, err
+	}
+
+	bms := []bookmark{}
+
+	ir, err := ctx.Outlines()
+	if err != nil {
+		return nil, err
+	}
+	if ir == nil {
+		return nil, errors.New("No bookmarks available")
+	}
+
+	d, err := ctx.DereferenceDict(*ir)
+	if err != nil {
+		return nil, err
+	}
+	if d == nil {
+		return nil, errors.New("No bookmarks available")
+	}
+
+	first := d.IndirectRefEntry("First")
+	last := d.IndirectRefEntry("Last")
+
+	// We consider Bookmarks at level 1 or 2 only.
+	for *first == *last {
+		//fmt.Println("first == last")
+		if d, err = ctx.DereferenceDict(*first); err != nil {
+			return nil, err
+		}
+		first = d.IndirectRefEntry("First")
+		last = d.IndirectRefEntry("Last")
+	}
+
+	// Process linked list of outline items.
+	for ir := first; ir != nil; ir = d.IndirectRefEntry("Next") {
+
+		//objNr := ir.ObjectNumber.Value()
+		if d, err = ctx.DereferenceDict(*ir); err != nil {
+			return nil, err
+		}
+
+		title, _ := pdf.Text(d["Title"])
+		//fmt.Printf("bookmark obj:%d title:%s\n", objNr, title)
+
+		dest, found := d["Dest"]
+		if !found {
+			return nil, errors.New("No destination based bookmarks available")
+		}
+
+		var pageIndRef pdf.IndirectRef
+
+		dest, _ = ctx.Dereference(dest)
+
+		switch dest := dest.(type) {
+
+		case pdf.Name:
+			//fmt.Printf("dest is Name: %s\n", dest.Value())
+			arr, err := dereferenceDestinationArray(ctx, dest.Value())
+			if err != nil {
+				return nil, err
+			}
+			pageIndRef = arr[0].(pdf.IndirectRef)
+
+		case pdf.StringLiteral:
+			//fmt.Printf("dest is StringLiteral: %s\n", dest.Value())
+			arr, err := dereferenceDestinationArray(ctx, dest.Value())
+			if err != nil {
+				return nil, err
+			}
+			pageIndRef = arr[0].(pdf.IndirectRef)
+
+		case pdf.HexLiteral:
+			//fmt.Printf("dest is HexLiteral: %s\n", dest.Value())
+			arr, err := dereferenceDestinationArray(ctx, dest.Value())
+			if err != nil {
+				return nil, err
+			}
+			pageIndRef = arr[0].(pdf.IndirectRef)
+
+		case pdf.Array:
+			pageIndRef = dest[0].(pdf.IndirectRef)
+
+		}
+
+		pageFrom, err := ctx.PageNumber(pageIndRef.ObjectNumber.Value())
+		if err != nil {
+			return nil, err
+		}
+
+		if len(bms) > 0 {
+			if pageFrom > bms[len(bms)-1].pageFrom {
+				bms[len(bms)-1].pageThru = pageFrom - 1
+			} else {
+				bms[len(bms)-1].pageThru = bms[len(bms)-1].pageFrom
+			}
+		}
+		bms = append(bms, bookmark{title: title, pageFrom: pageFrom})
+	}
+
+	return bms, nil
+}
+
+func writePDFSequenceSplitAlongBookmarks(ctx *pdf.Context, outDir string) error {
+
+	bms, err := bookmarksForOutlineLevel1(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, bm := range bms {
+		fileName := bm.title
+		from := bm.pageFrom
+		thru := bm.pageThru
+		if thru == 0 {
+			thru = ctx.PageCount
+		}
+		forBookmark := true
+		if err := writeSpan(ctx, from, thru, outDir, fileName, forBookmark); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func writePDFSequence(ctx *pdf.Context, span int, outDir, fileName string) error {
+
+	if span == 0 {
+		return writePDFSequenceSplitAlongBookmarks(ctx, outDir)
+	}
+
+	forBookmark := false
+
 	for i := 0; i < ctx.PageCount/span; i++ {
 
 		start := i * span
 		from := start + 1
 		thru := start + span
 
-		if err := writeSpan(ctx, from, thru, outDir, fileName); err != nil {
+		if err := writeSpan(ctx, from, thru, outDir, fileName, forBookmark); err != nil {
 			return err
 		}
 
 	}
 
+	// A possible last file that has less than span pages.
 	if ctx.PageCount%span > 0 {
 
 		start := (ctx.PageCount / span) * span
 		from := start + 1
-		thru := start + ctx.PageCount%span
+		thru := ctx.PageCount
 
-		if err := writeSpan(ctx, from, thru, outDir, fileName); err != nil {
+		if err := writeSpan(ctx, from, thru, outDir, fileName, forBookmark); err != nil {
 			return err
 		}
 
@@ -569,7 +723,8 @@ func writePDFSequence(ctx *pdf.Context, span int, outDir, fileName string) error
 }
 
 // Split generates a sequence of PDF files in outDir for the PDF stream read from rs obeying given split span.
-// The default span 1 creates a sequence of single page PDFs.
+// If span == 1 splitting results in single page PDFs.
+// If span == 0 we split along given bookmarks (level 1 only).
 func Split(rs io.ReadSeeker, outDir, fileName string, span int, conf *pdf.Configuration) error {
 	if conf == nil {
 		conf = pdf.NewDefaultConfiguration()

@@ -132,18 +132,26 @@ func handleSplitCommand(conf *pdfcpu.Configuration) {
 
 	inFile := flag.Arg(0)
 	ensurePdfExtension(inFile)
+	if mode != "" && mode != "span" && mode != "s" && mode != "bookmark" && mode != "b" {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageSplit)
+		os.Exit(1)
+	}
 
-	outDir := flag.Arg(1)
+	span := 0
 
-	span := 1
-	var err error
-	if len(flag.Args()) == 3 {
-		span, err = strconv.Atoi(flag.Arg(2))
-		if err != nil || span < 1 {
-			fmt.Fprintln(os.Stderr, "split: span is a numeric value >= 1")
-			os.Exit(1)
+	if mode == "" || mode == "span" || mode == "s" {
+		span = 1
+		var err error
+		if len(flag.Args()) == 3 {
+			span, err = strconv.Atoi(flag.Arg(2))
+			if err != nil || span < 1 {
+				fmt.Fprintln(os.Stderr, "split: span is a numeric value >= 1")
+				os.Exit(1)
+			}
 		}
 	}
+
+	outDir := flag.Arg(1)
 
 	process(cli.SplitCommand(inFile, outDir, span, conf))
 }

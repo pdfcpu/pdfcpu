@@ -31,6 +31,8 @@ func validateOutlineItemDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 		return err
 	}
 
+	// fmt.Printf("Title: %s\n", *title)
+
 	// Parent, required, dict indRef
 	ir, err := validateIndRefEntry(xRefTable, d, dictName, "Parent", REQUIRED, pdf.V10)
 	if err != nil {

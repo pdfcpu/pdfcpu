@@ -126,6 +126,9 @@ func validateDestination(xRefTable *pdf.XRefTable, o pdf.Object) error {
 	case pdf.StringLiteral:
 		// no further processing.
 
+	case pdf.HexLiteral:
+		// no further processing.
+
 	case pdf.Dict:
 		err = validateDestinationDict(xRefTable, o)
 

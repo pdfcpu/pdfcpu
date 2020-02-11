@@ -686,7 +686,7 @@ func validateNameTree(xRefTable *pdf.XRefTable, name string, d pdf.Dict, root bo
 
 	//fmt.Printf("validateNameTree %s\n", name)
 
-	node := &pdf.Node{D: &d}
+	node := &pdf.Node{D: d}
 	var kmin, kmax string
 	var err error
 

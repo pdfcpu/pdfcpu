@@ -26,7 +26,7 @@ The commands are:
 	portfolio	list, add, remove, extract portfolio entries with optional description
 	properties  list, add, remove document properties
 	rotate		rotate pages
-	split		split multi-page PDF into several PDFs according to split span
+	split		split up s PDF by span or bookmark
 	stamp		add, remove, update text, image or PDF stamps for selected pages
 	trim		create trimmed version of selected pages
 	validate	validate PDF against PDF 32000-1:2008 (PDF 1.7)

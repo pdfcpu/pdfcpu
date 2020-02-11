@@ -70,16 +70,19 @@ func Read(rs io.ReadSeeker, conf *Configuration) (*Context, error) {
 	}
 
 	// Populate xRefTable.
-	err = readXRefTable(ctx)
-	if err != nil {
+	if err = readXRefTable(ctx); err != nil {
 		return nil, errors.Wrap(err, "Read: xRefTable failed")
 	}
 
 	// Make all objects explicitly available (load into memory) in corresponding xRefTable entries.
 	// Also decode any involved object streams.
-	err = dereferenceXRefTable(ctx, conf)
-	if err != nil {
+	if err = dereferenceXRefTable(ctx, conf); err != nil {
 		return nil, err
+	}
+
+	// Some PDFWriters write an incorrent Size into trailer.
+	if *ctx.XRefTable.Size < len(ctx.XRefTable.Table) {
+		*ctx.XRefTable.Size = len(ctx.XRefTable.Table)
 	}
 
 	log.Read.Println("Read: end")
@@ -659,6 +662,8 @@ func parseTrailerInfo(d Dict, xRefTable *XRefTable) error {
 		if size == nil {
 			return errors.New("pdfcpu: parseTrailerInfo: missing entry \"Size\"")
 		}
+		// Not reliable!
+		// Patched after all read in.
 		xRefTable.Size = size
 	}
 

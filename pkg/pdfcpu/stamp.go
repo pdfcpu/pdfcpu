@@ -782,6 +782,9 @@ func ttfWidths(xRefTable *XRefTable, ttf font.TTFLight) (*IndirectRef, error) {
 
 	// we have tff firstchar, lastchar !
 
+	// Basic Latin        Unicode block: U+0000 - U+007F
+	// Latin-1 Supplement Unicode block: U+0080 - U+00FF
+
 	missingW := ttf.GlyphWidths[0]
 
 	w := make([]int, 256)
