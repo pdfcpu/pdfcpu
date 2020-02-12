@@ -125,9 +125,14 @@ func RemovePages(cmd *Command) ([]string, error) {
 	return nil, api.RemovePagesFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
 }
 
-// Merge merges inFiles in the order specified and writes the result to outFile.
-func Merge(cmd *Command) ([]string, error) {
-	return nil, api.MergeFile(cmd.InFiles, *cmd.OutFile, cmd.Conf)
+// MergeCreate merges inFiles in the order specified and writes the result to outFile.
+func MergeCreate(cmd *Command) ([]string, error) {
+	return nil, api.MergeCreateFile(cmd.InFiles, *cmd.OutFile, cmd.Conf)
+}
+
+// MergeAppend merges inFiles in the order specified and writes the result to outFile.
+func MergeAppend(cmd *Command) ([]string, error) {
+	return nil, api.MergeAppendFile(cmd.InFiles, *cmd.OutFile, cmd.Conf)
 }
 
 // ExtractImages dumps embedded image resources from inFile into outDir for selected pages.

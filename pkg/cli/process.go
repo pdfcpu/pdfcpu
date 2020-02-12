@@ -50,7 +50,8 @@ var cmdMap = map[pdf.CommandMode]func(cmd *Command) ([]string, error){
 	pdf.VALIDATE:                Validate,
 	pdf.OPTIMIZE:                Optimize,
 	pdf.SPLIT:                   Split,
-	pdf.MERGE:                   Merge,
+	pdf.MERGECREATE:             MergeCreate,
+	pdf.MERGEAPPEND:             MergeAppend,
 	pdf.EXTRACTIMAGES:           ExtractImages,
 	pdf.EXTRACTFONTS:            ExtractFonts,
 	pdf.EXTRACTPAGES:            ExtractPages,
@@ -145,14 +146,29 @@ func SplitCommand(inFile, dirNameOut string, span int, conf *pdf.Configuration) 
 		Conf:   conf}
 }
 
-// MergeCommand creates a new command to merge files.
-func MergeCommand(inFiles []string, outFile string, conf *pdf.Configuration) *Command {
+// MergeCreateCommand creates a new command to merge files.
+// Outfile will be created. An existing outFile will be overwritten.
+func MergeCreateCommand(inFiles []string, outFile string, conf *pdf.Configuration) *Command {
 	if conf == nil {
 		conf = pdf.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdf.MERGE
+	conf.Cmd = pdf.MERGECREATE
 	return &Command{
-		Mode:    pdf.MERGE,
+		Mode:    pdf.MERGECREATE,
+		InFiles: inFiles,
+		OutFile: &outFile,
+		Conf:    conf}
+}
+
+// MergeAppendCommand creates a new command to merge files.
+// Any existing outFile PDF content will be preserved and serves as the beginning of the merge result.
+func MergeAppendCommand(inFiles []string, outFile string, conf *pdf.Configuration) *Command {
+	if conf == nil {
+		conf = pdf.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdf.MERGEAPPEND
+	return &Command{
+		Mode:    pdf.MERGEAPPEND,
 		InFiles: inFiles,
 		OutFile: &outFile,
 		Conf:    conf}

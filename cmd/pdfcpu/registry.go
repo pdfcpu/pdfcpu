@@ -95,14 +95,26 @@ func (m CommandMap) Handle(cmdPrefix string, command string, conf *pdfcpu.Config
 }
 
 // HelpString returns documentation for a topic.
-func (m CommandMap) HelpString(topic string) string {
+func (m CommandMap) HelpString(topic string) (string, error) {
 
-	cmd, ok := m[topic]
-	if !ok || cmd.usageShort == "" {
-		return fmt.Sprintf("Unknown help topic `%s`.  Run 'pdfcpu help'.\n", topic)
+	topicStr := ""
+
+	for k := range m {
+		if !strings.HasPrefix(k, topic) {
+			continue
+		}
+		if len(topicStr) > 0 {
+			return topic, errAmbiguousCmd
+		}
+		topicStr = k
 	}
 
-	return fmt.Sprintf("%s\n\n%s\n", cmd.usageShort, cmd.usageLong)
+	cmd, ok := m[topicStr]
+	if !ok || cmd.usageShort == "" {
+		return fmt.Sprintf("Unknown help topic `%s`.  Run 'pdfcpu help'.\n", topic), nil
+	}
+
+	return fmt.Sprintf("%s\n\n%s\n", cmd.usageShort, cmd.usageLong), nil
 }
 
 func (m CommandMap) String() string {

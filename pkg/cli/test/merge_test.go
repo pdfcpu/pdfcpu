@@ -34,7 +34,7 @@ func TestMergeCommand(t *testing.T) {
 	}
 
 	outFile := filepath.Join(outDir, "test.pdf")
-	cmd := cli.MergeCommand(inFiles, outFile, nil)
+	cmd := cli.MergeCreateCommand(inFiles, outFile, nil)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}

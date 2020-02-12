@@ -17,7 +17,7 @@ The commands are:
 	import		import/convert images to PDF
 	info		print file info
 	keywords    list, add, remove keywords
-	merge		concatenate 2 or more PDFs
+	merge		concatenate PDFs
 	nup			rearrange pages or images for reduced number of pages
 	optimize	optimize PDF by getting rid of redundant page resources
 	pages		insert, remove selected pages

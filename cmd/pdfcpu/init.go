@@ -122,7 +122,6 @@ func initCommandMap() {
 		"keywords":    {nil, keywordsCmdMap, usageKeywords, usageLongKeywords},
 		"merge":       {handleMergeCommand, nil, usageMerge, usageLongMerge},
 		"nup":         {handleNUpCommand, nil, usageNUp, usageLongNUp},
-		"n-up":        {handleNUpCommand, nil, usageNUp, usageLongNUp},
 		"optimize":    {handleOptimizeCommand, nil, usageOptimize, usageLongOptimize},
 		"pages":       {nil, pagesCmdMap, usagePages, usageLongPages},
 		"paper":       {printPaperSizes, nil, usagePaper, usageLongPaper},

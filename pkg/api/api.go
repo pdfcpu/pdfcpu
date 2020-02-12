@@ -556,29 +556,27 @@ func dereferenceDestinationArray(ctx *pdf.Context, key string) (pdf.Array, error
 	return ctx.DereferenceArray(o)
 }
 
-func bookmarksForOutlineLevel1(ctx *pdf.Context) ([]bookmark, error) {
+func positionToOutlineTreeLevel(ctx *pdf.Context) (pdf.Dict, *pdf.IndirectRef, error) {
 
 	// Load Dests nametree.
 	if err := ctx.LocateNameTree("Dests", false); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-
-	bms := []bookmark{}
 
 	ir, err := ctx.Outlines()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if ir == nil {
-		return nil, errors.New("No bookmarks available")
+		return nil, nil, errors.New("No bookmarks available")
 	}
 
 	d, err := ctx.DereferenceDict(*ir)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if d == nil {
-		return nil, errors.New("No bookmarks available")
+		return nil, nil, errors.New("No bookmarks available")
 	}
 
 	first := d.IndirectRefEntry("First")
@@ -588,11 +586,23 @@ func bookmarksForOutlineLevel1(ctx *pdf.Context) ([]bookmark, error) {
 	for *first == *last {
 		//fmt.Println("first == last")
 		if d, err = ctx.DereferenceDict(*first); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		first = d.IndirectRefEntry("First")
 		last = d.IndirectRefEntry("Last")
 	}
+
+	return d, first, nil
+}
+
+func bookmarksForOutlineLevel1(ctx *pdf.Context) ([]bookmark, error) {
+
+	d, first, err := positionToOutlineTreeLevel(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	bms := []bookmark{}
 
 	// Process linked list of outline items.
 	for ir := first; ir != nil; ir = d.IndirectRefEntry("Next") {
@@ -1593,7 +1603,7 @@ func Merge(rsc []io.ReadSeeker, w io.Writer, conf *pdf.Configuration) error {
 	if conf == nil {
 		conf = pdf.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdf.MERGE
+	conf.Cmd = pdf.MERGECREATE
 
 	ctxDest, _, _, err := readAndValidate(rsc[0], conf, time.Now())
 	if err != nil {
@@ -1623,10 +1633,10 @@ func Merge(rsc []io.ReadSeeker, w io.Writer, conf *pdf.Configuration) error {
 	return WriteContext(ctxDest, w)
 }
 
-// MergeFile merges a sequence of inFiles and writes the result to outFile.
+// MergeCreateFile merges a sequence of inFiles and writes the result to outFile.
 // This operation corresponds to file concatenation in the order specified by inFiles.
 // The first entry of inFiles serves as the destination context where all remaining files get merged into.
-func MergeFile(inFiles []string, outFile string, conf *pdf.Configuration) error {
+func MergeCreateFile(inFiles []string, outFile string, conf *pdf.Configuration) error {
 	ff := []*os.File(nil)
 	for _, f := range inFiles {
 		log.CLI.Println(f)
@@ -1654,6 +1664,72 @@ func MergeFile(inFiles []string, outFile string, conf *pdf.Configuration) error 
 
 	log.CLI.Printf("writing %s...\n", outFile)
 	return Merge(rs, f, conf)
+}
+
+// MergeAppendFile merges a sequence of inFiles and writes the result to outFile.
+// This operation corresponds to file concatenation in the order specified by inFiles.
+// If outFile already exists, inFiles will be appended.
+func MergeAppendFile(inFiles []string, outFile string, conf *pdf.Configuration) (err error) {
+	var f1, f2 *os.File
+	tmpFile := outFile
+	if fileExists(outFile) {
+		if f1, err = os.Open(outFile); err != nil {
+			return err
+		}
+		tmpFile += ".tmp"
+		log.CLI.Printf("appending to %s...\n", outFile)
+	} else {
+		log.CLI.Printf("writing %s...\n", outFile)
+	}
+
+	if f2, err = os.Create(tmpFile); err != nil {
+		return err
+	}
+
+	ff := []*os.File(nil)
+	if f1 != nil {
+		ff = append(ff, f1)
+	}
+	for _, f := range inFiles {
+		log.CLI.Println(f)
+		f, err := os.Open(f)
+		if err != nil {
+			return err
+		}
+		ff = append(ff, f)
+	}
+
+	defer func() {
+		if err != nil {
+			f2.Close()
+			if f1 != nil {
+				f1.Close()
+				os.Remove(tmpFile)
+			}
+			for _, f := range ff {
+				f.Close()
+			}
+			return
+		}
+		if err = f2.Close(); err != nil {
+			return
+		}
+		if f1 != nil {
+			if err = f1.Close(); err != nil {
+				return
+			}
+			if err = os.Rename(tmpFile, outFile); err != nil {
+				return
+			}
+		}
+	}()
+
+	rss := make([]io.ReadSeeker, len(ff))
+	for i, f := range ff {
+		rss[i] = f
+	}
+
+	return Merge(rss, f2, conf)
 }
 
 // Info returns information about rs.

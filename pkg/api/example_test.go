@@ -66,6 +66,9 @@ func ExampleSplitFile() {
 
 	// Create dual page PDFs for in.pdf in outDir using the default configuration.
 	SplitFile("in.pdf", "outDir", 2, nil)
+
+	// Create a sequence of PDFs representing bookmark secions.
+	SplitFile("in.pdf", "outDir", 0, nil)
 }
 
 func ExampleRotateFile() {
@@ -78,11 +81,20 @@ func ExampleRotateFile() {
 	RotateFile("in.pdf", "", 180, []string{"1"}, nil)
 }
 
-func ExampleMergeFile() {
+func ExampleMergeCreateFile() {
 
 	// Merge inFiles by concatenation in the order specified and write the result to out.pdf.
+	// out.pdf will be overwritten.
 	inFiles := []string{"in1.pdf", "in2.pdf"}
-	MergeFile(inFiles, "out.pdf", nil)
+	MergeCreateFile(inFiles, "out.pdf", nil)
+}
+
+func ExampleMergeAppendFile() {
+
+	// Merge inFiles by concatenation in the order specified and write the result to out.pdf.
+	// If out.pdf already exists it will be preserved and serves as the beginning of the merge result.
+	inFiles := []string{"in1.pdf", "in2.pdf"}
+	MergeAppendFile(inFiles, "out.pdf", nil)
 }
 
 func ExampleInsertPagesFile() {

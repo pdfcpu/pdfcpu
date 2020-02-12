@@ -111,6 +111,29 @@ func writeCoreFontMetrics(w *bytes.Buffer) {
 	w.WriteString("}")
 }
 
+func writeFontBBox(w *bytes.Buffer, ss []string) {
+	if len(ss) != 5 {
+		panic("corrupt .afm file!")
+	}
+	f1, err := strconv.ParseFloat(ss[1], 64)
+	if err != nil {
+		log.Fatal(err)
+	}
+	f2, err := strconv.ParseFloat(ss[2], 64)
+	if err != nil {
+		log.Fatal(err)
+	}
+	f3, err := strconv.ParseFloat(ss[3], 64)
+	if err != nil {
+		log.Fatal(err)
+	}
+	f4, err := strconv.ParseFloat(ss[4], 64)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Fprintf(w, "types.NewRectangle(%.1f, %.1f, %.1f, %.1f),\n", f1, f2, f3, f4)
+}
+
 func writeFontMetrics(w *bytes.Buffer, dir, fileName string) {
 	fmt.Fprintf(w, "\"%s\": {\n", fileName[:len(fileName)-4])
 	f, err := os.Open(filepath.Join(dir, fileName))
@@ -126,26 +149,7 @@ func writeFontMetrics(w *bytes.Buffer, dir, fileName string) {
 		if isHeader {
 			switch ss[0] {
 			case "FontBBox":
-				if len(ss) != 5 {
-					panic("corrupt .afm file!")
-				}
-				f1, err := strconv.ParseFloat(ss[1], 64)
-				if err != nil {
-					log.Fatal(err)
-				}
-				f2, err := strconv.ParseFloat(ss[2], 64)
-				if err != nil {
-					log.Fatal(err)
-				}
-				f3, err := strconv.ParseFloat(ss[3], 64)
-				if err != nil {
-					log.Fatal(err)
-				}
-				f4, err := strconv.ParseFloat(ss[4], 64)
-				if err != nil {
-					log.Fatal(err)
-				}
-				fmt.Fprintf(w, "types.NewRectangle(%.1f, %.1f, %.1f, %.1f),\n", f1, f2, f3, f4)
+				writeFontBBox(w, ss)
 				headerDigested = true
 			case "StartCharMetrics":
 				if !headerDigested {

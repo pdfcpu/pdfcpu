@@ -23,8 +23,8 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 )
 
-func TestMerge(t *testing.T) {
-	msg := "TestMerge"
+func TestMergeCreate(t *testing.T) {
+	msg := "TestMergeCreate"
 	inFiles := []string{
 		filepath.Join(inDir, "Acroforms2.pdf"),
 		filepath.Join(inDir, "adobe_errata.pdf"),
@@ -32,7 +32,23 @@ func TestMerge(t *testing.T) {
 	outFile := filepath.Join(outDir, "test.pdf")
 
 	// Merge inFiles by concatenation in the order specified and write the result to outFile.
-	if err := api.MergeFile(inFiles, outFile, nil); err != nil {
+	// outFile will be overwritten.
+	if err := api.MergeCreateFile(inFiles, outFile, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+}
+
+func TestMergeAppend(t *testing.T) {
+	msg := "TestMergeAppend"
+	inFiles := []string{
+		filepath.Join(inDir, "Acroforms2.pdf"),
+		filepath.Join(inDir, "adobe_errata.pdf"),
+	}
+	outFile := filepath.Join(outDir, "test.pdf")
+
+	// Merge inFiles by concatenation in the order specified and write the result to outFile.
+	// If outFile already exists its content will be preserved and serves as the beginning of the merge result.
+	if err := api.MergeAppendFile(inFiles, outFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }

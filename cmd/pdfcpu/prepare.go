@@ -53,7 +53,11 @@ func printHelp(conf *pdfcpu.Configuration) {
 		fmt.Fprintln(os.Stderr, usage)
 
 	case 1:
-		fmt.Fprintln(os.Stderr, cmdMap.HelpString(flag.Arg(0)))
+		s, err := cmdMap.HelpString(flag.Arg(0))
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		}
+		fmt.Fprintln(os.Stderr, s)
 
 	default:
 		fmt.Fprintln(os.Stderr, "usage: pdfcpu help command\n\nToo many arguments.")
@@ -125,21 +129,22 @@ func handleOptimizeCommand(conf *pdfcpu.Configuration) {
 }
 
 func handleSplitCommand(conf *pdfcpu.Configuration) {
-	if len(flag.Args()) < 2 || len(flag.Args()) > 3 || selectedPages != "" {
+
+	if mode == "" {
+		mode = "span"
+	}
+	mode = extractModeCompletion(mode, []string{"span", "bookmark"})
+	if mode == "" || len(flag.Args()) < 2 || len(flag.Args()) > 3 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageSplit)
 		os.Exit(1)
 	}
 
 	inFile := flag.Arg(0)
 	ensurePdfExtension(inFile)
-	if mode != "" && mode != "span" && mode != "s" && mode != "bookmark" && mode != "b" {
-		fmt.Fprintf(os.Stderr, "%s\n\n", usageSplit)
-		os.Exit(1)
-	}
 
 	span := 0
 
-	if mode == "" || mode == "span" || mode == "s" {
+	if mode == "span" {
 		span = 1
 		var err error
 		if len(flag.Args()) == 3 {
@@ -157,7 +162,17 @@ func handleSplitCommand(conf *pdfcpu.Configuration) {
 }
 
 func handleMergeCommand(conf *pdfcpu.Configuration) {
-	if len(flag.Args()) < 3 || selectedPages != "" {
+
+	if mode == "" {
+		mode = "create"
+	}
+	mode = extractModeCompletion(mode, []string{"create", "append"})
+	if mode == "" {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageMerge)
+		os.Exit(1)
+	}
+
+	if len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageMerge)
 		os.Exit(1)
 	}
@@ -173,12 +188,23 @@ func handleMergeCommand(conf *pdfcpu.Configuration) {
 		filesIn = append(filesIn, arg)
 	}
 
-	process(cli.MergeCommand(filesIn, outFile, conf))
+	var cmd *cli.Command
+
+	switch mode {
+
+	case "create":
+		cmd = cli.MergeCreateCommand(filesIn, outFile, conf)
+
+	case "append":
+		cmd = cli.MergeAppendCommand(filesIn, outFile, conf)
+	}
+
+	process(cmd)
 }
 
-func extractModeCompletion(modePrefix string) string {
+func extractModeCompletion(modePrefix string, modes []string) string {
 	var modeStr string
-	for _, mode := range []string{"image", "font", "page", "content", "meta"} {
+	for _, mode := range modes {
 		if !strings.HasPrefix(mode, modePrefix) {
 			continue
 		}
@@ -191,7 +217,7 @@ func extractModeCompletion(modePrefix string) string {
 }
 
 func handleExtractCommand(conf *pdfcpu.Configuration) {
-	mode = extractModeCompletion(mode)
+	mode = extractModeCompletion(mode, []string{"image", "font", "page", "content", "meta"})
 	if len(flag.Args()) != 2 || mode == "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageExtract)
 		os.Exit(1)

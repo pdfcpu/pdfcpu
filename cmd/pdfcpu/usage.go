@@ -37,7 +37,7 @@ The commands are:
    import      import/convert images to PDF
    info        print file info
    keywords    list, add, remove keywords
-   merge       concatenate 2 or more PDFs
+   merge       concatenate PDFs
    nup         rearrange pages or images for reduced number of pages
    optimize    optimize PDF by getting rid of redundant page resources
    pages       insert, remove selected pages
@@ -98,16 +98,33 @@ verbose, v ... turn on logging
        opw ... owner password
     inFile ... input pdf file
     outDir ... output directory
-      span ... split span in pages (default: 1) for mode "span"`
+      span ... split span in pages (default: 1) for mode "span"
+      
+The split modes are:
 
-	usageMerge     = "usage: pdfcpu merge [-v(erbose)|vv] [-q(uiet)] outFile inFile..."
+      span     ... Split into PDF files with span pages each (default).
+                   span itself defaults to 1 resulting in single page PDF files.
+  
+      bookmark ... Split into PDF files representing sections defined by existing bookmarks.
+                   span will be ignored.
+                   Assumption: inFile contains an outline dictionary.`
+
+	usageMerge     = "usage: pdfcpu merge [-v(erbose)|vv] [-q(uiet)] [-mode create|append] outFile inFile..."
 	usageLongMerge = `Concatenate a sequence of PDFs/inFiles into outFile.
-
+   
 verbose, v ... turn on logging
         vv ... verbose logging
   quiet, q ... disable output
+      mode ... merge mode (defaults to create)
    outFile ... output pdf file
-    inFile ... a list of at least 2 pdf files subject to concatenation.`
+    inFile ... a list of pdf files subject to concatenation.
+    
+The merge modes are:
+
+    create ... outFile will be created and possibly overwritten (default).
+
+    append ... if outFile does not exist, it will be created (like in default mode).
+               if outFile already exists, inFiles will be appended to outFile.`
 
 	usagePageSelection = `'-pages' selects pages for processing and is a comma separated list of expressions:
 

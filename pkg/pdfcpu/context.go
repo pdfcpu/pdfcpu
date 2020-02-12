@@ -59,8 +59,22 @@ func NewContext(rs io.ReadSeeker, conf *Configuration) (*Context, error) {
 
 // ResetWriteContext prepares an existing WriteContext for a new file to be written.
 func (ctx *Context) ResetWriteContext() {
-
 	ctx.Write = NewWriteContext(ctx.Write.Eol)
+}
+
+func (rCtx *ReadContext) logReadContext(logStr []string) {
+	if rCtx.UsingObjectStreams {
+		logStr = append(logStr, "using object streams\n")
+	}
+	if rCtx.UsingXRefStreams {
+		logStr = append(logStr, "using xref streams\n")
+	}
+	if rCtx.Linearized {
+		logStr = append(logStr, "is linearized file\n")
+	}
+	if rCtx.Hybrid {
+		logStr = append(logStr, "is hybrid reference file\n")
+	}
 }
 
 func (ctx *Context) String() string {
@@ -76,21 +90,7 @@ func (ctx *Context) String() string {
 
 	logStr = append(logStr, fmt.Sprintf("has %d pages\n", ctx.PageCount))
 
-	if ctx.Read.UsingObjectStreams {
-		logStr = append(logStr, "using object streams\n")
-	}
-
-	if ctx.Read.UsingXRefStreams {
-		logStr = append(logStr, "using xref streams\n")
-	}
-
-	if ctx.Read.Linearized {
-		logStr = append(logStr, "is linearized file\n")
-	}
-
-	if ctx.Read.Hybrid {
-		logStr = append(logStr, "is hybrid reference file\n")
-	}
+	ctx.Read.logReadContext(logStr)
 
 	if ctx.Tagged {
 		logStr = append(logStr, "is tagged file\n")
@@ -144,10 +144,8 @@ func (ctx *Context) String() string {
 	}
 
 	logStr = append(logStr, fmt.Sprintf("\nTotal pages: %d\n", ctx.PageCount))
-
 	logStr = ctx.Optimize.collectFontInfo(logStr)
 	logStr = ctx.Optimize.collectImageInfo(logStr)
-
 	logStr = append(logStr, "\n")
 
 	return strings.Join(logStr, "")

@@ -48,7 +48,8 @@ const (
 	VALIDATE CommandMode = iota
 	OPTIMIZE
 	SPLIT
-	MERGE
+	MERGECREATE
+	MERGEAPPEND
 	EXTRACTIMAGES
 	EXTRACTFONTS
 	EXTRACTPAGES
@@ -197,7 +198,7 @@ func (c *Configuration) ValidationModeString() string {
 // ApplyReducedFeatureSet returns true if complex entries like annotations shall not be written.
 func (c *Configuration) ApplyReducedFeatureSet() bool {
 	switch c.Cmd {
-	case SPLIT, TRIM, EXTRACTPAGES, MERGE, IMPORTIMAGES:
+	case SPLIT, TRIM, EXTRACTPAGES, MERGECREATE, MERGEAPPEND, IMPORTIMAGES:
 		return true
 	}
 	return false

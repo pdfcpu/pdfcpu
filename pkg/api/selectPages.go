@@ -360,6 +360,8 @@ func selectedPages(pageCount int, pageSelection []string) (pdf.IntSet, error) {
 	return selectedPages, nil
 }
 
+// PagesForPageSelection ensures a set of page numbers for an ascending page sequence
+// where each page number may appear only once.
 func PagesForPageSelection(pageCount int, pageSelection []string, ensureAllforNone bool) (pdf.IntSet, error) {
 	if pageSelection != nil && len(pageSelection) > 0 {
 		return selectedPages(pageCount, pageSelection)
@@ -567,6 +569,8 @@ func parsePageRangeForCollection(pr []string, pageCount int, negated bool, cp *[
 	return nil
 }
 
+// PagesForPageCollection ensures a set of page numbers for generating a page sequence
+// consisting of any page number in any order any number of times.
 func PagesForPageCollection(pageCount int, pageSelection []string) ([]int, error) {
 	collectedPages := []int{}
 	for _, v := range pageSelection {
