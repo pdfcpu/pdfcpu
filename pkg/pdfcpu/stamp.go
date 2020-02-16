@@ -135,11 +135,11 @@ func (m matrix) String() string {
 
 // SimpleColor is a simple rgb wrapper.
 type SimpleColor struct {
-	r, g, b float32 // intensities between 0 and 1.
+	R, G, B float32 // intensities between 0 and 1.
 }
 
 func (sc SimpleColor) String() string {
-	return fmt.Sprintf("r=%1.1f g=%1.1f b=%1.1f", sc.r, sc.g, sc.b)
+	return fmt.Sprintf("r=%1.1f g=%1.1f b=%1.1f", sc.R, sc.G, sc.B)
 }
 
 type formCache map[types.Rectangle]*IndirectRef
@@ -429,7 +429,7 @@ func parseColor(s string, wm *Watermark) error {
 	if r < 0 || r > 1 {
 		return errors.New("pdfcpu: red: a color value is an intensity between 0.0 and 1.0")
 	}
-	wm.Color.r = float32(r)
+	wm.Color.R = float32(r)
 
 	g, err := strconv.ParseFloat(cs[1], 32)
 	if err != nil {
@@ -438,7 +438,7 @@ func parseColor(s string, wm *Watermark) error {
 	if g < 0 || g > 1 {
 		return errors.New("pdfcpu: green: a color value is an intensity between 0.0 and 1.0")
 	}
-	wm.Color.g = float32(g)
+	wm.Color.G = float32(g)
 
 	b, err := strconv.ParseFloat(cs[2], 32)
 	if err != nil {
@@ -447,7 +447,7 @@ func parseColor(s string, wm *Watermark) error {
 	if b < 0 || b > 1 {
 		return errors.New("pdfcpu: blue: a color value is an intensity between 0.0 and 1.0")
 	}
-	wm.Color.b = float32(b)
+	wm.Color.B = float32(b)
 
 	return nil
 }
@@ -1428,7 +1428,7 @@ func textFormContent(w io.Writer, pageNr int, wm *Watermark) {
 		dx := wm.bb.Width()/2 - sw/2
 
 		fmt.Fprintf(w, "BT /%s %d Tf %f %f %f rg %f %f Td (%s) Tj ET ",
-			wm.FontName, wm.ScaledFontSize, wm.Color.r, wm.Color.g, wm.Color.b, dx, dy+float64(j*wm.ScaledFontSize), wm.TextLines[i])
+			wm.FontName, wm.ScaledFontSize, wm.Color.R, wm.Color.G, wm.Color.B, dx, dy+float64(j*wm.ScaledFontSize), wm.TextLines[i])
 		j++
 	}
 }
