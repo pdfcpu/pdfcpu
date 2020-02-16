@@ -232,6 +232,10 @@ func validatePageEntryRotate(xRefTable *pdf.XRefTable, d pdf.Dict, required bool
 
 func validatePageEntryGroup(xRefTable *pdf.XRefTable, d pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		sinceVersion = pdf.V13
+	}
+
 	d1, err := validateDictEntry(xRefTable, d, "pageDict", "Group", required, sinceVersion, nil)
 	if err != nil {
 		return err

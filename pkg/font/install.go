@@ -551,7 +551,7 @@ func InstallTrueTypeFont(fontDir, fontName string) error {
 	fn = strings.TrimSuffix(fn, filepath.Ext(fn))
 	gobName := filepath.Join(fontDir, fn+".gob")
 
-	// Write gob.
+	// Write the populated ttf struct as gob.
 	//fmt.Printf("Write %s:\n", fd)
 	if err := writeGob(gobName, fd); err != nil {
 		return err
