@@ -317,23 +317,46 @@ verbose, v ... turn on logging
 
 <description> is a comma separated configuration string containing these optional entries:
 	
-   (defaults: 'font:Helvetica, points:24, pos:c, off:0,0 s:0.5 rel, c:0.5 0.5 0.5, rot:0, d:1, op:1, m:0')
+   (defaults: 'font:Helvetica, points:24, pos:c, off:0,0 s:0.5 rel, rot:0, d:1, op:1, m:0 and for all colors: 0.5 0.5 0.5')
 
-   fontname:    Please refer to pdfcpu fonts list
-   points:      fontsize in points, in combination with absolute scaling only.
-   position:    one of the anchors: tl,tc,tr, l,c,r, bl,bc,br
-                Reliable with non rotated pages only!
-   offset:      (dx dy) in user units eg. '15 20'
-   scalefactor: 0.0 <= x <= 1.0 followed by optional 'abs|rel' or 'a|r'.
-   color:       3 fill color intensities, where 0.0 < i < 1.0, eg 1.0, 0.0 0.0 = red (default:0.5 0.5 0.5 = gray)
-   rotation:    -180.0 <= x <= 180.0
-   diagonal:    render along diagonal, 1..lower left to upper right, 2..upper left to lower right (if present overrules r!)
-                Only one of rotation and diagonal is allowed!
-   opacity:     where 0.0 <= x <= 1.0
-   mode, rendermode: 0 ... fill
-                     1 ... stroke
-                     2 ... fill & stroke
+   fontname:         Please refer to "pdfcpu fonts list"
+   points:           fontsize in points, in combination with absolute scaling only.
+   position:         one of the anchors: tl,tc,tr, l,c,r, bl,bc,br
+                     Reliable with non rotated pages only!
+   offset:           (dx dy) in user units eg. '15 20'
+   scalefactor:      0.0 < i <= 1.0 {r|rel} | 0.0 < i {a|abs}
+   aligntext:        l..left, c..center, r..right, j..justified (for text watermarks only)
+   fillcolor:        color value to be used when rendering text, see also rendermode
+                     for backwards compatibility "color" is also accepted.
+   strokecolor:      color value to be used when rendering text, see also rendermode
+   backgroundcolor:  color value for visualization of the bounding box background
+                     "bgcolor" is also accepted. 
+   rotation:         -180.0 <= x <= 180.0
+   diagonal:         render along diagonal, 1..lower left to upper right, 2..upper left to lower right (if present overrules r!)
+                     Only one of rotation and diagonal is allowed!
+   opacity:          where 0.0 <= x <= 1.0
 
+   mode, rendermode: 0 ... fill (applies fill color)
+                     1 ... stroke (applies stroke color)
+                     2 ... fill & stroke (applies both fill and stroke colors)
+
+   margins:          Set bounding box margins (requires background color) i >= 0
+                     i       ... set all four margins
+                     i j     ... set top/bottom margins to i
+                                 set left/right margins to j
+                     i j k   ... set top margin to i
+                                 set left/right margins to j
+                                 set bottom margins to k
+                     i j k l ... set top, right, bottom, left margins
+
+   border:           Set bounding box border (requires background color)
+                     i {color} {round}
+                     i     ... border width > 0
+                     color ... border color
+                     round ... set round bounding box corners
+
+A color value: 3 color intensities, where 0.0 < i < 1.0, eg 1.0, 
+               or the hex RGB value: #RRGGBB, eg #FF0000 = red
 
 All configuration string parameters support completion.
 
@@ -363,7 +386,8 @@ e.g. 'pos:bl, off: 20 5'   'rot:45'                 'op:0.5, s:0.5 abs, rot:0'
        mode ... text, image, pdf
      string ... display string for text based watermarks
        file ... image or pdf file
-description ... fontname, points, position, offset, scalefactor, color, rotation, diagonal, opacity, rendermode
+description ... fontname, points, position, offset, scalefactor, aligntext, rotation, 
+                diagonal, opacity, rendermode, strokecolor, fillcolor, bgcolor, margins, border
      inFile ... input pdf file
     outFile ... output pdf file
 
@@ -388,7 +412,8 @@ description ... fontname, points, position, offset, scalefactor, color, rotation
        mode ... text, image, pdf
      string ... display string for text based watermarks
        file ... image or pdf file
-description ... fontname, points, position, offset, scalefactor, color, rotation, diagonal, opacity, rendermode
+description ... fontname, points, position, offset, scalefactor, aligntext, rotation, 
+                diagonal, opacity, rendermode, strokecolor, fillcolor, bgcolor, margins, border
      inFile ... input pdf file
     outFile ... output pdf file
 

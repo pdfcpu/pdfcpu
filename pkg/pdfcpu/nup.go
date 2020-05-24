@@ -511,8 +511,11 @@ func createNUpForm(xRefTable *XRefTable, imgIndRef *IndirectRef, w, h, i int) (*
 				"Resources": *ir,
 			},
 		),
-		Content: b.Bytes(),
+		Content:        b.Bytes(),
+		FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: nil}},
 	}
+
+	sd.InsertName("Filter", filter.Flate)
 
 	if err = encodeStream(&sd); err != nil {
 		return nil, err
@@ -533,8 +536,11 @@ func createNUpFormForPDFResource(xRefTable *XRefTable, resDict *IndirectRef, con
 				"Resources": *resDict,
 			},
 		),
-		Content: content,
+		Content:        content,
+		FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: nil}},
 	}
+
+	sd.InsertName("Filter", filter.Flate)
 
 	if err := encodeStream(&sd); err != nil {
 		return nil, err
@@ -578,20 +584,14 @@ func NewNUpPageForImage(xRefTable *XRefTable, fileName string, parentIndRef *Ind
 		return nil, err
 	}
 
-	// create content stream for Im0.
-	contents := &StreamDict{Dict: NewDict()}
-	contents.InsertName("Filter", filter.Flate)
-	contents.FilterPipeline = []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}
-
 	var buf bytes.Buffer
 	nUpImagePDFBytes(&buf, w, h, nup, formResID)
-	contents.Content = buf.Bytes()
-
-	if err = encodeStream(contents); err != nil {
+	sd, _ := xRefTable.NewStreamDictForBuf(buf.Bytes())
+	if err = encodeStream(sd); err != nil {
 		return nil, err
 	}
 
-	contentsIndRef, err := xRefTable.IndRefForNewObject(*contents)
+	contentsIndRef, err := xRefTable.IndRefForNewObject(*sd)
 	if err != nil {
 		return nil, err
 	}
@@ -645,16 +645,12 @@ func wrapUpPage(ctx *Context, nup *NUp, d Dict, buf bytes.Buffer, pagesDict Dict
 		return err
 	}
 
-	contents := &StreamDict{Dict: NewDict()}
-	contents.InsertName("Filter", filter.Flate)
-	contents.FilterPipeline = []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}
-	contents.Content = buf.Bytes()
-
-	if err = encodeStream(contents); err != nil {
+	sd, _ := xRefTable.NewStreamDictForBuf(buf.Bytes())
+	if err = encodeStream(sd); err != nil {
 		return err
 	}
 
-	contentsIndRef, err := xRefTable.IndRefForNewObject(*contents)
+	contentsIndRef, err := xRefTable.IndRefForNewObject(*sd)
 	if err != nil {
 		return err
 	}

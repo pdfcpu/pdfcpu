@@ -23,7 +23,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/types"
 	"github.com/pkg/errors"
 )
@@ -439,11 +438,6 @@ func NewPageForImage(xRefTable *XRefTable, r io.Reader, parentIndRef *IndirectRe
 		return nil, err
 	}
 
-	// create content stream for Im0.
-	contents := &StreamDict{Dict: NewDict()}
-	contents.InsertName("Filter", filter.Flate)
-	contents.FilterPipeline = []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}
-
 	dim := &Dim{float64(w), float64(h)}
 	if imp.Pos != Full {
 		dim = imp.PageDim
@@ -453,14 +447,12 @@ func NewPageForImage(xRefTable *XRefTable, r io.Reader, parentIndRef *IndirectRe
 
 	var buf bytes.Buffer
 	importImagePDFBytes(&buf, dim, float64(w), float64(h), imp)
-	contents.Content = buf.Bytes()
-
-	err = encodeStream(contents)
-	if err != nil {
+	sd, _ := xRefTable.NewStreamDictForBuf(buf.Bytes())
+	if err = encodeStream(sd); err != nil {
 		return nil, err
 	}
 
-	contentsIndRef, err := xRefTable.IndRefForNewObject(*contents)
+	contentsIndRef, err := xRefTable.IndRefForNewObject(*sd)
 	if err != nil {
 		return nil, err
 	}

@@ -18,6 +18,7 @@ package pdfcpu
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"image"
 	"io"
@@ -27,6 +28,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"unicode/utf16"
 
 	"github.com/pdfcpu/pdfcpu/internal/corefont/metrics"
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
@@ -46,7 +48,7 @@ const (
 
 // Watermark mode
 const (
-	WMText int = iota
+	WMText = iota
 	WMImage
 	WMPDF
 )
@@ -58,9 +60,12 @@ const (
 	DiagonalULToLR
 )
 
+// RenderMode represents the text rendering mode (see 9.3.6)
+type RenderMode int
+
 // Render mode
 const (
-	RMFill = iota
+	RMFill RenderMode = iota
 	RMStroke
 	RMFillAndStroke
 )
@@ -97,17 +102,24 @@ func (m watermarkParamMap) Handle(paramPrefix, paramValueStr string, imp *Waterm
 }
 
 var wmParamMap = watermarkParamMap{
-	"fontname":    parseFontName,
-	"points":      parseFontSize,
-	"color":       parseColor,
-	"rotation":    parseRotation,
-	"diagonal":    parseDiagonal,
-	"opacity":     parseOpacity,
-	"mode":        parseRenderMode,
-	"rendermode":  parseRenderMode,
-	"position":    parsePositionAnchorWM,
-	"offset":      parsePositionOffsetWM,
-	"scalefactor": parseScaleFactorWM,
+	"aligntext":       parseTextHorAlignment,
+	"backgroundcolor": parseBackgroundColor,
+	"bgcolor":         parseBackgroundColor,
+	"border":          parseBorder,
+	"color":           parseFillColor,
+	"diagonal":        parseDiagonal,
+	"fillcolor":       parseFillColor,
+	"fontname":        parseFontName,
+	"margins":         parseMargins,
+	"mode":            parseRenderMode,
+	"offset":          parsePositionOffsetWM,
+	"opacity":         parseOpacity,
+	"points":          parseFontSize,
+	"position":        parsePositionAnchorWM,
+	"rendermode":      parseRenderMode,
+	"rotation":        parseRotation,
+	"scalefactor":     parseScaleFactorWM,
+	"strokecolor":     parseStrokeColor,
 }
 
 type matrix [3][3]float64
@@ -142,6 +154,22 @@ func (sc SimpleColor) String() string {
 	return fmt.Sprintf("r=%1.1f g=%1.1f b=%1.1f", sc.R, sc.G, sc.B)
 }
 
+// NewSimpleColor returns a SimpleColor for rgb in the form 0x00RRGGBB
+func NewSimpleColor(rgb uint32) SimpleColor {
+	r := float32((rgb>>16)&0xFF) / 255
+	g := float32((rgb>>8)&0xFF) / 255
+	b := float32(rgb&0xFF) / 255
+	return SimpleColor{r, g, b}
+}
+
+// Some popular colors.
+var (
+	Black     = SimpleColor{}
+	White     = SimpleColor{R: 1, G: 1, B: 1}
+	Gray      = SimpleColor{.5, .5, .5}
+	LightGray = SimpleColor{.9, .9, .9}
+)
+
 type formCache map[types.Rectangle]*IndirectRef
 
 type pdfResources struct {
@@ -155,39 +183,48 @@ type pdfResources struct {
 type Watermark struct {
 
 	// configuration
-	Mode              int         // WMText, WMImage or WMPDF
-	TextString        string      // raw display text.
-	TextLines         []string    // display multiple lines of text.
-	FileName          string      // display pdf page or png image.
-	Page              int         // the page number of a PDF file. 0 means multistamp/multiwatermark.
-	OnTop             bool        // if true this is a STAMP else this is a WATERMARK.
-	Pos               anchor      // position anchor, one of tl,tc,tr,l,c,r,bl,bc,br.
-	Dx, Dy            int         // anchor offset.
-	FontName          string      // supported are Adobe base fonts only. (as of now: Helvetica, Times-Roman, Courier)
-	FontSize          int         // font scaling factor.
-	ScaledFontSize    int         // font scaling factor for a specific page
-	Color             SimpleColor // fill color(=non stroking color).
-	Rotation          float64     // rotation to apply in degrees. -180 <= x <= 180
-	Diagonal          int         // paint along the diagonal.
-	UserRotOrDiagonal bool        // true if one of rotation or diagonal provided overriding the default.
-	Opacity           float64     // opacity the displayed text. 0 <= x <= 1
-	RenderMode        int         // fill=0, stroke=1 fill&stroke=2
-	Scale             float64     // relative scale factor. 0 <= x <= 1
-	ScaleAbs          bool        // true for absolute scaling.
-	Update            bool        // true for updating instead of adding a page watermark.
+	Mode              int           // WMText, WMImage or WMPDF
+	TextString        string        // raw display text.
+	TextLines         []string      // display multiple lines of text.
+	FileName          string        // display pdf page or png image.
+	Page              int           // the page number of a PDF file. 0 means multistamp/multiwatermark.
+	OnTop             bool          // if true this is a STAMP else this is a WATERMARK.
+	Pos               anchor        // position anchor, one of tl,tc,tr,l,c,r,bl,bc,br.
+	Dx, Dy            int           // anchor offset.
+	HAlign            *HAlignment   // horizonal alignment for text watermarks.
+	FontName          string        // supported are Adobe base fonts only. (as of now: Helvetica, Times-Roman, Courier)
+	FontSize          int           // font scaling factor.
+	ScaledFontSize    int           // font scaling factor for a specific page
+	Color             SimpleColor   // text fill color(=non stroking color) for backwards compatibility.
+	FillColor         SimpleColor   // text fill color(=non stroking color).
+	StrokeColor       SimpleColor   // text stroking color
+	BgColor           *SimpleColor  // text bounding box background color
+	MLeft, MRight     int           // left and right bounding box margin
+	MTop, MBot        int           // top and bottom bounding box margin
+	BorderWidth       int           // Border width, visible if BgColor is set.
+	BorderStyle       LineJoinStyle // Border style (bounding box corner style), visible if BgColor is set.
+	BorderColor       *SimpleColor  // border color
+	Rotation          float64       // rotation to apply in degrees. -180 <= x <= 180
+	Diagonal          int           // paint along the diagonal.
+	UserRotOrDiagonal bool          // true if one of rotation or diagonal provided overriding the default.
+	Opacity           float64       // opacity the watermark. 0 <= x <= 1
+	RenderMode        RenderMode    // fill=0, stroke=1 fill&stroke=2
+	Scale             float64       // relative scale factor: 0 <= x <= 1, absolute scale factor: 0 <= x
+	ScaleAbs          bool          // true for absolute scaling.
+	Update            bool          // true for updating instead of adding a page watermark.
 
 	// resources
 	ocg, extGState, font, image *IndirectRef
 
-	// for an image or PDF watermark
+	// image or PDF watermark
 	width, height int // image or page dimensions.
 
-	// for a PDF watermark
+	// PDF watermark
 	pdfRes map[int]pdfResources
 
 	// page specific
 	bb      *Rectangle   // bounding box of the form representing this watermark.
-	vp      *Rectangle   // page dimensions for text alignment.
+	vp      *Rectangle   // page dimensions.
 	pageRot float64      // page rotation in effect.
 	form    *IndirectRef // Forms are dependent on given page dimensions.
 
@@ -199,20 +236,22 @@ type Watermark struct {
 // DefaultWatermarkConfig returns the default configuration.
 func DefaultWatermarkConfig() *Watermark {
 	return &Watermark{
-		Page:       0,
-		FontName:   "Helvetica",
-		FontSize:   24,
-		Pos:        Center,
-		Scale:      0.5,
-		ScaleAbs:   false,
-		Color:      SimpleColor{0.5, 0.5, 0.5}, // gray
-		Diagonal:   DiagonalLLToUR,
-		Opacity:    1.0,
-		RenderMode: RMFill,
-		pdfRes:     map[int]pdfResources{},
-		objs:       IntSet{},
-		fCache:     formCache{},
-		TextLines:  []string{},
+		Page:        0,
+		FontName:    "Helvetica",
+		FontSize:    24,
+		Pos:         Center,
+		Scale:       0.5,
+		ScaleAbs:    false,
+		Color:       Gray,
+		StrokeColor: Gray,
+		FillColor:   Gray,
+		Diagonal:    DiagonalLLToUR,
+		Opacity:     1.0,
+		RenderMode:  RMFill,
+		pdfRes:      map[int]pdfResources{},
+		objs:        IntSet{},
+		fCache:      formCache{},
+		TextLines:   []string{},
 	}
 }
 
@@ -307,6 +346,45 @@ func (wm Watermark) calcMaxTextWidth() float64 {
 	return maxWidth
 }
 
+func (wm Watermark) textDescriptor() TextDescriptor {
+	td := TextDescriptor{
+		Text:           wm.TextString,
+		FontName:       wm.FontName,
+		FontSize:       wm.FontSize,
+		Scale:          wm.Scale,
+		ScaleAbs:       wm.ScaleAbs,
+		RMode:          wm.RenderMode,
+		StrokeCol:      wm.StrokeColor,
+		FillCol:        wm.FillColor,
+		ShowBackground: true,
+	}
+	if wm.BgColor != nil {
+		td.ShowTextBB = true
+		td.BackgroundCol = *wm.BgColor
+	}
+	return td
+}
+
+func parseTextHorAlignment(s string, wm *Watermark) error {
+	var a HAlignment
+	switch s {
+	case "l":
+		a = AlignLeft
+	case "r":
+		a = AlignRight
+	case "c":
+		a = AlignCenter
+	case "j":
+		a = AlignJustify
+	default:
+		return errors.Errorf("pdfcpu: unknown horizontal alignment (l,r,c,j): %s", s)
+	}
+
+	wm.HAlign = &a
+
+	return nil
+}
+
 func parsePositionAnchorWM(s string, wm *Watermark) error {
 	// Note: Reliable with non rotated pages only!
 	switch s {
@@ -386,69 +464,124 @@ func parseScaleFactor(s string) (float64, bool, error) {
 
 	ss := strings.Split(s, " ")
 	if len(ss) > 2 {
-		return 0, false, errors.Errorf("illegal scale string: 0.0 <= i <= 1.0 {abs|rel}, %s\n", s)
+		return 0, false, errors.Errorf("pdfcpu: invalid scale string: 0.0 < i <= 1.0 {rel} | 0.0 < i {abs}, %s\n", s)
 	}
 
 	sc, err := strconv.ParseFloat(ss[0], 64)
 	if err != nil {
-		return 0, false, errors.Errorf("scale factor must be a float value: %s\n", ss[0])
+		return 0, false, errors.Errorf("pdfcpu: scale factor must be a float value: %s\n", ss[0])
 	}
-	if sc < 0 || sc > 1 {
-		return 0, false, errors.Errorf("illegal scale factor: 0.0 <= s <= 1.0, %s\n", ss[0])
+
+	if sc <= 0 {
+		return 0, false, errors.Errorf("pdfcpu: invalid scale value: 0.0 < i <= 1.0 {rel} | 0.0 < i {abs}, %.2f\n", sc)
 	}
 
 	var scaleAbs bool
 
-	if len(ss) == 2 {
-		switch ss[1] {
-		case "a", "abs":
-			scaleAbs = true
+	if len(ss) == 1 {
+		// Assume relative scaling for sc <= 1 and absolute scaling for sc > 1.
+		scaleAbs = sc > 1
+		return sc, scaleAbs, nil
+	}
 
-		case "r", "rel":
-			scaleAbs = false
+	switch ss[1] {
+	case "a", "abs":
+		scaleAbs = true
 
-		default:
-			return 0, false, errors.Errorf("illegal scale mode: abs|rel, %s\n", ss[1])
-		}
+	case "r", "rel":
+		scaleAbs = false
+
+	default:
+		return 0, false, errors.Errorf("pdfcpu: illegal scale mode: abs|rel, %s\n", ss[1])
+	}
+
+	if !scaleAbs && sc > 1 {
+		return 0, false, errors.Errorf("pdfcpu: invalid relative scale value: 0.0 < i <= 1, %.2f\n", sc)
 	}
 
 	return sc, scaleAbs, nil
 }
 
-func parseColor(s string, wm *Watermark) error {
+func parseHexColor(hexCol string) (SimpleColor, error) {
+	var sc SimpleColor
+	if len(hexCol) != 7 || hexCol[0] != '#' {
+		return sc, errors.Errorf("pdfcpu: invalid hex color string: #FFFFFF, %s\n", hexCol)
+	}
+	b, err := hex.DecodeString(hexCol[1:])
+	if err != nil || len(b) != 3 {
+		return sc, errors.Errorf("pdfcpu: invalid hex color string: #FFFFFF, %s\n", hexCol)
+	}
+	return SimpleColor{float32(b[0]) / 255, float32(b[1]) / 255, float32(b[2]) / 255}, nil
+}
+
+func parseColor(s string) (SimpleColor, error) {
+
+	var sc SimpleColor
 
 	cs := strings.Split(s, " ")
-	if len(cs) != 3 {
-		return errors.Errorf("pdfcpu: illegal color string: 3 intensities 0.0 <= i <= 1.0, %s\n", s)
+	if len(cs) != 1 && len(cs) != 3 {
+		return sc, errors.Errorf("pdfcpu: illegal color string: 3 intensities 0.0 <= i <= 1.0 or #FFFFFF, %s\n", s)
+	}
+
+	if len(cs) == 1 {
+		// #FFFFFF to uint32
+		return parseHexColor(cs[0])
 	}
 
 	r, err := strconv.ParseFloat(cs[0], 32)
 	if err != nil {
-		return errors.Errorf("red must be a float value: %s\n", cs[0])
+		return sc, errors.Errorf("red must be a float value: %s\n", cs[0])
 	}
 	if r < 0 || r > 1 {
-		return errors.New("pdfcpu: red: a color value is an intensity between 0.0 and 1.0")
+		return sc, errors.New("pdfcpu: red: a color value is an intensity between 0.0 and 1.0")
 	}
-	wm.Color.R = float32(r)
+	sc.R = float32(r)
 
 	g, err := strconv.ParseFloat(cs[1], 32)
 	if err != nil {
-		return errors.Errorf("pdfcpu: green must be a float value: %s\n", cs[1])
+		return sc, errors.Errorf("pdfcpu: green must be a float value: %s\n", cs[1])
 	}
 	if g < 0 || g > 1 {
-		return errors.New("pdfcpu: green: a color value is an intensity between 0.0 and 1.0")
+		return sc, errors.New("pdfcpu: green: a color value is an intensity between 0.0 and 1.0")
 	}
-	wm.Color.G = float32(g)
+	sc.G = float32(g)
 
 	b, err := strconv.ParseFloat(cs[2], 32)
 	if err != nil {
-		return errors.Errorf("pdfcpu: blue must be a float value: %s\n", cs[2])
+		return sc, errors.Errorf("pdfcpu: blue must be a float value: %s\n", cs[2])
 	}
 	if b < 0 || b > 1 {
-		return errors.New("pdfcpu: blue: a color value is an intensity between 0.0 and 1.0")
+		return sc, errors.New("pdfcpu: blue: a color value is an intensity between 0.0 and 1.0")
 	}
-	wm.Color.B = float32(b)
+	sc.B = float32(b)
 
+	return sc, nil
+}
+
+func parseStrokeColor(s string, wm *Watermark) error {
+	c, err := parseColor(s)
+	if err != nil {
+		return err
+	}
+	wm.StrokeColor = c
+	return nil
+}
+
+func parseFillColor(s string, wm *Watermark) error {
+	c, err := parseColor(s)
+	if err != nil {
+		return err
+	}
+	wm.FillColor = c
+	return nil
+}
+
+func parseBackgroundColor(s string, wm *Watermark) error {
+	c, err := parseColor(s)
+	if err != nil {
+		return err
+	}
+	wm.BgColor = &c
 	return nil
 }
 
@@ -514,22 +647,122 @@ func parseRenderMode(s string, wm *Watermark) error {
 	if err != nil {
 		return errors.Errorf("pdfcpu: illegal render mode value: allowed 0,1,2, %s\n", s)
 	}
-	if m != RMFill && m != RMStroke && m != RMFillAndStroke {
+	rm := RenderMode(m)
+	if rm != RMFill && rm != RMStroke && rm != RMFillAndStroke {
 		return errors.New("pdfcpu: valid rendermodes: 0..fill, 1..stroke, 2..fill&stroke")
 	}
-	wm.RenderMode = m
+	wm.RenderMode = rm
 
 	return nil
+}
+
+func parseMargins(s string, wm *Watermark) error {
+
+	var err error
+
+	m := strings.Split(s, " ")
+	if len(m) == 0 || len(m) > 4 {
+		return errors.Errorf("pdfcpu: margins: need 1,2,3 or 4 int values, %s\n", s)
+	}
+
+	i, err := strconv.Atoi(m[0])
+	if err != nil {
+		return err
+	}
+
+	if len(m) == 1 {
+		wm.MLeft = i
+		wm.MRight = i
+		wm.MTop = i
+		wm.MBot = i
+		return nil
+	}
+
+	j, err := strconv.Atoi(m[1])
+	if err != nil {
+		return err
+	}
+
+	if len(m) == 2 {
+		wm.MTop, wm.MBot = i, i
+		wm.MLeft, wm.MRight = j, j
+		return nil
+	}
+
+	k, err := strconv.Atoi(m[2])
+	if err != nil {
+		return err
+	}
+
+	if len(m) == 3 {
+		wm.MTop = i
+		wm.MLeft, wm.MRight = j, j
+		wm.MBot = k
+		return nil
+	}
+
+	l, err := strconv.Atoi(m[3])
+	if err != nil {
+		return err
+	}
+	wm.MTop = i
+	wm.MRight = j
+	wm.MBot = k
+	wm.MLeft = l
+	return nil
+}
+
+func parseBorder(s string, wm *Watermark) error {
+
+	// w
+	// w r g b
+	// w #c
+	// w round
+	// w round r g b
+	// w round #c
+
+	var err error
+
+	b := strings.Split(s, " ")
+	if len(b) == 0 || len(b) > 5 {
+		return errors.Errorf("pdfcpu: borders: need 1,2,3,4 or 5 int values, %s\n", s)
+	}
+
+	wm.BorderWidth, err = strconv.Atoi(b[0])
+	if err != nil {
+		return err
+	}
+	if wm.BorderWidth == 0 {
+		return errors.New("pdfcpu: borders: need width > 0")
+	}
+
+	if len(b) == 1 {
+		return nil
+	}
+
+	if strings.HasPrefix("round", b[1]) {
+		wm.BorderStyle = LJRound
+		if len(b) == 2 {
+			return nil
+		}
+		c, err := parseColor(strings.Join(b[2:], " "))
+		wm.BorderColor = &c
+		return err
+	}
+
+	c, err := parseColor(strings.Join(b[1:], " "))
+	wm.BorderColor = &c
+	return err
 }
 
 func parseWatermarkDetails(mode int, modeParm, s string, onTop bool) (*Watermark, error) {
 
 	wm := DefaultWatermarkConfig()
 	wm.OnTop = onTop
-	setWatermarkType(mode, modeParm, wm)
 
 	ss := strings.Split(s, ",")
-	if len(ss) < 1 || len(ss[0]) == 0 {
+	if len(ss) > 0 && len(ss[0]) == 0 {
+		setWatermarkType(mode, modeParm, wm)
 		return wm, nil
 	}
 
@@ -548,7 +781,7 @@ func parseWatermarkDetails(mode int, modeParm, s string, onTop bool) (*Watermark
 		}
 	}
 
-	return wm, nil
+	return wm, setWatermarkType(mode, modeParm, wm)
 }
 
 // ParseTextWatermarkDetails parses a text Watermark/Stamp command string into an internal structure.
@@ -583,76 +816,60 @@ func (wm Watermark) calcMinFontSize(w float64) int {
 	return minSize
 }
 
-// IsPDF returns whether the watermark content is an image or text.
-func (wm Watermark) isPDF() bool {
-	return len(wm.FileName) > 0 && strings.ToLower(filepath.Ext(wm.FileName)) == ".pdf"
+// IsText returns true if the watermark content is text.
+func (wm Watermark) isText() bool {
+	return wm.Mode == WMText
 }
 
-// IsImage returns whether the watermark content is an image or text.
+// IsPDF returns true if the watermark content is PDF.
+func (wm Watermark) isPDF() bool {
+	return wm.Mode == WMPDF
+}
+
+// IsImage returns true if the watermark content is an image.
 func (wm Watermark) isImage() bool {
-	return len(wm.FileName) > 0 && strings.ToLower(filepath.Ext(wm.FileName)) != ".pdf"
+	return wm.Mode == WMImage
 }
 
 func (wm *Watermark) calcBoundingBox(pageNr int) {
 
 	var bb *Rectangle
 
-	if wm.isImage() || wm.isPDF() {
-
-		if wm.isPDF() {
-			wm.width = wm.pdfRes[wm.Page].width
-			wm.height = wm.pdfRes[wm.Page].height
-			if wm.multiStamp() {
-				i := pageNr
-				if i > len(wm.pdfRes) {
-					i = len(wm.pdfRes)
-				}
-				wm.width = wm.pdfRes[i].width
-				wm.height = wm.pdfRes[i].height
+	if wm.isPDF() {
+		wm.width = wm.pdfRes[wm.Page].width
+		wm.height = wm.pdfRes[wm.Page].height
+		if wm.multiStamp() {
+			i := pageNr
+			if i > len(wm.pdfRes) {
+				i = len(wm.pdfRes)
 			}
+			wm.width = wm.pdfRes[i].width
+			wm.height = wm.pdfRes[i].height
 		}
+	}
 
-		bb = RectForDim(float64(wm.width), float64(wm.height))
-		ar := bb.AspectRatio()
+	// wm.isPDF()
 
-		if wm.ScaleAbs {
-			bb.UR.X = wm.Scale * bb.Width()
-			bb.UR.Y = bb.UR.X / ar
+	bb = RectForDim(float64(wm.width), float64(wm.height))
+	ar := bb.AspectRatio()
 
-			wm.bb = bb
-			return
-		}
-
-		if ar >= 1 {
-			bb.UR.X = wm.Scale * wm.vp.Width()
-			bb.UR.Y = bb.UR.X / ar
-		} else {
-			bb.UR.Y = wm.Scale * wm.vp.Height()
-			bb.UR.X = bb.UR.Y * ar
-		}
+	if wm.ScaleAbs {
+		bb.UR.X = wm.Scale * bb.Width()
+		bb.UR.Y = bb.UR.X / ar
 
 		wm.bb = bb
 		return
 	}
 
-	// Text watermark
-
-	var w float64
-	if wm.ScaleAbs {
-		wm.ScaledFontSize = int(float64(wm.FontSize) * wm.Scale)
-		w = wm.calcMaxTextWidth()
+	if ar >= 1 {
+		bb.UR.X = wm.Scale * wm.vp.Width()
+		bb.UR.Y = bb.UR.X / ar
 	} else {
-		w = wm.Scale * wm.vp.Width()
-		wm.ScaledFontSize = wm.calcMinFontSize(w)
+		bb.UR.Y = wm.Scale * wm.vp.Height()
+		bb.UR.X = bb.UR.Y * ar
 	}
 
-	fbb := font.BoundingBox(wm.FontName)
-	h := (float64(wm.ScaledFontSize) * fbb.Height() / 1000)
-	if len(wm.TextLines) > 1 {
-		h += float64(len(wm.TextLines)-1) * float64(wm.ScaledFontSize)
-	}
-
-	wm.bb = Rect(0, 0, w, h)
+	wm.bb = bb
 	return
 }
 
@@ -722,11 +939,27 @@ func setWatermarkType(mode int, s string, wm *Watermark) error {
 	switch mode {
 	case WMText:
 		wm.TextString = s
-		bb := []byte{}
-		for _, r := range s {
-			bb = append(bb, byte(r))
+		if font.IsCoreFont(wm.FontName) {
+			bb := []byte{}
+			for _, r := range s {
+				// Unicode => char code
+				b := byte(0x20) // better use glyph: .notdef
+				if r <= 0xff {
+					b = byte(r)
+				}
+				bb = append(bb, b)
+			}
+			s = string(bb)
+		} else {
+			bb := []byte{}
+			u := utf16.Encode([]rune(s))
+			for _, i := range u {
+				bb = append(bb, byte((i>>8)&0xFF))
+				bb = append(bb, byte(i&0xFF))
+			}
+			s = string(bb)
 		}
-		s = strings.ReplaceAll(string(bb), "\\n", "\n")
+		s = strings.ReplaceAll(s, "\\n", "\n")
 		for _, l := range strings.FieldsFunc(s, func(c rune) bool { return c == 0x0a }) {
 			wm.TextLines = append(wm.TextLines, l)
 		}
@@ -765,6 +998,7 @@ func coreFontDict(fontName string) Dict {
 	d.InsertName("Subtype", "Type1")
 	d.InsertName("BaseFont", fontName)
 
+	// TODO No encoding for Symbol or ZapfD?
 	if fontName != "Symbol" && fontName != "ZapfDingbats" {
 		encDict := Dict(
 			map[string]Object{
@@ -795,7 +1029,7 @@ func ttfWidths(xRefTable *XRefTable, ttf font.TTFLight) (*IndirectRef, error) {
 			continue
 		}
 
-		pos, ok := ttf.Chars[uint16(i)]
+		pos, ok := ttf.Chars[uint32(i)]
 		if !ok {
 			//fmt.Printf("Character %s missing\n", metrics.WinAnsiGlyphMap[i])
 			w[i] = missingW
@@ -847,31 +1081,26 @@ func ttfFontDescriptorFlags(ttf font.TTFLight) uint32 {
 	return flags
 }
 
-func ttfFontFile(xRefTable *XRefTable, ttf font.TTFLight, fontName string) (*IndirectRef, error) {
+func flateEncodedStreamIndRef(xRefTable *XRefTable, data []byte) (*IndirectRef, error) {
+	sd, _ := xRefTable.NewStreamDictForBuf(data)
+	sd.InsertInt("Length1", len(data))
+	if err := encodeStream(sd); err != nil {
+		return nil, err
+	}
+	return xRefTable.IndRefForNewObject(*sd)
+}
 
-	sd := &StreamDict{Dict: NewDict()}
-	sd.InsertName("Filter", filter.Flate)
-	sd.FilterPipeline = []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}
-
+func ttfFontFile(xRefTable *XRefTable, fontName string) (*IndirectRef, error) {
 	bb, err := font.Read(fontName)
 	if err != nil {
 		return nil, err
 	}
-	//fmt.Printf("read %d fontfile bytes\n", len(bb))
-	sd.InsertInt("Length1", len(bb))
-
-	sd.Content = bb
-
-	if err := encodeStream(sd); err != nil {
-		return nil, err
-	}
-
-	return xRefTable.IndRefForNewObject(*sd)
+	return flateEncodedStreamIndRef(xRefTable, bb)
 }
 
 func ttfFontDescriptor(xRefTable *XRefTable, ttf font.TTFLight, fontName string) (*IndirectRef, error) {
 
-	fontFile, err := ttfFontFile(xRefTable, ttf, fontName)
+	fontFile, err := ttfFontFile(xRefTable, fontName)
 	if err != nil {
 		return nil, err
 	}
@@ -899,6 +1128,10 @@ func userFontDict(xRefTable *XRefTable, fontName string) (Dict, error) {
 
 	ttf := font.UserFontMetrics[fontName]
 
+	// if ttf.IsCJK() {
+	// 	fmt.Println("supports CJK")
+	// }
+
 	d := NewDict()
 	d.InsertName("Type", "Font")
 	d.InsertName("Subtype", "TrueType")
@@ -923,6 +1156,206 @@ func userFontDict(xRefTable *XRefTable, fontName string) (Dict, error) {
 	return d, nil
 }
 
+// CIDFontDescriptor represents a font descriptor describing
+// the CIDFont’s default metrics other than its glyph widths.
+func CIDFontDescriptor(xRefTable *XRefTable, ttf font.TTFLight, fontName string) (*IndirectRef, error) {
+
+	/*
+		<Ascent, 1060>
+		<AvgWidth, 1000>
+		<CapHeight, 860>
+		<Descent, -340>
+		<Flags, 4>
+		<FontBBox, [-72 -212 1126 952]>
+		<FontFile3, (54 0 R)>                 ... <Subtype, CIDFontType0C>
+		// Type 0 CIDFont program represented in the Compact Font Format (CFF),
+		// as described in Adobe Technical Note #5176, The Compact Font Format Specification.
+		<FontName, EBLDSM+PingFangSC-Regular>
+		<ItalicAngle, 0>
+		<MaxWidth, 1300>
+		<StemH, 64>
+		<StemV, 70>
+		<Type, FontDescriptor>
+		<XHeight, 600>
+	*/
+	fontFile, err := ttfFontFile(xRefTable, fontName)
+	if err != nil {
+		return nil, err
+	}
+
+	d := Dict(
+		map[string]Object{
+			"Type":        Name("FontDescriptor"),
+			"FontName":    Name(fontName),
+			"Flags":       Integer(ttfFontDescriptorFlags(ttf)),
+			"FontBBox":    NewNumberArray(ttf.LLx, ttf.LLy, ttf.URx, ttf.URy),
+			"ItalicAngle": Float(ttf.ItalicAngle),
+			"Ascent":      Integer(ttf.Ascent),
+			"Descent":     Integer(ttf.Descent),
+			//"Leading": // The spacing between baselines of consecutive lines of text.
+			"CapHeight": Integer(ttf.CapHeight),
+			"StemV":     Integer(70), // Irrelevant for embedded files.
+			"FontFile2": *fontFile,
+
+			// (Optional) A dictionary containing entries that describe the style of the glyphs in the font (see 9.8.3.2, "Style").
+			//"Style": Dict(map[string]Object{}),
+
+			// (Optional) A name specifying the language of the font, which may be used for encodings
+			// where the language is not implied by the encoding itself.
+			//"Lang": Name(""),
+
+			// (Optional) A dictionary whose keys identify a class of glyphs in a CIDFont.
+			// Each value shall be a dictionary containing entries that shall override the
+			// corresponding values in the main font descriptor dictionary for that class of glyphs (see 9.8.3.3, "FD").
+			//"FD": Dict(map[string]Object{}),
+
+			// (Optional)
+			// A stream identifying which CIDs are present in the CIDFont file. If this entry is present,
+			// the CIDFont shall contain only a subset of the glyphs in the character collection defined by the CIDSystemInfo dictionary.
+			// If it is absent, the only indication of a CIDFont subset shall be the subset tag in the FontName entry (see 9.6.4, "Font Subsets").
+			// The stream’s data shall be organized as a table of bits indexed by CID.
+			// The bits shall be stored in bytes with the high-order bit first. Each bit shall correspond to a CID.
+			// The most significant bit of the first byte shall correspond to CID 0, the next bit to CID 1, and so on.
+			//"CIDSet": nil,
+		},
+	)
+
+	return xRefTable.IndRefForNewObject(d)
+}
+
+// CIDFontDict returns the descendent font dict for Type0 fonts.
+func CIDFontDict(xRefTable *XRefTable, ttf font.TTFLight, fontName string) (*IndirectRef, error) {
+
+	// For a font subset, the PostScript name of the font—the value of the font’s BaseFont entry
+	// and the font descriptor’s FontName entry— shall begin with a tag followed by a plus sign (+).
+	// The tag shall consist of exactly six uppercase letters; the choice of letters is arbitrary,
+	// but different subsets in the same PDF file shall have different tags.
+
+	/*
+		<BaseFont, EBLDSM+PingFangSC-Regular>
+			<CIDSystemInfo, <<    // character collection
+				<Ordering, (Identity)>    // UCS
+				<Registry, (Adobe)>
+				<Supplement, 0>
+			>>>
+			<DW, 1000>
+			<FontDescriptor, (53 0 R)>
+			<Subtype, CIDFontType0>
+			<Type, Font>
+			<W, (52 0 R)>
+	*/
+
+	fdIndRef, err := CIDFontDescriptor(xRefTable, ttf, fontName)
+	if err != nil {
+		return nil, err
+	}
+
+	d := Dict(
+		map[string]Object{
+			"Type":     Name("Font"),
+			"Subtype":  Name("CIDFontType2"),
+			"BaseFont": Name(fontName),
+			"CIDSystemInfo": Dict(
+				map[string]Object{
+					"Ordering":   StringLiteral("Identity"), // or UCS ?
+					"Registry":   StringLiteral("Adobe"),
+					"Supplement": Integer(0),
+				},
+			),
+			"FontDescriptor": *fdIndRef,
+
+			// (Optional)
+			// The default width for glyphs in the CIDFont (see 9.7.4.3, "Glyph Metrics in CIDFonts").
+			// Default value: 1000 (defined in user units).
+			"DW": Integer(1000),
+
+			// (Optional)
+			// A description of the widths for the glyphs in the CIDFont.
+			// The array’s elements have a variable format that can specify individual widths for consecutive CIDs
+			// or one width for a range of CIDs (see 9.7.4.3, "Glyph Metrics in CIDFonts").
+			// Default value: none (the DW value shall be used for all glyphs).
+			//"W": Array{},
+
+			// (Optional; applies only to CIDFonts used for vertical writing)
+			// An array of two numbers specifying the default metrics for vertical writing (see 9.7.4.3, "Glyph Metrics in CIDFonts").
+			// Default value: [880 −1000].
+			// "DW2":             Integer(1000),
+
+			// (Optional; applies only to CIDFonts used for vertical writing)
+			// A description of the metrics for vertical writing for the glyphs in the CIDFont (see 9.7.4.3, "Glyph Metrics in CIDFonts").
+			// Default value: none (the DW2 value shall be used for all glyphs).
+			// "W2": nil
+
+			// (Optional; Type 2 CIDFonts only)
+			// A specification of the mapping from CIDs to glyph indices.
+			// maps CIDs to the glyph indices for the appropriate glyph descriptions in that font program.
+			// if stream: the glyph index for a particular CID value c shall be a 2-byte value stored in bytes 2 × c and 2 × c + 1,
+			// where the first byte shall be the high-order byte.))
+			"CIDToGIDMap": Name("Identity"),
+		},
+	)
+
+	return xRefTable.IndRefForNewObject(d)
+}
+
+// toUnicodeCMap returns a stream dict containing a CMap file that maps character codes to Unicode values (see 9.10).
+func toUnicodeCMap(xRefTable *XRefTable, fontName string) (*IndirectRef, error) {
+	// TODO create CMap bytes ...
+	bb, err := font.Read(fontName)
+	if err != nil {
+		return nil, err
+	}
+	return flateEncodedStreamIndRef(xRefTable, bb)
+}
+
+func type0FontDict(xRefTable *XRefTable, fontName string) (Dict, error) {
+
+	// Work in progress!
+
+	/*
+		<BaseFont, EBLDSM+PingFangSC-Regular>
+		<DescendantFonts, [(49 0 R)]>
+		<Encoding, Identity-H>
+		<Subtype, Type0>
+		<ToUnicode, (50 0 R)>
+		<Type, Font>
+	*/
+
+	// Combines a CIDFont and a CMap to produce a font whose glyphs may be accessed
+	// by means of variable-length character codes in a string to be shown.
+
+	ttf := font.UserFontMetrics[fontName]
+
+	descendentFontIndRef, err := CIDFontDict(xRefTable, ttf, fontName)
+	if err != nil {
+		return nil, err
+	}
+
+	// toUnicodeIndRef, err := toUnicodeCMap(xRefTable, fontName)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	d := NewDict()
+	d.InsertName("Type", "Font")
+	d.InsertName("Subtype", "Type0")
+	d.InsertName("BaseFont", fontName)
+	d.InsertName("Encoding", "Identity-H") // or Identity-V
+	// The Encoding entry of a Type 0 font dictionary specifies a CMap that specifies how
+	// text-showing operators (such as Tj) shall interpret the bytes in the string to be shown when the current font is the Type 0 font.
+	// This sub- clause describes how the characters in the string shall be decoded and mapped into character selectors,
+	// which in PDF are always CIDs.
+
+	// (Required) A one-element array specifying the CIDFont dictionary that is the descendant of this Type 0 font.
+	d.Insert("DescendantFonts", Array{*descendentFontIndRef})
+
+	// (Optional) A stream containing a CMap file that maps character codes to Unicode values (see 9.10, "Extraction of Text Content").
+	// TODO only contain mapping for used characters.
+	//d.Insert("ToUnicode", Array{*toUnicodeIndRef})
+
+	return d, nil
+}
+
 func createFontResForWM(xRefTable *XRefTable, wm *Watermark) error {
 
 	var (
@@ -933,6 +1366,7 @@ func createFontResForWM(xRefTable *XRefTable, wm *Watermark) error {
 	if font.IsCoreFont(wm.FontName) {
 		d = coreFontDict(wm.FontName)
 	} else {
+		//d, err = type0FontDict(xRefTable, wm.FontName)
 		d, err = userFontDict(xRefTable, wm.FontName)
 		if err != nil {
 			return err
@@ -1381,7 +1815,7 @@ func createFormResDict(xRefTable *XRefTable, pageNr int, wm *Watermark) (*Indire
 
 	d := Dict(
 		map[string]Object{
-			"Font":    Dict(map[string]Object{wm.FontName: *wm.font}),
+			"Font":    Dict(map[string]Object{"F1": *wm.font}),
 			"ProcSet": NewNameArray("PDF", "Text"),
 		},
 	)
@@ -1412,25 +1846,8 @@ func pdfFormContent(w io.Writer, pageNr int, wm *Watermark) error {
 	return err
 }
 
-func imageFormContent(w io.Writer, pageNr int, wm *Watermark) {
+func imageFormContent(w io.Writer, wm *Watermark) {
 	fmt.Fprintf(w, "q %f 0 0 %f 0 0 cm /Im0 Do Q", wm.bb.Width(), wm.bb.Height()) // TODO dont need Q
-}
-
-func textFormContent(w io.Writer, pageNr int, wm *Watermark) {
-	// 12 font points result in a vertical displacement of 9.47
-	dy := -float64(wm.ScaledFontSize) / 12 * 9.47
-	wmForm := "0 g 0 G 0 i 0 J []0 d 0 j 1 w 10 M 0 Tc 0 Tw 100 Tz 0 TL %d Tr 0 Ts "
-	fmt.Fprintf(w, wmForm, wm.RenderMode)
-	j := 1
-	for i := len(wm.TextLines) - 1; i >= 0; i-- {
-
-		sw := font.TextWidth(wm.TextLines[i], wm.FontName, wm.ScaledFontSize)
-		dx := wm.bb.Width()/2 - sw/2
-
-		fmt.Fprintf(w, "BT /%s %d Tf %f %f %f rg %f %f Td (%s) Tj ET ",
-			wm.FontName, wm.ScaledFontSize, wm.Color.R, wm.Color.G, wm.Color.B, dx, dy+float64(j*wm.ScaledFontSize), wm.TextLines[i])
-		j++
-	}
 }
 
 func formContent(w io.Writer, pageNr int, wm *Watermark) error {
@@ -1438,17 +1855,76 @@ func formContent(w io.Writer, pageNr int, wm *Watermark) error {
 	case wm.isPDF():
 		return pdfFormContent(w, pageNr, wm)
 	case wm.isImage():
-		imageFormContent(w, pageNr, wm)
-	default:
-		textFormContent(w, pageNr, wm)
+		imageFormContent(w, wm)
 	}
 	return nil
 }
 
+func setupTextDescriptor(wm *Watermark) TextDescriptor {
+
+	// Set horizontal alignment.
+	var hAlign HAlignment
+	if wm.HAlign == nil {
+		// Use alignment implied by anchor.
+		_, _, hAlign, _ = anchorPosAndAlign(wm.Pos, RectForDim(0, 0))
+	} else {
+		// Use manual alignment.
+		hAlign = *wm.HAlign
+	}
+
+	// Set effective position and vertical alignment.
+	x, y, _, vAlign := anchorPosAndAlign(BottomLeft, wm.vp)
+	td := wm.textDescriptor()
+	td.X, td.Y, td.HAlign, td.VAlign, td.FontKey = x, y, hAlign, vAlign, "F1"
+
+	// Set margins.
+	td.MLeft = float64(wm.MLeft)
+	td.MRight = float64(wm.MRight)
+	td.MTop = float64(wm.MTop)
+	td.MBot = float64(wm.MBot)
+
+	// Set border.
+	td.BorderWidth = float64(wm.BorderWidth)
+	td.BorderStyle = wm.BorderStyle
+	if wm.BorderColor != nil {
+		td.ShowBorder = true
+		td.BorderCol = *wm.BorderColor
+	}
+	return td
+}
+
+func drawBoundingBox(b bytes.Buffer, wm *Watermark, bb *Rectangle) {
+	urx := bb.UR.X
+	ury := bb.UR.Y
+	if wm.isPDF() {
+		sc := wm.Scale
+		if !wm.ScaleAbs {
+			sc = bb.Width() / float64(wm.width)
+		}
+		urx /= sc
+		ury /= sc
+	}
+	fmt.Fprintf(&b, "[]0 d 2 w %.2f %.2f m %.2f %.2f l %.2f %.2f l %.2f %.2f l s ",
+		bb.LL.X, bb.LL.Y,
+		urx, bb.LL.Y,
+		urx, ury,
+		bb.LL.X, ury,
+	)
+}
+
 func createForm(xRefTable *XRefTable, pageNr int, wm *Watermark, withBB bool) error {
 
+	var b bytes.Buffer
+
+	if wm.isImage() || wm.isPDF() {
+		wm.calcBoundingBox(pageNr)
+	} else {
+		td := setupTextDescriptor(wm)
+		// Render td into b and return the bounding box.
+		wm.bb = WriteMultiLine(&b, wm.vp, nil, td)
+	}
+
 	// The forms bounding box is dependent on the page dimensions.
-	wm.calcBoundingBox(pageNr)
 	bb := wm.bb
 
 	if cachedForm(wm) || pageNr > len(wm.pdfRes) {
@@ -1460,29 +1936,15 @@ func createForm(xRefTable *XRefTable, pageNr int, wm *Watermark, withBB bool) er
 		}
 	}
 
-	var b bytes.Buffer
-	if err := formContent(&b, pageNr, wm); err != nil {
-		return err
+	if wm.isImage() || wm.isPDF() {
+		if err := formContent(&b, pageNr, wm); err != nil {
+			return err
+		}
 	}
 
 	// Paint bounding box
 	if withBB {
-		urx := bb.UR.X
-		ury := bb.UR.Y
-		if wm.isPDF() {
-			sc := wm.Scale
-			if !wm.ScaleAbs {
-				sc = bb.Width() / float64(wm.width)
-			}
-			urx /= sc
-			ury /= sc
-		}
-		fmt.Fprintf(&b, "[]0 d 2 w %.0f %.0f m %.0f %.0f l %.0f %.0f l %.0f %.0f l s ",
-			bb.LL.X, bb.LL.Y,
-			urx, bb.LL.Y,
-			urx, ury,
-			bb.LL.X, ury,
-		)
+		drawBoundingBox(b, wm, bb)
 	}
 
 	ir, err := createFormResDict(xRefTable, pageNr, wm)
@@ -1501,8 +1963,11 @@ func createForm(xRefTable *XRefTable, pageNr int, wm *Watermark, withBB bool) er
 				"Resources": *ir,
 			},
 		),
-		Content: b.Bytes(),
+		Content:        b.Bytes(),
+		FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: nil}},
 	}
+
+	sd.InsertName("Filter", filter.Flate)
 
 	if err = encodeStream(&sd); err != nil {
 		return err
@@ -1604,12 +2069,8 @@ func wmContent(wm *Watermark, gsID, xoID string) []byte {
 
 func insertPageContentsForWM(xRefTable *XRefTable, pageDict Dict, wm *Watermark, gsID, xoID string) error {
 
-	sd := &StreamDict{Dict: NewDict()}
-
-	sd.Content = wmContent(wm, gsID, xoID)
-
-	err := encodeStream(sd)
-	if err != nil {
+	sd, _ := xRefTable.NewStreamDictForBuf(wmContent(wm, gsID, xoID))
+	if err := encodeStream(sd); err != nil {
 		return err
 	}
 
@@ -1743,8 +2204,7 @@ func addPageWatermark(xRefTable *XRefTable, i int, wm *Watermark) error {
 
 	wm.vp = viewPort(xRefTable, inhPAttrs)
 
-	err = createForm(xRefTable, i, wm, stampWithBBox)
-	if err != nil {
+	if err = createForm(xRefTable, i, wm, stampWithBBox); err != nil {
 		return err
 	}
 

@@ -27,7 +27,6 @@ import (
 )
 
 func createSMaskObject(xRefTable *XRefTable, buf []byte, w, h int) (*IndirectRef, error) {
-
 	sd := &StreamDict{
 		Dict: Dict(
 			map[string]Object{
@@ -44,8 +43,7 @@ func createSMaskObject(xRefTable *XRefTable, buf []byte, w, h int) (*IndirectRef
 
 	sd.InsertName("Filter", filter.Flate)
 
-	err := encodeStream(sd)
-	if err != nil {
+	if err := encodeStream(sd); err != nil {
 		return nil, err
 	}
 
@@ -64,21 +62,13 @@ func createFlateImageObject(xRefTable *XRefTable, buf, sm []byte, w, h, bpc int,
 		}
 	}
 
-	sd := &StreamDict{
-		Dict: Dict(
-			map[string]Object{
-				"Type":             Name("XObject"),
-				"Subtype":          Name("Image"),
-				"Width":            Integer(w),
-				"Height":           Integer(h),
-				"BitsPerComponent": Integer(bpc),
-				"ColorSpace":       Name(cs),
-			},
-		),
-		Content:        buf,
-		FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}}
-
-	sd.InsertName("Filter", filter.Flate)
+	sd, _ := xRefTable.NewStreamDictForBuf(buf)
+	sd.InsertName("Type", "XObject")
+	sd.InsertName("Subtype", "Image")
+	sd.InsertInt("Width", w)
+	sd.InsertInt("Height", h)
+	sd.InsertInt("BitsPerComponent", bpc)
+	sd.InsertName("ColorSpace", cs)
 
 	if softMaskIndRef != nil {
 		sd.Insert("SMask", *softMaskIndRef)
@@ -88,8 +78,7 @@ func createFlateImageObject(xRefTable *XRefTable, buf, sm []byte, w, h, bpc int,
 		sd.Insert("Interpolate", Boolean(true))
 	}
 
-	err := encodeStream(sd)
-	if err != nil {
+	if err := encodeStream(sd); err != nil {
 		return nil, err
 	}
 
@@ -137,8 +126,7 @@ func createDCTImageObject(xRefTable *XRefTable, buf, sm []byte, w, h int, cs str
 		sd.Insert("SMask", *softMaskIndRef)
 	}
 
-	err := encodeStream(sd)
-	if err != nil {
+	if err := encodeStream(sd); err != nil {
 		return nil, err
 	}
 

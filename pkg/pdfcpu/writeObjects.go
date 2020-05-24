@@ -107,8 +107,7 @@ func stopObjectStream(ctx *Context) error {
 
 	// Encode objStreamDict.Content -> objStreamDict.Raw
 	// and wipe (decoded) content to free up memory.
-	err := encodeStream(&osd.StreamDict)
-	if err != nil {
+	if err := encodeStream(&osd.StreamDict); err != nil {
 		return err
 	}
 
@@ -121,8 +120,7 @@ func stopObjectStream(ctx *Context) error {
 	// for each objStream execute at the end right before xRefStreamDict gets written.
 	log.Write.Printf("stopObjectStream: objStreamDict: %s\n", osd)
 
-	err = writeStreamDictObject(ctx, *ctx.Write.CurrentObjStream, 0, osd.StreamDict)
-	if err != nil {
+	if err := writeStreamDictObject(ctx, *ctx.Write.CurrentObjStream, 0, osd.StreamDict); err != nil {
 		return err
 	}
 

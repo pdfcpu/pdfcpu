@@ -161,6 +161,12 @@ func (r Rectangle) ScaledHeight(w float64) float64 {
 	return w / r.AspectRatio()
 }
 
+// Translate moves r by dx and dy.
+func (r *Rectangle) Translate(dx, dy float64) {
+	r.LL.Translate(dx, dy)
+	r.UR.Translate(dx, dy)
+}
+
 // Array returns the PDF representation of a rectangle.
 func (r Rectangle) Array() Array {
 	return NewNumberArray(r.LL.X, r.LL.Y, r.UR.X, r.UR.Y)
@@ -194,6 +200,11 @@ func RectForArray(a Array) *Rectangle {
 // RectForDim returns a new rectangle for given dimensions.
 func RectForDim(width, height float64) *Rectangle {
 	return Rect(0.0, 0.0, width, height)
+}
+
+// RectForWidthAndHeight returns a new rectangle for given dimensions.
+func RectForWidthAndHeight(llx, lly, width, height float64) *Rectangle {
+	return Rect(llx, lly, llx+width, lly+height)
 }
 
 // RectForFormat returns a new rectangle for given format.

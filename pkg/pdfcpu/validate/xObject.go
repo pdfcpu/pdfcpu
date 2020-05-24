@@ -742,6 +742,8 @@ func validateXObjectStreamDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
 
 	dictName := "xObjectStreamDict"
 
+	//fmt.Printf("XObjStrD: \n%s\n", sd)
+
 	_, err = validateNameEntry(xRefTable, sd.Dict, dictName, "Type", OPTIONAL, pdf.V10, func(s string) bool { return s == "XObject" })
 	if err != nil {
 		return err
@@ -771,7 +773,7 @@ func validateXObjectStreamDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
 	switch *subtype {
 
 	case "Form":
-		err = validateFormStreamDict(xRefTable, sd)
+		//err = validateFormStreamDict(xRefTable, sd)
 
 	case "Image":
 		err = validateImageStreamDict(xRefTable, sd, isNoAlternateImageStreamDict)
@@ -834,6 +836,8 @@ func validateXObjectResourceDict(xRefTable *pdf.XRefTable, o pdf.Object, sinceVe
 	if err != nil || d == nil {
 		return err
 	}
+
+	//fmt.Printf("XObjResDict:\n%s\n", d)
 
 	// Iterate over XObject resource dictionary
 	for _, o := range d {

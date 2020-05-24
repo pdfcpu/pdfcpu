@@ -218,7 +218,6 @@ func TestReadWritePNG(t *testing.T) {
 
 // Read in a device gray image stream dump from disk.
 func read1BPCDeviceGrayFlateStreamDump(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
-
 	f, err := os.Open(fileName)
 	if err != nil {
 		return nil, err
@@ -248,12 +247,7 @@ func read1BPCDeviceGrayFlateStreamDump(xRefTable *XRefTable, fileName string) (*
 
 	sd.InsertName("Filter", filter.Flate)
 
-	err = decodeStream(sd)
-	if err != nil {
-		return nil, err
-	}
-
-	return sd, nil
+	return sd, decodeStream(sd)
 }
 
 // Starting out with a DeviceGray color space based image object, write a PNG file then read and write again.
@@ -312,7 +306,6 @@ func TestReadImageStreamWritePNG(t *testing.T) {
 
 // Read in a device CMYK image stream dump from disk.
 func read8BPCDeviceCMYKFlateStreamDump(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
-
 	f, err := os.Open(fileName)
 	if err != nil {
 		return nil, err
@@ -348,12 +341,9 @@ func read8BPCDeviceCMYKFlateStreamDump(xRefTable *XRefTable, fileName string) (*
 
 	sd.InsertName("Filter", filter.Flate)
 
-	err = decodeStream(sd)
-	if err != nil {
-		return nil, err
-	}
+	sd.FilterPipeline[0].DecodeParms = decodeParms
 
-	return sd, nil
+	return sd, decodeStream(sd)
 }
 
 // Starting out with a CMYK color space based image object, write a TIFF file then read and write again.

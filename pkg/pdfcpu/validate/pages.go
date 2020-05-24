@@ -451,8 +451,7 @@ func validatePageEntrySeparationInfo(xRefTable *pdf.XRefTable, pagesDict pdf.Dic
 
 func validatePageEntryTabs(xRefTable *pdf.XRefTable, d pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
-	// Include out of spec entry "W"
-	validateTabs := func(s string) bool { return pdf.MemberOf(s, []string{"R", "C", "S", "W"}) }
+	validateTabs := func(s string) bool { return pdf.MemberOf(s, []string{"R", "C", "S", "A", "W"}) }
 
 	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
 		sinceVersion = pdf.V14

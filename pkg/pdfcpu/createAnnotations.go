@@ -20,8 +20,6 @@ import (
 	"path"
 	"path/filepath"
 	"time"
-
-	"github.com/pdfcpu/pdfcpu/pkg/filter"
 )
 
 // Functions needed to create a test.pdf that gets used for validation testing (see process_test.go)
@@ -528,17 +526,7 @@ func createFileAttachmentAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef
 
 	fileName := testAudioFileWAV
 
-	sd, err := xRefTable.NewEmbeddedFileStreamDict(fileName)
-	if err != nil {
-		return nil, err
-	}
-
-	err = encodeStream(sd)
-	if err != nil {
-		return nil, err
-	}
-
-	ir, err := xRefTable.IndRefForNewObject(*sd)
+	ir, err := xRefTable.NewEmbeddedFileStreamDict(fileName)
 	if err != nil {
 		return nil, err
 	}
@@ -578,45 +566,20 @@ func createFileAttachmentAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef
 }
 
 func createFileSpecDict(xRefTable *XRefTable, fileName string) (Dict, error) {
-
-	sd, err := xRefTable.NewEmbeddedFileStreamDict(fileName)
+	ir, err := xRefTable.NewEmbeddedFileStreamDict(fileName)
 	if err != nil {
 		return nil, err
 	}
-
-	err = encodeStream(sd)
-	if err != nil {
-		return nil, err
-	}
-
-	ir, err := xRefTable.IndRefForNewObject(*sd)
-	if err != nil {
-		return nil, err
-	}
-
 	return xRefTable.NewFileSpecDict(path.Base(fileName), "attached by pdfcpu", *ir)
 }
 
 func createSoundObject(xRefTable *XRefTable) (*IndirectRef, error) {
-
 	fileName := testAudioFileWAV
-
 	fileSpecDict, err := createFileSpecDict(xRefTable, fileName)
 	if err != nil {
 		return nil, err
 	}
-
-	sd, err := xRefTable.NewSoundStreamDict(fileName, 44100, fileSpecDict)
-	if err != nil {
-		return nil, err
-	}
-
-	err = encodeStream(sd)
-	if err != nil {
-		return nil, err
-	}
-
-	return xRefTable.IndRefForNewObject(*sd)
+	return xRefTable.NewSoundStreamDict(fileName, 44100, fileSpecDict)
 }
 
 func createSoundAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
@@ -805,26 +768,15 @@ func createWidgetAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotR
 }
 
 func createXObjectForPrinterMark(xRefTable *XRefTable) (*IndirectRef, error) {
-
 	buf := `0 0 m 0 25 l 25 25 l 25 0 l s`
+	sd, _ := xRefTable.NewStreamDictForBuf([]byte(buf))
+	sd.InsertName("Type", "XObject")
+	sd.InsertName("Subtype", "Form")
+	sd.InsertInt("FormType", 1)
+	sd.Insert("BBox", NewNumberArray(0, 0, 25, 25))
+	sd.Insert("Matrix", NewIntegerArray(1, 0, 0, 1, 0, 0))
 
-	sd := &StreamDict{
-		Dict: Dict(
-			map[string]Object{
-				"Type":     Name("XObject"),
-				"Subtype":  Name("Form"),
-				"FormType": Integer(1),
-				"BBox":     NewNumberArray(0, 0, 25, 25),
-				"Matrix":   NewIntegerArray(1, 0, 0, 1, 0, 0),
-			},
-		),
-		Content:        []byte(buf),
-		FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}}
-
-	sd.InsertName("Filter", filter.Flate)
-
-	err := encodeStream(sd)
-	if err != nil {
+	if err := encodeStream(sd); err != nil {
 		return nil, err
 	}
 
@@ -861,8 +813,7 @@ func createPrinterMarkAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, a
 }
 
 func createXObjectForWaterMark(xRefTable *XRefTable) (*IndirectRef, error) {
-
-	fIndRef, err := createFontDict(xRefTable)
+	fIndRef, err := createFontDict(xRefTable, "Helvetica")
 	if err != nil {
 		return nil, err
 	}
@@ -873,25 +824,15 @@ func createXObjectForWaterMark(xRefTable *XRefTable) (*IndirectRef, error) {
 	resourceDict.Insert("Font", fResDict)
 
 	buf := `0 0 m 0 200 l 200 200 l 200 0 l s BT /F1 48 Tf 0.7 0.7 -0.7 0.7 30 10 Tm 1 Tr 2 w (Watermark) Tj ET`
+	sd, _ := xRefTable.NewStreamDictForBuf([]byte(buf))
+	sd.InsertName("Type", "XObject")
+	sd.InsertName("Subtype", "Form")
+	sd.InsertInt("FormType", 1)
+	sd.Insert("BBox", NewNumberArray(0, 0, 200, 200))
+	sd.Insert("Matrix", NewIntegerArray(1, 0, 0, 1, 0, 0))
+	sd.Insert("Resources", resourceDict)
 
-	sd := &StreamDict{
-		Dict: Dict(
-			map[string]Object{
-				"Type":      Name("XObject"),
-				"Subtype":   Name("Form"),
-				"FormType":  Integer(1),
-				"BBox":      NewNumberArray(0, 0, 200, 200),
-				"Matrix":    NewIntegerArray(1, 0, 0, 1, 0, 0),
-				"Resources": resourceDict,
-			},
-		),
-		Content:        []byte(buf),
-		FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}}
-
-	sd.InsertName("Filter", filter.Flate)
-
-	err = encodeStream(sd)
-	if err != nil {
+	if err = encodeStream(sd); err != nil {
 		return nil, err
 	}
 
@@ -1241,7 +1182,7 @@ func createLinkAnnotationDictWithHideAction(xRefTable *XRefTable, pageIndRef Ind
 
 func createTrapNetAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
 
-	ir, err := createFontDict(xRefTable)
+	ir, err := createFontDict(xRefTable, "Helvetica")
 	if err != nil {
 		return nil, err
 	}

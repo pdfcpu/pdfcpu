@@ -172,3 +172,46 @@ func Unescape(s string) ([]byte, error) {
 
 	return b.Bytes(), nil
 }
+
+// This is a patched version of strings.FieldsFunc that also returns empty fields.
+func fieldsFunc(s string, f func(rune) bool) []string {
+	// A span is used to record a slice of s of the form s[start:end].
+	// The start index is inclusive and the end index is exclusive.
+	type span struct {
+		start int
+		end   int
+	}
+	spans := make([]span, 0, 32)
+
+	// Find the field start and end indices.
+	wasField := false
+	fromIndex := 0
+	for i, rune := range s {
+		if f(rune) {
+			if wasField {
+				spans = append(spans, span{start: fromIndex, end: i})
+				wasField = false
+			} else {
+				spans = append(spans, span{})
+			}
+		} else {
+			if !wasField {
+				fromIndex = i
+				wasField = true
+			}
+		}
+	}
+
+	// Last field might end at EOF.
+	if wasField {
+		spans = append(spans, span{fromIndex, len(s)})
+	}
+
+	// Create strings from recorded field indices.
+	a := make([]string, len(spans))
+	for i, span := range spans {
+		a[i] = s[span.start:span.end]
+	}
+
+	return a
+}

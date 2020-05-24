@@ -73,7 +73,7 @@ func TestAddWatermarks(t *testing.T) {
 			false,
 			"text",
 			"Draft",
-			"s:0.7, rot:20"},
+			"scale:0.7, rot:20"},
 
 		// Add a greenish, slightly transparent stroked and filled text stamp to all odd pages of inFile other than page 1
 		// using the default rotation which is aligned along the first diagonal running from lower left to upper right corner.
@@ -84,7 +84,7 @@ func TestAddWatermarks(t *testing.T) {
 			true,
 			"text",
 			"Demo",
-			"font:Courier, c: 0 .8 0, op:0.8, m:2"},
+			"font:Courier, c: 0 .8 0, op:0.8, mode:2"},
 
 		// Add a red filled text stamp to all odd pages of inFile other than page 1 using a font size of 48 points
 		// and the default rotation which is aligned along the first diagonal running from lower left to upper right corner.
@@ -95,7 +95,7 @@ func TestAddWatermarks(t *testing.T) {
 			true,
 			"text",
 			"Demo",
-			"font:Courier, c: 1 0 0, op:1, s:1 abs, points:48"},
+			"font:Courier, c: 1 0 0, op:1, sc:1 abs, points:48"},
 
 		// Add image watermark to inFile starting at page 1 using no rotation.
 		{"TestWatermarkImage",
@@ -114,7 +114,7 @@ func TestAddWatermarks(t *testing.T) {
 			true,
 			"image",
 			filepath.Join(resDir, "pdfchip3.png"),
-			"s:.5 a, rot:-90"},
+			"sc:.5 a, rot:-90"},
 
 		// Add a PDF stamp to all pages of inFile using the 3rd page of pdfFile
 		// and rotate along the 2nd diagonal running from upper left to lower right corner.

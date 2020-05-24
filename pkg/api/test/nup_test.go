@@ -17,7 +17,9 @@ limitations under the License.
 package test
 
 import (
+	"io/ioutil"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
@@ -50,7 +52,24 @@ func testNUp(t *testing.T, msg string, inFiles []string, outFile string, selecte
 	}
 }
 
+func imageFileNames(t *testing.T, dir string) []string {
+	t.Helper()
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fn := []string{}
+	for _, fi := range files {
+		if strings.HasSuffix(fi.Name(), "jpg") || strings.HasSuffix(fi.Name(), "png") {
+			fn = append(fn, filepath.Join(dir, fi.Name()))
+		}
+	}
+	return fn
+}
+
 func TestNUp(t *testing.T) {
+	outDir := "../../samples/nup"
+
 	for _, tt := range []struct {
 		msg           string
 		inFiles       []string
@@ -62,30 +81,28 @@ func TestNUp(t *testing.T) {
 	}{
 		// 4-Up a PDF
 		{"TestNUpFromPDF",
-			[]string{filepath.Join(inDir, "Acroforms2.pdf")},
-			filepath.Join(outDir, "Acroforms2.pdf"),
+			[]string{filepath.Join(inDir, "WaldenFull.pdf")},
+			filepath.Join(outDir, "TestNUpFromPDF.pdf"),
 			nil,
 			"",
-			4,
+			9,
 			false},
+
 		// 9-Up an image
 		{"TestNUpFromSingleImage",
-			[]string{filepath.Join(resDir, "pdfchip3.png")},
-			filepath.Join(outDir, "out.pdf"),
+			[]string{filepath.Join(resDir, "logoSmall.png")},
+			filepath.Join(outDir, "NUpFromSingleImage.pdf"),
 			nil,
-			"f:A3L",
-			9,
+			"f:A3P",
+			16,
 			true},
+
 		// 6-Up a sequence of images.
 		{"TestNUpFromImages",
-			[]string{
-				filepath.Join(resDir, "pdfchip3.png"),
-				filepath.Join(resDir, "demo.png"),
-				filepath.Join(resDir, "snow.jpg"),
-			},
-			filepath.Join(outDir, "out1.pdf"),
+			imageFileNames(t, "../../../resources"),
+			filepath.Join(outDir, "NUpFromImages.pdf"),
 			nil,
-			"f:Tabloid, b:off, m:0",
+			"f:Tabloid, b:on, m:0",
 			6,
 			true},
 	} {

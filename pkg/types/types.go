@@ -24,6 +24,12 @@ type Point struct {
 	X, Y float64
 }
 
+// Translate modifies p's coordinates.
+func (p *Point) Translate(dx, dy float64) {
+	p.X += dx
+	p.Y += dy
+}
+
 func (p Point) String() string {
 	return fmt.Sprintf("(%.2f,%.2f)\n", p.X, p.Y)
 }

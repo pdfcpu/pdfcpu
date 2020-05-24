@@ -23,6 +23,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/internal/corefont/metrics"
@@ -39,6 +40,7 @@ type TTFLight struct {
 	CapHeight          int               // OS/2: sCapHeight
 	FirstChar          uint16            // OS/2: fsFirstCharIndex
 	LastChar           uint16            // OS/2: fsLastCharIndex
+	UnicodeRange       [4]uint32         // OS/2: Unicode Character Range
 	LLx, LLy, URx, URy float64           // head: xMin, yMin, xMax, yMax (fontbox)
 	ItalicAngle        float64           // post: italicAngle
 	FixedPitch         bool              // post: isFixedPitch
@@ -46,7 +48,7 @@ type TTFLight struct {
 	HorMetricsCount    int               // hhea: numOfLongHorMetrics
 	GlyphCount         int               // maxp: numGlyphs
 	GlyphWidths        []int             // hmtx: fd.HorMetricsCount.advanceWidth
-	Chars              map[uint16]uint16 // cmap
+	Chars              map[uint32]uint32 // cmap
 }
 
 func (fd TTFLight) String() string {
@@ -80,6 +82,17 @@ HorMetricsCount = %d
 		fd.HorMetricsCount,
 		fd.GlyphCount,
 	)
+}
+
+func (fd TTFLight) supportsUnicodeBlock(bit int) bool {
+	i := fd.UnicodeRange[bit/32]
+	i >>= uint32(bit) % 32
+	return i&1 > 0
+}
+
+func (fd TTFLight) IsCJK() bool {
+	// 4E00-9FFF	CJK Unified Ideographs
+	return fd.supportsUnicodeBlock(59)
 }
 
 // UserFontMetrics represents font metrics for user installed TrueType fonts.
@@ -182,7 +195,7 @@ func CharWidth(fontName string, c int) int {
 		//fmt.Printf("Character %d missing in WinAnsiGlyphMap\n", uint16(c))
 		return int(ttf.GlyphWidths[0])
 	}
-	pos, ok := ttf.Chars[uint16(c)]
+	pos, ok := ttf.Chars[uint32(c)]
 	if !ok {
 		//fmt.Printf("Character %s (%04x) missing\n", metrics.WinAnsiGlyphMap[c], uint16(c))
 		return int(ttf.GlyphWidths[0])
@@ -190,20 +203,46 @@ func CharWidth(fontName string, c int) int {
 	return int(ttf.GlyphWidths[pos])
 }
 
-func userSpaceUnits(glyphSpaceUnits float64, fontScalingFactor int) float64 {
-	return float64(glyphSpaceUnits) / 1000 * float64(fontScalingFactor)
+// UserSpaceUnits transforms glyphSpaceUnits into userspace units.
+func UserSpaceUnits(glyphSpaceUnits float64, fontScalingFactor int) float64 {
+	return glyphSpaceUnits / 1000 * float64(fontScalingFactor)
+}
+
+// GlyphSpaceUnits transforms userSpaceUnits into glyphspace Units.
+func GlyphSpaceUnits(userSpaceUnits float64, fontScalingFactor int) float64 {
+	return userSpaceUnits * 1000 / float64(fontScalingFactor)
 }
 
 func fontScalingFactor(glyphSpaceUnits, userSpaceUnits float64) int {
 	return int(userSpaceUnits / glyphSpaceUnits * 1000)
 }
 
+// Descent returns fontname's descent in userspace units corresponding to fontSize.
+func Descent(fontName string, fontSize int) float64 {
+	fbb := BoundingBox(fontName)
+	return UserSpaceUnits(-fbb.LL.Y, fontSize)
+}
+
+// Ascent returns fontname's ascent in userspace units corresponding to fontSize.
+func Ascent(fontName string, fontSize int) float64 {
+	fbb := BoundingBox(fontName)
+	return UserSpaceUnits(fbb.Height()+fbb.LL.Y, fontSize)
+}
+
+// LineHeight returns fontname's line height in userspace units corresponding to fontSize.
+func LineHeight(fontName string, fontSize int) float64 {
+	fbb := BoundingBox(fontName)
+	return UserSpaceUnits(fbb.Height(), fontSize)
+}
+
 // TextWidth represents the width in user space units for a given text string, font name and font size.
 func TextWidth(text, fontName string, fontSize int) float64 {
 	var width float64
-	for i := 0; i < len(text); i++ {
-		w := CharWidth(fontName, int(text[i]))
-		width += userSpaceUnits(float64(w), fontSize)
+	j := len(text)
+	for i := 0; i < j; i++ {
+		c := text[i]
+		w := CharWidth(fontName, int(c))
+		width += UserSpaceUnits(float64(w), fontSize)
 	}
 	//fmt.Printf("TextWidth:%.2f\n", width)
 	return width
@@ -223,10 +262,10 @@ func Size(text, fontName string, width float64) int {
 // UserSpaceFontBBox returns the font box for given font name and font size in user space coordinates.
 func UserSpaceFontBBox(fontName string, fontSize int) *types.Rectangle {
 	fontBBox := BoundingBox(fontName)
-	llx := userSpaceUnits(fontBBox.LL.X, fontSize)
-	lly := userSpaceUnits(fontBBox.LL.Y, fontSize)
-	urx := userSpaceUnits(fontBBox.UR.X, fontSize)
-	ury := userSpaceUnits(fontBBox.UR.Y, fontSize)
+	llx := UserSpaceUnits(fontBBox.LL.X, fontSize)
+	lly := UserSpaceUnits(fontBBox.LL.Y, fontSize)
+	urx := UserSpaceUnits(fontBBox.UR.X, fontSize)
+	ury := UserSpaceUnits(fontBBox.UR.Y, fontSize)
 	return types.NewRectangle(llx, lly, urx, ury)
 }
 
@@ -239,8 +278,8 @@ func IsCoreFont(fontName string) bool {
 // CoreFontNames returns a list of the 14 PDF standard fonts.
 func CoreFontNames() []string {
 	ss := []string{}
-	for fname := range metrics.CoreFontMetrics {
-		ss = append(ss, fname)
+	for fontName := range metrics.CoreFontMetrics {
+		ss = append(ss, fontName)
 	}
 	return ss
 }
@@ -254,8 +293,9 @@ func IsUserFont(fontName string) bool {
 // UserFontNames return a list of all installed TrueType fonts.
 func UserFontNames() []string {
 	ss := []string{}
-	for fname := range UserFontMetrics {
-		ss = append(ss, fname)
+	for fName, ttf := range UserFontMetrics {
+		s := fName + " (" + strconv.Itoa(ttf.GlyphCount) + " glyphs)"
+		ss = append(ss, s)
 	}
 	return ss
 }

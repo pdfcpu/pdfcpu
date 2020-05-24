@@ -24,7 +24,6 @@ import (
 
 	"strings"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pkg/errors"
 )
 
@@ -35,8 +34,8 @@ func IsStringUTF16BE(s string) bool {
 
 	ok := strings.HasPrefix(s1, "\376\377") // 0xFE 0xFF
 
-	log.Debug.Printf("IsStringUTF16BE: <%s> returning %v\n", s1, ok)
-	log.Debug.Printf("\n%s", hex.Dump([]byte(s1)))
+	//log.Debug.Printf("IsStringUTF16BE: <%s> returning %v\n", s1, ok)
+	//log.Debug.Printf("\n%s", hex.Dump([]byte(s1)))
 
 	return ok
 }

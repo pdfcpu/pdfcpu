@@ -1767,15 +1767,24 @@ func ListFonts() ([]string, error) {
 	// Get list of PDF core fonts.
 	coreFonts := font.CoreFontNames()
 	for i, s := range coreFonts {
-		coreFonts[i] = s + " (core font)"
+		coreFonts[i] = "  " + s
 	}
 	sort.Strings(coreFonts)
 
+	sscf := []string{"Corefonts:"}
+	sscf = append(sscf, coreFonts...)
+
 	// Get installed fonts from pdfcpu config dir in users home dir
 	userFonts := font.UserFontNames()
+	for i, s := range userFonts {
+		userFonts[i] = "  " + s
+	}
 	sort.Strings(userFonts)
+	ssuf := []string{"Userfonts:"}
+	ssuf = append(ssuf, userFonts...)
 
-	return append(coreFonts, userFonts...), nil
+	sscf = append(sscf, "")
+	return append(sscf, ssuf...), nil
 }
 
 // InstallFonts installs true type fonts for embedding.

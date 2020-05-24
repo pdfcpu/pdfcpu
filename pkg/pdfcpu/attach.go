@@ -138,22 +138,12 @@ func extractAttachedFiles(ctx *Context, files StringSet) error {
 }
 
 func fileSpectDict(xRefTable *XRefTable, filename, desc string) (*IndirectRef, error) {
-
 	sd, err := xRefTable.NewEmbeddedFileStreamDict(filename)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := encodeStream(sd); err != nil {
-		return nil, err
-	}
-
-	ir, err := xRefTable.IndRefForNewObject(*sd)
-	if err != nil {
-		return nil, err
-	}
-
-	d, err := xRefTable.NewFileSpecDict(filename, desc, *ir) // Supply description!
+	d, err := xRefTable.NewFileSpecDict(filename, desc, *sd) // Supply description!
 	if err != nil {
 		return nil, err
 	}

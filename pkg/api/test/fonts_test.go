@@ -19,112 +19,112 @@ package test
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 	"testing"
 
-	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/font"
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
-func createFontSample(fontName string, t *testing.T) {
-	t.Helper()
-	msg := "createFontSampleSpecial"
-	inFile := filepath.Join(inDir, "empty.pdf")
-	outFile := filepath.Join(inDir, "fontSamples", fontName+".pdf")
+func writeCoreFontDemoContent(p pdf.Page, fontName string) {
+	baseFontName := "Helvetica"
+	baseFontSize := 24
+	baseFontKey := p.Fm.EnsureKey(baseFontName)
 
-	ctx, err := api.ReadContextFile(inFile)
-	if err != nil {
-		t.Fatalf("%s: ReadContextFile %s: %v\n", msg, inFile, err)
+	fontKey := p.Fm.EnsureKey(fontName)
+	fontSize := 24
+
+	fillCol := pdf.NewSimpleColor(0xf7e6c7)
+	pdf.DrawGrid(p.Buf, 16, 14, pdf.RectForWidthAndHeight(55, 2, 480, 422), pdf.Black, &fillCol)
+
+	td := pdf.TextDescriptor{
+		FontName:       baseFontName,
+		FontKey:        baseFontKey,
+		FontSize:       baseFontSize,
+		HAlign:         pdf.AlignCenter,
+		VAlign:         pdf.AlignBaseline,
+		Scale:          1.0,
+		ScaleAbs:       true,
+		RMode:          pdf.RMFill,
+		StrokeCol:      pdf.Black,
+		FillCol:        pdf.NewSimpleColor(0xab6f30),
+		ShowBackground: true,
+		BackgroundCol:  pdf.SimpleColor{R: 1., G: .98, B: .77},
 	}
 
-	wm, err := pdf.ParseTextWatermarkDetails(fontName+" (CP1252)", "rot:0, scal:0.8 abs, pos:tl", true)
-	if err != nil {
-		t.Fatalf("%s: ParseTextWatermarkDetails: %v\n", msg, err)
+	s := fmt.Sprintf("%s %d points", fontName, fontSize)
+	if fontName != "ZapfDingbats" && fontName != "Symbol" {
+		s = s + " (CP1252)"
 	}
-	if err := api.WatermarkContext(ctx, nil, wm); err != nil {
-		t.Fatalf("%s: WatermarkContext: %v\n", msg, err)
+	td.X, td.Y, td.Text = p.MediaBox.Width()/2, 500, s
+	td.StrokeCol, td.FillCol = pdf.NewSimpleColor(0x77bdbd), pdf.NewSimpleColor(0xab6f30)
+	pdf.WriteMultiLine(p.Buf, p.MediaBox, nil, td)
+
+	for i := 0; i < 16; i++ {
+		s = fmt.Sprintf("#%02X", i)
+		td.X, td.Y, td.Text, td.FontSize = float64(70+i*30), 427, s, 14
+		td.StrokeCol, td.FillCol = pdf.Black, pdf.SimpleColor{B: .8}
+		pdf.WriteMultiLine(p.Buf, p.MediaBox, nil, td)
 	}
 
-	var sb strings.Builder
-	for i := 32; i <= 255; i++ {
-		if i%8 == 0 {
-			sb.WriteString(fmt.Sprintf("\n%3d (%03o): ", i, i))
+	for j := 0; j < 14; j++ {
+		s = fmt.Sprintf("#%02X", j*16+32)
+		td.X, td.Y, td.Text = 41, float64(403-j*30), s
+		td.StrokeCol, td.FillCol = pdf.Black, pdf.SimpleColor{B: .8}
+		td.FontName, td.FontKey, td.FontSize = baseFontName, baseFontKey, 14
+		pdf.WriteMultiLine(p.Buf, p.MediaBox, nil, td)
+		for i := 0; i < 16; i++ {
+			b := byte(32 + j*16 + i)
+			s = string([]byte{b})
+			td.X, td.Y, td.Text = float64(70+i*30), float64(400-j*30), s
+			td.StrokeCol, td.FillCol = pdf.Black, pdf.Black
+			td.FontName, td.FontKey, td.FontSize = fontName, fontKey, fontSize
+			pdf.WriteMultiLine(p.Buf, p.MediaBox, nil, td)
 		}
-	}
-	a := sb.String()
-	wm, err = pdf.ParseTextWatermarkDetails(a, "rot:0, scal:0.8 abs, pos:tl, off:5 -40", true)
-	if err != nil {
-		t.Fatalf("%s: ParseTextWatermarkDetails: %v\n", msg, err)
-	}
-	if err := api.WatermarkContext(ctx, nil, wm); err != nil {
-		t.Fatalf("%s: WatermarkContext: %v\n", msg, err)
-	}
-
-	sb.Reset()
-	x := 100
-	y := -38
-	if fontName == "ZapfDingbats" {
-		y = -45
-	}
-	for i := 32; i <= 256; i++ {
-		if i > 32 && i%8 == 0 {
-			desc := fmt.Sprintf("font:%s, rot:0, scal:0.8 abs, pos:tl, off:%d %d", fontName, x, y)
-			wm, err = pdf.ParseTextWatermarkDetails(sb.String(), desc, true)
-			if err != nil {
-				t.Fatalf("%s: ParseTextWatermarkDetails: %v\n", msg, err)
-			}
-			if err := api.WatermarkContext(ctx, nil, wm); err != nil {
-				t.Fatalf("%s: WatermarkContext: %v\n", msg, err)
-			}
-			y -= 19
-			sb.Reset()
-		}
-		sb.WriteRune(rune(i))
-		sb.WriteString(" ")
-	}
-
-	if err := api.WriteContextFile(ctx, outFile); err != nil {
-		t.Fatalf("%s: WriteContextFile %s: %v\n", msg, outFile, err)
 	}
 }
 
-func XXXTestCreateFontSamples(t *testing.T) {
+func writeCP1252SpecialMappings(p pdf.Page, fontName string) {
 
-	// Enable this test to create sample PDFs for all installed fonts
-	// into pdfcpu/pkg/testdata/fontSamples/
+	k := p.Fm.EnsureKey(fontName)
 
-	l, err := api.ListFonts()
-	if err != nil {
-		t.Fatalf("%v", err)
+	td := pdf.TextDescriptor{
+		Text:           "€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ",
+		FontName:       fontName,
+		FontKey:        k,
+		FontSize:       24,
+		HAlign:         pdf.AlignCenter,
+		VAlign:         pdf.AlignBaseline,
+		X:              -1,
+		Y:              550,
+		Scale:          1.0,
+		ScaleAbs:       true,
+		RMode:          pdf.RMFill,
+		StrokeCol:      pdf.SimpleColor{},
+		FillCol:        pdf.NewSimpleColor(0xab6f30),
+		ShowBackground: true,
+		BackgroundCol:  pdf.SimpleColor{R: 1., G: .98, B: .77},
 	}
-	for _, fn := range l {
-		createFontSample(strings.Fields(fn)[0], t)
-	}
+
+	pdf.WriteMultiLine(p.Buf, p.MediaBox, nil, td)
 }
 
-func XXXTestFontTestPage(t *testing.T) {
-
-	// Generate a sample page for an Adobe Type 1 standard font.
-	inFile := filepath.Join(inDir, "empty.pdf")
-
-	var sb strings.Builder
-	for i := 32; i <= 255; i++ {
-		if i%8 == 0 {
-			sb.WriteString(fmt.Sprintf("\n%03o ", i))
+func createCoreFontDemoPage(w, h int, fontName string) pdf.Page {
+	mediaBox := pdf.RectForDim(float64(w), float64(h))
+	p := pdf.NewPageWithBg(mediaBox, pdf.NewSimpleColor(0xbeded9))
+	writeCoreFontDemoContent(p, fontName)
+	//writeCP1252SpecialMappings(p, fontName)
+	return p
+}
+func TestCoreFontDemoPDF(t *testing.T) {
+	msg := "TestCoreFontDemoPDF"
+	w, h := 600, 600
+	for _, fn := range font.CoreFontNames() {
+		p := createCoreFontDemoPage(w, h, fn)
+		xRefTable, err := pdf.CreateDemoXRef(p)
+		if err != nil {
+			t.Fatalf("%s: %v\n", msg, err)
 		}
-		sb.WriteRune(rune(i))
-		sb.WriteString(" ")
+		outFile := filepath.Join("../../samples/fonts/core", fn+".pdf")
+		createAndValidate(t, xRefTable, outFile, msg)
 	}
-
-	a := sb.String()
-
-	wmConf := "font:Symbol, rot:0, scal:0.8 abs, pos:tl"
-	wm, err := pdf.ParseTextWatermarkDetails("Symbol\n\n"+a, wmConf, true)
-	if err != nil {
-		t.Fatalf("%v\n", err)
-	}
-	if err = api.AddWatermarksFile(inFile, filepath.Join(inDir, "Symbol.pdf"), []string{}, wm, nil); err != nil {
-		t.Fatalf("%v\n", err)
-	}
-
 }

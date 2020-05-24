@@ -757,8 +757,7 @@ func writeXRefStream(ctx *Context) error {
 	}
 
 	// After the last insert of an object.
-	err = xRefTable.EnsureValidFreeList()
-	if err != nil {
+	if err = xRefTable.EnsureValidFreeList(); err != nil {
 		return err
 	}
 
@@ -796,42 +795,35 @@ func writeXRefStream(ctx *Context) error {
 	xRefStreamDict.Insert("Index", *indArr)
 
 	// Encode xRefStreamDict.Content -> xRefStreamDict.Raw
-	err = encodeStream(&xRefStreamDict.StreamDict)
-	if err != nil {
+	if err = encodeStream(&xRefStreamDict.StreamDict); err != nil {
 		return err
 	}
 
 	log.Write.Printf("writeXRefStream: xRefStreamDict: %s\n", xRefStreamDict)
 
-	err = writeStreamDictObject(ctx, objNumber, 0, xRefStreamDict.StreamDict)
-	if err != nil {
+	if err = writeStreamDictObject(ctx, objNumber, 0, xRefStreamDict.StreamDict); err != nil {
 		return err
 	}
 
 	w := ctx.Write
 
-	err = w.WriteEol()
-	if err != nil {
+	if err = w.WriteEol(); err != nil {
 		return err
 	}
 
-	_, err = w.WriteString("startxref")
-	if err != nil {
+	if _, err = w.WriteString("startxref"); err != nil {
 		return err
 	}
 
-	err = w.WriteEol()
-	if err != nil {
+	if err = w.WriteEol(); err != nil {
 		return err
 	}
 
-	_, err = w.WriteString(fmt.Sprintf("%d", offset))
-	if err != nil {
+	if _, err = w.WriteString(fmt.Sprintf("%d", offset)); err != nil {
 		return err
 	}
 
-	err = w.WriteEol()
-	if err != nil {
+	if err = w.WriteEol(); err != nil {
 		return err
 	}
 

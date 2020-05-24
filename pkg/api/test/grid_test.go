@@ -61,18 +61,14 @@ func TestGrid(t *testing.T) {
 		isImg         bool
 	}{
 		{"TestGridFromPDF",
-			[]string{filepath.Join(inDir, "Acroforms2.pdf")},
-			filepath.Join(outDir, "testGridFromPDF.pdf"),
-			nil, "f:LegalL", 1, 3, false},
+			[]string{filepath.Join(inDir, "read.go.pdf")},
+			filepath.Join("../../samples/grid", "testGridFromPDF.pdf"),
+			nil, "f:LegalP, o:dr, b:off", 4, 6, false},
 
 		{"TestGridFromImages",
-			[]string{
-				filepath.Join(resDir, "pdfchip3.png"),
-				filepath.Join(resDir, "demo.png"),
-				filepath.Join(resDir, "snow.jpg"),
-			},
-			filepath.Join(outDir, "testGridFromImages.pdf"),
-			nil, "d:500 500, m:20, b:off", 1, 3, true},
+			imageFileNames(t, "../../../resources"),
+			filepath.Join("../../samples/grid", "testGridFromImages.pdf"),
+			nil, "d:500 500, m:20, b:off", 1, 4, true},
 	} {
 		testGrid(t, tt.msg, tt.inFiles, tt.outFile, tt.selectedPages, tt.desc, tt.rows, tt.cols, tt.isImg)
 	}

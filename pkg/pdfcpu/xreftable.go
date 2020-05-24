@@ -247,7 +247,7 @@ func (xRefTable *XRefTable) Free(objNr int) (*XRefTableEntry, error) {
 	entry, found := xRefTable.Find(objNr)
 
 	if !found {
-		return nil, errors.Errorf("Free: object #%d not found.", objNr)
+		return nil, nil //errors.Errorf("Free: object #%d not found.", objNr)
 	}
 
 	if !entry.Free {
@@ -376,69 +376,71 @@ func (xRefTable *XRefTable) IndRefForNewObject(obj Object) (*IndirectRef, error)
 	return NewIndirectRef(objNr, *xRefTableEntry.Generation), nil
 }
 
-// NewStreamDict creates a streamDict for buf.
-func (xRefTable *XRefTable) NewStreamDict(filename string) (*StreamDict, error) {
-
-	buf, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
+// NewStreamDictForBuf creates a streamDict for buf.
+func (xRefTable *XRefTable) NewStreamDictForBuf(buf []byte) (*StreamDict, error) {
 	sd := StreamDict{
 		Dict:           NewDict(),
 		Content:        buf,
 		FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: nil}},
 	}
-
 	sd.InsertName("Filter", filter.Flate)
-
 	return &sd, nil
 }
 
-// NewEmbeddedFileStreamDict creates and returns an embeddedFileStreamDict containing the file "filename".
-func (xRefTable *XRefTable) NewEmbeddedFileStreamDict(filename string) (*StreamDict, error) {
-
-	sd, err := xRefTable.NewStreamDict(filename)
+// NewStreamDictForFile creates a streamDict for filename.
+func (xRefTable *XRefTable) NewStreamDictForFile(filename string) (*StreamDict, error) {
+	buf, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
+	return xRefTable.NewStreamDictForBuf(buf)
+}
 
+// NewEmbeddedFileStreamDict creates and returns an embeddedFileStreamDict containing the file "filename".
+func (xRefTable *XRefTable) NewEmbeddedFileStreamDict(filename string) (*IndirectRef, error) {
+	sd, err := xRefTable.NewStreamDictForFile(filename)
+	if err != nil {
+		return nil, err
+	}
 	fi, err := os.Stat(filename)
 	if err != nil {
 		return nil, err
 	}
-
 	sd.InsertName("Type", "EmbeddedFile")
-
 	d := NewDict()
 	d.InsertInt("Size", int(fi.Size()))
 	d.Insert("ModDate", StringLiteral(DateString(fi.ModTime())))
 	sd.Insert("Params", d)
 
-	return sd, nil
-}
-
-// NewSoundStreamDict returns a new sound stream dict.
-func (xRefTable *XRefTable) NewSoundStreamDict(filename string, samplingRate int, fileSpecDict Dict) (*StreamDict, error) {
-
-	sd, err := xRefTable.NewStreamDict(filename)
-	if err != nil {
+	if err = encodeStream(sd); err != nil {
 		return nil, err
 	}
 
+	return xRefTable.IndRefForNewObject(*sd)
+}
+
+// NewSoundStreamDict returns a new sound stream dict.
+func (xRefTable *XRefTable) NewSoundStreamDict(filename string, samplingRate int, fileSpecDict Dict) (*IndirectRef, error) {
+	sd, err := xRefTable.NewStreamDictForFile(filename)
+	if err != nil {
+		return nil, err
+	}
 	sd.InsertName("Type", "Sound")
 	sd.InsertInt("R", samplingRate)
 	sd.InsertInt("C", 2)
 	sd.InsertInt("B", 8)
 	sd.InsertName("E", "Signed")
-
 	if fileSpecDict != nil {
 		sd.Insert("F", fileSpecDict)
 	} else {
 		sd.Insert("F", StringLiteral(path.Base(filename)))
 	}
 
-	return sd, nil
+	if err = encodeStream(sd); err != nil {
+		return nil, err
+	}
+
+	return xRefTable.IndRefForNewObject(*sd)
 }
 
 // NewFileSpecDict creates and returns a new fileSpec dictionary.
@@ -491,6 +493,13 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 	head, err := xRefTable.Free(0)
 	if err != nil {
 		return err
+	}
+
+	if head == nil {
+		g0 := FreeHeadGeneration
+		z := int64(0)
+		head = &XRefTableEntry{Free: true, Offset: &z, Generation: &g0}
+		xRefTable.Table[0] = head
 	}
 
 	// verify generation of 56535
@@ -1924,17 +1933,13 @@ func (xRefTable *XRefTable) PageDims() ([]Dim, error) {
 }
 
 func (xRefTable *XRefTable) emptyPage(parentIndRef *IndirectRef, mediaBox *Rectangle) (*IndirectRef, error) {
+	sd, _ := xRefTable.NewStreamDictForBuf(nil)
 
-	contents := &StreamDict{Dict: NewDict()}
-	contents.InsertName("Filter", filter.Flate)
-	contents.FilterPipeline = []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}
-
-	err := encodeStream(contents)
-	if err != nil {
+	if err := encodeStream(sd); err != nil {
 		return nil, err
 	}
 
-	contentsIndRef, err := xRefTable.IndRefForNewObject(*contents)
+	contentsIndRef, err := xRefTable.IndRefForNewObject(*sd)
 	if err != nil {
 		return nil, err
 	}

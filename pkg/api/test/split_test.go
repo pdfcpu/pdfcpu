@@ -23,23 +23,35 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 )
 
-func TestSplit(t *testing.T) {
-	msg := "TestSplit"
+func TestSplitSpan1(t *testing.T) {
+	msg := "TestSplitSpan1"
 	fileName := "Acroforms2.pdf"
 	inFile := filepath.Join(inDir, fileName)
 
 	// Create single page files of inFile in outDir.
-	if err := api.SplitFile(inFile, outDir, 1, nil); err != nil {
+	span := 1
+	if err := api.SplitFile(inFile, outDir, span, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
 
-func TestSplitByBookmarkCommand(t *testing.T) {
-	msg := "TestSplitByBookmarkCommand"
+func TestSplitSpan2(t *testing.T) {
+	msg := "TestSplitSpan2"
+	fileName := "Acroforms2.pdf"
+	inFile := filepath.Join(inDir, fileName)
+
+	span := 2
+	if err := api.SplitFile(inFile, outDir, span, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+}
+
+func TestSplit0ByBookmarkCommand(t *testing.T) {
+	msg := "TestSplit0ByBookmarkCommand"
 	fileName := "5116.DCT_Filter.pdf"
 	inFile := filepath.Join(inDir, fileName)
-	span := 0 // This means we are going to split by bookmarks.
 
+	span := 0 // 0 means we are going to split by bookmarks.
 	if err := api.SplitFile(inFile, outDir, span, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
