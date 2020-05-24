@@ -756,14 +756,14 @@ func checkV(ctx *Context, d Dict) (*int, error) {
 
 	// EFF
 	eff := d.NameEntry("EFF")
-	if eff != nil && *strf != "Identity" {
+	if eff != nil && *eff != "Identity" {
 		d := cfDict.DictEntry(*eff)
 		if d == nil {
 			return nil, errors.Errorf("pdfcpu: checkV: entry \"%s\" missing in \"CF\"", *eff)
 		}
 		aes, err := supportedCFEntry(d)
 		if err != nil {
-			return nil, errors.Wrapf(err, "checkV: unsupported \"%s\" entry in \"CF\"", *strf)
+			return nil, errors.Wrapf(err, "checkV: unsupported \"%s\" entry in \"CF\"", *eff)
 		}
 		ctx.AES4EmbeddedStreams = aes
 	}

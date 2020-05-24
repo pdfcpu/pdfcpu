@@ -137,9 +137,8 @@ func (ctx *Context) String() string {
 
 	// Print list of any missing objects.
 	if len(ctx.XRefTable.Table) < *ctx.XRefTable.Size {
-		missing, s := ctx.MissingObjects()
-		if missing > 0 {
-			logStr = append(logStr, fmt.Sprintf("%d missing objects: %s\n", missing, *s))
+		if count, mstr := ctx.MissingObjects(); count > 0 {
+			logStr = append(logStr, fmt.Sprintf("%d missing objects: %s\n", count, *mstr))
 		}
 	}
 

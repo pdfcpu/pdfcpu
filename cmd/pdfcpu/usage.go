@@ -329,7 +329,7 @@ verbose, v ... turn on logging
    fillcolor:        color value to be used when rendering text, see also rendermode
                      for backwards compatibility "color" is also accepted.
    strokecolor:      color value to be used when rendering text, see also rendermode
-   backgroundcolor:  color value for visualization of the bounding box background
+   backgroundcolor:  color value for visualization of the bounding box background for text.
                      "bgcolor" is also accepted. 
    rotation:         -180.0 <= x <= 180.0
    diagonal:         render along diagonal, 1..lower left to upper right, 2..upper left to lower right (if present overrules r!)
@@ -340,7 +340,7 @@ verbose, v ... turn on logging
                      1 ... stroke (applies stroke color)
                      2 ... fill & stroke (applies both fill and stroke colors)
 
-   margins:          Set bounding box margins (requires background color) i >= 0
+   margins:          Set bounding box margins for text (requires background color) i >= 0
                      i       ... set all four margins
                      i j     ... set top/bottom margins to i
                                  set left/right margins to j
@@ -349,7 +349,7 @@ verbose, v ... turn on logging
                                  set bottom margins to k
                      i j k l ... set top, right, bottom, left margins
 
-   border:           Set bounding box border (requires background color)
+   border:           Set bounding box border for text (requires background color)
                      i {color} {round}
                      i     ... border width > 0
                      color ... border color

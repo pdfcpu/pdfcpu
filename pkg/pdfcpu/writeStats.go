@@ -31,8 +31,9 @@ func logWriteStats(ctx *Context) {
 	xRefTable := ctx.XRefTable
 
 	if len(xRefTable.Table) != *xRefTable.Size {
-		missing, str := xRefTable.MissingObjects()
-		log.Stats.Printf("%d missing objects: %s\n", missing, *str)
+		if count, mstr := xRefTable.MissingObjects(); count > 0 {
+			log.Stats.Printf("%d missing objects: %s\n", count, *mstr)
+		}
 	}
 
 	var nonRefObjs []int
