@@ -149,9 +149,9 @@ func (d Dict) NameEntry(key string) *string {
 		return nil
 	}
 
-	Name, ok := value.(Name)
+	name, ok := value.(Name)
 	if ok {
-		s := string(Name)
+		s := name.Value()
 		return &s
 	}
 

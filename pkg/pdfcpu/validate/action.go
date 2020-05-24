@@ -539,7 +539,7 @@ func validateNamedActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName stri
 		}
 
 		// Some known non standard named actions
-		if pdf.MemberOf(s, []string{"GoToPage", "GoBack", "GoForward", "Find"}) {
+		if pdf.MemberOf(s, []string{"GoToPage", "GoBack", "GoForward", "Find", "Print"}) {
 			return true
 		}
 

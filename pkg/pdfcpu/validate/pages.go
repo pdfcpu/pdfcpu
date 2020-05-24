@@ -108,9 +108,10 @@ func validatePageResources(xRefTable *pdf.XRefTable, d pdf.Dict, hasResources, h
 		return err
 	}
 
-	if !hasResources && hasContents {
-		return errors.New("pdfcpu: validatePageResources: missing required entry \"Resources\" - should be inheritated")
-	}
+	// TODO Check if contents need resources (#169)
+	// if !hasResources && hasContents {
+	// 	return errors.New("pdfcpu: validatePageResources: missing required entry \"Resources\" - should be inheritated")
+	// }
 
 	return nil
 }
