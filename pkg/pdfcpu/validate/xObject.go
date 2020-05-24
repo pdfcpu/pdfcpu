@@ -735,7 +735,9 @@ func validateXObjectStreamDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
 
 	// see 8.8 External Objects
 
-	sd, err := xRefTable.DereferenceStreamDict(o)
+	// Dereference stream dict and ensure it is validated exactly once in order handle
+	// XObjects(forms) with recursive structures like produced by Microsoft.
+	sd, err := xRefTable.DereferenceStreamDictForValidation(o)
 	if err != nil || sd == nil {
 		return err
 	}
@@ -773,7 +775,7 @@ func validateXObjectStreamDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
 	switch *subtype {
 
 	case "Form":
-		//err = validateFormStreamDict(xRefTable, sd)
+		err = validateFormStreamDict(xRefTable, sd)
 
 	case "Image":
 		err = validateImageStreamDict(xRefTable, sd, isNoAlternateImageStreamDict)

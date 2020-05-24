@@ -45,6 +45,7 @@ type XRefTableEntry struct {
 	Compressed      bool
 	ObjectStream    *int
 	ObjectStreamInd *int
+	Valid           bool
 }
 
 // NewXRefTableEntryGen0 returns a cross reference table entry for an object with generation 0.
@@ -1012,6 +1013,33 @@ func (xRefTable *XRefTable) DereferenceStreamDict(o Object) (*StreamDict, error)
 	}
 
 	sd, ok := o.(StreamDict)
+	if !ok {
+		return nil, errors.Errorf("pdfcpu: dereferenceStreamDict: wrong type <%v>", o)
+	}
+
+	return &sd, nil
+}
+
+// DereferenceStreamDictForValidation resolves stream dictionary objects
+// and ensures they are visited once only during validation.
+func (xRefTable *XRefTable) DereferenceStreamDictForValidation(o Object) (*StreamDict, error) {
+
+	ir, ok := o.(IndirectRef)
+	if !ok {
+		// Nothing do dereference.
+		return nil, nil
+	}
+
+	// 7.3.10
+	// An indirect reference to an undefined object shall not be considered an error by a conforming reader;
+	// it shall be treated as a reference to the null object.
+	entry, found := xRefTable.FindTableEntry(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
+	if !found || entry.Free || entry.Valid {
+		return nil, nil
+	}
+	entry.Valid = true
+
+	sd, ok := entry.Object.(StreamDict)
 	if !ok {
 		return nil, errors.Errorf("pdfcpu: dereferenceStreamDict: wrong type <%v>", o)
 	}
