@@ -996,7 +996,11 @@ func validateString(xRefTable *pdf.XRefTable, o pdf.Object, validate func(string
 		s, err = pdf.HexLiteralToString(o.Value())
 
 	default:
-		return "", errors.New("pdfcpu: validateString: invalid type")
+		err = errors.New("pdfcpu: validateString: invalid type")
+	}
+
+	if err != nil {
+		return s, err
 	}
 
 	// Validation
@@ -1047,7 +1051,11 @@ func validateStringEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryNa
 		s, err = pdf.HexLiteralToString(o.Value())
 
 	default:
-		return nil, errors.Errorf("pdfcpu: validateStringEntry: dict=%s entry=%s invalid type", dictName, entryName)
+		err = errors.Errorf("pdfcpu: validateStringEntry: dict=%s entry=%s invalid type", dictName, entryName)
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	// Validation

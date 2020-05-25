@@ -58,8 +58,8 @@ func TestImportImages(t *testing.T) {
 		impConf       string
 		ensureOutFile bool
 	}{
-		// Convert an image into a single page PDF.
-		// The page dimensions will match the image dimensions.
+		//Convert an image into a single page PDF.
+		//The page dimensions will match the image dimensions.
 		{"TestConvertImageToPDF",
 			[]string{filepath.Join(resDir, "logoSmall.png")},
 			"convertImage.pdf",
@@ -67,20 +67,20 @@ func TestImportImages(t *testing.T) {
 			false},
 
 		// Import an image as a new page of the existing output file.
-		{"TestImportImage",
-			[]string{filepath.Join(resDir, "logoSmall.png")},
-			"importImage.pdf",
-			"",
-			true},
+		// {"TestImportImage",
+		// 	[]string{filepath.Join(resDir, "logoSmall.png")},
+		// 	"importImage.pdf",
+		// 	"",
+		// 	true},
 
-		// Import images by creating an A3 page for each image.
-		// Images are page centered with 1.0 relative scaling.
-		// Import an image as a new page of the existing output file.
+		//Import images by creating an A3 page for each image.
+		//Images are page centered with 1.0 relative scaling.
+		//Import an image as a new page of the existing output file.
 		{"TestCenteredImportImage",
 			imageFileNames(t, "../../../resources"),
-			"importImage.pdf",
+			"importImageToA3.pdf",
 			"f:A3, pos:c, s:1.0",
-			true},
+			false},
 	} {
 		testImportImages(t, tt.msg, tt.imgFiles, tt.outFile, tt.impConf, tt.ensureOutFile)
 	}

@@ -60,7 +60,7 @@ func imageFileNames(t *testing.T, dir string) []string {
 	}
 	fn := []string{}
 	for _, fi := range files {
-		if strings.HasSuffix(fi.Name(), "jpg") || strings.HasSuffix(fi.Name(), "png") {
+		if strings.HasSuffix(fi.Name(), "png") || strings.HasSuffix(fi.Name(), "jpg") {
 			fn = append(fn, filepath.Join(dir, fi.Name()))
 		}
 	}

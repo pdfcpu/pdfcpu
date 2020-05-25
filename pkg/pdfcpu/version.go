@@ -23,7 +23,7 @@ import (
 )
 
 // VersionStr is the current pdfcpu version.
-var VersionStr = "v0.3.2 dev"
+var VersionStr = "v0.3.3 dev"
 
 // Version is a type for the internal representation of PDF versions.
 type Version int

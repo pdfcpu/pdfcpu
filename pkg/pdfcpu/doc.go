@@ -8,7 +8,7 @@ The commands are:
 	attachments	list, add, remove, extract embedded file attachments
 	changeopw	change owner password
 	changeupw	change user password
-	collect     create custom sequence of selected pages
+	collect		create custom sequence of selected pages
 	decrypt		remove password protection
 	encrypt		set password protection
 	extract		extract images, fonts, content, pages or metadata
@@ -16,7 +16,7 @@ The commands are:
 	grid		rearrange pages or images for enhanced browsing experience
 	import		import/convert images to PDF
 	info		print file info
-	keywords    list, add, remove keywords
+	keywords	list, add, remove keywords
 	merge		concatenate PDFs
 	nup			rearrange pages or images for reduced number of pages
 	optimize	optimize PDF by getting rid of redundant page resources
@@ -24,7 +24,7 @@ The commands are:
 	paper		print list of supported paper sizes
 	permissions	list, set user access permissions
 	portfolio	list, add, remove, extract portfolio entries with optional description
-	properties  list, add, remove document properties
+	properties	list, add, remove document properties
 	rotate		rotate pages
 	split		split up s PDF by span or bookmark
 	stamp		add, remove, update text, image or PDF stamps for selected pages
