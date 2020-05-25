@@ -7,7 +7,7 @@ layout: default
 | Date      | Tag / Commit | Description  
 |:----------|:-------------|:--------
 |2020-05-25 | [v0.3.3](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.3)                              | stamps: Add hAlign, margins, border
-|           |                                                                                             | Fix: #157,#170,#173,#175,181-184,#188
+|           |                                                                                             | Fix: #157,#170,#173,#175,#181-184,#188
 |2020-01-04 | [v0.3.2](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.2)                              | Support multi-stamping
 |           |                                                                                             | Add new cmds: keywords, properties
 |           |                                                                                             | Add new cmds: collect, portfolio
