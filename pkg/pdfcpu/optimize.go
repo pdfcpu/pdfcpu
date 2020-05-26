@@ -392,7 +392,8 @@ func optimizeXObjectResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjN
 
 		// We are dealing with a new XObject..
 		// Dereference the XObject stream dict.
-		osd, err := ctx.DereferenceStreamDict(indRef)
+
+		osd, err := ctx.DereferenceStreamDictForValidation(indRef)
 		if err != nil {
 			return err
 		}
@@ -561,7 +562,6 @@ func parsePagesDict(ctx *Context, pagesDict Dict, pageNumber int) (int, error) {
 	log.Optimize.Printf("parsePagesDict: This page node has %d pages\n", int(count.(Integer)))
 
 	// Iterate over page tree.
-	//kidsArray := pagesDict.ArrayEntry("Kids")
 	for _, v := range pagesDict.ArrayEntry("Kids") {
 
 		// Dereference next page node dict.
