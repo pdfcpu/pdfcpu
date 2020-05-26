@@ -83,25 +83,43 @@ but `op: .7` will do the job.
 | points           | fontsize in points              | in combination with absolute scaling only           | points: 24
 | position         | the stamps lower left corner    | one of `full` or the anchors: `tl, tc, tr, l, c, r, bl, bc, br`| pos: c
 | offset           |                                 | (dx,dy) in user units eg. '15 20'                   | off: 0 0
-| scalefactor      |                                 | 0.0 < i <= 1.0 followed by optional `abs` or `rel`  | s: 0.5 rel
-| color            | 3 fill color intensities        | 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red         | c: 0.5 0.5 0.5 = gray
+| scalefactor      |                                 | 0.0 < i <= 1.0 followed by optional `abs` or `rel`  | sc: 0.5 rel
+| aligntext        | horizontal text alignment       | l..left, c..center, r..right, j..justified          | al:c
+| strokecolor      | for rendering text (see mode)   | 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red         | strokec: 0.5 0.5 0.5 = gray
+|                  |                                 | or the hex RGB value: #RRGGBB
+| fillcolor        | for rendering text (see mode)   | 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red         | fillc: 0.5 0.5 0.5 = gray
+|                  | (=color)                        | or the hex RGB value: #RRGGBB                       |
+| backgroundcolor  | bounding box background         | 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red         | none
+|                  | (=bgcolor)                      | or the hex RGB value: #RRGGBB                       |
 | rotation         | rotation angle                  | -180.0 <= i <= 180.0                                | rot: 0.0
 | diagonal         | render along diagonal           | 1 .. lower left to upper right                      | d:1
 |                  |                                 | 2 .. upper left to lower right                      |
 | opacity          |                                 | 0.0 <= i <= 1.0                                     | op:1
-| mode, rendermode |                                 | 0 .. fill                                           | m:0
-|                  |                                 | 1 .. stroke                                         |
-|                  |                                 | 2 .. fill & stroke                                  |
-
+| mode, rendermode | apply fill color                | 0 .. fill                                           | mo:0
+|                  | apply stroke color              | 1 .. stroke                                         |
+|                  | apply both fill & stroke color  | 2 .. fill & stroke                                  |
+| margins          | bounding box margins for text   | i .. set all four margins                           | ma:0
+|                  | requires bgcolor                | i j .. set t/b margins to i, set l/r margins to j   |
+|                  |                                 | i j k .. set top to i, left/right to j, bot to k    |
+|                  |                                 | i j k l .. set top, right, bottom, left margins     |
+| border           | bounding box border for text    | i {color} {round}                                   | bo:0
+|                  | requires bccolor                | i .. border width > 0                               |
+|                  |                                 | color .. border color                               |
+|                  |                                 | round .. set round bounding box corners             |
 
 Only one of rotation and diagonal is allowed.
 
 The following description parameters are for text based watermarks only:
 
-* font name
-* font size
-* color
-* render mode
+* fontname
+* points
+* aligntext
+* strokecolor 
+* fillcolor (=color)
+* bgcolor
+* rendermode
+* margins
+* border
 
 <br>
 
@@ -119,7 +137,7 @@ The following description parameters are for text based watermarks only:
 #### Default description
 
 ```sh
-'f:Helvetica, points:24, s:0.5 rel, pos:c, off:0 0, c:0.5 0.5 0.5, rot:0, d:1, o:1, m:0'
+'f:Helvetica, points:24, sc:0.5 rel, pos:c, off:0 0, c:0.5 0.5 0.5, rot:0, d:1, op:1, mo:0'
 ```
 
 The default watermark configuration is:
@@ -133,8 +151,13 @@ In addition for text based watermarks:
 
 * font name `Helvetica`
 * font size `24` points
+* align: `c`
+* stroke color gray (`0.5 0.5 0.5`)
 * fill color gray (`0.5 0.5 0.5`)
-* render mode fill (`m:0`)
+* no background color and therefore no bounding box
+* render mode fill (`mo:0`)
+* margins `0`
+* border `0`
 
 You only have to specify parameters that differ from the default.
 <br>
@@ -155,7 +178,7 @@ pdfcpu watermark add -mode text 'This is a watermark' '' in.pdf out.pdf
 Create a watermark using scale factor 1:
 
 ```sh
-pdfcpu watermark add -mode text 'This is a watermark' 's:1' in.pdf out.pdf
+pdfcpu watermark add -mode text 'This is a watermark' 'sc:1' in.pdf out.pdf
 ```
 
 <p align="center">
@@ -168,7 +191,7 @@ pdfcpu watermark add -mode text 'This is a watermark' 's:1' in.pdf out.pdf
 Create a watermark along the second diagonale using scale factor 0.9, default render mode `fill` and a fill color:
 
 ```sh
-pdfcpu watermark add -mode text 'This is a watermark' 's:.9, d:2, c:.6 .2 .9' in.pdf out.pdf
+pdfcpu watermark add -mode text 'This is a watermark' 'sc:.9, d:2, c:.6 .2 .9' in.pdf out.pdf
 ```
 
 <p align="center">
@@ -180,7 +203,7 @@ pdfcpu watermark add -mode text 'This is a watermark' 's:.9, d:2, c:.6 .2 .9' in
 Create a watermark with 0 degree rotation using scale factor 0.9 and render mode `stroke`:
 
 ```sh
-pdfcpu watermark add -mode text 'This is a watermark' 's:.9, rot:0, m:1' in.pdf out.pdf
+pdfcpu watermark add -mode text 'This is a watermark' 'sc:.9, rot:0, mo:1' in.pdf out.pdf
 ```
 
 <p align="center">
@@ -192,7 +215,7 @@ pdfcpu watermark add -mode text 'This is a watermark' 's:.9, rot:0, m:1' in.pdf 
 Create a watermark with a counterclockwise rotation of 45 degrees using scale factor 1, render mode `fill & stroke` and a fill color:
 
 ```sh
-pdfcpu watermark add -mode text 'This is a watermark' 's:1, rot:45, m:2, c:.2 .7 .9' in.pdf out.pdf
+pdfcpu watermark add -mode text 'This is a watermark' 'sc:1, rot:45, mo:2, c:.2 .7 .9' in.pdf out.pdf
 ```
 
 <p align="center">
@@ -238,7 +261,7 @@ pdfcpu watermark add -mode image 'pic.jpg' '' in.pdf out.pdf
 Create a watermark using 0 degree rotation and relative scaling of 1.0:
 
 ```sh
-pdfcpu watermark add -mode image 'pic.jpg' 's:1 rel, rot:0' in.pdf out.pdf
+pdfcpu watermark add -mode image 'pic.jpg' 'sc:1 rel, rot:0' in.pdf out.pdf
 ```
 
 <p align="center">
@@ -250,7 +273,7 @@ pdfcpu watermark add -mode image 'pic.jpg' 's:1 rel, rot:0' in.pdf out.pdf
 Create a watermark using 0 degree rotation and absolute scaling of 1.0:
 
 ```sh
-pdfcpu watermark add 'pic.jpg' 's:1 abs, rot:0' in.pdf out.pdf
+pdfcpu watermark add 'pic.jpg' 'sc:1 abs, rot:0' in.pdf out.pdf
 ```
 
 <p align="center">
@@ -274,7 +297,7 @@ pdfcpu watermark add -mode image 'pic.jpg' 'rotation:-30, scalefactor:1 abs' in.
 Create a watermark using a clockwise rotation of 30 degrees and absolute scaling of 0.25:
 
 ```sh
-pdfcpu watermark add -mode image 'pic.jpg' 'rot:-30, s:.25 abs' in.pdf out.pdf
+pdfcpu watermark add -mode image 'pic.jpg' 'rot:-30, sc:.25 abs' in.pdf out.pdf
 ```
 
 <p align="center">

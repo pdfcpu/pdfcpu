@@ -89,24 +89,43 @@ but `op: .7` will do the job.
 | points           | fontsize in points              | in combination with absolute scaling only           | points: 24
 | position         | the stamps lower left corner    | one of `full` or the anchors: `tl, tc, tr, l, c, r, bl, bc, br`| pos: c
 | offset           |                                 | (dx,dy) in user units eg. '15 20'                   | off: 0 0
-| scalefactor      |                                 | 0.0 < i <= 1.0 followed by optional `abs` or `rel`  | s: 0.5 rel
-| color            | 3 fill color intensities        | 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red         | c: 0.5 0.5 0.5 = gray
+| scalefactor      |                                 | 0.0 < i <= 1.0 followed by optional `abs` or `rel`  | sc: 0.5 rel
+| aligntext        | horizontal text alignment       | l..left, c..center, r..right, j..justified          | al:c
+| strokecolor      | for rendering text (see mode)   | 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red         | strokec: 0.5 0.5 0.5 = gray
+|                  |                                 | or the hex RGB value: #RRGGBB
+| fillcolor        | for rendering text (see mode)   | 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red         | fillc: 0.5 0.5 0.5 = gray
+|                  | (=color)                        | or the hex RGB value: #RRGGBB                       |
+| backgroundcolor  | bounding box background         | 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red         | none
+|                  | (=bgcolor)                      | or the hex RGB value: #RRGGBB                       |
 | rotation         | rotation angle                  | -180.0 <= i <= 180.0                                | rot: 0.0
 | diagonal         | render along diagonal           | 1 .. lower left to upper right                      | d:1
 |                  |                                 | 2 .. upper left to lower right                      |
 | opacity          |                                 | 0.0 <= i <= 1.0                                     | op:1
-| mode, rendermode |                                 | 0 .. fill                                           | m:0
-|                  |                                 | 1 .. stroke                                         |
-|                  |                                 | 2 .. fill & stroke                                  |
+| mode, rendermode | apply fill color                | 0 .. fill                                           | mo:0
+|                  | apply stroke color              | 1 .. stroke                                         |
+|                  | apply both fill & stroke color  | 2 .. fill & stroke                                  |
+| margins          | bounding box margins for text   | i .. set all four margins                           | ma:0
+|                  | requires bgcolor                | i j .. set t/b margins to i, set l/r margins to j   |
+|                  |                                 | i j k .. set top to i, left/right to j, bot to k    |
+|                  |                                 | i j k l .. set top, right, bottom, left margins     |
+| border           | bounding box border for text    | i {color} {round}                                   | bo:0
+|                  | requires bccolor                | i .. border width > 0                               |
+|                  |                                 | color .. border color                               |
+|                  |                                 | round .. set round bounding box corners             |
 
 Only one of rotation and diagonal is allowed.
 
 The following description parameters are for text based stamps only:
 
-* font name
-* font size
-* color
-* render mode
+* fontname
+* points
+* aligntext
+* strokecolor 
+* fillcolor (=color)
+* bgcolor
+* rendermode
+* margins
+* border
 
 <br>
 
@@ -124,7 +143,7 @@ The following description parameters are for text based stamps only:
 #### Default description
 
 ```sh
-'f:Helvetica, points:24, s:0.5 rel, pos:c, off: 0 0, c:0.5 0.5 0.5, rot:0, d:1, op:1, m:0'
+'fo:Helvetica, points:24, sc:0.5 rel, pos:c, off: 0 0, c:0.5 0.5 0.5, rot:0, d:1, op:1, mo:0'
 ```
 The default stamp configuration is:
 
@@ -137,8 +156,13 @@ In addition for text based stamps:
 
 * font name `Helvetica`
 * font size `24` points
-* fill color grey (`0.5 0.5 0.5`)
-* render mode fill (`m:0`)
+* align: `c`
+* stroke color gray (`0.5 0.5 0.5`)
+* fill color gray (`0.5 0.5 0.5`)
+* no background color and therefore no bounding box
+* render mode fill (`mo:0`)
+* margins `0`
+* border `0`
 
 You only have to specify parameters that differ from the default.
 
@@ -160,7 +184,7 @@ pdfcpu stamp add -mode text 'This is a stamp' '' in.pdf out.pdf
 Create a stamp using scale factor 1:
 
 ```sh
-pdfcpu stamp add 'This is a stamp, s:1' in.pdf out.pdf
+pdfcpu stamp add 'This is a stamp, sc:1' in.pdf out.pdf
 ```
 
 <p align="center">
@@ -173,7 +197,7 @@ pdfcpu stamp add 'This is a stamp, s:1' in.pdf out.pdf
 Create a stamp along the second diagonale using scale factor 0.9, default render mode `fill` and a fill color:
 
 ```sh
-pdfcpu stamp add -mode text 'This is a stamp' 's:.9, d:2, c:.6 .2 .9' in.pdf out.pdf
+pdfcpu stamp add -mode text 'This is a stamp' 'sc:.9, d:2, c:.6 .2 .9' in.pdf out.pdf
 ```
 
 <p align="center">
@@ -185,7 +209,7 @@ pdfcpu stamp add -mode text 'This is a stamp' 's:.9, d:2, c:.6 .2 .9' in.pdf out
 Create a stamp with 0 degree rotation using scale factor 0.9 and render mode `stroke`:
 
 ```sh
-pdfcpu stamp add -mode text 'This is a stamp' 's:.9, rot:0, m:1' in.pdf out.pdf
+pdfcpu stamp add -mode text 'This is a stamp' 'sc:.9, rot:0, mo:1' in.pdf out.pdf
 ```
 
 <p align="center">
@@ -209,9 +233,9 @@ pdfcpu stamp add -mode text 'This is a stamp' 'scale:1, rot:45, mode:2, color:.2
 Create a stamp with default rotation, using scale factor 1, font size 48, default render mode `fill`, a fill color and increasing opacity from 0.3 to 1. By setting an opacity < 1 you can fake a watermark. This may be useful in scenarios where `pdfcpu watermark` does not produce satisfying results for a particular PDF file:
 
 ```sh
-pdfcpu stamp add -mode text 'Draft' 'points:48, s:1, c:.8 .8 .4, op:.3' in1.pdf out1.pdf
-pdfcpu stamp add -mode text 'Draft' 'points:48, s:1, c:.8 .8 .4, op:0.6' in2.pdf out2.pdf
-pdfcpu stamp add -mode text 'Draft' 'points:48, s:1, c:.8 .8 .4, op:1' in3.pdf out3.pdf
+pdfcpu stamp add -mode text 'Draft' 'points:48, sc:1, fillc:.8 .8 .4, op:.3' in1.pdf out1.pdf
+pdfcpu stamp add -mode text 'Draft' 'points:48, sc:1, fillc:.8 .8 .4, op:0.6' in2.pdf out2.pdf
+pdfcpu stamp add -mode text 'Draft' 'points:48, sc:1, fillc:.8 .8 .4, op:1' in3.pdf out3.pdf
 ```
 
 <p align="center">
@@ -290,7 +314,7 @@ pdfcpu stamp add -mode text 'Draft' '' template.pdf work.pdf
 
 Let's edit the stamps color, render mode and opacity
 ```sh
-pdfcpu stamp update -mode text 'Draft' 'c: .2 .6 .5, m:2, op:.7' work.pdf
+pdfcpu stamp update -mode text 'Draft' 'c: .2 .6 .5, rendermode:2, op:.7' work.pdf
 ```
 <p align="center">
   <img style="border-color:silver" border="1" src="resources/2exp.png" height="300">
@@ -310,7 +334,7 @@ pdfcpu stamp add -mode text 'Footer' 'pos:bc, scale: 1.0 abs, rot:0, c: .5 .5 .9
 
 Let's add a logo in the top right corner.
 ```sh
-pdfcpu stamp add -mode image 'logo.png' 'pos:tr, rot:0, s:.2' work.pdf
+pdfcpu stamp add -mode image 'logo.png' 'pos:tr, rot:0, sc:.2' work.pdf
 ```
 <p align="center">
   <img style="border-color:silver" border="1" src="resources/4exp.png" height="300">
