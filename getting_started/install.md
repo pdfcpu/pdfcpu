@@ -34,7 +34,7 @@ pdfcpu version
 brew install pdfcpu
 ```
 
-## Run pdfcpu in a Docker container
+## Run in a Docker container
 
 ```
 docker build -t pdfcpu .
