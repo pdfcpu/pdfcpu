@@ -224,6 +224,18 @@ pdfcpu watermark add -mode text 'This is a watermark' 'sc:1, rot:45, mo:2, c:.2 
 
 <br>
 
+Create a watermark using  some multi line text, show its bounding box by setting bgcol, set all margins to 5 and a border width of 7 rendering round corners.
+
+```sh
+pdfcpu stamp add -mode text 'Some multi\nline text' 'ma:5, bo:7 round .3 .7 .7, fillc:#3277d3, bgcol:#beded9, rot:0' in.pdf out.pdf
+```
+
+<p align="center">
+  <img style="border-color:silver" border="1" src="resources/stMarginsRoundBorder.png" height="300">
+</p>
+
+<br>
+
 Create a watermark with default rotation, using scale factor 1, font size 48, default render mode `fill`, a fill color and set opacity to 0.6:
 
 ```sh
