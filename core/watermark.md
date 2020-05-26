@@ -102,10 +102,10 @@ but `op: .7` will do the job.
 |                  | requires bgcolor                | i j .. set t/b margins to i, set l/r margins to j   |
 |                  |                                 | i j k .. set top to i, left/right to j, bot to k    |
 |                  |                                 | i j k l .. set top, right, bottom, left margins     |
-| border           | bounding box border for text    | i {color} {round}                                   | bo:0
+| border           | bounding box border for text    | i {round} {color}                                   | bo:0
 |                  | requires bccolor                | i .. border width > 0                               |
-|                  |                                 | color .. border color                               |
 |                  |                                 | round .. set round bounding box corners             |
+|                  |                                 | color .. border color                               |
 
 Only one of rotation and diagonal is allowed.
 
@@ -227,7 +227,7 @@ pdfcpu watermark add -mode text 'This is a watermark' 'sc:1, rot:45, mo:2, c:.2 
 Create a watermark using  some multi line text, show its bounding box by setting bgcol, set all margins to 5 and a border width of 7 rendering round corners.
 
 ```sh
-pdfcpu stamp add -mode text 'Some multi\nline text' 'ma:5, bo:7 round .3 .7 .7, fillc:#3277d3, bgcol:#beded9, rot:0' in.pdf out.pdf
+pdfcpu watermark add -mode text 'Some multi\nline text' 'ma:5, bo:7 round .3 .7 .7, fillc:#3277d3, bgcol:#beded9, rot:0' in.pdf out.pdf
 ```
 
 <p align="center">

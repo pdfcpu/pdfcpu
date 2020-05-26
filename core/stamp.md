@@ -108,10 +108,10 @@ but `op: .7` will do the job.
 |                  | requires bgcolor                | i j .. set t/b margins to i, set l/r margins to j   |
 |                  |                                 | i j k .. set top to i, left/right to j, bot to k    |
 |                  |                                 | i j k l .. set top, right, bottom, left margins     |
-| border           | bounding box border for text    | i {color} {round}                                   | bo:0
+| border           | bounding box border for text    | i {round} {color}                                   | bo:0
 |                  | requires bccolor                | i .. border width > 0                               |
-|                  |                                 | color .. border color                               |
 |                  |                                 | round .. set round bounding box corners             |
+|                  |                                 | color .. border color                               |
 
 Only one of rotation and diagonal is allowed.
 
