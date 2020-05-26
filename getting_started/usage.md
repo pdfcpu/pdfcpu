@@ -175,3 +175,25 @@ pdfcpu info [-u(nits)] [-upw userpw] [-opw ownerpw] inFile
 ```sh
 pdfcpu fonts
 ```
+
+<br>
+
+### Keywords
+
+Manage your keywords for searching:
+```sh
+pdfcpu keywords list    [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile
+pdfcpu keywords add     [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile keyword...
+pdfcpu keywords remove  [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [keyword...]
+```
+
+<br>
+
+### Properties
+
+Manage your document properties:
+```sh
+pdfcpu properties list    [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile
+pdfcpu properties add     [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile nameValuePair...
+pdfcpu properties remove  [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [name...]
+```
