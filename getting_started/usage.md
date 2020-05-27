@@ -55,7 +55,7 @@ Use "pdfcpu help [command]" for more information about a command.
 ## Core Commands
 
 Choose on of the basic processing features:
-```sh
+```
 pdfcpu validate [-v(erbose)|vv] [-q(uiet)] [-mode strict|relaxed] [-upw userpw] [-opw ownerpw] inFile
 pdfcpu optimize [-v(erbose)|vv] [-q(uiet)] [-stats csvFile] [-upw userpw] [-opw ownerpw] inFile [outFile]
 pdfcpu merge [-v(erbose)|vv] [-q(uiet)] [-mode create|append] outFile inFile...
@@ -71,7 +71,7 @@ pdfcpu grid [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [description] outF
 ## Generate Commands
 
 Convert images (jpg, png, tiff) into PDF:
-```sh
+```
 pdfcpu import [-v(erbose)|vv] [-q(uiet)] [description] outFile imageFile...
 ```
 
@@ -80,7 +80,7 @@ pdfcpu import [-v(erbose)|vv] [-q(uiet)] [description] outFile imageFile...
 ## Stamps
 
 Manage stamps for selected pages:
-```sh
+```
 pdfcpu stamp add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]
 pdfcpu stamp remove [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]
 pdfcpu stamp update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]
@@ -91,7 +91,7 @@ pdfcpu stamp update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw user
 ## Watermarks
 
 Manage watermarks for selected pages:
-```sh
+```
 pdfcpu watermark add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]
 pdfcpu watermark remove [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]
 pdfcpu watermark update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]
@@ -102,7 +102,7 @@ pdfcpu watermark update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw 
 ## Pages
 
 Insert and remove pages:
-```sh
+```
 pdfcpu pages insert [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] [-mode before|after] inFile [outFile]
 pdfcpu pages remove [-v(erbose)|vv] [-q(uiet)]  -pages selectedPages  [-upw userpw] [-opw ownerpw] inFile [outFile]
 ```
@@ -112,7 +112,7 @@ pdfcpu pages remove [-v(erbose)|vv] [-q(uiet)]  -pages selectedPages  [-upw user
 ## Extraction
 
 Extract components and resources:
-```sh
+```
 pdfcpu extract [-v(erbose)|vv] [-q(uiet)] -mode image|font|content|page|meta [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile outDir
 ```
 
@@ -121,7 +121,7 @@ pdfcpu extract [-v(erbose)|vv] [-q(uiet)] -mode image|font|content|page|meta [-p
 ## Attachments
 
 Manage your PDF attachments:
-```sh
+```
 pdfcpu attachments list    [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile
 pdfcpu attachments add     [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile file...
 pdfcpu attachments remove  [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [file...]
@@ -148,7 +148,7 @@ pdfcpu permissions set [-v(erbose)|vv] [-q(uiet)] [-perm none|all] [-upw userpw]
 
 ### Print Supported Papersizes
 
-```sh
+```
 pdfcpu paper
 ```
 
@@ -156,7 +156,7 @@ pdfcpu paper
 
 ### Print Version
 
-```sh
+```
 pdfcpu version
 ```
 
@@ -164,7 +164,7 @@ pdfcpu version
 
 ### Print PDF Info
 
-```sh
+```
 pdfcpu info [-u(nits)] [-upw userpw] [-opw ownerpw] inFile
 ```
 
@@ -172,7 +172,7 @@ pdfcpu info [-u(nits)] [-upw userpw] [-opw ownerpw] inFile
 
 ### Print List of Supported Fonts
 
-```sh
+```
 pdfcpu fonts
 ```
 
@@ -181,7 +181,7 @@ pdfcpu fonts
 ### Keywords
 
 Manage your keywords for searching:
-```sh
+```
 pdfcpu keywords list    [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile
 pdfcpu keywords add     [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile keyword...
 pdfcpu keywords remove  [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [keyword...]
@@ -192,7 +192,7 @@ pdfcpu keywords remove  [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] 
 ### Properties
 
 Manage your document properties:
-```sh
+```
 pdfcpu properties list    [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile
 pdfcpu properties add     [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile nameValuePair...
 pdfcpu properties remove  [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [name...]
