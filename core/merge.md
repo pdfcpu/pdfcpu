@@ -9,18 +9,19 @@ Merge 2 or more PDF files into `outFile`. Have a look at some [examples](#exampl
 ## Usage
 
 ```
-pdfcpu merge [-v(erbose)|vv] [-q(uiet)] outFile inFile...
+pdfcpu merge [-v(erbose)|vv] [-q(uiet)] [-mode create|append] outFile inFile...
 ```
 
 <br>
 
 ### Flags
 
-| name                             | description     | required
-|:---------------------------------|:----------------|:--------
-| [verbose](../getting_started/common_flags.md) | turn on logging | no
-| [vv](../getting_started/common_flags.md)      | verbose logging | no
-| [quiet](../getting_started/common_flags.md)   | quiet mode      | no
+| name                             | description     | default | required
+|:---------------------------------|:-----------------------------|:-------|:--
+| [verbose](../getting_started/common_flags.md) | turn on logging |        | no
+| [vv](../getting_started/common_flags.md)      | verbose logging |        | no
+| [quiet](../getting_started/common_flags.md)   | quiet mode      |        | no
+| mode                                          | create, append  | create | no
 
 
 <br>
@@ -58,4 +59,12 @@ Merge all PDF Files in the current directory into `out.pdf`:
 
 ```sh
 pdfcpu merge out.pdf *.pdf
+```
+
+<br>
+
+Merge some PDF files into an existing PDF file `out.pdf`:
+
+```sh
+pdfcpu merge -mode append out.pdf in1.pdf in2.pdf in3.pdf
 ```
