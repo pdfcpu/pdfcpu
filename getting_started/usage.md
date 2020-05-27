@@ -56,14 +56,14 @@ Use "pdfcpu help [command]" for more information about a command.
 
 Choose on of the basic processing features:
 ```sh
-pdfcpu validate [-verbose] [-mode strict|relaxed] [-upw userpw] [-opw ownerpw] inFile
-pdfcpu optimize [-verbose] [-stats csvFile] [-upw userpw] [-opw ownerpw] inFile [outFile]
-pdfcpu merge [-verbose] outFile inFile...
-pdfcpu split [-verbose] [-upw userpw] [-opw ownerpw] inFile outDir [span]
-pdfcpu trim [-verbose] -pages pageSelection [-upw userpw] [-opw ownerpw] inFile outFile
-pdfcpu rotate [-v(erbose)|vv] [-pages pageSelection] inFile rotation
-pdfcpu nup [-v(erbose)|vv] [-pages pageSelection] [description] outFile n inFile|imageFiles...
-pdfcpu grid [-v(erbose)|vv] [-pages pageSelection] [description] outFile m n inFile|imageFiles...
+pdfcpu validate [-v(erbose)|vv] [-q(uiet)] [-mode strict|relaxed] [-upw userpw] [-opw ownerpw] inFile
+pdfcpu optimize [-v(erbose)|vv] [-q(uiet)] [-stats csvFile] [-upw userpw] [-opw ownerpw] inFile [outFile]
+pdfcpu merge [-v(erbose)|vv] [-q(uiet)] [-mode create|append] outFile inFile...
+pdfcpu split [-v(erbose)|vv] [-q(uiet)] [-mode span|bookmark] [-upw userpw] [-opw ownerpw] inFile outDir [span]
+pdfcpu trim [-v(erbose)|vv] [-q(uiet)] -pages selectedPages [-upw userpw] [-opw ownerpw] inFile [outFile]
+pdfcpu rotate [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile rotation [outFile]
+pdfcpu nup [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [description] outFile n inFile|imageFiles..
+pdfcpu grid [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [description] outFile m n inFile|imageFiles...
 ```
 
 <br>
@@ -72,7 +72,7 @@ pdfcpu grid [-v(erbose)|vv] [-pages pageSelection] [description] outFile m n inF
 
 Convert images (jpg, png, tiff) into PDF:
 ```sh
-pdfcpu import [-v(erbose)|vv] [description] outFile imageFile...
+pdfcpu import [-v(erbose)|vv] [-q(uiet)] [description] outFile imageFile...
 ```
 
 <br>
@@ -103,8 +103,8 @@ pdfcpu watermark update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw 
 
 Insert and remove pages:
 ```sh
-pdfcpu pages insert [-v(erbose)|vv] [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile [outFile]
-pdfcpu pages remove [-v(erbose)|vv]  -pages pageSelection  [-upw userpw] [-opw ownerpw] inFile [outFile]
+pdfcpu pages insert [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] [-mode before|after] inFile [outFile]
+pdfcpu pages remove [-v(erbose)|vv] [-q(uiet)]  -pages selectedPages  [-upw userpw] [-opw ownerpw] inFile [outFile]
 ```
 
 <br>
@@ -113,7 +113,7 @@ pdfcpu pages remove [-v(erbose)|vv]  -pages pageSelection  [-upw userpw] [-opw o
 
 Extract components and resources:
 ```sh
-pdfcpu extract [-verbose] -mode image|font|content|page|meta [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile outDir
+pdfcpu extract [-v(erbose)|vv] [-q(uiet)] -mode image|font|content|page|meta [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile outDir
 ```
 
 <br>
@@ -122,10 +122,10 @@ pdfcpu extract [-verbose] -mode image|font|content|page|meta [-pages pageSelecti
 
 Manage your PDF attachments:
 ```sh
-pdfcpu attachments list [-verbose] [-upw userpw] [-opw ownerpw] inFile
-pdfcpu attachments add [-verbose] [-upw userpw] [-opw ownerpw] inFile file...
-pdfcpu attachments remove [-verbose] [-upw userpw] [-opw ownerpw] inFile [file...]
-pdfcpu attachments extract [-verbose] [-upw userpw] [-opw ownerpw] inFile outDir [file...]
+pdfcpu attachments list    [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile
+pdfcpu attachments add     [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile file...
+pdfcpu attachments remove  [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [file...]
+pdfcpu attachments extract [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile outDir [file...]
 ```
 
 <br>
@@ -133,13 +133,13 @@ pdfcpu attachments extract [-verbose] [-upw userpw] [-opw ownerpw] inFile outDir
 ## Encryption
 
 Secure your PDFs:
-```sh
-pdfcpu encrypt [-verbose] [-mode rc4|aes] [-key 40|128|256] [-perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]
-pdfcpu decrypt [-verbose] [-upw userpw] [-opw ownerpw] inFile [outFile]
-pdfcpu changeopw [-verbose] [-upw userpw] inFile opwOld opwNew
-pdfcpu changeupw [-verbose] [-opw ownerpw] inFile upwOld upwNew
-pdfcpu permissions add [-verbose] [-perm none|all] [-upw userpw] -opw ownerpw inFile
-pdfcpu permissions list [-verbose] [-upw userpw] [-opw ownerpw] inFile
+```
+pdfcpu encrypt [-v(erbose)|vv] [-q(uiet)] [-mode rc4|aes] [-key 40|128|256] [perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]
+pdfcpu decrypt [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [outFile]
+pdfcpu changeopw [-v(erbose)|vv] [-q(uiet)] [-upw userpw] inFile opwOld opwNew
+pdfcpu changeupw [-v(erbose)|vv] [-q(uiet)] [-opw ownerpw] inFile upwOld upwNew
+pdfcpu permissions list [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile
+pdfcpu permissions set [-v(erbose)|vv] [-q(uiet)] [-perm none|all] [-upw userpw] -opw ownerpw inFile
 ```
 
 <br>
