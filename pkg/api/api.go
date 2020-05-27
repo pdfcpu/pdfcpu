@@ -775,7 +775,11 @@ func SplitFile(inFile, outDir string, span int, conf *pdf.Configuration) error {
 	log.CLI.Printf("splitting %s to %s/...\n", inFile, outDir)
 
 	defer func() {
-		f.Close()
+		if err != nil {
+			f.Close()
+			return
+		}
+		err = f.Close()
 	}()
 
 	return Split(f, outDir, filepath.Base(inFile), span, conf)
@@ -1388,9 +1392,7 @@ func ImportImagesFile(imgFiles []string, outFile string, imp *pdf.Import, conf *
 				os.Remove(tmpFile)
 			}
 			for _, f := range rc {
-				if err := f.Close(); err != nil {
-					return
-				}
+				f.Close()
 			}
 			return
 		}
@@ -1402,6 +1404,11 @@ func ImportImagesFile(imgFiles []string, outFile string, imp *pdf.Import, conf *
 				return
 			}
 			if err = os.Rename(tmpFile, outFile); err != nil {
+				return
+			}
+		}
+		for _, f := range rc {
+			if err := f.Close(); err != nil {
 				return
 			}
 		}
@@ -1651,9 +1658,19 @@ func MergeCreateFile(inFiles []string, outFile string, conf *pdf.Configuration) 
 		return err
 	}
 	defer func() {
-		f.Close()
-		for _, f := range ff {
+		if err != nil {
 			f.Close()
+			for _, f := range ff {
+				f.Close()
+			}
+		}
+		if err = f.Close(); err != nil {
+			return
+		}
+		for _, f := range ff {
+			if err = f.Close(); err != nil {
+				return
+			}
 		}
 	}()
 
@@ -1703,7 +1720,6 @@ func MergeAppendFile(inFiles []string, outFile string, conf *pdf.Configuration) 
 		if err != nil {
 			f2.Close()
 			if f1 != nil {
-				f1.Close()
 				os.Remove(tmpFile)
 			}
 			for _, f := range ff {
@@ -1715,10 +1731,12 @@ func MergeAppendFile(inFiles []string, outFile string, conf *pdf.Configuration) 
 			return
 		}
 		if f1 != nil {
-			if err = f1.Close(); err != nil {
+			if err = os.Rename(tmpFile, outFile); err != nil {
 				return
 			}
-			if err = os.Rename(tmpFile, outFile); err != nil {
+		}
+		for _, f := range ff {
+			if err = f.Close(); err != nil {
 				return
 			}
 		}

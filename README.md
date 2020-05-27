@@ -95,7 +95,7 @@ Get the latest binary [here](https://github.com/pdfcpu/pdfcpu/releases).
 
 ### Using GOPATH
 
-Required go version for building: go1.13 and up
+Required go version for building: go1.14 and up
 
 ```
 go get github.com/pdfcpu/pdfcpu/cmd/...
@@ -110,15 +110,16 @@ pdfcpu version
 git clone https://github.com/pdfcpu/pdfcpu
 cd pdfcpu/cmd/pdfcpu
 go install
-pdfcpu ve
+pdfcpu version
 ```
 
 ### Using Homebrew (macOS)
 ```
 brew install pdfcpu
+pdfcpu version
 ```
 
-### Using Docker
+### Run in a Docker container
 
 ```
 docker build -t pdfcpu .
