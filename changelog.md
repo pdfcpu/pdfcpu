@@ -6,6 +6,7 @@ layout: default
 
 | Date      | Tag / Commit | Description  
 |:----------|:-------------|:--------
+|2020-05-27 | [58a1e27](https://github.com/pdfcpu/pdfcpu/commit/58a1e278d00ee588f6e00b5b74f1fa965c5ce889) | Fix #174
 |2020-05-26 | [ed59dc3](https://github.com/pdfcpu/pdfcpu/commit/ed59dc35b4f5f7051141d5c11d4e887d453daa58) | Fix #192
 |2020-05-25 | [v0.3.3](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.3)                              | stamps: Add hAlign, margins, border
 |           |                                                                                             | Fix: #157,#170,#173,#175,#181-184,#188

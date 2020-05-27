@@ -32,6 +32,7 @@ pdfcpu version
 ## Using Homebrew (macOS)
 ```
 brew install pdfcpu
+pdfcpu version
 ```
 
 ## Run in a Docker container
