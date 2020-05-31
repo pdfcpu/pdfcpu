@@ -233,28 +233,22 @@ func (xRefTable *XRefTable) Find(objNr int) (*XRefTableEntry, bool) {
 
 // FindObject returns the object of the XRefTableEntry for a specific object number.
 func (xRefTable *XRefTable) FindObject(objNr int) (Object, error) {
-
 	entry, ok := xRefTable.Find(objNr)
 	if !ok {
 		return nil, errors.Errorf("FindObject: obj#%d not registered in xRefTable", objNr)
 	}
-
 	return entry.Object, nil
 }
 
 // Free returns the cross ref table entry for given number of a free object.
 func (xRefTable *XRefTable) Free(objNr int) (*XRefTableEntry, error) {
-
 	entry, found := xRefTable.Find(objNr)
-
 	if !found {
 		return nil, nil //errors.Errorf("Free: object #%d not found.", objNr)
 	}
-
 	if !entry.Free {
 		return nil, errors.Errorf("Free: object #%d found, but not free.", objNr)
 	}
-
 	return entry, nil
 }
 
@@ -576,6 +570,18 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 	return nil
 }
 
+func (xRefTable *XRefTable) deleteDictEntry(d Dict, key string) error {
+	o, found := d.Find(key)
+	if !found {
+		return nil
+	}
+	if err := xRefTable.deleteObject(o); err != nil {
+		return err
+	}
+	d.Delete(key)
+	return nil
+}
+
 func (xRefTable *XRefTable) locateObjForIndRef(ir IndirectRef) (Object, error) {
 
 	var err error
@@ -597,8 +603,7 @@ func (xRefTable *XRefTable) locateObjForIndRef(ir IndirectRef) (Object, error) {
 		return o, err
 	}
 
-	err = xRefTable.DeleteObject(objNr)
-	if err != nil {
+	if err = xRefTable.DeleteObject(objNr); err != nil {
 		return nil, err
 	}
 
@@ -659,8 +664,7 @@ func (xRefTable *XRefTable) DeleteObjectGraph(o Object) error {
 	}
 
 	// Delete ObjectGraph for object indRef.ObjectNumber.Value() via recursion.
-	err := xRefTable.deleteObject(ir)
-	if err != nil {
+	if err := xRefTable.deleteObject(ir); err != nil {
 		return err
 	}
 
@@ -787,8 +791,7 @@ func (xRefTable *XRefTable) DereferenceBoolean(o Object, sinceVersion Version) (
 	}
 
 	// Version check
-	err = xRefTable.ValidateVersion("DereferenceBoolean", sinceVersion)
-	if err != nil {
+	if err = xRefTable.ValidateVersion("DereferenceBoolean", sinceVersion); err != nil {
 		return nil, err
 	}
 
@@ -851,8 +854,7 @@ func (xRefTable *XRefTable) DereferenceName(o Object, sinceVersion Version, vali
 	}
 
 	// Version check
-	err = xRefTable.ValidateVersion("DereferenceName", sinceVersion)
-	if err != nil {
+	if err = xRefTable.ValidateVersion("DereferenceName", sinceVersion); err != nil {
 		return n, err
 	}
 
@@ -884,8 +886,7 @@ func (xRefTable *XRefTable) DereferenceStringLiteral(o Object, sinceVersion Vers
 	}
 
 	// Version check
-	err = xRefTable.ValidateVersion("DereferenceStringLiteral", sinceVersion)
-	if err != nil {
+	if err = xRefTable.ValidateVersion("DereferenceStringLiteral", sinceVersion); err != nil {
 		return s, err
 	}
 
@@ -1102,36 +1103,29 @@ func (xRefTable *XRefTable) EncryptDict() (Dict, error) {
 
 // CatalogHasPieceInfo returns true if the root has an entry for \"PieceInfo\".
 func (xRefTable *XRefTable) CatalogHasPieceInfo() (bool, error) {
-
 	rootDict, err := xRefTable.Catalog()
 	if err != nil {
 		return false, err
 	}
-
 	obj, hasPieceInfo := rootDict.Find("PieceInfo")
-
 	return hasPieceInfo && obj != nil, nil
 }
 
 // Pages returns the Pages reference contained in the catalog.
 func (xRefTable *XRefTable) Pages() (*IndirectRef, error) {
-
 	rootDict, err := xRefTable.Catalog()
 	if err != nil {
 		return nil, err
 	}
-
 	return rootDict.IndirectRefEntry("Pages"), nil
 }
 
 // Outlines returns the Outlines reference contained in the catalog.
 func (xRefTable *XRefTable) Outlines() (*IndirectRef, error) {
-
 	rootDict, err := xRefTable.Catalog()
 	if err != nil {
 		return nil, err
 	}
-
 	return rootDict.IndirectRefEntry("Outlines"), nil
 }
 
@@ -1450,35 +1444,21 @@ func (xRefTable *XRefTable) RemoveNameTree(nameTreeName string) error {
 	// We have an existing name dict.
 
 	// Delete the name tree.
-	o, found := namesDict.Find(nameTreeName)
-	if found {
-		err = xRefTable.deleteObject(o)
-		if err != nil {
-			return err
-		}
+	if err = xRefTable.deleteDictEntry(namesDict, nameTreeName); err != nil {
+		return err
 	}
-
-	// Delete the name tree entry.
-	namesDict.Delete(nameTreeName)
 	if namesDict.Len() > 0 {
 		return nil
 	}
 
 	// Remove empty names dict.
-
 	rootDict, err := xRefTable.Catalog()
 	if err != nil {
 		return err
 	}
-
-	if ir := rootDict.IndirectRefEntry("Names"); ir != nil {
-		err = xRefTable.DeleteObject(ir.ObjectNumber.Value())
-		if err != nil {
-			return err
-		}
+	if err = xRefTable.deleteDictEntry(rootDict, "Names"); err != nil {
+		return err
 	}
-
-	rootDict.Delete("Names")
 
 	log.Debug.Printf("Deleted Names from root: %s\n", rootDict)
 
@@ -1487,23 +1467,11 @@ func (xRefTable *XRefTable) RemoveNameTree(nameTreeName string) error {
 
 // RemoveCollection removes an existing Collection entry from the catalog.
 func (xRefTable *XRefTable) RemoveCollection() error {
-
 	rootDict, err := xRefTable.Catalog()
 	if err != nil {
 		return err
 	}
-
-	if ir := rootDict.IndirectRefEntry("Collection"); ir != nil {
-		err = xRefTable.DeleteObjectGraph(*ir)
-		if err != nil {
-			return err
-		}
-	}
-
-	rootDict.Delete("Collection")
-	log.Debug.Printf("deleted collection from root: %s\n", rootDict)
-
-	return nil
+	return xRefTable.deleteDictEntry(rootDict, "Collection")
 }
 
 // EnsureCollection makes sure there is a Collection entry in the catalog.
@@ -2166,11 +2134,9 @@ func (xRefTable *XRefTable) detectPageTreeWatermarks(root *IndirectRef) error {
 // DetectPageTreeWatermarks checks xRefTable's page tree for watermarks
 // and records the result to xRefTable.Watermarked.
 func (xRefTable *XRefTable) DetectPageTreeWatermarks() error {
-
 	root, err := xRefTable.Pages()
 	if err != nil {
 		return err
 	}
-
 	return xRefTable.detectPageTreeWatermarks(root)
 }
