@@ -972,21 +972,33 @@ func setWatermarkType(mode int, s string, wm *Watermark) error {
 		wm.FileName = s
 
 	case WMPDF:
-		ss := strings.Split(s, ":")
-		ext := strings.ToLower(filepath.Ext(ss[0]))
-		if !MemberOf(ext, []string{".pdf"}) {
-			return errors.Errorf("%s is not a PDF file", ss[0])
-		}
-		wm.FileName = ss[0]
-		if len(ss) > 1 {
-			// Parse page number for PDF watermarks.
-			var err error
-			wm.Page, err = strconv.Atoi(ss[1])
-			if err != nil {
-				return errors.Errorf("illegal PDF page number: %s\n", ss[1])
+		i := strings.LastIndex(s, ":")
+		if i < 1 {
+			// No Colon.
+			if strings.ToLower(filepath.Ext(s)) != ".pdf" {
+				return errors.Errorf("%s is not a PDF file", s)
 			}
+			wm.FileName = s
+			return nil
 		}
-
+		// We have at least one Colon.
+		if strings.ToLower(filepath.Ext(s)) == ".pdf" {
+			// We have an absolute DOS filename.
+			wm.FileName = s
+			return nil
+		}
+		// We expect a page number on the right side of the right most Colon.
+		var err error
+		pageNumberStr := s[i+1:]
+		wm.Page, err = strconv.Atoi(pageNumberStr)
+		if err != nil {
+			return errors.Errorf("illegal PDF page number: %s\n", pageNumberStr)
+		}
+		fileName := s[:i]
+		if strings.ToLower(filepath.Ext(fileName)) != ".pdf" {
+			return errors.Errorf("%s is not a PDF file", fileName)
+		}
+		wm.FileName = fileName
 	}
 
 	return nil
