@@ -32,23 +32,32 @@ func validateStandardType1Font(s string) bool {
 
 func validateFontFile3SubType(sd *pdf.StreamDict, fontType string) error {
 
+	// Hint about used font program.
 	dictSubType := sd.Subtype()
 
-	if fontType == "Type1" || fontType == "MMType1" {
-		if dictSubType == nil || *dictSubType != "Type1C" {
-			return errors.New("pdfcpu: validateFontFile3SubType: FontFile3 missing Subtype \"Type1C\"")
-		}
+	if dictSubType == nil {
+		return errors.New("pdfcpu: validateFontFile3SubType: missing Subtype")
 	}
 
-	if fontType == "CIDFontType0" {
-		if dictSubType == nil || *dictSubType != "CIDFontType0C" {
-			return errors.New("pdfcpu: validateFontFile3SubType: FontFile3 missing Subtype \"CIDFontType0C\"")
+	switch fontType {
+	case "Type1":
+		if *dictSubType != "Type1C" && *dictSubType != "OpenType" {
+			return errors.Errorf("pdfcpu: validateFontFile3SubType: Type1: unexpected Subtype %s", *dictSubType)
 		}
-	}
 
-	if fontType == "OpenType" {
-		if dictSubType == nil || *dictSubType != "OpenType" {
-			return errors.New("pdfcpu: validateFontFile3SubType: FontFile3 missing Subtype \"OpenType\"")
+	case "MMType1":
+		if *dictSubType != "Type1C" {
+			return errors.Errorf("pdfcpu: validateFontFile3SubType: MMType1: unexpected Subtype %s", *dictSubType)
+		}
+
+	case "CIDFontType0":
+		if *dictSubType != "CIDFontType0C" && *dictSubType != "OpenType" {
+			return errors.Errorf("pdfcpu: validateFontFile3SubType: CIDFontType0: unexpected Subtype %s", *dictSubType)
+		}
+
+	case "CIDFontType2", "TrueType":
+		if *dictSubType != "OpenType" {
+			return errors.Errorf("pdfcpu: validateFontFile3SubType: %s: unexpected Subtype %s", fontType, *dictSubType)
 		}
 	}
 
@@ -64,9 +73,8 @@ func validateFontFile(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, ent
 
 	// Process font file stream dict entries.
 
-	// SubType, required if referenced from FontFile3.
+	// SubType
 	if entryName == "FontFile3" {
-
 		err = validateFontFile3SubType(sd, fontType)
 		if err != nil {
 			return err
@@ -251,9 +259,6 @@ func validateFontDescriptorFontFile(xRefTable *pdf.XRefTable, d pdf.Dict, dictNa
 
 	case "CIDFontType0":
 		err = validateFontFile(xRefTable, d, dictName, "FontFile3", fontDictType, OPTIONAL, pdf.V13)
-
-	case "OpenType":
-		err = validateFontFile(xRefTable, d, dictName, "FontFile3", fontDictType, OPTIONAL, pdf.V16)
 
 	case "Type3": // No fontfile.
 
@@ -543,7 +548,7 @@ func validateCIDFontDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 		return err
 	}
 
-	isCIDFontType2 = true
+	isCIDFontType2 = *subType == "CIDFontType2"
 	fontType = subType.Value()
 
 	// BaseFont, required, name
