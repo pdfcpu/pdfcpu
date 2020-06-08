@@ -1035,14 +1035,14 @@ func (xRefTable *XRefTable) DereferenceStreamDictForValidation(o Object) (*Strea
 	// An indirect reference to an undefined object shall not be considered an error by a conforming reader;
 	// it shall be treated as a reference to the null object.
 	entry, found := xRefTable.FindTableEntry(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
-	if !found || entry.Free || entry.Valid {
+	if !found || entry.Free || entry.Valid || entry.Object == nil {
 		return nil, nil
 	}
 	entry.Valid = true
 
 	sd, ok := entry.Object.(StreamDict)
 	if !ok {
-		return nil, errors.Errorf("pdfcpu: dereferenceStreamDict: wrong type <%v>", o)
+		return nil, errors.Errorf("pdfcpu: dereferenceStreamDict: wrong type <%v> %T", o, entry.Object)
 	}
 
 	return &sd, nil

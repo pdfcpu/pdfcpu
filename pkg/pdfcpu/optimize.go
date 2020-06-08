@@ -927,15 +927,6 @@ func fontDescriptor(xRefTable *XRefTable, fontDict Dict, objNr int) (Dict, error
 	if err != nil {
 		return nil, errors.Errorf("pdfcpu: fontDescriptor: No FontDescriptor dict for font object %d\n", objNr)
 	}
-	if d == nil {
-		return nil, errors.Errorf("pdfcpu: fontDescriptor: FontDescriptor dict is null for font object %d\n", objNr)
-	}
-
-	if d.Type() == nil {
-		//logErrorOptimize.Printf("FontDescriptor: FontDescriptor without type \"FontDescriptor\" objNumber:%d\n", objNr)
-	} else if *d.Type() != "FontDescriptor" {
-		return nil, errors.Errorf("pdfcpu: fontDescriptor: FontDescriptor dict incorrect dict type for font object %d\n", objNr)
-	}
 
 	log.Optimize.Println("fontDescriptor end")
 
