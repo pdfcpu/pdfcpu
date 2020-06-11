@@ -131,3 +131,136 @@ func (io ImageObject) ResourceNamesString() string {
 // 	}
 // 	return io.ImageDict.Raw
 // }
+
+var resourceTypes = NewStringSet([]string{"ColorSpace", "ExtGState", "Font", "Pattern", "Properties", "Shading", "XObject"})
+
+// PageResourceNames represents the required resource names for a specific page as extracted from its content streams.
+type PageResourceNames map[string]StringSet
+
+// NewPageResourceNames returns initialized pageResourceNames.
+func NewPageResourceNames() PageResourceNames {
+	m := make(map[string]StringSet, len(resourceTypes))
+	for k := range resourceTypes {
+		m[k] = StringSet{}
+	}
+	return m
+}
+
+// Resources returns a set of all required resource names for subdict s.
+func (prn PageResourceNames) Resources(s string) StringSet {
+	return prn[s]
+}
+
+// HasResources returns true for any resource names present in resource subDict s.
+func (prn PageResourceNames) HasResources(s string) bool {
+	return len(prn.Resources(s)) > 0
+}
+
+// HasContent returns true in any resource names present.
+func (prn PageResourceNames) HasContent() bool {
+	for k := range resourceTypes {
+		if prn.HasResources(k) {
+			return true
+		}
+	}
+	return false
+}
+
+func (prn PageResourceNames) String() string {
+	sep := ", "
+	ss := []string{}
+	s := []string{"PageResourceNames:\n"}
+	for k := range resourceTypes {
+		ss = nil
+		for k := range prn.Resources(k) {
+			ss = append(ss, k)
+		}
+		s = append(s, k+": "+strings.Join(ss, sep)+"\n")
+	}
+	return strings.Join(s, "")
+}
+
+// PageResourceNamesForContent detects all resource names used by s.
+func PageResourceNamesForContent(s string) PageResourceNames {
+	//fmt.Println("prn begin")
+	prn := NewPageResourceNames()
+
+	ss := strings.Fields(s)
+
+	var inTJ, inTj bool
+	for i, s := range ss {
+		// Skip TJ expressions.
+		if inTJ {
+			i := strings.Index(s, "]")
+			if i < 0 {
+				continue
+			}
+			if i == 0 || s[i-1] != '\\' {
+				inTJ = false
+			}
+			continue
+		}
+		// Skip Tj expressions.
+		if inTj {
+			i := strings.Index(s, ")")
+			if i < 0 {
+				continue
+			}
+			if i == 0 || s[i-1] != '\\' {
+				inTj = false
+			}
+			continue
+		}
+		if strings.HasPrefix(s, "[") {
+			i := strings.Index(s, "]")
+			if i < 0 || s[i-1] == '\\' {
+				inTJ = true
+			}
+			continue
+		}
+		if strings.HasPrefix(s, "(") {
+			i := strings.Index(s, ")")
+			if i < 0 || s[i-1] == '\\' {
+				inTj = true
+			}
+			continue
+		}
+		//fmt.Println(s)
+		// Detect Resource Name usage
+		switch s {
+		case "cs":
+			//fmt.Printf("Colorspace: %s\n", ss[i-1])
+			prn["ColorSpace"][ss[i-1][1:]] = true
+
+		case "gs":
+			//fmt.Printf("ExtGState: %s\n", ss[i-1])
+			prn["ExtGState"][ss[i-1][1:]] = true
+
+		case "scn", "SCN":
+			//fmt.Printf("Pattern: %s\n", ss[i-1])
+			if ss[i-1][0] == '/' {
+				prn["Pattern"][ss[i-1][1:]] = true
+			}
+
+		case "DP", "BDC":
+			//fmt.Printf("PropList: %s\n", ss[i-1])
+			if ss[i-1][0] == '/' {
+				prn["Properties"][ss[i-1][1:]] = true
+			}
+
+		case "sh":
+			//fmt.Printf("Shading: %s\n", ss[i-1])
+			prn["Shading"][ss[i-1][1:]] = true
+
+		case "Do":
+			//fmt.Printf("XObject: %s\n", ss[i-1])
+			prn["XObject"][ss[i-1][1:]] = true
+
+		case "Tf":
+			//fmt.Printf("Font: %s\n", ss[i-2])
+			prn["Font"][ss[i-2][1:]] = true
+		}
+	}
+
+	return prn
+}

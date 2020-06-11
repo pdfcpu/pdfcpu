@@ -110,7 +110,7 @@ func buildNameTree(t *testing.T, r *Node) {
 	checkAddResult(t, r, "[(a,(av))(b,(bv)){a,b}],[(c,(cv))(d,(dv)){c,d}],[(f,(fv))(h,(hv))(i,(iv)){f,i}]", false)
 }
 
-func destroyNameTreet(t *testing.T, r *Node) {
+func destroyNameTree(t *testing.T, r *Node) {
 
 	_, ok, _ := r.Remove(nil, "g")
 	if ok {
@@ -199,5 +199,5 @@ func TestNameTree(t *testing.T) {
 
 	r := &Node{}
 	buildNameTree(t, r)
-	destroyNameTreet(t, r)
+	destroyNameTree(t, r)
 }

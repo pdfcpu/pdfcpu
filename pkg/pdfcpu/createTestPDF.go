@@ -84,6 +84,146 @@ func CreateDemoXRef(p Page) (*XRefTable, error) {
 	return xRefTable, nil
 }
 
+func addPageTreeForResourceDictInheritanceDemo(xRefTable *XRefTable, rootDict Dict) error {
+
+	// Create root page node.
+
+	fIndRef, err := createFontDict(xRefTable, "Courier")
+	if err != nil {
+		return err
+	}
+
+	rootPagesDict := Dict(
+		map[string]Object{
+			"Type":     Name("Pages"),
+			"Count":    Integer(1),
+			"MediaBox": RectForFormat("A4").Array(),
+			"Resources": Dict(
+				map[string]Object{
+					"Font": Dict(
+						map[string]Object{
+							"F99": *fIndRef,
+						},
+					),
+				},
+			),
+		},
+	)
+
+	rootPageIndRef, err := xRefTable.IndRefForNewObject(rootPagesDict)
+	if err != nil {
+		return err
+	}
+
+	// Create intermediate page node.
+
+	f100IndRef, err := createFontDict(xRefTable, "Courier-Bold")
+	if err != nil {
+		return err
+	}
+
+	pagesDict := Dict(
+		map[string]Object{
+			"Type":     Name("Pages"),
+			"Count":    Integer(1),
+			"MediaBox": RectForFormat("A4").Array(),
+			"Resources": Dict(
+				map[string]Object{
+					"Font": Dict(
+						map[string]Object{
+							"F100": *f100IndRef,
+						},
+					),
+				},
+			),
+		},
+	)
+
+	pagesIndRef, err := xRefTable.IndRefForNewObject(pagesDict)
+	if err != nil {
+		return err
+	}
+
+	// Create leaf page node.
+
+	p := Page{MediaBox: RectForFormat("A4"), Fm: FontMap{}, Buf: new(bytes.Buffer)}
+
+	fontName := "Times-Roman"
+	k := p.Fm.EnsureKey(fontName)
+	td := TextDescriptor{
+		Text:     "This font is Times-Roman and it is defined in the resource dict of this page dict.",
+		FontName: fontName,
+		FontKey:  k,
+		FontSize: 12,
+		Scale:    1.,
+		ScaleAbs: true,
+		X:        300,
+		Y:        400,
+	}
+
+	WriteMultiLine(p.Buf, p.MediaBox, nil, td)
+
+	fontName = "Courier"
+	td = TextDescriptor{
+		Text:     "This font is Courier and it is inherited from the page root.",
+		FontName: fontName,
+		FontKey:  "F99",
+		FontSize: 12,
+		Scale:    1.,
+		ScaleAbs: true,
+		X:        300,
+		Y:        300,
+	}
+
+	WriteMultiLine(p.Buf, p.MediaBox, nil, td)
+
+	fontName = "Courier-Bold"
+	td = TextDescriptor{
+		Text:     "This font is Courier-Bold and it is inherited from an intermediate page node.",
+		FontName: fontName,
+		FontKey:  "F100",
+		FontSize: 12,
+		Scale:    1.,
+		ScaleAbs: true,
+		X:        300,
+		Y:        350,
+	}
+
+	WriteMultiLine(p.Buf, p.MediaBox, nil, td)
+
+	pageIndRef, err := createDemoPage(xRefTable, *pagesIndRef, p)
+	if err != nil {
+		return err
+	}
+
+	pagesDict.Insert("Kids", Array{*pageIndRef})
+	pagesDict.Insert("Parent", *rootPageIndRef)
+
+	rootPagesDict.Insert("Kids", Array{*pagesIndRef})
+	rootDict.Insert("Pages", *rootPageIndRef)
+
+	return nil
+}
+
+// CreateResourceDictInheritanceDemoXRef creates a page tree for testing resource dict inheritance.
+func CreateResourceDictInheritanceDemoXRef() (*XRefTable, error) {
+	xRefTable, err := createXRefTableWithRootDict()
+	if err != nil {
+		return nil, err
+	}
+
+	rootDict, err := xRefTable.Catalog()
+	if err != nil {
+		return nil, err
+	}
+
+	if err = addPageTreeForResourceDictInheritanceDemo(xRefTable, rootDict); err != nil {
+		return nil, err
+	}
+
+	return xRefTable, nil
+}
+
 func createFontDict(xRefTable *XRefTable, coreFontName string) (*IndirectRef, error) {
 	d := NewDict()
 	d.InsertName("Type", "Font")
@@ -1867,12 +2007,14 @@ func createDemoPage(xRefTable *XRefTable, parentPageIndRef IndirectRef, p Page) 
 		return nil, err
 	}
 
-	resDict := Dict(
-		map[string]Object{
-			"Font": fontRes,
-		},
-	)
-	pageDict.Insert("Resources", resDict)
+	if len(fontRes) > 0 {
+		resDict := Dict(
+			map[string]Object{
+				"Font": fontRes,
+			},
+		)
+		pageDict.Insert("Resources", resDict)
+	}
 
 	ir, err := createDemoContentStreamDict(xRefTable, pageDict, p.Buf.Bytes())
 	if err != nil {

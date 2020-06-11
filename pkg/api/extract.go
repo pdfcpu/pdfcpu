@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -242,24 +243,33 @@ func ExtractFontsFile(inFile, outDir string, selectedPages []string, conf *pdf.C
 
 // singlePageFileName generates a filename for a Context and a specific page number.
 func singlePageFileName(pageNr int) string {
-	return "page_" + strconv.Itoa(pageNr) + ".pdf"
+	return "_" + strconv.Itoa(pageNr) + ".pdf"
 }
 
-func writeSinglePagePDF(ctx *pdf.Context, pageNr int, outDir string) error {
-	ctx.ResetWriteContext()
-	w := ctx.Write
-	w.SelectedPages[pageNr] = true
+func writeSinglePagePDF(ctx *pdf.Context, pageNr int, outDir, fileName string) error {
+
+	ctxDest, err := pdf.CreateContextWithXRefTable(nil, pdf.PaperSize["A4"])
+	if err != nil {
+		return err
+	}
+
+	usePgCache := false
+	if err := pdf.AddPages(ctx, ctxDest, []int{pageNr}, usePgCache); err != nil {
+		return err
+	}
+
+	w := ctxDest.Write
 	w.DirName = outDir + "/"
-	w.FileName = singlePageFileName(pageNr)
-	log.CLI.Printf("writing %s ...\n", w.DirName+w.FileName)
+	fn := strings.TrimSuffix(fileName, ".pdf")
+	w.FileName = fn + singlePageFileName(pageNr)
 
-	return pdf.Write(ctx)
+	return pdf.Write(ctxDest)
 }
 
-func writeSinglePagePDFs(ctx *pdf.Context, selectedPages pdf.IntSet, outDir string) error {
+func writeSinglePagePDFs(ctx *pdf.Context, selectedPages pdf.IntSet, outDir, fileName string) error {
 	for i, v := range selectedPages {
 		if v {
-			err := writeSinglePagePDF(ctx, i, outDir)
+			err := writeSinglePagePDF(ctx, i, outDir, fileName)
 			if err != nil {
 				return err
 			}
@@ -269,7 +279,7 @@ func writeSinglePagePDFs(ctx *pdf.Context, selectedPages pdf.IntSet, outDir stri
 }
 
 // ExtractPages generates single page PDF files from rs in outDir for selected pages.
-func ExtractPages(rs io.ReadSeeker, outDir string, selectedPages []string, conf *pdf.Configuration) error {
+func ExtractPages(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, conf *pdf.Configuration) error {
 	if conf == nil {
 		conf = pdf.NewDefaultConfiguration()
 		conf.Cmd = pdf.EXTRACTPAGES
@@ -291,7 +301,7 @@ func ExtractPages(rs io.ReadSeeker, outDir string, selectedPages []string, conf 
 		return err
 	}
 
-	if err = writeSinglePagePDFs(ctx, pages, outDir); err != nil {
+	if err = writeSinglePagePDFs(ctx, pages, outDir, fileName); err != nil {
 		return err
 	}
 
@@ -311,14 +321,15 @@ func ExtractPagesFile(inFile, outDir string, selectedPages []string, conf *pdf.C
 	}
 	defer f.Close()
 	log.CLI.Printf("extracting pages from %s into %s/ ...\n", inFile, outDir)
-	return ExtractPages(f, outDir, selectedPages, conf)
+	return ExtractPages(f, outDir, filepath.Base(inFile), selectedPages, conf)
 }
 
 func contentObjNrs(ctx *pdf.Context, page int) ([]int, error) {
 
 	objNrs := []int{}
 
-	d, _, err := ctx.PageDict(page)
+	consolidateRes := false
+	d, _, err := ctx.PageDict(page, consolidateRes)
 	if err != nil {
 		return nil, err
 	}

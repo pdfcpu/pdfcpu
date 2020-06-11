@@ -70,11 +70,17 @@ type StringSet map[string]bool
 // Object defines an interface for all Objects.
 type Object interface {
 	fmt.Stringer
+	Clone() Object
 	PDFString() string
 }
 
 // Boolean represents a PDF boolean object.
 type Boolean bool
+
+// Clone returns a clone of boolean.
+func (boolean Boolean) Clone() Object {
+	return boolean
+}
 
 func (boolean Boolean) String() string {
 	return fmt.Sprintf("%v", bool(boolean))
@@ -94,6 +100,11 @@ func (boolean Boolean) Value() bool {
 
 // Float represents a PDF float object.
 type Float float64
+
+// Clone returns a clone of f.
+func (f Float) Clone() Object {
+	return f
+}
 
 func (f Float) String() string {
 	// Use a precision of 2 for logging readability.
@@ -115,6 +126,11 @@ func (f Float) Value() float64 {
 
 // Integer represents a PDF integer object.
 type Integer int
+
+// Clone returns a clone of i.
+func (i Integer) Clone() Object {
+	return i
+}
 
 func (i Integer) String() string {
 	return strconv.Itoa(int(i))
@@ -218,6 +234,11 @@ func RectForFormat(f string) *Rectangle {
 // Name represents a PDF name object.
 type Name string
 
+// Clone returns a clone of nameObject.
+func (nameObject Name) Clone() Object {
+	return nameObject
+}
+
 func (nameObject Name) String() string {
 	return fmt.Sprintf("%s", string(nameObject))
 }
@@ -261,6 +282,11 @@ func (nameObject Name) Value() string {
 // StringLiteral represents a PDF string literal object.
 type StringLiteral string
 
+// Clone returns a clone of stringLiteral.
+func (stringliteral StringLiteral) Clone() Object {
+	return stringliteral
+}
+
 func (stringliteral StringLiteral) String() string {
 	return fmt.Sprintf("(%s)", string(stringliteral))
 }
@@ -296,6 +322,10 @@ func NewHexLiteral(b []byte) HexLiteral {
 	return HexLiteral(hex.EncodeToString(b))
 }
 
+// Clone returns a clone of hexliteral.
+func (hexliteral HexLiteral) Clone() Object {
+	return hexliteral
+}
 func (hexliteral HexLiteral) String() string {
 	return fmt.Sprintf("<%s>", string(hexliteral))
 }
@@ -332,6 +362,12 @@ func NewIndirectRef(objectNumber, generationNumber int) *IndirectRef {
 	return &IndirectRef{
 		ObjectNumber:     Integer(objectNumber),
 		GenerationNumber: Integer(generationNumber)}
+}
+
+// Clone returns a clone of ir.
+func (ir IndirectRef) Clone() Object {
+	ir2 := ir
+	return ir2
 }
 
 func (ir IndirectRef) String() string {

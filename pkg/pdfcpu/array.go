@@ -75,6 +75,15 @@ func NewIntegerArray(fVars ...int) Array {
 	return a
 }
 
+// Clone returns a clone of a.
+func (a Array) Clone() Object {
+	a1 := Array(make([]Object, len(a)))
+	for k, v := range a {
+		a1[k] = v.Clone()
+	}
+	return a1
+}
+
 func (a Array) contains(o Object, xRefTable *XRefTable) (bool, error) {
 	for _, e := range a {
 		ok, err := equalObjects(e, o, xRefTable)

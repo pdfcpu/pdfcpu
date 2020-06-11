@@ -40,7 +40,7 @@ func Write(ctx *Context) error {
 	if ctx.Write.Writer == nil {
 
 		fileName := filepath.Join(ctx.Write.DirName, ctx.Write.FileName)
-		log.Info.Printf("writing to %s\n", fileName)
+		log.CLI.Printf("writing to %s\n", fileName)
 
 		file, err = os.Create(fileName)
 		if err != nil {
@@ -259,12 +259,11 @@ func writeRootObject(ctx *Context) error {
 	log.Write.Printf("*** writeRootObject: begin offset=%d *** %s\n", ctx.Write.Offset, catalog)
 
 	// Ensure corresponding and accurate name tree object graphs.
-	if !ctx.ApplyReducedFeatureSet() {
-		err := ctx.BindNameTrees()
-		if err != nil {
-			return err
-		}
+	// if !ctx.ApplyReducedFeatureSet() {
+	if err := ctx.BindNameTrees(); err != nil {
+		return err
 	}
+	// }
 
 	d, err := xRefTable.DereferenceDict(catalog)
 	if err != nil {
@@ -277,16 +276,16 @@ func writeRootObject(ctx *Context) error {
 
 	dictName := "rootDict"
 
-	if ctx.ApplyReducedFeatureSet() {
-		log.Write.Println("writeRootObject - reducedFeatureSet:exclude complex entries.")
-		d.Delete("Names")
-		d.Delete("Dests")
-		d.Delete("Outlines")
-		d.Delete("OpenAction")
-		d.Delete("AcroForm")
-		d.Delete("StructTreeRoot")
-		d.Delete("OCProperties")
-	}
+	// if ctx.ApplyReducedFeatureSet() {
+	// 	log.Write.Println("writeRootObject - reducedFeatureSet:exclude complex entries.")
+	// 	d.Delete("Names")
+	// 	d.Delete("Dests")
+	// 	d.Delete("Outlines")
+	// 	d.Delete("OpenAction")
+	// 	d.Delete("AcroForm")
+	// 	d.Delete("StructTreeRoot")
+	// 	d.Delete("OCProperties")
+	// }
 
 	err = writeDictObject(ctx, objNumber, genNumber, d)
 	if err != nil {
@@ -1025,14 +1024,17 @@ func setFileSizeOfWrittenFile(w *WriteContext, f *os.File) error {
 		return err
 	}
 
+	f1 := f
+
 	// If writing is Writer based then f is nil.
 	if f == nil {
-		return nil
+		var ok bool
+		if f1, ok = w.Fp.(*os.File); !ok {
+			return errors.New("pdfcpu: missing write file descriptor")
+		}
 	}
 
-	// Writing is file based.
-
-	fileInfo, err := f.Stat()
+	fileInfo, err := f1.Stat()
 	if err != nil {
 		return err
 	}

@@ -102,7 +102,19 @@ func TestCreateDemoPDF(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	createAndValidate(t, xRefTable, "test.pdf", msg)
+	createAndValidate(t, xRefTable, "Test.pdf", msg)
+}
+
+func TestResourceDictInheritanceDemoPDF(t *testing.T) {
+	// Create a test page proofing resource inheritance.
+	// Resources may be inherited from ANY parent node.
+	// Case in point: fonts
+	msg := "TestResourceDictInheritanceDemoPDF"
+	xRefTable, err := pdf.CreateResourceDictInheritanceDemoXRef()
+	if err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+	createAndValidate(t, xRefTable, "ResourceDictInheritanceDemo.pdf", msg)
 }
 
 func TestAnnotationDemoPDF(t *testing.T) {
@@ -111,7 +123,7 @@ func TestAnnotationDemoPDF(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	createAndValidate(t, xRefTable, "annotationDemo.pdf", msg)
+	createAndValidate(t, xRefTable, "AnnotationDemo.pdf", msg)
 }
 
 func TestAcroformDemoPDF(t *testing.T) {
@@ -120,7 +132,7 @@ func TestAcroformDemoPDF(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	createAndValidate(t, xRefTable, "acroFormDemo.pdf", msg)
+	createAndValidate(t, xRefTable, "AcroFormDemo.pdf", msg)
 }
 
 func writeTextDemoAlignedWidthAndMargin(p pdf.Page, region *pdf.Rectangle, hAlign pdf.HAlignment, w, mLeft, mRight, mTop, mBot float64) {
@@ -1587,10 +1599,10 @@ func testTextDemoPDF(t *testing.T, msg, fileName string, w, h int, hAlign pdf.HA
 	}
 
 	mediaBox := pdf.RectForDim(float64(w), float64(h))
-	createXRefAndWritePDF(t, msg, "textDemo"+fileName, f1(mediaBox))
-	createXRefAndWritePDF(t, msg, "textDemo"+fileName+"Margin", f2(mediaBox))
-	createXRefAndWritePDF(t, msg, "textDemo"+fileName+"Width", f3(mediaBox))
-	createXRefAndWritePDF(t, msg, "textDemo"+fileName+"WidthAndMargin", f4(mediaBox))
+	createXRefAndWritePDF(t, msg, "TextDemo"+fileName, f1(mediaBox))
+	createXRefAndWritePDF(t, msg, "TextDemo"+fileName+"Margin", f2(mediaBox))
+	createXRefAndWritePDF(t, msg, "TextDemo"+fileName+"Width", f3(mediaBox))
+	createXRefAndWritePDF(t, msg, "TextDemo"+fileName+"WidthAndMargin", f4(mediaBox))
 }
 
 func TestTextDemoPDF(t *testing.T) {
@@ -1618,12 +1630,12 @@ func TestColumnDemoPDF(t *testing.T) {
 		w, h     int
 		f        func(mediaBox *pdf.Rectangle) pdf.Page
 	}{
-		{"testTextAlignJustifyDemo", 600, 600, createTextAlignJustifyDemo},
-		{"testTextAlignJustifyColumnDemo", 600, 600, createTextAlignJustifyColumnDemo},
-		{"textDemoAnchors", 600, 600, createTextDemoAnchors},
-		{"textDemoAnchorsWithOffset", 600, 600, createTextDemoAnchorsWithOffset},
-		{"textDemoColumnAnchored", 1200, 1200, createTextDemoColumnAnchored},
-		{"textDemoColumnAnchoredWithOffset", 1200, 1200, createTextDemoColumnAnchoredWithOffset},
+		{"TestTextAlignJustifyDemo", 600, 600, createTextAlignJustifyDemo},
+		{"TestTextAlignJustifyColumnDemo", 600, 600, createTextAlignJustifyColumnDemo},
+		{"TextDemoAnchors", 600, 600, createTextDemoAnchors},
+		{"TextDemoAnchorsWithOffset", 600, 600, createTextDemoAnchorsWithOffset},
+		{"TextDemoColumnAnchored", 1200, 1200, createTextDemoColumnAnchored},
+		{"TextDemoColumnAnchoredWithOffset", 1200, 1200, createTextDemoColumnAnchoredWithOffset},
 		{"TextRotateDemo", 1200, 1200, createTextRotateDemo},
 		{"TextRotateDemoWithOffset", 1200, 1200, createTextRotateDemoWithOffset},
 		{"TextScaleAbsoluteDemo", 600, 600, createTextScaleAbsoluteDemo},

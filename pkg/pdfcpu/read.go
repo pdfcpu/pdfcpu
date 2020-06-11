@@ -85,6 +85,14 @@ func Read(rs io.ReadSeeker, conf *Configuration) (*Context, error) {
 		*ctx.XRefTable.Size = len(ctx.XRefTable.Table)
 	}
 
+	if f, ok := rs.(*os.File); ok {
+		fileInfo, err := f.Stat()
+		if err != nil {
+			return nil, err
+		}
+		ctx.Read.FileSize = fileInfo.Size()
+	}
+
 	log.Read.Println("Read: end")
 
 	return ctx, nil

@@ -24,6 +24,18 @@ import (
 	"github.com/pkg/errors"
 )
 
+// NewStringSet returns a new StringSet for slice.
+func NewStringSet(slice []string) StringSet {
+	strSet := StringSet{}
+	if slice == nil {
+		return strSet
+	}
+	for _, s := range slice {
+		strSet[s] = true
+	}
+	return strSet
+}
+
 // Convert a 1,2 or 3 digit unescaped octal string into the corresponding byte value.
 func byteForOctalString(octalBytes string) (b byte) {
 	i, _ := strconv.ParseInt(octalBytes, 8, 64)

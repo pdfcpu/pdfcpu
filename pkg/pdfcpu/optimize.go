@@ -94,7 +94,7 @@ func resourcesDictForPageDict(xRefTable *XRefTable, pageDict Dict, pageObjNumber
 
 	o, found := pageDict.Find("Resources")
 	if !found {
-		log.Optimize.Printf("resourcesDictForPageDict end: No resources dict for page object %d, may be inheritated\n", pageObjNumber)
+		log.Optimize.Printf("resourcesDictForPageDict end: No resources dict for page object %d, may be inherited\n", pageObjNumber)
 		return nil, nil
 	}
 
@@ -531,7 +531,7 @@ func parseResourcesDict(ctx *Context, pageDict Dict, pageNumber, pageObjNumber i
 		return err
 	}
 
-	// dict may be nil for inheritated resource dicts.
+	// dict may be nil for inherited resource dicts.
 	if d != nil {
 
 		// Optimize image and font resources.
@@ -576,7 +576,7 @@ func parsePagesDict(ctx *Context, pagesDict Dict, pageNumber int) (int, error) {
 			return 0, errors.New("pdfcpu: parsePagesDict: Missing dict type")
 		}
 
-		// Note: Pages may contain a to be inheritated ResourcesDict.
+		// Note: Pages may contain a to be inherited ResourcesDict.
 
 		if *dictType == "Pages" {
 
@@ -1180,7 +1180,8 @@ func OptimizeXRefTable(ctx *Context) error {
 
 	log.Optimize.Println("optimizeXRefTable begin")
 
-	// Replace references of free object with NULL objects.
+	// Sometimes free objects are used although they are part of the free object list.
+	// Replace references to free xref table entries with a reference to a NULL object.
 	if err := fixReferencesToFreeObjects(ctx); err != nil {
 		return err
 	}

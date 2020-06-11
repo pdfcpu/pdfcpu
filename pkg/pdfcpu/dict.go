@@ -38,6 +38,15 @@ func (d Dict) Len() int {
 	return len(d)
 }
 
+// Clone returns a clone of d.
+func (d Dict) Clone() Object {
+	d1 := NewDict()
+	for k, v := range d {
+		d1.Insert(k, v.Clone())
+	}
+	return d1
+}
+
 // Insert adds a new entry to this PDFDict.
 func (d Dict) Insert(key string, value Object) (ok bool) {
 	_, found := d.Find(key)
@@ -90,7 +99,7 @@ func (d Dict) Delete(key string) (value Object) {
 
 	delete(d, key)
 
-	return
+	return value
 }
 
 // Entry returns the value for given key.

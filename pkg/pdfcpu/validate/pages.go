@@ -49,6 +49,17 @@ func validateResourceDict(xRefTable *pdf.XRefTable, o pdf.Object) (hasResources 
 		}
 	}
 
+	allowedResDictKeys := []string{"ExtGState", "Font", "XObject", "Properties", "ColorSpace", "Pattern", "ProcSet", "Shading"}
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		allowedResDictKeys = append(allowedResDictKeys, "Encoding")
+	}
+
+	for k := range d {
+		if !pdf.MemberOf(k, allowedResDictKeys) {
+			return false, errors.Errorf("invalid resource dict entry: %s", k)
+		}
+	}
+
 	// Beginning with PDF V1.4 this feature is considered to be obsolete.
 	//_, err = validateNameArrayEntry(xRefTable, dict, "resourceDict", "ProcSet", OPTIONAL, V10, validateProcedureSetName)
 	//if err != nil {
@@ -110,7 +121,7 @@ func validatePageResources(xRefTable *pdf.XRefTable, d pdf.Dict, hasResources, h
 
 	// TODO Check if contents need resources (#169)
 	// if !hasResources && hasContents {
-	// 	return errors.New("pdfcpu: validatePageResources: missing required entry \"Resources\" - should be inheritated")
+	// 	return errors.New("pdfcpu: validatePageResources: missing required entry \"Resources\" - should be inherited")
 	// }
 
 	return nil
@@ -893,7 +904,7 @@ func validateResources(xRefTable *pdf.XRefTable, d pdf.Dict) (hasResources bool,
 	return validateResourceDict(xRefTable, o)
 }
 
-func validatePagesDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNumber, genNumber int, hasResources, hasMediaBox bool) error {
+func validatePagesDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNr, genNumber int, hasResources, hasMediaBox bool) error {
 
 	// Resources and Mediabox are inherited.
 	//var dHasResources, dHasMediaBox bool
@@ -936,6 +947,12 @@ func validatePagesDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNumber, genNumbe
 		pageNodeDict, err := xRefTable.DereferenceDict(ir)
 		if err != nil {
 			return err
+		}
+
+		// Validate this kid's parent.
+		parentIndRef := pageNodeDict.IndirectRefEntry("Parent")
+		if parentIndRef.ObjectNumber.Value() != objNr {
+			return errors.New("pdfcpu: validatePagesDict: corrupt parent node")
 		}
 
 		dictType, err := dictTypeForPageNodeDict(pageNodeDict)

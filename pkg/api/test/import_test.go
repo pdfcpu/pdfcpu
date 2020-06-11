@@ -62,7 +62,7 @@ func TestImportImages(t *testing.T) {
 		//The page dimensions will match the image dimensions.
 		{"TestConvertImageToPDF",
 			[]string{filepath.Join(resDir, "logoSmall.png")},
-			"convertImage.pdf",
+			"ConvertImage.pdf",
 			"",
 			false},
 
@@ -78,7 +78,7 @@ func TestImportImages(t *testing.T) {
 		//Import an image as a new page of the existing output file.
 		{"TestCenteredImportImage",
 			imageFileNames(t, "../../../resources"),
-			"importImageToA3.pdf",
+			"ImportImageToA3.pdf",
 			"f:A3, pos:c, s:1.0",
 			false},
 	} {

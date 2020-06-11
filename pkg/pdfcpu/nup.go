@@ -809,7 +809,8 @@ func nupPages(ctx *Context, selectedPages IntSet, nup *NUp, pagesDict Dict, page
 			formsResDict = NewDict()
 		}
 
-		d, inhPAttrs, err := ctx.PageDict(p)
+		consolidateRes := true
+		d, inhPAttrs, err := ctx.PageDict(p, consolidateRes)
 		if err != nil {
 			return err
 		}
@@ -818,18 +819,11 @@ func nupPages(ctx *Context, selectedPages IntSet, nup *NUp, pagesDict Dict, page
 		}
 
 		// Retrieve content stream bytes.
-
-		o, found := d.Find("Contents")
-		if !found {
+		bb, err := xRefTable.PageContent(d)
+		if err == errNoContent {
 			continue
 		}
-
-		var bb []byte
-		bb, err = contentStream(xRefTable, o)
 		if err != nil {
-			if err == errNoContent {
-				continue
-			}
 			return err
 		}
 
@@ -861,7 +855,8 @@ func NUpFromPDF(ctx *Context, selectedPages IntSet, nup *NUp) error {
 
 	if nup.PageDim == nil {
 		// No page dimensions specified, use mediaBox of page 1.
-		d, inhPAttrs, err := ctx.PageDict(1)
+		consolidateRes := false
+		d, inhPAttrs, err := ctx.PageDict(1, consolidateRes)
 		if err != nil {
 			return err
 		}

@@ -18,7 +18,6 @@ package pdfcpu
 
 import (
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pkg/errors"
 )
 
 // CollectPages creates a new PDF Context for a custom PDF page sequence of the PDF represented by ctx.
@@ -31,67 +30,9 @@ func CollectPages(ctx *Context, collectedPages []int) (*Context, error) {
 		return nil, err
 	}
 
-	pagesIndRef, err := ctxDest.Pages()
-	if err != nil {
+	usePgCache := true
+	if err := AddPages(ctx, ctxDest, collectedPages, usePgCache); err != nil {
 		return nil, err
-	}
-
-	// This is the page tree root.
-	pagesDict, err := ctxDest.DereferenceDict(*pagesIndRef)
-	if err != nil {
-		return nil, err
-	}
-
-	pageCache := map[int]*IndirectRef{}
-	migrated := map[int]int{}
-
-	for _, i := range collectedPages {
-
-		indRef, ok := pageCache[i]
-		if ok {
-			if err := AppendPageTree(indRef, 1, pagesDict); err != nil {
-				return nil, err
-			}
-			continue
-		}
-
-		// Move page i and resources into new context.
-
-		d, inhPAttrs, err := ctx.PageDict(i)
-		if err != nil {
-			return nil, err
-		}
-		if d == nil {
-			return nil, errors.Errorf("pdfcpu: unknown page number: %d\n", i)
-		}
-
-		// Migrate external page dict into ctxDest.
-		for k, v := range d {
-			if k == "Parent" {
-				d["Parent"] = *pagesIndRef
-				continue
-			}
-			if v, err = migrateObject(ctx, ctxDest, migrated, v); err != nil {
-				return nil, err
-			}
-			d[k] = v
-		}
-
-		// Handle inherited page attributes.
-		d["MediaBox"] = inhPAttrs.mediaBox.Array()
-		if inhPAttrs.rotate%360 > 0 {
-			d["Rotate"] = Integer(inhPAttrs.rotate)
-		}
-
-		if indRef, err = ctxDest.IndRefForNewObject(d); err != nil {
-			return nil, err
-		}
-
-		if err := AppendPageTree(indRef, 1, pagesDict); err != nil {
-			return nil, err
-		}
-
-		pageCache[i] = indRef
 	}
 
 	return ctxDest, nil

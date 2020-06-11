@@ -40,6 +40,7 @@ func TestSplitSpan2(t *testing.T) {
 	fileName := "Acroforms2.pdf"
 	inFile := filepath.Join(inDir, fileName)
 
+	// Create dual page files of inFile in outDir.
 	span := 2
 	if err := api.SplitFile(inFile, outDir, span, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
@@ -51,7 +52,8 @@ func TestSplit0ByBookmarkCommand(t *testing.T) {
 	fileName := "5116.DCT_Filter.pdf"
 	inFile := filepath.Join(inDir, fileName)
 
-	span := 0 // 0 means we are going to split by bookmarks.
+	// Split along bookmarks.
+	span := 0
 	if err := api.SplitFile(inFile, outDir, span, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}

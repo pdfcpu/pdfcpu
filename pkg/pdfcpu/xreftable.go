@@ -1575,7 +1575,7 @@ func (xRefTable *XRefTable) IDFirstElement() (id []byte, err error) {
 
 // InheritedPageAttrs represents all inherited page attributes.
 type InheritedPageAttrs struct {
-	resources Dict
+	resources Dict // The closest resource dict to be inherited from parent nodes.
 	mediaBox  *Rectangle
 	cropBox   *Rectangle
 	rotate    int
@@ -1606,44 +1606,35 @@ func rect(xRefTable *XRefTable, a Array) (*Rectangle, error) {
 	return Rect(llx, lly, urx, ury), nil
 }
 
-func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict Dict, pAttrs *InheritedPageAttrs) error {
+func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict Dict, pAttrs *InheritedPageAttrs, consolidateRes bool) error {
+	// Compose a direct resource dict.
+	// if consolidateRes is true accumulate all inherited resources into it.
+	var (
+		obj   Object
+		found bool
+	)
 
-	var err error
-
-	obj, found := pageDict.Find("Resources")
-	if found {
-		pAttrs.resources, err = xRefTable.DereferenceDict(obj)
-		if err != nil {
-			return err
-		}
-	}
-
-	obj, found = pageDict.Find("MediaBox")
-	if found {
+	if obj, found = pageDict.Find("MediaBox"); found {
 		a, err := xRefTable.DereferenceArray(obj)
 		if err != nil {
 			return err
 		}
-		pAttrs.mediaBox, err = rect(xRefTable, a)
-		if err != nil {
+		if pAttrs.mediaBox, err = rect(xRefTable, a); err != nil {
 			return err
 		}
 	}
 
-	obj, found = pageDict.Find("CropBox")
-	if found {
+	if obj, found = pageDict.Find("CropBox"); found {
 		a, err := xRefTable.DereferenceArray(obj)
 		if err != nil {
 			return err
 		}
-		pAttrs.cropBox, err = rect(xRefTable, a)
-		if err != nil {
+		if pAttrs.cropBox, err = rect(xRefTable, a); err != nil {
 			return err
 		}
 	}
 
-	obj, found = pageDict.Find("Rotate")
-	if found {
+	if obj, found = pageDict.Find("Rotate"); found {
 		i, err := xRefTable.DereferenceInteger(obj)
 		if err != nil {
 			return err
@@ -1651,10 +1642,105 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict Dict, pAttrs *Inher
 		pAttrs.rotate = i.Value()
 	}
 
+	if !consolidateRes {
+		obj, found := pageDict.Find("Resources")
+		if found {
+			var err error
+			if pAttrs.resources, err = xRefTable.DereferenceDict(obj); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	// Accumulate all inherited resources.
+	if obj, found = pageDict.Find("Resources"); found {
+		d, err := xRefTable.DereferenceDict(obj)
+		if err != nil {
+			return err
+		}
+		if d == nil || len(d) == 0 {
+			return nil
+		}
+		if pAttrs.resources == nil {
+			// Create a resource dict that eventually will contain any inherited resources
+			// while walking down from the page root to the leave node representing the page in question.
+			d1 := d.Clone()
+			log.Write.Printf("d1:\n%s\n", d1)
+			pAttrs.resources = d1.(Dict)
+			log.Write.Printf("pA:\n%s\n", pAttrs.resources)
+			return nil
+		}
+		// Accumulate any resources defined in this page node into the inherited resources.
+		for k, v := range d {
+			if v == nil {
+				continue
+			}
+			d1, ok := v.(Dict)
+			if !ok {
+				return errors.Errorf("pdfcpu: checkInheritedPageAttrs: expected Dict d1: %T", v)
+			}
+			// We have identified a subdict that needs to go into the inherited res dict.
+			if pAttrs.resources[k] == nil {
+				pAttrs.resources[k] = d1
+				continue
+			}
+			d2, ok := pAttrs.resources[k].(Dict)
+			if !ok {
+				return errors.Errorf("pdfcpu: checkInheritedPageAttrs: expected Dict d2: %T", pAttrs.resources[k])
+			}
+			// Weave the sub dict d1 into the inherited sub dict.
+			// Any existing resource names will be overridden.
+			for k, v := range d1 {
+				d2[k] = v
+			}
+		}
+	}
+
 	return nil
 }
 
-func (xRefTable *XRefTable) processPageTreeForPageDict(root *IndirectRef, pAttrs *InheritedPageAttrs, p *int, page int) (Dict, error) {
+func consolidateResourceSubDict(d Dict, key string, prn PageResourceNames, pageNr int) error {
+	o := d[key]
+	if o == nil {
+		if prn.HasResources(key) {
+			return errors.Errorf("pdfcpu: page %d: missing required resource subdict: %s", pageNr, key)
+		}
+		return nil
+	}
+	if !prn.HasResources(key) {
+		d.Delete(key)
+		return nil
+	}
+	d1 := o.(Dict)
+	res := prn.Resources(key)
+	// Iterate over inherited resource sub dict and remove any entries not required.
+	for k := range d1 {
+		if !res[k] {
+			d1.Delete(k)
+		}
+	}
+	// Check for missing resource sub dict entries.
+	for k := range res {
+		if d1[k] == nil {
+			return errors.Errorf("pdfcpu: page %d: missing required %s: %s", pageNr, key, k)
+		}
+	}
+	d[key] = d1
+	return nil
+}
+
+func consolidateResourceDict(d Dict, prn PageResourceNames, pageNr int) error {
+	for k := range resourceTypes {
+		if err := consolidateResourceSubDict(d, k, prn, pageNr); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (xRefTable *XRefTable) processPageTreeForPageDict(root *IndirectRef, pAttrs *InheritedPageAttrs, p *int, page int, consolidateRes bool) (Dict, error) {
+	// Walk this page tree all the way down to the leave node representing page.
 
 	//fmt.Printf("entering processPageTreeForPageDict: p=%d obj#%d\n", *p, root.ObjectNumber.Value())
 
@@ -1672,14 +1758,38 @@ func (xRefTable *XRefTable) processPageTreeForPageDict(root *IndirectRef, pAttrs
 		}
 	}
 
-	if err = xRefTable.checkInheritedPageAttrs(d, pAttrs); err != nil {
+	// Return the current state of all page attributes that may be inherited.
+	if err = xRefTable.checkInheritedPageAttrs(d, pAttrs, consolidateRes); err != nil {
 		return nil, err
 	}
 
 	// Iterate over page tree.
 	kids := d.ArrayEntry("Kids")
 	if kids == nil {
-		//fmt.Println("returning from leaf node")
+
+		if !consolidateRes {
+			return d, nil
+		}
+
+		// Remove any inherited resource that is not required by this page by analyzing
+		// this page's content stream and then patching the accumulated resource dict.
+
+		bb, err := xRefTable.PageContent(d)
+		if err != nil {
+			return nil, err
+		}
+
+		// Calculate resources required by the content stream of this page.
+		prn := PageResourceNamesForContent(string(bb))
+
+		// Compare required resouces (prn) with available resources (pAttrs.resources).
+		// Remove any resource that's not required.
+		// Return an error for any required resource missing.
+		// TODO Calculate and acumulate resources required by content streams of any present form or type 3 fonts.
+		if err := consolidateResourceDict(pAttrs.resources, prn, page); err != nil {
+			return nil, err
+		}
+
 		return d, nil
 	}
 
@@ -1704,7 +1814,7 @@ func (xRefTable *XRefTable) processPageTreeForPageDict(root *IndirectRef, pAttrs
 
 		case "Pages":
 			// Recurse over sub pagetree.
-			pageNodeDict, err = xRefTable.processPageTreeForPageDict(&ir, pAttrs, p, page)
+			pageNodeDict, err = xRefTable.processPageTreeForPageDict(&ir, pAttrs, p, page, consolidateRes)
 			if err != nil {
 				return nil, err
 			}
@@ -1715,7 +1825,7 @@ func (xRefTable *XRefTable) processPageTreeForPageDict(root *IndirectRef, pAttrs
 		case "Page":
 			*p++
 			if *p == page {
-				return xRefTable.processPageTreeForPageDict(&ir, pAttrs, p, page)
+				return xRefTable.processPageTreeForPageDict(&ir, pAttrs, p, page, consolidateRes)
 			}
 
 		}
@@ -1726,7 +1836,7 @@ func (xRefTable *XRefTable) processPageTreeForPageDict(root *IndirectRef, pAttrs
 }
 
 // PageDict returns a specific page dict along with the resources, mediaBox and CropBox in effect.
-func (xRefTable *XRefTable) PageDict(page int) (Dict, *InheritedPageAttrs, error) {
+func (xRefTable *XRefTable) PageDict(page int, consolidateRes bool) (Dict, *InheritedPageAttrs, error) {
 
 	// Get an indirect reference to the page tree root dict.
 	pageRootDictIndRef, _ := xRefTable.Pages()
@@ -1736,7 +1846,9 @@ func (xRefTable *XRefTable) PageDict(page int) (Dict, *InheritedPageAttrs, error
 		pageCount int
 	)
 
-	pageDict, err := xRefTable.processPageTreeForPageDict(pageRootDictIndRef, &inhPAttrs, &pageCount, page)
+	// Calculate and return only resources that are really needed by
+	// any content stream of this page and any possible forms or type 3 fonts referenced.
+	pageDict, err := xRefTable.processPageTreeForPageDict(pageRootDictIndRef, &inhPAttrs, &pageCount, page, consolidateRes)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1980,14 +2092,15 @@ func (xRefTable *XRefTable) insertEmptyPage(root *IndirectRef, pAttrs *Inherited
 	return xRefTable.emptyPage(root, mediaBox)
 }
 
-func (xRefTable *XRefTable) insertIntoPageTree(root *IndirectRef, pAttrs *InheritedPageAttrs, p *int, selectedPages IntSet, before bool) (int, error) {
+func (xRefTable *XRefTable) insertBlankPagesIntoPageTree(root *IndirectRef, pAttrs *InheritedPageAttrs, p *int, selectedPages IntSet, before bool) (int, error) {
 
 	d, err := xRefTable.DereferenceDict(*root)
 	if err != nil {
 		return 0, err
 	}
 
-	err = xRefTable.checkInheritedPageAttrs(d, pAttrs)
+	consolidateRes := false
+	err = xRefTable.checkInheritedPageAttrs(d, pAttrs, consolidateRes)
 	if err != nil {
 		return 0, err
 	}
@@ -2021,7 +2134,7 @@ func (xRefTable *XRefTable) insertIntoPageTree(root *IndirectRef, pAttrs *Inheri
 
 		case "Pages":
 			// Recurse over sub pagetree.
-			j, err := xRefTable.insertIntoPageTree(&ir, pAttrs, p, selectedPages, before)
+			j, err := xRefTable.insertBlankPagesIntoPageTree(&ir, pAttrs, p, selectedPages, before)
 			if err != nil {
 				return 0, err
 			}
@@ -2058,8 +2171,8 @@ func (xRefTable *XRefTable) insertIntoPageTree(root *IndirectRef, pAttrs *Inheri
 	return i, d.IncrementBy("Count", i)
 }
 
-// InsertPages inserts a blank page before or after each selected page.
-func (xRefTable *XRefTable) InsertPages(pages IntSet, before bool) error {
+// InsertBlankPages inserts a blank page before or after each selected page.
+func (xRefTable *XRefTable) InsertBlankPages(pages IntSet, before bool) error {
 
 	root, err := xRefTable.Pages()
 	if err != nil {
@@ -2069,7 +2182,7 @@ func (xRefTable *XRefTable) InsertPages(pages IntSet, before bool) error {
 	var inhPAttrs InheritedPageAttrs
 	p := 0
 
-	_, err = xRefTable.insertIntoPageTree(root, &inhPAttrs, &p, pages, before)
+	_, err = xRefTable.insertBlankPagesIntoPageTree(root, &inhPAttrs, &p, pages, before)
 
 	return err
 }

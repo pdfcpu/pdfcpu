@@ -77,7 +77,7 @@ func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, co
 	from := time.Now()
 	var ok bool
 
-	if ok, err = pdf.AttachAdd(ctx.XRefTable, stringSet(files), coll); err != nil {
+	if ok, err = pdf.AttachAdd(ctx.XRefTable, pdf.NewStringSet(files), coll); err != nil {
 		return err
 	}
 	if !ok {
@@ -154,7 +154,7 @@ func RemoveAttachments(rs io.ReadSeeker, w io.Writer, fileNames []string, conf *
 	from := time.Now()
 
 	var ok bool
-	if ok, err = pdf.AttachRemove(ctx.XRefTable, stringSet(fileNames)); err != nil {
+	if ok, err = pdf.AttachRemove(ctx.XRefTable, pdf.NewStringSet(fileNames)); err != nil {
 		return err
 	}
 	if !ok {
@@ -230,7 +230,7 @@ func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, con
 	fromWrite := time.Now()
 
 	ctx.Write.DirName = outDir
-	if err = pdf.AttachExtract(ctx, stringSet(fileNames)); err != nil {
+	if err = pdf.AttachExtract(ctx, pdf.NewStringSet(fileNames)); err != nil {
 		return err
 	}
 

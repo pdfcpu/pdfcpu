@@ -1395,136 +1395,78 @@ func createFontResForWM(xRefTable *XRefTable, wm *Watermark) error {
 	return nil
 }
 
-func contentStream(xRefTable *XRefTable, o Object) ([]byte, error) {
-
-	o, err := xRefTable.Dereference(o)
-	if err != nil {
-		return nil, err
-	}
-
-	bb := []byte{}
-
-	switch o := o.(type) {
-
-	case StreamDict:
-
-		// Decode streamDict for supported filters only.
-		err := decodeStream(&o)
-		if err == filter.ErrUnsupportedFilter {
-			return nil, errors.New("pdfcpu: unsupported filter: unable to decode content for PDF watermark")
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		bb = o.Content
-
-	case Array:
-		for _, o := range o {
-
-			if o == nil {
-				continue
-			}
-
-			sd, err := xRefTable.DereferenceStreamDict(o)
-			if err != nil {
-				return nil, err
-			}
-
-			// Decode streamDict for supported filters only.
-			err = decodeStream(sd)
-			if err == filter.ErrUnsupportedFilter {
-				return nil, errors.New("pdfcpu: unsupported filter: unable to decode content for PDF watermark")
-			}
-			if err != nil {
-				return nil, err
-			}
-
-			bb = append(bb, sd.Content...)
-		}
-	}
-
-	if len(bb) == 0 {
-		return nil, errNoContent
-	}
-
-	return bb, nil
-}
-
-func identifyObjNrs(ctx *Context, o Object, migrated map[int]int, objNrs IntSet) error {
+func migrateObject(o Object, ctxSource, ctxDest *Context, migrated map[int]int) (Object, error) {
 
 	switch o := o.(type) {
 
 	case IndirectRef:
 		objNr := o.ObjectNumber.Value()
 		if migrated[objNr] > 0 {
-			return nil
+			//fmt.Printf("migrated: %d\n", objNr)
+			o.ObjectNumber = Integer(migrated[objNr])
+			return o, nil
 		}
-		if objNr >= *ctx.Size {
-			//fmt.Printf("%d > %d(ctx.Size)\n", objNr, *ctx.Size)
-			return nil
-		}
-		objNrs[objNr] = true
 
-		o1, err := ctx.Dereference(o)
+		//entrySrc, _ := ctxSource.FindTableEntryLight(objNr)
+		//fmt.Printf("src before: %d %s\n", objNr, entrySrc.Object)
+
+		o1, err := ctxSource.Dereference(o)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		if err = identifyObjNrs(ctx, o1, migrated, objNrs); err != nil {
-			return err
+		o1 = o1.Clone()
+		objNrNew, err := ctxDest.InsertObject(o1)
+		if err != nil {
+			return nil, err
 		}
+
+		migrated[objNr] = objNrNew
+		o.ObjectNumber = Integer(objNrNew)
+		//fmt.Printf("processing: %d -> %d\n", objNr, objNrNew)
+
+		//entry, _ := ctxDest.FindTableEntryLight(objNrNew)
+		//fmt.Printf("before: %d -> %d %s\n", objNr, objNrNew, entry.Object)
+
+		if _, err := migrateObject(o1, ctxSource, ctxDest, migrated); err != nil {
+			return nil, err
+		}
+		//fmt.Printf("after: %d -> %d %s\n", objNr, objNrNew, entry.Object)
+
+		//entrySrc, _ = ctxSource.FindTableEntryLight(objNr)
+		//fmt.Printf("src after: %d %s\n", objNr, entrySrc.Object)
+
+		return o, nil
 
 	case Dict:
-		for _, v := range o {
-			if err := identifyObjNrs(ctx, v, migrated, objNrs); err != nil {
-				return err
+		for k, v := range o {
+			v1, err := migrateObject(v, ctxSource, ctxDest, migrated)
+			if err != nil {
+				return nil, err
 			}
+			o[k] = v1
 		}
+		return o, nil
 
 	case StreamDict:
-		for _, v := range o.Dict {
-			if err := identifyObjNrs(ctx, v, migrated, objNrs); err != nil {
-				return err
+		for k, v := range o.Dict {
+			v1, err := migrateObject(v, ctxSource, ctxDest, migrated)
+			if err != nil {
+				return nil, err
 			}
+			o.Dict[k] = v1
 		}
+		return o, nil
 
 	case Array:
-		for _, v := range o {
-			if err := identifyObjNrs(ctx, v, migrated, objNrs); err != nil {
-				return err
+		for k, v := range o {
+			v1, err := migrateObject(v, ctxSource, ctxDest, migrated)
+			if err != nil {
+				return nil, err
 			}
+			o[k] = v1
 		}
-
-	}
-
-	return nil
-}
-
-// migrateObject migrates o from ctxSource into ctxDest.
-func migrateObject(ctxSource, ctxDest *Context, migrated map[int]int, o Object) (Object, error) {
-
-	// Collect referenced objNrs of o in ctxSource that have not been migrated.
-	objNrs := IntSet{}
-	if err := identifyObjNrs(ctxSource, o, migrated, objNrs); err != nil {
-		return nil, err
-	}
-
-	// Create a mapping from migration candidates in ctxSource to new objs in ctxDest.
-	for k := range objNrs {
-		migrated[k] = *ctxDest.Size
-		*ctxDest.Size++
-	}
-
-	// Patch indRefs reachable by o in ctxSource.
-	if po := patchObject(o, migrated); po != nil {
-		o = po
-	}
-
-	for k := range objNrs {
-		patchObject(ctxSource.Table[k].Object, migrated)
-		v := migrated[k]
-		ctxDest.Table[v] = ctxSource.Table[k]
+		return o, nil
 	}
 
 	return o, nil
@@ -1537,7 +1479,8 @@ func createPDFRes(ctx, otherCtx *Context, pageNr int, migrated map[int]int, wm *
 	otherXRefTable := otherCtx.XRefTable
 
 	// Locate page dict & resource dict of PDF stamp.
-	d, inhPAttrs, err := otherXRefTable.PageDict(pageNr)
+	consolidateRes := true
+	d, inhPAttrs, err := otherXRefTable.PageDict(pageNr, consolidateRes)
 	if err != nil {
 		return err
 	}
@@ -1546,17 +1489,13 @@ func createPDFRes(ctx, otherCtx *Context, pageNr int, migrated map[int]int, wm *
 	}
 
 	// Retrieve content stream bytes of page dict.
-	o, found := d.Find("Contents")
-	if !found {
-		return errors.New("pdfcpu: PDF page has no content")
-	}
-	pdfRes.content, err = contentStream(otherXRefTable, o)
+	pdfRes.content, err = otherXRefTable.PageContent(d)
 	if err != nil {
 		return err
 	}
 
 	// Migrate external resource dict into ctx.
-	if _, err = migrateObject(otherCtx, ctx, migrated, inhPAttrs.resources); err != nil {
+	if _, err = migrateObject(inhPAttrs.resources, otherCtx, ctx, migrated); err != nil {
 		return err
 	}
 
@@ -2209,7 +2148,8 @@ func addPageWatermark(xRefTable *XRefTable, i int, wm *Watermark) error {
 		}
 	}
 
-	d, inhPAttrs, err := xRefTable.PageDict(i)
+	consolidateRes := false
+	d, inhPAttrs, err := xRefTable.PageDict(i, consolidateRes)
 	if err != nil {
 		return err
 	}
@@ -2231,6 +2171,7 @@ func addPageWatermark(xRefTable *XRefTable, i int, wm *Watermark) error {
 		err = insertPageResourcesForWM(xRefTable, d, wm, gsID, xoID)
 	} else {
 		err = updatePageResourcesForWM(xRefTable, inhPAttrs.resources, wm, &gsID, &xoID)
+		d.Update("Resources", inhPAttrs.resources)
 	}
 	if err != nil {
 		return err
@@ -2448,7 +2389,8 @@ func removeArtifactsFromPage(xRefTable *XRefTable, sd *StreamDict, resDict *Dict
 
 func locatePageContentAndResourceDict(xRefTable *XRefTable, i int) (Object, Dict, error) {
 
-	d, _, err := xRefTable.PageDict(i)
+	consolidateRes := false
+	d, _, err := xRefTable.PageDict(i, consolidateRes)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -324,21 +324,21 @@ func (ctx *Context) InfoDigest() ([]string, error) {
 
 // ReadContext represents the context for reading a PDF file.
 type ReadContext struct {
-	FileName            string // The input PDF-File.
-	FileSize            int64
-	rs                  io.ReadSeeker
-	EolCount            int    // 1 or 2 characters used for eol.
-	BinaryTotalSize     int64  // total stream data
-	BinaryImageSize     int64  // total image stream data
-	BinaryFontSize      int64  // total font stream data (fontfiles)
-	BinaryImageDuplSize int64  // total obsolet image stream data after optimization
-	BinaryFontDuplSize  int64  // total obsolet font stream data after optimization
-	Linearized          bool   // File is linearized.
-	Hybrid              bool   // File is a hybrid PDF file.
-	UsingObjectStreams  bool   // File is using object streams.
-	ObjectStreams       IntSet // All object numbers of any object streams found which need to be decoded.
-	UsingXRefStreams    bool   // File is using xref streams.
-	XRefStreams         IntSet // All object numbers of any xref streams found.
+	FileName            string        // Input PDF-File.
+	FileSize            int64         // Input file size.
+	rs                  io.ReadSeeker // Input read seeker.
+	EolCount            int           // 1 or 2 characters used for eol.
+	BinaryTotalSize     int64         // total stream data
+	BinaryImageSize     int64         // total image stream data
+	BinaryFontSize      int64         // total font stream data (fontfiles)
+	BinaryImageDuplSize int64         // total obsolet image stream data after optimization
+	BinaryFontDuplSize  int64         // total obsolet font stream data after optimization
+	Linearized          bool          // File is linearized.
+	Hybrid              bool          // File is a hybrid PDF file.
+	UsingObjectStreams  bool          // File is using object streams.
+	ObjectStreams       IntSet        // All object numbers of any object streams found which need to be decoded.
+	UsingXRefStreams    bool          // File is using xref streams.
+	XRefStreams         IntSet        // All object numbers of any xref streams found.
 }
 
 func newReadContext(rs io.ReadSeeker) *ReadContext {
@@ -406,9 +406,9 @@ func (rc *ReadContext) LogStats(optimized bool) {
 	textSize := rc.FileSize - rc.BinaryTotalSize // = non binary content = non stream data
 
 	log.Println("Original:")
-	log.Printf("File Size            : %s (%d bytes)\n", ByteSize(rc.FileSize), rc.FileSize)
-	log.Printf("Total Binary Data    : %s (%d bytes) %4.1f%%\n", ByteSize(rc.BinaryTotalSize), rc.BinaryTotalSize, float32(rc.BinaryTotalSize)/float32(rc.FileSize)*100)
-	log.Printf("Total Text   Data    : %s (%d bytes) %4.1f%%\n\n", ByteSize(textSize), textSize, float32(textSize)/float32(rc.FileSize)*100)
+	log.Printf("File size            : %s (%d bytes)\n", ByteSize(rc.FileSize), rc.FileSize)
+	log.Printf("Total binary data    : %s (%d bytes) %4.1f%%\n", ByteSize(rc.BinaryTotalSize), rc.BinaryTotalSize, float32(rc.BinaryTotalSize)/float32(rc.FileSize)*100)
+	log.Printf("Total other data     : %s (%d bytes) %4.1f%%\n\n", ByteSize(textSize), textSize, float32(textSize)/float32(rc.FileSize)*100)
 
 	// Only when optimizing we get details about resource data usage.
 	if optimized {
@@ -718,10 +718,11 @@ func (oc *OptimizationContext) collectImageInfo(logStr []string) []string {
 type WriteContext struct {
 
 	// The PDF-File which gets generated.
-	*bufio.Writer
-	DirName             string
-	FileName            string
-	FileSize            int64
+	*bufio.Writer                     // A writer associated with Fp.
+	Fp                  io.Writer     // A file pointer needed for detecting FileSize.
+	FileSize            int64         // The size of the written file.
+	DirName             string        // The output directory.
+	FileName            string        // The output file name.
 	SelectedPages       IntSet        // For split, trim and extract.
 	BinaryTotalSize     int64         // total stream data, counts 100% all stream data written.
 	BinaryImageSize     int64         // total image stream data written = Read.BinaryImageSize.
@@ -761,9 +762,9 @@ func (wc *WriteContext) LogStats() {
 	binaryOtherSize := binaryTotalSize - binaryImageSize - binaryFontSize // content streams
 
 	log.Stats.Println("Optimized:")
-	log.Stats.Printf("File Size            : %s (%d bytes)\n", ByteSize(fileSize), fileSize)
-	log.Stats.Printf("Total Binary Data    : %s (%d bytes) %4.1f%%\n", ByteSize(binaryTotalSize), binaryTotalSize, float32(binaryTotalSize)/float32(fileSize)*100)
-	log.Stats.Printf("Total Text   Data    : %s (%d bytes) %4.1f%%\n\n", ByteSize(textSize), textSize, float32(textSize)/float32(fileSize)*100)
+	log.Stats.Printf("File size            : %s (%d bytes)\n", ByteSize(fileSize), fileSize)
+	log.Stats.Printf("Total binary data    : %s (%d bytes) %4.1f%%\n", ByteSize(binaryTotalSize), binaryTotalSize, float32(binaryTotalSize)/float32(fileSize)*100)
+	log.Stats.Printf("Total other data     : %s (%d bytes) %4.1f%%\n\n", ByteSize(textSize), textSize, float32(textSize)/float32(fileSize)*100)
 
 	log.Stats.Println("Breakup of binary data:")
 	log.Stats.Printf("images               : %s (%d bytes) %4.1f%%\n", ByteSize(binaryImageSize), binaryImageSize, float32(binaryImageSize)/float32(binaryTotalSize)*100)

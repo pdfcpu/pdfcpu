@@ -535,10 +535,10 @@ description ... dimensions, format, orientation
                            Only one of dimensions or format is allowed.
     
     orientation: one of rd ... right down (=default)
-                           dr ... down right
-                           ld ... left down
-                           dl ... down left
-                           Orientation applies to PDF input files only.
+                        dr ... down right
+                        ld ... left down
+                        dl ... down left
+                        Orientation applies to PDF input files only.
 
     border:      on/off true/false
     

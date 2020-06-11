@@ -228,20 +228,19 @@ func writePagesDict(ctx *Context, ir *IndirectRef, pageNr *int) (skip bool, writ
 	countOrig, _ := d.Find("Count")
 	kidsOrig := d.ArrayEntry("Kids")
 
+	// TRIM, REMOVEPAGES are the only commands where we modify the page tree during writing.
+	// In these cases the selected pages to be written or to be removed are defined in ctx.Write.SelectedPages.
 	if len(ctx.Write.SelectedPages) > 0 {
-		// EXTRACTPAGES, SPLIT, TRIM, REMOVEPAGES
 		c := int(countOrig.(Integer))
 		log.Write.Printf("writePagesDict: checking page range %d - %d \n", *pageNr+1, *pageNr+c)
 		if ctx.Cmd == REMOVEPAGES ||
-			((ctx.Cmd == EXTRACTPAGES || ctx.Cmd == TRIM || ctx.Cmd == SPLIT) && containsSelectedPages(ctx, *pageNr+1, *pageNr+c)) {
+			((ctx.Cmd == TRIM) && containsSelectedPages(ctx, *pageNr+1, *pageNr+c)) {
 			log.Write.Println("writePagesDict: process this subtree")
 		} else {
 			log.Write.Println("writePagesDict: skip this subtree")
 			*pageNr += c
 			return true, 0, nil
 		}
-	} else {
-		log.Write.Println("writePagesDict: process this subtree anyway")
 	}
 
 	// Iterate over page tree.

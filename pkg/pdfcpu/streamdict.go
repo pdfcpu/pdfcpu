@@ -56,6 +56,22 @@ func NewStreamDict(d Dict, streamOffset int64, streamLength *int64, streamLength
 	}
 }
 
+// Clone returns a clone of sd.
+func (sd StreamDict) Clone() Object {
+	//sd1 := StreamDict{Dict: sd.Dict.Clone().(Dict)}
+	sd1 := sd
+	sd1.Dict = sd.Dict.Clone().(Dict)
+	pl := make([]PDFFilter, len(sd.FilterPipeline))
+	for k, v := range sd.FilterPipeline {
+		f := PDFFilter{}
+		f.Name = v.Name
+		f.DecodeParms = v.DecodeParms.Clone().(Dict)
+		pl[k] = f
+	}
+	sd1.FilterPipeline = pl
+	return sd1
+}
+
 // HasSoleFilterNamed returns true if there is exactly one filter defined for a stream dict.
 func (sd StreamDict) HasSoleFilterNamed(filterName string) bool {
 
