@@ -138,7 +138,7 @@ func compare(t *testing.T, fn1, fn2 string) {
 		return
 	}
 
-	if len(bb1) != len(bb1) {
+	if len(bb1) != len(bb2) {
 		t.Errorf("%s <-> %s: length mismatch %d != %d", fn1, fn2, len(bb1), len(bb2))
 		return
 	}
