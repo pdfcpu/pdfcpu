@@ -1023,7 +1023,7 @@ func (xRefTable *XRefTable) DereferenceStreamDict(o Object) (*StreamDict, error)
 
 // DereferenceStreamDictForValidation resolves stream dictionary objects
 // and ensures they are visited once only during validation.
-func (xRefTable *XRefTable) DereferenceStreamDictForValidation(o Object) (*StreamDict, error) {
+func (xRefTable *XRefTable) DereferenceStreamDictForValidation(o Object, onFirstVisitOnly bool) (*StreamDict, error) {
 
 	ir, ok := o.(IndirectRef)
 	if !ok {
@@ -1035,7 +1035,7 @@ func (xRefTable *XRefTable) DereferenceStreamDictForValidation(o Object) (*Strea
 	// An indirect reference to an undefined object shall not be considered an error by a conforming reader;
 	// it shall be treated as a reference to the null object.
 	entry, found := xRefTable.FindTableEntry(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
-	if !found || entry.Free || entry.Valid || entry.Object == nil {
+	if !found || entry.Object == nil || entry.Free || onFirstVisitOnly && entry.Valid {
 		return nil, nil
 	}
 	entry.Valid = true

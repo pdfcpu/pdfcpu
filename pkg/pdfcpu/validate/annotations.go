@@ -1157,6 +1157,11 @@ func validateAnnotationDictRedact(xRefTable *pdf.XRefTable, d pdf.Dict, dictName
 	return err
 }
 
+func validateRichMediaAnnotation(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
+	// TODO See extension level 3.
+	return nil
+}
+
 func validateExDataDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 
 	dictName := "ExData"
@@ -1328,7 +1333,7 @@ func validateAppearDictEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName stri
 }
 
 func validateBorderArrayLength(a pdf.Array) bool {
-	return len(a) == 3 || len(a) == 4
+	return len(a) == 0 || len(a) == 3 || len(a) == 4
 }
 
 func validateAnnotationDictGeneral(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) (*pdf.Name, error) {
@@ -1394,7 +1399,6 @@ func validateAnnotationDictGeneral(xRefTable *pdf.XRefTable, d pdf.Dict, dictNam
 	}
 
 	// Border, optional, array of numbers
-	//v := func(a Array) bool { return len(a) == 3 || len(a) == 4 }
 	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "Border", OPTIONAL, pdf.V10, validateBorderArrayLength)
 	if err != nil {
 		return nil, err
@@ -1460,6 +1464,7 @@ func validateAnnotationDictConcrete(xRefTable *pdf.XRefTable, d pdf.Dict, dictNa
 		"Watermark":      {validateAnnotationDictWatermark, pdf.V16, false},
 		"3D":             {validateAnnotationDict3D, pdf.V16, false},
 		"Redact":         {validateAnnotationDictRedact, pdf.V17, true},
+		"RichMedia":      {validateRichMediaAnnotation, pdf.V17, false},
 	} {
 		if subtype.Value() == k {
 

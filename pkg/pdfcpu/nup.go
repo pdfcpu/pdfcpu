@@ -491,7 +491,7 @@ func createNUpForm(xRefTable *XRefTable, imgIndRef *IndirectRef, w, h, i int) (*
 
 	d := Dict(
 		map[string]Object{
-			"ProcSet": NewNameArray("PDF", "ImageC"),
+			"ProcSet": NewNameArray("PDF", "Text", "ImageB", "ImageC", "ImageI"),
 			"XObject": Dict(map[string]Object{imgResID: *imgIndRef}),
 		},
 	)

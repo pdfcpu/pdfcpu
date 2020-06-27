@@ -428,7 +428,7 @@ func NewPageForImage(xRefTable *XRefTable, r io.Reader, parentIndRef *IndirectRe
 	// create resource dict for XObject.
 	d := Dict(
 		map[string]Object{
-			"ProcSet": NewNameArray("PDF", "ImageB", "ImageC", "ImageI"),
+			"ProcSet": NewNameArray("PDF", "Text", "ImageB", "ImageC", "ImageI"),
 			"XObject": Dict(map[string]Object{"Im0": *imgIndRef}),
 		},
 	)

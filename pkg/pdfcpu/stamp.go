@@ -1755,7 +1755,7 @@ func createFormResDict(xRefTable *XRefTable, pageNr int, wm *Watermark) (*Indire
 
 		d := Dict(
 			map[string]Object{
-				"ProcSet": NewNameArray("PDF", "ImageC"),
+				"ProcSet": NewNameArray("PDF", "Text", "ImageB", "ImageC", "ImageI"),
 				"XObject": Dict(map[string]Object{"Im0": *wm.image}),
 			},
 		)
@@ -1767,7 +1767,7 @@ func createFormResDict(xRefTable *XRefTable, pageNr int, wm *Watermark) (*Indire
 	d := Dict(
 		map[string]Object{
 			"Font":    Dict(map[string]Object{"F1": *wm.font}),
-			"ProcSet": NewNameArray("PDF", "Text"),
+			"ProcSet": NewNameArray("PDF", "Text", "ImageB", "ImageC", "ImageI"),
 		},
 	)
 

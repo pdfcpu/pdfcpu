@@ -189,6 +189,17 @@ func handleMergeCommand(conf *pdfcpu.Configuration) {
 			fmt.Fprintf(os.Stderr, "%s may appear as inFile or outFile only\n", outFile)
 			os.Exit(1)
 		}
+		if strings.Index(arg, "*") >= 0 {
+			f, err := filepath.Glob(arg)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s", err)
+				os.Exit(1)
+			}
+			for _, f := range f {
+				filesIn = append(filesIn, f)
+			}
+			continue
+		}
 		filesIn = append(filesIn, arg)
 	}
 

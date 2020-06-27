@@ -218,7 +218,8 @@ func TestParseArray(t *testing.T) {
 	doTestParseArrayOK("[<004>]/Name[(abc)]]", t)
 
 	//	Numerics
-	doTestParseArrayOK("[1.09 2.00056]]", t)
+	doTestParseArrayOK("[0.000000-16763662]", t) // = -16763662
+	doTestParseArrayOK("[1.09 2.00056]", t)
 	doTestParseArrayOK("[1.09 null true false [/Name1 2.00056]]", t)
 	doTestParseArrayOK("[[2.22 2.22	2.22][0.95043 1 1.09]]", t)
 	doTestParseArrayOK("[1]", t)

@@ -591,26 +591,17 @@ func validateStructTreeRootDictEntryParentTree(xRefTable *pdf.XRefTable, ir *pdf
 	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
 
 		// Accept empty dict
-
 		d, err := xRefTable.DereferenceDict(*ir)
 		if err != nil {
 			return err
 		}
-
 		if d == nil || d.Len() == 0 {
-			return errors.New("pdfcpu: validateStructTreeRootDict: corrupt entry \"ParentTree\"")
+			return nil
 		}
-
-	} else {
-
-		_, _, err := validateNumberTree(xRefTable, "StructTree", *ir, true)
-		if err != nil {
-			return err
-		}
-
 	}
 
-	return nil
+	_, _, err := validateNumberTree(xRefTable, "StructTree", *ir, true)
+	return err
 }
 
 func validateStructTreeRootDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {

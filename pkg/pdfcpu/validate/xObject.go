@@ -737,7 +737,7 @@ func validateXObjectStreamDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
 
 	// Dereference stream dict and ensure it is validated exactly once in order handle
 	// XObjects(forms) with recursive structures like produced by Microsoft.
-	sd, err := xRefTable.DereferenceStreamDictForValidation(o)
+	sd, err := xRefTable.DereferenceStreamDictForValidation(o, true)
 	if err != nil || sd == nil {
 		return err
 	}

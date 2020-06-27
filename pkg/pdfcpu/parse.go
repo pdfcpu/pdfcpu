@@ -621,6 +621,25 @@ func parseNumericOrIndRef(line *string) (Object, error) {
 		str = l[:i1]
 	}
 
+	/*
+		Integers are sometimes prefixed with any form of 0.
+		Following is a list of valid prefixes that can be safely ignored:
+			0
+			0.000000000
+	*/
+	if len(str) > 1 && str[0] == '0' {
+		if str[1] == '+' || str[1] == '-' {
+			str = str[1:]
+		} else if str[1] == '.' {
+			var i int
+			for i = 2; len(str) > i && str[i] == '0'; i++ {
+			}
+			if len(str) > i && (str[i] == '+' || str[i] == '-') {
+				str = str[i:]
+			}
+		}
+	}
+
 	// Try int
 	i, err := strconv.Atoi(str)
 	if err != nil {

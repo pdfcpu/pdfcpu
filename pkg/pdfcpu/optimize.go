@@ -393,7 +393,7 @@ func optimizeXObjectResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjN
 		// We are dealing with a new XObject..
 		// Dereference the XObject stream dict.
 
-		osd, err := ctx.DereferenceStreamDictForValidation(indRef)
+		osd, err := ctx.DereferenceStreamDictForValidation(indRef, false)
 		if err != nil {
 			return err
 		}
@@ -610,8 +610,6 @@ func parsePagesDict(ctx *Context, pagesDict Dict, pageNumber int) (int, error) {
 		}
 
 		pageNumber++
-
-		return pageNumber, nil
 	}
 
 	log.Optimize.Printf("parsePagesDict end: %s\n", pagesDict)

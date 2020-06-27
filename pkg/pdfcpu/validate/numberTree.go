@@ -139,8 +139,8 @@ func validateNumberTreeDictLimitsEntry(xRefTable *pdf.XRefTable, d pdf.Dict, fir
 	fk, _ := a[0].(pdf.Integer)
 	lk, _ := a[1].(pdf.Integer)
 
-	if firstKey != fk.Value() || lastKey != lk.Value() {
-		return errors.Errorf("pdfcpu: validateNumberTreeDictLimitsEntry: leaf node corrupted\n")
+	if firstKey < fk.Value() || lastKey > lk.Value() {
+		return errors.Errorf("pdfcpu: validateNumberTreeDictLimitsEntry: leaf node corrupted: firstKey(%d vs. %d) lastKey(%d vs. %d)\n", firstKey, fk.Value(), lastKey, lk.Value())
 	}
 
 	return nil
