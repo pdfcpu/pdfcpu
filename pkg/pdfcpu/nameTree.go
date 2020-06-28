@@ -203,16 +203,35 @@ func (n *Node) Add(xRefTable *XRefTable, k string, v Object) error {
 		return nil
 	}
 
+	if k < n.Kmin {
+		n.Kmin = k
+	} else if k > n.Kmax {
+		n.Kmax = k
+	}
+
 	// For intermediary nodes we delegate to the corresponding subtree.
 	for _, a := range n.Kids {
 		if k < a.Kmin || a.withinLimits(k) {
+			if !a.leaf() {
+				if k < a.Kmin {
+					a.Kmin = k
+				} else if k > a.Kmax {
+					a.Kmax = k
+				}
+			}
 			return a.Add(xRefTable, k, v)
 		}
 	}
 
 	// Insert k into last (right most) subtree.
 	last := n.Kids[len(n.Kids)-1]
-
+	if !last.leaf() {
+		if k < last.Kmin {
+			last.Kmin = k
+		} else if k > last.Kmax {
+			last.Kmax = k
+		}
+	}
 	return last.Add(xRefTable, k, v)
 }
 
@@ -453,6 +472,8 @@ func (n Node) String() string {
 		a = append(a, fmt.Sprintf("{%s,%s}]", n.Kmin, n.Kmax))
 		return strings.Join(a, "")
 	}
+
+	a = append(a, fmt.Sprintf("{%s,%s}", n.Kmin, n.Kmax))
 
 	for _, v := range n.Kids {
 		a = append(a, v.String())

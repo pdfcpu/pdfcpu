@@ -98,16 +98,16 @@ func buildNameTree(t *testing.T, r *Node) {
 	}
 
 	r.Add(nil, "h", StringLiteral("hv"))
-	checkAddResult(t, r, "[(b,(bv))(d,(dv)){b,d}],[(f,(fv))(h,(hv)){f,h}]", false)
+	checkAddResult(t, r, "{b,h},[(b,(bv))(d,(dv)){b,d}],[(f,(fv))(h,(hv)){f,h}]", false)
 
 	r.Add(nil, "a", StringLiteral("av"))
-	checkAddResult(t, r, "[(a,(av))(b,(bv))(d,(dv)){a,d}],[(f,(fv))(h,(hv)){f,h}]", false)
+	checkAddResult(t, r, "{a,h},[(a,(av))(b,(bv))(d,(dv)){a,d}],[(f,(fv))(h,(hv)){f,h}]", false)
 
 	r.Add(nil, "i", StringLiteral("iv"))
-	checkAddResult(t, r, "[(a,(av))(b,(bv))(d,(dv)){a,d}],[(f,(fv))(h,(hv))(i,(iv)){f,i}]", false)
+	checkAddResult(t, r, "{a,i},[(a,(av))(b,(bv))(d,(dv)){a,d}],[(f,(fv))(h,(hv))(i,(iv)){f,i}]", false)
 
 	r.Add(nil, "c", StringLiteral("cv"))
-	checkAddResult(t, r, "[(a,(av))(b,(bv)){a,b}],[(c,(cv))(d,(dv)){c,d}],[(f,(fv))(h,(hv))(i,(iv)){f,i}]", false)
+	checkAddResult(t, r, "{a,i},{a,d},[(a,(av))(b,(bv)){a,b}],[(c,(cv))(d,(dv)){c,d}],[(f,(fv))(h,(hv))(i,(iv)){f,i}]", false)
 }
 
 func destroyNameTree(t *testing.T, r *Node) {
@@ -136,10 +136,10 @@ func destroyNameTree(t *testing.T, r *Node) {
 	}
 
 	empty, ok, _ := r.Remove(nil, "b")
-	checkRemoveResult(t, r, "b", empty, ok, "[(a,(av)){a,a}],[(c,(cv))(d,(dv)){c,d}],[(f,(fv))(h,(hv))(i,(iv)){f,i}]", false)
+	checkRemoveResult(t, r, "b", empty, ok, "{a,i},{a,d},[(a,(av)){a,a}],[(c,(cv))(d,(dv)){c,d}],[(f,(fv))(h,(hv))(i,(iv)){f,i}]", false)
 
 	empty, ok, _ = r.Remove(nil, "a")
-	checkRemoveResult(t, r, "b", empty, ok, "[(c,(cv))(d,(dv)){c,d}],[(f,(fv))(h,(hv))(i,(iv)){f,i}]", false)
+	checkRemoveResult(t, r, "a", empty, ok, "{c,i},[(c,(cv))(d,(dv)){c,d}],[(f,(fv))(h,(hv))(i,(iv)){f,i}]", false)
 
 	v, ok = r.Value("h")
 	if !ok {
@@ -155,10 +155,10 @@ func destroyNameTree(t *testing.T, r *Node) {
 	}
 
 	empty, ok, _ = r.Remove(nil, "h")
-	checkRemoveResult(t, r, "h", empty, ok, "[(c,(cv))(d,(dv)){c,d}],[(f,(fv))(i,(iv)){f,i}]", false)
+	checkRemoveResult(t, r, "h", empty, ok, "{c,i},[(c,(cv))(d,(dv)){c,d}],[(f,(fv))(i,(iv)){f,i}]", false)
 
 	empty, ok, _ = r.Remove(nil, "i")
-	checkRemoveResult(t, r, "i", empty, ok, "[(c,(cv))(d,(dv)){c,d}],[(f,(fv)){f,f}]", false)
+	checkRemoveResult(t, r, "i", empty, ok, "{c,f},[(c,(cv))(d,(dv)){c,d}],[(f,(fv)){f,f}]", false)
 
 	empty, ok, _ = r.Remove(nil, "f")
 	checkRemoveResult(t, r, "f", empty, ok, "[(c,(cv))(d,(dv)){c,d}]", true)

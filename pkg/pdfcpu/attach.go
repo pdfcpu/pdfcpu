@@ -143,7 +143,8 @@ func fileSpectDict(xRefTable *XRefTable, filename, desc string) (*IndirectRef, e
 		return nil, err
 	}
 
-	d, err := xRefTable.NewFileSpecDict(filename, desc, *sd) // Supply description!
+	_, fn := filepath.Split(filename)
+	d, err := xRefTable.NewFileSpecDict(fn, desc, *sd)
 	if err != nil {
 		return nil, err
 	}
