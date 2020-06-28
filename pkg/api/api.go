@@ -1911,3 +1911,30 @@ func CollectFile(inFile, outFile string, selectedPages []string, conf *pdf.Confi
 
 	return Collect(f1, f2, selectedPages, conf)
 }
+
+// GetPermissions returns the permissions for rs.
+func GetPermissions(rs io.ReadSeeker, conf *pdf.Configuration) (*int16, error) {
+	if conf == nil {
+		conf = pdf.NewDefaultConfiguration()
+	}
+	ctx, _, _, err := readAndValidate(rs, conf, time.Now())
+	if err != nil {
+		return nil, err
+	}
+	if ctx.E == nil {
+		// Full access - permissions don't apply.
+		return nil, nil
+	}
+	p := int16(ctx.E.P)
+	return &p, nil
+}
+
+// GetPermissionsFile returns the permissions for inFile.
+func GetPermissionsFile(inFile string, conf *pdf.Configuration) (*int16, error) {
+	f, err := os.Open(inFile)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return GetPermissions(f, conf)
+}
