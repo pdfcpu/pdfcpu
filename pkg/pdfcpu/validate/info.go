@@ -22,9 +22,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-// DocumentProperty ensures a valid property name.
+// DocumentProperty ensures a property name that may be modified.
 func DocumentProperty(s string) bool {
-	return !pdf.MemberOf(s, []string{"Title", "Author", "Subject", "Keywords", "Creator", "Producer", "CreationDate", "ModDate", "Trapped"})
+	return !pdf.MemberOf(s, []string{"Keywords", "Creator", "Producer", "CreationDate", "ModDate", "Trapped"})
 }
 
 func handleDefault(xRefTable *pdf.XRefTable, o pdf.Object) (string, error) {
