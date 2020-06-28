@@ -34,22 +34,16 @@ func testAddWatermarks(t *testing.T, msg, inFile, outFile string, selectedPages 
 	}
 	outFile = filepath.Join("../../samples", s, mode, outFile)
 
-	var (
-		wm  *pdf.Watermark
-		err error
-	)
+	var err error
 	switch mode {
 	case "text":
-		wm, err = pdf.ParseTextWatermarkDetails(modeParam, desc, onTop)
+		err = api.AddTextWatermarksFile(inFile, outFile, selectedPages, onTop, modeParam, desc, nil)
 	case "image":
-		wm, err = pdf.ParseImageWatermarkDetails(modeParam, desc, onTop)
+		err = api.AddImageWatermarksFile(inFile, outFile, selectedPages, onTop, modeParam, desc, nil)
 	case "pdf":
-		wm, err = pdf.ParsePDFWatermarkDetails(modeParam, desc, onTop)
+		err = api.AddPDFWatermarksFile(inFile, outFile, selectedPages, onTop, modeParam, desc, nil)
 	}
 	if err != nil {
-		t.Fatalf("%s %s: %v\n", msg, outFile, err)
-	}
-	if err := api.AddWatermarksFile(inFile, outFile, selectedPages, wm, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 	if err := api.ValidateFile(outFile, nil); err != nil {

@@ -975,6 +975,8 @@ func WatermarkContext(ctx *pdf.Context, selectedPages pdf.IntSet, wm *pdf.Waterm
 }
 
 // AddWatermarks adds watermarks to all pages selected in rs and writes the result to w.
+// Called by AddWatermarksFile or manually by passing in wm created by
+// calling TextWatermark, ImageWatermark or PDFWatermark.
 func AddWatermarks(rs io.ReadSeeker, w io.Writer, selectedPages []string, wm *pdf.Watermark, conf *pdf.Configuration) error {
 	if conf == nil {
 		conf = pdf.NewDefaultConfiguration()
@@ -1028,6 +1030,9 @@ func AddWatermarks(rs io.ReadSeeker, w io.Writer, selectedPages []string, wm *pd
 }
 
 // AddWatermarksFile adds watermarks to all selected pages of inFile and writes the result to outFile.
+// Called by:
+// AddTextWatermarksFile, AddImageWatermarksFile, AddPDFWatermarksFile
+// UpdateTextWatermarksFile, UpdateImageWatermarksFile, UpdatePDFWatermarksFile
 func AddWatermarksFile(inFile, outFile string, selectedPages []string, wm *pdf.Watermark, conf *pdf.Configuration) (err error) {
 	var f1, f2 *os.File
 
