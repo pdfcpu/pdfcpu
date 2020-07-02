@@ -230,6 +230,164 @@ func writePages(ctx *Context, rootDict Dict) error {
 
 	return stopObjectStream(ctx)
 }
+func sigDictPDFString(d Dict) string {
+	logstr := []string{}
+	logstr = append(logstr, "<<")
+	logstr = append(logstr, fmt.Sprintf("/ByteRange%-62v", d["ByteRange"].PDFString()))
+	logstr = append(logstr, fmt.Sprintf("/Contents%s", d["Contents"].PDFString()))
+	logstr = append(logstr, fmt.Sprintf("/Type%s", d["Type"].PDFString()))
+	logstr = append(logstr, fmt.Sprintf("/Filter%s", d["Filter"].PDFString()))
+	logstr = append(logstr, fmt.Sprintf("/SubFilter%s", d["SubFilter"].PDFString()))
+	logstr = append(logstr, ">>")
+	return strings.Join(logstr, "")
+}
+
+func writeSigDict(ctx *Context, ir IndirectRef) error {
+	// 	<<
+	// 		<ByteRange, []>
+	// 		<Contents, <00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000>>
+	// 		<Filter, Adobe.PPKLite>
+	// 		<SubFilter, adbe.pkcs7.detached>
+	// 		<Type, Sig>
+	// >>
+
+	d, err := ctx.DereferenceDict(ir)
+	if err != nil {
+		return err
+	}
+
+	typ := d.NameEntry("Type")
+	if typ == nil || *typ != "Sig" {
+		return errors.New("corrupt sig dict")
+	}
+
+	f := d.NameEntry("Filter")
+	if f == nil || *f != "Adobe.PPKLite" {
+		return errors.Errorf("sig dict: unexpected Filter: %s", *f)
+	}
+
+	f = d.NameEntry("SubFilter")
+	if f == nil || *f != "adbe.pkcs7.detached" {
+		return errors.Errorf("sig dict: unexpected SubFilter: %s", *f)
+	}
+
+	objNr := ir.ObjectNumber.Value()
+	genNr := ir.GenerationNumber.Value()
+
+	// Set write-offset for this object.
+	w := ctx.Write
+	w.SetWriteOffset(objNr)
+
+	written, err := writeObjectHeader(w, objNr, genNr)
+	if err != nil {
+		return err
+	}
+
+	// /ByteRange[]
+	w.OffsetSigByteRange = w.Offset + int64(written) + 2 + 10
+	// 2 for "<<"
+	// 10 for "/ByteRange"
+
+	// /Contents<00..... maxSigContentsBytes>
+	w.OffsetSigContents = w.OffsetSigByteRange + 1 + 60 + 1 + 9
+	// 1 for "["
+	// 60 for max 60 chars within this array PDF string.
+	// 1 for "]"
+	// 9 for "/Contents<"
+
+	i, err := w.WriteString(sigDictPDFString(d))
+	if err != nil {
+		return err
+	}
+
+	j, err := writeObjectTrailer(w)
+	if err != nil {
+		return err
+	}
+
+	// Write-offset for next object.
+	w.Offset += int64(written + i + j)
+
+	// Record writeOffset for first and last char of Contents.
+
+	// Record writeOffset for ByteArray...
+
+	return nil
+}
+
+func writeSigFieldDict(ctx *Context, d Dict, objNr, genNr int) error {
+	// 	<<
+	// 		<DA, (/Courier 0 Tf)>
+	// 		<FT, Sig>
+	// 		<Rect, [0.00 0.00 0.00 0.00]>
+	// 		<Subtype, Widget>
+	// 		<T, (Signature)>
+	// 		<Type, Annot>
+	// 		<V, (21 0 R)>
+	// >>
+
+	if err := writeDictObject(ctx, objNr, genNr, d); err != nil {
+		return err
+	}
+
+	ir := d.IndirectRefEntry("V")
+	if ir == nil {
+		return errors.New("sig field dict: missing V")
+	}
+
+	return writeSigDict(ctx, *ir)
+}
+
+func writeSignature(ctx *Context, d Dict, objNr, genNr int) error {
+	// <<
+	// 	<DR, <<
+	// 		<Font, <<
+	// 			<Courier, (19 0 R)>
+	// 		>>>
+	// 	>>>
+	// 	<Fields, [(20 0 R)]>
+	// 	<SigFlags, 3>
+	// >>
+
+	if err := writeDictObject(ctx, objNr, genNr, d); err != nil {
+		return err
+	}
+
+	// Write font resource
+	resDict := d.DictEntry("DR")
+	fontResDict := resDict.DictEntry("Font")
+	ir := fontResDict.IndirectRefEntry("Courier")
+	if _, err := writeIndirectObject(ctx, *ir); err != nil {
+		return err
+	}
+
+	// Write fields
+	a := d.ArrayEntry("Fields")
+	if a == nil {
+		return errors.New("acroform dict: missing Fields")
+	}
+	for _, o := range a {
+		ir, ok := o.(IndirectRef)
+		if !ok {
+			return errors.New("acroform dict fields: expecting indRef")
+		}
+		d, err := ctx.DereferenceDict(ir)
+		if err != nil {
+			return err
+		}
+		ft := d.NameEntry("FT")
+		if ft == nil || *ft != "Sig" {
+			if _, err := writeIndirectObject(ctx, ir); err != nil {
+				return err
+			}
+			continue
+		}
+		objNr := ir.ObjectNumber.Value()
+		genNr := ir.GenerationNumber.Value()
+		writeSigFieldDict(ctx, d, objNr, genNr)
+	}
+	return nil
+}
 
 func writeRootObject(ctx *Context) error {
 
@@ -287,6 +445,25 @@ func writeRootObject(ctx *Context) error {
 		return err
 	}
 
+	ir := d.IndirectRefEntry("AcroForm")
+	if ir != nil {
+		d1, err := ctx.DereferenceDict(*ir)
+		if err != nil {
+			return err
+		}
+		_, ok := d1.Find("SigFlags")
+		if ok {
+			objNr := ir.ObjectNumber.Value()
+			genNr := ir.GenerationNumber.Value()
+			err = writeSignature(ctx, d1, objNr, genNr)
+		} else {
+			err = writeRootEntry(ctx, d, dictName, "AcroForm", RootAcroForm)
+		}
+		if err != nil {
+			return err
+		}
+	}
+
 	for _, e := range []struct {
 		entryName string
 		statsAttr int
@@ -303,7 +480,7 @@ func writeRootObject(ctx *Context) error {
 		{"OpenAction", RootOpenAction},
 		{"AA", RootAA},
 		{"URI", RootURI},
-		{"AcroForm", RootAcroForm},
+		//{"AcroForm", RootAcroForm},
 		{"Metadata", RootMetadata},
 	} {
 		if err = writeRootEntry(ctx, d, dictName, e.entryName, e.statsAttr); err != nil {
