@@ -31,9 +31,7 @@ import (
 )
 
 // Write generates a PDF file for the cross reference table contained in Context.
-func Write(ctx *Context) error {
-	var err error
-
+func Write(ctx *Context) (err error) {
 	// Create a writer for dirname and filename if not already supplied.
 	if ctx.Write.Writer == nil {
 
