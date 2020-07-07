@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"os"
 	"sort"
 	"strings"
 
@@ -719,7 +720,7 @@ type WriteContext struct {
 
 	// The PDF-File which gets generated.
 	*bufio.Writer                     // A writer associated with Fp.
-	Fp                  io.Writer     // A file pointer needed for detecting FileSize.
+	Fp                  *os.File      // A file pointer needed for detecting FileSize.
 	FileSize            int64         // The size of the written file.
 	DirName             string        // The output directory.
 	FileName            string        // The output file name.
