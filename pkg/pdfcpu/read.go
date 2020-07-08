@@ -732,6 +732,11 @@ func parseTrailerDict(trailerDict Dict, ctx *Context) (*int64, error) {
 	offset := trailerDict.Prev()
 	if offset != nil {
 		log.Read.Printf("parseTrailerDict: previous xref table section offset:%d\n", *offset)
+		if *offset == 0 {
+			// Ignoring illegal offset.
+			log.Read.Println("parseTrailerDict: ignoring previous xref table section")
+			offset = nil
+		}
 	}
 
 	offsetXRefStream := trailerDict.Int64Entry("XRefStm")
