@@ -118,7 +118,7 @@ func validateFontDescriptorType(xRefTable *pdf.XRefTable, d pdf.Dict) (err error
 
 	}
 
-	if dictType != nil && *dictType != "FontDescriptor" {
+	if dictType != nil && *dictType != "FontDescriptor" && *dictType != "Font" {
 		return errors.New("pdfcpu: validateFontDescriptor: corrupt font descriptor dict")
 	}
 

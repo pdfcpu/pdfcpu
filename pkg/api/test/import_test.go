@@ -17,6 +17,10 @@ limitations under the License.
 package test
 
 import (
+	"bufio"
+	"bytes"
+	"io"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -84,4 +88,25 @@ func TestImportImages(t *testing.T) {
 	} {
 		testImportImages(t, tt.msg, tt.imgFiles, tt.outFile, tt.impConf, tt.ensureOutFile)
 	}
+}
+
+func TestMemBasedWriterPanic(t *testing.T) {
+
+	imgFiles := []string{filepath.Join(resDir, "logoSmall.png")}
+
+	rr := make([]io.Reader, len(imgFiles))
+	for i, fn := range imgFiles {
+		f, err := os.Open(fn)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rr[i] = bufio.NewReader(f)
+	}
+
+	outBuf := &bytes.Buffer{}
+
+	if err := api.ImportImages(nil, outBuf, rr, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+
 }
