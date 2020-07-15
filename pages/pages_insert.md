@@ -4,7 +4,11 @@ layout: default
 
 # Insert Pages
 
-This command inserts empty pages before ro after selected pages or before or after every page if no page is selected.
+This command inserts empty pages:
+
+- Before or after selected pages OR
+- If no page is selected, before or after *every page*
+
 Have a look at some [examples](#examples).
 
 ## Usage
