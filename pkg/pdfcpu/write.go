@@ -31,23 +31,20 @@ import (
 )
 
 // Write generates a PDF file for the cross reference table contained in Context.
-func Write(ctx *Context) error {
-
-	var file *os.File
-	var err error
-
+func Write(ctx *Context) (err error) {
 	// Create a writer for dirname and filename if not already supplied.
 	if ctx.Write.Writer == nil {
 
 		fileName := filepath.Join(ctx.Write.DirName, ctx.Write.FileName)
 		log.CLI.Printf("writing to %s\n", fileName)
 
-		file, err = os.Create(fileName)
+		file, err := os.Create(fileName)
 		if err != nil {
 			return errors.Wrapf(err, "can't create %s\n%s", fileName, err)
 		}
 
 		ctx.Write.Writer = bufio.NewWriter(file)
+		ctx.Write.Fp = file
 
 		defer func() {
 
@@ -127,7 +124,7 @@ func Write(ctx *Context) error {
 		return err
 	}
 
-	err = setFileSizeOfWrittenFile(ctx.Write, file)
+	err = setFileSizeOfWrittenFile(ctx.Write)
 	if err != nil {
 		return err
 	}
@@ -1017,24 +1014,18 @@ func writeXRef(ctx *Context) error {
 	return writeXRefTable(ctx)
 }
 
-func setFileSizeOfWrittenFile(w *WriteContext, f *os.File) error {
-
+func setFileSizeOfWrittenFile(w *WriteContext) error {
 	err := w.Flush()
 	if err != nil {
 		return err
 	}
 
-	f1 := f
-
 	// If writing is Writer based then f is nil.
-	if f == nil {
-		var ok bool
-		if f1, ok = w.Fp.(*os.File); !ok {
-			return errors.New("pdfcpu: missing write file descriptor")
-		}
+	if w.Fp == nil {
+		return nil
 	}
 
-	fileInfo, err := f1.Stat()
+	fileInfo, err := w.Fp.Stat()
 	if err != nil {
 		return err
 	}
