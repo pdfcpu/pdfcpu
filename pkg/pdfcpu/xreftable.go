@@ -1665,24 +1665,32 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict Dict, pAttrs *Inher
 		if pAttrs.resources == nil {
 			// Create a resource dict that eventually will contain any inherited resources
 			// while walking down from the page root to the leave node representing the page in question.
-			d1 := d.Clone()
-			log.Write.Printf("d1:\n%s\n", d1)
-			pAttrs.resources = d1.(Dict)
+			pAttrs.resources = d.Clone().(Dict)
+			for k, v := range pAttrs.resources {
+				o, err := xRefTable.Dereference(v)
+				if err != nil {
+					return err
+				}
+				pAttrs.resources[k] = o.Clone()
+			}
 			log.Write.Printf("pA:\n%s\n", pAttrs.resources)
 			return nil
 		}
 		// Accumulate any resources defined in this page node into the inherited resources.
 		for k, v := range d {
-			if v == nil {
+			if k == "ProcSet" || v == nil {
 				continue
 			}
-			d1, ok := v.(Dict)
-			if !ok {
-				return errors.Errorf("pdfcpu: checkInheritedPageAttrs: expected Dict d1: %T", v)
+			d1, err := xRefTable.DereferenceDict(v)
+			if err != nil {
+				return err
+			}
+			if d1 == nil {
+				continue
 			}
 			// We have identified a subdict that needs to go into the inherited res dict.
 			if pAttrs.resources[k] == nil {
-				pAttrs.resources[k] = d1
+				pAttrs.resources[k] = d1.Clone()
 				continue
 			}
 			d2, ok := pAttrs.resources[k].(Dict)
@@ -1692,7 +1700,7 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict Dict, pAttrs *Inher
 			// Weave the sub dict d1 into the inherited sub dict.
 			// Any existing resource names will be overridden.
 			for k, v := range d1 {
-				d2[k] = v
+				d2[k] = v.Clone()
 			}
 		}
 	}
