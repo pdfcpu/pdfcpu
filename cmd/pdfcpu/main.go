@@ -32,7 +32,7 @@ var (
 	verbose, veryVerbose           bool
 	quiet                          bool
 	needStackTrace                 = true
-	cmdMap                         CommandMap
+	cmdMap                         commandMap
 )
 
 // Set by Goreleaser.
@@ -47,18 +47,19 @@ func init() {
 }
 
 func main() {
-
 	if len(os.Args) == 1 {
 		fmt.Fprintln(os.Stderr, usage)
 		os.Exit(0)
 	}
 
-	// The first argument is the pdfcpu command
+	// The first argument is the pdfcpu command string.
 	cmdStr := os.Args[1]
 
+	// Create a default configuration.
 	conf := pdfcpu.NewDefaultConfiguration()
 
-	str, err := cmdMap.Handle(cmdStr, "", conf)
+	// Process command string for given configuration.
+	str, err := cmdMap.process(cmdStr, "", conf)
 	if err != nil {
 		if len(str) > 0 {
 			cmdStr = fmt.Sprintf("%s %s", str, os.Args[2])
@@ -71,10 +72,8 @@ func main() {
 	os.Exit(0)
 }
 
-func parseFlags(cmd *Command) {
-
+func parseFlags(cmd *command) {
 	// Execute after command completion.
-
 	i := 2
 
 	// This command uses a subcommand and is therefore a special case => start flag processing after 3rd argument.
@@ -88,12 +87,10 @@ func parseFlags(cmd *Command) {
 
 	// Parse commandline flags.
 	if !flag.CommandLine.Parsed() {
-
 		err := flag.CommandLine.Parse(os.Args[i:])
 		if err != nil {
 			os.Exit(1)
 		}
-
 		initLogging(verbose, veryVerbose)
 	}
 
@@ -101,9 +98,7 @@ func parseFlags(cmd *Command) {
 }
 
 func process(cmd *cli.Command) {
-
 	out, err := cli.Process(cmd)
-
 	if err != nil {
 		if needStackTrace {
 			fmt.Fprintf(os.Stderr, "Fatal: %+v\n", err)
@@ -118,6 +113,5 @@ func process(cmd *cli.Command) {
 			fmt.Fprintln(os.Stdout, s)
 		}
 	}
-
 	os.Exit(0)
 }

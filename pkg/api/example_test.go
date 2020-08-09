@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 func ExampleValidateFile() {
@@ -180,29 +179,29 @@ func ExampleImportImagesFile() {
 	// Import images by creating an A3 page for each image.
 	// Images are page centered with 1.0 relative scaling.
 	// Import an image as a new page of the existing out.pdf.
-	imp, _ := pdf.ParseImportDetails("form:A3, pos:c, s:1.0")
+	imp, _ := pdfcpu.ParseImportDetails("form:A3, pos:c, s:1.0")
 	ImportImagesFile([]string{"a1.png", "a2.jpg", "a3.tiff"}, "out.pdf", imp, nil)
 }
 
 func ExampleNUpFile() {
 
 	// 4-Up in.pdf and write result to out.pdf.
-	nup, _ := pdf.PDFNUpConfig(4, "")
+	nup, _ := pdfcpu.PDFNUpConfig(4, "")
 	inFiles := []string{"in.pdf"}
 	NUpFile(inFiles, "out.pdf", nil, nup, nil)
 
 	// 9-Up a sequence of images using format Tabloid w/o borders and no margins.
-	nup, _ = pdf.ImageNUpConfig(9, "f:Tabloid, b:off, m:0")
+	nup, _ = pdfcpu.ImageNUpConfig(9, "f:Tabloid, b:off, m:0")
 	inFiles = []string{"in1.png", "in2.jpg", "in3.tiff"}
 	NUpFile(inFiles, "out.pdf", nil, nup, nil)
 
 	// TestGridFromPDF
-	nup, _ = pdf.PDFGridConfig(1, 3, "f:LegalL")
+	nup, _ = pdfcpu.PDFGridConfig(1, 3, "f:LegalL")
 	inFiles = []string{"in.pdf"}
 	NUpFile(inFiles, "out.pdf", nil, nup, nil)
 
 	// TestGridFromImages
-	nup, _ = pdf.ImageGridConfig(4, 2, "d:500 500, m:20, b:off")
+	nup, _ = pdfcpu.ImageGridConfig(4, 2, "d:500 500, m:20, b:off")
 	inFiles = []string{"in1.png", "in2.jpg", "in3.tiff"}
 	NUpFile(inFiles, "out.pdf", nil, nup, nil)
 }
@@ -219,12 +218,12 @@ func ExampleListPermissionsFile() {
 func ExampleSetPermissionsFile() {
 
 	// Setting all permissions for the AES-256 encrypted in.pdf.
-	conf := pdf.NewAESConfiguration("upw", "opw", 256)
+	conf := pdfcpu.NewAESConfiguration("upw", "opw", 256)
 	conf.Permissions = pdfcpu.PermissionsAll
 	SetPermissionsFile("in.pdf", "", conf)
 
 	// Restricting permissions for the AES-256 encrypted in.pdf.
-	conf = pdf.NewAESConfiguration("upw", "opw", 256)
+	conf = pdfcpu.NewAESConfiguration("upw", "opw", 256)
 	conf.Permissions = pdfcpu.PermissionsNone
 	SetPermissionsFile("in.pdf", "", conf)
 }
@@ -232,28 +231,28 @@ func ExampleSetPermissionsFile() {
 func ExampleEncryptFile() {
 
 	// Encrypting a file using AES-256.
-	conf := pdf.NewAESConfiguration("upw", "opw", 256)
+	conf := pdfcpu.NewAESConfiguration("upw", "opw", 256)
 	EncryptFile("in.pdf", "", conf)
 }
 
 func ExampleDecryptFile() {
 
 	// Decrypting an AES-256 encrypted file.
-	conf := pdf.NewAESConfiguration("upw", "opw", 256)
+	conf := pdfcpu.NewAESConfiguration("upw", "opw", 256)
 	DecryptFile("in.pdf", "", conf)
 }
 
 func ExampleChangeUserPasswordFile() {
 
 	// Changing the user password for an AES-256 encrypted file.
-	conf := pdf.NewAESConfiguration("upw", "opw", 256)
+	conf := pdfcpu.NewAESConfiguration("upw", "opw", 256)
 	ChangeUserPasswordFile("in.pdf", "", "upw", "upwNew", conf)
 }
 
 func ExampleChangeOwnerPasswordFile() {
 
 	// Changing the owner password for an AES-256 encrypted file.
-	conf := pdf.NewAESConfiguration("upw", "opw", 256)
+	conf := pdfcpu.NewAESConfiguration("upw", "opw", 256)
 	ChangeOwnerPasswordFile("in.pdf", "", "opw", "opwNew", conf)
 }
 

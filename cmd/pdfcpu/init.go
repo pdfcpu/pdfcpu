@@ -19,129 +19,127 @@ package main
 import (
 	"flag"
 
-	PDFCPULog "github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/log"
 )
 
 func initCommandMap() {
-
-	attachCmdMap := NewCommandMap()
-	for k, v := range map[string]Command{
-		"list":    {handleListAttachmentsCommand, nil, "", ""},
-		"add":     {handleAddAttachmentsCommand, nil, "", ""},
-		"remove":  {handleRemoveAttachmentsCommand, nil, "", ""},
-		"extract": {handleExtractAttachmentsCommand, nil, "", ""},
+	attachCmdMap := newCommandMap()
+	for k, v := range map[string]command{
+		"list":    {processListAttachmentsCommand, nil, "", ""},
+		"add":     {processAddAttachmentsCommand, nil, "", ""},
+		"remove":  {processRemoveAttachmentsCommand, nil, "", ""},
+		"extract": {processExtractAttachmentsCommand, nil, "", ""},
 	} {
-		attachCmdMap.Register(k, v)
+		attachCmdMap.register(k, v)
 	}
 
-	portfolioCmdMap := NewCommandMap()
-	for k, v := range map[string]Command{
-		"list":    {handleListAttachmentsCommand, nil, "", ""},
-		"add":     {handleAddAttachmentsPortfolioCommand, nil, "", ""},
-		"remove":  {handleRemoveAttachmentsCommand, nil, "", ""},
-		"extract": {handleExtractAttachmentsCommand, nil, "", ""},
+	portfolioCmdMap := newCommandMap()
+	for k, v := range map[string]command{
+		"list":    {processListAttachmentsCommand, nil, "", ""},
+		"add":     {processAddAttachmentsPortfolioCommand, nil, "", ""},
+		"remove":  {processRemoveAttachmentsCommand, nil, "", ""},
+		"extract": {processExtractAttachmentsCommand, nil, "", ""},
 	} {
-		portfolioCmdMap.Register(k, v)
+		portfolioCmdMap.register(k, v)
 	}
 
-	permissionsCmdMap := NewCommandMap()
-	for k, v := range map[string]Command{
-		"list": {handleListPermissionsCommand, nil, "", ""},
-		"set":  {handleSetPermissionsCommand, nil, "", ""},
+	permissionsCmdMap := newCommandMap()
+	for k, v := range map[string]command{
+		"list": {processListPermissionsCommand, nil, "", ""},
+		"set":  {processSetPermissionsCommand, nil, "", ""},
 	} {
-		permissionsCmdMap.Register(k, v)
+		permissionsCmdMap.register(k, v)
 	}
 
-	pagesCmdMap := NewCommandMap()
-	for k, v := range map[string]Command{
-		"insert": {handleInsertPagesCommand, nil, "", ""},
-		"remove": {handleRemovePagesCommand, nil, "", ""},
+	pagesCmdMap := newCommandMap()
+	for k, v := range map[string]command{
+		"insert": {processInsertPagesCommand, nil, "", ""},
+		"remove": {processRemovePagesCommand, nil, "", ""},
 	} {
-		pagesCmdMap.Register(k, v)
+		pagesCmdMap.register(k, v)
 	}
 
-	stampCmdMap := NewCommandMap()
-	for k, v := range map[string]Command{
-		"add":    {handleAddStampsCommand, nil, "", ""},
-		"remove": {handleRemoveStampsCommand, nil, "", ""},
-		"update": {handleUpdateStampsCommand, nil, "", ""},
+	stampCmdMap := newCommandMap()
+	for k, v := range map[string]command{
+		"add":    {processAddStampsCommand, nil, "", ""},
+		"remove": {processRemoveStampsCommand, nil, "", ""},
+		"update": {processUpdateStampsCommand, nil, "", ""},
 	} {
-		stampCmdMap.Register(k, v)
+		stampCmdMap.register(k, v)
 	}
 
-	watermarkCmdMap := NewCommandMap()
-	for k, v := range map[string]Command{
-		"add":    {handleAddWatermarksCommand, nil, "", ""},
-		"remove": {handleRemoveWatermarksCommand, nil, "", ""},
-		"update": {handleUpdateWatermarksCommand, nil, "", ""},
+	watermarkCmdMap := newCommandMap()
+	for k, v := range map[string]command{
+		"add":    {processAddWatermarksCommand, nil, "", ""},
+		"remove": {processRemoveWatermarksCommand, nil, "", ""},
+		"update": {processUpdateWatermarksCommand, nil, "", ""},
 	} {
-		watermarkCmdMap.Register(k, v)
+		watermarkCmdMap.register(k, v)
 	}
 
-	fontsCmdMap := NewCommandMap()
-	for k, v := range map[string]Command{
-		"install": {handleInstallFontsCommand, nil, "", ""},
-		"list":    {handleListFontsCommand, nil, "", ""},
+	fontsCmdMap := newCommandMap()
+	for k, v := range map[string]command{
+		"install": {processInstallFontsCommand, nil, "", ""},
+		"list":    {processListFontsCommand, nil, "", ""},
 	} {
-		fontsCmdMap.Register(k, v)
+		fontsCmdMap.register(k, v)
 	}
 
-	keywordsCmdMap := NewCommandMap()
-	for k, v := range map[string]Command{
-		"list":   {handleListKeywordsCommand, nil, "", ""},
-		"add":    {handleAddKeywordsCommand, nil, "", ""},
-		"remove": {handleRemoveKeywordsCommand, nil, "", ""},
+	keywordsCmdMap := newCommandMap()
+	for k, v := range map[string]command{
+		"list":   {processListKeywordsCommand, nil, "", ""},
+		"add":    {processAddKeywordsCommand, nil, "", ""},
+		"remove": {processRemoveKeywordsCommand, nil, "", ""},
 	} {
-		keywordsCmdMap.Register(k, v)
+		keywordsCmdMap.register(k, v)
 	}
 
-	propertiesCmdMap := NewCommandMap()
-	for k, v := range map[string]Command{
-		"list":   {handleListPropertiesCommand, nil, "", ""},
-		"add":    {handleAddPropertiesCommand, nil, "", ""},
-		"remove": {handleRemovePropertiesCommand, nil, "", ""},
+	propertiesCmdMap := newCommandMap()
+	for k, v := range map[string]command{
+		"list":   {processListPropertiesCommand, nil, "", ""},
+		"add":    {processAddPropertiesCommand, nil, "", ""},
+		"remove": {processRemovePropertiesCommand, nil, "", ""},
 	} {
-		propertiesCmdMap.Register(k, v)
+		propertiesCmdMap.register(k, v)
 	}
 
-	cmdMap = NewCommandMap()
+	cmdMap = newCommandMap()
 
-	for k, v := range map[string]Command{
+	for k, v := range map[string]command{
 		"attachments": {nil, attachCmdMap, usageAttach, usageLongAttach},
-		"changeopw":   {handleChangeOwnerPasswordCommand, nil, usageChangeOwnerPW, usageLongChangeUserPW},
-		"changeupw":   {handleChangeUserPasswordCommand, nil, usageChangeUserPW, usageLongChangeUserPW},
-		"collect":     {handleCollectCommand, nil, usageCollect, usageLongCollect},
-		"decrypt":     {handleDecryptCommand, nil, usageDecrypt, usageLongDecrypt},
-		"encrypt":     {handleEncryptCommand, nil, usageEncrypt, usageLongEncrypt},
-		"extract":     {handleExtractCommand, nil, usageExtract, usageLongExtract},
+		"changeopw":   {processChangeOwnerPasswordCommand, nil, usageChangeOwnerPW, usageLongChangeUserPW},
+		"changeupw":   {processChangeUserPasswordCommand, nil, usageChangeUserPW, usageLongChangeUserPW},
+		"collect":     {processCollectCommand, nil, usageCollect, usageLongCollect},
+		"decrypt":     {processDecryptCommand, nil, usageDecrypt, usageLongDecrypt},
+		"encrypt":     {processEncryptCommand, nil, usageEncrypt, usageLongEncrypt},
+		"extract":     {processExtractCommand, nil, usageExtract, usageLongExtract},
 		"fonts":       {nil, fontsCmdMap, usageFonts, usageLongFonts},
-		"grid":        {handleGridCommand, nil, usageGrid, usageLongGrid},
+		"grid":        {processGridCommand, nil, usageGrid, usageLongGrid},
 		"help":        {printHelp, nil, "", ""},
-		"info":        {handleInfoCommand, nil, usageInfo, usageLongInfo},
-		"import":      {handleImportImagesCommand, nil, usageImportImages, usageLongImportImages},
+		"info":        {processInfoCommand, nil, usageInfo, usageLongInfo},
+		"import":      {processImportImagesCommand, nil, usageImportImages, usageLongImportImages},
 		"keywords":    {nil, keywordsCmdMap, usageKeywords, usageLongKeywords},
-		"merge":       {handleMergeCommand, nil, usageMerge, usageLongMerge},
-		"nup":         {handleNUpCommand, nil, usageNUp, usageLongNUp},
-		"optimize":    {handleOptimizeCommand, nil, usageOptimize, usageLongOptimize},
+		"merge":       {processMergeCommand, nil, usageMerge, usageLongMerge},
+		"nup":         {processNUpCommand, nil, usageNUp, usageLongNUp},
+		"optimize":    {processOptimizeCommand, nil, usageOptimize, usageLongOptimize},
 		"pages":       {nil, pagesCmdMap, usagePages, usageLongPages},
 		"paper":       {printPaperSizes, nil, usagePaper, usageLongPaper},
 		"permissions": {nil, permissionsCmdMap, usagePerm, usageLongPerm},
 		"portfolio":   {nil, portfolioCmdMap, usagePortfolio, usageLongPortfolio},
 		"properties":  {nil, propertiesCmdMap, usageProperties, usageLongProperties},
-		"rotate":      {handleRotateCommand, nil, usageRotate, usageLongRotate},
-		"split":       {handleSplitCommand, nil, usageSplit, usageLongSplit},
+		"rotate":      {processRotateCommand, nil, usageRotate, usageLongRotate},
+		"split":       {processSplitCommand, nil, usageSplit, usageLongSplit},
 		"stamp":       {nil, stampCmdMap, usageStamp, usageLongStamp},
-		"trim":        {handleTrimCommand, nil, usageTrim, usageLongTrim},
-		"validate":    {handleValidateCommand, nil, usageValidate, usageLongValidate},
+		"trim":        {processTrimCommand, nil, usageTrim, usageLongTrim},
+		"validate":    {processValidateCommand, nil, usageValidate, usageLongValidate},
 		"watermark":   {nil, watermarkCmdMap, usageWatermark, usageLongWatermark},
 		"version":     {printVersion, nil, usageVersion, usageLongVersion},
 	} {
-		cmdMap.Register(k, v)
+		cmdMap.register(k, v)
 	}
 }
 
 func initFlags() {
-
 	statsUsage := "optimize: a csv file for stats appending"
 	flag.StringVar(&fileStats, "stats", "", statsUsage)
 	flag.StringVar(&fileStats, "s", "", statsUsage)
@@ -177,28 +175,25 @@ func initFlags() {
 }
 
 func initLogging(verbose, veryVerbose bool) {
-
 	needStackTrace = verbose || veryVerbose
-
 	if quiet {
 		return
 	}
 
-	PDFCPULog.SetDefaultCLILogger()
+	log.SetDefaultCLILogger()
 
 	if verbose || veryVerbose {
-		PDFCPULog.SetDefaultDebugLogger()
-		PDFCPULog.SetDefaultInfoLogger()
-		PDFCPULog.SetDefaultStatsLogger()
+		log.SetDefaultDebugLogger()
+		log.SetDefaultInfoLogger()
+		log.SetDefaultStatsLogger()
 	}
 
 	if veryVerbose {
-		PDFCPULog.SetDefaultTraceLogger()
-		//PDFCPULog.SetDefaultParseLogger()
-		PDFCPULog.SetDefaultReadLogger()
-		PDFCPULog.SetDefaultValidateLogger()
-		PDFCPULog.SetDefaultOptimizeLogger()
-		PDFCPULog.SetDefaultWriteLogger()
+		log.SetDefaultTraceLogger()
+		//log.SetDefaultParseLogger()
+		log.SetDefaultReadLogger()
+		log.SetDefaultValidateLogger()
+		log.SetDefaultOptimizeLogger()
+		log.SetDefaultWriteLogger()
 	}
-
 }

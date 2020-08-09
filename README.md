@@ -167,6 +167,7 @@ If processing your PDF with pdfcpu crashes during validation and can be opened b
 ## Contributors
 
 Thanks goes to these wonderful people:
+
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 ||||||||
 | :---: | :---: | :---: | :---: | :---: |  :---: | :---: |

@@ -135,7 +135,12 @@ func TestAcroformDemoPDF(t *testing.T) {
 	createAndValidate(t, xRefTable, "AcroFormDemo.pdf", msg)
 }
 
-func writeTextDemoAlignedWidthAndMargin(p pdf.Page, region *pdf.Rectangle, hAlign pdf.HAlignment, w, mLeft, mRight, mTop, mBot float64) {
+func writeTextDemoAlignedWidthAndMargin(
+	p pdf.Page,
+	region *pdf.Rectangle,
+	hAlign pdf.HAlignment,
+	w, mLeft, mRight, mTop, mBot float64) {
+
 	buf := p.Buf
 	mediaBox := p.MediaBox
 

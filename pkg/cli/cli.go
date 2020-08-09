@@ -19,14 +19,14 @@ package cli
 
 import (
 	"github.com/pdfcpu/pdfcpu/pkg/api"
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pkg/errors"
 )
 
 // Validate inFile against ISO-32000-1:2008.
 func Validate(cmd *Command) ([]string, error) {
 	conf := cmd.Conf
-	if conf != nil && conf.ValidationMode == pdf.ValidationNone {
+	if conf != nil && conf.ValidationMode == pdfcpu.ValidationNone {
 		return nil, errors.New("validate: mode == ValidationNone")
 	}
 
@@ -114,7 +114,7 @@ func ImportImages(cmd *Command) ([]string, error) {
 // InsertPages inserts a blank page before or after each selected page.
 func InsertPages(cmd *Command) ([]string, error) {
 	before := true
-	if cmd.Mode == pdf.INSERTPAGESAFTER {
+	if cmd.Mode == pdfcpu.INSERTPAGESAFTER {
 		before = false
 	}
 	return nil, api.InsertPagesFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, before, cmd.Conf)
@@ -167,7 +167,7 @@ func ListAttachments(cmd *Command) ([]string, error) {
 
 // AddAttachments embeds inFiles into a PDF context read from inFile and writes the result to outFile.
 func AddAttachments(cmd *Command) ([]string, error) {
-	return nil, api.AddAttachmentsFile(*cmd.InFile, *cmd.OutFile, cmd.InFiles, cmd.Mode == pdf.ADDATTACHMENTSPORTFOLIO, cmd.Conf)
+	return nil, api.AddAttachmentsFile(*cmd.InFile, *cmd.OutFile, cmd.InFiles, cmd.Mode == pdfcpu.ADDATTACHMENTSPORTFOLIO, cmd.Conf)
 }
 
 // RemoveAttachments deletes inFiles from a PDF context read from inFile and writes the result to outFile.

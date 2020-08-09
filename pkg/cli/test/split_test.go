@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 // Split a test PDF file up into single page PDFs (using a split span of 1).
@@ -32,8 +32,8 @@ func TestSplitCommand(t *testing.T) {
 	span := 1
 
 	// Skip validation to boost processing.
-	conf := pdf.NewDefaultConfiguration()
-	conf.ValidationMode = pdf.ValidationNone
+	conf := pdfcpu.NewDefaultConfiguration()
+	conf.ValidationMode = pdfcpu.ValidationNone
 
 	cmd := cli.SplitCommand(inFile, outDir, span, conf)
 	if _, err := cli.Process(cmd); err != nil {

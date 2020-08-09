@@ -17,6 +17,10 @@ limitations under the License.
 package test
 
 import (
+	"bytes"
+	"io"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -50,5 +54,37 @@ func TestMergeAppend(t *testing.T) {
 	// If outFile already exists its content will be preserved and serves as the beginning of the merge result.
 	if err := api.MergeAppendFile(inFiles, outFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
+	}
+}
+
+func TestMergeToBuf(t *testing.T) {
+	msg := "TestMergeToBuf"
+	inFiles := []string{
+		filepath.Join(inDir, "Acroforms2.pdf"),
+		filepath.Join(inDir, "adobe_errata.pdf"),
+	}
+	outFile := filepath.Join(outDir, "test.pdf")
+
+	ff := []*os.File(nil)
+	for _, f := range inFiles {
+		f, err := os.Open(f)
+		if err != nil {
+			t.Fatalf("%s: open: %v\n", msg, err)
+		}
+		ff = append(ff, f)
+	}
+
+	rs := make([]io.ReadSeeker, len(ff))
+	for i, f := range ff {
+		rs[i] = f
+	}
+
+	buf := &bytes.Buffer{}
+	if err := api.Merge(rs, buf, nil); err != nil {
+		t.Fatalf("%s: merge: %v\n", msg, err)
+	}
+
+	if err := ioutil.WriteFile(outFile, buf.Bytes(), 0644); err != nil {
+		t.Fatalf("%s: write: %v\n", msg, err)
 	}
 }

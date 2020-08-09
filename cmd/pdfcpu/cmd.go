@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The pdfcpu Authors.
+Copyright 2020 The pdfcpu Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -30,35 +30,30 @@ var (
 	errAmbiguousCmd = errors.New("pdfcpu: ambiguous command")
 )
 
-// Command represents command meta information and command details wrapped into api.Command.
-type Command struct {
+// Command represents command meta information and details.
+type command struct {
 	handler    func(conf *pdfcpu.Configuration)
-	cmdMap     CommandMap // Optional sub commands.
+	cmdMap     commandMap // Optional map of sub commands.
 	usageShort string     // Short command description.
 	usageLong  string     // Long command description.
 }
 
-func (c Command) String() string {
+func (c command) String() string {
 	return fmt.Sprintf("cmd: <%s> <%s>\n", c.usageShort, c.usageLong)
 }
 
-// CommandMap is a command execution engine supporting completion.
-type CommandMap map[string]*Command
+type commandMap map[string]*command
 
-// NewCommandMap returns an initialized command map.
-func NewCommandMap() CommandMap {
-	return map[string]*Command{}
+func newCommandMap() commandMap {
+	return map[string]*command{}
 }
 
-// Register adds a new command.
-func (m CommandMap) Register(cmdStr string, cmd Command) {
+func (m commandMap) register(cmdStr string, cmd command) {
 	m[cmdStr] = &cmd
 }
 
-// Handle applies command completion and if successful
-// executes the resulting command.
-func (m CommandMap) Handle(cmdPrefix string, command string, conf *pdfcpu.Configuration) (string, error) {
-
+// process applies command completion and if successful processes the resulting command.
+func (m commandMap) process(cmdPrefix string, command string, conf *pdfcpu.Configuration) (string, error) {
 	var cmdStr string
 
 	// Support command completion.
@@ -91,14 +86,12 @@ func (m CommandMap) Handle(cmdPrefix string, command string, conf *pdfcpu.Config
 		os.Exit(1)
 	}
 
-	return m[cmdStr].cmdMap.Handle(os.Args[2], cmdStr, conf)
+	return m[cmdStr].cmdMap.process(os.Args[2], cmdStr, conf)
 }
 
 // HelpString returns documentation for a topic.
-func (m CommandMap) HelpString(topic string) (string, error) {
-
+func (m commandMap) HelpString(topic string) (string, error) {
 	topicStr := ""
-
 	for k := range m {
 		if !strings.HasPrefix(k, topic) {
 			continue
@@ -117,13 +110,10 @@ func (m CommandMap) HelpString(topic string) (string, error) {
 	return fmt.Sprintf("%s\n\n%s\n", cmd.usageShort, cmd.usageLong), nil
 }
 
-func (m CommandMap) String() string {
-
+func (m commandMap) String() string {
 	logStr := []string{}
-
 	for k, v := range m {
 		logStr = append(logStr, fmt.Sprintf("%s: %v\n", k, v))
 	}
-
 	return strings.Join(logStr, "")
 }

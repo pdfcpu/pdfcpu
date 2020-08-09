@@ -26,8 +26,8 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
-	PDFCPULog "github.com/pdfcpu/pdfcpu/pkg/log"
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 var inDir, outDir, resDir, fontDir string
@@ -89,7 +89,7 @@ func allPDFs(t *testing.T, dir string) []string {
 	return ff
 }
 
-func validateFile(t *testing.T, fileName string, conf *pdf.Configuration) error {
+func validateFile(t *testing.T, fileName string, conf *pdfcpu.Configuration) error {
 	t.Helper()
 	_, err := cli.Process(cli.ValidateCommand(fileName, conf))
 	return err
@@ -130,7 +130,7 @@ func TestInfoCommand(t *testing.T) {
 
 func TestUnknownCommand(t *testing.T) {
 	msg := "TestUnknownCommand"
-	conf := pdf.NewDefaultConfiguration()
+	conf := pdfcpu.NewDefaultConfiguration()
 	inFile := filepath.Join(outDir, "go.pdf")
 
 	cmd := &cli.Command{
@@ -147,15 +147,15 @@ func TestUnknownCommand(t *testing.T) {
 func XTestSomeCommand(t *testing.T) {
 	msg := "TestSomeCommand"
 
-	PDFCPULog.SetDefaultTraceLogger()
-	//PDFCPULog.SetDefaultParseLogger()
-	PDFCPULog.SetDefaultReadLogger()
-	PDFCPULog.SetDefaultValidateLogger()
-	PDFCPULog.SetDefaultOptimizeLogger()
-	PDFCPULog.SetDefaultWriteLogger()
-	//PDFCPULog.SetDefaultStatsLogger()
+	log.SetDefaultTraceLogger()
+	//log.SetDefaultParseLogger()
+	log.SetDefaultReadLogger()
+	log.SetDefaultValidateLogger()
+	log.SetDefaultOptimizeLogger()
+	log.SetDefaultWriteLogger()
+	//log.SetDefaultStatsLogger()
 
-	conf := pdf.NewDefaultConfiguration()
+	conf := pdfcpu.NewDefaultConfiguration()
 	inFile := filepath.Join(inDir, "test.pdf")
 
 	cmd := cli.ValidateCommand(inFile, conf)

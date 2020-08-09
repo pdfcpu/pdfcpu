@@ -23,11 +23,10 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
-func confForAlgorithm(aes bool, keyLength int) *pdf.Configuration {
-	c := pdf.NewDefaultConfiguration()
+func confForAlgorithm(aes bool, keyLength int) *pdfcpu.Configuration {
+	c := pdfcpu.NewDefaultConfiguration()
 	c.EncryptUsingAES = aes
 	c.EncryptKeyLength = keyLength
 	return c
@@ -216,14 +215,14 @@ func testEncryptDecryptUseCase2(t *testing.T, fileName string, aes bool, keyLeng
 	conf = confForAlgorithm(aes, keyLength)
 	conf.UserPW = "upw"
 	conf.OwnerPW = "opw"
-	conf.Permissions = pdf.PermissionsAll
+	conf.Permissions = pdfcpu.PermissionsAll
 	cmd = cli.SetPermissionsCommand(outFile, "", conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s: %s add permissions: %v\n", msg, outFile, err)
 	}
 
 	// List permissions
-	conf = pdf.NewDefaultConfiguration()
+	conf = pdfcpu.NewDefaultConfiguration()
 	conf.OwnerPW = "opw"
 	cmd = cli.ListPermissionsCommand(outFile, conf)
 	list, err := cli.Process(cmd)
@@ -536,7 +535,7 @@ func testPermissions(t *testing.T, fileName string, aes bool, keyLength int) {
 	}
 	ensurePermissionsNone(t, list)
 
-	conf = pdf.NewDefaultConfiguration()
+	conf = pdfcpu.NewDefaultConfiguration()
 	conf.OwnerPW = "opw"
 	cmd = cli.ListPermissionsCommand(outFile, conf)
 	if list, err = cli.Process(cmd); err != nil {

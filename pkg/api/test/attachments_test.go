@@ -77,30 +77,64 @@ func TestAttachments(t *testing.T) {
 		t.Log(s)
 	}
 
-	// // Extract all attachments.
-	// if err := api.ExtractAttachmentsFile(fileName, outDir, nil, nil); err != nil {
-	// 	t.Fatalf("%s extract all attachments: %v\n", msg, err)
-	// }
+	// Extract all attachments.
+	if err := api.ExtractAttachmentsFile(fileName, outDir, nil, nil); err != nil {
+		t.Fatalf("%s extract all attachments: %v\n", msg, err)
+	}
 
-	// // Extract 1 attachment.
-	// if err := api.ExtractAttachmentsFile(fileName, outDir, []string{"golang.pdf"}, nil); err != nil {
-	// 	t.Fatalf("%s extract one attachment: %v\n", msg, err)
-	// }
+	// Extract 1 attachment.
+	if err := api.ExtractAttachmentsFile(fileName, outDir, []string{"golang.pdf"}, nil); err != nil {
+		t.Fatalf("%s extract one attachment: %v\n", msg, err)
+	}
 
-	// // Remove 1 attachment.
-	// if err := api.RemoveAttachmentsFile(fileName, "", []string{"golang.pdf"}, nil); err != nil {
-	// 	t.Fatalf("%s remove one attachment: %v\n", msg, err)
-	// }
-	// listAttachments(t, msg, fileName, 3)
+	// Remove 1 attachment.
+	if err := api.RemoveAttachmentsFile(fileName, "", []string{"golang.pdf"}, nil); err != nil {
+		t.Fatalf("%s remove one attachment: %v\n", msg, err)
+	}
+	listAttachments(t, msg, fileName, 3)
 
-	// // Remove all attachments.
-	// if err := api.RemoveAttachmentsFile(fileName, "", nil, nil); err != nil {
-	// 	t.Fatalf("%s remove all attachments: %v\n", msg, err)
-	// }
-	// listAttachments(t, msg, fileName, 0)
+	// Remove all attachments.
+	if err := api.RemoveAttachmentsFile(fileName, "", nil, nil); err != nil {
+		t.Fatalf("%s remove all attachments: %v\n", msg, err)
+	}
+	listAttachments(t, msg, fileName, 0)
 
-	// // Validate the processed file.
-	// if err := api.ValidateFile(fileName, nil); err != nil {
-	// 	t.Fatalf("%s: validate: %v\n", msg, err)
-	// }
+	// Validate the processed file.
+	if err := api.ValidateFile(fileName, nil); err != nil {
+		t.Fatalf("%s: validate: %v\n", msg, err)
+	}
 }
+
+// func TestAddAndExtractAttachmentUsingByteSlice(t *testing.T) {
+// 	msg := "TestAddAndExtractAttachmentUsingByteSlice"
+// 	fileName := filepath.Join(inDir, "go.pdf")
+
+// 	ctx, err := api.ReadContextFile(fileName)
+// 	if err != nil {
+// 		t.Fatalf("%s readContext: %v\n", msg, err)
+// 	}
+
+// 	id := "attachment1"
+// 	desc := "description"
+// 	want := "12345"
+// 	bufIn := bytes.NewBufferString(want)
+// 	useCollection := false
+
+// 	if err = ctx.AddAttachment(id, desc, bufIn, time.Now(), useCollection); err != nil {
+// 		t.Fatalf("%s addAttachment: %v\n", msg, err)
+// 	}
+
+// 	bufOut := &bytes.Buffer{}
+// 	ok, err := ctx.ExtractAttachment(id, bufOut)
+// 	if err != nil {
+// 		t.Fatalf("%s extractAttachment: %v\n", msg, err)
+// 	}
+// 	if !ok {
+// 		t.Fatalf("%s extractAttachment: attachment %s not found\n", msg, id)
+// 	}
+// 	got := bufOut.String()
+
+// 	if got != want {
+// 		t.Fatalf("%s got:\n%s\nwant:\n%s", msg, got, want)
+// 	}
+// }

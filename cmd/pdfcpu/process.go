@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The pdfcpu Authors.
+Copyright 2020 The pdfcpu Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -81,7 +81,7 @@ func printVersion(conf *pdfcpu.Configuration) {
 	}
 }
 
-func handleValidateCommand(conf *pdfcpu.Configuration) {
+func processValidateCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) == 0 || len(flag.Args()) > 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageValidate)
 		os.Exit(1)
@@ -105,7 +105,7 @@ func handleValidateCommand(conf *pdfcpu.Configuration) {
 	process(cli.ValidateCommand(inFile, conf))
 }
 
-func handleOptimizeCommand(conf *pdfcpu.Configuration) {
+func processOptimizeCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageOptimize)
 		os.Exit(1)
@@ -128,8 +128,7 @@ func handleOptimizeCommand(conf *pdfcpu.Configuration) {
 	process(cli.OptimizeCommand(inFile, outFile, conf))
 }
 
-func handleSplitCommand(conf *pdfcpu.Configuration) {
-
+func processSplitCommand(conf *pdfcpu.Configuration) {
 	if mode == "" {
 		mode = "span"
 	}
@@ -161,8 +160,7 @@ func handleSplitCommand(conf *pdfcpu.Configuration) {
 	process(cli.SplitCommand(inFile, outDir, span, conf))
 }
 
-func handleMergeCommand(conf *pdfcpu.Configuration) {
-
+func processMergeCommand(conf *pdfcpu.Configuration) {
 	if mode == "" {
 		mode = "create"
 	}
@@ -231,7 +229,7 @@ func extractModeCompletion(modePrefix string, modes []string) string {
 	return modeStr
 }
 
-func handleExtractCommand(conf *pdfcpu.Configuration) {
+func processExtractCommand(conf *pdfcpu.Configuration) {
 	mode = extractModeCompletion(mode, []string{"image", "font", "page", "content", "meta"})
 	if len(flag.Args()) != 2 || mode == "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageExtract)
@@ -276,7 +274,7 @@ func handleExtractCommand(conf *pdfcpu.Configuration) {
 	process(cmd)
 }
 
-func handleTrimCommand(conf *pdfcpu.Configuration) {
+func processTrimCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || selectedPages == "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageTrim)
 		os.Exit(1)
@@ -300,7 +298,7 @@ func handleTrimCommand(conf *pdfcpu.Configuration) {
 	process(cli.TrimCommand(inFile, outFile, pages, conf))
 }
 
-func handleListAttachmentsCommand(conf *pdfcpu.Configuration) {
+func processListAttachmentsCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) != 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usageAttachList)
 		os.Exit(1)
@@ -311,7 +309,7 @@ func handleListAttachmentsCommand(conf *pdfcpu.Configuration) {
 	process(cli.ListAttachmentsCommand(inFile, conf))
 }
 
-func handleAddAttachmentsCommand(conf *pdfcpu.Configuration) {
+func processAddAttachmentsCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageAttachAdd)
 		os.Exit(1)
@@ -342,7 +340,7 @@ func handleAddAttachmentsCommand(conf *pdfcpu.Configuration) {
 	process(cli.AddAttachmentsCommand(inFile, "", fileNames, conf))
 }
 
-func handleAddAttachmentsPortfolioCommand(conf *pdfcpu.Configuration) {
+func processAddAttachmentsPortfolioCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageAttachAdd)
 		os.Exit(1)
@@ -373,7 +371,7 @@ func handleAddAttachmentsPortfolioCommand(conf *pdfcpu.Configuration) {
 	process(cli.AddAttachmentsPortfolioCommand(inFile, "", fileNames, conf))
 }
 
-func handleRemoveAttachmentsCommand(conf *pdfcpu.Configuration) {
+func processRemoveAttachmentsCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) < 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageAttachRemove)
 		os.Exit(1)
@@ -394,7 +392,7 @@ func handleRemoveAttachmentsCommand(conf *pdfcpu.Configuration) {
 	process(cli.RemoveAttachmentsCommand(inFile, "", fileNames, conf))
 }
 
-func handleExtractAttachmentsCommand(conf *pdfcpu.Configuration) {
+func processExtractAttachmentsCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageAttachExtract)
 		os.Exit(1)
@@ -420,7 +418,7 @@ func handleExtractAttachmentsCommand(conf *pdfcpu.Configuration) {
 	process(cli.ExtractAttachmentsCommand(inFile, outDir, fileNames, conf))
 }
 
-func handleListPermissionsCommand(conf *pdfcpu.Configuration) {
+func processListPermissionsCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) != 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usagePermList)
 		os.Exit(1)
@@ -434,7 +432,6 @@ func handleListPermissionsCommand(conf *pdfcpu.Configuration) {
 
 func permCompletion(permPrefix string) string {
 	var permStr string
-
 	for _, perm := range []string{"none", "all"} {
 		if !strings.HasPrefix(perm, permPrefix) {
 			continue
@@ -448,7 +445,7 @@ func permCompletion(permPrefix string) string {
 	return permStr
 }
 
-func handleSetPermissionsCommand(conf *pdfcpu.Configuration) {
+func processSetPermissionsCommand(conf *pdfcpu.Configuration) {
 	if perm != "" {
 		perm = permCompletion(perm)
 	}
@@ -468,7 +465,7 @@ func handleSetPermissionsCommand(conf *pdfcpu.Configuration) {
 	process(cli.SetPermissionsCommand(inFile, "", conf))
 }
 
-func handleDecryptCommand(conf *pdfcpu.Configuration) {
+func processDecryptCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageDecrypt)
 		os.Exit(1)
@@ -525,7 +522,7 @@ func validateEncryptFlags() {
 	}
 }
 
-func handleEncryptCommand(conf *pdfcpu.Configuration) {
+func processEncryptCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageEncrypt)
 		os.Exit(1)
@@ -560,7 +557,7 @@ func handleEncryptCommand(conf *pdfcpu.Configuration) {
 	process(cli.EncryptCommand(inFile, outFile, conf))
 }
 
-func handleChangeUserPasswordCommand(conf *pdfcpu.Configuration) {
+func processChangeUserPasswordCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) != 3 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageChangeUserPW)
 		os.Exit(1)
@@ -582,7 +579,7 @@ func handleChangeUserPasswordCommand(conf *pdfcpu.Configuration) {
 	process(cli.ChangeUserPWCommand(inFile, outFile, &pwOld, &pwNew, conf))
 }
 
-func handleChangeOwnerPasswordCommand(conf *pdfcpu.Configuration) {
+func processChangeOwnerPasswordCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) != 3 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageChangeOwnerPW)
 		os.Exit(1)
@@ -665,11 +662,11 @@ func addWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 	process(cli.AddWatermarksCommand(inFile, outFile, selectedPages, wm, conf))
 }
 
-func handleAddStampsCommand(conf *pdfcpu.Configuration) {
+func processAddStampsCommand(conf *pdfcpu.Configuration) {
 	addWatermarks(conf, true)
 }
 
-func handleAddWatermarksCommand(conf *pdfcpu.Configuration) {
+func processAddWatermarksCommand(conf *pdfcpu.Configuration) {
 	addWatermarks(conf, false)
 }
 
@@ -732,16 +729,15 @@ func updateWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 	process(cli.AddWatermarksCommand(inFile, outFile, selectedPages, wm, conf))
 }
 
-func handleUpdateStampsCommand(conf *pdfcpu.Configuration) {
+func processUpdateStampsCommand(conf *pdfcpu.Configuration) {
 	updateWatermarks(conf, true)
 }
 
-func handleUpdateWatermarksCommand(conf *pdfcpu.Configuration) {
+func processUpdateWatermarksCommand(conf *pdfcpu.Configuration) {
 	updateWatermarks(conf, false)
 }
 
 func removeWatermarks(conf *pdfcpu.Configuration, onTop bool) {
-
 	if len(flag.Args()) < 1 || len(flag.Args()) > 2 {
 		s := usageWatermarkRemove
 		if onTop {
@@ -769,11 +765,11 @@ func removeWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 	process(cli.RemoveWatermarksCommand(inFile, outFile, selectedPages, conf))
 }
 
-func handleRemoveStampsCommand(conf *pdfcpu.Configuration) {
+func processRemoveStampsCommand(conf *pdfcpu.Configuration) {
 	removeWatermarks(conf, true)
 }
 
-func handleRemoveWatermarksCommand(conf *pdfcpu.Configuration) {
+func processRemoveWatermarksCommand(conf *pdfcpu.Configuration) {
 	removeWatermarks(conf, false)
 }
 
@@ -789,7 +785,7 @@ func ensureImageExtension(filename string) {
 	}
 }
 
-func handleImportImagesCommand(conf *pdfcpu.Configuration) {
+func processImportImagesCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageImportImages)
 		os.Exit(1)
@@ -833,7 +829,7 @@ func handleImportImagesCommand(conf *pdfcpu.Configuration) {
 	process(cli.ImportImagesCommand(imageFileNames, outFile, imp, conf))
 }
 
-func handleInsertPagesCommand(conf *pdfcpu.Configuration) {
+func processInsertPagesCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usagePagesInsert)
 		os.Exit(1)
@@ -862,7 +858,7 @@ func handleInsertPagesCommand(conf *pdfcpu.Configuration) {
 	process(cli.InsertPagesCommand(inFile, outFile, pages, conf, mode))
 }
 
-func handleRemovePagesCommand(conf *pdfcpu.Configuration) {
+func processRemovePagesCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || selectedPages == "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usagePagesRemove)
 		os.Exit(1)
@@ -896,7 +892,7 @@ func abs(i int) int {
 	return i
 }
 
-func handleRotateCommand(conf *pdfcpu.Configuration) {
+func processRotateCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) < 2 || len(flag.Args()) > 3 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageRotate)
 		os.Exit(1)
@@ -927,7 +923,6 @@ func handleRotateCommand(conf *pdfcpu.Configuration) {
 }
 
 func parseAfterNUpDetails(nup *pdfcpu.NUp, argInd int, filenameOut string) []string {
-
 	if nup.PageGrid {
 		cols, err := strconv.Atoi(flag.Arg(argInd))
 		if err != nil {
@@ -990,7 +985,7 @@ func parseAfterNUpDetails(nup *pdfcpu.NUp, argInd int, filenameOut string) []str
 	return filenamesIn
 }
 
-func handleNUpCommand(conf *pdfcpu.Configuration) {
+func processNUpCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) < 3 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageNUp)
 		os.Exit(1)
@@ -1025,7 +1020,7 @@ func handleNUpCommand(conf *pdfcpu.Configuration) {
 	process(cli.NUpCommand(inFiles, outFile, pages, nup, conf))
 }
 
-func handleGridCommand(conf *pdfcpu.Configuration) {
+func processGridCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) < 4 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageGrid)
 		os.Exit(1)
@@ -1061,7 +1056,7 @@ func handleGridCommand(conf *pdfcpu.Configuration) {
 	process(cli.NUpCommand(inFiles, outFile, pages, nup, conf))
 }
 
-func handleInfoCommand(conf *pdfcpu.Configuration) {
+func processInfoCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) != 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageInfo)
 		os.Exit(1)
@@ -1089,11 +1084,11 @@ func handleInfoCommand(conf *pdfcpu.Configuration) {
 	process(cli.InfoCommand(inFile, conf))
 }
 
-func handleListFontsCommand(conf *pdfcpu.Configuration) {
+func processListFontsCommand(conf *pdfcpu.Configuration) {
 	process(cli.ListFontsCommand(conf))
 }
 
-func handleInstallFontsCommand(conf *pdfcpu.Configuration) {
+func processInstallFontsCommand(conf *pdfcpu.Configuration) {
 	fileNames := []string{}
 	if len(flag.Args()) == 0 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", "expecting a list of TrueType fonts(*.ttf) for installation.")
@@ -1112,7 +1107,7 @@ func handleInstallFontsCommand(conf *pdfcpu.Configuration) {
 	process(cli.InstallFontsCommand(fileNames, conf))
 }
 
-func handleListKeywordsCommand(conf *pdfcpu.Configuration) {
+func processListKeywordsCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) != 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usageKeywordsList)
 		os.Exit(1)
@@ -1123,7 +1118,7 @@ func handleListKeywordsCommand(conf *pdfcpu.Configuration) {
 	process(cli.ListKeywordsCommand(inFile, conf))
 }
 
-func handleAddKeywordsCommand(conf *pdfcpu.Configuration) {
+func processAddKeywordsCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageKeywordsAdd)
 		os.Exit(1)
@@ -1144,7 +1139,7 @@ func handleAddKeywordsCommand(conf *pdfcpu.Configuration) {
 	process(cli.AddKeywordsCommand(inFile, "", keywords, conf))
 }
 
-func handleRemoveKeywordsCommand(conf *pdfcpu.Configuration) {
+func processRemoveKeywordsCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) < 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageKeywordsRemove)
 		os.Exit(1)
@@ -1165,7 +1160,7 @@ func handleRemoveKeywordsCommand(conf *pdfcpu.Configuration) {
 	process(cli.RemoveKeywordsCommand(inFile, "", keywords, conf))
 }
 
-func handleListPropertiesCommand(conf *pdfcpu.Configuration) {
+func processListPropertiesCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) != 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usageKeywordsList)
 		os.Exit(1)
@@ -1176,7 +1171,7 @@ func handleListPropertiesCommand(conf *pdfcpu.Configuration) {
 	process(cli.ListPropertiesCommand(inFile, conf))
 }
 
-func handleAddPropertiesCommand(conf *pdfcpu.Configuration) {
+func processAddPropertiesCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePropertiesAdd)
 		os.Exit(1)
@@ -1211,7 +1206,7 @@ func handleAddPropertiesCommand(conf *pdfcpu.Configuration) {
 	process(cli.AddPropertiesCommand(inFile, "", properties, conf))
 }
 
-func handleRemovePropertiesCommand(conf *pdfcpu.Configuration) {
+func processRemovePropertiesCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) < 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePropertiesRemove)
 		os.Exit(1)
@@ -1232,7 +1227,7 @@ func handleRemovePropertiesCommand(conf *pdfcpu.Configuration) {
 	process(cli.RemovePropertiesCommand(inFile, "", keys, conf))
 }
 
-func handleCollectCommand(conf *pdfcpu.Configuration) {
+func processCollectCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) < 1 || len(flag.Args()) > 2 || selectedPages == "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageCollect)
 		os.Exit(1)

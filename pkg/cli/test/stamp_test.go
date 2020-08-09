@@ -22,7 +22,6 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 func testAddWatermarks(t *testing.T, msg, inFile, outFile string, selectedPages []string, mode, modeParm, desc string, onTop bool) {
@@ -36,11 +35,11 @@ func testAddWatermarks(t *testing.T, msg, inFile, outFile string, selectedPages 
 	)
 	switch mode {
 	case "text":
-		wm, err = pdf.ParseTextWatermarkDetails(modeParm, desc, onTop)
+		wm, err = pdfcpu.ParseTextWatermarkDetails(modeParm, desc, onTop)
 	case "image":
-		wm, err = pdf.ParseImageWatermarkDetails(modeParm, desc, onTop)
+		wm, err = pdfcpu.ParseImageWatermarkDetails(modeParm, desc, onTop)
 	case "pdf":
-		wm, err = pdf.ParsePDFWatermarkDetails(modeParm, desc, onTop)
+		wm, err = pdfcpu.ParsePDFWatermarkDetails(modeParm, desc, onTop)
 	}
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
@@ -149,7 +148,7 @@ func TestStampingLifecyle(t *testing.T) {
 	onTop := true // we are testing stamps
 
 	// Stamp all pages.
-	wm, err := pdf.ParseTextWatermarkDetails("Demo", "", onTop)
+	wm, err := pdfcpu.ParseTextWatermarkDetails("Demo", "", onTop)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
@@ -159,7 +158,7 @@ func TestStampingLifecyle(t *testing.T) {
 	}
 
 	// // Update stamp on page 1.
-	wm, err = pdf.ParseTextWatermarkDetails("Confidential", "", onTop)
+	wm, err = pdfcpu.ParseTextWatermarkDetails("Confidential", "", onTop)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
@@ -171,7 +170,7 @@ func TestStampingLifecyle(t *testing.T) {
 
 	// Add another stamp on top for all pages.
 	// This is a redish transparent footer.
-	wm, err = pdf.ParseTextWatermarkDetails("Footer", "pos:bc, c:0.8 0 0, op:.6, rot:0", onTop)
+	wm, err = pdfcpu.ParseTextWatermarkDetails("Footer", "pos:bc, c:0.8 0 0, op:.6, rot:0", onTop)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}

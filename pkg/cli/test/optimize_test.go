@@ -21,10 +21,10 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
-func optimizeFile(t *testing.T, fileName string, conf *pdf.Configuration) error {
+func optimizeFile(t *testing.T, fileName string, conf *pdfcpu.Configuration) error {
 	t.Helper()
 	cmd := cli.OptimizeCommand(fileName, "", conf)
 	_, err := cli.Process(cmd)
@@ -49,8 +49,8 @@ func testOptimizeFile(t *testing.T, inFile, outFile string) {
 
 	// Optimize outFile and write result to outFile.
 	// Also skip validation.
-	c := pdf.NewDefaultConfiguration()
-	c.ValidationMode = pdf.ValidationNone
+	c := pdfcpu.NewDefaultConfiguration()
+	c.ValidationMode = pdfcpu.ValidationNone
 
 	if err := optimizeFile(t, outFile, c); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)

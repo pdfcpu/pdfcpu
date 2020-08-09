@@ -113,7 +113,7 @@ func (f Float) String() string {
 
 // PDFString returns a string representation as found in and written to a PDF file.
 func (f Float) PDFString() string {
-	// The max precision encountered so far has been 11 (fontType3 fontmatrix components).
+	// The max precision encountered so far has been 12 (fontType3 fontmatrix components).
 	return strconv.FormatFloat(f.Value(), 'f', 12, 64)
 }
 
