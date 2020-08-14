@@ -18,9 +18,12 @@ package test
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 func prepareForAttachmentTest(t *testing.T) error {
@@ -105,36 +108,77 @@ func TestAttachments(t *testing.T) {
 	}
 }
 
-// func TestAddAndExtractAttachmentUsingByteSlice(t *testing.T) {
-// 	msg := "TestAddAndExtractAttachmentUsingByteSlice"
-// 	fileName := filepath.Join(inDir, "go.pdf")
+func TestAttachmentUsingReader(t *testing.T) {
+	msg := "TestAttachmentUsingStringReader"
 
-// 	ctx, err := api.ReadContextFile(fileName)
-// 	if err != nil {
-// 		t.Fatalf("%s readContext: %v\n", msg, err)
-// 	}
+	file := "go.pdf"
+	inFile := filepath.Join(inDir, file)
+	outFile := filepath.Join(outDir, file)
+	if err := copyFile(t, inFile, outFile); err != nil {
+		t.Fatalf("%s copyFile: %v\n", msg, err)
+	}
 
-// 	id := "attachment1"
-// 	desc := "description"
-// 	want := "12345"
-// 	bufIn := bytes.NewBufferString(want)
-// 	useCollection := false
+	// Create a context.
+	ctx, err := api.ReadContextFile(outFile)
+	if err != nil {
+		t.Fatalf("%s readContext: %v\n", msg, err)
+	}
 
-// 	if err = ctx.AddAttachment(id, desc, bufIn, time.Now(), useCollection); err != nil {
-// 		t.Fatalf("%s addAttachment: %v\n", msg, err)
-// 	}
+	// List attachments.
+	if aa, err := ctx.ListAttachments(); err != nil || len(aa) > 0 {
+		t.Fatalf("%s listAttachments: %v\n", msg, err)
+	}
 
-// 	bufOut := &bytes.Buffer{}
-// 	ok, err := ctx.ExtractAttachment(id, bufOut)
-// 	if err != nil {
-// 		t.Fatalf("%s extractAttachment: %v\n", msg, err)
-// 	}
-// 	if !ok {
-// 		t.Fatalf("%s extractAttachment: attachment %s not found\n", msg, id)
-// 	}
-// 	got := bufOut.String()
+	// Add attachment.
+	id := "attachment1"
+	want := "12345"
+	now := time.Now()
+	a := pdfcpu.NewAttachment(strings.NewReader(want), id, "description", &now)
+	useCollection := false
+	if err = ctx.AddAttachment(*a, useCollection); err != nil {
+		t.Fatalf("%s addAttachment: %v\n", msg, err)
+	}
 
-// 	if got != want {
-// 		t.Fatalf("%s got:\n%s\nwant:\n%s", msg, got, want)
-// 	}
-// }
+	// List attachments.
+	aa, err := ctx.ListAttachments()
+	if err != nil || len(aa) != 1 || aa[0].ID != id {
+		t.Fatalf("%s listAttachments: %v\n", msg, err)
+	}
+
+	// Extract attachment.
+	aa, err = ctx.ExtractAttachments([]string{id})
+	if err != nil {
+		t.Fatalf("%s extractAttachment: %v\n", msg, err)
+	}
+	if len(aa) != 1 { // || aa == nil
+		t.Fatalf("%s extractAttachment: attachment %s not found\n", msg, id)
+	}
+	gotBytes, err := aa[0].Bytes()
+	if err != nil {
+		t.Fatalf("%s extractAttachment: attachment %s no data available\n", msg, id)
+	}
+	got := string(gotBytes)
+	if got != want {
+		t.Fatalf("%s\ngot:%s\nwant:%s", msg, got, want)
+	}
+
+	if err := api.WriteContextFile(ctx, outFile); err != nil {
+		t.Fatalf("%s writeContext: \n", msg, err)
+	}
+
+	// Optional processing of attachment bytes.
+
+	// Remove attachment.
+	ok, err := ctx.RemoveAttachments([]string{id})
+	if err != nil {
+		t.Fatalf("%s removeAttachment: %v\n", msg, err)
+	}
+	if !ok {
+		t.Fatalf("%s removeAttachment: attachment %s not found\n", msg, id)
+	}
+
+	// List attachment.
+	if aa, err = ctx.ListAttachments(); err != nil || len(aa) > 0 {
+		t.Fatalf("%s listAttachments: %v\n", msg, err)
+	}
+}

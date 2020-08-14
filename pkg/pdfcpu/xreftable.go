@@ -19,11 +19,13 @@ package pdfcpu
 import (
 	"encoding/hex"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -360,9 +362,7 @@ func (xRefTable *XRefTable) InsertObject(obj Object) (objNr int, err error) {
 
 // IndRefForNewObject inserts an object into the xRefTable and returns an indirect reference to it.
 func (xRefTable *XRefTable) IndRefForNewObject(obj Object) (*IndirectRef, error) {
-
 	xRefTableEntry := NewXRefTableEntryGen0(obj)
-
 	objNr, err := xRefTable.InsertAndUseRecycled(*xRefTableEntry)
 	if err != nil {
 		return nil, err
@@ -388,30 +388,67 @@ func (xRefTable *XRefTable) NewStreamDictForFile(filename string) (*StreamDict, 
 	if err != nil {
 		return nil, err
 	}
+
 	return xRefTable.NewStreamDictForBuf(buf)
 }
 
-// NewEmbeddedFileStreamDict creates and returns an embeddedFileStreamDict containing the file "filename".
-func (xRefTable *XRefTable) NewEmbeddedFileStreamDict(filename string) (*IndirectRef, error) {
-	sd, err := xRefTable.NewStreamDictForFile(filename)
+// NewEmbeddedStreamDict creates and returns an embeddedStreamDict containing the bytes represented by r.
+func (xRefTable *XRefTable) NewEmbeddedStreamDict(r io.Reader, modDate time.Time) (*IndirectRef, error) {
+	buf, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
-	fi, err := os.Stat(filename)
+
+	sd, err := xRefTable.NewStreamDictForBuf(buf)
 	if err != nil {
 		return nil, err
 	}
+
 	sd.InsertName("Type", "EmbeddedFile")
 	d := NewDict()
-	d.InsertInt("Size", int(fi.Size()))
-	d.Insert("ModDate", StringLiteral(DateString(fi.ModTime())))
+	d.InsertInt("Size", len(buf))
+	d.Insert("ModDate", StringLiteral(DateString(modDate)))
 	sd.Insert("Params", d)
-
 	if err = encodeStream(sd); err != nil {
 		return nil, err
 	}
 
 	return xRefTable.IndRefForNewObject(*sd)
+}
+
+// NewFileSpectDictForAttachment returns a fileSpecDict for a.
+func (xRefTable *XRefTable) NewFileSpectDictForAttachment(a Attachment) (*IndirectRef, error) {
+	modTime := time.Now()
+	if a.ModTime != nil {
+		modTime = *a.ModTime
+	}
+	sd, err := xRefTable.NewEmbeddedStreamDict(a.r, modTime)
+	if err != nil {
+		return nil, err
+	}
+
+	d, err := xRefTable.NewFileSpecDict(a.ID, a.Desc, *sd)
+	if err != nil {
+		return nil, err
+	}
+
+	return xRefTable.IndRefForNewObject(d)
+}
+
+// NewEmbeddedFileStreamDict returns an embeddedFileStreamDict containing the file "filename".
+func (xRefTable *XRefTable) NewEmbeddedFileStreamDict(filename string) (*IndirectRef, error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	return xRefTable.NewEmbeddedStreamDict(f, fi.ModTime())
 }
 
 // NewSoundStreamDict returns a new sound stream dict.

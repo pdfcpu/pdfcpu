@@ -133,7 +133,6 @@ func (d Dict) BooleanEntry(key string) *bool {
 }
 
 // StringEntry expects and returns a StringLiteral entry for given key.
-// Unused.
 func (d Dict) StringEntry(key string) *string {
 
 	value, found := d.Find(key)

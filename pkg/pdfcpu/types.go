@@ -312,6 +312,11 @@ func DateString(t time.Time) string {
 		tz/60/60, tz/60%60)
 }
 
+// DateTime decodes s into a time.Time.
+func DateTime(s string) (time.Time, error) {
+	return time.Parse("", s)
+}
+
 ///////////////////////////////////////////////////////////////////////////////////
 
 // HexLiteral represents a PDF hex literal object.
