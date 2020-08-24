@@ -1063,7 +1063,6 @@ func addPageTreeWithAnnotations(xRefTable *XRefTable, rootDict Dict, fontName st
 	}
 
 	pagesDict.Insert("Kids", Array{*pageIndRef})
-
 	rootDict.Insert("Pages", *parentPageIndRef)
 
 	return pageIndRef, nil

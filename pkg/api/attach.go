@@ -18,18 +18,22 @@ package api
 
 import (
 	"io"
+	"io/ioutil"
 	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pkg/errors"
 )
 
 // ListAttachments returns a list of embedded file attachments of rs.
-func ListAttachments(rs io.ReadSeeker, conf *pdf.Configuration) ([]string, error) {
+func ListAttachments(rs io.ReadSeeker, conf *pdfcpu.Configuration) ([]string, error) {
 	if conf == nil {
-		conf = pdf.NewDefaultConfiguration()
+		conf = pdfcpu.NewDefaultConfiguration()
 	}
 
 	fromStart := time.Now()
@@ -39,21 +43,28 @@ func ListAttachments(rs io.ReadSeeker, conf *pdf.Configuration) ([]string, error
 	}
 
 	fromWrite := time.Now()
-	list, err := pdf.AttachList(ctx.XRefTable)
+
+	aa, err := ctx.ListAttachments()
 	if err != nil {
 		return nil, err
 	}
 
+	var ss []string
+	for _, a := range aa {
+		ss = append(ss, a.ID)
+	}
+	sort.Strings(ss)
+
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	pdf.TimingStats("list files", durRead, durVal, durOpt, durWrite, durTotal)
+	pdfcpu.TimingStats("list files", durRead, durVal, durOpt, durWrite, durTotal)
 
-	return list, nil
+	return ss, nil
 }
 
 // ListAttachmentsFile returns a list of embedded file attachments of inFile.
-func ListAttachmentsFile(inFile string, conf *pdf.Configuration) ([]string, error) {
+func ListAttachmentsFile(inFile string, conf *pdfcpu.Configuration) ([]string, error) {
 	f, err := os.Open(inFile)
 	if err != nil {
 		return nil, err
@@ -63,9 +74,10 @@ func ListAttachmentsFile(inFile string, conf *pdf.Configuration) ([]string, erro
 }
 
 // AddAttachments embeds files into a PDF context read from rs and writes the result to w.
-func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, conf *pdf.Configuration) error {
+// file is either a file name or a file name and a description separated by a comma.
+func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, conf *pdfcpu.Configuration) error {
 	if conf == nil {
-		conf = pdf.NewDefaultConfiguration()
+		conf = pdfcpu.NewDefaultConfiguration()
 	}
 
 	fromStart := time.Now()
@@ -77,9 +89,37 @@ func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, co
 	from := time.Now()
 	var ok bool
 
-	if ok, err = pdf.AttachAdd(ctx.XRefTable, pdf.NewStringSet(files), coll); err != nil {
-		return err
+	for _, fn := range files {
+		s := strings.Split(fn, ",")
+		if len(s) == 0 || len(s) > 2 {
+			continue
+		}
+
+		fileName := s[0]
+		desc := ""
+		if len(s) == 2 {
+			desc = s[1]
+		}
+
+		f, err := os.Open(fileName)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		fi, err := f.Stat()
+		if err != nil {
+			return err
+		}
+		mt := fi.ModTime()
+
+		a := pdfcpu.NewAttachment(f, filepath.Base(fileName), desc, &mt)
+		if err = ctx.AddAttachment(a, coll); err != nil {
+			return err
+		}
+		ok = true
 	}
+
 	if !ok {
 		return errors.New("no attachment added")
 	}
@@ -99,7 +139,7 @@ func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, co
 }
 
 // AddAttachmentsFile embeds files into a PDF context read from inFile and writes the result to outFile.
-func AddAttachmentsFile(inFile, outFile string, files []string, coll bool, conf *pdf.Configuration) (err error) {
+func AddAttachmentsFile(inFile, outFile string, files []string, coll bool, conf *pdfcpu.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {
@@ -140,9 +180,9 @@ func AddAttachmentsFile(inFile, outFile string, files []string, coll bool, conf 
 }
 
 // RemoveAttachments deletes embedded files from a PDF context read from rs and writes the result to w.
-func RemoveAttachments(rs io.ReadSeeker, w io.Writer, fileNames []string, conf *pdf.Configuration) error {
+func RemoveAttachments(rs io.ReadSeeker, w io.Writer, fileNames []string, conf *pdfcpu.Configuration) error {
 	if conf == nil {
-		conf = pdf.NewDefaultConfiguration()
+		conf = pdfcpu.NewDefaultConfiguration()
 	}
 
 	fromStart := time.Now()
@@ -154,7 +194,7 @@ func RemoveAttachments(rs io.ReadSeeker, w io.Writer, fileNames []string, conf *
 	from := time.Now()
 
 	var ok bool
-	if ok, err = pdf.AttachRemove(ctx.XRefTable, pdf.NewStringSet(fileNames)); err != nil {
+	if ok, err = ctx.RemoveAttachments(fileNames); err != nil {
 		return err
 	}
 	if !ok {
@@ -175,7 +215,7 @@ func RemoveAttachments(rs io.ReadSeeker, w io.Writer, fileNames []string, conf *
 }
 
 // RemoveAttachmentsFile deletes embedded files from a PDF context read from inFile and writes the result to outFile.
-func RemoveAttachmentsFile(inFile, outFile string, files []string, conf *pdf.Configuration) (err error) {
+func RemoveAttachmentsFile(inFile, outFile string, files []string, conf *pdfcpu.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {
@@ -216,9 +256,9 @@ func RemoveAttachmentsFile(inFile, outFile string, files []string, conf *pdf.Con
 }
 
 // ExtractAttachments extracts embedded files from a PDF context read from rs into outDir.
-func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, conf *pdf.Configuration) error {
+func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, conf *pdfcpu.Configuration) error {
 	if conf == nil {
-		conf = pdf.NewDefaultConfiguration()
+		conf = pdfcpu.NewDefaultConfiguration()
 	}
 
 	fromStart := time.Now()
@@ -229,21 +269,31 @@ func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, con
 
 	fromWrite := time.Now()
 
-	ctx.Write.DirName = outDir
-	if err = pdf.AttachExtract(ctx, pdf.NewStringSet(fileNames)); err != nil {
+	aa, err := ctx.ExtractAttachments(fileNames)
+	if err != nil {
 		return err
+	}
+
+	for _, a := range aa {
+		bb, err := a.Bytes()
+		if err != nil {
+			return err
+		}
+		if err := ioutil.WriteFile(filepath.Join(outDir, a.ID), bb, os.ModePerm); err != nil {
+			return err
+		}
 	}
 
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	pdf.TimingStats("write files", durRead, durVal, durOpt, durWrite, durTotal)
+	pdfcpu.TimingStats("write files", durRead, durVal, durOpt, durWrite, durTotal)
 
 	return nil
 }
 
 // ExtractAttachmentsFile extracts embedded files from a PDF context read from inFile into outDir.
-func ExtractAttachmentsFile(inFile, outDir string, fileNames []string, conf *pdf.Configuration) error {
+func ExtractAttachmentsFile(inFile, outDir string, fileNames []string, conf *pdfcpu.Configuration) error {
 	f, err := os.Open(inFile)
 	if err != nil {
 		return err

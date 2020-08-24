@@ -975,27 +975,23 @@ func createLinkAnnotationWithRemoteGoToAction(xRefTable *XRefTable, pageIndRef I
 
 func createEmbeddedGoToAction(xRefTable *XRefTable) (*IndirectRef, error) {
 
-	// fileSpecDict, err := createFileSpecDict(xRefTable, "testdata/go.pdf")
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	_, err := AttachAdd(xRefTable, StringSet{filepath.Join(testDir, "go.pdf"): true}, true)
+	f := filepath.Join(testDir, "go.pdf")
+	fileSpecDict, err := createFileSpecDict(xRefTable, f)
 	if err != nil {
 		return nil, err
 	}
 
 	d := Dict(
 		map[string]Object{
-			"Type": Name("Action"),
-			"S":    Name("GoToE"),
-			//"F":         *fileSpecDict,
+			"Type":      Name("Action"),
+			"S":         Name("GoToE"),
+			"F":         fileSpecDict,
 			"D":         Array{Integer(0), Name("Fit")},
 			"NewWindow": Boolean(true), // not honored by Acrobat Reader.
 			"T": Dict(
 				map[string]Object{
 					"R": Name("C"),
-					"N": StringLiteral(filepath.Join(testDir, "go.pdf")),
+					"N": StringLiteral(f),
 				},
 			),
 		},

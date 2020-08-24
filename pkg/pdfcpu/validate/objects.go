@@ -18,6 +18,7 @@ package validate
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -180,14 +181,23 @@ func validateBooleanArrayEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, e
 }
 
 func validateDateObject(xRefTable *pdf.XRefTable, o pdf.Object, sinceVersion pdf.Version) (string, error) {
-	s, err := xRefTable.DereferenceStringLiteral(o, sinceVersion, validateDate)
+	sl, err := xRefTable.DereferenceStringLiteral(o, sinceVersion, nil)
 	if err != nil {
 		return "", err
 	}
-	return s.Value(), nil
+	s := sl.Value()
+	if s == "" {
+		return s, nil
+	}
+
+	if _, ok := pdf.DateTime(s); !ok {
+		return "", errors.Errorf("pdfcpu: validateDateObject: <%s> invalid date", s)
+	}
+
+	return s, nil
 }
 
-func validateDateEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) (*string, error) {
+func validateDateEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) (*time.Time, error) {
 
 	log.Validate.Printf("validateDateEntry begin: entry=%s\n", entryName)
 
@@ -196,11 +206,11 @@ func validateDateEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName
 		return nil, err
 	}
 
-	date, err := xRefTable.DereferenceStringOrHexLiteral(o, sinceVersion, validateDate)
+	s, err := xRefTable.DereferenceStringOrHexLiteral(o, sinceVersion, nil)
 	if err != nil {
 		return nil, err
 	}
-	if date == "" {
+	if s == "" {
 		if required {
 			return nil, errors.Errorf("validateDateEntry: dict=%s required entry=%s is nil", dictName, entryName)
 		}
@@ -208,9 +218,14 @@ func validateDateEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName
 		return nil, nil
 	}
 
+	time, ok := pdf.DateTime(s)
+	if !ok {
+		return nil, errors.Errorf("pdfcpu: validateDateEntry: <%s> invalid date", s)
+	}
+
 	log.Validate.Printf("validateDateEntry end: entry=%s\n", entryName)
 
-	return &date, nil
+	return &time, nil
 }
 
 func validateDictEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version, validate func(pdf.Dict) bool) (pdf.Dict, error) {

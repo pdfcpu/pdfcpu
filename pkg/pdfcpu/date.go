@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The pdfcpu Authors.
+Copyright 2020 The pdfcpu Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,21 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package validate
+package pdfcpu
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
-
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
-func prevalidateDate(s string) (string, bool) {
+// DateString returns a string representation of t.
+func DateString(t time.Time) string {
+	_, tz := t.Zone()
+	return fmt.Sprintf("D:%d%02d%02d%02d%02d%02d+%02d'%02d'",
+		t.Year(), t.Month(), t.Day(),
+		t.Hour(), t.Minute(), t.Second(),
+		tz/60/60, tz/60%60)
+}
 
+func prevalidateDate(s string) (string, bool) {
 	// utf16 conversion if applicable.
-	if pdf.IsStringUTF16BE(s) {
-		utf16s, err := pdf.DecodeUTF16String(s)
+	if IsStringUTF16BE(s) {
+		utf16s, err := DecodeUTF16String(s)
 		if err != nil {
 			return "", false
 		}
@@ -43,81 +50,89 @@ func prevalidateDate(s string) (string, bool) {
 	return s, strings.HasPrefix(s, "D:")
 }
 
-func validateTimezoneMinutes(s string, o byte) bool {
-
+func parseTimezoneMinutes(s string, o byte) (int, bool) {
 	tzmin := s[20:22]
 	tzm, err := strconv.Atoi(tzmin)
 	if err != nil {
-		return false
+		return 0, false
 	}
 
 	if tzm > 59 {
-		return false
+		return 0, false
 	}
 
 	if o == 'Z' && tzm != 0 {
-		return false
+		return 0, false
 	}
 
 	// "D:YYYYMMDDHHmmSSZHH'mm"
 	if len(s) == 22 {
-		return false
+		return 0, false
 	}
 
 	// Accept a trailing '
-	return s[22] == '\''
+	return tzm, s[22] == '\''
 }
 
-func validateTimezone(s string) bool {
-
+func parseTimezone(s string) (h, m int, ok bool) {
 	o := s[16]
 
 	if o != '+' && o != '-' && o != 'Z' {
-		return false
+		return 0, 0, false
 	}
 
 	// local time equal to UT.
 	// "D:YYYYMMDDHHmmSSZ"
 	if o == 'Z' && len(s) == 17 {
-		return true
+		return 0, 0, true
 	}
 
 	if len(s) < 20 {
-		return false
+		return 0, 0, false
 	}
+
+	neg := o == '-'
 
 	tzhours := s[17:19]
 	tzh, err := strconv.Atoi(tzhours)
 	if err != nil {
-		return false
+		return 0, 0, false
 	}
 
 	if tzh > 23 {
-		return false
+		return 0, 0, false
 	}
 
 	if o == 'Z' && tzh != 0 {
-		return false
+		return 0, 0, false
 	}
 
 	if s[19] != '\'' {
-		return false
+		return 0, 0, false
+	}
+
+	if neg {
+		tzh *= -1
 	}
 
 	// "D:YYYYMMDDHHmmSSZHH'"
 	if len(s) == 20 {
-		return true
+		return tzh, 0, true
 	}
 
 	if len(s) != 22 && len(s) != 23 {
-		return false
+		return 0, 0, false
 	}
 
-	return validateTimezoneMinutes(s, o)
+	tzm, ok := parseTimezoneMinutes(s, o)
+	if !ok {
+		return 0, 0, false
+	}
+
+	return tzh, tzm, true
 }
 
-func validateYear(s string) (y int, finished, ok bool) {
-
+func parseYear(s string) (y int, finished, ok bool) {
 	year := s[2:6]
 
 	y, err := strconv.Atoi(year)
@@ -127,7 +142,7 @@ func validateYear(s string) (y int, finished, ok bool) {
 
 	// "D:YYYY"
 	if len(s) == 6 {
-		return 0, true, true
+		return y, true, true
 	}
 
 	if len(s) == 7 {
@@ -137,8 +152,7 @@ func validateYear(s string) (y int, finished, ok bool) {
 	return y, false, true
 }
 
-func validateMonth(s string) (m int, finished, ok bool) {
-
+func parseMonth(s string) (m int, finished, ok bool) {
 	month := s[6:8]
 
 	var err error
@@ -163,171 +177,187 @@ func validateMonth(s string) (m int, finished, ok bool) {
 	return m, false, true
 }
 
-func validateDay(s string, y, m int) (finished, ok bool) {
-
+func parseDay(s string, y, m int) (d int, finished, ok bool) {
 	day := s[8:10]
 
 	d, err := strconv.Atoi(day)
 	if err != nil {
-		return false, false
+		return 0, false, false
 	}
 
 	if d < 1 || d > 31 {
-		return false, false
+		return 0, false, false
 	}
 
 	// check valid Date(year,month,day)
+	// The day before the first day of next month:
 	t := time.Date(y, time.Month(m+1), 0, 0, 0, 0, 0, time.UTC)
 	if d > t.Day() {
-		return false, false
+		return 0, false, false
 	}
 
 	// "D:YYYYMMDD"
 	if len(s) == 10 {
-		return true, true
+		return d, true, true
 	}
 
 	if len(s) == 11 {
-		return false, false
+		return 0, false, false
 	}
 
-	return false, true
+	return d, false, true
 }
 
-func validateHour(s string) (finished, ok bool) {
-
+func parseHour(s string) (h int, finished, ok bool) {
 	hour := s[10:12]
 
 	h, err := strconv.Atoi(hour)
 	if err != nil {
-		return false, false
+		return 0, false, false
 	}
 
 	if h > 23 {
-		return false, false
+		return 0, false, false
 	}
 
 	// "D:YYYYMMDDHH"
 	if len(s) == 12 {
-		return true, true
+		return h, true, true
 	}
 
 	if len(s) == 13 {
-		return false, false
+		return 0, false, false
 	}
 
-	return false, true
+	return h, false, true
 }
 
-func validateMinute(s string) (finished, ok bool) {
-
+func parseMinute(s string) (min int, finished, ok bool) {
 	minute := s[12:14]
 
 	min, err := strconv.Atoi(minute)
 	if err != nil {
-		return false, false
+		return 0, false, false
 	}
 
 	if min > 59 {
-		return false, false
+		return 0, false, false
 	}
 
 	// "D:YYYYMMDDHHmm"
 	if len(s) == 14 {
-		return true, true
+		return min, true, true
 	}
 
 	if len(s) == 15 {
-		return false, false
+		return 0, false, false
 	}
 
-	return false, true
+	return min, false, true
 }
 
-func validateSecond(s string) (finished, ok bool) {
-
+func parseSecond(s string) (sec int, finished, ok bool) {
 	second := s[14:16]
 
 	sec, err := strconv.Atoi(second)
 	if err != nil {
-		return false, false
+		return 0, false, false
 	}
 
 	if sec > 59 {
-		return false, false
+		return 0, false, false
 	}
 
 	// "D:YYYYMMDDHHmmSS"
 	if len(s) == 16 {
-		return true, true
+		return sec, true, true
 	}
 
-	return false, true
+	return sec, false, true
 }
 
-// Date validates an ISO/IEC 8824 compliant date string.
-func validateDate(s string) bool {
-
+// DateTime decodes s into a time.Time.
+func DateTime(s string) (time.Time, bool) {
 	// 7.9.4 Dates
 	// (D:YYYYMMDDHHmmSSOHH'mm')
+
+	var d time.Time
 
 	var ok bool
 	s, ok = prevalidateDate(s)
 	if !ok {
-		return false
+		return d, false
 	}
 
-	y, finished, ok := validateYear(s)
+	y, finished, ok := parseYear(s)
 	if !ok {
-		return false
-	}
-	if finished {
-		return true
+		return d, false
 	}
 
-	m, finished, ok := validateMonth(s)
-	if !ok {
-		return false
-	}
+	// Construct time for yyyy 01 01 00:00:00
+	d = time.Date(y, 1, 1, 0, 0, 0, 0, time.UTC)
 	if finished {
-		return true
+		return d, true
 	}
 
-	finished, ok = validateDay(s, y, m)
+	m, finished, ok := parseMonth(s)
 	if !ok {
-		return false
-	}
-	if finished {
-		return true
+		return d, false
 	}
 
-	finished, ok = validateHour(s)
-	if !ok {
-		return false
-	}
+	d = d.AddDate(0, m-1, 0)
 	if finished {
-		return true
+		return d, true
 	}
 
-	finished, ok = validateMinute(s)
+	day, finished, ok := parseDay(s, y, m)
 	if !ok {
-		return false
-	}
-	if finished {
-		return true
+		return d, false
 	}
 
-	finished, ok = validateSecond(s)
-	if !ok {
-		return false
-	}
+	d = d.AddDate(0, 0, day-1)
 	if finished {
-		return true
+		return d, true
+	}
+
+	h, finished, ok := parseHour(s)
+	if !ok {
+		return d, false
+	}
+
+	d = d.Add(time.Duration(h) * time.Hour)
+	if finished {
+		return d, true
+	}
+
+	min, finished, ok := parseMinute(s)
+	if !ok {
+		return d, false
+	}
+
+	d = d.Add(time.Duration(min) * time.Minute)
+	if finished {
+		return d, true
+	}
+
+	sec, finished, ok := parseSecond(s)
+	if !ok {
+		return d, false
+	}
+
+	d = d.Add(time.Duration(sec) * time.Second)
+	if finished {
+		return d, true
 	}
 
 	// Process timezone
-	return validateTimezone(s)
-}
+	tzh, tzm, ok := parseTimezone(s)
+	if !ok {
+		return d, false
+	}
 
-// Date validates an ISO/IEC 8824 compliant date string.
-func Date(s string) bool { return validateDate(s) }
+	loc := time.FixedZone("", tzh*60*60+tzm*60)
+	d = time.Date(y, time.Month(m), day, h, min, sec, 0, loc)
+
+	return d, true
+}

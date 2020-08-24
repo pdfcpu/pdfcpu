@@ -21,7 +21,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/types"
 )
@@ -299,22 +298,6 @@ func (stringliteral StringLiteral) PDFString() string {
 // Value returns a string value for this PDF object.
 func (stringliteral StringLiteral) Value() string {
 	return string(stringliteral)
-}
-
-// DateString returns a string representation of t.
-func DateString(t time.Time) string {
-
-	_, tz := t.Zone()
-
-	return fmt.Sprintf("D:%d%02d%02d%02d%02d%02d+%02d'%02d'",
-		t.Year(), t.Month(), t.Day(),
-		t.Hour(), t.Minute(), t.Second(),
-		tz/60/60, tz/60%60)
-}
-
-// DateTime decodes s into a time.Time.
-func DateTime(s string) (time.Time, error) {
-	return time.Parse("", s)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////

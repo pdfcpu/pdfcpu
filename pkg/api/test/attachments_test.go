@@ -108,8 +108,22 @@ func TestAttachments(t *testing.T) {
 	}
 }
 
-func TestAttachmentUsingReader(t *testing.T) {
-	msg := "TestAttachmentUsingStringReader"
+// timeEqualsTimeFromDateTime returns true if t1 equals t2
+// working on the assumption that t2 is restored from a PDF
+// date string that does not have a way to include nanoseconds.
+func timeEqualsTimeFromDateTime(t1, t2 *time.Time) bool {
+	if t1 == nil && t2 == nil {
+		return true
+	}
+	if t1 == nil || t2 == nil {
+		return false
+	}
+	nanos := t1.Nanosecond()
+	t11 := t1.Add(-time.Duration(nanos) * time.Nanosecond)
+	return t11.Equal(*t2)
+}
+func TestAttachmentsLowLevel(t *testing.T) {
+	msg := "TestAttachmentsLowLevel"
 
 	file := "go.pdf"
 	inFile := filepath.Join(inDir, file)
@@ -131,18 +145,39 @@ func TestAttachmentUsingReader(t *testing.T) {
 
 	// Add attachment.
 	id := "attachment1"
+	desc := "description"
 	want := "12345"
-	now := time.Now()
-	a := pdfcpu.NewAttachment(strings.NewReader(want), id, "description", &now)
+	modTime := time.Now()
+	a := pdfcpu.NewAttachment(strings.NewReader(want), id, desc, &modTime)
+
 	useCollection := false
-	if err = ctx.AddAttachment(*a, useCollection); err != nil {
+	if err = ctx.AddAttachment(a, useCollection); err != nil {
 		t.Fatalf("%s addAttachment: %v\n", msg, err)
+	}
+
+	// Write context to outFile after adding attachment.
+	if err := api.WriteContextFile(ctx, outFile); err != nil {
+		t.Fatalf("%s writeContext: %v\n", msg, err)
+	}
+
+	// Read outfile again into a PDFContext.
+	ctx, err = api.ReadContextFile(outFile)
+	if err != nil {
+		t.Fatalf("%s readContext: %v\n", msg, err)
 	}
 
 	// List attachments.
 	aa, err := ctx.ListAttachments()
-	if err != nil || len(aa) != 1 || aa[0].ID != id {
+	if err != nil {
 		t.Fatalf("%s listAttachments: %v\n", msg, err)
+	}
+	if len(aa) != 1 {
+		t.Fatalf("%s listAttachments: want 1 got %d\n", msg, len(aa))
+	}
+	if aa[0].ID != id ||
+		aa[0].Desc != desc ||
+		!timeEqualsTimeFromDateTime(&modTime, aa[0].ModTime) {
+		t.Fatalf("%s listAttachments: unexpected attachment: %s\n", msg, aa[0])
 	}
 
 	// Extract attachment.
@@ -150,9 +185,16 @@ func TestAttachmentUsingReader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s extractAttachment: %v\n", msg, err)
 	}
-	if len(aa) != 1 { // || aa == nil
-		t.Fatalf("%s extractAttachment: attachment %s not found\n", msg, id)
+	if len(aa) != 1 {
+		t.Fatalf("%s extractAttachment: want 1 got %d\n", msg, len(aa))
 	}
+	if aa[0].ID != id ||
+		aa[0].Desc != desc ||
+		!timeEqualsTimeFromDateTime(&modTime, aa[0].ModTime) {
+		t.Fatalf("%s extractAttachment: unexpected attachment: %s\n", msg, aa[0])
+	}
+
+	// Compare extracted attachment bytes.
 	gotBytes, err := aa[0].Bytes()
 	if err != nil {
 		t.Fatalf("%s extractAttachment: attachment %s no data available\n", msg, id)
@@ -162,11 +204,8 @@ func TestAttachmentUsingReader(t *testing.T) {
 		t.Fatalf("%s\ngot:%s\nwant:%s", msg, got, want)
 	}
 
-	if err := api.WriteContextFile(ctx, outFile); err != nil {
-		t.Fatalf("%s writeContext: \n", msg, err)
-	}
-
-	// Optional processing of attachment bytes.
+	// Optional processing of attachment bytes:
+	// Process gotBytes..
 
 	// Remove attachment.
 	ok, err := ctx.RemoveAttachments([]string{id})
@@ -177,8 +216,22 @@ func TestAttachmentUsingReader(t *testing.T) {
 		t.Fatalf("%s removeAttachment: attachment %s not found\n", msg, id)
 	}
 
+	// Write context to outFile after removing attachment.
+	if err := api.WriteContextFile(ctx, outFile); err != nil {
+		t.Fatalf("%s writeContext: %v\n", msg, err)
+	}
+
+	// Read outfile once again into a PDFContext.
+	ctx, err = api.ReadContextFile(outFile)
+	if err != nil {
+		t.Fatalf("%s readContext: %v\n", msg, err)
+	}
+
 	// List attachment.
-	if aa, err = ctx.ListAttachments(); err != nil || len(aa) > 0 {
+	if aa, err = ctx.ListAttachments(); err != nil {
 		t.Fatalf("%s listAttachments: %v\n", msg, err)
+	}
+	if len(aa) != 0 {
+		t.Fatalf("%s extractAttachment: want 0 got %d\n", msg, len(aa))
 	}
 }
