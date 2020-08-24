@@ -29,34 +29,29 @@ import (
 
 // IsStringUTF16BE checks a string for Big Endian byte order BOM.
 func IsStringUTF16BE(s string) bool {
-
 	s1 := fmt.Sprintf("%s", s)
-
 	ok := strings.HasPrefix(s1, "\376\377") // 0xFE 0xFF
-
 	//log.Debug.Printf("IsStringUTF16BE: <%s> returning %v\n", s1, ok)
 	//log.Debug.Printf("\n%s", hex.Dump([]byte(s1)))
-
 	return ok
 }
 
-// IsUTF16BE checks for Big Endian byte order mark.
+// IsUTF16BE checks for Big Endian byte order mark and valid length.
 func IsUTF16BE(b []byte) bool {
-	if len(b) == 0 {
+	if len(b) == 0 || len(b)%2 != 0 {
 		return false
 	}
 	// Check BOM
 	return b[0] == 0xFE && b[1] == 0xFF
 }
 
-func decodeUTF16String(b []byte) (s string, err error) {
+func decodeUTF16String(b []byte) (string, error) {
 
 	//log.Debug.Printf("decodeUTF16String: begin %v\n", b)
 
 	// We only accept big endian byte order.
 	if !IsUTF16BE(b) {
-		err = errors.Errorf("decodeUTF16String: not UTF16BE: %v\n", b)
-		return
+		return "", errors.Errorf("decodeUTF16String: not UTF16BE: %v\n", b)
 	}
 
 	// Strip BOM.
@@ -82,14 +77,12 @@ func decodeUTF16String(b []byte) (s string, err error) {
 
 		// Ensure bytes needed in order to decode surrogate pair.
 		if i+2 >= len(b) {
-			err = errors.Errorf("decodeUTF16String: corrupt UTF16BE on unicode point 1: %v", b)
-			return
+			return "", errors.Errorf("decodeUTF16String: corrupt UTF16BE byte length on unicode point 1: %v", b)
 		}
 
 		// Ensure high surrogate is leading in possible surrogate pair.
 		if val >= 0xDC00 && val <= 0xDFFF {
-			err = errors.Errorf("decodeUTF16String: corrupt UTF16BE on unicode point 1: %v", b)
-			return
+			return "", errors.Errorf("decodeUTF16String: corrupt UTF16BE on unicode point 1: %v", b)
 		}
 
 		// Supplementary Planes
@@ -97,8 +90,7 @@ func decodeUTF16String(b []byte) (s string, err error) {
 		u16 = append(u16, val)
 		val = (uint16(b[i+2]) << 8) + uint16(b[i+3])
 		if val < 0xDC00 || val > 0xDFFF {
-			err = errors.Errorf("decodeUTF16String: corrupt UTF16BE on unicode point 2: %v", b)
-			return
+			return "", errors.Errorf("decodeUTF16String: corrupt UTF16BE on unicode point 2: %v", b)
 		}
 
 		u16 = append(u16, val)
@@ -106,7 +98,6 @@ func decodeUTF16String(b []byte) (s string, err error) {
 	}
 
 	decb := []byte{}
-
 	utf8Buf := make([]byte, utf8.UTFMax)
 
 	for _, rune := range utf16.Decode(u16) {
@@ -114,22 +105,17 @@ func decodeUTF16String(b []byte) (s string, err error) {
 		decb = append(decb, utf8Buf[:n]...)
 	}
 
-	s = string(decb)
-
-	//log.Debug.Printf("decodeUTF16String: end %s %s %s\n", s, hex.Dump(decb), hex.Dump([]byte(s)))
-
-	return
+	//log.Debug.Printf("decodeUTF16String: end %s\n", hex.Dump(decb))
+	return string(decb), nil
 }
 
 // DecodeUTF16String decodes a UTF16BE string from a hex string.
 func DecodeUTF16String(s string) (string, error) {
-
 	return decodeUTF16String([]byte(s))
 }
 
 // StringLiteralToString returns the best possible string rep for a string literal.
 func StringLiteralToString(s string) (string, error) {
-
 	b, err := Unescape(s)
 	if err != nil {
 		return "", err
@@ -148,7 +134,6 @@ func StringLiteralToString(s string) (string, error) {
 
 // HexLiteralToString returns a possibly UTF16 encoded string for a hex string.
 func HexLiteralToString(hexString string) (string, error) {
-
 	// Get corresponding byte slice.
 	b, err := hex.DecodeString(hexString)
 	if err != nil {
