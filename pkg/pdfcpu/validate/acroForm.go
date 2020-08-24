@@ -191,6 +191,12 @@ func validateAcroFieldDict(xRefTable *pdf.XRefTable, ir pdf.IndirectRef, inField
 		return err
 	}
 
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		if len(d) == 0 {
+			return nil
+		}
+	}
+
 	if o, ok := d.Find("Kids"); ok {
 
 		// dict represents a non terminal field.

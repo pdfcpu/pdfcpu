@@ -360,15 +360,17 @@ func validateStructElementDictPart1(xRefTable *pdf.XRefTable, d pdf.Dict, dictNa
 		return err
 	}
 
-	// pl: immediate parent, required, indirect reference
+	// P: immediate parent, required, indirect reference
 	ir := d.IndirectRefEntry("P")
-	if ir == nil {
-		return errors.Errorf("pdfcpu: validateStructElementDict: missing entry P: %s\n", d)
-	}
+	if xRefTable.ValidationMode != pdf.ValidationRelaxed {
+		if ir == nil {
+			return errors.Errorf("pdfcpu: validateStructElementDict: missing entry P: %s\n", d)
+		}
 
-	// Check if parent structure element exists.
-	if _, ok := xRefTable.FindTableEntryForIndRef(ir); !ok {
-		return errors.Errorf("pdfcpu: validateStructElementDict: unknown parent: %v\n", ir)
+		// Check if parent structure element exists.
+		if _, ok := xRefTable.FindTableEntryForIndRef(ir); !ok {
+			return errors.Errorf("pdfcpu: validateStructElementDict: unknown parent: %v\n", ir)
+		}
 	}
 
 	// ID: optional, byte string

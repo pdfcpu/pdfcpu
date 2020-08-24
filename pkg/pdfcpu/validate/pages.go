@@ -55,11 +55,11 @@ func validateResourceDict(xRefTable *pdf.XRefTable, o pdf.Object) (hasResources 
 		allowedResDictKeys = append(allowedResDictKeys, "ProcSets")
 	}
 
-	// Beginning with PDF V1.4 the "ProcSet" feature is considered to be obsolete!
+	// Note: Beginning with PDF V1.4 the "ProcSet" feature is considered to be obsolete!
 
 	for k := range d {
 		if !pdf.MemberOf(k, allowedResDictKeys) {
-			return false, errors.Errorf("invalid resource dict entry: %s", k)
+			d.Delete(k)
 		}
 	}
 

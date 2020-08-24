@@ -936,6 +936,12 @@ func validateFontDict(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
 		return err
 	}
 
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		if len(d) == 0 {
+			return nil
+		}
+	}
+
 	if d.Type() == nil || *d.Type() != "Font" {
 		return errors.New("pdfcpu: validateFontDict: corrupt font dict")
 	}

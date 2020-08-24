@@ -1761,10 +1761,21 @@ func readContentStream(rd io.Reader, streamLength int) ([]byte, error) {
 	for totalCount := 0; totalCount < streamLength; {
 		count, err := rd.Read(buf[totalCount:])
 		if err != nil {
-			return nil, err
+			if err != io.EOF {
+				return nil, err
+			}
+			// Weak heuristic to detect the actual end of this stream
+			// once we have reached EOF due to incorrect streamLength.
+			eob := bytes.Index(buf, []byte("endstream"))
+			if eob < 0 {
+				return nil, err
+			}
+			return buf[:eob-1], nil
 		}
+
 		log.Read.Printf("readContentStream: count=%d, buflen=%d(%X)\n", count, len(buf), len(buf))
 		totalCount += count
+
 	}
 
 	log.Read.Printf("readContentStream: end\n")
@@ -1813,6 +1824,13 @@ func loadEncodedStreamContent(ctx *Context, sd *StreamDict) ([]byte, error) {
 	rawContent, err := readContentStream(rd, int(*sd.StreamLength))
 	if err != nil {
 		return nil, err
+	}
+
+	// Sometimes the stream dict length is corrupt and needs to be fixed.
+	l := int64(len(rawContent))
+	if l < *sd.StreamLength {
+		sd.StreamLength = &l
+		sd.Dict["Length"] = Integer(l)
 	}
 
 	//log.Read.Printf("rawContent buflen=%d(#%x)\n%s", len(rawContent), len(rawContent), hex.Dump(rawContent))
