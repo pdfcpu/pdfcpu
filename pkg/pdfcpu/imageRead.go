@@ -26,20 +26,21 @@ import (
 	"github.com/pkg/errors"
 )
 
-func createSMaskObject(xRefTable *XRefTable, buf []byte, w, h int) (*IndirectRef, error) {
+func createSMaskObject(xRefTable *XRefTable, buf []byte, w, h, bpc int) (*IndirectRef, error) {
 	sd := &StreamDict{
 		Dict: Dict(
 			map[string]Object{
 				"Type":             Name("XObject"),
 				"Subtype":          Name("Image"),
-				"BitsPerComponent": Integer(8),
+				"BitsPerComponent": Integer(bpc),
 				"ColorSpace":       Name(DeviceGrayCS),
 				"Width":            Integer(w),
 				"Height":           Integer(h),
 			},
 		),
 		Content:        buf,
-		FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: nil}}}
+		FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: nil}},
+	}
 
 	sd.InsertName("Filter", filter.Flate)
 
@@ -56,7 +57,7 @@ func createFlateImageObject(xRefTable *XRefTable, buf, sm []byte, w, h, bpc int,
 
 	if sm != nil {
 		var err error
-		softMaskIndRef, err = createSMaskObject(xRefTable, sm, w, h)
+		softMaskIndRef, err = createSMaskObject(xRefTable, sm, w, h, bpc)
 		if err != nil {
 			return nil, err
 		}
@@ -85,18 +86,7 @@ func createFlateImageObject(xRefTable *XRefTable, buf, sm []byte, w, h, bpc int,
 	return sd, nil
 }
 
-func createDCTImageObject(xRefTable *XRefTable, buf, sm []byte, w, h int, cs string) (*StreamDict, error) {
-
-	var softMaskIndRef *IndirectRef
-
-	if sm != nil {
-		var err error
-		softMaskIndRef, err = createSMaskObject(xRefTable, sm, w, h)
-		if err != nil {
-			return nil, err
-		}
-	}
-
+func createDCTImageObject(xRefTable *XRefTable, buf []byte, w, h int, cs string) (*StreamDict, error) {
 	sd := &StreamDict{
 		Dict: Dict(
 			map[string]Object{
@@ -121,10 +111,6 @@ func createDCTImageObject(xRefTable *XRefTable, buf, sm []byte, w, h int, cs str
 	}
 
 	sd.InsertName("Filter", filter.DCT)
-
-	if softMaskIndRef != nil {
-		sd.Insert("SMask", *softMaskIndRef)
-	}
 
 	if err := encodeStream(sd); err != nil {
 		return nil, err
@@ -214,7 +200,7 @@ func writeNRGBAImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte) 
 				if xRefTable != nil && c.A != 0xFF {
 					softMask = true
 					sm = []byte{}
-					for index := 0; index < y*h+x; index++ {
+					for j := 0; j < y*h+x; j++ {
 						sm = append(sm, 0xFF)
 					}
 					sm = append(sm, c.A)
@@ -227,6 +213,47 @@ func writeNRGBAImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte) 
 			buf[i+1] = c.G
 			buf[i+2] = c.B
 			i += 3
+		}
+	}
+
+	return buf, sm
+}
+
+func writeNRGBA64ImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte) {
+
+	w := img.Bounds().Dx()
+	h := img.Bounds().Dy()
+	i := 0
+	buf := make([]byte, w*h*6)
+	var sm []byte
+	var softMask bool
+
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			c := img.At(x, y).(color.NRGBA64)
+			if !softMask {
+				if xRefTable != nil && c.A != 0xFFFF {
+					softMask = true
+					sm = []byte{}
+					for j := 0; j < y*h+x; j++ {
+						sm = append(sm, 0xFF)
+						sm = append(sm, 0xFF)
+					}
+					sm = append(sm, uint8(c.A>>8))
+					sm = append(sm, uint8(c.A&0x00FF))
+				}
+			} else {
+				sm = append(sm, uint8(c.A>>8))
+				sm = append(sm, uint8(c.A&0x00FF))
+			}
+
+			buf[i] = uint8(c.R >> 8)
+			buf[i+1] = uint8(c.R & 0x00FF)
+			buf[i+2] = uint8(c.G >> 8)
+			buf[i+3] = uint8(c.G & 0x00FF)
+			buf[i+4] = uint8(c.B >> 8)
+			buf[i+5] = uint8(c.B & 0x00FF)
+			i += 6
 		}
 	}
 
@@ -283,7 +310,7 @@ func imgToImageDict(xRefTable *XRefTable, img image.Image) (*StreamDict, error) 
 	h := img.Bounds().Dy()
 
 	var buf []byte
-	var sm []byte
+	var sm []byte // soft mask aka alpha mask
 	var cs string
 
 	switch img.(type) {
@@ -306,7 +333,10 @@ func imgToImageDict(xRefTable *XRefTable, img image.Image) (*StreamDict, error) 
 		buf, sm = writeNRGBAImageBuf(xRefTable, img)
 
 	case *image.NRGBA64:
-		return nil, errors.New("unsupported image type: NRGBA66")
+		// Non-alpha-premultiplied 64-bit color.
+		cs = DeviceRGBCS
+		bpc = 16
+		buf, sm = writeNRGBA64ImageBuf(xRefTable, img)
 
 	case *image.Alpha:
 		return nil, errors.New("unsupported image type: Alpha")
@@ -369,5 +399,5 @@ func ReadJPEG(xRefTable *XRefTable, buf []byte, c image.Config) (*StreamDict, er
 
 	}
 
-	return createDCTImageObject(xRefTable, buf, nil, c.Width, c.Height, cs)
+	return createDCTImageObject(xRefTable, buf, c.Width, c.Height, cs)
 }
