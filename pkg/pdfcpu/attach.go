@@ -227,7 +227,7 @@ func (ctx *Context) ExtractAttachments(ids []string) ([]Attachment, error) {
 		if err != nil {
 			return err
 		}
-		a := Attachment{bytes.NewReader(sd.Content), id, desc, modTime}
+		a := Attachment{Reader: bytes.NewReader(sd.Content), ID: id, Desc: desc, ModTime: modTime}
 		aa = append(aa, a)
 		return nil
 	}

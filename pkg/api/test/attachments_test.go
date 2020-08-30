@@ -149,7 +149,7 @@ func TestAttachmentsLowLevel(t *testing.T) {
 	desc := "description"
 	want := "12345"
 	modTime := time.Now()
-	a := pdfcpu.Attachment{strings.NewReader(want), id, desc, &modTime}
+	a := pdfcpu.Attachment{Reader: strings.NewReader(want), ID: id, Desc: desc, ModTime: &modTime}
 
 	useCollection := false
 	if err = ctx.AddAttachment(a, useCollection); err != nil {

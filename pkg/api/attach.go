@@ -112,7 +112,7 @@ func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, co
 		}
 		mt := fi.ModTime()
 
-		a := pdfcpu.Attachment{f, filepath.Base(fileName), desc, &mt}
+		a := pdfcpu.Attachment{Reader: f, ID: filepath.Base(fileName), Desc: desc, ModTime: &mt}
 		if err = ctx.AddAttachment(a, coll); err != nil {
 			return err
 		}
