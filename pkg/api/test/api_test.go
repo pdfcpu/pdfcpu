@@ -68,8 +68,8 @@ func copyFile(t *testing.T, srcFileName, destFileName string) error {
 	_, err = io.Copy(to, from)
 	return err
 }
-func BenchmarkValidateCommand(b *testing.B) {
-	msg := "BenchmarkValidateCommand"
+func BenchmarkValidate(b *testing.B) {
+	msg := "BenchmarkValidate"
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		f, err := os.Open(filepath.Join(inDir, "gobook.0.pdf"))

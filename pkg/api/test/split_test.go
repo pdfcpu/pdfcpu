@@ -47,8 +47,8 @@ func TestSplitSpan2(t *testing.T) {
 	}
 }
 
-func TestSplit0ByBookmarkCommand(t *testing.T) {
-	msg := "TestSplit0ByBookmarkCommand"
+func TestSplit0ByBookmark(t *testing.T) {
+	msg := "TestSplit0ByBookmark"
 	fileName := "5116.DCT_Filter.pdf"
 	inFile := filepath.Join(inDir, fileName)
 

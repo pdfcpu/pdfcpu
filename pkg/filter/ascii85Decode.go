@@ -32,7 +32,7 @@ type ascii85Decode struct {
 const eodASCII85 = "~>"
 
 // Encode implements encoding for an ASCII85Decode filter.
-func (f ascii85Decode) Encode(r io.Reader) (*bytes.Buffer, error) {
+func (f ascii85Decode) Encode(r io.Reader) (io.Reader, error) {
 
 	p, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -51,7 +51,7 @@ func (f ascii85Decode) Encode(r io.Reader) (*bytes.Buffer, error) {
 }
 
 // Decode implements decoding for an ASCII85Decode filter.
-func (f ascii85Decode) Decode(r io.Reader) (*bytes.Buffer, error) {
+func (f ascii85Decode) Decode(r io.Reader) (io.Reader, error) {
 
 	p, err := ioutil.ReadAll(r)
 	if err != nil {

@@ -316,5 +316,5 @@ func ExampleExtractPagesFile() {
 func ExampleExtractMetadataFile() {
 
 	// Extract all metadata from in.pdf into outDir.
-	ExtractMetadataFile("in.pdf", "outDir", nil, nil)
+	ExtractMetadataFile("in.pdf", "outDir", nil)
 }

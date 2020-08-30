@@ -30,7 +30,7 @@ type asciiHexDecode struct {
 const eodHexDecode = '>'
 
 // Encode implements encoding for an ASCIIHexDecode filter.
-func (f asciiHexDecode) Encode(r io.Reader) (*bytes.Buffer, error) {
+func (f asciiHexDecode) Encode(r io.Reader) (io.Reader, error) {
 
 	bb, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -47,7 +47,7 @@ func (f asciiHexDecode) Encode(r io.Reader) (*bytes.Buffer, error) {
 }
 
 // Decode implements decoding for an ASCIIHexDecode filter.
-func (f asciiHexDecode) Decode(r io.Reader) (*bytes.Buffer, error) {
+func (f asciiHexDecode) Decode(r io.Reader) (io.Reader, error) {
 
 	bb, err := ioutil.ReadAll(r)
 	if err != nil {

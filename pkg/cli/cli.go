@@ -157,7 +157,7 @@ func ExtractContent(cmd *Command) ([]string, error) {
 
 // ExtractMetadata dumps all metadata dict entries for inFile into outDir.
 func ExtractMetadata(cmd *Command) ([]string, error) {
-	return nil, api.ExtractMetadataFile(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Conf)
+	return nil, api.ExtractMetadataFile(*cmd.InFile, *cmd.OutDir, cmd.Conf)
 }
 
 // ListAttachments returns a list of embedded file attachments for inFile.

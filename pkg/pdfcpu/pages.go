@@ -71,7 +71,7 @@ func (xRefTable *XRefTable) PageContent(d Dict) ([]byte, error) {
 		}
 
 	default:
-		return nil, errors.Errorf("Content: page content must be stream dict or array")
+		return nil, errors.Errorf("pdfcpu: page content must be stream dict or array")
 	}
 
 	if len(bb) == 0 {

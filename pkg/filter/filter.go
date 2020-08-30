@@ -17,17 +17,14 @@ limitations under the License.
 // Package filter contains PDF filter implementations.
 package filter
 
-// See 7.4 for a list of defined filter pdfcpu.
-
 import (
-	"bytes"
 	"io"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pkg/errors"
 )
 
-// PDF defines the following filters.
+// PDF defines the following filters. See also 7.4 in the PDF spec.
 const (
 	ASCII85   = "ASCII85Decode"
 	ASCIIHex  = "ASCIIHexDecode"
@@ -40,23 +37,17 @@ const (
 	JPX       = "JPXDecode"
 )
 
-var (
+// ErrUnsupportedFilter signals unsupported filter encountered.
+var ErrUnsupportedFilter = errors.New("pdfcpu: filter not supported")
 
-	// ErrUnsupportedFilter signals an unsupported filter type.
-	ErrUnsupportedFilter = errors.New("pdfcpu: filter not supported")
-)
-
-// Filter defines an interface for encoding/decoding buffers.
+// Filter defines an interface for encoding/decoding PDF object streams.
 type Filter interface {
-	Encode(r io.Reader) (*bytes.Buffer, error)
-	Decode(r io.Reader) (*bytes.Buffer, error)
-	//Encode(r io.Reader, w io.Writer) error
-	//Decode(r io.Reader, w io.Writer) error
+	Encode(r io.Reader) (io.Reader, error)
+	Decode(r io.Reader) (io.Reader, error)
 }
 
 // NewFilter returns a filter for given filterName and an optional parameter dictionary.
 func NewFilter(filterName string, parms map[string]int) (filter Filter, err error) {
-
 	switch filterName {
 
 	case ASCII85:
@@ -76,16 +67,20 @@ func NewFilter(filterName string, parms map[string]int) (filter Filter, err erro
 
 	case CCITTFax:
 		filter = ccittDecode{baseFilter{parms}}
+
 	case DCT:
 		// Unsupported
 		fallthrough
+
 	case JBIG2:
 		// Unsupported
 		fallthrough
+
 	case JPX:
 		// Unsupported
 		log.Info.Printf("Filter not supported: <%s>", filterName)
 		err = ErrUnsupportedFilter
+
 	default:
 		err = errors.Errorf("Invalid filter: <%s>", filterName)
 	}

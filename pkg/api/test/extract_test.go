@@ -17,15 +17,19 @@ limitations under the License.
 package test
 
 import (
+	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 )
 
-func TestExtractImagesCommand(t *testing.T) {
-	msg := "TestExtractImagesCommand"
-
+func TestExtractImages(t *testing.T) {
+	msg := "TestExtractImages"
 	// Extract images for all pages into outDir.
 	for _, fn := range []string{"5116.DCT_Filter.pdf", "testImage.pdf", "go.pdf"} {
 		fn = filepath.Join(inDir, fn)
@@ -33,7 +37,6 @@ func TestExtractImagesCommand(t *testing.T) {
 			t.Fatalf("%s %s: %v\n", msg, fn, err)
 		}
 	}
-
 	// Extract images for inFile starting with page 1 into outDir.
 	inFile := filepath.Join(inDir, "testImage.pdf")
 	if err := api.ExtractImagesFile(inFile, outDir, []string{"1-"}, nil); err != nil {
@@ -41,9 +44,49 @@ func TestExtractImagesCommand(t *testing.T) {
 	}
 }
 
-func TestExtractFontsCommand(t *testing.T) {
-	msg := "TestExtractFontsCommand"
+func TestExtractImagesLowLevel(t *testing.T) {
+	msg := "TestExtractImagesLowLevel"
+	fileName := "testImage.pdf"
+	inFile := filepath.Join(inDir, fileName)
 
+	// Create a context.
+	ctx, err := api.ReadContextFile(inFile)
+	if err != nil {
+		t.Fatalf("%s readContext: %v\n", msg, err)
+	}
+
+	// Optimize resource usage of this context.
+	if err := api.OptimizeContext(ctx); err != nil {
+		t.Fatalf("%s optimizeContext: %v\n", msg, err)
+	}
+
+	// Extract images for page 1.
+	i := 1
+	ii, err := ctx.ExtractPageImages(i)
+	if err != nil {
+		t.Fatalf("%s extractPageFonts(%d): %v\n", msg, i, err)
+	}
+
+	baseFileName := strings.TrimSuffix(filepath.Base(fileName), ".pdf")
+
+	// Process extracted images.
+	for _, img := range ii {
+		fn := filepath.Join(outDir, fmt.Sprintf("%s_%d_%s.%s", baseFileName, i, img.Name, img.Type))
+		w, err := os.Create(fn)
+		if err != nil {
+			t.Fatalf("%s create: %s", msg, fn)
+		}
+		if _, err = io.Copy(w, img); err != nil {
+			t.Fatalf("%s io.Copy for: %s", msg, fn)
+		}
+		if err := w.Close(); err != nil {
+			t.Fatalf("%s close %s", msg, fn)
+		}
+	}
+}
+
+func TestExtractFonts(t *testing.T) {
+	msg := "TestExtractFonts"
 	// Extract fonts for all pages into outDir.
 	for _, fn := range []string{"5116.DCT_Filter.pdf", "testImage.pdf", "go.pdf"} {
 		fn = filepath.Join(inDir, fn)
@@ -51,7 +94,6 @@ func TestExtractFontsCommand(t *testing.T) {
 			t.Fatalf("%s %s: %v\n", msg, fn, err)
 		}
 	}
-
 	// Extract fonts for inFile for pages 1-3 into outDir.
 	inFile := filepath.Join(inDir, "go.pdf")
 	if err := api.ExtractFontsFile(inFile, outDir, []string{"1-3"}, nil); err != nil {
@@ -59,19 +101,46 @@ func TestExtractFontsCommand(t *testing.T) {
 	}
 }
 
-func TestExtractContentCommand(t *testing.T) {
-	msg := "TestExtractContentCommand"
+func TestExtractFontsLowLevel(t *testing.T) {
+	msg := "TestExtractFontsLowLevel"
+	inFile := filepath.Join(inDir, "go.pdf")
 
-	// Extract content of all pages into outDir.
-	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
-	if err := api.ExtractContentFile(inFile, outDir, nil, nil); err != nil {
-		t.Fatalf("%s %s: %v\n", msg, inFile, err)
+	// Create a context.
+	ctx, err := api.ReadContextFile(inFile)
+	if err != nil {
+		t.Fatalf("%s readContext: %v\n", msg, err)
+	}
+
+	// Optimize resource usage of this context.
+	if err := api.OptimizeContext(ctx); err != nil {
+		t.Fatalf("%s optimizeContext: %v\n", msg, err)
+	}
+
+	// Extract fonts for page 1.
+	i := 1
+	ff, err := ctx.ExtractPageFonts(i)
+	if err != nil {
+		t.Fatalf("%s extractPageFonts(%d): %v\n", msg, i, err)
+	}
+
+	// Process extracted fonts.
+	for _, f := range ff {
+		fn := filepath.Join(outDir, fmt.Sprintf("%s.%s", f.Name, f.Type))
+		w, err := os.Create(fn)
+		if err != nil {
+			t.Fatalf("%s create: %s", msg, fn)
+		}
+		if _, err = io.Copy(w, f); err != nil {
+			t.Fatalf("%s io.Copy for: %s", msg, fn)
+		}
+		if err := w.Close(); err != nil {
+			t.Fatalf("%s close %s", msg, fn)
+		}
 	}
 }
 
-func TestExtractPagesCommand(t *testing.T) {
-	msg := "TestExtractPagesCommand"
-
+func TestExtractPages(t *testing.T) {
+	msg := "TestExtractPages"
 	// Extract page #1 into outDir.
 	inFile := filepath.Join(inDir, "TheGoProgrammingLanguageCh1.pdf")
 	if err := api.ExtractPagesFile(inFile, outDir, []string{"1"}, nil); err != nil {
@@ -79,12 +148,98 @@ func TestExtractPagesCommand(t *testing.T) {
 	}
 }
 
-func TestExtractMetadataCommand(t *testing.T) {
-	msg := "TestExtractMetadataCommand"
-
-	// Extract metadata into outDir.
+func TestExtractPagesLowLevel(t *testing.T) {
+	msg := "TestExtractPagesLowLevel"
 	inFile := filepath.Join(inDir, "TheGoProgrammingLanguageCh1.pdf")
-	if err := api.ExtractMetadataFile(inFile, outDir, nil, nil); err != nil {
+	outFile := filepath.Join(outDir, "MyExtractedAndProcessedSinglePage.pdf")
+
+	// Create a context.
+	ctx, err := api.ReadContextFile(inFile)
+	if err != nil {
+		t.Fatalf("%s readContext: %v\n", msg, err)
+	}
+
+	// Extract page 1.
+	i := 1
+	ctxNew, err := ctx.ExtractPage(i)
+	if err != nil {
+		t.Fatalf("%s extractPage(%d): %v\n", msg, i, err)
+	}
+
+	// Here you can process this single page PDF context.
+
+	// Write context to file.
+	if err := api.WriteContextFile(ctxNew, outFile); err != nil {
+		t.Fatalf("%s write: %v\n", msg, err)
+	}
+}
+
+func TestExtractContent(t *testing.T) {
+	msg := "TestExtractContent"
+	// Extract content of all pages into outDir.
+	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
+	if err := api.ExtractContentFile(inFile, outDir, nil, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
+	}
+}
+
+func TestExtractContentLowLevel(t *testing.T) {
+	msg := "TestExtractContentLowLevel"
+	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
+
+	// Create a context.
+	ctx, err := api.ReadContextFile(inFile)
+	if err != nil {
+		t.Fatalf("%s readContext: %v\n", msg, err)
+	}
+
+	// Extract page content for page 2.
+	i := 2
+	r, err := ctx.ExtractPageContent(i)
+	if err != nil {
+		t.Fatalf("%s extractPageContent(%d): %v\n", msg, i, err)
+	}
+
+	// Process page content.
+	bb, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatalf("%s readAll: %v\n", msg, err)
+	}
+	t.Logf("Page content (PDF-syntax) for page %d:\n%s", i, string(bb))
+}
+
+func TestExtractMetadata(t *testing.T) {
+	msg := "TestExtractMetadata"
+	// Extract all metadata into outDir.
+	inFile := filepath.Join(inDir, "TheGoProgrammingLanguageCh1.pdf")
+	if err := api.ExtractMetadataFile(inFile, outDir, nil); err != nil {
+		t.Fatalf("%s %s: %v\n", msg, inFile, err)
+	}
+}
+
+func TestExtractMetadataLowLevel(t *testing.T) {
+	msg := "TestExtractMedadataLowLevel"
+	inFile := filepath.Join(inDir, "TheGoProgrammingLanguageCh1.pdf")
+
+	// Create a context.
+	ctx, err := api.ReadContextFile(inFile)
+	if err != nil {
+		t.Fatalf("%s readContext: %v\n", msg, err)
+	}
+
+	// Extract all metadata.
+	mm, err := ctx.ExtractMetadata()
+	if err != nil {
+		t.Fatalf("%s ExtractMetadata: %v\n", msg, err)
+	}
+
+	// Process metadata.
+	for _, md := range mm {
+		bb, err := ioutil.ReadAll(md)
+		if err != nil {
+			t.Fatalf("%s metadata readAll: %v\n", msg, err)
+		}
+		t.Logf("Metadata: objNr=%d parentDictObjNr=%d parentDictType=%s\n%s\n",
+			md.ObjNr, md.ParentObjNr, md.ParentType, string(bb))
 	}
 }

@@ -27,7 +27,6 @@ import (
 func testAddWatermarks(t *testing.T, msg, inFile, outFile string, selectedPages []string, mode, modeParam, desc string, onTop bool) {
 	t.Helper()
 	inFile = filepath.Join(inDir, inFile)
-	//outFile = filepath.Join(outDir, outFile)
 	s := "watermark"
 	if onTop {
 		s = "stamp"

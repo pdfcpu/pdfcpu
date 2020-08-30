@@ -113,7 +113,7 @@ func (f runLengthDecode) encode(w io.ByteWriter, src []byte) {
 }
 
 // Encode implements encoding for a RunLengthDecode filter.
-func (f runLengthDecode) Encode(r io.Reader) (*bytes.Buffer, error) {
+func (f runLengthDecode) Encode(r io.Reader) (io.Reader, error) {
 
 	p, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -127,7 +127,7 @@ func (f runLengthDecode) Encode(r io.Reader) (*bytes.Buffer, error) {
 }
 
 // Decode implements decoding for an RunLengthDecode filter.
-func (f runLengthDecode) Decode(r io.Reader) (*bytes.Buffer, error) {
+func (f runLengthDecode) Decode(r io.Reader) (io.Reader, error) {
 
 	p, err := ioutil.ReadAll(r)
 	if err != nil {

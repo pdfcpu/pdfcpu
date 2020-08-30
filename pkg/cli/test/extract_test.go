@@ -28,7 +28,8 @@ func TestExtractImagesCommand(t *testing.T) {
 
 	// Extract all images for each PDF file into outDir.
 	cmd := cli.ExtractImagesCommand("", outDir, nil, nil)
-	for _, f := range allPDFs(t, inDir) {
+	//for _, f := range allPDFs(t, inDir) {
+	for _, f := range []string{"5116.DCT_Filter.pdf", "testImage.pdf", "go.pdf"} {
 		inFile := filepath.Join(inDir, f)
 		cmd.InFile = &inFile
 		// Extract all images.
@@ -48,7 +49,7 @@ func TestExtractImagesCommand(t *testing.T) {
 func TestExtractFontsCommand(t *testing.T) {
 	msg := "TestExtractFontsCommand"
 
-	// Extract fonts for all pages into outDir.
+	// Extract fonts for all pages for the following 3 PDF files into outDir.
 	cmd := cli.ExtractFontsCommand("", outDir, nil, nil)
 	for _, fn := range []string{"5116.DCT_Filter.pdf", "testImage.pdf", "go.pdf"} {
 		fn = filepath.Join(inDir, fn)
@@ -66,20 +67,8 @@ func TestExtractFontsCommand(t *testing.T) {
 	}
 }
 
-func TestExtractContentCommand(t *testing.T) {
-	msg := "TestExtractContentCommand"
-
-	// Extract content of all pages into outDir.
-	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
-	cmd := cli.ExtractContentCommand(inFile, outDir, nil, nil)
-	if _, err := cli.Process(cmd); err != nil {
-		t.Fatalf("%s %s: %v\n", msg, inFile, err)
-	}
-}
-
 func TestExtractPagesCommand(t *testing.T) {
 	msg := "TestExtractPagesCommand"
-
 	// Extract page #1 into outDir.
 	inFile := filepath.Join(inDir, "TheGoProgrammingLanguageCh1.pdf")
 	cmd := cli.ExtractPagesCommand(inFile, outDir, []string{"1"}, nil)
@@ -88,9 +77,18 @@ func TestExtractPagesCommand(t *testing.T) {
 	}
 }
 
+func TestExtractContentCommand(t *testing.T) {
+	msg := "TestExtractContentCommand"
+	// Extract content of all pages into outDir.
+	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
+	cmd := cli.ExtractContentCommand(inFile, outDir, nil, nil)
+	if _, err := cli.Process(cmd); err != nil {
+		t.Fatalf("%s %s: %v\n", msg, inFile, err)
+	}
+}
+
 func TestExtractMetadataCommand(t *testing.T) {
 	msg := "TestExtractMetadataCommand"
-
 	// Extract metadata into outDir.
 	inFile := filepath.Join(inDir, "TheGoProgrammingLanguageCh1.pdf")
 	cmd := cli.ExtractMetadataCommand(inFile, outDir, nil)

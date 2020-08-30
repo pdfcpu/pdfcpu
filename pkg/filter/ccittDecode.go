@@ -30,13 +30,13 @@ type ccittDecode struct {
 }
 
 // Encode implements encoding for an CCITTDecode filter.
-func (f ccittDecode) Encode(r io.Reader) (*bytes.Buffer, error) {
+func (f ccittDecode) Encode(r io.Reader) (io.Reader, error) {
 	// TODO
 	return nil, nil
 }
 
 // Decode implements decoding for a CCITTDecode filter.
-func (f ccittDecode) Decode(r io.Reader) (*bytes.Buffer, error) {
+func (f ccittDecode) Decode(r io.Reader) (io.Reader, error) {
 
 	log.Trace.Println("DecodeCCITT begin")
 

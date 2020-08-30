@@ -17,11 +17,10 @@ limitations under the License.
 package filter_test
 
 import (
-	"bufio"
-	"bytes"
 	"errors"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
@@ -36,12 +35,10 @@ func encodeDecodeUsingFilterNamed(t *testing.T, filterName string) {
 		t.Fatalf("Problem: %v\n", err)
 	}
 
-	input := "Hello, Gopher!"
-	t.Logf("encoding using filter %s: len:%d % X <%s>\n", filterName, len(input), input, input)
+	want := "Hello, Gopher!"
+	t.Logf("encoding using filter %s: len:%d % X <%s>\n", filterName, len(want), want, want)
 
-	r := bytes.NewReader([]byte(input))
-
-	b1, err := filter.Encode(r)
+	b1, err := filter.Encode(strings.NewReader(want))
 	if err != nil {
 		t.Fatalf("Problem encoding 1: %v\n", err)
 	}
@@ -65,10 +62,14 @@ func encodeDecodeUsingFilterNamed(t *testing.T, filterName string) {
 	}
 	//t.Logf("decoded 1:  len:%d % X <%s>\n", c2.Len(), c2.Bytes(), c2.Bytes())
 
-	if input != c2.String() {
-		t.Fatal("original content != decoded content")
+	bb, err := ioutil.ReadAll(c2)
+	if err != nil {
+		t.Fatalf("%v\n", err)
 	}
-
+	got := string(bb)
+	if got != want {
+		t.Fatalf("got:%s want:%s\n", got, want)
+	}
 }
 
 func TestFilterSupport(t *testing.T) {
@@ -97,11 +98,9 @@ func TestFilterSupport(t *testing.T) {
 }
 
 func TestEncodeDecode(t *testing.T) {
-
 	for _, f := range filter.List() {
 		encodeDecodeUsingFilterNamed(t, f)
 	}
-
 }
 
 var filenames = []string{
@@ -129,7 +128,7 @@ func testFile(t *testing.T, filterName, fileName string) {
 	}
 	defer raw.Close()
 
-	enc, err := f.Encode(bufio.NewReader(raw))
+	enc, err := f.Encode(raw)
 	if err != nil {
 		t.Errorf("Problem encoding: %v\n", err)
 	}
@@ -153,7 +152,11 @@ func testFile(t *testing.T, filterName, fileName string) {
 		return
 	}
 
-	d := dec.Bytes()
+	d, err := ioutil.ReadAll(dec)
+	if err != nil {
+		t.Errorf("%s: %v", fileName, err)
+		return
+	}
 
 	if len(d) != len(g) {
 		t.Errorf("%s: length mismatch %d != %d", fileName, len(d), len(g))

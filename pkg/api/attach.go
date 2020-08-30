@@ -18,7 +18,6 @@ package api
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -113,7 +112,7 @@ func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, co
 		}
 		mt := fi.ModTime()
 
-		a := pdfcpu.NewAttachment(f, filepath.Base(fileName), desc, &mt)
+		a := pdfcpu.Attachment{f, filepath.Base(fileName), desc, &mt}
 		if err = ctx.AddAttachment(a, coll); err != nil {
 			return err
 		}
@@ -275,11 +274,15 @@ func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, con
 	}
 
 	for _, a := range aa {
-		bb, err := a.Bytes()
+		filename := filepath.Join(outDir, a.ID)
+		f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 		if err != nil {
 			return err
 		}
-		if err := ioutil.WriteFile(filepath.Join(outDir, a.ID), bb, os.ModePerm); err != nil {
+		if _, err = io.Copy(f, a); err != nil {
+			return err
+		}
+		if err := f.Close(); err != nil {
 			return err
 		}
 	}

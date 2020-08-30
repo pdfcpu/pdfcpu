@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
@@ -101,34 +100,16 @@ func fileSpecStreamDictInfo(xRefTable *XRefTable, id string, o Object, decode bo
 	return sd, desc, modDate, nil
 }
 
-// Attachment represents a PDF attachment.
+// Attachment is a Reader representing a PDF attachment.
 type Attachment struct {
-	r       io.Reader  // reader, used for add and extract only.
-	ID      string     // id
-	Desc    string     // description
-	ModTime *time.Time // time of last modification (optional)
-}
-
-// Bytes returns this attachments data.
-func (a Attachment) Bytes() ([]byte, error) {
-	if a.r == nil {
-		return nil, nil
-	}
-	return ioutil.ReadAll(a.r)
+	io.Reader            // attachment data
+	ID        string     // id
+	Desc      string     // description
+	ModTime   *time.Time // time of last modification (optional)
 }
 
 func (a Attachment) String() string {
 	return fmt.Sprintf("Attachment: id:%s desc:%s modTime:%s", a.ID, a.Desc, a.ModTime)
-}
-
-// NewAttachment returns a new attachment.
-func NewAttachment(r io.Reader, id string, desc string, modTime *time.Time) Attachment {
-	return Attachment{
-		r:       r,
-		ID:      id,
-		Desc:    desc,
-		ModTime: modTime,
-	}
 }
 
 // ListAttachments returns a slice of attachment stubs (attachment w/o data).
@@ -151,7 +132,7 @@ func (ctx *Context) ListAttachments() ([]Attachment, error) {
 		if err != nil {
 			return err
 		}
-		aa = append(aa, NewAttachment(nil, id, desc, modTime))
+		aa = append(aa, Attachment{nil, id, desc, modTime})
 		return nil
 	}
 
@@ -246,7 +227,7 @@ func (ctx *Context) ExtractAttachments(ids []string) ([]Attachment, error) {
 		if err != nil {
 			return err
 		}
-		a := NewAttachment(bytes.NewReader(sd.Content), id, desc, modTime)
+		a := Attachment{bytes.NewReader(sd.Content), id, desc, modTime}
 		aa = append(aa, a)
 		return nil
 	}

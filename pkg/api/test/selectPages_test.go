@@ -153,7 +153,7 @@ func collectedPagesString(cp []int, pageCount int) string {
 	return fmt.Sprint(cp)
 }
 
-func testCollectedPages(s string, pageCount int, compareString string, t *testing.T) {
+func testCollectedPages(s string, pageCount int, want string, t *testing.T) {
 	pageSelection, err := api.ParsePageSelection(s)
 	if err != nil {
 		t.Fatalf("testCollectedPages(%s) %v\n", s, err)
@@ -164,11 +164,11 @@ func testCollectedPages(s string, pageCount int, compareString string, t *testin
 		t.Fatalf("testCollectedPages(%s) %v\n", s, err)
 	}
 
-	resultString := collectedPagesString(collectedPages, pageCount)
-	fmt.Printf("%s\n", resultString)
+	got := collectedPagesString(collectedPages, pageCount)
+	//fmt.Printf("%s\n", resultString)
 
-	if resultString != compareString {
-		t.Fatalf("testCollectedPages(%s) expected:%s got%s\n", s, compareString, resultString)
+	if got != want {
+		t.Fatalf("testCollectedPages(%s) want:%s got%s\n", s, want, got)
 	}
 }
 

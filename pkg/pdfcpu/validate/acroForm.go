@@ -204,10 +204,9 @@ func validateAcroFieldDict(xRefTable *pdf.XRefTable, ir pdf.IndirectRef, inField
 			return errors.New("pdfcpu: validateAcroFieldDict: non terminal field can not be widget annotation")
 		}
 
-		// Write field entries.
+		// Validate field entries.
 		var xInFieldType *pdf.Name
-		xInFieldType, err = validateAcroFieldDictEntries(xRefTable, d, false, inFieldType)
-		if err != nil {
+		if xInFieldType, err = validateAcroFieldDictEntries(xRefTable, d, false, inFieldType); err != nil {
 			return err
 		}
 
@@ -224,8 +223,7 @@ func validateAcroFieldDict(xRefTable *pdf.XRefTable, ir pdf.IndirectRef, inField
 				return errors.New("pdfcpu: validateAcroFieldDict: corrupt kids array: entries must be indirect reference")
 			}
 
-			err = validateAcroFieldDict(xRefTable, ir, xInFieldType)
-			if err != nil {
+			if err = validateAcroFieldDict(xRefTable, ir, xInFieldType); err != nil {
 				return err
 			}
 
@@ -235,14 +233,12 @@ func validateAcroFieldDict(xRefTable *pdf.XRefTable, ir pdf.IndirectRef, inField
 	}
 
 	// dict represents a terminal field and must have Subtype "Widget"
-	_, err = validateNameEntry(xRefTable, d, "acroFieldDict", "Subtype", REQUIRED, pdf.V10, func(s string) bool { return s == "Widget" })
-	if err != nil {
+	if _, err = validateNameEntry(xRefTable, d, "acroFieldDict", "Subtype", REQUIRED, pdf.V10, func(s string) bool { return s == "Widget" }); err != nil {
 		return err
 	}
 
 	// Validate field dict entries.
-	_, err = validateAcroFieldDictEntries(xRefTable, d, true, inFieldType)
-	if err != nil {
+	if _, err = validateAcroFieldDictEntries(xRefTable, d, true, inFieldType); err != nil {
 		return err
 	}
 

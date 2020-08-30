@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"io"
+	"io/ioutil"
 
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -75,10 +76,8 @@ func encodeStream(sd *StreamDict) error {
 		return nil
 	}
 
-	var b io.Reader
+	var b, c io.Reader
 	b = bytes.NewReader(sd.Content)
-
-	var c *bytes.Buffer
 
 	// Apply each filter in the pipeline to result of preceding filter.
 	for _, f := range sd.FilterPipeline {
@@ -105,7 +104,11 @@ func encodeStream(sd *StreamDict) error {
 		b = c
 	}
 
-	sd.Raw = c.Bytes()
+	var err error
+	sd.Raw, err = ioutil.ReadAll(c)
+	if err != nil {
+		return err
+	}
 
 	streamLength := int64(len(sd.Raw))
 	sd.StreamLength = &streamLength
@@ -133,12 +136,10 @@ func decodeStream(sd *StreamDict) error {
 		return nil
 	}
 
-	var b io.Reader
-	b = bytes.NewReader(sd.Raw)
-
 	//fmt.Printf("decodedStream before:\n%s\n", hex.Dump(sd.Raw))
 
-	var c *bytes.Buffer
+	var b, c io.Reader
+	b = bytes.NewReader(sd.Raw)
 
 	// Apply each filter in the pipeline to result of preceding filter.
 	for _, f := range sd.FilterPipeline {
@@ -176,11 +177,14 @@ func decodeStream(sd *StreamDict) error {
 		}
 
 		//fmt.Printf("decodedStream after:%s\n%s\n", f.Name, hex.Dump(c.Bytes()))
-
 		b = c
 	}
 
-	sd.Content = c.Bytes()
+	var err error
+	sd.Content, err = ioutil.ReadAll(c)
+	if err != nil {
+		return err
+	}
 
 	//log.Trace.Printf("decodedStream returning %d(#%02x)bytes: \n%s\n", len(sd.Content), len(sd.Content), hex.Dump(c.Bytes()))
 

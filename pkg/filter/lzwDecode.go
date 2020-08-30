@@ -30,7 +30,7 @@ type lzwDecode struct {
 }
 
 // Encode implements encoding for an LZWDecode filter.
-func (f lzwDecode) Encode(r io.Reader) (*bytes.Buffer, error) {
+func (f lzwDecode) Encode(r io.Reader) (io.Reader, error) {
 
 	log.Trace.Println("EncodeLZW begin")
 
@@ -54,7 +54,7 @@ func (f lzwDecode) Encode(r io.Reader) (*bytes.Buffer, error) {
 }
 
 // Decode implements decoding for an LZWDecode filter.
-func (f lzwDecode) Decode(r io.Reader) (*bytes.Buffer, error) {
+func (f lzwDecode) Decode(r io.Reader) (io.Reader, error) {
 
 	log.Trace.Println("DecodeLZW begin")
 

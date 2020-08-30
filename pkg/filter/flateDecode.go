@@ -56,7 +56,7 @@ type flate struct {
 }
 
 // Encode implements encoding for a Flate filter.
-func (f flate) Encode(r io.Reader) (*bytes.Buffer, error) {
+func (f flate) Encode(r io.Reader) (io.Reader, error) {
 
 	log.Trace.Println("EncodeFlate begin")
 
@@ -76,7 +76,7 @@ func (f flate) Encode(r io.Reader) (*bytes.Buffer, error) {
 }
 
 // Decode implements decoding for a Flate filter.
-func (f flate) Decode(r io.Reader) (*bytes.Buffer, error) {
+func (f flate) Decode(r io.Reader) (io.Reader, error) {
 
 	log.Trace.Println("DecodeFlate begin")
 
@@ -250,7 +250,7 @@ func (f flate) parameters() (colors, bpc, columns int, err error) {
 }
 
 // decodePostProcess
-func (f flate) decodePostProcess(r io.Reader) (*bytes.Buffer, error) {
+func (f flate) decodePostProcess(r io.Reader) (io.Reader, error) {
 
 	predictor, found := f.parms["Predictor"]
 	if !found || predictor == PredictorNo {

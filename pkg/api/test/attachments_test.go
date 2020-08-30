@@ -17,6 +17,7 @@ limitations under the License.
 package test
 
 import (
+	"io/ioutil"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -46,9 +47,9 @@ func listAttachments(t *testing.T, msg, fileName string, want int) []string {
 		t.Fatalf("%s list attachments: %v\n", msg, err)
 	}
 
-	// # of attachments must be want
-	if len(list) != want {
-		t.Fatalf("%s: list attachments %s: want %d got %d\n", msg, fileName, want, len(list))
+	got := len(list)
+	if got != want {
+		t.Fatalf("%s: list attachments %s: want %d got %d\n", msg, fileName, want, got)
 	}
 	return list
 }
@@ -148,7 +149,7 @@ func TestAttachmentsLowLevel(t *testing.T) {
 	desc := "description"
 	want := "12345"
 	modTime := time.Now()
-	a := pdfcpu.NewAttachment(strings.NewReader(want), id, desc, &modTime)
+	a := pdfcpu.Attachment{strings.NewReader(want), id, desc, &modTime}
 
 	useCollection := false
 	if err = ctx.AddAttachment(a, useCollection); err != nil {
@@ -195,7 +196,7 @@ func TestAttachmentsLowLevel(t *testing.T) {
 	}
 
 	// Compare extracted attachment bytes.
-	gotBytes, err := aa[0].Bytes()
+	gotBytes, err := ioutil.ReadAll(aa[0])
 	if err != nil {
 		t.Fatalf("%s extractAttachment: attachment %s no data available\n", msg, id)
 	}

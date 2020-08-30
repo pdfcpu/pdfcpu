@@ -422,7 +422,7 @@ func (xRefTable *XRefTable) NewFileSpectDictForAttachment(a Attachment) (*Indire
 	if a.ModTime != nil {
 		modTime = *a.ModTime
 	}
-	sd, err := xRefTable.NewEmbeddedStreamDict(a.r, modTime)
+	sd, err := xRefTable.NewEmbeddedStreamDict(a, modTime)
 	if err != nil {
 		return nil, err
 	}
@@ -1643,9 +1643,64 @@ func rect(xRefTable *XRefTable, a Array) (*Rectangle, error) {
 	return Rect(llx, lly, urx, ury), nil
 }
 
+func (xRefTable *XRefTable) consolidateResources(obj Object, pAttrs *InheritedPageAttrs) error {
+	d, err := xRefTable.DereferenceDict(obj)
+	if err != nil {
+		return err
+	}
+	if d == nil || len(d) == 0 {
+		return nil
+	}
+
+	if pAttrs.resources == nil {
+		// Create a resource dict that eventually will contain any inherited resources
+		// while walking down from the page root to the leave node representing the page in question.
+		pAttrs.resources = d.Clone().(Dict)
+		for k, v := range pAttrs.resources {
+			o, err := xRefTable.Dereference(v)
+			if err != nil {
+				return err
+			}
+			pAttrs.resources[k] = o.Clone()
+		}
+		log.Write.Printf("pA:\n%s\n", pAttrs.resources)
+		return nil
+	}
+
+	// Accumulate any resources defined in this page node into the inherited resources.
+	for k, v := range d {
+		if k == "ProcSet" || v == nil {
+			continue
+		}
+		d1, err := xRefTable.DereferenceDict(v)
+		if err != nil {
+			return err
+		}
+		if d1 == nil {
+			continue
+		}
+		// We have identified a subdict that needs to go into the inherited res dict.
+		if pAttrs.resources[k] == nil {
+			pAttrs.resources[k] = d1.Clone()
+			continue
+		}
+		d2, ok := pAttrs.resources[k].(Dict)
+		if !ok {
+			return errors.Errorf("pdfcpu: checkInheritedPageAttrs: expected Dict d2: %T", pAttrs.resources[k])
+		}
+		// Weave the sub dict d1 into the inherited sub dict.
+		// Any existing resource names will be overridden.
+		for k, v := range d1 {
+			d2[k] = v.Clone()
+		}
+	}
+
+	return nil
+}
+
 func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict Dict, pAttrs *InheritedPageAttrs, consolidateRes bool) error {
 	// Compose a direct resource dict.
-	// if consolidateRes is true accumulate all inherited resources into it.
+	// if consolidateRes is true consolidate all inherited resources into it.
 	var (
 		obj   Object
 		found bool
@@ -1691,58 +1746,11 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict Dict, pAttrs *Inher
 	}
 
 	// Accumulate all inherited resources.
-	if obj, found = pageDict.Find("Resources"); found {
-		d, err := xRefTable.DereferenceDict(obj)
-		if err != nil {
-			return err
-		}
-		if d == nil || len(d) == 0 {
-			return nil
-		}
-		if pAttrs.resources == nil {
-			// Create a resource dict that eventually will contain any inherited resources
-			// while walking down from the page root to the leave node representing the page in question.
-			pAttrs.resources = d.Clone().(Dict)
-			for k, v := range pAttrs.resources {
-				o, err := xRefTable.Dereference(v)
-				if err != nil {
-					return err
-				}
-				pAttrs.resources[k] = o.Clone()
-			}
-			log.Write.Printf("pA:\n%s\n", pAttrs.resources)
-			return nil
-		}
-		// Accumulate any resources defined in this page node into the inherited resources.
-		for k, v := range d {
-			if k == "ProcSet" || v == nil {
-				continue
-			}
-			d1, err := xRefTable.DereferenceDict(v)
-			if err != nil {
-				return err
-			}
-			if d1 == nil {
-				continue
-			}
-			// We have identified a subdict that needs to go into the inherited res dict.
-			if pAttrs.resources[k] == nil {
-				pAttrs.resources[k] = d1.Clone()
-				continue
-			}
-			d2, ok := pAttrs.resources[k].(Dict)
-			if !ok {
-				return errors.Errorf("pdfcpu: checkInheritedPageAttrs: expected Dict d2: %T", pAttrs.resources[k])
-			}
-			// Weave the sub dict d1 into the inherited sub dict.
-			// Any existing resource names will be overridden.
-			for k, v := range d1 {
-				d2[k] = v.Clone()
-			}
-		}
+	if obj, found = pageDict.Find("Resources"); !found {
+		return nil
 	}
 
-	return nil
+	return xRefTable.consolidateResources(obj, pAttrs)
 }
 
 func consolidateResourceSubDict(d Dict, key string, prn PageResourceNames, pageNr int) error {
