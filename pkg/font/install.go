@@ -206,7 +206,7 @@ func (t table) parsePostScriptTable(fd *ttf) error {
 func printUnicodeRange(off int, r uint32) {
 	for i := 0; i < 64; i++ {
 		if r&1 > 0 {
-			fmt.Printf("bit %d: on\n", off+i)
+			//fmt.Printf("bit %d: on\n", off+i)
 		}
 		r >>= 1
 	}

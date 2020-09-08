@@ -256,7 +256,7 @@ func (ctx *Context) ExtractPageContent(pageNr int) (io.Reader, error) {
 		return nil, err
 	}
 	bb, err := ctx.PageContent(d)
-	if err != nil {
+	if err != nil && err != errNoContent {
 		return nil, err
 	}
 	return bytes.NewReader(bb), nil

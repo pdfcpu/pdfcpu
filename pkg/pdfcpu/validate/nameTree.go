@@ -655,7 +655,7 @@ func validateNameTreeDictLimitsEntry(xRefTable *pdf.XRefTable, d pdf.Dict, first
 	if !ok {
 		fk, _ := a[0].(pdf.HexLiteral)
 		//bb, _ := fk.Bytes()
-		//	fmt.Printf("fk: %v %s\n", bb, string(bb))
+		//fmt.Printf("fk: %v %s\n", bb, string(bb))
 		fkv = fk.Value()
 	} else {
 		fkv = fk.Value()

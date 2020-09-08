@@ -79,7 +79,10 @@ func NewIntegerArray(fVars ...int) Array {
 func (a Array) Clone() Object {
 	a1 := Array(make([]Object, len(a)))
 	for k, v := range a {
-		a1[k] = v.Clone()
+		if v != nil {
+			v = v.Clone()
+		}
+		a1[k] = v
 	}
 	return a1
 }

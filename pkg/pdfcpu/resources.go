@@ -102,7 +102,6 @@ func (fo FontObject) String() string {
 type ImageObject struct {
 	ResourceNames []string
 	ImageDict     *StreamDict
-	//Extension     string
 }
 
 // AddResourceName adds a resourceName to this imageObject's ResourceNames dict.
@@ -123,14 +122,6 @@ func (io ImageObject) ResourceNamesString() string {
 	}
 	return strings.Join(resNames, ",")
 }
-
-// Data returns the raw data belonging to this image object.
-// func (io ImageObject) Data() []byte {
-// 	if io.Extension == "png" {
-// 		return io.ImageDict.Content
-// 	}
-// 	return io.ImageDict.Raw
-// }
 
 var resourceTypes = NewStringSet([]string{"ColorSpace", "ExtGState", "Font", "Pattern", "Properties", "Shading", "XObject"})
 
@@ -178,89 +169,4 @@ func (prn PageResourceNames) String() string {
 		s = append(s, k+": "+strings.Join(ss, sep)+"\n")
 	}
 	return strings.Join(s, "")
-}
-
-// PageResourceNamesForContent detects all resource names used by s.
-func PageResourceNamesForContent(s string) PageResourceNames {
-	//fmt.Println("prn begin")
-	prn := NewPageResourceNames()
-
-	ss := strings.Fields(s)
-
-	var inTJ, inTj bool
-	for i, s := range ss {
-		// Skip TJ expressions.
-		if inTJ {
-			i := strings.Index(s, "]")
-			if i < 0 {
-				continue
-			}
-			if i == 0 || s[i-1] != '\\' {
-				inTJ = false
-			}
-			continue
-		}
-		// Skip Tj expressions.
-		if inTj {
-			i := strings.Index(s, ")")
-			if i < 0 {
-				continue
-			}
-			if i == 0 || s[i-1] != '\\' {
-				inTj = false
-			}
-			continue
-		}
-		if strings.HasPrefix(s, "[") {
-			i := strings.Index(s, "]")
-			if i < 0 || s[i-1] == '\\' {
-				inTJ = true
-			}
-			continue
-		}
-		if strings.HasPrefix(s, "(") {
-			i := strings.Index(s, ")")
-			if i < 0 || s[i-1] == '\\' {
-				inTj = true
-			}
-			continue
-		}
-		//fmt.Println(s)
-		// Detect Resource Name usage
-		switch s {
-		case "cs":
-			//fmt.Printf("Colorspace: %s\n", ss[i-1])
-			prn["ColorSpace"][ss[i-1][1:]] = true
-
-		case "gs":
-			//fmt.Printf("ExtGState: %s\n", ss[i-1])
-			prn["ExtGState"][ss[i-1][1:]] = true
-
-		case "scn", "SCN":
-			//fmt.Printf("Pattern: %s\n", ss[i-1])
-			if ss[i-1][0] == '/' {
-				prn["Pattern"][ss[i-1][1:]] = true
-			}
-
-		case "DP", "BDC":
-			//fmt.Printf("PropList: %s\n", ss[i-1])
-			if ss[i-1][0] == '/' {
-				prn["Properties"][ss[i-1][1:]] = true
-			}
-
-		case "sh":
-			//fmt.Printf("Shading: %s\n", ss[i-1])
-			prn["Shading"][ss[i-1][1:]] = true
-
-		case "Do":
-			//fmt.Printf("XObject: %s\n", ss[i-1])
-			prn["XObject"][ss[i-1][1:]] = true
-
-		case "Tf":
-			//fmt.Printf("Font: %s\n", ss[i-2])
-			prn["Font"][ss[i-2][1:]] = true
-		}
-	}
-
-	return prn
 }

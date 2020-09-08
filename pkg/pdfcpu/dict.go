@@ -42,7 +42,10 @@ func (d Dict) Len() int {
 func (d Dict) Clone() Object {
 	d1 := NewDict()
 	for k, v := range d {
-		d1.Insert(k, v.Clone())
+		if v != nil {
+			v = v.Clone()
+		}
+		d1.Insert(k, v)
 	}
 	return d1
 }

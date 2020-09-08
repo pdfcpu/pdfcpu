@@ -1691,7 +1691,10 @@ func (xRefTable *XRefTable) consolidateResources(obj Object, pAttrs *InheritedPa
 		// Weave the sub dict d1 into the inherited sub dict.
 		// Any existing resource names will be overridden.
 		for k, v := range d1 {
-			d2[k] = v.Clone()
+			if v != nil {
+				v = v.Clone()
+			}
+			d2[k] = v
 		}
 	}
 
@@ -1757,7 +1760,7 @@ func consolidateResourceSubDict(d Dict, key string, prn PageResourceNames, pageN
 	o := d[key]
 	if o == nil {
 		if prn.HasResources(key) {
-			return errors.Errorf("pdfcpu: page %d: missing required resource subdict: %s", pageNr, key)
+			return errors.Errorf("pdfcpu: page %d: missing required resource subdict: %s\n%s", pageNr, key, prn)
 		}
 		return nil
 	}
@@ -1766,16 +1769,20 @@ func consolidateResourceSubDict(d Dict, key string, prn PageResourceNames, pageN
 		return nil
 	}
 	d1 := o.(Dict)
+	set := StringSet{}
 	res := prn.Resources(key)
 	// Iterate over inherited resource sub dict and remove any entries not required.
 	for k := range d1 {
-		if !res[k] {
+		ki := Name(k).Value()
+		if !res[ki] {
 			d1.Delete(k)
+			continue
 		}
+		set[ki] = true
 	}
 	// Check for missing resource sub dict entries.
 	for k := range res {
-		if d1[k] == nil {
+		if !set[k] {
 			return errors.Errorf("pdfcpu: page %d: missing required %s: %s", pageNr, key, k)
 		}
 	}
@@ -1829,11 +1836,17 @@ func (xRefTable *XRefTable) processPageTreeForPageDict(root *IndirectRef, pAttrs
 
 		bb, err := xRefTable.PageContent(d)
 		if err != nil {
+			if err == errNoContent {
+				return d, nil
+			}
 			return nil, err
 		}
 
 		// Calculate resources required by the content stream of this page.
-		prn := PageResourceNamesForContent(string(bb))
+		prn, err := parseContent(string(bb))
+		if err != nil {
+			return nil, err
+		}
 
 		// Compare required resouces (prn) with available resources (pAttrs.resources).
 		// Remove any resource that's not required.

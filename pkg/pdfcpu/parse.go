@@ -120,17 +120,14 @@ func trimLeftSpace(s string) (outstr string, trimmedSpaces int) {
 
 // HexString validates and formats a hex string to be of even length.
 func hexString(s string) (*string, bool) {
-
-	log.Parse.Printf("HexString(%s)\n", s)
-
 	if len(s) == 0 {
 		s1 := ""
 		return &s1, true
 	}
 
 	var sb strings.Builder
-
 	i := 0
+
 	for _, c := range strings.ToUpper(s) {
 		if strings.IndexRune(" \x09\x0A\x0C\x0D", c) >= 0 {
 			if i%2 > 0 {
@@ -139,10 +136,8 @@ func hexString(s string) (*string, bool) {
 			}
 			continue
 		}
-		log.Parse.Printf("checking <%c>\n", c)
 		isHexChar := false
 		for _, hexch := range "ABCDEF1234567890" {
-			log.Parse.Printf("checking against <%c>\n", hexch)
 			if c == hexch {
 				isHexChar = true
 				sb.WriteRune(c)
@@ -151,12 +146,9 @@ func hexString(s string) (*string, bool) {
 			}
 		}
 		if !isHexChar {
-			log.Parse.Println("isHexStr returning false")
 			return nil, false
 		}
 	}
-
-	log.Parse.Println("isHexStr returning true")
 
 	// If the final digit of a hexadecimal string is missing -
 	// that is, if there is an odd number of digits - the final digit shall be assumed to be 0.

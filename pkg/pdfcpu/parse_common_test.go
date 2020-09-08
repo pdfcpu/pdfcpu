@@ -36,8 +36,7 @@ func doTestParseObjectOK(parseString string, t *testing.T) {
 		nextParseString = fmt.Sprintf("next parseString: <%s>\n\n", parseString)
 	}
 
-	//t.Logf("\nparseString: <%s>\nparsed Object: %v\n%s", str, o, nextParseString)
-	fmt.Printf("\nparseString: <%s>\nparsed Object: <%v>\n%s", str, o, nextParseString)
+	t.Logf("\nparseString: <%s>\nparsed Object: %v\n%s", str, o, nextParseString)
 }
 
 func doTestParseObjectFail(parseString string, t *testing.T) {
@@ -46,7 +45,7 @@ func doTestParseObjectFail(parseString string, t *testing.T) {
 	if err == nil {
 		t.Errorf("parseObject should have returned an error for %s\n", s)
 	} else {
-		//t.Logf("parseString: <%s> parsed Object, expected error: <%v>\n", parseString, err)
+		t.Logf("parseString: <%s> parsed Object, expected error: <%v>\n", parseString, err)
 	}
 }
 

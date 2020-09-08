@@ -71,7 +71,7 @@ const (
 )
 
 var (
-	errNoContent   = errors.New("pdfcpu: stamp: PDF page has no content")
+	errNoContent   = errors.New("pdfcpu: page without content")
 	errNoWatermark = errors.Errorf("pdfcpu: no watermarks found - nothing removed")
 )
 
@@ -1414,8 +1414,9 @@ func migrateObject(o Object, ctxSource, ctxDest *Context, migrated map[int]int) 
 		if err != nil {
 			return nil, err
 		}
-
-		o1 = o1.Clone()
+		if o1 != nil {
+			o1 = o1.Clone()
+		}
 		objNrNew, err := ctxDest.InsertObject(o1)
 		if err != nil {
 			return nil, err

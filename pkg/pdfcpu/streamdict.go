@@ -64,7 +64,9 @@ func (sd StreamDict) Clone() Object {
 	for k, v := range sd.FilterPipeline {
 		f := PDFFilter{}
 		f.Name = v.Name
-		f.DecodeParms = v.DecodeParms.Clone().(Dict)
+		if f.DecodeParms != nil {
+			f.DecodeParms = v.DecodeParms.Clone().(Dict)
+		}
 		pl[k] = f
 	}
 	sd1.FilterPipeline = pl
