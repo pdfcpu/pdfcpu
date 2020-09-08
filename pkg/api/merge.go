@@ -23,6 +23,7 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pkg/errors"
 )
 
 // appendTo appends inFile to ctxDest's page tree.
@@ -44,6 +45,12 @@ type ReadSeekerCloser interface {
 
 // Merge merges a sequence of PDF streams and writes the result to w.
 func Merge(rsc []io.ReadSeeker, w io.Writer, conf *pdfcpu.Configuration) error {
+	if rsc == nil {
+		return errors.New("pdfcpu: Merge: Please provide rsc")
+	}
+	if w == nil {
+		return errors.New("pdfcpu: Merge: Please provide w")
+	}
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
 	}

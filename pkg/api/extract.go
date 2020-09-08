@@ -26,10 +26,14 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pkg/errors"
 )
 
 // ExtractImages dumps embedded image resources from rs into outDir for selected pages.
 func ExtractImages(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, conf *pdfcpu.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: ExtractImages: Please provide rs")
+	}
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
 	}
@@ -97,6 +101,9 @@ func ExtractImagesFile(inFile, outDir string, selectedPages []string, conf *pdfc
 
 // ExtractFonts dumps embedded fontfiles from rs into outDir for selected pages.
 func ExtractFonts(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, conf *pdfcpu.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: ExtractFonts: Please provide rs")
+	}
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
 	}
@@ -163,6 +170,9 @@ func ExtractFontsFile(inFile, outDir string, selectedPages []string, conf *pdfcp
 
 // ExtractPages generates single page PDF files from rs in outDir for selected pages.
 func ExtractPages(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, conf *pdfcpu.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: ExtractPages: Please provide rs")
+	}
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
 		conf.Cmd = pdfcpu.EXTRACTPAGES
@@ -221,6 +231,9 @@ func ExtractPagesFile(inFile, outDir string, selectedPages []string, conf *pdfcp
 
 // ExtractContent dumps "PDF source" files from rs into outDir for selected pages.
 func ExtractContent(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, conf *pdfcpu.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: ExtractContent: Please provide rs")
+	}
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
 	}
@@ -288,6 +301,9 @@ func ExtractContentFile(inFile, outDir string, selectedPages []string, conf *pdf
 
 // ExtractMetadata dumps all metadata dict entries for rs into outDir.
 func ExtractMetadata(rs io.ReadSeeker, outDir, fileName string, conf *pdfcpu.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: ExtractMetadata: Please provide rs")
+	}
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
 	}

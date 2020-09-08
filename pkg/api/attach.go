@@ -31,6 +31,9 @@ import (
 
 // ListAttachments returns a list of embedded file attachments of rs.
 func ListAttachments(rs io.ReadSeeker, conf *pdfcpu.Configuration) ([]string, error) {
+	if rs == nil {
+		return nil, errors.New("pdfcpu: ListAttachments: Please provide rs")
+	}
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
 	}
@@ -75,6 +78,12 @@ func ListAttachmentsFile(inFile string, conf *pdfcpu.Configuration) ([]string, e
 // AddAttachments embeds files into a PDF context read from rs and writes the result to w.
 // file is either a file name or a file name and a description separated by a comma.
 func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, conf *pdfcpu.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: AddAttachments: Please provide rs")
+	}
+	if w == nil {
+		return errors.New("pdfcpu: AddAttachments: Please provide w")
+	}
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
 	}
@@ -180,6 +189,12 @@ func AddAttachmentsFile(inFile, outFile string, files []string, coll bool, conf 
 
 // RemoveAttachments deletes embedded files from a PDF context read from rs and writes the result to w.
 func RemoveAttachments(rs io.ReadSeeker, w io.Writer, fileNames []string, conf *pdfcpu.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: RemoveAttachments: Please provide rs")
+	}
+	if w == nil {
+		return errors.New("pdfcpu: RemoveAttachments: Please provide w")
+	}
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
 	}
@@ -256,6 +271,9 @@ func RemoveAttachmentsFile(inFile, outFile string, files []string, conf *pdfcpu.
 
 // ExtractAttachments extracts embedded files from a PDF context read from rs into outDir.
 func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, conf *pdfcpu.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: ExtractAttachments: Please provide rs")
+	}
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
 	}
