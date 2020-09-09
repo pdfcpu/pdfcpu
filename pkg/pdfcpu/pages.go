@@ -37,7 +37,7 @@ func (xRefTable *XRefTable) PageContent(d Dict) ([]byte, error) {
 
 	case StreamDict:
 		// no further processing.
-		err := decodeStream(&o)
+		err := o.Decode()
 		if err == filter.ErrUnsupportedFilter {
 			return nil, errors.New("pdfcpu: unsupported filter: unable to decode content")
 		}
@@ -60,7 +60,7 @@ func (xRefTable *XRefTable) PageContent(d Dict) ([]byte, error) {
 			if o == nil {
 				continue
 			}
-			err = decodeStream(o)
+			err = o.Decode()
 			if err == filter.ErrUnsupportedFilter {
 				return nil, errors.New("pdfcpu: unsupported filter: unable to decode content")
 			}

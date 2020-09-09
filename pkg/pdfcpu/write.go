@@ -757,7 +757,7 @@ func writeXRefStream(ctx *Context) error {
 	xRefStreamDict.Insert("Index", *indArr)
 
 	// Encode xRefStreamDict.Content -> xRefStreamDict.Raw
-	if err = encodeStream(&xRefStreamDict.StreamDict); err != nil {
+	if err = xRefStreamDict.StreamDict.Encode(); err != nil {
 		return err
 	}
 

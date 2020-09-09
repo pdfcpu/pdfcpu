@@ -448,7 +448,7 @@ func NewPageForImage(xRefTable *XRefTable, r io.Reader, parentIndRef *IndirectRe
 	var buf bytes.Buffer
 	importImagePDFBytes(&buf, dim, float64(w), float64(h), imp)
 	sd, _ := xRefTable.NewStreamDictForBuf(buf.Bytes())
-	if err = encodeStream(sd); err != nil {
+	if err = sd.Encode(); err != nil {
 		return nil, err
 	}
 

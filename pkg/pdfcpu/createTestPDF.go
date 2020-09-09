@@ -296,7 +296,7 @@ func createStreamObjForHalftoneDictType6(xRefTable *XRefTable) (*IndirectRef, er
 		Content: []byte{},
 	}
 
-	if err := encodeStream(sd); err != nil {
+	if err := sd.Encode(); err != nil {
 		return nil, err
 	}
 
@@ -316,7 +316,7 @@ func createStreamObjForHalftoneDictType10(xRefTable *XRefTable) (*IndirectRef, e
 		Content: []byte{},
 	}
 
-	if err := encodeStream(sd); err != nil {
+	if err := sd.Encode(); err != nil {
 		return nil, err
 	}
 
@@ -336,7 +336,7 @@ func createStreamObjForHalftoneDictType16(xRefTable *XRefTable) (*IndirectRef, e
 		Content: []byte{},
 	}
 
-	if err := encodeStream(sd); err != nil {
+	if err := sd.Encode(); err != nil {
 		return nil, err
 	}
 
@@ -355,7 +355,7 @@ func createPostScriptCalculatorFunctionStreamDict(xRefTable *XRefTable) (*Indire
 		Content: []byte{},
 	}
 
-	if err := encodeStream(sd); err != nil {
+	if err := sd.Encode(); err != nil {
 		return nil, err
 	}
 
@@ -689,7 +689,7 @@ func addContents(xRefTable *XRefTable, pageDict Dict, p Page) error {
 	CreateTestPageContent(p)
 	sd, _ := xRefTable.NewStreamDictForBuf(p.Buf.Bytes())
 
-	if err := encodeStream(sd); err != nil {
+	if err := sd.Encode(); err != nil {
 		return err
 	}
 
@@ -1356,7 +1356,7 @@ func createNormalAppearanceForFormField(xRefTable *XRefTable, w, h float64) (*In
 		Content: b.Bytes(),
 	}
 
-	if err := encodeStream(sd); err != nil {
+	if err := sd.Encode(); err != nil {
 		return nil, err
 	}
 
@@ -1381,7 +1381,7 @@ func createRolloverAppearanceForFormField(xRefTable *XRefTable, w, h float64) (*
 		Content: b.Bytes(),
 	}
 
-	if err := encodeStream(sd); err != nil {
+	if err := sd.Encode(); err != nil {
 		return nil, err
 	}
 
@@ -1406,7 +1406,7 @@ func createDownAppearanceForFormField(xRefTable *XRefTable, w, h float64) (*Indi
 		Content: b.Bytes(),
 	}
 
-	if err := encodeStream(sd); err != nil {
+	if err := sd.Encode(); err != nil {
 		return nil, err
 	}
 
@@ -1520,7 +1520,7 @@ func createYesAppearance(xRefTable *XRefTable, resourceDict Dict, w, h float64) 
 		Content: b.Bytes(),
 	}
 
-	if err := encodeStream(sd); err != nil {
+	if err := sd.Encode(); err != nil {
 		return nil, err
 	}
 
@@ -1556,7 +1556,7 @@ func createOffAppearance(xRefTable *XRefTable, resourceDict Dict, w, h float64) 
 		Content: b.Bytes(),
 	}
 
-	if err := encodeStream(sd); err != nil {
+	if err := sd.Encode(); err != nil {
 		return nil, err
 	}
 
@@ -1830,7 +1830,7 @@ func streamObjForXFAElement(xRefTable *XRefTable, s string) (*IndirectRef, error
 		Content: []byte(s),
 	}
 
-	if err := encodeStream(sd); err != nil {
+	if err := sd.Encode(); err != nil {
 		return nil, err
 	}
 
@@ -1971,7 +1971,7 @@ func CreateContextWithXRefTable(conf *Configuration, pageDim *Dim) (*Context, er
 
 func createDemoContentStreamDict(xRefTable *XRefTable, pageDict Dict, b []byte) (*IndirectRef, error) {
 	sd, _ := xRefTable.NewStreamDictForBuf(b)
-	if err := encodeStream(sd); err != nil {
+	if err := sd.Encode(); err != nil {
 		return nil, err
 	}
 	return xRefTable.IndRefForNewObject(*sd)

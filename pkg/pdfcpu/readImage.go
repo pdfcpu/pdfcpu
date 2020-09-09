@@ -44,7 +44,7 @@ func createSMaskObject(xRefTable *XRefTable, buf []byte, w, h, bpc int) (*Indire
 
 	sd.InsertName("Filter", filter.Flate)
 
-	if err := encodeStream(sd); err != nil {
+	if err := sd.Encode(); err != nil {
 		return nil, err
 	}
 
@@ -79,7 +79,7 @@ func createFlateImageObject(xRefTable *XRefTable, buf, sm []byte, w, h, bpc int,
 		sd.Insert("Interpolate", Boolean(true))
 	}
 
-	if err := encodeStream(sd); err != nil {
+	if err := sd.Encode(); err != nil {
 		return nil, err
 	}
 
@@ -112,7 +112,7 @@ func createDCTImageObject(xRefTable *XRefTable, buf []byte, w, h int, cs string)
 
 	sd.InsertName("Filter", filter.DCT)
 
-	if err := encodeStream(sd); err != nil {
+	if err := sd.Encode(); err != nil {
 		return nil, err
 	}
 

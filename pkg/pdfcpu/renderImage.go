@@ -173,8 +173,7 @@ func streamBytes(sd *StreamDict) ([]byte, error) {
 	fpl := sd.FilterPipeline
 	if fpl == nil {
 		log.Info.Printf("streamBytes: no filter pipeline\n")
-		err := decodeStream(sd)
-		if err != nil {
+		if err := sd.Decode(); err != nil {
 			return nil, err
 		}
 		return sd.Content, nil
@@ -189,8 +188,7 @@ func streamBytes(sd *StreamDict) ([]byte, error) {
 	switch fpl[0].Name {
 
 	case filter.Flate:
-		err := decodeStream(sd)
-		if err != nil {
+		if err := sd.Decode(); err != nil {
 			return nil, err
 		}
 

@@ -107,7 +107,7 @@ func stopObjectStream(ctx *Context) error {
 
 	// Encode objStreamDict.Content -> objStreamDict.Raw
 	// and wipe (decoded) content to free up memory.
-	if err := encodeStream(&osd.StreamDict); err != nil {
+	if err := osd.StreamDict.Encode(); err != nil {
 		return err
 	}
 

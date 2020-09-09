@@ -1096,7 +1096,7 @@ func ttfFontDescriptorFlags(ttf font.TTFLight) uint32 {
 func flateEncodedStreamIndRef(xRefTable *XRefTable, data []byte) (*IndirectRef, error) {
 	sd, _ := xRefTable.NewStreamDictForBuf(data)
 	sd.InsertInt("Length1", len(data))
-	if err := encodeStream(sd); err != nil {
+	if err := sd.Encode(); err != nil {
 		return nil, err
 	}
 	return xRefTable.IndRefForNewObject(*sd)
@@ -1921,7 +1921,7 @@ func createForm(xRefTable *XRefTable, pageNr int, wm *Watermark, withBB bool) er
 
 	sd.InsertName("Filter", filter.Flate)
 
-	if err = encodeStream(&sd); err != nil {
+	if err = sd.Encode(); err != nil {
 		return err
 	}
 
@@ -2022,7 +2022,7 @@ func wmContent(wm *Watermark, gsID, xoID string) []byte {
 func insertPageContentsForWM(xRefTable *XRefTable, pageDict Dict, wm *Watermark, gsID, xoID string) error {
 
 	sd, _ := xRefTable.NewStreamDictForBuf(wmContent(wm, gsID, xoID))
-	if err := encodeStream(sd); err != nil {
+	if err := sd.Encode(); err != nil {
 		return err
 	}
 
@@ -2189,7 +2189,7 @@ func addPageWatermark(xRefTable *XRefTable, i int, wm *Watermark) error {
 func patchContentForWM(sd *StreamDict, gsID, xoID string, wm *Watermark, saveGState bool) error {
 
 	// Decode streamDict for supported filters only.
-	err := decodeStream(sd)
+	err := sd.Decode()
 	if err == filter.ErrUnsupportedFilter {
 		log.Info.Println("unsupported filter: unable to patch content with watermark.")
 		return nil
@@ -2210,12 +2210,12 @@ func patchContentForWM(sd *StreamDict, gsID, xoID string, wm *Watermark, saveGSt
 		sd.Content = append(bb, sd.Content...)
 	}
 
-	return encodeStream(sd)
+	return sd.Encode()
 }
 
 func patchFirstContentForWM(sd *StreamDict) error {
 
-	err := decodeStream(sd)
+	err := sd.Decode()
 	if err == filter.ErrUnsupportedFilter {
 		log.Info.Println("unsupported filter: unable to patch content with watermark.")
 		return nil
@@ -2226,7 +2226,7 @@ func patchFirstContentForWM(sd *StreamDict) error {
 
 	sd.Content = append([]byte("q "), sd.Content...)
 
-	return encodeStream(sd)
+	return sd.Encode()
 }
 
 // AddWatermarks adds watermarks to all pages selected.
@@ -2308,7 +2308,7 @@ func removeForms(xRefTable *XRefTable, d *Dict, ids []string, i int) error {
 
 func removeArtifacts(sd *StreamDict, i int) (ok bool, extGStates []string, forms []string, err error) {
 
-	err = decodeStream(sd)
+	err = sd.Decode()
 	if err == filter.ErrUnsupportedFilter {
 		log.Info.Printf("unsupported filter: unable to patch content with watermark for page %d\n", i)
 		return false, nil, nil, nil
@@ -2360,7 +2360,7 @@ func removeArtifacts(sd *StreamDict, i int) (ok bool, extGStates []string, forms
 	}
 
 	if patched {
-		err = encodeStream(sd)
+		err = sd.Encode()
 	}
 
 	return patched, extGStates, forms, err
@@ -2593,7 +2593,7 @@ func RemoveWatermarks(ctx *Context, selectedPages IntSet) error {
 
 func detectArtifacts(xRefTable *XRefTable, sd *StreamDict) (bool, error) {
 
-	if err := decodeStream(sd); err != nil {
+	if err := sd.Decode(); err != nil {
 		return false, err
 	}
 

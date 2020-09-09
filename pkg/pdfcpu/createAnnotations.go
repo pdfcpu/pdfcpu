@@ -776,7 +776,7 @@ func createXObjectForPrinterMark(xRefTable *XRefTable) (*IndirectRef, error) {
 	sd.Insert("BBox", NewNumberArray(0, 0, 25, 25))
 	sd.Insert("Matrix", NewIntegerArray(1, 0, 0, 1, 0, 0))
 
-	if err := encodeStream(sd); err != nil {
+	if err := sd.Encode(); err != nil {
 		return nil, err
 	}
 
@@ -832,7 +832,7 @@ func createXObjectForWaterMark(xRefTable *XRefTable) (*IndirectRef, error) {
 	sd.Insert("Matrix", NewIntegerArray(1, 0, 0, 1, 0, 0))
 	sd.Insert("Resources", resourceDict)
 
-	if err = encodeStream(sd); err != nil {
+	if err = sd.Encode(); err != nil {
 		return nil, err
 	}
 

@@ -93,7 +93,7 @@ func fileSpecStreamDictInfo(xRefTable *XRefTable, id string, o Object, decode bo
 	}
 
 	// Decode streamDict for supported filters only.
-	if err := decodeStream(sd); err != nil {
+	if err := sd.Decode(); err != nil {
 		return nil, desc, modDate, err
 	}
 

@@ -247,7 +247,7 @@ func read1BPCDeviceGrayFlateStreamDump(xRefTable *XRefTable, fileName string) (*
 
 	sd.InsertName("Filter", filter.Flate)
 
-	return sd, decodeStream(sd)
+	return sd, sd.Decode()
 }
 
 // Starting out with a DeviceGray color space based image object, write a PNG file then read and write again.
@@ -343,7 +343,7 @@ func read8BPCDeviceCMYKFlateStreamDump(xRefTable *XRefTable, fileName string) (*
 
 	sd.FilterPipeline[0].DecodeParms = decodeParms
 
-	return sd, decodeStream(sd)
+	return sd, sd.Decode()
 }
 
 // Starting out with a CMYK color space based image object, write a TIFF file then read and write again.

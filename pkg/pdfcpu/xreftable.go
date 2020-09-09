@@ -409,7 +409,7 @@ func (xRefTable *XRefTable) NewEmbeddedStreamDict(r io.Reader, modDate time.Time
 	d.InsertInt("Size", len(buf))
 	d.Insert("ModDate", StringLiteral(DateString(modDate)))
 	sd.Insert("Params", d)
-	if err = encodeStream(sd); err != nil {
+	if err = sd.Encode(); err != nil {
 		return nil, err
 	}
 
@@ -468,7 +468,7 @@ func (xRefTable *XRefTable) NewSoundStreamDict(filename string, samplingRate int
 		sd.Insert("F", StringLiteral(path.Base(filename)))
 	}
 
-	if err = encodeStream(sd); err != nil {
+	if err = sd.Encode(); err != nil {
 		return nil, err
 	}
 
@@ -2110,7 +2110,7 @@ func (xRefTable *XRefTable) PageDims() ([]Dim, error) {
 func (xRefTable *XRefTable) emptyPage(parentIndRef *IndirectRef, mediaBox *Rectangle) (*IndirectRef, error) {
 	sd, _ := xRefTable.NewStreamDictForBuf(nil)
 
-	if err := encodeStream(sd); err != nil {
+	if err := sd.Encode(); err != nil {
 		return nil, err
 	}
 

@@ -104,7 +104,7 @@ func (ctx *Context) ExtractImage(objNr int) (*Image, error) {
 
 	case filter.Flate, filter.CCITTFax:
 		// If color space is CMYK then write .tif else write .png
-		if err := decodeStream(imageDict); err != nil {
+		if err := imageDict.Decode(); err != nil {
 			return nil, err
 		}
 
@@ -200,7 +200,7 @@ func (ctx *Context) ExtractFont(objNr int) (*Font, error) {
 		}
 
 		// Decode streamDict if used filter is supported only.
-		err = decodeStream(sd)
+		err = sd.Decode()
 		if err == filter.ErrUnsupportedFilter {
 			return nil, nil
 		}
@@ -303,7 +303,7 @@ func (ctx *Context) ExtractMetadata() ([]Metadata, error) {
 				dt = *d.Type()
 			}
 			// Decode streamDict for supported filters only.
-			if err = decodeStream(sd); err == filter.ErrUnsupportedFilter {
+			if err = sd.Decode(); err == filter.ErrUnsupportedFilter {
 				continue
 			}
 			if err != nil {
@@ -333,7 +333,7 @@ func (ctx *Context) ExtractMetadata() ([]Metadata, error) {
 				dt = *d.Type()
 			}
 			// Decode streamDict for supported filters only.
-			if err = decodeStream(sd); err == filter.ErrUnsupportedFilter {
+			if err = sd.Decode(); err == filter.ErrUnsupportedFilter {
 				continue
 			}
 			if err != nil {

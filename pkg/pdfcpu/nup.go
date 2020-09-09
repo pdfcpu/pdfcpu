@@ -517,7 +517,7 @@ func createNUpForm(xRefTable *XRefTable, imgIndRef *IndirectRef, w, h, i int) (*
 
 	sd.InsertName("Filter", filter.Flate)
 
-	if err = encodeStream(&sd); err != nil {
+	if err = sd.Encode(); err != nil {
 		return nil, err
 	}
 
@@ -542,7 +542,7 @@ func createNUpFormForPDFResource(xRefTable *XRefTable, resDict *IndirectRef, con
 
 	sd.InsertName("Filter", filter.Flate)
 
-	if err := encodeStream(&sd); err != nil {
+	if err := sd.Encode(); err != nil {
 		return nil, err
 	}
 
@@ -587,7 +587,7 @@ func NewNUpPageForImage(xRefTable *XRefTable, fileName string, parentIndRef *Ind
 	var buf bytes.Buffer
 	nUpImagePDFBytes(&buf, w, h, nup, formResID)
 	sd, _ := xRefTable.NewStreamDictForBuf(buf.Bytes())
-	if err = encodeStream(sd); err != nil {
+	if err = sd.Encode(); err != nil {
 		return nil, err
 	}
 
@@ -646,7 +646,7 @@ func wrapUpPage(ctx *Context, nup *NUp, d Dict, buf bytes.Buffer, pagesDict Dict
 	}
 
 	sd, _ := xRefTable.NewStreamDictForBuf(buf.Bytes())
-	if err = encodeStream(sd); err != nil {
+	if err = sd.Encode(); err != nil {
 		return err
 	}
 

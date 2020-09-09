@@ -1879,7 +1879,7 @@ func saveDecodedStreamContent(ctx *Context, sd *StreamDict, objNr, genNr int, de
 	}
 
 	// Actual decoding of content stream.
-	err = decodeStream(sd)
+	err = sd.Decode()
 	if err == filter.ErrUnsupportedFilter {
 		err = nil
 	}
