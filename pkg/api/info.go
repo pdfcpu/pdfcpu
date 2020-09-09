@@ -33,6 +33,9 @@ func Info(rs io.ReadSeeker, conf *pdfcpu.Configuration) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := ctx.EnsurePageCount(); err != nil {
+		return nil, err
+	}
 	if err := pdfcpu.DetectWatermarks(ctx); err != nil {
 		return nil, err
 	}

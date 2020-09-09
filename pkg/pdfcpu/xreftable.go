@@ -1984,6 +1984,7 @@ func (xRefTable *XRefTable) PageNumber(pageObjNr int) (int, error) {
 }
 
 // EnsurePageCount evaluates the page count for xRefTable if necessary.
+// Important when validation is turned off.
 func (xRefTable *XRefTable) EnsurePageCount() error {
 
 	if xRefTable.PageCount > 0 {

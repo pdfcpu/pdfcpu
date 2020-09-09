@@ -146,6 +146,10 @@ func Split(rs io.ReadSeeker, outDir, fileName string, span int, conf *pdfcpu.Con
 		return err
 	}
 
+	if err := ctx.EnsurePageCount(); err != nil {
+		return err
+	}
+
 	fromWrite := time.Now()
 
 	if err = writePageSpans(ctx, span, outDir, fileName); err != nil {

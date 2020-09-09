@@ -50,6 +50,9 @@ func Trim(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *pdfcpu.Co
 		return err
 	}
 
+	// No special context processing required.
+	// WriteContext decides which pages get written by checking conf.Cmd
+
 	ctx.Write.SelectedPages = pages
 	if err = WriteContext(ctx, w); err != nil {
 		return err

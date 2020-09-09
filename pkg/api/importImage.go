@@ -52,10 +52,6 @@ func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdfcpu.I
 		return err
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		return err
-	}
-
 	pagesIndRef, err := ctx.Pages()
 	if err != nil {
 		return err
