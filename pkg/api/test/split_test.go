@@ -73,7 +73,8 @@ func TestSplitLowLevel(t *testing.T) {
 	// Extract a page span.
 	from, thru := 2, 4
 	selectedPages := api.PagesForPageRange(from, thru)
-	ctxNew, err := ctx.ExtractPages(selectedPages)
+	usePgCache := false
+	ctxNew, err := ctx.ExtractPages(selectedPages, usePgCache)
 	if err != nil {
 		t.Fatalf("%s ExtractPages(%d,%d): %v\n", msg, from, thru, err)
 	}

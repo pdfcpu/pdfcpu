@@ -38,3 +38,34 @@ func TestCollect(t *testing.T) {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
+
+func TestCollectLowLevel(t *testing.T) {
+	msg := "TestCollectLowLevel"
+	inFile := filepath.Join(inDir, "pike-stanford.pdf")
+	outFile := filepath.Join(outDir, "MyCollectedPages.pdf")
+
+	// Create a context.
+	ctx, err := api.ReadContextFile(inFile)
+	if err != nil {
+		t.Fatalf("%s readContext: %v\n", msg, err)
+	}
+
+	// Collect pages.
+	selectedPages, err := api.PagesForPageCollection(ctx.PageCount, []string{"odd", "!1", "8-11", "l"})
+	if err != nil {
+		t.Fatalf("%s PagesForPageCollection: %v\n", msg, err)
+	}
+
+	usePgCache := true
+	ctxNew, err := ctx.ExtractPages(selectedPages, usePgCache)
+	if err != nil {
+		t.Fatalf("%s ExtractPages: %v\n", msg, err)
+	}
+
+	// Here you can process this single page PDF context.
+
+	// Write context to file.
+	if err := api.WriteContextFile(ctxNew, outFile); err != nil {
+		t.Fatalf("%s write: %v\n", msg, err)
+	}
+}

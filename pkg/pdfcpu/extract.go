@@ -235,17 +235,16 @@ func (ctx *Context) ExtractPageFonts(pageNr int) ([]Font, error) {
 
 // ExtractPage extracts pageNr into a new single page context.
 func (ctx *Context) ExtractPage(pageNr int) (*Context, error) {
-	return ctx.ExtractPages([]int{pageNr})
+	return ctx.ExtractPages([]int{pageNr}, false)
 }
 
 // ExtractPages extracts pageNrs into a new single page context.
-func (ctx *Context) ExtractPages(pageNrs []int) (*Context, error) {
+func (ctx *Context) ExtractPages(pageNrs []int, usePgCache bool) (*Context, error) {
 	ctxDest, err := CreateContextWithXRefTable(nil, PaperSize["A4"])
 	if err != nil {
 		return nil, err
 	}
 
-	usePgCache := false
 	if err := AddPages(ctx, ctxDest, pageNrs, usePgCache); err != nil {
 		return nil, err
 	}

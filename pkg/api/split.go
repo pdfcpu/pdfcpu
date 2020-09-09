@@ -66,7 +66,7 @@ func writePageSpan(ctx *pdfcpu.Context, from, thru int, outDir, fileName string,
 	selectedPages := PagesForPageRange(from, thru)
 
 	// Create context with copies of selectedPages.
-	ctxNew, err := ctx.ExtractPages(selectedPages)
+	ctxNew, err := ctx.ExtractPages(selectedPages, false)
 	if err != nil {
 		return err
 	}

@@ -33,21 +33,21 @@ func Collect(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *pdfcpu
 	conf.Cmd = pdfcpu.COLLECT
 
 	fromStart := time.Now()
-	ctxSource, _, _, _, err := readValidateAndOptimize(rs, conf, fromStart)
+	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, fromStart)
 	if err != nil {
 		return err
 	}
 
-	if err := ctxSource.EnsurePageCount(); err != nil {
+	if err := ctx.EnsurePageCount(); err != nil {
 		return err
 	}
 
-	pages, err := PagesForPageCollection(ctxSource.PageCount, selectedPages)
+	pages, err := PagesForPageCollection(ctx.PageCount, selectedPages)
 	if err != nil {
 		return err
 	}
 
-	ctxDest, err := pdfcpu.CollectPages(ctxSource, pages)
+	ctxDest, err := ctx.ExtractPages(pages, true)
 	if err != nil {
 		return err
 	}
