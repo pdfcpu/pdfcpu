@@ -58,3 +58,30 @@ func TestSplit0ByBookmark(t *testing.T) {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
+
+func TestSplitLowLevel(t *testing.T) {
+	msg := "TestSplitLowLevel"
+	inFile := filepath.Join(inDir, "TheGoProgrammingLanguageCh1.pdf")
+	outFile := filepath.Join(outDir, "MyExtractedPageSpan.pdf")
+
+	// Create a context.
+	ctx, err := api.ReadContextFile(inFile)
+	if err != nil {
+		t.Fatalf("%s readContext: %v\n", msg, err)
+	}
+
+	// Extract a page span.
+	from, thru := 2, 4
+	selectedPages := api.PagesForPageRange(from, thru)
+	ctxNew, err := ctx.ExtractPages(selectedPages)
+	if err != nil {
+		t.Fatalf("%s ExtractPages(%d,%d): %v\n", msg, from, thru, err)
+	}
+
+	// Here you can process this single page PDF context.
+
+	// Write context to file.
+	if err := api.WriteContextFile(ctxNew, outFile); err != nil {
+		t.Fatalf("%s write: %v\n", msg, err)
+	}
+}

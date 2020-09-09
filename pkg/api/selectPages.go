@@ -569,8 +569,8 @@ func parsePageRangeForCollection(pr []string, pageCount int, negated bool, cp *[
 	return nil
 }
 
-// PagesForPageCollection ensures a set of page numbers for generating a page sequence
-// consisting of any page number in any order any number of times.
+// PagesForPageCollection returns a slice of page numbers for a page collection.
+// Any page number in any order any number of times allowed.
 func PagesForPageCollection(pageCount int, pageSelection []string) ([]int, error) {
 	collectedPages := []int{}
 	for _, v := range pageSelection {
@@ -639,4 +639,13 @@ func PagesForPageCollection(pageCount int, pageSelection []string) ([]int, error
 		}
 	}
 	return collectedPages, nil
+}
+
+// PagesForPageRange returns a slice of page numbers for a page range.
+func PagesForPageRange(from, thru int) []int {
+	s := make([]int, thru-from+1)
+	for i := 0; i < len(s); i++ {
+		s[i] = from + i
+	}
+	return s
 }
