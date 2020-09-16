@@ -206,7 +206,11 @@ func validateFontDescriptorPart2(xRefTable *pdf.XRefTable, d pdf.Dict, dictName,
 		return err
 	}
 
-	_, err = validateNumberEntry(xRefTable, d, dictName, "StemV", fontDictType != "Type3", pdf.V10, nil)
+	required := fontDictType != "Type3"
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		required = false
+	}
+	_, err = validateNumberEntry(xRefTable, d, dictName, "StemV", required, pdf.V10, nil)
 	if err != nil {
 		return err
 	}

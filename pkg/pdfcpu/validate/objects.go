@@ -684,7 +684,8 @@ func validateNameEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName
 	}
 
 	// Validation
-	if validate != nil && !validate(name.Value()) {
+	v := name.Value()
+	if validate != nil && (required || len(v) > 0) && !validate(v) {
 		return nil, errors.Errorf("pdfcpu: validateNameEntry: dict=%s entry=%s invalid dict entry: %s", dictName, entryName, name.Value())
 	}
 
@@ -1074,7 +1075,7 @@ func validateStringEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryNa
 	}
 
 	// Validation
-	if validate != nil && !validate(s) {
+	if validate != nil && (required || len(s) > 0) && !validate(s) {
 		return nil, errors.Errorf("pdfcpu: validateStringEntry: dict=%s entry=%s invalid dict entry", dictName, entryName)
 	}
 
