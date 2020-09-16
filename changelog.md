@@ -6,7 +6,8 @@ layout: default
 
 | Date      | Tag / Commit | Description  
 |:----------|:-------------|:--------
-|2020-06-28 | [v0.3.4](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.4)                              | Fix #100,#102,#174,#177,#180,#187,
+|2020-08-31 | [v0.3.5](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.5)                              | Fix #145, #207, #208, #213, #215
+|2020-06-28 | [v0.3.4](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.4)                              | Fix #100,#102,#177,#180,#187,
 |           |                                                                                             | Fix #191-197, #199-202
 |2020-05-27 | [58a1e27](https://github.com/pdfcpu/pdfcpu/commit/58a1e278d00ee588f6e00b5b74f1fa965c5ce889) | Fix #174
 |2020-05-26 | [ed59dc3](https://github.com/pdfcpu/pdfcpu/commit/ed59dc35b4f5f7051141d5c11d4e887d453daa58) | Fix #192

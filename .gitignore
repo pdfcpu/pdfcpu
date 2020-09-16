@@ -4,3 +4,6 @@
 
 # VSCode 
 .vscode/*
+
+# GoReleaser
+dist/*
