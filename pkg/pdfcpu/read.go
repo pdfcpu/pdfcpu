@@ -1222,10 +1222,11 @@ func readXRefTable(ctx *Context) (err error) {
 		return
 	}
 
-	// Log list of free objects (not the "free list").
-	//log.Read.Printf("freelist: %v\n", ctx.FreeObjects)
+	//Log list of free objects (not the "free list").
+	//log.Read.Printf("freelist: %v\n", ctx.freeObjects())
 
 	// Ensure valid freelist of objects.
+	// Note: Acrobat 6.0 and later do not use the free list to recycle object numbers.
 	err = ctx.EnsureValidFreeList()
 	if err != nil {
 		return

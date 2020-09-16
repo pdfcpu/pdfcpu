@@ -553,7 +553,8 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 		return nil
 	}
 
-	f := int(*head.Offset)
+	e := head
+	f := int(*e.Offset)
 
 	// until we have found the last free object which should point to obj 0.
 	for f != 0 {
@@ -561,15 +562,22 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 		log.Trace.Printf("EnsureValidFreeList: validating obj #%d %v\n", f, m)
 		// verify if obj f is one of the free objects recorded.
 		if !m[f] {
-			return errors.New("pdfcpu: ensureValidFreeList: freelist corrupted")
+			if len(m) > 0 {
+				return errors.New("pdfcpu: ensureValidFreeList: freelist corrupted")
+			}
+			// Repair last entry.
+			*e.Offset = 0
+			break
 		}
 
 		delete(m, f)
 
-		f, err = xRefTable.NextForFree(f)
+		e, err = xRefTable.Free(f)
 		if err != nil {
 			return err
 		}
+
+		f = int(*e.Offset)
 	}
 
 	if len(m) == 0 {
