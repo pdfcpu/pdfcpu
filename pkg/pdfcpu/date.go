@@ -74,10 +74,14 @@ func parseTimezoneMinutes(s string, o byte) (int, bool) {
 	return tzm, s[22] == '\''
 }
 
+func validateTimezoneSeparator(c byte) bool {
+	return c == '+' || c == '-' || c == 'Z'
+}
+
 func parseTimezone(s string) (h, m int, ok bool) {
 	o := s[16]
 
-	if o != '+' && o != '-' && o != 'Z' {
+	if !validateTimezoneSeparator(o) {
 		return 0, 0, false
 	}
 

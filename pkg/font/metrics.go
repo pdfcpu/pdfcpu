@@ -90,7 +90,7 @@ func (fd TTFLight) supportsUnicodeBlock(bit int) bool {
 	return i&1 > 0
 }
 
-func (fd TTFLight) IsCJK() bool {
+func (fd TTFLight) isCJK() bool {
 	// 4E00-9FFF	CJK Unified Ideographs
 	return fd.supportsUnicodeBlock(59)
 }

@@ -811,33 +811,31 @@ func isDict(s string) (bool, error) {
 	return ok, nil
 }
 
-func scanTrailer(s *bufio.Scanner, line string) (string, error) {
+func scanTrailerDictStart(s *bufio.Scanner, line *string) error {
+	l := *line
+	var err error
+	for {
+		i := strings.Index(l, "<<")
+		if i >= 0 {
+			*line = l[i:]
+			return nil
+		}
+		l, err = scanLine(s)
+		log.Read.Printf("line: <%s>\n", l)
+		if err != nil {
+			return err
+		}
+	}
+}
 
-	var buf bytes.Buffer
+func scanTrailerDictRemainder(s *bufio.Scanner, line string, buf bytes.Buffer) (string, error) {
 	var err error
 	var i, j, k int
 
-	log.Read.Printf("line: <%s>\n", line)
-
-	// Scan for dict start tag "<<".
-	for {
-		i = strings.Index(line, "<<")
-		if i >= 0 {
-			break
-		}
-		line, err = scanLine(s)
-		log.Read.Printf("line: <%s>\n", line)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	line = line[i:]
 	buf.WriteString(line)
 	buf.WriteString(" ")
 	log.Read.Printf("scanTrailer dictBuf after start tag: <%s>\n", line)
 
-	// Scan for dict end tag ">>" but account for inner dicts.
 	line = line[2:]
 
 	for {
@@ -909,8 +907,20 @@ func scanTrailer(s *bufio.Scanner, line string) (string, error) {
 	}
 }
 
-func processTrailer(ctx *Context, s *bufio.Scanner, line string) (*int64, error) {
+func scanTrailer(s *bufio.Scanner, line string) (string, error) {
+	var buf bytes.Buffer
+	log.Read.Printf("line: <%s>\n", line)
 
+	// Scan for dict start tag "<<".
+	if err := scanTrailerDictStart(s, &line); err != nil {
+		return "", err
+	}
+
+	// Scan for dict end tag ">>" but account for inner dicts.
+	return scanTrailerDictRemainder(s, line, buf)
+}
+
+func processTrailer(ctx *Context, s *bufio.Scanner, line string) (*int64, error) {
 	var trailerString string
 
 	if line != "trailer" {
@@ -944,7 +954,6 @@ func processTrailer(ctx *Context, s *bufio.Scanner, line string) (*int64, error)
 
 // Parse xRef section into corresponding number of xRef table entries.
 func parseXRefSection(s *bufio.Scanner, ctx *Context) (*int64, error) {
-
 	log.Read.Println("parseXRefSection begin")
 
 	line, err := scanLine(s)
@@ -997,7 +1006,6 @@ func parseXRefSection(s *bufio.Scanner, ctx *Context) (*int64, error) {
 // The header version comes as the first line of the file.
 // eolCount is the number of characters used for eol (1 or 2).
 func headerVersion(rs io.ReadSeeker) (v *Version, eolCount int, err error) {
-
 	log.Read.Println("headerVersion begin")
 
 	var errCorruptHeader = errors.New("pdfcpu: headerVersion: corrupt pdf stream - no header version available")

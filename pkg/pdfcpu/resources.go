@@ -159,7 +159,7 @@ func (prn PageResourceNames) HasContent() bool {
 
 func (prn PageResourceNames) String() string {
 	sep := ", "
-	ss := []string{}
+	var ss []string
 	s := []string{"PageResourceNames:\n"}
 	for k := range resourceTypes {
 		ss = nil

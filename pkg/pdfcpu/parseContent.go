@@ -151,6 +151,41 @@ func skipBI(l *string, prn PageResourceNames) error {
 	return nil
 }
 
+func positionToNextContentToken(line *string, prn PageResourceNames) (bool, error) {
+	l := *line
+	for {
+		l = strings.TrimLeftFunc(l, whitespaceOrEOL)
+		if len(l) == 0 {
+			// whitespace or eol only
+			return true, nil
+		}
+		if l[0] == '[' {
+			// Skip TJ expression
+			if err := skipTJ(&l); err != nil {
+				return true, err
+			}
+			continue
+		}
+		if l[0] == '(' {
+			// Skip text strings as in TJ, Tj, ', " expressions
+			if err := skipStringLiteral(&l); err != nil {
+				return true, err
+			}
+			continue
+		}
+		if strings.HasPrefix(l, "BI") && (l[2] == '/' || whitespaceOrEOL(rune(l[2]))) {
+			// Handle inline image
+			l = l[2:]
+			if err := skipBI(&l, prn); err != nil {
+				return true, err
+			}
+			continue
+		}
+		*line = l
+		return false, nil
+	}
+}
+
 func nextContentToken(line *string, prn PageResourceNames) (string, error) {
 	// A token is either a name or some chunk terminated by white space or one of /, (, [
 	if noBuf(line) {
@@ -161,35 +196,12 @@ func nextContentToken(line *string, prn PageResourceNames) (string, error) {
 
 	log.Parse.Printf("nextContentToken: start buf= <%s>\n", *line)
 
-	for {
-		l = strings.TrimLeftFunc(l, whitespaceOrEOL)
-		if len(l) == 0 {
-			// whitespace or eol only
-			return "", nil
-		}
-		if l[0] == '[' {
-			// Skip TJ expression
-			if err := skipTJ(&l); err != nil {
-				return t, err
-			}
-			continue
-		}
-		if l[0] == '(' {
-			// Skip text strings as in TJ, Tj, ', " expressions
-			if err := skipStringLiteral(&l); err != nil {
-				return t, err
-			}
-			continue
-		}
-		if strings.HasPrefix(l, "BI") && (l[2] == '/' || whitespaceOrEOL(rune(l[2]))) {
-			// Handle inline image
-			l = l[2:]
-			if err := skipBI(&l, prn); err != nil {
-				return t, err
-			}
-			continue
-		}
-		break
+	done, err := positionToNextContentToken(&l, prn)
+	if err != nil {
+		return t, err
+	}
+	if done {
+		return "", nil
 	}
 
 	if l[0] == '/' {
@@ -231,6 +243,50 @@ func nextContentToken(line *string, prn PageResourceNames) (string, error) {
 	return t, nil
 }
 
+func resourceNameAtPos1(s, name string, prn PageResourceNames) bool {
+	switch s {
+	case "cs", "CS":
+		if !MemberOf(name, []string{"DeviceGray", "DeviceRGB", "DeviceCMYK", "Pattern"}) {
+			prn["ColorSpace"][name] = true
+			log.Parse.Printf("ColorSpace[%s]\n", name)
+		}
+		return true
+	case "gs":
+		prn["ExtGState"][name] = true
+		log.Parse.Printf("ExtGState[%s]\n", name)
+		return true
+	case "Do":
+		prn["XObject"][name] = true
+		log.Parse.Printf("XObject[%s]\n", name)
+		return true
+	case "sh":
+		prn["Shading"][name] = true
+		log.Parse.Printf("Shading[%s]\n", name)
+		return true
+	case "scn", "SCN":
+		prn["Pattern"][name] = true
+		log.Parse.Printf("Pattern[%s]\n", name)
+		return true
+	case "ri", "BMC", "MP":
+		return true
+	}
+	return false
+}
+
+func resourceNameAtPos2(s, name string, prn PageResourceNames) bool {
+	switch s {
+	case "Tf":
+		prn["Font"][name] = true
+		log.Parse.Printf("Font[%s]\n", name)
+		return true
+	case "BDC", "DP":
+		prn["Properties"][name] = true
+		log.Parse.Printf("Properties[%s]\n", name)
+		return true
+	}
+	return false
+}
+
 func parseContent(s string) (PageResourceNames, error) {
 	var (
 		name string
@@ -266,43 +322,13 @@ func parseContent(s string) (PageResourceNames, error) {
 
 		pos++
 		if pos == 1 {
-			switch t {
-			case "cs", "CS":
-				if !MemberOf(name, []string{"DeviceGray", "DeviceRGB", "DeviceCMYK", "Pattern"}) {
-					prn["ColorSpace"][name] = true
-					log.Parse.Printf("ColorSpace[%s]\n", name)
-				}
-				n = false
-			case "gs":
-				prn["ExtGState"][name] = true
-				log.Parse.Printf("ExtGState[%s]\n", name)
-				n = false
-			case "Do":
-				prn["XObject"][name] = true
-				log.Parse.Printf("XObject[%s]\n", name)
-				n = false
-			case "sh":
-				prn["Shading"][name] = true
-				log.Parse.Printf("Shading[%s]\n", name)
-				n = false
-			case "scn", "SCN":
-				prn["Pattern"][name] = true
-				log.Parse.Printf("Pattern[%s]\n", name)
-				n = false
-			case "ri", "BMC", "MP":
+			if resourceNameAtPos1(t, name, prn) {
 				n = false
 			}
 			continue
 		}
 		if pos == 2 {
-			switch t {
-			case "Tf":
-				prn["Font"][name] = true
-				log.Parse.Printf("Font[%s]\n", name)
-				n = false
-			case "BDC", "DP":
-				prn["Properties"][name] = true
-				log.Parse.Printf("Properties[%s]\n", name)
+			if resourceNameAtPos2(t, name, prn) {
 				n = false
 			}
 			continue

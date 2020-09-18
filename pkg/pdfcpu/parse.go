@@ -588,18 +588,7 @@ func noBuf(l *string) bool {
 	return l == nil || len(*l) == 0
 }
 
-func parseNumericOrIndRef(line *string) (Object, error) {
-
-	if noBuf(line) {
-		return nil, errBufNotAvailable
-	}
-
-	l := *line
-
-	// if this object is an integer we need to check for an indirect reference eg. 1 0 R
-	// otherwise it has to be a float
-	// we have to check first for integer
-
+func startParseNumericOrIndRef(l string) (string, string, int) {
 	i1, _ := positionToNextWhitespaceOrChar(l, "/<([]>")
 	var l1 string
 	if i1 > 0 {
@@ -631,6 +620,21 @@ func parseNumericOrIndRef(line *string) (Object, error) {
 			}
 		}
 	}
+	return str, l1, i1
+}
+
+func parseNumericOrIndRef(line *string) (Object, error) {
+
+	if noBuf(line) {
+		return nil, errBufNotAvailable
+	}
+
+	l := *line
+
+	// if this object is an integer we need to check for an indirect reference eg. 1 0 R
+	// otherwise it has to be a float
+	// we have to check first for integer
+	str, l1, i1 := startParseNumericOrIndRef(l)
 
 	// Try int
 	i, err := strconv.Atoi(str)

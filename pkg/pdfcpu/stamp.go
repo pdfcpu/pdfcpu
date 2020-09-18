@@ -1395,77 +1395,74 @@ func createFontResForWM(xRefTable *XRefTable, wm *Watermark) error {
 	return nil
 }
 
+func migrateIndRef(ir *IndirectRef, ctxSource, ctxDest *Context, migrated map[int]int) (Object, error) {
+	//entrySrc, _ := ctxSource.FindTableEntryLight(objNr)
+	//fmt.Printf("src before: %d %s\n", objNr, entrySrc.Object)
+	o, err := ctxSource.Dereference(*ir)
+	if err != nil {
+		return nil, err
+	}
+
+	if o != nil {
+		o = o.Clone()
+	}
+
+	objNrNew, err := ctxDest.InsertObject(o)
+	if err != nil {
+		return nil, err
+	}
+
+	objNr := ir.ObjectNumber.Value()
+	migrated[objNr] = objNrNew
+	ir.ObjectNumber = Integer(objNrNew)
+	//fmt.Printf("processing: %d -> %d\n", objNr, objNrNew)
+	//entry, _ := ctxDest.FindTableEntryLight(objNrNew)
+	//fmt.Printf("before: %d -> %d %s\n", objNr, objNrNew, entry.Object)
+	return o, nil
+}
+
 func migrateObject(o Object, ctxSource, ctxDest *Context, migrated map[int]int) (Object, error) {
+
+	var err error
 
 	switch o := o.(type) {
 
 	case IndirectRef:
 		objNr := o.ObjectNumber.Value()
 		if migrated[objNr] > 0 {
-			//fmt.Printf("migrated: %d\n", objNr)
 			o.ObjectNumber = Integer(migrated[objNr])
 			return o, nil
 		}
-
-		//entrySrc, _ := ctxSource.FindTableEntryLight(objNr)
-		//fmt.Printf("src before: %d %s\n", objNr, entrySrc.Object)
-
-		o1, err := ctxSource.Dereference(o)
+		o1, err := migrateIndRef(&o, ctxSource, ctxDest, migrated)
 		if err != nil {
 			return nil, err
 		}
-		if o1 != nil {
-			o1 = o1.Clone()
-		}
-		objNrNew, err := ctxDest.InsertObject(o1)
-		if err != nil {
-			return nil, err
-		}
-
-		migrated[objNr] = objNrNew
-		o.ObjectNumber = Integer(objNrNew)
-		//fmt.Printf("processing: %d -> %d\n", objNr, objNrNew)
-
-		//entry, _ := ctxDest.FindTableEntryLight(objNrNew)
-		//fmt.Printf("before: %d -> %d %s\n", objNr, objNrNew, entry.Object)
-
 		if _, err := migrateObject(o1, ctxSource, ctxDest, migrated); err != nil {
 			return nil, err
 		}
-		//fmt.Printf("after: %d -> %d %s\n", objNr, objNrNew, entry.Object)
-
-		//entrySrc, _ = ctxSource.FindTableEntryLight(objNr)
-		//fmt.Printf("src after: %d %s\n", objNr, entrySrc.Object)
-
 		return o, nil
 
 	case Dict:
 		for k, v := range o {
-			v1, err := migrateObject(v, ctxSource, ctxDest, migrated)
-			if err != nil {
+			if o[k], err = migrateObject(v, ctxSource, ctxDest, migrated); err != nil {
 				return nil, err
 			}
-			o[k] = v1
 		}
 		return o, nil
 
 	case StreamDict:
 		for k, v := range o.Dict {
-			v1, err := migrateObject(v, ctxSource, ctxDest, migrated)
-			if err != nil {
+			if o.Dict[k], err = migrateObject(v, ctxSource, ctxDest, migrated); err != nil {
 				return nil, err
 			}
-			o.Dict[k] = v1
 		}
 		return o, nil
 
 	case Array:
 		for k, v := range o {
-			v1, err := migrateObject(v, ctxSource, ctxDest, migrated)
-			if err != nil {
+			if o[k], err = migrateObject(v, ctxSource, ctxDest, migrated); err != nil {
 				return nil, err
 			}
-			o[k] = v1
 		}
 		return o, nil
 	}

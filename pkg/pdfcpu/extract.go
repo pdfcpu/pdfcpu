@@ -274,6 +274,36 @@ type Metadata struct {
 	ParentType  string // container dict type
 }
 
+func extractMetadataFromDict(ctx *Context, d Dict, parentObjNr int) (*Metadata, error) {
+	o, found := d.Find("Metadata")
+	if !found || o == nil {
+		return nil, nil
+	}
+	sd, err := ctx.DereferenceStreamDict(o)
+	if err != nil {
+		return nil, err
+	}
+	if sd == nil {
+		return nil, nil
+	}
+	// Get metadata dict object number.
+	ir, _ := o.(IndirectRef)
+	mdObjNr := ir.ObjectNumber.Value()
+	// Get container dict type.
+	dt := "unknown"
+	if d.Type() != nil {
+		dt = *d.Type()
+	}
+	// Decode streamDict for supported filters only.
+	if err = sd.Decode(); err == filter.ErrUnsupportedFilter {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &Metadata{bytes.NewReader(sd.Content), mdObjNr, parentObjNr, dt}, nil
+}
+
 // ExtractMetadata returns all metadata of ctx.
 func (ctx *Context) ExtractMetadata() ([]Metadata, error) {
 	mm := []Metadata{}
@@ -283,64 +313,24 @@ func (ctx *Context) ExtractMetadata() ([]Metadata, error) {
 		}
 		switch d := v.Object.(type) {
 		case Dict:
-			o, found := d.Find("Metadata")
-			if !found || o == nil {
-				continue
-			}
-			sd, err := ctx.DereferenceStreamDict(o)
+			md, err := extractMetadataFromDict(ctx, d, k)
 			if err != nil {
 				return nil, err
 			}
-			if sd == nil {
+			if md == nil {
 				continue
 			}
-			// Get metadata dict object number.
-			ir, _ := o.(IndirectRef)
-			mdObjNr := ir.ObjectNumber.Value()
-			// Get container dict type.
-			dt := "unknown"
-			if d.Type() != nil {
-				dt = *d.Type()
-			}
-			// Decode streamDict for supported filters only.
-			if err = sd.Decode(); err == filter.ErrUnsupportedFilter {
-				continue
-			}
-			if err != nil {
-				return nil, err
-			}
-			md := Metadata{bytes.NewReader(sd.Content), mdObjNr, k, dt}
-			mm = append(mm, md)
+			mm = append(mm, *md)
 
 		case StreamDict:
-			o, found := d.Find("Metadata")
-			if !found || o == nil {
-				continue
-			}
-			sd, err := ctx.DereferenceStreamDict(o)
+			md, err := extractMetadataFromDict(ctx, d.Dict, k)
 			if err != nil {
 				return nil, err
 			}
-			if sd == nil {
+			if md == nil {
 				continue
 			}
-			// Get metadata dict object number.
-			ir, _ := o.(IndirectRef)
-			mdObjNr := ir.ObjectNumber.Value()
-			// Get container dict type.
-			dt := "unknown"
-			if d.Type() != nil {
-				dt = *d.Type()
-			}
-			// Decode streamDict for supported filters only.
-			if err = sd.Decode(); err == filter.ErrUnsupportedFilter {
-				continue
-			}
-			if err != nil {
-				return nil, err
-			}
-			md := Metadata{bytes.NewReader(sd.Content), mdObjNr, k, dt}
-			mm = append(mm, md)
+			mm = append(mm, *md)
 		}
 	}
 	return mm, nil

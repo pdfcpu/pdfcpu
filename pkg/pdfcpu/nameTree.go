@@ -108,6 +108,89 @@ func (n *Node) AddToLeaf(k string, v Object) {
 	n.Names = append(n.Names, entry{k, v})
 }
 
+// HandleLeaf processes a leaf node.
+func (n *Node) HandleLeaf(xRefTable *XRefTable, k string, v Object) error {
+	// A leaf node contains up to maxEntries names.
+	// Any number of entries greater than maxEntries will be delegated to kid nodes.
+
+	if len(n.Names) == 0 {
+		n.Names = append(n.Names, entry{k, v})
+		n.Kmin, n.Kmax = k, k
+		log.Debug.Printf("first key=%s\n", k)
+		return nil
+	}
+
+	log.Debug.Printf("kmin=%s kmax=%s\n", n.Kmin, n.Kmax)
+
+	if k < n.Kmin {
+		// Insert (k,v) at the beginning.
+		log.Debug.Printf("Insert k:%s at beginning\n", k)
+		n.Kmin = k
+		n.Names = append(n.Names, entry{})
+		copy(n.Names[1:], n.Names[0:])
+		n.Names[0] = entry{k, v}
+	} else if k > n.Kmax {
+		// Insert (k,v) at the end.
+		log.Debug.Printf("Insert k:%s at end\n", k)
+		n.Kmax = k
+		n.Names = append(n.Names, entry{k, v})
+	} else {
+		// Insert (k,v) somewhere in the middle.
+		log.Debug.Printf("Insert k:%s in the middle\n", k)
+		for i, e := range n.Names {
+
+			if e.k < k {
+				continue
+			}
+
+			// Adding an already existing key updates its value.
+			if e.k == k {
+
+				// Free up all objs referred to by old values.
+				if xRefTable != nil {
+					err := xRefTable.DeleteObjectGraph(n.Names[i].v)
+					if err != nil {
+						return err
+					}
+				}
+
+				n.Names[i].v = v
+				break
+			}
+
+			// Insert entry(k,v) at i
+			n.Names = append(n.Names, entry{})
+			copy(n.Names[i+1:], n.Names[i:]) // ?
+			n.Names[i] = entry{k, v}
+			break
+		}
+	}
+
+	// if len was already > maxEntries we know we are dealing with somebody elses name tree.
+	// In that case we do not know the branching strategy and therefore just add to Names and do not create kids.
+	// If len is within maxEntries we do not create kids either way.
+	if len(n.Names) != maxEntries+1 {
+		return nil
+	}
+
+	// turn leaf into intermediate node with 2 kids/leafs (binary tree)
+	c := maxEntries + 1
+	k1 := &Node{Names: make([]entry, c/2, maxEntries)}
+	copy(k1.Names, n.Names[:c/2])
+	k1.Kmin = n.Names[0].k
+	k1.Kmax = n.Names[c/2-1].k
+
+	k2 := &Node{Names: make([]entry, len(n.Names)-c/2, maxEntries)}
+	copy(k2.Names, n.Names[c/2:])
+	k2.Kmin = n.Names[c/2].k
+	k2.Kmax = n.Names[c-1].k
+
+	n.Kids = []*Node{k1, k2}
+	n.Names = nil
+
+	return nil
+}
+
 // Add adds an entry to a name tree.
 func (n *Node) Add(xRefTable *XRefTable, k string, v Object) error {
 
@@ -121,86 +204,7 @@ func (n *Node) Add(xRefTable *XRefTable, k string, v Object) error {
 	}
 
 	if n.leaf() {
-
-		// A leaf node contains up to maxEntries names.
-		// Any number of entries greater than maxEntries will be delegated to kid nodes.
-
-		if len(n.Names) == 0 {
-			n.Names = append(n.Names, entry{k, v})
-			n.Kmin, n.Kmax = k, k
-			log.Debug.Printf("first key=%s\n", k)
-			return nil
-		}
-
-		log.Debug.Printf("kmin=%s kmax=%s\n", n.Kmin, n.Kmax)
-
-		if k < n.Kmin {
-			// Insert (k,v) at the beginning.
-			log.Debug.Printf("Insert k:%s at beginning\n", k)
-			n.Kmin = k
-			n.Names = append(n.Names, entry{})
-			copy(n.Names[1:], n.Names[0:])
-			n.Names[0] = entry{k, v}
-		} else if k > n.Kmax {
-			// Insert (k,v) at the end.
-			log.Debug.Printf("Insert k:%s at end\n", k)
-			n.Kmax = k
-			n.Names = append(n.Names, entry{k, v})
-		} else {
-			// Insert (k,v) somewhere in the middle.
-			log.Debug.Printf("Insert k:%s in the middle\n", k)
-			for i, e := range n.Names {
-
-				if e.k < k {
-					continue
-				}
-
-				// Adding an already existing key updates its value.
-				if e.k == k {
-
-					// Free up all objs referred to by old values.
-					if xRefTable != nil {
-						err := xRefTable.DeleteObjectGraph(n.Names[i].v)
-						if err != nil {
-							return err
-						}
-					}
-
-					n.Names[i].v = v
-					break
-				}
-
-				// Insert entry(k,v) at i
-				n.Names = append(n.Names, entry{})
-				copy(n.Names[i+1:], n.Names[i:]) // ?
-				n.Names[i] = entry{k, v}
-				break
-			}
-		}
-
-		// if len was already > maxEntries we know we are dealing with somebody elses name tree.
-		// In that case we do not know the branching strategy and therefore just add to Names and do not create kids.
-		// If len is within maxEntries we do not create kids either way.
-		if len(n.Names) != maxEntries+1 {
-			return nil
-		}
-
-		// turn leaf into intermediate node with 2 kids/leafs (binary tree)
-		c := maxEntries + 1
-		k1 := &Node{Names: make([]entry, c/2, maxEntries)}
-		copy(k1.Names, n.Names[:c/2])
-		k1.Kmin = n.Names[0].k
-		k1.Kmax = n.Names[c/2-1].k
-
-		k2 := &Node{Names: make([]entry, len(n.Names)-c/2, maxEntries)}
-		copy(k2.Names, n.Names[c/2:])
-		k2.Kmin = n.Names[c/2].k
-		k2.Kmax = n.Names[c-1].k
-
-		n.Kids = []*Node{k1, k2}
-		n.Names = nil
-
-		return nil
+		return n.HandleLeaf(xRefTable, k, v)
 	}
 
 	if k < n.Kmin {

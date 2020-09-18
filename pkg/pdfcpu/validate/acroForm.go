@@ -184,6 +184,22 @@ func validateAcroFieldDictEntries(xRefTable *pdf.XRefTable, d pdf.Dict, terminal
 	return outFieldType, nil
 }
 
+func validateAcroFieldParts(xRefTable *pdf.XRefTable, d pdf.Dict, inFieldType *pdf.Name) error {
+	// dict represents a terminal field and must have Subtype "Widget"
+	if _, err := validateNameEntry(xRefTable, d, "acroFieldDict", "Subtype", REQUIRED, pdf.V10, func(s string) bool { return s == "Widget" }); err != nil {
+		return err
+	}
+
+	// Validate field dict entries.
+	if _, err := validateAcroFieldDictEntries(xRefTable, d, true, inFieldType); err != nil {
+		return err
+	}
+
+	// Validate widget annotation - Validation of AA redundant because of merged acrofield with widget annotation.
+	_, err := validateAnnotationDict(xRefTable, d)
+	return err
+}
+
 func validateAcroFieldDict(xRefTable *pdf.XRefTable, ir pdf.IndirectRef, inFieldType *pdf.Name) error {
 
 	d, err := xRefTable.DereferenceDict(ir)
@@ -232,20 +248,7 @@ func validateAcroFieldDict(xRefTable *pdf.XRefTable, ir pdf.IndirectRef, inField
 		return nil
 	}
 
-	// dict represents a terminal field and must have Subtype "Widget"
-	if _, err = validateNameEntry(xRefTable, d, "acroFieldDict", "Subtype", REQUIRED, pdf.V10, func(s string) bool { return s == "Widget" }); err != nil {
-		return err
-	}
-
-	// Validate field dict entries.
-	if _, err = validateAcroFieldDictEntries(xRefTable, d, true, inFieldType); err != nil {
-		return err
-	}
-
-	// Validate widget annotation - Validation of AA redundant because of merged acrofield with widget annotation.
-	_, err = validateAnnotationDict(xRefTable, d)
-
-	return err
+	return validateAcroFieldParts(xRefTable, d, inFieldType)
 }
 
 func validateAcroFormFields(xRefTable *pdf.XRefTable, o pdf.Object) error {

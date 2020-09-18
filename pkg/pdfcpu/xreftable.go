@@ -1651,6 +1651,15 @@ func rect(xRefTable *XRefTable, a Array) (*Rectangle, error) {
 	return Rect(llx, lly, urx, ury), nil
 }
 
+func weaveResourceSubDict(d1, d2 Dict) {
+	for k, v := range d1 {
+		if v != nil {
+			v = v.Clone()
+		}
+		d2[k] = v
+	}
+}
+
 func (xRefTable *XRefTable) consolidateResources(obj Object, pAttrs *InheritedPageAttrs) error {
 	d, err := xRefTable.DereferenceDict(obj)
 	if err != nil {
@@ -1696,14 +1705,9 @@ func (xRefTable *XRefTable) consolidateResources(obj Object, pAttrs *InheritedPa
 		if !ok {
 			return errors.Errorf("pdfcpu: checkInheritedPageAttrs: expected Dict d2: %T", pAttrs.resources[k])
 		}
-		// Weave the sub dict d1 into the inherited sub dict.
+		// Weave sub dict d1 into inherited sub dict d2.
 		// Any existing resource names will be overridden.
-		for k, v := range d1 {
-			if v != nil {
-				v = v.Clone()
-			}
-			d2[k] = v
-		}
+		weaveResourceSubDict(d1, d2)
 	}
 
 	return nil
@@ -1807,6 +1811,32 @@ func consolidateResourceDict(d Dict, prn PageResourceNames, pageNr int) error {
 	return nil
 }
 
+func consolidateResources(consolidateRes bool, xRefTable *XRefTable, pageDict, resDict Dict, page int) error {
+	if !consolidateRes {
+		return nil
+	}
+
+	bb, err := xRefTable.PageContent(pageDict)
+	if err != nil {
+		if err == errNoContent {
+			return nil
+		}
+		return err
+	}
+
+	// Calculate resources required by the content stream of this page.
+	prn, err := parseContent(string(bb))
+	if err != nil {
+		return err
+	}
+
+	// Compare required resouces (prn) with available resources (pAttrs.resources).
+	// Remove any resource that's not required.
+	// Return an error for any required resource missing.
+	// TODO Calculate and acumulate resources required by content streams of any present form or type 3 fonts.
+	return consolidateResourceDict(resDict, prn, page)
+}
+
 func (xRefTable *XRefTable) processPageTreeForPageDict(root *IndirectRef, pAttrs *InheritedPageAttrs, p *int, page int, consolidateRes bool) (Dict, error) {
 	// Walk this page tree all the way down to the leave node representing page.
 
@@ -1834,37 +1864,7 @@ func (xRefTable *XRefTable) processPageTreeForPageDict(root *IndirectRef, pAttrs
 	// Iterate over page tree.
 	kids := d.ArrayEntry("Kids")
 	if kids == nil {
-
-		if !consolidateRes {
-			return d, nil
-		}
-
-		// Remove any inherited resource that is not required by this page by analyzing
-		// this page's content stream and then patching the accumulated resource dict.
-
-		bb, err := xRefTable.PageContent(d)
-		if err != nil {
-			if err == errNoContent {
-				return d, nil
-			}
-			return nil, err
-		}
-
-		// Calculate resources required by the content stream of this page.
-		prn, err := parseContent(string(bb))
-		if err != nil {
-			return nil, err
-		}
-
-		// Compare required resouces (prn) with available resources (pAttrs.resources).
-		// Remove any resource that's not required.
-		// Return an error for any required resource missing.
-		// TODO Calculate and acumulate resources required by content streams of any present form or type 3 fonts.
-		if err := consolidateResourceDict(pAttrs.resources, prn, page); err != nil {
-			return nil, err
-		}
-
-		return d, nil
+		return d, consolidateResources(consolidateRes, xRefTable, d, pAttrs.resources, page)
 	}
 
 	for _, o := range kids {

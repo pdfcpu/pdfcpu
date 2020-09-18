@@ -27,6 +27,30 @@ import (
 	"github.com/pkg/errors"
 )
 
+func decodeFileSpecStreamDict(sd *StreamDict, id string) error {
+	fpl := sd.FilterPipeline
+
+	if fpl == nil {
+		sd.Content = sd.Raw
+		return nil
+	}
+
+	// Ignore filter chains with length > 1
+	if len(fpl) > 1 {
+		log.Debug.Printf("decodedFileSpecStreamDict: ignore %s, more than 1 filter.\n", id)
+		return nil
+	}
+
+	// Only FlateDecode supported.
+	if fpl[0].Name != filter.Flate {
+		log.Debug.Printf("decodedFileSpecStreamDict: ignore %s, %s filter unsupported.\n", id, fpl[0].Name)
+		return nil
+	}
+
+	// Decode streamDict for supported filters only.
+	return sd.Decode()
+}
+
 func fileSpecStreamDictInfo(xRefTable *XRefTable, id string, o Object, decode bool) (*StreamDict, string, *time.Time, error) {
 	d, err := xRefTable.DereferenceDict(o)
 	if err != nil {
@@ -73,31 +97,9 @@ func fileSpecStreamDictInfo(xRefTable *XRefTable, id string, o Object, decode bo
 		modDate = &dt
 	}
 
-	fpl := sd.FilterPipeline
+	err = decodeFileSpecStreamDict(sd, id)
 
-	if fpl == nil {
-		sd.Content = sd.Raw
-		return sd, desc, modDate, nil
-	}
-
-	// Ignore filter chains with length > 1
-	if len(fpl) > 1 {
-		log.Debug.Printf("decodedFileSpecStreamDict: ignore %s, more than 1 filter.\n", id)
-		return nil, desc, modDate, nil
-	}
-
-	// Only FlateDecode supported.
-	if fpl[0].Name != filter.Flate {
-		log.Debug.Printf("decodedFileSpecStreamDict: ignore %s, %s filter unsupported.\n", id, fpl[0].Name)
-		return nil, desc, modDate, nil
-	}
-
-	// Decode streamDict for supported filters only.
-	if err := sd.Decode(); err != nil {
-		return nil, desc, modDate, err
-	}
-
-	return sd, desc, modDate, nil
+	return sd, desc, modDate, err
 }
 
 // Attachment is a Reader representing a PDF attachment.

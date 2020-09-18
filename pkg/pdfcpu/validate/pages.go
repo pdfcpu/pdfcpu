@@ -962,19 +962,17 @@ func validatePagesDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNr, genNumber in
 		case "Pages":
 			// Recurse over pagetree
 			err = validatePagesDict(xRefTable, pageNodeDict, objNumber, genNumber, hasResources, hasMediaBox)
-			if err != nil {
-				return err
-			}
 
 		case "Page":
 			err = validatePageDict(xRefTable, pageNodeDict, objNumber, genNumber, hasResources, hasMediaBox)
-			if err != nil {
-				return err
-			}
 
 		default:
 			return errors.Errorf("pdfcpu: validatePagesDict: Unexpected dict type: %s", dictType)
 
+		}
+
+		if err != nil {
+			return err
 		}
 
 	}

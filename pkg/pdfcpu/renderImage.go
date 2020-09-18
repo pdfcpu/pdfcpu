@@ -710,6 +710,44 @@ func RenderImage(xRefTable *XRefTable, io *ImageObject, objNr int) (*Image, erro
 	return nil, nil
 }
 
+func renderCSByName(cs Name, pdfImage *PDFImage, filename string, objNr int) (*Image, error) {
+	switch cs {
+
+	case DeviceGrayCS:
+		return renderDeviceGrayToPNG(pdfImage, filename)
+
+	case DeviceRGBCS:
+		return renderDeviceRGBToPNG(pdfImage, filename)
+
+	case DeviceCMYKCS:
+		return renderDeviceCMYKToTIFF(pdfImage, filename)
+
+	default:
+		log.Info.Printf("renderCSByName: objNr=%d, unsupported name colorspace %s\n", objNr, cs)
+	}
+
+	return nil, nil
+}
+
+func renderCSByArray(xRefTable *XRefTable, cs Array, pdfImage *PDFImage, filename string, objNr int) (*Image, error) {
+	switch cs[0].(Name) {
+
+	case CalRGBCS:
+		return renderCalRGBToPNG(pdfImage, filename)
+
+	case ICCBasedCS:
+		return renderICCBased(xRefTable, pdfImage, filename, cs)
+
+	case IndexedCS:
+		return renderIndexed(xRefTable, pdfImage, filename, cs)
+
+	default:
+		log.Info.Printf("renderCSByArray: objNr=%d, unsupported array colorspace %s\n", objNr, cs)
+	}
+
+	return nil, nil
+}
+
 func writeFlateEncodedImage(xRefTable *XRefTable, filename string, sd *StreamDict, objNr int) (string, error) {
 
 	pdfImage, err := pdfImage(xRefTable, sd, objNr)
@@ -725,45 +763,14 @@ func writeFlateEncodedImage(xRefTable *XRefTable, filename string, sd *StreamDic
 	var img *Image
 
 	switch cs := o.(type) {
-
 	case Name:
-		switch cs {
-
-		case DeviceGrayCS:
-			img, err = renderDeviceGrayToPNG(pdfImage, filename)
-
-		case DeviceRGBCS:
-			img, err = renderDeviceRGBToPNG(pdfImage, filename)
-
-		case DeviceCMYKCS:
-			img, err = renderDeviceCMYKToTIFF(pdfImage, filename)
-
-		default:
-			log.Info.Printf("renderFlateEncodedImage: objNr=%d, unsupported name colorspace %s\n", objNr, cs.String())
-		}
-
+		img, err = renderCSByName(cs, pdfImage, filename, objNr)
 	case Array:
-		csn, _ := cs[0].(Name)
-
-		switch csn {
-
-		case CalRGBCS:
-			img, err = renderCalRGBToPNG(pdfImage, filename)
-
-		case ICCBasedCS:
-			img, err = renderICCBased(xRefTable, pdfImage, filename, cs)
-
-		case IndexedCS:
-			img, err = renderIndexed(xRefTable, pdfImage, filename, cs)
-
-		default:
-			log.Info.Printf("renderFlateEncodedImage: objNr=%d, unsupported array colorspace %s\n", objNr, csn)
-		}
-
+		img, err = renderCSByArray(xRefTable, cs, pdfImage, filename, objNr)
 	}
 
-	if img == nil {
-		return "", nil
+	if err != nil || img == nil {
+		return "", err
 	}
 
 	bb, err := ioutil.ReadAll(img)
