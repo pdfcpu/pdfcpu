@@ -17,8 +17,10 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"fmt"
 	"image"
 	"image/color"
+	"image/draw"
 	_ "image/jpeg"
 	_ "image/png"
 
@@ -52,7 +54,6 @@ func createSMaskObject(xRefTable *XRefTable, buf []byte, w, h, bpc int) (*Indire
 }
 
 func createFlateImageObject(xRefTable *XRefTable, buf, sm []byte, w, h, bpc int, cs string) (*StreamDict, error) {
-
 	var softMaskIndRef *IndirectRef
 
 	if sm != nil {
@@ -122,7 +123,6 @@ func createDCTImageObject(xRefTable *XRefTable, buf []byte, w, h int, cs string)
 }
 
 func writeRGBAImageBuf(img image.Image) []byte {
-
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
 	i := 0
@@ -142,7 +142,6 @@ func writeRGBAImageBuf(img image.Image) []byte {
 }
 
 func writeRGBA64ImageBuf(img image.Image) []byte {
-
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
 	i := 0
@@ -165,7 +164,6 @@ func writeRGBA64ImageBuf(img image.Image) []byte {
 }
 
 func writeYCbCrToRGBAImageBuf(img image.Image) []byte {
-
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
 	i := 0
@@ -185,7 +183,6 @@ func writeYCbCrToRGBAImageBuf(img image.Image) []byte {
 	return buf
 }
 func writeNRGBAImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte) {
-
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
 	i := 0
@@ -193,8 +190,10 @@ func writeNRGBAImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte) 
 	var sm []byte
 	var softMask bool
 
+	fmt.Printf("writeNRGBAImageBuf: w=%d h=%d\n", w, h)
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
+			fmt.Printf("(%d/%d)\n", x, y)
 			c := img.At(x, y).(color.NRGBA)
 			if !softMask {
 				if xRefTable != nil && c.A != 0xFF {
@@ -220,7 +219,6 @@ func writeNRGBAImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte) 
 }
 
 func writeNRGBA64ImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte) {
-
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
 	i := 0
@@ -261,7 +259,6 @@ func writeNRGBA64ImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte
 }
 
 func writeGrayImageBuf(img image.Image) []byte {
-
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
 	i := 0
@@ -279,7 +276,6 @@ func writeGrayImageBuf(img image.Image) []byte {
 }
 
 func writeCMYKImageBuf(img image.Image) []byte {
-
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
 	i := 0
@@ -300,12 +296,16 @@ func writeCMYKImageBuf(img image.Image) []byte {
 	return buf
 }
 
+func convertToRGBA(img image.Image) *image.RGBA {
+	b := img.Bounds()
+	m := image.NewRGBA(image.Rect(0, 0, b.Dx(), b.Dy()))
+	draw.Draw(m, m.Bounds(), img, b.Min, draw.Src)
+	return m
+}
+
 func imgToImageDict(xRefTable *XRefTable, img image.Image) (*StreamDict, error) {
-
 	bpc := 8
-
 	// TODO if dpi != 72 resample (applies to PNG,JPG,TIFF)
-
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
 
@@ -364,9 +364,9 @@ func imgToImageDict(xRefTable *XRefTable, img image.Image) (*StreamDict, error) 
 		return nil, errors.New("unsupported image type: NYCbCrA")
 
 	case *image.Paletted:
-		// uint8 indices into a given color palette.
+		// In-memory image of uint8 indices into a given palette.
 		cs = DeviceRGBCS
-		buf = writeRGBAImageBuf(img)
+		buf = writeRGBAImageBuf(convertToRGBA(img))
 
 	default:
 		return nil, errors.Errorf("unsupported image type: %T", img)
@@ -380,7 +380,6 @@ func imgToImageDict(xRefTable *XRefTable, img image.Image) (*StreamDict, error) 
 // ReadJPEG generates a PDF image object for a JPEG stream
 // and appends this object to the cross reference table.
 func ReadJPEG(xRefTable *XRefTable, buf []byte, c image.Config) (*StreamDict, error) {
-
 	var cs string
 
 	switch c.ColorModel {
