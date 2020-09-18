@@ -17,7 +17,6 @@ limitations under the License.
 package pdfcpu
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
@@ -190,10 +189,8 @@ func writeNRGBAImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte) 
 	var sm []byte
 	var softMask bool
 
-	fmt.Printf("writeNRGBAImageBuf: w=%d h=%d\n", w, h)
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
-			fmt.Printf("(%d/%d)\n", x, y)
 			c := img.At(x, y).(color.NRGBA)
 			if !softMask {
 				if xRefTable != nil && c.A != 0xFF {
