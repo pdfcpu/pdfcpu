@@ -8,9 +8,6 @@ builds:
     - linux
     - darwin
     - windows
-  goarch:
-    - 386
-    - amd64
 dist: ./dist
 archives:
   -
