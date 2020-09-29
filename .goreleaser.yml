@@ -11,6 +11,9 @@ builds:
   goarch:
     - 386
     - amd64
+  ignore:
+    - goos: darwin
+    - goarch: 386
 dist: ./dist
 archives:
   -
