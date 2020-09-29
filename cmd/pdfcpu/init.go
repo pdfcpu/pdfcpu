@@ -172,6 +172,11 @@ func initFlags() {
 
 	flag.StringVar(&upw, "upw", "", "user password")
 	flag.StringVar(&opw, "opw", "", "owner password")
+
+	confUsage := "the config directory path | skip | none"
+	flag.StringVar(&conf, "config", "", confUsage)
+	flag.StringVar(&conf, "conf", "", confUsage)
+	flag.StringVar(&conf, "c", "", confUsage)
 }
 
 func initLogging(verbose, veryVerbose bool) {

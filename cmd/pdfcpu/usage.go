@@ -58,12 +58,20 @@ The commands are:
 
 Use "pdfcpu help [command]" for more information about a command.`
 
-	usageValidate     = "usage: pdfcpu validate [-v(erbose)|vv] [-q(uiet)] [-mode strict|relaxed] [-upw userpw] [-opw ownerpw] inFile"
+	generalFlags = `
+   
+other optional flags: -v(erbose)|vv
+                      -q(uiet)
+                      -c(onf) $path|disable`
+
+	usageValidate = "usage: pdfcpu validate [-mode strict|relaxed] [-upw userpw] [-opw ownerpw] inFile" + generalFlags
+
 	usageLongValidate = `Check inFile for specification compliance.
 
 verbose, v ... turn on logging
         vv ... verbose logging
   quiet, q ... disable output
+   c, conf ... set or disable config dir
       mode ... validation mode
        upw ... user password
        opw ... owner password
@@ -74,7 +82,7 @@ The validation modes are:
  strict ... (default) validates against PDF 32000-1:2008 (PDF 1.7)
 relaxed ... like strict but doesn't complain about common seen spec violations.`
 
-	usageOptimize     = "usage: pdfcpu optimize [-v(erbose)|vv] [-q(uiet)] [-stats csvFile] [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageOptimize     = "usage: pdfcpu optimize [-stats csvFile] [-upw userpw] [-opw ownerpw] inFile [outFile]" + generalFlags
 	usageLongOptimize = `Read inFile, remove redundant page resources like embedded fonts and images and write the result to outFile.
 
 verbose, v ... turn on logging
@@ -87,7 +95,7 @@ verbose, v ... turn on logging
     inFile ... input pdf file
    outFile ... output pdf file`
 
-	usageSplit     = "usage: pdfcpu split [-v(erbose)|vv] [-q(uiet)] [-mode span|bookmark] [-upw userpw] [-opw ownerpw] inFile outDir [span]"
+	usageSplit     = "usage: pdfcpu split [-mode span|bookmark] [-upw userpw] [-opw ownerpw] inFile outDir [span]" + generalFlags
 	usageLongSplit = `Generate a set of PDFs for the input file in outDir according to given span value or along bookmarks.
 
 verbose, v ... turn on logging
@@ -109,7 +117,7 @@ The split modes are:
                    span will be ignored.
                    Assumption: inFile contains an outline dictionary.`
 
-	usageMerge     = "usage: pdfcpu merge [-v(erbose)|vv] [-q(uiet)] [-mode create|append] outFile inFile..."
+	usageMerge     = "usage: pdfcpu merge [-mode create|append] outFile inFile..." + generalFlags
 	usageLongMerge = `Concatenate a sequence of PDFs/inFiles into outFile.
    
 verbose, v ... turn on logging
@@ -146,7 +154,7 @@ The merge modes are:
 
         e.g. -3,5,7- or 4-7,!6 or 1-,!5 or odd,n1`
 
-	usageExtract     = "usage: pdfcpu extract [-v(erbose)|vv] [-q(uiet)] -mode image|font|content|page|meta [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile outDir"
+	usageExtract     = "usage: pdfcpu extract -mode image|font|content|page|meta [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile outDir" + generalFlags
 	usageLongExtract = `Export inFile's images, fonts, content or pages into outDir.
 
 verbose, v ... turn on logging
@@ -169,7 +177,7 @@ content ... extract raw page content
    
 ` + usagePageSelection
 
-	usageTrim     = "usage: pdfcpu trim [-v(erbose)|vv] [-q(uiet)] -pages selectedPages [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageTrim     = "usage: pdfcpu trim -pages selectedPages [-upw userpw] [-opw ownerpw] inFile [outFile]" + generalFlags
 	usageLongTrim = `Generate a trimmed version of inFile for selected pages.
 
 verbose, v ... turn on logging
@@ -183,10 +191,10 @@ verbose, v ... turn on logging
    
 ` + usagePageSelection
 
-	usageAttachList    = "pdfcpu attachments list    [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile"
-	usageAttachAdd     = "pdfcpu attachments add     [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile file..."
-	usageAttachRemove  = "pdfcpu attachments remove  [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [file...]"
-	usageAttachExtract = "pdfcpu attachments extract [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile outDir [file...]"
+	usageAttachList    = "pdfcpu attachments list    [-upw userpw] [-opw ownerpw] inFile"
+	usageAttachAdd     = "pdfcpu attachments add     [-upw userpw] [-opw ownerpw] inFile file..."
+	usageAttachRemove  = "pdfcpu attachments remove  [-upw userpw] [-opw ownerpw] inFile [file...]"
+	usageAttachExtract = "pdfcpu attachments extract [-upw userpw] [-opw ownerpw] inFile outDir [file...]" + generalFlags
 
 	usageAttach = "usage: " + usageAttachList +
 		"\n       " + usageAttachAdd +
@@ -204,10 +212,10 @@ verbose, v ... turn on logging
       file ... attachment
     outDir ... output directory`
 
-	usagePortfolioList    = "pdfcpu portfolio list    [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile"
-	usagePortfolioAdd     = "pdfcpu portfolio add     [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile file[,desc]..."
-	usagePortfolioRemove  = "pdfcpu portfolio remove  [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [file...]"
-	usagePortfolioExtract = "pdfcpu portfolio extract [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile outDir [file...]"
+	usagePortfolioList    = "pdfcpu portfolio list    [-upw userpw] [-opw ownerpw] inFile"
+	usagePortfolioAdd     = "pdfcpu portfolio add     [-upw userpw] [-opw ownerpw] inFile file[,desc]..."
+	usagePortfolioRemove  = "pdfcpu portfolio remove  [-upw userpw] [-opw ownerpw] inFile [file...]"
+	usagePortfolioExtract = "pdfcpu portfolio extract [-upw userpw] [-opw ownerpw] inFile outDir [file...]" + generalFlags
 
 	usagePortfolio = "usage: " + usagePortfolioList +
 		"\n       " + usagePortfolioAdd +
@@ -233,8 +241,8 @@ verbose, v ... turn on logging
            pdfcpu portfolio add test.pdf 'test.mp3, Test sound file' 'test.mkv, Test video file'
     `
 
-	usagePermList = "pdfcpu permissions list [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile"
-	usagePermSet  = "pdfcpu permissions set [-v(erbose)|vv] [-q(uiet)] [-perm none|all] [-upw userpw] -opw ownerpw inFile"
+	usagePermList = "pdfcpu permissions list [-upw userpw] [-opw ownerpw] inFile"
+	usagePermSet  = "pdfcpu permissions set [-perm none|all] [-upw userpw] -opw ownerpw inFile" + generalFlags
 
 	usagePerm = "usage: " + usagePermList +
 		"\n       " + usagePermSet
@@ -249,7 +257,7 @@ verbose, v ... turn on logging
        opw ... owner password
     inFile ... input pdf file`
 
-	usageEncrypt     = "usage: pdfcpu encrypt [-v(erbose)|vv] [-q(uiet)] [-mode rc4|aes] [-key 40|128|256] [perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]"
+	usageEncrypt     = "usage: pdfcpu encrypt [-mode rc4|aes] [-key 40|128|256] [perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]" + generalFlags
 	usageLongEncrypt = `Setup password protection based on user and owner password.
 
 verbose, v ... turn on logging
@@ -263,7 +271,7 @@ verbose, v ... turn on logging
     inFile ... input pdf file
    outFile ... output pdf file`
 
-	usageDecrypt     = "usage: pdfcpu decrypt [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageDecrypt     = "usage: pdfcpu decrypt [-upw userpw] [-opw ownerpw] inFile [outFile]" + generalFlags
 	usageLongDecrypt = `Remove password protection and reset permissions.
 
 verbose, v ... turn on logging
@@ -274,7 +282,7 @@ verbose, v ... turn on logging
     inFile ... input pdf file
    outFile ... output pdf file`
 
-	usageChangeUserPW     = "usage: pdfcpu changeupw [-v(erbose)|vv] [-q(uiet)] [-opw ownerpw] inFile upwOld upwNew"
+	usageChangeUserPW     = "usage: pdfcpu changeupw [-opw ownerpw] inFile upwOld upwNew" + generalFlags
 	usageLongChangeUserPW = `Change the user password also known as the open doc password.
 	
 verbose, v ... turn on logging
@@ -285,7 +293,7 @@ verbose, v ... turn on logging
     upwOld ... old user password
     upwNew ... new user password`
 
-	usageChangeOwnerPW     = "usage: pdfcpu changeopw [-v(erbose)|vv] [-q(uiet)] [-upw userpw] inFile opwOld opwNew"
+	usageChangeOwnerPW     = "usage: pdfcpu changeopw [-upw userpw] inFile opwOld opwNew" + generalFlags
 	usageLongChangeOwnerPW = `Change the owner password also known as the set permissions password.
 	
 verbose, v ... turn on logging
@@ -367,9 +375,9 @@ e.g. 'pos:bl, off: 20 5'   'rot:45'                 'op:0.5, s:0.5 abs, rot:0'
      
 ` + usagePageSelection
 
-	usageStampAdd    = "pdfcpu stamp add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]"
-	usageStampRemove = "pdfcpu stamp remove [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]"
-	usageStampUpdate = "pdfcpu stamp update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]"
+	usageStampAdd    = "pdfcpu stamp add    [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]"
+	usageStampRemove = "pdfcpu stamp remove [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageStampUpdate = "pdfcpu stamp update [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]" + generalFlags
 
 	usageStamp = "usage: " + usageStampAdd +
 		"\n       " + usageStampRemove +
@@ -393,9 +401,9 @@ description ... fontname, points, position, offset, scalefactor, aligntext, rota
 
 ` + usageWMMode + usageWMDescription
 
-	usageWatermarkAdd    = "pdfcpu watermark add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]"
-	usageWatermarkRemove = "pdfcpu watermark remove [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]"
-	usageWatermarkUpdate = "pdfcpu watermark update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]"
+	usageWatermarkAdd    = "pdfcpu watermark add    [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]"
+	usageWatermarkRemove = "pdfcpu watermark remove [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageWatermarkUpdate = "pdfcpu watermark update [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]" + generalFlags
 
 	usageWatermark = "usage: " + usageWatermarkAdd +
 		"\n       " + usageWatermarkRemove +
@@ -419,7 +427,7 @@ description ... fontname, points, position, offset, scalefactor, aligntext, rota
 
 ` + usageWMMode + usageWMDescription
 
-	usageImportImages     = "usage: pdfcpu import [-v(erbose)|vv] [-q(uiet)] [description] outFile imageFile..."
+	usageImportImages     = "usage: pdfcpu import [description] outFile imageFile..." + generalFlags
 	usageLongImportImages = `Turn image files into a PDF page sequence and write the result to outFile.
 If outFile already exists the page sequence will be appended.
 Each imageFile will be rendered to a separate page.
@@ -461,8 +469,8 @@ description ... dimensions, format, position, offset, scale factor
        'f:A4, pos:c, dpi:300'                    ... render the image centered on A4 respecting a destination resolution of 300 dpi.
        `
 
-	usagePagesInsert = "pdfcpu pages insert [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] [-mode before|after] inFile [outFile]"
-	usagePagesRemove = "pdfcpu pages remove [-v(erbose)|vv] [-q(uiet)]  -pages selectedPages  [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usagePagesInsert = "pdfcpu pages insert [-pages selectedPages] [-upw userpw] [-opw ownerpw] [-mode before|after] inFile [outFile]"
+	usagePagesRemove = "pdfcpu pages remove  -pages selectedPages  [-upw userpw] [-opw ownerpw] inFile [outFile]" + generalFlags
 
 	usagePages = "usage: " + usagePagesInsert +
 		"\n       " + usagePagesRemove
@@ -481,7 +489,7 @@ description ... dimensions, format, position, offset, scale factor
 
 ` + usagePageSelection
 
-	usageRotate     = "usage: pdfcpu rotate [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile rotation [outFile]"
+	usageRotate     = "usage: pdfcpu rotate [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile rotation [outFile]" + generalFlags
 	usageLongRotate = `Rotate selected pages by a multiple of 90 degrees. 
 
  verbose, v ... turn on logging
@@ -496,7 +504,7 @@ description ... dimensions, format, position, offset, scale factor
 
 ` + usagePageSelection
 
-	usageNUp     = "usage: pdfcpu nup [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [description] outFile n inFile|imageFiles..."
+	usageNUp     = "usage: pdfcpu nup [-pages selectedPages] [description] outFile n inFile|imageFiles..." + generalFlags
 	usageLongNUp = `Rearrange existing PDF pages or images into a sequence of page grids.
 This reduces the number of pages and therefore the required print time.
 If the input is one imageFile a single page n-up PDF gets generated.
@@ -563,7 +571,7 @@ Examples: "pdfcpu nup out.pdf 4 in.pdf"
 
 ` + usagePageSelection
 
-	usageGrid     = "usage: pdfcpu grid [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [description] outFile m n inFile|imageFiles..."
+	usageGrid     = "usage: pdfcpu grid [-pages selectedPages] [description] outFile m n inFile|imageFiles..." + generalFlags
 	usageLongGrid = `Rearrange PDF pages or images for enhanced browsing experience.
 For a PDF inputfile each output page represents a grid of input pages.
 For image inputfiles each output page shows all images laid out onto grids of given paper size. 
@@ -684,7 +692,7 @@ Examples: "pdfcpu grid out.pdf 1 10 in.pdf"
    Kiku4, Kiku5
    AB, B40, Shikisen`
 
-	usageVersion     = "usage: pdfcpu version"
+	usageVersion     = "usage: pdfcpu version [-v(erbose)|vv]"
 	usageLongVersion = "Print the pdfcpu version."
 
 	usagePaper     = "usage: pdfcpu paper"
@@ -713,9 +721,9 @@ inches, in ... inches
 	usageLongFonts = `Print a list of supported fonts (includes the 14 PDF core fonts).
 Install given true type fonts (.ttf) from working directory for embedding in stamps/watermarks.`
 
-	usageKeywordsList   = "pdfcpu keywords list    [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile"
-	usageKeywordsAdd    = "pdfcpu keywords add     [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile keyword..."
-	usageKeywordsRemove = "pdfcpu keywords remove  [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [keyword...]"
+	usageKeywordsList   = "pdfcpu keywords list    [-upw userpw] [-opw ownerpw] inFile"
+	usageKeywordsAdd    = "pdfcpu keywords add     [-upw userpw] [-opw ownerpw] inFile keyword..."
+	usageKeywordsRemove = "pdfcpu keywords remove  [-upw userpw] [-opw ownerpw] inFile [keyword...]" + generalFlags
 
 	usageKeywords = "usage: " + usageKeywordsList +
 		"\n       " + usageKeywordsAdd +
@@ -735,9 +743,9 @@ verbose, v ... turn on logging
            pdfcpu keywords add test.pdf music 'virtual instruments'
     `
 
-	usagePropertiesList   = "pdfcpu properties list    [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile"
-	usagePropertiesAdd    = "pdfcpu properties add     [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile nameValuePair..."
-	usagePropertiesRemove = "pdfcpu properties remove  [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [name...]"
+	usagePropertiesList   = "pdfcpu properties list    [-upw userpw] [-opw ownerpw] inFile"
+	usagePropertiesAdd    = "pdfcpu properties add     [-upw userpw] [-opw ownerpw] inFile nameValuePair..."
+	usagePropertiesRemove = "pdfcpu properties remove  [-upw userpw] [-opw ownerpw] inFile [name...]" + generalFlags
 
 	usageProperties = "usage: " + usagePropertiesList +
 		"\n       " + usagePropertiesAdd +
@@ -757,7 +765,7 @@ nameValuePair ... 'name = value'
      Eg. adding one property:   pdfcpu properties add test.pdf 'key = value'
          adding two properties: pdfcpu properties add test.pdf 'key1 = val1' 'key2 = val2'
      `
-	usageCollect     = "usage: pdfcpu collect [-v(erbose)|vv] [-q(uiet)] -pages selectedPages [-upw userpw] [-opw ownerpw] inFile [outFile]"
+	usageCollect     = "usage: pdfcpu collect -pages selectedPages [-upw userpw] [-opw ownerpw] inFile [outFile]" + generalFlags
 	usageLongCollect = `Create custom sequence of selected pages. 
   
    verbose, v ... turn on logging

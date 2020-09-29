@@ -17,6 +17,7 @@
 package api
 
 import (
+	"fmt"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -48,7 +49,8 @@ func ListFonts() ([]string, error) {
 		userFonts[i] = "  " + s
 	}
 	sort.Strings(userFonts)
-	ssuf := []string{"Userfonts:"}
+
+	ssuf := []string{fmt.Sprintf("Userfonts(%s):", font.UserFontDir)}
 	ssuf = append(ssuf, userFonts...)
 
 	sscf = append(sscf, "")
@@ -57,16 +59,12 @@ func ListFonts() ([]string, error) {
 
 // InstallFonts installs true type fonts for embedding.
 func InstallFonts(fileNames []string) error {
-	fontDir, err := font.Dir()
-	if err != nil {
-		return err
-	}
-	log.CLI.Printf("installing to %s...", fontDir)
+	log.CLI.Printf("installing to %s...", font.UserFontDir)
 	for _, fn := range fileNames {
 		switch filepath.Ext(fn) {
 		case ".ttf":
 			log.CLI.Println(filepath.Base(fn))
-			if err := font.InstallTrueTypeFont(fontDir, fn); err != nil {
+			if err := font.InstallTrueTypeFont(font.UserFontDir, fn); err != nil {
 				return err
 			}
 		}

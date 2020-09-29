@@ -18,6 +18,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -52,8 +53,67 @@ func (m commandMap) register(cmdStr string, cmd command) {
 	m[cmdStr] = &cmd
 }
 
+func parseFlags(cmd *command) {
+	// Execute after command completion.
+	i := 2
+
+	// This command uses a subcommand and is therefore a special case => start flag processing after 3rd argument.
+	if cmd.handler == nil {
+		if len(os.Args) == 2 {
+			fmt.Fprintln(os.Stderr, cmd.usageShort)
+			os.Exit(1)
+		}
+		i = 3
+	}
+
+	// Parse commandline flags.
+	if !flag.CommandLine.Parsed() {
+		err := flag.CommandLine.Parse(os.Args[i:])
+		if err != nil {
+			os.Exit(1)
+		}
+		initLogging(verbose, veryVerbose)
+	}
+
+	return
+}
+
+func validateConfigDirFlag() {
+	if len(conf) > 0 && conf != "disable" {
+		info, err := os.Stat(conf)
+		if err != nil {
+			if os.IsNotExist(err) {
+				fmt.Fprintf(os.Stderr, "conf: %s does not exist\n\n", conf)
+				os.Exit(1)
+			}
+			fmt.Fprintf(os.Stderr, "conf: %s %v\n\n", conf, err)
+			os.Exit(1)
+		}
+		if !info.IsDir() {
+			fmt.Fprintf(os.Stderr, "conf: %s not a directory\n\n", conf)
+			os.Exit(1)
+		}
+		pdfcpu.ConfigPath = conf
+		return
+	}
+	if conf == "disable" {
+		pdfcpu.ConfigPath = "disable"
+	}
+}
+
+func ensureDefaultConfig() (*pdfcpu.Configuration, error) {
+	validateConfigDirFlag()
+	//fmt.Printf("conf = %s\n", pdfcpu.ConfigPath)
+	if !pdfcpu.MemberOf(pdfcpu.ConfigPath, []string{"default", "disable"}) {
+		if err := pdfcpu.EnsureDefaultConfigAt(pdfcpu.ConfigPath); err != nil {
+			return nil, err
+		}
+	}
+	return pdfcpu.NewDefaultConfiguration(), nil
+}
+
 // process applies command completion and if successful processes the resulting command.
-func (m commandMap) process(cmdPrefix string, command string, conf *pdfcpu.Configuration) (string, error) {
+func (m commandMap) process(cmdPrefix string, command string) (string, error) {
 	var cmdStr string
 
 	// Support command completion.
@@ -73,6 +133,11 @@ func (m commandMap) process(cmdPrefix string, command string, conf *pdfcpu.Confi
 
 	parseFlags(m[cmdStr])
 
+	conf, err := ensureDefaultConfig()
+	if err != nil {
+		return command, err
+	}
+
 	conf.OwnerPW = opw
 	conf.UserPW = upw
 
@@ -86,7 +151,7 @@ func (m commandMap) process(cmdPrefix string, command string, conf *pdfcpu.Confi
 		os.Exit(1)
 	}
 
-	return m[cmdStr].cmdMap.process(os.Args[2], cmdStr, conf)
+	return m[cmdStr].cmdMap.process(os.Args[2], cmdStr)
 }
 
 // HelpString returns documentation for a topic.

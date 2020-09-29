@@ -142,3 +142,17 @@ func logOperationStats(ctx *pdfcpu.Context, op string, durRead, durVal, durOpt, 
 		ctx.Write.LogStats()
 	}
 }
+
+// EnsureDefaultConfigAt switches to the pdfcpu confif dir located at path.
+// If path/pdfcpu is not existent, it will be created including config.yml
+func EnsureDefaultConfigAt(path string) error {
+	return pdfcpu.EnsureDefaultConfigAt(path)
+}
+
+// DisableConfigDir disables the configuration directory.
+// Any needed default configuration will be loaded from configuration.go
+// Since the config dir also contains the user font dir, this also limits font usage to the default core font set
+// No user fonts will be available.
+func DisableConfigDir() {
+	pdfcpu.ConfigPath = "disable"
+}

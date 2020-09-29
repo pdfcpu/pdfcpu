@@ -1047,7 +1047,6 @@ func ttfWidths(xRefTable *XRefTable, ttf font.TTFLight) (*IndirectRef, error) {
 			w[i] = missingW
 			continue
 		}
-
 		w[i] = ttf.GlyphWidths[pos]
 	}
 
@@ -1139,6 +1138,7 @@ func ttfFontDescriptor(xRefTable *XRefTable, ttf font.TTFLight, fontName string)
 func userFontDict(xRefTable *XRefTable, fontName string) (Dict, error) {
 
 	ttf := font.UserFontMetrics[fontName]
+	//fmt.Printf("userFontDict for %s:\n%s\n", fontName, ttf)
 
 	// if ttf.IsCJK() {
 	// 	fmt.Println("supports CJK")

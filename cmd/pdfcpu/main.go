@@ -18,21 +18,17 @@ limitations under the License.
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
-
-	"github.com/pdfcpu/pdfcpu/pkg/cli"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 var (
-	fileStats, mode, selectedPages string
-	upw, opw, key, perm, units     string
-	verbose, veryVerbose           bool
-	quiet                          bool
-	needStackTrace                 = true
-	cmdMap                         commandMap
+	fileStats, mode, selectedPages   string
+	upw, opw, key, perm, units, conf string
+	verbose, veryVerbose             bool
+	quiet                            bool
+	needStackTrace                   = true
+	cmdMap                           commandMap
 )
 
 // Set by Goreleaser.
@@ -55,11 +51,8 @@ func main() {
 	// The first argument is the pdfcpu command string.
 	cmdStr := os.Args[1]
 
-	// Create a default configuration.
-	conf := pdfcpu.NewDefaultConfiguration()
-
 	// Process command string for given configuration.
-	str, err := cmdMap.process(cmdStr, "", conf)
+	str, err := cmdMap.process(cmdStr, "")
 	if err != nil {
 		if len(str) > 0 {
 			cmdStr = fmt.Sprintf("%s %s", str, os.Args[2])
@@ -69,49 +62,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	os.Exit(0)
-}
-
-func parseFlags(cmd *command) {
-	// Execute after command completion.
-	i := 2
-
-	// This command uses a subcommand and is therefore a special case => start flag processing after 3rd argument.
-	if cmd.handler == nil {
-		if len(os.Args) == 2 {
-			fmt.Fprintln(os.Stderr, cmd.usageShort)
-			os.Exit(1)
-		}
-		i = 3
-	}
-
-	// Parse commandline flags.
-	if !flag.CommandLine.Parsed() {
-		err := flag.CommandLine.Parse(os.Args[i:])
-		if err != nil {
-			os.Exit(1)
-		}
-		initLogging(verbose, veryVerbose)
-	}
-
-	return
-}
-
-func process(cmd *cli.Command) {
-	out, err := cli.Process(cmd)
-	if err != nil {
-		if needStackTrace {
-			fmt.Fprintf(os.Stderr, "Fatal: %+v\n", err)
-		} else {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-		}
-		os.Exit(1)
-	}
-
-	if out != nil && !quiet {
-		for _, s := range out {
-			fmt.Fprintln(os.Stdout, s)
-		}
-	}
 	os.Exit(0)
 }

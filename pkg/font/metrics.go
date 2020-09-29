@@ -66,7 +66,8 @@ FontBoundingBox = (%.2f, %.2f, %.2f, %.2f)
      FixedPitch = %t
            Bold = %t
 HorMetricsCount = %d
-     GlyphCount = %d`,
+	 GlyphCount = %d
+len(GlyphWidths) = %d`,
 		fd.PostscriptName,
 		fd.Protected,
 		fd.UnitsPerEm,
@@ -81,6 +82,7 @@ HorMetricsCount = %d
 		fd.Bold,
 		fd.HorMetricsCount,
 		fd.GlyphCount,
+		len(fd.GlyphWidths),
 	)
 }
 
@@ -95,7 +97,10 @@ func (fd TTFLight) isCJK() bool {
 	return fd.supportsUnicodeBlock(59)
 }
 
-// UserFontMetrics represents font metrics for user installed TrueType fonts.
+// UserFontDir is the location for installed TTF or OTF font files.
+var UserFontDir string
+
+// UserFontMetrics represents font metrics for TTF or OTF font files installed into UserFontDir.
 var UserFontMetrics = map[string]TTFLight{}
 
 func load(fileName string, fd *TTFLight) error {
@@ -111,11 +116,7 @@ func load(fileName string, fd *TTFLight) error {
 
 // Read reads in the font file bytes from gob
 func Read(fileName string) ([]byte, error) {
-	dir, err := Dir()
-	if err != nil {
-		return nil, err
-	}
-	fn := filepath.Join(dir, fileName+".gob")
+	fn := filepath.Join(UserFontDir, fileName+".gob")
 	//fmt.Printf("reading in fontFile from %s\n", fn)
 	f, err := os.Open(fn)
 	if err != nil {
@@ -132,45 +133,28 @@ func isSupportedFontFile(filename string) bool {
 	return strings.HasSuffix(strings.ToLower(filename), ".gob")
 }
 
-// Dir returns the path where pdfcpu stores font info for embedding.
-func Dir() (string, error) {
-	userConfigDir, err := os.UserConfigDir()
+// LoadUserFonts loads any installed TTF or OTF font files.
+func LoadUserFonts() error {
+	//fmt.Printf("loading userFonts from %s\n", UserFontDir)
+	files, err := ioutil.ReadDir(UserFontDir)
 	if err != nil {
-		return "", err
-	}
-	fontDir := filepath.Join(userConfigDir, "pdfcpu", "fonts")
-	return fontDir, os.MkdirAll(fontDir, os.ModePerm)
-}
-
-func init() {
-	//fmt.Println("metrics.init begin")
-	dir, err := Dir()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed access to font dir: %v\n", err)
-		os.Exit(1)
-	}
-	//fmt.Printf("fontDir = %s\n", dir)
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed access to fonts dir: %v\n", err)
-		os.Exit(1)
+		return err
 	}
 	for _, f := range files {
-		if isSupportedFontFile(f.Name()) {
-			ttf := TTFLight{}
-			fn := filepath.Join(dir, f.Name())
-			if err := load(fn, &ttf); err != nil {
-				fmt.Fprintf(os.Stderr, "Failed access to %s:  %v\n", f.Name(), err)
-				os.Exit(1)
-			}
-			fn = strings.TrimSuffix(f.Name(), path.Ext(f.Name()))
-			//fmt.Printf("loading %s.ttf...\n", fn)
-			//fmt.Printf("Loaded %s:\n%s", fn, ttf)
-			UserFontMetrics[fn] = ttf
+		if !isSupportedFontFile(f.Name()) {
+			continue
 		}
+		ttf := TTFLight{}
+		fn := filepath.Join(UserFontDir, f.Name())
+		if err := load(fn, &ttf); err != nil {
+			return err
+		}
+		fn = strings.TrimSuffix(f.Name(), path.Ext(f.Name()))
+		//fmt.Printf("loading %s.ttf...\n", fn)
+		//fmt.Printf("Loaded %s:\n%s", fn, ttf)
+		UserFontMetrics[fn] = ttf
 	}
-	//fmt.Println()
-	//fmt.Println("metrics.init end")
+	return nil
 }
 
 // BoundingBox returns the font bounding box for a given font as specified in the corresponding AFM file.

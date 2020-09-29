@@ -79,8 +79,29 @@ func printVersion(conf *pdfcpu.Configuration) {
 	if date != "?" {
 		fmt.Fprintf(os.Stdout, "build : %v\ncommit: %v\n", date, commit)
 	}
+	if verbose {
+		fmt.Fprintf(os.Stdout, "config: %s\n", conf.Path)
+	}
 }
 
+func process(cmd *cli.Command) {
+	out, err := cli.Process(cmd)
+	if err != nil {
+		if needStackTrace {
+			fmt.Fprintf(os.Stderr, "Fatal: %+v\n", err)
+		} else {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+		}
+		os.Exit(1)
+	}
+
+	if out != nil && !quiet {
+		for _, s := range out {
+			fmt.Fprintln(os.Stdout, s)
+		}
+	}
+	os.Exit(0)
+}
 func processValidateCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) == 0 || len(flag.Args()) > 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageValidate)
