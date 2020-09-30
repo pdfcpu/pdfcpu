@@ -4,8 +4,10 @@ layout: default
 
 # Changelog
 
-| Date      | Tag / Commit | Description  
-|:----------|:-------------|:--------
+| Date      | Tag / Commit                                                                                | Description  
+|:----------|:--------------------------------------------------------------------------------------------|:------------------------------
+|2020-09-30 | [v0.3.6](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.6)                              | Fix #218, #220-#224, #231,#232
+|           |                                                                                             | Add config dir & file
 |2020-08-31 | [v0.3.5](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.5)                              | Fix #145, #207, #208, #213, #215
 |2020-06-28 | [v0.3.4](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.4)                              | Fix #100,#102,#177,#180,#187,
 |           |                                                                                             | Fix #191-197, #199-202
