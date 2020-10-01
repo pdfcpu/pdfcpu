@@ -1617,7 +1617,9 @@ func object(ctx *Context, offset int64, objNr, genNr int) (o Object, endInd, str
 	}
 
 	if objNr != *objectNr || genNr != *generationNr {
-		return nil, 0, 0, 0, errors.Errorf("object: non matching objNr(%d) or generationNumber(%d) tags found.", *objectNr, *generationNr)
+		// This is suspicious, but ok if two object numbers point to same offset and only one of them is used
+		// (compare entry.RefCount) like for cases where the PDF Writer is MS Word 2013.
+		log.Read.Printf("object %d: non matching objNr(%d) or generationNumber(%d) tags found.\n", objNr, *objectNr, *generationNr)
 	}
 
 	o, err = parseObject(&l)
