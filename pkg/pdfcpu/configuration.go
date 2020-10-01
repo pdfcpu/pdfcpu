@@ -22,9 +22,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
-
 	"github.com/pdfcpu/pdfcpu/internal/config"
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 )
@@ -100,19 +97,6 @@ const (
 	COLLECT
 )
 
-type configuration struct {
-	Reader15          bool
-	DecodeAllStreams  bool   `yaml:"decodeAllStreams"`
-	ValidationMode    string `yaml:"validationMode"`
-	Eol               string `yaml:"eol"`
-	WriteObjectStream bool   `yaml:"writeObjectStream"`
-	WriteXRefStream   bool   `yaml:"writeXRefStream"`
-	EncryptUsingAES   bool   `yaml:"encryptUsingAES"`
-	EncryptKeyLength  int    `yaml:"encryptKeyLength"`
-	Permissions       int    `yaml:"permissions"`
-	Units             string `yaml:"units"`
-}
-
 // Configuration of a Context.
 type Configuration struct {
 	Path string
@@ -180,69 +164,6 @@ var ConfigPath string = "default"
 
 var loadedDefaultConfig *Configuration
 
-func loadedConfig(c configuration, configPath string) *Configuration {
-	var conf Configuration
-	conf.Reader15 = c.Reader15
-	conf.DecodeAllStreams = c.DecodeAllStreams
-	conf.WriteObjectStream = c.WriteObjectStream
-	conf.WriteXRefStream = c.WriteXRefStream
-	conf.EncryptUsingAES = c.EncryptUsingAES
-	conf.EncryptKeyLength = c.EncryptKeyLength
-	conf.Permissions = int16(c.Permissions)
-
-	switch c.ValidationMode {
-	case "ValidationStrict":
-		conf.ValidationMode = ValidationStrict
-	case "ValidationRelaxed":
-		conf.ValidationMode = ValidationRelaxed
-	case "ValidationNone":
-		conf.ValidationMode = ValidationNone
-	}
-
-	switch c.Eol {
-	case "EolLF":
-		conf.Eol = EolLF
-	case "EolCR":
-		conf.Eol = EolCR
-	case "EolCRLF":
-		conf.Eol = EolCRLF
-	}
-
-	switch c.Units {
-	case "points":
-		conf.Units = POINTS
-	case "inches":
-		conf.Units = INCHES
-	case "cm":
-		conf.Units = CENTIMETRES
-	case "mm":
-		conf.Units = MILLIMETRES
-	}
-
-	conf.Path = configPath
-
-	return &conf
-}
-
-func parseConfigFile(bb []byte, configPath string) error {
-	var c configuration
-	if err := yaml.Unmarshal(bb, &c); err != nil {
-		return err
-	}
-	if !MemberOf(c.ValidationMode, []string{"ValidationStrict", "ValidationRelaxed", "ValidationNone"}) {
-		return errors.Errorf("parseConfigFile: invalid validationMode: %s", c.ValidationMode)
-	}
-	if !MemberOf(c.Eol, []string{"EolLF", "EolCR", "EolCRLF"}) {
-		return errors.Errorf("parseConfigFile: invalid eol: %s", c.Eol)
-	}
-	if !MemberOf(c.Units, []string{"points", "inches", "cm", "mm"}) {
-		return errors.Errorf("parseConfigFile: invalid units: %s", c.Units)
-	}
-	loadedDefaultConfig = loadedConfig(c, configPath)
-	//fmt.Println(loadedDefaultConfig)
-	return nil
-}
-
 func generateConfigFile(fileName string) error {
 	if err := ioutil.WriteFile(fileName, config.ConfigFileBytes, os.ModePerm); err != nil {
 		return err
@@ -253,15 +174,17 @@ func generateConfigFile(fileName string) error {
 }
 
 func ensureConfigFileAt(path string) error {
-	bb, err := ioutil.ReadFile(path)
+	// Accept config.yml and config.yaml
+	f, err := os.Open(path)
 	if err != nil {
 		// Create path/pdfcpu/config.yml
 		//fmt.Printf("writing %s ..\n", path)
 		return generateConfigFile(path)
 	}
+	defer f.Close()
 	// Load configuration into loadedDefaultConfig.
 	//fmt.Printf("loading %s ...\n", path)
-	return parseConfigFile(bb, path)
+	return parseConfigFile(f, path)
 }
 
 // EnsureDefaultConfigAt tries to load the default configuration from path.
@@ -275,6 +198,7 @@ func EnsureDefaultConfigAt(path string) error {
 	if err := ensureConfigFileAt(filepath.Join(configDir, "config.yml")); err != nil {
 		return err
 	}
+	//fmt.Println(loadedDefaultConfig)
 	return font.LoadUserFonts()
 }
 
@@ -304,10 +228,12 @@ func NewDefaultConfiguration() *Configuration {
 		if err != nil {
 			path = os.TempDir()
 		}
-		if err := EnsureDefaultConfigAt(path); err == nil {
+		if err = EnsureDefaultConfigAt(path); err == nil {
 			c := *loadedDefaultConfig
 			return &c
 		}
+		fmt.Fprintf(os.Stderr, "pdfcpu: config dir problem: %v\n", err)
+		os.Exit(1)
 	}
 	return newDefaultConfiguration()
 }
