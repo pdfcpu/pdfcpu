@@ -1,3 +1,5 @@
+// +build !js
+
 /*
 Copyright 2020 The pdfcpu Authors.
 
@@ -13,7 +15,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-// +build !js
+
 
 package pdfcpu
 
