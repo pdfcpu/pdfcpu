@@ -32,7 +32,7 @@ const (
 )
 
 const (
-	userSpaceToInch = 1 / 72
+	userSpaceToInch = float64(1) / 72
 	userSpaceToCm   = 2.54 / 72
 	userSpaceToMm   = userSpaceToCm * 10
 )

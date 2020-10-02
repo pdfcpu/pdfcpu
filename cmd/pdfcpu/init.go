@@ -156,8 +156,8 @@ func initFlags() {
 	flag.StringVar(&perm, "perm", "none", permUsage)
 
 	unitsUsage := "info: po|in|cm|mm"
-	flag.StringVar(&units, "units", "po", unitsUsage)
-	flag.StringVar(&units, "u", "po", unitsUsage)
+	flag.StringVar(&units, "units", "", unitsUsage)
+	flag.StringVar(&units, "u", "", unitsUsage)
 
 	selectedPagesUsage := "a comma separated list of pages or page ranges, see pdfcpu help split/extract"
 	flag.StringVar(&selectedPages, "pages", "", selectedPagesUsage)
