@@ -143,7 +143,7 @@ func logOperationStats(ctx *pdfcpu.Context, op string, durRead, durVal, durOpt, 
 	}
 }
 
-// EnsureDefaultConfigAt switches to the pdfcpu confif dir located at path.
+// EnsureDefaultConfigAt switches to the pdfcpu config dir located at path.
 // If path/pdfcpu is not existent, it will be created including config.yml
 func EnsureDefaultConfigAt(path string) error {
 	return pdfcpu.EnsureDefaultConfigAt(path)

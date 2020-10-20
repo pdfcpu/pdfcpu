@@ -373,7 +373,7 @@ func validateDeviceNColorSpaceAttributesDict(xRefTable *pdf.XRefTable, o pdf.Obj
 
 	dictName := "deviceNCSAttributesDict"
 
-	_, err = validateNameEntry(xRefTable, d, dictName, "SubType", OPTIONAL, pdf.V16, func(s string) bool { return s == "DeviceN" || s == "NChannel" })
+	_, err = validateNameEntry(xRefTable, d, dictName, "Subtype", OPTIONAL, pdf.V16, func(s string) bool { return s == "DeviceN" || s == "NChannel" })
 	if err != nil {
 		return err
 	}

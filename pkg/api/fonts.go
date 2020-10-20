@@ -44,7 +44,7 @@ func ListFonts() ([]string, error) {
 	sscf = append(sscf, coreFonts...)
 
 	// Get installed fonts from pdfcpu config dir in users home dir
-	userFonts := font.UserFontNames()
+	userFonts := font.UserFontNamesVerbose()
 	for i, s := range userFonts {
 		userFonts[i] = "  " + s
 	}

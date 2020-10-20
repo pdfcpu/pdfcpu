@@ -54,7 +54,9 @@ type ttf struct {
 	HorMetricsCount    int               // hhea: numOfLongHorMetrics
 	GlyphCount         int               // maxp: numGlyphs
 	GlyphWidths        []int             // hmtx: fd.HorMetricsCount.advanceWidth
-	Chars              map[uint32]uint32 // cmap: Unicode characters to glyph index
+	Chars              map[uint32]uint16 // cmap: Unicode character to glyph index
+	ToUnicode          map[uint16]uint32 // map glyph index to unicode character
+	Planes             map[int]bool      // used Unicode planes
 	FontFile           []byte
 }
 
@@ -110,8 +112,8 @@ func (f myUint32) Swap(i, j int) {
 }
 
 func (fd ttf) PrintChars() string {
-	var min = uint32(0xFFFFFFFF)
-	var max uint32
+	var min = uint16(0xFFFF)
+	var max uint16
 	var sb strings.Builder
 	sb.WriteByte(0x0a)
 
@@ -129,11 +131,11 @@ func (fd ttf) PrintChars() string {
 		if g < min {
 			min = g
 		}
-		sb.WriteString(fmt.Sprintf("%08x:%08x(%d)\n", c, g, g))
+		//sb.WriteString(fmt.Sprintf("%08x:%08x(%d)\n", c, g, g))
 		sb.WriteString(fmt.Sprintf("#%x -> #%x(%d)\n", c, g, g))
 	}
-	//fmt.Printf("using glyphs[%08x,%08x] [%d,%d]\n", min, max, min, max)
-	//fmt.Printf("using glyphs #%x - #%x (%d-%d)\n", min, max, min, max)
+	fmt.Printf("using glyphs[%08x,%08x] [%d,%d]\n", min, max, min, max)
+	fmt.Printf("using glyphs #%x - #%x (%d-%d)\n", min, max, min, max)
 	return sb.String()
 }
 
@@ -160,6 +162,7 @@ func (t table) fixed32(off int) float64 {
 }
 
 func (t table) parseFontHeaderTable(fd *ttf) error {
+	// table "head"
 
 	magic := t.uint32(12)
 	//fmt.Printf("magic: %0X\n", magic)
@@ -191,6 +194,7 @@ func (t table) parseFontHeaderTable(fd *ttf) error {
 }
 
 func (t table) parsePostScriptTable(fd *ttf) error {
+	// table "post"
 
 	italicAngle := t.fixed32(4)
 	//fmt.Printf("italicAngle: %2.2f\n", italicAngle)
@@ -206,41 +210,43 @@ func (t table) parsePostScriptTable(fd *ttf) error {
 func printUnicodeRange(off int, r uint32) {
 	for i := 0; i < 64; i++ {
 		if r&1 > 0 {
-			//fmt.Printf("bit %d: on\n", off+i)
+			fmt.Printf("bit %d: on\n", off+i)
 		}
 		r >>= 1
 	}
 }
 
 func (t table) parseWindowsMetricsTable(fd *ttf) error {
+	// table "OS/2"
+
 	version := t.uint16(0)
 	//fmt.Printf("version: %016b\n", version)
 
 	fsType := t.uint16(8)
 	//fmt.Printf("fsType: %016b\n", fsType)
 	fd.Protected = fsType&2 > 0
-	//fmt.Printf("protected: %t\n", fd.Protected)
+	fmt.Printf("protected: %t\n", fd.Protected)
 
 	uniCodeRange1 := t.uint32(42)
-	//fmt.Printf("uniCodeRange1: %032b\n", uniCodeRange1)
+	fmt.Printf("uniCodeRange1: %032b\n", uniCodeRange1)
 	fd.UnicodeRange[0] = uniCodeRange1
 
 	uniCodeRange2 := t.uint32(46)
-	//fmt.Printf("uniCodeRange2: %032b\n", uniCodeRange2)
+	fmt.Printf("uniCodeRange2: %032b\n", uniCodeRange2)
 	fd.UnicodeRange[1] = uniCodeRange2
 
 	uniCodeRange3 := t.uint32(50)
-	//fmt.Printf("uniCodeRange3: %032b\n", uniCodeRange3)
+	fmt.Printf("uniCodeRange3: %032b\n", uniCodeRange3)
 	fd.UnicodeRange[2] = uniCodeRange3
 
 	uniCodeRange4 := t.uint32(54)
-	//fmt.Printf("uniCodeRange4: %032b\n", uniCodeRange4)
+	fmt.Printf("uniCodeRange4: %032b\n", uniCodeRange4)
 	fd.UnicodeRange[3] = uniCodeRange4
 
-	// printUnicodeRange(0, uniCodeRange1)
-	// printUnicodeRange(32, uniCodeRange2)
-	// printUnicodeRange(64, uniCodeRange3)
-	// printUnicodeRange(96, uniCodeRange4)
+	printUnicodeRange(0, uniCodeRange1)
+	printUnicodeRange(32, uniCodeRange2)
+	printUnicodeRange(64, uniCodeRange3)
+	printUnicodeRange(96, uniCodeRange4)
 
 	sTypoAscender := t.int16(68)
 	//fmt.Printf("sTypoAscender: %d\n", sTypoAscender)
@@ -275,6 +281,7 @@ func (t table) parseWindowsMetricsTable(fd *ttf) error {
 }
 
 func (t table) parseNamingTable(fd *ttf) error {
+	// table "name"
 
 	count := int(t.uint16(2))
 	stringOffset := t.uint16(4)
@@ -302,6 +309,7 @@ func (t table) parseNamingTable(fd *ttf) error {
 }
 
 func (t table) parseHorizontalHeaderTable(fd *ttf) error {
+	// table "hhea"
 
 	ascent := t.int16(4)
 	//fmt.Printf("ascent: %d\n", ascent)
@@ -334,22 +342,24 @@ func (t table) parseHorizontalHeaderTable(fd *ttf) error {
 	//fmt.Printf("xMaxExtent: %d\n", xMaxExtent)
 
 	numOfLongHorMetrics := t.uint16(34)
-	//fmt.Printf("numOfLongHorMetrics: %d\n", numOfLongHorMetrics)
+	fmt.Printf("numOfLongHorMetrics: %d\n", numOfLongHorMetrics)
 	fd.HorMetricsCount = int(numOfLongHorMetrics)
 
 	return nil
 }
 
 func (t table) parseMaximumProfile(fd *ttf) error {
+	// table "maxp"
 
 	numGlyphs := t.uint16(4)
-	//fmt.Printf("numGlyphs: %d\n", numGlyphs)
+	fmt.Printf("numGlyphs: %d\n", numGlyphs)
 	fd.GlyphCount = int(numGlyphs)
 
 	return nil
 }
 
 func (t table) parseHorizontalMetricsTable(fd *ttf) error {
+	// table "hmtx"
 
 	fd.GlyphWidths = make([]int, fd.GlyphCount)
 
@@ -364,16 +374,17 @@ func (t table) parseHorizontalMetricsTable(fd *ttf) error {
 	return nil
 }
 
-func (t table) parseWinUnicodeBMPCharToGlyphMappingTable(fd *ttf) error {
-
-	//fmt.Printf("dump:\n%s", hex.Dump(t.data))
+func (t table) parseCMapFormat4(fd *ttf) error {
+	//fmt.Printf("parseCMapFormat4 dump:\n%s", hex.Dump(t.data))
+	fd.Planes[0] = true
 	segCount := int(t.uint16(6) / 2)
 	endOff := 14
 	startOff := endOff + 2*segCount + 2
 	deltaOff := startOff + 2*segCount
 	rangeOff := deltaOff + 2*segCount
-	//fmt.Printf("segCount:%d endC:%04x startC:%04x deltaOff:%04x rangeOff:%04x\n", segCount, endOff, startOff, deltaOff, rangeOff)
+	fmt.Printf("segCount:%d endC:%04x startC:%04x deltaOff:%04x rangeOff:%04x\n", segCount, endOff, startOff, deltaOff, rangeOff)
 
+	count := 0
 	for i := 0; i < segCount; i++ {
 		sc := t.uint16(startOff + i*2)
 		startCode := uint32(sc)
@@ -388,91 +399,81 @@ func (t table) parseWinUnicodeBMPCharToGlyphMappingTable(fd *ttf) error {
 		idDelta := uint32(t.uint16(deltaOff + i*2))
 		idRangeOff := int(t.uint16(rangeOff + i*2))
 		//fmt.Printf("Segment %02d: %04x - %04x delta:%04x(%d) rangeOff:%04x(%d)\n", i, startCode, endCode, idDelta, idDelta, idRangeOff, idRangeOff)
-		v := uint32(0)
+		//v := uint32(0)
+		v := uint16(0)
 		for c, j := startCode, 0; c <= endCode && c != 0xFFFF; c++ {
 			if idRangeOff > 0 {
-				v = uint32(t.uint16(rangeOff + i*2 + idRangeOff + j*2))
+				//v = uint32(t.uint16(rangeOff + i*2 + idRangeOff + j*2))
+				v = t.uint16(rangeOff + i*2 + idRangeOff + j*2)
 			} else {
-				v = c + idDelta
+				v = uint16(c + idDelta)
 			}
-			if gi := uint32(v) % uint32(65536); gi > 0 {
+			//if gi := uint32(v) % uint32(65536); gi > 0 {
+			if gi := v; gi > 0 {
+				//fmt.Printf("fd.Chars[%d(%04x)] = %d(%04x)\n", c, c, gi, gi)
 				fd.Chars[c] = gi
+				fd.ToUnicode[gi] = c
+				count++
 			}
 			j++
 		}
 	}
-
+	fmt.Printf("processed %d glyphs\n", count)
 	return nil
 }
 
-func (t table) parseWinUnicodeSPCharToGlyphMappingTable(fd *ttf) error {
-
-	//fmt.Printf("dump:\n%s", hex.Dump(t.data))
-	groupCount := int(t.uint32(12))
-	//fmt.Printf("groupCount:%d\n", groupCount)
-	baseOff := 16
-	for i := 0; i < groupCount; i++ {
-		off := baseOff + i*12
-		startCharCode := t.uint32(off)
-		if fd.FirstChar == 0 {
-			switch {
-			case startCharCode > 0xFFFF:
-				fd.FirstChar = 0xFFFF
-			default:
-				fd.FirstChar = uint16(startCharCode & 0xFFFF)
+func (t table) parseCMapFormat12(fd *ttf) error {
+	//fmt.Printf("parseCMapFormat12 dump:\n%s", hex.Dump(t.data))
+	numGroups := int(t.uint32(12))
+	fmt.Printf("numGroups = %d\n", numGroups)
+	off := 16
+	count := 0
+	var (
+		lowestStartCode uint32
+		prevCode        uint32
+	)
+	for i := 0; i < numGroups; i++ {
+		base := off + i*12
+		startCode := t.uint32(base)
+		if lowestStartCode == 0 {
+			lowestStartCode = startCode
+			fd.Planes[int(lowestStartCode/0x10000)] = true
+		}
+		if startCode/0x10000 != prevCode/0x10000 {
+			fd.Planes[int(startCode/0x10000)] = true
+		}
+		endCode := t.uint32(base + 4)
+		if startCode != endCode {
+			if startCode/0x10000 != endCode/0x10000 {
+				fd.Planes[int(endCode/0x10000)] = true
 			}
 		}
-		endCharCode := t.uint32(off + 4)
-		if fd.LastChar == 0 {
-			switch {
-			case endCharCode > 0xFFFF:
-				fd.FirstChar = 0xFFFF
-			default:
-				fd.FirstChar = uint16(endCharCode & 0xFFFF)
-			}
-		}
-		startGlyphID := t.uint32(off + 8)
-		//fmt.Printf("Group %02d: %08x - %08x startGlyphID:%08x(%d)\n", i, startCharCode, endCharCode, startGlyphID, startGlyphID)
-		for c, glyphID := startCharCode, startGlyphID; c <= endCharCode; c++ {
-			fd.Chars[c] = glyphID
-			glyphID++
+		prevCode = endCode
+		startGlyphID := uint16(t.uint32(base + 8))
+		for c, gi := startCode, startGlyphID; c <= endCode; c++ {
+			fd.Chars[c] = gi
+			fd.ToUnicode[gi] = c
+			gi++
+			count++
 		}
 	}
-
-	return nil
-}
-
-func (t table) parseMacSymbolTrimmedCharToGlyphMappingTable(fd *ttf) error {
-	//fmt.Printf("dump:\n%s", hex.Dump(t.data))
-	firstCode := t.uint16(6)
-	if fd.FirstChar == 0 {
-		fd.FirstChar = firstCode
-	}
-	entryCount := t.uint16(8)
-	if fd.LastChar == 0 {
-		fd.LastChar = firstCode + entryCount - 1
-	}
-	off := 10
-	//fmt.Printf("Group %02d: %08x - %08x startGlyphID:%08x(%d)\n", i, startCharCode, endCharCode, startGlyphID, startGlyphID)
-	for c, i := uint32(firstCode), 0; c < uint32(firstCode+entryCount); c++ {
-		fd.Chars[c] = uint32(t.uint16(off + i))
-		i++
-	}
-
+	fmt.Printf("processed %d glyphs\n", count)
 	return nil
 }
 
 func (t table) parseCharToGlyphMappingTable(fd *ttf) error {
+	// table "cmap"
 
-	// Note: For symbolic fonts the 'cmap' and 'name' tables must use platform ID 3 (Microsoft) and encoding ID 0.
-	var hasCMap bool
-
-	fd.Chars = map[uint32]uint32{}
+	fd.Chars = map[uint32]uint16{}
+	fd.ToUnicode = map[uint16]uint32{}
+	fd.Planes = map[int]bool{}
 
 	tableCount := t.uint16(2)
-	//fmt.Printf("glyphMappingTables: %d\n", tableCount)
+	fmt.Printf("glyphMappingTables: %d\n", tableCount)
 	baseOff := 4
 	var pf, enc, f uint16
+	m := map[string]table{}
+
 	for i := 0; i < int(tableCount); i++ {
 		off := baseOff + i*8
 		pf = t.uint16(off)
@@ -485,100 +486,34 @@ func (t table) parseCharToGlyphMappingTable(fd *ttf) error {
 		}
 		fmt.Printf("platformID:%d enc:%d format:%d (off:%04x length:%d)\n", pf, enc, f, o, l)
 
-		// We are interested in the standard character-to-glyph-index mapping table
-		// for the Windows platform for fonts that support Unicode BMP characters.
-		//
-		// Many of the cmap formats are either obsolete or were designed to meet
-		// anticipated needs which never materialized. Modern font generation tools
-		// need not be able to write general-purpose cmaps in formats other than 4, 6, and 12.
-		if pf == 3 && enc == 1 && f == 4 {
-			hasCMap = true
-			// Format 4 is a two-byte encoding format.
-			// It should be used when the character codes for a font fall into several contiguous ranges,
-			// possibly with holes in some or all of the ranges. That is, some of the codes in a range
-			// may not be associated with glyphs in the font.
-			b := t.data[o : o+l]
-			t1 := table{off: o, size: uint32(l), data: b}
-			if err := t1.parseWinUnicodeBMPCharToGlyphMappingTable(fd); err != nil {
-				return err
-			}
-			//fmt.Println(fd.PrintChars())
-			continue
-		}
-
-		if pf == 3 && enc == 1 && f == 6 {
-			// Format 6 is used to map 16-bit, 2-byte, characters to glyph indexes.
-			// It is sometimes called the trimmed table mapping. It should be used when character codes
-			// for a font fall into a single contiguous range. This results in what is termed a dense mapping.
-			// The firstCode and entryCount values specify a subrange (beginning at firstCode, length = entryCount) within the range of possible character codes.
-			// Codes outside of this subrange are mapped to glyph index 0.
-			// The offset of the code (from the first code) within this subrange is used as index to the glyphIdArray, which provides the glyph index value.
-			// uint16	firstCode	First character code of subrange.
-			// uint16	entryCount	Number of character codes in subrange.
-			// uint16	glyphIdArray[entryCount]	Array of glyph index values for character codes in the range.
-			continue
-		}
-
-		if pf == 1 && enc == 0 && f == 6 {
-			fmt.Println("3.1.6")
-			hasCMap = true
-			// Format 6 is used to map 16-bit, 2-byte, characters to glyph indexes.
-			// It is sometimes called the trimmed table mapping. It should be used when character codes
-			// for a font fall into a single contiguous range. This results in what is termed a dense mapping.
-			// The firstCode and entryCount values specify a subrange (beginning at firstCode, length = entryCount) within the range of possible character codes.
-			// Codes outside of this subrange are mapped to glyph index 0.
-			// The offset of the code (from the first code) within this subrange is used as index to the glyphIdArray, which provides the glyph index value.
-			// uint16	firstCode	First character code of subrange.
-			// uint16	entryCount	Number of character codes in subrange.
-			// uint16	glyphIdArray[entryCount]	Array of glyph index values for character codes in the range.
-			b := t.data[o : o+l]
-			t1 := table{off: o, size: uint32(l), data: b}
-			if err := t1.parseMacSymbolTrimmedCharToGlyphMappingTable(fd); err != nil {
-				return err
-			}
-			fmt.Println(fd.PrintChars())
-			continue
-		}
-
-		if pf == 3 && enc == 10 && f == 12 {
-			hasCMap = true
-			// Note: This will overlay any char mapping based on a (3,1,4) subtable
-			//       Assumption: A (3,10,12) subtable extends a (3,1,4) subtable possibly also repeating all (3,1,4) char mappings.
-			//
-			// Format 12 is a bit like format 4, in that it defines segments for sparse representation in a 4-byte character space.
-			// It is required for Unicode fonts covering characters above U+FFFF on Windows.
-			// It is the most useful of the cmap formats with 32-bit support.
-			// Segmented coverage
-			// This is the standard character-to-glyph-index mapping table for the Windows platform for fonts supporting Unicode supplementary-plane characters (U+10000 to U+10FFFF).
-			// Format 12 is similar to format 4 in that it defines segments for sparse representation.
-			// It differs, however, in that it uses 32-bit character codes.
-			// The sequential map group record is the same format as is used for the format 8 subtable.
-			// The qualifications regarding 16-bit character codes does not apply here, however, since characters codes are uniformly 32-bit.
-			b := t.data[o : o+l]
-			t1 := table{off: o, size: uint32(l), data: b}
-			if err := t1.parseWinUnicodeSPCharToGlyphMappingTable(fd); err != nil {
-				return err
-			}
-			//fmt.Println(fd.PrintChars())
-			continue
-		}
-
-		if pf == 3 && enc == 10 && f == 10 {
-			// Trimmed array
-			// Format 10 is similar to format 6, in that it defines a trimmed array for a tight range of character codes.
-			// It differs, however, in that is uses 32-bit character codes:
-			// uint32	startCharCode	First character code covered
-			// uint32	numChars	Number of character codes covered
-			// uint16	glyphs[]	Array of glyph indices for the character codes covered
-		}
-
+		b := t.data[o : o+l]
+		t1 := table{off: o, size: uint32(l), data: b}
+		k := fmt.Sprintf("p%02d.e%02d.f%02d", pf, enc, f)
+		m[k] = t1
 	}
 
-	if !hasCMap {
-		return fmt.Errorf("missing cmap")
+	if t, ok := m["p00.e10.f12"]; ok {
+		fmt.Println("processing 0 10 12")
+		return t.parseCMapFormat12(fd)
+	}
+	if t, ok := m["p00.e04.f12"]; ok {
+		fmt.Println("processing 0 4 12")
+		return t.parseCMapFormat12(fd)
+	}
+	if t, ok := m["p03.e10.f12"]; ok {
+		fmt.Println("processing 3 10 12")
+		return t.parseCMapFormat12(fd)
+	}
+	if t, ok := m["p00.e03.f04"]; ok {
+		fmt.Println("processing 0 3 4")
+		return t.parseCMapFormat4(fd)
+	}
+	if t, ok := m["p03.e01.f04"]; ok {
+		fmt.Println("processing 3 1 4")
+		return t.parseCMapFormat4(fd)
 	}
 
-	return nil
+	return fmt.Errorf("pdfcpu: unsupported cmap table")
 }
 
 func calcTableChecksum(tag string, b []byte) uint32 {
@@ -601,7 +536,6 @@ func getNext32BitAlignedLength(i uint32) uint32 {
 }
 
 func parseFontDir(name string) (map[string]table, error) {
-
 	f, err := os.Open(name)
 	if err != nil {
 		return nil, err
@@ -614,18 +548,18 @@ func parseFontDir(name string) (map[string]table, error) {
 		return nil, err
 	}
 	if n != 6 {
-		return nil, fmt.Errorf("corrupt file")
+		return nil, fmt.Errorf("pdfcpu: corrupt ttf file")
 	}
 	//fmt.Printf("read %d bytes\n%s\n", n, hex.Dump(b))
 
 	st := string(b[:4])
 
 	if st == sfntVersionCFF {
-		return nil, fmt.Errorf("OpenType CFF unsupported at the moment :(")
+		return nil, fmt.Errorf("pdfcpu: OpenType CFF unsupported at the moment :(")
 	}
 
 	if st != sfntVersionTrueType && st != sfntVersionTrueTypeApple {
-		return nil, fmt.Errorf("unrecognized font format")
+		return nil, fmt.Errorf("pdfcpu: unrecognized font format")
 	}
 
 	c := int(binary.BigEndian.Uint16(b[4:]))
@@ -637,7 +571,7 @@ func parseFontDir(name string) (map[string]table, error) {
 		return nil, err
 	}
 	if n != c*16 {
-		return nil, fmt.Errorf("corrupt file")
+		return nil, fmt.Errorf("pdfcpu: corrupt ttf file")
 	}
 
 	tables := map[string]table{}
@@ -651,7 +585,7 @@ func parseFontDir(name string) (map[string]table, error) {
 		chk := binary.BigEndian.Uint32(b1[4:8])
 		o := binary.BigEndian.Uint32(b1[8:12])
 		l := binary.BigEndian.Uint32(b1[12:])
-		//fmt.Printf("tag: %s chk:%d o:%d l:%d\n\n", tag, chk, o, l)
+		fmt.Printf("tag: %s chk:%d o:%d l:%d\n", tag, chk, o, l)
 		ll := getNext32BitAlignedLength(l)
 		t := make([]byte, ll)
 		n, err = f.ReadAt(t, int64(o))
@@ -659,14 +593,14 @@ func parseFontDir(name string) (map[string]table, error) {
 			return nil, err
 		}
 		if n != int(ll) {
-			return nil, fmt.Errorf("corrupt table")
+			return nil, fmt.Errorf("pdfcpu: corrupt table")
 		}
 
 		tables[tag] = table{off: o, size: ll, data: t}
 
 		//fmt.Printf("table <%s>:\n%s\n", tag, hex.Dump(t))
 		if sum := calcTableChecksum(tag, t); sum != chk {
-			return nil, fmt.Errorf("table<%s> checksum error", tag)
+			return nil, fmt.Errorf("pdfcpu: table<%s> checksum error", tag)
 		}
 
 		tags = append(tags, tag)
@@ -680,10 +614,10 @@ func parseFontDir(name string) (map[string]table, error) {
 func parse(tags map[string]table, tag string, fd *ttf) error {
 	t, found := tags[tag]
 	if !found {
-		return fmt.Errorf("tag: %s unavailable", tag)
+		return fmt.Errorf("pdfcpu: tag: %s unavailable", tag)
 	}
 	if t.data == nil {
-		return fmt.Errorf("tag: %s no data", tag)
+		return fmt.Errorf("pdfcpu: tag: %s no data", tag)
 	}
 	//fmt.Printf("table <%s>:\n%s\n", tag, hex.Dump(t.data))
 
@@ -743,20 +677,7 @@ func InstallTrueTypeFont(fontDir, fontName string) error {
 
 	fd := ttf{}
 
-	/* Apple TrueType needs:
-	'cmap'	character to glyph mapping   ok
-	'glyf'	glyph data
-	'head'	font header            ok
-	'hhea'	horizontal header      ok
-	'hmtx'	horizontal metrics     ok
-	'loca'	index to location
-	'maxp'	maximum profile        ok
-	'name'	naming                 ok
-	'post'	PostScript             ok
-	*/
-
 	for _, v := range []string{"head", "OS/2", "post", "name", "hhea", "maxp", "hmtx", "cmap"} {
-		//for _, v := range []string{"head", "post", "name", "hhea", "maxp", "hmtx", "cmap"} {
 		if err := parse(tags, v, &fd); err != nil {
 			return err
 		}
@@ -772,7 +693,7 @@ func InstallTrueTypeFont(fontDir, fontName string) error {
 	gobName := filepath.Join(fontDir, fn+".gob")
 
 	// Write the populated ttf struct as gob.
-	//fmt.Printf("Write %s:\n", fd)
+	fmt.Printf("Write %s:\n", fd)
 	if err := writeGob(gobName, fd); err != nil {
 		return err
 	}
@@ -785,7 +706,7 @@ func InstallTrueTypeFont(fontDir, fontName string) error {
 	//fmt.Printf("Read %s:\n", fdNew)
 
 	if !reflect.DeepEqual(fd, fdNew) {
-		return errors.Errorf("%s can't be installed", fontName)
+		return errors.Errorf("pdfcpu: %s can't be installed", fontName)
 	}
 
 	return nil
