@@ -68,15 +68,15 @@ func InstallFonts(fileNames []string) error {
 	for _, fn := range fileNames {
 		switch filepath.Ext(fn) {
 		case ".ttf":
-			log.CLI.Println(filepath.Base(fn))
+			//log.CLI.Println(filepath.Base(fn))
 			if err := font.InstallTrueTypeFont(font.UserFontDir, fn); err != nil {
-				return err
+				log.CLI.Printf("%v", err)
 			}
-			// case ".ttc":
-			// 	log.CLI.Println(filepath.Base(fn))
-			// 	if err := font.InstallTrueTypeCollection(font.UserFontDir, fn); err != nil {
-			// 		return err
-			// 	}
+		case ".ttc":
+			//log.CLI.Println(filepath.Base(fn))
+			if err := font.InstallTrueTypeCollection(font.UserFontDir, fn); err != nil {
+				log.CLI.Printf("%v", err)
+			}
 		}
 	}
 	return font.LoadUserFonts()

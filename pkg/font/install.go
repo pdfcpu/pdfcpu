@@ -22,7 +22,7 @@ import (
 	"encoding/binary"
 	"encoding/gob"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -30,6 +30,7 @@ import (
 	"strings"
 	"unicode/utf16"
 
+	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pkg/errors"
 )
 
@@ -547,45 +548,40 @@ func getNext32BitAlignedLength(i uint32) uint32 {
 	return i
 }
 
-func parseFontDir(name string) (map[string]table, error) {
-	f, err := os.Open(name)
+func headerAndTables(fn string, r io.ReaderAt, baseOff int64) ([]byte, map[string]*table, error) {
+	header := make([]byte, 12)
+	//n, err := f.Read(header)
+	n, err := r.ReadAt(header, baseOff)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	defer f.Close()
-
-	b := make([]byte, 6)
-	n, err := f.Read(b)
-	if err != nil {
-		return nil, err
-	}
-	if n != 6 {
-		return nil, fmt.Errorf("pdfcpu: corrupt ttf file: %s", name)
+	if n != 12 {
+		return nil, nil, fmt.Errorf("pdfcpu: corrupt ttf file: %s", fn)
 	}
 
-	st := string(b[:4])
+	st := string(header[:4])
 
 	if st == sfntVersionCFF {
-		return nil, fmt.Errorf("pdfcpu: %s is OpenType CFF - unsupported at the moment :(", name)
+		return nil, nil, fmt.Errorf("pdfcpu: %s is based on OpenType CFF and unsupported at the moment :(", fn)
 	}
 
 	if st != sfntVersionTrueType && st != sfntVersionTrueTypeApple {
-		return nil, fmt.Errorf("pdfcpu: unrecognized font format: %s", name)
+		return nil, nil, fmt.Errorf("pdfcpu: unrecognized font format: %s", fn)
 	}
 
-	c := int(binary.BigEndian.Uint16(b[4:]))
+	c := int(binary.BigEndian.Uint16(header[4:]))
 
-	b = make([]byte, c*16)
-	n, err = f.ReadAt(b, 12)
+	b := make([]byte, c*16)
+	n, err = r.ReadAt(b, baseOff+12)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if n != c*16 {
-		return nil, fmt.Errorf("pdfcpu: corrupt ttf file: %s", name)
+		return nil, nil, fmt.Errorf("pdfcpu: corrupt ttf file: %s", fn)
 	}
 
 	byteCount := uint32(12)
-	tables := map[string]table{}
+	tables := map[string]*table{}
 
 	for j := 0; j < c; j++ {
 		off := j * 16
@@ -597,26 +593,26 @@ func parseFontDir(name string) (map[string]table, error) {
 		ll := getNext32BitAlignedLength(l)
 		byteCount += ll
 		t := make([]byte, ll)
-		n, err = f.ReadAt(t, int64(o))
+		n, err = r.ReadAt(t, int64(o))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if n != int(ll) {
-			return nil, fmt.Errorf("pdfcpu: corrupt table: %s", tag)
+			return nil, nil, fmt.Errorf("pdfcpu: corrupt table: %s", tag)
 		}
-
-		tables[tag] = table{off: o, size: ll, data: t}
-		//fmt.Printf("table <%s>:\n%s\n", tag, hex.Dump(t))
-		if sum := calcTableChecksum(tag, t); sum != chk {
-			fmt.Printf("pdfcpu: ignoring table<%s> checksum error; want:%d got:%d\n", tag, chk, sum)
+		sum := calcTableChecksum(tag, t)
+		if sum != chk {
+			//fmt.Printf("pdfcpu: ignoring table<%s> checksum error; want:%d got:%d\n", tag, chk, sum)
 			//return nil, fmt.Errorf("pdfcpu: table<%s> checksum error; want:%d got:%d", tag, chk, sum)
 		}
+		tables[tag] = &table{chksum: sum, off: o, size: l, padded: ll, data: t}
+		//fmt.Printf("table <%s>:\n%s\n", tag, hex.Dump(t))
 	}
 
-	return tables, nil
+	return header, tables, nil
 }
 
-func parse(tags map[string]table, tag string, fd *ttf) error {
+func parse(tags map[string]*table, tag string, fd *ttf) error {
 	t, found := tags[tag]
 	if !found {
 		// OS/2 is optional for True Type fonts.
@@ -673,6 +669,48 @@ func readGob(fileName string, fd *ttf) error {
 	return dec.Decode(fd)
 }
 
+func installTrueTypeRep(fontDir, fontName string, header []byte, tables map[string]*table) error {
+	fd := ttf{}
+	for _, v := range []string{"head", "OS/2", "post", "name", "hhea", "maxp", "hmtx", "cmap"} {
+		if err := parse(tables, v, &fd); err != nil {
+			return err
+		}
+	}
+
+	bb, err := createTTF(header, tables)
+	if err != nil {
+		return err
+	}
+	fd.FontFile = bb
+
+	log.CLI.Println(fd.PostscriptName)
+	gobName := filepath.Join(fontDir, fd.PostscriptName+".gob")
+
+	// Write the populated ttf struct as gob.
+	if err := writeGob(gobName, fd); err != nil {
+		return err
+	}
+
+	// Read gob and double check integrity.
+	fdNew := ttf{}
+	if err := readGob(gobName, &fdNew); err != nil {
+		return err
+	}
+
+	if !reflect.DeepEqual(fd, fdNew) {
+		return errors.Errorf("pdfcpu: %s can't be installed", fontName)
+	}
+
+	return nil
+}
+
+func offsetTable(r io.ReaderAt, off int) ([]byte, map[string]*table, error) {
+
+	return nil, nil, nil
+}
+
+// InstallTrueTypeCollection saves an internal representation of all fonts
+// contained in a TrueType collection to the pdfcpu config dir.
 func InstallTrueTypeCollection(fontDir, fn string) error {
 	f, err := os.Open(fn)
 	if err != nil {
@@ -694,7 +732,7 @@ func InstallTrueTypeCollection(fontDir, fn string) error {
 	}
 
 	c := int(binary.BigEndian.Uint32(b[8:]))
-	fmt.Printf("We have %d fonts\n", c)
+	//fmt.Printf("We have %d fonts\n", c)
 
 	b = make([]byte, c*4)
 	n, err = f.ReadAt(b, 12)
@@ -705,54 +743,34 @@ func InstallTrueTypeCollection(fontDir, fn string) error {
 		return fmt.Errorf("pdfcpu: corrupt ttc file: %s", fn)
 	}
 
+	// Process contained fonts.
 	for i := 0; i < c; i++ {
-		off := int(binary.BigEndian.Uint32(b[i*4 : (i+1)*4]))
-		_ = off
+		off := int64(binary.BigEndian.Uint32(b[i*4 : (i+1)*4]))
+		header, tables, err := headerAndTables(fn, f, off)
+		if err != nil {
+			return err
+		}
+		if err := installTrueTypeRep(fontDir, fn, header, tables); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-// InstallTrueTypeFont compiles font attributes needed to build a font descriptor.
+// InstallTrueTypeFont saves an internal representation of TrueType font fontName to the pdfcpu config dir.
 func InstallTrueTypeFont(fontDir, fontName string) error {
-	tags, err := parseFontDir(fontName)
+	f, err := os.Open(fontName)
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
-	fd := ttf{}
-
-	for _, v := range []string{"head", "OS/2", "post", "name", "hhea", "maxp", "hmtx", "cmap"} {
-		if err := parse(tags, v, &fd); err != nil {
-			return err
-		}
-	}
-
-	fd.FontFile, err = ioutil.ReadFile(fontName)
+	header, tables, err := headerAndTables(fontName, f, 0)
 	if err != nil {
 		return err
 	}
-
-	fn := filepath.Base(fd.PostscriptName)
-	fn = strings.TrimSuffix(fn, filepath.Ext(fn))
-	gobName := filepath.Join(fontDir, fn+".gob")
-
-	// Write the populated ttf struct as gob.
-	if err := writeGob(gobName, fd); err != nil {
-		return err
-	}
-
-	// Read gob and double check integrity.
-	fdNew := ttf{}
-	if err := readGob(gobName, &fdNew); err != nil {
-		return err
-	}
-
-	if !reflect.DeepEqual(fd, fdNew) {
-		return errors.Errorf("pdfcpu: %s can't be installed", fontName)
-	}
-
-	return nil
+	return installTrueTypeRep(fontDir, fontName, header, tables)
 }
 
 func ttfTables(tableCount int, bb []byte) (map[string]*table, error) {
@@ -880,25 +898,7 @@ func glyfAndLoca(fontName string, tables map[string]*table, usedGIDs map[uint16]
 	return nil
 }
 
-// Subset creates a new font file based on usedGIDs.
-func Subset(fontName string, usedGIDs map[uint16]bool) ([]byte, error) {
-	bb, err := Read(fontName)
-	if err != nil {
-		return nil, err
-	}
-
-	header := bb[:12]
-	tableCount := int(binary.BigEndian.Uint16(header[4:6]))
-
-	tables, err := ttfTables(tableCount, bb)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := glyfAndLoca(fontName, tables, usedGIDs); err != nil {
-		return nil, err
-	}
-
+func createTTF(header []byte, tables map[string]*table) ([]byte, error) {
 	tags := []string{}
 	for t := range tables {
 		tags = append(tags, t)
@@ -906,7 +906,7 @@ func Subset(fontName string, usedGIDs map[uint16]bool) ([]byte, error) {
 	sort.Strings(tags)
 
 	buf := bytes.NewBuffer(header)
-	off := uint32(len(header) + tableCount*16)
+	off := uint32(len(header) + len(tables)*16)
 	o := off
 	for _, tag := range tags {
 		t := tables[tag]
@@ -941,4 +941,25 @@ func Subset(fontName string, usedGIDs map[uint16]bool) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+// Subset creates a new font file based on usedGIDs.
+func Subset(fontName string, usedGIDs map[uint16]bool) ([]byte, error) {
+	bb, err := Read(fontName)
+	if err != nil {
+		return nil, err
+	}
+
+	header := bb[:12]
+	tableCount := int(binary.BigEndian.Uint16(header[4:6]))
+	tables, err := ttfTables(tableCount, bb)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := glyfAndLoca(fontName, tables, usedGIDs); err != nil {
+		return nil, err
+	}
+
+	return createTTF(header, tables)
 }
