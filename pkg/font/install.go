@@ -136,7 +136,6 @@ func (fd ttf) PrintChars() string {
 		if g < min {
 			min = g
 		}
-		//sb.WriteString(fmt.Sprintf("%08x:%08x(%d)\n", c, g, g))
 		sb.WriteString(fmt.Sprintf("#%x -> #%x(%d)\n", c, g, g))
 	}
 	fmt.Printf("using glyphs[%08x,%08x] [%d,%d]\n", min, max, min, max)
@@ -153,7 +152,7 @@ type table struct {
 }
 
 func (t table) uint16(off int) uint16 {
-	return binary.BigEndian.Uint16(t.data[off : off+2])
+	return binary.BigEndian.Uint16(t.data[off:])
 }
 
 func (t table) int16(off int) int16 {
@@ -161,7 +160,7 @@ func (t table) int16(off int) int16 {
 }
 
 func (t table) uint32(off int) uint32 {
-	return binary.BigEndian.Uint32(t.data[off : off+4])
+	return binary.BigEndian.Uint32(t.data[off:])
 }
 
 func (t table) fixed32(off int) float64 {
@@ -243,10 +242,7 @@ func printUnicodeRange(off int, r uint32) {
 func (t table) parseWindowsMetricsTable(fd *ttf) error {
 	// table "OS/2"
 	version := t.uint16(0)
-	//fmt.Printf("version: %016b\n", version)
-
 	fsType := t.uint16(8)
-	//fmt.Printf("fsType: %016b\n", fsType)
 	fd.Protected = fsType&2 > 0
 	//fmt.Printf("protected: %t\n", fd.Protected)
 
@@ -272,11 +268,9 @@ func (t table) parseWindowsMetricsTable(fd *ttf) error {
 	// printUnicodeRange(96, uniCodeRange4)
 
 	sTypoAscender := t.int16(68)
-	//fmt.Printf("sTypoAscender: %d\n", sTypoAscender)
 	fd.Ascent = fd.toPDFGlyphSpace(int(sTypoAscender))
 
 	sTypoDescender := t.int16(70)
-	//fmt.Printf("sTypoDescender: %d\n", sTypoDescender)
 	fd.Descent = fd.toPDFGlyphSpace(int(sTypoDescender))
 
 	// sCapHeight: This field was defined in version 2 of the OS/2 table.
@@ -284,20 +278,15 @@ func (t table) parseWindowsMetricsTable(fd *ttf) error {
 	if version >= 2 {
 		sCapHeight = t.int16(88)
 	}
-	//fmt.Printf("sCapHeight: %d\n", sCapHeight)
 	fd.CapHeight = fd.toPDFGlyphSpace(int(sCapHeight))
 
 	fsSelection := t.uint16(62)
-	//fmt.Printf("fsSelection: %02x\n", fsSelection)
 	fd.Bold = fsSelection&0x40 > 0
-	//fmt.Printf("bold: %t\n", fd.Bold)
 
 	fsFirstCharIndex := t.uint16(64)
-	//fmt.Printf("fsFirstCharIndex: %d\n", fsFirstCharIndex)
 	fd.FirstChar = fsFirstCharIndex
 
 	fsLastCharIndex := t.uint16(66)
-	//fmt.Printf("fsLastCharIndex: %d\n", fsLastCharIndex)
 	fd.LastChar = fsLastCharIndex
 
 	return nil
@@ -311,7 +300,7 @@ func (t table) parseNamingTable(fd *ttf) error {
 	baseOff := 6
 	for i := 0; i < count; i++ {
 		recOff := baseOff + i*12
-		pf := t.uint16(recOff) // Mac pf:1 enc:0 lang:0(english) Win: pf:3 enc:1 lang:x0409 (english)
+		pf := t.uint16(recOff)
 		enc := t.uint16(recOff + 2)
 		lang := t.uint16(recOff + 4)
 		nameID = t.uint16(recOff + 6)
@@ -319,7 +308,6 @@ func (t table) parseNamingTable(fd *ttf) error {
 		o := t.uint16(recOff + 10)
 		soff := stringOffset + o
 		s := t.data[soff : soff+l]
-		//fmt.Printf("pf:%0x enc:%0x lang:%0x nameID:%0x length:%d off:%0x <%q>\n", pf, enc, lang, nameID, l, o, s)
 		if nameID == 6 {
 			if pf == 3 && enc == 1 && lang == 0x0409 {
 				fd.PostscriptName = utf16BEToString(s)
@@ -397,7 +385,6 @@ func (t table) parseHorizontalMetricsTable(fd *ttf) error {
 }
 
 func (t table) parseCMapFormat4(fd *ttf) error {
-	//fmt.Printf("parseCMapFormat4 dump:\n%s", hex.Dump(t.data))
 	fd.Planes[0] = true
 	segCount := int(t.uint16(6) / 2)
 	endOff := 14
@@ -438,7 +425,6 @@ func (t table) parseCMapFormat4(fd *ttf) error {
 }
 
 func (t table) parseCMapFormat12(fd *ttf) error {
-	//fmt.Printf("parseCMapFormat12 dump:\n%s", hex.Dump(t.data))
 	numGroups := int(t.uint32(12))
 	off := 16
 	count := 0
@@ -480,9 +466,7 @@ func (t table) parseCharToGlyphMappingTable(fd *ttf) error {
 	fd.Chars = map[uint32]uint16{}
 	fd.ToUnicode = map[uint16]uint32{}
 	fd.Planes = map[int]bool{}
-
 	tableCount := t.uint16(2)
-	//fmt.Printf("glyphMappingTables: %d\n", tableCount)
 	baseOff := 4
 	var pf, enc, f uint16
 	m := map[string]table{}
@@ -497,8 +481,6 @@ func (t table) parseCharToGlyphMappingTable(fd *ttf) error {
 		if f >= 8 {
 			l = t.uint32(int(o) + 4)
 		}
-		//fmt.Printf("platformID:%d enc:%d format:%d (off:%04x length:%d)\n", pf, enc, f, o, l)
-
 		b := t.data[o : o+l]
 		t1 := table{off: o, size: uint32(l), data: b}
 		k := fmt.Sprintf("p%02d.e%02d.f%02d", pf, enc, f)
@@ -506,23 +488,18 @@ func (t table) parseCharToGlyphMappingTable(fd *ttf) error {
 	}
 
 	if t, ok := m["p00.e10.f12"]; ok {
-		//fmt.Println("processing 0 10 12")
 		return t.parseCMapFormat12(fd)
 	}
 	if t, ok := m["p00.e04.f12"]; ok {
-		//fmt.Println("processing 0 4 12")
 		return t.parseCMapFormat12(fd)
 	}
 	if t, ok := m["p03.e10.f12"]; ok {
-		//fmt.Println("processing 3 10 12")
 		return t.parseCMapFormat12(fd)
 	}
 	if t, ok := m["p00.e03.f04"]; ok {
-		//fmt.Println("processing 0 3 4")
 		return t.parseCMapFormat4(fd)
 	}
 	if t, ok := m["p03.e01.f04"]; ok {
-		//fmt.Println("processing 3 1 4")
 		return t.parseCMapFormat4(fd)
 	}
 
@@ -536,7 +513,7 @@ func calcTableChecksum(tag string, b []byte) uint32 {
 		if tag == "head" && i == 2 {
 			continue
 		}
-		sum += binary.BigEndian.Uint32(b[i*4 : (i+1)*4])
+		sum += binary.BigEndian.Uint32(b[i*4:])
 	}
 	return sum
 }
@@ -550,7 +527,6 @@ func getNext32BitAlignedLength(i uint32) uint32 {
 
 func headerAndTables(fn string, r io.ReaderAt, baseOff int64) ([]byte, map[string]*table, error) {
 	header := make([]byte, 12)
-	//n, err := f.Read(header)
 	n, err := r.ReadAt(header, baseOff)
 	if err != nil {
 		return nil, nil, err
@@ -587,8 +563,8 @@ func headerAndTables(fn string, r io.ReaderAt, baseOff int64) ([]byte, map[strin
 		off := j * 16
 		b1 := b[off : off+16]
 		tag := string(b1[:4])
-		chk := binary.BigEndian.Uint32(b1[4:8])
-		o := binary.BigEndian.Uint32(b1[8:12])
+		chk := binary.BigEndian.Uint32(b1[4:])
+		o := binary.BigEndian.Uint32(b1[8:])
 		l := binary.BigEndian.Uint32(b1[12:])
 		ll := getNext32BitAlignedLength(l)
 		byteCount += ll
@@ -602,11 +578,10 @@ func headerAndTables(fn string, r io.ReaderAt, baseOff int64) ([]byte, map[strin
 		}
 		sum := calcTableChecksum(tag, t)
 		if sum != chk {
-			//fmt.Printf("pdfcpu: ignoring table<%s> checksum error; want:%d got:%d\n", tag, chk, sum)
-			//return nil, fmt.Errorf("pdfcpu: table<%s> checksum error; want:%d got:%d", tag, chk, sum)
+			fmt.Printf("pdfcpu: fixing table<%s> checksum error; want:%d got:%d\n", tag, chk, sum)
+			chk = sum
 		}
-		tables[tag] = &table{chksum: sum, off: o, size: l, padded: ll, data: t}
-		//fmt.Printf("table <%s>:\n%s\n", tag, hex.Dump(t))
+		tables[tag] = &table{chksum: chk, off: o, size: l, padded: ll, data: t}
 	}
 
 	return header, tables, nil
@@ -704,11 +679,6 @@ func installTrueTypeRep(fontDir, fontName string, header []byte, tables map[stri
 	return nil
 }
 
-func offsetTable(r io.ReaderAt, off int) ([]byte, map[string]*table, error) {
-
-	return nil, nil, nil
-}
-
 // InstallTrueTypeCollection saves an internal representation of all fonts
 // contained in a TrueType collection to the pdfcpu config dir.
 func InstallTrueTypeCollection(fontDir, fn string) error {
@@ -732,7 +702,6 @@ func InstallTrueTypeCollection(fontDir, fn string) error {
 	}
 
 	c := int(binary.BigEndian.Uint32(b[8:]))
-	//fmt.Printf("We have %d fonts\n", c)
 
 	b = make([]byte, c*4)
 	n, err = f.ReadAt(b, 12)
@@ -745,7 +714,7 @@ func InstallTrueTypeCollection(fontDir, fn string) error {
 
 	// Process contained fonts.
 	for i := 0; i < c; i++ {
-		off := int64(binary.BigEndian.Uint32(b[i*4 : (i+1)*4]))
+		off := int64(binary.BigEndian.Uint32(b[i*4:]))
 		header, tables, err := headerAndTables(fn, f, off)
 		if err != nil {
 			return err
@@ -780,8 +749,8 @@ func ttfTables(tableCount int, bb []byte) (map[string]*table, error) {
 		off := j * 16
 		b1 := b[off : off+16]
 		tag := string(b1[:4])
-		chksum := binary.BigEndian.Uint32(b1[4:8])
-		o := binary.BigEndian.Uint32(b1[8:12])
+		chksum := binary.BigEndian.Uint32(b1[4:])
+		o := binary.BigEndian.Uint32(b1[8:])
 		l := binary.BigEndian.Uint32(b1[12:])
 		ll := getNext32BitAlignedLength(l)
 		t := append([]byte(nil), bb[o:o+ll]...)
@@ -951,7 +920,7 @@ func Subset(fontName string, usedGIDs map[uint16]bool) ([]byte, error) {
 	}
 
 	header := bb[:12]
-	tableCount := int(binary.BigEndian.Uint16(header[4:6]))
+	tableCount := int(binary.BigEndian.Uint16(header[4:]))
 	tables, err := ttfTables(tableCount, bb)
 	if err != nil {
 		return nil, err

@@ -66,9 +66,9 @@ func (p iccProfile) tag(sig string) (int, int, error) {
 			continue
 		}
 		j += 4
-		off := binary.BigEndian.Uint32(p.b[j : j+4])
+		off := binary.BigEndian.Uint32(p.b[j:])
 		j += 4
-		size := binary.BigEndian.Uint32(p.b[j : j+4])
+		size := binary.BigEndian.Uint32(p.b[j:])
 		return int(off), int(size), nil
 	}
 
@@ -111,7 +111,7 @@ func (p *iccProfile) init() error {
 }
 
 func (p iccProfile) size() uint32 {
-	return binary.BigEndian.Uint32(p.b[0:4])
+	return binary.BigEndian.Uint32(p.b[0:])
 }
 
 func (p iccProfile) preferredCMM() string {
@@ -139,12 +139,12 @@ func (p iccProfile) pcs() string {
 
 func (p iccProfile) creationTS() string {
 
-	y := binary.BigEndian.Uint16(p.b[24:26])
-	m := binary.BigEndian.Uint16(p.b[26:28])
-	d := binary.BigEndian.Uint16(p.b[28:30])
-	h := binary.BigEndian.Uint16(p.b[30:32])
-	min := binary.BigEndian.Uint16(p.b[32:34])
-	s := binary.BigEndian.Uint16(p.b[34:36])
+	y := binary.BigEndian.Uint16(p.b[24:])
+	m := binary.BigEndian.Uint16(p.b[26:])
+	d := binary.BigEndian.Uint16(p.b[28:])
+	h := binary.BigEndian.Uint16(p.b[30:])
+	min := binary.BigEndian.Uint16(p.b[32:])
+	s := binary.BigEndian.Uint16(p.b[34:])
 
 	return fmt.Sprintf("%4d-%02d-%02d %02d:%02d:%02d", y, m, d, h, min, s)
 }
@@ -166,7 +166,7 @@ func (p iccProfile) deviceModel() string {
 }
 
 func (p iccProfile) renderingIntent() string {
-	ri := binary.BigEndian.Uint16(p.b[66:68])
+	ri := binary.BigEndian.Uint16(p.b[66:])
 	switch ri {
 	case 0:
 		return "Perceptual"
@@ -183,8 +183,8 @@ func (p iccProfile) renderingIntent() string {
 
 func (p iccProfile) xyz(i int) (x, y, z float32) {
 
-	x = float32(binary.BigEndian.Uint16(p.b[i : i+2]))
-	f := float32(binary.BigEndian.Uint16(p.b[i+2:i+4])) / 0x10000
+	x = float32(binary.BigEndian.Uint16(p.b[i:]))
+	f := float32(binary.BigEndian.Uint16(p.b[i+2:])) / 0x10000
 	if x < 0 {
 		x -= f
 	} else {
@@ -192,8 +192,8 @@ func (p iccProfile) xyz(i int) (x, y, z float32) {
 	}
 	i += 4
 
-	y = float32(binary.BigEndian.Uint16(p.b[i : i+2]))
-	f = float32(binary.BigEndian.Uint16(p.b[i+2:i+4])) / 0x10000
+	y = float32(binary.BigEndian.Uint16(p.b[i:]))
+	f = float32(binary.BigEndian.Uint16(p.b[i+2:])) / 0x10000
 	if y < 0 {
 		y -= f
 	} else {
@@ -201,8 +201,8 @@ func (p iccProfile) xyz(i int) (x, y, z float32) {
 	}
 	i += 4
 
-	z = float32(binary.BigEndian.Uint16(p.b[i : i+2]))
-	f = float32(binary.BigEndian.Uint16(p.b[i+2:i+4])) / 0x10000
+	z = float32(binary.BigEndian.Uint16(p.b[i:]))
+	f = float32(binary.BigEndian.Uint16(p.b[i+2:])) / 0x10000
 	if z < 0 {
 		z -= f
 	} else {
@@ -228,7 +228,7 @@ func (p iccProfile) id() string {
 }
 
 func (p iccProfile) tagCount() int {
-	return int(binary.BigEndian.Uint32(p.b[128:132]))
+	return int(binary.BigEndian.Uint32(p.b[128:]))
 }
 
 func (p iccProfile) String() string {
@@ -272,9 +272,9 @@ func (p iccProfile) String() string {
 	for i, j := 0, 132; i < p.tagCount(); i++ {
 		sig := string(p.b[j : j+4])
 		j += 4
-		off := binary.BigEndian.Uint32(p.b[j : j+4])
+		off := binary.BigEndian.Uint32(p.b[j:])
 		j += 4
-		size := binary.BigEndian.Uint32(p.b[j : j+4])
+		size := binary.BigEndian.Uint32(p.b[j:])
 		j += 4
 		s += fmt.Sprintf("Tag %d: signature:%s offset:%d(#%02x) size:%d(#%02x)\n%s\n", i, sig, off, off, size, size, hex.Dump(p.b[off:off+size]))
 		//s += fmt.Sprintf("Tag %d: signature:%s offset:%d(#%02x) size:%d(#%02x)\n", i, sig, off, off, size, size)

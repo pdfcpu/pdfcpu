@@ -120,7 +120,6 @@ func load(fileName string, fd *TTFLight) error {
 // Read reads in the font file bytes from gob
 func Read(fileName string) ([]byte, error) {
 	fn := filepath.Join(UserFontDir, fileName+".gob")
-	//fmt.Printf("reading in fontFile from %s\n", fn)
 	f, err := os.Open(fn)
 	if err != nil {
 		return nil, err
