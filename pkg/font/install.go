@@ -18,6 +18,7 @@ limitations under the License.
 package font
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/gob"
 	"fmt"
@@ -27,6 +28,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"unicode/utf16"
 
 	"github.com/pkg/errors"
 )
@@ -35,6 +37,8 @@ const (
 	sfntVersionTrueType      = "\x00\x01\x00\x00"
 	sfntVersionTrueTypeApple = "true"
 	sfntVersionCFF           = "OTTO"
+	ttfHeadMagicNumber       = 0x5F0F3CF5
+	ttcTag                   = "ttcf"
 )
 
 type ttf struct {
@@ -140,9 +144,11 @@ func (fd ttf) PrintChars() string {
 }
 
 type table struct {
-	off  uint32
-	size uint32
-	data []byte
+	chksum uint32
+	off    uint32
+	size   uint32
+	padded uint32
+	data   []byte
 }
 
 func (t table) uint16(off int) uint16 {
@@ -163,10 +169,8 @@ func (t table) fixed32(off int) float64 {
 
 func (t table) parseFontHeaderTable(fd *ttf) error {
 	// table "head"
-
 	magic := t.uint32(12)
-	//fmt.Printf("magic: %0X\n", magic)
-	if magic != 0x5F0F3CF5 {
+	if magic != ttfHeadMagicNumber {
 		return fmt.Errorf("parseHead: wrong magic number")
 	}
 
@@ -193,9 +197,28 @@ func (t table) parseFontHeaderTable(fd *ttf) error {
 	return nil
 }
 
+func uint16ToBigEndianBytes(i uint16) []byte {
+	b := make([]byte, 2)
+	binary.BigEndian.PutUint16(b, i)
+	return b
+}
+
+func uint32ToBigEndianBytes(i uint32) []byte {
+	b := make([]byte, 4)
+	binary.BigEndian.PutUint32(b, i)
+	return b
+}
+
+func utf16BEToString(bb []byte) string {
+	buf := make([]uint16, len(bb)/2)
+	for i := 0; i < len(buf); i++ {
+		buf[i] = binary.BigEndian.Uint16(bb[2*i:])
+	}
+	return string(utf16.Decode(buf))
+}
+
 func (t table) parsePostScriptTable(fd *ttf) error {
 	// table "post"
-
 	italicAngle := t.fixed32(4)
 	//fmt.Printf("italicAngle: %2.2f\n", italicAngle)
 	fd.ItalicAngle = italicAngle
@@ -218,35 +241,34 @@ func printUnicodeRange(off int, r uint32) {
 
 func (t table) parseWindowsMetricsTable(fd *ttf) error {
 	// table "OS/2"
-
 	version := t.uint16(0)
 	//fmt.Printf("version: %016b\n", version)
 
 	fsType := t.uint16(8)
 	//fmt.Printf("fsType: %016b\n", fsType)
 	fd.Protected = fsType&2 > 0
-	fmt.Printf("protected: %t\n", fd.Protected)
+	//fmt.Printf("protected: %t\n", fd.Protected)
 
 	uniCodeRange1 := t.uint32(42)
-	fmt.Printf("uniCodeRange1: %032b\n", uniCodeRange1)
+	//fmt.Printf("uniCodeRange1: %032b\n", uniCodeRange1)
 	fd.UnicodeRange[0] = uniCodeRange1
 
 	uniCodeRange2 := t.uint32(46)
-	fmt.Printf("uniCodeRange2: %032b\n", uniCodeRange2)
+	//fmt.Printf("uniCodeRange2: %032b\n", uniCodeRange2)
 	fd.UnicodeRange[1] = uniCodeRange2
 
 	uniCodeRange3 := t.uint32(50)
-	fmt.Printf("uniCodeRange3: %032b\n", uniCodeRange3)
+	//fmt.Printf("uniCodeRange3: %032b\n", uniCodeRange3)
 	fd.UnicodeRange[2] = uniCodeRange3
 
 	uniCodeRange4 := t.uint32(54)
-	fmt.Printf("uniCodeRange4: %032b\n", uniCodeRange4)
+	//fmt.Printf("uniCodeRange4: %032b\n", uniCodeRange4)
 	fd.UnicodeRange[3] = uniCodeRange4
 
-	printUnicodeRange(0, uniCodeRange1)
-	printUnicodeRange(32, uniCodeRange2)
-	printUnicodeRange(64, uniCodeRange3)
-	printUnicodeRange(96, uniCodeRange4)
+	// printUnicodeRange(0, uniCodeRange1)
+	// printUnicodeRange(32, uniCodeRange2)
+	// printUnicodeRange(64, uniCodeRange3)
+	// printUnicodeRange(96, uniCodeRange4)
 
 	sTypoAscender := t.int16(68)
 	//fmt.Printf("sTypoAscender: %d\n", sTypoAscender)
@@ -282,7 +304,6 @@ func (t table) parseWindowsMetricsTable(fd *ttf) error {
 
 func (t table) parseNamingTable(fd *ttf) error {
 	// table "name"
-
 	count := int(t.uint16(2))
 	stringOffset := t.uint16(4)
 	nameID := uint16(0)
@@ -295,22 +316,26 @@ func (t table) parseNamingTable(fd *ttf) error {
 		nameID = t.uint16(recOff + 6)
 		l := t.uint16(recOff + 8)
 		o := t.uint16(recOff + 10)
-
 		soff := stringOffset + o
 		s := t.data[soff : soff+l]
-		//fmt.Printf("pf:%0x enc:%0x lang:%0x nameID:%0x length:%d off:%0x <%s>\n", pf, enc, lang, nameID, l, o, s)
-		if nameID == 6 && (pf == 1 && enc == 0 && lang == 0) || (pf == 3 && enc == 1 && lang == 0x0409) {
-			fd.PostscriptName = string(s)
-			break
+		//fmt.Printf("pf:%0x enc:%0x lang:%0x nameID:%0x length:%d off:%0x <%q>\n", pf, enc, lang, nameID, l, o, s)
+		if nameID == 6 {
+			if pf == 3 && enc == 1 && lang == 0x0409 {
+				fd.PostscriptName = utf16BEToString(s)
+				return nil
+			}
+			if pf == 1 && enc == 0 && lang == 0 {
+				fd.PostscriptName = string(s)
+				return nil
+			}
 		}
 	}
 
-	return nil
+	return errors.New("pdfcpu: unable to identify postscript name")
 }
 
 func (t table) parseHorizontalHeaderTable(fd *ttf) error {
 	// table "hhea"
-
 	ascent := t.int16(4)
 	//fmt.Printf("ascent: %d\n", ascent)
 	if fd.Ascent == 0 {
@@ -342,7 +367,7 @@ func (t table) parseHorizontalHeaderTable(fd *ttf) error {
 	//fmt.Printf("xMaxExtent: %d\n", xMaxExtent)
 
 	numOfLongHorMetrics := t.uint16(34)
-	fmt.Printf("numOfLongHorMetrics: %d\n", numOfLongHorMetrics)
+	//fmt.Printf("numOfLongHorMetrics: %d\n", numOfLongHorMetrics)
 	fd.HorMetricsCount = int(numOfLongHorMetrics)
 
 	return nil
@@ -350,17 +375,13 @@ func (t table) parseHorizontalHeaderTable(fd *ttf) error {
 
 func (t table) parseMaximumProfile(fd *ttf) error {
 	// table "maxp"
-
 	numGlyphs := t.uint16(4)
-	fmt.Printf("numGlyphs: %d\n", numGlyphs)
 	fd.GlyphCount = int(numGlyphs)
-
 	return nil
 }
 
 func (t table) parseHorizontalMetricsTable(fd *ttf) error {
 	// table "hmtx"
-
 	fd.GlyphWidths = make([]int, fd.GlyphCount)
 
 	for i := 0; i < int(fd.HorMetricsCount); i++ {
@@ -382,7 +403,6 @@ func (t table) parseCMapFormat4(fd *ttf) error {
 	startOff := endOff + 2*segCount + 2
 	deltaOff := startOff + 2*segCount
 	rangeOff := deltaOff + 2*segCount
-	fmt.Printf("segCount:%d endC:%04x startC:%04x deltaOff:%04x rangeOff:%04x\n", segCount, endOff, startOff, deltaOff, rangeOff)
 
 	count := 0
 	for i := 0; i < segCount; i++ {
@@ -398,19 +418,14 @@ func (t table) parseCMapFormat4(fd *ttf) error {
 		}
 		idDelta := uint32(t.uint16(deltaOff + i*2))
 		idRangeOff := int(t.uint16(rangeOff + i*2))
-		//fmt.Printf("Segment %02d: %04x - %04x delta:%04x(%d) rangeOff:%04x(%d)\n", i, startCode, endCode, idDelta, idDelta, idRangeOff, idRangeOff)
-		//v := uint32(0)
 		v := uint16(0)
 		for c, j := startCode, 0; c <= endCode && c != 0xFFFF; c++ {
 			if idRangeOff > 0 {
-				//v = uint32(t.uint16(rangeOff + i*2 + idRangeOff + j*2))
 				v = t.uint16(rangeOff + i*2 + idRangeOff + j*2)
 			} else {
 				v = uint16(c + idDelta)
 			}
-			//if gi := uint32(v) % uint32(65536); gi > 0 {
 			if gi := v; gi > 0 {
-				//fmt.Printf("fd.Chars[%d(%04x)] = %d(%04x)\n", c, c, gi, gi)
 				fd.Chars[c] = gi
 				fd.ToUnicode[gi] = c
 				count++
@@ -418,14 +433,12 @@ func (t table) parseCMapFormat4(fd *ttf) error {
 			j++
 		}
 	}
-	fmt.Printf("processed %d glyphs\n", count)
 	return nil
 }
 
 func (t table) parseCMapFormat12(fd *ttf) error {
 	//fmt.Printf("parseCMapFormat12 dump:\n%s", hex.Dump(t.data))
 	numGroups := int(t.uint32(12))
-	fmt.Printf("numGroups = %d\n", numGroups)
 	off := 16
 	count := 0
 	var (
@@ -457,7 +470,6 @@ func (t table) parseCMapFormat12(fd *ttf) error {
 			count++
 		}
 	}
-	fmt.Printf("processed %d glyphs\n", count)
 	return nil
 }
 
@@ -469,7 +481,7 @@ func (t table) parseCharToGlyphMappingTable(fd *ttf) error {
 	fd.Planes = map[int]bool{}
 
 	tableCount := t.uint16(2)
-	fmt.Printf("glyphMappingTables: %d\n", tableCount)
+	//fmt.Printf("glyphMappingTables: %d\n", tableCount)
 	baseOff := 4
 	var pf, enc, f uint16
 	m := map[string]table{}
@@ -484,7 +496,7 @@ func (t table) parseCharToGlyphMappingTable(fd *ttf) error {
 		if f >= 8 {
 			l = t.uint32(int(o) + 4)
 		}
-		fmt.Printf("platformID:%d enc:%d format:%d (off:%04x length:%d)\n", pf, enc, f, o, l)
+		//fmt.Printf("platformID:%d enc:%d format:%d (off:%04x length:%d)\n", pf, enc, f, o, l)
 
 		b := t.data[o : o+l]
 		t1 := table{off: o, size: uint32(l), data: b}
@@ -493,23 +505,23 @@ func (t table) parseCharToGlyphMappingTable(fd *ttf) error {
 	}
 
 	if t, ok := m["p00.e10.f12"]; ok {
-		fmt.Println("processing 0 10 12")
+		//fmt.Println("processing 0 10 12")
 		return t.parseCMapFormat12(fd)
 	}
 	if t, ok := m["p00.e04.f12"]; ok {
-		fmt.Println("processing 0 4 12")
+		//fmt.Println("processing 0 4 12")
 		return t.parseCMapFormat12(fd)
 	}
 	if t, ok := m["p03.e10.f12"]; ok {
-		fmt.Println("processing 3 10 12")
+		//fmt.Println("processing 3 10 12")
 		return t.parseCMapFormat12(fd)
 	}
 	if t, ok := m["p00.e03.f04"]; ok {
-		fmt.Println("processing 0 3 4")
+		//fmt.Println("processing 0 3 4")
 		return t.parseCMapFormat4(fd)
 	}
 	if t, ok := m["p03.e01.f04"]; ok {
-		fmt.Println("processing 3 1 4")
+		//fmt.Println("processing 3 1 4")
 		return t.parseCMapFormat4(fd)
 	}
 
@@ -548,22 +560,20 @@ func parseFontDir(name string) (map[string]table, error) {
 		return nil, err
 	}
 	if n != 6 {
-		return nil, fmt.Errorf("pdfcpu: corrupt ttf file")
+		return nil, fmt.Errorf("pdfcpu: corrupt ttf file: %s", name)
 	}
-	//fmt.Printf("read %d bytes\n%s\n", n, hex.Dump(b))
 
 	st := string(b[:4])
 
 	if st == sfntVersionCFF {
-		return nil, fmt.Errorf("pdfcpu: OpenType CFF unsupported at the moment :(")
+		return nil, fmt.Errorf("pdfcpu: %s is OpenType CFF - unsupported at the moment :(", name)
 	}
 
 	if st != sfntVersionTrueType && st != sfntVersionTrueTypeApple {
-		return nil, fmt.Errorf("pdfcpu: unrecognized font format")
+		return nil, fmt.Errorf("pdfcpu: unrecognized font format: %s", name)
 	}
 
 	c := int(binary.BigEndian.Uint16(b[4:]))
-	//fmt.Printf("we have %d tables\n", c)
 
 	b = make([]byte, c*16)
 	n, err = f.ReadAt(b, 12)
@@ -571,42 +581,37 @@ func parseFontDir(name string) (map[string]table, error) {
 		return nil, err
 	}
 	if n != c*16 {
-		return nil, fmt.Errorf("pdfcpu: corrupt ttf file")
+		return nil, fmt.Errorf("pdfcpu: corrupt ttf file: %s", name)
 	}
 
+	byteCount := uint32(12)
 	tables := map[string]table{}
-	tags := []string{}
 
 	for j := 0; j < c; j++ {
 		off := j * 16
 		b1 := b[off : off+16]
-		//fmt.Printf("t%02d: %s", j, hex.Dump(b1))
 		tag := string(b1[:4])
 		chk := binary.BigEndian.Uint32(b1[4:8])
 		o := binary.BigEndian.Uint32(b1[8:12])
 		l := binary.BigEndian.Uint32(b1[12:])
-		fmt.Printf("tag: %s chk:%d o:%d l:%d\n", tag, chk, o, l)
 		ll := getNext32BitAlignedLength(l)
+		byteCount += ll
 		t := make([]byte, ll)
 		n, err = f.ReadAt(t, int64(o))
 		if err != nil {
 			return nil, err
 		}
 		if n != int(ll) {
-			return nil, fmt.Errorf("pdfcpu: corrupt table")
+			return nil, fmt.Errorf("pdfcpu: corrupt table: %s", tag)
 		}
 
 		tables[tag] = table{off: o, size: ll, data: t}
-
 		//fmt.Printf("table <%s>:\n%s\n", tag, hex.Dump(t))
 		if sum := calcTableChecksum(tag, t); sum != chk {
-			return nil, fmt.Errorf("pdfcpu: table<%s> checksum error", tag)
+			fmt.Printf("pdfcpu: ignoring table<%s> checksum error; want:%d got:%d\n", tag, chk, sum)
+			//return nil, fmt.Errorf("pdfcpu: table<%s> checksum error; want:%d got:%d", tag, chk, sum)
 		}
-
-		tags = append(tags, tag)
 	}
-
-	//fmt.Println(tags)
 
 	return tables, nil
 }
@@ -614,12 +619,15 @@ func parseFontDir(name string) (map[string]table, error) {
 func parse(tags map[string]table, tag string, fd *ttf) error {
 	t, found := tags[tag]
 	if !found {
+		// OS/2 is optional for True Type fonts.
+		if tag == "OS/2" {
+			return nil
+		}
 		return fmt.Errorf("pdfcpu: tag: %s unavailable", tag)
 	}
 	if t.data == nil {
 		return fmt.Errorf("pdfcpu: tag: %s no data", tag)
 	}
-	//fmt.Printf("table <%s>:\n%s\n", tag, hex.Dump(t.data))
 
 	var err error
 
@@ -646,7 +654,6 @@ func parse(tags map[string]table, tag string, fd *ttf) error {
 }
 
 func writeGob(fileName string, fd ttf) error {
-	//fmt.Printf("writing gob to: %s\n", fileName)
 	f, err := os.Create(fileName)
 	if err != nil {
 		return err
@@ -657,7 +664,6 @@ func writeGob(fileName string, fd ttf) error {
 }
 
 func readGob(fileName string, fd *ttf) error {
-	//fmt.Printf("reading gob from: %s\n", fileName)
 	f, err := os.Open(fileName)
 	if err != nil {
 		return err
@@ -667,9 +673,48 @@ func readGob(fileName string, fd *ttf) error {
 	return dec.Decode(fd)
 }
 
+func InstallTrueTypeCollection(fontDir, fn string) error {
+	f, err := os.Open(fn)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	b := make([]byte, 12)
+	n, err := f.Read(b)
+	if err != nil {
+		return err
+	}
+	if n != 12 {
+		return fmt.Errorf("pdfcpu: corrupt ttc file: %s", fn)
+	}
+
+	if string(b[:4]) != ttcTag {
+		return fmt.Errorf("pdfcpu: corrupt ttc file: %s", fn)
+	}
+
+	c := int(binary.BigEndian.Uint32(b[8:]))
+	fmt.Printf("We have %d fonts\n", c)
+
+	b = make([]byte, c*4)
+	n, err = f.ReadAt(b, 12)
+	if err != nil {
+		return err
+	}
+	if n != c*4 {
+		return fmt.Errorf("pdfcpu: corrupt ttc file: %s", fn)
+	}
+
+	for i := 0; i < c; i++ {
+		off := int(binary.BigEndian.Uint32(b[i*4 : (i+1)*4]))
+		_ = off
+	}
+
+	return nil
+}
+
 // InstallTrueTypeFont compiles font attributes needed to build a font descriptor.
 func InstallTrueTypeFont(fontDir, fontName string) error {
-
 	tags, err := parseFontDir(fontName)
 	if err != nil {
 		return err
@@ -688,12 +733,11 @@ func InstallTrueTypeFont(fontDir, fontName string) error {
 		return err
 	}
 
-	fn := filepath.Base(fontName)
+	fn := filepath.Base(fd.PostscriptName)
 	fn = strings.TrimSuffix(fn, filepath.Ext(fn))
 	gobName := filepath.Join(fontDir, fn+".gob")
 
 	// Write the populated ttf struct as gob.
-	fmt.Printf("Write %s:\n", fd)
 	if err := writeGob(gobName, fd); err != nil {
 		return err
 	}
@@ -703,11 +747,198 @@ func InstallTrueTypeFont(fontDir, fontName string) error {
 	if err := readGob(gobName, &fdNew); err != nil {
 		return err
 	}
-	//fmt.Printf("Read %s:\n", fdNew)
 
 	if !reflect.DeepEqual(fd, fdNew) {
 		return errors.Errorf("pdfcpu: %s can't be installed", fontName)
 	}
 
 	return nil
+}
+
+func ttfTables(tableCount int, bb []byte) (map[string]*table, error) {
+	tables := map[string]*table{}
+	b := bb[12:]
+	for j := 0; j < tableCount; j++ {
+		off := j * 16
+		b1 := b[off : off+16]
+		tag := string(b1[:4])
+		chksum := binary.BigEndian.Uint32(b1[4:8])
+		o := binary.BigEndian.Uint32(b1[8:12])
+		l := binary.BigEndian.Uint32(b1[12:])
+		ll := getNext32BitAlignedLength(l)
+		t := append([]byte(nil), bb[o:o+ll]...)
+		tables[tag] = &table{chksum: chksum, off: o, size: l, padded: ll, data: t}
+	}
+	return tables, nil
+}
+
+func glyfOffset(loca *table, gid, indexToLocFormat int) int {
+	if indexToLocFormat == 0 {
+		// short offsets
+		return 2 * int(loca.uint16(2*gid))
+	}
+	// 1 .. long offsets
+	return int(loca.uint32(4 * gid))
+}
+
+func writeGlyfOffset(buf *bytes.Buffer, off, indexToLocFormat int) {
+	var bb []byte
+	if indexToLocFormat == 0 {
+		// 0 .. short offsets
+		bb = uint16ToBigEndianBytes(uint16(off / 2))
+	} else {
+		// 1 .. long offsets
+		bb = uint32ToBigEndianBytes(uint32(off))
+	}
+	buf.Write(bb)
+}
+
+func pad(bb []byte) []byte {
+	i := len(bb) % 4
+	if i == 0 {
+		return bb
+	}
+	for j := 0; j < 4-i; j++ {
+		bb = append(bb, 0x00)
+	}
+	return bb
+}
+
+func glyfAndLoca(fontName string, tables map[string]*table, usedGIDs map[uint16]bool) error {
+	head, ok := tables["head"]
+	if !ok {
+		return errors.Errorf("pdfcpu: missing \"head\" table for font: %s", fontName)
+	}
+
+	maxp, ok := tables["maxp"]
+	if !ok {
+		return errors.Errorf("pdfcpu: missing \"maxp\" table for font: %s", fontName)
+	}
+
+	glyfsFull, ok := tables["glyf"]
+	if !ok {
+		return errors.Errorf("pdfcpu: missing \"glyf\" table for font: %s", fontName)
+	}
+
+	locaFull, ok := tables["loca"]
+	if !ok {
+		return errors.Errorf("pdfcpu: missing \"loca\" table for font: %s", fontName)
+	}
+
+	indexToLocFormat := int(head.uint16(50))
+	// 0 .. short offsets
+	// 1 .. long offsets
+	numGlyphs := int(maxp.uint16(4))
+
+	gids := make([]int, 0, len(usedGIDs)+1)
+	gids = append(gids, 0)
+	for gid := range usedGIDs {
+		gids = append(gids, int(gid))
+	}
+	sort.Ints(gids)
+
+	glyfBytes := []byte{}
+	var buf bytes.Buffer
+	off := 0
+	firstPendingGID := 0
+
+	for _, gid := range gids {
+		offFrom := glyfOffset(locaFull, gid, indexToLocFormat)
+		var offThru int
+		if gid == numGlyphs {
+			offThru = int(glyfsFull.padded)
+		} else {
+			offThru = glyfOffset(locaFull, gid+1, indexToLocFormat)
+		}
+		if offThru < offFrom {
+			return errors.Errorf("pdfcpu: illegal glyfOffset for font: %s", fontName)
+		}
+		if offThru != offFrom {
+			// We have a glyph outline.
+			for i := 0; i < gid-firstPendingGID; i++ {
+				writeGlyfOffset(&buf, off, indexToLocFormat)
+			}
+			glyfBytes = append(glyfBytes, glyfsFull.data[offFrom:offThru]...)
+			writeGlyfOffset(&buf, off, indexToLocFormat)
+			off += offThru - offFrom
+			firstPendingGID = gid + 1
+		}
+	}
+	for i := 0; i <= numGlyphs-firstPendingGID; i++ {
+		writeGlyfOffset(&buf, off, indexToLocFormat)
+	}
+
+	bb := buf.Bytes()
+	locaFull.size = uint32(len(bb))
+	locaFull.data = pad(bb)
+	locaFull.padded = uint32(len(locaFull.data))
+
+	glyfsFull.size = uint32(len(glyfBytes))
+	glyfsFull.data = pad(glyfBytes)
+	glyfsFull.padded = uint32(len(glyfsFull.data))
+
+	return nil
+}
+
+// Subset creates a new font file based on usedGIDs.
+func Subset(fontName string, usedGIDs map[uint16]bool) ([]byte, error) {
+	bb, err := Read(fontName)
+	if err != nil {
+		return nil, err
+	}
+
+	header := bb[:12]
+	tableCount := int(binary.BigEndian.Uint16(header[4:6]))
+
+	tables, err := ttfTables(tableCount, bb)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := glyfAndLoca(fontName, tables, usedGIDs); err != nil {
+		return nil, err
+	}
+
+	tags := []string{}
+	for t := range tables {
+		tags = append(tags, t)
+	}
+	sort.Strings(tags)
+
+	buf := bytes.NewBuffer(header)
+	off := uint32(len(header) + tableCount*16)
+	o := off
+	for _, tag := range tags {
+		t := tables[tag]
+		if _, err := buf.WriteString(tag); err != nil {
+			return nil, err
+		}
+		if tag == "loca" || tag == "glyf" {
+			t.chksum = calcTableChecksum(tag, t.data)
+		}
+		if _, err := buf.Write(uint32ToBigEndianBytes(t.chksum)); err != nil {
+			return nil, err
+		}
+		t.off = o
+		if _, err := buf.Write(uint32ToBigEndianBytes(t.off)); err != nil {
+			return nil, err
+		}
+		if _, err := buf.Write(uint32ToBigEndianBytes(t.size)); err != nil {
+			return nil, err
+		}
+		o += t.padded
+	}
+
+	for _, tag := range tags {
+		t := tables[tag]
+		n, err := buf.Write(t.data)
+		if err != nil {
+			return nil, err
+		}
+		if n != len(t.data) || n != int(t.padded) {
+			return nil, errors.Errorf("pdfcpu: unable to write %s data\n", tag)
+		}
+	}
+
+	return buf.Bytes(), nil
 }

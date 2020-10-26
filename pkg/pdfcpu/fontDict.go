@@ -25,7 +25,33 @@ import (
 	"unicode/utf16"
 
 	"github.com/pdfcpu/pdfcpu/pkg/font"
+	"github.com/pkg/errors"
 )
+
+func flateEncodedStreamIndRef(xRefTable *XRefTable, data []byte) (*IndirectRef, error) {
+	sd, _ := xRefTable.NewStreamDictForBuf(data)
+	sd.InsertInt("Length1", len(data))
+	if err := sd.Encode(); err != nil {
+		return nil, err
+	}
+	return xRefTable.IndRefForNewObject(*sd)
+}
+
+func ttfFontFile(xRefTable *XRefTable, ttf font.TTFLight, fontName string) (*IndirectRef, error) {
+	bb, err := font.Read(fontName)
+	if err != nil {
+		return nil, err
+	}
+	return flateEncodedStreamIndRef(xRefTable, bb)
+}
+
+func ttfSubFontFile(xRefTable *XRefTable, ttf font.TTFLight, fontName string) (*IndirectRef, error) {
+	bb, err := font.Subset(fontName, ttf.UsedGIDs)
+	if err != nil {
+		return nil, err
+	}
+	return flateEncodedStreamIndRef(xRefTable, bb)
+}
 
 func coreFontDict(xRefTable *XRefTable, coreFontName string) (*IndirectRef, error) {
 	d := NewDict()
@@ -38,29 +64,24 @@ func coreFontDict(xRefTable *XRefTable, coreFontName string) (*IndirectRef, erro
 	return xRefTable.IndRefForNewObject(d)
 }
 
+func cidSet(xRefTable *XRefTable, ttf font.TTFLight) (*IndirectRef, error) {
+	bb := make([]byte, ttf.GlyphCount/8+1)
+	for gid := range ttf.UsedGIDs {
+		bb[gid/8] |= 1 << (7 - (gid % 8))
+	}
+	return flateEncodedStreamIndRef(xRefTable, bb)
+}
+
 // CIDFontDescriptor represents a font descriptor describing
 // the CIDFont’s default metrics other than its glyph widths.
 func CIDFontDescriptor(xRefTable *XRefTable, ttf font.TTFLight, fontName, baseFontName string) (*IndirectRef, error) {
+	//fontFile, err := ttfFontFile(xRefTable, ttf, fontName)
+	fontFile, err := ttfSubFontFile(xRefTable, ttf, fontName)
+	if err != nil {
+		return nil, err
+	}
 
-	/*
-		<Ascent, 1060>
-		<AvgWidth, 1000>
-		<CapHeight, 860>
-		<Descent, -340>
-		<Flags, 4>
-		<FontBBox, [-72 -212 1126 952]>
-		<FontFile3, (54 0 R)>                 ... <Subtype, CIDFontType0C>
-		// Type 0 CIDFont program represented in the Compact Font Format (CFF),
-		// as described in Adobe Technical Note #5176, The Compact Font Format Specification.
-		<FontName, EBLDSM+PingFangSC-Regular>
-		<ItalicAngle, 0>
-		<MaxWidth, 1300>
-		<StemH, 64>
-		<StemV, 70>
-		<Type, FontDescriptor>
-		<XHeight, 600>
-	*/
-	fontFile, err := ttfFontFile(xRefTable, fontName)
+	cidSetIndRef, err := cidSet(xRefTable, ttf)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +119,7 @@ func CIDFontDescriptor(xRefTable *XRefTable, ttf font.TTFLight, fontName, baseFo
 			// The stream’s data shall be organized as a table of bits indexed by CID.
 			// The bits shall be stored in bytes with the high-order bit first. Each bit shall correspond to a CID.
 			// The most significant bit of the first byte shall correspond to CID 0, the next bit to CID 1, and so on.
-			//"CIDSet": nil,
+			"CIDSet": *cidSetIndRef,
 		},
 	)
 
@@ -107,15 +128,19 @@ func CIDFontDescriptor(xRefTable *XRefTable, ttf font.TTFLight, fontName, baseFo
 
 // CIDWidths returns the value for W in a CIDFontDict.
 func CIDWidths(ttf font.TTFLight) Array {
-	a := Array{Integer(0)}
-	a1 := make(Array, len(ttf.GlyphWidths))
-	for gid, w := range ttf.GlyphWidths {
-		a1[gid] = Integer(w)
+	gids := make([]int, 0, len(ttf.UsedGIDs))
+	for gid := range ttf.UsedGIDs {
+		gids = append(gids, int(gid))
 	}
-	return append(a, a1)
+	sort.Ints(gids)
+	a := Array{}
+	for _, gid := range gids {
+		a = append(a, Integer(gid), Array{Integer(ttf.GlyphWidths[gid])})
+	}
+	return a
 }
 
-// CIDFontDict returns the descendent font dict for Type0 fonts.
+// CIDFontDict returns the descendant font dict for Type0 fonts.
 func CIDFontDict(xRefTable *XRefTable, ttf font.TTFLight, fontName, baseFontName string) (*IndirectRef, error) {
 	fdIndRef, err := CIDFontDescriptor(xRefTable, ttf, fontName, baseFontName)
 	if err != nil {
@@ -199,8 +224,6 @@ func bf(b *bytes.Buffer, ttf font.TTFLight) {
 		}
 	}
 	b.WriteString("endbfchar\n")
-
-	ttf.UsedGIDs = map[uint16]bool{}
 }
 
 // toUnicodeCMap returns a stream dict containing a CMap file that maps character codes to Unicode values (see 9.10).
@@ -237,19 +260,22 @@ end`
 }
 
 func subFontPrefix() string {
-	chars := "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	var seededRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
-	b := make([]byte, 6)
-	for i := range b {
-		b[i] = chars[seededRand.Intn(len(chars))]
+	s := "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	var r *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+	bb := make([]byte, 6)
+	for i := range bb {
+		bb[i] = s[r.Intn(len(s))]
 	}
-	return string(b)
+	return string(bb)
 }
 
 func type0FontDict(xRefTable *XRefTable, fontName string) (*IndirectRef, error) {
 	// Combines a CIDFont and a CMap to produce a font whose glyphs may be accessed
 	// by means of variable-length character codes in a string to be shown.
-	ttf := font.UserFontMetrics[fontName]
+	ttf, ok := font.UserFontMetrics[fontName]
+	if !ok {
+		return nil, errors.Errorf("pdfcpu: font %s not avalable", fontName)
+	}
 
 	baseFontName := subFontPrefix() + "-" + fontName
 
@@ -262,6 +288,9 @@ func type0FontDict(xRefTable *XRefTable, fontName string) (*IndirectRef, error) 
 	if err != nil {
 		return nil, err
 	}
+
+	// Reset used glyph ids.
+	ttf.UsedGIDs = map[uint16]bool{}
 
 	d := NewDict()
 	d.InsertName("Type", "Font")

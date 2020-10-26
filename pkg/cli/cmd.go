@@ -77,6 +77,7 @@ var cmdMap = map[pdfcpu.CommandMode]func(cmd *Command) ([]string, error){
 	pdfcpu.ROTATE:                  Rotate,
 	pdfcpu.NUP:                     NUp,
 	pdfcpu.INFO:                    Info,
+	pdfcpu.CHEATSHEETSFONTS:        CreateCheatSheetsFonts,
 	pdfcpu.INSTALLFONTS:            InstallFonts,
 	pdfcpu.LISTFONTS:               ListFonts,
 	pdfcpu.LISTKEYWORDS:            processKeywords,
@@ -525,6 +526,18 @@ func InstallFontsCommand(fontFiles []string, conf *pdfcpu.Configuration) *Comman
 	conf.Cmd = pdfcpu.INSTALLFONTS
 	return &Command{
 		Mode:    pdfcpu.INSTALLFONTS,
+		InFiles: fontFiles,
+		Conf:    conf}
+}
+
+// CreateCheatSheetsFontsCommand creates single page PDF cheat sheets in current dir.
+func CreateCheatSheetsFontsCommand(fontFiles []string, conf *pdfcpu.Configuration) *Command {
+	if conf == nil {
+		conf = pdfcpu.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdfcpu.CHEATSHEETSFONTS
+	return &Command{
+		Mode:    pdfcpu.CHEATSHEETSFONTS,
 		InFiles: fontFiles,
 		Conf:    conf}
 }

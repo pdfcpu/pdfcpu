@@ -79,8 +79,9 @@ func initCommandMap() {
 
 	fontsCmdMap := newCommandMap()
 	for k, v := range map[string]command{
-		"install": {processInstallFontsCommand, nil, "", ""},
-		"list":    {processListFontsCommand, nil, "", ""},
+		"cheatsheet": {processCreateCheatSheetFontsCommand, nil, "", ""},
+		"install":    {processInstallFontsCommand, nil, "", ""},
+		"list":       {processListFontsCommand, nil, "", ""},
 	} {
 		fontsCmdMap.register(k, v)
 	}

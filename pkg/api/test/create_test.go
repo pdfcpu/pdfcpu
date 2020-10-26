@@ -22,12 +22,11 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/font"
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
-var apple = string(rune(0xf8ff))
-
-var sampleText string = `MOST of the adven` + apple + `tures recorded in this book really occurred; one or
+var sampleText string = `MOST of the adventures recorded in this book really occurred; one or
 two were experiences of my own, the rest those of boys who were
 schoolmates of mine. Huck Finn is drawn from life; Tom Sawyer also, but
 not from an individual--he is a combination of the characteristics of
@@ -141,7 +140,7 @@ func writeTextDemoAlignedWidthAndMargin(
 	p pdf.Page,
 	region *pdf.Rectangle,
 	hAlign pdf.HAlignment,
-	w, mLeft, mRight, mTop, mBot float64, fontName string) {
+	w, mLeft, mRight, mTop, mBot float64) {
 
 	buf := p.Buf
 	mediaBox := p.MediaBox
@@ -159,7 +158,7 @@ func writeTextDemoAlignedWidthAndMargin(
 		pdf.FillRect(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
 	}
 
-	//fontName := "Helvetica"
+	fontName := "Helvetica"
 	k := p.Fm.EnsureKey(fontName)
 
 	td := pdf.TextDescriptor{
@@ -226,77 +225,77 @@ func writeTextDemoAlignedWidthAndMargin(
 	pdf.DrawHairCross(buf, 0, 0, r)
 }
 
-func createTextDemoAlignedWidthAndMargin(mediaBox *pdf.Rectangle, hAlign pdf.HAlignment, w, mLeft, mRight, mTop, mBot float64, fontName string) pdf.Page {
+func createTextDemoAlignedWidthAndMargin(mediaBox *pdf.Rectangle, hAlign pdf.HAlignment, w, mLeft, mRight, mTop, mBot float64) pdf.Page {
 	p := pdf.NewPage(mediaBox)
 	var region *pdf.Rectangle
-	writeTextDemoAlignedWidthAndMargin(p, region, hAlign, w, mLeft, mRight, mTop, mBot, fontName)
+	writeTextDemoAlignedWidthAndMargin(p, region, hAlign, w, mLeft, mRight, mTop, mBot)
 	region = pdf.RectForWidthAndHeight(50, 70, 200, 200)
-	writeTextDemoAlignedWidthAndMargin(p, region, hAlign, w, mLeft, mRight, mTop, mBot, fontName)
+	writeTextDemoAlignedWidthAndMargin(p, region, hAlign, w, mLeft, mRight, mTop, mBot)
 	return p
 }
 
-func createTextDemoAlignLeft(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
-	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignLeft, 0, 0, 0, 0, 0, fontName)
+func createTextDemoAlignLeft(mediaBox *pdf.Rectangle) pdf.Page {
+	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignLeft, 0, 0, 0, 0, 0)
 }
 
-func createTextDemoAlignLeftMargin(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
-	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignLeft, 0, 5, 10, 15, 20, fontName)
+func createTextDemoAlignLeftMargin(mediaBox *pdf.Rectangle) pdf.Page {
+	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignLeft, 0, 5, 10, 15, 20)
 }
 
-func createTextDemoAlignRight(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
-	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignRight, 0, 0, 0, 0, 0, fontName)
+func createTextDemoAlignRight(mediaBox *pdf.Rectangle) pdf.Page {
+	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignRight, 0, 0, 0, 0, 0)
 }
 
-func createTextDemoAlignRightMargin(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
-	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignRight, 0, 5, 10, 15, 20, fontName)
+func createTextDemoAlignRightMargin(mediaBox *pdf.Rectangle) pdf.Page {
+	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignRight, 0, 5, 10, 15, 20)
 }
 
-func createTextDemoAlignCenter(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
-	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignCenter, 0, 0, 0, 0, 0, fontName)
+func createTextDemoAlignCenter(mediaBox *pdf.Rectangle) pdf.Page {
+	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignCenter, 0, 0, 0, 0, 0)
 }
 
-func createTextDemoAlignCenterMargin(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
-	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignCenter, 0, 5, 10, 15, 20, fontName)
+func createTextDemoAlignCenterMargin(mediaBox *pdf.Rectangle) pdf.Page {
+	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignCenter, 0, 5, 10, 15, 20)
 }
 
-func createTextDemoAlignJustify(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
-	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignJustify, 0, 0, 0, 0, 0, fontName)
+func createTextDemoAlignJustify(mediaBox *pdf.Rectangle) pdf.Page {
+	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignJustify, 0, 0, 0, 0, 0)
 }
 
-func createTextDemoAlignJustifyMargin(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
-	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignJustify, 0, 5, 10, 15, 20, fontName)
+func createTextDemoAlignJustifyMargin(mediaBox *pdf.Rectangle) pdf.Page {
+	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignJustify, 0, 5, 10, 15, 20)
 }
 
-func createTextDemoAlignLeftWidth(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
-	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignLeft, 250, 0, 0, 0, 0, fontName)
+func createTextDemoAlignLeftWidth(mediaBox *pdf.Rectangle) pdf.Page {
+	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignLeft, 250, 0, 0, 0, 0)
 }
 
-func createTextDemoAlignLeftWidthAndMargin(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
-	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignLeft, 250, 5, 10, 15, 20, fontName)
+func createTextDemoAlignLeftWidthAndMargin(mediaBox *pdf.Rectangle) pdf.Page {
+	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignLeft, 250, 5, 10, 15, 20)
 }
 
-func createTextDemoAlignRightWidth(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
-	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignRight, 250, 0, 0, 0, 0, fontName)
+func createTextDemoAlignRightWidth(mediaBox *pdf.Rectangle) pdf.Page {
+	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignRight, 250, 0, 0, 0, 0)
 }
 
-func createTextDemoAlignRightWidthAndMargin(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
-	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignRight, 250, 5, 10, 15, 20, fontName)
+func createTextDemoAlignRightWidthAndMargin(mediaBox *pdf.Rectangle) pdf.Page {
+	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignRight, 250, 5, 10, 15, 20)
 }
 
-func createTextDemoAlignCenterWidth(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
-	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignCenter, 250, 0, 0, 0, 0, fontName)
+func createTextDemoAlignCenterWidth(mediaBox *pdf.Rectangle) pdf.Page {
+	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignCenter, 250, 0, 0, 0, 0)
 }
 
-func createTextDemoAlignCenterWidthAndMargin(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
-	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignCenter, 250, 5, 40, 15, 20, fontName)
+func createTextDemoAlignCenterWidthAndMargin(mediaBox *pdf.Rectangle) pdf.Page {
+	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignCenter, 250, 5, 40, 15, 20)
 }
 
-func createTextDemoAlignJustifyWidth(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
-	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignJustify, 250, 0, 0, 0, 0, fontName)
+func createTextDemoAlignJustifyWidth(mediaBox *pdf.Rectangle) pdf.Page {
+	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignJustify, 250, 0, 0, 0, 0)
 }
 
-func createTextDemoAlignJustifyWidthAndMargin(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
-	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignJustify, 250, 5, 10, 15, 20, fontName)
+func createTextDemoAlignJustifyWidthAndMargin(mediaBox *pdf.Rectangle) pdf.Page {
+	return createTextDemoAlignedWidthAndMargin(mediaBox, pdf.AlignJustify, 250, 5, 10, 15, 20)
 }
 
 func writeTextAlignJustifyDemo(p pdf.Page, region *pdf.Rectangle, fontName string) {
@@ -315,8 +314,6 @@ func writeTextAlignJustifyDemo(p pdf.Page, region *pdf.Rectangle, fontName strin
 	if mediaBB {
 		pdf.FillRect(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
 	}
-
-	//fontName := "Times-Roman"
 
 	k := p.Fm.EnsureKey(fontName)
 
@@ -351,7 +348,7 @@ func writeTextAlignJustifyDemo(p pdf.Page, region *pdf.Rectangle, fontName strin
 	pdf.DrawHairCross(p.Buf, 0, 0, mediaBox)
 }
 
-func writeTextAlignJustifyColumnDemo(p pdf.Page, region *pdf.Rectangle, fontName string) {
+func writeTextAlignJustifyColumnDemo(p pdf.Page, region *pdf.Rectangle) {
 	mediaBox := p.MediaBox
 	buf := p.Buf
 
@@ -368,7 +365,8 @@ func writeTextAlignJustifyColumnDemo(p pdf.Page, region *pdf.Rectangle, fontName
 		pdf.FillRect(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
 	}
 
-	fontName2 := "Times-Roman"
+	fontName := "Times-Roman"
+	fontName2 := "Helvetica"
 	k1 := p.Fm.EnsureKey(fontName)
 	k2 := p.Fm.EnsureKey(fontName2)
 
@@ -394,14 +392,14 @@ func writeTextAlignJustifyColumnDemo(p pdf.Page, region *pdf.Rectangle, fontName
 
 	td.BackgroundCol = pdf.White
 	td.FillCol = pdf.Black
-	td.FontName, td.FontKey, td.FontSize = fontName2, k1, 9
+	td.FontName, td.FontKey, td.FontSize = fontName, k1, 9
 	td.ParIndent = true
 	td.VAlign, td.X, td.Y, td.Dx, td.Dy = pdf.AlignTop, 0, r.Height(), 5, -5
 	pdf.WriteColumn(buf, mediaBox, region, td, 150)
 
 	td.BackgroundCol = pdf.Black
 	td.FillCol = pdf.White
-	td.FontName, td.FontKey, td.FontSize = fontName, k2, 12
+	td.FontName, td.FontKey, td.FontSize = fontName2, k2, 12
 	td.ParIndent = true
 	td.VAlign, td.X, td.Y, td.Dx, td.Dy = pdf.AlignTop, -1, -1, 0, 0
 	pdf.WriteColumn(buf, mediaBox, region, td, 290)
@@ -409,25 +407,26 @@ func writeTextAlignJustifyColumnDemo(p pdf.Page, region *pdf.Rectangle, fontName
 	pdf.DrawHairCross(p.Buf, 0, 0, mediaBox)
 }
 
-func createTextAlignJustifyDemo(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
+func createTextAlignJustifyDemo(mediaBox *pdf.Rectangle) pdf.Page {
 	p := pdf.NewPage(mediaBox)
 	var region *pdf.Rectangle
+	fontName := "Times-Roman"
 	writeTextAlignJustifyDemo(p, region, fontName)
 	region = pdf.RectForWidthAndHeight(0, 0, 200, 200)
 	writeTextAlignJustifyDemo(p, region, fontName)
 	return p
 }
 
-func createTextAlignJustifyColumnDemo(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
+func createTextAlignJustifyColumnDemo(mediaBox *pdf.Rectangle) pdf.Page {
 	p := pdf.NewPage(mediaBox)
 	var region *pdf.Rectangle
-	writeTextAlignJustifyColumnDemo(p, region, fontName)
+	writeTextAlignJustifyColumnDemo(p, region)
 	region = pdf.RectForWidthAndHeight(0, 0, 200, 200)
-	writeTextAlignJustifyColumnDemo(p, region, fontName)
+	writeTextAlignJustifyColumnDemo(p, region)
 	return p
 }
 
-func writeTextDemoAnchorsWithOffset(p pdf.Page, region *pdf.Rectangle, dx, dy float64, fontName string) {
+func writeTextDemoAnchorsWithOffset(p pdf.Page, region *pdf.Rectangle, dx, dy float64) {
 	mediaBox := p.MediaBox
 	buf := p.Buf
 
@@ -444,7 +443,7 @@ func writeTextDemoAnchorsWithOffset(p pdf.Page, region *pdf.Rectangle, dx, dy fl
 		pdf.FillRect(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
 	}
 
-	//fontName := "Helvetica"
+	fontName := "Helvetica"
 	k := p.Fm.EnsureKey(fontName)
 
 	td := pdf.TextDescriptor{
@@ -498,30 +497,30 @@ func writeTextDemoAnchorsWithOffset(p pdf.Page, region *pdf.Rectangle, dx, dy fl
 	pdf.DrawHairCross(buf, 0, 0, r)
 }
 
-func writeTextDemoAnchors(p pdf.Page, region *pdf.Rectangle, fontName string) {
-	writeTextDemoAnchorsWithOffset(p, region, 0, 0, fontName)
+func writeTextDemoAnchors(p pdf.Page, region *pdf.Rectangle) {
+	writeTextDemoAnchorsWithOffset(p, region, 0, 0)
 }
 
-func createTextDemoAnchors(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
+func createTextDemoAnchors(mediaBox *pdf.Rectangle) pdf.Page {
 	p := pdf.NewPage(mediaBox)
 	var region *pdf.Rectangle
-	writeTextDemoAnchors(p, region, fontName)
+	writeTextDemoAnchors(p, region)
 	region = pdf.RectForWidthAndHeight(50, 70, 200, 200)
-	writeTextDemoAnchors(p, region, fontName)
+	writeTextDemoAnchors(p, region)
 	return p
 }
 
-func createTextDemoAnchorsWithOffset(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
+func createTextDemoAnchorsWithOffset(mediaBox *pdf.Rectangle) pdf.Page {
 	p := pdf.NewPage(mediaBox)
 	dx, dy := 20., 20.
 	var region *pdf.Rectangle
-	writeTextDemoAnchorsWithOffset(p, region, dx, dy, fontName)
+	writeTextDemoAnchorsWithOffset(p, region, dx, dy)
 	region = pdf.RectForWidthAndHeight(50, 70, 200, 200)
-	writeTextDemoAnchorsWithOffset(p, region, dx, dy, fontName)
+	writeTextDemoAnchorsWithOffset(p, region, dx, dy)
 	return p
 }
 
-func writeTextDemoColumnAnchoredWithOffset(p pdf.Page, region *pdf.Rectangle, dx, dy float64, fontName string) {
+func writeTextDemoColumnAnchoredWithOffset(p pdf.Page, region *pdf.Rectangle, dx, dy float64) {
 	mediaBox := p.MediaBox
 	buf := p.Buf
 
@@ -541,7 +540,7 @@ func writeTextDemoColumnAnchoredWithOffset(p pdf.Page, region *pdf.Rectangle, dx
 	wSmall := 100.
 	wBig := 300.
 
-	//fontName := "Helvetica"
+	fontName := "Helvetica"
 	k := p.Fm.EnsureKey(fontName)
 
 	td := pdf.TextDescriptor{
@@ -614,30 +613,30 @@ func writeTextDemoColumnAnchoredWithOffset(p pdf.Page, region *pdf.Rectangle, dx
 	pdf.DrawHairCross(buf, 0, 0, mediaBox)
 }
 
-func writeTextDemoColumnAnchored(p pdf.Page, region *pdf.Rectangle, fontName string) {
-	writeTextDemoColumnAnchoredWithOffset(p, region, 0, 0, fontName)
+func writeTextDemoColumnAnchored(p pdf.Page, region *pdf.Rectangle) {
+	writeTextDemoColumnAnchoredWithOffset(p, region, 0, 0)
 }
 
-func createTextDemoColumnAnchored(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
+func createTextDemoColumnAnchored(mediaBox *pdf.Rectangle) pdf.Page {
 	p := pdf.NewPage(mediaBox)
 	var region *pdf.Rectangle
-	writeTextDemoColumnAnchored(p, region, fontName)
+	writeTextDemoColumnAnchored(p, region)
 	region = pdf.RectForWidthAndHeight(50, 70, 400, 400)
-	writeTextDemoColumnAnchored(p, region, fontName)
+	writeTextDemoColumnAnchored(p, region)
 	return p
 }
 
-func createTextDemoColumnAnchoredWithOffset(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
+func createTextDemoColumnAnchoredWithOffset(mediaBox *pdf.Rectangle) pdf.Page {
 	p := pdf.NewPage(mediaBox)
 	var region *pdf.Rectangle
 	dx, dy := 20., 20.
-	writeTextDemoColumnAnchoredWithOffset(p, region, dx, dy, fontName)
+	writeTextDemoColumnAnchoredWithOffset(p, region, dx, dy)
 	region = pdf.RectForWidthAndHeight(50, 70, 400, 400)
-	writeTextDemoColumnAnchoredWithOffset(p, region, dx, dy, fontName)
+	writeTextDemoColumnAnchoredWithOffset(p, region, dx, dy)
 	return p
 }
 
-func writeTextRotateDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx, dy float64, fontName string) {
+func writeTextRotateDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx, dy float64) {
 	mediaBox := p.MediaBox
 	buf := p.Buf
 
@@ -657,7 +656,7 @@ func writeTextRotateDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx, dy flo
 
 	fillCol := pdf.Black
 
-	//fontName := "Helvetica"
+	fontName := "Helvetica"
 	k := p.Fm.EnsureKey(fontName)
 
 	td := pdf.TextDescriptor{
@@ -754,30 +753,30 @@ func writeTextRotateDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx, dy flo
 	pdf.WriteMultiLineAnchored(buf, mediaBox, r, td, pdf.BottomRight)
 }
 
-func writeTextRotateDemo(p pdf.Page, region *pdf.Rectangle, fontName string) {
-	writeTextRotateDemoWithOffset(p, region, 0, 0, fontName)
+func writeTextRotateDemo(p pdf.Page, region *pdf.Rectangle) {
+	writeTextRotateDemoWithOffset(p, region, 0, 0)
 }
 
-func createTextRotateDemo(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
+func createTextRotateDemo(mediaBox *pdf.Rectangle) pdf.Page {
 	p := pdf.NewPage(mediaBox)
 	var region *pdf.Rectangle
-	writeTextRotateDemo(p, region, fontName)
+	writeTextRotateDemo(p, region)
 	region = pdf.RectForWidthAndHeight(150, 150, 300, 300)
-	writeTextRotateDemo(p, region, fontName)
+	writeTextRotateDemo(p, region)
 	return p
 }
 
-func createTextRotateDemoWithOffset(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
+func createTextRotateDemoWithOffset(mediaBox *pdf.Rectangle) pdf.Page {
 	p := pdf.NewPage(mediaBox)
 	var region *pdf.Rectangle
 	dx, dy := 20., 20.
-	writeTextRotateDemoWithOffset(p, region, dx, dy, fontName)
+	writeTextRotateDemoWithOffset(p, region, dx, dy)
 	region = pdf.RectForWidthAndHeight(150, 150, 300, 300)
-	writeTextRotateDemoWithOffset(p, region, dx, dy, fontName)
+	writeTextRotateDemoWithOffset(p, region, dx, dy)
 	return p
 }
 
-func writeTextScaleAbsoluteDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx, dy float64, fontName string) {
+func writeTextScaleAbsoluteDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx, dy float64) {
 	mediaBox := p.MediaBox
 	buf := p.Buf
 
@@ -797,7 +796,7 @@ func writeTextScaleAbsoluteDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx,
 	fillCol := pdf.Black
 	bgCol := pdf.SimpleColor{R: 1., G: .98, B: .77}
 
-	//fontName := "Helvetica"
+	fontName := "Helvetica"
 	k := p.Fm.EnsureKey(fontName)
 
 	td := pdf.TextDescriptor{
@@ -949,30 +948,30 @@ func writeTextScaleAbsoluteDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx,
 	pdf.DrawHairCross(buf, 0, 0, r)
 }
 
-func writeTextScaleAbsoluteDemo(p pdf.Page, region *pdf.Rectangle, fontName string) {
-	writeTextScaleAbsoluteDemoWithOffset(p, region, 0, 0, fontName)
+func writeTextScaleAbsoluteDemo(p pdf.Page, region *pdf.Rectangle) {
+	writeTextScaleAbsoluteDemoWithOffset(p, region, 0, 0)
 }
 
-func createTextScaleAbsoluteDemo(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
+func createTextScaleAbsoluteDemo(mediaBox *pdf.Rectangle) pdf.Page {
 	p := pdf.NewPage(mediaBox)
 	var region *pdf.Rectangle
-	writeTextScaleAbsoluteDemo(p, region, fontName)
+	writeTextScaleAbsoluteDemo(p, region)
 	region = pdf.RectForWidthAndHeight(20, 70, 180, 180)
-	writeTextScaleAbsoluteDemo(p, region, fontName)
+	writeTextScaleAbsoluteDemo(p, region)
 	return p
 }
 
-func createTextScaleAbsoluteDemoWithOffset(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
+func createTextScaleAbsoluteDemoWithOffset(mediaBox *pdf.Rectangle) pdf.Page {
 	p := pdf.NewPage(mediaBox)
 	dx, dy := 20., 20.
 	var region *pdf.Rectangle
-	writeTextScaleAbsoluteDemoWithOffset(p, region, dx, dy, fontName)
+	writeTextScaleAbsoluteDemoWithOffset(p, region, dx, dy)
 	region = pdf.RectForWidthAndHeight(20, 70, 180, 180)
-	writeTextScaleAbsoluteDemoWithOffset(p, region, dx, dy, fontName)
+	writeTextScaleAbsoluteDemoWithOffset(p, region, dx, dy)
 	return p
 }
 
-func writeTextScaleRelativeDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx, dy float64, fontName string) {
+func writeTextScaleRelativeDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx, dy float64) {
 	mediaBox := p.MediaBox
 	buf := p.Buf
 
@@ -992,7 +991,7 @@ func writeTextScaleRelativeDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx,
 	fillCol := pdf.Black
 	bgCol := pdf.SimpleColor{R: 1., G: .98, B: .77}
 
-	//fontName := "Helvetica"
+	fontName := "Helvetica"
 	k := p.Fm.EnsureKey(fontName)
 
 	td := pdf.TextDescriptor{
@@ -1160,32 +1159,32 @@ func writeTextScaleRelativeDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx,
 	pdf.DrawHairCross(buf, 0, 0, r)
 }
 
-func writeTextScaleRelativeDemo(p pdf.Page, region *pdf.Rectangle, fontName string) {
-	writeTextScaleRelativeDemoWithOffset(p, region, 0, 0, fontName)
+func writeTextScaleRelativeDemo(p pdf.Page, region *pdf.Rectangle) {
+	writeTextScaleRelativeDemoWithOffset(p, region, 0, 0)
 }
 
-func createTextScaleRelativeDemo(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
+func createTextScaleRelativeDemo(mediaBox *pdf.Rectangle) pdf.Page {
 	p := pdf.NewPage(mediaBox)
 	var region *pdf.Rectangle
-	writeTextScaleRelativeDemo(p, region, fontName)
+	writeTextScaleRelativeDemo(p, region)
 	region = pdf.RectForWidthAndHeight(50, 70, 200, 200)
-	writeTextScaleRelativeDemo(p, region, fontName)
+	writeTextScaleRelativeDemo(p, region)
 	return p
 }
 
-func createTextScaleRelativeDemoWithOffset(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
+func createTextScaleRelativeDemoWithOffset(mediaBox *pdf.Rectangle) pdf.Page {
 	p := pdf.NewPage(mediaBox)
 	var region *pdf.Rectangle
 	dx, dy := 20., 20.
-	writeTextScaleRelativeDemoWithOffset(p, region, dx, dy, fontName)
+	writeTextScaleRelativeDemoWithOffset(p, region, dx, dy)
 	region = pdf.RectForWidthAndHeight(50, 70, 200, 200)
-	writeTextScaleRelativeDemoWithOffset(p, region, dx, dy, fontName)
+	writeTextScaleRelativeDemoWithOffset(p, region, dx, dy)
 	return p
 }
 
-func createTextDemoColumns(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
+func createTextDemoColumns(mediaBox *pdf.Rectangle) pdf.Page {
 	p := pdf.NewPageWithBg(mediaBox, pdf.NewSimpleColor(0xbeded9))
-	//fontName := "Times-Roman"
+	fontName := "Times-Roman"
 	k := p.Fm.EnsureKey(fontName)
 	td := pdf.TextDescriptor{
 		FontName:       fontName,
@@ -1272,7 +1271,7 @@ func createTextDemoColumns(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
 	return p
 }
 
-func writeTextBorderTest(p pdf.Page, region *pdf.Rectangle, fontName string) pdf.Page {
+func writeTextBorderTest(p pdf.Page, region *pdf.Rectangle) pdf.Page {
 	mediaBox := p.MediaBox
 	buf := p.Buf
 
@@ -1289,7 +1288,7 @@ func writeTextBorderTest(p pdf.Page, region *pdf.Rectangle, fontName string) pdf
 		pdf.FillRect(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
 	}
 
-	//fontName := "Times-Roman"
+	fontName := "Times-Roman"
 	k := p.Fm.EnsureKey(fontName)
 	td := pdf.TextDescriptor{
 		FontName:   fontName,
@@ -1387,18 +1386,18 @@ func writeTextBorderTest(p pdf.Page, region *pdf.Rectangle, fontName string) pdf
 	return p
 }
 
-func createTextBorderTest(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
+func createTextBorderTest(mediaBox *pdf.Rectangle) pdf.Page {
 	p := pdf.NewPageWithBg(mediaBox, pdf.NewSimpleColor(0xbeded9))
 	var region *pdf.Rectangle
-	writeTextBorderTest(p, region, fontName)
+	writeTextBorderTest(p, region)
 	region = pdf.RectForWidthAndHeight(70, 200, 200, 200)
-	writeTextBorderTest(p, region, fontName)
+	writeTextBorderTest(p, region)
 	return p
 }
 
-func createTextBorderNoMarginAlignLeftTest(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
+func createTextBorderNoMarginAlignLeftTest(mediaBox *pdf.Rectangle) pdf.Page {
 	p := pdf.NewPageWithBg(mediaBox, pdf.NewSimpleColor(0xbeded9))
-	//fontName := "Times-Roman"
+	fontName := "Times-Roman"
 	k := p.Fm.EnsureKey(fontName)
 	td := pdf.TextDescriptor{
 		Text:           sampleText2,
@@ -1439,9 +1438,9 @@ func createTextBorderNoMarginAlignLeftTest(mediaBox *pdf.Rectangle, fontName str
 	return p
 }
 
-func createTextBorderNoMarginAlignRightTest(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
+func createTextBorderNoMarginAlignRightTest(mediaBox *pdf.Rectangle) pdf.Page {
 	p := pdf.NewPageWithBg(mediaBox, pdf.NewSimpleColor(0xbeded9))
-	//fontName := "Times-Roman"
+	fontName := "Times-Roman"
 	k := p.Fm.EnsureKey(fontName)
 	td := pdf.TextDescriptor{
 		Text:           sampleText2,
@@ -1482,9 +1481,9 @@ func createTextBorderNoMarginAlignRightTest(mediaBox *pdf.Rectangle, fontName st
 	return p
 }
 
-func createTextBorderNoMarginAlignCenterTest(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
+func createTextBorderNoMarginAlignCenterTest(mediaBox *pdf.Rectangle) pdf.Page {
 	p := pdf.NewPageWithBg(mediaBox, pdf.NewSimpleColor(0xbeded9))
-	//fontName := "Times-Roman"
+	fontName := "Times-Roman"
 	k := p.Fm.EnsureKey(fontName)
 	td := pdf.TextDescriptor{
 		Text:           sampleText2,
@@ -1525,9 +1524,9 @@ func createTextBorderNoMarginAlignCenterTest(mediaBox *pdf.Rectangle, fontName s
 	return p
 }
 
-func createTextBorderNoMarginAlignJustifyTest(mediaBox *pdf.Rectangle, fontName string) pdf.Page {
+func createTextBorderNoMarginAlignJustifyTest(mediaBox *pdf.Rectangle) pdf.Page {
 	p := pdf.NewPageWithBg(mediaBox, pdf.NewSimpleColor(0xbeded9))
-	//fontName := "Times-Roman"
+	fontName := "Times-Roman"
 	k := p.Fm.EnsureKey(fontName)
 	td := pdf.TextDescriptor{
 		Text:           sampleText2,
@@ -1579,10 +1578,10 @@ func createXRefAndWritePDF(t *testing.T, msg, fileName string, p pdf.Page) {
 	createAndValidate(t, xRefTable, outFile, msg)
 }
 
-func testTextDemoPDF(t *testing.T, msg, fileName string, w, h int, hAlign pdf.HAlignment, fontName string) {
+func testTextDemoPDF(t *testing.T, msg, fileName string, w, h int, hAlign pdf.HAlignment) {
 	t.Helper()
 
-	var f1, f2, f3, f4 func(mediaBox *pdf.Rectangle, fontName string) pdf.Page
+	var f1, f2, f3, f4 func(mediaBox *pdf.Rectangle) pdf.Page
 
 	switch hAlign {
 	case pdf.AlignLeft:
@@ -1608,18 +1607,16 @@ func testTextDemoPDF(t *testing.T, msg, fileName string, w, h int, hAlign pdf.HA
 	}
 
 	mediaBox := pdf.RectForDim(float64(w), float64(h))
-	createXRefAndWritePDF(t, msg, "TextDemo"+fileName, f1(mediaBox, fontName))
-	createXRefAndWritePDF(t, msg, "TextDemo"+fileName+"Margin", f2(mediaBox, fontName))
-	createXRefAndWritePDF(t, msg, "TextDemo"+fileName+"Width", f3(mediaBox, fontName))
-	createXRefAndWritePDF(t, msg, "TextDemo"+fileName+"WidthAndMargin", f4(mediaBox, fontName))
+	createXRefAndWritePDF(t, msg, "TextDemo"+fileName, f1(mediaBox))
+	createXRefAndWritePDF(t, msg, "TextDemo"+fileName+"Margin", f2(mediaBox))
+	createXRefAndWritePDF(t, msg, "TextDemo"+fileName+"Width", f3(mediaBox))
+	createXRefAndWritePDF(t, msg, "TextDemo"+fileName+"WidthAndMargin", f4(mediaBox))
 }
 
 func TestTextDemoPDF(t *testing.T) {
 	msg := "TestTextDemoPDF"
 	w, h := 600, 600
-
-	_ = pdf.NewDefaultConfiguration()
-	fontName := "Geneva"
+	//api.LoadConfiguration()
 
 	for _, tt := range []struct {
 		fileName string
@@ -1631,20 +1628,18 @@ func TestTextDemoPDF(t *testing.T) {
 		{"AlignRight", w, h, pdf.AlignRight},
 		{"AlignJustify", w, h, pdf.AlignJustify},
 	} {
-		testTextDemoPDF(t, msg, tt.fileName, tt.w, tt.h, tt.hAlign, fontName)
+		testTextDemoPDF(t, msg, tt.fileName, tt.w, tt.h, tt.hAlign)
 	}
 }
 
 func TestColumnDemoPDF(t *testing.T) {
 	msg := "TestColumnDemoPDF"
-	_ = pdf.NewDefaultConfiguration()
-
-	fontName := "Geneva"
+	//api.LoadConfiguration()
 
 	for _, tt := range []struct {
 		fileName string
 		w, h     int
-		f        func(mediaBox *pdf.Rectangle, fontName string) pdf.Page
+		f        func(mediaBox *pdf.Rectangle) pdf.Page
 	}{
 		{"TestTextAlignJustifyDemo", 600, 600, createTextAlignJustifyDemo},
 		{"TestTextAlignJustifyColumnDemo", 600, 600, createTextAlignJustifyColumnDemo},
@@ -1666,7 +1661,7 @@ func TestColumnDemoPDF(t *testing.T) {
 		{"TextBorderNoMarginAlignJustifyTest", 600, 600, createTextBorderNoMarginAlignJustifyTest},
 	} {
 		mediaBox := pdf.RectForDim(float64(tt.w), float64(tt.h))
-		createXRefAndWritePDF(t, msg, tt.fileName, tt.f(mediaBox, fontName))
+		createXRefAndWritePDF(t, msg, tt.fileName, tt.f(mediaBox))
 	}
 }
 
@@ -1790,4 +1785,33 @@ func TestUserFontJustified(t *testing.T) {
 	_ = pdf.NewDefaultConfiguration()
 	mediaBox := pdf.RectForDim(600, 600)
 	createXRefAndWritePDF(t, msg, "TestUserFontJustified", createTestUserFontJustified(mediaBox))
+}
+
+func createTextAlignJustifyUserFontDemo(mediaBox *pdf.Rectangle, userFontName string) pdf.Page {
+	p := pdf.NewPage(mediaBox)
+	var region *pdf.Rectangle
+	writeTextAlignJustifyDemo(p, region, userFontName)
+	region = pdf.RectForWidthAndHeight(0, 0, 200, 200)
+	writeTextAlignJustifyDemo(p, region, userFontName)
+	return p
+}
+
+func TestUserFonts(t *testing.T) {
+	msg := "TestUserFonts"
+
+	api.LoadConfiguration()
+
+	// Install test user fonts (in addition to already installed user fonts)
+	// from pkg/testdata/fonts.
+	if err := api.InstallFonts(userFonts(t, "../../testdata/fonts")); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+
+	mediaBox := pdf.RectForDim(600, 600)
+	for _, fn := range font.UserFontNames() {
+		createXRefAndWritePDF(t, msg, "justifyUserFont_"+fn, createTextAlignJustifyUserFontDemo(mediaBox, fn))
+	}
+	for _, fn := range font.CoreFontNames() {
+		createXRefAndWritePDF(t, msg, "justifyCoreFont_"+fn, createTextAlignJustifyUserFontDemo(mediaBox, fn))
+	}
 }

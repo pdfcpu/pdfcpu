@@ -1128,6 +1128,16 @@ func processInstallFontsCommand(conf *pdfcpu.Configuration) {
 	process(cli.InstallFontsCommand(fileNames, conf))
 }
 
+func processCreateCheatSheetFontsCommand(conf *pdfcpu.Configuration) {
+	fileNames := []string{}
+	if len(flag.Args()) > 0 {
+		for _, arg := range flag.Args() {
+			fileNames = append(fileNames, arg)
+		}
+	}
+	process(cli.CreateCheatSheetsFontsCommand(fileNames, conf))
+}
+
 func processListKeywordsCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) != 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usageKeywordsList)

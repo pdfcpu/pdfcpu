@@ -1072,88 +1072,55 @@ func ttfFontDescriptorFlags(ttf font.TTFLight) uint32 {
 	return flags
 }
 
-func flateEncodedStreamIndRef(xRefTable *XRefTable, data []byte) (*IndirectRef, error) {
-	sd, _ := xRefTable.NewStreamDictForBuf(data)
-	sd.InsertInt("Length1", len(data))
-	if err := sd.Encode(); err != nil {
-		return nil, err
-	}
-	return xRefTable.IndRefForNewObject(*sd)
-}
+// func ttfFontDescriptor(xRefTable *XRefTable, ttf font.TTFLight, fontName string) (*IndirectRef, error) {
 
-func ttfFontFile(xRefTable *XRefTable, fontName string) (*IndirectRef, error) {
-	bb, err := font.Read(fontName)
-	if err != nil {
-		return nil, err
-	}
-	return flateEncodedStreamIndRef(xRefTable, bb)
-}
-
-func ttfFontDescriptor(xRefTable *XRefTable, ttf font.TTFLight, fontName string) (*IndirectRef, error) {
-
-	fontFile, err := ttfFontFile(xRefTable, fontName)
-	if err != nil {
-		return nil, err
-	}
-
-	d := Dict(
-		map[string]Object{
-			"Type":        Name("FontDescriptor"),
-			"FontName":    Name(fontName),
-			"Flags":       Integer(ttfFontDescriptorFlags(ttf)),
-			"FontBBox":    NewNumberArray(ttf.LLx, ttf.LLy, ttf.URx, ttf.URy),
-			"ItalicAngle": Float(ttf.ItalicAngle),
-			"Ascent":      Integer(ttf.Ascent),
-			"Descent":     Integer(ttf.Descent),
-			//"Leading": // The spacing between baselines of consecutive lines of text.
-			"CapHeight": Integer(ttf.CapHeight),
-			"StemV":     Integer(70), // Irrelevant for embedded files.
-			"FontFile2": *fontFile,
-		},
-	)
-
-	return xRefTable.IndRefForNewObject(d)
-}
-
-func trueTypeFontDict(xRefTable *XRefTable, fontName string, ttf font.TTFLight) (Dict, error) {
-	d := NewDict()
-	d.InsertName("Type", "Font")
-	d.InsertName("Subtype", "TrueType")
-	d.InsertName("BaseFont", fontName)
-	d.InsertInt("FirstChar", 32)
-	d.InsertInt("LastChar", 255)
-
-	w, err := ttfWidths(xRefTable, ttf)
-	if err != nil {
-		return nil, err
-	}
-	d.Insert("Widths", *w)
-
-	fd, err := ttfFontDescriptor(xRefTable, ttf, fontName)
-	if err != nil {
-		return nil, err
-	}
-	d.Insert("FontDescriptor", *fd)
-
-	d.InsertName("Encoding", "WinAnsiEncoding")
-
-	return d, nil
-}
-
-// func userFontDict(xRefTable *XRefTable, fontName string) (Dict, error) {
-// 	ttf := font.UserFontMetrics[fontName]
-// 	//fmt.Printf("userFontDict for %s:\n%s\n", fontName, ttf)
-
-// 	// if ttf.IsCJK() {
-// 	// 	fmt.Println("supports CJK")
-// 	// }
-
-// 	if len(ttf.Chars) <= 256 {
-// 		fmt.Println("using trueTypeFontDict")
-// 		return trueTypeFontDict(xRefTable, fontName, ttf)
+// 	fontFile, err := ttfFontFile(xRefTable, fontName)
+// 	if err != nil {
+// 		return nil, err
 // 	}
-// 	fmt.Println("using type0FontDict")
-// 	return type0FontDict(xRefTable, fontName, ttf)
+
+// 	d := Dict(
+// 		map[string]Object{
+// 			"Type":        Name("FontDescriptor"),
+// 			"FontName":    Name(fontName),
+// 			"Flags":       Integer(ttfFontDescriptorFlags(ttf)),
+// 			"FontBBox":    NewNumberArray(ttf.LLx, ttf.LLy, ttf.URx, ttf.URy),
+// 			"ItalicAngle": Float(ttf.ItalicAngle),
+// 			"Ascent":      Integer(ttf.Ascent),
+// 			"Descent":     Integer(ttf.Descent),
+// 			//"Leading": // The spacing between baselines of consecutive lines of text.
+// 			"CapHeight": Integer(ttf.CapHeight),
+// 			"StemV":     Integer(70), // Irrelevant for embedded files.
+// 			"FontFile2": *fontFile,
+// 		},
+// 	)
+
+// 	return xRefTable.IndRefForNewObject(d)
+// }
+
+// func trueTypeFontDict(xRefTable *XRefTable, fontName string, ttf font.TTFLight) (Dict, error) {
+// 	d := NewDict()
+// 	d.InsertName("Type", "Font")
+// 	d.InsertName("Subtype", "TrueType")
+// 	d.InsertName("BaseFont", fontName)
+// 	d.InsertInt("FirstChar", 32)
+// 	d.InsertInt("LastChar", 255)
+
+// 	w, err := ttfWidths(xRefTable, ttf)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	d.Insert("Widths", *w)
+
+// 	fd, err := ttfFontDescriptor(xRefTable, ttf, fontName)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	d.Insert("FontDescriptor", *fd)
+
+// 	d.InsertName("Encoding", "WinAnsiEncoding")
+
+// 	return d, nil
 // }
 
 func migrateIndRef(ir *IndirectRef, ctxSource, ctxDest *Context, migrated map[int]int) (Object, error) {
