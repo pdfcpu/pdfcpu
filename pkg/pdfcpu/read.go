@@ -1778,7 +1778,7 @@ func readContentStream(rd io.Reader, streamLength int) ([]byte, error) {
 			// Weak heuristic to detect the actual end of this stream
 			// once we have reached EOF due to incorrect streamLength.
 			eob := bytes.Index(buf, []byte("endstream"))
-			if eob < 0 {
+			if eob <= 0 {
 				return nil, err
 			}
 			return buf[:eob-1], nil
