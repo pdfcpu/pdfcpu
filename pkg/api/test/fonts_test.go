@@ -18,9 +18,12 @@ package test
 
 import (
 	"fmt"
+	"io/ioutil"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
@@ -126,5 +129,46 @@ func TestCoreFontDemoPDF(t *testing.T) {
 		}
 		outFile := filepath.Join("../../samples/fonts/core", fn+".pdf")
 		createAndValidate(t, xRefTable, outFile, msg)
+	}
+}
+
+func isTrueType(filename string) bool {
+	return strings.HasSuffix(strings.ToLower(filename), ".ttf")
+	//	|| strings.HasSuffix(strings.ToLower(filename), ".ttc")
+}
+
+func userFonts(t *testing.T, dir string) []string {
+	t.Helper()
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("%v\n", err)
+	}
+	ff := []string(nil)
+	for _, f := range files {
+		if isTrueType(f.Name()) {
+			fn := filepath.Join(dir, f.Name())
+			ff = append(ff, fn)
+		}
+	}
+	return ff
+}
+
+func TestUserFontDemoPDF(t *testing.T) {
+	msg := "TestUserFontDemoPDF"
+
+	api.LoadConfiguration()
+
+	// Install test user fonts from pkg/testdata/fonts.
+	if err := api.InstallFonts(userFonts(t, "../../testdata/fonts")); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+
+	// For each installed user font create a single page pdf cheat sheet for every unicode plane covered
+	// in pkg/samples/fonts/user.
+	for _, fn := range font.UserFontNames() {
+		fmt.Println(fn)
+		if err := api.CreateUserFontDemoFiles("../../samples/fonts/user", fn); err != nil {
+			t.Fatalf("%s: %v\n", msg, err)
+		}
 	}
 }

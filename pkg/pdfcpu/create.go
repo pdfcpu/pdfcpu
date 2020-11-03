@@ -87,10 +87,9 @@ type TextDescriptor struct {
 	BorderStyle    LineJoinStyle // Border style, also visible if ShowBorder is false as long as ShowBackground is true.
 	BorderCol      SimpleColor   // Border color.
 	ParIndent      bool          // Indent first line of paragraphs or space between paragraphs.
-	// Testing
-	ShowLineBB  bool // Render line bounding boxes in black.
-	ShowMargins bool // Render all margins in light gray.
-	HairCross   bool // Draw haircross at X,Y.
+	ShowLineBB     bool          // Render line bounding boxes in black (for HAlign != AlignJustify only)
+	ShowMargins    bool          // Render all margins in light gray.
+	HairCross      bool          // Draw haircross at X,Y.
 }
 
 // FontMap maps font resource ids to font names.
@@ -296,6 +295,24 @@ func calcBoundingBoxForLines(lines []string, x, y float64, fontName string, font
 	return box, maxLine
 }
 
+func calcBoundingBoxJ(x, y, w, h, d float64, fontName string, fontSize int) *Rectangle {
+	y -= d
+	return Rect(x, y, x+w, y+h)
+}
+
+func calcBoundingBoxForJLines(lines []string, x, y, w float64, fontName string, fontSize int) *Rectangle {
+	var box *Rectangle
+	h := font.LineHeight(fontName, fontSize)
+	d := math.Ceil(font.Descent(fontName, fontSize))
+	// TODO Return error if lines == nil or empty.
+	for i := 0; i < len(lines); i++ {
+		bbox := calcBoundingBoxJ(x, y, w, h, d, fontName, fontSize)
+		box = calcBoundingBoxForRects(box, bbox)
+		y -= bbox.Height()
+	}
+	return box
+}
+
 // DrawHairCross draw a haircross with origin x/y.
 func DrawHairCross(buf *bytes.Buffer, x, y float64, r *Rectangle) {
 	x1, y1 := x, y
@@ -311,10 +328,28 @@ func DrawHairCross(buf *bytes.Buffer, x, y float64, r *Rectangle) {
 	DrawLine(buf, x1, r.LL.Y, x1, r.LL.Y+r.Height()) // Vertical line
 }
 
-func writeStringToBuf(buf *bytes.Buffer, s string, x, y float64, strokeCol, fillCol SimpleColor, rm RenderMode) {
+func prepBytes(s, fontName string) string {
+	if font.IsUserFont(fontName) {
+		ttf := font.UserFontMetrics[fontName]
+		bb := []byte{}
+		for _, r := range s {
+			gid, ok := ttf.Chars[uint32(r)]
+			if ok {
+				bb = append(bb, byte((gid>>8)&0xFF))
+				bb = append(bb, byte(gid&0xFF))
+				ttf.UsedGIDs[gid] = true
+			}
+		}
+		s = string(bb)
+	}
 	s1, _ := Escape(s)
+	return *s1
+}
+
+func writeStringToBuf(buf *bytes.Buffer, s string, x, y float64, strokeCol, fillCol SimpleColor, rm RenderMode, fontName string) {
+	s = prepBytes(s, fontName)
 	buf.WriteString(fmt.Sprintf("BT 0 Tw %.2f %.2f %.2f RG %.2f %.2f %.2f rg %.2f %.2f Td %d Tr (%s) Tj ET ",
-		strokeCol.R, strokeCol.G, strokeCol.B, fillCol.R, fillCol.G, fillCol.B, x, y, rm, *s1))
+		strokeCol.R, strokeCol.G, strokeCol.B, fillCol.R, fillCol.G, fillCol.B, x, y, rm, s))
 }
 
 func setFont(b *bytes.Buffer, fontID string, fontSize float32) {
@@ -363,16 +398,17 @@ func horAdjustBoundingBoxForLines(r, box *Rectangle, dx, dy float64, x, y *float
 	}
 }
 
-func prepJustifiedLine(lines *[]string, strbuf []string, strWidth, w float64, fontSize int) {
+func prepJustifiedLine(lines *[]string, strbuf []string, strWidth, w float64, fontSize int, fontName string) {
+	bb := prepBytes(" ", fontName)
 	var sb strings.Builder
 	sb.WriteString("[")
 	wc := len(strbuf)
 	dx := font.GlyphSpaceUnits(float64((w-strWidth))/float64(wc-1), fontSize)
 	for i := 0; i < wc; i++ {
-		s2, _ := Escape(strbuf[i])
-		sb.WriteString(fmt.Sprintf(" (%s)", *s2))
+		s := prepBytes(strbuf[i], fontName)
+		sb.WriteString(fmt.Sprintf(" (%s)", s))
 		if i < wc-1 {
-			sb.WriteString(fmt.Sprintf(" %d ( )", -int(dx)))
+			sb.WriteString(fmt.Sprintf(" %d (%s)", -int(dx), bb))
 		}
 	}
 	sb.WriteString(" ] TJ")
@@ -399,8 +435,8 @@ func newPrepJustifiedString(fontName string, fontSize int) func(lines *[]string,
 
 		if len(s) == 0 {
 			if len(strbuf) > 0 {
-				s1, _ := Escape(strings.Join(strbuf, " "))
-				s = fmt.Sprintf("(%s) Tj", *s1)
+				s1 := prepBytes(strings.Join(strbuf, " "), fontName)
+				s = fmt.Sprintf("(%s) Tj", s1)
 				*lines = append(*lines, s)
 				strbuf = []string{}
 				strWidth = 0
@@ -431,12 +467,16 @@ func newPrepJustifiedString(fontName string, fontSize int) func(lines *[]string,
 				strbuf = append(strbuf, s1)
 				continue
 			}
+			// Scale down font size.
+			fs := font.Size(s1, fontName, w)
+			if fs < *fontSize {
+				*fontSize = fs
+			}
 			if len(strbuf) == 0 {
-				// Scale down font size.
-				*fontSize = font.Size(s1, fontName, w)
-				prepJustifiedLine(lines, []string{s1}, s1Width, w, *fontSize)
+				prepJustifiedLine(lines, []string{s1}, s1Width, w, *fontSize, fontName)
 			} else {
-				prepJustifiedLine(lines, strbuf, strWidth, w, *fontSize)
+				// Note: Previous lines have whitespace based on bigger font size.
+				prepJustifiedLine(lines, strbuf, strWidth, w, *fontSize, fontName)
 				strbuf = []string{s1}
 				strWidth = s1Width
 			}
@@ -577,6 +617,7 @@ func createBoundingBoxForColumn(r *Rectangle, x, y *float64,
 	*y += math.Ceil(dy1)
 
 	box, maxLine := calcBoundingBoxForLines(*lines, *x, *y, fontName, *fontSize)
+	// maxLine for hAlign != AlignJustify only!
 	horizontalWrapUp(box, maxLine, hAlign, x, width, ww, mLeft, mRight, borderWidth, fontName, fontSize)
 
 	box.LL.Y -= mBot + borderWidth
@@ -659,7 +700,7 @@ func renderText(buf *bytes.Buffer, lines []string, td TextDescriptor, x, y float
 				SetStrokeColor(buf, Black)
 				DrawRect(buf, lineBB)
 			}
-			writeStringToBuf(buf, s, x-dx, y, td.StrokeCol, td.FillCol, td.RMode)
+			writeStringToBuf(buf, s, x-dx, y, td.StrokeCol, td.FillCol, td.RMode, fontName)
 			y -= lh
 			continue
 		}
@@ -717,7 +758,7 @@ func WriteColumn(buf *bytes.Buffer, mediaBox, region *Rectangle, td TextDescript
 	// Cache haircross coordinates.
 	x0, y0 := x, y
 
-	if utf8.ValidString(s) {
+	if font.IsCoreFont(td.FontName) && utf8.ValidString(s) {
 		s = decodeUTF8ToByte(s)
 	}
 

@@ -713,13 +713,16 @@ inches, in ... inches
         cm ... centimetres
         mm ... millimetres`
 
-	usageFontsList    = "pdfcpu fonts list"
-	usageFontsInstall = "pdfcpu fonts install fontFiles..."
+	usageFontsList       = "pdfcpu fonts list"
+	usageFontsInstall    = "pdfcpu fonts install fontFiles..."
+	usageFontsCheatSheet = "pdfcpu fonts cheatsheet fontFiles..."
 
 	usageFonts = "usage: " + usageFontsList +
-		"\n       " + usageFontsInstall
+		"\n       " + usageFontsInstall +
+		"\n       " + usageFontsCheatSheet
 	usageLongFonts = `Print a list of supported fonts (includes the 14 PDF core fonts).
-Install given true type fonts (.ttf) from working directory for embedding in stamps/watermarks.`
+Install given true type fonts (.ttf) from working directory for embedding in stamps/watermarks.
+Create single page PDF cheat sheets in current dir.`
 
 	usageKeywordsList   = "pdfcpu keywords list    [-upw userpw] [-opw ownerpw] inFile"
 	usageKeywordsAdd    = "pdfcpu keywords add     [-upw userpw] [-opw ownerpw] inFile keyword..."

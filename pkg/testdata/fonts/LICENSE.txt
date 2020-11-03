@@ -1,0 +1,7 @@
+Roboto-Regular.ttf
+https://fonts.google.com/specimen/Roboto
+License: Apache 2.0
+
+GNU unifont*.ttf
+http://unifoundry.com/unifont/index.html
+License: GPL

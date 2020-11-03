@@ -224,25 +224,6 @@ func CreateResourceDictInheritanceDemoXRef() (*XRefTable, error) {
 	return xRefTable, nil
 }
 
-func createFontDict(xRefTable *XRefTable, coreFontName string) (*IndirectRef, error) {
-	d := NewDict()
-	d.InsertName("Type", "Font")
-	d.InsertName("Subtype", "Type1")
-	d.InsertName("BaseFont", coreFontName)
-	if coreFontName != "Symbol" && coreFontName != "ZapfDingbats" {
-		d.InsertName("Encoding", "WinAnsiEncoding")
-	}
-	return xRefTable.IndRefForNewObject(d)
-}
-
-func createZapfDingbatsFontDict(xRefTable *XRefTable) (*IndirectRef, error) {
-	d := NewDict()
-	d.InsertName("Type", "Font")
-	d.InsertName("Subtype", "Type1")
-	d.InsertName("BaseFont", "ZapfDingbats")
-	return xRefTable.IndRefForNewObject(d)
-}
-
 func createFunctionalShadingDict(xRefTable *XRefTable) Dict {
 	f := Dict(
 		map[string]Object{
@@ -428,7 +409,7 @@ func addResources(xRefTable *XRefTable, pageDict Dict, fontName string) error {
 				f,
 				Dict(
 					map[string]Object{
-						"SubType": Name("DeviceN"),
+						"Subtype": Name("DeviceN"),
 					},
 				),
 			},
@@ -439,7 +420,7 @@ func addResources(xRefTable *XRefTable, pageDict Dict, fontName string) error {
 				f,
 				Dict(
 					map[string]Object{
-						"SubType": Name("NChannel"),
+						"Subtype": Name("NChannel"),
 						"Process": Dict(
 							map[string]Object{
 								"ColorSpace": Array{
@@ -1564,7 +1545,7 @@ func createOffAppearance(xRefTable *XRefTable, resourceDict Dict, w, h float64) 
 }
 
 func createCheckBoxButtonField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectRef, error) {
-	fontDict, err := createZapfDingbatsFontDict(xRefTable)
+	fontDict, err := createFontDict(xRefTable, "ZapfDingbats")
 	if err != nil {
 		return nil, err
 	}
@@ -1645,7 +1626,7 @@ func createRadioButtonField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectR
 		return nil, err
 	}
 
-	fontDict, err := createZapfDingbatsFontDict(xRefTable)
+	fontDict, err := createFontDict(xRefTable, "ZapfDingbats")
 	if err != nil {
 		return nil, err
 	}

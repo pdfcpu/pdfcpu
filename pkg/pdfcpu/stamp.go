@@ -1004,26 +1004,6 @@ func setWatermarkType(mode int, s string, wm *Watermark) error {
 	return nil
 }
 
-func coreFontDict(fontName string) Dict {
-	d := NewDict()
-	d.InsertName("Type", "Font")
-	d.InsertName("Subtype", "Type1")
-	d.InsertName("BaseFont", fontName)
-
-	// TODO No encoding for Symbol or ZapfD?
-	if fontName != "Symbol" && fontName != "ZapfDingbats" {
-		encDict := Dict(
-			map[string]Object{
-				"Type":         Name("Encoding"),
-				"BaseEncoding": Name("WinAnsiEncoding"),
-				"Differences":  Array{Integer(172), Name("Euro")},
-			},
-		)
-		d.Insert("Encoding", encDict)
-	}
-	return d
-}
-
 func ttfWidths(xRefTable *XRefTable, ttf font.TTFLight) (*IndirectRef, error) {
 
 	// we have tff firstchar, lastchar !
@@ -1092,308 +1072,56 @@ func ttfFontDescriptorFlags(ttf font.TTFLight) uint32 {
 	return flags
 }
 
-func flateEncodedStreamIndRef(xRefTable *XRefTable, data []byte) (*IndirectRef, error) {
-	sd, _ := xRefTable.NewStreamDictForBuf(data)
-	sd.InsertInt("Length1", len(data))
-	if err := sd.Encode(); err != nil {
-		return nil, err
-	}
-	return xRefTable.IndRefForNewObject(*sd)
-}
+// func ttfFontDescriptor(xRefTable *XRefTable, ttf font.TTFLight, fontName string) (*IndirectRef, error) {
 
-func ttfFontFile(xRefTable *XRefTable, fontName string) (*IndirectRef, error) {
-	bb, err := font.Read(fontName)
-	if err != nil {
-		return nil, err
-	}
-	return flateEncodedStreamIndRef(xRefTable, bb)
-}
+// 	fontFile, err := ttfFontFile(xRefTable, fontName)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-func ttfFontDescriptor(xRefTable *XRefTable, ttf font.TTFLight, fontName string) (*IndirectRef, error) {
+// 	d := Dict(
+// 		map[string]Object{
+// 			"Type":        Name("FontDescriptor"),
+// 			"FontName":    Name(fontName),
+// 			"Flags":       Integer(ttfFontDescriptorFlags(ttf)),
+// 			"FontBBox":    NewNumberArray(ttf.LLx, ttf.LLy, ttf.URx, ttf.URy),
+// 			"ItalicAngle": Float(ttf.ItalicAngle),
+// 			"Ascent":      Integer(ttf.Ascent),
+// 			"Descent":     Integer(ttf.Descent),
+// 			//"Leading": // The spacing between baselines of consecutive lines of text.
+// 			"CapHeight": Integer(ttf.CapHeight),
+// 			"StemV":     Integer(70), // Irrelevant for embedded files.
+// 			"FontFile2": *fontFile,
+// 		},
+// 	)
 
-	fontFile, err := ttfFontFile(xRefTable, fontName)
-	if err != nil {
-		return nil, err
-	}
+// 	return xRefTable.IndRefForNewObject(d)
+// }
 
-	d := Dict(
-		map[string]Object{
-			"Type":        Name("FontDescriptor"),
-			"FontName":    Name(fontName),
-			"Flags":       Integer(ttfFontDescriptorFlags(ttf)),
-			"FontBBox":    NewNumberArray(ttf.LLx, ttf.LLy, ttf.URx, ttf.URy),
-			"ItalicAngle": Float(ttf.ItalicAngle),
-			"Ascent":      Integer(ttf.Ascent),
-			"Descent":     Integer(ttf.Descent),
-			//"Leading": // The spacing between baselines of consecutive lines of text.
-			"CapHeight": Integer(ttf.CapHeight),
-			"StemV":     Integer(70), // Irrelevant for embedded files.
-			"FontFile2": *fontFile,
-		},
-	)
+// func trueTypeFontDict(xRefTable *XRefTable, fontName string, ttf font.TTFLight) (Dict, error) {
+// 	d := NewDict()
+// 	d.InsertName("Type", "Font")
+// 	d.InsertName("Subtype", "TrueType")
+// 	d.InsertName("BaseFont", fontName)
+// 	d.InsertInt("FirstChar", 32)
+// 	d.InsertInt("LastChar", 255)
 
-	return xRefTable.IndRefForNewObject(d)
-}
+// 	w, err := ttfWidths(xRefTable, ttf)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	d.Insert("Widths", *w)
 
-func userFontDict(xRefTable *XRefTable, fontName string) (Dict, error) {
+// 	fd, err := ttfFontDescriptor(xRefTable, ttf, fontName)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	d.Insert("FontDescriptor", *fd)
 
-	ttf := font.UserFontMetrics[fontName]
-	//fmt.Printf("userFontDict for %s:\n%s\n", fontName, ttf)
+// 	d.InsertName("Encoding", "WinAnsiEncoding")
 
-	// if ttf.IsCJK() {
-	// 	fmt.Println("supports CJK")
-	// }
-
-	d := NewDict()
-	d.InsertName("Type", "Font")
-	d.InsertName("Subtype", "TrueType")
-	d.InsertName("BaseFont", fontName)
-	d.InsertInt("FirstChar", 32)
-	d.InsertInt("LastChar", 255)
-
-	w, err := ttfWidths(xRefTable, ttf)
-	if err != nil {
-		return nil, err
-	}
-	d.Insert("Widths", *w)
-
-	fd, err := ttfFontDescriptor(xRefTable, ttf, fontName)
-	if err != nil {
-		return nil, err
-	}
-	d.Insert("FontDescriptor", *fd)
-
-	d.InsertName("Encoding", "WinAnsiEncoding")
-
-	return d, nil
-}
-
-// CIDFontDescriptor represents a font descriptor describing
-// the CIDFont’s default metrics other than its glyph widths.
-func CIDFontDescriptor(xRefTable *XRefTable, ttf font.TTFLight, fontName string) (*IndirectRef, error) {
-
-	/*
-		<Ascent, 1060>
-		<AvgWidth, 1000>
-		<CapHeight, 860>
-		<Descent, -340>
-		<Flags, 4>
-		<FontBBox, [-72 -212 1126 952]>
-		<FontFile3, (54 0 R)>                 ... <Subtype, CIDFontType0C>
-		// Type 0 CIDFont program represented in the Compact Font Format (CFF),
-		// as described in Adobe Technical Note #5176, The Compact Font Format Specification.
-		<FontName, EBLDSM+PingFangSC-Regular>
-		<ItalicAngle, 0>
-		<MaxWidth, 1300>
-		<StemH, 64>
-		<StemV, 70>
-		<Type, FontDescriptor>
-		<XHeight, 600>
-	*/
-	fontFile, err := ttfFontFile(xRefTable, fontName)
-	if err != nil {
-		return nil, err
-	}
-
-	d := Dict(
-		map[string]Object{
-			"Type":        Name("FontDescriptor"),
-			"FontName":    Name(fontName),
-			"Flags":       Integer(ttfFontDescriptorFlags(ttf)),
-			"FontBBox":    NewNumberArray(ttf.LLx, ttf.LLy, ttf.URx, ttf.URy),
-			"ItalicAngle": Float(ttf.ItalicAngle),
-			"Ascent":      Integer(ttf.Ascent),
-			"Descent":     Integer(ttf.Descent),
-			//"Leading": // The spacing between baselines of consecutive lines of text.
-			"CapHeight": Integer(ttf.CapHeight),
-			"StemV":     Integer(70), // Irrelevant for embedded files.
-			"FontFile2": *fontFile,
-
-			// (Optional) A dictionary containing entries that describe the style of the glyphs in the font (see 9.8.3.2, "Style").
-			//"Style": Dict(map[string]Object{}),
-
-			// (Optional) A name specifying the language of the font, which may be used for encodings
-			// where the language is not implied by the encoding itself.
-			//"Lang": Name(""),
-
-			// (Optional) A dictionary whose keys identify a class of glyphs in a CIDFont.
-			// Each value shall be a dictionary containing entries that shall override the
-			// corresponding values in the main font descriptor dictionary for that class of glyphs (see 9.8.3.3, "FD").
-			//"FD": Dict(map[string]Object{}),
-
-			// (Optional)
-			// A stream identifying which CIDs are present in the CIDFont file. If this entry is present,
-			// the CIDFont shall contain only a subset of the glyphs in the character collection defined by the CIDSystemInfo dictionary.
-			// If it is absent, the only indication of a CIDFont subset shall be the subset tag in the FontName entry (see 9.6.4, "Font Subsets").
-			// The stream’s data shall be organized as a table of bits indexed by CID.
-			// The bits shall be stored in bytes with the high-order bit first. Each bit shall correspond to a CID.
-			// The most significant bit of the first byte shall correspond to CID 0, the next bit to CID 1, and so on.
-			//"CIDSet": nil,
-		},
-	)
-
-	return xRefTable.IndRefForNewObject(d)
-}
-
-// CIDFontDict returns the descendent font dict for Type0 fonts.
-func CIDFontDict(xRefTable *XRefTable, ttf font.TTFLight, fontName string) (*IndirectRef, error) {
-
-	// For a font subset, the PostScript name of the font—the value of the font’s BaseFont entry
-	// and the font descriptor’s FontName entry— shall begin with a tag followed by a plus sign (+).
-	// The tag shall consist of exactly six uppercase letters; the choice of letters is arbitrary,
-	// but different subsets in the same PDF file shall have different tags.
-
-	/*
-		<BaseFont, EBLDSM+PingFangSC-Regular>
-			<CIDSystemInfo, <<    // character collection
-				<Ordering, (Identity)>    // UCS
-				<Registry, (Adobe)>
-				<Supplement, 0>
-			>>>
-			<DW, 1000>
-			<FontDescriptor, (53 0 R)>
-			<Subtype, CIDFontType0>
-			<Type, Font>
-			<W, (52 0 R)>
-	*/
-
-	fdIndRef, err := CIDFontDescriptor(xRefTable, ttf, fontName)
-	if err != nil {
-		return nil, err
-	}
-
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Font"),
-			"Subtype":  Name("CIDFontType2"),
-			"BaseFont": Name(fontName),
-			"CIDSystemInfo": Dict(
-				map[string]Object{
-					"Ordering":   StringLiteral("Identity"), // or UCS ?
-					"Registry":   StringLiteral("Adobe"),
-					"Supplement": Integer(0),
-				},
-			),
-			"FontDescriptor": *fdIndRef,
-
-			// (Optional)
-			// The default width for glyphs in the CIDFont (see 9.7.4.3, "Glyph Metrics in CIDFonts").
-			// Default value: 1000 (defined in user units).
-			"DW": Integer(1000),
-
-			// (Optional)
-			// A description of the widths for the glyphs in the CIDFont.
-			// The array’s elements have a variable format that can specify individual widths for consecutive CIDs
-			// or one width for a range of CIDs (see 9.7.4.3, "Glyph Metrics in CIDFonts").
-			// Default value: none (the DW value shall be used for all glyphs).
-			//"W": Array{},
-
-			// (Optional; applies only to CIDFonts used for vertical writing)
-			// An array of two numbers specifying the default metrics for vertical writing (see 9.7.4.3, "Glyph Metrics in CIDFonts").
-			// Default value: [880 −1000].
-			// "DW2":             Integer(1000),
-
-			// (Optional; applies only to CIDFonts used for vertical writing)
-			// A description of the metrics for vertical writing for the glyphs in the CIDFont (see 9.7.4.3, "Glyph Metrics in CIDFonts").
-			// Default value: none (the DW2 value shall be used for all glyphs).
-			// "W2": nil
-
-			// (Optional; Type 2 CIDFonts only)
-			// A specification of the mapping from CIDs to glyph indices.
-			// maps CIDs to the glyph indices for the appropriate glyph descriptions in that font program.
-			// if stream: the glyph index for a particular CID value c shall be a 2-byte value stored in bytes 2 × c and 2 × c + 1,
-			// where the first byte shall be the high-order byte.))
-			"CIDToGIDMap": Name("Identity"),
-		},
-	)
-
-	return xRefTable.IndRefForNewObject(d)
-}
-
-// toUnicodeCMap returns a stream dict containing a CMap file that maps character codes to Unicode values (see 9.10).
-func toUnicodeCMap(xRefTable *XRefTable, fontName string) (*IndirectRef, error) {
-	// TODO create CMap bytes ...
-	bb, err := font.Read(fontName)
-	if err != nil {
-		return nil, err
-	}
-	return flateEncodedStreamIndRef(xRefTable, bb)
-}
-
-func type0FontDict(xRefTable *XRefTable, fontName string) (Dict, error) {
-
-	// Work in progress!
-
-	/*
-		<BaseFont, EBLDSM+PingFangSC-Regular>
-		<DescendantFonts, [(49 0 R)]>
-		<Encoding, Identity-H>
-		<Subtype, Type0>
-		<ToUnicode, (50 0 R)>
-		<Type, Font>
-	*/
-
-	// Combines a CIDFont and a CMap to produce a font whose glyphs may be accessed
-	// by means of variable-length character codes in a string to be shown.
-
-	ttf := font.UserFontMetrics[fontName]
-
-	descendentFontIndRef, err := CIDFontDict(xRefTable, ttf, fontName)
-	if err != nil {
-		return nil, err
-	}
-
-	// toUnicodeIndRef, err := toUnicodeCMap(xRefTable, fontName)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	d := NewDict()
-	d.InsertName("Type", "Font")
-	d.InsertName("Subtype", "Type0")
-	d.InsertName("BaseFont", fontName)
-	d.InsertName("Encoding", "Identity-H") // or Identity-V
-	// The Encoding entry of a Type 0 font dictionary specifies a CMap that specifies how
-	// text-showing operators (such as Tj) shall interpret the bytes in the string to be shown when the current font is the Type 0 font.
-	// This sub- clause describes how the characters in the string shall be decoded and mapped into character selectors,
-	// which in PDF are always CIDs.
-
-	// (Required) A one-element array specifying the CIDFont dictionary that is the descendant of this Type 0 font.
-	d.Insert("DescendantFonts", Array{*descendentFontIndRef})
-
-	// (Optional) A stream containing a CMap file that maps character codes to Unicode values (see 9.10, "Extraction of Text Content").
-	// TODO only contain mapping for used characters.
-	//d.Insert("ToUnicode", Array{*toUnicodeIndRef})
-
-	return d, nil
-}
-
-func createFontResForWM(xRefTable *XRefTable, wm *Watermark) error {
-
-	var (
-		d   Dict
-		err error
-	)
-
-	if font.IsCoreFont(wm.FontName) {
-		d = coreFontDict(wm.FontName)
-	} else {
-		//d, err = type0FontDict(xRefTable, wm.FontName)
-		d, err = userFontDict(xRefTable, wm.FontName)
-		if err != nil {
-			return err
-		}
-	}
-
-	ir, err := xRefTable.IndRefForNewObject(d)
-	if err != nil {
-		return err
-	}
-
-	wm.font = ir
-
-	return nil
-}
+// 	return d, nil
+// }
 
 func migrateIndRef(ir *IndirectRef, ctxSource, ctxDest *Context, migrated map[int]int) (Object, error) {
 	//entrySrc, _ := ctxSource.FindTableEntryLight(objNr)
@@ -1548,7 +1276,6 @@ func createPDFResForWM(ctx *Context, wm *Watermark) error {
 }
 
 func createImageResource(xRefTable *XRefTable, r io.Reader) (*IndirectRef, int, int, error) {
-
 	bb, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, 0, 0, err
@@ -1596,7 +1323,6 @@ func createImageResource(xRefTable *XRefTable, r io.Reader) (*IndirectRef, int, 
 }
 
 func createImageResForWM(xRefTable *XRefTable, wm *Watermark) (err error) {
-
 	f, err := os.Open(wm.FileName)
 	if err != nil {
 		return err
@@ -1604,23 +1330,24 @@ func createImageResForWM(xRefTable *XRefTable, wm *Watermark) (err error) {
 	defer f.Close()
 
 	wm.image, wm.width, wm.height, err = createImageResource(xRefTable, f)
+	return err
+}
 
+func createFontResForWM(xRefTable *XRefTable, wm *Watermark) (err error) {
+	// Dummy call in order to setup used glyphs.
+	WriteMultiLine(new(bytes.Buffer), RectForFormat("A4"), nil, setupTextDescriptor(wm))
+	wm.font, err = createFontDict(xRefTable, wm.FontName)
 	return err
 }
 
 func createResourcesForWM(ctx *Context, wm *Watermark) error {
-
-	xRefTable := ctx.XRefTable
-
 	if wm.isPDF() {
 		return createPDFResForWM(ctx, wm)
 	}
-
 	if wm.isImage() {
-		return createImageResForWM(xRefTable, wm)
+		return createImageResForWM(ctx.XRefTable, wm)
 	}
-
-	return createFontResForWM(xRefTable, wm)
+	return createFontResForWM(ctx.XRefTable, wm)
 }
 
 func ensureOCG(xRefTable *XRefTable, wm *Watermark) error {

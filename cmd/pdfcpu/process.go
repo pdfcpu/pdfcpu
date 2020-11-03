@@ -1112,20 +1112,30 @@ func processListFontsCommand(conf *pdfcpu.Configuration) {
 func processInstallFontsCommand(conf *pdfcpu.Configuration) {
 	fileNames := []string{}
 	if len(flag.Args()) == 0 {
-		fmt.Fprintf(os.Stderr, "%s\n\n", "expecting a list of TrueType fonts(*.ttf) for installation.")
+		fmt.Fprintf(os.Stderr, "%s\n\n", "expecting a list of TrueType filenames (.ttf, .ttc) for installation.")
 		os.Exit(1)
 	}
 	for _, arg := range flag.Args() {
-		if filepath.Ext(arg) != ".ttf" {
+		if !pdfcpu.MemberOf(filepath.Ext(arg), []string{".ttf", ".ttc"}) {
 			continue
 		}
 		fileNames = append(fileNames, arg)
 	}
 	if len(fileNames) == 0 {
-		fmt.Fprintln(os.Stderr, "Please supply a TrueType fontname!")
+		fmt.Fprintln(os.Stderr, "Please supply a *.ttf or *.tcc fontname!")
 		os.Exit(1)
 	}
 	process(cli.InstallFontsCommand(fileNames, conf))
+}
+
+func processCreateCheatSheetFontsCommand(conf *pdfcpu.Configuration) {
+	fileNames := []string{}
+	if len(flag.Args()) > 0 {
+		for _, arg := range flag.Args() {
+			fileNames = append(fileNames, arg)
+		}
+	}
+	process(cli.CreateCheatSheetsFontsCommand(fileNames, conf))
 }
 
 func processListKeywordsCommand(conf *pdfcpu.Configuration) {

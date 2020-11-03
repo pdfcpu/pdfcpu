@@ -143,9 +143,10 @@ func logOperationStats(ctx *pdfcpu.Context, op string, durRead, durVal, durOpt, 
 	}
 }
 
-// EnsureDefaultConfigAt switches to the pdfcpu confif dir located at path.
+// EnsureDefaultConfigAt switches to the pdfcpu config dir located at path.
 // If path/pdfcpu is not existent, it will be created including config.yml
 func EnsureDefaultConfigAt(path string) error {
+	// Call if you have specific requirements regarding the location of the pdfcpu config dir.
 	return pdfcpu.EnsureDefaultConfigAt(path)
 }
 
@@ -154,5 +155,15 @@ func EnsureDefaultConfigAt(path string) error {
 // Since the config dir also contains the user font dir, this also limits font usage to the default core font set
 // No user fonts will be available.
 func DisableConfigDir() {
+	// Call if you don't want to use a specific configuration
+	// and also do not need to use user fonts.
 	pdfcpu.ConfigPath = "disable"
+}
+
+// LoadConfiguration locates and loads the default configuration
+// and also loads installed user fonts.
+func LoadConfiguration() {
+	// Call if you don't have a specific config dir location
+	// and need to use user fonts for stamping or watermarking.
+	pdfcpu.NewDefaultConfiguration()
 }

@@ -185,12 +185,17 @@ func Info(cmd *Command) ([]string, error) {
 	return api.InfoFile(*cmd.InFile, cmd.Conf)
 }
 
+// CreateCheatSheetsFonts creates single page PDF cheat sheets for user fonts in current dir.
+func CreateCheatSheetsFonts(cmd *Command) ([]string, error) {
+	return nil, api.CreateCheatSheetsUserFonts(cmd.InFiles)
+}
+
 // ListFonts gathers information about supported fonts and returns the result as []string.
 func ListFonts(cmd *Command) ([]string, error) {
 	return api.ListFonts()
 }
 
-// InstallFonts gathers information about supported fonts and returns the result as []string.
+// InstallFonts installs True Type fonts into the pdfcpu pconfig dir.
 func InstallFonts(cmd *Command) ([]string, error) {
 	return nil, api.InstallFonts(cmd.InFiles)
 }
