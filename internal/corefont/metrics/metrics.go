@@ -34,7 +34,7 @@ package metrics
 // Helvetica-BoldOblique,
 // Courier-BoldOblique
 
-// CoreFontCharWidth returns the character width for fontNamr and c in glyph space units.
+// CoreFontCharWidth returns the character width for fontName and c in glyph space units.
 func CoreFontCharWidth(fontName string, c int) int {
 	var m map[int]string
 	switch fontName {

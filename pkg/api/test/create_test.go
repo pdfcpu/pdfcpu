@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/font"
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
@@ -1616,7 +1615,6 @@ func testTextDemoPDF(t *testing.T, msg, fileName string, w, h int, hAlign pdf.HA
 func TestTextDemoPDF(t *testing.T) {
 	msg := "TestTextDemoPDF"
 	w, h := 600, 600
-	//api.LoadConfiguration()
 
 	for _, tt := range []struct {
 		fileName string
@@ -1634,7 +1632,6 @@ func TestTextDemoPDF(t *testing.T) {
 
 func TestColumnDemoPDF(t *testing.T) {
 	msg := "TestColumnDemoPDF"
-	//api.LoadConfiguration()
 
 	for _, tt := range []struct {
 		fileName string
@@ -1665,63 +1662,6 @@ func TestColumnDemoPDF(t *testing.T) {
 	}
 }
 
-func TestUserFont(t *testing.T) {
-	msg := "TestUserFont"
-	mediaBox := pdf.RectForDim(600, 600)
-	p := pdf.NewPage(mediaBox)
-	var region *pdf.Rectangle
-	buf := p.Buf
-
-	_ = pdf.NewDefaultConfiguration()
-
-	fontName := "Courier"
-	k := p.Fm.EnsureKey(fontName)
-
-	td := pdf.TextDescriptor{
-		FontName:       fontName,
-		FontKey:        k,
-		FontSize:       24,
-		ShowMargins:    true,
-		MLeft:          0,
-		MRight:         0,
-		MTop:           0,
-		MBot:           0,
-		Scale:          1.,
-		ScaleAbs:       true,
-		HAlign:         pdf.AlignCenter,
-		RMode:          pdf.RMFill,
-		StrokeCol:      pdf.Black,
-		FillCol:        pdf.Black,
-		ShowBackground: true,
-		BackgroundCol:  pdf.SimpleColor{R: 1., G: .98, B: .77},
-		ShowBorder:     true,
-		ShowLineBB:     true,
-		ShowTextBB:     true,
-		HairCross:      true,
-	}
-	td.VAlign, td.X, td.Y, td.Text = pdf.AlignBaseline, -1, -1, "Courier"
-	pdf.WriteColumn(buf, mediaBox, region, td, 0)
-
-	fontName = "Geneva"
-	k = p.Fm.EnsureKey(fontName)
-	td.FontName, td.FontKey = fontName, k
-	td.VAlign, td.X, td.Y, td.Text = pdf.AlignBaseline, -1, -1, "Geneva: ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	td.Dy = -50
-	pdf.WriteColumn(buf, mediaBox, region, td, 0)
-
-	apple := rune(0xf8ff)
-	td.Dy, td.Text = -150, "abcdefghijklmnopqrstuvwxyz"+string(apple)
-	pdf.WriteColumn(buf, mediaBox, region, td, 0)
-
-	xRefTable, err := pdf.CreateDemoXRef(p)
-	if err != nil {
-		t.Fatalf("%s: %v\n", msg, err)
-	}
-	outDir := "../../samples/create"
-	outFile := filepath.Join(outDir, "testUserFont.pdf")
-	createAndValidate(t, xRefTable, outFile, msg)
-}
-
 func writecreateTestUserFontJustified(p pdf.Page, region *pdf.Rectangle) {
 	mediaBox := p.MediaBox
 	buf := p.Buf
@@ -1739,7 +1679,7 @@ func writecreateTestUserFontJustified(p pdf.Page, region *pdf.Rectangle) {
 		pdf.FillRect(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
 	}
 
-	fontName := "Geneva"
+	fontName := "Roboto-Regular"
 	k := p.Fm.EnsureKey(fontName)
 
 	td := pdf.TextDescriptor{
@@ -1782,36 +1722,96 @@ func createTestUserFontJustified(mediaBox *pdf.Rectangle) pdf.Page {
 
 func TestUserFontJustified(t *testing.T) {
 	msg := "TestUserFontJustified"
-	_ = pdf.NewDefaultConfiguration()
-	mediaBox := pdf.RectForDim(600, 600)
-	createXRefAndWritePDF(t, msg, "TestUserFontJustified", createTestUserFontJustified(mediaBox))
-}
-
-func createTextAlignJustifyUserFontDemo(mediaBox *pdf.Rectangle, userFontName string) pdf.Page {
-	p := pdf.NewPage(mediaBox)
-	var region *pdf.Rectangle
-	writeTextAlignJustifyDemo(p, region, userFontName)
-	region = pdf.RectForWidthAndHeight(0, 0, 200, 200)
-	writeTextAlignJustifyDemo(p, region, userFontName)
-	return p
-}
-
-func TestUserFonts(t *testing.T) {
-	msg := "TestUserFonts"
-
-	api.LoadConfiguration()
 
 	// Install test user fonts (in addition to already installed user fonts)
 	// from pkg/testdata/fonts.
+	api.LoadConfiguration()
 	if err := api.InstallFonts(userFonts(t, "../../testdata/fonts")); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
 	mediaBox := pdf.RectForDim(600, 600)
-	for _, fn := range font.UserFontNames() {
-		createXRefAndWritePDF(t, msg, "justifyUserFont_"+fn, createTextAlignJustifyUserFontDemo(mediaBox, fn))
+	createXRefAndWritePDF(t, msg, "TestUserFontJustified", createTestUserFontJustified(mediaBox))
+}
+
+func createCJKVDemo(mediaBox *pdf.Rectangle) pdf.Page {
+	p := pdf.NewPage(mediaBox)
+	mb := p.MediaBox
+
+	textEnglish := `pdfcpu
+Instant PDF processing for all your needs.
+Now supporting CJKV!`
+
+	textChineseSimple := `pdfcpu
+即时处理PDF，满足您的所有需求。
+现在支持CJKV字体！`
+
+	textKorean := `pdfcpu
+모든 요구 사항에 맞는 즉각적인 PDF 처리.
+이제 CJKV 글꼴을 지원합니다!`
+
+	textJapanese := `pdfcpu
+すべてのニーズに対応するインスタントPDF処理。
+CJKVフォントがサポートされるようになりました！`
+
+	textVietnamese := `pdfcpu
+Xử lý PDF tức thì cho mọi nhu cầu của bạn.
+Bây giờ với sự hỗ trợ cho các phông chữ CJKV!`
+
+	td := pdf.TextDescriptor{
+		FontSize:       24,
+		MLeft:          5,
+		MRight:         5,
+		MTop:           5,
+		MBot:           5,
+		Scale:          1,
+		ScaleAbs:       true,
+		HAlign:         pdf.AlignLeft,
+		VAlign:         pdf.AlignMiddle,
+		RMode:          pdf.RMFill,
+		StrokeCol:      pdf.NewSimpleColor(0x206A29),
+		FillCol:        pdf.NewSimpleColor(0x206A29),
+		ShowBackground: true,
+		BackgroundCol:  pdf.SimpleColor{R: 1., G: .98, B: .77},
+		ShowBorder:     true,
+		ShowLineBB:     false,
+		ShowTextBB:     true,
+		HairCross:      false,
 	}
-	for _, fn := range font.CoreFontNames() {
-		createXRefAndWritePDF(t, msg, "justifyCoreFont_"+fn, createTextAlignJustifyUserFontDemo(mediaBox, fn))
+
+	td.Text, td.FontName, td.FontKey = textChineseSimple, "UnifontMedium", p.Fm.EnsureKey("UnifontMedium")
+	td.X, td.Y = 0, mb.Height()
+	pdf.WriteColumn(p.Buf, mediaBox, nil, td, 3*mb.Width()/4)
+
+	td.Text = textKorean
+	td.X, td.Y = mb.Width(), 2*mb.Height()/3
+	pdf.WriteColumn(p.Buf, mediaBox, nil, td, 3*mb.Width()/4)
+
+	td.Text, td.FontName, td.FontKey = textJapanese, "Unifont-JPMedium", p.Fm.EnsureKey("Unifont-JPMedium")
+	td.X, td.Y = 0, mb.Height()/3
+	pdf.WriteColumn(p.Buf, mediaBox, nil, td, 3*mb.Width()/4)
+
+	td.Text, td.FontName, td.FontKey = textVietnamese, "Roboto-Regular", p.Fm.EnsureKey("Roboto-Regular")
+	td.X, td.Y = mb.Width(), 0
+	pdf.WriteColumn(p.Buf, mediaBox, nil, td, 3*mb.Width()/4)
+
+	td.Text, td.FontSize = textEnglish, 12
+	td.X, td.Y, td.HAlign = -1, -1, pdf.AlignCenter
+	pdf.WriteColumn(p.Buf, mediaBox, nil, td, 0)
+
+	return p
+}
+
+func TestCJKV(t *testing.T) {
+	msg := "TestCJKV"
+
+	// Install test user fonts (in addition to already installed user fonts)
+	// from pkg/testdata/fonts.
+	api.LoadConfiguration()
+	if err := api.InstallFonts(userFonts(t, "../../testdata/fonts")); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
 	}
+
+	mediaBox := pdf.RectForDim(600, 600)
+	createXRefAndWritePDF(t, msg, "TestCJKV", createCJKVDemo(mediaBox))
 }

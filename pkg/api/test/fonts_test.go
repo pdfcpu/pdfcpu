@@ -134,6 +134,7 @@ func TestCoreFontDemoPDF(t *testing.T) {
 
 func isTrueType(filename string) bool {
 	return strings.HasSuffix(strings.ToLower(filename), ".ttf")
+	//	|| strings.HasSuffix(strings.ToLower(filename), ".ttc")
 }
 
 func userFonts(t *testing.T, dir string) []string {

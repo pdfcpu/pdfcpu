@@ -20,6 +20,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"os"
 	"path"
 	"path/filepath"
@@ -201,7 +202,7 @@ func GlyphSpaceUnits(userSpaceUnits float64, fontScalingFactor int) float64 {
 }
 
 func fontScalingFactor(glyphSpaceUnits, userSpaceUnits float64) int {
-	return int(userSpaceUnits / glyphSpaceUnits * 1000)
+	return int(math.Round(userSpaceUnits / glyphSpaceUnits * 1000))
 }
 
 // Descent returns fontname's descent in userspace units corresponding to fontSize.
@@ -222,35 +223,32 @@ func LineHeight(fontName string, fontSize int) float64 {
 	return UserSpaceUnits(fbb.Height(), fontSize)
 }
 
+func glyphSpaceWidth(text, fontName string) int {
+	var w int
+	if IsCoreFont(fontName) {
+		for i := 0; i < len(text); i++ {
+			c := text[i]
+			w += CharWidth(fontName, rune(c))
+		}
+		return w
+	}
+	for _, r := range text {
+		w += CharWidth(fontName, r)
+	}
+	return w
+}
+
 // TextWidth represents the width in user space units for a given text string, font name and font size.
 func TextWidth(text, fontName string, fontSize int) float64 {
-	var width float64
-	//j := len(text)
-	for _, r := range text {
-		w := CharWidth(fontName, r)
-		width += UserSpaceUnits(float64(w), fontSize)
-	}
-	// for i := 0; i < j; i++ {
-	// 	c := text[i]
-	// 	w := CharWidth(fontName, int(c))
-	// 	width += UserSpaceUnits(float64(w), fontSize)
-	// }
-	//fmt.Printf("TextWidth:%.2f\n", width)
-	return width
+	w := glyphSpaceWidth(text, fontName)
+	return UserSpaceUnits(float64(w), fontSize)
 }
 
 // Size returns the needed font size (aka. font scaling factor) in points
 // for rendering a given text string using a given font name with a given user space width.
 func Size(text, fontName string, width float64) int {
-	var i int
-	for _, r := range text {
-		i += CharWidth(fontName, r)
-	}
-	// for j := 0; j < len(text); j++ {
-	// 	i += CharWidth(fontName, int(text[j]))
-	// }
-	//fmt.Printf("FontSize:%d\n", fontScalingFactor(float64(i), width))
-	return fontScalingFactor(float64(i), width)
+	w := glyphSpaceWidth(text, fontName)
+	return fontScalingFactor(float64(w), width)
 }
 
 // UserSpaceFontBBox returns the font box for given font name and font size in user space coordinates.

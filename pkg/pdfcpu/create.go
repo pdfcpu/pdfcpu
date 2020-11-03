@@ -87,10 +87,9 @@ type TextDescriptor struct {
 	BorderStyle    LineJoinStyle // Border style, also visible if ShowBorder is false as long as ShowBackground is true.
 	BorderCol      SimpleColor   // Border color.
 	ParIndent      bool          // Indent first line of paragraphs or space between paragraphs.
-	// Testing
-	ShowLineBB  bool // Render line bounding boxes in black.
-	ShowMargins bool // Render all margins in light gray.
-	HairCross   bool // Draw haircross at X,Y.
+	ShowLineBB     bool          // Render line bounding boxes in black (for HAlign != AlignJustify only)
+	ShowMargins    bool          // Render all margins in light gray.
+	HairCross      bool          // Draw haircross at X,Y.
 }
 
 // FontMap maps font resource ids to font names.
@@ -468,11 +467,15 @@ func newPrepJustifiedString(fontName string, fontSize int) func(lines *[]string,
 				strbuf = append(strbuf, s1)
 				continue
 			}
+			// Scale down font size.
+			fs := font.Size(s1, fontName, w)
+			if fs < *fontSize {
+				*fontSize = fs
+			}
 			if len(strbuf) == 0 {
-				// Scale down font size.
-				*fontSize = font.Size(s1, fontName, w)
 				prepJustifiedLine(lines, []string{s1}, s1Width, w, *fontSize, fontName)
 			} else {
+				// Note: Previous lines have whitespace based on bigger font size.
 				prepJustifiedLine(lines, strbuf, strWidth, w, *fontSize, fontName)
 				strbuf = []string{s1}
 				strWidth = s1Width

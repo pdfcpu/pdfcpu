@@ -791,6 +791,96 @@ func pad(bb []byte) []byte {
 	return bb
 }
 
+func glyphOffsets(gid int, locaFull, glyfsFull *table, numGlyphs, indexToLocFormat int) (int, int) {
+	offFrom := glyfOffset(locaFull, gid, indexToLocFormat)
+	var offThru int
+	if gid == numGlyphs {
+		offThru = int(glyfsFull.padded)
+	} else {
+		offThru = glyfOffset(locaFull, gid+1, indexToLocFormat)
+	}
+	return offFrom, offThru
+}
+
+func resolveCompoundGlyph(fontName string, bb []byte, usedGIDs map[uint16]bool,
+	locaFull, glyfsFull *table, numGlyphs, indexToLocFormat int) error {
+	last := false
+	for off := 10; !last; {
+		flags := binary.BigEndian.Uint16(bb[off:])
+		last = flags&0x20 == 0
+		wordArgs := flags&0x01 > 0
+
+		gid := binary.BigEndian.Uint16(bb[off+2:])
+
+		// Position behind arguments.
+		off += 6
+		if wordArgs {
+			off += 2
+		}
+
+		// Position behind transform.
+		if flags&0x08 > 0 {
+			off += 2
+		} else if flags&0x40 > 0 {
+			off += 4
+		} else if flags&0x80 > 0 {
+			off += 8
+		}
+
+		if _, ok := usedGIDs[gid]; ok {
+			// duplicate
+			continue
+		}
+
+		offFrom, offThru := glyphOffsets(int(gid), locaFull, glyfsFull, numGlyphs, indexToLocFormat)
+		if offThru < offFrom {
+			return errors.Errorf("pdfcpu: illegal glyfOffset for font: %s", fontName)
+		}
+		if offFrom == offThru {
+			// not available
+			continue
+		}
+
+		usedGIDs[gid] = true
+
+		cbb := glyfsFull.data[offFrom:offThru]
+		if cbb[0]&0x80 == 0 {
+			// simple
+			continue
+		}
+
+		if err := resolveCompoundGlyph(fontName, cbb, usedGIDs, locaFull, glyfsFull, numGlyphs, indexToLocFormat); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func resolveCompoundGlyphs(fontName string, usedGIDs map[uint16]bool, locaFull, glyfsFull *table, numGlyphs, indexToLocFormat int) error {
+	gids := make([]uint16, len(usedGIDs))
+	for k := range usedGIDs {
+		gids = append(gids, k)
+	}
+	for _, gid := range gids {
+		offFrom, offThru := glyphOffsets(int(gid), locaFull, glyfsFull, numGlyphs, indexToLocFormat)
+		if offThru < offFrom {
+			return errors.Errorf("pdfcpu: illegal glyfOffset for font: %s", fontName)
+		}
+		if offFrom == offThru {
+			continue
+		}
+		bb := glyfsFull.data[offFrom:offThru]
+		if bb[0]&0x80 == 0 {
+			// simple
+			continue
+		}
+		if err := resolveCompoundGlyph(fontName, bb, usedGIDs, locaFull, glyfsFull, numGlyphs, indexToLocFormat); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func glyfAndLoca(fontName string, tables map[string]*table, usedGIDs map[uint16]bool) error {
 	head, ok := tables["head"]
 	if !ok {
@@ -817,6 +907,10 @@ func glyfAndLoca(fontName string, tables map[string]*table, usedGIDs map[uint16]
 	// 1 .. long offsets
 	numGlyphs := int(maxp.uint16(4))
 
+	if err := resolveCompoundGlyphs(fontName, usedGIDs, locaFull, glyfsFull, numGlyphs, indexToLocFormat); err != nil {
+		return err
+	}
+
 	gids := make([]int, 0, len(usedGIDs)+1)
 	gids = append(gids, 0)
 	for gid := range usedGIDs {
@@ -830,13 +924,7 @@ func glyfAndLoca(fontName string, tables map[string]*table, usedGIDs map[uint16]
 	firstPendingGID := 0
 
 	for _, gid := range gids {
-		offFrom := glyfOffset(locaFull, gid, indexToLocFormat)
-		var offThru int
-		if gid == numGlyphs {
-			offThru = int(glyfsFull.padded)
-		} else {
-			offThru = glyfOffset(locaFull, gid+1, indexToLocFormat)
-		}
+		offFrom, offThru := glyphOffsets(gid, locaFull, glyfsFull, numGlyphs, indexToLocFormat)
 		if offThru < offFrom {
 			return errors.Errorf("pdfcpu: illegal glyfOffset for font: %s", fontName)
 		}
