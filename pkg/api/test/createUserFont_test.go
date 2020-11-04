@@ -417,7 +417,12 @@ func renderArticle(p pdf.Page, row, col, lang int) {
 
 func TestUserFonts(t *testing.T) {
 	msg := "TestUserFonts"
+
 	api.LoadConfiguration()
+	if err := api.InstallFonts(userFonts(t, "../../testdata/fonts")); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+
 	w, h := 600., 600.
 	mediaBox := pdf.RectForDim(w, h)
 	p := pdf.NewPageWithBg(mediaBox, pdf.NewSimpleColor(0xbeded9))
