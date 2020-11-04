@@ -1746,13 +1746,13 @@ Now supporting CJKV!`
 即时处理PDF，满足您的所有需求。
 现在支持CJKV字体！`
 
-	textKorean := `pdfcpu
-모든 요구 사항에 맞는 즉각적인 PDF 처리.
-이제 CJKV 글꼴을 지원합니다!`
-
 	textJapanese := `pdfcpu
 すべてのニーズに対応するインスタントPDF処理。
 CJKVフォントがサポートされるようになりました！`
+
+	textKorean := `pdfcpu
+모든 요구 사항에 맞는 즉각적인 PDF 처리.
+이제 CJKV 글꼴을 지원합니다!`
 
 	textVietnamese := `pdfcpu
 Xử lý PDF tức thì cho mọi nhu cầu của bạn.
@@ -1783,11 +1783,11 @@ Bây giờ với sự hỗ trợ cho các phông chữ CJKV!`
 	td.X, td.Y = 0, mb.Height()
 	pdf.WriteColumn(p.Buf, mediaBox, nil, td, 3*mb.Width()/4)
 
-	td.Text = textKorean
+	td.Text, td.FontName, td.FontKey = textJapanese, "Unifont-JPMedium", p.Fm.EnsureKey("Unifont-JPMedium")
 	td.X, td.Y = mb.Width(), 2*mb.Height()/3
 	pdf.WriteColumn(p.Buf, mediaBox, nil, td, 3*mb.Width()/4)
 
-	td.Text, td.FontName, td.FontKey = textJapanese, "Unifont-JPMedium", p.Fm.EnsureKey("Unifont-JPMedium")
+	td.Text, td.FontName, td.FontKey = textKorean, "UnifontMedium", p.Fm.EnsureKey("UnifontMedium")
 	td.X, td.Y = 0, mb.Height()/3
 	pdf.WriteColumn(p.Buf, mediaBox, nil, td, 3*mb.Width()/4)
 
@@ -1795,8 +1795,21 @@ Bây giờ với sự hỗ trợ cho các phông chữ CJKV!`
 	td.X, td.Y = mb.Width(), 0
 	pdf.WriteColumn(p.Buf, mediaBox, nil, td, 3*mb.Width()/4)
 
-	td.Text, td.FontSize = textEnglish, 12
+	td.Text, td.FontSize, td.ShowTextBB = textEnglish, 24, false
 	td.X, td.Y, td.HAlign = -1, -1, pdf.AlignCenter
+	pdf.WriteColumn(p.Buf, mediaBox, nil, td, 0)
+
+	td.FontSize = 80
+	td.Text, td.HAlign, td.X, td.Y = "C", pdf.AlignRight, mb.Width(), mb.Height()
+	pdf.WriteColumn(p.Buf, mediaBox, nil, td, 0)
+
+	td.Text, td.HAlign, td.X, td.Y = "J", pdf.AlignLeft, 0, 2*mb.Height()/3
+	pdf.WriteColumn(p.Buf, mediaBox, nil, td, 0)
+
+	td.Text, td.HAlign, td.X, td.Y = "K", pdf.AlignRight, mb.Width(), mb.Height()/3
+	pdf.WriteColumn(p.Buf, mediaBox, nil, td, 0)
+
+	td.Text, td.HAlign, td.X, td.Y = "V", pdf.AlignLeft, 0, 0
 	pdf.WriteColumn(p.Buf, mediaBox, nil, td, 0)
 
 	return p
