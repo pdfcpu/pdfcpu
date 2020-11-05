@@ -35,3 +35,33 @@ by pdfcpu eg. during stamping or watermarking.
 ## User Fonts
 
 Any TrueType font installed via `pdfcpu fonts install`.
+
+```sh
+pdfcpu font list
+Corefonts:
+  Courier
+  Courier-Bold
+  Courier-BoldOblique
+  Courier-Oblique
+  Helvetica
+  Helvetica-Bold
+  Helvetica-BoldOblique
+  Helvetica-Oblique
+  Symbol
+  Times-Bold
+  Times-BoldItalic
+  Times-Italic
+  Times-Roman
+  ZapfDingbats
+
+Userfonts(/Users/horstrutter/Library/Application Support/pdfcpu/fonts):
+  STSong (43033 glyphs)
+  STSongti-SC-Black (8535 glyphs)
+  STSongti-SC-Bold (43033 glyphs)
+  STSongti-SC-Light (43033 glyphs)
+  STSongti-SC-Regular (43033 glyphs)
+  STSongti-TC-Bold (43033 glyphs)
+  STSongti-TC-Light (43033 glyphs)
+  STSongti-TC-Regular (43033 glyphs)
+  SimSun (22141 glyphs)
+  ```
