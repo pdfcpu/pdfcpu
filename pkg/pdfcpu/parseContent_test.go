@@ -25,7 +25,7 @@ func TestParseContent(t *testing.T) {
 	s := `/CS0 cs/DeviceGray CS/Span<</ActualText <FEFF000900090009>>>, Span<</ActualText<FEFF0009>>>, Span<</ActualText<FEFF0020>>>,
 	Span<</ActualText<FEFF0020002E>>>, Span<</ActualText<FEFF002E>>>, Span<</ActualText<FEFF00090009>>> BDC
 	/a1 BMC/a2 MP /a3 /MC0 BDC/P0 scn/RelativeColorimetric ri/P1 SCN/GS0 gs[(Q[i,j]/2.)16.6(The/]maxi\)-)]TJ/CS1 CS/a4<</A<FEFF>>> BDC /a5 <</A<FEFF>>>
-	BDC (0.5*\(1/8\)*64 or +/4.\))Tj/T1_0 1 Tf /Im5 Do/a5 << /A <FEFF> >> BDC/a6/MC1 DP /a7<<>>DP
+	BDC (0.5*\(1/8\)*64 or +/4.\))Tj/T1_0 1 Tf <00150015> Tj /Im5 Do/a5 << /A <FEFF> >> BDC/a6/MC1 DP /a7<<>>DP
 	BI /IM true/W 1/CS/InlineCS/H 1/BPC 1 ID EI Q /Pattern cs/Span<</ActualText<FEFF0009>>> BDC/SH1 sh`
 
 	want := NewPageResourceNames()

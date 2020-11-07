@@ -87,6 +87,17 @@ func skipStringLiteral(l *string) error {
 	return nil
 }
 
+func skipHexStringLiteral(l *string) error {
+	s := *l
+	i := strings.Index(s, ">")
+	if i < 0 {
+		return errHexLiteralCorrupt
+	}
+	s = s[i+1:]
+	*l = s
+	return nil
+}
+
 func skipTJ(l *string) error {
 	// Each element shall be either a string or a number.
 	s := *l
@@ -101,7 +112,12 @@ func skipTJ(l *string) error {
 				return err
 			}
 		}
-		i, _ := positionToNextWhitespaceOrChar(s, "(]")
+		if s[0] == '<' {
+			if err := skipHexStringLiteral(&s); err != nil {
+				return err
+			}
+		}
+		i, _ := positionToNextWhitespaceOrChar(s, "<(]")
 		if i < 0 {
 			return errTJExpressionCorrupt
 		}
@@ -160,7 +176,9 @@ func positionToNextContentToken(line *string, prn PageResourceNames) (bool, erro
 			return true, nil
 		}
 		if l[0] == '[' {
-			// Skip TJ expression
+			// Skip TJ expression:
+			// [()...()] TJ
+			// [<>...<>] TJ
 			if err := skipTJ(&l); err != nil {
 				return true, err
 			}
@@ -169,6 +187,13 @@ func positionToNextContentToken(line *string, prn PageResourceNames) (bool, erro
 		if l[0] == '(' {
 			// Skip text strings as in TJ, Tj, ', " expressions
 			if err := skipStringLiteral(&l); err != nil {
+				return true, err
+			}
+			continue
+		}
+		if l[0] == '<' {
+			// Skip hex strings as in TJ, Tj, ', " expressions
+			if err := skipHexStringLiteral(&l); err != nil {
 				return true, err
 			}
 			continue
@@ -194,8 +219,9 @@ func nextContentToken(line *string, prn PageResourceNames) (string, error) {
 	l := *line
 	t := ""
 
-	log.Parse.Printf("nextContentToken: start buf= <%s>\n", *line)
+	//log.Parse.Printf("nextContentToken: start buf= <%s>\n", *line)
 
+	// Skip Tj, TJ and inline images.
 	done, err := positionToNextContentToken(&l, prn)
 	if err != nil {
 		return t, err
@@ -296,6 +322,7 @@ func parseContent(s string) (PageResourceNames, error) {
 
 	for pos := 0; ; {
 		t, err := nextContentToken(&s, prn)
+		//log.Parse.Printf("t = <%s>\n", t)
 		if err != nil {
 			return nil, err
 		}

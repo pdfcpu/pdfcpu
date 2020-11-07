@@ -316,7 +316,7 @@ func ParseNUpValue(n int, nUp *NUp) error {
 }
 
 // ParseNUpGridDefinition parses NUp grid dimensions into an internal structure.
-func ParseNUpGridDefinition(cols, rows int, nUp *NUp) error {
+func ParseNUpGridDefinition(rows, cols int, nUp *NUp) error {
 
 	m := cols
 	if m <= 0 {
@@ -870,7 +870,7 @@ func NUpFromPDF(ctx *Context, selectedPages IntSet, nup *NUp) error {
 
 	if nup.PageGrid {
 		mb.UR.X = mb.LL.X + float64(nup.Grid.Width)*mb.Width()
-		mb.UR.Y = mb.LL.Y + float64(nup.Grid.Width)*mb.Height()
+		mb.UR.Y = mb.LL.Y + float64(nup.Grid.Height)*mb.Height()
 	}
 
 	pagesDict := Dict(
