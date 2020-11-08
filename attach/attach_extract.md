@@ -43,7 +43,7 @@ Extract a specific attachment from `ledger.pdf` into `out`:
 
 ```sh
 pdfcpu attach extract ledger.pdf out invoice1.pdf
-extracting attachments from ledger.pdf into out ...
+writing out/invoice.pdf
 ```
 
 <br>
@@ -52,5 +52,7 @@ Extract all attachments of `ledger.pdf` into `out`:
 
 ```sh
 pdfcpu attach extract ledger.pdf out *
-extracting attachments from ledger.pdf into out ...
+writing out/invoice1.pdf
+writing out/invoice2.pdf
+writing out/invoice3.pdf
 ```

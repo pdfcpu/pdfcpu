@@ -36,11 +36,12 @@ pdfcpu attachments list [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] 
 
 ## Examples
 
- List all attachments embedded into `container.pdf`. You may attach any file to a PDF document:
+ List all attachments embedded into `container.pdf`. You may attach any file to a PDF document.
+ Any available attachment description will be shown in braces:
 
 ```sh
 pdfcpu attach list container.pdf
 forest.jpg
-pdfcpu.zip
-invoice.pdf
+pdfcpu.zip (description1)
+invoice.pdf (description2)
 ```

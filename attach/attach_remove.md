@@ -37,12 +37,11 @@ pdfcpu attachments remove [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw
 
 ## Examples
 
-Remove a specific attachment from `container.pdf`:
+Remove a specific attachment from container.pdf:
 
 ```sh
 pdfcpu attach remove container.pdf pdfcpu.zip
-removing 1 attachments from container.pdf ...
-writing container.pdf ...
+removing pdfcpu.zip
 ```
 
 <br>
@@ -51,6 +50,5 @@ Remove all attachments:
 
 ```sh
 pdfcpu attach remove container.pdf
-removing 9 attachments from container.pdf ...
-writing container.pdf ...
+removing all attachments
 ```
