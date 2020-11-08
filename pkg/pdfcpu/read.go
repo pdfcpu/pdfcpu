@@ -613,18 +613,22 @@ func parseXRefStream(rd io.Reader, offset *int64, ctx *Context) (prevOffset *int
 		return nil, err
 	}
 
-	// Create xRefTableEntry for XRefStreamDict.
-	entry :=
-		XRefTableEntry{
-			Free:       false,
-			Offset:     offset,
-			Generation: generationNumber,
-			Object:     *sd}
+	if ctx.XRefTable.Exists(*objectNumber) {
+		log.Read.Printf("parseXRefStream: Skip entry %d - already assigned\n", *objectNumber)
+	} else {
+		// Create xRefTableEntry for XRefStreamDict.
+		entry :=
+			XRefTableEntry{
+				Free:       false,
+				Offset:     offset,
+				Generation: generationNumber,
+				Object:     *sd}
 
-	log.Read.Printf("parseXRefStream: Insert new xRefTable entry for Object %d\n", *objectNumber)
+		log.Read.Printf("parseXRefStream: Insert new xRefTable entry for Object %d\n", *objectNumber)
 
-	ctx.Table[*objectNumber] = &entry
-	ctx.Read.XRefStreams[*objectNumber] = true
+		ctx.Table[*objectNumber] = &entry
+		ctx.Read.XRefStreams[*objectNumber] = true
+	}
 	prevOffset = sd.PreviousOffset
 
 	log.Read.Println("parseXRefStream: end")
