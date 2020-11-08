@@ -17,6 +17,7 @@
 package api
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -53,7 +54,11 @@ func ListAttachments(rs io.ReadSeeker, conf *pdfcpu.Configuration) ([]string, er
 
 	var ss []string
 	for _, a := range aa {
-		ss = append(ss, a.ID)
+		s := a.ID
+		if a.Desc != "" {
+			s = fmt.Sprintf("%s (%s)", s, a.Desc)
+		}
+		ss = append(ss, s)
 	}
 	sort.Strings(ss)
 
@@ -109,6 +114,7 @@ func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, co
 			desc = s[1]
 		}
 
+		log.CLI.Printf("adding %s\n", fileName)
 		f, err := os.Open(fileName)
 		if err != nil {
 			return err
@@ -188,7 +194,7 @@ func AddAttachmentsFile(inFile, outFile string, files []string, coll bool, conf 
 }
 
 // RemoveAttachments deletes embedded files from a PDF context read from rs and writes the result to w.
-func RemoveAttachments(rs io.ReadSeeker, w io.Writer, fileNames []string, conf *pdfcpu.Configuration) error {
+func RemoveAttachments(rs io.ReadSeeker, w io.Writer, files []string, conf *pdfcpu.Configuration) error {
 	if rs == nil {
 		return errors.New("pdfcpu: RemoveAttachments: Please provide rs")
 	}
@@ -208,7 +214,7 @@ func RemoveAttachments(rs io.ReadSeeker, w io.Writer, fileNames []string, conf *
 	from := time.Now()
 
 	var ok bool
-	if ok, err = ctx.RemoveAttachments(fileNames); err != nil {
+	if ok, err = ctx.RemoveAttachments(files); err != nil {
 		return err
 	}
 	if !ok {
@@ -292,8 +298,9 @@ func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, con
 	}
 
 	for _, a := range aa {
-		filename := filepath.Join(outDir, a.ID)
-		f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+		fileName := filepath.Join(outDir, a.ID)
+		log.CLI.Printf("writing %s\n", fileName)
+		f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 		if err != nil {
 			return err
 		}
@@ -314,11 +321,11 @@ func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, con
 }
 
 // ExtractAttachmentsFile extracts embedded files from a PDF context read from inFile into outDir.
-func ExtractAttachmentsFile(inFile, outDir string, fileNames []string, conf *pdfcpu.Configuration) error {
+func ExtractAttachmentsFile(inFile, outDir string, files []string, conf *pdfcpu.Configuration) error {
 	f, err := os.Open(inFile)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	return ExtractAttachments(f, outDir, fileNames, conf)
+	return ExtractAttachments(f, outDir, files, conf)
 }

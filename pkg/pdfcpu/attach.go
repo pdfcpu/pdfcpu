@@ -51,10 +51,10 @@ func decodeFileSpecStreamDict(sd *StreamDict, id string) error {
 	return sd.Decode()
 }
 
-func fileSpecStreamDictInfo(xRefTable *XRefTable, id string, o Object, decode bool) (*StreamDict, string, *time.Time, error) {
+func fileSpecStreamDictInfo(xRefTable *XRefTable, id string, o Object, decode bool) (*StreamDict, string, string, *time.Time, error) {
 	d, err := xRefTable.DereferenceDict(o)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, "", "", nil, err
 	}
 
 	var desc string
@@ -62,44 +62,47 @@ func fileSpecStreamDictInfo(xRefTable *XRefTable, id string, o Object, decode bo
 		desc = *s
 	}
 
+	var fileName string
+	if s := d.StringEntry("F"); s != nil {
+		fileName = *s
+	}
+
 	// Entry EF is a dict holding a stream dict in entry F.
 	o, found := d.Find("EF")
 	if !found || o == nil {
-		return nil, "", nil, nil
+		return nil, desc, fileName, nil, nil
 	}
 
 	d, err = xRefTable.DereferenceDict(o)
 	if err != nil || o == nil {
-		return nil, "", nil, err
+		return nil, desc, fileName, nil, err
 	}
 
 	// Entry F holds the embedded file's data.
 	o, found = d.Find("F")
 	if !found || o == nil {
-		return nil, desc, nil, nil
+		return nil, desc, fileName, nil, nil
 	}
 
 	sd, err := xRefTable.DereferenceStreamDict(o)
 	if err != nil || sd == nil {
-		return nil, desc, nil, err
-	}
-
-	if d = sd.DictEntry("Params"); d == nil {
-		return sd, desc, nil, nil
+		return nil, desc, fileName, nil, err
 	}
 
 	var modDate *time.Time
-	if s := d.StringEntry("ModDate"); s != nil {
-		dt, ok := DateTime(*s)
-		if !ok {
-			return nil, desc, nil, errors.New("pdfcpu: invalid date ModDate")
+	if d = sd.DictEntry("Params"); d != nil {
+		if s := d.StringEntry("ModDate"); s != nil {
+			dt, ok := DateTime(*s)
+			if !ok {
+				return nil, desc, "", nil, errors.New("pdfcpu: invalid date ModDate")
+			}
+			modDate = &dt
 		}
-		modDate = &dt
 	}
 
 	err = decodeFileSpecStreamDict(sd, id)
 
-	return sd, desc, modDate, err
+	return sd, desc, fileName, modDate, err
 }
 
 // Attachment is a Reader representing a PDF attachment.
@@ -130,11 +133,11 @@ func (ctx *Context) ListAttachments() ([]Attachment, error) {
 
 	createAttachmentStub := func(xRefTable *XRefTable, id string, o Object) error {
 		decode := false
-		_, desc, modTime, err := fileSpecStreamDictInfo(xRefTable, id, o, decode)
+		_, desc, fileName, modTime, err := fileSpecStreamDictInfo(xRefTable, id, o, decode)
 		if err != nil {
 			return err
 		}
-		aa = append(aa, Attachment{nil, id, desc, modTime})
+		aa = append(aa, Attachment{nil, fileName, desc, modTime})
 		return nil
 	}
 
@@ -178,11 +181,12 @@ func (ctx *Context) RemoveAttachments(ids []string) (bool, error) {
 		}
 	}
 	if xRefTable.Names["EmbeddedFiles"] == nil {
-		return false, errors.Errorf("pdfcpu: no attachments available.")
+		return false, errors.Errorf("no attachments available.")
 	}
 
 	if ids == nil || len(ids) == 0 {
 		// Remove all attachments - delete name tree root object.
+		log.CLI.Println("removing all attachments")
 		if err := xRefTable.RemoveEmbeddedFilesNameTree(); err != nil {
 			return false, err
 		}
@@ -190,12 +194,14 @@ func (ctx *Context) RemoveAttachments(ids []string) (bool, error) {
 	}
 
 	for _, id := range ids {
+		log.CLI.Printf("removing %s\n", id)
 		// EmbeddedFiles name tree containing at least one key value pair.
 		empty, ok, err := xRefTable.Names["EmbeddedFiles"].Remove(xRefTable, id)
 		if err != nil {
 			return false, err
 		}
 		if !ok {
+			log.CLI.Printf("attachment %s not found", id)
 			return false, nil
 		}
 		if empty {
@@ -218,18 +224,18 @@ func (ctx *Context) ExtractAttachments(ids []string) ([]Attachment, error) {
 		}
 	}
 	if xRefTable.Names["EmbeddedFiles"] == nil {
-		return nil, errors.Errorf("pdfcpu: no attachments available.")
+		return nil, errors.Errorf("no attachments available.")
 	}
 
 	aa := []Attachment{}
 
 	createAttachment := func(xRefTable *XRefTable, id string, o Object) error {
 		decode := true
-		sd, desc, modTime, err := fileSpecStreamDictInfo(xRefTable, id, o, decode)
+		sd, desc, fileName, modTime, err := fileSpecStreamDictInfo(xRefTable, id, o, decode)
 		if err != nil {
 			return err
 		}
-		a := Attachment{Reader: bytes.NewReader(sd.Content), ID: id, Desc: desc, ModTime: modTime}
+		a := Attachment{Reader: bytes.NewReader(sd.Content), ID: fileName, Desc: desc, ModTime: modTime}
 		aa = append(aa, a)
 		return nil
 	}
@@ -238,6 +244,7 @@ func (ctx *Context) ExtractAttachments(ids []string) ([]Attachment, error) {
 		for _, id := range ids {
 			v, ok := ctx.Names["EmbeddedFiles"].Value(id)
 			if !ok {
+				log.CLI.Printf("attachment %s not found", id)
 				log.Info.Printf("pdfcpu: extractAttachments: %s not found", id)
 				continue
 			}

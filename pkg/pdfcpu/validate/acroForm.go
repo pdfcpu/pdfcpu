@@ -203,12 +203,13 @@ func validateAcroFieldParts(xRefTable *pdf.XRefTable, d pdf.Dict, inFieldType *p
 func validateAcroFieldDict(xRefTable *pdf.XRefTable, ir pdf.IndirectRef, inFieldType *pdf.Name) error {
 
 	d, err := xRefTable.DereferenceDict(ir)
-	if err != nil || d == nil {
-		return err
-	}
+	// TODO Remove invalid AcroFieldDicts
+	// if err != nil || d == nil {
+	// 	return err
+	// }
 
 	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
-		if len(d) == 0 {
+		if err != nil || len(d) == 0 {
 			return nil
 		}
 	}

@@ -352,8 +352,8 @@ func processAddAttachmentsCommand(conf *pdfcpu.Configuration) {
 				for _, f := range f {
 					fileNames = append(fileNames, f)
 				}
-				continue
 			}
+			continue
 		}
 		fileNames = append(fileNames, arg)
 	}
@@ -383,8 +383,8 @@ func processAddAttachmentsPortfolioCommand(conf *pdfcpu.Configuration) {
 				for _, f := range f {
 					fileNames = append(fileNames, f)
 				}
-				continue
 			}
+			continue
 		}
 		fileNames = append(fileNames, arg)
 	}
