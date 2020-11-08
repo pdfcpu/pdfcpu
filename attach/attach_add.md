@@ -39,7 +39,7 @@ pdfcpu attachments add [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] i
 
 Attach pictures to a coverpage PDF for easy content delivery:
 
-```sh
+```
 pdfcpu attach add album.pdf *.png
 adding img1.png
 adding img2.png
@@ -47,7 +47,7 @@ adding img3.png
 ```
 
 Attach a file including a description:
-```sh
+```
 pdfcpu attach add invoice.pdf 'invoice.doc, my 1st desc'
 adding invoice.doc
 
