@@ -19,6 +19,7 @@ package api
 import (
 	"io"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -87,6 +88,9 @@ func Merge(rsc []io.ReadSeeker, w io.Writer, conf *pdfcpu.Configuration) error {
 // This operation corresponds to file concatenation in the order specified by inFiles.
 // The first entry of inFiles serves as the destination context where all remaining files get merged into.
 func MergeCreateFile(inFiles []string, outFile string, conf *pdfcpu.Configuration) error {
+	// files name sort
+	sort.Strings(inFiles)
+
 	ff := []*os.File(nil)
 	for _, f := range inFiles {
 		log.CLI.Println(f)
