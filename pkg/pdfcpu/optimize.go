@@ -393,7 +393,7 @@ func optimizeXObjectResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjN
 		// We are dealing with a new XObject..
 		// Dereference the XObject stream dict.
 
-		osd, err := ctx.DereferenceStreamDictForValidation(indRef, false)
+		osd, _, err := ctx.DereferenceStreamDict(indRef)
 		if err != nil {
 			return err
 		}
@@ -764,7 +764,7 @@ func streamLengthFontFile(xRefTable *XRefTable, indirectRef *IndirectRef) (*int6
 
 	objectNumber := indirectRef.ObjectNumber
 
-	sd, err := xRefTable.DereferenceStreamDict(*indirectRef)
+	sd, _, err := xRefTable.DereferenceStreamDict(*indirectRef)
 	if err != nil {
 		return nil, err
 	}

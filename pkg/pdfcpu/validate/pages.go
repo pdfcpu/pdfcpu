@@ -88,8 +88,7 @@ func validatePageContents(xRefTable *pdf.XRefTable, d pdf.Dict) (hasContents boo
 		// process array of content stream dicts.
 
 		for _, o := range o {
-
-			o, err = xRefTable.DereferenceStreamDict(o)
+			o, _, err = xRefTable.DereferenceStreamDict(o)
 			if err != nil {
 				return false, err
 			}

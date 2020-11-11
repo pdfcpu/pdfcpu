@@ -213,7 +213,7 @@ func softMask(xRefTable *XRefTable, d *StreamDict, w, h, objNr int) ([]byte, err
 
 	// Soft mask present.
 
-	sd, err := xRefTable.DereferenceStreamDict(o)
+	sd, _, err := xRefTable.DereferenceStreamDict(o)
 	if err != nil {
 		return nil, err
 	}
@@ -396,7 +396,7 @@ func renderICCBased(xRefTable *XRefTable, im *PDFImage, resourceName string, cs 
 	//  Any ICC profile >= ICC.1:2004:10 is sufficient for any PDF version <= 1.7
 	//  If the embedded ICC profile version is newer than the one used by the Reader, substitute with Alternate color space.
 
-	iccProfileStream, _ := xRefTable.DereferenceStreamDict(cs[1])
+	iccProfileStream, _, _ := xRefTable.DereferenceStreamDict(cs[1])
 
 	b := im.sd.Content
 
@@ -539,7 +539,7 @@ func renderIndexedArrayCS(xRefTable *XRefTable, im *PDFImage, resourceName strin
 
 	case ICCBasedCS:
 
-		iccProfileStream, _ := xRefTable.DereferenceStreamDict(csa[1])
+		iccProfileStream, _, _ := xRefTable.DereferenceStreamDict(csa[1])
 
 		// 1,3 or 4 color components.
 		n := *iccProfileStream.IntEntry("N")

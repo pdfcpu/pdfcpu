@@ -511,9 +511,7 @@ func validateImageStreamDictPart2(xRefTable *pdf.XRefTable, sd *pdf.StreamDict, 
 }
 
 func validateImageStreamDict(xRefTable *pdf.XRefTable, sd *pdf.StreamDict, isAlternate bool) error {
-
 	dictName := "imageStreamDict"
-
 	var isImageMask bool
 
 	isImageMask, err := validateImageStreamDictPart1(xRefTable, sd, dictName)
@@ -551,10 +549,10 @@ func validateImageStreamDict(xRefTable *pdf.XRefTable, sd *pdf.StreamDict, isAlt
 
 	// Name, name, required for V10
 	// Shall no longer be used.
-	_, err = validateNameEntry(xRefTable, sd.Dict, dictName, "Name", xRefTable.Version() == pdf.V10, pdf.V10, nil)
-	if err != nil {
-		return err
-	}
+	// _, err = validateNameEntry(xRefTable, sd.Dict, dictName, "Name", xRefTable.Version() == pdf.V10, pdf.V10, nil)
+	// if err != nil {
+	// 	return err
+	// }
 
 	// StructParent, integer, optional
 	_, err = validateIntegerEntry(xRefTable, sd.Dict, dictName, "StructParent", OPTIONAL, pdf.V13, nil)
@@ -737,7 +735,10 @@ func validateXObjectStreamDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
 
 	// Dereference stream dict and ensure it is validated exactly once in order handle
 	// XObjects(forms) with recursive structures like produced by Microsoft.
-	sd, err := xRefTable.DereferenceStreamDictForValidation(o, true)
+	sd, valid, err := xRefTable.DereferenceStreamDict(o)
+	if valid {
+		return nil
+	}
 	if err != nil || sd == nil {
 		return err
 	}

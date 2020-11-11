@@ -373,7 +373,12 @@ func validateDeviceNColorSpaceAttributesDict(xRefTable *pdf.XRefTable, o pdf.Obj
 
 	dictName := "deviceNCSAttributesDict"
 
-	_, err = validateNameEntry(xRefTable, d, dictName, "Subtype", OPTIONAL, pdf.V16, func(s string) bool { return s == "DeviceN" || s == "NChannel" })
+	sinceVersion := pdf.V16
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		sinceVersion = pdf.V13
+	}
+
+	_, err = validateNameEntry(xRefTable, d, dictName, "Subtype", OPTIONAL, sinceVersion, func(s string) bool { return s == "DeviceN" || s == "NChannel" })
 	if err != nil {
 		return err
 	}
@@ -388,11 +393,6 @@ func validateDeviceNColorSpaceAttributesDict(xRefTable *pdf.XRefTable, o pdf.Obj
 		if err != nil {
 			return err
 		}
-	}
-
-	sinceVersion := pdf.V16
-	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
-		sinceVersion = pdf.V13
 	}
 
 	d1, err = validateDictEntry(xRefTable, d, dictName, "Process", OPTIONAL, sinceVersion, nil)

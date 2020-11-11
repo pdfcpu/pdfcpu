@@ -191,7 +191,7 @@ func (ctx *Context) ExtractFont(objNr int) (*Font, error) {
 	case "TrueType":
 		// ttf ... true type file
 		// ttc ... true type collection
-		sd, err := ctx.DereferenceStreamDict(*ir)
+		sd, _, err := ctx.DereferenceStreamDict(*ir)
 		if err != nil {
 			return nil, err
 		}
@@ -279,7 +279,7 @@ func extractMetadataFromDict(ctx *Context, d Dict, parentObjNr int) (*Metadata, 
 	if !found || o == nil {
 		return nil, nil
 	}
-	sd, err := ctx.DereferenceStreamDict(o)
+	sd, _, err := ctx.DereferenceStreamDict(o)
 	if err != nil {
 		return nil, err
 	}

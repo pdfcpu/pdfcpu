@@ -84,7 +84,7 @@ func fileSpecStreamDictInfo(xRefTable *XRefTable, id string, o Object, decode bo
 		return nil, desc, fileName, nil, nil
 	}
 
-	sd, err := xRefTable.DereferenceStreamDict(o)
+	sd, _, err := xRefTable.DereferenceStreamDict(o)
 	if err != nil || sd == nil {
 		return nil, desc, fileName, nil, err
 	}

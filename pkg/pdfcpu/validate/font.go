@@ -727,7 +727,7 @@ func validateCharProcsDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string
 
 	for _, v := range d1 {
 
-		_, err = xRefTable.DereferenceStreamDict(v)
+		_, _, err = xRefTable.DereferenceStreamDict(v)
 		if err != nil {
 			return err
 		}

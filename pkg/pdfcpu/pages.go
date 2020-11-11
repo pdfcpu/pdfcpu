@@ -53,7 +53,7 @@ func (xRefTable *XRefTable) PageContent(d Dict) ([]byte, error) {
 			if o == nil {
 				continue
 			}
-			o, err := xRefTable.DereferenceStreamDict(o)
+			o, _, err := xRefTable.DereferenceStreamDict(o)
 			if err != nil {
 				return nil, err
 			}

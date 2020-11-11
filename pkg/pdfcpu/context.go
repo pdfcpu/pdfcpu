@@ -45,10 +45,15 @@ func NewContext(rs io.ReadSeeker, conf *Configuration) (*Context, error) {
 		conf = NewDefaultConfiguration()
 	}
 
+	rdCtx, err := newReadContext(rs)
+	if err != nil {
+		return nil, err
+	}
+
 	ctx := &Context{
 		conf,
 		newXRefTable(conf.ValidationMode),
-		newReadContext(rs),
+		rdCtx,
 		newOptimizationContext(),
 		NewWriteContext(conf.Eol),
 		false,
@@ -342,12 +347,23 @@ type ReadContext struct {
 	XRefStreams         IntSet        // All object numbers of any xref streams found.
 }
 
-func newReadContext(rs io.ReadSeeker) *ReadContext {
-	return &ReadContext{
+func newReadContext(rs io.ReadSeeker) (*ReadContext, error) {
+
+	rdCtx := &ReadContext{
 		rs:            rs,
 		ObjectStreams: IntSet{},
 		XRefStreams:   IntSet{},
 	}
+
+	if f, ok := rs.(*os.File); ok {
+		fileInfo, err := f.Stat()
+		if err != nil {
+			return nil, err
+		}
+		rdCtx.FileSize = fileInfo.Size()
+	}
+
+	return rdCtx, nil
 }
 
 // IsObjectStreamObject returns true if object i is a an object stream.

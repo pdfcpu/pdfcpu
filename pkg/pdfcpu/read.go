@@ -85,14 +85,6 @@ func Read(rs io.ReadSeeker, conf *Configuration) (*Context, error) {
 		*ctx.XRefTable.Size = len(ctx.XRefTable.Table)
 	}
 
-	if f, ok := rs.(*os.File); ok {
-		fileInfo, err := f.Stat()
-		if err != nil {
-			return nil, err
-		}
-		ctx.Read.FileSize = fileInfo.Size()
-	}
-
 	log.Read.Println("Read: end")
 
 	return ctx, nil
@@ -158,7 +150,8 @@ func newPositionedReader(rs io.ReadSeeker, offset *int64) (*bufio.Reader, error)
 
 // Get the file offset of the last XRefSection.
 // Go to end of file and search backwards for the first occurrence of startxref {offset} %%EOF
-func offsetLastXRefSection(ctx *Context) (*int64, error) {
+// xref at 114172
+func offsetLastXRefSection(ctx *Context, skip int64) (*int64, error) {
 
 	rs := ctx.Read.rs
 
@@ -170,7 +163,7 @@ func offsetLastXRefSection(ctx *Context) (*int64, error) {
 
 	for i := 1; offset == 0; i++ {
 
-		off, err := rs.Seek(-int64(i)*bufSize, io.SeekEnd)
+		off, err := rs.Seek(-int64(i)*bufSize-skip, io.SeekEnd)
 		if err != nil {
 			return nil, errors.New("pdfcpu: can't find last xref section")
 		}
@@ -203,10 +196,9 @@ func offsetLastXRefSection(ctx *Context) (*int64, error) {
 
 		p = p[:posEOF]
 		offset, err = strconv.ParseInt(strings.TrimSpace(string(p)), 10, 64)
-		if err != nil {
+		if err != nil || offset >= ctx.Read.FileSize {
 			return nil, errors.New("pdfcpu: corrupted last xref section")
 		}
-
 	}
 
 	log.Read.Printf("Offset last xrefsection: %d\n", offset)
@@ -1170,9 +1162,21 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 
 	ctx.HeaderVersion = hv
 	ctx.Read.EolCount = eolCount
+	offs := map[int64]bool{}
 
 	for offset != nil {
 
+		if offs[*offset] {
+			offset, err = offsetLastXRefSection(ctx, ctx.Read.FileSize-*offset)
+			if err != nil {
+				return err
+			}
+			if offs[*offset] {
+				return nil
+			}
+		}
+
+		offs[*offset] = true
 		rd, err := newPositionedReader(rs, offset)
 		if err != nil {
 			return err
@@ -1194,7 +1198,6 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 				return err
 			}
 		} else {
-
 			log.Read.Println("buildXRefTableStartingAt: found xref stream")
 			ctx.Read.UsingXRefStreams = true
 			rd, err = newPositionedReader(rs, offset)
@@ -1223,7 +1226,7 @@ func readXRefTable(ctx *Context) (err error) {
 
 	log.Read.Println("readXRefTable: begin")
 
-	offset, err := offsetLastXRefSection(ctx)
+	offset, err := offsetLastXRefSection(ctx, 0)
 	if err != nil {
 		return
 	}

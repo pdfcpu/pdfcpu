@@ -1050,47 +1050,65 @@ func (xRefTable *XRefTable) DereferenceDict(o Object) (Dict, error) {
 	return d, nil
 }
 
-// DereferenceStreamDict resolves and validates a stream dictionary object, which may be an indirect reference.
-func (xRefTable *XRefTable) DereferenceStreamDict(o Object) (*StreamDict, error) {
-
-	o, err := xRefTable.Dereference(o)
-	if err != nil || o == nil {
-		return nil, err
+// IsValid returns true if the object referenced by ir has already been validated.
+func (xRefTable *XRefTable) IsValid(ir IndirectRef) (bool, error) {
+	entry, found := xRefTable.FindTableEntry(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
+	if !found {
+		return false, errors.Errorf("pdfcpu: IsValid: no entry for obj#%d\n", ir.ObjectNumber.Value())
 	}
-
-	sd, ok := o.(StreamDict)
-	if !ok {
-		return nil, errors.Errorf("pdfcpu: dereferenceStreamDict: wrong type <%v>", o)
+	// if entry.Object == nil {
+	// 	return false, errors.Errorf("pdfcpu: IsValid: no entry for obj#%d\n", ir.ObjectNumber.Value())
+	// }
+	if entry.Free {
+		return false, errors.Errorf("pdfcpu: IsValid: unexpected free entry for obj#%d\n", ir.ObjectNumber.Value())
 	}
-
-	return &sd, nil
+	return entry.Valid, nil
 }
 
-// DereferenceStreamDictForValidation resolves stream dictionary objects
-// and ensures they are visited once only during validation.
-func (xRefTable *XRefTable) DereferenceStreamDictForValidation(o Object, onFirstVisitOnly bool) (*StreamDict, error) {
+// SetValid marks the xreftable entry of the object referenced by ir as valid.
+func (xRefTable *XRefTable) SetValid(ir IndirectRef) error {
+	entry, found := xRefTable.FindTableEntry(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
+	if !found {
+		return errors.Errorf("pdfcpu: SetValid: no entry for obj#%d\n", ir.ObjectNumber.Value())
+	}
+	// if entry.Object == nil {
+	// 	return errors.Errorf("pdfcpu: SetValid: no entry for obj#%d\n", ir.ObjectNumber.Value())
+	// }
+	if entry.Free {
+		return errors.Errorf("pdfcpu: SetValid: unexpected free entry for obj#%d\n", ir.ObjectNumber.Value())
+	}
+	entry.Valid = true
+	return nil
+}
 
+// DereferenceStreamDict resolves stream dictionary objects.
+func (xRefTable *XRefTable) DereferenceStreamDict(o Object) (*StreamDict, bool, error) {
 	ir, ok := o.(IndirectRef)
 	if !ok {
-		// Nothing do dereference.
-		return nil, nil
+		sd, ok := o.(StreamDict)
+		if !ok {
+			return nil, false, errors.Errorf("pdfcpu: DereferenceStreamDict: wrong type <%v> %T", o, o)
+		}
+		return &sd, false, nil
 	}
 
 	// 7.3.10
 	// An indirect reference to an undefined object shall not be considered an error by a conforming reader;
 	// it shall be treated as a reference to the null object.
 	entry, found := xRefTable.FindTableEntry(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
-	if !found || entry.Object == nil || entry.Free || onFirstVisitOnly && entry.Valid {
-		return nil, nil
+	if !found || entry.Object == nil || entry.Free {
+		return nil, false, nil
 	}
-	entry.Valid = true
-
+	ev := entry.Valid
+	if !entry.Valid {
+		entry.Valid = true
+	}
 	sd, ok := entry.Object.(StreamDict)
 	if !ok {
-		return nil, errors.Errorf("pdfcpu: dereferenceStreamDict: wrong type <%v> %T", o, entry.Object)
+		return nil, false, errors.Errorf("pdfcpu: DereferenceStreamDict: wrong type <%v> %T", o, entry.Object)
 	}
 
-	return &sd, nil
+	return &sd, ev, nil
 }
 
 // DereferenceDictEntry returns a dereferenced dict entry.
@@ -1112,7 +1130,7 @@ func (xRefTable *XRefTable) Catalog() (Dict, error) {
 	}
 
 	if xRefTable.Root == nil {
-		return nil, errors.New("pdfcpu: catalog: missing root dict")
+		return nil, errors.New("pdfcpu: Catalog: missing root dict")
 	}
 
 	o, err := xRefTable.indRefToObject(xRefTable.Root)

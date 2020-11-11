@@ -956,11 +956,19 @@ func validateStreamDictEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, ent
 		return nil, err
 	}
 
-	o, err = xRefTable.Dereference(o)
-	if err != nil {
+	sd, valid, err := xRefTable.DereferenceStreamDict(o)
+	if valid {
+		return nil, nil
+	}
+	if err != nil || sd == nil {
 		return nil, err
 	}
-	if o == nil {
+
+	// o, err = xRefTable.Dereference(o)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	if sd == nil {
 		if required {
 			return nil, errors.Errorf("pdfcpu: validateStreamDictEntry: dict=%s required entry=%s is nil", dictName, entryName)
 		}
@@ -974,19 +982,19 @@ func validateStreamDictEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, ent
 		return nil, err
 	}
 
-	sd, ok := o.(pdf.StreamDict)
-	if !ok {
-		return nil, errors.Errorf("pdfcpu: validateStreamDictEntry: dict=%s entry=%s invalid type", dictName, entryName)
-	}
+	// sd, ok := o.(pdf.StreamDict)
+	// if !ok {
+	// 	return nil, errors.Errorf("pdfcpu: validateStreamDictEntry: dict=%s entry=%s invalid type", dictName, entryName)
+	// }
 
 	// Validation
-	if validate != nil && !validate(sd) {
+	if validate != nil && !validate(*sd) {
 		return nil, errors.Errorf("pdfcpu: validateStreamDictEntry: dict=%s entry=%s invalid dict entry", dictName, entryName)
 	}
 
 	log.Validate.Printf("validateStreamDictEntry end: entry=%s\n", entryName)
 
-	return &sd, nil
+	return sd, nil
 }
 
 func validateString(xRefTable *pdf.XRefTable, o pdf.Object, validate func(string) bool) (string, error) {

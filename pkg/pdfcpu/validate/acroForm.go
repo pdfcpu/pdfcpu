@@ -212,6 +212,10 @@ func validateAcroFieldDict(xRefTable *pdf.XRefTable, ir pdf.IndirectRef, inField
 		}
 	}
 
+	if err := xRefTable.SetValid(ir); err != nil {
+		return err
+	}
+
 	if o, ok := d.Find("Kids"); ok {
 
 		// dict represents a non terminal field.
@@ -232,16 +236,20 @@ func validateAcroFieldDict(xRefTable *pdf.XRefTable, ir pdf.IndirectRef, inField
 		}
 
 		for _, value := range a {
-
 			ir, ok := value.(pdf.IndirectRef)
 			if !ok {
 				return errors.New("pdfcpu: validateAcroFieldDict: corrupt kids array: entries must be indirect reference")
 			}
-
-			if err = validateAcroFieldDict(xRefTable, ir, xInFieldType); err != nil {
+			valid, err := xRefTable.IsValid(ir)
+			if err != nil {
 				return err
 			}
 
+			if !valid {
+				if err = validateAcroFieldDict(xRefTable, ir, xInFieldType); err != nil {
+					return err
+				}
+			}
 		}
 
 		return nil
@@ -264,9 +272,15 @@ func validateAcroFormFields(xRefTable *pdf.XRefTable, o pdf.Object) error {
 			return errors.New("pdfcpu: validateAcroFormFields: corrupt form field array entry")
 		}
 
-		err = validateAcroFieldDict(xRefTable, ir, nil)
+		valid, err := xRefTable.IsValid(ir)
 		if err != nil {
 			return err
+		}
+
+		if !valid {
+			if validateAcroFieldDict(xRefTable, ir, nil); err != nil {
+				return err
+			}
 		}
 
 	}
