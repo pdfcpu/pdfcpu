@@ -16,7 +16,9 @@ limitations under the License.
 
 package pdfcpu
 
-import "strings"
+import (
+	"strings"
+)
 
 // KeywordsList returns a list of keywords as recorded in the document info dict.
 func KeywordsList(xRefTable *XRefTable) ([]string, error) {
@@ -38,7 +40,7 @@ func KeywordsAdd(xRefTable *XRefTable, keywords []string) error {
 
 	for _, s := range keywords {
 		if !MemberOf(s, list) {
-			xRefTable.Keywords += ", " + s
+			xRefTable.Keywords += ", " + UTF8ToCP1252(s)
 		}
 	}
 
@@ -67,6 +69,11 @@ func KeywordsRemove(xRefTable *XRefTable, keywords []string) (bool, error) {
 		return true, nil
 	}
 
+	kw := make([]string, len(keywords))
+	for i, s := range keywords {
+		kw[i] = UTF8ToCP1252(s)
+	}
+
 	// Distil document keywords.
 	ss := strings.FieldsFunc(xRefTable.Keywords, func(c rune) bool { return c == ',' || c == ';' || c == '\r' })
 
@@ -76,7 +83,7 @@ func KeywordsRemove(xRefTable *XRefTable, keywords []string) (bool, error) {
 
 	for _, s := range ss {
 		s = strings.TrimSpace(s)
-		if MemberOf(s, keywords) {
+		if MemberOf(s, kw) {
 			removed = true
 			continue
 		}

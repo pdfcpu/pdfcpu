@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/pkg/errors"
 )
@@ -226,4 +227,24 @@ func fieldsFunc(s string, f func(rune) bool) []string {
 	}
 
 	return a
+}
+
+// UTF8ToCP1252 converts UTF-8 to CP1252.
+func UTF8ToCP1252(s string) string {
+	bb := []byte{}
+	for _, r := range s {
+		bb = append(bb, byte(r))
+	}
+	return string(bb)
+}
+
+// CP1252ToUTF8 converts CP1252 to UTF-8.
+func CP1252ToUTF8(s string) string {
+	utf8Buf := make([]byte, utf8.UTFMax)
+	bb := []byte{}
+	for i := 0; i < len(s); i++ {
+		n := utf8.EncodeRune(utf8Buf, rune(s[i]))
+		bb = append(bb, utf8Buf[:n]...)
+	}
+	return string(bb)
 }

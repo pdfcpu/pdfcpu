@@ -54,7 +54,7 @@ func TestKeywords(t *testing.T) {
 	// # of keywords must be 0
 	listKeywords(t, msg, fileName, nil)
 
-	keywords := []string{"keyword1", "keyword2"}
+	keywords := []string{"Ö", "keyword2"}
 
 	if err := api.AddKeywordsFile(fileName, "", keywords, nil); err != nil {
 		t.Fatalf("%s add keywords: %v\n", msg, err)
@@ -66,7 +66,7 @@ func TestKeywords(t *testing.T) {
 		t.Fatalf("%s remove 1 keyword: %v\n", msg, err)
 	}
 
-	listKeywords(t, msg, fileName, []string{"keyword1"})
+	listKeywords(t, msg, fileName, []string{"Ö"})
 
 	if err := api.RemoveKeywordsFile(fileName, "", nil, nil); err != nil {
 		t.Fatalf("%s remove all keywords: %v\n", msg, err)

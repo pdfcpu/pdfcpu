@@ -47,8 +47,10 @@ func PropertiesAdd(xRefTable *XRefTable, properties map[string]string) error {
 		return err
 	}
 	for k, v := range properties {
-		d[k] = StringLiteral(v)
-		xRefTable.Properties[k] = v
+		k1 := UTF8ToCP1252(k)
+		v1 := UTF8ToCP1252(v)
+		d[k1] = StringLiteral(v1)
+		xRefTable.Properties[k1] = v1
 	}
 	return nil
 }
@@ -65,7 +67,8 @@ func PropertiesRemove(xRefTable *XRefTable, properties []string) (bool, error) {
 	if len(properties) == 0 {
 		// Remove all properties.
 		for k := range xRefTable.Properties {
-			delete(d, k)
+			k1 := UTF8ToCP1252(k)
+			delete(d, k1)
 		}
 		xRefTable.Properties = map[string]string{}
 		return true, nil
@@ -73,10 +76,11 @@ func PropertiesRemove(xRefTable *XRefTable, properties []string) (bool, error) {
 
 	var removed bool
 	for _, k := range properties {
-		_, ok := d[k]
+		k1 := UTF8ToCP1252(k)
+		_, ok := d[k1]
 		if ok && !removed {
-			delete(d, k)
-			delete(xRefTable.Properties, k)
+			delete(d, k1)
+			delete(xRefTable.Properties, k1)
 			removed = true
 		}
 	}

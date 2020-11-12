@@ -17,6 +17,8 @@ limitations under the License.
 package validate
 
 import (
+	"unicode/utf8"
+
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pkg/errors"
@@ -74,6 +76,9 @@ func validateInfoDictTrapped(xRefTable *pdf.XRefTable, o pdf.Object) error {
 }
 
 func handleProperties(xRefTable *pdf.XRefTable, key string, val pdf.Object) error {
+	if !utf8.ValidString(key) {
+		key = pdf.CP1252ToUTF8(key)
+	}
 	s, err := handleDefault(xRefTable, val)
 	if err != nil {
 		return err

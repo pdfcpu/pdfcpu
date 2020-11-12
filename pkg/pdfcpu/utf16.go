@@ -128,7 +128,10 @@ func StringLiteralToString(s string) (string, error) {
 		return DecodeUTF16String(s1)
 	}
 
-	// if no acceptable UTF16 encoding found, just return str.
+	// if no acceptable UTF16 encoding found, ensure utf8 encoding.
+	if !utf8.ValidString(s1) {
+		s1 = CP1252ToUTF8(s1)
+	}
 	return s1, nil
 }
 

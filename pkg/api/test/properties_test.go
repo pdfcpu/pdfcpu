@@ -54,14 +54,14 @@ func TestProperties(t *testing.T) {
 	// # of properties must be 0
 	listProperties(t, msg, fileName, nil)
 
-	properties := map[string]string{"name1": "value1", "name2": "value2"}
+	properties := map[string]string{"name1": "value1", "nameÖ": "valueö"}
 	if err := api.AddPropertiesFile(fileName, "", properties, nil); err != nil {
 		t.Fatalf("%s add properties: %v\n", msg, err)
 	}
 
-	listProperties(t, msg, fileName, []string{"name1 = value1", "name2 = value2"})
+	listProperties(t, msg, fileName, []string{"name1 = value1", "nameÖ = valueö"})
 
-	if err := api.RemovePropertiesFile(fileName, "", []string{"name2"}, nil); err != nil {
+	if err := api.RemovePropertiesFile(fileName, "", []string{"nameÖ"}, nil); err != nil {
 		t.Fatalf("%s remove 1 property: %v\n", msg, err)
 	}
 
