@@ -385,13 +385,11 @@ func newReadContext(rs io.ReadSeeker) (*ReadContext, error) {
 		XRefStreams:   IntSet{},
 	}
 
-	if f, ok := rs.(*os.File); ok {
-		fileInfo, err := f.Stat()
-		if err != nil {
-			return nil, err
-		}
-		rdCtx.FileSize = fileInfo.Size()
+	fileSize, err := rs.Seek(0, io.SeekEnd)
+	if err != nil {
+		return nil, err
 	}
+	rdCtx.FileSize = fileSize
 
 	return rdCtx, nil
 }
