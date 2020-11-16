@@ -227,6 +227,36 @@ func (ctx *Context) addPermissionsToInfoDigest(ss *[]string) {
 	}
 }
 
+func (ctx *Context) addAttachmentsToInfoDigest(ss *[]string) error {
+	aa, err := ctx.ListAttachments()
+	if err != nil {
+		return err
+	}
+	if len(aa) == 0 {
+		return nil
+	}
+
+	var list []string
+	for _, a := range aa {
+		s := a.ID
+		if a.Desc != "" {
+			s = fmt.Sprintf("%s (%s)", s, a.Desc)
+		}
+		list = append(list, s)
+	}
+	sort.Strings(list)
+
+	for i, s := range list {
+		if i == 0 {
+			*ss = append(*ss, fmt.Sprintf("%20s: %s", "Attachments", s))
+			continue
+		}
+		*ss = append(*ss, fmt.Sprintf("%20s  %s,", "", s))
+	}
+
+	return nil
+}
+
 // InfoDigest returns info about ctx.
 func (ctx *Context) InfoDigest() ([]string, error) {
 	var separator = "............................................"
@@ -321,9 +351,9 @@ func (ctx *Context) InfoDigest() ([]string, error) {
 
 	ctx.addPermissionsToInfoDigest(&ss)
 
-	//if ctx.ID != nil {
-	//	ss = append(ss, fmt.Sprintf("Id: %s", ctx.ID))
-	//}
+	if err := ctx.addAttachmentsToInfoDigest(&ss); err != nil {
+		return nil, err
+	}
 
 	return ss, nil
 }

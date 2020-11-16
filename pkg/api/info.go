@@ -22,12 +22,16 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 // Info returns information about rs.
 func Info(rs io.ReadSeeker, conf *pdfcpu.Configuration) ([]string, error) {
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
+	} else {
+		// Validation loads infodict.
+		conf.ValidationMode = pdf.ValidationRelaxed
 	}
 	ctx, _, _, err := readAndValidate(rs, conf, time.Now())
 	if err != nil {
@@ -36,7 +40,7 @@ func Info(rs io.ReadSeeker, conf *pdfcpu.Configuration) ([]string, error) {
 	if err := ctx.EnsurePageCount(); err != nil {
 		return nil, err
 	}
-	if err := pdfcpu.DetectWatermarks(ctx); err != nil {
+	if err := ctx.DetectWatermarks(); err != nil {
 		return nil, err
 	}
 	return ctx.InfoDigest()

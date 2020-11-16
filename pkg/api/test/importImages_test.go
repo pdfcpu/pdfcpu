@@ -71,11 +71,11 @@ func TestImportImages(t *testing.T) {
 			false},
 
 		// Import an image as a new page of the existing output file.
-		// {"TestImportImage",
-		// 	[]string{filepath.Join(resDir, "logoSmall.png")},
-		// 	"importImage.pdf",
-		// 	"",
-		// 	true},
+		{"TestImportImage",
+			[]string{filepath.Join(resDir, "logoSmall.png")},
+			"importImage.pdf",
+			"",
+			true},
 
 		//Import images by creating an A3 page for each image.
 		//Images are page centered with 1.0 relative scaling.

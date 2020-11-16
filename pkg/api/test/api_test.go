@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 var inDir, outDir, resDir string
@@ -158,11 +157,11 @@ func TestManipulateContext(t *testing.T) {
 	// Manipulate the PDF Context.
 	// Eg. Let's stamp all pages with pageCount and current timestamp.
 	text := fmt.Sprintf("Pages: %d \n Current time: %v", ctx.PageCount, time.Now())
-	wm, err := pdfcpu.ParseTextWatermarkDetails(text, "font:Times-Italic, scale:.9", true)
+	wm, err := api.TextWatermark(text, "font:Times-Italic, scale:.9", true, false)
 	if err != nil {
 		t.Fatalf("%s: ParseTextWatermarkDetails: %v\n", msg, err)
 	}
-	if err := api.WatermarkContext(ctx, nil, wm); err != nil {
+	if err := ctx.AddWatermarks(nil, wm); err != nil {
 		t.Fatalf("%s: WatermarkContext: %v\n", msg, err)
 	}
 

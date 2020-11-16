@@ -58,17 +58,34 @@ func fileSpecStreamDictInfo(xRefTable *XRefTable, id string, o Object, decode bo
 	}
 
 	var desc string
-	if s := d.StringEntry("Desc"); s != nil {
-		desc = *s
+	o, found := d.Find("Desc")
+	if found {
+		desc, err = xRefTable.DereferenceStringOrHexLiteral(o, V10, nil)
+		if err != nil {
+			return nil, "", "", nil, err
+		}
 	}
 
 	var fileName string
-	if s := d.StringEntry("F"); s != nil {
-		fileName = *s
+	o, found = d.Find("UF")
+	if found {
+		fileName, err = xRefTable.DereferenceStringOrHexLiteral(o, V10, nil)
+		if err != nil {
+			return nil, "", "", nil, err
+		}
+	} else {
+		o, found = d.Find("F")
+		if !found {
+			return nil, "", "", nil, errors.New("")
+		}
+		fileName, err = xRefTable.DereferenceStringOrHexLiteral(o, V10, nil)
+		if err != nil {
+			return nil, "", "", nil, err
+		}
 	}
 
 	// Entry EF is a dict holding a stream dict in entry F.
-	o, found := d.Find("EF")
+	o, found = d.Find("EF")
 	if !found || o == nil {
 		return nil, desc, fileName, nil, nil
 	}

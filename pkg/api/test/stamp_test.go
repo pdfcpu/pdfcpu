@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 func testAddWatermarks(t *testing.T, msg, inFile, outFile string, selectedPages []string, mode, modeParam, desc string, onTop bool) {
@@ -371,7 +370,7 @@ func TestAddWatermarks(t *testing.T) {
 			filepath.Join(resDir, "logoSmall.png"),
 			"scale:.33 abs, rot:180"},
 
-		// Add a PDF stamp to all pages of inFile using the 3rd page of pdfFile
+		// Add a PDF stamp to all pages of inFile using the 1st page of pdfFile
 		// and rotate along the 2nd diagonal running from upper left to lower right corner.
 		{"TestWatermarkPDF",
 			"Walden.pdf",
@@ -417,7 +416,7 @@ func TestStampingLifecyle(t *testing.T) {
 	}
 
 	// Stamp all pages.
-	wm, err := pdf.ParseTextWatermarkDetails("Demo", "", onTop)
+	wm, err := api.TextWatermark("Demo", "", onTop, false)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
@@ -431,18 +430,17 @@ func TestStampingLifecyle(t *testing.T) {
 	}
 
 	// // Update stamp on page 1.
-	wm, err = pdf.ParseTextWatermarkDetails("Confidential", "", onTop)
+	wm, err = api.TextWatermark("Confidential", "", onTop, true)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
-	wm.Update = true
 	if err := api.AddWatermarksFile(outFile, "", []string{"1"}, wm, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
 	// Add another stamp on top for all pages.
 	// This is a redish transparent footer.
-	wm, err = pdf.ParseTextWatermarkDetails("Footer", "pos:bc, c:0.8 0 0, op:.6, rot:0", onTop)
+	wm, err = api.TextWatermark("Footer", "pos:bc, c:0.8 0 0, op:.6, rot:0", onTop, false)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}

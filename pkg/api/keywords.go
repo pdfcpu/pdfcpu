@@ -30,6 +30,9 @@ import (
 func ListKeywords(rs io.ReadSeeker, conf *pdf.Configuration) ([]string, error) {
 	if conf == nil {
 		conf = pdf.NewDefaultConfiguration()
+	} else {
+		// Validation loads infodict.
+		conf.ValidationMode = pdf.ValidationRelaxed
 	}
 
 	fromStart := time.Now()
@@ -66,6 +69,9 @@ func ListKeywordsFile(inFile string, conf *pdf.Configuration) ([]string, error) 
 func AddKeywords(rs io.ReadSeeker, w io.Writer, files []string, conf *pdf.Configuration) error {
 	if conf == nil {
 		conf = pdf.NewDefaultConfiguration()
+	} else {
+		// Validation loads infodict.
+		conf.ValidationMode = pdf.ValidationRelaxed
 	}
 
 	fromStart := time.Now()
@@ -139,6 +145,9 @@ func AddKeywordsFile(inFile, outFile string, files []string, conf *pdf.Configura
 func RemoveKeywords(rs io.ReadSeeker, w io.Writer, keywords []string, conf *pdf.Configuration) error {
 	if conf == nil {
 		conf = pdf.NewDefaultConfiguration()
+	} else {
+		// Validation loads infodict.
+		conf.ValidationMode = pdf.ValidationRelaxed
 	}
 
 	fromStart := time.Now()

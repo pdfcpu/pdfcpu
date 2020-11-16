@@ -30,6 +30,9 @@ import (
 func ListProperties(rs io.ReadSeeker, conf *pdf.Configuration) ([]string, error) {
 	if conf == nil {
 		conf = pdf.NewDefaultConfiguration()
+	} else {
+		// Validation loads infodict.
+		conf.ValidationMode = pdf.ValidationRelaxed
 	}
 
 	fromStart := time.Now()
@@ -66,6 +69,9 @@ func ListPropertiesFile(inFile string, conf *pdf.Configuration) ([]string, error
 func AddProperties(rs io.ReadSeeker, w io.Writer, properties map[string]string, conf *pdf.Configuration) error {
 	if conf == nil {
 		conf = pdf.NewDefaultConfiguration()
+	} else {
+		// Validation loads infodict.
+		conf.ValidationMode = pdf.ValidationRelaxed
 	}
 
 	fromStart := time.Now()
@@ -139,6 +145,9 @@ func AddPropertiesFile(inFile, outFile string, properties map[string]string, con
 func RemoveProperties(rs io.ReadSeeker, w io.Writer, properties []string, conf *pdf.Configuration) error {
 	if conf == nil {
 		conf = pdf.NewDefaultConfiguration()
+	} else {
+		// Validation loads infodict.
+		conf.ValidationMode = pdf.ValidationRelaxed
 	}
 
 	fromStart := time.Now()
