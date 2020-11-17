@@ -238,7 +238,7 @@ func (ctx *Context) addAttachmentsToInfoDigest(ss *[]string) error {
 
 	var list []string
 	for _, a := range aa {
-		s := a.ID
+		s := a.FileName
 		if a.Desc != "" {
 			s = fmt.Sprintf("%s (%s)", s, a.Desc)
 		}

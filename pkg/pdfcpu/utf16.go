@@ -114,6 +114,15 @@ func DecodeUTF16String(s string) (string, error) {
 	return decodeUTF16String([]byte(s))
 }
 
+func encodeUTF16String(s string) string {
+	rr := utf16.Encode([]rune(s))
+	bb := []byte{0xFE, 0xFF}
+	for _, r := range rr {
+		bb = append(bb, byte(r>>8), byte(r&0xFF))
+	}
+	return string(bb)
+}
+
 // StringLiteralToString returns the best possible string rep for a string literal.
 func StringLiteralToString(s string) (string, error) {
 	b, err := Unescape(s)

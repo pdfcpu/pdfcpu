@@ -145,32 +145,33 @@ func addAttachment(t *testing.T, msg, outFile, id, desc, want string, modTime ti
 	}
 }
 
-func extractAttachment(t *testing.T, msg, id, desc string, modTime time.Time, ctx *pdfcpu.Context) pdfcpu.Attachment {
+func extractAttachment(t *testing.T, msg string, a pdfcpu.Attachment, ctx *pdfcpu.Context) pdfcpu.Attachment {
 	t.Helper()
 
-	aa, err := ctx.ExtractAttachments([]string{id})
+	aa, err := ctx.ExtractAttachment(a)
 	if err != nil {
 		t.Fatalf("%s extractAttachment: %v\n", msg, err)
 	}
 	if len(aa) != 1 {
 		t.Fatalf("%s extractAttachment: want 1 got %d\n", msg, len(aa))
 	}
-	if aa[0].ID != id ||
-		aa[0].Desc != desc ||
-		!timeEqualsTimeFromDateTime(&modTime, aa[0].ModTime) {
+	if aa[0].ID != a.ID ||
+		aa[0].FileName != a.FileName ||
+		aa[0].Desc != a.Desc ||
+		!timeEqualsTimeFromDateTime(a.ModTime, aa[0].ModTime) {
 		t.Fatalf("%s extractAttachment: unexpected attachment: %s\n", msg, aa[0])
 	}
 	return aa[0]
 }
 
-func removeAttachment(t *testing.T, msg, id, outFile string, ctx *pdfcpu.Context) {
+func removeAttachment(t *testing.T, msg, outFile string, a pdfcpu.Attachment, ctx *pdfcpu.Context) {
 	t.Helper()
-	ok, err := ctx.RemoveAttachments([]string{id})
+	ok, err := ctx.RemoveAttachment(a)
 	if err != nil {
 		t.Fatalf("%s removeAttachment: %v\n", msg, err)
 	}
 	if !ok {
-		t.Fatalf("%s removeAttachment: attachment %s not found\n", msg, id)
+		t.Fatalf("%s removeAttachment: attachment %s not found\n", msg, a.FileName)
 	}
 
 	// Write context to outFile after removing attachment.
@@ -235,13 +236,13 @@ func TestAttachmentsLowLevel(t *testing.T) {
 	if len(aa) != 1 {
 		t.Fatalf("%s listAttachments: want 1 got %d\n", msg, len(aa))
 	}
-	if aa[0].ID != id ||
+	if aa[0].FileName != id ||
 		aa[0].Desc != desc ||
 		!timeEqualsTimeFromDateTime(&modTime, aa[0].ModTime) {
 		t.Fatalf("%s listAttachments: unexpected attachment: %s\n", msg, aa[0])
 	}
 
-	a := extractAttachment(t, msg, id, desc, modTime, ctx)
+	a := extractAttachment(t, msg, aa[0], ctx)
 
 	// Compare extracted attachment bytes.
 	gotBytes, err := ioutil.ReadAll(a)
@@ -256,5 +257,5 @@ func TestAttachmentsLowLevel(t *testing.T) {
 	// Optional processing of attachment bytes:
 	// Process gotBytes..
 
-	removeAttachment(t, msg, id, outFile, ctx)
+	removeAttachment(t, msg, outFile, a, ctx)
 }

@@ -126,6 +126,7 @@ func fileSpecStreamDictInfo(xRefTable *XRefTable, id string, o Object, decode bo
 type Attachment struct {
 	io.Reader            // attachment data
 	ID        string     // id
+	FileName  string     // filename
 	Desc      string     // description
 	ModTime   *time.Time // time of last modification (optional)
 }
@@ -154,7 +155,7 @@ func (ctx *Context) ListAttachments() ([]Attachment, error) {
 		if err != nil {
 			return err
 		}
-		aa = append(aa, Attachment{nil, fileName, desc, modTime})
+		aa = append(aa, Attachment{nil, id, fileName, desc, modTime})
 		return nil
 	}
 
@@ -185,7 +186,41 @@ func (ctx *Context) AddAttachment(a Attachment, useCollection bool) error {
 		return err
 	}
 
-	return xRefTable.Names["EmbeddedFiles"].Add(xRefTable, a.ID, *ir)
+	return xRefTable.Names["EmbeddedFiles"].Add(xRefTable, encodeUTF16String(a.ID), *ir)
+}
+
+var errContentMatch = errors.New("name tree content match")
+
+func (ctx *Context) SearchEmbeddedFilesNameTreeNodeByContent(s string) (*string, Object, error) {
+
+	var (
+		k *string
+		v Object
+	)
+
+	identifyAttachmentStub := func(xRefTable *XRefTable, id string, o Object) error {
+		decode := false
+		_, desc, fileName, _, err := fileSpecStreamDictInfo(xRefTable, id, o, decode)
+		if err != nil {
+			return err
+		}
+		if s == fileName || s == desc {
+			k = &id
+			v = o
+			return errContentMatch
+		}
+		return nil
+	}
+
+	if err := ctx.Names["EmbeddedFiles"].Process(ctx.XRefTable, identifyAttachmentStub); err != nil {
+		if err != errContentMatch {
+			return nil, nil, err
+		}
+		// Node identified.
+		return k, v, nil
+	}
+
+	return nil, nil, nil
 }
 
 // RemoveAttachments removes attachments with given id and returns true if anything removed.
@@ -217,19 +252,42 @@ func (ctx *Context) RemoveAttachments(ids []string) (bool, error) {
 		if err != nil {
 			return false, err
 		}
-		if !ok {
-			log.CLI.Printf("attachment %s not found", id)
-			return false, nil
-		}
 		if empty {
 			// Delete name tree root object.
 			if err := xRefTable.RemoveEmbeddedFilesNameTree(); err != nil {
 				return false, err
 			}
 		}
+		if !ok {
+			// Try to identify name tree node by content.
+			k, _, err := ctx.SearchEmbeddedFilesNameTreeNodeByContent(id)
+			if err != nil {
+				return false, err
+			}
+			if k == nil {
+				log.CLI.Printf("attachment %s not found", id)
+				return false, nil
+			}
+			empty, _, err = xRefTable.Names["EmbeddedFiles"].Remove(xRefTable, *k)
+			if err != nil {
+				return false, err
+			}
+			if empty {
+				// Delete name tree root object.
+				if err := xRefTable.RemoveEmbeddedFilesNameTree(); err != nil {
+					return false, err
+				}
+			}
+		}
+
 	}
 
 	return true, nil
+}
+
+// RemoveAttachment removes a and returns true on success.
+func (ctx *Context) RemoveAttachment(a Attachment) (bool, error) {
+	return ctx.RemoveAttachments([]string{a.ID})
 }
 
 // ExtractAttachments extracts attachments with id.
@@ -252,18 +310,27 @@ func (ctx *Context) ExtractAttachments(ids []string) ([]Attachment, error) {
 		if err != nil {
 			return err
 		}
-		a := Attachment{Reader: bytes.NewReader(sd.Content), ID: fileName, Desc: desc, ModTime: modTime}
+		a := Attachment{Reader: bytes.NewReader(sd.Content), ID: id, FileName: fileName, Desc: desc, ModTime: modTime}
 		aa = append(aa, a)
 		return nil
 	}
 
+	// Search with UF,F,Desc
 	if ids != nil && len(ids) > 0 {
 		for _, id := range ids {
 			v, ok := ctx.Names["EmbeddedFiles"].Value(id)
 			if !ok {
-				log.CLI.Printf("attachment %s not found", id)
-				log.Info.Printf("pdfcpu: extractAttachments: %s not found", id)
-				continue
+				// Try to identify name tree node by content.
+				k, o, err := ctx.SearchEmbeddedFilesNameTreeNodeByContent(id)
+				if err != nil {
+					return nil, err
+				}
+				if k == nil {
+					log.CLI.Printf("attachment %s not found", id)
+					log.Info.Printf("pdfcpu: extractAttachments: %s not found", id)
+					continue
+				}
+				v = o
 			}
 			if err := createAttachment(ctx.XRefTable, id, v); err != nil {
 				return nil, err
@@ -278,4 +345,9 @@ func (ctx *Context) ExtractAttachments(ids []string) ([]Attachment, error) {
 	}
 
 	return aa, nil
+}
+
+// ExtractAttachment extracts a and returns true on success.
+func (ctx *Context) ExtractAttachment(a Attachment) ([]Attachment, error) {
+	return ctx.ExtractAttachments([]string{a.ID})
 }

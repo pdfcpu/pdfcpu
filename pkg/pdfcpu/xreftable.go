@@ -427,7 +427,7 @@ func (xRefTable *XRefTable) NewFileSpectDictForAttachment(a Attachment) (*Indire
 		return nil, err
 	}
 
-	d, err := xRefTable.NewFileSpecDict(a.ID, a.Desc, *sd)
+	d, err := xRefTable.NewFileSpecDict(a.ID, encodeUTF16String(a.ID), a.Desc, *sd)
 	if err != nil {
 		return nil, err
 	}
@@ -476,13 +476,12 @@ func (xRefTable *XRefTable) NewSoundStreamDict(filename string, samplingRate int
 }
 
 // NewFileSpecDict creates and returns a new fileSpec dictionary.
-func (xRefTable *XRefTable) NewFileSpecDict(filename, desc string, indRefStreamDict IndirectRef) (Dict, error) {
+func (xRefTable *XRefTable) NewFileSpecDict(f, uf, desc string, indRefStreamDict IndirectRef) (Dict, error) {
 
 	d := NewDict()
 	d.InsertName("Type", "Filespec")
-	d.InsertString("F", filename)
-	d.InsertString("UF", filename)
-	// TODO d.Insert("UF", utf16.Encode([]rune(filename)))
+	d.InsertString("F", f)
+	d.InsertString("UF", uf)
 
 	efDict := NewDict()
 	efDict.Insert("F", indRefStreamDict)

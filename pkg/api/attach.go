@@ -54,7 +54,7 @@ func ListAttachments(rs io.ReadSeeker, conf *pdfcpu.Configuration) ([]string, er
 
 	var ss []string
 	for _, a := range aa {
-		s := a.ID
+		s := a.FileName
 		if a.Desc != "" {
 			s = fmt.Sprintf("%s (%s)", s, a.Desc)
 		}
@@ -298,7 +298,7 @@ func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, con
 	}
 
 	for _, a := range aa {
-		fileName := filepath.Join(outDir, a.ID)
+		fileName := filepath.Join(outDir, a.FileName)
 		log.CLI.Printf("writing %s\n", fileName)
 		f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 		if err != nil {
