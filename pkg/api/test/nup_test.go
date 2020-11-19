@@ -23,23 +23,23 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 func testNUp(t *testing.T, msg string, inFiles []string, outFile string, selectedPages []string, desc string, n int, isImg bool) {
 	t.Helper()
 
 	var (
-		nup *pdf.NUp
+		nup *pdfcpu.NUp
 		err error
 	)
 
 	if isImg {
-		if nup, err = pdf.ImageNUpConfig(n, desc); err != nil {
+		if nup, err = pdfcpu.ImageNUpConfig(n, desc); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	} else {
-		if nup, err = pdf.PDFNUpConfig(n, desc); err != nil {
+		if nup, err = pdfcpu.PDFNUpConfig(n, desc); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	}
@@ -82,10 +82,19 @@ func TestNUp(t *testing.T) {
 		// 4-Up a PDF
 		{"TestNUpFromPDF",
 			[]string{filepath.Join(inDir, "WaldenFull.pdf")},
-			filepath.Join(outDir, "TestNUpFromPDF.pdf"),
+			filepath.Join(outDir, "NUpFromPDF.pdf"),
 			nil,
 			"",
 			9,
+			false},
+
+		// 2-Up a PDF with CropBox
+		{"TestNUpFromPdfWithCropBox",
+			[]string{filepath.Join(inDir, "grid_example.pdf")},
+			filepath.Join(outDir, "NUpFromPDFWithCropBox.pdf"),
+			nil,
+			"f:A5L, b:on, m:0",
+			2,
 			false},
 
 		// 9-Up an image

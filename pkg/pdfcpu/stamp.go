@@ -30,7 +30,6 @@ import (
 	"strings"
 	"unicode/utf16"
 
-	"github.com/pdfcpu/pdfcpu/internal/corefont/metrics"
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -72,7 +71,8 @@ const (
 
 var (
 	errNoContent   = errors.New("pdfcpu: page without content")
-	errNoWatermark = errors.Errorf("pdfcpu: no watermarks found - nothing removed")
+	errNoWatermark = errors.New("pdfcpu: no watermarks found")
+	errCorruptOCGs = errors.New("pdfcpu: OCProperties: corrupt OCGs element")
 )
 
 type watermarkParamMap map[string]func(string, *Watermark) error
@@ -80,7 +80,6 @@ type watermarkParamMap map[string]func(string, *Watermark) error
 // Handle applies parameter completion and if successful
 // parses the parameter values into import.
 func (m watermarkParamMap) Handle(paramPrefix, paramValueStr string, imp *Watermark) error {
-
 	var param string
 
 	// Completion support
@@ -175,13 +174,11 @@ type formCache map[types.Rectangle]*IndirectRef
 type pdfResources struct {
 	content []byte
 	resDict *IndirectRef
-	width   int
-	height  int
+	bb      *Rectangle
 }
 
 // Watermark represents the basic structure and command details for the commands "Stamp" and "Watermark".
 type Watermark struct {
-
 	// configuration
 	Mode              int           // WMText, WMImage or WMPDF
 	TextString        string        // raw display text.
@@ -210,6 +207,7 @@ type Watermark struct {
 	Opacity           float64       // opacity the watermark. 0 <= x <= 1
 	RenderMode        RenderMode    // fill=0, stroke=1 fill&stroke=2
 	Scale             float64       // relative scale factor: 0 <= x <= 1, absolute scale factor: 0 <= x
+	ScaleEff          float64       // effective scale factor
 	ScaleAbs          bool          // true for absolute scaling.
 	Update            bool          // true for updating instead of adding a page watermark.
 
@@ -218,6 +216,7 @@ type Watermark struct {
 
 	// image or PDF watermark
 	width, height int // image or page dimensions.
+	bbPDF         *Rectangle
 
 	// PDF watermark
 	pdfRes map[int]pdfResources
@@ -266,7 +265,6 @@ func (wm Watermark) typ() string {
 }
 
 func (wm Watermark) String() string {
-
 	var s string
 	if !wm.OnTop {
 		s = "not "
@@ -333,16 +331,13 @@ func (wm Watermark) multiStamp() bool {
 }
 
 func (wm Watermark) calcMaxTextWidth() float64 {
-
 	var maxWidth float64
-
 	for _, l := range wm.TextLines {
 		w := font.TextWidth(l, wm.FontName, wm.ScaledFontSize)
 		if w > maxWidth {
 			maxWidth = w
 		}
 	}
-
 	return maxWidth
 }
 
@@ -414,7 +409,6 @@ func parsePositionAnchorWM(s string, wm *Watermark) error {
 }
 
 func parsePositionOffsetWM(s string, wm *Watermark) error {
-
 	var err error
 
 	d := strings.Split(s, " ")
@@ -449,7 +443,6 @@ func parseFontName(s string, wm *Watermark) error {
 }
 
 func parseFontSize(s string, wm *Watermark) error {
-
 	fs, err := strconv.Atoi(s)
 	if err != nil {
 		return err
@@ -461,10 +454,9 @@ func parseFontSize(s string, wm *Watermark) error {
 }
 
 func parseScaleFactor(s string) (float64, bool, error) {
-
 	ss := strings.Split(s, " ")
 	if len(ss) > 2 {
-		return 0, false, errors.Errorf("pdfcpu: invalid scale string: 0.0 < i <= 1.0 {rel} | 0.0 < i {abs}, %s\n", s)
+		return 0, false, errors.Errorf("pdfcpu: invalid scale string %s: 0.0 < i <= 1.0 {rel} | 0.0 < i {abs}\n", s)
 	}
 
 	sc, err := strconv.ParseFloat(ss[0], 64)
@@ -473,7 +465,7 @@ func parseScaleFactor(s string) (float64, bool, error) {
 	}
 
 	if sc <= 0 {
-		return 0, false, errors.Errorf("pdfcpu: invalid scale value: 0.0 < i <= 1.0 {rel} | 0.0 < i {abs}, %.2f\n", sc)
+		return 0, false, errors.Errorf("pdfcpu: invalid scale value %.2f: 0.0 < i <= 1.0 {rel} | 0.0 < i {abs}\n", sc)
 	}
 
 	var scaleAbs bool
@@ -496,7 +488,7 @@ func parseScaleFactor(s string) (float64, bool, error) {
 	}
 
 	if !scaleAbs && sc > 1 {
-		return 0, false, errors.Errorf("pdfcpu: invalid relative scale value: 0.0 < i <= 1, %.2f\n", sc)
+		return 0, false, errors.Errorf("pdfcpu: invalid relative scale value %.2f: 0.0 < i <= 1\n", sc)
 	}
 
 	return sc, scaleAbs, nil
@@ -515,7 +507,6 @@ func parseHexColor(hexCol string) (SimpleColor, error) {
 }
 
 func parseColor(s string) (SimpleColor, error) {
-
 	var sc SimpleColor
 
 	cs := strings.Split(s, " ")
@@ -586,7 +577,6 @@ func parseBackgroundColor(s string, wm *Watermark) error {
 }
 
 func parseRotation(s string, wm *Watermark) error {
-
 	if wm.UserRotOrDiagonal {
 		return errors.New("pdfcpu: please specify rotation or diagonal (r or d)")
 	}
@@ -607,7 +597,6 @@ func parseRotation(s string, wm *Watermark) error {
 }
 
 func parseDiagonal(s string, wm *Watermark) error {
-
 	if wm.UserRotOrDiagonal {
 		return errors.New("pdfcpu: please specify rotation or diagonal (r or d)")
 	}
@@ -628,7 +617,6 @@ func parseDiagonal(s string, wm *Watermark) error {
 }
 
 func parseOpacity(s string, wm *Watermark) error {
-
 	o, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		return errors.Errorf("pdfcpu: opacity must be a float value: %s\n", s)
@@ -642,7 +630,6 @@ func parseOpacity(s string, wm *Watermark) error {
 }
 
 func parseRenderMode(s string, wm *Watermark) error {
-
 	m, err := strconv.Atoi(s)
 	if err != nil {
 		return errors.Errorf("pdfcpu: illegal render mode value: allowed 0,1,2, %s\n", s)
@@ -657,7 +644,6 @@ func parseRenderMode(s string, wm *Watermark) error {
 }
 
 func parseMargins(s string, wm *Watermark) error {
-
 	var err error
 
 	m := strings.Split(s, " ")
@@ -713,7 +699,6 @@ func parseMargins(s string, wm *Watermark) error {
 }
 
 func parseBorder(s string, wm *Watermark) error {
-
 	// w
 	// w r g b
 	// w #c
@@ -756,7 +741,6 @@ func parseBorder(s string, wm *Watermark) error {
 }
 
 func parseWatermarkDetails(mode int, modeParm, s string, onTop bool) (*Watermark, error) {
-
 	wm := DefaultWatermarkConfig()
 	wm.OnTop = onTop
 
@@ -800,9 +784,7 @@ func ParsePDFWatermarkDetails(fileName, desc string, onTop bool) (*Watermark, er
 }
 
 func (wm Watermark) calcMinFontSize(w float64) int {
-
 	var minSize int
-
 	for _, l := range wm.TextLines {
 		w := font.Size(l, wm.FontName, w)
 		if minSize == 0.0 {
@@ -812,7 +794,6 @@ func (wm Watermark) calcMinFontSize(w float64) int {
 			minSize = w
 		}
 	}
-
 	return minSize
 }
 
@@ -832,41 +813,45 @@ func (wm Watermark) isImage() bool {
 }
 
 func (wm *Watermark) calcBoundingBox(pageNr int) {
-
-	var bb *Rectangle
+	bb := RectForDim(float64(wm.width), float64(wm.height))
 
 	if wm.isPDF() {
-		wm.width = wm.pdfRes[wm.Page].width
-		wm.height = wm.pdfRes[wm.Page].height
+		wm.bbPDF = wm.pdfRes[wm.Page].bb
 		if wm.multiStamp() {
 			i := pageNr
 			if i > len(wm.pdfRes) {
 				i = len(wm.pdfRes)
 			}
-			wm.width = wm.pdfRes[i].width
-			wm.height = wm.pdfRes[i].height
+			wm.bbPDF = wm.pdfRes[i].bb
 		}
+		wm.width = int(wm.bbPDF.Width())
+		wm.height = int(wm.bbPDF.Height())
+		bb = wm.bbPDF
 	}
 
-	// wm.isPDF()
-
-	bb = RectForDim(float64(wm.width), float64(wm.height))
 	ar := bb.AspectRatio()
 
 	if wm.ScaleAbs {
-		bb.UR.X = wm.Scale * bb.Width()
-		bb.UR.Y = bb.UR.X / ar
-
+		w1 := wm.Scale * bb.Width()
+		bb.UR.X = bb.LL.X + w1
+		bb.UR.Y = bb.LL.Y + w1/ar
 		wm.bb = bb
+		wm.ScaleEff = wm.Scale
 		return
 	}
 
 	if ar >= 1 {
-		bb.UR.X = wm.Scale * wm.vp.Width()
-		bb.UR.Y = bb.UR.X / ar
+		// Landscape
+		w1 := wm.Scale * wm.vp.Width()
+		bb.UR.X = bb.LL.X + w1
+		bb.UR.Y = bb.LL.Y + w1/ar
+		wm.ScaleEff = w1 / float64(wm.width)
 	} else {
-		bb.UR.Y = wm.Scale * wm.vp.Height()
-		bb.UR.X = bb.UR.Y * ar
+		// Portrait
+		h1 := wm.Scale * wm.vp.Height()
+		bb.UR.Y = bb.LL.Y + h1
+		bb.UR.X = bb.LL.X + h1*ar
+		wm.ScaleEff = h1 / float64(wm.height)
 	}
 
 	wm.bb = bb
@@ -874,7 +859,6 @@ func (wm *Watermark) calcBoundingBox(pageNr int) {
 }
 
 func (wm *Watermark) calcTransformMatrix() *matrix {
-
 	var sin, cos float64
 	r := wm.Rotation
 
@@ -905,12 +889,10 @@ func (wm *Watermark) calcTransformMatrix() *matrix {
 
 	// 2) Translate
 	m2 := identMatrix
-
 	var dy float64
 	if !wm.isImage() && !wm.isPDF() {
 		dy = wm.bb.LL.Y
 	}
-
 	ll := lowerLeftCorner(wm.vp.Width(), wm.vp.Height(), wm.bb.Width(), wm.bb.Height(), wm.Pos)
 	m2[2][0] = ll.X + wm.bb.Width()/2 + float64(wm.Dx) + sin*(wm.bb.Height()/2+dy) - cos*wm.bb.Width()/2
 	m2[2][1] = ll.Y + wm.bb.Height()/2 + float64(wm.Dy) - cos*(wm.bb.Height()/2+dy) - sin*wm.bb.Width()/2
@@ -933,7 +915,6 @@ func parseWatermarkError(onTop bool) error {
 }
 
 func setWatermarkType(mode int, s string, wm *Watermark) error {
-
 	wm.Mode = mode
 
 	switch mode {
@@ -1004,128 +985,7 @@ func setWatermarkType(mode int, s string, wm *Watermark) error {
 	return nil
 }
 
-func ttfWidths(xRefTable *XRefTable, ttf font.TTFLight) (*IndirectRef, error) {
-
-	// we have tff firstchar, lastchar !
-
-	// Basic Latin        Unicode block: U+0000 - U+007F
-	// Latin-1 Supplement Unicode block: U+0080 - U+00FF
-
-	missingW := ttf.GlyphWidths[0]
-
-	w := make([]int, 256)
-
-	for i := 0; i < 256; i++ {
-		if i < 32 || metrics.WinAnsiGlyphMap[i] == ".notdef" {
-			w[i] = missingW
-			continue
-		}
-
-		pos, ok := ttf.Chars[uint32(i)]
-		if !ok {
-			//fmt.Printf("Character %s missing\n", metrics.WinAnsiGlyphMap[i])
-			w[i] = missingW
-			continue
-		}
-		w[i] = ttf.GlyphWidths[pos]
-	}
-
-	a := make(Array, 256-32)
-	for i := 32; i < 256; i++ {
-		a[i-32] = Integer(w[i])
-	}
-
-	return xRefTable.IndRefForNewObject(a)
-}
-
-func ttfFontDescriptorFlags(ttf font.TTFLight) uint32 {
-
-	// Bits:
-	// 1 FixedPitch
-	// 2 Serif
-	// 3 Symbolic
-	// 4 Script/cursive
-	// 6 Nonsymbolic
-	// 7 Italic
-	// 17 AllCap
-
-	flags := uint32(0)
-
-	// Bit 1
-	//fmt.Printf("fixedPitch: %t\n", ttf.FixedPitch)
-	if ttf.FixedPitch {
-		flags |= 0x01
-	}
-
-	// Bit 6 Set for non symbolic
-	// Note: Symbolic fonts are unsupported.
-	flags |= 0x20
-
-	// Bit 7
-	//fmt.Printf("italicAngle: %f\n", ttf.ItalicAngle)
-	if ttf.ItalicAngle != 0 {
-		flags |= 0x40
-	}
-
-	//fmt.Printf("flags: %08x\n", flags)
-
-	return flags
-}
-
-// func ttfFontDescriptor(xRefTable *XRefTable, ttf font.TTFLight, fontName string) (*IndirectRef, error) {
-
-// 	fontFile, err := ttfFontFile(xRefTable, fontName)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	d := Dict(
-// 		map[string]Object{
-// 			"Type":        Name("FontDescriptor"),
-// 			"FontName":    Name(fontName),
-// 			"Flags":       Integer(ttfFontDescriptorFlags(ttf)),
-// 			"FontBBox":    NewNumberArray(ttf.LLx, ttf.LLy, ttf.URx, ttf.URy),
-// 			"ItalicAngle": Float(ttf.ItalicAngle),
-// 			"Ascent":      Integer(ttf.Ascent),
-// 			"Descent":     Integer(ttf.Descent),
-// 			//"Leading": // The spacing between baselines of consecutive lines of text.
-// 			"CapHeight": Integer(ttf.CapHeight),
-// 			"StemV":     Integer(70), // Irrelevant for embedded files.
-// 			"FontFile2": *fontFile,
-// 		},
-// 	)
-
-// 	return xRefTable.IndRefForNewObject(d)
-// }
-
-// func trueTypeFontDict(xRefTable *XRefTable, fontName string, ttf font.TTFLight) (Dict, error) {
-// 	d := NewDict()
-// 	d.InsertName("Type", "Font")
-// 	d.InsertName("Subtype", "TrueType")
-// 	d.InsertName("BaseFont", fontName)
-// 	d.InsertInt("FirstChar", 32)
-// 	d.InsertInt("LastChar", 255)
-
-// 	w, err := ttfWidths(xRefTable, ttf)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	d.Insert("Widths", *w)
-
-// 	fd, err := ttfFontDescriptor(xRefTable, ttf, fontName)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	d.Insert("FontDescriptor", *fd)
-
-// 	d.InsertName("Encoding", "WinAnsiEncoding")
-
-// 	return d, nil
-// }
-
 func migrateIndRef(ir *IndirectRef, ctxSource, ctxDest *Context, migrated map[int]int) (Object, error) {
-	//entrySrc, _ := ctxSource.FindTableEntryLight(objNr)
-	//fmt.Printf("src before: %d %s\n", objNr, entrySrc.Object)
 	o, err := ctxSource.Dereference(*ir)
 	if err != nil {
 		return nil, err
@@ -1143,18 +1003,12 @@ func migrateIndRef(ir *IndirectRef, ctxSource, ctxDest *Context, migrated map[in
 	objNr := ir.ObjectNumber.Value()
 	migrated[objNr] = objNrNew
 	ir.ObjectNumber = Integer(objNrNew)
-	//fmt.Printf("processing: %d -> %d\n", objNr, objNrNew)
-	//entry, _ := ctxDest.FindTableEntryLight(objNrNew)
-	//fmt.Printf("before: %d -> %d %s\n", objNr, objNrNew, entry.Object)
 	return o, nil
 }
 
 func migrateObject(o Object, ctxSource, ctxDest *Context, migrated map[int]int) (Object, error) {
-
 	var err error
-
 	switch o := o.(type) {
-
 	case IndirectRef:
 		objNr := o.ObjectNumber.Value()
 		if migrated[objNr] > 0 {
@@ -1199,7 +1053,6 @@ func migrateObject(o Object, ctxSource, ctxDest *Context, migrated map[int]int) 
 }
 
 func createPDFRes(ctx, otherCtx *Context, pageNr int, migrated map[int]int, wm *Watermark) error {
-
 	pdfRes := pdfResources{}
 	xRefTable := ctx.XRefTable
 	otherXRefTable := otherCtx.XRefTable
@@ -1232,18 +1085,14 @@ func createPDFRes(ctx, otherCtx *Context, pageNr int, migrated map[int]int, wm *
 	}
 
 	pdfRes.resDict = ir
-
-	vp := viewPort(inhPAttrs)
-	pdfRes.width = int(vp.Width())
-	pdfRes.height = int(vp.Height())
-
+	pdfRes.bb = viewPort(inhPAttrs)
 	wm.pdfRes[pageNr] = pdfRes
 
 	return nil
 }
 
 func (ctx *Context) createPDFResForWM(wm *Watermark) error {
-	// The stamp pdf is assumed to be valid.
+	// Note: The stamp pdf is assumed to be valid!
 	otherCtx, err := ReadFile(wm.FileName, NewDefaultConfiguration())
 	if err != nil {
 		return err
@@ -1395,12 +1244,12 @@ func (ctx *Context) prepareOCPropertiesInRoot(onTop bool) (*IndirectRef, error) 
 		if found {
 			a, err := ctx.DereferenceArray(o)
 			if err != nil {
-				return nil, errors.Errorf("OCProperties: corrupt OCGs element")
+				return nil, errCorruptOCGs
 			}
 
 			ir, ok := a[0].(IndirectRef)
 			if !ok {
-				return nil, errors.Errorf("OCProperties: corrupt OCGs element")
+				return nil, errCorruptOCGs
 			}
 			return &ir, nil
 		}
@@ -1504,7 +1353,21 @@ func pdfFormContent(w io.Writer, pageNr int, wm *Watermark) error {
 	if !wm.ScaleAbs {
 		sc = wm.bb.Width() / float64(wm.width)
 	}
-	fmt.Fprintf(w, "%f 0 0 %f 0 0 cm ", sc, sc)
+
+	// Scale & translate into origin
+
+	m1 := identMatrix
+	m1[0][0] = sc
+	m1[1][1] = sc
+
+	m2 := identMatrix
+	m2[2][0] = -wm.bb.LL.X * wm.ScaleEff
+	m2[2][1] = -wm.bb.LL.Y * wm.ScaleEff
+
+	m := m1.multiply(m2)
+
+	fmt.Fprintf(w, "%.2f %.2f %.2f %.2f %.2f %.2f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
+
 	_, err := w.Write(cs)
 	return err
 }
@@ -1603,14 +1466,17 @@ func (ctx *Context) createForm(pageNr int, wm *Watermark, withBB bool) error {
 		}
 	}
 
-	// Paint bounding box
-	if withBB {
-		drawBoundingBox(b, wm, bb)
-	}
-
 	ir, err := ctx.createFormResDict(pageNr, wm)
 	if err != nil {
 		return err
+	}
+
+	bbox := bb.CroppedCopy(0)
+	bbox.Translate(-bb.LL.X, -bb.LL.Y)
+
+	// Paint bounding box
+	if withBB {
+		drawBoundingBox(b, wm, bbox)
 	}
 
 	sd := StreamDict{
@@ -1618,8 +1484,8 @@ func (ctx *Context) createForm(pageNr int, wm *Watermark, withBB bool) error {
 			map[string]Object{
 				"Type":      Name("XObject"),
 				"Subtype":   Name("Form"),
-				"BBox":      bb.Array(),
-				"Matrix":    NewIntegerArray(1, 0, 0, 1, 0, 0),
+				"BBox":      bbox.Array(),
+				"Matrix":    NewNumberArray(1, 0, 0, 1, 0, 0),
 				"OC":        *wm.ocg,
 				"Resources": *ir,
 			},
@@ -1881,7 +1747,6 @@ func (ctx *Context) addPageWatermark(i int, wm *Watermark) error {
 }
 
 func patchContentForWM(sd *StreamDict, gsID, xoID string, wm *Watermark, saveGState bool) error {
-	// Decode streamDict for supported filters only.
 	err := sd.Decode()
 	if err == filter.ErrUnsupportedFilter {
 		log.Info.Println("unsupported filter: unable to patch content with watermark.")
@@ -2033,7 +1898,7 @@ func (ctx *Context) AddWatermarks(selectedPages IntSet, wm *Watermark) error {
 func (ctx *Context) removeResDictEntry(d *Dict, entry string, ids []string, i int) error {
 	o, ok := d.Find(entry)
 	if !ok {
-		return errors.Errorf("page %d: corrupt resource dict", i)
+		return errors.Errorf("pdfcpu: page %d: corrupt resource dict", i)
 	}
 
 	d1, err := ctx.DereferenceDict(o)
@@ -2079,7 +1944,7 @@ func removeArtifacts(sd *StreamDict, i int) (ok bool, extGStates []string, forms
 
 	var patched bool
 
-	// Watermarks may be at the beginning or the end of the content stream.
+	// Watermarks may begin or end the content stream.
 
 	for {
 		s := string(sd.Content)
@@ -2156,7 +2021,7 @@ func (ctx *Context) locatePageContentAndResourceDict(i int) (Object, Dict, error
 
 	o, found := d.Find("Resources")
 	if !found {
-		return nil, nil, errors.Errorf("page %d: no resource dict found\n", i)
+		return nil, nil, errors.Errorf("pdfcpu: page %d: no resource dict found\n", i)
 	}
 
 	resDict, err := ctx.DereferenceDict(o)
@@ -2166,7 +2031,7 @@ func (ctx *Context) locatePageContentAndResourceDict(i int) (Object, Dict, error
 
 	o, found = d.Find("Contents")
 	if !found {
-		return nil, nil, errors.Errorf("page %d: no page watermark found", i)
+		return nil, nil, errors.Errorf("pdfcpu: page %d: no page watermark found", i)
 	}
 
 	return o, resDict, nil
@@ -2350,7 +2215,7 @@ func detectArtifacts(sd *StreamDict) (bool, error) {
 	if err := sd.Decode(); err != nil {
 		return false, err
 	}
-	// Watermarks may be at the beginning or at the end of the content stream.
+	// Watermarks may begin or end the content stream.
 	i := strings.Index(string(sd.Content), "/Artifact <</Subtype /Watermark /Type /Pagination >>BDC")
 	return i >= 0, nil
 }
@@ -2363,7 +2228,7 @@ func (ctx *Context) findPageWatermarks(pageDictIndRef *IndirectRef) (bool, error
 
 	o, found := d.Find("Contents")
 	if !found {
-		return false, errors.New("missing page contents")
+		return false, errNoContent
 	}
 
 	var entry *XRefTableEntry

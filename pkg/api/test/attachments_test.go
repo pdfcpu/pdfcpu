@@ -148,20 +148,17 @@ func addAttachment(t *testing.T, msg, outFile, id, desc, want string, modTime ti
 func extractAttachment(t *testing.T, msg string, a pdfcpu.Attachment, ctx *pdfcpu.Context) pdfcpu.Attachment {
 	t.Helper()
 
-	aa, err := ctx.ExtractAttachment(a)
+	a1, err := ctx.ExtractAttachment(a)
 	if err != nil {
 		t.Fatalf("%s extractAttachment: %v\n", msg, err)
 	}
-	if len(aa) != 1 {
-		t.Fatalf("%s extractAttachment: want 1 got %d\n", msg, len(aa))
+	if a1.ID != a.ID ||
+		a1.FileName != a.FileName ||
+		a1.Desc != a.Desc ||
+		!timeEqualsTimeFromDateTime(a.ModTime, a1.ModTime) {
+		t.Fatalf("%s extractAttachment: unexpected attachment: %s\n", msg, a1)
 	}
-	if aa[0].ID != a.ID ||
-		aa[0].FileName != a.FileName ||
-		aa[0].Desc != a.Desc ||
-		!timeEqualsTimeFromDateTime(a.ModTime, aa[0].ModTime) {
-		t.Fatalf("%s extractAttachment: unexpected attachment: %s\n", msg, aa[0])
-	}
-	return aa[0]
+	return *a1
 }
 
 func removeAttachment(t *testing.T, msg, outFile string, a pdfcpu.Attachment, ctx *pdfcpu.Context) {

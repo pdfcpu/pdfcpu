@@ -21,23 +21,23 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 func testGrid(t *testing.T, msg string, inFiles []string, outFile string, selectedPages []string, desc string, rows, cols int, isImg bool) {
 	t.Helper()
 
 	var (
-		nup *pdf.NUp
+		nup *pdfcpu.NUp
 		err error
 	)
 
 	if isImg {
-		if nup, err = pdf.ImageGridConfig(rows, cols, desc); err != nil {
+		if nup, err = pdfcpu.ImageGridConfig(rows, cols, desc); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	} else {
-		if nup, err = pdf.PDFGridConfig(rows, cols, desc); err != nil {
+		if nup, err = pdfcpu.PDFGridConfig(rows, cols, desc); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	}
@@ -64,6 +64,11 @@ func TestGrid(t *testing.T) {
 			[]string{filepath.Join(inDir, "read.go.pdf")},
 			filepath.Join("../../samples/grid", "GridFromPDF.pdf"),
 			nil, "f:LegalP, o:dr, b:off", 4, 6, false},
+
+		{"TestGridFromPDFWithCropBox",
+			[]string{filepath.Join(inDir, "grid_example.pdf")},
+			filepath.Join("../../samples/grid", "GridFromPDFWithCropBox.pdf"),
+			nil, "f:A5L, b:on, m:0", 2, 1, false},
 
 		{"TestGridFromImages",
 			imageFileNames(t, "../../../resources"),

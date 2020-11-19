@@ -347,7 +347,14 @@ func (ctx *Context) ExtractAttachments(ids []string) ([]Attachment, error) {
 	return aa, nil
 }
 
-// ExtractAttachment extracts a and returns true on success.
-func (ctx *Context) ExtractAttachment(a Attachment) ([]Attachment, error) {
-	return ctx.ExtractAttachments([]string{a.ID})
+// ExtractAttachment extracts a fully populated attachment.
+func (ctx *Context) ExtractAttachment(a Attachment) (*Attachment, error) {
+	aa, err := ctx.ExtractAttachments([]string{a.ID})
+	if err != nil || len(aa) == 0 {
+		return nil, err
+	}
+	if len(aa) > 1 {
+		return nil, errors.Errorf("pdfcpu: unexpected number of attachments: %d", len(aa))
+	}
+	return &aa[0], nil
 }

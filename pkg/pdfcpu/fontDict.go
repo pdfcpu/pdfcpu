@@ -72,6 +72,39 @@ func cidSet(xRefTable *XRefTable, ttf font.TTFLight) (*IndirectRef, error) {
 	return flateEncodedStreamIndRef(xRefTable, bb)
 }
 
+func ttfFontDescriptorFlags(ttf font.TTFLight) uint32 {
+	// Bits:
+	// 1 FixedPitch
+	// 2 Serif
+	// 3 Symbolic
+	// 4 Script/cursive
+	// 6 Nonsymbolic
+	// 7 Italic
+	// 17 AllCap
+
+	flags := uint32(0)
+
+	// Bit 1
+	//fmt.Printf("fixedPitch: %t\n", ttf.FixedPitch)
+	if ttf.FixedPitch {
+		flags |= 0x01
+	}
+
+	// Bit 6 Set for non symbolic
+	// Note: Symbolic fonts are unsupported.
+	flags |= 0x20
+
+	// Bit 7
+	//fmt.Printf("italicAngle: %f\n", ttf.ItalicAngle)
+	if ttf.ItalicAngle != 0 {
+		flags |= 0x40
+	}
+
+	//fmt.Printf("flags: %08x\n", flags)
+
+	return flags
+}
+
 // CIDFontDescriptor represents a font descriptor describing
 // the CIDFont’s default metrics other than its glyph widths.
 func CIDFontDescriptor(xRefTable *XRefTable, ttf font.TTFLight, fontName, baseFontName string) (*IndirectRef, error) {

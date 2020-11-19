@@ -17,6 +17,7 @@ limitations under the License.
 package test
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -58,7 +59,6 @@ func TestAddWatermarks(t *testing.T) {
 		modeParm        string
 		wmConf          string
 	}{
-		// Add text watermark to all pages of inFile starting at page 1 using a rotation angle of 20 degrees.
 		{"TestWatermarkText",
 			"Walden.pdf",
 			"TextDefaults.pdf",
@@ -392,6 +392,38 @@ func TestAddWatermarks(t *testing.T) {
 	} {
 		testAddWatermarks(t, tt.msg, tt.inFile, tt.outFile, tt.selectedPages, tt.mode, tt.modeParm, tt.wmConf, false)
 		testAddWatermarks(t, tt.msg, tt.inFile, tt.outFile, tt.selectedPages, tt.mode, tt.modeParm, tt.wmConf, true)
+	}
+}
+
+func TestCropBox(t *testing.T) {
+	msg := "TestCropBox"
+	inFile := filepath.Join(inDir, "empty.pdf")
+	outFile := filepath.Join("../../samples/stamp/pdf", "PdfWithCropBox.pdf")
+	pdfFile := filepath.Join(inDir, "grid_example.pdf")
+
+	// Create a context.
+	ctx, err := api.ReadContextFile(inFile)
+	if err != nil {
+		t.Fatalf("%s readContext: %v\n", msg, err)
+	}
+
+	for _, pos := range []string{"tl", "tc", "tr", "l", "c", "r", "bl", "bc", "br"} {
+		wm, err := api.PDFWatermark(pdfFile+":1", fmt.Sprintf("sc:.25 rel, pos:%s, rot:0", pos), true, false)
+		if err != nil {
+			t.Fatalf("%s %s: %v\n", msg, outFile, err)
+		}
+		if err := ctx.AddWatermarks(nil, wm); err != nil {
+			t.Fatalf("%s %s: %v\n", msg, outFile, err)
+		}
+	}
+
+	// Write context to file.
+	if err := api.WriteContextFile(ctx, outFile); err != nil {
+		t.Fatalf("%s write: %v\n", msg, err)
+	}
+
+	if err := api.ValidateFile(outFile, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
 
