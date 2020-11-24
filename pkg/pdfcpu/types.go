@@ -176,6 +176,11 @@ func (r Rectangle) ScaledHeight(w float64) float64 {
 	return w / r.AspectRatio()
 }
 
+// Dimensions returns r's dimensions.
+func (r Rectangle) Dimensions() Dim {
+	return Dim{r.Width(), r.Height()}
+}
+
 // Translate moves r by dx and dy.
 func (r *Rectangle) Translate(dx, dy float64) {
 	r.LL.Translate(dx, dy)
@@ -195,6 +200,52 @@ func (r Rectangle) CroppedCopy(margin float64) *Rectangle {
 		r.UR.X-margin,
 		r.UR.Y-margin,
 	)
+}
+
+func (r Rectangle) formatToInches() string {
+	return fmt.Sprintf("(%3.2f, %3.2f, %3.2f, %3.2f) w=%.2f h=%.2f ar=%.2f",
+		r.LL.X*userSpaceToInch,
+		r.LL.Y*userSpaceToInch,
+		r.UR.X*userSpaceToInch,
+		r.UR.Y*userSpaceToInch,
+		r.Width()*userSpaceToInch,
+		r.Height()*userSpaceToInch,
+		r.AspectRatio())
+}
+
+func (r Rectangle) formatToCentimetres() string {
+	return fmt.Sprintf("(%3.2f, %3.2f, %3.2f, %3.2f) w=%.2f h=%.2f ar=%.2f",
+		r.LL.X*userSpaceToCm,
+		r.LL.Y*userSpaceToCm,
+		r.UR.X*userSpaceToCm,
+		r.UR.Y*userSpaceToCm,
+		r.Width()*userSpaceToCm,
+		r.Height()*userSpaceToCm,
+		r.AspectRatio())
+}
+
+func (r Rectangle) formatToMillimetres() string {
+	return fmt.Sprintf("(%3.2f, %3.2f, %3.2f, %3.2f) w=%.2f h=%.2f ar=%.2f",
+		r.LL.X*userSpaceToMm,
+		r.LL.Y*userSpaceToMm,
+		r.UR.X*userSpaceToMm,
+		r.UR.Y*userSpaceToMm,
+		r.Width()*userSpaceToMm,
+		r.Height()*userSpaceToMm,
+		r.AspectRatio())
+}
+
+// Format returns r's details converted into units.
+func (r Rectangle) Format(units DisplayUnit) string {
+	switch units {
+	case INCHES:
+		return r.formatToInches()
+	case CENTIMETRES:
+		return r.formatToCentimetres()
+	case MILLIMETRES:
+		return r.formatToMillimetres()
+	}
+	return r.String()
 }
 
 // Rect returns a new rectangle for given lower left and upper right corners.
@@ -371,4 +422,52 @@ func (ir IndirectRef) PDFString() string {
 func (ir IndirectRef) Equals(indRef IndirectRef) bool {
 	return ir.ObjectNumber == indRef.ObjectNumber &&
 		ir.GenerationNumber == indRef.GenerationNumber
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+
+// PageBoundaries represents the PDF page boundaries.
+type PageBoundaries struct {
+	mediaBox,
+	cropBox,
+	trimBox,
+	bleedBox,
+	artBox *Rectangle
+}
+
+// MediaBox returns the effective mediabox for pb.
+func (pb PageBoundaries) MediaBox() *Rectangle {
+	return pb.mediaBox
+}
+
+// CropBox returns the effective cropbox for pb.
+func (pb PageBoundaries) CropBox() *Rectangle {
+	if pb.cropBox == nil {
+		return pb.mediaBox
+	}
+	return pb.cropBox
+}
+
+// TrimBox returns the effective trimbox for pb.
+func (pb PageBoundaries) TrimBox() *Rectangle {
+	if pb.trimBox == nil {
+		return pb.CropBox()
+	}
+	return pb.trimBox
+}
+
+// BleedBox returns the effective bleedbox for pb.
+func (pb PageBoundaries) BleedBox() *Rectangle {
+	if pb.bleedBox == nil {
+		return pb.CropBox()
+	}
+	return pb.bleedBox
+}
+
+// ArtBox returns the effective artbox for pb.
+func (pb PageBoundaries) ArtBox() *Rectangle {
+	if pb.artBox == nil {
+		return pb.CropBox()
+	}
+	return pb.artBox
 }

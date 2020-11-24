@@ -2036,28 +2036,76 @@ func (xRefTable *XRefTable) EnsurePageCount() error {
 	return nil
 }
 
-func (xRefTable *XRefTable) collectMediaBoxesForPageTree(root *IndirectRef, inhMediaBox *Rectangle, mediaBoxes []*Rectangle, p *int) (*Rectangle, error) {
+func (xRefTable *XRefTable) resolvePageBoundary(d Dict, boxName string) (*Rectangle, error) {
+	obj, found := d.Find(boxName)
+	if !found {
+		return nil, nil
+	}
+	a, err := xRefTable.DereferenceArray(obj)
+	if err != nil {
+		return nil, err
+	}
+	return rect(xRefTable, a)
+}
+
+func (xRefTable *XRefTable) collectPageBoundariesForPageTree(root *IndirectRef, inhMediaBox, inhCropBox **Rectangle, pb []PageBoundaries, p *int) error {
 
 	d, err := xRefTable.DereferenceDict(*root)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	obj, found := d.Find("MediaBox")
 	if found {
 		a, err := xRefTable.DereferenceArray(obj)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		if inhMediaBox, err = rect(xRefTable, a); err != nil {
-			return nil, err
+		if *inhMediaBox, err = rect(xRefTable, a); err != nil {
+			return err
 		}
+		//fmt.Printf("page %d, we have a mb: %v\n", *p, *inhMediaBox)
+		*inhCropBox = nil
+	}
+
+	obj, found = d.Find("CropBox")
+	if found {
+		a, err := xRefTable.DereferenceArray(obj)
+		if err != nil {
+			return err
+		}
+		if *inhCropBox, err = rect(xRefTable, a); err != nil {
+			return err
+		}
+		//fmt.Printf("page %d, we have a cb: %v\n", *p, *inhCropBox)
 	}
 
 	// Iterate over page tree.
 	kids := d.ArrayEntry("Kids")
 	if kids == nil {
-		return inhMediaBox, nil
+
+		if *inhMediaBox == nil {
+			return errors.New("pdfcpu: collectMediaBoxesForPageTree: mediaBox is nil")
+		}
+
+		//fmt.Printf("setting mb %v for page %d\n", *inhMediaBox, *p)
+		pb[*p].mediaBox = *inhMediaBox
+		pb[*p].cropBox = *inhCropBox
+
+		if pb[*p].trimBox, err = xRefTable.resolvePageBoundary(d, "TrimBox"); err != nil {
+			return err
+		}
+
+		if pb[*p].bleedBox, err = xRefTable.resolvePageBoundary(d, "BleedBox"); err != nil {
+			return err
+		}
+
+		if pb[*p].artBox, err = xRefTable.resolvePageBoundary(d, "ArtBox"); err != nil {
+			return err
+		}
+
+		//fmt.Printf("returning from page dict: %d\n", *p)
+		return nil
 	}
 
 	for _, o := range kids {
@@ -2069,48 +2117,42 @@ func (xRefTable *XRefTable) collectMediaBoxesForPageTree(root *IndirectRef, inhM
 		// Dereference next page node dict.
 		ir, ok := o.(IndirectRef)
 		if !ok {
-			return nil, errors.Errorf("pdfcpu: collectMediaBoxesForPageTree: corrupt page node dict")
+			return errors.Errorf("pdfcpu: collectMediaBoxesForPageTree: corrupt page node dict")
 		}
 
 		pageNodeDict, err := xRefTable.DereferenceDict(ir)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		switch *pageNodeDict.Type() {
 
 		case "Pages":
 			// Recurse over sub pagetree.
-			if _, err = xRefTable.collectMediaBoxesForPageTree(&ir, inhMediaBox, mediaBoxes, p); err != nil {
-				return nil, err
+			//fmt.Printf("pages: recursing %d\n", *p)
+			if err = xRefTable.collectPageBoundariesForPageTree(&ir, inhMediaBox, inhCropBox, pb, p); err != nil {
+				return err
 			}
 
 		case "Page":
-			mediaBox, err := xRefTable.collectMediaBoxesForPageTree(&ir, inhMediaBox, mediaBoxes, p)
-			if err != nil {
-				return nil, err
+			//fmt.Printf("page: recursing %d\n", *p)
+			if err = xRefTable.collectPageBoundariesForPageTree(&ir, inhMediaBox, inhCropBox, pb, p); err != nil {
+				return err
 			}
-			if mediaBox == nil {
-				return nil, errors.New("pdfcpu: collectMediaBoxesForPageTree: mediaBox is nil")
-			}
-			mediaBoxes[*p] = mediaBox
 			*p++
 		}
 
 	}
 
-	return nil, nil
+	return nil
 }
 
-// PageDims returns a sorted slice with media box dimensions
+// PageBoundaries returns a sorted slice with page boundaries
 // for all pages sorted ascending by page number.
-func (xRefTable *XRefTable) PageDims() ([]Dim, error) {
-
+func (xRefTable *XRefTable) PageBoundaries() ([]PageBoundaries, error) {
 	if err := xRefTable.EnsurePageCount(); err != nil {
 		return nil, err
 	}
-
-	mediaBoxes := make([]*Rectangle, xRefTable.PageCount)
 
 	// Get an indirect reference to the page tree root dict.
 	root, err := xRefTable.Pages()
@@ -2119,17 +2161,29 @@ func (xRefTable *XRefTable) PageDims() ([]Dim, error) {
 	}
 
 	i := 0
-	var mb Rectangle
-	if _, err := xRefTable.collectMediaBoxesForPageTree(root, &mb, mediaBoxes, &i); err != nil {
+	mb := &Rectangle{}
+	cb := &Rectangle{}
+	pbs := make([]PageBoundaries, xRefTable.PageCount)
+	if err := xRefTable.collectPageBoundariesForPageTree(root, &mb, &cb, pbs, &i); err != nil {
+		return nil, err
+	}
+	return pbs, nil
+}
+
+// PageDims returns a sorted slice with media box dimensions
+// for all pages sorted ascending by page number.
+func (xRefTable *XRefTable) PageDims() ([]Dim, error) {
+	pbs, err := xRefTable.PageBoundaries()
+	if err != nil {
 		return nil, err
 	}
 
-	ps := make([]Dim, len(mediaBoxes))
-	for i, mb := range mediaBoxes {
-		ps[i] = Dim{mb.Width(), mb.Height()}
+	dims := make([]Dim, len(pbs))
+	for i, pb := range pbs {
+		dims[i] = pb.mediaBox.Dimensions()
 	}
 
-	return ps, nil
+	return dims, nil
 }
 
 func (xRefTable *XRefTable) emptyPage(parentIndRef *IndirectRef, mediaBox *Rectangle) (*IndirectRef, error) {

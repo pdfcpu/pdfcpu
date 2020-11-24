@@ -698,9 +698,10 @@ Examples: "pdfcpu grid out.pdf 1 10 in.pdf"
 	usagePaper     = "usage: pdfcpu paper"
 	usageLongPaper = "Print a list of supported paper sizes."
 
-	usageInfo     = "usage: pdfcpu info [-u(nits)] [-upw userpw] [-opw ownerpw] inFile"
+	usageInfo     = "usage: pdfcpu info [-pages selectedPages] [-u(nits)] [-upw userpw] [-opw ownerpw] inFile"
 	usageLongInfo = `Print info about a PDF file.
    
+   pages ... selected pages
 units, u ... paper size display unit
      upw ... user password
      opw ... owner password
@@ -708,7 +709,7 @@ units, u ... paper size display unit
     
 Possible units are:
    
-points, po ... (default) points
+points, po ... points
 inches, in ... inches
         cm ... centimetres
         mm ... millimetres`

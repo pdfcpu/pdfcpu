@@ -1078,13 +1078,19 @@ func processGridCommand(conf *pdfcpu.Configuration) {
 }
 
 func processInfoCommand(conf *pdfcpu.Configuration) {
-	if len(flag.Args()) != 1 || selectedPages != "" {
+	if len(flag.Args()) != 1 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageInfo)
 		os.Exit(1)
 	}
 
 	inFile := flag.Arg(0)
 	ensurePdfExtension(inFile)
+
+	selectedPages, err := api.ParsePageSelection(selectedPages)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
+		os.Exit(1)
+	}
 
 	if !pdfcpu.MemberOf(units, []string{"", "points", "po", "inches", "in", "cm", "mm"}) {
 		fmt.Fprintf(os.Stderr, "%s\n\n", "supported units: (po)ints, (in)ches, cm, mm")
@@ -1102,7 +1108,7 @@ func processInfoCommand(conf *pdfcpu.Configuration) {
 		conf.Units = pdfcpu.MILLIMETRES
 	}
 
-	process(cli.InfoCommand(inFile, conf))
+	process(cli.InfoCommand(inFile, selectedPages, conf))
 }
 
 func processListFontsCommand(conf *pdfcpu.Configuration) {

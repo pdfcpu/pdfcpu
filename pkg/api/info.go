@@ -22,16 +22,15 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 // Info returns information about rs.
-func Info(rs io.ReadSeeker, conf *pdfcpu.Configuration) ([]string, error) {
+func Info(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Configuration) ([]string, error) {
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
 	} else {
 		// Validation loads infodict.
-		conf.ValidationMode = pdf.ValidationRelaxed
+		conf.ValidationMode = pdfcpu.ValidationRelaxed
 	}
 	ctx, _, _, err := readAndValidate(rs, conf, time.Now())
 	if err != nil {
@@ -40,18 +39,22 @@ func Info(rs io.ReadSeeker, conf *pdfcpu.Configuration) ([]string, error) {
 	if err := ctx.EnsurePageCount(); err != nil {
 		return nil, err
 	}
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, false)
+	if err != nil {
+		return nil, err
+	}
 	if err := ctx.DetectWatermarks(); err != nil {
 		return nil, err
 	}
-	return ctx.InfoDigest()
+	return ctx.InfoDigest(pages)
 }
 
 // InfoFile returns information about inFile.
-func InfoFile(inFile string, conf *pdfcpu.Configuration) ([]string, error) {
+func InfoFile(inFile string, selectedPages []string, conf *pdfcpu.Configuration) ([]string, error) {
 	f, err := os.Open(inFile)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
-	return Info(f, conf)
+	return Info(f, selectedPages, conf)
 }

@@ -182,7 +182,7 @@ func ExtractAttachments(cmd *Command) ([]string, error) {
 
 // Info gathers information about inFile and returns the result as []string.
 func Info(cmd *Command) ([]string, error) {
-	return api.InfoFile(*cmd.InFile, cmd.Conf)
+	return api.InfoFile(*cmd.InFile, cmd.PageSelection, cmd.Conf)
 }
 
 // CreateCheatSheetsFonts creates single page PDF cheat sheets for user fonts in current dir.

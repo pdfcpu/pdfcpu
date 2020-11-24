@@ -257,16 +257,74 @@ func (ctx *Context) addAttachmentsToInfoDigest(ss *[]string) error {
 	return nil
 }
 
-// InfoDigest returns info about ctx.
-func (ctx *Context) InfoDigest() ([]string, error) {
-	var separator = "............................................"
-	var ss []string
-	v := ctx.HeaderVersion
-	if ctx.RootVersion != nil {
-		v = ctx.RootVersion
+func (ctx *Context) pageInfo(selectedPages IntSet) ([]string, error) {
+	units := ctx.units()
+	if len(selectedPages) > 0 {
+		//fmt.Printf("len(selectedPages) = %d\n", len(selectedPages))
+		pbs, err := ctx.PageBoundaries()
+		if err != nil {
+			return nil, err
+		}
+		ss := []string{}
+		for i, pb := range pbs {
+			if _, found := selectedPages[i+1]; !found {
+				continue
+			}
+			ss = append(ss, fmt.Sprintf("Page %d:", i+1))
+			mb := pb.mediaBox
+			cb := pb.cropBox
+			tb := pb.trimBox
+			bb := pb.bleedBox
+			ab := pb.artBox
+			s := ""
+			if cb == nil || mb.equals(*cb) {
+				s += " = CropBox"
+				if tb == nil || tb.equals(*mb) {
+					s += ", TrimBox"
+				}
+				if bb == nil || bb.equals(*mb) {
+					s += ", BleedBox"
+				}
+				if ab == nil || ab.equals(*mb) {
+					s += ", ArtBox"
+				}
+			}
+			ss = append(ss, fmt.Sprintf("  MediaBox %v (%s) %s", mb.Format(ctx.Units), units, s))
+			if cb != nil && !cb.equals(*mb) {
+				s = ""
+				if tb == nil || tb.equals(*cb) {
+					s += "= TrimBox"
+				}
+				if bb == nil || bb.equals(*cb) {
+					if len(s) == 0 {
+						s += "= "
+					} else {
+						s += ", "
+					}
+					s += "BleedBox"
+				}
+				if ab == nil || ab.equals(*cb) {
+					if len(s) == 0 {
+						s += "= "
+					} else {
+						s += ", "
+					}
+					s += "ArtBox"
+				}
+				ss = append(ss, fmt.Sprintf("   CropBox %v (%s) %s", cb.Format(ctx.Units), units, s))
+				if tb != nil && !tb.equals(*mb) && !tb.equals(*cb) {
+					ss = append(ss, fmt.Sprintf("   TrimBox %v (%s)", tb.Format(ctx.Units), units))
+				}
+				if bb != nil && !bb.equals(*mb) && !bb.equals(*cb) {
+					ss = append(ss, fmt.Sprintf("  BleedBox %v (%s)", bb.Format(ctx.Units), units))
+				}
+				if ab != nil && !ab.equals(*mb) && !ab.equals(*cb) {
+					ss = append(ss, fmt.Sprintf("    ArtBox %v (%s)", ab.Format(ctx.Units), units))
+				}
+			}
+		}
+		return ss, nil
 	}
-	ss = append(ss, fmt.Sprintf("%20s: %s", "PDF version", v))
-	ss = append(ss, fmt.Sprintf("%20s: %d", "Page count", ctx.PageCount))
 
 	pd, err := ctx.PageDims()
 	if err != nil {
@@ -278,13 +336,33 @@ func (ctx *Context) InfoDigest() ([]string, error) {
 		m[d] = true
 	}
 
-	units := ctx.units()
+	ss := []string{}
 	s := "Page size:"
 	for d := range m {
 		dc := ctx.convertToUnits(d)
 		ss = append(ss, fmt.Sprintf("%21s %.2f x %.2f %s", s, dc.Width, dc.Height, units))
 		s = ""
 	}
+
+	return ss, nil
+}
+
+// InfoDigest returns info about ctx.
+func (ctx *Context) InfoDigest(selectedPages IntSet) ([]string, error) {
+	var separator = "............................................"
+	var ss []string
+	v := ctx.HeaderVersion
+	if ctx.RootVersion != nil {
+		v = ctx.RootVersion
+	}
+	ss = append(ss, fmt.Sprintf("%20s: %s", "PDF version", v))
+	ss = append(ss, fmt.Sprintf("%20s: %d", "Page count", ctx.PageCount))
+
+	pi, err := ctx.pageInfo(selectedPages)
+	if err != nil {
+		return nil, err
+	}
+	ss = append(ss, pi...)
 
 	ss = append(ss, fmt.Sprintf(separator))
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Title", ctx.Title))
@@ -305,7 +383,7 @@ func (ctx *Context) InfoDigest() ([]string, error) {
 
 	ss = append(ss, fmt.Sprintf(separator))
 
-	s = "No"
+	s := "No"
 	if ctx.Tagged {
 		s = "Yes"
 	}

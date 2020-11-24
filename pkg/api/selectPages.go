@@ -367,7 +367,7 @@ func PagesForPageSelection(pageCount int, pageSelection []string, ensureAllforNo
 		return selectedPages(pageCount, pageSelection)
 	}
 	if !ensureAllforNone {
-		log.CLI.Printf("pages: none\n")
+		//log.CLI.Printf("pages: none\n")
 		return nil, nil
 	}
 	m := pdf.IntSet{}

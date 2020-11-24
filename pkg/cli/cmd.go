@@ -496,15 +496,16 @@ func NUpCommand(inFiles []string, outFile string, pageSelection []string, nUp *p
 }
 
 // InfoCommand creates a new command to output information about inFile.
-func InfoCommand(inFile string, conf *pdfcpu.Configuration) *Command {
+func InfoCommand(inFile string, pageSelection []string, conf *pdfcpu.Configuration) *Command {
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
 	}
 	conf.Cmd = pdfcpu.INFO
 	return &Command{
-		Mode:   pdfcpu.INFO,
-		InFile: &inFile,
-		Conf:   conf}
+		Mode:          pdfcpu.INFO,
+		InFile:        &inFile,
+		PageSelection: pageSelection,
+		Conf:          conf}
 }
 
 // ListFontsCommand returns a list of supported fonts.
