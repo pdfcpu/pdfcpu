@@ -9,18 +9,19 @@ Print information about a PDF file.
 ## Usage
 
 ```
-usage: pdfcpu info [-u(nits)] [-upw userpw] [-opw ownerpw] inFile
+usage: pdfcpu info [-pages selectedPages] [-u(nits)] [-upw userpw] [-opw ownerpw] inFile
 ```
 
 <br>
 
 ### Flags
 
-| name                             | description       | required | values
-|:---------------------------------|:------------------|:---------|-------
-| u(units)                         | page size units   | no       |po(ints),in(ches),cm,mm
-| [upw](../getting_started/common_flags.md)     | user password     | no
-| [opw](../getting_started/common_flags.md)     | owner password    | no
+| name                                    | description       | required | values
+|:----------------------------------------|:------------------|:---------|-------
+| [pages](getting_started/page_selection) | page selection    | no
+| u(units)                                | page size units   | no       |po(ints),in(ches),cm,mm
+| [upw](getting_started/common_flags.md)  | user password     | no
+| [opw](getting_started/common_flags.md)  | owner password    | no
 
 <br>
 
