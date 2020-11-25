@@ -32,7 +32,6 @@ import (
 
 const (
 	defaultBufSize = 1024
-	//unknownDelimiter = byte(0)
 )
 
 // ReadFile reads in a PDF file and builds an internal structure holding its cross reference table aka the Context.
@@ -80,7 +79,7 @@ func Read(rs io.ReadSeeker, conf *Configuration) (*Context, error) {
 		return nil, err
 	}
 
-	// Some PDFWriters write an incorrent Size into trailer.
+	// Some PDFWriters write an incorrect Size into trailer.
 	if *ctx.XRefTable.Size < len(ctx.XRefTable.Table) {
 		*ctx.XRefTable.Size = len(ctx.XRefTable.Table)
 	}
@@ -949,7 +948,7 @@ func processTrailer(ctx *Context, s *bufio.Scanner, line string) (*int64, error)
 }
 
 // Parse xRef section into corresponding number of xRef table entries.
-func parseXRefSection(s *bufio.Scanner, ctx *Context) (*int64, error) {
+func parseXRefSection(s *bufio.Scanner, ctx *Context, ssCount *int) (*int64, error) {
 	log.Read.Println("parseXRefSection begin")
 
 	line, err := scanLine(s)
@@ -967,6 +966,7 @@ func parseXRefSection(s *bufio.Scanner, ctx *Context) (*int64, error) {
 		if err = parseXRefTableSubSection(s, ctx.XRefTable, fields); err != nil {
 			return nil, err
 		}
+		*ssCount++
 
 		// trailer or another xref table subsection ?
 		if line, err = scanLine(s); err != nil {
@@ -1163,6 +1163,7 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 	ctx.HeaderVersion = hv
 	ctx.Read.EolCount = eolCount
 	offs := map[int64]bool{}
+	ssCount := 0
 
 	for offset != nil {
 
@@ -1194,7 +1195,7 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 
 		if strings.TrimSpace(line) == "xref" {
 			log.Read.Println("buildXRefTableStartingAt: found xref section")
-			if offset, err = parseXRefSection(s, ctx); err != nil {
+			if offset, err = parseXRefSection(s, ctx, &ssCount); err != nil {
 				return err
 			}
 		} else {
@@ -1210,6 +1211,15 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 				return bypassXrefSection(ctx)
 			}
 		}
+	}
+
+	// A friendly 🤢 to the devs of the HP Scanner & Printer software utility.
+	// Hack for #250: If exactly one xref subsection ensure it starts with object #0 instead #1.
+	if ssCount == 1 && !ctx.Exists(0) {
+		for i := 1; i <= *ctx.Size; i++ {
+			ctx.Table[i-1] = ctx.Table[i]
+		}
+		delete(ctx.Table, *ctx.Size)
 	}
 
 	log.Read.Println("buildXRefTableStartingAt: end")
