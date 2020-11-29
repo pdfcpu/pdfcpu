@@ -49,6 +49,8 @@ func doTestParseDictGeneral(t *testing.T) {
 
 func doTestParseDictNameObjects(t *testing.T) {
 	// Name Objects
+	doTestParseDictOK("<</Title \x0a/Type /Outline\x0a/Key /Value>>", t)
+	doTestParseDictOK("<</Key1 /Value1\x0a/Title \x0a/Type /Outline\x0a/Key /Value>>", t)
 	doTestParseDictOK("<</S/A>>", t) // empty name
 	doTestParseDictOK("<</K1 / /K2 /Name2>>", t)
 	doTestParseDictOK("<</Key/Value>>", t)

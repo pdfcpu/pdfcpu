@@ -90,16 +90,29 @@ func positionToNextEOL(s string) string {
 }
 
 // trimLeftSpace trims leading whitespace and trailing comment.
-func trimLeftSpace(s string) (outstr string, trimmedSpaces int) {
+func trimLeftSpace(s string, relaxed bool) (outstr string, eol bool) {
 
 	log.Parse.Printf("TrimLeftSpace: begin %s\n", s)
 
 	whitespace := func(c rune) bool { return unicode.IsSpace(c) }
 
+	whitespaceNoEol := func(r rune) bool {
+		switch r {
+		case '\t', '\v', '\f', ' ', 0x85, 0xA0:
+			return true
+		}
+		return false
+	}
+
 	outstr = s
 
 	for {
-		// trim leading whitespace
+		if relaxed {
+			outstr = strings.TrimLeftFunc(outstr, whitespaceNoEol)
+			if len(outstr) >= 1 && (outstr[0] == '\n' || outstr[0] == '\r') {
+				eol = true
+			}
+		}
 		outstr = strings.TrimLeftFunc(outstr, whitespace)
 		log.Parse.Printf("1 outstr: <%s>\n", outstr)
 		if len(outstr) <= 1 || outstr[0] != '%' {
@@ -111,11 +124,9 @@ func trimLeftSpace(s string) (outstr string, trimmedSpaces int) {
 
 	}
 
-	trimmedSpaces = len(s) - len(outstr)
+	log.Parse.Printf("TrimLeftSpace: end %s\n", outstr)
 
-	log.Parse.Printf("TrimLeftSpace: end %s %d\n", outstr, trimmedSpaces)
-
-	return outstr, trimmedSpaces
+	return outstr, eol
 }
 
 // HexString validates and formats a hex string to be of even length.
@@ -241,7 +252,7 @@ func parseObjectAttributes(line *string) (objectNumber *int, generationNumber *i
 
 	// object number
 
-	l, _ = trimLeftSpace(l)
+	l, _ = trimLeftSpace(l, false)
 	if len(l) == 0 {
 		return nil, nil, errors.New("pdfcpu: ParseObjectAttributes: can't find object number")
 	}
@@ -259,7 +270,7 @@ func parseObjectAttributes(line *string) (objectNumber *int, generationNumber *i
 	// generation number
 
 	l = l[i:]
-	l, _ = trimLeftSpace(l)
+	l, _ = trimLeftSpace(l, false)
 	if len(l) == 0 {
 		return nil, nil, errors.New("pdfcpu: ParseObjectAttributes: can't find generation number")
 	}
@@ -304,7 +315,7 @@ func parseArray(line *string) (*Array, error) {
 	l = forwardParseBuf(l, 1)
 
 	// position to first non whitespace char after '['
-	l, _ = trimLeftSpace(l)
+	l, _ = trimLeftSpace(l, false)
 
 	if len(l) == 0 {
 		// only whitespace after '['
@@ -328,7 +339,7 @@ func parseArray(line *string) (*Array, error) {
 		}
 
 		// position to next non whitespace char.
-		l, _ = trimLeftSpace(l)
+		l, _ = trimLeftSpace(l, false)
 		if len(l) == 0 {
 			return nil, errArrayNotTerminated
 		}
@@ -503,7 +514,7 @@ func parseName(line *string) (*Name, error) {
 	return &nameObj, nil
 }
 
-func parseDict(line *string) (*Dict, error) {
+func parseDict(line *string, relaxed bool) (*Dict, error) {
 
 	if line == nil || len(*line) == 0 {
 		return nil, errNoDictionary
@@ -521,7 +532,7 @@ func parseDict(line *string) (*Dict, error) {
 	l = forwardParseBuf(l, 2)
 
 	// position to first non whitespace char after '<<'
-	l, _ = trimLeftSpace(l)
+	l, _ = trimLeftSpace(l, false)
 
 	if len(l) == 0 {
 		// only whitespace after '['
@@ -529,6 +540,7 @@ func parseDict(line *string) (*Dict, error) {
 	}
 
 	d := NewDict()
+	var eol bool
 
 	for !strings.HasPrefix(l, ">>") {
 
@@ -539,12 +551,24 @@ func parseDict(line *string) (*Dict, error) {
 		log.Parse.Printf("ParseDict: key = %s\n", key)
 
 		// position to first non whitespace after key
-		l, _ = trimLeftSpace(l)
+		l, eol = trimLeftSpace(l, relaxed)
 
 		if len(l) == 0 {
 			log.Parse.Println("ParseDict: only whitespace after key")
 			// only whitespace after key
 			return nil, errDictionaryNotTerminated
+		}
+
+		// A friendly 🤢 to the devs of the Kdan Pocket Scanner for the iPad.
+		// Hack for #252:
+		// For dicts with kv pairs terminated by eol we accept a missing value as an empty string.
+		if eol {
+			obj := StringLiteral("")
+			log.Parse.Printf("ParseDict: dict[%s]=%v\n", key, obj)
+			if ok := d.Insert(string(*key), obj); !ok {
+				return nil, errDictionaryDuplicateKey
+			}
+			continue
 		}
 
 		obj, err := parseObject(&l)
@@ -567,7 +591,7 @@ func parseDict(line *string) (*Dict, error) {
 		}
 
 		// position to next non whitespace char.
-		l, _ = trimLeftSpace(l)
+		l, _ = trimLeftSpace(l, false)
 		if len(l) == 0 {
 			return nil, errDictionaryNotTerminated
 		}
@@ -667,7 +691,7 @@ func parseNumericOrIndRef(line *string) (Object, error) {
 	iref1 := i
 
 	l = l[i1:]
-	l, _ = trimLeftSpace(l)
+	l, _ = trimLeftSpace(l, false)
 	if len(l) == 0 {
 		// only whitespace
 		*line = l1
@@ -702,7 +726,7 @@ func parseNumericOrIndRef(line *string) (Object, error) {
 	// Look for "R"
 
 	l = l[i2:]
-	l, _ = trimLeftSpace(l)
+	l, _ = trimLeftSpace(l, false)
 
 	if len(l) == 0 {
 		// only whitespace
@@ -733,9 +757,14 @@ func parseHexLiteralOrDict(l *string) (val Object, err error) {
 	// if next char = '<' parseDict.
 	if (*l)[1] == '<' {
 		log.Parse.Println("parseHexLiteralOrDict: value = Dictionary")
-		d, err := parseDict(l)
-		if err != nil {
-			return nil, err
+		var (
+			d   *Dict
+			err error
+		)
+		if d, err = parseDict(l, false); err != nil {
+			if d, err = parseDict(l, true); err != nil {
+				return nil, err
+			}
 		}
 		val = *d
 	} else {
@@ -784,7 +813,7 @@ func parseObject(line *string) (Object, error) {
 	log.Parse.Printf("ParseObject: buf= <%s>\n", l)
 
 	// position to first non whitespace char
-	l, _ = trimLeftSpace(l)
+	l, _ = trimLeftSpace(l, false)
 	if len(l) == 0 {
 		// only whitespace
 		return nil, errBufNotAvailable

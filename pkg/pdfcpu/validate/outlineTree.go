@@ -148,7 +148,7 @@ func validateOutlines(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool
 	}
 
 	// Type, optional, name
-	_, err = validateNameEntry(xRefTable, d, "outlineDict", "Type", OPTIONAL, pdf.V10, func(s string) bool { return s == "Outlines" })
+	_, err = validateNameEntry(xRefTable, d, "outlineDict", "Type", OPTIONAL, pdf.V10, func(s string) bool { return s == "Outlines" || s == "Outline" })
 	if err != nil {
 		return err
 	}
