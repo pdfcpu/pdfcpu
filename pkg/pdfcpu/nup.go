@@ -31,10 +31,11 @@ import (
 )
 
 var (
-	errInvalidGridID     = errors.New("pdfcpu: nup: n: one of 2, 3, 4, 6, 8, 9, 12, 16")
-	errInvalidGridDims   = errors.New("pdfcpu: grid: dimensions: m >= 0, n >= 0")
-	errInvalidNUpConfig  = errors.New("pdfcpu: nup: invalid configuration string. Please consult pdfcpu help nup")
-	errInvalidGridConfig = errors.New("pdfcpu: nup: invalid configuration string. Please consult pdfcpu help grid")
+	errInvalidGridID      = errors.New("pdfcpu: nup: n: one of 2, 3, 4, 6, 8, 9, 12, 16")
+	errInvalidGridDims    = errors.New("pdfcpu: grid: dimensions: m >= 0, n >= 0")
+	errInvalidNUpConfig   = errors.New("pdfcpu: nup: invalid configuration string. Please consult pdfcpu help nup")
+	errInvalidGridConfig  = errors.New("pdfcpu: nup: invalid configuration string. Please consult pdfcpu help grid")
+	errInvalidBookletGrid = errors.New("pdfcpu: nup: for booklets, n must be 2 or 4")
 )
 
 var (
@@ -238,6 +239,11 @@ func ParseNUpDetails(s string, nup *NUp) error {
 		if err := nupParamMap.Handle(paramPrefix, paramValueStr, nup); err != nil {
 			return err
 		}
+	}
+
+	n := nup.Grid.Height * nup.Grid.Width
+	if nup.Orient == Booklet && !(n == 2 || n == 4) {
+		return errInvalidBookletGrid
 	}
 
 	return nil
