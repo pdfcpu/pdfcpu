@@ -75,13 +75,5 @@ func (f asciiHexDecode) Decode(r io.Reader) (io.Reader, error) {
 		p = append(p, '0')
 	}
 
-	// dst := make([]byte, hex.DecodedLen(len(p)))
-
 	return hex.NewDecoder(bytes.NewReader(p)), nil
-	// _, err = hex.Decode(dst, p)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// return bytes.NewBuffer(dst), nil
 }
