@@ -242,11 +242,6 @@ func ParseNUpDetails(s string, nup *NUp) error {
 		}
 	}
 
-	n := nup.Grid.Height * nup.Grid.Width
-	if nup.Orient == Booklet && !(n == 2 || n == 4) {
-		return errInvalidBookletGrid
-	}
-
 	return nil
 }
 
@@ -257,6 +252,9 @@ func PDFNUpConfig(val int, desc string) (*NUp, error) {
 		if err := ParseNUpDetails(desc, nup); err != nil {
 			return nil, err
 		}
+	}
+	if nup.Orient == Booklet && !(val == 2 || val == 4) {
+		return nup, errInvalidBookletGrid
 	}
 	return nup, ParseNUpValue(val, nup)
 }
@@ -737,7 +735,7 @@ func getPageNumber(pageNumbers []int, n int) int {
 	return pageNumbers[n]
 }
 
-func sortedSelectedPages(pages IntSet, nup *NUp) []int {
+func sortedSelectedPages(pages IntSet, nup *NUp) ([]int, IntSet) {
 	var pageNumbers []int
 	for k, v := range pages {
 		if v {
@@ -756,6 +754,7 @@ func sortedSelectedPages(pages IntSet, nup *NUp) []int {
 				nPages++
 			}
 			out := make([]int, nPages)
+			pagesToRotate := IntSet{}
 			// (output page, input page) = [(1,1), (2,n), (3, 2), (4, n-1), (5, 3), (6, n-2), ...]
 			for i := 0; i < nPages; i++ {
 				if i%2 == 0 {
@@ -763,8 +762,12 @@ func sortedSelectedPages(pages IntSet, nup *NUp) []int {
 				} else {
 					out[i] = getPageNumber(pageNumbers, nPages-1-(i-1)/2)
 				}
+				// odd output pages should be upside-down
+				if i%4 < 2 {
+					pagesToRotate[out[i]] = true
+				}
 			}
-			return out
+			return out, pagesToRotate
 		case 4:
 			nPages := len(pageNumbers)
 			rem := nPages % 8
@@ -774,6 +777,7 @@ func sortedSelectedPages(pages IntSet, nup *NUp) []int {
 				nPages += 8 - rem
 			}
 			out := make([]int, nPages)
+			pagesToRotate := IntSet{}
 			// (output page, input page) = [
 			// (1,n), (2,1), (3, n/2+1), (4, n/2-0),
 			// (5, 2), (6, n-1), (7, n/2-1), (8, n/2+2)
@@ -805,11 +809,15 @@ func sortedSelectedPages(pages IntSet, nup *NUp) []int {
 						out[i] = getPageNumber(pageNumbers, nPages/2+bookletPageNumber)
 					}
 				}
+				if i%4 >= 2 {
+					// bottom of each output page should be rotated
+					pagesToRotate[out[i]] = true
+				}
 			}
-			return out
+			return out, pagesToRotate
 		}
 	}
-	return pageNumbers
+	return pageNumbers, nil
 }
 
 func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pagesIndRef *IndirectRef) error {
@@ -818,7 +826,16 @@ func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pag
 	formsResDict := NewDict()
 	rr := rectsForGrid(nup)
 
-	for i, p := range sortedSelectedPages(selectedPages, nup) {
+	pageNumbers, pagesToRotate := sortedSelectedPages(selectedPages, nup)
+
+	if nup.Orient == Booklet {
+		// rotate pages for booklet
+		if err := RotatePages(ctx, pagesToRotate, 180); err != nil {
+			return err
+		}
+	}
+
+	for i, p := range pageNumbers {
 
 		if i > 0 && i%len(rr) == 0 {
 
@@ -834,7 +851,6 @@ func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pag
 			// this is an empty page at the end of a booklet
 			continue
 		}
-		// TODO: rotate some of the booklet pages
 
 		consolidateRes := true
 		d, inhPAttrs, err := ctx.PageDict(p, consolidateRes)
