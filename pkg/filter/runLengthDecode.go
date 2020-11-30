@@ -17,7 +17,9 @@ limitations under the License.
 package filter
 
 import (
+	"bufio"
 	"bytes"
+	"errors"
 	"io"
 	"io/ioutil"
 )
@@ -26,37 +28,50 @@ type runLengthDecode struct {
 	baseFilter
 }
 
-func (f runLengthDecode) decode(w io.ByteWriter, src []byte) {
+const eodRunLength = 0x80
 
-	for i := 0; i < len(src); {
-		b := src[i]
-		if b == 0x80 {
-			// eod
-			break
+func unexpectedEOF(err error) error {
+	if err == io.EOF {
+		return errors.New("missing EOD marker in RunLength encoded stream")
+	}
+	return err
+}
+
+func (f runLengthDecode) decode(w io.ByteWriter, src io.ByteReader) error {
+
+	for b, err := src.ReadByte(); ; b, err = src.ReadByte() {
+		// EOF is an error since we expect the EOD marker
+		if err != nil {
+			return unexpectedEOF(err)
 		}
-		i++
+		if b == eodRunLength { // eod
+			return nil
+		}
 		if b < 0x80 {
 			c := int(b) + 1
 			for j := 0; j < c; j++ {
-				w.WriteByte(src[i])
-				i++
+				nextChar, err := src.ReadByte()
+				if err != nil {
+					return unexpectedEOF(err) // EOF here is an error
+				}
+				w.WriteByte(nextChar)
 			}
 			continue
 		}
 		c := 257 - int(b)
-		for j := 0; j < c; j++ {
-			w.WriteByte(src[i])
+		nextChar, err := src.ReadByte()
+		if err != nil {
+			return unexpectedEOF(err) // EOF here is an error
 		}
-		i++
+		for j := 0; j < c; j++ {
+			w.WriteByte(nextChar)
+		}
 	}
-
-	return
 }
 
 func (f runLengthDecode) encode(w io.ByteWriter, src []byte) {
 
 	const maxLen = 0x80
-	const eod = 0x80
 
 	i := 0
 	b := src[i]
@@ -74,7 +89,7 @@ func (f runLengthDecode) encode(w io.ByteWriter, src []byte) {
 			w.WriteByte(byte(257 - c))
 			w.WriteByte(b)
 			if i == len(src) {
-				w.WriteByte(0x80)
+				w.WriteByte(eodRunLength)
 				return
 			}
 			b = src[i]
@@ -94,7 +109,7 @@ func (f runLengthDecode) encode(w io.ByteWriter, src []byte) {
 				w.WriteByte(src[start+j])
 			}
 			if i == len(src) {
-				w.WriteByte(0x80)
+				w.WriteByte(eodRunLength)
 				return
 			}
 		} else {
@@ -128,14 +143,14 @@ func (f runLengthDecode) Encode(r io.Reader) (io.Reader, error) {
 
 // Decode implements decoding for an RunLengthDecode filter.
 func (f runLengthDecode) Decode(r io.Reader) (io.Reader, error) {
+	var b bytes.Buffer
 
-	p, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, err
+	// when possible, we make sure not to read passed EOD
+	byteReader, ok := r.(io.ByteReader)
+	if !ok {
+		byteReader = bufio.NewReader(r)
 	}
 
-	var b bytes.Buffer
-	f.decode(&b, p)
-
-	return &b, nil
+	err := f.decode(&b, byteReader)
+	return &b, err
 }

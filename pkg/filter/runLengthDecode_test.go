@@ -19,6 +19,9 @@ package filter
 import (
 	"bytes"
 	"encoding/hex"
+	"io"
+	"io/ioutil"
+	"math/rand"
 	"testing"
 )
 
@@ -71,8 +74,78 @@ func TestRunLengthEncoding(t *testing.T) {
 		compare(t, enc.Bytes(), []byte(tt.enc))
 
 		var raw bytes.Buffer
-		f.decode(&raw, enc.Bytes())
+		f.decode(&raw, &enc)
 		compare(t, raw.Bytes(), []byte(tt.raw))
 	}
 
+}
+
+func TestRandom(t *testing.T) {
+	input := make([]byte, 1000)
+	_, _ = rand.Read(input)
+	fil, err := NewFilter(RunLength, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := fil.Encode(bytes.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	filtered, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	re := bytes.NewReader(filtered)
+	toRead, err := fil.Decode(re)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = ioutil.ReadAll(toRead)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	toRead, err = fil.Decode(noByteReader{data: bytes.NewReader(filtered)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = ioutil.ReadAll(toRead)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+}
+
+type noByteReader struct {
+	data io.Reader
+}
+
+func (n noByteReader) Read(p []byte) (int, error) {
+	return n.data.Read(p)
+}
+
+func TestInvalid(t *testing.T) {
+	for range [200]int{} {
+		fil, err := NewFilter(RunLength, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		input := make([]byte, 20)
+		_, _ = rand.Read(input)
+		input = bytes.ReplaceAll(input, []byte{eodRunLength}, []byte{eodRunLength - 1})
+
+		re := bytes.NewReader(input)
+		_, err = fil.Decode(re) // runLength is not lazy
+		if err == nil {
+			t.Fatalf("expected error on random data %v", input)
+		}
+
+		// try with something not implementing ByteReader
+		_, err = fil.Decode(noByteReader{data: bytes.NewReader(input)}) // runLength is not lazy
+		if err == nil {
+			t.Fatalf("expected error on random data %v", input)
+		}
+	}
 }

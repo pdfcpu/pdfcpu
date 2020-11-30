@@ -43,6 +43,10 @@ var ErrUnsupportedFilter = errors.New("pdfcpu: filter not supported")
 // Filter defines an interface for encoding/decoding PDF object streams.
 type Filter interface {
 	Encode(r io.Reader) (io.Reader, error)
+	// Decode decode the input `r`.
+	// If `r` also implements `io.ByteReader`, `Decode`
+	// does not read passed the end of the filtered data,
+	// making it possible to use it on longer data.
 	Decode(r io.Reader) (io.Reader, error)
 }
 

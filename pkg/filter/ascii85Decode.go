@@ -52,6 +52,10 @@ func (f ascii85Decode) Encode(r io.Reader) (io.Reader, error) {
 
 // Decode implements decoding for an ASCII85Decode filter.
 func (f ascii85Decode) Decode(r io.Reader) (io.Reader, error) {
+	// when possible, we make sure not to read passed EOD
+	if byteReader, ok := r.(io.ByteReader); ok {
+		r = newReacher(byteReader, []byte(eodASCII85))
+	}
 
 	p, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -66,11 +70,5 @@ func (f ascii85Decode) Decode(r io.Reader) (io.Reader, error) {
 	p = p[:len(p)-2]
 
 	decoder := ascii85.NewDecoder(bytes.NewReader(p))
-
-	buf, err := ioutil.ReadAll(decoder)
-	if err != nil {
-		return nil, err
-	}
-
-	return bytes.NewBuffer(buf), nil
+	return decoder, nil
 }

@@ -48,6 +48,10 @@ func (f asciiHexDecode) Encode(r io.Reader) (io.Reader, error) {
 
 // Decode implements decoding for an ASCIIHexDecode filter.
 func (f asciiHexDecode) Decode(r io.Reader) (io.Reader, error) {
+	// when possible, we make sure not to read passed EOD
+	if byteReader, ok := r.(io.ByteReader); ok {
+		r = newReacher(byteReader, []byte{eodHexDecode})
+	}
 
 	bb, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -71,12 +75,13 @@ func (f asciiHexDecode) Decode(r io.Reader) (io.Reader, error) {
 		p = append(p, '0')
 	}
 
-	dst := make([]byte, hex.DecodedLen(len(p)))
+	// dst := make([]byte, hex.DecodedLen(len(p)))
 
-	_, err = hex.Decode(dst, p)
-	if err != nil {
-		return nil, err
-	}
+	return hex.NewDecoder(bytes.NewReader(p)), nil
+	// _, err = hex.Decode(dst, p)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	return bytes.NewBuffer(dst), nil
+	// return bytes.NewBuffer(dst), nil
 }
