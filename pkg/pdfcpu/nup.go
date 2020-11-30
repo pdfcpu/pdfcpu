@@ -723,6 +723,14 @@ func NUpFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict
 	return wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef)
 }
 
+func getPageNumber(pageNumbers []int, n int) int {
+	if n >= len(pageNumbers) {
+		// zero represents blank page at end
+		return 0
+	}
+	return pageNumbers[n]
+}
+
 func sortedSelectedPages(pages IntSet, nup *NUp) []int {
 	var pageNumbers []int
 	for k, v := range pages {
@@ -733,21 +741,67 @@ func sortedSelectedPages(pages IntSet, nup *NUp) []int {
 	sort.Ints(pageNumbers)
 
 	if nup.Orient == Booklet {
-		nPages := len(pageNumbers)
-		out := make([]int, nPages)
 		switch nup.Grid.Height * nup.Grid.Width {
 		case 2:
+			nPages := len(pageNumbers)
+			if nPages%2 != 0 {
+				// nPages must be a multiple of 2
+				// if not, we will insert a blank page at the end
+				nPages++
+			}
+			out := make([]int, nPages)
 			// (output page, input page) = [(1,1), (2,n), (3, 2), (4, n-1), (5, 3), (6, n-2), ...]
 			for i := 0; i < nPages; i++ {
 				if i%2 == 0 {
-					out[i] = pageNumbers[i/2]
+					out[i] = getPageNumber(pageNumbers, i/2)
 				} else {
-					out[i] = pageNumbers[nPages-1-(i-1)/2]
+					out[i] = getPageNumber(pageNumbers, nPages-1-(i-1)/2)
+				}
+			}
+			return out
+		case 4:
+			nPages := len(pageNumbers)
+			rem := nPages % 8
+			if rem != 0 {
+				// nPages must be a multiple of 8
+				// if not, we will insert blank pages at the end
+				nPages += 8 - rem
+			}
+			out := make([]int, nPages)
+			// (output page, input page) = [
+			// (1,n), (2,1), (3, n/2+1), (4, n/2-0),
+			// (5, 2), (6, n-1), (7, n/2-1), (8, n/2+2)
+			// ...]
+			for i := 0; i < len(pageNumbers); i++ {
+				bookletPageNumber := i / 4
+				if bookletPageNumber%2 == 0 {
+					// front side
+					switch i % 4 {
+					case 0:
+						out[i] = getPageNumber(pageNumbers, nPages-1-bookletPageNumber)
+					case 1:
+						out[i] = getPageNumber(pageNumbers, bookletPageNumber)
+					case 2:
+						out[i] = getPageNumber(pageNumbers, nPages/2+bookletPageNumber)
+					case 3:
+						out[i] = getPageNumber(pageNumbers, nPages/2-1-bookletPageNumber)
+					}
+				} else {
+					// back side
+					switch i % 4 {
+					case 0:
+						out[i] = getPageNumber(pageNumbers, bookletPageNumber)
+					case 1:
+						out[i] = getPageNumber(pageNumbers, nPages-1-bookletPageNumber)
+					case 2:
+						out[i] = getPageNumber(pageNumbers, nPages/2-1-bookletPageNumber)
+					case 3:
+						out[i] = getPageNumber(pageNumbers, nPages/2+bookletPageNumber)
+					}
 				}
 			}
 			return out
 		}
-		// TODO: 4up booklet
 	}
 	return pageNumbers
 }
@@ -770,6 +824,11 @@ func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pag
 			buf.Reset()
 			formsResDict = NewDict()
 		}
+		if p == 0 && nup.Orient == Booklet {
+			// this is an empty page at the end of a booklet
+			continue
+		}
+		// TODO: rotate some of the booklet pages
 
 		consolidateRes := true
 		d, inhPAttrs, err := ctx.PageDict(p, consolidateRes)
