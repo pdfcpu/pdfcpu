@@ -130,6 +130,9 @@ func (o orientation) String() string {
 	case DownLeft:
 		return "down left"
 
+	case Booklet:
+		return "booklet"
+
 	}
 
 	return ""
@@ -141,6 +144,7 @@ const (
 	DownRight
 	LeftDown
 	DownLeft
+	Booklet
 )
 
 func parsePageFormatNUp(s string, nup *NUp) (err error) {
@@ -171,6 +175,8 @@ func parseOrientation(s string, nup *NUp) error {
 		nup.Orient = LeftDown
 	case "dl":
 		nup.Orient = DownLeft
+	case "booklet":
+		nup.Orient = Booklet
 	default:
 		return errors.Errorf("pdfcpu: unknown nUp orientation: %s", s)
 	}
@@ -338,7 +344,7 @@ func rectsForGrid(nup *NUp) []*Rectangle {
 
 	switch nup.Orient {
 
-	case RightDown:
+	case RightDown, Booklet:
 		for i := rows - 1; i >= 0; i-- {
 			for j := 0; j < cols; j++ {
 				llx = float64(j) * gw
@@ -716,7 +722,7 @@ func NUpFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict
 	return wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef)
 }
 
-func sortedSelectedPages(pages IntSet) []int {
+func sortedSelectedPages(pages IntSet, nup *NUp) []int {
 	var pageNumbers []int
 	for k, v := range pages {
 		if v {
@@ -724,6 +730,24 @@ func sortedSelectedPages(pages IntSet) []int {
 		}
 	}
 	sort.Ints(pageNumbers)
+
+	if nup.Orient == Booklet {
+		nPages := len(pageNumbers)
+		out := make([]int, nPages)
+		switch nup.Grid.Height * nup.Grid.Width {
+		case 2:
+			// (output page, input page) = [(1,1), (2,n), (3, 2), (4, n-1), (5, 3), (6, n-2), ...]
+			for i := 0; i < nPages; i++ {
+				if i%2 == 0 {
+					out[i] = pageNumbers[i/2]
+				} else {
+					out[i] = pageNumbers[nPages-1-(i-1)/2]
+				}
+			}
+			return out
+		}
+		// TODO: 4up booklet
+	}
 	return pageNumbers
 }
 
@@ -733,7 +757,7 @@ func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pag
 	formsResDict := NewDict()
 	rr := rectsForGrid(nup)
 
-	for i, p := range sortedSelectedPages(selectedPages) {
+	for i, p := range sortedSelectedPages(selectedPages, nup) {
 
 		if i > 0 && i%len(rr) == 0 {
 
