@@ -390,7 +390,7 @@ func rectsForGrid(nup *NUp) []*Rectangle {
 }
 
 // Calculate the matrix for transforming rectangle r1 with lower left corner in the origin into rectangle r2.
-func calcTransMatrixForRect(r1, r2 *Rectangle, image bool) matrix {
+func calcTransMatrixForRect(r1, r2 *Rectangle, image bool, rotatePageForBooklet bool) matrix {
 	var (
 		w, h   float64
 		dx, dy float64
@@ -437,9 +437,14 @@ func calcTransMatrixForRect(r1, r2 *Rectangle, image bool) matrix {
 	m1[1][1] = h
 
 	// Rotate
+	r := 0.0
+	if rotatePageForBooklet {
+		// booklet pages are rotated 180deg
+		r = math.Mod(rot+180, 360)
+	}
 	m2 := identMatrix
-	sin := math.Sin(float64(rot) * float64(degToRad))
-	cos := math.Cos(float64(rot) * float64(degToRad))
+	sin := math.Sin(float64(r) * float64(degToRad))
+	cos := math.Cos(float64(r) * float64(degToRad))
 	m2[0][0] = cos
 	m2[0][1] = sin
 	m2[1][0] = -sin
@@ -450,10 +455,22 @@ func calcTransMatrixForRect(r1, r2 *Rectangle, image bool) matrix {
 	m3[2][0] = dx
 	m3[2][1] = dy
 
-	return m1.multiply(m2).multiply(m3)
+	m := m1.multiply(m2).multiply(m3)
+	if rotatePageForBooklet {
+		// we've rotated 180deg, so we need to translate to get the old page visiible on the new page
+		if rot == 0 {
+			m[2][0] += r2.Width()
+			m[2][1] += r2.Height()
+		} else {
+			// 90 degree rotation, in addition to 180
+			m[2][0] += r2.Height()
+			m[2][1] += r2.Width()
+		}
+	}
+	return m
 }
 
-func nUpTilePDFBytes(wr io.Writer, r1, r2 *Rectangle, formResID string, nup *NUp) {
+func nUpTilePDFBytes(wr io.Writer, r1, r2 *Rectangle, formResID string, nup *NUp, rotatePageForBooklet bool) {
 	// Draw bounding box.
 	if nup.Border {
 		fmt.Fprintf(wr, "[]0 d 0.1 w %.2f %.2f m %.2f %.2f l %.2f %.2f l %.2f %.2f l s ",
@@ -464,7 +481,7 @@ func nUpTilePDFBytes(wr io.Writer, r1, r2 *Rectangle, formResID string, nup *NUp
 	// Apply margin.
 	croppedRect := r2.CroppedCopy(float64(nup.Margin))
 
-	m := calcTransMatrixForRect(r1, croppedRect, nup.ImgInputFile)
+	m := calcTransMatrixForRect(r1, croppedRect, nup.ImgInputFile, rotatePageForBooklet)
 
 	fmt.Fprintf(wr, "q %.2f %.2f %.2f %.2f %.2f %.2f cm /%s Do Q ",
 		m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1], formResID)
@@ -472,7 +489,7 @@ func nUpTilePDFBytes(wr io.Writer, r1, r2 *Rectangle, formResID string, nup *NUp
 
 func nUpImagePDFBytes(wr io.Writer, imgWidth, imgHeight int, nup *NUp, formResID string) {
 	for _, r := range rectsForGrid(nup) {
-		nUpTilePDFBytes(wr, RectForDim(float64(imgWidth), float64(imgHeight)), r, formResID, nup)
+		nUpTilePDFBytes(wr, RectForDim(float64(imgWidth), float64(imgHeight)), r, formResID, nup, false)
 	}
 }
 
@@ -720,7 +737,7 @@ func NUpFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict
 		formResID := fmt.Sprintf("Fm%d", i)
 		formsResDict.Insert(formResID, *formIndRef)
 
-		nUpTilePDFBytes(&buf, RectForDim(float64(w), float64(h)), rr[i%len(rr)], formResID, nup)
+		nUpTilePDFBytes(&buf, RectForDim(float64(w), float64(h)), rr[i%len(rr)], formResID, nup, false)
 	}
 
 	// Wrap incomplete nUp page.
@@ -735,7 +752,7 @@ func getPageNumber(pageNumbers []int, n int) int {
 	return pageNumbers[n]
 }
 
-func sortedSelectedPages(pages IntSet, nup *NUp) ([]int, IntSet) {
+func sortedSelectedPages(pages IntSet, nup *NUp) ([]int, []bool) {
 	var pageNumbers []int
 	for k, v := range pages {
 		if v {
@@ -754,7 +771,7 @@ func sortedSelectedPages(pages IntSet, nup *NUp) ([]int, IntSet) {
 				nPages++
 			}
 			out := make([]int, nPages)
-			pagesToRotate := IntSet{}
+			shouldRotate := make([]bool, nPages)
 			// (output page, input page) = [(1,1), (2,n), (3, 2), (4, n-1), (5, 3), (6, n-2), ...]
 			for i := 0; i < nPages; i++ {
 				if i%2 == 0 {
@@ -764,10 +781,10 @@ func sortedSelectedPages(pages IntSet, nup *NUp) ([]int, IntSet) {
 				}
 				// odd output pages should be upside-down
 				if i%4 < 2 {
-					pagesToRotate[out[i]] = true
+					shouldRotate[i] = true
 				}
 			}
-			return out, pagesToRotate
+			return out, shouldRotate
 		case 4:
 			nPages := len(pageNumbers)
 			rem := nPages % 8
@@ -777,7 +794,7 @@ func sortedSelectedPages(pages IntSet, nup *NUp) ([]int, IntSet) {
 				nPages += 8 - rem
 			}
 			out := make([]int, nPages)
-			pagesToRotate := IntSet{}
+			shouldRotate := make([]bool, nPages)
 			// (output page, input page) = [
 			// (1,n), (2,1), (3, n/2+1), (4, n/2-0),
 			// (5, 2), (6, n-1), (7, n/2-1), (8, n/2+2)
@@ -810,11 +827,11 @@ func sortedSelectedPages(pages IntSet, nup *NUp) ([]int, IntSet) {
 					}
 				}
 				if i%4 >= 2 {
-					// bottom of each output page should be rotated
-					pagesToRotate[out[i]] = true
+					// bottom row of each output page should be rotated
+					shouldRotate[i] = true
 				}
 			}
-			return out, pagesToRotate
+			return out, shouldRotate
 		}
 	}
 	return pageNumbers, nil
@@ -826,15 +843,7 @@ func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pag
 	formsResDict := NewDict()
 	rr := rectsForGrid(nup)
 
-	pageNumbers, pagesToRotate := sortedSelectedPages(selectedPages, nup)
-
-	if nup.Orient == Booklet {
-		// rotate pages for booklet
-		if err := RotatePages(ctx, pagesToRotate, 180); err != nil {
-			return err
-		}
-	}
-
+	pageNumbers, shouldRotatePage := sortedSelectedPages(selectedPages, nup)
 	for i, p := range pageNumbers {
 
 		if i > 0 && i%len(rr) == 0 {
@@ -889,7 +898,7 @@ func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pag
 		formsResDict.Insert(formResID, *formIndRef)
 
 		// inhPAttrs.mediaBox
-		nUpTilePDFBytes(&buf, cropBox, rr[i%len(rr)], formResID, nup)
+		nUpTilePDFBytes(&buf, cropBox, rr[i%len(rr)], formResID, nup, nup.Orient == Booklet && shouldRotatePage[i])
 	}
 
 	// Wrap incomplete nUp page.
