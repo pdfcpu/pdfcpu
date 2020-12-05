@@ -79,20 +79,21 @@ func TestNUp(t *testing.T) {
 		n             int
 		isImg         bool
 	}{
-		// Booklet on PDF
+		// Booklet (4up on ledger) on PDF
 		{"TestNUpFromPdfWithBookletLedger",
 			[]string{filepath.Join(inDir, "WaldenFull.pdf")},
 			filepath.Join(outDir, "NUpFromPDFWithBookletLedger.pdf"),
 			[]string{"1-248"},
-			"orient:booklet, papersize:LedgerP",
+			"orient:booklet, papersize:LedgerP, margin:0, border:false",
 			4,
 			false},
 
+		// Booklet (2up with rotation) on PDF
 		{"TestNUpFromPdfWithBooklet",
 			[]string{filepath.Join(inDir, "WaldenFull.pdf")},
 			filepath.Join(outDir, "NUpFromPDFWithBooklet.pdf"),
 			nil,
-			"orient:booklet",
+			"orient:booklet, margin:0, border:false",
 			2,
 			false},
 
