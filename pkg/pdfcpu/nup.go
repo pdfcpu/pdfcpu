@@ -437,9 +437,9 @@ func calcTransMatrixForRect(r1, r2 *Rectangle, image bool, rotatePageForBooklet 
 	m1[1][1] = h
 
 	// Rotate
-	r := 0.0
+	r := float64(rot)
 	if rotatePageForBooklet {
-		// booklet pages are rotated 180deg
+		// booklet pages are rotated 180deg, in addition to any aspect rotation
 		r = math.Mod(rot+180, 360)
 	}
 	m2 := identMatrix
@@ -459,12 +459,12 @@ func calcTransMatrixForRect(r1, r2 *Rectangle, image bool, rotatePageForBooklet 
 	if rotatePageForBooklet {
 		// we've rotated 180deg, so we need to translate to get the old page visiible on the new page
 		if rot == 0 {
-			m[2][0] += r2.Width()
-			m[2][1] += r2.Height()
+			m[2][0] += w * r1.Width()
+			m[2][1] += h * r1.Height()
 		} else {
 			// 90 degree rotation, in addition to 180
-			m[2][0] += r2.Height()
-			m[2][1] += r2.Width()
+			m[2][0] -= r1.Height()
+			m[2][1] += w * r2.Width()
 		}
 	}
 	return m
