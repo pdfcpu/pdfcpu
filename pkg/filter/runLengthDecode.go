@@ -19,23 +19,24 @@ package filter
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"io"
 	"io/ioutil"
+
+	"github.com/pkg/errors"
 )
+
+func unexpectedEOF(err error) error {
+	if err == io.EOF {
+		return errors.New("missing EOD marker in encoded stream")
+	}
+	return err
+}
 
 type runLengthDecode struct {
 	baseFilter
 }
 
 const eodRunLength = 0x80
-
-func unexpectedEOF(err error) error {
-	if err == io.EOF {
-		return errors.New("missing EOD marker in RunLength encoded stream")
-	}
-	return err
-}
 
 func (f runLengthDecode) decode(w io.ByteWriter, src io.ByteReader) error {
 
