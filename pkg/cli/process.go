@@ -135,3 +135,23 @@ func processPages(cmd *Command) (out []string, err error) {
 
 	return nil, nil
 }
+
+func processPageBoundaries(cmd *Command) (out []string, err error) {
+	switch cmd.Mode {
+
+	case pdfcpu.LISTBOXES:
+		out, err = ListBoxes(cmd)
+
+	case pdfcpu.ADDBOXES:
+		out, err = AddBoxes(cmd)
+
+	case pdfcpu.REMOVEBOXES:
+		out, err = RemoveBoxes(cmd)
+
+	case pdfcpu.CROP:
+		out, err = Crop(cmd)
+
+	}
+
+	return out, err
+}

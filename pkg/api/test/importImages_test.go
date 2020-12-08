@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
@@ -42,7 +43,7 @@ func testImportImages(t *testing.T, msg string, imgFiles []string, outFile, impC
 	// which overrides all other import conf parms.
 	imp := pdf.DefaultImportConfig()
 	if impConf != "" {
-		if imp, err = pdf.ParseImportDetails(impConf); err != nil {
+		if imp, err = pdf.ParseImportDetails(impConf, pdfcpu.POINTS); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	}

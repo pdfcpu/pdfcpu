@@ -33,6 +33,15 @@ func initCommandMap() {
 		attachCmdMap.register(k, v)
 	}
 
+	boxesCmdMap := newCommandMap()
+	for k, v := range map[string]command{
+		"list":   {processListBoxesCommand, nil, "", ""},
+		"add":    {processAddBoxesCommand, nil, "", ""},
+		"remove": {processRemoveBoxesCommand, nil, "", ""},
+	} {
+		boxesCmdMap.register(k, v)
+	}
+
 	portfolioCmdMap := newCommandMap()
 	for k, v := range map[string]command{
 		"list":    {processListAttachmentsCommand, nil, "", ""},
@@ -108,9 +117,11 @@ func initCommandMap() {
 
 	for k, v := range map[string]command{
 		"attachments": {nil, attachCmdMap, usageAttach, usageLongAttach},
+		"boxes":       {nil, boxesCmdMap, usageBoxes, usageLongBoxes},
 		"changeopw":   {processChangeOwnerPasswordCommand, nil, usageChangeOwnerPW, usageLongChangeUserPW},
 		"changeupw":   {processChangeUserPasswordCommand, nil, usageChangeUserPW, usageLongChangeUserPW},
 		"collect":     {processCollectCommand, nil, usageCollect, usageLongCollect},
+		"crop":        {processCropCommand, nil, usageCrop, usageLongCrop},
 		"decrypt":     {processDecryptCommand, nil, usageDecrypt, usageLongDecrypt},
 		"encrypt":     {processEncryptCommand, nil, usageEncrypt, usageLongEncrypt},
 		"extract":     {processExtractCommand, nil, usageExtract, usageLongExtract},

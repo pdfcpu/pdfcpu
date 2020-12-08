@@ -186,6 +186,7 @@ type Watermark struct {
 	FileName          string        // display pdf page or png image.
 	Page              int           // the page number of a PDF file. 0 means multistamp/multiwatermark.
 	OnTop             bool          // if true this is a STAMP else this is a WATERMARK.
+	InpUnits          DisplayUnit   // input display units.
 	Pos               anchor        // position anchor, one of tl,tc,tr,l,c,r,bl,bc,br.
 	Dx, Dy            int           // anchor offset.
 	HAlign            *HAlignment   // horizonal alignment for text watermarks.
@@ -381,50 +382,31 @@ func parseTextHorAlignment(s string, wm *Watermark) error {
 }
 
 func parsePositionAnchorWM(s string, wm *Watermark) error {
-	// Note: Reliable with non rotated pages only!
-	switch s {
-	case "tl":
-		wm.Pos = TopLeft
-	case "tc":
-		wm.Pos = TopCenter
-	case "tr":
-		wm.Pos = TopRight
-	case "l":
-		wm.Pos = Left
-	case "c":
-		wm.Pos = Center
-	case "r":
-		wm.Pos = Right
-	case "bl":
-		wm.Pos = BottomLeft
-	case "bc":
-		wm.Pos = BottomCenter
-	case "br":
-		wm.Pos = BottomRight
-	default:
-		return errors.Errorf("pdfcpu: unknown position anchor: %s", s)
+	a, err := parsePositionAnchor(s)
+	if err != nil {
+		return err
 	}
-
+	wm.Pos = a
 	return nil
 }
 
 func parsePositionOffsetWM(s string, wm *Watermark) error {
-	var err error
-
 	d := strings.Split(s, " ")
 	if len(d) != 2 {
 		return errors.Errorf("pdfcpu: illegal position offset string: need 2 numeric values, %s\n", s)
 	}
 
-	wm.Dx, err = strconv.Atoi(d[0])
+	f, err := strconv.ParseFloat(d[0], 64)
 	if err != nil {
 		return err
 	}
+	wm.Dx = int(toUserSpace(f, wm.InpUnits))
 
-	wm.Dy, err = strconv.Atoi(d[1])
+	f, err = strconv.ParseFloat(d[1], 64)
 	if err != nil {
 		return err
 	}
+	wm.Dy = int(toUserSpace(f, wm.InpUnits))
 
 	return nil
 }
@@ -651,10 +633,11 @@ func parseMargins(s string, wm *Watermark) error {
 		return errors.Errorf("pdfcpu: margins: need 1,2,3 or 4 int values, %s\n", s)
 	}
 
-	i, err := strconv.Atoi(m[0])
+	f, err := strconv.ParseFloat(m[0], 64)
 	if err != nil {
 		return err
 	}
+	i := int(toUserSpace(f, wm.InpUnits))
 
 	if len(m) == 1 {
 		wm.MLeft = i
@@ -664,10 +647,11 @@ func parseMargins(s string, wm *Watermark) error {
 		return nil
 	}
 
-	j, err := strconv.Atoi(m[1])
+	f, err = strconv.ParseFloat(m[1], 64)
 	if err != nil {
 		return err
 	}
+	j := int(toUserSpace(f, wm.InpUnits))
 
 	if len(m) == 2 {
 		wm.MTop, wm.MBot = i, i
@@ -675,10 +659,11 @@ func parseMargins(s string, wm *Watermark) error {
 		return nil
 	}
 
-	k, err := strconv.Atoi(m[2])
+	f, err = strconv.ParseFloat(m[2], 64)
 	if err != nil {
 		return err
 	}
+	k := int(toUserSpace(f, wm.InpUnits))
 
 	if len(m) == 3 {
 		wm.MTop = i
@@ -687,10 +672,12 @@ func parseMargins(s string, wm *Watermark) error {
 		return nil
 	}
 
-	l, err := strconv.Atoi(m[3])
+	f, err = strconv.ParseFloat(m[3], 64)
 	if err != nil {
 		return err
 	}
+	l := int(toUserSpace(f, wm.InpUnits))
+
 	wm.MTop = i
 	wm.MRight = j
 	wm.MBot = k
@@ -740,9 +727,10 @@ func parseBorder(s string, wm *Watermark) error {
 	return err
 }
 
-func parseWatermarkDetails(mode int, modeParm, s string, onTop bool) (*Watermark, error) {
+func parseWatermarkDetails(mode int, modeParm, s string, onTop bool, u DisplayUnit) (*Watermark, error) {
 	wm := DefaultWatermarkConfig()
 	wm.OnTop = onTop
+	wm.InpUnits = u
 
 	ss := strings.Split(s, ",")
 	if len(ss) > 0 && len(ss[0]) == 0 {
@@ -769,18 +757,18 @@ func parseWatermarkDetails(mode int, modeParm, s string, onTop bool) (*Watermark
 }
 
 // ParseTextWatermarkDetails parses a text Watermark/Stamp command string into an internal structure.
-func ParseTextWatermarkDetails(text, desc string, onTop bool) (*Watermark, error) {
-	return parseWatermarkDetails(WMText, text, desc, onTop)
+func ParseTextWatermarkDetails(text, desc string, onTop bool, u DisplayUnit) (*Watermark, error) {
+	return parseWatermarkDetails(WMText, text, desc, onTop, u)
 }
 
 // ParseImageWatermarkDetails parses a text Watermark/Stamp command string into an internal structure.
-func ParseImageWatermarkDetails(fileName, desc string, onTop bool) (*Watermark, error) {
-	return parseWatermarkDetails(WMImage, fileName, desc, onTop)
+func ParseImageWatermarkDetails(fileName, desc string, onTop bool, u DisplayUnit) (*Watermark, error) {
+	return parseWatermarkDetails(WMImage, fileName, desc, onTop, u)
 }
 
 // ParsePDFWatermarkDetails parses a text Watermark/Stamp command string into an internal structure.
-func ParsePDFWatermarkDetails(fileName, desc string, onTop bool) (*Watermark, error) {
-	return parseWatermarkDetails(WMPDF, fileName, desc, onTop)
+func ParsePDFWatermarkDetails(fileName, desc string, onTop bool, u DisplayUnit) (*Watermark, error) {
+	return parseWatermarkDetails(WMPDF, fileName, desc, onTop, u)
 }
 
 func (wm Watermark) calcMinFontSize(w float64) int {

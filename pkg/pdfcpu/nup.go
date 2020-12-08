@@ -96,6 +96,7 @@ type NUp struct {
 	ImgInputFile bool        // Process image or PDF input files.
 	Margin       int         // Cropbox for n-Up content.
 	Border       bool        // Draw bounding box.
+	InpUnits     DisplayUnit // input display units.
 }
 
 // DefaultNUpConfig returns the default NUp configuration.
@@ -156,7 +157,7 @@ func parseDimensionsNUp(s string, nup *NUp) (err error) {
 	if nup.UserDim {
 		return errors.New("pdfcpu: only one of formsize(papersize) or dimensions allowed")
 	}
-	nup.PageDim, nup.PageSize, err = parsePageDim(s)
+	nup.PageDim, nup.PageSize, err = parsePageDim(s, nup.InpUnits)
 	nup.UserDim = true
 	return err
 }
@@ -192,16 +193,16 @@ func parseElementBorder(s string, nup *NUp) error {
 }
 
 func parseElementMargin(s string, nup *NUp) error {
-	i, err := strconv.Atoi(s)
+	f, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		return err
 	}
 
-	if i < 0 {
-		return errors.New("pdfcpu: nUp margin, Please provide a positive int value")
+	if f < 0 {
+		return errors.New("pdfcpu: nUp margin, Please provide a positive value")
 	}
 
-	nup.Margin = i
+	nup.Margin = int(toUserSpace(f, nup.InpUnits))
 
 	return nil
 }

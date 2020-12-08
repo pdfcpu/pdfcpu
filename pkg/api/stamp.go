@@ -334,8 +334,8 @@ func HasWatermarksFile(inFile string, conf *pdfcpu.Configuration) (bool, error) 
 }
 
 // TextWatermark returns a text watermark configuration.
-func TextWatermark(text, desc string, onTop, update bool) (*pdfcpu.Watermark, error) {
-	wm, err := pdfcpu.ParseTextWatermarkDetails(text, desc, onTop)
+func TextWatermark(text, desc string, onTop, update bool, u pdfcpu.DisplayUnit) (*pdfcpu.Watermark, error) {
+	wm, err := pdfcpu.ParseTextWatermarkDetails(text, desc, onTop, u)
 	if err != nil {
 		return nil, err
 	}
@@ -344,8 +344,8 @@ func TextWatermark(text, desc string, onTop, update bool) (*pdfcpu.Watermark, er
 }
 
 // ImageWatermark returns an image watermark configuration.
-func ImageWatermark(fileName, desc string, onTop, update bool) (*pdfcpu.Watermark, error) {
-	wm, err := pdfcpu.ParseImageWatermarkDetails(fileName, desc, onTop)
+func ImageWatermark(fileName, desc string, onTop, update bool, u pdfcpu.DisplayUnit) (*pdfcpu.Watermark, error) {
+	wm, err := pdfcpu.ParseImageWatermarkDetails(fileName, desc, onTop, u)
 	if err != nil {
 		return nil, err
 	}
@@ -354,8 +354,8 @@ func ImageWatermark(fileName, desc string, onTop, update bool) (*pdfcpu.Watermar
 }
 
 // PDFWatermark returns a PDF watermark configuration.
-func PDFWatermark(fileName, desc string, onTop, update bool) (*pdfcpu.Watermark, error) {
-	wm, err := pdfcpu.ParsePDFWatermarkDetails(fileName, desc, onTop)
+func PDFWatermark(fileName, desc string, onTop, update bool, u pdfcpu.DisplayUnit) (*pdfcpu.Watermark, error) {
+	wm, err := pdfcpu.ParsePDFWatermarkDetails(fileName, desc, onTop, u)
 	if err != nil {
 		return nil, err
 	}
@@ -365,7 +365,11 @@ func PDFWatermark(fileName, desc string, onTop, update bool) (*pdfcpu.Watermark,
 
 // AddTextWatermarksFile adds text stamps/watermarks to all selected pages of inFile and writes the result to outFile.
 func AddTextWatermarksFile(inFile, outFile string, selectedPages []string, onTop bool, text, desc string, conf *pdfcpu.Configuration) error {
-	wm, err := TextWatermark(text, desc, onTop, false)
+	units := pdfcpu.POINTS
+	if conf != nil {
+		units = conf.Units
+	}
+	wm, err := TextWatermark(text, desc, onTop, false, units)
 	if err != nil {
 		return err
 	}
@@ -374,7 +378,11 @@ func AddTextWatermarksFile(inFile, outFile string, selectedPages []string, onTop
 
 // AddImageWatermarksFile adds image stamps/watermarks to all selected pages of inFile and writes the result to outFile.
 func AddImageWatermarksFile(inFile, outFile string, selectedPages []string, onTop bool, fileName, desc string, conf *pdfcpu.Configuration) error {
-	wm, err := ImageWatermark(fileName, desc, onTop, false)
+	units := pdfcpu.POINTS
+	if conf != nil {
+		units = conf.Units
+	}
+	wm, err := ImageWatermark(fileName, desc, onTop, false, units)
 	if err != nil {
 		return err
 	}
@@ -383,7 +391,11 @@ func AddImageWatermarksFile(inFile, outFile string, selectedPages []string, onTo
 
 // AddPDFWatermarksFile adds PDF stamps/watermarks to all selected pages of inFile and writes the result to outFile.
 func AddPDFWatermarksFile(inFile, outFile string, selectedPages []string, onTop bool, fileName, desc string, conf *pdfcpu.Configuration) error {
-	wm, err := PDFWatermark(fileName, desc, onTop, false)
+	units := pdfcpu.POINTS
+	if conf != nil {
+		units = conf.Units
+	}
+	wm, err := PDFWatermark(fileName, desc, onTop, false, units)
 	if err != nil {
 		return err
 	}
@@ -392,7 +404,11 @@ func AddPDFWatermarksFile(inFile, outFile string, selectedPages []string, onTop 
 
 // UpdateTextWatermarksFile adds text stamps/watermarks to all selected pages of inFile and writes the result to outFile.
 func UpdateTextWatermarksFile(inFile, outFile string, selectedPages []string, onTop bool, text, desc string, conf *pdfcpu.Configuration) error {
-	wm, err := TextWatermark(text, desc, onTop, true)
+	units := pdfcpu.POINTS
+	if conf != nil {
+		units = conf.Units
+	}
+	wm, err := TextWatermark(text, desc, onTop, true, units)
 	if err != nil {
 		return err
 	}
@@ -401,7 +417,11 @@ func UpdateTextWatermarksFile(inFile, outFile string, selectedPages []string, on
 
 // UpdateImageWatermarksFile adds image stamps/watermarks to all selected pages of inFile and writes the result to outFile.
 func UpdateImageWatermarksFile(inFile, outFile string, selectedPages []string, onTop bool, fileName, desc string, conf *pdfcpu.Configuration) error {
-	wm, err := ImageWatermark(fileName, desc, onTop, true)
+	units := pdfcpu.POINTS
+	if conf != nil {
+		units = conf.Units
+	}
+	wm, err := ImageWatermark(fileName, desc, onTop, true, units)
 	if err != nil {
 		return err
 	}
@@ -410,7 +430,11 @@ func UpdateImageWatermarksFile(inFile, outFile string, selectedPages []string, o
 
 // UpdatePDFWatermarksFile adds PDF stamps/watermarks to all selected pages of inFile and writes the result to outFile.
 func UpdatePDFWatermarksFile(inFile, outFile string, selectedPages []string, onTop bool, fileName, desc string, conf *pdfcpu.Configuration) error {
-	wm, err := PDFWatermark(fileName, desc, onTop, true)
+	units := pdfcpu.POINTS
+	if conf != nil {
+		units = conf.Units
+	}
+	wm, err := PDFWatermark(fileName, desc, onTop, true, units)
 	if err != nil {
 		return err
 	}
