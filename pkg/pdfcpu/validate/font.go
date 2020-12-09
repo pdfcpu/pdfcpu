@@ -348,12 +348,17 @@ func validateFontEncoding(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string,
 		return err
 	}
 
+	encodings := []string{"MacRomanEncoding", "MacExpertEncoding", "WinAnsiEncoding"}
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		encodings = append(encodings, "StandardEncoding")
+	}
+
 	switch o := o.(type) {
 
 	case pdf.Name:
 		s := o.Value()
 		validateFontEncodingName := func(s string) bool {
-			return pdf.MemberOf(s, []string{"MacRomanEncoding", "MacExpertEncoding", "WinAnsiEncoding"})
+			return pdf.MemberOf(s, encodings)
 		}
 		if !validateFontEncodingName(s) {
 			return errors.Errorf("validateFontEncoding: invalid Encoding name: %s\n", s)
