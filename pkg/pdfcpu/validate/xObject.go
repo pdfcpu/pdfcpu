@@ -745,11 +745,18 @@ func validateXObjectStreamDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
 
 	dictName := "xObjectStreamDict"
 
-	//fmt.Printf("XObjStrD: \n%s\n", sd)
+	ss := []string{"XObject"}
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		ss = append(ss, "Xobject")
+	}
 
-	_, err = validateNameEntry(xRefTable, sd.Dict, dictName, "Type", OPTIONAL, pdf.V10, func(s string) bool { return s == "XObject" })
+	n, err := validateNameEntry(xRefTable, sd.Dict, dictName, "Type", OPTIONAL, pdf.V10, func(s string) bool { return pdf.MemberOf(s, ss) })
 	if err != nil {
 		return err
+	}
+	// Repair "Xobject" to "XObject".
+	if n != nil && *n == "Xobject" {
+		sd.Dict["Type"] = pdf.Name("XObject")
 	}
 
 	required := REQUIRED
