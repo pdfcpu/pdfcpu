@@ -674,9 +674,10 @@ func validateType1FontDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 		return err
 	}
 
-	required := xRefTable.Version() >= pdf.V15 || !validateStandardType1Font((*fontName).Value())
+	fn := (*fontName).Value()
+	required := xRefTable.Version() >= pdf.V15 || !validateStandardType1Font(fn)
 	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
-		required = !validateStandardType1Font((*fontName).Value())
+		required = !validateStandardType1Font(fn) && fn != "Arial"
 	}
 	// FirstChar,  required except for standard 14 fonts. since 1.5 always required, integer
 	fc, err := validateIntegerEntry(xRefTable, d, dictName, "FirstChar", required, pdf.V10, nil)

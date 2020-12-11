@@ -1213,13 +1213,23 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 		}
 	}
 
-	// A friendly 🤢 to the devs of the HP Scanner & Printer software utility.
-	// Hack for #250: If exactly one xref subsection ensure it starts with object #0 instead #1.
+	// Ensure free object #0 if exactly one xref subsection
+	// and in one of the following weird situations:
 	if ssCount == 1 && !ctx.Exists(0) {
-		for i := 1; i <= *ctx.Size; i++ {
-			ctx.Table[i-1] = ctx.Table[i]
+		if *ctx.Size == len(ctx.Table)+1 {
+			// Hack for #262
+			// Create free object 0 from scratch if the free list head is missing.
+			g0 := FreeHeadGeneration
+			z := int64(0)
+			ctx.Table[0] = &XRefTableEntry{Free: true, Offset: &z, Generation: &g0}
+		} else {
+			// Hack for #250: A friendly 🤢 to the devs of the HP Scanner & Printer software utility.
+			// Create free object 0 by shifting down all objects by one.
+			for i := 1; i <= *ctx.Size; i++ {
+				ctx.Table[i-1] = ctx.Table[i]
+			}
+			delete(ctx.Table, *ctx.Size)
 		}
-		delete(ctx.Table, *ctx.Size)
 	}
 
 	log.Read.Println("buildXRefTableStartingAt: end")
