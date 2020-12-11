@@ -33,7 +33,7 @@ The commands are:
    collect     create custom sequence of selected pages
    decrypt     remove password protection
    encrypt     set password protection		
-   extract     extract images, fonts, content, pages, metadata
+   extract     extract images, fonts, content, pages or metadata
    fonts       install, list supported fonts, create cheat sheets
    grid        rearrange pages or images for enhanced browsing experience
    import      import/convert images to PDF
@@ -115,10 +115,11 @@ The split modes are:
                    span will be ignored.
                    Assumption: inFile contains an outline dictionary.`
 
-	usageMerge     = "usage: pdfcpu merge [-mode create|append] outFile inFile..." + generalFlags
+	usageMerge     = "usage: pdfcpu merge [-mode create|append] [-sort] outFile inFile..." + generalFlags
 	usageLongMerge = `Concatenate a sequence of PDFs/inFiles into outFile.
 
       mode ... merge mode (defaults to create)
+      sort ... sort inFiles by file name
    outFile ... output pdf file
     inFile ... a list of pdf files subject to concatenation.
     
@@ -237,7 +238,7 @@ content ... extract raw page content
        opw ... owner password
     inFile ... input pdf file`
 
-	usageEncrypt     = "usage: pdfcpu encrypt [-mode rc4|aes] [-key 40|128|256] [perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]" + generalFlags
+	usageEncrypt     = "usage: pdfcpu encrypt [-mode rc4|aes] [-key 40|128|256] [-perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]" + generalFlags
 	usageLongEncrypt = `Setup password protection based on user and owner password.
 
       mode ... algorithm (default=aes)
@@ -802,10 +803,9 @@ Examples:
 
    m(edia): {box} 
     c(rop): {box} 
-     a(rt): {box} | b(leed) | c(rop) | m(edia) | t(rim)
-   b(leed): {box} | a(rt) | c(rop) | m(edia) | t(rim)
-    t(rim): {box} | a(rt) | b(leed) | c(rop) | m(edia)
-
+     a(rt): {box} | m(edia) | c(rop) | b(leed) | t(rim)
+   b(leed): {box} | m(edia) | c(rop) | a(rt) | t(rim)
+    t(rim): {box} | m(edia) | c(rop) | a(rt) | b(leed)
 Examples: 
    pdfcpu box list in.pdf
    pdfcpu box l 'bleed,trim' in.pdf

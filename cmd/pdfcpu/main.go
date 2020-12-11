@@ -26,7 +26,7 @@ var (
 	fileStats, mode, selectedPages   string
 	upw, opw, key, perm, units, conf string
 	verbose, veryVerbose             bool
-	quiet                            bool
+	quiet, sorted                    bool
 	needStackTrace                   = true
 	cmdMap                           commandMap
 )

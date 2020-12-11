@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -220,6 +221,10 @@ func processMergeCommand(conf *pdfcpu.Configuration) {
 			continue
 		}
 		filesIn = append(filesIn, arg)
+	}
+
+	if sorted {
+		sort.Strings(filesIn)
 	}
 
 	var cmd *cli.Command

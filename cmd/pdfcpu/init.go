@@ -152,9 +152,8 @@ func initCommandMap() {
 }
 
 func initFlags() {
-	statsUsage := "optimize: a csv file for stats appending"
+	statsUsage := "optimize: create a csv file for stats"
 	flag.StringVar(&fileStats, "stats", "", statsUsage)
-	flag.StringVar(&fileStats, "s", "", statsUsage)
 
 	modeUsage := "validate: strict|relaxed; extract: image|font|content|page|meta; encrypt: rc4|aes, stamp:text|image/pdf"
 	flag.StringVar(&mode, "mode", "", modeUsage)
@@ -177,6 +176,10 @@ func initFlags() {
 
 	flag.BoolVar(&quiet, "quiet", false, "")
 	flag.BoolVar(&quiet, "q", false, "")
+
+	sortUsage := "sort files before merging"
+	flag.BoolVar(&sorted, "sort", false, sortUsage)
+	flag.BoolVar(&sorted, "s", false, sortUsage)
 
 	flag.BoolVar(&verbose, "verbose", false, "")
 	flag.BoolVar(&verbose, "v", false, "")
