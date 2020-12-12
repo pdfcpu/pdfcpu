@@ -59,98 +59,52 @@ usage: pdfcpu crop [-pages selectedPages] [-upw userpw] [-opw ownerpw] descripti
 
 ## Examples
 
-Given the following page with a sole media box [0 0 400 600]:
+Given the following page with a sole media box represented by the rectangular region [0 0 400 600]:
 
 <p align="center">
-  <img style="border-color:silver" border="1" src="resources/nup4pdf.png" height="300">
+  <img style="border-color:silver" border="1" src="resources/cr.png" height="300">
 </p>
 
 <br>
 
-Crop a 200x200 points region located in lower left corner:
+Crop a 200 x 200 points region located in lower left corner of media box:
 
 ```sh
 pdfcpu crop '[0 0 200 200]' in.pdf cropped.pdf
 ```
 
 <p align="center">
-  <img style="border-color:silver" border="1" src="resources/nup4pdf.png" height="300">
+  <img style="border-color:silver" border="1" src="resources/cr1.png" height="300">
 </p>
 
 <br>
 
-Crop a 500x500 points region located in lower left corner:
+
+Margins and offsets may be expressed in any display unit you like (po,cm,mm,in). Crop a region located in the bottom left corner of the media box with dimension expressed as relative width and height of the media box applying a horizontal/vertical offset of 1 cm:
 
 ```sh
-pdfcpu crop 'pos:ll, off:5 5, dim:25% 25%' in.pdf cropped.pdf
+pdfcpu crop -u cm 'pos:bl, off:1 1, dim:25% 25%' in.pdf cropped.pdf
 ```
 
 <p align="center">
-  <img style="border-color:silver" border="1" src="resources/nup4pdf.png" height="300">
+  <img style="border-color:silver" border="1" src="resources/cr2.png" height="300">
 </p>
 
 <br>
 
-Crop relative to media box using a 20mm margin:
+Crop relative to media box using 100 points for each of the four margins:
 
 ```sh
-pdfcpu crop -u mm '20' in.pdf cropped.pdf
+pdfcpu crop '100' in.pdf cropped.pdf
 ```
 
 <p align="center">
-  <img style="border-color:silver" border="1" src="resources/nup4pdf.png" height="300">
+  <img style="border-color:silver" border="1" src="resources/cr6.png" height="300">
 </p>
 
 <br>
 
-
-Create `out.pdf` by applying 4-up to `in.pdf`. Each page fits `4` original pages of `in.pdf` into a 2x2 grid:
+The following command would set display units to mm in order to express top, left/right and bottom margins relative to the media box defining the rectangular regions that we want to use as crop box:
 ```sh
-pdfcpu nup out.pdf 4 in.pdf
+pdfcpu crop -u mm '15 10 15' in.pdf cropped.pdf
 ```
-
-<p align="center">
-  <img style="border-color:silver" border="1" src="resources/nup4pdf.png" height="300">
-</p>
-
-<br>
-
-The output file will use the page size of the input file unless explicitly declared by a description string like so:
-```sh
-pdfcpu nup 'f:A4' out.pdf 9 in.pdf
-```
-
-<p align="center">
-  <img style="border-color:silver" border="1" src="resources/nup9pdf.png" height="300">
-</p>
-
-<br>
-
-`nup` also accepts a list of image files with the result of rendering all images
-in N-up fashion into a PDF file using the specified paper size (default=A4).
-Generate `out.pdf` using `A4 L`andscape mode where each page fits 4 images onto a 2x2 grid.
-The grid element border lines are rendered by default as well is the default margin of 3 points applied:
-
-```sh
-pdfcpu nup 'f:A4L' out.pdf 4 *.jpg *.png *.tif
-````
-
-
-<p align="center">
-  <img style="border-color:silver" border="1" src="resources/nup4img.png">
-</p>
-
-<br>
-
-A single image input file supplied will produce a single page PDF ouput file.<br>
-In the following example `logo.jpg` will be `16`-up'ed onto `out.pdf`.
-Both grid borders and margins are suppressed and the output format is `Ledger`:
-
-```sh
-pdfcpu nup 'f:Ledger, b:off, m:0' out.pdf 16 logo.jpg
-```
-
-
-<p align="center">
-  <img style="border-color:silver" border="1" src="resources/nup16img.png">
-</p>
