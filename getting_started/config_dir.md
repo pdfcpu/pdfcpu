@@ -92,4 +92,5 @@ Go-> tree
 Use the [-conf](common_flags.md) flag to set a custom config dir path.
 
 You can also use this flag to disable the usage of a config dir.
+
 This comes in handy in (serverless) environments where the default [user's config directory](https://golang.org/pkg/os/#UserConfigDir) is not defined - as long as you are not using user fonts.

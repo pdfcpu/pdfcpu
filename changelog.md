@@ -6,6 +6,7 @@ layout: default
 
 | Date      | Tag / Commit                                                                                | Description  
 |:----------|:--------------------------------------------------------------------------------------------|:------------------------------
+|2020-12-?? | v0.3.8                                                                                      |  
 |2020-11-04 | [v0.3.7](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.7)                              | Add CJKV font support, Fix #233
 |2020-09-30 | [v0.3.6](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.6)                              | Fix #218, #220-#224, #231,#232
 |           |                                                                                             | Add config dir & file
