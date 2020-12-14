@@ -4,6 +4,13 @@ layout: default
 
 # Boxes
 
-Manage page boundaries
+Manage your page boundaries.
 
-Manipulate mediaBox, cropBox, trimBox, bleedBox, artBox for selected pages.
+Manipulate
+* Media Box
+* Crop Box
+* Trim Box
+* Bleed Box
+* Art Box 
+
+for selected pages.

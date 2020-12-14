@@ -82,3 +82,9 @@ Page 1:
   MediaBox (cm) (0.00, 0.00, 21.00, 29.70) w=21.00 h=29.70 ar=0.71 (inherited)
    CropBox (cm) (0.00, 0.00, 21.00, 29.70) w=21.00 h=29.70 ar=0.71 (default)
 ```
+
+<br>
+
+## Hint
+
+The [info](../info.md) command also prints page boundaries if the *-pages* flag is present.
