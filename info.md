@@ -9,7 +9,7 @@ Print information about a PDF file and its attachments.
 ## Usage
 
 ```
-usage: pdfcpu info [-pages selectedPages] [-u(nits)] [-upw userpw] [-opw ownerpw] inFile
+usage: pdfcpu info [-pages selectedPages] [-u(nit)] [-upw userpw] [-opw ownerpw] inFile
 ```
 
 <br>
@@ -19,7 +19,7 @@ usage: pdfcpu info [-pages selectedPages] [-u(nits)] [-upw userpw] [-opw ownerpw
 | name                                    | description       | required | values
 |:----------------------------------------|:------------------|:---------|-------
 | [pages](getting_started/page_selection) | page selection    | no
-| u(units)                                | page size units   | no       |po(ints),in(ches),cm,mm
+| [u(nit)](../getting_started/common_flags.md)  | display unit| no   |po(ints),in(ches),cm,mm
 | [upw](getting_started/common_flags.md)  | user password     | no
 | [opw](getting_started/common_flags.md)  | owner password    | no
 
