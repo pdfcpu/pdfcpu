@@ -4,7 +4,11 @@ layout: default
 
 # Config Dir
 
-pdfcpu will create its configuration directory at the default [user's config directory](https://golang.org/pkg/os/#UserConfigDir) on execution of the first command.
+Generally pdfcpu does not have to be configured.
+
+Yet it uses a configuration directory for user font management and storing the default configuration in effect.
+
+pdfcpu will create this dir at the default [user's config directory](https://golang.org/pkg/os/#UserConfigDir) on execution of the first command.
 
 You can look up its location like so:
 
@@ -85,5 +89,7 @@ Go-> tree
     └── UnifontUpperMedium.gob
 ```
 
-Use the [-conf](common_flags.md) flag to set a custom config dir path. You can also use this flag to disable the usage of a config dir.
+Use the [-conf](common_flags.md) flag to set a custom config dir path.
+
+You can also use this flag to disable the usage of a config dir.
 This comes in handy in (serverless) environments where the default [user's config directory](https://golang.org/pkg/os/#UserConfigDir) is not defined - as long as you are not using user fonts.
