@@ -21,6 +21,25 @@ Please use this flag to [report a bug](https://github.com/pdfcpu/pdfcpu/issues).
 
 Disables all output to stdOut.
 
+## conf, c
+
+Set or disable [config dir](config_dir.md):
+| command | value
+|:-----------|:-----------
+| Set | path
+| Disable | disable
+
+## unit, u
+
+Set input display unit to one of:
+
+| unit | value
+|:-----------|:-----------
+| points | po(ints)
+| inches | in(ches)
+| centimetres | cm
+| millimetres | mm
+
 ## pages, p
 
 A comma separated list of expressions defining the [selected pages](page_selection.md) of a PDF input file.

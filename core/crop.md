@@ -44,13 +44,13 @@ usage: pdfcpu crop [-pages selectedPages] [-upw userpw] [-opw ownerpw] descripti
 | [v(erbose)](../getting_started/common_flags.md) | turn on logging | no
 | [vv](../getting_started/common_flags.md)      | verbose logging | no
 | [q(uiet)](../getting_started/common_flags.md)   | quiet mode      | no
-| [u(nits)](../getting_started/common_flags.md) | display units  | no
+| [u(nit)](../getting_started/common_flags.md) | display unit  | no
 
 ### Arguments
 
 | name         | description          | required
 |:-------------|:---------------------|:---------
-| [description](../getting_started/box_.md)  | cropBox configuration string | yes
+| [description](../getting_started/box.md)  | box configuration string | yes
 | inFile       | PDF input file       | yes
 | outFile      | PDF output file      | no
 
@@ -107,4 +107,12 @@ pdfcpu crop '100' in.pdf cropped.pdf
 The following command would set display units to mm in order to express top, left/right and bottom margins relative to the media box defining the rectangular regions that we want to use as crop box:
 ```sh
 pdfcpu crop -u mm '15 10 15' in.pdf cropped.pdf
+```
+
+<br>
+
+The following command uses negative margins for cropping and therefore expands the media box:
+
+```sh
+pdfcpu crop '-10' in.pdf cropped.pdf
 ```
