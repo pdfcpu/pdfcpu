@@ -19,7 +19,7 @@ usage: pdfcpu info [-pages selectedPages] [-u(nit)] [-upw userpw] [-opw ownerpw]
 | name                                    | description       | required | values
 |:----------------------------------------|:------------------|:---------|-------
 | [pages](getting_started/page_selection) | page selection    | no
-| [u(nit)](../getting_started/common_flags.md)  | display unit| no   |po(ints),in(ches),cm,mm
+| [u(nit)](getting_started/common_flags.md)  | display unit| no   |po(ints),in(ches),cm,mm
 | [upw](getting_started/common_flags.md)  | user password     | no
 | [opw](getting_started/common_flags.md)  | owner password    | no
 
