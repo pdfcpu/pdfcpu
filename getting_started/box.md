@@ -68,7 +68,6 @@ Use dim and optionally pos, off. The default position is: center.
 <br>
 
 ### Anchors for positioning
-
 |||||
 |-|-|-|-|
 |       | left | center |right

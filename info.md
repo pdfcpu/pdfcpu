@@ -4,7 +4,7 @@ layout: default
 
 # Info
 
-Print information about a PDF file.
+Print information about a PDF file and its attachments.
 
 ## Usage
 

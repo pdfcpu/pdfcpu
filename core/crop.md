@@ -32,8 +32,9 @@ usage: pdfcpu crop [-pages selectedPages] [-upw userpw] [-opw ownerpw] descripti
 | flag                             | description     | required
 |:---------------------------------|:----------------|---------
 | [p(ages)](../getting_started/page_selection) | selected pages | no
-| [opw](../getting_started/common_flags.md)      | owner password | no
 | [upw](../getting_started/common_flags.md)   | user password      | no
+| [opw](../getting_started/common_flags.md)      | owner password | no
+
 
 <br>
 

@@ -23,19 +23,21 @@ usage: pdfcpu boxes list [-pages selectedPages] [-upw userpw] [-opw ownerpw] ['b
 | flag                             | description     | required
 |:---------------------------------|:----------------|---------
 | [p(ages)](../getting_started/page_selection) | selected pages | no
-| [opw](../getting_started/common_flags.md)      | owner password | no
 | [upw](../getting_started/common_flags.md)   | user password      | no
+| [opw](../getting_started/common_flags.md)      | owner password | no
+
 
 <br>
 
 ### Common Flags
 
-| flag                             | description     | required
-|:---------------------------------|:----------------|---------
+| flag                                            | description     | required
+|:------------------------------------------------|:----------------|---------
 | [v(erbose)](../getting_started/common_flags.md) | turn on logging | no
-| [vv](../getting_started/common_flags.md)      | verbose logging | no
+| [vv](../getting_started/common_flags.md)        | verbose logging | no
 | [q(uiet)](../getting_started/common_flags.md)   | quiet mode      | no
-| [u(nit)](../getting_started/common_flags.md) | display unit  | no
+| [u(nit)](../getting_started/common_flags.md)    | display unit    | no
+
 <br>
 
 ### Arguments
