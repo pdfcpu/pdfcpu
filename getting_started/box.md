@@ -9,7 +9,7 @@ Used by the commands:
 * [boxes add](../boxes/boxes_add.md)
 * [crop](../core/crop.md)
 
-A box is a rectangular region in user space describing one of:
+A box is a rectangular region in user space describing one of PDF's page boundaries:
 
       media box:  boundaries of the physical medium on which the page is to be printed.
        crop box:  region to which the contents of the page shall be clipped (cropped) when displayed or printed.
@@ -29,11 +29,12 @@ General rules:
 
 <br>
 
-## Arbitrary rectangular region in user space using absolute positioning
+## Arbitrary rectangular region in user space
 
 | config string | description
 |:-----------|:-----------
 |'[0 10 200 150]'  | lower left corner at (0/10) and upper right corner at (200/150) or xmin:0 ymin:10 xmax:200 ymax:150
+
 <br>
 
 ## Via margins within parent box
@@ -63,6 +64,8 @@ Use dim and optionally pos, off. The default position is: center.
 |'pos:c, off:0 0, dim: 200 300 abs' |  centered, 200x300 display units
 |'pos:tl, off:5 5, dim: 50% 50% rel' | anchored to top left corner, 50% width/height of parent box, offset by 5/5 display units
 |'pos:br, off:-5 -5, dim: .5 .5 rel' | anchored to bottom right corner, 50% width/height of parent box, offset by -5/-5 display units
+
+<br>
 
 ### Anchors for positioning
 

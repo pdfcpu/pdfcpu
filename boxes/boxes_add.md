@@ -5,7 +5,9 @@ layout: default
 # Add Boxes
 
 * This command adds specific page boundaries for selected pages.
+
 * Media Box is mandatory and serves as default/parent box for Crop Box.
+
 * Crop Box serves as default/parent box for Art Box, Bleed Box and Trim Box.
 
 Have a look at some [examples](#examples).

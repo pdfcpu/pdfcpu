@@ -4,9 +4,9 @@ layout: default
 
 # List Boxes
 
-A page boundary is any of mediaBox, cropBox, trimBox, bleedBox, artBox.
+* A page boundary is any of mediaBox, cropBox, trimBox, bleedBox, artBox.
 
-This command prints a list of selected page boundaries for selected pages using the display unit
+* This command prints a list of selected page boundaries for selected pages using the display unit
 
 Have a look at some [examples](#examples).
 

@@ -4,13 +4,13 @@ layout: default
 
 # Remove Boxes
 
-This command removes selected page boundaries for selected pages.
+* This command removes selected page boundaries for selected pages.
 
-Media Box can't be removed since it is mandatory and may be inherited.
+* Media Box can't be removed since it is mandatory and may be inherited.
 
-Media Box is mandatory and serves as default/parent box for Crop Box.
+* Media Box is mandatory and serves as default/parent box for Crop Box.
 
-Crop Box serves as default/parent box for Art Box, Bleed Box and Trim Box.
+* Crop Box serves as default/parent box for Art Box, Bleed Box and Trim Box.
 
 Have a look at some [examples](#examples).
 
