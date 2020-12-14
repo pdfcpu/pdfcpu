@@ -2,7 +2,7 @@
 layout: default
 ---
 
-# Config dir
+# Config Dir
 
 pdfcpu will create its configuration directory at the default [user's config directory](https://golang.org/pkg/os/#UserConfigDir) on execution of the first command.
 

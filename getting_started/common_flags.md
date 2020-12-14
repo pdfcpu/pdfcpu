@@ -24,10 +24,11 @@ Disables all output to stdOut.
 ## conf, c
 
 Set or disable [config dir](config_dir.md):
-| command | value
+
+| command    | value
 |:-----------|:-----------
-| Set | path
-| Disable | disable
+| Set        | path
+| Disable    | disable
 
 ## unit, u
 
