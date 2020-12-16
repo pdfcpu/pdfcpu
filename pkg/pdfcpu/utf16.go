@@ -24,8 +24,12 @@ import (
 
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pkg/errors"
 )
+
+// ErrInvalidUTF16BE represents an error that gets raised for invalid UTF-16BE byte sequences.
+var ErrInvalidUTF16BE = errors.New("pdfcpu: invalid UTF-16BE detected")
 
 // IsStringUTF16BE checks a string for Big Endian byte order BOM.
 func IsStringUTF16BE(s string) bool {
@@ -51,7 +55,8 @@ func decodeUTF16String(b []byte) (string, error) {
 
 	// We only accept big endian byte order.
 	if !IsUTF16BE(b) {
-		return "", errors.Errorf("decodeUTF16String: not UTF16BE: %v\n", b)
+		log.Debug.Printf("decodeUTF16String: not UTF16BE: %v\n", b)
+		return "", ErrInvalidUTF16BE
 	}
 
 	// Strip BOM.

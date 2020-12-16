@@ -1020,9 +1020,16 @@ func headerVersion(rs io.ReadSeeker) (v *Version, eolCount int, err error) {
 	s := string(buf)
 	prefix := "%PDF-"
 
-	if len(s) < 8 || !strings.HasPrefix(s, prefix) {
+	if len(s) < 8 {
 		return nil, 0, errCorruptHeader
 	}
+
+	// Allow for leading bytes before %PDF-
+	i := strings.Index(s, prefix)
+	if i < 0 {
+		return nil, 0, errCorruptHeader
+	}
+	s = s[i:]
 
 	pdfVersion, err := PDFVersion(s[len(prefix) : len(prefix)+3])
 	if err != nil {
@@ -1034,7 +1041,7 @@ func headerVersion(rs io.ReadSeeker) (v *Version, eolCount int, err error) {
 
 	// Detect the used eol which should be 1 (0x00, 0x0D) or 2 chars (0x0D0A)long.
 	// %PDF-1.x{whiteSpace}{text}{eol} or
-	i := strings.IndexAny(s, "\x0A\x0D")
+	i = strings.IndexAny(s, "\x0A\x0D")
 	if i < 0 {
 		return nil, 0, errCorruptHeader
 	}

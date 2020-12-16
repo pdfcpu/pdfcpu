@@ -144,6 +144,12 @@ func validateDocumentInfoDict(xRefTable *pdf.XRefTable, obj pdf.Object) (hasModD
 			err = handleProperties(xRefTable, k, v)
 		}
 
+		if err == pdf.ErrInvalidUTF16BE {
+			// Hack for #264: 🤢 where iText modifies a correct UTF-16BE string
+			// and carries over the UTF16 BOM when rewriting a PDFDocEncoded string.
+			err = nil
+		}
+
 		if err != nil {
 			return false, err
 		}
