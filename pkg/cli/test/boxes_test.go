@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
@@ -34,7 +35,7 @@ func TestListBoxesCommand(t *testing.T) {
 	}
 
 	// List crop box for all pages.
-	pb, err := pdfcpu.ParseBoxList("crop")
+	pb, err := api.PageBoundariesFromBoxList("crop")
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -63,7 +64,7 @@ func TestCropCommand(t *testing.T) {
 		{"-1", pdfcpu.INCHES},
 		{"-25%", pdfcpu.POINTS},
 	} {
-		box, err := pdfcpu.ParseBox(tt.s, tt.u)
+		box, err := api.Box(tt.s, tt.u)
 		if err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
@@ -92,7 +93,7 @@ func TestAddBoxesCommand(t *testing.T) {
 		{"c:10 20, t:c, a:b, b:m", pdfcpu.POINTS},
 		{"crop:10, trim:20, art:trim", pdfcpu.POINTS},
 	} {
-		pb, err := pdfcpu.ParsePageBoundaries(tt.s, tt.u)
+		pb, err := api.PageBoundaries(tt.s, tt.u)
 		if err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
@@ -109,7 +110,7 @@ func TestAddRemoveBoxesCommand(t *testing.T) {
 	inFile := filepath.Join(inDir, "test.pdf")
 	outFile := filepath.Join(outDir, "out.pdf")
 
-	pb, err := pdfcpu.ParsePageBoundaries("crop:[0 0 100 100]", pdfcpu.POINTS)
+	pb, err := api.PageBoundaries("crop:[0 0 100 100]", pdfcpu.POINTS)
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -118,7 +119,7 @@ func TestAddRemoveBoxesCommand(t *testing.T) {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	pb, err = pdfcpu.ParseBoxList("crop")
+	pb, err = api.PageBoundariesFromBoxList("crop")
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}

@@ -25,18 +25,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// // BoxType represents one specific page boundary type.
-// type BoxType int
-
-// // The defined page boundary types.
-// const (
-// 	MediaBox BoxType = iota
-// 	CropBox
-// 	TrimBox
-// 	BleedBox
-// 	ArtBox
-// )
-
 // Box is a rectangular region in user space
 // expressed either explicitly via Rect
 // or implicitly via margins applied to the containing parent box.
@@ -178,6 +166,25 @@ func resolveBoxType(s string) (string, error) {
 	return "", errors.Errorf("pdfcpu: invalid box type: %s", s)
 }
 
+func processBox(b **Box, boxID, paramValueStr string, unit DisplayUnit) error {
+	var err error
+	if *b != nil {
+		return errors.Errorf("pdfcpu: duplicate box definition: %s", boxID)
+	}
+	// process box assignment
+	boxVal, err := resolveBoxType(paramValueStr)
+	if err == nil {
+		if boxVal == boxID {
+			return errors.Errorf("pdfcpu: invalid box self assigment: %s", boxID)
+		}
+		*b = &Box{RefBox: boxVal}
+		return nil
+	}
+	// process box definition
+	*b, err = ParseBox(paramValueStr, unit)
+	return err
+}
+
 // ParsePageBoundaries parses a list of box definitions and assignments.
 func ParsePageBoundaries(s string, unit DisplayUnit) (*PageBoundaries, error) {
 	// A sequence of box definitions/assignments:
@@ -215,73 +222,28 @@ func ParsePageBoundaries(s string, unit DisplayUnit) (*PageBoundaries, error) {
 				return nil, errors.New("pdfcpu: duplicate box definition: media")
 			}
 			// process media box definition
-			if pb.Media, err = ParseBox(paramValueStr, unit); err != nil {
-				return nil, err
-			}
+			pb.Media, err = ParseBox(paramValueStr, unit)
 
 		case "crop":
 			if pb.Crop != nil {
 				return nil, errors.New("pdfcpu: duplicate box definition: crop")
 			}
 			// process crop box definition
-			if pb.Crop, err = ParseBox(paramValueStr, unit); err != nil {
-				return nil, err
-			}
+			pb.Crop, err = ParseBox(paramValueStr, unit)
 
 		case "trim":
-			if pb.Trim != nil {
-				return nil, errors.New("pdfcpu: duplicate box definition: trim")
-			}
-			// process trim box assignment
-			boxVal, err := resolveBoxType(paramValueStr)
-			if err == nil {
-				if boxVal == "trim" {
-					return nil, errors.New("pdfcpu: invalid box self assigment: trim")
-				}
-				pb.Trim = &Box{RefBox: boxVal}
-			} else {
-				// process trim box definition
-				if pb.Trim, err = ParseBox(paramValueStr, unit); err != nil {
-					return nil, err
-				}
-			}
+			err = processBox(&pb.Trim, "trim", paramValueStr, unit)
 
 		case "bleed":
-			if pb.Bleed != nil {
-				return nil, errors.New("pdfcpu: duplicate box definition: bleed")
-			}
-			// process bleed box assignment
-			boxVal, err := resolveBoxType(paramValueStr)
-			if err == nil {
-				if boxVal == "bleed" {
-					return nil, errors.New("pdfcpu: invalid box self assigment: bleed")
-				}
-				pb.Bleed = &Box{RefBox: boxVal}
-			} else {
-				// process bleed box definition
-				if pb.Bleed, err = ParseBox(paramValueStr, unit); err != nil {
-					return nil, err
-				}
-			}
+			err = processBox(&pb.Bleed, "bleed", paramValueStr, unit)
 
 		case "art":
-			if pb.Art != nil {
-				return nil, errors.New("pdfcpu: duplicate box definition: art")
-			}
-			// process art box assignment
-			boxVal, err := resolveBoxType(paramValueStr)
-			if err == nil {
-				if boxVal == "art" {
-					return nil, errors.New("pdfcpu: invalid box self assigment: art")
-				}
-				pb.Art = &Box{RefBox: boxVal}
-			} else {
-				// process art box definition
-				if pb.Art, err = ParseBox(paramValueStr, unit); err != nil {
-					return nil, err
-				}
-			}
+			err = processBox(&pb.Art, "art", paramValueStr, unit)
 
+		}
+
+		if err != nil {
+			return nil, err
 		}
 	}
 	return pb, nil
@@ -372,32 +334,36 @@ func parseBoxBySingleMarginVal(s, s1 string, abs bool, u DisplayUnit) (*Box, err
 	return &Box{MLeft: m, MRight: m, MTop: m, MBot: m}, nil
 }
 
+func parseBoxBy2Percentages(s, s1, s2 string) (*Box, error) {
+	// 10% 40%
+	// Parse vert margin.
+	s1 = s1[:len(s1)-1]
+	if len(s1) == 0 {
+		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+	}
+	vm, err := parseBoxPercentage(s1)
+	if err != nil {
+		return nil, err
+	}
+
+	if s2[len(s2)-1] != '%' {
+		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+	}
+	// Parse hor margin.
+	s2 = s2[:len(s2)-1]
+	if len(s2) == 0 {
+		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+	}
+	hm, err := parseBoxPercentage(s2)
+	if err != nil {
+		return nil, err
+	}
+	return &Box{MLeft: hm, MRight: hm, MTop: vm, MBot: vm}, nil
+}
+
 func parseBoxBy2MarginVals(s, s1, s2 string, abs bool, u DisplayUnit) (*Box, error) {
 	if s1[len(s1)-1] == '%' {
-		// 10% 40%
-		// Parse vert margin.
-		s1 = s1[:len(s1)-1]
-		if len(s1) == 0 {
-			return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
-		}
-		vm, err := parseBoxPercentage(s1)
-		if err != nil {
-			return nil, err
-		}
-
-		if s2[len(s2)-1] != '%' {
-			return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
-		}
-		// Parse hor margin.
-		s2 = s2[:len(s2)-1]
-		if len(s2) == 0 {
-			return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
-		}
-		hm, err := parseBoxPercentage(s2)
-		if err != nil {
-			return nil, err
-		}
-		return &Box{MLeft: hm, MRight: hm, MTop: vm, MBot: vm}, nil
+		return parseBoxBy2Percentages(s, s1, s2)
 	}
 
 	// 10 5
@@ -432,51 +398,55 @@ func parseBoxBy2MarginVals(s, s1, s2 string, abs bool, u DisplayUnit) (*Box, err
 	return &Box{MLeft: hm, MRight: hm, MTop: vm, MBot: vm}, nil
 }
 
+func parseBoxBy3Percentages(s, s1, s2, s3 string) (*Box, error) {
+	// 10% 15.5% 10%
+	// Parse top margin.
+	s1 = s1[:len(s1)-1]
+	if len(s1) == 0 {
+		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+	}
+	pct, err := strconv.ParseFloat(s1, 64)
+	if err != nil {
+		return nil, err
+	}
+	tm := pct / 100
+
+	if s2[len(s2)-1] != '%' {
+		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+	}
+	// Parse hor margin.
+	s2 = s2[:len(s2)-1]
+	if len(s2) == 0 {
+		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+	}
+	hm, err := parseBoxPercentage(s2)
+	if err != nil {
+		return nil, err
+	}
+
+	if s3[len(s3)-1] != '%' {
+		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+	}
+	// Parse bottom margin.
+	s3 = s3[:len(s3)-1]
+	if len(s3) == 0 {
+		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+	}
+	pct, err = strconv.ParseFloat(s3, 64)
+	if err != nil {
+		return nil, err
+	}
+	bm := pct / 100
+	if tm+bm >= 1 {
+		return nil, errors.Errorf("pdfcpu: vertical margin overflow: %s", s)
+	}
+
+	return &Box{MLeft: hm, MRight: hm, MTop: tm, MBot: bm}, nil
+}
+
 func parseBoxBy3MarginVals(s, s1, s2, s3 string, abs bool, u DisplayUnit) (*Box, error) {
 	if s1[len(s1)-1] == '%' {
-		// 10% 15.5% 10%
-		// Parse top margin.
-		s1 = s1[:len(s1)-1]
-		if len(s1) == 0 {
-			return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
-		}
-		pct, err := strconv.ParseFloat(s1, 64)
-		if err != nil {
-			return nil, err
-		}
-		tm := pct / 100
-
-		if s2[len(s2)-1] != '%' {
-			return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
-		}
-		// Parse hor margin.
-		s2 = s2[:len(s2)-1]
-		if len(s2) == 0 {
-			return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
-		}
-		hm, err := parseBoxPercentage(s2)
-		if err != nil {
-			return nil, err
-		}
-
-		if s3[len(s3)-1] != '%' {
-			return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
-		}
-		// Parse bottom margin.
-		s3 = s3[:len(s3)-1]
-		if len(s3) == 0 {
-			return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
-		}
-		pct, err = strconv.ParseFloat(s3, 64)
-		if err != nil {
-			return nil, err
-		}
-		bm := pct / 100
-		if tm+bm >= 1 {
-			return nil, errors.Errorf("pdfcpu: vertical margin overflow: %s", s)
-		}
-
-		return &Box{MLeft: hm, MRight: hm, MTop: tm, MBot: bm}, nil
+		return parseBoxBy3Percentages(s, s1, s2, s3)
 	}
 
 	// 10 5 15 				... absolute, top:10 left,right:5 bottom:15
@@ -516,70 +486,55 @@ func parseBoxBy3MarginVals(s, s1, s2, s3 string, abs bool, u DisplayUnit) (*Box,
 	return &Box{MLeft: hm, MRight: hm, MTop: tm, MBot: bm}, nil
 }
 
+func parseBoxBy4Percentages(s, s1, s2, s3, s4 string) (*Box, error) {
+	// 10% 15.5% 10%
+	// Parse top margin.
+	s1 = s1[:len(s1)-1]
+	if len(s1) == 0 {
+		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+	}
+	pct, err := strconv.ParseFloat(s1, 64)
+	if err != nil {
+		return nil, err
+	}
+	tm := pct / 100
+
+	if s2[len(s2)-1] != '%' {
+		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+	}
+	// Parse hor margin.
+	s2 = s2[:len(s2)-1]
+	if len(s2) == 0 {
+		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+	}
+	hm, err := parseBoxPercentage(s2)
+	if err != nil {
+		return nil, err
+	}
+
+	if s3[len(s3)-1] != '%' {
+		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+	}
+	// Parse bottom margin.
+	s3 = s3[:len(s3)-1]
+	if len(s3) == 0 {
+		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+	}
+	pct, err = strconv.ParseFloat(s3, 64)
+	if err != nil {
+		return nil, err
+	}
+	bm := pct / 100
+	if tm+bm >= 1 {
+		return nil, errors.Errorf("pdfcpu: vertical margin overflow: %s", s)
+	}
+
+	return &Box{MLeft: hm, MRight: hm, MTop: tm, MBot: bm}, nil
+}
+
 func parseBoxBy4MarginVals(s, s1, s2, s3, s4 string, abs bool, u DisplayUnit) (*Box, error) {
 	if s1[len(s1)-1] == '%' {
-		// 40% 40$ 10% 10%
-		// Parse top margin.
-		s1 = s1[:len(s1)-1]
-		if len(s1) == 0 {
-			return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
-		}
-		pct, err := strconv.ParseFloat(s1, 64)
-		if err != nil {
-			return nil, err
-		}
-		tm := pct / 100
-
-		if s2[len(s2)-1] != '%' {
-			return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
-		}
-		// Parse right margin.
-		s2 = s2[:len(s2)-1]
-		if len(s2) == 0 {
-			return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
-		}
-		pct, err = strconv.ParseFloat(s2, 64)
-		if err != nil {
-			return nil, err
-		}
-		rm := pct / 100
-
-		if s3[len(s3)-1] != '%' {
-			return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
-		}
-		// Parse bottom margin.
-		s3 = s3[:len(s3)-1]
-		if len(s3) == 0 {
-			return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
-		}
-		pct, err = strconv.ParseFloat(s3, 64)
-		if err != nil {
-			return nil, err
-		}
-		bm := pct / 100
-
-		if s4[len(s4)-1] != '%' {
-			return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
-		}
-		// Parse left margin.
-		s4 = s4[:len(s4)-1]
-		if len(s4) == 0 {
-			return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
-		}
-		pct, err = strconv.ParseFloat(s4, 64)
-		if err != nil {
-			return nil, err
-		}
-		lm := pct / 100
-
-		if tm+bm >= 1 {
-			return nil, errors.Errorf("pdfcpu: vertical margin overflow: %s", s)
-		}
-		if lm+rm >= 1 {
-			return nil, errors.Errorf("pdfcpu: horizontal margin overflow: %s", s)
-		}
-
-		return &Box{MLeft: lm, MRight: rm, MTop: tm, MBot: bm}, nil
+		return parseBoxBy4Percentages(s, s1, s2, s3, s4)
 	}
 
 	// 0.4 0.4 20 20		... absolute, top:.4 right:.4 bottom:20 left:20
@@ -649,6 +604,73 @@ func parseBoxOffset(s string, b *Box, u DisplayUnit) error {
 	return nil
 }
 
+func parseBoxDimByPercentage(s, s1, s2 string, b *Box) error {
+	// 10% 40%
+	// Parse width.
+	s1 = s1[:len(s1)-1]
+	if len(s1) == 0 {
+		return errors.Errorf("pdfcpu: invalid box definition: %s", s)
+	}
+	pct, err := strconv.ParseFloat(s1, 64)
+	if err != nil {
+		return err
+	}
+	if pct <= 0 || pct >= 100 {
+		return errors.Errorf("pdfcpu: invalid percentage: %s", s)
+	}
+	w := pct / 100
+
+	if s2[len(s2)-1] != '%' {
+		return errors.Errorf("pdfcpu: invalid box definition: %s", s)
+	}
+	// Parse height.
+	s2 = s2[:len(s2)-1]
+	if len(s2) == 0 {
+		return errors.Errorf("pdfcpu: invalid box definition: %s", s)
+	}
+	pct, err = strconv.ParseFloat(s2, 64)
+	if err != nil {
+		return err
+	}
+	if pct <= 0 || pct >= 100 {
+		return errors.Errorf("pdfcpu: invalid percentage: %s", s)
+	}
+	h := pct / 100
+	b.Dim = &Dim{w, h}
+	return nil
+}
+
+func parseBoxDimWidthAndHeight(s1, s2 string, abs bool) (float64, float64, error) {
+	var (
+		w, h float64
+		err  error
+	)
+
+	w, err = strconv.ParseFloat(s1, 64)
+	if err != nil {
+		return w, h, err
+	}
+	if !abs {
+		// eg 0.25 rel (=25%)
+		if w <= 0 || w >= 1 {
+			return w, h, errors.Errorf("pdfcpu: invalid relative box width: %f must be positive < 1", w)
+		}
+	}
+
+	h, err = strconv.ParseFloat(s2, 64)
+	if err != nil {
+		return w, h, err
+	}
+	if !abs {
+		// eg 0.25 rel (=25%)
+		if h <= 0 || h >= 1 {
+			return w, h, errors.Errorf("pdfcpu: invalid relative box height: %f must be positive < 1", h)
+		}
+	}
+
+	return w, h, nil
+}
+
 func parseBoxDim(s string, b *Box, u DisplayUnit) error {
 	ss := strings.Fields(s)
 	if len(ss) != 2 && len(ss) != 3 {
@@ -665,61 +687,14 @@ func parseBoxDim(s string, b *Box, u DisplayUnit) error {
 
 	s1, s2 := ss[0], ss[1]
 	if s1[len(s1)-1] == '%' {
-		// 10% 40%
-		// Parse width.
-		s1 = s1[:len(s1)-1]
-		if len(s1) == 0 {
-			return errors.Errorf("pdfcpu: invalid box definition: %s", s)
-		}
-		pct, err := strconv.ParseFloat(s1, 64)
-		if err != nil {
-			return err
-		}
-		if pct <= 0 || pct >= 100 {
-			return errors.Errorf("pdfcpu: invalid percentage: %s", s)
-		}
-		w := pct / 100
-
-		if s2[len(s2)-1] != '%' {
-			return errors.Errorf("pdfcpu: invalid box definition: %s", s)
-		}
-		// Parse height.
-		s2 = s2[:len(s2)-1]
-		if len(s2) == 0 {
-			return errors.Errorf("pdfcpu: invalid box definition: %s", s)
-		}
-		pct, err = strconv.ParseFloat(s2, 64)
-		if err != nil {
-			return err
-		}
-		if pct <= 0 || pct >= 100 {
-			return errors.Errorf("pdfcpu: invalid percentage: %s", s)
-		}
-		h := pct / 100
-		b.Dim = &Dim{w, h}
-		return nil
+		return parseBoxDimByPercentage(s, s1, s2, b)
 	}
 
-	w, err := strconv.ParseFloat(s1, 64)
+	w, h, err := parseBoxDimWidthAndHeight(s1, s2, abs)
 	if err != nil {
 		return err
 	}
-	if !abs {
-		// eg 0.25 rel (=25%)
-		if w <= 0 || w >= 1 {
-			return errors.Errorf("pdfcpu: invalid relative box width: %f must be positive < 1", w)
-		}
-	}
-	h, err := strconv.ParseFloat(s2, 64)
-	if err != nil {
-		return err
-	}
-	if !abs {
-		// eg 0.25 rel (=25%)
-		if h <= 0 || h >= 1 {
-			return errors.Errorf("pdfcpu: invalid relative box height: %f must be positive < 1", h)
-		}
-	}
+
 	if abs {
 		w = toUserSpace(w, u)
 		h = toUserSpace(h, u)
@@ -766,6 +741,22 @@ func parseBoxByPosWithinParent(s string, ss []string, u DisplayUnit) (*Box, erro
 		return nil, errors.New("pdfcpu: missing box definition attr dim")
 	}
 	return b, nil
+}
+
+func parseBoxByMarginVals(ss []string, s string, abs bool, u DisplayUnit) (*Box, error) {
+	switch len(ss) {
+	case 1:
+		return parseBoxBySingleMarginVal(s, ss[0], abs, u)
+	case 2:
+		return parseBoxBy2MarginVals(s, ss[0], ss[1], abs, u)
+	case 3:
+		return parseBoxBy3MarginVals(s, ss[0], ss[1], ss[2], abs, u)
+	case 4:
+		return parseBoxBy4MarginVals(s, ss[0], ss[1], ss[2], ss[3], abs, u)
+	case 5:
+		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+	}
+	return nil, nil
 }
 
 // ParseBox parses a box definition.
@@ -832,25 +823,12 @@ func ParseBox(s string, u DisplayUnit) (*Box, error) {
 		ss = ss[:l]
 	}
 
-	switch len(ss) {
-	case 1:
-		return parseBoxBySingleMarginVal(s, ss[0], abs, u)
-	case 2:
-		return parseBoxBy2MarginVals(s, ss[0], ss[1], abs, u)
-	case 3:
-		return parseBoxBy3MarginVals(s, ss[0], ss[1], ss[2], abs, u)
-	case 4:
-		return parseBoxBy4MarginVals(s, ss[0], ss[1], ss[2], ss[3], abs, u)
-	case 5:
-		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
-	}
-
-	return nil, nil
+	return parseBoxByMarginVals(ss, s, abs, u)
 }
 
 // ListPageBoundaries lists page boundaries specified in wantPB for selected pages.
 func (ctx *Context) ListPageBoundaries(selectedPages IntSet, wantPB *PageBoundaries) ([]string, error) {
-	units := ctx.units()
+	unit := ctx.unit()
 	// TODO ctx.PageBoundaries(selectedPages)
 	pbs, err := ctx.PageBoundaries()
 	if err != nil {
@@ -867,7 +845,7 @@ func (ctx *Context) ListPageBoundaries(selectedPages IntSet, wantPB *PageBoundar
 			if pb.Media.Inherited {
 				s = "(inherited)"
 			}
-			ss = append(ss, fmt.Sprintf("  MediaBox (%s) %v %s", units, pb.MediaBox().Format(ctx.Units), s))
+			ss = append(ss, fmt.Sprintf("  MediaBox (%s) %v %s", unit, pb.MediaBox().Format(ctx.Unit), s))
 		}
 		if wantPB.Crop != nil {
 			s := ""
@@ -876,28 +854,28 @@ func (ctx *Context) ListPageBoundaries(selectedPages IntSet, wantPB *PageBoundar
 			} else if pb.Crop.Inherited {
 				s = "(inherited)"
 			}
-			ss = append(ss, fmt.Sprintf("   CropBox (%s) %v %s", units, pb.CropBox().Format(ctx.Units), s))
+			ss = append(ss, fmt.Sprintf("   CropBox (%s) %v %s", unit, pb.CropBox().Format(ctx.Unit), s))
 		}
 		if wantPB.Trim != nil {
 			s := ""
 			if pb.Trim == nil {
 				s = "(default)"
 			}
-			ss = append(ss, fmt.Sprintf("   TrimBox (%s) %v %s", units, pb.TrimBox().Format(ctx.Units), s))
+			ss = append(ss, fmt.Sprintf("   TrimBox (%s) %v %s", unit, pb.TrimBox().Format(ctx.Unit), s))
 		}
 		if wantPB.Bleed != nil {
 			s := ""
 			if pb.Bleed == nil {
 				s = "(default)"
 			}
-			ss = append(ss, fmt.Sprintf("  BleedBox (%s) %v %s", units, pb.BleedBox().Format(ctx.Units), s))
+			ss = append(ss, fmt.Sprintf("  BleedBox (%s) %v %s", unit, pb.BleedBox().Format(ctx.Unit), s))
 		}
 		if wantPB.Art != nil {
 			s := ""
 			if pb.Art == nil {
 				s = "(default)"
 			}
-			ss = append(ss, fmt.Sprintf("    ArtBox (%s) %v %s", units, pb.ArtBox().Format(ctx.Units), s))
+			ss = append(ss, fmt.Sprintf("    ArtBox (%s) %v %s", unit, pb.ArtBox().Format(ctx.Unit), s))
 		}
 		ss = append(ss, "")
 	}
@@ -981,6 +959,21 @@ func boxLowerLeftCorner(r *Rectangle, w, h float64, a anchor) types.Point {
 	return p
 }
 
+func boxByDim(boxName string, b *Box, d Dict, parent *Rectangle) *Rectangle {
+	w := b.Dim.Width
+	if w < 1 {
+		w *= parent.Width()
+	}
+	h := b.Dim.Height
+	if h < 1 {
+		h *= parent.Height()
+	}
+	ll := boxLowerLeftCorner(parent, w, h, b.Pos)
+	r := RectForWidthAndHeight(ll.X+float64(b.Dx), ll.Y+float64(b.Dy), w, h)
+	d.Update(boxName, r.Array())
+	return r
+}
+
 func applyBox(boxName string, b *Box, d Dict, parent *Rectangle) *Rectangle {
 	if b.Rect != nil {
 		d.Update(boxName, b.Rect.Array())
@@ -988,18 +981,7 @@ func applyBox(boxName string, b *Box, d Dict, parent *Rectangle) *Rectangle {
 	}
 
 	if b.Dim != nil {
-		w := b.Dim.Width
-		if w < 1 {
-			w *= parent.Width()
-		}
-		h := b.Dim.Height
-		if h < 1 {
-			h *= parent.Height()
-		}
-		ll := boxLowerLeftCorner(parent, w, h, b.Pos)
-		r := RectForWidthAndHeight(ll.X+float64(b.Dx), ll.Y+float64(b.Dy), w, h)
-		d.Update(boxName, r.Array())
-		return r
+		return boxByDim(boxName, b, d, parent)
 	}
 
 	mLeft, mRight, mTop, mBot := b.MLeft, b.MRight, b.MTop, b.MBot
@@ -1047,97 +1029,113 @@ type boxes struct {
 }
 
 func applyBoxDefinitions(d Dict, pb *PageBoundaries, b *boxes) {
+	parentBox := b.mediaBox
 	if pb.Media != nil {
-		fmt.Println("add mb")
-		b.mediaBox = applyBox("MediaBox", pb.Media, d, b.mediaBox)
+		//fmt.Println("add mb")
+		b.mediaBox = applyBox("MediaBox", pb.Media, d, parentBox)
 	}
 
 	if pb.Crop != nil {
-		fmt.Println("add cb")
-		b.cropBox = applyBox("CropBox", pb.Crop, d, b.mediaBox)
+		//fmt.Println("add cb")
+		b.cropBox = applyBox("CropBox", pb.Crop, d, parentBox)
 	}
 
+	if b.cropBox != nil {
+		parentBox = b.cropBox
+	}
 	if pb.Trim != nil && pb.Trim.RefBox == "" {
-		fmt.Println("add tb")
-		b.trimBox = applyBox("TrimBox", pb.Trim, d, b.cropBox)
+		//fmt.Println("add tb")
+		b.trimBox = applyBox("TrimBox", pb.Trim, d, parentBox)
 	}
 
 	if pb.Bleed != nil && pb.Bleed.RefBox == "" {
-		fmt.Println("add bb")
-		b.bleedBox = applyBox("BleedBox", pb.Bleed, d, b.cropBox)
+		//fmt.Println("add bb")
+		b.bleedBox = applyBox("BleedBox", pb.Bleed, d, parentBox)
 	}
 
 	if pb.Art != nil && pb.Art.RefBox == "" {
-		fmt.Println("add ab")
-		b.artBox = applyBox("ArtBox", pb.Art, d, b.cropBox)
+		//fmt.Println("add ab")
+		b.artBox = applyBox("ArtBox", pb.Art, d, parentBox)
 	}
+}
+
+func updateTrimBox(d Dict, trimBox *Box, b *boxes) {
+	var r *Rectangle
+	switch trimBox.RefBox {
+	case "media":
+		r = b.mediaBox
+	case "crop":
+		r = b.cropBox
+	case "bleed":
+		r = b.bleedBox
+		if r == nil {
+			r = b.cropBox
+		}
+	case "art":
+		r = b.artBox
+		if r == nil {
+			r = b.cropBox
+		}
+	}
+	d.Update("TrimBox", r.Array())
+	b.trimBox = r
+}
+
+func updateBleedBox(d Dict, bleedBox *Box, b *boxes) {
+	var r *Rectangle
+	switch bleedBox.RefBox {
+	case "media":
+		r = b.mediaBox
+	case "crop":
+		r = b.cropBox
+	case "trim":
+		r = b.trimBox
+		if r == nil {
+			r = b.cropBox
+		}
+	case "art":
+		r = b.artBox
+		if r == nil {
+			r = b.cropBox
+		}
+	}
+	d.Update("BleedBox", r.Array())
+	b.bleedBox = r
+}
+
+func updateArtBox(d Dict, artBox *Box, b *boxes) {
+	var r *Rectangle
+	switch artBox.RefBox {
+	case "media":
+		r = b.mediaBox
+	case "crop":
+		r = b.cropBox
+	case "trim":
+		r = b.trimBox
+		if r == nil {
+			r = b.cropBox
+		}
+	case "bleed":
+		r = b.bleedBox
+		if r == nil {
+			r = b.cropBox
+		}
+	}
+	d.Update("ArtBox", r.Array())
+	b.artBox = r
 }
 
 func applyBoxAssignments(d Dict, pb *PageBoundaries, b *boxes) {
 	if pb.Trim != nil && pb.Trim.RefBox != "" {
-		var r *Rectangle
-		switch pb.Trim.RefBox {
-		case "media":
-			r = b.mediaBox
-		case "crop":
-			r = b.cropBox
-		case "bleed":
-			r = b.bleedBox
-			if r == nil {
-				r = b.cropBox
-			}
-		case "art":
-			r = b.artBox
-			if r == nil {
-				r = b.cropBox
-			}
-		}
-		d.Update("TrimBox", r.Array())
-		b.trimBox = r
+		updateTrimBox(d, pb.Trim, b)
 	}
 
 	if pb.Bleed != nil && pb.Bleed.RefBox != "" {
-		var r *Rectangle
-		switch pb.Bleed.RefBox {
-		case "media":
-			r = b.mediaBox
-		case "crop":
-			r = b.cropBox
-		case "trim":
-			r = b.trimBox
-			if r == nil {
-				r = b.cropBox
-			}
-		case "art":
-			r = b.artBox
-			if r == nil {
-				r = b.cropBox
-			}
-		}
-		d.Update("BleedBox", r.Array())
-		b.bleedBox = r
+		updateBleedBox(d, pb.Bleed, b)
 	}
 
 	if pb.Art != nil && pb.Art.RefBox != "" {
-		var r *Rectangle
-		switch pb.Art.RefBox {
-		case "media":
-			r = b.mediaBox
-		case "crop":
-			r = b.cropBox
-		case "trim":
-			r = b.trimBox
-			if r == nil {
-				r = b.cropBox
-			}
-		case "bleed":
-			r = b.bleedBox
-			if r == nil {
-				r = b.cropBox
-			}
-		}
-		d.Update("ArtBox", r.Array())
-		b.artBox = r
+		updateArtBox(d, pb.Art, b)
 	}
 }
 

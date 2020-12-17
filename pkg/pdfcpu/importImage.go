@@ -65,7 +65,7 @@ var impParamMap = importParamMap{
 
 // Import represents the command details for the command "ImportImage".
 type Import struct {
-	PageDim  *Dim        // page dimensions in user units.
+	PageDim  *Dim        // page dimensions in display unit.
 	PageSize string      // one of A0,A1,A2,A3,A4(=default),A5,A6,A7,A8,Letter,Legal,Ledger,Tabloid,Executive,ANSIC,ANSID,ANSIE.
 	UserDim  bool        // true if one of dimensions or paperSize provided overriding the default.
 	DPI      int         // destination resolution to apply in dots per inch.
@@ -73,7 +73,7 @@ type Import struct {
 	Dx, Dy   int         // anchor offset.
 	Scale    float64     // relative scale factor. 0 <= x <= 1
 	ScaleAbs bool        // true for absolute scaling.
-	InpUnits DisplayUnit // input display units.
+	InpUnit  DisplayUnit // input display unit.
 }
 
 // DefaultImportConfig returns the default configuration.
@@ -83,7 +83,7 @@ func DefaultImportConfig() *Import {
 		PageSize: "A4",
 		Pos:      Full,
 		Scale:    0.5,
-		InpUnits: POINTS,
+		InpUnit:  POINTS,
 	}
 }
 
@@ -162,7 +162,7 @@ func parseDimensionsImp(s string, imp *Import) (err error) {
 	if imp.UserDim {
 		return errors.New("pdfcpu: only one of formsize(papersize) or dimensions allowed")
 	}
-	imp.PageDim, imp.PageSize, err = parsePageDim(s, imp.InpUnits)
+	imp.PageDim, imp.PageSize, err = parsePageDim(s, imp.InpUnit)
 	imp.UserDim = true
 	return err
 }
@@ -271,13 +271,13 @@ func parsePositionOffsetImp(s string, imp *Import) error {
 	if err != nil {
 		return err
 	}
-	imp.Dx = int(toUserSpace(f, imp.InpUnits))
+	imp.Dx = int(toUserSpace(f, imp.InpUnit))
 
 	f, err = strconv.ParseFloat(d[1], 64)
 	if err != nil {
 		return err
 	}
-	imp.Dy = int(toUserSpace(f, imp.InpUnits))
+	imp.Dy = int(toUserSpace(f, imp.InpUnit))
 
 	return nil
 }
@@ -300,7 +300,7 @@ func ParseImportDetails(s string, u DisplayUnit) (*Import, error) {
 	}
 
 	imp := DefaultImportConfig()
-	imp.InpUnits = u
+	imp.InpUnit = u
 
 	ss := strings.Split(s, ",")
 

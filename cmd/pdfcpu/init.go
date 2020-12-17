@@ -166,9 +166,9 @@ func initFlags() {
 	permUsage := "encrypt, perm set: none|all"
 	flag.StringVar(&perm, "perm", "none", permUsage)
 
-	unitsUsage := "info: po|in|cm|mm"
-	flag.StringVar(&units, "units", "", unitsUsage)
-	flag.StringVar(&units, "u", "", unitsUsage)
+	unitUsage := "info: po|in|cm|mm"
+	flag.StringVar(&unit, "unit", "", unitUsage)
+	flag.StringVar(&unit, "u", "", unitUsage)
 
 	selectedPagesUsage := "a comma separated list of pages or page ranges, see pdfcpu help split/extract"
 	flag.StringVar(&selectedPages, "pages", "", selectedPagesUsage)

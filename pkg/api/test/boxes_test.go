@@ -33,7 +33,8 @@ func TestListBoxes(t *testing.T) {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	pb, err := pdfcpu.ParseBoxList("crop")
+	// List crop box for all pages.
+	pb, err := api.PageBoundariesFromBoxList("crop")
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -61,7 +62,7 @@ func TestCrop(t *testing.T) {
 		{"-1", pdfcpu.INCHES},
 		{"-25%", pdfcpu.POINTS},
 	} {
-		box, err := pdfcpu.ParseBox(tt.s, tt.u)
+		box, err := api.Box(tt.s, tt.u)
 		if err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
@@ -81,6 +82,8 @@ func TestAddBoxes(t *testing.T) {
 		s string
 		u pdfcpu.DisplayUnit
 	}{
+		{"art:10%", pdfcpu.POINTS}, // When using relative positioning unit is irrelevant.
+		{"trim:10", pdfcpu.POINTS},
 		{"crop:[0 0 5 5]", pdfcpu.CENTIMETRES}, // Crop 5 x 5 cm at bottom left corner
 		{"crop:10", pdfcpu.POINTS},
 		{"crop:-10", pdfcpu.POINTS},
@@ -89,7 +92,7 @@ func TestAddBoxes(t *testing.T) {
 		{"c:10 20, t:c, a:b, b:m", pdfcpu.POINTS},
 		{"crop:10, trim:20, art:trim", pdfcpu.POINTS},
 	} {
-		pb, err := pdfcpu.ParsePageBoundaries(tt.s, tt.u)
+		pb, err := api.PageBoundaries(tt.s, tt.u)
 		if err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
@@ -105,7 +108,7 @@ func TestAddRemoveBoxes(t *testing.T) {
 	inFile := filepath.Join(inDir, "test.pdf")
 	outFile := filepath.Join(outDir, "out.pdf")
 
-	pb, err := pdfcpu.ParsePageBoundaries("crop:[0 0 100 100]", pdfcpu.POINTS)
+	pb, err := api.PageBoundaries("crop:[0 0 100 100]", pdfcpu.POINTS)
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -113,7 +116,7 @@ func TestAddRemoveBoxes(t *testing.T) {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	pb, err = pdfcpu.ParseBoxList("crop")
+	pb, err = api.PageBoundariesFromBoxList("crop")
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}

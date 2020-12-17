@@ -647,7 +647,7 @@ func addWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 		os.Exit(1)
 	}
 
-	processDiplayUnits(conf)
+	processDiplayUnit(conf)
 
 	var (
 		wm  *pdfcpu.Watermark
@@ -656,13 +656,13 @@ func addWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 
 	switch mode {
 	case "text":
-		wm, err = pdfcpu.ParseTextWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Units)
+		wm, err = pdfcpu.ParseTextWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Unit)
 
 	case "image":
-		wm, err = pdfcpu.ParseImageWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Units)
+		wm, err = pdfcpu.ParseImageWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Unit)
 
 	case "pdf":
-		wm, err = pdfcpu.ParsePDFWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Units)
+		wm, err = pdfcpu.ParsePDFWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Unit)
 	default:
 		err = errors.Errorf("unsupported wm type: %s\n", mode)
 	}
@@ -714,7 +714,7 @@ func updateWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 		os.Exit(1)
 	}
 
-	processDiplayUnits(conf)
+	processDiplayUnit(conf)
 
 	var (
 		wm  *pdfcpu.Watermark
@@ -723,13 +723,13 @@ func updateWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 
 	switch mode {
 	case "text":
-		wm, err = pdfcpu.ParseTextWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Units)
+		wm, err = pdfcpu.ParseTextWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Unit)
 
 	case "image":
-		wm, err = pdfcpu.ParseImageWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Units)
+		wm, err = pdfcpu.ParseImageWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Unit)
 
 	case "pdf":
-		wm, err = pdfcpu.ParsePDFWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Units)
+		wm, err = pdfcpu.ParsePDFWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Unit)
 	default:
 		err = errors.Errorf("unsupported wm type: %s\n", mode)
 	}
@@ -821,7 +821,7 @@ func processImportImagesCommand(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
-	processDiplayUnits(conf)
+	processDiplayUnit(conf)
 
 	var outFile string
 	outFile = flag.Arg(0)
@@ -838,7 +838,7 @@ func processImportImagesCommand(conf *pdfcpu.Configuration) {
 	}
 
 	// pdfcpu import description outFile imageFile...
-	imp, err := pdfcpu.ParseImportDetails(flag.Arg(0), conf.Units)
+	imp, err := pdfcpu.ParseImportDetails(flag.Arg(0), conf.Unit)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
@@ -1023,7 +1023,7 @@ func processNUpCommand(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
-	processDiplayUnits(conf)
+	processDiplayUnit(conf)
 
 	pages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
@@ -1042,7 +1042,7 @@ func processNUpCommand(conf *pdfcpu.Configuration) {
 		process(cli.NUpCommand(inFiles, outFile, pages, nup, conf))
 	}
 
-	nup.InpUnits = conf.Units
+	nup.InpUnit = conf.Unit
 
 	// pdfcpu nup description outFile n inFile|imageFiles...
 	if err = pdfcpu.ParseNUpDetails(flag.Arg(0), nup); err != nil {
@@ -1062,7 +1062,7 @@ func processGridCommand(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
-	processDiplayUnits(conf)
+	processDiplayUnit(conf)
 
 	pages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
@@ -1082,7 +1082,7 @@ func processGridCommand(conf *pdfcpu.Configuration) {
 		process(cli.NUpCommand(inFiles, outFile, pages, nup, conf))
 	}
 
-	nup.InpUnits = conf.Units
+	nup.InpUnit = conf.Unit
 
 	// pdfcpu grid description outFile m n inFile|imageFiles...
 	if err = pdfcpu.ParseNUpDetails(flag.Arg(0), nup); err != nil {
@@ -1096,21 +1096,21 @@ func processGridCommand(conf *pdfcpu.Configuration) {
 	process(cli.NUpCommand(inFiles, outFile, pages, nup, conf))
 }
 
-func processDiplayUnits(conf *pdfcpu.Configuration) {
-	if !pdfcpu.MemberOf(units, []string{"", "points", "po", "inches", "in", "cm", "mm"}) {
+func processDiplayUnit(conf *pdfcpu.Configuration) {
+	if !pdfcpu.MemberOf(unit, []string{"", "points", "po", "inches", "in", "cm", "mm"}) {
 		fmt.Fprintf(os.Stderr, "%s\n\n", "supported units: (po)ints, (in)ches, cm, mm")
 		os.Exit(1)
 	}
 
-	switch units {
+	switch unit {
 	case "points", "po":
-		conf.Units = pdfcpu.POINTS
+		conf.Unit = pdfcpu.POINTS
 	case "inches", "in":
-		conf.Units = pdfcpu.INCHES
+		conf.Unit = pdfcpu.INCHES
 	case "cm":
-		conf.Units = pdfcpu.CENTIMETRES
+		conf.Unit = pdfcpu.CENTIMETRES
 	case "mm":
-		conf.Units = pdfcpu.MILLIMETRES
+		conf.Unit = pdfcpu.MILLIMETRES
 	}
 }
 
@@ -1129,7 +1129,7 @@ func processInfoCommand(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
-	processDiplayUnits(conf)
+	processDiplayUnit(conf)
 
 	process(cli.InfoCommand(inFile, selectedPages, conf))
 }
@@ -1317,7 +1317,7 @@ func processListBoxesCommand(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
-	processDiplayUnits(conf)
+	processDiplayUnit(conf)
 
 	selectedPages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
@@ -1331,7 +1331,7 @@ func processListBoxesCommand(conf *pdfcpu.Configuration) {
 		process(cli.ListBoxesCommand(inFile, selectedPages, nil, conf))
 	}
 
-	pb, err := pdfcpu.ParseBoxList(flag.Arg(0))
+	pb, err := api.PageBoundariesFromBoxList(flag.Arg(0))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "problem parsing box list: %v\n", err)
 		os.Exit(1)
@@ -1349,9 +1349,9 @@ func processAddBoxesCommand(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
-	processDiplayUnits(conf)
+	processDiplayUnit(conf)
 
-	pb, err := pdfcpu.ParsePageBoundaries(flag.Arg(0), conf.Units)
+	pb, err := api.PageBoundaries(flag.Arg(0), conf.Unit)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "problem parsing page boundaries: %v\n", err)
 		os.Exit(1)
@@ -1381,7 +1381,7 @@ func processRemoveBoxesCommand(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
-	pb, err := pdfcpu.ParseBoxList(flag.Arg(0))
+	pb, err := api.PageBoundariesFromBoxList(flag.Arg(0))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "problem parsing box list: %v\n", err)
 		os.Exit(1)
@@ -1420,9 +1420,9 @@ func processCropCommand(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
-	processDiplayUnits(conf)
+	processDiplayUnit(conf)
 
-	box, err := pdfcpu.ParseBox(flag.Arg(0), conf.Units)
+	box, err := api.Box(flag.Arg(0), conf.Unit)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "problem parsing box definition: %v\n", err)
 		os.Exit(1)

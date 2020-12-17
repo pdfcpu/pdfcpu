@@ -16,7 +16,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-
 package pdfcpu
 
 import (
@@ -37,7 +36,7 @@ type configuration struct {
 	EncryptUsingAES   bool   `yaml:"encryptUsingAES"`
 	EncryptKeyLength  int    `yaml:"encryptKeyLength"`
 	Permissions       int    `yaml:"permissions"`
-	Units             string `yaml:"units"`
+	Unit              string `yaml:"unit"`
 }
 
 func loadedConfig(c configuration, configPath string) *Configuration {
@@ -70,15 +69,15 @@ func loadedConfig(c configuration, configPath string) *Configuration {
 		conf.Eol = EolCRLF
 	}
 
-	switch c.Units {
+	switch c.Unit {
 	case "points":
-		conf.Units = POINTS
+		conf.Unit = POINTS
 	case "inches":
-		conf.Units = INCHES
+		conf.Unit = INCHES
 	case "cm":
-		conf.Units = CENTIMETRES
+		conf.Unit = CENTIMETRES
 	case "mm":
-		conf.Units = MILLIMETRES
+		conf.Unit = MILLIMETRES
 	}
 
 	return &conf
@@ -99,11 +98,11 @@ func parseConfigFile(r io.Reader, configPath string) error {
 	if !MemberOf(c.Eol, []string{"EolLF", "EolCR", "EolCRLF"}) {
 		return errors.Errorf("invalid eol: %s", c.Eol)
 	}
-	if !MemberOf(c.Units, []string{"points", "inches", "cm", "mm"}) {
-		errors.Errorf("invalid units: %s", c.Units)
+	if !MemberOf(c.Unit, []string{"points", "inches", "cm", "mm"}) {
+		errors.Errorf("invalid unit: %s", c.Unit)
 	}
 	if !IntMemberOf(c.EncryptKeyLength, []int{40, 128, 256}) {
-		return errors.Errorf("encryptKeyLength possible values: 40, 128, 256, got: %s", c.Units)
+		return errors.Errorf("encryptKeyLength possible values: 40, 128, 256, got: %s", c.Unit)
 	}
 	loadedDefaultConfig = loadedConfig(c, configPath)
 	return nil

@@ -156,9 +156,9 @@ func (ctx *Context) String() string {
 	return strings.Join(logStr, "")
 }
 
-func (ctx *Context) units() string {
+func (ctx *Context) unit() string {
 	u := "points"
-	switch ctx.Units {
+	switch ctx.Unit {
 	case INCHES:
 		u = "inches"
 	case CENTIMETRES:
@@ -169,8 +169,8 @@ func (ctx *Context) units() string {
 	return u
 }
 
-func (ctx *Context) convertToUnits(d Dim) Dim {
-	switch ctx.Units {
+func (ctx *Context) convertToUnit(d Dim) Dim {
+	switch ctx.Unit {
 	case INCHES:
 		return d.ToInches()
 	case CENTIMETRES:
@@ -400,7 +400,7 @@ type OptimizationContext struct {
 	DuplicateInfoObjects IntSet // Possible result of manual info dict modification.
 	NonReferencedObjs    []int  // Objects that are not referenced.
 
-	FixTable  map[int]bool // map for visited objects during xreftable traversal for fixing references to free objects.
+	Cache     map[int]bool // For visited objects during optimization.
 	NullObjNr *int         // objNr of a regular null object, to be used for fixing references to free objects.
 }
 
@@ -414,7 +414,7 @@ func newOptimizationContext() *OptimizationContext {
 		DuplicateImages:      map[int]*StreamDict{},
 		DuplicateImageObjs:   IntSet{},
 		DuplicateInfoObjects: IntSet{},
-		FixTable:             map[int]bool{},
+		Cache:                map[int]bool{},
 	}
 }
 

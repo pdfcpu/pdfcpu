@@ -235,9 +235,9 @@ func (r Rectangle) formatToMillimetres() string {
 		r.AspectRatio())
 }
 
-// Format returns r's details converted into units.
-func (r Rectangle) Format(units DisplayUnit) string {
-	switch units {
+// Format returns r's details converted into unit.
+func (r Rectangle) Format(unit DisplayUnit) string {
+	switch unit {
 	case INCHES:
 		return r.formatToInches()
 	case CENTIMETRES:
@@ -429,7 +429,7 @@ func (ir IndirectRef) Equals(indRef IndirectRef) bool {
 // DisplayUnit is the metric unit used to output paper sizes.
 type DisplayUnit int
 
-// The available display units.
+// Options for display unit in effect.
 const (
 	POINTS DisplayUnit = iota
 	INCHES
@@ -447,8 +447,8 @@ const (
 	mmToUserSpace   = 1 / userSpaceToMm
 )
 
-func toUserSpace(f float64, units DisplayUnit) float64 {
-	switch units {
+func toUserSpace(f float64, unit DisplayUnit) float64 {
+	switch unit {
 	case INCHES:
 		return f * inchToUserSpace
 	case CENTIMETRES:

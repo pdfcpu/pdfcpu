@@ -186,7 +186,7 @@ type Watermark struct {
 	FileName          string        // display pdf page or png image.
 	Page              int           // the page number of a PDF file. 0 means multistamp/multiwatermark.
 	OnTop             bool          // if true this is a STAMP else this is a WATERMARK.
-	InpUnits          DisplayUnit   // input display units.
+	InpUnit           DisplayUnit   // input display unit.
 	Pos               anchor        // position anchor, one of tl,tc,tr,l,c,r,bl,bc,br.
 	Dx, Dy            int           // anchor offset.
 	HAlign            *HAlignment   // horizonal alignment for text watermarks.
@@ -400,13 +400,13 @@ func parsePositionOffsetWM(s string, wm *Watermark) error {
 	if err != nil {
 		return err
 	}
-	wm.Dx = int(toUserSpace(f, wm.InpUnits))
+	wm.Dx = int(toUserSpace(f, wm.InpUnit))
 
 	f, err = strconv.ParseFloat(d[1], 64)
 	if err != nil {
 		return err
 	}
-	wm.Dy = int(toUserSpace(f, wm.InpUnits))
+	wm.Dy = int(toUserSpace(f, wm.InpUnit))
 
 	return nil
 }
@@ -637,7 +637,7 @@ func parseMargins(s string, wm *Watermark) error {
 	if err != nil {
 		return err
 	}
-	i := int(toUserSpace(f, wm.InpUnits))
+	i := int(toUserSpace(f, wm.InpUnit))
 
 	if len(m) == 1 {
 		wm.MLeft = i
@@ -651,7 +651,7 @@ func parseMargins(s string, wm *Watermark) error {
 	if err != nil {
 		return err
 	}
-	j := int(toUserSpace(f, wm.InpUnits))
+	j := int(toUserSpace(f, wm.InpUnit))
 
 	if len(m) == 2 {
 		wm.MTop, wm.MBot = i, i
@@ -663,7 +663,7 @@ func parseMargins(s string, wm *Watermark) error {
 	if err != nil {
 		return err
 	}
-	k := int(toUserSpace(f, wm.InpUnits))
+	k := int(toUserSpace(f, wm.InpUnit))
 
 	if len(m) == 3 {
 		wm.MTop = i
@@ -676,7 +676,7 @@ func parseMargins(s string, wm *Watermark) error {
 	if err != nil {
 		return err
 	}
-	l := int(toUserSpace(f, wm.InpUnits))
+	l := int(toUserSpace(f, wm.InpUnit))
 
 	wm.MTop = i
 	wm.MRight = j
@@ -730,7 +730,7 @@ func parseBorder(s string, wm *Watermark) error {
 func parseWatermarkDetails(mode int, modeParm, s string, onTop bool, u DisplayUnit) (*Watermark, error) {
 	wm := DefaultWatermarkConfig()
 	wm.OnTop = onTop
-	wm.InpUnits = u
+	wm.InpUnit = u
 
 	ss := strings.Split(s, ",")
 	if len(ss) > 0 && len(ss[0]) == 0 {
@@ -1774,6 +1774,39 @@ func patchFirstContentForWM(sd *StreamDict) error {
 	return sd.Encode()
 }
 
+func (ctx *Context) createResourcesForWMMap(m map[int]*Watermark, ocgIndRef, extGStateIndRef *IndirectRef, onTop bool, opacity float64) (map[string]*[]int, error) {
+	fm := map[string]*[]int{}
+	for i, wm := range m {
+		wm.ocg = ocgIndRef
+		wm.extGState = extGStateIndRef
+		wm.OnTop = onTop
+		wm.Opacity = opacity
+		if wm.isText() {
+			if font.IsUserFont(wm.FontName) {
+				// Dummy call in order to setup used glyphs.
+				WriteMultiLine(new(bytes.Buffer), RectForFormat("A4"), nil, setupTextDescriptor(wm))
+			}
+			ii, found := fm[wm.FontName]
+			if !found {
+				fm[wm.FontName] = &[]int{i}
+			} else {
+				*ii = append(*ii, i)
+			}
+			continue
+		}
+		if wm.isImage() {
+			if err := ctx.createImageResForWM(wm); err != nil {
+				return nil, err
+			}
+			continue
+		}
+		if err := ctx.createPDFResForWM(wm); err != nil {
+			return nil, err
+		}
+	}
+	return fm, nil
+}
+
 // AddWatermarksMap adds watermarks in m to corresponding pages.
 func (ctx *Context) AddWatermarksMap(m map[int]*Watermark) error {
 	var (
@@ -1796,35 +1829,9 @@ func (ctx *Context) AddWatermarksMap(m map[int]*Watermark) error {
 		return err
 	}
 
-	fm := map[string]*[]int{}
-
-	for i, wm := range m {
-		wm.ocg = ocgIndRef
-		wm.extGState = extGStateIndRef
-		wm.OnTop = onTop
-		wm.Opacity = opacity
-		if wm.isText() {
-			if font.IsUserFont(wm.FontName) {
-				// Dummy call in order to setup used glyphs.
-				WriteMultiLine(new(bytes.Buffer), RectForFormat("A4"), nil, setupTextDescriptor(wm))
-			}
-			ii, found := fm[wm.FontName]
-			if !found {
-				fm[wm.FontName] = &[]int{i}
-			} else {
-				*ii = append(*ii, i)
-			}
-			continue
-		}
-		if wm.isImage() {
-			if err := ctx.createImageResForWM(wm); err != nil {
-				return err
-			}
-			continue
-		}
-		if err := ctx.createPDFResForWM(wm); err != nil {
-			return err
-		}
+	fm, err := ctx.createResourcesForWMMap(m, ocgIndRef, extGStateIndRef, onTop, opacity)
+	if err != nil {
+		return err
 	}
 
 	for k, v := range fm {

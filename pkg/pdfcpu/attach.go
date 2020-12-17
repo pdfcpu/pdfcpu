@@ -51,6 +51,44 @@ func decodeFileSpecStreamDict(sd *StreamDict, id string) error {
 	return sd.Decode()
 }
 
+func fileSpectStreamFileName(xRefTable *XRefTable, d Dict) (string, error) {
+	o, found := d.Find("UF")
+	if found {
+		fileName, err := xRefTable.DereferenceStringOrHexLiteral(o, V10, nil)
+		return fileName, err
+	}
+
+	o, found = d.Find("F")
+	if !found {
+		return "", errors.New("")
+	}
+
+	fileName, err := xRefTable.DereferenceStringOrHexLiteral(o, V10, nil)
+	return fileName, err
+}
+
+func fileSpecStreamDict(xRefTable *XRefTable, d Dict) (*StreamDict, error) {
+	// Entry EF is a dict holding a stream dict in entry F.
+	o, found := d.Find("EF")
+	if !found || o == nil {
+		return nil, nil
+	}
+
+	d, err := xRefTable.DereferenceDict(o)
+	if err != nil || o == nil {
+		return nil, err
+	}
+
+	// Entry F holds the embedded file's data.
+	o, found = d.Find("F")
+	if !found || o == nil {
+		return nil, nil
+	}
+
+	sd, _, err := xRefTable.DereferenceStreamDict(o)
+	return sd, err
+}
+
 func fileSpecStreamDictInfo(xRefTable *XRefTable, id string, o Object, decode bool) (*StreamDict, string, string, *time.Time, error) {
 	d, err := xRefTable.DereferenceDict(o)
 	if err != nil {
@@ -66,44 +104,14 @@ func fileSpecStreamDictInfo(xRefTable *XRefTable, id string, o Object, decode bo
 		}
 	}
 
-	var fileName string
-	o, found = d.Find("UF")
-	if found {
-		fileName, err = xRefTable.DereferenceStringOrHexLiteral(o, V10, nil)
-		if err != nil {
-			return nil, "", "", nil, err
-		}
-	} else {
-		o, found = d.Find("F")
-		if !found {
-			return nil, "", "", nil, errors.New("")
-		}
-		fileName, err = xRefTable.DereferenceStringOrHexLiteral(o, V10, nil)
-		if err != nil {
-			return nil, "", "", nil, err
-		}
+	fileName, err := fileSpectStreamFileName(xRefTable, d)
+	if err != nil {
+		return nil, "", "", nil, err
 	}
 
-	// Entry EF is a dict holding a stream dict in entry F.
-	o, found = d.Find("EF")
-	if !found || o == nil {
-		return nil, desc, fileName, nil, nil
-	}
-
-	d, err = xRefTable.DereferenceDict(o)
-	if err != nil || o == nil {
-		return nil, desc, fileName, nil, err
-	}
-
-	// Entry F holds the embedded file's data.
-	o, found = d.Find("F")
-	if !found || o == nil {
-		return nil, desc, fileName, nil, nil
-	}
-
-	sd, _, err := xRefTable.DereferenceStreamDict(o)
-	if err != nil || sd == nil {
-		return nil, desc, fileName, nil, err
+	sd, err := fileSpecStreamDict(xRefTable, d)
+	if err != nil {
+		return nil, "", "", nil, err
 	}
 
 	var modDate *time.Time
@@ -191,6 +199,7 @@ func (ctx *Context) AddAttachment(a Attachment, useCollection bool) error {
 
 var errContentMatch = errors.New("name tree content match")
 
+// SearchEmbeddedFilesNameTreeNodeByContent tries to identify a name tree by content.
 func (ctx *Context) SearchEmbeddedFilesNameTreeNodeByContent(s string) (*string, Object, error) {
 
 	var (
@@ -223,6 +232,44 @@ func (ctx *Context) SearchEmbeddedFilesNameTreeNodeByContent(s string) (*string,
 	return nil, nil, nil
 }
 
+func (ctx *Context) removeAttachment(id string) (bool, error) {
+	log.CLI.Printf("removing %s\n", id)
+	xRefTable := ctx.XRefTable
+	// EmbeddedFiles name tree containing at least one key value pair.
+	empty, ok, err := xRefTable.Names["EmbeddedFiles"].Remove(xRefTable, id)
+	if err != nil {
+		return false, err
+	}
+	if empty {
+		// Delete name tree root object.
+		if err := xRefTable.RemoveEmbeddedFilesNameTree(); err != nil {
+			return false, err
+		}
+	}
+	if !ok {
+		// Try to identify name tree node by content.
+		k, _, err := ctx.SearchEmbeddedFilesNameTreeNodeByContent(id)
+		if err != nil {
+			return false, err
+		}
+		if k == nil {
+			log.CLI.Printf("attachment %s not found", id)
+			return false, nil
+		}
+		empty, _, err = xRefTable.Names["EmbeddedFiles"].Remove(xRefTable, *k)
+		if err != nil {
+			return false, err
+		}
+		if empty {
+			// Delete name tree root object.
+			if err := xRefTable.RemoveEmbeddedFilesNameTree(); err != nil {
+				return false, err
+			}
+		}
+	}
+	return true, nil
+}
+
 // RemoveAttachments removes attachments with given id and returns true if anything removed.
 func (ctx *Context) RemoveAttachments(ids []string) (bool, error) {
 	// Note: Any remove operation may be deleting the only key value pair of this name tree.
@@ -246,40 +293,13 @@ func (ctx *Context) RemoveAttachments(ids []string) (bool, error) {
 	}
 
 	for _, id := range ids {
-		log.CLI.Printf("removing %s\n", id)
-		// EmbeddedFiles name tree containing at least one key value pair.
-		empty, ok, err := xRefTable.Names["EmbeddedFiles"].Remove(xRefTable, id)
+		found, err := ctx.removeAttachment(id)
 		if err != nil {
 			return false, err
 		}
-		if empty {
-			// Delete name tree root object.
-			if err := xRefTable.RemoveEmbeddedFilesNameTree(); err != nil {
-				return false, err
-			}
+		if !found {
+			return false, nil
 		}
-		if !ok {
-			// Try to identify name tree node by content.
-			k, _, err := ctx.SearchEmbeddedFilesNameTreeNodeByContent(id)
-			if err != nil {
-				return false, err
-			}
-			if k == nil {
-				log.CLI.Printf("attachment %s not found", id)
-				return false, nil
-			}
-			empty, _, err = xRefTable.Names["EmbeddedFiles"].Remove(xRefTable, *k)
-			if err != nil {
-				return false, err
-			}
-			if empty {
-				// Delete name tree root object.
-				if err := xRefTable.RemoveEmbeddedFilesNameTree(); err != nil {
-					return false, err
-				}
-			}
-		}
-
 	}
 
 	return true, nil

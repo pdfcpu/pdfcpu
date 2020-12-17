@@ -165,10 +165,95 @@ func (ctx *Context) writeDocumentInfoDict() error {
 	return nil
 }
 
+func appendEqualMediaAndCropBoxInfo(ss *[]string, pb PageBoundaries, unit string, currUnit DisplayUnit) {
+	mb := pb.MediaBox()
+	tb := pb.TrimBox()
+	bb := pb.BleedBox()
+	ab := pb.ArtBox()
+	s := " = CropBox"
+
+	if tb == nil || tb.equals(*mb) {
+		s += ", TrimBox"
+	}
+	if bb == nil || bb.equals(*mb) {
+		s += ", BleedBox"
+	}
+	if ab == nil || ab.equals(*mb) {
+		s += ", ArtBox"
+	}
+
+	*ss = append(*ss, fmt.Sprintf("  MediaBox (%s) %v %s", unit, mb.Format(currUnit), s))
+
+	if tb != nil && !tb.equals(*mb) {
+		*ss = append(*ss, fmt.Sprintf("   TrimBox (%s) %v", unit, tb.Format(currUnit)))
+	}
+	if bb != nil && !bb.equals(*mb) {
+		*ss = append(*ss, fmt.Sprintf("  BleedBox (%s) %v", unit, bb.Format(currUnit)))
+	}
+	if ab != nil && !ab.equals(*mb) {
+		*ss = append(*ss, fmt.Sprintf("    ArtBox (%s) %v", unit, ab.Format(currUnit)))
+	}
+}
+
+func trimBleedArtBoxString(cb, tb, bb, ab *Rectangle) string {
+	s := ""
+	if tb == nil || tb.equals(*cb) {
+		s += "= TrimBox"
+	}
+	if bb == nil || bb.equals(*cb) {
+		if len(s) == 0 {
+			s += "= "
+		} else {
+			s += ", "
+		}
+		s += "BleedBox"
+	}
+	if ab == nil || ab.equals(*cb) {
+		if len(s) == 0 {
+			s += "= "
+		} else {
+			s += ", "
+		}
+		s += "ArtBox"
+	}
+	return s
+}
+
+func appendNotEqualMediaAndCropBoxInfo(ss *[]string, pb PageBoundaries, unit string, currUnit DisplayUnit) {
+	mb := pb.MediaBox()
+	cb := pb.CropBox()
+	tb := pb.TrimBox()
+	bb := pb.BleedBox()
+	ab := pb.ArtBox()
+
+	s := trimBleedArtBoxString(cb, tb, bb, ab)
+	*ss = append(*ss, fmt.Sprintf("   CropBox (%s) %v %s", unit, cb.Format(currUnit), s))
+
+	if tb != nil && !tb.equals(*mb) && !tb.equals(*cb) {
+		*ss = append(*ss, fmt.Sprintf("   TrimBox (%s) %v", unit, tb.Format(currUnit)))
+	}
+	if bb != nil && !bb.equals(*mb) && !bb.equals(*cb) {
+		*ss = append(*ss, fmt.Sprintf("  BleedBox (%s) %v", unit, bb.Format(currUnit)))
+	}
+	if ab != nil && !ab.equals(*mb) && !ab.equals(*cb) {
+		*ss = append(*ss, fmt.Sprintf("    ArtBox (%s) %v", unit, ab.Format(currUnit)))
+	}
+}
+
+func appendPageBoxesInfo(ss *[]string, pb PageBoundaries, unit string, currUnit DisplayUnit, i int) {
+	*ss = append(*ss, fmt.Sprintf("Page %d:", i+1))
+	mb := pb.MediaBox()
+	cb := pb.CropBox()
+	if cb == nil || mb.equals(*cb) {
+		appendEqualMediaAndCropBoxInfo(ss, pb, unit, currUnit)
+		return
+	}
+	appendNotEqualMediaAndCropBoxInfo(ss, pb, unit, currUnit)
+}
+
 func (ctx *Context) pageInfo(selectedPages IntSet) ([]string, error) {
-	units := ctx.units()
+	unit := ctx.unit()
 	if len(selectedPages) > 0 {
-		//fmt.Printf("len(selectedPages) = %d\n", len(selectedPages))
 		// TODO ctx.PageBoundaries(selectedPages)
 		pbs, err := ctx.PageBoundaries()
 		if err != nil {
@@ -179,58 +264,7 @@ func (ctx *Context) pageInfo(selectedPages IntSet) ([]string, error) {
 			if _, found := selectedPages[i+1]; !found {
 				continue
 			}
-			ss = append(ss, fmt.Sprintf("Page %d:", i+1))
-			mb := pb.MediaBox()
-			cb := pb.CropBox()
-			tb := pb.TrimBox()
-			bb := pb.BleedBox()
-			ab := pb.ArtBox()
-			s := ""
-			if cb == nil || mb.equals(*cb) {
-				s += " = CropBox"
-				if tb == nil || tb.equals(*mb) {
-					s += ", TrimBox"
-				}
-				if bb == nil || bb.equals(*mb) {
-					s += ", BleedBox"
-				}
-				if ab == nil || ab.equals(*mb) {
-					s += ", ArtBox"
-				}
-			}
-			ss = append(ss, fmt.Sprintf("  MediaBox (%s) %v %s", units, mb.Format(ctx.Units), s))
-			if cb != nil && !cb.equals(*mb) {
-				s = ""
-				if tb == nil || tb.equals(*cb) {
-					s += "= TrimBox"
-				}
-				if bb == nil || bb.equals(*cb) {
-					if len(s) == 0 {
-						s += "= "
-					} else {
-						s += ", "
-					}
-					s += "BleedBox"
-				}
-				if ab == nil || ab.equals(*cb) {
-					if len(s) == 0 {
-						s += "= "
-					} else {
-						s += ", "
-					}
-					s += "ArtBox"
-				}
-				ss = append(ss, fmt.Sprintf("   CropBox (%s) %v %s", units, cb.Format(ctx.Units), s))
-				if tb != nil && !tb.equals(*mb) && !tb.equals(*cb) {
-					ss = append(ss, fmt.Sprintf("   TrimBox (%s) %v", units, tb.Format(ctx.Units)))
-				}
-				if bb != nil && !bb.equals(*mb) && !bb.equals(*cb) {
-					ss = append(ss, fmt.Sprintf("  BleedBox (%s) %v", units, bb.Format(ctx.Units)))
-				}
-				if ab != nil && !ab.equals(*mb) && !ab.equals(*cb) {
-					ss = append(ss, fmt.Sprintf("    ArtBox (%s) %v", units, ab.Format(ctx.Units)))
-				}
-			}
+			appendPageBoxesInfo(&ss, pb, unit, ctx.Unit, i)
 		}
 		return ss, nil
 	}
@@ -248,8 +282,8 @@ func (ctx *Context) pageInfo(selectedPages IntSet) ([]string, error) {
 	ss := []string{}
 	s := "Page size:"
 	for d := range m {
-		dc := ctx.convertToUnits(d)
-		ss = append(ss, fmt.Sprintf("%21s %.2f x %.2f %s", s, dc.Width, dc.Height, units))
+		dc := ctx.convertToUnit(d)
+		ss = append(ss, fmt.Sprintf("%21s %.2f x %.2f %s", s, dc.Width, dc.Height, unit))
 		s = ""
 	}
 

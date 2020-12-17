@@ -25,6 +25,26 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
+// PDFNUp returns an NUp configuration for Nup-ing PDF files.
+func PDFNUp(val int, desc string) (*pdfcpu.NUp, error) {
+	return pdfcpu.PDFNUpConfig(val, desc)
+}
+
+// ImageNUp returns an NUp configuration for Nup-ing image files.
+func ImageNUp(val int, desc string) (*pdfcpu.NUp, error) {
+	return pdfcpu.ImageNUpConfig(val, desc)
+}
+
+// PDFGrid returns a grid configuration for Nup-ing PDF files.
+func PDFGrid(rows, cols int, desc string) (*pdfcpu.NUp, error) {
+	return pdfcpu.PDFGridConfig(rows, cols, desc)
+}
+
+// ImageGrid returns a grid configuration for Nup-ing image files.
+func ImageGrid(rows, cols int, desc string) (*pdfcpu.NUp, error) {
+	return pdfcpu.ImageGridConfig(rows, cols, desc)
+}
+
 // NUpFromImage creates a single page n-up PDF for one image
 // or a sequence of n-up pages for more than one image.
 func NUpFromImage(conf *pdfcpu.Configuration, imageFileNames []string, nup *pdfcpu.NUp) (*pdfcpu.Context, error) {

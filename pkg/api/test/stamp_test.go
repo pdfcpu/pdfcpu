@@ -448,10 +448,10 @@ func TestStampingLifecyle(t *testing.T) {
 		t.Fatalf("Watermarks found: %s\n", inFile)
 	}
 
-	units := pdfcpu.POINTS
+	unit := pdfcpu.POINTS
 
 	// Stamp all pages.
-	wm, err := api.TextWatermark("Demo", "", onTop, false, units)
+	wm, err := api.TextWatermark("Demo", "", onTop, false, unit)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
@@ -465,7 +465,7 @@ func TestStampingLifecyle(t *testing.T) {
 	}
 
 	// // Update stamp on page 1.
-	wm, err = api.TextWatermark("Confidential", "", onTop, true, units)
+	wm, err = api.TextWatermark("Confidential", "", onTop, true, unit)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
@@ -475,7 +475,7 @@ func TestStampingLifecyle(t *testing.T) {
 
 	// Add another stamp on top for all pages.
 	// This is a redish transparent footer.
-	wm, err = api.TextWatermark("Footer", "pos:bc, c:0.8 0 0, op:.6, rot:0", onTop, false, units)
+	wm, err = api.TextWatermark("Footer", "pos:bc, c:0.8 0 0, op:.6, rot:0", onTop, false, unit)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}

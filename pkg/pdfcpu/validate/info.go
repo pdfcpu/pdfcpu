@@ -89,60 +89,71 @@ func handleProperties(xRefTable *pdf.XRefTable, key string, val pdf.Object) erro
 	return nil
 }
 
-func validateDocumentInfoDict(xRefTable *pdf.XRefTable, obj pdf.Object) (hasModDate bool, err error) {
+func validateDocInfoDictEntry(xRefTable *pdf.XRefTable, k string, v pdf.Object) (bool, error) {
+	var (
+		err        error
+		hasModDate bool
+	)
 
+	switch k {
+
+	// text string, opt, since V1.1
+	case "Title":
+		xRefTable.Title, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V11, nil)
+
+	// text string, optional
+	case "Author":
+		xRefTable.Author, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V10, nil)
+
+	// text string, optional, since V1.1
+	case "Subject":
+		xRefTable.Subject, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V11, nil)
+
+	// text string, optional, since V1.1
+	case "Keywords":
+		xRefTable.Keywords, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V11, nil)
+
+	// text string, optional
+	case "Creator":
+		xRefTable.Creator, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V10, nil)
+
+	// text string, optional
+	case "Producer":
+		xRefTable.Producer, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V10, nil)
+
+	// date, optional
+	case "CreationDate":
+		xRefTable.CreationDate, err = validateInfoDictDate(xRefTable, v)
+
+	// date, required if PieceInfo is present in document catalog.
+	case "ModDate":
+		hasModDate = true
+		xRefTable.ModDate, err = validateInfoDictDate(xRefTable, v)
+
+	// name, optional, since V1.3
+	case "Trapped":
+		err = validateInfoDictTrapped(xRefTable, v)
+
+	// text string, optional
+	default:
+		err = handleProperties(xRefTable, k, v)
+	}
+
+	return hasModDate, err
+}
+
+func validateDocumentInfoDict(xRefTable *pdf.XRefTable, obj pdf.Object) (bool, error) {
 	// Document info object is optional.
-
 	d, err := xRefTable.DereferenceDict(obj)
 	if err != nil || d == nil {
 		return false, err
 	}
 
+	hasModDate := false
+
 	for k, v := range d {
 
-		switch k {
-
-		// text string, opt, since V1.1
-		case "Title":
-			xRefTable.Title, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V11, nil)
-
-		// text string, optional
-		case "Author":
-			xRefTable.Author, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V10, nil)
-
-		// text string, optional, since V1.1
-		case "Subject":
-			xRefTable.Subject, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V11, nil)
-
-		// text string, optional, since V1.1
-		case "Keywords":
-			xRefTable.Keywords, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V11, nil)
-
-		// text string, optional
-		case "Creator":
-			xRefTable.Creator, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V10, nil)
-
-		// text string, optional
-		case "Producer":
-			xRefTable.Producer, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V10, nil)
-
-		// date, optional
-		case "CreationDate":
-			xRefTable.CreationDate, err = validateInfoDictDate(xRefTable, v)
-
-		// date, required if PieceInfo is present in document catalog.
-		case "ModDate":
-			hasModDate = true
-			xRefTable.ModDate, err = validateInfoDictDate(xRefTable, v)
-
-		// name, optional, since V1.3
-		case "Trapped":
-			err = validateInfoDictTrapped(xRefTable, v)
-
-		// text string, optional
-		default:
-			err = handleProperties(xRefTable, k, v)
-		}
+		hmd, err := validateDocInfoDictEntry(xRefTable, k, v)
 
 		if err == pdf.ErrInvalidUTF16BE {
 			// Hack for #264: 🤢 where iText modifies a correct UTF-16BE string
@@ -154,6 +165,9 @@ func validateDocumentInfoDict(xRefTable *pdf.XRefTable, obj pdf.Object) (hasModD
 			return false, err
 		}
 
+		if !hasModDate && hmd {
+			hasModDate = true
+		}
 	}
 
 	return hasModDate, nil

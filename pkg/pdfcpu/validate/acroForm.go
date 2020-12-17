@@ -200,6 +200,45 @@ func validateAcroFieldParts(xRefTable *pdf.XRefTable, d pdf.Dict, inFieldType *p
 	return err
 }
 
+func validateAcroFieldKid(xRefTable *pdf.XRefTable, d pdf.Dict, o pdf.Object, inFieldType *pdf.Name) error {
+	var err error
+	// dict represents a non terminal field.
+	if d.Subtype() != nil && *d.Subtype() == "Widget" {
+		return errors.New("pdfcpu: validateAcroFieldKid: non terminal field can not be widget annotation")
+	}
+
+	// Validate field entries.
+	var xInFieldType *pdf.Name
+	if xInFieldType, err = validateAcroFieldDictEntries(xRefTable, d, false, inFieldType); err != nil {
+		return err
+	}
+
+	// Recurse over kids.
+	a, err := xRefTable.DereferenceArray(o)
+	if err != nil || a == nil {
+		return err
+	}
+
+	for _, value := range a {
+		ir, ok := value.(pdf.IndirectRef)
+		if !ok {
+			return errors.New("pdfcpu: validateAcroFieldKid: corrupt kids array: entries must be indirect reference")
+		}
+		valid, err := xRefTable.IsValid(ir)
+		if err != nil {
+			return err
+		}
+
+		if !valid {
+			if err = validateAcroFieldDict(xRefTable, ir, xInFieldType); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 func validateAcroFieldDict(xRefTable *pdf.XRefTable, ir pdf.IndirectRef, inFieldType *pdf.Name) error {
 	d, err := xRefTable.DereferenceDict(ir)
 	if err != nil || d == nil {
@@ -217,42 +256,7 @@ func validateAcroFieldDict(xRefTable *pdf.XRefTable, ir pdf.IndirectRef, inField
 	}
 
 	if o, ok := d.Find("Kids"); ok {
-
-		// dict represents a non terminal field.
-		if d.Subtype() != nil && *d.Subtype() == "Widget" {
-			return errors.New("pdfcpu: validateAcroFieldDict: non terminal field can not be widget annotation")
-		}
-
-		// Validate field entries.
-		var xInFieldType *pdf.Name
-		if xInFieldType, err = validateAcroFieldDictEntries(xRefTable, d, false, inFieldType); err != nil {
-			return err
-		}
-
-		// Recurse over kids.
-		a, err := xRefTable.DereferenceArray(o)
-		if err != nil || a == nil {
-			return err
-		}
-
-		for _, value := range a {
-			ir, ok := value.(pdf.IndirectRef)
-			if !ok {
-				return errors.New("pdfcpu: validateAcroFieldDict: corrupt kids array: entries must be indirect reference")
-			}
-			valid, err := xRefTable.IsValid(ir)
-			if err != nil {
-				return err
-			}
-
-			if !valid {
-				if err = validateAcroFieldDict(xRefTable, ir, xInFieldType); err != nil {
-					return err
-				}
-			}
-		}
-
-		return nil
+		return validateAcroFieldKid(xRefTable, d, o, inFieldType)
 	}
 
 	return validateAcroFieldParts(xRefTable, d, inFieldType)

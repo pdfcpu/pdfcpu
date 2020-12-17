@@ -43,7 +43,7 @@ func testImportImages(t *testing.T, msg string, imgFiles []string, outFile, impC
 	// which overrides all other import conf parms.
 	imp := pdf.DefaultImportConfig()
 	if impConf != "" {
-		if imp, err = pdf.ParseImportDetails(impConf, pdfcpu.POINTS); err != nil {
+		if imp, err = api.Import(impConf, pdfcpu.POINTS); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	}

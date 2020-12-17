@@ -1155,6 +1155,27 @@ func bypassXrefSection(ctx *Context) error {
 	return nil
 }
 
+func postProcess(ctx *Context, xrefSectionCount int) {
+	// Ensure free object #0 if exactly one xref subsection
+	// and in one of the following weird situations:
+	if xrefSectionCount == 1 && !ctx.Exists(0) {
+		if *ctx.Size == len(ctx.Table)+1 {
+			// Hack for #262
+			// Create free object 0 from scratch if the free list head is missing.
+			g0 := FreeHeadGeneration
+			z := int64(0)
+			ctx.Table[0] = &XRefTableEntry{Free: true, Offset: &z, Generation: &g0}
+		} else {
+			// Hack for #250: A friendly 🤢 to the devs of the HP Scanner & Printer software utility.
+			// Create free object 0 by shifting down all objects by one.
+			for i := 1; i <= *ctx.Size; i++ {
+				ctx.Table[i-1] = ctx.Table[i]
+			}
+			delete(ctx.Table, *ctx.Size)
+		}
+	}
+}
+
 // Build XRefTable by reading XRef streams or XRef sections.
 func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 
@@ -1170,7 +1191,7 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 	ctx.HeaderVersion = hv
 	ctx.Read.EolCount = eolCount
 	offs := map[int64]bool{}
-	ssCount := 0
+	xrefSectionCount := 0
 
 	for offset != nil {
 
@@ -1202,7 +1223,7 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 
 		if strings.TrimSpace(line) == "xref" {
 			log.Read.Println("buildXRefTableStartingAt: found xref section")
-			if offset, err = parseXRefSection(s, ctx, &ssCount); err != nil {
+			if offset, err = parseXRefSection(s, ctx, &xrefSectionCount); err != nil {
 				return err
 			}
 		} else {
@@ -1220,24 +1241,7 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 		}
 	}
 
-	// Ensure free object #0 if exactly one xref subsection
-	// and in one of the following weird situations:
-	if ssCount == 1 && !ctx.Exists(0) {
-		if *ctx.Size == len(ctx.Table)+1 {
-			// Hack for #262
-			// Create free object 0 from scratch if the free list head is missing.
-			g0 := FreeHeadGeneration
-			z := int64(0)
-			ctx.Table[0] = &XRefTableEntry{Free: true, Offset: &z, Generation: &g0}
-		} else {
-			// Hack for #250: A friendly 🤢 to the devs of the HP Scanner & Printer software utility.
-			// Create free object 0 by shifting down all objects by one.
-			for i := 1; i <= *ctx.Size; i++ {
-				ctx.Table[i-1] = ctx.Table[i]
-			}
-			delete(ctx.Table, *ctx.Size)
-		}
-	}
+	postProcess(ctx, xrefSectionCount)
 
 	log.Read.Println("buildXRefTableStartingAt: end")
 

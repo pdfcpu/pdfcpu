@@ -26,6 +26,11 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
+// Import parses an Import command string into an internal structure.
+func Import(s string, u pdfcpu.DisplayUnit) (*pdfcpu.Import, error) {
+	return pdfcpu.ParseImportDetails(s, u)
+}
+
 // ImportImages appends PDF pages containing images to rs and writes the result to w.
 // If rs == nil a new PDF file will be written to w.
 func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdfcpu.Import, conf *pdfcpu.Configuration) error {

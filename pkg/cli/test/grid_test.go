@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
@@ -33,11 +34,11 @@ func testGrid(t *testing.T, msg string, inFiles []string, outFile string, select
 	)
 
 	if isImg {
-		if nup, err = pdfcpu.ImageGridConfig(rows, cols, desc); err != nil {
+		if nup, err = api.ImageGrid(rows, cols, desc); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	} else {
-		if nup, err = pdfcpu.PDFGridConfig(rows, cols, desc); err != nil {
+		if nup, err = api.PDFGrid(rows, cols, desc); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	}

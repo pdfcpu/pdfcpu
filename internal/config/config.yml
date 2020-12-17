@@ -29,9 +29,9 @@ encryptKeyLength: 256
 #    -1 = 0xFFFF (PermissionsAll)
 permissions: -3901
 
-# displayUnits:
+# displayUnit:
 # points
 # inches
 # cm
 # mm
-units: points
+unit: points

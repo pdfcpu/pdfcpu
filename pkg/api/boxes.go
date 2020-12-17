@@ -26,6 +26,21 @@ import (
 	"github.com/pkg/errors"
 )
 
+// PageBoundariesFromBoxList parses a list of box types.
+func PageBoundariesFromBoxList(s string) (*pdfcpu.PageBoundaries, error) {
+	return pdfcpu.ParseBoxList(s)
+}
+
+// PageBoundaries parses a list of box definitions and assignments.
+func PageBoundaries(s string, unit pdfcpu.DisplayUnit) (*pdfcpu.PageBoundaries, error) {
+	return pdfcpu.ParsePageBoundaries(s, unit)
+}
+
+// Box parses a box definition.
+func Box(s string, u pdfcpu.DisplayUnit) (*pdfcpu.Box, error) {
+	return pdfcpu.ParseBox(s, u)
+}
+
 // ListBoxes returns a list of page boundaries for selected pages of rs.
 func ListBoxes(rs io.ReadSeeker, selectedPages []string, pb *pdfcpu.PageBoundaries, conf *pdfcpu.Configuration) ([]string, error) {
 	if rs == nil {

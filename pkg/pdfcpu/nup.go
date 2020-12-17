@@ -87,7 +87,7 @@ func (m nUpParamMap) Handle(paramPrefix, paramValueStr string, nup *NUp) error {
 
 // NUp represents the command details for the command "NUp".
 type NUp struct {
-	PageDim      *Dim        // Page dimensions in user units.
+	PageDim      *Dim        // Page dimensions in display unit.
 	PageSize     string      // Paper size eg. A4L, A4P, A4(=default=A4P), see paperSize.go
 	UserDim      bool        // true if one of dimensions or paperSize provided overriding the default.
 	Orient       orientation // One of rd(=default),dr,ld,dl
@@ -96,7 +96,7 @@ type NUp struct {
 	ImgInputFile bool        // Process image or PDF input files.
 	Margin       int         // Cropbox for n-Up content.
 	Border       bool        // Draw bounding box.
-	InpUnits     DisplayUnit // input display units.
+	InpUnit      DisplayUnit // input display unit.
 }
 
 // DefaultNUpConfig returns the default NUp configuration.
@@ -157,7 +157,7 @@ func parseDimensionsNUp(s string, nup *NUp) (err error) {
 	if nup.UserDim {
 		return errors.New("pdfcpu: only one of formsize(papersize) or dimensions allowed")
 	}
-	nup.PageDim, nup.PageSize, err = parsePageDim(s, nup.InpUnits)
+	nup.PageDim, nup.PageSize, err = parsePageDim(s, nup.InpUnit)
 	nup.UserDim = true
 	return err
 }
@@ -202,7 +202,7 @@ func parseElementMargin(s string, nup *NUp) error {
 		return errors.New("pdfcpu: nUp margin, Please provide a positive value")
 	}
 
-	nup.Margin = int(toUserSpace(f, nup.InpUnits))
+	nup.Margin = int(toUserSpace(f, nup.InpUnit))
 
 	return nil
 }

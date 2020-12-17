@@ -29,8 +29,8 @@ The commands are:
    boxes       list, add, remove page boundaries for selected pages
    changeopw   change owner password
    changeupw   change user password
-   crop        set cropbox for selected pages
    collect     create custom sequence of selected pages
+   crop        set cropbox for selected pages
    decrypt     remove password protection
    encrypt     set password protection		
    extract     extract images, fonts, content, pages or metadata
@@ -62,23 +62,22 @@ Use "pdfcpu help [command]" for more information about a command.`
 
 	generalFlags = `
    
-general flags: -v(erbose)            ... turn on logging
-               -vv                   ... verbose logging
-               -q(uiet)              ... disable output
-               -c(onf) $path|disable ... set or disable config dir
-               -u(nits)              ... display units:
-                                          po(ints) ... points
-                                          in(ches) ... inches
-                                                cm ... centimetres
-                                                mm ... millimetres`
+general flags: -v(erbose)  ... turn on logging
+               -vv         ... verbose logging
+               -q(uiet)    ... disable output
+               -c(onf)     ... set or disable config dir: $path|disable
+               -opw        ... owner password
+               -upw        ... user password
+               -u(nit)     ... display unit: po(ints) ... points
+                                             in(ches) ... inches
+                                                   cm ... centimetres
+                                                   mm ... millimetres`
 
-	usageValidate = "usage: pdfcpu validate [-mode strict|relaxed] [-upw userpw] [-opw ownerpw] inFile" + generalFlags
+	usageValidate = "usage: pdfcpu validate [-mode strict|relaxed] inFile" + generalFlags
 
 	usageLongValidate = `Check inFile for specification compliance.
 
       mode ... validation mode
-       upw ... user password
-       opw ... owner password
     inFile ... input pdf file
 		
 The validation modes are:
@@ -86,22 +85,18 @@ The validation modes are:
  strict ... (default) validates against PDF 32000-1:2008 (PDF 1.7)
 relaxed ... like strict but doesn't complain about common seen spec violations.`
 
-	usageOptimize     = "usage: pdfcpu optimize [-stats csvFile] [-upw userpw] [-opw ownerpw] inFile [outFile]" + generalFlags
+	usageOptimize     = "usage: pdfcpu optimize [-stats csvFile] inFile [outFile]" + generalFlags
 	usageLongOptimize = `Read inFile, remove redundant page resources like embedded fonts and images and write the result to outFile.
 
      stats ... appends a stats line to a csv file with information about the usage of root and page entries.
                useful for batch optimization and debugging PDFs.
-       upw ... user password
-       opw ... owner password
     inFile ... input pdf file
    outFile ... output pdf file`
 
-	usageSplit     = "usage: pdfcpu split [-mode span|bookmark] [-upw userpw] [-opw ownerpw] inFile outDir [span]" + generalFlags
+	usageSplit     = "usage: pdfcpu split [-mode span|bookmark] inFile outDir [span]" + generalFlags
 	usageLongSplit = `Generate a set of PDFs for the input file in outDir according to given span value or along bookmarks.
 
       mode ... split mode (defaults to span)
-       upw ... user password
-       opw ... owner password
     inFile ... input pdf file
     outDir ... output directory
       span ... split span in pages (default: 1) for mode "span"
@@ -150,13 +145,11 @@ The merge modes are:
 
         e.g. -3,5,7- or 4-7,!6 or 1-,!5 or odd,n1`
 
-	usageExtract     = "usage: pdfcpu extract -mode image|font|content|page|meta [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile outDir" + generalFlags
+	usageExtract     = "usage: pdfcpu extract -mode image|font|content|page|meta [-pages selectedPages] inFile outDir" + generalFlags
 	usageLongExtract = `Export inFile's images, fonts, content or pages into outDir.
 
       mode ... extraction mode
      pages ... selected pages
-       upw ... user password
-       opw ... owner password
     inFile ... input pdf file
     outDir ... output directory
 
@@ -170,21 +163,19 @@ content ... extract raw page content
    
 ` + usagePageSelection
 
-	usageTrim     = "usage: pdfcpu trim -pages selectedPages [-upw userpw] [-opw ownerpw] inFile [outFile]" + generalFlags
+	usageTrim     = "usage: pdfcpu trim -pages selectedPages inFile [outFile]" + generalFlags
 	usageLongTrim = `Generate a trimmed version of inFile for selected pages.
 
      pages ... selected pages
-       upw ... user password
-       opw ... owner password
     inFile ... input pdf file
    outFile ... output pdf file
    
 ` + usagePageSelection
 
-	usageAttachList    = "pdfcpu attachments list    [-upw userpw] [-opw ownerpw] inFile"
-	usageAttachAdd     = "pdfcpu attachments add     [-upw userpw] [-opw ownerpw] inFile file..."
-	usageAttachRemove  = "pdfcpu attachments remove  [-upw userpw] [-opw ownerpw] inFile [file...]"
-	usageAttachExtract = "pdfcpu attachments extract [-upw userpw] [-opw ownerpw] inFile outDir [file...]" + generalFlags
+	usageAttachList    = "pdfcpu attachments list    inFile"
+	usageAttachAdd     = "pdfcpu attachments add     inFile file..."
+	usageAttachRemove  = "pdfcpu attachments remove  inFile [file...]"
+	usageAttachExtract = "pdfcpu attachments extract inFile outDir [file...]" + generalFlags
 
 	usageAttach = "usage: " + usageAttachList +
 		"\n       " + usageAttachAdd +
@@ -193,16 +184,14 @@ content ... extract raw page content
 
 	usageLongAttach = `Manage embedded file attachments.
 
-       upw ... user password
-       opw ... owner password
     inFile ... input pdf file
       file ... attachment
     outDir ... output directory`
 
-	usagePortfolioList    = "pdfcpu portfolio list    [-upw userpw] [-opw ownerpw] inFile"
-	usagePortfolioAdd     = "pdfcpu portfolio add     [-upw userpw] [-opw ownerpw] inFile file[,desc]..."
-	usagePortfolioRemove  = "pdfcpu portfolio remove  [-upw userpw] [-opw ownerpw] inFile [file...]"
-	usagePortfolioExtract = "pdfcpu portfolio extract [-upw userpw] [-opw ownerpw] inFile outDir [file...]" + generalFlags
+	usagePortfolioList    = "pdfcpu portfolio list    inFile"
+	usagePortfolioAdd     = "pdfcpu portfolio add     inFile file[,desc]..."
+	usagePortfolioRemove  = "pdfcpu portfolio remove  inFile [file...]"
+	usagePortfolioExtract = "pdfcpu portfolio extract inFile outDir [file...]" + generalFlags
 
 	usagePortfolio = "usage: " + usagePortfolioList +
 		"\n       " + usagePortfolioAdd +
@@ -211,8 +200,6 @@ content ... extract raw page content
 
 	usageLongPortfolio = `Manage portfolio entries.
 
-       upw ... user password
-       opw ... owner password
     inFile ... input pdf file
       file ... attachment
       desc ... description (optional)
@@ -234,8 +221,6 @@ content ... extract raw page content
 	usageLongPerm = `Manage user access permissions.
 
       perm ... user access permissions
-       upw ... user password
-       opw ... owner password
     inFile ... input pdf file`
 
 	usageEncrypt     = "usage: pdfcpu encrypt [-mode rc4|aes] [-key 40|128|256] [-perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]" + generalFlags
@@ -244,16 +229,12 @@ content ... extract raw page content
       mode ... algorithm (default=aes)
        key ... key length in bits (default=256)
       perm ... user access permissions
-       upw ... user password
-       opw ... owner password (must not be empty!)
     inFile ... input pdf file
    outFile ... output pdf file`
 
 	usageDecrypt     = "usage: pdfcpu decrypt [-upw userpw] [-opw ownerpw] inFile [outFile]" + generalFlags
 	usageLongDecrypt = `Remove password protection and reset permissions.
 
-       upw ... user password
-       opw ... owner password
     inFile ... input pdf file
    outFile ... output pdf file`
 
@@ -300,7 +281,7 @@ content ... extract raw page content
    points:           fontsize in points, in combination with absolute scaling only.
    position:         one of the anchors: tl,tc,tr, l,c,r, bl,bc,br
                      Reliable with non rotated pages only!
-   offset:           (dx dy) in display units eg. '15 20'
+   offset:           (dx dy) in given display unit eg. '15 20'
    scalefactor:      0.0 < i <= 1.0 {r|rel} | 0.0 < i {a|abs}
    aligntext:        l..left, c..center, r..right, j..justified (for text watermarks only)
    fillcolor:        color value to be used when rendering text, see also rendermode
@@ -344,13 +325,13 @@ e.g. 'pos:bl, off: 20 5'   'rot:45'                 'op:0.5, s:0.5 abs, rot:0'
      
 ` + usagePageSelection
 
-	usageStampAdd    = "pdfcpu stamp add    [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]"
-	usageStampRemove = "pdfcpu stamp remove [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]"
-	usageStampUpdate = "pdfcpu stamp update [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]" + generalFlags
+	usageStampAdd    = "pdfcpu stamp add    [-pages selectedPages] -mode text|image|pdf string|file description inFile [outFile]"
+	usageStampUpdate = "pdfcpu stamp update [-pages selectedPages] -mode text|image|pdf string|file description inFile [outFile]"
+	usageStampRemove = "pdfcpu stamp remove [-pages selectedPages] inFile [outFile]" + generalFlags
 
 	usageStamp = "usage: " + usageStampAdd +
-		"\n       " + usageStampRemove +
-		"\n       " + usageStampUpdate
+		"\n       " + usageStampUpdate +
+		"\n       " + usageStampRemove
 
 	usageLongStamp = `Process stamping for selected pages. 
 
@@ -367,19 +348,17 @@ description ... fontname, points, position, offset, scalefactor, aligntext, rota
 
 ` + usageWMMode + usageWMDescription
 
-	usageWatermarkAdd    = "pdfcpu watermark add    [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]"
-	usageWatermarkRemove = "pdfcpu watermark remove [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]"
-	usageWatermarkUpdate = "pdfcpu watermark update [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]" + generalFlags
+	usageWatermarkAdd    = "pdfcpu watermark add    [-pages selectedPages] -mode text|image|pdf string|file description inFile [outFile]"
+	usageWatermarkUpdate = "pdfcpu watermark update [-pages selectedPages] -mode text|image|pdf string|file description inFile [outFile]"
+	usageWatermarkRemove = "pdfcpu watermark remove [-pages selectedPages] inFile [outFile]" + generalFlags
 
 	usageWatermark = "usage: " + usageWatermarkAdd +
-		"\n       " + usageWatermarkRemove +
-		"\n       " + usageWatermarkUpdate
+		"\n       " + usageWatermarkUpdate +
+		"\n       " + usageWatermarkRemove
 
 	usageLongWatermark = `Process watermarking for selected pages. 
 
       pages ... selected pages
-        upw ... user password
-        opw ... owner password
        mode ... text, image, pdf
      string ... display string for text based watermarks
        file ... image or pdf file
@@ -406,7 +385,7 @@ description ... dimensions, format, position, offset, scale factor, boxes
 
       (defaults: d:595 842, f:A4, pos:full, off:0 0, s:0.5 rel, dpi:72)
 
-  dimensions: (width height) in display units eg. '400 200' setting the media box
+  dimensions: (width height) in given display unit eg. '400 200' setting the media box
 
   formsize, papersize: eg. A4, Letter, Legal...
                            Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
@@ -414,18 +393,10 @@ description ... dimensions, format, position, offset, scale factor, boxes
                            An appended 'P' enforces portrait mode. (eg. TabloidP)
 
   position:    one of 'full' or the anchors: tl,tc,tr, l,c,r, bl,bc,br
-  offset:      (dx dy) in display units eg. '15 20'
+  offset:      (dx dy) in given display unit eg. '15 20'
   scalefactor: 0.0 <= x <= 1.0 followed by optional 'abs|rel' or 'a|r'
   dpi:         apply desired dpi
   
-  media:       {box} | a(rt) | b(leed) | c(rop) | t(rim)
-   crop:       {box} | a(rt) | b(leed) | m(edia) | t(rim)
-    art:       {box} | b(leed) | c(rop) | m(edia) | t(rim)
-  bleed:       {box} | a(rt) | c(rop) | m(edia) | t(rim)
-   trim:       {box} | a(rt) | b(leed) | c(rop) | m(edia)
-
-  Please refer to "pdfcpu help boxes" for more info about boxes and box definitions.
-
   Only one of dimensions or format is allowed.
   position: full => image dimensions equal page dimensions.
   
@@ -437,8 +408,8 @@ description ... dimensions, format, position, offset, scale factor, boxes
        'f:A4, pos:c, dpi:300'                    ... render the image centered on A4 respecting a destination resolution of 300 dpi.
        `
 
-	usagePagesInsert = "pdfcpu pages insert [-pages selectedPages] [-upw userpw] [-opw ownerpw] [-mode before|after] inFile [outFile]"
-	usagePagesRemove = "pdfcpu pages remove  -pages selectedPages  [-upw userpw] [-opw ownerpw] inFile [outFile]" + generalFlags
+	usagePagesInsert = "pdfcpu pages insert [-pages selectedPages] [-mode before|after] inFile [outFile]"
+	usagePagesRemove = "pdfcpu pages remove  -pages selectedPages  inFile [outFile]" + generalFlags
 
 	usagePages = "usage: " + usagePagesInsert +
 		"\n       " + usagePagesRemove
@@ -446,20 +417,16 @@ description ... dimensions, format, position, offset, scale factor, boxes
 	usageLongPages = `Manage pages.
 
       pages ... selected pages
-        upw ... user password
-        opw ... owner password
        mode ... before, after (default: before)
      inFile ... input pdf file
     outFile ... output pdf file
 
 ` + usagePageSelection
 
-	usageRotate     = "usage: pdfcpu rotate [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile rotation [outFile]" + generalFlags
+	usageRotate     = "usage: pdfcpu rotate [-pages selectedPages] inFile rotation [outFile]" + generalFlags
 	usageLongRotate = `Rotate selected pages by a multiple of 90 degrees. 
 
       pages ... selected pages
-        upw ... user password
-        opw ... owner password
      inFile ... input pdf file
    rotation ... a multiple of 90 degrees for clockwise rotation
     outFile ... output pdf file
@@ -493,7 +460,7 @@ description ... dimensions, format, orientation
   
         (defaults: d:595 842, f:A4, o:rd, b:on, m:3)
   
-    dimensions: (width,height) in display units eg. '400 200'
+    dimensions: (width,height) in given display unit eg. '400 200'
     
     formsize, papersize, eg. A4, Letter, Legal...
                            Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
@@ -509,7 +476,7 @@ description ... dimensions, format, orientation
 
     border:      on/off true/false
     
-    margin:      for n-up content: float >= 0 display units
+    margin:      for n-up content: float >= 0 in given display unit
 
 All configuration string parameters support completion.
     
@@ -550,7 +517,7 @@ description ... dimensions, format, orientation
   
         (defaults: d:595 842, f:A4, o:rd, b:on, m:3)
   
-    dimensions: (width height) in display units eg. '400 200'
+    dimensions: (width height) in given display unit eg. '400 200'
 
     formsize, papersize, eg. A4, Letter, Legal...
                            Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
@@ -566,7 +533,7 @@ description ... dimensions, format, orientation
 
     border:      on/off true/false
     
-    margin:      for content: float >= 0 display units
+    margin:      for content: float >= 0 in given display unit
 
 All configuration string parameters support completion.
 
@@ -654,12 +621,10 @@ Examples: "pdfcpu grid out.pdf 1 10 in.pdf"
 	usagePaper     = "usage: pdfcpu paper"
 	usageLongPaper = "Print a list of supported paper sizes."
 
-	usageInfo     = "usage: pdfcpu info [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile" + generalFlags
+	usageInfo     = "usage: pdfcpu info [-pages selectedPages] inFile" + generalFlags
 	usageLongInfo = `Print info about a PDF file.
    
    pages ... selected pages
-     upw ... user password
-     opw ... owner password
   inFile ... input pdf file`
 
 	usageFontsList       = "pdfcpu fonts list"
@@ -670,12 +635,12 @@ Examples: "pdfcpu grid out.pdf 1 10 in.pdf"
 		"\n       " + usageFontsInstall +
 		"\n       " + usageFontsCheatSheet
 	usageLongFonts = `Print a list of supported fonts (includes the 14 PDF core fonts).
-Install given true type fonts (.ttf) from working directory for embedding in stamps/watermarks.
+Install given True Type fonts(.ttf) or True Type collections(.ttc) for usage in stamps/watermarks.
 Create single page PDF cheat sheets in current dir.`
 
-	usageKeywordsList   = "pdfcpu keywords list    [-upw userpw] [-opw ownerpw] inFile"
-	usageKeywordsAdd    = "pdfcpu keywords add     [-upw userpw] [-opw ownerpw] inFile keyword..."
-	usageKeywordsRemove = "pdfcpu keywords remove  [-upw userpw] [-opw ownerpw] inFile [keyword...]" + generalFlags
+	usageKeywordsList   = "pdfcpu keywords list    inFile"
+	usageKeywordsAdd    = "pdfcpu keywords add     inFile keyword..."
+	usageKeywordsRemove = "pdfcpu keywords remove  inFile [keyword...]" + generalFlags
 
 	usageKeywords = "usage: " + usageKeywordsList +
 		"\n       " + usageKeywordsAdd +
@@ -683,8 +648,6 @@ Create single page PDF cheat sheets in current dir.`
 
 	usageLongKeywords = `Manage keywords.
 
-       upw ... user password
-       opw ... owner password
     inFile ... input pdf file
    keyword ... search keyword
     
@@ -692,9 +655,9 @@ Create single page PDF cheat sheets in current dir.`
            pdfcpu keywords add test.pdf music 'virtual instruments'
     `
 
-	usagePropertiesList   = "pdfcpu properties list    [-upw userpw] [-opw ownerpw] inFile"
-	usagePropertiesAdd    = "pdfcpu properties add     [-upw userpw] [-opw ownerpw] inFile nameValuePair..."
-	usagePropertiesRemove = "pdfcpu properties remove  [-upw userpw] [-opw ownerpw] inFile [name...]" + generalFlags
+	usagePropertiesList   = "pdfcpu properties list    inFile"
+	usagePropertiesAdd    = "pdfcpu properties add     inFile nameValuePair..."
+	usagePropertiesRemove = "pdfcpu properties remove  inFile [name...]" + generalFlags
 
 	usageProperties = "usage: " + usagePropertiesList +
 		"\n       " + usagePropertiesAdd +
@@ -702,8 +665,6 @@ Create single page PDF cheat sheets in current dir.`
 
 	usageLongProperties = `Manage document properties.
 
-          upw ... user password
-          opw ... owner password
        inFile ... input pdf file
 nameValuePair ... 'name = value'
          name ... property name
@@ -711,12 +672,10 @@ nameValuePair ... 'name = value'
      Eg. adding one property:   pdfcpu properties add test.pdf 'key = value'
          adding two properties: pdfcpu properties add test.pdf 'key1 = val1' 'key2 = val2'
      `
-	usageCollect     = "usage: pdfcpu collect -pages selectedPages [-upw userpw] [-opw ownerpw] inFile [outFile]" + generalFlags
+	usageCollect     = "usage: pdfcpu collect -pages selectedPages inFile [outFile]" + generalFlags
 	usageLongCollect = `Create custom sequence of selected pages. 
 
         pages ... selected pages
-          upw ... user password
-          opw ... owner password
        inFile ... input pdf file
       outFile ... output pdf file
   
@@ -735,7 +694,7 @@ box:
    
    Please refer to the PDF Specification 14.11.2 Page Boundaries for details.
 
-   All values are in display units (po, in, mm, cm)
+   All values are in given display unit (po, in, mm, cm)
 
    General rules:
       The media box is mandatory and serves as default for the crop box and is its parent box.
@@ -766,12 +725,10 @@ box:
 
 `
 
-	usageCrop     = "usage: pdfcpu crop [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]" + generalFlags
+	usageCrop     = "usage: pdfcpu crop [-pages selectedPages] description inFile [outFile]" + generalFlags
 	usageLongCrop = `Set crop box for selected pages. 
 
         pages ... selected pages
-          upw ... user password
-          opw ... owner password
   description ... crop box definition abs. or rel. to media box
        inFile ... input pdf file
       outFile ... output pdf file
@@ -782,9 +739,9 @@ Examples:
 
 ` + usageBoxDescription + usagePageSelection
 
-	usageBoxesList   = "pdfcpu boxes list    [-pages selectedPages] [-upw userpw] [-opw ownerpw] '[boxTypes]' inFile"
-	usageBoxesAdd    = "pdfcpu boxes add     [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]"
-	usageBoxesRemove = "pdfcpu boxes remove  [-pages selectedPages] [-upw userpw] [-opw ownerpw] 'boxTypes' inFile [outFile]" + generalFlags
+	usageBoxesList   = "pdfcpu boxes list    [-pages selectedPages] '[boxTypes]' inFile"
+	usageBoxesAdd    = "pdfcpu boxes add     [-pages selectedPages] description  inFile [outFile]"
+	usageBoxesRemove = "pdfcpu boxes remove  [-pages selectedPages] 'boxTypes'   inFile [outFile]" + generalFlags
 
 	usageBoxes = "usage: " + usageBoxesList +
 		"\n       " + usageBoxesAdd +
@@ -792,8 +749,6 @@ Examples:
 
 	usageLongBoxes = `Manage page boundaries.
 
-          upw ... user password
-          opw ... owner password
      boxTypes ... comma separated list of box types: m(edia), c(rop), t(rim), b(leed), a(rt)
   description ... box definitions abs. or rel. to parent box
        inFile ... input pdf file

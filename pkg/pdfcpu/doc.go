@@ -9,8 +9,8 @@ The commands are:
 	boxes       list, add, remove page boundaries for selected pages
 	changeopw	change owner password
 	changeupw	change user password
-	crop        set cropbox for selected pages
 	collect		create custom sequence of selected pages
+	crop        set cropbox for selected pages
 	decrypt		remove password protection
 	encrypt		set password protection
 	extract		extract images, fonts, content, pages or metadata
