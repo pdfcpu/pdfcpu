@@ -62,18 +62,18 @@ Use "pdfcpu help [command]" for more information about a command.`
 
 	generalFlags = `
    
-general flags: -v(erbose)  ... turn on logging
-               -vv         ... verbose logging
-               -q(uiet)    ... disable output
-               -c(onf)     ... set or disable config dir: $path|disable
-               -opw        ... owner password
-               -upw        ... user password
-               -u(nit)     ... display unit: po(ints) ... points
+common flags: -v(erbose)  ... turn on logging
+              -vv         ... verbose logging
+              -q(uiet)    ... disable output
+              -c(onf)     ... set or disable config dir: $path|disable
+              -opw        ... owner password
+              -upw        ... user password
+              -u(nit)     ... display unit: po(ints) ... points
                                              in(ches) ... inches
                                                    cm ... centimetres
                                                    mm ... millimetres`
 
-	usageValidate = "usage: pdfcpu validate [-mode strict|relaxed] inFile" + generalFlags
+	usageValidate = "usage: pdfcpu validate [-m(ode) strict|relaxed] inFile" + generalFlags
 
 	usageLongValidate = `Check inFile for specification compliance.
 
@@ -93,7 +93,7 @@ relaxed ... like strict but doesn't complain about common seen spec violations.`
     inFile ... input pdf file
    outFile ... output pdf file`
 
-	usageSplit     = "usage: pdfcpu split [-mode span|bookmark] inFile outDir [span]" + generalFlags
+	usageSplit     = "usage: pdfcpu split [-m(ode) span|bookmark] inFile outDir [span]" + generalFlags
 	usageLongSplit = `Generate a set of PDFs for the input file in outDir according to given span value or along bookmarks.
 
       mode ... split mode (defaults to span)
@@ -110,7 +110,7 @@ The split modes are:
                    span will be ignored.
                    Assumption: inFile contains an outline dictionary.`
 
-	usageMerge     = "usage: pdfcpu merge [-mode create|append] [-sort] outFile inFile..." + generalFlags
+	usageMerge     = "usage: pdfcpu merge [-m(ode) create|append] [-sort] outFile inFile..." + generalFlags
 	usageLongMerge = `Concatenate a sequence of PDFs/inFiles into outFile.
 
       mode ... merge mode (defaults to create)
@@ -145,7 +145,7 @@ The merge modes are:
 
         e.g. -3,5,7- or 4-7,!6 or 1-,!5 or odd,n1`
 
-	usageExtract     = "usage: pdfcpu extract -mode image|font|content|page|meta [-pages selectedPages] inFile outDir" + generalFlags
+	usageExtract     = "usage: pdfcpu extract -m(ode) image|font|content|page|meta [-p(ages) selectedPages] inFile outDir" + generalFlags
 	usageLongExtract = `Export inFile's images, fonts, content or pages into outDir.
 
       mode ... extraction mode
@@ -163,7 +163,7 @@ content ... extract raw page content
    
 ` + usagePageSelection
 
-	usageTrim     = "usage: pdfcpu trim -pages selectedPages inFile [outFile]" + generalFlags
+	usageTrim     = "usage: pdfcpu trim -p(ages) selectedPages inFile [outFile]" + generalFlags
 	usageLongTrim = `Generate a trimmed version of inFile for selected pages.
 
      pages ... selected pages
@@ -223,7 +223,7 @@ content ... extract raw page content
       perm ... user access permissions
     inFile ... input pdf file`
 
-	usageEncrypt     = "usage: pdfcpu encrypt [-mode rc4|aes] [-key 40|128|256] [-perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]" + generalFlags
+	usageEncrypt     = "usage: pdfcpu encrypt [-m(ode) rc4|aes] [-key 40|128|256] [-perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]" + generalFlags
 	usageLongEncrypt = `Setup password protection based on user and owner password.
 
       mode ... algorithm (default=aes)
@@ -325,9 +325,9 @@ e.g. 'pos:bl, off: 20 5'   'rot:45'                 'op:0.5, s:0.5 abs, rot:0'
      
 ` + usagePageSelection
 
-	usageStampAdd    = "pdfcpu stamp add    [-pages selectedPages] -mode text|image|pdf string|file description inFile [outFile]"
-	usageStampUpdate = "pdfcpu stamp update [-pages selectedPages] -mode text|image|pdf string|file description inFile [outFile]"
-	usageStampRemove = "pdfcpu stamp remove [-pages selectedPages] inFile [outFile]" + generalFlags
+	usageStampAdd    = "pdfcpu stamp add    [-p(ages) selectedPages] -m(ode) text|image|pdf string|file description inFile [outFile]"
+	usageStampUpdate = "pdfcpu stamp update [-p(ages) selectedPages] -m(ode) text|image|pdf string|file description inFile [outFile]"
+	usageStampRemove = "pdfcpu stamp remove [-p(ages) selectedPages] inFile [outFile]" + generalFlags
 
 	usageStamp = "usage: " + usageStampAdd +
 		"\n       " + usageStampUpdate +
@@ -348,9 +348,9 @@ description ... fontname, points, position, offset, scalefactor, aligntext, rota
 
 ` + usageWMMode + usageWMDescription
 
-	usageWatermarkAdd    = "pdfcpu watermark add    [-pages selectedPages] -mode text|image|pdf string|file description inFile [outFile]"
-	usageWatermarkUpdate = "pdfcpu watermark update [-pages selectedPages] -mode text|image|pdf string|file description inFile [outFile]"
-	usageWatermarkRemove = "pdfcpu watermark remove [-pages selectedPages] inFile [outFile]" + generalFlags
+	usageWatermarkAdd    = "pdfcpu watermark add    [-p(ages) selectedPages] -m(ode) text|image|pdf string|file description inFile [outFile]"
+	usageWatermarkUpdate = "pdfcpu watermark update [-p(ages) selectedPages] -m(ode) text|image|pdf string|file description inFile [outFile]"
+	usageWatermarkRemove = "pdfcpu watermark remove [-p(ages) selectedPages] inFile [outFile]" + generalFlags
 
 	usageWatermark = "usage: " + usageWatermarkAdd +
 		"\n       " + usageWatermarkUpdate +
@@ -408,8 +408,8 @@ description ... dimensions, format, position, offset, scale factor, boxes
        'f:A4, pos:c, dpi:300'                    ... render the image centered on A4 respecting a destination resolution of 300 dpi.
        `
 
-	usagePagesInsert = "pdfcpu pages insert [-pages selectedPages] [-mode before|after] inFile [outFile]"
-	usagePagesRemove = "pdfcpu pages remove  -pages selectedPages  inFile [outFile]" + generalFlags
+	usagePagesInsert = "pdfcpu pages insert [-p(ages) selectedPages] [-m(ode) before|after] inFile [outFile]"
+	usagePagesRemove = "pdfcpu pages remove  -p(ages) selectedPages  inFile [outFile]" + generalFlags
 
 	usagePages = "usage: " + usagePagesInsert +
 		"\n       " + usagePagesRemove
@@ -423,7 +423,7 @@ description ... dimensions, format, position, offset, scale factor, boxes
 
 ` + usagePageSelection
 
-	usageRotate     = "usage: pdfcpu rotate [-pages selectedPages] inFile rotation [outFile]" + generalFlags
+	usageRotate     = "usage: pdfcpu rotate [-p(ages) selectedPages] inFile rotation [outFile]" + generalFlags
 	usageLongRotate = `Rotate selected pages by a multiple of 90 degrees. 
 
       pages ... selected pages
@@ -433,7 +433,7 @@ description ... dimensions, format, position, offset, scale factor, boxes
 
 ` + usagePageSelection
 
-	usageNUp     = "usage: pdfcpu nup [-pages selectedPages] [description] outFile n inFile|imageFiles..." + generalFlags
+	usageNUp     = "usage: pdfcpu nup [-p(ages) selectedPages] [description] outFile n inFile|imageFiles..." + generalFlags
 	usageLongNUp = `Rearrange existing PDF pages or images into a sequence of page grids.
 This reduces the number of pages and therefore the required print time.
 If the input is one imageFile a single page n-up PDF gets generated.
@@ -497,7 +497,7 @@ Examples: "pdfcpu nup out.pdf 4 in.pdf"
 
 ` + usagePageSelection
 
-	usageGrid     = "usage: pdfcpu grid [-pages selectedPages] [description] outFile m n inFile|imageFiles..." + generalFlags
+	usageGrid     = "usage: pdfcpu grid [-p(ages) selectedPages] [description] outFile m n inFile|imageFiles..." + generalFlags
 	usageLongGrid = `Rearrange PDF pages or images for enhanced browsing experience.
 For a PDF inputfile each output page represents a grid of input pages.
 For image inputfiles each output page shows all images laid out onto grids of given paper size. 
@@ -621,7 +621,7 @@ Examples: "pdfcpu grid out.pdf 1 10 in.pdf"
 	usagePaper     = "usage: pdfcpu paper"
 	usageLongPaper = "Print a list of supported paper sizes."
 
-	usageInfo     = "usage: pdfcpu info [-pages selectedPages] inFile" + generalFlags
+	usageInfo     = "usage: pdfcpu info [-p(ages) selectedPages] inFile" + generalFlags
 	usageLongInfo = `Print info about a PDF file.
    
    pages ... selected pages
@@ -725,7 +725,7 @@ box:
 
 `
 
-	usageCrop     = "usage: pdfcpu crop [-pages selectedPages] description inFile [outFile]" + generalFlags
+	usageCrop     = "usage: pdfcpu crop [-p(ages) selectedPages] description inFile [outFile]" + generalFlags
 	usageLongCrop = `Set crop box for selected pages. 
 
         pages ... selected pages
@@ -739,9 +739,9 @@ Examples:
 
 ` + usageBoxDescription + usagePageSelection
 
-	usageBoxesList   = "pdfcpu boxes list    [-pages selectedPages] '[boxTypes]' inFile"
-	usageBoxesAdd    = "pdfcpu boxes add     [-pages selectedPages] description  inFile [outFile]"
-	usageBoxesRemove = "pdfcpu boxes remove  [-pages selectedPages] 'boxTypes'   inFile [outFile]" + generalFlags
+	usageBoxesList   = "pdfcpu boxes list    [-p(ages) selectedPages] '[boxTypes]' inFile"
+	usageBoxesAdd    = "pdfcpu boxes add     [-p(ages) selectedPages] description  inFile [outFile]"
+	usageBoxesRemove = "pdfcpu boxes remove  [-p(ages) selectedPages] 'boxTypes'   inFile [outFile]" + generalFlags
 
 	usageBoxes = "usage: " + usageBoxesList +
 		"\n       " + usageBoxesAdd +

@@ -37,6 +37,7 @@ type configuration struct {
 	EncryptKeyLength  int    `yaml:"encryptKeyLength"`
 	Permissions       int    `yaml:"permissions"`
 	Unit              string `yaml:"unit"`
+	Units             string `yaml:"units"` // Be flexible if version < v0.3.8
 }
 
 func loadedConfig(c configuration, configPath string) *Configuration {
@@ -92,15 +93,23 @@ func parseConfigFile(r io.Reader, configPath string) error {
 	if err := yaml.Unmarshal(bb, &c); err != nil {
 		return err
 	}
+
 	if !MemberOf(c.ValidationMode, []string{"ValidationStrict", "ValidationRelaxed", "ValidationNone"}) {
 		return errors.Errorf("invalid validationMode: %s", c.ValidationMode)
 	}
 	if !MemberOf(c.Eol, []string{"EolLF", "EolCR", "EolCRLF"}) {
 		return errors.Errorf("invalid eol: %s", c.Eol)
 	}
-	if !MemberOf(c.Unit, []string{"points", "inches", "cm", "mm"}) {
-		errors.Errorf("invalid unit: %s", c.Unit)
+	if c.Unit == "" {
+		// v0.3.8 modifies "units" to "unit".
+		if c.Units != "" {
+			c.Unit = c.Units
+		}
 	}
+	if !MemberOf(c.Unit, []string{"points", "inches", "cm", "mm"}) {
+		return errors.Errorf("invalid unit: %s", c.Unit)
+	}
+
 	if !IntMemberOf(c.EncryptKeyLength, []int{40, 128, 256}) {
 		return errors.Errorf("encryptKeyLength possible values: 40, 128, 256, got: %s", c.Unit)
 	}

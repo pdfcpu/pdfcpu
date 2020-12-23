@@ -170,7 +170,7 @@ func parseKeyValue(k, v string, c *Configuration) error {
 	case "permissions":
 		err = handleConfPermissions(v, c)
 
-	case "unit":
+	case "unit", "units":
 		err = handleConfUnit(v, c)
 	}
 	return err
