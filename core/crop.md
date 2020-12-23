@@ -105,7 +105,7 @@ pdfcpu crop '100' in.pdf cropped.pdf
 
 <br>
 
-The following command would set display units to mm in order to express top, left/right and bottom margins relative to the media box defining the rectangular regions that we want to use as crop box:
+The following command would set display unit to mm in order to express top, left/right and bottom margins relative to the media box defining the rectangular regions that we want to use as crop box:
 ```sh
 pdfcpu crop -u mm '15 10 15' in.pdf cropped.pdf
 ```

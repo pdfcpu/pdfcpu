@@ -17,7 +17,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-usage: pdfcpu boxes remove [-pages selectedPages] [-upw userpw] [-opw ownerpw] 'boxTypes' inFile [outFile]
+pdfcpu boxes remove [-p(ages) selectedPages] 'boxTypes' inFile [outFile]
 ```
 
 <br>
@@ -27,19 +27,20 @@ usage: pdfcpu boxes remove [-pages selectedPages] [-upw userpw] [-opw ownerpw] '
 | flag                                         | description    | required
 |:---------------------------------------------|:---------------|---------
 | [p(ages)](../getting_started/page_selection) | selected pages | no
-| [upw](../getting_started/common_flags.md)    | user password  | no
-| [opw](../getting_started/common_flags.md)    | owner password | no
 
 <br>
 
 ### Common Flags
 
-| flag                                            | description     | required
-|:------------------------------------------------|:----------------|---------
-| [v(erbose)](../getting_started/common_flags.md) | turn on logging | no
-| [vv](../getting_started/common_flags.md)        | verbose logging | no
-| [q(uiet)](../getting_started/common_flags.md)   | quiet mode      | no
-| [u(nit)](../getting_started/common_flags.md)    | display unit    | no
+| name                                            | description     | values
+|:------------------------------------------------|:----------------|:-------
+| [v(erbose)](../getting_started/common_flags.md) | turn on logging |
+| [vv](../getting_started/common_flags.md)        | verbose logging |
+| [q(uiet)](../getting_started/common_flags.md)   | quiet mode      |
+| [u(nit)](../getting_started/common_flags.md)    | display unit    | po(ints),in(ches),cm,mm
+| [c(onf)](getting_started/common_flags.md)       | config dir      | $path, disable
+| [upw](getting_started/common_flags.md)          | user password   |
+| [opw](getting_started/common_flags.md)          | owner password  |
 
 <br>
 
@@ -58,7 +59,7 @@ usage: pdfcpu boxes remove [-pages selectedPages] [-upw userpw] [-opw ownerpw] '
  Remove all page boundaries other than Media Box for page 2 of in.pdf:
 
 ```
-Go-> pdfcpu box rem -pages 2 'c,b,a,t' in.pdf out.pdf
+pdfcpu box rem -pages 2 'c,b,a,t' in.pdf out.pdf
 removing cropBox, trimBox, bleedBox, artBox for in.pdf
 writing out.pdf...
 ```
@@ -68,7 +69,7 @@ writing out.pdf...
 Remove Crop Box for all pages of in.pdf:
 
 ```
-Go-> pdfcpu box rem 'crop' in.pdf out.pdf
+pdfcpu box rem 'crop' in.pdf out.pdf
 removing cropBox for in.pdf
 writing out.pdf...
 pages: all

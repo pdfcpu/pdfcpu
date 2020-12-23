@@ -13,7 +13,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-usage: pdfcpu boxes list [-pages selectedPages] [-upw userpw] [-opw ownerpw] ['boxTypes'] inFile
+pdfcpu boxes list [-p(ages) selectedPages] '[boxTypes]' inFile
 ```
 
 <br>
@@ -23,20 +23,21 @@ usage: pdfcpu boxes list [-pages selectedPages] [-upw userpw] [-opw ownerpw] ['b
 | flag                             | description     | required
 |:---------------------------------|:----------------|---------
 | [p(ages)](../getting_started/page_selection) | selected pages | no
-| [upw](../getting_started/common_flags.md)   | user password      | no
-| [opw](../getting_started/common_flags.md)      | owner password | no
 
 
 <br>
 
 ### Common Flags
 
-| flag                                            | description     | required
-|:------------------------------------------------|:----------------|---------
-| [v(erbose)](../getting_started/common_flags.md) | turn on logging | no
-| [vv](../getting_started/common_flags.md)        | verbose logging | no
-| [q(uiet)](../getting_started/common_flags.md)   | quiet mode      | no
-| [u(nit)](../getting_started/common_flags.md)    | display unit    | no
+| name                                            | description     | values
+|:------------------------------------------------|:----------------|:-------
+| [v(erbose)](../getting_started/common_flags.md) | turn on logging |
+| [vv](../getting_started/common_flags.md)        | verbose logging |
+| [q(uiet)](../getting_started/common_flags.md)   | quiet mode      |
+| [u(nit)](../getting_started/common_flags.md)    | display unit    | po(ints),in(ches),cm,mm
+| [c(onf)](getting_started/common_flags.md)       | config dir      | $path, disable
+| [upw](getting_started/common_flags.md)          | user password   |
+| [opw](getting_started/common_flags.md)          | owner password  |
 
 <br>
 
@@ -54,7 +55,7 @@ usage: pdfcpu boxes list [-pages selectedPages] [-upw userpw] [-opw ownerpw] ['b
  List all page boundaries of test.pdf:
 
 ```
-Go-> pdfcpu box list test.pdf
+pdfcpu box list test.pdf
 listing mediaBox, cropBox, trimBox, bleedBox, artBox for upc.pdf
 pages: all
 Page 1:
@@ -77,7 +78,7 @@ Page 2:
 List mediaBox and cropBox of page 1 of test.pdf using display unit cm:
 
 ```
-Go-> pdfcpu box list -u cm -pages 1 'm,c' test.pdf
+pdfcpu box list -u cm -pages 1 'm,c' test.pdf
 listing mediaBox, cropBox for test.pdf
 pages: 1
 Page 1:
