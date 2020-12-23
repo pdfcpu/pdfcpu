@@ -31,7 +31,7 @@ func WatermarkContext(ctx *pdfcpu.Context, selectedPages pdfcpu.IntSet, wm *pdfc
 	return ctx.AddWatermarks(selectedPages, wm)
 }
 
-// AddWatermarksSliceMap adds watermarks in m to corresponding pages in rs and writes the result to w.
+// AddWatermarksSliceMap adds watermarks in wmm to corresponding pages in rs and writes the result to w.
 func AddWatermarksSliceMap(rs io.ReadSeeker, w io.Writer, wmm map[int][]*pdfcpu.Watermark, conf *pdfcpu.Configuration) error {
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
