@@ -9,7 +9,7 @@ This command encrypts `inFile` using the standard security handler as defined in
 ## Usage
 
 ```
-usage: pdfcpu encrypt [-v(erbose)|vv] [-q(uiet)] [-mode rc4|aes] [-key 40|128|256] [perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]
+pdfcpu encrypt [-mode rc4|aes] [-key 40|128|256] [-perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]
 ```
 
 <br>
@@ -18,14 +18,23 @@ usage: pdfcpu encrypt [-v(erbose)|vv] [-q(uiet)] [-mode rc4|aes] [-key 40|128|25
 
 | name                                            | description     | required | values         |default
 |:------------------------------------------------|:----------------|:---------|:---------------|:------
-| [verbose](../getting_started/common_flags.md)   | turn on logging | no       |
-| [vv](../getting_started/common_flags.md)        | verbose logging | no       |
-| [quiet](../getting_started/common_flags.md)     | quiet mode      | no
 | mode                             | encryption   | no              | rc4, aes | aes
 | key                              | key length   | no              | rc4:40,128 aes:40,128,256        | 256
 | perm                             | permissions  | no              | none, all | none
-| [upw](../getting_started/common_flags.md)       | user password   | no
-| [opw](../getting_started/common_flags.md)       | owner password  | yes, must not be empty!
+
+<br>
+
+### Common Flags
+
+| name                                            | description     | values
+|:------------------------------------------------|:----------------|:-------
+| [v(erbose)](../getting_started/common_flags.md) | turn on logging |
+| [vv](../getting_started/common_flags.md)        | verbose logging |
+| [q(uiet)](../getting_started/common_flags.md)   | quiet mode      |
+| [u(nit)](../getting_started/common_flags.md)    | display unit    | po(ints),in(ches),cm,mm
+| [c(onf)](../getting_started/common_flags.md)       | config dir      | $path, disable
+| [upw](../getting_started/common_flags.md)          | user password   |
+| [opw](../getting_started/common_flags.md)          | owner password  |
 
 <br>
 

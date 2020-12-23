@@ -9,7 +9,7 @@ This command decrypts `inFile` and removes password protection. If provided the 
 ## Usage
 
 ```
-usage: pdfcpu decrypt [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [outFile]
+pdfcpu decrypt [-upw userpw] [-opw ownerpw] inFile [outFile]
 ```
 
 <br>
@@ -18,11 +18,20 @@ usage: pdfcpu decrypt [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] in
 
 | name                                          | description     | required
 |:----------------------------------------------|:----------------|:--------
-| [verbose](../getting_started/common_flags.md) | turn on logging | no
-| [vv](../getting_started/common_flags.md)      | verbose logging | no
-| [quiet](../getting_started/common_flags.md)   | quiet mode      | no
 | [upw](../getting_started/common_flags.md)     | user password   | no
 | [opw](../getting_started/common_flags.md)     | owner password  | no
+
+<br>
+
+### Common Flags
+
+| name                                            | description     | values
+|:------------------------------------------------|:----------------|:-------
+| [v(erbose)](../getting_started/common_flags.md) | turn on logging |
+| [vv](../getting_started/common_flags.md)        | verbose logging |
+| [q(uiet)](../getting_started/common_flags.md)   | quiet mode      |
+| [u(nit)](../getting_started/common_flags.md)    | display unit    | po(ints),in(ches),cm,mm
+| [c(onf)](../getting_started/common_flags.md)    | config dir      | $path, disable
 
 <br>
 

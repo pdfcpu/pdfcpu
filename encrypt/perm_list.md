@@ -10,12 +10,12 @@ This command prints the current permission set. Have a look at some [examples](#
 ## Usage
 
 ```
-pdfcpu permissions list [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile
+pdfcpu permissions list [-upw userpw] [-opw ownerpw] inFile
 ```
 
 <br>
 
-### Flags
+### Common Flags
 
 | name                             | description     | required
 |:---------------------------------|:----------------|:--------

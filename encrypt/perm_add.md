@@ -2,7 +2,7 @@
 layout: default
 ---
 
-# Add Permissions
+# Set Permissions
 
 The PDF specification defines a set of permissions that may be set for encrypted documents.
 Permissions go into effect anytime an encrypted document is opened with the *user password*.
@@ -13,7 +13,7 @@ Providing the *owner password* which is also known as the *set permissions passw
 ## Usage
 
 ```
-pdfcpu permissions add [-v(erbose)|vv] [-q(uiet)] [-perm none|all] [-upw userpw] -opw ownerpw inFile
+pdfcpu permissions set [-perm none|all] [-upw userpw] -opw ownerpw inFile
 ```
 
 <br>
@@ -22,10 +22,19 @@ pdfcpu permissions add [-v(erbose)|vv] [-q(uiet)] [-perm none|all] [-upw userpw]
 
 | name                             | description     | required | values    | default
 |:---------------------------------|:----------------|:---------|:----------|:-------
+| perm                             | permissions     | no       | none, all | none
+| [upw](../getting_started/common_flags.md)     | user password   | if set
+| [opw](../getting_started/common_flags.md)     | owner password  | if set
+
+<br>
+
+### Common Flags
+
+| name                             | description     | required
+|:---------------------------------|:----------------|:--------
 | [verbose](../getting_started/common_flags.md) | turn on logging | no
 | [vv](../getting_started/common_flags.md)      | verbose logging | no
 | [quiet](../getting_started/common_flags.md)   | quiet mode      | no
-| perm                             | permissions     | no       | none, all | none
 | [upw](../getting_started/common_flags.md)     | user password   | if set
 | [opw](../getting_started/common_flags.md)     | owner password  | if set
 
