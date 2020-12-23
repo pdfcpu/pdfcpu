@@ -10,20 +10,22 @@ If you want to remove an extracted document you can do this using [attach remove
 ## Usage
 
 ```
-pdfcpu attachments extract [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile outDir [file...]
+pdfcpu attachments extract inFile outDir [file...]
 ```
 
 <br>
 
-### Flags
+### Common Flags
 
-| name                                          | description       | required
-|:----------------------------------------------|:------------------|:--------
-| [verbose](../getting_started/common_flags.md) | turn on logging   | no
-| [vv](../getting_started/common_flags.md)      | verbose logging   | no
-| [quiet](../getting_started/common_flags.md)   | quiet mode        | no
-| [upw](../getting_started/common_flags.md)     | user password     | no
-| [opw](../getting_started/common_flags.md)     | owner password    | no
+| name                                            | description     | values
+|:------------------------------------------------|:----------------|:-------
+| [v(erbose)](../getting_started/common_flags.md) | turn on logging |
+| [vv](../getting_started/common_flags.md)        | verbose logging |
+| [q(uiet)](../getting_started/common_flags.md)   | quiet mode      |
+| [u(nit)](../getting_started/common_flags.md)    | display unit    | po(ints),in(ches),cm,mm
+| [c(onf)](getting_started/common_flags.md)       | config dir      | $path, disable
+| [upw](getting_started/common_flags.md)          | user password   |
+| [opw](getting_started/common_flags.md)          | owner password  |
 
 <br>
 
