@@ -12,6 +12,7 @@ layout: default
 * Split (split multi-page PDF into several PDFs according to split span)
 * Trim (generate a custom version of a PDF including selected pages)
 * Collect (generate a PDF page sequence, pages may appear multiple times in any order)
+* Crop (apply a Crop Box for selected pages)
 * Rotate selected pages
 * Manage (add,update,remove) stamps/watermarks for selected pages using text, images or PDF page content.
 * N-up (rearrange pages into grid layout for reduced number of pages)
@@ -31,6 +32,7 @@ layout: default
 * Manage (insert,remove) pages
 * Manage (add,remove,list) search keywords
 * Manage (add,remove,list) document properties
+* Manage (add,remove,list) page boundaries
 * Info (print file info)
 * Fonts (install, list supported fonts)
 * Paper (print list of supported papersizes)

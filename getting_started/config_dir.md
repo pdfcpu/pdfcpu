@@ -14,7 +14,7 @@ You can look up its location like so:
 
 ```
 Go-> pdfcpu ver -v
-pdfcpu: v0.3.7 dev
+pdfcpu: v0.3.8 dev
 config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 ```
 
@@ -55,12 +55,12 @@ encryptKeyLength: 256
 #    -1 = 0xFFFF (PermissionsAll)
 permissions: -3901
 
-# displayUnits:
+# displayUnit:
 # points
 # inches
 # cm
 # mm
-units: cm
+unit: cm
 ```
 
 <br>
