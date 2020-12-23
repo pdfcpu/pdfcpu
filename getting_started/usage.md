@@ -17,9 +17,11 @@ Usage:
 The commands are:
 
    attachments list, add, remove, extract embedded file attachments
+   boxes       list, add, remove page boundaries for selected pages
    changeopw   change owner password
    changeupw   change user password
    collect     create custom PDF page sequence
+   crop        set crop box for selected pages
    decrypt     remove password protection
    encrypt     set password protection
    extract     extract images, fonts, content, pages, metadata

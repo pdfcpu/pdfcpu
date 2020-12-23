@@ -13,9 +13,9 @@ Using `description` you can configure various aspects like position, offset, rot
 ## Usage
 
 ```
-pdfcpu stamp add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]
-pdfcpu stamp remove [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]
-pdfcpu stamp update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]
+pdfcpu stamp add    [-p(ages) selectedPages] -m(ode) text|image|pdf string|file description inFile [outFile]
+pdfcpu stamp update [-p(ages) selectedPages] -m(ode) text|image|pdf string|file description inFile [outFile]
+pdfcpu stamp remove [-p(ages) selectedPages] inFile [outFile]
 ```
 
 <br>
@@ -38,14 +38,23 @@ where *content* may be text, an image or a PDF page.
 
 | flag                             | description          | required
 |:---------------------------------|:---------------------|:--------
-| [verbose](../getting_started/common_flags.md) | turn on logging      | no
-| [vv](../getting_started/common_flags.md)      | verbose logging      | no
-| [quiet](../getting_started/common_flags.md)   | quiet mode      | no
-| [pages](../getting_started/page_selection) | page selection  | no
-| [upw](../getting_started/common_flags.md)     | user password        | no
-| [opw](../getting_started/common_flags.md)    | owner password       | no
-| [mode](../getting_started/common_flags.md)    | text, image or pdf       | yes
+| [p(ages)](../getting_started/page_selection) | selected pages | no
+| [m(ode)](../getting_started/common_flags.md)    | text, image or pdf       | yes
 
+
+<br>
+
+### Common Flags
+
+| name                                            | description     | values
+|:------------------------------------------------|:----------------|:-------
+| [v(erbose)](../getting_started/common_flags.md) | turn on logging |
+| [vv](../getting_started/common_flags.md)        | verbose logging |
+| [q(uiet)](../getting_started/common_flags.md)   | quiet mode      |
+| [u(nit)](../getting_started/common_flags.md)    | display unit    | po(ints),in(ches),cm,mm
+| [c(onf)](../getting_started/common_flags.md)       | config dir      | $path, disable
+| [upw](../getting_started/common_flags.md)          | user password   |
+| [opw](../getting_started/common_flags.md)          | owner password  |
 
 <br>
 

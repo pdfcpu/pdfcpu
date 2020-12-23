@@ -22,7 +22,7 @@ layout: default
 ## Usage
 
 ```
-pdfcpu crop [-pages selectedPages] description inFile [outFile]
+pdfcpu crop [-p(ages) selectedPages] description inFile [outFile]
 ```
 
 <br>

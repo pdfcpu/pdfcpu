@@ -9,23 +9,30 @@ Generate a trimmed version of `inFile` for selected pages. Have a look at some [
 ## Usage
 
 ```
-pdfcpu trim [-v(erbose)|vv] [-q(uiet)] -pages pageSelection [-upw userpw] [-opw ownerpw] inFile [outFile]
+pdfcpu trim -p(ages) selectedPages inFile [outFile]
 ```
 
 <br>
 
 ### Flags
 
-| flag                             | description     | required
-|:---------------------------------|:----------------|:--------
-| [verbose](../getting_started/common_flags.md) | turn on logging | no
-| [vv](../getting_started/common_flags.md)     | verbose logging | no
-| [quiet](../getting_started/common_flags.md)   | quiet mode      | no
-| [pages](../getting_started/page_selection) | page selection  | yes
-| [upw](../getting_started/common_flags.md)    | user password   | no
-| [opw](../getting_started/common_flags.md)    | owner password  | no
+| name                                         | description    | required
+|:---------------------------------------------|:---------------|---------
+| [p(ages)](../getting_started/page_selection) | selected pages | yes
 
 <br>
+
+### Common Flags
+
+| name                                            | description     | values
+|:------------------------------------------------|:----------------|:-------
+| [v(erbose)](../getting_started/common_flags.md) | turn on logging |
+| [vv](../getting_started/common_flags.md)        | verbose logging |
+| [q(uiet)](../getting_started/common_flags.md)   | quiet mode      |
+| [u(nit)](../getting_started/common_flags.md)    | display unit    | po(ints),in(ches),cm,mm
+| [c(onf)](../getting_started/common_flags.md)       | config dir      | $path, disable
+| [upw](../getting_started/common_flags.md)          | user password   |
+| [opw](../getting_started/common_flags.md)          | owner password  |
 
 ### Arguments
 

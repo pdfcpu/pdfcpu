@@ -9,21 +9,30 @@ Rotate selected pages of `inFile` clockwise by a multiple of 90 degrees. Have a 
 ## Usage
 
 ```
-pdfcpu rotate [-v(erbose)|vv] [-q(uiet)] [-pages pageSelection] [-upw userpw] [-opw ownerpw] inFile rotation [outFile]
+pdfcpu rotate [-p(ages) selectedPages] inFile rotation [outFile]
 ```
 
 <br>
 
 ### Flags
 
-| flag                             | description     | required | values
-|:---------------------------------|:----------------|:---------|:------
-| [verbose](../getting_started/common_flags.md) | turn on logging | no
-| [vv](../getting_started/common_flags.md)      | verbose logging | no
-| [quiet](../getting_started/common_flags.md)   | quiet mode      | no
-| [pages](../getting_started/page_selection) | page selection  | no | all pages
-| [upw](../getting_started/common_flags.md)     | user password   | no
-| [opw](../getting_started/common_flags.md)     | owner password  | no
+| name                                         | description    | required
+|:---------------------------------------------|:---------------|---------
+| [p(ages)](../getting_started/page_selection) | selected pages | no
+
+<br>
+
+### Common Flags
+
+| name                                            | description     | values
+|:------------------------------------------------|:----------------|:-------
+| [v(erbose)](../getting_started/common_flags.md) | turn on logging |
+| [vv](../getting_started/common_flags.md)        | verbose logging |
+| [q(uiet)](../getting_started/common_flags.md)   | quiet mode      |
+| [u(nit)](../getting_started/common_flags.md)    | display unit    | po(ints),in(ches),cm,mm
+| [c(onf)](../getting_started/common_flags.md)       | config dir      | $path, disable
+| [upw](../getting_started/common_flags.md)          | user password   |
+| [opw](../getting_started/common_flags.md)          | owner password  |
 
 <br>
 

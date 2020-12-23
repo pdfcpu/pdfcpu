@@ -15,7 +15,7 @@ This command lets you extract the following from a PDF file:
 ## Usage
 
 ```
-pdfcpu extract -mode image|font|content|page|meta [-pages selectedPages] inFile outDir
+pdfcpu extract -m(ode) image|font|content|page|meta [-p(ages) selectedPages] inFile outDir
 ````
 
 <br>
@@ -24,8 +24,8 @@ pdfcpu extract -mode image|font|content|page|meta [-pages selectedPages] inFile 
 
 | name                             | description               | required   | values
 |:---------------------------------|:--------------------------|:-----------|:-
-| mode                             | component to be extracted | yes | [image](extract_images.md), [font](extract_fonts.md), [content](extract_content.md), [page](extract_pages.md), [meta](extract_metadata.md)
-| [pages](../getting_started/page_selection) | page selection  | yes
+| m(ode)                             | component to be extracted | yes | [image](extract_images.md), [font](extract_fonts.md), [content](extract_content.md), [page](extract_pages.md), [meta](extract_metadata.md)
+| [p(ages)](../getting_started/page_selection) | page selection  | yes
 
 <br>
 

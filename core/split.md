@@ -9,20 +9,31 @@ Generate a set of PDF files for `inFile` in `outDir` according to given `span` v
 ## Usage
 
 ```
-pdfcpu split [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile outDir [span]
+pdfcpu split [-m(ode) span|bookmark] inFile outDir [span]
 ```
 
 <br>
 
 ### Flags
 
-| flag                             | description         | required
-|:---------------------------------|:--------------------|:--------
-| [verbose](../getting_started/common_flags.md) | turn on logging     | no
-| [vv](../getting_started/common_flags.md)      | verbose logging     | no
-| [quiet](../getting_started/common_flags.md)   | quiet mode      | no
-| [upw](../getting_started/common_flags.md)    | user password       | no
-| [opw](../getting_started/common_flags.md)    | owner password      | no
+| name       | required | value    | description
+|:-----------|:---------|:---------|:-----------
+| m(ode)     | no       | span     | Split into PDF files with span pages each (default)
+|            |          | bookmark | Split into PDF files representing sections defined by existing bookmarks.
+
+<br>
+
+### Common Flags
+
+| name                                            | description     | values
+|:------------------------------------------------|:----------------|:-------
+| [v(erbose)](../getting_started/common_flags.md) | turn on logging |
+| [vv](../getting_started/common_flags.md)        | verbose logging |
+| [q(uiet)](../getting_started/common_flags.md)   | quiet mode      |
+| [u(nit)](../getting_started/common_flags.md)    | display unit    | po(ints),in(ches),cm,mm
+| [c(onf)](../getting_started/common_flags.md)       | config dir      | $path, disable
+| [upw](../getting_started/common_flags.md)          | user password   |
+| [opw](../getting_started/common_flags.md)          | owner password  |
 
 <br>
 

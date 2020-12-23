@@ -9,7 +9,7 @@ This command checks `inFile` for compliance with the specification [PDF 32000-1:
 ## Usage
 
 ```
-pdfcpu validate [-v(erbose)|vv] [-q(uiet)] [-mode strict|relaxed] [-upw userpw] [-opw ownerpw] inFile
+pdfcpu validate [-m(ode) strict|relaxed] inFile
 ```
 
 <br>
@@ -18,15 +18,23 @@ pdfcpu validate [-v(erbose)|vv] [-q(uiet)] [-mode strict|relaxed] [-upw userpw] 
 
 | name                             | description     | required | values          |default
 |:---------------------------------|:----------------|:---------|:----------------|:------
-| [verbose](../getting_started/common_flags.md) | turn on logging | no       |
-| [vv](../getting_started/common_flags.md)      | verbose logging | no       |
-| [quiet](../getting_started/common_flags.md)   | quiet mode      | no
-| mode                             | validation mode | no       | strict, relaxed | relaxed
-| [upw](../getting_started/common_flags.md)     | user password   | no
-| [opw](../getting_started/common_flags.md)    | owner password  | no
+| m(ode)                           | validation mode | no       | strict, relaxed | relaxed
 
 <br>
 
+### Common Flags
+
+| name                                            | description     | values
+|:------------------------------------------------|:----------------|:-------
+| [v(erbose)](../getting_started/common_flags.md) | turn on logging |
+| [vv](../getting_started/common_flags.md)        | verbose logging |
+| [q(uiet)](../getting_started/common_flags.md)   | quiet mode      |
+| [u(nit)](../getting_started/common_flags.md)    | display unit    | po(ints),in(ches),cm,mm
+| [c(onf)](../getting_started/common_flags.md)       | config dir      | $path, disable
+| [upw](../getting_started/common_flags.md)          | user password   |
+| [opw](../getting_started/common_flags.md)          | owner password  |
+
+<br>
 ### Arguments
 
 | name         | description         | required
