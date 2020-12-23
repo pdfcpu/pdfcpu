@@ -22,30 +22,33 @@ layout: default
 ## Usage
 
 ```
-usage: pdfcpu crop [-pages selectedPages] [-upw userpw] [-opw ownerpw] description inFile [outFile]
+pdfcpu crop [-pages selectedPages] description inFile [outFile]
 ```
 
 <br>
 
 ### Flags
 
-| flag                             | description     | required
+| name                             | description     | required
 |:---------------------------------|:----------------|---------
 | [p(ages)](../getting_started/page_selection) | selected pages | no
-| [upw](../getting_started/common_flags.md)   | user password      | no
-| [opw](../getting_started/common_flags.md)      | owner password | no
 
 
 <br>
 
 ### Common Flags
 
-| flag                             | description     | required
-|:---------------------------------|:----------------|---------
-| [v(erbose)](../getting_started/common_flags.md) | turn on logging | no
-| [vv](../getting_started/common_flags.md)      | verbose logging | no
-| [q(uiet)](../getting_started/common_flags.md)   | quiet mode      | no
-| [u(nit)](../getting_started/common_flags.md) | display unit  | no
+| name                                            | description     | values
+|:------------------------------------------------|:----------------|:-------
+| [v(erbose)](../getting_started/common_flags.md) | turn on logging |
+| [vv](../getting_started/common_flags.md)        | verbose logging |
+| [q(uiet)](../getting_started/common_flags.md)   | quiet mode      |
+| [u(nit)](../getting_started/common_flags.md)    | display unit    | po(ints),in(ches),cm,mm
+| [c(onf)](getting_started/common_flags.md)       | config dir      | $path, disable
+| [upw](getting_started/common_flags.md)          | user password   |
+| [opw](getting_started/common_flags.md)          | owner password  |
+
+<br>
 
 ### Arguments
 

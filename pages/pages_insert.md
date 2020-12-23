@@ -14,22 +14,35 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu pages insert [-v(erbose)|vv] [-q(uiet)] [-pages pageSelection] [-upw userpw] [-opw ownerpw] [-mode before|after] inFile [outFile]
+pdfcpu pages insert [-p(ages) selectedPages] [-m(ode) before|after] inFile [outFile]
 ```
 
 <br>
 
 ### Flags
 
-| name                                          | description     | default | required 
-|:----------------------------------------------|:----------------|:--------|:--------
-| [verbose](../getting_started/common_flags.md) | turn on logging |         | no
-| [vv](../getting_started/common_flags.md)      | verbose logging |         | no
-| [quiet](../getting_started/common_flags.md)   | quiet mode      |         | no
-| [pages](../getting_started/page_selection)    | page selection  |         | no
-| [upw](../getting_started/common_flags.md)     | user password   |         | no
-| [opw](../getting_started/common_flags.md)     | owner password  |         | no
-| mode                                          | before, after   | before  | no
+| name                                         | description    | required | values | default
+|:---------------------------------------------|:---------------|----------|--------|--------
+| [p(ages)](../getting_started/page_selection) | selected pages | no
+| [m(ode)]()                                   |                | no       | before, after | before
+
+
+<br>
+
+
+<br>
+
+### Common Flags
+
+| name                                            | description     | values
+|:------------------------------------------------|:----------------|:-------
+| [v(erbose)](../getting_started/common_flags.md) | turn on logging |
+| [vv](../getting_started/common_flags.md)        | verbose logging |
+| [q(uiet)](../getting_started/common_flags.md)   | quiet mode      |
+| [u(nit)](../getting_started/common_flags.md)    | display unit    | po(ints),in(ches),cm,mm
+| [c(onf)](getting_started/common_flags.md)       | config dir      | $path, disable
+| [upw](getting_started/common_flags.md)          | user password   |
+| [opw](getting_started/common_flags.md)          | owner password  |
 
 <br>
 

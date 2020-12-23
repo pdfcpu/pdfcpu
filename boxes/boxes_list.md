@@ -20,7 +20,7 @@ pdfcpu boxes list [-p(ages) selectedPages] '[boxTypes]' inFile
 
 ### Flags
 
-| flag                             | description     | required
+| name                             | description     | required
 |:---------------------------------|:----------------|---------
 | [p(ages)](../getting_started/page_selection) | selected pages | no
 

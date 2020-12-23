@@ -24,7 +24,7 @@ pdfcpu boxes remove [-p(ages) selectedPages] 'boxTypes' inFile [outFile]
 
 ### Flags
 
-| flag                                         | description    | required
+| name                                         | description    | required
 |:---------------------------------------------|:---------------|---------
 | [p(ages)](../getting_started/page_selection) | selected pages | no
 

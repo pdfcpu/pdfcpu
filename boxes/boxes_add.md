@@ -15,14 +15,14 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu boxes add [-p(ages) selectedPages] description  inFile [outFile]
+pdfcpu boxes add [-p(ages) selectedPages] description inFile [outFile]
 ```
 
 <br>
 
 ### Flags
 
-| flag                                         | description    | required
+| name                                         | description    | required
 |:---------------------------------------------|:---------------|---------
 | [p(ages)](../getting_started/page_selection) | selected pages | no
 

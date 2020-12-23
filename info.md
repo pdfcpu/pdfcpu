@@ -16,8 +16,8 @@ pdfcpu info [-pages selectedPages] inFile
 
 ### Flags
 
-| name                                    | description       | required | values
-|:----------------------------------------|:------------------|:---------|-------
+| name                                    | description       | required
+|:----------------------------------------|:------------------|:--------
 | [p(ages)](getting_started/page_selection) | page selection    | no
 
 <br>
