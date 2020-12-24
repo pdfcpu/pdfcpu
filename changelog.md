@@ -7,7 +7,7 @@ layout: default
 | Date      | Tag / Commit                                                                                | Description  
 |:----------|:--------------------------------------------------------------------------------------------|:------------------------------
 |2020-12-24 | [v0.3.8](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.8)                              | Add new cmds: boxes, crop
-|           |                                                                                             | Fix #210, #216, #236, #236, #238, #241,
+|           |                                                                                             | Fix #210, #216, #236, #238, #241,
 |           |                                                                                             | #244, #245, #250, #252, #256, #258,
 |           |                                                                                             | #259, #262, #264, #265, #268
 |2020-11-04 | [v0.3.7](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.7)                              | Add CJKV font support, Fix #233
