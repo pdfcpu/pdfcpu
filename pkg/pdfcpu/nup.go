@@ -462,9 +462,10 @@ func calcTransMatrixForRect(r1, r2 *Rectangle, image bool, rotatePageForBooklet 
 			m[2][0] += w * r1.Width()
 			m[2][1] += h * r1.Height()
 		} else {
-			// 90 degree rotation, in addition to 180
-			m[2][0] -= r1.Height()
-			m[2][1] += w * r2.Width()
+			// 90 degree rotation because of paper, in addition to the 180 rotation for booklet
+			// need to shift rotated page on sheet down and left
+			m[2][0] -= h * r1.Width()
+			m[2][1] += w * r1.Height()
 		}
 	}
 	return m
