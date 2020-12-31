@@ -124,24 +124,23 @@ func ExampleAddWatermarksFile() {
 
 	// Add a "Demo" watermark to all pages of in.pdf along the diagonal running from lower left to upper right.
 	onTop := false
-	wm, _ := pdfcpu.ParseTextWatermarkDetails("Demo", "", onTop)
+	update := false
+	wm, _ := TextWatermark("Demo", "", onTop, update, pdfcpu.POINTS)
 	AddWatermarksFile("in.pdf", "", nil, wm, nil)
 
 	// Stamp all odd pages of in.pdf in red "Confidential" in 48 point Courier
 	// using a rotation angle of 45 degrees and an absolute scalefactor of 1.0.
 	onTop = true
-	wm, _ = pdfcpu.ParseTextWatermarkDetails("Confidential", "font:Courier, points:48, col: 1 0 0, rot:45, sc:1 abs, ", onTop)
+	wm, _ = TextWatermark("Confidential", "font:Courier, points:48, col: 1 0 0, rot:45, sc:1 abs, ", onTop, update, pdfcpu.POINTS)
 	AddWatermarksFile("in.pdf", "", []string{"odd"}, wm, nil)
 
 	// Add image stamps to in.pdf using absolute scaling and a negative rotation of 90 degrees.
-	onTop = true
-	wm, _ = pdfcpu.ParseImageWatermarkDetails("image.png", "scalefactor:.5 a, rot:-90", onTop)
+	wm, _ = ImageWatermark("image.png", "scalefactor:.5 a, rot:-90", onTop, update, pdfcpu.POINTS)
 	AddWatermarksFile("in.pdf", "", nil, wm, nil)
 
 	// Add a PDF stamp to all pages of in.pdf using the 2nd page of stamp.pdf, use absolute scaling of 0.5
 	// and rotate along the 2nd diagonal running from upper left to lower right corner.
-	onTop = true
-	wm, _ = pdfcpu.ParsePDFWatermarkDetails("stamp.pdf:2", "sc:.5 abs, diagonal:2", onTop)
+	wm, _ = PDFWatermark("stamp.pdf:2", "sc:.5 abs, diagonal:2", onTop, update, pdfcpu.POINTS)
 	AddWatermarksFile("in.pdf", "", nil, wm, nil)
 }
 
@@ -149,16 +148,17 @@ func ExampleRemoveWatermarksFile() {
 
 	// Add a "Demo" stamp to all pages of in.pdf along the diagonal running from lower left to upper right.
 	onTop := true
-	wm, _ := pdfcpu.ParseTextWatermarkDetails("Demo", "", onTop)
+	update := false
+	wm, _ := TextWatermark("Demo", "", onTop, update, pdfcpu.POINTS)
 	AddWatermarksFile("in.pdf", "", nil, wm, nil)
 
 	// Update stamp for correction:
-	wm, _ = pdfcpu.ParseTextWatermarkDetails("Confidential", "", onTop)
-	wm.Update = true
+	update = true
+	wm, _ = TextWatermark("Confidential", "", onTop, update, pdfcpu.POINTS)
 	AddWatermarksFile("in.pdf", "", nil, wm, nil)
 
 	// Add another watermark on top of page 1
-	wm, _ = pdfcpu.ParseTextWatermarkDetails("Footer stamp", "c:.5 1 1, pos:bc", onTop)
+	wm, _ = TextWatermark("Footer stamp", "c:.5 1 1, pos:bc", onTop, update, pdfcpu.POINTS)
 	AddWatermarksFile("in.pdf", "", nil, wm, nil)
 
 	// Remove watermark on page 1
@@ -179,29 +179,29 @@ func ExampleImportImagesFile() {
 	// Import images by creating an A3 page for each image.
 	// Images are page centered with 1.0 relative scaling.
 	// Import an image as a new page of the existing out.pdf.
-	imp, _ := pdfcpu.ParseImportDetails("form:A3, pos:c, s:1.0")
+	imp, _ := Import("form:A3, pos:c, s:1.0", pdfcpu.POINTS)
 	ImportImagesFile([]string{"a1.png", "a2.jpg", "a3.tiff"}, "out.pdf", imp, nil)
 }
 
 func ExampleNUpFile() {
 
 	// 4-Up in.pdf and write result to out.pdf.
-	nup, _ := pdfcpu.PDFNUpConfig(4, "")
+	nup, _ := PDFNUp(4, "")
 	inFiles := []string{"in.pdf"}
 	NUpFile(inFiles, "out.pdf", nil, nup, nil)
 
 	// 9-Up a sequence of images using format Tabloid w/o borders and no margins.
-	nup, _ = pdfcpu.ImageNUpConfig(9, "f:Tabloid, b:off, m:0")
+	nup, _ = ImageNUp(9, "f:Tabloid, b:off, m:0")
 	inFiles = []string{"in1.png", "in2.jpg", "in3.tiff"}
 	NUpFile(inFiles, "out.pdf", nil, nup, nil)
 
 	// TestGridFromPDF
-	nup, _ = pdfcpu.PDFGridConfig(1, 3, "f:LegalL")
+	nup, _ = PDFGrid(1, 3, "f:LegalL")
 	inFiles = []string{"in.pdf"}
 	NUpFile(inFiles, "out.pdf", nil, nup, nil)
 
 	// TestGridFromImages
-	nup, _ = pdfcpu.ImageGridConfig(4, 2, "d:500 500, m:20, b:off")
+	nup, _ = ImageGrid(4, 2, "d:500 500, m:20, b:off")
 	inFiles = []string{"in1.png", "in2.jpg", "in3.tiff"}
 	NUpFile(inFiles, "out.pdf", nil, nup, nil)
 }

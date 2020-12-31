@@ -33,6 +33,15 @@ func initCommandMap() {
 		attachCmdMap.register(k, v)
 	}
 
+	boxesCmdMap := newCommandMap()
+	for k, v := range map[string]command{
+		"list":   {processListBoxesCommand, nil, "", ""},
+		"add":    {processAddBoxesCommand, nil, "", ""},
+		"remove": {processRemoveBoxesCommand, nil, "", ""},
+	} {
+		boxesCmdMap.register(k, v)
+	}
+
 	portfolioCmdMap := newCommandMap()
 	for k, v := range map[string]command{
 		"list":    {processListAttachmentsCommand, nil, "", ""},
@@ -108,9 +117,11 @@ func initCommandMap() {
 
 	for k, v := range map[string]command{
 		"attachments": {nil, attachCmdMap, usageAttach, usageLongAttach},
+		"boxes":       {nil, boxesCmdMap, usageBoxes, usageLongBoxes},
 		"changeopw":   {processChangeOwnerPasswordCommand, nil, usageChangeOwnerPW, usageLongChangeUserPW},
 		"changeupw":   {processChangeUserPasswordCommand, nil, usageChangeUserPW, usageLongChangeUserPW},
 		"collect":     {processCollectCommand, nil, usageCollect, usageLongCollect},
+		"crop":        {processCropCommand, nil, usageCrop, usageLongCrop},
 		"decrypt":     {processDecryptCommand, nil, usageDecrypt, usageLongDecrypt},
 		"encrypt":     {processEncryptCommand, nil, usageEncrypt, usageLongEncrypt},
 		"extract":     {processExtractCommand, nil, usageExtract, usageLongExtract},
@@ -141,9 +152,8 @@ func initCommandMap() {
 }
 
 func initFlags() {
-	statsUsage := "optimize: a csv file for stats appending"
+	statsUsage := "optimize: create a csv file for stats"
 	flag.StringVar(&fileStats, "stats", "", statsUsage)
-	flag.StringVar(&fileStats, "s", "", statsUsage)
 
 	modeUsage := "validate: strict|relaxed; extract: image|font|content|page|meta; encrypt: rc4|aes, stamp:text|image/pdf"
 	flag.StringVar(&mode, "mode", "", modeUsage)
@@ -156,9 +166,9 @@ func initFlags() {
 	permUsage := "encrypt, perm set: none|all"
 	flag.StringVar(&perm, "perm", "none", permUsage)
 
-	unitsUsage := "info: po|in|cm|mm"
-	flag.StringVar(&units, "units", "", unitsUsage)
-	flag.StringVar(&units, "u", "", unitsUsage)
+	unitUsage := "info: po|in|cm|mm"
+	flag.StringVar(&unit, "unit", "", unitUsage)
+	flag.StringVar(&unit, "u", "", unitUsage)
 
 	selectedPagesUsage := "a comma separated list of pages or page ranges, see pdfcpu help split/extract"
 	flag.StringVar(&selectedPages, "pages", "", selectedPagesUsage)
@@ -166,6 +176,10 @@ func initFlags() {
 
 	flag.BoolVar(&quiet, "quiet", false, "")
 	flag.BoolVar(&quiet, "q", false, "")
+
+	sortUsage := "sort files before merging"
+	flag.BoolVar(&sorted, "sort", false, sortUsage)
+	flag.BoolVar(&sorted, "s", false, sortUsage)
 
 	flag.BoolVar(&verbose, "verbose", false, "")
 	flag.BoolVar(&verbose, "v", false, "")

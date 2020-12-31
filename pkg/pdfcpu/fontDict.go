@@ -307,7 +307,7 @@ func type0FontDict(xRefTable *XRefTable, fontName string) (*IndirectRef, error) 
 	// by means of variable-length character codes in a string to be shown.
 	ttf, ok := font.UserFontMetrics[fontName]
 	if !ok {
-		return nil, errors.Errorf("pdfcpu: font %s not avalable", fontName)
+		return nil, errors.Errorf("pdfcpu: font %s not available", fontName)
 	}
 
 	baseFontName := subFontPrefix() + "-" + fontName

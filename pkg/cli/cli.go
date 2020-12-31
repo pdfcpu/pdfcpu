@@ -234,3 +234,23 @@ func RemoveProperties(cmd *Command) ([]string, error) {
 func Collect(cmd *Command) ([]string, error) {
 	return nil, api.CollectFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
 }
+
+// ListBoxes returns inFile's page boundaries.
+func ListBoxes(cmd *Command) ([]string, error) {
+	return api.ListBoxesFile(*cmd.InFile, cmd.PageSelection, cmd.PageBoundaries, cmd.Conf)
+}
+
+// AddBoxes adds page boundaries to inFile's page tree and writes the result to outFile.
+func AddBoxes(cmd *Command) ([]string, error) {
+	return nil, api.AddBoxesFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.PageBoundaries, cmd.Conf)
+}
+
+// RemoveBoxes deletes page boundaries from inFile's page tree and writes the result to outFile.
+func RemoveBoxes(cmd *Command) ([]string, error) {
+	return nil, api.RemoveBoxesFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.PageBoundaries, cmd.Conf)
+}
+
+// Crop adds crop boxes for selected pages of inFile and writes result to outFile.
+func Crop(cmd *Command) ([]string, error) {
+	return nil, api.CropFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Box, cmd.Conf)
+}

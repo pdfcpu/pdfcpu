@@ -26,13 +26,15 @@ Usage:
 The commands are:
 
    attachments list, add, remove, extract embedded file attachments
+   boxes       list, add, remove page boundaries for selected pages
    changeopw   change owner password
    changeupw   change user password
    collect     create custom sequence of selected pages
+   crop        set cropbox for selected pages
    decrypt     remove password protection
    encrypt     set password protection		
-   extract     extract images, fonts, content, pages, metadata
-   fonts       install, list supported fonts
+   extract     extract images, fonts, content, pages or metadata
+   fonts       install, list supported fonts, create cheat sheets
    grid        rearrange pages or images for enhanced browsing experience
    import      import/convert images to PDF
    info        print file info
@@ -47,11 +49,11 @@ The commands are:
    properties  list, add, remove document properties
    rotate      rotate pages
    split       split up a PDF by span or bookmark
-   stamp       add, remove, update text, image or PDF stamps for selected pages
+   stamp       add, remove, update Unicode text, image or PDF stamps for selected pages
    trim        create trimmed version of selected pages
    validate    validate PDF against PDF 32000-1:2008 (PDF 1.7)
    version     print version
-   watermark   add, remove, update text, image or PDF watermarks for selected pages
+   watermark   add, remove, update Unicode text, image or PDF watermarks for selected pages
 
    All instantly recognizable command prefixes are supported eg. val for validation
    One letter Unix style abbreviations supported for flags and command parameters.
@@ -60,21 +62,22 @@ Use "pdfcpu help [command]" for more information about a command.`
 
 	generalFlags = `
    
-other optional flags: -v(erbose)|vv
-                      -q(uiet)
-                      -c(onf) $path|disable`
+common flags: -v(erbose)  ... turn on logging
+              -vv         ... verbose logging
+              -q(uiet)    ... disable output
+              -c(onf)     ... set or disable config dir: $path|disable
+              -opw        ... owner password
+              -upw        ... user password
+              -u(nit)     ... display unit: po(ints) ... points
+                                             in(ches) ... inches
+                                                   cm ... centimetres
+                                                   mm ... millimetres`
 
-	usageValidate = "usage: pdfcpu validate [-mode strict|relaxed] [-upw userpw] [-opw ownerpw] inFile" + generalFlags
+	usageValidate = "usage: pdfcpu validate [-m(ode) strict|relaxed] inFile" + generalFlags
 
 	usageLongValidate = `Check inFile for specification compliance.
 
-verbose, v ... turn on logging
-        vv ... verbose logging
-  quiet, q ... disable output
-   c, conf ... set or disable config dir
       mode ... validation mode
-       upw ... user password
-       opw ... owner password
     inFile ... input pdf file
 		
 The validation modes are:
@@ -82,28 +85,18 @@ The validation modes are:
  strict ... (default) validates against PDF 32000-1:2008 (PDF 1.7)
 relaxed ... like strict but doesn't complain about common seen spec violations.`
 
-	usageOptimize     = "usage: pdfcpu optimize [-stats csvFile] [-upw userpw] [-opw ownerpw] inFile [outFile]" + generalFlags
+	usageOptimize     = "usage: pdfcpu optimize [-stats csvFile] inFile [outFile]" + generalFlags
 	usageLongOptimize = `Read inFile, remove redundant page resources like embedded fonts and images and write the result to outFile.
 
-verbose, v ... turn on logging
-        vv ... verbose logging
-  quiet, q ... disable output
      stats ... appends a stats line to a csv file with information about the usage of root and page entries.
                useful for batch optimization and debugging PDFs.
-       upw ... user password
-       opw ... owner password
     inFile ... input pdf file
    outFile ... output pdf file`
 
-	usageSplit     = "usage: pdfcpu split [-mode span|bookmark] [-upw userpw] [-opw ownerpw] inFile outDir [span]" + generalFlags
+	usageSplit     = "usage: pdfcpu split [-m(ode) span|bookmark] inFile outDir [span]" + generalFlags
 	usageLongSplit = `Generate a set of PDFs for the input file in outDir according to given span value or along bookmarks.
 
-verbose, v ... turn on logging
-        vv ... verbose logging
-  quiet, q ... disable output
       mode ... split mode (defaults to span)
-       upw ... user password
-       opw ... owner password
     inFile ... input pdf file
     outDir ... output directory
       span ... split span in pages (default: 1) for mode "span"
@@ -117,13 +110,11 @@ The split modes are:
                    span will be ignored.
                    Assumption: inFile contains an outline dictionary.`
 
-	usageMerge     = "usage: pdfcpu merge [-mode create|append] outFile inFile..." + generalFlags
+	usageMerge     = "usage: pdfcpu merge [-m(ode) create|append] [-sort] outFile inFile..." + generalFlags
 	usageLongMerge = `Concatenate a sequence of PDFs/inFiles into outFile.
-   
-verbose, v ... turn on logging
-        vv ... verbose logging
-  quiet, q ... disable output
+
       mode ... merge mode (defaults to create)
+      sort ... sort inFiles by file name
    outFile ... output pdf file
     inFile ... a list of pdf files subject to concatenation.
     
@@ -154,16 +145,11 @@ The merge modes are:
 
         e.g. -3,5,7- or 4-7,!6 or 1-,!5 or odd,n1`
 
-	usageExtract     = "usage: pdfcpu extract -mode image|font|content|page|meta [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile outDir" + generalFlags
+	usageExtract     = "usage: pdfcpu extract -m(ode) image|font|content|page|meta [-p(ages) selectedPages] inFile outDir" + generalFlags
 	usageLongExtract = `Export inFile's images, fonts, content or pages into outDir.
 
-verbose, v ... turn on logging
-        vv ... verbose logging
-  quiet, q ... disable output
       mode ... extraction mode
      pages ... selected pages
-       upw ... user password
-       opw ... owner password
     inFile ... input pdf file
     outDir ... output directory
 
@@ -177,24 +163,19 @@ content ... extract raw page content
    
 ` + usagePageSelection
 
-	usageTrim     = "usage: pdfcpu trim -pages selectedPages [-upw userpw] [-opw ownerpw] inFile [outFile]" + generalFlags
+	usageTrim     = "usage: pdfcpu trim -p(ages) selectedPages inFile [outFile]" + generalFlags
 	usageLongTrim = `Generate a trimmed version of inFile for selected pages.
 
-verbose, v ... turn on logging
-        vv ... verbose logging
-  quiet, q ... disable output
      pages ... selected pages
-       upw ... user password
-       opw ... owner password
     inFile ... input pdf file
    outFile ... output pdf file
    
 ` + usagePageSelection
 
-	usageAttachList    = "pdfcpu attachments list    [-upw userpw] [-opw ownerpw] inFile"
-	usageAttachAdd     = "pdfcpu attachments add     [-upw userpw] [-opw ownerpw] inFile file..."
-	usageAttachRemove  = "pdfcpu attachments remove  [-upw userpw] [-opw ownerpw] inFile [file...]"
-	usageAttachExtract = "pdfcpu attachments extract [-upw userpw] [-opw ownerpw] inFile outDir [file...]" + generalFlags
+	usageAttachList    = "pdfcpu attachments list    inFile"
+	usageAttachAdd     = "pdfcpu attachments add     inFile file..."
+	usageAttachRemove  = "pdfcpu attachments remove  inFile [file...]"
+	usageAttachExtract = "pdfcpu attachments extract inFile outDir [file...]" + generalFlags
 
 	usageAttach = "usage: " + usageAttachList +
 		"\n       " + usageAttachAdd +
@@ -202,20 +183,15 @@ verbose, v ... turn on logging
 		"\n       " + usageAttachExtract
 
 	usageLongAttach = `Manage embedded file attachments.
-	
-verbose, v ... turn on logging
-        vv ... verbose logging
-  quiet, q ... disable output
-       upw ... user password
-       opw ... owner password
+
     inFile ... input pdf file
       file ... attachment
     outDir ... output directory`
 
-	usagePortfolioList    = "pdfcpu portfolio list    [-upw userpw] [-opw ownerpw] inFile"
-	usagePortfolioAdd     = "pdfcpu portfolio add     [-upw userpw] [-opw ownerpw] inFile file[,desc]..."
-	usagePortfolioRemove  = "pdfcpu portfolio remove  [-upw userpw] [-opw ownerpw] inFile [file...]"
-	usagePortfolioExtract = "pdfcpu portfolio extract [-upw userpw] [-opw ownerpw] inFile outDir [file...]" + generalFlags
+	usagePortfolioList    = "pdfcpu portfolio list    inFile"
+	usagePortfolioAdd     = "pdfcpu portfolio add     inFile file[,desc]..."
+	usagePortfolioRemove  = "pdfcpu portfolio remove  inFile [file...]"
+	usagePortfolioExtract = "pdfcpu portfolio extract inFile outDir [file...]" + generalFlags
 
 	usagePortfolio = "usage: " + usagePortfolioList +
 		"\n       " + usagePortfolioAdd +
@@ -223,12 +199,7 @@ verbose, v ... turn on logging
 		"\n       " + usagePortfolioExtract
 
 	usageLongPortfolio = `Manage portfolio entries.
-	
-verbose, v ... turn on logging
-        vv ... verbose logging
-  quiet, q ... disable output
-       upw ... user password
-       opw ... owner password
+
     inFile ... input pdf file
       file ... attachment
       desc ... description (optional)
@@ -248,46 +219,28 @@ verbose, v ... turn on logging
 		"\n       " + usagePermSet
 
 	usageLongPerm = `Manage user access permissions.
-	
-verbose, v ... turn on logging
-        vv ... verbose logging
-  quiet, q ... disable output
+
       perm ... user access permissions
-       upw ... user password
-       opw ... owner password
     inFile ... input pdf file`
 
-	usageEncrypt     = "usage: pdfcpu encrypt [-mode rc4|aes] [-key 40|128|256] [perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]" + generalFlags
+	usageEncrypt     = "usage: pdfcpu encrypt [-m(ode) rc4|aes] [-key 40|128|256] [-perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]" + generalFlags
 	usageLongEncrypt = `Setup password protection based on user and owner password.
 
-verbose, v ... turn on logging
-        vv ... verbose logging
-  quiet, q ... disable output
       mode ... algorithm (default=aes)
        key ... key length in bits (default=256)
       perm ... user access permissions
-       upw ... user password
-       opw ... owner password (must not be empty!)
     inFile ... input pdf file
    outFile ... output pdf file`
 
 	usageDecrypt     = "usage: pdfcpu decrypt [-upw userpw] [-opw ownerpw] inFile [outFile]" + generalFlags
 	usageLongDecrypt = `Remove password protection and reset permissions.
 
-verbose, v ... turn on logging
-        vv ... verbose logging
-  quiet, q ... disable output
-       upw ... user password
-       opw ... owner password
     inFile ... input pdf file
    outFile ... output pdf file`
 
 	usageChangeUserPW     = "usage: pdfcpu changeupw [-opw ownerpw] inFile upwOld upwNew" + generalFlags
 	usageLongChangeUserPW = `Change the user password also known as the open doc password.
-	
-verbose, v ... turn on logging
-        vv ... verbose logging
-  quiet, q ... disable output
+
        opw ... owner password, required unless = ""
     inFile ... input pdf file
     upwOld ... old user password
@@ -295,10 +248,7 @@ verbose, v ... turn on logging
 
 	usageChangeOwnerPW     = "usage: pdfcpu changeopw [-upw userpw] inFile opwOld opwNew" + generalFlags
 	usageLongChangeOwnerPW = `Change the owner password also known as the set permissions password.
-	
-verbose, v ... turn on logging
-        vv ... verbose logging
-  quiet, q ... disable output
+
        upw ... user password, required unless = ""
     inFile ... input pdf file
     opwOld ... old owner password (provide user password on initial changeopw)
@@ -331,7 +281,7 @@ verbose, v ... turn on logging
    points:           fontsize in points, in combination with absolute scaling only.
    position:         one of the anchors: tl,tc,tr, l,c,r, bl,bc,br
                      Reliable with non rotated pages only!
-   offset:           (dx dy) in user units eg. '15 20'
+   offset:           (dx dy) in given display unit eg. '15 20'
    scalefactor:      0.0 < i <= 1.0 {r|rel} | 0.0 < i {a|abs}
    aligntext:        l..left, c..center, r..right, j..justified (for text watermarks only)
    fillcolor:        color value to be used when rendering text, see also rendermode
@@ -375,19 +325,16 @@ e.g. 'pos:bl, off: 20 5'   'rot:45'                 'op:0.5, s:0.5 abs, rot:0'
      
 ` + usagePageSelection
 
-	usageStampAdd    = "pdfcpu stamp add    [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]"
-	usageStampRemove = "pdfcpu stamp remove [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]"
-	usageStampUpdate = "pdfcpu stamp update [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]" + generalFlags
+	usageStampAdd    = "pdfcpu stamp add    [-p(ages) selectedPages] -m(ode) text|image|pdf string|file description inFile [outFile]"
+	usageStampUpdate = "pdfcpu stamp update [-p(ages) selectedPages] -m(ode) text|image|pdf string|file description inFile [outFile]"
+	usageStampRemove = "pdfcpu stamp remove [-p(ages) selectedPages] inFile [outFile]" + generalFlags
 
 	usageStamp = "usage: " + usageStampAdd +
-		"\n       " + usageStampRemove +
-		"\n       " + usageStampUpdate
+		"\n       " + usageStampUpdate +
+		"\n       " + usageStampRemove
 
 	usageLongStamp = `Process stamping for selected pages. 
 
- verbose, v ... turn on logging
-         vv ... verbose logging
-   quiet, q ... disable output
       pages ... selected pages
         upw ... user password
         opw ... owner password
@@ -401,26 +348,21 @@ description ... fontname, points, position, offset, scalefactor, aligntext, rota
 
 ` + usageWMMode + usageWMDescription
 
-	usageWatermarkAdd    = "pdfcpu watermark add    [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]"
-	usageWatermarkRemove = "pdfcpu watermark remove [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]"
-	usageWatermarkUpdate = "pdfcpu watermark update [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]" + generalFlags
+	usageWatermarkAdd    = "pdfcpu watermark add    [-p(ages) selectedPages] -m(ode) text|image|pdf string|file description inFile [outFile]"
+	usageWatermarkUpdate = "pdfcpu watermark update [-p(ages) selectedPages] -m(ode) text|image|pdf string|file description inFile [outFile]"
+	usageWatermarkRemove = "pdfcpu watermark remove [-p(ages) selectedPages] inFile [outFile]" + generalFlags
 
 	usageWatermark = "usage: " + usageWatermarkAdd +
-		"\n       " + usageWatermarkRemove +
-		"\n       " + usageWatermarkUpdate
+		"\n       " + usageWatermarkUpdate +
+		"\n       " + usageWatermarkRemove
 
 	usageLongWatermark = `Process watermarking for selected pages. 
 
- verbose, v ... turn on logging
-         vv ... verbose logging
-   quiet, q ... disable output
       pages ... selected pages
-        upw ... user password
-        opw ... owner password
        mode ... text, image, pdf
      string ... display string for text based watermarks
        file ... image or pdf file
-description ... fontname, points, position, offset, scalefactor, aligntext, rotation, 
+description ... fontname, points, position, offset, scalefactor, aligntext, rotation,
                 diagonal, opacity, rendermode, strokecolor, fillcolor, bgcolor, margins, border
      inFile ... input pdf file
     outFile ... output pdf file
@@ -433,10 +375,7 @@ If outFile already exists the page sequence will be appended.
 Each imageFile will be rendered to a separate page.
 In its simplest form this converts an image into a PDF: "pdfcpu import img.pdf img.jpg"
 
- verbose, v ... turn on logging
-         vv ... verbose logging
-   quiet, q ... disable output
-description ... dimensions, format, position, offset, scale factor
+description ... dimensions, format, position, offset, scale factor, boxes
     outFile ... output pdf file
   imageFile ... a list of image files
   
@@ -446,7 +385,7 @@ description ... dimensions, format, position, offset, scale factor
 
       (defaults: d:595 842, f:A4, pos:full, off:0 0, s:0.5 rel, dpi:72)
 
-  dimensions: (width height) in user units eg. '400 200'
+  dimensions: (width height) in given display unit eg. '400 200' setting the media box
 
   formsize, papersize: eg. A4, Letter, Legal...
                            Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
@@ -454,7 +393,7 @@ description ... dimensions, format, position, offset, scale factor
                            An appended 'P' enforces portrait mode. (eg. TabloidP)
 
   position:    one of 'full' or the anchors: tl,tc,tr, l,c,r, bl,bc,br
-  offset:      (dx dy) in user units eg. '15 20'
+  offset:      (dx dy) in given display unit eg. '15 20'
   scalefactor: 0.0 <= x <= 1.0 followed by optional 'abs|rel' or 'a|r'
   dpi:         apply desired dpi
   
@@ -469,49 +408,36 @@ description ... dimensions, format, position, offset, scale factor
        'f:A4, pos:c, dpi:300'                    ... render the image centered on A4 respecting a destination resolution of 300 dpi.
        `
 
-	usagePagesInsert = "pdfcpu pages insert [-pages selectedPages] [-upw userpw] [-opw ownerpw] [-mode before|after] inFile [outFile]"
-	usagePagesRemove = "pdfcpu pages remove  -pages selectedPages  [-upw userpw] [-opw ownerpw] inFile [outFile]" + generalFlags
+	usagePagesInsert = "pdfcpu pages insert [-p(ages) selectedPages] [-m(ode) before|after] inFile [outFile]"
+	usagePagesRemove = "pdfcpu pages remove  -p(ages) selectedPages  inFile [outFile]" + generalFlags
 
 	usagePages = "usage: " + usagePagesInsert +
 		"\n       " + usagePagesRemove
 
 	usageLongPages = `Manage pages.
 
- verbose, v ... turn on logging
-         vv ... verbose logging
-   quiet, q ... disable output
       pages ... selected pages
-        upw ... user password
-        opw ... owner password
        mode ... before, after (default: before)
      inFile ... input pdf file
     outFile ... output pdf file
 
 ` + usagePageSelection
 
-	usageRotate     = "usage: pdfcpu rotate [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile rotation [outFile]" + generalFlags
+	usageRotate     = "usage: pdfcpu rotate [-p(ages) selectedPages] inFile rotation [outFile]" + generalFlags
 	usageLongRotate = `Rotate selected pages by a multiple of 90 degrees. 
 
- verbose, v ... turn on logging
-         vv ... verbose logging
-   quiet, q ... disable output
       pages ... selected pages
-        upw ... user password
-        opw ... owner password
      inFile ... input pdf file
    rotation ... a multiple of 90 degrees for clockwise rotation
     outFile ... output pdf file
 
 ` + usagePageSelection
 
-	usageNUp     = "usage: pdfcpu nup [-pages selectedPages] [description] outFile n inFile|imageFiles..." + generalFlags
+	usageNUp     = "usage: pdfcpu nup [-p(ages) selectedPages] [description] outFile n inFile|imageFiles..." + generalFlags
 	usageLongNUp = `Rearrange existing PDF pages or images into a sequence of page grids.
 This reduces the number of pages and therefore the required print time.
 If the input is one imageFile a single page n-up PDF gets generated.
 
- verbose, v ... turn on logging
-         vv ... verbose logging
-   quiet, q ... disable output
       pages ... selected pages for inFile only
 description ... dimensions, format, orientation
     outFile ... output pdf file
@@ -534,7 +460,7 @@ description ... dimensions, format, orientation
   
         (defaults: d:595 842, f:A4, o:rd, b:on, m:3)
   
-    dimensions: (width,height) in user units eg. '400 200'
+    dimensions: (width,height) in given display unit eg. '400 200'
     
     formsize, papersize, eg. A4, Letter, Legal...
                            Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
@@ -550,7 +476,7 @@ description ... dimensions, format, orientation
 
     border:      on/off true/false
     
-    margin:      for n-up content: int >= 0
+    margin:      for n-up content: float >= 0 in given display unit
 
 All configuration string parameters support completion.
     
@@ -571,15 +497,12 @@ Examples: "pdfcpu nup out.pdf 4 in.pdf"
 
 ` + usagePageSelection
 
-	usageGrid     = "usage: pdfcpu grid [-pages selectedPages] [description] outFile m n inFile|imageFiles..." + generalFlags
+	usageGrid     = "usage: pdfcpu grid [-p(ages) selectedPages] [description] outFile m n inFile|imageFiles..." + generalFlags
 	usageLongGrid = `Rearrange PDF pages or images for enhanced browsing experience.
 For a PDF inputfile each output page represents a grid of input pages.
 For image inputfiles each output page shows all images laid out onto grids of given paper size. 
 This command produces poster like PDF pages convenient for page and image browsing. 
 
- verbose, v ... turn on logging
-         vv ... verbose logging
-   quiet, q ... disable output
       pages ... selected pages for inFile only
 description ... dimensions, format, orientation
     outFile ... output pdf file
@@ -594,7 +517,7 @@ description ... dimensions, format, orientation
   
         (defaults: d:595 842, f:A4, o:rd, b:on, m:3)
   
-    dimensions: (width height) in user units eg. '400 200'
+    dimensions: (width height) in given display unit eg. '400 200'
 
     formsize, papersize, eg. A4, Letter, Legal...
                            Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
@@ -603,14 +526,14 @@ description ... dimensions, format, orientation
                            Only one of dimensions or format is allowed.
 
     orientation: one of rd ... right down (=default)
-                           dr ... down right
-                           ld ... left down
-                           dl ... down left
-                           Orientation applies to PDF input files only.
+                        dr ... down right
+                        ld ... left down
+                        dl ... down left
+                        Orientation applies to PDF input files only.
 
     border:      on/off true/false
     
-    margin:      for content: int >= 0
+    margin:      for content: float >= 0 in given display unit
 
 All configuration string parameters support completion.
 
@@ -698,21 +621,11 @@ Examples: "pdfcpu grid out.pdf 1 10 in.pdf"
 	usagePaper     = "usage: pdfcpu paper"
 	usageLongPaper = "Print a list of supported paper sizes."
 
-	usageInfo     = "usage: pdfcpu info [-pages selectedPages] [-u(nits)] [-upw userpw] [-opw ownerpw] inFile"
+	usageInfo     = "usage: pdfcpu info [-p(ages) selectedPages] inFile" + generalFlags
 	usageLongInfo = `Print info about a PDF file.
    
    pages ... selected pages
-units, u ... paper size display unit
-     upw ... user password
-     opw ... owner password
-  inFile ... input pdf file
-    
-Possible units are:
-   
-points, po ... points
-inches, in ... inches
-        cm ... centimetres
-        mm ... millimetres`
+  inFile ... input pdf file`
 
 	usageFontsList       = "pdfcpu fonts list"
 	usageFontsInstall    = "pdfcpu fonts install fontFiles..."
@@ -722,24 +635,19 @@ inches, in ... inches
 		"\n       " + usageFontsInstall +
 		"\n       " + usageFontsCheatSheet
 	usageLongFonts = `Print a list of supported fonts (includes the 14 PDF core fonts).
-Install given true type fonts (.ttf) from working directory for embedding in stamps/watermarks.
+Install given True Type fonts(.ttf) or True Type collections(.ttc) for usage in stamps/watermarks.
 Create single page PDF cheat sheets in current dir.`
 
-	usageKeywordsList   = "pdfcpu keywords list    [-upw userpw] [-opw ownerpw] inFile"
-	usageKeywordsAdd    = "pdfcpu keywords add     [-upw userpw] [-opw ownerpw] inFile keyword..."
-	usageKeywordsRemove = "pdfcpu keywords remove  [-upw userpw] [-opw ownerpw] inFile [keyword...]" + generalFlags
+	usageKeywordsList   = "pdfcpu keywords list    inFile"
+	usageKeywordsAdd    = "pdfcpu keywords add     inFile keyword..."
+	usageKeywordsRemove = "pdfcpu keywords remove  inFile [keyword...]" + generalFlags
 
 	usageKeywords = "usage: " + usageKeywordsList +
 		"\n       " + usageKeywordsAdd +
 		"\n       " + usageKeywordsRemove
 
 	usageLongKeywords = `Manage keywords.
-	
-verbose, v ... turn on logging
-        vv ... verbose logging
-  quiet, q ... disable output
-       upw ... user password
-       opw ... owner password
+
     inFile ... input pdf file
    keyword ... search keyword
     
@@ -747,21 +655,16 @@ verbose, v ... turn on logging
            pdfcpu keywords add test.pdf music 'virtual instruments'
     `
 
-	usagePropertiesList   = "pdfcpu properties list    [-upw userpw] [-opw ownerpw] inFile"
-	usagePropertiesAdd    = "pdfcpu properties add     [-upw userpw] [-opw ownerpw] inFile nameValuePair..."
-	usagePropertiesRemove = "pdfcpu properties remove  [-upw userpw] [-opw ownerpw] inFile [name...]" + generalFlags
+	usagePropertiesList   = "pdfcpu properties list    inFile"
+	usagePropertiesAdd    = "pdfcpu properties add     inFile nameValuePair..."
+	usagePropertiesRemove = "pdfcpu properties remove  inFile [name...]" + generalFlags
 
 	usageProperties = "usage: " + usagePropertiesList +
 		"\n       " + usagePropertiesAdd +
 		"\n       " + usagePropertiesRemove
 
 	usageLongProperties = `Manage document properties.
-    
-   verbose, v ... turn on logging
-           vv ... verbose logging
-     quiet, q ... disable output
-          upw ... user password
-          opw ... owner password
+
        inFile ... input pdf file
 nameValuePair ... 'name = value'
          name ... property name
@@ -769,17 +672,100 @@ nameValuePair ... 'name = value'
      Eg. adding one property:   pdfcpu properties add test.pdf 'key = value'
          adding two properties: pdfcpu properties add test.pdf 'key1 = val1' 'key2 = val2'
      `
-	usageCollect     = "usage: pdfcpu collect -pages selectedPages [-upw userpw] [-opw ownerpw] inFile [outFile]" + generalFlags
+	usageCollect     = "usage: pdfcpu collect -pages selectedPages inFile [outFile]" + generalFlags
 	usageLongCollect = `Create custom sequence of selected pages. 
-  
-   verbose, v ... turn on logging
-           vv ... verbose logging
-     quiet, q ... disable output
+
         pages ... selected pages
-          upw ... user password
-          opw ... owner password
        inFile ... input pdf file
       outFile ... output pdf file
   
   ` + usagePageSelection
+
+	usageBoxDescription = `
+box:
+
+   A rectangular region in user space describing one of:
+
+      media box:  boundaries of the physical medium on which the page is to be printed.
+       crop box:  region to which the contents of the page shall be clipped (cropped) when displayed or printed.
+      bleed box:  region to which the contents of the page shall be clipped when output in a production environment.
+       trim box:  intended dimensions of the finished page after trimming.
+        art box:  extent of the page’s meaningful content as intended by the page’s creator.
+   
+   Please refer to the PDF Specification 14.11.2 Page Boundaries for details.
+
+   All values are in given display unit (po, in, mm, cm)
+
+   General rules:
+      The media box is mandatory and serves as default for the crop box and is its parent box.
+      The crop box serves as default for art box, bleed box and trim box and is their parent box.
+
+   Arbitrary rectangular region in user space:
+      [0 10 200 150]       lower left corner at (0/10), upper right corner at (200/150)
+                           or xmin:0 ymin:10 xmax:200 ymax:150
+
+   Expressed as margins within parent box:
+      '0.5 0.5 20 20'      absolute, top:.5 right:.5 bottom:20 left:20
+      '0.5 0.5 .1 .1 abs'  absolute, top:.5 right:.5 bottom:.1 left:.1
+      '0.5 0.5 .1 .1 rel'  relative, top:.5 right:.5 bottom:20 left:20
+      '10'                 absolute, top,right,bottom,left:10
+      '10 5'               absolute, top,bottom:10  left,right:5
+      '10 5 15'            absolute, top:10 left,right:5 bottom:15
+      '5%'                 relative, top,right,bottom,left:5% of parent box width/height
+      '.1 .5'              absolute, top,bottom:.1  left,right:.5 
+      '.1 .3 rel'          relative, top,bottom:.1=10%  left,right:.3=30%
+      '-10'                absolute, top,right,bottom,left:-10 relative to parent box (for crop box the media box gets expanded)
+
+   Anchored within parent box, use dim and optionally pos, off:
+      'dim: 200 300 abs'                   centered, 200x300 display units
+      'pos:c, off:0 0, dim: 200 300 abs'   centered, 200x300 display units
+      'pos:tl, off:5 5, dim: 50% 50% rel'  anchored to top left corner, 50% width/height of parent box, offset by 5/5 display units
+      'pos:br, off:-5 -5, dim: .5 .5 rel'  anchored to bottom right corner, 50% width/height of parent box, offset by -5/-5 display units
+
+
+`
+
+	usageCrop     = "usage: pdfcpu crop [-p(ages) selectedPages] description inFile [outFile]" + generalFlags
+	usageLongCrop = `Set crop box for selected pages. 
+
+        pages ... selected pages
+  description ... crop box definition abs. or rel. to media box
+       inFile ... input pdf file
+      outFile ... output pdf file
+
+Examples:
+   pdfcpu crop '[0 0 500 500]' in.pdf ... crop a 500x500 points region located in lower left corner
+   pdfcpu crop -u mm '20' in.pdf      ... crop relative to media box using a 20mm margin
+
+` + usageBoxDescription + usagePageSelection
+
+	usageBoxesList   = "pdfcpu boxes list    [-p(ages) selectedPages] '[boxTypes]' inFile"
+	usageBoxesAdd    = "pdfcpu boxes add     [-p(ages) selectedPages] description  inFile [outFile]"
+	usageBoxesRemove = "pdfcpu boxes remove  [-p(ages) selectedPages] 'boxTypes'   inFile [outFile]" + generalFlags
+
+	usageBoxes = "usage: " + usageBoxesList +
+		"\n       " + usageBoxesAdd +
+		"\n       " + usageBoxesRemove
+
+	usageLongBoxes = `Manage page boundaries.
+
+     boxTypes ... comma separated list of box types: m(edia), c(rop), t(rim), b(leed), a(rt)
+  description ... box definitions abs. or rel. to parent box
+       inFile ... input pdf file
+      outFile ... output pdf file
+
+<description> is a sequence of box definitions and assignments:
+
+   m(edia): {box} 
+    c(rop): {box} 
+     a(rt): {box} | m(edia) | c(rop) | b(leed) | t(rim)
+   b(leed): {box} | m(edia) | c(rop) | a(rt) | t(rim)
+    t(rim): {box} | m(edia) | c(rop) | a(rt) | b(leed)
+Examples: 
+   pdfcpu box list in.pdf
+   pdfcpu box l 'bleed,trim' in.pdf
+   pdfcpu box add 'crop:[10 10 200 200], trim:5, bleed:trim' in.pdf
+   pdfcpu box rem 't,b' in.pdf
+     
+` + usageBoxDescription + usagePageSelection
 )

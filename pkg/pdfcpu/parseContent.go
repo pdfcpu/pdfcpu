@@ -27,7 +27,7 @@ import (
 var (
 	errPageContentCorrupt  = errors.New("pdfcpu: corrupt page content")
 	errTJExpressionCorrupt = errors.New("pdfcpu: corrupt TJ expression")
-	errBIExpressionCorrupt = errors.New("pdfcpu: corrupt TJ expression")
+	errBIExpressionCorrupt = errors.New("pdfcpu: corrupt BI expression")
 )
 
 func whitespaceOrEOL(c rune) bool {

@@ -94,14 +94,11 @@ func (d Dict) Find(key string) (value Object, found bool) {
 
 // Delete deletes the Object for given key.
 func (d Dict) Delete(key string) (value Object) {
-
 	value, found := d.Find(key)
 	if !found {
 		return nil
 	}
-
 	delete(d, key)
-
 	return value
 }
 

@@ -123,19 +123,19 @@ func handleConfPermissions(v string, c *Configuration) error {
 	return nil
 }
 
-func handleConfUnits(v string, c *Configuration) error {
+func handleConfUnit(v string, c *Configuration) error {
 	v1 := v
 	switch v1 {
 	case "points":
-		c.Units = POINTS
+		c.Unit = POINTS
 	case "inches":
-		c.Units = INCHES
+		c.Unit = INCHES
 	case "cm":
-		c.Units = CENTIMETRES
+		c.Unit = CENTIMETRES
 	case "mm":
-		c.Units = MILLIMETRES
+		c.Unit = MILLIMETRES
 	default:
-		return errors.Errorf("invalid units: %s", v)
+		return errors.Errorf("invalid unit: %s", v)
 	}
 	return nil
 }
@@ -170,8 +170,8 @@ func parseKeyValue(k, v string, c *Configuration) error {
 	case "permissions":
 		err = handleConfPermissions(v, c)
 
-	case "units":
-		err = handleConfUnits(v, c)
+	case "unit", "units":
+		err = handleConfUnit(v, c)
 	}
 	return err
 }

@@ -96,6 +96,10 @@ const (
 	ADDPROPERTIES
 	REMOVEPROPERTIES
 	COLLECT
+	CROP
+	LISTBOXES
+	ADDBOXES
+	REMOVEBOXES
 )
 
 // Configuration of a Context.
@@ -152,8 +156,8 @@ type Configuration struct {
 	// Command being executed.
 	Cmd CommandMode
 
-	// Chosen units for outputting paper sizes.
-	Units DisplayUnit
+	// Display unit in effect.
+	Unit DisplayUnit
 }
 
 // ConfigPath defines the location of pdfcpu's configuration directory.
@@ -275,7 +279,7 @@ func (c Configuration) String() string {
 		"EncryptUsingAES:   %t\n"+
 		"EncryptKeyLength:  %d\n"+
 		"Permissions:       %d\n"+
-		"Units:             %s\n",
+		"Unit :             %s\n",
 		path,
 		c.Reader15,
 		c.DecodeAllStreams,
@@ -286,7 +290,7 @@ func (c Configuration) String() string {
 		c.EncryptUsingAES,
 		c.EncryptKeyLength,
 		c.Permissions,
-		c.UnitsString())
+		c.UnitString())
 }
 
 // EolString returns a string rep for the eol in effect.
@@ -314,10 +318,10 @@ func (c *Configuration) ValidationModeString() string {
 	return "none"
 }
 
-// UnitsString returns a string rep for the display unit in effect.
-func (c *Configuration) UnitsString() string {
+// UnitString returns a string rep for the display unit in effect.
+func (c *Configuration) UnitString() string {
 	var s string
-	switch c.Units {
+	switch c.Unit {
 	case POINTS:
 		s = "points"
 	case INCHES:

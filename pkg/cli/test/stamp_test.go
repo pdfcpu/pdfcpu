@@ -28,6 +28,7 @@ func testAddWatermarks(t *testing.T, msg, inFile, outFile string, selectedPages 
 	t.Helper()
 	inFile = filepath.Join(inDir, inFile)
 	outFile = filepath.Join(outDir, outFile)
+	unit := pdfcpu.POINTS
 
 	var (
 		wm  *pdfcpu.Watermark
@@ -35,11 +36,11 @@ func testAddWatermarks(t *testing.T, msg, inFile, outFile string, selectedPages 
 	)
 	switch mode {
 	case "text":
-		wm, err = pdfcpu.ParseTextWatermarkDetails(modeParm, desc, onTop)
+		wm, err = pdfcpu.ParseTextWatermarkDetails(modeParm, desc, onTop, unit)
 	case "image":
-		wm, err = pdfcpu.ParseImageWatermarkDetails(modeParm, desc, onTop)
+		wm, err = pdfcpu.ParseImageWatermarkDetails(modeParm, desc, onTop, unit)
 	case "pdf":
-		wm, err = pdfcpu.ParsePDFWatermarkDetails(modeParm, desc, onTop)
+		wm, err = pdfcpu.ParsePDFWatermarkDetails(modeParm, desc, onTop, unit)
 	}
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
@@ -146,9 +147,10 @@ func TestStampingLifecyle(t *testing.T) {
 	inFile := filepath.Join(inDir, "Acroforms2.pdf")
 	outFile := filepath.Join(outDir, "stampLC.pdf")
 	onTop := true // we are testing stamps
+	unit := pdfcpu.POINTS
 
 	// Stamp all pages.
-	wm, err := pdfcpu.ParseTextWatermarkDetails("Demo", "", onTop)
+	wm, err := pdfcpu.ParseTextWatermarkDetails("Demo", "", onTop, unit)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
@@ -158,7 +160,7 @@ func TestStampingLifecyle(t *testing.T) {
 	}
 
 	// // Update stamp on page 1.
-	wm, err = pdfcpu.ParseTextWatermarkDetails("Confidential", "", onTop)
+	wm, err = pdfcpu.ParseTextWatermarkDetails("Confidential", "", onTop, unit)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
@@ -170,7 +172,7 @@ func TestStampingLifecyle(t *testing.T) {
 
 	// Add another stamp on top for all pages.
 	// This is a redish transparent footer.
-	wm, err = pdfcpu.ParseTextWatermarkDetails("Footer", "pos:bc, c:0.8 0 0, op:.6, rot:0", onTop)
+	wm, err = pdfcpu.ParseTextWatermarkDetails("Footer", "pos:bc, c:0.8 0 0, op:.6, rot:0", onTop, unit)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}

@@ -1020,9 +1020,16 @@ func headerVersion(rs io.ReadSeeker) (v *Version, eolCount int, err error) {
 	s := string(buf)
 	prefix := "%PDF-"
 
-	if len(s) < 8 || !strings.HasPrefix(s, prefix) {
+	if len(s) < 8 {
 		return nil, 0, errCorruptHeader
 	}
+
+	// Allow for leading bytes before %PDF-
+	i := strings.Index(s, prefix)
+	if i < 0 {
+		return nil, 0, errCorruptHeader
+	}
+	s = s[i:]
 
 	pdfVersion, err := PDFVersion(s[len(prefix) : len(prefix)+3])
 	if err != nil {
@@ -1034,7 +1041,7 @@ func headerVersion(rs io.ReadSeeker) (v *Version, eolCount int, err error) {
 
 	// Detect the used eol which should be 1 (0x00, 0x0D) or 2 chars (0x0D0A)long.
 	// %PDF-1.x{whiteSpace}{text}{eol} or
-	i := strings.IndexAny(s, "\x0A\x0D")
+	i = strings.IndexAny(s, "\x0A\x0D")
 	if i < 0 {
 		return nil, 0, errCorruptHeader
 	}
@@ -1148,6 +1155,27 @@ func bypassXrefSection(ctx *Context) error {
 	return nil
 }
 
+func postProcess(ctx *Context, xrefSectionCount int) {
+	// Ensure free object #0 if exactly one xref subsection
+	// and in one of the following weird situations:
+	if xrefSectionCount == 1 && !ctx.Exists(0) {
+		if *ctx.Size == len(ctx.Table)+1 {
+			// Hack for #262
+			// Create free object 0 from scratch if the free list head is missing.
+			g0 := FreeHeadGeneration
+			z := int64(0)
+			ctx.Table[0] = &XRefTableEntry{Free: true, Offset: &z, Generation: &g0}
+		} else {
+			// Hack for #250: A friendly 🤢 to the devs of the HP Scanner & Printer software utility.
+			// Create free object 0 by shifting down all objects by one.
+			for i := 1; i <= *ctx.Size; i++ {
+				ctx.Table[i-1] = ctx.Table[i]
+			}
+			delete(ctx.Table, *ctx.Size)
+		}
+	}
+}
+
 // Build XRefTable by reading XRef streams or XRef sections.
 func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 
@@ -1163,7 +1191,7 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 	ctx.HeaderVersion = hv
 	ctx.Read.EolCount = eolCount
 	offs := map[int64]bool{}
-	ssCount := 0
+	xrefSectionCount := 0
 
 	for offset != nil {
 
@@ -1195,7 +1223,7 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 
 		if strings.TrimSpace(line) == "xref" {
 			log.Read.Println("buildXRefTableStartingAt: found xref section")
-			if offset, err = parseXRefSection(s, ctx, &ssCount); err != nil {
+			if offset, err = parseXRefSection(s, ctx, &xrefSectionCount); err != nil {
 				return err
 			}
 		} else {
@@ -1213,14 +1241,7 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 		}
 	}
 
-	// A friendly 🤢 to the devs of the HP Scanner & Printer software utility.
-	// Hack for #250: If exactly one xref subsection ensure it starts with object #0 instead #1.
-	if ssCount == 1 && !ctx.Exists(0) {
-		for i := 1; i <= *ctx.Size; i++ {
-			ctx.Table[i-1] = ctx.Table[i]
-		}
-		delete(ctx.Table, *ctx.Size)
-	}
+	postProcess(ctx, xrefSectionCount)
 
 	log.Read.Println("buildXRefTableStartingAt: end")
 
@@ -1797,10 +1818,10 @@ func readContentStream(rd io.Reader, streamLength int) ([]byte, error) {
 			// Weak heuristic to detect the actual end of this stream
 			// once we have reached EOF due to incorrect streamLength.
 			eob := bytes.Index(buf, []byte("endstream"))
-			if eob <= 0 {
+			if eob < 0 {
 				return nil, err
 			}
-			return buf[:eob-1], nil
+			return buf[:eob], nil
 		}
 
 		log.Read.Printf("readContentStream: count=%d, buflen=%d(%X)\n", count, len(buf), len(buf))

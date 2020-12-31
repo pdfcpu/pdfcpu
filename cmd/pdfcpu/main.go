@@ -23,12 +23,12 @@ import (
 )
 
 var (
-	fileStats, mode, selectedPages   string
-	upw, opw, key, perm, units, conf string
-	verbose, veryVerbose             bool
-	quiet                            bool
-	needStackTrace                   = true
-	cmdMap                           commandMap
+	fileStats, mode, selectedPages  string
+	upw, opw, key, perm, unit, conf string
+	verbose, veryVerbose            bool
+	quiet, sorted                   bool
+	needStackTrace                  = true
+	cmdMap                          commandMap
 )
 
 // Set by Goreleaser.

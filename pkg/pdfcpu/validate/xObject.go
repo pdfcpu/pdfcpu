@@ -729,6 +729,25 @@ func validateFormStreamDict(xRefTable *pdf.XRefTable, sd *pdf.StreamDict) error 
 	return validateFormStreamDictPart2(xRefTable, sd.Dict, dictName)
 }
 
+func validateXObjectType(xRefTable *pdf.XRefTable, sd *pdf.StreamDict) error {
+	ss := []string{"XObject"}
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		ss = append(ss, "Xobject")
+	}
+
+	n, err := validateNameEntry(xRefTable, sd.Dict, "xObjectStreamDict", "Type", OPTIONAL, pdf.V10, func(s string) bool { return pdf.MemberOf(s, ss) })
+	if err != nil {
+		return err
+	}
+
+	// Repair "Xobject" to "XObject".
+	if n != nil && *n == "Xobject" {
+		sd.Dict["Type"] = pdf.Name("XObject")
+	}
+
+	return nil
+}
+
 func validateXObjectStreamDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
 
 	// see 8.8 External Objects
@@ -745,10 +764,7 @@ func validateXObjectStreamDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
 
 	dictName := "xObjectStreamDict"
 
-	//fmt.Printf("XObjStrD: \n%s\n", sd)
-
-	_, err = validateNameEntry(xRefTable, sd.Dict, dictName, "Type", OPTIONAL, pdf.V10, func(s string) bool { return s == "XObject" })
-	if err != nil {
+	if err := validateXObjectType(xRefTable, sd); err != nil {
 		return err
 	}
 

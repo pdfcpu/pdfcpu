@@ -37,9 +37,11 @@ The main focus lies on strong support for batch processing and scripting via a r
 ## Command Set
 
 * [attachments](https://pdfcpu.io/attach/attach)
+* [boxes](https://pdfcpu.io/boxes/boxes)
 * [change owner password](https://pdfcpu.io/encrypt/change_opw)
 * [change user password](https://pdfcpu.io/encrypt/change_upw)
 * [collect](https://pdfcpu.io/core/collect)
+* [crop](https://pdfcpu.io/core/crop)
 * [decrypt](https://pdfcpu.io/encrypt/decryptPDF)
 * [encrypt](https://pdfcpu.io/encrypt/encryptPDF)
 * [extract](https://pdfcpu.io/extract/extract)

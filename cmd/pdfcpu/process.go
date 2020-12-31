@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -220,6 +221,10 @@ func processMergeCommand(conf *pdfcpu.Configuration) {
 			continue
 		}
 		filesIn = append(filesIn, arg)
+	}
+
+	if sorted {
+		sort.Strings(filesIn)
 	}
 
 	var cmd *cli.Command
@@ -642,6 +647,8 @@ func addWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 		os.Exit(1)
 	}
 
+	processDiplayUnit(conf)
+
 	var (
 		wm  *pdfcpu.Watermark
 		err error
@@ -649,13 +656,13 @@ func addWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 
 	switch mode {
 	case "text":
-		wm, err = pdfcpu.ParseTextWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop)
+		wm, err = pdfcpu.ParseTextWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Unit)
 
 	case "image":
-		wm, err = pdfcpu.ParseImageWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop)
+		wm, err = pdfcpu.ParseImageWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Unit)
 
 	case "pdf":
-		wm, err = pdfcpu.ParsePDFWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop)
+		wm, err = pdfcpu.ParsePDFWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Unit)
 	default:
 		err = errors.Errorf("unsupported wm type: %s\n", mode)
 	}
@@ -707,6 +714,8 @@ func updateWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 		os.Exit(1)
 	}
 
+	processDiplayUnit(conf)
+
 	var (
 		wm  *pdfcpu.Watermark
 		err error
@@ -714,13 +723,13 @@ func updateWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 
 	switch mode {
 	case "text":
-		wm, err = pdfcpu.ParseTextWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop)
+		wm, err = pdfcpu.ParseTextWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Unit)
 
 	case "image":
-		wm, err = pdfcpu.ParseImageWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop)
+		wm, err = pdfcpu.ParseImageWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Unit)
 
 	case "pdf":
-		wm, err = pdfcpu.ParsePDFWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop)
+		wm, err = pdfcpu.ParsePDFWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Unit)
 	default:
 		err = errors.Errorf("unsupported wm type: %s\n", mode)
 	}
@@ -812,6 +821,8 @@ func processImportImagesCommand(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
+	processDiplayUnit(conf)
+
 	var outFile string
 	outFile = flag.Arg(0)
 	if hasPdfExtension(outFile) {
@@ -827,7 +838,7 @@ func processImportImagesCommand(conf *pdfcpu.Configuration) {
 	}
 
 	// pdfcpu import description outFile imageFile...
-	imp, err := pdfcpu.ParseImportDetails(flag.Arg(0))
+	imp, err := pdfcpu.ParseImportDetails(flag.Arg(0), conf.Unit)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
@@ -1012,6 +1023,8 @@ func processNUpCommand(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
+	processDiplayUnit(conf)
+
 	pages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
@@ -1028,6 +1041,8 @@ func processNUpCommand(conf *pdfcpu.Configuration) {
 		inFiles := parseAfterNUpDetails(nup, 1, outFile)
 		process(cli.NUpCommand(inFiles, outFile, pages, nup, conf))
 	}
+
+	nup.InpUnit = conf.Unit
 
 	// pdfcpu nup description outFile n inFile|imageFiles...
 	if err = pdfcpu.ParseNUpDetails(flag.Arg(0), nup); err != nil {
@@ -1047,6 +1062,8 @@ func processGridCommand(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
+	processDiplayUnit(conf)
+
 	pages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
@@ -1065,6 +1082,8 @@ func processGridCommand(conf *pdfcpu.Configuration) {
 		process(cli.NUpCommand(inFiles, outFile, pages, nup, conf))
 	}
 
+	nup.InpUnit = conf.Unit
+
 	// pdfcpu grid description outFile m n inFile|imageFiles...
 	if err = pdfcpu.ParseNUpDetails(flag.Arg(0), nup); err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
@@ -1075,6 +1094,24 @@ func processGridCommand(conf *pdfcpu.Configuration) {
 	ensurePdfExtension(outFile)
 	inFiles := parseAfterNUpDetails(nup, 2, outFile)
 	process(cli.NUpCommand(inFiles, outFile, pages, nup, conf))
+}
+
+func processDiplayUnit(conf *pdfcpu.Configuration) {
+	if !pdfcpu.MemberOf(unit, []string{"", "points", "po", "inches", "in", "cm", "mm"}) {
+		fmt.Fprintf(os.Stderr, "%s\n\n", "supported units: (po)ints, (in)ches, cm, mm")
+		os.Exit(1)
+	}
+
+	switch unit {
+	case "points", "po":
+		conf.Unit = pdfcpu.POINTS
+	case "inches", "in":
+		conf.Unit = pdfcpu.INCHES
+	case "cm":
+		conf.Unit = pdfcpu.CENTIMETRES
+	case "mm":
+		conf.Unit = pdfcpu.MILLIMETRES
+	}
 }
 
 func processInfoCommand(conf *pdfcpu.Configuration) {
@@ -1092,21 +1129,7 @@ func processInfoCommand(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
-	if !pdfcpu.MemberOf(units, []string{"", "points", "po", "inches", "in", "cm", "mm"}) {
-		fmt.Fprintf(os.Stderr, "%s\n\n", "supported units: (po)ints, (in)ches, cm, mm")
-		os.Exit(1)
-	}
-
-	switch units {
-	case "points", "po":
-		conf.Units = pdfcpu.POINTS
-	case "inches", "in":
-		conf.Units = pdfcpu.INCHES
-	case "cm":
-		conf.Units = pdfcpu.CENTIMETRES
-	case "mm":
-		conf.Units = pdfcpu.MILLIMETRES
-	}
+	processDiplayUnit(conf)
 
 	process(cli.InfoCommand(inFile, selectedPages, conf))
 }
@@ -1286,4 +1309,139 @@ func processCollectCommand(conf *pdfcpu.Configuration) {
 	}
 
 	process(cli.CollectCommand(inFile, outFile, selectedPages, conf))
+}
+
+func processListBoxesCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) < 1 || len(flag.Args()) > 2 {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usageBoxesList)
+		os.Exit(1)
+	}
+
+	processDiplayUnit(conf)
+
+	selectedPages, err := api.ParsePageSelection(selectedPages)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
+		os.Exit(1)
+	}
+
+	if len(flag.Args()) == 1 {
+		inFile := flag.Arg(0)
+		ensurePdfExtension(inFile)
+		process(cli.ListBoxesCommand(inFile, selectedPages, nil, conf))
+	}
+
+	pb, err := api.PageBoundariesFromBoxList(flag.Arg(0))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem parsing box list: %v\n", err)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(1)
+	ensurePdfExtension(inFile)
+
+	process(cli.ListBoxesCommand(inFile, selectedPages, pb, conf))
+}
+
+func processAddBoxesCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) < 1 || len(flag.Args()) > 3 {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usageBoxesAdd)
+		os.Exit(1)
+	}
+
+	processDiplayUnit(conf)
+
+	pb, err := api.PageBoundaries(flag.Arg(0), conf.Unit)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem parsing page boundaries: %v\n", err)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(1)
+	ensurePdfExtension(inFile)
+
+	outFile := ""
+	if len(flag.Args()) == 3 {
+		outFile = flag.Arg(2)
+		ensurePdfExtension(outFile)
+	}
+
+	selectedPages, err := api.ParsePageSelection(selectedPages)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
+		os.Exit(1)
+	}
+
+	process(cli.AddBoxesCommand(inFile, outFile, selectedPages, pb, conf))
+}
+
+func processRemoveBoxesCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) < 1 || len(flag.Args()) > 3 {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usageBoxesRemove)
+		os.Exit(1)
+	}
+
+	pb, err := api.PageBoundariesFromBoxList(flag.Arg(0))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem parsing box list: %v\n", err)
+		os.Exit(1)
+	}
+	if pb == nil {
+		fmt.Fprintln(os.Stderr, "please supply a list of box types to be removed")
+		os.Exit(1)
+	}
+
+	if pb.Media != nil {
+		fmt.Fprintf(os.Stderr, "cannot remove media box\n")
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(1)
+	ensurePdfExtension(inFile)
+
+	outFile := ""
+	if len(flag.Args()) == 3 {
+		outFile = flag.Arg(2)
+		ensurePdfExtension(outFile)
+	}
+
+	selectedPages, err := api.ParsePageSelection(selectedPages)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
+		os.Exit(1)
+	}
+
+	process(cli.RemoveBoxesCommand(inFile, outFile, selectedPages, pb, conf))
+}
+
+func processCropCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) < 1 || len(flag.Args()) > 3 {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usageCrop)
+		os.Exit(1)
+	}
+
+	processDiplayUnit(conf)
+
+	box, err := api.Box(flag.Arg(0), conf.Unit)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem parsing box definition: %v\n", err)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(1)
+	ensurePdfExtension(inFile)
+
+	outFile := ""
+	if len(flag.Args()) == 3 {
+		outFile = flag.Arg(2)
+		ensurePdfExtension(outFile)
+	}
+
+	selectedPages, err := api.ParsePageSelection(selectedPages)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
+		os.Exit(1)
+	}
+
+	process(cli.CropCommand(inFile, outFile, selectedPages, box, conf))
 }

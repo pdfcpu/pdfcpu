@@ -156,9 +156,9 @@ func (ctx *Context) String() string {
 	return strings.Join(logStr, "")
 }
 
-func (ctx *Context) units() string {
+func (ctx *Context) unit() string {
 	u := "points"
-	switch ctx.Units {
+	switch ctx.Unit {
 	case INCHES:
 		u = "inches"
 	case CENTIMETRES:
@@ -169,8 +169,8 @@ func (ctx *Context) units() string {
 	return u
 }
 
-func (ctx *Context) convertToUnits(d Dim) Dim {
-	switch ctx.Units {
+func (ctx *Context) convertToUnit(d Dim) Dim {
+	switch ctx.Unit {
 	case INCHES:
 		return d.ToInches()
 	case CENTIMETRES:
@@ -255,185 +255,6 @@ func (ctx *Context) addAttachmentsToInfoDigest(ss *[]string) error {
 	}
 
 	return nil
-}
-
-func (ctx *Context) pageInfo(selectedPages IntSet) ([]string, error) {
-	units := ctx.units()
-	if len(selectedPages) > 0 {
-		//fmt.Printf("len(selectedPages) = %d\n", len(selectedPages))
-		pbs, err := ctx.PageBoundaries()
-		if err != nil {
-			return nil, err
-		}
-		ss := []string{}
-		for i, pb := range pbs {
-			if _, found := selectedPages[i+1]; !found {
-				continue
-			}
-			ss = append(ss, fmt.Sprintf("Page %d:", i+1))
-			mb := pb.mediaBox
-			cb := pb.cropBox
-			tb := pb.trimBox
-			bb := pb.bleedBox
-			ab := pb.artBox
-			s := ""
-			if cb == nil || mb.equals(*cb) {
-				s += " = CropBox"
-				if tb == nil || tb.equals(*mb) {
-					s += ", TrimBox"
-				}
-				if bb == nil || bb.equals(*mb) {
-					s += ", BleedBox"
-				}
-				if ab == nil || ab.equals(*mb) {
-					s += ", ArtBox"
-				}
-			}
-			ss = append(ss, fmt.Sprintf("  MediaBox (%s) %v %s", units, mb.Format(ctx.Units), s))
-			if cb != nil && !cb.equals(*mb) {
-				s = ""
-				if tb == nil || tb.equals(*cb) {
-					s += "= TrimBox"
-				}
-				if bb == nil || bb.equals(*cb) {
-					if len(s) == 0 {
-						s += "= "
-					} else {
-						s += ", "
-					}
-					s += "BleedBox"
-				}
-				if ab == nil || ab.equals(*cb) {
-					if len(s) == 0 {
-						s += "= "
-					} else {
-						s += ", "
-					}
-					s += "ArtBox"
-				}
-				ss = append(ss, fmt.Sprintf("   CropBox (%s) %v %s", units, cb.Format(ctx.Units), s))
-				if tb != nil && !tb.equals(*mb) && !tb.equals(*cb) {
-					ss = append(ss, fmt.Sprintf("   TrimBox (%s) %v", units, tb.Format(ctx.Units)))
-				}
-				if bb != nil && !bb.equals(*mb) && !bb.equals(*cb) {
-					ss = append(ss, fmt.Sprintf("  BleedBox (%s) %v", units, bb.Format(ctx.Units)))
-				}
-				if ab != nil && !ab.equals(*mb) && !ab.equals(*cb) {
-					ss = append(ss, fmt.Sprintf("    ArtBox (%s) %v", units, ab.Format(ctx.Units)))
-				}
-			}
-		}
-		return ss, nil
-	}
-
-	pd, err := ctx.PageDims()
-	if err != nil {
-		return nil, err
-	}
-
-	m := map[Dim]bool{}
-	for _, d := range pd {
-		m[d] = true
-	}
-
-	ss := []string{}
-	s := "Page size:"
-	for d := range m {
-		dc := ctx.convertToUnits(d)
-		ss = append(ss, fmt.Sprintf("%21s %.2f x %.2f %s", s, dc.Width, dc.Height, units))
-		s = ""
-	}
-
-	return ss, nil
-}
-
-// InfoDigest returns info about ctx.
-func (ctx *Context) InfoDigest(selectedPages IntSet) ([]string, error) {
-	var separator = "............................................"
-	var ss []string
-	v := ctx.HeaderVersion
-	if ctx.RootVersion != nil {
-		v = ctx.RootVersion
-	}
-	ss = append(ss, fmt.Sprintf("%20s: %s", "PDF version", v))
-	ss = append(ss, fmt.Sprintf("%20s: %d", "Page count", ctx.PageCount))
-
-	pi, err := ctx.pageInfo(selectedPages)
-	if err != nil {
-		return nil, err
-	}
-	ss = append(ss, pi...)
-
-	ss = append(ss, fmt.Sprintf(separator))
-	ss = append(ss, fmt.Sprintf("%20s: %s", "Title", ctx.Title))
-	ss = append(ss, fmt.Sprintf("%20s: %s", "Author", ctx.Author))
-	ss = append(ss, fmt.Sprintf("%20s: %s", "Subject", ctx.Subject))
-	ss = append(ss, fmt.Sprintf("%20s: %s", "PDF Producer", ctx.Producer))
-	ss = append(ss, fmt.Sprintf("%20s: %s", "Content creator", ctx.Creator))
-	ss = append(ss, fmt.Sprintf("%20s: %s", "Creation date", ctx.CreationDate))
-	ss = append(ss, fmt.Sprintf("%20s: %s", "Modification date", ctx.ModDate))
-
-	if err := ctx.addKeywordsToInfoDigest(&ss); err != nil {
-		return nil, err
-	}
-
-	if err := ctx.addPropertiesToInfoDigest(&ss); err != nil {
-		return nil, err
-	}
-
-	ss = append(ss, fmt.Sprintf(separator))
-
-	s := "No"
-	if ctx.Tagged {
-		s = "Yes"
-	}
-	ss = append(ss, fmt.Sprintf("              Tagged: %s", s))
-
-	s = "No"
-	if ctx.Read.Hybrid {
-		s = "Yes"
-	}
-	ss = append(ss, fmt.Sprintf("              Hybrid: %s", s))
-
-	s = "No"
-	if ctx.Read.Linearized {
-		s = "Yes"
-	}
-	ss = append(ss, fmt.Sprintf("          Linearized: %s", s))
-
-	s = "No"
-	if ctx.Read.UsingXRefStreams {
-		s = "Yes"
-	}
-	ss = append(ss, fmt.Sprintf("  Using XRef streams: %s", s))
-
-	s = "No"
-	if ctx.Read.UsingObjectStreams {
-		s = "Yes"
-	}
-	ss = append(ss, fmt.Sprintf("Using object streams: %s", s))
-
-	s = "No"
-	if ctx.Watermarked {
-		s = "Yes"
-	}
-	ss = append(ss, fmt.Sprintf("         Watermarked: %s", s))
-
-	ss = append(ss, fmt.Sprintf(separator))
-
-	s = "No"
-	if ctx.Encrypt != nil {
-		s = "Yes"
-	}
-	ss = append(ss, fmt.Sprintf("%20s: %s", "Encrypted", s))
-
-	ctx.addPermissionsToInfoDigest(&ss)
-
-	if err := ctx.addAttachmentsToInfoDigest(&ss); err != nil {
-		return nil, err
-	}
-
-	return ss, nil
 }
 
 // ReadContext represents the context for reading a PDF file.
@@ -579,7 +400,7 @@ type OptimizationContext struct {
 	DuplicateInfoObjects IntSet // Possible result of manual info dict modification.
 	NonReferencedObjs    []int  // Objects that are not referenced.
 
-	FixTable  map[int]bool // map for visited objects during xreftable traversal for fixing references to free objects.
+	Cache     map[int]bool // For visited objects during optimization.
 	NullObjNr *int         // objNr of a regular null object, to be used for fixing references to free objects.
 }
 
@@ -593,7 +414,7 @@ func newOptimizationContext() *OptimizationContext {
 		DuplicateImages:      map[int]*StreamDict{},
 		DuplicateImageObjs:   IntSet{},
 		DuplicateInfoObjects: IntSet{},
-		FixTable:             map[int]bool{},
+		Cache:                map[int]bool{},
 	}
 }
 

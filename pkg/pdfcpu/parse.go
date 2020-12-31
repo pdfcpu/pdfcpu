@@ -514,36 +514,11 @@ func parseName(line *string) (*Name, error) {
 	return &nameObj, nil
 }
 
-func parseDict(line *string, relaxed bool) (*Dict, error) {
-
-	if line == nil || len(*line) == 0 {
-		return nil, errNoDictionary
-	}
-
+func processDictKeys(line *string, relaxed bool) (Dict, error) {
 	l := *line
-
-	log.Parse.Printf("ParseDict: %s\n", l)
-
-	if len(l) < 4 || !strings.HasPrefix(l, "<<") {
-		return nil, errDictionaryCorrupt
-	}
-
-	// position behind '<<'
-	l = forwardParseBuf(l, 2)
-
-	// position to first non whitespace char after '<<'
-	l, _ = trimLeftSpace(l, false)
-
-	if len(l) == 0 {
-		// only whitespace after '['
-		return nil, errDictionaryNotTerminated
-	}
-
+	eol := false
 	d := NewDict()
-	var eol bool
-
 	for !strings.HasPrefix(l, ">>") {
-
 		key, err := parseName(&l)
 		if err != nil {
 			return nil, err
@@ -597,6 +572,39 @@ func parseDict(line *string, relaxed bool) (*Dict, error) {
 		}
 
 	}
+	*line = l
+	return d, nil
+}
+
+func parseDict(line *string, relaxed bool) (Dict, error) {
+
+	if line == nil || len(*line) == 0 {
+		return nil, errNoDictionary
+	}
+
+	l := *line
+
+	log.Parse.Printf("ParseDict: %s\n", l)
+
+	if len(l) < 4 || !strings.HasPrefix(l, "<<") {
+		return nil, errDictionaryCorrupt
+	}
+
+	// position behind '<<'
+	l = forwardParseBuf(l, 2)
+
+	// position to first non whitespace char after '<<'
+	l, _ = trimLeftSpace(l, false)
+
+	if len(l) == 0 {
+		// only whitespace after '['
+		return nil, errDictionaryNotTerminated
+	}
+
+	d, err := processDictKeys(&l, relaxed)
+	if err != nil {
+		return nil, err
+	}
 
 	// position behind '>>'
 	l = forwardParseBuf(l, 2)
@@ -605,7 +613,7 @@ func parseDict(line *string, relaxed bool) (*Dict, error) {
 
 	log.Parse.Printf("ParseDict: returning dict at: %v\n", d)
 
-	return &d, nil
+	return d, nil
 }
 
 func noBuf(l *string) bool {
@@ -758,7 +766,7 @@ func parseHexLiteralOrDict(l *string) (val Object, err error) {
 	if (*l)[1] == '<' {
 		log.Parse.Println("parseHexLiteralOrDict: value = Dictionary")
 		var (
-			d   *Dict
+			d   Dict
 			err error
 		)
 		if d, err = parseDict(l, false); err != nil {
@@ -766,7 +774,7 @@ func parseHexLiteralOrDict(l *string) (val Object, err error) {
 				return nil, err
 			}
 		}
-		val = *d
+		val = d
 	} else {
 		// hex literals
 		log.Parse.Println("parseHexLiteralOrDict: value = Hex Literal")

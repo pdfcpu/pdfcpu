@@ -17,6 +17,7 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -28,7 +29,7 @@ func csvSafeString(s string) string {
 }
 
 // handleInfoDict extracts relevant infoDict fields into the context.
-func handleInfoDict(ctx *Context, d Dict) (err error) {
+func (ctx *Context) handleInfoDict(d Dict) (err error) {
 
 	for key, value := range d {
 
@@ -81,7 +82,7 @@ func handleInfoDict(ctx *Context, d Dict) (err error) {
 	return nil
 }
 
-func ensureInfoDict(ctx *Context) error {
+func (ctx *Context) ensureInfoDict() error {
 
 	// => 14.3.3 Document Information Dictionary
 
@@ -122,8 +123,7 @@ func ensureInfoDict(ctx *Context) error {
 		return err
 	}
 
-	err = handleInfoDict(ctx, d)
-	if err != nil {
+	if err = ctx.handleInfoDict(d); err != nil {
 		return err
 	}
 
@@ -135,7 +135,7 @@ func ensureInfoDict(ctx *Context) error {
 }
 
 // Write the document info object for this PDF file.
-func writeDocumentInfoDict(ctx *Context) error {
+func (ctx *Context) writeDocumentInfoDict() error {
 
 	log.Write.Printf("*** writeDocumentInfoDict begin: offset=%d ***\n", ctx.Write.Offset)
 
@@ -163,4 +163,218 @@ func writeDocumentInfoDict(ctx *Context) error {
 	log.Write.Printf("*** writeDocumentInfoDict end: offset=%d ***\n", ctx.Write.Offset)
 
 	return nil
+}
+
+func appendEqualMediaAndCropBoxInfo(ss *[]string, pb PageBoundaries, unit string, currUnit DisplayUnit) {
+	mb := pb.MediaBox()
+	tb := pb.TrimBox()
+	bb := pb.BleedBox()
+	ab := pb.ArtBox()
+	s := " = CropBox"
+
+	if tb == nil || tb.equals(*mb) {
+		s += ", TrimBox"
+	}
+	if bb == nil || bb.equals(*mb) {
+		s += ", BleedBox"
+	}
+	if ab == nil || ab.equals(*mb) {
+		s += ", ArtBox"
+	}
+
+	*ss = append(*ss, fmt.Sprintf("  MediaBox (%s) %v %s", unit, mb.Format(currUnit), s))
+
+	if tb != nil && !tb.equals(*mb) {
+		*ss = append(*ss, fmt.Sprintf("   TrimBox (%s) %v", unit, tb.Format(currUnit)))
+	}
+	if bb != nil && !bb.equals(*mb) {
+		*ss = append(*ss, fmt.Sprintf("  BleedBox (%s) %v", unit, bb.Format(currUnit)))
+	}
+	if ab != nil && !ab.equals(*mb) {
+		*ss = append(*ss, fmt.Sprintf("    ArtBox (%s) %v", unit, ab.Format(currUnit)))
+	}
+}
+
+func trimBleedArtBoxString(cb, tb, bb, ab *Rectangle) string {
+	s := ""
+	if tb == nil || tb.equals(*cb) {
+		s += "= TrimBox"
+	}
+	if bb == nil || bb.equals(*cb) {
+		if len(s) == 0 {
+			s += "= "
+		} else {
+			s += ", "
+		}
+		s += "BleedBox"
+	}
+	if ab == nil || ab.equals(*cb) {
+		if len(s) == 0 {
+			s += "= "
+		} else {
+			s += ", "
+		}
+		s += "ArtBox"
+	}
+	return s
+}
+
+func appendNotEqualMediaAndCropBoxInfo(ss *[]string, pb PageBoundaries, unit string, currUnit DisplayUnit) {
+	mb := pb.MediaBox()
+	cb := pb.CropBox()
+	tb := pb.TrimBox()
+	bb := pb.BleedBox()
+	ab := pb.ArtBox()
+
+	s := trimBleedArtBoxString(cb, tb, bb, ab)
+	*ss = append(*ss, fmt.Sprintf("   CropBox (%s) %v %s", unit, cb.Format(currUnit), s))
+
+	if tb != nil && !tb.equals(*mb) && !tb.equals(*cb) {
+		*ss = append(*ss, fmt.Sprintf("   TrimBox (%s) %v", unit, tb.Format(currUnit)))
+	}
+	if bb != nil && !bb.equals(*mb) && !bb.equals(*cb) {
+		*ss = append(*ss, fmt.Sprintf("  BleedBox (%s) %v", unit, bb.Format(currUnit)))
+	}
+	if ab != nil && !ab.equals(*mb) && !ab.equals(*cb) {
+		*ss = append(*ss, fmt.Sprintf("    ArtBox (%s) %v", unit, ab.Format(currUnit)))
+	}
+}
+
+func appendPageBoxesInfo(ss *[]string, pb PageBoundaries, unit string, currUnit DisplayUnit, i int) {
+	*ss = append(*ss, fmt.Sprintf("Page %d:", i+1))
+	mb := pb.MediaBox()
+	cb := pb.CropBox()
+	if cb == nil || mb.equals(*cb) {
+		appendEqualMediaAndCropBoxInfo(ss, pb, unit, currUnit)
+		return
+	}
+	appendNotEqualMediaAndCropBoxInfo(ss, pb, unit, currUnit)
+}
+
+func (ctx *Context) pageInfo(selectedPages IntSet) ([]string, error) {
+	unit := ctx.unit()
+	if len(selectedPages) > 0 {
+		// TODO ctx.PageBoundaries(selectedPages)
+		pbs, err := ctx.PageBoundaries()
+		if err != nil {
+			return nil, err
+		}
+		ss := []string{}
+		for i, pb := range pbs {
+			if _, found := selectedPages[i+1]; !found {
+				continue
+			}
+			appendPageBoxesInfo(&ss, pb, unit, ctx.Unit, i)
+		}
+		return ss, nil
+	}
+
+	pd, err := ctx.PageDims()
+	if err != nil {
+		return nil, err
+	}
+
+	m := map[Dim]bool{}
+	for _, d := range pd {
+		m[d] = true
+	}
+
+	ss := []string{}
+	s := "Page size:"
+	for d := range m {
+		dc := ctx.convertToUnit(d)
+		ss = append(ss, fmt.Sprintf("%21s %.2f x %.2f %s", s, dc.Width, dc.Height, unit))
+		s = ""
+	}
+
+	return ss, nil
+}
+
+// InfoDigest returns info about ctx.
+func (ctx *Context) InfoDigest(selectedPages IntSet) ([]string, error) {
+	var separator = "............................................"
+	var ss []string
+	v := ctx.HeaderVersion
+	if ctx.RootVersion != nil {
+		v = ctx.RootVersion
+	}
+	ss = append(ss, fmt.Sprintf("%20s: %s", "PDF version", v))
+	ss = append(ss, fmt.Sprintf("%20s: %d", "Page count", ctx.PageCount))
+
+	pi, err := ctx.pageInfo(selectedPages)
+	if err != nil {
+		return nil, err
+	}
+	ss = append(ss, pi...)
+
+	ss = append(ss, fmt.Sprintf(separator))
+	ss = append(ss, fmt.Sprintf("%20s: %s", "Title", ctx.Title))
+	ss = append(ss, fmt.Sprintf("%20s: %s", "Author", ctx.Author))
+	ss = append(ss, fmt.Sprintf("%20s: %s", "Subject", ctx.Subject))
+	ss = append(ss, fmt.Sprintf("%20s: %s", "PDF Producer", ctx.Producer))
+	ss = append(ss, fmt.Sprintf("%20s: %s", "Content creator", ctx.Creator))
+	ss = append(ss, fmt.Sprintf("%20s: %s", "Creation date", ctx.CreationDate))
+	ss = append(ss, fmt.Sprintf("%20s: %s", "Modification date", ctx.ModDate))
+
+	if err := ctx.addKeywordsToInfoDigest(&ss); err != nil {
+		return nil, err
+	}
+
+	if err := ctx.addPropertiesToInfoDigest(&ss); err != nil {
+		return nil, err
+	}
+
+	ss = append(ss, fmt.Sprintf(separator))
+
+	s := "No"
+	if ctx.Tagged {
+		s = "Yes"
+	}
+	ss = append(ss, fmt.Sprintf("              Tagged: %s", s))
+
+	s = "No"
+	if ctx.Read.Hybrid {
+		s = "Yes"
+	}
+	ss = append(ss, fmt.Sprintf("              Hybrid: %s", s))
+
+	s = "No"
+	if ctx.Read.Linearized {
+		s = "Yes"
+	}
+	ss = append(ss, fmt.Sprintf("          Linearized: %s", s))
+
+	s = "No"
+	if ctx.Read.UsingXRefStreams {
+		s = "Yes"
+	}
+	ss = append(ss, fmt.Sprintf("  Using XRef streams: %s", s))
+
+	s = "No"
+	if ctx.Read.UsingObjectStreams {
+		s = "Yes"
+	}
+	ss = append(ss, fmt.Sprintf("Using object streams: %s", s))
+
+	s = "No"
+	if ctx.Watermarked {
+		s = "Yes"
+	}
+	ss = append(ss, fmt.Sprintf("         Watermarked: %s", s))
+
+	ss = append(ss, fmt.Sprintf(separator))
+
+	s = "No"
+	if ctx.Encrypt != nil {
+		s = "Yes"
+	}
+	ss = append(ss, fmt.Sprintf("%20s: %s", "Encrypted", s))
+
+	ctx.addPermissionsToInfoDigest(&ss)
+
+	if err := ctx.addAttachmentsToInfoDigest(&ss); err != nil {
+		return nil, err
+	}
+
+	return ss, nil
 }

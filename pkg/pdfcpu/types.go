@@ -235,9 +235,9 @@ func (r Rectangle) formatToMillimetres() string {
 		r.AspectRatio())
 }
 
-// Format returns r's details converted into units.
-func (r Rectangle) Format(units DisplayUnit) string {
-	switch units {
+// Format returns r's details converted into unit.
+func (r Rectangle) Format(unit DisplayUnit) string {
+	switch unit {
 	case INCHES:
 		return r.formatToInches()
 	case CENTIMETRES:
@@ -426,48 +426,77 @@ func (ir IndirectRef) Equals(indRef IndirectRef) bool {
 
 /////////////////////////////////////////////////////////////////////////////////////
 
-// PageBoundaries represents the PDF page boundaries.
-type PageBoundaries struct {
-	mediaBox,
-	cropBox,
-	trimBox,
-	bleedBox,
-	artBox *Rectangle
-}
+// DisplayUnit is the metric unit used to output paper sizes.
+type DisplayUnit int
 
-// MediaBox returns the effective mediabox for pb.
-func (pb PageBoundaries) MediaBox() *Rectangle {
-	return pb.mediaBox
-}
+// Options for display unit in effect.
+const (
+	POINTS DisplayUnit = iota
+	INCHES
+	CENTIMETRES
+	MILLIMETRES
+)
 
-// CropBox returns the effective cropbox for pb.
-func (pb PageBoundaries) CropBox() *Rectangle {
-	if pb.cropBox == nil {
-		return pb.mediaBox
+const (
+	userSpaceToInch = float64(1) / 72
+	userSpaceToCm   = 2.54 / 72
+	userSpaceToMm   = userSpaceToCm * 10
+
+	inchToUserSpace = 1 / userSpaceToInch
+	cmToUserSpace   = 1 / userSpaceToCm
+	mmToUserSpace   = 1 / userSpaceToMm
+)
+
+func toUserSpace(f float64, unit DisplayUnit) float64 {
+	switch unit {
+	case INCHES:
+		return f * inchToUserSpace
+	case CENTIMETRES:
+		return f * cmToUserSpace
+	case MILLIMETRES:
+		return f * mmToUserSpace
+
 	}
-	return pb.cropBox
+	return f
 }
 
-// TrimBox returns the effective trimbox for pb.
-func (pb PageBoundaries) TrimBox() *Rectangle {
-	if pb.trimBox == nil {
-		return pb.CropBox()
-	}
-	return pb.trimBox
+// Dim represents the dimensions of a rectangular view medium
+// like a PDF page, a sheet of paper or an image grid
+// in user space, inches, centimetres or millimetres.
+type Dim struct {
+	Width, Height float64
 }
 
-// BleedBox returns the effective bleedbox for pb.
-func (pb PageBoundaries) BleedBox() *Rectangle {
-	if pb.bleedBox == nil {
-		return pb.CropBox()
-	}
-	return pb.bleedBox
+// ToInches converts d to inches.
+func (d Dim) ToInches() Dim {
+	return Dim{d.Width * userSpaceToInch, d.Height * userSpaceToInch}
 }
 
-// ArtBox returns the effective artbox for pb.
-func (pb PageBoundaries) ArtBox() *Rectangle {
-	if pb.artBox == nil {
-		return pb.CropBox()
-	}
-	return pb.artBox
+// ToCentimetres converts d to centimetres.
+func (d Dim) ToCentimetres() Dim {
+	return Dim{d.Width * userSpaceToCm, d.Height * userSpaceToCm}
+}
+
+// ToMillimetres converts d to centimetres.
+func (d Dim) ToMillimetres() Dim {
+	return Dim{d.Width * userSpaceToMm, d.Height * userSpaceToMm}
+}
+
+// AspectRatio returns the relation between width and height.
+func (d Dim) AspectRatio() float64 {
+	return d.Width / d.Height
+}
+
+// Landscape returns true if d is in landscape mode.
+func (d Dim) Landscape() bool {
+	return d.AspectRatio() > 1
+}
+
+// Portrait returns true if d is in portrait mode.
+func (d Dim) Portrait() bool {
+	return d.AspectRatio() < 1
+}
+
+func (d Dim) String() string {
+	return fmt.Sprintf("%fx%f points", d.Width, d.Height)
 }

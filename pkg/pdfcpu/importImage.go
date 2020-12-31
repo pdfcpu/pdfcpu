@@ -65,14 +65,15 @@ var impParamMap = importParamMap{
 
 // Import represents the command details for the command "ImportImage".
 type Import struct {
-	PageDim  *Dim    // page dimensions in user units.
-	PageSize string  // one of A0,A1,A2,A3,A4(=default),A5,A6,A7,A8,Letter,Legal,Ledger,Tabloid,Executive,ANSIC,ANSID,ANSIE.
-	UserDim  bool    // true if one of dimensions or paperSize provided overriding the default.
-	DPI      int     // destination resolution to apply in dots per inch.
-	Pos      anchor  // position anchor, one of tl,tc,tr,l,c,r,bl,bc,br,full.
-	Dx, Dy   int     // anchor offset.
-	Scale    float64 // relative scale factor. 0 <= x <= 1
-	ScaleAbs bool    // true for absolute scaling.
+	PageDim  *Dim        // page dimensions in display unit.
+	PageSize string      // one of A0,A1,A2,A3,A4(=default),A5,A6,A7,A8,Letter,Legal,Ledger,Tabloid,Executive,ANSIC,ANSID,ANSIE.
+	UserDim  bool        // true if one of dimensions or paperSize provided overriding the default.
+	DPI      int         // destination resolution to apply in dots per inch.
+	Pos      anchor      // position anchor, one of tl,tc,tr,l,c,r,bl,bc,br,full.
+	Dx, Dy   int         // anchor offset.
+	Scale    float64     // relative scale factor. 0 <= x <= 1
+	ScaleAbs bool        // true for absolute scaling.
+	InpUnit  DisplayUnit // input display unit.
 }
 
 // DefaultImportConfig returns the default configuration.
@@ -82,6 +83,7 @@ func DefaultImportConfig() *Import {
 		PageSize: "A4",
 		Pos:      Full,
 		Scale:    0.5,
+		InpUnit:  POINTS,
 	}
 }
 
@@ -134,24 +136,24 @@ func parsePageFormatImp(s string, imp *Import) (err error) {
 	return err
 }
 
-func parsePageDim(v string) (*Dim, string, error) {
+func parsePageDim(v string, u DisplayUnit) (*Dim, string, error) {
 
 	ss := strings.Split(v, " ")
 	if len(ss) != 2 {
 		return nil, v, errors.Errorf("pdfcpu: illegal dimension string: need 2 positive values, %s\n", v)
 	}
 
-	w, err := strconv.Atoi(ss[0])
+	w, err := strconv.ParseFloat(ss[0], 64)
 	if err != nil || w <= 0 {
 		return nil, v, errors.Errorf("pdfcpu: dimension X must be a positiv numeric value: %s\n", ss[0])
 	}
 
-	h, err := strconv.Atoi(ss[1])
+	h, err := strconv.ParseFloat(ss[1], 64)
 	if err != nil || h <= 0 {
 		return nil, v, errors.Errorf("pdfcpu: dimension Y must be a positiv numeric value: %s\n", ss[1])
 	}
 
-	d := Dim{float64(w), float64(h)}
+	d := Dim{toUserSpace(w, u), toUserSpace(h, u)}
 
 	return &d, "", nil
 }
@@ -160,7 +162,7 @@ func parseDimensionsImp(s string, imp *Import) (err error) {
 	if imp.UserDim {
 		return errors.New("pdfcpu: only one of formsize(papersize) or dimensions allowed")
 	}
-	imp.PageDim, imp.PageSize, err = parsePageDim(s)
+	imp.PageDim, imp.PageSize, err = parsePageDim(s, imp.InpUnit)
 	imp.UserDim = true
 	return err
 }
@@ -220,54 +222,62 @@ const (
 	Full // special case, no anchor needed, imageSize = pageSize
 )
 
-func parsePositionAnchorImp(s string, imp *Import) error {
-
+func parsePositionAnchor(s string) (anchor, error) {
+	var a anchor
 	switch s {
 	case "tl":
-		imp.Pos = TopLeft
+		a = TopLeft
 	case "tc":
-		imp.Pos = TopCenter
+		a = TopCenter
 	case "tr":
-		imp.Pos = TopRight
+		a = TopRight
 	case "l":
-		imp.Pos = Left
+		a = Left
 	case "c":
-		imp.Pos = Center
+		a = Center
 	case "r":
-		imp.Pos = Right
+		a = Right
 	case "bl":
-		imp.Pos = BottomLeft
+		a = BottomLeft
 	case "bc":
-		imp.Pos = BottomCenter
+		a = BottomCenter
 	case "br":
-		imp.Pos = BottomRight
+		a = BottomRight
 	case "full":
-		imp.Pos = Full
+		a = Full
 	default:
-		return errors.Errorf("pdfcpu: unknown position anchor: %s", s)
+		return a, errors.Errorf("pdfcpu: unknown position anchor: %s", s)
 	}
+	return a, nil
+}
 
+func parsePositionAnchorImp(s string, imp *Import) error {
+	a, err := parsePositionAnchor(s)
+	if err != nil {
+		return err
+	}
+	imp.Pos = a
 	return nil
 }
 
 func parsePositionOffsetImp(s string, imp *Import) error {
-
-	var err error
 
 	d := strings.Split(s, " ")
 	if len(d) != 2 {
 		return errors.Errorf("pdfcpu: illegal position offset string: need 2 numeric values, %s\n", s)
 	}
 
-	imp.Dx, err = strconv.Atoi(d[0])
+	f, err := strconv.ParseFloat(d[0], 64)
 	if err != nil {
 		return err
 	}
+	imp.Dx = int(toUserSpace(f, imp.InpUnit))
 
-	imp.Dy, err = strconv.Atoi(d[1])
+	f, err = strconv.ParseFloat(d[1], 64)
 	if err != nil {
 		return err
 	}
+	imp.Dy = int(toUserSpace(f, imp.InpUnit))
 
 	return nil
 }
@@ -283,13 +293,14 @@ func parseDPI(s string, imp *Import) (err error) {
 }
 
 // ParseImportDetails parses an Import command string into an internal structure.
-func ParseImportDetails(s string) (*Import, error) {
+func ParseImportDetails(s string, u DisplayUnit) (*Import, error) {
 
 	if s == "" {
 		return nil, nil
 	}
 
 	imp := DefaultImportConfig()
+	imp.InpUnit = u
 
 	ss := strings.Split(s, ",")
 
