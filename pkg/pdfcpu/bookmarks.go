@@ -16,7 +16,11 @@ limitations under the License.
 
 package pdfcpu
 
-import "github.com/pkg/errors"
+import (
+	"strings"
+
+	"github.com/pkg/errors"
+)
 
 var (
 	errNoBookmarks    = errors.New("pdfcpu: no bookmarks available")
@@ -91,7 +95,18 @@ func (ctx *Context) BookmarksForOutlineLevel1() ([]Bookmark, error) {
 			return nil, err
 		}
 
-		title, _ := Text(d["Title"])
+		s, _ := Text(d["Title"])
+		var sb strings.Builder
+		for i := 0; i < len(s); i++ {
+			b := s[i]
+			if b >= 32 {
+				if b == 32 {
+					b = '_'
+				}
+				sb.WriteByte(b)
+			}
+		}
+		title := sb.String()
 
 		dest, found := d["Dest"]
 		if !found {

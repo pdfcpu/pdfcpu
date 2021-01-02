@@ -1,0 +1,42 @@
+on: [push, pull_request]
+name: Test
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+        go:
+          - '1.15.x'  
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Set up Go ${{ matrix.go }}
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go }}
+
+      - run: go version
+
+      - name: Checkout repo      
+        uses: actions/checkout@v2
+
+      - name: Go vet
+        run: go vet -v ./...
+
+      - name: Check coverage
+        uses: shogo82148/actions-goveralls@v1
+        with:
+          flag-name: Go-${{ matrix.go }}
+          parallel: true
+
+  finish:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: shogo82148/actions-goveralls@v1
+        with:
+          parallel-finished: true
