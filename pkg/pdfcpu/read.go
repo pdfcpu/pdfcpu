@@ -1662,6 +1662,14 @@ func object(ctx *Context, offset int64, objNr, genNr int) (o Object, endInd, str
 		log.Read.Printf("object %d: non matching objNr(%d) or generationNumber(%d) tags found.\n", objNr, *objectNr, *generationNr)
 	}
 
+	l = strings.TrimSpace(l)
+	if len(l) == 0 {
+		// 7.3.9
+		// Specifying the null object as the value of a dictionary entry (7.3.7, "Dictionary Objects")
+		// shall be equivalent to omitting the entry entirely.
+		return nil, endInd, streamInd, streamOffset, err
+	}
+
 	o, err = parseObject(&l)
 
 	return o, endInd, streamInd, streamOffset, err
