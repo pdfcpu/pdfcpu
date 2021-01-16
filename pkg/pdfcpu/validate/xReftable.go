@@ -124,7 +124,7 @@ func validateNames(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool, s
 		if err != nil {
 			return err
 		}
-		if d == nil {
+		if d == nil || len(d) == 0 {
 			continue
 		}
 
