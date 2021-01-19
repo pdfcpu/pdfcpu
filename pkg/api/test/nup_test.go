@@ -81,16 +81,16 @@ func TestNUp(t *testing.T) {
 	}{
 		// Booklet (4up on ledger) on PDF
 		{"TestNUpFromPdfWithBookletLedger",
-			[]string{filepath.Join(inDir, "WaldenFull.pdf")},
+			[]string{filepath.Join(inDir, "demo-booklet-statement.pdf")},
 			filepath.Join(outDir, "NUpFromPDFWithBookletLedger.pdf"),
-			[]string{"1-248"},
+			[]string{"1-16"},
 			"orient:booklet, papersize:LedgerP, margin:0, border:false",
 			4,
 			false},
 
 		// Booklet (2up with rotation) on PDF
 		{"TestNUpFromPdfWithBooklet",
-			[]string{filepath.Join(inDir, "WaldenFull.pdf")},
+			[]string{filepath.Join(inDir, "demo-booklet-statement.pdf")},
 			filepath.Join(outDir, "NUpFromPDFWithBooklet.pdf"),
 			nil,
 			"orient:booklet, margin:0, border:false",
