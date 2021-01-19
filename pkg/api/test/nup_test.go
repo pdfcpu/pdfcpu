@@ -83,7 +83,7 @@ func TestNUp(t *testing.T) {
 		{"TestNUpFromPdfWithBookletLedger",
 			[]string{filepath.Join(inDir, "demo-booklet-statement.pdf")},
 			filepath.Join(outDir, "NUpFromPDFWithBookletLedger.pdf"),
-			[]string{"1-16"},
+			[]string{"1-24"},
 			"orient:booklet, papersize:LedgerP, margin:0, border:false",
 			4,
 			false},
