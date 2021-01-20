@@ -736,15 +736,7 @@ func NUpFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict
 	return wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef)
 }
 
-func getPageNumber(pageNumbers []int, n int) int {
-	if n >= len(pageNumbers) {
-		// zero represents blank page at end of booklet
-		return 0
-	}
-	return pageNumbers[n]
-}
-
-func sortedSelectedPages(pages IntSet, nup *NUp) ([]int, []bool) {
+func sortedSelectedPages(pages IntSet, nup *NUp) []int {
 	var pageNumbers []int
 	for k, v := range pages {
 		if v {
@@ -753,89 +745,55 @@ func sortedSelectedPages(pages IntSet, nup *NUp) ([]int, []bool) {
 	}
 	sort.Ints(pageNumbers)
 
-	if nup.Orient == bookletOrient {
-		switch nup.Grid.Height * nup.Grid.Width {
-		case 2:
-			nPages := len(pageNumbers)
-			if nPages%2 != 0 {
-				// nPages must be a multiple of 2
-				// if not, we will insert a blank page at the end
-				nPages++
-			}
-			out := make([]int, nPages)
-			shouldRotate := make([]bool, nPages)
-			// (output page, input page) = [(1,1), (2,n), (3, 2), (4, n-1), (5, 3), (6, n-2), ...]
-			for i := 0; i < nPages; i++ {
-				if i%2 == 0 {
-					out[i] = getPageNumber(pageNumbers, i/2)
-				} else {
-					out[i] = getPageNumber(pageNumbers, nPages-1-(i-1)/2)
-				}
-				// odd output pages should be upside-down
-				if i%4 < 2 {
-					shouldRotate[i] = true
-				}
-			}
-			return out, shouldRotate
-		case 4:
-			nPages := len(pageNumbers)
-			rem := nPages % 8
-			if rem != 0 {
-				// nPages must be a multiple of 8
-				// if not, we will insert blank pages at the end
-				nPages += 8 - rem
-			}
-			out := make([]int, nPages)
-			shouldRotate := make([]bool, nPages)
-			// (output page, input page) = [
-			// (1,n), (2,1), (3, n/2+1), (4, n/2-0),
-			// (5, 2), (6, n-1), (7, n/2-1), (8, n/2+2)
-			// ...]
-			for i := 0; i < len(pageNumbers); i++ {
-				bookletPageNumber := i / 4
-				if bookletPageNumber%2 == 0 {
-					// front side
-					switch i % 4 {
-					case 0:
-						out[i] = getPageNumber(pageNumbers, nPages-1-bookletPageNumber)
-					case 1:
-						out[i] = getPageNumber(pageNumbers, bookletPageNumber)
-					case 2:
-						out[i] = getPageNumber(pageNumbers, nPages/2+bookletPageNumber)
-					case 3:
-						out[i] = getPageNumber(pageNumbers, nPages/2-1-bookletPageNumber)
-					}
-				} else {
-					// back side
-					switch i % 4 {
-					case 0:
-						out[i] = getPageNumber(pageNumbers, bookletPageNumber)
-					case 1:
-						out[i] = getPageNumber(pageNumbers, nPages-1-bookletPageNumber)
-					case 2:
-						out[i] = getPageNumber(pageNumbers, nPages/2-1-bookletPageNumber)
-					case 3:
-						out[i] = getPageNumber(pageNumbers, nPages/2+bookletPageNumber)
-					}
-				}
-				if i%4 >= 2 {
-					// bottom row of each output page should be rotated
-					shouldRotate[i] = true
-				}
-			}
-			return out, shouldRotate
-		}
+	return pageNumbers
+}
+
+func (ctx *Context) nupPrepPage(i int, p int, formsResDict Dict) (isEmpty bool, cropBox *Rectangle, formResID string, err error) {
+	xRefTable := ctx.XRefTable
+	consolidateRes := true
+	d, inhPAttrs, err := ctx.PageDict(p, consolidateRes)
+	if err != nil {
+		return isEmpty, cropBox, formResID, err
 	}
-	return pageNumbers, nil
+	if d == nil {
+		return isEmpty, cropBox, formResID, errors.Errorf("pdfcpu: unknown page number: %d\n", i)
+	}
+
+	// Retrieve content stream bytes.
+	bb, err := xRefTable.PageContent(d)
+	if err == errNoContent {
+		return true, cropBox, formResID, nil
+	}
+	if err != nil {
+		return isEmpty, cropBox, formResID, err
+	}
+
+	// Create an object for this resDict in xRefTable.
+	ir, err := ctx.IndRefForNewObject(inhPAttrs.resources)
+	if err != nil {
+		return isEmpty, cropBox, formResID, err
+	}
+
+	cropBox = inhPAttrs.mediaBox
+	if inhPAttrs.cropBox != nil {
+		cropBox = inhPAttrs.cropBox
+	}
+	formIndRef, err := createNUpFormForPDFResource(xRefTable, ir, bb, cropBox)
+	if err != nil {
+		return isEmpty, cropBox, formResID, err
+	}
+
+	formResID = fmt.Sprintf("Fm%d", i)
+	formsResDict.Insert(formResID, *formIndRef)
+	return isEmpty, cropBox, formResID, nil
 }
 
 func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pagesIndRef *IndirectRef) error {
 	var buf bytes.Buffer
-	xRefTable := ctx.XRefTable
 	formsResDict := NewDict()
 	rr := rectsForGrid(nup)
 
-	pageNumbers, shouldRotatePage := sortedSelectedPages(selectedPages, nup)
+	pageNumbers := sortedSelectedPages(selectedPages, nup)
 	for i, p := range pageNumbers {
 
 		if i > 0 && i%len(rr) == 0 {
@@ -848,67 +806,33 @@ func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pag
 			buf.Reset()
 			formsResDict = NewDict()
 		}
-		if p == 0 && nup.Orient == bookletOrient {
-			// this is an empty page at the end of a bookletOrient
+
+		isEmpty, cropBox, formResID, err := ctx.nupPrepPage(i, p, formsResDict)
+		if err != nil {
+			return err
+		}
+		if isEmpty {
 			continue
 		}
-
-		consolidateRes := true
-		d, inhPAttrs, err := ctx.PageDict(p, consolidateRes)
-		if err != nil {
-			return err
-		}
-		if d == nil {
-			return errors.Errorf("pdfcpu: unknown page number: %d\n", i)
-		}
-
-		// Retrieve content stream bytes.
-		bb, err := xRefTable.PageContent(d)
-		if err == errNoContent {
-			continue
-		}
-		if err != nil {
-			return err
-		}
-
-		// Create an object for this resDict in xRefTable.
-		ir, err := ctx.IndRefForNewObject(inhPAttrs.resources)
-		if err != nil {
-			return err
-		}
-
-		cropBox := inhPAttrs.mediaBox
-		if inhPAttrs.cropBox != nil {
-			cropBox = inhPAttrs.cropBox
-		}
-		formIndRef, err := createNUpFormForPDFResource(xRefTable, ir, bb, cropBox)
-		if err != nil {
-			return err
-		}
-
-		formResID := fmt.Sprintf("Fm%d", i)
-		formsResDict.Insert(formResID, *formIndRef)
-
 		// inhPAttrs.mediaBox
-		nUpTilePDFBytes(&buf, cropBox, rr[i%len(rr)], formResID, nup, nup.Orient == bookletOrient && shouldRotatePage[i])
+		nUpTilePDFBytes(&buf, cropBox, rr[i%len(rr)], formResID, nup, false)
 	}
 
 	// Wrap incomplete nUp page.
 	return wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef)
 }
 
-// NUpFromPDF creates an n-up version of the PDF represented by xRefTable.
-func (ctx *Context) NUpFromPDF(selectedPages IntSet, nup *NUp) error {
+func (ctx *Context) getNupPagesDict(nup *NUp) (Dict, error) {
 	var mb *Rectangle
 	if nup.PageDim == nil {
 		// No page dimensions specified, use mediaBox of page 1.
 		consolidateRes := false
 		d, inhPAttrs, err := ctx.PageDict(1, consolidateRes)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if d == nil {
-			return errors.Errorf("unknown page number: %d\n", 1)
+			return nil, errors.Errorf("unknown page number: %d\n", 1)
 		}
 		mb = inhPAttrs.mediaBox
 	} else {
@@ -928,13 +852,21 @@ func (ctx *Context) NUpFromPDF(selectedPages IntSet, nup *NUp) error {
 		},
 	)
 
+	nup.PageDim = &Dim{mb.Width(), mb.Height()}
+	return pagesDict, nil
+
+}
+
+// NUpFromPDF creates an n-up version of the PDF represented by xRefTable.
+func (ctx *Context) NUpFromPDF(selectedPages IntSet, nup *NUp) error {
+	pagesDict, err := ctx.getNupPagesDict(nup)
+	if err != nil {
+		return err
+	}
 	pagesIndRef, err := ctx.IndRefForNewObject(pagesDict)
 	if err != nil {
 		return err
 	}
-
-	nup.PageDim = &Dim{mb.Width(), mb.Height()}
-
 	if err = ctx.nupPages(selectedPages, nup, pagesDict, pagesIndRef); err != nil {
 		return err
 	}

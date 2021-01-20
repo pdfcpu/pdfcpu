@@ -17,8 +17,10 @@
 package pdfcpu
 
 import (
+	"bytes"
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -157,5 +159,157 @@ func (ctx *Context) BookletFromPDF(selectedPages IntSet, booklet *Booklet) error
 		Grid:     grid,
 		Margin:   booklet.Margin,
 	}
-	return ctx.NUpFromPDF(selectedPages, nup)
+	return ctx.bookletFromPDF(selectedPages, nup)
+}
+
+func getPageNumber(pageNumbers []int, n int) int {
+	if n >= len(pageNumbers) {
+		// zero represents blank page at end of booklet
+		return 0
+	}
+	return pageNumbers[n]
+}
+
+func sortedSelectedPagesBooklet(pages IntSet, nup *NUp) ([]int, []bool) {
+	var pageNumbers []int
+	for k, v := range pages {
+		if v {
+			pageNumbers = append(pageNumbers, k)
+		}
+	}
+	sort.Ints(pageNumbers)
+
+	switch nup.Grid.Height * nup.Grid.Width {
+	case 2:
+		nPages := len(pageNumbers)
+		if nPages%2 != 0 {
+			// nPages must be a multiple of 2
+			// if not, we will insert a blank page at the end
+			nPages++
+		}
+		out := make([]int, nPages)
+		shouldRotate := make([]bool, nPages)
+		// (output page, input page) = [(1,1), (2,n), (3, 2), (4, n-1), (5, 3), (6, n-2), ...]
+		for i := 0; i < nPages; i++ {
+			if i%2 == 0 {
+				out[i] = getPageNumber(pageNumbers, i/2)
+			} else {
+				out[i] = getPageNumber(pageNumbers, nPages-1-(i-1)/2)
+			}
+			// odd output pages should be upside-down
+			if i%4 < 2 {
+				shouldRotate[i] = true
+			}
+		}
+		return out, shouldRotate
+	case 4:
+		nPages := len(pageNumbers)
+		rem := nPages % 8
+		if rem != 0 {
+			// nPages must be a multiple of 8
+			// if not, we will insert blank pages at the end
+			nPages += 8 - rem
+		}
+		out := make([]int, nPages)
+		shouldRotate := make([]bool, nPages)
+		// (output page, input page) = [
+		// (1,n), (2,1), (3, n/2+1), (4, n/2-0),
+		// (5, 2), (6, n-1), (7, n/2-1), (8, n/2+2)
+		// ...]
+		for i := 0; i < len(pageNumbers); i++ {
+			bookletPageNumber := i / 4
+			if bookletPageNumber%2 == 0 {
+				// front side
+				switch i % 4 {
+				case 0:
+					out[i] = getPageNumber(pageNumbers, nPages-1-bookletPageNumber)
+				case 1:
+					out[i] = getPageNumber(pageNumbers, bookletPageNumber)
+				case 2:
+					out[i] = getPageNumber(pageNumbers, nPages/2+bookletPageNumber)
+				case 3:
+					out[i] = getPageNumber(pageNumbers, nPages/2-1-bookletPageNumber)
+				}
+			} else {
+				// back side
+				switch i % 4 {
+				case 0:
+					out[i] = getPageNumber(pageNumbers, bookletPageNumber)
+				case 1:
+					out[i] = getPageNumber(pageNumbers, nPages-1-bookletPageNumber)
+				case 2:
+					out[i] = getPageNumber(pageNumbers, nPages/2-1-bookletPageNumber)
+				case 3:
+					out[i] = getPageNumber(pageNumbers, nPages/2+bookletPageNumber)
+				}
+			}
+			if i%4 >= 2 {
+				// bottom row of each output page should be rotated
+				shouldRotate[i] = true
+			}
+		}
+		return out, shouldRotate
+	}
+
+	return pageNumbers, nil
+}
+
+func (ctx *Context) arrangePagesForBooklet(selectedPages IntSet, nup *NUp, pagesDict Dict, pagesIndRef *IndirectRef) error {
+	// this code is similar to nupPages, but for booklets
+	var buf bytes.Buffer
+	formsResDict := NewDict()
+	rr := rectsForGrid(nup)
+
+	pageNumbers, shouldRotatePage := sortedSelectedPagesBooklet(selectedPages, nup)
+	for i, p := range pageNumbers {
+
+		if i > 0 && i%len(rr) == 0 {
+
+			// Wrap complete nUp page.
+			if err := wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef); err != nil {
+				return err
+			}
+
+			buf.Reset()
+			formsResDict = NewDict()
+		}
+		if p == 0 && nup.Orient == bookletOrient {
+			// this is an empty page at the end of a bookletOrient
+			continue
+		}
+		isEmpty, cropBox, formResID, err := ctx.nupPrepPage(i, p, formsResDict)
+		if err != nil {
+			return err
+		}
+		if isEmpty {
+			continue
+		}
+		nUpTilePDFBytes(&buf, cropBox, rr[i%len(rr)], formResID, nup, shouldRotatePage[i])
+	}
+
+	// Wrap incomplete nUp page.
+	return wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef)
+}
+
+// bookletFromPDF arranges the PDF represented by xRefTable into a booklet
+// this code is similar to NUpFromPDF, but for booklets
+func (ctx *Context) bookletFromPDF(selectedPages IntSet, nup *NUp) error {
+	pagesDict, err := ctx.getNupPagesDict(nup)
+	if err != nil {
+		return err
+	}
+	pagesIndRef, err := ctx.IndRefForNewObject(pagesDict)
+	if err != nil {
+		return err
+	}
+	if err = ctx.arrangePagesForBooklet(selectedPages, nup, pagesDict, pagesIndRef); err != nil {
+		return err
+	}
+	// Replace original pagesDict.
+	rootDict, err := ctx.Catalog()
+	if err != nil {
+		return err
+	}
+	rootDict.Update("Pages", *pagesIndRef)
+	return nil
 }
