@@ -151,6 +151,11 @@ func (ctx *Context) BookletFromPDF(selectedPages IntSet, booklet *Booklet) error
 	if !(n == 2 || n == 4) {
 		return fmt.Errorf("booklet must have page and sheet dimensions that result in 2 or 4 pages per sheet, got %d", n)
 	}
+	if n == 2 && booklet.PageDim.Landscape() == booklet.SheetDim.Landscape() {
+		// transpose grid
+		grid = &Dim{grid.Height, grid.Width}
+	}
+
 	// TODO: we're assuming that inputs are really booklet.PageSize
 	nup := &NUp{
 		PageDim:  booklet.SheetDim,
