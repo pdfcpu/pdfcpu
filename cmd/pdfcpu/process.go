@@ -954,6 +954,16 @@ func processRotateCommand(conf *pdfcpu.Configuration) {
 	process(cli.RotateCommand(inFile, outFile, rotation, selectedPages, conf))
 }
 
+func parseBookletInputPDFFilenames(argInd int, filenameOut string) []string {
+	filenamesIn := make([]string, 0)
+	for i := argInd; i < len(flag.Args()); i++ {
+		arg := flag.Args()[i]
+		ensurePdfExtension(arg)
+		filenamesIn = append(filenamesIn, arg)
+	}
+	return filenamesIn
+}
+
 func parseAfterNUpDetails(nup *pdfcpu.NUp, argInd int, filenameOut string) []string {
 	if nup.PageGrid {
 		cols, err := strconv.Atoi(flag.Arg(argInd))
@@ -1054,6 +1064,48 @@ func processNUpCommand(conf *pdfcpu.Configuration) {
 	ensurePdfExtension(outFile)
 	inFiles := parseAfterNUpDetails(nup, 2, outFile)
 	process(cli.NUpCommand(inFiles, outFile, pages, nup, conf))
+}
+
+func processBookletCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) < 3 {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageNUp)
+		os.Exit(1)
+	}
+
+	processDiplayUnit(conf)
+
+	pages, err := api.ParsePageSelection(selectedPages)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
+		os.Exit(1)
+	}
+
+	booklet := pdfcpu.DefaultBookletConfig()
+
+	outFile := flag.Arg(0)
+	if hasPdfExtension(outFile) {
+		// usage: pdfcpu booklet outFile inFiles
+		// No optional 'description' argument provided for this case.
+		// We use the default booklet configuration.
+		inFiles := parseBookletInputPDFFilenames(1, outFile)
+		process(cli.BookletCommand(inFiles, outFile, pages, booklet, conf))
+		return
+	}
+
+	booklet.InpUnit = conf.Unit
+
+	// usage: pdfcpu booklet description outFile inFiles
+
+	// parse description
+	if err = pdfcpu.ParseBookletDetails(flag.Arg(0), booklet); err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(1)
+	}
+
+	outFile = flag.Arg(1)
+	ensurePdfExtension(outFile)
+	inFiles := parseBookletInputPDFFilenames(2, outFile)
+	process(cli.BookletCommand(inFiles, outFile, pages, booklet, conf))
 }
 
 func processGridCommand(conf *pdfcpu.Configuration) {

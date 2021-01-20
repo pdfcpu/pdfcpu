@@ -104,6 +104,11 @@ func NUp(cmd *Command) ([]string, error) {
 	return nil, api.NUpFile(cmd.InFiles, *cmd.OutFile, cmd.PageSelection, cmd.NUp, cmd.Conf)
 }
 
+// Booklet arranges selected PDF pages to outFile in an order and arrangement that form a small book.
+func Booklet(cmd *Command) ([]string, error) {
+	return nil, api.PDFBooklet(cmd.InFiles, *cmd.OutFile, cmd.PageSelection, cmd.Booklet, cmd.Conf)
+}
+
 // ImportImages appends PDF pages containing images to outFile which will be created if necessary.
 // ImportImages turns image files into a page sequence and writes the result to outFile.
 // In its simplest form this operation converts an image into a PDF.

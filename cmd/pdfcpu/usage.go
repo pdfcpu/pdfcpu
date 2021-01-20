@@ -26,6 +26,7 @@ Usage:
 The commands are:
 
    attachments list, add, remove, extract embedded file attachments
+   booklet     arrange pages onto larger sheets of paper to make a booklet or zine
    boxes       list, add, remove page boundaries for selected pages
    changeopw   change owner password
    changeupw   change user password
@@ -495,6 +496,46 @@ Examples: "pdfcpu nup out.pdf 4 in.pdf"
           Rearrange all jpg files into 2x2 grids and write result to out.pdf using the Tabloid format
           and the default orientation.
 
+` + usagePageSelection
+
+	usageBooklet     = "usage: pdfcpu booklet [-p(ages) selectedPages] [description] outFile n inFiles..." + generalFlags
+	usageLongBooklet = `Arrange a sequence of pages onto larger sheets of paper.
+Using this arrangement, you can assemble a small book or zine.
+There are two styles of booklet, depending on your page/input and sheet/output size. Here are the assembly instructions:
+
+* If two of your pages fit on one side of a sheet (eg statement on letter or A5 on A4),
+assemble by printing on both sides (odd pages on the front and even pages on the back) and folding down the middle.
+
+* If four of your pages fit on one side of a sheet (eg statement on ledger or A5 on A3), assemble by printing on both sides,
+then cutting the sheets horizontally. The sets of pages on the bottom of the sheet are rotated
+so that the cut side of the paper is on the bottom of the booklet for every page.
+After cutting, place the bottom set of pages after the top set of pages in the booklet. Then fold the half sheets.
+
+      pages ... selected pages for inFile only
+description ... dimensions, format
+    outFile ... output pdf file
+     inFile ... input pdf file
+
+     <description> is a comma separated configuration string containing:
+
+     optional entries:
+   
+         (defaults: p:A5 s:A3, m:0)
+     
+     pagesize, eg. A5, Statement...
+               PageSize is the size of your input pdf and the size of your final booklet after assembly.
+               Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
+
+     sheetsize, eg. A3, Ledger...
+                SheetSize is the size of your output pdf and the size of the sheets you are printing onto.
+          
+     margin:      for n-up content: float >= 0 in given display unit
+
+Examples: "pdfcpu booklet 'pagesize:Statement sheetsize:Letter' out.pdf in.pdf"
+           Arrange pages of in.pdf 2 per sheet side (4 per sheet, back and front) onto out.pdf
+           
+          "pdfcpu booklet 'pagesize:Statement sheetsize:Ledger' out.pdf in.pdf"
+           Arrange pages of in.pdf 4 per sheet side (8 per sheet, back and front) onto out.pdf
 ` + usagePageSelection
 
 	usageGrid     = "usage: pdfcpu grid [-p(ages) selectedPages] [description] outFile m n inFile|imageFiles..." + generalFlags

@@ -31,11 +31,10 @@ import (
 )
 
 var (
-	errInvalidGridID      = errors.New("pdfcpu: nup: n: one of 2, 3, 4, 6, 8, 9, 12, 16")
-	errInvalidGridDims    = errors.New("pdfcpu: grid: dimensions: m >= 0, n >= 0")
-	errInvalidNUpConfig   = errors.New("pdfcpu: nup: invalid configuration string. Please consult pdfcpu help nup")
-	errInvalidGridConfig  = errors.New("pdfcpu: nup: invalid configuration string. Please consult pdfcpu help grid")
-	errInvalidBookletGrid = errors.New("pdfcpu: nup: for booklets, n must be 2 or 4")
+	errInvalidGridID     = errors.New("pdfcpu: nup: n: one of 2, 3, 4, 6, 8, 9, 12, 16")
+	errInvalidGridDims   = errors.New("pdfcpu: grid: dimensions: m >= 0, n >= 0")
+	errInvalidNUpConfig  = errors.New("pdfcpu: nup: invalid configuration string. Please consult pdfcpu help nup")
+	errInvalidGridConfig = errors.New("pdfcpu: nup: invalid configuration string. Please consult pdfcpu help grid")
 )
 
 var (
@@ -132,9 +131,6 @@ func (o orientation) String() string {
 	case DownLeft:
 		return "down left"
 
-	case Booklet:
-		return "booklet"
-
 	}
 
 	return ""
@@ -146,7 +142,7 @@ const (
 	DownRight
 	LeftDown
 	DownLeft
-	Booklet
+	bookletOrient // this is not an option that can be used from the cli - use pdfcpu booklet command instead
 )
 
 func parsePageFormatNUp(s string, nup *NUp) (err error) {
@@ -177,8 +173,6 @@ func parseOrientation(s string, nup *NUp) error {
 		nup.Orient = LeftDown
 	case "dl":
 		nup.Orient = DownLeft
-	case "booklet":
-		nup.Orient = Booklet
 	default:
 		return errors.Errorf("pdfcpu: unknown nUp orientation: %s", s)
 	}
@@ -252,9 +246,6 @@ func PDFNUpConfig(val int, desc string) (*NUp, error) {
 		if err := ParseNUpDetails(desc, nup); err != nil {
 			return nil, err
 		}
-	}
-	if nup.Orient == Booklet && !(val == 2 || val == 4) {
-		return nup, errInvalidBookletGrid
 	}
 	return nup, ParseNUpValue(val, nup)
 }
@@ -349,7 +340,7 @@ func rectsForGrid(nup *NUp) []*Rectangle {
 
 	switch nup.Orient {
 
-	case RightDown, Booklet:
+	case RightDown, bookletOrient:
 		for i := rows - 1; i >= 0; i-- {
 			for j := 0; j < cols; j++ {
 				llx = float64(j) * gw
@@ -747,7 +738,7 @@ func NUpFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict
 
 func getPageNumber(pageNumbers []int, n int) int {
 	if n >= len(pageNumbers) {
-		// zero represents blank page at end
+		// zero represents blank page at end of booklet
 		return 0
 	}
 	return pageNumbers[n]
@@ -762,7 +753,7 @@ func sortedSelectedPages(pages IntSet, nup *NUp) ([]int, []bool) {
 	}
 	sort.Ints(pageNumbers)
 
-	if nup.Orient == Booklet {
+	if nup.Orient == bookletOrient {
 		switch nup.Grid.Height * nup.Grid.Width {
 		case 2:
 			nPages := len(pageNumbers)
@@ -857,8 +848,8 @@ func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pag
 			buf.Reset()
 			formsResDict = NewDict()
 		}
-		if p == 0 && nup.Orient == Booklet {
-			// this is an empty page at the end of a booklet
+		if p == 0 && nup.Orient == bookletOrient {
+			// this is an empty page at the end of a bookletOrient
 			continue
 		}
 
@@ -899,7 +890,7 @@ func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pag
 		formsResDict.Insert(formResID, *formIndRef)
 
 		// inhPAttrs.mediaBox
-		nUpTilePDFBytes(&buf, cropBox, rr[i%len(rr)], formResID, nup, nup.Orient == Booklet && shouldRotatePage[i])
+		nUpTilePDFBytes(&buf, cropBox, rr[i%len(rr)], formResID, nup, nup.Orient == bookletOrient && shouldRotatePage[i])
 	}
 
 	// Wrap incomplete nUp page.

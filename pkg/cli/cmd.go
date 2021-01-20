@@ -39,6 +39,7 @@ type Command struct {
 	Import         *pdfcpu.Import
 	Rotation       int
 	NUp            *pdfcpu.NUp
+	Booklet        *pdfcpu.Booklet
 	Input          io.ReadSeeker
 	Inputs         []io.ReadSeeker
 	Output         io.Writer
@@ -78,6 +79,7 @@ var cmdMap = map[pdfcpu.CommandMode]func(cmd *Command) ([]string, error){
 	pdfcpu.REMOVEPAGES:             processPages,
 	pdfcpu.ROTATE:                  Rotate,
 	pdfcpu.NUP:                     NUp,
+	pdfcpu.BOOKLET:                 Booklet,
 	pdfcpu.INFO:                    Info,
 	pdfcpu.CHEATSHEETSFONTS:        CreateCheatSheetsFonts,
 	pdfcpu.INSTALLFONTS:            InstallFonts,
@@ -498,6 +500,21 @@ func NUpCommand(inFiles []string, outFile string, pageSelection []string, nUp *p
 		OutFile:       &outFile,
 		PageSelection: pageSelection,
 		NUp:           nUp,
+		Conf:          conf}
+}
+
+// BookletCommand creates a new command to render PDFs or image files in booklet fashion.
+func BookletCommand(inFiles []string, outFile string, pageSelection []string, booklet *pdfcpu.Booklet, conf *pdfcpu.Configuration) *Command {
+	if conf == nil {
+		conf = pdfcpu.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdfcpu.NUP
+	return &Command{
+		Mode:          pdfcpu.BOOKLET,
+		InFiles:       inFiles,
+		OutFile:       &outFile,
+		PageSelection: pageSelection,
+		Booklet:       booklet,
 		Conf:          conf}
 }
 
