@@ -184,68 +184,64 @@ func sortedSelectedPagesBooklet(pages IntSet, nup *NUp) ([]int, []bool) {
 	}
 	sort.Ints(pageNumbers)
 
-	switch nup.Grid.Height * nup.Grid.Width {
+	nPagesPerSheetSide := int(nup.Grid.Height * nup.Grid.Width)
+	nPagesPerSheet := 2 * nPagesPerSheetSide
+
+	nPages := len(pageNumbers)
+	rem := nPages % nPagesPerSheet
+	if rem != 0 {
+		rem = nPagesPerSheet - rem
+	}
+	nPages += rem
+
+	// nPages must be a multiple of the number of pages per sheet
+	// if not, we will insert blank pages at the end of the booklet
+	pageNumbersBookletOrder := make([]int, nPages)
+	shouldRotate := make([]bool, nPages)
+	switch nPagesPerSheetSide {
 	case 2:
-		nPages := len(pageNumbers)
-		if nPages%2 != 0 {
-			// nPages must be a multiple of 2
-			// if not, we will insert a blank page at the end
-			nPages++
-		}
-		out := make([]int, nPages)
-		shouldRotate := make([]bool, nPages)
 		// (output page, input page) = [(1,1), (2,n), (3, 2), (4, n-1), (5, 3), (6, n-2), ...]
 		for i := 0; i < nPages; i++ {
 			if i%2 == 0 {
-				out[i] = getPageNumber(pageNumbers, i/2)
+				pageNumbersBookletOrder[i] = getPageNumber(pageNumbers, i/2)
 			} else {
-				out[i] = getPageNumber(pageNumbers, nPages-1-(i-1)/2)
+				pageNumbersBookletOrder[i] = getPageNumber(pageNumbers, nPages-1-(i-1)/2)
 			}
 			// odd output pages should be upside-down
 			if i%4 < 2 {
 				shouldRotate[i] = true
 			}
 		}
-		return out, shouldRotate
 	case 4:
-		nPages := len(pageNumbers)
-		rem := nPages % 8
-		if rem != 0 {
-			// nPages must be a multiple of 8
-			// if not, we will insert blank pages at the end
-			nPages += 8 - rem
-		}
-		out := make([]int, nPages)
-		shouldRotate := make([]bool, nPages)
 		// (output page, input page) = [
 		// (1,n), (2,1), (3, n/2+1), (4, n/2-0),
 		// (5, 2), (6, n-1), (7, n/2-1), (8, n/2+2)
 		// ...]
-		for i := 0; i < len(pageNumbers); i++ {
+		for i := 0; i < nPages; i++ {
 			bookletPageNumber := i / 4
 			if bookletPageNumber%2 == 0 {
 				// front side
 				switch i % 4 {
 				case 0:
-					out[i] = getPageNumber(pageNumbers, nPages-1-bookletPageNumber)
+					pageNumbersBookletOrder[i] = getPageNumber(pageNumbers, nPages-1-bookletPageNumber)
 				case 1:
-					out[i] = getPageNumber(pageNumbers, bookletPageNumber)
+					pageNumbersBookletOrder[i] = getPageNumber(pageNumbers, bookletPageNumber)
 				case 2:
-					out[i] = getPageNumber(pageNumbers, nPages/2+bookletPageNumber)
+					pageNumbersBookletOrder[i] = getPageNumber(pageNumbers, nPages/2+bookletPageNumber)
 				case 3:
-					out[i] = getPageNumber(pageNumbers, nPages/2-1-bookletPageNumber)
+					pageNumbersBookletOrder[i] = getPageNumber(pageNumbers, nPages/2-1-bookletPageNumber)
 				}
 			} else {
 				// back side
 				switch i % 4 {
 				case 0:
-					out[i] = getPageNumber(pageNumbers, bookletPageNumber)
+					pageNumbersBookletOrder[i] = getPageNumber(pageNumbers, bookletPageNumber)
 				case 1:
-					out[i] = getPageNumber(pageNumbers, nPages-1-bookletPageNumber)
+					pageNumbersBookletOrder[i] = getPageNumber(pageNumbers, nPages-1-bookletPageNumber)
 				case 2:
-					out[i] = getPageNumber(pageNumbers, nPages/2-1-bookletPageNumber)
+					pageNumbersBookletOrder[i] = getPageNumber(pageNumbers, nPages/2-1-bookletPageNumber)
 				case 3:
-					out[i] = getPageNumber(pageNumbers, nPages/2+bookletPageNumber)
+					pageNumbersBookletOrder[i] = getPageNumber(pageNumbers, nPages/2+bookletPageNumber)
 				}
 			}
 			if i%4 >= 2 {
@@ -253,10 +249,8 @@ func sortedSelectedPagesBooklet(pages IntSet, nup *NUp) ([]int, []bool) {
 				shouldRotate[i] = true
 			}
 		}
-		return out, shouldRotate
 	}
-
-	return pageNumbers, nil
+	return pageNumbersBookletOrder, shouldRotate
 }
 
 func (ctx *Context) arrangePagesForBooklet(selectedPages IntSet, nup *NUp, pagesDict Dict, pagesIndRef *IndirectRef) error {

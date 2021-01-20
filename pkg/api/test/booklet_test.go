@@ -34,7 +34,7 @@ func testBooklet(t *testing.T, cfg *testBookletCfg) {
 func TestBooklet(t *testing.T) {
 	outDir := "../../samples/booklet"
 	for _, tt := range []*testBookletCfg{
-		// Booklet (4up on ledger) on PDF
+		// 4-up booklet
 		{"TestBookletLedger",
 			[]string{filepath.Join(inDir, "demo-booklet-input-statement.pdf")},
 			filepath.Join(outDir, "booklet-ledger.pdf"),
@@ -42,7 +42,7 @@ func TestBooklet(t *testing.T) {
 			"pagesize:Statement, sheetsize:LedgerP",
 		},
 
-		// Booklet (2up with rotation) on PDF
+		// 2-up booklet
 		{"TestBookletLetter",
 			[]string{filepath.Join(inDir, "demo-booklet-input-statement.pdf")},
 			filepath.Join(outDir, "booklet-letter.pdf"),
@@ -50,12 +50,20 @@ func TestBooklet(t *testing.T) {
 			"pagesize:Statement, sheetsize:LetterP",
 		},
 
-		// Booklet where the number of pages don't fill the whole sheet
+		// 2-up booklet where the number of pages don't fill the whole sheet
 		{"TestBookletBlankPages",
 			[]string{filepath.Join(inDir, "demo-booklet-input-statement.pdf")},
 			filepath.Join(outDir, "booklet-letter-with-blank-pages.pdf"),
-			[]string{"1-13"},
+			[]string{"1-14"},
 			"pagesize:Statement, sheetsize:LetterP",
+		},
+
+		// 4-up booklet where the number of pages don't fill the whole sheet
+		{"TestBookletBlankPagesLedger",
+			[]string{filepath.Join(inDir, "demo-booklet-input-statement.pdf")},
+			filepath.Join(outDir, "booklet-ledger-with-blank-pages.pdf"),
+			[]string{"1-21"},
+			"pagesize:Statement, sheetsize:LedgerP",
 		},
 	} {
 		testBooklet(t, tt)
