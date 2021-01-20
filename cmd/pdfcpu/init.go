@@ -117,6 +117,7 @@ func initCommandMap() {
 
 	for k, v := range map[string]command{
 		"attachments": {nil, attachCmdMap, usageAttach, usageLongAttach},
+		"booklet":     {processBookletCommand, nil, usageBooklet, usageLongBooklet},
 		"boxes":       {nil, boxesCmdMap, usageBoxes, usageLongBoxes},
 		"changeopw":   {processChangeOwnerPasswordCommand, nil, usageChangeOwnerPW, usageLongChangeUserPW},
 		"changeupw":   {processChangeUserPasswordCommand, nil, usageChangeUserPW, usageLongChangeUserPW},
