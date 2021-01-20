@@ -155,7 +155,7 @@ func (ctx *Context) BookletFromPDF(selectedPages IntSet, booklet *Booklet) error
 	nup := &NUp{
 		PageDim:  booklet.SheetDim,
 		PageSize: booklet.SheetSize,
-		Orient:   bookletOrient,
+		Orient:   RightDown,
 		Grid:     grid,
 		Margin:   booklet.Margin,
 	}
@@ -273,8 +273,8 @@ func (ctx *Context) arrangePagesForBooklet(selectedPages IntSet, nup *NUp, pages
 			buf.Reset()
 			formsResDict = NewDict()
 		}
-		if p == 0 && nup.Orient == bookletOrient {
-			// this is an empty page at the end of a bookletOrient
+		if p == 0 {
+			// this is an empty page at the end of a booklet
 			continue
 		}
 		isEmpty, cropBox, formResID, err := ctx.nupPrepPage(i, p, formsResDict)

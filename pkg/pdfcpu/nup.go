@@ -142,7 +142,6 @@ const (
 	DownRight
 	LeftDown
 	DownLeft
-	bookletOrient // this is not an option that can be used from the cli - use pdfcpu booklet command instead
 )
 
 func parsePageFormatNUp(s string, nup *NUp) (err error) {
@@ -340,7 +339,7 @@ func rectsForGrid(nup *NUp) []*Rectangle {
 
 	switch nup.Orient {
 
-	case RightDown, bookletOrient:
+	case RightDown:
 		for i := rows - 1; i >= 0; i-- {
 			for j := 0; j < cols; j++ {
 				llx = float64(j) * gw
@@ -736,7 +735,7 @@ func NUpFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict
 	return wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef)
 }
 
-func sortedSelectedPages(pages IntSet, nup *NUp) []int {
+func sortedSelectedPages(pages IntSet) []int {
 	var pageNumbers []int
 	for k, v := range pages {
 		if v {
@@ -744,7 +743,6 @@ func sortedSelectedPages(pages IntSet, nup *NUp) []int {
 		}
 	}
 	sort.Ints(pageNumbers)
-
 	return pageNumbers
 }
 
@@ -793,7 +791,7 @@ func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pag
 	formsResDict := NewDict()
 	rr := rectsForGrid(nup)
 
-	pageNumbers := sortedSelectedPages(selectedPages, nup)
+	pageNumbers := sortedSelectedPages(selectedPages)
 	for i, p := range pageNumbers {
 
 		if i > 0 && i%len(rr) == 0 {
