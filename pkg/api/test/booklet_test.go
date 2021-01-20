@@ -49,6 +49,14 @@ func TestBooklet(t *testing.T) {
 			[]string{"1-16"},
 			"pagesize:Statement, sheetsize:LetterP",
 		},
+
+		// Booklet where the number of pages don't fill the whole sheet
+		{"TestBookletBlankPages",
+			[]string{filepath.Join(inDir, "demo-booklet-input-statement.pdf")},
+			filepath.Join(outDir, "booklet-letter-with-blank-pages.pdf"),
+			[]string{"1-13"},
+			"pagesize:Statement, sheetsize:LetterP",
+		},
 	} {
 		testBooklet(t, tt)
 	}
