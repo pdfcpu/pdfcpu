@@ -118,6 +118,10 @@ func (ctx *Context) BookmarksForOutlineLevel1() ([]Bookmark, error) {
 		if actFound {
 			act, _ = ctx.Dereference(act)
 			dest, _ = act.(Dict)["D"]
+			actType, _ := act.(Dict)["S"]
+			if actType.String() != "GoTo" {
+				continue
+			}
 			destFound = true
 		}
 
