@@ -90,7 +90,6 @@ func (ctx *Context) BookmarksForOutlineLevel1() ([]Bookmark, error) {
 
 	// Process outline items.
 	for ir := first; ir != nil; ir = d.IndirectRefEntry("Next") {
-
 		if d, err = ctx.DereferenceDict(*ir); err != nil {
 			return nil, err
 		}
@@ -108,40 +107,53 @@ func (ctx *Context) BookmarksForOutlineLevel1() ([]Bookmark, error) {
 		}
 		title := sb.String()
 
-		dest, found := d["Dest"]
-		if !found {
+		dest, destFound := d["Dest"]
+		act, actFound := d["A"]
+		if !destFound && !actFound {
 			return nil, errNoBookmarks
 		}
 
 		var ir IndirectRef
 
-		dest, _ = ctx.Dereference(dest)
+		if actFound {
+			act, _ = ctx.Dereference(act)
+			dest, _ = act.(Dict)["D"]
+			destFound = true
+		}
 
-		switch dest := dest.(type) {
-		case Name:
-			arr, err := ctx.dereferenceDestinationArray(dest.Value())
-			if err != nil {
-				return nil, err
-			}
-			ir = arr[0].(IndirectRef)
-		case StringLiteral:
-			arr, err := ctx.dereferenceDestinationArray(dest.Value())
-			if err != nil {
-				return nil, err
-			}
-			ir = arr[0].(IndirectRef)
-		case HexLiteral:
-			arr, err := ctx.dereferenceDestinationArray(dest.Value())
-			if err != nil {
-				return nil, err
-			}
-			ir = arr[0].(IndirectRef)
-		case Array:
-			ir = dest[0].(IndirectRef)
+		if destFound {
+			dest, _ = ctx.Dereference(dest)
 
+			switch dest := dest.(type) {
+			case Name:
+				arr, err := ctx.dereferenceDestinationArray(dest.Value())
+				if err != nil {
+					return nil, err
+				}
+				ir = arr[0].(IndirectRef)
+			case StringLiteral:
+				arr, err := ctx.dereferenceDestinationArray(dest.Value())
+				if err != nil {
+					return nil, err
+				}
+				ir = arr[0].(IndirectRef)
+			case HexLiteral:
+				arr, err := ctx.dereferenceDestinationArray(dest.Value())
+				if err != nil {
+					return nil, err
+				}
+				ir = arr[0].(IndirectRef)
+			case Array:
+				if dest[0] != nil {
+					ir = dest[0].(IndirectRef)
+				} else {
+					continue
+				}
+			}
 		}
 
 		pageFrom, err := ctx.PageNumber(ir.ObjectNumber.Value())
+
 		if err != nil {
 			return nil, err
 		}
