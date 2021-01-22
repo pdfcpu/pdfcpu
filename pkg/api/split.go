@@ -81,7 +81,7 @@ func writePageSpan(ctx *pdfcpu.Context, from, thru int, outDir, fileName string,
 }
 
 func writePageSpansSplitAlongBookmarks(ctx *pdfcpu.Context, outDir string) error {
-	bms, err := ctx.BookmarksForOutlineLevel1()
+	bms, err := ctx.BookmarksForOutline()
 	if err != nil {
 		return err
 	}
