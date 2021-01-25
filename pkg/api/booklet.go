@@ -28,6 +28,10 @@ import (
 
 // BookletFile rearranges PDF pages or images into a booklet layout and writes the result to outFile.
 func BookletFile(inFiles []string, outFile string, selectedPages []string, nup *pdfcpu.NUp, conf *pdfcpu.Configuration) (err error) {
+	if nup.ImgInputFile {
+		return fmt.Errorf("image file input not yet supported for booklet")
+	}
+
 	var f1, f2 *os.File
 
 	// booklet from a PDF
@@ -87,10 +91,6 @@ func Booklet(rs io.ReadSeeker, w io.Writer, selectedPages []string, nup *pdfcpu.
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return err
-	}
-
-	if nup.ImgInputFile {
-		return fmt.Errorf("image file input not yet supported for booklet")
 	}
 
 	if err = ctx.BookletFromPDF(pages, nup); err != nil {
