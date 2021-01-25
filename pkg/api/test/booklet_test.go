@@ -23,7 +23,7 @@ func testBooklet(t *testing.T, cfg *testBookletCfg) {
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", cfg.msg, cfg.outFile, err)
 	}
-	if err := api.PDFBooklet(cfg.inFiles, cfg.outFile, cfg.selectedPages, booklet, nil); err != nil {
+	if err := api.BookletFile(cfg.inFiles, cfg.outFile, cfg.selectedPages, booklet, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", cfg.msg, cfg.outFile, err)
 	}
 	if err := api.ValidateFile(cfg.outFile, nil); err != nil {

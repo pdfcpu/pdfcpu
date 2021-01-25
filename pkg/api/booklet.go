@@ -25,8 +25,8 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
-// PDFBooklet rearranges PDF pages or images into a booklet layout and writes the result to outFile.
-func PDFBooklet(inFiles []string, outFile string, selectedPages []string, booklet *pdfcpu.Booklet, conf *pdfcpu.Configuration) (err error) {
+// BookletFile rearranges PDF pages or images into a booklet layout and writes the result to outFile.
+func BookletFile(inFiles []string, outFile string, selectedPages []string, booklet *pdfcpu.Booklet, conf *pdfcpu.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	// booklet from a PDF
