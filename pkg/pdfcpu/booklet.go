@@ -142,6 +142,25 @@ func sortedSelectedPagesBooklet(pages IntSet, nup *NUp) ([]int, []bool) {
 	return pageNumbersBookletOrder, shouldRotate
 }
 
+func calcTransMatrixForRectBooklet(r1, r2 *Rectangle, image bool) (float64, matrix, matrix, matrix) {
+	rot, m1, m2, m3 := calcTransMatrixForRectNUp(r1, r2, image)
+	// Rotation: booklet pages are rotated 180deg, in addition to any aspect rotation
+	// this is equivalent to flipping the sign on first two rows/cols of the m2 matrix
+	m2[0][0] *= -1
+	m2[0][1] *= -1
+	m2[1][0] *= -1
+	m2[1][1] *= -1
+
+	// Translation: we've rotated 180deg, so we need to translate to get the old page visiible on the new page
+	if rot == 0 {
+		m3[2][0] += r1.Width()
+	} else {
+		m3[2][0] -= r1.Width()
+	}
+	m3[2][1] += r1.Height()
+	return rot, m1, m2, m3
+}
+
 func (ctx *Context) arrangePagesForBooklet(selectedPages IntSet, nup *NUp, pagesDict Dict, pagesIndRef *IndirectRef) error {
 	// this code is similar to nupPages, but for booklets
 	var buf bytes.Buffer
@@ -172,7 +191,13 @@ func (ctx *Context) arrangePagesForBooklet(selectedPages IntSet, nup *NUp, pages
 		if isEmpty {
 			continue
 		}
-		nUpTilePDFBytes(&buf, cropBox, rr[i%len(rr)], formResID, nup, shouldRotatePage[i])
+		var calc calcTransMatrixForRect
+		if shouldRotatePage[i] {
+			calc = calcTransMatrixForRectBooklet
+		} else {
+			calc = calcTransMatrixForRectNUp
+		}
+		nUpTilePDFBytes(&buf, cropBox, rr[i%len(rr)], formResID, nup, calc)
 	}
 
 	// Wrap incomplete nUp page.
