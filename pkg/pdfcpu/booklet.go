@@ -151,10 +151,11 @@ func calcTransMatrixForRectBooklet(r1, r2 *Rectangle, image bool) (float64, matr
 	m2[1][0] *= -1
 	m2[1][1] *= -1
 
-	// Translation: we've rotated 180deg, so we need to translate to get the old page visiible on the new page
-	if rot == 0 {
+	// Translation: we've rotated 180deg in addition to the original rotation (for aspect ratio)
+	// so we need to translate to get the old page visiible on the new page
+	if rot == 0 { // new rotation is 180deg
 		m3[2][0] += r1.Width()
-	} else {
+	} else { // new rotation is 270deg
 		m3[2][0] -= r1.Width()
 	}
 	m3[2][1] += r1.Height()
