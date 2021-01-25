@@ -498,7 +498,7 @@ Examples: "pdfcpu nup out.pdf 4 in.pdf"
 
 ` + usagePageSelection
 
-	usageBooklet     = "usage: pdfcpu booklet [-p(ages) selectedPages] [description] outFile n inFiles..." + generalFlags
+	usageBooklet     = "usage: pdfcpu booklet [-p(ages) selectedPages] [description] outFile n inFile|imageFiles..." + generalFlags
 	usageLongBooklet = `Arrange a sequence of pages onto larger sheets of paper.
 Using this arrangement, you can assemble a small book or zine.
 There are two styles of booklet, depending on your page/input and sheet/output size. Here are the assembly instructions:
@@ -511,30 +511,47 @@ then cutting the sheets horizontally. The sets of pages on the bottom of the she
 so that the cut side of the paper is on the bottom of the booklet for every page.
 After cutting, place the bottom set of pages after the top set of pages in the booklet. Then fold the half sheets.
 
-      pages ... selected pages for inFile only
-description ... dimensions, format
+pages ... selected pages for inFile only
+description ... dimensions, format, orientation
     outFile ... output pdf file
+          n ... the n-Up value (see below for details)
      inFile ... input pdf file
+ imageFiles ... input image file(s)
 
-     <description> is a comma separated configuration string containing:
+                             portrait landscape
+ Possible values for n: 2 ...  1x2       2x1
+                        4 ...  2x2
 
-     optional entries:
-   
-         (defaults: p:A5 s:A3, m:0)
-     
-     pagesize, eg. A5, Statement...
-               PageSize is the size of your input pdf and the size of your final booklet after assembly.
-               Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
+    <description> is a comma separated configuration string containing:
 
-     sheetsize, eg. A3, Ledger...
-                SheetSize is the size of your output pdf and the size of the sheets you are printing onto.
-          
-     margin:      for n-up content: float >= 0 in given display unit
+    optional entries:
 
-Examples: "pdfcpu booklet 'pagesize:Statement sheetsize:Letter' out.pdf in.pdf"
+        (defaults: d:595 842, f:A4, o:rd, b:off, m:0)
+
+    dimensions: (width,height) of the output sheet in given display unit eg. '400 200'
+
+    formsize, papersize of the output sheet, eg. A4, Letter, Legal...
+                           Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
+                           Appended 'L' enforces landscape mode. (eg. A3L)
+                           Appended 'P' enforces portrait mode. (eg. TabloidP)
+                           Only one of dimensions or format is allowed.
+
+    orientation: one of rd ... right down (=default)
+                        dr ... down right
+                        ld ... left down
+                        dl ... down left
+                        Orientation applies to PDF input files only.
+
+    border:      on/off true/false
+
+    margin:      for n-up content: float >= 0 in given display unit
+
+All configuration string parameters support completion.
+
+Examples: "pdfcpu booklet 'formsize:Letter' out.pdf 2 in.pdf"
            Arrange pages of in.pdf 2 per sheet side (4 per sheet, back and front) onto out.pdf
-           
-          "pdfcpu booklet 'pagesize:Statement sheetsize:Ledger' out.pdf in.pdf"
+
+          "pdfcpu booklet 'formsize:Ledger' out.pdf 4 in.pdf"
            Arrange pages of in.pdf 4 per sheet side (8 per sheet, back and front) onto out.pdf
 ` + usagePageSelection
 

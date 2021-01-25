@@ -954,16 +954,6 @@ func processRotateCommand(conf *pdfcpu.Configuration) {
 	process(cli.RotateCommand(inFile, outFile, rotation, selectedPages, conf))
 }
 
-func parseBookletInputPDFFilenames(argInd int, filenameOut string) []string {
-	filenamesIn := make([]string, 0)
-	for i := argInd; i < len(flag.Args()); i++ {
-		arg := flag.Args()[i]
-		ensurePdfExtension(arg)
-		filenamesIn = append(filenamesIn, arg)
-	}
-	return filenamesIn
-}
-
 func parseAfterNUpDetails(nup *pdfcpu.NUp, argInd int, filenameOut string) []string {
 	if nup.PageGrid {
 		cols, err := strconv.Atoi(flag.Arg(argInd))
@@ -1027,7 +1017,38 @@ func parseAfterNUpDetails(nup *pdfcpu.NUp, argInd int, filenameOut string) []str
 	return filenamesIn
 }
 
+type nupOrBookletInputs struct {
+	inFiles       []string
+	outFile       string
+	pageSelection []string
+	nup           *pdfcpu.NUp
+	conf          *pdfcpu.Configuration
+	pages         []string
+}
+
+type nupOrBookletCommandBuilder func(inputs *nupOrBookletInputs) *cli.Command
+
 func processNUpCommand(conf *pdfcpu.Configuration) {
+	processNUpOrBookletCommand(
+		conf,
+		pdfcpu.DefaultNUpConfig(),
+		func(inputs *nupOrBookletInputs) *cli.Command {
+			return cli.NUpCommand(inputs.inFiles, inputs.outFile, inputs.pages, inputs.nup, inputs.conf)
+		},
+	)
+}
+
+func processBookletCommand(conf *pdfcpu.Configuration) {
+	processNUpOrBookletCommand(
+		conf,
+		pdfcpu.DefaultBookletConfig(),
+		func(inputs *nupOrBookletInputs) *cli.Command {
+			return cli.BookletCommand(inputs.inFiles, inputs.outFile, inputs.pages, inputs.nup, inputs.conf)
+		},
+	)
+}
+
+func processNUpOrBookletCommand(conf *pdfcpu.Configuration, nup *pdfcpu.NUp, cmdBuilder nupOrBookletCommandBuilder) {
 	if len(flag.Args()) < 3 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageNUp)
 		os.Exit(1)
@@ -1041,15 +1062,13 @@ func processNUpCommand(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
-	nup := pdfcpu.DefaultNUpConfig()
-
 	outFile := flag.Arg(0)
 	if hasPdfExtension(outFile) {
 		// pdfcpu nup outFile n inFile|imageFiles...
 		// No optional 'description' argument provided.
 		// We use the default nup configuration.
 		inFiles := parseAfterNUpDetails(nup, 1, outFile)
-		process(cli.NUpCommand(inFiles, outFile, pages, nup, conf))
+		process(cmdBuilder(&nupOrBookletInputs{inFiles, outFile, pages, nup, conf, pages}))
 	}
 
 	nup.InpUnit = conf.Unit
@@ -1063,49 +1082,7 @@ func processNUpCommand(conf *pdfcpu.Configuration) {
 	outFile = flag.Arg(1)
 	ensurePdfExtension(outFile)
 	inFiles := parseAfterNUpDetails(nup, 2, outFile)
-	process(cli.NUpCommand(inFiles, outFile, pages, nup, conf))
-}
-
-func processBookletCommand(conf *pdfcpu.Configuration) {
-	if len(flag.Args()) < 3 {
-		fmt.Fprintf(os.Stderr, "%s\n\n", usageNUp)
-		os.Exit(1)
-	}
-
-	processDiplayUnit(conf)
-
-	pages, err := api.ParsePageSelection(selectedPages)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
-		os.Exit(1)
-	}
-
-	booklet := pdfcpu.DefaultBookletConfig()
-
-	outFile := flag.Arg(0)
-	if hasPdfExtension(outFile) {
-		// usage: pdfcpu booklet outFile inFiles
-		// No optional 'description' argument provided for this case.
-		// We use the default booklet configuration.
-		inFiles := parseBookletInputPDFFilenames(1, outFile)
-		process(cli.BookletCommand(inFiles, outFile, pages, booklet, conf))
-		return
-	}
-
-	booklet.InpUnit = conf.Unit
-
-	// usage: pdfcpu booklet description outFile inFiles
-
-	// parse description
-	if err = pdfcpu.ParseBookletDetails(flag.Arg(0), booklet); err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		os.Exit(1)
-	}
-
-	outFile = flag.Arg(1)
-	ensurePdfExtension(outFile)
-	inFiles := parseBookletInputPDFFilenames(2, outFile)
-	process(cli.BookletCommand(inFiles, outFile, pages, booklet, conf))
+	process(cmdBuilder(&nupOrBookletInputs{inFiles, outFile, pages, nup, conf, pages}))
 }
 
 func processGridCommand(conf *pdfcpu.Configuration) {

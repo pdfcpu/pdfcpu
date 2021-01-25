@@ -17,6 +17,7 @@
 package api
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -26,7 +27,7 @@ import (
 )
 
 // BookletFile rearranges PDF pages or images into a booklet layout and writes the result to outFile.
-func BookletFile(inFiles []string, outFile string, selectedPages []string, booklet *pdfcpu.Booklet, conf *pdfcpu.Configuration) (err error) {
+func BookletFile(inFiles []string, outFile string, selectedPages []string, nup *pdfcpu.NUp, conf *pdfcpu.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	// booklet from a PDF
@@ -57,17 +58,17 @@ func BookletFile(inFiles []string, outFile string, selectedPages []string, bookl
 
 	}()
 
-	return Booklet(f1, f2, selectedPages, booklet, conf)
+	return Booklet(f1, f2, selectedPages, nup, conf)
 }
 
 // Booklet arranges PDF pages on larger sheets of paper and writes the result to w.
-func Booklet(rs io.ReadSeeker, w io.Writer, selectedPages []string, booklet *pdfcpu.Booklet, conf *pdfcpu.Configuration) error {
+func Booklet(rs io.ReadSeeker, w io.Writer, selectedPages []string, nup *pdfcpu.NUp, conf *pdfcpu.Configuration) error {
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
 	}
 	conf.Cmd = pdfcpu.BOOKLET
 
-	log.Info.Printf("%s", booklet)
+	log.Info.Printf("%s", nup)
 
 	// below is very similar to api.NUp
 	var (
@@ -88,7 +89,11 @@ func Booklet(rs io.ReadSeeker, w io.Writer, selectedPages []string, booklet *pdf
 		return err
 	}
 
-	if err = ctx.BookletFromPDF(pages, booklet); err != nil {
+	if nup.ImgInputFile {
+		return fmt.Errorf("image file input not yet supported for booklet")
+	}
+
+	if err = ctx.BookletFromPDF(pages, nup); err != nil {
 		return err
 	}
 

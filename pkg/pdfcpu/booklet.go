@@ -19,150 +19,39 @@ package pdfcpu
 import (
 	"bytes"
 	"fmt"
-	"math"
 	"sort"
-	"strconv"
-	"strings"
-
-	"github.com/pkg/errors"
 )
 
-// Booklet represents the command details for the command "Booklet".
-type Booklet struct {
-	PageSize  string      // Page size eg. A4L, A4P, A4(=default=A4P), see paperSize.go
-	PageDim   *Dim        // Dimensions of the page of a booklet (and input files)
-	SheetSize string      // Sheet size eg. A4L, A4P, A4(=default=A4P), see paperSize.go
-	SheetDim  *Dim        // Dimensions of the sheet of paper printed (and output files)
-	Margin    int         // Cropbox for booklet content within sheet
-	InpUnit   DisplayUnit // input display unit.
-}
-
-// BookletConfig returns an Booklet configuration
-func BookletConfig(desc string) (*Booklet, error) {
-	b := DefaultBookletConfig()
-	err := ParseBookletDetails(desc, b)
-	return b, err
-}
-
-// DefaultBookletConfig returns the default NUp configuration.
-func DefaultBookletConfig() *Booklet {
-	return &Booklet{
-		PageSize:  "A5",
-		SheetSize: "A3",
-		Margin:    0,
+// DefaultBookletConfig returns the default configuration for a booklet
+func DefaultBookletConfig() *NUp {
+	return &NUp{
+		PageSize: "A4",
+		Orient:   RightDown,
+		Margin:   0,
+		Border:   false,
 	}
 }
 
-func (b Booklet) String() string {
-	return fmt.Sprintf("Booklet conf: input=%s %s, output=%s %s\n",
-		b.PageSize, *b.PageDim, b.SheetSize, b.SheetDim)
-}
-
-// ParseBookletDetails parses a Booklet command string into an internal structure.
-func ParseBookletDetails(s string, booklet *Booklet) error {
-	err1 := errInvalidNUpConfig
-	if s == "" {
-		return err1
-	}
-
-	ss := strings.Split(s, ",")
-
-	for _, s := range ss {
-
-		ss1 := strings.Split(s, ":")
-		if len(ss1) != 2 {
-			return err1
-		}
-
-		paramPrefix := strings.TrimSpace(ss1[0])
-		paramValueStr := strings.TrimSpace(ss1[1])
-
-		if err := bookletParamMap.Handle(paramPrefix, paramValueStr, booklet); err != nil {
-			return err
+// PDFBookletConfig returns an NUp configuration for booklet-ing PDF files.
+func PDFBookletConfig(val int, desc string) (*NUp, error) {
+	nup := DefaultBookletConfig()
+	if desc != "" {
+		if err := ParseNUpDetails(desc, nup); err != nil {
+			return nil, err
 		}
 	}
-
-	return nil
-}
-
-type bkltParamMap map[string]func(string, *Booklet) error
-
-// Handle applies parameter completion and if successful
-// parses the parameter values into import.
-func (m bkltParamMap) Handle(paramPrefix, paramValueStr string, booklet *Booklet) error {
-	var param string
-
-	// Completion support
-	for k := range m {
-		if !strings.HasPrefix(k, paramPrefix) {
-			continue
-		}
-		if len(param) > 0 {
-			return errors.Errorf("pdfcpu: ambiguous parameter prefix \"%s\"", paramPrefix)
-		}
-		param = k
-	}
-
-	if param == "" {
-		return errors.Errorf("pdfcpu: ambiguous parameter prefix \"%s\"", paramPrefix)
-	}
-
-	return m[param](paramValueStr, booklet)
-}
-
-var bookletParamMap = bkltParamMap{
-	"pagesize":  parseBookletPageSize,
-	"sheetsize": parseBookletSheetSize,
-	"margin":    parseBookletMargin,
-}
-
-func parseBookletPageSize(s string, b *Booklet) (err error) {
-	b.PageDim, b.PageSize, err = parsePageFormat(s)
-	return err
-}
-
-func parseBookletSheetSize(s string, b *Booklet) (err error) {
-	b.SheetDim, b.SheetSize, err = parsePageFormat(s)
-	return err
-}
-
-func parseBookletMargin(s string, b *Booklet) error {
-	f, err := strconv.ParseFloat(s, 64)
-	if err != nil {
-		return err
-	}
-
-	if f < 0 {
-		return errors.New("pdfcpu: booklet margin, Please provide a positive value")
-	}
-
-	b.Margin = int(toUserSpace(f, b.InpUnit))
-
-	return nil
+	return nup, ParseNUpValue(val, nup)
 }
 
 // BookletFromPDF creates an booklet version of the PDF represented by xRefTable.
-func (ctx *Context) BookletFromPDF(selectedPages IntSet, booklet *Booklet) error {
-	grid := &Dim{
-		math.Round(booklet.SheetDim.Width / booklet.PageDim.Width),
-		math.Round(booklet.SheetDim.Height / booklet.PageDim.Height),
-	}
-	n := int(grid.Width * grid.Height)
+func (ctx *Context) BookletFromPDF(selectedPages IntSet, nup *NUp) error {
+	n := int(nup.Grid.Width * nup.Grid.Height)
 	if !(n == 2 || n == 4) {
-		return fmt.Errorf("booklet must have page and sheet dimensions that result in 2 or 4 pages per sheet, got %d", n)
+		return fmt.Errorf("booklet must have n={2,4} pages per sheet, got %d", n)
 	}
-	if n == 2 && booklet.PageDim.Landscape() == booklet.SheetDim.Landscape() {
+	if n == 2 && nup.PageDim.Landscape() {
 		// transpose grid
-		grid = &Dim{grid.Height, grid.Width}
-	}
-
-	// TODO: we're assuming that inputs are really booklet.PageSize
-	nup := &NUp{
-		PageDim:  booklet.SheetDim,
-		PageSize: booklet.SheetSize,
-		Orient:   RightDown,
-		Grid:     grid,
-		Margin:   booklet.Margin,
+		nup.Grid = &Dim{nup.Grid.Height, nup.Grid.Width}
 	}
 	return ctx.bookletFromPDF(selectedPages, nup)
 }

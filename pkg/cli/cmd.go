@@ -39,7 +39,6 @@ type Command struct {
 	Import         *pdfcpu.Import
 	Rotation       int
 	NUp            *pdfcpu.NUp
-	Booklet        *pdfcpu.Booklet
 	Input          io.ReadSeeker
 	Inputs         []io.ReadSeeker
 	Output         io.Writer
@@ -504,17 +503,17 @@ func NUpCommand(inFiles []string, outFile string, pageSelection []string, nUp *p
 }
 
 // BookletCommand creates a new command to render PDFs or image files in booklet fashion.
-func BookletCommand(inFiles []string, outFile string, pageSelection []string, booklet *pdfcpu.Booklet, conf *pdfcpu.Configuration) *Command {
+func BookletCommand(inFiles []string, outFile string, pageSelection []string, nup *pdfcpu.NUp, conf *pdfcpu.Configuration) *Command {
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.NUP
+	conf.Cmd = pdfcpu.BOOKLET
 	return &Command{
 		Mode:          pdfcpu.BOOKLET,
 		InFiles:       inFiles,
 		OutFile:       &outFile,
 		PageSelection: pageSelection,
-		Booklet:       booklet,
+		NUp:           nup,
 		Conf:          conf}
 }
 
