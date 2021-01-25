@@ -30,16 +30,17 @@ type testBookletCfg struct {
 	outFile       string
 	selectedPages []string
 	desc          string
+	n             int
 }
 
 func testBooklet(t *testing.T, cfg testBookletCfg) {
 	t.Helper()
 
-	booklet, err := pdfcpu.BookletConfig(cfg.desc)
+	nup, err := pdfcpu.PDFBookletConfig(cfg.n, cfg.desc)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", cfg.msg, cfg.outFile, err)
 	}
-	cmd := cli.BookletCommand(cfg.inFiles, cfg.outFile, cfg.selectedPages, booklet, nil)
+	cmd := cli.BookletCommand(cfg.inFiles, cfg.outFile, cfg.selectedPages, nup, nil)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", cfg.msg, cfg.outFile, err)
 	}
@@ -55,7 +56,8 @@ func TestBookletCommand(t *testing.T) {
 			[]string{filepath.Join(inDir, "demo-booklet-input-statement.pdf")},
 			filepath.Join(outDir, "booklet-ledger.pdf"),
 			[]string{"1-24"},
-			"pagesize:Statement, sheetsize:LedgerP",
+			"p:LedgerP",
+			4,
 		},
 
 		// Booklet (2up with rotation) on PDF
@@ -63,7 +65,8 @@ func TestBookletCommand(t *testing.T) {
 			[]string{filepath.Join(inDir, "demo-booklet-input-statement.pdf")},
 			filepath.Join(outDir, "booklet-letter.pdf"),
 			[]string{"1-16"},
-			"pagesize:Statement, sheetsize:LetterP",
+			"p:LetterP",
+			2,
 		},
 	} {
 		testBooklet(t, tt)
