@@ -379,8 +379,10 @@ func rectsForGrid(nup *NUp) []*Rectangle {
 	return rr
 }
 
+type calcTransMatrixForRect func(r1, r2 *Rectangle, image bool) (float64, matrix, matrix, matrix)
+
 // Calculate the matrix for transforming rectangle r1 with lower left corner in the origin into rectangle r2.
-func calcTransMatrixForRect(r1, r2 *Rectangle, image bool, rotatePageForBooklet bool) matrix {
+func calcTransMatrixForRectNUp(r1, r2 *Rectangle, image bool) (float64, matrix, matrix, matrix) {
 	var (
 		w, h   float64
 		dx, dy float64
@@ -427,14 +429,9 @@ func calcTransMatrixForRect(r1, r2 *Rectangle, image bool, rotatePageForBooklet 
 	m1[1][1] = h
 
 	// Rotate
-	r := float64(rot)
-	if rotatePageForBooklet {
-		// booklet pages are rotated 180deg, in addition to any aspect rotation
-		r = math.Mod(rot+180, 360)
-	}
 	m2 := identMatrix
-	sin := math.Sin(float64(r) * float64(degToRad))
-	cos := math.Cos(float64(r) * float64(degToRad))
+	sin := math.Sin(float64(rot) * float64(degToRad))
+	cos := math.Cos(float64(rot) * float64(degToRad))
 	m2[0][0] = cos
 	m2[0][1] = sin
 	m2[1][0] = -sin
@@ -445,23 +442,10 @@ func calcTransMatrixForRect(r1, r2 *Rectangle, image bool, rotatePageForBooklet 
 	m3[2][0] = dx
 	m3[2][1] = dy
 
-	m := m1.multiply(m2).multiply(m3)
-	if rotatePageForBooklet {
-		// we've rotated 180deg, so we need to translate to get the old page visiible on the new page
-		if rot == 0 {
-			m[2][0] += w * r1.Width()
-			m[2][1] += h * r1.Height()
-		} else {
-			// 90 degree rotation because of paper, in addition to the 180 rotation for booklet
-			// need to shift rotated page on sheet down and left
-			m[2][0] -= h * r1.Width()
-			m[2][1] += w * r1.Height()
-		}
-	}
-	return m
+	return rot, m1, m2, m3
 }
 
-func nUpTilePDFBytes(wr io.Writer, r1, r2 *Rectangle, formResID string, nup *NUp, rotatePageForBooklet bool) {
+func nUpTilePDFBytes(wr io.Writer, r1, r2 *Rectangle, formResID string, nup *NUp, calc calcTransMatrixForRect) {
 	// Draw bounding box.
 	if nup.Border {
 		fmt.Fprintf(wr, "[]0 d 0.1 w %.2f %.2f m %.2f %.2f l %.2f %.2f l %.2f %.2f l s ",
@@ -472,7 +456,8 @@ func nUpTilePDFBytes(wr io.Writer, r1, r2 *Rectangle, formResID string, nup *NUp
 	// Apply margin.
 	croppedRect := r2.CroppedCopy(float64(nup.Margin))
 
-	m := calcTransMatrixForRect(r1, croppedRect, nup.ImgInputFile, rotatePageForBooklet)
+	_, m1, m2, m3 := calc(r1, croppedRect, nup.ImgInputFile)
+	m := m1.multiply(m2).multiply(m3)
 
 	fmt.Fprintf(wr, "q %.2f %.2f %.2f %.2f %.2f %.2f cm /%s Do Q ",
 		m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1], formResID)
@@ -480,7 +465,7 @@ func nUpTilePDFBytes(wr io.Writer, r1, r2 *Rectangle, formResID string, nup *NUp
 
 func nUpImagePDFBytes(wr io.Writer, imgWidth, imgHeight int, nup *NUp, formResID string) {
 	for _, r := range rectsForGrid(nup) {
-		nUpTilePDFBytes(wr, RectForDim(float64(imgWidth), float64(imgHeight)), r, formResID, nup, false)
+		nUpTilePDFBytes(wr, RectForDim(float64(imgWidth), float64(imgHeight)), r, formResID, nup, calcTransMatrixForRectNUp)
 	}
 }
 
@@ -728,7 +713,7 @@ func NUpFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict
 		formResID := fmt.Sprintf("Fm%d", i)
 		formsResDict.Insert(formResID, *formIndRef)
 
-		nUpTilePDFBytes(&buf, RectForDim(float64(w), float64(h)), rr[i%len(rr)], formResID, nup, false)
+		nUpTilePDFBytes(&buf, RectForDim(float64(w), float64(h)), rr[i%len(rr)], formResID, nup, calcTransMatrixForRectNUp)
 	}
 
 	// Wrap incomplete nUp page.
@@ -813,7 +798,7 @@ func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pag
 			continue
 		}
 		// inhPAttrs.mediaBox
-		nUpTilePDFBytes(&buf, cropBox, rr[i%len(rr)], formResID, nup, false)
+		nUpTilePDFBytes(&buf, cropBox, rr[i%len(rr)], formResID, nup, calcTransMatrixForRectNUp)
 	}
 
 	// Wrap incomplete nUp page.
