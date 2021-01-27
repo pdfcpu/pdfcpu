@@ -42,7 +42,7 @@ func TestMergeCreate(t *testing.T) {
 	}
 }
 
-func TestMergeAppend(t *testing.T) {
+func xxxTestMergeAppend(t *testing.T) {
 	msg := "TestMergeAppend"
 	inFiles := []string{
 		filepath.Join(inDir, "Acroforms2.pdf"),

@@ -17,7 +17,6 @@ limitations under the License.
 package pdfcpu
 
 import (
-	"path"
 	"path/filepath"
 	"time"
 )
@@ -522,7 +521,7 @@ func createPopupAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRe
 
 func createFileAttachmentAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
 
-	// macOS starts up iTunes for FileAttachments.
+	// macOS starts up iTunes for audio file attachments.
 
 	fileName := testAudioFileWAV
 
@@ -531,7 +530,7 @@ func createFileAttachmentAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef
 		return nil, err
 	}
 
-	fn := path.Base(fileName)
+	fn := filepath.Base(fileName)
 	fileSpecDict, err := xRefTable.NewFileSpecDict(fn, encodeUTF16String(fn), "attached by pdfcpu", *ir)
 	if err != nil {
 		return nil, err
@@ -571,7 +570,7 @@ func createFileSpecDict(xRefTable *XRefTable, fileName string) (Dict, error) {
 	if err != nil {
 		return nil, err
 	}
-	fn := path.Base(fileName)
+	fn := filepath.Base(fileName)
 	return xRefTable.NewFileSpecDict(fn, encodeUTF16String(fn), "attached by pdfcpu", *ir)
 }
 
@@ -993,7 +992,7 @@ func createEmbeddedGoToAction(xRefTable *XRefTable) (*IndirectRef, error) {
 			"T": Dict(
 				map[string]Object{
 					"R": Name("C"),
-					"N": StringLiteral(f),
+					"N": StringLiteral(filepath.Base(f)),
 				},
 			),
 		},
@@ -1041,7 +1040,7 @@ func createLinkAnnotationDictWithLaunchAction(xRefTable *XRefTable, pageIndRef I
 				map[string]Object{
 					"Type": Name("Action"),
 					"S":    Name("Launch"),
-					"F":    StringLiteral(".\\/golang.pdf"), // e.g pdf, wav..
+					"F":    StringLiteral("golang.pdf"),
 					"Win": Dict(
 						map[string]Object{
 							"F": StringLiteral("golang.pdf"),
