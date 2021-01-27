@@ -213,9 +213,7 @@ func calcTransMatrixForRectBookletRotated(r1, r2 *Rectangle, image bool) matrix 
 	return m1.multiply(m2).multiply(m3)
 }
 
-type calcTransMatrix func(r1, r2 *Rectangle, image bool) matrix
-
-func bookletTilePDFBytes(wr io.Writer, r1, r2 *Rectangle, formResID string, nup *NUp, calc calcTransMatrix) {
+func bookletTilePDFBytes(wr io.Writer, r1, r2 *Rectangle, formResID string, nup *NUp, shouldRotate bool) {
 	// Draw bounding box.
 	if nup.Border {
 		fmt.Fprintf(wr, "[]0 d 0.1 w %.2f %.2f m %.2f %.2f l %.2f %.2f l %.2f %.2f l s ",
@@ -226,7 +224,12 @@ func bookletTilePDFBytes(wr io.Writer, r1, r2 *Rectangle, formResID string, nup 
 	// Apply margin.
 	croppedRect := r2.CroppedCopy(float64(nup.Margin))
 
-	m := calc(r1, croppedRect, nup.ImgInputFile)
+	var m matrix
+	if shouldRotate {
+		m = calcTransMatrixForRectBookletRotated(r1, croppedRect, nup.ImgInputFile)
+	} else {
+		m = calcTransMatrixForRect(r1, croppedRect, nup.ImgInputFile)
+	}
 
 	fmt.Fprintf(wr, "q %.2f %.2f %.2f %.2f %.2f %.2f cm /%s Do Q ",
 		m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1], formResID)
@@ -294,13 +297,7 @@ func (ctx *Context) bookletPages(selectedPages IntSet, nup *NUp, pagesDict Dict,
 		formResID := fmt.Sprintf("Fm%d", i)
 		formsResDict.Insert(formResID, *formIndRef)
 
-		var calc calcTransMatrix
-		if shouldRotatePage[i] {
-			calc = calcTransMatrixForRectBookletRotated
-		} else {
-			calc = calcTransMatrixForRect
-		}
-		bookletTilePDFBytes(&buf, cropBox, rr[i%len(rr)], formResID, nup, calc)
+		bookletTilePDFBytes(&buf, cropBox, rr[i%len(rr)], formResID, nup, shouldRotatePage[i])
 	}
 
 	// Wrap incomplete nUp page.
