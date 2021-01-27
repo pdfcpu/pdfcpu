@@ -379,10 +379,8 @@ func rectsForGrid(nup *NUp) []*Rectangle {
 	return rr
 }
 
-type calcTransMatrixForRect func(r1, r2 *Rectangle, image bool) (float64, matrix, matrix, matrix)
-
 // Calculate the matrix for transforming rectangle r1 with lower left corner in the origin into rectangle r2.
-func calcTransMatrixForRectNUp(r1, r2 *Rectangle, image bool) (float64, matrix, matrix, matrix) {
+func calcTransMatrixForRect(r1, r2 *Rectangle, image bool) matrix {
 	var (
 		w, h   float64
 		dx, dy float64
@@ -442,10 +440,10 @@ func calcTransMatrixForRectNUp(r1, r2 *Rectangle, image bool) (float64, matrix, 
 	m3[2][0] = dx
 	m3[2][1] = dy
 
-	return rot, m1, m2, m3
+	return m1.multiply(m2).multiply(m3)
 }
 
-func nUpTilePDFBytes(wr io.Writer, r1, r2 *Rectangle, formResID string, nup *NUp, calc calcTransMatrixForRect) {
+func nUpTilePDFBytes(wr io.Writer, r1, r2 *Rectangle, formResID string, nup *NUp) {
 	// Draw bounding box.
 	if nup.Border {
 		fmt.Fprintf(wr, "[]0 d 0.1 w %.2f %.2f m %.2f %.2f l %.2f %.2f l %.2f %.2f l s ",
@@ -456,8 +454,7 @@ func nUpTilePDFBytes(wr io.Writer, r1, r2 *Rectangle, formResID string, nup *NUp
 	// Apply margin.
 	croppedRect := r2.CroppedCopy(float64(nup.Margin))
 
-	_, m1, m2, m3 := calc(r1, croppedRect, nup.ImgInputFile)
-	m := m1.multiply(m2).multiply(m3)
+	m := calcTransMatrixForRect(r1, croppedRect, nup.ImgInputFile)
 
 	fmt.Fprintf(wr, "q %.2f %.2f %.2f %.2f %.2f %.2f cm /%s Do Q ",
 		m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1], formResID)
@@ -465,7 +462,7 @@ func nUpTilePDFBytes(wr io.Writer, r1, r2 *Rectangle, formResID string, nup *NUp
 
 func nUpImagePDFBytes(wr io.Writer, imgWidth, imgHeight int, nup *NUp, formResID string) {
 	for _, r := range rectsForGrid(nup) {
-		nUpTilePDFBytes(wr, RectForDim(float64(imgWidth), float64(imgHeight)), r, formResID, nup, calcTransMatrixForRectNUp)
+		nUpTilePDFBytes(wr, RectForDim(float64(imgWidth), float64(imgHeight)), r, formResID, nup)
 	}
 }
 
@@ -713,7 +710,7 @@ func NUpFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict
 		formResID := fmt.Sprintf("Fm%d", i)
 		formsResDict.Insert(formResID, *formIndRef)
 
-		nUpTilePDFBytes(&buf, RectForDim(float64(w), float64(h)), rr[i%len(rr)], formResID, nup, calcTransMatrixForRectNUp)
+		nUpTilePDFBytes(&buf, RectForDim(float64(w), float64(h)), rr[i%len(rr)], formResID, nup)
 	}
 
 	// Wrap incomplete nUp page.
@@ -731,53 +728,13 @@ func sortedSelectedPages(pages IntSet) []int {
 	return pageNumbers
 }
 
-func (ctx *Context) nupPrepPage(i int, p int, formsResDict Dict) (isEmpty bool, cropBox *Rectangle, formResID string, err error) {
-	xRefTable := ctx.XRefTable
-	consolidateRes := true
-	d, inhPAttrs, err := ctx.PageDict(p, consolidateRes)
-	if err != nil {
-		return isEmpty, cropBox, formResID, err
-	}
-	if d == nil {
-		return isEmpty, cropBox, formResID, errors.Errorf("pdfcpu: unknown page number: %d\n", i)
-	}
-
-	// Retrieve content stream bytes.
-	bb, err := xRefTable.PageContent(d)
-	if err == errNoContent {
-		return true, cropBox, formResID, nil
-	}
-	if err != nil {
-		return isEmpty, cropBox, formResID, err
-	}
-
-	// Create an object for this resDict in xRefTable.
-	ir, err := ctx.IndRefForNewObject(inhPAttrs.resources)
-	if err != nil {
-		return isEmpty, cropBox, formResID, err
-	}
-
-	cropBox = inhPAttrs.mediaBox
-	if inhPAttrs.cropBox != nil {
-		cropBox = inhPAttrs.cropBox
-	}
-	formIndRef, err := createNUpFormForPDFResource(xRefTable, ir, bb, cropBox)
-	if err != nil {
-		return isEmpty, cropBox, formResID, err
-	}
-
-	formResID = fmt.Sprintf("Fm%d", i)
-	formsResDict.Insert(formResID, *formIndRef)
-	return isEmpty, cropBox, formResID, nil
-}
-
 func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pagesIndRef *IndirectRef) error {
 	var buf bytes.Buffer
+	xRefTable := ctx.XRefTable
 	formsResDict := NewDict()
 	rr := rectsForGrid(nup)
 
-	pageNumbers := sortedSelectedPages(selectedPages)
-	for i, p := range pageNumbers {
+	for i, p := range sortedSelectedPages(selectedPages) {
 
 		if i > 0 && i%len(rr) == 0 {
 
@@ -790,32 +747,62 @@ func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pag
 			formsResDict = NewDict()
 		}
 
-		isEmpty, cropBox, formResID, err := ctx.nupPrepPage(i, p, formsResDict)
+		consolidateRes := true
+		d, inhPAttrs, err := ctx.PageDict(p, consolidateRes)
 		if err != nil {
 			return err
 		}
-		if isEmpty {
+		if d == nil {
+			return errors.Errorf("pdfcpu: unknown page number: %d\n", i)
+		}
+
+		// Retrieve content stream bytes.
+		bb, err := xRefTable.PageContent(d)
+		if err == errNoContent {
 			continue
 		}
+		if err != nil {
+			return err
+		}
+
+		// Create an object for this resDict in xRefTable.
+		ir, err := ctx.IndRefForNewObject(inhPAttrs.resources)
+		if err != nil {
+			return err
+		}
+
+		cropBox := inhPAttrs.mediaBox
+		if inhPAttrs.cropBox != nil {
+			cropBox = inhPAttrs.cropBox
+		}
+		formIndRef, err := createNUpFormForPDFResource(xRefTable, ir, bb, cropBox)
+		if err != nil {
+			return err
+		}
+
+		formResID := fmt.Sprintf("Fm%d", i)
+		formsResDict.Insert(formResID, *formIndRef)
+
 		// inhPAttrs.mediaBox
-		nUpTilePDFBytes(&buf, cropBox, rr[i%len(rr)], formResID, nup, calcTransMatrixForRectNUp)
+		nUpTilePDFBytes(&buf, cropBox, rr[i%len(rr)], formResID, nup)
 	}
 
 	// Wrap incomplete nUp page.
 	return wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef)
 }
 
-func (ctx *Context) getNupPagesDict(nup *NUp) (Dict, error) {
+// NUpFromPDF creates an n-up version of the PDF represented by xRefTable.
+func (ctx *Context) NUpFromPDF(selectedPages IntSet, nup *NUp) error {
 	var mb *Rectangle
 	if nup.PageDim == nil {
 		// No page dimensions specified, use mediaBox of page 1.
 		consolidateRes := false
 		d, inhPAttrs, err := ctx.PageDict(1, consolidateRes)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if d == nil {
-			return nil, errors.Errorf("unknown page number: %d\n", 1)
+			return errors.Errorf("unknown page number: %d\n", 1)
 		}
 		mb = inhPAttrs.mediaBox
 	} else {
@@ -835,21 +822,13 @@ func (ctx *Context) getNupPagesDict(nup *NUp) (Dict, error) {
 		},
 	)
 
-	nup.PageDim = &Dim{mb.Width(), mb.Height()}
-	return pagesDict, nil
-
-}
-
-// NUpFromPDF creates an n-up version of the PDF represented by xRefTable.
-func (ctx *Context) NUpFromPDF(selectedPages IntSet, nup *NUp) error {
-	pagesDict, err := ctx.getNupPagesDict(nup)
-	if err != nil {
-		return err
-	}
 	pagesIndRef, err := ctx.IndRefForNewObject(pagesDict)
 	if err != nil {
 		return err
 	}
+
+	nup.PageDim = &Dim{mb.Width(), mb.Height()}
+
 	if err = ctx.nupPages(selectedPages, nup, pagesDict, pagesIndRef); err != nil {
 		return err
 	}
