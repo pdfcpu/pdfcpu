@@ -404,7 +404,7 @@ func writeStream(w *WriteContext, sd StreamDict) (int64, error) {
 		return 0, errors.Errorf("writeStream: failed to write raw content: %d bytes written - streamlength:%d", c, *sd.StreamLength)
 	}
 
-	e, err := w.WriteString("endstream")
+	e, err := w.WriteString(fmt.Sprintf("%sendstream", w.Eol))
 	if err != nil {
 		return 0, errors.Wrapf(err, "writeStream: failed to write raw content")
 	}

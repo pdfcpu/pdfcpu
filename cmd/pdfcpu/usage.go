@@ -69,9 +69,9 @@ common flags: -v(erbose)  ... turn on logging
               -opw        ... owner password
               -upw        ... user password
               -u(nit)     ... display unit: po(ints) ... points
-                                             in(ches) ... inches
-                                                   cm ... centimetres
-                                                   mm ... millimetres`
+                                            in(ches) ... inches
+                                                  cm ... centimetres
+                                                  mm ... millimetres`
 
 	usageValidate = "usage: pdfcpu validate [-m(ode) strict|relaxed] inFile" + generalFlags
 

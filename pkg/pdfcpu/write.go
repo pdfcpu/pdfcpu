@@ -769,10 +769,6 @@ func writeXRefStream(ctx *Context) error {
 
 	w := ctx.Write
 
-	if err = w.WriteEol(); err != nil {
-		return err
-	}
-
 	if _, err = w.WriteString("startxref"); err != nil {
 		return err
 	}
