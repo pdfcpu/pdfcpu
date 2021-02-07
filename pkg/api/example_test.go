@@ -186,22 +186,22 @@ func ExampleImportImagesFile() {
 func ExampleNUpFile() {
 
 	// 4-Up in.pdf and write result to out.pdf.
-	nup, _ := PDFNUp(4, "")
+	nup, _ := PDFNUpConfig(4, "")
 	inFiles := []string{"in.pdf"}
 	NUpFile(inFiles, "out.pdf", nil, nup, nil)
 
 	// 9-Up a sequence of images using format Tabloid w/o borders and no margins.
-	nup, _ = ImageNUp(9, "f:Tabloid, b:off, m:0")
+	nup, _ = ImageNUpConfig(9, "f:Tabloid, b:off, m:0")
 	inFiles = []string{"in1.png", "in2.jpg", "in3.tiff"}
 	NUpFile(inFiles, "out.pdf", nil, nup, nil)
 
 	// TestGridFromPDF
-	nup, _ = PDFGrid(1, 3, "f:LegalL")
+	nup, _ = PDFGridConfig(1, 3, "f:LegalL")
 	inFiles = []string{"in.pdf"}
 	NUpFile(inFiles, "out.pdf", nil, nup, nil)
 
 	// TestGridFromImages
-	nup, _ = ImageGrid(4, 2, "d:500 500, m:20, b:off")
+	nup, _ = ImageGridConfig(4, 2, "d:500 500, m:20, b:off")
 	inFiles = []string{"in1.png", "in2.jpg", "in3.tiff"}
 	NUpFile(inFiles, "out.pdf", nil, nup, nil)
 }

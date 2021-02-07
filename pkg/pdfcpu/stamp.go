@@ -121,29 +121,6 @@ var wmParamMap = watermarkParamMap{
 	"strokecolor":     parseStrokeColor,
 }
 
-type matrix [3][3]float64
-
-var identMatrix = matrix{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}
-
-func (m matrix) multiply(n matrix) matrix {
-	var p matrix
-	for i := 0; i < 3; i++ {
-		for j := 0; j < 3; j++ {
-			for k := 0; k < 3; k++ {
-				p[i][j] += m[i][k] * n[k][j]
-			}
-		}
-	}
-	return p
-}
-
-func (m matrix) String() string {
-	return fmt.Sprintf("%3.2f %3.2f %3.2f\n%3.2f %3.2f %3.2f\n%3.2f %3.2f %3.2f\n",
-		m[0][0], m[0][1], m[0][2],
-		m[1][0], m[1][1], m[1][2],
-		m[2][0], m[2][1], m[2][2])
-}
-
 // SimpleColor is a simple rgb wrapper.
 type SimpleColor struct {
 	R, G, B float32 // intensities between 0 and 1.
@@ -205,7 +182,7 @@ type Watermark struct {
 	Rotation          float64       // rotation to apply in degrees. -180 <= x <= 180
 	Diagonal          int           // paint along the diagonal.
 	UserRotOrDiagonal bool          // true if one of rotation or diagonal provided overriding the default.
-	Opacity           float64       // opacity the watermark. 0 <= x <= 1
+	Opacity           float64       // opacity of the watermark. 0 <= x <= 1
 	RenderMode        RenderMode    // fill=0, stroke=1 fill&stroke=2
 	Scale             float64       // relative scale factor: 0 <= x <= 1, absolute scale factor: 0 <= x
 	ScaleEff          float64       // effective scale factor
@@ -846,7 +823,7 @@ func (wm *Watermark) calcBoundingBox(pageNr int) {
 	return
 }
 
-func (wm *Watermark) calcTransformMatrix() *matrix {
+func (wm *Watermark) calcTransformMatrix() matrix {
 	var sin, cos float64
 	r := wm.Rotation
 
@@ -868,25 +845,16 @@ func (wm *Watermark) calcTransformMatrix() *matrix {
 	sin = math.Sin(float64(r) * float64(degToRad))
 	cos = math.Cos(float64(r) * float64(degToRad))
 
-	// 1) Rotate
-	m1 := identMatrix
-	m1[0][0] = cos
-	m1[0][1] = sin
-	m1[1][0] = -sin
-	m1[1][1] = cos
-
-	// 2) Translate
-	m2 := identMatrix
 	var dy float64
 	if !wm.isImage() && !wm.isPDF() {
 		dy = wm.bb.LL.Y
 	}
 	ll := lowerLeftCorner(wm.vp.Width(), wm.vp.Height(), wm.bb.Width(), wm.bb.Height(), wm.Pos)
-	m2[2][0] = ll.X + wm.bb.Width()/2 + float64(wm.Dx) + sin*(wm.bb.Height()/2+dy) - cos*wm.bb.Width()/2
-	m2[2][1] = ll.Y + wm.bb.Height()/2 + float64(wm.Dy) - cos*(wm.bb.Height()/2+dy) - sin*wm.bb.Width()/2
 
-	m := m1.multiply(m2)
-	return &m
+	dx := ll.X + wm.bb.Width()/2 + float64(wm.Dx) + sin*(wm.bb.Height()/2+dy) - cos*wm.bb.Width()/2
+	dy = ll.Y + wm.bb.Height()/2 + float64(wm.Dy) - cos*(wm.bb.Height()/2+dy) - sin*wm.bb.Width()/2
+
+	return calcTransformMatrix(1, 1, sin, cos, dx, dy)
 }
 
 func onTopString(onTop bool) string {

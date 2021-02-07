@@ -19,6 +19,7 @@ package pdfcpu
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"math"
 	"strconv"
 	"strings"
@@ -186,64 +187,73 @@ func decodeUTF8ToByte(s string) string {
 }
 
 // SetLineJoinStyle sets the line join style for stroking operations.
-func SetLineJoinStyle(b *bytes.Buffer, s LineJoinStyle) {
-	b.WriteString(fmt.Sprintf("%d j ", s))
+func SetLineJoinStyle(w io.Writer, s LineJoinStyle) {
+	fmt.Fprintf(w, "%d j ", s)
 }
 
 // SetLineWidth sets line width for stroking operations.
-func SetLineWidth(b *bytes.Buffer, w float64) {
-	b.WriteString(fmt.Sprintf("%.2f w ", w))
+func SetLineWidth(w io.Writer, width float64) {
+	fmt.Fprintf(w, "%.2f w ", width)
 }
 
 // DrawLine draws the path from P to Q.
-func DrawLine(b *bytes.Buffer, xp, yp, xq, yq float64) {
-	b.WriteString(fmt.Sprintf("%.2f %.2f m %.2f %.2f l s ", xp, yp, xq, yq))
+func DrawLine(w io.Writer, xp, yp, xq, yq float64) {
+	fmt.Fprintf(w, "%.2f %.2f m %.2f %.2f l s ", xp, yp, xq, yq)
 }
 
 // DrawRect strokes a rectangular path for r.
-func DrawRect(b *bytes.Buffer, r *Rectangle) {
-	b.WriteString(fmt.Sprintf("%.2f %.2f %.2f %.2f re s ", r.LL.X, r.LL.Y, r.Width(), r.Height()))
+func DrawRect(w io.Writer, r *Rectangle) {
+	fmt.Fprintf(w, "%.2f %.2f %.2f %.2f re s ", r.LL.X, r.LL.Y, r.Width(), r.Height())
 }
 
 // DrawAndFillRect strokes and fills a rectangular path for r.
-func DrawAndFillRect(b *bytes.Buffer, r *Rectangle) {
-	b.WriteString(fmt.Sprintf("%.2f %.2f %.2f %.2f re B ", r.LL.X, r.LL.Y, r.Width(), r.Height()))
+func DrawAndFillRect(w io.Writer, r *Rectangle) {
+	fmt.Fprintf(w, "%.2f %.2f %.2f %.2f re B ", r.LL.X, r.LL.Y, r.Width(), r.Height())
 }
 
 // SetFillColor sets the fill color.
-func SetFillColor(bb *bytes.Buffer, c SimpleColor) {
-	bb.WriteString(fmt.Sprintf("%.2f %.2f %.2f rg ", c.R, c.G, c.B))
+func SetFillColor(w io.Writer, c SimpleColor) {
+	fmt.Fprintf(w, "%.2f %.2f %.2f rg ", c.R, c.G, c.B)
 }
 
 // SetStrokeColor sets the stroke color.
-func SetStrokeColor(bb *bytes.Buffer, c SimpleColor) {
-	bb.WriteString(fmt.Sprintf("%.2f %.2f %.2f RG ", c.R, c.G, c.B))
+func SetStrokeColor(w io.Writer, c SimpleColor) {
+	fmt.Fprintf(w, "%.2f %.2f %.2f RG ", c.R, c.G, c.B)
 }
 
 // FillRect draws and fills a rectangle using r, g, b.
-func FillRect(bb *bytes.Buffer, rect *Rectangle, c SimpleColor) {
-	SetFillColor(bb, c)
-	DrawAndFillRect(bb, rect)
+func FillRect(w io.Writer, rect *Rectangle, c SimpleColor) {
+	SetFillColor(w, c)
+	DrawAndFillRect(w, rect)
+}
+
+// FillRectStacked is a safe way to fill a rectangle within a page content stream.
+func FillRectStacked(w io.Writer, r *Rectangle, c SimpleColor) {
+	fmt.Fprintf(w, "q ")
+	SetLineWidth(w, 0)
+	SetStrokeColor(w, c)
+	FillRect(w, r, c)
+	fmt.Fprintf(w, "Q ")
 }
 
 // DrawGrid draws an x * y grid on r using strokeCol and fillCol.
-func DrawGrid(bb *bytes.Buffer, x, y int, r *Rectangle, strokeCol SimpleColor, fillCol *SimpleColor) {
-	SetLineWidth(bb, 0)
-	SetStrokeColor(bb, strokeCol)
+func DrawGrid(w io.Writer, x, y int, r *Rectangle, strokeCol SimpleColor, fillCol *SimpleColor) {
+	SetLineWidth(w, 0)
+	SetStrokeColor(w, strokeCol)
 	if fillCol != nil {
-		FillRect(bb, r, *fillCol)
+		FillRect(w, r, *fillCol)
 	}
 
 	s := r.Width() / float64(x)
 	for i := 0; i <= x; i++ {
 		x := r.LL.X + float64(i)*s
-		DrawLine(bb, x, r.LL.Y, x, r.UR.Y)
+		DrawLine(w, x, r.LL.Y, x, r.UR.Y)
 	}
 
 	s = r.Height() / float64(y)
 	for i := 0; i <= y; i++ {
 		y := r.LL.Y + float64(i)*s
-		DrawLine(bb, r.LL.X, y, r.UR.X, y)
+		DrawLine(w, r.LL.X, y, r.UR.X, y)
 	}
 }
 
@@ -314,7 +324,7 @@ func calcBoundingBoxForJLines(lines []string, x, y, w float64, fontName string, 
 }
 
 // DrawHairCross draw a haircross with origin x/y.
-func DrawHairCross(buf *bytes.Buffer, x, y float64, r *Rectangle) {
+func DrawHairCross(w io.Writer, x, y float64, r *Rectangle) {
 	x1, y1 := x, y
 	if x == 0 {
 		x1 = r.LL.X + r.Width()/2
@@ -322,10 +332,10 @@ func DrawHairCross(buf *bytes.Buffer, x, y float64, r *Rectangle) {
 	if y == 0 {
 		y1 = r.LL.Y + r.Height()/2
 	}
-	SetLineWidth(buf, 0)
-	SetStrokeColor(buf, Black)
-	DrawLine(buf, r.LL.X, y1, r.LL.X+r.Width(), y1)  // Horizontal line
-	DrawLine(buf, x1, r.LL.Y, x1, r.LL.Y+r.Height()) // Vertical line
+	SetLineWidth(w, 0)
+	SetStrokeColor(w, Black)
+	DrawLine(w, r.LL.X, y1, r.LL.X+r.Width(), y1)  // Horizontal line
+	DrawLine(w, x1, r.LL.Y, x1, r.LL.Y+r.Height()) // Vertical line
 }
 
 func prepBytes(s, fontName string) string {
@@ -346,14 +356,14 @@ func prepBytes(s, fontName string) string {
 	return *s1
 }
 
-func writeStringToBuf(buf *bytes.Buffer, s string, x, y float64, strokeCol, fillCol SimpleColor, rm RenderMode, fontName string) {
+func writeStringToBuf(w io.Writer, s string, x, y float64, strokeCol, fillCol SimpleColor, rm RenderMode, fontName string) {
 	s = prepBytes(s, fontName)
-	buf.WriteString(fmt.Sprintf("BT 0 Tw %.2f %.2f %.2f RG %.2f %.2f %.2f rg %.2f %.2f Td %d Tr (%s) Tj ET ",
-		strokeCol.R, strokeCol.G, strokeCol.B, fillCol.R, fillCol.G, fillCol.B, x, y, rm, s))
+	fmt.Fprintf(w, "BT 0 Tw %.2f %.2f %.2f RG %.2f %.2f %.2f rg %.2f %.2f Td %d Tr (%s) Tj ET ",
+		strokeCol.R, strokeCol.G, strokeCol.B, fillCol.R, fillCol.G, fillCol.B, x, y, rm, s)
 }
 
-func setFont(b *bytes.Buffer, fontID string, fontSize float32) {
-	b.WriteString(fmt.Sprintf("BT /%s %.2f Tf ET ", fontID, fontSize))
+func setFont(w io.Writer, fontID string, fontSize float32) {
+	fmt.Fprintf(w, "BT /%s %.2f Tf ET ", fontID, fontSize)
 }
 
 func calcBoundingBox(s string, x, y float64, fontName string, fontSize int) *Rectangle {
@@ -632,9 +642,9 @@ func createBoundingBoxForColumn(r *Rectangle, x, y *float64,
 	return box
 }
 
-func flushJustifiedStringToBuf(buf *bytes.Buffer, s string, x, y float64, strokeCol, fillCol SimpleColor, rm RenderMode) {
-	buf.WriteString(fmt.Sprintf("BT 0 Tw %.2f %.2f %.2f RG %.2f %.2f %.2f rg %.2f %.2f Td %d Tr %s ET ",
-		strokeCol.R, strokeCol.G, strokeCol.B, fillCol.R, fillCol.G, fillCol.B, x, y, rm, s))
+func flushJustifiedStringToBuf(w io.Writer, s string, x, y float64, strokeCol, fillCol SimpleColor, rm RenderMode) {
+	fmt.Fprintf(w, "BT 0 Tw %.2f %.2f %.2f RG %.2f %.2f %.2f rg %.2f %.2f Td %d Tr %s ET ",
+		strokeCol.R, strokeCol.G, strokeCol.B, fillCol.R, fillCol.G, fillCol.B, x, y, rm, s)
 }
 
 func scaleXForRegion(x float64, mediaBox, region *Rectangle) float64 {
@@ -645,43 +655,59 @@ func scaleYForRegion(y float64, mediaBox, region *Rectangle) float64 {
 	return y / mediaBox.Width() * region.Width()
 }
 
-func drawMargins(buf *bytes.Buffer, c SimpleColor, colBB *Rectangle, borderWidth, mLeft, mRight, mTop, mBot float64) {
-	SetLineWidth(buf, 0)
-	SetStrokeColor(buf, c)
+func drawMargins(w io.Writer, c SimpleColor, colBB *Rectangle, borderWidth, mLeft, mRight, mTop, mBot float64) {
+	if mLeft <= 0 && mRight <= 0 && mTop <= 0 && mBot <= 0 {
+		return
+	}
 
-	r := RectForWidthAndHeight(colBB.LL.X+borderWidth, colBB.LL.Y+borderWidth, colBB.Width()-2*borderWidth, mBot)
-	FillRect(buf, r, c)
+	fmt.Fprintf(w, "q ")
+	SetLineWidth(w, 0)
+	SetStrokeColor(w, c)
+	var r *Rectangle
 
-	r = RectForWidthAndHeight(colBB.LL.X+borderWidth, colBB.Height()-borderWidth-mTop, colBB.Width()-2*borderWidth, mTop)
-	FillRect(buf, r, c)
+	if mBot > 0 {
+		r = RectForWidthAndHeight(colBB.LL.X+borderWidth, colBB.LL.Y+borderWidth, colBB.Width()-2*borderWidth, mBot)
+		FillRect(w, r, c)
+	}
 
-	r = RectForWidthAndHeight(colBB.LL.X+borderWidth, colBB.LL.Y+borderWidth+mBot, mLeft, colBB.Height()-2*borderWidth-mTop-mBot)
-	FillRect(buf, r, c)
+	if mTop > 0 {
+		r = RectForWidthAndHeight(colBB.LL.X+borderWidth, colBB.UR.Y-borderWidth-mTop, colBB.Width()-2*borderWidth, mTop)
+		FillRect(w, r, c)
+	}
 
-	r = RectForWidthAndHeight(colBB.UR.X-borderWidth-mRight, colBB.LL.Y+borderWidth+mBot, mRight, colBB.Height()-2*borderWidth-mTop-mBot)
-	FillRect(buf, r, c)
+	if mLeft > 0 {
+		r = RectForWidthAndHeight(colBB.LL.X+borderWidth, colBB.LL.Y+borderWidth+mBot, mLeft, colBB.Height()-2*borderWidth-mTop-mBot)
+		FillRect(w, r, c)
+	}
+
+	if mRight > 0 {
+		r = RectForWidthAndHeight(colBB.UR.X-borderWidth-mRight, colBB.LL.Y+borderWidth+mBot, mRight, colBB.Height()-2*borderWidth-mTop-mBot)
+		FillRect(w, r, c)
+	}
+
+	fmt.Fprintf(w, "Q ")
 }
 
-func renderBackgroundAndBorder(buf *bytes.Buffer, td TextDescriptor, borderWidth float64, colBB *Rectangle) {
-	SetLineJoinStyle(buf, td.BorderStyle)
+func renderBackgroundAndBorder(w io.Writer, td TextDescriptor, borderWidth float64, colBB *Rectangle) {
+	SetLineJoinStyle(w, td.BorderStyle)
 	if td.ShowBackground {
-		SetLineWidth(buf, borderWidth)
+		SetLineWidth(w, borderWidth)
 		c := td.BackgroundCol
 		if td.ShowBorder {
 			c = td.BorderCol
 		}
-		SetStrokeColor(buf, c)
+		SetStrokeColor(w, c)
 		r := RectForWidthAndHeight(colBB.LL.X+borderWidth/2, colBB.LL.Y+borderWidth/2, colBB.Width()-borderWidth, colBB.Height()-borderWidth)
-		FillRect(buf, r, td.BackgroundCol)
+		FillRect(w, r, td.BackgroundCol)
 	} else if td.ShowBorder {
-		SetLineWidth(buf, borderWidth)
-		SetStrokeColor(buf, td.BorderCol)
+		SetLineWidth(w, borderWidth)
+		SetStrokeColor(w, td.BorderCol)
 		r := RectForWidthAndHeight(colBB.LL.X+borderWidth/2, colBB.LL.Y+borderWidth/2, colBB.Width()-borderWidth, colBB.Height()-borderWidth)
-		DrawRect(buf, r)
+		DrawRect(w, r)
 	}
 }
 
-func renderText(buf *bytes.Buffer, lines []string, td TextDescriptor, x, y float64, fontName string, fontSize int) {
+func renderText(w io.Writer, lines []string, td TextDescriptor, x, y float64, fontName string, fontSize int) {
 	lh := font.LineHeight(fontName, fontSize)
 	for _, s := range lines {
 		if td.HAlign != AlignJustify {
@@ -697,16 +723,16 @@ func renderText(buf *bytes.Buffer, lines []string, td TextDescriptor, x, y float
 			lineBB.Translate(-dx, 0)
 			if td.ShowLineBB {
 				// Draw line bounding box.
-				SetStrokeColor(buf, Black)
-				DrawRect(buf, lineBB)
+				SetStrokeColor(w, Black)
+				DrawRect(w, lineBB)
 			}
-			writeStringToBuf(buf, s, x-dx, y, td.StrokeCol, td.FillCol, td.RMode, fontName)
+			writeStringToBuf(w, s, x-dx, y, td.StrokeCol, td.FillCol, td.RMode, fontName)
 			y -= lh
 			continue
 		}
 
 		if len(s) > 0 {
-			flushJustifiedStringToBuf(buf, s, x, y, td.StrokeCol, td.FillCol, td.RMode)
+			flushJustifiedStringToBuf(w, s, x, y, td.StrokeCol, td.FillCol, td.RMode)
 		}
 		y -= lh
 	}
@@ -715,7 +741,7 @@ func renderText(buf *bytes.Buffer, lines []string, td TextDescriptor, x, y float
 // WriteColumn writes a text column using s at position x/y using a certain font, fontsize and a desired horizontal and vertical alignment.
 // Enforce a desired column width by supplying a width > 0 (especially useful for justified text).
 // It returns the bounding box of this column.
-func WriteColumn(buf *bytes.Buffer, mediaBox, region *Rectangle, td TextDescriptor, width float64) *Rectangle {
+func WriteColumn(w io.Writer, mediaBox, region *Rectangle, td TextDescriptor, width float64) *Rectangle {
 	x, y, dx, dy := td.X, td.Y, td.Dx, td.Dy
 	mTop, mBot, mLeft, mRight := td.MTop, td.MBot, td.MLeft, td.MRight
 	s, fontSize, borderWidth := td.Text, td.FontSize, td.BorderWidth
@@ -780,9 +806,9 @@ func WriteColumn(buf *bytes.Buffer, mediaBox, region *Rectangle, td TextDescript
 		td.Scale, td.ScaleAbs,
 		td.ParIndent, td.FontName, &fontSize, &lines)
 
-	setFont(buf, td.FontKey, float32(fontSize))
+	setFont(w, td.FontKey, float32(fontSize))
 	m := calcRotateTransformMatrix(td.Rotation, x, y, colBB)
-	fmt.Fprintf(buf, "q %.2f %.2f %.2f %.2f %.2f %.2f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
+	fmt.Fprintf(w, "q %.2f %.2f %.2f %.2f %.2f %.2f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 
 	x -= colBB.LL.X
 	y -= colBB.LL.Y
@@ -790,21 +816,21 @@ func WriteColumn(buf *bytes.Buffer, mediaBox, region *Rectangle, td TextDescript
 
 	// Render background and border.
 	if td.ShowTextBB {
-		renderBackgroundAndBorder(buf, td, borderWidth, colBB)
+		renderBackgroundAndBorder(w, td, borderWidth, colBB)
 	}
 
 	// Render margins.
 	if td.ShowMargins {
-		drawMargins(buf, LightGray, colBB, borderWidth, mLeft, mRight, mTop, mBot)
+		drawMargins(w, LightGray, colBB, borderWidth, mLeft, mRight, mTop, mBot)
 	}
 
 	// Render text.
-	renderText(buf, lines, td, x, y, td.FontName, fontSize)
+	renderText(w, lines, td, x, y, td.FontName, fontSize)
 
-	buf.WriteString("Q ")
+	fmt.Fprintf(w, "Q ")
 
 	if td.HairCross {
-		DrawHairCross(buf, x0, y0, r)
+		DrawHairCross(w, x0, y0, r)
 	}
 
 	return colBB
@@ -812,8 +838,8 @@ func WriteColumn(buf *bytes.Buffer, mediaBox, region *Rectangle, td TextDescript
 
 // WriteMultiLine writes s at position x/y using a certain font, fontsize and a desired horizontal and vertical alignment.
 // It returns the bounding box of this text column.
-func WriteMultiLine(buf *bytes.Buffer, mediaBox, region *Rectangle, td TextDescriptor) *Rectangle {
-	return WriteColumn(buf, mediaBox, region, td, 0)
+func WriteMultiLine(w io.Writer, mediaBox, region *Rectangle, td TextDescriptor) *Rectangle {
+	return WriteColumn(w, mediaBox, region, td, 0)
 }
 
 func anchorPosAndAlign(a anchor, r *Rectangle) (x, y float64, hAlign HAlignment, vAlign VAlignment) {
@@ -841,22 +867,22 @@ func anchorPosAndAlign(a anchor, r *Rectangle) (x, y float64, hAlign HAlignment,
 }
 
 // WriteMultiLineAnchored writes multiple lines with anchored position and returns its bounding box.
-func WriteMultiLineAnchored(buf *bytes.Buffer, mediaBox, region *Rectangle, td TextDescriptor, a anchor) *Rectangle {
+func WriteMultiLineAnchored(w io.Writer, mediaBox, region *Rectangle, td TextDescriptor, a anchor) *Rectangle {
 	r := mediaBox
 	if region != nil {
 		r = region
 	}
 	td.X, td.Y, td.HAlign, td.VAlign = anchorPosAndAlign(a, r)
-	return WriteMultiLine(buf, mediaBox, region, td)
+	return WriteMultiLine(w, mediaBox, region, td)
 }
 
 // WriteColumnAnchored writes a justified text column with anchored position and returns its bounding box.
-func WriteColumnAnchored(buf *bytes.Buffer, mediaBox, region *Rectangle, td TextDescriptor, a anchor, width float64) *Rectangle {
+func WriteColumnAnchored(w io.Writer, mediaBox, region *Rectangle, td TextDescriptor, a anchor, width float64) *Rectangle {
 	r := mediaBox
 	if region != nil {
 		r = region
 	}
 	td.HAlign = AlignJustify
 	td.X, td.Y, _, td.VAlign = anchorPosAndAlign(a, r)
-	return WriteColumn(buf, mediaBox, region, td, width)
+	return WriteColumn(w, mediaBox, region, td, width)
 }

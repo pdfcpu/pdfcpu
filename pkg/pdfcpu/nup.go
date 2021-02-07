@@ -31,10 +31,9 @@ import (
 )
 
 var (
-	errInvalidGridID     = errors.New("pdfcpu: nup: n: one of 2, 3, 4, 6, 8, 9, 12, 16")
-	errInvalidGridDims   = errors.New("pdfcpu: grid: dimensions: m >= 0, n >= 0")
-	errInvalidNUpConfig  = errors.New("pdfcpu: nup: invalid configuration string. Please consult pdfcpu help nup")
-	errInvalidGridConfig = errors.New("pdfcpu: nup: invalid configuration string. Please consult pdfcpu help grid")
+	errInvalidGridID    = errors.New("pdfcpu nup: n must be one of 2, 3, 4, 6, 8, 9, 12, 16")
+	errInvalidGridDims  = errors.New("pdfcpu grid: dimensions: m >= 0, n >= 0")
+	errInvalidNUpConfig = errors.New("pdfcpu: invalid configuration string")
 )
 
 var (
@@ -60,6 +59,8 @@ var nupParamMap = nUpParamMap{
 	"orientation": parseOrientation,
 	"border":      parseElementBorder,
 	"margin":      parseElementMargin,
+	"bgcolor":     parseSheetBackgroundColor,
+	"guides":      parseBookletGuides,
 }
 
 // Handle applies parameter completion and if successful
@@ -87,16 +88,18 @@ func (m nUpParamMap) Handle(paramPrefix, paramValueStr string, nup *NUp) error {
 
 // NUp represents the command details for the command "NUp".
 type NUp struct {
-	PageDim      *Dim        // Page dimensions in display unit.
-	PageSize     string      // Paper size eg. A4L, A4P, A4(=default=A4P), see paperSize.go
-	UserDim      bool        // true if one of dimensions or paperSize provided overriding the default.
-	Orient       orientation // One of rd(=default),dr,ld,dl
-	Grid         *Dim        // Intra page grid dimensions eg (2,2)
-	PageGrid     bool        // Create a mxn grid of pages for PDF inputfiles only (think "extra page n-Up").
-	ImgInputFile bool        // Process image or PDF input files.
-	Margin       int         // Cropbox for n-Up content.
-	Border       bool        // Draw bounding box.
-	InpUnit      DisplayUnit // input display unit.
+	PageDim       *Dim         // Page dimensions in display unit.
+	PageSize      string       // Paper size eg. A4L, A4P, A4(=default=A4P), see paperSize.go
+	UserDim       bool         // true if one of dimensions or paperSize provided overriding the default.
+	Orient        orientation  // One of rd(=default),dr,ld,dl
+	Grid          *Dim         // Intra page grid dimensions eg (2,2)
+	PageGrid      bool         // Create a mxn grid of pages for PDF inputfiles only (think "extra page n-Up").
+	ImgInputFile  bool         // Process image or PDF input files.
+	Margin        int          // Cropbox for n-Up content.
+	Border        bool         // Draw bounding box.
+	BookletGuides bool         // Draw folding and cutting lines
+	InpUnit       DisplayUnit  // input display unit.
+	BgColor       *SimpleColor // background color
 }
 
 // DefaultNUpConfig returns the default NUp configuration.
@@ -112,6 +115,11 @@ func DefaultNUpConfig() *NUp {
 func (nup NUp) String() string {
 	return fmt.Sprintf("N-Up conf: %s %s, orient=%s, grid=%s, pageGrid=%t, isImage=%t\n",
 		nup.PageSize, *nup.PageDim, nup.Orient, *nup.Grid, nup.PageGrid, nup.ImgInputFile)
+}
+
+// N returns the nUp value.
+func (nup NUp) N() int {
+	return int(nup.Grid.Height * nup.Grid.Width)
 }
 
 type orientation int
@@ -192,6 +200,19 @@ func parseElementBorder(s string, nup *NUp) error {
 	return nil
 }
 
+func parseBookletGuides(s string, nup *NUp) error {
+	switch strings.ToLower(s) {
+	case "on", "true":
+		nup.BookletGuides = true
+	case "off", "false":
+		nup.BookletGuides = false
+	default:
+		return errors.New("pdfcpu: booklet guides, please provide one of: on/off true/false")
+	}
+
+	return nil
+}
+
 func parseElementMargin(s string, nup *NUp) error {
 	f, err := strconv.ParseFloat(s, 64)
 	if err != nil {
@@ -207,15 +228,19 @@ func parseElementMargin(s string, nup *NUp) error {
 	return nil
 }
 
+func parseSheetBackgroundColor(s string, nup *NUp) error {
+	c, err := parseColor(s)
+	if err != nil {
+		return err
+	}
+	nup.BgColor = &c
+	return nil
+}
+
 // ParseNUpDetails parses a NUp command string into an internal structure.
 func ParseNUpDetails(s string, nup *NUp) error {
-	err1 := errInvalidNUpConfig
-	if nup.PageGrid {
-		err1 = errInvalidGridConfig
-	}
-
 	if s == "" {
-		return err1
+		return errInvalidNUpConfig
 	}
 
 	ss := strings.Split(s, ",")
@@ -224,7 +249,7 @@ func ParseNUpDetails(s string, nup *NUp) error {
 
 		ss1 := strings.Split(s, ":")
 		if len(ss1) != 2 {
-			return err1
+			return errInvalidNUpConfig
 		}
 
 		paramPrefix := strings.TrimSpace(ss1[0])
@@ -379,94 +404,159 @@ func rectsForGrid(nup *NUp) []*Rectangle {
 	return rr
 }
 
-// Calculate the matrix for transforming rectangle r1 with lower left corner in the origin into rectangle r2.
-func calcTransMatrixForRect(r1, r2 *Rectangle, image bool) matrix {
-	var (
-		w, h   float64
-		dx, dy float64
-		rot    float64
-	)
-
-	if r2.Landscape() && r1.Portrait() || r2.Portrait() && r1.Landscape() {
-		rot = 90
-		r1.UR.X, r1.UR.Y = r1.UR.Y, r1.UR.X
+func bestFitRectIntoRect(rSrc, rDest *Rectangle) (w, h, dx, dy, rot float64) {
+	if rSrc.FitsWithin(rDest) {
+		// Translate rSrc into center of rDest without scaling.
+		w = rSrc.Width()
+		h = rSrc.Height()
+		dx = rDest.Width()/2 - rSrc.Width()/2
+		dy = rDest.Height()/2 - rSrc.Height()/2
+		return
 	}
 
-	if r1.FitsWithin(r2) {
-		// Translate r1 into center of r2 w/o scaling up.
-		w = r1.Width()
-		h = r1.Height()
-	} else if r1.AspectRatio() <= r2.AspectRatio() {
-		// Scale down r1 height to fit into r2 height.
-		h = r2.Height()
-		w = r1.ScaledWidth(h)
-	} else {
-		// Scale down r1 width to fit into r2 width.
-		w = r2.Width()
-		h = r1.ScaledHeight(w)
-	}
-
-	dx = r2.LL.X - r1.LL.X*w/r1.Width() + r2.Width()/2 - w/2
-	dy = r2.LL.Y - r1.LL.Y*h/r1.Height() + r2.Height()/2 - h/2
-
-	if rot > 0 {
-		dx += w
-		if !image {
-			w /= r1.Width()
-			h /= r1.Height()
+	if rSrc.Landscape() {
+		if rDest.Landscape() {
+			if rSrc.AspectRatio() > rDest.AspectRatio() {
+				w = rDest.Width()
+				h = rSrc.ScaledHeight(w)
+				dy = (rDest.Height() - h) / 2
+			} else {
+				h = rDest.Height()
+				w = rSrc.ScaledWidth(h)
+				dx = (rDest.Width() - w) / 2
+			}
+		} else {
+			rot = 90
+			if 1/rSrc.AspectRatio() < rDest.AspectRatio() {
+				w = rDest.Height()
+				h = rSrc.ScaledHeight(w)
+				dx = (rDest.Width() - h) / 2
+			} else {
+				h = rDest.Width()
+				w = rSrc.ScaledWidth(h)
+				dy = (rDest.Height() - w) / 2
+			}
 		}
-		w, h = h, w
-	} else if !image {
-		w /= r1.Width()
-		h /= r1.Height()
+		return
 	}
 
-	// Scale
-	m1 := identMatrix
-	m1[0][0] = w
-	m1[1][1] = h
+	if rSrc.Portrait() {
+		if rDest.Portrait() {
+			if rSrc.AspectRatio() < rDest.AspectRatio() {
+				h = rDest.Height()
+				w = rSrc.ScaledWidth(h)
+				dx = (rDest.Width() - w) / 2
+			} else {
+				w = rDest.Width()
+				h = rSrc.ScaledHeight(w)
+				dy = (rDest.Height() - h) / 2
+			}
+		} else {
+			rot = 90
+			if 1/rSrc.AspectRatio() > rDest.AspectRatio() {
+				h = rDest.Width()
+				w = rSrc.ScaledWidth(h)
+				dy = (rDest.Height() - w) / 2
+			} else {
+				w = rDest.Height()
+				h = rSrc.ScaledHeight(w)
+				dx = (rDest.Width() - h) / 2
+			}
+		}
+		return
+	}
 
-	// Rotate
-	m2 := identMatrix
-	sin := math.Sin(float64(rot) * float64(degToRad))
-	cos := math.Cos(float64(rot) * float64(degToRad))
-	m2[0][0] = cos
-	m2[0][1] = sin
-	m2[1][0] = -sin
-	m2[1][1] = cos
+	w = rDest.Height()
+	if rDest.Portrait() {
+		w = rDest.Width()
+	}
+	h = w
+	dx = rDest.Width()/2 - rSrc.Width()/2
+	dy = rDest.Height()/2 - rSrc.Height()/2
 
-	// Translate
-	m3 := identMatrix
-	m3[2][0] = dx
-	m3[2][1] = dy
-
-	return m1.multiply(m2).multiply(m3)
+	return
 }
 
-func nUpTilePDFBytes(wr io.Writer, r1, r2 *Rectangle, formResID string, nup *NUp) {
+func nUpTilePDFBytes(wr io.Writer, rSrc, rDest *Rectangle, formResID string, nup *NUp, rotate bool) {
+
+	// rScr is a rectangular region represented by form formResID in form space.
+
+	// rDest is an arbitrary rectangular region in dest space.
+	// It is the location where we want the form content to get rendered on a "best fit" basis.
+	// Accounting for the aspect ratios of rSrc and rDest "best fit" tries to fit the largest version of rScr into rDest.
+	// This may result in a 90 degree rotation.
+
+	// rotate indicates if we need to apply a post rotation of 180 degrees eg for booklets.
+
 	// Draw bounding box.
 	if nup.Border {
 		fmt.Fprintf(wr, "[]0 d 0.1 w %.2f %.2f m %.2f %.2f l %.2f %.2f l %.2f %.2f l s ",
-			r2.LL.X, r2.LL.Y, r2.UR.X, r2.LL.Y, r2.UR.X, r2.UR.Y, r2.LL.X, r2.UR.Y,
+			rDest.LL.X, rDest.LL.Y, rDest.UR.X, rDest.LL.Y, rDest.UR.X, rDest.UR.Y, rDest.LL.X, rDest.UR.Y,
 		)
 	}
 
-	// Apply margin.
-	croppedRect := r2.CroppedCopy(float64(nup.Margin))
+	// Apply margin to rDest which potentially makes it smaller.
+	rDestCr := rDest.CroppedCopy(float64(nup.Margin))
 
-	m := calcTransMatrixForRect(r1, croppedRect, nup.ImgInputFile)
+	// Calculate transform matrix.
 
+	// Best fit translation of a source rectangle into a destination rectangle.
+	w, h, dx, dy, r := bestFitRectIntoRect(rSrc, rDestCr)
+
+	if nup.BgColor != nil {
+		if nup.ImgInputFile {
+			// Fill background.
+			FillRectStacked(wr, rDest, *nup.BgColor)
+		} else if nup.Margin > 0 {
+			// Fill margins.
+			m := float64(nup.Margin)
+			drawMargins(wr, *nup.BgColor, rDest, 0, m, m, m, m)
+		}
+	}
+
+	// Apply additional rotation.
+	if rotate {
+		r += 180
+	}
+
+	sx := w
+	sy := h
+	if !nup.ImgInputFile {
+		sx /= rSrc.Width()
+		sy /= rSrc.Height()
+	}
+
+	sin := math.Sin(r * float64(degToRad))
+	cos := math.Cos(r * float64(degToRad))
+
+	switch r {
+	case 90:
+		dx += h
+	case 180:
+		dx += w
+		dy += h
+	case 270:
+		dy += w
+	}
+
+	dx += rDestCr.LL.X
+	dy += rDestCr.LL.Y
+
+	m := calcTransformMatrix(sx, sy, sin, cos, dx, dy)
+
+	// Apply transform matrix and display form.
 	fmt.Fprintf(wr, "q %.2f %.2f %.2f %.2f %.2f %.2f cm /%s Do Q ",
 		m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1], formResID)
 }
 
-func nUpImagePDFBytes(wr io.Writer, imgWidth, imgHeight int, nup *NUp, formResID string) {
+func nUpImagePDFBytes(w io.Writer, imgWidth, imgHeight int, nup *NUp, formResID string) {
 	for _, r := range rectsForGrid(nup) {
-		nUpTilePDFBytes(wr, RectForDim(float64(imgWidth), float64(imgHeight)), r, formResID, nup)
+		// Append to content stream.
+		nUpTilePDFBytes(w, RectForDim(float64(imgWidth), float64(imgHeight)), r, formResID, nup, false)
 	}
 }
 
-func createNUpForm(xRefTable *XRefTable, imgIndRef *IndirectRef, w, h, i int) (*IndirectRef, error) {
+func createNUpFormForImage(xRefTable *XRefTable, imgIndRef *IndirectRef, w, h, i int) (*IndirectRef, error) {
 	imgResID := fmt.Sprintf("Im%d", i)
 	bb := RectForDim(float64(w), float64(h))
 
@@ -508,14 +598,14 @@ func createNUpForm(xRefTable *XRefTable, imgIndRef *IndirectRef, w, h, i int) (*
 	return xRefTable.IndRefForNewObject(sd)
 }
 
-func createNUpFormForPDFResource(xRefTable *XRefTable, resDict *IndirectRef, content []byte, cropBox *Rectangle) (*IndirectRef, error) {
+func createNUpFormForPDF(xRefTable *XRefTable, resDict *IndirectRef, content []byte, cropBox *Rectangle) (*IndirectRef, error) {
 	sd := StreamDict{
 		Dict: Dict(
 			map[string]Object{
 				"Type":      Name("XObject"),
 				"Subtype":   Name("Form"),
 				"BBox":      cropBox.Array(),
-				"Matrix":    NewIntegerArray(1, 0, 0, 1, 0, 0),
+				"Matrix":    NewNumberArray(1, 0, 0, 1, -cropBox.LL.X, -cropBox.LL.Y),
 				"Resources": *resDict,
 			},
 		),
@@ -548,7 +638,7 @@ func NewNUpPageForImage(xRefTable *XRefTable, fileName string, parentIndRef *Ind
 
 	resID := 0
 
-	formIndRef, err := createNUpForm(xRefTable, imgIndRef, w, h, resID)
+	formIndRef, err := createNUpFormForImage(xRefTable, imgIndRef, w, h, resID)
 	if err != nil {
 		return nil, err
 	}
@@ -578,7 +668,6 @@ func NewNUpPageForImage(xRefTable *XRefTable, fileName string, parentIndRef *Ind
 		return nil, err
 	}
 
-	// mediabox = physical page dimensions
 	dim := nup.PageDim
 	mediaBox := RectForDim(dim.Width, dim.Height)
 
@@ -614,11 +703,26 @@ func NUpFromOneImage(ctx *Context, fileName string, nup *NUp, pagesDict Dict, pa
 func wrapUpPage(ctx *Context, nup *NUp, d Dict, buf bytes.Buffer, pagesDict Dict, pagesIndRef *IndirectRef) error {
 	xRefTable := ctx.XRefTable
 
+	var fm FontMap
+	if nup.BookletGuides {
+		// For booklets only.
+		fm = drawBookletGuides(nup, &buf)
+	}
+
 	resourceDict := Dict(
 		map[string]Object{
 			"XObject": d,
 		},
 	)
+
+	fontRes, err := fontResources(xRefTable, fm)
+	if err != nil {
+		return err
+	}
+
+	if len(fontRes) > 0 {
+		resourceDict["Font"] = fontRes
+	}
 
 	resIndRef, err := xRefTable.IndRefForNewObject(resourceDict)
 	if err != nil {
@@ -635,7 +739,6 @@ func wrapUpPage(ctx *Context, nup *NUp, d Dict, buf bytes.Buffer, pagesDict Dict
 		return err
 	}
 
-	// mediabox = physical page dimensions
 	dim := nup.PageDim
 	mediaBox := RectForDim(dim.Width, dim.Height)
 
@@ -675,17 +778,37 @@ func NUpFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict
 	var buf bytes.Buffer
 	rr := rectsForGrid(nup)
 
-	for i, fileName := range fileNames {
+	// fileCount must be a multiple of n.
+	// If not, we will insert blank pages at the end.
+	fileCount := len(fileNames)
+	if fileCount%nup.N() != 0 {
+		fileCount += nup.N() - fileCount%nup.N()
+	}
+
+	for i := 0; i < fileCount; i++ {
 
 		if i > 0 && i%len(rr) == 0 {
-
 			// Wrap complete nUp page.
 			if err := wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef); err != nil {
 				return err
 			}
-
 			buf.Reset()
 			formsResDict = NewDict()
+		}
+
+		rDest := rr[i%len(rr)]
+
+		var fileName string
+		if i < len(fileNames) {
+			fileName = fileNames[i]
+		}
+
+		if fileName == "" {
+			// This is an empty page at the end.
+			if nup.BgColor != nil {
+				FillRectStacked(&buf, rDest, *nup.BgColor)
+			}
+			continue
 		}
 
 		f, err := os.Open(fileName)
@@ -702,7 +825,7 @@ func NUpFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict
 			return err
 		}
 
-		formIndRef, err := createNUpForm(xRefTable, imgIndRef, w, h, i)
+		formIndRef, err := createNUpFormForImage(xRefTable, imgIndRef, w, h, i)
 		if err != nil {
 			return err
 		}
@@ -710,14 +833,15 @@ func NUpFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict
 		formResID := fmt.Sprintf("Fm%d", i)
 		formsResDict.Insert(formResID, *formIndRef)
 
-		nUpTilePDFBytes(&buf, RectForDim(float64(w), float64(h)), rr[i%len(rr)], formResID, nup)
+		// Append to content stream of page i.
+		nUpTilePDFBytes(&buf, RectForDim(float64(w), float64(h)), rr[i%len(rr)], formResID, nup, false)
 	}
 
 	// Wrap incomplete nUp page.
 	return wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef)
 }
 
-func sortedSelectedPages(pages IntSet) []int {
+func sortSelectedPages(pages IntSet) []int {
 	var pageNumbers []int
 	for k, v := range pages {
 		if v {
@@ -734,21 +858,42 @@ func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pag
 	formsResDict := NewDict()
 	rr := rectsForGrid(nup)
 
-	for i, p := range sortedSelectedPages(selectedPages) {
+	sortedPageNumbers := sortSelectedPages(selectedPages)
+	pageCount := len(sortedPageNumbers)
+	// pageCount must be a multiple of n.
+	// If not, we will insert blank pages at the end.
+	if pageCount%nup.N() != 0 {
+		pageCount += nup.N() - pageCount%nup.N()
+	}
+
+	for i := 0; i < pageCount; i++ {
 
 		if i > 0 && i%len(rr) == 0 {
-
 			// Wrap complete nUp page.
 			if err := wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef); err != nil {
 				return err
 			}
-
 			buf.Reset()
 			formsResDict = NewDict()
 		}
 
+		rDest := rr[i%len(rr)]
+
+		var pageNumber int
+		if i < len(sortedPageNumbers) {
+			pageNumber = sortedPageNumbers[i]
+		}
+
+		if pageNumber == 0 {
+			// This is an empty page at the end of a booklet.
+			if nup.BgColor != nil {
+				FillRectStacked(&buf, rDest, *nup.BgColor)
+			}
+			continue
+		}
+
 		consolidateRes := true
-		d, inhPAttrs, err := ctx.PageDict(p, consolidateRes)
+		d, inhPAttrs, err := ctx.PageDict(pageNumber, consolidateRes)
 		if err != nil {
 			return err
 		}
@@ -775,7 +920,7 @@ func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pag
 		if inhPAttrs.cropBox != nil {
 			cropBox = inhPAttrs.cropBox
 		}
-		formIndRef, err := createNUpFormForPDFResource(xRefTable, ir, bb, cropBox)
+		formIndRef, err := createNUpFormForPDF(xRefTable, ir, bb, cropBox)
 		if err != nil {
 			return err
 		}
@@ -783,8 +928,8 @@ func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pag
 		formResID := fmt.Sprintf("Fm%d", i)
 		formsResDict.Insert(formResID, *formIndRef)
 
-		// inhPAttrs.mediaBox
-		nUpTilePDFBytes(&buf, cropBox, rr[i%len(rr)], formResID, nup)
+		// Append to content stream of page i.
+		nUpTilePDFBytes(&buf, cropBox, rDest, formResID, nup, false)
 	}
 
 	// Wrap incomplete nUp page.

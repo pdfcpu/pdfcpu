@@ -17,9 +17,12 @@ limitations under the License.
 package test
 
 import (
+	"io/ioutil"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
@@ -33,42 +36,140 @@ type testBookletCfg struct {
 	n             int
 }
 
-func testBooklet(t *testing.T, cfg testBookletCfg) {
+func testBooklet(t *testing.T, msg string, inFiles []string, outFile string, selectedPages []string, desc string, n int, isImg bool) {
 	t.Helper()
 
-	nup, err := pdfcpu.PDFBookletConfig(cfg.n, cfg.desc)
-	if err != nil {
-		t.Fatalf("%s %s: %v\n", cfg.msg, cfg.outFile, err)
-	}
-	cmd := cli.BookletCommand(cfg.inFiles, cfg.outFile, cfg.selectedPages, nup, nil)
-	if _, err := cli.Process(cmd); err != nil {
-		t.Fatalf("%s %s: %v\n", cfg.msg, cfg.outFile, err)
+	var (
+		booklet *pdfcpu.NUp
+		err     error
+	)
+
+	if isImg {
+		if booklet, err = api.ImageBookletConfig(n, desc); err != nil {
+			t.Fatalf("%s %s: %v\n", msg, outFile, err)
+		}
+	} else {
+		if booklet, err = api.PDFBookletConfig(n, desc); err != nil {
+			t.Fatalf("%s %s: %v\n", msg, outFile, err)
+		}
 	}
 
-	if err := validateFile(t, cfg.outFile, nil); err != nil {
-		t.Fatalf("%s: %v\n", cfg.msg, err)
+	cmd := cli.BookletCommand(inFiles, outFile, selectedPages, booklet, nil)
+	if _, err := cli.Process(cmd); err != nil {
+		t.Fatalf("%s %s: %v\n", msg, outFile, err)
+	}
+
+	if err := validateFile(t, outFile, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
 
+func imageFileNames(t *testing.T, dir string) []string {
+	t.Helper()
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fn := []string{}
+	for _, fi := range files {
+		if strings.HasSuffix(fi.Name(), "png") || strings.HasSuffix(fi.Name(), "jpg") {
+			fn = append(fn, filepath.Join(dir, fi.Name()))
+		}
+	}
+	return fn
+}
+
 func TestBookletCommand(t *testing.T) {
-	for _, tt := range []testBookletCfg{
-		{"TestBookletLedger",
-			[]string{filepath.Join(inDir, "demo-booklet-input-statement.pdf")},
-			filepath.Join(outDir, "booklet-ledger.pdf"),
-			[]string{"1-24"},
-			"p:LedgerP",
-			4,
+	for _, tt := range []struct {
+		msg           string
+		inFiles       []string
+		outFile       string
+		selectedPages []string
+		desc          string
+		n             int
+		isImg         bool
+	}{
+
+		// 2-up booklet from images on A4
+		{"TestBookletFromImagesA42Up",
+			imageFileNames(t, resDir),
+			filepath.Join(outDir, "BookletFromImagesA4_2Up.pdf"),
+			nil,
+			"p:A4, border:false, g:on, ma:25, bgcol:#beded9",
+			2,
+			true,
 		},
 
-		// Booklet (2up with rotation) on PDF
-		{"TestBookletLetter",
-			[]string{filepath.Join(inDir, "demo-booklet-input-statement.pdf")},
-			filepath.Join(outDir, "booklet-letter.pdf"),
-			[]string{"1-16"},
-			"p:LetterP",
+		// 4-up booklet from images on A4
+		{"TestBookletFromImagesA44Up",
+			imageFileNames(t, resDir),
+			filepath.Join(outDir, "BookletFromImagesA4_4Up.pdf"),
+			nil,
+			"p:A4, border:false, g:on, ma:25, bgcol:#beded9",
+			4,
+			true,
+		},
+
+		// 2-up booklet from PDF on A4
+		{"TestBookletFromPDF2UpA4",
+			[]string{filepath.Join(inDir, "zineTest.pdf")},
+			filepath.Join(outDir, "BookletFromPDFA4_2Up.pdf"),
+			nil, // all pages
+			"p:A4, border:false, g:on, ma:10, bgcol:#beded9",
 			2,
+			false,
+		},
+
+		// 4-up booklet from PDF on A4
+		{"TestBookletFromPDF4UpA4",
+			[]string{filepath.Join(inDir, "zineTest.pdf")},
+			filepath.Join(outDir, "BookletFromPDFA4_4Up.pdf"),
+			[]string{"1-"}, // all pages
+			"p:A4, border:off, guides:on, ma:10, bgcol:#beded9",
+			4,
+			false,
+		},
+
+		// 4-up booklet from PDF on Ledger
+		{"TestBookletFromPDF4UpLedger",
+			[]string{filepath.Join(inDir, "bookletTest.pdf")},
+			filepath.Join(outDir, "BookletFromPDFLedger_4Up.pdf"),
+			[]string{"1-24"},
+			"p:LedgerP, g:on, ma:10, bgcol:#f7e6c7",
+			4,
+			false,
+		},
+
+		// 4-up booklet from PDF on Ledger where the number of pages don't fill the whole sheet
+		{"TestBookletFromPDF4UpLedgerWithTrailingBlankPages",
+			[]string{filepath.Join(inDir, "bookletTest.pdf")},
+			filepath.Join(outDir, "BookletFromPDFLedger_4UpWithTrailingBlankPages.pdf"),
+			[]string{"1-21"},
+			"p:LedgerP, g:on, ma:10, bgcol:#f7e6c7",
+			4,
+			false,
+		},
+
+		// 2-up booklet from PDF on Letter
+		{"TestBookletFromPDF2UpLetter",
+			[]string{filepath.Join(inDir, "bookletTest.pdf")},
+			filepath.Join(outDir, "BookletFromPDFLetter_2Up.pdf"),
+			[]string{"1-16"},
+			"p:LetterP, g:on, ma:10, bgcol:#f7e6c7",
+			2,
+			false,
+		},
+
+		// 2-up booklet from PDF on Letter where the number of pages don't fill the whole sheet
+		{"TestBookletFromPDF2UpLetterWithTrailingBlankPages",
+			[]string{filepath.Join(inDir, "bookletTest.pdf")},
+			filepath.Join(outDir, "BookletFromPDFLetter_2UpWithTrailingBlankPages.pdf"),
+			[]string{"1-14"},
+			"p:LetterP, g:on, ma:10, bgcol:#f7e6c7",
+			2,
+			false,
 		},
 	} {
-		testBooklet(t, tt)
+		testBooklet(t, tt.msg, tt.inFiles, tt.outFile, tt.selectedPages, tt.desc, tt.n, tt.isImg)
 	}
 }

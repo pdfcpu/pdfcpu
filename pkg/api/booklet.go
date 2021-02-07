@@ -17,7 +17,6 @@
 package api
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"time"
@@ -26,11 +25,95 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
+// BookletFromImages creates a booklet from images.
+func BookletFromImages(conf *pdfcpu.Configuration, imageFileNames []string, nup *pdfcpu.NUp) (*pdfcpu.Context, error) {
+	if nup.PageDim == nil {
+		// Set default paper size.
+		nup.PageDim = pdfcpu.PaperSize[nup.PageSize]
+	}
+
+	ctx, err := pdfcpu.CreateContextWithXRefTable(conf, nup.PageDim)
+	if err != nil {
+		return nil, err
+	}
+
+	pagesIndRef, err := ctx.Pages()
+	if err != nil {
+		return nil, err
+	}
+
+	// This is the page tree root.
+	pagesDict, err := ctx.DereferenceDict(*pagesIndRef)
+	if err != nil {
+		return nil, err
+	}
+
+	err = pdfcpu.BookletFromImages(ctx, imageFileNames, nup, pagesDict, pagesIndRef)
+
+	return ctx, err
+}
+
+// Booklet arranges PDF pages on larger sheets of paper and writes the result to w.
+func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *pdfcpu.NUp, conf *pdfcpu.Configuration) error {
+	if conf == nil {
+		conf = pdfcpu.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdfcpu.BOOKLET
+
+	log.Info.Printf("%s", nup)
+
+	// below is very similar to api.NUp
+	var (
+		ctx *pdfcpu.Context
+		err error
+	)
+
+	if nup.ImgInputFile {
+
+		if ctx, err = BookletFromImages(conf, imgFiles, nup); err != nil {
+			return err
+		}
+
+	} else {
+
+		if ctx, _, _, err = readAndValidate(rs, conf, time.Now()); err != nil {
+			return err
+		}
+
+		if err := ctx.EnsurePageCount(); err != nil {
+			return err
+		}
+
+		pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
+		if err != nil {
+			return err
+		}
+
+		if err = ctx.BookletFromPDF(pages, nup); err != nil {
+			return err
+		}
+	}
+
+	if conf.ValidationMode != pdfcpu.ValidationNone {
+		if err = ValidateContext(ctx); err != nil {
+			return err
+		}
+	}
+
+	if err = WriteContext(ctx, w); err != nil {
+		return err
+	}
+
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+
+	return nil
+}
+
 // BookletFile rearranges PDF pages or images into a booklet layout and writes the result to outFile.
 func BookletFile(inFiles []string, outFile string, selectedPages []string, nup *pdfcpu.NUp, conf *pdfcpu.Configuration) (err error) {
-	if nup.ImgInputFile {
-		return fmt.Errorf("image file input not yet supported for booklet")
-	}
+	//if nup.ImgInputFile {
+	//	return fmt.Errorf("image file input not yet supported for booklet")
+	//}
 
 	var f1, f2 *os.File
 
@@ -62,52 +145,5 @@ func BookletFile(inFiles []string, outFile string, selectedPages []string, nup *
 
 	}()
 
-	return Booklet(f1, f2, selectedPages, nup, conf)
-}
-
-// Booklet arranges PDF pages on larger sheets of paper and writes the result to w.
-func Booklet(rs io.ReadSeeker, w io.Writer, selectedPages []string, nup *pdfcpu.NUp, conf *pdfcpu.Configuration) error {
-	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
-	}
-	conf.Cmd = pdfcpu.BOOKLET
-
-	log.Info.Printf("%s", nup)
-
-	// below is very similar to api.NUp
-	var (
-		ctx *pdfcpu.Context
-		err error
-	)
-
-	if ctx, _, _, err = readAndValidate(rs, conf, time.Now()); err != nil {
-		return err
-	}
-
-	if err := ctx.EnsurePageCount(); err != nil {
-		return err
-	}
-
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
-	if err != nil {
-		return err
-	}
-
-	if err = ctx.BookletFromPDF(pages, nup); err != nil {
-		return err
-	}
-
-	if conf.ValidationMode != pdfcpu.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
-	}
-
-	if err = WriteContext(ctx, w); err != nil {
-		return err
-	}
-
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
-
-	return nil
+	return Booklet(f1, f2, inFiles, selectedPages, nup, conf)
 }

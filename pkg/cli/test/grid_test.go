@@ -34,11 +34,11 @@ func testGrid(t *testing.T, msg string, inFiles []string, outFile string, select
 	)
 
 	if isImg {
-		if nup, err = api.ImageGrid(rows, cols, desc); err != nil {
+		if nup, err = api.ImageGridConfig(rows, cols, desc); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	} else {
-		if nup, err = api.PDFGrid(rows, cols, desc); err != nil {
+		if nup, err = api.PDFGridConfig(rows, cols, desc); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	}
@@ -75,7 +75,7 @@ func TestGridCommand(t *testing.T) {
 				filepath.Join(resDir, "snow.jpg"),
 			},
 			filepath.Join(outDir, "testGridFromImages.pdf"),
-			nil, "d:500 500, m:20, b:off", 1, 3, true},
+			nil, "d:500 500, margin:20, border:off", 1, 3, true},
 	} {
 		testGrid(t, tt.msg, tt.inFiles, tt.outFile, tt.selectedPages, tt.desc, tt.rows, tt.cols, tt.isImg)
 	}

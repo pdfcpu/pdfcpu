@@ -34,11 +34,11 @@ func testNUp(t *testing.T, msg string, inFiles []string, outFile string, selecte
 	)
 
 	if isImg {
-		if nup, err = api.ImageNUp(n, desc); err != nil {
+		if nup, err = api.ImageNUpConfig(n, desc); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	} else {
-		if nup, err = api.PDFNUp(n, desc); err != nil {
+		if nup, err = api.PDFNUpConfig(n, desc); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	}
@@ -87,7 +87,7 @@ func TestNUpCommand(t *testing.T) {
 			},
 			filepath.Join(outDir, "out1.pdf"),
 			nil,
-			"f:Tabloid, b:off, m:0",
+			"f:Tabloid, bo:off, m:0",
 			6,
 			true},
 	} {

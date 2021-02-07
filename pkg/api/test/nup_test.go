@@ -35,11 +35,11 @@ func testNUp(t *testing.T, msg string, inFiles []string, outFile string, selecte
 	)
 
 	if isImg {
-		if nup, err = api.ImageNUp(n, desc); err != nil {
+		if nup, err = api.ImageNUpConfig(n, desc); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	} else {
-		if nup, err = api.PDFNUp(n, desc); err != nil {
+		if nup, err = api.PDFNUpConfig(n, desc); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	}
@@ -84,7 +84,7 @@ func TestNUp(t *testing.T) {
 			[]string{filepath.Join(inDir, "WaldenFull.pdf")},
 			filepath.Join(outDir, "NUpFromPDF.pdf"),
 			nil,
-			"",
+			"m:10, bgcol:#f7e6c7",
 			9,
 			false},
 
@@ -93,16 +93,16 @@ func TestNUp(t *testing.T) {
 			[]string{filepath.Join(inDir, "grid_example.pdf")},
 			filepath.Join(outDir, "NUpFromPDFWithCropBox.pdf"),
 			nil,
-			"f:A5L, b:on, m:0",
+			"f:A5L, border:on, m:10, bgcol:#f7e6c7",
 			2,
 			false},
 
-		// 9-Up an image
+		// 16-Up an image
 		{"TestNUpFromSingleImage",
-			[]string{filepath.Join(resDir, "logoSmall.png")},
+			[]string{filepath.Join("../../../resources", "logoSmall.png")},
 			filepath.Join(outDir, "NUpFromSingleImage.pdf"),
 			nil,
-			"f:A3P",
+			"f:A3P, m:10, bgcol:#f7e6c7",
 			16,
 			true},
 
@@ -111,7 +111,7 @@ func TestNUp(t *testing.T) {
 			imageFileNames(t, "../../../resources"),
 			filepath.Join(outDir, "NUpFromImages.pdf"),
 			nil,
-			"f:Tabloid, b:on, m:0",
+			"f:Tabloid, border:on, m:10, bgcol:#f7e6c7",
 			6,
 			true},
 	} {

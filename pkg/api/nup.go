@@ -25,24 +25,34 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
-// PDFNUp returns an NUp configuration for Nup-ing PDF files.
-func PDFNUp(val int, desc string) (*pdfcpu.NUp, error) {
+// PDFNUpConfig returns an NUp configuration for Nup-ing PDF files.
+func PDFNUpConfig(val int, desc string) (*pdfcpu.NUp, error) {
 	return pdfcpu.PDFNUpConfig(val, desc)
 }
 
-// ImageNUp returns an NUp configuration for Nup-ing image files.
-func ImageNUp(val int, desc string) (*pdfcpu.NUp, error) {
+// ImageNUpConfig returns an NUp configuration for Nup-ing image files.
+func ImageNUpConfig(val int, desc string) (*pdfcpu.NUp, error) {
 	return pdfcpu.ImageNUpConfig(val, desc)
 }
 
-// PDFGrid returns a grid configuration for Nup-ing PDF files.
-func PDFGrid(rows, cols int, desc string) (*pdfcpu.NUp, error) {
+// PDFGridConfig returns a grid configuration for Grid-ing PDF files.
+func PDFGridConfig(rows, cols int, desc string) (*pdfcpu.NUp, error) {
 	return pdfcpu.PDFGridConfig(rows, cols, desc)
 }
 
-// ImageGrid returns a grid configuration for Nup-ing image files.
-func ImageGrid(rows, cols int, desc string) (*pdfcpu.NUp, error) {
+// ImageGridConfig returns a grid configuration for Grid-ing image files.
+func ImageGridConfig(rows, cols int, desc string) (*pdfcpu.NUp, error) {
 	return pdfcpu.ImageGridConfig(rows, cols, desc)
+}
+
+// PDFBookletConfig returns an NUp configuration for Booklet-ing PDF files.
+func PDFBookletConfig(val int, desc string) (*pdfcpu.NUp, error) {
+	return pdfcpu.PDFBookletConfig(val, desc)
+}
+
+// ImageBookletConfig returns an NUp configuration for Booklet-ing image files.
+func ImageBookletConfig(val int, desc string) (*pdfcpu.NUp, error) {
+	return pdfcpu.ImageBookletConfig(val, desc)
 }
 
 // NUpFromImage creates a single page n-up PDF for one image
