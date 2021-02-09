@@ -6,15 +6,6 @@ layout: default
 
 The `-pages ` flag allows you to select specific pages for processing when using the following commands:
 
-* [trim](../core/split.md)
-* [collect](../core/collect.md)
-* [extract](../extract/extract.md)
-* [rotate](../core/rotate.md)
-* [stamp/watermark](../core/stamp.md)
-* [grid](../core/grid.md)
-* [nup](../core/nup.md)
-* [pages](../pages/pages.md)
-
 ## Syntax
 
 The value of this flag is a string which is a comma separated list of expressions containing page numbers or page number ranges:

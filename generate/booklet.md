@@ -90,7 +90,6 @@ A configuration string to specify the details of the grid layout.
 | dimensions           | (width, height) in user units eg. '400 200' | d: 595 842
 | formsize, paper size | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode| f: A4
 | guides               | on/off true/false                           | g:off
-| orientation          | one of `rd, dr, ld, dl` for PDF input files | o: rd
 | border               | on/off true/false                           | b: on
 | margin               | integer >= 0                                | m: 0
 | backgroundcolor, bgcol | 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red | none
