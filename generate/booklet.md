@@ -2,7 +2,7 @@
 layout: default
 ---
 
-# N-up
+# Booklet
 
 * Rearrange all pages of `inFile` file in order to reduce the number of pages and write the result to `outFile`.
 Each new page is composed of multiple original pages in a grid like fashion.
@@ -89,7 +89,8 @@ A configuration string to specify the details of the grid layout.
 | orientation          | one of `rd, dr, ld, dl` for PDF input files | o: rd
 | border               | on/off true/false                           | b: on
 | margin               | integer >= 0                                | m: 0
-
+| backgroundcolor      | (=bgcol) 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red | none
+|                      | or the hex RGB value: #RRGGBB               |
 <br>
 
 #### Orientation

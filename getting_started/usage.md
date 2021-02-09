@@ -17,6 +17,7 @@ Usage:
 The commands are:
 
    attachments list, add, remove, extract embedded file attachments
+   booklet     arrange pages onto larger sheets of paper to make a booklet or zine
    boxes       list, add, remove page boundaries for selected pages
    changeopw   change owner password
    changeupw   change user password

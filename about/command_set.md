@@ -17,6 +17,7 @@ layout: default
 * Manage (add,update,remove) stamps/watermarks for selected pages using text, images or PDF page content.
 * N-up (rearrange pages into grid layout for reduced number of pages)
 * Grid (rearrange pages into grid layout for enhanced browsing)
+* Booklet (arrange pages onto larger sheets of paper to make a booklet or zine)
 * Import convert/import images into PDF
 * Extract Images (extract embedded images of a PDF into a given dir)
 * Extract Fonts (extract all embedded fonts of a PDF file into a given dir)

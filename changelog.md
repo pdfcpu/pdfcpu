@@ -6,6 +6,8 @@ layout: default
 
 | Date      | Tag / Commit                                                                                | Description  
 |:----------|:--------------------------------------------------------------------------------------------|:------------------------------
+|2021-02-xx | [v0.3.9](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.9)                              | Add booklet cmd
+|           |                                                                                             | Fix #276, #280, #285, #288
 |2020-12-24 | [v0.3.8](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.8)                              | Add new cmds: boxes, crop
 |           |                                                                                             | Fix #210, #216, #236, #238, #241,
 |           |                                                                                             | #244, #245, #250, #252, #256, #258,
