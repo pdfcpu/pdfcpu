@@ -89,7 +89,7 @@ A configuration string to specify the details of the grid layout.
 | orientation          | one of `rd, dr, ld, dl` for PDF input files | o: rd
 | border               | on/off true/false                           | bo: on
 | margin               | integer >= 0                                | m: 0
-| backgroundcolor      | (=bgcol) 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red | none
+| backgroundcolor, bgcol| 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red | none
 |                      | or the hex RGB value: #RRGGBB               |
 
 <br>
@@ -110,7 +110,7 @@ This is usually associated with the writing direction used in the document to be
 #### Default description
 
 ```sh
-'f:A4, d:595 842, o:rd, b:on, m:3'
+'f:A4, d:595 842, o:rd, bo:on, m:3'
 ```
 
 * You only have to specify any parameter diverging from the default.
@@ -165,7 +165,7 @@ In the following example `logo.jpg` will be `16`-up'ed onto `out.pdf`.
 Both grid borders and margins are suppressed and the output format is `Ledger`:
 
 ```sh
-pdfcpu nup 'f:Ledger, b:off, m:0' out.pdf 16 logo.jpg
+pdfcpu nup 'f:Ledger, bo:off, m:0' out.pdf 16 logo.jpg
 ```
 
 

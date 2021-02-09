@@ -4,16 +4,11 @@ layout: default
 
 # Booklet
 
-* Rearrange all pages of `inFile` file in order to reduce the number of pages and write the result to `outFile`.
-Each new page is composed of multiple original pages in a grid like fashion.
-The original page size is preserved.
+* Arrange a sequence of pages of `inFile` onto larger sheets of paper for a small book or zine and write the result to `outFile`.
 
-* Create `outFile` for a given [paper size](../paper.md) and arrange `imageFiles` on pages in a grid like fashion.
-For a single image file create a single page PDF file and fill the grid with copies of the image.
+* Create your booklet or zine out of a sequence of image files.
 
-* The [N-up](https://en.wikipedia.org/wiki/N-up) value `n` controls the grid layout.
-
-* Proper rotation based on involved aspect ratios will be applied during the process.
+* Optionally set the sheet background color and render guidelines for folding and cutting.
 
 * Have a look at some [examples](#examples).
 
@@ -23,7 +18,7 @@ For a single image file create a single page PDF file and fill the grid with cop
 ## Usage
 
 ```
-pdfcpu nup [-p(ages) selectedPages] [description] outFile n inFile|imageFiles...
+pdfcpu booklet [-p(ages) selectedPages] [description] outFile n inFile|imageFiles...
 ```
 
 <br>
@@ -56,13 +51,13 @@ pdfcpu nup [-p(ages) selectedPages] [description] outFile n inFile|imageFiles...
 |:-------------|:---------------------|:---------|:-
 | description  | configuration string | no
 | outFile      | PDF output file      | yes
-| n            | the N-up value       | yes
+| n            | the N-up value (2 or 4) | yes
 | inFile       | PDF input file       | inFile or imageFile(s)
 | imageFile... | one or more images   | inFile or imageFile(s)
 
 <br>
 
-### N-up Value
+### Booklet N-up Value
 
 The following table lists all supported values for `n` and the resulting grid layout with respect to the orientation of the chosen output [paper size](../paper.md). See [here](https://en.wikipedia.org/wiki/N-up) for a thorough explanation of N-up.
 
@@ -86,30 +81,19 @@ A configuration string to specify the details of the grid layout.
 |:---------------------|:--------------------------------------------|:--
 | dimensions           | (width, height) in user units eg. '400 200' | d: 595 842
 | formsize, paper size | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode| f: A4
+| guides               | on/off true/false                           | g:off
 | orientation          | one of `rd, dr, ld, dl` for PDF input files | o: rd
 | border               | on/off true/false                           | b: on
 | margin               | integer >= 0                                | m: 0
-| backgroundcolor      | (=bgcol) 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red | none
+| backgroundcolor, bgcol | 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red | none
 |                      | or the hex RGB value: #RRGGBB               |
-<br>
-
-#### Orientation
-
-This is usually associated with the writing direction used in the document to be processed. For PDF input files only
-
-| value | description |
-|:------|-------------|
-| rd    | right down, default |
-| dr    | down right  |
-| ld    | left down   |
-| dl    | down left   |
 
 <br>
 
 #### Default description
 
 ```sh
-'f:A4, d:595 842, o:rd, b:on, m:3'
+'f:A4, d:595 842, bo:on, g:off, m:3'
 ```
 
 * You only have to specify any parameter diverging from the default.
