@@ -828,7 +828,7 @@ func scanTrailerDictRemainder(s *bufio.Scanner, line string, buf bytes.Buffer) (
 	var i, j, k int
 
 	buf.WriteString(line)
-	buf.WriteString(" ")
+	buf.WriteString("\x0a")
 	log.Read.Printf("scanTrailer dictBuf after start tag: <%s>\n", line)
 
 	line = line[2:]
@@ -841,7 +841,7 @@ func scanTrailerDictRemainder(s *bufio.Scanner, line string, buf bytes.Buffer) (
 				return "", err
 			}
 			buf.WriteString(line)
-			buf.WriteString(" ")
+			buf.WriteString("\x0a")
 			log.Read.Printf("scanTrailer dictBuf next line: <%s>\n", line)
 		}
 
@@ -869,7 +869,7 @@ func scanTrailerDictRemainder(s *bufio.Scanner, line string, buf bytes.Buffer) (
 				return "", err
 			}
 			buf.WriteString(line)
-			buf.WriteString(" ")
+			buf.WriteString("\x0a")
 			log.Read.Printf("scanTrailer dictBuf next line: <%s>\n", line)
 		} else {
 			// Yes <<
@@ -1091,13 +1091,14 @@ func bypassXrefSection(ctx *Context) error {
 
 	for {
 		line, err := scanLineRaw(s)
+		//println(line)
 		if err != nil {
 			break
 		}
 		if withinXref {
 			offset += int64(len(line) + eolCount)
 			if withinTrailer {
-				bb = append(bb, ' ')
+				bb = append(bb, '\n')
 				bb = append(bb, line...)
 				i := strings.Index(line, "startxref")
 				if i >= 0 {

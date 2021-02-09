@@ -495,7 +495,7 @@ func parseName(line *string) (*Name, error) {
 	l = forwardParseBuf(l, 1)
 
 	// cut off on whitespace or delimiter
-	eok, _ := positionToNextWhitespaceOrChar(l, "/<>()[]")
+	eok, _ := positionToNextWhitespaceOrChar(l, "/<>()[]%")
 	if eok < 0 {
 		// Name terminated by eol.
 		*line = ""
@@ -621,7 +621,7 @@ func noBuf(l *string) bool {
 }
 
 func startParseNumericOrIndRef(l string) (string, string, int) {
-	i1, _ := positionToNextWhitespaceOrChar(l, "/<([]>")
+	i1, _ := positionToNextWhitespaceOrChar(l, "/<([]>%")
 	var l1 string
 	if i1 > 0 {
 		l1 = l[i1:]

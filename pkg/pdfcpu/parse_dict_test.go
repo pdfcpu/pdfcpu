@@ -130,8 +130,22 @@ func doTestParseDictIndirectRefs(t *testing.T) {
 	doTestParseDictOK("<</Key1 32 0 R/Key2 32 /Key3 3.34>>", t)
 }
 
-func TestParseDict(t *testing.T) {
+func doTestParseDictWithComments(t *testing.T) {
 
+	doTestParseDictOK(`<</Root 1 0 R/Info%comment after name
+<</Subject(Compacted Syntax v3.0)%comment after literal string end
+/Title<436f6d7061637465642073796e746178>%comment after hex string end
+/Keywords(PDF,Compacted,Syntax,ISO 32000-2:2020)/CreationDate(D:20200317)/Author(Peter Wyatt)/Creator<48616e642d65646974>/Producer<48616e642d65646974>>>/ID[<18D6B641245C03FABE67D93AD879D6EC><6264992C92074533A46A019C7CF9BFB6>]/Size 7>>`, t)
+
+	doTestParseDictOK(`<</Type/Page/Parent 3 0 R/MediaBox[%comment after array start token
++0 .0 999 999.]%comment after array end token
+/CropBox[+0 .0 999%comment after an integer
+999.]/Contents[5 0 R]/UserUnit +0.88/Annots null%comment after null
+/Resources<</Pattern<<>>/ProcSet[null]/ExtGState<</ 6 0 R>>/Font<</F1<</Type/Font/Subtype/Type1/BaseFont/Times-Bold/Encoding/WinAnsiEncoding>>>>>>>>`, t)
+
+}
+
+func TestParseDict(t *testing.T) {
 	doTestParseDictGeneral(t)
 	doTestParseDictNameObjects(t)
 	doTestParseDictStringLiteral(t)
@@ -141,4 +155,5 @@ func TestParseDict(t *testing.T) {
 	doTestParseDictBool(t)
 	doTestParseDictNumerics(t)
 	doTestParseDictIndirectRefs(t)
+	doTestParseDictWithComments(t)
 }

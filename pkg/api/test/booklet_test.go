@@ -8,16 +8,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
-type testBookletCfg struct {
-	msg           string
-	inFiles       []string
-	outFile       string
-	selectedPages []string
-	desc          string
-	n             int
-	isImg         bool
-}
-
 func testBooklet(t *testing.T, msg string, inFiles []string, outFile string, selectedPages []string, desc string, n int, isImg bool) {
 	t.Helper()
 
