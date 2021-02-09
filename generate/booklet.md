@@ -57,19 +57,27 @@ pdfcpu booklet [-p(ages) selectedPages] [description] outFile n inFile|imageFile
 
 <br>
 
-### Booklet N-up Value
+### N-up Value
 
-The following table lists all supported values for `n` and the resulting grid layout with respect to the orientation of the chosen output [paper size](../paper.md). See [here](https://en.wikipedia.org/wiki/N-up) for a thorough explanation of N-up.
+There are two styles of booklet, depending on your page/input and sheet/output size:
+
+#### n=2
+
+Two of your pages fit on one side of a sheet (eg statement on letter, A5 on A4)
+Assemble by printing on both sides (odd pages on the front and even pages on the back) and folding down the middle.
+
+#### n=4
+
+Four of your pages fit on one side of a sheet (eg statement on ledger, A5 on A3, A6 on A4)
+Assemble by printing on both sides, then cutting the sheets horizontally.
+The sets of pages on the bottom of the sheet are rotated so that the cut side of the
+paper is on the bottom of the booklet for every page. After cutting, place the bottom
+set of pages after the top set of pages in the booklet. Then fold the half sheets.
 
 | value | portrait | landscape
 |:------|:---------|----------
 | 2     | 1x2      | 2x1
-| 3     | 1x3      | 3x1
 | 4     | 2x2      | 2x2
-| 8     | 2x4      | 4x2
-| 9     | 3x3      | 3x3
-| 12    | 3x4      | 4x3
-| 16    | 4x4      | 4x4
 
 <br>
 
