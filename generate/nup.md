@@ -110,12 +110,12 @@ This is usually associated with the writing direction used in the document to be
 #### Default description
 
 ```sh
-'f:A4, d:595 842, o:rd, bo:on, m:3'
+'formsize:A4, dimensions:595 842, orientation:rd, border:on, margin:3'
 ```
 
 * You only have to specify any parameter diverging from the default.
 
-* Only one of dimensions or format is allowed.
+* Only one of dimensions or formsize is allowed.
 
 * You may use parameter prefixes as long as the parameter can be identified.
 
