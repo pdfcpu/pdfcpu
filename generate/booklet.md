@@ -201,7 +201,7 @@ In this example we have five input image files resulting in a booklet with five 
 Since we want to produce a 4-up booklet we can fit eight booklet pages on one sheet of paper.
 As a result of this pages 6 thru 8 are rendered as empty pages.
 <br>
-Here are pages 1 and 2 of the output file *bookletFromImages.pdf*:
+Here are allpages (1 and 2) of the output file *bookletFromImages.pdf*:
 
 <p align="center">
   <img style="border-color:silver" border="1" src="resources/book4A4Imp1.png" height="300">
