@@ -199,9 +199,10 @@ pdfcpu booklet 'p:A4, g:on, m:25, bgcol:#beded9' bookletFromImages.pdf 4 *.png
 
 In this example we have five input image files resulting in a booklet with five pages of content.
 Since we want to produce a 4-up booklet we can fit eight booklet pages on one sheet of paper.
-As a result of this pages 6 thru 8 are rendered as empty pages.
 <br>
-Here are allpages (1 and 2) of the output file *bookletFromImages.pdf*:
+As a result of this pages 6 thru 8 are rendered as empty pages.
+<br><br>
+Here are all pages (1 and 2) of the output file *bookletFromImages.pdf*:
 
 <p align="center">
   <img style="border-color:silver" border="1" src="resources/book4A4Imp1.png" height="300">
