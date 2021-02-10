@@ -53,14 +53,15 @@ var (
 type nUpParamMap map[string]func(string, *NUp) error
 
 var nupParamMap = nUpParamMap{
-	"dimensions":  parseDimensionsNUp,
-	"formsize":    parsePageFormatNUp,
-	"papersize":   parsePageFormatNUp,
-	"orientation": parseOrientation,
-	"border":      parseElementBorder,
-	"margin":      parseElementMargin,
-	"bgcolor":     parseSheetBackgroundColor,
-	"guides":      parseBookletGuides,
+	"dimensions":      parseDimensionsNUp,
+	"formsize":        parsePageFormatNUp,
+	"papersize":       parsePageFormatNUp,
+	"orientation":     parseOrientation,
+	"border":          parseElementBorder,
+	"margin":          parseElementMargin,
+	"backgroundcolor": parseSheetBackgroundColor,
+	"bgcolor":         parseSheetBackgroundColor,
+	"guides":          parseBookletGuides,
 }
 
 // Handle applies parameter completion and if successful

@@ -390,8 +390,8 @@ description ... dimensions, format, position, offset, scale factor, boxes
 
   formsize, papersize: eg. A4, Letter, Legal...
                            Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
-                           An appended 'L' enforces landscape mode. (eg. A3L)
-                           An appended 'P' enforces portrait mode. (eg. TabloidP)
+                           Append 'L' to enforce landscape mode. (eg. A3L)
+                           Append 'P' to enforce portrait mode. (eg. TabloidP)
 
   position:    one of 'full' or the anchors: tl,tc,tr, l,c,r, bl,bc,br
   offset:      (dx dy) in given display unit eg. '15 20'
@@ -459,22 +459,24 @@ description ... dimensions, format, orientation
 
     optional entries:
   
-        (defaults: d:595 842, f:A4, o:rd, b:on, m:3)
+        (defaults: di:595 842, fo:A4, or:rd, bo:on, ma:3)
   
     dimensions:      (width,height) in given display unit eg. '400 200'
-    formsize:        papersize, eg. A4, Letter, Legal...
-                        Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
-                        Appended 'L' enforces landscape mode. (eg. A3L)
-                        Appended 'P' enforces portrait mode. (eg. TabloidP)
-                        Only one of dimensions or format is allowed.
+    formsize:        The output sheet size, eg. A4, Letter, Legal...
+                     Append 'L' to enforce landscape mode. (eg. A3L)
+                     Append 'P' to enforce portrait mode. (eg. TabloidP)
+                     Only one of dimensions or format is allowed.
+                     Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
+                     "papersize" is also accepted.
     orientation:     one of rd ... right down (=default)
-                        dr ... down right
-                        ld ... left down
-                        dl ... down left
-                        Orientation applies to PDF input files only.
+                            dr ... down right
+                            ld ... left down
+                            dl ... down left
+                     Orientation applies to PDF input files only.
     border:          on/off true/false
     margin:          for n-up content: float >= 0 in given display unit
-    backgroundcolor: backgound color for margin > 0. "bgcolor" is also accepted.
+    backgroundcolor: backgound color for margin > 0.
+                     "bgcolor" is also accepted.
 
 All configuration string parameters support completion.
     
@@ -483,8 +485,9 @@ Examples: "pdfcpu nup out.pdf 4 in.pdf"
           and default paper size A4. in.pdf's page size will be preserved.
                                  
           "pdfcpu nup -pages=3- out.pdf 6 in.pdf"
-          Rearrange selected pages of in.pdf (all pages starting with page 3) into 3x2 grids and write result to out.pdf using the default orientation
-          and default paper size A4. in.pdf's page size will be preserved.
+          Rearrange selected pages of in.pdf (all pages starting with page 3) into 3x2 grids and
+          write result to out.pdf using the default orientation and default paper size A4.
+          in.pdf's page size will be preserved.
 
           "pdfcpu nup out.pdf 9 logo.jpg"
           Arrange instances of logo.jpg into a 3x3 grid and write result to out.pdf using the A4 default format.
@@ -522,18 +525,20 @@ set of pages after the top set of pages in the booklet. Then fold the half sheet
 
 <description> is a comma separated configuration string containing these optional entries:
 
-   (defaults: 'dim:595 842, formsize:A4, border:off, margin:0')
+   (defaults: 'dim:595 842, formsize:A4, border:off, guides:off, margin:0')
 
    dimensions:       (width,height) of the output sheet in given display unit eg. '400 200'
-   formsize:         papersize of the output sheet, eg. A4, Letter, Legal...
-                        Appended 'L' enforces landscape mode. (eg. A3L)
-                        Appended 'P' enforces portrait mode. (eg. TabloidP)
-                        Only one of dimensions or format is allowed.
-                        Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
+   formsize:         The output sheet size, eg. A4, Letter, Legal...
+                     Append 'L' to enforce landscape mode. (eg. A3L)
+                     Append 'P' to enforce portrait mode. (eg. TabloidP)
+                     Only one of dimensions or format is allowed.
+                     Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
+                     "papersize" is also accepted.
    border:           on/off true/false
    guides:           on/off true/false prints folding and cutting lines
    margin:           for n-up content: float >= 0 in given display unit
-   backgroundcolor:  sheet backgound color for margin > 0. "bgcolor" is also accepted.
+   backgroundcolor:  sheet backgound color for margin > 0.
+                     "bgcolor" is also accepted.
 
 All configuration string parameters support completion.
 
@@ -565,21 +570,22 @@ description ... dimensions, format, orientation
 
     optional entries:
   
-        (defaults: d:595 842, f:A4, o:rd, b:on, m:3)
+        (defaults: d:595 842, f:A4, o:rd, bo:on, m:3)
   
     dimensions:   (width height) in given display unit eg. '400 200'
-    formsize:     papersize, eg. A4, Letter, Legal...
-                     Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
-                     Appended 'L' enforces landscape mode. (eg. A3L)
-                     Appended 'P' enforces portrait mode. (eg. TabloidP)
-                     Only one of dimensions or format is allowed.
+    formsize:     The output sheet size, eg. A4, Letter, Legal...
+                  Append 'L' to enforce landscape mode. (eg. A3L)
+                  Append 'P' to enforce portrait mode. (eg. TabloidP)
+                  Only one of dimensions or format is allowed.
+                  Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
+                  "papersize" is also accepted.
     orientation:  one of rd ... right down (=default)
-                     dr ... down right
-                     ld ... left down
-                     dl ... down left
-                     Orientation applies to PDF input files only.
-    border:      on/off true/false
-    margin:      for content: float >= 0 in given display unit
+                         dr ... down right
+                         ld ... left down
+                         dl ... down left
+                  Orientation applies to PDF input files only.
+    border:       on/off true/false
+    margin:       for content: float >= 0 in given display unit
 
 All configuration string parameters support completion.
 
