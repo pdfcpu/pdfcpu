@@ -853,6 +853,14 @@ func sortSelectedPages(pages IntSet) []int {
 	return pageNumbers
 }
 
+func nupPageNumber(i int, sortedPageNumbers []int) int {
+	var pageNumber int
+	if i < len(sortedPageNumbers) {
+		pageNumber = sortedPageNumbers[i]
+	}
+	return pageNumber
+}
+
 func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pagesIndRef *IndirectRef) error {
 	var buf bytes.Buffer
 	xRefTable := ctx.XRefTable
@@ -880,11 +888,7 @@ func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pag
 
 		rDest := rr[i%len(rr)]
 
-		var pageNumber int
-		if i < len(sortedPageNumbers) {
-			pageNumber = sortedPageNumbers[i]
-		}
-
+		pageNumber := nupPageNumber(i, sortedPageNumbers)
 		if pageNumber == 0 {
 			// This is an empty page at the end of a booklet.
 			if nup.BgColor != nil {

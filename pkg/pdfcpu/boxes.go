@@ -487,7 +487,7 @@ func parseBoxBy3MarginVals(s, s1, s2, s3 string, abs bool, u DisplayUnit) (*Box,
 }
 
 func parseBoxBy4Percentages(s, s1, s2, s3, s4 string) (*Box, error) {
-	// 10% 15.5% 10%
+	// 10% 15% 15% 10%
 	// Parse top margin.
 	s1 = s1[:len(s1)-1]
 	if len(s1) == 0 {
@@ -499,23 +499,24 @@ func parseBoxBy4Percentages(s, s1, s2, s3, s4 string) (*Box, error) {
 	}
 	tm := pct / 100
 
+	// Parse right margin.
 	if s2[len(s2)-1] != '%' {
 		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
-	// Parse hor margin.
 	s2 = s2[:len(s2)-1]
 	if len(s2) == 0 {
 		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
-	hm, err := parseBoxPercentage(s2)
+	pct, err = strconv.ParseFloat(s1, 64)
 	if err != nil {
 		return nil, err
 	}
+	rm := pct / 100
 
+	// Parse bottom margin.
 	if s3[len(s3)-1] != '%' {
 		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
-	// Parse bottom margin.
 	s3 = s3[:len(s3)-1]
 	if len(s3) == 0 {
 		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
@@ -525,11 +526,29 @@ func parseBoxBy4Percentages(s, s1, s2, s3, s4 string) (*Box, error) {
 		return nil, err
 	}
 	bm := pct / 100
+
+	// Parse left margin.
+	if s4[len(s4)-1] != '%' {
+		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+	}
+	s4 = s4[:len(s4)-1]
+	if len(s4) == 0 {
+		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+	}
+	pct, err = strconv.ParseFloat(s3, 64)
+	if err != nil {
+		return nil, err
+	}
+	lm := pct / 100
+
 	if tm+bm >= 1 {
 		return nil, errors.Errorf("pdfcpu: vertical margin overflow: %s", s)
 	}
+	if rm+lm >= 1 {
+		return nil, errors.Errorf("pdfcpu: horizontal margin overflow: %s", s)
+	}
 
-	return &Box{MLeft: hm, MRight: hm, MTop: tm, MBot: bm}, nil
+	return &Box{MLeft: lm, MRight: rm, MTop: tm, MBot: bm}, nil
 }
 
 func parseBoxBy4MarginVals(s, s1, s2, s3, s4 string, abs bool, u DisplayUnit) (*Box, error) {
@@ -554,14 +573,14 @@ func parseBoxBy4MarginVals(s, s1, s2, s3, s4 string, abs bool, u DisplayUnit) (*
 		return nil, err
 	}
 
-	// Parse botton margin.
+	// Parse bottom margin.
 	bm, err := strconv.ParseFloat(s3, 64)
 	if err != nil {
 		return nil, err
 	}
 
 	// Parse left margin.
-	lm, err := strconv.ParseFloat(s1, 64)
+	lm, err := strconv.ParseFloat(s4, 64)
 	if err != nil {
 		return nil, err
 	}

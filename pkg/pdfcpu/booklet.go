@@ -136,6 +136,61 @@ type bookletPage struct {
 	rotate bool
 }
 
+func nup2OutputPageNr(inputPageNr, inputPageCount int, pageNumbers []int) (int, bool) {
+	var p int
+	if inputPageNr%2 == 0 {
+		p = inputPageCount - 1 - inputPageNr/2
+	} else {
+		p = (inputPageNr - 1) / 2
+	}
+	pageNr := getPageNumber(pageNumbers, p)
+
+	// Rotate odd output pages (the back sides) by 180 degrees.
+	var rotate bool
+	if inputPageNr%4 < 2 {
+		rotate = true
+	}
+	return pageNr, rotate
+}
+
+func nup4OutputPageNr(inputPageNr int, inputPageCount int, pageNumbers []int) (int, bool) {
+	bookletPageNumber := inputPageNr / 4
+	var p int
+	if bookletPageNumber%2 == 0 {
+		// front side
+		switch inputPageNr % 4 {
+		case 0:
+			p = inputPageCount - 1 - bookletPageNumber
+		case 1:
+			p = bookletPageNumber
+		case 2:
+			p = inputPageCount/2 + bookletPageNumber
+		case 3:
+			p = inputPageCount/2 - 1 - bookletPageNumber
+		}
+	} else {
+		// back side
+		switch inputPageNr % 4 {
+		case 0:
+			p = bookletPageNumber
+		case 1:
+			p = inputPageCount - 1 - bookletPageNumber
+		case 2:
+			p = inputPageCount/2 - 1 - bookletPageNumber
+		case 3:
+			p = inputPageCount/2 + bookletPageNumber
+		}
+	}
+	pageNr := getPageNumber(pageNumbers, p)
+
+	// Rotate bottom row of each output page by 180 degrees.
+	var rotate bool
+	if inputPageNr%4 >= 2 {
+		rotate = true
+	}
+	return pageNr, rotate
+}
+
 func sortSelectedPagesForBooklet(pages IntSet, nup *NUp) []bookletPage {
 	pageNumbers := sortSelectedPages(pages)
 	pageCount := len(pageNumbers)
@@ -155,56 +210,17 @@ func sortSelectedPagesForBooklet(pages IntSet, nup *NUp) []bookletPage {
 	case 2:
 		// (output page, input page) = [(1,n), (2,1), (3, n-1), (4, 2), (5, n-2), (6, 3), ...]
 		for i := 0; i < pageCount; i++ {
-			var p int
-			if i%2 == 0 {
-				p = pageCount - 1 - i/2
-			} else {
-				p = (i - 1) / 2
-			}
-			bookletPages[i].number = getPageNumber(pageNumbers, p)
-
-			// Odd output pages (the back sides) should be upside-down.
-			if i%4 < 2 {
-				bookletPages[i].rotate = true
-			}
+			pageNr, rotate := nup2OutputPageNr(i, pageCount, pageNumbers)
+			bookletPages[i].number = pageNr
+			bookletPages[i].rotate = rotate
 		}
 
 	case 4:
 		// (output page, input page) = [(1,n), (2,1), (3, n/2+1), (4, n/2-0), (5, 2), (6, n-1), (7, n/2-1), (8, n/2+2) ...]
 		for i := 0; i < pageCount; i++ {
-			bookletPageNumber := i / 4
-			var p int
-			if bookletPageNumber%2 == 0 {
-				// front side
-				switch i % 4 {
-				case 0:
-					p = pageCount - 1 - bookletPageNumber
-				case 1:
-					p = bookletPageNumber
-				case 2:
-					p = pageCount/2 + bookletPageNumber
-				case 3:
-					p = pageCount/2 - 1 - bookletPageNumber
-				}
-			} else {
-				// back side
-				switch i % 4 {
-				case 0:
-					p = bookletPageNumber
-				case 1:
-					p = pageCount - 1 - bookletPageNumber
-				case 2:
-					p = pageCount/2 - 1 - bookletPageNumber
-				case 3:
-					p = pageCount/2 + bookletPageNumber
-				}
-			}
-			bookletPages[i].number = getPageNumber(pageNumbers, p)
-
-			// Bottom row of each output page should be rotated.
-			if i%4 >= 2 {
-				bookletPages[i].rotate = true
-			}
+			pageNr, rotate := nup4OutputPageNr(i, pageCount, pageNumbers)
+			bookletPages[i].number = pageNr
+			bookletPages[i].rotate = rotate
 		}
 	}
 
