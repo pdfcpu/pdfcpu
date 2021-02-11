@@ -296,7 +296,7 @@ func (t table) parseNamingTable(fd *ttf) error {
 	// table "name"
 	count := int(t.uint16(2))
 	stringOffset := t.uint16(4)
-	nameID := uint16(0)
+	var nameID uint16
 	baseOff := 6
 	for i := 0; i < count; i++ {
 		recOff := baseOff + i*12
@@ -406,7 +406,7 @@ func (t table) parseCMapFormat4(fd *ttf) error {
 		}
 		idDelta := uint32(t.uint16(deltaOff + i*2))
 		idRangeOff := int(t.uint16(rangeOff + i*2))
-		v := uint16(0)
+		var v uint16
 		for c, j := startCode, 0; c <= endCode && c != 0xFFFF; c++ {
 			if idRangeOff > 0 {
 				v = t.uint16(rangeOff + i*2 + idRangeOff + j*2)

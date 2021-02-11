@@ -48,3 +48,12 @@ func TestListFontsCommand(t *testing.T) {
 		t.Fatalf("%s list fonts: %v\n", msg, err)
 	}
 }
+
+func TestCreateCheatSheetsFontsCommand(t *testing.T) {
+	msg := "TestCreateCheatSheetsFontsCommand"
+	userFontName := filepath.Join(fontDir, "Songti.ttc")
+	cmd := cli.CreateCheatSheetsFontsCommand([]string{userFontName}, nil)
+	if _, err := cli.Process(cmd); err != nil {
+		t.Fatalf("%s create cheat sheets fonts: %v\n", msg, err)
+	}
+}

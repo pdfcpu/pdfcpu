@@ -516,7 +516,7 @@ func parseName(line *string) (*Name, error) {
 
 func processDictKeys(line *string, relaxed bool) (Dict, error) {
 	l := *line
-	eol := false
+	var eol bool
 	d := NewDict()
 	for !strings.HasPrefix(l, ">>") {
 		key, err := parseName(&l)
