@@ -17,9 +17,9 @@ It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO
 This is an effort to build a comprehensive PDF processing library from the ground up written in Go. Over time pdfcpu aims to support the standard range of PDF processing features and also any interesting use cases that may present themselves along the way.
 
 <p align="center">
-  <kbd><a href="https://pdfcpu.io/core/grid"><img src="resources/gridpdf.png" height="150"></a></kbd>&nbsp;
+  <kbd><a href="https://pdfcpu.io/generate/grid"><img src="resources/gridpdf.png" height="150"></a></kbd>&nbsp;
   <kbd><a href="https://pdfcpu.io/core/watermark"><img src="resources/wmi1abs.png" height="150"></a></kbd>&nbsp;
-  <kbd><a href="https://pdfcpu.io/core/nup"><img src="resources/nup9pdf.png" height="150"></a></kbd>&nbsp;
+  <kbd><a href="https://pdfcpu.io/generate/nup"><img src="resources/nup9pdf.png" height="150"></a></kbd>&nbsp;
   <kbd><a href="https://pdfcpu.io/fonts/fonts"><img src="resources/cjkv.png" height="150"></a></kbd>&nbsp;
   <kbd><a href="https://pdfcpu.io/core/stamp"><img src="resources/4exp.png" height="150"></a></kbd><br><br>
   <kbd><a href="https://pdfcpu.io/core/stamp"><img src="resources/sti.png" height="150"></a></kbd>&nbsp;
@@ -27,7 +27,7 @@ This is an effort to build a comprehensive PDF processing library from the groun
   <kbd><a href="https://pdfcpu.io/core/watermark"><img src="resources/wmi4.png" height="150"></a></kbd>&nbsp;<br><br>
   <kbd><a href="https://pdfcpu.io/generate/booklet"><img src="resources/book2A4p1.png" height="150"></a></kbd>
   <kbd><a href="https://pdfcpu.io/core/stamp"><img src="resources/stp.png" height="150"></a></kbd>&nbsp;
-  <kbd><a href="https://pdfcpu.io/core/grid"><img src="resources/gridimg.png" height="150"></a></kbd>
+  <kbd><a href="https://pdfcpu.io/generate/grid"><img src="resources/gridimg.png" height="150"></a></kbd>
   <kbd><a href="https://pdfcpu.io/core/stamp"><img src="resources/stRoundBorder.png" height="150"></a></kbd>
   <kbd><a href="https://pdfcpu.io/generate/booklet"><img src="resources/book4A4p1.png" height="150"></a></kbd>
 </p>
@@ -49,12 +49,12 @@ The main focus lies on strong support for batch processing and scripting via a r
 * [encrypt](https://pdfcpu.io/encrypt/encryptPDF)
 * [extract](https://pdfcpu.io/extract/extract)
 * [fonts](https://pdfcpu.io/fonts/fonts)
-* [grid](https://pdfcpu.io/core/grid)
+* [grid](https://pdfcpu.io/generate/grid)
 * [import](https://pdfcpu.io/generate/import)
 * [info](https://pdfcpu.io/info)
 * [keywords](https://pdfcpu.io/keywords/keywords)
 * [merge](https://pdfcpu.io/core/merge)
-* [nup](https://pdfcpu.io/core/nup)
+* [nup](https://pdfcpu.io/generate/nup)
 * [optimize](https://pdfcpu.io/core/optimize)
 * [pages](https://pdfcpu.io/pages/pages)
 * [permissions](https://pdfcpu.io/encrypt/perm_add)
