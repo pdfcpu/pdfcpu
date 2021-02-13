@@ -347,6 +347,10 @@ func parseObjectStream(osd *ObjectStreamDict) error {
 	decodedContent := osd.Content
 	prolog := decodedContent[:osd.FirstObjOffset]
 
+	// The separator used in the prolog shall be white space
+	// but some PDF writers use 0x00.
+	prolog = bytes.ReplaceAll(prolog, []byte{0x00}, []byte{0x20})
+
 	objs := strings.Fields(string(prolog))
 	if len(objs)%2 > 0 {
 		return errors.New("pdfcpu: parseObjectStream: corrupt object stream dict")
