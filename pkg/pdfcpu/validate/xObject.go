@@ -583,8 +583,12 @@ func validateImageStreamDict(xRefTable *pdf.XRefTable, sd *pdf.StreamDict, isAlt
 }
 
 func validateFormStreamDictPart1(xRefTable *pdf.XRefTable, sd *pdf.StreamDict, dictName string) error {
-
-	_, err := validateIntegerEntry(xRefTable, sd.Dict, dictName, "FormType", OPTIONAL, pdf.V10, func(i int) bool { return i == 1 })
+	var err error
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		_, err = validateNumberEntry(xRefTable, sd.Dict, dictName, "FormType", OPTIONAL, pdf.V10, func(f float64) bool { return f == 1. })
+	} else {
+		_, err = validateIntegerEntry(xRefTable, sd.Dict, dictName, "FormType", OPTIONAL, pdf.V10, func(i int) bool { return i == 1 })
+	}
 	if err != nil {
 		return err
 	}
