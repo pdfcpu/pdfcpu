@@ -725,7 +725,9 @@ func writeXRefStream(ctx *Context) error {
 
 	xRefStreamDict.Insert("Size", Integer(*xRefTable.Size))
 
+	// Include xref stream dict obj within xref stream dict.
 	offset := ctx.Write.Offset
+	ctx.Write.SetWriteOffset(objNumber)
 
 	i2Base := int64(*ctx.Size)
 	if offset > i2Base {

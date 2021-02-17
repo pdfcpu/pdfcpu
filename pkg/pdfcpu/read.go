@@ -432,7 +432,7 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, xsd *XRefStreamDict, ctx 
 	log.Read.Printf("extractXRefTableEntriesFromXRefStream: len(buf):%d objCount*xrefEntryLen:%d\n", len(buf), objCount*xrefEntryLen)
 	if len(buf) < objCount*xrefEntryLen {
 		// Sometimes there is an additional xref entry not accounted for by "Index".
-		// We ignore such a entries and do not treat this as an error.
+		// We ignore such entries and do not treat this as an error.
 		return errors.New("pdfcpu: extractXRefTableEntriesFromXRefStream: corrupt xrefstream")
 	}
 
@@ -608,22 +608,17 @@ func parseXRefStream(rd io.Reader, offset *int64, ctx *Context) (prevOffset *int
 		return nil, err
 	}
 
-	if ctx.XRefTable.Exists(*objectNumber) {
-		log.Read.Printf("parseXRefStream: Skip entry %d - already assigned\n", *objectNumber)
-	} else {
-		// Create xRefTableEntry for XRefStreamDict.
-		entry :=
-			XRefTableEntry{
-				Free:       false,
-				Offset:     offset,
-				Generation: generationNumber,
-				Object:     *sd}
+	entry :=
+		XRefTableEntry{
+			Free:       false,
+			Offset:     offset,
+			Generation: generationNumber,
+			Object:     *sd}
 
-		log.Read.Printf("parseXRefStream: Insert new xRefTable entry for Object %d\n", *objectNumber)
+	log.Read.Printf("parseXRefStream: Insert new xRefTable entry for Object %d\n", *objectNumber)
 
-		ctx.Table[*objectNumber] = &entry
-		ctx.Read.XRefStreams[*objectNumber] = true
-	}
+	ctx.Table[*objectNumber] = &entry
+	ctx.Read.XRefStreams[*objectNumber] = true
 	prevOffset = sd.PreviousOffset
 
 	log.Read.Println("parseXRefStream: end")
