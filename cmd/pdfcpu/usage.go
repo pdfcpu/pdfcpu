@@ -25,36 +25,37 @@ Usage:
    
 The commands are:
 
-   attachments list, add, remove, extract embedded file attachments
-   booklet     arrange pages onto larger sheets of paper to make a booklet or zine
-   boxes       list, add, remove page boundaries for selected pages
-   changeopw   change owner password
-   changeupw   change user password
-   collect     create custom sequence of selected pages
-   crop        set cropbox for selected pages
-   decrypt     remove password protection
-   encrypt     set password protection		
-   extract     extract images, fonts, content, pages or metadata
-   fonts       install, list supported fonts, create cheat sheets
-   grid        rearrange pages or images for enhanced browsing experience
-   import      import/convert images to PDF
-   info        print file info
-   keywords    list, add, remove keywords
-   merge       concatenate PDFs
-   nup         rearrange pages or images for reduced number of pages
-   optimize    optimize PDF by getting rid of redundant page resources
-   pages       insert, remove selected pages
-   paper       print list of supported paper sizes
-   permissions list, set user access permissions
-   portfolio   list, add, remove, extract portfolio entries with optional description
-   properties  list, add, remove document properties
-   rotate      rotate pages
-   split       split up a PDF by span or bookmark
-   stamp       add, remove, update Unicode text, image or PDF stamps for selected pages
-   trim        create trimmed version of selected pages
-   validate    validate PDF against PDF 32000-1:2008 (PDF 1.7)
-   version     print version
-   watermark   add, remove, update Unicode text, image or PDF watermarks for selected pages
+   attachments   list, add, remove, extract embedded file attachments
+   booklet       arrange pages onto larger sheets of paper to make a booklet or zine
+   boxes         list, add, remove page boundaries for selected pages
+   changeopw     change owner password
+   changeupw     change user password
+   collect       create custom sequence of selected pages
+   crop          set cropbox for selected pages
+   decrypt       remove password protection
+   encrypt       set password protection		
+   extract       extract images, fonts, content, pages or metadata
+   fonts         install, list supported fonts, create cheat sheets
+   grid          rearrange pages or images for enhanced browsing experience
+   import        import/convert images to PDF
+   info          print file info
+   keywords      list, add, remove keywords
+   merge         concatenate PDFs
+   nup           rearrange pages or images for reduced number of pages
+   optimize      optimize PDF by getting rid of redundant page resources
+   pages         insert, remove selected pages
+   paper         print list of supported paper sizes
+   permissions   list, set user access permissions
+   portfolio     list, add, remove, extract portfolio entries with optional description
+   properties    list, add, remove document properties
+   rotate        rotate pages
+   selectedpages print definition of the -pages flag
+   split         split up a PDF by span or bookmark
+   stamp         add, remove, update Unicode text, image or PDF stamps for selected pages
+   trim          create trimmed version of selected pages
+   validate      validate PDF against PDF 32000-1:2008 (PDF 1.7)
+   version       print version
+   watermark     add, remove, update Unicode text, image or PDF watermarks for selected pages
 
    All instantly recognizable command prefixes are supported eg. val for validation
    One letter Unix style abbreviations supported for flags and command parameters.
@@ -150,7 +151,7 @@ The merge modes are:
 	usageLongExtract = `Export inFile's images, fonts, content or pages into outDir.
 
       mode ... extraction mode
-     pages ... selected pages
+     pages ... Please refer to "pdfcpu selectedpages"
     inFile ... input pdf file
     outDir ... output directory
 
@@ -162,16 +163,16 @@ content ... extract raw page content
    page ... extract single page PDFs
    meta ... extract all metadata (page selection does not apply)
    
-` + usagePageSelection
+`
 
 	usageTrim     = "usage: pdfcpu trim -p(ages) selectedPages inFile [outFile]" + generalFlags
 	usageLongTrim = `Generate a trimmed version of inFile for selected pages.
 
-     pages ... selected pages
+     pages ... Please refer to "pdfcpu selectedpages"
     inFile ... input pdf file
    outFile ... output pdf file
    
-` + usagePageSelection
+`
 
 	usageAttachList    = "pdfcpu attachments list    inFile"
 	usageAttachAdd     = "pdfcpu attachments add     inFile file..."
@@ -210,7 +211,7 @@ content ... extract raw page content
            pdfcpu portfolio add test.pdf test.mp3 test.mkv
 
     Adding attachments to portfolio with description: 
-           pdfcpu portfolio add test.pdf 'test.mp3, Test sound file' 'test.mkv, Test video file'
+           pdfcpu portfolio add test.pdf "test.mp3, Test sound file" "test.mkv, Test video file"
     `
 
 	usagePermList = "pdfcpu permissions list [-upw userpw] [-opw ownerpw] inFile"
@@ -276,7 +277,7 @@ content ... extract raw page content
 
 <description> is a comma separated configuration string containing these optional entries:
 	
-   (defaults: 'font:Helvetica, points:24, pos:c, off:0,0 s:0.5 rel, rot:0, d:1, op:1, m:0 and for all colors: 0.5 0.5 0.5')
+   (defaults: "font:Helvetica, points:24, pos:c, off:0,0 s:0.5 rel, rot:0, d:1, op:1, m:0 and for all colors: 0.5 0.5 0.5")
 
    fontname:         Please refer to "pdfcpu fonts list"
    points:           fontsize in points, in combination with absolute scaling only.
@@ -319,15 +320,15 @@ A color value: 3 color intensities, where 0.0 < i < 1.0, eg 1.0,
 
 All configuration string parameters support completion.
 
-e.g. 'pos:bl, off: 20 5'   'rot:45'                 'op:0.5, s:0.5 abs, rot:0'
-     'd:2'                 's:.75 abs, points:48'   'rot:-90, scale:0.75 rel'
-     'f:Courier, s:0.75, c: 0.5 0.0 0.0, rot:20'  
+e.g. "pos:bl, off: 20 5"   "rot:45"                 "op:0.5, s:0.5 abs, rot:0"
+     "d:2"                 "s:.75 abs, points:48"   "rot:-90, scale:0.75 rel"
+     "f:Courier, s:0.75, c: 0.5 0.0 0.0, rot:20"  
   
      
-` + usagePageSelection
+`
 
-	usageStampAdd    = "pdfcpu stamp add    [-p(ages) selectedPages] -m(ode) text|image|pdf string|file description inFile [outFile]"
-	usageStampUpdate = "pdfcpu stamp update [-p(ages) selectedPages] -m(ode) text|image|pdf string|file description inFile [outFile]"
+	usageStampAdd    = "pdfcpu stamp add    [-p(ages) selectedPages] -m(ode) text|image|pdf string|file -- description inFile [outFile]"
+	usageStampUpdate = "pdfcpu stamp update [-p(ages) selectedPages] -m(ode) text|image|pdf string|file -- description inFile [outFile]"
 	usageStampRemove = "pdfcpu stamp remove [-p(ages) selectedPages] inFile [outFile]" + generalFlags
 
 	usageStamp = "usage: " + usageStampAdd +
@@ -336,7 +337,7 @@ e.g. 'pos:bl, off: 20 5'   'rot:45'                 'op:0.5, s:0.5 abs, rot:0'
 
 	usageLongStamp = `Process stamping for selected pages. 
 
-      pages ... selected pages
+      pages ... Please refer to "pdfcpu selectedpages"
         upw ... user password
         opw ... owner password
        mode ... text, image, pdf
@@ -349,8 +350,8 @@ description ... fontname, points, position, offset, scalefactor, aligntext, rota
 
 ` + usageWMMode + usageWMDescription
 
-	usageWatermarkAdd    = "pdfcpu watermark add    [-p(ages) selectedPages] -m(ode) text|image|pdf string|file description inFile [outFile]"
-	usageWatermarkUpdate = "pdfcpu watermark update [-p(ages) selectedPages] -m(ode) text|image|pdf string|file description inFile [outFile]"
+	usageWatermarkAdd    = "pdfcpu watermark add    [-p(ages) selectedPages] -m(ode) text|image|pdf string|file -- description inFile [outFile]"
+	usageWatermarkUpdate = "pdfcpu watermark update [-p(ages) selectedPages] -m(ode) text|image|pdf string|file -- description inFile [outFile]"
 	usageWatermarkRemove = "pdfcpu watermark remove [-p(ages) selectedPages] inFile [outFile]" + generalFlags
 
 	usageWatermark = "usage: " + usageWatermarkAdd +
@@ -359,7 +360,7 @@ description ... fontname, points, position, offset, scalefactor, aligntext, rota
 
 	usageLongWatermark = `Process watermarking for selected pages. 
 
-      pages ... selected pages
+      pages ... Please refer to "pdfcpu selectedpages"
        mode ... text, image, pdf
      string ... display string for text based watermarks
        file ... image or pdf file
@@ -370,7 +371,7 @@ description ... fontname, points, position, offset, scalefactor, aligntext, rota
 
 ` + usageWMMode + usageWMDescription
 
-	usageImportImages     = "usage: pdfcpu import [description] outFile imageFile..." + generalFlags
+	usageImportImages     = "usage: pdfcpu import [-- description] outFile imageFile..." + generalFlags
 	usageLongImportImages = `Turn image files into a PDF page sequence and write the result to outFile.
 If outFile already exists the page sequence will be appended.
 Each imageFile will be rendered to a separate page.
@@ -384,12 +385,12 @@ description ... dimensions, format, position, offset, scale factor, boxes
 
   optional entries:
 
-      (defaults: d:595 842, f:A4, pos:full, off:0 0, s:0.5 rel, dpi:72)
+      (defaults: "d:595 842, f:A4, pos:full, off:0 0, s:0.5 rel, dpi:72")
 
   dimensions: (width height) in given display unit eg. '400 200' setting the media box
 
   formsize, papersize: eg. A4, Letter, Legal...
-                           Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
+                           Please refer to "pdfcpu paper" for a comprehensive list of defined paper sizes.
                            Append 'L' to enforce landscape mode. (eg. A3L)
                            Append 'P' to enforce portrait mode. (eg. TabloidP)
 
@@ -403,10 +404,10 @@ description ... dimensions, format, position, offset, scale factor, boxes
   
   All configuration string parameters support completion.
 
-  e.g. 'f:A5, pos:c                              ... render the image centered on A5 with relative scaling 0.5.'
-       'd:300 600, pos:bl, off:20 20, s:1.0 abs' ... render the image anchored to bottom left corner with offset 20,20 and abs. scaling 1.0.
-       'pos:full'                                ... render the image to a page with corresponding dimensions.
-       'f:A4, pos:c, dpi:300'                    ... render the image centered on A4 respecting a destination resolution of 300 dpi.
+  e.g. "f:A5, pos:c"                             ... render the image centered on A5 with relative scaling 0.5.'
+       "d:300 600, pos:bl, off:20 20, s:1.0 abs" ... render the image anchored to bottom left corner with offset 20,20 and abs. scaling 1.0.
+       "pos:full"                                ... render the image to a page with corresponding dimensions.
+       "f:A4, pos:c, dpi:300"                    ... render the image centered on A4 respecting a destination resolution of 300 dpi.
        `
 
 	usagePagesInsert = "pdfcpu pages insert [-p(ages) selectedPages] [-m(ode) before|after] inFile [outFile]"
@@ -417,29 +418,29 @@ description ... dimensions, format, position, offset, scale factor, boxes
 
 	usageLongPages = `Manage pages.
 
-      pages ... selected pages
+      pages ... Please refer to "pdfcpu selectedpages"
        mode ... before, after (default: before)
      inFile ... input pdf file
     outFile ... output pdf file
 
-` + usagePageSelection
+`
 
 	usageRotate     = "usage: pdfcpu rotate [-p(ages) selectedPages] inFile rotation [outFile]" + generalFlags
 	usageLongRotate = `Rotate selected pages by a multiple of 90 degrees. 
 
-      pages ... selected pages
+      pages ... Please refer to "pdfcpu selectedpages"
      inFile ... input pdf file
    rotation ... a multiple of 90 degrees for clockwise rotation
     outFile ... output pdf file
 
-` + usagePageSelection
+`
 
-	usageNUp     = "usage: pdfcpu nup [-p(ages) selectedPages] [description] outFile n inFile|imageFiles..." + generalFlags
+	usageNUp     = "usage: pdfcpu nup [-p(ages) selectedPages] [-- description] outFile n inFile|imageFiles..." + generalFlags
 	usageLongNUp = `Rearrange existing PDF pages or images into a sequence of page grids.
 This reduces the number of pages and therefore the required print time.
 If the input is one imageFile a single page n-up PDF gets generated.
 
-      pages ... selected pages for inFile only
+      pages ... inFile only, please refer to "pdfcpu selectedpages"
 description ... dimensions, format, orientation
     outFile ... output pdf file
           n ... the n-Up value (see below for details)
@@ -459,14 +460,14 @@ description ... dimensions, format, orientation
 
     optional entries:
   
-        (defaults: di:595 842, fo:A4, or:rd, bo:on, ma:3)
+        (defaults: "di:595 842, fo:A4, or:rd, bo:on, ma:3")
   
     dimensions:      (width,height) in given display unit eg. '400 200'
     formsize:        The output sheet size, eg. A4, Letter, Legal...
                      Append 'L' to enforce landscape mode. (eg. A3L)
                      Append 'P' to enforce portrait mode. (eg. TabloidP)
                      Only one of dimensions or format is allowed.
-                     Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
+                     Please refer to "pdfcpu paper" for a comprehensive list of defined paper sizes.
                      "papersize" is also accepted.
     orientation:     one of rd ... right down (=default)
                             dr ... down right
@@ -480,28 +481,28 @@ description ... dimensions, format, orientation
 
 All configuration string parameters support completion.
     
-Examples: "pdfcpu nup out.pdf 4 in.pdf"
-          Rearrange pages of in.pdf into 2x2 grids and write result to out.pdf using the default orientation
-          and default paper size A4. in.pdf's page size will be preserved.
+Examples: pdfcpu nup out.pdf 4 in.pdf
+           Rearrange pages of in.pdf into 2x2 grids and write result to out.pdf using the default orientation
+           and default paper size A4. in.pdf's page size will be preserved.
                                  
-          "pdfcpu nup -pages=3- out.pdf 6 in.pdf"
-          Rearrange selected pages of in.pdf (all pages starting with page 3) into 3x2 grids and
-          write result to out.pdf using the default orientation and default paper size A4.
-          in.pdf's page size will be preserved.
+          pdfcpu nup -pages=3- out.pdf 6 in.pdf
+           Rearrange selected pages of in.pdf (all pages starting with page 3) into 3x2 grids and
+           write result to out.pdf using the default orientation and default paper size A4.
+           in.pdf's page size will be preserved.
 
-          "pdfcpu nup out.pdf 9 logo.jpg"
-          Arrange instances of logo.jpg into a 3x3 grid and write result to out.pdf using the A4 default format.
+          pdfcpu nup out.pdf 9 logo.jpg
+           Arrange instances of logo.jpg into a 3x3 grid and write result to out.pdf using the A4 default format.
           
-          "pdfcpu nup 'f:Tabloid' out.pdf 4 *.jpg" 
-          Rearrange all jpg files into 2x2 grids and write result to out.pdf using the Tabloid format
-          and the default orientation.
+          pdfcpu nup -- "f:Tabloid" out.pdf 4 *.jpg 
+           Rearrange all jpg files into 2x2 grids and write result to out.pdf using the Tabloid format
+           and the default orientation.
 
-` + usagePageSelection
+`
 
-	usageBooklet     = "usage: pdfcpu booklet [-p(ages) selectedPages] [description] outFile n inFile|imageFiles..." + generalFlags
+	usageBooklet     = "usage: pdfcpu booklet [-p(ages) selectedPages] [-- description] outFile n inFile|imageFiles..." + generalFlags
 	usageLongBooklet = `Arrange a sequence of pages onto larger sheets of paper for a small book or zine.
 
-              pages       ... selected pages for inFile only
+              pages       ... for inFile only, please refer to "pdfcpu selectedpages"
               description ... dimensions, formsize, border, margin
               outFile     ... output pdf file
               n           ... the n-Up value: 2 or 4
@@ -525,14 +526,14 @@ set of pages after the top set of pages in the booklet. Then fold the half sheet
 
 <description> is a comma separated configuration string containing these optional entries:
 
-   (defaults: 'dim:595 842, formsize:A4, border:off, guides:off, margin:0')
+   (defaults: "dim:595 842, formsize:A4, border:off, guides:off, margin:0")
 
    dimensions:       (width,height) of the output sheet in given display unit eg. '400 200'
    formsize:         The output sheet size, eg. A4, Letter, Legal...
                      Append 'L' to enforce landscape mode. (eg. A3L)
                      Append 'P' to enforce portrait mode. (eg. TabloidP)
                      Only one of dimensions or format is allowed.
-                     Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
+                     Please refer to "pdfcpu paper" for a comprehensive list of defined paper sizes.
                      "papersize" is also accepted.
    border:           on/off true/false
    guides:           on/off true/false prints folding and cutting lines
@@ -542,23 +543,23 @@ set of pages after the top set of pages in the booklet. Then fold the half sheet
 
 All configuration string parameters support completion.
 
-Examples: "pdfcpu booklet 'formsize:Letter' out.pdf 2 in.pdf"
+Examples: pdfcpu booklet -- "formsize:Letter" out.pdf 2 in.pdf
            Arrange pages of in.pdf 2 per sheet side (4 per sheet, back and front) onto out.pdf
 
-          "pdfcpu booklet 'formsize:Ledger' out.pdf 4 in.pdf"
+          pdfcpu booklet -- "formsize:Ledger" out.pdf 4 in.pdf"
            Arrange pages of in.pdf 4 per sheet side (8 per sheet, back and front) onto out.pdf
 
-           "pdfcpu booklet 'formsize:A4' out.pdf 2 in.pdf"
+          pdfcpu booklet -- "formsize:A4" out.pdf 2 in.pdf
            Arrange pages of in.pdf 2 per sheet side (4 per sheet, back and front) onto out.pdf
 `
 
-	usageGrid     = "usage: pdfcpu grid [-p(ages) selectedPages] [description] outFile m n inFile|imageFiles..." + generalFlags
+	usageGrid     = "usage: pdfcpu grid [-p(ages) selectedPages] [-- description] outFile m n inFile|imageFiles..." + generalFlags
 	usageLongGrid = `Rearrange PDF pages or images for enhanced browsing experience.
 For a PDF inputfile each output page represents a grid of input pages.
 For image inputfiles each output page shows all images laid out onto grids of given paper size. 
 This command produces poster like PDF pages convenient for page and image browsing. 
 
-      pages ... selected pages for inFile only
+      pages ... Please refer to "pdfcpu selectedpages"
 description ... dimensions, format, orientation
     outFile ... output pdf file
           m ... grid columns
@@ -570,14 +571,14 @@ description ... dimensions, format, orientation
 
     optional entries:
   
-        (defaults: d:595 842, f:A4, o:rd, bo:on, m:3)
+        (defaults: "d:595 842, f:A4, o:rd, bo:on, m:3")
   
     dimensions:   (width height) in given display unit eg. '400 200'
     formsize:     The output sheet size, eg. A4, Letter, Legal...
                   Append 'L' to enforce landscape mode. (eg. A3L)
                   Append 'P' to enforce portrait mode. (eg. TabloidP)
                   Only one of dimensions or format is allowed.
-                  Please refer to "pdfcpu help paper" for a comprehensive list of defined paper sizes.
+                  Please refer to "pdfcpu paper" for a comprehensive list of defined paper sizes.
                   "papersize" is also accepted.
     orientation:  one of rd ... right down (=default)
                          dr ... down right
@@ -589,22 +590,22 @@ description ... dimensions, format, orientation
 
 All configuration string parameters support completion.
 
-Examples: "pdfcpu grid out.pdf 1 10 in.pdf"
-          Rearrange pages of in.pdf into 1x10 grids and write result to out.pdf using the default orientation.
-          The output page size is the result of a 1(hor)x10(vert) page grid using in.pdf's page size.
+Examples: pdfcpu grid out.pdf 1 10 in.pdf
+           Rearrange pages of in.pdf into 1x10 grids and write result to out.pdf using the default orientation.
+           The output page size is the result of a 1(hor)x10(vert) page grid using in.pdf's page size.
 
-          "pdfcpu grid 'LegalL' out.pdf 2 2 in.pdf" 
-          Rearrange pages of in.pdf into 2x2 grids and write result to out.pdf using the default orientation.
-          The output page size is the result of a 2(hor)x2(vert) page grid using page size Legal in landscape mode.
+          pdfcpu grid -- "LegalL" out.pdf 2 2 in.pdf 
+           Rearrange pages of in.pdf into 2x2 grids and write result to out.pdf using the default orientation.
+           The output page size is the result of a 2(hor)x2(vert) page grid using page size Legal in landscape mode.
 
-          "pdfcpu grid 'o:rd' out.pdf 3 2 in.pdf" 
-          Rearrange pages of in.pdf into 3x2 grids and write result to out.pdf using orientation 'right down'.
-          The output page size is the result of a 3(hor)x2(vert) page grid using in.pdf's page size.
+          pdfcpu grid -- "o:rd" out.pdf 3 2 in.pdf 
+           Rearrange pages of in.pdf into 3x2 grids and write result to out.pdf using orientation 'right down'.
+           The output page size is the result of a 3(hor)x2(vert) page grid using in.pdf's page size.
 
-          "pdfcpu grid 'd:400 400' out.pdf 6 8 *.jpg"
-          Arrange imagefiles onto a 6x8 page grid and write result to out.pdf using a grid cell size of 400x400.
+          pdfcpu grid -- "d:400 400" out.pdf 6 8 *.jpg
+           Arrange imagefiles onto a 6x8 page grid and write result to out.pdf using a grid cell size of 400x400.
 
-` + usagePageSelection
+`
 
 	paperSizes = `This is a list of predefined paper sizes:
    
@@ -673,10 +674,13 @@ Examples: "pdfcpu grid out.pdf 1 10 in.pdf"
 	usagePaper     = "usage: pdfcpu paper"
 	usageLongPaper = "Print a list of supported paper sizes."
 
+	usageSelectedPages     = "usage: pdfcpu selectedpages"
+	usageLongSelectedPages = "Print definition of the -pages flag."
+
 	usageInfo     = "usage: pdfcpu info [-p(ages) selectedPages] inFile" + generalFlags
 	usageLongInfo = `Print info about a PDF file.
    
-   pages ... selected pages
+   pages ... Please refer to "pdfcpu selectedpages"
   inFile ... input pdf file`
 
 	usageFontsList       = "pdfcpu fonts list"
@@ -727,11 +731,11 @@ nameValuePair ... 'name = value'
 	usageCollect     = "usage: pdfcpu collect -pages selectedPages inFile [outFile]" + generalFlags
 	usageLongCollect = `Create custom sequence of selected pages. 
 
-        pages ... selected pages
+        pages ... Please refer to "pdfcpu selectedpages"
        inFile ... input pdf file
       outFile ... output pdf file
   
-  ` + usagePageSelection
+  `
 
 	usageBoxDescription = `
 box:
@@ -757,43 +761,43 @@ box:
                            or xmin:0 ymin:10 xmax:200 ymax:150
 
    Expressed as margins within parent box:
-      '0.5 0.5 20 20'      absolute, top:.5 right:.5 bottom:20 left:20
-      '0.5 0.5 .1 .1 abs'  absolute, top:.5 right:.5 bottom:.1 left:.1
-      '0.5 0.5 .1 .1 rel'  relative, top:.5 right:.5 bottom:20 left:20
-      '10'                 absolute, top,right,bottom,left:10
-      '10 5'               absolute, top,bottom:10  left,right:5
-      '10 5 15'            absolute, top:10 left,right:5 bottom:15
-      '5%'                 relative, top,right,bottom,left:5% of parent box width/height
-      '.1 .5'              absolute, top,bottom:.1  left,right:.5 
-      '.1 .3 rel'          relative, top,bottom:.1=10%  left,right:.3=30%
-      '-10'                absolute, top,right,bottom,left:-10 relative to parent box (for crop box the media box gets expanded)
+      "0.5 0.5 20 20"      absolute, top:.5 right:.5 bottom:20 left:20
+      "0.5 0.5 .1 .1 abs"  absolute, top:.5 right:.5 bottom:.1 left:.1
+      "0.5 0.5 .1 .1 rel"  relative, top:.5 right:.5 bottom:20 left:20
+      "10"                 absolute, top,right,bottom,left:10
+      "10 5"               absolute, top,bottom:10  left,right:5
+      "10 5 15"            absolute, top:10 left,right:5 bottom:15
+      "5%"                 relative, top,right,bottom,left:5% of parent box width/height
+      ".1 .5"              absolute, top,bottom:.1  left,right:.5 
+      ".1 .3 rel"          relative, top,bottom:.1=10%  left,right:.3=30%
+      "-10"                absolute, top,right,bottom,left:-10 relative to parent box (for crop box the media box gets expanded)
 
    Anchored within parent box, use dim and optionally pos, off:
-      'dim: 200 300 abs'                   centered, 200x300 display units
-      'pos:c, off:0 0, dim: 200 300 abs'   centered, 200x300 display units
-      'pos:tl, off:5 5, dim: 50% 50% rel'  anchored to top left corner, 50% width/height of parent box, offset by 5/5 display units
-      'pos:br, off:-5 -5, dim: .5 .5 rel'  anchored to bottom right corner, 50% width/height of parent box, offset by -5/-5 display units
+      "dim: 200 300 abs"                   centered, 200x300 display units
+      "pos:c, off:0 0, dim: 200 300 abs"   centered, 200x300 display units
+      "pos:tl, off:5 5, dim: 50% 50% rel"  anchored to top left corner, 50% width/height of parent box, offset by 5/5 display units
+      "pos:br, off:-5 -5, dim: .5 .5 rel"  anchored to bottom right corner, 50% width/height of parent box, offset by -5/-5 display units
 
 
 `
 
-	usageCrop     = "usage: pdfcpu crop [-p(ages) selectedPages] description inFile [outFile]" + generalFlags
+	usageCrop     = "usage: pdfcpu crop [-p(ages) selectedPages] -- description inFile [outFile]" + generalFlags
 	usageLongCrop = `Set crop box for selected pages. 
 
-        pages ... selected pages
+        pages ... Please refer to "pdfcpu selectedpages"
   description ... crop box definition abs. or rel. to media box
        inFile ... input pdf file
       outFile ... output pdf file
 
 Examples:
-   pdfcpu crop '[0 0 500 500]' in.pdf ... crop a 500x500 points region located in lower left corner
-   pdfcpu crop -u mm '20' in.pdf      ... crop relative to media box using a 20mm margin
+   pdfcpu crop -- "[0 0 500 500]" in.pdf ... crop a 500x500 points region located in lower left corner
+   pdfcpu crop -u mm -- "20" in.pdf      ... crop relative to media box using a 20mm margin
 
-` + usageBoxDescription + usagePageSelection
+` + usageBoxDescription
 
-	usageBoxesList   = "pdfcpu boxes list    [-p(ages) selectedPages] '[boxTypes]' inFile"
-	usageBoxesAdd    = "pdfcpu boxes add     [-p(ages) selectedPages] description  inFile [outFile]"
-	usageBoxesRemove = "pdfcpu boxes remove  [-p(ages) selectedPages] 'boxTypes'   inFile [outFile]" + generalFlags
+	usageBoxesList   = "pdfcpu boxes list    [-p(ages) selectedPages] [-- boxTypes] inFile"
+	usageBoxesAdd    = "pdfcpu boxes add     [-p(ages) selectedPages] -- description inFile [outFile]"
+	usageBoxesRemove = "pdfcpu boxes remove  [-p(ages) selectedPages] -- boxTypes inFile [outFile]" + generalFlags
 
 	usageBoxes = "usage: " + usageBoxesList +
 		"\n       " + usageBoxesAdd +
@@ -802,6 +806,7 @@ Examples:
 	usageLongBoxes = `Manage page boundaries.
 
      boxTypes ... comma separated list of box types: m(edia), c(rop), t(rim), b(leed), a(rt)
+        pages ... Please refer to "pdfcpu selectedpages"
   description ... box definitions abs. or rel. to parent box
        inFile ... input pdf file
       outFile ... output pdf file
@@ -813,11 +818,12 @@ Examples:
      a(rt): {box} | m(edia) | c(rop) | b(leed) | t(rim)
    b(leed): {box} | m(edia) | c(rop) | a(rt) | t(rim)
     t(rim): {box} | m(edia) | c(rop) | a(rt) | b(leed)
+
 Examples: 
    pdfcpu box list in.pdf
-   pdfcpu box l 'bleed,trim' in.pdf
-   pdfcpu box add 'crop:[10 10 200 200], trim:5, bleed:trim' in.pdf
-   pdfcpu box rem 't,b' in.pdf
+   pdfcpu box l -- "bleed,trim" in.pdf
+   pdfcpu box add -- "crop:[10 10 200 200], trim:5, bleed:trim" in.pdf
+   pdfcpu box rem -- "t,b" in.pdf
      
-` + usageBoxDescription + usagePageSelection
+` + usageBoxDescription
 )

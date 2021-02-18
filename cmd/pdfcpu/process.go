@@ -72,6 +72,10 @@ func printPaperSizes(conf *pdfcpu.Configuration) {
 	fmt.Fprintln(os.Stderr, paperSizes)
 }
 
+func printSelectedPages(conf *pdfcpu.Configuration) {
+	fmt.Fprintln(os.Stderr, usagePageSelection)
+}
+
 func printVersion(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) != 0 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageVersion)
