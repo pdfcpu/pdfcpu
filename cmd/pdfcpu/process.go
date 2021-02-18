@@ -1460,7 +1460,7 @@ func processRemoveBoxesCommand(conf *pdfcpu.Configuration) {
 
 func processCropCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) < 1 || len(flag.Args()) > 3 {
-		fmt.Fprintf(os.Stderr, "usage: %s\n", usageCrop)
+		fmt.Fprintf(os.Stderr, "%s\n", usageCrop)
 		os.Exit(1)
 	}
 
