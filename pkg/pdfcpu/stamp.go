@@ -151,7 +151,7 @@ type formCache map[types.Rectangle]*IndirectRef
 type pdfResources struct {
 	content []byte
 	resDict *IndirectRef
-	bb      *Rectangle
+	bb      *Rectangle // visible region in user space
 }
 
 // Watermark represents the basic structure and command details for the commands "Stamp" and "Watermark".
@@ -202,7 +202,7 @@ type Watermark struct {
 	// page specific
 	bb      *Rectangle   // bounding box of the form representing this watermark.
 	vp      *Rectangle   // page dimensions.
-	pageRot float64      // page rotation in effect.
+	pageRot int          // page rotation in effect.
 	form    *IndirectRef // Forms are dependent on given page dimensions.
 
 	// house keeping
@@ -279,7 +279,7 @@ func (wm Watermark) String() string {
 		"renderMode: %d\n"+
 		"bbox:%s\n"+
 		"vp:%s\n"+
-		"pageRotation: %.1f\n",
+		"pageRotation: %d\n",
 		t, s, wm.typ(),
 		wm.FontName, wm.FontSize,
 		wm.Page,
@@ -791,7 +791,7 @@ func (wm *Watermark) calcBoundingBox(pageNr int) {
 		}
 		wm.width = int(wm.bbPDF.Width())
 		wm.height = int(wm.bbPDF.Height())
-		bb = wm.bbPDF
+		bb = wm.bbPDF.CroppedCopy(0)
 	}
 
 	ar := bb.AspectRatio()
@@ -1035,12 +1035,14 @@ func createPDFRes(ctx, otherCtx *Context, pageNr int, migrated map[int]int, wm *
 	}
 
 	// Create an object for resource dict in xRefTable.
-	ir, err := xRefTable.IndRefForNewObject(inhPAttrs.resources)
-	if err != nil {
-		return err
+	if inhPAttrs.resources != nil {
+		ir, err := xRefTable.IndRefForNewObject(inhPAttrs.resources)
+		if err != nil {
+			return err
+		}
+		pdfRes.resDict = ir
 	}
 
-	pdfRes.resDict = ir
 	pdfRes.bb = viewPort(inhPAttrs)
 	wm.pdfRes[pageNr] = pdfRes
 
@@ -1438,16 +1440,19 @@ func (ctx *Context) createForm(pageNr int, wm *Watermark, withBB bool) error {
 	sd := StreamDict{
 		Dict: Dict(
 			map[string]Object{
-				"Type":      Name("XObject"),
-				"Subtype":   Name("Form"),
-				"BBox":      bbox.Array(),
-				"Matrix":    NewNumberArray(1, 0, 0, 1, 0, 0),
-				"OC":        *wm.ocg,
-				"Resources": *ir,
+				"Type":    Name("XObject"),
+				"Subtype": Name("Form"),
+				"BBox":    bbox.Array(),
+				"Matrix":  NewNumberArray(1, 0, 0, 1, 0, 0),
+				"OC":      *wm.ocg,
 			},
 		),
 		Content:        b.Bytes(),
 		FilterPipeline: []PDFFilter{{Name: filter.Flate, DecodeParms: nil}},
+	}
+
+	if ir != nil {
+		sd.Insert("Resources", *ir)
 	}
 
 	sd.InsertName("Filter", filter.Flate)
@@ -1552,6 +1557,97 @@ func (ctx *Context) insertPageContentsForWM(pageDict Dict, wm *Watermark, gsID, 
 	return nil
 }
 
+func contentBytesForPageRotation(r, dx, dy float64) []byte {
+	m := calcRotateAndTranslateTransformMatrix(r, dx, dy)
+	var b bytes.Buffer
+	fmt.Fprintf(&b, " q %.2f %.2f %.2f %.2f %.2f %.2f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
+	return b.Bytes()
+}
+
+func translationForPageRotation(pageRot int, w, h float64) (float64, float64) {
+	var dx, dy float64
+
+	switch pageRot {
+	case 90, -270:
+		dy = h
+	case -90, 270:
+		dx = w
+	case 180, -180:
+		dx, dy = w, h
+	}
+
+	return dx, dy
+}
+
+func patchFirstContentForWM(sd *StreamDict, gsID, xoID string, wm *Watermark, isLast bool) error {
+	err := sd.Decode()
+	if err == filter.ErrUnsupportedFilter {
+		log.Info.Println("unsupported filter: unable to patch content with watermark.")
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	bb := wmContent(wm, gsID, xoID)
+
+	if wm.OnTop {
+		if wm.pageRot != 0 {
+			dx, dy := translationForPageRotation(wm.pageRot, wm.vp.Width(), wm.vp.Height())
+			sd.Content = append(contentBytesForPageRotation(float64(-wm.pageRot), dx, dy), sd.Content...)
+			if !isLast {
+				return sd.Encode()
+			}
+			sd.Content = append(sd.Content, []byte(" Q")...)
+		}
+		if isLast {
+			sd.Content = append(sd.Content, bb...)
+			return sd.Encode()
+		}
+		return nil
+	}
+
+	if wm.pageRot != 0 {
+		dx, dy := translationForPageRotation(wm.pageRot, wm.vp.Width(), wm.vp.Height())
+		prbb := contentBytesForPageRotation(float64(-wm.pageRot), dx, dy)
+		bb1 := append(bb, prbb...)
+		sd.Content = append(bb1, sd.Content...)
+		if !isLast {
+			return sd.Encode()
+		}
+		sd.Content = append(sd.Content, []byte(" Q")...)
+	} else {
+		sd.Content = append(bb, sd.Content...)
+	}
+	return sd.Encode()
+}
+
+func patchLastContentForWM(sd *StreamDict, gsID, xoID string, wm *Watermark) error {
+	err := sd.Decode()
+	if err == filter.ErrUnsupportedFilter {
+		log.Info.Println("unsupported filter: unable to patch content with watermark.")
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	if wm.OnTop {
+		if wm.pageRot != 0 {
+			sd.Content = append(sd.Content, []byte(" Q")...)
+		}
+		sd.Content = append(sd.Content, wmContent(wm, gsID, xoID)...)
+		return sd.Encode()
+	}
+
+	if wm.pageRot != 0 {
+		sd.Content = append(sd.Content, []byte(" Q")...)
+		return sd.Encode()
+	}
+
+	return nil
+}
+
 func (ctx *Context) updatePageContentsForWM(obj Object, wm *Watermark, gsID, xoID string) error {
 	var entry *XRefTableEntry
 	var objNr int
@@ -1572,7 +1668,7 @@ func (ctx *Context) updatePageContentsForWM(obj Object, wm *Watermark, gsID, xoI
 
 	case StreamDict:
 
-		err := patchContentForWM(&o, gsID, xoID, wm, true)
+		err := patchFirstContentForWM(&o, gsID, xoID, wm, true)
 		if err != nil {
 			return err
 		}
@@ -1582,7 +1678,7 @@ func (ctx *Context) updatePageContentsForWM(obj Object, wm *Watermark, gsID, xoI
 
 	case Array:
 
-		// Get stream dict for first element.
+		// Get stream dict for first array element.
 		o1 := o[0]
 		ir, _ := o1.(IndirectRef)
 		objNr = ir.ObjectNumber.Value()
@@ -1590,35 +1686,23 @@ func (ctx *Context) updatePageContentsForWM(obj Object, wm *Watermark, gsID, xoI
 		entry, _ := ctx.FindTableEntry(objNr, genNr)
 		sd, _ := (entry.Object).(StreamDict)
 
-		if len(o) == 1 || !wm.OnTop {
-
-			if wm.objs[objNr] {
-				// wm already applied to this content stream.
-				return nil
-			}
-
-			err := patchContentForWM(&sd, gsID, xoID, wm, true)
-			if err != nil {
-				return err
-			}
-			entry.Object = sd
-			wm.objs[objNr] = true
+		if wm.objs[objNr] {
+			// wm already applied to this content stream.
 			return nil
 		}
 
-		if wm.objs[objNr] {
-			// wm already applied to this content stream.
-		} else {
-			// Patch first content stream.
-			err := patchFirstContentForWM(&sd)
-			if err != nil {
-				return err
-			}
-			entry.Object = sd
-			wm.objs[objNr] = true
+		err := patchFirstContentForWM(&sd, gsID, xoID, wm, len(o) == 1)
+		if err != nil {
+			return err
 		}
 
-		// Patch last content stream.
+		entry.Object = sd
+		wm.objs[objNr] = true
+		if len(o) == 1 {
+			return nil
+		}
+
+		// Get stream dict for last array element.
 		o1 = o[len(o)-1]
 
 		ir, _ = o1.(IndirectRef)
@@ -1632,7 +1716,7 @@ func (ctx *Context) updatePageContentsForWM(obj Object, wm *Watermark, gsID, xoI
 		entry, _ = ctx.FindTableEntry(objNr, genNr)
 		sd, _ = (entry.Object).(StreamDict)
 
-		err := patchContentForWM(&sd, gsID, xoID, wm, false)
+		err = patchLastContentForWM(&sd, gsID, xoID, wm)
 		if err != nil {
 			return err
 		}
@@ -1671,13 +1755,28 @@ func (ctx *Context) addPageWatermark(i int, wm *Watermark) error {
 		return err
 	}
 
+	// Internalize page rotation into content stream.
+	wm.pageRot = inhPAttrs.rotate
+
 	wm.vp = viewPort(inhPAttrs)
+
+	// Reset page rotation in page dict.
+	if wm.pageRot != 0 {
+
+		if IntMemberOf(wm.pageRot, []int{+90, -90, +270, -270}) {
+			w := wm.vp.Width()
+			wm.vp.UR.X = wm.vp.LL.X + wm.vp.Height()
+			wm.vp.UR.Y = wm.vp.LL.Y + w
+		}
+
+		d.Update("MediaBox", wm.vp.Array())
+		d.Update("CropBox", wm.vp.Array())
+		d.Delete("Rotate")
+	}
 
 	if err = ctx.createForm(i, wm, stampWithBBox); err != nil {
 		return err
 	}
-
-	wm.pageRot = float64(inhPAttrs.rotate)
 
 	log.Debug.Printf("\n%s\n", wm)
 
@@ -1700,46 +1799,6 @@ func (ctx *Context) addPageWatermark(i int, wm *Watermark) error {
 	}
 
 	return ctx.updatePageContentsForWM(obj, wm, gsID, xoID)
-}
-
-func patchContentForWM(sd *StreamDict, gsID, xoID string, wm *Watermark, saveGState bool) error {
-	err := sd.Decode()
-	if err == filter.ErrUnsupportedFilter {
-		log.Info.Println("unsupported filter: unable to patch content with watermark.")
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-
-	bb := wmContent(wm, gsID, xoID)
-
-	if wm.OnTop {
-		if saveGState {
-			sd.Content = append([]byte("q "), sd.Content...)
-		}
-		sd.Content = append(sd.Content, []byte(" Q")...)
-		sd.Content = append(sd.Content, bb...)
-	} else {
-		sd.Content = append(bb, sd.Content...)
-	}
-
-	return sd.Encode()
-}
-
-func patchFirstContentForWM(sd *StreamDict) error {
-	err := sd.Decode()
-	if err == filter.ErrUnsupportedFilter {
-		log.Info.Println("unsupported filter: unable to patch content with watermark.")
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-
-	sd.Content = append([]byte("q "), sd.Content...)
-
-	return sd.Encode()
 }
 
 func (ctx *Context) createResourcesForWMMap(m map[int]*Watermark, ocgIndRef, extGStateIndRef *IndirectRef, onTop bool, opacity float64) (map[string]*[]int, error) {

@@ -320,9 +320,9 @@ A color value: 3 color intensities, where 0.0 < i < 1.0, eg 1.0,
 
 All configuration string parameters support completion.
 
-e.g. "pos:bl, off: 20 5"   "rot:45"                 "op:0.5, s:0.5 abs, rot:0"
-     "d:2"                 "s:.75 abs, points:48"   "rot:-90, scale:0.75 rel"
-     "f:Courier, s:0.75, c: 0.5 0.0 0.0, rot:20"  
+e.g. "pos:bl, off: 20 5"   "rot:45"                 "op:0.5, sc:0.5 abs, rot:0"
+     "d:2"                 "sc:.75 abs, points:48"  "rot:-90, scale:0.75 rel"
+     "f:Courier, sc:0.75, str: 0.5 0.0 0.0, rot:20"  
   
      
 `
@@ -404,10 +404,10 @@ description ... dimensions, format, position, offset, scale factor, boxes
   
   All configuration string parameters support completion.
 
-  e.g. "f:A5, pos:c"                             ... render the image centered on A5 with relative scaling 0.5.'
-       "d:300 600, pos:bl, off:20 20, s:1.0 abs" ... render the image anchored to bottom left corner with offset 20,20 and abs. scaling 1.0.
-       "pos:full"                                ... render the image to a page with corresponding dimensions.
-       "f:A4, pos:c, dpi:300"                    ... render the image centered on A4 respecting a destination resolution of 300 dpi.
+  e.g. "f:A5, pos:c"                              ... render the image centered on A5 with relative scaling 0.5.'
+       "d:300 600, pos:bl, off:20 20, sc:1.0 abs" ... render the image anchored to bottom left corner with offset 20,20 and abs. scaling 1.0.
+       "pos:full"                                 ... render the image to a page with corresponding dimensions.
+       "f:A4, pos:c, dpi:300"                     ... render the image centered on A4 respecting a destination resolution of 300 dpi.
        `
 
 	usagePagesInsert = "pdfcpu pages insert [-p(ages) selectedPages] [-m(ode) before|after] inFile [outFile]"

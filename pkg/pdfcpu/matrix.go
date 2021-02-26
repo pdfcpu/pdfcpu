@@ -16,7 +16,10 @@ limitations under the License.
 
 package pdfcpu
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+)
 
 type matrix [3][3]float64
 
@@ -57,4 +60,10 @@ func calcTransformMatrix(sx, sy, sin, cos, dx, dy float64) matrix {
 	m3[2][0] = dx
 	m3[2][1] = dy
 	return m1.multiply(m2).multiply(m3)
+}
+
+func calcRotateAndTranslateTransformMatrix(r, dx, dy float64) matrix {
+	sin := math.Sin(float64(r) * float64(degToRad))
+	cos := math.Cos(float64(r) * float64(degToRad))
+	return calcTransformMatrix(1, 1, sin, cos, dx, dy)
 }
