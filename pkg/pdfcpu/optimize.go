@@ -554,6 +554,8 @@ func parseResourcesDict(ctx *Context, pageDict Dict, pageNumber, pageObjNumber i
 // Iterate over all pages and optimize resources.
 func parsePagesDict(ctx *Context, pagesDict Dict, pageNumber int) (int, error) {
 
+	// TODO Integrate resource consolidation based on content stream requirements.
+
 	log.Optimize.Printf("parsePagesDict begin (next page=%d): %s\n", pageNumber+1, pagesDict)
 
 	// Get number of pages of this PDF file.

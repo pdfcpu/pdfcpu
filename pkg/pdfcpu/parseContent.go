@@ -31,7 +31,7 @@ var (
 )
 
 func whitespaceOrEOL(c rune) bool {
-	return unicode.IsSpace(c) || c == 0x0A || c == 0x0D
+	return unicode.IsSpace(c) || c == 0x0A || c == 0x0D || c == 0x00
 }
 
 func skipDict(l *string) error {
@@ -322,7 +322,7 @@ func parseContent(s string) (PageResourceNames, error) {
 
 	for pos := 0; ; {
 		t, err := nextContentToken(&s, prn)
-		//log.Parse.Printf("t = <%s>\n", t)
+		log.Parse.Printf("t = <%s>\n", t)
 		if err != nil {
 			return nil, err
 		}

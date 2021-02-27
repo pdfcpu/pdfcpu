@@ -1810,10 +1810,38 @@ func int64Object(ctx *Context, objectNumber int) (*int64, error) {
 
 }
 
-// Reads and returns a file buffer with length = stream length using provided reader positioned at offset.
-func readContentStream(rd io.Reader, streamLength int) ([]byte, error) {
+func readStreamContentBlindly(rd io.Reader) (buf []byte, err error) {
+	// Weak heuristic for reading in stream data for cases where stream length is unknown.
+	// ...data...{eol}endstream{eol}endobj
+	var i int
+	for i = -1; i < 0; i = bytes.Index(buf, []byte("endstream")) {
+		buf, err = growBufBy(buf, defaultBufSize, rd)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	log.Read.Printf("readContentStream: begin streamLength:%d\n", streamLength)
+	buf = buf[:i]
+
+	j := 0
+
+	// Cut off trailing eol's.
+	for i = len(buf) - 1; i >= 0 && (buf[i] == 0x0A || buf[i] == 0x0D); i-- {
+		j++
+	}
+
+	return buf[:i+1], nil
+}
+
+// Reads and returns a file buffer with length = stream length using provided reader positioned at offset.
+func readStreamContent(rd io.Reader, streamLength int) ([]byte, error) {
+
+	log.Read.Printf("readStreamContent: begin streamLength:%d\n", streamLength)
+
+	// If streamLength == 0 read until "endstream" then fix "Length"
+	if streamLength == 0 {
+		return readStreamContentBlindly(rd)
+	}
 
 	buf := make([]byte, streamLength)
 
@@ -1832,12 +1860,12 @@ func readContentStream(rd io.Reader, streamLength int) ([]byte, error) {
 			return buf[:eob], nil
 		}
 
-		log.Read.Printf("readContentStream: count=%d, buflen=%d(%X)\n", count, len(buf), len(buf))
+		log.Read.Printf("readStreamContent: count=%d, buflen=%d(%X)\n", count, len(buf), len(buf))
 		totalCount += count
 
 	}
 
-	log.Read.Printf("readContentStream: end\n")
+	log.Read.Printf("readStreamContent: end\n")
 
 	return buf, nil
 }
@@ -1880,14 +1908,14 @@ func loadEncodedStreamContent(ctx *Context, sd *StreamDict) ([]byte, error) {
 
 	// Buffer stream contents.
 	// Read content from disk.
-	rawContent, err := readContentStream(rd, int(*sd.StreamLength))
+	rawContent, err := readStreamContent(rd, int(*sd.StreamLength))
 	if err != nil {
 		return nil, err
 	}
 
 	// Sometimes the stream dict length is corrupt and needs to be fixed.
 	l := int64(len(rawContent))
-	if l < *sd.StreamLength {
+	if *sd.StreamLength == 0 || l < *sd.StreamLength {
 		sd.StreamLength = &l
 		sd.Dict["Length"] = Integer(l)
 	}
@@ -1937,7 +1965,7 @@ func saveDecodedStreamContent(ctx *Context, sd *StreamDict, objNr, genNr int, de
 		return nil
 	}
 
-	// Actual decoding of content stream.
+	// Actual decoding of stream data.
 	err = sd.Decode()
 	if err == filter.ErrUnsupportedFilter {
 		err = nil
@@ -2222,7 +2250,7 @@ func dereferenceObject(ctx *Context, objNr int) error {
 
 	o := entry.Object
 
-	// Already dereferenced stream dict.
+	// Already dereferenced object.
 	if o != nil {
 		logStream(entry.Object)
 		updateBinaryTotalSize(ctx, o)

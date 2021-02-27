@@ -35,8 +35,6 @@ var ErrInvalidUTF16BE = errors.New("pdfcpu: invalid UTF-16BE detected")
 func IsStringUTF16BE(s string) bool {
 	s1 := fmt.Sprintf("%s", s)
 	ok := strings.HasPrefix(s1, "\376\377") // 0xFE 0xFF
-	//log.Debug.Printf("IsStringUTF16BE: <%s> returning %v\n", s1, ok)
-	//log.Debug.Printf("\n%s", hex.Dump([]byte(s1)))
 	return ok
 }
 
@@ -50,9 +48,6 @@ func IsUTF16BE(b []byte) bool {
 }
 
 func decodeUTF16String(b []byte) (string, error) {
-
-	//log.Debug.Printf("decodeUTF16String: begin %v\n", b)
-
 	// We only accept big endian byte order.
 	if !IsUTF16BE(b) {
 		log.Debug.Printf("decodeUTF16String: not UTF16BE: %v\n", b)
@@ -68,13 +63,10 @@ func decodeUTF16String(b []byte) (string, error) {
 	// Collect code points.
 	for i := 0; i < len(b); {
 
-		//log.Debug.Printf("i=%d\n", i)
-
 		val := (uint16(b[i]) << 8) + uint16(b[i+1])
 
 		if val <= 0xD7FF || val > 0xE000 && val <= 0xFFFF {
 			// Basic Multilingual Plane
-			//log.Debug.Println("decodeUTF16String: Basic Multilingual Plane detected")
 			u16 = append(u16, val)
 			i += 2
 			continue
@@ -91,7 +83,6 @@ func decodeUTF16String(b []byte) (string, error) {
 		}
 
 		// Supplementary Planes
-		//log.Debug.Println("decodeUTF16String: Supplementary Planes detected")
 		u16 = append(u16, val)
 		val = (uint16(b[i+2]) << 8) + uint16(b[i+3])
 		if val < 0xDC00 || val > 0xDFFF {
@@ -110,7 +101,6 @@ func decodeUTF16String(b []byte) (string, error) {
 		decb = append(decb, utf8Buf[:n]...)
 	}
 
-	//log.Debug.Printf("decodeUTF16String: end %s\n", hex.Dump(decb))
 	return string(decb), nil
 }
 
