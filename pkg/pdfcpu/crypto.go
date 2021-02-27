@@ -793,7 +793,7 @@ func getR(d Dict) (int, error) {
 
 	r := d.IntEntry("R")
 	if r == nil || *r < 2 || *r > 5 {
-		if *r > 5 {
+		if r != nil && *r > 5 {
 			return 0, errors.New("pdfcpu: PDF 2.0 encryption not supported")
 		}
 		return 0, errors.New("pdfcpu: encryption: \"R\" must be 2,3,4,5")
