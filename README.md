@@ -104,7 +104,7 @@ Get the latest binary [here](https://github.com/pdfcpu/pdfcpu/releases).
 Required go version for building: go1.15 and up
 
 ```
-go get github.com/pdfcpu/pdfcpu/cmd/...
+go get github.com/pdfcpu/pdfcpu/cmd/pdfcpu
 cd $GOPATH/src/github.com/pdfcpu/pdfcpu/cmd/pdfcpu
 go install
 pdfcpu version
