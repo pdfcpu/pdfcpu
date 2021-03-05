@@ -256,23 +256,49 @@ content ... extract raw page content
     opwOld ... old owner password (provide user password on initial changeopw)
     opwNew ... new owner password`
 
-	usageWMMode = `There are 3 different kinds:
+	usageStampMode = `There are 3 different kinds of stamps:
 
    1) text based:
       -mode text string			
-         eg. mode -text "Hello gopher!"
+         eg. pdfcpu stamp add -mode text "Hello gopher!" -- "" in.pdf out.pdf
+         Use the following format strings:
+               %p ... current page number
+               %P ... total pages
+         eg. pdfcpu stamp add -mode text "Page %p of %P" -- "sc:1.0 abs, pos:bc, rot:0" in.pdf out.pdf
    
    2) image based
       -mode image imageFileName
          supported extensions: '.jpg', 'jpeg', .png', '.tif', '.tiff' 
-         eg. mode -image logo.png
+         eg. pdfcpu stamp add -mode image "logo.png" -- "" in.pdf out.pdf
          
    3) PDF based
       -mode pdf pdfFileName[:page#]
-         eg. pdfcpu stamp add mode -pdf 'stamp.pdf:3' '' in.pdf out.pdf ... stamp each page of in.pdf with page 3 of stamp.pdf
+         eg. pdfcpu stamp add -mode pdf "stamp.pdf:3" -- "" in.pdf out.pdf ... stamp each page of in.pdf with page 3 of stamp.pdf
          Omit page# for multistamping:
-         eg. pdfcpu stamp add mode -pdf 'stamp.pdf' '' in.pdf out.pdf   ... stamp each page of in.pdf with corresponding page of stamp.pdf
+         eg. pdfcpu stamp add -mode pdf "stamp.pdf" -- "" in.pdf out.pdf   ... stamp each page of in.pdf with corresponding page of stamp.pdf
    `
+
+	usageWatermarkMode = `There are 3 different kinds of watermarks:
+
+   1) text based:
+      -mode text string			
+         eg. pdfcpu watermark add -mode text "Hello gopher!" -- "" in.pdf out.pdf
+         Use the following format strings:
+               %p ... current page number
+               %P ... total pages
+         eg. pdfcpu watermark add -mode text "Page %p of %P" -- "sc:1.0 abs, pos:bc, rot:0" in.pdf out.pdf
+   
+   2) image based
+      -mode image imageFileName
+         supported extensions: '.jpg', 'jpeg', .png', '.tif', '.tiff' 
+         eg. pdfcpu watermark add -mode image "logo.png" -- "" in.pdf out.pdf
+         
+   3) PDF based
+      -mode pdf pdfFileName[:page#]
+         eg. pdfcpu watermark add -mode pdf "stamp.pdf:3" -- "" in.pdf out.pdf ... watermark each page of in.pdf with page 3 of stamp.pdf
+         Omit page# for multistamping:
+         eg. pdfcpu watermark add -mode pdf "stamp.pdf" -- "" in.pdf out.pdf   ... watermark each page of in.pdf with corresponding page of stamp.pdf
+`
 	usageWMDescription = `
 
 <description> is a comma separated configuration string containing these optional entries:
@@ -280,20 +306,35 @@ content ... extract raw page content
    (defaults: "font:Helvetica, points:24, pos:c, off:0,0 s:0.5 rel, rot:0, d:1, op:1, m:0 and for all colors: 0.5 0.5 0.5")
 
    fontname:         Please refer to "pdfcpu fonts list"
+
    points:           fontsize in points, in combination with absolute scaling only.
-   position:         one of the anchors: tl,tc,tr, l,c,r, bl,bc,br
-                     Reliable with non rotated pages only!
+   
+   position:         one of the anchors:
+                     tl(=topleft)      tc(=topcenter)       tr(=topright)
+                     l(=left)          c(=center)           r(=right)
+                     bl(=bottom left)  bc(=bottom center)   br(=bottom right)
+   
    offset:           (dx dy) in given display unit eg. '15 20'
+   
    scalefactor:      0.0 < i <= 1.0 {r|rel} | 0.0 < i {a|abs}
+  
    aligntext:        l..left, c..center, r..right, j..justified (for text watermarks only)
+   
    fillcolor:        color value to be used when rendering text, see also rendermode
                      for backwards compatibility "color" is also accepted.
+   
    strokecolor:      color value to be used when rendering text, see also rendermode
+   
    backgroundcolor:  color value for visualization of the bounding box background for text.
                      "bgcolor" is also accepted. 
+   
    rotation:         -180.0 <= x <= 180.0
-   diagonal:         render along diagonal, 1..lower left to upper right, 2..upper left to lower right (if present overrules r!)
+   
+   diagonal:         render along diagonal
+                     1..lower left to upper right
+                     2..upper left to lower right (if present overrules r!)
                      Only one of rotation and diagonal is allowed!
+   
    opacity:          where 0.0 <= x <= 1.0
 
    mode, rendermode: 0 ... fill (applies fill color)
@@ -348,7 +389,7 @@ description ... fontname, points, position, offset, scalefactor, aligntext, rota
      inFile ... input pdf file
     outFile ... output pdf file
 
-` + usageWMMode + usageWMDescription
+` + usageStampMode + usageWMDescription
 
 	usageWatermarkAdd    = "pdfcpu watermark add    [-p(ages) selectedPages] -m(ode) text|image|pdf string|file -- description inFile [outFile]"
 	usageWatermarkUpdate = "pdfcpu watermark update [-p(ages) selectedPages] -m(ode) text|image|pdf string|file -- description inFile [outFile]"
@@ -369,7 +410,7 @@ description ... fontname, points, position, offset, scalefactor, aligntext, rota
      inFile ... input pdf file
     outFile ... output pdf file
 
-` + usageWMMode + usageWMDescription
+` + usageWatermarkMode + usageWMDescription
 
 	usageImportImages     = "usage: pdfcpu import [-- description] outFile imageFile..." + generalFlags
 	usageLongImportImages = `Turn image files into a PDF page sequence and write the result to outFile.

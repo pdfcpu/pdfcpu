@@ -319,9 +319,43 @@ func (wm Watermark) calcMaxTextWidth() float64 {
 	return maxWidth
 }
 
-func (wm Watermark) textDescriptor() TextDescriptor {
+func resolveWMTextString(text string, pageNr, pageCount int) (string, bool) {
+	// replace %p with pageNr
+	var (
+		bb         []byte
+		hasPercent bool
+		unique     bool
+	)
+	for i := 0; i < len(text); i++ {
+		if text[i] == '%' {
+			if hasPercent {
+				bb = append(bb, '%')
+			}
+			hasPercent = true
+			continue
+		}
+		if hasPercent {
+			hasPercent = false
+			if text[i] == 'p' {
+				bb = append(bb, strconv.Itoa(pageNr)...)
+				unique = true
+				continue
+			}
+			if text[i] == 'P' {
+				bb = append(bb, strconv.Itoa(pageCount)...)
+				unique = true
+				continue
+			}
+		}
+		bb = append(bb, text[i])
+	}
+	return string(bb), unique
+}
+
+func (wm Watermark) textDescriptor(pageNr, pageCount int) (TextDescriptor, bool) {
+	t, unique := resolveWMTextString(wm.TextString, pageNr, pageCount)
 	td := TextDescriptor{
-		Text:           wm.TextString,
+		Text:           t,
 		FontName:       wm.FontName,
 		FontSize:       wm.FontSize,
 		Scale:          wm.Scale,
@@ -335,7 +369,7 @@ func (wm Watermark) textDescriptor() TextDescriptor {
 		td.ShowTextBB = true
 		td.BackgroundCol = *wm.BgColor
 	}
-	return td
+	return td, unique
 }
 
 func parseTextHorAlignment(s string, wm *Watermark) error {
@@ -1143,7 +1177,8 @@ func (ctx *Context) createFontResForWM(wm *Watermark) (err error) {
 	// TODO Take existing font dicts into account.
 	if font.IsUserFont(wm.FontName) {
 		// Dummy call in order to setup used glyphs.
-		WriteMultiLine(new(bytes.Buffer), RectForFormat("A4"), nil, setupTextDescriptor(wm))
+		td, _ := setupTextDescriptor(wm, 0, 0)
+		WriteMultiLine(new(bytes.Buffer), RectForFormat("A4"), nil, td)
 	}
 	wm.font, err = createFontDict(ctx.XRefTable, wm.FontName)
 	return err
@@ -1344,7 +1379,7 @@ func formContent(w io.Writer, pageNr int, wm *Watermark) error {
 	return nil
 }
 
-func setupTextDescriptor(wm *Watermark) TextDescriptor {
+func setupTextDescriptor(wm *Watermark, pageNr, pageCount int) (TextDescriptor, bool) {
 	// Set horizontal alignment.
 	var hAlign HAlignment
 	if wm.HAlign == nil {
@@ -1357,7 +1392,7 @@ func setupTextDescriptor(wm *Watermark) TextDescriptor {
 
 	// Set effective position and vertical alignment.
 	x, y, _, vAlign := anchorPosAndAlign(BottomLeft, wm.vp)
-	td := wm.textDescriptor()
+	td, unique := wm.textDescriptor(pageNr, pageCount)
 	td.X, td.Y, td.HAlign, td.VAlign, td.FontKey = x, y, hAlign, vAlign, "F1"
 
 	// Set margins.
@@ -1373,7 +1408,7 @@ func setupTextDescriptor(wm *Watermark) TextDescriptor {
 		td.ShowBorder = true
 		td.BorderCol = *wm.BorderColor
 	}
-	return td
+	return td, unique
 }
 
 func drawBoundingBox(b bytes.Buffer, wm *Watermark, bb *Rectangle) {
@@ -1395,13 +1430,17 @@ func drawBoundingBox(b bytes.Buffer, wm *Watermark, bb *Rectangle) {
 	)
 }
 
-func (ctx *Context) createForm(pageNr int, wm *Watermark, withBB bool) error {
-	var b bytes.Buffer
+func (ctx *Context) createForm(pageNr, pageCount int, wm *Watermark, withBB bool) error {
+	var (
+		b      bytes.Buffer
+		unique bool
+	)
 
 	if wm.isImage() || wm.isPDF() {
 		wm.calcBoundingBox(pageNr)
 	} else {
-		td := setupTextDescriptor(wm)
+		var td TextDescriptor
+		td, unique = setupTextDescriptor(wm, pageNr, pageCount)
 		// Render td into b and return the bounding box.
 		wm.bb = WriteMultiLine(&b, wm.vp, nil, td)
 	}
@@ -1409,7 +1448,7 @@ func (ctx *Context) createForm(pageNr int, wm *Watermark, withBB bool) error {
 	// The forms bounding box is dependent on the page dimensions.
 	bb := wm.bb
 
-	if cachedForm(wm) || pageNr > len(wm.pdfRes) {
+	if !unique && (cachedForm(wm) || pageNr > len(wm.pdfRes)) {
 		// Use cached form.
 		ir, ok := wm.fCache[*bb.Rectangle]
 		if ok {
@@ -1774,7 +1813,7 @@ func (ctx *Context) addPageWatermark(i int, wm *Watermark) error {
 		d.Delete("Rotate")
 	}
 
-	if err = ctx.createForm(i, wm, stampWithBBox); err != nil {
+	if err = ctx.createForm(i, ctx.PageCount, wm, stampWithBBox); err != nil {
 		return err
 	}
 
@@ -1811,7 +1850,8 @@ func (ctx *Context) createResourcesForWMMap(m map[int]*Watermark, ocgIndRef, ext
 		if wm.isText() {
 			if font.IsUserFont(wm.FontName) {
 				// Dummy call in order to setup used glyphs.
-				WriteMultiLine(new(bytes.Buffer), RectForFormat("A4"), nil, setupTextDescriptor(wm))
+				td, _ := setupTextDescriptor(wm, 0, 0)
+				WriteMultiLine(new(bytes.Buffer), RectForFormat("A4"), nil, td)
 			}
 			ii, found := fm[wm.FontName]
 			if !found {

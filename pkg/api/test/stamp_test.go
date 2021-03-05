@@ -87,6 +87,14 @@ func TestAddWatermarks(t *testing.T) {
 
 		{"TestWatermarkText",
 			"Walden.pdf",
+			"TextPagenumbers.pdf",
+			[]string{"1-"},
+			"text",
+			"Page %p of %P",
+			"sc:1 abs, pos:bc, rot:0"},
+
+		{"TestWatermarkText",
+			"Walden.pdf",
 			"TextRenderMode0.pdf",
 			[]string{"1-"},
 			"text",
