@@ -221,6 +221,12 @@ pdfcpu info [-p(ages) selectedPages] inFile
 
 <br>
 
+## Print definition of the -pages flag
+
+pdfcpu selectedpages
+
+<br>
+
 ## Print Version
 
 ```
