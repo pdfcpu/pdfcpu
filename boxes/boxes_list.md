@@ -13,7 +13,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu boxes list [-p(ages) selectedPages] '[boxTypes]' inFile
+pdfcpu boxes list    [-p(ages) selectedPages] [-- boxTypes] inFile
 ```
 
 <br>

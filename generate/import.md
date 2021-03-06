@@ -19,7 +19,7 @@ Convert one or more image files into a PDF file. Have a look at some [examples](
 ## Usage
 
 ```
-pdfcpu import [description] outFile imageFile...
+pdfcpu import -- [description] outFile imageFile...
 ```
 <br>
 
@@ -104,7 +104,7 @@ pdfcpu import photo.pdf photo.png
 Create a single page PDF using paper size `f:A5` using the default orientation *portrait* which could also be expressed with `f:A5P`. Use the positioning parameter `pos:c` to center the image on the page and the default relative scaling `s:0.5 rel`:
 
 ```sh
-pdfcpu import 'f:A5, pos:c' photo.pdf photo.jpg
+pdfcpu import -- "f:A5, pos:c" photo.pdf photo.jpg
 ```
 
 <p align="center">
@@ -116,7 +116,7 @@ pdfcpu import 'f:A5, pos:c' photo.pdf photo.jpg
 Create a single page PDF using paper size `f:A5L` using the orientation landscape. Use the positioning parameter `pos:c` to center the image on the page and the default relative scaling `s:0.5 rel`:
 
 ```sh
-pdfcpu import 'f:A5L, pos:c' photo.pdf photo.jpg
+pdfcpu import -- "f:A5L, pos:c" photo.pdf photo.jpg
 ```
 
 <p align="center">
@@ -128,7 +128,7 @@ pdfcpu import 'f:A5L, pos:c' photo.pdf photo.jpg
 Create a single page PDF using A5 landscape mode, a relative scaling of 0.5 and the positioning `pos:bl` which anchors the picture to the bottom left page corner:
 
 ```sh
-pdfcpu import 'form:A5L, pos:bl' photo.pdf photo.jpg
+pdfcpu import -- "form:A5L, pos:bl" photo.pdf photo.jpg
 ```
 
 <p align="center">
@@ -140,7 +140,7 @@ pdfcpu import 'form:A5L, pos:bl' photo.pdf photo.jpg
 Create a single page PDF using A5 landscape mode, relative scaling 0.5, positioning `pos:r` which anchors the picture to the right side vertically centered. Use a negative horizontal offset `off:-20 0` to impose a margin:
 
 ```sh
-pdfcpu import 'form:A5L, pos:r, off:-20 0' photo.pdf photo.jpg
+pdfcpu import -- "form:A5L, pos:r, off:-20 0" photo.pdf photo.jpg
 ```
 
 <p align="center">
@@ -152,7 +152,7 @@ pdfcpu import 'form:A5L, pos:r, off:-20 0' photo.pdf photo.jpg
 Import `photo.jpg` into a 500 x 500 single page PDF anchoring the image to the top left corner using a relative scaling of 0.3:
 
 ```sh
-pdfcpu import 'd:500 500, pos:tl, s:0.3 rel' photo.pdf photo.jpg
+pdfcpu import -- "d:500 500, pos:tl, s:0.3 rel" photo.pdf photo.jpg
 ```
 
 <p align="center">
@@ -164,7 +164,7 @@ pdfcpu import 'd:500 500, pos:tl, s:0.3 rel' photo.pdf photo.jpg
 Import `photo.jpg` into a 500 x 500 single page PDF anchoring the image to the top left corner using a relative scaling of 1:
 
 ```sh
-pdfcpu import 'd:500 500, pos:tl, s:1' photo.pdf photo.jpg
+pdfcpu import -- "d:500 500, pos:tl, s:1" photo.pdf photo.jpg
 ```
 
 <p align="center">
@@ -183,14 +183,14 @@ pdfcpu import album.pdf pics/*
 Generate a PDF photo album with images centered on the page using the default relative scaling of 0.5:
 
 ```sh
-pdfcpu import 'pos:c' album.pdf pics/*
+pdfcpu import -- "pos:c" album.pdf pics/*
 ```
 <br>
 
 The following command also generates a PDF album but additionally configures the paper size *Letter* and positions the images to be anchored to the bottom left corner with a horizontal offset of 10 points and a vertical offset of 20 points with a scaling of 0.3 relative to page dimensions:
 
 ```sh
-pdfcpu import 'f:Letter, pos:bl, off:10 20, scale:0.3' album.pdf *.jpg *.png
+pdfcpu import -- "f:Letter, pos:bl, off:10 20, scale:0.3" album.pdf *.jpg *.png
 ```
 <br>
 

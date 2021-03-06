@@ -22,7 +22,7 @@ layout: default
 ## Usage
 
 ```
-pdfcpu crop [-p(ages) selectedPages] description inFile [outFile]
+pdfcpu crop [-p(ages) selectedPages] -- description inFile [outFile]
 ```
 
 <br>
@@ -74,7 +74,7 @@ Given the following page with a sole media box represented by the rectangular re
 Crop a 200 x 200 points region located in lower left corner of media box:
 
 ```sh
-pdfcpu crop '[0 0 200 200]' in.pdf cropped.pdf
+pdfcpu crop "[0 0 200 200]" in.pdf cropped.pdf
 ```
 
 <p align="center">
@@ -87,7 +87,7 @@ pdfcpu crop '[0 0 200 200]' in.pdf cropped.pdf
 Margins and offsets may be expressed in any display unit you like (po,cm,mm,in). Crop a region located in the bottom left corner of the media box with dimension expressed as relative width and height of the media box applying a horizontal/vertical offset of 1 cm:
 
 ```sh
-pdfcpu crop -u cm 'pos:bl, off:1 1, dim:25% 25%' in.pdf cropped.pdf
+pdfcpu crop -u cm -- "pos:bl, off:1 1, dim:25% 25%" in.pdf cropped.pdf
 ```
 
 <p align="center">
@@ -99,7 +99,7 @@ pdfcpu crop -u cm 'pos:bl, off:1 1, dim:25% 25%' in.pdf cropped.pdf
 Crop relative to media box using 100 points for each of the four margins:
 
 ```sh
-pdfcpu crop '100' in.pdf cropped.pdf
+pdfcpu crop -- "100" in.pdf cropped.pdf
 ```
 
 <p align="center">
@@ -110,7 +110,7 @@ pdfcpu crop '100' in.pdf cropped.pdf
 
 The following command would set display unit to mm in order to express top, left/right and bottom margins relative to the media box defining the rectangular regions that we want to use as crop box:
 ```sh
-pdfcpu crop -u mm '15 10 15' in.pdf cropped.pdf
+pdfcpu crop -u mm -- "15 10 15" in.pdf cropped.pdf
 ```
 
 <br>
@@ -118,5 +118,5 @@ pdfcpu crop -u mm '15 10 15' in.pdf cropped.pdf
 The following command uses negative margins for cropping and therefore expands the media box:
 
 ```sh
-pdfcpu crop '-10' in.pdf cropped.pdf
+pdfcpu crop -- "-10" in.pdf cropped.pdf
 ```

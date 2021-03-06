@@ -17,7 +17,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu boxes remove [-p(ages) selectedPages] 'boxTypes' inFile [outFile]
+pdfcpu boxes remove  [-p(ages) selectedPages] -- boxTypes inFile [outFile]
 ```
 
 <br>

@@ -57,57 +57,70 @@ Use "pdfcpu help [command]" for more information about a command.
 
 ## Core Commands
 
-Choose on of the basic processing features:
+The basic processing features:
 ```
-pdfcpu validate [-v(erbose)|vv] [-q(uiet)] [-mode strict|relaxed] [-upw userpw] [-opw ownerpw] inFile
-pdfcpu optimize [-v(erbose)|vv] [-q(uiet)] [-stats csvFile] [-upw userpw] [-opw ownerpw] inFile [outFile]
-pdfcpu merge [-v(erbose)|vv] [-q(uiet)] [-mode create|append] outFile inFile...
-pdfcpu split [-v(erbose)|vv] [-q(uiet)] [-mode span|bookmark] [-upw userpw] [-opw ownerpw] inFile outDir [span]
-pdfcpu trim [-v(erbose)|vv] [-q(uiet)] -pages selectedPages [-upw userpw] [-opw ownerpw] inFile [outFile]
-pdfcpu rotate [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile rotation [outFile]
-pdfcpu nup [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [description] outFile n inFile|imageFiles..
-pdfcpu grid [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [description] outFile m n inFile|imageFiles...
+pdfcpu validate [-m(ode) strict|relaxed] inFile
+pdfcpu optimize [-stats csvFile] inFile [outFile]
+pdfcpu merge    [-m(ode) create|append] [-sort] outFile inFile...
+pdfcpu split    [-m(ode) span|bookmark] inFile outDir [span]
+pdfcpu crop     [-p(ages) selectedPages] -- description inFile [outFile]
+pdfcpu rotate   [-p(ages) selectedPages] inFile rotation [outFile]
+pdfcpu trim      -p(ages) selectedPages  inFile [outFile]
+pdfcpu collect   -p(ages) selectedPages  inFile [outFile]
+
 ```
-
-<br>
-
-## Generate Commands
-
-Convert images (jpg, png, tiff) into PDF:
-```
-pdfcpu import [-v(erbose)|vv] [-q(uiet)] [description] outFile imageFile...
-```
-
-<br>
 
 ## Stamps
 
-Manage stamps for selected pages:
+Manage stamps:
 ```
-pdfcpu stamp add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]
-pdfcpu stamp remove [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]
-pdfcpu stamp update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]
+pdfcpu stamp add    [-p(ages) selectedPages] -m(ode) text|image|pdf string|file -- description inFile [outFile]
+pdfcpu stamp update [-p(ages) selectedPages] -m(ode) text|image|pdf string|file -- description inFile [outFile]
+pdfcpu stamp remove [-p(ages) selectedPages] inFile [outFile]
 ```
 
 <br>
 
 ## Watermarks
 
-Manage watermarks for selected pages:
+Manage watermarks:
 ```
-pdfcpu watermark add    [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]
-pdfcpu watermark remove [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile [outFile]
-pdfcpu watermark update [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] -mode text|image|pdf string|file description inFile [outFile]
+pdfcpu watermark add    [-p(ages) selectedPages] -m(ode) text|image|pdf string|file -- description inFile [outFile]
+pdfcpu watermark update [-p(ages) selectedPages] -m(ode) text|image|pdf string|file -- description inFile [outFile]
+pdfcpu watermark remove [-p(ages) selectedPages] inFile [outFile]
+```
+
+<br>
+
+## Fonts
+
+Manage core fonts and your user fonts:
+
+```
+pdfcpu fonts list
+pdfcpu fonts install fontFiles...
+pdfcpu fonts cheatsheet fontFiles...
+```
+
+<br>
+
+## Generate Commands
+
+```
+pdfcpu booklet [-p(ages) selectedPages] [-- description] outFile n inFile|imageFiles...
+pdfcpu grid    [-p(ages) selectedPages] [-- description] outFile m n inFile|imageFiles...
+pdfcpu import                           [-- description] outFile imageFile...
+pdfcpu nup     [-p(ages) selectedPages] [-- description] outFile n inFile|imageFiles...
 ```
 
 <br>
 
 ## Pages
 
-Insert and remove pages:
+Insert or remove pages:
 ```
-pdfcpu pages insert [-v(erbose)|vv] [-q(uiet)] [-pages selectedPages] [-upw userpw] [-opw ownerpw] [-mode before|after] inFile [outFile]
-pdfcpu pages remove [-v(erbose)|vv] [-q(uiet)]  -pages selectedPages  [-upw userpw] [-opw ownerpw] inFile [outFile]
+pdfcpu pages insert [-p(ages) selectedPages] [-m(ode) before|after] inFile [outFile]
+pdfcpu pages remove  -p(ages) selectedPages  inFile [outFile]
 ```
 
 <br>
@@ -116,19 +129,31 @@ pdfcpu pages remove [-v(erbose)|vv] [-q(uiet)]  -pages selectedPages  [-upw user
 
 Extract components and resources:
 ```
-pdfcpu extract [-v(erbose)|vv] [-q(uiet)] -mode image|font|content|page|meta [-pages selectedPages] [-upw userpw] [-opw ownerpw] inFile outDir
+pdfcpu extract -m(ode) image|font|content|page|meta [-p(ages) selectedPages] inFile outDir
 ```
 
 <br>
 
 ## Attachments
 
-Manage your PDF attachments:
+Manage your attachments:
 ```
-pdfcpu attachments list    [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile
-pdfcpu attachments add     [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile file...
-pdfcpu attachments remove  [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [file...]
-pdfcpu attachments extract [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile outDir [file...]
+pdfcpu attachments list    inFile
+pdfcpu attachments add     inFile file...
+pdfcpu attachments remove  inFile [file...]
+pdfcpu attachments extract inFile outDir [file...]
+```
+
+<br>
+
+## Portfolio
+
+Manage your portfolios:
+```
+pdfcpu portfolio list    inFile
+pdfcpu portfolio add     inFile file[,desc]...
+pdfcpu portfolio remove  inFile [file...]
+pdfcpu portfolio extract inFile outDir [file...]
 ```
 
 <br>
@@ -137,66 +162,68 @@ pdfcpu attachments extract [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerp
 
 Secure your PDFs:
 ```
-pdfcpu encrypt [-v(erbose)|vv] [-q(uiet)] [-mode rc4|aes] [-key 40|128|256] [perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]
-pdfcpu decrypt [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [outFile]
-pdfcpu changeopw [-v(erbose)|vv] [-q(uiet)] [-upw userpw] inFile opwOld opwNew
-pdfcpu changeupw [-v(erbose)|vv] [-q(uiet)] [-opw ownerpw] inFile upwOld upwNew
-pdfcpu permissions list [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile
-pdfcpu permissions set [-v(erbose)|vv] [-q(uiet)] [-perm none|all] [-upw userpw] -opw ownerpw inFile
+pdfcpu encrypt [-m(ode) rc4|aes] [-key 40|128|256] [-perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]
+pdfcpu decrypt [-upw userpw] [-opw ownerpw] inFile [outFile]
+pdfcpu changeopw [-upw userpw] inFile opwOld opwNew
+pdfcpu changeupw [-opw ownerpw] inFile upwOld upwNew
+pdfcpu permissions list [-upw userpw] [-opw ownerpw] inFile
+pdfcpu permissions set [-perm none|all] [-upw userpw] -opw ownerpw inFile
 ```
 
 <br>
 
-## Other
-
-### Print Supported Papersizes
+## Print Supported Papersizes
 
 ```
 pdfcpu paper
 ```
+<br>
+
+## Keywords
+
+Manage your keywords for searching:
+```
+pdfcpu keywords list    inFile
+pdfcpu keywords add     inFile keyword...
+pdfcpu keywords remove  inFile [keyword...]
+```
 
 <br>
 
-### Print Version
+## Properties
+
+Manage your document properties:
+```
+pdfcpu properties list    inFile
+pdfcpu properties add     inFile nameValuePair...
+pdfcpu properties remove  inFile [name...]
+```
+
+<br>
+
+## Boxes
+
+Manage your page boundaries:
+```
+pdfcpu boxes list    [-p(ages) selectedPages] [-- boxTypes] inFile
+pdfcpu boxes add     [-p(ages) selectedPages] -- description inFile [outFile]
+pdfcpu boxes remove  [-p(ages) selectedPages] -- boxTypes inFile [outFile]
+```
+
+<br>
+
+## Info
+
+Print file details:
+```
+pdfcpu info [-p(ages) selectedPages] inFile
+```
+
+<br>
+
+## Print Version
 
 ```
 pdfcpu version
 ```
 
-<br>
-
-### Print PDF Info
-
-```
-pdfcpu info [-u(nits)] [-upw userpw] [-opw ownerpw] inFile
-```
-
-<br>
-
-### Print List of Supported Fonts
-
-```
-pdfcpu fonts
-```
-
-<br>
-
-### Keywords
-
-Manage your keywords for searching:
-```
-pdfcpu keywords list    [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile
-pdfcpu keywords add     [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile keyword...
-pdfcpu keywords remove  [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [keyword...]
-```
-
-<br>
-
-### Properties
-
-Manage your document properties:
-```
-pdfcpu properties list    [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile
-pdfcpu properties add     [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile nameValuePair...
-pdfcpu properties remove  [-v(erbose)|vv] [-q(uiet)] [-upw userpw] [-opw ownerpw] inFile [name...]
-```
