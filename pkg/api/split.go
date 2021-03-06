@@ -86,7 +86,7 @@ func writePageSpansSplitAlongBookmarks(ctx *pdfcpu.Context, outDir string) error
 		return err
 	}
 	for _, bm := range bms {
-		fileName := bm.Title
+		fileName := strings.Replace(bm.Title, " ", "_", -1)
 		from := bm.PageFrom
 		thru := bm.PageThru
 		if thru == 0 {
