@@ -13,7 +13,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu boxes list    [-p(ages) selectedPages] [-- boxTypes] inFile
+pdfcpu boxes list [-p(ages) selectedPages] -- [boxTypes] inFile
 ```
 
 <br>
@@ -78,7 +78,7 @@ Page 2:
 List mediaBox and cropBox of page 1 of test.pdf using display unit cm:
 
 ```
-pdfcpu box list -u cm -pages 1 'm,c' test.pdf
+pdfcpu box list -u cm -pages 1 -- "m,c" test.pdf
 listing mediaBox, cropBox for test.pdf
 pages: 1
 Page 1:

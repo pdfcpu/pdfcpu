@@ -132,7 +132,7 @@ Rearrange pages of in.pdf into 2x2 grids and write result to out.pdf using the d
 The output page size is the result of a 2(hor)x2(vert) page grid using page size Legal in landscape mode:
 
 ```sh
-pdfcpu grid -- "LegalL" out.pdf 2 2 in.pdf
+pdfcpu grid -- "f:LegalL" out.pdf 2 2 in.pdf
 ```
 
 <br>

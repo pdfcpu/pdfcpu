@@ -74,7 +74,7 @@ Given the following page with a sole media box represented by the rectangular re
 Crop a 200 x 200 points region located in lower left corner of media box:
 
 ```sh
-pdfcpu crop "[0 0 200 200]" in.pdf cropped.pdf
+pdfcpu crop -- "[0 0 200 200]" in.pdf cropped.pdf
 ```
 
 <p align="center">

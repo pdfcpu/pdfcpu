@@ -65,8 +65,8 @@ pdfcpu merge    [-m(ode) create|append] [-sort] outFile inFile...
 pdfcpu split    [-m(ode) span|bookmark] inFile outDir [span]
 pdfcpu crop     [-p(ages) selectedPages] -- description inFile [outFile]
 pdfcpu rotate   [-p(ages) selectedPages] inFile rotation [outFile]
-pdfcpu trim      -p(ages) selectedPages  inFile [outFile]
-pdfcpu collect   -p(ages) selectedPages  inFile [outFile]
+pdfcpu trim      -p(ages) selectedPages inFile [outFile]
+pdfcpu collect   -p(ages) selectedPages inFile [outFile]
 
 ```
 
@@ -74,8 +74,8 @@ pdfcpu collect   -p(ages) selectedPages  inFile [outFile]
 
 Manage stamps:
 ```
-pdfcpu stamp add    [-p(ages) selectedPages] -m(ode) text|image|pdf string|file -- description inFile [outFile]
-pdfcpu stamp update [-p(ages) selectedPages] -m(ode) text|image|pdf string|file -- description inFile [outFile]
+pdfcpu stamp add    [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]
+pdfcpu stamp update [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]
 pdfcpu stamp remove [-p(ages) selectedPages] inFile [outFile]
 ```
 
@@ -85,8 +85,8 @@ pdfcpu stamp remove [-p(ages) selectedPages] inFile [outFile]
 
 Manage watermarks:
 ```
-pdfcpu watermark add    [-p(ages) selectedPages] -m(ode) text|image|pdf string|file -- description inFile [outFile]
-pdfcpu watermark update [-p(ages) selectedPages] -m(ode) text|image|pdf string|file -- description inFile [outFile]
+pdfcpu watermark add    [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]
+pdfcpu watermark update [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]
 pdfcpu watermark remove [-p(ages) selectedPages] inFile [outFile]
 ```
 
@@ -107,10 +107,10 @@ pdfcpu fonts cheatsheet fontFiles...
 ## Generate Commands
 
 ```
-pdfcpu booklet [-p(ages) selectedPages] [-- description] outFile n inFile|imageFiles...
-pdfcpu grid    [-p(ages) selectedPages] [-- description] outFile m n inFile|imageFiles...
-pdfcpu import                           [-- description] outFile imageFile...
-pdfcpu nup     [-p(ages) selectedPages] [-- description] outFile n inFile|imageFiles...
+pdfcpu booklet [-p(ages) selectedPages] -- [description] outFile n inFile|imageFiles...
+pdfcpu grid    [-p(ages) selectedPages] -- [description] outFile m n inFile|imageFiles...
+pdfcpu import                           -- [description] outFile imageFile...
+pdfcpu nup     [-p(ages) selectedPages] -- [description] outFile n inFile|imageFiles...
 ```
 
 <br>
@@ -120,7 +120,7 @@ pdfcpu nup     [-p(ages) selectedPages] [-- description] outFile n inFile|imageF
 Insert or remove pages:
 ```
 pdfcpu pages insert [-p(ages) selectedPages] [-m(ode) before|after] inFile [outFile]
-pdfcpu pages remove  -p(ages) selectedPages  inFile [outFile]
+pdfcpu pages remove  -p(ages) selectedPages inFile [outFile]
 ```
 
 <br>
@@ -205,7 +205,7 @@ pdfcpu properties remove  inFile [name...]
 
 Manage your page boundaries:
 ```
-pdfcpu boxes list    [-p(ages) selectedPages] [-- boxTypes] inFile
+pdfcpu boxes list    [-p(ages) selectedPages] -- [boxTypes] inFile
 pdfcpu boxes add     [-p(ages) selectedPages] -- description inFile [outFile]
 pdfcpu boxes remove  [-p(ages) selectedPages] -- boxTypes inFile [outFile]
 ```

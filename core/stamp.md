@@ -15,7 +15,7 @@ Using `description` you can configure various aspects like position, offset, rot
 ```
 pdfcpu stamp add    [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]
 pdfcpu stamp update [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]
-pdfcpu stamp remove [-p(ages) selectedPages] -- inFile [outFile]
+pdfcpu stamp remove [-p(ages) selectedPages] inFile [outFile]
 ```
 
 <br>

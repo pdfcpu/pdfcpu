@@ -124,7 +124,7 @@ This is usually associated with the writing direction used in the document to be
 
 Create `out.pdf` by applying 4-up to `in.pdf`. Each page fits `4` original pages of `in.pdf` into a 2x2 grid:
 ```sh
-pdfcpu nup -- out.pdf 4 in.pdf
+pdfcpu nup out.pdf 4 in.pdf
 ```
 
 <p align="center">
