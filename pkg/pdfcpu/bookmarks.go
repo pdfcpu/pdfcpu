@@ -32,6 +32,8 @@ type Bookmark struct {
 	Title    string
 	PageFrom int
 	PageThru int // >= pageFrom and reaches until before pageFrom of the next bookmark.
+	Children []Bookmark
+	Parent   *Bookmark
 }
 
 func (ctx *Context) dereferenceDestinationArray(key string) (Array, error) {
@@ -79,72 +81,81 @@ func (ctx *Context) positionToOutlineTreeLevel1() (Dict, *IndirectRef, error) {
 	return d, first, nil
 }
 
-func (ctx *Context) dereferenceDestPageNumber(dest Object) (IndirectRef, error) {
-	var ir IndirectRef
-	switch dest := dest.(type) {
-	case Name:
-		arr, err := ctx.dereferenceDestinationArray(dest.Value())
-		if err != nil {
-			return ir, err
+func outlineItemTitle(s string) string {
+	var sb strings.Builder
+	for i := 0; i < len(s); i++ {
+		b := s[i]
+		if b >= 32 {
+			sb.WriteByte(b)
 		}
-		ir = arr[0].(IndirectRef)
-	case StringLiteral:
-		arr, err := ctx.dereferenceDestinationArray(dest.Value())
-		if err != nil {
-			return ir, err
-		}
-		ir = arr[0].(IndirectRef)
-	case HexLiteral:
-		arr, err := ctx.dereferenceDestinationArray(dest.Value())
-		if err != nil {
-			return ir, err
-		}
-		ir = arr[0].(IndirectRef)
-	case Array:
-		ir = dest[0].(IndirectRef)
 	}
-	return ir, nil
+	return sb.String()
 }
 
-// BookmarksForOutlineLevel1 returns bookmarks incliuding page span info.
-func (ctx *Context) BookmarksForOutlineLevel1() ([]Bookmark, error) {
-	d, first, err := ctx.positionToOutlineTreeLevel1()
+// BookmarksForOutlineItem returns the bookmarks tree for an outline item.
+func (ctx *Context) BookmarksForOutlineItem(item *IndirectRef, parent *Bookmark) ([]Bookmark, error) {
+	bms := []Bookmark{}
+
+	d, err := ctx.DereferenceDict(*item)
 	if err != nil {
 		return nil, err
 	}
 
-	bms := []Bookmark{}
-
 	// Process outline items.
-	for ir := first; ir != nil; ir = d.IndirectRefEntry("Next") {
+	for ir := item; ir != nil; ir = d.IndirectRefEntry("Next") {
 
 		if d, err = ctx.DereferenceDict(*ir); err != nil {
 			return nil, err
 		}
 
 		s, _ := Text(d["Title"])
-		var sb strings.Builder
-		for i := 0; i < len(s); i++ {
-			b := s[i]
-			if b >= 32 {
-				if b == 32 {
-					b = '_'
-				}
-				sb.WriteByte(b)
-			}
-		}
-		title := sb.String()
+		title := outlineItemTitle(s)
 
-		dest, found := d["Dest"]
-		if !found {
-			return nil, errNoBookmarks
+		// Retrieve page number out of a destination via "Dest" or "Goto Action".
+		dest, destFound := d["Dest"]
+		if !destFound {
+			act, actFound := d["A"]
+			if !actFound {
+				continue
+			}
+			act, _ = ctx.Dereference(act)
+			actType, _ := act.(Dict)["S"]
+			if actType.String() != "GoTo" {
+				continue
+			}
+			dest, _ = act.(Dict)["D"]
 		}
+
+		var ir IndirectRef
 
 		dest, _ = ctx.Dereference(dest)
 
-		ir, err := ctx.dereferenceDestPageNumber(dest)
-		if err != nil {
-			return nil, err
+		switch dest := dest.(type) {
+		case Name:
+			arr, err := ctx.dereferenceDestinationArray(dest.Value())
+			if err != nil {
+				return nil, err
+			}
+			ir = arr[0].(IndirectRef)
+		case StringLiteral:
+			arr, err := ctx.dereferenceDestinationArray(dest.Value())
+			if err != nil {
+				return nil, err
+			}
+			ir = arr[0].(IndirectRef)
+		case HexLiteral:
+			arr, err := ctx.dereferenceDestinationArray(dest.Value())
+			if err != nil {
+				return nil, err
+			}
+			ir = arr[0].(IndirectRef)
+		case Array:
+			if dest[0] != nil {
+				ir = dest[0].(IndirectRef)
+			} else {
+				// Skipping bookmarks that don't point to anything.
+				continue
+			}
 		}
 
 		pageFrom, err := ctx.PageNumber(ir.ObjectNumber.Value())
@@ -159,8 +170,32 @@ func (ctx *Context) BookmarksForOutlineLevel1() ([]Bookmark, error) {
 				bms[len(bms)-1].PageThru = bms[len(bms)-1].PageFrom
 			}
 		}
-		bms = append(bms, Bookmark{Title: title, PageFrom: pageFrom})
+
+		newBookmark := Bookmark{
+			Title:    title,
+			PageFrom: pageFrom,
+			Parent:   parent,
+		}
+
+		first, _ := d["First"]
+		if first != nil {
+			indRef := first.(IndirectRef)
+			children, _ := ctx.BookmarksForOutlineItem(&indRef, &newBookmark)
+			newBookmark.Children = children
+		}
+
+		bms = append(bms, newBookmark)
 	}
 
 	return bms, nil
+}
+
+// BookmarksForOutline returns all of the bookmark information recursively.
+func (ctx *Context) BookmarksForOutline() ([]Bookmark, error) {
+	_, first, err := ctx.positionToOutlineTreeLevel1()
+	if err != nil {
+		return nil, err
+	}
+
+	return ctx.BookmarksForOutlineItem(first, nil)
 }
