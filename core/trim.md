@@ -73,5 +73,5 @@ pdfcpu trim -pages 1 test.pdf firstPage.pdf
 Get rid of the catalog and trailing index:
 
 ```sh
-pdfcpu trim -pages '!2-4,!12-' book.pdf essence.pdf
+pdfcpu trim -pages "!2-4,!12-" book.pdf essence.pdf
 ```

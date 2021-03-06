@@ -23,7 +23,7 @@ A watermark resides in the background of a page. How much of the watermark will 
 ```
 pdfcpu watermark add    [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]
 pdfcpu watermark update [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]
-pdfcpu watermark remove [-p(ages) selectedPages] -- inFile [outFile]
+pdfcpu watermark remove [-p(ages) selectedPages] inFile [outFile]
 ```
 
 

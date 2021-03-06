@@ -68,19 +68,37 @@ where *content* may be text, an image or a PDF page.
 | inFile       | PDF input file       | yes
 | outFile      | PDF output file      | no
 
+<br>
+
+Special note for text stamps:
+
+Use the following format strings:
+* %p ... current page number
+* %P ... total pages
+         
+```
+pdfcpu stamp add -mode text "Page %p of %P" -- "sc:1.0 abs, pos:bc, rot:0" in.pdf out.pdf
+```
+
+<br>
+
 Special note for pdf stamps:
 
 If you want to use a specific page as your stamp,
 specify the page number after the stamp file and use ':' as separator:
 
-`pdfcpu stamp add -mode pdf -- "stamp.pdf:1" "" in.pdf out.pdf`
+```
+pdfcpu stamp add -mode pdf -- "stamp.pdf:1" "" in.pdf out.pdf
+```
 
 You can also apply a `multi-stamp`.
 This means you repeatedly apply stamp.pdf's pages to stamp pages of in.pdf in an orderly fashion.
 If in.pdf has more pages than stamp.pdf, the last page of stamp.pdf gets applied for the remaining pages.
 Omit the stamp page number for multi stamping:
 
-`pdfcpu stamp add -mode pdf -- "stamp.pdf" "" in.pdf out.pdf`
+```
+pdfcpu stamp add -mode pdf -- "stamp.pdf" "" in.pdf out.pdf
+```
 
 <br>
 
