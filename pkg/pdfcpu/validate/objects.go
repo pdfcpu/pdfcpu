@@ -181,11 +181,12 @@ func validateBooleanArrayEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, e
 }
 
 func validateDateObject(xRefTable *pdf.XRefTable, o pdf.Object, sinceVersion pdf.Version) (string, error) {
-	sl, err := xRefTable.DereferenceStringLiteral(o, sinceVersion, nil)
+	s, err := xRefTable.DereferenceStringOrHexLiteral(o, sinceVersion, nil)
+	//sl, err := xRefTable.DereferenceStringLiteral(o, sinceVersion, nil)
 	if err != nil {
 		return "", err
 	}
-	s := sl.Value()
+	//s := sl.Value()
 	if s == "" {
 		return s, nil
 	}

@@ -87,7 +87,8 @@ func parseTimezone(s string) (h, m int, ok bool) {
 
 	// local time equal to UT.
 	// "D:YYYYMMDDHHmmSSZ"
-	if o == 'Z' && len(s) == 17 {
+	// relaxed accept "D:20201222164228Z'"
+	if o == 'Z' && (len(s) == 17 || len(s) == 18) {
 		return 0, 0, true
 	}
 

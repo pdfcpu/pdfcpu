@@ -260,44 +260,44 @@ content ... extract raw page content
 
    1) text based:
       -mode text string			
-         eg. pdfcpu stamp add -mode text "Hello gopher!" -- "" in.pdf out.pdf
+         eg. pdfcpu stamp add -mode text -- "Hello gopher!" "" in.pdf out.pdf
          Use the following format strings:
                %p ... current page number
                %P ... total pages
-         eg. pdfcpu stamp add -mode text "Page %p of %P" -- "sc:1.0 abs, pos:bc, rot:0" in.pdf out.pdf
+         eg. pdfcpu stamp add -mode text -- "Page %p of %P" "sc:1.0 abs, pos:bc, rot:0" in.pdf out.pdf
    
    2) image based
       -mode image imageFileName
          supported extensions: '.jpg', 'jpeg', .png', '.tif', '.tiff' 
-         eg. pdfcpu stamp add -mode image "logo.png" -- "" in.pdf out.pdf
+         eg. pdfcpu stamp add -mode image -- "logo.png" "" in.pdf out.pdf
          
    3) PDF based
       -mode pdf pdfFileName[:page#]
-         eg. pdfcpu stamp add -mode pdf "stamp.pdf:3" -- "" in.pdf out.pdf ... stamp each page of in.pdf with page 3 of stamp.pdf
+         eg. pdfcpu stamp add -mode pdf -- "stamp.pdf:3" "" in.pdf out.pdf ... stamp each page of in.pdf with page 3 of stamp.pdf
          Omit page# for multistamping:
-         eg. pdfcpu stamp add -mode pdf "stamp.pdf" -- "" in.pdf out.pdf   ... stamp each page of in.pdf with corresponding page of stamp.pdf
+         eg. pdfcpu stamp add -mode pdf -- "stamp.pdf" "" in.pdf out.pdf   ... stamp each page of in.pdf with corresponding page of stamp.pdf
    `
 
 	usageWatermarkMode = `There are 3 different kinds of watermarks:
 
    1) text based:
       -mode text string			
-         eg. pdfcpu watermark add -mode text "Hello gopher!" -- "" in.pdf out.pdf
+         eg. pdfcpu watermark add -mode text -- "Hello gopher!" "" in.pdf out.pdf
          Use the following format strings:
                %p ... current page number
                %P ... total pages
-         eg. pdfcpu watermark add -mode text "Page %p of %P" -- "sc:1.0 abs, pos:bc, rot:0" in.pdf out.pdf
+         eg. pdfcpu watermark add -mode text -- "Page %p of %P" "sc:1.0 abs, pos:bc, rot:0" in.pdf out.pdf
    
    2) image based
       -mode image imageFileName
          supported extensions: '.jpg', 'jpeg', .png', '.tif', '.tiff' 
-         eg. pdfcpu watermark add -mode image "logo.png" -- "" in.pdf out.pdf
+         eg. pdfcpu watermark add -mode image -- "logo.png" "" in.pdf out.pdf
          
    3) PDF based
       -mode pdf pdfFileName[:page#]
-         eg. pdfcpu watermark add -mode pdf "stamp.pdf:3" -- "" in.pdf out.pdf ... watermark each page of in.pdf with page 3 of stamp.pdf
+         eg. pdfcpu watermark add -mode pdf -- "stamp.pdf:3" "" in.pdf out.pdf ... watermark each page of in.pdf with page 3 of stamp.pdf
          Omit page# for multistamping:
-         eg. pdfcpu watermark add -mode pdf "stamp.pdf" -- "" in.pdf out.pdf   ... watermark each page of in.pdf with corresponding page of stamp.pdf
+         eg. pdfcpu watermark add -mode pdf -- "stamp.pdf" "" in.pdf out.pdf   ... watermark each page of in.pdf with corresponding page of stamp.pdf
 `
 	usageWMDescription = `
 
@@ -368,8 +368,8 @@ e.g. "pos:bl, off: 20 5"   "rot:45"                 "op:0.5, sc:0.5 abs, rot:0"
      
 `
 
-	usageStampAdd    = "pdfcpu stamp add    [-p(ages) selectedPages] -m(ode) text|image|pdf string|file -- description inFile [outFile]"
-	usageStampUpdate = "pdfcpu stamp update [-p(ages) selectedPages] -m(ode) text|image|pdf string|file -- description inFile [outFile]"
+	usageStampAdd    = "pdfcpu stamp add    [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]"
+	usageStampUpdate = "pdfcpu stamp update [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]"
 	usageStampRemove = "pdfcpu stamp remove [-p(ages) selectedPages] inFile [outFile]" + generalFlags
 
 	usageStamp = "usage: " + usageStampAdd +
@@ -391,8 +391,8 @@ description ... fontname, points, position, offset, scalefactor, aligntext, rota
 
 ` + usageStampMode + usageWMDescription
 
-	usageWatermarkAdd    = "pdfcpu watermark add    [-p(ages) selectedPages] -m(ode) text|image|pdf string|file -- description inFile [outFile]"
-	usageWatermarkUpdate = "pdfcpu watermark update [-p(ages) selectedPages] -m(ode) text|image|pdf string|file -- description inFile [outFile]"
+	usageWatermarkAdd    = "pdfcpu watermark add    [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]"
+	usageWatermarkUpdate = "pdfcpu watermark update [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]"
 	usageWatermarkRemove = "pdfcpu watermark remove [-p(ages) selectedPages] inFile [outFile]" + generalFlags
 
 	usageWatermark = "usage: " + usageWatermarkAdd +
@@ -412,7 +412,7 @@ description ... fontname, points, position, offset, scalefactor, aligntext, rota
 
 ` + usageWatermarkMode + usageWMDescription
 
-	usageImportImages     = "usage: pdfcpu import [-- description] outFile imageFile..." + generalFlags
+	usageImportImages     = "usage: pdfcpu import -- [description] outFile imageFile..." + generalFlags
 	usageLongImportImages = `Turn image files into a PDF page sequence and write the result to outFile.
 If outFile already exists the page sequence will be appended.
 Each imageFile will be rendered to a separate page.
@@ -476,7 +476,7 @@ description ... dimensions, format, position, offset, scale factor, boxes
 
 `
 
-	usageNUp     = "usage: pdfcpu nup [-p(ages) selectedPages] [-- description] outFile n inFile|imageFiles..." + generalFlags
+	usageNUp     = "usage: pdfcpu nup [-p(ages) selectedPages] -- [description] outFile n inFile|imageFiles..." + generalFlags
 	usageLongNUp = `Rearrange existing PDF pages or images into a sequence of page grids.
 This reduces the number of pages and therefore the required print time.
 If the input is one imageFile a single page n-up PDF gets generated.
@@ -526,7 +526,7 @@ Examples: pdfcpu nup out.pdf 4 in.pdf
            Rearrange pages of in.pdf into 2x2 grids and write result to out.pdf using the default orientation
            and default paper size A4. in.pdf's page size will be preserved.
                                  
-          pdfcpu nup -pages=3- out.pdf 6 in.pdf
+          pdfcpu nup -pages=3- -- out.pdf 6 in.pdf
            Rearrange selected pages of in.pdf (all pages starting with page 3) into 3x2 grids and
            write result to out.pdf using the default orientation and default paper size A4.
            in.pdf's page size will be preserved.
@@ -540,7 +540,7 @@ Examples: pdfcpu nup out.pdf 4 in.pdf
 
 `
 
-	usageBooklet     = "usage: pdfcpu booklet [-p(ages) selectedPages] [-- description] outFile n inFile|imageFiles..." + generalFlags
+	usageBooklet     = "usage: pdfcpu booklet [-p(ages) selectedPages] -- [description] outFile n inFile|imageFiles..." + generalFlags
 	usageLongBooklet = `Arrange a sequence of pages onto larger sheets of paper for a small book or zine.
 
               pages       ... for inFile only, please refer to "pdfcpu selectedpages"
@@ -594,7 +594,7 @@ Examples: pdfcpu booklet -- "formsize:Letter" out.pdf 2 in.pdf
            Arrange pages of in.pdf 2 per sheet side (4 per sheet, back and front) onto out.pdf
 `
 
-	usageGrid     = "usage: pdfcpu grid [-p(ages) selectedPages] [-- description] outFile m n inFile|imageFiles..." + generalFlags
+	usageGrid     = "usage: pdfcpu grid [-p(ages) selectedPages] -- [description] outFile m n inFile|imageFiles..." + generalFlags
 	usageLongGrid = `Rearrange PDF pages or images for enhanced browsing experience.
 For a PDF inputfile each output page represents a grid of input pages.
 For image inputfiles each output page shows all images laid out onto grids of given paper size. 
@@ -769,7 +769,7 @@ nameValuePair ... 'name = value'
      Eg. adding one property:   pdfcpu properties add test.pdf 'key = value'
          adding two properties: pdfcpu properties add test.pdf 'key1 = val1' 'key2 = val2'
      `
-	usageCollect     = "usage: pdfcpu collect -pages selectedPages inFile [outFile]" + generalFlags
+	usageCollect     = "usage: pdfcpu collect -p(ages) selectedPages inFile [outFile]" + generalFlags
 	usageLongCollect = `Create custom sequence of selected pages. 
 
         pages ... Please refer to "pdfcpu selectedpages"
@@ -836,7 +836,7 @@ Examples:
 
 ` + usageBoxDescription
 
-	usageBoxesList   = "pdfcpu boxes list    [-p(ages) selectedPages] [-- boxTypes] inFile"
+	usageBoxesList   = "pdfcpu boxes list    [-p(ages) selectedPages] -- [boxTypes] inFile"
 	usageBoxesAdd    = "pdfcpu boxes add     [-p(ages) selectedPages] -- description inFile [outFile]"
 	usageBoxesRemove = "pdfcpu boxes remove  [-p(ages) selectedPages] -- boxTypes inFile [outFile]" + generalFlags
 

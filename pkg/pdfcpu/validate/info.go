@@ -45,9 +45,6 @@ func handleDefault(xRefTable *pdf.XRefTable, o pdf.Object) (string, error) {
 }
 
 func validateInfoDictDate(xRefTable *pdf.XRefTable, o pdf.Object) (s string, err error) {
-	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
-		return validateString(xRefTable, o, nil)
-	}
 	return validateDateObject(xRefTable, o, pdf.V10)
 }
 
