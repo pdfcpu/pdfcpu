@@ -118,6 +118,93 @@ func AddWatermarksMapFile(inFile, outFile string, m map[int]*pdfcpu.Watermark, c
 	return AddWatermarksMap(f1, f2, m, conf)
 }
 
+// AddWatermarksSliceMap adds watermarks in m to corresponding pages in rs and writes the result to w.
+func AddWatermarksSliceMap(rs io.ReadSeeker, w io.Writer, m map[int][]*pdfcpu.Watermark, conf *pdfcpu.Configuration) error {
+	if conf == nil {
+		conf = pdfcpu.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdfcpu.ADDWATERMARKS
+
+	if len(m) == 0 {
+		return errors.New("pdfcpu: missing watermarks")
+	}
+
+	fromStart := time.Now()
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
+	if err != nil {
+		return err
+	}
+
+	from := time.Now()
+
+	if err = ctx.AddWatermarksSliceMap(m); err != nil {
+		return err
+	}
+
+	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+
+	if conf.ValidationMode != pdfcpu.ValidationNone {
+		if err = ValidateContext(ctx); err != nil {
+			return err
+		}
+	}
+
+	durStamp := time.Since(from).Seconds()
+	fromWrite := time.Now()
+
+	if err = WriteContext(ctx, w); err != nil {
+		return err
+	}
+
+	durWrite := durStamp + time.Since(fromWrite).Seconds()
+	durTotal := time.Since(fromStart).Seconds()
+	logOperationStats(ctx, "watermark, write", durRead, durVal, durOpt, durWrite, durTotal)
+
+	return nil
+}
+
+// AddWatermarksSliceMapFile adds watermarks to corresponding pages in m of inFile and writes the result to outFile.
+func AddWatermarksSliceMapFile(inFile, outFile string, m map[int][]*pdfcpu.Watermark, conf *pdfcpu.Configuration) (err error) {
+	var f1, f2 *os.File
+
+	if f1, err = os.Open(inFile); err != nil {
+		return err
+	}
+
+	tmpFile := inFile + ".tmp"
+	if outFile != "" && inFile != outFile {
+		tmpFile = outFile
+		log.CLI.Printf("writing %s...\n", outFile)
+	} else {
+		log.CLI.Printf("writing %s...\n", inFile)
+	}
+	if f2, err = os.Create(tmpFile); err != nil {
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			f2.Close()
+			f1.Close()
+			os.Remove(tmpFile)
+			return
+		}
+		if err = f2.Close(); err != nil {
+			return
+		}
+		if err = f1.Close(); err != nil {
+			return
+		}
+		if outFile == "" || inFile == outFile {
+			if err = os.Rename(tmpFile, inFile); err != nil {
+				return
+			}
+		}
+	}()
+
+	return AddWatermarksSliceMap(f1, f2, m, conf)
+}
+
 // AddWatermarks adds watermarks to all pages selected in rs and writes the result to w.
 func AddWatermarks(rs io.ReadSeeker, w io.Writer, selectedPages []string, wm *pdfcpu.Watermark, conf *pdfcpu.Configuration) error {
 	if conf == nil {

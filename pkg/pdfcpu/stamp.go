@@ -1840,37 +1840,75 @@ func (ctx *Context) addPageWatermark(i int, wm *Watermark) error {
 	return ctx.updatePageContentsForWM(obj, wm, gsID, xoID)
 }
 
-func (ctx *Context) createResourcesForWMMap(m map[int]*Watermark, ocgIndRef, extGStateIndRef *IndirectRef, onTop bool, opacity float64) (map[string]*[]int, error) {
-	fm := map[string]*[]int{}
-	for i, wm := range m {
-		wm.ocg = ocgIndRef
-		wm.extGState = extGStateIndRef
-		wm.OnTop = onTop
-		wm.Opacity = opacity
-		if wm.isText() {
-			if font.IsUserFont(wm.FontName) {
-				// Dummy call in order to setup used glyphs.
-				td, _ := setupTextDescriptor(wm, 0, 0)
-				WriteMultiLine(new(bytes.Buffer), RectForFormat("A4"), nil, td)
-			}
-			ii, found := fm[wm.FontName]
-			if !found {
-				fm[wm.FontName] = &[]int{i}
-			} else {
-				*ii = append(*ii, i)
-			}
-			continue
-		}
-		if wm.isImage() {
-			if err := ctx.createImageResForWM(wm); err != nil {
-				return nil, err
-			}
-			continue
-		}
-		if err := ctx.createPDFResForWM(wm); err != nil {
+func (ctx *Context) createWMResources(
+	wm *Watermark,
+	pageNr int,
+	fm map[string]IntSet,
+	ocgIndRef, extGStateIndRef *IndirectRef,
+	onTop bool, opacity float64) error {
+
+	wm.ocg = ocgIndRef
+	wm.extGState = extGStateIndRef
+	wm.OnTop = onTop
+	wm.Opacity = opacity
+
+	if wm.isImage() {
+		return ctx.createImageResForWM(wm)
+	}
+
+	if wm.isPDF() {
+		return ctx.createPDFResForWM(wm)
+	}
+
+	// Text watermark
+
+	if font.IsUserFont(wm.FontName) {
+		// Dummy call in order to setup used glyphs.
+		td, _ := setupTextDescriptor(wm, 0, 0)
+		WriteMultiLine(new(bytes.Buffer), RectForFormat("A4"), nil, td)
+	}
+
+	pageSet, found := fm[wm.FontName]
+	if !found {
+		fm[wm.FontName] = IntSet{pageNr: true}
+	} else {
+		pageSet[pageNr] = true
+	}
+
+	return nil
+}
+
+func (ctx *Context) createResourcesForWMMap(
+	m map[int]*Watermark,
+	ocgIndRef, extGStateIndRef *IndirectRef,
+	onTop bool,
+	opacity float64) (map[string]IntSet, error) {
+
+	fm := map[string]IntSet{}
+	for pageNr, wm := range m {
+		if err := ctx.createWMResources(wm, pageNr, fm, ocgIndRef, extGStateIndRef, onTop, opacity); err != nil {
 			return nil, err
 		}
 	}
+
+	return fm, nil
+}
+
+func (ctx *Context) createResourcesForWMSliceMap(
+	m map[int][]*Watermark,
+	ocgIndRef, extGStateIndRef *IndirectRef,
+	onTop bool,
+	opacity float64) (map[string]IntSet, error) {
+
+	fm := map[string]IntSet{}
+	for pageNr, wms := range m {
+		for _, wm := range wms {
+			if err := ctx.createWMResources(wm, pageNr, fm, ocgIndRef, extGStateIndRef, onTop, opacity); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	return fm, nil
 }
 
@@ -1901,20 +1939,83 @@ func (ctx *Context) AddWatermarksMap(m map[int]*Watermark) error {
 		return err
 	}
 
-	for k, v := range fm {
-		// TODO Take existing font dicts into account.
-		ir, err := createFontDict(ctx.XRefTable, k)
+	// TODO Take existing font dicts in xref into account.
+	for fontName, pageSet := range fm {
+		ir, err := createFontDict(ctx.XRefTable, fontName)
 		if err != nil {
 			return err
 		}
-		for _, pageNr := range *v {
-			m[pageNr].font = ir
+		for pageNr, v := range pageSet {
+			if !v {
+				continue
+			}
+			wm := m[pageNr]
+			if wm.isText() && wm.FontName == fontName {
+				m[pageNr].font = ir
+			}
 		}
 	}
 
 	for k, wm := range m {
 		if err := ctx.addPageWatermark(k, wm); err != nil {
 			return err
+		}
+	}
+
+	ctx.EnsureVersionForWriting()
+	return nil
+}
+
+// AddWatermarksSliceMap adds watermarks in m to corresponding pages.
+func (ctx *Context) AddWatermarksSliceMap(m map[int][]*Watermark) error {
+	var (
+		onTop   bool
+		opacity float64
+	)
+	for _, wms := range m {
+		onTop = wms[0].OnTop
+		opacity = wms[0].Opacity
+		break
+	}
+
+	ocgIndRef, err := ctx.prepareOCPropertiesInRoot(onTop)
+	if err != nil {
+		return err
+	}
+
+	extGStateIndRef, err := ctx.createExtGStateForStamp(opacity)
+	if err != nil {
+		return err
+	}
+
+	fm, err := ctx.createResourcesForWMSliceMap(m, ocgIndRef, extGStateIndRef, onTop, opacity)
+	if err != nil {
+		return err
+	}
+
+	// TODO Take existing font dicts in xref into account.
+	for fontName, pageSet := range fm {
+		ir, err := createFontDict(ctx.XRefTable, fontName)
+		if err != nil {
+			return err
+		}
+		for pageNr, v := range pageSet {
+			if !v {
+				continue
+			}
+			for _, wm := range m[pageNr] {
+				if wm.isText() && wm.FontName == fontName {
+					wm.font = ir
+				}
+			}
+		}
+	}
+
+	for k, wms := range m {
+		for _, wm := range wms {
+			if err := ctx.addPageWatermark(k, wm); err != nil {
+				return err
+			}
 		}
 	}
 
