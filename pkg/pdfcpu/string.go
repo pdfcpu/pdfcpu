@@ -168,7 +168,8 @@ func Unescape(s string) ([]byte, error) {
 			continue
 		}
 
-		if !strings.ContainsRune("nrtbf()01234567", rune(c)) {
+		// Relax for issue 305 and also accept "\ ".
+		if !strings.ContainsRune(" nrtbf()01234567", rune(c)) {
 			return nil, errors.Errorf("Unescape: illegal escape sequence \\%c detected", c)
 		}
 
