@@ -355,7 +355,8 @@ func imgToImageDict(xRefTable *XRefTable, img image.Image) (*StreamDict, error) 
 		buf = writeCMYKImageBuf(img)
 
 	case *image.YCbCr:
-		return nil, errors.New("unsupported image type: YCbCr")
+		cs = DeviceRGBCS
+		buf = writeRGBAImageBuf(convertToRGBA(img))
 
 	case *image.NYCbCrA:
 		return nil, errors.New("unsupported image type: NYCbCrA")

@@ -34,6 +34,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/types"
+	"golang.org/x/image/webp"
 
 	"github.com/pkg/errors"
 )
@@ -1124,7 +1125,7 @@ func createImageResource(xRefTable *XRefTable, r io.Reader) (*IndirectRef, int, 
 	var sd *StreamDict
 	r = bytes.NewReader(bb)
 
-	// We identify JPG via its magic bytes.
+	// Identify JPG via its magic bytes.
 	if bytes.HasPrefix(bb, []byte("\xff\xd8")) {
 		// Process JPG by wrapping byte stream into DCTEncoded object stream.
 		c, _, err := image.DecodeConfig(r)
@@ -1138,11 +1139,23 @@ func createImageResource(xRefTable *XRefTable, r io.Reader) (*IndirectRef, int, 
 		}
 
 	} else {
-		// Process other formats by decoding into an image
-		// and subsequent object stream encoding,
-		img, _, err := image.Decode(r)
-		if err != nil {
-			return nil, 0, 0, err
+
+		var img image.Image
+
+		// Identify WEBP via its magic bytes.
+		if bytes.HasPrefix(bb, []byte("\x52\x49\x46\x46")) &&
+			bytes.HasPrefix(bb[8:], []byte("\x57\x45\x42\x50")) {
+			img, err = webp.Decode(r)
+			if err != nil {
+				return nil, 0, 0, err
+			}
+		} else {
+			// Process other formats by decoding into an image
+			// and subsequent object stream encoding,
+			img, _, err = image.Decode(r)
+			if err != nil {
+				return nil, 0, 0, err
+			}
 		}
 
 		sd, err = imgToImageDict(xRefTable, img)
