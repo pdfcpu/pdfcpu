@@ -58,7 +58,11 @@ A configuration string to specify the details of the image layout on the page.
 | formsize, papersize | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode| f: A4
 | position            | one of `full` or the anchors: `tl, tc, tr, l, c, r, bl, bc, br`| pos: full
 | offset              | (dx,dy) in user units eg. '15 20'                              | off: 0 0
-| scalefactor         | 0.0 <= s <= 1.0 followed by optional `abs` or `rel`            | s: 0.5 rel
+| scalefactor         | 0.0 <= s <= 1.0 followed by optional `abs` or `rel`            | sc: 0.5 rel
+| gray                | Convert to grayscale (on/off, true/false, t/f)                 | gray:off
+| sepia               | Apply sepia effect (on/off, true/false, t/f)                   | sepia: off
+| backgroundcolor, bgcol| 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red | none
+|                      | or the hex RGB value: #RRGGBB               |
 
 <br>
 
@@ -101,7 +105,7 @@ pdfcpu import photo.pdf photo.png
 
 <br>
 
-Create a single page PDF using paper size `f:A5` using the default orientation *portrait* which could also be expressed with `f:A5P`. Use the positioning parameter `pos:c` to center the image on the page and the default relative scaling `s:0.5 rel`:
+Create a single page PDF using paper size `f:A5` using the default orientation *portrait* which could also be expressed with `f:A5P`. Use the positioning parameter `pos:c` to center the image on the page and the default relative scaling `sc:0.5 rel`:
 
 ```sh
 pdfcpu import -- "f:A5, pos:c" photo.pdf photo.jpg
@@ -113,7 +117,7 @@ pdfcpu import -- "f:A5, pos:c" photo.pdf photo.jpg
 
 <br>
 
-Create a single page PDF using paper size `f:A5L` using the orientation landscape. Use the positioning parameter `pos:c` to center the image on the page and the default relative scaling `s:0.5 rel`:
+Create a single page PDF using paper size `f:A5L` using the orientation landscape. Use the positioning parameter `pos:c` to center the image on the page and the default relative scaling `sc:0.5 rel`:
 
 ```sh
 pdfcpu import -- "f:A5L, pos:c" photo.pdf photo.jpg
@@ -152,7 +156,7 @@ pdfcpu import -- "form:A5L, pos:r, off:-20 0" photo.pdf photo.jpg
 Import `photo.jpg` into a 500 x 500 single page PDF anchoring the image to the top left corner using a relative scaling of 0.3:
 
 ```sh
-pdfcpu import -- "d:500 500, pos:tl, s:0.3 rel" photo.pdf photo.jpg
+pdfcpu import -- "d:500 500, pos:tl, sc:0.3 rel" photo.pdf photo.jpg
 ```
 
 <p align="center">
@@ -164,7 +168,7 @@ pdfcpu import -- "d:500 500, pos:tl, s:0.3 rel" photo.pdf photo.jpg
 Import `photo.jpg` into a 500 x 500 single page PDF anchoring the image to the top left corner using a relative scaling of 1:
 
 ```sh
-pdfcpu import -- "d:500 500, pos:tl, s:1" photo.pdf photo.jpg
+pdfcpu import -- "d:500 500, pos:tl, sc:1" photo.pdf photo.jpg
 ```
 
 <p align="center">
