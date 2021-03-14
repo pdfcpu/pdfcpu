@@ -59,10 +59,10 @@ A configuration string to specify the details of the image layout on the page.
 | position            | one of `full` or the anchors: `tl, tc, tr, l, c, r, bl, bc, br`| pos: full
 | offset              | (dx,dy) in user units eg. '15 20'                              | off: 0 0
 | scalefactor         | 0.0 <= s <= 1.0 followed by optional `abs` or `rel`            | sc: 0.5 rel
-| gray                | Convert to grayscale (on/off, true/false, t/f)                 | gray:off
-| sepia               | Apply sepia effect (on/off, true/false, t/f)                   | sepia: off
-| backgroundcolor, bgcol| 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red | none
-|                      | or the hex RGB value: #RRGGBB               |
+| gray                | Convert to grayscale (on/off, true/false)                      | gray:off
+| sepia               | Apply sepia effect (on/off, true/false)                        | sepia: off
+| backgroundcolor, bgcol| 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red                  | none
+|                      | or the hex RGB value: #RRGGBB                                 |
 
 <br>
 
@@ -80,7 +80,7 @@ A configuration string to specify the details of the image layout on the page.
 #### Default description
 
 ```sh
-'f:A4, dim:595 842, dpi:72, pos:full, off:0 0, s:0.5 rel'
+'f:A4, dim:595 842, dpi:72, pos:full, off:0 0, scale:0.5 rel, gray:off, sepia:off'
 ```
 
 * You only have to specify any parameter diverging from the default.
