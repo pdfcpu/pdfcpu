@@ -37,10 +37,10 @@ func TestPortfolioCommand(t *testing.T) {
 
 	// attach add 4 portfolio entries including descriptions.
 	files := []string{
-		outDir + "/golang.pdf",
-		outDir + "/T4.pdf" + ", CCITT spec",
-		outDir + "/go-lecture.pdf",
-		outDir + "/test.wav" + ", test audio file"}
+		filepath.Join(outDir, "golang.pdf"),
+		filepath.Join(outDir, "T4.pdf") + ", CCITT spec",
+		filepath.Join(outDir, "go-lecture.pdf"),
+		filepath.Join(outDir, "test.wav") + ", test audio file"}
 
 	cmd := cli.AddAttachmentsPortfolioCommand(fileName, "", files, nil)
 	if _, err := cli.Process(cmd); err != nil {

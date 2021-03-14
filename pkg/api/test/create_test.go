@@ -1572,7 +1572,7 @@ func createXRefAndWritePDF(t *testing.T, msg, fileName string, p pdf.Page) {
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	outDir := "../../samples/create"
+	outDir := filepath.Join("..", "..", "samples", "create")
 	outFile := filepath.Join(outDir, fileName+".pdf")
 	createAndValidate(t, xRefTable, outFile, msg)
 }
@@ -1726,7 +1726,7 @@ func TestUserFontJustified(t *testing.T) {
 	// Install test user fonts (in addition to already installed user fonts)
 	// from pkg/testdata/fonts.
 	api.LoadConfiguration()
-	if err := api.InstallFonts(userFonts(t, "../../testdata/fonts")); err != nil {
+	if err := api.InstallFonts(userFonts(t, filepath.Join("..", "..", "testdata", "fonts"))); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
@@ -1821,7 +1821,7 @@ func TestCJKV(t *testing.T) {
 	// Install test user fonts (in addition to already installed user fonts)
 	// from pkg/testdata/fonts.
 	api.LoadConfiguration()
-	if err := api.InstallFonts(userFonts(t, "../../testdata/fonts")); err != nil {
+	if err := api.InstallFonts(userFonts(t, filepath.Join("..", "..", "testdata", "fonts"))); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 

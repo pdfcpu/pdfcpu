@@ -29,7 +29,7 @@ import (
 func TestAlternatingPageNumbersViaWatermarkMap(t *testing.T) {
 	msg := "TestAlternatingPageNumbersViaWatermarkMap"
 	inFile := filepath.Join(inDir, "WaldenFull.pdf")
-	outFile := filepath.Join("../../samples/stamp/mixed", "AlternatingPageNumbersViaWatermarkMap.pdf")
+	outFile := filepath.Join("..", "..", "samples", "stamp", "mixed", "AlternatingPageNumbersViaWatermarkMap.pdf")
 
 	pageCount, err := api.PageCountFile(inFile)
 	if err != nil {
@@ -83,7 +83,7 @@ func TestAlternatingPageNumbersViaWatermarkMap(t *testing.T) {
 func TestAlternatingPageNumbersViaWatermarkMapLowLevel(t *testing.T) {
 	msg := "TestAlternatingPageNumbersViaWatermarkMapLowLevel"
 	inFile := filepath.Join(inDir, "WaldenFull.pdf")
-	outFile := filepath.Join("../../samples/stamp/mixed", "AlternatingPageNumbersViaWatermarkMapLowLevel.pdf")
+	outFile := filepath.Join("..", "..", "samples", "stamp", "mixed", "AlternatingPageNumbersViaWatermarkMapLowLevel.pdf")
 
 	// Create a context.
 	ctx, err := api.ReadContextFile(inFile)
@@ -149,7 +149,7 @@ func TestAlternatingPageNumbersViaWatermarkMapLowLevel(t *testing.T) {
 func TestAlternatingPageNumbersViaWatermarkSliceMap(t *testing.T) {
 	msg := "TestAlternatingPageNumbersViaWatermarkSliceMap"
 	inFile := filepath.Join(inDir, "WaldenFull.pdf")
-	outFile := filepath.Join("../../samples/stamp/mixed", "AlternatingPageNumbersViaWatermarkSliceMap.pdf")
+	outFile := filepath.Join("..", "..", "samples", "stamp", "mixed", "AlternatingPageNumbersViaWatermarkSliceMap.pdf")
 
 	pageCount, err := api.PageCountFile(inFile)
 	if err != nil {
@@ -224,7 +224,7 @@ func TestAlternatingPageNumbersViaWatermarkSliceMap(t *testing.T) {
 func TestImagesTextAndPDFWMViaWatermarkMap(t *testing.T) {
 	msg := "TestImagesTextAndPDFWMViaWatermarkMap"
 	inFile := filepath.Join(inDir, "WaldenFull.pdf")
-	outFile := filepath.Join("../../samples/stamp/mixed", "ImagesTextAndPDFWMViaWatermarkMap.pdf")
+	outFile := filepath.Join("..", "..", "samples", "stamp", "mixed", "ImagesTextAndPDFWMViaWatermarkMap.pdf")
 
 	pageCount, err := api.PageCountFile(inFile)
 	if err != nil {
@@ -232,7 +232,7 @@ func TestImagesTextAndPDFWMViaWatermarkMap(t *testing.T) {
 	}
 
 	m := map[int]*pdfcpu.Watermark{}
-	fileNames := imageFileNames(t, "../../../resources")
+	fileNames := imageFileNames(t, filepath.Join("..", "..", "..", "resources"))
 
 	opacity := 1.0
 	onTop := true // All stamps!

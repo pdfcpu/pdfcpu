@@ -190,9 +190,9 @@ func parseOrientation(s string, nup *NUp) error {
 
 func parseElementBorder(s string, nup *NUp) error {
 	switch strings.ToLower(s) {
-	case "on", "true":
+	case "on", "true", "t":
 		nup.Border = true
-	case "off", "false":
+	case "off", "false", "f":
 		nup.Border = false
 	default:
 		return errors.New("pdfcpu: nUp border, please provide one of: on/off true/false")
@@ -203,9 +203,9 @@ func parseElementBorder(s string, nup *NUp) error {
 
 func parseBookletGuides(s string, nup *NUp) error {
 	switch strings.ToLower(s) {
-	case "on", "true":
+	case "on", "true", "t":
 		nup.BookletGuides = true
-	case "off", "false":
+	case "off", "false", "f":
 		nup.BookletGuides = false
 	default:
 		return errors.New("pdfcpu: booklet guides, please provide one of: on/off true/false")
@@ -632,7 +632,7 @@ func NewNUpPageForImage(xRefTable *XRefTable, fileName string, parentIndRef *Ind
 	defer f.Close()
 
 	// create image dict.
-	imgIndRef, w, h, err := createImageResource(xRefTable, f)
+	imgIndRef, w, h, err := createImageResource(xRefTable, f, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -817,7 +817,7 @@ func NUpFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict
 			return err
 		}
 
-		imgIndRef, w, h, err := createImageResource(xRefTable, f)
+		imgIndRef, w, h, err := createImageResource(xRefTable, f, false, false)
 		if err != nil {
 			return err
 		}

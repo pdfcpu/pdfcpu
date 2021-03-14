@@ -54,13 +54,17 @@ func (m importParamMap) Handle(paramPrefix, paramValueStr string, imp *Import) e
 }
 
 var impParamMap = importParamMap{
-	"dimensions":  parseDimensionsImp,
-	"dpi":         parseDPI,
-	"formsize":    parsePageFormatImp,
-	"papersize":   parsePageFormatImp,
-	"position":    parsePositionAnchorImp,
-	"offset":      parsePositionOffsetImp,
-	"scalefactor": parseScaleFactorImp,
+	"dimensions":      parseDimensionsImp,
+	"dpi":             parseDPI,
+	"formsize":        parsePageFormatImp,
+	"papersize":       parsePageFormatImp,
+	"position":        parsePositionAnchorImp,
+	"offset":          parsePositionOffsetImp,
+	"scalefactor":     parseScaleFactorImp,
+	"gray":            parseGray,
+	"sepia":           parseSepia,
+	"backgroundcolor": parseImportBackgroundColor,
+	"bgcolor":         parseImportBackgroundColor,
 }
 
 // Import represents the command details for the command "ImportImage".
@@ -74,6 +78,9 @@ type Import struct {
 	Scale    float64     // relative scale factor. 0 <= x <= 1
 	ScaleAbs bool        // true for absolute scaling.
 	InpUnit  DisplayUnit // input display unit.
+	Gray     bool        // true for rendering in Gray.
+	Sepia    bool
+	BgColor  *SimpleColor // background color
 }
 
 // DefaultImportConfig returns the default configuration.
@@ -292,6 +299,41 @@ func parseDPI(s string, imp *Import) (err error) {
 	return err
 }
 
+func parseGray(s string, imp *Import) error {
+	switch strings.ToLower(s) {
+	case "on", "true", "t":
+		imp.Gray = true
+	case "off", "false", "f":
+		imp.Gray = false
+	default:
+		return errors.New("pdfcpu: import gray, please provide one of: on/off true/false")
+	}
+
+	return nil
+}
+
+func parseSepia(s string, imp *Import) error {
+	switch strings.ToLower(s) {
+	case "on", "true", "t":
+		imp.Sepia = true
+	case "off", "false", "f":
+		imp.Sepia = false
+	default:
+		return errors.New("pdfcpu: import gray, please provide one of: on/off true/false")
+	}
+
+	return nil
+}
+
+func parseImportBackgroundColor(s string, imp *Import) error {
+	c, err := parseColor(s)
+	if err != nil {
+		return err
+	}
+	imp.BgColor = &c
+	return nil
+}
+
 // ParseImportDetails parses an Import command string into an internal structure.
 func ParseImportDetails(s string, u DisplayUnit) (*Import, error) {
 
@@ -381,9 +423,13 @@ func importImagePDFBytes(wr io.Writer, pageDim *Dim, imgWidth, imgHeight float64
 	vpw := float64(pageDim.Width)
 	vph := float64(pageDim.Height)
 
+	bb := RectForDim(vpw, vph)
+	if imp.BgColor != nil {
+		FillRectStacked(wr, bb, *imp.BgColor)
+	}
+
 	if imp.Pos == Full {
 		// The bounding box equals the page dimensions.
-		bb := types.NewRectangle(0, 0, vpw, vph)
 		bb.UR.X = bb.Width()
 		bb.UR.Y = bb.UR.X / bb.AspectRatio()
 		fmt.Fprintf(wr, "q %f 0 0 %f 0 0 cm /Im0 Do Q", bb.Width(), bb.Height())
@@ -396,7 +442,7 @@ func importImagePDFBytes(wr io.Writer, pageDim *Dim, imgWidth, imgHeight float64
 		imgHeight *= float64(72) / float64(imp.DPI)
 	}
 
-	bb := types.NewRectangle(0, 0, imgWidth, imgHeight)
+	bb = RectForDim(imgWidth, imgHeight)
 	ar := bb.AspectRatio()
 
 	if imp.ScaleAbs {
@@ -431,7 +477,7 @@ func importImagePDFBytes(wr io.Writer, pageDim *Dim, imgWidth, imgHeight float64
 func NewPageForImage(xRefTable *XRefTable, r io.Reader, parentIndRef *IndirectRef, imp *Import) (*IndirectRef, error) {
 
 	// create image dict.
-	imgIndRef, w, h, err := createImageResource(xRefTable, r)
+	imgIndRef, w, h, err := createImageResource(xRefTable, r, imp.Gray, imp.Sepia)
 	if err != nil {
 		return nil, err
 	}

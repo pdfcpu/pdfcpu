@@ -119,7 +119,8 @@ func (ctx *Context) ExtractImage(objNr int) (*Image, error) {
 		return nil, nil
 	}
 
-	return RenderImage(ctx.XRefTable, imageObj, objNr)
+	resourceName := imageObj.ResourceNames[0]
+	return RenderImage(ctx.XRefTable, imageDict, resourceName, objNr)
 }
 
 // ExtractPageImages extracts all images used by pageNr.

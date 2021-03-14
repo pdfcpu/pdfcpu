@@ -20,9 +20,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"image"
 	"io"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -34,7 +32,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/types"
-	"golang.org/x/image/webp"
 
 	"github.com/pkg/errors"
 )
@@ -937,9 +934,8 @@ func setWatermarkType(mode int, s string, wm *Watermark) error {
 		}
 
 	case WMImage:
-		ext := strings.ToLower(filepath.Ext(s))
-		if !MemberOf(ext, []string{".jpg", ".jpeg", ".png", ".tif", ".tiff"}) {
-			return errors.New("imageFileName has to have one of these extensions: jpg, jpeg, png, tif, tiff")
+		if !ImageFileName(s) {
+			return errors.New("imageFileName has to have one of these extensions: .jpg, .jpeg, .png, .tif, .tiff, .webp")
 		}
 		wm.FileName = s
 
@@ -1116,65 +1112,6 @@ func (ctx *Context) createPDFResForWM(wm *Watermark) error {
 	return nil
 }
 
-func createImageResource(xRefTable *XRefTable, r io.Reader) (*IndirectRef, int, int, error) {
-	bb, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, 0, 0, err
-	}
-
-	var sd *StreamDict
-	r = bytes.NewReader(bb)
-
-	// Identify JPG via its magic bytes.
-	if bytes.HasPrefix(bb, []byte("\xff\xd8")) {
-		// Process JPG by wrapping byte stream into DCTEncoded object stream.
-		c, _, err := image.DecodeConfig(r)
-		if err != nil {
-			return nil, 0, 0, err
-		}
-
-		sd, err = ReadJPEG(xRefTable, bb, c)
-		if err != nil {
-			return nil, 0, 0, err
-		}
-
-	} else {
-
-		var img image.Image
-
-		// Identify WEBP via its magic bytes.
-		if bytes.HasPrefix(bb, []byte("\x52\x49\x46\x46")) &&
-			bytes.HasPrefix(bb[8:], []byte("\x57\x45\x42\x50")) {
-			img, err = webp.Decode(r)
-			if err != nil {
-				return nil, 0, 0, err
-			}
-		} else {
-			// Process other formats by decoding into an image
-			// and subsequent object stream encoding,
-			img, _, err = image.Decode(r)
-			if err != nil {
-				return nil, 0, 0, err
-			}
-		}
-
-		sd, err = imgToImageDict(xRefTable, img)
-		if err != nil {
-			return nil, 0, 0, err
-		}
-	}
-
-	w := *sd.IntEntry("Width")
-	h := *sd.IntEntry("Height")
-
-	indRef, err := xRefTable.IndRefForNewObject(*sd)
-	if err != nil {
-		return nil, 0, 0, err
-	}
-
-	return indRef, w, h, nil
-}
-
 func (ctx *Context) createImageResForWM(wm *Watermark) (err error) {
 	f, err := os.Open(wm.FileName)
 	if err != nil {
@@ -1182,7 +1119,7 @@ func (ctx *Context) createImageResForWM(wm *Watermark) (err error) {
 	}
 	defer f.Close()
 
-	wm.image, wm.width, wm.height, err = createImageResource(ctx.XRefTable, f)
+	wm.image, wm.width, wm.height, err = createImageResource(ctx.XRefTable, f, false, false)
 	return err
 }
 

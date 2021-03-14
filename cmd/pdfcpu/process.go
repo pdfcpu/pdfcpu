@@ -809,14 +809,9 @@ func processRemoveWatermarksCommand(conf *pdfcpu.Configuration) {
 	removeWatermarks(conf, false)
 }
 
-func hasImageExtension(filename string) bool {
-	s := strings.ToLower(filepath.Ext(filename))
-	return pdfcpu.MemberOf(s, []string{".jpg", ".jpeg", ".png", ".tif", ".tiff"})
-}
-
 func ensureImageExtension(filename string) {
-	if !hasImageExtension(filename) {
-		fmt.Fprintf(os.Stderr, "%s needs an image extension (.jpg, .jpeg, .png, .tif, .tiff)\n", filename)
+	if !pdfcpu.ImageFileName(filename) {
+		fmt.Fprintf(os.Stderr, "%s needs an image extension (.jpg, .jpeg, .png, .tif, .tiff, .webp)\n", filename)
 		os.Exit(1)
 	}
 }
@@ -991,7 +986,7 @@ func parseAfterNUpDetails(nup *pdfcpu.NUp, argInd int, filenameOut string) []str
 	}
 
 	filenameIn := flag.Arg(argInd)
-	if !hasPdfExtension(filenameIn) && !hasImageExtension(filenameIn) {
+	if !hasPdfExtension(filenameIn) && !pdfcpu.ImageFileName(filenameIn) {
 		fmt.Fprintf(os.Stderr, "inFile has to be a PDF or one or a sequence of image files: %s\n", filenameIn)
 		os.Exit(1)
 	}

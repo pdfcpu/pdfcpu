@@ -268,7 +268,7 @@ content ... extract raw page content
    
    2) image based
       -mode image imageFileName
-         supported extensions: '.jpg', 'jpeg', .png', '.tif', '.tiff' 
+         supported extensions: .jpg, .jpeg, .png, .tif, .tiff, .webp
          eg. pdfcpu stamp add -mode image -- "logo.png" "" in.pdf out.pdf
          
    3) PDF based
@@ -290,7 +290,7 @@ content ... extract raw page content
    
    2) image based
       -mode image imageFileName
-         supported extensions: '.jpg', 'jpeg', .png', '.tif', '.tiff' 
+         supported extensions: .jpg, .jpeg, .png, .tif, .tiff, .webp 
          eg. pdfcpu watermark add -mode image -- "logo.png" "" in.pdf out.pdf
          
    3) PDF based
@@ -303,7 +303,7 @@ content ... extract raw page content
 
 <description> is a comma separated configuration string containing these optional entries:
 	
-   (defaults: "font:Helvetica, points:24, pos:c, off:0,0 s:0.5 rel, rot:0, d:1, op:1, m:0 and for all colors: 0.5 0.5 0.5")
+   (defaults: "font:Helvetica, points:24, pos:c, off:0,0 sc:0.5 rel, rot:0, d:1, op:1, m:0 and for all colors: 0.5 0.5 0.5")
 
    fontname:         Please refer to "pdfcpu fonts list"
 
@@ -426,19 +426,21 @@ description ... dimensions, format, position, offset, scale factor, boxes
 
   optional entries:
 
-      (defaults: "d:595 842, f:A4, pos:full, off:0 0, s:0.5 rel, dpi:72")
+      (defaults: "d:595 842, f:A4, pos:full, off:0 0, sc:0.5 rel, dpi:72, gray:off, sepia:off")
 
-  dimensions: (width height) in given display unit eg. '400 200' setting the media box
-
-  formsize, papersize: eg. A4, Letter, Legal...
-                           Please refer to "pdfcpu paper" for a comprehensive list of defined paper sizes.
-                           Append 'L' to enforce landscape mode. (eg. A3L)
-                           Append 'P' to enforce portrait mode. (eg. TabloidP)
-
-  position:    one of 'full' or the anchors: tl,tc,tr, l,c,r, bl,bc,br
-  offset:      (dx dy) in given display unit eg. '15 20'
-  scalefactor: 0.0 <= x <= 1.0 followed by optional 'abs|rel' or 'a|r'
-  dpi:         apply desired dpi
+  dimensions:      (width height) in given display unit eg. '400 200' setting the media box
+  formsize:        eg. A4, Letter, Legal...
+                   Append 'L' to enforce landscape mode. (eg. A3L)
+                   Append 'P' to enforce portrait mode. (eg. TabloidP)
+                   Please refer to "pdfcpu paper" for a comprehensive list of defined paper sizes.
+                   "papersize" is also accepted.
+  position:        one of 'full' or the anchors: tl,tc,tr, l,c,r, bl,bc,br
+  offset:          (dx dy) in given display unit eg. '15 20'
+  scalefactor:     0.0 <= x <= 1.0 followed by optional 'abs|rel' or 'a|r'
+  dpi:             apply desired dpi
+  gray:            Convert to grayscale (on/off, true/false, t/f)
+  sepia:           Apply sepia effect (on/off, true/false, t/f)
+  backgroundcolor: "bgcolor" is also accepted.
   
   Only one of dimensions or format is allowed.
   position: full => image dimensions equal page dimensions.
@@ -515,7 +517,7 @@ description ... dimensions, format, orientation
                             ld ... left down
                             dl ... down left
                      Orientation applies to PDF input files only.
-    border:          on/off true/false
+    border:          Print border (on/off, true/false, t/f) 
     margin:          for n-up content: float >= 0 in given display unit
     backgroundcolor: backgound color for margin > 0.
                      "bgcolor" is also accepted.
@@ -576,9 +578,9 @@ set of pages after the top set of pages in the booklet. Then fold the half sheet
                      Only one of dimensions or format is allowed.
                      Please refer to "pdfcpu paper" for a comprehensive list of defined paper sizes.
                      "papersize" is also accepted.
-   border:           on/off true/false
-   guides:           on/off true/false prints folding and cutting lines
-   margin:           for n-up content: float >= 0 in given display unit
+   border:           Print border (on/off, true/false, t/f) 
+   guides:           Print folding and cutting lines (on/off, true/false, t/f)
+   margin:           Apply content margin (float >= 0 in given display unit)
    backgroundcolor:  sheet backgound color for margin > 0.
                      "bgcolor" is also accepted.
 
@@ -626,8 +628,8 @@ description ... dimensions, format, orientation
                          ld ... left down
                          dl ... down left
                   Orientation applies to PDF input files only.
-    border:       on/off true/false
-    margin:       for content: float >= 0 in given display unit
+    border:       Print border (on/off, true/false, t/f) 
+    margin:       Apply content margin (float >= 0 in given display unit)
 
 All configuration string parameters support completion.
 

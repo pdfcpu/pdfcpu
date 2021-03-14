@@ -127,7 +127,7 @@ func TestCoreFontDemoPDF(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
-		outFile := filepath.Join("../../samples/fonts/core", fn+".pdf")
+		outFile := filepath.Join("..", "..", "samples", "fonts", "core", fn+".pdf")
 		createAndValidate(t, xRefTable, outFile, msg)
 	}
 }
@@ -159,7 +159,7 @@ func TestUserFontDemoPDF(t *testing.T) {
 	api.LoadConfiguration()
 
 	// Install test user fonts from pkg/testdata/fonts.
-	if err := api.InstallFonts(userFonts(t, "../../testdata/fonts")); err != nil {
+	if err := api.InstallFonts(userFonts(t, filepath.Join("..", "..", "testdata", "fonts"))); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
@@ -167,7 +167,7 @@ func TestUserFontDemoPDF(t *testing.T) {
 	// in pkg/samples/fonts/user.
 	for _, fn := range font.UserFontNames() {
 		fmt.Println(fn)
-		if err := api.CreateUserFontDemoFiles("../../samples/fonts/user", fn); err != nil {
+		if err := api.CreateUserFontDemoFiles(filepath.Join("..", "..", "samples", "fonts", "user"), fn); err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
 	}

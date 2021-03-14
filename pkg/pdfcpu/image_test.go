@@ -20,15 +20,15 @@ import (
 	"bytes"
 	"fmt"
 	"image"
-	"image/png"
+	"image/color"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/hhrutter/tiff"
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
+	"github.com/pkg/errors"
 )
 
 var inDir, outDir string
@@ -36,7 +36,7 @@ var xRefTable *XRefTable
 
 func TestMain(m *testing.M) {
 
-	inDir = "testdata"
+	inDir = filepath.Join("..", "testdata", "resources")
 
 	var err error
 
@@ -57,9 +57,7 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-// readJPEGFile generates a PDF image object for a JPEG file
-// and appends this object to the cross reference table.
-func readJPEGFile(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
+func streamDictForJPGFile(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
 
 	bb, err := ioutil.ReadFile(fileName)
 	if err != nil {
@@ -71,43 +69,37 @@ func readJPEGFile(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
 		return nil, err
 	}
 
-	return ReadJPEG(xRefTable, bb, c)
+	var cs string
+
+	switch c.ColorModel {
+
+	case color.GrayModel:
+		cs = DeviceGrayCS
+
+	case color.YCbCrModel:
+		cs = DeviceRGBCS
+
+	case color.CMYKModel:
+		cs = DeviceCMYKCS
+
+	default:
+		return nil, errors.New("pdfcpu: unexpected color model for JPEG")
+
+	}
+
+	// Preserve the original JPG encoded data.
+	return createDCTImageObject(xRefTable, bb, c.Width, c.Height, 8, cs)
 }
 
-// readPNGFile generates a PDF image object for a PNG file
-// and appends this object to the cross reference table.
-func readPNGFile(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
-
+func streamDictForImageFile(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
-	img, err := png.Decode(f)
-	if err != nil {
-		return nil, err
-	}
-
-	return imgToImageDict(xRefTable, img)
-}
-
-// readTIFFFile generates a PDF image object for a TIFF file
-// and appends this object to the cross reference table.
-func readTIFFFile(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
-
-	f, err := os.Open(fileName)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	img, err := tiff.Decode(f)
-	if err != nil {
-		return nil, err
-	}
-
-	return imgToImageDict(xRefTable, img)
+	sd, _, _, err := createImageStreamDict(xRefTable, f, false, false)
+	return sd, err
 }
 
 func compare(t *testing.T, fn1, fn2 string) {
@@ -162,16 +154,15 @@ func printOptionalSMask(t *testing.T, sd *StreamDict) {
 		fmt.Printf("SMask %s: %s\n", o, sm)
 	}
 }
-func TestReadWritePNG(t *testing.T) {
+func TestReadWritePNGAndWEBP(t *testing.T) {
 
 	for _, filename := range []string{
-		"demo.png",     // fully opaque
-		"pdfchip3.png", // transparent
-		"DeviceGray.png",
+		"mountain.png",
+		"mountain.webp",
 	} {
 
 		// Read a PNG file and create an image object which is a stream dict.
-		sd, err := readPNGFile(xRefTable, filepath.Join(inDir, filename))
+		sd, err := streamDictForImageFile(xRefTable, filepath.Join(inDir, filename))
 		if err != nil {
 			t.Fatalf("err: %v\n", err)
 		}
@@ -199,7 +190,7 @@ func TestReadWritePNG(t *testing.T) {
 		// we can only compare against a PNG file which resulted from using image/png.
 
 		// Read in a PNG file created by pdfcpu and create an image object.
-		sd, err = readPNGFile(xRefTable, fn1)
+		sd, err = streamDictForImageFile(xRefTable, fn1)
 		if err != nil {
 			t.Fatalf("err: %v\n", err)
 		}
@@ -251,7 +242,7 @@ func read1BPCDeviceGrayFlateStreamDump(xRefTable *XRefTable, fileName string) (*
 }
 
 // Starting out with a DeviceGray color space based image object, write a PNG file then read and write again.
-func TestReadImageStreamWritePNG(t *testing.T) {
+func TestReadDeviceGrayWritePNG(t *testing.T) {
 
 	// Create an image for a flate encoded stream dump file.
 	filename := "DeviceGray"
@@ -285,7 +276,7 @@ func TestReadImageStreamWritePNG(t *testing.T) {
 	// we can only compare against a PNG file which resulted from using image/png.
 
 	// Read in a PNG file created by pdfcpu and create an image object.
-	sd, err = readPNGFile(xRefTable, fn1)
+	sd, err = streamDictForImageFile(xRefTable, fn1)
 	if err != nil || sd == nil {
 		t.Fatalf("err: %v\n", err)
 	}
@@ -347,7 +338,7 @@ func read8BPCDeviceCMYKFlateStreamDump(xRefTable *XRefTable, fileName string) (*
 }
 
 // Starting out with a CMYK color space based image object, write a TIFF file then read and write again.
-func TestReadImageStreamWriteTIFF(t *testing.T) {
+func TestReadCMYKWriteTIFF(t *testing.T) {
 
 	filename := "DeviceCMYK"
 	path := filepath.Join(inDir, filename+".raw")
@@ -374,7 +365,7 @@ func TestReadImageStreamWriteTIFF(t *testing.T) {
 	}
 
 	// Read in a TIFF file created by pdfcpu and create an image object.
-	sd, err = readTIFFFile(xRefTable, fn1)
+	sd, err = streamDictForImageFile(xRefTable, fn1)
 	if err != nil || sd == nil {
 		t.Errorf("err: %v\n", err)
 	}
@@ -397,92 +388,80 @@ func TestReadTIFFWritePNG(t *testing.T) {
 	// TIFF images get read into a Flate encoded image stream like PNGs.
 	// Any Flate encoded image stream gets written as PNG unless it operates in the Device CMYK color space.
 
-	for _, filename := range []string{
-		"video-001.tiff",
-		"24bit_1800dpi.tif",
-		"48bit_1800dpi.tif",
-	} {
+	fileName := "mountain.tif"
 
-		// Read a TIFF file and create an image object which is a stream dict.
-		sd, err := readTIFFFile(xRefTable, filepath.Join(inDir, filename))
-		if err != nil {
-			t.Fatalf("err: %v\n", err)
-		}
-
-		// Print the image object.
-		fmt.Printf("created imageObj: %s\n", sd)
-
-		// Print the optional SMask.
-		printOptionalSMask(t, sd)
-
-		// The file type and its extension gets decided during the call to WriteImage!
-		// These testcases all produce PNG files.
-		fnNoExt := strings.TrimSuffix(filename, filepath.Ext(filename))
-		tmpFileName1 := filepath.Join(outDir, fnNoExt)
-		fmt.Printf("tmpFileName: %s\n", tmpFileName1)
-
-		// Write the image object (as PNG file) to disk.
-		// fn1 is the resulting fileName path including the suffix (aka filetype extension).
-		fn1, err := WriteImage(xRefTable, tmpFileName1, sd, 0)
-		if err != nil {
-			t.Fatalf("err: %v\n", err)
-		}
-
-		// Since image/png does not write all ancillary chunks (eg. pHYs for dpi)
-		// we can only compare against a PNG file which resulted from using image/png.
-
-		// Read in a PNG file created by pdfcpu and create an image object.
-		sd, err = readPNGFile(xRefTable, fn1)
-		if err != nil {
-			t.Fatalf("err: %v\n", err)
-		}
-
-		// Write the image object (as PNG file) to disk.
-		fn2, err := WriteImage(xRefTable, tmpFileName1+"2", sd, 0)
-		if err != nil {
-			t.Fatalf("err: %v\n", err)
-		}
-
-		// ..and compare each other.
-		compare(t, fn1, fn2)
+	// Read a TIFF file and create an image object which is a stream dict.
+	sd, err := streamDictForImageFile(xRefTable, filepath.Join(inDir, fileName))
+	if err != nil {
+		t.Fatalf("err: %v\n", err)
 	}
 
+	// Print the image object.
+	fmt.Printf("created imageObj: %s\n", sd)
+
+	// Print the optional SMask.
+	printOptionalSMask(t, sd)
+
+	// The file type and its extension gets decided during the call to WriteImage!
+	// These testcases all produce PNG files.
+	fnNoExt := strings.TrimSuffix(fileName, filepath.Ext(fileName))
+	tmpFileName1 := filepath.Join(outDir, fnNoExt)
+	fmt.Printf("tmpFileName: %s\n", tmpFileName1)
+
+	// Write the image object (as PNG file) to disk.
+	// fn1 is the resulting fileName path including the suffix (aka filetype extension).
+	fn1, err := WriteImage(xRefTable, tmpFileName1, sd, 0)
+	if err != nil {
+		t.Fatalf("err: %v\n", err)
+	}
+
+	// Since image/png does not write all ancillary chunks (eg. pHYs for dpi)
+	// we can only compare against a PNG file which resulted from using image/png.
+
+	// Read in a PNG file created by pdfcpu and create an image object.
+	sd, err = streamDictForImageFile(xRefTable, fn1)
+	if err != nil {
+		t.Fatalf("err: %v\n", err)
+	}
+
+	// Write the image object (as PNG file) to disk.
+	fn2, err := WriteImage(xRefTable, tmpFileName1+"2", sd, 0)
+	if err != nil {
+		t.Fatalf("err: %v\n", err)
+	}
+
+	// ..and compare each other.
+	compare(t, fn1, fn2)
 }
 
 func TestReadWriteJPEG(t *testing.T) {
 
-	for _, filename := range []string{
-		"video-001.221212.jpeg",
-		"video-001.cmyk.jpeg",
-		"video-001.jpeg",
-		"video-001.progressive.jpeg",
-		"video-005.gray.jpeg",
-	} {
+	fileName := "mountain.jpg"
 
-		// Read a JPEG file and create an image object which is a stream dict.
-		sd, err := readJPEGFile(xRefTable, filepath.Join(inDir, filename))
-		if err != nil {
-			t.Fatalf("err: %v\n", err)
-		}
-
-		// Print the image object.
-		fmt.Printf("created imageObj: %s\n", sd)
-
-		// Print the optional SMask.
-		printOptionalSMask(t, sd)
-
-		// The file type and its extension gets decided during the call to WriteImage!
-		// These testcases all produce PNG files.
-		fnNoExt := strings.TrimSuffix(filename, filepath.Ext(filename))
-		tmpFileName1 := filepath.Join(outDir, fnNoExt)
-		fmt.Printf("tmpFileName: %s\n", tmpFileName1)
-
-		// Write the image object (as .jpg file) to disk.
-		// fn is the resulting fileName path including the suffix (aka filetype extension).
-		fn, err := WriteImage(xRefTable, tmpFileName1, sd, 0)
-		if err != nil {
-			t.Fatalf("err: %v\n", err)
-		}
-		fmt.Printf("fileName: %s\n", fn)
+	// Read a JPEG file and create a stream dict w/o decoding.
+	sd, err := streamDictForJPGFile(xRefTable, filepath.Join(inDir, fileName))
+	if err != nil {
+		t.Fatalf("err: %v\n", err)
 	}
+
+	// Print the image object.
+	fmt.Printf("created imageObj: %s\n", sd)
+
+	// Print the optional SMask.
+	printOptionalSMask(t, sd)
+
+	// The file type and its extension gets decided during the call to WriteImage!
+	// These testcases all produce PNG files.
+	fnNoExt := strings.TrimSuffix(fileName, filepath.Ext(fileName))
+	tmpFileName1 := filepath.Join(outDir, fnNoExt)
+	fmt.Printf("tmpFileName: %s\n", tmpFileName1)
+
+	// Write the image object (as .jpg file) to disk.
+	// fn is the resulting fileName path including the suffix (aka filetype extension).
+	fn, err := WriteImage(xRefTable, tmpFileName1, sd, 0)
+	if err != nil {
+		t.Fatalf("err: %v\n", err)
+	}
+	fmt.Printf("fileName: %s\n", fn)
+	// No comparison since JPG is lossy.
 }

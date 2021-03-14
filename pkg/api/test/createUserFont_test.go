@@ -17,6 +17,7 @@ limitations under the License.
 package test
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
@@ -419,7 +420,7 @@ func TestUserFonts(t *testing.T) {
 	msg := "TestUserFonts"
 
 	api.LoadConfiguration()
-	if err := api.InstallFonts(userFonts(t, "../../testdata/fonts")); err != nil {
+	if err := api.InstallFonts(userFonts(t, filepath.Join("..", "..", "testdata", "fonts"))); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 

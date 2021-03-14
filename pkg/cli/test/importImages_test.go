@@ -25,15 +25,11 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
-func testImportImages(t *testing.T, msg string, imgFiles []string, outFile, impConf string, ensureOutFile bool) {
+func testImportImages(t *testing.T, msg string, imgFiles []string, outFile, impConf string) {
 	t.Helper()
 	var err error
 
 	outFile = filepath.Join(outDir, outFile)
-	if ensureOutFile {
-		// We want to test appending to an existing PDF.
-		copyFile(t, filepath.Join(inDir, outFile), outFile)
-	}
 
 	// The default import conf uses the special pos:full argument
 	// which overrides all other import conf parms.
@@ -54,40 +50,41 @@ func testImportImages(t *testing.T, msg string, imgFiles []string, outFile, impC
 
 func TestImportCommand(t *testing.T) {
 	for _, tt := range []struct {
-		msg           string
-		imgFiles      []string
-		outFile       string
-		impConf       string
-		ensureOutFile bool
+		msg      string
+		imgFiles []string
+		outFile  string
+		impConf  string
 	}{
-		// Convert an image into a single page PDF.
-		// The page dimensions will match the image dimensions.
-		{"TestConvertImageToPDF",
-			[]string{filepath.Join(resDir, "pdfchip3.png")},
-			"testConvertImage.pdf",
-			"",
-			false},
+		// Render image on an A4 portrait mode page.
+		{"TestCenteredGraySepia",
+			[]string{filepath.Join(resDir, "mountain.jpg")},
+			"CenteredGraySepia.pdf",
+			"f:A4, pos:c, bgcol:#beded9"},
 
-		// Import an image as a new page of the existing output file.
-		{"TestImportImage",
-			[]string{filepath.Join(resDir, "pdfchip3.png")},
-			"Acroforms2.pdf",
-			"",
-			true},
+		// Import another image as a new page of testfile1 and convert image to gray.
+		{"TestCenteredGraySepia",
+			[]string{filepath.Join(resDir, "mountain.png")},
+			"CenteredGraySepia.pdf",
+			"f:A4, pos:c, sc:.75, bgcol:#beded9, gray:true"},
 
-		// Import images by creating an A3 page for each image.
-		// Images are page centered with 1.0 relative scaling.
-		// Import an image as a new page of the existing output file.
-		{"TestCenteredImportImage",
-			[]string{
-				filepath.Join(resDir, "pdfchip3.png"),
-				filepath.Join(resDir, "demo.png"),
-				filepath.Join(resDir, "snow.jpg"),
-			},
-			"Acroforms2.pdf",
-			"f:A3, pos:c, s:1.0",
-			true},
+		// Import another image as a new page of testfile1 and apply a sepia filter.
+		{"TestCenteredGraySepia",
+			[]string{filepath.Join(resDir, "mountain.webp")},
+			"CenteredGraySepia.pdf",
+			"f:A4, pos:c, sc:.9, bgcol:#beded9, sepia:true"},
+
+		// Import another image as a new page of testfile1.
+		{"TestCenteredGraySepia",
+			[]string{filepath.Join(resDir, "mountain.tif")},
+			"CenteredGraySepia.pdf",
+			"f:A4, pos:c, sc:1, bgcol:#beded9"},
+
+		// Page dimensions match image dimensions.
+		{"TestFull",
+			imageFileNames(t, filepath.Join("..", "..", "..", "resources")),
+			"Full.pdf",
+			"pos:full"},
 	} {
-		testImportImages(t, tt.msg, tt.imgFiles, tt.outFile, tt.impConf, tt.ensureOutFile)
+		testImportImages(t, tt.msg, tt.imgFiles, tt.outFile, tt.impConf)
 	}
 }

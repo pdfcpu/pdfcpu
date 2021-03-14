@@ -63,10 +63,11 @@ func TestAttachments(t *testing.T) {
 
 	// attach add 4 files
 	files := []string{
-		outDir + "/golang.pdf",
-		outDir + "/T4.pdf",
-		outDir + "/go-lecture.pdf",
-		outDir + "/test.wav"}
+		filepath.Join(outDir, "golang.pdf"),
+		filepath.Join(outDir, "T4.pdf"),
+		filepath.Join(outDir, "go-lecture.pdf"),
+		filepath.Join(outDir, "test.wav"),
+	}
 
 	cmd := cli.AddAttachmentsCommand(fileName, "", files, nil)
 	if _, err := cli.Process(cmd); err != nil {

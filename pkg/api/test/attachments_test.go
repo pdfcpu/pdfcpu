@@ -68,10 +68,10 @@ func TestAttachments(t *testing.T) {
 
 	// attach add 4 files
 	files := []string{
-		outDir + "/golang.pdf",
-		outDir + "/T4.pdf",
-		outDir + "/go-lecture.pdf",
-		outDir + "/test.wav"}
+		filepath.Join(outDir, "golang.pdf"),
+		filepath.Join(outDir, "T4.pdf"),
+		filepath.Join(outDir, "go-lecture.pdf"),
+		filepath.Join(outDir, "test.wav")}
 
 	if err := api.AddAttachmentsFile(fileName, "", files, false, nil); err != nil {
 		t.Fatalf("%s add attachments: %v\n", msg, err)

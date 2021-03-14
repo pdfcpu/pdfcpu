@@ -17,9 +17,7 @@ limitations under the License.
 package test
 
 import (
-	"io/ioutil"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
@@ -53,21 +51,6 @@ func testBooklet(t *testing.T, msg string, inFiles []string, outFile string, sel
 	if err := validateFile(t, outFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-}
-
-func imageFileNames(t *testing.T, dir string) []string {
-	t.Helper()
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	fn := []string{}
-	for _, fi := range files {
-		if strings.HasSuffix(fi.Name(), "png") || strings.HasSuffix(fi.Name(), "jpg") {
-			fn = append(fn, filepath.Join(dir, fi.Name()))
-		}
-	}
-	return fn
 }
 
 func TestBookletCommand(t *testing.T) {

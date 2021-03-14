@@ -17,15 +17,43 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"bytes"
 	"image"
 	"image/color"
 	"image/draw"
-	_ "image/jpeg"
+	"image/jpeg"
 	_ "image/png"
+	"io"
+	"io/ioutil"
+	"math"
+	"path/filepath"
+	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pkg/errors"
+	_ "golang.org/x/image/webp"
 )
+
+// ImageFileName returns true for supported image file types.
+func ImageFileName(fileName string) bool {
+	ext := strings.ToLower(filepath.Ext(fileName))
+	return MemberOf(ext, []string{".png", ".webp", ".tif", ".tiff", ".jpg", ".jpeg"})
+}
+
+// ImageFileNames returns a slice of image file names contained in dir.
+func ImageFileNames(dir string) ([]string, error) {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	fn := []string{}
+	for _, fi := range files {
+		if ImageFileName(fi.Name()) {
+			fn = append(fn, filepath.Join(dir, fi.Name()))
+		}
+	}
+	return fn, nil
+}
 
 func createSMaskObject(xRefTable *XRefTable, buf []byte, w, h, bpc int) (*IndirectRef, error) {
 	sd := &StreamDict{
@@ -54,7 +82,6 @@ func createSMaskObject(xRefTable *XRefTable, buf []byte, w, h, bpc int) (*Indire
 
 func createFlateImageObject(xRefTable *XRefTable, buf, sm []byte, w, h, bpc int, cs string) (*StreamDict, error) {
 	var softMaskIndRef *IndirectRef
-
 	if sm != nil {
 		var err error
 		softMaskIndRef, err = createSMaskObject(xRefTable, sm, w, h, bpc)
@@ -86,7 +113,7 @@ func createFlateImageObject(xRefTable *XRefTable, buf, sm []byte, w, h, bpc int,
 	return sd, nil
 }
 
-func createDCTImageObject(xRefTable *XRefTable, buf []byte, w, h int, cs string) (*StreamDict, error) {
+func createDCTImageObject(xRefTable *XRefTable, buf []byte, w, h, bpc int, cs string) (*StreamDict, error) {
 	sd := &StreamDict{
 		Dict: Dict(
 			map[string]Object{
@@ -94,7 +121,7 @@ func createDCTImageObject(xRefTable *XRefTable, buf []byte, w, h int, cs string)
 				"Subtype":          Name("Image"),
 				"Width":            Integer(w),
 				"Height":           Integer(h),
-				"BitsPerComponent": Integer(8),
+				"BitsPerComponent": Integer(bpc),
 				"ColorSpace":       Name(cs),
 			},
 		),
@@ -272,6 +299,24 @@ func writeGrayImageBuf(img image.Image) []byte {
 	return buf
 }
 
+func writeGray16ImageBuf(img image.Image) []byte {
+	w := img.Bounds().Dx()
+	h := img.Bounds().Dy()
+	i := 0
+	buf := make([]byte, 2*w*h)
+
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			c := img.At(x, y).(color.Gray16)
+			buf[i] = uint8(c.Y >> 8)
+			buf[i+1] = uint8(c.Y & 0x00FF)
+			i += 2
+		}
+	}
+
+	return buf
+}
+
 func writeCMYKImageBuf(img image.Image) []byte {
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
@@ -300,21 +345,82 @@ func convertToRGBA(img image.Image) *image.RGBA {
 	return m
 }
 
-func imgToImageDict(xRefTable *XRefTable, img image.Image) (*StreamDict, error) {
-	bpc := 8
-	// TODO if dpi != 72 resample (applies to PNG,JPG,TIFF)
+func convertToGray(img image.Image) *image.Gray {
+	b := img.Bounds()
+	m := image.NewGray(image.Rect(0, 0, b.Dx(), b.Dy()))
+	draw.Draw(m, m.Bounds(), img, b.Min, draw.Src)
+	return m
+}
+
+func convertToSepia(img image.Image) *image.RGBA {
+	m := convertToRGBA(img)
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			c := m.At(x, y).(color.RGBA)
+			r := math.Round((float64(c.R) * .393) + (float64(c.G) * .769) + (float64(c.B) * .189))
+			if r > 255 {
+				r = 255
+			}
+			g := math.Round((float64(c.R) * .349) + (float64(c.G) * .686) + (float64(c.B) * .168))
+			if g > 255 {
+				g = 255
+			}
+			b := math.Round((float64(c.R) * .272) + (float64(c.G) * .534) + (float64(c.B) * .131))
+			if b > 255 {
+				b = 255
+			}
+			m.Set(x, y, color.RGBA{uint8(r), uint8(g), uint8(b), c.A})
+		}
+	}
+	return m
+}
 
+func createImageDict(xRefTable *XRefTable, buf, softMask []byte, w, h, bpc int, format, cs string) (*StreamDict, int, int, error) {
+	var (
+		sd  *StreamDict
+		err error
+	)
+	switch format {
+	case "JPG":
+		sd, err = createDCTImageObject(xRefTable, buf, w, h, bpc, cs)
+	default:
+		sd, err = createFlateImageObject(xRefTable, buf, softMask, w, h, bpc, cs)
+	}
+	return sd, w, h, err
+}
+
+func createImageBuf(xRefTable *XRefTable, img image.Image, format string) ([]byte, []byte, int, string, error) {
 	var buf []byte
 	var sm []byte // soft mask aka alpha mask
+	var bpc int
+	// TODO if dpi != 72 resample (applies to PNG,JPG,TIFF)
 	var cs string
+
+	if format == "JPG" {
+		switch img.(type) {
+		case *image.Gray, *image.Gray16:
+			cs = DeviceGrayCS
+		case *image.YCbCr:
+			cs = DeviceRGBCS
+		case *image.CMYK:
+			cs = DeviceCMYKCS
+		default:
+			return buf, sm, bpc, cs, errors.Errorf("pdfcpu: unexpected color model for JPEG: %s", cs)
+		}
+		var buf bytes.Buffer
+		if err := jpeg.Encode(&buf, img, nil); err != nil {
+			return buf.Bytes(), sm, 8, cs, err
+		}
+	}
 
 	switch img.(type) {
 	case *image.RGBA:
 		// A 32-bit alpha-premultiplied color, having 8 bits for each of red, green, blue and alpha.
 		// An alpha-premultiplied color component C has been scaled by alpha (A), so it has valid values 0 <= C <= A.
 		cs = DeviceRGBCS
+		bpc = 8
 		buf = writeRGBAImageBuf(img)
 
 	case *image.RGBA64:
@@ -327,6 +433,7 @@ func imgToImageDict(xRefTable *XRefTable, img image.Image) (*StreamDict, error) 
 	case *image.NRGBA:
 		// Non-alpha-premultiplied 32-bit color.
 		cs = DeviceRGBCS
+		bpc = 8
 		buf, sm = writeNRGBAImageBuf(xRefTable, img)
 
 	case *image.NRGBA64:
@@ -336,65 +443,87 @@ func imgToImageDict(xRefTable *XRefTable, img image.Image) (*StreamDict, error) 
 		buf, sm = writeNRGBA64ImageBuf(xRefTable, img)
 
 	case *image.Alpha:
-		return nil, errors.New("unsupported image type: Alpha")
+		return buf, sm, bpc, cs, errors.New("pdfcpu: unsupported image type: Alpha")
 
 	case *image.Alpha16:
-		return nil, errors.New("unsupported image type: Alpha16")
+		return buf, sm, bpc, cs, errors.New("pdfcpu: unsupported image type: Alpha16")
 
 	case *image.Gray:
 		// 8-bit grayscale color.
 		cs = DeviceGrayCS
+		bpc = 8
 		buf = writeGrayImageBuf(img)
 
 	case *image.Gray16:
-		return nil, errors.New("unsupported image type: Gray16")
+		// 16-bit grayscale color.
+		cs = DeviceGrayCS
+		bpc = 16
+		buf = writeGray16ImageBuf(img)
 
 	case *image.CMYK:
 		// Opaque CMYK color, having 8 bits for each of cyan, magenta, yellow and black.
 		cs = DeviceCMYKCS
+		bpc = 8
 		buf = writeCMYKImageBuf(img)
 
 	case *image.YCbCr:
 		cs = DeviceRGBCS
+		bpc = 8
 		buf = writeRGBAImageBuf(convertToRGBA(img))
 
 	case *image.NYCbCrA:
-		return nil, errors.New("unsupported image type: NYCbCrA")
+		return buf, sm, bpc, cs, errors.New("pdfcpu: unsupported image type: NYCbCrA")
 
 	case *image.Paletted:
 		// In-memory image of uint8 indices into a given palette.
 		cs = DeviceRGBCS
+		bpc = 8
 		buf = writeRGBAImageBuf(convertToRGBA(img))
 
 	default:
-		return nil, errors.Errorf("unsupported image type: %T", img)
+		return buf, sm, bpc, cs, errors.Errorf("pdfcpu: unsupported image type: %T", img)
 	}
 
-	//fmt.Printf("old w:%3d, h:%3d, new w:%3d, h:%3d\n", img.Bounds().Dx(), img.Bounds().Dy(), w, h)
-
-	return createFlateImageObject(xRefTable, buf, sm, w, h, bpc, cs)
+	return buf, sm, bpc, cs, nil
 }
 
-// ReadJPEG generates a PDF image object for a JPEG stream
-// and appends this object to the cross reference table.
-func ReadJPEG(xRefTable *XRefTable, buf []byte, c image.Config) (*StreamDict, error) {
-	var cs string
-
-	switch c.ColorModel {
-
-	case color.GrayModel:
-		cs = DeviceGrayCS
-
-	case color.YCbCrModel:
-		cs = DeviceRGBCS
-
-	case color.CMYKModel:
-		cs = DeviceCMYKCS
-
-	default:
-		return nil, errors.New("pdfcpu: unexpected color model for JPEG")
-
+func createImageStreamDict(xRefTable *XRefTable, r io.Reader, gray, sepia bool) (*StreamDict, int, int, error) {
+	img, format, err := image.Decode(r)
+	if err != nil {
+		return nil, 0, 0, err
 	}
 
-	return createDCTImageObject(xRefTable, buf, c.Width, c.Height, cs)
+	if gray {
+		switch img.(type) {
+		case *image.Gray, *image.Gray16:
+		default:
+			img = convertToGray(img)
+		}
+	}
+
+	if sepia {
+		switch img.(type) {
+		case *image.Gray, *image.Gray16:
+		default:
+			img = convertToSepia(img)
+		}
+	}
+
+	buf, softMask, bpc, cs, err := createImageBuf(xRefTable, img, format)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	w, h := img.Bounds().Dx(), img.Bounds().Dy()
+
+	return createImageDict(xRefTable, buf, softMask, w, h, bpc, format, cs)
+}
+
+func createImageResource(xRefTable *XRefTable, r io.Reader, gray, sepia bool) (*IndirectRef, int, int, error) {
+	sd, w, h, err := createImageStreamDict(xRefTable, r, gray, sepia)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	indRef, err := xRefTable.IndRefForNewObject(*sd)
+	return indRef, w, h, err
 }

@@ -33,8 +33,16 @@ import (
 
 var inDir, outDir, resDir string
 
+func imageFileNames(t *testing.T, dir string) []string {
+	t.Helper()
+	fn, err := pdfcpu.ImageFileNames(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return fn
+}
 func TestMain(m *testing.M) {
-	inDir = "../../testdata"
+	inDir = filepath.Join("..", "..", "testdata")
 	resDir = filepath.Join(inDir, "resources")
 	var err error
 

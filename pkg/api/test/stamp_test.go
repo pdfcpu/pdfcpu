@@ -32,7 +32,7 @@ func testAddWatermarks(t *testing.T, msg, inFile, outFile string, selectedPages 
 	if onTop {
 		s = "stamp"
 	}
-	outFile = filepath.Join("../../samples", s, mode, outFile)
+	outFile = filepath.Join("..", "..", "samples", s, mode, outFile)
 
 	var err error
 	switch mode {
@@ -370,14 +370,14 @@ func TestAddWatermarks(t *testing.T) {
 			filepath.Join(resDir, "logoSmall.png"),
 			"sc:.1, pos:bl, off:15 20, rot:0"},
 
-		// Add image stamp to inFile using absolute scaling and a negative rotation of 90 degrees.
+		// Add image stamp to inFile using absolute scaling and a rotation of 45 degrees.
 		{"TestStampImageAbsScaling",
 			"Walden.pdf",
 			"ImageAbsScaling.pdf",
 			[]string{"1-"},
 			"image",
 			filepath.Join(resDir, "logoSmall.png"),
-			"scale:.33 abs, rot:180"},
+			"scale:.33 abs, rot:45"},
 
 		// Add a PDF stamp to all pages of inFile using the 1st page of pdfFile
 		// and rotate along the 2nd diagonal running from upper left to lower right corner.
@@ -407,7 +407,7 @@ func TestAddWatermarks(t *testing.T) {
 func TestCropBox(t *testing.T) {
 	msg := "TestCropBox"
 	inFile := filepath.Join(inDir, "empty.pdf")
-	outFile := filepath.Join("../../samples/stamp/pdf", "PdfWithCropBox.pdf")
+	outFile := filepath.Join("..", "..", "samples", "stamp", "pdf", "PdfWithCropBox.pdf")
 	pdfFile := filepath.Join(inDir, "grid_example.pdf")
 
 	// Create a context.

@@ -17,9 +17,7 @@ limitations under the License.
 package test
 
 import (
-	"io/ioutil"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
@@ -52,23 +50,8 @@ func testNUp(t *testing.T, msg string, inFiles []string, outFile string, selecte
 	}
 }
 
-func imageFileNames(t *testing.T, dir string) []string {
-	t.Helper()
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	fn := []string{}
-	for _, fi := range files {
-		if strings.HasSuffix(fi.Name(), "png") || strings.HasSuffix(fi.Name(), "jpg") {
-			fn = append(fn, filepath.Join(dir, fi.Name()))
-		}
-	}
-	return fn
-}
-
 func TestNUp(t *testing.T) {
-	outDir := "../../samples/nup"
+	outDir := filepath.Join("..", "..", "samples", "nup")
 
 	for _, tt := range []struct {
 		msg           string
@@ -99,7 +82,7 @@ func TestNUp(t *testing.T) {
 
 		// 16-Up an image
 		{"TestNUpFromSingleImage",
-			[]string{filepath.Join("../../../resources", "logoSmall.png")},
+			[]string{filepath.Join("..", "..", "..", "resources", "logoSmall.png")},
 			filepath.Join(outDir, "NUpFromSingleImage.pdf"),
 			nil,
 			"f:A3P, m:10, bgcol:#f7e6c7",
@@ -108,7 +91,7 @@ func TestNUp(t *testing.T) {
 
 		// 6-Up a sequence of images.
 		{"TestNUpFromImages",
-			imageFileNames(t, "../../../resources"),
+			imageFileNames(t, filepath.Join("..", "..", "..", "resources")),
 			filepath.Join(outDir, "NUpFromImages.pdf"),
 			nil,
 			"f:Tabloid, border:on, m:10, bgcol:#f7e6c7",

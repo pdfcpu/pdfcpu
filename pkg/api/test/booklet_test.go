@@ -35,7 +35,7 @@ func testBooklet(t *testing.T, msg string, inFiles []string, outFile string, sel
 }
 
 func TestBooklet(t *testing.T) {
-	outDir := "../../samples/booklet"
+	outDir := filepath.Join("..", "..", "samples", "booklet")
 
 	for _, tt := range []struct {
 		msg           string
