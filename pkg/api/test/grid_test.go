@@ -63,17 +63,17 @@ func TestGrid(t *testing.T) {
 		{"TestGridFromPDF",
 			[]string{filepath.Join(inDir, "read.go.pdf")},
 			filepath.Join("..", "..", "samples", "grid", "GridFromPDF.pdf"),
-			nil, "f:LegalP, o:dr, border:off", 4, 6, false},
+			nil, "form:LegalP, o:dr, border:off", 4, 6, false},
 
 		{"TestGridFromPDFWithCropBox",
 			[]string{filepath.Join(inDir, "grid_example.pdf")},
 			filepath.Join("..", "..", "samples", "grid", "GridFromPDFWithCropBox.pdf"),
-			nil, "f:A5L, border:on, m:0", 2, 1, false},
+			nil, "form:A5L, border:on, margin:0", 2, 1, false},
 
 		{"TestGridFromImages",
 			imageFileNames(t, "../../../resources"),
 			filepath.Join("..", "..", "samples", "grid", "GridFromImages.pdf"),
-			nil, "d:500 500, m:20, bo:off", 1, 4, true},
+			nil, "d:500 500, margin:20, bo:off", 1, 4, true},
 	} {
 		testGrid(t, tt.msg, tt.inFiles, tt.outFile, tt.selectedPages, tt.desc, tt.rows, tt.cols, tt.isImg)
 	}

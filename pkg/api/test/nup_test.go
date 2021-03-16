@@ -67,7 +67,7 @@ func TestNUp(t *testing.T) {
 			[]string{filepath.Join(inDir, "WaldenFull.pdf")},
 			filepath.Join(outDir, "NUpFromPDF.pdf"),
 			nil,
-			"m:10, bgcol:#f7e6c7",
+			"margin:10, bgcol:#f7e6c7",
 			9,
 			false},
 
@@ -76,7 +76,7 @@ func TestNUp(t *testing.T) {
 			[]string{filepath.Join(inDir, "grid_example.pdf")},
 			filepath.Join(outDir, "NUpFromPDFWithCropBox.pdf"),
 			nil,
-			"f:A5L, border:on, m:10, bgcol:#f7e6c7",
+			"form:A5L, border:on, margin:10, bgcol:#f7e6c7",
 			2,
 			false},
 
@@ -85,7 +85,7 @@ func TestNUp(t *testing.T) {
 			[]string{filepath.Join("..", "..", "..", "resources", "logoSmall.png")},
 			filepath.Join(outDir, "NUpFromSingleImage.pdf"),
 			nil,
-			"f:A3P, m:10, bgcol:#f7e6c7",
+			"form:A3P, ma:10, bgcol:#f7e6c7",
 			16,
 			true},
 
@@ -94,7 +94,7 @@ func TestNUp(t *testing.T) {
 			imageFileNames(t, filepath.Join("..", "..", "..", "resources")),
 			filepath.Join(outDir, "NUpFromImages.pdf"),
 			nil,
-			"f:Tabloid, border:on, m:10, bgcol:#f7e6c7",
+			"form:Tabloid, border:on, ma:10, bgcol:#f7e6c7",
 			6,
 			true},
 	} {

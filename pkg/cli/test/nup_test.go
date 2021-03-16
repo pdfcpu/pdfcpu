@@ -75,7 +75,7 @@ func TestNUpCommand(t *testing.T) {
 			[]string{filepath.Join(resDir, "pdfchip3.png")},
 			filepath.Join(outDir, "out.pdf"),
 			nil,
-			"f:A3L",
+			"form:A3L",
 			9,
 			true},
 
@@ -87,7 +87,7 @@ func TestNUpCommand(t *testing.T) {
 			},
 			filepath.Join(outDir, "out1.pdf"),
 			nil,
-			"f:Tabloid, bo:off, m:0",
+			"form:Tabloid, bo:off, ma:0",
 			6,
 			true},
 	} {

@@ -503,7 +503,7 @@ description ... dimensions, format, orientation
 
     optional entries:
   
-        (defaults: "di:595 842, fo:A4, or:rd, bo:on, ma:3")
+        (defaults: "di:595 842, form:A4, or:rd, bo:on, ma:3")
   
     dimensions:      (width,height) in given display unit eg. '400 200'
     formsize:        The output sheet size, eg. A4, Letter, Legal...
@@ -536,7 +536,7 @@ Examples: pdfcpu nup out.pdf 4 in.pdf
           pdfcpu nup out.pdf 9 logo.jpg
            Arrange instances of logo.jpg into a 3x3 grid and write result to out.pdf using the A4 default format.
           
-          pdfcpu nup -- "f:Tabloid" out.pdf 4 *.jpg 
+          pdfcpu nup -- "form:Tabloid" out.pdf 4 *.jpg 
            Rearrange all jpg files into 2x2 grids and write result to out.pdf using the Tabloid format
            and the default orientation.
 
@@ -548,7 +548,7 @@ Examples: pdfcpu nup out.pdf 4 in.pdf
               pages       ... for inFile only, please refer to "pdfcpu selectedpages"
               description ... dimensions, formsize, border, margin
               outFile     ... output pdf file
-              n           ... the n-Up value: 2 or 4
+              n           ... booklet style (2 or 4)
               inFile      ... input pdf file
               imageFiles  ... input image file(s)
 
@@ -556,6 +556,12 @@ There are two styles of booklet, depending on your page/input and sheet/output s
 
 n=2: Two of your pages fit on one side of a sheet (eg statement on letter, A5 on A4)
 Assemble by printing on both sides (odd pages on the front and even pages on the back) and folding down the middle.
+
+A variant of n=2 is a technique to bind your own hardback book.
+It works best when the source PDF holding your book content has at least 128 pages.
+You bind your paper in eight sheet folios each making up 32 pages of your book.
+Each sheet is going to make four pages of your book, gets printed on both sides and folded in half.
+For such a multi folio booklet set 'multifolio:on' and play around with 'foliosize' which defaults to 8.
 
 n=4: Four of your pages fit on one side of a sheet (eg statement on ledger, A5 on A3, A6 on A4)
 Assemble by printing on both sides, then cutting the sheets horizontally.
@@ -578,6 +584,8 @@ set of pages after the top set of pages in the booklet. Then fold the half sheet
                      Only one of dimensions or format is allowed.
                      Please refer to "pdfcpu paper" for a comprehensive list of defined paper sizes.
                      "papersize" is also accepted.
+   multifolio:       Generate multi folio booklet (on/off, true/false, t/f) for n=2 and PDF input only.
+   foliosize:        folio size for multi folio booklets only (default:8)
    border:           Print border (on/off, true/false, t/f) 
    guides:           Print folding and cutting lines (on/off, true/false, t/f)
    margin:           Apply content margin (float >= 0 in given display unit)
@@ -594,6 +602,10 @@ Examples: pdfcpu booklet -- "formsize:Letter" out.pdf 2 in.pdf
 
           pdfcpu booklet -- "formsize:A4" out.pdf 2 in.pdf
            Arrange pages of in.pdf 2 per sheet side (4 per sheet, back and front) onto out.pdf
+
+          pdfcpu booklet -- "formsize:A4, multifolio:on" hardbackbook.pdf 2 in.pdf
+           Arrange pages of in.pdf 2 per sheetside as sequence of folios covering 4*foliosize pages each.
+           See also: https://www.instructables.com/How-to-bind-your-own-Hardback-Book/
 `
 
 	usageGrid     = "usage: pdfcpu grid [-p(ages) selectedPages] -- [description] outFile m n inFile|imageFiles..." + generalFlags
@@ -614,7 +626,7 @@ description ... dimensions, format, orientation
 
     optional entries:
   
-        (defaults: "d:595 842, f:A4, o:rd, bo:on, m:3")
+        (defaults: "d:595 842, form:A4, o:rd, bo:on, ma:3")
   
     dimensions:   (width height) in given display unit eg. '400 200'
     formsize:     The output sheet size, eg. A4, Letter, Legal...
@@ -637,7 +649,7 @@ Examples: pdfcpu grid out.pdf 1 10 in.pdf
            Rearrange pages of in.pdf into 1x10 grids and write result to out.pdf using the default orientation.
            The output page size is the result of a 1(hor)x10(vert) page grid using in.pdf's page size.
 
-          pdfcpu grid -- "LegalL" out.pdf 2 2 in.pdf 
+          pdfcpu grid -- "p:LegalL" out.pdf 2 2 in.pdf 
            Rearrange pages of in.pdf into 2x2 grids and write result to out.pdf using the default orientation.
            The output page size is the result of a 2(hor)x2(vert) page grid using page size Legal in landscape mode.
 

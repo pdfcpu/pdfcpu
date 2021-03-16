@@ -31,6 +31,8 @@ func DefaultBookletConfig() *NUp {
 	nup.Margin = 0
 	nup.Border = false
 	nup.BookletGuides = false
+	nup.MultiFolio = false
+	nup.FolioSize = 8
 	return nup
 }
 
@@ -330,8 +332,27 @@ func (ctx *Context) BookletFromPDF(selectedPages IntSet, nup *NUp) error {
 
 	nup.PageDim = &Dim{mb.Width(), mb.Height()}
 
-	if err = ctx.bookletPages(selectedPages, nup, pagesDict, pagesIndRef); err != nil {
-		return err
+	if nup.MultiFolio {
+		pages := IntSet{}
+		for _, i := range sortSelectedPages(selectedPages) {
+			pages[i] = true
+			if len(pages) == 4*nup.FolioSize {
+				if err = ctx.bookletPages(pages, nup, pagesDict, pagesIndRef); err != nil {
+					return err
+				}
+				pages = IntSet{}
+			}
+		}
+		if len(pages) > 0 {
+			if err = ctx.bookletPages(pages, nup, pagesDict, pagesIndRef); err != nil {
+				return err
+			}
+		}
+
+	} else {
+		if err = ctx.bookletPages(selectedPages, nup, pagesDict, pagesIndRef); err != nil {
+			return err
+		}
 	}
 
 	// Replace original pagesDict.

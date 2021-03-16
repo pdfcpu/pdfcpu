@@ -66,7 +66,7 @@ func TestGridCommand(t *testing.T) {
 		{"TestGridFromPDF",
 			[]string{filepath.Join(inDir, "Acroforms2.pdf")},
 			filepath.Join(outDir, "testGridFromPDF.pdf"),
-			nil, "f:LegalL", 1, 3, false},
+			nil, "form:LegalL", 1, 3, false},
 
 		{"TestGridFromImages",
 			[]string{

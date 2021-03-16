@@ -1,17 +1,17 @@
 /*
-Copyright 2021 The pdfcpu Authors.
+	Copyright 2021 The pdfcpu Authors.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
 
-	http://www.apache.org/licenses/LICENSE-2.0
+		http://www.apache.org/licenses/LICENSE-2.0
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
 */
 
 package test
@@ -140,6 +140,20 @@ func TestBookletCommand(t *testing.T) {
 			filepath.Join(outDir, "BookletFromPDFLetter_2UpWithTrailingBlankPages.pdf"),
 			[]string{"1-14"},
 			"p:LetterP, g:on, ma:10, bgcol:#f7e6c7",
+			2,
+			false,
+		},
+
+		// 2-up multi folio booklet from PDF on A4 using 8 sheets per folio
+		// using the default foliosize:8
+		// Here we print 2 complete folios (2 x 8 sheets) + 1 partial folio
+		// multi folio only makes sense for n = 2
+		// See also  https://www.instructables.com/How-to-bind-your-own-Hardback-Book/
+		{"TestHardbackBookFromPDF",
+			[]string{filepath.Join(inDir, "WaldenFull.pdf")},
+			filepath.Join(outDir, "HardbackBookFromPDF.pdf"),
+			[]string{"1-70"},
+			"p:A4, multifolio:on, border:off, g:on, ma:10, bgcol:#beded9",
 			2,
 			false,
 		},

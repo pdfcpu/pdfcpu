@@ -62,7 +62,6 @@ func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nu
 
 	log.Info.Printf("%s", nup)
 
-	// below is very similar to api.NUp
 	var (
 		ctx *pdfcpu.Context
 		err error
@@ -111,9 +110,6 @@ func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nu
 
 // BookletFile rearranges PDF pages or images into a booklet layout and writes the result to outFile.
 func BookletFile(inFiles []string, outFile string, selectedPages []string, nup *pdfcpu.NUp, conf *pdfcpu.Configuration) (err error) {
-	//if nup.ImgInputFile {
-	//	return fmt.Errorf("image file input not yet supported for booklet")
-	//}
 
 	var f1, f2 *os.File
 
