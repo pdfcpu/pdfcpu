@@ -91,10 +91,12 @@ A configuration string to specify the details of the booklet layout.
 | parameter            | values                                      | default
 |:---------------------|:--------------------------------------------|:--
 | dimensions           | (width, height) in user units eg. '400 200' | d: 595 842
-| formsize, paper size | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode| f: A4
+| formsize, paper size | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode| p: A4
+| multifolio           | on/off true/false, for n=2 and PDF input only | mu:off
+| foliosize            | for multi folio booklets only               | folios:8
 | guides               | on/off true/false                           | g: off
 | border               | on/off true/false                           | b: off
-| margin               | integer >= 0                                | m: 0
+| margin               | integer >= 0                                | ma: 0
 | backgroundcolor, bgcol | 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0, 0.0 = 1,0,0 = red | none
 |                      | or the hex RGB value: #RRGGBB               |
 
@@ -151,7 +153,7 @@ pdfcpu booklet -- "formsize:A4, border:off, guide:on, margin:10, bgcol:#beded9" 
 
 Since A4 happens to be the default form size the following command is identical to the one above:
 ```sh
-pdfcpu booklet -- "g:on, m:10, bgcol:#beded9" booklet.pdf 2 pageSequence.pdf
+pdfcpu booklet -- "g:on, ma:10, bgcol:#beded9" booklet.pdf 2 pageSequence.pdf
 ```
 
 <br>
@@ -180,7 +182,7 @@ Using guidelines for cutting and folding and a nice combination of margin and ba
 may be easier to understand:
 
 ```sh
-pdfcpu booklet -- "p:A4, bo:off, g:on, m:10, bgcol:#beded9" zine.pdf 4 pageSequence.pdf
+pdfcpu booklet -- "p:A4, bo:off, g:on, ma:10, bgcol:#beded9" zine.pdf 4 pageSequence.pdf
 ```
 
 <p align="center">
@@ -194,16 +196,26 @@ Similar to *nup* and *grid* the *booklet* command also accepts a sequence of ima
 In this case pdfcpu applies the same logic as above treating each image as a booklet page:
 
 ```sh
-pdfcpu booklet -- "p:A4, g:on, m:25, bgcol:#beded9" bookletFromImages.pdf 4 *.png
+pdfcpu booklet -- "p:A4, g:on, ma:25, bgcol:#beded9" bookletFromImages.pdf 4 *.png
 ```
 
-In this example we have five input image files resulting in a booklet with five pages of content.
-Since we want to produce a 4-up booklet we can fit eight booklet pages on one sheet of paper.
-<br>
-As a result of this pages 6 thru 8 are rendered as empty pages.
+In the following example we have five input image files resulting in a booklet with five pages of content.<br>
+Since we want to produce a 4-up booklet we can fit eight booklet pages on one sheet of paper.<br>
+As a result of this pages 6 thru 8 are rendered as empty pages.<br>
 Here are all pages (1 and 2) of the output file *bookletFromImages.pdf*:
 
 <p align="center">
   <img style="border-color:silver" border="1" src="resources/book4A4Imp1.png" height="300">
   <img style="border-color:silver" border="1" src="resources/book4A4Imp2.png" height="300">
 </p>
+<br>
+
+
+### Bind your own hard back book
+This variant of n=2 works best when the source PDF holding your book content has at least 128 pages.<br>
+* You bind your paper in eight sheet folios each making up 32 pages of your book.<br>
+* Each sheet is going to make four pages of your book, gets printed on both sides and folded in half.<br>
+* For such a multi folio booklet set 'multifolio:on' and play around with 'foliosize' which defaults to 8.
+```sh
+pdfcpu booklet -- "p:A4, multifolio:on, foliosize:8" hardbackbook.pdf 2 in.pdf
+```

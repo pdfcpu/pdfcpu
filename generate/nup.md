@@ -85,10 +85,10 @@ A configuration string to specify the details of the grid layout.
 | parameter            | values                                      | default
 |:---------------------|:--------------------------------------------|:--
 | dimensions           | (width, height) in user units eg. '400 200' | d: 595 842
-| formsize, paper size | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode| f: A4
+| formsize, paper size | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode| p: A4
 | orientation          | one of `rd, dr, ld, dl` for PDF input files | o: rd
 | border               | on/off true/false                           | bo: on
-| margin               | integer >= 0                                | m: 0
+| margin               | integer >= 0                                | ma: 0
 | backgroundcolor, bgcol| 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red | none
 |                      | or the hex RGB value: #RRGGBB               |
 
@@ -135,7 +135,7 @@ pdfcpu nup out.pdf 4 in.pdf
 
 The output file will use the page size of the input file unless explicitly declared by a description string like so:
 ```sh
-pdfcpu nup -- "f:A4" out.pdf 9 in.pdf
+pdfcpu nup -- "form:A4" out.pdf 9 in.pdf
 ```
 
 <p align="center">
@@ -150,7 +150,7 @@ Generate `out.pdf` using `A4 L`andscape mode where each page fits 4 images onto 
 The grid element border lines are rendered by default as well is the default margin of 3 points applied:
 
 ```sh
-pdfcpu nup -- "f:A4L" out.pdf 4 *.jpg *.png *.tif
+pdfcpu nup -- "form:A4L" out.pdf 4 *.jpg *.png *.tif
 ````
 
 
@@ -165,7 +165,7 @@ In the following example `logo.jpg` will be `16`-up'ed onto `out.pdf`.
 Both grid borders and margins are suppressed and the output format is `Ledger`:
 
 ```sh
-pdfcpu nup -- "f:Ledger, bo:off, m:0" out.pdf 16 logo.jpg
+pdfcpu nup -- "form:Ledger, bo:off, ma:0" out.pdf 16 logo.jpg
 ```
 
 

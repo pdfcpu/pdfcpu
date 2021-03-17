@@ -60,10 +60,10 @@ A configuration string to specify the details of the grid layout.
 | parameter            | values                                      | default
 |:---------------------|:--------------------------------------------|:--
 | dimensions           | (width, height) in user units eg. '400 200' | d: 595 842
-| formsize, paper size | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode| f: A4
+| formsize, paper size | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode| p: A4
 | orientation          | one of `rd, dr, ld, dl` for PDF input files | o: rd
 | border               | on/off true/false                           | bo: on
-| margin               | integer >= 0                                | m: 0
+| margin               | integer >= 0                                | ma: 0
 
 <br>
 
@@ -84,7 +84,7 @@ This is usually associated with the writing direction used in the document to be
 #### Default description
 
 ```sh
-'f:A4, d:595 842, o:rd, bo:on, m:3'
+'form:A4, d:595 842, o:rd, bo:on, ma:3'
 ```
 
 * You only have to specify any parameter diverging from the default.
@@ -118,7 +118,7 @@ When applied to image files this command produces simple photo galleries of arbi
 Arrange imagefiles onto a 5x2 page grid and write the result to out.pdf using a grid cell size of 500x500:
 
 ```sh
-pdfcpu grid -- "d:500 500, m:20, bo:off" out.pdf 5 2 *.jpg
+pdfcpu grid -- "d:500 500, ma:20, bo:off" out.pdf 5 2 *.jpg
 ```
 
 
@@ -132,7 +132,7 @@ Rearrange pages of in.pdf into 2x2 grids and write result to out.pdf using the d
 The output page size is the result of a 2(hor)x2(vert) page grid using page size Legal in landscape mode:
 
 ```sh
-pdfcpu grid -- "f:LegalL" out.pdf 2 2 in.pdf
+pdfcpu grid -- "form:LegalL" out.pdf 2 2 in.pdf
 ```
 
 <br>
