@@ -213,9 +213,11 @@ Here are all pages (1 and 2) of the output file *bookletFromImages.pdf*:
 
 ### Bind your own hard back book
 This variant of n=2 works best when the source PDF holding your book content has at least 128 pages.<br>
+
 * You bind your paper in eight sheet folios each making up 32 pages of your book.<br>
 * Each sheet is going to make four pages of your book, gets printed on both sides and folded in half.<br>
 * For such a multi folio booklet set 'multifolio:on' and play around with 'foliosize' which defaults to 8.
+
 ```sh
 pdfcpu booklet -- "p:A4, multifolio:on, foliosize:8" hardbackbook.pdf 2 in.pdf
 ```
