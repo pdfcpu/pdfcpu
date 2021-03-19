@@ -29,6 +29,10 @@ func validateBitsPerCoordinate(i int) bool {
 	return pdf.IntMemberOf(i, []int{1, 2, 4, 8, 12, 16, 24, 32})
 }
 
+func validateBitsPerFlag(i int) bool {
+	return pdf.IntMemberOf(i, []int{2, 4, 8})
+}
+
 func validateShadingDictCommonEntries(xRefTable *pdf.XRefTable, dict pdf.Dict) (shadType int, err error) {
 
 	dictName := "shadingDictCommonEntries"
@@ -163,7 +167,7 @@ func validateFreeFormGouroudShadedTriangleMeshesDict(xRefTable *pdf.XRefTable, d
 		return err
 	}
 
-	_, err = validateIntegerEntry(xRefTable, dict, dictName, "BitsPerFlag", REQUIRED, pdf.V10, func(i int) bool { return i >= 0 && i <= 2 })
+	_, err = validateIntegerEntry(xRefTable, dict, dictName, "BitsPerFlag", REQUIRED, pdf.V10, validateBitsPerFlag)
 	if err != nil {
 		return err
 	}
@@ -217,10 +221,6 @@ func validateCoonsPatchMeshesDict(xRefTable *pdf.XRefTable, dict pdf.Dict) error
 		return err
 	}
 
-	validateBitsPerFlag := func(i int) bool { return i >= 0 && i <= 3 }
-	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
-		validateBitsPerFlag = func(i int) bool { return i >= 0 && i <= 8 }
-	}
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "BitsPerFlag", REQUIRED, pdf.V10, validateBitsPerFlag)
 	if err != nil {
 		return err
@@ -248,10 +248,6 @@ func validateTensorProductPatchMeshesDict(xRefTable *pdf.XRefTable, dict pdf.Dic
 		return err
 	}
 
-	validateBitsPerFlag := func(i int) bool { return i >= 0 && i <= 3 }
-	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
-		validateBitsPerFlag = func(i int) bool { return i >= 0 && i <= 8 }
-	}
 	_, err = validateIntegerEntry(xRefTable, dict, dictName, "BitsPerFlag", REQUIRED, pdf.V10, validateBitsPerFlag)
 	if err != nil {
 		return err
