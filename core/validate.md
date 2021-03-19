@@ -9,7 +9,7 @@ This command checks `inFile` for compliance with the specification [PDF 32000-1:
 ## Usage
 
 ```
-pdfcpu validate [-m(ode) strict|relaxed] inFile
+pdfcpu validate [-m(ode) strict|relaxed] [-l(inks)] inFile
 ```
 
 <br>
@@ -19,6 +19,7 @@ pdfcpu validate [-m(ode) strict|relaxed] inFile
 | name                             | description     | required | values          |default
 |:---------------------------------|:----------------|:---------|:----------------|:------
 | m(ode)                           | validation mode | no       | strict, relaxed | relaxed
+| l(inks)                          | check links     | no       |                 |
 
 <br>
 
@@ -72,4 +73,22 @@ An example using default validation:
 pdfcpu validate test.pdf
 validating(mode=relaxed) test.pdf ...
 validation ok
+```
+
+<br>
+
+Check for broken links:
+```sh
+pdfcpu val -l PDF32000_2008.pdf
+validating(mode=relaxed) PDF32000_2008.pdf ...
+validating URIs..
+...........................
+Page 8: http://www.aiim.org/pdfrefdocs status=404
+Page 10: http://adobe.com/go/pdf_ref_bibliography status=404
+Page 10: http://www.adobe.com/go/pdf_ref_bibliography status=404
+Page 11: http://www.aiim.org/pdfnotes status=404
+Page 753: http://developer.apple.com/fonts/TTRefMan/ status=404
+Page 754: http://www.agfamonotype.com/printer/pan1.asp status=404
+Page 755: http://www.rsasecurity.com/rsalabs/node.asp?id=2125 status=404
+validation error: broken links detected
 ```

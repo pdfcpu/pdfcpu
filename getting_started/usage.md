@@ -59,7 +59,7 @@ Use "pdfcpu help [command]" for more information about a command.
 
 The basic processing features:
 ```
-pdfcpu validate [-m(ode) strict|relaxed] inFile
+pdfcpu validate [-m(ode) strict|relaxed] [-l(inks)] inFile
 pdfcpu optimize [-stats csvFile] inFile [outFile]
 pdfcpu merge    [-m(ode) create|append] [-sort] outFile inFile...
 pdfcpu split    [-m(ode) span|bookmark] inFile outDir [span]
