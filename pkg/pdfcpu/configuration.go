@@ -116,6 +116,9 @@ type Configuration struct {
 	// Validate against ISO-32000: strict or relaxed
 	ValidationMode int
 
+	// Check for broken links in LinkedAnnotations/URIActions.
+	ValidateLinks bool
+
 	// End of line char sequence for writing.
 	Eol string
 

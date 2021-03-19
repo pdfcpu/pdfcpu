@@ -187,6 +187,10 @@ func initFlags() {
 	flag.BoolVar(&verbose, "v", false, "")
 	flag.BoolVar(&veryVerbose, "vv", false, "")
 
+	linksUsage := "check for broken links"
+	flag.BoolVar(&links, "links", false, linksUsage)
+	flag.BoolVar(&links, "l", false, linksUsage)
+
 	flag.StringVar(&upw, "upw", "", "user password")
 	flag.StringVar(&opw, "opw", "", "owner password")
 

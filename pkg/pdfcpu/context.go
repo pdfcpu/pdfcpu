@@ -52,7 +52,7 @@ func NewContext(rs io.ReadSeeker, conf *Configuration) (*Context, error) {
 
 	ctx := &Context{
 		conf,
-		newXRefTable(conf.ValidationMode),
+		newXRefTable(conf.ValidationMode, conf.ValidateLinks),
 		rdCtx,
 		newOptimizationContext(),
 		NewWriteContext(conf.Eol),

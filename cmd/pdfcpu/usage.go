@@ -75,17 +75,18 @@ common flags: -v(erbose)  ... turn on logging
                                                   cm ... centimetres
                                                   mm ... millimetres`
 
-	usageValidate = "usage: pdfcpu validate [-m(ode) strict|relaxed] inFile" + generalFlags
+	usageValidate = "usage: pdfcpu validate [-m(ode) strict|relaxed] [-l(inks)] inFile" + generalFlags
 
 	usageLongValidate = `Check inFile for specification compliance.
 
       mode ... validation mode
+     links ... check for broken links
     inFile ... input pdf file
 		
 The validation modes are:
 
- strict ... (default) validates against PDF 32000-1:2008 (PDF 1.7)
-relaxed ... like strict but doesn't complain about common seen spec violations.`
+ strict ... validates against PDF 32000-1:2008 (PDF 1.7)
+relaxed ... (default) like strict but doesn't complain about common seen spec violations.`
 
 	usageOptimize     = "usage: pdfcpu optimize [-stats csvFile] inFile [outFile]" + generalFlags
 	usageLongOptimize = `Read inFile, remove redundant page resources like embedded fonts and images and write the result to outFile.
@@ -112,7 +113,7 @@ The split modes are:
                    span will be ignored.
                    Assumption: inFile contains an outline dictionary.`
 
-	usageMerge     = "usage: pdfcpu merge [-m(ode) create|append] [-sort] outFile inFile..." + generalFlags
+	usageMerge     = "usage: pdfcpu merge [-m(ode) create|append] [-s(ort)] outFile inFile..." + generalFlags
 	usageLongMerge = `Concatenate a sequence of PDFs/inFiles into outFile.
 
       mode ... merge mode (defaults to create)

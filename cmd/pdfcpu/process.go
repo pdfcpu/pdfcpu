@@ -130,6 +130,10 @@ func processValidateCommand(conf *pdfcpu.Configuration) {
 		conf.ValidationMode = pdfcpu.ValidationRelaxed
 	}
 
+	if links {
+		conf.ValidateLinks = true
+	}
+
 	process(cli.ValidateCommand(inFile, conf))
 }
 

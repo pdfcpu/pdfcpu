@@ -126,15 +126,18 @@ type XRefTable struct {
 	Tagged bool // File is using tags. This is important for ???
 
 	// Validation
-	Valid          bool // true means successful validated against ISO 32000.
-	ValidationMode int  // see Configuration
+	CurPage        int                       // current page during validation
+	ValidationMode int                       // see Configuration
+	ValidateLinks  bool                      // check for broken links in LinkAnnotations/URIDicts.
+	Valid          bool                      // true means successful validated against ISO 32000.
+	URIs           map[int]map[string]string // URIs for link checking
 
 	Optimized   bool
 	Watermarked bool
 }
 
 // NewXRefTable creates a new XRefTable.
-func newXRefTable(validationMode int) (xRefTable *XRefTable) {
+func newXRefTable(validationMode int, validateLinks bool) (xRefTable *XRefTable) {
 	return &XRefTable{
 		Table:             map[int]*XRefTableEntry{},
 		Names:             map[string]*Node{},
@@ -142,6 +145,8 @@ func newXRefTable(validationMode int) (xRefTable *XRefTable) {
 		LinearizationObjs: IntSet{},
 		Stats:             NewPDFStats(),
 		ValidationMode:    validationMode,
+		ValidateLinks:     validateLinks,
+		URIs:              map[int]map[string]string{},
 	}
 }
 

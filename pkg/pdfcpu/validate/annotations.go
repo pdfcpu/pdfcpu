@@ -1558,12 +1558,12 @@ func validatePageAnnotations(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 	return nil
 }
 
-func validatePagesAnnotations(xRefTable *pdf.XRefTable, d pdf.Dict) error {
+func validatePagesAnnotations(xRefTable *pdf.XRefTable, d pdf.Dict, curPage int) (int, error) {
 
 	// Get number of pages of this PDF file.
 	pageCount := d.IntEntry("Count")
 	if pageCount == nil {
-		return errors.New("pdfcpu: validatePagesAnnotations: missing \"Count\"")
+		return curPage, errors.New("pdfcpu: validatePagesAnnotations: missing \"Count\"")
 	}
 
 	log.Validate.Printf("validatePagesAnnotations: This page node has %d pages\n", *pageCount)
@@ -1580,38 +1580,40 @@ func validatePagesAnnotations(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 
 		d, err := xRefTable.DereferenceDict(v)
 		if err != nil {
-			return err
+			return curPage, err
 		}
 		if d == nil {
-			return errors.New("pdfcpu: validatePagesAnnotations: pageNodeDict is null")
+			return curPage, errors.New("pdfcpu: validatePagesAnnotations: pageNodeDict is null")
 		}
 
 		dictType := d.Type()
 		if dictType == nil {
-			return errors.New("pdfcpu: validatePagesAnnotations: missing pageNodeDict type")
+			return curPage, errors.New("pdfcpu: validatePagesAnnotations: missing pageNodeDict type")
 		}
 
 		switch *dictType {
 
 		case "Pages":
 			// Recurse over pagetree
-			err = validatePagesAnnotations(xRefTable, d)
+			curPage, err = validatePagesAnnotations(xRefTable, d, curPage)
 			if err != nil {
-				return err
+				return curPage, err
 			}
 
 		case "Page":
+			curPage++
+			xRefTable.CurPage = curPage
 			err = validatePageAnnotations(xRefTable, d)
 			if err != nil {
-				return err
+				return curPage, err
 			}
 
 		default:
-			return errors.Errorf("validatePagesAnnotations: expected dict type: %s\n", *dictType)
+			return curPage, errors.Errorf("validatePagesAnnotations: expected dict type: %s\n", *dictType)
 
 		}
 
 	}
 
-	return nil
+	return curPage, nil
 }
