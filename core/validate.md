@@ -4,7 +4,7 @@ layout: default
 
 # Validate
 
-This command checks `inFile` for compliance with the specification [PDF 32000-1:2008](https://www.adobe.com/content/dam/acom/en/devnet/pdf/pdfs/PDF32000_2008.pdf) (PDF 1.7). Any PDF file you would like to process needs to pass validation. Have a look at some [examples](#examples).
+This command checks `inFile` for compliance with the specification [PDF 32000-1:2008](https://www.adobe.com/content/dam/acom/en/devnet/pdf/pdfs/PDF32000_2008.pdf) (PDF 1.7). Any PDF file you would like to process needs to pass validation. Optionally check for broken links.<br>Have a look at some [examples](#examples).
 
 ## Usage
 
