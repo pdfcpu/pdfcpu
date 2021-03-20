@@ -523,9 +523,9 @@ func sortedWritableKeys(ctx *Context) []int {
 // After inserting the last object write the cross reference table to disk.
 func writeXRefTable(ctx *Context) error {
 
-	if err := ctx.EnsureValidFreeList(); err != nil {
-		return err
-	}
+	//if err := ctx.EnsureValidFreeList(); err != nil {
+	//	return err
+	//}
 
 	keys := sortedWritableKeys(ctx)
 
@@ -719,9 +719,9 @@ func writeXRefStream(ctx *Context) error {
 	}
 
 	// After the last insert of an object.
-	if err = xRefTable.EnsureValidFreeList(); err != nil {
-		return err
-	}
+	//if err = xRefTable.EnsureValidFreeList(); err != nil {
+	//	return err
+	//}
 
 	xRefStreamDict.Insert("Size", Integer(*xRefTable.Size))
 
