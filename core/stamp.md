@@ -23,11 +23,11 @@ pdfcpu stamp remove [-p(ages) selectedPages] inFile [outFile]
 ---
 NOTE
 
-In the Adobe world a watermark is text or an image that appears either in front of or behind existing document content, like a stamp comment aka stamp annotation that anybody reading the PDF can open, edit, move around and delete. The difference here is that a watermark is integrated into a PDF page as a fixed element. Within `pdfcpu` the meaning of these terms is slightly different:
+In the Adobe world a watermark is text or an image that appears either in front of or behind existing document content, unlike a stamp comment aka stamp annotation that anybody reading the PDF can open, edit, move around and delete. The difference here is that a watermark is integrated into a PDF page as a fixed element. Within `pdfcpu` the meaning of these terms is slightly different:
 
-* `stamp` is any accumulated *content* that appears in front of the existing page content - sitting on top of everything else on a page
+* `stamp` is any accumulated *content* that appears in front of the existing page content - sitting on top of everything else on a page at a fixed position.
 
-* `watermark` is any accumulated *content* that appears behind the existing page content - residing in the page background
+* `watermark` is any accumulated *content* that appears behind the existing page content - residing in the page background at a fixed position.
 
 where *content* may be text, an image or a PDF page.
 
