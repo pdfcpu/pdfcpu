@@ -25,7 +25,19 @@ import (
 )
 
 const (
-	sampleArabic   = "يولد جميع الناس أحرارًا ومتساوين في الكرامة والحقوق. وقد وهبوا عقلاً وضميرًا وعليهم أن يعامل بعضهم بعضًا بروح الإخاء."
+	sampleArabic = `الإعلان العالمي لحقوق الإنسان
+
+المادة 1.
+يولد جميع الناس أحرارًا ومتساوين في الكرامة والحقوق.
+وقد وهبوا عقلاً وضميرًا وعليهم أن يعامل بعضهم بعضًا بروح الإخاء.
+
+المادة 2.
+لكل فرد الحق في جميع الحقوق والحريات المنصوص عليها في هذا الإعلان ، دون تمييز من أي نوع ،
+مثل العرق أو اللون أو الجنس أو اللغة أو الدين أو الرأي السياسي أو غير السياسي أو الأصل القومي أو الاجتماعي أو الملكية أو
+ولادة أو حالة أخرى. علاوة على ذلك ، لا يجوز التمييز على أساس سياسي أو قضائي أو
+الوضع الدولي للبلد أو الإقليم الذي ينتمي إليه الشخص ، سواء كان مستقلاً ، أو محل ثقة ،
+غير متمتع بالحكم الذاتي أو تحت أي قيود أخرى على السيادة.`
+
 	sampleArmenian = `Մարդու իրավունքների համընդհանուր հռչակագիր
 
 Հոդված 1.
@@ -133,7 +145,18 @@ Des weiteren darf kein Unterschied gemacht werden auf Grund der politischen, rec
 ΑΡΘΡΟ 2
 Κάθε άνθρωπος δικαιούται να επικαλείται όλα τα δικαιώματα και όλες τις ελευθερίες που προκηρύσσει η παρούσα Διακήρυξη, χωρίς καμία απολύτως διάκριση, ειδικότερα ως προς τη φυλή, το χρώμα, το φύλο, τη γλώσσα, τις θρησκείες, τις πολιτικές ή οποιεσδήποτε άλλες πεποιθήσεις, την εθνική ή κοινωνική καταγωγή, την περιουσία, τη γέννηση ή οποιαδήποτε άλλη κατάσταση.`
 
-	sampleHebrew = `הצהרה האוניברסלית של זכויות האדם`
+	sampleHebrew = `הצהרה האוניברסלית של זכויות האדם
+
+מאמר 1.
+כל בני האדם נולדים חופשיים ושווים בכבודם ובזכויותיהם.
+הם ניחנים בתבונה ובמצפון ועליהם לפעול זה כלפי זה ברוח אחווה.
+
+סעיף 2.
+כל אחד זכאי לכל הזכויות והחירויות המופיעות בהצהרה זו, ללא הבחנה מכל סוג שהוא,
+כגון גזע, צבע, מין, שפה, דת, דעה פוליטית או אחרת, מקור לאומי או חברתי, רכוש,
+לידה או מעמד אחר. יתר על כן, לא תיעשה הבחנה על בסיס הפוליטי, השיפוט או
+מעמד בינלאומי של המדינה או השטח שאדם משתייך אליו, בין אם זה עצמאי, אמון,
+לא ממשל עצמי או תחת כל מגבלה אחרת של ריבונות.`
 
 	sampleHindi = `मानव अधिकारों की सार्वभौम घोषणा
 
@@ -178,23 +201,19 @@ Nessuna distinzione sarà inoltre stabilita sulla base dello statuto politico, g
 	sampleJapanese = `『世界人権宣言』
 
 第１条
+
 すべての人間は、生まれながらにして自由であり、かつ、尊厳と権利と について平等である。人間は、理性と良心とを授けられており、互いに同 胞の精神をもって行動しなければならない。
 
 第２条
+
 すべて人は、人種、皮膚の色、性、言語、宗教、政治上その他の意見、　　　
-
 国民的もしくは社会的出身、財産、門地その他の地位又はこれに類するい　　　
-
 かなる自由による差別をも受けることなく、この宣言に掲げるすべての権　　　
-
 利と自由とを享有することができる。
 
 さらに、個人の属する国又は地域が独立国であると、信託統治地域で　　　
-
 あると、非自治地域であると、又は他のなんらかの主権制限の下にあると　　　
-
 を問わず、その国又は地域の政治上、管轄上又は国際上の地位に基ずくい　　　
-
 かなる差別もしてはならない。`
 
 	sampleKorean = `세 계 인 권 선 언
@@ -213,7 +232,18 @@ Nessuna distinzione sarà inoltre stabilita sulla base dello statuto politico, g
 अनुच्छेद २.
 या घोषणेमध्ये वंश, रंग, लिंग, भाषा, धर्म, राजकीय किंवा अन्य मत, राष्ट्रीय किंवा सामाजिक मूळ, मालमत्ता, जन्म किंवा इतर कोणत्याही प्रकारचे भेद न करता प्रत्येकजण या घोषणेत नमूद केलेले सर्व अधिकार आणि स्वातंत्र्य मिळविण्यास पात्र आहे. इतर स्थिती. याव्यतिरिक्त, एखादा देश ज्याच्या ताब्यात आहे तो देशाच्या राजकीय, कार्यकक्षात्मक किंवा आंतरराष्ट्रीय दर्जाच्या आधारे कोणताही भेदभाव केला जाणार नाही, तो स्वतंत्र, विश्वास असो, स्वराज्य असो किंवा सार्वभौमत्वाच्या कोणत्याही अन्य मर्यादेखाली असो.`
 
-	samplePersian = "همه انسانها آزاد و از نظر کرامت و حقوق برابر به دنیا می آیند. آنها از عقل و وجدان برخوردارند و باید با روحیه برادری نسبت به یکدیگر رفتار کنند."
+	samplePersian = `اعلامیه جهانی حقوق بشر
+
+مقاله 1.
+همه انسانها آزاد و از نظر کرامت و حقوق برابر به دنیا می آیند.
+آنها از عقل و وجدان برخوردارند و باید با روحیه برادری نسبت به یکدیگر رفتار کنند.
+
+ماده 2
+هر کس بدون هیچ گونه تمایزی از کلیه حقوق و آزادی های مندرج در این بیانیه برخوردار است ،
+مانند نژاد ، رنگ ، جنس ، زبان ، مذهب ، عقاید سیاسی یا عقاید دیگر ، منشا national ملی یا اجتماعی ، دارایی ،
+تولد یا وضعیت دیگر بعلاوه ، هیچ تفکیکی نباید بر اساس حوزه های سیاسی ، قضایی یا قضایی قائل شود
+وضعیت بین المللی کشور یا سرزمینی که شخص به آن تعلق دارد ، خواه استقلال باشد ،
+غیر خود حاکم یا تحت هر محدودیت دیگری در حاکمیت.`
 
 	samplePolish = `POWSZECHNA DEKLARACJA PRAW CZŁOWIEKA
 
@@ -278,8 +308,10 @@ Ingen åtskillnad må vidare göras på grund av den politiska, juridiska eller 
 ข้อ 2.
 ทุกคนมีสิทธิได้รับสิทธิและเสรีภาพทั้งหมดที่ระบุไ
 ว้ในปฏิญญานี้โดยไม่มีความแตกต่างใด ๆ เช่นเชื้อชาติสีผิวเพศภาษาศาสนาความคิดเห็นทางการเมืองหรืออื่น ๆ
-ชาติกำเนิดหรือสังคมทรัพย์สินการเกิดหรือ สถานะอื่น ๆ นอกจากนี้จะต้องไม่สร้างความแตกต่างบนพื้นฐานของสถานะทางการเมืองเขตอำนาจศาลหรือระหว่างปร
-ะเทศของประเทศหรือดินแดนที่บุคคลนั้นอยู่ไม่ว่าจะเป็นอิสระความไว้วางใจการไม่ปกครองตนเองหรือภายใต้ข้อ จำกัด อื่นใดของอำนาจอธิปไตย`
+ชาติกำเนิดหรือสังคมทรัพย์สินการเกิดหรือ สถานะอื่น ๆ 
+นอกจากนี้จะต้องไม่สร้างความแตกต่างบนพื้นฐานของสถานะทางการเมืองเขตอำนาจศาลหรือระหว่างปร
+ะเทศของประเทศหรือดินแดนที่บุคคลนั้นอยู่ไม่ว่าจะเป็นอิสระความไว้วางใจการไม่ปกครองตนเองหรือภายใต้ข้อ
+จำกัด อื่นใดของอำนาจอธิปไตย`
 
 	sampleTurkish = `İnsan hakları  evrensel beyannamesi
 
@@ -291,8 +323,17 @@ Herkes, ırk, renk, cinsiyet, dil, din, siyasi veya diğer herhangi bir akide, m
 Bundan başka, bağımsız memleket uyruğu olsun, vesayet altında bulunan, gayri muhtar veya sair bir egemenlik kayıtlamasına tabi ülke uyruğu olsun, bir şahıs hakkında, uyruğu bulunduğu memleket veya ülkenin siyasi, hukuki veya milletlerarası statüsü bakımından hiçbir ayrılık gözetilmeyecektir.`
 
 	sampleUrdu = `انسانی حقوق کا عالمی اعلان
-	آرٹیکل 1. تمام انسان وقار اور حقوق میں آزاد اور مساوی ہیں۔ وہ استدلال اور ضمیر کے مالک ہیں اور بھائی چارے کے جذبے سے ایک دوسرے کے ساتھ کام کریں۔
-	آرٹیکل 2۔ ہر شخص اس اعلامیے میں بتائے گئے تمام حقوق اور آزادی کا حقدار ہے ، بغیر کسی امتیاز کے ، جیسے کہ نسل ، رنگ ، جنس ، زبان ، مذہب ، سیاسی یا دیگر رائے ، قومی یا معاشرتی اصل ، ملکیت ، پیدائش یا دوسری حیثیت مزید برآں ، کسی بھی ملک یا علاقے کی سیاسی ، دائرہ اختیار یا بین الاقوامی حیثیت کی بنا پر کوئی امتیازی سلوک نہیں کیا جائے گا ، خواہ وہ آزاد ، اعتماد ، غیر خود حکومت ہو یا خودمختاری کی کسی دوسری حد کے تحت ہو۔`
+
+آرٹیکل 1۔
+تمام انسان وقار اور حقوق میں آزاد اور برابر پیدا ہوئے ہیں۔
+وہ استدلال اور ضمیر کے مالک ہیں اور بھائی چارے کے جذبے سے ایک دوسرے کے ساتھ کام کریں۔
+
+آرٹیکل 2۔
+ہر شخص کسی بھی طرح کے امتیاز کے بغیر ، اس اعلامیے میں بیان کردہ تمام حقوق اور آزادی کا حقدار ہے ،
+جیسے نسل ، رنگ ، جنس ، زبان ، مذہب ، سیاسی یا دوسری رائے ، قومی یا معاشرتی اصل ، املاک ،
+پیدائش یا دوسری حیثیت مزید برآں ، سیاسی ، دائرہ اختیار یا کی بنیاد پر کوئی امتیاز نہیں برپا کیا جائے گا
+ملک یا علاقے کی بین الاقوامی حیثیت جس سے کسی شخص کا تعلق ہے ، خواہ وہ آزاد ہو ، اعتماد ،
+غیر خود حکمرانی یا خود مختاری کی کسی بھی دوسری حد کے تحت۔`
 
 	sampleVietnamese = `Tuyên ngôn nhân quyền
 
@@ -308,48 +349,49 @@ type sample struct {
 	fontName string
 	lang     string
 	text     string
+	rtl      bool
 }
 
-var ss = []sample{
-	//{"UnifontMedium", "Arabic", sampleArabic},
-	{"UnifontMedium", "Armenian", sampleArmenian},
-	{"Roboto-Regular", "Azerbaijani", sampleAzerbaijani},
-	{"UnifontMedium", "Bangla", sampleBangla},
-	{"Roboto-Regular", "Belarusian", sampleBelarusian},
-	{"UnifontMedium", "Chinese simple", sampleChineseSimple},
-	{"UnifontMedium", "Chinese traditional", sampleChineseTraditional},
-	{"Roboto-Regular", "English", sampleEnglish},
-	{"Roboto-Regular", "French", sampleFrench},
-	{"Roboto-Regular", "German", sampleGerman},
-	{"Roboto-Regular", "Greek", sampleGreek},
-	//{"UnifontMedium", "Hebrew", sampleHebrew},
-	{"UnifontMedium", "Hindi", sampleHindi},
-	{"Roboto-Regular", "Hungarian", sampleHungarian},
-	{"Roboto-Regular", "Indonesian", sampleIndonesian},
-	{"Roboto-Regular", "Italian", sampleItalian},
-	{"Unifont-JPMedium", "Japanese", sampleJapanese},
-	{"UnifontMedium", "Korean", sampleKorean},
-	{"UnifontMedium", "Marathi", sampleMarathi},
-	//{"UnifontMedium", "Persian", samplePersian},
-	{"Roboto-Regular", "Portuguese", samplePortuguese},
-	{"Roboto-Regular", "Polish", samplePolish},
-	{"Roboto-Regular", "Russian", sampleRussian},
-	{"Roboto-Regular", "Spanish", sampleSpanish},
-	{"Roboto-Regular", "Swahili", sampleSwahili},
-	{"Roboto-Regular", "Swedish", sampleSwedish},
-	//{"UnifontMedium", "Thai", sampleThai},
-	{"Roboto-Regular", "Turkish", sampleTurkish},
-	//{"UnifontMedium", "Urdu", sampleUrdu},
-	{"Roboto-Regular", "Vietnamese", sampleVietnamese},
+var langSamples = []sample{
+	{"UnifontMedium", "Arabic", sampleArabic, true},
+	{"UnifontMedium", "Armenian", sampleArmenian, false},
+	{"Roboto-Regular", "Azerbaijani", sampleAzerbaijani, false},
+	{"UnifontMedium", "Bangla", sampleBangla, false},
+	{"Roboto-Regular", "Belarusian", sampleBelarusian, false},
+	{"UnifontMedium", "Chinese simple", sampleChineseSimple, false},
+	{"UnifontMedium", "Chinese traditional", sampleChineseTraditional, false},
+	{"Roboto-Regular", "English", sampleEnglish, false},
+	{"Roboto-Regular", "French", sampleFrench, false},
+	{"Roboto-Regular", "German", sampleGerman, false},
+	{"Roboto-Regular", "Greek", sampleGreek, false},
+	{"UnifontMedium", "Hebrew", sampleHebrew, true},
+	{"UnifontMedium", "Hindi", sampleHindi, false},
+	{"Roboto-Regular", "Hungarian", sampleHungarian, false},
+	{"Roboto-Regular", "Indonesian", sampleIndonesian, false},
+	{"Roboto-Regular", "Italian", sampleItalian, false},
+	{"Unifont-JPMedium", "Japanese", sampleJapanese, false},
+	{"UnifontMedium", "Korean", sampleKorean, false},
+	{"UnifontMedium", "Marathi", sampleMarathi, false},
+	{"UnifontMedium", "Persian", samplePersian, true},
+	{"Roboto-Regular", "Portuguese", samplePortuguese, false},
+	{"Roboto-Regular", "Polish", samplePolish, false},
+	{"Roboto-Regular", "Russian", sampleRussian, false},
+	{"Roboto-Regular", "Spanish", sampleSpanish, false},
+	{"Roboto-Regular", "Swahili", sampleSwahili, false},
+	{"Roboto-Regular", "Swedish", sampleSwedish, false},
+	{"UnifontMedium", "Thai", sampleThai, true},
+	{"Roboto-Regular", "Turkish", sampleTurkish, false},
+	{"UnifontMedium", "Urdu", sampleUrdu, true},
+	{"Roboto-Regular", "Vietnamese", sampleVietnamese, false},
 }
 
 func renderArticle(p pdf.Page, row, col, lang int) {
 	mediaBox := p.MediaBox
-	w := mediaBox.Width() / 5
+	w := mediaBox.Width() / 6
 	h := mediaBox.Height() / 5
 	region := pdf.RectForWidthAndHeight(float64(col)*w, float64(4-row)*h, w, h)
 	buf := p.Buf
-	sample := ss[lang]
+	sample := langSamples[lang]
 
 	if lang%2 > 0 {
 		pdf.FillRect(buf, region, pdf.SimpleColor{R: .75, G: .75, B: 1})
@@ -390,6 +432,7 @@ func renderArticle(p pdf.Page, row, col, lang int) {
 	td = pdf.TextDescriptor{
 		Text:           sample.text,
 		FontName:       fontName,
+		RTL:            sample.rtl,
 		FontKey:        k,
 		FontSize:       16,
 		MLeft:          5,
@@ -413,7 +456,18 @@ func renderArticle(p pdf.Page, row, col, lang int) {
 		HairCross:      false,
 	}
 
-	pdf.WriteColumn(buf, mediaBox, region, td, 0)
+	if sample.lang == "Thai" {
+		td.HAlign = pdf.AlignRight
+		pdf.WriteColumn(buf, mediaBox, region, td, mediaBox.Width()*.9)
+		return
+	}
+
+	if sample.lang == "Japanese" {
+		pdf.WriteColumn(buf, mediaBox, region, td, mediaBox.Width()*.9)
+		return
+	}
+
+	pdf.WriteMultiLine(buf, mediaBox, region, td)
 }
 
 func TestUserFonts(t *testing.T) {
@@ -430,7 +484,7 @@ func TestUserFonts(t *testing.T) {
 
 	lang := 0
 	for row := 0; row < 5; row++ {
-		for col := 0; col < 5; col++ {
+		for col := 0; col < 6; col++ {
 			renderArticle(p, row, col, lang)
 			lang++
 		}

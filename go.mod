@@ -7,5 +7,6 @@ require (
 	github.com/hhrutter/tiff v0.0.0-20190829141212-736cae8d0bc7
 	github.com/pkg/errors v0.9.1
 	golang.org/x/image v0.0.0-20210220032944-ac19c3e999fb
+	golang.org/x/text v0.3.0
 	gopkg.in/yaml.v2 v2.4.0
 )

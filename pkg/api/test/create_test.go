@@ -1662,7 +1662,7 @@ func TestColumnDemoPDF(t *testing.T) {
 	}
 }
 
-func writecreateTestUserFontJustified(p pdf.Page, region *pdf.Rectangle) {
+func writecreateTestUserFontJustified(p pdf.Page, region *pdf.Rectangle, rtl bool) {
 	mediaBox := p.MediaBox
 	buf := p.Buf
 
@@ -1687,6 +1687,7 @@ func writecreateTestUserFontJustified(p pdf.Page, region *pdf.Rectangle) {
 		FontName:       fontName,
 		FontKey:        k,
 		FontSize:       12,
+		RTL:            rtl,
 		MLeft:          5,
 		MRight:         5,
 		MTop:           5,
@@ -1713,10 +1714,10 @@ func writecreateTestUserFontJustified(p pdf.Page, region *pdf.Rectangle) {
 	pdf.DrawHairCross(p.Buf, 0, 0, mediaBox)
 }
 
-func createTestUserFontJustified(mediaBox *pdf.Rectangle) pdf.Page {
+func createTestUserFontJustified(mediaBox *pdf.Rectangle, rtl bool) pdf.Page {
 	p := pdf.NewPage(mediaBox)
 	var region *pdf.Rectangle
-	writecreateTestUserFontJustified(p, region)
+	writecreateTestUserFontJustified(p, region, rtl)
 	return p
 }
 
@@ -1731,7 +1732,8 @@ func TestUserFontJustified(t *testing.T) {
 	}
 
 	mediaBox := pdf.RectForDim(600, 600)
-	createXRefAndWritePDF(t, msg, "TestUserFontJustified", createTestUserFontJustified(mediaBox))
+	createXRefAndWritePDF(t, msg, "TestUserFontJustified", createTestUserFontJustified(mediaBox, false))
+	createXRefAndWritePDF(t, msg, "TestUserFontJustifiedRightToLeft", createTestUserFontJustified(mediaBox, true))
 }
 
 func createCJKVDemo(mediaBox *pdf.Rectangle) pdf.Page {
