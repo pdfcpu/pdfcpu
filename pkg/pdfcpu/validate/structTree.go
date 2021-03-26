@@ -109,8 +109,22 @@ func validateObjectReferenceDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 }
 
 func validateStructElementDictEntryKArray(xRefTable *pdf.XRefTable, a pdf.Array) error {
-
 	for _, o := range a {
+
+		// Avoid recursion.
+		ir, ok := o.(pdf.IndirectRef)
+		if ok {
+			valid, err := xRefTable.IsValid(ir)
+			if err != nil {
+				return err
+			}
+			if valid {
+				continue
+			}
+			if err := xRefTable.SetValid(ir); err != nil {
+				return err
+			}
+		}
 
 		o, err := xRefTable.Dereference(o)
 		if err != nil {
@@ -184,7 +198,6 @@ func validateStructElementDictEntryK(xRefTable *pdf.XRefTable, o pdf.Object) err
 	case pdf.Integer:
 
 	case pdf.Dict:
-
 		dictType := o.Type()
 
 		if dictType == nil || *dictType == "StructElem" {

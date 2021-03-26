@@ -756,8 +756,8 @@ func validateXObjectStreamDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
 
 	// see 8.8 External Objects
 
-	// Dereference stream dict and ensure it is validated exactly once in order handle
-	// XObjects(forms) with recursive structures like produced by Microsoft.
+	// Dereference stream dict and ensure it is validated exactly once in order
+	// to handle XObjects(forms) with recursive structures like produced by Microsoft.
 	sd, valid, err := xRefTable.DereferenceStreamDict(o)
 	if valid {
 		return nil
@@ -782,7 +782,6 @@ func validateXObjectStreamDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
 	}
 
 	if subtype == nil {
-
 		// relaxed
 		_, found := sd.Find("BBox")
 		if found {
