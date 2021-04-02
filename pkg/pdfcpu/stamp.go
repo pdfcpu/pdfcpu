@@ -1546,13 +1546,6 @@ func (ctx *Context) insertPageContentsForWM(pageDict Dict, wm *Watermark, gsID, 
 	return nil
 }
 
-func contentBytesForPageRotation(r, dx, dy float64) []byte {
-	m := calcRotateAndTranslateTransformMatrix(r, dx, dy)
-	var b bytes.Buffer
-	fmt.Fprintf(&b, " q %.2f %.2f %.2f %.2f %.2f %.2f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
-	return b.Bytes()
-}
-
 func translationForPageRotation(pageRot int, w, h float64) (float64, float64) {
 	var dx, dy float64
 
@@ -1568,7 +1561,15 @@ func translationForPageRotation(pageRot int, w, h float64) (float64, float64) {
 	return dx, dy
 }
 
-func patchFirstContentForWM(sd *StreamDict, gsID, xoID string, wm *Watermark, isLast bool) error {
+func contentBytesForPageRotation(wm *Watermark) []byte {
+	dx, dy := translationForPageRotation(wm.pageRot, wm.vp.Width(), wm.vp.Height())
+	m := calcRotateAndTranslateTransformMatrix(float64(-wm.pageRot), dx, dy)
+	var b bytes.Buffer
+	fmt.Fprintf(&b, "%.2f %.2f %.2f %.2f %.2f %.2f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
+	return b.Bytes()
+}
+
+func patchFirstContentStreamForWatermark(sd *StreamDict, gsID, xoID string, wm *Watermark, isLast bool) error {
 	err := sd.Decode()
 	if err == filter.ErrUnsupportedFilter {
 		log.Info.Println("unsupported filter: unable to patch content with watermark.")
@@ -1578,40 +1579,38 @@ func patchFirstContentForWM(sd *StreamDict, gsID, xoID string, wm *Watermark, is
 		return err
 	}
 
-	bb := wmContent(wm, gsID, xoID)
+	wmbb := wmContent(wm, gsID, xoID)
 
+	// stamp
 	if wm.OnTop {
+		bb := []byte(" q ")
 		if wm.pageRot != 0 {
-			dx, dy := translationForPageRotation(wm.pageRot, wm.vp.Width(), wm.vp.Height())
-			sd.Content = append(contentBytesForPageRotation(float64(-wm.pageRot), dx, dy), sd.Content...)
-			if !isLast {
-				return sd.Encode()
-			}
-			sd.Content = append(sd.Content, []byte(" Q")...)
+			bb = append(bb, contentBytesForPageRotation(wm)...)
 		}
-		if isLast {
-			sd.Content = append(sd.Content, bb...)
-			return sd.Encode()
-		}
-		return nil
-	}
-
-	if wm.pageRot != 0 {
-		dx, dy := translationForPageRotation(wm.pageRot, wm.vp.Width(), wm.vp.Height())
-		prbb := contentBytesForPageRotation(float64(-wm.pageRot), dx, dy)
-		bb1 := append(bb, prbb...)
-		sd.Content = append(bb1, sd.Content...)
+		sd.Content = append(bb, sd.Content...)
 		if !isLast {
 			return sd.Encode()
 		}
+		sd.Content = append(sd.Content, []byte(" Q ")...)
+		sd.Content = append(sd.Content, wmbb...)
+		return sd.Encode()
+	}
+
+	// watermark
+	if wm.pageRot == 0 {
+		sd.Content = append(wmbb, sd.Content...)
+		return sd.Encode()
+	}
+
+	bb := append([]byte(" q "), contentBytesForPageRotation(wm)...)
+	sd.Content = append(bb, sd.Content...)
+	if isLast {
 		sd.Content = append(sd.Content, []byte(" Q")...)
-	} else {
-		sd.Content = append(bb, sd.Content...)
 	}
 	return sd.Encode()
 }
 
-func patchLastContentForWM(sd *StreamDict, gsID, xoID string, wm *Watermark) error {
+func patchLastContentStreamForWatermark(sd *StreamDict, gsID, xoID string, wm *Watermark) error {
 	err := sd.Decode()
 	if err == filter.ErrUnsupportedFilter {
 		log.Info.Println("unsupported filter: unable to patch content with watermark.")
@@ -1621,14 +1620,14 @@ func patchLastContentForWM(sd *StreamDict, gsID, xoID string, wm *Watermark) err
 		return err
 	}
 
+	// stamp
 	if wm.OnTop {
-		if wm.pageRot != 0 {
-			sd.Content = append(sd.Content, []byte(" Q")...)
-		}
+		sd.Content = append(sd.Content, []byte(" Q ")...)
 		sd.Content = append(sd.Content, wmContent(wm, gsID, xoID)...)
 		return sd.Encode()
 	}
 
+	// watermark
 	if wm.pageRot != 0 {
 		sd.Content = append(sd.Content, []byte(" Q")...)
 		return sd.Encode()
@@ -1657,7 +1656,7 @@ func (ctx *Context) updatePageContentsForWM(obj Object, wm *Watermark, gsID, xoI
 
 	case StreamDict:
 
-		err := patchFirstContentForWM(&o, gsID, xoID, wm, true)
+		err := patchFirstContentStreamForWatermark(&o, gsID, xoID, wm, true)
 		if err != nil {
 			return err
 		}
@@ -1680,7 +1679,7 @@ func (ctx *Context) updatePageContentsForWM(obj Object, wm *Watermark, gsID, xoI
 			return nil
 		}
 
-		err := patchFirstContentForWM(&sd, gsID, xoID, wm, len(o) == 1)
+		err := patchFirstContentStreamForWatermark(&sd, gsID, xoID, wm, len(o) == 1)
 		if err != nil {
 			return err
 		}
@@ -1705,7 +1704,7 @@ func (ctx *Context) updatePageContentsForWM(obj Object, wm *Watermark, gsID, xoI
 		entry, _ = ctx.FindTableEntry(objNr, genNr)
 		sd, _ = (entry.Object).(StreamDict)
 
-		err = patchLastContentForWM(&sd, gsID, xoID, wm)
+		err = patchLastContentStreamForWatermark(&sd, gsID, xoID, wm)
 		if err != nil {
 			return err
 		}
