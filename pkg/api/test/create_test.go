@@ -42,6 +42,81 @@ for part of my plan has been to try to pleasantly remind adults of what
 they once were themselves, and of how they felt and thought and talked,
 and what queer enterprises they sometimes engaged in.`
 
+var sampleTextArabic = `حدثت بالفعل معظم المغامرات المسجلة في هذا الكتاب ؛ واحد أو
+كانت اثنتان من تجربتي الخاصة ، والباقي تجارب الأولاد الذين كانوا كذلك
+زملائي في المدرسة. هاك فين مستوحى من الحياة ؛ توم سوير أيضا ولكن
+ليس من فرد - إنه مزيج من خصائص
+ثلاثة أولاد أعرفهم ، وبالتالي ينتمون إلى الترتيب المركب لـ
+هندسة معمارية.
+
+كانت الخرافات الغريبة التي تم التطرق إليها سائدة بين الأطفال
+والعبيد في الغرب في فترة هذه القصة - أي
+قبل ثلاثين أو أربعين سنة.
+
+على الرغم من أن كتابي مخصص بشكل أساسي للترفيه عن الأولاد و
+الفتيات ، أتمنى ألا يتجنب الرجال والنساء ذلك الحساب ،
+جزء من خطتي كان محاولة تذكير البالغين بما يحدث
+كانوا أنفسهم ذات مرة ، وكيف شعروا وفكروا وتحدثوا ،
+وما هي المؤسسات الكويرية التي شاركوا فيها أحيانًا.`
+
+var sampleTextHebrew = `רוב ההרפתקאות שתועדו בספר זה באמת התרחשו; אחד או
+שתיים היו חוויות משלי, והשאר אלה של בנים שהיו
+חברי לבית הספר שלי. האק פין נשאב מהחיים; גם טום סוייר, אבל
+לא מאדם - הוא שילוב של המאפיינים של
+שלושה בנים שהכרתי ולכן שייכים לסדר המורכב של
+ארכיטקטורה.
+
+האמונות הטפלות המוזרות בהן נגעו היו כולן רווחות בקרב ילדים
+ועבדים במערב בתקופת הסיפור הזה - כלומר,
+לפני שלושים או ארבעים שנה.
+
+למרות שהספר שלי מיועד בעיקר לבידור של בנים ו
+בנות, אני מקווה שזה לא יימנע מגברים ונשים בגלל זה,
+חלק מהתוכנית שלי הייתה לנסות להזכיר למבוגרים בנעימות מה
+פעם הם היו עצמם, ועל איך שהם הרגישו וחשבו ודיברו,
+ובאילו מפעלים מוזרים הם עסקו לפעמים.`
+
+var sampleTextPersian = `بیشتر ماجراهای ثبت شده در این کتاب واقعاً اتفاق افتاده است. یکی یا
+دو مورد از تجربه های خودم بود ، بقیه از پسران بودند
+هم مدرسه ای های من. هاک فین از زندگی کشیده شده است. تام سویر نیز ، اما
+نه از یک فرد - او ترکیبی از ویژگی های است
+سه پسر که من آنها را می شناختم و بنابراین به ترتیب مرکب تعلق دارند
+معماری.
+
+خرافات عجیب و غریب لمس شده همه در میان کودکان شایع بود
+و بردگان در غرب این دوره از داستان - یعنی اینکه ،
+سی چهل سال پیش
+
+اگرچه کتاب من عمدتا برای سرگرمی پسران و
+دختران ، امیدوارم با این حساب مردان و زنان از آن اجتناب نکنند ،
+زیرا بخشی از برنامه من این بوده است که سعی کنم چه چیزی را به بزرگسالان یادآوری کنم
+آنها یک بار خودشان بودند ، و از احساس و تفکر و صحبت کردن ،
+و بعضی اوقات چه کارهایی را انجام می دادند`
+
+var sampleTextUrdu = `اس کتاب میں درج کی گئی زیادہ تر مہم جوئی واقعتا؛ پیش آئی ہے۔ ایک یا
+دو میرے اپنے تجربات تھے ، باقی جو لڑکے تھے
+میرے اسکول کے ساتھیوں. ہک فن زندگی سے نکالا گیا ہے۔ ٹام ساویر بھی ، لیکن
+کسی فرد سے نہیں - وہ کی خصوصیات کا ایک مجموعہ ہے
+تین لڑکے جن کو میں جانتا تھا ، اور اس وجہ سے یہ جامع ترتیب سے ہے
+فن تعمیر
+
+بچوں میں عجیب و غریب اندوشواس کا اثر تمام تھا
+اور اس کہانی کے دور میں مغرب میں غلام۔
+تیس یا چالیس سال پہلے کی بات ہے۔
+
+اگرچہ میری کتاب بنیادی طور پر لڑکوں اور تفریح ​​کے لئے ہے
+لڑکیاں ، مجھے امید ہے کہ اس وجہ سے مرد اور خواتین اس سے باز نہیں آئیں گے ،
+میرے منصوبے کا ایک حص adultsہ یہ رہا ہے کہ بالغوں کو خوشی سے اس کی یاد دلانے کی کیا کوشش کی جائے
+وہ ایک بار خود تھے ، اور یہ کہ وہ کیسے محسوس کرتے ہیں ، سوچتے اور بات کرتے ہیں ،
+اور کن کن کن کاروباری اداروں میں وہ کبھی کبھی مشغول رہتے ہیں۔`
+
+var sampleTextRTL = map[string]string{
+	"Arabic":  sampleTextArabic,
+	"Hebrew":  sampleTextHebrew,
+	"Persian": sampleTextPersian,
+	"Urdu":    sampleTextUrdu,
+}
+
 var sampleText2 = `THE two boys flew on and on, toward the village, speechless with
 horror. They glanced backward over their shoulders from time to time,
 apprehensively, as if they feared they might be followed. Every stump
@@ -1662,6 +1737,67 @@ func TestColumnDemoPDF(t *testing.T) {
 	}
 }
 
+func writecreateTestRTLUserFont(p pdf.Page, region *pdf.Rectangle, fontName, text string) {
+	mediaBox := p.MediaBox
+	buf := p.Buf
+
+	mediaBB := true
+
+	var cr, cg, cb float32
+	cr, cg, cb = .5, .75, 1.
+	r := mediaBox
+	if region != nil {
+		r = region
+		cr, cg, cb = .75, .75, 1
+	}
+	if mediaBB {
+		pdf.FillRect(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
+	}
+
+	k := p.Fm.EnsureKey(fontName)
+
+	td := pdf.TextDescriptor{
+		Text:           text,
+		FontName:       fontName,
+		FontKey:        k,
+		FontSize:       12,
+		RTL:            true,
+		MLeft:          5,
+		MRight:         5,
+		MTop:           5,
+		MBot:           5,
+		X:              mediaBox.Width(),
+		Y:              -1,
+		Scale:          1.,
+		ScaleAbs:       true,
+		HAlign:         pdf.AlignRight,
+		VAlign:         pdf.AlignMiddle,
+		RMode:          pdf.RMFill,
+		StrokeCol:      pdf.NewSimpleColor(0x206A29),
+		FillCol:        pdf.NewSimpleColor(0x206A29),
+		ShowBackground: true,
+		BackgroundCol:  pdf.SimpleColor{R: 1., G: .98, B: .77},
+		ShowBorder:     true,
+		ShowLineBB:     false,
+		ShowTextBB:     true,
+		HairCross:      false,
+	}
+
+	pdf.WriteMultiLine(buf, mediaBox, region, td)
+
+	pdf.DrawHairCross(p.Buf, 0, 0, mediaBox)
+}
+
+func createTestRTLUserFont(mediaBox *pdf.Rectangle, language, fontName string) pdf.Page {
+	p := pdf.NewPage(mediaBox)
+	var region *pdf.Rectangle
+	text := sampleTextRTL[language]
+	writecreateTestRTLUserFont(p, region, fontName, text)
+	region = pdf.RectForWidthAndHeight(10, 10, mediaBox.Width()/4, mediaBox.Height()/4)
+	writecreateTestRTLUserFont(p, region, fontName, text)
+	return p
+}
+
 func writecreateTestUserFontJustified(p pdf.Page, region *pdf.Rectangle, rtl bool) {
 	mediaBox := p.MediaBox
 	buf := p.Buf
@@ -1732,8 +1868,13 @@ func TestUserFontJustified(t *testing.T) {
 	}
 
 	mediaBox := pdf.RectForDim(600, 600)
-	createXRefAndWritePDF(t, msg, "TestUserFontJustified", createTestUserFontJustified(mediaBox, false))
-	createXRefAndWritePDF(t, msg, "TestUserFontJustifiedRightToLeft", createTestUserFontJustified(mediaBox, true))
+	createXRefAndWritePDF(t, msg, "UserFont_Justified", createTestUserFontJustified(mediaBox, false))
+	createXRefAndWritePDF(t, msg, "UserFont_JustifiedRightToLeft", createTestUserFontJustified(mediaBox, true))
+	// Justified text for right to left languages seems to be tricky business - the following samples are right aligned:
+	createXRefAndWritePDF(t, msg, "UserFont_Arabic", createTestRTLUserFont(mediaBox, "Arabic", "UnifontMedium"))
+	createXRefAndWritePDF(t, msg, "UserFont_Hebrew", createTestRTLUserFont(mediaBox, "Hebrew", "UnifontMedium"))
+	createXRefAndWritePDF(t, msg, "UserFont_Persian", createTestRTLUserFont(mediaBox, "Persian", "UnifontMedium"))
+	createXRefAndWritePDF(t, msg, "UserFont_Urdu", createTestRTLUserFont(mediaBox, "Urdu", "UnifontMedium"))
 }
 
 func createCJKVDemo(mediaBox *pdf.Rectangle) pdf.Page {
@@ -1828,5 +1969,5 @@ func TestCJKV(t *testing.T) {
 	}
 
 	mediaBox := pdf.RectForDim(600, 600)
-	createXRefAndWritePDF(t, msg, "TestCJKV", createCJKVDemo(mediaBox))
+	createXRefAndWritePDF(t, msg, "UserFont_CJKV", createCJKVDemo(mediaBox))
 }

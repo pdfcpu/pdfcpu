@@ -301,17 +301,16 @@ Ingen åtskillnad må vidare göras på grund av den politiska, juridiska eller 
 
 	sampleThai = `ปฏิญญาสากลว่าด้วยสิทธิมนุษยชน
 
-ข้อ 1.
-มนุษย์ทุกคนเกิดมาโดยเสรีและเท่าเทียมกันในศักดิ์ศรีและสิทธิ พวกเขากอปรด้วยเหตุผลและมโนธรรมและ
-ควรปฏิบัติต่อกันด้วยจิตวิญญาณแห่งความเป็นพี่น้องกัน
+หัวข้อที่ 1.
+มนุษย์ทุกคนเกิดมาโดยเสรีและเท่าเทียมกันในศักดิ์ศรีและสิทธิ
+พวกเขากอปรด้วยเหตุผลและมโนธรรมและควรปฏิบัติต่อกันด้วยจิตวิญญาณแห่งความเป็นพี่น้องกัน
 
 ข้อ 2.
-ทุกคนมีสิทธิได้รับสิทธิและเสรีภาพทั้งหมดที่ระบุไ
-ว้ในปฏิญญานี้โดยไม่มีความแตกต่างใด ๆ เช่นเชื้อชาติสีผิวเพศภาษาศาสนาความคิดเห็นทางการเมืองหรืออื่น ๆ
-ชาติกำเนิดหรือสังคมทรัพย์สินการเกิดหรือ สถานะอื่น ๆ 
-นอกจากนี้จะต้องไม่สร้างความแตกต่างบนพื้นฐานของสถานะทางการเมืองเขตอำนาจศาลหรือระหว่างปร
-ะเทศของประเทศหรือดินแดนที่บุคคลนั้นอยู่ไม่ว่าจะเป็นอิสระความไว้วางใจการไม่ปกครองตนเองหรือภายใต้ข้อ
-จำกัด อื่นใดของอำนาจอธิปไตย`
+ทุกคนมีสิทธิได้รับสิทธิและเสรีภาพทั้งหมดที่กำหนดไว้ในปฏิญญานี้โดยไม่มีความแตกต่างใด ๆ
+เช่นเชื้อชาติสีผิวเพศภาษาศาสนาความคิดเห็นทางการเมืองหรืออื่น ๆ ชาติกำเนิดหรือสังคมทรัพย์สิน
+การเกิดหรือสถานะอื่น ๆ นอกจากนี้จะไม่มีการสร้างความแตกต่างใด ๆ บนพื้นฐานของการเมืองเขตอำนาจศาลหรือ
+สถานะระหว่างประเทศของประเทศหรือดินแดนที่บุคคลเป็นอยู่ไม่ว่าจะเป็นอิสระความไว้วางใจ
+ไม่ปกครองตนเองหรืออยู่ภายใต้ข้อ จำกัด อื่นใดของอำนาจอธิปไตย`
 
 	sampleTurkish = `İnsan hakları  evrensel beyannamesi
 
@@ -379,7 +378,7 @@ var langSamples = []sample{
 	{"Roboto-Regular", "Spanish", sampleSpanish, false},
 	{"Roboto-Regular", "Swahili", sampleSwahili, false},
 	{"Roboto-Regular", "Swedish", sampleSwedish, false},
-	{"UnifontMedium", "Thai", sampleThai, true},
+	{"UnifontMedium", "Thai", sampleThai, false},
 	{"Roboto-Regular", "Turkish", sampleTurkish, false},
 	{"UnifontMedium", "Urdu", sampleUrdu, true},
 	{"Roboto-Regular", "Vietnamese", sampleVietnamese, false},
@@ -456,13 +455,13 @@ func renderArticle(p pdf.Page, row, col, lang int) {
 		HairCross:      false,
 	}
 
-	if sample.lang == "Thai" {
-		td.HAlign = pdf.AlignRight
+	if sample.lang == "Japanese" {
 		pdf.WriteColumn(buf, mediaBox, region, td, mediaBox.Width()*.9)
 		return
 	}
 
-	if sample.lang == "Japanese" {
+	if sample.lang == "Thai" {
+		td.HAlign = pdf.AlignLeft
 		pdf.WriteColumn(buf, mediaBox, region, td, mediaBox.Width()*.9)
 		return
 	}
@@ -490,5 +489,5 @@ func TestUserFonts(t *testing.T) {
 		}
 	}
 
-	createXRefAndWritePDF(t, msg, "TestUserFonts", p)
+	createXRefAndWritePDF(t, msg, "UserFont_HumanRights", p)
 }
