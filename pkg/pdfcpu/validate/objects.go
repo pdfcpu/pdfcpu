@@ -191,7 +191,7 @@ func validateDateObject(xRefTable *pdf.XRefTable, o pdf.Object, sinceVersion pdf
 		return s, nil
 	}
 
-	if _, ok := pdf.DateTime(s); !ok {
+	if _, ok := pdf.DateTime(s, xRefTable.ValidationMode == pdf.ValidationRelaxed); !ok {
 		return "", errors.Errorf("pdfcpu: validateDateObject: <%s> invalid date", s)
 	}
 
@@ -219,7 +219,7 @@ func validateDateEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName
 		return nil, nil
 	}
 
-	time, ok := pdf.DateTime(s)
+	time, ok := pdf.DateTime(s, xRefTable.ValidationMode == pdf.ValidationRelaxed)
 	if !ok {
 		return nil, errors.Errorf("pdfcpu: validateDateEntry: <%s> invalid date", s)
 	}

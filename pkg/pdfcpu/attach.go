@@ -117,7 +117,7 @@ func fileSpecStreamDictInfo(xRefTable *XRefTable, id string, o Object, decode bo
 	var modDate *time.Time
 	if d = sd.DictEntry("Params"); d != nil {
 		if s := d.StringEntry("ModDate"); s != nil {
-			dt, ok := DateTime(*s)
+			dt, ok := DateTime(*s, xRefTable.ValidationMode == ValidationRelaxed)
 			if !ok {
 				return nil, desc, "", nil, errors.New("pdfcpu: invalid date ModDate")
 			}

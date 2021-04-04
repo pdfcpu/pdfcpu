@@ -1380,20 +1380,22 @@ func drawBoundingBox(b bytes.Buffer, wm *Watermark, bb *Rectangle) {
 	)
 }
 
-func (ctx *Context) createForm(pageNr, pageCount int, wm *Watermark, withBB bool) error {
-	var (
-		b      bytes.Buffer
-		unique bool
-	)
-
+func calcFormBoundingBox(w io.Writer, pageNr, pageCount int, wm *Watermark) bool {
+	var unique bool
 	if wm.isImage() || wm.isPDF() {
 		wm.calcBoundingBox(pageNr)
 	} else {
 		var td TextDescriptor
 		td, unique = setupTextDescriptor(wm, pageNr, pageCount)
 		// Render td into b and return the bounding box.
-		wm.bb = WriteMultiLine(&b, wm.vp, nil, td)
+		wm.bb = WriteMultiLine(w, wm.vp, nil, td)
 	}
+	return unique
+}
+
+func (ctx *Context) createForm(pageNr, pageCount int, wm *Watermark, withBB bool) error {
+	var b bytes.Buffer
+	unique := calcFormBoundingBox(&b, pageNr, pageCount, wm)
 
 	// The forms bounding box is dependent on the page dimensions.
 	bb := wm.bb

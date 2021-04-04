@@ -810,6 +810,26 @@ func validateNeedsRendering(xRefTable *pdf.XRefTable, rootDict pdf.Dict, require
 	return err
 }
 
+func logURIError(xRefTable *pdf.XRefTable, pages []int) {
+	fmt.Println()
+	for _, page := range pages {
+		for uri, resp := range xRefTable.URIs[page] {
+			if resp != "" {
+				var s string
+				switch resp {
+				case "i":
+					s = "invalid url"
+				case "s":
+					s = "severe error"
+				default:
+					s = fmt.Sprintf("status=%s", resp)
+				}
+				log.CLI.Printf("Page %d: %s %s\n", page, uri, s)
+			}
+		}
+	}
+}
+
 func checkForBrokenLinks(xRefTable *pdf.XRefTable) error {
 	var httpErr bool
 	log.CLI.Println("validating URIs..")
@@ -851,23 +871,7 @@ func checkForBrokenLinks(xRefTable *pdf.XRefTable) error {
 	}
 
 	if log.IsCLILoggerEnabled() {
-		fmt.Println()
-		for _, page := range pages {
-			for uri, resp := range xRefTable.URIs[page] {
-				if resp != "" {
-					var s string
-					switch resp {
-					case "i":
-						s = "invalid url"
-					case "s":
-						s = "severe error"
-					default:
-						s = fmt.Sprintf("status=%s", resp)
-					}
-					log.CLI.Printf("Page %d: %s %s\n", page, uri, s)
-				}
-			}
-		}
+		logURIError(xRefTable, pages)
 	}
 
 	if httpErr {

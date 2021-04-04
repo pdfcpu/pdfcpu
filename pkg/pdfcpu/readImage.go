@@ -383,7 +383,7 @@ func createImageDict(xRefTable *XRefTable, buf, softMask []byte, w, h, bpc int, 
 		err error
 	)
 	switch format {
-	case "JPG":
+	case "jpeg":
 		sd, err = createDCTImageObject(xRefTable, buf, w, h, bpc, cs)
 	default:
 		sd, err = createFlateImageObject(xRefTable, buf, softMask, w, h, bpc, cs)
@@ -391,29 +391,35 @@ func createImageDict(xRefTable *XRefTable, buf, softMask []byte, w, h, bpc int, 
 	return sd, w, h, err
 }
 
+func encodeJPEG(img image.Image) ([]byte, string, error) {
+	var cs string
+	switch img.(type) {
+	case *image.Gray, *image.Gray16:
+		cs = DeviceGrayCS
+	case *image.YCbCr:
+		cs = DeviceRGBCS
+	case *image.CMYK:
+		cs = DeviceCMYKCS
+	default:
+		return nil, "", errors.Errorf("pdfcpu: unexpected color model for JPEG: %s", cs)
+	}
+	var buf bytes.Buffer
+	err := jpeg.Encode(&buf, img, nil)
+	return buf.Bytes(), cs, err
+}
+
 func createImageBuf(xRefTable *XRefTable, img image.Image, format string) ([]byte, []byte, int, string, error) {
 	var buf []byte
 	var sm []byte // soft mask aka alpha mask
 	var bpc int
 	// TODO if dpi != 72 resample (applies to PNG,JPG,TIFF)
-	var cs string
 
-	if format == "JPG" {
-		switch img.(type) {
-		case *image.Gray, *image.Gray16:
-			cs = DeviceGrayCS
-		case *image.YCbCr:
-			cs = DeviceRGBCS
-		case *image.CMYK:
-			cs = DeviceCMYKCS
-		default:
-			return buf, sm, bpc, cs, errors.Errorf("pdfcpu: unexpected color model for JPEG: %s", cs)
-		}
-		var buf bytes.Buffer
-		if err := jpeg.Encode(&buf, img, nil); err != nil {
-			return buf.Bytes(), sm, 8, cs, err
-		}
+	if format == "jpeg" {
+		bb, cs, err := encodeJPEG(img)
+		return bb, sm, 8, cs, err
 	}
+
+	var cs string
 
 	switch img.(type) {
 	case *image.RGBA:

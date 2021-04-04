@@ -32,7 +32,7 @@ func DateString(t time.Time) string {
 		tz/60/60, tz/60%60)
 }
 
-func prevalidateDate(s string) (string, bool) {
+func prevalidateDate(s string, relaxed bool) (string, bool) {
 	// utf16 conversion if applicable.
 	if IsStringUTF16BE(s) {
 		utf16s, err := DecodeUTF16String(s)
@@ -42,16 +42,47 @@ func prevalidateDate(s string) (string, bool) {
 		s = utf16s
 	}
 
+	if relaxed {
+		// Accept missing "D:" prefix.
+		// "YYYY" is mandatory
+		if strings.HasPrefix(s, "D:") {
+			s = s[2:]
+		}
+		return s, len(s) >= 4
+	}
+
 	// "D:YYYY" is mandatory
 	if len(s) < 6 {
 		return "", false
 	}
 
-	return s, strings.HasPrefix(s, "D:")
+	return s[2:], strings.HasPrefix(s, "D:")
+}
+
+func parseTimezoneHours(s string, o byte) (int, bool) {
+	tzhours := s[15:17]
+	tzh, err := strconv.Atoi(tzhours)
+	if err != nil {
+		return 0, false
+	}
+
+	if tzh > 23 {
+		return 0, false
+	}
+
+	if o == 'Z' && tzh != 0 {
+		return 0, false
+	}
+
+	if s[17] != '\'' {
+		return 0, false
+	}
+
+	return tzh, true
 }
 
 func parseTimezoneMinutes(s string, o byte) (int, bool) {
-	tzmin := s[20:22]
+	tzmin := s[18:20]
 	tzm, err := strconv.Atoi(tzmin)
 	if err != nil {
 		return 0, false
@@ -65,54 +96,41 @@ func parseTimezoneMinutes(s string, o byte) (int, bool) {
 		return 0, false
 	}
 
-	// "D:YYYYMMDDHHmmSSZHH'mm"
-	if len(s) == 22 {
+	// "YYYYMMDDHHmmSSZHH'mm"
+	if len(s) == 20 {
 		return 0, false
 	}
 
 	// Accept a trailing '
-	return tzm, s[22] == '\''
+	return tzm, s[20] == '\''
 }
 
 func validateTimezoneSeparator(c byte) bool {
 	return c == '+' || c == '-' || c == 'Z'
 }
 
-func parseTimezone(s string) (h, m int, ok bool) {
-	o := s[16]
+func parseTimezone(s string, relaxed bool) (h, m int, ok bool) {
+	o := s[14]
 
 	if !validateTimezoneSeparator(o) {
 		return 0, 0, false
 	}
 
 	// local time equal to UT.
-	// "D:YYYYMMDDHHmmSSZ"
-	// relaxed accept "D:20201222164228Z'"
-	if o == 'Z' && (len(s) == 17 || len(s) == 18) {
+	// "YYYYMMDDHHmmSSZ" or
+	// "20201222164228Z'" accepted if relaxed
+	if o == 'Z' && (len(s) == 15 || (relaxed && len(s) == 16)) {
 		return 0, 0, true
 	}
 
-	if len(s) < 20 {
+	if len(s) < 18 {
 		return 0, 0, false
 	}
 
 	neg := o == '-'
 
-	tzhours := s[17:19]
-	tzh, err := strconv.Atoi(tzhours)
-	if err != nil {
-		return 0, 0, false
-	}
-
-	if tzh > 23 {
-		return 0, 0, false
-	}
-
-	if o == 'Z' && tzh != 0 {
-		return 0, 0, false
-	}
-
-	if s[19] != '\'' {
+	tzh, ok := parseTimezoneHours(s, o)
+	if !ok {
 		return 0, 0, false
 	}
 
@@ -120,12 +138,12 @@ func parseTimezone(s string) (h, m int, ok bool) {
 		tzh *= -1
 	}
 
-	// "D:YYYYMMDDHHmmSSZHH'"
-	if len(s) == 20 {
+	// "YYYYMMDDHHmmSSZHH'"
+	if len(s) == 18 {
 		return tzh, 0, true
 	}
 
-	if len(s) != 22 && len(s) != 23 {
+	if len(s) != 20 && len(s) != 21 {
 		return 0, 0, false
 	}
 
@@ -138,19 +156,19 @@ func parseTimezone(s string) (h, m int, ok bool) {
 }
 
 func parseYear(s string) (y int, finished, ok bool) {
-	year := s[2:6]
+	year := s[0:4]
 
 	y, err := strconv.Atoi(year)
 	if err != nil {
 		return 0, false, false
 	}
 
-	// "D:YYYY"
-	if len(s) == 6 {
+	// "YYYY"
+	if len(s) == 4 {
 		return y, true, true
 	}
 
-	if len(s) == 7 {
+	if len(s) == 5 {
 		return 0, false, false
 	}
 
@@ -158,7 +176,7 @@ func parseYear(s string) (y int, finished, ok bool) {
 }
 
 func parseMonth(s string) (m int, finished, ok bool) {
-	month := s[6:8]
+	month := s[4:6]
 
 	var err error
 	m, err = strconv.Atoi(month)
@@ -170,12 +188,12 @@ func parseMonth(s string) (m int, finished, ok bool) {
 		return 0, false, false
 	}
 
-	// "D:YYYYMM"
-	if len(s) == 8 {
+	// "YYYYMM"
+	if len(s) == 6 {
 		return m, true, true
 	}
 
-	if len(s) == 9 {
+	if len(s) == 7 {
 		return 0, false, false
 	}
 
@@ -183,7 +201,7 @@ func parseMonth(s string) (m int, finished, ok bool) {
 }
 
 func parseDay(s string, y, m int) (d int, finished, ok bool) {
-	day := s[8:10]
+	day := s[6:8]
 
 	d, err := strconv.Atoi(day)
 	if err != nil {
@@ -201,12 +219,12 @@ func parseDay(s string, y, m int) (d int, finished, ok bool) {
 		return 0, false, false
 	}
 
-	// "D:YYYYMMDD"
-	if len(s) == 10 {
+	// "YYYYMMDD"
+	if len(s) == 8 {
 		return d, true, true
 	}
 
-	if len(s) == 11 {
+	if len(s) == 9 {
 		return 0, false, false
 	}
 
@@ -214,7 +232,7 @@ func parseDay(s string, y, m int) (d int, finished, ok bool) {
 }
 
 func parseHour(s string) (h int, finished, ok bool) {
-	hour := s[10:12]
+	hour := s[8:10]
 
 	h, err := strconv.Atoi(hour)
 	if err != nil {
@@ -225,12 +243,12 @@ func parseHour(s string) (h int, finished, ok bool) {
 		return 0, false, false
 	}
 
-	// "D:YYYYMMDDHH"
-	if len(s) == 12 {
+	// "YYYYMMDDHH"
+	if len(s) == 10 {
 		return h, true, true
 	}
 
-	if len(s) == 13 {
+	if len(s) == 11 {
 		return 0, false, false
 	}
 
@@ -238,7 +256,7 @@ func parseHour(s string) (h int, finished, ok bool) {
 }
 
 func parseMinute(s string) (min int, finished, ok bool) {
-	minute := s[12:14]
+	minute := s[10:12]
 
 	min, err := strconv.Atoi(minute)
 	if err != nil {
@@ -249,12 +267,12 @@ func parseMinute(s string) (min int, finished, ok bool) {
 		return 0, false, false
 	}
 
-	// "D:YYYYMMDDHHmm"
-	if len(s) == 14 {
+	// "YYYYMMDDHHmm"
+	if len(s) == 12 {
 		return min, true, true
 	}
 
-	if len(s) == 15 {
+	if len(s) == 13 {
 		return 0, false, false
 	}
 
@@ -262,7 +280,7 @@ func parseMinute(s string) (min int, finished, ok bool) {
 }
 
 func parseSecond(s string) (sec int, finished, ok bool) {
-	second := s[14:16]
+	second := s[12:14]
 
 	sec, err := strconv.Atoi(second)
 	if err != nil {
@@ -273,8 +291,8 @@ func parseSecond(s string) (sec int, finished, ok bool) {
 		return 0, false, false
 	}
 
-	// "D:YYYYMMDDHHmmSS"
-	if len(s) == 16 {
+	// "YYYYMMDDHHmmSS"
+	if len(s) == 14 {
 		return sec, true, true
 	}
 
@@ -282,14 +300,14 @@ func parseSecond(s string) (sec int, finished, ok bool) {
 }
 
 // DateTime decodes s into a time.Time.
-func DateTime(s string) (time.Time, bool) {
+func DateTime(s string, relaxed bool) (time.Time, bool) {
 	// 7.9.4 Dates
 	// (D:YYYYMMDDHHmmSSOHH'mm')
 
 	var d time.Time
 
 	var ok bool
-	s, ok = prevalidateDate(s)
+	s, ok = prevalidateDate(s, relaxed)
 	if !ok {
 		return d, false
 	}
@@ -356,7 +374,7 @@ func DateTime(s string) (time.Time, bool) {
 	}
 
 	// Process timezone
-	tzh, tzm, ok := parseTimezone(s)
+	tzh, tzm, ok := parseTimezone(s, relaxed)
 	if !ok {
 		return d, false
 	}
