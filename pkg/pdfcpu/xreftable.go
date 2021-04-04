@@ -127,6 +127,7 @@ type XRefTable struct {
 
 	// Validation
 	CurPage        int                       // current page during validation
+	CurObj         int                       // current object during validation, the last dereferenced object
 	ValidationMode int                       // see Configuration
 	ValidateLinks  bool                      // check for broken links in LinkAnnotations/URIDicts.
 	Valid          bool                      // true means successful validated against ISO 32000.
@@ -810,6 +811,8 @@ func (xRefTable *XRefTable) indRefToObject(ir *IndirectRef) (Object, error) {
 	if !found || entry.Free {
 		return nil, nil
 	}
+
+	xRefTable.CurObj = int(ir.ObjectNumber)
 
 	// return dereferenced object
 	return entry.Object, nil

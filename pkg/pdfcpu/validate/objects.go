@@ -39,7 +39,7 @@ func validateEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName str
 	o, found := d.Find(entryName)
 	if !found || o == nil {
 		if required {
-			return nil, errors.Errorf("dict=%s required entry=%s missing.", dictName, entryName)
+			return nil, errors.Errorf("dict=%s required entry=%s missing (obj#%d).", dictName, entryName, xRefTable.CurObj)
 		}
 		return nil, nil
 	}
@@ -51,13 +51,13 @@ func validateEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName str
 
 	if o == nil {
 		if required {
-			return nil, errors.Errorf("dict=%s required entry=%s missing.", dictName, entryName)
+			return nil, errors.Errorf("dict=%s required entry=%s missing (obj#%d).", dictName, entryName, xRefTable.CurObj)
 		}
 		return nil, nil
 	}
 
 	// Version check
-	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s", dictName, entryName), sinceVersion)
+	err = xRefTable.ValidateVersion(fmt.Sprintf("dict=%s entry=%s (obj#%d)", dictName, entryName, xRefTable.CurObj), sinceVersion)
 	if err != nil {
 		return nil, err
 	}

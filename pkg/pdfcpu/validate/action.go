@@ -26,9 +26,13 @@ import (
 func validateGoToActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	// see 12.6.4.2 Go-To Actions
+	required := REQUIRED
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		required = OPTIONAL
+	}
 
 	// D, required, name, byte string or array
-	return validateDestinationEntry(xRefTable, d, dictName, "D", REQUIRED, pdf.V10)
+	return validateDestinationEntry(xRefTable, d, dictName, "D", required, pdf.V10)
 }
 
 func validateGoToRActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
