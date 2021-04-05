@@ -114,6 +114,7 @@ var wmParamMap = watermarkParamMap{
 	"points":          parseFontSize,
 	"position":        parsePositionAnchorWM,
 	"rendermode":      parseRenderMode,
+	"rtl":             parseRightToLeft,
 	"rotation":        parseRotation,
 	"scalefactor":     parseScaleFactorWM,
 	"strokecolor":     parseStrokeColor,
@@ -168,6 +169,7 @@ type Watermark struct {
 	FontName          string        // supported are Adobe base fonts only. (as of now: Helvetica, Times-Roman, Courier)
 	FontSize          int           // font scaling factor.
 	ScaledFontSize    int           // font scaling factor for a specific page
+	RTL               bool          // if true, render text from right to left
 	Color             SimpleColor   // text fill color(=non stroking color) for backwards compatibility.
 	FillColor         SimpleColor   // text fill color(=non stroking color).
 	StrokeColor       SimpleColor   // text stroking color
@@ -214,6 +216,7 @@ func DefaultWatermarkConfig() *Watermark {
 		Page:        0,
 		FontName:    "Helvetica",
 		FontSize:    24,
+		RTL:         false,
 		Pos:         Center,
 		Scale:       0.5,
 		ScaleAbs:    false,
@@ -483,6 +486,19 @@ func parseScaleFactor(s string) (float64, bool, error) {
 	}
 
 	return sc, scaleAbs, nil
+}
+
+func parseRightToLeft(s string, wm *Watermark) error {
+	switch strings.ToLower(s) {
+	case "on", "true", "t":
+		wm.RTL = true
+	case "off", "false", "f":
+		wm.RTL = false
+	default:
+		return errors.New("pdfcpu: rtl (right-to-left), please provide one of: on/off true/false t/f")
+	}
+
+	return nil
 }
 
 func parseHexColor(hexCol string) (SimpleColor, error) {
@@ -1344,6 +1360,9 @@ func setupTextDescriptor(wm *Watermark, pageNr, pageCount int) (TextDescriptor, 
 	x, y, _, vAlign := anchorPosAndAlign(BottomLeft, wm.vp)
 	td, unique := wm.textDescriptor(pageNr, pageCount)
 	td.X, td.Y, td.HAlign, td.VAlign, td.FontKey = x, y, hAlign, vAlign, "F1"
+
+	// Set right to left rendering.
+	td.RTL = wm.RTL
 
 	// Set margins.
 	td.MLeft = float64(wm.MLeft)

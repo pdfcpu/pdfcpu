@@ -199,7 +199,7 @@ func parseElementBorder(s string, nup *NUp) error {
 	case "off", "false", "f":
 		nup.Border = false
 	default:
-		return errors.New("pdfcpu: nUp border, please provide one of: on/off true/false")
+		return errors.New("pdfcpu: nUp border, please provide one of: on/off true/false t/f")
 	}
 
 	return nil
@@ -212,7 +212,7 @@ func parseBookletGuides(s string, nup *NUp) error {
 	case "off", "false", "f":
 		nup.BookletGuides = false
 	default:
-		return errors.New("pdfcpu: booklet guides, please provide one of: on/off true/false")
+		return errors.New("pdfcpu: booklet guides, please provide one of: on/off true/false t/f")
 	}
 
 	return nil

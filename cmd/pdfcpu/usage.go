@@ -304,11 +304,13 @@ content ... extract raw page content
 
 <description> is a comma separated configuration string containing these optional entries:
 	
-   (defaults: "font:Helvetica, points:24, pos:c, off:0,0 sc:0.5 rel, rot:0, d:1, op:1, m:0 and for all colors: 0.5 0.5 0.5")
+   (defaults: "font:Helvetica, points:24, rtl:off, pos:c, off:0,0 sc:0.5 rel, rot:0, d:1, op:1, m:0 and for all colors: 0.5 0.5 0.5")
 
    fontname:         Please refer to "pdfcpu fonts list"
 
    points:           fontsize in points, in combination with absolute scaling only.
+
+   rtl:              render right to left (on/off, true/false, t/f)
    
    position:         one of the anchors:
                      tl(=topleft)      tc(=topcenter)       tr(=topright)

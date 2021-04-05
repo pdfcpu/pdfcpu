@@ -71,20 +71,25 @@ bir şəxsin mənsub olduğu ölkənin və ya ərazinin beynəlxalq statusu, mü
 এগুলি যুক্তি ও বিবেকের অধিকারী এবং ভ্রাতৃত্বের মনোভাবের সাথে একে অপরের প্রতি আচরণ করা উচিত।
 
 অনুচ্ছেদ 2।
-এই ঘোষণাপত্রে নির্ধারিত সমস্ত অধিকার এবং স্বাধীনতার জন্য প্রত্যেকেই অধিকারপ্রাপ্ত, কোনও প্রকারভেদ ছাড়াই,
-যেমন জাতি, বর্ণ, লিঙ্গ, ভাষা, ধর্ম, রাজনৈতিক বা অন্যান্য মতামত, জাতীয় বা সামাজিক উত্স, সম্পত্তি,
-জন্ম বা অন্য অবস্থা। তদুপরি, রাজনৈতিক, এখতিয়ার বা ভিত্তিতে কোনও পার্থক্য করা হবে না
-একজন ব্যক্তি যার দেশ বা অঞ্চলে তার আন্তর্জাতিক অবস্থান, এটি স্বাধীন, বিশ্বাস,
-স্ব-শাসন পরিচালনা বা সার্বভৌমত্বের অন্য কোনও সীমাবদ্ধতার অধীনে।`
+এই ঘোষণাপত্রে নির্ধারিত সমস্ত অধিকার এবং স্বাধীনতার জন্য প্রত্যেকেই অধিকারপ্রাপ্ত,
+কোনও প্রকারভেদ ছাড়াই, যেমন জাতি, বর্ণ, লিঙ্গ, ভাষা, ধর্ম, রাজনৈতিক বা অন্যান্য মতামত,
+জাতীয় বা সামাজিক উত্স, সম্পত্তি, জন্ম বা অন্য অবস্থা। তদুপরি, রাজনৈতিক,
+এখতিয়ার বা ভিত্তিতে কোনও পার্থক্য করা হবে না একজন ব্যক্তি যার দেশ বা অঞ্চলে তার আন্তর্জাতিক
+অবস্থান, এটি স্বাধীন, বিশ্বাস, স্ব-শাসন পরিচালনা বা সার্বভৌমত্বের অন্য কোনও সীমাবদ্ধতার অধীনে।`
 
 	sampleBelarusian = `УСЕАГУЛЬНАЯ ДЭКЛАРАЦЫЯ ПРАВОЎ ЧАЛАВЕКА
 
 Артыкул 1.
-Усе людзi нараджаюцца свабоднымi i роўнымi ў сваёй годнасцi i правах. Яны надзелены розумам i сумленнем i павiнны ставiцца адзiн да аднаго ў духу брацтва.
+Усе людзi нараджаюцца свабоднымi i роўнымi ў сваёй годнасцi i правах. Яны надзелены розумам i сумленнем i павiнны ставiцца
+адзiн да аднаго ў духу брацтва.
 
 Артыкул 2.
-Кожны чалавек павiнен валодаць усiмi правамi i ўсiмi свабодамi, што абвешчаны гэтай Дэкларацыяй, без якога б там нi было адрознення, як напрыклад у адносiнах расы, колеру скуры, полу, мовы, рэлiгii, палiтычных або iншых перакананняў, нацыянальнага або сацыяльнага паходжання, маёмаснага, саслоўнага або iншага становiшча.
-Апрача таго, не павiнна рабiцца нiякага адрознення на аснове палiтычнага, прававога або мiжнароднага статуса краiны або тэрыторыi, да якой чалавек належыць, незалежна ад таго, цi з’яўляецца гэта тэрыторыя незалежнай, падапечнай, несамакiравальнай, або як-небудзь iнакш абмежаванай у сваiм суверэнiтэце.`
+Кожны чалавек павiнен валодаць усiмi правамi i ўсiмi свабодамi, што абвешчаны гэтай Дэкларацыяй, без якога б там нi было адрознення,
+як напрыклад у адносiнах расы, колеру скуры, полу, мовы, рэлiгii, палiтычных або iншых перакананняў, нацыянальнага або сацыяльнага
+паходжання, маёмаснага, саслоўнага або iншага становiшча.
+Апрача таго, не павiнна рабiцца нiякага адрознення на аснове палiтычнага, прававога або мiжнароднага статуса краiны або тэрыторыi,
+да якой чалавек належыць, незалежна ад таго, цi з’яўляецца гэта тэрыторыя незалежнай, падапечнай, несамакiравальнай,
+або як-небудзь iнакш абмежаванай у сваiм суверэнiтэце.`
 
 	sampleChineseSimple = `世界人权宣言
 
@@ -122,28 +127,39 @@ non-self-governing or under any other limitation of sovereignty.`
 	sampleFrench = `Déclaration universelle des droits de l'Homme
 
 Article 1.
-Tous les êtres humains naissent libres et égaux en dignité et en droits. Ils sont doués de raison et de conscience et doivent agir les uns envers les autres dans un esprit de fraternité.
+Tous les êtres humains naissent libres et égaux en dignité et en droits. Ils sont doués de raison et de conscience et doivent agir les uns envers les autres
+dans un esprit de fraternité.
 
 Article 2.
-Chacun peut se prévaloir de tous les droits et de toutes les libertés proclamés dans la présente Déclaration, sans distinction aucune, notamment de race, de couleur, de sexe, de langue, de religion, d'opinion politique ou de toute autre opinion, d'origine nationale ou sociale, de fortune, de naissance ou de toute autre situation.
-De plus, il ne sera fait aucune distinction fondée sur le statut politique, juridique ou international du pays ou du territoire dont une personne est ressortissante, que ce pays ou territoire soit indépendant, sous tutelle, non autonome ou soumis à une limitation quelconque de souveraineté.`
+Chacun peut se prévaloir de tous les droits et de toutes les libertés proclamés dans la présente Déclaration, sans distinction aucune, notamment de race,
+de couleur, de sexe, de langue, de religion, d'opinion politique ou de toute autre opinion, d'origine nationale ou sociale, de fortune, de naissance ou de toute
+autre situation. De plus, il ne sera fait aucune distinction fondée sur le statut politique, juridique ou international du pays ou du territoire dont une personne
+est ressortissante, que ce pays ou territoire soit indépendant, sous tutelle, non autonome ou soumis à une limitation quelconque de souveraineté.`
 
 	sampleGerman = `Die Allgemeine Erklärung der Menschenrechte
 
 	Artikel 1.
-Alle Menschen sind frei und gleich an Würde und Rechten geboren. Sie sind mit Vernunft und Gewissen begabt und sollen einander im Geist der Brüderlichkeit begegnen.
+Alle Menschen sind frei und gleich an Würde und Rechten geboren.
+Sie sind mit Vernunft und Gewissen begabt und sollen einander im Geist der Brüderlichkeit begegnen.
 
 Artikel 2.
-Jeder hat Anspruch auf die in dieser Erklärung verkündeten Rechte und Freiheiten ohne irgendeinen Unterschied, etwa nach Rasse, Hautfarbe, Geschlecht, Sprache, Religion, politischer oder sonstiger Überzeugung, nationaler oder sozialer Herkunft, Vermögen, Geburt oder sonstigem Stand.
-Des weiteren darf kein Unterschied gemacht werden auf Grund der politischen, rechtlichen oder internationalen Stellung des Landes oder Gebiets, dem eine Person angehört, gleichgültig ob dieses unabhängig ist, unter Treuhandschaft steht, keine Selbstregierung besitzt oder sonst in seiner Souveränität eingeschränkt ist.`
+Jeder hat Anspruch auf die in dieser Erklärung verkündeten Rechte und Freiheiten ohne irgendeinen Unterschied,
+etwa nach Rasse, Hautfarbe, Geschlecht, Sprache, Religion, politischer oder sonstiger Überzeugung, nationaler
+oder sozialer Herkunft, Vermögen, Geburt oder sonstigem Stand.
+Des weiteren darf kein Unterschied gemacht werden auf Grund der politischen, rechtlichen oder internationalen
+Stellung des Landes oder Gebiets, dem eine Person angehört, gleichgültig ob dieses unabhängig ist, unter Treuhandschaft steht,
+keine Selbstregierung besitzt oder sonst in seiner Souveränität eingeschränkt ist.`
 
 	sampleGreek = `ΟΙΚΟΥΜΕΝΙΚΗ ΔΙΑΚΗΡΥΞΗ ΓΙΑ ΤΑ ΑΝΘΡΩΠΙΝΑ ΔΙΚΑΙΩΜΑΤΑ
 
 ΑΡΘΡΟ 1
-Ολοι οι άνθρωποι γεννιούνται ελεύθεροι και ίσοι στην αξιοπρέπεια και τα δικαιώματα. Είναι προικισμένοι με λογική και συνείδηση, και οφείλουν να συμπεριφέρονται μεταξύ τους με πνεύμα αδελφοσύνης.
+Ολοι οι άνθρωποι γεννιούνται ελεύθεροι και ίσοι στην αξιοπρέπεια και τα δικαιώματα.
+Είναι προικισμένοι με λογική και συνείδηση, και οφείλουν να συμπεριφέρονται μεταξύ τους με πνεύμα αδελφοσύνης.
 
 ΑΡΘΡΟ 2
-Κάθε άνθρωπος δικαιούται να επικαλείται όλα τα δικαιώματα και όλες τις ελευθερίες που προκηρύσσει η παρούσα Διακήρυξη, χωρίς καμία απολύτως διάκριση, ειδικότερα ως προς τη φυλή, το χρώμα, το φύλο, τη γλώσσα, τις θρησκείες, τις πολιτικές ή οποιεσδήποτε άλλες πεποιθήσεις, την εθνική ή κοινωνική καταγωγή, την περιουσία, τη γέννηση ή οποιαδήποτε άλλη κατάσταση.`
+Κάθε άνθρωπος δικαιούται να επικαλείται όλα τα δικαιώματα και όλες τις ελευθερίες που προκηρύσσει η παρούσα Διακήρυξη,
+χωρίς καμία απολύτως διάκριση, ειδικότερα ως προς τη φυλή, το χρώμα, το φύλο, τη γλώσσα, τις θρησκείες, τις πολιτικές
+ή οποιεσδήποτε άλλες πεποιθήσεις, την εθνική ή κοινωνική καταγωγή, την περιουσία, τη γέννηση ή οποιαδήποτε άλλη κατάσταση.`
 
 	sampleHebrew = `הצהרה האוניברסלית של זכויות האדם
 
@@ -174,29 +190,44 @@ Des weiteren darf kein Unterschied gemacht werden auf Grund der politischen, rec
 	sampleHungarian = `Az Emberi Jogok Egyetemes Nyilatkozata
 
 1. cikk
-Minden. emberi lény szabadon születik és egyenlő méltósága és joga van. Az emberek, ésszel és lelkiismerettel bírván, egymással szemben testvéri szellemben kell hogy viseltessenek.
+Minden. emberi lény szabadon születik és egyenlő méltósága és joga van. Az emberek, ésszel és lelkiismerettel bírván,
+egymással szemben testvéri szellemben kell hogy viseltessenek.
 
 2. cikk
-Mindenki, bármely megkülönböztetésre, nevezetesen fajra, színre, nemre, nyelvre, vallásra, politikai vagy bármely más véleményre, nemzeti vagy társadalmi eredetre, vagyonra, születésre, vagy bármely más körülményre való tekintet nélkül hivatkozhat a jelen Nyilatkozatban kinyilvánított összes jogokra és szabadságokra.
-Ezenfelül nem lehet semmiféle megkülönböztetést tenni annak az országnak, vagy területnek politikai, jogi vagy nemzetközi helyzete alapján sem, amelynek a személy állampolgára, aszerint, hogy az illető ország vagy terület független, gyámság alatt áll, nem autonóm vagy szuverenitása bármely vonatkozásban korlátozott.`
+Mindenki, bármely megkülönböztetésre, nevezetesen fajra, színre, nemre, nyelvre, vallásra, politikai vagy bármely
+más véleményre, nemzeti vagy társadalmi eredetre, vagyonra, születésre, vagy bármely más körülményre való tekintet
+nélkül hivatkozhat a jelen Nyilatkozatban kinyilvánított összes jogokra és szabadságokra.
+Ezenfelül nem lehet semmiféle megkülönböztetést tenni annak az országnak, vagy területnek politikai, jogi vagy
+nemzetközi helyzete alapján sem, amelynek a személy állampolgára, aszerint, hogy az illető ország vagy terület független,
+gyámság alatt áll, nem autonóm vagy szuverenitása bármely vonatkozásban korlátozott.`
 
 	sampleIndonesian = `Pernyataan Umum tentang Hak-Hak Asasi Manusia
 
 Pasal 1
-Semua orang dilahirkan merdeka dan mempunyai martabat dan hak-hak yang sama. Mereka dikaruniai akal dan hati nurani dan hendaknya bergaul satu sama lain dalam semangat persaudaraan.
+Semua orang dilahirkan merdeka dan mempunyai martabat dan hak-hak yang sama.
+Mereka dikaruniai akal dan hati nurani dan hendaknya bergaul satu sama lain dalam semangat persaudaraan.
 
 Pasal 2
-Setiap orang berhak atas semua hak dan kebebasan-kebebasan yang tercantum di dalam Pernyataan ini tanpa perkecualian apapun, seperti ras, warna kulit, jenis kelamin, bahasa, agama, politik atau pendapat yang berlainan, asal mula kebangsaan atau kemasyarakatan, hak milik, kelahiran ataupun kedudukan lain.
-Di samping itu, tidak diperbolehkan melakukan perbedaan atas dasar kedudukan politik, hukum atau kedudukan internasional dari negara atau daerah dari mana seseorang berasal, baik dari negara yang merdeka, yang berbentuk wilayah-wilayah perwalian, jajahan atau yang berada di bawah batasan kedaulatan yang lain.`
+Setiap orang berhak atas semua hak dan kebebasan-kebebasan yang tercantum di dalam Pernyataan ini tanpa perkecualian apapun,
+seperti ras, warna kulit, jenis kelamin, bahasa, agama, politik atau pendapat yang berlainan, asal mula kebangsaan atau
+kemasyarakatan, hak milik, kelahiran ataupun kedudukan lain.
+Di samping itu, tidak diperbolehkan melakukan perbedaan atas dasar kedudukan politik, hukum atau kedudukan internasional
+dari negara atau daerah dari mana seseorang berasal, baik dari negara yang merdeka, yang berbentuk wilayah-wilayah perwalian,
+jajahan atau yang berada di bawah batasan kedaulatan yang lain.`
 
 	sampleItalian = `DICHIARAZIONE UNIVERSALE DEI DIRITTI UMANI
 
 Articolo 1
-Tutti gli esseri umani nascono liberi ed eguali in dignità e diritti. Essi sono dotati di ragione e di coscienza e devono agire gli uni verso gli altri in spirito di fratellanza.
+Tutti gli esseri umani nascono liberi ed eguali in dignità e diritti.
+Essi sono dotati di ragione e di coscienza e devono agire gli uni verso gli altri in spirito di fratellanza.
 
 Articolo 2
-Ad ogni individuo spettano tutti i diritti e tutte le libertà enunciate nella presente Dichiarazione, senza distinzione alcuna, per ragioni di razza, di colore, di sesso, di lingua, di religione, di opinione politica o di altro genere, di origine nazionale o sociale, di ricchezza, di nascita o di altra condizione.
-Nessuna distinzione sarà inoltre stabilita sulla base dello statuto politico, giuridico o internazionale del paese o del territorio cui una persona appartiene, sia indipendente, o sottoposto ad amministrazione fiduciaria o non autonomo, o soggetto a qualsiasi limitazione di sovranità.`
+Ad ogni individuo spettano tutti i diritti e tutte le libertà enunciate nella presente Dichiarazione,
+senza distinzione alcuna, per ragioni di razza, di colore, di sesso, di lingua, di religione,
+di opinione politica o di altro genere, di origine nazionale o sociale, di ricchezza, di nascita o di altra condizione.
+Nessuna distinzione sarà inoltre stabilita sulla base dello statuto politico, giuridico o internazionale del paese
+o del territorio cui una persona appartiene, sia indipendente, o sottoposto ad amministrazione fiduciaria o non autonomo,
+o soggetto a qualsiasi limitazione di sovranità.`
 
 	sampleJapanese = `『世界人権宣言』
 
@@ -222,7 +253,9 @@ Nessuna distinzione sarà inoltre stabilita sulla base dello statuto politico, g
 모든 인간은 태어날 때부터 자유로우며 그 존엄과 권리에 있어 동등하다. 인간은 천부적으로 이성과 양심을 부여받았으며 서로 형제애의 정신으로 행동하여야 한다.
 
 제 2 조
-모든 사람은 인종, 피부색, 성, 언어, 종교, 정치적 또는 기타의 견해, 민족적 또는 사회적 출신, 재산, 출생 또는 기타의 신분과 같은 어떠한 종류의 차별이 없이, 이 선언에 규정된 모든 권리와 자유를 향유할 자격이 있다 . 더 나아가 개인이 속한 국가 또는 영토가 독립국 , 신탁통치지역 , 비자치지역이거나 또는 주권에 대한 여타의 제약을 받느냐에 관계없이 , 그 국가 또는 영토의 정치적, 법적 또는 국제적 지위에 근거하여 차별이 있어서는 아니된다 .`
+모든 사람은 인종, 피부색, 성, 언어, 종교, 정치적 또는 기타의 견해, 민족적 또는 사회적 출신, 재산, 출생 또는 기타의 신분과 같은 어떠한 종류의 차별이 없이,
+이 선언에 규정된 모든 권리와 자유를 향유할 자격이 있다 . 더 나아가 개인이 속한 국가 또는 영토가 독립국 , 신탁통치지역 , 비자치지역이거나 또는 주권에 대한 여타의 제약을 받느냐에 관계없이 ,
+그 국가 또는 영토의 정치적, 법적 또는 국제적 지위에 근거하여 차별이 있어서는 아니된다 .`
 
 	sampleMarathi = `मानवाधिकारांची सार्वत्रिक घोषणा
 
@@ -230,7 +263,10 @@ Nessuna distinzione sarà inoltre stabilita sulla base dello statuto politico, g
 सर्व मानव स्वतंत्र आणि समान सन्मान आणि अधिकारात जन्माला येतात. ते तर्क आणि विवेकबुद्धीने संपन्न आहेत आणि त्यांनी बंधुत्वाच्या भावनेने एकमेकांशी वागले पाहिजे.
 
 अनुच्छेद २.
-या घोषणेमध्ये वंश, रंग, लिंग, भाषा, धर्म, राजकीय किंवा अन्य मत, राष्ट्रीय किंवा सामाजिक मूळ, मालमत्ता, जन्म किंवा इतर कोणत्याही प्रकारचे भेद न करता प्रत्येकजण या घोषणेत नमूद केलेले सर्व अधिकार आणि स्वातंत्र्य मिळविण्यास पात्र आहे. इतर स्थिती. याव्यतिरिक्त, एखादा देश ज्याच्या ताब्यात आहे तो देशाच्या राजकीय, कार्यकक्षात्मक किंवा आंतरराष्ट्रीय दर्जाच्या आधारे कोणताही भेदभाव केला जाणार नाही, तो स्वतंत्र, विश्वास असो, स्वराज्य असो किंवा सार्वभौमत्वाच्या कोणत्याही अन्य मर्यादेखाली असो.`
+या घोषणेमध्ये वंश, रंग, लिंग, भाषा, धर्म, राजकीय किंवा अन्य मत, राष्ट्रीय किंवा सामाजिक मूळ, मालमत्ता, जन्म किंवा इतर कोणत्याही प्रकारचे भेद न
+करता प्रत्येकजण या घोषणेत नमूद केलेले सर्व अधिकार आणि स्वातंत्र्य मिळविण्यास पात्र आहे. इतर स्थिती. याव्यतिरिक्त, एखादा देश ज्याच्या ताब्यात आहे तो
+देशाच्या राजकीय, कार्यकक्षात्मक किंवा आंतरराष्ट्रीय दर्जाच्या आधारे कोणताही भेदभाव केला जाणार नाही, तो स्वतंत्र, विश्वास असो, स्वराज्य असो किंवा
+सार्वभौमत्वाच्या कोणत्याही अन्य मर्यादेखाली असो.`
 
 	samplePersian = `اعلامیه جهانی حقوق بشر
 
@@ -248,38 +284,59 @@ Nessuna distinzione sarà inoltre stabilita sulla base dello statuto politico, g
 	samplePolish = `POWSZECHNA DEKLARACJA PRAW CZŁOWIEKA
 
 Artykuł 1
-Wszyscy ludzie rodzą się wolni i równi pod względem swej godności i swych praw. Są oni obdarzeni rozumem i sumieniem i powinni postępować wobec innych w duchu braterstwa.
+Wszyscy ludzie rodzą się wolni i równi pod względem swej godności i swych praw. Są oni obdarzeni rozumem i sumieniem
+i powinni postępować wobec innych w duchu braterstwa.
 
 Artykuł 2
-Każdy człowiek posiada wszystkie prawa i wolności zawarte w niniejszej Deklaracji bez względu na jakiekolwiek różnice rasy, koloru, płci, języka, wyznania, poglądów politycznych i innych, narodowości, pochodzenia społecznego, majątku, urodzenia lub jakiegokolwiek innego stanu.
-Nie wolno ponadto czynić żadnej różnicy w zależności od sytuacji politycznej, prawnej lub międzynarodowej kraju lub obszaru, do którego dana osoba przynależy, bez względu na to, czy dany kraj lub obszar jest niepodległy, czy też podlega systemowi powiernictwa, nie rządzi się samodzielnie lub jest w jakikolwiek sposób ograniczony w swej niepodległości.`
+Każdy człowiek posiada wszystkie prawa i wolności zawarte w niniejszej Deklaracji bez względu na jakiekolwiek różnice rasy,
+koloru, płci, języka, wyznania, poglądów politycznych i innych, narodowości, pochodzenia społecznego, majątku,
+urodzenia lub jakiegokolwiek innego stanu.
+Nie wolno ponadto czynić żadnej różnicy w zależności od sytuacji politycznej, prawnej lub międzynarodowej kraju lub obszaru,
+do którego dana osoba przynależy, bez względu na to, czy dany kraj lub obszar jest niepodległy, czy też podlega systemowi
+powiernictwa, nie rządzi się samodzielnie lub jest w jakikolwiek sposób ograniczony w swej niepodległości.`
 
 	samplePortuguese = `Declaração Universal dos Direitos Humanos
 
 Artigo 1°
-Todos os seres humanos nascem livres e iguais em dignidade e em direitos. Dotados de razão e de consciência, devem agir uns para com os outros em espírito de fraternidade.	
+Todos os seres humanos nascem livres e iguais em dignidade e em direitos. Dotados de razão e de consciência,
+devem agir uns para com os outros em espírito de fraternidade.	
 
 Artigo 2°
-Todos os seres humanos podem invocar os direitos e as liberdades proclamados na presente Declaração, sem distinção alguma, nomeadamente de raça, de cor, de sexo, de língua, de religião, de opinião política ou outra, de origem nacional ou social, de fortuna, de nascimento ou de qualquer outra situação.
-Além disso, não será feita nenhuma distinção fundada no estatuto político, jurídico ou internacional do país ou do território da naturalidade da pessoa, seja esse país ou território independente, sob tutela, autônomo ou sujeito a alguma limitação de soberania.`
+Todos os seres humanos podem invocar os direitos e as liberdades proclamados na presente Declaração,
+sem distinção alguma, nomeadamente de raça, de cor, de sexo, de língua, de religião, de opinião política ou outra,
+de origem nacional ou social, de fortuna, de nascimento ou de qualquer outra situação.
+Além disso, não será feita nenhuma distinção fundada no estatuto político, jurídico ou internacional do país ou do
+território da naturalidade da pessoa, seja esse país ou território independente, sob tutela, autônomo ou sujeito
+a alguma limitação de soberania.`
 
 	sampleRussian = `Всеобщая декларация прав человека
 
 Статья 1
-Все люди рождаются свободными и равными в своем достоинстве и правах. Они наделены разумом и совестью и должны поступать в отношении друг друга в духе братства.
+Все люди рождаются свободными и равными в своем достоинстве и правах.
+Они наделены разумом и совестью и должны поступать в отношении друг друга в духе братства.
 
 Статья 2
-Каждый человек должен обладать всеми правами и всеми свободами, провозглашенными настоящей Декларацией, без какого бы то ни было различия, как-то в отношении расы, цвета кожи, пола, языка, религии, политических или иных убеждений, национального или социального происхождения, имущественного, сословного или иного положения.
-Кроме того, не должно проводиться никакого различия на основе политического, правового или международного статуса страны или территории, к которой человек принадлежит, независимо от того, является ли эта территория независимой, подопечной, несамоуправляющейся или как-либо иначе ограниченной в своем суверенитете.`
+Каждый человек должен обладать всеми правами и всеми свободами, провозглашенными настоящей
+Декларацией, без какого бы то ни было различия, как-то в отношении расы, цвета кожи, пола,
+языка, религии, политических или иных убеждений, национального или социального происхождения,
+имущественного, сословного или иного положения.
+Кроме того, не должно проводиться никакого различия на основе политического, правового или
+международного статуса страны или территории, к которой человек принадлежит, независимо от того,
+является ли эта территория независимой, подопечной, несамоуправляющейся или как-либо иначе
+ограниченной в своем суверенитете.`
 
 	sampleSpanish = `Declaración Universal de Derechos Humanos
 
 Artículo 1.
-Todos los seres humanos nacen libres e iguales en dignidad y derechos y, dotados como están de razón y conciencia, deben comportarse fraternalmente los unos con los otros.
+Todos los seres humanos nacen libres e iguales en dignidad y derechos y, dotados como están de razón y conciencia,
+deben comportarse fraternalmente los unos con los otros.
 
 Artículo 2.
-Toda persona tiene los derechos y libertades proclamados en esta Declaración, sin distinción alguna de raza, color, sexo, idioma, religión, opinión política o de cualquier otra índole, origen nacional o social, posición económica, nacimiento o cualquier otra condición.
-Además, no se hará distinción alguna fundada en la condición política, jurídica o internacional del país o territorio de cuya jurisdicción dependa una persona, tanto si se trata de un país independiente, como de un territorio bajo administración fiduciaria, no autónomo o sometido a cualquier otra limitación de soberanía.`
+Toda persona tiene los derechos y libertades proclamados en esta Declaración, sin distinción alguna de raza, color,
+sexo, idioma, religión, opinión política o de cualquier otra índole, origen nacional o social, posición económica,
+nacimiento o cualquier otra condición. Además, no se hará distinción alguna fundada en la condición política,jurídica
+o internacional del país o territorio de cuya jurisdicción dependa una persona, tanto si se trata de un país independiente,
+como de un territorio bajo administración fiduciaria, no autónomo o sometido a cualquier otra limitación de soberanía.`
 
 	sampleSwahili = `UMOJA WA MATAIFA OFISI YA IDARA YA HABARI TAARIFA YA ULIMWENGU JUU YA HAKI ZA BINADAMU
 
@@ -287,17 +344,24 @@ Kifungu cha 1.
 Watu wote wamezaliwa huru, hadhi na haki zao ni sawa. Wote wamejaliwa akili na dhamiri, hivyo yapasa watendeane kindugu.
 
 Kifungu cha 2.
-Kila mtu anastahili kuwa na haki zote na uhuru wote ambao umeelezwa katika Taarifa hii bila ubaguzi wo wote. Yaani bila kubaguana kwa rangi, taifa, wanaume kwa wanawake, dini, siasa, fikara, asili ya taifa la mtu, mali, kwa kizazi au kwa hali nyingine yo yote.
-Juu ya hayo usifanye ubaguzi kwa kutegemea siasa, utawala au kwa kutegemea uhusiano wa nchi fulani na mataifa mengine au nchi ya asili ya mtu, haidhuru nchi hiyo iwe inayojitawala, ya udhamini, isiyojitawala au inayotawaliwa na nchi nyingine kwa hali ya namna yo yote.`
+Kila mtu anastahili kuwa na haki zote na uhuru wote ambao umeelezwa katika Taarifa hii bila ubaguzi wo wote. Yaani bila kubaguana kwa rangi,
+taifa, wanaume kwa wanawake, dini, siasa, fikara, asili ya taifa la mtu, mali, kwa kizazi au kwa hali nyingine yo yote.
+Juu ya hayo usifanye ubaguzi kwa kutegemea siasa, utawala au kwa kutegemea uhusiano wa nchi fulani na mataifa mengine au nchi ya asili ya mtu,
+haidhuru nchi hiyo iwe inayojitawala, ya udhamini, isiyojitawala au inayotawaliwa na nchi nyingine kwa hali ya namna yo yote.`
 
 	sampleSwedish = `ALLMÄN FÖRKLARING OM DE MÄNSKLIGA RÄTTIGHETERNA
 
 Artikel 1.
-Alla människor äro födda fria och lika i värde och rättigheter. De äro utrustade med förnuft och samvete och böra handla gentemot varandra i en anda av broderskap.
+Alla människor äro födda fria och lika i värde och rättigheter.
+De äro utrustade med förnuft och samvete och böra handla gentemot varandra i en anda av broderskap.
 
 Artikel 2.
-Envar är berättigad till alla de fri- och rättigheter, som uttalas i denna förklaring, utan åtskillnad av något slag, såsom ras, hudfärg, kön, språk, religion, politisk eller annan uppfattning, nationellt eller socialt ursprung, egendom, börd eller ställning i övrigt.
-Ingen åtskillnad må vidare göras på grund av den politiska, juridiska eller internationella ställning, som intages av det land eller område, till vilket en person hör, vare sig detta land eller område är oberoende, står under förvaltarskap, är icke-självstyrande eller är underkastat någon annan begränsning av sin suveränitet.`
+Envar är berättigad till alla de fri- och rättigheter, som uttalas i denna förklaring, utan åtskillnad av något slag,
+såsom ras, hudfärg, kön, språk, religion, politisk eller annan uppfattning, nationellt eller socialt ursprung,
+egendom, börd eller ställning i övrigt.
+Ingen åtskillnad må vidare göras på grund av den politiska, juridiska eller internationella ställning, som intages 
+v det land eller område, till vilket en person hör, vare sig detta land eller område är oberoende, står under
+förvaltarskap, är icke-självstyrande eller är underkastat någon annan begränsning av sin suveränitet.`
 
 	sampleThai = `ปฏิญญาสากลว่าด้วยสิทธิมนุษยชน
 
@@ -315,11 +379,16 @@ Ingen åtskillnad må vidare göras på grund av den politiska, juridiska eller 
 	sampleTurkish = `İnsan hakları  evrensel beyannamesi
 
 Madde 1
-Bütün insanlar hür, haysiyet ve haklar bakımından eşit doğarlar. Akıl ve vicdana sahiptirler ve birbirlerine karşı kardeşlik zihniyeti ile hareket etmelidirler.
+Bütün insanlar hür, haysiyet ve haklar bakımından eşit doğarlar.
+Akıl ve vicdana sahiptirler ve birbirlerine karşı kardeşlik zihniyeti ile hareket etmelidirler.
 
 Madde 2
-Herkes, ırk, renk, cinsiyet, dil, din, siyasi veya diğer herhangi bir akide, milli veya içtimai menşe, servet, doğuş veya herhangi diğer bir fark gözetilmeksizin işbu Beyannamede ilan olunan tekmil haklardan ve bütün hürriyetlerden istifade edebilir.
-Bundan başka, bağımsız memleket uyruğu olsun, vesayet altında bulunan, gayri muhtar veya sair bir egemenlik kayıtlamasına tabi ülke uyruğu olsun, bir şahıs hakkında, uyruğu bulunduğu memleket veya ülkenin siyasi, hukuki veya milletlerarası statüsü bakımından hiçbir ayrılık gözetilmeyecektir.`
+Herkes, ırk, renk, cinsiyet, dil, din, siyasi veya diğer herhangi bir akide, milli veya içtimai menşe,
+servet, doğuş veya herhangi diğer bir fark gözetilmeksizin işbu Beyannamede ilan olunan tekmil haklardan
+ve bütün hürriyetlerden istifade edebilir.
+Bundan başka, bağımsız memleket uyruğu olsun, vesayet altında bulunan, gayri muhtar veya sair bir egemenlik
+kayıtlamasına tabi ülke uyruğu olsun, bir şahıs hakkında, uyruğu bulunduğu memleket veya ülkenin siyasi,
+hukuki veya milletlerarası statüsü bakımından hiçbir ayrılık gözetilmeyecektir.`
 
 	sampleUrdu = `انسانی حقوق کا عالمی اعلان
 
@@ -341,7 +410,12 @@ Tất cả con người sinh ra đều tự do, bình đẳng về nhân phẩm 
 Họ được phú cho lý trí và lương tâm và nên hành động với nhau trong tinh thần anh em.
 
 Điều 2.
-Mọi người được hưởng tất cả các quyền và tự do được nêu trong Tuyên bố này, không phân biệt bất kỳ hình thức nào, chẳng hạn như chủng tộc, màu da, giới tính, ngôn ngữ, tôn giáo, chính trị hoặc quan điểm khác, nguồn gốc quốc gia hoặc xã hội, tài sản, nơi sinh hoặc trạng thái khác. Hơn nữa, không có sự phân biệt nào được thực hiện trên cơ sở địa vị chính trị, quyền tài phán hoặc quốc tế của quốc gia hoặc vùng lãnh thổ mà một người thuộc về, cho dù đó là quốc gia độc lập, tin cậy, không tự quản hay theo bất kỳ giới hạn chủ quyền nào khác.`
+Mọi người được hưởng tất cả các quyền và tự do được nêu trong Tuyên bố này, không phân biệt bất kỳ
+hình thức nào, chẳng hạn như chủng tộc, màu da, giới tính, ngôn ngữ, tôn giáo, chính trị hoặc quan
+điểm khác, nguồn gốc quốc gia hoặc xã hội, tài sản, nơi sinh hoặc trạng thái khác.
+Hơn nữa, không có sự phân biệt nào được thực hiện trên cơ sở địa vị chính trị, quyền tài phán hoặc
+quốc tế của quốc gia hoặc vùng lãnh thổ mà một người thuộc về, cho dù đó là quốc gia độc lập,
+tin cậy, không tự quản hay theo bất kỳ giới hạn chủ quyền nào khác.`
 )
 
 type sample struct {
