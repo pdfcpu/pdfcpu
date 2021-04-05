@@ -6,6 +6,10 @@ layout: default
 
 | Date      | Tag / Commit                                                                                | Description  
 |:----------|:--------------------------------------------------------------------------------------------|:------------------------------
+|2021-04-05 | [v0.3.11](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.11)                            | Add right to left stamping
+|2021-04-05 | [v0.3.10](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.10)                            | #271,#273,#285,#287,#293,#294,
+|           |                                                                                             | #295,#296,#297,#298,#299,#301,
+|           |                                                                                             | #303,#305,#307,#311,#313,#316,#319
 |2021-02-13 | [v0.3.9](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.9)                              | Add booklet cmd, Fix #276, #279,
 |           |                                                                                             | #280, #285, #288, #290, #291
 |2020-12-24 | [v0.3.8](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.8)                              | Add new cmds: boxes, crop
