@@ -21,8 +21,7 @@ pdfcpu stamp remove [-p(ages) selectedPages] inFile [outFile]
 <br>
 
 ---
-NOTE
-
+NOTE<br>
 In the Adobe world a watermark is text or an image that appears either in front of or behind existing document content, unlike a stamp comment aka stamp annotation that anybody reading the PDF can open, edit, move around and delete. The difference here is that a watermark is integrated into a PDF page as a fixed element. Within `pdfcpu` the meaning of these terms is slightly different:
 
 * `stamp` is any accumulated *content* that appears in front of the existing page content - sitting on top of everything else on a page at a fixed position.
@@ -114,6 +113,7 @@ but `op: .7` will do the job.
 |:-----------------|:--------------------------------|:----------------------------------------------------|:---------
 | fontname         | a basefont                      | Please refer to `pdfcpu fonts list`                 | font: Helvetica
 | points           | fontsize in points              | in combination with absolute scaling only           | points: 24
+| rtl              | right to left userfont          | on/off, true/false, t/f                             | off
 | position         | the stamps lower left corner    | one of `full` or the anchors: `tl, tc, tr, l, c, r, bl, bc, br`| pos: c
 | offset           |                                 | (dx,dy) in user units eg. '15 20'                   | off: 0 0
 | scalefactor      |                                 | 0.0 < i <= 1.0 followed by optional `abs` or `rel`  | sc: 0.5 rel
@@ -153,6 +153,7 @@ The following description parameters are for text based stamps only:
 * rendermode
 * margins
 * border
+* rtl (for user fonts only)
 
 <br>
 
@@ -170,7 +171,7 @@ The following description parameters are for text based stamps only:
 #### Default description
 
 ```sh
-'f:Helvetica, points:24, sc:0.5 rel, pos:c, off:0 0, align:c, fillc:#808080, strokec:#808080, rot:0, d:1, op:1, mo:0, ma:0, bo:0'
+'f:Helvetica, points:24, rtl:off, sc:0.5 rel, pos:c, off:0 0, align:c, fillc:#808080, strokec:#808080, rot:0, d:1, op:1, mo:0, ma:0, bo:0'
 ```
 The default stamp configuration is:
 
@@ -190,6 +191,7 @@ In addition for text based stamps:
 * render mode fill (`mo:0`)
 * margins `0`
 * border `0`
+* rtl `off`
 
 You only have to specify parameters that differ from the default.
 
