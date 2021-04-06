@@ -6,6 +6,8 @@ layout: default
 
 Convert one or more image files into a PDF file. Have a look at some [examples](#examples).
 
+* The supported file types are: JPG, PNG, WEBP, TIFF
+
 * Every image file will be rendered onto a separate page.
 
 * If you pass in a single image file name a single page PDF will be created.
@@ -59,8 +61,8 @@ A configuration string to specify the details of the image layout on the page.
 | position            | one of `full` or the anchors: `tl, tc, tr, l, c, r, bl, bc, br`| pos: full
 | offset              | (dx,dy) in user units eg. '15 20'                              | off: 0 0
 | scalefactor         | 0.0 <= s <= 1.0 followed by optional `abs` or `rel`            | sc: 0.5 rel
-| gray                | Convert to grayscale (on/off, true/false)                      | gray:off
-| sepia               | Apply sepia effect (on/off, true/false)                        | sepia: off
+| gray                | Convert to grayscale (on/off, true/false, t/f)                 | gray:off
+| sepia               | Apply sepia effect (on/off, true/false, t/f)                   | sepia: off
 | backgroundcolor, bgcol| 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red                  | none
 |                      | or the hex RGB value: #RRGGBB                                 |
 
@@ -203,3 +205,27 @@ If an album created by *Import* ends up having some pages with images not in upr
 ```sh
 pdfcpu rotate -pages 3-4 album.pdf -90
 ```
+
+<br>
+
+You can also convert your input images to grayscale:
+
+```sh
+pdfcpu import -- "gray:true" gray.pdf test.jpg 
+```
+<div>
+<img width="150" src="https://user-images.githubusercontent.com/11322155/113626732-d0dc6c00-9662-11eb-9255-009e56009852.png">&nbsp;&nbsp;&nbsp;
+<img width="150" src="https://user-images.githubusercontent.com/11322155/113625860-bfdf2b00-9661-11eb-89eb-1c07e6e99cca.png">
+</div>
+
+<br>
+
+Or you can apply a sepia effect:
+
+```sh
+pdfcpu import -- "sepia:true" sepia.pdf test.jpg 
+```
+<div>
+<img width="150" src="https://user-images.githubusercontent.com/11322155/113626732-d0dc6c00-9662-11eb-9255-009e56009852.png">&nbsp;&nbsp;&nbsp;
+<img width="150" src="https://user-images.githubusercontent.com/11322155/113625936-d5eceb80-9661-11eb-9ea6-01ca0459e809.png">
+</div>
