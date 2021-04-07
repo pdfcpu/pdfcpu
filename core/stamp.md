@@ -409,7 +409,7 @@ Let's create a Unicode text stamp using a user font:
 
 <br>
 
-### Left-to-right
+### Left-to-right, Simple Chinese
 
 ```
 pdfcpu stamp add -mode text "这是一个测试" "fo:SimSun" in.pdf out.pdf
@@ -421,7 +421,7 @@ pages: all
 </p>
 
 
-### Right-to-left
+### Right-to-left, Arabic
 
 ```
 pdfcpu stamp add -mode text "هذا اختبار" "rtl:true, fo:UnifontMedium" in.pdf out.pdf
