@@ -403,8 +403,8 @@ pdfcpu stamp remove work.pdf
 
 Let's create a Unicode text stamp using a user font:
 
-1) Choose your favorite TrueType font or collection.
-2) Follow [the instructions](../fonts/fonts_install.md) to install the font you would like to use.
+1. Choose your favorite TrueType font or collection.
+2. Follow [the instructions](../fonts/fonts_install.md) to install the font you would like to use.
 
 <br>
 
