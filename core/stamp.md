@@ -424,11 +424,11 @@ pages: all
 ### Right-to-left
 
 ```
-pdfcpu stamp add -mode text "هذا اختبار" "fo:UnifontMedium, rtl:true" in.pdf out.pdf
+pdfcpu stamp add -mode text "هذا اختبار" "rtl:true, fo:UnifontMedium" in.pdf out.pdf
 writing out.pdf...
 pages: all
 ```
 
 <p align="center">
-  <img style="border-color:silver" border="1" src="resources/teststampRTL.png" height="300">
+  <img style="border-color:silver" border="1" src="resources/testStampRTL.png" height="300">
 </p>
