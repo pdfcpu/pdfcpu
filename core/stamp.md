@@ -401,7 +401,6 @@ pdfcpu stamp remove work.pdf
 
 ## Userfonts
 
-<br>
 Let's create a Unicode text stamp using a user font:
 
 1) Choose your favorite TrueType font or collection.
