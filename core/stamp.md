@@ -6,6 +6,7 @@ layout: default
 
 Add stamps to selected pages of `inFile`. Have a look at some [examples](#examples).
 
+
 Stamps may be stacked on top of each other. 
 This allows for producing more complex page stamps - a mixture of text, images and foreign PDF page content.
 Using `description` you can configure various aspects like position, offset, rotation, scaling and opacity. For text based stamps you can also configure font name, font size, fill color and render mode.
@@ -395,3 +396,39 @@ Finally let's remove all stamps of this file.
 ```
 pdfcpu stamp remove work.pdf
 ``` 
+
+<br>
+
+## Userfonts
+
+<br>
+Let's create a Unicode text stamp using a user font:
+
+1) Choose your favorite TrueType font or collection.
+2) Follow [the instructions](../fonts/fonts_install.md) to install the font you would like to use.
+
+<br>
+
+### Left-to-right
+
+```
+pdfcpu stamp add -mode text "这是一个测试" "fo:SimSun" in.pdf out.pdf
+writing out.pdf...
+pages: all
+```
+<p align="center">
+  <img style="border-color:silver" border="1" src="https://user-images.githubusercontent.com/11322155/98120442-3e1a8400-1eae-11eb-9918-9f9b755d841d.png" height="300">
+</p>
+
+
+### Right-to-left
+
+```
+pdfcpu stamp add -mode text "هذا اختبار" "fo:UnifontMedium, rtl:true" in.pdf out.pdf
+writing out.pdf...
+pages: all
+```
+
+<p align="center">
+  <img style="border-color:silver" border="1" src="resources/teststampRTL.png" height="300">
+</p>

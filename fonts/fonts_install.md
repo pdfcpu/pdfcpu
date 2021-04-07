@@ -14,7 +14,7 @@ installing to /Users/horstrutter/Library/Application Support/pdfcpu/fonts...
 SimSun
 ```
 
-TrueType colections are also supported:
+TrueType collections are also supported:
 
 ```sh
 pdfcpu font install Songti.ttc
