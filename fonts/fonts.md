@@ -19,7 +19,7 @@ pdfcpu supports the whole Unicode code range covering the 65536 Unicode code poi
 plus all defined code points of the defined supplementary planes (1, 2, 14-16) and any code points yet to be defined.
 This means pdfcpu also allows you to stamp PDFs using your favorite CJKV based font on the command line or via the api.
 
-Have a look at some [examples for stamping with user fonts](../core/stamp.md##Userfonts).
+Have a look at some [examples for stamping with user fonts](../core/stamp.md#Userfonts).
 
 There are also commands for listing all installed fonts and producing cheat sheets.
 
