@@ -65,18 +65,7 @@ func ExtractImages(rs io.ReadSeeker, outDir, fileName string, selectedPages []st
 			return err
 		}
 		for _, img := range ii {
-			outFile := filepath.Join(outDir, fmt.Sprintf("%s_%d_%s.%s", fileName, i, img.Name, img.Type))
-			log.CLI.Printf("writing %s\n", outFile)
-			w, err := os.Create(outFile)
-			if err != nil {
-				return err
-			}
-			if _, err = io.Copy(w, img); err != nil {
-				return err
-			}
-			if err := w.Close(); err != nil {
-				return err
-			}
+			writeImageFile(outDir, fileName, img, i)
 		}
 	}
 
@@ -85,6 +74,22 @@ func ExtractImages(rs io.ReadSeeker, outDir, fileName string, selectedPages []st
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
 	pdfcpu.TimingStats("write images", durRead, durVal, durOpt, durWrite, durTotal)
 
+	return nil
+}
+
+func writeImageFile(outDir, fileName string, img pdfcpu.Image, pageNum int) error {
+	outFile := filepath.Join(outDir, fmt.Sprintf("%s_%d_%s.%s", fileName, pageNum, img.Name, img.Type))
+	log.CLI.Printf("writing %s\n", outFile)
+	w, err := os.Create(outFile)
+	if err != nil {
+		return err
+	}
+	if _, err = io.Copy(w, img); err != nil {
+		return err
+	}
+	if err := w.Close(); err != nil {
+		return err
+	}
 	return nil
 }
 
