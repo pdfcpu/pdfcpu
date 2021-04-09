@@ -31,30 +31,41 @@ import (
 
 // ExtractImages dumps embedded image resources from rs into outDir for selected pages.
 func ExtractImages(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, conf *pdfcpu.Configuration) error {
+	fileName = strings.TrimSuffix(filepath.Base(fileName), ".pdf")
+	_, error := extractImages(rs, selectedPages, conf, false, outDir, fileName)
+	return error
+}
+
+func ExtractImagesInMem(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Configuration) ([]pdfcpu.Image, error) {
+	return extractImages(rs, selectedPages, conf, true, "", "")
+}
+
+func extractImages(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Configuration,
+	inMem bool, outDir, fileName string) ([]pdfcpu.Image, error) {
 	if rs == nil {
-		return errors.New("pdfcpu: ExtractImages: Please provide rs")
+		return nil, errors.New("pdfcpu: ExtractImages: Please provide rs")
 	}
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
 	}
 
+	var images []pdfcpu.Image
+
 	fromStart := time.Now()
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := ctx.EnsurePageCount(); err != nil {
-		return err
+		return nil, err
 	}
 
 	fromWrite := time.Now()
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	fileName = strings.TrimSuffix(filepath.Base(fileName), ".pdf")
 
 	for i, v := range pages {
 		if !v {
@@ -62,10 +73,14 @@ func ExtractImages(rs io.ReadSeeker, outDir, fileName string, selectedPages []st
 		}
 		ii, err := ctx.ExtractPageImages(i)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		for _, img := range ii {
-			writeImageFile(outDir, fileName, img, i)
+			if inMem {
+				images = append(images, img)
+			} else {
+				writeImageFile(outDir, fileName, img, i)
+			}
 		}
 	}
 
@@ -74,7 +89,7 @@ func ExtractImages(rs io.ReadSeeker, outDir, fileName string, selectedPages []st
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
 	pdfcpu.TimingStats("write images", durRead, durVal, durOpt, durWrite, durTotal)
 
-	return nil
+	return images, nil
 }
 
 func writeImageFile(outDir, fileName string, img pdfcpu.Image, pageNum int) error {
