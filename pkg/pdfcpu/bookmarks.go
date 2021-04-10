@@ -92,6 +92,7 @@ func outlineItemTitle(s string) string {
 	return sb.String()
 }
 
+// PageObjFromDestinationArray return an IndirectRef for this destinations page object.
 func (ctx *Context) PageObjFromDestinationArray(dest Object) (*IndirectRef, error) {
 	var (
 		err error

@@ -16,7 +16,10 @@ limitations under the License.
 
 package pdfcpu
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func doParseDateTimeRelaxedOK(s string, t *testing.T) {
 	t.Helper()
@@ -33,7 +36,7 @@ func doParseDateTimeOK(s string, t *testing.T) {
 	t.Helper()
 	if time, ok := DateTime(s, false); ok {
 		_ = time
-		//t.Logf("DateTime(%s) valid => %s\n", s, time)
+		t.Logf("DateTime(%s) valid => %s\n", s, time)
 	} else {
 		t.Errorf("DateTime(%s) invalid => not ok!\n", s)
 	}
@@ -50,7 +53,7 @@ func doParseDateTimeFail(s string, t *testing.T) {
 
 }
 
-func TestDateTime(t *testing.T) {
+func TestParseDateTime(t *testing.T) {
 
 	s := "D:2017"
 	doParseDateTimeOK(s, t)
@@ -100,4 +103,22 @@ func TestDateTime(t *testing.T) {
 
 	s = "20141117162446Z00'00'"
 	doParseDateTimeRelaxedOK(s, t)
+}
+
+func TestWriteDateTime(t *testing.T) {
+
+	now := DateString(time.Now())
+	doParseDateTimeOK(now, t)
+
+	loc, _ := time.LoadLocation("Europe/Vienna")
+	now = DateString(time.Now().In(loc))
+	doParseDateTimeOK(now, t)
+
+	loc, _ = time.LoadLocation("Pacific/Honolulu")
+	now = DateString(time.Now().In(loc))
+	doParseDateTimeOK(now, t)
+
+	loc, _ = time.LoadLocation("Australia/Sydney")
+	now = DateString(time.Now().In(loc))
+	doParseDateTimeOK(now, t)
 }

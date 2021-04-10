@@ -26,10 +26,17 @@ import (
 // DateString returns a string representation of t.
 func DateString(t time.Time) string {
 	_, tz := t.Zone()
-	return fmt.Sprintf("D:%d%02d%02d%02d%02d%02d+%02d'%02d'",
+	tzm := tz / 60
+	sign := "+"
+	if tzm < 0 {
+		sign = "-"
+		tzm = -tzm
+	}
+
+	return fmt.Sprintf("D:%d%02d%02d%02d%02d%02d%s%02d'%02d'",
 		t.Year(), t.Month(), t.Day(),
 		t.Hour(), t.Minute(), t.Second(),
-		tz/60/60, tz/60%60)
+		sign, tzm/60, tzm%60)
 }
 
 func prevalidateDate(s string, relaxed bool) (string, bool) {
