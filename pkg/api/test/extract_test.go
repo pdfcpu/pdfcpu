@@ -17,6 +17,7 @@ limitations under the License.
 package test
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -26,15 +27,29 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 func TestExtractImages(t *testing.T) {
 	msg := "TestExtractImages"
 	// Extract images for all pages into outDir.
 	for _, fn := range []string{"5116.DCT_Filter.pdf", "testImage.pdf", "go.pdf"} {
+		// Test writing files
 		fn = filepath.Join(inDir, fn)
 		if err := api.ExtractImagesFile(fn, outDir, nil, nil); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, fn, err)
+		}
+		// Test in mem
+		content, err := ioutil.ReadFile(fn)
+		if err != nil {
+			t.Fatalf("%s %s: %v\n", msg, fn, err)
+		}
+		imgs, err := api.ExtractImagesInMem(bytes.NewReader(content), nil, nil)
+		if err != nil {
+			t.Fatalf("%s %s: %v\n", msg, fn, err)
+		}
+		if len(imgs) == 0 {
+			t.Fatalf("%s %s: No images extracted\n", msg, fn, err)
 		}
 	}
 	// Extract images for inFile starting with page 1 into outDir.

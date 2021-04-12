@@ -36,11 +36,13 @@ func ExtractImages(rs io.ReadSeeker, outDir, fileName string, selectedPages []st
 	return error
 }
 
+// Similar to ExtractImages but returnes in memory images as opposed to writing them to disk.
 func ExtractImagesInMem(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Configuration) ([]pdfcpu.Image, error) {
 	return extractImages(rs, selectedPages, conf, true, "", "")
 }
 
 func extractImages(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Configuration,
+	// in inMem is false, outDir and fileName won't be used. The boolean argument makes this behaviour more explicit
 	inMem bool, outDir, fileName string) ([]pdfcpu.Image, error) {
 	if rs == nil {
 		return nil, errors.New("pdfcpu: ExtractImages: Please provide rs")
