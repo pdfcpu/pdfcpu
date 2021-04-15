@@ -29,8 +29,9 @@ import (
 // Image is a Reader representing an image resource.
 type Image struct {
 	io.Reader
-	Name string // Resource name
-	Type string // File type
+	PageNr int
+	Name   string // Resource name
+	Type   string // File type
 }
 
 // ImageObjNrs returns all image dict objNrs for pageNr.
@@ -132,6 +133,7 @@ func (ctx *Context) ExtractPageImages(pageNr int) ([]Image, error) {
 			return nil, err
 		}
 		if i != nil {
+			i.PageNr = pageNr
 			ii = append(ii, *i)
 		}
 	}

@@ -18,20 +18,20 @@ package test
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 func TestExtractImages(t *testing.T) {
 	msg := "TestExtractImages"
 	// Extract images for all pages into outDir.
 	for _, fn := range []string{"5116.DCT_Filter.pdf", "testImage.pdf", "go.pdf"} {
+		// Test writing files
 		fn = filepath.Join(inDir, fn)
 		if err := api.ExtractImagesFile(fn, outDir, nil, nil); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, fn, err)
@@ -72,15 +72,8 @@ func TestExtractImagesLowLevel(t *testing.T) {
 	// Process extracted images.
 	for _, img := range ii {
 		fn := filepath.Join(outDir, fmt.Sprintf("%s_%d_%s.%s", baseFileName, i, img.Name, img.Type))
-		w, err := os.Create(fn)
-		if err != nil {
-			t.Fatalf("%s create: %s", msg, fn)
-		}
-		if _, err = io.Copy(w, img); err != nil {
-			t.Fatalf("%s io.Copy for: %s", msg, fn)
-		}
-		if err := w.Close(); err != nil {
-			t.Fatalf("%s close %s", msg, fn)
+		if err := pdfcpu.WriteReader(fn, img); err != nil {
+			t.Fatalf("%s write: %s", msg, fn)
 		}
 	}
 }
@@ -126,15 +119,8 @@ func TestExtractFontsLowLevel(t *testing.T) {
 	// Process extracted fonts.
 	for _, f := range ff {
 		fn := filepath.Join(outDir, fmt.Sprintf("%s.%s", f.Name, f.Type))
-		w, err := os.Create(fn)
-		if err != nil {
-			t.Fatalf("%s create: %s", msg, fn)
-		}
-		if _, err = io.Copy(w, f); err != nil {
-			t.Fatalf("%s io.Copy for: %s", msg, fn)
-		}
-		if err := w.Close(); err != nil {
-			t.Fatalf("%s close %s", msg, fn)
+		if err := pdfcpu.WriteReader(fn, f); err != nil {
+			t.Fatalf("%s write: %s", msg, fn)
 		}
 	}
 }
