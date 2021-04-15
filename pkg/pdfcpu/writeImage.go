@@ -270,7 +270,7 @@ func renderDeviceCMYKToTIFF(im *PDFImage, resourceName string) (*Image, error) {
 	if err := tiff.Encode(&buf, img, nil); err != nil {
 		return nil, err
 	}
-	return &Image{&buf, resourceName, "tif"}, nil
+	return &Image{&buf, 0, resourceName, "tif"}, nil
 }
 
 func renderDeviceGrayToPNG(im *PDFImage, resourceName string) (*Image, error) {
@@ -308,7 +308,7 @@ func renderDeviceGrayToPNG(im *PDFImage, resourceName string) (*Image, error) {
 	if err := png.Encode(&buf, img); err != nil {
 		return nil, err
 	}
-	return &Image{&buf, resourceName, "png"}, nil
+	return &Image{&buf, 0, resourceName, "png"}, nil
 }
 
 func renderDeviceRGBToPNG(im *PDFImage, resourceName string) (*Image, error) {
@@ -342,7 +342,7 @@ func renderDeviceRGBToPNG(im *PDFImage, resourceName string) (*Image, error) {
 	if err := png.Encode(&buf, img); err != nil {
 		return nil, err
 	}
-	return &Image{&buf, resourceName, "png"}, nil
+	return &Image{&buf, 0, resourceName, "png"}, nil
 }
 
 func ensureDeviceRGBCS(xRefTable *XRefTable, o Object) bool {
@@ -388,7 +388,7 @@ func renderCalRGBToPNG(im *PDFImage, resourceName string) (*Image, error) {
 	if err := png.Encode(&buf, img); err != nil {
 		return nil, err
 	}
-	return &Image{&buf, resourceName, "png"}, nil
+	return &Image{&buf, 0, resourceName, "png"}, nil
 }
 
 func renderICCBased(xRefTable *XRefTable, im *PDFImage, resourceName string, cs Array) (*Image, error) {
@@ -468,7 +468,7 @@ func renderIndexedRGBToPNG(im *PDFImage, resourceName string, lookup []byte) (*I
 	if err := png.Encode(&buf, img); err != nil {
 		return nil, err
 	}
-	return &Image{&buf, resourceName, "png"}, nil
+	return &Image{&buf, 0, resourceName, "png"}, nil
 }
 
 func renderIndexedCMYKToTIFF(im *PDFImage, resourceName string, lookup []byte) (*Image, error) {
@@ -500,7 +500,7 @@ func renderIndexedCMYKToTIFF(im *PDFImage, resourceName string, lookup []byte) (
 	if err := tiff.Encode(&buf, img, nil); err != nil {
 		return nil, err
 	}
-	return &Image{&buf, resourceName, "tif"}, nil
+	return &Image{&buf, 0, resourceName, "tif"}, nil
 }
 
 func renderIndexedNameCS(im *PDFImage, resourceName string, cs Name, maxInd int, lookup []byte) (*Image, error) {
@@ -573,7 +573,7 @@ func renderIndexedArrayCS(xRefTable *XRefTable, im *PDFImage, resourceName strin
 			if err := png.Encode(&buf, img); err != nil {
 				return nil, err
 			}
-			return &Image{&buf, "", "png"}, nil
+			return &Image{&buf, 0, "", "png"}, nil
 
 		case 3:
 			// RGB
@@ -688,7 +688,6 @@ func renderFlateEncodedImage(xRefTable *XRefTable, sd *StreamDict, resourceName 
 // RenderImage returns a reader for the encoded image bytes.
 // for extract
 func RenderImage(xRefTable *XRefTable, sd *StreamDict, resourceName string, objNr int) (*Image, error) {
-
 	switch sd.FilterPipeline[0].Name {
 
 	case filter.Flate, filter.CCITTFax:
@@ -697,34 +696,32 @@ func RenderImage(xRefTable *XRefTable, sd *StreamDict, resourceName string, objN
 
 	case filter.DCT:
 		// Write original stream data.
-		return &Image{bytes.NewReader(sd.Raw), resourceName, "jpg"}, nil
+		return &Image{bytes.NewReader(sd.Raw), 0, resourceName, "jpg"}, nil
 
 	case filter.JPX:
 		// Write original stream data.
-		return &Image{bytes.NewReader(sd.Raw), resourceName, "jpx"}, nil
+		return &Image{bytes.NewReader(sd.Raw), 0, resourceName, "jpx"}, nil
 	}
 
 	return nil, nil
 }
 
+func WriteReader(path string, r io.Reader) error {
+	w, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	if _, err = io.Copy(w, r); err != nil {
+		return err
+	}
+	return w.Close()
+}
+
 // WriteImage writes a PDF image object to disk.
 func WriteImage(xRefTable *XRefTable, fileName string, sd *StreamDict, objNr int) (string, error) {
-
 	img, err := RenderImage(xRefTable, sd, fileName, objNr)
 	if err != nil {
 		return "", err
 	}
-
-	w, err := os.Create(fileName)
-	if err != nil {
-		return "", err
-	}
-
-	if _, err = io.Copy(w, img); err != nil {
-		return "", err
-	}
-
-	err = w.Close()
-
-	return fileName, err
+	return fileName, WriteReader(fileName, img)
 }

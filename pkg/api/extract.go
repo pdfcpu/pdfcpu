@@ -29,21 +29,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ExtractImages dumps embedded image resources from rs into outDir for selected pages.
-func ExtractImages(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, conf *pdfcpu.Configuration) error {
-	fileName = strings.TrimSuffix(filepath.Base(fileName), ".pdf")
-	_, error := extractImages(rs, selectedPages, conf, false, outDir, fileName)
-	return error
-}
-
-// Similar to ExtractImages but returnes in memory images as opposed to writing them to disk.
-func ExtractImagesInMem(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Configuration) ([]pdfcpu.Image, error) {
-	return extractImages(rs, selectedPages, conf, true, "", "")
-}
-
-func extractImages(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Configuration,
-	// in inMem is false, outDir and fileName won't be used. The boolean argument makes this behaviour more explicit
-	inMem bool, outDir, fileName string) ([]pdfcpu.Image, error) {
+func ExtractImagesRaw(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Configuration) ([]pdfcpu.Image, error) {
 	if rs == nil {
 		return nil, errors.New("pdfcpu: ExtractImages: Please provide rs")
 	}
@@ -77,13 +63,7 @@ func extractImages(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Config
 		if err != nil {
 			return nil, err
 		}
-		for _, img := range ii {
-			if inMem {
-				images = append(images, img)
-			} else {
-				writeImageFile(outDir, fileName, img, i)
-			}
-		}
+		images = append(images, ii...)
 	}
 
 	durWrite := time.Since(fromWrite).Seconds()
@@ -94,18 +74,18 @@ func extractImages(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Config
 	return images, nil
 }
 
-func writeImageFile(outDir, fileName string, img pdfcpu.Image, pageNum int) error {
-	outFile := filepath.Join(outDir, fmt.Sprintf("%s_%d_%s.%s", fileName, pageNum, img.Name, img.Type))
-	log.CLI.Printf("writing %s\n", outFile)
-	w, err := os.Create(outFile)
+// ExtractImages dumps embedded image resources from rs into outDir for selected pages.
+func ExtractImages(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, conf *pdfcpu.Configuration) error {
+	imgs, err := ExtractImagesRaw(rs, selectedPages, conf)
 	if err != nil {
 		return err
 	}
-	if _, err = io.Copy(w, img); err != nil {
-		return err
-	}
-	if err := w.Close(); err != nil {
-		return err
+	for _, img := range imgs {
+		outFile := filepath.Join(outDir, fmt.Sprintf("%s_%d_%s.%s", fileName, img.PageNr, img.Name, img.Type))
+		log.CLI.Printf("writing %s\n", outFile)
+		if err := pdfcpu.WriteReader(outFile, img); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -118,7 +98,8 @@ func ExtractImagesFile(inFile, outDir string, selectedPages []string, conf *pdfc
 	}
 	defer f.Close()
 	log.CLI.Printf("extracting images from %s into %s/ ...\n", inFile, outDir)
-	return ExtractImages(f, outDir, filepath.Base(inFile), selectedPages, conf)
+	fileName := strings.TrimSuffix(filepath.Base(inFile), ".pdf")
+	return ExtractImages(f, outDir, fileName, selectedPages, conf)
 }
 
 // ExtractFonts dumps embedded fontfiles from rs into outDir for selected pages.
