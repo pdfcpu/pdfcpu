@@ -17,6 +17,7 @@
 package api
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -52,7 +53,7 @@ func Validate(rs io.ReadSeeker, conf *pdfcpu.Configuration) error {
 		if conf.ValidationMode == pdfcpu.ValidationStrict {
 			s = " (try -mode=relaxed)"
 		}
-		err = errors.Wrap(err, "validation error"+s)
+		err = errors.Wrap(err, fmt.Sprintf("validation error (obj#:%d)%s", ctx.CurObj, s))
 	}
 
 	dur2 := time.Since(from2).Seconds()
