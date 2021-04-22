@@ -116,30 +116,22 @@ func pdfImage(xRefTable *XRefTable, sd *StreamDict, objNr int) (*PDFImage, error
 // Identify the color lookup table for an Indexed color space.
 func colorLookupTable(xRefTable *XRefTable, o Object) ([]byte, error) {
 
-	var lookup []byte
-	var err error
-
 	o, _ = xRefTable.Dereference(o)
 
 	switch o := o.(type) {
 
 	case StringLiteral:
-		return Unescape(string(o))
+		return []byte(o), nil
 
 	case HexLiteral:
-		lookup, err = o.Bytes()
-		if err != nil {
-			return nil, err
-		}
+		return o.Bytes()
 
 	case StreamDict:
-		lookup, err = streamBytes(&o)
-		if err != nil || lookup == nil {
-			return nil, err
-		}
+		return streamBytes(&o)
+
 	}
 
-	return lookup, nil
+	return nil, nil
 }
 
 func decodePixelColorValue(p uint8, bpc, c int, decode []colValRange) uint8 {

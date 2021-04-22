@@ -512,7 +512,11 @@ func (d Dict) StringEntryBytes(key string) ([]byte, error) {
 
 	s := d.StringLiteralEntry(key)
 	if s != nil {
-		return Unescape(s.Value())
+		bb, err := Unescape(s.Value())
+		if err != nil {
+			return nil, err
+		}
+		return bb, nil
 	}
 
 	h := d.HexLiteralEntry(key)

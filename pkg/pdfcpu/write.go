@@ -833,12 +833,9 @@ func setupEncryption(ctx *Context) error {
 		return errors.New("pdfcpu: encrypt: missing ID")
 	}
 
-	var id []byte
-	if id, err = ctx.IDFirstElement(); err != nil {
+	if ctx.E.ID, err = ctx.IDFirstElement(); err != nil {
 		return err
 	}
-
-	ctx.E.ID = id
 
 	if err = calcOAndU(ctx, d); err != nil {
 		return err

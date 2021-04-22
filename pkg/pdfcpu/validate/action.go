@@ -477,7 +477,7 @@ func validateHideActionDictEntryT(xRefTable *pdf.XRefTable, o pdf.Object) error 
 
 	case pdf.StringLiteral:
 		// Ensure UTF16 correctness.
-		_, err := pdf.StringLiteralToString(o.Value())
+		_, err := pdf.StringLiteralToString(o)
 		if err != nil {
 			return err
 		}
@@ -506,7 +506,7 @@ func validateHideActionDictEntryT(xRefTable *pdf.XRefTable, o pdf.Object) error 
 
 			case pdf.StringLiteral:
 				// Ensure UTF16 correctness.
-				_, err = pdf.StringLiteralToString(o.Value())
+				_, err = pdf.StringLiteralToString(o)
 				if err != nil {
 					return err
 				}
@@ -664,11 +664,11 @@ func validateJavaScript(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryNam
 
 	case pdf.StringLiteral:
 		// Ensure UTF16 correctness.
-		_, err = pdf.StringLiteralToString(o.Value())
+		_, err = pdf.StringLiteralToString(o)
 
 	case pdf.HexLiteral:
 		// Ensure UTF16 correctness.
-		_, err = pdf.HexLiteralToString(o.Value())
+		_, err = pdf.HexLiteralToString(o)
 
 	case pdf.StreamDict:
 		// no further processing

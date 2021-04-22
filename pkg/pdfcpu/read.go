@@ -1704,11 +1704,11 @@ func ParseObject(ctx *Context, offset int64, objNr, genNr int) (Object, error) {
 
 	case StringLiteral:
 		if ctx.EncKey != nil {
-			s1, err := decryptString(o.Value(), objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
+			bb, err := decryptString(o.Value(), objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
 			if err != nil {
 				return nil, err
 			}
-			return StringLiteral(*s1), nil
+			return NewHexLiteral(bb), nil
 		}
 		return o, nil
 
@@ -1718,7 +1718,7 @@ func ParseObject(ctx *Context, offset int64, objNr, genNr int) (Object, error) {
 			if err != nil {
 				return nil, err
 			}
-			return StringLiteral(string(bb)), nil
+			return NewHexLiteral(bb), nil
 		}
 		return o, nil
 
@@ -2477,32 +2477,6 @@ func handleUnencryptedFile(ctx *Context) error {
 	return nil
 }
 
-func idBytes(ctx *Context) (id []byte, err error) {
-
-	if ctx.ID == nil {
-		return nil, errors.New("pdfcpu: missing ID entry")
-	}
-
-	hl, ok := ctx.ID[0].(HexLiteral)
-	if ok {
-		id, err = hl.Bytes()
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		sl, ok := ctx.ID[0].(StringLiteral)
-		if !ok {
-			return nil, errors.New("pdfcpu: ID must contain hex literals or string literals")
-		}
-		id, err = Unescape(sl.Value())
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return id, nil
-}
-
 func needsOwnerAndUserPassword(cmd CommandMode) bool {
 
 	return cmd == CHANGEOPW || cmd == CHANGEUPW || cmd == SETPERMISSIONS
@@ -2535,8 +2509,7 @@ func setupEncryptionKey(ctx *Context, d Dict) (err error) {
 		return err
 	}
 
-	ctx.E.ID, err = idBytes(ctx)
-	if err != nil {
+	if ctx.E.ID, err = ctx.IDFirstElement(); err != nil {
 		return err
 	}
 

@@ -862,7 +862,7 @@ func validateOAndU(d Dict) (o, u []byte, err error) {
 			break
 		}
 		if o == nil || len(o) != 32 && len(o) != 48 {
-			err = errors.New("pdfcpu: unsupported encryption: required entry \"O\" missing or invalid")
+			err = errors.New("pdfcpu: unsupported encryption: missing or invalid required entry \"O\"")
 			break
 		}
 
@@ -872,7 +872,7 @@ func validateOAndU(d Dict) (o, u []byte, err error) {
 			break
 		}
 		if u == nil || len(u) != 32 && len(u) != 48 {
-			err = errors.Errorf("pdfcpu: unsupported encryption: required entry \"U\" missing or invalid %d", len(u))
+			err = errors.New("pdfcpu: unsupported encryption: missing or invalid required entry \"U\"")
 		}
 
 		break
@@ -1034,20 +1034,14 @@ func decryptBytes(b []byte, objNr, genNr int, encKey []byte, needAES bool, r int
 }
 
 // decryptString decrypts s using RC4 or AES.
-func decryptString(s string, objNr, genNr int, key []byte, needAES bool, r int) (*string, error) {
+func decryptString(s string, objNr, genNr int, key []byte, needAES bool, r int) ([]byte, error) {
 
-	b, err := Unescape(s)
+	bb, err := Unescape(s)
 	if err != nil {
 		return nil, err
 	}
 
-	b, err = decryptBytes(b, objNr, genNr, key, needAES, r)
-	if err != nil {
-		return nil, err
-	}
-
-	s1 := string(b)
-	return &s1, nil
+	return decryptBytes(bb, objNr, genNr, key, needAES, r)
 }
 
 func applyRC4CipherBytes(b []byte, objNr, genNr int, key []byte, needAES bool) ([]byte, error) {
@@ -1145,8 +1139,7 @@ func encryptDeepObject(objIn Object, objNr, genNr int, key []byte, needAES bool,
 	return nil, nil
 }
 
-// DecryptDeepObject recurses over non trivial PDF objects and decrypts all strings encountered.
-func decryptDeepObject(objIn Object, objNr, genNr int, key []byte, needAES bool, r int) (*StringLiteral, error) {
+func decryptDeepObject(objIn Object, objNr, genNr int, key []byte, needAES bool, r int) (*HexLiteral, error) {
 
 	_, ok := objIn.(IndirectRef)
 	if ok {
@@ -1178,20 +1171,20 @@ func decryptDeepObject(objIn Object, objNr, genNr int, key []byte, needAES bool,
 		}
 
 	case StringLiteral:
-		s, err := decryptString(obj.Value(), objNr, genNr, key, needAES, r)
+		bb, err := decryptString(obj.Value(), objNr, genNr, key, needAES, r)
 		if err != nil {
 			return nil, err
 		}
-		sl := StringLiteral(*s)
-		return &sl, nil
+		hl := NewHexLiteral(bb)
+		return &hl, nil
 
 	case HexLiteral:
 		bb, err := decryptHexLiteral(obj, objNr, genNr, key, needAES, r)
 		if err != nil {
 			return nil, err
 		}
-		sl := StringLiteral(string(bb))
-		return &sl, nil
+		hl := NewHexLiteral(bb)
+		return &hl, nil
 
 	default:
 

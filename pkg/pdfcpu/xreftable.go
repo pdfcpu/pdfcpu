@@ -932,7 +932,7 @@ func (xRefTable *XRefTable) DereferenceStringLiteral(o Object, sinceVersion Vers
 	}
 
 	// Ensure UTF16 correctness.
-	s1, err := StringLiteralToString(s.Value())
+	s1, err := StringLiteralToString(s)
 	if err != nil {
 		return s, err
 	}
@@ -962,18 +962,18 @@ func (xRefTable *XRefTable) DereferenceStringOrHexLiteral(obj Object, sinceVersi
 
 	case StringLiteral:
 		// Ensure UTF16 correctness.
-		if s, err = StringLiteralToString(str.Value()); err != nil {
+		if s, err = StringLiteralToString(str); err != nil {
 			return "", err
 		}
 
 	case HexLiteral:
 		// Ensure UTF16 correctness.
-		if s, err = HexLiteralToString(str.Value()); err != nil {
+		if s, err = HexLiteralToString(str); err != nil {
 			return "", err
 		}
 
 	default:
-		return "", errors.Errorf("pdfcpu: dereferenceStringOrHexLiteral: wrong type <%v>", obj)
+		return "", errors.Errorf("pdfcpu: dereferenceStringOrHexLiteral: wrong type %T", obj)
 
 	}
 
@@ -994,9 +994,9 @@ func (xRefTable *XRefTable) DereferenceStringOrHexLiteral(obj Object, sinceVersi
 func Text(o Object) (string, error) {
 	switch obj := o.(type) {
 	case StringLiteral:
-		return StringLiteralToString(obj.Value())
+		return StringLiteralToString(obj)
 	case HexLiteral:
-		return HexLiteralToString(obj.Value())
+		return HexLiteralToString(obj)
 	default:
 		return "", errors.Errorf("pdfcpu: text: corrupt -  %v\n", obj)
 	}
@@ -1640,7 +1640,8 @@ func (xRefTable *XRefTable) IDFirstElement() (id []byte, err error) {
 		return nil, errors.New("pdfcpu: ID must contain hex literals or string literals")
 	}
 
-	return Unescape(sl.Value())
+	//return Unescape(sl.Value())
+	return []byte(sl), nil
 }
 
 // InheritedPageAttrs represents all inherited page attributes.

@@ -941,7 +941,7 @@ func createRemoteGoToAction(xRefTable *XRefTable) (*IndirectRef, error) {
 		map[string]Object{
 			"Type":      Name("Action"),
 			"S":         Name("GoToR"),
-			"F":         StringLiteral(".\\/go.pdf"),
+			"F":         StringLiteral("./go.pdf"),
 			"D":         Array{Integer(0), Name("Fit")},
 			"NewWindow": Boolean(true),
 		},

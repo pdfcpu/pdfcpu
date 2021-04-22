@@ -108,7 +108,7 @@ func TestValidate(t *testing.T) {
 	for _, f := range allPDFs(t, inDir) {
 		inFile := filepath.Join(inDir, f)
 		if err := validateFile(t, inFile, nil); err != nil {
-			t.Fatalf("%s: %v\n", msg, err)
+			t.Fatalf("%s: %s: %v\n", msg, inFile, err)
 		}
 	}
 }
