@@ -61,7 +61,6 @@ func NewXRefTableEntryGen0(obj Object) *XRefTableEntry {
 func NewFreeHeadXRefTableEntry() *XRefTableEntry {
 
 	freeHeadGeneration := FreeHeadGeneration
-	zero := int64(0)
 
 	return &XRefTableEntry{
 		Free:       true,
@@ -252,7 +251,7 @@ func (xRefTable *XRefTable) FindObject(objNr int) (Object, error) {
 func (xRefTable *XRefTable) Free(objNr int) (*XRefTableEntry, error) {
 	entry, found := xRefTable.Find(objNr)
 	if !found {
-		return nil, nil //errors.Errorf("Free: object #%d not found.", objNr)
+		return nil, nil
 	}
 	if !entry.Free {
 		return nil, errors.Errorf("Free: object #%d found, but not free.", objNr)
@@ -506,11 +505,10 @@ func (xRefTable *XRefTable) NewFileSpecDict(f, uf, desc string, indRefStreamDict
 }
 
 func (xRefTable *XRefTable) freeObjects() IntSet {
-
 	m := IntSet{}
 
 	for k, v := range xRefTable.Table {
-		if v.Free && k > 0 {
+		if v != nil && v.Free && k > 0 {
 			m[k] = true
 		}
 	}
@@ -521,21 +519,15 @@ func (xRefTable *XRefTable) freeObjects() IntSet {
 // EnsureValidFreeList ensures the integrity of the free list associated with the recorded free objects.
 // See 7.5.4 Cross-Reference Table
 func (xRefTable *XRefTable) EnsureValidFreeList() error {
-
 	log.Trace.Println("EnsureValidFreeList begin")
 
 	m := xRefTable.freeObjects()
 
 	// Verify free object 0 as free list head.
-	head, err := xRefTable.Free(0)
-	if err != nil {
-		return err
-	}
-
+	head, _ := xRefTable.Find(0)
 	if head == nil {
 		g0 := FreeHeadGeneration
-		z := int64(0)
-		head = &XRefTableEntry{Free: true, Offset: &z, Generation: &g0}
+		head = &XRefTableEntry{Free: true, Offset: &zero, Generation: &g0}
 		xRefTable.Table[0] = head
 	}
 
@@ -577,7 +569,7 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 
 		delete(m, f)
 
-		e, err = xRefTable.Free(f)
+		e, err := xRefTable.Free(f)
 		if err != nil {
 			return err
 		}
@@ -605,7 +597,6 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 		}
 
 		if *entry.Generation == FreeHeadGeneration {
-			zero := int64(0)
 			entry.Offset = &zero
 			continue
 		}

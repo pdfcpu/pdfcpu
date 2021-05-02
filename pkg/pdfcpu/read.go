@@ -34,6 +34,8 @@ const (
 	defaultBufSize = 1024
 )
 
+var zero int64 = 0
+
 // ReadFile reads in a PDF file and builds an internal structure holding its cross reference table aka the Context.
 func ReadFile(inFile string, conf *Configuration) (*Context, error) {
 
@@ -1164,8 +1166,7 @@ func postProcess(ctx *Context, xrefSectionCount int) {
 			// Hack for #262
 			// Create free object 0 from scratch if the free list head is missing.
 			g0 := FreeHeadGeneration
-			z := int64(0)
-			ctx.Table[0] = &XRefTableEntry{Free: true, Offset: &z, Generation: &g0}
+			ctx.Table[0] = &XRefTableEntry{Free: true, Offset: &zero, Generation: &g0}
 		} else {
 			// Hack for #250: A friendly 🤢 to the devs of the HP Scanner & Printer software utility.
 			// Create free object 0 by shifting down all objects by one.
@@ -1213,8 +1214,7 @@ func tryXRefSection(ctx *Context, rs io.ReadSeeker, offset *int64, xrefSectionCo
 		return parseXRefSection(s, ctx, xrefSectionCount, repairOff)
 	}
 
-	notFoundOff := int64(0)
-	return &notFoundOff, nil
+	return &zero, nil
 }
 
 // Build XRefTable by reading XRef streams or XRef sections.
