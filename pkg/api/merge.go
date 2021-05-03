@@ -182,13 +182,13 @@ func MergeAppendFile(inFiles []string, outFile string, conf *pdfcpu.Configuratio
 		if err = f2.Close(); err != nil {
 			return
 		}
-		if f1 != nil {
-			if err = os.Rename(tmpFile, outFile); err != nil {
+		for _, f := range ff {
+			if err = f.Close(); err != nil {
 				return
 			}
 		}
-		for _, f := range ff {
-			if err = f.Close(); err != nil {
+		if f1 != nil {
+			if err = os.Rename(tmpFile, outFile); err != nil {
 				return
 			}
 		}
