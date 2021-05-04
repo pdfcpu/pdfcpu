@@ -42,13 +42,16 @@ func TestMergeCreate(t *testing.T) {
 	}
 }
 
-func xxxTestMergeAppend(t *testing.T) {
+func TestMergeAppend(t *testing.T) {
 	msg := "TestMergeAppend"
 	inFiles := []string{
 		filepath.Join(inDir, "Acroforms2.pdf"),
 		filepath.Join(inDir, "adobe_errata.pdf"),
 	}
 	outFile := filepath.Join(outDir, "test.pdf")
+	if err := copyFile(t, filepath.Join(inDir, "test.pdf"), outFile); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
 
 	// Merge inFiles by concatenation in the order specified and write the result to outFile.
 	// If outFile already exists its content will be preserved and serves as the beginning of the merge result.

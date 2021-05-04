@@ -39,7 +39,14 @@ func TestMergeCommand(t *testing.T) {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
-	outFile = filepath.Join(outDir, "test2.pdf")
+	cmd = cli.ValidateCommand(outFile, nil)
+	if _, err := cli.Process(cmd); err != nil {
+		t.Fatalf("%s %s: %v\n", msg, outFile, err)
+	}
+
+	if err := copyFile(t, filepath.Join(inDir, "test.pdf"), outFile); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
 	cmd = cli.MergeAppendCommand(inFiles, outFile, nil)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)

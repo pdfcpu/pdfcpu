@@ -107,6 +107,7 @@ func MergeCreateFile(inFiles []string, outFile string, conf *pdfcpu.Configuratio
 			for _, f := range ff {
 				f.Close()
 			}
+			return
 		}
 		if err = f.Close(); err != nil {
 			return
