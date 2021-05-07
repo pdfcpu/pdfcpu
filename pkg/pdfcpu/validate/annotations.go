@@ -327,8 +327,8 @@ func validateAnnotationDictLink(xRefTable *pdf.XRefTable, d pdf.Dict, dictName s
 		return err
 	}
 
-	// QuadPoints, optional, number array, len=8, since V1.6
-	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "QuadPoints", OPTIONAL, pdf.V16, func(a pdf.Array) bool { return len(a) == 8 })
+	// QuadPoints, optional, number array, len= a multiple of 8, since V1.6
+	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "QuadPoints", OPTIONAL, pdf.V16, func(a pdf.Array) bool { return len(a)%8 == 0 })
 	if err != nil {
 		return err
 	}
@@ -1115,8 +1115,8 @@ func validateAnnotationDictRedact(xRefTable *pdf.XRefTable, d pdf.Dict, dictName
 
 	// see 12.5.6.23
 
-	// QuadPoints, optional, number array
-	_, err := validateNumberArrayEntry(xRefTable, d, dictName, "QuadPoints", OPTIONAL, pdf.V10, nil)
+	// QuadPoints, optional, len: a multiple of 8
+	_, err := validateNumberArrayEntry(xRefTable, d, dictName, "QuadPoints", OPTIONAL, pdf.V10, func(a pdf.Array) bool { return len(a)%8 == 0 })
 	if err != nil {
 		return err
 	}
