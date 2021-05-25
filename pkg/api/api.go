@@ -65,26 +65,35 @@ func ReadContextFile(inFile string) (*pdfcpu.Context, error) {
 	return ctx, err
 }
 
-// ValidateContext validates a PDF context.
+// ValidateContext validates ctx.
 func ValidateContext(ctx *pdfcpu.Context) error {
 	return validate.XRefTable(ctx.XRefTable)
 }
 
-// OptimizeContext optimizes a PDF context.
+// OptimizeContext optimizes ctx.
 func OptimizeContext(ctx *pdfcpu.Context) error {
 	return pdfcpu.OptimizeXRefTable(ctx)
 }
 
-// WriteContext writes a PDF context to w.
+// WriteContext writes ctx to w.
 func WriteContext(ctx *pdfcpu.Context, w io.Writer) error {
 	if f, ok := w.(*os.File); ok {
+		// In order to retrieve the written file size.
 		ctx.Write.Fp = f
 	}
 	ctx.Write.Writer = bufio.NewWriter(w)
+	defer ctx.Write.Flush()
 	return pdfcpu.Write(ctx)
 }
 
-// WriteContextFile writes a PDF context to outFile.
+// WriteIncrement writes a PDF increment for ctx to w.
+func WriteIncrement(ctx *pdfcpu.Context, w io.Writer) error {
+	ctx.Write.Writer = bufio.NewWriter(w)
+	defer ctx.Write.Flush()
+	return pdfcpu.WriteIncrement(ctx)
+}
+
+// WriteContextFile writes ctx to outFile.
 func WriteContextFile(ctx *pdfcpu.Context, outFile string) error {
 	f, err := os.Create(outFile)
 	if err != nil {
@@ -124,7 +133,6 @@ func readValidateAndOptimize(rs io.ReadSeeker, conf *pdfcpu.Configuration, from1
 	}
 
 	from3 := time.Now()
-
 	if err = OptimizeContext(ctx); err != nil {
 		return nil, 0, 0, 0, err
 	}

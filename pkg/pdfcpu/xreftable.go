@@ -1854,14 +1854,14 @@ func consolidateResources(consolidateRes bool, xRefTable *XRefTable, pageDict, r
 	return consolidateResourceDict(resDict, prn, page)
 }
 
-func (xRefTable *XRefTable) processPageTreeForPageDict(root *IndirectRef, pAttrs *InheritedPageAttrs, p *int, page int, consolidateRes bool) (Dict, error) {
+func (xRefTable *XRefTable) processPageTreeForPageDict(root *IndirectRef, pAttrs *InheritedPageAttrs, p *int, page int, consolidateRes bool) (Dict, *IndirectRef, error) {
 	// Walk this page tree all the way down to the leave node representing page.
 
 	//fmt.Printf("entering processPageTreeForPageDict: p=%d obj#%d\n", *p, root.ObjectNumber.Value())
 
 	d, err := xRefTable.DereferenceDict(*root)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	pageCount := d.IntEntry("Count")
@@ -1869,19 +1869,19 @@ func (xRefTable *XRefTable) processPageTreeForPageDict(root *IndirectRef, pAttrs
 		if *p+*pageCount < page {
 			// Skip sub pagetree.
 			*p += *pageCount
-			return nil, nil
+			return nil, nil, nil
 		}
 	}
 
 	// Return the current state of all page attributes that may be inherited.
 	if err = xRefTable.checkInheritedPageAttrs(d, pAttrs, consolidateRes); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Iterate over page tree.
 	kids := d.ArrayEntry("Kids")
 	if kids == nil {
-		return d, consolidateResources(consolidateRes, xRefTable, d, pAttrs.resources, page)
+		return d, root, consolidateResources(consolidateRes, xRefTable, d, pAttrs.resources, page)
 	}
 
 	for _, o := range kids {
@@ -1893,24 +1893,24 @@ func (xRefTable *XRefTable) processPageTreeForPageDict(root *IndirectRef, pAttrs
 		// Dereference next page node dict.
 		ir, ok := o.(IndirectRef)
 		if !ok {
-			return nil, errors.Errorf("pdfcpu: processPageTreeForPageDict: corrupt page node dict")
+			return nil, nil, errors.Errorf("pdfcpu: processPageTreeForPageDict: corrupt page node dict")
 		}
 
 		pageNodeDict, err := xRefTable.DereferenceDict(ir)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		switch *pageNodeDict.Type() {
 
 		case "Pages":
 			// Recurse over sub pagetree.
-			pageNodeDict, err = xRefTable.processPageTreeForPageDict(&ir, pAttrs, p, page, consolidateRes)
+			pageDict, pageDictIndRef, err := xRefTable.processPageTreeForPageDict(&ir, pAttrs, p, page, consolidateRes)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
-			if pageNodeDict != nil {
-				return pageNodeDict, nil
+			if pageDict != nil {
+				return pageDict, pageDictIndRef, nil
 			}
 
 		case "Page":
@@ -1923,23 +1923,26 @@ func (xRefTable *XRefTable) processPageTreeForPageDict(root *IndirectRef, pAttrs
 
 	}
 
-	return nil, nil
+	return nil, nil, nil
 }
 
 // PageDict returns a specific page dict along with the resources, mediaBox and CropBox in effect.
 func (xRefTable *XRefTable) PageDict(page int, consolidateRes bool) (Dict, *InheritedPageAttrs, error) {
-
-	// Get an indirect reference to the page tree root dict.
-	pageRootDictIndRef, _ := xRefTable.Pages()
 
 	var (
 		inhPAttrs InheritedPageAttrs
 		pageCount int
 	)
 
+	// Get an indirect reference to the page tree root dict.
+	pageRootDictIndRef, err := xRefTable.Pages()
+	if err != nil {
+		return nil, nil, err
+	}
+
 	// Calculate and return only resources that are really needed by
 	// any content stream of this page and any possible forms or type 3 fonts referenced.
-	pageDict, err := xRefTable.processPageTreeForPageDict(pageRootDictIndRef, &inhPAttrs, &pageCount, page, consolidateRes)
+	pageDict, _, err := xRefTable.processPageTreeForPageDict(pageRootDictIndRef, &inhPAttrs, &pageCount, page, consolidateRes)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1947,6 +1950,29 @@ func (xRefTable *XRefTable) PageDict(page int, consolidateRes bool) (Dict, *Inhe
 	return pageDict, &inhPAttrs, nil
 }
 
+// PageDictIndRef returns the pageDict IndRef for a logical page number.
+func (xRefTable *XRefTable) PageDictIndRef(page int) (*IndirectRef, error) {
+
+	var (
+		inhPAttrs InheritedPageAttrs
+		pageCount int
+	)
+
+	// Get an indirect reference to the page tree root dict.
+	pageRootDictIndRef, err := xRefTable.Pages()
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate and return only resources that are really needed by
+	// any content stream of this page and any possible forms or type 3 fonts referenced.
+	consolidateRes := false
+	_, ir, err := xRefTable.processPageTreeForPageDict(pageRootDictIndRef, &inhPAttrs, &pageCount, page, consolidateRes)
+
+	return ir, err
+}
+
+// Calculate logical page number for page dict object number.
 func (xRefTable *XRefTable) processPageTreeForPageNumber(root *IndirectRef, pageCount *int, pageObjNr int) (int, error) {
 
 	//fmt.Printf("entering processPageTreeForPageNumber: p=%d obj#%d\n", *p, root.ObjectNumber.Value())
@@ -2366,4 +2392,17 @@ func (xRefTable *XRefTable) InsertBlankPages(pages IntSet, before bool) error {
 	_, err = xRefTable.insertBlankPagesIntoPageTree(root, &inhPAttrs, &p, pages, before)
 
 	return err
+}
+
+func (xRefTable *XRefTable) markAsFree(ir IndirectRef) error {
+	objNr := ir.ObjectNumber.Value()
+	genNr := ir.GenerationNumber.Value()
+	entry, ok := xRefTable.FindTableEntry(objNr, genNr)
+	if !ok {
+		return errors.Errorf("unknown xreftable entry for obj#%d\n", objNr)
+	}
+	i := int(zero)
+	entry.Generation = &i
+	entry.Free = true
+	return nil
 }

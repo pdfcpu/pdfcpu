@@ -67,7 +67,7 @@ func Write(ctx *Context) (err error) {
 	}
 
 	// Since we support PDF Collections (since V1.7) for file attachments
-	// we need to always generate V1.7 PDF files.
+	// we need to generate V1.7 PDF files.
 	if err = writeHeader(ctx.Write, V17); err != nil {
 		return err
 	}
@@ -115,6 +115,10 @@ func Write(ctx *Context) (err error) {
 		return err
 	}
 
+	if err = ctx.Write.WriteEol(); err != nil {
+		return err
+	}
+
 	if err = setFileSizeOfWrittenFile(ctx.Write); err != nil {
 		return err
 	}
@@ -126,6 +130,26 @@ func Write(ctx *Context) (err error) {
 	}
 
 	return nil
+}
+
+// WriteIncrement writes a PDF increment..
+func WriteIncrement(ctx *Context) error {
+	// Write all modified objects that are part of this increment.
+	for _, i := range ctx.Write.ObjNrs {
+		if err := writeFlatObject(ctx, i); err != nil {
+			return err
+		}
+	}
+
+	if err := writeXRef(ctx); err != nil {
+		return err
+	}
+
+	if _, err := writeTrailer(ctx.Write); err != nil {
+		return err
+	}
+
+	return ctx.Write.WriteEol()
 }
 
 func prepareContextForWriting(ctx *Context) error {
@@ -372,6 +396,10 @@ func writeTrailerDict(ctx *Context) error {
 		d.Insert("ID", xRefTable.ID)
 	}
 
+	if ctx.Write.Increment {
+		d.Insert("Prev", Integer(*ctx.Write.OffsetPrevXRef))
+	}
+
 	if _, err := w.WriteString(d.PDFString()); err != nil {
 		return err
 	}
@@ -510,7 +538,7 @@ func sortedWritableKeys(ctx *Context) []int {
 	var keys []int
 
 	for i, e := range ctx.Table {
-		if e.Free || ctx.Write.HasWriteOffset(i) {
+		if !ctx.Write.Increment && e.Free || ctx.Write.HasWriteOffset(i) {
 			keys = append(keys, i)
 		}
 	}
@@ -522,10 +550,6 @@ func sortedWritableKeys(ctx *Context) []int {
 
 // After inserting the last object write the cross reference table to disk.
 func writeXRefTable(ctx *Context) error {
-
-	//if err := ctx.EnsureValidFreeList(); err != nil {
-	//	return err
-	//}
 
 	keys := sortedWritableKeys(ctx)
 
@@ -612,7 +636,7 @@ func int64ToBuf(i int64, byteCount int) (buf []byte) {
 	return
 }
 
-func createXRefStream(ctx *Context, i1, i2, i3 int) ([]byte, *Array, error) {
+func createXRefStream(ctx *Context, i1, i2, i3 int, objNrs []int) ([]byte, *Array, error) {
 
 	log.Write.Println("createXRefStream begin")
 
@@ -623,23 +647,15 @@ func createXRefStream(ctx *Context, i1, i2, i3 int) ([]byte, *Array, error) {
 		a   Array
 	)
 
-	var keys []int
-	for i, e := range xRefTable.Table {
-		if e.Free || ctx.Write.HasWriteOffset(i) {
-			keys = append(keys, i)
-		}
-	}
-	sort.Ints(keys)
-
-	objCount := len(keys)
+	objCount := len(objNrs)
 	log.Write.Printf("createXRefStream: xref has %d entries\n", objCount)
 
-	start := keys[0]
+	start := objNrs[0]
 	size := 0
 
-	for i := 0; i < len(keys); i++ {
+	for i := 0; i < len(objNrs); i++ {
 
-		j := keys[i]
+		j := objNrs[i]
 		entry := xRefTable.Table[j]
 		var s1, s2, s3 []byte
 
@@ -683,12 +699,12 @@ func createXRefStream(ctx *Context, i1, i2, i3 int) ([]byte, *Array, error) {
 		buf = append(buf, s2...)
 		buf = append(buf, s3...)
 
-		if i > 0 && (keys[i]-keys[i-1] > 1) {
+		if i > 0 && (objNrs[i]-objNrs[i-1] > 1) {
 
 			a = append(a, Integer(start))
 			a = append(a, Integer(size))
 
-			start = keys[i]
+			start = objNrs[i]
 			size = 1
 			continue
 		}
@@ -718,11 +734,6 @@ func writeXRefStream(ctx *Context) error {
 		return err
 	}
 
-	// After the last insert of an object.
-	//if err = xRefTable.EnsureValidFreeList(); err != nil {
-	//	return err
-	//}
-
 	xRefStreamDict.Insert("Size", Integer(*xRefTable.Size))
 
 	// Include xref stream dict obj within xref stream dict.
@@ -750,7 +761,8 @@ func writeXRefStream(ctx *Context) error {
 	xRefStreamDict.Insert("W", wArr)
 
 	// Generate xRefStreamDict data = xref entries -> xRefStreamDict.Content
-	content, indArr, err := createXRefStream(ctx, i1, i2, i3)
+	objNrs := sortedWritableKeys(ctx)
+	content, indArr, err := createXRefStream(ctx, i1, i2, i3, objNrs)
 	if err != nil {
 		return err
 	}

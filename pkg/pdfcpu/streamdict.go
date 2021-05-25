@@ -308,5 +308,8 @@ func NewXRefStreamDict(ctx *Context) *XRefStreamDict {
 	if ctx.Encrypt != nil && ctx.EncKey != nil {
 		sd.Insert("Encrypt", *ctx.Encrypt)
 	}
+	if ctx.Write.Increment {
+		sd.Insert("Prev", Integer(*ctx.Write.OffsetPrevXRef))
+	}
 	return &XRefStreamDict{StreamDict: sd}
 }

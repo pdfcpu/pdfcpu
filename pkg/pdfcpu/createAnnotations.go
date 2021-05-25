@@ -31,9 +31,10 @@ func createTextAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRec
 		"Contents": StringLiteral("Text Annotation"),
 		"Rect":     annotRect,
 		"P":        pageIndRef,
-		"Border":   NewIntegerArray(0, 0, 5),
-		"C":        NewNumberArray(1, 0, 0),
-		"Name":     Name("Note"),
+		//"NM": "",
+		//"Border":   NewIntegerArray(0, 0, 5),
+		//"C":        NewNumberArray(1, 0, 0),
+		//"Name":     Name("Note"),
 	})
 
 	return xRefTable.IndRefForNewObject(d)

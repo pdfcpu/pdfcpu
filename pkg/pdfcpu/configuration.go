@@ -101,6 +101,8 @@ const (
 	LISTBOXES
 	ADDBOXES
 	REMOVEBOXES
+	ADDANNOTATIONS
+	REMOVEANNOTATIONS
 )
 
 // Configuration of a Context.

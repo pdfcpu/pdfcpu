@@ -1293,6 +1293,8 @@ func readXRefTable(ctx *Context) (err error) {
 		return
 	}
 
+	ctx.Write.OffsetPrevXRef = offset
+
 	err = buildXRefTableStartingAt(ctx, offset)
 	if err == io.EOF {
 		return errors.Wrap(err, "readXRefTable: unexpected eof")

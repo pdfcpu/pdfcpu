@@ -2141,7 +2141,7 @@ func (ctx *Context) removeArtifactsFromPage(sd *StreamDict, resDict *Dict, i int
 		return false, err
 	}
 
-	// Remove obsolete extGStatesforms from page resource dict.
+	// Remove obsolete forms from page resource dict.
 	return true, ctx.removeForms(resDict, forms, i)
 }
 
@@ -2250,6 +2250,8 @@ func (ctx *Context) removePageWatermark(i int) (bool, error) {
 			>>>
 
 	*/
+
+	// if found remove any associated link annotations from page dict identified via stamp bbox.
 
 	return found, nil
 }

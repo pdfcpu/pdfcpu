@@ -676,11 +676,14 @@ type WriteContext struct {
 	WriteToObjectStream bool          // if true start to embed objects into object streams and obey ObjectStreamMaxObjects.
 	CurrentObjStream    *int          // if not nil, any new non-stream-object gets added to the object stream with this object number.
 	Eol                 string        // end of line char sequence
+	Increment           bool          // Write context as PDF increment.
+	ObjNrs              []int         // Increment candidate object numbers.
+	OffsetPrevXRef      *int64        // Increment trailer entry "Prev".
 }
 
 // NewWriteContext returns a new WriteContext.
 func NewWriteContext(eol string) *WriteContext {
-	return &WriteContext{SelectedPages: IntSet{}, Table: map[int]int64{}, Eol: eol}
+	return &WriteContext{SelectedPages: IntSet{}, Table: map[int]int64{}, Eol: eol, ObjNrs: []int{}}
 }
 
 // SetWriteOffset saves the current write offset to the PDFDestination.
@@ -722,4 +725,8 @@ func (wc *WriteContext) WriteEol() error {
 	_, err := wc.WriteString(wc.Eol)
 
 	return err
+}
+
+func (wc *WriteContext) IncrementWithObjNr(i int) {
+	wc.ObjNrs = append(wc.ObjNrs, i)
 }
