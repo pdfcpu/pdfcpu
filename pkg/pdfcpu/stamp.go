@@ -191,6 +191,7 @@ type Watermark struct {
 
 	// resources
 	ocg, extGState, font, image *IndirectRef
+	ResourceBuffer              *bytes.Buffer
 
 	// image or PDF watermark
 	width, height int // image or page dimensions.
@@ -1129,13 +1130,17 @@ func (ctx *Context) createPDFResForWM(wm *Watermark) error {
 }
 
 func (ctx *Context) createImageResForWM(wm *Watermark) (err error) {
-	f, err := os.Open(wm.FileName)
-	if err != nil {
-		return err
+	if wm.ResourceBuffer != nil {
+		wm.image, wm.width, wm.height, err = createImageResource(ctx.XRefTable, wm.ResourceBuffer, false, false)
+	} else {
+		f, err := os.Open(wm.FileName)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		wm.image, wm.width, wm.height, err = createImageResource(ctx.XRefTable, f, false, false)
 	}
-	defer f.Close()
 
-	wm.image, wm.width, wm.height, err = createImageResource(ctx.XRefTable, f, false, false)
 	return err
 }
 
