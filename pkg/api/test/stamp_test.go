@@ -60,6 +60,7 @@ func TestAddWatermarks(t *testing.T) {
 		modeParm        string
 		wmConf          string
 	}{
+
 		{"TestWatermarkText",
 			"Walden.pdf",
 			"TextDefaults.pdf",
@@ -78,11 +79,11 @@ func TestAddWatermarks(t *testing.T) {
 			[]string{"1-"},
 			"text",
 			`A simple text watermark using defaults:
-		Unique abbreviations also work:
-		"fo:Helvetica, poi:24, align:c,
-		pos:c, off:0 0, sc:0.5 rel, d:1,
-		op:1, mode:0, fillc: 0.5 0.5 0.5,
-		strokec: #808080"`,
+			Unique abbreviations also work:
+			"fo:Helvetica, poi:24, align:c,
+			pos:c, off:0 0, sc:0.5 rel, d:1,
+			op:1, mode:0, fillc: 0.5 0.5 0.5,
+			strokec: #808080"`,
 			""},
 
 		{"TestWatermarkText",
@@ -402,6 +403,37 @@ func TestAddWatermarks(t *testing.T) {
 		testAddWatermarks(t, tt.msg, tt.inFile, tt.outFile, tt.selectedPages, tt.mode, tt.modeParm, tt.wmConf, false)
 		testAddWatermarks(t, tt.msg, tt.inFile, tt.outFile, tt.selectedPages, tt.mode, tt.modeParm, tt.wmConf, true)
 	}
+}
+
+func TestAddStampWithLink(t *testing.T) {
+	for _, tt := range []struct {
+		msg             string
+		inFile, outFile string
+		selectedPages   []string
+		mode            string
+		modeParm        string
+		wmConf          string
+	}{
+		{"TestStampTextWithLink",
+			"Walden.pdf",
+			"TextWithLink.pdf",
+			[]string{"1-"},
+			"text",
+			"A simple text watermark with link",
+			"url:pdfcpu.io"},
+
+		{"TestStampImageWithLink",
+			"Walden.pdf",
+			"ImageWithLink.pdf",
+			[]string{"1-"},
+			"image",
+			filepath.Join(resDir, "logoSmall.png"),
+			"url:pdfcpu.io, scale:.33 abs, rot:45"},
+	} {
+		// Links supported for stamps only (watermark onTop:true).
+		testAddWatermarks(t, tt.msg, tt.inFile, tt.outFile, tt.selectedPages, tt.mode, tt.modeParm, tt.wmConf, true)
+	}
+
 }
 
 func TestCropBox(t *testing.T) {

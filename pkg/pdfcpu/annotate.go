@@ -17,38 +17,118 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"fmt"
+	"sort"
+	"strconv"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pkg/errors"
 )
+
+type AnnotationFlags int
+
+const ( // See table 165
+	Ann_Invisible AnnotationFlags = 1 << iota
+	Ann_Hidden
+	Ann_Print
+	Ann_NoZoom
+	Ann_NoRotate
+	Ann_NoView
+	Ann_ReadOnly
+	Ann_Locked
+	Ann_ToggleNoView
+	Ann_LockedContents
+)
+
+type AnnotationType int
+
+const (
+	Ann_Text AnnotationType = iota
+	Ann_Link
+	Ann_FreeText
+	Ann_Line
+	Ann_Square
+	Ann_Circle
+	Ann_Polygon
+	Ann_PolyLine
+	Ann_HighLight
+	Ann_Underline
+	Ann_Squiggly
+	Ann_StrikeOut
+	Ann_Stamp
+	Ann_Caret
+	Ann_Ink
+	Ann_Popup
+	Ann_FileAttachment
+	Ann_Sound
+	Ann_Movie
+	Ann_Widget
+	Ann_Screen
+	Ann_PrinterMark
+	Ann_TrapNet
+	Ann_Watermark
+	Ann_3D
+	Ann_Redact
+)
+
+var AnnotTypeStrings = map[AnnotationType]string{
+	Ann_Text:           "Text",
+	Ann_Link:           "Link",
+	Ann_FreeText:       "FreeText",
+	Ann_Line:           "Line",
+	Ann_Square:         "Square",
+	Ann_Circle:         "Circle",
+	Ann_Polygon:        "Polygon",
+	Ann_PolyLine:       "PolyLine",
+	Ann_HighLight:      "HighLight",
+	Ann_Underline:      "Underline",
+	Ann_Squiggly:       "Squiggly",
+	Ann_StrikeOut:      "StrikeOut",
+	Ann_Stamp:          "Stamp",
+	Ann_Caret:          "Caret",
+	Ann_Ink:            "Ink",
+	Ann_Popup:          "Popup",
+	Ann_FileAttachment: "FileAttachment",
+	Ann_Sound:          "Sound",
+	Ann_Movie:          "Movie",
+	Ann_Widget:         "Widget",
+	Ann_Screen:         "Screen",
+	Ann_PrinterMark:    "PrinterMark",
+	Ann_TrapNet:        "TrapNet",
+	Ann_Watermark:      "Watermark",
+	Ann_3D:             "3D",
+	Ann_Redact:         "Redact",
+}
 
 type AnnotationRenderer interface {
 	RenderDict(pageIndRef IndirectRef) Dict
 	ID() string
+	Type() AnnotationType
 }
 
 type Annotation struct {
-	SubType  string       // The type of annotation that this dictionary describes.
-	Rect     Rectangle    // The annotation rectangle, defining the location of the annotation on the page in default user space units.
-	Contents string       // Text that shall be displayed for the annotation.
-	P        *IndirectRef // An indirect reference to the page object with which this annotation is associated.
-	NM       string       // (Since V1.4) The annotation name, a text string uniquely identifying it among all the annotations on its page.
-	ModDate  string       // The date and time when the annotation was most recently modified.
-	F        int          // A set of flags specifying various characteristics of the annotation.
-	C        *SimpleColor // The background color of the annotation’s icon when closed.
+	SubType  AnnotationType  // The type of annotation that this dictionary describes.
+	Rect     Rectangle       // The annotation rectangle, defining the location of the annotation on the page in default user space units.
+	Contents string          // Text that shall be displayed for the annotation.
+	P        *IndirectRef    // An indirect reference to the page object with which this annotation is associated.
+	NM       string          // (Since V1.4) The annotation name, a text string uniquely identifying it among all the annotations on its page.
+	ModDate  string          // The date and time when the annotation was most recently modified.
+	F        AnnotationFlags // A set of flags specifying various characteristics of the annotation.
+	C        *SimpleColor    // The background color of the annotation’s icon when closed.
 }
 
 func NewAnnotation(
-	subType string,
+	typ AnnotationType,
 	rect Rectangle,
 	contents string,
 	pageIndRef *IndirectRef,
 	nm string,
-	f int,
+	f AnnotationFlags,
 	backgrCol *SimpleColor) Annotation {
 
 	return Annotation{
-		SubType:  subType,
+		SubType:  typ,
 		Rect:     rect,
 		Contents: contents,
 		P:        pageIndRef,
@@ -57,8 +137,121 @@ func NewAnnotation(
 		C:        backgrCol}
 }
 
+func NewAnnotationForRawType(
+	typ string,
+	rect Rectangle,
+	contents string,
+	pageIndRef *IndirectRef,
+	nm string,
+	f AnnotationFlags,
+	backgrCol *SimpleColor) Annotation {
+
+	var subType AnnotationType
+	switch typ {
+	case "Text":
+		subType = Ann_Text
+	case "Link":
+		subType = Ann_Link
+	case "FreeText":
+		subType = Ann_FreeText
+	case "Line":
+		subType = Ann_Line
+	case "Square":
+		subType = Ann_Square
+	case "Circle":
+		subType = Ann_Circle
+	case "Polygon":
+		subType = Ann_Polygon
+	case "PolyLine":
+		subType = Ann_PolyLine
+	case "HighLight":
+		subType = Ann_HighLight
+	case "Underline":
+		subType = Ann_Underline
+	case "Squiggly":
+		subType = Ann_Squiggly
+	case "StrikeOut":
+		subType = Ann_StrikeOut
+	case "Stamp":
+		subType = Ann_Stamp
+	case "Caret":
+		subType = Ann_Caret
+	case "Ink":
+		subType = Ann_Ink
+	case "Popup":
+		subType = Ann_Popup
+	case "FileAttachment":
+		subType = Ann_FileAttachment
+	case "Sound":
+		subType = Ann_Sound
+	case "Movie":
+		subType = Ann_Movie
+	case "Widget":
+		subType = Ann_Widget
+	case "Screen":
+		subType = Ann_Screen
+	case "PrinterMark":
+		subType = Ann_PrinterMark
+	case "TrapNet":
+		subType = Ann_TrapNet
+	case "Watermark":
+		subType = Ann_Watermark
+	case "3D":
+		subType = Ann_3D
+	case "Redact":
+		subType = Ann_Redact
+	}
+
+	return NewAnnotation(subType, rect, contents, pageIndRef, nm, f, backgrCol)
+}
+
 func (ann Annotation) ID() string {
 	return ann.NM
+}
+
+func (ann Annotation) Type() AnnotationType {
+	return ann.SubType
+}
+
+func (ann Annotation) TypeString() string {
+	return AnnotTypeStrings[ann.SubType]
+}
+
+func (ann Annotation) String() string {
+	return fmt.Sprintf("%s \"%s\" \"%s\"", ann.Rect.ShortString(), ann.ID(), ann.Contents)
+}
+
+func (ann Annotation) RenderDict(pageIndRef IndirectRef) Dict {
+	return nil
+}
+
+type PopupAnnotation struct {
+	Annotation
+	ParentIndRef *IndirectRef // The parent annotation with which this pop-up annotation shall be associated.
+	Open         bool         // A flag specifying whether the annotation shall initially be displayed open.
+}
+
+func NewPopupAnnotation(
+	rect Rectangle,
+	pageIndRef *IndirectRef,
+	contents, id string,
+	f AnnotationFlags,
+	backgrCol *SimpleColor,
+	parentIndRef *IndirectRef) PopupAnnotation {
+
+	ann := NewAnnotation(Ann_Popup, rect, contents, pageIndRef, id, f, backgrCol)
+
+	return PopupAnnotation{
+		Annotation:   ann,
+		ParentIndRef: parentIndRef}
+}
+
+func (ann PopupAnnotation) String() string {
+	s := "\"" + ann.Contents + "\""
+	if ann.ParentIndRef != nil {
+		s = "-> #" + ann.ParentIndRef.ObjectNumber.String()
+	}
+	return fmt.Sprintf("%s \"%s\" %s", ann.Rect.ShortString(), ann.ID(), s)
 }
 
 type MarkupAnnotation struct {
@@ -72,11 +265,11 @@ type MarkupAnnotation struct {
 }
 
 func NewMarkupAnnotation(
-	subType string,
+	subType AnnotationType,
 	rect Rectangle,
 	pageIndRef *IndirectRef,
 	contents, id, title string,
-	f int,
+	f AnnotationFlags,
 	backgrCol *SimpleColor,
 	popupIndRef *IndirectRef,
 	ca *float64,
@@ -96,22 +289,22 @@ func NewMarkupAnnotation(
 
 // Sticky Note
 type TextAnnotation struct {
-	MarkupAnnotation        // SubType = Text
-	Open             bool   // A flag specifying whether the annotation shall initially be displayed open.
-	Name             string // The name of an icon that shall be used in displaying the annotation. Comment, Key, (Note), Help, NewParagraph, Paragraph, Insert
+	MarkupAnnotation
+	Open bool   // A flag specifying whether the annotation shall initially be displayed open.
+	Name string // The name of an icon that shall be used in displaying the annotation. Comment, Key, (Note), Help, NewParagraph, Paragraph, Insert
 }
 
 func NewTextAnnotation(
 	rect Rectangle,
 	contents, id, title string,
-	f int,
+	f AnnotationFlags,
 	backgrCol *SimpleColor,
 	ca *float64,
 	rc, subj string,
 	open bool,
 	name string) TextAnnotation {
 
-	ma := NewMarkupAnnotation("Text", rect, nil, contents, id, title, f, backgrCol, nil, ca, rc, subj)
+	ma := NewMarkupAnnotation(Ann_Text, rect, nil, contents, id, title, f, backgrCol, nil, ca, rc, subj)
 
 	return TextAnnotation{
 		MarkupAnnotation: ma,
@@ -127,10 +320,10 @@ func (ann TextAnnotation) RenderDict(pageIndRef IndirectRef) Dict {
 	}
 	d := Dict(map[string]Object{
 		"Type":         Name("Annot"),
-		"Subtype":      Name(ann.SubType),
+		"Subtype":      Name(ann.TypeString()),
 		"Rect":         ann.Rect.Array(),
 		"P":            pageIndRef,
-		"F":            Integer(ann.F), // 24 = NoRotate + NoZoom
+		"F":            Integer(ann.F),
 		"CreationDate": StringLiteral(ann.CreationDate),
 		"Subj":         StringLiteral(subject),
 		"Open":         Boolean(ann.Open),
@@ -165,33 +358,36 @@ func (ann TextAnnotation) RenderDict(pageIndRef IndirectRef) Dict {
 }
 
 type LinkAnnotation struct {
-	Annotation // SubType = Link
-	URI        string
+	Annotation
+	URI  string
+	Quad QuadPoints // Shall be ignored if any coordinate lies outside the region specified by Rect.
 }
 
 func NewLinkAnnotation(
 	rect Rectangle,
+	quad QuadPoints,
 	uri, id string,
-	f int,
+	f AnnotationFlags,
 	backgrCol *SimpleColor) LinkAnnotation {
 
-	ann := NewAnnotation("Link", rect, "", nil, id, f, backgrCol)
+	ann := NewAnnotation(Ann_Link, rect, "", nil, id, f, backgrCol)
 
 	return LinkAnnotation{
 		Annotation: ann,
 		URI:        uri,
+		Quad:       quad,
 	}
 }
 
+func (ann LinkAnnotation) String() string {
+	s := "(internal)"
+	if len(ann.URI) > 0 {
+		s = "\"" + ann.URI + "\""
+	}
+	return fmt.Sprintf("%s \"%s\" %s", ann.Rect.ShortString(), ann.ID(), s)
+}
+
 func (ann LinkAnnotation) RenderDict(pageIndRef IndirectRef) Dict {
-
-	// <A, <<
-	// 	<S, URI>
-	// 	<Type, Action>
-	// 	<URI, (http://www.acme.org)>
-	// 	>>
-	// >
-
 	actionDict := Dict(map[string]Object{
 		"Type": Name("Action"),
 		"S":    Name("URI"),
@@ -200,27 +396,96 @@ func (ann LinkAnnotation) RenderDict(pageIndRef IndirectRef) Dict {
 
 	d := Dict(map[string]Object{
 		"Type":    Name("Annot"),
-		"Subtype": Name(ann.SubType),
+		"Subtype": Name(ann.TypeString()),
 		"Rect":    ann.Rect.Array(),
 		"P":       pageIndRef,
-		"F":       Integer(24), // = NoRotate + NoZoom
-		"Border":  NewIntegerArray(0, 0, 1),
-		"H":       Name("I"), // = Default
+		"F":       Integer(ann.F),
+		"Border":  NewIntegerArray(0, 0, 0), // no border
+		"H":       Name("I"),                // default
 		"A":       actionDict,
 	})
 
 	if ann.NM != "" {
-		d.InsertString("NM", ann.NM) // check for uniqueness across annotations on this page
+		d.InsertString("NM", ann.NM)
 	} else {
 		// new UUID
 	}
 	if ann.C != nil {
 		d.Insert("C", NewNumberArray(float64(ann.C.R), float64(ann.C.G), float64(ann.C.B)))
 	}
+	if ann.Quad != nil {
+		d.Insert("QuadPoints", ann.Quad.Array())
+	}
 	return d
 }
 
-func (ctx *Context) findAnnot(id string, annots Array) (int, error) {
+// AnnotationObjNrs returns a list of object numbers representing
+// known annotation dict indirect references.
+func (ctx *Context) AnnotationObjNrs() ([]int, error) {
+	// Note: Not all cached annotations are based on IndRefs!
+	// pdfcpu also caches direct annot dict objects (violating the PDF spec) for listing purposes.
+	// Such annotations may only be removecd as part of removing all annotations (for a page).
+
+	objNrs := []int{}
+
+	for _, pageAnnots := range ctx.PageAnnots {
+		for _, annots := range pageAnnots {
+			for k := range annots {
+				if k[0] != '?' {
+					i, err := strconv.Atoi(k)
+					if err != nil {
+						return nil, err
+					}
+					objNrs = append(objNrs, i)
+				}
+			}
+		}
+	}
+
+	return objNrs, nil
+}
+
+// Add annotation to xreftable page annotation cache.
+func (ctx *Context) addAnnotation(ann AnnotationRenderer, pageNr int, objNr string) error {
+	pgAnnots, ok := ctx.PageAnnots[pageNr]
+	if !ok {
+		pgAnnots = PgAnnots{}
+		ctx.PageAnnots[pageNr] = pgAnnots
+	}
+	annots, ok := pgAnnots[ann.Type()]
+	if !ok {
+		annots = AnnotMap{}
+		pgAnnots[ann.Type()] = annots
+	}
+	if _, ok := annots[objNr]; ok {
+		return errors.Errorf("addAnnotation: obj#%s already cached", objNr)
+	}
+	annots[objNr] = ann
+	return nil
+}
+
+// Remove annotation from xreftable page annotations cache.
+func (ctx *Context) removeAnnotation(pageNr int, objNr string) error {
+	pgAnnots, ok := ctx.PageAnnots[pageNr]
+	if !ok {
+		return errors.Errorf("removeAnnotation: no page annotations cached for page %d", pageNr)
+	}
+	for annType, annots := range pgAnnots {
+		if _, ok := annots[objNr]; ok {
+			delete(annots, objNr)
+			if len(annots) == 0 {
+				delete(pgAnnots, annType)
+				if len(pgAnnots) == 0 {
+					delete(ctx.PageAnnots, pageNr)
+				}
+			}
+			return nil
+		}
+	}
+	return errors.Errorf("removeAnnotation: no page annotation cached for obj#%s", objNr)
+}
+
+func (ctx *Context) findAnnotByID(id string, annots Array) (int, error) {
 	for i, o := range annots {
 		d, err := ctx.DereferenceDict(o)
 		if err != nil {
@@ -237,118 +502,228 @@ func (ctx *Context) findAnnot(id string, annots Array) (int, error) {
 	return -1, nil
 }
 
+func (ctx *Context) findAnnotByObjNr(objNr int, annots Array) (int, error) {
+	for i, o := range annots {
+		indRef, _ := o.(IndirectRef)
+		if indRef.ObjectNumber.Value() == objNr {
+			return i, nil
+		}
+	}
+	return -1, nil
+}
+
 func (ctx *Context) createAnnot(ar AnnotationRenderer, pageIndRef *IndirectRef) (*IndirectRef, error) {
 	d := ar.RenderDict(*pageIndRef)
 	return ctx.IndRefForNewObject(d)
 }
 
-func (ctx *Context) AddAnnotations(selectedPages IntSet, ar AnnotationRenderer, incr bool) error {
-	if incr {
-		ctx.Write.Increment = true
-		ctx.Write.Offset = ctx.Read.FileSize
+func (xRefTable *XRefTable) Annotation(d Dict) (AnnotationRenderer, error) {
+
+	subtype := d.NameEntry("Subtype")
+
+	o, _ := d.Find("Rect")
+	arr, err := xRefTable.DereferenceArray(o)
+	if err != nil {
+		return nil, err
 	}
-	for k, v := range selectedPages {
-		if !v {
-			continue
-		}
-		if k > ctx.PageCount {
-			return errors.Errorf("pdfcpu: invalid page number: %d", k)
-		}
 
-		pageDictIndRef, err := ctx.PageDictIndRef(k)
-		if err != nil {
-			return err
-		}
+	r, err := RectForArray(arr)
+	if err != nil {
+		return nil, err
+	}
 
-		d, err := ctx.DereferenceDict(*pageDictIndRef)
-		if err != nil {
-			return err
-		}
+	bb, err := d.StringEntryBytes("Contents")
+	if err != nil {
+		return nil, err
+	}
+	contents := string(bb)
 
-		annotIndRef, err := ctx.createAnnot(ar, pageDictIndRef)
-		if err != nil {
-			return err
-		}
-		if incr {
-			// Mark new annotaton dict obj for incremental writing.
-			ctx.Write.IncrementWithObjNr(annotIndRef.ObjectNumber.Value())
-		}
+	var nm string
+	s := d.StringEntry("NM") // This is what pdfcpu refers to as the annotation id.
+	if s != nil {
+		nm = *s
+	}
 
-		obj, found := d.Find("Annots")
-		if !found {
-			d.Insert("Annots", Array{*annotIndRef})
-			// Alternatively create a separate array object:
-			// ir, err := ctx.IndRefForNewObject(Array{*annotIndRef})
-			// if err != nil {
-			// 	return err
-			// }
-			// if incr {
-			// 	// Mark new Annot array obj for incremental writing.
-			// 	ctx.Write.IncrementWithObjNr(ir.ObjectNumber.Value())
-			// 	// Mark page dict obj for incremental writing.
-			// 	ctx.Write.IncrementWithObjNr(pageDictIndRef.ObjectNumber.Value())
-			// }
-			// d.Insert("Annots", *ir)
-			continue
-		}
+	var f AnnotationFlags
+	i := d.IntEntry("F")
+	if i != nil {
+		f = AnnotationFlags(*i)
+	}
 
-		ir, ok := obj.(IndirectRef)
-		if !ok {
-			annots, _ := obj.(Array)
-			i, err := ctx.findAnnot(ar.ID(), annots)
+	var ann AnnotationRenderer
+
+	switch *subtype {
+
+	case "Text":
+		ann = NewTextAnnotation(*r, contents, nm, "", f, nil, nil, "", "", true, "")
+
+	case "Link":
+		var uri string
+		o, found := d.Find("A")
+		if found && o != nil {
+			d, err := xRefTable.DereferenceDict(o)
 			if err != nil {
-				return err
+				return nil, err
 			}
-			if i >= 0 {
-				return errors.Errorf("page %d: duplicate annotation with id:%s\n", k, ar.ID())
+
+			bb, err := xRefTable.DereferenceStringEntryBytes(d, "URI")
+			if err != nil {
+				return nil, err
 			}
-			d.Update("Annots", append(annots, *annotIndRef))
-			if incr {
-				// Mark page dict obj for incremental writing.
-				ctx.Write.IncrementWithObjNr(pageDictIndRef.ObjectNumber.Value())
+			if len(bb) > 0 {
+				uri = string(bb)
 			}
-			continue
 		}
+		ann = NewLinkAnnotation(*r, nil, uri, nm, f, nil)
 
-		// Annots array is an IndirectReference.
+	case "Popup":
+		parentIndRef := d.IndirectRefEntry("Parent")
+		ann = NewPopupAnnotation(*r, nil, contents, nm, f, nil, parentIndRef)
 
-		o, err := ctx.Dereference(ir)
-		if err != nil || o == nil {
-			return err
-		}
+	// TODO handle remaining annotation types.
 
-		annots, _ := o.(Array)
-		i, err := ctx.findAnnot(ar.ID(), annots)
-		if err != nil {
-			return err
-		}
-		if i >= 0 {
-			return errors.Errorf("page %d: duplicate annotation with id:%s\n", k, ar.ID())
-		}
-
-		entry, ok := ctx.FindTableEntryForIndRef(&ir)
-		if !ok {
-			return errors.Errorf("page %d: can't dereference Annots indirect reference(obj#:%d)\n", k, ir.ObjectNumber)
-		}
-		entry.Object = append(annots, *annotIndRef)
-		if incr {
-			// Mark Annot array obj for incremental writing.
-			ctx.Write.IncrementWithObjNr(ir.ObjectNumber.Value())
-		}
+	default:
+		ann = NewAnnotationForRawType(*subtype, *r, contents, nil, nm, f, nil)
 	}
 
-	//ctx.EnsureVersionForWriting()
-	return nil
+	return ann, nil
 }
 
-func (ctx *Context) RemoveAnnotations(selectedPages IntSet, id string, incr bool) (bool, error) {
-	// Based on the assumptions that annotations don't use indRefs other than for P.
-	// TODO: Handle popUpIndRef for markup annotations.
-	ok := false
+type AnnotMap map[string]AnnotationRenderer
+
+type PgAnnots map[AnnotationType]AnnotMap
+
+// ListAnnotations returns a formatted list of annotations for selected pages.
+func (xRefTable *XRefTable) ListAnnotations(selectedPages IntSet) (int, []string, error) {
+	var (
+		j       int
+		pageNrs []int
+	)
+	ss := []string{}
+
+	for k := range xRefTable.PageAnnots {
+		pageNrs = append(pageNrs, k)
+	}
+	sort.Ints(pageNrs)
+
+	for _, i := range pageNrs {
+		if selectedPages != nil {
+			if _, found := selectedPages[i]; !found {
+				continue
+			}
+		}
+		pageAnnots := xRefTable.PageAnnots[i]
+		if len(pageAnnots) == 0 {
+			continue
+		}
+		ss = append(ss, "")
+		ss = append(ss, fmt.Sprintf("Page %d:", i))
+		for annType, annots := range pageAnnots {
+			ss = append(ss, "")
+			ss = append(ss, fmt.Sprintf("  %s:", AnnotTypeStrings[annType]))
+			ss = append(ss, "    Obj# Rect Id Content")
+			ss = append(ss, "    =================================")
+			for objNr, ann := range annots {
+				s := "?"
+				if objNr[0] != '?' {
+					s = objNr
+				}
+				ss = append(ss, fmt.Sprintf("    %s %s", s, ann))
+				j++
+			}
+		}
+	}
+
+	return j, append([]string{fmt.Sprintf("%d annotations available", j)}, ss...), nil
+}
+
+// AddAnnotation adds the annotation ar to pageDict.
+func (ctx *Context) AddAnnotation(pageDictIndRef *IndirectRef, pageDict Dict, pageNr int, ar AnnotationRenderer, incr bool) (bool, error) {
+	// Create xreftable entry for annotation.
+	annotIndRef, err := ctx.createAnnot(ar, pageDictIndRef)
+	if err != nil {
+		return false, err
+	}
+
+	// Add annotation to xreftable page annotation cache.
+	err = ctx.addAnnotation(ar, pageNr, annotIndRef.ObjectNumber.String())
+	if err != nil {
+		return false, err
+	}
+
+	if incr {
+		// Mark new annotaton dict obj for incremental writing.
+		ctx.Write.IncrementWithObjNr(annotIndRef.ObjectNumber.Value())
+	}
+
+	obj, found := pageDict.Find("Annots")
+	if !found {
+		pageDict.Insert("Annots", Array{*annotIndRef})
+		if incr {
+			// Mark page dict obj for incremental writing.
+			ctx.Write.IncrementWithObjNr(pageDictIndRef.ObjectNumber.Value())
+		}
+		ctx.EnsureVersionForWriting()
+		return true, nil
+	}
+
+	ir, ok := obj.(IndirectRef)
+	if !ok {
+		annots, _ := obj.(Array)
+		i, err := ctx.findAnnotByID(ar.ID(), annots)
+		if err != nil {
+			return false, err
+		}
+		if i >= 0 {
+			return false, errors.Errorf("page %d: duplicate annotation with id:%s\n", pageNr, ar.ID())
+		}
+		pageDict.Update("Annots", append(annots, *annotIndRef))
+		if incr {
+			// Mark page dict obj for incremental writing.
+			ctx.Write.IncrementWithObjNr(pageDictIndRef.ObjectNumber.Value())
+		}
+		ctx.EnsureVersionForWriting()
+		return true, nil
+	}
+
+	// Annots array is an IndirectReference.
+
+	o, err := ctx.Dereference(ir)
+	if err != nil || o == nil {
+		return false, err
+	}
+
+	annots, _ := o.(Array)
+	i, err := ctx.findAnnotByID(ar.ID(), annots)
+	if err != nil {
+		return false, err
+	}
+	if i >= 0 {
+		return false, errors.Errorf("page %d: duplicate annotation with id:%s\n", pageNr, ar.ID())
+	}
+
+	entry, ok := ctx.FindTableEntryForIndRef(&ir)
+	if !ok {
+		return false, errors.Errorf("page %d: can't dereference Annots indirect reference(obj#:%d)\n", pageNr, ir.ObjectNumber)
+	}
+	entry.Object = append(annots, *annotIndRef)
+	if incr {
+		// Mark Annot array obj for incremental writing.
+		ctx.Write.IncrementWithObjNr(ir.ObjectNumber.Value())
+	}
+
+	ctx.EnsureVersionForWriting()
+	return true, nil
+}
+
+// AddAnnotations adds the annotation ar to selected pages.
+func (ctx *Context) AddAnnotations(selectedPages IntSet, ar AnnotationRenderer, incr bool) (bool, error) {
+	var ok bool
 	if incr {
 		ctx.Write.Increment = true
 		ctx.Write.Offset = ctx.Read.FileSize
 	}
+
 	for k, v := range selectedPages {
 		if !v {
 			continue
@@ -367,91 +742,313 @@ func (ctx *Context) RemoveAnnotations(selectedPages IntSet, id string, incr bool
 			return false, err
 		}
 
-		obj, found := d.Find("Annots")
-		if !found {
-			continue
-		}
-
-		ir, ok1 := obj.(IndirectRef)
-		if !ok1 {
-			annots, _ := obj.(Array)
-			i, err := ctx.findAnnot(id, annots)
-			if err != nil {
-				return false, err
-			}
-			if i < 0 {
-				// annotation not found.
-				continue
-			}
-			if incr {
-				// Mark page dict obj for incremental writing.
-				ctx.Write.IncrementWithObjNr(pageDictIndRef.ObjectNumber.Value())
-				// Mark annotation dict as free.
-				ir, _ := annots[i].(IndirectRef)
-				if err = ctx.markAsFree(ir); err != nil {
-					return false, err
-				}
-				// Mark annotation dict obj for incremental writing.
-				ctx.Write.IncrementWithObjNr(ir.ObjectNumber.Value())
-			}
-			// Remove annotation indRef from Annots array.
-			// TODO (arr Array) func Delete(i int)
-			if len(annots) == 1 {
-				d.Delete("Annots")
-				ok = true
-				continue
-			}
-			d.Update("Annots", append(annots[:i], annots[i+1:]...))
-			ok = true
-			continue
-		}
-
-		// Annots array is an IndirectReference.
-		o, err := ctx.Dereference(ir)
-		if err != nil || o == nil {
-			return false, err
-		}
-		annots, _ := o.(Array)
-		i, err := ctx.findAnnot(id, annots)
+		added, err := ctx.AddAnnotation(pageDictIndRef, d, k, ar, incr)
 		if err != nil {
 			return false, err
 		}
-		if i < 0 {
-			// annotation not found.
-			continue
+		if added {
+			ok = true
 		}
-		objNr := ir.ObjectNumber.Value()
-		genNr := ir.GenerationNumber.Value()
-		if incr {
-			// Mark annotation dict as free.
-			ir, _ := annots[i].(IndirectRef)
-			if err = ctx.markAsFree(ir); err != nil {
+	}
+
+	return ok, nil
+}
+
+// AddAnnotations adds annotations in m to corresponding pages.
+func (ctx *Context) AddAnnotationsMap(m map[int][]AnnotationRenderer, incr bool) (bool, error) {
+	var ok bool
+	if incr {
+		ctx.Write.Increment = true
+		ctx.Write.Offset = ctx.Read.FileSize
+	}
+	for i, annots := range m {
+
+		if i > ctx.PageCount {
+			return false, errors.Errorf("pdfcpu: invalid page number: %d", i)
+		}
+
+		pageDictIndRef, err := ctx.PageDictIndRef(i)
+		if err != nil {
+			return false, err
+		}
+
+		d, err := ctx.DereferenceDict(*pageDictIndRef)
+		if err != nil {
+			return false, err
+		}
+
+		for _, annot := range annots {
+			added, err := ctx.AddAnnotation(pageDictIndRef, d, i, annot, incr)
+			if err != nil {
 				return false, err
 			}
-			// Mark annotation dict obj for incremental writing.
-			ctx.Write.IncrementWithObjNr(ir.ObjectNumber.Value())
+			if added {
+				ok = true
+			}
+		}
+
+	}
+
+	return ok, nil
+}
+
+func (ctx *Context) removeAllAnnotations(pageDict Dict, pageDictObjNr, pageNr int, incr bool) (bool, error) {
+	var err error
+	obj, found := pageDict.Find("Annots")
+	if !found {
+		return false, nil
+	}
+
+	ir, ok := obj.(IndirectRef)
+	if ok {
+		obj, err = ctx.Dereference(ir)
+		if err != nil || obj == nil {
+			return false, err
+		}
+		objNr := ir.ObjectNumber.Value()
+		if err := ctx.deleteObject(ir); err != nil {
+			return false, err
+		}
+		if incr {
 			// Modify Annots array obj for incremental writing.
 			ctx.Write.IncrementWithObjNr(objNr)
 		}
-		entry, _ := ctx.FindTableEntry(objNr, genNr)
-		// Remove annotation indRef from Annots array.
-		if len(annots) == 1 {
-			d.Delete("Annots")
-			if incr {
-				// Mark Annots array as free.
-				if err = ctx.markAsFree(ir); err != nil {
-					return false, err
-				}
-				// Mark page dict obj for incremental writing.
-				ctx.Write.IncrementWithObjNr(pageDictIndRef.ObjectNumber.Value())
-			}
-			ok = true
-			continue
+	}
+	annots, _ := obj.(Array)
+
+	for _, o := range annots {
+		ir, _ := o.(IndirectRef)
+		objNr := ir.ObjectNumber.Value()
+		if err := ctx.deleteObject(ir); err != nil {
+			return false, err
 		}
-		entry.Object = append(annots[:i], annots[i+1:]...)
-		ok = true
+		if incr {
+			// Mark annotation dict obj for incremental writing.
+			ctx.Write.IncrementWithObjNr(objNr)
+		}
 	}
 
-	//ctx.EnsureVersionForWriting()
-	return ok, nil
+	pageDict.Delete("Annots")
+	if incr {
+		// Mark page dict obj for incremental writing.
+		ctx.Write.IncrementWithObjNr(pageDictObjNr)
+	}
+
+	// Remove xref table page annotation cache.
+	delete(ctx.PageAnnots, pageNr)
+
+	return true, nil
+}
+
+func (ctx *Context) removeAnnotationsFromPageDictByIDOrObjNr(ids []string, objNrSet IntSet, pageNr int, annots Array, incr bool) (Array, bool, error) {
+	var ok bool
+	for _, id := range ids {
+		i, err := ctx.findAnnotByID(id, annots)
+		if err != nil {
+			return nil, false, err
+		}
+		if i >= 0 {
+			ok = true
+			ir1, _ := annots[i].(IndirectRef)
+
+			// Remove annotation from xreftable page annotation cache.
+			err = ctx.removeAnnotation(pageNr, ir1.ObjectNumber.String())
+			if err != nil {
+				return nil, false, err
+			}
+
+			if err := ctx.deleteObject(ir1); err != nil {
+				return nil, false, err
+			}
+			if incr {
+				// Mark annotation dict obj for incremental writing.
+				ctx.Write.IncrementWithObjNr(ir1.ObjectNumber.Value())
+			}
+			if len(annots) == 1 {
+				return nil, ok, nil
+			}
+			annots = append(annots[:i], annots[i+1:]...)
+		}
+	}
+
+	for objNr, v := range objNrSet {
+		if !v {
+			continue
+		}
+		i, err := ctx.findAnnotByObjNr(objNr, annots)
+		if err != nil {
+			return nil, false, err
+		}
+		if i >= 0 {
+			ok = true
+			ir1, _ := annots[i].(IndirectRef)
+
+			// Remove annotation from xreftable page annotation cache.
+			err = ctx.removeAnnotation(pageNr, ir1.ObjectNumber.String())
+			if err != nil {
+				return nil, false, err
+			}
+
+			if err := ctx.deleteObject(ir1); err != nil {
+				return nil, false, err
+			}
+			if incr {
+				// Mark annotation dict obj for incremental writing.
+				ctx.Write.IncrementWithObjNr(ir1.ObjectNumber.Value())
+			}
+			delete(objNrSet, objNr)
+			if len(annots) == 1 {
+				return nil, ok, nil
+			}
+			annots = append(annots[:i], annots[i+1:]...)
+		}
+	}
+
+	return annots, ok, nil
+}
+
+// RemoveAnnotationsFromPageDict removes an annotation by its object number annObjNr from pageDict.
+func (ctx *Context) RemoveAnnotationsFromPageDict(ids []string, objNrSet IntSet, pageDict Dict, pageDictObjNr, pageNr int, incr bool) (bool, error) {
+	var (
+		ok  bool
+		err error
+	)
+
+	defer func() {
+		if ok {
+			ctx.EnsureVersionForWriting()
+		}
+	}()
+
+	//fmt.Printf("ids:%v objNrSet:%v\n", ids, objNrSet)
+
+	if len(ids) == 0 && len(objNrSet) == 0 {
+		ok, err = ctx.removeAllAnnotations(pageDict, pageDictObjNr, pageNr, incr)
+		return ok, err
+	}
+
+	obj, found := pageDict.Find("Annots")
+	if !found {
+		return false, nil
+	}
+
+	ir, ok1 := obj.(IndirectRef)
+	if !ok1 {
+		annots, _ := obj.(Array)
+		annots, ok, err = ctx.removeAnnotationsFromPageDictByIDOrObjNr(ids, objNrSet, pageNr, annots, incr)
+		if err != nil {
+			return false, err
+		}
+		if !ok {
+			return false, nil
+		}
+		if incr {
+			// Mark page dict obj for incremental writing.
+			ctx.Write.IncrementWithObjNr(pageDictObjNr)
+		}
+		if annots == nil {
+			pageDict.Delete("Annots")
+			return ok, nil
+		}
+		pageDict.Update("Annots", annots)
+		return true, nil
+	}
+
+	// Annots array is an IndirectReference.
+	o, err := ctx.Dereference(ir)
+	if err != nil || o == nil {
+		return false, err
+	}
+	annots, _ := o.(Array)
+	annots, ok, err = ctx.removeAnnotationsFromPageDictByIDOrObjNr(ids, objNrSet, pageNr, annots, incr)
+	if err != nil {
+		return false, err
+	}
+	if !ok {
+		return false, nil
+	}
+	objNr := ir.ObjectNumber.Value()
+	genNr := ir.GenerationNumber.Value()
+	entry, _ := ctx.FindTableEntry(objNr, genNr)
+	if incr {
+		// Modify Annots array obj for incremental writing.
+		ctx.Write.IncrementWithObjNr(objNr)
+	}
+	if annots == nil {
+		pageDict.Delete("Annots")
+		if err := ctx.deleteObject(ir); err != nil {
+			return false, err
+		}
+		if incr {
+			// Mark page dict obj for incremental writing.
+			ctx.Write.IncrementWithObjNr(pageDictObjNr)
+		}
+		return ok, nil
+	}
+	entry.Object = append(annots)
+	return true, nil
+}
+
+// RemoveAnnotations removes annotations for selected pages by id and object number.
+// All annotations for selected pages are removed if neither ids nor objNrs are provided.
+func (ctx *Context) RemoveAnnotations(selectedPages IntSet, ids []string, objNrs []int, incr bool) (bool, error) {
+	// Note: Selected pages only apply if no objNrs provided.
+	var removed bool
+
+	// Remove all annotations for selectedPages
+	removeAll := len(ids) == 0 && len(objNrs) == 0
+	if removeAll {
+		log.CLI.Println("removing all annotations for selected pages!")
+	}
+
+	objNrSet := IntSet{}
+	for _, i := range objNrs {
+		objNrSet[i] = true
+	}
+
+	if incr {
+		ctx.Write.Increment = true
+		ctx.Write.Offset = ctx.Read.FileSize
+	}
+
+	var pageNrs []int
+	for k := range ctx.PageAnnots {
+		pageNrs = append(pageNrs, k)
+	}
+	sort.Ints(pageNrs)
+
+	for _, pageNr := range pageNrs {
+		if selectedPages != nil {
+			if _, found := selectedPages[pageNr]; !found {
+				continue
+			}
+		}
+
+		pageDictIndRef, err := ctx.PageDictIndRef(pageNr)
+		if err != nil {
+			return false, err
+		}
+
+		d, err := ctx.DereferenceDict(*pageDictIndRef)
+		if err != nil {
+			return false, err
+		}
+
+		objNr := pageDictIndRef.ObjectNumber.Value()
+
+		ok, err := ctx.RemoveAnnotationsFromPageDict(ids, objNrSet, d, objNr, pageNr, incr)
+		if err != nil {
+			return false, err
+		}
+		if ok {
+			removed = true
+		}
+		if !removeAll && len(ids) == 0 && len(objNrSet) == 0 {
+			// If all annotations with objNrs are removed
+			// and we don't need to remove by id we are done here!
+			break
+		}
+	}
+
+	return removed, nil
 }

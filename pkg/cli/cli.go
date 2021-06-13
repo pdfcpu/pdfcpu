@@ -259,3 +259,14 @@ func RemoveBoxes(cmd *Command) ([]string, error) {
 func Crop(cmd *Command) ([]string, error) {
 	return nil, api.CropFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Box, cmd.Conf)
 }
+
+// ListAnnotations returns inFile's page annotations.
+func ListAnnotations(cmd *Command) ([]string, error) {
+	_, ss, err := api.ListAnnotationsFile(*cmd.InFile, cmd.PageSelection, cmd.Conf)
+	return ss, err
+}
+
+// RemoveBoxes deletes annotations from inFile's page tree and writes the result to outFile.
+func RemoveAnnotations(cmd *Command) ([]string, error) {
+	return nil, api.RemoveAnnotationsFile(*cmd.InFile, "", cmd.PageSelection, nil, cmd.IntVals, cmd.Conf, false)
+}

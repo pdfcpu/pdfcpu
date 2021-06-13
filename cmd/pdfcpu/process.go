@@ -1488,3 +1488,52 @@ func processCropCommand(conf *pdfcpu.Configuration) {
 
 	process(cli.CropCommand(inFile, outFile, selectedPages, box, conf))
 }
+
+func processListAnnotationsCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) != 1 {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usageAnnotsList)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	ensurePdfExtension(inFile)
+
+	selectedPages, err := api.ParsePageSelection(selectedPages)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
+		os.Exit(1)
+	}
+
+	process(cli.ListAnnotationsCommand(inFile, selectedPages, conf))
+}
+func processRemoveAnnotationsCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) < 1 {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usageAnnotsRemove)
+		os.Exit(1)
+	}
+
+	selectedPages, err := api.ParsePageSelection(selectedPages)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
+		os.Exit(1)
+	}
+
+	inFile := ""
+	objNrs := []int{}
+
+	for i, arg := range flag.Args() {
+		if i == 0 {
+			inFile = arg
+			ensurePdfExtension(inFile)
+			continue
+		}
+		i, err := strconv.Atoi(arg)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "objNr has to be a positiv numeric value")
+			os.Exit(1)
+		}
+		objNrs = append(objNrs, i)
+	}
+
+	process(cli.RemoveAnnotationsCommand(inFile, "", selectedPages, objNrs, conf))
+}

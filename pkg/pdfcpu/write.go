@@ -134,6 +134,7 @@ func Write(ctx *Context) (err error) {
 
 // WriteIncrement writes a PDF increment..
 func WriteIncrement(ctx *Context) error {
+
 	// Write all modified objects that are part of this increment.
 	for _, i := range ctx.Write.ObjNrs {
 		if err := writeFlatObject(ctx, i); err != nil {
@@ -459,12 +460,12 @@ func deleteRedundantObject(ctx *Context, objNr int) {
 
 	if len(ctx.Write.SelectedPages) == 0 &&
 		(ctx.Optimize.IsDuplicateFontObject(objNr) || ctx.Optimize.IsDuplicateImageObject(objNr)) {
-		ctx.DeleteObject(objNr)
+		ctx.turnEntryToFree(objNr)
 	}
 
 	if ctx.IsLinearizationObject(objNr) || ctx.Optimize.IsDuplicateInfoObject(objNr) ||
 		ctx.Read.IsObjectStreamObject(objNr) || ctx.Read.IsXRefStreamObject(objNr) {
-		ctx.DeleteObject(objNr)
+		ctx.turnEntryToFree(objNr)
 	}
 
 }

@@ -5,6 +5,7 @@ It provides an API and a command line interface. Supported are all versions up t
 
 The commands are:
 
+	annotations list, remove page annotations
 	attachments	list, add, remove, extract embedded file attachments
 	booklet     arrange pages onto larger sheets of paper to make a booklet or zine
 	boxes       list, add, remove page boundaries for selected pages

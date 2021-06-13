@@ -136,6 +136,9 @@ func validateICCBasedColorSpace(xRefTable *pdf.XRefTable, a pdf.Array, sinceVers
 
 	dictName := "ICCBasedColorSpace"
 
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		sinceVersion = pdf.V12
+	}
 	err := xRefTable.ValidateVersion(dictName, sinceVersion)
 	if err != nil {
 		return err

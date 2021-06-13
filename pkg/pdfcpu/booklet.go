@@ -259,7 +259,7 @@ func (ctx *Context) bookletPages(selectedPages IntSet, nup *NUp, pagesDict Dict,
 		}
 
 		consolidateRes := true
-		d, inhPAttrs, err := ctx.PageDict(bp.number, consolidateRes)
+		d, _, inhPAttrs, err := ctx.PageDict(bp.number, consolidateRes)
 		if err != nil {
 			return err
 		}

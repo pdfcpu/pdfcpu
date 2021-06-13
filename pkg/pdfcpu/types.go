@@ -23,6 +23,7 @@ import (
 	"strconv"
 
 	"github.com/pdfcpu/pdfcpu/pkg/types"
+	"github.com/pkg/errors"
 )
 
 // Supported line delimiters
@@ -253,14 +254,42 @@ func Rect(llx, lly, urx, ury float64) *Rectangle {
 	return &Rectangle{types.NewRectangle(llx, lly, urx, ury)}
 }
 
+func (a Array) FloatNumber(ind int) (float64, error) {
+	f, ok := a[ind].(Float)
+	if ok {
+		return f.Value(), nil
+	}
+	i, ok := a[ind].(Integer)
+	if ok {
+		return float64(i.Value()), nil
+	}
+	return 0, errors.Errorf("pdfcpu: array element %d not a number (Float/Integer", ind)
+}
+
 // RectForArray returns a new rectangle for given Array.
-func RectForArray(a Array) *Rectangle {
-	return Rect(
-		a[0].(Float).Value(),
-		a[1].(Float).Value(),
-		a[2].(Float).Value(),
-		a[3].(Float).Value(),
-	)
+func RectForArray(a Array) (*Rectangle, error) {
+
+	llx, err := a.FloatNumber(0)
+	if err != nil {
+		return nil, err
+	}
+
+	lly, err := a.FloatNumber(1)
+	if err != nil {
+		return nil, err
+	}
+
+	urx, err := a.FloatNumber(2)
+	if err != nil {
+		return nil, err
+	}
+
+	ury, err := a.FloatNumber(3)
+	if err != nil {
+		return nil, err
+	}
+
+	return Rect(llx, lly, urx, ury), nil
 }
 
 // RectForDim returns a new rectangle for given dimensions.
@@ -277,6 +306,55 @@ func RectForWidthAndHeight(llx, lly, width, height float64) *Rectangle {
 func RectForFormat(f string) *Rectangle {
 	d := PaperSize[f]
 	return RectForDim(d.Width, d.Height)
+}
+
+///////////////////////////////////////////////////////////////////////////////////
+
+// QuadLiteral is a polygon with four edges and four vertices.
+// The four vertices are assumed to be specified in counter clockwise order.
+type QuadLiteral struct {
+	P1, P2, P3, P4 Point
+}
+
+// Array returns the PDF representation of ql.
+func (ql QuadLiteral) Array() Array {
+	return NewNumberArray(ql.P1.X, ql.P1.Y, ql.P2.X, ql.P2.Y, ql.P3.X, ql.P3.Y, ql.P4.X, ql.P4.Y)
+}
+
+// EnclosingRectangle calculates the rectangle enclosing ql's vertices at a distance f.
+func (ql QuadLiteral) EnclosingRectangle(f float64) *Rectangle {
+	xmin, xmax := ql.P1.X, ql.P1.X
+	ymin, ymax := ql.P1.Y, ql.P1.Y
+	for _, p := range []Point{ql.P2, ql.P3, ql.P4} {
+		if p.X < xmin {
+			xmin = p.X
+		} else if p.X > xmax {
+			xmax = p.X
+		}
+		if p.Y < ymin {
+			ymin = p.Y
+		} else if p.Y > ymax {
+			ymax = p.Y
+		}
+	}
+	return Rect(xmin-f, ymin-f, xmax+f, ymax+f)
+}
+
+// QuadPoints is an array of 8 × n numbers specifying the coordinates of n quadrilaterals in default user space.
+type QuadPoints []QuadLiteral
+
+// AddQuadliteral adds a quadliteral to qp.
+func (qp *QuadPoints) AddQuadLiteral(ql QuadLiteral) {
+	*qp = append(*qp, ql)
+}
+
+// Array returns the PDF representation of qp.
+func (qp *QuadPoints) Array() Array {
+	a := Array{}
+	for _, ql := range *qp {
+		a = append(a, ql.Array()...)
+	}
+	return a
 }
 
 ///////////////////////////////////////////////////////////////////////////////////

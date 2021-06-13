@@ -925,7 +925,7 @@ func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pag
 		}
 
 		consolidateRes := true
-		d, inhPAttrs, err := ctx.PageDict(pageNumber, consolidateRes)
+		d, _, inhPAttrs, err := ctx.PageDict(pageNumber, consolidateRes)
 		if err != nil {
 			return err
 		}
@@ -974,7 +974,7 @@ func (ctx *Context) NUpFromPDF(selectedPages IntSet, nup *NUp) error {
 	if nup.PageDim == nil {
 		// No page dimensions specified, use mediaBox of page 1.
 		consolidateRes := false
-		d, inhPAttrs, err := ctx.PageDict(1, consolidateRes)
+		d, _, inhPAttrs, err := ctx.PageDict(1, consolidateRes)
 		if err != nil {
 			return err
 		}

@@ -258,7 +258,7 @@ func (ctx *Context) ExtractPages(pageNrs []int, usePgCache bool) (*Context, erro
 // ExtractPageContent extracts the consolidated page content stream for pageNr.
 func (ctx *Context) ExtractPageContent(pageNr int) (io.Reader, error) {
 	consolidateRes := false
-	d, _, err := ctx.PageDict(pageNr, consolidateRes)
+	d, _, _, err := ctx.PageDict(pageNr, consolidateRes)
 	if err != nil {
 		return nil, err
 	}

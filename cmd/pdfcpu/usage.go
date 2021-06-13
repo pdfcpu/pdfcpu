@@ -25,6 +25,7 @@ Usage:
    
 The commands are:
 
+   annotations   list, remove page annotations
    attachments   list, add, remove, extract embedded file attachments
    booklet       arrange pages onto larger sheets of paper to make a booklet or zine
    boxes         list, add, remove page boundaries for selected pages
@@ -189,7 +190,10 @@ content ... extract raw page content
 
     inFile ... input pdf file
       file ... attachment
-    outDir ... output directory`
+    outDir ... output directory
+    
+    Remove all attachments: pdfcpu attach remove test.pdf
+    `
 
 	usagePortfolioList    = "pdfcpu portfolio list    inFile"
 	usagePortfolioAdd     = "pdfcpu portfolio add     inFile file[,desc]..."
@@ -358,6 +362,8 @@ content ... extract raw page content
                      i     ... border width > 0
                      color ... border color
                      round ... set round bounding box corners
+
+   url:              Add link annotation for stamps only (omit https://)
 
 A color value: 3 color intensities, where 0.0 < i < 1.0, eg 1.0, 
                or the hex RGB value: #RRGGBB, eg #FF0000 = red
@@ -767,6 +773,9 @@ Create single page PDF cheat sheets in current dir.`
     
     Eg. adding two keywords: 
            pdfcpu keywords add test.pdf music 'virtual instruments'
+
+        remove all keywords:
+           pdfcpu keywords remove test.pdf
     `
 
 	usagePropertiesList   = "pdfcpu properties list    inFile"
@@ -785,6 +794,8 @@ nameValuePair ... 'name = value'
      
      Eg. adding one property:   pdfcpu properties add test.pdf 'key = value'
          adding two properties: pdfcpu properties add test.pdf 'key1 = val1' 'key2 = val2'
+
+         remove all properties: pdfcpu properties remove test.pdf
      `
 	usageCollect     = "usage: pdfcpu collect -p(ages) selectedPages inFile [outFile]" + generalFlags
 	usageLongCollect = `Create custom sequence of selected pages. 
@@ -884,4 +895,31 @@ Examples:
    pdfcpu box rem -- "t,b" in.pdf
      
 ` + usageBoxDescription
+
+	usageAnnotsList   = "pdfcpu annotations list   [-p(ages) selectedPages] inFile"
+	usageAnnotsRemove = "pdfcpu annotations remove [-p(ages) selectedPages] inFile [objNr...]" + generalFlags
+
+	usageAnnots = "usage: " + usageAnnotsList +
+		"\n       " + usageAnnotsRemove
+
+	usageLongAnnots = `Manage annotations.
+   
+      pages ... Please refer to "pdfcpu selectedpages"
+     inFile ... input pdf file
+      objNr ... annotation dict objNr
+   
+   Examples:
+
+      pdfcpu annot list in.pdf
+      pdfcpu annot list -pages 1-2 in.pdf
+
+      Remove all page annotations:
+         pdfcpu annot remove in.pdf
+      
+      Remove annotations for first 10 pages:
+         pdfcpu annot remove -pages 1-10 in.pdf
+
+      Remove annotations with obj# 37, 38 (see output of pdfcpu annot list)
+         pdfcpu annot remove in.pdf 37 38
+      `
 )

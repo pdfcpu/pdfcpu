@@ -31,9 +31,10 @@ var (
 
 func createXRefTableWithRootDict() (*XRefTable, error) {
 	xRefTable := &XRefTable{
-		Table: map[int]*XRefTableEntry{},
-		Names: map[string]*Node{},
-		Stats: NewPDFStats(),
+		Table:      map[int]*XRefTableEntry{},
+		Names:      map[string]*Node{},
+		PageAnnots: map[int]PgAnnots{},
+		Stats:      NewPDFStats(),
 	}
 
 	xRefTable.Table[0] = NewFreeHeadXRefTableEntry()

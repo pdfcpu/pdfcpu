@@ -17,6 +17,8 @@ limitations under the License.
 package validate
 
 import (
+	"fmt"
+
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pkg/errors"
@@ -421,7 +423,7 @@ func validateAnnotationDictFreeTextPart2(xRefTable *pdf.XRefTable, d pdf.Dict, d
 	// BS, optional, border style dict, since V1.6
 	sinceVersion = pdf.V16
 	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
-		sinceVersion = pdf.V13
+		sinceVersion = pdf.V12
 	}
 	err = validateBorderStyleDict(xRefTable, d, dictName, "BS", OPTIONAL, sinceVersion)
 	if err != nil {
@@ -442,12 +444,12 @@ func validateAnnotationDictFreeText(xRefTable *pdf.XRefTable, d pdf.Dict, dictNa
 
 	// see 12.5.6.6
 
-	err := validateAnnotationDictFreeTextPart1(xRefTable, d, dictName, pdf.V13)
+	err := validateAnnotationDictFreeTextPart1(xRefTable, d, dictName, pdf.V12) //pdf.V13
 	if err != nil {
 		return err
 	}
 
-	return validateAnnotationDictFreeTextPart2(xRefTable, d, dictName, pdf.V13)
+	return validateAnnotationDictFreeTextPart2(xRefTable, d, dictName, pdf.V12) //pdf.V13
 }
 
 func validateEntryMeasure(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, required bool, sinceVersion pdf.Version) error {
@@ -1178,6 +1180,9 @@ func validateExDataDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 
 func validatePopupEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
 
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		sinceVersion = pdf.V12
+	}
 	d1, err := validateDictEntry(xRefTable, d, dictName, entryName, required, sinceVersion, nil)
 	if err != nil {
 		return err
@@ -1440,7 +1445,7 @@ func validateAnnotationDictConcrete(xRefTable *pdf.XRefTable, d pdf.Dict, dictNa
 	}{
 		"Text":           {validateAnnotationDictText, pdf.V10, true},
 		"Link":           {validateAnnotationDictLink, pdf.V10, false},
-		"FreeText":       {validateAnnotationDictFreeText, pdf.V13, true},
+		"FreeText":       {validateAnnotationDictFreeText, pdf.V12, true}, // pdf.V13
 		"Line":           {validateAnnotationDictLine, pdf.V13, true},
 		"Polygon":        {validateAnnotationDictPolyLine, pdf.V15, true},
 		"PolyLine":       {validateAnnotationDictPolyLine, pdf.V15, true},
@@ -1453,7 +1458,7 @@ func validateAnnotationDictConcrete(xRefTable *pdf.XRefTable, d pdf.Dict, dictNa
 		"Stamp":          {validateAnnotationDictStamp, pdf.V13, true},
 		"Caret":          {validateAnnotationDictCaret, pdf.V15, true},
 		"Ink":            {validateAnnotationDictInk, pdf.V13, true},
-		"Popup":          {validateAnnotationDictPopup, pdf.V13, false},
+		"Popup":          {validateAnnotationDictPopup, pdf.V12, false}, // pdf.V13
 		"FileAttachment": {validateAnnotationDictFileAttachment, pdf.V13, true},
 		"Sound":          {validateAnnotationDictSound, pdf.V12, true},
 		"Movie":          {validateAnnotationDictMovie, pdf.V12, false},
@@ -1529,21 +1534,33 @@ func validatePageAnnotations(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 	// an optional TrapNetAnnotation has to be the final entry in this list.
 	hasTrapNet := false
 
+	var i int
+
+	if len(a) == 0 {
+		return nil
+	}
+
+	pgAnnots := pdf.PgAnnots{}
+	xRefTable.PageAnnots[xRefTable.CurPage] = pgAnnots
+
 	for _, v := range a {
 
 		if hasTrapNet {
 			return errors.New("pdfcpu: validatePageAnnotations: corrupted page annotation list, \"TrapNet\" has to be the last entry")
 		}
 
-		if ir, ok := v.(pdf.IndirectRef); ok {
+		var (
+			ok, hasIndRef bool
+			ir            pdf.IndirectRef
+		)
 
+		if ir, ok = v.(pdf.IndirectRef); ok {
+			hasIndRef = true
 			log.Validate.Printf("processing annotDict %d\n", ir.ObjectNumber)
-
 			annotsDict, err = xRefTable.DereferenceDict(ir)
 			if err != nil || annotsDict == nil {
 				return errors.New("pdfcpu: validatePageAnnotations: corrupted annotation dict")
 			}
-
 		} else if annotsDict, ok = v.(pdf.Dict); !ok {
 			return errors.New("pdfcpu: validatePageAnnotations: corrupted array of indrefs")
 		}
@@ -1553,6 +1570,26 @@ func validatePageAnnotations(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 			return err
 		}
 
+		// Collect annotations.
+		ann, err := xRefTable.Annotation(annotsDict)
+		if err != nil {
+			return err
+		}
+
+		annots, ok1 := pgAnnots[ann.Type()]
+		if !ok1 {
+			annots = pdf.AnnotMap{}
+			pgAnnots[ann.Type()] = annots
+		}
+
+		var k string
+		if hasIndRef {
+			k = ir.ObjectNumber.String()
+		} else {
+			k = fmt.Sprintf("?%d", i)
+			i++
+		}
+		annots[k] = ann
 	}
 
 	return nil

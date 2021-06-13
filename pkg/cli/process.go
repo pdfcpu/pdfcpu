@@ -38,6 +38,19 @@ func Process(cmd *Command) (out []string, err error) {
 	return nil, errors.Errorf("pdfcpu: process: Unknown command mode %d\n", cmd.Mode)
 }
 
+func processPageAnnotations(cmd *Command) (out []string, err error) {
+	switch cmd.Mode {
+
+	case pdfcpu.LISTANNOTATIONS:
+		out, err = ListAnnotations(cmd)
+
+	case pdfcpu.REMOVEANNOTATIONS:
+		out, err = RemoveAnnotations(cmd)
+	}
+
+	return out, err
+}
+
 func processAttachments(cmd *Command) (out []string, err error) {
 	switch cmd.Mode {
 

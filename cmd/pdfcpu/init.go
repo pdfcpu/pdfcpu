@@ -23,6 +23,14 @@ import (
 )
 
 func initCommandMap() {
+	annotsCmdMap := newCommandMap()
+	for k, v := range map[string]command{
+		"list":   {processListAnnotationsCommand, nil, "", ""},
+		"remove": {processRemoveAnnotationsCommand, nil, "", ""},
+	} {
+		annotsCmdMap.register(k, v)
+	}
+
 	attachCmdMap := newCommandMap()
 	for k, v := range map[string]command{
 		"list":    {processListAttachmentsCommand, nil, "", ""},
@@ -116,6 +124,7 @@ func initCommandMap() {
 	cmdMap = newCommandMap()
 
 	for k, v := range map[string]command{
+		"annotations":   {nil, annotsCmdMap, usageAnnots, usageLongAnnots},
 		"attachments":   {nil, attachCmdMap, usageAttach, usageLongAttach},
 		"booklet":       {processBookletCommand, nil, usageBooklet, usageLongBooklet},
 		"boxes":         {nil, boxesCmdMap, usageBoxes, usageLongBoxes},
@@ -172,7 +181,7 @@ func initFlags() {
 	flag.StringVar(&unit, "unit", "", unitUsage)
 	flag.StringVar(&unit, "u", "", unitUsage)
 
-	selectedPagesUsage := "a comma separated list of pages or page ranges, see pdfcpu help split/extract"
+	selectedPagesUsage := "a comma separated list of pages or page ranges, see pdfcpu selectedpages"
 	flag.StringVar(&selectedPages, "pages", "", selectedPagesUsage)
 	flag.StringVar(&selectedPages, "p", "", selectedPagesUsage)
 

@@ -306,7 +306,7 @@ func MergeXRefTables(ctxSource, ctxDest *Context) (err error) {
 	appendSourceObjectsToDest(ctxSource, ctxDest)
 
 	// Mark source's root object as free.
-	err = ctxDest.DeleteObject(int(ctxSource.Root.ObjectNumber))
+	err = ctxDest.turnEntryToFree(int(ctxSource.Root.ObjectNumber))
 	if err != nil {
 		return
 	}
@@ -314,7 +314,7 @@ func MergeXRefTables(ctxSource, ctxDest *Context) (err error) {
 	// Mark source's info object as free.
 	// Note: Any indRefs this info object depends on are missed.
 	if ctxSource.Info != nil {
-		err = ctxDest.DeleteObject(int(ctxSource.Info.ObjectNumber))
+		err = ctxDest.turnEntryToFree(int(ctxSource.Info.ObjectNumber))
 		if err != nil {
 			return
 		}

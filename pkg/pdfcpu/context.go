@@ -728,5 +728,10 @@ func (wc *WriteContext) WriteEol() error {
 }
 
 func (wc *WriteContext) IncrementWithObjNr(i int) {
+	for _, objNr := range wc.ObjNrs {
+		if objNr == i {
+			return
+		}
+	}
 	wc.ObjNrs = append(wc.ObjNrs, i)
 }

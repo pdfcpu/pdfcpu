@@ -23,7 +23,7 @@ func rotatePage(xRefTable *XRefTable, i, j int) error {
 	log.Debug.Printf("rotate page:%d\n", i)
 
 	consolidateRes := false
-	d, inhPAttrs, err := xRefTable.PageDict(i, consolidateRes)
+	d, _, inhPAttrs, err := xRefTable.PageDict(i, consolidateRes)
 	if err != nil {
 		return err
 	}

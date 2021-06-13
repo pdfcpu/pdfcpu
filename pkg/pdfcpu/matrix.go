@@ -37,6 +37,12 @@ func (m matrix) multiply(n matrix) matrix {
 	return p
 }
 
+func (m matrix) transform(p Point) Point {
+	x := p.X*m[0][0] + p.Y*m[1][0] + m[2][0]
+	y := p.X*m[0][1] + p.Y*m[1][1] + m[2][1]
+	return Point{x, y}
+}
+
 func (m matrix) String() string {
 	return fmt.Sprintf("%3.2f %3.2f %3.2f\n%3.2f %3.2f %3.2f\n%3.2f %3.2f %3.2f\n",
 		m[0][0], m[0][1], m[0][2],

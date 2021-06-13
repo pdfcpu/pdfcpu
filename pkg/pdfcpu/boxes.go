@@ -911,7 +911,7 @@ func (ctx *Context) RemovePageBoundaries(selectedPages IntSet, pb *PageBoundarie
 		if !v {
 			continue
 		}
-		d, inhPAttrs, err := ctx.PageDict(k, false)
+		d, _, inhPAttrs, err := ctx.PageDict(k, false)
 		if err != nil {
 			return err
 		}
@@ -1164,7 +1164,7 @@ func (ctx *Context) AddPageBoundaries(selectedPages IntSet, pb *PageBoundaries) 
 		if !v {
 			continue
 		}
-		d, inhPAttrs, err := ctx.PageDict(k, false)
+		d, _, inhPAttrs, err := ctx.PageDict(k, false)
 		if err != nil {
 			return err
 		}
@@ -1220,7 +1220,7 @@ func (ctx *Context) Crop(selectedPages IntSet, b *Box) error {
 		if !v {
 			continue
 		}
-		d, inhPAttrs, err := ctx.PageDict(k, false)
+		d, _, inhPAttrs, err := ctx.PageDict(k, false)
 		if err != nil {
 			return err
 		}
