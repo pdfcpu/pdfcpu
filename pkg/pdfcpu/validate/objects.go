@@ -681,7 +681,7 @@ func validateNameEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName
 
 	name, ok := o.(pdf.Name)
 	if !ok {
-		return nil, errors.Errorf("pdfcpu: validateNameEntry: dict=%s entry=%s invalid type", dictName, entryName)
+		return nil, errors.Errorf("pdfcpu: validateNameEntry: dict=%s entry=%s invalid type %T", dictName, entryName, o)
 	}
 
 	// Validation

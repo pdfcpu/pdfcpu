@@ -21,6 +21,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -29,6 +31,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ExtractImagesRaw returns []pdfcpu.Image containing io.Readers for images contained in selectedPages.
 func ExtractImagesRaw(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Configuration) ([]pdfcpu.Image, error) {
 	if rs == nil {
 		return nil, errors.New("pdfcpu: ExtractImages: Please provide rs")
@@ -74,20 +77,74 @@ func ExtractImagesRaw(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Con
 	return images, nil
 }
 
-// ExtractImages dumps embedded image resources from rs into outDir for selected pages.
-func ExtractImages(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, conf *pdfcpu.Configuration) error {
-	imgs, err := ExtractImagesRaw(rs, selectedPages, conf)
+// ExtractImages extracts and digests embedded image resources from rs for selected pages.
+func ExtractImages(rs io.ReadSeeker, selectedPages []string, digestImage func(pdfcpu.Image, bool, int) error, conf *pdfcpu.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: ExtractImages: Please provide rs")
+	}
+	if conf == nil {
+		conf = pdfcpu.NewDefaultConfiguration()
+	}
+
+	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, time.Now())
 	if err != nil {
 		return err
 	}
-	for _, img := range imgs {
-		outFile := filepath.Join(outDir, fmt.Sprintf("%s_%d_%s.%s", fileName, img.PageNr, img.Name, img.Type))
-		log.CLI.Printf("writing %s\n", outFile)
-		if err := pdfcpu.WriteReader(outFile, img); err != nil {
+
+	if err := ctx.EnsurePageCount(); err != nil {
+		return err
+	}
+
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
+	if err != nil {
+		return err
+	}
+
+	pageNrs := []int{}
+	for k, v := range pages {
+		if !v {
+			continue
+		}
+		pageNrs = append(pageNrs, k)
+	}
+
+	sort.Ints(pageNrs)
+	maxPageDigits := len(strconv.Itoa(pageNrs[len(pageNrs)-1]))
+
+	for _, i := range pageNrs {
+		ii, err := ctx.ExtractPageImages(i)
+		if err != nil {
 			return err
 		}
+		singleImgPerPage := len(ii) == 1
+		for _, img := range ii {
+			if err := digestImage(img, singleImgPerPage, maxPageDigits); err != nil {
+				return err
+			}
+		}
 	}
+
 	return nil
+}
+
+func writeImageToDisk(outDir, fileName string) func(pdfcpu.Image, bool, int) error {
+	return func(img pdfcpu.Image, singleImgPerPage bool, maxPageDigits int) error {
+		s := "%s_%" + fmt.Sprintf("0%dd", maxPageDigits)
+		qual := img.Name
+		if img.Thumb {
+			qual = "thumb"
+		}
+		f := fmt.Sprintf(s+"_%s.%s", fileName, img.PageNr, qual, img.Type)
+		if singleImgPerPage {
+			if img.Thumb {
+				s += "_" + qual
+			}
+			f = fmt.Sprintf(s+".%s", fileName, img.PageNr, img.Type)
+		}
+		outFile := filepath.Join(outDir, f)
+		log.CLI.Printf("writing %s\n", outFile)
+		return pdfcpu.WriteReader(outFile, img)
+	}
 }
 
 // ExtractImagesFile dumps embedded image resources from inFile into outDir for selected pages.
@@ -99,7 +156,7 @@ func ExtractImagesFile(inFile, outDir string, selectedPages []string, conf *pdfc
 	defer f.Close()
 	log.CLI.Printf("extracting images from %s into %s/ ...\n", inFile, outDir)
 	fileName := strings.TrimSuffix(filepath.Base(inFile), ".pdf")
-	return ExtractImages(f, outDir, fileName, selectedPages, conf)
+	return ExtractImages(f, selectedPages, writeImageToDisk(outDir, fileName), conf)
 }
 
 // ExtractFonts dumps embedded fontfiles from rs into outDir for selected pages.

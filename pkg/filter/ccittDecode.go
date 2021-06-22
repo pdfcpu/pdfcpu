@@ -29,7 +29,7 @@ type ccittDecode struct {
 	baseFilter
 }
 
-// Encode implements encoding for an CCITTDecode filter.
+// Encode implements encoding for a CCITTDecode filter.
 func (f ccittDecode) Encode(r io.Reader) (io.Reader, error) {
 	// TODO
 	return nil, nil

@@ -83,7 +83,7 @@ func TestFilterSupport(t *testing.T) {
 		{filter.LZW, nil},
 		{filter.Flate, nil},
 		{filter.CCITTFax, nil},
-		{filter.DCT, filter.ErrUnsupportedFilter},
+		{filter.DCT, nil},
 		{filter.JBIG2, filter.ErrUnsupportedFilter},
 		{filter.JPX, filter.ErrUnsupportedFilter},
 		{"INVALID_FILTER", errors.New("Invalid filter: <INVALID_FILTER>")},

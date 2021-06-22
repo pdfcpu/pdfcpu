@@ -18,11 +18,13 @@ package pdfcpu
 
 import (
 	"bytes"
+	"encoding/gob"
 	"image"
 	"image/color"
 	"image/png"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/hhrutter/tiff"
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
@@ -43,12 +45,14 @@ type colValRange struct {
 
 // PDFImage represents a XObject of subtype image.
 type PDFImage struct {
-	objNr    int
-	sd       *StreamDict
-	bpc      int
-	w, h     int
-	softMask []byte
-	decode   []colValRange
+	objNr     int
+	sd        *StreamDict
+	bpc       int
+	w, h      int
+	softMask  []byte
+	decode    []colValRange
+	imageMask bool
+	thumb     bool
 }
 
 func decodeArr(a Array) []colValRange {
@@ -84,7 +88,7 @@ func decodeArr(a Array) []colValRange {
 	return decode
 }
 
-func pdfImage(xRefTable *XRefTable, sd *StreamDict, objNr int) (*PDFImage, error) {
+func pdfImage(xRefTable *XRefTable, sd *StreamDict, thumb bool, objNr int) (*PDFImage, error) {
 
 	bpc := *sd.IntEntry("BitsPerComponent")
 	//if bpc == 16 {
@@ -97,19 +101,26 @@ func pdfImage(xRefTable *XRefTable, sd *StreamDict, objNr int) (*PDFImage, error
 	decode := decodeArr(sd.ArrayEntry("Decode"))
 	//fmt.Printf("decode: %v\n", decode)
 
+	var imgMask bool
+	if im := sd.BooleanEntry("ImageMask"); im != nil && *im {
+		imgMask = true
+	}
+
 	sm, err := softMask(xRefTable, sd, w, h, objNr)
 	if err != nil {
 		return nil, err
 	}
 
 	return &PDFImage{
-		objNr:    objNr,
-		sd:       sd,
-		bpc:      bpc,
-		w:        w,
-		h:        h,
-		softMask: sm,
-		decode:   decode,
+		objNr:     objNr,
+		sd:        sd,
+		bpc:       bpc,
+		w:         w,
+		h:         h,
+		imageMask: imgMask,
+		softMask:  sm,
+		decode:    decode,
+		thumb:     thumb,
 	}, nil
 }
 
@@ -171,21 +182,29 @@ func streamBytes(sd *StreamDict) ([]byte, error) {
 		return sd.Content, nil
 	}
 
-	// Ignore filter chains with length > 1
-	if len(fpl) > 1 {
-		log.Info.Printf("streamBytes: more than 1 filter\n")
-		return nil, nil
+	var fName string
+	var s []string
+	for _, filter := range fpl {
+		s = append(s, filter.Name)
+		fName = filter.Name
 	}
+	filters := strings.Join(s, ",")
 
-	switch fpl[0].Name {
+	f := fName
 
-	case filter.Flate:
+	switch f {
+
+	case filter.DCT, filter.Flate, filter.CCITTFax, filter.ASCII85, filter.RunLength:
+		// If color space is CMYK then write .tif else write .png
 		if err := sd.Decode(); err != nil {
 			return nil, err
 		}
 
+	case filter.JPX:
+		//imageObj.Extension = "jpx"
+
 	default:
-		log.Debug.Printf("streamBytes: filter not \"Flate\": %s\n", fpl[0].Name)
+		log.Debug.Printf("streamBytes: skip img, filter %s unsupported\n", filters)
 		return nil, nil
 	}
 
@@ -262,7 +281,7 @@ func renderDeviceCMYKToTIFF(im *PDFImage, resourceName string) (*Image, error) {
 	if err := tiff.Encode(&buf, img, nil); err != nil {
 		return nil, err
 	}
-	return &Image{&buf, 0, resourceName, "tif"}, nil
+	return &Image{&buf, 0, resourceName, im.thumb, "tif"}, nil
 }
 
 func renderDeviceGrayToPNG(im *PDFImage, resourceName string) (*Image, error) {
@@ -286,7 +305,11 @@ func renderDeviceGrayToPNG(im *PDFImage, resourceName string) (*Image, error) {
 			p := b[i]
 			for j := 0; j < 8/im.bpc; j++ {
 				pix := p >> (8 - uint8(im.bpc))
-				v := decodePixelColorValue(pix, im.bpc, 0, im.decode)
+				var dec []colValRange
+				if !im.imageMask {
+					dec = im.decode
+				}
+				v := decodePixelColorValue(pix, im.bpc, 0, dec)
 				//fmt.Printf("x=%d y=%d pix=#%02x v=#%02x\n", x, y, pix, v)
 				img.Set(x, y, color.Gray{Y: v})
 				p <<= uint8(im.bpc)
@@ -300,7 +323,7 @@ func renderDeviceGrayToPNG(im *PDFImage, resourceName string) (*Image, error) {
 	if err := png.Encode(&buf, img); err != nil {
 		return nil, err
 	}
-	return &Image{&buf, 0, resourceName, "png"}, nil
+	return &Image{&buf, 0, resourceName, im.thumb, "png"}, nil
 }
 
 func renderDeviceRGBToPNG(im *PDFImage, resourceName string) (*Image, error) {
@@ -334,7 +357,7 @@ func renderDeviceRGBToPNG(im *PDFImage, resourceName string) (*Image, error) {
 	if err := png.Encode(&buf, img); err != nil {
 		return nil, err
 	}
-	return &Image{&buf, 0, resourceName, "png"}, nil
+	return &Image{&buf, 0, resourceName, im.thumb, "png"}, nil
 }
 
 func ensureDeviceRGBCS(xRefTable *XRefTable, o Object) bool {
@@ -380,7 +403,7 @@ func renderCalRGBToPNG(im *PDFImage, resourceName string) (*Image, error) {
 	if err := png.Encode(&buf, img); err != nil {
 		return nil, err
 	}
-	return &Image{&buf, 0, resourceName, "png"}, nil
+	return &Image{&buf, 0, resourceName, im.thumb, "png"}, nil
 }
 
 func renderICCBased(xRefTable *XRefTable, im *PDFImage, resourceName string, cs Array) (*Image, error) {
@@ -434,9 +457,8 @@ func renderIndexedRGBToPNG(im *PDFImage, resourceName string, lookup []byte) (*I
 
 	img := image.NewNRGBA(image.Rect(0, 0, im.w, im.h))
 
-	// TODO handle decode.
-
 	i := 0
+	// TODO: For (some) Runlength encoded images the line sequence is reversed.
 	for y := 0; y < im.h; y++ {
 		for x := 0; x < im.w; {
 			p := b[i]
@@ -460,7 +482,7 @@ func renderIndexedRGBToPNG(im *PDFImage, resourceName string, lookup []byte) (*I
 	if err := png.Encode(&buf, img); err != nil {
 		return nil, err
 	}
-	return &Image{&buf, 0, resourceName, "png"}, nil
+	return &Image{&buf, 0, resourceName, im.thumb, "png"}, nil
 }
 
 func renderIndexedCMYKToTIFF(im *PDFImage, resourceName string, lookup []byte) (*Image, error) {
@@ -492,7 +514,7 @@ func renderIndexedCMYKToTIFF(im *PDFImage, resourceName string, lookup []byte) (
 	if err := tiff.Encode(&buf, img, nil); err != nil {
 		return nil, err
 	}
-	return &Image{&buf, 0, resourceName, "tif"}, nil
+	return &Image{&buf, 0, resourceName, im.thumb, "tif"}, nil
 }
 
 func renderIndexedNameCS(im *PDFImage, resourceName string, cs Name, maxInd int, lookup []byte) (*Image, error) {
@@ -565,7 +587,7 @@ func renderIndexedArrayCS(xRefTable *XRefTable, im *PDFImage, resourceName strin
 			if err := png.Encode(&buf, img); err != nil {
 				return nil, err
 			}
-			return &Image{&buf, 0, "", "png"}, nil
+			return &Image{&buf, 0, resourceName, im.thumb, "png"}, nil
 
 		case 3:
 			// RGB
@@ -624,9 +646,11 @@ func renderIndexed(xRefTable *XRefTable, im *PDFImage, resourceName string, cs A
 	return nil, nil
 }
 
-func renderFlateEncodedImage(xRefTable *XRefTable, sd *StreamDict, resourceName string, objNr int) (*Image, error) {
+func renderFlateEncodedImage(xRefTable *XRefTable, sd *StreamDict, thumb bool, resourceName string, objNr int) (*Image, error) {
 
-	pdfImage, err := pdfImage(xRefTable, sd, objNr)
+	// If color space is CMYK then write .tif else write .png
+
+	pdfImage, err := pdfImage(xRefTable, sd, thumb, objNr)
 	if err != nil {
 		return nil, err
 	}
@@ -677,22 +701,99 @@ func renderFlateEncodedImage(xRefTable *XRefTable, sd *StreamDict, resourceName 
 	return nil, nil
 }
 
-// RenderImage returns a reader for the encoded image bytes.
-// for extract
-func RenderImage(xRefTable *XRefTable, sd *StreamDict, resourceName string, objNr int) (*Image, error) {
-	switch sd.FilterPipeline[0].Name {
+func renderDeviceCMYKToPng(im *PDFImage, resourceName string) (*Image, error) {
 
-	case filter.Flate, filter.CCITTFax:
-		// If color space is CMYK then write .tif else write .png
-		return renderFlateEncodedImage(xRefTable, sd, resourceName, objNr)
+	bb := bytes.NewReader(im.sd.Content)
+	dec := gob.NewDecoder(bb)
+
+	var img image.CMYK
+	if err := dec.Decode(&img); err != nil {
+		return nil, err
+	}
+
+	img1 := image.NewRGBA(image.Rect(0, 0, im.w, im.h))
+
+	for y := 0; y < im.h; y++ {
+		for x := 0; x < im.w; x++ {
+			c := img.At(x, y)
+			a := c.(color.CMYK)
+			r, g, b := color.CMYKToRGB(255-a.C, 255-a.M, 255-a.Y, 255-a.K)
+			img1.SetRGBA(x, y, color.RGBA{r, g, b, 255})
+		}
+	}
+
+	var buf bytes.Buffer
+
+	if err := png.Encode(&buf, img1); err != nil {
+		return nil, err
+	}
+
+	return &Image{&buf, 0, resourceName, im.thumb, "png"}, nil
+}
+
+func renderDCTEncodedImage(xRefTable *XRefTable, sd *StreamDict, thumb bool, resourceName string, objNr int) (*Image, error) {
+
+	im, err := pdfImage(xRefTable, sd, thumb, objNr)
+	if err != nil {
+		return nil, err
+	}
+
+	o, err := xRefTable.DereferenceDictEntry(sd.Dict, "ColorSpace")
+	if err != nil {
+		return nil, err
+	}
+
+	switch cs := o.(type) {
+
+	case Name:
+		switch cs {
+
+		case DeviceCMYKCS:
+			return renderDeviceCMYKToPng(im, resourceName)
+
+		// case DeviceRGBCS:
+		// 	fmt.Println("DeviceRGBCS")
+		// 	return renderDeviceRGBToPNG(im, resourceName)
+
+		default:
+			//fmt.Printf("renderDCTEncodedImage: objNr=%d, colorspace: %s\n", objNr, cs.String())
+		}
+
+	}
+
+	bb := bytes.NewReader(im.sd.Content)
+	dec := gob.NewDecoder(bb)
+
+	var img image.YCbCr
+	if err := dec.Decode(&img); err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, &img); err != nil {
+		return nil, err
+	}
+
+	return &Image{&buf, 0, resourceName, im.thumb, "png"}, nil
+}
+
+// RenderImage returns a reader for a decoded image stream.
+func RenderImage(xRefTable *XRefTable, sd *StreamDict, thumb bool, resourceName string, objNr int) (*Image, error) {
+
+	// The real image compression is the last filter in the pipeline.
+	f := sd.FilterPipeline[len(sd.FilterPipeline)-1].Name
+
+	switch f {
+
+	case filter.Flate, filter.CCITTFax, filter.RunLength:
+		return renderFlateEncodedImage(xRefTable, sd, thumb, resourceName, objNr)
 
 	case filter.DCT:
-		// Write original stream data.
-		return &Image{bytes.NewReader(sd.Raw), 0, resourceName, "jpg"}, nil
+		return renderDCTEncodedImage(xRefTable, sd, thumb, resourceName, objNr)
 
 	case filter.JPX:
-		// Write original stream data.
-		return &Image{bytes.NewReader(sd.Raw), 0, resourceName, "jpx"}, nil
+		// Exception: Write original encoded stream data.
+		return &Image{bytes.NewReader(sd.Raw), 0, resourceName, thumb, "jpx"}, nil
 	}
 
 	return nil, nil
@@ -710,8 +811,8 @@ func WriteReader(path string, r io.Reader) error {
 }
 
 // WriteImage writes a PDF image object to disk.
-func WriteImage(xRefTable *XRefTable, fileName string, sd *StreamDict, objNr int) (string, error) {
-	img, err := RenderImage(xRefTable, sd, fileName, objNr)
+func WriteImage(xRefTable *XRefTable, fileName string, sd *StreamDict, thumb bool, objNr int) (string, error) {
+	img, err := RenderImage(xRefTable, sd, thumb, fileName, objNr)
 	if err != nil {
 		return "", err
 	}

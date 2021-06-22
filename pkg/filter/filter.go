@@ -69,8 +69,7 @@ func NewFilter(filterName string, parms map[string]int) (filter Filter, err erro
 		filter = ccittDecode{baseFilter{parms}}
 
 	case DCT:
-		// Unsupported
-		fallthrough
+		filter = dctDecode{baseFilter{parms}}
 
 	case JBIG2:
 		// Unsupported

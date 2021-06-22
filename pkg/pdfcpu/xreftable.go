@@ -119,6 +119,9 @@ type XRefTable struct {
 	// Page annotation cache
 	PageAnnots map[int]PgAnnots
 
+	// Thumbnail images
+	PageThumbs map[int]IndirectRef
+
 	// Offspec section
 	AdditionalStreams *Array // array of IndirectRef - trailer :e.g., Oasis "Open Doc"
 
@@ -147,6 +150,7 @@ func newXRefTable(validationMode int, validateLinks bool) (xRefTable *XRefTable)
 		Properties:        map[string]string{},
 		LinearizationObjs: IntSet{},
 		PageAnnots:        map[int]PgAnnots{},
+		PageThumbs:        map[int]IndirectRef{},
 		Stats:             NewPDFStats(),
 		ValidationMode:    validationMode,
 		ValidateLinks:     validateLinks,

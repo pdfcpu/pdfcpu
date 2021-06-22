@@ -90,6 +90,7 @@ func createFlateImageObject(xRefTable *XRefTable, buf, sm []byte, w, h, bpc int,
 		}
 	}
 
+	// Create Flate stream dict.
 	sd, _ := xRefTable.NewStreamDictForBuf(buf)
 	sd.InsertName("Type", "XObject")
 	sd.InsertName("Subtype", "Image")
@@ -139,9 +140,12 @@ func createDCTImageObject(xRefTable *XRefTable, buf []byte, w, h, bpc int, cs st
 
 	sd.InsertName("Filter", filter.DCT)
 
+	// Calling Encode without FilterPipeline ensures an encoded stream in sd.Raw.
 	if err := sd.Encode(); err != nil {
 		return nil, err
 	}
+
+	sd.Content = nil
 
 	sd.FilterPipeline = []PDFFilter{{Name: filter.DCT, DecodeParms: nil}}
 

@@ -58,6 +58,13 @@ func (f ascii85Decode) Decode(r io.Reader) (io.Reader, error) {
 		return nil, err
 	}
 
+	// fmt.Printf("dump:\n%s", hex.Dump(p))
+
+	l := len(p)
+	if p[l-1] == 0x0A || p[l-1] == 0x0D {
+		p = p[:l-1]
+	}
+
 	if !bytes.HasSuffix(p, []byte(eodASCII85)) {
 		return nil, errors.New("pdfcpu: Decode: missing eod marker")
 	}

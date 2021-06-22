@@ -362,6 +362,12 @@ func (ctx *Context) InfoDigest(selectedPages IntSet) ([]string, error) {
 	}
 	ss = append(ss, fmt.Sprintf("         Watermarked: %s", s))
 
+	s = "No"
+	if len(ctx.PageThumbs) > 0 {
+		s = "Yes"
+	}
+	ss = append(ss, fmt.Sprintf("          Thumbnails: %s", s))
+
 	ss = append(ss, fmt.Sprintf(separator))
 
 	s = "No"

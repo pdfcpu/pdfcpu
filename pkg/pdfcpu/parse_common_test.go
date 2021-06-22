@@ -81,7 +81,7 @@ func TestParseObject(t *testing.T) {
 	doTestParseObjectOK("<</Key1<ABC>>>", t)
 	doTestParseObjectOK("<</Key1<0ab>>>", t)
 	doTestParseObjectOK("<</Key<>>>", t)
-	doTestParseObjectFail("<>", t)
+	doTestParseObjectOK("<>", t)
 
 	doTestParseObjectOK("()", t)
 	doTestParseObjectOK("(gopher\\\x28go)", t)

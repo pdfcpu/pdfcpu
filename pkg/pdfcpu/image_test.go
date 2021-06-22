@@ -87,8 +87,17 @@ func streamDictForJPGFile(xRefTable *XRefTable, fileName string) (*StreamDict, e
 
 	}
 
-	// Preserve the original JPG encoded data.
-	return createDCTImageObject(xRefTable, bb, c.Width, c.Height, 8, cs)
+	sd, err := createDCTImageObject(xRefTable, bb, c.Width, c.Height, 8, cs)
+	if err != nil {
+		return nil, err
+	}
+
+	// Ensure decoded image stream.
+	if err := sd.Decode(); err != nil {
+		return nil, err
+	}
+
+	return sd, nil
 }
 
 func streamDictForImageFile(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
@@ -181,7 +190,7 @@ func TestReadWritePNGAndWEBP(t *testing.T) {
 
 		// Write the image object (as PNG file) to disk.
 		// fn1 is the resulting fileName path including the suffix (aka filetype extension).
-		fn1, err := WriteImage(xRefTable, tmpFileName1, sd, 0)
+		fn1, err := WriteImage(xRefTable, tmpFileName1, sd, false, 0)
 		if err != nil {
 			t.Fatalf("err: %v\n", err)
 		}
@@ -196,7 +205,7 @@ func TestReadWritePNGAndWEBP(t *testing.T) {
 		}
 
 		// Write the image object (as PNG file) to disk.s
-		fn2, err := WriteImage(xRefTable, tmpFileName1+"2", sd, 0)
+		fn2, err := WriteImage(xRefTable, tmpFileName1+"2", sd, false, 0)
 		if err != nil {
 			t.Fatalf("err: %v\n", err)
 		}
@@ -267,7 +276,7 @@ func TestReadDeviceGrayWritePNG(t *testing.T) {
 	tmpFile1 := filepath.Join(outDir, filename)
 
 	// Write the image object as PNG file.
-	fn1, err := WriteImage(xRefTable, tmpFile1, sd, 0)
+	fn1, err := WriteImage(xRefTable, tmpFile1, sd, false, 0)
 	if err != nil {
 		t.Fatalf("err: %v\n", err)
 	}
@@ -286,7 +295,7 @@ func TestReadDeviceGrayWritePNG(t *testing.T) {
 	tmpFile2 := filepath.Join(outDir, filename+"2")
 
 	// Write the image object as PNG file.
-	fn2, err := WriteImage(xRefTable, tmpFile2, sd, 0)
+	fn2, err := WriteImage(xRefTable, tmpFile2, sd, false, 0)
 	if err != nil {
 		t.Fatalf("err: %v\n", err)
 	}
@@ -359,7 +368,7 @@ func TestReadCMYKWriteTIFF(t *testing.T) {
 	tmpFile1 := filepath.Join(outDir, filename)
 
 	// Write the image object as TIFF file.
-	fn1, err := WriteImage(xRefTable, tmpFile1, sd, 0)
+	fn1, err := WriteImage(xRefTable, tmpFile1, sd, false, 0)
 	if err != nil {
 		t.Errorf("err: %v\n", err)
 	}
@@ -373,7 +382,7 @@ func TestReadCMYKWriteTIFF(t *testing.T) {
 	tmpFile2 := filepath.Join(outDir, filename+"2")
 
 	// Write the image object as TIFF file.
-	fn2, err := WriteImage(xRefTable, tmpFile2, sd, 0)
+	fn2, err := WriteImage(xRefTable, tmpFile2, sd, false, 0)
 	if err != nil {
 		t.Errorf("err: %v\n", err)
 	}
@@ -410,7 +419,7 @@ func TestReadTIFFWritePNG(t *testing.T) {
 
 	// Write the image object (as PNG file) to disk.
 	// fn1 is the resulting fileName path including the suffix (aka filetype extension).
-	fn1, err := WriteImage(xRefTable, tmpFileName1, sd, 0)
+	fn1, err := WriteImage(xRefTable, tmpFileName1, sd, false, 0)
 	if err != nil {
 		t.Fatalf("err: %v\n", err)
 	}
@@ -425,7 +434,7 @@ func TestReadTIFFWritePNG(t *testing.T) {
 	}
 
 	// Write the image object (as PNG file) to disk.
-	fn2, err := WriteImage(xRefTable, tmpFileName1+"2", sd, 0)
+	fn2, err := WriteImage(xRefTable, tmpFileName1+"2", sd, false, 0)
 	if err != nil {
 		t.Fatalf("err: %v\n", err)
 	}
@@ -458,7 +467,7 @@ func TestReadWriteJPEG(t *testing.T) {
 
 	// Write the image object (as .jpg file) to disk.
 	// fn is the resulting fileName path including the suffix (aka filetype extension).
-	fn, err := WriteImage(xRefTable, tmpFileName1, sd, 0)
+	fn, err := WriteImage(xRefTable, tmpFileName1, sd, false, 0)
 	if err != nil {
 		t.Fatalf("err: %v\n", err)
 	}

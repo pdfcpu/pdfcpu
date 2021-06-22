@@ -263,7 +263,15 @@ func validatePageEntryThumb(xRefTable *pdf.XRefTable, d pdf.Dict, required bool,
 		return err
 	}
 
-	return validateXObjectStreamDict(xRefTable, *sd)
+	if err := validateXObjectStreamDict(xRefTable, *sd); err != nil {
+		return err
+	}
+
+	indRef := d.IndirectRefEntry("Thumb")
+	xRefTable.PageThumbs[xRefTable.CurPage] = *indRef
+	//fmt.Printf("adding thumb page:%d obj#:%d\n", xRefTable.CurPage, indRef.ObjectNumber.Value())
+
+	return nil
 }
 
 func validatePageEntryB(xRefTable *pdf.XRefTable, d pdf.Dict, required bool, sinceVersion pdf.Version) error {
@@ -714,6 +722,9 @@ func validatePageEntryVP(xRefTable *pdf.XRefTable, d pdf.Dict, required bool, si
 
 	// see table 260
 
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		sinceVersion = pdf.V15
+	}
 	a, err := validateArrayEntry(xRefTable, d, "pagesDict", "VP", required, sinceVersion, nil)
 	if err != nil || a == nil {
 		return err
@@ -900,12 +911,12 @@ func validateResources(xRefTable *pdf.XRefTable, d pdf.Dict) (hasResources bool,
 	return validateResourceDict(xRefTable, o)
 }
 
-func validatePagesDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNr, genNumber int, hasResources, hasMediaBox bool) error {
+func validatePagesDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNr, genNumber int, hasResources, hasMediaBox bool, curPage int) (int, error) {
 
 	// Resources and Mediabox are inherited.
 	dHasResources, dHasMediaBox, err := validatePagesDictGeneralEntries(xRefTable, d)
 	if err != nil {
-		return err
+		return curPage, err
 	}
 
 	if dHasResources {
@@ -919,7 +930,7 @@ func validatePagesDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNr, genNumber in
 	// Iterate over page tree.
 	kidsArray := d.ArrayEntry("Kids")
 	if kidsArray == nil {
-		return errors.New("pdfcpu: validatePagesDict: corrupt \"Kids\" entry")
+		return curPage, errors.New("pdfcpu: validatePagesDict: corrupt \"Kids\" entry")
 	}
 
 	for _, o := range kidsArray {
@@ -931,7 +942,7 @@ func validatePagesDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNr, genNumber in
 		// Dereference next page node dict.
 		ir, ok := o.(pdf.IndirectRef)
 		if !ok {
-			return errors.New("pdfcpu: validatePagesDict: missing indirect reference for kid")
+			return curPage, errors.New("pdfcpu: validatePagesDict: missing indirect reference for kid")
 		}
 
 		log.Validate.Printf("validatePagesDict: PageNode: %s\n", ir)
@@ -941,41 +952,43 @@ func validatePagesDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNr, genNumber in
 
 		pageNodeDict, err := xRefTable.DereferenceDict(ir)
 		if err != nil {
-			return err
+			return curPage, err
 		}
 
 		// Validate this kid's parent.
 		parentIndRef := pageNodeDict.IndirectRefEntry("Parent")
 		if parentIndRef.ObjectNumber.Value() != objNr {
-			return errors.New("pdfcpu: validatePagesDict: corrupt parent node")
+			return curPage, errors.New("pdfcpu: validatePagesDict: corrupt parent node")
 		}
 
 		dictType, err := dictTypeForPageNodeDict(pageNodeDict)
 		if err != nil {
-			return err
+			return curPage, err
 		}
 
 		switch dictType {
 
 		case "Pages":
 			// Recurse over pagetree
-			err = validatePagesDict(xRefTable, pageNodeDict, objNumber, genNumber, hasResources, hasMediaBox)
+			curPage, err = validatePagesDict(xRefTable, pageNodeDict, objNumber, genNumber, hasResources, hasMediaBox, curPage)
 
 		case "Page":
+			curPage++
+			xRefTable.CurPage = curPage
 			err = validatePageDict(xRefTable, pageNodeDict, objNumber, genNumber, hasResources, hasMediaBox)
 
 		default:
-			return errors.Errorf("pdfcpu: validatePagesDict: Unexpected dict type: %s", dictType)
+			return curPage, errors.Errorf("pdfcpu: validatePagesDict: Unexpected dict type: %s", dictType)
 
 		}
 
 		if err != nil {
-			return err
+			return curPage, err
 		}
 
 	}
 
-	return nil
+	return curPage, nil
 }
 
 func validatePages(xRefTable *pdf.XRefTable, rootDict pdf.Dict) (pdf.Dict, error) {
@@ -1001,7 +1014,7 @@ func validatePages(xRefTable *pdf.XRefTable, rootDict pdf.Dict) (pdf.Dict, error
 	}
 
 	// Process page node tree.
-	err = validatePagesDict(xRefTable, rootPageNodeDict, objNumber, genNumber, false, false)
+	_, err = validatePagesDict(xRefTable, rootPageNodeDict, objNumber, genNumber, false, false, 0)
 	if err != nil {
 		return nil, err
 	}

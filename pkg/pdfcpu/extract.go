@@ -31,6 +31,7 @@ type Image struct {
 	io.Reader
 	PageNr int
 	Name   string // Resource name
+	Thumb  bool
 	Type   string // File type
 }
 
@@ -47,34 +48,35 @@ func (ctx *Context) ImageObjNrs(pageNr int) []int {
 	return objNrs
 }
 
-// ExtractImage extracts an image from image dict referenced by objNr.
+// ExtractImage extracts an image from sd.
 // Supported imgTypes: FlateDecode, DCTDecode, JPXDecode
-func (ctx *Context) ExtractImage(objNr int) (*Image, error) {
-	imageObj := ctx.Optimize.ImageObjects[objNr]
+func (ctx *Context) ExtractImage(sd *StreamDict, thumb bool, resourceId string, objNr int) (*Image, error) {
+	//imageObj := ctx.Optimize.ImageObjects[objNr]
 
-	imageDict := imageObj.ImageDict
+	// Get also imageDict for Thumb.
 
-	fpl := imageDict.FilterPipeline
+	//imageDict := imageObj.ImageDict
+	if sd == nil {
+		return nil, nil
+	}
+
+	fpl := sd.FilterPipeline
 	if fpl == nil {
 		return nil, nil
 	}
 
+	var fName string
 	var s []string
 	for _, filter := range fpl {
 		s = append(s, filter.Name)
+		fName = filter.Name
 	}
 	filters := strings.Join(s, ",")
 
-	// Ignore filter chains with length > 1
-	if len(fpl) > 1 {
-		log.Info.Printf("ExtractImage(%d): skip img with more than 1 filter: %s\n", objNr, filters)
-		return nil, nil
-	}
+	f := fName
 
-	f := fpl[0].Name
-
-	// We do not extract imageMasks with the exception of CCITTDecoded images
-	if im := imageDict.BooleanEntry("ImageMask"); im != nil && *im {
+	// We do not extract imageMasks with the exception of CCITTDecoded images.
+	if im := sd.BooleanEntry("ImageMask"); im != nil && *im {
 		if f != filter.CCITTFax {
 			log.Info.Printf("ExtractImage(%d): skip img with imageMask\n", objNr)
 			return nil, nil
@@ -88,29 +90,26 @@ func (ctx *Context) ExtractImage(objNr int) (*Image, error) {
 	// }
 
 	// Ignore if image has a Mask defined.
-	if sm, _ := imageDict.Find("Mask"); sm != nil {
+	if sm, _ := sd.Find("Mask"); sm != nil {
 		log.Info.Printf("ExtractImage(%d): skip image, unsupported \"Mask\"\n", objNr)
 		return nil, nil
 	}
 
-	// CCITTDecoded images sometimes don't have a ColorSpace attribute.
+	// CCITTDecoded image (bit) masks don't have a ColorSpace attribute, but we render image files.
 	if f == filter.CCITTFax {
-		_, err := ctx.DereferenceDictEntry(imageDict.Dict, "ColorSpace")
+		_, err := ctx.DereferenceDictEntry(sd.Dict, "ColorSpace")
 		if err != nil {
-			imageDict.InsertName("ColorSpace", DeviceGrayCS)
+			sd.InsertName("ColorSpace", DeviceGrayCS)
 		}
 	}
 
 	switch f {
 
-	case filter.Flate, filter.CCITTFax:
+	case filter.DCT, filter.Flate, filter.CCITTFax, filter.RunLength:
 		// If color space is CMYK then write .tif else write .png
-		if err := imageDict.Decode(); err != nil {
+		if err := sd.Decode(); err != nil {
 			return nil, err
 		}
-
-	case filter.DCT:
-		//imageObj.Extension = "jpg"
 
 	case filter.JPX:
 		//imageObj.Extension = "jpx"
@@ -120,15 +119,32 @@ func (ctx *Context) ExtractImage(objNr int) (*Image, error) {
 		return nil, nil
 	}
 
-	resourceName := imageObj.ResourceNames[0]
-	return RenderImage(ctx.XRefTable, imageDict, resourceName, objNr)
+	//resourceName := imageObj.ResourceNames[0]
+	return RenderImage(ctx.XRefTable, sd, thumb, resourceId, objNr)
 }
 
 // ExtractPageImages extracts all images used by pageNr.
 func (ctx *Context) ExtractPageImages(pageNr int) ([]Image, error) {
 	ii := []Image{}
 	for _, objNr := range ctx.ImageObjNrs(pageNr) {
-		i, err := ctx.ExtractImage(objNr)
+		imageObj := ctx.Optimize.ImageObjects[objNr]
+		i, err := ctx.ExtractImage(imageObj.ImageDict, false, imageObj.ResourceNames[0], objNr)
+		if err != nil {
+			return nil, err
+		}
+		if i != nil {
+			i.PageNr = pageNr
+			ii = append(ii, *i)
+		}
+	}
+	// Extract thumbnail for pageNr
+	if indRef, ok := ctx.PageThumbs[pageNr]; ok {
+		objNr := indRef.ObjectNumber.Value()
+		sd, _, err := ctx.DereferenceStreamDict(indRef)
+		if err != nil {
+			return nil, err
+		}
+		i, err := ctx.ExtractImage(sd, true, "", objNr)
 		if err != nil {
 			return nil, err
 		}

@@ -399,7 +399,6 @@ func parseStringLiteral(line *string) (Object, error) {
 }
 
 func parseHexLiteral(line *string) (Object, error) {
-	// hexliterals have no whitespace and can't be empty.
 	if line == nil || len(*line) == 0 {
 		return nil, errBufNotAvailable
 	}
@@ -408,7 +407,7 @@ func parseHexLiteral(line *string) (Object, error) {
 
 	log.Parse.Printf("parseHexLiteral: %s\n", l)
 
-	if len(l) < 3 || !strings.HasPrefix(l, "<") {
+	if len(l) < 2 || !strings.HasPrefix(l, "<") {
 		return nil, errHexLiteralCorrupt
 	}
 
