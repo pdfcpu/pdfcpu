@@ -1590,19 +1590,6 @@ func contentBytesForPageRotation(wm *Watermark) []byte {
 	return b.Bytes()
 }
 
-func GetStringInBetweenTwoString(str string, startS string, endS string) (result string, found bool) {
-	s := strings.Index(str, startS)
-	if s == -1 {
-		return result, false
-	}
-	newS := str[s+len(startS):]
-	e := strings.Index(newS, endS)
-	if e == -1 {
-		return result, false
-	}
-	result = newS[:e]
-	return result, true
-}
 func RemoveSubStringBetweenTwoStrings(str string, startS string, endS string) (result string, found bool) {
 	s := strings.Index(str, startS)
 	if s == -1 {
@@ -1629,17 +1616,6 @@ func patchFirstContentStreamForWatermark(sd *StreamDict, gsID, xoID string, wm *
 		return err
 	}
 
-	start := "/Cs1 cs 1 1 1 sc"
-	end := "/Cs1 cs 0 0 0 sc"
-	remove, _ := GetStringInBetweenTwoString(string(sd.Content), start, end)
-	removed_white_object, _ := RemoveSubStringBetweenTwoStrings(string(sd.Content), start, end)
-
-	fmt.Printf("WATERMARKBEFORE %s\n", sd.Content)
-	fmt.Printf("WATERMARKTOREMOVE %s\n", remove)
-	fmt.Printf("WATERMARKREMOVED %s\n", removed_white_object)
-
-	sd.Content = []byte(removed_white_object)
-
 	wmbb := wmContent(wm, gsID, xoID)
 
 	// stamp
@@ -1659,6 +1635,19 @@ func patchFirstContentStreamForWatermark(sd *StreamDict, gsID, xoID string, wm *
 
 	// watermark
 	if wm.pageRot == 0 {
+
+		// Remove white non transparent backgrounds in
+		foundWhiteRectanglesCS := false
+		removeWhiteRectanglesCS, foundWhiteRectanglesCS := RemoveSubStringBetweenTwoStrings(string(sd.Content), "/Cs1 cs 1 1 1 sc", "/Cs1 cs 0 0 0 sc")
+		if foundWhiteRectanglesCS {
+			sd.Content = []byte(removeWhiteRectanglesCS)
+		}
+		foundWhiteRectanglesRG := false
+		removeWhiteRectanglesRG, foundWhiteRectanglesRG := RemoveSubStringBetweenTwoStrings(string(sd.Content), "1 1 1 rg", "0 0 0 rg")
+		if foundWhiteRectanglesRG {
+			sd.Content = []byte(removeWhiteRectanglesRG)
+		}
+
 		sd.Content = append(wmbb, sd.Content...)
 		//fmt.Printf("WATERMARKAFTER %s\n", sd.Content)
 		return sd.Encode()
