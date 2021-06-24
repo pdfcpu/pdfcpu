@@ -1649,7 +1649,6 @@ func patchFirstContentStreamForWatermark(sd *StreamDict, gsID, xoID string, wm *
 		}
 
 		sd.Content = append(wmbb, sd.Content...)
-		//fmt.Printf("WATERMARKAFTER %s\n", sd.Content)
 		return sd.Encode()
 	}
 
