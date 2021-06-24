@@ -270,6 +270,7 @@ func ExtractContent(rs io.ReadSeeker, outDir, fileName string, selectedPages []s
 		if r == nil {
 			continue
 		}
+
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_Content_page_%d.txt", fileName, p))
 		log.CLI.Printf("writing %s\n", outFile)
 		f, err := os.Create(outFile)
