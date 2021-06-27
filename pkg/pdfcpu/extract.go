@@ -51,11 +51,7 @@ func (ctx *Context) ImageObjNrs(pageNr int) []int {
 // ExtractImage extracts an image from sd.
 // Supported imgTypes: FlateDecode, DCTDecode, JPXDecode
 func (ctx *Context) ExtractImage(sd *StreamDict, thumb bool, resourceId string, objNr int) (*Image, error) {
-	//imageObj := ctx.Optimize.ImageObjects[objNr]
 
-	// Get also imageDict for Thumb.
-
-	//imageDict := imageObj.ImageDict
 	if sd == nil {
 		return nil, nil
 	}
@@ -119,7 +115,6 @@ func (ctx *Context) ExtractImage(sd *StreamDict, thumb bool, resourceId string, 
 		return nil, nil
 	}
 
-	//resourceName := imageObj.ResourceNames[0]
 	return RenderImage(ctx.XRefTable, sd, thumb, resourceId, objNr)
 }
 

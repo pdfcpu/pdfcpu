@@ -81,14 +81,15 @@ func parseTimezoneHours(s string, o byte) (int, bool) {
 		return 0, false
 	}
 
-	if s[17] != '\'' {
-		return 0, false
-	}
-
 	return tzh, true
 }
 
 func parseTimezoneMinutes(s string, o byte) (int, bool) {
+
+	if s[17] != '\'' {
+		return 0, false
+	}
+
 	tzmin := s[18:20]
 	tzm, err := strconv.Atoi(tzmin)
 	if err != nil {
@@ -130,9 +131,9 @@ func parseTimezone(s string, relaxed bool) (h, m int, ok bool) {
 		return 0, 0, true
 	}
 
-	if len(s) < 18 {
-		return 0, 0, false
-	}
+	// if len(s) < 18 {
+	// 	return 0, 0, false
+	// }
 
 	neg := o == '-'
 
@@ -145,8 +146,8 @@ func parseTimezone(s string, relaxed bool) (h, m int, ok bool) {
 		tzh *= -1
 	}
 
-	// "YYYYMMDDHHmmSSZHH'"
-	if len(s) == 18 {
+	// "YYYYMMDDHHmmSSZHH"
+	if len(s) == 17 {
 		return tzh, 0, true
 	}
 
