@@ -17,12 +17,12 @@ limitations under the License.
 package pdfcpu
 
 import (
+	_ "embed"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	"github.com/pdfcpu/pdfcpu/internal/config"
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 )
 
@@ -108,6 +108,7 @@ const (
 
 // Configuration of a Context.
 type Configuration struct {
+	// Location of corresponding config.yml
 	Path string
 
 	// Enables PDF V1.5 compatible processing of object streams, xref streams, hybrid PDF files.
@@ -176,26 +177,20 @@ var ConfigPath string = "default"
 
 var loadedDefaultConfig *Configuration
 
-func generateConfigFile(fileName string) error {
-	if err := ioutil.WriteFile(fileName, config.ConfigFileBytes, os.ModePerm); err != nil {
-		return err
-	}
-	loadedDefaultConfig = newDefaultConfiguration()
-	loadedDefaultConfig.Path = fileName
-	return nil
-}
+//go:embed config.yml
+var configFileBytes []byte
 
 func ensureConfigFileAt(path string) error {
-	// Accept config.yml and config.yaml
 	f, err := os.Open(path)
 	if err != nil {
-		// Create path/pdfcpu/config.yml
-		//fmt.Printf("writing %s ..\n", path)
-		return generateConfigFile(path)
+		f.Close()
+		if err := ioutil.WriteFile(path, configFileBytes, os.ModePerm); err != nil {
+			return err
+		}
+		f, err = os.Open(path)
 	}
 	defer f.Close()
 	// Load configuration into loadedDefaultConfig.
-	//fmt.Printf("loading %s ...\n", path)
 	return parseConfigFile(f, path)
 }
 
@@ -215,7 +210,11 @@ func EnsureDefaultConfigAt(path string) error {
 }
 
 func newDefaultConfiguration() *Configuration {
-	// NOTE: pdfcpu/internal/config/config.yml must be updated whenever the default configuration changes.
+	// NOTE: Needs to stay in sync with config.yml
+	//
+	// Takes effect whenever the installed config.yml is disabled:
+	// 		cli: supply -conf disable
+	// 		api: call api.DisableConfigDir()
 	return &Configuration{
 		Reader15:          true,
 		DecodeAllStreams:  false,
@@ -247,6 +246,7 @@ func NewDefaultConfiguration() *Configuration {
 		fmt.Fprintf(os.Stderr, "pdfcpu: config dir problem: %v\n", err)
 		os.Exit(1)
 	}
+	// Bypass config.yml
 	return newDefaultConfiguration()
 }
 

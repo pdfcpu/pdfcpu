@@ -96,7 +96,7 @@ func validateDocInfoDictEntry(xRefTable *pdf.XRefTable, k string, v pdf.Object) 
 
 	// text string, opt, since V1.1
 	case "Title":
-		//xRefTable.Title, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V11, nil)
+		xRefTable.Title, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V11, nil)
 
 	// text string, optional
 	case "Author":
@@ -120,7 +120,7 @@ func validateDocInfoDictEntry(xRefTable *pdf.XRefTable, k string, v pdf.Object) 
 
 	// date, optional
 	case "CreationDate":
-		//xRefTable.CreationDate, err = validateInfoDictDate(xRefTable, v)
+		xRefTable.CreationDate, err = validateInfoDictDate(xRefTable, v)
 
 	// date, required if PieceInfo is present in document catalog.
 	case "ModDate":
