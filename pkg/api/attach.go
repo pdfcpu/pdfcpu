@@ -275,24 +275,26 @@ func RemoveAttachmentsFile(inFile, outFile string, files []string, conf *pdfcpu.
 	return RemoveAttachments(f1, f2, files, conf)
 }
 
-// ExtractAttachments extracts embedded files from a PDF context read from rs into outDir.
-func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, conf *pdfcpu.Configuration) error {
+// ExtractAttachmentsRaw extracts embedded files from a PDF context read from rs.
+func ExtractAttachmentsRaw(rs io.ReadSeeker, outDir string, fileNames []string, conf *pdfcpu.Configuration) ([]pdfcpu.Attachment, error) {
 	if rs == nil {
-		return errors.New("pdfcpu: ExtractAttachments: Please provide rs")
+		return nil, errors.New("pdfcpu: ExtractAttachmentsRaw: Please provide rs")
 	}
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
 	}
 
-	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
+	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, time.Now())
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	fromWrite := time.Now()
+	return ctx.ExtractAttachments(fileNames)
+}
 
-	aa, err := ctx.ExtractAttachments(fileNames)
+// ExtractAttachments extracts embedded files from a PDF context read from rs into outDir.
+func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, conf *pdfcpu.Configuration) error {
+	aa, err := ExtractAttachmentsRaw(rs, outDir, fileNames, conf)
 	if err != nil {
 		return err
 	}
@@ -311,11 +313,6 @@ func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, con
 			return err
 		}
 	}
-
-	durWrite := time.Since(fromWrite).Seconds()
-	durTotal := time.Since(fromStart).Seconds()
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	pdfcpu.TimingStats("write files", durRead, durVal, durOpt, durWrite, durTotal)
 
 	return nil
 }
