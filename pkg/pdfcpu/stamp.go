@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math"
 	"net/url"
 	"os"
@@ -163,6 +164,7 @@ type Watermark struct {
 	TextLines         []string      // display multiple lines of text.
 	URL               string        // overlay link annotation for stamps.
 	FileName          string        // display pdf page or png image.
+	Image             io.Reader     // reader for image watermark.
 	Page              int           // the page number of a PDF file. 0 means multistamp/multiwatermark.
 	OnTop             bool          // if true this is a STAMP else this is a WATERMARK.
 	InpUnit           DisplayUnit   // input display unit.
@@ -804,12 +806,12 @@ func ParseTextWatermarkDetails(text, desc string, onTop bool, u DisplayUnit) (*W
 	return parseWatermarkDetails(WMText, text, desc, onTop, u)
 }
 
-// ParseImageWatermarkDetails parses a text Watermark/Stamp command string into an internal structure.
+// ParseImageWatermarkDetails parses an image Watermark/Stamp command string into an internal structure.
 func ParseImageWatermarkDetails(fileName, desc string, onTop bool, u DisplayUnit) (*Watermark, error) {
 	return parseWatermarkDetails(WMImage, fileName, desc, onTop, u)
 }
 
-// ParsePDFWatermarkDetails parses a text Watermark/Stamp command string into an internal structure.
+// ParsePDFWatermarkDetails parses a PDF Watermark/Stamp command string into an internal structure.
 func ParsePDFWatermarkDetails(fileName, desc string, onTop bool, u DisplayUnit) (*Watermark, error) {
 	return parseWatermarkDetails(WMPDF, fileName, desc, onTop, u)
 }
@@ -968,10 +970,24 @@ func setWatermarkType(mode int, s string, wm *Watermark) error {
 		}
 
 	case WMImage:
+		if len(s) == 0 {
+			// The caller is expected to supply wm.Image
+			return nil
+		}
 		if !ImageFileName(s) {
 			return errors.New("imageFileName has to have one of these extensions: .jpg, .jpeg, .png, .tif, .tiff, .webp")
 		}
 		wm.FileName = s
+		f, err := os.Open(wm.FileName)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		bb, err := ioutil.ReadAll(f)
+		if err != nil {
+			return err
+		}
+		wm.Image = bytes.NewReader(bb)
 
 	case WMPDF:
 		i := strings.LastIndex(s, ":")
@@ -1147,13 +1163,8 @@ func (ctx *Context) createPDFResForWM(wm *Watermark) error {
 }
 
 func (ctx *Context) createImageResForWM(wm *Watermark) (err error) {
-	f, err := os.Open(wm.FileName)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
 
-	wm.image, wm.width, wm.height, err = createImageResource(ctx.XRefTable, f, false, false)
+	wm.image, wm.width, wm.height, err = createImageResource(ctx.XRefTable, wm.Image, false, false)
 	return err
 }
 

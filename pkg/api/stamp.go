@@ -440,6 +440,17 @@ func ImageWatermark(fileName, desc string, onTop, update bool, u pdfcpu.DisplayU
 	return wm, nil
 }
 
+// ImageWatermarkForReader returns an image watermark configuration for r.
+func ImageWatermarkForReader(r io.Reader, desc string, onTop, update bool, u pdfcpu.DisplayUnit) (*pdfcpu.Watermark, error) {
+	wm, err := pdfcpu.ParseImageWatermarkDetails("", desc, onTop, u)
+	if err != nil {
+		return nil, err
+	}
+	wm.Update = update
+	wm.Image = r
+	return wm, nil
+}
+
 // PDFWatermark returns a PDF watermark configuration.
 func PDFWatermark(fileName, desc string, onTop, update bool, u pdfcpu.DisplayUnit) (*pdfcpu.Watermark, error) {
 	wm, err := pdfcpu.ParsePDFWatermarkDetails(fileName, desc, onTop, u)
@@ -470,6 +481,19 @@ func AddImageWatermarksFile(inFile, outFile string, selectedPages []string, onTo
 		unit = conf.Unit
 	}
 	wm, err := ImageWatermark(fileName, desc, onTop, false, unit)
+	if err != nil {
+		return err
+	}
+	return AddWatermarksFile(inFile, outFile, selectedPages, wm, conf)
+}
+
+// AddImageWatermarksForReaderFile adds image stamps/watermarks to all selected pages of inFile for r and writes the result to outFile.
+func AddImageWatermarksForReaderFile(inFile, outFile string, selectedPages []string, onTop bool, r io.Reader, desc string, conf *pdfcpu.Configuration) error {
+	unit := pdfcpu.POINTS
+	if conf != nil {
+		unit = conf.Unit
+	}
+	wm, err := ImageWatermarkForReader(r, desc, onTop, false, unit)
 	if err != nil {
 		return err
 	}
