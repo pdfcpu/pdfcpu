@@ -30,8 +30,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ListAttachments returns a list of embedded file attachments of rs.
-func ListAttachments(rs io.ReadSeeker, conf *pdfcpu.Configuration) ([]string, error) {
+func listAttachments(rs io.ReadSeeker, conf *pdfcpu.Configuration, withDesc, sorted bool) ([]string, error) {
 	if rs == nil {
 		return nil, errors.New("pdfcpu: ListAttachments: Please provide rs")
 	}
@@ -55,12 +54,14 @@ func ListAttachments(rs io.ReadSeeker, conf *pdfcpu.Configuration) ([]string, er
 	var ss []string
 	for _, a := range aa {
 		s := a.FileName
-		if a.Desc != "" {
+		if withDesc && a.Desc != "" {
 			s = fmt.Sprintf("%s (%s)", s, a.Desc)
 		}
 		ss = append(ss, s)
 	}
-	sort.Strings(ss)
+	if sorted {
+		sort.Strings(ss)
+	}
 
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
@@ -70,7 +71,12 @@ func ListAttachments(rs io.ReadSeeker, conf *pdfcpu.Configuration) ([]string, er
 	return ss, nil
 }
 
-// ListAttachmentsFile returns a list of embedded file attachments of inFile.
+// ListAttachments returns a list of embedded file attachments of rs with optional description.
+func ListAttachments(rs io.ReadSeeker, conf *pdfcpu.Configuration) ([]string, error) {
+	return listAttachments(rs, conf, true, true)
+}
+
+// ListAttachmentsFile returns a list of embedded file attachments of inFile with optional description.
 func ListAttachmentsFile(inFile string, conf *pdfcpu.Configuration) ([]string, error) {
 	f, err := os.Open(inFile)
 	if err != nil {
@@ -78,6 +84,21 @@ func ListAttachmentsFile(inFile string, conf *pdfcpu.Configuration) ([]string, e
 	}
 	defer f.Close()
 	return ListAttachments(f, conf)
+}
+
+// ListAttachmentsCompact returns a list of embedded file attachments of rs w/o optional description.
+func ListAttachmentsCompact(rs io.ReadSeeker, conf *pdfcpu.Configuration) ([]string, error) {
+	return listAttachments(rs, conf, false, false)
+}
+
+// ListAttachmentsCompactFile returns a list of embedded file attachments of inFile w/o optional description.
+func ListAttachmentsCompactFile(inFile string, conf *pdfcpu.Configuration) ([]string, error) {
+	f, err := os.Open(inFile)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return ListAttachmentsCompact(f, conf)
 }
 
 // AddAttachments embeds files into a PDF context read from rs and writes the result to w.
