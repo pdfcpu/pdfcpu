@@ -164,6 +164,72 @@ func validateTransferFunctionEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictNam
 	return validateTransferFunction(xRefTable, o)
 }
 
+func validateTR(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
+
+	switch o := o.(type) {
+
+	case pdf.Name:
+		s := o.Value()
+		if s != "Identity" {
+			return errors.Errorf("pdfcpu: validateTR: corrupt name\n")
+		}
+
+	case pdf.Array:
+
+		if len(o) != 4 {
+			return errors.New("pdfcpu: validateTR: corrupt function array")
+		}
+
+		for _, o := range o {
+
+			o, err = xRefTable.Dereference(o)
+			if err != nil {
+				return
+			}
+
+			if o == nil {
+				continue
+			}
+
+			if o, ok := o.(pdf.Name); ok {
+				s := o.Value()
+				if s != "Identity" {
+					return errors.Errorf("pdfcpu: validateTR: corrupt name\n")
+				}
+				continue
+			}
+
+			err = processFunction(xRefTable, o)
+			if err != nil {
+				return
+			}
+
+		}
+
+	case pdf.Dict:
+		err = processFunction(xRefTable, o)
+
+	case pdf.StreamDict:
+		err = processFunction(xRefTable, o)
+
+	default:
+		return errors.Errorf("validateTR: corrupt entry %v\n", o)
+
+	}
+
+	return err
+}
+
+func validateTREntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, entryName string, required bool, sinceVersion pdf.Version) error {
+
+	o, err := validateEntry(xRefTable, d, dictName, entryName, required, sinceVersion)
+	if err != nil || o == nil {
+		return err
+	}
+
+	return validateTR(xRefTable, o)
+}
+
 func validateTR2(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
 
 	switch o := o.(type) {
@@ -188,6 +254,14 @@ func validateTR2(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
 			}
 
 			if o == nil {
+				continue
+			}
+
+			if o, ok := o.(pdf.Name); ok {
+				s := o.Value()
+				if s != "Identity" && s != "Default" {
+					return errors.Errorf("pdfcpu: validateTR2: corrupt name\n")
+				}
 				continue
 			}
 
@@ -714,7 +788,7 @@ func validateExtGStateDictPart2(xRefTable *pdf.XRefTable, d pdf.Dict, dictName s
 	}
 
 	// TR, function, array of 4 functions or name(/Identity), optional, see 10.4 transfer functions
-	err = validateTransferFunctionEntry(xRefTable, d, dictName, "TR", OPTIONAL, pdf.V10)
+	err = validateTREntry(xRefTable, d, dictName, "TR", OPTIONAL, pdf.V10)
 	if err != nil {
 		return err
 	}
