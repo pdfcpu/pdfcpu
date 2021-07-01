@@ -401,7 +401,7 @@ func validateOCProperties(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required 
 	}
 
 	d, err := validateDictEntry(xRefTable, rootDict, "rootDict", "OCProperties", required, sinceVersion, nil)
-	if err != nil || d == nil {
+	if err != nil || len(d) == 0 {
 		return err
 	}
 
