@@ -220,13 +220,13 @@ func processMergeCommand(conf *pdfcpu.Configuration) {
 			os.Exit(1)
 		}
 		if strings.Index(arg, "*") >= 0 {
-			f, err := filepath.Glob(arg)
+			matches, err := filepath.Glob(arg)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s", err)
 				os.Exit(1)
 			}
-			for _, f := range f {
-				filesIn = append(filesIn, f)
+			for _, fn := range matches {
+				filesIn = append(filesIn, fn)
 			}
 			continue
 		}
@@ -358,15 +358,16 @@ func processAddAttachmentsCommand(conf *pdfcpu.Configuration) {
 		if i == 0 {
 			inFile = arg
 			ensurePdfExtension(inFile)
-			if strings.Index(arg, "*") >= 0 {
-				f, err := filepath.Glob(arg)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "%s", err)
-					os.Exit(1)
-				}
-				for _, f := range f {
-					fileNames = append(fileNames, f)
-				}
+			continue
+		}
+		if strings.Index(arg, "*") >= 0 {
+			matches, err := filepath.Glob(arg)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s", err)
+				os.Exit(1)
+			}
+			for _, fn := range matches {
+				fileNames = append(fileNames, fn)
 			}
 			continue
 		}
@@ -389,15 +390,16 @@ func processAddAttachmentsPortfolioCommand(conf *pdfcpu.Configuration) {
 		if i == 0 {
 			inFile = arg
 			ensurePdfExtension(inFile)
-			if strings.Index(arg, "*") >= 0 {
-				f, err := filepath.Glob(arg)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "%s", err)
-					os.Exit(1)
-				}
-				for _, f := range f {
-					fileNames = append(fileNames, f)
-				}
+			continue
+		}
+		if strings.Index(arg, "*") >= 0 {
+			matches, err := filepath.Glob(arg)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s", err)
+				os.Exit(1)
+			}
+			for _, fn := range matches {
+				fileNames = append(fileNames, fn)
 			}
 			continue
 		}
@@ -820,6 +822,28 @@ func ensureImageExtension(filename string) {
 	}
 }
 
+func parseArgsForImageFileNames(startInd int) []string {
+	imageFileNames := []string{}
+	for i := startInd; i < len(flag.Args()); i++ {
+		arg := flag.Arg(i)
+		if strings.Index(arg, "*") >= 0 {
+			matches, err := filepath.Glob(arg)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%v\n", err)
+				os.Exit(1)
+			}
+			for _, fn := range matches {
+				ensureImageExtension(fn)
+				imageFileNames = append(imageFileNames, fn)
+			}
+			continue
+		}
+		ensureImageExtension(arg)
+		imageFileNames = append(imageFileNames, arg)
+	}
+	return imageFileNames
+}
+
 func processImportImagesCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageImportImages)
@@ -833,12 +857,7 @@ func processImportImagesCommand(conf *pdfcpu.Configuration) {
 	if hasPdfExtension(outFile) {
 		// pdfcpu import outFile imageFile...
 		imp := pdfcpu.DefaultImportConfig()
-		imageFileNames := []string{}
-		for i := 1; i < len(flag.Args()); i++ {
-			arg := flag.Arg(i)
-			ensureImageExtension(arg)
-			imageFileNames = append(imageFileNames, arg)
-		}
+		imageFileNames := parseArgsForImageFileNames(1)
 		process(cli.ImportImagesCommand(imageFileNames, outFile, imp, conf))
 	}
 
@@ -855,14 +874,7 @@ func processImportImagesCommand(conf *pdfcpu.Configuration) {
 
 	outFile = flag.Arg(1)
 	ensurePdfExtension(outFile)
-
-	imageFileNames := []string{}
-	for i := 2; i < len(flag.Args()); i++ {
-		arg := flag.Args()[i]
-		ensureImageExtension(arg)
-		imageFileNames = append(imageFileNames, arg)
-	}
-
+	imageFileNames := parseArgsForImageFileNames(2)
 	process(cli.ImportImagesCommand(imageFileNames, outFile, imp, conf))
 }
 
