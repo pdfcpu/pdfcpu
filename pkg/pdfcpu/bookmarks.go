@@ -23,17 +23,33 @@ import (
 )
 
 var (
-	errNoBookmarks    = errors.New("pdfcpu: no bookmarks available")
-	errCorruptedDests = errors.New("pdfcpu: corrupted named destination")
+	errNoBookmarks        = errors.New("pdfcpu: no bookmarks available")
+	errCorruptedDests     = errors.New("pdfcpu: corrupted named destination")
+	errCorruptedBookmarks = errors.New("pdfcpu: corrupt bookmark")
+	errExistingBookmarks  = errors.New("pdfcpu: existing bookmarks")
 )
 
-// Bookmark represents an outline item at some level including page span info.
+// Bookmark represents an outline item tree.
 type Bookmark struct {
 	Title    string
 	PageFrom int
-	PageThru int // >= pageFrom and reaches until before pageFrom of the next bookmark.
+	PageThru int // for extraction only; >= pageFrom and reaches until before pageFrom of the next bookmark.
+	Bold     bool
+	Italic   bool
+	Color    *SimpleColor
 	Children []Bookmark
 	Parent   *Bookmark
+}
+
+func (bm Bookmark) Style() int {
+	var i int
+	if bm.Bold {
+		i += 2
+	}
+	if bm.Italic {
+		i += 1
+	}
+	return i
 }
 
 func (ctx *Context) dereferenceDestinationArray(key string) (Array, error) {
@@ -201,7 +217,7 @@ func (ctx *Context) BookmarksForOutlineItem(item *IndirectRef, parent *Bookmark)
 	return bms, nil
 }
 
-// BookmarksForOutline returns all of the bookmark information recursively.
+// BookmarksForOutline returns all ctx bookmark information recursively.
 func (ctx *Context) BookmarksForOutline() ([]Bookmark, error) {
 	_, first, err := ctx.positionToOutlineTreeLevel1()
 	if err != nil {
@@ -209,4 +225,109 @@ func (ctx *Context) BookmarksForOutline() ([]Bookmark, error) {
 	}
 
 	return ctx.BookmarksForOutlineItem(first, nil)
+}
+
+func createOutlineItemDict(ctx *Context, bms []Bookmark, parent *IndirectRef, parentPageNr *int) (*IndirectRef, *IndirectRef, int, error) {
+	var (
+		first  *IndirectRef
+		irPrev *IndirectRef
+		dPrev  Dict
+		count  int
+	)
+
+	for i, bm := range bms {
+
+		if i == 0 && parentPageNr != nil && bm.PageFrom < *parentPageNr {
+			return nil, nil, 0, errCorruptedBookmarks
+		}
+
+		if i > 0 && bm.PageFrom < bms[i-1].PageFrom {
+			return nil, nil, 0, errCorruptedBookmarks
+		}
+
+		_, pageIndRef, _, err := ctx.PageDict(bm.PageFrom, false)
+		if err != nil {
+			return nil, nil, 0, err
+		}
+
+		d := Dict(map[string]Object{
+			"Dest":   Array{*pageIndRef, Name("Fit")},
+			"Title":  StringLiteral(bm.Title),
+			"Parent": *parent},
+		)
+
+		if bm.Color != nil {
+			d["C"] = Array{Float(bm.Color.R), Float(bm.Color.G), Float(bm.Color.B)}
+		}
+
+		if style := bm.Style(); style > 0 {
+			d["F"] = Integer(style)
+		}
+
+		ir, err := ctx.IndRefForNewObject(d)
+		if err != nil {
+			return nil, nil, 0, err
+		}
+
+		if first == nil {
+			first = ir
+		}
+
+		if bm.Children != nil {
+			first, last, c, err := createOutlineItemDict(ctx, bm.Children, ir, &bm.PageFrom)
+			if err != nil {
+				return nil, nil, 0, err
+			}
+			d["First"] = *first
+			d["Last"] = *last
+
+			d["Count"] = Integer(c + 1)
+			count += c + 1
+		} else {
+			count++
+		}
+
+		if irPrev != nil {
+			d["Prev"] = *irPrev
+			dPrev["Next"] = *ir
+		}
+
+		dPrev = d
+		irPrev = ir
+
+	}
+
+	return first, irPrev, count, nil
+}
+
+// AddBookmarks adds bms to ctx.
+func (ctx *Context) AddBookmarks(bms []Bookmark) error {
+
+	rootDict, err := ctx.Catalog()
+	if err != nil {
+		return err
+	}
+
+	if _, ok := rootDict.Find("Outlines"); ok {
+		return errExistingBookmarks
+	}
+
+	outlinesDict := Dict(map[string]Object{"Type": Name("Outlines")})
+	outlinesir, err := ctx.IndRefForNewObject(outlinesDict)
+	if err != nil {
+		return err
+	}
+
+	first, last, count, err := createOutlineItemDict(ctx, bms, outlinesir, nil)
+	if err != nil {
+		return err
+	}
+
+	outlinesDict["First"] = *first
+	outlinesDict["Last"] = *last
+	outlinesDict["Count"] = Integer(count)
+
+	rootDict["Outlines"] = *outlinesir
+
+	return nil
 }

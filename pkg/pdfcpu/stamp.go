@@ -146,6 +146,9 @@ var (
 	White     = SimpleColor{R: 1, G: 1, B: 1}
 	Gray      = SimpleColor{.5, .5, .5}
 	LightGray = SimpleColor{.9, .9, .9}
+	Red       = SimpleColor{1, 0, 0}
+	Green     = SimpleColor{0, 1, 0}
+	Blue      = SimpleColor{0, 0, 1}
 )
 
 type formCache map[types.Rectangle]*IndirectRef
