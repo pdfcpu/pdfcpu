@@ -106,7 +106,7 @@ func parseTimezoneMinutes(s string, o byte) (int, bool) {
 
 	// "YYYYMMDDHHmmSSZHH'mm"
 	if len(s) == 20 {
-		return 0, false
+		return 0, true
 	}
 
 	// Accept a trailing '
