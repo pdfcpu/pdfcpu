@@ -498,7 +498,49 @@ func createImageBuf(xRefTable *XRefTable, img image.Image, format string) ([]byt
 }
 
 func createImageStreamDict(xRefTable *XRefTable, r io.Reader, gray, sepia bool) (*StreamDict, int, int, error) {
-	img, format, err := image.Decode(r)
+
+	var bb bytes.Buffer
+	tee := io.TeeReader(r, &bb)
+	sniff, err := ioutil.ReadAll(tee)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	c, format, err := image.DecodeConfig(bytes.NewBuffer(sniff))
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	if format == "jpeg" && !gray && !sepia {
+		var cs string
+
+		switch c.ColorModel {
+
+		case color.GrayModel:
+			cs = DeviceGrayCS
+
+		case color.YCbCrModel:
+			cs = DeviceRGBCS
+
+		case color.CMYKModel:
+			cs = DeviceCMYKCS
+
+		default:
+			return nil, 0, 0, errors.New("pdfcpu: unexpected color model for JPEG")
+
+		}
+
+		buf, err := ioutil.ReadAll(&bb)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+
+		sd, err := createDCTImageObject(xRefTable, buf, c.Width, c.Height, 8, cs)
+
+		return sd, c.Width, c.Height, err
+	}
+
+	img, format, err := image.Decode(&bb)
 	if err != nil {
 		return nil, 0, 0, err
 	}
