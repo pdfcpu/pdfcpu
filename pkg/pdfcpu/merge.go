@@ -189,6 +189,7 @@ func patchSourceObjectNumbers(ctxSource, ctxDest *Context) {
 	m := make(map[int]*XRefTableEntry, *ctxSource.Size)
 	for k, v := range lookup {
 		m[v] = ctxSource.Table[k]
+		*ctxSource.Size++
 	}
 	m[0] = ctxSource.Table[0]
 	ctxSource.Table = m
@@ -288,11 +289,249 @@ func mergeDuplicateObjNumberIntSets(ctxSource, ctxDest *Context) {
 	log.Debug.Println("mergeDuplicateObjNumberIntSets end")
 }
 
+func mergeAcroForms(ctxSource, ctxDest *Context) error {
+
+	// NOTE:
+	// This is a very naive first stab at merging AcroForms.
+	// Your mileage may vary.
+
+	rootDictDest, err := ctxDest.Catalog()
+	if err != nil {
+		return err
+	}
+
+	rootDictSource, err := ctxSource.Catalog()
+	if err != nil {
+		return err
+	}
+
+	o, found := rootDictSource.Find("AcroForm")
+	if !found {
+		return nil
+	}
+
+	dSrc, err := ctxSource.DereferenceDict(o)
+	if err != nil || len(dSrc) == 0 {
+		return err
+	}
+
+	// Retrieve ctxSrc AcroForm Fields
+	o, found = dSrc.Find("Fields")
+	if !found {
+		return nil
+	}
+	arrFieldsSrc, err := ctxDest.DereferenceArray(o)
+	if err != nil {
+		return err
+	}
+	if len(arrFieldsSrc) == 0 {
+		return nil
+	}
+
+	// We have a ctxSrc.Acroform with fields.
+
+	o, found = rootDictDest.Find("AcroForm")
+	if !found {
+		rootDictDest["AcroForm"] = dSrc
+		return nil
+	}
+
+	dDest, err := ctxDest.DereferenceDict(o)
+	if err != nil {
+		return err
+	}
+
+	if len(dDest) == 0 {
+		rootDictDest["AcroForm"] = dSrc
+		return nil
+	}
+
+	// Retrieve ctxDest AcroForm Fields
+	o, found = dDest.Find("Fields")
+	if !found {
+		rootDictDest["AcroForm"] = dSrc
+		return nil
+	}
+	arrFieldsDest, err := ctxDest.DereferenceArray(o)
+	if err != nil {
+		return err
+	}
+	if len(arrFieldsDest) == 0 {
+		rootDictDest["AcroForm"] = dSrc
+		return nil
+	}
+
+	// Merge Dsrc into dDest.
+
+	// Fields: add all indrefs
+
+	// Merge all fields from ctxSrc into ctxDest
+	for _, o := range arrFieldsSrc {
+		arrFieldsDest = append(arrFieldsDest, o)
+	}
+	dDest["Fields"] = arrFieldsDest
+
+	// NeedAppearances: try: set to true only
+	o, found = dSrc.Find("NeedAppearances")
+	if found && o != nil {
+		b, err := ctxSource.DereferenceBoolean(o, V10)
+		if err != nil {
+			return err
+		}
+		if b != nil && *b {
+			dDest["NeedAppearances"] = Boolean(true)
+		}
+	}
+
+	// SigFlags: set bit 1 to true only (SignaturesExist)
+	//           set bit 2 to true only (AppendOnly)
+
+	o, found = dSrc.Find("SigFields")
+	if found {
+		iSrc, err := ctxSource.DereferenceInteger(o)
+		if err != nil {
+			return err
+		}
+		if iSrc != nil {
+			// Merge SigFields into dDest.
+			o, found = dDest.Find("SigFlags")
+			if !found {
+				dDest["SigFields"] = Integer(*iSrc)
+			} else {
+				iDest, err := ctxDest.DereferenceInteger(o)
+				if err != nil {
+					return err
+				}
+				if iDest == nil {
+					dDest["SigFields"] = Integer(*iSrc)
+				} else {
+					// SignaturesExist
+					if *iSrc&1 > 0 {
+						*iDest |= 1
+					}
+					// AppendOnly
+					if *iSrc&2 > 0 {
+						*iDest |= 2
+					}
+				}
+			}
+		}
+	}
+
+	// CO: add all indrefs
+	o, found = dSrc.Find("CO")
+	if found {
+		arrSrc, err := ctxSource.DereferenceArray(o)
+		if err != nil {
+			return err
+		}
+		o, found = dDest.Find("CO")
+		if !found {
+			dDest["CO"] = arrSrc
+		} else {
+			arrDest, err := ctxDest.DereferenceArray(o)
+			if err != nil {
+				return err
+			}
+			if len(arrDest) == 0 {
+				dDest["CO"] = arrSrc
+			} else {
+				for _, indRef := range arrSrc {
+					arrDest = append(arrDest, indRef)
+				}
+				dDest["CO"] = arrDest
+			}
+		}
+	}
+
+	// DR: default resource dict
+	o, found = dSrc.Find("DR")
+	if found {
+		dSrc, err := ctxSource.DereferenceDict(o)
+		if err != nil {
+			return err
+		}
+		if len(dSrc) > 0 {
+			o, found = dDest.Find("DR")
+			if !found {
+				dDest["DR"] = dSrc
+			} else {
+				dDest, err := ctxDest.DereferenceDict(o)
+				if err != nil {
+					return err
+				}
+				if len(dDest) == 0 {
+					dDest["DR"] = dSrc
+				}
+			}
+		}
+	}
+
+	// DA: default appearance streams for variable text fields
+	// (for each with field type  /FT /Tx w/o DA, set DA to default DA)
+	// TODO Walk field tree and inspect terminal fields.
+	sSrc := dSrc.StringEntry("DA")
+	if sSrc != nil && len(*sSrc) > 0 {
+		sDest := dDest.StringEntry("DA")
+		if sDest == nil {
+			dDest["DA"] = StringLiteral(*sSrc)
+		} else {
+			// Push sSrc down to all top level fields of dSource
+			for _, o := range arrFieldsSrc {
+				d, err := ctxSource.DereferenceDict(o)
+				if err != nil {
+					return err
+				}
+				n := d.NameEntry("FT")
+				if n != nil && *n == "Tx" {
+					_, found := d.Find("DA")
+					if !found {
+						d["DA"] = StringLiteral(*sSrc)
+					}
+				}
+			}
+		}
+	}
+
+	// Q: left, center, right for variable text fields
+	// (for each with field type /FT /Tx w/o Q, set Q to default Q)
+	// TODO Walk field tree and inspect terminal fields.
+	iSrc := dSrc.IntEntry("Q")
+	if iSrc != nil {
+		iDest := dDest.IntEntry("Q")
+		if iDest == nil {
+			dDest["Q"] = Integer(*iSrc)
+		} else {
+			// Push iSrc down to all top level fields of dSource
+			for _, o := range arrFieldsSrc {
+				d, err := ctxSource.DereferenceDict(o)
+				if err != nil {
+					return err
+				}
+				n := d.NameEntry("FT")
+				if n != nil && *n == "Tx" {
+					_, found := d.Find("Q")
+					if !found {
+						d["Q"] = Integer(*iSrc)
+					}
+				}
+			}
+		}
+	}
+
+	// XFA: ignore
+	delete(dDest, "XFA")
+
+	return nil
+}
+
 // MergeXRefTables merges Context ctxSource into ctxDest by appending its page tree.
 func MergeXRefTables(ctxSource, ctxDest *Context) (err error) {
 
 	// Sweep over ctxSource cross ref table and ensure valid object numbers in ctxDest's space.
 	patchSourceObjectNumbers(ctxSource, ctxDest)
+
+	mergeAcroForms(ctxSource, ctxDest)
 
 	// Append ctxSource pageTree to ctxDest pageTree.
 	log.Debug.Println("appendSourcePageTreeToDestPageTree")
