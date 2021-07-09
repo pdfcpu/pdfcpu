@@ -46,7 +46,12 @@ type Box struct {
 
 // PageBoundaries represent the defined PDF page boundaries.
 type PageBoundaries struct {
-	Media, Crop, Trim, Bleed, Art *Box
+	Media *Box
+	Crop  *Box
+	Trim  *Box
+	Bleed *Box
+	Art   *Box
+	Rot   int // The effective page rotation.
 }
 
 // SelectAll selects all page boundaries.
@@ -858,7 +863,11 @@ func (ctx *Context) ListPageBoundaries(selectedPages IntSet, wantPB *PageBoundar
 		if _, found := selectedPages[i+1]; !found {
 			continue
 		}
-		ss = append(ss, fmt.Sprintf("Page %d:", i+1))
+		var s string
+		if pb.Rot != 0 {
+			s = fmt.Sprintf("rot=%+d", pb.Rot)
+		}
+		ss = append(ss, fmt.Sprintf("Page %d: %s", i+1, s))
 		if wantPB.Media != nil {
 			s := ""
 			if pb.Media.Inherited {

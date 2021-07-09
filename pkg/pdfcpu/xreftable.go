@@ -1811,7 +1811,7 @@ func (xRefTable *XRefTable) resolvePageBoundary(d Dict, boxName string) (*Rectan
 	return rect(xRefTable, a)
 }
 
-func (xRefTable *XRefTable) collectPageBoundariesForPage(d Dict, pb []PageBoundaries, inhMediaBox, inhCropBox *Rectangle, p int) error {
+func (xRefTable *XRefTable) collectPageBoundariesForPage(d Dict, pb []PageBoundaries, inhMediaBox, inhCropBox *Rectangle, rot, p int) error {
 	if inhMediaBox != nil {
 		pb[p].Media = &Box{Rect: inhMediaBox, Inherited: true}
 	}
@@ -1861,6 +1861,8 @@ func (xRefTable *XRefTable) collectPageBoundariesForPage(d Dict, pb []PageBounda
 		pb[p].Art = &Box{Rect: r}
 	}
 
+	pb[p].Rot = rot
+
 	return nil
 }
 
@@ -1875,9 +1877,6 @@ func (xRefTable *XRefTable) collectMediaBoxAndCropBox(d Dict, inhMediaBox, inhCr
 			return err
 		}
 		*inhCropBox = nil
-		//if kids == nil {
-		//	pb[*p].Media = &Box{Rect: *inhMediaBox}
-		//}
 	}
 
 	obj, found = d.Find("CropBox")
@@ -1893,15 +1892,23 @@ func (xRefTable *XRefTable) collectMediaBoxAndCropBox(d Dict, inhMediaBox, inhCr
 	return nil
 }
 
-func (xRefTable *XRefTable) collectPageBoundariesForPageTree(root *IndirectRef, inhMediaBox, inhCropBox **Rectangle, pb []PageBoundaries, p *int) error {
+func (xRefTable *XRefTable) collectPageBoundariesForPageTree(root *IndirectRef, inhMediaBox, inhCropBox **Rectangle, pb []PageBoundaries, r int, p *int) error {
 	d, err := xRefTable.DereferenceDict(*root)
 	if err != nil {
 		return err
 	}
 
+	if obj, found := d.Find("Rotate"); found {
+		i, err := xRefTable.DereferenceInteger(obj)
+		if err != nil {
+			return err
+		}
+		r = i.Value()
+	}
+
 	kids := d.ArrayEntry("Kids")
 	if kids == nil {
-		return xRefTable.collectPageBoundariesForPage(d, pb, *inhMediaBox, *inhCropBox, *p)
+		return xRefTable.collectPageBoundariesForPage(d, pb, *inhMediaBox, *inhCropBox, r, *p)
 	}
 
 	if err := xRefTable.collectMediaBoxAndCropBox(d, inhMediaBox, inhCropBox); err != nil {
@@ -1929,12 +1936,12 @@ func (xRefTable *XRefTable) collectPageBoundariesForPageTree(root *IndirectRef, 
 		switch *pageNodeDict.Type() {
 
 		case "Pages":
-			if err = xRefTable.collectPageBoundariesForPageTree(&ir, inhMediaBox, inhCropBox, pb, p); err != nil {
+			if err = xRefTable.collectPageBoundariesForPageTree(&ir, inhMediaBox, inhCropBox, pb, r, p); err != nil {
 				return err
 			}
 
 		case "Page":
-			if err = xRefTable.collectPageBoundariesForPageTree(&ir, inhMediaBox, inhCropBox, pb, p); err != nil {
+			if err = xRefTable.collectPageBoundariesForPageTree(&ir, inhMediaBox, inhCropBox, pb, r, p); err != nil {
 				return err
 			}
 			*p++
@@ -1962,7 +1969,7 @@ func (xRefTable *XRefTable) PageBoundaries() ([]PageBoundaries, error) {
 	mb := &Rectangle{}
 	cb := &Rectangle{}
 	pbs := make([]PageBoundaries, xRefTable.PageCount)
-	if err := xRefTable.collectPageBoundariesForPageTree(root, &mb, &cb, pbs, &i); err != nil {
+	if err := xRefTable.collectPageBoundariesForPageTree(root, &mb, &cb, pbs, 0, &i); err != nil {
 		return nil, err
 	}
 	return pbs, nil
