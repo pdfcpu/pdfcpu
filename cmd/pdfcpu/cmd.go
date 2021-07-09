@@ -74,8 +74,6 @@ func parseFlags(cmd *command) {
 		}
 		initLogging(verbose, veryVerbose)
 	}
-
-	return
 }
 
 func validateConfigDirFlag() {

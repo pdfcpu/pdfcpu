@@ -270,3 +270,8 @@ func ListAnnotations(cmd *Command) ([]string, error) {
 func RemoveAnnotations(cmd *Command) ([]string, error) {
 	return nil, api.RemoveAnnotationsFile(*cmd.InFile, "", cmd.PageSelection, nil, cmd.IntVals, cmd.Conf, false)
 }
+
+// ListImages returns inFile's embedded images.
+func ListImages(cmd *Command) ([]string, error) {
+	return api.ListImagesFile(*cmd.InFile, cmd.PageSelection, cmd.Conf)
+}

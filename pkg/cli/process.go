@@ -168,3 +168,14 @@ func processPageBoundaries(cmd *Command) (out []string, err error) {
 
 	return out, err
 }
+
+func processImages(cmd *Command) (out []string, err error) {
+	switch cmd.Mode {
+
+	case pdfcpu.LISTIMAGES:
+		return ListImages(cmd)
+
+	}
+
+	return nil, nil
+}

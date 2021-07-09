@@ -62,7 +62,7 @@ func ExtractImagesRaw(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Con
 		if !v {
 			continue
 		}
-		ii, err := ctx.ExtractPageImages(i)
+		ii, err := ctx.ExtractPageImages(i, false)
 		if err != nil {
 			return nil, err
 		}
@@ -112,7 +112,7 @@ func ExtractImages(rs io.ReadSeeker, selectedPages []string, digestImage func(pd
 	maxPageDigits := len(strconv.Itoa(pageNrs[len(pageNrs)-1]))
 
 	for _, i := range pageNrs {
-		ii, err := ctx.ExtractPageImages(i)
+		ii, err := ctx.ExtractPageImages(i, false)
 		if err != nil {
 			return err
 		}
@@ -127,26 +127,6 @@ func ExtractImages(rs io.ReadSeeker, selectedPages []string, digestImage func(pd
 	return nil
 }
 
-func writeImageToDisk(outDir, fileName string) func(pdfcpu.Image, bool, int) error {
-	return func(img pdfcpu.Image, singleImgPerPage bool, maxPageDigits int) error {
-		s := "%s_%" + fmt.Sprintf("0%dd", maxPageDigits)
-		qual := img.Name
-		if img.Thumb {
-			qual = "thumb"
-		}
-		f := fmt.Sprintf(s+"_%s.%s", fileName, img.PageNr, qual, img.Type)
-		if singleImgPerPage {
-			if img.Thumb {
-				s += "_" + qual
-			}
-			f = fmt.Sprintf(s+".%s", fileName, img.PageNr, img.Type)
-		}
-		outFile := filepath.Join(outDir, f)
-		log.CLI.Printf("writing %s\n", outFile)
-		return pdfcpu.WriteReader(outFile, img)
-	}
-}
-
 // ExtractImagesFile dumps embedded image resources from inFile into outDir for selected pages.
 func ExtractImagesFile(inFile, outDir string, selectedPages []string, conf *pdfcpu.Configuration) error {
 	f, err := os.Open(inFile)
@@ -156,7 +136,7 @@ func ExtractImagesFile(inFile, outDir string, selectedPages []string, conf *pdfc
 	defer f.Close()
 	log.CLI.Printf("extracting images from %s into %s/ ...\n", inFile, outDir)
 	fileName := strings.TrimSuffix(filepath.Base(inFile), ".pdf")
-	return ExtractImages(f, selectedPages, writeImageToDisk(outDir, fileName), conf)
+	return ExtractImages(f, selectedPages, pdfcpu.WriteImageToDisk(outDir, fileName), conf)
 }
 
 // ExtractFonts dumps embedded fontfiles from rs into outDir for selected pages.

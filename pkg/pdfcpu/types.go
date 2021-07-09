@@ -58,7 +58,7 @@ func (b ByteSize) String() string {
 		return fmt.Sprintf("%.0f KB", b/KB)
 	}
 
-	return fmt.Sprintf("%f Bytes", b)
+	return fmt.Sprintf("%.0f", b)
 }
 
 // IntSet is a set of integers.

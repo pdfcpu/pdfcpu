@@ -38,6 +38,7 @@ The commands are:
    extract       extract images, fonts, content, pages or metadata
    fonts         install, list supported fonts, create cheat sheets
    grid          rearrange pages or images for enhanced browsing experience
+   images        list images for selected pages
    import        import/convert images to PDF
    info          print file info
    keywords      list, add, remove keywords
@@ -149,7 +150,7 @@ The merge modes are:
 
         e.g. -3,5,7- or 4-7,!6 or 1-,!5 or odd,n1`
 
-	usageExtract     = "usage: pdfcpu extract -m(ode) image|font|content|page|meta [-p(ages) selectedPages] inFile outDir" + generalFlags
+	usageExtract     = "usage: pdfcpu extract -m(ode) i(mage)|f(ont)|c(ontent)|p(age)|m(eta) [-p(ages) selectedPages] inFile outDir" + generalFlags
 	usageLongExtract = `Export inFile's images, fonts, content or pages into outDir.
 
       mode ... extraction mode
@@ -922,4 +923,16 @@ Examples:
       Remove annotations with obj# 37, 38 (see output of pdfcpu annot list)
          pdfcpu annot remove in.pdf 37 38
       `
+
+	usageImagesList = "pdfcpu images list [-p(ages) selectedPages] inFile" + generalFlags
+
+	usageImages = "usage: " + usageImagesList
+
+	usageLongImages = `Manage keywords.
+
+     pages ... Please refer to "pdfcpu selectedpages"
+    inFile ... input pdf file
+    
+    Example: pdfcpu images list -p "1-5" gallery.pdf
+    `
 )

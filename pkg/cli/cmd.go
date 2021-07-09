@@ -97,6 +97,7 @@ var cmdMap = map[pdfcpu.CommandMode]func(cmd *Command) ([]string, error){
 	pdfcpu.CROP:                    processPageBoundaries,
 	pdfcpu.LISTANNOTATIONS:         processPageAnnotations,
 	pdfcpu.REMOVEANNOTATIONS:       processPageAnnotations,
+	pdfcpu.LISTIMAGES:              processImages,
 }
 
 // ValidateCommand creates a new command to validate a file.
@@ -746,5 +747,18 @@ func RemoveAnnotationsCommand(inFile, outFile string, pageSelection []string, ob
 		OutFile:       &outFile,
 		PageSelection: pageSelection,
 		IntVals:       objNrs,
+		Conf:          conf}
+}
+
+// ListImagesCommand creates a new command to list annotations for selected pages.
+func ListImagesCommand(inFile string, pageSelection []string, conf *pdfcpu.Configuration) *Command {
+	if conf == nil {
+		conf = pdfcpu.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdfcpu.LISTIMAGES
+	return &Command{
+		Mode:          pdfcpu.LISTIMAGES,
+		InFile:        &inFile,
+		PageSelection: pageSelection,
 		Conf:          conf}
 }

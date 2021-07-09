@@ -62,7 +62,7 @@ func TestExtractImagesLowLevel(t *testing.T) {
 
 	// Extract images for page 1.
 	i := 1
-	ii, err := ctx.ExtractPageImages(i)
+	ii, err := ctx.ExtractPageImages(i, false)
 	if err != nil {
 		t.Fatalf("%s extractPageFonts(%d): %v\n", msg, i, err)
 	}
@@ -71,7 +71,7 @@ func TestExtractImagesLowLevel(t *testing.T) {
 
 	// Process extracted images.
 	for _, img := range ii {
-		fn := filepath.Join(outDir, fmt.Sprintf("%s_%d_%s.%s", baseFileName, i, img.Name, img.Type))
+		fn := filepath.Join(outDir, fmt.Sprintf("%s_%d_%s.%s", baseFileName, i, img.Name, img.FileType))
 		if err := pdfcpu.WriteReader(fn, img); err != nil {
 			t.Fatalf("%s write: %s", msg, fn)
 		}

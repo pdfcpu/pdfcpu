@@ -26,15 +26,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Image is a Reader representing an image resource.
-type Image struct {
-	io.Reader
-	PageNr int
-	Name   string // Resource name
-	Thumb  bool
-	Type   string // File type
-}
-
 // ImageObjNrs returns all image dict objNrs for pageNr.
 // Requires an optimized context.
 func (ctx *Context) ImageObjNrs(pageNr int) []int {
@@ -48,42 +39,231 @@ func (ctx *Context) ImageObjNrs(pageNr int) []int {
 	return objNrs
 }
 
+func (ctx *Context) StreamLength(sd *StreamDict) (int64, error) {
+
+	val := sd.Int64Entry("Length")
+	if val != nil {
+		return *val, nil
+	}
+
+	indRef := sd.IndirectRefEntry("Length")
+	if indRef == nil {
+		return 0, nil
+	}
+
+	i, err := ctx.DereferenceInteger(indRef)
+	if err != nil || i == nil {
+		return 0, err
+	}
+
+	return int64(*i), nil
+}
+
+func (ctx *Context) ColorSpaceString(sd *StreamDict) (string, error) {
+	o, found := sd.Find("ColorSpace")
+	if !found {
+		return "", nil
+	}
+
+	o, err := ctx.Dereference(o)
+	if err != nil {
+		return "", err
+	}
+
+	switch cs := o.(type) {
+
+	case Name:
+		return string(cs), nil
+
+	case Array:
+		return string(cs[0].(Name)), nil
+	}
+
+	return "", nil
+}
+
+func colorSpaceNameComponents(cs Name) int {
+	switch cs {
+
+	case DeviceGrayCS:
+		return 1
+
+	case DeviceRGBCS:
+		return 3
+
+	case DeviceCMYKCS:
+		return 4
+	}
+	return 0
+}
+
+func (ctx *Context) ColorSpaceComponents(sd *StreamDict) (int, error) {
+	o, found := sd.Find("ColorSpace")
+	if !found {
+		return 0, nil
+	}
+
+	o, err := ctx.Dereference(o)
+	if err != nil {
+		return 0, err
+	}
+
+	switch cs := o.(type) {
+
+	case Name:
+		return colorSpaceNameComponents(cs), nil
+
+	case Array:
+		switch cs[0].(Name) {
+
+		case CalRGBCS:
+			return 3, nil
+
+		case ICCBasedCS:
+			iccProfileStream, _, err := ctx.DereferenceStreamDict(cs[1])
+			if err != nil {
+				return 0, err
+			}
+			n := iccProfileStream.IntEntry("N")
+			i := 0
+			if n != nil {
+				i = *n
+			}
+			return i, nil
+
+		case IndexedCS:
+
+			baseCS, err := ctx.Dereference(cs[1])
+			if err != nil {
+				return 0, err
+			}
+
+			switch cs := baseCS.(type) {
+			case Name:
+				return colorSpaceNameComponents(cs), nil
+
+			case Array:
+				iccProfileStream, _, err := ctx.DereferenceStreamDict(cs[1])
+				if err != nil {
+					return 0, err
+				}
+				n := iccProfileStream.IntEntry("N")
+				i := 0
+				if n != nil {
+					i = *n
+				}
+				return i, nil
+			}
+		}
+	}
+
+	return 0, nil
+}
+
 // ExtractImage extracts an image from sd.
-// Supported imgTypes: FlateDecode, DCTDecode, JPXDecode
-func (ctx *Context) ExtractImage(sd *StreamDict, thumb bool, resourceId string, objNr int) (*Image, error) {
+func (ctx *Context) ExtractImage(sd *StreamDict, thumb bool, resourceId string, objNr int, stub bool) (*Image, error) {
 
 	if sd == nil {
 		return nil, nil
 	}
 
+	var imgMask bool
+
+	if im := sd.BooleanEntry("ImageMask"); im != nil && *im {
+		imgMask = true
+	}
+
+	var filters, lastFilter string
+
 	fpl := sd.FilterPipeline
+	if fpl != nil {
+		var s []string
+		for _, filter := range fpl {
+			s = append(s, filter.Name)
+			lastFilter = filter.Name
+		}
+		filters = strings.Join(s, ",")
+	}
+
+	if stub {
+
+		w := sd.IntEntry("Width")
+		if w == nil {
+			return nil, errors.Errorf("pdfcpu: missing image width obj#%d", objNr)
+		}
+
+		h := sd.IntEntry("Height")
+		if h == nil {
+			return nil, errors.Errorf("pdfcpu: missing image height obj#%d", objNr)
+		}
+
+		cs, err := ctx.ColorSpaceString(sd)
+		if err != nil {
+			return nil, err
+		}
+
+		comp, err := ctx.ColorSpaceComponents(sd)
+		if err != nil {
+			return nil, err
+		}
+		if lastFilter == filter.CCITTFax {
+			comp = 1
+		}
+
+		bpc := 0
+		if i := sd.IntEntry("BitsPerComponent"); i != nil {
+			bpc = *i
+		}
+		// if jpx, bpc is undefined
+		if imgMask {
+			bpc = 1
+		}
+
+		var sMask bool
+		if sm, _ := sd.Find("SMask"); sm != nil {
+			sMask = true
+		}
+
+		var interpol bool
+		if b := sd.BooleanEntry("Interpolate"); b != nil && *b {
+			interpol = true
+		}
+
+		i, err := ctx.StreamLength(sd)
+		if err != nil {
+			return nil, err
+		}
+
+		img := &Image{
+			objNr:    objNr,
+			Name:     resourceId,
+			thumb:    thumb,
+			imgMask:  imgMask,
+			sMask:    sMask,
+			width:    *w,
+			height:   *h,
+			cs:       cs,
+			comp:     comp,
+			bpc:      bpc,
+			interpol: interpol,
+			size:     i,
+			filter:   filters,
+		}
+
+		return img, nil
+	}
+
 	if fpl == nil {
 		return nil, nil
 	}
 
-	var fName string
-	var s []string
-	for _, filter := range fpl {
-		s = append(s, filter.Name)
-		fName = filter.Name
-	}
-	filters := strings.Join(s, ",")
-
-	f := fName
-
 	// We do not extract imageMasks with the exception of CCITTDecoded images.
-	if im := sd.BooleanEntry("ImageMask"); im != nil && *im {
-		if f != filter.CCITTFax {
+	if imgMask {
+		if lastFilter != filter.CCITTFax {
 			log.Info.Printf("ExtractImage(%d): skip img with imageMask\n", objNr)
 			return nil, nil
 		}
 	}
-
-	// Ignore if image has a soft mask defined.
-	// if sm, _ := imageDict.Find("SMask"); sm != nil {
-	// 	log.Info.Printf("extractImageData: ignore obj# %d, unsupported \"SMask\"\n", objNr)
-	// 	return nil, nil
-	// }
 
 	// Ignore if image has a Mask defined.
 	if sm, _ := sd.Find("Mask"); sm != nil {
@@ -91,15 +271,15 @@ func (ctx *Context) ExtractImage(sd *StreamDict, thumb bool, resourceId string, 
 		return nil, nil
 	}
 
-	// CCITTDecoded image (bit) masks don't have a ColorSpace attribute, but we render image files.
-	if f == filter.CCITTFax {
+	// CCITTDecoded images / (bit) masks don't have a ColorSpace attribute, but we render image files.
+	if lastFilter == filter.CCITTFax {
 		_, err := ctx.DereferenceDictEntry(sd.Dict, "ColorSpace")
 		if err != nil {
 			sd.InsertName("ColorSpace", DeviceGrayCS)
 		}
 	}
 
-	switch f {
+	switch lastFilter {
 
 	case filter.DCT, filter.Flate, filter.CCITTFax, filter.RunLength:
 		// If color space is CMYK then write .tif else write .png
@@ -115,20 +295,34 @@ func (ctx *Context) ExtractImage(sd *StreamDict, thumb bool, resourceId string, 
 		return nil, nil
 	}
 
-	return RenderImage(ctx.XRefTable, sd, thumb, resourceId, objNr)
+	r, t, err := RenderImage(ctx.XRefTable, sd, thumb, resourceId, objNr)
+	if err != nil {
+		return nil, err
+	}
+
+	img := &Image{
+		Reader:   r,
+		Name:     resourceId,
+		objNr:    objNr,
+		thumb:    thumb,
+		FileType: t,
+	}
+
+	return img, nil
 }
 
 // ExtractPageImages extracts all images used by pageNr.
-func (ctx *Context) ExtractPageImages(pageNr int) ([]Image, error) {
+// Optionally return stubs only.
+func (ctx *Context) ExtractPageImages(pageNr int, stub bool) ([]Image, error) {
 	ii := []Image{}
 	for _, objNr := range ctx.ImageObjNrs(pageNr) {
 		imageObj := ctx.Optimize.ImageObjects[objNr]
-		i, err := ctx.ExtractImage(imageObj.ImageDict, false, imageObj.ResourceNames[0], objNr)
+		i, err := ctx.ExtractImage(imageObj.ImageDict, false, imageObj.ResourceNames[0], objNr, stub)
 		if err != nil {
 			return nil, err
 		}
 		if i != nil {
-			i.PageNr = pageNr
+			i.pageNr = pageNr
 			ii = append(ii, *i)
 		}
 	}
@@ -139,12 +333,12 @@ func (ctx *Context) ExtractPageImages(pageNr int) ([]Image, error) {
 		if err != nil {
 			return nil, err
 		}
-		i, err := ctx.ExtractImage(sd, true, "", objNr)
+		i, err := ctx.ExtractImage(sd, true, "", objNr, stub)
 		if err != nil {
 			return nil, err
 		}
 		if i != nil {
-			i.PageNr = pageNr
+			i.pageNr = pageNr
 			ii = append(ii, *i)
 		}
 	}

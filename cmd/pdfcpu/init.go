@@ -50,6 +50,13 @@ func initCommandMap() {
 		boxesCmdMap.register(k, v)
 	}
 
+	imagesCmdMap := newCommandMap()
+	for k, v := range map[string]command{
+		"list": {processListImagesCommand, nil, "", ""},
+	} {
+		imagesCmdMap.register(k, v)
+	}
+
 	portfolioCmdMap := newCommandMap()
 	for k, v := range map[string]command{
 		"list":    {processListAttachmentsCommand, nil, "", ""},
@@ -138,8 +145,9 @@ func initCommandMap() {
 		"fonts":         {nil, fontsCmdMap, usageFonts, usageLongFonts},
 		"grid":          {processGridCommand, nil, usageGrid, usageLongGrid},
 		"help":          {printHelp, nil, "", ""},
-		"info":          {processInfoCommand, nil, usageInfo, usageLongInfo},
+		"images":        {nil, imagesCmdMap, usageImages, usageLongImages},
 		"import":        {processImportImagesCommand, nil, usageImportImages, usageLongImportImages},
+		"info":          {processInfoCommand, nil, usageInfo, usageLongInfo},
 		"keywords":      {nil, keywordsCmdMap, usageKeywords, usageLongKeywords},
 		"merge":         {processMergeCommand, nil, usageMerge, usageLongMerge},
 		"nup":           {processNUpCommand, nil, usageNUp, usageLongNUp},
