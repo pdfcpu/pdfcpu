@@ -241,7 +241,16 @@ func appendNotEqualMediaAndCropBoxInfo(ss *[]string, pb PageBoundaries, unit str
 }
 
 func appendPageBoxesInfo(ss *[]string, pb PageBoundaries, unit string, currUnit DisplayUnit, i int) {
-	*ss = append(*ss, fmt.Sprintf("Page %d:", i+1))
+	d := pb.CropBox().Dimensions()
+	if pb.Rot%180 != 0 {
+		d.Width, d.Height = d.Height, d.Width
+	}
+	or := "portrait"
+	if d.Landscape() {
+		or = "landscape"
+	}
+	s := fmt.Sprintf("rot=%+d orientation:%s", pb.Rot, or)
+	*ss = append(*ss, fmt.Sprintf("Page %d: %s", i+1, s))
 	mb := pb.MediaBox()
 	cb := pb.CropBox()
 	if cb == nil || mb.equals(*cb) {

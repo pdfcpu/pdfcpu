@@ -1975,7 +1975,7 @@ func (xRefTable *XRefTable) PageBoundaries() ([]PageBoundaries, error) {
 	return pbs, nil
 }
 
-// PageDims returns a sorted slice with media box dimensions
+// PageDims returns a sorted slice with effective media box dimensions
 // for all pages sorted ascending by page number.
 func (xRefTable *XRefTable) PageDims() ([]Dim, error) {
 	pbs, err := xRefTable.PageBoundaries()
@@ -1985,7 +1985,11 @@ func (xRefTable *XRefTable) PageDims() ([]Dim, error) {
 
 	dims := make([]Dim, len(pbs))
 	for i, pb := range pbs {
-		dims[i] = pb.MediaBox().Dimensions()
+		d := pb.CropBox().Dimensions()
+		if pb.Rot%180 != 0 {
+			d.Width, d.Height = d.Height, d.Width
+		}
+		dims[i] = d
 	}
 
 	return dims, nil

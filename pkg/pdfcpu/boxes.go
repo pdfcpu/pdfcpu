@@ -863,10 +863,17 @@ func (ctx *Context) ListPageBoundaries(selectedPages IntSet, wantPB *PageBoundar
 		if _, found := selectedPages[i+1]; !found {
 			continue
 		}
-		var s string
-		if pb.Rot != 0 {
-			s = fmt.Sprintf("rot=%+d", pb.Rot)
+
+		d := pb.CropBox().Dimensions()
+		if pb.Rot%180 != 0 {
+			d.Width, d.Height = d.Height, d.Width
 		}
+		or := "portrait"
+		if d.Landscape() {
+			or = "landscape"
+		}
+
+		s := fmt.Sprintf("rot=%+d orientation:%s", pb.Rot, or)
 		ss = append(ss, fmt.Sprintf("Page %d: %s", i+1, s))
 		if wantPB.Media != nil {
 			s := ""
