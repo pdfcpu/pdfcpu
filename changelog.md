@@ -6,7 +6,7 @@ layout: default
 
 | Date      | Tag / Commit                                                                                | Description  
 |:----------|:--------------------------------------------------------------------------------------------|:------------------------------
-|2021-07-11 | [v0.3.12](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.12)                            | Add new cmds: annotations, images
+|2021-07-12 | [v0.3.12](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.12)                            | Add new cmds: annotations, images
 |           |                                                                                             | Fix #300, #302, #323, #324, #329,
 |           |                                                                                             | #331-336, #338, #341-343, #347, #350
 |2021-04-05 | [v0.3.11](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.11)                            | Add right to left stamping
