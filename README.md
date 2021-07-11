@@ -1,5 +1,6 @@
 # pdfcpu: a Go PDF processor
 
+[![Open in Visual Studio Code](https://open.vscode.dev/badges/open-in-vscode.svg)](https://open.vscode.dev/pdfcpu/pdfcpu)
 [![Test](https://github.com/pdfcpu/pdfcpu/workflows/Test/badge.svg)](https://github.com/pdfcpu/pdfcpu/actions)
 [![Coverage Status](https://coveralls.io/repos/github/pdfcpu/pdfcpu/badge.svg?branch=master)](https://coveralls.io/github/pdfcpu/pdfcpu?branch=master)
 [![GoDoc](https://godoc.org/github.com/pdfcpu/pdfcpu?status.svg)](https://pkg.go.dev/github.com/pdfcpu/pdfcpu)
@@ -38,6 +39,7 @@ The main focus lies on strong support for batch processing and scripting via a r
 
 ## Command Set
 
+* [annotations](https://pdfcpu.io/annot/annot)
 * [attachments](https://pdfcpu.io/attach/attach)
 * [booklet](https://pdfcpu.io/generate/booklet)
 * [boxes](https://pdfcpu.io/boxes/boxes)
@@ -50,6 +52,7 @@ The main focus lies on strong support for batch processing and scripting via a r
 * [extract](https://pdfcpu.io/extract/extract)
 * [fonts](https://pdfcpu.io/fonts/fonts)
 * [grid](https://pdfcpu.io/generate/grid)
+* [images](https://pdfcpu.io/images/images)
 * [import](https://pdfcpu.io/generate/import)
 * [info](https://pdfcpu.io/info)
 * [keywords](https://pdfcpu.io/keywords/keywords)
@@ -101,7 +104,7 @@ Get the latest binary [here](https://github.com/pdfcpu/pdfcpu/releases).
 
 ### Using GOPATH
 
-Required go version for building: go1.15 and up
+Required go version for building: go1.16 and up
 
 ```
 go get github.com/pdfcpu/pdfcpu/cmd/...
@@ -180,8 +183,7 @@ Thanks goes to these wonderful people:
 | [<img src="https://avatars1.githubusercontent.com/u/11322155?v=4" width="100px"/><br/><sub><b>Horst Rutter</b></sub>](https://github.com/hhrutter) | [<img src="https://avatars0.githubusercontent.com/u/5140211?v=4" width="100px"/><br/><sub><b>haldyr</b></sub>](https://github.com/haldyr) | [<img src="https://avatars3.githubusercontent.com/u/20608155?v=4" width="100px"/><br/><sub><b>Vyacheslav</b></sub>](https://github.com/SimePel) | [<img src="https://avatars1.githubusercontent.com/u/617459?v=4" width="100px"/><br/><sub><b>Erik Unger</b></sub>](https://github.com/ungerik) | [<img src="https://avatars1.githubusercontent.com/u/13079058?v=4" width="100px"/><br/><sub><b>Richard Wilkes</b></sub>](https://github.com/richardwilkes) | [<img src="https://avatars1.githubusercontent.com/u/16303386?s=400&v=4" width="100px"/><br/><sub><b>minenok-tutu</b></sub>](https://github.com/minenok-tutu) | [<img src="https://avatars0.githubusercontent.com/u/1965445?s=400&v=4" width="100px"/><br/><sub><b>Mateusz Burniak</b></sub>](https://github.com/matbur) |
 | [<img src="https://avatars2.githubusercontent.com/u/1175110?s=400&v=4" width="100px"/><br/><sub><b>Dmitry Harnitski</b></sub>](https://github.com/dharnitski) | [<img src="https://avatars0.githubusercontent.com/u/1074083?s=400&v=4" width="100px"/><br/><sub><b>ryarnyah</b></sub>](https://github.com/ryarnyah) | [<img src="https://avatars0.githubusercontent.com/u/13267?s=400&v=4" width="100px"/><br/><sub><b>Sam Giffney</b></sub>](https://github.com/s01ipsist) | [<img src="https://avatars3.githubusercontent.com/u/32948066?s=400&v=4" width="100px"/><br /><sub><b>Carlos Eduardo Witte</b></sub>](https://github.com/cewitte) | [<img src="https://avatars1.githubusercontent.com/u/2374948?s=400&u=a36e5f8da8dc1c102bc4d283f25e4c61cae7f985&v=4" width="100px"/><br/><sub><b>minusworld</b></sub>](https://github.com/minusworld) | [<img src="https://avatars0.githubusercontent.com/u/18538487?s=400&u=b9e628dfc60f672a887be2ed04a791195829943e&v=4" width="100px"/><br/><sub><b>Witold Konior</b></sub>](https://github.com/jozuenoon) | [<img src="https://avatars0.githubusercontent.com/u/630151?s=400&v=4" width="100px"/><br/><sub><b>joonas.fi</b></sub>](https://github.com/joonas-fi) |
 | [<img src="https://avatars3.githubusercontent.com/u/10349817?s=400&u=93bacb23bd2909d5b6c5b644a8d4cdd947422ee1&v=4" width="100px"/><br/><sub><b>Henrik Reinstädtler</b></sub>](https://github.com/henrixapp) | [<img src="https://avatars1.githubusercontent.com/u/72016286?s=400&v=4" width="100px"/><br/><sub><b>VMorozov-wh</b></sub>](https://github.com/VMorozov-wh) | [<img src="https://avatars0.githubusercontent.com/u/31929422?s=400&v=4" width="100px"/><br/><sub><b>Benoit KUGLER</b></sub>](https://github.com/benoitkugler) | [<img src="https://avatars.githubusercontent.com/u/704919?s=400&v=4" width="100px"/><br/><sub><b>Adam Greenhall</b></sub>](https://github.com/adamgreenhall) | [<img src="https://avatars.githubusercontent.com/u/5201812?s=400&u=8a0a9fca4560be71d4923299ddebf877854eea54&v=4" width="100px"/><br/><sub><b>moritamori</b></sub>](https://github.com/moritamori) | [<img src="https://avatars.githubusercontent.com/u/41904529?s=400&u=044396494285ad806e86d1936c390b3071ce57c0&v=4" width="100px"/><br/><sub><b>JanBaryla</b></sub>](https://github.com/JanBaryla) | [<img src="https://avatars.githubusercontent.com/u/43145244?s=400&u=89a689f1a854ce0f57ae2a0333c82bfdc5723bb9&v=4" width="100px"/><br/><sub><b>TheDiscordian</b></sub>](https://github.com/TheDiscordian) |
-| [<img src="https://avatars.githubusercontent.com/u/15472552?v=4" width="100px"/><br/><sub><b>Rafael Garcia Argente</b></sub>](https://github.com/rgargente) |||||||
-
+| [<img src="https://avatars.githubusercontent.com/u/15472552?v=4" width="100px"/><br/><sub><b>Rafael Garcia Argente</b></sub>](https://github.com/rgargente) | [<img src="https://avatars.githubusercontent.com/u/710057?v=4" width="100px"/><br/><sub><b>truyet</b></sub>](https://github.com/truyet) | [<img src="https://avatars.githubusercontent.com/u/5031217?v=4" width="100px"/><br/><sub><b>Christian Nicola</b></sub>](https://github.com/christiannicola) | [<img src="https://avatars.githubusercontent.com/u/3233970?v=4" width="100px"/><br/><sub><b>Benjamin Krill</b></sub>](https://github.com/kben) | [<img src="https://avatars.githubusercontent.com/u/26521615?v=4" width="100px"/><br/><sub><b>Peter Wyatt</b></sub>](https://github.com/petervwyatt) | [<img src="https://avatars.githubusercontent.com/u/3142701?v=4" width="100px"/><br/><sub><b>Kroum Tzanev</b></sub>](https://github.com/kpym) ||
 
 <!-- ALL-CONTRIBUTORS-LIST:END - Do not remove or modify this section -->
 
