@@ -140,6 +140,7 @@ but `op: .7` will do the job.
 |                  | requires bccolor                | i .. border width > 0                               |
 |                  |                                 | round .. set round bounding box corners             |
 |                  |                                 | color .. border color                               |
+| url              | add link annotation             | Omit https://                                       |
 
 Only one of rotation and diagonal is allowed.
 
