@@ -47,10 +47,10 @@ pdfcpu info -u cm test.pdf
                Title:
               Author:
              Subject:
-        PDF Producer: pdfcpu v0.3.2
+        PDF Producer: pdfcpu v0.3.12
      Content creator:
-       Creation date: D:20190823010752+02'00'
-   Modification date: D:20190823010752+02'00'
+       Creation date: D:20210823010752+02'00'
+   Modification date: D:20210823010752+02'00'
             Keywords: key1
                       key2
           Properties: name1 = val1
@@ -61,7 +61,8 @@ pdfcpu info -u cm test.pdf
           Linearized: No
   Using XRef streams: Yes
 Using object streams: Yes
-          Watermarks: No
+         Watermarked: No
+          Thumbnails: No
 ..........................................
            Encrypted: No
          Permissions: Full access
@@ -74,9 +75,9 @@ pdfcpu info -u po -pages 1,2 test.pdf
 pages: 1,2
          PDF version: 1.2
           Page count: 2
-Page 1:
+Page 1: rot=+0 orientation:portrait
   MediaBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71  = CropBox, TrimBox, BleedBox, ArtBox
-Page 2:
+Page 2: rot=+0 orientation:portrait
   MediaBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71  = CropBox, TrimBox, BleedBox, ArtBox
 ............................................
                Title:
@@ -93,6 +94,7 @@ Page 2:
   Using XRef streams: No
 Using object streams: No
          Watermarked: No
+          Thumbnails: No
 ............................................
            Encrypted: No
          Permissions: Full access

@@ -16,6 +16,7 @@ Usage:
 
 The commands are:
 
+   annotations list, remove page annotations
    attachments list, add, remove, extract embedded file attachments
    booklet     arrange pages onto larger sheets of paper to make a booklet or zine
    boxes       list, add, remove page boundaries for selected pages
@@ -28,6 +29,7 @@ The commands are:
    extract     extract images, fonts, content, pages, metadata
    fonts       install, list supported fonts
    grid        rearrange pages or images for enhanced browsing experience
+   images      list images for selected pages
    import      import/convert images to PDF
    info        print file info
    keywords    list, add, remove document keywords

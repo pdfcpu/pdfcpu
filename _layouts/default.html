@@ -85,6 +85,10 @@
           {% include nav_properties.html navclass='nav-top' %}
         {% elsif page.dir == '/boxes/' %}
           {% include nav_boxes.html navclass='nav-top' %}
+        {% elsif page.dir == '/annot/' %}
+          {% include nav_annot.html navclass='nav-top' %}
+        {% elsif page.dir == '/images/' %}
+          {% include nav_images.html navclass='nav-top' %}
         {% else %}
           {% include nav.html navclass='nav-top' %}
         {% endif %}

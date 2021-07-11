@@ -34,6 +34,8 @@ layout: default
 * Manage (add,remove,list) search keywords
 * Manage (add,remove,list) document properties
 * Manage (add,remove,list) page boundaries
+* Manage (remove,list) annotations
 * Info (print file info)
 * Fonts (install, list supported fonts)
 * Paper (print list of supported papersizes)
+* List embedded images

@@ -58,14 +58,14 @@ pdfcpu boxes list [-p(ages) selectedPages] -- [boxTypes] inFile
 pdfcpu box list test.pdf
 listing mediaBox, cropBox, trimBox, bleedBox, artBox for upc.pdf
 pages: all
-Page 1:
+Page 1: rot=+0 orientation:portrait
   MediaBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71 (inherited)
    CropBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71 (default)
    TrimBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71 (default)
   BleedBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71 (default)
     ArtBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71 (default)
 
-Page 2:
+Page 2: rot=+0 orientation:portrait
   MediaBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71 (inherited)
    CropBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71 (default)
    TrimBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71 (default)
@@ -81,7 +81,7 @@ List mediaBox and cropBox of page 1 of test.pdf using display unit cm:
 pdfcpu box list -u cm -pages 1 -- "m,c" test.pdf
 listing mediaBox, cropBox for test.pdf
 pages: 1
-Page 1:
+Page 1: rot=+0 orientation:portrait
   MediaBox (cm) (0.00, 0.00, 21.00, 29.70) w=21.00 h=29.70 ar=0.71 (inherited)
    CropBox (cm) (0.00, 0.00, 21.00, 29.70) w=21.00 h=29.70 ar=0.71 (default)
 ```
