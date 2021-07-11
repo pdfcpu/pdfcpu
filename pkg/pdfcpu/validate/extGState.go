@@ -230,14 +230,21 @@ func validateTREntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, entr
 	return validateTR(xRefTable, o)
 }
 
+func validateTR2Name(xRefTable *pdf.XRefTable, name pdf.Name) error {
+	s := name.Value()
+	if s != "Identity" && s != "Default" {
+		return errors.Errorf("pdfcpu: validateTR2: corrupt name\n")
+	}
+	return nil
+}
+
 func validateTR2(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
 
 	switch o := o.(type) {
 
 	case pdf.Name:
-		s := o.Value()
-		if s != "Identity" && s != "Default" {
-			return errors.Errorf("pdfcpu: validateTR2: corrupt name\n")
+		if err = validateTR2Name(xRefTable, o); err != nil {
+			return err
 		}
 
 	case pdf.Array:
@@ -258,9 +265,8 @@ func validateTR2(xRefTable *pdf.XRefTable, o pdf.Object) (err error) {
 			}
 
 			if o, ok := o.(pdf.Name); ok {
-				s := o.Value()
-				if s != "Identity" && s != "Default" {
-					return errors.Errorf("pdfcpu: validateTR2: corrupt name\n")
+				if err = validateTR2Name(xRefTable, o); err != nil {
+					return err
 				}
 				continue
 			}

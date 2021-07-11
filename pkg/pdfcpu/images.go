@@ -48,47 +48,10 @@ type Image struct {
 
 }
 
-func (ctx *Context) ListImages(selectedPages IntSet) ([]string, error) {
-
-	var j int
+func (ctx *Context) listImages(iii [][]Image, maxLenID, maxLenSize int) ([]string, int, error) {
 	ss := []string{}
-	pageNrs := []int{}
-
-	for k, v := range selectedPages {
-		if !v {
-			continue
-		}
-		pageNrs = append(pageNrs, k)
-	}
-	sort.Ints(pageNrs)
-
-	iii := [][]Image{}
-	var (
-		maxLenID, maxLenSize int
-	)
-
-	for _, i := range pageNrs {
-		ii, err := ctx.ExtractPageImages(i, true)
-		if err != nil {
-			return nil, err
-		}
-		if len(ii) == 0 {
-			continue
-		}
-		for _, i := range ii {
-			if len(i.Name) > maxLenID {
-				maxLenID = len(i.Name)
-			}
-			lenSize := len(ByteSize(i.size).String())
-			if lenSize > maxLenSize {
-				maxLenSize = lenSize
-			}
-		}
-		iii = append(iii, ii)
-	}
-
 	first := true
-
+	j := 0
 	for _, ii := range iii {
 		if first {
 			s1 := ("page  obj# ")
@@ -135,6 +98,48 @@ func (ctx *Context) ListImages(selectedPages IntSet) ([]string, error) {
 				pageNr, img.objNr, img.Name, t, img.width, img.height, img.cs, img.comp, bpc, interp, ByteSize(img.size), img.filter))
 			j++
 		}
+	}
+	return ss, j, nil
+}
+
+func (ctx *Context) ListImages(selectedPages IntSet) ([]string, error) {
+	pageNrs := []int{}
+	for k, v := range selectedPages {
+		if !v {
+			continue
+		}
+		pageNrs = append(pageNrs, k)
+	}
+	sort.Ints(pageNrs)
+
+	iii := [][]Image{}
+	var (
+		maxLenID, maxLenSize int
+	)
+
+	for _, i := range pageNrs {
+		ii, err := ctx.ExtractPageImages(i, true)
+		if err != nil {
+			return nil, err
+		}
+		if len(ii) == 0 {
+			continue
+		}
+		for _, i := range ii {
+			if len(i.Name) > maxLenID {
+				maxLenID = len(i.Name)
+			}
+			lenSize := len(ByteSize(i.size).String())
+			if lenSize > maxLenSize {
+				maxLenSize = lenSize
+			}
+		}
+		iii = append(iii, ii)
+	}
+
+	ss, j, err := ctx.listImages(iii, maxLenID, maxLenSize)
+	if err != nil {
+		return nil, err
 	}
 
 	return append([]string{fmt.Sprintf("%d images available", j)}, ss...), nil

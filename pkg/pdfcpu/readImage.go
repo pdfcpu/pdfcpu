@@ -497,6 +497,34 @@ func createImageBuf(xRefTable *XRefTable, img image.Image, format string) ([]byt
 	return buf, sm, bpc, cs, nil
 }
 
+func colorSpaceForJPEGColorModel(cm color.Model) string {
+	switch cm {
+	case color.GrayModel:
+		return DeviceGrayCS
+	case color.YCbCrModel:
+		return DeviceRGBCS
+	case color.CMYKModel:
+		return DeviceCMYKCS
+	}
+	return ""
+}
+
+func createDCTImageObjectForJPEG(xRefTable *XRefTable, c image.Config, bb bytes.Buffer) (*StreamDict, int, int, error) {
+	cs := colorSpaceForJPEGColorModel(c.ColorModel)
+	if cs == "" {
+		return nil, 0, 0, errors.New("pdfcpu: unexpected color model for JPEG")
+	}
+
+	buf, err := ioutil.ReadAll(&bb)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	sd, err := createDCTImageObject(xRefTable, buf, c.Width, c.Height, 8, cs)
+
+	return sd, c.Width, c.Height, err
+}
+
 func createImageStreamDict(xRefTable *XRefTable, r io.Reader, gray, sepia bool) (*StreamDict, int, int, error) {
 
 	var bb bytes.Buffer
@@ -512,32 +540,7 @@ func createImageStreamDict(xRefTable *XRefTable, r io.Reader, gray, sepia bool) 
 	}
 
 	if format == "jpeg" && !gray && !sepia {
-		var cs string
-
-		switch c.ColorModel {
-
-		case color.GrayModel:
-			cs = DeviceGrayCS
-
-		case color.YCbCrModel:
-			cs = DeviceRGBCS
-
-		case color.CMYKModel:
-			cs = DeviceCMYKCS
-
-		default:
-			return nil, 0, 0, errors.New("pdfcpu: unexpected color model for JPEG")
-
-		}
-
-		buf, err := ioutil.ReadAll(&bb)
-		if err != nil {
-			return nil, 0, 0, err
-		}
-
-		sd, err := createDCTImageObject(xRefTable, buf, c.Width, c.Height, 8, cs)
-
-		return sd, c.Width, c.Height, err
+		return createDCTImageObjectForJPEG(xRefTable, c, bb)
 	}
 
 	img, format, err := image.Decode(&bb)

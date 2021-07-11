@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -72,6 +73,35 @@ const (
 	Ann_Redact
 )
 
+var annotTypes = map[string]AnnotationType{
+	"Text":           Ann_Text,
+	"Link":           Ann_Link,
+	"FreeText":       Ann_FreeText,
+	"Line":           Ann_Line,
+	"Square":         Ann_Square,
+	"Circle":         Ann_Circle,
+	"Polygon":        Ann_Polygon,
+	"PolyLine":       Ann_PolyLine,
+	"HighLight":      Ann_HighLight,
+	"Underline":      Ann_Underline,
+	"Squiggly":       Ann_Squiggly,
+	"StrikeOut":      Ann_StrikeOut,
+	"Stamp":          Ann_Stamp,
+	"Caret":          Ann_Caret,
+	"Ink":            Ann_Ink,
+	"Popup":          Ann_Popup,
+	"FileAttachment": Ann_FileAttachment,
+	"Sound":          Ann_Sound,
+	"Movie":          Ann_Movie,
+	"Widget":         Ann_Widget,
+	"Screen":         Ann_Screen,
+	"PrinterMark":    Ann_PrinterMark,
+	"TrapNet":        Ann_TrapNet,
+	"Watermark":      Ann_Watermark,
+	"3D":             Ann_3D,
+	"Redact":         Ann_Redact,
+}
+
 var AnnotTypeStrings = map[AnnotationType]string{
 	Ann_Text:           "Text",
 	Ann_Link:           "Link",
@@ -103,8 +133,10 @@ var AnnotTypeStrings = map[AnnotationType]string{
 
 type AnnotationRenderer interface {
 	RenderDict(pageIndRef IndirectRef) Dict
-	ID() string
 	Type() AnnotationType
+	RectString() string
+	ID() string
+	ContentString() string
 }
 
 type Annotation struct {
@@ -145,68 +177,19 @@ func NewAnnotationForRawType(
 	nm string,
 	f AnnotationFlags,
 	backgrCol *SimpleColor) Annotation {
-
-	var subType AnnotationType
-	switch typ {
-	case "Text":
-		subType = Ann_Text
-	case "Link":
-		subType = Ann_Link
-	case "FreeText":
-		subType = Ann_FreeText
-	case "Line":
-		subType = Ann_Line
-	case "Square":
-		subType = Ann_Square
-	case "Circle":
-		subType = Ann_Circle
-	case "Polygon":
-		subType = Ann_Polygon
-	case "PolyLine":
-		subType = Ann_PolyLine
-	case "HighLight":
-		subType = Ann_HighLight
-	case "Underline":
-		subType = Ann_Underline
-	case "Squiggly":
-		subType = Ann_Squiggly
-	case "StrikeOut":
-		subType = Ann_StrikeOut
-	case "Stamp":
-		subType = Ann_Stamp
-	case "Caret":
-		subType = Ann_Caret
-	case "Ink":
-		subType = Ann_Ink
-	case "Popup":
-		subType = Ann_Popup
-	case "FileAttachment":
-		subType = Ann_FileAttachment
-	case "Sound":
-		subType = Ann_Sound
-	case "Movie":
-		subType = Ann_Movie
-	case "Widget":
-		subType = Ann_Widget
-	case "Screen":
-		subType = Ann_Screen
-	case "PrinterMark":
-		subType = Ann_PrinterMark
-	case "TrapNet":
-		subType = Ann_TrapNet
-	case "Watermark":
-		subType = Ann_Watermark
-	case "3D":
-		subType = Ann_3D
-	case "Redact":
-		subType = Ann_Redact
-	}
-
-	return NewAnnotation(subType, rect, contents, pageIndRef, nm, f, backgrCol)
+	return NewAnnotation(annotTypes[typ], rect, contents, pageIndRef, nm, f, backgrCol)
 }
 
 func (ann Annotation) ID() string {
 	return ann.NM
+}
+
+func (ann Annotation) ContentString() string {
+	return ann.Contents
+}
+
+func (ann Annotation) RectString() string {
+	return ann.Rect.ShortString()
 }
 
 func (ann Annotation) Type() AnnotationType {
@@ -215,10 +198,6 @@ func (ann Annotation) Type() AnnotationType {
 
 func (ann Annotation) TypeString() string {
 	return AnnotTypeStrings[ann.SubType]
-}
-
-func (ann Annotation) String() string {
-	return fmt.Sprintf("%s \"%s\" \"%s\"", ann.Rect.ShortString(), ann.ID(), ann.Contents)
 }
 
 func (ann Annotation) RenderDict(pageIndRef IndirectRef) Dict {
@@ -246,12 +225,12 @@ func NewPopupAnnotation(
 		ParentIndRef: parentIndRef}
 }
 
-func (ann PopupAnnotation) String() string {
+func (ann PopupAnnotation) ContentString() string {
 	s := "\"" + ann.Contents + "\""
 	if ann.ParentIndRef != nil {
 		s = "-> #" + ann.ParentIndRef.ObjectNumber.String()
 	}
-	return fmt.Sprintf("%s \"%s\" %s", ann.Rect.ShortString(), ann.ID(), s)
+	return s
 }
 
 type MarkupAnnotation struct {
@@ -379,12 +358,12 @@ func NewLinkAnnotation(
 	}
 }
 
-func (ann LinkAnnotation) String() string {
+func (ann LinkAnnotation) ContentString() string {
 	s := "(internal)"
 	if len(ann.URI) > 0 {
-		s = "\"" + ann.URI + "\""
+		s = ann.URI
 	}
-	return fmt.Sprintf("%s \"%s\" %s", ann.Rect.ShortString(), ann.ID(), s)
+	return s
 }
 
 func (ann LinkAnnotation) RenderDict(pageIndRef IndirectRef) Dict {
@@ -619,22 +598,68 @@ func (xRefTable *XRefTable) ListAnnotations(selectedPages IntSet) (int, []string
 		ss = append(ss, "")
 		ss = append(ss, fmt.Sprintf("Page %d:", i))
 		for annType, annots := range pageAnnots {
+			var (
+				maxLenRect    int
+				maxLenContent int
+			)
+			maxLenID := 2
+			for _, ann := range annots {
+				if len(ann.RectString()) > maxLenRect {
+					maxLenRect = len(ann.RectString())
+				}
+				if len(ann.ID()) > maxLenID {
+					maxLenID = len(ann.ID())
+				}
+				if len(ann.ContentString()) > maxLenContent {
+					maxLenContent = len(ann.ContentString())
+				}
+			}
 			ss = append(ss, "")
 			ss = append(ss, fmt.Sprintf("  %s:", AnnotTypeStrings[annType]))
-			ss = append(ss, "    Obj# Rect Id Content")
-			ss = append(ss, "    =================================")
+			s1 := ("     obj# ")
+			s2 := fmt.Sprintf("%%%ds", maxLenRect)
+			s3 := fmt.Sprintf("%%%ds", maxLenID)
+			s4 := fmt.Sprintf("%%%ds", maxLenContent)
+			s := fmt.Sprintf(s1+s2+" "+s3+" "+s4, "rect", "id", "content")
+			ss = append(ss, s)
+			ss = append(ss, "    "+strings.Repeat("=", len(s)-4))
+
 			for objNr, ann := range annots {
 				s := "?"
 				if objNr[0] != '?' {
 					s = objNr
 				}
-				ss = append(ss, fmt.Sprintf("    %s %s", s, ann))
+				ss = append(ss, fmt.Sprintf("    %5s "+s2+" "+s3+" "+s4, s, ann.RectString(), ann.ID(), ann.ContentString()))
 				j++
 			}
 		}
 	}
 
 	return j, append([]string{fmt.Sprintf("%d annotations available", j)}, ss...), nil
+}
+
+func (ctx *Context) addAnnotationToDirectObj(
+	annots Array,
+	annotIndRef, pageDictIndRef *IndirectRef,
+	pageDict Dict,
+	pageNr int,
+	ar AnnotationRenderer,
+	incr bool) (bool, error) {
+
+	i, err := ctx.findAnnotByID(ar.ID(), annots)
+	if err != nil {
+		return false, err
+	}
+	if i >= 0 {
+		return false, errors.Errorf("page %d: duplicate annotation with id:%s\n", pageNr, ar.ID())
+	}
+	pageDict.Update("Annots", append(annots, *annotIndRef))
+	if incr {
+		// Mark page dict obj for incremental writing.
+		ctx.Write.IncrementWithObjNr(pageDictIndRef.ObjectNumber.Value())
+	}
+	ctx.EnsureVersionForWriting()
+	return true, nil
 }
 
 // AddAnnotation adds the annotation ar to pageDict.
@@ -669,21 +694,7 @@ func (ctx *Context) AddAnnotation(pageDictIndRef *IndirectRef, pageDict Dict, pa
 
 	ir, ok := obj.(IndirectRef)
 	if !ok {
-		annots, _ := obj.(Array)
-		i, err := ctx.findAnnotByID(ar.ID(), annots)
-		if err != nil {
-			return false, err
-		}
-		if i >= 0 {
-			return false, errors.Errorf("page %d: duplicate annotation with id:%s\n", pageNr, ar.ID())
-		}
-		pageDict.Update("Annots", append(annots, *annotIndRef))
-		if incr {
-			// Mark page dict obj for incremental writing.
-			ctx.Write.IncrementWithObjNr(pageDictIndRef.ObjectNumber.Value())
-		}
-		ctx.EnsureVersionForWriting()
-		return true, nil
+		return ctx.addAnnotationToDirectObj(obj.(Array), annotIndRef, pageDictIndRef, pageDict, pageNr, ar, incr)
 	}
 
 	// Annots array is an IndirectReference.
@@ -840,7 +851,7 @@ func (ctx *Context) removeAllAnnotations(pageDict Dict, pageDictObjNr, pageNr in
 	return true, nil
 }
 
-func (ctx *Context) removeAnnotationsFromPageDictByIDOrObjNr(ids []string, objNrSet IntSet, pageNr int, annots Array, incr bool) (Array, bool, error) {
+func (ctx *Context) removeAnnotationsFromPageDictByID(ids []string, pageNr int, annots Array, incr bool) (Array, bool, error) {
 	var ok bool
 	for _, id := range ids {
 		i, err := ctx.findAnnotByID(id, annots)
@@ -870,7 +881,11 @@ func (ctx *Context) removeAnnotationsFromPageDictByIDOrObjNr(ids []string, objNr
 			annots = append(annots[:i], annots[i+1:]...)
 		}
 	}
+	return annots, ok, nil
+}
 
+func (ctx *Context) removeAnnotationsFromPageDictByObjNr(objNrSet IntSet, pageNr int, annots Array, incr bool) (Array, bool, error) {
+	var ok bool
 	for objNr, v := range objNrSet {
 		if !v {
 			continue
@@ -903,8 +918,54 @@ func (ctx *Context) removeAnnotationsFromPageDictByIDOrObjNr(ids []string, objNr
 			annots = append(annots[:i], annots[i+1:]...)
 		}
 	}
-
 	return annots, ok, nil
+}
+
+func (ctx *Context) removeAnnotationsFromPageDictByIDOrObjNr(ids []string, objNrSet IntSet, pageNr int, annots Array, incr bool) (Array, bool, error) {
+	var (
+		ok  bool
+		err error
+	)
+
+	if len(ids) > 0 {
+		annots, ok, err = ctx.removeAnnotationsFromPageDictByID(ids, pageNr, annots, incr)
+		if err != nil || annots == nil {
+			return nil, ok, err
+		}
+	}
+
+	return ctx.removeAnnotationsFromPageDictByObjNr(objNrSet, pageNr, annots, incr)
+}
+
+func (ctx *Context) removeAnnotationsFromDirectObj(
+	annots Array,
+	ids []string,
+	objNrSet IntSet,
+	pageDict Dict,
+	pageDictObjNr, pageNr int,
+	incr bool) (bool, error) {
+
+	var (
+		ok  bool
+		err error
+	)
+	annots, ok, err = ctx.removeAnnotationsFromPageDictByIDOrObjNr(ids, objNrSet, pageNr, annots, incr)
+	if err != nil {
+		return false, err
+	}
+	if !ok {
+		return false, nil
+	}
+	if incr {
+		// Mark page dict obj for incremental writing.
+		ctx.Write.IncrementWithObjNr(pageDictObjNr)
+	}
+	if annots == nil {
+		pageDict.Delete("Annots")
+		return ok, nil
+	}
+	pageDict.Update("Annots", annots)
+	return true, nil
 }
 
 // RemoveAnnotationsFromPageDict removes an annotation by its object number annObjNr from pageDict.
@@ -934,24 +995,7 @@ func (ctx *Context) RemoveAnnotationsFromPageDict(ids []string, objNrSet IntSet,
 
 	ir, ok1 := obj.(IndirectRef)
 	if !ok1 {
-		annots, _ := obj.(Array)
-		annots, ok, err = ctx.removeAnnotationsFromPageDictByIDOrObjNr(ids, objNrSet, pageNr, annots, incr)
-		if err != nil {
-			return false, err
-		}
-		if !ok {
-			return false, nil
-		}
-		if incr {
-			// Mark page dict obj for incremental writing.
-			ctx.Write.IncrementWithObjNr(pageDictObjNr)
-		}
-		if annots == nil {
-			pageDict.Delete("Annots")
-			return ok, nil
-		}
-		pageDict.Update("Annots", annots)
-		return true, nil
+		return ctx.removeAnnotationsFromDirectObj(obj.(Array), ids, objNrSet, pageDict, pageDictObjNr, pageNr, incr)
 	}
 
 	// Annots array is an IndirectReference.
@@ -985,8 +1029,17 @@ func (ctx *Context) RemoveAnnotationsFromPageDict(ids []string, objNrSet IntSet,
 		}
 		return ok, nil
 	}
-	entry.Object = append(annots)
+	entry.Object = annots
 	return true, nil
+}
+
+func (ctx *Context) sortedPageNrsForAnnots() []int {
+	var pageNrs []int
+	for k := range ctx.PageAnnots {
+		pageNrs = append(pageNrs, k)
+	}
+	sort.Ints(pageNrs)
+	return pageNrs
 }
 
 // RemoveAnnotations removes annotations for selected pages by id and object number.
@@ -1011,13 +1064,7 @@ func (ctx *Context) RemoveAnnotations(selectedPages IntSet, ids []string, objNrs
 		ctx.Write.Offset = ctx.Read.FileSize
 	}
 
-	var pageNrs []int
-	for k := range ctx.PageAnnots {
-		pageNrs = append(pageNrs, k)
-	}
-	sort.Ints(pageNrs)
-
-	for _, pageNr := range pageNrs {
+	for _, pageNr := range ctx.sortedPageNrsForAnnots() {
 		if selectedPages != nil {
 			if _, found := selectedPages[pageNr]; !found {
 				continue

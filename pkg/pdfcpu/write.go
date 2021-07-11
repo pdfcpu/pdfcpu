@@ -111,11 +111,7 @@ func Write(ctx *Context) (err error) {
 	}
 
 	// Write pdf trailer.
-	if _, err = writeTrailer(ctx.Write); err != nil {
-		return err
-	}
-
-	if err = ctx.Write.WriteEol(); err != nil {
+	if err = writeTrailer(ctx.Write); err != nil {
 		return err
 	}
 
@@ -146,11 +142,7 @@ func WriteIncrement(ctx *Context) error {
 		return err
 	}
 
-	if _, err := writeTrailer(ctx.Write); err != nil {
-		return err
-	}
-
-	return ctx.Write.WriteEol()
+	return writeTrailer(ctx.Write)
 }
 
 func prepareContextForWriting(ctx *Context) error {

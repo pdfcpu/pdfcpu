@@ -50,8 +50,9 @@ func writeHeader(w *WriteContext, v Version) error {
 	return nil
 }
 
-func writeTrailer(w *WriteContext) (int, error) {
-	return w.WriteString("%%EOF")
+func writeTrailer(w *WriteContext) error {
+	_, err := w.WriteString("%%EOF" + w.Eol)
+	return err
 }
 
 func writeObjectHeader(w *WriteContext, objNumber, genNumber int) (int, error) {

@@ -941,88 +941,98 @@ func parseWatermarkError(onTop bool) error {
 	return errors.Errorf("Invalid %s configuration string. Please consult pdfcpu help %s.\n", s, s)
 }
 
-func setWatermarkType(mode int, s string, wm *Watermark) error {
-	wm.Mode = mode
-
-	switch mode {
-	case WMText:
-		wm.TextString = s
-		if font.IsCoreFont(wm.FontName) {
-			bb := []byte{}
-			for _, r := range s {
-				// Unicode => char code
-				b := byte(0x20) // better use glyph: .notdef
-				if r <= 0xff {
-					b = byte(r)
-				}
-				bb = append(bb, b)
+func setTextWatermark(s string, wm *Watermark) {
+	wm.TextString = s
+	if font.IsCoreFont(wm.FontName) {
+		bb := []byte{}
+		for _, r := range s {
+			// Unicode => char code
+			b := byte(0x20) // better use glyph: .notdef
+			if r <= 0xff {
+				b = byte(r)
 			}
-			s = string(bb)
-		} else {
-			bb := []byte{}
-			u := utf16.Encode([]rune(s))
-			for _, i := range u {
-				bb = append(bb, byte((i>>8)&0xFF))
-				bb = append(bb, byte(i&0xFF))
-			}
-			s = string(bb)
+			bb = append(bb, b)
 		}
-		s = strings.ReplaceAll(s, "\\n", "\n")
-		for _, l := range strings.FieldsFunc(s, func(c rune) bool { return c == 0x0a }) {
-			wm.TextLines = append(wm.TextLines, l)
+		s = string(bb)
+	} else {
+		bb := []byte{}
+		u := utf16.Encode([]rune(s))
+		for _, i := range u {
+			bb = append(bb, byte((i>>8)&0xFF))
+			bb = append(bb, byte(i&0xFF))
 		}
+		s = string(bb)
+	}
+	s = strings.ReplaceAll(s, "\\n", "\n")
+	wm.TextLines = append(wm.TextLines, strings.FieldsFunc(s, func(c rune) bool { return c == 0x0a })...)
+}
 
-	case WMImage:
-		if len(s) == 0 {
-			// The caller is expected to supply wm.Image
-			return nil
-		}
-		if !ImageFileName(s) {
-			return errors.New("imageFileName has to have one of these extensions: .jpg, .jpeg, .png, .tif, .tiff, .webp")
+func setImageWatermark(s string, wm *Watermark) error {
+	if len(s) == 0 {
+		// The caller is expected to supply wm.Image
+		return nil
+	}
+	if !ImageFileName(s) {
+		return errors.New("imageFileName has to have one of these extensions: .jpg, .jpeg, .png, .tif, .tiff, .webp")
+	}
+	wm.FileName = s
+	f, err := os.Open(wm.FileName)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	bb, err := ioutil.ReadAll(f)
+	if err != nil {
+		return err
+	}
+	wm.Image = bytes.NewReader(bb)
+	return nil
+}
+
+func setPDFWatermark(s string, wm *Watermark) error {
+	i := strings.LastIndex(s, ":")
+	if i < 1 {
+		// No Colon.
+		if strings.ToLower(filepath.Ext(s)) != ".pdf" {
+			return errors.Errorf("%s is not a PDF file", s)
 		}
 		wm.FileName = s
-		f, err := os.Open(wm.FileName)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		bb, err := ioutil.ReadAll(f)
-		if err != nil {
-			return err
-		}
-		wm.Image = bytes.NewReader(bb)
+		return nil
+	}
+	// We have at least one Colon.
+	if strings.ToLower(filepath.Ext(s)) == ".pdf" {
+		// We have an absolute DOS filename.
+		wm.FileName = s
+		return nil
+	}
+	// We expect a page number on the right side of the right most Colon.
+	var err error
+	pageNumberStr := s[i+1:]
+	wm.Page, err = strconv.Atoi(pageNumberStr)
+	if err != nil {
+		return errors.Errorf("illegal PDF page number: %s\n", pageNumberStr)
+	}
+	fileName := s[:i]
+	if strings.ToLower(filepath.Ext(fileName)) != ".pdf" {
+		return errors.Errorf("%s is not a PDF file", fileName)
+	}
+	wm.FileName = fileName
+	return nil
+}
+
+func setWatermarkType(mode int, s string, wm *Watermark) (err error) {
+	wm.Mode = mode
+	switch wm.Mode {
+	case WMText:
+		setTextWatermark(s, wm)
+
+	case WMImage:
+		err = setImageWatermark(s, wm)
 
 	case WMPDF:
-		i := strings.LastIndex(s, ":")
-		if i < 1 {
-			// No Colon.
-			if strings.ToLower(filepath.Ext(s)) != ".pdf" {
-				return errors.Errorf("%s is not a PDF file", s)
-			}
-			wm.FileName = s
-			return nil
-		}
-		// We have at least one Colon.
-		if strings.ToLower(filepath.Ext(s)) == ".pdf" {
-			// We have an absolute DOS filename.
-			wm.FileName = s
-			return nil
-		}
-		// We expect a page number on the right side of the right most Colon.
-		var err error
-		pageNumberStr := s[i+1:]
-		wm.Page, err = strconv.Atoi(pageNumberStr)
-		if err != nil {
-			return errors.Errorf("illegal PDF page number: %s\n", pageNumberStr)
-		}
-		fileName := s[:i]
-		if strings.ToLower(filepath.Ext(fileName)) != ".pdf" {
-			return errors.Errorf("%s is not a PDF file", fileName)
-		}
-		wm.FileName = fileName
+		err = setPDFWatermark(s, wm)
 	}
-
-	return nil
+	return err
 }
 
 func migrateIndRef(ir *IndirectRef, ctxSource, ctxDest *Context, migrated map[int]int) (Object, error) {
@@ -2085,7 +2095,7 @@ func (ctx *Context) AddWatermarks(selectedPages IntSet, wm *Watermark) error {
 	return nil
 }
 
-func (ctx *Context) removeResDictEntry(d *Dict, entry string, ids []string, i int) error {
+func (ctx *Context) removeResDictEntry(d Dict, entry string, ids []string, i int) error {
 	o, ok := d.Find(entry)
 	if !ok {
 		return errors.Errorf("pdfcpu: page %d: corrupt resource dict", i)
@@ -2114,11 +2124,11 @@ func (ctx *Context) removeResDictEntry(d *Dict, entry string, ids []string, i in
 	return nil
 }
 
-func (ctx *Context) removeExtGStates(d *Dict, ids []string, i int) error {
+func (ctx *Context) removeExtGStates(d Dict, ids []string, i int) error {
 	return ctx.removeResDictEntry(d, "ExtGState", ids, i)
 }
 
-func (ctx *Context) removeForms(d *Dict, ids []string, i int) error {
+func (ctx *Context) removeForms(d Dict, ids []string, i int) error {
 	return ctx.removeResDictEntry(d, "XObject", ids, i)
 }
 
@@ -2181,7 +2191,7 @@ func removeArtifacts(sd *StreamDict, i int) (ok bool, extGStates []string, forms
 	return patched, extGStates, forms, err
 }
 
-func (ctx *Context) removeArtifactsFromPage(sd *StreamDict, resDict *Dict, i int) (bool, error) {
+func (ctx *Context) removeArtifactsFromPage(sd *StreamDict, resDict Dict, i int) (bool, error) {
 	// Remove watermark artifacts and locate id's
 	// of used extGStates and forms.
 	ok, extGStates, forms, err := removeArtifacts(sd, i)
@@ -2227,27 +2237,12 @@ func (ctx *Context) locatePageContentAndResourceDict(pageNr int) (Object, *Indir
 	return o, pageDictIndRef, resDict, nil
 }
 
-func (ctx *Context) removePageWatermark(pageNr int) (bool, error) {
-	o, pageDictIndRef, resDict, err := ctx.locatePageContentAndResourceDict(pageNr)
-	if err != nil {
-		return false, err
-	}
-
+func (ctx *Context) removeArtifacts(o Object, entry *XRefTableEntry, resDict Dict, pageNr int) (bool, error) {
 	found := false
-	var entry *XRefTableEntry
-
-	ir, ok := o.(IndirectRef)
-	if ok {
-		objNr := ir.ObjectNumber.Value()
-		genNr := ir.GenerationNumber.Value()
-		entry, _ = ctx.FindTableEntry(objNr, genNr)
-		o = entry.Object
-	}
-
 	switch o := o.(type) {
 
 	case StreamDict:
-		ok, err := ctx.removeArtifactsFromPage(&o, &resDict, pageNr)
+		ok, err := ctx.removeArtifactsFromPage(&o, resDict, pageNr)
 		if err != nil {
 			return false, err
 		}
@@ -2265,7 +2260,7 @@ func (ctx *Context) removePageWatermark(pageNr int) (bool, error) {
 		entry, _ := ctx.FindTableEntry(objNr, genNr)
 		sd, _ := (entry.Object).(StreamDict)
 
-		ok, err := ctx.removeArtifactsFromPage(&sd, &resDict, pageNr)
+		ok, err := ctx.removeArtifactsFromPage(&sd, resDict, pageNr)
 		if err != nil {
 			return false, err
 		}
@@ -2283,7 +2278,7 @@ func (ctx *Context) removePageWatermark(pageNr int) (bool, error) {
 			entry, _ := ctx.FindTableEntry(objNr, genNr)
 			sd, _ := (entry.Object).(StreamDict)
 
-			ok, err = ctx.removeArtifactsFromPage(&sd, &resDict, pageNr)
+			ok, err = ctx.removeArtifactsFromPage(&sd, resDict, pageNr)
 			if err != nil {
 				return false, err
 			}
@@ -2293,6 +2288,29 @@ func (ctx *Context) removePageWatermark(pageNr int) (bool, error) {
 			}
 		}
 
+	}
+	return found, nil
+}
+
+func (ctx *Context) removePageWatermark(pageNr int) (bool, error) {
+	o, pageDictIndRef, resDict, err := ctx.locatePageContentAndResourceDict(pageNr)
+	if err != nil {
+		return false, err
+	}
+
+	var entry *XRefTableEntry
+
+	ir, ok := o.(IndirectRef)
+	if ok {
+		objNr := ir.ObjectNumber.Value()
+		genNr := ir.GenerationNumber.Value()
+		entry, _ = ctx.FindTableEntry(objNr, genNr)
+		o = entry.Object
+	}
+
+	found, err := ctx.removeArtifacts(o, entry, resDict, pageNr)
+	if err != nil {
+		return false, err
 	}
 
 	/*

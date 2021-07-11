@@ -160,15 +160,80 @@ func (ctx *Context) ColorSpaceComponents(sd *StreamDict) (int, error) {
 	return 0, nil
 }
 
-// ExtractImage extracts an image from sd.
-func (ctx *Context) ExtractImage(sd *StreamDict, thumb bool, resourceId string, objNr int, stub bool) (*Image, error) {
+func (ctx *Context) imageStub(
+	sd *StreamDict,
+	resourceId, filters, lastFilter string,
+	thumb, imgMask bool,
+	objNr int) (*Image, error) {
 
-	if sd == nil {
-		return nil, nil
+	w := sd.IntEntry("Width")
+	if w == nil {
+		return nil, errors.Errorf("pdfcpu: missing image width obj#%d", objNr)
 	}
 
-	var imgMask bool
+	h := sd.IntEntry("Height")
+	if h == nil {
+		return nil, errors.Errorf("pdfcpu: missing image height obj#%d", objNr)
+	}
 
+	cs, err := ctx.ColorSpaceString(sd)
+	if err != nil {
+		return nil, err
+	}
+
+	comp, err := ctx.ColorSpaceComponents(sd)
+	if err != nil {
+		return nil, err
+	}
+	if lastFilter == filter.CCITTFax {
+		comp = 1
+	}
+
+	bpc := 0
+	if i := sd.IntEntry("BitsPerComponent"); i != nil {
+		bpc = *i
+	}
+	// if jpx, bpc is undefined
+	if imgMask {
+		bpc = 1
+	}
+
+	var sMask bool
+	if sm, _ := sd.Find("SMask"); sm != nil {
+		sMask = true
+	}
+
+	var interpol bool
+	if b := sd.BooleanEntry("Interpolate"); b != nil && *b {
+		interpol = true
+	}
+
+	i, err := ctx.StreamLength(sd)
+	if err != nil {
+		return nil, err
+	}
+
+	img := &Image{
+		objNr:    objNr,
+		Name:     resourceId,
+		thumb:    thumb,
+		imgMask:  imgMask,
+		sMask:    sMask,
+		width:    *w,
+		height:   *h,
+		cs:       cs,
+		comp:     comp,
+		bpc:      bpc,
+		interpol: interpol,
+		size:     i,
+		filter:   filters,
+	}
+
+	return img, nil
+}
+
+func prepareExtractImage(sd *StreamDict) (string, string, bool) {
+	var imgMask bool
 	if im := sd.BooleanEntry("ImageMask"); im != nil && *im {
 		imgMask = true
 	}
@@ -185,75 +250,23 @@ func (ctx *Context) ExtractImage(sd *StreamDict, thumb bool, resourceId string, 
 		filters = strings.Join(s, ",")
 	}
 
-	if stub {
+	return filters, lastFilter, imgMask
+}
 
-		w := sd.IntEntry("Width")
-		if w == nil {
-			return nil, errors.Errorf("pdfcpu: missing image width obj#%d", objNr)
-		}
+// ExtractImage extracts an image from sd.
+func (ctx *Context) ExtractImage(sd *StreamDict, thumb bool, resourceId string, objNr int, stub bool) (*Image, error) {
 
-		h := sd.IntEntry("Height")
-		if h == nil {
-			return nil, errors.Errorf("pdfcpu: missing image height obj#%d", objNr)
-		}
-
-		cs, err := ctx.ColorSpaceString(sd)
-		if err != nil {
-			return nil, err
-		}
-
-		comp, err := ctx.ColorSpaceComponents(sd)
-		if err != nil {
-			return nil, err
-		}
-		if lastFilter == filter.CCITTFax {
-			comp = 1
-		}
-
-		bpc := 0
-		if i := sd.IntEntry("BitsPerComponent"); i != nil {
-			bpc = *i
-		}
-		// if jpx, bpc is undefined
-		if imgMask {
-			bpc = 1
-		}
-
-		var sMask bool
-		if sm, _ := sd.Find("SMask"); sm != nil {
-			sMask = true
-		}
-
-		var interpol bool
-		if b := sd.BooleanEntry("Interpolate"); b != nil && *b {
-			interpol = true
-		}
-
-		i, err := ctx.StreamLength(sd)
-		if err != nil {
-			return nil, err
-		}
-
-		img := &Image{
-			objNr:    objNr,
-			Name:     resourceId,
-			thumb:    thumb,
-			imgMask:  imgMask,
-			sMask:    sMask,
-			width:    *w,
-			height:   *h,
-			cs:       cs,
-			comp:     comp,
-			bpc:      bpc,
-			interpol: interpol,
-			size:     i,
-			filter:   filters,
-		}
-
-		return img, nil
+	if sd == nil {
+		return nil, nil
 	}
 
-	if fpl == nil {
+	filters, lastFilter, imgMask := prepareExtractImage(sd)
+
+	if stub {
+		return ctx.imageStub(sd, resourceId, filters, lastFilter, thumb, imgMask, objNr)
+	}
+
+	if sd.FilterPipeline == nil {
 		return nil, nil
 	}
 
