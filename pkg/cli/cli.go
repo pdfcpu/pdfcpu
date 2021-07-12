@@ -266,7 +266,7 @@ func ListAnnotations(cmd *Command) ([]string, error) {
 	return ss, err
 }
 
-// RemoveBoxes deletes annotations from inFile's page tree and writes the result to outFile.
+// RemoveAnnotations deletes annotations from inFile's page tree and writes the result to outFile.
 func RemoveAnnotations(cmd *Command) ([]string, error) {
 	return nil, api.RemoveAnnotationsFile(*cmd.InFile, "", cmd.PageSelection, nil, cmd.IntVals, cmd.Conf, false)
 }

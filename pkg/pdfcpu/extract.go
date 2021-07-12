@@ -39,6 +39,7 @@ func (ctx *Context) ImageObjNrs(pageNr int) []int {
 	return objNrs
 }
 
+// StreamLength returns sd's stream length.
 func (ctx *Context) StreamLength(sd *StreamDict) (int64, error) {
 
 	val := sd.Int64Entry("Length")
@@ -59,6 +60,7 @@ func (ctx *Context) StreamLength(sd *StreamDict) (int64, error) {
 	return int64(*i), nil
 }
 
+// ColorSpaceString returns a string representation for sd's colorspace.
 func (ctx *Context) ColorSpaceString(sd *StreamDict) (string, error) {
 	o, found := sd.Find("ColorSpace")
 	if !found {
@@ -97,6 +99,7 @@ func colorSpaceNameComponents(cs Name) int {
 	return 0
 }
 
+// ColorSpaceComponents returns the corresponding number of used color components for sd's colorspace.
 func (ctx *Context) ColorSpaceComponents(sd *StreamDict) (int, error) {
 	o, found := sd.Find("ColorSpace")
 	if !found {

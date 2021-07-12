@@ -78,6 +78,7 @@ func (r Rectangle) String() string {
 	return fmt.Sprintf("(%3.2f, %3.2f, %3.2f, %3.2f) w=%.2f h=%.2f ar=%.2f", r.LL.X, r.LL.Y, r.UR.X, r.UR.Y, r.Width(), r.Height(), r.AspectRatio())
 }
 
+// ShortString returns a compact string representation for r.
 func (r Rectangle) ShortString() string {
 	return fmt.Sprintf("(%3.0f, %3.0f, %3.0f, %3.0f)", r.LL.X, r.LL.Y, r.UR.X, r.UR.Y)
 }

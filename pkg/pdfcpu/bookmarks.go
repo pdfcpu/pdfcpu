@@ -41,6 +41,7 @@ type Bookmark struct {
 	Parent   *Bookmark
 }
 
+// Style returns an int corresponding to the bookmark style.
 func (bm Bookmark) Style() int {
 	var i int
 	if bm.Bold {

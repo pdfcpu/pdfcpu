@@ -1866,7 +1866,7 @@ func (ctx *Context) addPageWatermark(i int, wm *Watermark) error {
 			QuadPoints{wm.bbTrans},
 			wm.URL,
 			"pdfcpu",
-			Ann_NoZoom+Ann_NoRotate,
+			AnnNoZoom+AnnNoRotate,
 			nil)
 
 		if _, err := ctx.AddAnnotation(pageIndRef, d, i, ann, false); err != nil {

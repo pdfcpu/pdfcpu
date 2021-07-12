@@ -102,6 +102,7 @@ func (ctx *Context) listImages(iii [][]Image, maxLenID, maxLenSize int) ([]strin
 	return ss, j, nil
 }
 
+// ListImages returns a list of embedded images.
 func (ctx *Context) ListImages(selectedPages IntSet) ([]string, error) {
 	pageNrs := []int{}
 	for k, v := range selectedPages {
@@ -145,6 +146,7 @@ func (ctx *Context) ListImages(selectedPages IntSet) ([]string, error) {
 	return append([]string{fmt.Sprintf("%d images available", j)}, ss...), nil
 }
 
+// WriteImageToDisk returns a closure for writing img to disk.
 func WriteImageToDisk(outDir, fileName string) func(Image, bool, int) error {
 	return func(img Image, singleImgPerPage bool, maxPageDigits int) error {
 		s := "%s_%" + fmt.Sprintf("0%dd", maxPageDigits)

@@ -288,6 +288,7 @@ func (xRefTable *XRefTable) DereferenceDictEntry(d Dict, key string) (Object, er
 	return xRefTable.Dereference(o)
 }
 
+// DereferenceStringEntryBytes returns the bytes of a string entry of d.
 func (xRefTable *XRefTable) DereferenceStringEntryBytes(d Dict, key string) ([]byte, error) {
 	o, found := d.Find(key)
 	if !found || o == nil {

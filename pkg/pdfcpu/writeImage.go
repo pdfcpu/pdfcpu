@@ -811,6 +811,7 @@ func RenderImage(xRefTable *XRefTable, sd *StreamDict, thumb bool, resourceName 
 	return nil, "", nil
 }
 
+// WriteReader consumes r's content by writing it to a file at path.
 func WriteReader(path string, r io.Reader) error {
 	w, err := os.Create(path)
 	if err != nil {

@@ -27,110 +27,114 @@ import (
 	"github.com/pkg/errors"
 )
 
+// AnnotationFlags represents the PDF annotation flags.
 type AnnotationFlags int
 
 const ( // See table 165
-	Ann_Invisible AnnotationFlags = 1 << iota
-	Ann_Hidden
-	Ann_Print
-	Ann_NoZoom
-	Ann_NoRotate
-	Ann_NoView
-	Ann_ReadOnly
-	Ann_Locked
-	Ann_ToggleNoView
-	Ann_LockedContents
+	AnnInvisible AnnotationFlags = 1 << iota
+	AnnHidden
+	AnnPrint
+	AnnNoZoom
+	AnnNoRotate
+	AnnNoView
+	AnnReadOnly
+	AnnLocked
+	AnnToggleNoView
+	AnnLockedContents
 )
 
+// AnnotationType represents the various PDF annotation types.
 type AnnotationType int
 
 const (
-	Ann_Text AnnotationType = iota
-	Ann_Link
-	Ann_FreeText
-	Ann_Line
-	Ann_Square
-	Ann_Circle
-	Ann_Polygon
-	Ann_PolyLine
-	Ann_HighLight
-	Ann_Underline
-	Ann_Squiggly
-	Ann_StrikeOut
-	Ann_Stamp
-	Ann_Caret
-	Ann_Ink
-	Ann_Popup
-	Ann_FileAttachment
-	Ann_Sound
-	Ann_Movie
-	Ann_Widget
-	Ann_Screen
-	Ann_PrinterMark
-	Ann_TrapNet
-	Ann_Watermark
-	Ann_3D
-	Ann_Redact
+	AnnText AnnotationType = iota
+	AnnLink
+	AnnFreeText
+	AnnLine
+	AnnSquare
+	AnnCircle
+	AnnPolygon
+	AnnPolyLine
+	AnnHighLight
+	AnnUnderline
+	AnnSquiggly
+	AnnStrikeOut
+	AnnStamp
+	AnnCaret
+	AnnInk
+	AnnPopup
+	AnnFileAttachment
+	AnnSound
+	AnnMovie
+	AnnWidget
+	AnnScreen
+	AnnPrinterMark
+	AnnTrapNet
+	AnnWatermark
+	Ann3D
+	AnnRedact
 )
 
 var annotTypes = map[string]AnnotationType{
-	"Text":           Ann_Text,
-	"Link":           Ann_Link,
-	"FreeText":       Ann_FreeText,
-	"Line":           Ann_Line,
-	"Square":         Ann_Square,
-	"Circle":         Ann_Circle,
-	"Polygon":        Ann_Polygon,
-	"PolyLine":       Ann_PolyLine,
-	"HighLight":      Ann_HighLight,
-	"Underline":      Ann_Underline,
-	"Squiggly":       Ann_Squiggly,
-	"StrikeOut":      Ann_StrikeOut,
-	"Stamp":          Ann_Stamp,
-	"Caret":          Ann_Caret,
-	"Ink":            Ann_Ink,
-	"Popup":          Ann_Popup,
-	"FileAttachment": Ann_FileAttachment,
-	"Sound":          Ann_Sound,
-	"Movie":          Ann_Movie,
-	"Widget":         Ann_Widget,
-	"Screen":         Ann_Screen,
-	"PrinterMark":    Ann_PrinterMark,
-	"TrapNet":        Ann_TrapNet,
-	"Watermark":      Ann_Watermark,
-	"3D":             Ann_3D,
-	"Redact":         Ann_Redact,
+	"Text":           AnnText,
+	"Link":           AnnLink,
+	"FreeText":       AnnFreeText,
+	"Line":           AnnLine,
+	"Square":         AnnSquare,
+	"Circle":         AnnCircle,
+	"Polygon":        AnnPolygon,
+	"PolyLine":       AnnPolyLine,
+	"HighLight":      AnnHighLight,
+	"Underline":      AnnUnderline,
+	"Squiggly":       AnnSquiggly,
+	"StrikeOut":      AnnStrikeOut,
+	"Stamp":          AnnStamp,
+	"Caret":          AnnCaret,
+	"Ink":            AnnInk,
+	"Popup":          AnnPopup,
+	"FileAttachment": AnnFileAttachment,
+	"Sound":          AnnSound,
+	"Movie":          AnnMovie,
+	"Widget":         AnnWidget,
+	"Screen":         AnnScreen,
+	"PrinterMark":    AnnPrinterMark,
+	"TrapNet":        AnnTrapNet,
+	"Watermark":      AnnWatermark,
+	"3D":             Ann3D,
+	"Redact":         AnnRedact,
 }
 
+// AnnotTypeStrings manages string representations for annotation types.
 var AnnotTypeStrings = map[AnnotationType]string{
-	Ann_Text:           "Text",
-	Ann_Link:           "Link",
-	Ann_FreeText:       "FreeText",
-	Ann_Line:           "Line",
-	Ann_Square:         "Square",
-	Ann_Circle:         "Circle",
-	Ann_Polygon:        "Polygon",
-	Ann_PolyLine:       "PolyLine",
-	Ann_HighLight:      "HighLight",
-	Ann_Underline:      "Underline",
-	Ann_Squiggly:       "Squiggly",
-	Ann_StrikeOut:      "StrikeOut",
-	Ann_Stamp:          "Stamp",
-	Ann_Caret:          "Caret",
-	Ann_Ink:            "Ink",
-	Ann_Popup:          "Popup",
-	Ann_FileAttachment: "FileAttachment",
-	Ann_Sound:          "Sound",
-	Ann_Movie:          "Movie",
-	Ann_Widget:         "Widget",
-	Ann_Screen:         "Screen",
-	Ann_PrinterMark:    "PrinterMark",
-	Ann_TrapNet:        "TrapNet",
-	Ann_Watermark:      "Watermark",
-	Ann_3D:             "3D",
-	Ann_Redact:         "Redact",
+	AnnText:           "Text",
+	AnnLink:           "Link",
+	AnnFreeText:       "FreeText",
+	AnnLine:           "Line",
+	AnnSquare:         "Square",
+	AnnCircle:         "Circle",
+	AnnPolygon:        "Polygon",
+	AnnPolyLine:       "PolyLine",
+	AnnHighLight:      "HighLight",
+	AnnUnderline:      "Underline",
+	AnnSquiggly:       "Squiggly",
+	AnnStrikeOut:      "StrikeOut",
+	AnnStamp:          "Stamp",
+	AnnCaret:          "Caret",
+	AnnInk:            "Ink",
+	AnnPopup:          "Popup",
+	AnnFileAttachment: "FileAttachment",
+	AnnSound:          "Sound",
+	AnnMovie:          "Movie",
+	AnnWidget:         "Widget",
+	AnnScreen:         "Screen",
+	AnnPrinterMark:    "PrinterMark",
+	AnnTrapNet:        "TrapNet",
+	AnnWatermark:      "Watermark",
+	Ann3D:             "3D",
+	AnnRedact:         "Redact",
 }
 
+// AnnotationRenderer is the interface for PDF annotations.
 type AnnotationRenderer interface {
 	RenderDict(pageIndRef IndirectRef) Dict
 	Type() AnnotationType
@@ -139,6 +143,7 @@ type AnnotationRenderer interface {
 	ContentString() string
 }
 
+// Annotation represents a PDF annnotation.
 type Annotation struct {
 	SubType  AnnotationType  // The type of annotation that this dictionary describes.
 	Rect     Rectangle       // The annotation rectangle, defining the location of the annotation on the page in default user space units.
@@ -150,6 +155,7 @@ type Annotation struct {
 	C        *SimpleColor    // The background color of the annotation’s icon when closed.
 }
 
+// NewAnnotation returns a new annotation.
 func NewAnnotation(
 	typ AnnotationType,
 	rect Rectangle,
@@ -169,6 +175,7 @@ func NewAnnotation(
 		C:        backgrCol}
 }
 
+// NewAnnotationForRawType returns a new annotation of a specific type.
 func NewAnnotationForRawType(
 	typ string,
 	rect Rectangle,
@@ -180,36 +187,44 @@ func NewAnnotationForRawType(
 	return NewAnnotation(annotTypes[typ], rect, contents, pageIndRef, nm, f, backgrCol)
 }
 
+// ID returns the annotation id.
 func (ann Annotation) ID() string {
 	return ann.NM
 }
 
+// ContentString returns a string representation of ann's contents.
 func (ann Annotation) ContentString() string {
 	return ann.Contents
 }
 
+// RectString returns ann's positioning rectangle.
 func (ann Annotation) RectString() string {
 	return ann.Rect.ShortString()
 }
 
+// Type returns ann's type.
 func (ann Annotation) Type() AnnotationType {
 	return ann.SubType
 }
 
+// TypeString returns a string representation of ann's type.
 func (ann Annotation) TypeString() string {
 	return AnnotTypeStrings[ann.SubType]
 }
 
+// RenderDict is a stub for behavior that renders ann's PDF dict.
 func (ann Annotation) RenderDict(pageIndRef IndirectRef) Dict {
 	return nil
 }
 
+// PopupAnnotation represents PDF Popup annotations.
 type PopupAnnotation struct {
 	Annotation
 	ParentIndRef *IndirectRef // The parent annotation with which this pop-up annotation shall be associated.
 	Open         bool         // A flag specifying whether the annotation shall initially be displayed open.
 }
 
+// NewPopupAnnotation returns a new popup annotation.
 func NewPopupAnnotation(
 	rect Rectangle,
 	pageIndRef *IndirectRef,
@@ -218,13 +233,14 @@ func NewPopupAnnotation(
 	backgrCol *SimpleColor,
 	parentIndRef *IndirectRef) PopupAnnotation {
 
-	ann := NewAnnotation(Ann_Popup, rect, contents, pageIndRef, id, f, backgrCol)
+	ann := NewAnnotation(AnnPopup, rect, contents, pageIndRef, id, f, backgrCol)
 
 	return PopupAnnotation{
 		Annotation:   ann,
 		ParentIndRef: parentIndRef}
 }
 
+// ContentString returns a string representation of ann's content.
 func (ann PopupAnnotation) ContentString() string {
 	s := "\"" + ann.Contents + "\""
 	if ann.ParentIndRef != nil {
@@ -233,6 +249,7 @@ func (ann PopupAnnotation) ContentString() string {
 	return s
 }
 
+// MarkupAnnotation represents a PDF markup annotation.
 type MarkupAnnotation struct {
 	Annotation
 	T            string       // The text label that shall be displayed in the title bar of the annotation’s pop-up window when open and active. This entry shall identify the user who added the annotation.
@@ -243,6 +260,7 @@ type MarkupAnnotation struct {
 	Subj         string       // Text representing a short description of the subject being addressed by the annotation.
 }
 
+// NewMarkupAnnotation returns a new markup annotation.
 func NewMarkupAnnotation(
 	subType AnnotationType,
 	rect Rectangle,
@@ -266,13 +284,14 @@ func NewMarkupAnnotation(
 		Subj:         subject}
 }
 
-// Sticky Note
+// TextAnnotation represents a PDF text annotation aka "Sticky Note".
 type TextAnnotation struct {
 	MarkupAnnotation
 	Open bool   // A flag specifying whether the annotation shall initially be displayed open.
 	Name string // The name of an icon that shall be used in displaying the annotation. Comment, Key, (Note), Help, NewParagraph, Paragraph, Insert
 }
 
+// NewTextAnnotation returns a new text annotation.
 func NewTextAnnotation(
 	rect Rectangle,
 	contents, id, title string,
@@ -283,7 +302,7 @@ func NewTextAnnotation(
 	open bool,
 	name string) TextAnnotation {
 
-	ma := NewMarkupAnnotation(Ann_Text, rect, nil, contents, id, title, f, backgrCol, nil, ca, rc, subj)
+	ma := NewMarkupAnnotation(AnnText, rect, nil, contents, id, title, f, backgrCol, nil, ca, rc, subj)
 
 	return TextAnnotation{
 		MarkupAnnotation: ma,
@@ -292,6 +311,7 @@ func NewTextAnnotation(
 	}
 }
 
+// RenderDict renders ann into a PDF annotation dict.
 func (ann TextAnnotation) RenderDict(pageIndRef IndirectRef) Dict {
 	subject := "Sticky Note"
 	if ann.Subj != "" {
@@ -336,12 +356,14 @@ func (ann TextAnnotation) RenderDict(pageIndRef IndirectRef) Dict {
 	return d
 }
 
+// LinkAnnotation represents a PDF link annotation.
 type LinkAnnotation struct {
 	Annotation
 	URI  string
 	Quad QuadPoints // Shall be ignored if any coordinate lies outside the region specified by Rect.
 }
 
+// NewLinkAnnotation returns a new link annotation.
 func NewLinkAnnotation(
 	rect Rectangle,
 	quad QuadPoints,
@@ -349,7 +371,7 @@ func NewLinkAnnotation(
 	f AnnotationFlags,
 	backgrCol *SimpleColor) LinkAnnotation {
 
-	ann := NewAnnotation(Ann_Link, rect, "", nil, id, f, backgrCol)
+	ann := NewAnnotation(AnnLink, rect, "", nil, id, f, backgrCol)
 
 	return LinkAnnotation{
 		Annotation: ann,
@@ -358,6 +380,7 @@ func NewLinkAnnotation(
 	}
 }
 
+// ContentString returns a string representation of ann's content.
 func (ann LinkAnnotation) ContentString() string {
 	s := "(internal)"
 	if len(ann.URI) > 0 {
@@ -366,6 +389,7 @@ func (ann LinkAnnotation) ContentString() string {
 	return s
 }
 
+// RenderDict renders ann into a PDF annotation dict.
 func (ann LinkAnnotation) RenderDict(pageIndRef IndirectRef) Dict {
 	actionDict := Dict(map[string]Object{
 		"Type": Name("Action"),
@@ -398,8 +422,7 @@ func (ann LinkAnnotation) RenderDict(pageIndRef IndirectRef) Dict {
 	return d
 }
 
-// AnnotationObjNrs returns a list of object numbers representing
-// known annotation dict indirect references.
+// AnnotationObjNrs returns a list of object numbers representing known annotation dict indirect references.
 func (ctx *Context) AnnotationObjNrs() ([]int, error) {
 	// Note: Not all cached annotations are based on IndRefs!
 	// pdfcpu also caches direct annot dict objects (violating the PDF spec) for listing purposes.
@@ -424,7 +447,6 @@ func (ctx *Context) AnnotationObjNrs() ([]int, error) {
 	return objNrs, nil
 }
 
-// Add annotation to xreftable page annotation cache.
 func (ctx *Context) addAnnotation(ann AnnotationRenderer, pageNr int, objNr string) error {
 	pgAnnots, ok := ctx.PageAnnots[pageNr]
 	if !ok {
@@ -443,7 +465,6 @@ func (ctx *Context) addAnnotation(ann AnnotationRenderer, pageNr int, objNr stri
 	return nil
 }
 
-// Remove annotation from xreftable page annotations cache.
 func (ctx *Context) removeAnnotation(pageNr int, objNr string) error {
 	pgAnnots, ok := ctx.PageAnnots[pageNr]
 	if !ok {
@@ -496,6 +517,8 @@ func (ctx *Context) createAnnot(ar AnnotationRenderer, pageIndRef *IndirectRef) 
 	return ctx.IndRefForNewObject(d)
 }
 
+// Annotation returns an annotation renderer.
+// Validation sets up a cache of annotation renderers.
 func (xRefTable *XRefTable) Annotation(d Dict) (AnnotationRenderer, error) {
 
 	subtype := d.NameEntry("Subtype")
@@ -568,8 +591,10 @@ func (xRefTable *XRefTable) Annotation(d Dict) (AnnotationRenderer, error) {
 	return ann, nil
 }
 
+// AnnotMap represents annotations by object number of the corresponding annotation dict.
 type AnnotMap map[string]AnnotationRenderer
 
+// PgAnnots represents a map of page annotations by type.
 type PgAnnots map[AnnotationType]AnnotMap
 
 // ListAnnotations returns a formatted list of annotations for selected pages.
@@ -662,7 +687,7 @@ func (ctx *Context) addAnnotationToDirectObj(
 	return true, nil
 }
 
-// AddAnnotation adds the annotation ar to pageDict.
+// AddAnnotation adds ar to pageDict.
 func (ctx *Context) AddAnnotation(pageDictIndRef *IndirectRef, pageDict Dict, pageNr int, ar AnnotationRenderer, incr bool) (bool, error) {
 	// Create xreftable entry for annotation.
 	annotIndRef, err := ctx.createAnnot(ar, pageDictIndRef)
@@ -727,7 +752,7 @@ func (ctx *Context) AddAnnotation(pageDictIndRef *IndirectRef, pageDict Dict, pa
 	return true, nil
 }
 
-// AddAnnotations adds the annotation ar to selected pages.
+// AddAnnotations adds ar to selected pages.
 func (ctx *Context) AddAnnotations(selectedPages IntSet, ar AnnotationRenderer, incr bool) (bool, error) {
 	var ok bool
 	if incr {
@@ -765,7 +790,7 @@ func (ctx *Context) AddAnnotations(selectedPages IntSet, ar AnnotationRenderer, 
 	return ok, nil
 }
 
-// AddAnnotations adds annotations in m to corresponding pages.
+// AddAnnotationsMap adds annotations in m to corresponding pages.
 func (ctx *Context) AddAnnotationsMap(m map[int][]AnnotationRenderer, incr bool) (bool, error) {
 	var ok bool
 	if incr {

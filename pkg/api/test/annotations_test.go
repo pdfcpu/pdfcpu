@@ -29,7 +29,7 @@ var textAnn pdf.AnnotationRenderer = pdf.NewTextAnnotation(
 	"Test Content",
 	"ID1",
 	"Title1",
-	pdf.Ann_NoZoom+pdf.Ann_NoRotate,
+	pdf.AnnNoZoom+pdf.AnnNoRotate,
 	&pdf.Gray,
 	nil,
 	"",
@@ -42,7 +42,7 @@ var linkAnn pdf.AnnotationRenderer = pdf.NewLinkAnnotation(
 	nil,
 	"https://pdfcpu.io",
 	"ID2",
-	pdf.Ann_NoZoom+pdf.Ann_NoRotate,
+	pdf.AnnNoZoom+pdf.AnnNoRotate,
 	nil)
 
 func TestAddRemoveAnnotationsById(t *testing.T) {

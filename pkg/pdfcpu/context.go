@@ -727,6 +727,7 @@ func (wc *WriteContext) WriteEol() error {
 	return err
 }
 
+// IncrementWithObjNr adds obj# i to wc for writing.
 func (wc *WriteContext) IncrementWithObjNr(i int) {
 	for _, objNr := range wc.ObjNrs {
 		if objNr == i {

@@ -254,6 +254,7 @@ func Rect(llx, lly, urx, ury float64) *Rectangle {
 	return &Rectangle{types.NewRectangle(llx, lly, urx, ury)}
 }
 
+// FloatNumber returns the element at index ind of a numbers array and returns a float64.
 func (a Array) FloatNumber(ind int) (float64, error) {
 	f, ok := a[ind].(Float)
 	if ok {
@@ -343,7 +344,7 @@ func (ql QuadLiteral) EnclosingRectangle(f float64) *Rectangle {
 // QuadPoints is an array of 8 × n numbers specifying the coordinates of n quadrilaterals in default user space.
 type QuadPoints []QuadLiteral
 
-// AddQuadliteral adds a quadliteral to qp.
+// AddQuadLiteral adds a quadliteral to qp.
 func (qp *QuadPoints) AddQuadLiteral(ql QuadLiteral) {
 	*qp = append(*qp, ql)
 }
