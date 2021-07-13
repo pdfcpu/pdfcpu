@@ -47,6 +47,7 @@ type colValRange struct {
 type PDFImage struct {
 	objNr     int
 	sd        *StreamDict
+	comp      int
 	bpc       int
 	w, h      int
 	softMask  []byte
@@ -56,9 +57,7 @@ type PDFImage struct {
 }
 
 func decodeArr(a Array) []colValRange {
-
 	if a == nil {
-		//println("decodearr == nil")
 		return nil
 	}
 
@@ -89,6 +88,10 @@ func decodeArr(a Array) []colValRange {
 }
 
 func pdfImage(xRefTable *XRefTable, sd *StreamDict, thumb bool, objNr int) (*PDFImage, error) {
+	comp, err := xRefTable.ColorSpaceComponents(sd)
+	if err != nil {
+		return nil, err
+	}
 
 	bpc := *sd.IntEntry("BitsPerComponent")
 
@@ -96,7 +99,6 @@ func pdfImage(xRefTable *XRefTable, sd *StreamDict, thumb bool, objNr int) (*PDF
 	h := *sd.IntEntry("Height")
 
 	decode := decodeArr(sd.ArrayEntry("Decode"))
-	//fmt.Printf("decode: %v\n", decode)
 
 	var imgMask bool
 	if im := sd.BooleanEntry("ImageMask"); im != nil && *im {
@@ -111,6 +113,7 @@ func pdfImage(xRefTable *XRefTable, sd *StreamDict, thumb bool, objNr int) (*PDF
 	return &PDFImage{
 		objNr:     objNr,
 		sd:        sd,
+		comp:      comp,
 		bpc:       bpc,
 		w:         w,
 		h:         h,
@@ -123,7 +126,6 @@ func pdfImage(xRefTable *XRefTable, sd *StreamDict, thumb bool, objNr int) (*PDF
 
 // Identify the color lookup table for an Indexed color space.
 func colorLookupTable(xRefTable *XRefTable, o Object) ([]byte, error) {
-
 	o, _ = xRefTable.Dereference(o)
 
 	switch o := o.(type) {
@@ -143,7 +145,6 @@ func colorLookupTable(xRefTable *XRefTable, o Object) ([]byte, error) {
 }
 
 func decodePixelColorValue(p uint8, bpc, c int, decode []colValRange) uint8 {
-
 	// p ...the color value for this pixel
 	// c ...applicable index of a color component in the decode array for this pixel.
 
@@ -169,7 +170,6 @@ func decodePixelColorValue(p uint8, bpc, c int, decode []colValRange) uint8 {
 }
 
 func streamBytes(sd *StreamDict) ([]byte, error) {
-
 	fpl := sd.FilterPipeline
 	if fpl == nil {
 		log.Info.Printf("streamBytes: no filter pipeline\n")
@@ -255,9 +255,7 @@ func softMask(xRefTable *XRefTable, d *StreamDict, w, h, objNr int) ([]byte, err
 }
 
 func renderDeviceCMYKToTIFF(im *PDFImage, resourceName string) (io.Reader, string, error) {
-
 	b := im.sd.Content
-
 	log.Debug.Printf("renderDeviceCMYKToTIFF: CMYK objNr=%d w=%d h=%d bpc=%d buflen=%d\n", im.objNr, im.w, im.h, im.bpc, len(b))
 
 	img := image.NewCMYK(image.Rect(0, 0, im.w, im.h))
@@ -280,13 +278,10 @@ func renderDeviceCMYKToTIFF(im *PDFImage, resourceName string) (io.Reader, strin
 	}
 
 	return &buf, "tif", nil
-	//return &Image{&buf, 0, resourceName, im.thumb, "tif"}, nil
 }
 
 func renderDeviceGrayToPNG(im *PDFImage, resourceName string) (io.Reader, string, error) {
-
 	b := im.sd.Content
-
 	log.Debug.Printf("renderDeviceGrayToPNG: objNr=%d w=%d h=%d bpc=%d buflen=%d\n", im.objNr, im.w, im.h, im.bpc, len(b))
 
 	// Validate buflen.
@@ -324,13 +319,10 @@ func renderDeviceGrayToPNG(im *PDFImage, resourceName string) (io.Reader, string
 	}
 
 	return &buf, "png", nil
-	//return &Image{&buf, 0, resourceName, im.thumb, "png"}, nil
 }
 
 func renderDeviceRGBToPNG(im *PDFImage, resourceName string) (io.Reader, string, error) {
-
 	b := im.sd.Content
-
 	log.Debug.Printf("renderDeviceRGBToPNG: objNr=%d w=%d h=%d bpc=%d buflen=%d\n", im.objNr, im.w, im.h, im.bpc, len(b))
 
 	// Validate buflen.
@@ -360,11 +352,9 @@ func renderDeviceRGBToPNG(im *PDFImage, resourceName string) (io.Reader, string,
 	}
 
 	return &buf, "png", nil
-	//return &Image{&buf, 0, resourceName, im.thumb, "png"}, nil
 }
 
 func ensureDeviceRGBCS(xRefTable *XRefTable, o Object) bool {
-
 	o, err := xRefTable.Dereference(o)
 	if err != nil {
 		return false
@@ -379,9 +369,7 @@ func ensureDeviceRGBCS(xRefTable *XRefTable, o Object) bool {
 }
 
 func renderCalRGBToPNG(im *PDFImage, resourceName string) (io.Reader, string, error) {
-
 	b := im.sd.Content
-
 	log.Debug.Printf("renderCalRGBToPNG: objNr=%d w=%d h=%d bpc=%d buflen=%d\n", im.objNr, im.w, im.h, im.bpc, len(b))
 
 	if len(b) < (3*im.bpc*im.w*im.h+7)/8 {
@@ -408,11 +396,9 @@ func renderCalRGBToPNG(im *PDFImage, resourceName string) (io.Reader, string, er
 	}
 
 	return &buf, "png", nil
-	//return &Image{&buf, 0, resourceName, im.thumb, "png"}, nil
 }
 
 func renderICCBased(xRefTable *XRefTable, im *PDFImage, resourceName string, cs Array) (io.Reader, string, error) {
-
 	//  Any ICC profile >= ICC.1:2004:10 is sufficient for any PDF version <= 1.7
 	//  If the embedded ICC profile version is newer than the one used by the Reader, substitute with Alternate color space.
 
@@ -457,7 +443,6 @@ func renderICCBased(xRefTable *XRefTable, im *PDFImage, resourceName string, cs 
 }
 
 func renderIndexedRGBToPNG(im *PDFImage, resourceName string, lookup []byte) (io.Reader, string, error) {
-
 	b := im.sd.Content
 
 	img := image.NewNRGBA(image.Rect(0, 0, im.w, im.h))
@@ -489,11 +474,9 @@ func renderIndexedRGBToPNG(im *PDFImage, resourceName string, lookup []byte) (io
 	}
 
 	return &buf, "png", nil
-	//return &Image{&buf, 0, resourceName, im.thumb, "png"}, nil
 }
 
 func renderIndexedCMYKToTIFF(im *PDFImage, resourceName string, lookup []byte) (io.Reader, string, error) {
-
 	b := im.sd.Content
 
 	img := image.NewCMYK(image.Rect(0, 0, im.w, im.h))
@@ -523,27 +506,21 @@ func renderIndexedCMYKToTIFF(im *PDFImage, resourceName string, lookup []byte) (
 	}
 
 	return &buf, "tif", nil
-	//return &Image{&buf, 0, resourceName, im.thumb, "tif"}, nil
 }
 
 func renderIndexedNameCS(im *PDFImage, resourceName string, cs Name, maxInd int, lookup []byte) (io.Reader, string, error) {
-
 	switch cs {
 
 	case DeviceRGBCS:
-
 		if len(lookup) < 3*(maxInd+1) {
 			return nil, "", errors.Errorf("pdfcpu: renderIndexedNameCS: objNr=%d, corrupt DeviceRGB lookup table\n", im.objNr)
 		}
-
 		return renderIndexedRGBToPNG(im, resourceName, lookup)
 
 	case DeviceCMYKCS:
-
 		if len(lookup) < 4*(maxInd+1) {
 			return nil, "", errors.Errorf("pdfcpu: renderIndexedNameCS: objNr=%d, corrupt DeviceCMYK lookup table\n", im.objNr)
 		}
-
 		return renderIndexedCMYKToTIFF(im, resourceName, lookup)
 	}
 
@@ -553,7 +530,6 @@ func renderIndexedNameCS(im *PDFImage, resourceName string, cs Name, maxInd int,
 }
 
 func renderIndexedArrayCS(xRefTable *XRefTable, im *PDFImage, resourceName string, csa Array, maxInd int, lookup []byte) (io.Reader, string, error) {
-
 	b := im.sd.Content
 
 	cs, _ := csa[0].(Name)
@@ -616,7 +592,6 @@ func renderIndexedArrayCS(xRefTable *XRefTable, im *PDFImage, resourceName strin
 }
 
 func renderIndexed(xRefTable *XRefTable, im *PDFImage, resourceName string, cs Array) (io.Reader, string, error) {
-
 	// Identify the base color space.
 	baseCS, _ := xRefTable.Dereference(cs[1])
 
@@ -629,10 +604,10 @@ func renderIndexed(xRefTable *XRefTable, im *PDFImage, resourceName string, cs A
 	if err != nil {
 		return nil, "", err
 	}
+
 	if lookup == nil {
 		return nil, "", errors.Errorf("pdfcpu: renderIndexed: objNr=%d IndexedCS with corrupt lookup table %s\n", im.objNr, cs)
 	}
-	//fmt.Printf("lookup: \n%s\n", hex.Dump(l))
 
 	b := im.sd.Content
 
@@ -657,7 +632,6 @@ func renderIndexed(xRefTable *XRefTable, im *PDFImage, resourceName string, cs A
 }
 
 func renderFlateEncodedImage(xRefTable *XRefTable, sd *StreamDict, thumb bool, resourceName string, objNr int) (io.Reader, string, error) {
-
 	// If color space is CMYK then write .tif else write .png
 
 	pdfImage, err := pdfImage(xRefTable, sd, thumb, objNr)
@@ -711,8 +685,41 @@ func renderFlateEncodedImage(xRefTable *XRefTable, sd *StreamDict, thumb bool, r
 	return nil, "", nil
 }
 
-func renderDeviceCMYKToPng(im *PDFImage, resourceName string) (io.Reader, string, error) {
+func renderGrayToPng(im *PDFImage, resourceName string) (io.Reader, string, error) {
+	bb := bytes.NewReader(im.sd.Content)
+	dec := gob.NewDecoder(bb)
 
+	var img image.Gray
+	if err := dec.Decode(&img); err != nil {
+		return nil, "", err
+	}
+
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, &img); err != nil {
+		return nil, "", err
+	}
+
+	return &buf, "png", nil
+}
+
+func renderRGBToPng(im *PDFImage, resourceName string) (io.Reader, string, error) {
+	bb := bytes.NewReader(im.sd.Content)
+	dec := gob.NewDecoder(bb)
+
+	var img image.YCbCr
+	if err := dec.Decode(&img); err != nil {
+		return nil, "", err
+	}
+
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, &img); err != nil {
+		return nil, "", err
+	}
+
+	return &buf, "png", nil
+}
+
+func renderCMYKToPng(im *PDFImage, resourceName string) (io.Reader, string, error) {
 	bb := bytes.NewReader(im.sd.Content)
 	dec := gob.NewDecoder(bb)
 
@@ -733,65 +740,33 @@ func renderDeviceCMYKToPng(im *PDFImage, resourceName string) (io.Reader, string
 	}
 
 	var buf bytes.Buffer
-
 	if err := png.Encode(&buf, img1); err != nil {
 		return nil, "", err
 	}
 
 	return &buf, "png", nil
-	//return &Image{&buf, 0, resourceName, im.thumb, "png"}, nil
 }
 
 func renderDCTEncodedImage(xRefTable *XRefTable, sd *StreamDict, thumb bool, resourceName string, objNr int) (io.Reader, string, error) {
-
 	im, err := pdfImage(xRefTable, sd, thumb, objNr)
 	if err != nil {
 		return nil, "", err
 	}
 
-	o, err := xRefTable.DereferenceDictEntry(sd.Dict, "ColorSpace")
-	if err != nil {
-		return nil, "", err
+	switch im.comp {
+	case 1:
+		return renderGrayToPng(im, resourceName)
+	case 3:
+		return renderRGBToPng(im, resourceName)
+	case 4:
+		return renderCMYKToPng(im, resourceName)
 	}
 
-	switch cs := o.(type) {
-
-	case Name:
-		switch cs {
-
-		case DeviceCMYKCS:
-			return renderDeviceCMYKToPng(im, resourceName)
-
-		// case DeviceRGBCS:
-		// 	fmt.Println("DeviceRGBCS")
-		// 	return renderDeviceRGBToPNG(im, resourceName)
-
-		default:
-			//fmt.Printf("renderDCTEncodedImage: objNr=%d, colorspace: %s\n", objNr, cs.String())
-		}
-
-	}
-
-	bb := bytes.NewReader(im.sd.Content)
-	dec := gob.NewDecoder(bb)
-
-	var img image.YCbCr
-	if err := dec.Decode(&img); err != nil {
-		return nil, "", err
-	}
-
-	var buf bytes.Buffer
-	if err := png.Encode(&buf, &img); err != nil {
-		return nil, "", err
-	}
-
-	return &buf, "png", nil
-	//return &Image{&buf, 0, resourceName, im.thumb, "png"}, nil
+	return nil, "", errors.Errorf("renderDCTEncodedImage: invalid number of components: %d", im.comp)
 }
 
 // RenderImage returns a reader for a decoded image stream.
 func RenderImage(xRefTable *XRefTable, sd *StreamDict, thumb bool, resourceName string, objNr int) (io.Reader, string, error) {
-
 	// The real image compression is the last filter in the pipeline.
 	f := sd.FilterPipeline[len(sd.FilterPipeline)-1].Name
 

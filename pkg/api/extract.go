@@ -32,6 +32,7 @@ import (
 )
 
 // ExtractImagesRaw returns []pdfcpu.Image containing io.Readers for images contained in selectedPages.
+// Beware of memory intensive returned slice.
 func ExtractImagesRaw(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Configuration) ([]pdfcpu.Image, error) {
 	if rs == nil {
 		return nil, errors.New("pdfcpu: ExtractImages: Please provide rs")
@@ -40,10 +41,7 @@ func ExtractImagesRaw(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Con
 		conf = pdfcpu.NewDefaultConfiguration()
 	}
 
-	var images []pdfcpu.Image
-
-	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
+	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, time.Now())
 	if err != nil {
 		return nil, err
 	}
@@ -52,12 +50,12 @@ func ExtractImagesRaw(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Con
 		return nil, err
 	}
 
-	fromWrite := time.Now()
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return nil, err
 	}
 
+	var images []pdfcpu.Image
 	for i, v := range pages {
 		if !v {
 			continue
@@ -68,11 +66,6 @@ func ExtractImagesRaw(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Con
 		}
 		images = append(images, ii...)
 	}
-
-	durWrite := time.Since(fromWrite).Seconds()
-	durTotal := time.Since(fromStart).Seconds()
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	pdfcpu.TimingStats("write images", durRead, durVal, durOpt, durWrite, durTotal)
 
 	return images, nil
 }

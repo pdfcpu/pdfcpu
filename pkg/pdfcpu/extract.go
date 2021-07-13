@@ -52,7 +52,7 @@ func (ctx *Context) StreamLength(sd *StreamDict) (int64, error) {
 		return 0, nil
 	}
 
-	i, err := ctx.DereferenceInteger(indRef)
+	i, err := ctx.DereferenceInteger(*indRef)
 	if err != nil || i == nil {
 		return 0, err
 	}
@@ -100,13 +100,13 @@ func colorSpaceNameComponents(cs Name) int {
 }
 
 // ColorSpaceComponents returns the corresponding number of used color components for sd's colorspace.
-func (ctx *Context) ColorSpaceComponents(sd *StreamDict) (int, error) {
+func (xRefTable *XRefTable) ColorSpaceComponents(sd *StreamDict) (int, error) {
 	o, found := sd.Find("ColorSpace")
 	if !found {
 		return 0, nil
 	}
 
-	o, err := ctx.Dereference(o)
+	o, err := xRefTable.Dereference(o)
 	if err != nil {
 		return 0, err
 	}
@@ -123,7 +123,7 @@ func (ctx *Context) ColorSpaceComponents(sd *StreamDict) (int, error) {
 			return 3, nil
 
 		case ICCBasedCS:
-			iccProfileStream, _, err := ctx.DereferenceStreamDict(cs[1])
+			iccProfileStream, _, err := xRefTable.DereferenceStreamDict(cs[1])
 			if err != nil {
 				return 0, err
 			}
@@ -136,7 +136,7 @@ func (ctx *Context) ColorSpaceComponents(sd *StreamDict) (int, error) {
 
 		case IndexedCS:
 
-			baseCS, err := ctx.Dereference(cs[1])
+			baseCS, err := xRefTable.Dereference(cs[1])
 			if err != nil {
 				return 0, err
 			}
@@ -146,7 +146,7 @@ func (ctx *Context) ColorSpaceComponents(sd *StreamDict) (int, error) {
 				return colorSpaceNameComponents(cs), nil
 
 			case Array:
-				iccProfileStream, _, err := ctx.DereferenceStreamDict(cs[1])
+				iccProfileStream, _, err := xRefTable.DereferenceStreamDict(cs[1])
 				if err != nil {
 					return 0, err
 				}
