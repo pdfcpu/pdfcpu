@@ -1587,7 +1587,6 @@ func (ctx *Context) updatePageResourcesForWM(resDict Dict, wm *Watermark, gsID, 
 
 func wmContent(wm *Watermark, gsID, xoID string) []byte {
 	m := wm.calcTransformMatrix()
-	// Calc bbTrans = m(bb)
 	p1 := m.transform(Point{wm.bb.LL.X, wm.bb.LL.Y})
 	p2 := m.transform(Point{wm.bb.UR.X, wm.bb.LL.X})
 	p3 := m.transform(Point{wm.bb.UR.X, wm.bb.UR.Y})
@@ -1630,9 +1629,10 @@ func translationForPageRotation(pageRot int, w, h float64) (float64, float64) {
 	return dx, dy
 }
 
-func contentBytesForPageRotation(wm *Watermark) []byte {
-	dx, dy := translationForPageRotation(wm.pageRot, wm.vp.Width(), wm.vp.Height())
-	m := calcRotateAndTranslateTransformMatrix(float64(-wm.pageRot), dx, dy)
+func contentBytesForPageRotation(rot int, w, h float64) []byte {
+	dx, dy := translationForPageRotation(rot, w, h)
+	// Note: PDF rotation is clockwise!
+	m := calcRotateAndTranslateTransformMatrix(float64(-rot), dx, dy)
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "%.2f %.2f %.2f %.2f %.2f %.2f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 	return b.Bytes()
@@ -1654,7 +1654,7 @@ func patchFirstContentStreamForWatermark(sd *StreamDict, gsID, xoID string, wm *
 	if wm.OnTop {
 		bb := []byte(" q ")
 		if wm.pageRot != 0 {
-			bb = append(bb, contentBytesForPageRotation(wm)...)
+			bb = append(bb, contentBytesForPageRotation(wm.pageRot, wm.vp.Width(), wm.vp.Height())...)
 		}
 		sd.Content = append(bb, sd.Content...)
 		if !isLast {
@@ -1671,7 +1671,7 @@ func patchFirstContentStreamForWatermark(sd *StreamDict, gsID, xoID string, wm *
 		return sd.Encode()
 	}
 
-	bb := append([]byte(" q "), contentBytesForPageRotation(wm)...)
+	bb := append([]byte(" q "), contentBytesForPageRotation(wm.pageRot, wm.vp.Width(), wm.vp.Height())...)
 	sd.Content = append(bb, sd.Content...)
 	if isLast {
 		sd.Content = append(sd.Content, []byte(" Q")...)

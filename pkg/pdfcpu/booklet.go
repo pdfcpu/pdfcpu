@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-
-	"github.com/pkg/errors"
 )
 
 // DefaultBookletConfig returns the default configuration for a booklet
@@ -229,8 +227,12 @@ func sortSelectedPagesForBooklet(pages IntSet, nup *NUp) []bookletPage {
 	return bookletPages
 }
 
-func (ctx *Context) bookletPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pagesIndRef *IndirectRef) error {
-	xRefTable := ctx.XRefTable
+func (ctx *Context) bookletPages(
+	selectedPages IntSet,
+	nup *NUp,
+	pagesDict Dict,
+	pagesIndRef *IndirectRef) error {
+
 	var buf bytes.Buffer
 	formsResDict := NewDict()
 	rr := rectsForGrid(nup)
@@ -238,12 +240,10 @@ func (ctx *Context) bookletPages(selectedPages IntSet, nup *NUp, pagesDict Dict,
 	for i, bp := range sortSelectedPagesForBooklet(selectedPages, nup) {
 
 		if i > 0 && i%len(rr) == 0 {
-
-			// Wrap complete booklet page.
+			// Wrap complete page.
 			if err := wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef); err != nil {
 				return err
 			}
-
 			buf.Reset()
 			formsResDict = NewDict()
 		}
@@ -251,51 +251,16 @@ func (ctx *Context) bookletPages(selectedPages IntSet, nup *NUp, pagesDict Dict,
 		rDest := rr[i%len(rr)]
 
 		if bp.number == 0 {
-			// This is an empty page at the end of a booklet.
+			// This is an empty page at the end.
 			if nup.BgColor != nil {
 				FillRectStacked(&buf, rDest, *nup.BgColor)
 			}
 			continue
 		}
 
-		consolidateRes := true
-		d, _, inhPAttrs, err := ctx.PageDict(bp.number, consolidateRes)
-		if err != nil {
+		if err := ctx.nUpTilePDFBytesForPDF(bp.number, formsResDict, &buf, rDest, nup, bp.rotate); err != nil {
 			return err
 		}
-		if d == nil {
-			return errors.Errorf("pdfcpu: unknown page number: %d\n", i)
-		}
-
-		// Retrieve content stream bytes.
-		bb, err := xRefTable.PageContent(d)
-		if err == errNoContent {
-			continue
-		}
-		if err != nil {
-			return err
-		}
-
-		// Create an object for this resDict in xRefTable.
-		ir, err := ctx.IndRefForNewObject(inhPAttrs.resources)
-		if err != nil {
-			return err
-		}
-
-		cropBox := inhPAttrs.mediaBox
-		if inhPAttrs.cropBox != nil {
-			cropBox = inhPAttrs.cropBox
-		}
-		formIndRef, err := createNUpFormForPDF(xRefTable, ir, bb, cropBox)
-		if err != nil {
-			return err
-		}
-
-		formResID := fmt.Sprintf("Fm%d", i)
-		formsResDict.Insert(formResID, *formIndRef)
-
-		// Append to content stream of page i.
-		nUpTilePDFBytes(&buf, cropBox, rDest, formResID, nup, bp.rotate)
 	}
 
 	// Wrap incomplete booklet page.
@@ -387,7 +352,7 @@ func BookletFromImages(ctx *Context, fileNames []string, nup *NUp, pagesDict Dic
 
 		if i > 0 && i%len(rr) == 0 {
 
-			// Wrap complete booklet page.
+			// Wrap complete page.
 			if err := wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef); err != nil {
 				return err
 			}
@@ -429,7 +394,8 @@ func BookletFromImages(ctx *Context, fileNames []string, nup *NUp, pagesDict Dic
 		formsResDict.Insert(formResID, *formIndRef)
 
 		// Append to content stream of booklet page i.
-		nUpTilePDFBytes(&buf, RectForDim(float64(w), float64(h)), rr[i%len(rr)], formResID, nup, bp.rotate)
+		enforceOrientation := false
+		nUpTilePDFBytes(&buf, RectForDim(float64(w), float64(h)), rr[i%len(rr)], formResID, nup, bp.rotate, enforceOrientation)
 	}
 
 	// Wrap incomplete booklet page.

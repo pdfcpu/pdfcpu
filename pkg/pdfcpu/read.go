@@ -1996,8 +1996,7 @@ func saveDecodedStreamContent(ctx *Context, sd *StreamDict, objNr, genNr int, de
 		return nil
 	}
 
-	t := sd.Type()
-	if t != nil && *t == "XObject" {
+	if sd.Image() {
 		return nil
 	}
 

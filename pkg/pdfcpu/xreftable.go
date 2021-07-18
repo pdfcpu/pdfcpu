@@ -1003,8 +1003,8 @@ func (xRefTable *XRefTable) list(logStr []string) []string {
 				}
 
 				sd, ok := entry.Object.(StreamDict)
-				if ok && log.IsTraceLoggerEnabled() { //&& sd.IsPageContent {
-					s := "decoded stream content (length = %d)\n<%s>\n"
+				if ok && log.IsTraceLoggerEnabled() {
+					s := "decoded stream content (length = %d)\n%s\n"
 					if sd.IsPageContent {
 						str += fmt.Sprintf(s, len(sd.Content), sd.Content)
 					} else {

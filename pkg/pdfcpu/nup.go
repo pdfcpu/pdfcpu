@@ -432,7 +432,7 @@ func rectsForGrid(nup *NUp) []*Rectangle {
 	return rr
 }
 
-func bestFitRectIntoRect(rSrc, rDest *Rectangle) (w, h, dx, dy, rot float64) {
+func bestFitRectIntoRect(rSrc, rDest *Rectangle, enforceOrient bool) (w, h, dx, dy, rot float64) {
 	if rSrc.FitsWithin(rDest) {
 		// Translate rSrc into center of rDest without scaling.
 		w = rSrc.Width()
@@ -454,16 +454,22 @@ func bestFitRectIntoRect(rSrc, rDest *Rectangle) (w, h, dx, dy, rot float64) {
 				dx = (rDest.Width() - w) / 2
 			}
 		} else {
-			rot = 90
-			if 1/rSrc.AspectRatio() < rDest.AspectRatio() {
-				w = rDest.Height()
-				h = rSrc.ScaledHeight(w)
-				dx = (rDest.Width() - h) / 2
-			} else {
-				h = rDest.Width()
-				w = rSrc.ScaledWidth(h)
-				dy = (rDest.Height() - w) / 2
+			if enforceOrient {
+				rot = 90
+				if 1/rSrc.AspectRatio() < rDest.AspectRatio() {
+					w = rDest.Height()
+					h = rSrc.ScaledHeight(w)
+					dx = (rDest.Width() - h) / 2
+				} else {
+					h = rDest.Width()
+					w = rSrc.ScaledWidth(h)
+					dy = (rDest.Height() - w) / 2
+				}
+				return
 			}
+			w = rDest.Width()
+			h = rSrc.ScaledHeight(w)
+			dy = (rDest.Height() - h) / 2
 		}
 		return
 	}
@@ -480,16 +486,22 @@ func bestFitRectIntoRect(rSrc, rDest *Rectangle) (w, h, dx, dy, rot float64) {
 				dy = (rDest.Height() - h) / 2
 			}
 		} else {
-			rot = 90
-			if 1/rSrc.AspectRatio() > rDest.AspectRatio() {
-				h = rDest.Width()
-				w = rSrc.ScaledWidth(h)
-				dy = (rDest.Height() - w) / 2
-			} else {
-				w = rDest.Height()
-				h = rSrc.ScaledHeight(w)
-				dx = (rDest.Width() - h) / 2
+			if enforceOrient {
+				rot = 90
+				if 1/rSrc.AspectRatio() > rDest.AspectRatio() {
+					h = rDest.Width()
+					w = rSrc.ScaledWidth(h)
+					dy = (rDest.Height() - w) / 2
+				} else {
+					w = rDest.Height()
+					h = rSrc.ScaledHeight(w)
+					dx = (rDest.Width() - h) / 2
+				}
+				return
 			}
+			h = rDest.Height()
+			w = rSrc.ScaledWidth(h)
+			dx = (rDest.Width() - w) / 2
 		}
 		return
 	}
@@ -505,7 +517,7 @@ func bestFitRectIntoRect(rSrc, rDest *Rectangle) (w, h, dx, dy, rot float64) {
 	return
 }
 
-func nUpTilePDFBytes(wr io.Writer, rSrc, rDest *Rectangle, formResID string, nup *NUp, rotate bool) {
+func nUpTilePDFBytes(wr io.Writer, rSrc, rDest *Rectangle, formResID string, nup *NUp, rotate, enforceOrient bool) {
 
 	// rScr is a rectangular region represented by form formResID in form space.
 
@@ -513,8 +525,12 @@ func nUpTilePDFBytes(wr io.Writer, rSrc, rDest *Rectangle, formResID string, nup
 	// It is the location where we want the form content to get rendered on a "best fit" basis.
 	// Accounting for the aspect ratios of rSrc and rDest "best fit" tries to fit the largest version of rScr into rDest.
 	// This may result in a 90 degree rotation.
-
-	// rotate indicates if we need to apply a post rotation of 180 degrees eg for booklets.
+	//
+	// rotate:
+	//			indicates if we need to apply a post rotation of 180 degrees eg for booklets.
+	//
+	// enforceOrient:
+	//			indicates if we need to enforce dest's orientation.
 
 	// Draw bounding box.
 	if nup.Border {
@@ -529,7 +545,9 @@ func nUpTilePDFBytes(wr io.Writer, rSrc, rDest *Rectangle, formResID string, nup
 	// Calculate transform matrix.
 
 	// Best fit translation of a source rectangle into a destination rectangle.
-	w, h, dx, dy, r := bestFitRectIntoRect(rSrc, rDestCr)
+	// For nup we enforce the dest orientation,
+	// whereas in cases where the original orientation needs to be preserved eg. for booklets, we don't.
+	w, h, dx, dy, r := bestFitRectIntoRect(rSrc, rDestCr, enforceOrient)
 
 	if nup.BgColor != nil {
 		if nup.ImgInputFile {
@@ -580,7 +598,7 @@ func nUpTilePDFBytes(wr io.Writer, rSrc, rDest *Rectangle, formResID string, nup
 func nUpImagePDFBytes(w io.Writer, imgWidth, imgHeight int, nup *NUp, formResID string) {
 	for _, r := range rectsForGrid(nup) {
 		// Append to content stream.
-		nUpTilePDFBytes(w, RectForDim(float64(imgWidth), float64(imgHeight)), r, formResID, nup, false)
+		nUpTilePDFBytes(w, RectForDim(float64(imgWidth), float64(imgHeight)), r, formResID, nup, false, true)
 	}
 }
 
@@ -862,7 +880,7 @@ func NUpFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict
 		formsResDict.Insert(formResID, *formIndRef)
 
 		// Append to content stream of page i.
-		nUpTilePDFBytes(&buf, RectForDim(float64(w), float64(h)), rr[i%len(rr)], formResID, nup, false)
+		nUpTilePDFBytes(&buf, RectForDim(float64(w), float64(h)), rr[i%len(rr)], formResID, nup, false, true)
 	}
 
 	// Wrap incomplete nUp page.
@@ -888,9 +906,75 @@ func nupPageNumber(i int, sortedPageNumbers []int) int {
 	return pageNumber
 }
 
-func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pagesIndRef *IndirectRef) error {
+func (ctx *Context) nUpTilePDFBytesForPDF(
+	pageNr int,
+	formsResDict Dict,
+	buf *bytes.Buffer,
+	rDest *Rectangle,
+	nup *NUp,
+	rotate bool) error {
+
+	consolidateRes := true
+	d, _, inhPAttrs, err := ctx.PageDict(pageNr, consolidateRes)
+	if err != nil {
+		return err
+	}
+	if d == nil {
+		return errors.Errorf("pdfcpu: unknown page number: %d\n", pageNr)
+	}
+
+	// Retrieve content stream bytes.
+	bb, err := ctx.PageContent(d)
+	if err == errNoContent {
+		// TODO render if has annotations.
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	// Create an object for this resDict in xRefTable.
+	ir, err := ctx.IndRefForNewObject(inhPAttrs.resources)
+	if err != nil {
+		return err
+	}
+
+	cropBox := inhPAttrs.mediaBox
+	if inhPAttrs.cropBox != nil {
+		cropBox = inhPAttrs.cropBox
+	}
+
+	// Account for existing rotation.
+	if inhPAttrs.rotate != 0 {
+		if IntMemberOf(inhPAttrs.rotate, []int{+90, -90, +270, -270}) {
+			w := cropBox.Width()
+			cropBox.UR.X = cropBox.LL.X + cropBox.Height()
+			cropBox.UR.Y = cropBox.LL.Y + w
+		}
+		bb = append(contentBytesForPageRotation(inhPAttrs.rotate, cropBox.Width(), cropBox.Height()), bb...)
+	}
+
+	formIndRef, err := createNUpFormForPDF(ctx.XRefTable, ir, bb, cropBox)
+	if err != nil {
+		return err
+	}
+
+	formResID := fmt.Sprintf("Fm%d", pageNr)
+	formsResDict.Insert(formResID, *formIndRef)
+
+	// Append to content stream buf of destination page.
+	nUpTilePDFBytes(buf, cropBox, rDest, formResID, nup, rotate, true)
+
+	return nil
+}
+
+func (ctx *Context) nupPages(
+	selectedPages IntSet,
+	nup *NUp,
+	pagesDict Dict,
+	pagesIndRef *IndirectRef) error {
+
 	var buf bytes.Buffer
-	xRefTable := ctx.XRefTable
 	formsResDict := NewDict()
 	rr := rectsForGrid(nup)
 
@@ -905,7 +989,7 @@ func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pag
 	for i := 0; i < pageCount; i++ {
 
 		if i > 0 && i%len(rr) == 0 {
-			// Wrap complete nUp page.
+			// Wrap complete page.
 			if err := wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef); err != nil {
 				return err
 			}
@@ -915,53 +999,18 @@ func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pag
 
 		rDest := rr[i%len(rr)]
 
-		pageNumber := nupPageNumber(i, sortedPageNumbers)
-		if pageNumber == 0 {
-			// This is an empty page at the end of a booklet.
+		pageNr := nupPageNumber(i, sortedPageNumbers)
+		if pageNr == 0 {
+			// This is an empty page at the end.
 			if nup.BgColor != nil {
 				FillRectStacked(&buf, rDest, *nup.BgColor)
 			}
 			continue
 		}
 
-		consolidateRes := true
-		d, _, inhPAttrs, err := ctx.PageDict(pageNumber, consolidateRes)
-		if err != nil {
+		if err := ctx.nUpTilePDFBytesForPDF(pageNr, formsResDict, &buf, rDest, nup, false); err != nil {
 			return err
 		}
-		if d == nil {
-			return errors.Errorf("pdfcpu: unknown page number: %d\n", i)
-		}
-
-		// Retrieve content stream bytes.
-		bb, err := xRefTable.PageContent(d)
-		if err == errNoContent {
-			continue
-		}
-		if err != nil {
-			return err
-		}
-
-		// Create an object for this resDict in xRefTable.
-		ir, err := ctx.IndRefForNewObject(inhPAttrs.resources)
-		if err != nil {
-			return err
-		}
-
-		cropBox := inhPAttrs.mediaBox
-		if inhPAttrs.cropBox != nil {
-			cropBox = inhPAttrs.cropBox
-		}
-		formIndRef, err := createNUpFormForPDF(xRefTable, ir, bb, cropBox)
-		if err != nil {
-			return err
-		}
-
-		formResID := fmt.Sprintf("Fm%d", i)
-		formsResDict.Insert(formResID, *formIndRef)
-
-		// Append to content stream of page i.
-		nUpTilePDFBytes(&buf, cropBox, rDest, formResID, nup, false)
 	}
 
 	// Wrap incomplete nUp page.
@@ -972,7 +1021,7 @@ func (ctx *Context) nupPages(selectedPages IntSet, nup *NUp, pagesDict Dict, pag
 func (ctx *Context) NUpFromPDF(selectedPages IntSet, nup *NUp) error {
 	var mb *Rectangle
 	if nup.PageDim == nil {
-		// No page dimensions specified, use mediaBox of page 1.
+		// No page dimensions specified, use cropBox of page 1 as mediaBox(=cropBox).
 		consolidateRes := false
 		d, _, inhPAttrs, err := ctx.PageDict(1, consolidateRes)
 		if err != nil {
@@ -981,7 +1030,22 @@ func (ctx *Context) NUpFromPDF(selectedPages IntSet, nup *NUp) error {
 		if d == nil {
 			return errors.Errorf("unknown page number: %d\n", 1)
 		}
-		mb = inhPAttrs.mediaBox
+
+		cropBox := inhPAttrs.mediaBox
+		if inhPAttrs.cropBox != nil {
+			cropBox = inhPAttrs.cropBox
+		}
+
+		// Account for existing rotation.
+		if inhPAttrs.rotate != 0 {
+			if IntMemberOf(inhPAttrs.rotate, []int{+90, -90, +270, -270}) {
+				w := cropBox.Width()
+				cropBox.UR.X = cropBox.LL.X + cropBox.Height()
+				cropBox.UR.Y = cropBox.LL.Y + w
+			}
+		}
+
+		mb = cropBox
 	} else {
 		mb = RectForDim(nup.PageDim.Width, nup.PageDim.Height)
 	}
