@@ -253,7 +253,7 @@ func appendPageBoxesInfo(ss *[]string, pb PageBoundaries, unit string, currUnit 
 	*ss = append(*ss, fmt.Sprintf("Page %d: %s", i+1, s))
 	mb := pb.MediaBox()
 	cb := pb.CropBox()
-	if cb == nil || mb.equals(*cb) {
+	if cb == nil || mb != nil && mb.equals(*cb) {
 		appendEqualMediaAndCropBoxInfo(ss, pb, unit, currUnit)
 		return
 	}
