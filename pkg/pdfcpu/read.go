@@ -790,12 +790,6 @@ func scanLine(s *bufio.Scanner) (s1 string, err error) {
 		}
 	}
 
-	// Remove comment.
-	i := strings.Index(s1, "%")
-	if i >= 0 {
-		s1 = s1[:i]
-	}
-
 	return s1, nil
 }
 
@@ -2059,9 +2053,9 @@ func logStream(o Object) {
 			log.Read.Println("logStream: no stream content")
 		}
 
-		if o.IsPageContent {
-			//log.Read.Printf("content <%s>\n", StreamDict.Content)
-		}
+		// if o.IsPageContent {
+		// 	//log.Read.Printf("content <%s>\n", StreamDict.Content)
+		// }
 
 	case ObjectStreamDict:
 
