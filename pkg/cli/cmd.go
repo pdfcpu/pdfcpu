@@ -101,15 +101,15 @@ var cmdMap = map[pdfcpu.CommandMode]func(cmd *Command) ([]string, error){
 }
 
 // ValidateCommand creates a new command to validate a file.
-func ValidateCommand(inFile string, conf *pdfcpu.Configuration) *Command {
+func ValidateCommand(inFiles []string, conf *pdfcpu.Configuration) *Command {
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
 	}
 	conf.Cmd = pdfcpu.VALIDATE
 	return &Command{
-		Mode:   pdfcpu.VALIDATE,
-		InFile: &inFile,
-		Conf:   conf}
+		Mode:    pdfcpu.VALIDATE,
+		InFiles: inFiles,
+		Conf:    conf}
 }
 
 // OptimizeCommand creates a new command to optimize a file.

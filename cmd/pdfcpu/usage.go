@@ -77,13 +77,13 @@ common flags: -v(erbose)  ... turn on logging
                                                   cm ... centimetres
                                                   mm ... millimetres`
 
-	usageValidate = "usage: pdfcpu validate [-m(ode) strict|relaxed] [-l(inks)] inFile" + generalFlags
+	usageValidate = "usage: pdfcpu validate [-m(ode) strict|relaxed] [-l(inks)] inFile..." + generalFlags
 
 	usageLongValidate = `Check inFile for specification compliance.
 
       mode ... validation mode
      links ... check for broken links
-    inFile ... input pdf file
+    inFile ... a list of pdf input files
 		
 The validation modes are:
 

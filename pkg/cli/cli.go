@@ -30,7 +30,7 @@ func Validate(cmd *Command) ([]string, error) {
 		return nil, errors.New("validate: mode == ValidationNone")
 	}
 
-	return nil, api.ValidateFile(*cmd.InFile, conf)
+	return nil, api.ValidateFiles(cmd.InFiles, conf)
 }
 
 // Optimize inFile and write result to outFile.

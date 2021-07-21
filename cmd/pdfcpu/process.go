@@ -106,13 +106,25 @@ func process(cmd *cli.Command) {
 	os.Exit(0)
 }
 func processValidateCommand(conf *pdfcpu.Configuration) {
-	if len(flag.Args()) == 0 || len(flag.Args()) > 1 || selectedPages != "" {
+	if len(flag.Args()) == 0 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageValidate)
 		os.Exit(1)
 	}
 
-	inFile := flag.Arg(0)
-	ensurePdfExtension(inFile)
+	inFiles := []string{}
+	for _, arg := range flag.Args() {
+		ensurePdfExtension(arg)
+		if strings.Contains(arg, "*") {
+			matches, err := filepath.Glob(arg)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s", err)
+				os.Exit(1)
+			}
+			inFiles = append(inFiles, matches...)
+			continue
+		}
+		inFiles = append(inFiles, arg)
+	}
 
 	if mode != "" && mode != "strict" && mode != "s" && mode != "relaxed" && mode != "r" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageValidate)
@@ -130,7 +142,7 @@ func processValidateCommand(conf *pdfcpu.Configuration) {
 		conf.ValidateLinks = true
 	}
 
-	process(cli.ValidateCommand(inFile, conf))
+	process(cli.ValidateCommand(inFiles, conf))
 }
 
 func processOptimizeCommand(conf *pdfcpu.Configuration) {

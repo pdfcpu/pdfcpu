@@ -97,3 +97,13 @@ func ValidateFile(inFile string, conf *pdfcpu.Configuration) error {
 
 	return nil
 }
+
+// ValidateFiles validates inFiles.
+func ValidateFiles(inFiles []string, conf *pdfcpu.Configuration) error {
+	for _, inFile := range inFiles {
+		if err := ValidateFile(inFile, conf); err != nil {
+			return err
+		}
+	}
+	return nil
+}
