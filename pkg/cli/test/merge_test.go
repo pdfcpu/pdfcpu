@@ -39,7 +39,7 @@ func TestMergeCommand(t *testing.T) {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
-	cmd = cli.ValidateCommand(outFile, nil)
+	cmd = cli.ValidateCommand([]string{outFile}, nil)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
@@ -52,7 +52,7 @@ func TestMergeCommand(t *testing.T) {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
-	cmd = cli.ValidateCommand(outFile, nil)
+	cmd = cli.ValidateCommand([]string{outFile}, nil)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}

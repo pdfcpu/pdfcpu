@@ -119,6 +119,7 @@ func validateTimezoneSeparator(c byte) bool {
 }
 
 func parseTimezone(s string, relaxed bool) (h, m int, ok bool) {
+
 	o := s[14]
 
 	if !validateTimezoneSeparator(o) {
@@ -127,8 +128,8 @@ func parseTimezone(s string, relaxed bool) (h, m int, ok bool) {
 
 	// local time equal to UT.
 	// "YYYYMMDDHHmmSSZ" or
-	// "20201222164228Z'" accepted if relaxed
-	if o == 'Z' && (len(s) == 15 || (relaxed && len(s) == 16)) {
+	// "YYYYMMDDHHmmSSZ'" if relaxed
+	if o == 'Z' && (len(s) == 15 || (relaxed && len(s) == 16 && s[15] == '\'')) {
 		return 0, 0, true
 	}
 
@@ -147,8 +148,9 @@ func parseTimezone(s string, relaxed bool) (h, m int, ok bool) {
 		tzh *= -1
 	}
 
-	// "YYYYMMDDHHmmSSZHH"
-	if len(s) == 17 {
+	// "YYYYMMDDHHmmSSZHH" or
+	// "YYYYMMDDHHmmSSZHH'" if relaxed
+	if len(s) == 17 || (relaxed && len(s) == 18 && s[17] == '\'') {
 		return tzh, 0, true
 	}
 
@@ -308,6 +310,36 @@ func parseSecond(s string) (sec int, finished, ok bool) {
 	return sec, false, true
 }
 
+func digestPopularOutOfSpecDates(s string) (time.Time, bool) {
+
+	// Mon Jan 2 15:04:05 2006
+	// Monday, January 02, 2006 3:04:05 PM
+	// 1/2/2006 15:04:05
+	// Mon, Jan 2, 2006
+
+	t, err := time.Parse("Mon Jan 2 15:04:05 2006", s)
+	if err == nil {
+		return t, true
+	}
+
+	t, err = time.Parse("Monday, January 02, 2006 3:04:05 PM", s)
+	if err == nil {
+		return t, true
+	}
+
+	t, err = time.Parse("1/2/2006 15:04:05", s)
+	if err == nil {
+		return t, true
+	}
+
+	t, err = time.Parse("Mon, Jan 2, 2006", s)
+	if err == nil {
+		return t, true
+	}
+
+	return t, false
+}
+
 // DateTime decodes s into a time.Time.
 func DateTime(s string, relaxed bool) (time.Time, bool) {
 	// 7.9.4 Dates
@@ -323,7 +355,8 @@ func DateTime(s string, relaxed bool) (time.Time, bool) {
 
 	y, finished, ok := parseYear(s)
 	if !ok {
-		return d, false
+		// Try workaround
+		return digestPopularOutOfSpecDates(s)
 	}
 
 	// Construct time for yyyy 01 01 00:00:00
