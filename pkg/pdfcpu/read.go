@@ -151,7 +151,6 @@ func newPositionedReader(rs io.ReadSeeker, offset *int64) (*bufio.Reader, error)
 
 // Get the file offset of the last XRefSection.
 // Go to end of file and search backwards for the first occurrence of startxref {offset} %%EOF
-// xref at 114172
 func offsetLastXRefSection(ctx *Context, skip int64) (*int64, error) {
 
 	rs := ctx.Read.rs
@@ -1087,7 +1086,6 @@ func bypassXrefSection(ctx *Context) error {
 
 	for {
 		line, err := scanLineRaw(s)
-		//println(line)
 		if err != nil {
 			break
 		}

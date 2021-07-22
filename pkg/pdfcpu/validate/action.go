@@ -837,7 +837,11 @@ func validateActionDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 	dictName := "actionDict"
 
 	// Type, optional, name
-	_, err := validateNameEntry(xRefTable, d, dictName, "Type", OPTIONAL, pdf.V10, func(s string) bool { return s == "Action" })
+	allowedTypes := []string{"Action"}
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		allowedTypes = []string{"A", "Action"}
+	}
+	_, err := validateNameEntry(xRefTable, d, dictName, "Type", OPTIONAL, pdf.V10, func(s string) bool { return pdf.MemberOf(s, allowedTypes) })
 	if err != nil {
 		return err
 	}

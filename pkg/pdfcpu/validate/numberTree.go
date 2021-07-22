@@ -146,14 +146,9 @@ func validateNumberTreeDictLimitsEntry(xRefTable *pdf.XRefTable, d pdf.Dict, fir
 	return nil
 }
 
-func validateNumberTree(xRefTable *pdf.XRefTable, name string, ir pdf.IndirectRef, root bool) (firstKey, lastKey int, err error) {
+func validateNumberTree(xRefTable *pdf.XRefTable, name string, d pdf.Dict, root bool) (firstKey, lastKey int, err error) {
 
 	// A node has "Kids" or "Nums" entry.
-
-	d, err := xRefTable.DereferenceDict(ir)
-	if err != nil || d == nil {
-		return 0, 0, err
-	}
 
 	// Kids: array of indirect references to the immediate children of this node.
 	// if Kids present then recurse
@@ -169,13 +164,13 @@ func validateNumberTree(xRefTable *pdf.XRefTable, name string, ir pdf.IndirectRe
 
 		for _, o := range a {
 
-			kid, ok := o.(pdf.IndirectRef)
-			if !ok {
-				return 0, 0, errors.New("pdfcpu: validateNumberTree: corrupt kid, should be indirect reference")
+			d1, err := xRefTable.DereferenceDict(o)
+			if err != nil {
+				return 0, 0, err
 			}
 
 			var fk int
-			fk, lastKey, err = validateNumberTree(xRefTable, name, kid, false)
+			fk, lastKey, err = validateNumberTree(xRefTable, name, d1, false)
 			if err != nil {
 				return 0, 0, err
 			}

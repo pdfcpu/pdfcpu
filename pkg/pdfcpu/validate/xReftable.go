@@ -102,7 +102,12 @@ func validatePageLabels(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bo
 		return err
 	}
 
-	_, _, err = validateNumberTree(xRefTable, "PageLabel", *ir, true)
+	d, err := xRefTable.DereferenceDict(*ir)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = validateNumberTree(xRefTable, "PageLabel", d, true)
 
 	return err
 }

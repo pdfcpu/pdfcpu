@@ -707,12 +707,7 @@ func validateNameTree(xRefTable *pdf.XRefTable, name string, d pdf.Dict, root bo
 
 		for _, o := range a {
 
-			kid, ok := o.(pdf.IndirectRef)
-			if !ok {
-				return "", "", nil, errors.New("pdfcpu: validateNameTree: corrupt kid, should be indirect reference")
-			}
-
-			d, err := xRefTable.DereferenceDict(kid)
+			d, err := xRefTable.DereferenceDict(o)
 			if err != nil {
 				return "", "", nil, err
 			}
