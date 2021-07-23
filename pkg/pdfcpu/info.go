@@ -333,7 +333,7 @@ func (ctx *Context) InfoDigest(selectedPages IntSet) ([]string, error) {
 		return nil, err
 	}
 
-	ss = append(ss, fmt.Sprintf(separator))
+	ss = append(ss, separator)
 
 	s := "No"
 	if ctx.Tagged {
@@ -377,7 +377,23 @@ func (ctx *Context) InfoDigest(selectedPages IntSet) ([]string, error) {
 	}
 	ss = append(ss, fmt.Sprintf("          Thumbnails: %s", s))
 
-	ss = append(ss, fmt.Sprintf(separator))
+	s = "No"
+	if ctx.AcroForm {
+		s = "Yes"
+	}
+	ss = append(ss, fmt.Sprintf("            Acroform: %s", s))
+	if ctx.AcroForm {
+		if ctx.SignatureExist {
+			ss = append(ss, "     SignaturesExist: Yes")
+			s = "No"
+			if ctx.AppendOnly {
+				s = "Yes"
+			}
+			ss = append(ss, fmt.Sprintf("          AppendOnly: %s", s))
+		}
+	}
+
+	ss = append(ss, separator)
 
 	s = "No"
 	if ctx.Encrypt != nil {

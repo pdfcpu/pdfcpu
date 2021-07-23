@@ -138,8 +138,11 @@ type XRefTable struct {
 	Valid          bool                      // true means successful validated against ISO 32000.
 	URIs           map[int]map[string]string // URIs for link checking
 
-	Optimized   bool
-	Watermarked bool
+	Optimized      bool
+	Watermarked    bool
+	AcroForm       bool
+	SignatureExist bool
+	AppendOnly     bool
 }
 
 // NewXRefTable creates a new XRefTable.

@@ -265,9 +265,11 @@ func validateAcroFieldDict(xRefTable *pdf.XRefTable, ir pdf.IndirectRef, inField
 func validateAcroFormFields(xRefTable *pdf.XRefTable, o pdf.Object) error {
 
 	a, err := xRefTable.DereferenceArray(o)
-	if err != nil || a == nil {
+	if err != nil || len(a) == 0 {
 		return err
 	}
+
+	xRefTable.AcroForm = true
 
 	for _, value := range a {
 
@@ -282,7 +284,7 @@ func validateAcroFormFields(xRefTable *pdf.XRefTable, o pdf.Object) error {
 		}
 
 		if !valid {
-			if validateAcroFieldDict(xRefTable, ir, nil); err != nil {
+			if err = validateAcroFieldDict(xRefTable, ir, nil); err != nil {
 				return err
 			}
 		}
@@ -344,6 +346,8 @@ func validateAcroFormXFA(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion pdf.
 	if err != nil || o == nil {
 		return err
 	}
+
+	xRefTable.AcroForm = true
 
 	switch o := o.(type) {
 
@@ -450,9 +454,14 @@ func validateAcroForm(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool
 	}
 
 	// SigFlags: optional, since 1.3, integer
-	_, err = validateIntegerEntry(xRefTable, d, dictName, "SigFlags", OPTIONAL, pdf.V13, nil)
+	sf, err := validateIntegerEntry(xRefTable, d, dictName, "SigFlags", OPTIONAL, pdf.V13, nil)
 	if err != nil {
 		return err
+	}
+	if sf != nil {
+		i := sf.Value()
+		xRefTable.SignatureExist = i&1 > 0
+		xRefTable.AppendOnly = i&2 > 0
 	}
 
 	// CO: arra
