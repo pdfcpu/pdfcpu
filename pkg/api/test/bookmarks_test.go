@@ -37,8 +37,8 @@ func TestAddSimpleBookmarks(t *testing.T) {
 	// TODO Emoji support!
 
 	bms := []pdfcpu.Bookmark{
-		{PageFrom: 1, Title: "Page 1: Regular"},
-		{PageFrom: 2, Title: "Page 2: Bold", Bold: true},
+		{PageFrom: 1, Title: "Page 1: Applicant’s Form"},
+		{PageFrom: 2, Title: "Page 2: Bold 这是一个测试", Bold: true},
 		{PageFrom: 3, Title: "Page 3: Italic", Italic: true, Bold: true},
 		{PageFrom: 4, Title: "Page 4: Bold & Italic", Bold: true, Italic: true},
 		{PageFrom: 16, Title: "Page 16: The birthday of Smalltalk", Color: &bookmarkColor},
