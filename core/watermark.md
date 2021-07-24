@@ -88,36 +88,24 @@ but `op: .7` will do the job.
 
 | parameter | description                            | values                                              | default
 |:-----------------|:--------------------------------|:----------------------------------------------------|:---------
-| fontname         | a basefont                      | Please refer to `pdfcpu fonts list`                 | font: Helvetica
-| points           | fontsize in points              | in combination with absolute scaling only           | points: 24
-| rtl              | right to left userfont          | on/off, true/false, t/f                             | off
-| position         | the stamps lower left corner    | one of `full` or the anchors: `tl, tc, tr, l, c, r, bl, bc, br`| pos: c
-| offset           |                                 | (dx,dy) in user units eg. '15 20'                   | off: 0 0
-| scalefactor      |                                 | 0.0 < i <= 1.0 followed by optional `abs` or `rel`  | sc: 0.5 rel
-| aligntext        | horizontal text alignment       | l..left, c..center, r..right, j..justified          | al:c
-| strokecolor      | for rendering text (see mode)   | 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red         | strokec: 0.5 0.5 0.5 = gray
-|                  |                                 | or the hex RGB value: #RRGGBB
-| fillcolor        | for rendering text (see mode)   | 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red         | fillc: 0.5 0.5 0.5 = gray
-|                  | (=color)                        | or the hex RGB value: #RRGGBB                       |
-| backgroundcolor  | bounding box background         | 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red         | none
-|                  | (=bgcolor)                      | or the hex RGB value: #RRGGBB                       |
-| rotation         | rotation angle                  | -180.0 <= i <= 180.0                                | rot: 0.0
-| diagonal         | render along diagonal           | 1 .. lower left to upper right                      | d:1
-|                  |                                 | 2 .. upper left to lower right                      |
-| opacity          |                                 | 0.0 <= i <= 1.0                                     | op:1
-| mode, rendermode | apply fill color                | 0 .. fill                                           | mo:0
-|                  | apply stroke color              | 1 .. stroke                                         |
-|                  | apply both fill & stroke color  | 2 .. fill & stroke                                  |
-| margins          | bounding box margins for text   | i .. set all four margins                           | ma:0
-|                  | requires bgcolor                | i j .. set t/b margins to i, set l/r margins to j   |
-|                  |                                 | i j k .. set top to i, left/right to j, bot to k    |
-|                  |                                 | i j k l .. set top, right, bottom, left margins     |
-| border           | bounding box border for text    | i {round} {color}                                   | bo:0
-|                  | requires bccolor                | i .. border width > 0                               |
-|                  |                                 | round .. set round bounding box corners             |
-|                  |                                 | color .. border color                               |
+| fontname                    | a basefont                                        | `{name}` <br> Please refer to `pdfcpu fonts list`                                                                                                                                                            | `font:Helvetica`
+| points                      | fontsize in points                                | `{size}` <br> in combination with absolute scaling only                                                                                                                                                      | `points:24`
+| rtl                         | right to left userfont                            | `{rtl}` <br> one of: `on|true|t`, `off|false|f`                                                                                                                                                              | `rtl:off`
+| position                    | the stamps lower left corner                      | `{position}` <br> one of: `f|full` or anchor `tl|top-left`, `tc|top-center`, `tr|top-right`, `l|left`, `c|center`, `r|right`, `bl|bottom-left`, `bc|bottom-center`, `br|bottom-right`                        | `pos:c`
+| offset                      |                                                   | `{dx} {dy}` <br> in user units  <br> eg. `15 20`                                                                                                                                                             | `off:0 0`
+| scalefactor                 |                                                   | `{factor} [mode]` <br> 0.0 < `{factor}` <= 1.0, optional `{mode}` one of: `abs|absolute`, `rel|relative`                                                                                                     | `sc:0.5 rel`
+| aligntext                   | horizontal text alignment                         | `{alignment}` <br> one of: `l|left`, `c|center`, `r|right`, `j|justified`                                                                                                                                    | `al:c`
+| strokecolor                 | for rendering text (see mode)                     | `{r} {g} {b}|#{RRGGBB}` <br> 0.0 <= `{r|g|b}` <= 1.0, `#{RRGGBB}` 8bit hex RGB  <br> eg. `1.0 0.0 0.0` (red)                                                                                                 | `strokec:0.5 0.5 0.5` (gray)
+| fillcolor (=color)          | for rendering text (see mode)                     | `{r} {g} {b}|#{RRGGBB}` <br> 0.0 <= `{r|g|b}` <= 1.0, `#{RRGGBB}` 8bit hex RGB  <br> eg. `1.0 0.0 0.0` (red)                                                                                                 | `fillc:0.5 0.5 0.5` (gray)
+| backgroundcolor (=bgcolor)  | bounding box background                           | `{r} {g} {b}|#{RRGGBB}` <br> 0.0 <= `{r|g|b}` <= 1.0, `#{RRGGBB}` 8bit hex RGB  <br> eg. `1.0 0.0 0.0` (red)                                                                                                 | (none)
+| rotation*                   | rotation angle                                    | `{r}` <br> in degrees, -180.0 <= `{r}` <= 180.0                                                                                                                                                              | `rot:0.0`
+| diagonal*                   | render along diagonal                             | `{diagonal}` <br> one of: `1` (lower left to upper right) `2` (upper left to lower right)                                                                                                                    | `d:1`
+| opacity                     |                                                   | `{opacity}` <br> 0.0 <= `{opacity}` <= 1.0                                                                                                                                                                   | `op:1.0`
+| mode, rendermode            | apply fill and/or stroke color                    | `{mode}` <br> one of: `0` (fill), `1` (stroke), `2` (fill & stroke)                                                                                                                                          | `mo:0`
+| margins                     | bounding box margins for text (requires bgcolor)  | `{a}|{v} {h}|{t} {h} {b}|{t} {r} {b} {l}` <br> one of: `{a}` (all four sides), `{v} {h}` (vertical, horizontal), `{t} {h} {b}` (top,  horizontal,  bottom), `{t} {r} {b} {l}` (top, right, bottom, left)     | `ma:0`
+| border                      | bounding box border for text (requires bccolor)   | `{width} [round] [{color}]` <br> `{width}` > 0 in user units, `round` set round bounding box corners, `{color}` border color                                                                                 | `bo:0`
 
-Only one of rotation and diagonal is allowed.
+\* = Only one of rotation and diagonal is allowed.
 
 The following description parameters are for text based watermarks only:
 
@@ -143,12 +131,22 @@ The following description parameters are for text based watermarks only:
 |       | `l`  | `c`    |  `r`
 |bottom | `bl` | `bc`   | `br`
 
+or
+
+|||||
+|-|-|-|-|
+|        | left          | center          | right          |
+| top    | `top-left`    | `top-center`    | `top-right`    |
+|        | `left`        | `center`        | `right`        |
+| bottom | `bottom-left` | `bottom-center` | `bottom-right` |
+
+
 <br>
 
 #### Default description
 
 ```sh
-'f:Helvetica, points:24, rtl:off, sc:0.5 rel, pos:c, off:0 0, align:c, fillc:#808080, strokec:#808080, rot:0, d:1, op:1, mo:0, ma:0, bo:0'
+'f:Helvetica, points:24, rtl:off, pos:c, off:0 0, sc:0.5 rel, align:c, strokec:#808080, fillc:#808080, rot:0, d:1, op:1, mo:0, ma:0, bo:0'
 ```
 
 The default watermark configuration is:
