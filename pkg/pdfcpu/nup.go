@@ -96,7 +96,7 @@ type NUp struct {
 	UserDim       bool         // true if one of dimensions or paperSize provided overriding the default.
 	Orient        orientation  // One of rd(=default),dr,ld,dl
 	Grid          *Dim         // Intra page grid dimensions eg (2,2)
-	PageGrid      bool         // Create a mxn grid of pages for PDF inputfiles only (think "extra page n-Up").
+	PageGrid      bool         // Create a m x n grid of pages for PDF inputfiles only (think "extra page n-Up").
 	ImgInputFile  bool         // Process image or PDF input files.
 	Margin        int          // Cropbox for n-Up content.
 	Border        bool         // Draw bounding box.

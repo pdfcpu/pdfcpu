@@ -42,7 +42,7 @@ func createXRefTableWithRootDict() (*XRefTable, error) {
 	one := 1
 	xRefTable.Size = &one
 
-	v := (V17)
+	v := V17
 	xRefTable.HeaderVersion = &v
 
 	xRefTable.PageCount = 0

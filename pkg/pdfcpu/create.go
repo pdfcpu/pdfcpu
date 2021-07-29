@@ -76,7 +76,7 @@ type TextDescriptor struct {
 	MinHeight      float64       // The minimum height of this text's bounding box.
 	Rotation       float64       // 0..360 degree rotation angle.
 	ScaleAbs       bool          // Scaling type, true=absolute, false=relative to container dimensions.
-	Scale          float64       // font scaling factor > 0 (<= 1 for relative scaling).
+	Scale          float64       // font scaling factor > 0 (and <= 1 for relative scaling).
 	HAlign         HAlignment    // Horizontal text alignment.
 	VAlign         VAlignment    // Vertical text alignment.
 	RMode          RenderMode    // Text render mode
