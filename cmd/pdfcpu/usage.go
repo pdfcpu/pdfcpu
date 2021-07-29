@@ -308,74 +308,78 @@ content ... extract raw page content
 	usageWMDescription = `
 
 <description> is a comma separated configuration string containing these optional entries:
-	
-   (defaults: "font:Helvetica, points:24, rtl:off, pos:c, off:0,0 sc:0.5 rel, rot:0, d:1, op:1, m:0 and for all colors: 0.5 0.5 0.5")
 
-   fontname:         Please refer to "pdfcpu fonts list"
+   (defaults: "f:Helvetica, points:24, rtl:off, pos:c, off:0 0, sc:0.5 rel, align:c, strokec:#808080, fillc:#808080, rot:0, d:1, op:1, mo:0, ma:0, bo:0")
 
-   points:           fontsize in points, in combination with absolute scaling only.
+   fontname:         a basefont – '{name}'
+                     Please refer to 'pdfcpu fonts list'
 
-   rtl:              render right to left (on/off, true/false, t/f)
-   
-   position:         one of the anchors:
-                     tl(=topleft)      tc(=topcenter)       tr(=topright)
-                     l(=left)          c(=center)           r(=right)
-                     bl(=bottom left)  bc(=bottom center)   br(=bottom right)
-   
-   offset:           (dx dy) in given display unit eg. '15 20'
-   
-   scalefactor:      0.0 < i <= 1.0 {r|rel} | 0.0 < i {a|abs}
-  
-   aligntext:        l..left, c..center, r..right, j..justified (for text watermarks only)
-   
-   fillcolor:        color value to be used when rendering text, see also rendermode
-                     for backwards compatibility "color" is also accepted.
-   
-   strokecolor:      color value to be used when rendering text, see also rendermode
-   
-   backgroundcolor:  color value for visualization of the bounding box background for text.
-                     "bgcolor" is also accepted. 
-   
-   rotation:         -180.0 <= x <= 180.0
-   
-   diagonal:         render along diagonal
-                     1..lower left to upper right
-                     2..upper left to lower right (if present overrules r!)
-                     Only one of rotation and diagonal is allowed!
-   
-   opacity:          where 0.0 <= x <= 1.0
+   points:           fontsize in points – '{size}'
+                     in combination with absolute scaling only
 
-   mode, rendermode: 0 ... fill (applies fill color)
-                     1 ... stroke (applies stroke color)
-                     2 ... fill & stroke (applies both fill and stroke colors)
+   rtl:              right to left userfont – '{rtl}'
+                     one of: 'on|true|t', 'off|false|f'
 
-   margins:          Set bounding box margins for text (requires background color) i >= 0
-                     i       ... set all four margins
-                     i j     ... set top/bottom margins to i
-                                 set left/right margins to j
-                     i j k   ... set top margin to i
-                                 set left/right margins to j
-                                 set bottom margins to k
-                     i j k l ... set top, right, bottom, left margins
+   position:         the stamps lower left corner – '{position}'
+                     one of: 'f|full' or anchor
+                     tl|top-left      tc|top-center       tr|top-right
+                     l|left           c|center            r|right
+                     bl|bottom-left   bc|bottom-center    br|bottom-right
 
-   border:           Set bounding box border for text (requires background color)
-                     i {color} {round}
-                     i     ... border width > 0
-                     color ... border color
-                     round ... set round bounding box corners
+   offset:           offset of lower left corner – '{dx} {dy}'
+                     in user units
+                     eg. '15 20'
 
-   url:              Add link annotation for stamps only (omit https://)
+   scalefactor:      scale factor – '{factor} [mode]'
+                     0.0 < '{factor}' <= 1.0, optional '{mode}' one of: 'abs|absolute', 'rel|relative'
 
-A color value: 3 color intensities, where 0.0 < i < 1.0, eg 1.0, 
-               or the hex RGB value: #RRGGBB, eg #FF0000 = red
+   aligntext:        horizontal text alignment – '{alignment}'
+                     one of: 'l|left', 'c|center', 'r|right', 'j|justified'
+
+   strokecolor:      stroke color of text (see mode) – '{r} {g} {b}|#{RRGGBB}'
+                     color intensity 0.0 <= '{r|g|b}' <= 1.0, '#{RRGGBB}' 8bit hex RGB
+                     eg. '1.0 0.0 0.0' (red)
+
+   fillcolor:        fill color of text (see mode) – '{r} {g} {b}|#{RRGGBB}'
+   (color)           color intensity 0.0 <= '{r|g|b}' <= 1.0, '#{RRGGBB}' 8bit hex RGB
+                     eg. '1.0 0.0 0.0' (red)
+
+   backgroundcolor:  bounding box background – '{r} {g} {b}|#{RRGGBB}'
+   (bgcolor)         color intensity 0.0 <= '{r|g|b}' <= 1.0, '#{RRGGBB}' 8bit hex RGB
+                     eg. '1.0 0.0 0.0' (red)
+
+   rotation:         rotation angle – '{r}'
+                     in degrees, -180.0 <= '{r}' <= 180.0
+
+   diagonal:         render along diagonal – '{diagonal}'
+                     one of: '1' (lower left to upper right) '2' (upper left to lower right)
+
+   opacity:          opacity of insertation – '{opacity}'
+                     0.0 <= '{opacity}' <= 1.0
+
+   mode:             apply fill and/or stroke color – '{mode}'
+   (rendermode)      one of: '0' (fill), '1' (stroke), '2' (fill & stroke)
+
+   margins:          bounding box margins for text (requires bgcolor) – '{a}|{v} {h}|{t} {h} {b}|{t} {r} {b} {l}'
+                     one of:
+                     '{a}'             (all four sides),
+                     '{v} {h}'         (vertical, horizontal),
+                     '{t} {h} {b}'     (top,  horizontal,  bottom),
+                     '{t} {r} {b} {l}' (top, right, bottom, left)
+
+   border:           bounding box border for text (requires bccolor) – '{width} [round] [{color}]'
+                     '{width}' > 0 in user units, 'round' set round bounding box corners, '{color}' border color
+
+   url:              add link annotation for insertation – '{url}'
+                     omit https://
 
 All configuration string parameters support completion.
 
 e.g. "pos:bl, off: 20 5"   "rot:45"                 "op:0.5, sc:0.5 abs, rot:0"
      "d:2"                 "sc:.75 abs, points:48"  "rot:-90, scale:0.75 rel"
-     "f:Courier, sc:0.75, str: 0.5 0.0 0.0, rot:20"  
-  
-     
+     "f:Courier, sc:0.75, str: 0.5 0.0 0.0, rot:20"
+
+
 `
 
 	usageStampAdd    = "pdfcpu stamp add    [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]"
