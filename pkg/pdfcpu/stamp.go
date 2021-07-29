@@ -1247,12 +1247,13 @@ func (ctx *Context) prepareOCPropertiesInRoot(onTop bool) (*IndirectRef, error) 
 			if err != nil {
 				return nil, errCorruptOCGs
 			}
-
-			ir, ok := a[0].(IndirectRef)
-			if !ok {
-				return nil, errCorruptOCGs
+			if len(a) > 0 {
+				ir, ok := a[0].(IndirectRef)
+				if !ok {
+					return nil, errCorruptOCGs
+				}
+				return &ir, nil
 			}
-			return &ir, nil
 		}
 	}
 
