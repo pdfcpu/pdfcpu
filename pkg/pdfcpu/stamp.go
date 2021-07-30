@@ -132,6 +132,10 @@ func (sc SimpleColor) String() string {
 	return fmt.Sprintf("r=%1.1f g=%1.1f b=%1.1f", sc.R, sc.G, sc.B)
 }
 
+func (sc SimpleColor) Array() Array {
+	return NewNumberArray(float64(sc.R), float64(sc.G), float64(sc.B))
+}
+
 // NewSimpleColor returns a SimpleColor for rgb in the form 0x00RRGGBB
 func NewSimpleColor(rgb uint32) SimpleColor {
 	r := float32((rgb>>16)&0xFF) / 255

@@ -1909,9 +1909,15 @@ func (xRefTable *XRefTable) collectPageBoundariesForPageTree(root *IndirectRef, 
 		r = i.Value()
 	}
 
-	kids := d.ArrayEntry("Kids")
-	if kids == nil {
+	o, _ := d.Find("Kids")
+	o, _ = xRefTable.Dereference(o)
+	if o == nil {
 		return xRefTable.collectPageBoundariesForPage(d, pb, *inhMediaBox, *inhCropBox, r, *p)
+	}
+
+	kids, ok := o.(Array)
+	if !ok {
+		return errors.New("pdfcpu: validatePagesDict: corrupt \"Kids\" entry")
 	}
 
 	if err := xRefTable.collectMediaBoxAndCropBox(d, inhMediaBox, inhCropBox); err != nil {

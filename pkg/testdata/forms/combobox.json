@@ -1,0 +1,488 @@
+{
+	"paper": "A4",
+	"//bgCol": "#cefe49",
+	"inputFont" : {
+		"name": "Courier",
+		"size": 12,
+		"col": "#222222"
+	},
+	"labelFont" : {
+		"name": "Courier",
+		"size": 12,
+		"col": "#222222"
+	},
+	"comboboxes": [
+		{
+			"id": "llgender",
+			"value": "male",
+			"options": ["female", "male", "non binary"],
+			"edit": false,
+			"pos": [150, 750],
+			"width": 100,
+			"label": {
+				"value": "Gender:",
+				"width": 60,
+				"gap": 10,
+				"align": "left",
+				"pos": "left",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "llsex",
+			"options": ["female", "male", "diverse", "inter", "undefined", "no entry"],
+			"edit": false,
+			"pos": [150, 730],
+			"width": 100,
+			"bgCol": "#F00000",
+			"border": {
+				"width": 1,
+				"col": "#000000"
+			},
+			"label": {
+				"value": "Sex:",
+				"width": 60,
+				"gap": 10,
+				"align": "left",
+				"pos": "left",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "lrgender",
+			"options": ["female", "male", "non binary"],
+			"edit": false,
+			"pos": [400, 750],
+			"width": 100,
+			"bgCol": "#00FF00",
+			"label": {
+				"value": "Gender:",
+				"width": 60,
+				"gap": 10,
+				"align": "right",
+				"pos": "left",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "lrsex",
+			"options": ["female", "male", "diverse", "inter", "undefined", "no entry"],
+			"edit": false,
+			"pos": [400, 730],
+			"width": 100,
+			"border": {
+				"width": 1,
+				"col": "#FF0000"
+			},
+			"label": {
+				"value": "Sex:",
+				"width": 60,
+				"gap": 10,
+				"align": "right",
+				"pos": "left",
+				"//bgCol": "#beded9"
+			}
+		},
+
+		{
+			"id": "llegender",
+			"options": ["female", "male", "non binary"],
+			"edit": true,
+			"pos": [150, 690],
+			"width": 100,
+			"bgCol": "#00FF00",
+			"label": {
+				"value": "Gender:",
+				"width": 60,
+				"gap": 10,
+				"align": "left",
+				"pos": "left",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "llesex",
+			"options": ["female", "male", "diverse", "inter", "undefined", "no entry"],
+			"edit": true,
+			"pos": [150, 670],
+			"width": 100,
+			"bgCol": "#00FF00",
+			"label": {
+				"value": "Sex:",
+				"width": 60,
+				"gap": 10,
+				"align": "left",
+				"pos": "left",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "lregender",
+			"options": ["female", "male", "non binary"],
+			"edit": true,
+			"pos": [400, 690],
+			"width": 100,
+			"bgCol": "#00FF00",
+			"label": {
+				"value": "Gender:",
+				"width": 60,
+				"gap": 10,
+				"align": "right",
+				"pos": "left",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "lresex",
+			"options": ["female", "male", "diverse", "inter", "undefined", "no entry"],
+			"edit": true,
+			"pos": [400, 670],
+			"width": 100,
+			"bgCol": "#00FF00",
+			"label": {
+				"value": "Sex:",
+				"width": 60,
+				"gap": 10,
+				"align": "right",
+				"pos": "left",
+				"//bgCol": "#beded9"
+			}
+		},
+
+
+		{
+			"id": "rlgender",
+			"options": ["female", "male", "non binary"],
+			"edit": false,
+			"pos": [150, 550],
+			"width": 100,
+			"bgCol": "#00FF00",
+			"label": {
+				"value": "Gender",
+				"width": 60,
+				"gap": 10,
+				"align": "left",
+				"pos": "right",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "rlsex",
+			"options": ["female", "male", "diverse", "inter", "undefined", "no entry"],
+			"edit": false,
+			"pos": [150, 530],
+			"width": 100,
+			"bgCol": "#00FF00",
+			"label": {
+				"value": "Sex",
+				"width": 60,
+				"gap": 10,
+				"align": "left",
+				"pos": "right",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "rrgender",
+			"options": ["female", "male", "non binary"],
+			"edit": false,
+			"pos": [400, 550],
+			"width": 100,
+			"bgCol": "#00FF00",
+			"label": {
+				"value": "Gender",
+				"width": 60,
+				"gap": 10,
+				"align": "right",
+				"pos": "right",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "rrsex",
+			"options": ["female", "male", "diverse", "inter", "undefined", "no entry"],
+			"edit": false,
+			"pos": [400, 530],
+			"width": 100,
+			"bgCol": "#00FF00",
+			"label": {
+				"value": "Sex",
+				"width": 60,
+				"gap": 10,
+				"align": "right",
+				"pos": "right",
+				"//bgCol": "#beded9"
+			}
+		},
+
+		{
+			"id": "rlegender",
+			"options": ["female", "male", "non binary"],
+			"edit": true,
+			"pos": [150, 490],
+			"width": 100,
+			"bgCol": "#00FF00",
+			"label": {
+				"value": "Gender",
+				"width": 60,
+				"gap": 10,
+				"align": "left",
+				"pos": "right",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "rlesex",
+			"options": ["female", "male", "diverse", "inter", "undefined", "no entry"],
+			"edit": true,
+			"pos": [150, 470],
+			"width": 100,
+			"bgCol": "#00FF00",
+			"label": {
+				"value": "Sex",
+				"width": 60,
+				"gap": 10,
+				"align": "left",
+				"pos": "right",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "rregender",
+			"options": ["female", "male", "non binary"],
+			"edit": true,
+			"pos": [400, 490],
+			"width": 100,
+			"bgCol": "#00FF00",
+			"label": {
+				"value": "Gender",
+				"width": 60,
+				"gap": 10,
+				"align": "right",
+				"pos": "right",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "rresex",
+			"options": ["female", "male", "diverse", "inter", "undefined", "no entry"],
+			"edit": true,
+			"pos": [400, 470],
+			"width": 100,
+			"bgCol": "#00FF00",
+			"label": {
+				"value": "Sex",
+				"width": 60,
+				"gap": 10,
+				"align": "right",
+				"pos": "right",
+				"//bgCol": "#beded9"
+			}
+		},
+
+
+		{
+			"id": "tlgender",
+			"options": ["female", "male", "non binary"],
+			"edit": false,
+			"pos": [100, 290],
+			"width": 100,
+			"bgCol": "#00FF00",
+			"label": {
+				"value": "Gender",
+				"width": 60,
+				"gap": 5,
+				"align": "left",
+				"pos": "top",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "tcgender",
+			"options": ["female", "male", "non binary"],
+			"edit": false,
+			"pos": [250, 290],
+			"width": 100,
+			"bgCol": "#00FF00",
+			"label": {
+				"value": "Gender",
+				"width": 60,
+				"gap": 5,
+				"align": "center",
+				"pos": "top",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "trgender",
+			"options": ["female", "male", "non binary"],
+			"edit": false,
+			"pos": [400, 290],
+			"width": 100,
+			"bgCol": "#00FF00",
+			"label": {
+				"value": "Gender",
+				"width": 60,
+				"gap": 5,
+				"align": "right",
+				"pos": "top",
+				"//bgCol": "#beded9"
+			}
+		},
+
+
+		{
+			"id": "blgender",
+			"options": ["female", "male", "non binary"],
+			"edit": false,
+			"pos": [100, 90],
+			"width": 100,
+			"bgCol": "#00FF00",
+			"label": {
+				"value": "Gender",
+				"width": 60,
+				"gap": 5,
+				"align": "left",
+				"pos": "bottom",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "bcgender",
+			"options": ["female", "male", "non binary"],
+			"edit": false,
+			"pos": [250, 90],
+			"width": 100,
+			"bgCol": "#00FF00",
+			"label": {
+				"value": "Gender",
+				"width": 60,
+				"gap": 5,
+				"align": "center",
+				"pos": "bottom",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "brgender",
+			"options": ["female", "male", "non binary"],
+			"edit": false,
+			"pos": [400, 90],
+			"width": 100,
+			"bgCol": "#00FF00",
+			"label": {
+				"value": "Gender",
+				"width": 60,
+				"gap": 5,
+				"align": "right",
+				"pos": "bottom",
+				"//bgCol": "#beded9"
+			}
+		}
+
+	],
+	"textboxes": [
+		{
+			"value": "Combobox with left label",
+			"pos": [10, 800],
+			"width": 0,
+			"align": "left",
+			"rtl": false,
+			"font" : {
+				"name": "Courier",
+				"size": 12,
+				"col": "#222222"
+			},
+			"bgCol": "#00FF00",
+			"border": {
+				"width": 1,
+				"col": "#FF0000"
+			}
+		},
+		{
+			"value": "Editable:",
+			"pos": [10, 690],
+			"width": 0,
+			"align": "left",
+			"rtl": false,
+			"font" : {
+				"name": "Courier",
+				"size": 12,
+				"col": "#222222"
+			},
+			"bgCol": "#00FF00",
+			"border": {
+				"width": 1,
+				"col": "#FF0000"
+			}
+		},
+		{
+			"value": "Combobox with right label",
+			"pos": [10, 600], 
+			"width": 0,
+			"align": "left",
+			"rtl": false,
+			"font" : {
+				"name": "Courier",
+				"size": 12,
+				"col": "#222222"
+			},
+			"bgCol": "#00FF00",
+			"border": {
+				"width": 1,
+				"col": "#FF0000"
+			}
+		},
+		{
+			"value": "Editable:",
+			"pos": [10, 490],
+			"width": 0,
+			"align": "left",
+			"rtl": false,
+			"font" : {
+				"name": "Courier",
+				"size": 12,
+				"col": "#222222"
+			},
+			"bgCol": "#00FF00",
+			"border": {
+				"width": 1,
+				"col": "#FF0000"
+			}
+		},
+		{
+			"value": "Combobox with top label",
+			"pos": [10, 400],
+			"width": 0,
+			"align": "left",
+			"rtl": false,
+			"font" : {
+				"name": "Courier",
+				"size": 12,
+				"col": "#222222"
+			},
+			"bgCol": "#00FF00",
+			"border": {
+				"width": 1,
+				"col": "#FF0000"
+			}
+		},
+		{
+			"value": "Combobox with bottom label",
+			"pos": [10, 190], 
+			"width": 0,
+			"align": "left",
+			"rtl": false,
+			"font" : {
+				"name": "Courier",
+				"size": 12,
+				"col": "#222222"
+			},
+			"bgCol": "#00FF00",
+			"border": {
+				"width": 1,
+				"col": "#FF0000"
+			}
+		}
+	]
+}

@@ -1,0 +1,422 @@
+{
+	"paper": "A4",
+	"//bgCol": "#cefe49",
+	"inputFont" : {
+		"name": "Courier",
+		"size": 12,
+		"col": "#222222"
+	},
+	"labelFont" : {
+		"name": "Courier",
+		"size": 12,
+		"col": "#222222"
+	},
+	"radiobuttongroups": [
+		{
+			"id": "ll1gender",
+			"value": "",
+			"orientation": "vert",
+			"pos": [150, 770],
+			"buttons": {
+				"values": ["female", "male", "non binary"],
+				"label": {
+					"value": "dummy",
+					"width": 40,
+					"gap": 10,
+					"pos": "left",
+					"//bgCol": "#beded9"
+				}
+			},
+			"label": {
+				"value": "Gender:",
+				"width": 60,
+				"gap": 10,
+				"align": "left",
+				"pos": "left",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "ll2gender",
+			"value": "",
+			"orientation": "vert",
+			"pos": [150, 690],
+			"buttons": {
+				"values": ["female", "male", "non binary"],
+				"label": {
+					"value": "dummy",
+					"width": 40,
+					"gap": 10,
+					"pos": "left",
+					"//bgCol": "#beded9"
+				}
+			},
+			"label": {
+				"value": "Sex:",
+				"width": 60,
+				"gap": 10,
+				"align": "left",
+				"pos": "left",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "lr1gender",
+			"value": "",
+			"orientation": "vert",
+			"pos": [400, 770],
+			"buttons": {
+				"values": ["female", "male", "non binary"],
+				"label": {
+					"value": "dummy",
+					"width": 40,
+					"gap": 10,
+					"pos": "left",
+					"//bgCol": "#beded9"
+				}
+			},
+			"label": {
+				"value": "Gender:",
+				"width": 60,
+				"gap": 10,
+				"align": "right",
+				"pos": "left",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "lr2gender",
+			"value": "",
+			"orientation": "vert",
+			"pos": [400, 690],
+			"buttons": {
+				"values": ["female", "male", "non binary"],
+				"label": {
+					"value": "dummy",
+					"width": 40,
+					"gap": 10,
+					"pos": "left",
+					"//bgCol": "#beded9"
+				}
+			},
+			"label": {
+				"value": "Sex:",
+				"width": 60,
+				"gap": 10,
+				"align": "right",
+				"pos": "left",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "rl1gender",
+			"value": "",
+			"orientation": "vert",
+			"pos": [150, 570],
+			"buttons": {
+				"values": ["female", "male", "non binary"],
+				"label": {
+					"value": "dummy",
+					"width": 40,
+					"gap": 10,
+					"pos": "left",
+					"//bgCol": "#beded9"
+				}
+			},
+			"label": {
+				"value": "Gender",
+				"width": 60,
+				"gap": 10,
+				"align": "left",
+				"pos": "right",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "rl2gender",
+			"value": "",
+			"orientation": "vert",
+			"pos": [150, 490],
+			"buttons": {
+				"values": ["female", "male", "non binary"],
+				"label": {
+					"value": "dummy",
+					"width": 40,
+					"gap": 10,
+					"pos": "left",
+					"//bgCol": "#beded9"
+				}
+			},
+			"label": {
+				"value": "Sex",
+				"width": 60,
+				"gap": 10,
+				"align": "left",
+				"pos": "right",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "rr1gender",
+			"value": "",
+			"orientation": "vert",
+			"pos": [400, 570],
+			"buttons": {
+				"values": ["female", "male", "non binary"],
+				"label": {
+					"value": "dummy",
+					"width": 40,
+					"gap": 10,
+					"pos": "left",
+					"//bgCol": "#beded9"
+				}
+			},
+			"label": {
+				"value": "Gender",
+				"width": 60,
+				"gap": 10,
+				"align": "right",
+				"pos": "right",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "rr2gender",
+			"value": "",
+			"orientation": "vert",
+			"pos": [400, 490],
+			"buttons": {
+				"values": ["female", "male", "non binary"],
+				"label": {
+					"value": "dummy",
+					"width": 40,
+					"gap": 10,
+					"pos": "left",
+					"//bgCol": "#beded9"
+				}
+			},
+			"label": {
+				"value": "Sex",
+				"width": 60,
+				"gap": 10,
+				"align": "right",
+				"pos": "right",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "tlgender",
+			"value": "",
+			"orientation": "vert",
+			"pos": [100, 310],
+			"buttons": {
+				"values": ["female", "male", "non binary"],
+				"label": {
+					"value": "dummy",
+					"width": 40,
+					"gap":10,
+					"pos": "left",
+					"//bgCol": "#beded9"
+				}
+			},
+			"label": {
+				"value": "Gender:",
+				"width": 60,
+				"gap": 10,
+				"align": "left",
+				"pos": "top",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "tmgender",
+			"value": "",
+			"orientation": "vert",
+			"pos": [270, 310],
+			"buttons": {
+				"values": ["female", "male", "non binary"],
+				"label": {
+					"value": "dummy",
+					"width": 40,
+					"gap": 10,
+					"pos": "left",
+					"//bgCol": "#beded9"
+				}
+			},
+			"label": {
+				"value": "Gender:",
+				"width": 60,
+				"gap": 10,
+				"align": "center",
+				"pos": "top",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "trgender",
+			"value": "",
+			"orientation": "vert",
+			"pos": [420, 310],
+			"buttons": {
+				"values": ["female", "male", "non binary"],
+				"label": {
+					"value": "dummy",
+					"width": 40,
+					"gap": 10,
+					"pos": "left",
+					"//bgCol": "#beded9"
+				}
+			},
+			"label": {
+				"value": "Gender:",
+				"width": 60,
+				"gap": 10,
+				"align": "right",
+				"pos": "top",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "blgender",
+			"value": "",
+			"orientation": "vert",
+			"pos": [100, 120],
+			"buttons": {
+				"values": ["female", "male", "non binary"],
+				"label": {
+					"value": "dummy",
+					"width": 40,
+					"gap":10,
+					"pos": "left",
+					"//bgCol": "#beded9"
+				}
+			},
+			"label": {
+				"value": "Gender",
+				"width": 60,
+				"gap": 10,
+				"align": "left",
+				"pos": "bottom",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "bmgender",
+			"value": "",
+			"orientation": "vert",
+			"pos": [270, 120],
+			"buttons": {
+				"values": ["female", "male", "non binary"],
+				"label": {
+					"value": "dummy",
+					"width": 40,
+					"gap": 10,
+					"pos": "left",
+					"//bgCol": "#beded9"
+				}
+			},
+			"label": {
+				"value": "Gender",
+				"width": 60,
+				"gap": 10,
+				"align": "center",
+				"pos": "bottom",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "brgender",
+			"value": "",
+			"orientation": "vert",
+			"pos": [420, 120],
+			"buttons": {
+				"values": ["female", "male", "non binary"],
+				"label": {
+					"value": "dummy",
+					"width": 40,
+					"gap": 10,
+					"pos": "left",
+					"//bgCol": "#beded9"
+				}
+			},
+			"label": {
+				"value": "Gender",
+				"width": 60,
+				"gap": 10,
+				"align": "right",
+				"pos": "bottom",
+				"//bgCol": "#beded9"
+			}
+		}
+	],
+	"textboxes": [
+		{
+			"value": "Vertical right aligned radiobuttons with left label",
+			"pos": [10, 800],
+			"width": 0,
+			"align": "left",
+			"rtl": false,
+			"font" : {
+				"name": "Courier",
+				"size": 12,
+				"col": "#222222"
+			},
+			"bgCol": "#00FF00",
+			"border": {
+				"width": 1,
+				"col": "#FF0000"
+			}
+		},
+		{
+			"value": "Vertical right aligned radiobuttons with right label",
+			"pos": [10, 600], 
+			"width": 0,
+			"align": "left",
+			"rtl": false,
+			"font" : {
+				"name": "Courier",
+				"size": 12,
+				"col": "#222222"
+			},
+			"bgCol": "#00FF00",
+			"border": {
+				"width": 1,
+				"col": "#FF0000"
+			}
+		},
+		{
+			"value": "Vertical right aligned radiobuttons with top label",
+			"pos": [10, 400],
+			"width": 0,
+			"align": "left",
+			"rtl": false,
+			"font" : {
+				"name": "Courier",
+				"size": 12,
+				"col": "#222222"
+			},
+			"bgCol": "#00FF00",
+			"border": {
+				"width": 1,
+				"col": "#FF0000"
+			}
+		},
+		{
+			"value": "Vertical right aligned radiobuttons with bottom label",
+			"pos": [10, 190], 
+			"width": 0,
+			"align": "left",
+			"rtl": false,
+			"font" : {
+				"name": "Courier",
+				"size": 12,
+				"col": "#222222"
+			},
+			"bgCol": "#00FF00",
+			"border": {
+				"width": 1,
+				"col": "#FF0000"
+			}
+		}
+	]
+}

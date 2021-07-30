@@ -1,0 +1,506 @@
+{
+	"paper": "A4",
+	"//bgCol": "#cefe49",
+	"inputFont" : {
+		"name": "Courier",
+		"size": 12,
+		"col": "#222222"
+	},
+	"labelFont" : {
+		"name": "Courier",
+		"size": 12,
+		"col": "#222222"
+	},
+	"textfields": [
+		{
+			"id": "llfirstName",
+			"value": "Horst",
+			"rect": [200, 750, 300, 766],
+			"align": "left",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "First Name:",
+				"width": 100,
+				"gap":10,
+				"align": "left",
+				"pos": "left",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "lllastName",
+			"value": "Rutter",
+			"rect": [200, 730, 300, 746],
+			"align": "left",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "Last Name:",
+				"width": 100,
+				"gap":10,
+				"align": "left",
+				"pos": "left",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "lrfirstName",
+			"value": "Horst",
+			"rect": [200, 700, 300, 716],
+			"align": "left",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "First Name:",
+				"width": 100,
+				"gap":10,
+				"align": "right",
+				"pos": "left",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "lrlastName",
+			"value": "Rutter",
+			"rect": [200, 680, 300, 696],
+			"align": "left",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "Last Name:",
+				"width": 100,
+				"gap":10,
+				"align": "right",
+				"pos": "left",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "rlfirstName",
+			"value": "Horst",
+			"rect": [200, 550, 300, 566],
+			"align": "right",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "First Name",
+				"width": 100,
+				"gap":10,
+				"align": "left",
+				"pos": "right",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "rllastName",
+			"value": "Rutter",
+			"rect": [200, 530, 300, 546],
+			"align": "right",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "Last Name",
+				"width": 100,
+				"gap":10,
+				"align": "left",
+				"pos": "right",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "rrfirstName",
+			"value": "Horst",
+			"rect": [200, 500, 300, 516],
+			"align": "right",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "First Name",
+				"width": 100,
+				"gap":10,
+				"align": "right",
+				"pos": "right",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "rrlastName",
+			"value": "Rutter",
+			"rect": [200, 480, 300, 496],
+			"align": "right",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "Last Name",
+				"width": 100,
+				"gap":10,
+				"align": "right",
+				"pos": "right",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "tllfirstName",
+			"value": "Horst",
+			"rect": [10, 350, 110, 366],
+			"align": "left",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "First Name",
+				"width": 100,
+				"gap":0,
+				"align": "left",
+				"pos": "top",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "tlllastName",
+			"value": "Rutter",
+			"rect": [10, 310, 110, 326],
+			"align": "left",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "Last Name",
+				"width": 100,
+				"gap":0,
+				"align": "left",
+				"pos": "top",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "tlrfirstName",
+			"value": "Horst",
+			"rect": [150, 350, 250, 366],
+			"align": "left",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "First Name",
+				"width": 100,
+				"gap":0,
+				"align": "right",
+				"pos": "top",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "tlrlastName",
+			"value": "Rutter",
+			"rect": [150, 310, 250, 326],
+			"align": "left",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "Last Name",
+				"width": 100,
+				"gap":0,
+				"align": "right",
+				"pos": "top",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "trlfirstName",
+			"value": "Horst",
+			"rect": [310, 350, 410, 366],
+			"align": "right",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "First Name",
+				"width": 100,
+				"gap":0,
+				"align": "left",
+				"pos": "top",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "trllastName",
+			"value": "Rutter",
+			"rect": [310, 310, 410, 326],
+			"align": "right",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "Last Name",
+				"width": 100,
+				"gap":0,
+				"align": "left",
+				"pos": "top",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "trrfirstName",
+			"value": "Horst",
+			"rect": [450, 350, 550, 366],
+			"align": "right",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "First Name",
+				"width": 100,
+				"gap":0,
+				"align": "right",
+				"pos": "top",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "trrlastName",
+			"value": "Rutter",
+			"rect": [450, 310, 550, 326],
+			"align": "right",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "Last Name",
+				"width": 100,
+				"gap":0,
+				"align": "right",
+				"pos": "top",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "tccfirstName",
+			"value": "Horst",
+			"rect": [10, 270, 110, 286],
+			"align": "center",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "First Name",
+				"width": 100,
+				"gap":0,
+				"align": "center",
+				"pos": "top",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "tcclastName",
+			"value": "Rutter",
+			"rect": [10, 230, 110, 246],
+			"align": "center",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "Last Name",
+				"width": 100,
+				"gap":0,
+				"align": "center",
+				"pos": "top",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "bllfirstName",
+			"value": "Horst",
+			"rect": [10, 150, 110, 166],
+			"align": "left",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "First Name",
+				"width": 100,
+				"gap":0,
+				"align": "left",
+				"pos": "bottom",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "blllastName",
+			"value": "Rutter",
+			"rect": [10, 110, 110, 126],
+			"align": "left",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "Last Name",
+				"width": 100,
+				"gap":0,
+				"align": "left",
+				"pos": "bottom",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "blrfirstName",
+			"value": "Horst",
+			"rect": [150, 150, 250, 166],
+			"align": "left",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "First Name",
+				"width": 100,
+				"gap":0,
+				"align": "right",
+				"pos": "bottom",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "blrlastName",
+			"value": "Rutter",
+			"rect": [150, 110, 250, 126],
+			"align": "left",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "Last Name",
+				"width": 100,
+				"gap":0,
+				"align": "right",
+				"pos": "bottom",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "brlfirstName",
+			"value": "Horst",
+			"rect": [310, 150, 410, 166],
+			"align": "right",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "First Name",
+				"width": 100,
+				"gap":0,
+				"align": "left",
+				"pos": "bottom",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "brllastName",
+			"value": "Rutter",
+			"rect": [310, 110, 410, 126],
+			"align": "right",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "Last Name",
+				"width": 100,
+				"gap":0,
+				"align": "left",
+				"pos": "bottom",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "brrfirstName",
+			"value": "Horst",
+			"rect": [450, 150, 550, 166],
+			"align": "right",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "First Name",
+				"width": 100,
+				"gap":0,
+				"align": "right",
+				"pos": "bottom",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "brrlastName",
+			"value": "Rutter",
+			"rect": [450, 110, 550, 126],
+			"align": "right",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "Last Name",
+				"width": 100,
+				"gap":0,
+				"align": "right",
+				"pos": "bottom",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "bccfirstName",
+			"value": "Horst",
+			"rect": [10, 70, 110, 86],
+			"align": "center",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "First Name",
+				"width": 100,
+				"gap":0,
+				"align": "center",
+				"pos": "bottom",
+				"//bgCol": "#beded9"
+			}
+		},
+		{
+			"id": "bcclastName",
+			"value": "Rutter",
+			"rect": [10, 30, 110, 46],
+			"align": "center",
+			"bgCol": "#beded9",
+			"label": {
+				"value": "Last Name",
+				"width": 100,
+				"gap":0,
+				"align": "center",
+				"pos": "bottom",
+				"//bgCol": "#beded9"
+			}
+		}
+	],
+	"textboxes": [
+		{
+			"value": "Inputfields with left label",
+			"pos": [10, 800],
+			"width": 0,
+			"align": "left",
+			"rtl": false,
+			"font" : {
+				"name": "Courier",
+				"size": 12,
+				"col": "#222222"
+			},
+			"bgCol": "#00FF00",
+			"border": {
+				"width": 1,
+				"col": "#FF0000"
+			}
+		},
+		{
+			"value": "Inputfields with right label",
+			"pos": [10, 600], 
+			"width": 0,
+			"align": "left",
+			"rtl": false,
+			"font" : {
+				"name": "Courier",
+				"size": 12,
+				"col": "#222222"
+			},
+			"bgCol": "#00FF00",
+			"border": {
+				"width": 1,
+				"col": "#FF0000"
+			}
+		},
+		{
+			"value": "Inputfields with top label",
+			"pos": [10, 400],
+			"width": 0,
+			"align": "left",
+			"rtl": false,
+			"font" : {
+				"name": "Courier",
+				"size": 12,
+				"col": "#222222"
+			},
+			"bgCol": "#00FF00",
+			"border": {
+				"width": 1,
+				"col": "#FF0000"
+			}
+		},
+		{
+			"value": "Inputfields with bottom label",
+			"pos": [10, 190], 
+			"width": 0,
+			"align": "left",
+			"rtl": false,
+			"font" : {
+				"name": "Courier",
+				"size": 12,
+				"col": "#222222"
+			},
+			"bgCol": "#00FF00",
+			"border": {
+				"width": 1,
+				"col": "#FF0000"
+			}
+		}
+	]
+}

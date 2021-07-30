@@ -319,7 +319,7 @@ func parseSepia(s string, imp *Import) error {
 	case "off", "false", "f":
 		imp.Sepia = false
 	default:
-		return errors.New("pdfcpu: import gray, please provide one of: on/off true/false")
+		return errors.New("pdfcpu: import sepia, please provide one of: on/off true/false")
 	}
 
 	return nil

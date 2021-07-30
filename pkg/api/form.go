@@ -16,18 +16,38 @@ limitations under the License.
 
 package api
 
-import "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+import (
+	"io"
+	"io/ioutil"
+	"os"
+
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+)
 
 // CreateForm reads a form definition from jsonFile, creates a single page form and writes it to outFile.
-func CreateForm(jsonFile, outFile string, conf *pdfcpu.Configuration) error {
+func CreateForm(rd io.Reader, outFile string, conf *pdfcpu.Configuration) error {
 
-	// Create a PDF with one text field.
-	xRefTable, err := pdfcpu.CreateFormXRef()
+	bb, err := ioutil.ReadAll(rd)
+	if err != nil {
+		return err
+	}
+
+	xRefTable, err := pdfcpu.CreateFormXRef(bb)
 	if err != nil {
 		return err
 	}
 
 	return CreatePDFFile(xRefTable, outFile, conf)
+}
+
+func CreateFormFile(inFile, outFile string, conf *pdfcpu.Configuration) error {
+
+	f, err := os.Open(inFile)
+	if err != nil {
+		return err
+	}
+
+	return CreateForm(f, outFile, conf)
 }
 
 // ExtractForm extracts form data from inFile into jsonFile.

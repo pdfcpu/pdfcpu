@@ -40,7 +40,6 @@ var (
 // colValRange defines a numeric range for color space component values that may be inverted.
 type colValRange struct {
 	min, max float64
-	inv      bool
 }
 
 // PDFImage represents a XObject of subtype image.
@@ -76,12 +75,7 @@ func decodeArr(a Array) []colValRange {
 			continue
 		}
 		max = f64
-		var inv bool
-		if min > max {
-			min, max = max, min
-			inv = true
-		}
-		decode = append(decode, colValRange{min: min, max: max, inv: inv})
+		decode = append(decode, colValRange{min, max})
 	}
 
 	return decode
@@ -144,29 +138,17 @@ func colorLookupTable(xRefTable *XRefTable, o Object) ([]byte, error) {
 	return nil, nil
 }
 
-func decodePixelColorValue(p uint8, bpc, c int, decode []colValRange) uint8 {
-	// p ...the color value for this pixel
-	// c ...applicable index of a color component in the decode array for this pixel.
+func decodePixelValue(v uint8, bpc int, r colValRange) uint8 {
 
-	if decode == nil {
-		decode = []colValRange{{min: 0, max: 255}}
-	}
-
-	min := decode[c].min
-	max := decode[c].max
-
+	// Odd way to calc 2**bpc-1
 	q := 1
 	for i := 1; i < bpc; i++ {
 		q = 2*q + 1
 	}
 
-	v := uint8(min + (float64(p) * (max - min) / float64(q)))
+	f := r.min + (float64(v) * (r.max - r.min) / float64(q))
 
-	if decode[c].inv {
-		v = v ^ 0xff
-	}
-
-	return v
+	return uint8(f * float64(q))
 }
 
 func streamBytes(sd *StreamDict) ([]byte, error) {
@@ -299,11 +281,11 @@ func renderDeviceGrayToPNG(im *PDFImage, resourceName string) (io.Reader, string
 			p := b[i]
 			for j := 0; j < 8/im.bpc; j++ {
 				pix := p >> (8 - uint8(im.bpc))
-				var dec []colValRange
+				dec := []colValRange{{0, 1}}
 				if !im.imageMask {
 					dec = im.decode
 				}
-				v := decodePixelColorValue(pix, im.bpc, 0, dec)
+				v := decodePixelValue(pix, im.bpc, dec[0])
 				//fmt.Printf("x=%d y=%d pix=#%02x v=#%02x\n", x, y, pix, v)
 				img.Set(x, y, color.Gray{Y: v})
 				p <<= uint8(im.bpc)
@@ -719,6 +701,21 @@ func renderRGBToPng(im *PDFImage, resourceName string) (io.Reader, string, error
 	return &buf, "png", nil
 }
 
+// func decode8BitColVal(v uint8, r colValRange) uint8 {
+// 	return uint8(r.min + (float64(v) * (r.max - r.min) / 255.0))
+// }
+
+func decodeCMYK(c, m, y, k uint8, decode []colValRange) (uint8, uint8, uint8, uint8) {
+	if len(decode) == 0 {
+		return c, m, y, k
+	}
+	c = decodePixelValue(c, 8, decode[0])
+	m = decodePixelValue(m, 8, decode[1])
+	y = decodePixelValue(y, 8, decode[2])
+	k = decodePixelValue(k, 8, decode[3])
+	return c, m, y, k
+}
+
 func renderCMYKToPng(im *PDFImage, resourceName string) (io.Reader, string, error) {
 	bb := bytes.NewReader(im.sd.Content)
 	dec := gob.NewDecoder(bb)
@@ -732,9 +729,11 @@ func renderCMYKToPng(im *PDFImage, resourceName string) (io.Reader, string, erro
 
 	for y := 0; y < im.h; y++ {
 		for x := 0; x < im.w; x++ {
-			c := img.At(x, y)
-			a := c.(color.CMYK)
-			r, g, b := color.CMYKToRGB(255-a.C, 255-a.M, 255-a.Y, 255-a.K)
+			//c := img.At(x, y)
+			a := img.At(x, y).(color.CMYK)
+			cyan, mag, yel, blk := decodeCMYK(255-a.C, 255-a.M, 255-a.Y, 255-a.K, im.decode)
+			r, g, b := color.CMYKToRGB(cyan, mag, yel, blk)
+			// TODO Apply Decode array
 			img1.SetRGBA(x, y, color.RGBA{r, g, b, 255})
 		}
 	}

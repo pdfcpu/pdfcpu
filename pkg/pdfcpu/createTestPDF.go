@@ -1395,7 +1395,7 @@ func createDownAppearanceForFormField(xRefTable *XRefTable, w, h float64) (*Indi
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createTextField(xRefTable *XRefTable, pageAnnots *Array, fontName string) (*IndirectRef, error) {
+func createFormTextField(xRefTable *XRefTable, pageAnnots *Array, fontName string) (*IndirectRef, error) {
 	// lower left corner
 	x := 100.0
 	y := 300.0
@@ -1839,7 +1839,7 @@ func createXFAArray(xRefTable *XRefTable) (Array, error) {
 func createAcroFormDict(xRefTable *XRefTable, fontName string) (Dict, Array, error) {
 	pageAnnots := Array{}
 
-	text, err := createTextField(xRefTable, &pageAnnots, fontName)
+	text, err := createFormTextField(xRefTable, &pageAnnots, fontName)
 	if err != nil {
 		return nil, nil, err
 	}

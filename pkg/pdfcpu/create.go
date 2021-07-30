@@ -824,9 +824,11 @@ func WriteColumn(w io.Writer, mediaBox, region *Rectangle, td TextDescriptor, wi
 	colBB := createBoundingBoxForColumn(
 		r, &x, &y, width, td, dx, dy, mTop, mBot, mLeft, mRight, borderWidth, &fontSize, &lines)
 
+	fmt.Fprint(w, "q ")
+
 	setFont(w, td.FontKey, float32(fontSize))
 	m := calcRotateTransformMatrix(td.Rotation, colBB)
-	fmt.Fprintf(w, "q %.2f %.2f %.2f %.2f %.2f %.2f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
+	fmt.Fprintf(w, "%.2f %.2f %.2f %.2f %.2f %.2f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 
 	x -= colBB.LL.X
 	y -= colBB.LL.Y
@@ -845,11 +847,11 @@ func WriteColumn(w io.Writer, mediaBox, region *Rectangle, td TextDescriptor, wi
 	// Render text.
 	renderText(w, lines, td, x, y, fontSize)
 
-	fmt.Fprintf(w, "Q ")
-
 	if td.HairCross {
 		DrawHairCross(w, x0, y0, r)
 	}
+
+	fmt.Fprintf(w, "Q ")
 
 	return colBB
 }

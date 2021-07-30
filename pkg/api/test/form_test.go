@@ -23,18 +23,50 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 )
 
-func TestCreateForm(t *testing.T) {
-	msg := "TestCreateForm"
+func createForm(t *testing.T, msg, inDir, inFile, outDir, outFile string) {
 
-	outDir := filepath.Join("..", "..", "samples", "forms")
-	outFile := filepath.Join(outDir, "test.pdf")
+	t.Helper()
 
-	if err := api.CreateForm("in.json", outFile, nil); err != nil {
+	inFile = filepath.Join(inDir, inFile)
+	outFile = filepath.Join(outDir, outFile)
+
+	if err := api.CreateFormFile(inFile, outFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
 	if err := api.ValidateFile(outFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
+	}
+
+}
+
+func TestCreateForm(t *testing.T) {
+
+	api.LoadConfiguration()
+
+	// Install test user fonts from pkg/testdata/fonts.
+	if err := api.InstallFonts(userFonts(t, filepath.Join("..", "..", "testdata", "fonts"))); err != nil {
+		t.Fatalf("%s: %v\n", "TestCreateForm", err)
+	}
+
+	inDir := filepath.Join("..", "..", "testdata", "forms")
+	outDir := filepath.Join("..", "..", "samples", "forms")
+
+	for _, tt := range []struct {
+		msg     string
+		inFile  string
+		outFile string
+	}{
+		// {"TestTextfield", "textfield.json", "textfield.pdf"},
+		// {"TestTextarea", "textarea.json", "textarea.pdf"},
+		// {"TestCheckbox", "checkbox.json", "checkbox.pdf"},
+		// {"TestRadiobuttonsHor", "radiobuttonsHor.json", "radiobuttonsHor.pdf"},
+		// {"TestRadiobuttonsVertLeft", "radiobuttonsVertLeft.json", "radiobuttonsVertLeft.pdf"},
+		// {"TestRadiobuttonsVertRight", "radiobuttonsVertRight.json", "radiobuttonsVertRight.pdf"},
+		{"TestListbox", "listbox.json", "listbox.pdf"},
+		{"TestCombobox", "combobox.json", "combobox.pdf"},
+	} {
+		createForm(t, tt.msg, inDir, tt.inFile, outDir, tt.outFile)
 	}
 
 	// if err := api.ExtractForm(outFile, "out.json", nil); err != nil {

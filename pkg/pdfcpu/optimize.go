@@ -552,8 +552,12 @@ func parsePagesDict(ctx *Context, pagesDict Dict, pageNumber int) (int, error) {
 
 	ctx.Optimize.Cache = map[int]bool{}
 
+	o, _ := pagesDict.Find("Kids")
+	o, _ = ctx.Dereference(o)
+	kidsArray, _ := o.(Array)
+
 	// Iterate over page tree.
-	for _, v := range pagesDict.ArrayEntry("Kids") {
+	for _, v := range kidsArray {
 
 		// Dereference next page node dict.
 		ir, _ := v.(IndirectRef)
