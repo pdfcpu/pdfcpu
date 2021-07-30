@@ -232,25 +232,25 @@ const (
 func parsePositionAnchor(s string) (anchor, error) {
 	var a anchor
 	switch s {
-	case "tl":
+	case "tl", "topleft", "top-left":
 		a = TopLeft
-	case "tc":
+	case "tc", "topcenter", "top-center":
 		a = TopCenter
-	case "tr":
+	case "tr", "topright", "top-right":
 		a = TopRight
-	case "l":
+	case "l", "left":
 		a = Left
-	case "c":
+	case "c", "center":
 		a = Center
-	case "r":
+	case "r", "right":
 		a = Right
-	case "bl":
+	case "bl", "bottomleft", "bottom-left":
 		a = BottomLeft
-	case "bc":
+	case "bc", "bottomcenter", "bottom-center":
 		a = BottomCenter
-	case "br":
+	case "br", "bottomright", "bottom-right":
 		a = BottomRight
-	case "full":
+	case "f", "full":
 		a = Full
 	default:
 		return a, errors.Errorf("pdfcpu: unknown position anchor: %s", s)

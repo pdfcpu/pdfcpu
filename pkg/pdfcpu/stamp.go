@@ -385,13 +385,13 @@ func (wm Watermark) textDescriptor(pageNr, pageCount int) (TextDescriptor, bool)
 func parseTextHorAlignment(s string, wm *Watermark) error {
 	var a HAlignment
 	switch s {
-	case "l":
+	case "l", "left":
 		a = AlignLeft
-	case "r":
+	case "r", "right":
 		a = AlignRight
-	case "c":
+	case "c", "center":
 		a = AlignCenter
-	case "j":
+	case "j", "justify":
 		a = AlignJustify
 	default:
 		return errors.Errorf("pdfcpu: unknown horizontal alignment (l,r,c,j): %s", s)
@@ -494,10 +494,10 @@ func parseScaleFactor(s string) (float64, bool, error) {
 	}
 
 	switch ss[1] {
-	case "a", "abs":
+	case "a", "abs", "absolute":
 		scaleAbs = true
 
-	case "r", "rel":
+	case "r", "rel", "relative":
 		scaleAbs = false
 
 	default:

@@ -308,7 +308,7 @@ content ... extract raw page content
 	usageWMDescription = `
 
 <description> is a comma separated configuration string containing these optional entries:
-	
+   
    (defaults: "font:Helvetica, points:24, rtl:off, pos:c, off:0,0 sc:0.5 rel, rot:0, d:1, op:1, m:0 and for all colors: 0.5 0.5 0.5")
 
    fontname:         Please refer to "pdfcpu fonts list"
@@ -316,18 +316,19 @@ content ... extract raw page content
    points:           fontsize in points, in combination with absolute scaling only.
 
    rtl:              render right to left (on/off, true/false, t/f)
-   
+
    position:         one of the anchors:
-                     tl(=topleft)      tc(=topcenter)       tr(=topright)
-                     l(=left)          c(=center)           r(=right)
-                     bl(=bottom left)  bc(=bottom center)   br(=bottom right)
-   
+
+                           tl|top-left     tc|top-center      tr|top-right
+                            l|left          c|center           r|right
+                           bl|bottom-left  bc|bottom-center   br|bottom-right
+
    offset:           (dx dy) in given display unit eg. '15 20'
    
    scalefactor:      0.0 < i <= 1.0 {r|rel} | 0.0 < i {a|abs}
-  
-   aligntext:        l..left, c..center, r..right, j..justified (for text watermarks only)
-   
+                    
+   aligntext:        l|left, c|center, r|right, j|justified (for text watermarks only)
+
    fillcolor:        color value to be used when rendering text, see also rendermode
                      for backwards compatibility "color" is also accepted.
    
@@ -373,9 +374,9 @@ All configuration string parameters support completion.
 
 e.g. "pos:bl, off: 20 5"   "rot:45"                 "op:0.5, sc:0.5 abs, rot:0"
      "d:2"                 "sc:.75 abs, points:48"  "rot:-90, scale:0.75 rel"
-     "f:Courier, sc:0.75, str: 0.5 0.0 0.0, rot:20"  
-  
-     
+     "f:Courier, sc:0.75, str: 0.5 0.0 0.0, rot:20"
+
+
 `
 
 	usageStampAdd    = "pdfcpu stamp add    [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]"
@@ -439,17 +440,29 @@ description ... dimensions, format, position, offset, scale factor, boxes
       (defaults: "d:595 842, f:A4, pos:full, off:0 0, sc:0.5 rel, dpi:72, gray:off, sepia:off")
 
   dimensions:      (width height) in given display unit eg. '400 200' setting the media box
+
   formsize:        eg. A4, Letter, Legal...
                    Append 'L' to enforce landscape mode. (eg. A3L)
                    Append 'P' to enforce portrait mode. (eg. TabloidP)
                    Please refer to "pdfcpu paper" for a comprehensive list of defined paper sizes.
                    "papersize" is also accepted.
-  position:        one of 'full' or the anchors: tl,tc,tr, l,c,r, bl,bc,br
+
+  position:        one of 'full' or the anchors:
+
+                        tl|top-left     tc|top-center      tr|top-right
+                         l|left          c|center           r|right
+                        bl|bottom-left  bc|bottom-center   br|bottom-right
+
   offset:          (dx dy) in given display unit eg. '15 20'
+
   scalefactor:     0.0 <= x <= 1.0 followed by optional 'abs|rel' or 'a|r'
+
   dpi:             apply desired dpi
+
   gray:            Convert to grayscale (on/off, true/false, t/f)
+
   sepia:           Apply sepia effect (on/off, true/false, t/f)
+
   backgroundcolor: "bgcolor" is also accepted.
   
   Only one of dimensions or format is allowed.
