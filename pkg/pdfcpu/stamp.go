@@ -175,8 +175,8 @@ type Watermark struct {
 	Dx, Dy            int           // anchor offset.
 	HAlign            *HAlignment   // horizonal alignment for text watermarks.
 	FontName          string        // supported are Adobe base fonts only. (as of now: Helvetica, Times-Roman, Courier)
-	FontSize          int           // font scaling factor.
-	ScaledFontSize    int           // font scaling factor for a specific page
+	FontSize          float64       // font scaling factor.
+	ScaledFontSize    float64       // font scaling factor for a specific page
 	RTL               bool          // if true, render text from right to left
 	Color             SimpleColor   // text fill color(=non stroking color) for backwards compatibility.
 	FillColor         SimpleColor   // text fill color(=non stroking color).
@@ -224,7 +224,7 @@ func DefaultWatermarkConfig() *Watermark {
 	return &Watermark{
 		Page:        0,
 		FontName:    "Helvetica",
-		FontSize:    24,
+		FontSize:    24.,
 		RTL:         false,
 		Pos:         Center,
 		Scale:       0.5,
@@ -279,7 +279,7 @@ func (wm Watermark) String() string {
 	}
 
 	return fmt.Sprintf("Watermark: <%s> is %son top, typ:%s\n"+
-		"%s %d points\n"+
+		"%s %f points\n"+
 		"PDFpage#: %d\n"+
 		"scaling: %.1f %s\n"+
 		"color: %s\n"+
@@ -460,7 +460,7 @@ func parseURL(s string, wm *Watermark) error {
 }
 
 func parseFontSize(s string, wm *Watermark) error {
-	fs, err := strconv.Atoi(s)
+	fs, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		return err
 	}
@@ -819,8 +819,8 @@ func ParsePDFWatermarkDetails(fileName, desc string, onTop bool, u DisplayUnit) 
 	return parseWatermarkDetails(WMPDF, fileName, desc, onTop, u)
 }
 
-func (wm Watermark) calcMinFontSize(w float64) int {
-	var minSize int
+func (wm Watermark) calcMinFontSize(w float64) float64 {
+	var minSize float64
 	for _, l := range wm.TextLines {
 		w := font.Size(l, wm.FontName, w)
 		if minSize == 0.0 {

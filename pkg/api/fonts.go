@@ -90,7 +90,7 @@ func rowLabel(i int, td pdf.TextDescriptor, baseFontName, baseFontKey string, bu
 	s := fmt.Sprintf("#%02X", i)
 	td.X, td.Y, td.Text = x, float64(7677-i*30), s
 	td.StrokeCol, td.FillCol = pdf.Black, pdf.SimpleColor{B: .8}
-	td.FontName, td.FontKey, td.FontSize = baseFontName, baseFontKey, 14
+	td.FontName, td.FontKey, td.FontSize = baseFontName, baseFontKey, 14.
 	pdf.WriteMultiLine(buf, mb, nil, td)
 }
 
@@ -102,7 +102,7 @@ func columnsLabel(td pdf.TextDescriptor, baseFontName, baseFontKey string, buf *
 	td.FontName, td.FontKey = baseFontName, baseFontKey
 	for i := 0; i < 256; i++ {
 		s := fmt.Sprintf("#%02X", i)
-		td.X, td.Y, td.Text, td.FontSize = float64(70+i*30), y, s, 14
+		td.X, td.Y, td.Text, td.FontSize = float64(70+i*30), y, s, 14.
 		td.StrokeCol, td.FillCol = pdf.Black, pdf.SimpleColor{B: .8}
 		pdf.WriteMultiLine(buf, mb, nil, td)
 	}
@@ -113,11 +113,11 @@ func surrogate(r rune) bool {
 }
 func writeUserFontDemoContent(p pdf.Page, fontName string, plane int) {
 	baseFontName := "Helvetica"
-	baseFontSize := 24
+	baseFontSize := 24.
 	baseFontKey := p.Fm.EnsureKey(baseFontName)
 
 	fontKey := p.Fm.EnsureKey(fontName)
-	fontSize := 24
+	fontSize := 24.
 
 	fillCol := pdf.NewSimpleColor(0xf7e6c7)
 	pdf.DrawGrid(p.Buf, 16*16, 16*16, pdf.RectForWidthAndHeight(55, 16, 16*480, 16*480), pdf.Black, &fillCol)
@@ -139,7 +139,7 @@ func writeUserFontDemoContent(p pdf.Page, fontName string, plane int) {
 
 	from := plane * 0x10000
 	to := (plane+1)*0x10000 - 1
-	s := fmt.Sprintf("%s %d points (%04X - %04X)", fontName, fontSize, from, to)
+	s := fmt.Sprintf("%s %f points (%04X - %04X)", fontName, fontSize, from, to)
 
 	td.X, td.Y, td.Text = p.MediaBox.Width()/2, 7750, s
 	td.FontName, td.FontKey = baseFontName, baseFontKey
@@ -152,7 +152,7 @@ func writeUserFontDemoContent(p pdf.Page, fontName string, plane int) {
 		rowLabel(j, td, baseFontName, baseFontKey, p.Buf, p.MediaBox, true)
 		buf := make([]byte, 4)
 		td.StrokeCol, td.FillCol = pdf.Black, pdf.Black
-		td.FontName, td.FontKey, td.FontSize = fontName, fontKey, fontSize-2
+		td.FontName, td.FontKey, td.FontSize = fontName, fontKey, fontSize-2.
 		for i := 0; i < 256; i++ {
 			r := base + rune(j*256+i)
 			s = " "

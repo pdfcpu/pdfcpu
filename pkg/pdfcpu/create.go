@@ -68,7 +68,7 @@ type TextDescriptor struct {
 	FontName       string        // Name of the core or user font to be used.
 	RTL            bool          // Right to left user font.
 	FontKey        string        // Resource id registered for FontName.
-	FontSize       int           // Fontsize in points.
+	FontSize       float64       // Fontsize in points.
 	X, Y           float64       // Position of first char's baseline.
 	Dx, Dy         float64       // Horizontal and vertical offsets for X,Y.
 	MTop, MBot     float64       // Top and bottom margins applied to text bounding box.
@@ -129,15 +129,15 @@ func NewPageWithBg(mediaBox *Rectangle, c SimpleColor) Page {
 	return p
 }
 
-func deltaAlignMiddle(fontName string, fontSize, lines int, mTop, mBot float64) float64 {
+func deltaAlignMiddle(fontName string, fontSize float64, lines int, mTop, mBot float64) float64 {
 	return -font.Ascent(fontName, fontSize) + (float64(lines)*font.LineHeight(fontName, fontSize)+mTop+mBot)/2 - mTop
 }
 
-func deltaAlignTop(fontName string, fontSize int, mTop float64) float64 {
+func deltaAlignTop(fontName string, fontSize float64, mTop float64) float64 {
 	return -font.Ascent(fontName, fontSize) - mTop
 }
 
-func deltaAlignBottom(fontName string, fontSize, lines int, mBot float64) float64 {
+func deltaAlignBottom(fontName string, fontSize float64, lines int, mBot float64) float64 {
 	return -font.Ascent(fontName, fontSize) + float64(lines)*font.LineHeight(fontName, fontSize) + mBot
 }
 
@@ -288,7 +288,7 @@ func calcBoundingBoxForRects(r1, r2 *Rectangle) *Rectangle {
 	return calcBoundingBoxForRectAndPoint(bbox, r2.UR)
 }
 
-func calcBoundingBoxForLines(lines []string, x, y float64, fontName string, fontSize int) (*Rectangle, string) {
+func calcBoundingBoxForLines(lines []string, x, y float64, fontName string, fontSize float64) (*Rectangle, string) {
 	var (
 		box      *Rectangle
 		maxLine  string
@@ -307,12 +307,12 @@ func calcBoundingBoxForLines(lines []string, x, y float64, fontName string, font
 	return box, maxLine
 }
 
-func calcBoundingBoxJ(x, y, w, h, d float64, fontName string, fontSize int) *Rectangle {
+func calcBoundingBoxJ(x, y, w, h, d float64, fontName string, fontSize float64) *Rectangle {
 	y -= d
 	return Rect(x, y, x+w, y+h)
 }
 
-func calcBoundingBoxForJLines(lines []string, x, y, w float64, fontName string, fontSize int) *Rectangle {
+func calcBoundingBoxForJLines(lines []string, x, y, w float64, fontName string, fontSize float64) *Rectangle {
 	var box *Rectangle
 	h := font.LineHeight(fontName, fontSize)
 	d := math.Ceil(font.Descent(fontName, fontSize))
@@ -371,7 +371,7 @@ func setFont(w io.Writer, fontID string, fontSize float32) {
 	fmt.Fprintf(w, "BT /%s %.2f Tf ET ", fontID, fontSize)
 }
 
-func calcBoundingBox(s string, x, y float64, fontName string, fontSize int) *Rectangle {
+func calcBoundingBox(s string, x, y float64, fontName string, fontSize float64) *Rectangle {
 	w := font.TextWidth(s, fontName, fontSize)
 	h := font.LineHeight(fontName, fontSize)
 	y -= math.Ceil(font.Descent(fontName, fontSize))
@@ -407,7 +407,7 @@ func horAdjustBoundingBoxForLines(r, box *Rectangle, dx, dy float64, x, y *float
 	}
 }
 
-func prepJustifiedLine(lines *[]string, strbuf []string, strWidth, w float64, fontSize int, fontName string, rtl bool) {
+func prepJustifiedLine(lines *[]string, strbuf []string, strWidth, w float64, fontSize float64, fontName string, rtl bool) {
 	blank := prepBytes(" ", fontName, false)
 	var sb strings.Builder
 	sb.WriteString("[")
@@ -430,7 +430,7 @@ func prepJustifiedLine(lines *[]string, strbuf []string, strWidth, w float64, fo
 
 func newPrepJustifiedString(
 	fontName string,
-	fontSize int) func(lines *[]string, s string, w float64, fontName string, fontSize *int, lastline, parIndent, rtl bool) int {
+	fontSize float64) func(lines *[]string, s string, w float64, fontName string, fontSize *float64, lastline, parIndent, rtl bool) int {
 
 	// Not yet rendered content.
 	strbuf := []string{}
@@ -446,7 +446,7 @@ func newPrepJustifiedString(
 
 	blankWidth := font.TextWidth(" ", fontName, fontSize)
 
-	return func(lines *[]string, s string, w float64, fontName string, fontSize *int, lastline, parIndent, rtl bool) int {
+	return func(lines *[]string, s string, w float64, fontName string, fontSize *float64, lastline, parIndent, rtl bool) int {
 
 		if len(s) == 0 {
 			if len(strbuf) > 0 {
@@ -515,7 +515,7 @@ func preRenderJustifiedText(
 	x, y, width float64,
 	td TextDescriptor,
 	mLeft, mRight, borderWidth float64,
-	fontSize *int) float64 {
+	fontSize *float64) float64 {
 
 	var ww float64
 	if !td.ScaleAbs {
@@ -547,22 +547,22 @@ func preRenderJustifiedText(
 
 func scaleFontSize(r *Rectangle, lines []string, scaleAbs bool,
 	scale, width, x, y, mLeft, mRight, borderWidth float64,
-	fontName string, fontSize *int) {
+	fontName string, fontSize *float64) {
 	if scaleAbs {
-		*fontSize = int(float64(*fontSize) * scale)
+		*fontSize = *fontSize * scale
 	} else {
 		www := width
 		if width == 0 {
 			box, _ := calcBoundingBoxForLines(lines, x, y, fontName, *fontSize)
 			www = box.Width() + mLeft + mRight + 2*borderWidth
 		}
-		*fontSize = int(r.Width() * scale * float64(*fontSize) / www)
+		*fontSize = r.Width() * scale * float64(*fontSize) / www
 	}
 }
 
 func horizontalWrapUp(box *Rectangle, maxLine string, hAlign HAlignment,
 	x *float64, width, ww, mLeft, mRight, borderWidth float64,
-	fontName string, fontSize *int) {
+	fontName string, fontSize *float64) {
 	switch hAlign {
 	case AlignLeft:
 		box.Translate(mLeft+borderWidth, 0)
@@ -613,7 +613,7 @@ func createBoundingBoxForColumn(r *Rectangle, x, y *float64,
 	dx, dy float64,
 	mTop, mBot, mLeft, mRight float64,
 	borderWidth float64,
-	fontSize *int, lines *[]string) *Rectangle {
+	fontSize *float64, lines *[]string) *Rectangle {
 
 	var ww float64
 	if td.HAlign == AlignJustify {
@@ -727,7 +727,7 @@ func reverse(s string) string {
 	return string(outRunes)
 }
 
-func renderText(w io.Writer, lines []string, td TextDescriptor, x, y float64, fontSize int) {
+func renderText(w io.Writer, lines []string, td TextDescriptor, x, y float64, fontSize float64) {
 	lh := font.LineHeight(td.FontName, fontSize)
 	for _, s := range lines {
 		if td.HAlign != AlignJustify {
@@ -772,7 +772,7 @@ func WriteColumn(w io.Writer, mediaBox, region *Rectangle, td TextDescriptor, wi
 		dx = scaleXForRegion(dx, mediaBox, r)
 		dy = scaleYForRegion(dy, mediaBox, r)
 		width = scaleXForRegion(width, mediaBox, r)
-		fontSize = int(scaleYForRegion(float64(fontSize), mediaBox, r))
+		fontSize = scaleYForRegion(fontSize, mediaBox, r)
 		mTop = scaleYForRegion(mTop, mediaBox, r)
 		mBot = scaleYForRegion(mBot, mediaBox, r)
 		mLeft = scaleXForRegion(mLeft, mediaBox, r)

@@ -20,7 +20,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"os"
 	"path"
 	"path/filepath"
@@ -192,33 +191,33 @@ func CharWidth(fontName string, r rune) int {
 }
 
 // UserSpaceUnits transforms glyphSpaceUnits into userspace units.
-func UserSpaceUnits(glyphSpaceUnits float64, fontScalingFactor int) float64 {
-	return glyphSpaceUnits / 1000 * float64(fontScalingFactor)
+func UserSpaceUnits(glyphSpaceUnits float64, fontScalingFactor float64) float64 {
+	return glyphSpaceUnits / 1000 * fontScalingFactor
 }
 
 // GlyphSpaceUnits transforms userSpaceUnits into glyphspace Units.
-func GlyphSpaceUnits(userSpaceUnits float64, fontScalingFactor int) float64 {
-	return userSpaceUnits * 1000 / float64(fontScalingFactor)
+func GlyphSpaceUnits(userSpaceUnits float64, fontScalingFactor float64) float64 {
+	return userSpaceUnits * 1000 / fontScalingFactor
 }
 
-func fontScalingFactor(glyphSpaceUnits, userSpaceUnits float64) int {
-	return int(math.Round(userSpaceUnits / glyphSpaceUnits * 1000))
+func fontScalingFactor(glyphSpaceUnits, userSpaceUnits float64) float64 {
+	return userSpaceUnits / glyphSpaceUnits * 1000
 }
 
 // Descent returns fontname's descent in userspace units corresponding to fontSize.
-func Descent(fontName string, fontSize int) float64 {
+func Descent(fontName string, fontSize float64) float64 {
 	fbb := BoundingBox(fontName)
 	return UserSpaceUnits(-fbb.LL.Y, fontSize)
 }
 
 // Ascent returns fontname's ascent in userspace units corresponding to fontSize.
-func Ascent(fontName string, fontSize int) float64 {
+func Ascent(fontName string, fontSize float64) float64 {
 	fbb := BoundingBox(fontName)
 	return UserSpaceUnits(fbb.Height()+fbb.LL.Y, fontSize)
 }
 
 // LineHeight returns fontname's line height in userspace units corresponding to fontSize.
-func LineHeight(fontName string, fontSize int) float64 {
+func LineHeight(fontName string, fontSize float64) float64 {
 	fbb := BoundingBox(fontName)
 	return UserSpaceUnits(fbb.Height(), fontSize)
 }
@@ -239,20 +238,20 @@ func glyphSpaceWidth(text, fontName string) int {
 }
 
 // TextWidth represents the width in user space units for a given text string, font name and font size.
-func TextWidth(text, fontName string, fontSize int) float64 {
+func TextWidth(text, fontName string, fontSize float64) float64 {
 	w := glyphSpaceWidth(text, fontName)
 	return UserSpaceUnits(float64(w), fontSize)
 }
 
 // Size returns the needed font size (aka. font scaling factor) in points
 // for rendering a given text string using a given font name with a given user space width.
-func Size(text, fontName string, width float64) int {
+func Size(text, fontName string, width float64) float64 {
 	w := glyphSpaceWidth(text, fontName)
 	return fontScalingFactor(float64(w), width)
 }
 
 // UserSpaceFontBBox returns the font box for given font name and font size in user space coordinates.
-func UserSpaceFontBBox(fontName string, fontSize int) *types.Rectangle {
+func UserSpaceFontBBox(fontName string, fontSize float64) *types.Rectangle {
 	fontBBox := BoundingBox(fontName)
 	llx := UserSpaceUnits(fontBBox.LL.X, fontSize)
 	lly := UserSpaceUnits(fontBBox.LL.Y, fontSize)

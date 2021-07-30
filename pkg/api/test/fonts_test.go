@@ -30,11 +30,11 @@ import (
 
 func writeCoreFontDemoContent(p pdf.Page, fontName string) {
 	baseFontName := "Helvetica"
-	baseFontSize := 24
+	baseFontSize := 24.
 	baseFontKey := p.Fm.EnsureKey(baseFontName)
 
 	fontKey := p.Fm.EnsureKey(fontName)
-	fontSize := 24
+	fontSize := 24.
 
 	fillCol := pdf.NewSimpleColor(0xf7e6c7)
 	pdf.DrawGrid(p.Buf, 16, 14, pdf.RectForWidthAndHeight(55, 2, 480, 422), pdf.Black, &fillCol)
@@ -54,7 +54,7 @@ func writeCoreFontDemoContent(p pdf.Page, fontName string) {
 		BackgroundCol:  pdf.SimpleColor{R: 1., G: .98, B: .77},
 	}
 
-	s := fmt.Sprintf("%s %d points", fontName, fontSize)
+	s := fmt.Sprintf("%s %f points", fontName, fontSize)
 	if fontName != "ZapfDingbats" && fontName != "Symbol" {
 		s = s + " (CP1252)"
 	}
@@ -64,7 +64,7 @@ func writeCoreFontDemoContent(p pdf.Page, fontName string) {
 
 	for i := 0; i < 16; i++ {
 		s = fmt.Sprintf("#%02X", i)
-		td.X, td.Y, td.Text, td.FontSize = float64(70+i*30), 427, s, 14
+		td.X, td.Y, td.Text, td.FontSize = float64(70+i*30), 427, s, 14.
 		td.StrokeCol, td.FillCol = pdf.Black, pdf.SimpleColor{B: .8}
 		pdf.WriteMultiLine(p.Buf, p.MediaBox, nil, td)
 	}
@@ -73,7 +73,7 @@ func writeCoreFontDemoContent(p pdf.Page, fontName string) {
 		s = fmt.Sprintf("#%02X", j*16+32)
 		td.X, td.Y, td.Text = 41, float64(403-j*30), s
 		td.StrokeCol, td.FillCol = pdf.Black, pdf.SimpleColor{B: .8}
-		td.FontName, td.FontKey, td.FontSize = baseFontName, baseFontKey, 14
+		td.FontName, td.FontKey, td.FontSize = baseFontName, baseFontKey, 14.
 		pdf.WriteMultiLine(p.Buf, p.MediaBox, nil, td)
 		for i := 0; i < 16; i++ {
 			b := byte(32 + j*16 + i)
@@ -94,7 +94,7 @@ func writeCP1252SpecialMappings(p pdf.Page, fontName string) {
 		Text:           "€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ",
 		FontName:       fontName,
 		FontKey:        k,
-		FontSize:       24,
+		FontSize:       24.,
 		HAlign:         pdf.AlignCenter,
 		VAlign:         pdf.AlignBaseline,
 		X:              -1,

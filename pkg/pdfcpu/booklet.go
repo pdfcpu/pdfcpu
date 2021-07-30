@@ -68,7 +68,7 @@ func drawGuideLineLabel(w io.Writer, x, y float64, s string, mb *Rectangle, fm F
 	td := TextDescriptor{
 		FontName:  fontName,
 		FontKey:   fm.EnsureKey(fontName),
-		FontSize:  9,
+		FontSize:  9.,
 		Scale:     1.0,
 		ScaleAbs:  true,
 		StrokeCol: Black,
@@ -86,7 +86,7 @@ func drawScissors(w io.Writer, mb *Rectangle, fm FontMap) {
 	td := TextDescriptor{
 		FontName:  fontName,
 		FontKey:   fm.EnsureKey(fontName),
-		FontSize:  12,
+		FontSize:  12.,
 		Scale:     1.0,
 		ScaleAbs:  true,
 		StrokeCol: Black,

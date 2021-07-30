@@ -238,7 +238,7 @@ func writeTextDemoAlignedWidthAndMargin(
 	td := pdf.TextDescriptor{
 		FontName:       fontName,
 		FontKey:        k,
-		FontSize:       24,
+		FontSize:       24.,
 		ShowMargins:    true,
 		MLeft:          mLeft,
 		MRight:         mRight,
@@ -395,7 +395,7 @@ func writeTextAlignJustifyDemo(p pdf.Page, region *pdf.Rectangle, fontName strin
 		Text:           sampleText,
 		FontName:       fontName,
 		FontKey:        k,
-		FontSize:       12,
+		FontSize:       12.,
 		MLeft:          5,
 		MRight:         5,
 		MTop:           5,
@@ -466,14 +466,14 @@ func writeTextAlignJustifyColumnDemo(p pdf.Page, region *pdf.Rectangle) {
 
 	td.BackgroundCol = pdf.White
 	td.FillCol = pdf.Black
-	td.FontName, td.FontKey, td.FontSize = fontName, k1, 9
+	td.FontName, td.FontKey, td.FontSize = fontName, k1, 9.
 	td.ParIndent = true
 	td.VAlign, td.X, td.Y, td.Dx, td.Dy = pdf.AlignTop, 0, r.Height(), 5, -5
 	pdf.WriteColumn(buf, mediaBox, region, td, 150)
 
 	td.BackgroundCol = pdf.Black
 	td.FillCol = pdf.White
-	td.FontName, td.FontKey, td.FontSize = fontName2, k2, 12
+	td.FontName, td.FontKey, td.FontSize = fontName2, k2, 12.
 	td.ParIndent = true
 	td.VAlign, td.X, td.Y, td.Dx, td.Dy = pdf.AlignTop, -1, -1, 0, 0
 	pdf.WriteColumn(buf, mediaBox, region, td, 290)
@@ -523,7 +523,7 @@ func writeTextDemoAnchorsWithOffset(p pdf.Page, region *pdf.Rectangle, dx, dy fl
 	td := pdf.TextDescriptor{
 		FontName:       fontName,
 		FontKey:        k,
-		FontSize:       24,
+		FontSize:       24.,
 		MLeft:          10,
 		MRight:         10,
 		MTop:           10,
@@ -621,7 +621,7 @@ func writeTextDemoColumnAnchoredWithOffset(p pdf.Page, region *pdf.Rectangle, dx
 		Text:           sampleText,
 		FontName:       fontName,
 		FontKey:        k,
-		FontSize:       6,
+		FontSize:       6.,
 		MLeft:          5,
 		MRight:         5,
 		MTop:           5,
@@ -737,7 +737,7 @@ func writeTextRotateDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx, dy flo
 		Text:           "Hello Gopher!\nLine 2",
 		FontName:       fontName,
 		FontKey:        k,
-		FontSize:       24,
+		FontSize:       24.,
 		MLeft:          10,
 		MRight:         10,
 		MTop:           10,
@@ -877,7 +877,7 @@ func writeTextScaleAbsoluteDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx,
 		Text:           sampleText,
 		FontName:       fontName,
 		FontKey:        k,
-		FontSize:       18,
+		FontSize:       18.,
 		MLeft:          5,
 		MRight:         5,
 		MTop:           5,
@@ -893,7 +893,7 @@ func writeTextScaleAbsoluteDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx,
 		HairCross:      false,
 	}
 
-	td.HAlign, td.VAlign, td.X, td.Y, td.FontSize = pdf.AlignJustify, pdf.AlignMiddle, -1, r.Height()*.72, 9
+	td.HAlign, td.VAlign, td.X, td.Y, td.FontSize = pdf.AlignJustify, pdf.AlignMiddle, -1, r.Height()*.72, 9.
 	td.Scale, td.FillCol = 1, fillCol
 	pdf.WriteMultiLine(buf, mediaBox, region, td)
 	td.Scale, td.FillCol = 1.5, pdf.SimpleColor{R: 1}
@@ -912,13 +912,13 @@ func writeTextScaleAbsoluteDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx,
 	td.Scale = 1.5
 	pdf.WriteColumn(buf, mediaBox, region, td, width)
 
-	td.FontSize, td.Y = 12, r.Height()*.22
+	td.FontSize, td.Y = 12., r.Height()*.22
 	td.Scale = 1
 	pdf.WriteColumn(buf, mediaBox, region, td, width)
 	td.Scale = 1.5
 	pdf.WriteColumn(buf, mediaBox, region, td, width)
 
-	td.FontSize = 9
+	td.FontSize = 9.
 	td.Scale, td.Y = 1, r.Height()*.15
 	pdf.WriteColumn(buf, mediaBox, region, td, width)
 	td.Scale, td.Y = 1.5, r.Height()*.13
@@ -927,7 +927,7 @@ func writeTextScaleAbsoluteDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx,
 	td = pdf.TextDescriptor{
 		FontName:       fontName,
 		FontKey:        k,
-		FontSize:       12,
+		FontSize:       12.,
 		MLeft:          5,
 		MRight:         5,
 		MTop:           5,
@@ -1072,7 +1072,7 @@ func writeTextScaleRelativeDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx,
 		Text:           sampleText,
 		FontName:       fontName,
 		FontKey:        k,
-		FontSize:       18,
+		FontSize:       18.,
 		MLeft:          5,
 		MRight:         5,
 		MTop:           5,
@@ -1092,11 +1092,11 @@ func writeTextScaleRelativeDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx,
 		HairCross:      false,
 	}
 
-	td.FontSize, td.Scale, td.FillCol = 9, .4, fillCol
+	td.FontSize, td.Scale, td.FillCol = 9., .4, fillCol
 	pdf.WriteMultiLine(buf, mediaBox, region, td)
-	td.FontSize, td.Scale, td.FillCol = 9, .6, pdf.SimpleColor{R: 1}
+	td.FontSize, td.Scale, td.FillCol = 9., .6, pdf.SimpleColor{R: 1}
 	pdf.WriteMultiLine(buf, mediaBox, region, td)
-	td.FontSize, td.Scale, td.FillCol = 9, .8, pdf.SimpleColor{R: .5}
+	td.FontSize, td.Scale, td.FillCol = 9., .8, pdf.SimpleColor{R: .5}
 	pdf.WriteMultiLine(buf, mediaBox, region, td)
 
 	width := 130.
@@ -1105,7 +1105,7 @@ func writeTextScaleRelativeDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx,
 		Text:           "Justified column\nWidth=130",
 		FontName:       fontName,
 		FontKey:        k,
-		FontSize:       18,
+		FontSize:       18.,
 		MLeft:          5,
 		MRight:         5,
 		MTop:           5,
@@ -1134,7 +1134,7 @@ func writeTextScaleRelativeDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx,
 	td = pdf.TextDescriptor{
 		FontName:       fontName,
 		FontKey:        k,
-		FontSize:       18,
+		FontSize:       18.,
 		MLeft:          5,
 		MRight:         5,
 		MTop:           5,
@@ -1263,7 +1263,7 @@ func createTextDemoColumns(mediaBox *pdf.Rectangle) pdf.Page {
 	td := pdf.TextDescriptor{
 		FontName:       fontName,
 		FontKey:        k,
-		FontSize:       9,
+		FontSize:       9.,
 		MLeft:          10,
 		MRight:         10,
 		MTop:           10,
@@ -1367,7 +1367,7 @@ func writeTextBorderTest(p pdf.Page, region *pdf.Rectangle) pdf.Page {
 	td := pdf.TextDescriptor{
 		FontName:   fontName,
 		FontKey:    k,
-		FontSize:   7,
+		FontSize:   7.,
 		MLeft:      10,
 		MRight:     10,
 		MTop:       10,
@@ -1477,7 +1477,7 @@ func createTextBorderNoMarginAlignLeftTest(mediaBox *pdf.Rectangle) pdf.Page {
 		Text:           sampleText2,
 		FontName:       fontName,
 		FontKey:        k,
-		FontSize:       12,
+		FontSize:       12.,
 		Scale:          1.,
 		ScaleAbs:       true,
 		RMode:          pdf.RMFill,
@@ -1520,7 +1520,7 @@ func createTextBorderNoMarginAlignRightTest(mediaBox *pdf.Rectangle) pdf.Page {
 		Text:           sampleText2,
 		FontName:       fontName,
 		FontKey:        k,
-		FontSize:       12,
+		FontSize:       12.,
 		Scale:          1.,
 		ScaleAbs:       true,
 		RMode:          pdf.RMFill,
@@ -1563,7 +1563,7 @@ func createTextBorderNoMarginAlignCenterTest(mediaBox *pdf.Rectangle) pdf.Page {
 		Text:           sampleText2,
 		FontName:       fontName,
 		FontKey:        k,
-		FontSize:       12,
+		FontSize:       12.,
 		Scale:          1.,
 		ScaleAbs:       true,
 		RMode:          pdf.RMFill,
@@ -1606,7 +1606,7 @@ func createTextBorderNoMarginAlignJustifyTest(mediaBox *pdf.Rectangle) pdf.Page 
 		Text:           sampleText2,
 		FontName:       fontName,
 		FontKey:        k,
-		FontSize:       12,
+		FontSize:       12.,
 		Scale:          1.,
 		ScaleAbs:       true,
 		RMode:          pdf.RMFill,
@@ -1760,7 +1760,7 @@ func writecreateTestRTLUserFont(p pdf.Page, region *pdf.Rectangle, fontName, tex
 		Text:           text,
 		FontName:       fontName,
 		FontKey:        k,
-		FontSize:       12,
+		FontSize:       12.,
 		RTL:            true,
 		MLeft:          5,
 		MRight:         5,
@@ -1822,7 +1822,7 @@ func writecreateTestUserFontJustified(p pdf.Page, region *pdf.Rectangle, rtl boo
 		Text:           sampleText,
 		FontName:       fontName,
 		FontKey:        k,
-		FontSize:       12,
+		FontSize:       12.,
 		RTL:            rtl,
 		MLeft:          5,
 		MRight:         5,
@@ -1902,7 +1902,7 @@ Xử lý PDF tức thì cho mọi nhu cầu của bạn.
 Bây giờ với sự hỗ trợ cho các phông chữ CJKV!`
 
 	td := pdf.TextDescriptor{
-		FontSize:       24,
+		FontSize:       24.,
 		MLeft:          5,
 		MRight:         5,
 		MTop:           5,
@@ -1938,11 +1938,11 @@ Bây giờ với sự hỗ trợ cho các phông chữ CJKV!`
 	td.X, td.Y = mb.Width(), 0
 	pdf.WriteColumn(p.Buf, mediaBox, nil, td, 3*mb.Width()/4)
 
-	td.Text, td.FontSize, td.ShowTextBB = textEnglish, 24, false
+	td.Text, td.FontSize, td.ShowTextBB = textEnglish, 24., false
 	td.X, td.Y, td.HAlign = -1, -1, pdf.AlignCenter
 	pdf.WriteColumn(p.Buf, mediaBox, nil, td, 0)
 
-	td.FontSize = 80
+	td.FontSize = 80.
 	td.Text, td.HAlign, td.X, td.Y = "C", pdf.AlignRight, mb.Width(), mb.Height()
 	pdf.WriteColumn(p.Buf, mediaBox, nil, td, 0)
 
