@@ -308,70 +308,67 @@ content ... extract raw page content
 	usageWMDescription = `
 
 <description> is a comma separated configuration string containing these optional entries:
+   
+   (defaults: "font:Helvetica, points:24, rtl:off, pos:c, off:0,0 sc:0.5 rel, rot:0, d:1, op:1, m:0 and for all colors: 0.5 0.5 0.5")
 
-   (defaults: "f:Helvetica, points:24, rtl:off, pos:c, off:0 0, sc:0.5 rel, align:c, strokec:#808080, fillc:#808080, rot:0, d:1, op:1, mo:0, ma:0, bo:0")
+   fontname:         Please refer to "pdfcpu fonts list"
 
-   fontname:         a basefont – '{name}'
-                     Please refer to 'pdfcpu fonts list'
+   points:           fontsize in points, in combination with absolute scaling only.
 
-   points:           fontsize in points – '{size}'
-                     in combination with absolute scaling only
+   rtl:              render right to left (on/off, true/false, t/f)
 
-   rtl:              right to left userfont – '{rtl}'
-                     one of: 'on|true|t', 'off|false|f'
+   position:         one of the anchors:
 
-   position:         the stamps lower left corner – '{position}'
-                     one of: 'f|full' or anchor
-                     tl|top-left      tc|top-center       tr|top-right
-                     l|left           c|center            r|right
-                     bl|bottom-left   bc|bottom-center    br|bottom-right
+                           tl|top-left     tc|top-center      tr|top-right
+                            l|left          c|center           r|right
+                           bl|bottom-left  bc|bottom-center   br|bottom-right
 
-   offset:           offset of lower left corner – '{dx} {dy}'
-                     in user units
-                     eg. '15 20'
+   offset:           (dx dy) in given display unit eg. '15 20'
+   
+   scalefactor:      0.0 < i <= 1.0 {r|rel} | 0.0 < i {a|abs}
+                    
+   aligntext:        l|left, c|center, r|right, j|justified (for text watermarks only)
 
-   scalefactor:      scale factor – '{factor} [mode]'
-                     0.0 < '{factor}' <= 1.0, optional '{mode}' one of: 'abs|absolute', 'rel|relative'
+   fillcolor:        color value to be used when rendering text, see also rendermode
+                     for backwards compatibility "color" is also accepted.
+   
+   strokecolor:      color value to be used when rendering text, see also rendermode
+   
+   backgroundcolor:  color value for visualization of the bounding box background for text.
+                     "bgcolor" is also accepted. 
+   
+   rotation:         -180.0 <= x <= 180.0
+   
+   diagonal:         render along diagonal
+                     1..lower left to upper right
+                     2..upper left to lower right (if present overrules r!)
+                     Only one of rotation and diagonal is allowed!
+   
+   opacity:          where 0.0 <= x <= 1.0
 
-   aligntext:        horizontal text alignment – '{alignment}'
-                     one of: 'l|left', 'c|center', 'r|right', 'j|justified'
+   mode, rendermode: 0 ... fill (applies fill color)
+                     1 ... stroke (applies stroke color)
+                     2 ... fill & stroke (applies both fill and stroke colors)
 
-   strokecolor:      stroke color of text (see mode) – '{r} {g} {b}|#{RRGGBB}'
-                     color intensity 0.0 <= '{r|g|b}' <= 1.0, '#{RRGGBB}' 8bit hex RGB
-                     eg. '1.0 0.0 0.0' (red)
+   margins:          Set bounding box margins for text (requires background color) i >= 0
+                     i       ... set all four margins
+                     i j     ... set top/bottom margins to i
+                                 set left/right margins to j
+                     i j k   ... set top margin to i
+                                 set left/right margins to j
+                                 set bottom margins to k
+                     i j k l ... set top, right, bottom, left margins
 
-   fillcolor:        fill color of text (see mode) – '{r} {g} {b}|#{RRGGBB}'
-   (color)           color intensity 0.0 <= '{r|g|b}' <= 1.0, '#{RRGGBB}' 8bit hex RGB
-                     eg. '1.0 0.0 0.0' (red)
+   border:           Set bounding box border for text (requires background color)
+                     i {color} {round}
+                     i     ... border width > 0
+                     color ... border color
+                     round ... set round bounding box corners
 
-   backgroundcolor:  bounding box background – '{r} {g} {b}|#{RRGGBB}'
-   (bgcolor)         color intensity 0.0 <= '{r|g|b}' <= 1.0, '#{RRGGBB}' 8bit hex RGB
-                     eg. '1.0 0.0 0.0' (red)
+   url:              Add link annotation for stamps only (omit https://)
 
-   rotation:         rotation angle – '{r}'
-                     in degrees, -180.0 <= '{r}' <= 180.0
-
-   diagonal:         render along diagonal – '{diagonal}'
-                     one of: '1' (lower left to upper right) '2' (upper left to lower right)
-
-   opacity:          opacity of insertation – '{opacity}'
-                     0.0 <= '{opacity}' <= 1.0
-
-   mode:             apply fill and/or stroke color – '{mode}'
-   (rendermode)      one of: '0' (fill), '1' (stroke), '2' (fill & stroke)
-
-   margins:          bounding box margins for text (requires bgcolor) – '{a}|{v} {h}|{t} {h} {b}|{t} {r} {b} {l}'
-                     one of:
-                     '{a}'             (all four sides),
-                     '{v} {h}'         (vertical, horizontal),
-                     '{t} {h} {b}'     (top,  horizontal,  bottom),
-                     '{t} {r} {b} {l}' (top, right, bottom, left)
-
-   border:           bounding box border for text (requires bccolor) – '{width} [round] [{color}]'
-                     '{width}' > 0 in user units, 'round' set round bounding box corners, '{color}' border color
-
-   url:              add link annotation for insertation – '{url}'
-                     omit https://
+A color value: 3 color intensities, where 0.0 < i < 1.0, eg 1.0, 
+               or the hex RGB value: #RRGGBB, eg #FF0000 = red
 
 All configuration string parameters support completion.
 
@@ -443,17 +440,29 @@ description ... dimensions, format, position, offset, scale factor, boxes
       (defaults: "d:595 842, f:A4, pos:full, off:0 0, sc:0.5 rel, dpi:72, gray:off, sepia:off")
 
   dimensions:      (width height) in given display unit eg. '400 200' setting the media box
+
   formsize:        eg. A4, Letter, Legal...
                    Append 'L' to enforce landscape mode. (eg. A3L)
                    Append 'P' to enforce portrait mode. (eg. TabloidP)
                    Please refer to "pdfcpu paper" for a comprehensive list of defined paper sizes.
                    "papersize" is also accepted.
-  position:        one of 'full' or the anchors: tl,tc,tr, l,c,r, bl,bc,br
+
+  position:        one of 'full' or the anchors:
+
+                        tl|top-left     tc|top-center      tr|top-right
+                         l|left          c|center           r|right
+                        bl|bottom-left  bc|bottom-center   br|bottom-right
+
   offset:          (dx dy) in given display unit eg. '15 20'
+
   scalefactor:     0.0 <= x <= 1.0 followed by optional 'abs|rel' or 'a|r'
+
   dpi:             apply desired dpi
+
   gray:            Convert to grayscale (on/off, true/false, t/f)
+
   sepia:           Apply sepia effect (on/off, true/false, t/f)
+
   backgroundcolor: "bgcolor" is also accepted.
   
   Only one of dimensions or format is allowed.
