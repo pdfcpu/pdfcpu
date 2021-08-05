@@ -251,9 +251,14 @@ func createOutlineItemDict(ctx *Context, bms []Bookmark, parent *IndirectRef, pa
 			return nil, nil, 0, err
 		}
 
+		s, err := Escape(encodeUTF16String(bm.Title))
+		if err != nil {
+			return nil, nil, 0, err
+		}
+
 		d := Dict(map[string]Object{
 			"Dest":   Array{*pageIndRef, Name("Fit")},
-			"Title":  StringLiteral(encodeUTF16String(bm.Title)),
+			"Title":  StringLiteral(*s),
 			"Parent": *parent},
 		)
 
