@@ -49,12 +49,13 @@ func prevalidateDate(s string, relaxed bool) (string, bool) {
 		s = utf16s
 	}
 
+	// Remove trailing 0x00
+	s = strings.TrimRight(s, "\x00")
+
 	if relaxed {
 		// Accept missing "D:" prefix.
 		// "YYYY" is mandatory
-		if strings.HasPrefix(s, "D:") {
-			s = s[2:]
-		}
+		s = strings.TrimPrefix(s, "D:")
 		return s, len(s) >= 4
 	}
 
