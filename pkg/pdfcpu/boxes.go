@@ -1024,7 +1024,7 @@ func applyBox(boxName string, b *Box, d Dict, parent *Rectangle) *Rectangle {
 	}
 
 	mLeft, mRight, mTop, mBot := b.MLeft, b.MRight, b.MTop, b.MBot
-	if -1 < b.MLeft && b.MLeft < 1 {
+	if b.MLeft != 0 && -1 < b.MLeft && b.MLeft < 1 {
 		// Margins relative to media box
 		mLeft *= parent.Width()
 		mRight *= parent.Width()

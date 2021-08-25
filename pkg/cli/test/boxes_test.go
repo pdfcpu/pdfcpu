@@ -54,6 +54,7 @@ func TestCropCommand(t *testing.T) {
 		s string
 		u pdfcpu.DisplayUnit
 	}{
+		{"0 0 10 0", pdfcpu.POINTS},
 		{"[0 0 5 5]", pdfcpu.CENTIMETRES},
 		{"100", pdfcpu.POINTS},
 		{"20% 40%", pdfcpu.POINTS},
