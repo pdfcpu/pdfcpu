@@ -93,6 +93,7 @@ func parseRadioButtonOrientation(s string) (Orientation, error) {
 }
 
 type FormFont struct {
+	pdf   *PDF
 	Name  string
 	Size  int
 	Color string `json:"col"`
@@ -101,46 +102,157 @@ type FormFont struct {
 
 func (f *FormFont) validate() error {
 
-	if !font.SupportedFont(f.Name) {
-		return errors.Errorf("pdfcpu: font %s is unsupported, please refer to \"pdfcpu fonts list\".\n", f.Name)
+	// if f.Name == "" {
+	// 	return errors.New("pdfcpu: missing font name")
+	// }
+
+	if f.Name == "$" {
+		return errors.New("pdfcpu: invalid font reference $")
 	}
 
-	if f.Size <= 0 {
-		return errors.Errorf("pdfcpu: invalid font size: %d", f.Size)
+	if f.Name != "" && f.Name[0] != '$' {
+		if !font.SupportedFont(f.Name) {
+			return errors.Errorf("pdfcpu: font %s is unsupported, please refer to \"pdfcpu fonts list\".\n", f.Name)
+		}
+		if f.Size <= 0 {
+			return errors.Errorf("pdfcpu: invalid font size: %d", f.Size)
+		}
 	}
 
 	if f.Color != "" {
-		sc, err := parseHexColor(f.Color)
+		sc, err := f.pdf.parseColor(f.Color)
 		if err != nil {
 			return err
 		}
-		f.col = &sc
+		f.col = sc
 	}
 
 	return nil
 }
 
+func (f *FormFont) mergeIn(f0 *FormFont) {
+	if f.Name == "" {
+		f.Name = f0.Name
+	}
+	if f.Size == 0 {
+		f.Size = f0.Size
+	}
+	if f.col == nil {
+		f.col = f0.col
+	}
+}
+
 type Border struct {
+	pdf   *PDF
+	Name  string
 	Width int
 	Color string `json:"col"`
 	col   *SimpleColor
+	Style string
+	style LineJoinStyle
 }
 
 func (b *Border) validate() error {
 
-	if b.Width < 0 {
-		return errors.Errorf("pdfcpu: invalid border width: %d", b.Width)
+	if b.Name == "$" {
+		return errors.New("pdfcpu: invalid border reference $")
 	}
 
 	if b.Color != "" {
-		sc, err := parseHexColor(b.Color)
+		sc, err := b.pdf.parseColor(b.Color)
 		if err != nil {
 			return err
 		}
-		b.col = &sc
+		b.col = sc
+	}
+
+	b.style = LJMiter
+	if b.Style != "" {
+		switch b.Style {
+		case "miter":
+			b.style = LJMiter
+		case "round":
+			b.style = LJRound
+		case "bevel":
+			b.style = LJBevel
+		default:
+			return errors.Errorf("pdfcpu: invalid border style: %s (should be \"miter\", \"round\" or \"bevel\")", b.Style)
+		}
 	}
 
 	return nil
+}
+
+func (b *Border) mergeIn(b0 *Border) {
+	if b.Width == 0 {
+		b.Width = b0.Width
+	}
+	if b.col == nil {
+		b.col = b0.col
+	}
+	if b.style == LJMiter {
+		b.style = b0.style
+	}
+}
+
+type Margin struct {
+	Name                     string
+	Width                    float64
+	Top, Right, Bottom, Left float64
+}
+
+func (m *Margin) validate() error {
+
+	if m.Name == "$" {
+		return errors.New("pdfcpu: invalid margin reference $")
+	}
+
+	if m.Width < 0 {
+		if m.Top > 0 || m.Right > 0 || m.Bottom > 0 || m.Left > 0 {
+			return errors.Errorf("pdfcpu: individual margins not allowed for width: %f", m.Width)
+		}
+	}
+
+	if m.Width > 0 {
+		m.Top, m.Right, m.Bottom, m.Left = m.Width, m.Width, m.Width, m.Width
+		return nil
+	}
+
+	return nil
+}
+
+func (m *Margin) mergeIn(m0 *Margin) {
+	if m.Width > 0 {
+		return
+	}
+	if m.Width < 0 {
+		m.Top, m.Right, m.Bottom, m.Left = 0, 0, 0, 0
+		return
+	}
+
+	if m.Top == 0 {
+		m.Top = m0.Top
+	} else if m.Top < 0 {
+		m.Top = 0.
+	}
+
+	if m.Right == 0 {
+		m.Right = m0.Right
+	} else if m.Right < 0 {
+		m.Right = 0.
+	}
+
+	if m.Bottom == 0 {
+		m.Bottom = m0.Bottom
+	} else if m.Bottom < 0 {
+		m.Bottom = 0.
+	}
+
+	if m.Left == 0 {
+		m.Left = m0.Left
+	} else if m.Left < 0 {
+		m.Left = 0.
+	}
 }
 
 type TextFieldLabel struct {
@@ -172,23 +284,25 @@ func (tfl *TextFieldLabel) validate() error {
 	}
 
 	if tfl.Font != nil {
+		tfl.Font.pdf = tfl.pdf
 		if err := tfl.Font.validate(); err != nil {
 			return err
 		}
 	}
 
 	if tfl.Border != nil {
+		tfl.Border.pdf = tfl.pdf
 		if err := tfl.Border.validate(); err != nil {
 			return err
 		}
 	}
 
 	if tfl.BackgroundColor != "" {
-		sc, err := parseHexColor(tfl.BackgroundColor)
+		sc, err := tfl.pdf.parseColor(tfl.BackgroundColor)
 		if err != nil {
 			return err
 		}
-		tfl.bgCol = &sc
+		tfl.bgCol = sc
 	}
 
 	tfl.horAlign = AlignLeft
@@ -203,18 +317,284 @@ func (tfl *TextFieldLabel) validate() error {
 	return nil
 }
 
+type SimpleBox struct {
+	pdf       *PDF
+	content   *Content
+	Name      string
+	Position  [2]float64 `json:"pos"` // x,y
+	x, y      float64
+	Dx, Dy    float64
+	Anchor    string
+	anchor    anchor
+	anchored  bool
+	Width     float64
+	Height    float64
+	Margin    *Margin
+	Border    *Border
+	FillColor string `json:"fillCol"`
+	fillCol   *SimpleColor
+	Rotation  float64 `json:"rot"`
+	URL       string
+	Hide      bool
+}
+
+func (sb *SimpleBox) validate() error {
+
+	sb.x = sb.Position[0]
+	sb.y = sb.Position[1]
+
+	if sb.Name == "$" {
+		return errors.New("pdfcpu: invalid box reference $")
+	}
+
+	if sb.Anchor != "" {
+		if sb.Position[0] != 0 || sb.Position[1] != 0 {
+			return errors.New("pdfcpu: Please supply \"pos\" or \"anchor\"")
+		}
+		a, err := parseAnchor(sb.Anchor)
+		if err != nil {
+			return err
+		}
+		sb.anchor = a
+		sb.anchored = true
+	}
+
+	if sb.Margin != nil {
+		if err := sb.Margin.validate(); err != nil {
+			return err
+		}
+	}
+
+	if sb.Border != nil {
+		sb.Border.pdf = sb.pdf
+		if err := sb.Border.validate(); err != nil {
+			return err
+		}
+	}
+
+	if sb.FillColor != "" {
+		sc, err := sb.pdf.parseColor(sb.FillColor)
+		if err != nil {
+			return err
+		}
+		sb.fillCol = sc
+	}
+
+	return nil
+}
+
+func (sb *SimpleBox) margin(name string) *Margin {
+	return sb.content.namedMargin(name)
+}
+
+func (sb *SimpleBox) border(name string) *Border {
+	return sb.content.namedBorder(name)
+}
+
+func (sb *SimpleBox) mergeIn(sb0 *SimpleBox) {
+	if sb.Width == 0 {
+		sb.Width = sb0.Width
+	}
+	if sb.Height == 0 {
+		sb.Height = sb0.Height
+	}
+	if !sb.anchored && sb.x == 0 && sb.y == 0 {
+		sb.x = sb0.x
+		sb.y = sb0.y
+		sb.anchor = sb0.anchor
+		sb.anchored = sb0.anchored
+	}
+
+	if sb.Dx == 0 {
+		sb.Dx = sb0.Dx
+	}
+	if sb.Dy == 0 {
+		sb.Dy = sb0.Dy
+	}
+
+	if sb.Margin == nil {
+		sb.Margin = sb0.Margin
+	}
+
+	if sb.Border == nil {
+		sb.Border = sb0.Border
+	}
+
+	if sb.fillCol == nil {
+		sb.fillCol = sb0.fillCol
+	}
+
+	if sb.Rotation == 0 {
+		sb.Rotation = sb0.Rotation
+	}
+
+	if !sb.Hide {
+		sb.Hide = sb0.Hide
+	}
+}
+
+func anchorPosition(a anchor, r *Rectangle, w, h float64) (x float64, y float64) {
+	switch a {
+	case TopLeft:
+		x, y = 0, r.Height()-h
+	case TopCenter:
+		x, y = r.Width()/2-w/2, r.Height()-h
+	case TopRight:
+		x, y = r.Width()-w, r.Height()-h
+	case Left:
+		x, y = 0, r.Height()/2-h/2
+	case Center:
+		x, y = r.Width()/2-w/2, r.Height()/2-h/2
+	case Right:
+		x, y = r.Width()-w, r.Height()/2-h/2
+	case BottomLeft:
+		x, y = 0, 0
+	case BottomCenter:
+		x, y = r.Width()/2-w/2, 0
+	case BottomRight:
+		x, y = r.Width()-w, 0
+	}
+	return
+}
+
+func (sb *SimpleBox) render(p *Page) error {
+	pdf := sb.content.page.pdf
+	bWidth := 0.
+	var bCol *SimpleColor
+	bStyle := LJMiter
+	if sb.Border != nil {
+		b := sb.Border
+		if b.Name != "" && b.Name[0] == '$' {
+			// Use named border
+			bName := b.Name[1:]
+			b0 := sb.border(bName)
+			if b0 == nil {
+				return errors.Errorf("pdfcpu: unknown named border %s", bName)
+			}
+			b.mergeIn(b0)
+		}
+		if b.Width >= 0 {
+			bWidth = float64(b.Width)
+			if b.col != nil {
+				bCol = b.col
+			}
+			bStyle = b.style
+		}
+	}
+
+	mTop, mRight, mBottom, mLeft := 0., 0., 0., 0.
+	if sb.Margin != nil {
+		m := sb.Margin
+		if m.Name != "" && m.Name[0] == '$' {
+			// use named margin
+			mName := m.Name[1:]
+			m0 := sb.margin(mName)
+			if m0 == nil {
+				return errors.Errorf("pdfcpu: unknown named margin %s", mName)
+			}
+			m.mergeIn(m0)
+		}
+
+		if m.Width > 0 {
+			mTop = m.Width
+			mRight = m.Width
+			mBottom = m.Width
+			mLeft = m.Width
+		} else {
+			mTop = m.Top
+			mRight = m.Right
+			mBottom = m.Bottom
+			mLeft = m.Left
+		}
+	}
+
+	cBox := sb.content.Box()
+	r := sb.content.Box().CroppedCopy(0)
+	r.LL.X += mLeft
+	r.LL.Y += mBottom
+	r.UR.X -= mRight
+	r.UR.Y -= mTop
+
+	var x, y float64
+	if sb.anchored {
+		x, y = anchorPosition(sb.anchor, r, sb.Width, sb.Height)
+	} else {
+		x, y = coord(sb.x, sb.y, r, pdf.origin, false)
+		if y < 0 {
+			y = cBox.Center().Y - sb.Height/2 - r.LL.Y
+		} else if y > 0 {
+			y -= mBottom
+		}
+		if x < 0 {
+			x = cBox.Center().X - sb.Width/2 - r.LL.X
+		} else if x > 0 {
+			x -= mLeft
+		}
+	}
+
+	x += r.LL.X + sb.Dx
+	y += r.LL.Y + sb.Dy
+
+	if x < r.LL.X {
+		x = r.LL.X
+	} else if x > r.UR.X-sb.Width {
+		x = r.UR.X - sb.Width
+	}
+
+	if y < r.LL.Y {
+		y = r.LL.Y
+	} else if y > r.UR.Y-sb.Height {
+		y = r.UR.Y - sb.Height
+	}
+
+	r = RectForWidthAndHeight(x, y, sb.Width, sb.Height)
+	r.LL.X += bWidth / 2
+	r.LL.Y += bWidth / 2
+	r.UR.X -= bWidth / 2
+	r.UR.Y -= bWidth / 2
+
+	if bCol == nil {
+		bCol = &Black
+	}
+
+	// TODO Fix: All within same transform for rotate.
+
+	if sb.fillCol != nil {
+		if bWidth == 0 {
+			bCol = sb.fillCol
+		}
+		FillRect(p.Buf, r, bWidth, bCol, *sb.fillCol, &bStyle)
+		return nil
+	}
+
+	DrawRect(p.Buf, r, bWidth, bCol, &bStyle)
+	return nil
+}
+
 type TextBox struct {
+	pdf             *PDF
+	content         *Content
+	Name            string
 	Value           string     // text, content
 	Position        [2]float64 `json:"pos"` // x,y
 	x, y            float64
+	Dx, Dy          float64
+	Anchor          string
+	anchor          anchor
+	anchored        bool
 	Width           float64
 	Font            *FormFont
+	Margin          *Margin
 	Border          *Border
+	Padding         *Padding
 	BackgroundColor string `json:"bgCol"`
 	bgCol           *SimpleColor
 	Alignment       string `json:"align"` // "Left", "Center", "Right"
 	horAlign        HAlignment
 	RTL             bool
+	Rotation        float64 `json:"rot"`
+	URL             string
+	Hide            bool
 }
 
 func (tb *TextBox) validate() error {
@@ -222,25 +602,56 @@ func (tb *TextBox) validate() error {
 	tb.x = tb.Position[0]
 	tb.y = tb.Position[1]
 
-	if tb.Font == nil {
+	if tb.Name == "$" {
+		return errors.New("pdfcpu: invalid text reference $")
+	}
+
+	if tb.Anchor != "" {
+		if tb.Position[0] != 0 || tb.Position[1] != 0 {
+			return errors.New("pdfcpu: Please supply \"pos\" or \"anchor\"")
+		}
+		a, err := parseAnchor(tb.Anchor)
+		if err != nil {
+			return err
+		}
+		tb.anchor = a
+		tb.anchored = true
+	}
+
+	if tb.Font != nil {
+		tb.Font.pdf = tb.pdf
+		if err := tb.Font.validate(); err != nil {
+			return err
+		}
+	} else if !strings.HasPrefix(tb.Name, "$") {
 		return errors.New("pdfcpu: textbox missing font definition")
 	}
-	if err := tb.Font.validate(); err != nil {
-		return err
+
+	if tb.Margin != nil {
+		if err := tb.Margin.validate(); err != nil {
+			return err
+		}
 	}
 
 	if tb.Border != nil {
+		tb.Border.pdf = tb.pdf
 		if err := tb.Border.validate(); err != nil {
 			return err
 		}
 	}
 
+	if tb.Padding != nil {
+		if err := tb.Padding.validate(); err != nil {
+			return err
+		}
+	}
+
 	if tb.BackgroundColor != "" {
-		sc, err := parseHexColor(tb.BackgroundColor)
+		sc, err := tb.pdf.parseColor(tb.BackgroundColor)
 		if err != nil {
 			return err
 		}
-		tb.bgCol = &sc
+		tb.bgCol = sc
 	}
 
 	tb.horAlign = AlignLeft
@@ -255,7 +666,247 @@ func (tb *TextBox) validate() error {
 	return nil
 }
 
+func (tb *TextBox) font(name string) *FormFont {
+	return tb.content.namedFont(name)
+}
+
+func (tb *TextBox) margin(name string) *Margin {
+	return tb.content.namedMargin(name)
+}
+
+func (tb *TextBox) border(name string) *Border {
+	return tb.content.namedBorder(name)
+}
+
+func (tb *TextBox) padding(name string) *Padding {
+	return tb.content.namedPadding(name)
+}
+
+func (tb *TextBox) mergeIn(tb0 *TextBox) {
+
+	if !tb.anchored && tb.x == 0 && tb.y == 0 {
+		tb.x = tb0.x
+		tb.y = tb0.y
+		tb.anchor = tb0.anchor
+		tb.anchored = tb0.anchored
+	}
+
+	if tb.Dx == 0 {
+		tb.Dx = tb0.Dx
+	}
+	if tb.Dy == 0 {
+		tb.Dy = tb0.Dy
+	}
+
+	if tb.Width == 0 {
+		tb.Width = tb0.Width
+	}
+
+	if tb.Margin == nil {
+		tb.Margin = tb0.Margin
+	}
+	if tb.Border == nil {
+		tb.Border = tb0.Border
+	}
+	if tb.Padding == nil {
+		tb.Padding = tb0.Padding
+	}
+	if tb.Font == nil {
+		tb.Font = tb0.Font
+	}
+
+	if tb.horAlign == AlignLeft {
+		tb.horAlign = tb0.horAlign
+	}
+
+	if tb.bgCol == nil {
+		tb.bgCol = tb0.bgCol
+	}
+
+	if tb.Rotation == 0 {
+		tb.Rotation = tb0.Rotation
+	}
+
+	if !tb.Hide {
+		tb.Hide = tb0.Hide
+	}
+}
+
+func (tb *TextBox) render(p *Page, pageNr int, fonts FontMap) error {
+	pdf := tb.content.page.pdf
+	f := tb.Font
+	if f.Name[0] == '$' {
+		// use named font
+		fName := f.Name[1:]
+		f0 := tb.font(fName)
+		if f0 == nil {
+			return errors.Errorf("pdfcpu: unknown font name %s", fName)
+		}
+		f.Name = f0.Name
+		if f.Size == 0 {
+			f.Size = f0.Size
+		}
+		if f.col == nil {
+			f.col = f0.col
+		}
+	}
+
+	fontName := f.Name
+	fontSize := f.Size
+	col := f.col
+
+	t, _ := resolveWMTextString(tb.Value, pdf.TimestampFormat, pageNr, pdf.pageCount())
+
+	id, ok := fonts[fontName]
+	if ok {
+		p.Fm[id] = fontName
+	} else {
+		id = p.Fm.EnsureKey(fontName)
+		fonts[fontName] = id
+	}
+
+	td := TextDescriptor{
+		Text:     t,
+		Dx:       tb.Dx,
+		Dy:       tb.Dy,
+		HAlign:   tb.horAlign,
+		VAlign:   AlignBottom,
+		FontName: fontName,
+		FontKey:  id,
+		FontSize: fontSize,
+		Scale:    1.,
+		ScaleAbs: true,
+		Rotation: tb.Rotation,
+		RTL:      tb.RTL, // for user fonts only!
+	}
+
+	if col != nil {
+		td.StrokeCol, td.FillCol = *col, *col
+	}
+
+	if tb.bgCol != nil {
+		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *tb.bgCol
+	}
+
+	if tb.Border != nil {
+		b := tb.Border
+		if b.Name != "" && b.Name[0] == '$' {
+			// Use named border
+			bName := b.Name[1:]
+			b0 := tb.border(bName)
+			if b0 == nil {
+				return errors.Errorf("pdfcpu: unknown named border %s", bName)
+			}
+			b.mergeIn(b0)
+		}
+		if b.Width >= 0 {
+			td.BorderWidth = float64(b.Width)
+			if b.col != nil {
+				td.BorderCol = *b.col
+				td.ShowBorder = true
+			}
+			td.BorderStyle = b.style
+		}
+	}
+
+	if tb.Padding != nil {
+		p := tb.Padding
+		if p.Name != "" && p.Name[0] == '$' {
+			// use named padding
+			pName := p.Name[1:]
+			p0 := tb.padding(pName)
+			if p0 == nil {
+				return errors.Errorf("pdfcpu: unknown named padding %s", pName)
+			}
+			p.mergeIn(p0)
+		}
+
+		if p.Width > 0 {
+			td.MTop = p.Width
+			td.MRight = p.Width
+			td.MBot = p.Width
+			td.MLeft = p.Width
+		} else {
+			td.MTop = p.Top
+			td.MRight = p.Right
+			td.MBot = p.Bottom
+			td.MLeft = p.Left
+		}
+	}
+
+	mTop, mRight, mBottom, mLeft := 0., 0., 0., 0.
+	if tb.Margin != nil {
+		m := tb.Margin
+		if m.Name != "" && m.Name[0] == '$' {
+			// use named margin
+			mName := m.Name[1:]
+			m0 := tb.margin(mName)
+			if m0 == nil {
+				return errors.Errorf("pdfcpu: unknown named margin %s", mName)
+			}
+			m.mergeIn(m0)
+		}
+
+		if m.Width > 0 {
+			mTop = m.Width
+			mRight = m.Width
+			mBottom = m.Width
+			mLeft = m.Width
+		} else {
+			mTop = m.Top
+			mRight = m.Right
+			mBottom = m.Bottom
+			mLeft = m.Left
+		}
+	}
+
+	r := tb.content.Box().CroppedCopy(0)
+	r.LL.X += mLeft
+	r.LL.Y += mBottom
+	r.UR.X -= mRight
+	r.UR.Y -= mTop
+
+	if tb.anchored {
+		WriteMultiLineAnchored(p.Buf, r, nil, td, tb.anchor)
+		return nil
+	}
+
+	td.X, td.Y = coord(tb.x, tb.y, r, pdf.origin, false)
+	cBox := tb.content.Box()
+	if td.Y < 0 {
+		td.Y = cBox.Center().Y - r.LL.Y
+		td.VAlign = AlignMiddle
+	} else if td.Y > 0 {
+		td.Y -= mBottom
+		r.LL.Y += td.BorderWidth // Hack in order to gain nice alignment on position (x,y).
+	}
+	if td.X < 0 {
+		td.X = cBox.Center().X - r.LL.X
+	} else if td.X > 0 {
+		td.X -= mLeft
+	}
+
+	WriteColumn(p.Buf, r, nil, td, float64(tb.Width))
+
+	/*
+	   ann := NewLinkAnnotation(
+	   			*wm.bbTrans.EnclosingRectangle(5.0),
+	   			QuadPoints{wm.bbTrans},
+	   			tb.URL,
+	   			"pdfcpu",
+	   			AnnNoZoom+AnnNoRotate,
+	   			nil)
+
+	   		if _, err := ctx.AddAnnotation(pageIndRef, d, i, ann, false); err != nil {
+	   			return err
+	   		}
+	*/
+
+	return nil
+}
+
 type TextField struct {
+	pdf             *PDF
 	ID              string
 	Value           string     // (Default) value or input data during extraction
 	Rect            [4]float64 // xmin ymin xmax ymax
@@ -282,23 +933,25 @@ func (tf *TextField) validate() error {
 	tf.boundingBox = Rect(r[0], r[1], r[2], r[3])
 
 	if tf.Font != nil {
+		tf.Font.pdf = tf.pdf
 		if err := tf.Font.validate(); err != nil {
 			return err
 		}
 	}
 
 	if tf.Border != nil {
+		tf.Border.pdf = tf.pdf
 		if err := tf.Border.validate(); err != nil {
 			return err
 		}
 	}
 
 	if tf.BackgroundColor != "" {
-		sc, err := parseHexColor(tf.BackgroundColor)
+		sc, err := tf.pdf.parseColor(tf.BackgroundColor)
 		if err != nil {
 			return err
 		}
-		tf.bgCol = &sc
+		tf.bgCol = sc
 	}
 
 	tf.horAlign = AlignLeft
@@ -320,6 +973,7 @@ func (tf *TextField) validate() error {
 }
 
 type CheckBox struct {
+	pdf             *PDF
 	ID              string
 	Value           bool       // checked state
 	Position        [2]float64 `json:"pos"` // x,y
@@ -344,27 +998,30 @@ func (cb *CheckBox) boundingBox() *Rectangle {
 
 func (cb *CheckBox) validate() error {
 
+	pdf := cb.pdf
 	cb.x = cb.Position[0]
 	cb.y = cb.Position[1]
 
 	if cb.Font != nil {
+		cb.Font.pdf = pdf
 		if err := cb.Font.validate(); err != nil {
 			return err
 		}
 	}
 
 	if cb.Border != nil {
+		cb.Border.pdf = pdf
 		if err := cb.Border.validate(); err != nil {
 			return err
 		}
 	}
 
 	if cb.BackgroundColor != "" {
-		sc, err := parseHexColor(cb.BackgroundColor)
+		sc, err := cb.pdf.parseColor(cb.BackgroundColor)
 		if err != nil {
 			return err
 		}
-		cb.bgCol = &sc
+		cb.bgCol = sc
 	}
 
 	if cb.Label != nil {
@@ -455,6 +1112,7 @@ func (b *Buttons) maxLabelWidth(hor bool) (float64, float64) {
 }
 
 type RadioButtonGroup struct {
+	pdf         *PDF
 	ID          string
 	Value       string // checked button
 	Orientation string
@@ -592,7 +1250,7 @@ func (rbg *RadioButtonGroup) validate() error {
 	// }
 
 	// if cb.BackgroundColor != "" {
-	// 	sc, err := parseHexColor(cb.BackgroundColor)
+	// 	sc, err := parseColor(cb.BackgroundColor)
 	// 	if err != nil {
 	// 		return err
 	// 	}
@@ -625,6 +1283,7 @@ type ListBox interface {
 }
 
 type ScrollableListBox struct {
+	pdf             *PDF
 	ID              string
 	Value           string
 	Values          []string
@@ -696,7 +1355,7 @@ func (lb *ScrollableListBox) validateValues() error {
 
 	for _, s := range vv {
 		if !MemberOf(s, lb.Options) {
-			return errors.Errorf("pdfcpu: field: %s invalid value", lb.ID, s)
+			return errors.Errorf("pdfcpu: field: %s invalid value: %s", lb.ID, s)
 		}
 	}
 
@@ -707,6 +1366,7 @@ func (lb *ScrollableListBox) validateValues() error {
 
 func (lb *ScrollableListBox) validate() error {
 
+	pdf := lb.pdf
 	r := lb.Rect
 	if r[0] == 0 && r[1] == 0 && r[2] == 0 && r[3] == 0 {
 		return errors.Errorf("pdfcpu: field: %s missing rect", lb.ID)
@@ -722,23 +1382,25 @@ func (lb *ScrollableListBox) validate() error {
 	}
 
 	if lb.Font != nil {
+		lb.Font.pdf = pdf
 		if err := lb.Font.validate(); err != nil {
 			return err
 		}
 	}
 
 	if lb.Border != nil {
+		lb.Border.pdf = pdf
 		if err := lb.Border.validate(); err != nil {
 			return err
 		}
 	}
 
 	if lb.BackgroundColor != "" {
-		sc, err := parseHexColor(lb.BackgroundColor)
+		sc, err := pdf.parseColor(lb.BackgroundColor)
 		if err != nil {
 			return err
 		}
-		lb.bgCol = &sc
+		lb.bgCol = sc
 	}
 
 	if lb.Label != nil {
@@ -751,6 +1413,7 @@ func (lb *ScrollableListBox) validate() error {
 }
 
 type ComboBox struct {
+	pdf             *PDF
 	ID              string
 	Value           string
 	Options         []string
@@ -809,6 +1472,7 @@ func (cb *ComboBox) values() []string {
 
 func (cb *ComboBox) validate() error {
 
+	pdf := cb.pdf
 	cb.x = cb.Position[0]
 	cb.y = cb.Position[1]
 
@@ -817,27 +1481,29 @@ func (cb *ComboBox) validate() error {
 	}
 
 	if len(cb.Value) > 0 && !MemberOf(cb.Value, cb.Options) {
-		return errors.Errorf("pdfcpu: field: %s invalid value", cb.ID, cb.Value)
+		return errors.Errorf("pdfcpu: field: %s invalid value: %s", cb.ID, cb.Value)
 	}
 
 	if cb.Font != nil {
+		cb.Font.pdf = pdf
 		if err := cb.Font.validate(); err != nil {
 			return err
 		}
 	}
 
 	if cb.Border != nil {
+		cb.Border.pdf = pdf
 		if err := cb.Border.validate(); err != nil {
 			return err
 		}
 	}
 
 	if cb.BackgroundColor != "" {
-		sc, err := parseHexColor(cb.BackgroundColor)
+		sc, err := pdf.parseColor(cb.BackgroundColor)
 		if err != nil {
 			return err
 		}
-		cb.bgCol = &sc
+		cb.bgCol = sc
 	}
 
 	if cb.Label != nil {
@@ -849,12 +1515,8 @@ func (cb *ComboBox) validate() error {
 	return nil
 }
 
-type FontResource struct {
-	resID  string
-	indRef IndirectRef
-}
-
 type Form struct {
+	pdf               *PDF // Hack
 	Paper             string
 	mediaBox          *Rectangle
 	BackgroundColor   string `json:"bgCol"`
@@ -869,12 +1531,14 @@ type Form struct {
 	ComboBoxes        []*ComboBox          // input comboboxes with optional label and editable.
 	fields            StringSet
 	annots            Array
-	fonts             map[string]FontResource
+	fonts             map[string]Resource
+	images            map[string]Resource
 	DA                Object
 }
 
 func (f *Form) validate() error {
 
+	pdf := f.pdf
 	f.mediaBox = RectForFormat("A4")
 	if f.Paper != "" {
 		dim, _, err := parsePageFormat(f.Paper)
@@ -885,20 +1549,22 @@ func (f *Form) validate() error {
 	}
 
 	if f.BackgroundColor != "" {
-		sc, err := parseHexColor(f.BackgroundColor)
-		if err != nil {
+		sc, err := f.pdf.parseColor(f.BackgroundColor)
+		if err == nil {
 			return err
 		}
-		f.bgCol = &sc
+		f.bgCol = sc
 	}
 
 	if f.InputFont != nil {
+		f.InputFont.pdf = pdf
 		if err := f.InputFont.validate(); err != nil {
 			return err
 		}
 	}
 
 	if f.LabelFont != nil {
+		f.LabelFont.pdf = pdf
 		if err := f.LabelFont.validate(); err != nil {
 			return err
 		}
@@ -912,6 +1578,7 @@ func (f *Form) validate() error {
 			return errors.Errorf("pdfcpu: duplicate form field: %s", tf.ID)
 		}
 		f.fields[tf.ID] = true
+		tf.pdf = pdf
 		if err := tf.validate(); err != nil {
 			return err
 		}
@@ -925,6 +1592,7 @@ func (f *Form) validate() error {
 			return errors.Errorf("pdfcpu: duplicate form field: %s", cb.ID)
 		}
 		f.fields[cb.ID] = true
+		cb.pdf = pdf
 		if err := cb.validate(); err != nil {
 			return err
 		}
@@ -938,6 +1606,7 @@ func (f *Form) validate() error {
 			return errors.Errorf("pdfcpu: duplicate form field: %s", rbg.ID)
 		}
 		f.fields[rbg.ID] = true
+		rbg.pdf = pdf
 		if err := rbg.validate(); err != nil {
 			return err
 		}
@@ -951,6 +1620,7 @@ func (f *Form) validate() error {
 			return errors.Errorf("pdfcpu: duplicate form field: %s", lb.ID)
 		}
 		f.fields[lb.ID] = true
+		lb.pdf = pdf
 		if err := lb.validate(); err != nil {
 			return err
 		}
@@ -964,6 +1634,7 @@ func (f *Form) validate() error {
 			return errors.Errorf("pdfcpu: duplicate form field: %s", cb.ID)
 		}
 		f.fields[cb.ID] = true
+		cb.pdf = pdf
 		if err := cb.validate(); err != nil {
 			return err
 		}
@@ -1011,7 +1682,7 @@ const ( // See table 221 et.al.
 	FieldCommitOnSelChange
 )
 
-func parseForm(bb []byte) (*Form, error) {
+func parseFormFromJSON(bb []byte) (*Form, error) {
 
 	if !json.Valid(bb) {
 		return nil, errors.Errorf("pdfcpu: invalid JSON encoding detected.")
@@ -1019,7 +1690,7 @@ func parseForm(bb []byte) (*Form, error) {
 
 	form := &Form{
 		fields: StringSet{},
-		fonts:  map[string]FontResource{},
+		fonts:  map[string]Resource{},
 	}
 
 	if err := json.Unmarshal(bb, form); err != nil {
@@ -1448,53 +2119,159 @@ func createListBoxLabel(lb ListBox, p *Page, font *FormFont) error {
 	return nil
 }
 
-func createTextBox(tb *TextBox, p *Page) error {
-
-	w := float64(tb.Width)
-
-	fontName := tb.Font.Name
-	fontSize := tb.Font.Size
-	col := tb.Font.col
-
-	k := p.Fm.EnsureKey(fontName)
-
-	td := TextDescriptor{
-		Text:     tb.Value,
-		X:        tb.x,
-		Y:        tb.y,
-		HAlign:   tb.horAlign,
-		VAlign:   AlignBottom,
-		FontName: fontName,
-		FontKey:  k,
-		FontSize: fontSize,
-		Scale:    1.,
-		ScaleAbs: true,
-		RTL:      tb.RTL, // for user fonts only!
-		// MTop, MBot, MLeft, MRight
-		// Borderwidth, BorderStyle, BordeCol
-		// Rotation
+func coord(x, y float64, r *Rectangle, origin Corner, absolute bool) (float64, float64) {
+	switch origin {
+	case UpperLeft:
+		if y >= 0 {
+			y = r.Height() - y
+		}
+	case LowerRight:
+		if x >= 0 {
+			x = r.Width() - x
+		}
+	case UpperRight:
+		if x >= 0 {
+			x = r.Width() - x
+		}
+		if y >= 0 {
+			y = r.Height() - y
+		}
 	}
-
-	if col != nil {
-		td.StrokeCol, td.FillCol = *col, *col
+	if absolute {
+		if x >= 0 {
+			x += r.LL.X
+		}
+		if y >= 0 {
+			y += r.LL.Y
+		}
 	}
-
-	// Set Border color etc.
-
-	if tb.bgCol != nil {
-		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *tb.bgCol
-		// ShowMargins
-	}
-
-	WriteColumn(p.Buf, p.MediaBox, nil, td, w)
-
-	return nil
+	return x, y
 }
+
+// func createTextBox(tb *TextBox, pageNr int, p *Page, pdf *PDF) error {
+
+// 	f := tb.Font
+// 	if f.Name[0] == '$' {
+// 		// use inherited font
+// 		fName := f.Name[1:]
+// 		f0 := tb.font(fName)
+// 		if f0 == nil {
+// 			return errors.Errorf("pdfcpu: unknown font name %s", fName)
+// 		}
+// 		if f.Size == 0 {
+// 			f.Size = f0.Size
+// 		}
+// 		if f.col == nil {
+// 			f.col = f0.col
+// 		}
+// 	}
+
+// 	fontName := f.Name
+// 	fontSize := f.Size
+// 	col := f.col
+
+// 	x, y := coord(tb.x, tb.y, p.CropBox, pdf.origin)
+// 	t, _ := resolveWMTextString(tb.Value, pageNr, pdf.pageCount())
+// 	k := p.Fm.EnsureKey(fontName)
+
+// 	td := TextDescriptor{
+// 		Text:     t,
+// 		X:        x,
+// 		Y:        y,
+// 		HAlign:   tb.horAlign,
+// 		VAlign:   AlignBottom,
+// 		FontName: fontName,
+// 		FontKey:  k,
+// 		FontSize: fontSize,
+// 		Scale:    1.,
+// 		ScaleAbs: true,
+// 		Rotation: tb.Rotation,
+// 		RTL:      tb.RTL, // for user fonts only!
+// 	}
+
+// 	if col != nil {
+// 		td.StrokeCol, td.FillCol = *col, *col
+// 	}
+
+// 	if tb.bgCol != nil {
+// 		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *tb.bgCol
+// 	}
+
+// 	if tb.Border != nil {
+// 		b := tb.Border
+// 		if b.Name != "" && b.Name[0] == '$' {
+// 			// use inherited border
+// 			bName := b.Name[1:]
+// 			b0 := tb.border(bName)
+// 			if b0 == nil {
+// 				return errors.Errorf("pdfcpu: unknown border %s", bName)
+// 			}
+// 			if b.Width == 0 {
+// 				b.Width = b0.Width
+// 			}
+// 			if b.col == nil {
+// 				b.col = b0.col
+// 			}
+// 			if b.style == LJMiter {
+// 				b.style = b0.style
+// 			}
+// 		}
+// 		td.BorderWidth = float64(b.Width)
+// 		if b.col != nil {
+// 			td.BorderCol = *b.col
+// 			td.ShowBorder = true
+// 		}
+// 		td.BorderStyle = b.style
+// 	}
+
+// 	if tb.Margin != nil {
+// 		m := tb.Margin
+// 		if m.Name != "" && m.Name[0] == '$' {
+// 			// use inherited margin
+// 			mName := m.Name[1:]
+// 			m0 := tb.margin(mName)
+// 			if m0 == nil {
+// 				return errors.Errorf("pdfcpu: unknown margin %s", mName)
+// 			}
+// 			if m.Width == 0 {
+// 				// inherit all margins that are not set
+// 				if m.Top == 0 {
+// 					m.Top = m0.Top
+// 				}
+// 				if m.Right == 0 {
+// 					m.Right = m0.Right
+// 				}
+// 				if m.Bottom == 0 {
+// 					m.Bottom = m0.Bottom
+// 				}
+// 				if m.Left == 0 {
+// 					m.Left = m0.Left
+// 				}
+// 			}
+// 		}
+
+// 		if m.Width > 0 {
+// 			td.MTop = m.Width
+// 			td.MRight = m.Width
+// 			td.MBot = m.Width
+// 			td.MLeft = m.Width
+// 		} else {
+// 			td.MTop = m.Top
+// 			td.MRight = m.Right
+// 			td.MBot = m.Bottom
+// 			td.MLeft = m.Left
+// 		}
+// 	}
+
+// 	WriteColumn(p.Buf, p.MediaBox, nil, td, float64(tb.Width))
+
+// 	return nil
+// }
 
 func createTextField(
 	xRefTable *XRefTable,
 	tf *TextField,
-	fonts map[string]FontResource,
+	fonts map[string]Resource,
 	inheritedDA string,
 	pageAnnots *Array,
 	fields *Array,
@@ -1594,7 +2371,7 @@ func createTextField(
 func createCheckBox(
 	xRefTable *XRefTable,
 	cb *CheckBox,
-	fonts map[string]FontResource,
+	fonts map[string]Resource,
 	inheritedDA string,
 	pageAnnots *Array,
 	fields *Array,
@@ -1845,7 +2622,7 @@ func createRadioButtonFields(
 func createRadioButtonGroup(
 	xRefTable *XRefTable,
 	rbg *RadioButtonGroup,
-	fonts map[string]FontResource,
+	fonts map[string]Resource,
 	inheritedDA string,
 	pageAnnots *Array,
 	fields *Array,
@@ -1888,7 +2665,7 @@ func createListBox(
 	xRefTable *XRefTable,
 	lb ListBox,
 	combo bool,
-	fonts map[string]FontResource,
+	fonts map[string]Resource,
 	inheritedDA string,
 	pageAnnots *Array,
 	fields *Array,
@@ -2002,7 +2779,7 @@ func createLabels(form *Form) (Page, error) {
 
 	p := Page{MediaBox: form.mediaBox, Fm: FontMap{}, Buf: new(bytes.Buffer)}
 	if form.bgCol != nil {
-		FillRect(p.Buf, form.mediaBox, *form.bgCol)
+		FillRectNoBorder(p.Buf, form.mediaBox, *form.bgCol)
 	}
 
 	for _, tf := range form.TextFields {
@@ -2036,9 +2813,13 @@ func createLabels(form *Form) (Page, error) {
 	}
 
 	for _, tb := range form.TextBoxes {
-		if err := createTextBox(tb, &p); err != nil {
+		// Fix pageNr, fonts
+		if err := tb.render(&p, 0, nil); err != nil {
 			return p, err
 		}
+		// if err := createTextBox(tb, 0, &p, form.pdf); err != nil {
+		// 	return p, err
+		// }
 	}
 
 	//DrawHairCross(p.Buf, 0, 0, p.MediaBox)
@@ -2046,19 +2827,20 @@ func createLabels(form *Form) (Page, error) {
 	return p, nil
 }
 
-func ensureFont(xRefTable *XRefTable, fontName string, fonts map[string]FontResource) (string, error) {
+func ensureFont(xRefTable *XRefTable, fontName string, fonts map[string]Resource) (string, error) {
 	fontResource, ok := fonts[fontName]
 	if ok {
-		return fontResource.resID, nil
+		return fontResource.id, nil
 	}
 	resID := fmt.Sprintf("F%d", len(fonts))
 
+	// TODO ensure usedChars For userfonts used for textfield inputfonts.
 	indRef, err := createFontDict(xRefTable, fontName)
 	if err != nil {
 		return "", err
 	}
 
-	fonts[fontName] = FontResource{resID: resID, indRef: *indRef}
+	fonts[fontName] = Resource{id: resID, indRef: *indRef}
 
 	return resID, nil
 }
@@ -2124,7 +2906,9 @@ func createForm(xRefTable *XRefTable, form *Form, pageIndRef *IndirectRef) (Dict
 	if len(form.fonts) > 0 {
 		d1 := Dict{}
 		for _, fontRes := range form.fonts {
-			d1.Insert(fontRes.resID, fontRes.indRef)
+			if fontRes.id != "" {
+				d1.Insert(fontRes.id, fontRes.indRef)
+			}
 		}
 		d["DR"] = Dict(map[string]Object{"Font": d1})
 	}
@@ -2132,35 +2916,57 @@ func createForm(xRefTable *XRefTable, form *Form, pageIndRef *IndirectRef) (Dict
 	return d, nil
 }
 
-func createFormPage(xRefTable *XRefTable, parentPageIndRef IndirectRef, p Page, f *Form) (*IndirectRef, Dict, error) {
+func createFormPage(
+	xRefTable *XRefTable,
+	parentPageIndRef IndirectRef,
+	p Page,
+	fonts map[string]Resource) (*IndirectRef, Dict, error) {
 
 	pageDict := Dict(
 		map[string]Object{
-			"Type":   Name("Page"),
-			"Parent": parentPageIndRef,
+			"Type":     Name("Page"),
+			"Parent":   parentPageIndRef,
+			"MediaBox": p.MediaBox.Array(),
+			"CropBox":  p.CropBox.Array(),
 		},
 	)
 
+	// Populate font resources
+
 	fontRes := Dict{}
-	for k, fontName := range p.Fm {
-		fontResource, ok := f.fonts[fontName]
+	for id, fontName := range p.Fm {
+		fontResource, ok := fonts[fontName]
 		if !ok {
-			ir, err := createFontDict(xRefTable, fontName)
+			indRef, err := createFontDict(xRefTable, fontName)
 			if err != nil {
 				return nil, pageDict, err
 			}
-			fontRes.Insert(k, *ir)
-			continue
+			fontResource = Resource{id: id, indRef: *indRef}
+			fonts[fontName] = fontResource
 		}
-		fontRes.Insert(k, fontResource.indRef)
+		fontRes.Insert(id, fontResource.indRef)
 	}
 
-	if len(fontRes) > 0 {
-		resDict := Dict(
-			map[string]Object{
-				"Font": fontRes,
-			},
-		)
+	// Populate image resources
+
+	imgRes := Dict{}
+	for _, img := range p.Im {
+		imgRes.Insert(img.res.id, img.res.indRef)
+	}
+
+	if len(fontRes) > 0 || len(imgRes) > 0 {
+
+		resDict := Dict(map[string]Object{})
+		//"ProcSet": NewNameArray("PDF", "Text", "ImageB", "ImageC", "ImageI"),
+
+		if len(fontRes) > 0 {
+			resDict["Font"] = fontRes
+		}
+
+		if len(imgRes) > 0 {
+			resDict["XObject"] = imgRes
+		}
+
 		pageDict.Insert("Resources", resDict)
 	}
 
@@ -2183,6 +2989,7 @@ func addPageTreeWithFormFields(xRefTable *XRefTable, rootDict Dict, p Page, f *F
 			"Type":     Name("Pages"),
 			"Count":    Integer(1),
 			"MediaBox": p.MediaBox.Array(),
+			"CropBox":  p.CropBox.Array(),
 		},
 	)
 
@@ -2192,7 +2999,7 @@ func addPageTreeWithFormFields(xRefTable *XRefTable, rootDict Dict, p Page, f *F
 	}
 
 	// adding annotations to page
-	pageIndRef, pageDict, err := createFormPage(xRefTable, *parentPageIndRef, p, f)
+	pageIndRef, pageDict, err := createFormPage(xRefTable, *parentPageIndRef, p, f.fonts)
 	if err != nil {
 		return nil, err
 	}
@@ -2213,9 +3020,9 @@ func addPageTreeWithFormFields(xRefTable *XRefTable, rootDict Dict, p Page, f *F
 }
 
 // Create a PDF with a single page form with 1 text field.
-func CreateFormXRef(bb []byte) (*XRefTable, error) {
+func CreateFormXRefFromJSON(bb []byte) (*XRefTable, error) {
 
-	form, err := parseForm(bb)
+	form, err := parseFormFromJSON(bb)
 	if err != nil {
 		return nil, err
 	}

@@ -1,0 +1,226 @@
+{
+	"paper": "A4",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"guides": true,
+	"//bgcol": "#7EDED9",
+	"fonts": {
+		"myCourier": {
+			"name": "Courier",
+			"size": 12,
+			"col": "#00AA00"
+		}
+	},
+	"borders": {
+		"myBorder": {
+			"width": 5,
+			"col": "#FF0000",
+			"style": "round"
+		}
+	},
+	"margins": {
+		"margin": {
+			"top": 5,
+			"right": 0,
+			"bottom": 20,
+			"left": 0
+		},
+		"myMargin": {
+			"top": 5,
+			"right": 0,
+			"bottom": 5,
+			"left": 0
+		}
+	},
+	"header": {
+		"font": {
+			"name": "Courier-Bold",
+			"size": 24,
+			"col": "#0000FF"
+		},
+		"center": "Attribute Inheritance",
+		"thru": 2,
+		"height": 100,
+		"dx": 20,
+		"dy": 10,
+		"border": true
+	},
+	"footer": {
+		"font": {
+			"name": "$myCourier"
+		},
+		"left": "Footer left",
+		"center": "Page %p of %P",
+		"right": "Footer right",
+		"from": 2,
+		"height": 30,
+		"dx": 10,
+		"dy": 10,
+		"border": true
+	},
+	"pages": {
+		"2": {
+			"paper": "A4L",
+			"insert": true,
+			"crop": "20",
+			"bgcol": "#BEDED9",
+			"guides": [
+				{
+					"top": true,
+					"pos": [
+						50,
+						100
+					]
+				},
+				{
+					"top": true,
+					"pos": [
+						100,
+						200
+					]
+				}
+			],
+			"fonts": {
+				"myCourier": {
+					"col": "#00FFFF"
+				},
+				"myHelvetica": {
+					"name": "Helvetica",
+					"size": 12,
+					"col": "#FFFF00"
+				}
+			},
+			"borders": {
+				"myBorder": {
+					"col": "#0000FF",
+					"style": "bevel"
+				}
+			},
+			"margins": {
+				"margin": {
+					"right": 5,
+					"left": 5
+				},
+				"myMargin": {
+					"right": 5,
+					"left": 5
+				}
+			},
+			"text": [
+				{
+					"value": "Page %p of %P. A multiline textbox @(50,100)\nusing page scoped Courier 12, border and margin",
+					"//pos": [
+						50,
+						100
+					],
+					"anchor": "br",
+					"dx": -5,
+					"dy": 10,
+					"width": 0,
+					"align": "left",
+					"rot": 0,
+					"bgCol": "#03F890",
+					"font": {
+						"name": "$myCourier"
+					},
+					"border": {
+						"name": "$myBorder"
+					},
+					"margin": {
+						"name": "$myMargin",
+						"top": 10,
+						"bottom": 10
+					}
+				},
+				{
+					"value": "A textbox @(100,200) page scoped Helvetica 12, border and margin",
+					"pos": [
+						100,
+						200
+					],
+					"width": 0,
+					"align": "left",
+					"rot": 0,
+					"bgCol": "#03F890",
+					"font": {
+						"name": "$myHelvetica"
+					},
+					"border": {
+						"name": "$myBorder"
+					},
+					"margin": {
+						"name": "$myMargin",
+						"top": 20,
+						"bottom": 20
+					}
+				}
+			]
+		},
+		"4": {
+			"insert": true,
+			"guides": [
+				{
+					"top": true,
+					"pos": [
+						50,
+						100
+					]
+				},
+				{
+					"top": true,
+					"pos": [
+						100,
+						300
+					]
+				}
+			],
+			"text": [
+				{
+					"value": "Page %p of %P. A multiline textbox @(50,100)\nusing global Courier 18, border and margin",
+					"pos": [
+						50,
+						100
+					],
+					"width": 0,
+					"align": "left",
+					"rot": 0,
+					"bgCol": "#03F890",
+					"font": {
+						"name": "$myCourier",
+						"size": 18
+					},
+					"border": {
+						"name": "$myBorder",
+						"style": "round"
+					},
+					"margin": {
+						"name": "$myMargin"
+					}
+				},
+				{
+					"value": "A multiline textbox @(100,300)\nwith rounded corners\nusing local Helvetica 24, border, margin",
+					"pos": [
+						100,
+						300
+					],
+					"width": 0,
+					"align": "left",
+					"rot": 0,
+					"bgCol": "#03F890",
+					"font": {
+						"name": "Helvetica",
+						"size": 24,
+						"col": "#A00000"
+					},
+					"border": {
+						"width": 5,
+						"style": "round"
+					},
+					"margin": {
+						"width": 5
+					}
+				}
+			]
+		}
+	}
+}

@@ -24,15 +24,15 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
-// CreateForm reads a form definition from jsonFile, creates a single page form and writes it to outFile.
-func CreateForm(rd io.Reader, outFile string, conf *pdfcpu.Configuration) error {
+// CreateFormFromJSON reads a form definition from rd, creates a multiple page PDF form and writes it to outFile.
+func CreateFormFromJSON(rd io.Reader, outFile string, conf *pdfcpu.Configuration) error {
 
 	bb, err := ioutil.ReadAll(rd)
 	if err != nil {
 		return err
 	}
 
-	xRefTable, err := pdfcpu.CreateFormXRef(bb)
+	xRefTable, err := pdfcpu.CreateFormXRefFromJSON(bb)
 	if err != nil {
 		return err
 	}
@@ -40,14 +40,15 @@ func CreateForm(rd io.Reader, outFile string, conf *pdfcpu.Configuration) error 
 	return CreatePDFFile(xRefTable, outFile, conf)
 }
 
-func CreateFormFile(inFile, outFile string, conf *pdfcpu.Configuration) error {
+// CreateFormFromJSONFile reads a form definition from inFile, creates a multi page PDF form and writes it to outFile.
+func CreateFormFromJSONFile(inFile, outFile string, conf *pdfcpu.Configuration) error {
 
 	f, err := os.Open(inFile)
 	if err != nil {
 		return err
 	}
 
-	return CreateForm(f, outFile, conf)
+	return CreateFormFromJSON(f, outFile, conf)
 }
 
 // ExtractForm extracts form data from inFile into jsonFile.

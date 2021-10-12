@@ -72,89 +72,89 @@ func TestBooklet(t *testing.T) {
 			true,
 		},
 
-		// 4-up booklet from images on A4
-		{"TestBookletFromImagesA44Up",
-			imageFileNames(t, resDir),
-			filepath.Join(outDir, "BookletFromImagesA4_4Up.pdf"),
-			nil,
-			"p:A4, border:false, g:on, ma:25, bgcol:#beded9",
-			4,
-			true,
-		},
+		// // 4-up booklet from images on A4
+		// {"TestBookletFromImagesA44Up",
+		// 	imageFileNames(t, resDir),
+		// 	filepath.Join(outDir, "BookletFromImagesA4_4Up.pdf"),
+		// 	nil,
+		// 	"p:A4, border:false, g:on, ma:25, bgcol:#beded9",
+		// 	4,
+		// 	true,
+		// },
 
-		// 2-up booklet from PDF on A4
-		{"TestBookletFromPDF2UpA4",
-			[]string{filepath.Join(inDir, "zineTest.pdf")},
-			filepath.Join(outDir, "BookletFromPDFA4_2Up.pdf"),
-			nil, // all pages
-			"p:A4, border:false, g:on, ma:10, bgcol:#beded9",
-			2,
-			false,
-		},
+		// // 2-up booklet from PDF on A4
+		// {"TestBookletFromPDF2UpA4",
+		// 	[]string{filepath.Join(inDir, "zineTest.pdf")},
+		// 	filepath.Join(outDir, "BookletFromPDFA4_2Up.pdf"),
+		// 	nil, // all pages
+		// 	"p:A4, border:false, g:on, ma:10, bgcol:#beded9",
+		// 	2,
+		// 	false,
+		// },
 
-		// 4-up booklet from PDF on A4
-		{"TestBookletFromPDF4UpA4",
-			[]string{filepath.Join(inDir, "zineTest.pdf")},
-			filepath.Join(outDir, "BookletFromPDFA4_4Up.pdf"),
-			[]string{"1-"}, // all pages
-			"p:A4, border:off, guides:on, ma:10, bgcol:#beded9",
-			4,
-			false,
-		},
+		// // 4-up booklet from PDF on A4
+		// {"TestBookletFromPDF4UpA4",
+		// 	[]string{filepath.Join(inDir, "zineTest.pdf")},
+		// 	filepath.Join(outDir, "BookletFromPDFA4_4Up.pdf"),
+		// 	[]string{"1-"}, // all pages
+		// 	"p:A4, border:off, guides:on, ma:10, bgcol:#beded9",
+		// 	4,
+		// 	false,
+		// },
 
-		// 4-up booklet from PDF on Ledger
-		{"TestBookletFromPDF4UpLedger",
-			[]string{filepath.Join(inDir, "bookletTest.pdf")},
-			filepath.Join(outDir, "BookletFromPDFLedger_4Up.pdf"),
-			[]string{"1-24"},
-			"p:LedgerP, g:on, ma:10, bgcol:#f7e6c7",
-			4,
-			false,
-		},
+		// // 4-up booklet from PDF on Ledger
+		// {"TestBookletFromPDF4UpLedger",
+		// 	[]string{filepath.Join(inDir, "bookletTest.pdf")},
+		// 	filepath.Join(outDir, "BookletFromPDFLedger_4Up.pdf"),
+		// 	[]string{"1-24"},
+		// 	"p:LedgerP, g:on, ma:10, bgcol:#f7e6c7",
+		// 	4,
+		// 	false,
+		// },
 
-		// 4-up booklet from PDF on Ledger where the number of pages don't fill the whole sheet
-		{"TestBookletFromPDF4UpLedgerWithTrailingBlankPages",
-			[]string{filepath.Join(inDir, "bookletTest.pdf")},
-			filepath.Join(outDir, "BookletFromPDFLedger_4UpWithTrailingBlankPages.pdf"),
-			[]string{"1-21"},
-			"p:LedgerP, g:on, ma:10, bgcol:#f7e6c7",
-			4,
-			false,
-		},
+		// // 4-up booklet from PDF on Ledger where the number of pages don't fill the whole sheet
+		// {"TestBookletFromPDF4UpLedgerWithTrailingBlankPages",
+		// 	[]string{filepath.Join(inDir, "bookletTest.pdf")},
+		// 	filepath.Join(outDir, "BookletFromPDFLedger_4UpWithTrailingBlankPages.pdf"),
+		// 	[]string{"1-21"},
+		// 	"p:LedgerP, g:on, ma:10, bgcol:#f7e6c7",
+		// 	4,
+		// 	false,
+		// },
 
-		// 2-up booklet from PDF on Letter
-		{"TestBookletFromPDF2UpLetter",
-			[]string{filepath.Join(inDir, "bookletTest.pdf")},
-			filepath.Join(outDir, "BookletFromPDFLetter_2Up.pdf"),
-			[]string{"1-16"},
-			"p:LetterP, g:on, ma:10, bgcol:#f7e6c7",
-			2,
-			false,
-		},
+		// // 2-up booklet from PDF on Letter
+		// {"TestBookletFromPDF2UpLetter",
+		// 	[]string{filepath.Join(inDir, "bookletTest.pdf")},
+		// 	filepath.Join(outDir, "BookletFromPDFLetter_2Up.pdf"),
+		// 	[]string{"1-16"},
+		// 	"p:LetterP, g:on, ma:10, bgcol:#f7e6c7",
+		// 	2,
+		// 	false,
+		// },
 
-		// 2-up booklet from PDF on Letter where the number of pages don't fill the whole sheet
-		{"TestBookletFromPDF2UpLetterWithTrailingBlankPages",
-			[]string{filepath.Join(inDir, "bookletTest.pdf")},
-			filepath.Join(outDir, "BookletFromPDFLetter_2UpWithTrailingBlankPages.pdf"),
-			[]string{"1-14"},
-			"p:LetterP, g:on, ma:10, bgcol:#f7e6c7",
-			2,
-			false,
-		},
+		// // 2-up booklet from PDF on Letter where the number of pages don't fill the whole sheet
+		// {"TestBookletFromPDF2UpLetterWithTrailingBlankPages",
+		// 	[]string{filepath.Join(inDir, "bookletTest.pdf")},
+		// 	filepath.Join(outDir, "BookletFromPDFLetter_2UpWithTrailingBlankPages.pdf"),
+		// 	[]string{"1-14"},
+		// 	"p:LetterP, g:on, ma:10, bgcol:#f7e6c7",
+		// 	2,
+		// 	false,
+		// },
 
-		// 2-up multi folio booklet from PDF on A4 using 8 sheets per folio
-		// using the default foliosize:8
-		// Here we print 2 complete folios (2 x 8 sheets) + 1 partial folio
-		// multi folio only makes sense for n = 2
-		// See also  https://www.instructables.com/How-to-bind-your-own-Hardback-Book/
-		{"TestHardbackBookFromPDF",
-			[]string{filepath.Join(inDir, "WaldenFull.pdf")},
-			filepath.Join(outDir, "HardbackBookFromPDF.pdf"),
-			[]string{"1-70"},
-			"p:A4, multifolio:on, border:off, g:on, ma:10, bgcol:#beded9",
-			2,
-			false,
-		},
+		// // 2-up multi folio booklet from PDF on A4 using 8 sheets per folio
+		// // using the default foliosize:8
+		// // Here we print 2 complete folios (2 x 8 sheets) + 1 partial folio
+		// // multi folio only makes sense for n = 2
+		// // See also  https://www.instructables.com/How-to-bind-your-own-Hardback-Book/
+		// {"TestHardbackBookFromPDF",
+		// 	[]string{filepath.Join(inDir, "WaldenFull.pdf")},
+		// 	filepath.Join(outDir, "HardbackBookFromPDF.pdf"),
+		// 	[]string{"1-70"},
+		// 	"p:A4, multifolio:on, border:off, g:on, ma:10, bgcol:#beded9",
+		// 	2,
+		// 	false,
+		// },
 	} {
 		testBooklet(t, tt.msg, tt.inFiles, tt.outFile, tt.selectedPages, tt.desc, tt.n, tt.isImg)
 	}

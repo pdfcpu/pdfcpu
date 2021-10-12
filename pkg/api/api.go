@@ -170,8 +170,8 @@ func DisableConfigDir() {
 
 // LoadConfiguration locates and loads the default configuration
 // and also loads installed user fonts.
-func LoadConfiguration() {
+func LoadConfiguration() *pdfcpu.Configuration {
 	// Call if you don't have a specific config dir location
 	// and need to use user fonts for stamping or watermarking.
-	pdfcpu.NewDefaultConfiguration()
+	return pdfcpu.NewDefaultConfiguration()
 }

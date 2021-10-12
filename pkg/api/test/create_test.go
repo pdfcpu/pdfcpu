@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
@@ -229,7 +230,7 @@ func writeTextDemoAlignedWidthAndMargin(
 		cr, cg, cb = .75, .75, 1
 	}
 	if mediaBB {
-		pdf.FillRect(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
+		pdf.FillRectNoBorder(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
 	}
 
 	fontName := "Helvetica"
@@ -386,7 +387,7 @@ func writeTextAlignJustifyDemo(p pdf.Page, region *pdf.Rectangle, fontName strin
 		cr, cg, cb = .75, .75, 1
 	}
 	if mediaBB {
-		pdf.FillRect(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
+		pdf.FillRectNoBorder(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
 	}
 
 	k := p.Fm.EnsureKey(fontName)
@@ -436,7 +437,7 @@ func writeTextAlignJustifyColumnDemo(p pdf.Page, region *pdf.Rectangle) {
 		cr, cg, cb = .75, .75, 1
 	}
 	if mediaBB {
-		pdf.FillRect(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
+		pdf.FillRectNoBorder(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
 	}
 
 	fontName := "Times-Roman"
@@ -514,7 +515,7 @@ func writeTextDemoAnchorsWithOffset(p pdf.Page, region *pdf.Rectangle, dx, dy fl
 		cr, cg, cb = .75, .75, 1
 	}
 	if mediaBB {
-		pdf.FillRect(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
+		pdf.FillRectNoBorder(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
 	}
 
 	fontName := "Helvetica"
@@ -608,7 +609,7 @@ func writeTextDemoColumnAnchoredWithOffset(p pdf.Page, region *pdf.Rectangle, dx
 		cr, cg, cb = .75, .75, 1
 	}
 	if mediaBB {
-		pdf.FillRect(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
+		pdf.FillRectNoBorder(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
 	}
 
 	wSmall := 100.
@@ -724,7 +725,7 @@ func writeTextRotateDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx, dy flo
 		cr, cg, cb = .75, .75, 1
 	}
 	if mediaBB {
-		pdf.FillRect(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
+		pdf.FillRectNoBorder(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
 		pdf.DrawHairCross(buf, 0, 0, r)
 	}
 
@@ -864,7 +865,7 @@ func writeTextScaleAbsoluteDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx,
 		cr, cg, cb = .75, .75, 1
 	}
 	if mediaBB {
-		pdf.FillRect(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
+		pdf.FillRectNoBorder(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
 	}
 
 	fillCol := pdf.Black
@@ -1059,7 +1060,7 @@ func writeTextScaleRelativeDemoWithOffset(p pdf.Page, region *pdf.Rectangle, dx,
 		cr, cg, cb = .75, .75, 1
 	}
 	if mediaBB {
-		pdf.FillRect(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
+		pdf.FillRectNoBorder(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
 	}
 
 	fillCol := pdf.Black
@@ -1359,7 +1360,7 @@ func writeTextBorderTest(p pdf.Page, region *pdf.Rectangle) pdf.Page {
 		cr, cg, cb = .75, .75, 1
 	}
 	if mediaBB {
-		pdf.FillRect(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
+		pdf.FillRectNoBorder(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
 	}
 
 	fontName := "Times-Roman"
@@ -1500,14 +1501,14 @@ func createTextBorderNoMarginAlignLeftTest(mediaBox *pdf.Rectangle) pdf.Page {
 
 	pdf.SetLineWidth(p.Buf, 0)
 	pdf.SetStrokeColor(p.Buf, pdf.Black)
-	pdf.DrawLine(p.Buf, 100, 0, 100, 600)
-	pdf.DrawLine(p.Buf, 500, 0, 500, 600)
-	pdf.DrawLine(p.Buf, 110, 0, 110, 600)
-	pdf.DrawLine(p.Buf, 490, 0, 490, 600)
-	pdf.DrawLine(p.Buf, 0, 150, 600, 150)
-	pdf.DrawLine(p.Buf, 0, 450, 600, 450)
-	pdf.DrawLine(p.Buf, 0, 160, 600, 160)
-	pdf.DrawLine(p.Buf, 0, 440, 600, 440)
+	pdf.DrawLineSimple(p.Buf, 100, 0, 100, 600)
+	pdf.DrawLineSimple(p.Buf, 500, 0, 500, 600)
+	pdf.DrawLineSimple(p.Buf, 110, 0, 110, 600)
+	pdf.DrawLineSimple(p.Buf, 490, 0, 490, 600)
+	pdf.DrawLineSimple(p.Buf, 0, 150, 600, 150)
+	pdf.DrawLineSimple(p.Buf, 0, 450, 600, 450)
+	pdf.DrawLineSimple(p.Buf, 0, 160, 600, 160)
+	pdf.DrawLineSimple(p.Buf, 0, 440, 600, 440)
 	//pdf.DrawHairCross(p.Buf, 0, 0, mediaBox)
 	return p
 }
@@ -1543,14 +1544,14 @@ func createTextBorderNoMarginAlignRightTest(mediaBox *pdf.Rectangle) pdf.Page {
 
 	pdf.SetLineWidth(p.Buf, 0)
 	pdf.SetStrokeColor(p.Buf, pdf.Black)
-	pdf.DrawLine(p.Buf, 100, 0, 100, 600)
-	pdf.DrawLine(p.Buf, 500, 0, 500, 600)
-	pdf.DrawLine(p.Buf, 110, 0, 110, 600)
-	pdf.DrawLine(p.Buf, 490, 0, 490, 600)
-	pdf.DrawLine(p.Buf, 0, 150, 600, 150)
-	pdf.DrawLine(p.Buf, 0, 450, 600, 450)
-	pdf.DrawLine(p.Buf, 0, 160, 600, 160)
-	pdf.DrawLine(p.Buf, 0, 440, 600, 440)
+	pdf.DrawLineSimple(p.Buf, 100, 0, 100, 600)
+	pdf.DrawLineSimple(p.Buf, 500, 0, 500, 600)
+	pdf.DrawLineSimple(p.Buf, 110, 0, 110, 600)
+	pdf.DrawLineSimple(p.Buf, 490, 0, 490, 600)
+	pdf.DrawLineSimple(p.Buf, 0, 150, 600, 150)
+	pdf.DrawLineSimple(p.Buf, 0, 450, 600, 450)
+	pdf.DrawLineSimple(p.Buf, 0, 160, 600, 160)
+	pdf.DrawLineSimple(p.Buf, 0, 440, 600, 440)
 	//pdf.DrawHairCross(p.Buf, 0, 0, mediaBox)
 	return p
 }
@@ -1586,14 +1587,13 @@ func createTextBorderNoMarginAlignCenterTest(mediaBox *pdf.Rectangle) pdf.Page {
 
 	pdf.SetLineWidth(p.Buf, 0)
 	pdf.SetStrokeColor(p.Buf, pdf.Black)
-	pdf.DrawLine(p.Buf, 100, 0, 100, 600)
-	pdf.DrawLine(p.Buf, 500, 0, 500, 600)
-	pdf.DrawLine(p.Buf, 110, 0, 110, 600)
-	pdf.DrawLine(p.Buf, 490, 0, 490, 600)
-	pdf.DrawLine(p.Buf, 0, 150, 600, 150)
-	pdf.DrawLine(p.Buf, 0, 450, 600, 450)
-	pdf.DrawLine(p.Buf, 0, 160, 600, 160)
-	pdf.DrawLine(p.Buf, 0, 440, 600, 440)
+	pdf.DrawLineSimple(p.Buf, 100, 0, 100, 600)
+	pdf.DrawLineSimple(p.Buf, 500, 0, 500, 600)
+	pdf.DrawLineSimple(p.Buf, 110, 0, 110, 600)
+	pdf.DrawLineSimple(p.Buf, 490, 0, 490, 600)
+	pdf.DrawLineSimple(p.Buf, 0, 150, 600, 150)
+	pdf.DrawLineSimple(p.Buf, 0, 450, 600, 450)
+	pdf.DrawLineSimple(p.Buf, 0, 440, 600, 440)
 	//pdf.DrawHairCross(p.Buf, 0, 0, mediaBox)
 	return p
 }
@@ -1629,14 +1629,14 @@ func createTextBorderNoMarginAlignJustifyTest(mediaBox *pdf.Rectangle) pdf.Page 
 
 	pdf.SetLineWidth(p.Buf, 0)
 	pdf.SetStrokeColor(p.Buf, pdf.Black)
-	pdf.DrawLine(p.Buf, 100, 0, 100, 600)
-	pdf.DrawLine(p.Buf, 500, 0, 500, 600)
-	pdf.DrawLine(p.Buf, 110, 0, 110, 600)
-	pdf.DrawLine(p.Buf, 490, 0, 490, 600)
-	pdf.DrawLine(p.Buf, 0, 150, 600, 150)
-	pdf.DrawLine(p.Buf, 0, 450, 600, 450)
-	pdf.DrawLine(p.Buf, 0, 160, 600, 160)
-	pdf.DrawLine(p.Buf, 0, 440, 600, 440)
+	pdf.DrawLineSimple(p.Buf, 100, 0, 100, 600)
+	pdf.DrawLineSimple(p.Buf, 500, 0, 500, 600)
+	pdf.DrawLineSimple(p.Buf, 110, 0, 110, 600)
+	pdf.DrawLineSimple(p.Buf, 490, 0, 490, 600)
+	pdf.DrawLineSimple(p.Buf, 0, 150, 600, 150)
+	pdf.DrawLineSimple(p.Buf, 0, 450, 600, 450)
+	pdf.DrawLineSimple(p.Buf, 0, 160, 600, 160)
+	pdf.DrawLineSimple(p.Buf, 0, 440, 600, 440)
 	//pdf.DrawHairCross(p.Buf, 0, 0, mediaBox)
 	return p
 }
@@ -1751,7 +1751,7 @@ func writecreateTestRTLUserFont(p pdf.Page, region *pdf.Rectangle, fontName, tex
 		cr, cg, cb = .75, .75, 1
 	}
 	if mediaBB {
-		pdf.FillRect(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
+		pdf.FillRectNoBorder(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
 	}
 
 	k := p.Fm.EnsureKey(fontName)
@@ -1812,7 +1812,7 @@ func writecreateTestUserFontJustified(p pdf.Page, region *pdf.Rectangle, rtl boo
 		cr, cg, cb = .75, .75, 1
 	}
 	if mediaBB {
-		pdf.FillRect(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
+		pdf.FillRectNoBorder(buf, r, pdf.SimpleColor{R: cr, G: cg, B: cb})
 	}
 
 	fontName := "Roboto-Regular"
@@ -1970,4 +1970,54 @@ func TestCJKV(t *testing.T) {
 
 	mediaBox := pdf.RectForDim(600, 600)
 	createXRefAndWritePDF(t, msg, "UserFont_CJKV", createCJKVDemo(mediaBox))
+}
+
+func createText(t *testing.T, msg, inDir, inFile, outDir, outFile string, conf *pdfcpu.Configuration) {
+
+	t.Helper()
+
+	inFile = filepath.Join(inDir, inFile)
+	outFile = filepath.Join(outDir, outFile)
+
+	if err := api.CreateFromJSONFile(inFile, outFile, conf); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+
+	if err := api.ValidateFile(outFile, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+
+}
+
+func TestCreateViaJson(t *testing.T) {
+
+	conf := api.LoadConfiguration()
+
+	// Install test user fonts from pkg/testdata/fonts.
+	if err := api.InstallFonts(userFonts(t, filepath.Join("..", "..", "testdata", "fonts"))); err != nil {
+		t.Fatalf("%s: %v\n", "TestCreateForm", err)
+	}
+
+	inDir := filepath.Join("..", "..", "testdata", "forms")
+	outDir := filepath.Join("..", "..", "samples", "forms")
+
+	for _, tt := range []struct {
+		msg     string
+		inFile  string
+		outFile string
+	}{
+		{"TestBordersAndMargins", "bordersAndMargins.json", "bordersAndMargins.pdf"},
+		{"TestAnchoredText", "anchoredText.json", "anchoredText.pdf"},
+		{"TestFonts", "fonts.json", "fonts.pdf"},
+		{"TestRegions", "regions.json", "regions.pdf"},
+		{"TestMarginBorderPadding", "marginBorderPadding.json", "marginBorderPadding.pdf"},
+		{"TestBoxesAndColors", "boxesAndColors.json", "boxesAndColors.pdf"},
+		{"TestImages", "images.json", "images.pdf"},
+		{"TestImagesOptimized", "imagesOptimized.json", "imagesOptimized.pdf"},
+		{"TestBoxesAndMargin", "boxesAndMargin.json", "boxesAndMargin.pdf"},
+		//{"TestBoxesRotated", "boxesRotated.json", "boxesRotated.pdf"},
+	} {
+		createText(t, tt.msg, inDir, tt.inFile, outDir, tt.outFile, conf)
+	}
+
 }

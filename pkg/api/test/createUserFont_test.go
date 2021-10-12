@@ -467,7 +467,7 @@ func renderArticle(p pdf.Page, row, col, lang int) {
 	sample := langSamples[lang]
 
 	if lang%2 > 0 {
-		pdf.FillRect(buf, region, pdf.SimpleColor{R: .75, G: .75, B: 1})
+		pdf.FillRectNoBorder(buf, region, pdf.SimpleColor{R: .75, G: .75, B: 1})
 	}
 
 	fontName := "Helvetica"

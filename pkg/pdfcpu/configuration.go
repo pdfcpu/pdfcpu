@@ -168,6 +168,9 @@ type Configuration struct {
 
 	// Display unit in effect.
 	Unit DisplayUnit
+
+	// Timestamp format
+	TimestampFormat string
 }
 
 // ConfigPath defines the location of pdfcpu's configuration directory.
@@ -221,12 +224,14 @@ func newDefaultConfiguration() *Configuration {
 		Reader15:          true,
 		DecodeAllStreams:  false,
 		ValidationMode:    ValidationRelaxed,
+		ValidateLinks:     false,
 		Eol:               EolLF,
 		WriteObjectStream: true,
 		WriteXRefStream:   true,
 		EncryptUsingAES:   true,
 		EncryptKeyLength:  256,
 		Permissions:       PermissionsNone,
+		TimestampFormat:   "2006-01-02 15:04",
 	}
 }
 
@@ -288,7 +293,8 @@ func (c Configuration) String() string {
 		"EncryptUsingAES:   %t\n"+
 		"EncryptKeyLength:  %d\n"+
 		"Permissions:       %d\n"+
-		"Unit :             %s\n",
+		"Unit :             %s\n"+
+		"TimestampFormat:	%s\n",
 		path,
 		c.Reader15,
 		c.DecodeAllStreams,
@@ -299,7 +305,9 @@ func (c Configuration) String() string {
 		c.EncryptUsingAES,
 		c.EncryptKeyLength,
 		c.Permissions,
-		c.UnitString())
+		c.UnitString(),
+		c.TimestampFormat,
+	)
 }
 
 // EolString returns a string rep for the eol in effect.

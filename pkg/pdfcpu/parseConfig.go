@@ -38,6 +38,7 @@ type configuration struct {
 	Permissions       int    `yaml:"permissions"`
 	Unit              string `yaml:"unit"`
 	Units             string `yaml:"units"` // Be flexible if version < v0.3.8
+	TimestampFormat   string `yaml:"timestampFormat"`
 }
 
 func loadedConfig(c configuration, configPath string) *Configuration {
@@ -81,6 +82,8 @@ func loadedConfig(c configuration, configPath string) *Configuration {
 		conf.Unit = MILLIMETRES
 	}
 
+	conf.TimestampFormat = c.TimestampFormat
+
 	return &conf
 }
 
@@ -113,6 +116,7 @@ func parseConfigFile(r io.Reader, configPath string) error {
 	if !IntMemberOf(c.EncryptKeyLength, []int{40, 128, 256}) {
 		return errors.Errorf("encryptKeyLength possible values: 40, 128, 256, got: %s", c.Unit)
 	}
+
 	loadedDefaultConfig = loadedConfig(c, configPath)
 	return nil
 }

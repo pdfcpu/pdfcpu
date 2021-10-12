@@ -282,7 +282,7 @@ func renderDeviceGrayToPNG(im *PDFImage, resourceName string) (io.Reader, string
 			for j := 0; j < 8/im.bpc; j++ {
 				pix := p >> (8 - uint8(im.bpc))
 				dec := []colValRange{{0, 1}}
-				if !im.imageMask {
+				if !im.imageMask && im.decode != nil {
 					dec = im.decode
 				}
 				v := decodePixelValue(pix, im.bpc, dec[0])

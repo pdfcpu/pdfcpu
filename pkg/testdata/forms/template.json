@@ -1,35 +1,38 @@
 {
-	"pages": [
-		{
-			"paper": "A4",
+	"paper": "A4",
+	"pages": {
+		"1": {
 			"//bgCol": "#cefe49",
-			"inputFont" : {
+			"inputFont": {
 				"name": "Courier",
 				"size": 12,
 				"col": "#222222"
 			},
-			"labelFont" : {
+			"labelFont": {
 				"name": "Courier",
 				"size": 12,
 				"col": "#222222"
 			},
 			"image": [
 				{
-					"file": "",
-					"pos": [150, 750],
-					"width": 1,
-					"height": 1,
-					"rot": 0,
-					"gray": false,
-					"sepia": false,
-					"dpi": 72
+					"file": "abc.png",
+					"pos": [
+						150,
+						750
+					],
+					"width": 100
 				},
 				{
-					"file": "",
-					"rect": [150, 350, 450, 500],
+					"file": "abc.png",
+					"rect": [
+						150,
+						350,
+						450,
+						500
+					],
 					"rot": 0,
 					"bgCol": "#00FF00",
-					"margins": 0,
+					"margin": 10,
 					"border": {
 						"width": 1,
 						"col": "#FF0000",
@@ -40,11 +43,14 @@
 			"text": [
 				{
 					"value": "Checkbox with bottom label",
-					"pos": [10, 190], 
+					"pos": [
+						10,
+						190
+					],
 					"width": 0,
 					"align": "left",
 					"rtl": false,
-					"font" : {
+					"font": {
 						"name": "Courier",
 						"size": 12,
 						"col": "#222222"
@@ -56,7 +62,6 @@
 					}
 				}
 			]
-		},
-		{}
-	]
+		}
+	}
 }

@@ -17,18 +17,48 @@
 package api
 
 import (
+	"io"
+	"io/ioutil"
 	"os"
 
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 // CreatePDFFile creates a PDF file for an xRefTable and writes it to outFile.
-func CreatePDFFile(xRefTable *pdf.XRefTable, outFile string, conf *pdf.Configuration) error {
+func CreatePDFFile(xRefTable *pdfcpu.XRefTable, outFile string, conf *pdfcpu.Configuration) error {
 	f, err := os.Create(outFile)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	ctx := pdf.CreateContext(xRefTable, conf)
+	ctx := pdfcpu.CreateContext(xRefTable, conf)
 	return WriteContext(ctx, f)
+}
+
+// CreateFromJSON reads a PDF definition from rd, creates a multiple page PDF form and writes it to outFile.
+// Any existing out.pdf will be modified.
+func CreateFromJSON(rd io.Reader, outFile string, conf *pdfcpu.Configuration) error {
+
+	bb, err := ioutil.ReadAll(rd)
+	if err != nil {
+		return err
+	}
+
+	xRefTable, err := pdfcpu.CreateXRefFromJSON(bb, conf)
+	if err != nil {
+		return err
+	}
+
+	return CreatePDFFile(xRefTable, outFile, conf)
+}
+
+// CreateFromJSONFile reads a PDF definition from inFile, creates a multi page PDF and writes it to outFile.
+// Any existing out.pdf will be modified.
+func CreateFromJSONFile(inFile, outFile string, conf *pdfcpu.Configuration) error {
+	f, err := os.Open(inFile)
+	if err != nil {
+		return err
+	}
+
+	return CreateFromJSON(f, outFile, conf)
 }

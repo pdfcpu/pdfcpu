@@ -425,7 +425,7 @@ func importImagePDFBytes(wr io.Writer, pageDim *Dim, imgWidth, imgHeight float64
 
 	bb := RectForDim(vpw, vph)
 	if imp.BgColor != nil {
-		FillRectStacked(wr, bb, *imp.BgColor)
+		FillRectNoBorder(wr, bb, *imp.BgColor)
 	}
 
 	if imp.Pos == Full {

@@ -111,17 +111,17 @@ func drawBookletGuides(nup *NUp, w io.Writer) FontMap {
 	case 2:
 		// Draw horizontal folding line.
 		fmt.Fprint(w, "[3] 0 d ")
-		DrawLine(w, 0, height/2, width, height/2)
+		DrawLineSimple(w, 0, height/2, width, height/2)
 		drawGuideLineLabel(w, 1, height/2+2, "Fold here", mb, fm, 0)
 	case 4:
 		// Draw vertical folding line.
 		fmt.Fprint(w, "[3] 0 d ")
-		DrawLine(w, width/2, 0, width/2, height)
+		DrawLineSimple(w, width/2, 0, width/2, height)
 		drawGuideLineLabel(w, width/2-23, 20, "Fold here", mb, fm, 90)
 
 		// Draw horizontal cutting line.
 		fmt.Fprint(w, "[3] 0 d ")
-		DrawLine(w, 0, height/2, width, height/2)
+		DrawLineSimple(w, 0, height/2, width, height/2)
 		drawGuideLineLabel(w, width, height/2+2, "Fold & Cut here", mb, fm, 0)
 
 		// Draw scissors over cutting line.
@@ -253,7 +253,7 @@ func (ctx *Context) bookletPages(
 		if bp.number == 0 {
 			// This is an empty page at the end.
 			if nup.BgColor != nil {
-				FillRectStacked(&buf, rDest, *nup.BgColor)
+				FillRectNoBorder(&buf, rDest, *nup.BgColor)
 			}
 			continue
 		}
@@ -366,7 +366,7 @@ func BookletFromImages(ctx *Context, fileNames []string, nup *NUp, pagesDict Dic
 		if bp.number == 0 {
 			// This is an empty page at the end of a booklet.
 			if nup.BgColor != nil {
-				FillRectStacked(&buf, rDest, *nup.BgColor)
+				FillRectNoBorder(&buf, rDest, *nup.BgColor)
 			}
 			continue
 		}

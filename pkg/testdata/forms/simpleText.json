@@ -1,0 +1,301 @@
+{
+	"paper": "A4",
+	"origin": "UpperLeft",
+	"guides": true,
+	"bgcol": "#BEDED9",
+	
+	"pages": {
+		"1": {
+			"bgcol": "#BEDED9",
+			"guides": [
+				{
+					"top": true,
+					"pos": [
+						0,
+						0
+					]
+				},
+				{
+					"pos": [
+						50,
+						50
+					]
+				}
+			],
+			"text": [
+				{
+					"value": "This is a multiline textbox\nwith default corners and without border color",
+					"pos": [
+						50,
+						50
+					],
+					"width": 0,
+					"align": "left",
+					"bgCol": "#03F890",
+					"font": {
+						"name": "Courier",
+						"size": 12,
+						"col": "#222222"
+					},
+					"border": {
+						"width": 5,
+						"//col": "#03F890"
+					}
+				},
+				{
+					"value": "This is a multiline textbox\nwith rounded corners and without border color",
+					"pos": [
+						50,
+						100
+					],
+					"width": 0,
+					"align": "left",
+					"rot": 0,
+					"bgCol": "#03F890",
+					"font": {
+						"name": "Courier",
+						"size": 12,
+						"col": "#222222"
+					},
+					"border": {
+						"width": 5,
+						"//col": "#03F890",
+						"style": "round"
+					}
+				},
+				{
+					"value": "This is a multiline textbox\nwith beveled corners and without border color",
+					"pos": [
+						50,
+						150
+					],
+					"width": 0,
+					"align": "left",
+					"rot": 0,
+					"bgCol": "#03F890",
+					"font": {
+						"name": "Courier",
+						"size": 12,
+						"col": "#222222"
+					},
+					"border": {
+						"width": 5,
+						"col": "#03F890",
+						"//col": "#03D870",
+						"style": "bevel"
+					}
+				},
+				{
+					"value": "This is a multiline textbox\nwith default corners and border color",
+					"pos": [
+						50,
+						250
+					],
+					"width": 0,
+					"align": "left",
+					"bgCol": "#03F890",
+					"font": {
+						"name": "Courier",
+						"size": 12,
+						"col": "#222222"
+					},
+					"border": {
+						"width": 5,
+						"col": "#03D870"
+					}
+				},
+				{
+					"value": "This is a multiline textbox\nwith rounded corners and border color",
+					"pos": [
+						50,
+						300
+					],
+					"width": 0,
+					"align": "left",
+					"rot": 0,
+					"bgCol": "#03F890",
+					"font": {
+						"name": "Courier",
+						"size": 12,
+						"col": "#222222"
+					},
+					"border": {
+						"width": 5,
+						"col": "#03D870",
+						"style": "round"
+					}
+				},
+				{
+					"value": "This is a multiline textbox\nwith beveled corners and border color",
+					"pos": [
+						50,
+						350
+					],
+					"width": 0,
+					"align": "left",
+					"rot": 0,
+					"bgCol": "#03F890",
+					"font": {
+						"name": "Courier",
+						"size": 12,
+						"col": "#222222"
+					},
+					"border": {
+						"width": 5,
+						"col": "#03D870",
+						"style": "bevel"
+					}
+				},
+				{
+					"value": "This is a multiline textbox\nwith default corners, margin and border color",
+					"pos": [
+						50,
+						450
+					],
+					"width": 0,
+					"align": "left",
+					"bgCol": "#03F890",
+					"font": {
+						"name": "Courier",
+						"size": 12,
+						"col": "#222222"
+					},
+					"border": {
+						"width": 5,
+						"col": "#03D870"
+					},
+					"margin": {
+						"width": 5
+					}
+				},
+				{
+					"value": "This is a multiline textbox\nwith rounded corners, margin and border color",
+					"pos": [
+						50,
+						500
+					],
+					"width": 0,
+					"align": "left",
+					"rot": 0,
+					"bgCol": "#03F890",
+					"font": {
+						"name": "Courier",
+						"size": 12,
+						"col": "#222222"
+					},
+					"border": {
+						"width": 5,
+						"col": "#03D870",
+						"style": "round"
+					},
+					"margin": {
+						"width": 5
+					}
+				},
+				{
+					"value": "This is a multiline textbox\nwith beveled corners, margin and border color",
+					"pos": [
+						50,
+						550
+					],
+					"width": 0,
+					"align": "left",
+					"rot": 0,
+					"bgCol": "#03F890",
+					"font": {
+						"name": "Courier",
+						"size": 12,
+						"col": "#222222"
+					},
+					"border": {
+						"width": 5,
+						"col": "#03D870",
+						"style": "bevel"
+					},
+					"margin": {
+						"width": 5
+					}
+				},
+				{
+					"value": "This is a multiline textbox\nwith default corners, individual margins and border color",
+					"pos": [
+						50,
+						650
+					],
+					"width": 0,
+					"align": "left",
+					"bgCol": "#03F890",
+					"font": {
+						"name": "Courier",
+						"size": 12,
+						"col": "#222222"
+					},
+					"border": {
+						"width": 5,
+						"col": "#03D870"
+					},
+					"margin": {
+						"top": 5,
+						"right": 10,
+						"bottom": 15,
+						"left": 20
+					}
+				},
+				{
+					"value": "This is a multiline textbox\nwith rounded corners, individual margins and border color",
+					"pos": [
+						50,
+						720
+					],
+					"width": 0,
+					"align": "left",
+					"rot": 0,
+					"bgCol": "#03F890",
+					"font": {
+						"name": "Courier",
+						"size": 12,
+						"col": "#222222"
+					},
+					"border": {
+						"width": 5,
+						"col": "#03D870",
+						"style": "round"
+					},
+					"margin": {
+						"top": 5,
+						"right": 10,
+						"bottom": 15,
+						"left": 20
+					}
+				},
+				{
+					"value": "This is a multiline textbox\nwith beveled corners, individual margins and border color",
+					"pos": [
+						50,
+						790
+					],
+					"width": 0,
+					"align": "left",
+					"rot": 0,
+					"bgCol": "#03F890",
+					"font": {
+						"name": "Courier",
+						"size": 12,
+						"col": "#222222"
+					},
+					"border": {
+						"width": 5,
+						"col": "#03D870",
+						"style": "bevel"
+					},
+					"margin": {
+						"top": 5,
+						"right": 10,
+						"bottom": 15,
+						"left": 20
+					}
+				}
+			]
+		}
+	}
+}

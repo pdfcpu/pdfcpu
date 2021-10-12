@@ -188,6 +188,12 @@ func (r *Rectangle) Translate(dx, dy float64) {
 	r.UR.Translate(dx, dy)
 }
 
+func (r *Rectangle) Center() Point {
+	x := r.UR.X - r.Width()/2
+	y := r.UR.Y - r.Height()/2
+	return Point{x, y}
+}
+
 // Array returns the PDF representation of a rectangle.
 func (r Rectangle) Array() Array {
 	return NewNumberArray(r.LL.X, r.LL.Y, r.UR.X, r.UR.Y)

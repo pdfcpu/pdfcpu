@@ -552,7 +552,7 @@ func nUpTilePDFBytes(wr io.Writer, rSrc, rDest *Rectangle, formResID string, nup
 	if nup.BgColor != nil {
 		if nup.ImgInputFile {
 			// Fill background.
-			FillRectStacked(wr, rDest, *nup.BgColor)
+			FillRectNoBorder(wr, rDest, *nup.BgColor)
 		} else if nup.Margin > 0 {
 			// Fill margins.
 			m := float64(nup.Margin)
@@ -852,7 +852,7 @@ func NUpFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict
 		if fileName == "" {
 			// This is an empty page at the end.
 			if nup.BgColor != nil {
-				FillRectStacked(&buf, rDest, *nup.BgColor)
+				FillRectNoBorder(&buf, rDest, *nup.BgColor)
 			}
 			continue
 		}
@@ -1003,7 +1003,7 @@ func (ctx *Context) nupPages(
 		if pageNr == 0 {
 			// This is an empty page at the end.
 			if nup.BgColor != nil {
-				FillRectStacked(&buf, rDest, *nup.BgColor)
+				FillRectNoBorder(&buf, rDest, *nup.BgColor)
 			}
 			continue
 		}

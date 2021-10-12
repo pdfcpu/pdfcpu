@@ -35,3 +35,9 @@ permissions: -3901
 # cm
 # mm
 unit: points
+
+# timestamp format: yyyy-mm-dd hh:mm
+# Switch month and year by using: 2006-02-01 15:04
+# See more at https://pkg.go.dev/time@go1.17.1#pkg-constants
+timestampFormat: 2006-01-02 15:04
+

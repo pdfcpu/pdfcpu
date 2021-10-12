@@ -28,6 +28,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf16"
 
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
@@ -70,9 +71,10 @@ const (
 )
 
 var (
-	errNoContent   = errors.New("pdfcpu: page without content")
-	errNoWatermark = errors.New("pdfcpu: no watermarks found")
-	errCorruptOCGs = errors.New("pdfcpu: OCProperties: corrupt OCGs element")
+	errNoContent    = errors.New("pdfcpu: page without content")
+	errNoWatermark  = errors.New("pdfcpu: no watermarks found")
+	errCorruptOCGs  = errors.New("pdfcpu: OCProperties: corrupt OCGs element")
+	errInvalidColor = errors.New("pdfcpu: invalid color constant")
 )
 
 type watermarkParamMap map[string]func(string, *Watermark) error
@@ -148,8 +150,9 @@ func NewSimpleColor(rgb uint32) SimpleColor {
 var (
 	Black     = SimpleColor{}
 	White     = SimpleColor{R: 1, G: 1, B: 1}
-	Gray      = SimpleColor{.5, .5, .5}
 	LightGray = SimpleColor{.9, .9, .9}
+	Gray      = SimpleColor{.5, .5, .5}
+	DarkGray  = SimpleColor{.3, .3, .3}
 	Red       = SimpleColor{1, 0, 0}
 	Green     = SimpleColor{0, 1, 0}
 	Blue      = SimpleColor{0, 0, 1}
@@ -333,8 +336,10 @@ func (wm Watermark) calcMaxTextWidth() float64 {
 	return maxWidth
 }
 
-func resolveWMTextString(text string, pageNr, pageCount int) (string, bool) {
-	// replace %p with pageNr
+func resolveWMTextString(text, timeStampFormat string, pageNr, pageCount int) (string, bool) {
+	// replace  %p with pageNr
+	//			%P with pageCount
+	//			%t with timestamp
 	var (
 		bb         []byte
 		hasPercent bool
@@ -360,14 +365,19 @@ func resolveWMTextString(text string, pageNr, pageCount int) (string, bool) {
 				unique = true
 				continue
 			}
+			if text[i] == 't' {
+				bb = append(bb, time.Now().Format(timeStampFormat)...)
+				unique = true
+				continue
+			}
 		}
 		bb = append(bb, text[i])
 	}
 	return string(bb), unique
 }
 
-func (wm Watermark) textDescriptor(pageNr, pageCount int) (TextDescriptor, bool) {
-	t, unique := resolveWMTextString(wm.TextString, pageNr, pageCount)
+func (wm Watermark) textDescriptor(timestampFormat string, pageNr, pageCount int) (TextDescriptor, bool) {
+	t, unique := resolveWMTextString(wm.TextString, timestampFormat, pageNr, pageCount)
 	td := TextDescriptor{
 		Text:           t,
 		FontName:       wm.FontName,
@@ -540,6 +550,28 @@ func parseHexColor(hexCol string) (SimpleColor, error) {
 	return SimpleColor{float32(b[0]) / 255, float32(b[1]) / 255, float32(b[2]) / 255}, nil
 }
 
+func parseConstantColor(s string) (SimpleColor, error) {
+	var (
+		sc  SimpleColor
+		err error
+	)
+	switch strings.ToLower(s) {
+	case "black":
+		sc = Black
+	case "darkgray":
+		sc = DarkGray
+	case "gray":
+		sc = Gray
+	case "lightgray":
+		sc = LightGray
+	case "white":
+		sc = White
+	default:
+		err = errInvalidColor
+	}
+	return sc, err
+}
+
 func parseColor(s string) (SimpleColor, error) {
 	var sc SimpleColor
 
@@ -549,8 +581,11 @@ func parseColor(s string) (SimpleColor, error) {
 	}
 
 	if len(cs) == 1 {
-		// #FFFFFF to uint32
-		return parseHexColor(cs[0])
+		if len(cs[0]) == 7 && cs[0][0] == '#' {
+			// #FFFFFF to uint32
+			return parseHexColor(cs[0])
+		}
+		return parseConstantColor(cs[0])
 	}
 
 	r, err := strconv.ParseFloat(cs[0], 32)
@@ -1189,7 +1224,7 @@ func (ctx *Context) createFontResForWM(wm *Watermark) (err error) {
 	// TODO Take existing font dicts into account.
 	if font.IsUserFont(wm.FontName) {
 		// Dummy call in order to setup used glyphs.
-		td, _ := setupTextDescriptor(wm, 0, 0)
+		td, _ := setupTextDescriptor(wm, "", 0, 0)
 		WriteMultiLine(new(bytes.Buffer), RectForFormat("A4"), nil, td)
 	}
 	wm.font, err = createFontDict(ctx.XRefTable, wm.FontName)
@@ -1392,7 +1427,7 @@ func formContent(w io.Writer, pageNr int, wm *Watermark) error {
 	return nil
 }
 
-func setupTextDescriptor(wm *Watermark, pageNr, pageCount int) (TextDescriptor, bool) {
+func setupTextDescriptor(wm *Watermark, timestampFormat string, pageNr, pageCount int) (TextDescriptor, bool) {
 	// Set horizontal alignment.
 	var hAlign HAlignment
 	if wm.HAlign == nil {
@@ -1405,7 +1440,7 @@ func setupTextDescriptor(wm *Watermark, pageNr, pageCount int) (TextDescriptor, 
 
 	// Set effective position and vertical alignment.
 	x, y, _, vAlign := anchorPosAndAlign(BottomLeft, wm.vp)
-	td, unique := wm.textDescriptor(pageNr, pageCount)
+	td, unique := wm.textDescriptor(timestampFormat, pageNr, pageCount)
 	td.X, td.Y, td.HAlign, td.VAlign, td.FontKey = x, y, hAlign, vAlign, "F1"
 
 	// Set right to left rendering.
@@ -1446,13 +1481,13 @@ func drawBoundingBox(b bytes.Buffer, wm *Watermark, bb *Rectangle) {
 	)
 }
 
-func calcFormBoundingBox(w io.Writer, pageNr, pageCount int, wm *Watermark) bool {
+func calcFormBoundingBox(w io.Writer, timestampFormat string, pageNr, pageCount int, wm *Watermark) bool {
 	var unique bool
 	if wm.isImage() || wm.isPDF() {
 		wm.calcBoundingBox(pageNr)
 	} else {
 		var td TextDescriptor
-		td, unique = setupTextDescriptor(wm, pageNr, pageCount)
+		td, unique = setupTextDescriptor(wm, timestampFormat, pageNr, pageCount)
 		// Render td into b and return the bounding box.
 		wm.bb = WriteMultiLine(w, wm.vp, nil, td)
 	}
@@ -1461,7 +1496,7 @@ func calcFormBoundingBox(w io.Writer, pageNr, pageCount int, wm *Watermark) bool
 
 func (ctx *Context) createForm(pageNr, pageCount int, wm *Watermark, withBB bool) error {
 	var b bytes.Buffer
-	unique := calcFormBoundingBox(&b, pageNr, pageCount, wm)
+	unique := calcFormBoundingBox(&b, ctx.Configuration.TimestampFormat, pageNr, pageCount, wm)
 
 	// The forms bounding box is dependent on the page dimensions.
 	bb := wm.bb
@@ -1906,7 +1941,7 @@ func (ctx *Context) createWMResources(
 
 	if font.IsUserFont(wm.FontName) {
 		// Dummy call in order to setup used glyphs.
-		td, _ := setupTextDescriptor(wm, 0, 0)
+		td, _ := setupTextDescriptor(wm, "", 0, 0)
 		WriteMultiLine(new(bytes.Buffer), RectForFormat("A4"), nil, td)
 	}
 

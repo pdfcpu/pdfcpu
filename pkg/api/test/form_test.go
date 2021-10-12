@@ -30,7 +30,7 @@ func createForm(t *testing.T, msg, inDir, inFile, outDir, outFile string) {
 	inFile = filepath.Join(inDir, inFile)
 	outFile = filepath.Join(outDir, outFile)
 
-	if err := api.CreateFormFile(inFile, outFile, nil); err != nil {
+	if err := api.CreateFormFromJSONFile(inFile, outFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
@@ -40,7 +40,7 @@ func createForm(t *testing.T, msg, inDir, inFile, outDir, outFile string) {
 
 }
 
-func TestCreateForm(t *testing.T) {
+func xxxTestCreateForm(t *testing.T) {
 
 	api.LoadConfiguration()
 

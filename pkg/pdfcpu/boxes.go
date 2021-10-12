@@ -1009,13 +1009,17 @@ func boxByDim(boxName string, b *Box, d Dict, parent *Rectangle) *Rectangle {
 	}
 	ll := boxLowerLeftCorner(parent, w, h, b.Pos)
 	r := RectForWidthAndHeight(ll.X+float64(b.Dx), ll.Y+float64(b.Dy), w, h)
-	d.Update(boxName, r.Array())
+	if d != nil {
+		d.Update(boxName, r.Array())
+	}
 	return r
 }
 
 func applyBox(boxName string, b *Box, d Dict, parent *Rectangle) *Rectangle {
 	if b.Rect != nil {
-		d.Update(boxName, b.Rect.Array())
+		if d != nil {
+			d.Update(boxName, b.Rect.Array())
+		}
 		return b.Rect
 	}
 
@@ -1036,7 +1040,9 @@ func applyBox(boxName string, b *Box, d Dict, parent *Rectangle) *Rectangle {
 	xmax := parent.UR.X - mRight
 	ymax := parent.UR.Y - mTop
 	r := Rect(xmin, ymin, xmax, ymax)
-	d.Update(boxName, r.Array())
+	if d != nil {
+		d.Update(boxName, r.Array())
+	}
 	if boxName != "CropBox" {
 		return r
 	}
@@ -1058,7 +1064,9 @@ func applyBox(boxName string, b *Box, d Dict, parent *Rectangle) *Rectangle {
 		if ymax > parent.UR.Y {
 			parent.UR.Y = ymax
 		}
-		d.Update("MediaBox", parent.Array())
+		if d != nil {
+			d.Update("MediaBox", parent.Array())
+		}
 	}
 	return r
 }
