@@ -138,6 +138,44 @@ func scanLines(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	return 0, nil, nil
 }
 
+func scanLinesForSingleEol(data []byte, atEOF bool) (advance int, token []byte, err error) {
+
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+
+	indCR := bytes.IndexByte(data, '\r')
+	indLF := bytes.IndexByte(data, '\n')
+
+	switch {
+
+	case indCR >= 0 && indLF >= 0:
+		if indCR < indLF {
+			// 0x0D ... 0x0A
+			return indCR + 1, data[0:indCR], nil
+		}
+		// 0x0A ... 0x0D
+		return indLF + 1, data[0:indLF], nil
+
+	case indCR >= 0:
+		// We have a full carriage return terminated line.
+		return indCR + 1, data[0:indCR], nil
+
+	case indLF >= 0:
+		// We have a full newline-terminated line.
+		return indLF + 1, data[0:indLF], nil
+
+	}
+
+	// If we're at EOF, we have a final, non-terminated line. Return it.
+	if atEOF {
+		return len(data), data, nil
+	}
+
+	// Request more data.
+	return 0, nil, nil
+}
+
 func newPositionedReader(rs io.ReadSeeker, offset *int64) (*bufio.Reader, error) {
 
 	if _, err := rs.Seek(*offset, io.SeekStart); err != nil {
@@ -1076,7 +1114,7 @@ func bypassXrefSection(ctx *Context) error {
 	}
 
 	s := bufio.NewScanner(rd)
-	s.Split(scanLines)
+	s.Split(scanLinesForSingleEol)
 
 	bb := []byte{}
 	var (
