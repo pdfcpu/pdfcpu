@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -553,21 +554,27 @@ func (sb *SimpleBox) render(p *Page) error {
 	r.UR.X -= bWidth / 2
 	r.UR.Y -= bWidth / 2
 
-	if bCol == nil {
-		bCol = &Black
-	}
+	sin := math.Sin(float64(sb.Rotation) * float64(degToRad))
+	cos := math.Cos(float64(sb.Rotation) * float64(degToRad))
 
-	// TODO Fix: All within same transform for rotate.
+	dx := r.LL.X
+	dy := r.LL.Y
+	r.Translate(-r.LL.X, -r.LL.Y)
+
+	dx += sb.Dx + r.Width()/2 + sin*(r.Height()/2) - cos*r.Width()/2
+	dy += sb.Dy + r.Height()/2 - cos*(r.Height()/2) - sin*r.Width()/2
+
+	m := calcTransformMatrix(1, 1, sin, cos, dx, dy)
+	fmt.Fprintf(p.Buf, "q %.2f %.2f %.2f %.2f %.2f %.2f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 
 	if sb.fillCol != nil {
-		if bWidth == 0 {
-			bCol = sb.fillCol
-		}
 		FillRect(p.Buf, r, bWidth, bCol, *sb.fillCol, &bStyle)
+		fmt.Fprint(p.Buf, "Q ")
 		return nil
 	}
 
 	DrawRect(p.Buf, r, bWidth, bCol, &bStyle)
+	fmt.Fprint(p.Buf, "Q ")
 	return nil
 }
 

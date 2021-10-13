@@ -423,33 +423,54 @@ func (ib *ImageBox) render(p *Page, images ImageMap) error {
 		y = r.UR.Y - ib.Height
 	}
 
-	rDest := RectForWidthAndHeight(x+bWidth+pLeft, y+bWidth+pBot, ib.Width-2*bWidth-pLeft-pRight, ib.Height-2*bWidth-pTop-pBot)
+	//////////////////
 
-	sx, sy, dx, dy, _ := bestFitRectIntoRect(rSrc, rDest, false)
+	r = RectForWidthAndHeight(x, y, ib.Width, ib.Height)
+	r.LL.X += bWidth / 2
+	r.LL.Y += bWidth / 2
+	r.UR.X -= bWidth / 2
+	r.UR.Y -= bWidth / 2
+
+	if bCol == nil {
+		bCol = &Black
+	}
 
 	sin := math.Sin(float64(ib.Rotation) * float64(degToRad))
 	cos := math.Cos(float64(ib.Rotation) * float64(degToRad))
 
+	dx := r.LL.X
+	dy := r.LL.Y
+	r.Translate(-r.LL.X, -r.LL.Y)
+
+	dx += ib.Dx + r.Width()/2 + sin*(r.Height()/2) - cos*r.Width()/2
+	dy += ib.Dy + r.Height()/2 - cos*(r.Height()/2) - sin*r.Width()/2
+
+	m := calcTransformMatrix(1, 1, sin, cos, dx, dy)
+	fmt.Fprintf(p.Buf, "q %.2f %.2f %.2f %.2f %.2f %.2f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
+
+	// Render box
+	if ib.bgCol != nil {
+		if bWidth == 0 {
+			bCol = ib.bgCol
+		}
+		FillRect(p.Buf, r, bWidth, bCol, *ib.bgCol, &bStyle)
+	} else {
+		FillRect(p.Buf, r, bWidth, bCol, *bCol, &bStyle)
+	}
+
+	fmt.Fprint(p.Buf, "Q ")
+
+	// Render image
+	rDest := RectForWidthAndHeight(x+bWidth+pLeft, y+bWidth+pBot, ib.Width-2*bWidth-pLeft-pRight, ib.Height-2*bWidth-pTop-pBot)
+	sx, sy, dx, dy, _ := bestFitRectIntoRect(rSrc, rDest, false)
 	dx += rDest.LL.X
 	dy += rDest.LL.Y
 
-	// TODO Fix: All within same transform for rotate.
+	dx += ib.Dx + sx/2 + sin*(sy/2) - cos*sx/2
+	dy += ib.Dy + sy/2 - cos*(sy/2) - sin*sx/2
 
-	// Render background
-	if ib.bgCol != nil {
-		r := RectForWidthAndHeight(x+bWidth, y+bWidth, ib.Width-2*bWidth, ib.Height-2*bWidth)
-		FillRect(p.Buf, r, bWidth, ib.bgCol, *ib.bgCol, nil)
-	}
-
-	// Render image
-	m := calcTransformMatrix(sx, sy, sin, cos, dx, dy)
+	m = calcTransformMatrix(sx, sy, sin, cos, dx, dy)
 	fmt.Fprintf(p.Buf, "q %.2f %.2f %.2f %.2f %.2f %.2f cm /%s Do Q ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1], id)
-
-	// Render border
-	if bCol != nil {
-		r := RectForWidthAndHeight(x+bWidth/2, y+bWidth/2, ib.Width-bWidth, ib.Height-bWidth)
-		DrawRect(p.Buf, r, bWidth, bCol, &bStyle)
-	}
 
 	return nil
 }
@@ -1949,6 +1970,9 @@ func (pdf *PDF) calcInheritedAttrs() {
 	// Calc inherited fonts.
 	for id, f0 := range pdf.Fonts {
 		for _, page := range pdf.pages {
+			if page == nil {
+				continue
+			}
 			f1 := page.Fonts[id]
 			if f1 != nil {
 				f1.mergeIn(f0)
@@ -1956,6 +1980,9 @@ func (pdf *PDF) calcInheritedAttrs() {
 		}
 	}
 	for _, page := range pdf.pages {
+		if page == nil {
+			continue
+		}
 		ff := map[string]*FormFont{}
 		for k, v := range pdf.Fonts {
 			ff[k] = v
@@ -1969,6 +1996,9 @@ func (pdf *PDF) calcInheritedAttrs() {
 	// Calc inherited margins.
 	for id, m0 := range pdf.Margins {
 		for _, page := range pdf.pages {
+			if page == nil {
+				continue
+			}
 			m1 := page.Margins[id]
 			if m1 != nil {
 				m1.mergeIn(m0)
@@ -1976,6 +2006,9 @@ func (pdf *PDF) calcInheritedAttrs() {
 		}
 	}
 	for _, page := range pdf.pages {
+		if page == nil {
+			continue
+		}
 		mm := map[string]*Margin{}
 		for k, v := range pdf.Margins {
 			mm[k] = v
@@ -1989,6 +2022,9 @@ func (pdf *PDF) calcInheritedAttrs() {
 	// Calc inherited borders.
 	for id, b0 := range pdf.Borders {
 		for _, page := range pdf.pages {
+			if page == nil {
+				continue
+			}
 			b1 := page.Borders[id]
 			if b1 != nil {
 				b1.mergeIn(b0)
@@ -1996,6 +2032,9 @@ func (pdf *PDF) calcInheritedAttrs() {
 		}
 	}
 	for _, page := range pdf.pages {
+		if page == nil {
+			continue
+		}
 		bb := map[string]*Border{}
 		for k, v := range pdf.Borders {
 			bb[k] = v
@@ -2009,6 +2048,9 @@ func (pdf *PDF) calcInheritedAttrs() {
 	// Calc inherited paddings.
 	for id, p0 := range pdf.Paddings {
 		for _, page := range pdf.pages {
+			if page == nil {
+				continue
+			}
 			p1 := page.Paddings[id]
 			if p1 != nil {
 				p1.mergeIn(p0)
@@ -2016,6 +2058,9 @@ func (pdf *PDF) calcInheritedAttrs() {
 		}
 	}
 	for _, page := range pdf.pages {
+		if page == nil {
+			continue
+		}
 		pp := map[string]*Padding{}
 		for k, v := range pdf.Paddings {
 			pp[k] = v
@@ -2029,6 +2074,9 @@ func (pdf *PDF) calcInheritedAttrs() {
 	// Calc inherited SimpleBoxes.
 	for id, sb0 := range pdf.SimpleBoxPool {
 		for _, page := range pdf.pages {
+			if page == nil {
+				continue
+			}
 			sb1 := page.SimpleBoxPool[id]
 			if sb1 != nil {
 				sb1.mergeIn(sb0)
@@ -2036,6 +2084,9 @@ func (pdf *PDF) calcInheritedAttrs() {
 		}
 	}
 	for _, page := range pdf.pages {
+		if page == nil {
+			continue
+		}
 		bb := map[string]*SimpleBox{}
 		for k, v := range pdf.SimpleBoxPool {
 			bb[k] = v
@@ -2049,6 +2100,9 @@ func (pdf *PDF) calcInheritedAttrs() {
 	// Calc inherited TextBoxes.
 	for id, tb0 := range pdf.TextBoxPool {
 		for _, page := range pdf.pages {
+			if page == nil {
+				continue
+			}
 			tb1 := page.TextBoxPool[id]
 			if tb1 != nil {
 				tb1.mergeIn(tb0)
@@ -2056,6 +2110,9 @@ func (pdf *PDF) calcInheritedAttrs() {
 		}
 	}
 	for _, page := range pdf.pages {
+		if page == nil {
+			continue
+		}
 		tb := map[string]*TextBox{}
 		for k, v := range pdf.TextBoxPool {
 			tb[k] = v
@@ -2069,6 +2126,9 @@ func (pdf *PDF) calcInheritedAttrs() {
 	// Calc inherited ImageBoxes.
 	for id, ib0 := range pdf.ImageBoxPool {
 		for _, page := range pdf.pages {
+			if page == nil {
+				continue
+			}
 			ib1 := page.ImageBoxPool[id]
 			if ib1 != nil {
 				ib1.mergeIn(ib0)
@@ -2076,6 +2136,9 @@ func (pdf *PDF) calcInheritedAttrs() {
 		}
 	}
 	for _, page := range pdf.pages {
+		if page == nil {
+			continue
+		}
 		ib := map[string]*ImageBox{}
 		for k, v := range pdf.ImageBoxPool {
 			ib[k] = v

@@ -72,19 +72,10 @@
 					{
 						"anchor": "center",
 						"dy": 80,
-						"value": "Anchored Textboxes obeying margin",
-						"bgCol": "#032890",
+						"value": "Anchored Textboxes with margin",
 						"font": {
-							"name": "$myCourier"
-						},
-						"margin": {
-							"width": 10
-						},
-						"border": {
-							"name": "$myBorder"
-						},
-						"padding": {
-							"width": 10
+							"name": "Courier",
+							"size": 18
 						}
 					},
 
@@ -280,19 +271,10 @@
 						"hide": false,
 						"anchor": "center",
 						"dy": 80,
-						"value": "Positioned Textboxes obeying margin",
-						"bgCol": "#032890",
+						"value": "Positioned Textboxes with margin",
 						"font": {
-							"name": "$myCourier"
-						},
-						"margin": {
-							"width": 10
-						},
-						"border": {
-							"name": "$myBorder"
-						},
-						"padding": {
-							"width": 10
+							"name": "Courier",
+							"size": 18
 						}
 					},
 
@@ -543,19 +525,10 @@
 					{
 						"anchor": "center",
 						"dy": 80,
-						"value": "Anchored Imageboxes obeying margin",
-						"bgCol": "#032890",
+						"value": "Anchored Imageboxes with margin",
 						"font": {
-							"name": "$myCourier"
-						},
-						"margin": {
-							"width": 10
-						},
-						"border": {
-							"name": "$myBorder"
-						},
-						"padding": {
-							"width": 10
+							"name": "Courier",
+							"size": 18
 						}
 					}
 				],
@@ -690,19 +663,10 @@
 					{
 						"anchor": "center",
 						"dy": 80,
-						"value": "Positioned Imageboxes obeying margin",
-						"bgCol": "#032890",
+						"value": "Positioned Imageboxes with margin",
 						"font": {
-							"name": "$myCourier"
-						},
-						"margin": {
-							"width": 10
-						},
-						"border": {
-							"name": "$myBorder"
-						},
-						"padding": {
-							"width": 10
+							"name": "Courier",
+							"size": 18
 						}
 					}
 				],
@@ -875,19 +839,10 @@
 					{
 						"anchor": "center",
 						"dy": 80,
-						"value": "Anchored Simpleboxes obeying margin",
-						"bgCol": "#032890",
+						"value": "Anchored Simpleboxes with margin",
 						"font": {
-							"name": "$myCourier"
-						},
-						"margin": {
-							"width": 10
-						},
-						"border": {
-							"name": "$myBorder"
-						},
-						"padding": {
-							"width": 10
+							"name": "Courier",
+							"size": 18
 						}
 					}
 				],
@@ -1019,19 +974,10 @@
 					{
 						"anchor": "center",
 						"dy": 80,
-						"value": "Positioned Simpleboxes obeying margin",
-						"bgCol": "#032890",
+						"value": "Positioned Simpleboxes with margin",
 						"font": {
-							"name": "$myCourier"
-						},
-						"margin": {
-							"width": 10
-						},
-						"border": {
-							"name": "$myBorder"
-						},
-						"padding": {
-							"width": 10
+							"name": "Courier",
+							"size": 18
 						}
 					}
 				],

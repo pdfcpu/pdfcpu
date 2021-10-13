@@ -2011,11 +2011,11 @@ func TestCreateViaJson(t *testing.T) {
 		{"TestFonts", "fonts.json", "fonts.pdf"},
 		{"TestRegions", "regions.json", "regions.pdf"},
 		{"TestMarginBorderPadding", "marginBorderPadding.json", "marginBorderPadding.pdf"},
-		{"TestBoxesAndColors", "boxesAndColors.json", "boxesAndColors.pdf"},
 		{"TestImages", "images.json", "images.pdf"},
 		{"TestImagesOptimized", "imagesOptimized.json", "imagesOptimized.pdf"},
+		{"TestBoxesAndColors", "boxesAndColors.json", "boxesAndColors.pdf"},
 		{"TestBoxesAndMargin", "boxesAndMargin.json", "boxesAndMargin.pdf"},
-		//{"TestBoxesRotated", "boxesRotated.json", "boxesRotated.pdf"},
+		{"TestBoxesAndRotation", "boxesAndRotation.json", "boxesAndRotation.pdf"},
 	} {
 		createText(t, tt.msg, inDir, tt.inFile, outDir, tt.outFile, conf)
 	}

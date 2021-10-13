@@ -930,7 +930,6 @@ func (wm *Watermark) calcBoundingBox(pageNr int) {
 	}
 
 	wm.bb = bb
-	return
 }
 
 func (wm *Watermark) calcTransformMatrix() matrix {
@@ -1880,22 +1879,23 @@ func (ctx *Context) addPageWatermark(i int, wm *Watermark) error {
 	gsID := "GS0"
 	xoID := "Fm0"
 
-	if inhPAttrs.resources == nil {
-		err = ctx.insertPageResourcesForWM(d, wm, gsID, xoID)
-	} else {
+	if inhPAttrs.resources != nil {
 		err = ctx.updatePageResourcesForWM(inhPAttrs.resources, wm, &gsID, &xoID)
 		d.Update("Resources", inhPAttrs.resources)
+	} else {
+		err = ctx.insertPageResourcesForWM(d, wm, gsID, xoID)
 	}
 	if err != nil {
 		return err
 	}
 
 	obj, found := d.Find("Contents")
-	if !found {
-		return ctx.insertPageContentsForWM(d, wm, gsID, xoID)
+	if found {
+		err = ctx.updatePageContentsForWM(obj, wm, gsID, xoID)
+	} else {
+		err = ctx.insertPageContentsForWM(d, wm, gsID, xoID)
 	}
-
-	if err = ctx.updatePageContentsForWM(obj, wm, gsID, xoID); err != nil {
+	if err != nil {
 		return err
 	}
 
