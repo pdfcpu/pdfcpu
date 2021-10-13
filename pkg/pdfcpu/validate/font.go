@@ -525,7 +525,7 @@ func validateCIDFontDictEntryCIDToGIDMap(xRefTable *pdf.XRefTable, d pdf.Dict, i
 
 	if o, found := d.Find("CIDToGIDMap"); found {
 
-		if !isCIDFontType2 {
+		if xRefTable.ValidationMode == pdf.ValidationStrict && !isCIDFontType2 {
 			return errors.New("pdfcpu: validateCIDFontDict: entry CIDToGIDMap not allowed - must be CIDFontType2")
 		}
 
