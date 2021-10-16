@@ -903,7 +903,7 @@ func WriteMultiLine(w io.Writer, mediaBox, region *Rectangle, td TextDescriptor)
 	return WriteColumn(w, mediaBox, region, td, 0)
 }
 
-func anchorPosAndAlign(a anchor, r *Rectangle) (x, y float64, hAlign HAlignment, vAlign VAlignment) {
+func anchorPosAndAlign(a Anchor, r *Rectangle) (x, y float64, hAlign HAlignment, vAlign VAlignment) {
 	switch a {
 	case TopLeft:
 		x, y, hAlign, vAlign = 0, r.Height(), AlignLeft, AlignTop
@@ -928,7 +928,7 @@ func anchorPosAndAlign(a anchor, r *Rectangle) (x, y float64, hAlign HAlignment,
 }
 
 // WriteMultiLineAnchored writes multiple lines with anchored position and returns its bounding box.
-func WriteMultiLineAnchored(w io.Writer, mediaBox, region *Rectangle, td TextDescriptor, a anchor) *Rectangle {
+func WriteMultiLineAnchored(w io.Writer, mediaBox, region *Rectangle, td TextDescriptor, a Anchor) *Rectangle {
 	r := mediaBox
 	if region != nil {
 		r = region
@@ -938,7 +938,7 @@ func WriteMultiLineAnchored(w io.Writer, mediaBox, region *Rectangle, td TextDes
 }
 
 // WriteColumnAnchored writes a justified text column with anchored position and returns its bounding box.
-func WriteColumnAnchored(w io.Writer, mediaBox, region *Rectangle, td TextDescriptor, a anchor, width float64) *Rectangle {
+func WriteColumnAnchored(w io.Writer, mediaBox, region *Rectangle, td TextDescriptor, a Anchor, width float64) *Rectangle {
 	r := mediaBox
 	if region != nil {
 		r = region

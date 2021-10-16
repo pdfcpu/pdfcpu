@@ -40,7 +40,7 @@ type Box struct {
 	MTop, MBot    float64
 	// Relative position within parent box
 	Dim    *Dim   // dimensions
-	Pos    anchor // position anchor within parent box, one of tl,tc,tr,l,c,r,bl,bc,br.
+	Pos    Anchor // position anchor within parent box, one of tl,tc,tr,l,c,r,bl,bc,br.
 	Dx, Dy int    // anchor offset
 }
 
@@ -953,7 +953,7 @@ func (ctx *Context) RemovePageBoundaries(selectedPages IntSet, pb *PageBoundarie
 	return nil
 }
 
-func boxLowerLeftCorner(r *Rectangle, w, h float64, a anchor) types.Point {
+func boxLowerLeftCorner(r *Rectangle, w, h float64, a Anchor) types.Point {
 	var p types.Point
 
 	switch a {

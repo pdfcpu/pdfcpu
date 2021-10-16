@@ -71,8 +71,8 @@ func parseRegionOrientation(s string) (Orientation, error) {
 	return o, nil
 }
 
-func parseAnchor(s string) (anchor, error) {
-	var a anchor
+func parseAnchor(s string) (Anchor, error) {
+	var a Anchor
 	switch strings.ToLower(s) {
 	case "tl", "topleft":
 		a = TopLeft
@@ -107,13 +107,13 @@ type ImageBox struct {
 	pdf             *PDF
 	content         *Content
 	Name            string
-	FileName        string `json:"file"` // path of image file name
-	Data            *ImageData
+	FileName        string     `json:"file"` // path of image file name
+	Data            *ImageData // TODO
 	Position        [2]float64 `json:"pos"` // x,y
 	x, y            float64
 	Dx, Dy          float64
 	Anchor          string
-	anchor          anchor
+	anchor          Anchor
 	anchored        bool
 	Width           float64
 	Height          float64
@@ -502,7 +502,7 @@ type HorizontalBand struct {
 	Left            string
 	Center          string
 	Right           string
-	position        anchor // topcenter, center, bottomcenter
+	position        Anchor // topcenter, center, bottomcenter
 	Height          float64
 	Dx, Dy          int
 	BackgroundColor string `json:"bgCol"`
@@ -2360,7 +2360,7 @@ func parseFromJSON(bb []byte, conf *Configuration) (*PDF, error) {
 	return pdf, nil
 }
 
-func createAnchoredTextbox(text string, a anchor, dx, dy int, font *FormFont, bgCol *SimpleColor, pageNr int, p *Page, pdf *PDF) error {
+func createAnchoredTextbox(text string, a Anchor, dx, dy int, font *FormFont, bgCol *SimpleColor, pageNr int, p *Page, pdf *PDF) error {
 
 	fontName := font.Name
 	fontSize := font.Size

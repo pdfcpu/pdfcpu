@@ -326,7 +326,7 @@ type SimpleBox struct {
 	x, y      float64
 	Dx, Dy    float64
 	Anchor    string
-	anchor    anchor
+	anchor    Anchor
 	anchored  bool
 	Width     float64
 	Height    float64
@@ -434,7 +434,7 @@ func (sb *SimpleBox) mergeIn(sb0 *SimpleBox) {
 	}
 }
 
-func anchorPosition(a anchor, r *Rectangle, w, h float64) (x float64, y float64) {
+func anchorPosition(a Anchor, r *Rectangle, w, h float64) (x float64, y float64) {
 	switch a {
 	case TopLeft:
 		x, y = 0, r.Height()-h
@@ -587,7 +587,7 @@ type TextBox struct {
 	x, y            float64
 	Dx, Dy          float64
 	Anchor          string
-	anchor          anchor
+	anchor          Anchor
 	anchored        bool
 	Width           float64
 	Font            *FormFont

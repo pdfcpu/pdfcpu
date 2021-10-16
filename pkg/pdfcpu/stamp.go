@@ -178,7 +178,7 @@ type Watermark struct {
 	Page              int           // the page number of a PDF file. 0 means multistamp/multiwatermark.
 	OnTop             bool          // if true this is a STAMP else this is a WATERMARK.
 	InpUnit           DisplayUnit   // input display unit.
-	Pos               anchor        // position anchor, one of tl,tc,tr,l,c,r,bl,bc,br.
+	Pos               Anchor        // position anchor, one of tl,tc,tr,l,c,r,bl,bc,br.
 	Dx, Dy            int           // anchor offset.
 	HAlign            *HAlignment   // horizonal alignment for text watermarks.
 	FontName          string        // supported are Adobe base fonts only. (as of now: Helvetica, Times-Roman, Courier)
