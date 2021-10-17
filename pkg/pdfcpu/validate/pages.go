@@ -928,7 +928,22 @@ func validatePagesDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNr, genNumber in
 	}
 
 	// Iterate over page tree.
-	kidsArray := d.ArrayEntry("Kids")
+
+	var kidsArray pdf.Array
+
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		o, found := d.Find("Kids")
+		if !found {
+			return curPage, errors.New("pdfcpu: validatePagesDict: corrupt \"Kids\" entry")
+		}
+		kidsArray, err = xRefTable.DereferenceArray(o)
+		if err != nil {
+			return curPage, errors.New("pdfcpu: validatePagesDict: corrupt \"Kids\" entry")
+		}
+	} else {
+		kidsArray = d.ArrayEntry("Kids")
+	}
+
 	if kidsArray == nil {
 		return curPage, errors.New("pdfcpu: validatePagesDict: corrupt \"Kids\" entry")
 	}

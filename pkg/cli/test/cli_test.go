@@ -99,7 +99,7 @@ func allPDFs(t *testing.T, dir string) []string {
 
 func validateFile(t *testing.T, fileName string, conf *pdfcpu.Configuration) error {
 	t.Helper()
-	_, err := cli.Process(cli.ValidateCommand(fileName, conf))
+	_, err := cli.Process(cli.ValidateCommand([]string{fileName}, conf))
 	return err
 }
 
@@ -166,7 +166,7 @@ func XTestSomeCommand(t *testing.T) {
 	conf := pdfcpu.NewDefaultConfiguration()
 	inFile := filepath.Join(inDir, "test.pdf")
 
-	cmd := cli.ValidateCommand(inFile, conf)
+	cmd := cli.ValidateCommand([]string{inFile}, conf)
 
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)

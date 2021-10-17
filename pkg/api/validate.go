@@ -97,3 +97,28 @@ func ValidateFile(inFile string, conf *pdfcpu.Configuration) error {
 
 	return nil
 }
+
+// ValidateFiles validates inFiles.
+func ValidateFiles(inFiles []string, conf *pdfcpu.Configuration) error {
+	if conf == nil {
+		conf = pdfcpu.NewDefaultConfiguration()
+	}
+
+	if conf != nil && conf.ValidationMode == pdfcpu.ValidationNone {
+		return nil
+	}
+
+	for i, fn := range inFiles {
+		if i > 0 {
+			log.CLI.Println()
+		}
+		if err := ValidateFile(fn, conf); err != nil {
+			if len(inFiles) == 1 {
+				return err
+			}
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+		}
+	}
+
+	return nil
+}

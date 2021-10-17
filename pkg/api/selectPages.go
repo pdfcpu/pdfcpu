@@ -279,6 +279,7 @@ func logSelPages(selectedPages pdf.IntSet) {
 	if len(s) > 1 {
 		s = s[:len(s)-1]
 	}
+	// TODO Supress for multifile cmds
 	log.CLI.Printf("pages: %s\n", s)
 }
 
@@ -363,7 +364,7 @@ func selectedPages(pageCount int, pageSelection []string) (pdf.IntSet, error) {
 // PagesForPageSelection ensures a set of page numbers for an ascending page sequence
 // where each page number may appear only once.
 func PagesForPageSelection(pageCount int, pageSelection []string, ensureAllforNone bool) (pdf.IntSet, error) {
-	if pageSelection != nil && len(pageSelection) > 0 {
+	if len(pageSelection) > 0 {
 		return selectedPages(pageCount, pageSelection)
 	}
 	if !ensureAllforNone {
@@ -374,7 +375,7 @@ func PagesForPageSelection(pageCount int, pageSelection []string, ensureAllforNo
 	for i := 1; i <= pageCount; i++ {
 		m[i] = true
 	}
-	log.CLI.Printf("pages: all\n")
+	//log.CLI.Printf("pages: all\n")
 	return m, nil
 }
 

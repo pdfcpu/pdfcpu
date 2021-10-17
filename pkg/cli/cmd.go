@@ -101,15 +101,15 @@ var cmdMap = map[pdfcpu.CommandMode]func(cmd *Command) ([]string, error){
 }
 
 // ValidateCommand creates a new command to validate a file.
-func ValidateCommand(inFile string, conf *pdfcpu.Configuration) *Command {
+func ValidateCommand(inFiles []string, conf *pdfcpu.Configuration) *Command {
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
 	}
 	conf.Cmd = pdfcpu.VALIDATE
 	return &Command{
-		Mode:   pdfcpu.VALIDATE,
-		InFile: &inFile,
-		Conf:   conf}
+		Mode:    pdfcpu.VALIDATE,
+		InFiles: inFiles,
+		Conf:    conf}
 }
 
 // OptimizeCommand creates a new command to optimize a file.
@@ -751,14 +751,14 @@ func RemoveAnnotationsCommand(inFile, outFile string, pageSelection []string, ob
 }
 
 // ListImagesCommand creates a new command to list annotations for selected pages.
-func ListImagesCommand(inFile string, pageSelection []string, conf *pdfcpu.Configuration) *Command {
+func ListImagesCommand(inFiles []string, pageSelection []string, conf *pdfcpu.Configuration) *Command {
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
 	}
 	conf.Cmd = pdfcpu.LISTIMAGES
 	return &Command{
 		Mode:          pdfcpu.LISTIMAGES,
-		InFile:        &inFile,
+		InFiles:       inFiles,
 		PageSelection: pageSelection,
 		Conf:          conf}
 }

@@ -29,8 +29,7 @@ func Validate(cmd *Command) ([]string, error) {
 	if conf != nil && conf.ValidationMode == pdfcpu.ValidationNone {
 		return nil, errors.New("validate: mode == ValidationNone")
 	}
-
-	return nil, api.ValidateFile(*cmd.InFile, conf)
+	return nil, api.ValidateFiles(cmd.InFiles, conf)
 }
 
 // Optimize inFile and write result to outFile.
@@ -271,7 +270,7 @@ func RemoveAnnotations(cmd *Command) ([]string, error) {
 	return nil, api.RemoveAnnotationsFile(*cmd.InFile, "", cmd.PageSelection, nil, cmd.IntVals, cmd.Conf, false)
 }
 
-// ListImages returns inFile's embedded images.
+// ListImages returns inFiles embedded images.
 func ListImages(cmd *Command) ([]string, error) {
-	return api.ListImagesFile(*cmd.InFile, cmd.PageSelection, cmd.Conf)
+	return api.ListImagesFile(cmd.InFiles, cmd.PageSelection, cmd.Conf)
 }

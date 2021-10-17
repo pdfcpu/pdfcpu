@@ -17,10 +17,12 @@ limitations under the License.
 package api
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pkg/errors"
 )
@@ -50,11 +52,32 @@ func ListImages(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Configura
 }
 
 // ListImagesFile returns a list of embedded images of inFile.
-func ListImagesFile(inFile string, selectedPages []string, conf *pdfcpu.Configuration) ([]string, error) {
-	f, err := os.Open(inFile)
-	if err != nil {
-		return nil, err
+func ListImagesFile(inFiles []string, selectedPages []string, conf *pdfcpu.Configuration) ([]string, error) {
+	if len(selectedPages) == 0 {
+		log.CLI.Printf("pages: all\n")
 	}
-	defer f.Close()
-	return ListImages(f, selectedPages, conf)
+	ss := []string{}
+	// Continue on error for file list.
+	for _, fn := range inFiles {
+		f, err := os.Open(fn)
+		if err != nil {
+			if len(inFiles) > 1 {
+				ss = append(ss, fmt.Sprintf("\ncan't open %s: %v", fn, err))
+				continue
+			}
+			return nil, err
+		}
+		defer f.Close()
+		output, err := ListImages(f, selectedPages, conf)
+		if err != nil {
+			if len(inFiles) > 1 {
+				ss = append(ss, fmt.Sprintf("\nproblem processing %s: %v", fn, err))
+				continue
+			}
+			return nil, err
+		}
+		ss = append(ss, "\n"+fn)
+		ss = append(ss, output...)
+	}
+	return ss, nil
 }

@@ -545,7 +545,7 @@ func parsePagesDict(ctx *Context, pagesDict Dict, pageNumber int) (int, error) {
 	// Get number of pages of this PDF file.
 	count, found := pagesDict.Find("Count")
 	if !found {
-		return 0, errors.New("pdfcpu: parsePagesDict: missing Count")
+		return pageNumber, errors.New("pdfcpu: parsePagesDict: missing Count")
 	}
 
 	log.Optimize.Printf("parsePagesDict: This page node has %d pages\n", int(count.(Integer)))
@@ -553,7 +553,16 @@ func parsePagesDict(ctx *Context, pagesDict Dict, pageNumber int) (int, error) {
 	ctx.Optimize.Cache = map[int]bool{}
 
 	// Iterate over page tree.
-	for _, v := range pagesDict.ArrayEntry("Kids") {
+	o, found := pagesDict.Find("Kids")
+	if !found {
+		return 0, errors.New("pdfcpu: corrupt \"Kids\" entry")
+	}
+	kids, err := ctx.DereferenceArray(o)
+	if err != nil || kids == nil {
+		return pageNumber, errors.New("pdfcpu: corrupt \"Kids\" entry")
+	}
+
+	for _, v := range kids {
 
 		// Dereference next page node dict.
 		ir, _ := v.(IndirectRef)

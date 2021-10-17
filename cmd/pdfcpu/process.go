@@ -106,13 +106,26 @@ func process(cmd *cli.Command) {
 	os.Exit(0)
 }
 func processValidateCommand(conf *pdfcpu.Configuration) {
-	if len(flag.Args()) == 0 || len(flag.Args()) > 1 || selectedPages != "" {
+	if len(flag.Args()) == 0 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageValidate)
 		os.Exit(1)
 	}
 
-	inFile := flag.Arg(0)
-	ensurePdfExtension(inFile)
+	filesIn := []string{}
+	for _, arg := range flag.Args() {
+		ensurePdfExtension(arg)
+		if strings.Contains(arg, "*") {
+			matches, err := filepath.Glob(arg)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s", err)
+				os.Exit(1)
+			}
+			filesIn = append(filesIn, matches...)
+			continue
+		} else {
+			filesIn = append(filesIn, arg)
+		}
+	}
 
 	if mode != "" && mode != "strict" && mode != "s" && mode != "relaxed" && mode != "r" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageValidate)
@@ -130,7 +143,7 @@ func processValidateCommand(conf *pdfcpu.Configuration) {
 		conf.ValidateLinks = true
 	}
 
-	process(cli.ValidateCommand(inFile, conf))
+	process(cli.ValidateCommand(filesIn, conf))
 }
 
 func processOptimizeCommand(conf *pdfcpu.Configuration) {
@@ -1539,13 +1552,21 @@ func processRemoveAnnotationsCommand(conf *pdfcpu.Configuration) {
 }
 
 func processListImagesCommand(conf *pdfcpu.Configuration) {
-	if len(flag.Args()) != 1 {
-		fmt.Fprintf(os.Stderr, "usage: %s\n", usageImagesList)
-		os.Exit(1)
+	filesIn := []string{}
+	for _, arg := range flag.Args() {
+		ensurePdfExtension(arg)
+		if strings.Contains(arg, "*") {
+			matches, err := filepath.Glob(arg)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s", err)
+				os.Exit(1)
+			}
+			filesIn = append(filesIn, matches...)
+			continue
+		} else {
+			filesIn = append(filesIn, arg)
+		}
 	}
-
-	inFile := flag.Arg(0)
-	ensurePdfExtension(inFile)
 
 	selectedPages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
@@ -1553,5 +1574,5 @@ func processListImagesCommand(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
-	process(cli.ListImagesCommand(inFile, selectedPages, conf))
+	process(cli.ListImagesCommand(filesIn, selectedPages, conf))
 }

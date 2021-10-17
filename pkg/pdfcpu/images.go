@@ -30,22 +30,22 @@ import (
 // Image is a Reader representing an image resource.
 type Image struct {
 	io.Reader
-	Name     string // Resource name
-	FileType string
-	pageNr   int
-	objNr    int
-	width    int    // "Width"
-	height   int    // "Height"
-	bpc      int    // "BitsPerComponent"
-	cs       string // "ColorSpace"
-	comp     int    // color component count
-	sMask    bool   // "SMask"
-	imgMask  bool   // "ImageMask"
-	thumb    bool   // "Thumbnail"
-	interpol bool   // "Interpolate"
-	size     int64  // "Length"
-	filter   string // filter pipeline
-
+	Name        string // Resource name
+	FileType    string
+	pageNr      int
+	objNr       int
+	width       int    // "Width"
+	height      int    // "Height"
+	bpc         int    // "BitsPerComponent"
+	cs          string // "ColorSpace"
+	comp        int    // color component count
+	sMask       bool   // "SMask"
+	imgMask     bool   // "ImageMask"
+	thumb       bool   // "Thumbnail"
+	interpol    bool   // "Interpolate"
+	size        int64  // "Length"
+	filter      string // filter pipeline
+	decodeParms string
 }
 
 func (ctx *Context) listImages(iii [][]Image, maxLenID, maxLenSize int) ([]string, int, error) {
