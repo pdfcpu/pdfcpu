@@ -46,7 +46,7 @@ func validateDestinationArrayFirstElement(xRefTable *pdf.XRefTable, a pdf.Array)
 
 func validateDestinationArrayLength(a pdf.Array) bool {
 	l := len(a)
-	return l == 2 || l == 3 || l == 5 || l == 6
+	return l == 2 || l == 3 || l == 5 || l == 6 || l == 4 // 4 = hack! see below
 }
 
 func validateDestinationArray(xRefTable *pdf.XRefTable, a pdf.Array) error {
@@ -82,6 +82,12 @@ func validateDestinationArray(xRefTable *pdf.XRefTable, a pdf.Array) error {
 
 	case 3:
 		nameErr = name.Value() != "FitH" && name.Value() != "FitV" && name.Value() != "FitBH"
+
+	case 4:
+		// TODO Cleanup
+		// hack for i381 - possibly zoom == null or 0
+		// eg. [(886 0 R) XYZ 53 303]
+		nameErr = name.Value() != "XYZ"
 
 	case 5:
 		nameErr = name.Value() != "XYZ"
