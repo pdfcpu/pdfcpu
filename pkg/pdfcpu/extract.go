@@ -119,7 +119,13 @@ func (xRefTable *XRefTable) ColorSpaceComponents(sd *StreamDict) (int, error) {
 	case Array:
 		switch cs[0].(Name) {
 
+		case CalGrayCS:
+			return 1, nil
+
 		case CalRGBCS:
+			return 3, nil
+
+		case LabCS:
 			return 3, nil
 
 		case ICCBasedCS:
@@ -134,8 +140,13 @@ func (xRefTable *XRefTable) ColorSpaceComponents(sd *StreamDict) (int, error) {
 			}
 			return i, nil
 
-		case IndexedCS:
+		case SeparationCS:
+			return 1, nil
 
+		case DeviceNCS:
+			return len(cs[1].(Array)), nil
+
+		case IndexedCS:
 			baseCS, err := xRefTable.Dereference(cs[1])
 			if err != nil {
 				return 0, err
@@ -146,16 +157,36 @@ func (xRefTable *XRefTable) ColorSpaceComponents(sd *StreamDict) (int, error) {
 				return colorSpaceNameComponents(cs), nil
 
 			case Array:
-				iccProfileStream, _, err := xRefTable.DereferenceStreamDict(cs[1])
-				if err != nil {
-					return 0, err
+
+				switch cs[0].(Name) {
+
+				case CalGrayCS:
+					return 1, nil
+
+				case CalRGBCS:
+					return 3, nil
+
+				case LabCS:
+					return 3, nil
+
+				case ICCBasedCS:
+					iccProfileStream, _, err := xRefTable.DereferenceStreamDict(cs[1])
+					if err != nil {
+						return 0, err
+					}
+					n := iccProfileStream.IntEntry("N")
+					i := 0
+					if n != nil {
+						i = *n
+					}
+					return i, nil
+
+				case SeparationCS:
+					return 1, nil
+
+				case DeviceNCS:
+					return len(cs[1].(Array)), nil
 				}
-				n := iccProfileStream.IntEntry("N")
-				i := 0
-				if n != nil {
-					i = *n
-				}
-				return i, nil
 			}
 		}
 	}
@@ -166,6 +197,7 @@ func (xRefTable *XRefTable) ColorSpaceComponents(sd *StreamDict) (int, error) {
 func (ctx *Context) imageStub(
 	sd *StreamDict,
 	resourceId, filters, lastFilter string,
+	decodeParms Dict,
 	thumb, imgMask bool,
 	objNr int) (*Image, error) {
 
@@ -216,32 +248,42 @@ func (ctx *Context) imageStub(
 		return nil, err
 	}
 
+	var s string
+	if decodeParms != nil {
+		s = decodeParms.String()
+	}
+
 	img := &Image{
-		objNr:    objNr,
-		Name:     resourceId,
-		thumb:    thumb,
-		imgMask:  imgMask,
-		sMask:    sMask,
-		width:    *w,
-		height:   *h,
-		cs:       cs,
-		comp:     comp,
-		bpc:      bpc,
-		interpol: interpol,
-		size:     i,
-		filter:   filters,
+		objNr:       objNr,
+		Name:        resourceId,
+		thumb:       thumb,
+		imgMask:     imgMask,
+		sMask:       sMask,
+		width:       *w,
+		height:      *h,
+		cs:          cs,
+		comp:        comp,
+		bpc:         bpc,
+		interpol:    interpol,
+		size:        i,
+		filter:      filters,
+		decodeParms: s,
 	}
 
 	return img, nil
 }
 
-func prepareExtractImage(sd *StreamDict) (string, string, bool) {
+func prepareExtractImage(sd *StreamDict) (string, string, Dict, bool) {
 	var imgMask bool
 	if im := sd.BooleanEntry("ImageMask"); im != nil && *im {
 		imgMask = true
 	}
 
-	var filters, lastFilter string
+	var (
+		filters    string
+		lastFilter string
+		d          Dict
+	)
 
 	fpl := sd.FilterPipeline
 	if fpl != nil {
@@ -249,11 +291,14 @@ func prepareExtractImage(sd *StreamDict) (string, string, bool) {
 		for _, filter := range fpl {
 			s = append(s, filter.Name)
 			lastFilter = filter.Name
+			if filter.DecodeParms != nil {
+				d = filter.DecodeParms
+			}
 		}
 		filters = strings.Join(s, ",")
 	}
 
-	return filters, lastFilter, imgMask
+	return filters, lastFilter, d, imgMask
 }
 
 // ExtractImage extracts an image from sd.
@@ -263,10 +308,10 @@ func (ctx *Context) ExtractImage(sd *StreamDict, thumb bool, resourceId string, 
 		return nil, nil
 	}
 
-	filters, lastFilter, imgMask := prepareExtractImage(sd)
+	filters, lastFilter, decodeParms, imgMask := prepareExtractImage(sd)
 
 	if stub {
-		return ctx.imageStub(sd, resourceId, filters, lastFilter, thumb, imgMask, objNr)
+		return ctx.imageStub(sd, resourceId, filters, lastFilter, decodeParms, thumb, imgMask, objNr)
 	}
 
 	if sd.FilterPipeline == nil {

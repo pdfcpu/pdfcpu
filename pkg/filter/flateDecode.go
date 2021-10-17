@@ -235,8 +235,6 @@ func (f flate) parameters() (colors, bpc, columns int, err error) {
 		bpc = 8
 	} else if !intMemberOf(bpc, []int{1, 2, 4, 8, 16}) {
 		return 0, 0, 0, errors.Errorf("pdfcpu: filter FlateDecode: Unexpected \"BitsPerComponent\": %d", bpc)
-	} else if bpc != 8 {
-		return 0, 0, 0, errors.New("pdfcpu: filter FlateDecode: \"BitsPerComponent\" must be 8")
 	}
 
 	// Columns, int

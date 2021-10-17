@@ -111,7 +111,7 @@ func processValidateCommand(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
-	inFiles := []string{}
+	filesIn := []string{}
 	for _, arg := range flag.Args() {
 		ensurePdfExtension(arg)
 		if strings.Contains(arg, "*") {
@@ -120,10 +120,11 @@ func processValidateCommand(conf *pdfcpu.Configuration) {
 				fmt.Fprintf(os.Stderr, "%s", err)
 				os.Exit(1)
 			}
-			inFiles = append(inFiles, matches...)
+			filesIn = append(filesIn, matches...)
 			continue
+		} else {
+			filesIn = append(filesIn, arg)
 		}
-		inFiles = append(inFiles, arg)
 	}
 
 	if mode != "" && mode != "strict" && mode != "s" && mode != "relaxed" && mode != "r" {
@@ -142,7 +143,7 @@ func processValidateCommand(conf *pdfcpu.Configuration) {
 		conf.ValidateLinks = true
 	}
 
-	process(cli.ValidateCommand(inFiles, conf))
+	process(cli.ValidateCommand(filesIn, conf))
 }
 
 func processOptimizeCommand(conf *pdfcpu.Configuration) {
@@ -1551,13 +1552,21 @@ func processRemoveAnnotationsCommand(conf *pdfcpu.Configuration) {
 }
 
 func processListImagesCommand(conf *pdfcpu.Configuration) {
-	if len(flag.Args()) != 1 {
-		fmt.Fprintf(os.Stderr, "usage: %s\n", usageImagesList)
-		os.Exit(1)
+	filesIn := []string{}
+	for _, arg := range flag.Args() {
+		ensurePdfExtension(arg)
+		if strings.Contains(arg, "*") {
+			matches, err := filepath.Glob(arg)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s", err)
+				os.Exit(1)
+			}
+			filesIn = append(filesIn, matches...)
+			continue
+		} else {
+			filesIn = append(filesIn, arg)
+		}
 	}
-
-	inFile := flag.Arg(0)
-	ensurePdfExtension(inFile)
 
 	selectedPages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
@@ -1565,5 +1574,5 @@ func processListImagesCommand(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
-	process(cli.ListImagesCommand(inFile, selectedPages, conf))
+	process(cli.ListImagesCommand(filesIn, selectedPages, conf))
 }

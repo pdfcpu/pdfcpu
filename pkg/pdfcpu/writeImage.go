@@ -125,7 +125,7 @@ func colorLookupTable(xRefTable *XRefTable, o Object) ([]byte, error) {
 	switch o := o.(type) {
 
 	case StringLiteral:
-		return []byte(o), nil
+		return Unescape(o.Value())
 
 	case HexLiteral:
 		return o.Bytes()
@@ -518,6 +518,14 @@ func renderIndexedArrayCS(xRefTable *XRefTable, im *PDFImage, resourceName strin
 
 	switch cs {
 
+	//case CalGrayCS:
+
+	case CalRGBCS:
+		return renderIndexedRGBToPNG(im, resourceName, lookup)
+
+	//case LabCS:
+	//	return renderIndexedRGBToPNG(im, resourceName, lookup)
+
 	case ICCBasedCS:
 
 		iccProfileStream, _, _ := xRefTable.DereferenceStreamDict(csa[1])
@@ -555,7 +563,6 @@ func renderIndexedArrayCS(xRefTable *XRefTable, im *PDFImage, resourceName strin
 				return nil, "", err
 			}
 			return &buf, "png", nil
-			//return &Image{&buf, 0, resourceName, im.thumb, "png"}, nil
 
 		case 3:
 			// RGB

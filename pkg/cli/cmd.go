@@ -751,14 +751,14 @@ func RemoveAnnotationsCommand(inFile, outFile string, pageSelection []string, ob
 }
 
 // ListImagesCommand creates a new command to list annotations for selected pages.
-func ListImagesCommand(inFile string, pageSelection []string, conf *pdfcpu.Configuration) *Command {
+func ListImagesCommand(inFiles []string, pageSelection []string, conf *pdfcpu.Configuration) *Command {
 	if conf == nil {
 		conf = pdfcpu.NewDefaultConfiguration()
 	}
 	conf.Cmd = pdfcpu.LISTIMAGES
 	return &Command{
 		Mode:          pdfcpu.LISTIMAGES,
-		InFile:        &inFile,
+		InFiles:       inFiles,
 		PageSelection: pageSelection,
 		Conf:          conf}
 }
