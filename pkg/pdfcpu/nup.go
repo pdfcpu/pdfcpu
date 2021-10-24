@@ -161,7 +161,7 @@ func parsePageFormatNUp(s string, nup *NUp) (err error) {
 	if nup.UserDim {
 		return errors.New("pdfcpu: only one of formsize(papersize) or dimensions allowed")
 	}
-	nup.PageDim, nup.PageSize, err = parsePageFormat(s)
+	nup.PageDim, nup.PageSize, err = ParsePageFormat(s)
 	nup.UserDim = true
 	return err
 }
@@ -257,7 +257,7 @@ func parseElementMargin(s string, nup *NUp) error {
 }
 
 func parseSheetBackgroundColor(s string, nup *NUp) error {
-	c, err := parseColor(s)
+	c, err := ParseColor(s)
 	if err != nil {
 		return err
 	}
@@ -432,7 +432,7 @@ func rectsForGrid(nup *NUp) []*Rectangle {
 	return rr
 }
 
-func bestFitRectIntoRect(rSrc, rDest *Rectangle, enforceOrient bool) (w, h, dx, dy, rot float64) {
+func BestFitRectIntoRect(rSrc, rDest *Rectangle, enforceOrient bool) (w, h, dx, dy, rot float64) {
 	if rSrc.FitsWithin(rDest) {
 		// Translate rSrc into center of rDest without scaling.
 		w = rSrc.Width()
@@ -547,7 +547,7 @@ func nUpTilePDFBytes(wr io.Writer, rSrc, rDest *Rectangle, formResID string, nup
 	// Best fit translation of a source rectangle into a destination rectangle.
 	// For nup we enforce the dest orientation,
 	// whereas in cases where the original orientation needs to be preserved eg. for booklets, we don't.
-	w, h, dx, dy, r := bestFitRectIntoRect(rSrc, rDestCr, enforceOrient)
+	w, h, dx, dy, r := BestFitRectIntoRect(rSrc, rDestCr, enforceOrient)
 
 	if nup.BgColor != nil {
 		if nup.ImgInputFile {
@@ -572,8 +572,8 @@ func nUpTilePDFBytes(wr io.Writer, rSrc, rDest *Rectangle, formResID string, nup
 		sy /= rSrc.Height()
 	}
 
-	sin := math.Sin(r * float64(degToRad))
-	cos := math.Cos(r * float64(degToRad))
+	sin := math.Sin(r * float64(DegToRad))
+	cos := math.Cos(r * float64(DegToRad))
 
 	switch r {
 	case 90:
@@ -588,7 +588,7 @@ func nUpTilePDFBytes(wr io.Writer, rSrc, rDest *Rectangle, formResID string, nup
 	dx += rDestCr.LL.X
 	dy += rDestCr.LL.Y
 
-	m := calcTransformMatrix(sx, sy, sin, cos, dx, dy)
+	m := CalcTransformMatrix(sx, sy, sin, cos, dx, dy)
 
 	// Apply transform matrix and display form.
 	fmt.Fprintf(wr, "q %.2f %.2f %.2f %.2f %.2f %.2f cm /%s Do Q ",
@@ -677,7 +677,7 @@ func NewNUpPageForImage(xRefTable *XRefTable, fileName string, parentIndRef *Ind
 	defer f.Close()
 
 	// create image dict.
-	imgIndRef, w, h, err := createImageResource(xRefTable, f, false, false)
+	imgIndRef, w, h, err := CreateImageResource(xRefTable, f, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -862,7 +862,7 @@ func NUpFromMultipleImages(ctx *Context, fileNames []string, nup *NUp, pagesDict
 			return err
 		}
 
-		imgIndRef, w, h, err := createImageResource(xRefTable, f, false, false)
+		imgIndRef, w, h, err := CreateImageResource(xRefTable, f, false, false)
 		if err != nil {
 			return err
 		}
@@ -934,24 +934,24 @@ func (ctx *Context) nUpTilePDFBytesForPDF(
 	}
 
 	// Create an object for this resDict in xRefTable.
-	ir, err := ctx.IndRefForNewObject(inhPAttrs.resources)
+	ir, err := ctx.IndRefForNewObject(inhPAttrs.Resources)
 	if err != nil {
 		return err
 	}
 
-	cropBox := inhPAttrs.mediaBox
-	if inhPAttrs.cropBox != nil {
-		cropBox = inhPAttrs.cropBox
+	cropBox := inhPAttrs.MediaBox
+	if inhPAttrs.CropBox != nil {
+		cropBox = inhPAttrs.CropBox
 	}
 
 	// Account for existing rotation.
-	if inhPAttrs.rotate != 0 {
-		if IntMemberOf(inhPAttrs.rotate, []int{+90, -90, +270, -270}) {
+	if inhPAttrs.Rotate != 0 {
+		if IntMemberOf(inhPAttrs.Rotate, []int{+90, -90, +270, -270}) {
 			w := cropBox.Width()
 			cropBox.UR.X = cropBox.LL.X + cropBox.Height()
 			cropBox.UR.Y = cropBox.LL.Y + w
 		}
-		bb = append(contentBytesForPageRotation(inhPAttrs.rotate, cropBox.Width(), cropBox.Height()), bb...)
+		bb = append(contentBytesForPageRotation(inhPAttrs.Rotate, cropBox.Width(), cropBox.Height()), bb...)
 	}
 
 	formIndRef, err := createNUpFormForPDF(ctx.XRefTable, ir, bb, cropBox)
@@ -1031,14 +1031,14 @@ func (ctx *Context) NUpFromPDF(selectedPages IntSet, nup *NUp) error {
 			return errors.Errorf("unknown page number: %d\n", 1)
 		}
 
-		cropBox := inhPAttrs.mediaBox
-		if inhPAttrs.cropBox != nil {
-			cropBox = inhPAttrs.cropBox
+		cropBox := inhPAttrs.MediaBox
+		if inhPAttrs.CropBox != nil {
+			cropBox = inhPAttrs.CropBox
 		}
 
 		// Account for existing rotation.
-		if inhPAttrs.rotate != 0 {
-			if IntMemberOf(inhPAttrs.rotate, []int{+90, -90, +270, -270}) {
+		if inhPAttrs.Rotate != 0 {
+			if IntMemberOf(inhPAttrs.Rotate, []int{+90, -90, +270, -270}) {
 				w := cropBox.Width()
 				cropBox.UR.X = cropBox.LL.X + cropBox.Height()
 				cropBox.UR.Y = cropBox.LL.Y + w

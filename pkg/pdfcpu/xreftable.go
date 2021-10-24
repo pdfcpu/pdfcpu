@@ -140,7 +140,7 @@ type XRefTable struct {
 
 	Optimized      bool
 	Watermarked    bool
-	AcroForm       bool
+	AcroForm       Dict
 	SignatureExist bool
 	AppendOnly     bool
 }
@@ -443,7 +443,7 @@ func (xRefTable *XRefTable) NewFileSpectDictForAttachment(a Attachment) (*Indire
 		return nil, err
 	}
 
-	d, err := xRefTable.NewFileSpecDict(a.ID, encodeUTF16String(a.ID), a.Desc, *sd)
+	d, err := xRefTable.NewFileSpecDict(a.ID, EncodeUTF16String(a.ID), a.Desc, *sd)
 	if err != nil {
 		return nil, err
 	}
@@ -834,6 +834,7 @@ func (xRefTable *XRefTable) SetValid(ir IndirectRef) error {
 
 // DereferenceStreamDict resolves stream dictionary objects.
 func (xRefTable *XRefTable) DereferenceStreamDict(o Object) (*StreamDict, bool, error) {
+	// TODO Check if we still need the bool return value
 	ir, ok := o.(IndirectRef)
 	if !ok {
 		sd, ok := o.(StreamDict)
@@ -1379,10 +1380,10 @@ func (xRefTable *XRefTable) IDFirstElement() (id []byte, err error) {
 
 // InheritedPageAttrs represents all inherited page attributes.
 type InheritedPageAttrs struct {
-	resources Dict // The closest resource dict to be inherited from parent nodes.
-	mediaBox  *Rectangle
-	cropBox   *Rectangle
-	rotate    int
+	Resources Dict
+	MediaBox  *Rectangle
+	CropBox   *Rectangle
+	Rotate    int
 }
 
 func rect(xRefTable *XRefTable, a Array) (*Rectangle, error) {
@@ -1428,18 +1429,18 @@ func (xRefTable *XRefTable) consolidateResources(obj Object, pAttrs *InheritedPa
 		return nil
 	}
 
-	if pAttrs.resources == nil {
+	if pAttrs.Resources == nil {
 		// Create a resource dict that eventually will contain any inherited resources
-		// while walking down from the page root to the leave node representing the page in question.
-		pAttrs.resources = d.Clone().(Dict)
-		for k, v := range pAttrs.resources {
+		// walking down from page root to leaf node representing the page in question.
+		pAttrs.Resources = d.Clone().(Dict)
+		for k, v := range pAttrs.Resources {
 			o, err := xRefTable.Dereference(v)
 			if err != nil {
 				return err
 			}
-			pAttrs.resources[k] = o.Clone()
+			pAttrs.Resources[k] = o.Clone()
 		}
-		log.Write.Printf("pA:\n%s\n", pAttrs.resources)
+		log.Write.Printf("pA:\n%s\n", pAttrs.Resources)
 		return nil
 	}
 
@@ -1456,13 +1457,13 @@ func (xRefTable *XRefTable) consolidateResources(obj Object, pAttrs *InheritedPa
 			continue
 		}
 		// We have identified a subdict that needs to go into the inherited res dict.
-		if pAttrs.resources[k] == nil {
-			pAttrs.resources[k] = d1.Clone()
+		if pAttrs.Resources[k] == nil {
+			pAttrs.Resources[k] = d1.Clone()
 			continue
 		}
-		d2, ok := pAttrs.resources[k].(Dict)
+		d2, ok := pAttrs.Resources[k].(Dict)
 		if !ok {
-			return errors.Errorf("pdfcpu: checkInheritedPageAttrs: expected Dict d2: %T", pAttrs.resources[k])
+			return errors.Errorf("pdfcpu: checkInheritedPageAttrs: expected Dict d2: %T", pAttrs.Resources[k])
 		}
 		// Weave sub dict d1 into inherited sub dict d2.
 		// Any existing resource names will be overridden.
@@ -1473,8 +1474,10 @@ func (xRefTable *XRefTable) consolidateResources(obj Object, pAttrs *InheritedPa
 }
 
 func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict Dict, pAttrs *InheritedPageAttrs, consolidateRes bool) error {
-	// Compose a direct resource dict.
-	// if consolidateRes is true consolidate all inherited resources into it.
+	// Return mediaBox, cropBox and rotate as inherited.
+	// if consolidateRes is true
+	// then consolidate all inherited resources as required by content stream
+	// else return pageDict resources.
 	var (
 		obj   Object
 		found bool
@@ -1485,7 +1488,7 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict Dict, pAttrs *Inher
 		if err != nil {
 			return err
 		}
-		if pAttrs.mediaBox, err = rect(xRefTable, a); err != nil {
+		if pAttrs.MediaBox, err = rect(xRefTable, a); err != nil {
 			return err
 		}
 	}
@@ -1495,7 +1498,7 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict Dict, pAttrs *Inher
 		if err != nil {
 			return err
 		}
-		if pAttrs.cropBox, err = rect(xRefTable, a); err != nil {
+		if pAttrs.CropBox, err = rect(xRefTable, a); err != nil {
 			return err
 		}
 	}
@@ -1505,23 +1508,24 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict Dict, pAttrs *Inher
 		if err != nil {
 			return err
 		}
-		pAttrs.rotate = i.Value()
+		pAttrs.Rotate = i.Value()
 	}
 
-	// Accumulate all inherited resources.
 	if obj, found = pageDict.Find("Resources"); !found {
 		return nil
 	}
 
 	if !consolidateRes {
+		// Return resourceDict as is.
 		d, err := xRefTable.DereferenceDict(obj)
 		if err != nil {
 			return err
 		}
-		pAttrs.resources = d
+		pAttrs.Resources = d
 		return nil
 	}
 
+	// Accumulate inherited resources.
 	return xRefTable.consolidateResources(obj, pAttrs)
 }
 
@@ -1595,7 +1599,7 @@ func consolidateResources(consolidateRes bool, xRefTable *XRefTable, pageDict, r
 }
 
 func (xRefTable *XRefTable) processPageTreeForPageDict(root *IndirectRef, pAttrs *InheritedPageAttrs, p *int, page int, consolidateRes bool) (Dict, *IndirectRef, error) {
-	// Walk this page tree all the way down to the leave node representing page.
+	// Walk this page tree all the way down to the leaf node representing page.
 
 	//fmt.Printf("entering processPageTreeForPageDict: p=%d obj#%d\n", *p, root.ObjectNumber.Value())
 
@@ -1621,7 +1625,7 @@ func (xRefTable *XRefTable) processPageTreeForPageDict(root *IndirectRef, pAttrs
 	// Iterate over page tree.
 	kids := d.ArrayEntry("Kids")
 	if kids == nil {
-		return d, root, consolidateResources(consolidateRes, xRefTable, d, pAttrs.resources, page)
+		return d, root, consolidateResources(consolidateRes, xRefTable, d, pAttrs.Resources, page)
 	}
 
 	for _, o := range kids {
@@ -1667,6 +1671,7 @@ func (xRefTable *XRefTable) processPageTreeForPageDict(root *IndirectRef, pAttrs
 }
 
 // PageDict returns a specific page dict along with the resources, mediaBox and CropBox in effect.
+// consolidateRes ensures optimized resources in InheritedPageAttrs.
 func (xRefTable *XRefTable) PageDict(pageNr int, consolidateRes bool) (Dict, *IndirectRef, *InheritedPageAttrs, error) {
 
 	var (
@@ -2045,7 +2050,7 @@ func (xRefTable *XRefTable) pageMediaBox(d *Dict) (*Rectangle, error) {
 }
 
 func (xRefTable *XRefTable) insertEmptyPage(root *IndirectRef, pAttrs *InheritedPageAttrs, pageNodeDict Dict) (indRef *IndirectRef, err error) {
-	mediaBox := pAttrs.mediaBox
+	mediaBox := pAttrs.MediaBox
 	if mediaBox == nil {
 		mediaBox, err = xRefTable.pageMediaBox(&pageNodeDict)
 		if err != nil {
@@ -2162,5 +2167,130 @@ func (xRefTable *XRefTable) markAsFree(ir IndirectRef) error {
 	i := int(zero)
 	entry.Generation = &i
 	entry.Free = true
+	return nil
+}
+
+func (xRefTable *XRefTable) streamDictIndRef(b []byte) (*IndirectRef, error) {
+	sd, _ := xRefTable.NewStreamDictForBuf(b)
+	if err := sd.Encode(); err != nil {
+		return nil, err
+	}
+	return xRefTable.IndRefForNewObject(*sd)
+}
+
+// Resources returns the <category> resource dict for pageDict.
+// func (xRefTable *XRefTable) Resources(pageDict Dict, key string, ensure bool) (Dict, error) {
+// 	var d Dict
+
+// 	allowedResDictKeys := []string{"ExtGState", "Font", "XObject", "Properties", "ColorSpace", "Pattern", "ProcSet", "Shading"}
+
+// 	if !MemberOf(key, allowedResDictKeys) {
+// 		return d, errors.Errorf("pdfcpu: invalid resDict key: %s", key)
+// 	}
+
+// 	if obj, found := pageDict.Find("Resources"); found {
+// 		d, err := xRefTable.DereferenceDict(obj)
+// 		if err != nil {
+// 			return d, err
+// 		}
+// 		if obj, found := d.Find(key); found {
+// 			return xRefTable.DereferenceDict(obj)
+// 		}
+// 		if !ensure {
+// 			return d, errors.Errorf("pdfcpu: unknown resDict: %s", key)
+// 		}
+// 		d[key] = Dict{}
+// 		return d, nil
+// 	}
+
+// 	if !ensure {
+// 		return d, errors.Errorf("pdfcpu: unknown resDict: %s", key)
+// 	}
+
+// 	d = Dict{}
+// 	pageDict["Resources"] = Dict{key: d}
+
+// 	return d, nil
+// }
+
+func (xRefTable *XRefTable) insertContent(pageDict Dict, bb []byte) error {
+
+	sd, _ := xRefTable.NewStreamDictForBuf(bb)
+	if err := sd.Encode(); err != nil {
+		return err
+	}
+
+	ir, err := xRefTable.IndRefForNewObject(*sd)
+	if err != nil {
+		return err
+	}
+
+	pageDict.Insert("Contents", *ir)
+	return nil
+}
+
+func appendToContentStream(sd *StreamDict, bb []byte) error {
+	err := sd.Decode()
+	if err == filter.ErrUnsupportedFilter {
+		log.Info.Println("unsupported filter: unable to patch content with watermark.")
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	sd.Content = append(sd.Content, ' ')
+	sd.Content = append(sd.Content, bb...)
+	return sd.Encode()
+}
+
+// AppendContent appends bb to pageDict's content stream.
+func (xRefTable *XRefTable) AppendContent(pageDict Dict, bb []byte) error {
+
+	obj, found := pageDict.Find("Contents")
+	if !found {
+		return xRefTable.insertContent(pageDict, bb)
+	}
+
+	var entry *XRefTableEntry
+	var objNr int
+
+	ir, ok := obj.(IndirectRef)
+	if ok {
+		objNr = ir.ObjectNumber.Value()
+		genNr := ir.GenerationNumber.Value()
+		entry, _ = xRefTable.FindTableEntry(objNr, genNr)
+		obj = entry.Object
+	}
+
+	switch o := obj.(type) {
+
+	case StreamDict:
+
+		if err := appendToContentStream(&o, bb); err != nil {
+			return err
+		}
+		entry.Object = o
+
+	case Array:
+
+		// Get stream dict for last array element.
+		o1 := o[len(o)-1]
+		ir, _ = o1.(IndirectRef)
+		objNr = ir.ObjectNumber.Value()
+		genNr := ir.GenerationNumber.Value()
+		entry, _ = xRefTable.FindTableEntry(objNr, genNr)
+		sd, _ := (entry.Object).(StreamDict)
+
+		if err := appendToContentStream(&sd, bb); err != nil {
+			return err
+		}
+		entry.Object = o
+
+	default:
+		return errors.Errorf("pdfcpu: corrupt page \"Content\"")
+
+	}
+
 	return nil
 }

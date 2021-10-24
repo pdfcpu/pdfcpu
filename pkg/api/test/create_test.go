@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
@@ -159,7 +158,7 @@ parents during vacation--so there was no bright side to life anywhere.`
 
 func createAndValidate(t *testing.T, xRefTable *pdf.XRefTable, outFile, msg string) {
 	t.Helper()
-	outDir := "../../samples/create"
+	outDir := "../../samples/basic"
 	outFile = filepath.Join(outDir, outFile)
 	if err := api.CreatePDFFile(xRefTable, outFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
@@ -1647,7 +1646,7 @@ func createXRefAndWritePDF(t *testing.T, msg, fileName string, p pdf.Page) {
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	outDir := filepath.Join("..", "..", "samples", "create")
+	outDir := filepath.Join("..", "..", "samples", "basic")
 	outFile := filepath.Join(outDir, fileName+".pdf")
 	createAndValidate(t, xRefTable, outFile, msg)
 }
@@ -1970,54 +1969,4 @@ func TestCJKV(t *testing.T) {
 
 	mediaBox := pdf.RectForDim(600, 600)
 	createXRefAndWritePDF(t, msg, "UserFont_CJKV", createCJKVDemo(mediaBox))
-}
-
-func createText(t *testing.T, msg, inDir, inFile, outDir, outFile string, conf *pdfcpu.Configuration) {
-
-	t.Helper()
-
-	inFile = filepath.Join(inDir, inFile)
-	outFile = filepath.Join(outDir, outFile)
-
-	if err := api.CreateFromJSONFile(inFile, outFile, conf); err != nil {
-		t.Fatalf("%s: %v\n", msg, err)
-	}
-
-	if err := api.ValidateFile(outFile, nil); err != nil {
-		t.Fatalf("%s: %v\n", msg, err)
-	}
-
-}
-
-func TestCreateViaJson(t *testing.T) {
-
-	conf := api.LoadConfiguration()
-
-	// Install test user fonts from pkg/testdata/fonts.
-	if err := api.InstallFonts(userFonts(t, filepath.Join("..", "..", "testdata", "fonts"))); err != nil {
-		t.Fatalf("%s: %v\n", "TestCreateForm", err)
-	}
-
-	inDir := filepath.Join("..", "..", "testdata", "forms")
-	outDir := filepath.Join("..", "..", "samples", "forms")
-
-	for _, tt := range []struct {
-		msg     string
-		inFile  string
-		outFile string
-	}{
-		{"TestBordersAndMargins", "bordersAndMargins.json", "bordersAndMargins.pdf"},
-		{"TestAnchoredText", "anchoredText.json", "anchoredText.pdf"},
-		{"TestFonts", "fonts.json", "fonts.pdf"},
-		{"TestRegions", "regions.json", "regions.pdf"},
-		{"TestMarginBorderPadding", "marginBorderPadding.json", "marginBorderPadding.pdf"},
-		{"TestImages", "images.json", "images.pdf"},
-		{"TestImagesOptimized", "imagesOptimized.json", "imagesOptimized.pdf"},
-		{"TestBoxesAndColors", "boxesAndColors.json", "boxesAndColors.pdf"},
-		{"TestBoxesAndMargin", "boxesAndMargin.json", "boxesAndMargin.pdf"},
-		{"TestBoxesAndRotation", "boxesAndRotation.json", "boxesAndRotation.pdf"},
-	} {
-		createText(t, tt.msg, inDir, tt.inFile, outDir, tt.outFile, conf)
-	}
-
 }

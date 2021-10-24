@@ -82,6 +82,7 @@ var (
 		ADDBOXES:                {0, 1},
 		REMOVEBOXES:             {0, 1},
 		LISTIMAGES:              {0, 1},
+		CREATE:                  {0, 0},
 	}
 )
 

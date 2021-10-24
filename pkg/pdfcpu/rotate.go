@@ -28,7 +28,7 @@ func rotatePage(xRefTable *XRefTable, i, j int) error {
 		return err
 	}
 
-	d.Update("Rotate", Integer((inhPAttrs.rotate+j)%360))
+	d.Update("Rotate", Integer((inhPAttrs.Rotate+j)%360))
 
 	return nil
 }

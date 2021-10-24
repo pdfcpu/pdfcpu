@@ -26,6 +26,7 @@ import (
 type Command struct {
 	Mode           pdfcpu.CommandMode
 	InFile         *string
+	inFileJSON     *string
 	InFiles        []string
 	InDir          *string
 	OutFile        *string
@@ -98,6 +99,7 @@ var cmdMap = map[pdfcpu.CommandMode]func(cmd *Command) ([]string, error){
 	pdfcpu.LISTANNOTATIONS:         processPageAnnotations,
 	pdfcpu.REMOVEANNOTATIONS:       processPageAnnotations,
 	pdfcpu.LISTIMAGES:              processImages,
+	pdfcpu.CREATE:                  Create,
 }
 
 // ValidateCommand creates a new command to validate a file.
@@ -761,4 +763,18 @@ func ListImagesCommand(inFiles []string, pageSelection []string, conf *pdfcpu.Co
 		InFiles:       inFiles,
 		PageSelection: pageSelection,
 		Conf:          conf}
+}
+
+// CreateCommand creates a new command to create a PDF file.
+func CreateCommand(inFileJSON, inFilePDF, outFilePDF string, conf *pdfcpu.Configuration) *Command {
+	if conf == nil {
+		conf = pdfcpu.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdfcpu.OPTIMIZE
+	return &Command{
+		Mode:       pdfcpu.CREATE,
+		inFileJSON: &inFileJSON,
+		InFile:     &inFilePDF,
+		OutFile:    &outFilePDF,
+		Conf:       conf}
 }

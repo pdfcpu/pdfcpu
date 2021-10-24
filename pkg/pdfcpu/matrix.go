@@ -21,12 +21,12 @@ import (
 	"math"
 )
 
-type matrix [3][3]float64
+type Matrix [3][3]float64
 
-var identMatrix = matrix{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}
+var identMatrix = Matrix{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}
 
-func (m matrix) multiply(n matrix) matrix {
-	var p matrix
+func (m Matrix) multiply(n Matrix) Matrix {
+	var p Matrix
 	for i := 0; i < 3; i++ {
 		for j := 0; j < 3; j++ {
 			for k := 0; k < 3; k++ {
@@ -37,20 +37,20 @@ func (m matrix) multiply(n matrix) matrix {
 	return p
 }
 
-func (m matrix) transform(p Point) Point {
+func (m Matrix) Transform(p Point) Point {
 	x := p.X*m[0][0] + p.Y*m[1][0] + m[2][0]
 	y := p.X*m[0][1] + p.Y*m[1][1] + m[2][1]
 	return Point{x, y}
 }
 
-func (m matrix) String() string {
+func (m Matrix) String() string {
 	return fmt.Sprintf("%3.2f %3.2f %3.2f\n%3.2f %3.2f %3.2f\n%3.2f %3.2f %3.2f\n",
 		m[0][0], m[0][1], m[0][2],
 		m[1][0], m[1][1], m[1][2],
 		m[2][0], m[2][1], m[2][2])
 }
 
-func calcTransformMatrix(sx, sy, sin, cos, dx, dy float64) matrix {
+func CalcTransformMatrix(sx, sy, sin, cos, dx, dy float64) Matrix {
 	// Scale
 	m1 := identMatrix
 	m1[0][0] = sx
@@ -68,8 +68,8 @@ func calcTransformMatrix(sx, sy, sin, cos, dx, dy float64) matrix {
 	return m1.multiply(m2).multiply(m3)
 }
 
-func calcRotateAndTranslateTransformMatrix(r, dx, dy float64) matrix {
-	sin := math.Sin(float64(r) * float64(degToRad))
-	cos := math.Cos(float64(r) * float64(degToRad))
-	return calcTransformMatrix(1, 1, sin, cos, dx, dy)
+func calcRotateAndTranslateTransformMatrix(r, dx, dy float64) Matrix {
+	sin := math.Sin(float64(r) * float64(DegToRad))
+	cos := math.Cos(float64(r) * float64(DegToRad))
+	return CalcTransformMatrix(1, 1, sin, cos, dx, dy)
 }

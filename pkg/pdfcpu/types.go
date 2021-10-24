@@ -158,7 +158,7 @@ type Rectangle struct {
 	*types.Rectangle
 }
 
-func (r Rectangle) equals(r2 Rectangle) bool {
+func (r Rectangle) Equals(r2 Rectangle) bool {
 	return r.LL == r2.LL && r.UR == r2.UR
 }
 

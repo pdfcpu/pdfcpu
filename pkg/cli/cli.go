@@ -274,3 +274,9 @@ func RemoveAnnotations(cmd *Command) ([]string, error) {
 func ListImages(cmd *Command) ([]string, error) {
 	return api.ListImagesFile(cmd.InFiles, cmd.PageSelection, cmd.Conf)
 }
+
+// Create renders page content corresponding to declarations found in inJSONFile and writes the result to outFile.
+// If inFile is present, page content will be appended,
+func Create(cmd *Command) ([]string, error) {
+	return nil, api.CreateFromJSONFile(*cmd.inFileJSON, *cmd.InFile, *cmd.OutFile, cmd.Conf)
+}

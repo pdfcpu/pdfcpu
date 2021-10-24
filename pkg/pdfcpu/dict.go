@@ -19,6 +19,7 @@ package pdfcpu
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -55,8 +56,9 @@ func (d Dict) Insert(key string, value Object) (ok bool) {
 	_, found := d.Find(key)
 	if !found {
 		d[key] = value
+		ok = true
 	}
-	return true
+	return ok
 }
 
 // InsertInt adds a new int entry to this PDFDict.
@@ -100,6 +102,16 @@ func (d Dict) Delete(key string) (value Object) {
 	}
 	delete(d, key)
 	return value
+}
+
+func (d Dict) NewIDForPrefix(prefix string, i int) string {
+	var id string
+	found := true
+	for j := i; found; j++ {
+		id = prefix + strconv.Itoa(j)
+		_, found = d.Find(id)
+	}
+	return id
 }
 
 // Entry returns the value for given key.

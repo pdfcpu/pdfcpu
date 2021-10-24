@@ -95,31 +95,41 @@ type TextDescriptor struct {
 	HairCross      bool          // Draw haircross at X,Y.
 }
 
-// FontMap maps font resource ids to fontnames.
-type FontMap map[string]string
+type Resource struct {
+	ID     string
+	IndRef *IndirectRef
+}
+
+// FontResource represents an existing PDF font resource.
+type FontResource struct {
+	Res       Resource
+	CIDSet    *IndirectRef
+	FontFile  *IndirectRef
+	ToUnicode *IndirectRef
+	W         *IndirectRef
+}
+
+// FontMap maps font names to font resources.
+type FontMap map[string]FontResource
 
 // EnsureKey registers fontName with corresponding font resource id.
 func (fm FontMap) EnsureKey(fontName string) string {
+	// TODO userfontname prefix
 	for k, v := range fm {
-		if v == fontName {
-			return k
+		if k == fontName {
+			return v.Res.ID
 		}
 	}
 	key := "F" + strconv.Itoa(len(fm))
-	fm[key] = fontName
+	fm[fontName] = FontResource{Res: Resource{ID: key}}
 	return key
-}
-
-type Resource struct {
-	id     string
-	indRef IndirectRef
 }
 
 // ImageResource represents an existing PDF image resource.
 type ImageResource struct {
-	res    Resource
-	width  int
-	height int
+	Res    Resource
+	Width  int
+	Height int
 }
 
 // ImageMap maps image filenames to image resources.
@@ -127,11 +137,14 @@ type ImageMap map[string]ImageResource
 
 // Page represents rendered page content.
 type Page struct {
-	MediaBox *Rectangle
-	CropBox  *Rectangle
-	Fm       FontMap
-	Im       ImageMap
-	Buf      *bytes.Buffer
+	MediaBox     *Rectangle
+	CropBox      *Rectangle
+	Fm           FontMap
+	Im           ImageMap
+	AnnotIndRefs Array
+	Annots       []Dict
+	LinkAnnots   []LinkAnnotation
+	Buf          *bytes.Buffer
 }
 
 // NewPage creates a page for a mediaBox.
@@ -188,7 +201,7 @@ var unicodeToCP1252 = map[rune]byte{
 	0x0178: 159, // Ÿ Latin Capital Letter Y with Diaeresis
 }
 
-func decodeUTF8ToByte(s string) string {
+func DecodeUTF8ToByte(s string) string {
 	var sb strings.Builder
 	for _, r := range s {
 		// Unicode => char code
@@ -346,7 +359,7 @@ func calcBoundingBoxForLines(lines []string, x, y float64, fontName string, font
 	)
 	// TODO Return error if lines == nil or empty.
 	for _, s := range lines {
-		bbox := calcBoundingBox(s, x, y, fontName, fontSize)
+		bbox := CalcBoundingBox(s, x, y, fontName, fontSize)
 		if bbox.Width() > maxWidth {
 			maxWidth = bbox.Width()
 			maxLine = s
@@ -391,7 +404,7 @@ func DrawHairCross(w io.Writer, x, y float64, r *Rectangle) {
 	//DrawLine(w, x1, r.LL.Y, x1, r.LL.Y+r.Height(), 0, &Black, nil) // Vertical line
 }
 
-func prepBytes(s, fontName string, rtl bool) string {
+func PrepBytes(s, fontName string, rtl bool) string {
 	if font.IsUserFont(fontName) {
 		ttf := font.UserFontMetrics[fontName]
 		bb := []byte{}
@@ -413,7 +426,7 @@ func prepBytes(s, fontName string, rtl bool) string {
 }
 
 func writeStringToBuf(w io.Writer, s string, x, y float64, td TextDescriptor) {
-	s = prepBytes(s, td.FontName, td.RTL)
+	s = PrepBytes(s, td.FontName, td.RTL)
 	fmt.Fprintf(w, "BT 0 Tw %.2f %.2f %.2f RG %.2f %.2f %.2f rg %.2f %.2f Td %d Tr (%s) Tj ET ",
 		td.StrokeCol.R, td.StrokeCol.G, td.StrokeCol.B, td.FillCol.R, td.FillCol.G, td.FillCol.B, x, y, td.RMode, s)
 }
@@ -422,19 +435,19 @@ func setFont(w io.Writer, fontID string, fontSize float32) {
 	fmt.Fprintf(w, "BT /%s %.2f Tf ET ", fontID, fontSize)
 }
 
-func calcBoundingBox(s string, x, y float64, fontName string, fontSize int) *Rectangle {
+func CalcBoundingBox(s string, x, y float64, fontName string, fontSize int) *Rectangle {
 	w := font.TextWidth(s, fontName, fontSize)
 	h := font.LineHeight(fontName, fontSize)
 	y -= math.Ceil(font.Descent(fontName, fontSize))
 	return Rect(x, y, x+w, y+h)
 }
 
-func calcRotateTransformMatrix(rot float64, bb *Rectangle) matrix {
-	sin := math.Sin(float64(rot) * float64(degToRad))
-	cos := math.Cos(float64(rot) * float64(degToRad))
+func calcRotateTransformMatrix(rot float64, bb *Rectangle) Matrix {
+	sin := math.Sin(float64(rot) * float64(DegToRad))
+	cos := math.Cos(float64(rot) * float64(DegToRad))
 	dx := bb.LL.X + bb.Width()/2 + sin*(bb.Height()/2) - cos*bb.Width()/2
 	dy := bb.LL.Y + bb.Height()/2 - cos*(bb.Height()/2) - sin*bb.Width()/2
-	return calcTransformMatrix(1, 1, sin, cos, dx, dy)
+	return CalcTransformMatrix(1, 1, sin, cos, dx, dy)
 }
 
 func horAdjustBoundingBoxForLines(r, box *Rectangle, dx, dy float64, x, y *float64) {
@@ -459,7 +472,7 @@ func horAdjustBoundingBoxForLines(r, box *Rectangle, dx, dy float64, x, y *float
 }
 
 func prepJustifiedLine(lines *[]string, strbuf []string, strWidth, w float64, fontSize int, fontName string, rtl bool) {
-	blank := prepBytes(" ", fontName, false)
+	blank := PrepBytes(" ", fontName, false)
 	var sb strings.Builder
 	sb.WriteString("[")
 	wc := len(strbuf)
@@ -469,7 +482,7 @@ func prepJustifiedLine(lines *[]string, strbuf []string, strWidth, w float64, fo
 		if rtl {
 			j = wc - 1 - i
 		}
-		s := prepBytes(strbuf[j], fontName, rtl)
+		s := PrepBytes(strbuf[j], fontName, rtl)
 		sb.WriteString(fmt.Sprintf(" (%s)", s))
 		if i < wc-1 {
 			sb.WriteString(fmt.Sprintf(" %d (%s)", -int(dx), blank))
@@ -501,7 +514,7 @@ func newPrepJustifiedString(
 
 		if len(s) == 0 {
 			if len(strbuf) > 0 {
-				s1 := prepBytes(strings.Join(strbuf, " "), fontName, rtl)
+				s1 := PrepBytes(strings.Join(strbuf, " "), fontName, rtl)
 				if rtl {
 					dx := font.GlyphSpaceUnits(w-strWidth, *fontSize)
 					s = fmt.Sprintf("[ %d (%s) ] TJ ", -int(dx), s1)
@@ -772,7 +785,7 @@ func renderText(w io.Writer, lines []string, td TextDescriptor, x, y float64, fo
 	lh := font.LineHeight(td.FontName, fontSize)
 	for _, s := range lines {
 		if td.HAlign != AlignJustify {
-			lineBB := calcBoundingBox(s, x, y, td.FontName, fontSize)
+			lineBB := CalcBoundingBox(s, x, y, td.FontName, fontSize)
 			// Apply horizontal alignment.
 			var dx float64
 			switch td.HAlign {
@@ -797,6 +810,12 @@ func renderText(w io.Writer, lines []string, td TextDescriptor, x, y float64, fo
 		}
 		y -= lh
 	}
+}
+
+func SplitMultilineStr(s string) []string {
+	s = strings.ReplaceAll(s, "\\n", "\n")
+	var lines []string
+	return append(lines, fieldsFunc(s, func(c rune) bool { return c == 0x0a })...)
 }
 
 // WriteColumn writes a text column using s at position x/y using a certain font, fontsize and a desired horizontal and vertical alignment.
@@ -846,14 +865,16 @@ func WriteColumn(w io.Writer, mediaBox, region *Rectangle, td TextDescriptor, wi
 	x0, y0 := x, y
 
 	if font.IsCoreFont(td.FontName) && utf8.ValidString(s) {
-		s = decodeUTF8ToByte(s)
+		s = DecodeUTF8ToByte(s)
 	}
 
-	s = strings.ReplaceAll(s, "\\n", "\n")
-	lines := []string{}
-	for _, l := range fieldsFunc(s, func(c rune) bool { return c == 0x0a }) {
-		lines = append(lines, l)
-	}
+	lines := SplitMultilineStr(s)
+
+	// s = strings.ReplaceAll(s, "\\n", "\n")
+	// lines := []string{}
+	// for _, l := range fieldsFunc(s, func(c rune) bool { return c == 0x0a }) {
+	// 	lines = append(lines, l)
+	// }
 
 	if !td.ScaleAbs {
 		if td.Scale > 1 {

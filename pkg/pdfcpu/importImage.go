@@ -105,7 +105,7 @@ func (imp Import) String() string {
 		imp.PageSize, *imp.PageDim, imp.Pos, imp.Dx, imp.Dy, imp.Scale, sc)
 }
 
-func parsePageFormat(v string) (*Dim, string, error) {
+func ParsePageFormat(v string) (*Dim, string, error) {
 
 	// Optional: appended last letter L indicates landscape mode.
 	// Optional: appended last letter P indicates portrait mode.
@@ -138,7 +138,7 @@ func parsePageFormatImp(s string, imp *Import) (err error) {
 	if imp.UserDim {
 		return errors.New("pdfcpu: only one of formsize(papersize) or dimensions allowed")
 	}
-	imp.PageDim, imp.PageSize, err = parsePageFormat(s)
+	imp.PageDim, imp.PageSize, err = ParsePageFormat(s)
 	imp.UserDim = true
 	return err
 }
@@ -326,7 +326,7 @@ func parseSepia(s string, imp *Import) error {
 }
 
 func parseImportBackgroundColor(s string, imp *Import) error {
-	c, err := parseColor(s)
+	c, err := ParseColor(s)
 	if err != nil {
 		return err
 	}
@@ -477,7 +477,7 @@ func importImagePDFBytes(wr io.Writer, pageDim *Dim, imgWidth, imgHeight float64
 func NewPageForImage(xRefTable *XRefTable, r io.Reader, parentIndRef *IndirectRef, imp *Import) (*IndirectRef, error) {
 
 	// create image dict.
-	imgIndRef, w, h, err := createImageResource(xRefTable, r, imp.Gray, imp.Sepia)
+	imgIndRef, w, h, err := CreateImageResource(xRefTable, r, imp.Gray, imp.Sepia)
 	if err != nil {
 		return nil, err
 	}

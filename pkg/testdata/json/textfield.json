@@ -1,0 +1,673 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": true,
+	"guides": false,
+	"colors": {
+		"DarkOrange": "#FF8C00",
+		"DarkSeaGreen": "#8FBC8F"
+	},
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"fonts": {
+		"myCourier": {
+			"name": "Courier",
+			"size": 12
+		},
+		"input": {
+			"name": "Courier",
+			"size": 12,
+			"col": "#222222"
+		},
+		"label": {
+			"name": "Courier",
+			"comment": "label fontsize enforced by input font!",
+			"size": 12,
+			"col": "Gray"
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"header": {
+		"font": {
+			"name": "Courier-Bold",
+			"size": 24,
+			"col": "#FF0000"
+		},
+		"bgCol": "#FFFFFF",
+		"left": "$logo1",
+		"center": "TextFields",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "$myCourier",
+			"size": 9
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Page %p of %P",
+		"right": "Source:\ntestdata/json/textfield.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"images": {
+		"logo1": {
+			"file": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"file": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"pages": {
+		"1": {
+			"bgcol": "LightGray",
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							0,
+							0
+						]
+					}
+				],
+				"textfield": [
+					{
+						"hide": false,
+						"id": "llfirstName",
+						"value": "Jackie",
+						"pos": [
+							180,
+							670
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "$DarkOrange",
+						"label": {
+							"value": "First Name:",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "lllastName",
+						"value": "Doe",
+						"pos": [
+							180,
+							650
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "$DarkOrange",
+						"label": {
+							"value": "Last Name:",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "lrfirstName",
+						"value": "Jackie",
+						"pos": [
+							180,
+							620
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "$DarkSeaGreen",
+						"label": {
+							"value": "First Name:",
+							"width": 100,
+							"gap": 10,
+							"align": "right",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "lrlastName",
+						"value": "Doe",
+						"pos": [
+							180,
+							600
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "$DarkSeaGreen",
+						"label": {
+							"value": "Last Name:",
+							"width": 100,
+							"gap": 10,
+							"align": "right",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "rlfirstName",
+						"value": "Jackie",
+						"pos": [
+							180,
+							515
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "$DarkOrange",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "rllastName",
+						"value": "Doe",
+						"pos": [
+							180,
+							495
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "$DarkOrange",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "rrfirstName",
+						"value": "Jackie",
+						"pos": [
+							180,
+							465
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "$DarkSeaGreen",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 10,
+							"align": "right",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "rrlastName",
+						"value": "Doe",
+						"pos": [
+							180,
+							445
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "$DarkSeaGreen",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 10,
+							"align": "right",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "tllfirstName",
+						"value": "Jackie",
+						"pos": [
+							10,
+							345	
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 0,
+							"align": "left",
+							"pos": "top"
+						}
+					},
+					{
+						"hide": false,
+						"id": "tlllastName",
+						"value": "Doe",
+						"pos": [
+							10,
+							305
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 0,
+							"align": "left",
+							"pos": "top"
+						}
+					},
+					{
+						"hide": false,
+						"id": "tlrfirstName",
+						"value": "Jackie",
+						"pos": [
+							150,
+							345
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 0,
+							"align": "right",
+							"pos": "top"
+						}
+					},
+					{
+						"hide": false,
+						"id": "tlrlastName",
+						"value": "Doe",
+						"pos": [
+							150,
+							305
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 0,
+							"align": "right",
+							"pos": "top"
+						}
+					},
+					{
+						"hide": false,
+						"id": "trlfirstName",
+						"value": "Jackie",
+						"pos": [
+							310,
+							345
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 0,
+							"align": "left",
+							"pos": "top"
+						}
+					},
+					{
+						"hide": false,
+						"id": "trllastName",
+						"value": "Doe",
+						"pos": [
+							310,
+							305
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 0,
+							"align": "left",
+							"pos": "top"
+						}
+					},
+					{
+						"hide": false,
+						"id": "trrfirstName",
+						"value": "Jackie",
+						"pos": [
+							450,
+							345
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 0,
+							"align": "right",
+							"pos": "top"
+						}
+					},
+					{
+						"hide": false,
+						"id": "trrlastName",
+						"value": "Doe",
+						"pos": [
+							450,
+							305
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 0,
+							"align": "right",
+							"pos": "top"
+						}
+					},
+					{
+						"hide": false,
+						"id": "tccfirstName",
+						"value": "Jackie",
+						"pos": [
+							10,
+							260
+						],
+						"width": 100,
+						"align": "center",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 0,
+							"align": "center",
+							"pos": "top"
+						}
+					},
+					{
+						"hide": false,
+						"id": "tcclastName",
+						"value": "Doe",
+						"pos": [
+							10,
+							220
+						],
+						"width": 100,
+						"align": "center",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 0,
+							"align": "center",
+							"pos": "top"
+						}
+					},
+					{
+						"hide": false,
+						"id": "bllfirstName",
+						"value": "Jackie",
+						"pos": [
+							10,
+							150
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 0,
+							"align": "left",
+							"pos": "bottom"
+						}
+					},
+					{
+						"hide": false,
+						"id": "blllastName",
+						"value": "Doe",
+						"pos": [
+							10,
+							110
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 0,
+							"align": "left",
+							"pos": "bottom"
+						}
+					},
+					{
+						"hide": false,
+						"id": "blrfirstName",
+						"value": "Jackie",
+						"pos": [
+							150,
+							150
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 0,
+							"align": "right",
+							"pos": "bottom"
+						}
+					},
+					{
+						"hide": false,
+						"id": "blrlastName",
+						"value": "Doe",
+						"pos": [
+							150,
+							110
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 0,
+							"align": "right",
+							"pos": "bottom"
+						}
+					},
+					{
+						"hide": false,
+						"id": "brlfirstName",
+						"value": "Jackie",
+						"pos": [
+							310,
+							150
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 0,
+							"align": "left",
+							"pos": "bottom"
+						}
+					},
+					{
+						"hide": false,
+						"id": "brllastName",
+						"value": "Doe",
+						"pos": [
+							310,
+							110
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 0,
+							"align": "left",
+							"pos": "bottom"
+						}
+					},
+					{
+						"hide": false,
+						"id": "brrfirstName",
+						"value": "Jackie",
+						"pos": [
+							450,
+							150
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 0,
+							"align": "right",
+							"pos": "bottom"
+						}
+					},
+					{
+						"hide": false,
+						"id": "brrlastName",
+						"value": "Doe",
+						"pos": [
+							450,
+							110
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 0,
+							"align": "right",
+							"pos": "bottom"
+						}
+					},
+					{
+						"hide": false,
+						"id": "bccfirstName",
+						"value": "Jackie",
+						"pos": [
+							10,
+							70
+						],
+						"width": 100,
+						"align": "center",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 0,
+							"align": "center",
+							"pos": "bottom"
+						}
+					},
+					{
+						"hide": false,
+						"id": "bcclastName",
+						"value": "Doe",
+						"pos": [
+							10,
+							30
+						],
+						"width": 100,
+						"align": "center",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 0,
+							"align": "center",
+							"pos": "bottom"
+						}
+					}
+				],
+				"text": [
+					{
+						"value": "Textfield with left label:",
+						"pos": [
+							0,
+							700
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Textfields with right label:",
+						"pos": [
+							0,
+							545
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Textfields with top label:",
+						"pos": [
+							0,
+							390
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Textfields with bottom label:",
+						"pos": [
+							0,
+							180
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					}
+				]
+			}
+		}
+	}
+}

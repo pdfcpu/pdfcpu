@@ -251,7 +251,7 @@ func createOutlineItemDict(ctx *Context, bms []Bookmark, parent *IndirectRef, pa
 			return nil, nil, 0, err
 		}
 
-		s, err := Escape(encodeUTF16String(bm.Title))
+		s, err := Escape(EncodeUTF16String(bm.Title))
 		if err != nil {
 			return nil, nil, 0, err
 		}

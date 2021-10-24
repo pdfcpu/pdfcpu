@@ -194,7 +194,7 @@ func (ctx *Context) AddAttachment(a Attachment, useCollection bool) error {
 		return err
 	}
 
-	return xRefTable.Names["EmbeddedFiles"].Add(xRefTable, encodeUTF16String(a.ID), *ir)
+	return xRefTable.Names["EmbeddedFiles"].Add(xRefTable, EncodeUTF16String(a.ID), *ir)
 }
 
 var errContentMatch = errors.New("name tree content match")

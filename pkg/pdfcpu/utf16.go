@@ -109,7 +109,7 @@ func DecodeUTF16String(s string) (string, error) {
 	return decodeUTF16String([]byte(s))
 }
 
-func encodeUTF16String(s string) string {
+func EncodeUTF16String(s string) string {
 	rr := utf16.Encode([]rune(s))
 	bb := []byte{0xFE, 0xFF}
 	for _, r := range rr {

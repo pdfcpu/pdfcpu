@@ -17,10 +17,15 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"bufio"
 	"bytes"
+	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"math/rand"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 	"unicode/utf16"
 
@@ -45,12 +50,23 @@ func ttfFontFile(xRefTable *XRefTable, ttf font.TTFLight, fontName string) (*Ind
 	return flateEncodedStreamIndRef(xRefTable, bb)
 }
 
-func ttfSubFontFile(xRefTable *XRefTable, ttf font.TTFLight, fontName string) (*IndirectRef, error) {
+func ttfSubFontFile(xRefTable *XRefTable, ttf font.TTFLight, fontName string, indRef *IndirectRef) (*IndirectRef, error) {
 	bb, err := font.Subset(fontName, ttf.UsedGIDs)
 	if err != nil {
 		return nil, err
 	}
-	return flateEncodedStreamIndRef(xRefTable, bb)
+	if indRef == nil {
+		return flateEncodedStreamIndRef(xRefTable, bb)
+	}
+	entry, _ := xRefTable.FindTableEntryForIndRef(indRef)
+	sd, _ := entry.Object.(StreamDict)
+	sd.Content = bb
+	sd.InsertInt("Length1", len(bb))
+	if err := sd.Encode(); err != nil {
+		return nil, err
+	}
+	entry.Object = sd
+	return indRef, nil
 }
 
 func coreFontDict(xRefTable *XRefTable, coreFontName string) (*IndirectRef, error) {
@@ -64,12 +80,23 @@ func coreFontDict(xRefTable *XRefTable, coreFontName string) (*IndirectRef, erro
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func cidSet(xRefTable *XRefTable, ttf font.TTFLight) (*IndirectRef, error) {
+func CIDSet(xRefTable *XRefTable, ttf font.TTFLight, indRef *IndirectRef) (*IndirectRef, error) {
 	bb := make([]byte, ttf.GlyphCount/8+1)
 	for gid := range ttf.UsedGIDs {
 		bb[gid/8] |= 1 << (7 - (gid % 8))
 	}
-	return flateEncodedStreamIndRef(xRefTable, bb)
+	if indRef == nil {
+		return flateEncodedStreamIndRef(xRefTable, bb)
+	}
+	entry, _ := xRefTable.FindTableEntryForIndRef(indRef)
+	sd, _ := entry.Object.(StreamDict)
+	sd.Content = bb
+	sd.InsertInt("Length1", len(bb))
+	if err := sd.Encode(); err != nil {
+		return nil, err
+	}
+	entry.Object = sd
+	return indRef, nil
 }
 
 func ttfFontDescriptorFlags(ttf font.TTFLight) uint32 {
@@ -105,16 +132,18 @@ func ttfFontDescriptorFlags(ttf font.TTFLight) uint32 {
 	return flags
 }
 
-// CIDFontDescriptor represents a font descriptor describing
-// the CIDFont’s default metrics other than its glyph widths.
-func CIDFontDescriptor(xRefTable *XRefTable, ttf font.TTFLight, fontName, baseFontName string) (*IndirectRef, error) {
-	//fontFile, err := ttfFontFile(xRefTable, ttf, fontName)
-	fontFile, err := ttfSubFontFile(xRefTable, ttf, fontName)
-	if err != nil {
-		return nil, err
-	}
+// CIDFontDescriptor returns a font descriptor describing the CIDFont’s default metrics other than its glyph widths.
+func CIDFontDescriptor(xRefTable *XRefTable, ttf font.TTFLight, fontName, baseFontName string, subFont bool) (*IndirectRef, error) {
 
-	cidSetIndRef, err := cidSet(xRefTable, ttf)
+	var (
+		fontFile *IndirectRef
+		err      error
+	)
+	if subFont {
+		fontFile, err = ttfSubFontFile(xRefTable, ttf, fontName, nil)
+	} else {
+		fontFile, err = ttfFontFile(xRefTable, ttf, fontName)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -132,40 +161,34 @@ func CIDFontDescriptor(xRefTable *XRefTable, ttf font.TTFLight, fontName, baseFo
 			"CapHeight": Integer(ttf.CapHeight),
 			"StemV":     Integer(70), // Irrelevant for embedded files.
 			"FontFile2": *fontFile,
-
-			// (Optional) A dictionary containing entries that describe the style of the glyphs in the font (see 9.8.3.2, "Style").
-			//"Style": Dict(map[string]Object{}),
-
-			// (Optional) A name specifying the language of the font, which may be used for encodings
-			// where the language is not implied by the encoding itself.
-			//"Lang": Name(""),
-
-			// (Optional) A dictionary whose keys identify a class of glyphs in a CIDFont.
-			// Each value shall be a dictionary containing entries that shall override the
-			// corresponding values in the main font descriptor dictionary for that class of glyphs (see 9.8.3.3, "FD").
-			//"FD": Dict(map[string]Object{}),
-
-			// (Optional)
-			// A stream identifying which CIDs are present in the CIDFont file. If this entry is present,
-			// the CIDFont shall contain only a subset of the glyphs in the character collection defined by the CIDSystemInfo dictionary.
-			// If it is absent, the only indication of a CIDFont subset shall be the subset tag in the FontName entry (see 9.6.4, "Font Subsets").
-			// The stream’s data shall be organized as a table of bits indexed by CID.
-			// The bits shall be stored in bytes with the high-order bit first. Each bit shall correspond to a CID.
-			// The most significant bit of the first byte shall correspond to CID 0, the next bit to CID 1, and so on.
-			"CIDSet": *cidSetIndRef,
 		},
 	)
+
+	if subFont {
+		// (Optional)
+		// A stream identifying which CIDs are present in the CIDFont file. If this entry is present,
+		// the CIDFont shall contain only a subset of the glyphs in the character collection defined by the CIDSystemInfo dictionary.
+		// If it is absent, the only indication of a CIDFont subset shall be the subset tag in the FontName entry (see 9.6.4, "Font Subsets").
+		// The stream’s data shall be organized as a table of bits indexed by CID.
+		// The bits shall be stored in bytes with the high-order bit first. Each bit shall correspond to a CID.
+		// The most significant bit of the first byte shall correspond to CID 0, the next bit to CID 1, and so on.
+		cidSetIndRef, err := CIDSet(xRefTable, ttf, nil)
+		if err != nil {
+			return nil, err
+		}
+		d["CIDSet"] = *cidSetIndRef
+	}
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-// CIDWidths returns the value for W in a CIDFontDict.
-func CIDWidths(ttf font.TTFLight) Array {
+func usedCIDWidths(ttf font.TTFLight) Array {
 	gids := make([]int, 0, len(ttf.UsedGIDs))
 	for gid := range ttf.UsedGIDs {
 		gids = append(gids, int(gid))
 	}
 	sort.Ints(gids)
+
 	a := Array{}
 	for _, gid := range gids {
 		a = append(a, Integer(gid), Array{Integer(ttf.GlyphWidths[gid])})
@@ -173,9 +196,96 @@ func CIDWidths(ttf font.TTFLight) Array {
 	return a
 }
 
+func allCIDWidths(ttf font.TTFLight) Array {
+	a := Array{}
+	var g0, w0, wLast int
+	start, equalWidths := true, true
+	for gid, w := range ttf.GlyphWidths {
+		fmt.Printf("gid:%d w:%d\n", gid, w)
+		if start {
+			g0 = gid
+			w0 = w
+			wLast = w
+			start = false
+			continue
+		}
+		if w == wLast {
+			if equalWidths {
+				continue
+			}
+			// non-contiguous width block
+			a = append(a, Integer(g0))
+			a1 := Array{}
+			for i := g0; i < gid-1; i++ {
+				a1 = append(a1, Integer(ttf.GlyphWidths[i]))
+			}
+			a = append(a, a1)
+			g0 = gid - 1
+			w0 = w
+			equalWidths = true
+			continue
+		}
+		wLast = w
+		if !equalWidths {
+			continue
+		}
+		if gid-g0 == 1 {
+			equalWidths = false
+			continue
+		}
+		// contiguous width block
+		a = append(a, Integer(g0), Integer(gid-1), Integer(w0))
+		g0 = gid
+		w0 = w
+	}
+	if equalWidths {
+		// last contiguous width block
+		a = append(a, Integer(g0), Integer(len(ttf.GlyphWidths)-1), Integer(w0))
+	} else {
+		// last non-contiguous width block
+		a = append(a, Integer(g0))
+		a1 := Array{}
+		for i := g0; i < len(ttf.GlyphWidths); i++ {
+			a1 = append(a1, Integer(ttf.GlyphWidths[i]))
+		}
+		a = append(a, a1)
+	}
+
+	return a
+}
+
+// CIDWidths returns the value for W in a CIDFontDict.
+func CIDWidths(xRefTable *XRefTable, ttf font.TTFLight, subFont bool, indRef *IndirectRef) (*IndirectRef, error) {
+
+	// 108 [750]            108:750
+	// 120 [400 325 500]	120:400 121:325 122:500
+	// 7080 8032 1000	    7080-8032: 1000
+
+	var a Array
+	if subFont {
+		a = usedCIDWidths(ttf)
+	} else {
+		a = allCIDWidths(ttf)
+	}
+
+	if indRef == nil {
+		return xRefTable.IndRefForNewObject(a)
+	}
+
+	entry, _ := xRefTable.FindTableEntryForIndRef(indRef)
+	entry.Object = a
+
+	return indRef, nil
+}
+
 // CIDFontDict returns the descendant font dict for Type0 fonts.
-func CIDFontDict(xRefTable *XRefTable, ttf font.TTFLight, fontName, baseFontName string) (*IndirectRef, error) {
-	fdIndRef, err := CIDFontDescriptor(xRefTable, ttf, fontName, baseFontName)
+func CIDFontDict(xRefTable *XRefTable, ttf font.TTFLight, fontName, baseFontName string, subFont bool) (*IndirectRef, error) {
+	fdIndRef, err := CIDFontDescriptor(xRefTable, ttf, fontName, baseFontName, subFont)
+	if err != nil {
+		return nil, err
+	}
+
+	wIndRef, err := CIDWidths(xRefTable, ttf, subFont, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +314,7 @@ func CIDFontDict(xRefTable *XRefTable, ttf font.TTFLight, fontName, baseFontName
 			// The array’s elements have a variable format that can specify individual widths for consecutive CIDs
 			// or one width for a range of CIDs (see 9.7.4.3, "Glyph Metrics in CIDFonts").
 			// Default value: none (the DW value shall be used for all glyphs).
-			"W": CIDWidths(ttf),
+			"W": *wIndRef,
 
 			// (Optional; applies only to CIDFonts used for vertical writing)
 			// An array of two numbers specifying the default metrics for vertical writing (see 9.7.4.3, "Glyph Metrics in CIDFonts").
@@ -260,7 +370,21 @@ func bf(b *bytes.Buffer, ttf font.TTFLight) {
 }
 
 // toUnicodeCMap returns a stream dict containing a CMap file that maps character codes to Unicode values (see 9.10).
-func toUnicodeCMap(xRefTable *XRefTable, ttf font.TTFLight, fontName string) (*IndirectRef, error) {
+func toUnicodeCMap(xRefTable *XRefTable, ttf font.TTFLight, subFont bool, indRef *IndirectRef) (*IndirectRef, error) {
+
+	// n beginbfchar
+	// srcCode dstString
+	// <003A>  <0037>                                            : 003a:0037
+	// <3A51>  <D840DC3E>                                        : 3a51:d840dc3e
+	// ...
+	// endbfchar
+
+	// n beginbfrange
+	// srcCode1 srcCode2 dstString
+	// <0000>   <005E>   <0020>                                  : 0000:0020 0001:0021 0002:0022 ...
+	// <005F>   <0061>   [<00660066> <00660069> <00660066006C>]  : 005F:00660066 0060:00660069 0061:00660066006C
+	// endbfrange
+
 	pro := `/CIDInit /ProcSet findresource begin
 12 dict begin
 begincmap
@@ -289,7 +413,154 @@ end`
 	bf(&b, ttf)
 	b.WriteString(epi)
 
-	return flateEncodedStreamIndRef(xRefTable, b.Bytes())
+	bb := b.Bytes()
+
+	if indRef == nil {
+		return flateEncodedStreamIndRef(xRefTable, bb)
+	}
+
+	entry, _ := xRefTable.FindTableEntryForIndRef(indRef)
+	sd, _ := entry.Object.(StreamDict)
+	sd.Content = bb
+	sd.InsertInt("Length1", len(bb))
+	if err := sd.Encode(); err != nil {
+		return nil, err
+	}
+	entry.Object = sd
+
+	return indRef, nil
+}
+
+var (
+	errCorruptCMap     = errors.New("pdfcpu: corrupt CMap")
+	errCorruptFontDict = errors.New("pdfcpu: corrupt fontDict")
+)
+
+func usedGIDsFromCMap(cMap string) ([]uint16, error) {
+	gids := []uint16{}
+	i := strings.Index(cMap, "endcodespacerange")
+	if i < 0 {
+		return nil, errCorruptCMap
+	}
+	scanner := bufio.NewScanner(strings.NewReader(cMap[i+len("endcodespacerange")+1:]))
+
+	// scanLine: %d beginbfchar
+	scanner.Scan()
+	s := scanner.Text()
+
+	var lastBlock bool
+
+	for {
+		ss := strings.Split(s, " ")
+		i, err := strconv.Atoi(ss[0])
+		if err != nil {
+			return nil, errCorruptCMap
+		}
+
+		lastBlock = i < 100
+
+		// scan i lines: <0046>********* => record usedGid(<0046>)
+		for j := 0; j < i; j++ {
+			scanner.Scan()
+			s1 := scanner.Text()
+			if s1[0] != '<' {
+				return nil, errCorruptCMap
+			}
+			bb, err := hex.DecodeString(s1[1:5])
+			if err != nil {
+				return nil, errCorruptCMap
+			}
+			gid := binary.BigEndian.Uint16(bb)
+			gids = append(gids, gid)
+		}
+
+		// scanLine: endbfchar
+		scanner.Scan()
+		if scanner.Text() != "endbfchar" {
+			return nil, errCorruptCMap
+		}
+
+		// scanLine: endcmap => done, or %d beginbfchar
+		scanner.Scan()
+		s = scanner.Text()
+		if s == "endcmap" {
+			break
+		}
+		if lastBlock {
+			return nil, errCorruptCMap
+		}
+	}
+
+	return gids, nil
+}
+
+func IndRefsForUserfontUpdate(xRefTable *XRefTable, d Dict, font *FontResource) error {
+
+	// ToUnicode *IndirectRef d["ToUnicode"]
+	font.ToUnicode = d.IndirectRefEntry("ToUnicode")
+	if font.ToUnicode == nil {
+		return errCorruptFontDict
+	}
+
+	o, found := d.Find("DescendantFonts")
+	if !found {
+		return errCorruptFontDict
+	}
+
+	a, err := xRefTable.DereferenceArray(o)
+	if err != nil {
+		return err
+	}
+
+	if len(a) != 1 {
+		return errCorruptFontDict
+	}
+
+	df, err := xRefTable.DereferenceDict(a[0])
+	if err != nil {
+		return err
+	}
+
+	// W *IndirectRef d["DescendantFonts"][0]["W"]
+	font.W = df.IndirectRefEntry("W")
+	if font.W == nil {
+		return errCorruptFontDict
+	}
+
+	o, found = df.Find("FontDescriptor")
+	if !found {
+		return errCorruptFontDict
+	}
+
+	fd, err := xRefTable.DereferenceDict(o)
+	if err != nil {
+		return err
+	}
+
+	// CIDSet *IndirectRef d["DescendantFonts"][0]["FontDescriptor"]["CIDSet"]
+	font.CIDSet = fd.IndirectRefEntry("CIDSet")
+	if font.CIDSet == nil {
+		return errCorruptFontDict
+	}
+
+	// FontFile *IndirectRef d["DescendantFonts"][0]["FontDescriptor"]["FontFile2"]
+	font.FontFile = fd.IndirectRefEntry("FontFile2")
+	if font.FontFile == nil {
+		return errCorruptFontDict
+	}
+
+	return nil
+}
+
+func usedGIDsFromCMapIndRef(xRefTable *XRefTable, cmapIndRef IndirectRef) ([]uint16, error) {
+	sd, _, err := xRefTable.DereferenceStreamDict(cmapIndRef)
+	if err != nil {
+		return nil, err
+	}
+	if err := sd.Decode(); err != nil {
+		return nil, err
+	}
+	return usedGIDsFromCMap(string(sd.Content))
 }
 
 func subFontPrefix() string {
@@ -302,28 +573,24 @@ func subFontPrefix() string {
 	return string(bb)
 }
 
-func type0FontDict(xRefTable *XRefTable, fontName string) (*IndirectRef, error) {
+func type0FontDict(xRefTable *XRefTable, fontName string, subFont bool, indRef *IndirectRef) (*IndirectRef, error) {
 	// Combines a CIDFont and a CMap to produce a font whose glyphs may be accessed
 	// by means of variable-length character codes in a string to be shown.
+
 	ttf, ok := font.UserFontMetrics[fontName]
 	if !ok {
 		return nil, errors.Errorf("pdfcpu: font %s not available", fontName)
 	}
 
-	baseFontName := subFontPrefix() + "-" + fontName
+	baseFontName := fontName
+	if subFont {
+		baseFontName = subFontPrefix() + "+" + fontName
+	}
 
-	descendentFontIndRef, err := CIDFontDict(xRefTable, ttf, fontName, baseFontName)
+	descendentFontIndRef, err := CIDFontDict(xRefTable, ttf, fontName, baseFontName, subFont)
 	if err != nil {
 		return nil, err
 	}
-
-	toUnicodeIndRef, err := toUnicodeCMap(xRefTable, ttf, fontName)
-	if err != nil {
-		return nil, err
-	}
-
-	// Reset used glyph ids.
-	ttf.UsedGIDs = map[uint16]bool{}
 
 	d := NewDict()
 	d.InsertName("Type", "Font")
@@ -331,14 +598,36 @@ func type0FontDict(xRefTable *XRefTable, fontName string) (*IndirectRef, error) 
 	d.InsertName("BaseFont", baseFontName)
 	d.InsertName("Encoding", "Identity-H")
 	d.Insert("DescendantFonts", Array{*descendentFontIndRef})
-	d.Insert("ToUnicode", *toUnicodeIndRef)
 
-	return xRefTable.IndRefForNewObject(d)
+	if subFont {
+
+		toUnicodeIndRef, err := toUnicodeCMap(xRefTable, ttf, true, nil)
+		if err != nil {
+			return nil, err
+		}
+		d.Insert("ToUnicode", *toUnicodeIndRef)
+	}
+	// TODO else write full toUniCodeCmap.
+
+	// Reset used glyph ids.
+	ttf.UsedGIDs = map[uint16]bool{}
+
+	if indRef == nil {
+		return xRefTable.IndRefForNewObject(d)
+	}
+
+	entry, _ := xRefTable.FindTableEntryForIndRef(indRef)
+	entry.Object = d
+
+	return indRef, nil
 }
 
-func createFontDict(xRefTable *XRefTable, fontName string) (*IndirectRef, error) {
+func EnsureFontDict(xRefTable *XRefTable, fontName string, subDict bool, indRef *IndirectRef) (*IndirectRef, error) {
 	if font.IsCoreFont(fontName) {
+		if indRef != nil {
+			return indRef, nil
+		}
 		return coreFontDict(xRefTable, fontName)
 	}
-	return type0FontDict(xRefTable, fontName)
+	return type0FontDict(xRefTable, fontName, subDict, indRef)
 }

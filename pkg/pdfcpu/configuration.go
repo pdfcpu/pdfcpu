@@ -106,6 +106,7 @@ const (
 	REMOVEANNOTATIONS
 	ADDBOOKMARKS
 	LISTIMAGES
+	CREATE
 )
 
 // Configuration of a Context.

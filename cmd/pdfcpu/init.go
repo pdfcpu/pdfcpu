@@ -138,6 +138,7 @@ func initCommandMap() {
 		"changeopw":     {processChangeOwnerPasswordCommand, nil, usageChangeOwnerPW, usageLongChangeUserPW},
 		"changeupw":     {processChangeUserPasswordCommand, nil, usageChangeUserPW, usageLongChangeUserPW},
 		"collect":       {processCollectCommand, nil, usageCollect, usageLongCollect},
+		"create":        {processCreateCommand, nil, usageCreate, usageLongCreate},
 		"crop":          {processCropCommand, nil, usageCrop, usageLongCrop},
 		"decrypt":       {processDecryptCommand, nil, usageDecrypt, usageLongDecrypt},
 		"encrypt":       {processEncryptCommand, nil, usageEncrypt, usageLongEncrypt},

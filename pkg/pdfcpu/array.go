@@ -89,7 +89,7 @@ func (a Array) Clone() Object {
 
 func (a Array) contains(o Object, xRefTable *XRefTable) (bool, error) {
 	for _, e := range a {
-		ok, err := equalObjects(e, o, xRefTable)
+		ok, err := EqualObjects(e, o, xRefTable)
 		if err != nil {
 			return false, err
 		}

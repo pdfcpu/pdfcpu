@@ -40,7 +40,7 @@ func TestMain(m *testing.M) {
 
 	var err error
 
-	xRefTable, err = createXRefTableWithRootDict()
+	xRefTable, err = CreateXRefTableWithRootDict()
 	if err != nil {
 		//fmt.Printf("%v", err)
 		os.Exit(1)
@@ -107,7 +107,7 @@ func streamDictForImageFile(xRefTable *XRefTable, fileName string) (*StreamDict,
 	}
 	defer f.Close()
 
-	sd, _, _, err := createImageStreamDict(xRefTable, f, false, false)
+	sd, _, _, err := CreateImageStreamDict(xRefTable, f, false, false)
 	return sd, err
 }
 

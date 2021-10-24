@@ -98,9 +98,14 @@ func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdfcpu.I
 }
 
 func fileExists(filename string) bool {
+	var ret bool
 	f, err := os.Open(filename)
+	if err == nil {
+		ret = true
+	}
 	defer f.Close()
-	return err == nil
+	return ret
+
 }
 
 // ImportImagesFile appends PDF pages containing images to outFile which will be created if necessary.

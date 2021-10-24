@@ -532,7 +532,7 @@ func createFileAttachmentAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef
 	}
 
 	fn := filepath.Base(fileName)
-	fileSpecDict, err := xRefTable.NewFileSpecDict(fn, encodeUTF16String(fn), "attached by pdfcpu", *ir)
+	fileSpecDict, err := xRefTable.NewFileSpecDict(fn, EncodeUTF16String(fn), "attached by pdfcpu", *ir)
 	if err != nil {
 		return nil, err
 	}
@@ -572,7 +572,7 @@ func createFileSpecDict(xRefTable *XRefTable, fileName string) (Dict, error) {
 		return nil, err
 	}
 	fn := filepath.Base(fileName)
-	return xRefTable.NewFileSpecDict(fn, encodeUTF16String(fn), "attached by pdfcpu", *ir)
+	return xRefTable.NewFileSpecDict(fn, EncodeUTF16String(fn), "attached by pdfcpu", *ir)
 }
 
 func createSoundObject(xRefTable *XRefTable) (*IndirectRef, error) {
@@ -815,7 +815,7 @@ func createPrinterMarkAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, a
 }
 
 func createXObjectForWaterMark(xRefTable *XRefTable) (*IndirectRef, error) {
-	fIndRef, err := createFontDict(xRefTable, "Helvetica")
+	fIndRef, err := EnsureFontDict(xRefTable, "Helvetica", false, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1180,7 +1180,7 @@ func createLinkAnnotationDictWithHideAction(xRefTable *XRefTable, pageIndRef Ind
 
 func createTrapNetAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
 
-	ir, err := createFontDict(xRefTable, "Helvetica")
+	ir, err := EnsureFontDict(xRefTable, "Helvetica", false, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -244,6 +244,7 @@ func (xRefTable *XRefTable) DereferenceCSVSafeText(o Object) (string, error) {
 func (xRefTable *XRefTable) DereferenceArray(o Object) (Array, error) {
 
 	// TODO Cleanup responsibilities!
+	// Fix relict from Destination validation.
 
 	o, err := xRefTable.Dereference(o)
 	if err != nil || o == nil {

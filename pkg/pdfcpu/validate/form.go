@@ -269,7 +269,7 @@ func validateAcroFormFields(xRefTable *pdf.XRefTable, o pdf.Object) error {
 		return err
 	}
 
-	xRefTable.AcroForm = true
+	//xRefTable.AcroForm = true
 
 	for _, value := range a {
 
@@ -347,7 +347,7 @@ func validateAcroFormXFA(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion pdf.
 		return err
 	}
 
-	xRefTable.AcroForm = true
+	//xRefTable.AcroForm = true
 
 	switch o := o.(type) {
 
@@ -427,6 +427,8 @@ func validateAcroForm(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool
 	if err != nil || d == nil {
 		return err
 	}
+
+	xRefTable.AcroForm = d
 
 	// Version check
 	err = xRefTable.ValidateVersion("AcroForm", sinceVersion)

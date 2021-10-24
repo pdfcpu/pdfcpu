@@ -42,8 +42,8 @@ import (
 const stampWithBBox = false
 
 const (
-	degToRad = math.Pi / 180
-	radToDeg = 180 / math.Pi
+	DegToRad = math.Pi / 180
+	RadToDeg = 180 / math.Pi
 )
 
 // Watermark mode
@@ -74,7 +74,7 @@ var (
 	errNoContent    = errors.New("pdfcpu: page without content")
 	errNoWatermark  = errors.New("pdfcpu: no watermarks found")
 	errCorruptOCGs  = errors.New("pdfcpu: OCProperties: corrupt OCGs element")
-	errInvalidColor = errors.New("pdfcpu: invalid color constant")
+	ErrInvalidColor = errors.New("pdfcpu: invalid color constant")
 )
 
 type watermarkParamMap map[string]func(string, *Watermark) error
@@ -336,10 +336,11 @@ func (wm Watermark) calcMaxTextWidth() float64 {
 	return maxWidth
 }
 
-func resolveWMTextString(text, timeStampFormat string, pageNr, pageCount int) (string, bool) {
+func ResolveWMTextString(text, timeStampFormat string, pageNr, pageCount int) (string, bool) {
 	// replace  %p with pageNr
 	//			%P with pageCount
 	//			%t with timestamp
+	//			%v with pdfcpu version
 	var (
 		bb         []byte
 		hasPercent bool
@@ -370,6 +371,11 @@ func resolveWMTextString(text, timeStampFormat string, pageNr, pageCount int) (s
 				unique = true
 				continue
 			}
+			if text[i] == 'v' {
+				bb = append(bb, VersionStr...)
+				unique = true
+				continue
+			}
 		}
 		bb = append(bb, text[i])
 	}
@@ -377,7 +383,7 @@ func resolveWMTextString(text, timeStampFormat string, pageNr, pageCount int) (s
 }
 
 func (wm Watermark) textDescriptor(timestampFormat string, pageNr, pageCount int) (TextDescriptor, bool) {
-	t, unique := resolveWMTextString(wm.TextString, timestampFormat, pageNr, pageCount)
+	t, unique := ResolveWMTextString(wm.TextString, timestampFormat, pageNr, pageCount)
 	td := TextDescriptor{
 		Text:           t,
 		FontName:       wm.FontName,
@@ -538,7 +544,7 @@ func parseRightToLeft(s string, wm *Watermark) error {
 	return nil
 }
 
-func parseHexColor(hexCol string) (SimpleColor, error) {
+func ParseHexColor(hexCol string) (SimpleColor, error) {
 	var sc SimpleColor
 	if len(hexCol) != 7 || hexCol[0] != '#' {
 		return sc, errors.Errorf("pdfcpu: invalid hex color string: #FFFFFF, %s\n", hexCol)
@@ -567,12 +573,12 @@ func parseConstantColor(s string) (SimpleColor, error) {
 	case "white":
 		sc = White
 	default:
-		err = errInvalidColor
+		err = ErrInvalidColor
 	}
 	return sc, err
 }
 
-func parseColor(s string) (SimpleColor, error) {
+func ParseColor(s string) (SimpleColor, error) {
 	var sc SimpleColor
 
 	cs := strings.Split(s, " ")
@@ -583,7 +589,7 @@ func parseColor(s string) (SimpleColor, error) {
 	if len(cs) == 1 {
 		if len(cs[0]) == 7 && cs[0][0] == '#' {
 			// #FFFFFF to uint32
-			return parseHexColor(cs[0])
+			return ParseHexColor(cs[0])
 		}
 		return parseConstantColor(cs[0])
 	}
@@ -619,7 +625,7 @@ func parseColor(s string) (SimpleColor, error) {
 }
 
 func parseStrokeColor(s string, wm *Watermark) error {
-	c, err := parseColor(s)
+	c, err := ParseColor(s)
 	if err != nil {
 		return err
 	}
@@ -628,7 +634,7 @@ func parseStrokeColor(s string, wm *Watermark) error {
 }
 
 func parseFillColor(s string, wm *Watermark) error {
-	c, err := parseColor(s)
+	c, err := ParseColor(s)
 	if err != nil {
 		return err
 	}
@@ -637,7 +643,7 @@ func parseFillColor(s string, wm *Watermark) error {
 }
 
 func parseBackgroundColor(s string, wm *Watermark) error {
-	c, err := parseColor(s)
+	c, err := ParseColor(s)
 	if err != nil {
 		return err
 	}
@@ -804,12 +810,12 @@ func parseBorder(s string, wm *Watermark) error {
 		if len(b) == 2 {
 			return nil
 		}
-		c, err := parseColor(strings.Join(b[2:], " "))
+		c, err := ParseColor(strings.Join(b[2:], " "))
 		wm.BorderColor = &c
 		return err
 	}
 
-	c, err := parseColor(strings.Join(b[1:], " "))
+	c, err := ParseColor(strings.Join(b[1:], " "))
 	wm.BorderColor = &c
 	return err
 }
@@ -932,14 +938,14 @@ func (wm *Watermark) calcBoundingBox(pageNr int) {
 	wm.bb = bb
 }
 
-func (wm *Watermark) calcTransformMatrix() matrix {
+func (wm *Watermark) calcTransformMatrix() Matrix {
 	var sin, cos float64
 	r := wm.Rotation
 
 	if wm.Diagonal != NoDiagonal {
 
 		// Calculate the angle of the diagonal with respect of the aspect ratio of the bounding box.
-		r = math.Atan(wm.vp.Height()/wm.vp.Width()) * float64(radToDeg)
+		r = math.Atan(wm.vp.Height()/wm.vp.Width()) * float64(RadToDeg)
 
 		if wm.bb.AspectRatio() < 1 {
 			r -= 90
@@ -951,8 +957,8 @@ func (wm *Watermark) calcTransformMatrix() matrix {
 
 	}
 
-	sin = math.Sin(float64(r) * float64(degToRad))
-	cos = math.Cos(float64(r) * float64(degToRad))
+	sin = math.Sin(float64(r) * float64(DegToRad))
+	cos = math.Cos(float64(r) * float64(DegToRad))
 
 	var dy float64
 	if !wm.isImage() && !wm.isPDF() {
@@ -963,7 +969,7 @@ func (wm *Watermark) calcTransformMatrix() matrix {
 	dx := ll.X + wm.bb.Width()/2 + float64(wm.Dx) + sin*(wm.bb.Height()/2+dy) - cos*wm.bb.Width()/2
 	dy = ll.Y + wm.bb.Height()/2 + float64(wm.Dy) - cos*(wm.bb.Height()/2+dy) - sin*wm.bb.Width()/2
 
-	return calcTransformMatrix(1, 1, sin, cos, dx, dy)
+	return CalcTransformMatrix(1, 1, sin, cos, dx, dy)
 }
 
 func onTopString(onTop bool) string {
@@ -1162,13 +1168,13 @@ func createPDFRes(ctx, otherCtx *Context, pageNr int, migrated map[int]int, wm *
 	}
 
 	// Migrate external resource dict into ctx.
-	if _, err = migrateObject(inhPAttrs.resources, otherCtx, ctx, migrated); err != nil {
+	if _, err = migrateObject(inhPAttrs.Resources, otherCtx, ctx, migrated); err != nil {
 		return err
 	}
 
 	// Create an object for resource dict in xRefTable.
-	if inhPAttrs.resources != nil {
-		ir, err := xRefTable.IndRefForNewObject(inhPAttrs.resources)
+	if inhPAttrs.Resources != nil {
+		ir, err := xRefTable.IndRefForNewObject(inhPAttrs.Resources)
 		if err != nil {
 			return err
 		}
@@ -1215,7 +1221,7 @@ func (ctx *Context) createPDFResForWM(wm *Watermark) error {
 
 func (ctx *Context) createImageResForWM(wm *Watermark) (err error) {
 
-	wm.image, wm.width, wm.height, err = createImageResource(ctx.XRefTable, wm.Image, false, false)
+	wm.image, wm.width, wm.height, err = CreateImageResource(ctx.XRefTable, wm.Image, false, false)
 	return err
 }
 
@@ -1226,7 +1232,7 @@ func (ctx *Context) createFontResForWM(wm *Watermark) (err error) {
 		td, _ := setupTextDescriptor(wm, "", 0, 0)
 		WriteMultiLine(new(bytes.Buffer), RectForFormat("A4"), nil, td)
 	}
-	wm.font, err = createFontDict(ctx.XRefTable, wm.FontName)
+	wm.font, err = EnsureFontDict(ctx.XRefTable, wm.FontName, true, nil)
 	return err
 }
 
@@ -1626,10 +1632,10 @@ func (ctx *Context) updatePageResourcesForWM(resDict Dict, wm *Watermark, gsID, 
 
 func wmContent(wm *Watermark, gsID, xoID string) []byte {
 	m := wm.calcTransformMatrix()
-	p1 := m.transform(Point{wm.bb.LL.X, wm.bb.LL.Y})
-	p2 := m.transform(Point{wm.bb.UR.X, wm.bb.LL.X})
-	p3 := m.transform(Point{wm.bb.UR.X, wm.bb.UR.Y})
-	p4 := m.transform(Point{wm.bb.LL.X, wm.bb.UR.Y})
+	p1 := m.Transform(Point{wm.bb.LL.X, wm.bb.LL.Y})
+	p2 := m.Transform(Point{wm.bb.UR.X, wm.bb.LL.X})
+	p3 := m.Transform(Point{wm.bb.UR.X, wm.bb.UR.Y})
+	p4 := m.Transform(Point{wm.bb.LL.X, wm.bb.UR.Y})
 	wm.bbTrans = QuadLiteral{P1: p1, P2: p2, P3: p3, P4: p4}
 	insertOCG := " /Artifact <</Subtype /Watermark /Type /Pagination >>BDC q %.2f %.2f %.2f %.2f %.2f %.2f cm /%s gs /%s Do Q EMC "
 	var b bytes.Buffer
@@ -1825,9 +1831,9 @@ func (ctx *Context) updatePageContentsForWM(obj Object, wm *Watermark, gsID, xoI
 }
 
 func viewPort(a *InheritedPageAttrs) *Rectangle {
-	visibleRegion := a.mediaBox
-	if a.cropBox != nil {
-		visibleRegion = a.cropBox
+	visibleRegion := a.MediaBox
+	if a.CropBox != nil {
+		visibleRegion = a.CropBox
 	}
 	return visibleRegion
 }
@@ -1852,7 +1858,7 @@ func (ctx *Context) addPageWatermark(i int, wm *Watermark) error {
 	}
 
 	// Internalize page rotation into content stream.
-	wm.pageRot = inhPAttrs.rotate
+	wm.pageRot = inhPAttrs.Rotate
 
 	wm.vp = viewPort(inhPAttrs)
 
@@ -1879,9 +1885,9 @@ func (ctx *Context) addPageWatermark(i int, wm *Watermark) error {
 	gsID := "GS0"
 	xoID := "Fm0"
 
-	if inhPAttrs.resources != nil {
-		err = ctx.updatePageResourcesForWM(inhPAttrs.resources, wm, &gsID, &xoID)
-		d.Update("Resources", inhPAttrs.resources)
+	if inhPAttrs.Resources != nil {
+		err = ctx.updatePageResourcesForWM(inhPAttrs.Resources, wm, &gsID, &xoID)
+		d.Update("Resources", inhPAttrs.Resources)
 	} else {
 		err = ctx.insertPageResourcesForWM(d, wm, gsID, xoID)
 	}
@@ -2018,7 +2024,7 @@ func (ctx *Context) AddWatermarksMap(m map[int]*Watermark) error {
 
 	// TODO Take existing font dicts in xref into account.
 	for fontName, pageSet := range fm {
-		ir, err := createFontDict(ctx.XRefTable, fontName)
+		ir, err := EnsureFontDict(ctx.XRefTable, fontName, true, nil)
 		if err != nil {
 			return err
 		}
@@ -2072,7 +2078,7 @@ func (ctx *Context) AddWatermarksSliceMap(m map[int][]*Watermark) error {
 
 	// TODO Take existing font dicts in xref into account.
 	for fontName, pageSet := range fm {
-		ir, err := createFontDict(ctx.XRefTable, fontName)
+		ir, err := EnsureFontDict(ctx.XRefTable, fontName, true, nil)
 		if err != nil {
 			return err
 		}

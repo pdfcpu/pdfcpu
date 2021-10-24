@@ -24,7 +24,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func equalObjects(o1, o2 Object, xRefTable *XRefTable) (ok bool, err error) {
+func EqualObjects(o1, o2 Object, xRefTable *XRefTable) (ok bool, err error) {
 
 	//log.Debug.Printf("equalObjects: comparing %T with %T \n", o1, o2)
 
@@ -82,7 +82,7 @@ func equalArrays(a1, a2 Array, xRefTable *XRefTable) (bool, error) {
 
 	for i, o1 := range a1 {
 
-		ok, err := equalObjects(o1, a2[i], xRefTable)
+		ok, err := EqualObjects(o1, a2[i], xRefTable)
 		if err != nil {
 			return false, err
 		}
@@ -182,7 +182,7 @@ func equalDicts(d1, d2 Dict, xRefTable *XRefTable) (bool, error) {
 			continue
 		}
 
-		ok, err := equalObjects(v1, v2, xRefTable)
+		ok, err := EqualObjects(v1, v2, xRefTable)
 		if err != nil {
 			//log.Debug.Printf("equalDict: return4 false, key=%s v1=%v\nv2=%v\n%v\n", key, v1, v2, err)
 			return false, err

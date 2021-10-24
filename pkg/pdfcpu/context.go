@@ -387,6 +387,7 @@ type OptimizationContext struct {
 	// Font section
 	PageFonts         []IntSet            // For each page a registry of font object numbers.
 	FontObjects       map[int]*FontObject // FontObject lookup table by font object number.
+	FormFontObjects   map[int]*FontObject // FormFontObject lookup table by font object number.
 	Fonts             map[string][]int    // All font object numbers registered for a font name.
 	DuplicateFonts    map[int]Dict        // Registry of duplicate font dicts.
 	DuplicateFontObjs IntSet              // The set of objects that represents the union of the object graphs of all duplicate font dicts.
@@ -407,6 +408,7 @@ type OptimizationContext struct {
 func newOptimizationContext() *OptimizationContext {
 	return &OptimizationContext{
 		FontObjects:          map[int]*FontObject{},
+		FormFontObjects:      map[int]*FontObject{},
 		Fonts:                map[string][]int{},
 		DuplicateFonts:       map[int]Dict{},
 		DuplicateFontObjs:    IntSet{},

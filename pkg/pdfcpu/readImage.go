@@ -525,7 +525,7 @@ func createDCTImageObjectForJPEG(xRefTable *XRefTable, c image.Config, bb bytes.
 	return sd, c.Width, c.Height, err
 }
 
-func createImageStreamDict(xRefTable *XRefTable, r io.Reader, gray, sepia bool) (*StreamDict, int, int, error) {
+func CreateImageStreamDict(xRefTable *XRefTable, r io.Reader, gray, sepia bool) (*StreamDict, int, int, error) {
 
 	var bb bytes.Buffer
 	tee := io.TeeReader(r, &bb)
@@ -574,8 +574,8 @@ func createImageStreamDict(xRefTable *XRefTable, r io.Reader, gray, sepia bool) 
 	return createImageDict(xRefTable, buf, softMask, w, h, bpc, format, cs)
 }
 
-func createImageResource(xRefTable *XRefTable, r io.Reader, gray, sepia bool) (*IndirectRef, int, int, error) {
-	sd, w, h, err := createImageStreamDict(xRefTable, r, gray, sepia)
+func CreateImageResource(xRefTable *XRefTable, r io.Reader, gray, sepia bool) (*IndirectRef, int, int, error) {
+	sd, w, h, err := CreateImageStreamDict(xRefTable, r, gray, sepia)
 	if err != nil {
 		return nil, 0, 0, err
 	}

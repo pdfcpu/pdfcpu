@@ -18,10 +18,12 @@ package api
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
+	"time"
 
+	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/create"
 )
 
 // CreatePDFFile creates a PDF file for an xRefTable and writes it to outFile.
@@ -35,30 +37,108 @@ func CreatePDFFile(xRefTable *pdfcpu.XRefTable, outFile string, conf *pdfcpu.Con
 	return WriteContext(ctx, f)
 }
 
-// CreateFromJSON reads a PDF definition from rd, creates a multiple page PDF form and writes it to outFile.
-// Any existing out.pdf will be modified.
-func CreateFromJSON(rd io.Reader, outFile string, conf *pdfcpu.Configuration) error {
+// CreateFromJSONFile renders the PDF structure corresponding to rd to w.
+// If rs == nil a new PDF file will be written to w.
+// If infile exists it appends page content for existing pages and
+// appends new pages including any empty pages needed in between.
+func CreateFromJSON(rd io.Reader, rs io.ReadSeeker, w io.Writer, conf *pdfcpu.Configuration) error {
+	if conf == nil {
+		conf = pdfcpu.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdfcpu.CREATE
 
-	bb, err := ioutil.ReadAll(rd)
+	var (
+		ctx *pdfcpu.Context
+		err error
+	)
+
+	if rs != nil {
+		ctx, _, _, _, err = readValidateAndOptimize(rs, conf, time.Now())
+	} else {
+		ctx, err = pdfcpu.CreateContextWithXRefTable(conf, pdfcpu.PaperSize["A4"])
+	}
 	if err != nil {
 		return err
 	}
 
-	xRefTable, err := pdfcpu.CreateXRefFromJSON(bb, conf)
-	if err != nil {
+	if err := ctx.EnsurePageCount(); err != nil {
 		return err
 	}
 
-	return CreatePDFFile(xRefTable, outFile, conf)
+	if err := create.FromJSON(rd, ctx); err != nil {
+		return err
+	}
+
+	if conf.ValidationMode != pdfcpu.ValidationNone {
+		if err = ValidateContext(ctx); err != nil {
+			return err
+		}
+	}
+
+	return WriteContext(ctx, w)
 }
 
-// CreateFromJSONFile reads a PDF definition from inFile, creates a multi page PDF and writes it to outFile.
-// Any existing out.pdf will be modified.
-func CreateFromJSONFile(inFile, outFile string, conf *pdfcpu.Configuration) error {
-	f, err := os.Open(inFile)
-	if err != nil {
+// CreateFromJSONFile renders the PDF structure corresponding to jsonFile to outFile.
+// If inFile does not exist it creates a new PDF Context.
+// If infile exists it appends page content for existing pages and
+// appends new pages including any empty pages needed.
+func CreateFromJSONFile(jsonFile, inFile, outFile string, conf *pdfcpu.Configuration) (err error) {
+
+	var f0, f1, f2 *os.File
+
+	if f0, err = os.Open(jsonFile); err != nil {
 		return err
 	}
 
-	return CreateFromJSON(f, outFile, conf)
+	rs := io.ReadSeeker(nil)
+	f1 = nil
+	if fileExists(inFile) {
+		if f1, err = os.Open(inFile); err != nil {
+			return err
+		}
+		rs = f1
+	}
+
+	tmpFile := inFile + ".tmp"
+	if outFile != "" && inFile != outFile {
+		tmpFile = outFile
+		log.CLI.Printf("writing %s...\n", outFile)
+	} else {
+		log.CLI.Printf("writing %s...\n", inFile)
+	}
+	if f2, err = os.Create(tmpFile); err != nil {
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			f2.Close()
+			if f1 != nil {
+				f1.Close()
+			}
+			f0.Close()
+			os.Remove(tmpFile)
+			return
+		}
+		if err = f2.Close(); err != nil {
+			return
+		}
+		if f1 != nil {
+			if err = f1.Close(); err != nil {
+				return
+			}
+		}
+		if err = f0.Close(); err != nil {
+			return
+		}
+		s := outFile
+		if outFile == "" || inFile == outFile {
+			s = inFile
+		}
+		if err = os.Rename(tmpFile, s); err != nil {
+			return
+		}
+	}()
+
+	return CreateFromJSON(f0, rs, f2, conf)
 }

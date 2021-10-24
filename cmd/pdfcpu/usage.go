@@ -32,6 +32,7 @@ The commands are:
    changeopw     change owner password
    changeupw     change user password
    collect       create custom sequence of selected pages
+   create        create PDF content
    crop          set cropbox for selected pages
    decrypt       remove password protection
    encrypt       set password protection		
@@ -948,4 +949,37 @@ Examples:
     
     Example: pdfcpu images list -p "1-5" gallery.pdf
     `
+
+	usageCreate     = "usage: pdfcpu create inFileJSON [inFile] outFile" + generalFlags
+	usageLongCreate = `Create page content corresponding to declarations in inFileJSON.
+Append new page content to existing page content in inFile and write result to outFile.
+If inFile is absent outFile will be overwritten.
+
+   inFileJSON ... input json file
+   inFile     ... optional input pdf file 
+   outFile    ... output pdf file
+
+A minimalistic sample json:
+{
+	"pages": {
+		"1": {
+			"content": {
+				"text": [
+					{
+						"value": "Hello pdfcpu user!",
+						"anchor": "center",
+						"font": {
+							"name": "Helvetica",
+							"size": 12
+						}
+					}
+				]
+			}
+		}
+	}
+}
+   
+For more info on json syntax & samples please refer to :
+   pdfcpu/pkg/testdata/json/*
+   pdfcpu/pkg/samples/create/*`
 )

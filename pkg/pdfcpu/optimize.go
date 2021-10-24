@@ -1151,6 +1151,93 @@ func fixReferencesToFreeObjects(ctx *Context) error {
 	return fixDirectObject(ctx, ctx.RootDict)
 }
 
+func cacheFormFonts(ctx *Context) error {
+
+	d := ctx.AcroForm
+	if len(d) == 0 {
+		return nil
+	}
+
+	o, found := d.Find("DR")
+	if !found {
+		return nil
+	}
+
+	resDict, err := ctx.DereferenceDict(o)
+	if err != nil || len(resDict) == 0 {
+		return err
+	}
+
+	o, found = resDict.Find("Font")
+	if !found {
+		return err
+	}
+
+	fontResDict, err := ctx.DereferenceDict(o)
+	if err != nil {
+		return err
+	}
+
+	// Iterate over font resource dict.
+	for rName, v := range fontResDict {
+
+		indRef, ok := v.(IndirectRef)
+		if !ok {
+			continue
+		}
+
+		log.Optimize.Printf("optimizeFontResourcesDict: processing font: %s, %s\n", rName, indRef)
+		objNr := int(indRef.ObjectNumber)
+		log.Optimize.Printf("optimizeFontResourcesDict: objectNumber = %d\n", objNr)
+
+		fontDict, err := ctx.DereferenceDict(indRef)
+		if err != nil {
+			return err
+		}
+		if fontDict == nil {
+			continue
+		}
+
+		log.Optimize.Printf("optimizeFontResourcesDict: fontDict: %s\n", fontDict)
+
+		if fontDict.Type() == nil {
+			return errors.Errorf("pdfcpu: optimizeFontResourcesDict: missing dict type %s\n", v)
+		}
+
+		if *fontDict.Type() != "Font" {
+			return errors.Errorf("pdfcpu: optimizeFontResourcesDict: expected Type=Font, unexpected Type: %s", *fontDict.Type())
+		}
+
+		// Get the unique font name.
+		prefix, fName, err := fontName(ctx, fontDict, objNr)
+		if err != nil {
+			return err
+		}
+		log.Optimize.Printf("optimizeFontResourcesDict: baseFont: prefix=%s name=%s\n", prefix, fName)
+
+		// Register new font dict.
+		log.Optimize.Printf("optimizeFontResourcesDict: adding new font %s obj#%d\n", fName, objNr)
+
+		fontObjNrs, found := ctx.Optimize.Fonts[fName]
+		if found {
+			log.Optimize.Printf("optimizeFontResourcesDict: appending %d to %s\n", objNr, fName)
+			ctx.Optimize.Fonts[fName] = append(fontObjNrs, objNr)
+		} else {
+			ctx.Optimize.Fonts[fName] = []int{objNr}
+		}
+
+		ctx.Optimize.FormFontObjects[objNr] =
+			&FontObject{
+				ResourceNames: []string{rName},
+				Prefix:        prefix,
+				FontName:      fName,
+				FontDict:      fontDict,
+			}
+	}
+
+	return nil
+}
+
 // OptimizeXRefTable optimizes an xRefTable by locating and getting rid of redundant embedded fonts and images.
 func OptimizeXRefTable(ctx *Context) error {
 	log.Info.Println("optimizing fonts & images")
@@ -1159,6 +1246,12 @@ func OptimizeXRefTable(ctx *Context) error {
 	// Sometimes free objects are used although they are part of the free object list.
 	// Replace references to free xref table entries with a reference to a NULL object.
 	if err := fixReferencesToFreeObjects(ctx); err != nil {
+		return err
+	}
+
+	// Cache form fonts.
+	// TODO optimize form fonts.
+	if err := cacheFormFonts(ctx); err != nil {
 		return err
 	}
 

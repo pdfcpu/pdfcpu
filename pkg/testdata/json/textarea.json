@@ -1,0 +1,551 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": true,
+	"guides": false,
+	"colors": {
+		"DarkOrange": "#FF8C00",
+		"DarkSeaGreen": "#8FBC8F"
+	},
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"fonts": {
+		"myCourier": {
+			"name": "Courier",
+			"size": 12
+		},
+		"input": {
+			"name": "Courier",
+			"size": 12,
+			"col": "#222222"
+		},
+		"label": {
+			"name": "Courier",
+			"comment": "label fontsize enforced by input font!",
+			"size": 12,
+			"col": "Gray"
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"header": {
+		"font": {
+			"name": "Courier-Bold",
+			"size": 24,
+			"col": "#FF0000"
+		},
+		"bgCol": "#FFFFFF",
+		"left": "$logo1",
+		"center": "TextAreas / Multiline Textfields",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "$myCourier",
+			"size": 9
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Page %p of %P",
+		"right": "Source:\ntestdata/json/textarea.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"images": {
+		"logo1": {
+			"file": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"file": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"pages": {
+		"1": {
+			"bgcol": "LightGray",
+			"fonts": {
+				"labelOrange": {
+					"name": "Courier-Bold",
+					"comment": "label fontsize enforced by input font!",
+					"size": 12,
+					"col": "$DarkOrange"
+				},
+				"labelGreen": {
+					"name": "Courier-Bold",
+					"comment": "label fontsize enforced by input font!",
+					"size": 12,
+					"col": "$DarkSeaGreen"
+				}
+			},
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							200,
+							640
+						]
+					}
+				],
+				"textfield": [
+					{
+						"hide": false,
+						"multiline": true,
+						"id": "llnote1",
+						"value": "line1\nand line2",
+						"pos": [
+							200,
+							640
+						],
+						"width": 100,
+						"height":50,
+						"align": "left",
+						"bgCol": "$DarkOrange",
+						"label": {
+							"value": "1st note:",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "left",
+							"font": {
+								"name": "$labelOrange"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "llnote2",
+						"multiline": true,
+						"value": "line1 xxx line2 yyy",
+						"pos": [
+							200,
+							580
+						],
+						"width": 100,
+						"height":50,
+						"align": "left",
+						"bgCol": "$DarkOrange",
+						"label": {
+							"value": "Second note:",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "left",
+							"font": {
+								"name": "$labelOrange"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "lrnote1",
+						"multiline": true,
+						"value": "line1\nand line2",
+						"pos": [
+							450,
+							640
+						],
+						"width": 100,
+						"height":50,
+						"align": "left",
+						"bgCol": "$DarkOrange",
+						"border": {
+							"width": 1,
+							"col": "Black"
+						},
+						"label": {
+							"value": "1st note:",
+							"width": 100,
+							"gap": 10,
+							"align": "right",
+							"pos": "left",
+							"font": {
+								"name": "$labelOrange"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "lrnote2",
+						"multiline": true,
+						"value": "line1\nand line2",
+						"pos": [
+							450,
+							580
+						],
+						"width": 100,
+						"height":50,
+						"align": "left",
+						"bgCol": "$DarkOrange",
+						"border": {
+							"width": 1,
+							"col": "Black"
+						},
+						"label": {
+							"value": "Second note:",
+							"width": 100,
+							"gap": 10,
+							"align": "right",
+							"pos": "left",
+							"font": {
+								"name": "$labelOrange"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "rlnote1",
+						"multiline": true,
+						"value": "line1\nand line2",
+						"pos": [
+							100,
+							485
+						],
+						"width": 100,
+						"height":50,
+						"align": "right",
+						"bgCol": "$DarkSeaGreen",
+						"border": {
+							"width": 0,
+							"col": "#FF0000"
+						},
+						"label": {
+							"value": "1st note",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "right",
+							"font": {
+								"name": "$labelGreen"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "rlnote2",
+						"multiline": true,
+						"value": "line1\nand line2",
+						"pos": [
+							100,
+							425
+						],
+						"width": 100,
+						"height":50,
+						"align": "right",
+						"bgCol": "$DarkSeaGreen",
+						"border": {
+							"width": 0,
+							"col": "#FF0000"
+						},
+						"label": {
+							"value": "Second note",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "right",
+							"font": {
+								"name": "$labelGreen"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "rrnote1",
+						"multiline": true,
+						"value": "line1\nand line2",
+						"pos": [
+							345,
+							485
+						],
+						"width": 100,
+						"height":50,
+						"align": "right",
+						"bgCol": "$DarkSeaGreen",
+						"border": {
+							"width": 1,
+							"col": "Black"
+						},
+						"label": {
+							"value": "1st note",
+							"width": 100,
+							"gap": 10,
+							"align": "right",
+							"pos": "right",
+							"font": {
+								"name": "$labelGreen"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "rrnote2",
+						"multiline": true,
+						"value": "line1\nand line2",
+						"pos": [
+							345,
+							425
+						],
+						"width": 100,
+						"height":50,
+						"align": "right",
+						"bgCol": "$DarkSeaGreen",
+						"border": {
+							"width": 1,
+							"col": "Black"
+						},
+						"label": {
+							"value": "Second note",
+							"width": 100,
+							"gap": 10,
+							"align": "right",
+							"pos": "right",
+							"font": {
+								"name": "$labelGreen"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "tlnote",
+						"multiline": true,
+						"value": "line1\nand line2",
+						"pos": [
+							100,
+							310
+						],
+						"width": 100,
+						"height":50,
+						"align": "left",
+						"bgCol": "LightGray",
+						"border": {
+							"width": 0,
+							"col": "#FF0000"
+						},
+						"label": {
+							"value": "Note",
+							"width": 100,
+							"align": "left",
+							"pos": "top",
+							"bgCol": "LightGray"
+						}
+					},
+					{
+						"hide": false,
+						"id": "tcnote",
+						"multiline": true,
+						"value": "line1\nand line2",
+						"pos": [
+							250,
+							310
+						],
+						"width": 100,
+						"height":50,
+						"align": "center",
+						"bgCol": "LightGray",
+						"border": {
+							"width": 0,
+							"col": "#FF0000"
+						},
+						"label": {
+							"value": "Note",
+							"width": 100,
+							"align": "center",
+							"pos": "top",
+							"bgCol": "LightGray"
+						}
+					},
+					{
+						"hide": false,
+						"id": "trnote",
+						"multiline": true,
+						"value": "line1\nand line2",
+						"pos": [
+							400,
+							310
+						],
+						"width": 100,
+						"height":50,
+						"align": "right",
+						"bgCol": "LightGray",
+						"border": {
+							"width": 0,
+							"col": "#FF0000"
+						},
+						"label": {
+							"value": "Note",
+							"width": 100,
+							"align": "right",
+							"pos": "top",
+							"bgCol": "LightGray"
+						}
+					},
+					{
+						"hide": false,
+						"id": "tclnote",
+						"multiline": true,
+						"value": "line1\nand line2",
+						"pos": [
+							250,
+							220
+						],
+						"width": 100,
+						"height":50,
+						"align": "left",
+						"bgCol": "LightGray",
+						"border": {
+							"width": 1,
+							"col": "Black"
+						},
+						"label": {
+							"value": "Note",
+							"width": 100,
+							"align": "center",
+							"pos": "top",
+							"bgCol": "LightGray"
+						}
+					},
+					{
+						"hide": false,
+						"id": "blnote",
+						"multiline": true,
+						"value": "line1\nand line2",
+						"pos": [
+							100,
+							110
+						],
+						"width": 100,
+						"height":50,
+						"align": "left",
+						"label": {
+							"value": "Note",
+							"width": 100,
+							"align": "left",
+							"pos": "bottom"
+						}
+					},
+					{
+						"hide": false,
+						"id": "bcnote",
+						"multiline": true,
+						"value": "line1\nand line2",
+						"pos": [
+							250,
+							110
+						],
+						"width": 100,
+						"height":50,
+						"align": "center",
+						"label": {
+							"value": "Note",
+							"width": 100,
+							"align": "center",
+							"pos": "bottom"
+						}
+					},
+					{
+						"hide": false,
+						"id": "brnote",
+						"multiline": true,
+						"value": "line1\nand line2",
+						"pos": [
+							400,
+							110
+						],
+						"width": 100,
+						"height":50,
+						"align": "right",
+						"label": {
+							"value": "Note",
+							"width": 100,
+							"align": "right",
+							"pos": "bottom"
+						}
+					},
+					{
+						"hide": false,
+						"id": "bclnote",
+						"multiline": true,
+						"value": "line1\nand line2",
+						"pos": [
+							250,
+							20
+						],
+						"width": 100,
+						"height":50,
+						"align": "left",
+						"border": {
+							"width": 1,
+							"col": "Black"
+						},
+						"label": {
+							"value": "Note",
+							"width": 100,
+							"align": "center",
+							"pos": "bottom"
+						}
+					}
+				],
+				"text": [
+					{
+						"value": "Textareas with left label:",
+						"pos": [
+							0,
+							700
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Textareas with right label:",
+						"pos": [
+							0,
+							545
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Textareas with top label:",
+						"pos": [
+							0,
+							390
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Textareas with bottom label:",
+						"pos": [
+							0,
+							180
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					}
+				]
+			}
+		}
+	}
+}
