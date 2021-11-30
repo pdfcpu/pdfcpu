@@ -17,7 +17,6 @@
 package primitives
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -61,7 +60,7 @@ func (page *PDFPage) resolveFileName(s string) (string, error) {
 	}
 
 	filePath = filePath[1:]
-	i := strings.Index(filePath, string(os.PathSeparator))
+	i := strings.Index(filePath, "/")
 	if i <= 0 {
 		return "", errors.Errorf("pdfcpu: corrupt filename: %s", s)
 	}
