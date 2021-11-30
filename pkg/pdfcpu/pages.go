@@ -124,7 +124,8 @@ func AddPages(ctx, ctxDest *Context, pages []int, usePgCache bool) error {
 
 		// Move page i and required resources into new context.
 
-		consolidateRes := true
+		consolidateRes := false
+		// TODO consolidate via optimize flag
 		d, _, inhPAttrs, err := ctx.PageDict(i, consolidateRes)
 		if err != nil {
 			return err

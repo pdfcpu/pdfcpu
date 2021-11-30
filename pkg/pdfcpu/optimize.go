@@ -116,7 +116,10 @@ func handleDuplicateFontObject(ctx *Context, fontDict Dict, fName, rName string,
 	for _, fontObjNr := range fontObjNrs {
 
 		// Get the font object from the lookup table.
-		fontObject := ctx.Optimize.FontObjects[fontObjNr]
+		fontObject, ok := ctx.Optimize.FontObjects[fontObjNr]
+		if !ok {
+			continue
+		}
 
 		log.Optimize.Printf("handleDuplicateFontObject: comparing with fontDict Obj %d\n", fontObjNr)
 

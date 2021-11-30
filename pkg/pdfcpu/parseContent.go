@@ -136,6 +136,7 @@ func skipBI(l *string, prn PageResourceNames) error {
 			s = s[2:]
 			break
 		}
+		// TODO Check len(s) > 0
 		if s[0] == '/' {
 			s = s[1:]
 			i, _ := positionToNextWhitespaceOrChar(s, "/")
