@@ -362,7 +362,11 @@ func validateMarkInfo(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool
 	}
 
 	// Suspects: optional, since V1.6, boolean
-	suspects, err := validateBooleanEntry(xRefTable, d, dictName, "Suspects", OPTIONAL, pdf.V16, nil)
+	sinceVersion = pdf.V16
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		sinceVersion = pdf.V15
+	}
+	suspects, err := validateBooleanEntry(xRefTable, d, dictName, "Suspects", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
