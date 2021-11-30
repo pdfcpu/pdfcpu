@@ -320,7 +320,11 @@ func validateFontDescriptor(xRefTable *pdf.XRefTable, d pdf.Dict, fontDictName s
 		}
 
 		// Lang, optional, name
-		_, err = validateNameEntry(xRefTable, d1, dictName, "Lang", OPTIONAL, pdf.V15, nil)
+		sinceVersion := pdf.V15
+		if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+			sinceVersion = pdf.V14
+		}
+		_, err = validateNameEntry(xRefTable, d1, dictName, "Lang", OPTIONAL, sinceVersion, nil)
 		if err != nil {
 			return err
 		}
