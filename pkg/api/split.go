@@ -17,6 +17,8 @@
 package api
 
 import (
+	"bufio"
+	"bytes"
 	"io"
 	"os"
 	"path/filepath"
@@ -80,6 +82,18 @@ func writePageSpan(ctx *pdfcpu.Context, from, thru int, outDir, fileName string,
 	return WriteContextFile(ctxNew, outFile)
 }
 
+func outPageSpan(ctx *pdfcpu.Context, from, thru int, forBookmark bool, w io.Writer) error {
+	selectedPages := PagesForPageRange(from, thru)
+
+	// Create context with copies of selectedPages.
+	ctxNew, err := ctx.ExtractPages(selectedPages, false)
+	if err != nil {
+		return err
+	}
+
+	return WriteContext(ctxNew, w)
+}
+
 func writePageSpansSplitAlongBookmarks(ctx *pdfcpu.Context, outDir string) error {
 	bms, err := ctx.BookmarksForOutline()
 	if err != nil {
@@ -98,6 +112,29 @@ func writePageSpansSplitAlongBookmarks(ctx *pdfcpu.Context, outDir string) error
 		}
 	}
 	return nil
+}
+
+func outPageSpansSplitAlongBookmarks(ctx *pdfcpu.Context) (buffers []bytes.Buffer, err error) {
+	bms, err := ctx.BookmarksForOutline()
+	if err != nil {
+		return
+	}
+	for _, bm := range bms {
+		from := bm.PageFrom
+		thru := bm.PageThru
+		if thru == 0 {
+			thru = ctx.PageCount
+		}
+		forBookmark := true
+
+		var buffer bytes.Buffer
+		writer := bufio.NewWriter(&buffer)
+		if err = outPageSpan(ctx, from, thru, forBookmark, writer); err != nil {
+			return
+		}
+		buffers = append(buffers, buffer)
+	}
+	return
 }
 
 func writePageSpans(ctx *pdfcpu.Context, span int, outDir, fileName string) error {
@@ -127,6 +164,43 @@ func writePageSpans(ctx *pdfcpu.Context, span int, outDir, fileName string) erro
 	}
 
 	return nil
+}
+
+func outPageSpans(ctx *pdfcpu.Context, span int) (buffers []bytes.Buffer, err error) {
+	if span == 0 {
+		return outPageSpansSplitAlongBookmarks(ctx)
+	}
+
+	forBookmark := false
+
+	for i := 0; i < ctx.PageCount/span; i++ {
+		start := i * span
+		from := start + 1
+		thru := start + span
+
+		var buffer bytes.Buffer
+		writer := bufio.NewWriter(&buffer)
+		if err = outPageSpan(ctx, from, thru, forBookmark, writer); err != nil {
+			return
+		}
+		buffers = append(buffers, buffer)
+	}
+
+	// A possible last file has less than span pages.
+	if ctx.PageCount%span > 0 {
+		start := (ctx.PageCount / span) * span
+		from := start + 1
+		thru := ctx.PageCount
+
+		var buffer bytes.Buffer
+		w := bufio.NewWriter(&buffer)
+		if err = outPageSpan(ctx, from, thru, forBookmark, w); err != nil {
+			return
+		}
+		buffers = append(buffers, buffer)
+	}
+
+	return
 }
 
 // Split generates a sequence of PDF files in outDir for the PDF stream read from rs obeying given split span.
@@ -161,6 +235,42 @@ func Split(rs io.ReadSeeker, outDir, fileName string, span int, conf *pdfcpu.Con
 	logOperationStats(ctx, "split", durRead, durVal, durOpt, durWrite, durTotal)
 
 	return nil
+}
+
+// SplitBuffer generates a sequence of PDF files in []bytes.Buffer for the PDF stream read from rs obeying given split span.
+// If span == 1 splitting results in single page PDFs.
+// If span == 0 we split along given bookmarks (level 1 only).
+// Default span: 1
+func SplitBuffer(rs io.ReadSeeker, span int, conf *pdfcpu.Configuration) (buffers []bytes.Buffer, err error) {
+	if conf == nil {
+		conf = pdfcpu.NewDefaultConfiguration()
+	}
+	conf.Cmd = pdfcpu.SPLIT
+
+	fromStart := time.Now()
+
+	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
+	if err != nil {
+		return
+	}
+
+	if err = ctx.EnsurePageCount(); err != nil {
+		return
+	}
+
+	fromWrite := time.Now()
+
+	buffers, err = outPageSpans(ctx, span)
+
+	if err != nil {
+		return
+	}
+
+	durWrite := time.Since(fromWrite).Seconds()
+	durTotal := time.Since(fromStart).Seconds()
+	logOperationStats(ctx, "split", durRead, durVal, durOpt, durWrite, durTotal)
+
+	return
 }
 
 // SplitFile generates a sequence of PDF files in outDir for inFile obeying given split span.
