@@ -11,6 +11,7 @@ layout: default
 * Merge (a set of PDF files into one consolidated PDF file)
 * Split (split multi-page PDF into several PDFs according to split span)
 * Trim (generate a custom version of a PDF including selected pages)
+* Create (generate PDF via JSON)
 * Collect (generate a PDF page sequence, pages may appear multiple times in any order)
 * Crop (apply a Crop Box for selected pages)
 * Rotate selected pages
