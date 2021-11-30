@@ -10,7 +10,7 @@ jobs:
           - ubuntu-latest
           - windows-latest
         go:
-          - '1.16.x'  
+          - '1.17.x'  
     runs-on: ${{ matrix.os }}
 
     steps:
