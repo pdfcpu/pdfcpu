@@ -31,8 +31,8 @@ import (
 )
 
 var (
-	errInvalidGridID    = errors.New("pdfcpu nup: n must be one of 2, 3, 4, 6, 8, 9, 12, 16")
-	errInvalidGridDims  = errors.New("pdfcpu grid: dimensions: m >= 0, n >= 0")
+	errInvalidNUpVal    = errors.New("pdfcpu nup: n must be one of 2, 3, 4, 6, 8, 9, 12, 16")
+	errInvalidGridDims  = errors.New("pdfcpu grid: dimensions must be: m > 0, n > 0")
 	errInvalidNUpConfig = errors.New("pdfcpu: invalid configuration string")
 )
 
@@ -337,7 +337,7 @@ func ImageGridConfig(rows, cols int, desc string) (*NUp, error) {
 // ParseNUpValue parses the NUp value into an internal structure.
 func ParseNUpValue(n int, nUp *NUp) error {
 	if !IntMemberOf(n, nUpValues) {
-		return errInvalidGridID
+		return errInvalidNUpVal
 	}
 
 	// The n-Up layout depends on the orientation of the chosen output paper size.
@@ -368,7 +368,7 @@ func ParseNUpGridDefinition(rows, cols int, nUp *NUp) error {
 	}
 
 	n := rows
-	if m <= 0 {
+	if n <= 0 {
 		return errInvalidGridDims
 	}
 

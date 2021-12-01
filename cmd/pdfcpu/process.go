@@ -1101,6 +1101,7 @@ func processGridCommand(conf *pdfcpu.Configuration) {
 
 	nup := pdfcpu.DefaultNUpConfig()
 	nup.InpUnit = conf.Unit
+	nup.PageGrid = true
 	argInd := 1
 
 	outFile := flag.Arg(0)
