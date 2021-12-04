@@ -1,9 +1,13 @@
-#########################
-# Default configuration #
-#########################
+#############################
+#   Default configuration   #
+#############################
+
+# toggle for inFilename extension check (.pdf) 
+checkFileNameExt: true
 
 reader15: true
 decodeAllStreams: false
+
 
 # validationMode: 
 # ValidationStrict,

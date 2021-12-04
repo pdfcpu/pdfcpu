@@ -27,6 +27,7 @@ import (
 )
 
 type configuration struct {
+	CheckFileNameExt  bool   `yaml:"checkFileNameExt"`
 	Reader15          bool   `yaml:"reader15"`
 	DecodeAllStreams  bool   `yaml:"decodeAllStreams"`
 	ValidationMode    string `yaml:"validationMode"`
@@ -45,6 +46,7 @@ func loadedConfig(c configuration, configPath string) *Configuration {
 	var conf Configuration
 	conf.Path = configPath
 
+	conf.CheckFileNameExt = c.CheckFileNameExt
 	conf.Reader15 = c.Reader15
 	conf.DecodeAllStreams = c.DecodeAllStreams
 	conf.WriteObjectStream = c.WriteObjectStream
@@ -89,6 +91,10 @@ func loadedConfig(c configuration, configPath string) *Configuration {
 
 func parseConfigFile(r io.Reader, configPath string) error {
 	var c configuration
+
+	// Enforce default for old config files.
+	c.CheckFileNameExt = true
+
 	bb, err := ioutil.ReadAll(r)
 	if err != nil {
 		return err

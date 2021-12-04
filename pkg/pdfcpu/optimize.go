@@ -835,10 +835,6 @@ func fontDescriptorFontFileIndirectObjectRef(fontDescriptorDict Dict) *IndirectR
 		ir = fontDescriptorDict.IndirectRefEntry("FontFile3")
 	}
 
-	if ir == nil {
-		//logInfoReader.Printf("FontDescriptorFontFileLength: FontDescriptor dict without fontFile: \n%s\n", fontDescriptorDict)
-	}
-
 	log.Optimize.Println("FontDescriptorFontFileIndirectObjectRef end")
 
 	return ir

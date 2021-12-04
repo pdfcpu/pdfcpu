@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -75,6 +76,22 @@ func printHelp(conf *pdfcpu.Configuration) {
 	}
 }
 
+func printConfiguration(conf *pdfcpu.Configuration) {
+	fmt.Fprintf(os.Stdout, "config: %s\n", conf.Path)
+	f, err := os.Open(conf.Path)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "can't open %s", conf.Path)
+		os.Exit(1)
+	}
+	defer f.Close()
+	bb, err := ioutil.ReadAll(f)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "can't read %s", conf.Path)
+		os.Exit(1)
+	}
+	fmt.Print(string(bb))
+}
+
 func printPaperSizes(conf *pdfcpu.Configuration) {
 	fmt.Fprintln(os.Stderr, paperSizes)
 }
@@ -124,7 +141,6 @@ func processValidateCommand(conf *pdfcpu.Configuration) {
 
 	filesIn := []string{}
 	for _, arg := range flag.Args() {
-		ensurePDFExtension(arg)
 		if strings.Contains(arg, "*") {
 			matches, err := filepath.Glob(arg)
 			if err != nil {
@@ -133,9 +149,11 @@ func processValidateCommand(conf *pdfcpu.Configuration) {
 			}
 			filesIn = append(filesIn, matches...)
 			continue
-		} else {
-			filesIn = append(filesIn, arg)
 		}
+		if conf.CheckFileNameExt {
+			ensurePDFExtension(arg)
+		}
+		filesIn = append(filesIn, arg)
 	}
 
 	if mode != "" && mode != "strict" && mode != "s" && mode != "relaxed" && mode != "r" {
@@ -164,7 +182,9 @@ func processOptimizeCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(0)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 
 	outFile := inFile
 	if len(flag.Args()) == 2 {
@@ -191,7 +211,9 @@ func processSplitCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(0)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 
 	span := 0
 
@@ -230,8 +252,8 @@ func processMergeCommand(conf *pdfcpu.Configuration) {
 	filesIn := []string{}
 	outFile := ""
 	for i, arg := range flag.Args() {
-		ensurePDFExtension(arg)
 		if i == 0 {
+			ensurePDFExtension(arg)
 			outFile = arg
 			continue
 		}
@@ -247,6 +269,9 @@ func processMergeCommand(conf *pdfcpu.Configuration) {
 			}
 			filesIn = append(filesIn, matches...)
 			continue
+		}
+		if conf.CheckFileNameExt {
+			ensurePDFExtension(arg)
 		}
 		filesIn = append(filesIn, arg)
 	}
@@ -291,7 +316,9 @@ func processExtractCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(0)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 	outDir := flag.Arg(1)
 
 	pages, err := api.ParsePageSelection(selectedPages)
@@ -341,7 +368,9 @@ func processTrimCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(0)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 
 	outFile := ""
 	if len(flag.Args()) == 2 {
@@ -359,7 +388,9 @@ func processListAttachmentsCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(0)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 	process(cli.ListAttachmentsCommand(inFile, conf))
 }
 
@@ -375,7 +406,9 @@ func processAddAttachmentsCommand(conf *pdfcpu.Configuration) {
 	for i, arg := range flag.Args() {
 		if i == 0 {
 			inFile = arg
-			ensurePDFExtension(inFile)
+			if conf.CheckFileNameExt {
+				ensurePDFExtension(inFile)
+			}
 			continue
 		}
 		if strings.Contains(arg, "*") {
@@ -405,7 +438,9 @@ func processAddAttachmentsPortfolioCommand(conf *pdfcpu.Configuration) {
 	for i, arg := range flag.Args() {
 		if i == 0 {
 			inFile = arg
-			ensurePDFExtension(inFile)
+			if conf.CheckFileNameExt {
+				ensurePDFExtension(inFile)
+			}
 			continue
 		}
 		if strings.Contains(arg, "*") {
@@ -435,7 +470,9 @@ func processRemoveAttachmentsCommand(conf *pdfcpu.Configuration) {
 	for i, arg := range flag.Args() {
 		if i == 0 {
 			inFile = arg
-			ensurePDFExtension(inFile)
+			if conf.CheckFileNameExt {
+				ensurePDFExtension(inFile)
+			}
 			continue
 		}
 		fileNames = append(fileNames, arg)
@@ -457,7 +494,9 @@ func processExtractAttachmentsCommand(conf *pdfcpu.Configuration) {
 	for i, arg := range flag.Args() {
 		if i == 0 {
 			inFile = arg
-			ensurePDFExtension(inFile)
+			if conf.CheckFileNameExt {
+				ensurePDFExtension(inFile)
+			}
 			continue
 		}
 		if i == 1 {
@@ -477,7 +516,9 @@ func processListPermissionsCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(0)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 
 	process(cli.ListPermissionsCommand(inFile, conf))
 }
@@ -508,7 +549,9 @@ func processSetPermissionsCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(0)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 
 	if perm == "all" {
 		conf.Permissions = pdfcpu.PermissionsAll
@@ -524,7 +567,9 @@ func processDecryptCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(0)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 
 	outFile := inFile
 	if len(flag.Args()) == 2 {
@@ -598,7 +643,9 @@ func processEncryptCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(0)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 
 	outFile := inFile
 	if len(flag.Args()) == 2 {
@@ -616,13 +663,14 @@ func processChangeUserPasswordCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(0)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 
 	outFile := inFile
 	if len(flag.Args()) == 2 {
 		outFile = flag.Arg(1)
 		ensurePDFExtension(outFile)
-
 	}
 
 	pwOld := flag.Arg(1)
@@ -638,7 +686,9 @@ func processChangeOwnerPasswordCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(0)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 
 	outFile := inFile
 	if len(flag.Args()) == 2 {
@@ -705,7 +755,9 @@ func addWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 	}
 
 	inFile := flag.Arg(2)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 
 	outFile := ""
 	if len(flag.Args()) == 4 {
@@ -774,7 +826,9 @@ func updateWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 	wm.Update = true
 
 	inFile := flag.Arg(2)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 
 	outFile := ""
 	if len(flag.Args()) == 4 {
@@ -810,7 +864,9 @@ func removeWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 	}
 
 	inFile := flag.Arg(0)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 
 	outFile := ""
 	if len(flag.Args()) == 2 {
@@ -899,7 +955,9 @@ func processInsertPagesCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(0)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 	outFile := ""
 	if len(flag.Args()) == 2 {
 		outFile = flag.Arg(1)
@@ -928,7 +986,9 @@ func processRemovePagesCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(0)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 	outFile := ""
 	if len(flag.Args()) == 2 {
 		outFile = flag.Arg(1)
@@ -962,7 +1022,9 @@ func processRotateCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(0)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 
 	rotation, err := strconv.Atoi(flag.Arg(1))
 	if err != nil || abs(rotation)%90 > 0 {
@@ -1191,7 +1253,9 @@ func processInfoCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(0)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 
 	selectedPages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
@@ -1242,7 +1306,9 @@ func processListKeywordsCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(0)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 	process(cli.ListKeywordsCommand(inFile, conf))
 }
 
@@ -1258,7 +1324,9 @@ func processAddKeywordsCommand(conf *pdfcpu.Configuration) {
 	for i, arg := range flag.Args() {
 		if i == 0 {
 			inFile = arg
-			ensurePDFExtension(inFile)
+			if conf.CheckFileNameExt {
+				ensurePDFExtension(inFile)
+			}
 			continue
 		}
 		keywords = append(keywords, arg)
@@ -1279,7 +1347,9 @@ func processRemoveKeywordsCommand(conf *pdfcpu.Configuration) {
 	for i, arg := range flag.Args() {
 		if i == 0 {
 			inFile = arg
-			ensurePDFExtension(inFile)
+			if conf.CheckFileNameExt {
+				ensurePDFExtension(inFile)
+			}
 			continue
 		}
 		keywords = append(keywords, arg)
@@ -1295,7 +1365,9 @@ func processListPropertiesCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(0)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 	process(cli.ListPropertiesCommand(inFile, conf))
 }
 
@@ -1311,7 +1383,9 @@ func processAddPropertiesCommand(conf *pdfcpu.Configuration) {
 	for i, arg := range flag.Args() {
 		if i == 0 {
 			inFile = arg
-			ensurePDFExtension(inFile)
+			if conf.CheckFileNameExt {
+				ensurePDFExtension(inFile)
+			}
 			continue
 		}
 		// Ensure key value pair.
@@ -1346,7 +1420,9 @@ func processRemovePropertiesCommand(conf *pdfcpu.Configuration) {
 	for i, arg := range flag.Args() {
 		if i == 0 {
 			inFile = arg
-			ensurePDFExtension(inFile)
+			if conf.CheckFileNameExt {
+				ensurePDFExtension(inFile)
+			}
 			continue
 		}
 		keys = append(keys, arg)
@@ -1362,7 +1438,9 @@ func processCollectCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(0)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 
 	outFile := ""
 	if len(flag.Args()) == 2 {
@@ -1395,7 +1473,9 @@ func processListBoxesCommand(conf *pdfcpu.Configuration) {
 
 	if len(flag.Args()) == 1 {
 		inFile := flag.Arg(0)
-		ensurePDFExtension(inFile)
+		if conf.CheckFileNameExt {
+			ensurePDFExtension(inFile)
+		}
 		process(cli.ListBoxesCommand(inFile, selectedPages, nil, conf))
 	}
 
@@ -1406,7 +1486,9 @@ func processListBoxesCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(1)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 
 	process(cli.ListBoxesCommand(inFile, selectedPages, pb, conf))
 }
@@ -1426,7 +1508,9 @@ func processAddBoxesCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(1)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 
 	outFile := ""
 	if len(flag.Args()) == 3 {
@@ -1465,7 +1549,9 @@ func processRemoveBoxesCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(1)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 
 	outFile := ""
 	if len(flag.Args()) == 3 {
@@ -1497,7 +1583,9 @@ func processCropCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(1)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 
 	outFile := ""
 	if len(flag.Args()) == 3 {
@@ -1521,7 +1609,9 @@ func processListAnnotationsCommand(conf *pdfcpu.Configuration) {
 	}
 
 	inFile := flag.Arg(0)
-	ensurePDFExtension(inFile)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
 
 	selectedPages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
@@ -1549,7 +1639,9 @@ func processRemoveAnnotationsCommand(conf *pdfcpu.Configuration) {
 	for i, arg := range flag.Args() {
 		if i == 0 {
 			inFile = arg
-			ensurePDFExtension(inFile)
+			if conf.CheckFileNameExt {
+				ensurePDFExtension(inFile)
+			}
 			continue
 		}
 		i, err := strconv.Atoi(arg)
@@ -1566,7 +1658,6 @@ func processRemoveAnnotationsCommand(conf *pdfcpu.Configuration) {
 func processListImagesCommand(conf *pdfcpu.Configuration) {
 	filesIn := []string{}
 	for _, arg := range flag.Args() {
-		ensurePDFExtension(arg)
 		if strings.Contains(arg, "*") {
 			matches, err := filepath.Glob(arg)
 			if err != nil {
@@ -1575,9 +1666,11 @@ func processListImagesCommand(conf *pdfcpu.Configuration) {
 			}
 			filesIn = append(filesIn, matches...)
 			continue
-		} else {
-			filesIn = append(filesIn, arg)
 		}
+		if conf.CheckFileNameExt {
+			ensurePDFExtension(arg)
+		}
+		filesIn = append(filesIn, arg)
 	}
 
 	selectedPages, err := api.ParsePageSelection(selectedPages)
@@ -1606,7 +1699,9 @@ func processCreateCommand(conf *pdfcpu.Configuration) {
 	if len(flag.Args()) == 3 {
 		inFile = outFile
 		outFile = flag.Arg(2)
-		ensurePDFExtension(outFile)
+		if conf.CheckFileNameExt {
+			ensurePDFExtension(outFile)
+		}
 	}
 
 	process(cli.CreateCommand(inJSONFile, inFile, outFile, conf))

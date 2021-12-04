@@ -101,7 +101,6 @@ func validateConfigDirFlag() {
 
 func ensureDefaultConfig() (*pdfcpu.Configuration, error) {
 	validateConfigDirFlag()
-	//fmt.Printf("conf = %s\n", pdfcpu.ConfigPath)
 	if !pdfcpu.MemberOf(pdfcpu.ConfigPath, []string{"default", "disable"}) {
 		if err := pdfcpu.EnsureDefaultConfigAt(pdfcpu.ConfigPath); err != nil {
 			return nil, err

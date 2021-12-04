@@ -50,11 +50,45 @@ func initCommandMap() {
 		boxesCmdMap.register(k, v)
 	}
 
+	fontsCmdMap := newCommandMap()
+	for k, v := range map[string]command{
+		"cheatsheet": {processCreateCheatSheetFontsCommand, nil, "", ""},
+		"install":    {processInstallFontsCommand, nil, "", ""},
+		"list":       {processListFontsCommand, nil, "", ""},
+	} {
+		fontsCmdMap.register(k, v)
+	}
+
 	imagesCmdMap := newCommandMap()
 	for k, v := range map[string]command{
 		"list": {processListImagesCommand, nil, "", ""},
 	} {
 		imagesCmdMap.register(k, v)
+	}
+
+	keywordsCmdMap := newCommandMap()
+	for k, v := range map[string]command{
+		"list":   {processListKeywordsCommand, nil, "", ""},
+		"add":    {processAddKeywordsCommand, nil, "", ""},
+		"remove": {processRemoveKeywordsCommand, nil, "", ""},
+	} {
+		keywordsCmdMap.register(k, v)
+	}
+
+	pagesCmdMap := newCommandMap()
+	for k, v := range map[string]command{
+		"insert": {processInsertPagesCommand, nil, "", ""},
+		"remove": {processRemovePagesCommand, nil, "", ""},
+	} {
+		pagesCmdMap.register(k, v)
+	}
+
+	permissionsCmdMap := newCommandMap()
+	for k, v := range map[string]command{
+		"list": {processListPermissionsCommand, nil, "", ""},
+		"set":  {processSetPermissionsCommand, nil, "", ""},
+	} {
+		permissionsCmdMap.register(k, v)
 	}
 
 	portfolioCmdMap := newCommandMap()
@@ -67,20 +101,13 @@ func initCommandMap() {
 		portfolioCmdMap.register(k, v)
 	}
 
-	permissionsCmdMap := newCommandMap()
+	propertiesCmdMap := newCommandMap()
 	for k, v := range map[string]command{
-		"list": {processListPermissionsCommand, nil, "", ""},
-		"set":  {processSetPermissionsCommand, nil, "", ""},
+		"list":   {processListPropertiesCommand, nil, "", ""},
+		"add":    {processAddPropertiesCommand, nil, "", ""},
+		"remove": {processRemovePropertiesCommand, nil, "", ""},
 	} {
-		permissionsCmdMap.register(k, v)
-	}
-
-	pagesCmdMap := newCommandMap()
-	for k, v := range map[string]command{
-		"insert": {processInsertPagesCommand, nil, "", ""},
-		"remove": {processRemovePagesCommand, nil, "", ""},
-	} {
-		pagesCmdMap.register(k, v)
+		propertiesCmdMap.register(k, v)
 	}
 
 	stampCmdMap := newCommandMap()
@@ -101,33 +128,6 @@ func initCommandMap() {
 		watermarkCmdMap.register(k, v)
 	}
 
-	fontsCmdMap := newCommandMap()
-	for k, v := range map[string]command{
-		"cheatsheet": {processCreateCheatSheetFontsCommand, nil, "", ""},
-		"install":    {processInstallFontsCommand, nil, "", ""},
-		"list":       {processListFontsCommand, nil, "", ""},
-	} {
-		fontsCmdMap.register(k, v)
-	}
-
-	keywordsCmdMap := newCommandMap()
-	for k, v := range map[string]command{
-		"list":   {processListKeywordsCommand, nil, "", ""},
-		"add":    {processAddKeywordsCommand, nil, "", ""},
-		"remove": {processRemoveKeywordsCommand, nil, "", ""},
-	} {
-		keywordsCmdMap.register(k, v)
-	}
-
-	propertiesCmdMap := newCommandMap()
-	for k, v := range map[string]command{
-		"list":   {processListPropertiesCommand, nil, "", ""},
-		"add":    {processAddPropertiesCommand, nil, "", ""},
-		"remove": {processRemovePropertiesCommand, nil, "", ""},
-	} {
-		propertiesCmdMap.register(k, v)
-	}
-
 	cmdMap = newCommandMap()
 
 	for k, v := range map[string]command{
@@ -138,6 +138,7 @@ func initCommandMap() {
 		"changeopw":     {processChangeOwnerPasswordCommand, nil, usageChangeOwnerPW, usageLongChangeUserPW},
 		"changeupw":     {processChangeUserPasswordCommand, nil, usageChangeUserPW, usageLongChangeUserPW},
 		"collect":       {processCollectCommand, nil, usageCollect, usageLongCollect},
+		"config":        {printConfiguration, nil, usageConfig, usageLongConfig},
 		"create":        {processCreateCommand, nil, usageCreate, usageLongCreate},
 		"crop":          {processCropCommand, nil, usageCrop, usageLongCrop},
 		"decrypt":       {processDecryptCommand, nil, usageDecrypt, usageLongDecrypt},

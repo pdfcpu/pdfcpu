@@ -32,7 +32,8 @@ The commands are:
    changeopw     change owner password
    changeupw     change user password
    collect       create custom sequence of selected pages
-   create        create PDF content
+   config        print configuration
+   create        create PDF content via JSON
    crop          set cropbox for selected pages
    decrypt       remove password protection
    encrypt       set password protection		
@@ -752,6 +753,9 @@ Examples: pdfcpu grid out.pdf 1 10 in.pdf
 
 	usagePaper     = "usage: pdfcpu paper"
 	usageLongPaper = "Print a list of supported paper sizes."
+
+	usageConfig     = "usage: pdfcpu config"
+	usageLongConfig = "Print configuration."
 
 	usageSelectedPages     = "usage: pdfcpu selectedpages"
 	usageLongSelectedPages = "Print definition of the -pages flag."
