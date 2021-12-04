@@ -10,23 +10,32 @@ Yet it uses a configuration directory for user font management and storing the d
 
 pdfcpu will create this dir at the default [user's config directory](https://golang.org/pkg/os/#UserConfigDir) on execution of the first command.
 
-You can look up its location like so:
+You can look up its location either like so:
 
 ```
 Go-> pdfcpu ver -v
-pdfcpu: v0.3.12 dev
+pdfcpu: v0.3.13 dev
 config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 ```
 
 <br>
-This is also the location of config.yml.
+
+or you can do the following which will print out both the config file path and its content.
 
 This file holds carefully selected default values for various aspects of pdfcpu's operation:
+
 ```
-Go-> cat config.yml
-#########################
-# Default configuration #
-#########################
+Go-> pdfcpu config
+config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
+#############################
+# pdfcpu v0.3.13 dev        #
+# Created: 2021-12-04 15:58 #
+#############################
+#   Default configuration   #
+#############################
+
+# toggle for inFilename extension check (.pdf)
+checkFileNameExt: true
 
 reader15: true
 decodeAllStreams: false
@@ -61,6 +70,11 @@ permissions: -3901
 # cm
 # mm
 unit: cm
+
+# timestamp format: yyyy-mm-dd hh:mm
+# Switch month and year by using: 2006-02-01 15:04
+# See more at https://pkg.go.dev/time@go1.17.1#pkg-constants
+timestampFormat: 2006-01-02 15:04
 ```
 
 <br>

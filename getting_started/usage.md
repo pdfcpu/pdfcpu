@@ -23,6 +23,8 @@ The commands are:
    changeopw   change owner password
    changeupw   change user password
    collect     create custom PDF page sequence
+   create      create PDF content via JSON
+   config      print configuration
    crop        set crop box for selected pages
    decrypt     remove password protection
    encrypt     set password protection
