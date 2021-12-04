@@ -18,7 +18,7 @@ pdfcpu: v0.3.13 dev
 config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 ```
 
-or you can do the following which will print out both the config file path and its content. This file holds carefully selected default values for various aspects of pdfcpu's operation:
+or you can do the following which will print out both the config file path and its content. This file holds carefully selected default values for various aspects of pdfcpu's operations:
 
 ```
 Go-> pdfcpu config
