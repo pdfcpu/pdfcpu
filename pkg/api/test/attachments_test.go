@@ -17,7 +17,7 @@ limitations under the License.
 package test
 
 import (
-	"io/ioutil"
+	"io"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -242,7 +242,7 @@ func TestAttachmentsLowLevel(t *testing.T) {
 	a := extractAttachment(t, msg, aa[0], ctx)
 
 	// Compare extracted attachment bytes.
-	gotBytes, err := ioutil.ReadAll(a)
+	gotBytes, err := io.ReadAll(a)
 	if err != nil {
 		t.Fatalf("%s extractAttachment: attachment %s no data available\n", msg, id)
 	}

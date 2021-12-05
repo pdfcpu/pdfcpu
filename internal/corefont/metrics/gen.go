@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build ignore
 // +build ignore
 
 package main
@@ -22,7 +23,6 @@ import (
 	"flag"
 	"fmt"
 	"go/format"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -98,7 +98,7 @@ func writeCoreFontMetrics(w *bytes.Buffer) {
 	`
 	w.WriteString(s)
 	dir := "../Core14_AFMs"
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -199,8 +199,8 @@ func finish(w *bytes.Buffer, filename string) {
 	if err != nil {
 		log.Fatalf("format.Source: %v", err)
 	}
-	if err := ioutil.WriteFile(filename, out, 0660); err != nil {
-		log.Fatalf("ioutil.WriteFile: %v", err)
+	if err := os.WriteFile(filename, out, 0660); err != nil {
+		log.Fatalf("os.WriteFile: %v", err)
 	}
 }
 

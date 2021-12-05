@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"io"
-	"io/ioutil"
 )
 
 type asciiHexDecode struct {
@@ -32,7 +31,7 @@ const eodHexDecode = '>'
 // Encode implements encoding for an ASCIIHexDecode filter.
 func (f asciiHexDecode) Encode(r io.Reader) (io.Reader, error) {
 
-	bb, err := ioutil.ReadAll(r)
+	bb, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +48,7 @@ func (f asciiHexDecode) Encode(r io.Reader) (io.Reader, error) {
 // Decode implements decoding for an ASCIIHexDecode filter.
 func (f asciiHexDecode) Decode(r io.Reader) (io.Reader, error) {
 
-	bb, err := ioutil.ReadAll(r)
+	bb, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}

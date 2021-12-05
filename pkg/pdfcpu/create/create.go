@@ -19,7 +19,6 @@ package create
 import (
 	"encoding/json"
 	"io"
-	"io/ioutil"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/primitives"
@@ -219,7 +218,7 @@ func createAcroForm(
 
 func FromJSON(rd io.Reader, ctx *pdfcpu.Context) error {
 
-	bb, err := ioutil.ReadAll(rd)
+	bb, err := io.ReadAll(rd)
 	if err != nil {
 		return err
 	}

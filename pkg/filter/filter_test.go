@@ -18,7 +18,7 @@ package filter_test
 
 import (
 	"errors"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -62,7 +62,7 @@ func encodeDecodeUsingFilterNamed(t *testing.T, filterName string) {
 	}
 	//t.Logf("decoded 1:  len:%d % X <%s>\n", c2.Len(), c2.Bytes(), c2.Bytes())
 
-	bb, err := ioutil.ReadAll(c2)
+	bb, err := io.ReadAll(c2)
 	if err != nil {
 		t.Fatalf("%v\n", err)
 	}
@@ -146,13 +146,13 @@ func testFile(t *testing.T, filterName, fileName string) {
 	}
 	defer golden.Close()
 
-	g, err := ioutil.ReadAll(golden)
+	g, err := io.ReadAll(golden)
 	if err != nil {
 		t.Errorf("%s: %v", fileName, err)
 		return
 	}
 
-	d, err := ioutil.ReadAll(dec)
+	d, err := io.ReadAll(dec)
 	if err != nil {
 		t.Errorf("%s: %v", fileName, err)
 		return
