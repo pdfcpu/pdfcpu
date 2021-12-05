@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,7 +46,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	outDir, err = ioutil.TempDir("", "pdfcpu_imageTests")
+	outDir, err = os.MkdirTemp("", "pdfcpu_imageTests")
 	if err != nil {
 		//fmt.Printf("%v", err)
 		os.Exit(1)
@@ -59,7 +59,7 @@ func TestMain(m *testing.M) {
 
 func streamDictForJPGFile(xRefTable *XRefTable, fileName string) (*StreamDict, error) {
 
-	bb, err := ioutil.ReadFile(fileName)
+	bb, err := os.ReadFile(fileName)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func compare(t *testing.T, fn1, fn2 string) {
 	}
 	defer f1.Close()
 
-	bb1, err := ioutil.ReadAll(f1)
+	bb1, err := io.ReadAll(f1)
 	if err != nil {
 		t.Errorf("%s: %v", fn1, err)
 		return
@@ -133,7 +133,7 @@ func compare(t *testing.T, fn1, fn2 string) {
 	}
 	defer f1.Close()
 
-	bb2, err := ioutil.ReadAll(f2)
+	bb2, err := io.ReadAll(f2)
 	if err != nil {
 		t.Errorf("%s: %v", fn2, err)
 		return
@@ -225,7 +225,7 @@ func read1BPCDeviceGrayFlateStreamDump(xRefTable *XRefTable, fileName string) (*
 	defer f.Close()
 
 	// Read in a flate encoded stream.
-	buf, err := ioutil.ReadAll(f)
+	buf, err := io.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}
@@ -312,7 +312,7 @@ func read8BPCDeviceCMYKFlateStreamDump(xRefTable *XRefTable, fileName string) (*
 	}
 	defer f.Close()
 
-	buf, err := ioutil.ReadAll(f)
+	buf, err := io.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}

@@ -19,7 +19,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -84,7 +84,7 @@ func printConfiguration(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 	defer f.Close()
-	bb, err := ioutil.ReadAll(f)
+	bb, err := io.ReadAll(f)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "can't read %s", conf.Path)
 		os.Exit(1)

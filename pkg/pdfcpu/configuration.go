@@ -19,7 +19,6 @@ package pdfcpu
 import (
 	_ "embed"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -196,7 +195,7 @@ func ensureConfigFileAt(path string) error {
 		f.Close()
 		s := fmt.Sprintf("#############################\n# pdfcpu %s        #\n# Created: %s #\n", VersionStr, time.Now().Format("2006-01-02 15:04"))
 		bb := append([]byte(s), configFileBytes...)
-		if err := ioutil.WriteFile(path, bb, os.ModePerm); err != nil {
+		if err := os.WriteFile(path, bb, os.ModePerm); err != nil {
 			return err
 		}
 		f, err = os.Open(path)

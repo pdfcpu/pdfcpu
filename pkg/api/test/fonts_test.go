@@ -18,7 +18,7 @@ package test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -139,7 +139,7 @@ func isTrueType(filename string) bool {
 
 func userFonts(t *testing.T, dir string) []string {
 	t.Helper()
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("%v\n", err)
 	}

@@ -21,7 +21,6 @@ package pdfcpu
 
 import (
 	"io"
-	"io/ioutil"
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -96,7 +95,7 @@ func parseConfigFile(r io.Reader, configPath string) error {
 	// Enforce default for old config files.
 	c.CheckFileNameExt = true
 
-	bb, err := ioutil.ReadAll(r)
+	bb, err := io.ReadAll(r)
 	if err != nil {
 		return err
 	}

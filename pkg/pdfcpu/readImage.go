@@ -24,8 +24,8 @@ import (
 	"image/jpeg"
 	_ "image/png"
 	"io"
-	"io/ioutil"
 	"math"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -42,7 +42,7 @@ func ImageFileName(fileName string) bool {
 
 // ImageFileNames returns a slice of image file names contained in dir.
 func ImageFileNames(dir string) ([]string, error) {
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
@@ -515,7 +515,7 @@ func createDCTImageObjectForJPEG(xRefTable *XRefTable, c image.Config, bb bytes.
 		return nil, 0, 0, errors.New("pdfcpu: unexpected color model for JPEG")
 	}
 
-	buf, err := ioutil.ReadAll(&bb)
+	buf, err := io.ReadAll(&bb)
 	if err != nil {
 		return nil, 0, 0, err
 	}
@@ -529,7 +529,7 @@ func CreateImageStreamDict(xRefTable *XRefTable, r io.Reader, gray, sepia bool) 
 
 	var bb bytes.Buffer
 	tee := io.TeeReader(r, &bb)
-	sniff, err := ioutil.ReadAll(tee)
+	sniff, err := io.ReadAll(tee)
 	if err != nil {
 		return nil, 0, 0, err
 	}

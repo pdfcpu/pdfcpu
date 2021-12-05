@@ -18,7 +18,6 @@ package test
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,7 +45,7 @@ func TestMain(m *testing.M) {
 	fontDir = filepath.Join(inDir, "fonts")
 	var err error
 
-	if outDir, err = ioutil.TempDir("", "pdfcpu_cli_tests"); err != nil {
+	if outDir, err = os.MkdirTemp("", "pdfcpu_cli_tests"); err != nil {
 		fmt.Printf("%v", err)
 		os.Exit(1)
 	}
@@ -84,7 +83,7 @@ func isPDF(filename string) bool {
 
 func allPDFs(t *testing.T, dir string) []string {
 	t.Helper()
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("pdfFiles from %s: %v\n", dir, err)
 	}

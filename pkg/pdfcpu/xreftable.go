@@ -20,7 +20,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"sort"
@@ -400,7 +399,7 @@ func (xRefTable *XRefTable) NewStreamDictForBuf(buf []byte) (*StreamDict, error)
 
 // NewStreamDictForFile creates a streamDict for filename.
 func (xRefTable *XRefTable) NewStreamDictForFile(filename string) (*StreamDict, error) {
-	buf, err := ioutil.ReadFile(filename)
+	buf, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -410,7 +409,7 @@ func (xRefTable *XRefTable) NewStreamDictForFile(filename string) (*StreamDict, 
 
 // NewEmbeddedStreamDict creates and returns an embeddedStreamDict containing the bytes represented by r.
 func (xRefTable *XRefTable) NewEmbeddedStreamDict(r io.Reader, modDate time.Time) (*IndirectRef, error) {
-	buf, err := ioutil.ReadAll(r)
+	buf, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
