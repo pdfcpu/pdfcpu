@@ -34,7 +34,10 @@ const (
 	defaultBufSize = 1024
 )
 
-var zero int64 = 0
+var (
+	ErrWrongPassword       = errors.New("pdfcpu: please provide the correct password")
+	zero             int64 = 0
+)
 
 // ReadFile reads in a PDF file and builds an internal structure holding its cross reference table aka the Context.
 func ReadFile(inFile string, conf *Configuration) (*Context, error) {
@@ -2616,7 +2619,7 @@ func setupEncryptionKey(ctx *Context, d Dict) (err error) {
 		return err
 	}
 	if !ok {
-		return errors.New("pdfcpu: please provide the correct password")
+		return ErrWrongPassword
 	}
 
 	//fmt.Printf("upw ok: %t\n", ok)
