@@ -533,10 +533,11 @@ func processDictKeys(line *string, relaxed bool) (Dict, error) {
 		// Specifying the null object as the value of a dictionary entry (7.3.7, "Dictionary Objects")
 		// shall be equivalent to omitting the entry entirely.
 		if obj != nil {
-			log.Parse.Printf("ParseDict: dict[%s]=%v\n", key, obj)
-			if ok := d.Insert(string(*key), obj); !ok {
-				return nil, errDictionaryDuplicateKey
-			}
+			d.Insert(string(*key), obj)
+			//log.Parse.Printf("ParseDict: dict[%s]=%v\n", key, obj)
+			// if ok := d.Insert(string(*key), obj); !ok {
+			// 	return nil, errDictionaryDuplicateKey
+			// }
 		}
 
 		// we are positioned on the char behind the last parsed dict value.
@@ -633,6 +634,15 @@ func startParseNumericOrIndRef(l string) (string, string, int) {
 	return str, l1, i1
 }
 
+func isRangeError(err error) bool {
+	if err, ok := err.(*strconv.NumError); ok {
+		if err.Err == strconv.ErrRange {
+			return true
+		}
+	}
+	return false
+}
+
 func parseNumericOrIndRef(line *string) (Object, error) {
 	if noBuf(line) {
 		return nil, errBufNotAvailable
@@ -646,25 +656,38 @@ func parseNumericOrIndRef(line *string) (Object, error) {
 	str, l1, i1 := startParseNumericOrIndRef(l)
 
 	// Try int
+	var rangeErr bool
 	i, err := strconv.Atoi(str)
 	if err != nil {
 
-		// Try float
-		f, err := strconv.ParseFloat(str, 64)
-		if err != nil {
-			return nil, err
+		rangeErr = isRangeError(err)
+		if !rangeErr {
+
+			// Try float
+			f, err := strconv.ParseFloat(str, 64)
+			if err != nil {
+				return nil, err
+			}
+
+			// We have a Float!
+			log.Parse.Printf("parseNumericOrIndRef: value is numeric float: %f\n", f)
+			*line = l1
+			return Float(f), nil
 		}
 
-		// We have a Float!
-		log.Parse.Printf("parseNumericOrIndRef: value is numeric float: %f\n", f)
-		*line = l1
-		return Float(f), nil
+		// #407
+		i = 0
 	}
 
 	// We have an Int!
 
 	// if not followed by whitespace return sole integer value.
 	if i1 <= 0 || delimiter(l[i1]) {
+
+		if rangeErr {
+			return nil, err
+		}
+
 		log.Parse.Printf("parseNumericOrIndRef: value is numeric int: %d\n", i)
 		*line = l1
 		return Integer(i), nil
@@ -679,6 +702,9 @@ func parseNumericOrIndRef(line *string) (Object, error) {
 	l, _ = trimLeftSpace(l, false)
 	if len(l) == 0 {
 		// only whitespace
+		if rangeErr {
+			return nil, err
+		}
 		*line = l1
 		return Integer(i), nil
 	}
@@ -688,6 +714,9 @@ func parseNumericOrIndRef(line *string) (Object, error) {
 	// if only 2 token, can't be indirect reference.
 	// if not followed by whitespace return sole integer value.
 	if i2 <= 0 || delimiter(l[i2]) {
+		if rangeErr {
+			return nil, err
+		}
 		log.Parse.Printf("parseNumericOrIndRef: 2 objects => value is numeric int: %d\n", i)
 		*line = l1
 		return Integer(i), nil
@@ -714,15 +743,25 @@ func parseNumericOrIndRef(line *string) (Object, error) {
 	l, _ = trimLeftSpace(l, false)
 
 	if len(l) == 0 {
+		if rangeErr {
+			return nil, err
+		}
 		// only whitespace
-		l = l1
+		*line = l1
 		return Integer(i), nil
 	}
 
 	if l[0] == 'R' {
+		if rangeErr {
+			return nil, nil
+		}
 		// We have all 3 components to create an indirect reference.
 		*line = forwardParseBuf(l, 1)
 		return *NewIndirectRef(iref1, iref2), nil
+	}
+
+	if rangeErr {
+		return nil, err
 	}
 
 	// 'R' not available.
