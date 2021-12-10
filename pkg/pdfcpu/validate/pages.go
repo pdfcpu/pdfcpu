@@ -88,12 +88,12 @@ func validatePageContents(xRefTable *pdf.XRefTable, d pdf.Dict) (hasContents boo
 		// process array of content stream dicts.
 
 		for _, o := range o {
-			o, _, err = xRefTable.DereferenceStreamDict(o)
+			o1, _, err := xRefTable.DereferenceStreamDict(o)
 			if err != nil {
 				return false, err
 			}
 
-			if o == nil {
+			if o1 == nil {
 				continue
 			}
 
@@ -968,6 +968,10 @@ func validatePagesDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNr, genNumber in
 		pageNodeDict, err := xRefTable.DereferenceDict(ir)
 		if err != nil {
 			return curPage, err
+		}
+		if pageNodeDict == nil {
+			//fmt.Printf("obj#%d missing\n", objNumber)
+			return curPage, errors.New("pdfcpu: validatePagesDict: corrupt page node")
 		}
 
 		// Validate this kid's parent.

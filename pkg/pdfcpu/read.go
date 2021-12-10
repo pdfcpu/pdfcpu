@@ -744,7 +744,59 @@ func parseTrailerInfo(d Dict, xRefTable *XRefTable) error {
 	return nil
 }
 
-func parseTrailerDict(trailerDict Dict, ctx *Context) (*int64, error) {
+func scanForPreviousXref(ctx *Context, offset *int64) *int64 {
+
+	var (
+		prevBuf, workBuf []byte
+		bufSize          int64 = 512
+		off              int64
+		match1           []byte = []byte("startxref")
+		match2           []byte = []byte("xref")
+	)
+
+	m := match1
+
+	for i := int64(1); ; i++ {
+		off = *offset - i*bufSize
+		rd, err := newPositionedReader(ctx.Read.rs, &off)
+		if err != nil {
+			return nil
+		}
+
+		curBuf := make([]byte, bufSize)
+
+		n, err := rd.Read(curBuf)
+		if err != nil {
+			return nil
+		}
+
+		workBuf = curBuf
+		if prevBuf != nil {
+			workBuf = append(curBuf, prevBuf...)
+		}
+
+		j := bytes.LastIndex(workBuf, m)
+		if j == -1 {
+			if int64(n) < bufSize {
+				return nil
+			}
+			prevBuf = curBuf
+			continue
+		}
+
+		if bytes.Equal(m, match1) {
+			m = match2
+			continue
+		}
+
+		off += int64(j)
+		break
+	}
+
+	return &off
+}
+
+func parseTrailerDict(trailerDict Dict, ctx *Context, offCurXRef *int64) (*int64, error) {
 
 	log.Read.Println("parseTrailerDict begin")
 
@@ -770,9 +822,12 @@ func parseTrailerDict(trailerDict Dict, ctx *Context) (*int64, error) {
 	if offset != nil {
 		log.Read.Printf("parseTrailerDict: previous xref table section offset:%d\n", *offset)
 		if *offset == 0 {
-			// Ignoring illegal offset.
-			log.Read.Println("parseTrailerDict: ignoring previous xref table section")
 			offset = nil
+			if offCurXRef != nil {
+				if off := scanForPreviousXref(ctx, offCurXRef); off != nil {
+					offset = off
+				}
+			}
 		}
 	}
 
@@ -951,7 +1006,7 @@ func scanTrailer(s *bufio.Scanner, line string) (string, error) {
 	return scanTrailerDictRemainder(s, line, buf)
 }
 
-func processTrailer(ctx *Context, s *bufio.Scanner, line string) (*int64, error) {
+func processTrailer(ctx *Context, s *bufio.Scanner, line string, offCurXRef *int64) (*int64, error) {
 	var trailerString string
 
 	if line != "trailer" {
@@ -980,11 +1035,11 @@ func processTrailer(ctx *Context, s *bufio.Scanner, line string) (*int64, error)
 
 	log.Read.Printf("processTrailer: trailerDict:\n%s\n", trailerDict)
 
-	return parseTrailerDict(trailerDict, ctx)
+	return parseTrailerDict(trailerDict, ctx, offCurXRef)
 }
 
 // Parse xRef section into corresponding number of xRef table entries.
-func parseXRefSection(s *bufio.Scanner, ctx *Context, ssCount *int, repairOff int) (*int64, error) {
+func parseXRefSection(s *bufio.Scanner, ctx *Context, ssCount *int, offCurXRef *int64, repairOff int) (*int64, error) {
 	log.Read.Println("parseXRefSection begin")
 
 	line, err := scanLine(s)
@@ -1027,7 +1082,7 @@ func parseXRefSection(s *bufio.Scanner, ctx *Context, ssCount *int, repairOff in
 
 	log.Read.Println("parseXRefSection: parsing trailer dict..")
 
-	return processTrailer(ctx, s, line)
+	return processTrailer(ctx, s, line, offCurXRef)
 }
 
 // Get version from first line of file.
@@ -1138,7 +1193,7 @@ func bypassXrefSection(ctx *Context) error {
 				i := strings.Index(line, "startxref")
 				if i >= 0 {
 					// Parse trailer.
-					_, err = processTrailer(ctx, s, string(bb))
+					_, err = processTrailer(ctx, s, string(bb), nil)
 					return err
 				}
 				continue
@@ -1229,7 +1284,7 @@ func tryXRefSection(ctx *Context, rs io.ReadSeeker, offset *int64, xrefSectionCo
 
 	if strings.TrimSpace(line) == "xref" {
 		log.Read.Println("buildXRefTableStartingAt: found xref section")
-		return parseXRefSection(s, ctx, xrefSectionCount, 0)
+		return parseXRefSection(s, ctx, xrefSectionCount, offset, 0)
 	}
 
 	// Retry using next line. (Repair fix for #326)
@@ -1244,7 +1299,7 @@ func tryXRefSection(ctx *Context, rs io.ReadSeeker, offset *int64, xrefSectionCo
 		log.Read.Println("buildXRefTableStartingAt: found xref section")
 		repairOff += i
 		log.Read.Printf("Repair offset: %d\n", repairOff)
-		return parseXRefSection(s, ctx, xrefSectionCount, repairOff)
+		return parseXRefSection(s, ctx, xrefSectionCount, offset, repairOff)
 	}
 
 	return &zero, nil

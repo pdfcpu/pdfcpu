@@ -752,11 +752,11 @@ func parseNumericOrIndRef(line *string) (Object, error) {
 	}
 
 	if l[0] == 'R' {
+		*line = forwardParseBuf(l, 1)
 		if rangeErr {
 			return nil, nil
 		}
 		// We have all 3 components to create an indirect reference.
-		*line = forwardParseBuf(l, 1)
 		return *NewIndirectRef(iref1, iref2), nil
 	}
 
