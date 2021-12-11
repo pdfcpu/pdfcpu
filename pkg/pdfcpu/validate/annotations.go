@@ -1319,7 +1319,8 @@ func validateEntryP(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, requi
 	}
 
 	if d1 == nil {
-		return errors.Errorf("validateEntryP: entry \"P\" (obj#%d) is nil", ir.ObjectNumber)
+		d.Delete("P")
+		return nil
 	}
 
 	_, err = validateNameEntry(xRefTable, d1, "pageDict", "Type", REQUIRED, pdf.V10, func(s string) bool { return s == "Page" })

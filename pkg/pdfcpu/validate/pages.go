@@ -948,6 +948,8 @@ func validatePagesDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNr, genNumber in
 		return curPage, errors.New("pdfcpu: validatePagesDict: corrupt \"Kids\" entry")
 	}
 
+	var a pdf.Array
+
 	for _, o := range kidsArray {
 
 		if o == nil {
@@ -964,6 +966,12 @@ func validatePagesDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNr, genNumber in
 
 		objNumber := ir.ObjectNumber.Value()
 		genNumber := ir.GenerationNumber.Value()
+
+		if objNumber == 0 {
+			continue
+		}
+
+		a = append(a, ir)
 
 		pageNodeDict, err := xRefTable.DereferenceDict(ir)
 		if err != nil {
@@ -1006,6 +1014,8 @@ func validatePagesDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNr, genNumber in
 		}
 
 	}
+
+	d["Kids"] = a
 
 	return curPage, nil
 }
