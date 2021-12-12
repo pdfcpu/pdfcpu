@@ -288,7 +288,7 @@ func (xRefTable *XRefTable) FindTableEntryLight(objNr int) (*XRefTableEntry, boo
 
 // FindTableEntry returns the XRefTable entry for given object and generation numbers.
 func (xRefTable *XRefTable) FindTableEntry(objNr int, genNr int) (*XRefTableEntry, bool) {
-	//fmt.Printf("FindTableEntry: obj#:%d gen:%d \n", objNr, genNr)
+	log.Trace.Printf("FindTableEntry: obj#:%d gen:%d \n", objNr, genNr)
 	return xRefTable.Find(objNr)
 }
 

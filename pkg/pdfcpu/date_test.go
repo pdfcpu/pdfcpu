@@ -93,7 +93,7 @@ func TestParseDateTime(t *testing.T) {
 	doParseDateTimeOK(s, t)
 
 	s = "D:20170430155901+06'"
-	doParseDateTimeFail(s, t)
+	doParseDateTimeOK(s, t)
 
 	s = "D:20170430155901+06'59"
 	doParseDateTimeOK(s, t)
@@ -108,6 +108,45 @@ func TestParseDateTime(t *testing.T) {
 	doParseDateTimeRelaxedOK(s, t)
 
 	s = "20141117162446Z00'00'"
+	doParseDateTimeRelaxedOK(s, t)
+
+	s = "D: 20210827124448+00'00'"
+	doParseDateTimeRelaxedOK(s, t)
+
+	s = "D: 20191003062617-07'00'"
+	doParseDateTimeRelaxedOK(s, t)
+
+	s = "D:20150521.124925823"
+	doParseDateTimeRelaxedOK(s, t)
+
+	s = "D:20210517043452}"
+	doParseDateTimeRelaxedOK(s, t)
+
+	s = "D:20210608122455Z00\\'00"
+	doParseDateTimeRelaxedOK(s, t)
+
+	s = "D:20020301230221- 5' 0'"
+	doParseDateTimeRelaxedOK(s, t)
+
+	s = "D:20061102145045-05'"
+	doParseDateTimeRelaxedOK(s, t)
+
+	s = "D:20150312082530-5'00'"
+	doParseDateTimeRelaxedOK(s, t)
+
+	s = "D:20191009100417-05'00''"
+	doParseDateTimeRelaxedOK(s, t)
+
+	s = "D:20200429084309+ 0' 0'"
+	doParseDateTimeRelaxedOK(s, t)
+
+	s = "D:20211028112621--04'00"
+	doParseDateTimeRelaxedOK(s, t)
+
+	s = "D:20210419150333-04'00'Z"
+	doParseDateTimeRelaxedOK(s, t)
+
+	s = "D:20160404061414+65'53'"
 	doParseDateTimeRelaxedOK(s, t)
 }
 
