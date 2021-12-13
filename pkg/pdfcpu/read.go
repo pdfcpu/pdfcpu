@@ -1150,7 +1150,7 @@ func headerVersion(rs io.ReadSeeker) (v *Version, eolCount int, err error) {
 	return &pdfVersion, eolCount, nil
 }
 
-// bypassXrefSection is a hack for digesting corrupt xref sections.
+// bypassXrefSection is a fix for digesting corrupt xref sections.
 // It populates the xRefTable by reading in all indirect objects line by line
 // and works on the assumption of a single xref section - meaning no incremental updates have been made.
 func bypassXrefSection(ctx *Context) error {
@@ -1251,12 +1251,12 @@ func postProcess(ctx *Context, xrefSectionCount int) {
 	// and in one of the following weird situations:
 	if xrefSectionCount == 1 && !ctx.Exists(0) {
 		if *ctx.Size == len(ctx.Table)+1 {
-			// Hack for #262
+			// Fix for #262
 			// Create free object 0 from scratch if the free list head is missing.
 			g0 := FreeHeadGeneration
 			ctx.Table[0] = &XRefTableEntry{Free: true, Offset: &zero, Generation: &g0}
 		} else {
-			// Hack for #250: A friendly 🤢 to the devs of the HP Scanner & Printer software utility.
+			// Fix for #250
 			// Create free object 0 by shifting down all objects by one.
 			for i := 1; i <= *ctx.Size; i++ {
 				ctx.Table[i-1] = ctx.Table[i]

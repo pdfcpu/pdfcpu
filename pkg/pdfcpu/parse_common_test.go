@@ -29,12 +29,12 @@ func doTestParseObjectOK(parseString string, t *testing.T) {
 		return
 	}
 
-	var nextParseString string
-	if &parseString == nil {
-		nextParseString = "end of parseString.\n"
-	} else {
-		nextParseString = fmt.Sprintf("next parseString: <%s>\n\n", parseString)
-	}
+	//var nextParseString string
+	//if &parseString == nil {
+	//	nextParseString = "end of parseString.\n"
+	//} else {
+	var nextParseString = fmt.Sprintf("next parseString: <%s>\n\n", parseString)
+	//}
 
 	t.Logf("\nparseString: <%s>\nparsed Object: %v\n%s", str, o, nextParseString)
 }

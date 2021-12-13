@@ -165,13 +165,13 @@ func (a Array) PDFString() string {
 
 		d, ok := entry.(Dict)
 		if ok {
-			logstr = append(logstr, fmt.Sprintf("%s", d.PDFString()))
+			logstr = append(logstr, d.PDFString())
 			continue
 		}
 
 		a, ok := entry.(Array)
 		if ok {
-			logstr = append(logstr, fmt.Sprintf("%s", a.PDFString()))
+			logstr = append(logstr, a.PDFString())
 			continue
 		}
 
@@ -183,7 +183,7 @@ func (a Array) PDFString() string {
 
 		n, ok := entry.(Name)
 		if ok {
-			logstr = append(logstr, fmt.Sprintf("%s", n.PDFString()))
+			logstr = append(logstr, n.PDFString())
 			continue
 		}
 

@@ -316,7 +316,7 @@ func (ctx *Context) InfoDigest(selectedPages IntSet) ([]string, error) {
 	}
 	ss = append(ss, pi...)
 
-	ss = append(ss, fmt.Sprintf(separator))
+	ss = append(ss, fmt.Sprint(separator))
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Title", ctx.Title))
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Author", ctx.Author))
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Subject", ctx.Subject))

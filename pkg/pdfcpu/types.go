@@ -375,7 +375,7 @@ func (nameObject Name) Clone() Object {
 }
 
 func (nameObject Name) String() string {
-	return fmt.Sprintf("%s", string(nameObject))
+	return fmt.Sprint(string(nameObject))
 }
 
 // PDFString returns a string representation as found in and written to a PDF file.

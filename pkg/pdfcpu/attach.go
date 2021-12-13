@@ -283,7 +283,7 @@ func (ctx *Context) RemoveAttachments(ids []string) (bool, error) {
 		return false, errors.Errorf("no attachments available.")
 	}
 
-	if ids == nil || len(ids) == 0 {
+	if len(ids) == 0 {
 		// Remove all attachments - delete name tree root object.
 		log.CLI.Println("removing all attachments")
 		if err := xRefTable.RemoveEmbeddedFilesNameTree(); err != nil {
@@ -336,7 +336,7 @@ func (ctx *Context) ExtractAttachments(ids []string) ([]Attachment, error) {
 	}
 
 	// Search with UF,F,Desc
-	if ids != nil && len(ids) > 0 {
+	if len(ids) > 0 {
 		for _, id := range ids {
 			v, ok := ctx.Names["EmbeddedFiles"].Value(id)
 			if !ok {

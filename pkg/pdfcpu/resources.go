@@ -44,9 +44,7 @@ func (fo *FontObject) AddResourceName(resourceName string) {
 // ResourceNamesString returns a string representation of all the resource names of this font.
 func (fo FontObject) ResourceNamesString() string {
 	var resNames []string
-	for _, resName := range fo.ResourceNames {
-		resNames = append(resNames, resName)
-	}
+	resNames = append(resNames, fo.ResourceNames...)
 	return strings.Join(resNames, ",")
 }
 
@@ -117,9 +115,7 @@ func (io *ImageObject) AddResourceName(resourceName string) {
 // ResourceNamesString returns a string representation of the ResourceNames for this image.
 func (io ImageObject) ResourceNamesString() string {
 	var resNames []string
-	for _, resName := range io.ResourceNames {
-		resNames = append(resNames, resName)
-	}
+	resNames = append(resNames, io.ResourceNames...)
 	return strings.Join(resNames, ",")
 }
 

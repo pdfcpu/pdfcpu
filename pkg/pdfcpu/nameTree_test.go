@@ -125,7 +125,7 @@ func destroyNameTree(t *testing.T, r *Node) {
 		t.Fatalf("Value for a should be: %s but is %s", "av", v)
 	}
 
-	v, ok = r.Value("x")
+	_, ok = r.Value("x")
 	if ok {
 		t.Fatal("should not find Value for x")
 	}
@@ -149,7 +149,7 @@ func destroyNameTree(t *testing.T, r *Node) {
 		t.Fatalf("Value for h should be: %s but is %s", "hv", v)
 	}
 
-	v, ok = r.Value("x")
+	_, ok = r.Value("x")
 	if ok {
 		t.Fatal("should not find Value for x")
 	}

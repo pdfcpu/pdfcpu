@@ -92,7 +92,7 @@ func validateDestinationArray(xRefTable *pdf.XRefTable, a pdf.Array) error {
 
 	case 4:
 		// TODO Cleanup
-		// hack for i381 - possibly zoom == null or 0
+		// hack for #381 - possibly zoom == null or 0
 		// eg. [(886 0 R) XYZ 53 303]
 		nameErr = name.Value() != "XYZ"
 

@@ -169,11 +169,11 @@ func (ctx *Context) BookmarksForOutlineItem(item *IndirectRef, parent *Bookmark)
 				continue
 			}
 			act, _ = ctx.Dereference(act)
-			actType, _ := act.(Dict)["S"]
+			actType := act.(Dict)["S"]
 			if actType.String() != "GoTo" {
 				continue
 			}
-			dest, _ = act.(Dict)["D"]
+			dest = act.(Dict)["D"]
 		}
 
 		dest, _ = ctx.Dereference(dest)
@@ -205,7 +205,7 @@ func (ctx *Context) BookmarksForOutlineItem(item *IndirectRef, parent *Bookmark)
 			Parent:   parent,
 		}
 
-		first, _ := d["First"]
+		first := d["First"]
 		if first != nil {
 			indRef := first.(IndirectRef)
 			children, _ := ctx.BookmarksForOutlineItem(&indRef, &newBookmark)

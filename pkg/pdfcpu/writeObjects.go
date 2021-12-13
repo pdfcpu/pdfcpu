@@ -442,7 +442,7 @@ func writeStreamDictObject(ctx *Context, objNumber, genNumber int, sd StreamDict
 
 	var inObjStream bool
 
-	if ctx.Write.WriteToObjectStream == true {
+	if ctx.Write.WriteToObjectStream {
 		inObjStream = true
 		ctx.Write.WriteToObjectStream = false
 	}

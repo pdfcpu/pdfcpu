@@ -134,7 +134,7 @@ func hexString(s string) (*string, bool) {
 	i := 0
 
 	for _, c := range strings.ToUpper(s) {
-		if strings.IndexRune(" \x09\x0A\x0C\x0D", c) >= 0 {
+		if strings.ContainsRune(" \x09\x0A\x0C\x0D", c) {
 			if i%2 > 0 {
 				sb.WriteString("0")
 				i = 0
@@ -221,11 +221,12 @@ func delimiter(b byte) bool {
 
 // parseObjectAttributes parses object number and generation of the next object for given string buffer.
 func parseObjectAttributes(line *string) (objectNumber *int, generationNumber *int, err error) {
-	log.Parse.Printf("ParseObjectAttributes: buf=<%s>\n", *line)
 
 	if line == nil || len(*line) == 0 {
 		return nil, nil, errors.New("pdfcpu: ParseObjectAttributes: buf not available")
 	}
+
+	log.Parse.Printf("ParseObjectAttributes: buf=<%s>\n", *line)
 
 	l := *line
 	var remainder string
@@ -513,8 +514,7 @@ func processDictKeys(line *string, relaxed bool) (Dict, error) {
 			return nil, errDictionaryNotTerminated
 		}
 
-		// A friendly 🤢 to the devs of the Kdan Pocket Scanner for the iPad.
-		// Hack for #252:
+		// Fix for #252:
 		// For dicts with kv pairs terminated by eol we accept a missing value as an empty string.
 		if eol {
 			obj := StringLiteral("")
