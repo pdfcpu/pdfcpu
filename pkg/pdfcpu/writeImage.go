@@ -281,11 +281,13 @@ func renderDeviceGrayToPNG(im *PDFImage, resourceName string) (io.Reader, string
 			p := b[i]
 			for j := 0; j < 8/im.bpc; j++ {
 				pix := p >> (8 - uint8(im.bpc))
-				dec := []colValRange{{0, 1}}
-				if !im.imageMask && im.decode != nil {
-					dec = im.decode
+				dec := colValRange{0, 255}
+				if !im.imageMask && len(im.decode) > 0 {
+					// Erik Unger <erik@domonda.com>: do we want this,
+					// or should we always scale to 0..255 for color.Gray ?
+					dec = im.decode[0]
 				}
-				v := decodePixelValue(pix, im.bpc, dec[0])
+				v := decodePixelValue(pix, im.bpc, dec)
 				//fmt.Printf("x=%d y=%d pix=#%02x v=#%02x\n", x, y, pix, v)
 				img.Set(x, y, color.Gray{Y: v})
 				p <<= uint8(im.bpc)
