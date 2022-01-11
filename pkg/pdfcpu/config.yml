@@ -45,3 +45,6 @@ unit: points
 # See more at https://pkg.go.dev/time@go1.17.1#pkg-constants
 timestampFormat: 2006-01-02 15:04
 
+# buffer size >= 100 for locating PDF header
+headerBufSize: 100
+

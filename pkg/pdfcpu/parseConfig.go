@@ -40,6 +40,7 @@ type configuration struct {
 	Unit              string `yaml:"unit"`
 	Units             string `yaml:"units"` // Be flexible if version < v0.3.8
 	TimestampFormat   string `yaml:"timestampFormat"`
+	HeaderBufSize     int    `yaml:"headerBufSize"`
 }
 
 func loadedConfig(c configuration, configPath string) *Configuration {
@@ -86,6 +87,8 @@ func loadedConfig(c configuration, configPath string) *Configuration {
 
 	conf.TimestampFormat = c.TimestampFormat
 
+	conf.HeaderBufSize = c.HeaderBufSize
+
 	return &conf
 }
 
@@ -121,6 +124,15 @@ func parseConfigFile(r io.Reader, configPath string) error {
 
 	if !IntMemberOf(c.EncryptKeyLength, []int{40, 128, 256}) {
 		return errors.Errorf("encryptKeyLength possible values: 40, 128, 256, got: %s", c.Unit)
+	}
+
+	// TODO Disable on next release.
+	if c.HeaderBufSize == 0 {
+		c.HeaderBufSize = 100
+	}
+
+	if c.HeaderBufSize < 100 {
+		return errors.Errorf("headerBufSize must be >= 100, got: %d", c.HeaderBufSize)
 	}
 
 	loadedDefaultConfig = loadedConfig(c, configPath)
