@@ -644,9 +644,11 @@ func validateStructTreeRootDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 		if err != nil {
 			return err
 		}
-		_, _, _, err = validateNameTree(xRefTable, "IDTree", d, true)
-		if err != nil {
-			return err
+		if len(d) > 0 {
+			_, _, _, err = validateNameTree(xRefTable, "IDTree", d, true)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
