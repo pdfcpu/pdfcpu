@@ -175,6 +175,9 @@ type Configuration struct {
 
 	// Timestamp format.
 	TimestampFormat string
+
+	// Buffersize for locating PDF header <= 100
+	HeaderBufSize int
 }
 
 // ConfigPath defines the location of pdfcpu's configuration directory.
@@ -242,6 +245,7 @@ func newDefaultConfiguration() *Configuration {
 		EncryptKeyLength:  256,
 		Permissions:       PermissionsNone,
 		TimestampFormat:   "2006-01-02 15:04",
+		HeaderBufSize:     100,
 	}
 }
 
@@ -305,7 +309,8 @@ func (c Configuration) String() string {
 		"EncryptKeyLength:  %d\n"+
 		"Permissions:       %d\n"+
 		"Unit :             %s\n"+
-		"TimestampFormat:	%s\n",
+		"TimestampFormat:	%s\n"+
+		"HeaderBufSize:		%d\n",
 		path,
 		c.CheckFileNameExt,
 		c.Reader15,
@@ -319,6 +324,7 @@ func (c Configuration) String() string {
 		c.Permissions,
 		c.UnitString(),
 		c.TimestampFormat,
+		c.HeaderBufSize,
 	)
 }
 
