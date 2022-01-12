@@ -320,7 +320,7 @@ func validateWebCaptureContentSetDict(XRefTable *pdf.XRefTable, d pdf.Dict) erro
 	}
 
 	// S, required, name
-	s, err := validateNameEntry(XRefTable, d, dictName, "Type", REQUIRED, pdf.V10, func(s string) bool { return s == "SPS" || s == "SIS" })
+	s, err := validateNameEntry(XRefTable, d, dictName, "S", REQUIRED, pdf.V10, func(s string) bool { return s == "SPS" || s == "SIS" })
 	if err != nil {
 		return err
 	}

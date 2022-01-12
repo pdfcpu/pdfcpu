@@ -1093,7 +1093,7 @@ func parseXRefSection(s *bufio.Scanner, ctx *Context, ssCount *int, offCurXRef *
 // Save PDF Version from header to xRefTable.
 // The header version comes as the first line of the file.
 // eolCount is the number of characters used for eol (1 or 2).
-func headerVersion(rs io.ReadSeeker) (v *Version, eolCount int, err error) {
+func headerVersion(rs io.ReadSeeker, headerBufSize int) (v *Version, eolCount int, err error) {
 	log.Read.Println("headerVersion begin")
 
 	var (
@@ -1107,8 +1107,7 @@ func headerVersion(rs io.ReadSeeker) (v *Version, eolCount int, err error) {
 		return nil, 0, err
 	}
 
-	// Read up to 8k from beginning to search for prefix
-	buf := make([]byte, 8192)
+	buf := make([]byte, headerBufSize)
 	n, err := rs.Read(buf)
 	if err != nil {
 		return nil, 0, err
@@ -1314,8 +1313,8 @@ func buildXRefTableStartingAt(ctx *Context, offset *int64) error {
 	log.Read.Println("buildXRefTableStartingAt: begin")
 
 	rs := ctx.Read.rs
-
-	hv, eolCount, err := headerVersion(rs)
+	conf := ctx.Configuration
+	hv, eolCount, err := headerVersion(rs, conf.HeaderBufSize)
 	if err != nil {
 		return err
 	}
