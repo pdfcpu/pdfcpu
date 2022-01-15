@@ -138,17 +138,15 @@ func colorLookupTable(xRefTable *XRefTable, o Object) ([]byte, error) {
 	return nil, nil
 }
 
+func maxValForBits(bpc int) int {
+	return 1<<bpc - 1
+}
+
+// Decode v into the bpc deep color image space using the applicable DecodeArray component.
 func decodePixelValue(v uint8, bpc int, r colValRange) uint8 {
-
-	// Odd way to calc 2**bpc-1
-	q := 1
-	for i := 1; i < bpc; i++ {
-		q = 2*q + 1
-	}
-
-	f := r.min + (float64(v) * (r.max - r.min) / float64(q))
-
-	return uint8(f * float64(q))
+	q := float64(maxValForBits(bpc))
+	f := r.min + (float64(v) * (r.max - r.min) / q)
+	return uint8(f * q)
 }
 
 func streamBytes(sd *StreamDict) ([]byte, error) {
@@ -262,6 +260,10 @@ func renderDeviceCMYKToTIFF(im *PDFImage, resourceName string) (io.Reader, strin
 	return &buf, "tif", nil
 }
 
+func scaleToBPC8(v uint8, bpc int) uint8 {
+	return uint8(float64(v) * 255.0 / float64(maxValForBits(bpc)))
+}
+
 func renderDeviceGrayToPNG(im *PDFImage, resourceName string) (io.Reader, string, error) {
 	b := im.sd.Content
 	log.Debug.Printf("renderDeviceGrayToPNG: objNr=%d w=%d h=%d bpc=%d buflen=%d\n", im.objNr, im.w, im.h, im.bpc, len(b))
@@ -270,6 +272,11 @@ func renderDeviceGrayToPNG(im *PDFImage, resourceName string) (io.Reader, string
 	// For streams not using compression there is a trailing 0x0A in addition to the imagebytes.
 	if len(b) < (im.bpc*im.w*im.h+7)/8 {
 		return nil, "", errors.Errorf("pdfcpu: renderDeviceGrayToPNG: objNr=%d corrupt image object %v\n", im.objNr, *im.sd)
+	}
+
+	cvr := colValRange{0, 1}
+	if im.decode != nil {
+		cvr = im.decode[0]
 	}
 
 	img := image.NewGray(image.Rect(0, 0, im.w, im.h))
@@ -281,11 +288,10 @@ func renderDeviceGrayToPNG(im *PDFImage, resourceName string) (io.Reader, string
 			p := b[i]
 			for j := 0; j < 8/im.bpc; j++ {
 				pix := p >> (8 - uint8(im.bpc))
-				dec := []colValRange{{0, 1}}
-				if !im.imageMask && im.decode != nil {
-					dec = im.decode
+				v := decodePixelValue(pix, im.bpc, cvr)
+				if im.bpc < 8 {
+					v = scaleToBPC8(v, im.bpc)
 				}
-				v := decodePixelValue(pix, im.bpc, dec[0])
 				//fmt.Printf("x=%d y=%d pix=#%02x v=#%02x\n", x, y, pix, v)
 				img.Set(x, y, color.Gray{Y: v})
 				p <<= uint8(im.bpc)
