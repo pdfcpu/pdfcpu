@@ -42,7 +42,9 @@ type StreamDict struct {
 	FilterPipeline    []PDFFilter
 	Raw               []byte // Encoded
 	Content           []byte // Decoded
-	IsPageContent     bool
+	//DCTImage          image.Image
+	IsPageContent bool
+	CSComponents  int
 }
 
 // NewStreamDict creates a new PDFStreamDict for given PDFDict, stream offset and length.
@@ -55,7 +57,9 @@ func NewStreamDict(d Dict, streamOffset int64, streamLength *int64, streamLength
 		filterPipeline,
 		nil,
 		nil,
+		//nil,
 		false,
+		0,
 	}
 }
 
@@ -203,8 +207,10 @@ func (sd *StreamDict) Decode() error {
 		return nil
 	}
 
-	// No filter specified, nothing to decode.
-	if sd.FilterPipeline == nil {
+	fpl := sd.FilterPipeline
+
+	// No filter or sole filter DTC && !CMYK or JPX - nothing to decode.
+	if fpl == nil || len(fpl) == 1 && ((fpl[0].Name == filter.DCT && sd.CSComponents != 4) || fpl[0].Name == filter.JPX) {
 		sd.Content = sd.Raw
 		log.Trace.Printf("decodedStream returning %d(#%02x)bytes: \n%s\n", len(sd.Content), len(sd.Content), hex.Dump(sd.Content))
 		return nil
@@ -217,6 +223,28 @@ func (sd *StreamDict) Decode() error {
 
 	// Apply each filter in the pipeline to result of preceding filter.
 	for _, f := range sd.FilterPipeline {
+
+		if f.Name == filter.JPX {
+			break
+		}
+
+		if f.Name == filter.DCT {
+			if sd.CSComponents != 4 {
+				break
+			}
+			// if sd.CSComponents == 4 {
+			// 	// Special case where we have to do real JPG decoding.
+			// 	// Another option is using a dctDecode filter using gob - performance hit?
+
+			// 	im, err := jpeg.Decode(b)
+			//  if err != nil {
+			// 	 	return err
+			// 	}
+			// 	sd.DCTImage = im // hacky
+			// 	return nil
+			// }
+
+		}
 
 		if f.DecodeParms != nil {
 			log.Trace.Printf("decodeStream: decoding filter:%s\ndecodeParms:%s\n", f.Name, f.DecodeParms)

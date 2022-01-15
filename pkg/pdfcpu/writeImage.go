@@ -680,42 +680,34 @@ func renderFlateEncodedImage(xRefTable *XRefTable, sd *StreamDict, thumb bool, r
 	return nil, "", nil
 }
 
-func renderGrayToPng(im *PDFImage, resourceName string) (io.Reader, string, error) {
-	bb := bytes.NewReader(im.sd.Content)
-	dec := gob.NewDecoder(bb)
+// func renderDCTToPng(im *PDFImage, resourceName string) (io.Reader, string, error) {
+// 	var buf bytes.Buffer
+// 	if err := png.Encode(&buf, im.sd.DCTImage); err != nil {
+// 		return nil, "", err
+// 	}
+// 	return &buf, "png", nil
+// }
 
-	var img image.Gray
-	if err := dec.Decode(&img); err != nil {
-		return nil, "", err
-	}
+// func renderDCTCMYKToPng(im *PDFImage, resourceName string) (io.Reader, string, error) {
+// 	img := im.sd.DCTImage
+// 	img1 := image.NewRGBA(image.Rect(0, 0, im.w, im.h))
 
-	var buf bytes.Buffer
-	if err := png.Encode(&buf, &img); err != nil {
-		return nil, "", err
-	}
+// 	for y := 0; y < im.h; y++ {
+// 		for x := 0; x < im.w; x++ {
+// 			a := img.At(x, y).(color.CMYK)
+// 			cyan, mag, yel, blk := decodeCMYK(255-a.C, 255-a.M, 255-a.Y, 255-a.K, im.decode)
+// 			r, g, b := color.CMYKToRGB(cyan, mag, yel, blk)
+// 			// TODO Apply Decode array
+// 			img1.SetRGBA(x, y, color.RGBA{r, g, b, 255})
+// 		}
+// 	}
 
-	return &buf, "png", nil
-}
+// 	var buf bytes.Buffer
+// 	if err := png.Encode(&buf, img1); err != nil {
+// 		return nil, "", err
+// 	}
 
-func renderRGBToPng(im *PDFImage, resourceName string) (io.Reader, string, error) {
-	bb := bytes.NewReader(im.sd.Content)
-	dec := gob.NewDecoder(bb)
-
-	var img image.YCbCr
-	if err := dec.Decode(&img); err != nil {
-		return nil, "", err
-	}
-
-	var buf bytes.Buffer
-	if err := png.Encode(&buf, &img); err != nil {
-		return nil, "", err
-	}
-
-	return &buf, "png", nil
-}
-
-// func decode8BitColVal(v uint8, r colValRange) uint8 {
-// 	return uint8(r.min + (float64(v) * (r.max - r.min) / 255.0))
+// 	return &buf, "png", nil
 // }
 
 func decodeCMYK(c, m, y, k uint8, decode []colValRange) (uint8, uint8, uint8, uint8) {
@@ -742,7 +734,6 @@ func renderCMYKToPng(im *PDFImage, resourceName string) (io.Reader, string, erro
 
 	for y := 0; y < im.h; y++ {
 		for x := 0; x < im.w; x++ {
-			//c := img.At(x, y)
 			a := img.At(x, y).(color.CMYK)
 			cyan, mag, yel, blk := decodeCMYK(255-a.C, 255-a.M, 255-a.Y, 255-a.K, im.decode)
 			r, g, b := color.CMYKToRGB(cyan, mag, yel, blk)
@@ -759,27 +750,19 @@ func renderCMYKToPng(im *PDFImage, resourceName string) (io.Reader, string, erro
 	return &buf, "png", nil
 }
 
-func renderDCTEncodedImage(xRefTable *XRefTable, sd *StreamDict, thumb bool, resourceName string, objNr int) (io.Reader, string, error) {
+func renderDCTToPNG(xRefTable *XRefTable, sd *StreamDict, thumb bool, resourceName string, objNr int) (io.Reader, string, error) {
 	im, err := pdfImage(xRefTable, sd, thumb, objNr)
 	if err != nil {
 		return nil, "", err
 	}
 
-	switch im.comp {
-	case 1:
-		return renderGrayToPng(im, resourceName)
-	case 3:
-		return renderRGBToPng(im, resourceName)
-	case 4:
-		return renderCMYKToPng(im, resourceName)
-	}
-
-	return nil, "", errors.Errorf("renderDCTEncodedImage: invalid number of components: %d", im.comp)
+	return renderCMYKToPng(im, resourceName)
 }
 
 // RenderImage returns a reader for a decoded image stream.
 func RenderImage(xRefTable *XRefTable, sd *StreamDict, thumb bool, resourceName string, objNr int) (io.Reader, string, error) {
-	// The real image compression is the last filter in the pipeline.
+	// Image compression is the last filter in the pipeline.
+
 	f := sd.FilterPipeline[len(sd.FilterPipeline)-1].Name
 
 	switch f {
@@ -788,11 +771,13 @@ func RenderImage(xRefTable *XRefTable, sd *StreamDict, thumb bool, resourceName 
 		return renderFlateEncodedImage(xRefTable, sd, thumb, resourceName, objNr)
 
 	case filter.DCT:
-		return renderDCTEncodedImage(xRefTable, sd, thumb, resourceName, objNr)
+		if sd.CSComponents == 4 {
+			return renderDCTToPNG(xRefTable, sd, thumb, resourceName, objNr)
+		}
+		return bytes.NewReader(sd.Content), "jpg", nil
 
 	case filter.JPX:
-		// Exception: Write original encoded stream data.
-		return bytes.NewReader(sd.Raw), "jpx", nil
+		return bytes.NewReader(sd.Content), "jpx", nil
 	}
 
 	return nil, "", nil

@@ -340,16 +340,20 @@ func (ctx *Context) ExtractImage(sd *StreamDict, thumb bool, resourceId string, 
 		}
 	}
 
+	if lastFilter == filter.DCT {
+		comp, err := ctx.ColorSpaceComponents(sd)
+		if err != nil {
+			return nil, err
+		}
+		sd.CSComponents = comp
+	}
+
 	switch lastFilter {
 
-	case filter.DCT, filter.Flate, filter.CCITTFax, filter.RunLength:
-		// If color space is CMYK then write .tif else write .png
+	case filter.DCT, filter.JPX, filter.Flate, filter.CCITTFax, filter.RunLength:
 		if err := sd.Decode(); err != nil {
 			return nil, err
 		}
-
-	case filter.JPX:
-		//imageObj.Extension = "jpx"
 
 	default:
 		log.Debug.Printf("ExtractImage(%d): skip img, filter %s unsupported\n", objNr, filters)
