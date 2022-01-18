@@ -47,9 +47,9 @@ func doParseDateTimeFail(s string, t *testing.T) {
 	t.Helper()
 	if time, ok := DateTime(s, false); ok {
 		t.Errorf("DateTime(%s) valid => not ok! %s\n", s, time)
-	} else {
-		//t.Logf("DateTime(%s) invalid => ok\n", s)
-	}
+	} // else {
+	//t.Logf("DateTime(%s) invalid => ok\n", s)
+	//}
 
 }
 

@@ -21,20 +21,20 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateSignatureDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
+// func validateSignatureDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
 
-	d, err := xRefTable.DereferenceDict(o)
-	if err != nil || d == nil {
-		return err
-	}
+// 	d, err := xRefTable.DereferenceDict(o)
+// 	if err != nil || d == nil {
+// 		return err
+// 	}
 
-	// Type, optional, name
-	_, err = validateNameEntry(xRefTable, d, "signatureDict", "Type", OPTIONAL, pdf.V10, func(s string) bool { return s == "Sig" })
+// 	// Type, optional, name
+// 	_, err = validateNameEntry(xRefTable, d, "signatureDict", "Type", OPTIONAL, pdf.V10, func(s string) bool { return s == "Sig" })
 
-	// process signature dict fields.
+// 	// process signature dict fields.
 
-	return err
-}
+// 	return err
+// }
 
 func validateAppearanceSubDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 

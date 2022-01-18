@@ -18,7 +18,6 @@ package test
 
 import (
 	"fmt"
-	"regexp"
 	"testing"
 
 	"strings"
@@ -26,8 +25,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
-
-var r *regexp.Regexp
 
 func testPageSelectionSyntaxOk(t *testing.T, s string) {
 	t.Helper()

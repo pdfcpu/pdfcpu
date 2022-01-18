@@ -432,24 +432,22 @@ func validateOCProperties(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required 
 	if err != nil {
 		return err
 	}
-	if a != nil {
-		for _, o := range a {
+	for _, o := range a {
 
-			d, err := xRefTable.DereferenceDict(o)
-			if err != nil {
-				return err
-			}
-
-			if d == nil {
-				continue
-			}
-
-			err = validateOptionalContentConfigurationDict(xRefTable, d, sinceVersion)
-			if err != nil {
-				return err
-			}
-
+		d, err := xRefTable.DereferenceDict(o)
+		if err != nil {
+			return err
 		}
+
+		if d == nil {
+			continue
+		}
+
+		err = validateOptionalContentConfigurationDict(xRefTable, d, sinceVersion)
+		if err != nil {
+			return err
+		}
+
 	}
 
 	return nil

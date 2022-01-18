@@ -230,14 +230,14 @@ func (t table) parsePostScriptTable(fd *ttf) error {
 	return nil
 }
 
-func printUnicodeRange(off int, r uint32) {
-	for i := 0; i < 64; i++ {
-		if r&1 > 0 {
-			fmt.Printf("bit %d: on\n", off+i)
-		}
-		r >>= 1
-	}
-}
+// func printUnicodeRange(off int, r uint32) {
+// 	for i := 0; i < 64; i++ {
+// 		if r&1 > 0 {
+// 			fmt.Printf("bit %d: on\n", off+i)
+// 		}
+// 		r >>= 1
+// 	}
+// }
 
 func (t table) parseWindowsMetricsTable(fd *ttf) error {
 	// table "OS/2"

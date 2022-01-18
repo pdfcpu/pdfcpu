@@ -239,30 +239,26 @@ func validateFileSpecDictEntriesEFAndRF(xRefTable *pdf.XRefTable, efDict, rfDict
 		return err
 	}
 
-	if rfDict != nil {
+	for k, val := range rfDict {
 
-		for k, val := range rfDict {
+		if _, ok := efDict.Find(k); !ok {
+			return errors.Errorf("pdfcpu: validateFileSpecEntriesEFAndRF: rfDict entry=%s missing corresponding efDict entry\n", k)
+		}
 
-			if _, ok := efDict.Find(k); !ok {
-				return errors.Errorf("pdfcpu: validateFileSpecEntriesEFAndRF: rfDict entry=%s missing corresponding efDict entry\n", k)
-			}
+		// value must be related files array.
+		// see 7.11.4.2
+		a, err := xRefTable.DereferenceArray(val)
+		if err != nil {
+			return err
+		}
 
-			// value must be related files array.
-			// see 7.11.4.2
-			a, err := xRefTable.DereferenceArray(val)
-			if err != nil {
-				return err
-			}
+		if a == nil {
+			continue
+		}
 
-			if a == nil {
-				continue
-			}
-
-			err = validateRFDictFilesArray(xRefTable, a)
-			if err != nil {
-				return err
-			}
-
+		err = validateRFDictFilesArray(xRefTable, a)
+		if err != nil {
+			return err
 		}
 
 	}

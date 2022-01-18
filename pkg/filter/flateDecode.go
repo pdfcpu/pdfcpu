@@ -106,50 +106,50 @@ func intMemberOf(i int, list []int) bool {
 }
 
 // Each prediction value implies (a) certain row filter(s).
-func validateRowFilter(f, p int) error {
+// func validateRowFilter(f, p int) error {
 
-	switch p {
+// 	switch p {
 
-	case PredictorNone:
-		if !intMemberOf(f, []int{PNGNone, PNGSub, PNGUp, PNGAverage, PNGPaeth}) {
-			return errors.Errorf("pdfcpu: validateRowFilter: PredictorOptimum, unexpected row filter #%02x", f)
-		}
-		// if f != PNGNone {
-		// 	return errors.Errorf("validateRowFilter: expected row filter #%02x, got: #%02x", PNGNone, f)
-		// }
+// 	case PredictorNone:
+// 		if !intMemberOf(f, []int{PNGNone, PNGSub, PNGUp, PNGAverage, PNGPaeth}) {
+// 			return errors.Errorf("pdfcpu: validateRowFilter: PredictorOptimum, unexpected row filter #%02x", f)
+// 		}
+// 		// if f != PNGNone {
+// 		// 	return errors.Errorf("validateRowFilter: expected row filter #%02x, got: #%02x", PNGNone, f)
+// 		// }
 
-	case PredictorSub:
-		if f != PNGSub {
-			return errors.Errorf("pdfcpu: validateRowFilter: expected row filter #%02x, got: #%02x", PNGSub, f)
-		}
+// 	case PredictorSub:
+// 		if f != PNGSub {
+// 			return errors.Errorf("pdfcpu: validateRowFilter: expected row filter #%02x, got: #%02x", PNGSub, f)
+// 		}
 
-	case PredictorUp:
-		if f != PNGUp {
-			return errors.Errorf("pdfcpu: validateRowFilter: expected row filter #%02x, got: #%02x", PNGUp, f)
-		}
+// 	case PredictorUp:
+// 		if f != PNGUp {
+// 			return errors.Errorf("pdfcpu: validateRowFilter: expected row filter #%02x, got: #%02x", PNGUp, f)
+// 		}
 
-	case PredictorAverage:
-		if f != PNGAverage {
-			return errors.Errorf("pdfcpu: validateRowFilter: expected row filter #%02x, got: #%02x", PNGAverage, f)
-		}
+// 	case PredictorAverage:
+// 		if f != PNGAverage {
+// 			return errors.Errorf("pdfcpu: validateRowFilter: expected row filter #%02x, got: #%02x", PNGAverage, f)
+// 		}
 
-	case PredictorPaeth:
-		if f != PNGPaeth {
-			return errors.Errorf("pdfcpu: validateRowFilter: expected row filter #%02x, got: #%02x", PNGPaeth, f)
-		}
+// 	case PredictorPaeth:
+// 		if f != PNGPaeth {
+// 			return errors.Errorf("pdfcpu: validateRowFilter: expected row filter #%02x, got: #%02x", PNGPaeth, f)
+// 		}
 
-	case PredictorOptimum:
-		if !intMemberOf(f, []int{PNGNone, PNGSub, PNGUp, PNGAverage, PNGPaeth}) {
-			return errors.Errorf("pdfcpu: validateRowFilter: PredictorOptimum, unexpected row filter #%02x", f)
-		}
+// 	case PredictorOptimum:
+// 		if !intMemberOf(f, []int{PNGNone, PNGSub, PNGUp, PNGAverage, PNGPaeth}) {
+// 			return errors.Errorf("pdfcpu: validateRowFilter: PredictorOptimum, unexpected row filter #%02x", f)
+// 		}
 
-	default:
-		return errors.Errorf("pdfcpu: validateRowFilter: unexpected predictor #%02x", p)
+// 	default:
+// 		return errors.Errorf("pdfcpu: validateRowFilter: unexpected predictor #%02x", p)
 
-	}
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func applyHorDiff(row []byte, colors int) ([]byte, error) {
 	// This works for 8 bits per color only.

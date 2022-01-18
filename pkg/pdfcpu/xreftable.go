@@ -2150,19 +2150,18 @@ func (xRefTable *XRefTable) InsertBlankPages(pages IntSet, before bool) error {
 	return err
 }
 
-// ???
-func (xRefTable *XRefTable) markAsFree(ir IndirectRef) error {
-	objNr := ir.ObjectNumber.Value()
-	genNr := ir.GenerationNumber.Value()
-	entry, ok := xRefTable.FindTableEntry(objNr, genNr)
-	if !ok {
-		return errors.Errorf("unknown xreftable entry for obj#%d\n", objNr)
-	}
-	i := int(zero)
-	entry.Generation = &i
-	entry.Free = true
-	return nil
-}
+// func (xRefTable *XRefTable) markAsFree(ir IndirectRef) error {
+// 	objNr := ir.ObjectNumber.Value()
+// 	genNr := ir.GenerationNumber.Value()
+// 	entry, ok := xRefTable.FindTableEntry(objNr, genNr)
+// 	if !ok {
+// 		return errors.Errorf("unknown xreftable entry for obj#%d\n", objNr)
+// 	}
+// 	i := int(zero)
+// 	entry.Generation = &i
+// 	entry.Free = true
+// 	return nil
+//}
 
 func (xRefTable *XRefTable) streamDictIndRef(b []byte) (*IndirectRef, error) {
 	sd, _ := xRefTable.NewStreamDictForBuf(b)
@@ -2171,41 +2170,6 @@ func (xRefTable *XRefTable) streamDictIndRef(b []byte) (*IndirectRef, error) {
 	}
 	return xRefTable.IndRefForNewObject(*sd)
 }
-
-// Resources returns the <category> resource dict for pageDict.
-// func (xRefTable *XRefTable) Resources(pageDict Dict, key string, ensure bool) (Dict, error) {
-// 	var d Dict
-
-// 	allowedResDictKeys := []string{"ExtGState", "Font", "XObject", "Properties", "ColorSpace", "Pattern", "ProcSet", "Shading"}
-
-// 	if !MemberOf(key, allowedResDictKeys) {
-// 		return d, errors.Errorf("pdfcpu: invalid resDict key: %s", key)
-// 	}
-
-// 	if obj, found := pageDict.Find("Resources"); found {
-// 		d, err := xRefTable.DereferenceDict(obj)
-// 		if err != nil {
-// 			return d, err
-// 		}
-// 		if obj, found := d.Find(key); found {
-// 			return xRefTable.DereferenceDict(obj)
-// 		}
-// 		if !ensure {
-// 			return d, errors.Errorf("pdfcpu: unknown resDict: %s", key)
-// 		}
-// 		d[key] = Dict{}
-// 		return d, nil
-// 	}
-
-// 	if !ensure {
-// 		return d, errors.Errorf("pdfcpu: unknown resDict: %s", key)
-// 	}
-
-// 	d = Dict{}
-// 	pageDict["Resources"] = Dict{key: d}
-
-// 	return d, nil
-// }
 
 func (xRefTable *XRefTable) insertContent(pageDict Dict, bb []byte) error {
 

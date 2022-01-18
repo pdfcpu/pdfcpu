@@ -177,8 +177,6 @@ func NUpFile(inFiles []string, outFile string, selectedPages []string, nup *pdfc
 			}
 		}
 		err = f2.Close()
-		return
-
 	}()
 
 	return NUp(f1, f2, inFiles, selectedPages, nup, conf)

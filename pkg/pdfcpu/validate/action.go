@@ -595,15 +595,13 @@ func validateSubmitFormActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName
 		return err
 	}
 
-	if a != nil {
-		for _, v := range a {
-			switch v.(type) {
-			case pdf.StringLiteral, pdf.IndirectRef:
-				// no further processing
+	for _, v := range a {
+		switch v.(type) {
+		case pdf.StringLiteral, pdf.IndirectRef:
+			// no further processing
 
-			default:
-				return errors.New("pdfcpu: validateSubmitFormActionDict: unknown Fields entry")
-			}
+		default:
+			return errors.New("pdfcpu: validateSubmitFormActionDict: unknown Fields entry")
 		}
 	}
 
@@ -625,15 +623,13 @@ func validateResetFormActionDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName 
 		return err
 	}
 
-	if a != nil {
-		for _, v := range a {
-			switch v.(type) {
-			case pdf.StringLiteral, pdf.IndirectRef:
-				// no further processing
+	for _, v := range a {
+		switch v.(type) {
+		case pdf.StringLiteral, pdf.IndirectRef:
+			// no further processing
 
-			default:
-				return errors.New("pdfcpu: validateResetFormActionDict: unknown Fields entry")
-			}
+		default:
+			return errors.New("pdfcpu: validateResetFormActionDict: unknown Fields entry")
 		}
 	}
 

@@ -21,19 +21,17 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pkg/errors"
 )
 
-func isSupportedFontFile(filename string) bool {
-	return strings.HasSuffix(strings.ToLower(filename), ".gob")
-}
+// func isSupportedFontFile(filename string) bool {
+// 	return strings.HasSuffix(strings.ToLower(filename), ".gob")
+// }
 
 // ListFonts returns a list of supported fonts.
 func ListFonts() ([]string, error) {
@@ -203,7 +201,7 @@ func CreateUserFontDemoFiles(dir, fn string) error {
 	// Create a single page PDF for each Unicode plane with existing glyphs.
 	for i := range ttf.Planes {
 		p := createUserFontDemoPage(w, h, i, fn)
-		xRefTable, err := pdfcpu.CreateDemoXRef(p)
+		xRefTable, err := pdf.CreateDemoXRef(p)
 		if err != nil {
 			return err
 		}

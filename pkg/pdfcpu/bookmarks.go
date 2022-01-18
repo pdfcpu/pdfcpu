@@ -135,9 +135,9 @@ func (ctx *Context) PageObjFromDestinationArray(dest Object) (*IndirectRef, erro
 	case Array:
 		if dest[0] != nil {
 			ir = dest[0].(IndirectRef)
-		} else {
-			// Skipping bookmarks that don't point to anything.
 		}
+		// else skipping bookmarks that don't point to anything.
+
 	}
 	return &ir, err
 }
@@ -146,10 +146,14 @@ func (ctx *Context) PageObjFromDestinationArray(dest Object) (*IndirectRef, erro
 func (ctx *Context) BookmarksForOutlineItem(item *IndirectRef, parent *Bookmark) ([]Bookmark, error) {
 	bms := []Bookmark{}
 
-	d, err := ctx.DereferenceDict(*item)
-	if err != nil {
-		return nil, err
-	}
+	// d, err := ctx.DereferenceDict(*item)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	var (
+		d   Dict
+		err error
+	)
 
 	// Process outline items.
 	for ir := item; ir != nil; ir = d.IndirectRefEntry("Next") {

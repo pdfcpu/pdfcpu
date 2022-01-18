@@ -137,8 +137,6 @@ func BookletFile(inFiles []string, outFile string, selectedPages []string, nup *
 			}
 		}
 		err = f2.Close()
-		return
-
 	}()
 
 	return Booklet(f1, f2, inFiles, selectedPages, nup, conf)

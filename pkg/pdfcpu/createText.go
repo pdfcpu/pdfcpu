@@ -370,23 +370,23 @@ func calcBoundingBoxForLines(lines []string, x, y float64, fontName string, font
 	return box, maxLine
 }
 
-func calcBoundingBoxJ(x, y, w, h, d float64, fontName string, fontSize int) *Rectangle {
-	y -= d
-	return Rect(x, y, x+w, y+h)
-}
+// func calcBoundingBoxJ(x, y, w, h, d float64, fontName string, fontSize int) *Rectangle {
+// 	y -= d
+// 	return Rect(x, y, x+w, y+h)
+// }
 
-func calcBoundingBoxForJLines(lines []string, x, y, w float64, fontName string, fontSize int) *Rectangle {
-	var box *Rectangle
-	h := font.LineHeight(fontName, fontSize)
-	d := math.Ceil(font.Descent(fontName, fontSize))
-	// TODO Return error if lines == nil or empty.
-	for i := 0; i < len(lines); i++ {
-		bbox := calcBoundingBoxJ(x, y, w, h, d, fontName, fontSize)
-		box = calcBoundingBoxForRects(box, bbox)
-		y -= bbox.Height()
-	}
-	return box
-}
+// func calcBoundingBoxForJLines(lines []string, x, y, w float64, fontName string, fontSize int) *Rectangle {
+// 	var box *Rectangle
+// 	h := font.LineHeight(fontName, fontSize)
+// 	d := math.Ceil(font.Descent(fontName, fontSize))
+// 	// TODO Return error if lines == nil or empty.
+// 	for i := 0; i < len(lines); i++ {
+// 		bbox := calcBoundingBoxJ(x, y, w, h, d, fontName, fontSize)
+// 		box = calcBoundingBoxForRects(box, bbox)
+// 		y -= bbox.Height()
+// 	}
+// 	return box
+// }
 
 // DrawHairCross draw a haircross with origin x/y.
 func DrawHairCross(w io.Writer, x, y float64, r *Rectangle) {

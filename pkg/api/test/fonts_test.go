@@ -86,30 +86,30 @@ func writeCoreFontDemoContent(p pdf.Page, fontName string) {
 	}
 }
 
-func writeCP1252SpecialMappings(p pdf.Page, fontName string) {
+// func writeCP1252SpecialMappings(p pdf.Page, fontName string) {
 
-	k := p.Fm.EnsureKey(fontName)
+// 	k := p.Fm.EnsureKey(fontName)
 
-	td := pdf.TextDescriptor{
-		Text:           "€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ",
-		FontName:       fontName,
-		FontKey:        k,
-		FontSize:       24,
-		HAlign:         pdf.AlignCenter,
-		VAlign:         pdf.AlignBaseline,
-		X:              -1,
-		Y:              550,
-		Scale:          1.0,
-		ScaleAbs:       true,
-		RMode:          pdf.RMFill,
-		StrokeCol:      pdf.SimpleColor{},
-		FillCol:        pdf.NewSimpleColor(0xab6f30),
-		ShowBackground: true,
-		BackgroundCol:  pdf.SimpleColor{R: 1., G: .98, B: .77},
-	}
+// 	td := pdf.TextDescriptor{
+// 		Text:           "€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ",
+// 		FontName:       fontName,
+// 		FontKey:        k,
+// 		FontSize:       24,
+// 		HAlign:         pdf.AlignCenter,
+// 		VAlign:         pdf.AlignBaseline,
+// 		X:              -1,
+// 		Y:              550,
+// 		Scale:          1.0,
+// 		ScaleAbs:       true,
+// 		RMode:          pdf.RMFill,
+// 		StrokeCol:      pdf.SimpleColor{},
+// 		FillCol:        pdf.NewSimpleColor(0xab6f30),
+// 		ShowBackground: true,
+// 		BackgroundCol:  pdf.SimpleColor{R: 1., G: .98, B: .77},
+// 	}
 
-	pdf.WriteMultiLine(p.Buf, p.MediaBox, nil, td)
-}
+// 	pdf.WriteMultiLine(p.Buf, p.MediaBox, nil, td)
+// }
 
 func createCoreFontDemoPage(w, h int, fontName string) pdf.Page {
 	mediaBox := pdf.RectForDim(float64(w), float64(h))

@@ -89,16 +89,16 @@ len(GlyphWidths) = %d`,
 	)
 }
 
-func (fd TTFLight) supportsUnicodeBlock(bit int) bool {
-	i := fd.UnicodeRange[bit/32]
-	i >>= uint32(bit) % 32
-	return i&1 > 0
-}
+// func (fd TTFLight) supportsUnicodeBlock(bit int) bool {
+// 	i := fd.UnicodeRange[bit/32]
+// 	i >>= uint32(bit) % 32
+// 	return i&1 > 0
+// }
 
-func (fd TTFLight) isCJK() bool {
-	// 4E00-9FFF	CJK Unified Ideographs
-	return fd.supportsUnicodeBlock(59)
-}
+// func (fd TTFLight) isCJK() bool {
+// 	// 4E00-9FFF	CJK Unified Ideographs
+// 	return fd.supportsUnicodeBlock(59)
+// }
 
 // UserFontDir is the location for installed TTF or OTF font files.
 var UserFontDir string

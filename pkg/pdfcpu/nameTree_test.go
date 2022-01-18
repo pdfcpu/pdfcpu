@@ -163,7 +163,7 @@ func destroyNameTree(t *testing.T, r *Node) {
 	empty, ok, _ = r.Remove(nil, "f")
 	checkRemoveResult(t, r, "f", empty, ok, "[(c,(cv))(d,(dv)){c,d}]", true)
 
-	v, ok = r.Value("x")
+	_, ok = r.Value("x")
 	if ok {
 		t.Fatal("should not find Value for x")
 	}

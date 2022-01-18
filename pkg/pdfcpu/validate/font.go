@@ -696,8 +696,6 @@ func validateType1FontDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 		// For the standard 14 fonts, the entries FirstChar, LastChar, Widths and FontDescriptor shall either all be present or all be absent.
 		if xRefTable.ValidationMode == pdf.ValidationStrict {
 			required = true
-		} else {
-			// relaxed: do nothing
 		}
 	}
 

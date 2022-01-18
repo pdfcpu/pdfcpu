@@ -709,9 +709,9 @@ func (pdf *PDF) RenderPages() ([]*pdfcpu.Page, pdfcpu.FontMap, pdfcpu.Array, err
 			continue
 		}
 
-		if page.mediaBox != nil {
-			mediaBox = page.mediaBox
-		}
+		//if page.mediaBox != nil {
+		//	mediaBox = page.mediaBox
+		//}
 		if page.cropBox != nil {
 			cropBox = page.cropBox
 		}

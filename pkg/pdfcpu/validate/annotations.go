@@ -344,7 +344,7 @@ func validateAnnotationDictLink(xRefTable *pdf.XRefTable, d pdf.Dict, dictName s
 	return validateBorderStyleDict(xRefTable, d, dictName, "BS", OPTIONAL, sinceVersion)
 }
 
-func validateAnnotationDictFreeTextPart1(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, sinceVersion pdf.Version) error {
+func validateAnnotationDictFreeTextPart1(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	// DA, required, string
 	_, err := validateStringEntry(xRefTable, d, dictName, "DA", REQUIRED, pdf.V10, nil)
@@ -353,7 +353,7 @@ func validateAnnotationDictFreeTextPart1(xRefTable *pdf.XRefTable, d pdf.Dict, d
 	}
 
 	// Q, optional, integer, since V1.4, 0,1,2
-	sinceVersion = pdf.V14
+	sinceVersion := pdf.V14
 	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
 		sinceVersion = pdf.V13
 	}
@@ -389,10 +389,10 @@ func validateAnnotationDictFreeTextPart1(xRefTable *pdf.XRefTable, d pdf.Dict, d
 	return err
 }
 
-func validateAnnotationDictFreeTextPart2(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, sinceVersion pdf.Version) error {
+func validateAnnotationDictFreeTextPart2(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	// IT, optional, name, since V1.6
-	sinceVersion = pdf.V16
+	sinceVersion := pdf.V16
 	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
 		sinceVersion = pdf.V14
 	}
@@ -444,12 +444,12 @@ func validateAnnotationDictFreeText(xRefTable *pdf.XRefTable, d pdf.Dict, dictNa
 
 	// see 12.5.6.6
 
-	err := validateAnnotationDictFreeTextPart1(xRefTable, d, dictName, pdf.V12) //pdf.V13
+	err := validateAnnotationDictFreeTextPart1(xRefTable, d, dictName)
 	if err != nil {
 		return err
 	}
 
-	return validateAnnotationDictFreeTextPart2(xRefTable, d, dictName, pdf.V12) //pdf.V13
+	return validateAnnotationDictFreeTextPart2(xRefTable, d, dictName)
 }
 
 func validateEntryMeasure(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, required bool, sinceVersion pdf.Version) error {
@@ -1038,11 +1038,7 @@ func validateAnnotationDictWatermark(xRefTable *pdf.XRefTable, d pdf.Dict, dictN
 
 		// V, optional, number
 		_, err = validateNumberEntry(xRefTable, d, dictName, "V", OPTIONAL, pdf.V10, nil)
-		if err != nil {
-			return false
-		}
-
-		return true
+		return err == nil
 	}
 
 	_, err := validateDictEntry(xRefTable, d, dictName, "FixedPrint", OPTIONAL, pdf.V10, validateFixedPrintDict)

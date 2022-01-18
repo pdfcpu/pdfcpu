@@ -324,16 +324,16 @@ func (wm Watermark) multiStamp() bool {
 	return wm.Page == 0
 }
 
-func (wm Watermark) calcMaxTextWidth() float64 {
-	var maxWidth float64
-	for _, l := range wm.TextLines {
-		w := font.TextWidth(l, wm.FontName, wm.ScaledFontSize)
-		if w > maxWidth {
-			maxWidth = w
-		}
-	}
-	return maxWidth
-}
+// func (wm Watermark) calcMaxTextWidth() float64 {
+// 	var maxWidth float64
+// 	for _, l := range wm.TextLines {
+// 		w := font.TextWidth(l, wm.FontName, wm.ScaledFontSize)
+// 		if w > maxWidth {
+// 			maxWidth = w
+// 		}
+// 	}
+// 	return maxWidth
+// }
 
 func ResolveWMTextString(text, timeStampFormat string, pageNr, pageCount int) (string, bool) {
 	// replace  %p with pageNr
@@ -863,19 +863,19 @@ func ParsePDFWatermarkDetails(fileName, desc string, onTop bool, u DisplayUnit) 
 	return parseWatermarkDetails(WMPDF, fileName, desc, onTop, u)
 }
 
-func (wm Watermark) calcMinFontSize(w float64) int {
-	var minSize int
-	for _, l := range wm.TextLines {
-		w := font.Size(l, wm.FontName, w)
-		if minSize == 0.0 {
-			minSize = w
-		}
-		if w < minSize {
-			minSize = w
-		}
-	}
-	return minSize
-}
+// func (wm Watermark) calcMinFontSize(w float64) int {
+// 	var minSize int
+// 	for _, l := range wm.TextLines {
+// 		w := font.Size(l, wm.FontName, w)
+// 		if minSize == 0.0 {
+// 			minSize = w
+// 		}
+// 		if w < minSize {
+// 			minSize = w
+// 		}
+// 	}
+// 	return minSize
+// }
 
 // IsText returns true if the watermark content is text.
 func (wm Watermark) isText() bool {

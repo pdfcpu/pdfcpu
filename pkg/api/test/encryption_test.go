@@ -18,7 +18,6 @@ package test
 
 import (
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
@@ -32,26 +31,26 @@ func confForAlgorithm(aes bool, keyLength int, upw, opw string) *pdf.Configurati
 	return pdf.NewRC4Configuration(upw, opw, keyLength)
 }
 
-func ensureFullAccess(t *testing.T, listPermOutput []string) {
-	t.Helper()
-	if len(listPermOutput) == 0 || listPermOutput[0] != "Full access" {
-		t.Fail()
-	}
-}
+// func ensureFullAccess(t *testing.T, listPermOutput []string) {
+// 	t.Helper()
+// 	if len(listPermOutput) == 0 || listPermOutput[0] != "Full access" {
+// 		t.Fail()
+// 	}
+// }
 
-func ensurePermissionsNone(t *testing.T, listPermOutput []string) {
-	t.Helper()
-	if len(listPermOutput) == 0 || !strings.HasPrefix(listPermOutput[0], "permission bits:            0") {
-		t.Fail()
-	}
-}
+// func ensurePermissionsNone(t *testing.T, listPermOutput []string) {
+// 	t.Helper()
+// 	if len(listPermOutput) == 0 || !strings.HasPrefix(listPermOutput[0], "permission bits:            0") {
+// 		t.Fail()
+// 	}
+// }
 
-func ensurePermissionsAll(t *testing.T, listPermOutput []string) {
-	t.Helper()
-	if len(listPermOutput) == 0 || listPermOutput[0] != "permission bits: 111100111100" {
-		t.Fail()
-	}
-}
+// func ensurePermissionsAll(t *testing.T, listPermOutput []string) {
+// 	t.Helper()
+// 	if len(listPermOutput) == 0 || listPermOutput[0] != "permission bits: 111100111100" {
+// 		t.Fail()
+// 	}
+// }
 
 func setPermissions(t *testing.T, aes bool, keyLength int, msg, outFile string) {
 	t.Helper()

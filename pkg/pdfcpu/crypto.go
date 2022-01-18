@@ -1393,26 +1393,26 @@ func calcFileEncKeyFromUE(ctx *Context) (k []byte, err error) {
 	return k, nil
 }
 
-func calcFileEncKeyFromOE(ctx *Context) (k []byte, err error) {
+// func calcFileEncKeyFromOE(ctx *Context) (k []byte, err error) {
 
-	opw := []byte(ctx.OwnerPW)
-	b := append(opw, keySalt(ctx.E.O)...)
-	b = append(b, ctx.E.U...)
-	key := sha256.Sum256(b)
+// 	opw := []byte(ctx.OwnerPW)
+// 	b := append(opw, keySalt(ctx.E.O)...)
+// 	b = append(b, ctx.E.U...)
+// 	key := sha256.Sum256(b)
 
-	cb, err := aes.NewCipher(key[:])
-	if err != nil {
-		return nil, err
-	}
+// 	cb, err := aes.NewCipher(key[:])
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	iv := make([]byte, 16)
-	k = make([]byte, 32)
+// 	iv := make([]byte, 16)
+// 	k = make([]byte, 32)
 
-	mode := cipher.NewCBCDecrypter(cb, iv)
-	mode.CryptBlocks(k, ctx.E.OE)
+// 	mode := cipher.NewCBCDecrypter(cb, iv)
+// 	mode.CryptBlocks(k, ctx.E.OE)
 
-	return k, nil
-}
+// 	return k, nil
+// }
 
 func calcFileEncKey(ctx *Context, d Dict) (err error) {
 

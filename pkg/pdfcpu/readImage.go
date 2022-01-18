@@ -193,25 +193,25 @@ func writeRGBA64ImageBuf(img image.Image) []byte {
 	return buf
 }
 
-func writeYCbCrToRGBAImageBuf(img image.Image) []byte {
-	w := img.Bounds().Dx()
-	h := img.Bounds().Dy()
-	i := 0
-	buf := make([]byte, w*h*3)
+// func writeYCbCrToRGBAImageBuf(img image.Image) []byte {
+// 	w := img.Bounds().Dx()
+// 	h := img.Bounds().Dy()
+// 	i := 0
+// 	buf := make([]byte, w*h*3)
 
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
-			c := img.At(x, y).(color.YCbCr)
-			r, g, b, _ := c.RGBA()
-			buf[i] = uint8(r >> 8 & 0xFF)
-			buf[i+1] = uint8(g >> 8 & 0xFF)
-			buf[i+2] = uint8(b >> 8 & 0xFF)
-			i += 3
-		}
-	}
+// 	for y := 0; y < h; y++ {
+// 		for x := 0; x < w; x++ {
+// 			c := img.At(x, y).(color.YCbCr)
+// 			r, g, b, _ := c.RGBA()
+// 			buf[i] = uint8(r >> 8 & 0xFF)
+// 			buf[i+1] = uint8(g >> 8 & 0xFF)
+// 			buf[i+2] = uint8(b >> 8 & 0xFF)
+// 			i += 3
+// 		}
+// 	}
+// 	return buf
+// }
 
-	return buf
-}
 func writeNRGBAImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte) {
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()

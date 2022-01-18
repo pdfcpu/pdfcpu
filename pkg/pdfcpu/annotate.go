@@ -344,9 +344,9 @@ func (ann TextAnnotation) RenderDict(pageIndRef IndirectRef) Dict {
 	}
 	if ann.NM != "" {
 		d.InsertString("NM", ann.NM) // check for uniqueness across annotations on this page
-	} else {
-		// new UUID
-	}
+	} // else {
+	// new UUID
+	// }
 	if ann.T != "" {
 		d.InsertString("T", ann.T)
 	}
@@ -410,9 +410,9 @@ func (ann LinkAnnotation) RenderDict(pageIndRef IndirectRef) Dict {
 
 	if ann.NM != "" {
 		d.InsertString("NM", ann.NM)
-	} else {
-		// new UUID
-	}
+	} // else {
+	// new UUID
+	//}
 	if ann.C != nil {
 		d.Insert("C", NewNumberArray(float64(ann.C.R), float64(ann.C.G), float64(ann.C.B)))
 	}

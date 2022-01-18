@@ -342,19 +342,19 @@ func renderDeviceRGBToPNG(im *PDFImage, resourceName string) (io.Reader, string,
 	return &buf, "png", nil
 }
 
-func ensureDeviceRGBCS(xRefTable *XRefTable, o Object) bool {
-	o, err := xRefTable.Dereference(o)
-	if err != nil {
-		return false
-	}
+// func ensureDeviceRGBCS(xRefTable *XRefTable, o Object) bool {
+// 	o, err := xRefTable.Dereference(o)
+// 	if err != nil {
+// 		return false
+// 	}
 
-	switch altCS := o.(type) {
-	case Name:
-		return altCS == DeviceRGBCS
-	}
+// 	switch altCS := o.(type) {
+// 	case Name:
+// 		return altCS == DeviceRGBCS
+// 	}
 
-	return false
-}
+// 	return false
+// }
 
 func renderCalRGBToPNG(im *PDFImage, resourceName string) (io.Reader, string, error) {
 	b := im.sd.Content

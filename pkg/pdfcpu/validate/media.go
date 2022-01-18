@@ -149,26 +149,22 @@ func validateMediaCriteriaDictEntryV(xRefTable *pdf.XRefTable, d pdf.Dict, dictN
 		return err
 	}
 
-	if a != nil {
+	for _, v := range a {
 
-		for _, v := range a {
+		if v == nil {
+			continue
+		}
 
-			if v == nil {
-				continue
-			}
+		d, err := xRefTable.DereferenceDict(v)
+		if err != nil {
+			return err
+		}
 
-			d, err := xRefTable.DereferenceDict(v)
+		if d != nil {
+			err = validateSoftwareIdentifierDict(xRefTable, d, sinceVersion)
 			if err != nil {
 				return err
 			}
-
-			if d != nil {
-				err = validateSoftwareIdentifierDict(xRefTable, d, sinceVersion)
-				if err != nil {
-					return err
-				}
-			}
-
 		}
 
 	}
@@ -325,28 +321,24 @@ func validateMediaPlayersDict(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion
 		return err
 	}
 
-	if a != nil {
+	for _, v := range a {
 
-		for _, v := range a {
+		if v == nil {
+			continue
+		}
 
-			if v == nil {
-				continue
-			}
+		d, err := xRefTable.DereferenceDict(v)
+		if err != nil {
+			return err
+		}
 
-			d, err := xRefTable.DereferenceDict(v)
-			if err != nil {
-				return err
-			}
+		if d == nil {
+			continue
+		}
 
-			if d == nil {
-				continue
-			}
-
-			err = validateMediaPlayerInfoDict(xRefTable, d, sinceVersion)
-			if err != nil {
-				return err
-			}
-
+		err = validateMediaPlayerInfoDict(xRefTable, d, sinceVersion)
+		if err != nil {
+			return err
 		}
 
 	}

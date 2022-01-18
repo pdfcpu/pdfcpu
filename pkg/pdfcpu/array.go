@@ -87,18 +87,18 @@ func (a Array) Clone() Object {
 	return a1
 }
 
-func (a Array) contains(o Object, xRefTable *XRefTable) (bool, error) {
-	for _, e := range a {
-		ok, err := EqualObjects(e, o, xRefTable)
-		if err != nil {
-			return false, err
-		}
-		if ok {
-			return true, nil
-		}
-	}
-	return false, nil
-}
+// func (a Array) contains(o Object, xRefTable *XRefTable) (bool, error) {
+// 	for _, e := range a {
+// 		ok, err := EqualObjects(e, o, xRefTable)
+// 		if err != nil {
+// 			return false, err
+// 		}
+// 		if ok {
+// 			return true, nil
+// 		}
+// 	}
+// 	return false, nil
+// }
 
 func (a Array) indentedString(level int) string {
 
