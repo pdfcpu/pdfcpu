@@ -157,6 +157,9 @@ func equalDicts(d1, d2 Dict, xRefTable *XRefTable) (bool, error) {
 		return false, nil
 	}
 
+	t1, t2 := d1.Type(), d2.Type()
+	fontDicts := (t1 != nil && *t1 == "Font") && (t2 != nil && *t2 == "Font")
+
 	for key, v1 := range d1 {
 
 		v2, found := d2[key]
@@ -166,7 +169,7 @@ func equalDicts(d1, d2 Dict, xRefTable *XRefTable) (bool, error) {
 		}
 
 		// Special treatment for font dicts
-		if key == "BaseFont" || key == "FontName" || key == "Name" {
+		if fontDicts && (key == "BaseFont" || key == "FontName" || key == "Name") {
 
 			ok, err := equalFontNames(v1, v2, xRefTable)
 			if err != nil {

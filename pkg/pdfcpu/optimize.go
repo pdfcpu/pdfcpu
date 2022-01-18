@@ -17,6 +17,7 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"bytes"
 	"fmt"
 	"sort"
 	"strings"
@@ -25,8 +26,46 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Mark all content streams for a page dictionary (for stats).
-func identifyPageContent(xRefTable *XRefTable, pageDict Dict, pageObjNumber int) error {
+func optimizeContentStream(ctx *Context, sd *StreamDict, objNr int) (*IndirectRef, error) {
+
+	f := ctx.Optimize.ContentStreamCache
+	if len(f) == 0 {
+		f[objNr] = sd
+		return nil, nil
+	}
+
+	if f[objNr] != nil {
+		return nil, nil
+	}
+
+	cachedObjNrs := []int{}
+	for objNr, sd1 := range f {
+		if *sd1.StreamLength == *sd.StreamLength {
+			cachedObjNrs = append(cachedObjNrs, objNr)
+		}
+	}
+	if len(cachedObjNrs) == 0 {
+		f[objNr] = sd
+		return nil, nil
+	}
+
+	for _, objNr := range cachedObjNrs {
+		sd1 := f[objNr]
+		if bytes.Equal(sd.Raw, sd1.Raw) {
+			ir := NewIndirectRef(objNr, 0)
+			entry, ok := ctx.FindTableEntryForIndRef(ir)
+			if ok {
+				entry.RefCount++
+			}
+			return ir, nil
+		}
+	}
+
+	f[objNr] = sd
+	return nil, nil
+}
+
+func optimizePageContent(ctx *Context, pageDict Dict, pageObjNumber int) error {
 	log.Optimize.Println("identifyPageContent begin")
 
 	o, found := pageDict.Find("Contents")
@@ -39,16 +78,24 @@ func identifyPageContent(xRefTable *XRefTable, pageDict Dict, pageObjNumber int)
 
 	if ir, ok := o.(IndirectRef); ok {
 
-		entry, found := xRefTable.FindTableEntry(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
+		objNr := ir.ObjectNumber.Value()
+		entry, found := ctx.FindTableEntry(objNr, ir.GenerationNumber.Value())
 		if !found {
 			return errors.Errorf("identifyPageContent: obj#:%d illegal indRef for Contents\n", pageObjNumber)
 		}
 
 		contentStreamDict, ok := entry.Object.(StreamDict)
 		if ok {
+			ir, err := optimizeContentStream(ctx, &contentStreamDict, objNr)
+			if err != nil {
+				return err
+			}
+			if ir != nil {
+				pageDict["Contents"] = *ir
+			}
 			contentStreamDict.IsPageContent = true
 			entry.Object = contentStreamDict
-			log.Optimize.Printf("identifyPageContent end: ok obj#%d\n", ir.ObjectNumber.Value())
+			log.Optimize.Printf("identifyPageContent end: ok obj#%d\n", objNr)
 			return nil
 		}
 
@@ -68,7 +115,7 @@ func identifyPageContent(xRefTable *XRefTable, pageDict Dict, pageObjNumber int)
 			return errors.Errorf("identifyPageContent: obj#:%d corrupt page content array entry\n", pageObjNumber)
 		}
 
-		entry, found := xRefTable.FindTableEntry(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
+		entry, found := ctx.FindTableEntry(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
 		if !found {
 			return errors.Errorf("identifyPageContent: obj#:%d illegal indRef for Contents\n", pageObjNumber)
 		}
@@ -77,7 +124,8 @@ func identifyPageContent(xRefTable *XRefTable, pageDict Dict, pageObjNumber int)
 		if !ok {
 			return errors.Errorf("identifyPageContent: obj#:%d page content entry is no stream dict\n", pageObjNumber)
 		}
-
+		// TODO Check against contentStream cache.
+		// contentArr[i] = *ir
 		contentStreamDict.IsPageContent = true
 		entry.Object = contentStreamDict
 		log.Optimize.Printf("identifyPageContent: ok obj#%d\n", ir.GenerationNumber.Value())
@@ -364,12 +412,95 @@ func handleDuplicateImageObject(ctx *Context, imageDict *StreamDict, resourceNam
 	return nil, nil
 }
 
-// Get rid of redundant XObjects e.g. embedded images.
+func optimizeXObjectImage(ctx *Context, osd *StreamDict, rName string, objNr, pageNumber int, pageImages IntSet) (*IndirectRef, error) {
+
+	// Already registered image object that appears in different resources dicts.
+	if _, found := ctx.Optimize.ImageObjects[objNr]; found {
+		// This image has already been registered.
+		//log.Optimize.Printf("optimizeXObjectResourcesDict: Imageobject %d already registered\n", objNr)
+		pageImages[objNr] = true
+		return nil, nil
+	}
+
+	// Check if image is a duplicate and if so return the object number of the original.
+	originalObjNr, err := handleDuplicateImageObject(ctx, osd, rName, objNr, pageNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	if originalObjNr != nil {
+		// We have identified a redundant image!
+		// Update xobject resource dict so that rName points to the original.
+		ir := NewIndirectRef(*originalObjNr, 0)
+		//rDict[rName] = *ir
+		// Increase refCount for *originalObjNr
+		entry, ok := ctx.FindTableEntryForIndRef(ir)
+		if ok {
+			entry.RefCount++
+		}
+		return ir, nil
+	}
+
+	// Register new image dict.
+	log.Optimize.Printf("optimizeXObjectResourcesDict: adding new image obj#%d\n", objNr)
+
+	ctx.Optimize.ImageObjects[objNr] =
+		&ImageObject{
+			ResourceNames: []string{rName},
+			ImageDict:     osd,
+		}
+
+	pageImages[objNr] = true
+	return nil, nil
+}
+
+func optimizeXObjectForm(ctx *Context, sd *StreamDict, rName string, objNr int) (*IndirectRef, error) {
+
+	f := ctx.Optimize.FormStreamCache
+	if len(f) == 0 {
+		f[objNr] = sd
+		return nil, nil
+	}
+
+	if f[objNr] != nil {
+		return nil, nil
+	}
+
+	cachedObjNrs := []int{}
+	for objNr, sd1 := range f {
+		if *sd1.StreamLength == *sd.StreamLength {
+			cachedObjNrs = append(cachedObjNrs, objNr)
+		}
+	}
+	if len(cachedObjNrs) == 0 {
+		f[objNr] = sd
+		return nil, nil
+	}
+
+	for _, objNr := range cachedObjNrs {
+		sd1 := f[objNr]
+		ok, err := equalStreamDicts(sd, sd1, ctx.XRefTable)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			ir := NewIndirectRef(objNr, 0)
+			entry, ok := ctx.FindTableEntryForIndRef(ir)
+			if ok {
+				entry.RefCount++
+			}
+			return ir, nil
+		}
+	}
+
+	f[objNr] = sd
+	return nil, nil
+}
+
 func optimizeXObjectResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjNumber int) error {
 	log.Optimize.Printf("optimizeXObjectResourcesDict page#%dbegin: %s\n", pageObjNumber, rDict)
 	pageImages := pageImages(ctx, pageNumber)
 
-	// Iterate over XObject resource dict.
 	for rName, v := range rDict {
 
 		indRef, ok := v.(IndirectRef)
@@ -380,9 +511,6 @@ func optimizeXObjectResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjN
 		log.Optimize.Printf("optimizeXObjectResourcesDict: processing xobject: %s, %s\n", rName, indRef)
 		objNr := int(indRef.ObjectNumber)
 		log.Optimize.Printf("optimizeXObjectResourcesDict: objectNumber = %d\n", objNr)
-
-		// We are dealing with a new XObject..
-		// Dereference the XObject stream dict.
 
 		osd, _, err := ctx.DereferenceStreamDict(indRef)
 		if err != nil {
@@ -399,55 +527,28 @@ func optimizeXObjectResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjN
 		}
 
 		if *osd.Dict.Subtype() == "Image" {
-
-			// Already registered image object that appears in different resources dicts.
-			if _, found := ctx.Optimize.ImageObjects[objNr]; found {
-				// This image has already been registered.
-				//log.Optimize.Printf("optimizeXObjectResourcesDict: Imageobject %d already registered\n", objNr)
-				pageImages[objNr] = true
-				continue
-			}
-
-			// Check if image is a duplicate and if so return the object number of the original.
-			originalObjNr, err := handleDuplicateImageObject(ctx, osd, rName, objNr, pageNumber)
+			ir, err := optimizeXObjectImage(ctx, osd, rName, objNr, pageNumber, pageImages)
 			if err != nil {
 				return err
 			}
-
-			if originalObjNr != nil {
-				// We have identified a redundant image!
-				// Update xobject resource dict so that rName points to the original.
-				ir := NewIndirectRef(*originalObjNr, 0)
+			if ir != nil {
 				rDict[rName] = *ir
-				// Increase refCount for *originalObjNr
-				entry, ok := ctx.FindTableEntryForIndRef(ir)
-				if ok {
-					entry.RefCount++
-				}
-				continue
 			}
-
-			// Register new image dict.
-			log.Optimize.Printf("optimizeXObjectResourcesDict: adding new image obj#%d\n", objNr)
-
-			ctx.Optimize.ImageObjects[objNr] =
-				&ImageObject{
-					ResourceNames: []string{rName},
-					ImageDict:     osd,
-				}
-
-			pageImages[objNr] = true
 			continue
 		}
 
-		if *osd.Subtype() != "Form" {
-			log.Optimize.Printf("optimizeXObjectResourcesDict: unexpected stream dict Subtype %s\n", *osd.Dict.Subtype())
+		if *osd.Subtype() == "Form" {
+			ir, err := optimizeXObjectForm(ctx, osd, rName, objNr)
+			if err != nil {
+				return err
+			}
+			if ir != nil {
+				rDict[rName] = *ir
+			}
 			continue
 		}
 
-		// Process form dict
-		log.Optimize.Printf("optimizeXObjectResourcesDict: parsing form dict obj:%d\n", objNr)
-		parseResourcesDict(ctx, osd.Dict, pageNumber, objNr)
+		log.Optimize.Printf("optimizeXObjectResourcesDict: unexpected stream dict Subtype %s\n", *osd.Dict.Subtype())
 	}
 
 	log.Optimize.Println("optimizeXObjectResourcesDict end")
@@ -600,8 +701,7 @@ func parsePagesDict(ctx *Context, pagesDict Dict, pageNumber int) (int, error) {
 
 		// Process page dict.
 
-		// Mark page content streams for stats.
-		if err = identifyPageContent(ctx.XRefTable, pageNodeDict, int(ir.ObjectNumber)); err != nil {
+		if err = optimizePageContent(ctx, pageNodeDict, int(ir.ObjectNumber)); err != nil {
 			return 0, err
 		}
 
@@ -747,6 +847,9 @@ func optimizeFontAndImages(ctx *Context) error {
 	if err != nil {
 		return err
 	}
+
+	ctx.Optimize.ContentStreamCache = map[int]*StreamDict{}
+	ctx.Optimize.FormStreamCache = map[int]*StreamDict{}
 
 	// Identify all duplicate objects.
 	if err = calcRedundantObjects(ctx); err != nil {
