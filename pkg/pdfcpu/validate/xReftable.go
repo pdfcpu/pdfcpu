@@ -178,6 +178,19 @@ func validateNamedDestinations(xRefTable *pdf.XRefTable, rootDict pdf.Dict, requ
 	return nil
 }
 
+func validateBooleanOrNameEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+	_, err := validateBooleanEntry(xRefTable, d, dictName, entryName, required, sinceVersion, nil)
+	if err != nil {
+		if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+			_, err = validateNameEntry(xRefTable, d, dictName, entryName, required, sinceVersion,
+				func(s string) bool {
+					return pdf.MemberOf(s, []string{"False", "True", "false", "true"})
+				})
+		}
+	}
+	return err
+}
+
 func validateViewerPreferences(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool, sinceVersion pdf.Version) error {
 
 	// => 12.2 Viewer Preferences
@@ -190,87 +203,42 @@ func validateViewerPreferences(xRefTable *pdf.XRefTable, rootDict pdf.Dict, requ
 	}
 
 	dictName = "ViewerPreferences"
-	validate := func(s string) bool { return pdf.MemberOf(s, []string{"False", "True", "false", "true"}) }
 
-	_, err = validateBooleanEntry(xRefTable, d, dictName, "HideToolbar", OPTIONAL, pdf.V10, nil)
-	if err != nil {
-		if xRefTable.ValidationMode == pdf.ValidationStrict {
-			return err
-		}
-		_, err = validateNameEntry(xRefTable, d, dictName, "HideToolbar", OPTIONAL, pdf.V10, validate)
-		if err != nil {
-			return err
-		}
+	if err = validateBooleanOrNameEntry(xRefTable, d, dictName, "HideToolbar", OPTIONAL, pdf.V10); err != nil {
+		return err
 	}
 
-	_, err = validateBooleanEntry(xRefTable, d, dictName, "HideMenubar", OPTIONAL, pdf.V10, nil)
-	if err != nil {
-		if xRefTable.ValidationMode == pdf.ValidationStrict {
-			return err
-		}
-		_, err = validateNameEntry(xRefTable, d, dictName, "HideMenubar", OPTIONAL, pdf.V10, validate)
-		if err != nil {
-			return err
-		}
+	if err = validateBooleanOrNameEntry(xRefTable, d, dictName, "HideMenubar", OPTIONAL, pdf.V10); err != nil {
+		return err
 	}
 
-	_, err = validateBooleanEntry(xRefTable, d, dictName, "HideWindowUI", OPTIONAL, pdf.V10, nil)
-	if err != nil {
-		if xRefTable.ValidationMode == pdf.ValidationStrict {
-			return err
-		}
-		_, err = validateNameEntry(xRefTable, d, dictName, "HideWindowUI", OPTIONAL, pdf.V10, validate)
-		if err != nil {
-			return err
-		}
+	if err = validateBooleanOrNameEntry(xRefTable, d, dictName, "HideWindowUI", OPTIONAL, pdf.V10); err != nil {
+		return err
 	}
 
-	_, err = validateBooleanEntry(xRefTable, d, dictName, "FitWindow", OPTIONAL, pdf.V10, nil)
-	if err != nil {
-		if xRefTable.ValidationMode == pdf.ValidationStrict {
-			return err
-		}
-		_, err = validateNameEntry(xRefTable, d, dictName, "FitWindow", OPTIONAL, pdf.V10, validate)
-		if err != nil {
-			return err
-		}
+	if err = validateBooleanOrNameEntry(xRefTable, d, dictName, "FitWindow", OPTIONAL, pdf.V10); err != nil {
+		return err
 	}
 
-	_, err = validateBooleanEntry(xRefTable, d, dictName, "CenterWindow", OPTIONAL, pdf.V10, nil)
-	if err != nil {
-		if xRefTable.ValidationMode == pdf.ValidationStrict {
-			return err
-		}
-		_, err = validateNameEntry(xRefTable, d, dictName, "CenterWindow", OPTIONAL, pdf.V10, validate)
-		if err != nil {
-			return err
-		}
+	if err = validateBooleanOrNameEntry(xRefTable, d, dictName, "CenterWindow", OPTIONAL, pdf.V10); err != nil {
+		return err
 	}
 
 	sinceVersion = pdf.V14
 	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
 		sinceVersion = pdf.V10
 	}
-	_, err = validateBooleanEntry(xRefTable, d, dictName, "DisplayDocTitle", OPTIONAL, sinceVersion, nil)
-	if err != nil {
-		if xRefTable.ValidationMode == pdf.ValidationStrict {
-			return err
-		}
-		_, err = validateNameEntry(xRefTable, d, dictName, "DisplayDocTitle", OPTIONAL, pdf.V10, validate)
-		if err != nil {
-			return err
-		}
+	if err = validateBooleanOrNameEntry(xRefTable, d, dictName, "DisplayDocTitle", OPTIONAL, sinceVersion); err != nil {
+		return err
 	}
 
-	validate = func(s string) bool { return pdf.MemberOf(s, []string{"UseNone", "UseOutlines", "UseThumbs", "UseOC"}) }
-	_, err = validateNameEntry(xRefTable, d, dictName, "NonFullScreenPageMode", OPTIONAL, pdf.V10, validate)
-	if err != nil {
+	validate := func(s string) bool { return pdf.MemberOf(s, []string{"UseNone", "UseOutlines", "UseThumbs", "UseOC"}) }
+	if _, err = validateNameEntry(xRefTable, d, dictName, "NonFullScreenPageMode", OPTIONAL, pdf.V10, validate); err != nil {
 		return err
 	}
 
 	validate = func(s string) bool { return pdf.MemberOf(s, []string{"L2R", "R2L"}) }
-	_, err = validateNameEntry(xRefTable, d, dictName, "Direction", OPTIONAL, pdf.V13, validate)
-	if err != nil {
+	if _, err = validateNameEntry(xRefTable, d, dictName, "Direction", OPTIONAL, pdf.V13, validate); err != nil {
 		return err
 	}
 

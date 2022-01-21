@@ -99,6 +99,51 @@ func colorSpaceNameComponents(cs Name) int {
 	return 0
 }
 
+func (xRefTable *XRefTable) indexedColorSpaceComponents(cs Array) (int, error) {
+	baseCS, err := xRefTable.Dereference(cs[1])
+	if err != nil {
+		return 0, err
+	}
+
+	switch cs := baseCS.(type) {
+	case Name:
+		return colorSpaceNameComponents(cs), nil
+
+	case Array:
+		switch cs[0].(Name) {
+
+		case CalGrayCS:
+			return 1, nil
+
+		case CalRGBCS:
+			return 3, nil
+
+		case LabCS:
+			return 3, nil
+
+		case ICCBasedCS:
+			iccProfileStream, _, err := xRefTable.DereferenceStreamDict(cs[1])
+			if err != nil {
+				return 0, err
+			}
+			n := iccProfileStream.IntEntry("N")
+			i := 0
+			if n != nil {
+				i = *n
+			}
+			return i, nil
+
+		case SeparationCS:
+			return 1, nil
+
+		case DeviceNCS:
+			return len(cs[1].(Array)), nil
+		}
+	}
+
+	return 0, nil
+}
+
 // ColorSpaceComponents returns the corresponding number of used color components for sd's colorspace.
 func (xRefTable *XRefTable) ColorSpaceComponents(sd *StreamDict) (int, error) {
 	o, found := sd.Find("ColorSpace")
@@ -112,7 +157,6 @@ func (xRefTable *XRefTable) ColorSpaceComponents(sd *StreamDict) (int, error) {
 	}
 
 	switch cs := o.(type) {
-
 	case Name:
 		return colorSpaceNameComponents(cs), nil
 
@@ -147,47 +191,8 @@ func (xRefTable *XRefTable) ColorSpaceComponents(sd *StreamDict) (int, error) {
 			return len(cs[1].(Array)), nil
 
 		case IndexedCS:
-			baseCS, err := xRefTable.Dereference(cs[1])
-			if err != nil {
-				return 0, err
-			}
+			return xRefTable.indexedColorSpaceComponents(cs)
 
-			switch cs := baseCS.(type) {
-			case Name:
-				return colorSpaceNameComponents(cs), nil
-
-			case Array:
-
-				switch cs[0].(Name) {
-
-				case CalGrayCS:
-					return 1, nil
-
-				case CalRGBCS:
-					return 3, nil
-
-				case LabCS:
-					return 3, nil
-
-				case ICCBasedCS:
-					iccProfileStream, _, err := xRefTable.DereferenceStreamDict(cs[1])
-					if err != nil {
-						return 0, err
-					}
-					n := iccProfileStream.IntEntry("N")
-					i := 0
-					if n != nil {
-						i = *n
-					}
-					return i, nil
-
-				case SeparationCS:
-					return 1, nil
-
-				case DeviceNCS:
-					return len(cs[1].(Array)), nil
-				}
-			}
 		}
 	}
 

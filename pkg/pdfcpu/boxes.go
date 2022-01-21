@@ -1015,6 +1015,27 @@ func boxByDim(boxName string, b *Box, d Dict, parent *Rectangle) *Rectangle {
 	return r
 }
 
+func ensureCropBoxWithinMediaBox(xmin, xmax, ymin, ymax float64, d Dict, parent *Rectangle) {
+	if xmin < parent.LL.X || ymin < parent.LL.Y || xmax > parent.UR.X || ymax > parent.UR.Y {
+		// Expand media box.
+		if xmin < parent.LL.X {
+			parent.LL.X = xmin
+		}
+		if xmax > parent.UR.X {
+			parent.UR.X = xmax
+		}
+		if ymin < parent.LL.Y {
+			parent.LL.Y = ymin
+		}
+		if ymax > parent.UR.Y {
+			parent.UR.Y = ymax
+		}
+		if d != nil {
+			d.Update("MediaBox", parent.Array())
+		}
+	}
+}
+
 func ApplyBox(boxName string, b *Box, d Dict, parent *Rectangle) *Rectangle {
 	if b.Rect != nil {
 		if d != nil {
@@ -1043,30 +1064,8 @@ func ApplyBox(boxName string, b *Box, d Dict, parent *Rectangle) *Rectangle {
 	if d != nil {
 		d.Update(boxName, r.Array())
 	}
-	if boxName != "CropBox" {
-		return r
-	}
-
-	if xmin < parent.LL.X || ymin < parent.LL.Y || xmax > parent.UR.X || ymax > parent.UR.Y {
-		// Expand media box.
-		if xmin < parent.LL.X {
-			parent.LL.X = xmin
-		}
-		if xmax > parent.UR.X {
-			parent.UR.X = xmax
-		}
-		if ymin < parent.LL.Y {
-			parent.LL.Y = ymin
-		}
-		if xmax > parent.UR.X {
-			parent.UR.X = xmax
-		}
-		if ymax > parent.UR.Y {
-			parent.UR.Y = ymax
-		}
-		if d != nil {
-			d.Update("MediaBox", parent.Array())
-		}
+	if boxName == "CropBox" {
+		ensureCropBoxWithinMediaBox(xmin, xmax, ymin, ymax, d, parent)
 	}
 	return r
 }

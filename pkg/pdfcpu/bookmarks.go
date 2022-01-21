@@ -232,6 +232,25 @@ func (ctx *Context) BookmarksForOutline() ([]Bookmark, error) {
 	return ctx.BookmarksForOutlineItem(first, nil)
 }
 
+func bmDict(bm Bookmark, pageIndRef, parent IndirectRef, s string) Dict {
+
+	d := Dict(map[string]Object{
+		"Dest":   Array{pageIndRef, Name("Fit")},
+		"Title":  StringLiteral(s),
+		"Parent": parent},
+	)
+
+	if bm.Color != nil {
+		d["C"] = Array{Float(bm.Color.R), Float(bm.Color.G), Float(bm.Color.B)}
+	}
+
+	if style := bm.Style(); style > 0 {
+		d["F"] = Integer(style)
+	}
+
+	return d
+}
+
 func createOutlineItemDict(ctx *Context, bms []Bookmark, parent *IndirectRef, parentPageNr *int) (*IndirectRef, *IndirectRef, int, error) {
 	var (
 		first  *IndirectRef
@@ -260,20 +279,7 @@ func createOutlineItemDict(ctx *Context, bms []Bookmark, parent *IndirectRef, pa
 			return nil, nil, 0, err
 		}
 
-		d := Dict(map[string]Object{
-			"Dest":   Array{*pageIndRef, Name("Fit")},
-			"Title":  StringLiteral(*s),
-			"Parent": *parent},
-		)
-
-		if bm.Color != nil {
-			d["C"] = Array{Float(bm.Color.R), Float(bm.Color.G), Float(bm.Color.B)}
-		}
-
-		if style := bm.Style(); style > 0 {
-			d["F"] = Integer(style)
-		}
-
+		d := bmDict(bm, *pageIndRef, *parent, *s)
 		ir, err := ctx.IndRefForNewObject(d)
 		if err != nil {
 			return nil, nil, 0, err

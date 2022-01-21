@@ -27,6 +27,15 @@ import (
 
 // This gets rid of the gopkg.in/yaml.v2 dependency for wasm builds.
 
+func handleCheckFileNameExt(k, v string, c *Configuration) error {
+	v = strings.ToLower(v)
+	if v != "true" && v != "false" {
+		return errors.Errorf("config key %s is boolean", k)
+	}
+	c.CheckFileNameExt = v == "true"
+	return nil
+}
+
 func handleConfReader15(k, v string, c *Configuration) error {
 	v = strings.ToLower(v)
 	if v != "true" && v != "false" {
@@ -140,9 +149,30 @@ func handleConfUnit(v string, c *Configuration) error {
 	return nil
 }
 
+func handleTimestampFormat(v string, c *Configuration) error {
+	c.TimestampFormat = v
+	return nil
+}
+
+func handleHeaderBufSize(v string, c *Configuration) error {
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		return errors.Errorf("headerBufSize is numeric, got: %s", v)
+	}
+	if i < 100 {
+		return errors.Errorf("headerBufSize must be >= 100, got: %d", i)
+	}
+	c.HeaderBufSize = i
+	return nil
+}
+
 func parseKeyValue(k, v string, c *Configuration) error {
 	var err error
 	switch k {
+
+	case "checkFileNameExt":
+		err = handleCheckFileNameExt(k, v, c)
+
 	case "reader15":
 		err = handleConfReader15(k, v, c)
 
@@ -172,7 +202,14 @@ func parseKeyValue(k, v string, c *Configuration) error {
 
 	case "unit", "units":
 		err = handleConfUnit(v, c)
+
+	case "timestampFormat":
+		err = handleTimestampFormat(v, c)
+
+	case "headerBufSize":
+		err = handleHeaderBufSize(k, v, c)
 	}
+
 	return err
 }
 

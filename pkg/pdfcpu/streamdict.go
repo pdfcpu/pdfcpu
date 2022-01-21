@@ -200,6 +200,22 @@ func (sd *StreamDict) Encode() error {
 	return nil
 }
 
+func fixParms(f PDFFilter, parms map[string]int, sd *StreamDict) error {
+	if f.Name == filter.CCITTFax {
+		// x/image/ccitt needs the optional decode parameter "Rows"
+		// if not available we supply the image "Height".
+		_, ok := parms["Rows"]
+		if !ok {
+			ip := sd.IntEntry("Height")
+			if ip == nil {
+				return errors.New("pdfcpu: ccitt: \"Height\" required")
+			}
+			parms["Rows"] = *ip
+		}
+	}
+	return nil
+}
+
 // Decode applies sd's filter pipeline to sd.Raw in order to produce sd.Content.
 func (sd *StreamDict) Decode() error {
 	if sd.Content != nil {
@@ -243,29 +259,11 @@ func (sd *StreamDict) Decode() error {
 			// 	sd.DCTImage = im // hacky
 			// 	return nil
 			// }
-
 		}
 
-		if f.DecodeParms != nil {
-			log.Trace.Printf("decodeStream: decoding filter:%s\ndecodeParms:%s\n", f.Name, f.DecodeParms)
-		} else {
-			log.Trace.Printf("decodeStream: decoding filter:%s\n", f.Name)
-		}
-
-		// make parms map[string]int
 		parms := parmsForFilter(f.DecodeParms)
-
-		if f.Name == filter.CCITTFax {
-			// x/image/ccitt needs the optional decode parameter "Rows"
-			// if not available we supply the image "Height".
-			_, ok := parms["Rows"]
-			if !ok {
-				ip := sd.IntEntry("Height")
-				if ip == nil {
-					return errors.New("pdfcpu: ccitt: \"Height\" required")
-				}
-				parms["Rows"] = *ip
-			}
+		if err := fixParms(f, parms, sd); err != nil {
+			return err
 		}
 
 		fi, err := filter.NewFilter(f.Name, parms)

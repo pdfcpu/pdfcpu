@@ -183,6 +183,50 @@ func NormalizeOffset(x, y float64, origin Corner) (float64, float64) {
 	return x, y
 }
 
+func addPageResources(
+	xRefTable *XRefTable,
+	pageDict Dict,
+	p Page,
+	fonts map[string]IndirectRef,
+	formFontIDs map[string]string) error {
+
+	fontRes := Dict{}
+	for fontName, font := range p.Fm {
+		if font.Res.IndRef != nil {
+			fonts[fontName] = *font.Res.IndRef
+		}
+		indRef, ok := fonts[fontName]
+		if !ok {
+			_, ok := formFontIDs[fontName]
+			ir, err := EnsureFontDict(xRefTable, fontName, !ok, nil)
+			if err != nil {
+				return err
+			}
+			indRef = *ir
+			fonts[fontName] = indRef
+		}
+		fontRes[font.Res.ID] = indRef
+	}
+
+	imgRes := Dict{}
+	for _, img := range p.Im {
+		imgRes[img.Res.ID] = *img.Res.IndRef
+	}
+
+	if len(fontRes) > 0 || len(imgRes) > 0 {
+		resDict := Dict{}
+		if len(fontRes) > 0 {
+			resDict["Font"] = fontRes
+		}
+		if len(imgRes) > 0 {
+			resDict["XObject"] = imgRes
+		}
+		pageDict["Resources"] = resDict
+	}
+
+	return nil
+}
+
 func CreatePage(
 	xRefTable *XRefTable,
 	parentPageIndRef IndirectRef,
@@ -200,56 +244,21 @@ func CreatePage(
 		},
 	)
 
-	// Populate font resources
-
-	fontRes := Dict{}
-	for fontName, font := range p.Fm {
-		if font.Res.IndRef != nil {
-			fonts[fontName] = *font.Res.IndRef
-		}
-		indRef, ok := fonts[fontName]
-		if !ok {
-			_, ok := formFontIDs[fontName]
-			ir, err := EnsureFontDict(xRefTable, fontName, !ok, nil)
-			if err != nil {
-				return nil, pageDict, err
-			}
-			indRef = *ir
-			fonts[fontName] = indRef
-		}
-		fontRes[font.Res.ID] = indRef
-	}
-
-	// Populate image resources
-
-	imgRes := Dict{}
-	for _, img := range p.Im {
-		imgRes[img.Res.ID] = *img.Res.IndRef
-	}
-
-	if len(fontRes) > 0 || len(imgRes) > 0 {
-
-		resDict := Dict{}
-		//"ProcSet": NewNameArray("PDF", "Text", "ImageB", "ImageC", "ImageI"),
-
-		if len(fontRes) > 0 {
-			resDict["Font"] = fontRes
-		}
-
-		if len(imgRes) > 0 {
-			resDict["XObject"] = imgRes
-		}
-
-		pageDict["Resources"] = resDict
+	err := addPageResources(xRefTable, pageDict, p, fonts, formFontIDs)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	ir, err := xRefTable.streamDictIndRef(p.Buf.Bytes())
 	if err != nil {
 		return nil, pageDict, err
 	}
-
 	pageDict.Insert("Contents", *ir)
+
 	pageDictIndRef, err := xRefTable.IndRefForNewObject(pageDict)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	if len(p.AnnotIndRefs) > 0 || len(p.Annots) > 0 || len(p.LinkAnnots) > 0 {
 
@@ -318,18 +327,13 @@ func updateUserfont(xRefTable *XRefTable, fontName string, font FontResource) er
 	return nil
 }
 
-func ModifyPageContent(
+func addPageResourcesForExistingPage(
 	xRefTable *XRefTable,
-	dIndRef IndirectRef,
 	d, res Dict,
 	p Page,
 	fonts map[string]IndirectRef,
-	fields *Array,
 	formFontIDs map[string]string) error {
 
-	// TODO Account for existing page rotation.
-
-	// Populate font resources
 	if len(p.Fm) > 0 {
 		fontRes, ok := res["Font"].(Dict)
 		if !ok {
@@ -367,7 +371,6 @@ func ModifyPageContent(
 		res["Font"] = fontRes
 	}
 
-	// 	Populate image resources
 	if len(p.Im) > 0 {
 		imgRes, ok := res["XObject"].(Dict)
 		if !ok {
@@ -383,12 +386,30 @@ func ModifyPageContent(
 		d["Resources"] = res
 	}
 
-	// Append to content stream
-	if err := xRefTable.AppendContent(d, p.Buf.Bytes()); err != nil {
+	return nil
+}
+
+func ModifyPageContent(
+	xRefTable *XRefTable,
+	dIndRef IndirectRef,
+	d, res Dict,
+	p Page,
+	fonts map[string]IndirectRef,
+	fields *Array,
+	formFontIDs map[string]string) error {
+
+	// TODO Account for existing page rotation.
+
+	err := addPageResourcesForExistingPage(xRefTable, d, res, p, fonts, formFontIDs)
+	if err != nil {
 		return err
 	}
 
-	// Append annotations
+	err = xRefTable.AppendContent(d, p.Buf.Bytes())
+	if err != nil {
+		return err
+	}
+
 	if len(p.AnnotIndRefs) > 0 || len(p.Annots) > 0 || len(p.LinkAnnots) > 0 {
 		a, err := xRefTable.DereferenceArray(d["Annots"])
 		if err != nil {

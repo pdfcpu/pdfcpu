@@ -78,6 +78,36 @@ func CreateFromJSON(rd io.Reader, rs io.ReadSeeker, w io.Writer, conf *pdfcpu.Co
 	return WriteContext(ctx, w)
 }
 
+func closeAll(err error, f0, f1, f2 *os.File, inFile, outFile, tmpFile string) {
+	if err != nil {
+		f2.Close()
+		if f1 != nil {
+			f1.Close()
+		}
+		f0.Close()
+		os.Remove(tmpFile)
+		return
+	}
+	if err = f2.Close(); err != nil {
+		return
+	}
+	if f1 != nil {
+		if err = f1.Close(); err != nil {
+			return
+		}
+	}
+	if err = f0.Close(); err != nil {
+		return
+	}
+	s := outFile
+	if outFile == "" || inFile == outFile {
+		s = inFile
+	}
+	if err = os.Rename(tmpFile, s); err != nil {
+		return
+	}
+}
+
 // CreateFromJSONFile renders the PDF structure corresponding to jsonFile to outFile.
 // If inFile does not exist it creates a new PDF Context.
 // If infile exists it appends page content for existing pages and
@@ -110,35 +140,7 @@ func CreateFromJSONFile(jsonFile, inFile, outFile string, conf *pdfcpu.Configura
 		return err
 	}
 
-	defer func() {
-		if err != nil {
-			f2.Close()
-			if f1 != nil {
-				f1.Close()
-			}
-			f0.Close()
-			os.Remove(tmpFile)
-			return
-		}
-		if err = f2.Close(); err != nil {
-			return
-		}
-		if f1 != nil {
-			if err = f1.Close(); err != nil {
-				return
-			}
-		}
-		if err = f0.Close(); err != nil {
-			return
-		}
-		s := outFile
-		if outFile == "" || inFile == outFile {
-			s = inFile
-		}
-		if err = os.Rename(tmpFile, s); err != nil {
-			return
-		}
-	}()
+	defer closeAll(err, f0, f1, f2, inFile, outFile, tmpFile)
 
 	return CreateFromJSON(f0, rs, f2, conf)
 }

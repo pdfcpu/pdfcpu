@@ -796,6 +796,24 @@ func scanForPreviousXref(ctx *Context, offset *int64) *int64 {
 	return &off
 }
 
+func handleAdditionalStreams(trailerDict Dict, xRefTable *XRefTable) {
+	arr := trailerDict.ArrayEntry("AdditionalStreams")
+	if arr == nil {
+		return
+	}
+
+	log.Read.Printf("parseTrailerInfo: found AdditionalStreams: %s\n", arr)
+
+	a := Array{}
+	for _, value := range arr {
+		if indRef, ok := value.(IndirectRef); ok {
+			a = append(a, indRef)
+		}
+	}
+
+	xRefTable.AdditionalStreams = &a
+}
+
 func parseTrailerDict(trailerDict Dict, ctx *Context, offCurXRef *int64) (*int64, error) {
 
 	log.Read.Println("parseTrailerDict begin")
@@ -807,16 +825,7 @@ func parseTrailerDict(trailerDict Dict, ctx *Context, offCurXRef *int64) (*int64
 		return nil, err
 	}
 
-	if arr := trailerDict.ArrayEntry("AdditionalStreams"); arr != nil {
-		log.Read.Printf("parseTrailerInfo: found AdditionalStreams: %s\n", arr)
-		a := Array{}
-		for _, value := range arr {
-			if indRef, ok := value.(IndirectRef); ok {
-				a = append(a, indRef)
-			}
-		}
-		xRefTable.AdditionalStreams = &a
-	}
+	handleAdditionalStreams(trailerDict, xRefTable)
 
 	offset := trailerDict.Prev()
 	if offset != nil {

@@ -299,6 +299,77 @@ func (ctx *Context) pageInfo(selectedPages IntSet) ([]string, error) {
 	return ss, nil
 }
 
+func (ctx *Context) addFlagsToInfoDigest(ss *[]string, separator string) {
+
+	*ss = append(*ss, separator)
+
+	s := "No"
+	if ctx.Tagged {
+		s = "Yes"
+	}
+	*ss = append(*ss, fmt.Sprintf("              Tagged: %s", s))
+
+	s = "No"
+	if ctx.Read.Hybrid {
+		s = "Yes"
+	}
+	*ss = append(*ss, fmt.Sprintf("              Hybrid: %s", s))
+
+	s = "No"
+	if ctx.Read.Linearized {
+		s = "Yes"
+	}
+	*ss = append(*ss, fmt.Sprintf("          Linearized: %s", s))
+
+	s = "No"
+	if ctx.Read.UsingXRefStreams {
+		s = "Yes"
+	}
+	*ss = append(*ss, fmt.Sprintf("  Using XRef streams: %s", s))
+
+	s = "No"
+	if ctx.Read.UsingObjectStreams {
+		s = "Yes"
+	}
+	*ss = append(*ss, fmt.Sprintf("Using object streams: %s", s))
+
+	s = "No"
+	if ctx.Watermarked {
+		s = "Yes"
+	}
+	*ss = append(*ss, fmt.Sprintf("         Watermarked: %s", s))
+
+	s = "No"
+	if len(ctx.PageThumbs) > 0 {
+		s = "Yes"
+	}
+	*ss = append(*ss, fmt.Sprintf("          Thumbnails: %s", s))
+
+	s = "No"
+	if ctx.AcroForm != nil {
+		s = "Yes"
+	}
+	*ss = append(*ss, fmt.Sprintf("            Acroform: %s", s))
+	if ctx.AcroForm != nil {
+		if ctx.SignatureExist {
+			*ss = append(*ss, "     SignaturesExist: Yes")
+			s = "No"
+			if ctx.AppendOnly {
+				s = "Yes"
+			}
+			*ss = append(*ss, fmt.Sprintf("          AppendOnly: %s", s))
+		}
+	}
+
+	*ss = append(*ss, separator)
+
+	s = "No"
+	if ctx.Encrypt != nil {
+		s = "Yes"
+	}
+	*ss = append(*ss, fmt.Sprintf("%20s: %s", "Encrypted", s))
+}
+
 // InfoDigest returns info about ctx.
 func (ctx *Context) InfoDigest(selectedPages IntSet) ([]string, error) {
 	var separator = "............................................"
@@ -333,73 +404,7 @@ func (ctx *Context) InfoDigest(selectedPages IntSet) ([]string, error) {
 		return nil, err
 	}
 
-	ss = append(ss, separator)
-
-	s := "No"
-	if ctx.Tagged {
-		s = "Yes"
-	}
-	ss = append(ss, fmt.Sprintf("              Tagged: %s", s))
-
-	s = "No"
-	if ctx.Read.Hybrid {
-		s = "Yes"
-	}
-	ss = append(ss, fmt.Sprintf("              Hybrid: %s", s))
-
-	s = "No"
-	if ctx.Read.Linearized {
-		s = "Yes"
-	}
-	ss = append(ss, fmt.Sprintf("          Linearized: %s", s))
-
-	s = "No"
-	if ctx.Read.UsingXRefStreams {
-		s = "Yes"
-	}
-	ss = append(ss, fmt.Sprintf("  Using XRef streams: %s", s))
-
-	s = "No"
-	if ctx.Read.UsingObjectStreams {
-		s = "Yes"
-	}
-	ss = append(ss, fmt.Sprintf("Using object streams: %s", s))
-
-	s = "No"
-	if ctx.Watermarked {
-		s = "Yes"
-	}
-	ss = append(ss, fmt.Sprintf("         Watermarked: %s", s))
-
-	s = "No"
-	if len(ctx.PageThumbs) > 0 {
-		s = "Yes"
-	}
-	ss = append(ss, fmt.Sprintf("          Thumbnails: %s", s))
-
-	s = "No"
-	if ctx.AcroForm != nil {
-		s = "Yes"
-	}
-	ss = append(ss, fmt.Sprintf("            Acroform: %s", s))
-	if ctx.AcroForm != nil {
-		if ctx.SignatureExist {
-			ss = append(ss, "     SignaturesExist: Yes")
-			s = "No"
-			if ctx.AppendOnly {
-				s = "Yes"
-			}
-			ss = append(ss, fmt.Sprintf("          AppendOnly: %s", s))
-		}
-	}
-
-	ss = append(ss, separator)
-
-	s = "No"
-	if ctx.Encrypt != nil {
-		s = "Yes"
-	}
-	ss = append(ss, fmt.Sprintf("%20s: %s", "Encrypted", s))
+	ctx.addFlagsToInfoDigest(&ss, separator)
 
 	ctx.addPermissionsToInfoDigest(&ss)
 
