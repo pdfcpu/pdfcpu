@@ -53,20 +53,19 @@ type Content struct {
 	RadioButtonGroups []*RadioButtonGroup `json:"radiobuttongroup"` // input radiobutton groups with optional label
 }
 
-func (c *Content) validate() error {
-	pdf := c.page.pdf
+func (c *Content) validateBackgroundColor() error {
 	if c.BackgroundColor != "" {
-		sc, err := pdf.parseColor(c.BackgroundColor)
+		sc, err := c.page.pdf.parseColor(c.BackgroundColor)
 		if err != nil {
 			return err
 		}
 		c.bgCol = sc
 	}
+	return nil
+}
 
-	for _, g := range c.Guides {
-		g.validate()
-	}
-
+func (c *Content) validateBorders() error {
+	pdf := c.page.pdf
 	if c.Border != nil {
 		if len(c.Borders) > 0 {
 			return errors.New("pdfcpu: Please supply either content \"border\" or \"borders\"")
@@ -84,7 +83,10 @@ func (c *Content) validate() error {
 			return err
 		}
 	}
+	return nil
+}
 
+func (c *Content) validateMargins() error {
 	if c.Margin != nil {
 		if len(c.Margins) > 0 {
 			return errors.New("pdfcpu: Please supply either page \"margin\" or \"margins\"")
@@ -100,7 +102,10 @@ func (c *Content) validate() error {
 			return err
 		}
 	}
+	return nil
+}
 
+func (c *Content) validatePaddings() error {
 	if c.Padding != nil {
 		if len(c.Paddings) > 0 {
 			return errors.New("pdfcpu: Please supply either page \"padding\" or \"paddings\"")
@@ -116,121 +121,153 @@ func (c *Content) validate() error {
 			return err
 		}
 	}
+	return nil
+}
 
-	if c.Regions != nil {
-		s := "must be defined within region content"
-		if len(c.SimpleBoxPool) > 0 {
-			return errors.Errorf("pdfcpu: \"boxes\" %s", s)
-		}
-		if len(c.SimpleBoxes) > 0 {
-			return errors.Errorf("pdfcpu: \"box\" %s", s)
-		}
-		if len(c.TextBoxPool) > 0 {
-			return errors.Errorf("pdfcpu: \"texts\" %s", s)
-		}
-		if len(c.TextBoxes) > 0 {
-			return errors.Errorf("pdfcpu: \"text\" %s", s)
-		}
-		if len(c.ImageBoxPool) > 0 {
-			return errors.Errorf("pdfcpu: \"images\" %s", s)
-		}
-		if len(c.ImageBoxes) > 0 {
-			return errors.Errorf("pdfcpu: \"image\" %s", s)
-		}
-		if len(c.TablePool) > 0 {
-			return errors.Errorf("pdfcpu: \"tables\" %s", s)
-		}
-		if len(c.Tables) > 0 {
-			return errors.Errorf("pdfcpu: \"table\" %s", s)
-		}
-		if len(c.TextFields) > 0 {
-			return errors.Errorf("pdfcpu: \"textfield\" %s", s)
-		}
-		if len(c.CheckBoxes) > 0 {
-			return errors.Errorf("pdfcpu: \"checkbox\" %s", s)
-		}
-		if len(c.RadioButtonGroups) > 0 {
-			return errors.Errorf("pdfcpu: \"checkbox\" %s", s)
-		}
-		c.Regions.page = c.page
-		c.Regions.parent = c
-		return c.Regions.validate()
+func (c *Content) validateRegions() error {
+	s := "must be defined within region content"
+	if len(c.SimpleBoxPool) > 0 {
+		return errors.Errorf("pdfcpu: \"boxes\" %s", s)
 	}
+	if len(c.SimpleBoxes) > 0 {
+		return errors.Errorf("pdfcpu: \"box\" %s", s)
+	}
+	if len(c.TextBoxPool) > 0 {
+		return errors.Errorf("pdfcpu: \"texts\" %s", s)
+	}
+	if len(c.TextBoxes) > 0 {
+		return errors.Errorf("pdfcpu: \"text\" %s", s)
+	}
+	if len(c.ImageBoxPool) > 0 {
+		return errors.Errorf("pdfcpu: \"images\" %s", s)
+	}
+	if len(c.ImageBoxes) > 0 {
+		return errors.Errorf("pdfcpu: \"image\" %s", s)
+	}
+	if len(c.TablePool) > 0 {
+		return errors.Errorf("pdfcpu: \"tables\" %s", s)
+	}
+	if len(c.Tables) > 0 {
+		return errors.Errorf("pdfcpu: \"table\" %s", s)
+	}
+	if len(c.TextFields) > 0 {
+		return errors.Errorf("pdfcpu: \"textfield\" %s", s)
+	}
+	if len(c.CheckBoxes) > 0 {
+		return errors.Errorf("pdfcpu: \"checkbox\" %s", s)
+	}
+	if len(c.RadioButtonGroups) > 0 {
+		return errors.Errorf("pdfcpu: \"checkbox\" %s", s)
+	}
+	c.Regions.page = c.page
+	c.Regions.parent = c
+	return c.Regions.validate()
+}
 
+func (c *Content) validateBars() error {
 	// bars
 	for _, b := range c.Bars {
-		b.pdf = pdf
+		b.pdf = c.page.pdf
 		b.content = c
 		if err := b.validate(); err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
+func (c *Content) validateSimpleBoxPool() error {
 	// boxes
 	for _, sb := range c.SimpleBoxPool {
-		sb.pdf = pdf
+		sb.pdf = c.page.pdf
 		sb.content = c
 		if err := sb.validate(); err != nil {
 			return err
 		}
 	}
 	for _, sb := range c.SimpleBoxes {
-		sb.pdf = pdf
+		sb.pdf = c.page.pdf
 		sb.content = c
 		if err := sb.validate(); err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
+func (c *Content) validateTextBoxPool() error {
 	// text
 	for _, tb := range c.TextBoxPool {
-		tb.pdf = pdf
+		tb.pdf = c.page.pdf
 		tb.content = c
 		if err := tb.validate(); err != nil {
 			return err
 		}
 	}
 	for _, tb := range c.TextBoxes {
-		tb.pdf = pdf
+		tb.pdf = c.page.pdf
 		tb.content = c
 		if err := tb.validate(); err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
+func (c *Content) validateImageBoxPool() error {
 	// images
 	for _, ib := range c.ImageBoxPool {
-		ib.pdf = pdf
+		ib.pdf = c.page.pdf
 		ib.content = c
 		if err := ib.validate(); err != nil {
 			return err
 		}
 	}
 	for _, ib := range c.ImageBoxes {
-		ib.pdf = pdf
+		ib.pdf = c.page.pdf
 		ib.content = c
 		if err := ib.validate(); err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
+func (c *Content) validateTablePool() error {
 	// tables
 	for _, t := range c.TablePool {
-		t.pdf = pdf
+		t.pdf = c.page.pdf
 		t.content = c
 		if err := t.validate(); err != nil {
 			return err
 		}
 	}
 	for _, t := range c.Tables {
-		t.pdf = pdf
+		t.pdf = c.page.pdf
 		t.content = c
 		if err := t.validate(); err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
+func (c *Content) validatePools() error {
+	if err := c.validateSimpleBoxPool(); err != nil {
+		return err
+	}
+	if err := c.validateTextBoxPool(); err != nil {
+		return err
+	}
+	if err := c.validateImageBoxPool(); err != nil {
+		return err
+	}
+	return c.validateTablePool()
+}
+
+func (c *Content) validateTextFields() error {
 	// text fields
+	pdf := c.page.pdf
 	if len(c.TextFields) > 0 {
 		// Reject form fields for existing Acroform.
 		if pdf.HasForm {
@@ -244,8 +281,12 @@ func (c *Content) validate() error {
 			}
 		}
 	}
+	return nil
+}
 
+func (c *Content) validateCheckBoxes() error {
 	// check boxes
+	pdf := c.page.pdf
 	if len(c.CheckBoxes) > 0 {
 		// Reject form fields for existing Acroform.
 		if pdf.HasForm {
@@ -259,8 +300,12 @@ func (c *Content) validate() error {
 			}
 		}
 	}
+	return nil
+}
 
+func (c *Content) validateRadioButtonGroups() error {
 	// radio button groups
+	pdf := c.page.pdf
 	if len(c.RadioButtonGroups) > 0 {
 		// Reject form fields for existing Acroform.
 		if pdf.HasForm {
@@ -274,8 +319,52 @@ func (c *Content) validate() error {
 			}
 		}
 	}
-
 	return nil
+}
+
+func (c *Content) validate() error {
+
+	if err := c.validateBackgroundColor(); err != nil {
+		return err
+	}
+
+	for _, g := range c.Guides {
+		g.validate()
+	}
+
+	if err := c.validateBorders(); err != nil {
+		return err
+	}
+
+	if err := c.validateMargins(); err != nil {
+		return err
+	}
+
+	if err := c.validatePaddings(); err != nil {
+		return err
+	}
+
+	if c.Regions != nil {
+		return c.validateRegions()
+	}
+
+	if err := c.validateBars(); err != nil {
+		return err
+	}
+
+	if err := c.validatePools(); err != nil {
+		return err
+	}
+
+	if err := c.validateTextFields(); err != nil {
+		return err
+	}
+
+	if err := c.validateCheckBoxes(); err != nil {
+		return err
+	}
+
+	return c.validateRadioButtonGroups()
 }
 
 func (c *Content) namedFont(id string) *FormFont {
@@ -639,28 +728,7 @@ func (c *Content) Box() *pdfcpu.Rectangle {
 	return c.box
 }
 
-func (c *Content) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, images pdfcpu.ImageMap, fields *pdfcpu.Array) error {
-
-	if c.Regions != nil {
-		c.Regions.mediaBox = c.mediaBox
-		c.Regions.page = c.page
-		return c.Regions.render(p, pageNr, fonts, images, fields)
-	}
-
-	pdf := c.page.pdf
-
-	// Render background
-	if c.bgCol != nil {
-		pdfcpu.FillRectNoBorder(p.Buf, c.BorderRect(), *c.bgCol)
-	}
-
-	// Render border
-	b := c.border()
-	if b != nil && b.col != nil && b.Width >= 0 {
-		pdfcpu.DrawRect(p.Buf, c.BorderRect(), float64(b.Width), b.col, &b.style)
-	}
-
-	// Render bars
+func (c *Content) renderBars(p *pdfcpu.Page) error {
 	for _, b := range c.Bars {
 		if b.Hide {
 			continue
@@ -669,8 +737,10 @@ func (c *Content) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, image
 			return err
 		}
 	}
+	return nil
+}
 
-	// Render boxes
+func (c *Content) renderSimpleBoxes(p *pdfcpu.Page) error {
 	for _, sb := range c.SimpleBoxes {
 		if sb.Hide {
 			continue
@@ -688,8 +758,10 @@ func (c *Content) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, image
 			return err
 		}
 	}
+	return nil
+}
 
-	// Render text
+func (c *Content) renderTextBoxes(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) error {
 	for _, tb := range c.TextBoxes {
 		if tb.Hide {
 			continue
@@ -707,8 +779,10 @@ func (c *Content) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, image
 			return err
 		}
 	}
+	return nil
+}
 
-	// Render images
+func (c *Content) renderImageBoxes(p *pdfcpu.Page, pageNr int, images pdfcpu.ImageMap) error {
 	for _, ib := range c.ImageBoxes {
 		if ib.Hide {
 			continue
@@ -726,8 +800,10 @@ func (c *Content) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, image
 			return err
 		}
 	}
+	return nil
+}
 
-	// Render tables
+func (c *Content) renderTables(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) error {
 	for _, t := range c.Tables {
 		if t.Hide {
 			continue
@@ -745,8 +821,10 @@ func (c *Content) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, image
 			return err
 		}
 	}
+	return nil
+}
 
-	// Render textfields
+func (c *Content) renderTextFields(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) error {
 	for _, tf := range c.TextFields {
 		if tf.Hide {
 			continue
@@ -755,8 +833,10 @@ func (c *Content) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, image
 			return err
 		}
 	}
+	return nil
+}
 
-	// Render checkboxes
+func (c *Content) renderCheckBoxes(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) error {
 	for _, cb := range c.CheckBoxes {
 		if cb.Hide {
 			continue
@@ -765,8 +845,10 @@ func (c *Content) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, image
 			return err
 		}
 	}
+	return nil
+}
 
-	// Render radio button groups
+func (c *Content) renderRadioButtonGroups(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, fields *pdfcpu.Array) error {
 	for _, rbg := range c.RadioButtonGroups {
 		if rbg.Hide {
 			continue
@@ -775,6 +857,11 @@ func (c *Content) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, image
 			return err
 		}
 	}
+	return nil
+}
+
+func (c *Content) renderBoxesAndGuides(p *pdfcpu.Page) {
+	pdf := c.page.pdf
 
 	// Render mediaBox & contentBox
 	if pdf.ContentBox {
@@ -788,6 +875,60 @@ func (c *Content) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, image
 			g.render(p.Buf, c.Box(), pdf)
 		}
 	}
+}
+
+func (c *Content) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, images pdfcpu.ImageMap, fields *pdfcpu.Array) error {
+
+	if c.Regions != nil {
+		c.Regions.mediaBox = c.mediaBox
+		c.Regions.page = c.page
+		return c.Regions.render(p, pageNr, fonts, images, fields)
+	}
+
+	// Render background
+	if c.bgCol != nil {
+		pdfcpu.FillRectNoBorder(p.Buf, c.BorderRect(), *c.bgCol)
+	}
+
+	// Render border
+	b := c.border()
+	if b != nil && b.col != nil && b.Width >= 0 {
+		pdfcpu.DrawRect(p.Buf, c.BorderRect(), float64(b.Width), b.col, &b.style)
+	}
+
+	if err := c.renderBars(p); err != nil {
+		return err
+	}
+
+	if err := c.renderSimpleBoxes(p); err != nil {
+		return err
+	}
+
+	if err := c.renderTextBoxes(p, pageNr, fonts); err != nil {
+		return err
+	}
+
+	if err := c.renderImageBoxes(p, pageNr, images); err != nil {
+		return err
+	}
+
+	if err := c.renderTables(p, pageNr, fonts); err != nil {
+		return err
+	}
+
+	if err := c.renderTextFields(p, pageNr, fonts); err != nil {
+		return err
+	}
+
+	if err := c.renderCheckBoxes(p, pageNr, fonts); err != nil {
+		return err
+	}
+
+	if err := c.renderRadioButtonGroups(p, pageNr, fonts, fields); err != nil {
+		return err
+	}
+
+	c.renderBoxesAndGuides(p)
 
 	return nil
 }

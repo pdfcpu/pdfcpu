@@ -77,8 +77,7 @@ func (pdf *PDF) pageCount() int {
 	return len(pdf.pages)
 }
 
-func (pdf *PDF) Validate() error {
-
+func (pdf *PDF) validatePageBoundaries() error {
 	// Default paper size
 	defaultPaperSize := "A4"
 
@@ -100,7 +99,10 @@ func (pdf *PDF) Validate() error {
 		}
 		pdf.cropBox = pdfcpu.ApplyBox("CropBox", box, nil, pdf.mediaBox)
 	}
+	return nil
+}
 
+func (pdf *PDF) validateOrigin() error {
 	// Layout coordinate system
 	pdf.origin = pdfcpu.LowerLeft
 	if pdf.Origin != "" {
@@ -110,7 +112,10 @@ func (pdf *PDF) Validate() error {
 		}
 		pdf.origin = corner
 	}
+	return nil
+}
 
+func (pdf *PDF) validateColors() error {
 	// Custom colors
 	pdf.colors = map[string]pdfcpu.SimpleColor{}
 	for n, c := range pdf.Colors {
@@ -132,7 +137,10 @@ func (pdf *PDF) Validate() error {
 		}
 		pdf.bgCol = sc
 	}
+	return nil
+}
 
+func (pdf *PDF) validateFonts() error {
 	// Default fonts
 	for _, f := range pdf.Fonts {
 		f.pdf = pdf
@@ -140,7 +148,10 @@ func (pdf *PDF) Validate() error {
 			return err
 		}
 	}
+	return nil
+}
 
+func (pdf *PDF) validateHeader() error {
 	if pdf.Header != nil {
 		if err := pdf.Header.validate(); err != nil {
 			return err
@@ -148,13 +159,160 @@ func (pdf *PDF) Validate() error {
 		pdf.Header.position = pdfcpu.TopCenter
 		pdf.Header.pdf = pdf
 	}
+	return nil
+}
 
+func (pdf *PDF) validateFooter() error {
 	if pdf.Footer != nil {
 		if err := pdf.Footer.validate(); err != nil {
 			return err
 		}
 		pdf.Footer.position = pdfcpu.BottomCenter
 		pdf.Footer.pdf = pdf
+	}
+	return nil
+}
+
+func (pdf *PDF) validateBorders() error {
+	if pdf.Border != nil {
+		if len(pdf.Borders) > 0 {
+			return errors.New("pdfcpu: Please supply either \"border\" or \"borders\"")
+		}
+		pdf.Border.pdf = pdf
+		if err := pdf.Border.validate(); err != nil {
+			return err
+		}
+		pdf.Borders = map[string]*Border{}
+		pdf.Borders["border"] = pdf.Border
+	}
+	for _, b := range pdf.Borders {
+		b.pdf = pdf
+		if err := b.validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (pdf *PDF) validateMargins() error {
+	if pdf.Margin != nil {
+		if len(pdf.Margins) > 0 {
+			return errors.New("pdfcpu: Please supply either \"margin\" or \"margins\"")
+		}
+		if err := pdf.Margin.validate(); err != nil {
+			return err
+		}
+		pdf.Margins = map[string]*Margin{}
+		pdf.Margins["margin"] = pdf.Margin
+	}
+	for _, m := range pdf.Margins {
+		if err := m.validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (pdf *PDF) validatePaddings() error {
+	if pdf.Padding != nil {
+		if len(pdf.Paddings) > 0 {
+			return errors.New("pdfcpu: Please supply either \"padding\" or \"paddings\"")
+		}
+		if err := pdf.Padding.validate(); err != nil {
+			return err
+		}
+		pdf.Paddings = map[string]*Padding{}
+		pdf.Paddings["padding"] = pdf.Padding
+	}
+	for _, p := range pdf.Paddings {
+		if err := p.validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (pdf *PDF) validateSimpleBoxPool() error {
+	// box templates
+	for _, sb := range pdf.SimpleBoxPool {
+		sb.pdf = pdf
+		if err := sb.validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (pdf *PDF) validateTextBoxPool() error {
+	// text templates
+	for _, tb := range pdf.TextBoxPool {
+		tb.pdf = pdf
+		if err := tb.validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (pdf *PDF) validateImageBoxPool() error {
+	// image templates
+	for _, ib := range pdf.ImageBoxPool {
+		ib.pdf = pdf
+		if err := ib.validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (pdf *PDF) validateTablePool() error {
+	// table templates
+	for _, t := range pdf.TablePool {
+		t.pdf = pdf
+		if err := t.validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (pdf *PDF) validatePools() error {
+	if err := pdf.validateSimpleBoxPool(); err != nil {
+		return err
+	}
+	if err := pdf.validateTextBoxPool(); err != nil {
+		return err
+	}
+	if err := pdf.validateImageBoxPool(); err != nil {
+		return err
+	}
+	return pdf.validateTablePool()
+}
+
+func (pdf *PDF) Validate() error {
+
+	if err := pdf.validatePageBoundaries(); err != nil {
+		return err
+	}
+
+	if err := pdf.validateOrigin(); err != nil {
+		return err
+	}
+
+	if err := pdf.validateColors(); err != nil {
+		return err
+	}
+
+	if err := pdf.validateFonts(); err != nil {
+		return err
+	}
+
+	if err := pdf.validateHeader(); err != nil {
+		return err
+	}
+
+	if err := pdf.validateFooter(); err != nil {
+		return err
 	}
 
 	if pdf.TimestampFormat == "" {
@@ -190,93 +348,22 @@ func (pdf *PDF) Validate() error {
 
 	pdf.pages = pp
 
-	if pdf.Border != nil {
-		if len(pdf.Borders) > 0 {
-			return errors.New("pdfcpu: Please supply either \"border\" or \"borders\"")
-		}
-		pdf.Border.pdf = pdf
-		if err := pdf.Border.validate(); err != nil {
-			return err
-		}
-		pdf.Borders = map[string]*Border{}
-		pdf.Borders["border"] = pdf.Border
-	}
-	for _, b := range pdf.Borders {
-		b.pdf = pdf
-		if err := b.validate(); err != nil {
-			return err
-		}
+	if err := pdf.validateBorders(); err != nil {
+		return err
 	}
 
-	if pdf.Margin != nil {
-		if len(pdf.Margins) > 0 {
-			return errors.New("pdfcpu: Please supply either \"margin\" or \"margins\"")
-		}
-		if err := pdf.Margin.validate(); err != nil {
-			return err
-		}
-		pdf.Margins = map[string]*Margin{}
-		pdf.Margins["margin"] = pdf.Margin
-	}
-	for _, m := range pdf.Margins {
-		if err := m.validate(); err != nil {
-			return err
-		}
+	if err := pdf.validateMargins(); err != nil {
+		return err
 	}
 
-	if pdf.Padding != nil {
-		if len(pdf.Paddings) > 0 {
-			return errors.New("pdfcpu: Please supply either \"padding\" or \"paddings\"")
-		}
-		if err := pdf.Padding.validate(); err != nil {
-			return err
-		}
-		pdf.Paddings = map[string]*Padding{}
-		pdf.Paddings["padding"] = pdf.Padding
-	}
-	for _, p := range pdf.Paddings {
-		if err := p.validate(); err != nil {
-			return err
-		}
+	if err := pdf.validatePaddings(); err != nil {
+		return err
 	}
 
-	// box templates
-	for _, sb := range pdf.SimpleBoxPool {
-		sb.pdf = pdf
-		if err := sb.validate(); err != nil {
-			return err
-		}
-	}
-
-	// text templates
-	for _, tb := range pdf.TextBoxPool {
-		tb.pdf = pdf
-		if err := tb.validate(); err != nil {
-			return err
-		}
-	}
-
-	// image templates
-	for _, ib := range pdf.ImageBoxPool {
-		ib.pdf = pdf
-		if err := ib.validate(); err != nil {
-			return err
-		}
-	}
-
-	// table templates
-	for _, t := range pdf.TablePool {
-		t.pdf = pdf
-		if err := t.validate(); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return pdf.validatePools()
 }
 
-func (pdf *PDF) calcInheritedAttrs() {
-
+func (pdf *PDF) calcInheritedFonts() {
 	// Calc inherited fonts.
 	for id, f0 := range pdf.Fonts {
 		for _, page := range pdf.pages {
@@ -302,7 +389,9 @@ func (pdf *PDF) calcInheritedAttrs() {
 		}
 		page.Content.calcFont(ff)
 	}
+}
 
+func (pdf *PDF) calcInheritedMargins() {
 	// Calc inherited margins.
 	for id, m0 := range pdf.Margins {
 		for _, page := range pdf.pages {
@@ -328,7 +417,9 @@ func (pdf *PDF) calcInheritedAttrs() {
 		}
 		page.Content.calcMargin(mm)
 	}
+}
 
+func (pdf *PDF) calcInheritedBorders() {
 	// Calc inherited borders.
 	for id, b0 := range pdf.Borders {
 		for _, page := range pdf.pages {
@@ -354,7 +445,9 @@ func (pdf *PDF) calcInheritedAttrs() {
 		}
 		page.Content.calcBorder(bb)
 	}
+}
 
+func (pdf *PDF) calcInheritedPaddings() {
 	// Calc inherited paddings.
 	for id, p0 := range pdf.Paddings {
 		for _, page := range pdf.pages {
@@ -380,7 +473,9 @@ func (pdf *PDF) calcInheritedAttrs() {
 		}
 		page.Content.calcPadding(pp)
 	}
+}
 
+func (pdf *PDF) calcInheritedSimpleBoxes() {
 	// Calc inherited SimpleBoxes.
 	for id, sb0 := range pdf.SimpleBoxPool {
 		for _, page := range pdf.pages {
@@ -406,7 +501,9 @@ func (pdf *PDF) calcInheritedAttrs() {
 		}
 		page.Content.calcSimpleBoxes(bb)
 	}
+}
 
+func (pdf *PDF) calcInheritedTextBoxes() {
 	// Calc inherited TextBoxes.
 	for id, tb0 := range pdf.TextBoxPool {
 		for _, page := range pdf.pages {
@@ -432,7 +529,9 @@ func (pdf *PDF) calcInheritedAttrs() {
 		}
 		page.Content.calcTextBoxes(tb)
 	}
+}
 
+func (pdf *PDF) calcInheritedImageBoxes() {
 	// Calc inherited ImageBoxes.
 	for id, ib0 := range pdf.ImageBoxPool {
 		for _, page := range pdf.pages {
@@ -458,7 +557,9 @@ func (pdf *PDF) calcInheritedAttrs() {
 		}
 		page.Content.calcImageBoxes(ib)
 	}
+}
 
+func (pdf *PDF) calcInheritedTables() {
 	// Calc inherited Tables.
 	for id, t0 := range pdf.TablePool {
 		for _, page := range pdf.pages {
@@ -484,6 +585,17 @@ func (pdf *PDF) calcInheritedAttrs() {
 		}
 		page.Content.calcTables(t)
 	}
+}
+
+func (pdf *PDF) calcInheritedAttrs() {
+	pdf.calcInheritedFonts()
+	pdf.calcInheritedMargins()
+	pdf.calcInheritedBorders()
+	pdf.calcInheritedPaddings()
+	pdf.calcInheritedSimpleBoxes()
+	pdf.calcInheritedTextBoxes()
+	pdf.calcInheritedImageBoxes()
+	pdf.calcInheritedTables()
 }
 
 func (pdf *PDF) color(s string) *pdfcpu.SimpleColor {
@@ -556,6 +668,32 @@ func (pdf *PDF) calcFont(f *FormFont) error {
 	return nil
 }
 
+func (pdf *PDF) globalFont(fontName string, font pdfcpu.FontResource, pageFonts pdfcpu.FontMap, pageNr int) string {
+	fontResIDs := pdf.FontResIDs[pageNr]
+	font.Res.ID = "F" + strconv.Itoa(len(pageFonts))
+	if pdf.Optimize != nil && font.Res.IndRef != nil {
+		id := fontResIDs.NewIDForPrefix("F", len(pageFonts))
+		for k, v := range fontResIDs {
+			if v == *font.Res.IndRef {
+				id = k
+				break
+			}
+		}
+		font.Res.ID = id
+	}
+	pageFonts[fontName] = font
+	return font.Res.ID
+}
+
+func (pdf *PDF) newFontID(pageFonts pdfcpu.FontMap, pageNr int) string {
+	id := "F" + strconv.Itoa(len(pageFonts))
+	if pdf.Optimize != nil {
+		fontResIDs := pdf.FontResIDs[pageNr]
+		id = fontResIDs.NewIDForPrefix("F", len(pageFonts))
+	}
+	return id
+}
+
 func (pdf *PDF) idForFontName(fontName string, pageFonts, fonts pdfcpu.FontMap, pageNr int) (string, error) {
 
 	var (
@@ -568,26 +706,14 @@ func (pdf *PDF) idForFontName(fontName string, pageFonts, fonts pdfcpu.FontMap, 
 		return font.Res.ID, nil
 	}
 
-	fontResIDs := pdf.FontResIDs[pageNr]
-
 	font, ok = fonts[fontName]
 	if ok {
-		font.Res.ID = "F" + strconv.Itoa(len(pageFonts))
-		if pdf.Optimize != nil && font.Res.IndRef != nil {
-			id := fontResIDs.NewIDForPrefix("F", len(pageFonts))
-			for k, v := range fontResIDs {
-				if v == *font.Res.IndRef {
-					id = k
-					break
-				}
-			}
-			font.Res.ID = id
-		}
-		pageFonts[fontName] = font
-		return font.Res.ID, nil
+		return pdf.globalFont(fontName, font, pageFonts, pageNr), nil
 	}
 
 	font = pdfcpu.FontResource{}
+
+	fontResIDs := pdf.FontResIDs[pageNr]
 
 	if pdf.Optimize != nil {
 
@@ -629,10 +755,7 @@ func (pdf *PDF) idForFontName(fontName string, pageFonts, fonts pdfcpu.FontMap, 
 	}
 
 	if indRef == nil {
-		id = "F" + strconv.Itoa(len(pageFonts))
-		if pdf.Optimize != nil {
-			id = fontResIDs.NewIDForPrefix("F", len(pageFonts))
-		}
+		id = pdf.newFontID(pageFonts, pageNr)
 	}
 
 	font.Res = pdfcpu.Resource{ID: id, IndRef: indRef}

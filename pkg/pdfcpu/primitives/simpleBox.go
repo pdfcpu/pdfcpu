@@ -139,8 +139,7 @@ func (sb *SimpleBox) mergeIn(sb0 *SimpleBox) {
 	}
 }
 
-func (sb *SimpleBox) render(p *pdfcpu.Page) error {
-	pdf := sb.content.page.pdf
+func (sb *SimpleBox) calcBorder() (float64, *pdfcpu.SimpleColor, pdfcpu.LineJoinStyle, error) {
 	bWidth := 0.
 	var bCol *pdfcpu.SimpleColor
 	bStyle := pdfcpu.LJMiter
@@ -151,7 +150,7 @@ func (sb *SimpleBox) render(p *pdfcpu.Page) error {
 			bName := b.Name[1:]
 			b0 := sb.border(bName)
 			if b0 == nil {
-				return errors.Errorf("pdfcpu: unknown named border %s", bName)
+				return bWidth, bCol, bStyle, errors.Errorf("pdfcpu: unknown named border %s", bName)
 			}
 			b.mergeIn(b0)
 		}
@@ -163,7 +162,10 @@ func (sb *SimpleBox) render(p *pdfcpu.Page) error {
 			bStyle = b.style
 		}
 	}
+	return bWidth, bCol, bStyle, nil
+}
 
+func (sb *SimpleBox) calcMargin() (float64, float64, float64, float64, error) {
 	mTop, mRight, mBottom, mLeft := 0., 0., 0., 0.
 	if sb.Margin != nil {
 		m := sb.Margin
@@ -172,11 +174,10 @@ func (sb *SimpleBox) render(p *pdfcpu.Page) error {
 			mName := m.Name[1:]
 			m0 := sb.margin(mName)
 			if m0 == nil {
-				return errors.Errorf("pdfcpu: unknown named margin %s", mName)
+				return mTop, mRight, mBottom, mLeft, errors.Errorf("pdfcpu: unknown named margin %s", mName)
 			}
 			m.mergeIn(m0)
 		}
-
 		if m.Width > 0 {
 			mTop = m.Width
 			mRight = m.Width
@@ -189,7 +190,11 @@ func (sb *SimpleBox) render(p *pdfcpu.Page) error {
 			mLeft = m.Left
 		}
 	}
+	return mTop, mRight, mBottom, mLeft, nil
+}
 
+func (sb *SimpleBox) calcTransform(mLeft, mBottom, mRight, mTop, bWidth float64) (pdfcpu.Matrix, *pdfcpu.Rectangle) {
+	pdf := sb.content.page.pdf
 	cBox := sb.content.Box()
 	r := sb.content.Box().CroppedCopy(0)
 	r.LL.X += mLeft
@@ -247,6 +252,24 @@ func (sb *SimpleBox) render(p *pdfcpu.Page) error {
 	dy += sb.Dy + r.Height()/2 - cos*(r.Height()/2) - sin*r.Width()/2
 
 	m := pdfcpu.CalcTransformMatrix(1, 1, sin, cos, dx, dy)
+
+	return m, r
+}
+
+func (sb *SimpleBox) render(p *pdfcpu.Page) error {
+
+	bWidth, bCol, bStyle, err := sb.calcBorder()
+	if err != nil {
+		return err
+	}
+
+	mTop, mRight, mBottom, mLeft, err := sb.calcMargin()
+	if err != nil {
+		return err
+	}
+
+	m, r := sb.calcTransform(mTop, mRight, mBottom, mLeft, bWidth)
+
 	fmt.Fprintf(p.Buf, "q %.2f %.2f %.2f %.2f %.2f %.2f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 
 	if sb.fillCol != nil {

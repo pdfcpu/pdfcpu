@@ -50,15 +50,7 @@ type TextBox struct {
 	Hide            bool
 }
 
-func (tb *TextBox) validate() error {
-
-	tb.x = tb.Position[0]
-	tb.y = tb.Position[1]
-
-	if tb.Name == "$" {
-		return errors.New("pdfcpu: invalid text reference $")
-	}
-
+func (tb *TextBox) validateAnchor() error {
 	if tb.Anchor != "" {
 		if tb.Position[0] != 0 || tb.Position[1] != 0 {
 			return errors.New("pdfcpu: Please supply \"pos\" or \"anchor\"")
@@ -70,7 +62,10 @@ func (tb *TextBox) validate() error {
 		tb.anchor = a
 		tb.anchored = true
 	}
+	return nil
+}
 
+func (tb *TextBox) validateFont() error {
 	if tb.Font != nil {
 		tb.Font.pdf = tb.pdf
 		if err := tb.Font.validate(); err != nil {
@@ -79,26 +74,34 @@ func (tb *TextBox) validate() error {
 	} else if !strings.HasPrefix(tb.Name, "$") {
 		return errors.New("pdfcpu: textbox missing font definition")
 	}
+	return nil
+}
 
-	if tb.Margin != nil {
-		if err := tb.Margin.validate(); err != nil {
-			return err
-		}
+func (tb *TextBox) validateMargin() error {
+	if tb.Margin == nil {
+		return nil
 	}
+	return tb.Margin.validate()
+}
 
+func (tb *TextBox) validateBorder() error {
 	if tb.Border != nil {
 		tb.Border.pdf = tb.pdf
 		if err := tb.Border.validate(); err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
-	if tb.Padding != nil {
-		if err := tb.Padding.validate(); err != nil {
-			return err
-		}
+func (tb *TextBox) validatePadding() error {
+	if tb.Padding == nil {
+		return nil
 	}
+	return tb.Padding.validate()
+}
 
+func (tb *TextBox) validateBackgroundColor() error {
 	if tb.BackgroundColor != "" {
 		sc, err := tb.pdf.parseColor(tb.BackgroundColor)
 		if err != nil {
@@ -106,7 +109,10 @@ func (tb *TextBox) validate() error {
 		}
 		tb.bgCol = sc
 	}
+	return nil
+}
 
+func (tb *TextBox) validateHorAlign() error {
 	tb.horAlign = pdfcpu.AlignLeft
 	if tb.Alignment != "" {
 		ha, err := pdfcpu.ParseHorAlignment(tb.Alignment)
@@ -115,8 +121,43 @@ func (tb *TextBox) validate() error {
 		}
 		tb.horAlign = ha
 	}
-
 	return nil
+}
+
+func (tb *TextBox) validate() error {
+
+	tb.x = tb.Position[0]
+	tb.y = tb.Position[1]
+
+	if tb.Name == "$" {
+		return errors.New("pdfcpu: invalid text reference $")
+	}
+
+	if err := tb.validateAnchor(); err != nil {
+		return err
+	}
+
+	if err := tb.validateFont(); err != nil {
+		return err
+	}
+
+	if err := tb.validateMargin(); err != nil {
+		return err
+	}
+
+	if err := tb.validateBorder(); err != nil {
+		return err
+	}
+
+	if err := tb.validatePadding(); err != nil {
+		return err
+	}
+
+	if err := tb.validateBackgroundColor(); err != nil {
+		return err
+	}
+
+	return tb.validateHorAlign()
 }
 
 func (tb *TextBox) font(name string) *FormFont {
@@ -188,8 +229,7 @@ func (tb *TextBox) mergeIn(tb0 *TextBox) {
 	}
 }
 
-func (tb *TextBox) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) error {
-	pdf := tb.content.page.pdf
+func (tb *TextBox) calcFont() error {
 	f := tb.Font
 	if f.Name[0] == '$' {
 		// use named font
@@ -209,7 +249,14 @@ func (tb *TextBox) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) erro
 	if f.col == nil {
 		f.col = &pdfcpu.Black
 	}
+	return nil
+}
 
+func (tb *TextBox) prepareTextDescriptor(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) (*pdfcpu.TextDescriptor, error) {
+
+	//pdf := tb.content.page.pdf
+	pdf := tb.pdf
+	f := tb.Font
 	fontName := f.Name
 	fontSize := f.Size
 	col := f.col
@@ -218,7 +265,7 @@ func (tb *TextBox) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) erro
 
 	id, err := tb.pdf.idForFontName(fontName, p.Fm, fonts, pageNr)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	dx, dy := pdfcpu.NormalizeOffset(tb.Dx, tb.Dy, pdf.origin)
@@ -253,7 +300,7 @@ func (tb *TextBox) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) erro
 			bName := b.Name[1:]
 			b0 := tb.border(bName)
 			if b0 == nil {
-				return errors.Errorf("pdfcpu: unknown named border %s", bName)
+				return nil, errors.Errorf("pdfcpu: unknown named border %s", bName)
 			}
 			b.mergeIn(b0)
 		}
@@ -274,7 +321,7 @@ func (tb *TextBox) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) erro
 			pName := p.Name[1:]
 			p0 := tb.padding(pName)
 			if p0 == nil {
-				return errors.Errorf("pdfcpu: unknown named padding %s", pName)
+				return nil, errors.Errorf("pdfcpu: unknown named padding %s", pName)
 			}
 			p.mergeIn(p0)
 		}
@@ -293,6 +340,10 @@ func (tb *TextBox) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) erro
 		}
 	}
 
+	return &td, nil
+}
+
+func (tb *TextBox) calcMargin() (float64, float64, float64, float64, error) {
 	mTop, mRight, mBottom, mLeft := 0., 0., 0., 0.
 	if tb.Margin != nil {
 		m := tb.Margin
@@ -301,11 +352,10 @@ func (tb *TextBox) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) erro
 			mName := m.Name[1:]
 			m0 := tb.margin(mName)
 			if m0 == nil {
-				return errors.Errorf("pdfcpu: unknown named margin %s", mName)
+				return mTop, mRight, mBottom, mLeft, errors.Errorf("pdfcpu: unknown named margin %s", mName)
 			}
 			m.mergeIn(m0)
 		}
-
 		if m.Width > 0 {
 			mTop = m.Width
 			mRight = m.Width
@@ -318,6 +368,24 @@ func (tb *TextBox) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) erro
 			mLeft = m.Left
 		}
 	}
+	return mTop, mRight, mBottom, mLeft, nil
+}
+
+func (tb *TextBox) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) error {
+
+	if err := tb.calcFont(); err != nil {
+		return err
+	}
+
+	td, err := tb.prepareTextDescriptor(p, pageNr, fonts)
+	if err != nil {
+		return err
+	}
+
+	mTop, mRight, mBottom, mLeft, err := tb.calcMargin()
+	if err != nil {
+		return err
+	}
 
 	cBox := tb.content.Box()
 	r := cBox.CroppedCopy(0)
@@ -327,10 +395,11 @@ func (tb *TextBox) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) erro
 	r.UR.Y -= mTop
 
 	if tb.anchored {
-		pdfcpu.WriteMultiLineAnchored(p.Buf, r, nil, td, tb.anchor)
+		pdfcpu.WriteMultiLineAnchored(p.Buf, r, nil, *td, tb.anchor)
 		return nil
 	}
 
+	pdf := tb.pdf
 	td.X, td.Y = pdfcpu.NormalizeCoord(tb.x, tb.y, tb.content.Box(), pdf.origin, false)
 
 	if td.X == -1 {
@@ -355,7 +424,7 @@ func (tb *TextBox) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) erro
 		r.LL.Y += td.BorderWidth
 	}
 
-	pdfcpu.WriteColumn(p.Buf, r, nil, td, float64(tb.Width))
+	pdfcpu.WriteColumn(p.Buf, r, nil, *td, float64(tb.Width))
 
 	return nil
 }

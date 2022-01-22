@@ -84,8 +84,7 @@ type TextField struct {
 	Hide            bool
 }
 
-func (tf *TextField) validate() error {
-
+func (tf *TextField) validateID() error {
 	if tf.ID == "" {
 		return errors.New("pdfcpu: missing field id")
 	}
@@ -93,40 +92,61 @@ func (tf *TextField) validate() error {
 		return errors.Errorf("pdfcpu: duplicate form field: %s", tf.ID)
 	}
 	tf.pdf.FieldIDs[tf.ID] = true
+	return nil
+}
 
+func (tf *TextField) validatePosition() error {
 	if tf.Position[0] < 0 || tf.Position[1] < 0 {
 		return errors.Errorf("pdfcpu: field: %s pos value < 0", tf.ID)
 	}
 	tf.x, tf.y = tf.Position[0], tf.Position[1]
+	return nil
+}
 
+func (tf *TextField) validateWidth() error {
 	if tf.Width <= 0 {
 		return errors.Errorf("pdfcpu: field: %s width <= 0", tf.ID)
 	}
+	return nil
+}
 
+func (tf *TextField) validateHeight() error {
 	if tf.Height < 0 {
 		return errors.Errorf("pdfcpu: field: %s height < 0", tf.ID)
 	}
+	return nil
+}
 
+func (tf *TextField) validateFont() error {
 	if tf.Font != nil {
 		tf.Font.pdf = tf.pdf
 		if err := tf.Font.validate(); err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
+func (tf *TextField) validateMargin() error {
 	if tf.Margin != nil {
 		if err := tf.Margin.validate(); err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
+func (tf *TextField) validateBorder() error {
 	if tf.Border != nil {
 		tf.Border.pdf = tf.pdf
 		if err := tf.Border.validate(); err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
+func (tf *TextField) validateBackgroundColor() error {
 	if tf.BackgroundColor != "" {
 		sc, err := tf.pdf.parseColor(tf.BackgroundColor)
 		if err != nil {
@@ -134,7 +154,10 @@ func (tf *TextField) validate() error {
 		}
 		tf.bgCol = sc
 	}
+	return nil
+}
 
+func (tf *TextField) validateHorAlign() error {
 	tf.horAlign = pdfcpu.AlignLeft
 	if tf.Alignment != "" {
 		ha, err := pdfcpu.ParseHorAlignment(tf.Alignment)
@@ -143,15 +166,58 @@ func (tf *TextField) validate() error {
 		}
 		tf.horAlign = ha
 	}
+	return nil
+}
 
+func (tf *TextField) validateLabel() error {
 	if tf.Label != nil {
 		tf.Label.pdf = tf.pdf
 		if err := tf.Label.validate(); err != nil {
 			return err
 		}
 	}
-
 	return nil
+}
+
+func (tf *TextField) validate() error {
+
+	if err := tf.validateID(); err != nil {
+		return err
+	}
+
+	if err := tf.validatePosition(); err != nil {
+		return err
+	}
+
+	if err := tf.validateWidth(); err != nil {
+		return err
+	}
+
+	if err := tf.validateHeight(); err != nil {
+		return err
+	}
+
+	if err := tf.validateFont(); err != nil {
+		return err
+	}
+
+	if err := tf.validateMargin(); err != nil {
+		return err
+	}
+
+	if err := tf.validateBorder(); err != nil {
+		return err
+	}
+
+	if err := tf.validateBackgroundColor(); err != nil {
+		return err
+	}
+
+	if err := tf.validateHorAlign(); err != nil {
+		return err
+	}
+
+	return tf.validateLabel()
 }
 
 func (tf *TextField) font(name string) *FormFont {
@@ -445,8 +511,7 @@ func (tf *TextField) irN(fontID, fontName string, fontSize int, col *pdfcpu.Simp
 	return tf.pdf.XRefTable.IndRefForNewObject(*sd)
 }
 
-func (tf *TextField) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) error {
-
+func (tf *TextField) calcMargin() (float64, float64, float64, float64, error) {
 	mTop, mRight, mBottom, mLeft := 0., 0., 0., 0.
 	if tf.Margin != nil {
 		m := tf.Margin
@@ -455,11 +520,10 @@ func (tf *TextField) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) er
 			mName := m.Name[1:]
 			m0 := tf.margin(mName)
 			if m0 == nil {
-				return errors.Errorf("pdfcpu: unknown named margin %s", mName)
+				return mTop, mRight, mBottom, mLeft, errors.Errorf("pdfcpu: unknown named margin %s", mName)
 			}
 			m.mergeIn(m0)
 		}
-
 		if m.Width > 0 {
 			mTop = m.Width
 			mRight = m.Width
@@ -472,7 +536,46 @@ func (tf *TextField) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) er
 			mLeft = m.Left
 		}
 	}
+	return mTop, mRight, mBottom, mLeft, nil
+}
 
+func (tf *TextField) calcFont() (*FormFont, error) {
+
+	var f *FormFont
+
+	if tf.Font != nil {
+		f = tf.Font
+		if f.Name[0] == '$' {
+			// use named font
+			fName := f.Name[1:]
+			f0 := tf.font(fName)
+			if f0 == nil {
+				return nil, errors.Errorf("pdfcpu: unknown font name %s", fName)
+			}
+			f.Name = f0.Name
+			if f.Size == 0 {
+				f.Size = f0.Size
+			}
+			if f.col == nil {
+				f.col = f0.col
+			}
+		}
+	} else {
+		// Use inherited named font "input".
+		f = tf.font("input")
+		if f == nil {
+			return nil, errors.Errorf("pdfcpu: missing named font \"input\"")
+		}
+	}
+
+	if f.col == nil {
+		f.col = &pdfcpu.Black
+	}
+
+	return f, nil
+}
+
+func (tf *TextField) prepareRect(mTop, mRight, mBottom, mLeft float64) (*pdfcpu.Rectangle, float64, float64) {
 	cBox := tf.content.Box()
 	r := cBox.CroppedCopy(0)
 	r.LL.X += mLeft
@@ -524,57 +627,11 @@ func (tf *TextField) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) er
 	x += tf.Dx
 	y += tf.Dy
 
-	var f *FormFont
+	return r, x, y
+}
 
-	if tf.Font != nil {
-		f = tf.Font
-		if f.Name[0] == '$' {
-			// use named font
-			fName := f.Name[1:]
-			f0 := tf.font(fName)
-			if f0 == nil {
-				return errors.Errorf("pdfcpu: unknown font name %s", fName)
-			}
-			f.Name = f0.Name
-			if f.Size == 0 {
-				f.Size = f0.Size
-			}
-			if f.col == nil {
-				f.col = f0.col
-			}
-		}
-	} else {
-		// Use inherited named font "input".
-		f = tf.font("input")
-		if f == nil {
-			return errors.Errorf("pdfcpu: missing named font \"input\"")
-		}
-	}
-
-	var (
-		fontName string
-		fontSize int
-	)
-
-	if f != nil {
-
-		if f.col == nil {
-			f.col = &pdfcpu.Black
-		}
-
-		fontName = f.Name
-		fontSize = f.Size
-	}
-
-	h := float64(fontSize) * 1.2
-	if tf.Multiline {
-		if tf.Height == 0 {
-			return errors.Errorf("pdfcpu: field: %s height == 0", tf.ID)
-		}
-		h = tf.Height
-	}
-	tf.boundingBox = pdfcpu.RectForWidthAndHeight(x, y, tf.Width, h)
-
+func (tf *TextField) prepareDict(f *FormFont, fonts pdfcpu.FontMap) (pdfcpu.Dict, error) {
+	pdf := tf.pdf
 	id := pdfcpu.StringLiteral(pdfcpu.EncodeUTF16String(tf.ID))
 
 	ff := FieldDoNotSpellCheck
@@ -632,29 +689,61 @@ func (tf *TextField) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) er
 		d["DA"] = pdfcpu.StringLiteral(pdf.InheritedDA)
 	}
 
-	if f != nil {
+	//if f != nil {
 
-		col := f.col
+	col := f.col
 
-		fontID, err := pdf.ensureFormFont(fontName)
+	fontID, err := pdf.ensureFormFont(f.Name)
+	if err != nil {
+		return d, err
+	}
+
+	da := fmt.Sprintf("/%s %d Tf %.2f %.2f %.2f rg", fontID, f.Size, col.R, col.G, col.B)
+	// Note: Mac Preview does not honor inherited "DA"
+	d["DA"] = pdfcpu.StringLiteral(da)
+
+	if tf.Value != "" {
+		irN, err := tf.irN(fontID, f.Name, f.Size, col, da, fonts)
 		if err != nil {
-			return err
+			return d, err
 		}
+		d["AP"] = pdfcpu.Dict(map[string]pdfcpu.Object{"N": *irN})
+	}
 
-		da := fmt.Sprintf("/%s %d Tf %.2f %.2f %.2f rg", fontID, fontSize, col.R, col.G, col.B)
-		// Note: Mac Preview does not honor inherited "DA"
-		d["DA"] = pdfcpu.StringLiteral(da)
+	//}
 
-		if tf.Value != "" {
-			irN, err := tf.irN(fontID, fontName, fontSize, col, da, fonts)
-			if err != nil {
-				return err
-			}
-			d["AP"] = pdfcpu.Dict(map[string]pdfcpu.Object{"N": *irN})
+	return d, nil
+}
+
+func (tf *TextField) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) error {
+
+	mTop, mRight, mBottom, mLeft, err := tf.calcMargin()
+	if err != nil {
+		return err
+	}
+
+	r, x, y := tf.prepareRect(mTop, mRight, mBottom, mLeft)
+
+	f, err := tf.calcFont()
+	if err != nil {
+		return err
+	}
+
+	h := float64(f.Size) * 1.2
+	if tf.Multiline {
+		if tf.Height == 0 {
+			return errors.Errorf("pdfcpu: field: %s height == 0", tf.ID)
 		}
+		h = tf.Height
+	}
+	tf.boundingBox = pdfcpu.RectForWidthAndHeight(x, y, tf.Width, h)
+
+	d, err := tf.prepareDict(f, fonts)
+	if err != nil {
+		return err
 	}
 
 	p.Annots = append(p.Annots, d)
 
-	return tf.renderLabel(r, p, pageNr, fonts, fontSize)
+	return tf.renderLabel(r, p, pageNr, fonts, f.Size)
 }

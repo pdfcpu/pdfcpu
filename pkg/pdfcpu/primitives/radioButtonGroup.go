@@ -610,22 +610,19 @@ func (rbg *RadioButtonGroup) appearanceIndRefs() (
 	return irDOff, irDYes, irNOff, irNYes, nil
 }
 
-func (rbg *RadioButtonGroup) renderRadioButtonFields(p *pdfcpu.Page, parent pdfcpu.IndirectRef) (pdfcpu.Array, error) {
+func (rbg *RadioButtonGroup) prepareMargin() (float64, float64, float64, float64, error) {
 
-	irDOff, irDYes, irNOff, irNYes, err := rbg.appearanceIndRefs()
-	if err != nil {
-		return nil, err
-	}
+	mTop, mRight, mBot, mLeft := 0., 0., 0., 0.
 
-	mTop, mRight, mBottom, mLeft := 0., 0., 0., 0.
 	if rbg.Margin != nil {
+
 		m := rbg.Margin
 		if m.Name != "" && m.Name[0] == '$' {
 			// use named margin
 			mName := m.Name[1:]
 			m0 := rbg.margin(mName)
 			if m0 == nil {
-				return nil, errors.Errorf("pdfcpu: unknown named margin %s", mName)
+				return mTop, mRight, mBot, mLeft, errors.Errorf("pdfcpu: unknown named margin %s", mName)
 			}
 			m.mergeIn(m0)
 		}
@@ -633,14 +630,72 @@ func (rbg *RadioButtonGroup) renderRadioButtonFields(p *pdfcpu.Page, parent pdfc
 		if m.Width > 0 {
 			mTop = m.Width
 			mRight = m.Width
-			mBottom = m.Width
+			mBot = m.Width
 			mLeft = m.Width
 		} else {
 			mTop = m.Top
 			mRight = m.Right
-			mBottom = m.Bottom
+			mBot = m.Bottom
 			mLeft = m.Left
 		}
+	}
+
+	return mTop, mRight, mBot, mLeft, nil
+}
+
+func (rbg *RadioButtonGroup) prepareDict(r *pdfcpu.Rectangle, v string, parent pdfcpu.IndirectRef, irDOff, irDYes, irNOff, irNYes *pdfcpu.IndirectRef) (*pdfcpu.IndirectRef, pdfcpu.Dict, error) {
+	d := pdfcpu.Dict(map[string]pdfcpu.Object{
+		"Type":    pdfcpu.Name("Annot"),
+		"Subtype": pdfcpu.Name("Widget"),
+		"F":       pdfcpu.Integer(pdfcpu.AnnPrint),
+		"Parent":  parent,
+		"AS":      pdfcpu.Name("Off"), // Preselect "Off" or buttonVal
+		"Rect":    r.Array(),
+		//"T":       id, // required
+		//"TU":      id, // Acrobat Reader Hover over field
+		"AP": pdfcpu.Dict(
+			map[string]pdfcpu.Object{
+				"D": pdfcpu.Dict(
+					map[string]pdfcpu.Object{
+						"Off": *irDOff,
+						v:     *irDYes,
+					},
+				),
+				"N": pdfcpu.Dict(
+					map[string]pdfcpu.Object{
+						"Off": *irNOff,
+						v:     *irNYes,
+					},
+				),
+			},
+		),
+		"BS": pdfcpu.Dict(
+			map[string]pdfcpu.Object{
+				"S": pdfcpu.Name("I"),
+				"W": pdfcpu.Integer(1),
+			},
+		),
+	})
+
+	if v == rbg.Value {
+		d["AS"] = pdfcpu.Name(v) // not on MacPreview!
+	}
+
+	ir, err := rbg.pdf.XRefTable.IndRefForNewObject(d)
+
+	return ir, d, err
+}
+
+func (rbg *RadioButtonGroup) renderRadioButtonFields(p *pdfcpu.Page, parent pdfcpu.IndirectRef) (pdfcpu.Array, error) {
+
+	irDOff, irDYes, irNOff, irNYes, err := rbg.appearanceIndRefs()
+	if err != nil {
+		return nil, err
+	}
+
+	mTop, mRight, mBottom, mLeft, err := rbg.prepareMargin()
+	if err != nil {
+		return nil, err
 	}
 
 	cBox := rbg.content.Box()
@@ -704,50 +759,12 @@ func (rbg *RadioButtonGroup) renderRadioButtonFields(p *pdfcpu.Page, parent pdfc
 
 		r := rbg.rect(float64(i), maxw, firstw)
 
-		d := pdfcpu.Dict(map[string]pdfcpu.Object{
-			"Type":    pdfcpu.Name("Annot"),
-			"Subtype": pdfcpu.Name("Widget"),
-			"F":       pdfcpu.Integer(pdfcpu.AnnPrint),
-			"Parent":  parent,
-			"AS":      pdfcpu.Name("Off"), // Preselect "Off" or buttonVal
-			"Rect":    r.Array(),
-			//"T":       id, // required
-			//"TU":      id, // Acrobat Reader Hover over field
-			"AP": pdfcpu.Dict(
-				map[string]pdfcpu.Object{
-					"D": pdfcpu.Dict(
-						map[string]pdfcpu.Object{
-							"Off": *irDOff,
-							v:     *irDYes,
-						},
-					),
-					"N": pdfcpu.Dict(
-						map[string]pdfcpu.Object{
-							"Off": *irNOff,
-							v:     *irNYes,
-						},
-					),
-				},
-			),
-			"BS": pdfcpu.Dict(
-				map[string]pdfcpu.Object{
-					"S": pdfcpu.Name("I"),
-					"W": pdfcpu.Integer(1),
-				},
-			),
-		})
-
-		if v == rbg.Value {
-			d["AS"] = pdfcpu.Name(v) // not on MacPreview!
-		}
-
-		ir, err := rbg.pdf.XRefTable.IndRefForNewObject(d)
+		ir, d, err := rbg.prepareDict(r, v, parent, irDOff, irDYes, irNOff, irNYes)
 		if err != nil {
 			return nil, err
 		}
 
 		kids = append(kids, *ir)
-
 		p.Annots = append(p.Annots, d)
 		p.AnnotIndRefs = append(p.AnnotIndRefs, *ir)
 	}

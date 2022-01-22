@@ -643,6 +643,50 @@ func isRangeError(err error) bool {
 	return false
 }
 
+func parseIndRef(s, l, l1 string, line *string, i, i2 int, rangeErr bool) (Object, error) {
+
+	g, err := strconv.Atoi(s)
+	if err != nil {
+		// 2nd int(generation number) not available.
+		// Can't be an indirect reference.
+		log.Parse.Printf("parseIndRef: 3 objects, 2nd no int, value is no indirect ref but numeric int: %d\n", i)
+		*line = l1
+		return Integer(i), nil
+	}
+
+	l = l[i2:]
+	l, _ = trimLeftSpace(l, false)
+
+	if len(l) == 0 {
+		if rangeErr {
+			return nil, err
+		}
+		// only whitespace
+		*line = l1
+		return Integer(i), nil
+	}
+
+	if l[0] == 'R' {
+		*line = forwardParseBuf(l, 1)
+		if rangeErr {
+			return nil, nil
+		}
+		// We have all 3 components to create an indirect reference.
+		return *NewIndirectRef(i, g), nil
+	}
+
+	if rangeErr {
+		return nil, err
+	}
+
+	// 'R' not available.
+	// Can't be an indirect reference.
+	log.Parse.Printf("parseNumericOrIndRef: value is no indirect ref(no 'R') but numeric int: %d\n", i)
+	*line = l1
+
+	return Integer(i), nil
+}
+
 func parseNumericOrIndRef(line *string) (Object, error) {
 	if noBuf(line) {
 		return nil, errBufNotAvailable
@@ -653,18 +697,18 @@ func parseNumericOrIndRef(line *string) (Object, error) {
 	// if this object is an integer we need to check for an indirect reference eg. 1 0 R
 	// otherwise it has to be a float
 	// we have to check first for integer
-	str, l1, i1 := startParseNumericOrIndRef(l)
+	s, l1, i1 := startParseNumericOrIndRef(l)
 
 	// Try int
 	var rangeErr bool
-	i, err := strconv.Atoi(str)
+	i, err := strconv.Atoi(s)
 	if err != nil {
-
 		rangeErr = isRangeError(err)
+
 		if !rangeErr {
 
 			// Try float
-			f, err := strconv.ParseFloat(str, 64)
+			f, err := strconv.ParseFloat(s, 64)
 			if err != nil {
 				return nil, err
 			}
@@ -696,8 +740,6 @@ func parseNumericOrIndRef(line *string) (Object, error) {
 	// Must be indirect reference. (123 0 R)
 	// Missing is the 2nd int and "R".
 
-	iref1 := i
-
 	l = l[i1:]
 	l, _ = trimLeftSpace(l, false)
 	if len(l) == 0 {
@@ -722,54 +764,12 @@ func parseNumericOrIndRef(line *string) (Object, error) {
 		return Integer(i), nil
 	}
 
-	str = l
+	s = l
 	if i2 > 0 {
-		str = l[:i2]
+		s = l[:i2]
 	}
 
-	iref2, err := strconv.Atoi(str)
-	if err != nil {
-		// 2nd int(generation number) not available.
-		// Can't be an indirect reference.
-		log.Parse.Printf("parseNumericOrIndRef: 3 objects, 2nd no int, value is no indirect ref but numeric int: %d\n", i)
-		*line = l1
-		return Integer(i), nil
-	}
-
-	// We have the 2nd int(generation number).
-	// Look for "R"
-
-	l = l[i2:]
-	l, _ = trimLeftSpace(l, false)
-
-	if len(l) == 0 {
-		if rangeErr {
-			return nil, err
-		}
-		// only whitespace
-		*line = l1
-		return Integer(i), nil
-	}
-
-	if l[0] == 'R' {
-		*line = forwardParseBuf(l, 1)
-		if rangeErr {
-			return nil, nil
-		}
-		// We have all 3 components to create an indirect reference.
-		return *NewIndirectRef(iref1, iref2), nil
-	}
-
-	if rangeErr {
-		return nil, err
-	}
-
-	// 'R' not available.
-	// Can't be an indirect reference.
-	log.Parse.Printf("parseNumericOrIndRef: value is no indirect ref(no 'R') but numeric int: %d\n", i)
-	*line = l1
-
-	return Integer(i), nil
+	return parseIndRef(s, l, l1, line, i, i2, rangeErr)
 }
 
 func parseHexLiteralOrDict(l *string) (val Object, err error) {

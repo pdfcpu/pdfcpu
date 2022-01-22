@@ -476,8 +476,7 @@ func (cb *CheckBox) appearanceIndRefs(fonts pdfcpu.FontMap) (
 	return irDOff, irDYes, irNOff, irNYes, nil
 }
 
-func (cb *CheckBox) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) error {
-
+func (cb *CheckBox) handleMargin() (float64, float64, float64, float64, error) {
 	mTop, mRight, mBottom, mLeft := 0., 0., 0., 0.
 	if cb.Margin != nil {
 		m := cb.Margin
@@ -486,7 +485,7 @@ func (cb *CheckBox) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) err
 			mName := m.Name[1:]
 			m0 := cb.margin(mName)
 			if m0 == nil {
-				return errors.Errorf("pdfcpu: unknown named margin %s", mName)
+				return mTop, mRight, mBottom, mLeft, errors.Errorf("pdfcpu: unknown named margin %s", mName)
 			}
 			m.mergeIn(m0)
 		}
@@ -502,6 +501,15 @@ func (cb *CheckBox) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) err
 			mBottom = m.Bottom
 			mLeft = m.Left
 		}
+	}
+	return mTop, mRight, mBottom, mLeft, nil
+}
+
+func (cb *CheckBox) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) error {
+
+	mTop, mRight, mBottom, mLeft, err := cb.handleMargin()
+	if err != nil {
+		return err
 	}
 
 	cBox := cb.content.Box()
