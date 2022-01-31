@@ -128,7 +128,8 @@ func ParsePageFormat(v string) (*Dim, string, error) {
 	}
 
 	if d.Portrait() && land || d.Landscape() && port {
-		d.Width, d.Height = d.Height, d.Width
+		// flip the dimensions
+		return &Dim{d.Height, d.Width}, v, nil
 	}
 
 	return d, v, nil
