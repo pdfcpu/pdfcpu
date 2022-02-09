@@ -78,6 +78,7 @@ func AddBookmarksFile(inFile, outFile string, bms []pdf.Bookmark, conf *pdf.Conf
 		tmpFile = outFile
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 

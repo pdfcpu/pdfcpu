@@ -113,6 +113,7 @@ func AddPropertiesFile(inFile, outFile string, properties map[string]string, con
 		tmpFile = outFile
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -192,6 +193,7 @@ func RemovePropertiesFile(inFile, outFile string, properties []string, conf *pdf
 		tmpFile = outFile
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 

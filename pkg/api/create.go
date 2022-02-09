@@ -124,6 +124,7 @@ func CreateFromJSONFile(jsonFile, inFile, outFile string, conf *pdfcpu.Configura
 	f1 = nil
 	if fileExists(inFile) {
 		if f1, err = os.Open(inFile); err != nil {
+			f0.Close()
 			return err
 		}
 		rs = f1
@@ -137,6 +138,10 @@ func CreateFromJSONFile(jsonFile, inFile, outFile string, conf *pdfcpu.Configura
 		log.CLI.Printf("writing %s...\n", inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f0.Close()
+		if f1 != nil {
+			f1.Close()
+		}
 		return err
 	}
 

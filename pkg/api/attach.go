@@ -186,6 +186,7 @@ func AddAttachmentsFile(inFile, outFile string, files []string, coll bool, conf 
 		tmpFile = outFile
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -268,6 +269,7 @@ func RemoveAttachmentsFile(inFile, outFile string, files []string, conf *pdfcpu.
 		tmpFile = outFile
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 

@@ -113,6 +113,7 @@ func AddKeywordsFile(inFile, outFile string, files []string, conf *pdf.Configura
 		tmpFile = outFile
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -192,6 +193,7 @@ func RemoveKeywordsFile(inFile, outFile string, keywords []string, conf *pdf.Con
 		tmpFile = outFile
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 

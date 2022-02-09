@@ -92,6 +92,7 @@ func AddWatermarksMapFile(inFile, outFile string, m map[int]*pdfcpu.Watermark, c
 		log.CLI.Printf("writing %s...\n", inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -179,6 +180,7 @@ func AddWatermarksSliceMapFile(inFile, outFile string, m map[int][]*pdfcpu.Water
 		log.CLI.Printf("writing %s...\n", inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -274,6 +276,7 @@ func AddWatermarksFile(inFile, outFile string, selectedPages []string, wm *pdfcp
 		log.CLI.Printf("writing %s...\n", inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -365,6 +368,7 @@ func RemoveWatermarksFile(inFile, outFile string, selectedPages []string, conf *
 		log.CLI.Printf("writing %s...\n", inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 

@@ -150,12 +150,6 @@ func AddAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages []string, a
 
 // AddAnnotationsFile adds annotations for selected pages to a PDF context read from inFile and writes the result to outFile.
 func AddAnnotationsFile(inFile, outFile string, selectedPages []string, ar pdfcpu.AnnotationRenderer, conf *pdfcpu.Configuration, incr bool) (err error) {
-	var f1, f2 *os.File
-
-	if f1, err = os.Open(inFile); err != nil {
-		return err
-	}
-
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
@@ -172,7 +166,14 @@ func AddAnnotationsFile(inFile, outFile string, selectedPages []string, ar pdfcp
 		}
 	}
 
+	var f1, f2 *os.File
+
+	if f1, err = os.Open(inFile); err != nil {
+		return err
+	}
+
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -280,12 +281,6 @@ func AddAnnotationsMapAsIncrement(rws io.ReadWriteSeeker, m map[int][]pdfcpu.Ann
 
 // AddAnnotationsMapFile adds annotations in m to corresponding pages of inFile and writes the result to outFile.
 func AddAnnotationsMapFile(inFile, outFile string, m map[int][]pdfcpu.AnnotationRenderer, conf *pdfcpu.Configuration, incr bool) (err error) {
-	var f1, f2 *os.File
-
-	if f1, err = os.Open(inFile); err != nil {
-		return err
-	}
-
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
@@ -302,7 +297,14 @@ func AddAnnotationsMapFile(inFile, outFile string, m map[int][]pdfcpu.Annotation
 		}
 	}
 
+	var f1, f2 *os.File
+
+	if f1, err = os.Open(inFile); err != nil {
+		return err
+	}
+
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -422,12 +424,6 @@ func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, ids []s
 // RemoveAnnotationsFile removes annotations for selected pages by id and object number
 // from a PDF context read from inFile and writes the result to outFile.
 func RemoveAnnotationsFile(inFile, outFile string, selectedPages, ids []string, objNrs []int, conf *pdfcpu.Configuration, incr bool) (err error) {
-	var f1, f2 *os.File
-
-	if f1, err = os.Open(inFile); err != nil {
-		return err
-	}
-
 	//fmt.Printf("RemoveAnnotationsFile: ids:%v objNrs:%v\n", ids, objNrs)
 
 	tmpFile := inFile + ".tmp"
@@ -446,7 +442,14 @@ func RemoveAnnotationsFile(inFile, outFile string, selectedPages, ids []string, 
 		}
 	}
 
+	var f1, f2 *os.File
+
+	if f1, err = os.Open(inFile); err != nil {
+		return err
+	}
+
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 

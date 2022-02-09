@@ -153,6 +153,9 @@ func MergeAppendFile(inFiles []string, outFile string, conf *pdfcpu.Configuratio
 	}
 
 	if f2, err = os.Create(tmpFile); err != nil {
+		if f1 != nil {
+			f1.Close()
+		}
 		return err
 	}
 
@@ -164,6 +167,7 @@ func MergeAppendFile(inFiles []string, outFile string, conf *pdfcpu.Configuratio
 		log.CLI.Println(f)
 		f, err := os.Open(f)
 		if err != nil {
+			f2.Close()
 			return err
 		}
 		ff = append(ff, f)

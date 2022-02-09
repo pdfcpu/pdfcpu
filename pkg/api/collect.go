@@ -77,6 +77,7 @@ func CollectFile(inFile, outFile string, selectedPages []string, conf *pdfcpu.Co
 		log.CLI.Printf("writing %s...\n", inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 

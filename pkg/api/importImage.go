@@ -131,6 +131,9 @@ func ImportImagesFile(imgFiles []string, outFile string, imp *pdfcpu.Import, con
 	for i, fn := range imgFiles {
 		f, err := os.Open(fn)
 		if err != nil {
+			if f1 != nil {
+				f1.Close()
+			}
 			return err
 		}
 		rc[i] = f
@@ -138,6 +141,9 @@ func ImportImagesFile(imgFiles []string, outFile string, imp *pdfcpu.Import, con
 	}
 
 	if f2, err = os.Create(tmpFile); err != nil {
+		if f1 != nil {
+			f1.Close()
+		}
 		return err
 	}
 

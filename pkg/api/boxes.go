@@ -136,6 +136,7 @@ func AddBoxesFile(inFile, outFile string, selectedPages []string, pb *pdfcpu.Pag
 		log.CLI.Printf("writing %s...\n", inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -217,6 +218,7 @@ func RemoveBoxesFile(inFile, outFile string, selectedPages []string, pb *pdfcpu.
 		log.CLI.Printf("writing %s...\n", inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -298,6 +300,7 @@ func CropFile(inFile, outFile string, selectedPages []string, b *pdfcpu.Box, con
 		log.CLI.Printf("writing %s...\n", inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 

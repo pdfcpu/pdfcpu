@@ -119,6 +119,7 @@ func BookletFile(inFiles []string, outFile string, selectedPages []string, nup *
 	}
 
 	if f2, err = os.Create(outFile); err != nil {
+		f1.Close()
 		return err
 	}
 	log.CLI.Printf("writing %s...\n", outFile)
