@@ -2,6 +2,7 @@ package pdfcpu
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -16,58 +17,36 @@ type pageOrderResults struct {
 }
 
 var bookletTestCases = []pageOrderResults{
-	// classic (booklet) test cases
+	// basic booklet sidefold test cases
 	{
-		id:        "portrait long edge",
+		id:        "booklet portrait long edge",
 		nup:       4,
-		pageCount: 8,
+		pageCount: 16,
 		expectedPageOrder: []int{
-			8, 1, 5, 4,
-			2, 7, 3, 6,
+			16, 1, 3, 14,
+			2, 15, 13, 4,
+			12, 5, 7, 10,
+			6, 11, 9, 8,
 		},
 		papersize:   "A5", // portrait, long-edge binding
 		bookletType: "booklet",
 		binding:     "long",
 	},
 	{
-		id:        "landscape short edge",
+		id:        "booklet landscape short edge",
 		nup:       4,
 		pageCount: 8,
 		expectedPageOrder: []int{
-			8, 1, 5, 4,
-			6, 3, 7, 2, // this is 180degrees flipped from the portrait layout (because of differences in how duplexing works)
+			8, 1, 3, 6,
+			4, 5, 7, 2, // this is ordered differently from the portrait layout (because of differences in how duplexing works)
 		},
 		papersize:   "A5L", // landscape, short-edge binding
 		bookletType: "booklet",
 		binding:     "short",
 	},
-	// topfold test cases
+	// basic booklet topfold test cases
 	{
-		id:        "topfold portrait",
-		nup:       4,
-		pageCount: 8,
-		expectedPageOrder: []int{
-			8, 3, 1, 6,
-			4, 7, 5, 2,
-		},
-		papersize:   "A5", // portrait, short-edge binding
-		bookletType: "booklet",
-		binding:     "short",
-	},
-	{
-		id:        "topfold landscape",
-		nup:       4,
-		pageCount: 8,
-		expectedPageOrder: []int{
-			8, 3, 1, 6,
-			2, 5, 7, 4,
-		},
-		papersize:   "A5L", // landscape, long-edge binding
-		bookletType: "booklet",
-		binding:     "long",
-	},
-	{
-		id:        "topfold portrait multisheet",
+		id:        "booklet topfold portrait",
 		nup:       4,
 		pageCount: 16,
 		expectedPageOrder: []int{
@@ -80,9 +59,46 @@ var bookletTestCases = []pageOrderResults{
 		bookletType: "booklet",
 		binding:     "short",
 	},
+	{
+		id:        "booklet topfold landscape",
+		nup:       4,
+		pageCount: 8,
+		expectedPageOrder: []int{
+			8, 3, 1, 6,
+			2, 5, 7, 4, // this is 180degrees flipped from the portrait layout (because of differences in how duplexing works)
+		},
+		papersize:   "A5L", // landscape, long-edge binding
+		bookletType: "booklet",
+		binding:     "long",
+	},
+	// advanced booklet sidefold test cases
+	{
+		id:        "advanced portrait long edge",
+		nup:       4,
+		pageCount: 8,
+		expectedPageOrder: []int{
+			8, 1, 5, 4,
+			2, 7, 3, 6,
+		},
+		papersize:   "A5", // portrait, long-edge binding
+		bookletType: "bookletadvanced",
+		binding:     "long",
+	},
+	{
+		id:        "advanced landscape short edge",
+		nup:       4,
+		pageCount: 8,
+		expectedPageOrder: []int{
+			8, 1, 5, 4,
+			6, 3, 7, 2, // this is ordered differently from the portrait layout (because of differences in how duplexing works)
+		},
+		papersize:   "A5L", // landscape, short-edge binding
+		bookletType: "bookletadvanced",
+		binding:     "short",
+	},
 	// 6up test
 	{
-		id:        "6up",
+		id:        "advanced 6up",
 		nup:       6,
 		pageCount: 12,
 		expectedPageOrder: []int{
@@ -90,11 +106,11 @@ var bookletTestCases = []pageOrderResults{
 			2, 11, 4, 9, 6, 7,
 		},
 		papersize:   "A6", // portrait, long-edge binding
-		bookletType: "booklet",
+		bookletType: "bookletadvanced",
 		binding:     "long",
 	},
 	{
-		id:        "6up multisheet",
+		id:        "advanced 6up multisheet",
 		nup:       6,
 		pageCount: 24,
 		expectedPageOrder: []int{
@@ -104,7 +120,7 @@ var bookletTestCases = []pageOrderResults{
 			8, 17, 10, 15, 12, 13,
 		},
 		papersize:   "A6", // portrait, long-edge binding
-		bookletType: "booklet",
+		bookletType: "bookletadvanced",
 		binding:     "long",
 	},
 	// perfect bound
@@ -181,9 +197,17 @@ func TestBookletPageOrder(t *testing.T) {
 			}
 			for i, expected := range test.expectedPageOrder {
 				if pageOrder[i] != expected {
-					t.Fatal("incorrect page order\nexpected:", test.expectedPageOrder, "\ngot:", pageOrder)
+					t.Fatal("incorrect page order\nexpected:", arrayToString(test.expectedPageOrder), "\n     got:", arrayToString(pageOrder))
 				}
 			}
 		})
 	}
+}
+
+func arrayToString(arr []int) string {
+	out := make([]string, len(arr))
+	for i, n := range arr {
+		out[i] = fmt.Sprintf("%02d", n)
+	}
+	return fmt.Sprintf("[%s]", strings.Join(out, " "))
 }

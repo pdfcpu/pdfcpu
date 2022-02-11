@@ -143,6 +143,10 @@ func (nup NUp) isTopFoldBinding() bool {
 	return (nup.PageDim.Portrait() && nup.BookletBinding == shortEdge) || (nup.PageDim.Landscape() && nup.BookletBinding == longEdge)
 }
 
+func (nup NUp) isBooklet() bool {
+	return nup.BookletType == Booklet || nup.BookletType == BookletAdvanced
+}
+
 type orientation int
 
 func (o orientation) String() string {
@@ -313,6 +317,8 @@ func parseBookletType(s string, nup *NUp) error {
 	switch strings.ToLower(s) {
 	case "booklet":
 		nup.BookletType = Booklet
+	case "bookletadvanced":
+		nup.BookletType = BookletAdvanced
 	case "perfectbound":
 		nup.BookletType = BookletPerfectBound
 	case "cover":

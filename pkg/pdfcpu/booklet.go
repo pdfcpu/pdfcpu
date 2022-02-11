@@ -30,6 +30,7 @@ type bookletType int
 // These are the types of booklet layouts
 const (
 	Booklet bookletType = iota
+	BookletAdvanced
 	BookletPerfectBound
 	BookletCover
 	BookletCoverFullSpan
@@ -40,11 +41,12 @@ func (b bookletType) String() string {
 
 	case Booklet:
 		return "booklet"
+	case BookletAdvanced:
+		return "booklet advanced"
 	case BookletPerfectBound:
 		return "booklet perfect bound"
 	case BookletCover:
 		return "booklet cover"
-
 	case BookletCoverFullSpan:
 		return "booklet cover full span"
 
@@ -74,6 +76,7 @@ var (
 	errInvalidBookletGridID          = errors.New("pdfcpu booklet: n must be one of 2, 4, 6")
 	errInvalidBookletCoverGridID     = errors.New("pdfcpu booklet cover: n must be one of 2, 4")
 	errInvalidBookletCoverFullGridID = errors.New("pdfcpu booklet cover full-span: n must 2")
+	errInvalidBookletAdvanced        = errors.New("pdfcpu booklet advanced cannot have binding along the top (portrait short-edge, landscape long-edge). use plain booklet instead.")
 )
 
 // DefaultBookletConfig returns the default configuration for a booklet
@@ -100,25 +103,32 @@ func PDFBookletConfig(val int, desc string) (*NUp, error) {
 	if err := ParseNUpValue(val, nup); err != nil {
 		return nil, err
 	}
-	if nup.BookletType == Booklet && !(val == 2 || val == 4 || val == 6) {
+	if nup.isBooklet() && !(val == 2 || val == 4 || val == 6) {
 		return nup, errInvalidBookletGridID
 	}
-	if nup.BookletType == Booklet && val == 6 && nup.isTopFoldBinding() {
+	// 6up special cases
+	if nup.isBooklet() && val == 6 && nup.isTopFoldBinding() {
 		// you can't top fold a 6up with 3 rows
 		return nup, errInvalidBookletGridID
 	}
-	if nup.BookletType == Booklet && val == 6 && nup.PageDim.Landscape() {
+	if nup.isBooklet() && val == 6 && nup.PageDim.Landscape() {
 		// TODO: support this
 		return nup, errInvalidBookletGridID
 	}
+	// covers
 	if nup.BookletType == BookletCover && !(val == 2 || val == 4) {
 		return nup, errInvalidBookletCoverGridID
 	}
 	if nup.BookletType == BookletCoverFullSpan && val != 2 {
 		return nup, errInvalidBookletCoverFullGridID
 	}
+	// perfect bound
 	if nup.BookletType == BookletPerfectBound && !(val == 2 || val == 4 || val == 6) {
 		return nup, errInvalidBookletGridID
+	}
+	// bookletadvanced
+	if nup.BookletType == BookletAdvanced && val == 4 && nup.isTopFoldBinding() {
+		return nup, errInvalidBookletAdvanced
 	}
 	return nup, nil
 }
@@ -231,58 +241,83 @@ func nup2OutputPageNr(inputPageNr, inputPageCount int, pageNumbers []int) (int, 
 	return pageNr, rotate
 }
 
-func nup4OutputPageNr(inputPageNr int, inputPageCount int, pageNumbers []int, nup *NUp) (int, bool) {
-	bookletPageNumber := inputPageNr / 4
-	var p int
-	if bookletPageNumber%2 == 0 {
-		// front side
-		switch inputPageNr % 4 {
+func get4upPos(pos int, isLandscape bool) (out int) {
+	if isLandscape {
+		switch pos % 4 {
+		// landscape short-edge binding page ordering is rotated 90 degrees anti-clockwise from the portrait ordering on the back sides of the pages to make duplexing work
+		// from portrait to lanscape map {0 => 3, 1 => 2, 2 => 1, 3 => 0}
 		case 0:
-			p = inputPageCount - 1 - bookletPageNumber
+			return 3
 		case 1:
-			p = bookletPageNumber
+			return 2
 		case 2:
-			p = inputPageCount/2 + bookletPageNumber
+			return 1
 		case 3:
-			p = inputPageCount/2 - 1 - bookletPageNumber
-		}
-	} else if nup.PageDim.Portrait() {
-		// back side (portrait)
-		switch inputPageNr % 4 {
-		case 0:
-			p = bookletPageNumber
-		case 1:
-			p = inputPageCount - 1 - bookletPageNumber
-		case 2:
-			p = inputPageCount/2 - 1 - bookletPageNumber
-		case 3:
-			p = inputPageCount/2 + bookletPageNumber
-		}
-	} else {
-		// back side (landscape)
-		// landscape short-edge binding page ordering is rotated 180 degrees from the portrait ordering on the back sides of the pages to make duplexing work
-		switch inputPageNr % 4 {
-		case 0:
-			p = inputPageCount/2 + bookletPageNumber
-		case 1:
-			p = inputPageCount/2 - 1 - bookletPageNumber
-		case 2:
-			p = inputPageCount - 1 - bookletPageNumber
-		case 3:
-			p = bookletPageNumber
+			return 0
 		}
 	}
-	pageNr := getPageNumber(pageNumbers, p)
+	return pos % 4
+}
 
-	// Rotate bottom row of each output page by 180 degrees.
+func nup4OutputPageNr(inputPageNr int, pageCount int, pageNumbers []int, nup *NUp) (int, bool) {
+	switch nup.BookletType {
+	case Booklet:
+		// simple booklets are collated by collecting the top of the sheet, then the bottom, then the top of the next sheet, and so on.
+		// this is conceptually easier for collation without specialized tools.
+		if nup.isTopFoldBinding() {
+			return nup4BasicTopFoldOutputPageNr(inputPageNr, pageCount, pageNumbers, nup)
+		} else {
+			return nup4BasicSideFoldOutputPageNr(inputPageNr, pageCount, pageNumbers, nup)
+		}
+	case BookletAdvanced:
+		// advanced booklets have a different collation pattern: collect the top of each sheet and then the bottom of each sheet.
+		// this allows printers to fold the sheets twice and then cut along one of the folds.
+		return nup4AdvancedSideFoldOutputPageNr(inputPageNr, pageCount, pageNumbers, nup)
+	}
+	return 0, false
+}
+
+func nup4BasicSideFoldOutputPageNr(positionNumber int, inputPageCount int, pageNumbers []int, nup *NUp) (int, bool) {
+	var p int
+	bookletSheetSideNumber := positionNumber / 4
+	bookletPageNumber := positionNumber / 8
+	if bookletSheetSideNumber%2 == 0 {
+		// front side
+		n := bookletPageNumber * 4
+		switch positionNumber % 4 {
+		case 0:
+			p = inputPageCount - n
+		case 1:
+			p = 1 + n
+		case 2:
+			p = 3 + n
+		case 3:
+			p = inputPageCount - 2 - n
+		}
+	} else {
+		// back side
+		n := bookletPageNumber * 4
+		switch get4upPos(positionNumber, nup.PageDim.Landscape()) {
+		case 0:
+			p = 2 + n
+		case 1:
+			p = inputPageCount - 1 - n
+		case 2:
+			p = inputPageCount - 3 - n
+		case 3:
+			p = 4 + n
+		}
+	}
+	pageNr := getPageNumber(pageNumbers, p-1) // p is one-indexed and we want zero-indexed
+	// Rotate bottom row of each output sheet by 180 degrees.
 	var rotate bool
-	if inputPageNr%4 >= 2 {
+	if positionNumber%4 >= 2 {
 		rotate = true
 	}
 	return pageNr, rotate
 }
 
-func nup4TopFoldOutputPageNr(positionNumber int, inputPageCount int, pageNumbers []int, nup *NUp) (int, bool) {
+func nup4BasicTopFoldOutputPageNr(positionNumber int, inputPageCount int, pageNumbers []int, nup *NUp) (int, bool) {
 	var p int
 	bookletSheetSideNumber := positionNumber / 4
 	bookletSheetNumber := positionNumber / 8
@@ -298,37 +333,62 @@ func nup4TopFoldOutputPageNr(positionNumber int, inputPageCount int, pageNumbers
 		case 3:
 			p = inputPageCount - 2 - 4*bookletSheetNumber
 		}
-	} else if nup.PageDim.Portrait() {
-		// back side (portrait)
-		switch positionNumber % 4 {
-		case 0:
-			p = 4 + 4*bookletSheetNumber
-		case 1:
-			p = inputPageCount - 1 - 4*bookletSheetNumber
-		case 2:
-			p = inputPageCount - 3 - 4*bookletSheetNumber
-		case 3:
-			p = 2 + 4*bookletSheetNumber
-		}
 	} else {
-		// back side (landscape)
-		// landscape long-edge binding page ordering is rotated 180 degrees from the portrait ordering on the back sides of the pages to make duplexing work
-		switch positionNumber % 4 {
+		// back side
+		switch get4upPos(positionNumber, nup.PageDim.Landscape()) {
 		case 0:
-			p = 2 + 4*bookletSheetNumber
-		case 1:
-			p = inputPageCount - 3 - 4*bookletSheetNumber
-		case 2:
-			p = inputPageCount - 1 - 4*bookletSheetNumber
-		case 3:
 			p = 4 + 4*bookletSheetNumber
+		case 1:
+			p = inputPageCount - 1 - 4*bookletSheetNumber
+		case 2:
+			p = inputPageCount - 3 - 4*bookletSheetNumber
+		case 3:
+			p = 2 + 4*bookletSheetNumber
 		}
 	}
-
 	pageNr := getPageNumber(pageNumbers, p-1) // p is one-indexed and we want zero-indexed
 	// Rotate right side of output page by 180 degrees.
 	var rotate bool
 	if positionNumber%2 == 1 {
+		rotate = true
+	}
+	return pageNr, rotate
+}
+
+func nup4AdvancedSideFoldOutputPageNr(inputPageNr int, inputPageCount int, pageNumbers []int, nup *NUp) (int, bool) {
+	// (output page, input page) = [(1,n), (2,1), (3, n/2+1), (4, n/2-0), (5, 2), (6, n-1), (7, n/2-1), (8, n/2+2) ...]
+	bookletPageNumber := inputPageNr / 4
+	var p int
+	if bookletPageNumber%2 == 0 {
+		// front side
+		switch inputPageNr % 4 {
+		case 0:
+			p = inputPageCount - 1 - bookletPageNumber
+		case 1:
+			p = bookletPageNumber
+		case 2:
+			p = inputPageCount/2 + bookletPageNumber
+		case 3:
+			p = inputPageCount/2 - 1 - bookletPageNumber
+		}
+	} else {
+		// back side (portrait)
+		switch get4upPos(inputPageNr, nup.PageDim.Landscape()) {
+		case 0:
+			p = bookletPageNumber
+		case 1:
+			p = inputPageCount - 1 - bookletPageNumber
+		case 2:
+			p = inputPageCount/2 - 1 - bookletPageNumber
+		case 3:
+			p = inputPageCount/2 + bookletPageNumber
+		}
+	}
+	pageNr := getPageNumber(pageNumbers, p)
+
+	// Rotate bottom row of each output page by 180 degrees.
+	var rotate bool
+	if inputPageNr%4 >= 2 {
 		rotate = true
 	}
 	return pageNr, rotate
@@ -417,7 +477,7 @@ func sortSelectedPagesForBooklet(pages IntSet, nup *NUp) []bookletPage {
 	bookletPages := make([]bookletPage, pageCount)
 
 	switch nup.BookletType {
-	case Booklet:
+	case Booklet, BookletAdvanced:
 		switch nup.N() {
 		case 2:
 			// (output page, input page) = [(1,n), (2,1), (3, n-1), (4, 2), (5, n-2), (6, 3), ...]
@@ -428,21 +488,11 @@ func sortSelectedPagesForBooklet(pages IntSet, nup *NUp) []bookletPage {
 			}
 
 		case 4:
-			if nup.isTopFoldBinding() {
-				for i := 0; i < pageCount; i++ {
-					pageNr, rotate := nup4TopFoldOutputPageNr(i, pageCount, pageNumbers, nup)
-					bookletPages[i].number = pageNr
-					bookletPages[i].rotate = rotate
-				}
-			} else {
-				// (output page, input page) = [(1,n), (2,1), (3, n/2+1), (4, n/2-0), (5, 2), (6, n-1), (7, n/2-1), (8, n/2+2) ...]
-				for i := 0; i < pageCount; i++ {
-					pageNr, rotate := nup4OutputPageNr(i, pageCount, pageNumbers, nup)
-					bookletPages[i].number = pageNr
-					bookletPages[i].rotate = rotate
-				}
+			for i := 0; i < pageCount; i++ {
+				pageNr, rotate := nup4OutputPageNr(i, pageCount, pageNumbers, nup)
+				bookletPages[i].number = pageNr
+				bookletPages[i].rotate = rotate
 			}
-
 		case 6:
 			for i := 0; i < pageCount; i++ {
 				pageNr, rotate := nup6OutputPageNr(i, pageCount, pageNumbers, nup)
@@ -517,16 +567,10 @@ func (ctx *Context) bookletPages(
 		if len(selectedPages) > 2 {
 			return fmt.Errorf("booklet covers must be either one or two pages")
 		}
-		if !(nup.N() == 4 || nup.N() == 2) {
-			return fmt.Errorf("booklet covers must be 2-up or 4-up")
-		}
 	}
 	if nup.BookletType == BookletCoverFullSpan {
 		if len(selectedPages) != 1 {
 			return fmt.Errorf("booklet cover full span must have just one page")
-		}
-		if nup.N() != 2 {
-			return fmt.Errorf("booklet cover full-span must be 2-up")
 		}
 	}
 
