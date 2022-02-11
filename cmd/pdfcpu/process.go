@@ -35,6 +35,8 @@ import (
 
 var errInvalidBookletID = errors.New("pdfcpu: booklet: n: one of 2, 4")
 
+const maxByte = 1<<8 - 1
+
 func hasPDFExtension(filename string) bool {
 	return strings.HasSuffix(strings.ToLower(filename), ".pdf")
 }
@@ -55,6 +57,60 @@ func ensureJSONExtension(filename string) {
 		fmt.Fprintf(os.Stderr, "%s needs extension \".json\".\n", filename)
 		os.Exit(1)
 	}
+}
+
+// Taken from https://stackoverflow.com/questions/18355338/alphanumeric-sorting-in-go
+
+func isDigit(d byte) bool {
+	return '0' <= d && d <= '9'
+}
+
+func SequenceKey(key string) string {
+	sKey := make([]byte, 0, len(key)+8)
+	j := -1
+	for i := 0; i < len(key); i++ {
+		b := key[i]
+		if !isDigit(b) {
+			sKey = append(sKey, b)
+			j = -1
+			continue
+		}
+		if j == -1 {
+			sKey = append(sKey, 0x00)
+			j = len(sKey) - 1
+		}
+		if sKey[j] == 1 && sKey[j+1] == '0' {
+			sKey[j+1] = b
+			continue
+		}
+		if sKey[j]+1 > maxByte {
+			panic("SequenceKey: invalid key")
+		}
+		sKey = append(sKey, b)
+		sKey[j]++
+	}
+	return string(sKey)
+}
+
+type FileName struct {
+	Sequence    string
+	SequenceKey string `datastore:"-"`
+}
+
+type Files []*FileName
+
+type BySequenceKey struct{ Files }
+
+func (s Files) Len() int {
+	return len(s)
+}
+
+func (s Files) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+func (s BySequenceKey) Less(i, j int) bool {
+	return s.Files[i].SequenceKey < s.Files[j].SequenceKey
 }
 
 func printHelp(conf *pdfcpu.Configuration) {
@@ -238,6 +294,7 @@ func processMergeCommand(conf *pdfcpu.Configuration) {
 	if mode == "" {
 		mode = "create"
 	}
+	var filesSequence = Files{}
 	mode = extractModeCompletion(mode, []string{"create", "append"})
 	if mode == "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageMerge)
@@ -267,6 +324,16 @@ func processMergeCommand(conf *pdfcpu.Configuration) {
 				fmt.Fprintf(os.Stderr, "%s", err)
 				os.Exit(1)
 			}
+			if sorted {
+				for _, m := range matches {
+					filesSequence = append(filesSequence, &FileName{
+						Sequence: m,
+					})
+				}
+				for _, fileName := range filesSequence {
+					fileName.SequenceKey = SequenceKey(fileName.Sequence)
+				}
+			}
 			filesIn = append(filesIn, matches...)
 			continue
 		}
@@ -277,7 +344,13 @@ func processMergeCommand(conf *pdfcpu.Configuration) {
 	}
 
 	if sorted {
-		sort.Strings(filesIn)
+		arg := filesIn[len(filesIn)-1]
+		filesIn = []string{}
+		sort.Sort(BySequenceKey{filesSequence})
+		for _, f := range filesSequence {
+			filesIn = append(filesIn, f.Sequence)
+		}
+		filesIn = append(filesIn, arg)
 	}
 
 	var cmd *cli.Command
