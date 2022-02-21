@@ -73,7 +73,7 @@ func (b bookletBinding) String() string {
 }
 
 var (
-	errInvalidBookletGridID          = errors.New("pdfcpu booklet: n must be one of 2, 4, 6")
+	errInvalidBookletGridID          = errors.New("pdfcpu booklet: n must be one of 2, 4, 6, 8")
 	errInvalidBookletCoverGridID     = errors.New("pdfcpu booklet cover: n must be one of 2, 4")
 	errInvalidBookletCoverFullGridID = errors.New("pdfcpu booklet cover full-span: n must 2")
 	errInvalidBookletAdvanced        = errors.New("pdfcpu booklet advanced cannot have binding along the top (portrait short-edge, landscape long-edge). use plain booklet instead.")
@@ -103,17 +103,14 @@ func PDFBookletConfig(val int, desc string) (*NUp, error) {
 	if err := ParseNUpValue(val, nup); err != nil {
 		return nil, err
 	}
-	if nup.isBooklet() && !(val == 2 || val == 4 || val == 6) {
+	if !(val == 2 || val == 4 || val == 6 || val == 8) {
 		return nup, errInvalidBookletGridID
 	}
-	// 6up special cases
-	if nup.isBooklet() && val == 6 && nup.isTopFoldBinding() {
+	// 6up and 8up special cases
+	if nup.isBooklet() && val > 4 && nup.isTopFoldBinding() {
 		// you can't top fold a 6up with 3 rows
-		return nup, errInvalidBookletGridID
-	}
-	if nup.isBooklet() && val == 6 && nup.PageDim.Landscape() {
-		// TODO: support this
-		return nup, errInvalidBookletGridID
+		// TODO: support this for 8up
+		return nup, fmt.Errorf("pdfcpu booklet: n>4 must have binding on side (portrait long-edge or landscape short-edge)")
 	}
 	// covers
 	if nup.BookletType == BookletCover && !(val == 2 || val == 4) {
@@ -121,10 +118,6 @@ func PDFBookletConfig(val int, desc string) (*NUp, error) {
 	}
 	if nup.BookletType == BookletCoverFullSpan && val != 2 {
 		return nup, errInvalidBookletCoverFullGridID
-	}
-	// perfect bound
-	if nup.BookletType == BookletPerfectBound && !(val == 2 || val == 4 || val == 6) {
-		return nup, errInvalidBookletGridID
 	}
 	// bookletadvanced
 	if nup.BookletType == BookletAdvanced && val == 4 && nup.isTopFoldBinding() {
@@ -394,27 +387,28 @@ func nup4AdvancedSideFoldOutputPageNr(inputPageNr int, inputPageCount int, pageN
 	return pageNr, rotate
 }
 
-func nup6OutputPageNr(positionNumber int, inputPageCount int, pageNumbers []int, nup *NUp) (int, bool) {
+func nupBookletOutputPageNr(positionNumber int, inputPageCount int, pageNumbers []int, nup *NUp) (int, bool) {
 	var p int
-	bookletSheetSideNumber := positionNumber / 6
-	bookletSheetNumber := positionNumber / 12
+	N := nup.N()
+	bookletSheetSideNumber := positionNumber / N
+	bookletSheetNumber := positionNumber / (2 * N)
 	if bookletSheetSideNumber%2 == 0 {
 		// front side
 		if positionNumber%2 == 0 {
 			// left side - count down from end
-			p = inputPageCount - 6*bookletSheetNumber - positionNumber%6
+			p = inputPageCount - N*bookletSheetNumber - positionNumber%N
 		} else {
 			// right side - count up from start
-			p = 6*bookletSheetNumber + positionNumber%6
+			p = N*bookletSheetNumber + positionNumber%N
 		}
 	} else {
 		// back side
 		if positionNumber%2 == 0 {
 			// left side - count up from start
-			p = 2 + 6*bookletSheetNumber + positionNumber%6
+			p = 2 + N*bookletSheetNumber + positionNumber%N
 		} else {
 			// right side - count down from end
-			p = inputPageCount - 6*bookletSheetNumber - positionNumber%6
+			p = inputPageCount - N*bookletSheetNumber - positionNumber%N
 		}
 	}
 	pageNr := getPageNumber(pageNumbers, p-1) // p is one-indexed and we want zero-indexed
@@ -437,8 +431,7 @@ func nupPerfectBound(positionNumber int, inputPageCount int, pageNumbers []int, 
 	} else {
 		// back side
 		p = bookletSheetNumber*twoN + 2*((positionNumber-N)%twoN) + 2
-		if N == 4 || N == 6 {
-			// TODO: 8up
+		if N == 4 || N == 6 || N == 8 {
 			if N == 4 && nup.PageDim.Landscape() { // landscape pages on portrait sheets
 				// flip top and bottom rows to account for landscape rotation and the page handling flip (short edge flip, no duplex)
 				if positionNumber%N < 2 { // top side
@@ -493,9 +486,9 @@ func sortSelectedPagesForBooklet(pages IntSet, nup *NUp) []bookletPage {
 				bookletPages[i].number = pageNr
 				bookletPages[i].rotate = rotate
 			}
-		case 6:
+		case 6, 8:
 			for i := 0; i < pageCount; i++ {
-				pageNr, rotate := nup6OutputPageNr(i, pageCount, pageNumbers, nup)
+				pageNr, rotate := nupBookletOutputPageNr(i, pageCount, pageNumbers, nup)
 				bookletPages[i].number = pageNr
 				bookletPages[i].rotate = rotate
 			}
@@ -607,8 +600,8 @@ func (ctx *Context) bookletPages(
 // BookletFromPDF creates a booklet version of the PDF represented by xRefTable.
 func (ctx *Context) BookletFromPDF(selectedPages IntSet, nup *NUp) error {
 	n := int(nup.Grid.Width * nup.Grid.Height)
-	if !(n == 2 || n == 4 || n == 6) {
-		return fmt.Errorf("pdfcpu: booklet must have n={2,4,6} pages per sheet, got %d", n)
+	if !(n == 2 || n == 4 || n == 6 || n == 8) {
+		return fmt.Errorf("pdfcpu: booklet must have n={2,4,6,8} pages per sheet, got %d", n)
 	}
 
 	var mb *Rectangle

@@ -98,7 +98,7 @@ var bookletTestCases = []pageOrderResults{
 	},
 	// 6up test
 	{
-		id:        "advanced 6up",
+		id:        "6up",
 		nup:       6,
 		pageCount: 12,
 		expectedPageOrder: []int{
@@ -106,11 +106,11 @@ var bookletTestCases = []pageOrderResults{
 			2, 11, 4, 9, 6, 7,
 		},
 		papersize:   "A6", // portrait, long-edge binding
-		bookletType: "bookletadvanced",
+		bookletType: "booklet",
 		binding:     "long",
 	},
 	{
-		id:        "advanced 6up multisheet",
+		id:        "6up multisheet",
 		nup:       6,
 		pageCount: 24,
 		expectedPageOrder: []int{
@@ -120,7 +120,22 @@ var bookletTestCases = []pageOrderResults{
 			8, 17, 10, 15, 12, 13,
 		},
 		papersize:   "A6", // portrait, long-edge binding
-		bookletType: "bookletadvanced",
+		bookletType: "booklet",
+		binding:     "long",
+	},
+	// 8up test
+	{
+		id:        "8up",
+		nup:       8,
+		pageCount: 32,
+		expectedPageOrder: []int{
+			32, 1, 30, 3, 28, 5, 26, 7,
+			2, 31, 4, 29, 6, 27, 8, 25,
+			24, 9, 22, 11, 20, 13, 18, 15,
+			10, 23, 12, 21, 14, 19, 16, 17,
+		},
+		papersize:   "A6", // portrait, long-edge binding
+		bookletType: "booklet",
 		binding:     "long",
 	},
 	// perfect bound
@@ -167,12 +182,12 @@ var bookletTestCases = []pageOrderResults{
 		binding:     "short",
 	},
 	{
-		id:        "perfect bound 6up",
-		nup:       6,
-		pageCount: 12,
+		id:        "perfect bound 8up",
+		nup:       8,
+		pageCount: 16,
 		expectedPageOrder: []int{
-			1, 3, 5, 7, 9, 11,
-			4, 2, 8, 6, 12, 10,
+			1, 3, 5, 7, 9, 11, 13, 15,
+			4, 2, 8, 6, 12, 10, 16, 14,
 		},
 		papersize:   "A6", // portrait, long-edge binding
 		bookletType: "perfectbound",
