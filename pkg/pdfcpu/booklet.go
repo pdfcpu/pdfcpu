@@ -426,34 +426,40 @@ func nup8OutputPageNr(portraitPositionNumber int, inputPageCount int, pageNumber
 	var landscapePositionNumber int
 	switch bookletSheetSideNumber % 2 {
 	case 0: // front side
-		// rotate the block of four pages 90deg clockwise to go from portrait to landscape
+		// rotate the block of four pages 90deg clockwise to go from portrait to landscape.             sequence=[1,3,0,2]
+		// then because we are rotating the left side by 180deg - so need to change to those positions. sequence=[0,3,1,2]
 		switch portraitPositionNumber % 4 {
 		case 0:
-			landscapePositionNumber = 1
+			landscapePositionNumber = 0
 		case 1:
 			landscapePositionNumber = 3
 		case 2:
-			landscapePositionNumber = 0
+			landscapePositionNumber = 1
 		case 3:
 			landscapePositionNumber = 2
 		}
 	case 1: // back side
-		// rotate the block of four pages 90deg anti-clockwise to go from portrait to landscape
+		// rotate the block of four pages 90deg anti-clockwise to go from portrait to landscape.           sequence=[2,0,3,1]
+		// then because we are rotating the *right* side by 180deg - so need to change to those positions. sequence=[2,1,3,0]
 		// this is different from the front side because of the non-duplex sheet handling flip along the short edge
+
 		switch portraitPositionNumber % 4 {
 		case 0:
 			landscapePositionNumber = 2
 		case 1:
-			landscapePositionNumber = 0
+			landscapePositionNumber = 1
 		case 2:
 			landscapePositionNumber = 3
 		case 3:
-			landscapePositionNumber = 1
+			landscapePositionNumber = 0
 		}
 
 	}
 	positionNumber := landscapePositionNumber + portraitPositionNumber/4*4
-	return nupLRTBOutputPageNr(positionNumber, inputPageCount, pageNumbers, nup)
+	pageNumber, _ := nupLRTBOutputPageNr(positionNumber, inputPageCount, pageNumbers, nup)
+	// rotate left side so that top edge of pages faces the center cut
+	rotate := portraitPositionNumber%2 == 0
+	return pageNumber, rotate
 }
 
 func nupPerfectBound(positionNumber int, inputPageCount int, pageNumbers []int, nup *NUp) (int, bool) {
