@@ -129,10 +129,10 @@ var bookletTestCases = []pageOrderResults{
 		nup:       8,
 		pageCount: 32,
 		expectedPageOrder: []int{
-			32, 3, 1, 30, 28, 7, 5, 26,
-			4, 31, 29, 2, 8, 27, 25, 6,
-			24, 11, 9, 22, 20, 15, 13, 18,
-			12, 23, 21, 10, 16, 19, 17, 14,
+			1, 30, 32, 3, 5, 26, 28, 7,
+			29, 2, 4, 31, 25, 6, 8, 27,
+			9, 22, 24, 11, 13, 18, 20, 15,
+			21, 10, 12, 23, 17, 14, 16, 19,
 		},
 		papersize:   "A6", // portrait, long-edge binding
 		bookletType: "booklet",

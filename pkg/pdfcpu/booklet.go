@@ -427,38 +427,38 @@ func nup8OutputPageNr(portraitPositionNumber int, inputPageCount int, pageNumber
 	switch bookletSheetSideNumber % 2 {
 	case 0: // front side
 		// rotate the block of four pages 90deg clockwise to go from portrait to landscape.             sequence=[1,3,0,2]
-		// then because we are rotating the left side by 180deg - so need to change to those positions. sequence=[0,3,1,2]
+		// then because we are rotating the right side by 180deg - so need to change to those positions. sequence=[1,2,0,3]
 		switch portraitPositionNumber % 4 {
 		case 0:
-			landscapePositionNumber = 0
-		case 1:
-			landscapePositionNumber = 3
-		case 2:
 			landscapePositionNumber = 1
-		case 3:
+		case 1:
 			landscapePositionNumber = 2
+		case 2:
+			landscapePositionNumber = 0
+		case 3:
+			landscapePositionNumber = 3
 		}
 	case 1: // back side
 		// rotate the block of four pages 90deg anti-clockwise to go from portrait to landscape.           sequence=[2,0,3,1]
-		// then because we are rotating the *right* side by 180deg - so need to change to those positions. sequence=[2,1,3,0]
+		// then because we are rotating the *left* side by 180deg - so need to change to those positions. sequence=[3,0,2,1]
 		// this is different from the front side because of the non-duplex sheet handling flip along the short edge
 
 		switch portraitPositionNumber % 4 {
 		case 0:
-			landscapePositionNumber = 2
-		case 1:
-			landscapePositionNumber = 1
-		case 2:
 			landscapePositionNumber = 3
-		case 3:
+		case 1:
 			landscapePositionNumber = 0
+		case 2:
+			landscapePositionNumber = 2
+		case 3:
+			landscapePositionNumber = 1
 		}
 
 	}
 	positionNumber := landscapePositionNumber + portraitPositionNumber/4*4
 	pageNumber, _ := nupLRTBOutputPageNr(positionNumber, inputPageCount, pageNumbers, nup)
-	// rotate left side so that top edge of pages faces the center cut
-	rotate := portraitPositionNumber%2 == 0
+	// rotate right side so that bottom edge of pages is on the center cut
+	rotate := portraitPositionNumber%2 == 1
 	return pageNumber, rotate
 }
 
