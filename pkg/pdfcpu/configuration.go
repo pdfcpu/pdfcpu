@@ -178,6 +178,9 @@ type Configuration struct {
 
 	// Buffersize for locating PDF header <= 100
 	HeaderBufSize int
+
+	// Optimize duplicate content streams across pages.
+	OptimizeDuplicateContentStreams bool
 }
 
 // ConfigPath defines the location of pdfcpu's configuration directory.
@@ -233,19 +236,20 @@ func newDefaultConfiguration() *Configuration {
 	// 		cli: supply -conf disable
 	// 		api: call api.DisableConfigDir()
 	return &Configuration{
-		CheckFileNameExt:  true,
-		Reader15:          true,
-		DecodeAllStreams:  false,
-		ValidationMode:    ValidationRelaxed,
-		ValidateLinks:     false,
-		Eol:               EolLF,
-		WriteObjectStream: true,
-		WriteXRefStream:   true,
-		EncryptUsingAES:   true,
-		EncryptKeyLength:  256,
-		Permissions:       PermissionsNone,
-		TimestampFormat:   "2006-01-02 15:04",
-		HeaderBufSize:     100,
+		CheckFileNameExt:                true,
+		Reader15:                        true,
+		DecodeAllStreams:                false,
+		ValidationMode:                  ValidationRelaxed,
+		ValidateLinks:                   false,
+		Eol:                             EolLF,
+		WriteObjectStream:               true,
+		WriteXRefStream:                 true,
+		EncryptUsingAES:                 true,
+		EncryptKeyLength:                256,
+		Permissions:                     PermissionsNone,
+		TimestampFormat:                 "2006-01-02 15:04",
+		HeaderBufSize:                   100,
+		OptimizeDuplicateContentStreams: false,
 	}
 }
 
@@ -310,7 +314,8 @@ func (c Configuration) String() string {
 		"Permissions:       %d\n"+
 		"Unit :             %s\n"+
 		"TimestampFormat:	%s\n"+
-		"HeaderBufSize:		%d\n",
+		"HeaderBufSize:		%d\n"+
+		"OptimizeDuplicateContentStreams %t\n",
 		path,
 		c.CheckFileNameExt,
 		c.Reader15,
@@ -325,6 +330,7 @@ func (c Configuration) String() string {
 		c.UnitString(),
 		c.TimestampFormat,
 		c.HeaderBufSize,
+		c.OptimizeDuplicateContentStreams,
 	)
 }
 

@@ -166,6 +166,15 @@ func handleHeaderBufSize(v string, c *Configuration) error {
 	return nil
 }
 
+func handleOptimizeDuplicateContentStreams(k, v string, c *Configuration) error {
+	v = strings.ToLower(v)
+	if v != "true" && v != "false" {
+		return errors.Errorf("config key %s is boolean", k)
+	}
+	c.OptimizeDuplicateContentStreams = v == "true"
+	return nil
+}
+
 func parseKeyValue(k, v string, c *Configuration) error {
 	var err error
 	switch k {
@@ -208,6 +217,9 @@ func parseKeyValue(k, v string, c *Configuration) error {
 
 	case "headerBufSize":
 		err = handleHeaderBufSize(k, v, c)
+
+	case "optimizeDuplicateContentStreams":
+		err = handleOptimizeDuplicateContentStreams(k, v, c)
 	}
 
 	return err

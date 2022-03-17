@@ -26,7 +26,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-func optimizeContentStream(ctx *Context, sd *StreamDict, objNr int) (*IndirectRef, error) {
+func optimizeContentStreamUsage(ctx *Context, sd *StreamDict, objNr int) (*IndirectRef, error) {
+	if !ctx.OptimizeDuplicateContentStreams {
+		return nil, nil
+	}
 
 	f := ctx.Optimize.ContentStreamCache
 	if len(f) == 0 {
@@ -86,7 +89,7 @@ func optimizePageContent(ctx *Context, pageDict Dict, pageObjNumber int) error {
 
 		contentStreamDict, ok := entry.Object.(StreamDict)
 		if ok {
-			ir, err := optimizeContentStream(ctx, &contentStreamDict, objNr)
+			ir, err := optimizeContentStreamUsage(ctx, &contentStreamDict, objNr)
 			if err != nil {
 				return err
 			}
