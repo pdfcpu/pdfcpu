@@ -45,6 +45,9 @@ const (
 	// PermissionsAll enables all user access permission bits.
 	PermissionsAll int16 = -1 // 0xFFFF
 
+	// PermissionsPrint disables all user access permissions bits except for printing.
+	PermissionsPrint int16 = -1849 // 0xF8C7
+
 	// PermissionsNone disables all user access permissions bits.
 	PermissionsNone int16 = -3901 // 0xF0C3
 
