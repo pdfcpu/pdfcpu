@@ -477,6 +477,9 @@ func (t table) parseCharToGlyphMappingTable(fd *ttf) error {
 		enc = t.uint16(off + 2)
 		o := t.uint32(off + 4)
 		f = t.uint16(int(o))
+		if f == 14 {
+			continue
+		}
 		l := uint32(t.uint16(int(o) + 2))
 		if f >= 8 {
 			l = t.uint32(int(o) + 4)
