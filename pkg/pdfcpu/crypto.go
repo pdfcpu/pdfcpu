@@ -1153,6 +1153,15 @@ func decryptDeepObject(objIn Object, objNr, genNr int, key []byte, needAES bool,
 	switch obj := objIn.(type) {
 
 	case Dict:
+		ft := obj["FT"]
+		if ft == nil {
+			ft = obj["Type"]
+		}
+		if ft != nil {
+			if ftv, ok := ft.(Name); ok && ftv == "Sig" {
+				break
+			}
+		}
 		for k, v := range obj {
 			s, err := decryptDeepObject(v, objNr, genNr, key, needAES, r)
 			if err != nil {
