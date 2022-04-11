@@ -1284,6 +1284,8 @@ func tryXRefSection(ctx *Context, rs io.ReadSeeker, offset *int64, xrefSectionCo
 	}
 
 	s := bufio.NewScanner(rd)
+	buf := make([]byte, 0, 4096)
+	s.Buffer(buf, 1024*1024)
 	s.Split(scanLines)
 
 	line, err := scanLine(s)
