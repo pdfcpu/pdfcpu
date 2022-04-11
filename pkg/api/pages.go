@@ -206,8 +206,11 @@ func PageCount(rs io.ReadSeeker, conf *pdfcpu.Configuration) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if err := ValidateContext(ctx); err != nil {
-		return 0, err
+
+	if conf.ValidationMode != pdfcpu.ValidationNone {
+		if err = ValidateContext(ctx); err != nil {
+			return 0, err
+		}
 	}
 	return ctx.PageCount, nil
 }
