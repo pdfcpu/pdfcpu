@@ -1407,14 +1407,12 @@ func readXRefTable(ctx *Context) (err error) {
 	//Log list of free objects (not the "free list").
 	//log.Read.Printf("freelist: %v\n", ctx.freeObjects())
 
-	// Ensure valid freelist of objects.
-	// Note: Acrobat 6.0 and later do not use the free list to recycle object numbers.
-	// Not really necessary but call and fail silently so we at least get a chance to repair corrupt free lists.
-	ctx.EnsureValidFreeList()
+	// Note: Acrobat 6.0 and later do not use the free list to recycle object numbers - pdfcpu does.
+	err = ctx.EnsureValidFreeList()
 
 	log.Read.Println("readXRefTable: end")
 
-	return
+	return err
 }
 
 func growBufBy(buf []byte, size int, rd io.Reader) ([]byte, error) {
