@@ -49,6 +49,39 @@ func validateLineDashPatternEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName
 	return err
 }
 
+func validateBGEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, entryName string, required bool, sinceVersion pdf.Version) error {
+
+	o, err := validateEntry(xRefTable, d, dictName, entryName, required, sinceVersion)
+	if err != nil || o == nil {
+		return err
+	}
+
+	switch o := o.(type) {
+
+	case pdf.Name:
+		if xRefTable.ValidationMode == pdf.ValidationStrict {
+			err = errors.Errorf("pdfcpu: validateBGEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+			break
+		}
+		s := o.Value()
+		if s != "Identity" {
+			err = errors.New("pdfcpu: validateBGEntry: corrupt name")
+		}
+
+	case pdf.Dict:
+		err = processFunction(xRefTable, o)
+
+	case pdf.StreamDict:
+		err = processFunction(xRefTable, o)
+
+	default:
+		err = errors.Errorf("pdfcpu: validateBGEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+
+	}
+
+	return err
+}
+
 func validateBG2Entry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, entryName string, required bool, sinceVersion pdf.Version) error {
 
 	o, err := validateEntry(xRefTable, d, dictName, entryName, required, sinceVersion)
@@ -72,6 +105,39 @@ func validateBG2Entry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, ent
 
 	default:
 		err = errors.Errorf("pdfcpu: validateBG2Entry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+
+	}
+
+	return err
+}
+
+func validateUCREntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, entryName string, required bool, sinceVersion pdf.Version) error {
+
+	o, err := validateEntry(xRefTable, d, dictName, entryName, required, sinceVersion)
+	if err != nil || o == nil {
+		return err
+	}
+
+	switch o := o.(type) {
+
+	case pdf.Name:
+		if xRefTable.ValidationMode == pdf.ValidationStrict {
+			err = errors.Errorf("pdfcpu: validateUCREntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+			break
+		}
+		s := o.Value()
+		if s != "Identity" {
+			err = errors.New("pdfcpu: writeUCREntry: corrupt name")
+		}
+
+	case pdf.Dict:
+		err = processFunction(xRefTable, o)
+
+	case pdf.StreamDict:
+		err = processFunction(xRefTable, o)
+
+	default:
+		err = errors.Errorf("pdfcpu: validateUCREntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 
 	}
 
@@ -770,7 +836,7 @@ func validateExtGStateDictPart1(xRefTable *pdf.XRefTable, d pdf.Dict, dictName s
 func validateExtGStateDictPart2(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string) error {
 
 	// BG, function, optional, black-generation function, see 10.3.4
-	err := validateFunctionEntry(xRefTable, d, dictName, "BG", OPTIONAL, pdf.V10)
+	err := validateBGEntry(xRefTable, d, dictName, "BG", OPTIONAL, pdf.V10)
 	if err != nil {
 		return err
 	}
@@ -782,7 +848,7 @@ func validateExtGStateDictPart2(xRefTable *pdf.XRefTable, d pdf.Dict, dictName s
 	}
 
 	// UCR, function, optional, undercolor-removal function, see 10.3.4
-	err = validateFunctionEntry(xRefTable, d, dictName, "UCR", OPTIONAL, pdf.V10)
+	err = validateUCREntry(xRefTable, d, dictName, "UCR", OPTIONAL, pdf.V10)
 	if err != nil {
 		return err
 	}
