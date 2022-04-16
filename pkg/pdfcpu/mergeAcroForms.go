@@ -217,14 +217,53 @@ func handleFormAttributes(ctxSource, ctxDest *Context, dSrc, dDest Dict, arrFiel
 	return nil
 }
 
-func mergeAcroForms(ctxSource, ctxDest *Context) error {
+func rootDicts(ctxSource, ctxDest *Context) (Dict, Dict, error) {
+
+	rootDictSource, err := ctxSource.Catalog()
+	if err != nil {
+		return nil, nil, err
+	}
 
 	rootDictDest, err := ctxDest.Catalog()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return rootDictSource, rootDictDest, nil
+}
+
+func mergeInFields(ctxDest *Context, arrFieldsSrc, arrFieldsDest Array, dDest Dict) error {
+
+	parentDict :=
+		Dict(map[string]Object{
+			"Kids": arrFieldsSrc,
+			"T":    StringLiteral(fmt.Sprintf("%d", len(arrFieldsDest))),
+		})
+
+	ir, err := ctxDest.IndRefForNewObject(parentDict)
 	if err != nil {
 		return err
 	}
 
-	rootDictSource, err := ctxSource.Catalog()
+	for _, ir1 := range arrFieldsSrc {
+		d, err := ctxDest.DereferenceDict(ir1)
+		if err != nil {
+			return err
+		}
+		if len(d) == 0 {
+			continue
+		}
+		d["Parent"] = *ir
+	}
+
+	dDest["Fields"] = append(arrFieldsDest, *ir)
+
+	return nil
+}
+
+func mergeAcroForms(ctxSource, ctxDest *Context) error {
+
+	rootDictSource, rootDictDest, err := rootDicts(ctxSource, ctxDest)
 	if err != nil {
 		return err
 	}
@@ -285,31 +324,9 @@ func mergeAcroForms(ctxSource, ctxDest *Context) error {
 		return nil
 	}
 
-	// Merge Dsrc into dDest.
-	parentDict :=
-		Dict(map[string]Object{
-			"Kids": arrFieldsSrc,
-			"T":    StringLiteral(fmt.Sprintf("%d", len(arrFieldsDest))),
-		})
-
-	ir, err := ctxDest.IndRefForNewObject(parentDict)
-	if err != nil {
+	if err := mergeInFields(ctxDest, arrFieldsSrc, arrFieldsDest, dDest); err != nil {
 		return err
 	}
-
-	for _, ir1 := range arrFieldsSrc {
-		d, err := ctxDest.DereferenceDict(ir1)
-		if err != nil {
-			return err
-		}
-		if len(d) == 0 {
-			continue
-		}
-		d["Parent"] = *ir
-	}
-
-	arrFieldsDest = append(arrFieldsDest, *ir)
-	dDest["Fields"] = arrFieldsDest
 
 	return handleFormAttributes(ctxSource, ctxDest, dSrc, dDest, arrFieldsSrc)
 }

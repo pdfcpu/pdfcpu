@@ -528,6 +528,30 @@ func anyKey(m IntSet) int {
 	return -1
 }
 
+func (xRefTable *XRefTable) handleDanglingFree(m IntSet, head *XRefTableEntry) error {
+	for i := range m {
+
+		entry, found := xRefTable.FindTableEntryLight(i)
+		if !found {
+			return errors.Errorf("pdfcpu: ensureValidFreeList: no xref entry found for obj #%d\n", i)
+		}
+
+		if !entry.Free {
+			return errors.Errorf("pdfcpu: ensureValidFreeList: xref entry is not free for obj #%d\n", i)
+		}
+
+		if *entry.Generation == FreeHeadGeneration {
+			entry.Offset = &zero
+			continue
+		}
+
+		entry.Offset = head.Offset
+		next := int64(i)
+		head.Offset = &next
+	}
+	return nil
+}
+
 // EnsureValidFreeList ensures the integrity of the free list associated with the recorded free objects.
 // See 7.5.4 Cross-Reference Table
 func (xRefTable *XRefTable) EnsureValidFreeList() error {
@@ -610,30 +634,11 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 	// insert remaining free objects into verified linked list
 	// unless they are forever deleted with generation 65535.
 	// In that case they have to point to obj 0.
-	for i := range m {
-
-		entry, found := xRefTable.FindTableEntryLight(i)
-		if !found {
-			return errors.Errorf("pdfcpu: ensureValidFreeList: no xref entry found for obj #%d\n", i)
-		}
-
-		if !entry.Free {
-			return errors.Errorf("pdfcpu: ensureValidFreeList: xref entry is not free for obj #%d\n", i)
-		}
-
-		if *entry.Generation == FreeHeadGeneration {
-			entry.Offset = &zero
-			continue
-		}
-
-		entry.Offset = head.Offset
-		next := int64(i)
-		head.Offset = &next
-	}
+	err := xRefTable.handleDanglingFree(m, head)
 
 	log.Trace.Println("EnsureValidFreeList: end, linked list plus some dangling free objects.")
 
-	return nil
+	return err
 }
 
 func (xRefTable *XRefTable) deleteDictEntry(d Dict, key string) error {
@@ -969,16 +974,19 @@ func (xRefTable *XRefTable) MissingObjects() (int, *string) {
 	return len(missing), s
 }
 
-func (xRefTable *XRefTable) list(logStr []string) []string {
-
+func (xRefTable *XRefTable) sortedKeys() []int {
 	var keys []int
 	for k := range xRefTable.Table {
 		keys = append(keys, k)
 	}
 	sort.Ints(keys)
+	return keys
+}
+
+func (xRefTable *XRefTable) list(logStr []string) []string {
 
 	// Print list of XRefTable entries to logString.
-	for _, k := range keys {
+	for _, k := range xRefTable.sortedKeys() {
 
 		entry := xRefTable.Table[k]
 
