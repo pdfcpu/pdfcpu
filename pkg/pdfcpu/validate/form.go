@@ -428,8 +428,6 @@ func validateAcroForm(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool
 		return err
 	}
 
-	xRefTable.AcroForm = d
-
 	// Version check
 	err = xRefTable.ValidateVersion("AcroForm", sinceVersion)
 	if err != nil {
@@ -439,8 +437,11 @@ func validateAcroForm(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool
 	// Fields, required, array of indirect references
 	o, ok := d.Find("Fields")
 	if !ok {
-		return errors.New("pdfcpu: validateAcroForm: missing required entry \"Fields\"")
+		rootDict.Delete("AcroForm")
+		return nil
 	}
+
+	xRefTable.AcroForm = d
 
 	err = validateAcroFormFields(xRefTable, o)
 	if err != nil {

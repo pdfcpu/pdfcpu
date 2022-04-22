@@ -148,8 +148,19 @@ func validateICCBasedColorSpace(xRefTable *pdf.XRefTable, a pdf.Array, sinceVers
 		return errors.Errorf("validateICCBasedColorSpace: invalid array length %d (expected 2) \n.", len(a))
 	}
 
+	valid, err := xRefTable.IsValid(a[1].(pdf.IndirectRef))
+	if err != nil {
+		return err
+	}
+	if valid {
+		return nil
+	}
+
 	sd, err := validateStreamDict(xRefTable, a[1])
 	if err != nil || sd == nil {
+		return err
+	}
+	if err := xRefTable.SetValid(a[1].(pdf.IndirectRef)); err != nil {
 		return err
 	}
 
