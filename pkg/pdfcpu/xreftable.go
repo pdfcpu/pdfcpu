@@ -521,6 +521,37 @@ func (xRefTable *XRefTable) freeObjects() IntSet {
 	return m
 }
 
+func anyKey(m IntSet) int {
+	for k := range m {
+		return k
+	}
+	return -1
+}
+
+func (xRefTable *XRefTable) handleDanglingFree(m IntSet, head *XRefTableEntry) error {
+	for i := range m {
+
+		entry, found := xRefTable.FindTableEntryLight(i)
+		if !found {
+			return errors.Errorf("pdfcpu: ensureValidFreeList: no xref entry found for obj #%d\n", i)
+		}
+
+		if !entry.Free {
+			return errors.Errorf("pdfcpu: ensureValidFreeList: xref entry is not free for obj #%d\n", i)
+		}
+
+		if *entry.Generation == FreeHeadGeneration {
+			entry.Offset = &zero
+			continue
+		}
+
+		entry.Offset = head.Offset
+		next := int64(i)
+		head.Offset = &next
+	}
+	return nil
+}
+
 // EnsureValidFreeList ensures the integrity of the free list associated with the recorded free objects.
 // See 7.5.4 Cross-Reference Table
 func (xRefTable *XRefTable) EnsureValidFreeList() error {
@@ -557,6 +588,8 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 
 	e := head
 	f := int(*e.Offset)
+	var lastValid *XRefTableEntry
+	var nextFree int
 
 	// until we have found the last free object which should point to obj 0.
 	for f != 0 {
@@ -564,8 +597,11 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 		log.Trace.Printf("EnsureValidFreeList: validating obj #%d %v\n", f, m)
 		// verify if obj f is one of the free objects recorded.
 		if !m[f] {
-			if len(m) > 0 {
-				return errors.New("pdfcpu: ensureValidFreeList: freelist corrupted")
+			if len(m) > 0 && lastValid == nil {
+				lastValid = e
+				f = anyKey(m)
+				nextFree = f
+				continue
 			}
 			// Repair last entry.
 			*e.Offset = 0
@@ -574,12 +610,20 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 
 		delete(m, f)
 
-		e, err := xRefTable.Free(f)
+		var err error
+		e, err = xRefTable.Free(f)
 		if err != nil {
 			return err
 		}
+		if e == nil {
+			return errors.Errorf("pdfcpu: ensureValidFreeList: no xref entry found for obj #%d\n", f)
+		}
 
 		f = int(*e.Offset)
+	}
+
+	if lastValid != nil {
+		*lastValid.Offset = int64(nextFree)
 	}
 
 	if len(m) == 0 {
@@ -590,30 +634,11 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 	// insert remaining free objects into verified linked list
 	// unless they are forever deleted with generation 65535.
 	// In that case they have to point to obj 0.
-	for i := range m {
-
-		entry, found := xRefTable.FindTableEntryLight(i)
-		if !found {
-			return errors.Errorf("pdfcpu: ensureValidFreeList: no xref entry found for obj #%d\n", i)
-		}
-
-		if !entry.Free {
-			return errors.Errorf("pdfcpu: ensureValidFreeList: xref entry is not free for obj #%d\n", i)
-		}
-
-		if *entry.Generation == FreeHeadGeneration {
-			entry.Offset = &zero
-			continue
-		}
-
-		entry.Offset = head.Offset
-		next := int64(i)
-		head.Offset = &next
-	}
+	err := xRefTable.handleDanglingFree(m, head)
 
 	log.Trace.Println("EnsureValidFreeList: end, linked list plus some dangling free objects.")
 
-	return nil
+	return err
 }
 
 func (xRefTable *XRefTable) deleteDictEntry(d Dict, key string) error {
@@ -949,16 +974,19 @@ func (xRefTable *XRefTable) MissingObjects() (int, *string) {
 	return len(missing), s
 }
 
-func (xRefTable *XRefTable) list(logStr []string) []string {
-
+func (xRefTable *XRefTable) sortedKeys() []int {
 	var keys []int
 	for k := range xRefTable.Table {
 		keys = append(keys, k)
 	}
 	sort.Ints(keys)
+	return keys
+}
+
+func (xRefTable *XRefTable) list(logStr []string) []string {
 
 	// Print list of XRefTable entries to logString.
-	for _, k := range keys {
+	for _, k := range xRefTable.sortedKeys() {
 
 		entry := xRefTable.Table[k]
 
@@ -1016,8 +1044,11 @@ func (xRefTable *XRefTable) list(logStr []string) []string {
 				}
 
 			} else {
-
-				str = fmt.Sprintf("%5d:   offset=%8d generation=%d nil\n", k, *entry.Offset, *entry.Generation)
+				if entry.Offset == nil {
+					str = fmt.Sprintf("%5d:   offset=    none generation=%d nil\n", k, *entry.Generation)
+				} else {
+					str = fmt.Sprintf("%5d:   offset=%8d generation=%d nil\n", k, *entry.Offset, *entry.Generation)
+				}
 			}
 		}
 

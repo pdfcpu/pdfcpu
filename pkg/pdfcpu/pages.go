@@ -138,8 +138,7 @@ func AddPages(ctx, ctxDest *Context, pages []int, usePgCache bool) error {
 		//fmt.Printf("migrresDict bef: \n%s", d)
 
 		d = d.Clone().(Dict)
-
-		d["Resources"] = inhPAttrs.Resources
+		d["Resources"] = inhPAttrs.Resources.Clone()
 		d["Parent"] = *pagesIndRef
 
 		// Migrate external page dict into ctxDest.

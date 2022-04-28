@@ -30,6 +30,7 @@ encryptKeyLength: 256
 
 # permissions for encrypted files: 
 # -3901 = 0xF0C3 (PermissionsNone)
+# -1849 = 0xF8C7 (PermissionsPrint)
 #    -1 = 0xFFFF (PermissionsAll)
 permissions: -3901
 
@@ -48,3 +49,5 @@ timestampFormat: 2006-01-02 15:04
 # buffer size >= 100 for locating PDF header
 headerBufSize: 100
 
+# optimize duplicate content streams across pages
+optimizeDuplicateContentStreams: false

@@ -1143,6 +1143,28 @@ func encryptDeepObject(objIn Object, objNr, genNr int, key []byte, needAES bool,
 	return nil, nil
 }
 
+func decryptDict(d Dict, objNr, genNr int, key []byte, needAES bool, r int) error {
+	ft := d["FT"]
+	if ft == nil {
+		ft = d["Type"]
+	}
+	if ft != nil {
+		if ftv, ok := ft.(Name); ok && ftv == "Sig" {
+			return nil
+		}
+	}
+	for k, v := range d {
+		s, err := decryptDeepObject(v, objNr, genNr, key, needAES, r)
+		if err != nil {
+			return err
+		}
+		if s != nil {
+			d[k] = *s
+		}
+	}
+	return nil
+}
+
 func decryptDeepObject(objIn Object, objNr, genNr int, key []byte, needAES bool, r int) (*HexLiteral, error) {
 
 	_, ok := objIn.(IndirectRef)
@@ -1153,14 +1175,8 @@ func decryptDeepObject(objIn Object, objNr, genNr int, key []byte, needAES bool,
 	switch obj := objIn.(type) {
 
 	case Dict:
-		for k, v := range obj {
-			s, err := decryptDeepObject(v, objNr, genNr, key, needAES, r)
-			if err != nil {
-				return nil, err
-			}
-			if s != nil {
-				obj[k] = *s
-			}
+		if err := decryptDict(obj, objNr, genNr, key, needAES, r); err != nil {
+			return nil, err
 		}
 
 	case Array:

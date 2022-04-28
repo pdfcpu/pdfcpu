@@ -396,6 +396,9 @@ type OptimizationContext struct {
 	DuplicateImages    map[int]*StreamDict  // Registry of duplicate image dicts.
 	DuplicateImageObjs IntSet               // The set of objects that represents the union of the object graphs of all duplicate image dicts.
 
+	ContentStreamCache map[int]*StreamDict
+	FormStreamCache    map[int]*StreamDict
+
 	DuplicateInfoObjects IntSet // Possible result of manual info dict modification.
 	NonReferencedObjs    []int  // Objects that are not referenced.
 
@@ -414,6 +417,8 @@ func newOptimizationContext() *OptimizationContext {
 		DuplicateImages:      map[int]*StreamDict{},
 		DuplicateImageObjs:   IntSet{},
 		DuplicateInfoObjects: IntSet{},
+		ContentStreamCache:   map[int]*StreamDict{},
+		FormStreamCache:      map[int]*StreamDict{},
 		Cache:                map[int]bool{},
 	}
 }

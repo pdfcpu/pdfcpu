@@ -16,9 +16,7 @@ limitations under the License.
 
 package pdfcpu
 
-// NOTE
-// A naive first stab at merging AcroForms.
-// Your mileage may vary.
+import "fmt"
 
 func handleNeedAppearances(ctxSource *Context, dSrc, dDest Dict) error {
 	o, found := dSrc.Find("NeedAppearances")
@@ -114,14 +112,6 @@ func handleDR(ctxSource, ctxDest *Context, dSrc, dDest Dict) error {
 	o, found = dDest.Find("DR")
 	if !found {
 		dDest["DR"] = dSrc
-	} else {
-		dDest, err := ctxDest.DereferenceDict(o)
-		if err != nil {
-			return err
-		}
-		if len(dDest) == 0 {
-			dDest["DR"] = dSrc
-		}
 	}
 	return nil
 }
@@ -195,9 +185,11 @@ func handleFormAttributes(ctxSource, ctxDest *Context, dSrc, dDest Dict, arrFiel
 
 	// SigFlags: set bit 1 to true only (SignaturesExist)
 	//           set bit 2 to true only (AppendOnly)
-	if err := handleSigFields(ctxSource, ctxDest, dSrc, dDest); err != nil {
-		return err
-	}
+	//
+	//if err := handleSigFields(ctxSource, ctxDest, dSrc, dDest); err != nil {
+	//	return err
+	//}
+	dDest.Delete("SigFields")
 
 	// CO: add all indrefs
 	if err := handleCO(ctxSource, ctxDest, dSrc, dDest); err != nil {
@@ -225,14 +217,53 @@ func handleFormAttributes(ctxSource, ctxDest *Context, dSrc, dDest Dict, arrFiel
 	return nil
 }
 
-func mergeAcroForms(ctxSource, ctxDest *Context) error {
+func rootDicts(ctxSource, ctxDest *Context) (Dict, Dict, error) {
+
+	rootDictSource, err := ctxSource.Catalog()
+	if err != nil {
+		return nil, nil, err
+	}
 
 	rootDictDest, err := ctxDest.Catalog()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return rootDictSource, rootDictDest, nil
+}
+
+func mergeInFields(ctxDest *Context, arrFieldsSrc, arrFieldsDest Array, dDest Dict) error {
+
+	parentDict :=
+		Dict(map[string]Object{
+			"Kids": arrFieldsSrc,
+			"T":    StringLiteral(fmt.Sprintf("%d", len(arrFieldsDest))),
+		})
+
+	ir, err := ctxDest.IndRefForNewObject(parentDict)
 	if err != nil {
 		return err
 	}
 
-	rootDictSource, err := ctxSource.Catalog()
+	for _, ir1 := range arrFieldsSrc {
+		d, err := ctxDest.DereferenceDict(ir1)
+		if err != nil {
+			return err
+		}
+		if len(d) == 0 {
+			continue
+		}
+		d["Parent"] = *ir
+	}
+
+	dDest["Fields"] = append(arrFieldsDest, *ir)
+
+	return nil
+}
+
+func mergeAcroForms(ctxSource, ctxDest *Context) error {
+
+	rootDictSource, rootDictDest, err := rootDicts(ctxSource, ctxDest)
 	if err != nil {
 		return err
 	}
@@ -252,7 +283,7 @@ func mergeAcroForms(ctxSource, ctxDest *Context) error {
 	if !found {
 		return nil
 	}
-	arrFieldsSrc, err := ctxDest.DereferenceArray(o)
+	arrFieldsSrc, err := ctxSource.DereferenceArray(o)
 	if err != nil {
 		return err
 	}
@@ -293,13 +324,9 @@ func mergeAcroForms(ctxSource, ctxDest *Context) error {
 		return nil
 	}
 
-	// Merge Dsrc into dDest.
-
-	// Fields: add all indrefs
-
-	// Merge all fields from ctxSrc into ctxDest
-	arrFieldsDest = append(arrFieldsDest, arrFieldsSrc...)
-	dDest["Fields"] = arrFieldsDest
+	if err := mergeInFields(ctxDest, arrFieldsSrc, arrFieldsDest, dDest); err != nil {
+		return err
+	}
 
 	return handleFormAttributes(ctxSource, ctxDest, dSrc, dDest, arrFieldsSrc)
 }

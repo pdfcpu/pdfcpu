@@ -120,6 +120,12 @@ brew install pdfcpu
 pdfcpu version
 ```
 
+### Using DNF/YUM (Fedora)
+```
+sudo dnf install golang-github-pdfcpu
+pdfcpu version
+```
+
 ### Run in a Docker container
 
 ```

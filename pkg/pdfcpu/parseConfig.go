@@ -27,20 +27,21 @@ import (
 )
 
 type configuration struct {
-	CheckFileNameExt  bool   `yaml:"checkFileNameExt"`
-	Reader15          bool   `yaml:"reader15"`
-	DecodeAllStreams  bool   `yaml:"decodeAllStreams"`
-	ValidationMode    string `yaml:"validationMode"`
-	Eol               string `yaml:"eol"`
-	WriteObjectStream bool   `yaml:"writeObjectStream"`
-	WriteXRefStream   bool   `yaml:"writeXRefStream"`
-	EncryptUsingAES   bool   `yaml:"encryptUsingAES"`
-	EncryptKeyLength  int    `yaml:"encryptKeyLength"`
-	Permissions       int    `yaml:"permissions"`
-	Unit              string `yaml:"unit"`
-	Units             string `yaml:"units"` // Be flexible if version < v0.3.8
-	TimestampFormat   string `yaml:"timestampFormat"`
-	HeaderBufSize     int    `yaml:"headerBufSize"`
+	CheckFileNameExt                bool   `yaml:"checkFileNameExt"`
+	Reader15                        bool   `yaml:"reader15"`
+	DecodeAllStreams                bool   `yaml:"decodeAllStreams"`
+	ValidationMode                  string `yaml:"validationMode"`
+	Eol                             string `yaml:"eol"`
+	WriteObjectStream               bool   `yaml:"writeObjectStream"`
+	WriteXRefStream                 bool   `yaml:"writeXRefStream"`
+	EncryptUsingAES                 bool   `yaml:"encryptUsingAES"`
+	EncryptKeyLength                int    `yaml:"encryptKeyLength"`
+	Permissions                     int    `yaml:"permissions"`
+	Unit                            string `yaml:"unit"`
+	Units                           string `yaml:"units"` // Be flexible if version < v0.3.8
+	TimestampFormat                 string `yaml:"timestampFormat"`
+	HeaderBufSize                   int    `yaml:"headerBufSize"`
+	OptimizeDuplicateContentStreams bool   `yaml:"optimizeDuplicateContentStreams"`
 }
 
 func loadedConfig(c configuration, configPath string) *Configuration {
@@ -88,6 +89,8 @@ func loadedConfig(c configuration, configPath string) *Configuration {
 	conf.TimestampFormat = c.TimestampFormat
 
 	conf.HeaderBufSize = c.HeaderBufSize
+
+	conf.OptimizeDuplicateContentStreams = c.OptimizeDuplicateContentStreams
 
 	return &conf
 }

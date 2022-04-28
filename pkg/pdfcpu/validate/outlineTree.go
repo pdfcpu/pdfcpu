@@ -112,6 +112,12 @@ func validateOutlineTree(xRefTable *pdf.XRefTable, first, last *pdf.IndirectRef)
 			continue
 		}
 
+		if firstChild != nil && firstChild.ObjectNumber.Value() == objNumber &&
+			lastChild != nil && lastChild.ObjectNumber.Value() == objNumber {
+			// Degenerated leaf.
+			continue
+		}
+
 		if firstChild != nil && (xRefTable.ValidationMode == pdf.ValidationRelaxed ||
 			xRefTable.ValidationMode == pdf.ValidationStrict && lastChild != nil) {
 			// Recurse into subtree.

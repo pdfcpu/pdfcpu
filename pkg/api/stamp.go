@@ -211,6 +211,7 @@ func AddWatermarks(rs io.ReadSeeker, w io.Writer, selectedPages []string, wm *pd
 		conf = pdfcpu.NewDefaultConfiguration()
 	}
 	conf.Cmd = pdfcpu.ADDWATERMARKS
+	conf.OptimizeDuplicateContentStreams = false
 
 	if wm == nil {
 		return errors.New("pdfcpu: missing watermark configuration")

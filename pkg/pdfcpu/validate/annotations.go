@@ -330,17 +330,16 @@ func validateAnnotationDictLink(xRefTable *pdf.XRefTable, d pdf.Dict, dictName s
 	}
 
 	// QuadPoints, optional, number array, len= a multiple of 8, since V1.6
-	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "QuadPoints", OPTIONAL, pdf.V16, func(a pdf.Array) bool { return len(a)%8 == 0 })
+	sinceVersion := pdf.V16
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		sinceVersion = pdf.V13
+	}
+	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "QuadPoints", OPTIONAL, sinceVersion, func(a pdf.Array) bool { return len(a)%8 == 0 })
 	if err != nil {
 		return err
 	}
 
 	// BS, optional, border style dict, since V1.6
-	sinceVersion := pdf.V16
-	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
-		sinceVersion = pdf.V13
-	}
-
 	return validateBorderStyleDict(xRefTable, d, dictName, "BS", OPTIONAL, sinceVersion)
 }
 

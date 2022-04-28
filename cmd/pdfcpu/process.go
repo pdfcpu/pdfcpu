@@ -525,7 +525,7 @@ func processListPermissionsCommand(conf *pdfcpu.Configuration) {
 
 func permCompletion(permPrefix string) string {
 	var permStr string
-	for _, perm := range []string{"none", "all"} {
+	for _, perm := range []string{"none", "print", "all"} {
 		if !strings.HasPrefix(perm, permPrefix) {
 			continue
 		}
@@ -543,7 +543,7 @@ func processSetPermissionsCommand(conf *pdfcpu.Configuration) {
 		perm = permCompletion(perm)
 	}
 	if len(flag.Args()) != 1 || selectedPages != "" ||
-		!(perm == "none" || perm == "all") {
+		!(perm == "none" || perm == "print" || perm == "all") {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePermSet)
 		os.Exit(1)
 	}
@@ -551,6 +551,10 @@ func processSetPermissionsCommand(conf *pdfcpu.Configuration) {
 	inFile := flag.Arg(0)
 	if conf.CheckFileNameExt {
 		ensurePDFExtension(inFile)
+	}
+
+	if perm == "print" {
+		conf.Permissions = pdfcpu.PermissionsPrint
 	}
 
 	if perm == "all" {
@@ -613,14 +617,18 @@ func validateEncryptModeFlag() {
 
 func validateEncryptFlags() {
 	validateEncryptModeFlag()
-	if perm != "none" && perm != "all" && perm != "" {
-		fmt.Fprintf(os.Stderr, "%s\n\n", "supported permissions: none,all default:none (viewing always allowed!)")
+	if perm != "none" && perm != "print" && perm != "all" && perm != "" {
+		fmt.Fprintf(os.Stderr, "%s\n\n", "supported permissions: none,print,all default:none (viewing always allowed!)")
 		os.Exit(1)
 	}
 }
 
 func processEncryptCommand(conf *pdfcpu.Configuration) {
-	if len(flag.Args()) == 0 || len(flag.Args()) > 2 {
+	if perm != "" {
+		perm = permCompletion(perm)
+	}
+	if len(flag.Args()) == 0 || len(flag.Args()) > 2 ||
+		!(perm == "none" || perm == "print" || perm == "all") {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageEncrypt)
 		os.Exit(1)
 	}
@@ -632,6 +640,9 @@ func processEncryptCommand(conf *pdfcpu.Configuration) {
 	}
 
 	validateEncryptFlags()
+	if perm != "" {
+		perm = permCompletion(perm)
+	}
 
 	conf.EncryptUsingAES = mode != "rc4"
 
@@ -640,6 +651,10 @@ func processEncryptCommand(conf *pdfcpu.Configuration) {
 
 	if perm == "all" {
 		conf.Permissions = pdfcpu.PermissionsAll
+	}
+
+	if perm == "print" {
+		conf.Permissions = pdfcpu.PermissionsPrint
 	}
 
 	inFile := flag.Arg(0)

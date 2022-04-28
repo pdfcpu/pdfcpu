@@ -626,6 +626,25 @@ func renderIndexed(xRefTable *XRefTable, im *PDFImage, resourceName string, cs A
 	return nil, "", nil
 }
 
+func renderDeviceN(xRefTable *XRefTable, im *PDFImage, resourceName string, cs Array) (io.Reader, string, error) {
+
+	switch im.comp {
+	case 1:
+		// Gray
+		return renderDeviceGrayToPNG(im, resourceName)
+
+	case 3:
+		// RGB
+		return renderDeviceRGBToPNG(im, resourceName)
+
+	case 4:
+		// CMYK
+		return renderDeviceCMYKToTIFF(im, resourceName)
+	}
+
+	return nil, "", nil
+}
+
 func renderFlateEncodedImage(xRefTable *XRefTable, sd *StreamDict, thumb bool, resourceName string, objNr int) (io.Reader, string, error) {
 	// If color space is CMYK then write .tif else write .png
 
@@ -665,11 +684,17 @@ func renderFlateEncodedImage(xRefTable *XRefTable, sd *StreamDict, thumb bool, r
 		case CalRGBCS:
 			return renderCalRGBToPNG(pdfImage, resourceName)
 
+		case DeviceNCS:
+			return renderDeviceN(xRefTable, pdfImage, resourceName, cs)
+
 		case ICCBasedCS:
 			return renderICCBased(xRefTable, pdfImage, resourceName, cs)
 
 		case IndexedCS:
 			return renderIndexed(xRefTable, pdfImage, resourceName, cs)
+
+		case SeparationCS:
+			return renderDeviceN(xRefTable, pdfImage, resourceName, cs)
 
 		default:
 			log.Info.Printf("renderFlateEncodedImage: objNr=%d, unsupported array colorspace %s\n", objNr, csn)

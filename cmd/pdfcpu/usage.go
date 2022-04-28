@@ -223,7 +223,7 @@ content ... extract raw page content
     `
 
 	usagePermList = "pdfcpu permissions list [-upw userpw] [-opw ownerpw] inFile"
-	usagePermSet  = "pdfcpu permissions set [-perm none|all] [-upw userpw] -opw ownerpw inFile" + generalFlags
+	usagePermSet  = "pdfcpu permissions set [-perm none|print|all] [-upw userpw] -opw ownerpw inFile" + generalFlags
 
 	usagePerm = "usage: " + usagePermList +
 		"\n       " + usagePermSet
@@ -233,7 +233,7 @@ content ... extract raw page content
       perm ... user access permissions
     inFile ... input pdf file`
 
-	usageEncrypt     = "usage: pdfcpu encrypt [-m(ode) rc4|aes] [-key 40|128|256] [-perm none|all] [-upw userpw] -opw ownerpw inFile [outFile]" + generalFlags
+	usageEncrypt     = "usage: pdfcpu encrypt [-m(ode) rc4|aes] [-key 40|128|256] [-perm none|print|all] [-upw userpw] -opw ownerpw inFile [outFile]" + generalFlags
 	usageLongEncrypt = `Setup password protection based on user and owner password.
 
       mode ... algorithm (default=aes)

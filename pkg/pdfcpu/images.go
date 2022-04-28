@@ -34,8 +34,8 @@ type Image struct {
 	FileType    string
 	pageNr      int
 	objNr       int
-	width       int    // "Width"
-	height      int    // "Height"
+	Width       int    // "Width"
+	Height      int    // "Height"
 	bpc         int    // "BitsPerComponent"
 	cs          string // "ColorSpace"
 	comp        int    // color component count
@@ -43,7 +43,7 @@ type Image struct {
 	imgMask     bool   // "ImageMask"
 	thumb       bool   // "Thumbnail"
 	interpol    bool   // "Interpolate"
-	size        int64  // "Length"
+	Size        int64  // "Length"
 	filter      string // filter pipeline
 	decodeParms string
 }
@@ -95,7 +95,7 @@ func (ctx *Context) listImages(iii [][]Image, maxLenID, maxLenSize int) ([]strin
 			sSize := fmt.Sprintf("%%%ds", maxLenSize)
 
 			ss = append(ss, fmt.Sprintf("%4s %5d "+sID+" %s %5d  %5d %10s    %d   %s    %s   "+sSize+" %s",
-				pageNr, img.objNr, img.Name, t, img.width, img.height, img.cs, img.comp, bpc, interp, ByteSize(img.size), img.filter))
+				pageNr, img.objNr, img.Name, t, img.Width, img.Height, img.cs, img.comp, bpc, interp, ByteSize(img.Size), img.filter))
 			j++
 		}
 	}
@@ -130,7 +130,7 @@ func (ctx *Context) ListImages(selectedPages IntSet) ([]string, error) {
 			if len(i.Name) > maxLenID {
 				maxLenID = len(i.Name)
 			}
-			lenSize := len(ByteSize(i.size).String())
+			lenSize := len(ByteSize(i.Size).String())
 			if lenSize > maxLenSize {
 				maxLenSize = lenSize
 			}
@@ -149,6 +149,9 @@ func (ctx *Context) ListImages(selectedPages IntSet) ([]string, error) {
 // WriteImageToDisk returns a closure for writing img to disk.
 func WriteImageToDisk(outDir, fileName string) func(Image, bool, int) error {
 	return func(img Image, singleImgPerPage bool, maxPageDigits int) error {
+		if img.Reader == nil {
+			return nil
+		}
 		s := "%s_%" + fmt.Sprintf("0%dd", maxPageDigits)
 		qual := img.Name
 		if img.thumb {
