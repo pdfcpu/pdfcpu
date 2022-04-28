@@ -32,8 +32,6 @@ const (
 	Booklet bookletType = iota
 	BookletAdvanced
 	BookletPerfectBound
-	BookletCover
-	BookletCoverFullSpan
 )
 
 func (b bookletType) String() string {
@@ -45,11 +43,6 @@ func (b bookletType) String() string {
 		return "booklet advanced"
 	case BookletPerfectBound:
 		return "booklet perfect bound"
-	case BookletCover:
-		return "booklet cover"
-	case BookletCoverFullSpan:
-		return "booklet cover full span"
-
 	}
 
 	return ""
@@ -73,10 +66,8 @@ func (b bookletBinding) String() string {
 }
 
 var (
-	errInvalidBookletGridID          = errors.New("pdfcpu booklet: n must be one of 2, 4, 6, 8")
-	errInvalidBookletCoverGridID     = errors.New("pdfcpu booklet cover: n must be one of 2, 4")
-	errInvalidBookletCoverFullGridID = errors.New("pdfcpu booklet cover full-span: n must 2")
-	errInvalidBookletAdvanced        = errors.New("pdfcpu booklet advanced cannot have binding along the top (portrait short-edge, landscape long-edge). use plain booklet instead.")
+	errInvalidBookletGridID   = errors.New("pdfcpu booklet: n must be one of 2, 4, 6, 8")
+	errInvalidBookletAdvanced = errors.New("pdfcpu booklet advanced cannot have binding along the top (portrait short-edge, landscape long-edge). use plain booklet instead.")
 )
 
 // DefaultBookletConfig returns the default configuration for a booklet
@@ -111,13 +102,6 @@ func PDFBookletConfig(val int, desc string) (*NUp, error) {
 		// you can't top fold a 6up with 3 rows
 		// TODO: support this for 8up
 		return nup, fmt.Errorf("pdfcpu booklet: n>4 must have binding on side (portrait long-edge or landscape short-edge)")
-	}
-	// covers
-	if nup.BookletType == BookletCover && !(val == 2 || val == 4) {
-		return nup, errInvalidBookletCoverGridID
-	}
-	if nup.BookletType == BookletCoverFullSpan && val != 2 {
-		return nup, errInvalidBookletCoverFullGridID
 	}
 	// bookletadvanced
 	if nup.BookletType == BookletAdvanced && val == 4 && nup.isTopFoldBinding() {
@@ -552,48 +536,6 @@ func sortSelectedPagesForBooklet(pages IntSet, nup *NUp) []bookletPage {
 			bookletPages[i].number = pageNr
 			bookletPages[i].rotate = rotate
 		}
-	case BookletCover:
-		// covers can have either one (front) or two pages (front and back).
-		// the front cover is on the right of the sheet (and the back on the left).
-		// the bottom row should be rotated 180deg so that the cuts are always along the bottom of the booklet
-		// the bottom row is also in the opposite page order
-		switch nup.N() {
-		case 2:
-			// we are printing one cover per sheet
-			switch len(pages) {
-			case 1:
-				// there is no back cover - just front (top/right of sheet)
-				bookletPages = []bookletPage{{1, false}, {0, false}}
-			case 2:
-				// the cover has a front (top/right of sheet) and back (bottom/left of sheet)
-				bookletPages = []bookletPage{{1, false}, {2, false}}
-			}
-		case 4:
-			// we are printing two covers per sheet
-			switch len(pages) {
-			case 1:
-				// there is no back cover
-				bookletPages = []bookletPage{{0, false}, {1, false}, {1, true}, {0, true}}
-			case 2:
-				// the cover has a front and back
-				if nup.isTopFoldBinding() {
-					// the cover and it's back should both have top sides up
-					bookletPages = []bookletPage{{2, true}, {1, true}, {1, false}, {2, false}}
-				} else {
-					bookletPages = []bookletPage{{2, false}, {1, false}, {1, true}, {2, true}}
-				}
-			}
-		}
-	case BookletCoverFullSpan:
-		switch nup.N() {
-		case 2:
-			// we are printing two covers per sheet. full-span covers have just one pdf input, that spans front and back of the booklet
-			// the bottom row should be rotated 180deg so that the cuts are always along the bottom of the booklet
-			switch len(pages) {
-			case 1:
-				bookletPages = []bookletPage{{1, false}, {1, true}}
-			}
-		}
 	}
 
 	return bookletPages
@@ -608,17 +550,6 @@ func (ctx *Context) bookletPages(
 	var buf bytes.Buffer
 	formsResDict := NewDict()
 	rr := rectsForGrid(nup)
-
-	if nup.BookletType == BookletCover {
-		if len(selectedPages) > 2 {
-			return fmt.Errorf("booklet covers must be either one or two pages")
-		}
-	}
-	if nup.BookletType == BookletCoverFullSpan {
-		if len(selectedPages) != 1 {
-			return fmt.Errorf("booklet cover full span must have just one page")
-		}
-	}
 
 	for i, bp := range sortSelectedPagesForBooklet(selectedPages, nup) {
 

@@ -321,10 +321,6 @@ func parseBookletType(s string, nup *NUp) error {
 		nup.BookletType = BookletAdvanced
 	case "perfectbound":
 		nup.BookletType = BookletPerfectBound
-	case "cover":
-		nup.BookletType = BookletCover
-	case "coverfullspan":
-		nup.BookletType = BookletCoverFullSpan
 	default:
 		return errors.New("pdfcpu: booklet type, please provide one of: booklet perfectbound cover coverfullspan")
 	}
