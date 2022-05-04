@@ -238,21 +238,25 @@ func renderDeviceCMYKToTIFF(im *PDFImage, resourceName string) (io.Reader, strin
 	b := im.sd.Content
 	log.Debug.Printf("renderDeviceCMYKToTIFF: CMYK objNr=%d w=%d h=%d bpc=%d buflen=%d\n", im.objNr, im.w, im.h, im.bpc, len(b))
 
-	img := image.NewCMYK(image.Rect(0, 0, im.w, im.h))
+	img := image.NewNRGBA(image.Rect(0, 0, im.w, im.h))
 
 	i := 0
 
-	// TODO support bpc, decode and softMask.
+	// TODO support bpc and decode.
 
 	for y := 0; y < im.h; y++ {
 		for x := 0; x < im.w; x++ {
-			img.Set(x, y, color.CMYK{C: b[i], M: b[i+1], Y: b[i+2], K: b[i+3]})
+			cr, cg, cb := color.CMYKToRGB(b[i], b[i+1], b[i+2], b[i+3])
+			alpha := uint8(255)
+			if im.softMask != nil {
+				alpha = im.softMask[y*im.w+x]
+			}
+			img.Set(x, y, color.NRGBA{cr, cg, cb, alpha})
 			i += 4
 		}
 	}
 
 	var buf bytes.Buffer
-	// TODO softmask handling.
 	if err := tiff.Encode(&buf, img, nil); err != nil {
 		return nil, "", err
 	}
@@ -279,9 +283,8 @@ func renderDeviceGrayToPNG(im *PDFImage, resourceName string) (io.Reader, string
 		cvr = im.decode[0]
 	}
 
-	img := image.NewGray(image.Rect(0, 0, im.w, im.h))
+	img := image.NewNRGBA(image.Rect(0, 0, im.w, im.h))
 
-	// TODO support softmask.
 	i := 0
 	for y := 0; y < im.h; y++ {
 		for x := 0; x < im.w; {
@@ -292,8 +295,14 @@ func renderDeviceGrayToPNG(im *PDFImage, resourceName string) (io.Reader, string
 				if im.bpc < 8 {
 					v = scaleToBPC8(v, im.bpc)
 				}
-				//fmt.Printf("x=%d y=%d pix=#%02x v=#%02x\n", x, y, pix, v)
-				img.Set(x, y, color.Gray{Y: v})
+
+				alpha := uint8(255)
+				if im.softMask != nil {
+					alpha = im.softMask[y*im.w+x]
+				}
+
+				img.Set(x, y, color.NRGBA{R: v, G: v, B: v, A: alpha})
+
 				p <<= uint8(im.bpc)
 				x++
 			}
