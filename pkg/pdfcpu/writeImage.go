@@ -476,7 +476,7 @@ func renderIndexedRGBToPNG(im *PDFImage, resourceName string, lookup []byte) (io
 func renderIndexedCMYKToTIFF(im *PDFImage, resourceName string, lookup []byte) (io.Reader, string, error) {
 	b := im.sd.Content
 
-	img := image.NewCMYK(image.Rect(0, 0, im.w, im.h))
+	img := image.NewNRGBA(image.Rect(0, 0, im.w, im.h))
 
 	// TODO handle decode and softmask.
 
@@ -488,7 +488,12 @@ func renderIndexedCMYKToTIFF(im *PDFImage, resourceName string, lookup []byte) (
 				ind := p >> (8 - uint8(im.bpc))
 				//fmt.Printf("x=%d y=%d i=%d j=%d p=#%02x ind=#%02x\n", x, y, i, j, p, ind)
 				l := 4 * int(ind)
-				img.Set(x, y, color.CMYK{C: lookup[l], M: lookup[l+1], Y: lookup[l+2], K: lookup[l+3]})
+				cr, cg, cb := color.CMYKToRGB(lookup[l], lookup[l+1], lookup[l+2], lookup[l+3])
+				alpha := uint8(255)
+				if im.softMask != nil {
+					alpha = im.softMask[y*im.w+x]
+				}
+				img.Set(x, y, color.NRGBA{cr, cg, cb, alpha})
 				p <<= uint8(im.bpc)
 				x++
 			}
@@ -497,7 +502,6 @@ func renderIndexedCMYKToTIFF(im *PDFImage, resourceName string, lookup []byte) (
 	}
 
 	var buf bytes.Buffer
-	// TODO softmask handling.
 	if err := tiff.Encode(&buf, img, nil); err != nil {
 		return nil, "", err
 	}
