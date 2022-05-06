@@ -216,7 +216,7 @@ func parseKeyValue(k, v string, c *Configuration) error {
 		err = handleTimestampFormat(v, c)
 
 	case "headerBufSize":
-		err = handleHeaderBufSize(k, v, c)
+		err = handleHeaderBufSize(v, c)
 
 	case "optimizeDuplicateContentStreams":
 		err = handleOptimizeDuplicateContentStreams(k, v, c)
