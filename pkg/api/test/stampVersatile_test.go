@@ -70,12 +70,12 @@ func TestAlternatingPageNumbersViaWatermarkMap(t *testing.T) {
 
 	// Add a stamp with the creation date on the center of the bottom of every page.
 	text := fmt.Sprintf("%%p of %%P - Creation date: %v", time.Now().Format("2006-01-02 15:04"))
-	if err := api.AddTextWatermarksFile(outFile, outFile, nil, true, text, "fo:Roboto-Regular, points:12, sc:1 abs, pos:bc, off:0 10, rot:0", nil); err != nil {
+	if err := api.AddTextWatermarksFile(inFile, outFile, nil, true, text, "fo:Roboto-Regular, points:12, sc:1 abs, pos:bc, off:0 10, rot:0", nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
 	// Add a "Draft" stamp with opacity 0.6 along the 1st diagonale in light blue using Courier.
-	if err := api.AddTextWatermarksFile(outFile, outFile, nil, true, "Draft", "fo:Courier, sc:.9, fillcol:#00aacc, op:.6", nil); err != nil {
+	if err := api.AddTextWatermarksFile(inFile, outFile, nil, true, "Draft", "fo:Courier, sc:.9, fillcol:#00aacc, op:.6", nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 }
