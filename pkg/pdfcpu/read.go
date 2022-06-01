@@ -94,6 +94,25 @@ func Read(rs io.ReadSeeker, conf *Configuration) (*Context, error) {
 	return ctx, nil
 }
 
+// fillBuffer reads from the reader until buf is full or an error happens.
+// The error is EOF only if no bytes were read.
+// Unlike io.ReadFull this function doesn't return ErrUnexpectedEOF if an EOF happens before the buffer is filled.
+func fillBuffer(r io.Reader, buf []byte) (int, error) {
+	var n int
+	var err error
+	for n < len(buf) && err == nil {
+		var nn int
+		nn, err = r.Read(buf[n:])
+		n += nn
+	}
+
+	if n > 0 && err == io.EOF {
+		return n, nil
+	}
+
+	return n, err
+}
+
 // ScanLines is a split function for a Scanner that returns each line of
 // text, stripped of any trailing end-of-line marker. The returned line may
 // be empty. The end-of-line marker is one carriage return followed
@@ -213,7 +232,7 @@ func offsetLastXRefSection(ctx *Context, skip int64) (*int64, error) {
 
 		curBuf := make([]byte, bufSize)
 
-		_, err = rs.Read(curBuf)
+		_, err = fillBuffer(rs, curBuf)
 		if err != nil {
 			return nil, err
 		}
@@ -765,7 +784,7 @@ func scanForPreviousXref(ctx *Context, offset *int64) *int64 {
 
 		curBuf := make([]byte, bufSize)
 
-		n, err := rd.Read(curBuf)
+		n, err := fillBuffer(rd, curBuf)
 		if err != nil {
 			return nil
 		}
@@ -1116,7 +1135,7 @@ func headerVersion(rs io.ReadSeeker, headerBufSize int) (v *Version, eolCount in
 	}
 
 	buf := make([]byte, headerBufSize)
-	n, err := rs.Read(buf)
+	n, err := fillBuffer(rs, buf)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -1419,7 +1438,7 @@ func growBufBy(buf []byte, size int, rd io.Reader) ([]byte, error) {
 
 	b := make([]byte, size)
 
-	_, err := rd.Read(b)
+	_, err := fillBuffer(rd, b)
 	if err != nil {
 		return nil, err
 	}
