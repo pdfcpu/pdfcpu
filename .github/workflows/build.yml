@@ -1,0 +1,35 @@
+on: [push, pull_request]
+name: Build
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - goos: js
+            goarch: wasm
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: linux
+            goarch: amd64
+          - goos: windows
+            goarch: amd64
+        go:
+          - '1.17.x'
+    runs-on: linux-latest
+
+    steps:
+      - name: Set up Go ${{ matrix.go }}
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go }}
+
+      - run: go version
+
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Go build
+        run: env CGO=0 GOOS=${{ matrix.target.goos }} GOARCH=${{ matrix.target.goarch }} go build ./cmd/pdfcpu
