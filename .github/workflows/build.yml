@@ -32,4 +32,4 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Go build
-        run: env CGO=0 GOOS=${{ matrix.target.goos }} GOARCH=${{ matrix.target.goarch }} go build ./cmd/pdfcpu
+        run: env CGO_ENABLED=0 GOOS=${{ matrix.target.goos }} GOARCH=${{ matrix.target.goarch }} go build ./cmd/pdfcpu
