@@ -2155,14 +2155,14 @@ func (xRefTable *XRefTable) insertBlankPagesIntoPageTree(root *IndirectRef, pAtt
 				a = append(a, ir)
 				i++
 			}
-
 		}
 
 	}
 
 	d.Update("Kids", a)
+	d.Update("Count", Integer(i))
 
-	return i, d.IncrementBy("Count", i)
+	return i, nil
 }
 
 // InsertBlankPages inserts a blank page before or after each selected page.
@@ -2180,19 +2180,6 @@ func (xRefTable *XRefTable) InsertBlankPages(pages IntSet, before bool) error {
 
 	return err
 }
-
-// func (xRefTable *XRefTable) markAsFree(ir IndirectRef) error {
-// 	objNr := ir.ObjectNumber.Value()
-// 	genNr := ir.GenerationNumber.Value()
-// 	entry, ok := xRefTable.FindTableEntry(objNr, genNr)
-// 	if !ok {
-// 		return errors.Errorf("unknown xreftable entry for obj#%d\n", objNr)
-// 	}
-// 	i := int(zero)
-// 	entry.Generation = &i
-// 	entry.Free = true
-// 	return nil
-//}
 
 func (xRefTable *XRefTable) streamDictIndRef(b []byte) (*IndirectRef, error) {
 	sd, _ := xRefTable.NewStreamDictForBuf(b)
