@@ -478,7 +478,7 @@ func renderIndexedCMYKToTIFF(im *PDFImage, resourceName string, lookup []byte) (
 
 	img := image.NewNRGBA(image.Rect(0, 0, im.w, im.h))
 
-	// TODO handle decode and softmask.
+	// TODO handle decode.
 
 	i := 0
 	for y := 0; y < im.h; y++ {
