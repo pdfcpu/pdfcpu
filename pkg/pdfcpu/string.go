@@ -104,7 +104,7 @@ func regularChar(c byte, esc bool) bool {
 }
 
 // Unescape resolves all escape sequences of s.
-func Unescape(s string) ([]byte, error) {
+func Unescape(s string, enc bool) ([]byte, error) {
 
 	var esc bool
 	var longEol bool
@@ -169,7 +169,7 @@ func Unescape(s string) ([]byte, error) {
 		}
 
 		// Relax for issue 305 and also accept "\ ".
-		if !strings.ContainsRune(" nrtbf()01234567", rune(c)) {
+		if !enc && !strings.ContainsRune(" nrtbf()01234567", rune(c)) {
 			return nil, errors.Errorf("Unescape: illegal escape sequence \\%c detected: <%s>", c, s)
 		}
 
