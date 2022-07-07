@@ -46,8 +46,8 @@ pdfcpu grid [-p(ages) selectedPages] -- [description] outFile m n inFile|imageFi
 |:-------------|:---------------------|:--------
 | description  | configuration string | no
 | outFile      | PDF output file      | yes
-| m            | horizontal span      | yes
-| n            | vertical span        | yes
+| m            | vertical span        | yes
+| n            | horizontal span      | yes
 | inFile       | PDF input file       | inFile or imageFile(s)
 | imageFile... | one or more images   | inFile or imageFile(s)
 
@@ -105,7 +105,7 @@ In the following example we use a 1x4 grid since this is easier to visualize.
 Rearrange pages of in.pdf into pages composed of 1x4 grids and write the result to out.pdf using the default orientation. The output page size is the result of a 1(horizontal) x 4(vertical) grid using in.pdf's page size:
 
 ```sh
-pdfcpu grid -- "bo:off" out.pdf 1 4 in.pdf
+pdfcpu grid -- "bo:off" out.pdf 4 1 in.pdf
 ```
 
 
@@ -115,10 +115,10 @@ pdfcpu grid -- "bo:off" out.pdf 1 4 in.pdf
 
 <br>
 When applied to image files this command produces simple photo galleries of arbitrary dimensions in PDF form.<br>
-Arrange imagefiles onto a 5x2 page grid and write the result to out.pdf using a grid cell size of 500x500:
+Arrange imagefiles onto a 2x5 page grid and write the result to out.pdf using a grid cell size of 500x500:
 
 ```sh
-pdfcpu grid -- "d:500 500, ma:20, bo:off" out.pdf 5 2 *.jpg
+pdfcpu grid -- "d:500 500, ma:20, bo:off" out.pdf 2 5 *.jpg
 ```
 
 
