@@ -248,6 +248,11 @@ func DefaultWatermarkConfig() *Watermark {
 	}
 }
 
+func (wm *Watermark) Recycle() {
+	wm.objs = IntSet{}
+	wm.fCache = formCache{}
+}
+
 func (wm Watermark) typ() string {
 	if wm.isImage() {
 		return "image"
@@ -323,17 +328,6 @@ func (wm Watermark) OnTopString() string {
 func (wm Watermark) multiStamp() bool {
 	return wm.Page == 0
 }
-
-// func (wm Watermark) calcMaxTextWidth() float64 {
-// 	var maxWidth float64
-// 	for _, l := range wm.TextLines {
-// 		w := font.TextWidth(l, wm.FontName, wm.ScaledFontSize)
-// 		if w > maxWidth {
-// 			maxWidth = w
-// 		}
-// 	}
-// 	return maxWidth
-// }
 
 func ResolveWMTextString(text, timeStampFormat string, pageNr, pageCount int) (string, bool) {
 	// replace  %p with pageNr

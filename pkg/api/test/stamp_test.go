@@ -548,3 +548,29 @@ func TestStampingLifecyle(t *testing.T) {
 		t.Fatalf("Watermarks found: %s\n", outFile)
 	}
 }
+
+func TestRecycleWM(t *testing.T) {
+	msg := "TestRecycleWM"
+	inFile := filepath.Join(inDir, "Test.pdf")
+	outFile := filepath.Join("..", "..", "samples", "watermark", "text", "TextRecycled.pdf")
+	onTop := false // we are testing watermarks
+
+	desc := "pos:tl, points:22, rot:0, scale:1 abs, off:0 -5, opacity:0.3"
+	wm, err := api.TextWatermark("This is a watermark", desc, onTop, false, pdfcpu.POINTS)
+	if err != nil {
+		t.Fatalf("%s %s: %v\n", msg, outFile, err)
+	}
+
+	if err = api.AddWatermarksFile(inFile, outFile, nil, wm, nil); err != nil {
+		t.Fatalf("%s %s: %v\n", msg, outFile, err)
+	}
+
+	wm.Recycle()
+
+	// Shift down watermark.
+	wm.Dy = -55
+
+	if err = api.AddWatermarksFile(outFile, outFile, nil, wm, nil); err != nil {
+		t.Fatalf("%s %s: %v\n", msg, outFile, err)
+	}
+}
