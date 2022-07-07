@@ -642,8 +642,8 @@ This command produces poster like PDF pages convenient for page and image browsi
       pages ... Please refer to "pdfcpu selectedpages"
 description ... dimensions, format, orientation
     outFile ... output pdf file
-          m ... grid columns
-          n ... grid lines
+          m ... grid lines
+          n ... grid columns
      inFile ... input pdf file
  imageFiles ... input image file(s)
 
@@ -670,20 +670,20 @@ description ... dimensions, format, orientation
 
 All configuration string parameters support completion.
 
-Examples: pdfcpu grid out.pdf 1 10 in.pdf
-           Rearrange pages of in.pdf into 1x10 grids and write result to out.pdf using the default orientation.
+Examples: pdfcpu grid out.pdf 10 1 in.pdf
+           Rearrange pages of in.pdf into 10x1 grids and write result to out.pdf using the default orientation.
            The output page size is the result of a 1(hor)x10(vert) page grid using in.pdf's page size.
 
           pdfcpu grid -- "p:LegalL" out.pdf 2 2 in.pdf 
            Rearrange pages of in.pdf into 2x2 grids and write result to out.pdf using the default orientation.
            The output page size is the result of a 2(hor)x2(vert) page grid using page size Legal in landscape mode.
 
-          pdfcpu grid -- "o:rd" out.pdf 3 2 in.pdf 
-           Rearrange pages of in.pdf into 3x2 grids and write result to out.pdf using orientation 'right down'.
+          pdfcpu grid -- "o:rd" out.pdf 2 3 in.pdf 
+           Rearrange pages of in.pdf into 2x3 grids and write result to out.pdf using orientation 'right down'.
            The output page size is the result of a 3(hor)x2(vert) page grid using in.pdf's page size.
 
-          pdfcpu grid -- "d:400 400" out.pdf 6 8 *.jpg
-           Arrange imagefiles onto a 6x8 page grid and write result to out.pdf using a grid cell size of 400x400.
+          pdfcpu grid -- "d:400 400" out.pdf 8 6 *.jpg
+           Arrange imagefiles onto a 8x6 page grid and write result to out.pdf using a grid cell size of 400x400.
 
 `
 

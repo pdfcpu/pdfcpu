@@ -551,7 +551,7 @@ func TestStampingLifecyle(t *testing.T) {
 
 func TestRecycleWM(t *testing.T) {
 	msg := "TestRecycleWM"
-	inFile := filepath.Join(inDir, "Test.pdf")
+	inFile := filepath.Join(inDir, "test.pdf")
 	outFile := filepath.Join("..", "..", "samples", "watermark", "text", "TextRecycled.pdf")
 	onTop := false // we are testing watermarks
 
