@@ -27,10 +27,6 @@ import (
 )
 
 func optimizeContentStreamUsage(ctx *Context, sd *StreamDict, objNr int) (*IndirectRef, error) {
-	if !ctx.OptimizeDuplicateContentStreams {
-		return nil, nil
-	}
-
 	f := ctx.Optimize.ContentStreamCache
 	if len(f) == 0 {
 		f[objNr] = sd
@@ -69,6 +65,9 @@ func optimizeContentStreamUsage(ctx *Context, sd *StreamDict, objNr int) (*Indir
 }
 
 func optimizePageContent(ctx *Context, pageDict Dict, pageObjNumber int) error {
+	if !ctx.OptimizeDuplicateContentStreams {
+		return nil
+	}
 	log.Optimize.Println("identifyPageContent begin")
 
 	o, found := pageDict.Find("Contents")
@@ -111,28 +110,40 @@ func optimizePageContent(ctx *Context, pageDict Dict, pageObjNumber int) error {
 		return errors.Errorf("identifyPageContent: obj#:%d corrupt page content array\n", pageObjNumber)
 	}
 
-	for _, c := range contentArr {
+	// TODO Activate content array opimization as soon as we have a proper test file.
 
-		ir, ok := c.(IndirectRef)
-		if !ok {
-			return errors.Errorf("identifyPageContent: obj#:%d corrupt page content array entry\n", pageObjNumber)
-		}
+	_ = contentArr
 
-		entry, found := ctx.FindTableEntry(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
-		if !found {
-			return errors.Errorf("identifyPageContent: obj#:%d illegal indRef for Contents\n", pageObjNumber)
-		}
+	// for i, c := range contentArr {
 
-		contentStreamDict, ok := entry.Object.(StreamDict)
-		if !ok {
-			return errors.Errorf("identifyPageContent: obj#:%d page content entry is no stream dict\n", pageObjNumber)
-		}
-		// TODO Check against contentStream cache.
-		// contentArr[i] = *ir
-		contentStreamDict.IsPageContent = true
-		entry.Object = contentStreamDict
-		log.Optimize.Printf("identifyPageContent: ok obj#%d\n", ir.GenerationNumber.Value())
-	}
+	// 	ir, ok := c.(IndirectRef)
+	// 	if !ok {
+	// 		return errors.Errorf("identifyPageContent: obj#:%d corrupt page content array entry\n", pageObjNumber)
+	// 	}
+
+	// 	objNr := ir.ObjectNumber.Value()
+	// 	entry, found := ctx.FindTableEntry(objNr, ir.GenerationNumber.Value())
+	// 	if !found {
+	// 		return errors.Errorf("identifyPageContent: obj#:%d illegal indRef for Contents\n", pageObjNumber)
+	// 	}
+
+	// 	contentStreamDict, ok := entry.Object.(StreamDict)
+	// 	if !ok {
+	// 		return errors.Errorf("identifyPageContent: obj#:%d page content entry is no stream dict\n", pageObjNumber)
+	// 	}
+
+	// 	ir1, err := optimizeContentStreamUsage(ctx, &contentStreamDict, objNr)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	if ir1 != nil {
+	// 		contentArr[i] = *ir1
+	// 	}
+
+	// 	contentStreamDict.IsPageContent = true
+	// 	entry.Object = contentStreamDict
+	// 	log.Optimize.Printf("identifyPageContent: ok obj#%d\n", ir.GenerationNumber.Value())
+	// }
 
 	log.Optimize.Println("identifyPageContent end")
 
@@ -435,7 +446,6 @@ func optimizeXObjectImage(ctx *Context, osd *StreamDict, rName string, objNr, pa
 		// We have identified a redundant image!
 		// Update xobject resource dict so that rName points to the original.
 		ir := NewIndirectRef(*originalObjNr, 0)
-		//rDict[rName] = *ir
 		// Increase refCount for *originalObjNr
 		entry, ok := ctx.FindTableEntryForIndRef(ir)
 		if ok {
@@ -547,7 +557,23 @@ func optimizeXObjectResourcesDict(ctx *Context, rDict Dict, pageNumber, pageObjN
 			}
 			if ir != nil {
 				rDict[rName] = *ir
+				continue
 			}
+
+			o, found := osd.Find("Resources")
+			if !found {
+				continue
+			}
+
+			// Optimize form resources
+			d, err := ctx.DereferenceDict(o)
+			if d != nil {
+				// Optimize image and font resources.
+				if err = optimizeResources(ctx, d, pageNumber, pageObjNumber); err != nil {
+					return err
+				}
+			}
+
 			continue
 		}
 

@@ -158,12 +158,12 @@ func WriteImageToDisk(outDir, fileName string) func(Image, bool, int) error {
 			qual = "thumb"
 		}
 		f := fmt.Sprintf(s+"_%s.%s", fileName, img.pageNr, qual, img.FileType)
-		if singleImgPerPage {
-			if img.thumb {
-				s += "_" + qual
-			}
-			f = fmt.Sprintf(s+".%s", fileName, img.pageNr, img.FileType)
-		}
+		// if singleImgPerPage {
+		// 	if img.thumb {
+		// 		s += "_" + qual
+		// 	}
+		// 	f = fmt.Sprintf(s+".%s", fileName, img.pageNr, img.FileType)
+		// }
 		outFile := filepath.Join(outDir, f)
 		log.CLI.Printf("writing %s\n", outFile)
 		return WriteReader(outFile, img)
