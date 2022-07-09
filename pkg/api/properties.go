@@ -42,7 +42,7 @@ func ListProperties(rs io.ReadSeeker, conf *pdf.Configuration) ([]string, error)
 	}
 
 	fromWrite := time.Now()
-	list, err := pdf.PropertiesList(ctx.XRefTable)
+	list, err := ctx.PropertiesList()
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func AddProperties(rs io.ReadSeeker, w io.Writer, properties map[string]string, 
 
 	from := time.Now()
 
-	if err = pdf.PropertiesAdd(ctx.XRefTable, properties); err != nil {
+	if err = ctx.PropertiesAdd(properties); err != nil {
 		return err
 	}
 
@@ -159,7 +159,7 @@ func RemoveProperties(rs io.ReadSeeker, w io.Writer, properties []string, conf *
 	from := time.Now()
 
 	var ok bool
-	if ok, err = pdf.PropertiesRemove(ctx.XRefTable, properties); err != nil {
+	if ok, err = ctx.PropertiesRemove(properties); err != nil {
 		return err
 	}
 	if !ok {

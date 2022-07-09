@@ -187,37 +187,6 @@ func Unescape(s string, enc bool) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func unescapeEncrypted(s string) ([]byte, error) {
-	var esc bool
-	var b bytes.Buffer
-
-	for i := 0; i < len(s); i++ {
-
-		c := s[i]
-
-		if regularChar(c, esc) {
-			b.WriteByte(c)
-			continue
-		}
-
-		if c == 0x5c { // '\'
-			if !esc { // Start escape sequence.
-				esc = true
-			} else { // Escaped \
-				b.WriteByte(c)
-				esc = false
-			}
-			continue
-		}
-
-		// escaped && any other than \
-		b.WriteByte(c)
-		esc = false
-	}
-
-	return b.Bytes(), nil
-}
-
 // This is a patched version of strings.FieldsFunc that also returns empty fields.
 func fieldsFunc(s string, f func(rune) bool) []string {
 	// A span is used to record a slice of s of the form s[start:end].
