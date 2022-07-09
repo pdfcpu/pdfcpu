@@ -49,18 +49,12 @@ func Decrypt(cmd *Command) ([]string, error) {
 
 // ChangeUserPassword of inFile and write result to outFile.
 func ChangeUserPassword(cmd *Command) ([]string, error) {
-	// md.Conf.UserPW = *cmd.PWOld
-	// cmd.Conf.UserPWNew = cmd.PWNew
 	return nil, api.ChangeUserPasswordFile(*cmd.InFile, *cmd.OutFile, *cmd.PWOld, *cmd.PWNew, cmd.Conf)
-	// return Optimize(cmd)
 }
 
 // ChangeOwnerPassword of inFile and write result to outFile.
 func ChangeOwnerPassword(cmd *Command) ([]string, error) {
-	// cmd.Conf.OwnerPW = *cmd.PWOld
-	// cmd.Conf.OwnerPWNew = cmd.PWNew
 	return nil, api.ChangeOwnerPasswordFile(*cmd.InFile, *cmd.OutFile, *cmd.PWOld, *cmd.PWNew, cmd.Conf)
-	// return Optimize(cmd)
 }
 
 // ListPermissions of inFile.

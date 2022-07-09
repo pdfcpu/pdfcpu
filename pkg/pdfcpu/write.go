@@ -865,6 +865,10 @@ func setupEncryption(ctx *Context) error {
 
 func updateEncryption(ctx *Context) error {
 
+	if ctx.Encrypt == nil {
+		return errors.New("pdfcpu: This file is not encrypted - nothing written.")
+	}
+
 	d, err := ctx.EncryptDict()
 	if err != nil {
 		return err
