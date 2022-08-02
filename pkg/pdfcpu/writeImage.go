@@ -847,6 +847,9 @@ func RenderImage(xRefTable *XRefTable, sd *StreamDict, thumb bool, resourceName 
 
 // WriteReader consumes r's content by writing it to a file at path.
 func WriteReader(path string, r io.Reader) error {
+	if r == nil {
+		return errors.New("pdfcpu: WriteReader: Please provide r")
+	}
 	w, err := os.Create(path)
 	if err != nil {
 		return err
