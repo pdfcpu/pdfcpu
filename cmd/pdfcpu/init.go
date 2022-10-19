@@ -135,7 +135,7 @@ func initCommandMap() {
 		"attachments":   {nil, attachCmdMap, usageAttach, usageLongAttach},
 		"booklet":       {processBookletCommand, nil, usageBooklet, usageLongBooklet},
 		"boxes":         {nil, boxesCmdMap, usageBoxes, usageLongBoxes},
-		"changeopw":     {processChangeOwnerPasswordCommand, nil, usageChangeOwnerPW, usageLongChangeUserPW},
+		"changeopw":     {processChangeOwnerPasswordCommand, nil, usageChangeOwnerPW, usageLongChangeOwnerPW},
 		"changeupw":     {processChangeUserPasswordCommand, nil, usageChangeUserPW, usageLongChangeUserPW},
 		"collect":       {processCollectCommand, nil, usageCollect, usageLongCollect},
 		"config":        {printConfiguration, nil, usageConfig, usageLongConfig},

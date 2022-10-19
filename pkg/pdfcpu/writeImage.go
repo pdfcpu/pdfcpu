@@ -125,7 +125,7 @@ func colorLookupTable(xRefTable *XRefTable, o Object) ([]byte, error) {
 	switch o := o.(type) {
 
 	case StringLiteral:
-		return Unescape(o.Value())
+		return Unescape(o.Value(), false)
 
 	case HexLiteral:
 		return o.Bytes()
@@ -342,20 +342,6 @@ func renderDeviceRGBToPNG(im *PDFImage, resourceName string) (io.Reader, string,
 	return &buf, "png", nil
 }
 
-// func ensureDeviceRGBCS(xRefTable *XRefTable, o Object) bool {
-// 	o, err := xRefTable.Dereference(o)
-// 	if err != nil {
-// 		return false
-// 	}
-
-// 	switch altCS := o.(type) {
-// 	case Name:
-// 		return altCS == DeviceRGBCS
-// 	}
-
-// 	return false
-// }
-
 func renderCalRGBToPNG(im *PDFImage, resourceName string) (io.Reader, string, error) {
 	b := im.sd.Content
 	log.Debug.Printf("renderCalRGBToPNG: objNr=%d w=%d h=%d bpc=%d buflen=%d\n", im.objNr, im.w, im.h, im.bpc, len(b))
@@ -430,6 +416,51 @@ func renderICCBased(xRefTable *XRefTable, im *PDFImage, resourceName string, cs 
 	return nil, "", nil
 }
 
+func renderIndexedGrayToPNG(im *PDFImage, resourceName string, lookup []byte) (io.Reader, string, error) {
+	b := im.sd.Content
+	log.Debug.Printf("renderIndexedGrayToPNG: objNr=%d w=%d h=%d bpc=%d buflen=%d\n", im.objNr, im.w, im.h, im.bpc, len(b))
+
+	// Validate buflen.
+	// For streams not using compression there is a trailing 0x0A in addition to the imagebytes.
+	if len(b) < (im.bpc*im.w*im.h+7)/8 {
+		return nil, "", errors.Errorf("pdfcpu: renderIndexedGrayToPNG: objNr=%d corrupt image object %v\n", im.objNr, *im.sd)
+	}
+
+	cvr := colValRange{0, 1}
+	if im.decode != nil {
+		cvr = im.decode[0]
+	}
+
+	img := image.NewGray(image.Rect(0, 0, im.w, im.h))
+
+	// TODO support softmask.
+	i := 0
+	for y := 0; y < im.h; y++ {
+		for x := 0; x < im.w; {
+			p := b[i]
+			for j := 0; j < 8/im.bpc; j++ {
+				ind := p >> (8 - uint8(im.bpc))
+				v := decodePixelValue(lookup[ind], im.bpc, cvr)
+				if im.bpc < 8 {
+					v = scaleToBPC8(v, im.bpc)
+				}
+				//fmt.Printf("x=%d y=%d pix=#%02x v=#%02x\n", x, y, pix, v)
+				img.Set(x, y, color.Gray{Y: v})
+				p <<= uint8(im.bpc)
+				x++
+			}
+			i++
+		}
+	}
+
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		return nil, "", err
+	}
+
+	return &buf, "png", nil
+}
+
 func renderIndexedRGBToPNG(im *PDFImage, resourceName string, lookup []byte) (io.Reader, string, error) {
 	b := im.sd.Content
 
@@ -498,6 +529,12 @@ func renderIndexedCMYKToTIFF(im *PDFImage, resourceName string, lookup []byte) (
 
 func renderIndexedNameCS(im *PDFImage, resourceName string, cs Name, maxInd int, lookup []byte) (io.Reader, string, error) {
 	switch cs {
+
+	case DeviceGrayCS:
+		if len(lookup) < 1*(maxInd+1) {
+			return nil, "", errors.Errorf("pdfcpu: renderIndexedNameCS: objNr=%d, corrupt DeviceGray lookup table\n", im.objNr)
+		}
+		return renderIndexedGrayToPNG(im, resourceName, lookup)
 
 	case DeviceRGBCS:
 		if len(lookup) < 3*(maxInd+1) {

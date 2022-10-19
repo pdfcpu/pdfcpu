@@ -373,47 +373,49 @@ func AppendPageTree(d1 *IndirectRef, countd1 int, d2 Dict) error {
 	return d2.IncrementBy("Count", countd1)
 }
 
-func lowerLeftCorner(vpw, vph, bbw, bbh float64, a Anchor) types.Point {
+func lowerLeftCorner(vp *Rectangle, bbw, bbh float64, a Anchor) types.Point {
 
 	var p types.Point
+	vpw := vp.Width()
+	vph := vp.Height()
 
 	switch a {
 
 	case TopLeft:
-		p.X = 0
-		p.Y = vph - bbh
+		p.X = vp.LL.X
+		p.Y = vp.UR.Y - bbh
 
 	case TopCenter:
-		p.X = vpw/2 - bbw/2
-		p.Y = vph - bbh
+		p.X = vp.LL.X + (vpw/2 - bbw/2)
+		p.Y = vp.UR.Y - bbh
 
 	case TopRight:
-		p.X = vpw - bbw
-		p.Y = vph - bbh
+		p.X = vp.UR.X - bbw
+		p.Y = vp.UR.Y - bbh
 
 	case Left:
-		p.X = 0
-		p.Y = vph/2 - bbh/2
+		p.X = vp.LL.X
+		p.Y = vp.LL.Y + (vph/2 - bbh/2)
 
 	case Center:
-		p.X = vpw/2 - bbw/2
-		p.Y = vph/2 - bbh/2
+		p.X = vp.LL.X + (vpw/2 - bbw/2)
+		p.Y = vp.LL.Y + (vph/2 - bbh/2)
 
 	case Right:
-		p.X = vpw - bbw
-		p.Y = vph/2 - bbh/2
+		p.X = vp.UR.X - bbw
+		p.Y = vp.LL.Y + (vph/2 - bbh/2)
 
 	case BottomLeft:
-		p.X = 0
-		p.Y = 0
+		p.X = vp.LL.X
+		p.Y = vp.LL.Y
 
 	case BottomCenter:
-		p.X = vpw/2 - bbw/2
-		p.Y = 0
+		p.X = vp.LL.X + (vpw/2 - bbw/2)
+		p.Y = vp.LL.Y
 
 	case BottomRight:
-		p.X = vpw - bbw
-		p.Y = 0
+		p.X = vp.UR.X - bbw
+		p.Y = vp.LL.Y
 	}
 
 	return p
@@ -466,7 +468,7 @@ func importImagePDFBytes(wr io.Writer, pageDim *Dim, imgWidth, imgHeight float64
 	m[1][1] = bb.Height()
 
 	// Translate
-	ll := lowerLeftCorner(vpw, vph, bb.Width(), bb.Height(), imp.Pos)
+	ll := lowerLeftCorner(bb, bb.Width(), bb.Height(), imp.Pos)
 	m[2][0] = ll.X + float64(imp.Dx)
 	m[2][1] = ll.Y + float64(imp.Dy)
 

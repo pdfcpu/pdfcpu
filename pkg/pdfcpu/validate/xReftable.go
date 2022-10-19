@@ -129,7 +129,10 @@ func validateNames(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool, s
 	for treeName, value := range d {
 
 		if ok := validateNameTreeName(treeName); !ok {
-			return errors.Errorf("validateNames: unknown name tree name: %s\n", treeName)
+			if xRefTable.ValidationMode == pdf.ValidationStrict {
+				return errors.Errorf("validateNames: unknown name tree name: %s\n", treeName)
+			}
+			continue
 		}
 
 		d, err := xRefTable.DereferenceDict(value)

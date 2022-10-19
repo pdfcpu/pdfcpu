@@ -22,17 +22,17 @@ import (
 )
 
 // PropertiesList returns a list of document properties as recorded in the document info dict.
-func PropertiesList(xRefTable *XRefTable) ([]string, error) {
-	list := make([]string, 0, len(xRefTable.Properties))
-	keys := make([]string, len(xRefTable.Properties))
+func (ctx *Context) PropertiesList() ([]string, error) {
+	list := make([]string, 0, len(ctx.Properties))
+	keys := make([]string, len(ctx.Properties))
 	i := 0
-	for k := range xRefTable.Properties {
+	for k := range ctx.Properties {
 		keys[i] = k
 		i++
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		v := xRefTable.Properties[k]
+		v := ctx.Properties[k]
 		list = append(list, fmt.Sprintf("%s = %s", k, v))
 	}
 	return list, nil
@@ -40,37 +40,41 @@ func PropertiesList(xRefTable *XRefTable) ([]string, error) {
 
 // PropertiesAdd adds properties into the document info dict.
 // Returns true if at least one property was added.
-func PropertiesAdd(xRefTable *XRefTable, properties map[string]string) error {
-	// TODO Handle missing info dict.
-	d, err := xRefTable.DereferenceDict(*xRefTable.Info)
-	if err != nil || d == nil {
+func (ctx *Context) PropertiesAdd(properties map[string]string) error {
+	if err := ensureInfoDictAndFileID(ctx); err != nil {
 		return err
 	}
+
+	d, _ := ctx.DereferenceDict(*ctx.Info)
+
 	for k, v := range properties {
 		k1 := UTF8ToCP1252(k)
 		v1 := UTF8ToCP1252(v)
 		d[k1] = StringLiteral(v1)
-		xRefTable.Properties[k1] = v1
+		ctx.Properties[k1] = v1
 	}
+
 	return nil
 }
 
 // PropertiesRemove deletes specified properties.
 // Returns true if at least one property was removed.
-func PropertiesRemove(xRefTable *XRefTable, properties []string) (bool, error) {
-	// TODO Handle missing info dict.
-	d, err := xRefTable.DereferenceDict(*xRefTable.Info)
+func (ctx *Context) PropertiesRemove(properties []string) (bool, error) {
+	if ctx.Info == nil {
+		return false, nil
+	}
+	d, err := ctx.DereferenceDict(*ctx.Info)
 	if err != nil || d == nil {
 		return false, err
 	}
 
 	if len(properties) == 0 {
 		// Remove all properties.
-		for k := range xRefTable.Properties {
+		for k := range ctx.Properties {
 			k1 := UTF8ToCP1252(k)
 			delete(d, k1)
 		}
-		xRefTable.Properties = map[string]string{}
+		ctx.Properties = map[string]string{}
 		return true, nil
 	}
 
@@ -80,7 +84,7 @@ func PropertiesRemove(xRefTable *XRefTable, properties []string) (bool, error) {
 		_, ok := d[k1]
 		if ok && !removed {
 			delete(d, k1)
-			delete(xRefTable.Properties, k1)
+			delete(ctx.Properties, k1)
 			removed = true
 		}
 	}

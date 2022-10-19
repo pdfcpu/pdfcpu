@@ -845,32 +845,39 @@ func validatePageDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNumber, genNumber
 	return nil
 }
 
-func validatePagesDictGeneralEntries(xRefTable *pdf.XRefTable, d pdf.Dict) (hasResources, hasMediaBox bool, err error) {
+func validatePagesDictGeneralEntries(xRefTable *pdf.XRefTable, d pdf.Dict) (pageCount int, hasResources, hasMediaBox bool, err error) {
+
+	// PageCount of this sub page tree
+	i := d.IntEntry("Count")
+	if i == nil {
+		return 0, false, false, errors.New("pdfcpu: validatePagesDictGeneralEntries: missing \"Count\" in page tree")
+	}
+	pageCount = *i
 
 	hasResources, err = validateResources(xRefTable, d)
 	if err != nil {
-		return false, false, err
+		return 0, false, false, err
 	}
 
 	// MediaBox: optional, rectangle
 	hasMediaBox, err = validatePageEntryMediaBox(xRefTable, d, OPTIONAL, pdf.V10)
 	if err != nil {
-		return false, false, err
+		return 0, false, false, err
 	}
 
 	// CropBox: optional, rectangle
 	err = validatePageEntryCropBox(xRefTable, d, OPTIONAL, pdf.V10)
 	if err != nil {
-		return false, false, err
+		return 0, false, false, err
 	}
 
 	// Rotate:  optional, integer
 	err = validatePageEntryRotate(xRefTable, d, OPTIONAL, pdf.V10)
 	if err != nil {
-		return false, false, err
+		return 0, false, false, err
 	}
 
-	return hasResources, hasMediaBox, nil
+	return pageCount, hasResources, hasMediaBox, nil
 }
 
 func dictTypeForPageNodeDict(d pdf.Dict) (string, error) {
@@ -993,9 +1000,13 @@ func processPagesKids(xRefTable *pdf.XRefTable, kids pdf.Array, objNr int, hasRe
 }
 
 func validatePagesDict(xRefTable *pdf.XRefTable, d pdf.Dict, objNr, genNumber int, hasResources, hasMediaBox bool, curPage *int) error {
-	dHasResources, dHasMediaBox, err := validatePagesDictGeneralEntries(xRefTable, d)
+	pageCount, dHasResources, dHasMediaBox, err := validatePagesDictGeneralEntries(xRefTable, d)
 	if err != nil {
 		return err
+	}
+
+	if pageCount == 0 {
+		return nil
 	}
 
 	if dHasResources {
@@ -1032,10 +1043,19 @@ func validatePages(xRefTable *pdf.XRefTable, rootDict pdf.Dict) (pdf.Dict, error
 		return nil, errors.New("pdfcpu: validatePagesDict: cannot dereference pageNodeDict")
 	}
 
+	pageCount := pageRoot.IntEntry("Count")
+	if pageCount == nil {
+		return nil, errors.New("pdfcpu: validatePagesDict: missing \"Count\" in page root dict")
+	}
+
 	i := 0
 	err = validatePagesDict(xRefTable, pageRoot, objNr, genNr, false, false, &i)
 	if err != nil {
 		return nil, err
+	}
+
+	if i != *pageCount {
+		return nil, errors.New("pdfcpu: validatePagesDict: page tree corrupted")
 	}
 
 	return pageRoot, err

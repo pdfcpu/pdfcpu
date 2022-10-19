@@ -129,7 +129,6 @@ func skipTJ(l *string) error {
 
 func skipBI(l *string, prn PageResourceNames) error {
 	s := *l
-	cs := false
 	for {
 		s = strings.TrimLeftFunc(s, whitespaceOrEOL)
 		if strings.HasPrefix(s, "EI") && whitespaceOrEOL(rune(s[2])) {
@@ -143,25 +142,13 @@ func skipBI(l *string, prn PageResourceNames) error {
 			if i < 0 {
 				return errBIExpressionCorrupt
 			}
-			n := s[:i]
 			s = s[i:]
-			if cs {
-				if !MemberOf(n, []string{"RGB", "Gray", "CMYK", "DeviceRGB", "DeviceGray", "DeviceCMYK"}) {
-					prn["ColorSpace"][n] = true
-				}
-				cs = false
-				continue
-			}
-			if n == "CS" {
-				cs = true
-			}
 			continue
 		}
 		i, _ := positionToNextWhitespaceOrChar(s, "/")
 		if i < 0 {
 			return errBIExpressionCorrupt
 		}
-		cs = false
 		s = s[i:]
 	}
 	*l = s
@@ -320,6 +307,8 @@ func parseContent(s string) (PageResourceNames, error) {
 		n    bool
 	)
 	prn := NewPageResourceNames()
+
+	//fmt.Printf("parseContent:\n%s\n", hex.Dump([]byte(s)))
 
 	for pos := 0; ; {
 		t, err := nextContentToken(&s, prn)

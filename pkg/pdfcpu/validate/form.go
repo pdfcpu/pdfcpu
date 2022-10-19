@@ -269,8 +269,6 @@ func validateAcroFormFields(xRefTable *pdf.XRefTable, o pdf.Object) error {
 		return err
 	}
 
-	//xRefTable.AcroForm = true
-
 	for _, value := range a {
 
 		ir, ok := value.(pdf.IndirectRef)
@@ -305,30 +303,7 @@ func validateAcroFormCO(xRefTable *pdf.XRefTable, o pdf.Object, sinceVersion pdf
 		return err
 	}
 
-	a, err := xRefTable.DereferenceArray(o)
-	if err != nil || a == nil {
-		return err
-	}
-
-	for _, o := range a {
-
-		d, err := xRefTable.DereferenceDict(o)
-		if err != nil {
-			return err
-		}
-
-		if d == nil {
-			continue
-		}
-
-		_, err = validateAnnotationDict(xRefTable, d)
-		if err != nil {
-			return err
-		}
-
-	}
-
-	return nil
+	return validateAcroFormFields(xRefTable, o)
 }
 
 func validateAcroFormXFA(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion pdf.Version) error {
@@ -346,8 +321,6 @@ func validateAcroFormXFA(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion pdf.
 	if err != nil || o == nil {
 		return err
 	}
-
-	//xRefTable.AcroForm = true
 
 	switch o := o.(type) {
 

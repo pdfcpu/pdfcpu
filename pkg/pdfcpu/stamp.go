@@ -248,6 +248,11 @@ func DefaultWatermarkConfig() *Watermark {
 	}
 }
 
+func (wm *Watermark) Recycle() {
+	wm.objs = IntSet{}
+	wm.fCache = formCache{}
+}
+
 func (wm Watermark) typ() string {
 	if wm.isImage() {
 		return "image"
@@ -323,17 +328,6 @@ func (wm Watermark) OnTopString() string {
 func (wm Watermark) multiStamp() bool {
 	return wm.Page == 0
 }
-
-// func (wm Watermark) calcMaxTextWidth() float64 {
-// 	var maxWidth float64
-// 	for _, l := range wm.TextLines {
-// 		w := font.TextWidth(l, wm.FontName, wm.ScaledFontSize)
-// 		if w > maxWidth {
-// 			maxWidth = w
-// 		}
-// 	}
-// 	return maxWidth
-// }
 
 func ResolveWMTextString(text, timeStampFormat string, pageNr, pageCount int) (string, bool) {
 	// replace  %p with pageNr
@@ -963,7 +957,7 @@ func (wm *Watermark) calcTransformMatrix() Matrix {
 	if !wm.isImage() && !wm.isPDF() {
 		dy = wm.bb.LL.Y
 	}
-	ll := lowerLeftCorner(wm.vp.Width(), wm.vp.Height(), wm.bb.Width(), wm.bb.Height(), wm.Pos)
+	ll := lowerLeftCorner(wm.vp, wm.bb.Width(), wm.bb.Height(), wm.Pos)
 
 	dx := ll.X + wm.bb.Width()/2 + float64(wm.Dx) + sin*(wm.bb.Height()/2+dy) - cos*wm.bb.Width()/2
 	dy = ll.Y + wm.bb.Height()/2 + float64(wm.Dy) - cos*(wm.bb.Height()/2+dy) - sin*wm.bb.Width()/2
@@ -1466,7 +1460,7 @@ func setupTextDescriptor(wm *Watermark, timestampFormat string, pageNr, pageCoun
 	return td, unique
 }
 
-func drawBoundingBox(b bytes.Buffer, wm *Watermark, bb *Rectangle) {
+func drawBoundingBox(b *bytes.Buffer, wm *Watermark, bb *Rectangle) {
 	urx := bb.UR.X
 	ury := bb.UR.Y
 	if wm.isPDF() {
@@ -1477,7 +1471,7 @@ func drawBoundingBox(b bytes.Buffer, wm *Watermark, bb *Rectangle) {
 		urx /= sc
 		ury /= sc
 	}
-	fmt.Fprintf(&b, "[]0 d 2 w %.2f %.2f m %.2f %.2f l %.2f %.2f l %.2f %.2f l s ",
+	fmt.Fprintf(b, "[]0 d 2 w %.2f %.2f m %.2f %.2f l %.2f %.2f l %.2f %.2f l s ",
 		bb.LL.X, bb.LL.Y,
 		urx, bb.LL.Y,
 		urx, ury,
@@ -1493,7 +1487,7 @@ func calcFormBoundingBox(w io.Writer, timestampFormat string, pageNr, pageCount 
 		var td TextDescriptor
 		td, unique = setupTextDescriptor(wm, timestampFormat, pageNr, pageCount)
 		// Render td into b and return the bounding box.
-		wm.bb = WriteMultiLine(w, wm.vp, nil, td)
+		wm.bb = WriteMultiLine(w, RectForDim(wm.vp.Width(), wm.vp.Height()), nil, td)
 	}
 	return unique
 }
@@ -1530,7 +1524,7 @@ func (ctx *Context) createForm(pageNr, pageCount int, wm *Watermark, withBB bool
 
 	// Paint bounding box
 	if withBB {
-		drawBoundingBox(b, wm, bbox)
+		drawBoundingBox(&b, wm, bbox)
 	}
 
 	sd := StreamDict{

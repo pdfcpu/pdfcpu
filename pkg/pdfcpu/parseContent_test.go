@@ -31,7 +31,6 @@ func TestParseContent(t *testing.T) {
 	want := NewPageResourceNames()
 	want["ColorSpace"]["CS0"] = true
 	want["ColorSpace"]["CS1"] = true
-	want["ColorSpace"]["InlineCS"] = true
 	want["ExtGState"]["GS0"] = true
 	want["Font"]["T1_0"] = true
 	want["Pattern"]["P0"] = true

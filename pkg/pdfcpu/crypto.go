@@ -1040,7 +1040,7 @@ func decryptBytes(b []byte, objNr, genNr int, encKey []byte, needAES bool, r int
 // decryptString decrypts s using RC4 or AES.
 func decryptString(s string, objNr, genNr int, key []byte, needAES bool, r int) ([]byte, error) {
 
-	bb, err := Unescape(s)
+	bb, err := Unescape(s, true)
 	if err != nil {
 		return nil, err
 	}

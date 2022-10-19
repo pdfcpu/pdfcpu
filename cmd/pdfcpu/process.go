@@ -1671,6 +1671,11 @@ func processRemoveAnnotationsCommand(conf *pdfcpu.Configuration) {
 }
 
 func processListImagesCommand(conf *pdfcpu.Configuration) {
+	if len(flag.Args()) < 1 {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usageImagesList)
+		os.Exit(1)
+	}
+
 	filesIn := []string{}
 	for _, arg := range flag.Args() {
 		if strings.Contains(arg, "*") {

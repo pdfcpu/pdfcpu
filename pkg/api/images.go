@@ -27,7 +27,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ListImages returns a list of page annotations of rs.
+// ListImages returns a list of embedded images of rs.
 func ListImages(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Configuration) ([]string, error) {
 	if rs == nil {
 		return nil, errors.New("pdfcpu: ListImages: Please provide rs")
