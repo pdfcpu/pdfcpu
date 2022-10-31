@@ -154,13 +154,13 @@ func handleTimestampFormat(v string, c *Configuration) error {
 	return nil
 }
 
-func handleHeaderBufSize(v string, c *Configuration) error {
+func handleHeaderBufSize(k, v string, c *Configuration) error {
 	i, err := strconv.Atoi(v)
 	if err != nil {
-		return errors.Errorf("headerBufSize is numeric, got: %s", v)
+		return errors.Errorf("%s is numeric, got: %s", k, v)
 	}
 	if i < 100 {
-		return errors.Errorf("headerBufSize must be >= 100, got: %d", i)
+		return errors.Errorf("%s must be >= 100, got: %d", k, i)
 	}
 	c.HeaderBufSize = i
 	return nil
