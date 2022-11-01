@@ -52,14 +52,10 @@ func TestImportImages(t *testing.T) {
 	outDir := filepath.Join("..", "..", "samples", "import")
 
 	testFile1 := filepath.Join(outDir, "CenteredGraySepia.pdf")
-	if err := os.Remove(testFile1); err != nil {
-		t.Fatal(err)
-	}
+	os.Remove(testFile1)
 
 	testFile2 := filepath.Join(outDir, "Full.pdf")
-	if err := os.Remove(testFile2); err != nil {
-		t.Fatal(err)
-	}
+	os.Remove(testFile2)
 
 	for _, tt := range []struct {
 		msg      string

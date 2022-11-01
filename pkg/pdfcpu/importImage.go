@@ -424,17 +424,14 @@ func importImagePDFBytes(wr io.Writer, pageDim *Dim, imgWidth, imgHeight float64
 
 	vpw := float64(pageDim.Width)
 	vph := float64(pageDim.Height)
+	vp := RectForDim(vpw, vph)
 
-	bb := RectForDim(vpw, vph)
 	if imp.BgColor != nil {
-		FillRectNoBorder(wr, bb, *imp.BgColor)
+		FillRectNoBorder(wr, vp, *imp.BgColor)
 	}
 
 	if imp.Pos == Full {
-		// The bounding box equals the page dimensions.
-		bb.UR.X = bb.Width()
-		bb.UR.Y = bb.UR.X / bb.AspectRatio()
-		fmt.Fprintf(wr, "q %f 0 0 %f 0 0 cm /Im0 Do Q", bb.Width(), bb.Height())
+		fmt.Fprintf(wr, "q %f 0 0 %f 0 0 cm /Im0 Do Q", vp.Width(), vp.Height())
 		return
 	}
 
@@ -444,7 +441,7 @@ func importImagePDFBytes(wr io.Writer, pageDim *Dim, imgWidth, imgHeight float64
 		imgHeight *= float64(72) / float64(imp.DPI)
 	}
 
-	bb = RectForDim(imgWidth, imgHeight)
+	bb := RectForDim(imgWidth, imgHeight)
 	ar := bb.AspectRatio()
 
 	if imp.ScaleAbs {
@@ -452,11 +449,31 @@ func importImagePDFBytes(wr io.Writer, pageDim *Dim, imgWidth, imgHeight float64
 		bb.UR.Y = bb.UR.X / ar
 	} else {
 		if ar >= 1 {
-			bb.UR.X = imp.Scale * vpw
-			bb.UR.Y = bb.UR.X / ar
+			if vp.AspectRatio() <= 1 {
+				bb.UR.X = imp.Scale * vpw
+				bb.UR.Y = bb.UR.X / ar
+			} else {
+				if ar >= vp.AspectRatio() {
+					bb.UR.X = imp.Scale * vpw
+					bb.UR.Y = bb.UR.X / ar
+				} else {
+					bb.UR.Y = imp.Scale * vph
+					bb.UR.X = bb.UR.Y * ar
+				}
+			}
 		} else {
-			bb.UR.Y = imp.Scale * vph
-			bb.UR.X = bb.UR.Y * ar
+			if vp.AspectRatio() >= 1 {
+				bb.UR.Y = imp.Scale * vph
+				bb.UR.X = bb.UR.Y * ar
+			} else {
+				if ar <= vp.AspectRatio() {
+					bb.UR.Y = imp.Scale * vph
+					bb.UR.X = bb.UR.Y * ar
+				} else {
+					bb.UR.X = imp.Scale * vpw
+					bb.UR.Y = bb.UR.X / ar
+				}
+			}
 		}
 	}
 
@@ -467,7 +484,7 @@ func importImagePDFBytes(wr io.Writer, pageDim *Dim, imgWidth, imgHeight float64
 	m[1][1] = bb.Height()
 
 	// Translate
-	ll := lowerLeftCorner(bb, bb.Width(), bb.Height(), imp.Pos)
+	ll := lowerLeftCorner(vp, bb.Width(), bb.Height(), imp.Pos)
 	m[2][0] = ll.X + float64(imp.Dx)
 	m[2][1] = ll.Y + float64(imp.Dy)
 
