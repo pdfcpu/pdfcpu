@@ -1250,7 +1250,11 @@ func validateMarkupAnnotation(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 	}
 
 	// CreationDate, optional, date, since V1.5
-	_, err = validateDateEntry(xRefTable, d, dictName, "CreationDate", OPTIONAL, pdf.V15)
+	sinceVersion := pdf.V15
+	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+		sinceVersion = pdf.V13
+	}
+	_, err = validateDateEntry(xRefTable, d, dictName, "CreationDate", OPTIONAL, sinceVersion)
 	if err != nil {
 		return err
 	}
@@ -1262,7 +1266,7 @@ func validateMarkupAnnotation(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 	}
 
 	// Subj, optional, text string, since V1.5
-	sinceVersion := pdf.V15
+	sinceVersion = pdf.V15
 	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
 		sinceVersion = pdf.V14
 	}
