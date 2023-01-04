@@ -157,8 +157,8 @@ func Unescape(s string, enc bool) ([]byte, error) {
 			continue
 		}
 
-		// Ignore \eol line breaks.
-		if c == 0x0A {
+		// Ignore \eol line breaks and null characters.
+		if c == 0x0A || c == 0x00 {
 			esc = false
 			continue
 		}
