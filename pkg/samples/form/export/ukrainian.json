@@ -1,0 +1,121 @@
+{
+	"header": {
+		"source": "ukrainian.pdf",
+		"version": "pdfcpu v0.4.0 dev",
+		"creation": "2023-02-10 21:43:44 CET",
+		"producer": "pdfcpu v0.4.0 dev"
+	},
+	"forms": [
+		{
+			"textfield": [
+				{
+					"id": "firstName1",
+					"default": "Володимир",
+					"value": "Джекі",
+					"multiline": false,
+					"locked": false
+				},
+				{
+					"id": "lastName1",
+					"value": "лань",
+					"multiline": false,
+					"locked": false
+				},
+				{
+					"id": "note1",
+					"value": "Це зразок тексту.\nЦе наступний рядок.",
+					"multiline": true,
+					"locked": false
+				}
+			],
+			"datefield": [
+				{
+					"id": "dob1",
+					"format": "dd.mm.yyyy",
+					"default": "05.12.1992",
+					"value": "31.12.1999",
+					"locked": false
+				}
+			],
+			"checkbox": [
+				{
+					"id": "cb11",
+					"default": false,
+					"value": true,
+					"locked": false
+				},
+				{
+					"id": "cb12",
+					"default": false,
+					"value": false,
+					"locked": false
+				},
+				{
+					"id": "cb13",
+					"default": false,
+					"value": false,
+					"locked": false
+				},
+				{
+					"id": "cb14",
+					"default": false,
+					"value": false,
+					"locked": false
+				},
+				{
+					"id": "cb15",
+					"default": false,
+					"value": false,
+					"locked": false
+				}
+			],
+			"radiobuttongroup": [
+				{
+					"id": "gender1",
+					"options": [
+						"жіноча",
+						"чоловічий",
+						"небінарний"
+					],
+					"default": "жіноча",
+					"value": "небінарний",
+					"locked": false
+				}
+			],
+			"combobox": [
+				{
+					"id": "city12",
+					"editable": false,
+					"options": [
+						"Київ",
+						"Маріуполь",
+						"Севастополь"
+					],
+					"default": "Маріуполь",
+					"value": "Севастополь",
+					"locked": false
+				}
+			],
+			"listbox": [
+				{
+					"id": "city11",
+					"multi": true,
+					"options": [
+						"Сан Франциско",
+						"Сан-Паулу",
+						"Відень"
+					],
+					"defaults": [
+						"Відень",
+						"Сан-Паулу"
+					],
+					"values": [
+						"Сан Франциско",
+						"Відень"
+					],
+					"locked": false
+				}
+			]
+		}
+	]
+}

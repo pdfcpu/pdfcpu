@@ -21,28 +21,28 @@ import (
 	"os"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
 
 // Encrypt reads a PDF stream from rs and writes the encrypted PDF stream to w.
 // A configuration containing at least the current passwords is required.
-func Encrypt(rs io.ReadSeeker, w io.Writer, conf *pdfcpu.Configuration) error {
+func Encrypt(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
 	if conf == nil {
 		return errors.New("pdfcpu: missing configuration for encryption")
 	}
-	conf.Cmd = pdfcpu.ENCRYPT
+	conf.Cmd = model.ENCRYPT
 
 	return Optimize(rs, w, conf)
 }
 
 // EncryptFile encrypts inFile and writes the result to outFile.
 // A configuration containing at least the current passwords is required.
-func EncryptFile(inFile, outFile string, conf *pdfcpu.Configuration) (err error) {
+func EncryptFile(inFile, outFile string, conf *model.Configuration) (err error) {
 	if conf == nil {
 		return errors.New("pdfcpu: missing configuration for encryption")
 	}
-	conf.Cmd = pdfcpu.ENCRYPT
+	conf.Cmd = model.ENCRYPT
 
 	var f1, f2 *os.File
 
@@ -87,22 +87,22 @@ func EncryptFile(inFile, outFile string, conf *pdfcpu.Configuration) (err error)
 
 // Decrypt reads a PDF stream from rs and writes the encrypted PDF stream to w.
 // A configuration containing at least the current passwords is required.
-func Decrypt(rs io.ReadSeeker, w io.Writer, conf *pdfcpu.Configuration) error {
+func Decrypt(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
 	if conf == nil {
 		return errors.New("pdfcpu: missing configuration for decryption")
 	}
-	conf.Cmd = pdfcpu.DECRYPT
+	conf.Cmd = model.DECRYPT
 
 	return Optimize(rs, w, conf)
 }
 
 // DecryptFile decrypts inFile and writes the result to outFile.
 // A configuration containing at least the current passwords is required.
-func DecryptFile(inFile, outFile string, conf *pdfcpu.Configuration) (err error) {
+func DecryptFile(inFile, outFile string, conf *model.Configuration) (err error) {
 	if conf == nil {
 		return errors.New("pdfcpu: missing configuration for decryption")
 	}
-	conf.Cmd = pdfcpu.DECRYPT
+	conf.Cmd = model.DECRYPT
 
 	var f1, f2 *os.File
 
@@ -147,11 +147,11 @@ func DecryptFile(inFile, outFile string, conf *pdfcpu.Configuration) (err error)
 
 // ChangeUserPassword reads a PDF stream from rs, changes the user password and writes the encrypted PDF stream to w.
 // A configuration containing the current passwords is required.
-func ChangeUserPassword(rs io.ReadSeeker, w io.Writer, pwOld, pwNew string, conf *pdfcpu.Configuration) error {
+func ChangeUserPassword(rs io.ReadSeeker, w io.Writer, pwOld, pwNew string, conf *model.Configuration) error {
 	if conf == nil {
 		return errors.New("pdfcpu: missing configuration for change user password")
 	}
-	conf.Cmd = pdfcpu.CHANGEUPW
+	conf.Cmd = model.CHANGEUPW
 	conf.UserPW = pwOld
 	conf.UserPWNew = &pwNew
 
@@ -160,11 +160,11 @@ func ChangeUserPassword(rs io.ReadSeeker, w io.Writer, pwOld, pwNew string, conf
 
 // ChangeUserPasswordFile reads inFile, changes the user password and writes the result to outFile.
 // A configuration containing the current passwords is required.
-func ChangeUserPasswordFile(inFile, outFile string, pwOld, pwNew string, conf *pdfcpu.Configuration) (err error) {
+func ChangeUserPasswordFile(inFile, outFile string, pwOld, pwNew string, conf *model.Configuration) (err error) {
 	if conf == nil {
 		return errors.New("pdfcpu: missing configuration for change user password")
 	}
-	conf.Cmd = pdfcpu.CHANGEUPW
+	conf.Cmd = model.CHANGEUPW
 	conf.UserPW = pwOld
 	conf.UserPWNew = &pwNew
 
@@ -211,11 +211,11 @@ func ChangeUserPasswordFile(inFile, outFile string, pwOld, pwNew string, conf *p
 
 // ChangeOwnerPassword reads a PDF stream from rs, changes the owner password and writes the encrypted PDF stream to w.
 // A configuration containing the current passwords is required.
-func ChangeOwnerPassword(rs io.ReadSeeker, w io.Writer, pwOld, pwNew string, conf *pdfcpu.Configuration) error {
+func ChangeOwnerPassword(rs io.ReadSeeker, w io.Writer, pwOld, pwNew string, conf *model.Configuration) error {
 	if conf == nil {
 		return errors.New("pdfcpu: missing configuration for change owner password")
 	}
-	conf.Cmd = pdfcpu.CHANGEOPW
+	conf.Cmd = model.CHANGEOPW
 	conf.OwnerPW = pwOld
 	conf.OwnerPWNew = &pwNew
 
@@ -224,11 +224,11 @@ func ChangeOwnerPassword(rs io.ReadSeeker, w io.Writer, pwOld, pwNew string, con
 
 // ChangeOwnerPasswordFile reads inFile, changes the owner password and writes the result to outFile.
 // A configuration containing the current passwords is required.
-func ChangeOwnerPasswordFile(inFile, outFile string, pwOld, pwNew string, conf *pdfcpu.Configuration) (err error) {
+func ChangeOwnerPasswordFile(inFile, outFile string, pwOld, pwNew string, conf *model.Configuration) (err error) {
 	if conf == nil {
 		return errors.New("pdfcpu: missing configuration for change owner password")
 	}
-	conf.Cmd = pdfcpu.CHANGEOPW
+	conf.Cmd = model.CHANGEOPW
 	conf.OwnerPW = pwOld
 	conf.OwnerPWNew = &pwNew
 

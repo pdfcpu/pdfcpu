@@ -24,27 +24,29 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 // Import parses an Import command string into an internal structure.
-func Import(s string, u pdfcpu.DisplayUnit) (*pdfcpu.Import, error) {
+func Import(s string, u types.DisplayUnit) (*pdfcpu.Import, error) {
 	return pdfcpu.ParseImportDetails(s, u)
 }
 
 // ImportImages appends PDF pages containing images to rs and writes the result to w.
 // If rs == nil a new PDF file will be written to w.
-func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdfcpu.Import, conf *pdfcpu.Configuration) error {
+func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdfcpu.Import, conf *model.Configuration) error {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.IMPORTIMAGES
+	conf.Cmd = model.IMPORTIMAGES
 
 	if imp == nil {
 		imp = pdfcpu.DefaultImportConfig()
 	}
 
 	var (
-		ctx *pdfcpu.Context
+		ctx *model.Context
 		err error
 	)
 
@@ -75,14 +77,14 @@ func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdfcpu.I
 			return err
 		}
 
-		if err = pdfcpu.AppendPageTree(indRef, 1, pagesDict); err != nil {
+		if err = model.AppendPageTree(indRef, 1, pagesDict); err != nil {
 			return err
 		}
 
 		ctx.PageCount++
 	}
 
-	if conf.ValidationMode != pdfcpu.ValidationNone {
+	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
 			return err
 		}
@@ -109,7 +111,7 @@ func fileExists(filename string) bool {
 }
 
 // ImportImagesFile appends PDF pages containing images to outFile which will be created if necessary.
-func ImportImagesFile(imgFiles []string, outFile string, imp *pdfcpu.Import, conf *pdfcpu.Configuration) (err error) {
+func ImportImagesFile(imgFiles []string, outFile string, imp *pdfcpu.Import, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	rs := io.ReadSeeker(nil)

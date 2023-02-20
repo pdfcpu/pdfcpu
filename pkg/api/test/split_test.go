@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
 func TestSplitSpan1(t *testing.T) {
@@ -74,7 +75,7 @@ func TestSplitLowLevel(t *testing.T) {
 	from, thru := 2, 4
 	selectedPages := api.PagesForPageRange(from, thru)
 	usePgCache := false
-	ctxNew, err := ctx.ExtractPages(selectedPages, usePgCache)
+	ctxNew, err := pdfcpu.ExtractPages(ctx, selectedPages, usePgCache)
 	if err != nil {
 		t.Fatalf("%s ExtractPages(%d,%d): %v\n", msg, from, thru, err)
 	}

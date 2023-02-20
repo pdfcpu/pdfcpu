@@ -1,0 +1,4 @@
+"firstName1","lastName1","dob1","gender1","note1","city11","city12","@img(page:1, pos:br, off:-30 30, w:100)"
+"Jane","Doe","06.01.2000","female","Person #1","San Francisco","London","../../testdata/resources/qr.png,(https://pdfcpu.io)"
+"Joe","Doe","30.07.2001","male","Person #2","São Paulo","San Francisco","../../testdata/resources/logoVerySmall.png,(https://pdfcpu.io)"
+"Jackie","Doe","29.11.1965","non-binary","Person #3","Vienna","Sidney","../../testdata/resources/pdfchip3.png,(https://pdfcpu.io)"

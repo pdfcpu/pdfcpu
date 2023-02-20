@@ -22,16 +22,16 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
 // Trim generates a trimmed version of rs
 // containing all selected pages and writes the result to w.
-func Trim(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *pdfcpu.Configuration) error {
+func Trim(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.Configuration) error {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.TRIM
+	conf.Cmd = model.TRIM
 
 	fromStart := time.Now()
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
@@ -67,7 +67,7 @@ func Trim(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *pdfcpu.Co
 
 // TrimFile generates a trimmed version of inFile
 // containing all selected pages and writes the result to outFile.
-func TrimFile(inFile, outFile string, selectedPages []string, conf *pdfcpu.Configuration) (err error) {
+func TrimFile(inFile, outFile string, selectedPages []string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {

@@ -24,6 +24,8 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 func TestAlternatingPageNumbersViaWatermarkMap(t *testing.T) {
@@ -39,7 +41,7 @@ func TestAlternatingPageNumbersViaWatermarkMap(t *testing.T) {
 	// Prepare a map of watermarks.
 	// This maps pages to corresponding watermarks.
 	// Any page may be assigned a single watermark of type text, image or PDF.
-	m := map[int]*pdfcpu.Watermark{}
+	m := map[int]*model.Watermark{}
 
 	// Start stamping with page 2.
 	// For odd page numbers add a blue stamp on the bottom right corner using Roboto-Regular
@@ -57,7 +59,7 @@ func TestAlternatingPageNumbersViaWatermarkMap(t *testing.T) {
 			fillCol = "#0000E0"
 		}
 		desc := fmt.Sprintf("font:%s, points:12, sc:1 abs, pos:%s, off:%d 10, fillcol:%s, rot:0", fontName, pos, dx, fillCol)
-		wm, err := api.TextWatermark(text, desc, true, false, pdfcpu.POINTS)
+		wm, err := api.TextWatermark(text, desc, true, false, types.POINTS)
 		if err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
@@ -91,8 +93,8 @@ func TestAlternatingPageNumbersViaWatermarkMapLowLevel(t *testing.T) {
 		t.Fatalf("%s readContext: %v\n", msg, err)
 	}
 
-	m := map[int]*pdfcpu.Watermark{}
-	unit := pdfcpu.POINTS
+	m := map[int]*model.Watermark{}
+	unit := types.POINTS
 
 	// Start stamping with page 2.
 	// For odd page numbers add a blue stamp on the bottom right corner using Roboto-Regular
@@ -117,7 +119,7 @@ func TestAlternatingPageNumbersViaWatermarkMapLowLevel(t *testing.T) {
 		m[i] = wm
 	}
 
-	if err := ctx.AddWatermarksMap(m); err != nil {
+	if err := pdfcpu.AddWatermarksMap(ctx, m); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
@@ -127,7 +129,7 @@ func TestAlternatingPageNumbersViaWatermarkMapLowLevel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
-	if err := ctx.AddWatermarks(nil, wm); err != nil {
+	if err := pdfcpu.AddWatermarks(ctx, nil, wm); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
@@ -136,7 +138,7 @@ func TestAlternatingPageNumbersViaWatermarkMapLowLevel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
-	if err := ctx.AddWatermarks(nil, wm); err != nil {
+	if err := pdfcpu.AddWatermarks(ctx, nil, wm); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
@@ -156,18 +158,18 @@ func TestAlternatingPageNumbersViaWatermarkSliceMap(t *testing.T) {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	m := map[int][]*pdfcpu.Watermark{}
+	m := map[int][]*model.Watermark{}
 	opacity := 1.0
 	onTop := true // All stamps!
 	update := false
-	unit := pdfcpu.POINTS
+	unit := types.POINTS
 
 	// Prepare a map of watermark slices.
 	// This maps pages to corresponding watermarks.
 	// Each page may be assigned an arbitrary number of watermarks of type text, image or PDF.
 	for i := 2; i <= pageCount; i++ {
 
-		wms := []*pdfcpu.Watermark{}
+		wms := []*model.Watermark{}
 
 		// 1st watermark on page
 		// For odd page numbers add a blue stamp on the bottom right corner using Roboto-Regular
@@ -231,13 +233,13 @@ func TestImagesTextAndPDFWMViaWatermarkMap(t *testing.T) {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	m := map[int]*pdfcpu.Watermark{}
+	m := map[int]*model.Watermark{}
 	fileNames := imageFileNames(t, filepath.Join("..", "..", "..", "resources"))
 
 	opacity := 1.0
 	onTop := true // All stamps!
 	update := false
-	unit := pdfcpu.POINTS
+	unit := types.POINTS
 
 	// Apply a mix of image, text and PDF watermarks in one go.
 	for i := 1; i <= pageCount; i++ {

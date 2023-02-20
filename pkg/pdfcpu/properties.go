@@ -19,10 +19,13 @@ package pdfcpu
 import (
 	"fmt"
 	"sort"
+
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 // PropertiesList returns a list of document properties as recorded in the document info dict.
-func (ctx *Context) PropertiesList() ([]string, error) {
+func PropertiesList(ctx *model.Context) ([]string, error) {
 	list := make([]string, 0, len(ctx.Properties))
 	keys := make([]string, len(ctx.Properties))
 	i := 0
@@ -40,7 +43,7 @@ func (ctx *Context) PropertiesList() ([]string, error) {
 
 // PropertiesAdd adds properties into the document info dict.
 // Returns true if at least one property was added.
-func (ctx *Context) PropertiesAdd(properties map[string]string) error {
+func PropertiesAdd(ctx *model.Context, properties map[string]string) error {
 	if err := ensureInfoDictAndFileID(ctx); err != nil {
 		return err
 	}
@@ -48,9 +51,9 @@ func (ctx *Context) PropertiesAdd(properties map[string]string) error {
 	d, _ := ctx.DereferenceDict(*ctx.Info)
 
 	for k, v := range properties {
-		k1 := UTF8ToCP1252(k)
-		v1 := UTF8ToCP1252(v)
-		d[k1] = StringLiteral(v1)
+		k1 := types.UTF8ToCP1252(k)
+		v1 := types.UTF8ToCP1252(v)
+		d[k1] = types.StringLiteral(v1)
 		ctx.Properties[k1] = v1
 	}
 
@@ -59,7 +62,7 @@ func (ctx *Context) PropertiesAdd(properties map[string]string) error {
 
 // PropertiesRemove deletes specified properties.
 // Returns true if at least one property was removed.
-func (ctx *Context) PropertiesRemove(properties []string) (bool, error) {
+func PropertiesRemove(ctx *model.Context, properties []string) (bool, error) {
 	if ctx.Info == nil {
 		return false, nil
 	}
@@ -71,7 +74,7 @@ func (ctx *Context) PropertiesRemove(properties []string) (bool, error) {
 	if len(properties) == 0 {
 		// Remove all properties.
 		for k := range ctx.Properties {
-			k1 := UTF8ToCP1252(k)
+			k1 := types.UTF8ToCP1252(k)
 			delete(d, k1)
 		}
 		ctx.Properties = map[string]string{}
@@ -80,7 +83,7 @@ func (ctx *Context) PropertiesRemove(properties []string) (bool, error) {
 
 	var removed bool
 	for _, k := range properties {
-		k1 := UTF8ToCP1252(k)
+		k1 := types.UTF8ToCP1252(k)
 		_, ok := d[k1]
 		if ok && !removed {
 			delete(d, k1)

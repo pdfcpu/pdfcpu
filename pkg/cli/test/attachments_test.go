@@ -37,7 +37,7 @@ func prepareForAttachmentTest(t *testing.T) error {
 
 func listAttachments(t *testing.T, msg, fileName string, want int) []string {
 	t.Helper()
-	cmd := cli.ListAttachmentsCommand(fileName, nil)
+	cmd := cli.ListAttachmentsCommand(fileName, conf)
 	list, err := cli.Process(cmd)
 	if err != nil {
 		t.Fatalf("%s list attachments: %v\n", msg, err)
@@ -69,7 +69,7 @@ func TestAttachments(t *testing.T) {
 		filepath.Join(outDir, "test.wav"),
 	}
 
-	cmd := cli.AddAttachmentsCommand(fileName, "", files, nil)
+	cmd := cli.AddAttachmentsCommand(fileName, "", files, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s add attachments: %v\n", msg, err)
 	}
@@ -79,33 +79,33 @@ func TestAttachments(t *testing.T) {
 	}
 
 	// Extract all attachments.
-	cmd = cli.ExtractAttachmentsCommand(fileName, outDir, nil, nil)
+	cmd = cli.ExtractAttachmentsCommand(fileName, outDir, nil, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s extract all attachments: %v\n", msg, err)
 	}
 
 	// Extract 1 attachment.
-	cmd = cli.ExtractAttachmentsCommand(fileName, outDir, []string{"golang.pdf"}, nil)
+	cmd = cli.ExtractAttachmentsCommand(fileName, outDir, []string{"golang.pdf"}, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s extract one attachment: %v\n", msg, err)
 	}
 
 	// Remove 1 attachment.
-	cmd = cli.RemoveAttachmentsCommand(fileName, "", []string{"golang.pdf"}, nil)
+	cmd = cli.RemoveAttachmentsCommand(fileName, "", []string{"golang.pdf"}, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s remove one attachment: %v\n", msg, err)
 	}
 	listAttachments(t, msg, fileName, 3)
 
 	// Remove all attachments.
-	cmd = cli.RemoveAttachmentsCommand(fileName, "", nil, nil)
+	cmd = cli.RemoveAttachmentsCommand(fileName, "", nil, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s remove all attachments: %v\n", msg, err)
 	}
 	listAttachments(t, msg, fileName, 0)
 
 	// Validate the processed file.
-	if err := validateFile(t, fileName, nil); err != nil {
+	if err := validateFile(t, fileName, conf); err != nil {
 		t.Fatalf("%s: validate: %v\n", msg, err)
 	}
 }

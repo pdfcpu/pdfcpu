@@ -21,19 +21,21 @@ import (
 	"os"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
 
 // AddBookmarks adds a single bookmark outline layer to the PDF context read from rs and writes the result to w.
-func AddBookmarks(rs io.ReadSeeker, w io.Writer, bms []pdf.Bookmark, conf *pdf.Configuration) error {
+func AddBookmarks(rs io.ReadSeeker, w io.Writer, bms []pdf.Bookmark, conf *model.Configuration) error {
 
 	if conf == nil {
-		conf = pdf.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	} else {
-		conf.ValidationMode = pdf.ValidationRelaxed
+		conf.ValidationMode = model.ValidationRelaxed
 	}
-	conf.Cmd = pdf.ADDBOOKMARKS
+	conf.Cmd = model.ADDBOOKMARKS
 
 	if len(bms) == 0 {
 		return errors.New("pdfcpu: AddBookmarks: Please supply m")
@@ -47,7 +49,7 @@ func AddBookmarks(rs io.ReadSeeker, w io.Writer, bms []pdf.Bookmark, conf *pdf.C
 
 	from := time.Now()
 
-	if err := ctx.AddBookmarks(bms); err != nil {
+	if err := pdfcpu.AddBookmarks(ctx, bms); err != nil {
 		return err
 	}
 
@@ -66,7 +68,7 @@ func AddBookmarks(rs io.ReadSeeker, w io.Writer, bms []pdf.Bookmark, conf *pdf.C
 }
 
 // AddBookmarksFile adds a single bookmark outline layer to the PDF context read from inFile and writes the result to outFile.
-func AddBookmarksFile(inFile, outFile string, bms []pdf.Bookmark, conf *pdf.Configuration) (err error) {
+func AddBookmarksFile(inFile, outFile string, bms []pdf.Bookmark, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {

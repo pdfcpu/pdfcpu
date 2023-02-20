@@ -1,0 +1,121 @@
+{
+	"header": {
+		"source": "arabic.pdf",
+		"version": "pdfcpu v0.4.0 dev",
+		"creation": "2023-02-10 21:43:44 CET",
+		"producer": "pdfcpu v0.4.0 dev"
+	},
+	"forms": [
+		{
+			"textfield": [
+				{
+					"id": "firstName1",
+					"default": "الاسم الافتراضي",
+					"value": "جاكي",
+					"multiline": false,
+					"locked": false
+				},
+				{
+					"id": "lastName1",
+					"value": "ظبية",
+					"multiline": false,
+					"locked": false
+				},
+				{
+					"id": "note1",
+					"value": "هذا نموذج نص.\nهذا هو السطر التال.",
+					"multiline": true,
+					"locked": false
+				}
+			],
+			"datefield": [
+				{
+					"id": "dob1",
+					"format": "dd/mm/yyyy",
+					"default": "01/01/2000",
+					"value": "31/12/1999",
+					"locked": false
+				}
+			],
+			"checkbox": [
+				{
+					"id": "cb11",
+					"default": false,
+					"value": true,
+					"locked": false
+				},
+				{
+					"id": "cb12",
+					"default": false,
+					"value": false,
+					"locked": false
+				},
+				{
+					"id": "cb13",
+					"default": false,
+					"value": false,
+					"locked": false
+				},
+				{
+					"id": "cb14",
+					"default": false,
+					"value": false,
+					"locked": false
+				},
+				{
+					"id": "cb15",
+					"default": false,
+					"value": false,
+					"locked": false
+				}
+			],
+			"radiobuttongroup": [
+				{
+					"id": "gender1",
+					"options": [
+						"غير ثنائي",
+						"الذكر",
+						"أنثى"
+					],
+					"default": "غير ثنائي",
+					"value": "أنثى",
+					"locked": false
+				}
+			],
+			"combobox": [
+				{
+					"id": "city12",
+					"editable": false,
+					"options": [
+						"رياض",
+						"دبي",
+						"القاهرة"
+					],
+					"default": "دبي",
+					"value": "القاهرة",
+					"locked": false
+				}
+			],
+			"listbox": [
+				{
+					"id": "city11",
+					"multi": true,
+					"options": [
+						"سان فرانسيسكو",
+						"ساو باولو",
+						"فيينا"
+					],
+					"defaults": [
+						"ساو باولو",
+						"فيينا"
+					],
+					"values": [
+						"سان فرانسيسكو",
+						"ساو باولو"
+					],
+					"locked": false
+				}
+			]
+		}
+	]
+}

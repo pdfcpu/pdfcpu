@@ -29,6 +29,8 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/validate"
 	"github.com/pkg/errors"
 )
@@ -57,7 +59,18 @@ func ensureJSONExtension(filename string) {
 	}
 }
 
-func printHelp(conf *pdfcpu.Configuration) {
+func hasCSVExtension(filename string) bool {
+	return strings.HasSuffix(strings.ToLower(filename), ".csv")
+}
+
+func ensureCSVExtension(filename string) {
+	if !hasCSVExtension(filename) {
+		fmt.Fprintf(os.Stderr, "%s needs extension \".csv\".\n", filename)
+		os.Exit(1)
+	}
+}
+
+func printHelp(conf *model.Configuration) {
 	switch len(flag.Args()) {
 
 	case 0:
@@ -76,7 +89,7 @@ func printHelp(conf *pdfcpu.Configuration) {
 	}
 }
 
-func printConfiguration(conf *pdfcpu.Configuration) {
+func printConfiguration(conf *model.Configuration) {
 	fmt.Fprintf(os.Stdout, "config: %s\n", conf.Path)
 	f, err := os.Open(conf.Path)
 	if err != nil {
@@ -92,21 +105,21 @@ func printConfiguration(conf *pdfcpu.Configuration) {
 	fmt.Print(string(bb))
 }
 
-func printPaperSizes(conf *pdfcpu.Configuration) {
+func printPaperSizes(conf *model.Configuration) {
 	fmt.Fprintln(os.Stderr, paperSizes)
 }
 
-func printSelectedPages(conf *pdfcpu.Configuration) {
+func printSelectedPages(conf *model.Configuration) {
 	fmt.Fprintln(os.Stderr, usagePageSelection)
 }
 
-func printVersion(conf *pdfcpu.Configuration) {
+func printVersion(conf *model.Configuration) {
 	if len(flag.Args()) != 0 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageVersion)
 		os.Exit(1)
 	}
 
-	fmt.Fprintf(os.Stdout, "pdfcpu: %v\n", pdfcpu.VersionStr)
+	fmt.Fprintf(os.Stdout, "pdfcpu: %v\n", model.VersionStr)
 	if date != "?" {
 		fmt.Fprintf(os.Stdout, "build : %v\ncommit: %v\n", date, commit)
 	}
@@ -133,7 +146,8 @@ func process(cmd *cli.Command) {
 	}
 	os.Exit(0)
 }
-func processValidateCommand(conf *pdfcpu.Configuration) {
+
+func processValidateCommand(conf *model.Configuration) {
 	if len(flag.Args()) == 0 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageValidate)
 		os.Exit(1)
@@ -163,9 +177,9 @@ func processValidateCommand(conf *pdfcpu.Configuration) {
 
 	switch mode {
 	case "strict", "s":
-		conf.ValidationMode = pdfcpu.ValidationStrict
+		conf.ValidationMode = model.ValidationStrict
 	case "relaxed", "r":
-		conf.ValidationMode = pdfcpu.ValidationRelaxed
+		conf.ValidationMode = model.ValidationRelaxed
 	}
 
 	if links {
@@ -175,7 +189,7 @@ func processValidateCommand(conf *pdfcpu.Configuration) {
 	process(cli.ValidateCommand(filesIn, conf))
 }
 
-func processOptimizeCommand(conf *pdfcpu.Configuration) {
+func processOptimizeCommand(conf *model.Configuration) {
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageOptimize)
 		os.Exit(1)
@@ -200,7 +214,7 @@ func processOptimizeCommand(conf *pdfcpu.Configuration) {
 	process(cli.OptimizeCommand(inFile, outFile, conf))
 }
 
-func processSplitCommand(conf *pdfcpu.Configuration) {
+func processSplitCommand(conf *model.Configuration) {
 	if mode == "" {
 		mode = "span"
 	}
@@ -234,7 +248,7 @@ func processSplitCommand(conf *pdfcpu.Configuration) {
 	process(cli.SplitCommand(inFile, outDir, span, conf))
 }
 
-func processMergeCommand(conf *pdfcpu.Configuration) {
+func processMergeCommand(conf *model.Configuration) {
 	if mode == "" {
 		mode = "create"
 	}
@@ -308,7 +322,7 @@ func extractModeCompletion(modePrefix string, modes []string) string {
 	return modeStr
 }
 
-func processExtractCommand(conf *pdfcpu.Configuration) {
+func processExtractCommand(conf *model.Configuration) {
 	mode = extractModeCompletion(mode, []string{"image", "font", "page", "content", "meta"})
 	if len(flag.Args()) != 2 || mode == "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageExtract)
@@ -355,7 +369,7 @@ func processExtractCommand(conf *pdfcpu.Configuration) {
 	process(cmd)
 }
 
-func processTrimCommand(conf *pdfcpu.Configuration) {
+func processTrimCommand(conf *model.Configuration) {
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || selectedPages == "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageTrim)
 		os.Exit(1)
@@ -381,7 +395,7 @@ func processTrimCommand(conf *pdfcpu.Configuration) {
 	process(cli.TrimCommand(inFile, outFile, pages, conf))
 }
 
-func processListAttachmentsCommand(conf *pdfcpu.Configuration) {
+func processListAttachmentsCommand(conf *model.Configuration) {
 	if len(flag.Args()) != 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usageAttachList)
 		os.Exit(1)
@@ -394,7 +408,7 @@ func processListAttachmentsCommand(conf *pdfcpu.Configuration) {
 	process(cli.ListAttachmentsCommand(inFile, conf))
 }
 
-func processAddAttachmentsCommand(conf *pdfcpu.Configuration) {
+func processAddAttachmentsCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageAttachAdd)
 		os.Exit(1)
@@ -426,7 +440,7 @@ func processAddAttachmentsCommand(conf *pdfcpu.Configuration) {
 	process(cli.AddAttachmentsCommand(inFile, "", fileNames, conf))
 }
 
-func processAddAttachmentsPortfolioCommand(conf *pdfcpu.Configuration) {
+func processAddAttachmentsPortfolioCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageAttachAdd)
 		os.Exit(1)
@@ -458,7 +472,7 @@ func processAddAttachmentsPortfolioCommand(conf *pdfcpu.Configuration) {
 	process(cli.AddAttachmentsPortfolioCommand(inFile, "", fileNames, conf))
 }
 
-func processRemoveAttachmentsCommand(conf *pdfcpu.Configuration) {
+func processRemoveAttachmentsCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageAttachRemove)
 		os.Exit(1)
@@ -481,7 +495,7 @@ func processRemoveAttachmentsCommand(conf *pdfcpu.Configuration) {
 	process(cli.RemoveAttachmentsCommand(inFile, "", fileNames, conf))
 }
 
-func processExtractAttachmentsCommand(conf *pdfcpu.Configuration) {
+func processExtractAttachmentsCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageAttachExtract)
 		os.Exit(1)
@@ -509,7 +523,7 @@ func processExtractAttachmentsCommand(conf *pdfcpu.Configuration) {
 	process(cli.ExtractAttachmentsCommand(inFile, outDir, fileNames, conf))
 }
 
-func processListPermissionsCommand(conf *pdfcpu.Configuration) {
+func processListPermissionsCommand(conf *model.Configuration) {
 	if len(flag.Args()) != 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usagePermList)
 		os.Exit(1)
@@ -538,7 +552,7 @@ func permCompletion(permPrefix string) string {
 	return permStr
 }
 
-func processSetPermissionsCommand(conf *pdfcpu.Configuration) {
+func processSetPermissionsCommand(conf *model.Configuration) {
 	if perm != "" {
 		perm = permCompletion(perm)
 	}
@@ -554,17 +568,17 @@ func processSetPermissionsCommand(conf *pdfcpu.Configuration) {
 	}
 
 	if perm == "print" {
-		conf.Permissions = pdfcpu.PermissionsPrint
+		conf.Permissions = model.PermissionsPrint
 	}
 
 	if perm == "all" {
-		conf.Permissions = pdfcpu.PermissionsAll
+		conf.Permissions = model.PermissionsAll
 	}
 
 	process(cli.SetPermissionsCommand(inFile, "", conf))
 }
 
-func processDecryptCommand(conf *pdfcpu.Configuration) {
+func processDecryptCommand(conf *model.Configuration) {
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageDecrypt)
 		os.Exit(1)
@@ -585,7 +599,7 @@ func processDecryptCommand(conf *pdfcpu.Configuration) {
 }
 
 func validateEncryptModeFlag() {
-	if !pdfcpu.MemberOf(mode, []string{"rc4", "aes", ""}) {
+	if !types.MemberOf(mode, []string{"rc4", "aes", ""}) {
 		fmt.Fprintf(os.Stderr, "%s\n\n", "valid modes: rc4,aes default:aes")
 		os.Exit(1)
 	}
@@ -623,7 +637,7 @@ func validateEncryptFlags() {
 	}
 }
 
-func processEncryptCommand(conf *pdfcpu.Configuration) {
+func processEncryptCommand(conf *model.Configuration) {
 	if perm != "" {
 		perm = permCompletion(perm)
 	}
@@ -650,11 +664,11 @@ func processEncryptCommand(conf *pdfcpu.Configuration) {
 	conf.EncryptKeyLength = kl
 
 	if perm == "all" {
-		conf.Permissions = pdfcpu.PermissionsAll
+		conf.Permissions = model.PermissionsAll
 	}
 
 	if perm == "print" {
-		conf.Permissions = pdfcpu.PermissionsPrint
+		conf.Permissions = model.PermissionsPrint
 	}
 
 	inFile := flag.Arg(0)
@@ -671,7 +685,7 @@ func processEncryptCommand(conf *pdfcpu.Configuration) {
 	process(cli.EncryptCommand(inFile, outFile, conf))
 }
 
-func processChangeUserPasswordCommand(conf *pdfcpu.Configuration) {
+func processChangeUserPasswordCommand(conf *model.Configuration) {
 	if len(flag.Args()) != 3 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageChangeUserPW)
 		os.Exit(1)
@@ -694,7 +708,7 @@ func processChangeUserPasswordCommand(conf *pdfcpu.Configuration) {
 	process(cli.ChangeUserPWCommand(inFile, outFile, &pwOld, &pwNew, conf))
 }
 
-func processChangeOwnerPasswordCommand(conf *pdfcpu.Configuration) {
+func processChangeOwnerPasswordCommand(conf *model.Configuration) {
 	if len(flag.Args()) != 3 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageChangeOwnerPW)
 		os.Exit(1)
@@ -722,7 +736,7 @@ func processChangeOwnerPasswordCommand(conf *pdfcpu.Configuration) {
 	process(cli.ChangeOwnerPWCommand(inFile, outFile, &pwOld, &pwNew, conf))
 }
 
-func addWatermarks(conf *pdfcpu.Configuration, onTop bool) {
+func addWatermarks(conf *model.Configuration, onTop bool) {
 	u := usageWatermarkAdd
 	if onTop {
 		u = usageStampAdd
@@ -741,7 +755,7 @@ func addWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 	processDiplayUnit(conf)
 
 	var (
-		wm  *pdfcpu.Watermark
+		wm  *model.Watermark
 		err error
 	)
 
@@ -783,15 +797,15 @@ func addWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 	process(cli.AddWatermarksCommand(inFile, outFile, selectedPages, wm, conf))
 }
 
-func processAddStampsCommand(conf *pdfcpu.Configuration) {
+func processAddStampsCommand(conf *model.Configuration) {
 	addWatermarks(conf, true)
 }
 
-func processAddWatermarksCommand(conf *pdfcpu.Configuration) {
+func processAddWatermarksCommand(conf *model.Configuration) {
 	addWatermarks(conf, false)
 }
 
-func updateWatermarks(conf *pdfcpu.Configuration, onTop bool) {
+func updateWatermarks(conf *model.Configuration, onTop bool) {
 	u := usageWatermarkAdd
 	if onTop {
 		u = usageStampAdd
@@ -810,7 +824,7 @@ func updateWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 	processDiplayUnit(conf)
 
 	var (
-		wm  *pdfcpu.Watermark
+		wm  *model.Watermark
 		err error
 	)
 
@@ -854,15 +868,15 @@ func updateWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 	process(cli.AddWatermarksCommand(inFile, outFile, selectedPages, wm, conf))
 }
 
-func processUpdateStampsCommand(conf *pdfcpu.Configuration) {
+func processUpdateStampsCommand(conf *model.Configuration) {
 	updateWatermarks(conf, true)
 }
 
-func processUpdateWatermarksCommand(conf *pdfcpu.Configuration) {
+func processUpdateWatermarksCommand(conf *model.Configuration) {
 	updateWatermarks(conf, false)
 }
 
-func removeWatermarks(conf *pdfcpu.Configuration, onTop bool) {
+func removeWatermarks(conf *model.Configuration, onTop bool) {
 	if len(flag.Args()) < 1 || len(flag.Args()) > 2 {
 		s := usageWatermarkRemove
 		if onTop {
@@ -892,16 +906,16 @@ func removeWatermarks(conf *pdfcpu.Configuration, onTop bool) {
 	process(cli.RemoveWatermarksCommand(inFile, outFile, selectedPages, conf))
 }
 
-func processRemoveStampsCommand(conf *pdfcpu.Configuration) {
+func processRemoveStampsCommand(conf *model.Configuration) {
 	removeWatermarks(conf, true)
 }
 
-func processRemoveWatermarksCommand(conf *pdfcpu.Configuration) {
+func processRemoveWatermarksCommand(conf *model.Configuration) {
 	removeWatermarks(conf, false)
 }
 
 func ensureImageExtension(filename string) {
-	if !pdfcpu.ImageFileName(filename) {
+	if !model.ImageFileName(filename) {
 		fmt.Fprintf(os.Stderr, "%s needs an image extension (.jpg, .jpeg, .png, .tif, .tiff, .webp)\n", filename)
 		os.Exit(1)
 	}
@@ -929,7 +943,7 @@ func parseArgsForImageFileNames(startInd int) []string {
 	return imageFileNames
 }
 
-func processImportImagesCommand(conf *pdfcpu.Configuration) {
+func processImportImagesCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageImportImages)
 		os.Exit(1)
@@ -963,7 +977,7 @@ func processImportImagesCommand(conf *pdfcpu.Configuration) {
 	process(cli.ImportImagesCommand(imageFileNames, outFile, imp, conf))
 }
 
-func processInsertPagesCommand(conf *pdfcpu.Configuration) {
+func processInsertPagesCommand(conf *model.Configuration) {
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usagePagesInsert)
 		os.Exit(1)
@@ -994,7 +1008,7 @@ func processInsertPagesCommand(conf *pdfcpu.Configuration) {
 	process(cli.InsertPagesCommand(inFile, outFile, pages, conf, mode))
 }
 
-func processRemovePagesCommand(conf *pdfcpu.Configuration) {
+func processRemovePagesCommand(conf *model.Configuration) {
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || selectedPages == "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usagePagesRemove)
 		os.Exit(1)
@@ -1030,7 +1044,7 @@ func abs(i int) int {
 	return i
 }
 
-func processRotateCommand(conf *pdfcpu.Configuration) {
+func processRotateCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 2 || len(flag.Args()) > 3 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageRotate)
 		os.Exit(1)
@@ -1062,7 +1076,7 @@ func processRotateCommand(conf *pdfcpu.Configuration) {
 	process(cli.RotateCommand(inFile, outFile, rotation, selectedPages, conf))
 }
 
-func parseAfterNUpDetails(nup *pdfcpu.NUp, argInd int, filenameOut string) []string {
+func parseAfterNUpDetails(nup *model.NUp, argInd int, filenameOut string) []string {
 	if nup.PageGrid {
 		cols, err := strconv.Atoi(flag.Arg(argInd))
 		if err != nil {
@@ -1093,7 +1107,7 @@ func parseAfterNUpDetails(nup *pdfcpu.NUp, argInd int, filenameOut string) []str
 	}
 
 	filenameIn := flag.Arg(argInd)
-	if !hasPDFExtension(filenameIn) && !pdfcpu.ImageFileName(filenameIn) {
+	if !hasPDFExtension(filenameIn) && !model.ImageFileName(filenameIn) {
 		fmt.Fprintf(os.Stderr, "inFile has to be a PDF or one or a sequence of image files: %s\n", filenameIn)
 		os.Exit(1)
 	}
@@ -1125,7 +1139,7 @@ func parseAfterNUpDetails(nup *pdfcpu.NUp, argInd int, filenameOut string) []str
 	return filenamesIn
 }
 
-func processNUpCommand(conf *pdfcpu.Configuration) {
+func processNUpCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 3 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageNUp)
 		os.Exit(1)
@@ -1139,7 +1153,7 @@ func processNUpCommand(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
-	nup := pdfcpu.DefaultNUpConfig()
+	nup := model.DefaultNUpConfig()
 	nup.InpUnit = conf.Unit
 	argInd := 1
 
@@ -1162,7 +1176,7 @@ func processNUpCommand(conf *pdfcpu.Configuration) {
 	process(cli.NUpCommand(inFiles, outFile, pages, nup, conf))
 }
 
-func processGridCommand(conf *pdfcpu.Configuration) {
+func processGridCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 4 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageGrid)
 		os.Exit(1)
@@ -1176,7 +1190,7 @@ func processGridCommand(conf *pdfcpu.Configuration) {
 		os.Exit(1)
 	}
 
-	nup := pdfcpu.DefaultNUpConfig()
+	nup := model.DefaultNUpConfig()
 	nup.InpUnit = conf.Unit
 	nup.PageGrid = true
 	argInd := 1
@@ -1200,7 +1214,7 @@ func processGridCommand(conf *pdfcpu.Configuration) {
 	process(cli.NUpCommand(inFiles, outFile, pages, nup, conf))
 }
 
-func processBookletCommand(conf *pdfcpu.Configuration) {
+func processBookletCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 3 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageBooklet)
 		os.Exit(1)
@@ -1243,25 +1257,25 @@ func processBookletCommand(conf *pdfcpu.Configuration) {
 	process(cli.BookletCommand(inFiles, outFile, pages, nup, conf))
 }
 
-func processDiplayUnit(conf *pdfcpu.Configuration) {
-	if !pdfcpu.MemberOf(unit, []string{"", "points", "po", "inches", "in", "cm", "mm"}) {
+func processDiplayUnit(conf *model.Configuration) {
+	if !types.MemberOf(unit, []string{"", "points", "po", "inches", "in", "cm", "mm"}) {
 		fmt.Fprintf(os.Stderr, "%s\n\n", "supported units: (po)ints, (in)ches, cm, mm")
 		os.Exit(1)
 	}
 
 	switch unit {
 	case "points", "po":
-		conf.Unit = pdfcpu.POINTS
+		conf.Unit = types.POINTS
 	case "inches", "in":
-		conf.Unit = pdfcpu.INCHES
+		conf.Unit = types.INCHES
 	case "cm":
-		conf.Unit = pdfcpu.CENTIMETRES
+		conf.Unit = types.CENTIMETRES
 	case "mm":
-		conf.Unit = pdfcpu.MILLIMETRES
+		conf.Unit = types.MILLIMETRES
 	}
 }
 
-func processInfoCommand(conf *pdfcpu.Configuration) {
+func processInfoCommand(conf *model.Configuration) {
 	if len(flag.Args()) != 1 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageInfo)
 		os.Exit(1)
@@ -1283,18 +1297,18 @@ func processInfoCommand(conf *pdfcpu.Configuration) {
 	process(cli.InfoCommand(inFile, selectedPages, conf))
 }
 
-func processListFontsCommand(conf *pdfcpu.Configuration) {
+func processListFontsCommand(conf *model.Configuration) {
 	process(cli.ListFontsCommand(conf))
 }
 
-func processInstallFontsCommand(conf *pdfcpu.Configuration) {
+func processInstallFontsCommand(conf *model.Configuration) {
 	fileNames := []string{}
 	if len(flag.Args()) == 0 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", "expecting a list of TrueType filenames (.ttf, .ttc) for installation.")
 		os.Exit(1)
 	}
 	for _, arg := range flag.Args() {
-		if !pdfcpu.MemberOf(filepath.Ext(arg), []string{".ttf", ".ttc"}) {
+		if !types.MemberOf(filepath.Ext(arg), []string{".ttf", ".ttc"}) {
 			continue
 		}
 		fileNames = append(fileNames, arg)
@@ -1306,7 +1320,7 @@ func processInstallFontsCommand(conf *pdfcpu.Configuration) {
 	process(cli.InstallFontsCommand(fileNames, conf))
 }
 
-func processCreateCheatSheetFontsCommand(conf *pdfcpu.Configuration) {
+func processCreateCheatSheetFontsCommand(conf *model.Configuration) {
 	fileNames := []string{}
 	if len(flag.Args()) > 0 {
 		fileNames = append(fileNames, flag.Args()...)
@@ -1314,7 +1328,7 @@ func processCreateCheatSheetFontsCommand(conf *pdfcpu.Configuration) {
 	process(cli.CreateCheatSheetsFontsCommand(fileNames, conf))
 }
 
-func processListKeywordsCommand(conf *pdfcpu.Configuration) {
+func processListKeywordsCommand(conf *model.Configuration) {
 	if len(flag.Args()) != 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usageKeywordsList)
 		os.Exit(1)
@@ -1327,7 +1341,7 @@ func processListKeywordsCommand(conf *pdfcpu.Configuration) {
 	process(cli.ListKeywordsCommand(inFile, conf))
 }
 
-func processAddKeywordsCommand(conf *pdfcpu.Configuration) {
+func processAddKeywordsCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageKeywordsAdd)
 		os.Exit(1)
@@ -1350,7 +1364,7 @@ func processAddKeywordsCommand(conf *pdfcpu.Configuration) {
 	process(cli.AddKeywordsCommand(inFile, "", keywords, conf))
 }
 
-func processRemoveKeywordsCommand(conf *pdfcpu.Configuration) {
+func processRemoveKeywordsCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageKeywordsRemove)
 		os.Exit(1)
@@ -1373,7 +1387,7 @@ func processRemoveKeywordsCommand(conf *pdfcpu.Configuration) {
 	process(cli.RemoveKeywordsCommand(inFile, "", keywords, conf))
 }
 
-func processListPropertiesCommand(conf *pdfcpu.Configuration) {
+func processListPropertiesCommand(conf *model.Configuration) {
 	if len(flag.Args()) != 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usageKeywordsList)
 		os.Exit(1)
@@ -1386,7 +1400,7 @@ func processListPropertiesCommand(conf *pdfcpu.Configuration) {
 	process(cli.ListPropertiesCommand(inFile, conf))
 }
 
-func processAddPropertiesCommand(conf *pdfcpu.Configuration) {
+func processAddPropertiesCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePropertiesAdd)
 		os.Exit(1)
@@ -1423,7 +1437,7 @@ func processAddPropertiesCommand(conf *pdfcpu.Configuration) {
 	process(cli.AddPropertiesCommand(inFile, "", properties, conf))
 }
 
-func processRemovePropertiesCommand(conf *pdfcpu.Configuration) {
+func processRemovePropertiesCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePropertiesRemove)
 		os.Exit(1)
@@ -1446,7 +1460,7 @@ func processRemovePropertiesCommand(conf *pdfcpu.Configuration) {
 	process(cli.RemovePropertiesCommand(inFile, "", keys, conf))
 }
 
-func processCollectCommand(conf *pdfcpu.Configuration) {
+func processCollectCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 1 || len(flag.Args()) > 2 || selectedPages == "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageCollect)
 		os.Exit(1)
@@ -1472,7 +1486,7 @@ func processCollectCommand(conf *pdfcpu.Configuration) {
 	process(cli.CollectCommand(inFile, outFile, selectedPages, conf))
 }
 
-func processListBoxesCommand(conf *pdfcpu.Configuration) {
+func processListBoxesCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 1 || len(flag.Args()) > 2 {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usageBoxesList)
 		os.Exit(1)
@@ -1508,7 +1522,7 @@ func processListBoxesCommand(conf *pdfcpu.Configuration) {
 	process(cli.ListBoxesCommand(inFile, selectedPages, pb, conf))
 }
 
-func processAddBoxesCommand(conf *pdfcpu.Configuration) {
+func processAddBoxesCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 1 || len(flag.Args()) > 3 {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usageBoxesAdd)
 		os.Exit(1)
@@ -1542,7 +1556,7 @@ func processAddBoxesCommand(conf *pdfcpu.Configuration) {
 	process(cli.AddBoxesCommand(inFile, outFile, selectedPages, pb, conf))
 }
 
-func processRemoveBoxesCommand(conf *pdfcpu.Configuration) {
+func processRemoveBoxesCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 1 || len(flag.Args()) > 3 {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usageBoxesRemove)
 		os.Exit(1)
@@ -1583,7 +1597,7 @@ func processRemoveBoxesCommand(conf *pdfcpu.Configuration) {
 	process(cli.RemoveBoxesCommand(inFile, outFile, selectedPages, pb, conf))
 }
 
-func processCropCommand(conf *pdfcpu.Configuration) {
+func processCropCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 1 || len(flag.Args()) > 3 {
 		fmt.Fprintf(os.Stderr, "%s\n", usageCrop)
 		os.Exit(1)
@@ -1617,7 +1631,7 @@ func processCropCommand(conf *pdfcpu.Configuration) {
 	process(cli.CropCommand(inFile, outFile, selectedPages, box, conf))
 }
 
-func processListAnnotationsCommand(conf *pdfcpu.Configuration) {
+func processListAnnotationsCommand(conf *model.Configuration) {
 	if len(flag.Args()) != 1 {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usageAnnotsList)
 		os.Exit(1)
@@ -1636,7 +1650,7 @@ func processListAnnotationsCommand(conf *pdfcpu.Configuration) {
 
 	process(cli.ListAnnotationsCommand(inFile, selectedPages, conf))
 }
-func processRemoveAnnotationsCommand(conf *pdfcpu.Configuration) {
+func processRemoveAnnotationsCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 1 {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usageAnnotsRemove)
 		os.Exit(1)
@@ -1670,7 +1684,7 @@ func processRemoveAnnotationsCommand(conf *pdfcpu.Configuration) {
 	process(cli.RemoveAnnotationsCommand(inFile, "", selectedPages, objNrs, conf))
 }
 
-func processListImagesCommand(conf *pdfcpu.Configuration) {
+func processListImagesCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 1 {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usageImagesList)
 		os.Exit(1)
@@ -1702,27 +1716,294 @@ func processListImagesCommand(conf *pdfcpu.Configuration) {
 	process(cli.ListImagesCommand(filesIn, selectedPages, conf))
 }
 
-func processCreateCommand(conf *pdfcpu.Configuration) {
-	if len(flag.Args()) <= 1 || len(flag.Args()) > 3 || selectedPages != "" {
-		fmt.Fprintf(os.Stderr, "%s\n\n", usageCreate)
+func processDumpCommand(conf *model.Configuration) {
+	s := "No dump for you!! One year!\n\n"
+	if len(flag.Args()) != 3 {
+		fmt.Fprintln(os.Stderr, s)
 		os.Exit(1)
 	}
 
-	var inFile string
+	mode := flag.Arg(0)
+	hex := mode[0] == 'h' || mode[0] == 'H'
 
-	inJSONFile := flag.Arg(0)
-	ensureJSONExtension(inJSONFile)
+	vals := []int{0, 0}
+	if hex {
+		vals[0] = 1
+	}
 
-	outFile := flag.Arg(1)
-	ensurePDFExtension(outFile)
+	objNr, err := strconv.Atoi(flag.Arg(1))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, s)
+		os.Exit(1)
+	}
+	vals[1] = objNr
 
-	if len(flag.Args()) == 3 {
-		inFile = outFile
-		outFile = flag.Arg(2)
+	inFile := flag.Arg(2)
+	ensurePDFExtension(inFile)
+
+	conf.ValidationMode = model.ValidationRelaxed
+
+	process(cli.DumpCommand(inFile, vals, conf))
+}
+
+func processCreateCommand(conf *model.Configuration) {
+	if len(flag.Args()) <= 1 || len(flag.Args()) > 3 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageCreate)
+		os.Exit(1)
+	}
+
+	inFileJSON := flag.Arg(0)
+	ensureJSONExtension(inFileJSON)
+
+	inFile, outFile := "", ""
+	if len(flag.Args()) == 2 {
+		inFile := flag.Arg(1)
+		ensurePDFExtension(inFile)
+		outFile = inFile
+	} else {
+		outFile = flag.Arg(1)
+		ensurePDFExtension(outFile)
+	}
+
+	process(cli.CreateCommand(inFileJSON, inFile, outFile, conf))
+}
+
+func processListFormFieldsCommand(conf *model.Configuration) {
+	if len(flag.Args()) < 1 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageFormListFields)
+		os.Exit(1)
+	}
+
+	filesIn := []string{}
+	for _, arg := range flag.Args() {
+		if strings.Contains(arg, "*") {
+			matches, err := filepath.Glob(arg)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s", err)
+				os.Exit(1)
+			}
+			filesIn = append(filesIn, matches...)
+			continue
+		}
 		if conf.CheckFileNameExt {
-			ensurePDFExtension(outFile)
+			ensurePDFExtension(arg)
+		}
+		filesIn = append(filesIn, arg)
+	}
+
+	process(cli.ListFormFieldsCommand(filesIn, conf))
+}
+
+func processRemoveFormFieldsCommand(conf *model.Configuration) {
+	if len(flag.Args()) < 2 {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageFormRemoveFields)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+
+	var fieldIDs []string
+	outFile := inFile
+
+	if len(flag.Args()) == 2 {
+		s := flag.Arg(1)
+		if hasPDFExtension(s) {
+			fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageFormRemoveFields)
+			os.Exit(1)
+		}
+		fieldIDs = append(fieldIDs, s)
+	} else {
+		s := flag.Arg(1)
+		if hasPDFExtension(s) {
+			outFile = s
+		} else {
+			fieldIDs = append(fieldIDs, s)
+		}
+		for i := 2; i < len(flag.Args()); i++ {
+			fieldIDs = append(fieldIDs, flag.Arg(i))
 		}
 	}
 
-	process(cli.CreateCommand(inJSONFile, inFile, outFile, conf))
+	process(cli.RemoveFormFieldsCommand(inFile, outFile, fieldIDs, conf))
+}
+
+func processLockFormCommand(conf *model.Configuration) {
+	if len(flag.Args()) == 0 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageFormLock)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+
+	var fieldIDs []string
+	outFile := inFile
+
+	if len(flag.Args()) > 1 {
+		s := flag.Arg(1)
+		if hasPDFExtension(s) {
+			outFile = s
+		} else {
+			fieldIDs = append(fieldIDs, s)
+		}
+	}
+
+	if len(flag.Args()) > 2 {
+		for i := 2; i < len(flag.Args()); i++ {
+			fieldIDs = append(fieldIDs, flag.Arg(i))
+		}
+	}
+
+	process(cli.LockFormCommand(inFile, outFile, fieldIDs, conf))
+}
+
+func processUnlockFormCommand(conf *model.Configuration) {
+	if len(flag.Args()) == 0 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageFormUnlock)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+
+	var fieldIDs []string
+	outFile := inFile
+
+	if len(flag.Args()) > 1 {
+		s := flag.Arg(1)
+		if hasPDFExtension(s) {
+			outFile = s
+		} else {
+			fieldIDs = append(fieldIDs, s)
+		}
+	}
+
+	if len(flag.Args()) > 2 {
+		for i := 2; i < len(flag.Args()); i++ {
+			fieldIDs = append(fieldIDs, flag.Arg(i))
+		}
+	}
+
+	process(cli.UnlockFormCommand(inFile, outFile, fieldIDs, conf))
+}
+
+func processResetFormCommand(conf *model.Configuration) {
+	if len(flag.Args()) == 0 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageFormReset)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+
+	var fieldIDs []string
+	outFile := inFile
+
+	if len(flag.Args()) > 1 {
+		s := flag.Arg(1)
+		if hasPDFExtension(s) {
+			outFile = s
+		} else {
+			fieldIDs = append(fieldIDs, s)
+		}
+	}
+
+	if len(flag.Args()) > 2 {
+		for i := 2; i < len(flag.Args()); i++ {
+			fieldIDs = append(fieldIDs, flag.Arg(i))
+		}
+	}
+
+	process(cli.ResetFormCommand(inFile, outFile, fieldIDs, conf))
+}
+
+func processExportFormCommand(conf *model.Configuration) {
+	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageFormExport)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+
+	// TODO inFile.json
+	outFileJSON := "out.json"
+	if len(flag.Args()) == 2 {
+		outFileJSON = flag.Arg(1)
+		ensureJSONExtension(outFileJSON)
+	}
+	ensureJSONExtension(outFileJSON)
+
+	process(cli.ExportFormCommand(inFile, outFileJSON, conf))
+}
+
+func processFillFormCommand(conf *model.Configuration) {
+	if len(flag.Args()) < 2 || len(flag.Args()) > 3 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageFormFill)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+
+	inFileJSON := flag.Arg(1)
+	ensureJSONExtension(inFileJSON)
+
+	outFile := inFile
+	if len(flag.Args()) == 3 {
+		outFile = flag.Arg(2)
+		ensurePDFExtension(outFile)
+	}
+
+	process(cli.FillFormCommand(inFile, inFileJSON, outFile, conf))
+}
+
+func processMultiFillFormCommand(conf *model.Configuration) {
+	if mode == "" {
+		mode = "single"
+	}
+	mode = extractModeCompletion(mode, []string{"single", "merge"})
+	if mode == "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageFormMultiFill)
+		os.Exit(1)
+	}
+
+	if len(flag.Args()) < 3 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageFormMultiFill)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+
+	inFileData := flag.Arg(1)
+	if !hasJSONExtension(inFileData) && !hasCSVExtension(inFileData) {
+		fmt.Fprintf(os.Stderr, "%s needs extension \".json\" or \".csv\".\n", inFileData)
+		os.Exit(1)
+	}
+
+	outDir := flag.Arg(2)
+
+	outFile := inFile
+	if len(flag.Args()) == 4 {
+		outFile = flag.Arg(3)
+		ensurePDFExtension(outFile)
+	}
+
+	process(cli.MultiFillFormCommand(inFile, inFileData, outDir, outFile, mode == "merge", conf))
 }

@@ -23,11 +23,12 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
 
 // appendTo appends inFile to ctxDest's page tree.
-func appendTo(rs io.ReadSeeker, ctxDest *pdfcpu.Context) error {
+func appendTo(rs io.ReadSeeker, ctxDest *model.Context) error {
 	ctxSource, _, _, err := readAndValidate(rs, ctxDest.Configuration, time.Now())
 	if err != nil {
 		return err
@@ -44,7 +45,7 @@ type ReadSeekerCloser interface {
 }
 
 // Merge merges a sequence of PDF streams and writes the result to w.
-func Merge(rsc []io.ReadSeeker, w io.Writer, conf *pdfcpu.Configuration) error {
+func Merge(rsc []io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
 	if rsc == nil {
 		return errors.New("pdfcpu: Merge: Please provide rsc")
 	}
@@ -52,9 +53,9 @@ func Merge(rsc []io.ReadSeeker, w io.Writer, conf *pdfcpu.Configuration) error {
 		return errors.New("pdfcpu: Merge: Please provide w")
 	}
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.MERGECREATE
+	conf.Cmd = model.MERGECREATE
 
 	ctxDest, _, _, err := readAndValidate(rsc[0], conf, time.Now())
 	if err != nil {
@@ -74,7 +75,7 @@ func Merge(rsc []io.ReadSeeker, w io.Writer, conf *pdfcpu.Configuration) error {
 		return err
 	}
 
-	if conf.ValidationMode != pdfcpu.ValidationNone {
+	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctxDest); err != nil {
 			return err
 		}
@@ -86,7 +87,7 @@ func Merge(rsc []io.ReadSeeker, w io.Writer, conf *pdfcpu.Configuration) error {
 // MergeCreateFile merges a sequence of inFiles and writes the result to outFile.
 // This operation corresponds to file concatenation in the order specified by inFiles.
 // The first entry of inFiles serves as the destination context where all remaining files get merged into.
-func MergeCreateFile(inFiles []string, outFile string, conf *pdfcpu.Configuration) error {
+func MergeCreateFile(inFiles []string, outFile string, conf *model.Configuration) error {
 	ff := []*os.File(nil)
 	for _, f := range inFiles {
 		log.CLI.Println(f)
@@ -139,7 +140,7 @@ func prepareReadSeekers(ff []*os.File) []io.ReadSeeker {
 // MergeAppendFile merges a sequence of inFiles and writes the result to outFile.
 // This operation corresponds to file concatenation in the order specified by inFiles.
 // If outFile already exists, inFiles will be appended.
-func MergeAppendFile(inFiles []string, outFile string, conf *pdfcpu.Configuration) (err error) {
+func MergeAppendFile(inFiles []string, outFile string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 	tmpFile := outFile
 	if fileExists(outFile) {

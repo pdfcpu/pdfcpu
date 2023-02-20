@@ -27,22 +27,51 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-var inDir, outDir, resDir string
+var inDir, outDir, resDir, samplesDir string
+var conf *model.Configuration
 
-func imageFileNames(t *testing.T, dir string) []string {
-	t.Helper()
-	fn, err := pdfcpu.ImageFileNames(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return fn
+func isTrueType(filename string) bool {
+	s := strings.ToLower(filename)
+	return strings.HasSuffix(s, ".ttf") || strings.HasSuffix(s, ".ttc")
 }
+
+func userFonts(dir string) ([]string, error) {
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	ff := []string(nil)
+	for _, f := range files {
+		if isTrueType(f.Name()) {
+			fn := filepath.Join(dir, f.Name())
+			ff = append(ff, fn)
+		}
+	}
+	return ff, nil
+}
+
 func TestMain(m *testing.M) {
 	inDir = filepath.Join("..", "..", "testdata")
 	resDir = filepath.Join(inDir, "resources")
-	var err error
+	samplesDir = filepath.Join("..", "..", "samples")
+
+	conf = api.LoadConfiguration()
+
+	// Install test user fonts from pkg/testdata/fonts.
+	fonts, err := userFonts(filepath.Join(inDir, "fonts"))
+	if err != nil {
+		fmt.Printf("%v", err)
+		os.Exit(1)
+	}
+
+	if err := api.InstallFonts(fonts); err != nil {
+		fmt.Printf("%v", err)
+		os.Exit(1)
+	}
 
 	if outDir, err = os.MkdirTemp("", "pdfcpu_api_tests"); err != nil {
 		fmt.Printf("%v", err)
@@ -75,6 +104,16 @@ func copyFile(t *testing.T, srcFileName, destFileName string) error {
 	_, err = io.Copy(to, from)
 	return err
 }
+
+func imageFileNames(t *testing.T, dir string) []string {
+	t.Helper()
+	fn, err := model.ImageFileNames(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return fn
+}
+
 func BenchmarkValidate(b *testing.B) {
 	msg := "BenchmarkValidate"
 	b.ResetTimer()
@@ -165,11 +204,11 @@ func TestManipulateContext(t *testing.T) {
 	// Manipulate the PDF Context.
 	// Eg. Let's stamp all pages with pageCount and current timestamp.
 	text := fmt.Sprintf("Pages: %d \n Current time: %v", ctx.PageCount, time.Now())
-	wm, err := api.TextWatermark(text, "font:Times-Italic, scale:.9", true, false, pdfcpu.POINTS)
+	wm, err := api.TextWatermark(text, "font:Times-Italic, scale:.9", true, false, types.POINTS)
 	if err != nil {
 		t.Fatalf("%s: ParseTextWatermarkDetails: %v\n", msg, err)
 	}
-	if err := ctx.AddWatermarks(nil, wm); err != nil {
+	if err := pdfcpu.AddWatermarks(ctx, nil, wm); err != nil {
 		t.Fatalf("%s: WatermarkContext: %v\n", msg, err)
 	}
 

@@ -1,0 +1,87 @@
+{
+	"header": {
+		"source": "person.pdf",
+		"version": "pdfcpu v0.4.0 dev",
+		"creation": "2023-01-28 21:00:08 CET",
+		"producer": "pdfcpu v0.4.0 dev"
+	},
+	"forms": [
+		{
+			"textfield": [
+				{
+					"id": "firstName",
+					"value": "Jackie",
+					"locked": true
+				},
+				{
+					"id": "lastName",
+					"value": "Dent",
+					"locked": true
+				},
+				{
+					"id": "country",
+					"value": "US of the world",
+					"multiline": false,
+					"locked": false
+				},
+				{
+					"id": "occup",
+					"value": "Human"
+				}
+			],
+			"datefield": [
+				{
+					"id": "dob",
+					"value": "31.01.1999",
+					"locked": true
+				}
+			],
+			"checkbox": [
+				{
+					"id": "dobVerified",
+					"value": true,
+					"locked": true
+				}
+			],
+			"radiobuttongroup": [
+				{
+					"id": "gender",
+					"value": "non-binary",
+					"locked": true
+				}
+			],
+			"combobox": [
+				{
+					"id": "status",
+					"value": "alive"
+				},
+				{
+					"id": "license",
+					"value": "unknown"
+				}
+			],
+			"pages": {
+				"1": {
+					"image": [
+						{
+							"src": "../../testdata/resources/qr.png",
+							"pos": [
+								40,
+								350
+							],
+							"width": 290,
+							"height": 200,
+							"bgCol": "#F5F5DC",
+							"border": {
+								"width": 5,
+								"col": "LightGray",
+								"style": "round"
+							},
+							"url": "https://pdfcpu.io"
+						}
+					]
+				}
+			}
+		}
+	]
+}

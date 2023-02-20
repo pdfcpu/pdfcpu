@@ -22,6 +22,7 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 )
 
 // Acrobat Reader "Bookmarks" = Mac Preview "Table of Contents".
@@ -32,7 +33,7 @@ func TestAddSimpleBookmarks(t *testing.T) {
 	inFile := filepath.Join(inDir, "CenterOfWhy.pdf")
 	outFile := filepath.Join("..", "..", "samples", "bookmarks", "bookmarkSimple.pdf")
 
-	bookmarkColor := pdfcpu.NewSimpleColor(0xab6f30)
+	bookmarkColor := color.NewSimpleColor(0xab6f30)
 
 	// TODO Emoji support!
 
@@ -42,9 +43,9 @@ func TestAddSimpleBookmarks(t *testing.T) {
 		{PageFrom: 3, Title: "Page 3: Italic 测试 尾巴", Italic: true, Bold: true},
 		{PageFrom: 4, Title: "Page 4: Bold & Italic", Bold: true, Italic: true},
 		{PageFrom: 16, Title: "Page 16: The birthday of Smalltalk", Color: &bookmarkColor},
-		{PageFrom: 17, Title: "Page 17: Gray", Color: &pdfcpu.Gray},
-		{PageFrom: 18, Title: "Page 18: Red", Color: &pdfcpu.Red},
-		{PageFrom: 19, Title: "Page 19: Bold Red ", Color: &pdfcpu.Red, Bold: true},
+		{PageFrom: 17, Title: "Page 17: Gray", Color: &color.Gray},
+		{PageFrom: 18, Title: "Page 18: Red", Color: &color.Red},
+		{PageFrom: 19, Title: "Page 19: Bold Red ", Color: &color.Red, Bold: true},
 	}
 
 	if err := api.AddBookmarksFile(inFile, outFile, bms, nil); err != nil {
@@ -58,12 +59,12 @@ func TestAddBookmarkTree2Levels(t *testing.T) {
 	outFile := filepath.Join("..", "..", "samples", "bookmarks", "bookmarkTree.pdf")
 
 	bms := []pdfcpu.Bookmark{
-		{PageFrom: 1, Title: "Page 1: Level 1", Color: &pdfcpu.Green,
+		{PageFrom: 1, Title: "Page 1: Level 1", Color: &color.Green,
 			Children: []pdfcpu.Bookmark{
 				{PageFrom: 2, Title: "Page 2: Level 1.1"},
 				{PageFrom: 3, Title: "Page 3: Level 1.2"},
 			}},
-		{PageFrom: 5, Title: "Page 5: Level 2", Color: &pdfcpu.Blue,
+		{PageFrom: 5, Title: "Page 5: Level 2", Color: &color.Blue,
 			Children: []pdfcpu.Bookmark{
 				{PageFrom: 6, Title: "Page 6: Level 2.1"},
 				{PageFrom: 7, Title: "Page 7: Level 2.2"},

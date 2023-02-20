@@ -10,3 +10,8 @@ require (
 	golang.org/x/text v0.3.6
 	gopkg.in/yaml.v2 v2.4.0
 )
+
+require (
+	github.com/mattn/go-runewidth v0.0.14 // indirect
+	github.com/rivo/uniseg v0.4.3 // indirect
+)

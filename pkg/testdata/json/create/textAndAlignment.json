@@ -1,0 +1,453 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"debug": false,
+	"contentBox": true,
+	"guides": true,
+	"colors": {
+		"DarkOrange": "#FF8C00",
+		"DarkSeaGreen": "#8FBC8F",
+		"LimeGreen": "#BEDED9"
+	},
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"fonts": {
+		"myCourier": {
+			"name": "Courier",
+			"size": 12
+		},
+		"myCourierBold": {
+			"name": "Courier-Bold",
+			"size": 12
+		},
+		"input": {
+			"name": "Helvetica",
+			"size": 12,
+			"xcol": "#222222"
+		},
+		"label": {
+			"name": "Helvetica",
+			"size": 12
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"header": {
+		"font": {
+			"name": "$myCourierBold",
+			"size": 24,
+			"col": "#C00000"
+		},
+		"left": "$logo1",
+		"center": "Textboxes and Alignment",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "Courier",
+			"size": 9
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Page %p of %P",
+		"right": "Source:\ntestdata/json/create/textAndAlignment.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"pages": {
+		"1": {
+			"bgcol": "LightGray",
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							-1,
+							650
+						]
+					},
+					{
+						"pos": [
+							-1,
+							600
+						]
+					},
+					{
+						"pos": [
+							-1,
+							550
+						]
+					},
+					{
+						"pos": [
+							-1,
+							485
+						]
+					},
+
+					{
+						"pos": [
+							-1,
+							420
+						]
+					},
+					{
+						"pos": [
+							-1,
+							370
+						]
+					},
+					{
+						"pos": [
+							-1,
+							320
+						]
+					},
+					{
+						"pos": [
+							-1,
+							260
+						]
+					},
+
+					{
+						"pos": [
+							-1,
+							190
+						]
+					},
+					{
+						"pos": [
+							-1,
+							140
+						]
+					},
+					{
+						"pos": [
+							-1,
+							90
+						]
+					},
+					{
+						"pos": [
+							-1,
+							3
+						]
+					}
+				],
+				"text": [
+					{
+						"hide": false,
+						"value": "Textboxes without width:",
+						"pos": [
+							1,
+							680
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"hide": false,
+						"value": "A left aligned text\nwith border and padding.",
+						"pos": [
+							-1,
+							650
+						],
+						"align": "left",
+						"bgcol": "$LimeGreen",
+						"border": {
+							"width": 2,
+							"col": "Black"
+						},
+						"font": {
+							"name": "$myCourier"
+						},
+						"padding": {
+							"width": 5
+						}
+					},
+					{
+						"hide": false,
+						"value": "A center aligned text\nwith border and padding.",
+						"pos": [
+							-1,
+							600
+						],
+						"align": "center",
+						"bgcol": "$LimeGreen",
+						"border": {
+							"width": 2,
+							"col": "Black"
+						},
+						"font": {
+							"name": "$myCourier"
+						},
+						"padding": {
+							"width": 5
+						}
+					},
+					{
+						"hide": false,
+						"value": "A right aligned text\nwith border and padding.",
+						"pos": [
+							-1,
+							550
+						],
+						"align": "right",
+						"bgcol": "$LimeGreen",
+						"border": {
+							"width": 2,
+							"col": "Black"
+						},
+						"font": {
+							"name": "$myCourier"
+						},
+						"padding": {
+							"width": 5
+						}
+					},
+					{
+						"hide": false,
+						"value": "A justified aligned text\nwith border and padding.",
+						"pos": [
+							-1,
+							485
+						],
+						"align": "justify",
+						"bgcol": "$LimeGreen",
+						"border": {
+							"width": 2,
+							"col": "Black"
+						},
+						"font": {
+							"name": "$myCourier"
+						},
+						"padding": {
+							"width": 5
+						}
+					},
+
+					{
+						"hide": false,
+						"value": "Textboxes using width: 200",
+						"pos": [
+							1,
+							450
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"hide": false,
+						"value": "A left aligned text\nwith border and padding.",
+						"pos": [
+							-1,
+							420
+						],
+						"width": 200,
+						"align": "left",
+						"bgcol": "$DarkSeaGreen",
+						"border": {
+							"width": 2,
+							"col": "Black"
+						},
+						"font": {
+							"name": "$myCourier"
+						},
+						"padding": {
+							"width": 5
+						}
+					},
+					{
+						"hide": false,
+						"value": "A center aligned text\nwith border and padding.",
+						"pos": [
+							-1,
+							370
+						],
+						"width": 200,
+						"align": "center",
+						"bgcol": "$DarkSeaGreen",
+						"border": {
+							"width": 2,
+							"col": "Black"
+						},
+						"font": {
+							"name": "$myCourier"
+						},
+						"padding": {
+							"width": 5
+						}
+					},
+					{
+						"hide": false,
+						"value": "A right aligned text\nwith border and padding.",
+						"pos": [
+							-1,
+							320
+						],
+						"width": 200,
+						"align": "right",
+						"bgcol": "$DarkSeaGreen",
+						"border": {
+							"width": 2,
+							"col": "Black"
+						},
+						"font": {
+							"name": "$myCourier"
+						},
+						"padding": {
+							"width": 5
+						}
+					},
+					{
+						"hide": false,
+						"value": "A justified aligned text with border and padding.",
+						"pos": [
+							-1,
+							260
+						],
+						"width": 200,
+						"align": "justify",
+						"bgcol": "$DarkSeaGreen",
+						"border": {
+							"width": 2,
+							"col": "Black"
+						},
+						"font": {
+							"name": "$myCourier"
+						},
+						"padding": {
+							"width": 5
+						}
+					},
+
+					{
+						"hide": false,
+						"value": "Textboxes using width: 100",
+						"pos": [
+							1,
+							220
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"hide": false,
+						"value": "A left aligned text\nwith border and padding.",
+						"pos": [
+							-1,
+							190
+						],
+						"width": 100,
+						"align": "left",
+						"bgcol": "$DarkOrange",
+						"border": {
+							"width": 2,
+							"col": "Black"
+						},
+						"font": {
+							"name": "$myCourier"
+						},
+						"padding": {
+							"width": 5
+						}
+					},
+					{
+						"hide": false,
+						"value": "A center aligned text\nwith border and padding.",
+						"pos": [
+							-1,
+							140
+						],
+						"width": 100,
+						"align": "center",
+						"bgcol": "$DarkOrange",
+						"border": {
+							"width": 2,
+							"col": "Black"
+						},
+						"font": {
+							"name": "$myCourier"
+						},
+						"padding": {
+							"width": 5
+						}
+					},
+					{
+						"hide": false,
+						"value": "A right aligned text\nwith border and padding.",
+						"pos": [
+							-1,
+							90
+						],
+						"width": 100,
+						"align": "right",
+						"bgcol": "$DarkOrange",
+						"border": {
+							"width": 2,
+							"col": "Black"
+						},
+						"font": {
+							"name": "$myCourier"
+						},
+						"padding": {
+							"width": 5
+						}
+					},
+					{
+						"hide": false,
+						"value": "A justified aligned text with border and padding.",
+						"pos": [
+							-1,
+							3
+						],
+						"width": 100,
+						"align": "justify",
+						"bgcol": "$DarkOrange",
+						"border": {
+							"width": 2,
+							"col": "Black"
+						},
+						"font": {
+							"name": "$myCourier"
+						},
+						"padding": {
+							"width": 5
+						}
+					}
+				]
+			}
+		}
+	}
+}

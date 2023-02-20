@@ -33,12 +33,13 @@ The commands are:
    changeupw     change user password
    collect       create custom sequence of selected pages
    config        print configuration
-   create        create PDF content via JSON
+   create        create PDF content including forms via JSON
    crop          set cropbox for selected pages
    decrypt       remove password protection
    encrypt       set password protection		
    extract       extract images, fonts, content, pages or metadata
    fonts         install, list supported fonts, create cheat sheets
+   form          list, remove fields, lock, unlock, reset, export, fill form via JSON or CSV
    grid          rearrange pages or images for enhanced browsing experience
    images        list images for selected pages
    import        import/convert images to PDF
@@ -670,17 +671,17 @@ description ... dimensions, format, orientation
 
 All configuration string parameters support completion.
 
-Examples: pdfcpu grid out.pdf 10 1 in.pdf
-           Rearrange pages of in.pdf into 10x1 grids and write result to out.pdf using the default orientation.
-           The output page size is the result of a 1(hor)x10(vert) page grid using in.pdf's page size.
+Examples: pdfcpu grid out.pdf 1 10 in.pdf
+           Rearrange pages of in.pdf into 1x10 grids and write result to out.pdf using the default orientation.
+           The output page size is the result of a 1(vert)x10(hor) page grid using in.pdf's page size.
 
           pdfcpu grid -- "p:LegalL" out.pdf 2 2 in.pdf 
            Rearrange pages of in.pdf into 2x2 grids and write result to out.pdf using the default orientation.
-           The output page size is the result of a 2(hor)x2(vert) page grid using page size Legal in landscape mode.
+           The output page size is the result of a 2(vert)x2(hor) page grid using page size Legal in landscape mode.
 
-          pdfcpu grid -- "o:rd" out.pdf 2 3 in.pdf 
-           Rearrange pages of in.pdf into 2x3 grids and write result to out.pdf using orientation 'right down'.
-           The output page size is the result of a 3(hor)x2(vert) page grid using in.pdf's page size.
+          pdfcpu grid -- "o:rd" out.pdf 3 2 in.pdf 
+           Rearrange pages of in.pdf into 3x2 grids and write result to out.pdf using orientation 'right down'.
+           The output page size is the result of a 3(vert)x2(hor) page grid using in.pdf's page size.
 
           pdfcpu grid -- "d:400 400" out.pdf 8 6 *.jpg
            Arrange imagefiles onto a 8x6 page grid and write result to out.pdf using a grid cell size of 400x400.
@@ -942,7 +943,7 @@ Examples:
          pdfcpu annot remove in.pdf 37 38
       `
 
-	usageImagesList = "pdfcpu images list [-p(ages) selectedPages] inFile" + generalFlags
+	usageImagesList = "pdfcpu images list [-p(ages) selectedPages] inFile..." + generalFlags
 
 	usageImages = "usage: " + usageImagesList
 
@@ -986,4 +987,93 @@ A minimalistic sample json:
 For more info on json syntax & samples please refer to :
    pdfcpu/pkg/testdata/json/*
    pdfcpu/pkg/samples/create/*`
+
+	usageFormListFields   = "pdfcpu form list   inFile..."
+	usageFormRemoveFields = "pdfcpu form remove inFile [outFile] fieldID..."
+	usageFormLock         = "pdfcpu form lock   inFile [outFile] [fieldID...]"
+	usageFormUnlock       = "pdfcpu form unlock inFile [outFile] [fieldID...]"
+	usageFormReset        = "pdfcpu form reset  inFile [outFile] [fieldID...]"
+	usageFormExport       = "pdfcpu form export inFile [outFileJSON]"
+	usageFormFill         = "pdfcpu form fill inFile inFileJSON [outFile]"
+	usageFormMultiFill    = "pdfcpu form multifill [-m(ode) single|merge] inFile inFileData outDir [outName]"
+
+	usageForm = "usage: " + usageFormListFields +
+		"\n       " + usageFormRemoveFields +
+		"\n       " + usageFormLock +
+		"\n       " + usageFormUnlock +
+		"\n       " + usageFormReset +
+		"\n       " + usageFormExport +
+		"\n\n       " + usageFormFill +
+		"\n       " + usageFormMultiFill + generalFlags
+
+	usageLongForm = `Manage PDF forms.
+
+      mode       ... output mode (defaults to single)
+      inFile     ... input pdf file
+      inFileData ... input CSV or JSON file
+      outDir     ... output directory
+      outFile    ... output pdf file
+      outName    ... base output name
+
+
+The output modes are:
+
+    single ... each filled form instance gets written to a separate output file.
+
+    merge  ... all filled form instances are merged together resulting in one output file.
+               
+
+Supported usecases:
+
+   1) Get a list of form fields:
+         "pdfcpu form list in.pdf" returns the list of fieldIds of in.pdf eg. "firstName, lastName, dob".
+   
+   2) Remove some form fields:
+         "pdfcpu form remove in.pdf middleName birthPlace" removes the the two fields with ids "middleName" and "birthPlace".
+      
+   3) Make some or all fields read-only:
+         "pdfcpu form lock in.pdf dateOfBirth" turns the field "dateOfBirth" into read-only.
+         "pdfcpu from lock in.pdf" makes the form read-only.
+   
+   4) Make some or all read-only fields writeable:
+         "pdfcpu form unlock in.pdf dateOfBirth" makes the field "dateOfBirth" writeable.
+         "pdfcpu form unlock in.pdf" makes all fields of in.pdf writeable.
+   
+   5) Clear some or all fields:
+         "pdfcpu form reset in.pdf firstName lastName" resets the fields "firstName" and "lastName" to its default values.
+         "pdfcpu form reset in.pdf" resets the whole form of in.pdf.
+       
+   6) Export all form fields as preparation for form filling:
+         "pdfcpu form export in.pdf" exports field data into a JSON structure written to in.json.
+   
+   7) Fill a form with data:
+         a) Export your form into in.json and edit the field values.
+         b) "pdfcpu form fill in.pdf in.json out.pdf" fills in.pdf with form data from in.json and writes the result to out.pdf.
+
+   or
+
+   8) Generate a sequence of filled instances of a form:
+         a) Export your form to in.json and edit the field values.
+            Extend the JSON Array containing the form by using copy & paste and edit the corresponding form data.
+         b) "pdfcpu form multifill in.pdf in.json outDir" creates a separate PDF for each filled form instance in outDir.
+      or
+         c) Export your form to in.json.
+         d) Create a CSV file holding form instance data where each CSV line corresponds to one form data tuple.
+            The first line identifies fieldIds in in.json.
+         e) "pdfcpu form multifill in.pdf in.csv outDir" creates a separate PDF for each filled form instance in outDir.
+
+   or
+
+   9) Generate a sequence of filled instances of a form and merge output:
+         a) Export your form to in.json and edit the field values.
+            Extend the JSON Array containing the form by using copy & paste and edit the corresponding form data.
+         b) "pdfcpu form multifill -m merge in.pdf in.json outDir" creates a single output PDF in outDir.
+      or
+         c) Export your form to in.json.
+         d) Create a CSV file holding form instance data where each CSV line corresponds to one form data tuple.
+            The first line identifies fieldIds in in.json.
+         e) "pdfcpu form multifill -m merge in.pdf in.csv outDir" creates a single output PDF in outDir.
+
+
+   (For syntax and details please refer to pdfcpu/pkg/api/test/form_test.go)`
 )

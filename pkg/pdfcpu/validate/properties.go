@@ -18,11 +18,12 @@ package validate
 
 import (
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
-func validatePropertiesDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
+func validatePropertiesDict(xRefTable *model.XRefTable, o types.Object) error {
 
 	// see 14.6.2
 	// a dictionary containing private information meaningful to the conforming writer creating marked content.
@@ -47,7 +48,7 @@ func validatePropertiesDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
 		return err
 	}
 
-	err = validateMetadata(xRefTable, d, OPTIONAL, pdf.V14)
+	err = validateMetadata(xRefTable, d, OPTIONAL, model.V14)
 	if err != nil {
 		return err
 	}
@@ -101,7 +102,7 @@ func validatePropertiesDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
 	return nil
 }
 
-func validatePropertiesResourceDict(xRefTable *pdf.XRefTable, o pdf.Object, sinceVersion pdf.Version) error {
+func validatePropertiesResourceDict(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
 
 	// Version check
 	err := xRefTable.ValidateVersion("PropertiesResourceDict", sinceVersion)

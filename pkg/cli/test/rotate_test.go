@@ -30,12 +30,12 @@ func TestRotateCommand(t *testing.T) {
 	outFile := filepath.Join(outDir, "test.pdf")
 	rotation := 90
 
-	cmd := cli.RotateCommand(inFile, outFile, rotation, []string{"-2"}, nil)
+	cmd := cli.RotateCommand(inFile, outFile, rotation, []string{"-2"}, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
-	if err := validateFile(t, outFile, nil); err != nil {
+	if err := validateFile(t, outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }

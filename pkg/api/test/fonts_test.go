@@ -18,17 +18,21 @@ package test
 
 import (
 	"fmt"
-	"os"
+
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-func writeCoreFontDemoContent(p pdf.Page, fontName string) {
+func writeCoreFontDemoContent(xRefTable *model.XRefTable, p model.Page, fontName string) {
 	baseFontName := "Helvetica"
 	baseFontSize := 24
 	baseFontKey := p.Fm.EnsureKey(baseFontName)
@@ -36,22 +40,22 @@ func writeCoreFontDemoContent(p pdf.Page, fontName string) {
 	fontKey := p.Fm.EnsureKey(fontName)
 	fontSize := 24
 
-	fillCol := pdf.NewSimpleColor(0xf7e6c7)
-	pdf.DrawGrid(p.Buf, 16, 14, pdf.RectForWidthAndHeight(55, 2, 480, 422), pdf.Black, &fillCol)
+	fillCol := color.NewSimpleColor(0xf7e6c7)
+	draw.DrawGrid(p.Buf, 16, 14, types.RectForWidthAndHeight(55, 2, 480, 422), color.Black, &fillCol)
 
-	td := pdf.TextDescriptor{
+	td := model.TextDescriptor{
 		FontName:       baseFontName,
 		FontKey:        baseFontKey,
 		FontSize:       baseFontSize,
-		HAlign:         pdf.AlignCenter,
-		VAlign:         pdf.AlignBaseline,
+		HAlign:         types.AlignCenter,
+		VAlign:         types.AlignBaseline,
 		Scale:          1.0,
 		ScaleAbs:       true,
-		RMode:          pdf.RMFill,
-		StrokeCol:      pdf.Black,
-		FillCol:        pdf.NewSimpleColor(0xab6f30),
+		RMode:          draw.RMFill,
+		StrokeCol:      color.Black,
+		FillCol:        color.NewSimpleColor(0xab6f30),
 		ShowBackground: true,
-		BackgroundCol:  pdf.SimpleColor{R: 1., G: .98, B: .77},
+		BackgroundCol:  color.SimpleColor{R: 1., G: .98, B: .77},
 	}
 
 	s := fmt.Sprintf("%s %d points", fontName, fontSize)
@@ -59,29 +63,29 @@ func writeCoreFontDemoContent(p pdf.Page, fontName string) {
 		s = s + " (CP1252)"
 	}
 	td.X, td.Y, td.Text = p.MediaBox.Width()/2, 500, s
-	td.StrokeCol, td.FillCol = pdf.NewSimpleColor(0x77bdbd), pdf.NewSimpleColor(0xab6f30)
-	pdf.WriteMultiLine(p.Buf, p.MediaBox, nil, td)
+	td.StrokeCol, td.FillCol = color.NewSimpleColor(0x77bdbd), color.NewSimpleColor(0xab6f30)
+	model.WriteMultiLine(xRefTable, p.Buf, p.MediaBox, nil, td)
 
 	for i := 0; i < 16; i++ {
 		s = fmt.Sprintf("#%02X", i)
 		td.X, td.Y, td.Text, td.FontSize = float64(70+i*30), 427, s, 14
-		td.StrokeCol, td.FillCol = pdf.Black, pdf.SimpleColor{B: .8}
-		pdf.WriteMultiLine(p.Buf, p.MediaBox, nil, td)
+		td.StrokeCol, td.FillCol = color.Black, color.SimpleColor{B: .8}
+		model.WriteMultiLine(xRefTable, p.Buf, p.MediaBox, nil, td)
 	}
 
 	for j := 0; j < 14; j++ {
 		s = fmt.Sprintf("#%02X", j*16+32)
 		td.X, td.Y, td.Text = 41, float64(403-j*30), s
-		td.StrokeCol, td.FillCol = pdf.Black, pdf.SimpleColor{B: .8}
+		td.StrokeCol, td.FillCol = color.Black, color.SimpleColor{B: .8}
 		td.FontName, td.FontKey, td.FontSize = baseFontName, baseFontKey, 14
-		pdf.WriteMultiLine(p.Buf, p.MediaBox, nil, td)
+		model.WriteMultiLine(xRefTable, p.Buf, p.MediaBox, nil, td)
 		for i := 0; i < 16; i++ {
 			b := byte(32 + j*16 + i)
 			s = string([]byte{b})
 			td.X, td.Y, td.Text = float64(70+i*30), float64(400-j*30), s
-			td.StrokeCol, td.FillCol = pdf.Black, pdf.Black
+			td.StrokeCol, td.FillCol = color.Black, color.Black
 			td.FontName, td.FontKey, td.FontSize = fontName, fontKey, fontSize
-			pdf.WriteMultiLine(p.Buf, p.MediaBox, nil, td)
+			model.WriteMultiLine(xRefTable, p.Buf, p.MediaBox, nil, td)
 		}
 	}
 }
@@ -111,10 +115,10 @@ func writeCoreFontDemoContent(p pdf.Page, fontName string) {
 // 	pdf.WriteMultiLine(p.Buf, p.MediaBox, nil, td)
 // }
 
-func createCoreFontDemoPage(w, h int, fontName string) pdf.Page {
-	mediaBox := pdf.RectForDim(float64(w), float64(h))
-	p := pdf.NewPageWithBg(mediaBox, pdf.NewSimpleColor(0xbeded9))
-	writeCoreFontDemoContent(p, fontName)
+func createCoreFontDemoPage(xRefTable *model.XRefTable, w, h int, fontName string) model.Page {
+	mediaBox := types.RectForDim(float64(w), float64(h))
+	p := model.NewPageWithBg(mediaBox, color.NewSimpleColor(0xbeded9))
+	writeCoreFontDemoContent(xRefTable, p, fontName)
 	//writeCP1252SpecialMappings(p, fontName)
 	return p
 }
@@ -122,9 +126,16 @@ func TestCoreFontDemoPDF(t *testing.T) {
 	msg := "TestCoreFontDemoPDF"
 	w, h := 600, 600
 	for _, fn := range font.CoreFontNames() {
-		p := createCoreFontDemoPage(w, h, fn)
-		xRefTable, err := pdf.CreateDemoXRef(p)
+		xRefTable, err := pdf.CreateDemoXRef()
 		if err != nil {
+			t.Fatalf("%s: %v\n", msg, err)
+		}
+		rootDict, err := xRefTable.Catalog()
+		if err != nil {
+			t.Fatalf("%s: %v\n", msg, err)
+		}
+		p := createCoreFontDemoPage(xRefTable, w, h, fn)
+		if err = pdf.AddPageTreeWithSamplePage(xRefTable, rootDict, p); err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
 		outFile := filepath.Join("..", "..", "samples", "fonts", "core", fn+".pdf")
@@ -132,36 +143,8 @@ func TestCoreFontDemoPDF(t *testing.T) {
 	}
 }
 
-func isTrueType(filename string) bool {
-	return strings.HasSuffix(strings.ToLower(filename), ".ttf")
-	//	|| strings.HasSuffix(strings.ToLower(filename), ".ttc")
-}
-
-func userFonts(t *testing.T, dir string) []string {
-	t.Helper()
-	files, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatalf("%v\n", err)
-	}
-	ff := []string(nil)
-	for _, f := range files {
-		if isTrueType(f.Name()) {
-			fn := filepath.Join(dir, f.Name())
-			ff = append(ff, fn)
-		}
-	}
-	return ff
-}
-
 func TestUserFontDemoPDF(t *testing.T) {
 	msg := "TestUserFontDemoPDF"
-
-	api.LoadConfiguration()
-
-	// Install test user fonts from pkg/testdata/fonts.
-	if err := api.InstallFonts(userFonts(t, filepath.Join("..", "..", "testdata", "fonts"))); err != nil {
-		t.Fatalf("%s: %v\n", msg, err)
-	}
 
 	// For each installed user font create a single page pdf cheat sheet for every unicode plane covered
 	// in pkg/samples/fonts/user.

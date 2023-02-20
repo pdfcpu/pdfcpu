@@ -1,0 +1,1160 @@
+{
+	"paper": "A4L",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": true,
+	"debug": false,
+	"guides": true,
+	"colors": {
+		"DarkSalmon": "#E9967A"
+	},
+	"bgcol": "#BEDED9",
+	"timestamp": "Monday, 2.Jan 2006 15:04:05",
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"fonts": {
+		"myCourier": {
+			"name": "Courier",
+			"size": 12,
+			"col": "#00AA00"
+		}
+	},
+	"borders": {
+		"myBorder": {
+			"width": 5,
+			"col": "#0000FF",
+			"style": "round"
+		}
+	},
+	"margin": {
+		"width": 20
+	},
+	"header": {
+		"font": {
+			"name": "Courier-Bold",
+			"size": 24,
+			"col": "#0000FF"
+		},
+		"left": "$logo1",
+		"center": "Boxes & Margin",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 10,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "$myCourier",
+			"col": "Black"
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Page %p of %P",
+		"right": "Source:\ntestdata/json/create/boxesAndMargin.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"pages": {
+		"1": {
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							-1,
+							-1
+						]
+					},
+					{
+						"pos": [
+							10,
+							10
+						]
+					}
+				],
+				"text": [
+					{
+						"anchor": "center",
+						"dy": 80,
+						"value": "Anchored Textboxes with margin",
+						"font": {
+							"name": "Courier",
+							"size": 18
+						}
+					},
+
+					{
+						"value": "TopLeft",
+						"anchor": "topLeft",
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder",
+							"col": "White"
+						},
+						"padding": {
+							"width": 20
+						}
+					},
+					{
+						"value": "TopCenter",
+						"anchor": "topCenter",
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder",
+							"col": "White"
+						},
+						"padding": {
+							"width": 20
+						}
+					},
+					{
+						"value": "TopRight",
+						"anchor": "topRight",
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder",
+							"col": "White"
+						},
+						"padding": {
+							"width": 20
+						}
+					},
+					{
+						"value": "Left",
+						"anchor": "left",
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder",
+							"col": "White"
+						},
+						"padding": {
+							"width": 20
+						}
+					},
+					{
+						"value": "Center",
+						"anchor": "center",
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder",
+							"col": "White"
+						},
+						"padding": {
+							"width":20
+						}
+					},
+					{
+						"value": "Right",
+						"anchor": "right",
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder",
+							"col": "White"
+						},
+						"padding": {
+							"width": 20
+						}
+					},
+					{
+						"value": "BottomLeft",
+						"anchor": "bottomleft",
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder",
+							"col": "White"
+						},
+						"padding": {
+							"width": 20
+						}
+					},
+					{
+						"value": "BottomCenter",
+						"anchor": "bottomCenter",
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder",
+							"col": "White"
+						},
+						"padding": {
+							"width": 20
+						}
+					},
+					{
+						"value": "BottomRight",
+						"anchor": "bottomRight",
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder",
+							"col": "White"
+						},
+						"padding": {
+							"width": 20
+						}
+					}
+				]				
+			}
+		},
+		"2": {
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							-1,
+							-1
+						]
+					},
+					{
+						"pos": [
+							10,
+							10
+						]
+					},
+					{
+						"pos": [
+							100,
+							100
+						]
+					}
+				],
+				"text": [
+					{
+						"hide": false,
+						"anchor": "center",
+						"dy": 80,
+						"value": "Positioned Textboxes with margin",
+						"font": {
+							"name": "Courier",
+							"size": 18
+						}
+					},
+
+					{
+						"hide": false,
+						"value": "Test",
+						"pos": [
+							100,
+							100
+						],
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder",
+							"col": "White"
+						},
+						"padding": {
+							"width": 10
+						}
+					},
+
+					{
+						"hide": false,
+						"value": "TopLeft",
+						"anchor": "topLeft",
+						"//pos": [
+							0,
+							500
+						],
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder",
+							"col": "White"
+						},
+						"padding": {
+							"width": 10
+						}
+					},
+					{
+						"value": "TopCenter",
+						"//align": "center",
+						"anchor": "topCenter",
+						"//pos": [
+							-1,
+							500
+						],
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder",
+							"col": "White"
+						},
+						"padding": {
+							"width": 10
+						}
+					},
+					{
+						"hide": false,
+						"value": "TopRight",
+						"anchor": "topRight",
+						"//pos": [
+							800,
+							500
+						],
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder",
+							"col": "White"
+						},
+						"padding": {
+							"width": 10
+						}
+					},
+					{
+						"hide": false,
+						"value": "Left",
+						"pos": [
+							0,
+							-1
+						],
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder",
+							"col": "White"
+						},
+						"padding": {
+							"width": 10
+						}
+					},
+					{
+						"hide": false,
+						"value": "Center",
+						"align": "center",
+						"pos": [
+							-1,
+							-1
+						],
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"margin": {
+							"left": 10,
+							"right": 20
+						},
+						"border": {
+							"name": "$myBorder",
+							"col": "White"
+						},
+						"padding": {
+							"width":10
+						}
+					},
+					{
+						"hide": false,
+						"value": "Right",
+						"anchor": "right",
+						"//pos": [
+							800,
+							-1
+						],
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder",
+							"col": "White"
+						},
+						"padding": {
+							"width": 10
+						}
+					},
+					{
+						"hide": false,
+						"value": "BottomLeft",
+						"pos": [
+							0,
+							0
+						],
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder",
+							"col": "White"
+						},
+						"padding": {
+							"width": 10
+						}
+					},
+					{
+						"hide": false,
+						"value": "BottomCenter",
+						"align": "center",
+						"pos": [
+							-1,
+							0
+						],
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder",
+							"col": "White"
+						},
+						"padding": {
+							"width": 10
+						}
+					},
+					{
+						"hide": false,
+						"value": "BottomRight",
+						"anchor": "bottomRight",
+						"//pos": [
+							800,
+							0
+						],
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder",
+							"col": "White"
+						},
+						"padding": {
+							"width": 10
+						}
+					}
+				]				
+			}
+		},
+		"3": {
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							-1,
+							-1
+						]
+					},
+					{
+						"pos": [
+							10,
+							10
+						]
+					}
+				],
+				"text": [
+					{
+						"anchor": "center",
+						"dy": 80,
+						"value": "Anchored Imageboxes with margin",
+						"font": {
+							"name": "Courier",
+							"size": 18
+						}
+					}
+				],
+				"image": [
+					{
+						"anchor": "topleft",
+						"src": "../../testdata/resources/demo.png",
+						"height": 100,
+						"margin": {
+							"width": 10
+						}
+					},
+					{
+						"anchor": "topcenter",
+						"src": "../../testdata/resources/demo.png",
+						"height": 100,
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						}
+					},
+					{
+						"anchor": "topright",
+						"src": "../../testdata/resources/demo.png",
+						"height": 100,
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"padding": {
+							"width": 10
+						}
+					},
+
+					{
+						"anchor": "left",
+						"src": "../../testdata/resources/demo.png",
+						"height": 100,
+						"margin": {
+							"width": 10
+						}
+					},
+					{
+						"anchor": "center",
+						"src": "../../testdata/resources/demo.png",
+						"height": 100,
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						}
+					},
+					{
+						"anchor": "right",
+						"src": "../../testdata/resources/demo.png",
+						"height": 100,
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"padding": {
+							"width": 10
+						}
+					},
+
+					{
+						"anchor": "bottomleft",
+						"src": "../../testdata/resources/demo.png",
+						"height": 100,
+						"margin": {
+							"width": 10
+						}
+					},
+					{
+						"anchor": "bottomcenter",
+						"src": "../../testdata/resources/demo.png",
+						"height": 100,
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						}
+					},
+					{
+						"anchor": "bottomright",
+						"src": "../../testdata/resources/demo.png",
+						"height": 100,
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"padding": {
+							"width": 10
+						}
+					}
+				]
+			}
+		},
+		"4": {
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							-1,
+							-1
+						]
+					},
+					{
+						"pos": [
+							10,
+							10
+						]
+					},
+					{
+						"pos": [
+							100,
+							100
+						]
+					}
+				],
+				"text": [
+					{
+						"anchor": "center",
+						"dy": 80,
+						"value": "Positioned Imageboxes with margin",
+						"font": {
+							"name": "Courier",
+							"size": 18
+						}
+					}
+				],
+				"image": [
+					{
+						"pos": [
+							100,
+							100
+						],
+						"src": "../../testdata/resources/demo.png",
+						"height": 70,
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"padding": {
+							"width": 10
+						}
+					},
+					{
+						"pos": [
+							0,
+							500
+						],
+						"src": "../../testdata/resources/demo.png",
+						"height": 70,
+						"margin": {
+							"width": 10
+						}
+					},
+					{
+						"pos": [
+							-1,
+							500
+						],
+						"src": "../../testdata/resources/demo.png",
+						"height": 70,
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						}
+					},
+					{
+						"pos": [
+							1000,
+							500
+						],
+						"src": "../../testdata/resources/demo.png",
+						"height": 70,
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"padding": {
+							"width": 10
+						}
+					},
+
+					{
+						"pos": [
+							0,
+							-1
+						],
+						"src": "../../testdata/resources/demo.png",
+						"height": 70,
+						"margin": {
+							"width": 10
+						}
+					},
+					{
+						"pos": [
+							-1,
+							-1
+						],
+						"src": "../../testdata/resources/demo.png",
+						"height": 70,
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						}
+					},
+					{
+						"pos": [
+							1000,
+							-1
+						],
+						"src": "../../testdata/resources/demo.png",
+						"height": 70,
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"padding": {
+							"width": 10
+						}
+					},
+
+					{
+						"pos": [
+							0,
+							0
+						],
+						"src": "../../testdata/resources/demo.png",
+						"height": 70,
+						"margin": {
+							"width": 10
+						}
+					},
+					{
+						"pos": [
+							-1,
+							0
+						],
+						"src": "../../testdata/resources/demo.png",
+						"height": 70,
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						}
+					},
+					{
+						"pos": [
+							1000,
+							0
+						],
+						"src": "../../testdata/resources/demo.png",
+						"height": 70,
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"padding": {
+							"width": 10
+						}
+					}
+				]
+			}
+		},
+		"5": {
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							-1,
+							-1
+						]
+					},
+					{
+						"pos": [
+							10,
+							10
+						]
+					}
+				],
+				"text": [
+					{
+						"anchor": "center",
+						"dy": 80,
+						"value": "Anchored Simpleboxes with margin",
+						"font": {
+							"name": "Courier",
+							"size": 18
+						}
+					}
+				],
+				"box": [
+					{
+						"anchor": "topleft",
+						"width": 150,
+						"height": 100,
+						"fillCol": "$DarkSalmon",
+						"margin": {
+							"width": 10
+						}
+					},
+					{
+						"anchor": "topcenter",
+						"width": 150,
+						"height": 100,
+						"fillCol": "$DarkSalmon",
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						}
+					},
+					{
+						"anchor": "topright",
+						"width": 150,
+						"height": 100,
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						}
+					},
+
+					{
+						"anchor": "left",
+						"width": 150,
+						"height": 100,
+						"fillCol": "$DarkSalmon",
+						"margin": {
+							"width": 10
+						}
+					},
+					{
+						"anchor": "center",
+						"width": 150,
+						"height": 100,
+						"fillCol": "$DarkSalmon",
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						}
+					},
+					{
+						"anchor": "right",
+						"width": 150,
+						"height": 100,
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						}
+					},
+
+					{
+						"anchor": "bottomleft",
+						"width": 150,
+						"height": 100,
+						"fillCol": "$DarkSalmon",
+						"margin": {
+							"width": 10
+						}
+					},
+					{
+						"anchor": "bottomcenter",
+						"width": 150,
+						"height": 100,
+						"fillCol": "$DarkSalmon",
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						}
+					},
+					{
+						"anchor": "bottomright",
+						"width": 150,
+						"height": 100,
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						}
+					}
+				]
+			}
+		},
+		"6": {
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							-1,
+							-1
+						]
+					},
+					{
+						"pos": [
+							10,
+							10
+						]
+					},
+					{
+						"pos": [
+							100,
+							100
+						]
+					}
+				],
+				"text": [
+					{
+						"anchor": "center",
+						"dy": 80,
+						"value": "Positioned Simpleboxes with margin",
+						"font": {
+							"name": "Courier",
+							"size": 18
+						}
+					}
+				],
+				"box": [
+					{
+						"pos": [
+							100,
+							100
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "$DarkSalmon",
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						}
+					},
+					{
+						"pos": [
+							0,
+							500
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "$DarkSalmon",
+						"margin": {
+							"width": 10
+						}
+					},
+					{
+						"pos": [
+							-1,
+							500
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "$DarkSalmon",
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						}
+					},
+					{
+						"pos": [
+							1000,
+							500
+						],
+						"width": 100,
+						"height": 50,
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						}
+					},
+
+					{
+						"pos": [
+							0,
+							-1
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "$DarkSalmon",
+						"margin": {
+							"width": 10
+						}
+					},
+					{
+						"pos": [
+							-1,
+							-1
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "$DarkSalmon",
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						}
+					},
+					{
+						"pos": [
+							1000,
+							-1
+						],
+						"width": 100,
+						"height": 50,
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						}
+					},
+
+					{
+						"pos": [
+							0,
+							0
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "$DarkSalmon",
+						"margin": {
+							"width": 10
+						}
+					},
+					{
+						"pos": [
+							-1,
+							0
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "$DarkSalmon",
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						}
+					},
+					{
+						"pos": [
+							1000,
+							0
+						],
+						"width": 100,
+						"height": 50,
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						}
+					}
+				]
+			}
+		}
+	}
+}

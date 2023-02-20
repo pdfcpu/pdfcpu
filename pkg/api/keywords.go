@@ -23,16 +23,17 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
 
 // ListKeywords returns the keyword list of rs.
-func ListKeywords(rs io.ReadSeeker, conf *pdf.Configuration) ([]string, error) {
+func ListKeywords(rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {
 	if conf == nil {
-		conf = pdf.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	} else {
 		// Validation loads infodict.
-		conf.ValidationMode = pdf.ValidationRelaxed
+		conf.ValidationMode = model.ValidationRelaxed
 	}
 
 	fromStart := time.Now()
@@ -50,13 +51,13 @@ func ListKeywords(rs io.ReadSeeker, conf *pdf.Configuration) ([]string, error) {
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	pdf.TimingStats("list files", durRead, durVal, durOpt, durWrite, durTotal)
+	model.TimingStats("list files", durRead, durVal, durOpt, durWrite, durTotal)
 
 	return list, nil
 }
 
 // ListKeywordsFile returns the keyword list of inFile.
-func ListKeywordsFile(inFile string, conf *pdf.Configuration) ([]string, error) {
+func ListKeywordsFile(inFile string, conf *model.Configuration) ([]string, error) {
 	f, err := os.Open(inFile)
 	if err != nil {
 		return nil, err
@@ -66,12 +67,12 @@ func ListKeywordsFile(inFile string, conf *pdf.Configuration) ([]string, error) 
 }
 
 // AddKeywords embeds files into a PDF context read from rs and writes the result to w.
-func AddKeywords(rs io.ReadSeeker, w io.Writer, files []string, conf *pdf.Configuration) error {
+func AddKeywords(rs io.ReadSeeker, w io.Writer, files []string, conf *model.Configuration) error {
 	if conf == nil {
-		conf = pdf.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	} else {
 		// Validation loads infodict.
-		conf.ValidationMode = pdf.ValidationRelaxed
+		conf.ValidationMode = model.ValidationRelaxed
 	}
 
 	fromStart := time.Now()
@@ -101,7 +102,7 @@ func AddKeywords(rs io.ReadSeeker, w io.Writer, files []string, conf *pdf.Config
 }
 
 // AddKeywordsFile embeds files into a PDF context read from inFile and writes the result to outFile.
-func AddKeywordsFile(inFile, outFile string, files []string, conf *pdf.Configuration) (err error) {
+func AddKeywordsFile(inFile, outFile string, files []string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {
@@ -142,12 +143,12 @@ func AddKeywordsFile(inFile, outFile string, files []string, conf *pdf.Configura
 }
 
 // RemoveKeywords deletes embedded files from a PDF context read from rs and writes the result to w.
-func RemoveKeywords(rs io.ReadSeeker, w io.Writer, keywords []string, conf *pdf.Configuration) error {
+func RemoveKeywords(rs io.ReadSeeker, w io.Writer, keywords []string, conf *model.Configuration) error {
 	if conf == nil {
-		conf = pdf.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	} else {
 		// Validation loads infodict.
-		conf.ValidationMode = pdf.ValidationRelaxed
+		conf.ValidationMode = model.ValidationRelaxed
 	}
 
 	fromStart := time.Now()
@@ -180,7 +181,7 @@ func RemoveKeywords(rs io.ReadSeeker, w io.Writer, keywords []string, conf *pdf.
 }
 
 // RemoveKeywordsFile deletes embedded files from a PDF context read from inFile and writes the result to outFile.
-func RemoveKeywordsFile(inFile, outFile string, keywords []string, conf *pdf.Configuration) (err error) {
+func RemoveKeywordsFile(inFile, outFile string, keywords []string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {

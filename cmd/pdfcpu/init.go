@@ -59,6 +59,20 @@ func initCommandMap() {
 		fontsCmdMap.register(k, v)
 	}
 
+	formCmdMap := newCommandMap()
+	for k, v := range map[string]command{
+		"list":      {processListFormFieldsCommand, nil, "", ""},
+		"remove":    {processRemoveFormFieldsCommand, nil, "", ""},
+		"lock":      {processLockFormCommand, nil, "", ""},
+		"unlock":    {processUnlockFormCommand, nil, "", ""},
+		"reset":     {processResetFormCommand, nil, "", ""},
+		"export":    {processExportFormCommand, nil, "", ""},
+		"fill":      {processFillFormCommand, nil, "", ""},
+		"multifill": {processMultiFillFormCommand, nil, "", ""},
+	} {
+		formCmdMap.register(k, v)
+	}
+
 	imagesCmdMap := newCommandMap()
 	for k, v := range map[string]command{
 		"list": {processListImagesCommand, nil, "", ""},
@@ -142,9 +156,11 @@ func initCommandMap() {
 		"create":        {processCreateCommand, nil, usageCreate, usageLongCreate},
 		"crop":          {processCropCommand, nil, usageCrop, usageLongCrop},
 		"decrypt":       {processDecryptCommand, nil, usageDecrypt, usageLongDecrypt},
+		"dump":          {processDumpCommand, nil, "", ""},
 		"encrypt":       {processEncryptCommand, nil, usageEncrypt, usageLongEncrypt},
 		"extract":       {processExtractCommand, nil, usageExtract, usageLongExtract},
 		"fonts":         {nil, fontsCmdMap, usageFonts, usageLongFonts},
+		"form":          {nil, formCmdMap, usageForm, usageLongForm},
 		"grid":          {processGridCommand, nil, usageGrid, usageLongGrid},
 		"help":          {printHelp, nil, "", ""},
 		"images":        {nil, imagesCmdMap, usageImages, usageLongImages},

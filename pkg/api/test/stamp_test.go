@@ -23,6 +23,7 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 func testAddWatermarks(t *testing.T, msg, inFile, outFile string, selectedPages []string, mode, modeParam, desc string, onTop bool) {
@@ -449,11 +450,11 @@ func TestCropBox(t *testing.T) {
 	}
 
 	for _, pos := range []string{"tl", "tc", "tr", "l", "c", "r", "bl", "bc", "br"} {
-		wm, err := api.PDFWatermark(pdfFile+":1", fmt.Sprintf("sc:.25 rel, pos:%s, rot:0", pos), true, false, pdfcpu.POINTS)
+		wm, err := api.PDFWatermark(pdfFile+":1", fmt.Sprintf("sc:.25 rel, pos:%s, rot:0", pos), true, false, types.POINTS)
 		if err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
-		if err := ctx.AddWatermarks(nil, wm); err != nil {
+		if err := pdfcpu.AddWatermarks(ctx, nil, wm); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	}
@@ -488,7 +489,7 @@ func TestStampingLifecyle(t *testing.T) {
 		t.Fatalf("Watermarks found: %s\n", inFile)
 	}
 
-	unit := pdfcpu.POINTS
+	unit := types.POINTS
 
 	// Stamp all pages.
 	wm, err := api.TextWatermark("Demo", "", onTop, false, unit)
@@ -556,7 +557,7 @@ func TestRecycleWM(t *testing.T) {
 	onTop := false // we are testing watermarks
 
 	desc := "pos:tl, points:22, rot:0, scale:1 abs, off:0 -5, opacity:0.3"
-	wm, err := api.TextWatermark("This is a watermark", desc, onTop, false, pdfcpu.POINTS)
+	wm, err := api.TextWatermark("This is a watermark", desc, onTop, false, types.POINTS)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}

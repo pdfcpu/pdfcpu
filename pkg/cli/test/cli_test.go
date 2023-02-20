@@ -26,24 +26,51 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-var inDir, outDir, resDir, fontDir string
+var inDir, outDir, resDir, fontDir, samplesDir string
+var conf *model.Configuration
 
-func imageFileNames(t *testing.T, dir string) []string {
-	t.Helper()
-	fn, err := pdfcpu.ImageFileNames(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return fn
+func isTrueType(filename string) bool {
+	s := strings.ToLower(filename)
+	return strings.HasSuffix(s, ".ttf") || strings.HasSuffix(s, ".ttc")
 }
+
+func userFonts(dir string) ([]string, error) {
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	ff := []string(nil)
+	for _, f := range files {
+		if isTrueType(f.Name()) {
+			fn := filepath.Join(dir, f.Name())
+			ff = append(ff, fn)
+		}
+	}
+	return ff, nil
+}
+
 func TestMain(m *testing.M) {
 	inDir = filepath.Join("..", "..", "testdata")
-	resDir = filepath.Join(inDir, "resources")
 	fontDir = filepath.Join(inDir, "fonts")
-	var err error
+	resDir = filepath.Join(inDir, "resources")
+	samplesDir = filepath.Join("..", "..", "samples")
+
+	conf = api.LoadConfiguration()
+
+	// Install test user fonts from pkg/testdata/fonts.
+	fonts, err := userFonts(filepath.Join(inDir, "fonts"))
+	if err != nil {
+		fmt.Printf("%v", err)
+		os.Exit(1)
+	}
+
+	if err := api.InstallFonts(fonts); err != nil {
+		fmt.Printf("%v", err)
+		os.Exit(1)
+	}
 
 	if outDir, err = os.MkdirTemp("", "pdfcpu_cli_tests"); err != nil {
 		fmt.Printf("%v", err)
@@ -77,6 +104,15 @@ func copyFile(t *testing.T, srcFileName, destFileName string) error {
 	return err
 }
 
+func imageFileNames(t *testing.T, dir string) []string {
+	t.Helper()
+	fn, err := model.ImageFileNames(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return fn
+}
+
 func isPDF(filename string) bool {
 	return strings.HasSuffix(strings.ToLower(filename), ".pdf")
 }
@@ -96,7 +132,7 @@ func allPDFs(t *testing.T, dir string) []string {
 	return ff
 }
 
-func validateFile(t *testing.T, fileName string, conf *pdfcpu.Configuration) error {
+func validateFile(t *testing.T, fileName string, conf *model.Configuration) error {
 	t.Helper()
 	_, err := cli.Process(cli.ValidateCommand([]string{fileName}, conf))
 	return err
@@ -106,22 +142,9 @@ func TestValidate(t *testing.T) {
 	msg := "TestValidateCommand"
 	for _, f := range allPDFs(t, inDir) {
 		inFile := filepath.Join(inDir, f)
-		if err := validateFile(t, inFile, nil); err != nil {
+		if err := validateFile(t, inFile, conf); err != nil {
 			t.Fatalf("%s: %s: %v\n", msg, inFile, err)
 		}
-	}
-}
-
-func TestGetPageCount(t *testing.T) {
-	msg := "TestGetPageCount"
-	inFile := filepath.Join(inDir, "CenterOfWhy.pdf")
-
-	n, err := api.PageCountFile(inFile)
-	if err != nil {
-		t.Fatalf("%s %s: %v\n", msg, inFile, err)
-	}
-	if n != 25 {
-		t.Fatalf("%s %s: pageCount want:%d got:%d\n", msg, inFile, 25, n)
 	}
 }
 
@@ -129,7 +152,7 @@ func TestInfoCommand(t *testing.T) {
 	msg := "TestInfoCommand"
 	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
 
-	cmd := cli.InfoCommand(inFile, nil, nil)
+	cmd := cli.InfoCommand(inFile, nil, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -137,7 +160,6 @@ func TestInfoCommand(t *testing.T) {
 
 func TestUnknownCommand(t *testing.T) {
 	msg := "TestUnknownCommand"
-	conf := pdfcpu.NewDefaultConfiguration()
 	inFile := filepath.Join(outDir, "go.pdf")
 
 	cmd := &cli.Command{
@@ -162,7 +184,6 @@ func XTestSomeCommand(t *testing.T) {
 	log.SetDefaultWriteLogger()
 	//log.SetDefaultStatsLogger()
 
-	conf := pdfcpu.NewDefaultConfiguration()
 	inFile := filepath.Join(inDir, "test.pdf")
 
 	cmd := cli.ValidateCommand([]string{inFile}, conf)

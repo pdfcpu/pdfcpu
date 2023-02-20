@@ -21,28 +21,30 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-var textAnn pdf.AnnotationRenderer = pdf.NewTextAnnotation(
-	*pdf.Rect(0, 0, 100, 100),
+var textAnn model.AnnotationRenderer = model.NewTextAnnotation(
+	*types.NewRectangle(0, 0, 100, 100),
 	"Test Content",
 	"ID1",
 	"Title1",
-	pdf.AnnNoZoom+pdf.AnnNoRotate,
-	&pdf.Gray,
+	model.AnnNoZoom+model.AnnNoRotate,
+	&color.Gray,
 	nil,
 	"",
 	"",
 	false,
 	"Comment")
 
-var linkAnn pdf.AnnotationRenderer = pdf.NewLinkAnnotation(
-	*pdf.Rect(0, 0, 100, 100),
+var linkAnn model.AnnotationRenderer = model.NewLinkAnnotation(
+	*types.NewRectangle(0, 0, 100, 100),
 	nil,
 	"https://pdfcpu.io",
 	"ID2",
-	pdf.AnnNoZoom+pdf.AnnNoRotate,
+	model.AnnNoZoom+model.AnnNoRotate,
 	nil)
 
 func TestAddRemoveAnnotationsById(t *testing.T) {
@@ -169,8 +171,8 @@ func TestRemoveAllAnnotations(t *testing.T) {
 	copyFile(t, filepath.Join(inDir, fn), filepath.Join(outDir, fn))
 	inFile := filepath.Join(outDir, fn)
 
-	m := map[int][]pdf.AnnotationRenderer{}
-	anns := make([]pdf.AnnotationRenderer, 2)
+	m := map[int][]model.AnnotationRenderer{}
+	anns := make([]model.AnnotationRenderer, 2)
 	anns[0] = textAnn
 	anns[1] = linkAnn
 	m[1] = anns
@@ -212,8 +214,8 @@ func TestAddAnnotationsLowLevel(t *testing.T) {
 		t.Fatalf("%s readContext: %v\n", msg, err)
 	}
 
-	m := map[int][]pdf.AnnotationRenderer{}
-	anns := make([]pdf.AnnotationRenderer, 2)
+	m := map[int][]model.AnnotationRenderer{}
+	anns := make([]model.AnnotationRenderer, 2)
 	anns[0] = textAnn
 	anns[1] = linkAnn
 	m[1] = anns

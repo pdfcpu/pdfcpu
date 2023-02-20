@@ -22,6 +22,11 @@ import (
 	"bytes"
 	"fmt"
 	"path/filepath"
+
+	pdffont "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 var (
@@ -29,20 +34,22 @@ var (
 	testAudioFileWAV = filepath.Join(testDir, "resources", "test.wav")
 )
 
-func CreateXRefTableWithRootDict() (*XRefTable, error) {
-	xRefTable := &XRefTable{
-		Table:      map[int]*XRefTableEntry{},
-		Names:      map[string]*Node{},
-		PageAnnots: map[int]PgAnnots{},
-		Stats:      NewPDFStats(),
+func CreateXRefTableWithRootDict() (*model.XRefTable, error) {
+	xRefTable := &model.XRefTable{
+		Table:      map[int]*model.XRefTableEntry{},
+		Names:      map[string]*model.Node{},
+		PageAnnots: map[int]model.PgAnnots{},
+		Stats:      model.NewPDFStats(),
+		URIs:       map[int]map[string]string{},
+		UsedGIDs:   map[string]map[uint16]bool{},
 	}
 
-	xRefTable.Table[0] = NewFreeHeadXRefTableEntry()
+	xRefTable.Table[0] = model.NewFreeHeadXRefTableEntry()
 
 	one := 1
 	xRefTable.Size = &one
 
-	v := V17
+	v := model.V17
 	xRefTable.HeaderVersion = &v
 
 	xRefTable.PageCount = 0
@@ -53,7 +60,7 @@ func CreateXRefTableWithRootDict() (*XRefTable, error) {
 	// Additional streams not implemented.
 	xRefTable.AdditionalStreams = nil
 
-	rootDict := NewDict()
+	rootDict := types.NewDict()
 	rootDict.InsertName("Type", "Catalog")
 
 	ir, err := xRefTable.IndRefForNewObject(rootDict)
@@ -67,42 +74,33 @@ func CreateXRefTableWithRootDict() (*XRefTable, error) {
 }
 
 // CreateDemoXRef creates a minimal single page PDF file for demo purposes.
-func CreateDemoXRef(p Page) (*XRefTable, error) {
+func CreateDemoXRef() (*model.XRefTable, error) {
 	xRefTable, err := CreateXRefTableWithRootDict()
 	if err != nil {
-		return nil, err
-	}
-
-	rootDict, err := xRefTable.Catalog()
-	if err != nil {
-		return nil, err
-	}
-
-	if err = addPageTreeWithSamplePage(xRefTable, rootDict, p); err != nil {
 		return nil, err
 	}
 
 	return xRefTable, nil
 }
 
-func addPageTreeForResourceDictInheritanceDemo(xRefTable *XRefTable, rootDict Dict) error {
+func addPageTreeForResourceDictInheritanceDemo(xRefTable *model.XRefTable, rootDict types.Dict) error {
 
 	// Create root page node.
 
-	fIndRef, err := EnsureFontDict(xRefTable, "Courier", false, nil)
+	fIndRef, err := pdffont.EnsureFontDict(xRefTable, "Courier", "", "", false, false, nil)
 	if err != nil {
 		return err
 	}
 
-	rootPagesDict := Dict(
-		map[string]Object{
-			"Type":     Name("Pages"),
-			"Count":    Integer(1),
-			"MediaBox": RectForFormat("A4").Array(),
-			"Resources": Dict(
-				map[string]Object{
-					"Font": Dict(
-						map[string]Object{
+	rootPagesDict := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Pages"),
+			"Count":    types.Integer(1),
+			"MediaBox": types.RectForFormat("A4").Array(),
+			"Resources": types.Dict(
+				map[string]types.Object{
+					"Font": types.Dict(
+						map[string]types.Object{
 							"F99": *fIndRef,
 						},
 					),
@@ -118,20 +116,20 @@ func addPageTreeForResourceDictInheritanceDemo(xRefTable *XRefTable, rootDict Di
 
 	// Create intermediate page node.
 
-	f100IndRef, err := EnsureFontDict(xRefTable, "Courier-Bold", false, nil)
+	f100IndRef, err := pdffont.EnsureFontDict(xRefTable, "Courier-Bold", "", "", false, false, nil)
 	if err != nil {
 		return err
 	}
 
-	pagesDict := Dict(
-		map[string]Object{
-			"Type":     Name("Pages"),
-			"Count":    Integer(1),
-			"MediaBox": RectForFormat("A4").Array(),
-			"Resources": Dict(
-				map[string]Object{
-					"Font": Dict(
-						map[string]Object{
+	pagesDict := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Pages"),
+			"Count":    types.Integer(1),
+			"MediaBox": types.RectForFormat("A4").Array(),
+			"Resources": types.Dict(
+				map[string]types.Object{
+					"Font": types.Dict(
+						map[string]types.Object{
 							"F100": *f100IndRef,
 						},
 					),
@@ -147,11 +145,11 @@ func addPageTreeForResourceDictInheritanceDemo(xRefTable *XRefTable, rootDict Di
 
 	// Create leaf page node.
 
-	p := Page{MediaBox: RectForFormat("A4"), Fm: FontMap{}, Buf: new(bytes.Buffer)}
+	p := model.Page{MediaBox: types.RectForFormat("A4"), Fm: model.FontMap{}, Buf: new(bytes.Buffer)}
 
 	fontName := "Times-Roman"
 	k := p.Fm.EnsureKey(fontName)
-	td := TextDescriptor{
+	td := model.TextDescriptor{
 		Text:     "This font is Times-Roman and it is defined in the resource dict of this page dict.",
 		FontName: fontName,
 		FontKey:  k,
@@ -162,10 +160,10 @@ func addPageTreeForResourceDictInheritanceDemo(xRefTable *XRefTable, rootDict Di
 		Y:        400,
 	}
 
-	WriteMultiLine(p.Buf, p.MediaBox, nil, td)
+	model.WriteMultiLine(xRefTable, p.Buf, p.MediaBox, nil, td)
 
 	fontName = "Courier"
-	td = TextDescriptor{
+	td = model.TextDescriptor{
 		Text:     "This font is Courier and it is inherited from the page root.",
 		FontName: fontName,
 		FontKey:  "F99",
@@ -176,10 +174,10 @@ func addPageTreeForResourceDictInheritanceDemo(xRefTable *XRefTable, rootDict Di
 		Y:        300,
 	}
 
-	WriteMultiLine(p.Buf, p.MediaBox, nil, td)
+	model.WriteMultiLine(xRefTable, p.Buf, p.MediaBox, nil, td)
 
 	fontName = "Courier-Bold"
-	td = TextDescriptor{
+	td = model.TextDescriptor{
 		Text:     "This font is Courier-Bold and it is inherited from an intermediate page node.",
 		FontName: fontName,
 		FontKey:  "F100",
@@ -190,24 +188,24 @@ func addPageTreeForResourceDictInheritanceDemo(xRefTable *XRefTable, rootDict Di
 		Y:        350,
 	}
 
-	WriteMultiLine(p.Buf, p.MediaBox, nil, td)
+	model.WriteMultiLine(xRefTable, p.Buf, p.MediaBox, nil, td)
 
 	pageIndRef, err := createDemoPage(xRefTable, *pagesIndRef, p)
 	if err != nil {
 		return err
 	}
 
-	pagesDict.Insert("Kids", Array{*pageIndRef})
+	pagesDict.Insert("Kids", types.Array{*pageIndRef})
 	pagesDict.Insert("Parent", *rootPageIndRef)
 
-	rootPagesDict.Insert("Kids", Array{*pagesIndRef})
+	rootPagesDict.Insert("Kids", types.Array{*pagesIndRef})
 	rootDict.Insert("Pages", *rootPageIndRef)
 
 	return nil
 }
 
 // CreateResourceDictInheritanceDemoXRef creates a page tree for testing resource dict inheritance.
-func CreateResourceDictInheritanceDemoXRef() (*XRefTable, error) {
+func CreateResourceDictInheritanceDemoXRef() (*model.XRefTable, error) {
 	xRefTable, err := CreateXRefTableWithRootDict()
 	if err != nil {
 		return nil, err
@@ -225,54 +223,54 @@ func CreateResourceDictInheritanceDemoXRef() (*XRefTable, error) {
 	return xRefTable, nil
 }
 
-func createFunctionalShadingDict(xRefTable *XRefTable) Dict {
-	f := Dict(
-		map[string]Object{
-			"FunctionType": Integer(2),
-			"Domain":       NewNumberArray(1.0, 1.2, 1.4, 1.6, 1.8, 2.0),
-			"N":            Float(1),
+func createFunctionalShadingDict(xRefTable *model.XRefTable) types.Dict {
+	f := types.Dict(
+		map[string]types.Object{
+			"FunctionType": types.Integer(2),
+			"Domain":       types.NewNumberArray(1.0, 1.2, 1.4, 1.6, 1.8, 2.0),
+			"N":            types.Float(1),
 		},
 	)
 
-	d := Dict(
-		map[string]Object{
-			"ShadingType": Integer(1),
-			"Function":    Array{f},
-		},
-	)
-
-	return d
-}
-
-func createRadialShadingDict(xRefTable *XRefTable) Dict {
-	f := Dict(
-		map[string]Object{
-			"FunctionType": Integer(2),
-			"Domain":       NewNumberArray(1.0, 1.2, 1.4, 1.6, 1.8, 2.0),
-			"N":            Float(1),
-		},
-	)
-
-	d := Dict(
-		map[string]Object{
-			"ShadingType": Integer(3),
-			"Coords":      NewNumberArray(0, 0, 50, 10, 10, 100),
-			"Function":    Array{f},
+	d := types.Dict(
+		map[string]types.Object{
+			"ShadingType": types.Integer(1),
+			"Function":    types.Array{f},
 		},
 	)
 
 	return d
 }
 
-func createStreamObjForHalftoneDictType6(xRefTable *XRefTable) (*IndirectRef, error) {
-	sd := &StreamDict{
-		Dict: Dict(
-			map[string]Object{
-				"Type":             Name("Halftone"),
-				"HalftoneType":     Integer(6),
-				"Width":            Integer(100),
-				"Height":           Integer(100),
-				"TransferFunction": Name("Identity"),
+func createRadialShadingDict(xRefTable *model.XRefTable) types.Dict {
+	f := types.Dict(
+		map[string]types.Object{
+			"FunctionType": types.Integer(2),
+			"Domain":       types.NewNumberArray(1.0, 1.2, 1.4, 1.6, 1.8, 2.0),
+			"N":            types.Float(1),
+		},
+	)
+
+	d := types.Dict(
+		map[string]types.Object{
+			"ShadingType": types.Integer(3),
+			"Coords":      types.NewNumberArray(0, 0, 50, 10, 10, 100),
+			"Function":    types.Array{f},
+		},
+	)
+
+	return d
+}
+
+func createStreamObjForHalftoneDictType6(xRefTable *model.XRefTable) (*types.IndirectRef, error) {
+	sd := &types.StreamDict{
+		Dict: types.Dict(
+			map[string]types.Object{
+				"Type":             types.Name("Halftone"),
+				"HalftoneType":     types.Integer(6),
+				"Width":            types.Integer(100),
+				"Height":           types.Integer(100),
+				"TransferFunction": types.Name("Identity"),
 			},
 		),
 		Content: []byte{},
@@ -285,14 +283,14 @@ func createStreamObjForHalftoneDictType6(xRefTable *XRefTable) (*IndirectRef, er
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createStreamObjForHalftoneDictType10(xRefTable *XRefTable) (*IndirectRef, error) {
-	sd := &StreamDict{
-		Dict: Dict(
-			map[string]Object{
-				"Type":         Name("Halftone"),
-				"HalftoneType": Integer(10),
-				"Xsquare":      Integer(100),
-				"Ysquare":      Integer(100),
+func createStreamObjForHalftoneDictType10(xRefTable *model.XRefTable) (*types.IndirectRef, error) {
+	sd := &types.StreamDict{
+		Dict: types.Dict(
+			map[string]types.Object{
+				"Type":         types.Name("Halftone"),
+				"HalftoneType": types.Integer(10),
+				"Xsquare":      types.Integer(100),
+				"Ysquare":      types.Integer(100),
 			},
 		),
 		Content: []byte{},
@@ -305,14 +303,14 @@ func createStreamObjForHalftoneDictType10(xRefTable *XRefTable) (*IndirectRef, e
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createStreamObjForHalftoneDictType16(xRefTable *XRefTable) (*IndirectRef, error) {
-	sd := &StreamDict{
-		Dict: Dict(
-			map[string]Object{
-				"Type":         Name("Halftone"),
-				"HalftoneType": Integer(16),
-				"Width":        Integer(100),
-				"Height":       Integer(100),
+func createStreamObjForHalftoneDictType16(xRefTable *model.XRefTable) (*types.IndirectRef, error) {
+	sd := &types.StreamDict{
+		Dict: types.Dict(
+			map[string]types.Object{
+				"Type":         types.Name("Halftone"),
+				"HalftoneType": types.Integer(16),
+				"Width":        types.Integer(100),
+				"Height":       types.Integer(100),
 			},
 		),
 		Content: []byte{},
@@ -325,13 +323,13 @@ func createStreamObjForHalftoneDictType16(xRefTable *XRefTable) (*IndirectRef, e
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createPostScriptCalculatorFunctionStreamDict(xRefTable *XRefTable) (*IndirectRef, error) {
-	sd := &StreamDict{
-		Dict: Dict(
-			map[string]Object{
-				"FunctionType": Integer(4),
-				"Domain":       NewNumberArray(100.),
-				"Range":        NewNumberArray(100.),
+func createPostScriptCalculatorFunctionStreamDict(xRefTable *model.XRefTable) (*types.IndirectRef, error) {
+	sd := &types.StreamDict{
+		Dict: types.Dict(
+			map[string]types.Object{
+				"FunctionType": types.Integer(4),
+				"Domain":       types.NewNumberArray(100.),
+				"Range":        types.NewNumberArray(100.),
 			},
 		),
 		Content: []byte{},
@@ -344,8 +342,8 @@ func createPostScriptCalculatorFunctionStreamDict(xRefTable *XRefTable) (*Indire
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func addResources(xRefTable *XRefTable, pageDict Dict, fontName string) error {
-	fIndRef, err := EnsureFontDict(xRefTable, fontName, true, nil)
+func addResources(xRefTable *model.XRefTable, pageDict types.Dict, fontName string) error {
+	fIndRef, err := pdffont.EnsureFontDict(xRefTable, fontName, "", "", true, false, nil)
 	if err != nil {
 		return err
 	}
@@ -354,112 +352,112 @@ func addResources(xRefTable *XRefTable, pageDict Dict, fontName string) error {
 
 	radialShDict := createRadialShadingDict(xRefTable)
 
-	f := Dict(
-		map[string]Object{
-			"FunctionType": Integer(2),
-			"Domain":       NewNumberArray(0.0, 1.0),
-			"C0":           NewNumberArray(0.0),
-			"C1":           NewNumberArray(1.0),
-			"N":            Float(1),
+	f := types.Dict(
+		map[string]types.Object{
+			"FunctionType": types.Integer(2),
+			"Domain":       types.NewNumberArray(0.0, 1.0),
+			"C0":           types.NewNumberArray(0.0),
+			"C1":           types.NewNumberArray(1.0),
+			"N":            types.Float(1),
 		},
 	)
 
-	fontResources := Dict(
-		map[string]Object{
+	fontResources := types.Dict(
+		map[string]types.Object{
 			"F1": *fIndRef,
 		},
 	)
 
-	shadingResources := Dict(
-		map[string]Object{
+	shadingResources := types.Dict(
+		map[string]types.Object{
 			"S1": functionalBasedShDict,
 			"S3": radialShDict,
 		},
 	)
 
-	colorSpaceResources := Dict(
-		map[string]Object{
-			"CSCalGray": Array{
-				Name("CalGray"),
-				Dict(
-					map[string]Object{
-						"WhitePoint": NewNumberArray(0.9505, 1.0000, 1.0890),
+	colorSpaceResources := types.Dict(
+		map[string]types.Object{
+			"CSCalGray": types.Array{
+				types.Name("CalGray"),
+				types.Dict(
+					map[string]types.Object{
+						"WhitePoint": types.NewNumberArray(0.9505, 1.0000, 1.0890),
 					},
 				),
 			},
-			"CSCalRGB": Array{
-				Name("CalRGB"),
-				Dict(
-					map[string]Object{
-						"WhitePoint": NewNumberArray(0.9505, 1.0000, 1.0890),
+			"CSCalRGB": types.Array{
+				types.Name("CalRGB"),
+				types.Dict(
+					map[string]types.Object{
+						"WhitePoint": types.NewNumberArray(0.9505, 1.0000, 1.0890),
 					},
 				),
 			},
-			"CSLab": Array{
-				Name("Lab"),
-				Dict(
-					map[string]Object{
-						"WhitePoint": NewNumberArray(0.9505, 1.0000, 1.0890),
+			"CSLab": types.Array{
+				types.Name("Lab"),
+				types.Dict(
+					map[string]types.Object{
+						"WhitePoint": types.NewNumberArray(0.9505, 1.0000, 1.0890),
 					},
 				),
 			},
-			"CS4DeviceN": Array{
-				Name("DeviceN"),
-				NewNameArray("Orange", "Green", "None"),
-				Name("DeviceCMYK"),
+			"CS4DeviceN": types.Array{
+				types.Name("DeviceN"),
+				types.NewNameArray("Orange", "Green", "None"),
+				types.Name("DeviceCMYK"),
 				f,
-				Dict(
-					map[string]Object{
-						"Subtype": Name("DeviceN"),
+				types.Dict(
+					map[string]types.Object{
+						"Subtype": types.Name("DeviceN"),
 					},
 				),
 			},
-			"CS6DeviceN": Array{
-				Name("DeviceN"),
-				NewNameArray("L", "a", "b", "Spot1"),
-				Name("DeviceCMYK"),
+			"CS6DeviceN": types.Array{
+				types.Name("DeviceN"),
+				types.NewNameArray("L", "a", "b", "Spot1"),
+				types.Name("DeviceCMYK"),
 				f,
-				Dict(
-					map[string]Object{
-						"Subtype": Name("NChannel"),
-						"Process": Dict(
-							map[string]Object{
-								"ColorSpace": Array{
-									Name("Lab"),
-									Dict(
-										map[string]Object{
-											"WhitePoint": NewNumberArray(0.9505, 1.0000, 1.0890),
+				types.Dict(
+					map[string]types.Object{
+						"Subtype": types.Name("NChannel"),
+						"Process": types.Dict(
+							map[string]types.Object{
+								"ColorSpace": types.Array{
+									types.Name("Lab"),
+									types.Dict(
+										map[string]types.Object{
+											"WhitePoint": types.NewNumberArray(0.9505, 1.0000, 1.0890),
 										},
 									),
 								},
-								"Components": NewNameArray("L", "a", "b"),
+								"Components": types.NewNameArray("L", "a", "b"),
 							},
 						),
-						"Colorants": Dict(
-							map[string]Object{
-								"Spot1": Array{
-									Name("Separation"),
-									Name("Spot1"),
-									Name("DeviceCMYK"),
+						"Colorants": types.Dict(
+							map[string]types.Object{
+								"Spot1": types.Array{
+									types.Name("Separation"),
+									types.Name("Spot1"),
+									types.Name("DeviceCMYK"),
 									f,
 								},
 							},
 						),
-						"MixingHints": Dict(
-							map[string]Object{
-								"Solidities": Dict(
-									map[string]Object{
-										"Spot1": Float(1.0),
+						"MixingHints": types.Dict(
+							map[string]types.Object{
+								"Solidities": types.Dict(
+									map[string]types.Object{
+										"Spot1": types.Float(1.0),
 									},
 								),
-								"DotGain": Dict(
-									map[string]Object{
+								"DotGain": types.Dict(
+									map[string]types.Object{
 										"Spot1":   f,
 										"Magenta": f,
 										"Yellow":  f,
 									},
 								),
-								"PrintingOrder": NewNameArray("Magenta", "Yellow", "Spot1"),
+								"PrintingOrder": types.NewNameArray("Magenta", "Yellow", "Spot1"),
 							},
 						),
 					},
@@ -493,26 +491,26 @@ func addResources(xRefTable *XRefTable, pageDict Dict, fontName string) error {
 		return err
 	}
 
-	graphicStateResources := Dict(
-		map[string]Object{
-			"GS1": Dict(
-				map[string]Object{
-					"Type": Name("ExtGState"),
-					"HT": Dict(
-						map[string]Object{
-							"Type":             Name("Halftone"),
-							"HalftoneType":     Integer(1),
-							"Frequency":        Integer(120),
-							"Angle":            Integer(30),
-							"SpotFunction":     Name("CosineDot"),
-							"TransferFunction": Name("Identity"),
+	graphicStateResources := types.Dict(
+		map[string]types.Object{
+			"GS1": types.Dict(
+				map[string]types.Object{
+					"Type": types.Name("ExtGState"),
+					"HT": types.Dict(
+						map[string]types.Object{
+							"Type":             types.Name("Halftone"),
+							"HalftoneType":     types.Integer(1),
+							"Frequency":        types.Integer(120),
+							"Angle":            types.Integer(30),
+							"SpotFunction":     types.Name("CosineDot"),
+							"TransferFunction": types.Name("Identity"),
 						},
 					),
-					"BM": NewNameArray("Overlay", "Darken", "Normal"),
-					"SMask": Dict(
-						map[string]Object{
-							"Type": Name("Mask"),
-							"S":    Name("Alpha"),
+					"BM": types.NewNameArray("Overlay", "Darken", "Normal"),
+					"SMask": types.Dict(
+						map[string]types.Object{
+							"Type": types.Name("Mask"),
+							"S":    types.Name("Alpha"),
 							"G":    *anyXObject,
 							"TR":   f,
 						},
@@ -521,49 +519,49 @@ func addResources(xRefTable *XRefTable, pageDict Dict, fontName string) error {
 					"TR2": f,
 				},
 			),
-			"GS2": Dict(
-				map[string]Object{
-					"Type": Name("ExtGState"),
-					"HT": Dict(
-						map[string]Object{
-							"Type":         Name("Halftone"),
-							"HalftoneType": Integer(5),
-							"Default": Dict(
-								map[string]Object{
-									"Type":             Name("Halftone"),
-									"HalftoneType":     Integer(1),
-									"Frequency":        Integer(120),
-									"Angle":            Integer(30),
-									"SpotFunction":     Name("CosineDot"),
-									"TransferFunction": Name("Identity"),
+			"GS2": types.Dict(
+				map[string]types.Object{
+					"Type": types.Name("ExtGState"),
+					"HT": types.Dict(
+						map[string]types.Object{
+							"Type":         types.Name("Halftone"),
+							"HalftoneType": types.Integer(5),
+							"Default": types.Dict(
+								map[string]types.Object{
+									"Type":             types.Name("Halftone"),
+									"HalftoneType":     types.Integer(1),
+									"Frequency":        types.Integer(120),
+									"Angle":            types.Integer(30),
+									"SpotFunction":     types.Name("CosineDot"),
+									"TransferFunction": types.Name("Identity"),
 								},
 							),
 						},
 					),
-					"BM": NewNameArray("Overlay", "Darken", "Normal"),
-					"SMask": Dict(
-						map[string]Object{
-							"Type": Name("Mask"),
-							"S":    Name("Alpha"),
+					"BM": types.NewNameArray("Overlay", "Darken", "Normal"),
+					"SMask": types.Dict(
+						map[string]types.Object{
+							"Type": types.Name("Mask"),
+							"S":    types.Name("Alpha"),
 							"G":    *anyXObject,
-							"TR":   Name("Identity"),
+							"TR":   types.Name("Identity"),
 						},
 					),
-					"TR":   Array{f, f, f, f},
-					"TR2":  Array{f, f, f, f},
+					"TR":   types.Array{f, f, f, f},
+					"TR2":  types.Array{f, f, f, f},
 					"BG2":  f,
 					"UCR2": f,
-					"D":    Array{Array{}, Integer(0)},
+					"D":    types.Array{types.Array{}, types.Integer(0)},
 				},
 			),
-			"GS3": Dict(
-				map[string]Object{
-					"Type": Name("ExtGState"),
+			"GS3": types.Dict(
+				map[string]types.Object{
+					"Type": types.Name("ExtGState"),
 					"HT":   *indRefHalfToneType6,
-					"SMask": Dict(
-						map[string]Object{
-							"Type": Name("Mask"),
-							"S":    Name("Alpha"),
+					"SMask": types.Dict(
+						map[string]types.Object{
+							"Type": types.Name("Mask"),
+							"S":    types.Name("Alpha"),
 							"G":    *anyXObject,
 							"TR":   *indRefFunctionStream,
 						},
@@ -574,41 +572,41 @@ func addResources(xRefTable *XRefTable, pageDict Dict, fontName string) error {
 					"TR2":  *indRefFunctionStream,
 				},
 			),
-			"GS4": Dict(
-				map[string]Object{
-					"Type": Name("ExtGState"),
+			"GS4": types.Dict(
+				map[string]types.Object{
+					"Type": types.Name("ExtGState"),
 					"HT":   *indRefHalfToneType10,
 				},
 			),
-			"GS5": Dict(
-				map[string]Object{
-					"Type": Name("ExtGState"),
+			"GS5": types.Dict(
+				map[string]types.Object{
+					"Type": types.Name("ExtGState"),
 					"HT":   *indRefHalfToneType16,
 				},
 			),
-			"GS6": Dict(
-				map[string]Object{
-					"Type": Name("ExtGState"),
-					"HT": Dict(
-						map[string]Object{
-							"Type":         Name("Halftone"),
-							"HalftoneType": Integer(1),
-							"Frequency":    Integer(120),
-							"Angle":        Integer(30),
+			"GS6": types.Dict(
+				map[string]types.Object{
+					"Type": types.Name("ExtGState"),
+					"HT": types.Dict(
+						map[string]types.Object{
+							"Type":         types.Name("Halftone"),
+							"HalftoneType": types.Integer(1),
+							"Frequency":    types.Integer(120),
+							"Angle":        types.Integer(30),
 							"SpotFunction": *indRefFunctionStream,
 						},
 					),
 				},
 			),
-			"GS7": Dict(
-				map[string]Object{
-					"Type": Name("ExtGState"),
-					"HT": Dict(
-						map[string]Object{
-							"Type":         Name("Halftone"),
-							"HalftoneType": Integer(1),
-							"Frequency":    Integer(120),
-							"Angle":        Integer(30),
+			"GS7": types.Dict(
+				map[string]types.Object{
+					"Type": types.Name("ExtGState"),
+					"HT": types.Dict(
+						map[string]types.Object{
+							"Type":         types.Name("Halftone"),
+							"HalftoneType": types.Integer(1),
+							"Frequency":    types.Integer(120),
+							"Angle":        types.Integer(30),
 							"SpotFunction": f,
 						},
 					),
@@ -617,8 +615,8 @@ func addResources(xRefTable *XRefTable, pageDict Dict, fontName string) error {
 		},
 	)
 
-	resourceDict := Dict(
-		map[string]Object{
+	resourceDict := types.Dict(
+		map[string]types.Object{
 			"Font":       fontResources,
 			"Shading":    shadingResources,
 			"ColorSpace": colorSpaceResources,
@@ -632,7 +630,7 @@ func addResources(xRefTable *XRefTable, pageDict Dict, fontName string) error {
 }
 
 // CreateTestPageContent draws a test grid.
-func CreateTestPageContent(p Page) {
+func CreateTestPageContent(p model.Page) {
 	b := p.Buf
 	mb := p.MediaBox
 
@@ -667,7 +665,7 @@ func CreateTestPageContent(p Page) {
 	}
 }
 
-func addContents(xRefTable *XRefTable, pageDict Dict, p Page) error {
+func addContents(xRefTable *model.XRefTable, pageDict types.Dict, p model.Page) error {
 	CreateTestPageContent(p)
 	sd, _ := xRefTable.NewStreamDictForBuf(p.Buf.Bytes())
 
@@ -685,39 +683,39 @@ func addContents(xRefTable *XRefTable, pageDict Dict, p Page) error {
 	return nil
 }
 
-func createBoxColorDict() Dict {
-	cropBoxColorInfoDict := Dict(
-		map[string]Object{
-			"C": NewNumberArray(1.0, 1.0, 0.0),
-			"W": Float(1.0),
-			"S": Name("D"),
-			"D": NewIntegerArray(3, 2),
+func createBoxColorDict() types.Dict {
+	cropBoxColorInfoDict := types.Dict(
+		map[string]types.Object{
+			"C": types.NewNumberArray(1.0, 1.0, 0.0),
+			"W": types.Float(1.0),
+			"S": types.Name("D"),
+			"D": types.NewIntegerArray(3, 2),
 		},
 	)
-	bleedBoxColorInfoDict := Dict(
-		map[string]Object{
-			"C": NewNumberArray(1.0, 0.0, 0.0),
-			"W": Float(3.0),
-			"S": Name("S"),
+	bleedBoxColorInfoDict := types.Dict(
+		map[string]types.Object{
+			"C": types.NewNumberArray(1.0, 0.0, 0.0),
+			"W": types.Float(3.0),
+			"S": types.Name("S"),
 		},
 	)
-	trimBoxColorInfoDict := Dict(
-		map[string]Object{
-			"C": NewNumberArray(0.0, 1.0, 0.0),
-			"W": Float(1.0),
-			"S": Name("D"),
-			"D": NewIntegerArray(3, 2),
+	trimBoxColorInfoDict := types.Dict(
+		map[string]types.Object{
+			"C": types.NewNumberArray(0.0, 1.0, 0.0),
+			"W": types.Float(1.0),
+			"S": types.Name("D"),
+			"D": types.NewIntegerArray(3, 2),
 		},
 	)
-	artBoxColorInfoDict := Dict(
-		map[string]Object{
-			"C": NewNumberArray(0.0, 0.0, 1.0),
-			"W": Float(1.0),
-			"S": Name("S"),
+	artBoxColorInfoDict := types.Dict(
+		map[string]types.Object{
+			"C": types.NewNumberArray(0.0, 0.0, 1.0),
+			"W": types.Float(1.0),
+			"S": types.Name("S"),
 		},
 	)
-	d := Dict(
-		map[string]Object{
+	d := types.Dict(
+		map[string]types.Object{
 			"CropBox":  cropBoxColorInfoDict,
 			"BleedBox": bleedBoxColorInfoDict,
 			"Trim":     trimBoxColorInfoDict,
@@ -727,75 +725,75 @@ func createBoxColorDict() Dict {
 	return d
 }
 
-func addViewportDict(pageDict Dict) {
-	measureDict := Dict(
-		map[string]Object{
-			"Type":    Name("Measure"),
-			"Subtype": Name("RL"),
-			"R":       StringLiteral("1in = 0.1m"),
-			"X": Array{
-				Dict(
-					map[string]Object{
-						"Type": Name("NumberFormat"),
-						"U":    StringLiteral("mi"),
-						"C":    Float(0.00139),
-						"D":    Integer(100000),
+func addViewportDict(pageDict types.Dict) {
+	measureDict := types.Dict(
+		map[string]types.Object{
+			"Type":    types.Name("Measure"),
+			"Subtype": types.Name("RL"),
+			"R":       types.StringLiteral("1in = 0.1m"),
+			"X": types.Array{
+				types.Dict(
+					map[string]types.Object{
+						"Type": types.Name("NumberFormat"),
+						"U":    types.StringLiteral("mi"),
+						"C":    types.Float(0.00139),
+						"D":    types.Integer(100000),
 					},
 				),
 			},
-			"D": Array{
-				Dict(
-					map[string]Object{
-						"Type": Name("NumberFormat"),
-						"U":    StringLiteral("mi"),
-						"C":    Float(1),
+			"D": types.Array{
+				types.Dict(
+					map[string]types.Object{
+						"Type": types.Name("NumberFormat"),
+						"U":    types.StringLiteral("mi"),
+						"C":    types.Float(1),
 					},
 				),
-				Dict(
-					map[string]Object{
-						"Type": Name("NumberFormat"),
-						"U":    StringLiteral("feet"),
-						"C":    Float(5280),
+				types.Dict(
+					map[string]types.Object{
+						"Type": types.Name("NumberFormat"),
+						"U":    types.StringLiteral("feet"),
+						"C":    types.Float(5280),
 					},
 				),
-				Dict(
-					map[string]Object{
-						"Type": Name("NumberFormat"),
-						"U":    StringLiteral("inch"),
-						"C":    Float(12),
-						"F":    Name("F"),
-						"D":    Integer(8),
-					},
-				),
-			},
-			"A": Array{
-				Dict(
-					map[string]Object{
-						"Type": Name("NumberFormat"),
-						"U":    StringLiteral("acres"),
-						"C":    Float(640),
+				types.Dict(
+					map[string]types.Object{
+						"Type": types.Name("NumberFormat"),
+						"U":    types.StringLiteral("inch"),
+						"C":    types.Float(12),
+						"F":    types.Name("F"),
+						"D":    types.Integer(8),
 					},
 				),
 			},
-			"O": NewIntegerArray(0, 1),
+			"A": types.Array{
+				types.Dict(
+					map[string]types.Object{
+						"Type": types.Name("NumberFormat"),
+						"U":    types.StringLiteral("acres"),
+						"C":    types.Float(640),
+					},
+				),
+			},
+			"O": types.NewIntegerArray(0, 1),
 		},
 	)
 
-	bbox := RectForDim(10, 60)
+	bbox := types.RectForDim(10, 60)
 
-	vpDict := Dict(
-		map[string]Object{
-			"Type":    Name("Viewport"),
+	vpDict := types.Dict(
+		map[string]types.Object{
+			"Type":    types.Name("Viewport"),
 			"BBox":    bbox.Array(),
-			"Name":    StringLiteral("viewPort"),
+			"Name":    types.StringLiteral("viewPort"),
 			"Measure": measureDict,
 		},
 	)
 
-	pageDict.Insert("VP", Array{vpDict})
+	pageDict.Insert("VP", types.Array{vpDict})
 }
 
-func annotRect(i int, w, h, d, l float64) *Rectangle {
+func annotRect(i int, w, h, d, l float64) *types.Rectangle {
 	// d..distance between annotation rectangles
 	// l..side length of rectangle
 
@@ -814,17 +812,17 @@ func annotRect(i int, w, h, d, l float64) *Rectangle {
 	urx := llx + l
 	ury := lly + l
 
-	return Rect(llx, lly, urx, ury)
+	return types.NewRectangle(llx, lly, urx, ury)
 }
 
 // createAnnotsArray generates side by side lined up annotations starting in the lower left corner of the page.
-func createAnnotsArray(xRefTable *XRefTable, pageIndRef IndirectRef, mediaBox Array) (Array, error) {
-	pageWidth := mediaBox[2].(Float)
-	pageHeight := mediaBox[3].(Float)
+func createAnnotsArray(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, mediaBox types.Array) (types.Array, error) {
+	pageWidth := mediaBox[2].(types.Float)
+	pageHeight := mediaBox[3].(types.Float)
 
-	a := Array{}
+	a := types.Array{}
 
-	for i, f := range []func(*XRefTable, IndirectRef, Array) (*IndirectRef, error){
+	for i, f := range []func(*model.XRefTable, types.IndirectRef, types.Array) (*types.IndirectRef, error){
 		createTextAnnotation,
 		createLinkAnnotation,
 		createFreeTextAnnotation,
@@ -872,18 +870,18 @@ func createAnnotsArray(xRefTable *XRefTable, pageIndRef IndirectRef, mediaBox Ar
 	return a, nil
 }
 
-func createPageWithAnnotations(xRefTable *XRefTable, parentPageIndRef IndirectRef, mediaBox *Rectangle, fontName string) (*IndirectRef, error) {
+func createPageWithAnnotations(xRefTable *model.XRefTable, parentPageIndRef types.IndirectRef, mediaBox *types.Rectangle, fontName string) (*types.IndirectRef, error) {
 	mba := mediaBox.Array()
 
-	pageDict := Dict(
-		map[string]Object{
-			"Type":         Name("Page"),
+	pageDict := types.Dict(
+		map[string]types.Object{
+			"Type":         types.Name("Page"),
 			"Parent":       parentPageIndRef,
 			"BleedBox":     mba,
 			"TrimBox":      mba,
 			"ArtBox":       mba,
 			"BoxColorInfo": createBoxColorDict(),
-			"UserUnit":     Float(1.5)}, // Note: not honored by Apple Preview
+			"UserUnit":     types.Float(1.5)}, // Note: not honoured by Apple Preview
 	)
 
 	err := addResources(xRefTable, pageDict, fontName)
@@ -891,7 +889,7 @@ func createPageWithAnnotations(xRefTable *XRefTable, parentPageIndRef IndirectRe
 		return nil, err
 	}
 
-	p := Page{MediaBox: mediaBox, Buf: new(bytes.Buffer)}
+	p := model.Page{MediaBox: mediaBox, Buf: new(bytes.Buffer)}
 	err = addContents(xRefTable, pageDict, p)
 	if err != nil {
 		return nil, err
@@ -903,21 +901,21 @@ func createPageWithAnnotations(xRefTable *XRefTable, parentPageIndRef IndirectRe
 	}
 
 	// Fake SeparationInfo related to a single page only.
-	separationInfoDict := Dict(
-		map[string]Object{
-			"Pages":          Array{*pageIndRef},
-			"DeviceColorant": Name("Cyan"),
-			"ColorSpace": Array{
-				Name("Separation"),
-				Name("Green"),
-				Name("DeviceCMYK"),
-				Dict(
-					map[string]Object{
-						"FunctionType": Integer(2),
-						"Domain":       NewNumberArray(0.0, 1.0),
-						"C0":           NewNumberArray(0.0),
-						"C1":           NewNumberArray(1.0),
-						"N":            Float(1),
+	separationInfoDict := types.Dict(
+		map[string]types.Object{
+			"Pages":          types.Array{*pageIndRef},
+			"DeviceColorant": types.Name("Cyan"),
+			"ColorSpace": types.Array{
+				types.Name("Separation"),
+				types.Name("Green"),
+				types.Name("DeviceCMYK"),
+				types.Dict(
+					map[string]types.Object{
+						"FunctionType": types.Integer(2),
+						"Domain":       types.NewNumberArray(0.0, 1.0),
+						"C0":           types.NewNumberArray(0.0),
+						"C1":           types.NewNumberArray(1.0),
+						"N":            types.Float(1),
 					},
 				),
 			},
@@ -936,18 +934,18 @@ func createPageWithAnnotations(xRefTable *XRefTable, parentPageIndRef IndirectRe
 	return pageIndRef, nil
 }
 
-func createPageWithAcroForm(xRefTable *XRefTable, parentPageIndRef IndirectRef, annotsArray Array, mediaBox *Rectangle, fontName string) (*IndirectRef, error) {
+func createPageWithAcroForm(xRefTable *model.XRefTable, parentPageIndRef types.IndirectRef, annotsArray types.Array, mediaBox *types.Rectangle, fontName string) (*types.IndirectRef, error) {
 	mba := mediaBox.Array()
 
-	pageDict := Dict(
-		map[string]Object{
-			"Type":         Name("Page"),
+	pageDict := types.Dict(
+		map[string]types.Object{
+			"Type":         types.Name("Page"),
 			"Parent":       parentPageIndRef,
 			"BleedBox":     mba,
 			"TrimBox":      mba,
 			"ArtBox":       mba,
 			"BoxColorInfo": createBoxColorDict(),
-			"UserUnit":     Float(1.0), // Note: not honored by Apple Preview
+			"UserUnit":     types.Float(1.0), // Note: not honoured by Apple Preview
 		},
 	)
 
@@ -956,7 +954,7 @@ func createPageWithAcroForm(xRefTable *XRefTable, parentPageIndRef IndirectRef, 
 		return nil, err
 	}
 
-	p := Page{MediaBox: mediaBox, Buf: new(bytes.Buffer)}
+	p := model.Page{MediaBox: mediaBox, Buf: new(bytes.Buffer)}
 	err = addContents(xRefTable, pageDict, p)
 	if err != nil {
 		return nil, err
@@ -967,19 +965,19 @@ func createPageWithAcroForm(xRefTable *XRefTable, parentPageIndRef IndirectRef, 
 	return xRefTable.IndRefForNewObject(pageDict)
 }
 
-func addPageTreeWithoutPage(xRefTable *XRefTable, rootDict Dict, d *Dim) error {
+func addPageTreeWithoutPage(xRefTable *model.XRefTable, rootDict types.Dict, d *types.Dim) error {
 	// May be modified later on.
-	mediaBox := RectForDim(d.Width, d.Height)
+	mediaBox := types.RectForDim(d.Width, d.Height)
 
-	pagesDict := Dict(
-		map[string]Object{
-			"Type":     Name("Pages"),
-			"Count":    Integer(0),
+	pagesDict := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Pages"),
+			"Count":    types.Integer(0),
 			"MediaBox": mediaBox.Array(),
 		},
 	)
 
-	pagesDict.Insert("Kids", Array{})
+	pagesDict.Insert("Kids", types.Array{})
 
 	pagesRootIndRef, err := xRefTable.IndRefForNewObject(pagesDict)
 	if err != nil {
@@ -991,15 +989,15 @@ func addPageTreeWithoutPage(xRefTable *XRefTable, rootDict Dict, d *Dim) error {
 	return nil
 }
 
-func addPageTreeWithSamplePage(xRefTable *XRefTable, rootDict Dict, p Page) error {
+func AddPageTreeWithSamplePage(xRefTable *model.XRefTable, rootDict types.Dict, p model.Page) error {
 
 	// mediabox = physical page dimensions
 	mba := p.MediaBox.Array()
 
-	pagesDict := Dict(
-		map[string]Object{
-			"Type":     Name("Pages"),
-			"Count":    Integer(1),
+	pagesDict := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Pages"),
+			"Count":    types.Integer(1),
 			"MediaBox": mba,
 		},
 	)
@@ -1014,21 +1012,21 @@ func addPageTreeWithSamplePage(xRefTable *XRefTable, rootDict Dict, p Page) erro
 		return err
 	}
 
-	pagesDict.Insert("Kids", Array{*pageIndRef})
+	pagesDict.Insert("Kids", types.Array{*pageIndRef})
 	rootDict.Insert("Pages", *parentPageIndRef)
 
 	return nil
 }
 
-func addPageTreeWithAnnotations(xRefTable *XRefTable, rootDict Dict, fontName string) (*IndirectRef, error) {
+func addPageTreeWithAnnotations(xRefTable *model.XRefTable, rootDict types.Dict, fontName string) (*types.IndirectRef, error) {
 	// mediabox = physical page dimensions
-	mediaBox := RectForFormat("A4")
+	mediaBox := types.RectForFormat("A4")
 	mba := mediaBox.Array()
 
-	pagesDict := Dict(
-		map[string]Object{
-			"Type":     Name("Pages"),
-			"Count":    Integer(1),
+	pagesDict := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Pages"),
+			"Count":    types.Integer(1),
 			"MediaBox": mba,
 			"CropBox":  mba,
 		},
@@ -1044,21 +1042,21 @@ func addPageTreeWithAnnotations(xRefTable *XRefTable, rootDict Dict, fontName st
 		return nil, err
 	}
 
-	pagesDict.Insert("Kids", Array{*pageIndRef})
+	pagesDict.Insert("Kids", types.Array{*pageIndRef})
 	rootDict.Insert("Pages", *parentPageIndRef)
 
 	return pageIndRef, nil
 }
 
-func addPageTreeWithAcroFields(xRefTable *XRefTable, rootDict Dict, annotsArray Array, fontName string) (*IndirectRef, error) {
+func addPageTreeWithAcroFields(xRefTable *model.XRefTable, rootDict types.Dict, annotsArray types.Array, fontName string) (*types.IndirectRef, error) {
 	// mediabox = physical page dimensions
-	mediaBox := RectForFormat("A4")
+	mediaBox := types.RectForFormat("A4")
 	mba := mediaBox.Array()
 
-	pagesDict := Dict(
-		map[string]Object{
-			"Type":     Name("Pages"),
-			"Count":    Integer(1),
+	pagesDict := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Pages"),
+			"Count":    types.Integer(1),
 			"MediaBox": mba,
 			"CropBox":  mba,
 		},
@@ -1074,7 +1072,7 @@ func addPageTreeWithAcroFields(xRefTable *XRefTable, rootDict Dict, annotsArray 
 		return nil, err
 	}
 
-	pagesDict.Insert("Kids", Array{*pageIndRef})
+	pagesDict.Insert("Kids", types.Array{*pageIndRef})
 
 	rootDict.Insert("Pages", *parentPageIndRef)
 
@@ -1082,13 +1080,13 @@ func addPageTreeWithAcroFields(xRefTable *XRefTable, rootDict Dict, annotsArray 
 }
 
 // create a thread with 2 beads.
-func createThreadDict(xRefTable *XRefTable, pageIndRef IndirectRef) (*IndirectRef, error) {
-	infoDict := NewDict()
+func createThreadDict(xRefTable *model.XRefTable, pageIndRef types.IndirectRef) (*types.IndirectRef, error) {
+	infoDict := types.NewDict()
 	infoDict.InsertString("Title", "DummyArticle")
 
-	d := Dict(
-		map[string]Object{
-			"Type": Name("Thread"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type": types.Name("Thread"),
 			"I":    infoDict,
 		},
 	)
@@ -1099,12 +1097,12 @@ func createThreadDict(xRefTable *XRefTable, pageIndRef IndirectRef) (*IndirectRe
 	}
 
 	// create first bead
-	d1 := Dict(
-		map[string]Object{
-			"Type": Name("Bead"),
+	d1 := types.Dict(
+		map[string]types.Object{
+			"Type": types.Name("Bead"),
 			"T":    *dIndRef,
 			"P":    pageIndRef,
-			"R":    NewNumberArray(0, 0, 100, 100),
+			"R":    types.NewNumberArray(0, 0, 100, 100),
 		},
 	)
 
@@ -1116,14 +1114,14 @@ func createThreadDict(xRefTable *XRefTable, pageIndRef IndirectRef) (*IndirectRe
 	d.Insert("F", *d1IndRef)
 
 	// create last bead
-	d2 := Dict(
-		map[string]Object{
-			"Type": Name("Bead"),
+	d2 := types.Dict(
+		map[string]types.Object{
+			"Type": types.Name("Bead"),
 			"T":    *dIndRef,
 			"N":    *d1IndRef,
 			"V":    *d1IndRef,
 			"P":    pageIndRef,
-			"R":    NewNumberArray(0, 100, 200, 100),
+			"R":    types.NewNumberArray(0, 100, 200, 100),
 		},
 	)
 
@@ -1138,13 +1136,13 @@ func createThreadDict(xRefTable *XRefTable, pageIndRef IndirectRef) (*IndirectRe
 	return dIndRef, nil
 }
 
-func addThreads(xRefTable *XRefTable, rootDict Dict, pageIndRef IndirectRef) error {
+func addThreads(xRefTable *model.XRefTable, rootDict types.Dict, pageIndRef types.IndirectRef) error {
 	ir, err := createThreadDict(xRefTable, pageIndRef)
 	if err != nil {
 		return err
 	}
 
-	ir, err = xRefTable.IndRefForNewObject(Array{*ir})
+	ir, err = xRefTable.IndRefForNewObject(types.Array{*ir})
 	if err != nil {
 		return err
 	}
@@ -1154,22 +1152,22 @@ func addThreads(xRefTable *XRefTable, rootDict Dict, pageIndRef IndirectRef) err
 	return nil
 }
 
-func addOpenAction(xRefTable *XRefTable, rootDict Dict) error {
-	nextActionDict := Dict(
-		map[string]Object{
-			"Type": Name("Action"),
-			"S":    Name("Movie"),
-			"T":    StringLiteral("Sample Movie"),
+func addOpenAction(xRefTable *model.XRefTable, rootDict types.Dict) error {
+	nextActionDict := types.Dict(
+		map[string]types.Object{
+			"Type": types.Name("Action"),
+			"S":    types.Name("Movie"),
+			"T":    types.StringLiteral("Sample Movie"),
 		},
 	)
 
 	script := `app.alert('Hello Gopher!');`
 
-	d := Dict(
-		map[string]Object{
-			"Type": Name("Action"),
-			"S":    Name("JavaScript"),
-			"JS":   StringLiteral(script),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type": types.Name("Action"),
+			"S":    types.Name("JavaScript"),
+			"JS":   types.StringLiteral(script),
 			"Next": nextActionDict,
 		},
 	)
@@ -1179,23 +1177,23 @@ func addOpenAction(xRefTable *XRefTable, rootDict Dict) error {
 	return nil
 }
 
-func addURI(xRefTable *XRefTable, rootDict Dict) {
-	d := NewDict()
+func addURI(xRefTable *model.XRefTable, rootDict types.Dict) {
+	d := types.NewDict()
 	d.InsertString("Base", "http://www.adobe.com")
 
 	rootDict.Insert("URI", d)
 }
 
-func addSpiderInfo(xRefTable *XRefTable, rootDict Dict) error {
+func addSpiderInfo(xRefTable *model.XRefTable, rootDict types.Dict) error {
 	// webCaptureInfoDict
-	webCaptureInfoDict := NewDict()
+	webCaptureInfoDict := types.NewDict()
 	webCaptureInfoDict.InsertInt("V", 1.0)
 
-	a := Array{}
-	captureCmdDict := NewDict()
+	a := types.Array{}
+	captureCmdDict := types.NewDict()
 	captureCmdDict.InsertString("URL", (""))
 
-	cmdSettingsDict := NewDict()
+	cmdSettingsDict := types.NewDict()
 	captureCmdDict.Insert("S", cmdSettingsDict)
 
 	ir, err := xRefTable.IndRefForNewObject(captureCmdDict)
@@ -1217,35 +1215,35 @@ func addSpiderInfo(xRefTable *XRefTable, rootDict Dict) error {
 	return nil
 }
 
-func addOCProperties(xRefTable *XRefTable, rootDict Dict) error {
-	usageAppDict := Dict(
-		map[string]Object{
-			"Event":    Name("View"),
-			"OCGs":     Array{}, // of indRefs
-			"Category": NewNameArray("Language"),
+func addOCProperties(xRefTable *model.XRefTable, rootDict types.Dict) error {
+	usageAppDict := types.Dict(
+		map[string]types.Object{
+			"Event":    types.Name("View"),
+			"OCGs":     types.Array{}, // of indRefs
+			"Category": types.NewNameArray("Language"),
 		},
 	)
 
-	optionalContentConfigDict := Dict(
-		map[string]Object{
-			"Name":      StringLiteral("OCConf"),
-			"Creator":   StringLiteral("Horst Rutter"),
-			"BaseState": Name("ON"),
-			"OFF":       Array{},
-			"Intent":    Name("Design"),
-			"AS":        Array{usageAppDict},
-			"Order":     Array{},
-			"ListMode":  Name("AllPages"),
-			"RBGroups":  Array{},
-			"Locked":    Array{},
+	optionalContentConfigDict := types.Dict(
+		map[string]types.Object{
+			"Name":      types.StringLiteral("OCConf"),
+			"Creator":   types.StringLiteral("Horst Rutter"),
+			"BaseState": types.Name("ON"),
+			"OFF":       types.Array{},
+			"Intent":    types.Name("Design"),
+			"AS":        types.Array{usageAppDict},
+			"Order":     types.Array{},
+			"ListMode":  types.Name("AllPages"),
+			"RBGroups":  types.Array{},
+			"Locked":    types.Array{},
 		},
 	)
 
-	d := Dict(
-		map[string]Object{
-			"OCGs":    Array{}, // of indRefs
+	d := types.Dict(
+		map[string]types.Object{
+			"OCGs":    types.Array{}, // of indRefs
 			"D":       optionalContentConfigDict,
-			"Configs": Array{optionalContentConfigDict},
+			"Configs": types.Array{optionalContentConfigDict},
 		},
 	)
 
@@ -1254,16 +1252,16 @@ func addOCProperties(xRefTable *XRefTable, rootDict Dict) error {
 	return nil
 }
 
-func addRequirements(xRefTable *XRefTable, rootDict Dict) {
-	d := NewDict()
+func addRequirements(xRefTable *model.XRefTable, rootDict types.Dict) {
+	d := types.NewDict()
 	d.InsertName("Type", "Requirement")
 	d.InsertName("S", "EnableJavaScripts")
 
-	rootDict.Insert("Requirements", Array{d})
+	rootDict.Insert("Requirements", types.Array{d})
 }
 
 // CreateAnnotationDemoXRef creates a PDF file with examples of annotations and actions.
-func CreateAnnotationDemoXRef() (*XRefTable, error) {
+func CreateAnnotationDemoXRef() (*model.XRefTable, error) {
 	fontName := "Helvetica"
 
 	xRefTable, err := CreateXRefTableWithRootDict()
@@ -1320,19 +1318,19 @@ func setBit(i uint32, pos uint) uint32 {
 	return i
 }
 
-func createNormalAppearanceForFormField(xRefTable *XRefTable, w, h float64) (*IndirectRef, error) {
+func createNormalAppearanceForFormField(xRefTable *model.XRefTable, w, h float64) (*types.IndirectRef, error) {
 	// stroke outline path
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "0 0 m 0 %f l %f %f l %f 0 l s", h, w, h, w)
 
-	sd := &StreamDict{
-		Dict: Dict(
-			map[string]Object{
-				"Type":     Name("XObject"),
-				"Subtype":  Name("Form"),
-				"FormType": Integer(1),
-				"BBox":     NewNumberArray(0, 0, w, h),
-				"Matrix":   NewIntegerArray(1, 0, 0, 1, 0, 0),
+	sd := &types.StreamDict{
+		Dict: types.Dict(
+			map[string]types.Object{
+				"Type":     types.Name("XObject"),
+				"Subtype":  types.Name("Form"),
+				"FormType": types.Integer(1),
+				"BBox":     types.NewNumberArray(0, 0, w, h),
+				"Matrix":   types.NewIntegerArray(1, 0, 0, 1, 0, 0),
 			},
 		),
 		Content: b.Bytes(),
@@ -1345,19 +1343,19 @@ func createNormalAppearanceForFormField(xRefTable *XRefTable, w, h float64) (*In
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createRolloverAppearanceForFormField(xRefTable *XRefTable, w, h float64) (*IndirectRef, error) {
+func createRolloverAppearanceForFormField(xRefTable *model.XRefTable, w, h float64) (*types.IndirectRef, error) {
 	// stroke outline path
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "1 0 0 RG 0 0 m 0 %f l %f %f l %f 0 l s", h, w, h, w)
 
-	sd := &StreamDict{
-		Dict: Dict(
-			map[string]Object{
-				"Type":     Name("XObject"),
-				"Subtype":  Name("Form"),
-				"FormType": Integer(1),
-				"BBox":     NewNumberArray(0, 0, w, h),
-				"Matrix":   NewIntegerArray(1, 0, 0, 1, 0, 0),
+	sd := &types.StreamDict{
+		Dict: types.Dict(
+			map[string]types.Object{
+				"Type":     types.Name("XObject"),
+				"Subtype":  types.Name("Form"),
+				"FormType": types.Integer(1),
+				"BBox":     types.NewNumberArray(0, 0, w, h),
+				"Matrix":   types.NewIntegerArray(1, 0, 0, 1, 0, 0),
 			},
 		),
 		Content: b.Bytes(),
@@ -1370,19 +1368,19 @@ func createRolloverAppearanceForFormField(xRefTable *XRefTable, w, h float64) (*
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createDownAppearanceForFormField(xRefTable *XRefTable, w, h float64) (*IndirectRef, error) {
+func createDownAppearanceForFormField(xRefTable *model.XRefTable, w, h float64) (*types.IndirectRef, error) {
 	// stroke outline path
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "0 0 m 0 %f l %f %f l %f 0 l s", h, w, h, w)
 
-	sd := &StreamDict{
-		Dict: Dict(
-			map[string]Object{
-				"Type":     Name("XObject"),
-				"Subtype":  Name("Form"),
-				"FormType": Integer(1),
-				"BBox":     NewNumberArray(0, 0, w, h),
-				"Matrix":   NewIntegerArray(1, 0, 0, 1, 0, 0),
+	sd := &types.StreamDict{
+		Dict: types.Dict(
+			map[string]types.Object{
+				"Type":     types.Name("XObject"),
+				"Subtype":  types.Name("Form"),
+				"FormType": types.Integer(1),
+				"BBox":     types.NewNumberArray(0, 0, w, h),
+				"Matrix":   types.NewIntegerArray(1, 0, 0, 1, 0, 0),
 			},
 		),
 		Content: b.Bytes(),
@@ -1395,7 +1393,7 @@ func createDownAppearanceForFormField(xRefTable *XRefTable, w, h float64) (*Indi
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createFormTextField(xRefTable *XRefTable, pageAnnots *Array, fontName string) (*IndirectRef, error) {
+func createFormTextField(xRefTable *model.XRefTable, pageAnnots *types.Array, fontName string) (*types.IndirectRef, error) {
 	// lower left corner
 	x := 100.0
 	y := 300.0
@@ -1421,41 +1419,41 @@ func createFormTextField(xRefTable *XRefTable, pageAnnots *Array, fontName strin
 		return nil, err
 	}
 
-	fontDict, err := EnsureFontDict(xRefTable, fontName, true, nil)
+	fontDict, err := pdffont.EnsureFontDict(xRefTable, fontName, "", "", true, false, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	resourceDict := Dict(
-		map[string]Object{
-			"Font": Dict(
-				map[string]Object{
+	resourceDict := types.Dict(
+		map[string]types.Object{
+			"Font": types.Dict(
+				map[string]types.Object{
 					fontName: *fontDict,
 				},
 			),
 		},
 	)
 
-	d := Dict(
-		map[string]Object{
-			"AP": Dict(
-				map[string]Object{
+	d := types.Dict(
+		map[string]types.Object{
+			"AP": types.Dict(
+				map[string]types.Object{
 					"N": *fN,
 					"R": *fR,
 					"D": *fD,
 				},
 			),
-			"DA":      StringLiteral("/" + fontName + " 12 Tf 0 g"),
+			"DA":      types.StringLiteral("/" + fontName + " 12 Tf 0 g"),
 			"DR":      resourceDict,
-			"FT":      Name("Tx"),
-			"Rect":    NewNumberArray(x, y, x+w, y+h),
-			"Border":  NewIntegerArray(0, 0, 1),
-			"Type":    Name("Annot"),
-			"Subtype": Name("Widget"),
-			"T":       StringLiteral("inputField"),
-			"TU":      StringLiteral("inputField"),
-			"DV":      StringLiteral("Default value"),
-			"V":       StringLiteral("Default value"),
+			"FT":      types.Name("Tx"),
+			"Rect":    types.NewNumberArray(x, y, x+w, y+h),
+			"Border":  types.NewIntegerArray(0, 0, 1),
+			"Type":    types.Name("Annot"),
+			"Subtype": types.Name("Widget"),
+			"T":       types.StringLiteral("inputField"),
+			"TU":      types.StringLiteral("inputField"),
+			"DV":      types.StringLiteral("Default value"),
+			"V":       types.StringLiteral("Default value"),
 		},
 	)
 
@@ -1469,32 +1467,32 @@ func createFormTextField(xRefTable *XRefTable, pageAnnots *Array, fontName strin
 	return ir, nil
 }
 
-func createYesAppearance(xRefTable *XRefTable, resourceDict Dict, w, h float64) (*IndirectRef, error) {
+func createYesAppearance(xRefTable *model.XRefTable, resourceDict types.Dict, w, h float64) (*types.IndirectRef, error) {
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "q 0 0 1 rg BT /ZaDb 12 Tf 0 0 Td (8) Tj ET Q")
 
-	sd := &StreamDict{
-		Dict: Dict(
-			map[string]Object{
+	sd := &types.StreamDict{
+		Dict: types.Dict(
+			map[string]types.Object{
 				"Resources": resourceDict,
-				"Subtype":   Name("Form"),
-				"BBox":      NewNumberArray(0, 0, w, h),
-				"OPI": Dict(
-					map[string]Object{
-						"2.0": Dict(
-							map[string]Object{
-								"Type":    Name("OPI"),
-								"Version": Float(2.0),
-								"F":       StringLiteral("Proxy"),
-								"Inks":    Name("full_color"),
+				"Subtype":   types.Name("Form"),
+				"BBox":      types.NewNumberArray(0, 0, w, h),
+				"OPI": types.Dict(
+					map[string]types.Object{
+						"2.0": types.Dict(
+							map[string]types.Object{
+								"Type":    types.Name("OPI"),
+								"Version": types.Float(2.0),
+								"F":       types.StringLiteral("Proxy"),
+								"Inks":    types.Name("full_color"),
 							},
 						),
 					},
 				),
-				"Ref": Dict(
-					map[string]Object{
-						"F":    StringLiteral("Proxy"),
-						"Page": Integer(1),
+				"Ref": types.Dict(
+					map[string]types.Object{
+						"F":    types.StringLiteral("Proxy"),
+						"Page": types.Integer(1),
 					},
 				),
 			},
@@ -1509,26 +1507,26 @@ func createYesAppearance(xRefTable *XRefTable, resourceDict Dict, w, h float64) 
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createOffAppearance(xRefTable *XRefTable, resourceDict Dict, w, h float64) (*IndirectRef, error) {
+func createOffAppearance(xRefTable *model.XRefTable, resourceDict types.Dict, w, h float64) (*types.IndirectRef, error) {
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "q 0 0 1 rg BT /ZaDb 12 Tf 0 0 Td (4) Tj ET Q")
 
-	sd := &StreamDict{
-		Dict: Dict(
-			map[string]Object{
+	sd := &types.StreamDict{
+		Dict: types.Dict(
+			map[string]types.Object{
 				"Resources": resourceDict,
-				"Subtype":   Name("Form"),
-				"BBox":      NewNumberArray(0, 0, w, h),
-				"OPI": Dict(
-					map[string]Object{
-						"1.3": Dict(
-							map[string]Object{
-								"Type":     Name("OPI"),
-								"Version":  Float(1.3),
-								"F":        StringLiteral("Proxy"),
-								"Size":     NewIntegerArray(400, 400),
-								"CropRect": NewIntegerArray(0, 400, 400, 0),
-								"Position": NewNumberArray(0, 0, 0, 400, 400, 400, 400, 0),
+				"Subtype":   types.Name("Form"),
+				"BBox":      types.NewNumberArray(0, 0, w, h),
+				"OPI": types.Dict(
+					map[string]types.Object{
+						"1.3": types.Dict(
+							map[string]types.Object{
+								"Type":     types.Name("OPI"),
+								"Version":  types.Float(1.3),
+								"F":        types.StringLiteral("Proxy"),
+								"Size":     types.NewIntegerArray(400, 400),
+								"CropRect": types.NewIntegerArray(0, 400, 400, 0),
+								"Position": types.NewNumberArray(0, 0, 0, 400, 400, 400, 400, 0),
 							},
 						),
 					},
@@ -1545,16 +1543,16 @@ func createOffAppearance(xRefTable *XRefTable, resourceDict Dict, w, h float64) 
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createCheckBoxButtonField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectRef, error) {
-	fontDict, err := EnsureFontDict(xRefTable, "ZapfDingbats", false, nil)
+func createCheckBoxButtonField(xRefTable *model.XRefTable, pageAnnots *types.Array) (*types.IndirectRef, error) {
+	fontDict, err := pdffont.EnsureFontDict(xRefTable, "ZapfDingbats", "", "", false, false, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	resDict := Dict(
-		map[string]Object{
-			"Font": Dict(
-				map[string]Object{
+	resDict := types.Dict(
+		map[string]types.Object{
+			"Font": types.Dict(
+				map[string]types.Object{
 					"ZaDb": *fontDict,
 				},
 			),
@@ -1571,10 +1569,10 @@ func createCheckBoxButtonField(xRefTable *XRefTable, pageAnnots *Array) (*Indire
 		return nil, err
 	}
 
-	apDict := Dict(
-		map[string]Object{
-			"N": Dict(
-				map[string]Object{
+	apDict := types.Dict(
+		map[string]types.Object{
+			"N": types.Dict(
+				map[string]types.Object{
 					"Yes": *yesForm,
 					"Off": *offForm,
 				},
@@ -1582,16 +1580,16 @@ func createCheckBoxButtonField(xRefTable *XRefTable, pageAnnots *Array) (*Indire
 		},
 	)
 
-	d := Dict(
-		map[string]Object{
-			"FT":      Name("Btn"),
-			"Rect":    NewNumberArray(250, 300, 270, 320),
-			"Type":    Name("Annot"),
-			"Subtype": Name("Widget"),
-			"T":       StringLiteral("CheckBox"),
-			"TU":      StringLiteral("CheckBox"),
-			"V":       Name("Yes"),
-			"AS":      Name("Yes"),
+	d := types.Dict(
+		map[string]types.Object{
+			"FT":      types.Name("Btn"),
+			"Rect":    types.NewNumberArray(250, 300, 270, 320),
+			"Type":    types.Name("Annot"),
+			"Subtype": types.Name("Widget"),
+			"T":       types.StringLiteral("CheckBox"),
+			"TU":      types.StringLiteral("CheckBox"),
+			"V":       types.Name("Yes"),
+			"AS":      types.Name("Yes"),
 			"AP":      apDict,
 		},
 	)
@@ -1606,19 +1604,19 @@ func createCheckBoxButtonField(xRefTable *XRefTable, pageAnnots *Array) (*Indire
 	return ir, nil
 }
 
-func createRadioButtonField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectRef, error) {
+func createRadioButtonField(xRefTable *model.XRefTable, pageAnnots *types.Array) (*types.IndirectRef, error) {
 	var flags uint32
 	flags = setBit(flags, 16)
 
-	d := Dict(
-		map[string]Object{
-			"FT":   Name("Btn"),
-			"Ff":   Integer(flags),
-			"Rect": NewNumberArray(250, 400, 280, 420),
+	d := types.Dict(
+		map[string]types.Object{
+			"FT":   types.Name("Btn"),
+			"Ff":   types.Integer(flags),
+			"Rect": types.NewNumberArray(250, 400, 280, 420),
 			//"Type":    Name("Annot"),
 			//"Subtype": Name("Widget"),
-			"T": StringLiteral("Credit card"),
-			"V": Name("card1"),
+			"T": types.StringLiteral("Credit card"),
+			"V": types.Name("card1"),
 		},
 	)
 
@@ -1627,15 +1625,15 @@ func createRadioButtonField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectR
 		return nil, err
 	}
 
-	fontDict, err := EnsureFontDict(xRefTable, "ZapfDingbats", false, nil)
+	fontDict, err := pdffont.EnsureFontDict(xRefTable, "ZapfDingbats", "", "", false, false, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	resDict := Dict(
-		map[string]Object{
-			"Font": Dict(
-				map[string]Object{
+	resDict := types.Dict(
+		map[string]types.Object{
+			"Font": types.Dict(
+				map[string]types.Object{
 					"ZaDb": *fontDict,
 				},
 			),
@@ -1652,19 +1650,19 @@ func createRadioButtonField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectR
 		return nil, err
 	}
 
-	r1 := Dict(
-		map[string]Object{
-			"Rect":    NewNumberArray(250, 400, 280, 420),
-			"Type":    Name("Annot"),
-			"Subtype": Name("Widget"),
+	r1 := types.Dict(
+		map[string]types.Object{
+			"Rect":    types.NewNumberArray(250, 400, 280, 420),
+			"Type":    types.Name("Annot"),
+			"Subtype": types.Name("Widget"),
 			"Parent":  *indRef,
-			"T":       StringLiteral("Radio1"),
-			"TU":      StringLiteral("Radio1"),
-			"AS":      Name("card1"),
-			"AP": Dict(
-				map[string]Object{
-					"N": Dict(
-						map[string]Object{
+			"T":       types.StringLiteral("Radio1"),
+			"TU":      types.StringLiteral("Radio1"),
+			"AS":      types.Name("card1"),
+			"AP": types.Dict(
+				map[string]types.Object{
+					"N": types.Dict(
+						map[string]types.Object{
 							"card1": *selectedForm,
 							"Off":   *offForm,
 						},
@@ -1679,19 +1677,19 @@ func createRadioButtonField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectR
 		return nil, err
 	}
 
-	r2 := Dict(
-		map[string]Object{
-			"Rect":    NewNumberArray(300, 400, 330, 420),
-			"Type":    Name("Annot"),
-			"Subtype": Name("Widget"),
+	r2 := types.Dict(
+		map[string]types.Object{
+			"Rect":    types.NewNumberArray(300, 400, 330, 420),
+			"Type":    types.Name("Annot"),
+			"Subtype": types.Name("Widget"),
 			"Parent":  *indRef,
-			"T":       StringLiteral("Radio2"),
-			"TU":      StringLiteral("Radio2"),
-			"AS":      Name("Off"),
-			"AP": Dict(
-				map[string]Object{
-					"N": Dict(
-						map[string]Object{
+			"T":       types.StringLiteral("Radio2"),
+			"TU":      types.StringLiteral("Radio2"),
+			"AS":      types.Name("Off"),
+			"AP": types.Dict(
+				map[string]types.Object{
+					"N": types.Dict(
+						map[string]types.Object{
 							"card2": *selectedForm,
 							"Off":   *offForm,
 						},
@@ -1706,7 +1704,7 @@ func createRadioButtonField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectR
 		return nil, err
 	}
 
-	d.Insert("Kids", Array{*indRefR1, *indRefR2})
+	d.Insert("Kids", types.Array{*indRefR1, *indRefR2})
 
 	*pageAnnots = append(*pageAnnots, *indRefR1)
 	*pageAnnots = append(*pageAnnots, *indRefR2)
@@ -1714,7 +1712,7 @@ func createRadioButtonField(xRefTable *XRefTable, pageAnnots *Array) (*IndirectR
 	return indRef, nil
 }
 
-func createResetButton(xRefTable *XRefTable, pageAnnots *Array) (*IndirectRef, error) {
+func createResetButton(xRefTable *model.XRefTable, pageAnnots *types.Array) (*types.IndirectRef, error) {
 	var flags uint32
 	flags = setBit(flags, 17)
 
@@ -1723,25 +1721,25 @@ func createResetButton(xRefTable *XRefTable, pageAnnots *Array) (*IndirectRef, e
 		return nil, err
 	}
 
-	resetFormActionDict := Dict(
-		map[string]Object{
-			"Type":   Name("Action"),
-			"S":      Name("ResetForm"),
-			"Fields": NewStringArray("inputField"),
-			"Flags":  Integer(0),
+	resetFormActionDict := types.Dict(
+		map[string]types.Object{
+			"Type":   types.Name("Action"),
+			"S":      types.Name("ResetForm"),
+			"Fields": types.NewStringArray("inputField"),
+			"Flags":  types.Integer(0),
 		},
 	)
 
-	d := Dict(
-		map[string]Object{
-			"FT":      Name("Btn"),
-			"Ff":      Integer(flags),
-			"Rect":    NewNumberArray(100, 400, 120, 420),
-			"Type":    Name("Annot"),
-			"Subtype": Name("Widget"),
-			"AP":      Dict(map[string]Object{"N": *fN}),
-			"T":       StringLiteral("Reset"),
-			"TU":      StringLiteral("Reset"),
+	d := types.Dict(
+		map[string]types.Object{
+			"FT":      types.Name("Btn"),
+			"Ff":      types.Integer(flags),
+			"Rect":    types.NewNumberArray(100, 400, 120, 420),
+			"Type":    types.Name("Annot"),
+			"Subtype": types.Name("Widget"),
+			"AP":      types.Dict(map[string]types.Object{"N": *fN}),
+			"T":       types.StringLiteral("Reset"),
+			"TU":      types.StringLiteral("Reset"),
 			"A":       resetFormActionDict,
 		},
 	)
@@ -1756,7 +1754,7 @@ func createResetButton(xRefTable *XRefTable, pageAnnots *Array) (*IndirectRef, e
 	return ir, nil
 }
 
-func createSubmitButton(xRefTable *XRefTable, pageAnnots *Array) (*IndirectRef, error) {
+func createSubmitButton(xRefTable *model.XRefTable, pageAnnots *types.Array) (*types.IndirectRef, error) {
 	var flags uint32
 	flags = setBit(flags, 17)
 
@@ -1765,33 +1763,33 @@ func createSubmitButton(xRefTable *XRefTable, pageAnnots *Array) (*IndirectRef, 
 		return nil, err
 	}
 
-	urlSpec := Dict(
-		map[string]Object{
-			"FS": Name("URL"),
-			"F":  StringLiteral("http://www.me.com"),
+	urlSpec := types.Dict(
+		map[string]types.Object{
+			"FS": types.Name("URL"),
+			"F":  types.StringLiteral("http://www.me.com"),
 		},
 	)
 
-	submitFormActionDict := Dict(
-		map[string]Object{
-			"Type":   Name("Action"),
-			"S":      Name("SubmitForm"),
+	submitFormActionDict := types.Dict(
+		map[string]types.Object{
+			"Type":   types.Name("Action"),
+			"S":      types.Name("SubmitForm"),
 			"F":      urlSpec,
-			"Fields": NewStringArray("inputField"),
-			"Flags":  Integer(0),
+			"Fields": types.NewStringArray("inputField"),
+			"Flags":  types.Integer(0),
 		},
 	)
 
-	d := Dict(
-		map[string]Object{
-			"FT":      Name("Btn"),
-			"Ff":      Integer(flags),
-			"Rect":    NewNumberArray(140, 400, 160, 420),
-			"Type":    Name("Annot"),
-			"Subtype": Name("Widget"),
-			"AP":      Dict(map[string]Object{"N": *fN}),
-			"T":       StringLiteral("Submit"),
-			"TU":      StringLiteral("Submit"),
+	d := types.Dict(
+		map[string]types.Object{
+			"FT":      types.Name("Btn"),
+			"Ff":      types.Integer(flags),
+			"Rect":    types.NewNumberArray(140, 400, 160, 420),
+			"Type":    types.Name("Annot"),
+			"Subtype": types.Name("Widget"),
+			"AP":      types.Dict(map[string]types.Object{"N": *fN}),
+			"T":       types.StringLiteral("Submit"),
+			"TU":      types.StringLiteral("Submit"),
 			"A":       submitFormActionDict,
 		},
 	)
@@ -1806,9 +1804,9 @@ func createSubmitButton(xRefTable *XRefTable, pageAnnots *Array) (*IndirectRef, 
 	return ir, nil
 }
 
-func streamObjForXFAElement(xRefTable *XRefTable, s string) (*IndirectRef, error) {
-	sd := &StreamDict{
-		Dict:    Dict(map[string]Object{}),
+func streamObjForXFAElement(xRefTable *model.XRefTable, s string) (*types.IndirectRef, error) {
+	sd := &types.StreamDict{
+		Dict:    types.Dict(map[string]types.Object{}),
 		Content: []byte(s),
 	}
 
@@ -1819,7 +1817,7 @@ func streamObjForXFAElement(xRefTable *XRefTable, s string) (*IndirectRef, error
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createXFAArray(xRefTable *XRefTable) (Array, error) {
+func createXFAArray(xRefTable *model.XRefTable) (types.Array, error) {
 	sd1, err := streamObjForXFAElement(xRefTable, "<xdp:xdp xmlns:xdp=\"http://ns.adobe.com/xdp/\">")
 	if err != nil {
 		return nil, err
@@ -1830,14 +1828,14 @@ func createXFAArray(xRefTable *XRefTable) (Array, error) {
 		return nil, err
 	}
 
-	return Array{
-		StringLiteral("xdp:xdp"), *sd1,
-		StringLiteral("/xdp:xdp"), *sd3,
+	return types.Array{
+		types.StringLiteral("xdp:xdp"), *sd1,
+		types.StringLiteral("/xdp:xdp"), *sd3,
 	}, nil
 }
 
-func createAcroFormDict(xRefTable *XRefTable, fontName string) (Dict, Array, error) {
-	pageAnnots := Array{}
+func createAcroFormDict(xRefTable *model.XRefTable, fontName string) (types.Dict, types.Array, error) {
+	pageAnnots := types.Array{}
 
 	text, err := createFormTextField(xRefTable, &pageAnnots, fontName)
 	if err != nil {
@@ -1869,11 +1867,11 @@ func createAcroFormDict(xRefTable *XRefTable, fontName string) (Dict, Array, err
 		return nil, nil, err
 	}
 
-	d := Dict(
-		map[string]Object{
-			"Fields":          Array{*text, *checkBox, *radioButton, *resetButton, *submitButton}, // indRefs of fieldDicts
-			"NeedAppearances": Boolean(true),
-			"CO":              Array{*text},
+	d := types.Dict(
+		map[string]types.Object{
+			"Fields":          types.Array{*text, *checkBox, *radioButton, *resetButton, *submitButton}, // indRefs of fieldDicts
+			"NeedAppearances": types.Boolean(true),
+			"CO":              types.Array{*text},
 			"XFA":             xfaArr,
 		},
 	)
@@ -1882,7 +1880,7 @@ func createAcroFormDict(xRefTable *XRefTable, fontName string) (Dict, Array, err
 }
 
 // CreateAcroFormDemoXRef creates an xRefTable with an AcroForm example.
-func CreateAcroFormDemoXRef() (*XRefTable, error) {
+func CreateAcroFormDemoXRef() (*model.XRefTable, error) {
 	fontName := "Helvetica"
 
 	xRefTable, err := CreateXRefTableWithRootDict()
@@ -1908,10 +1906,10 @@ func CreateAcroFormDemoXRef() (*XRefTable, error) {
 	}
 
 	rootDict.Insert("ViewerPreferences",
-		Dict(
-			map[string]Object{
-				"FitWindow":    Boolean(true),
-				"CenterWindow": Boolean(true),
+		types.Dict(
+			map[string]types.Object{
+				"FitWindow":    types.Boolean(true),
+				"CenterWindow": types.Boolean(true),
 			},
 		),
 	)
@@ -1920,20 +1918,20 @@ func CreateAcroFormDemoXRef() (*XRefTable, error) {
 }
 
 // CreateContext creates a Context for given cross reference table and configuration.
-func CreateContext(xRefTable *XRefTable, conf *Configuration) *Context {
+func CreateContext(xRefTable *model.XRefTable, conf *model.Configuration) *model.Context {
 	if conf == nil {
-		conf = NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
 	xRefTable.ValidationMode = conf.ValidationMode
-	return &Context{
+	return &model.Context{
 		Configuration: conf,
 		XRefTable:     xRefTable,
-		Write:         NewWriteContext(conf.Eol),
+		Write:         model.NewWriteContext(conf.Eol),
 	}
 }
 
 // CreateContextWithXRefTable creates a Context with an xRefTable without pages for given configuration.
-func CreateContextWithXRefTable(conf *Configuration, pageDim *Dim) (*Context, error) {
+func CreateContextWithXRefTable(conf *model.Configuration, pageDim *types.Dim) (*model.Context, error) {
 	xRefTable, err := CreateXRefTableWithRootDict()
 	if err != nil {
 		return nil, err
@@ -1951,7 +1949,7 @@ func CreateContextWithXRefTable(conf *Configuration, pageDim *Dim) (*Context, er
 	return CreateContext(xRefTable, conf), nil
 }
 
-func createDemoContentStreamDict(xRefTable *XRefTable, pageDict Dict, b []byte) (*IndirectRef, error) {
+func createDemoContentStreamDict(xRefTable *model.XRefTable, pageDict types.Dict, b []byte) (*types.IndirectRef, error) {
 	sd, _ := xRefTable.NewStreamDictForBuf(b)
 	if err := sd.Encode(); err != nil {
 		return nil, err
@@ -1959,38 +1957,23 @@ func createDemoContentStreamDict(xRefTable *XRefTable, pageDict Dict, b []byte) 
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func fontResources(xRefTable *XRefTable, fm FontMap) (Dict, error) {
+func createDemoPage(xRefTable *model.XRefTable, parentPageIndRef types.IndirectRef, p model.Page) (*types.IndirectRef, error) {
 
-	d := Dict{}
-
-	for fontName, font := range fm {
-		ir, err := EnsureFontDict(xRefTable, fontName, true, nil)
-		if err != nil {
-			return nil, err
-		}
-		d.Insert(font.Res.ID, *ir)
-	}
-
-	return d, nil
-}
-
-func createDemoPage(xRefTable *XRefTable, parentPageIndRef IndirectRef, p Page) (*IndirectRef, error) {
-
-	pageDict := Dict(
-		map[string]Object{
-			"Type":   Name("Page"),
+	pageDict := types.Dict(
+		map[string]types.Object{
+			"Type":   types.Name("Page"),
 			"Parent": parentPageIndRef,
 		},
 	)
 
-	fontRes, err := fontResources(xRefTable, p.Fm)
+	fontRes, err := pdffont.FontResources(xRefTable, p.Fm)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(fontRes) > 0 {
-		resDict := Dict(
-			map[string]Object{
+		resDict := types.Dict(
+			map[string]types.Object{
 				"Font": fontRes,
 			},
 		)

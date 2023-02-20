@@ -1,0 +1,92 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"debug": false,
+	"contentBox": false,
+	"guides": false,
+	"colors": {
+		"DarkOrange": "#FF8C00"
+	},
+	"fonts": {
+		"myCourier": {
+			"name": "Courier",
+			"size": 12,
+			"col": "#DF0000"
+		},
+		"label": {
+			"name": "Helvetica",
+			"size": 12,
+			"col": "#007000"
+		},
+		"userFont": {
+			"name": "Roboto-Regular",
+			"lang": "el",
+			"script": "Grek",
+			"size": 12,
+			"col": "#000070"
+		},
+		"cjkUserFont": {
+			"name": "UnifontMedium",
+			"lang": "zh",
+			"script": "HanS",
+			"size": 12,
+			"col": "$DarkOrange"
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"pages": {
+		"2": {
+			"content": {
+				"text": [
+					{
+						"hide": false,
+						"value": "Update #2: Textbox reusing Corefont Courier from different page",
+						"pos": [
+							1,
+							670
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"hide": false,
+						"value": "Update #2: Textbox reusing Corefont Helvetica from different page",
+						"pos": [
+							1,
+							620
+						],
+						"font": {
+							"name": "$label"
+						}
+					},
+					{
+						"hide": false,
+						"value": "Update #2: 1234567890 Textbox reusing Userfont Robotic from different page (1234567890)",
+						"pos": [
+							1,
+							570
+						],
+						"font": {
+							"name": "$userFont"
+						}
+					},
+					{
+						"hide": false,
+						"value": "Update #2: Textbox reusing cjk Userfont Unifont from different page (1234567890)",
+						"pos": [
+							1,
+							520
+						],
+						"font": {
+							"name": "$cjkUserFont"
+						}
+					}
+				]
+			}
+		}
+	}
+}

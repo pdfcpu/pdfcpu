@@ -25,7 +25,7 @@ import (
 
 func listKeywords(t *testing.T, msg, fileName string, want []string) []string {
 	t.Helper()
-	cmd := cli.ListKeywordsCommand(fileName, nil)
+	cmd := cli.ListKeywordsCommand(fileName, conf)
 	got, err := cli.Process(cmd)
 	if err != nil {
 		t.Fatalf("%s list keywords: %v\n", msg, err)
@@ -53,21 +53,21 @@ func TestKeywordsCommand(t *testing.T) {
 	listKeywords(t, msg, fileName, nil)
 
 	keywords := []string{"keyword1", "keyword2"}
-	cmd := cli.AddKeywordsCommand(fileName, "", keywords, nil)
+	cmd := cli.AddKeywordsCommand(fileName, "", keywords, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s add keywords: %v\n", msg, err)
 	}
 
 	listKeywords(t, msg, fileName, keywords)
 
-	cmd = cli.RemoveKeywordsCommand(fileName, "", []string{"keyword2"}, nil)
+	cmd = cli.RemoveKeywordsCommand(fileName, "", []string{"keyword2"}, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s remove 1 keyword: %v\n", msg, err)
 	}
 
 	listKeywords(t, msg, fileName, []string{"keyword1"})
 
-	cmd = cli.RemoveKeywordsCommand(fileName, "", nil, nil)
+	cmd = cli.RemoveKeywordsCommand(fileName, "", nil, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s remove all keywords: %v\n", msg, err)
 	}

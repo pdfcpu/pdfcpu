@@ -22,18 +22,18 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
 
 // ListAnnotations returns a list of page annotations of rs.
-func ListAnnotations(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Configuration) (int, []string, error) {
+func ListAnnotations(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration) (int, []string, error) {
 	if rs == nil {
 		return 0, nil, errors.New("pdfcpu: ListAnnotations: Please provide rs")
 	}
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
-		conf.Cmd = pdfcpu.LISTANNOTATIONS
+		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.LISTANNOTATIONS
 	}
 	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, time.Now())
 	if err != nil {
@@ -51,7 +51,7 @@ func ListAnnotations(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Conf
 }
 
 // ListAnnotationsFile returns a list of page annotations of inFile.
-func ListAnnotationsFile(inFile string, selectedPages []string, conf *pdfcpu.Configuration) (int, []string, error) {
+func ListAnnotationsFile(inFile string, selectedPages []string, conf *model.Configuration) (int, []string, error) {
 	f, err := os.Open(inFile)
 	if err != nil {
 		return 0, nil, err
@@ -61,10 +61,10 @@ func ListAnnotationsFile(inFile string, selectedPages []string, conf *pdfcpu.Con
 }
 
 // AddAnnotations adds annotations for selected pages in rs and writes the result to w.
-func AddAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages []string, ann pdfcpu.AnnotationRenderer, conf *pdfcpu.Configuration) error {
+func AddAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages []string, ann model.AnnotationRenderer, conf *model.Configuration) error {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
-		conf.Cmd = pdfcpu.ADDANNOTATIONS
+		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.ADDANNOTATIONS
 	}
 
 	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, time.Now())
@@ -91,7 +91,7 @@ func AddAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages []string, ann p
 
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
 
-	if conf.ValidationMode != pdfcpu.ValidationNone {
+	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
 			return err
 		}
@@ -101,10 +101,10 @@ func AddAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages []string, ann p
 }
 
 // AddAnnotationsAsIncrement adds annotations for selected pages in rws and writes out a PDF increment.
-func AddAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages []string, ar pdfcpu.AnnotationRenderer, conf *pdfcpu.Configuration) error {
+func AddAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages []string, ar model.AnnotationRenderer, conf *model.Configuration) error {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
-		conf.Cmd = pdfcpu.ADDANNOTATIONS
+		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.ADDANNOTATIONS
 	}
 
 	ctx, _, _, err := readAndValidate(rws, conf, time.Now())
@@ -112,7 +112,7 @@ func AddAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages []string, a
 		return err
 	}
 
-	if *ctx.HeaderVersion < pdfcpu.V14 {
+	if *ctx.HeaderVersion < model.V14 {
 		return errors.New("Increment writing not supported for PDF version < V1.4 (Hint: Use pdfcpu optimize then try again)")
 	}
 
@@ -135,7 +135,7 @@ func AddAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages []string, a
 
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
 
-	if conf.ValidationMode != pdfcpu.ValidationNone {
+	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
 			return err
 		}
@@ -149,7 +149,7 @@ func AddAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages []string, a
 }
 
 // AddAnnotationsFile adds annotations for selected pages to a PDF context read from inFile and writes the result to outFile.
-func AddAnnotationsFile(inFile, outFile string, selectedPages []string, ar pdfcpu.AnnotationRenderer, conf *pdfcpu.Configuration, incr bool) (err error) {
+func AddAnnotationsFile(inFile, outFile string, selectedPages []string, ar model.AnnotationRenderer, conf *model.Configuration, incr bool) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {
@@ -200,10 +200,10 @@ func AddAnnotationsFile(inFile, outFile string, selectedPages []string, ar pdfcp
 }
 
 // AddAnnotationsMap adds annotations in m to corresponding pages of rs and writes the result to w.
-func AddAnnotationsMap(rs io.ReadSeeker, w io.Writer, m map[int][]pdfcpu.AnnotationRenderer, conf *pdfcpu.Configuration) error {
+func AddAnnotationsMap(rs io.ReadSeeker, w io.Writer, m map[int][]model.AnnotationRenderer, conf *model.Configuration) error {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
-		conf.Cmd = pdfcpu.ADDANNOTATIONS
+		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.ADDANNOTATIONS
 	}
 
 	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, time.Now())
@@ -225,7 +225,7 @@ func AddAnnotationsMap(rs io.ReadSeeker, w io.Writer, m map[int][]pdfcpu.Annotat
 
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
 
-	if conf.ValidationMode != pdfcpu.ValidationNone {
+	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
 			return err
 		}
@@ -235,11 +235,11 @@ func AddAnnotationsMap(rs io.ReadSeeker, w io.Writer, m map[int][]pdfcpu.Annotat
 }
 
 // AddAnnotationsMapAsIncrement adds annotations in m to corresponding pages of rws and writes out a PDF increment.
-func AddAnnotationsMapAsIncrement(rws io.ReadWriteSeeker, m map[int][]pdfcpu.AnnotationRenderer, conf *pdfcpu.Configuration) error {
+func AddAnnotationsMapAsIncrement(rws io.ReadWriteSeeker, m map[int][]model.AnnotationRenderer, conf *model.Configuration) error {
 
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
-		conf.Cmd = pdfcpu.ADDANNOTATIONS
+		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.ADDANNOTATIONS
 	}
 
 	ctx, _, _, err := readAndValidate(rws, conf, time.Now())
@@ -247,7 +247,7 @@ func AddAnnotationsMapAsIncrement(rws io.ReadWriteSeeker, m map[int][]pdfcpu.Ann
 		return err
 	}
 
-	if *ctx.HeaderVersion < pdfcpu.V14 {
+	if *ctx.HeaderVersion < model.V14 {
 		return errors.New("Increment writing not supported for PDF version < V1.4 (Hint: Use pdfcpu optimize then try again)")
 	}
 
@@ -265,7 +265,7 @@ func AddAnnotationsMapAsIncrement(rws io.ReadWriteSeeker, m map[int][]pdfcpu.Ann
 
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
 
-	if conf.ValidationMode != pdfcpu.ValidationNone {
+	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
 			return err
 		}
@@ -279,7 +279,7 @@ func AddAnnotationsMapAsIncrement(rws io.ReadWriteSeeker, m map[int][]pdfcpu.Ann
 }
 
 // AddAnnotationsMapFile adds annotations in m to corresponding pages of inFile and writes the result to outFile.
-func AddAnnotationsMapFile(inFile, outFile string, m map[int][]pdfcpu.AnnotationRenderer, conf *pdfcpu.Configuration, incr bool) (err error) {
+func AddAnnotationsMapFile(inFile, outFile string, m map[int][]model.AnnotationRenderer, conf *model.Configuration, incr bool) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {
@@ -331,10 +331,10 @@ func AddAnnotationsMapFile(inFile, outFile string, m map[int][]pdfcpu.Annotation
 
 // RemoveAnnotations removes annotations for selected pages by id and object number
 // from a PDF context read from rs and writes the result to w.
-func RemoveAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages, ids []string, objNrs []int, conf *pdfcpu.Configuration) error {
+func RemoveAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages, ids []string, objNrs []int, conf *model.Configuration) error {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
-		conf.Cmd = pdfcpu.REMOVEANNOTATIONS
+		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.REMOVEANNOTATIONS
 	}
 
 	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, time.Now())
@@ -361,7 +361,7 @@ func RemoveAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages, ids []strin
 
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
 
-	if conf.ValidationMode != pdfcpu.ValidationNone {
+	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
 			return err
 		}
@@ -372,10 +372,10 @@ func RemoveAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages, ids []strin
 
 // RemoveAnnotationsAsIncrement removes annotations for selected pages by ids and object number
 // from a PDF context read from rs and writes out a PDF increment.
-func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, ids []string, objNrs []int, conf *pdfcpu.Configuration) error {
+func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, ids []string, objNrs []int, conf *model.Configuration) error {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
-		conf.Cmd = pdfcpu.REMOVEANNOTATIONS
+		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.REMOVEANNOTATIONS
 	}
 
 	ctx, _, _, err := readAndValidate(rws, conf, time.Now())
@@ -383,7 +383,7 @@ func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, ids []s
 		return err
 	}
 
-	if *ctx.HeaderVersion < pdfcpu.V14 {
+	if *ctx.HeaderVersion < model.V14 {
 		return errors.New("Increment writing unsupported for PDF version < V1.4 (Hint: Use pdfcpu optimize then try again)")
 	}
 
@@ -406,7 +406,7 @@ func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, ids []s
 
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
 
-	if conf.ValidationMode != pdfcpu.ValidationNone {
+	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
 			return err
 		}
@@ -421,7 +421,7 @@ func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, ids []s
 
 // RemoveAnnotationsFile removes annotations for selected pages by id and object number
 // from a PDF context read from inFile and writes the result to outFile.
-func RemoveAnnotationsFile(inFile, outFile string, selectedPages, ids []string, objNrs []int, conf *pdfcpu.Configuration, incr bool) (err error) {
+func RemoveAnnotationsFile(inFile, outFile string, selectedPages, ids []string, objNrs []int, conf *model.Configuration, incr bool) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {

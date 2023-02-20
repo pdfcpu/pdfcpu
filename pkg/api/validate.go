@@ -23,18 +23,18 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
 
 // Validate validates a PDF stream read from rs.
-func Validate(rs io.ReadSeeker, conf *pdfcpu.Configuration) error {
+func Validate(rs io.ReadSeeker, conf *model.Configuration) error {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.VALIDATE
+	conf.Cmd = model.VALIDATE
 
-	if conf.ValidationMode == pdfcpu.ValidationNone {
+	if conf.ValidationMode == model.ValidationNone {
 		return errors.New("pdfcpu: validate: mode ValidationNone not allowed")
 	}
 
@@ -50,7 +50,7 @@ func Validate(rs io.ReadSeeker, conf *pdfcpu.Configuration) error {
 
 	if err = ValidateContext(ctx); err != nil {
 		s := ""
-		if conf.ValidationMode == pdfcpu.ValidationStrict {
+		if conf.ValidationMode == model.ValidationStrict {
 			s = " (try -mode=relaxed)"
 		}
 		err = errors.Wrap(err, fmt.Sprintf("validation error (obj#:%d)%s", ctx.CurObj, s))
@@ -60,7 +60,7 @@ func Validate(rs io.ReadSeeker, conf *pdfcpu.Configuration) error {
 	dur := time.Since(from1).Seconds()
 
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	pdfcpu.ValidationTimingStats(dur1, dur2, dur)
+	model.ValidationTimingStats(dur1, dur2, dur)
 
 	// at this stage: no binary breakup available!
 	if ctx.Read.FileSize > 0 {
@@ -71,12 +71,12 @@ func Validate(rs io.ReadSeeker, conf *pdfcpu.Configuration) error {
 }
 
 // ValidateFile validates inFile.
-func ValidateFile(inFile string, conf *pdfcpu.Configuration) error {
+func ValidateFile(inFile string, conf *model.Configuration) error {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
 
-	if conf != nil && conf.ValidationMode == pdfcpu.ValidationNone {
+	if conf != nil && conf.ValidationMode == model.ValidationNone {
 		return nil
 	}
 
@@ -99,12 +99,12 @@ func ValidateFile(inFile string, conf *pdfcpu.Configuration) error {
 }
 
 // ValidateFiles validates inFiles.
-func ValidateFiles(inFiles []string, conf *pdfcpu.Configuration) error {
+func ValidateFiles(inFiles []string, conf *model.Configuration) error {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
 
-	if conf != nil && conf.ValidationMode == pdfcpu.ValidationNone {
+	if conf != nil && conf.ValidationMode == model.ValidationNone {
 		return nil
 	}
 
@@ -121,4 +121,44 @@ func ValidateFiles(inFiles []string, conf *pdfcpu.Configuration) error {
 	}
 
 	return nil
+}
+
+// Validate validates a PDF stream read from rs.
+func DumpObject(rs io.ReadSeeker, objNr int, hex bool, conf *model.Configuration) error {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.DUMP
+
+	ctx, err := ReadContext(rs, conf)
+	if err != nil {
+		return err
+	}
+
+	if err = ValidateContext(ctx); err != nil {
+		s := ""
+		if conf.ValidationMode == model.ValidationStrict {
+			s = " (try -mode=relaxed)"
+		}
+		return errors.Wrap(err, fmt.Sprintf("validation error (obj#:%d)%s", ctx.CurObj, s))
+	}
+
+	ctx.DumpStream(objNr, hex)
+
+	return err
+}
+
+func DumpObjectFile(inFile string, objNr int, hex bool, conf *model.Configuration) error {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+
+	f, err := os.Open(inFile)
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+
+	return DumpObject(f, objNr, hex, conf)
 }

@@ -22,11 +22,11 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-func confForAlgorithm(aes bool, keyLength int) *pdfcpu.Configuration {
-	c := pdfcpu.NewDefaultConfiguration()
+func confForAlgorithm(aes bool, keyLength int) *model.Configuration {
+	c := model.NewDefaultConfiguration()
 	c.EncryptUsingAES = aes
 	c.EncryptKeyLength = keyLength
 	return c
@@ -215,14 +215,14 @@ func testEncryptDecryptUseCase2(t *testing.T, fileName string, aes bool, keyLeng
 	conf = confForAlgorithm(aes, keyLength)
 	conf.UserPW = "upw"
 	conf.OwnerPW = "opw"
-	conf.Permissions = pdfcpu.PermissionsAll
+	conf.Permissions = model.PermissionsAll
 	cmd = cli.SetPermissionsCommand(outFile, "", conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s: %s add permissions: %v\n", msg, outFile, err)
 	}
 
 	// List permissions
-	conf = pdfcpu.NewDefaultConfiguration()
+	conf = model.NewDefaultConfiguration()
 	conf.OwnerPW = "opw"
 	cmd = cli.ListPermissionsCommand(outFile, conf)
 	list, err := cli.Process(cmd)
@@ -469,7 +469,7 @@ func testPermissionsOPWOnly(t *testing.T, fileName string, aes bool, keyLength i
 
 	conf = confForAlgorithm(aes, keyLength)
 	conf.OwnerPW = "opw"
-	conf.Permissions = pdfcpu.PermissionsAll
+	conf.Permissions = model.PermissionsAll
 	cmd = cli.SetPermissionsCommand(outFile, "", conf)
 	if _, err = cli.Process(cmd); err != nil {
 		t.Fatalf("%s: set all permissions for %s: %v\n", msg, outFile, err)
@@ -482,7 +482,7 @@ func testPermissionsOPWOnly(t *testing.T, fileName string, aes bool, keyLength i
 	ensurePermissionsAll(t, list)
 
 	conf = confForAlgorithm(aes, keyLength)
-	conf.Permissions = pdfcpu.PermissionsNone
+	conf.Permissions = model.PermissionsNone
 	cmd = cli.SetPermissionsCommand(outFile, "", conf)
 	if _, err = cli.Process(cmd); err == nil {
 		t.Fatalf("%s: clear all permissions w/o opw for %s\n", msg, outFile)
@@ -490,7 +490,7 @@ func testPermissionsOPWOnly(t *testing.T, fileName string, aes bool, keyLength i
 
 	conf = confForAlgorithm(aes, keyLength)
 	conf.OwnerPW = "opw"
-	conf.Permissions = pdfcpu.PermissionsNone
+	conf.Permissions = model.PermissionsNone
 	cmd = cli.SetPermissionsCommand(outFile, "", conf)
 	if _, err = cli.Process(cmd); err != nil {
 		t.Fatalf("%s: clear all permissions for %s: %v\n", msg, outFile, err)
@@ -535,7 +535,7 @@ func testPermissions(t *testing.T, fileName string, aes bool, keyLength int) {
 	}
 	ensurePermissionsNone(t, list)
 
-	conf = pdfcpu.NewDefaultConfiguration()
+	conf = model.NewDefaultConfiguration()
 	conf.OwnerPW = "opw"
 	cmd = cli.ListPermissionsCommand(outFile, conf)
 	if list, err = cli.Process(cmd); err != nil {
@@ -544,7 +544,7 @@ func testPermissions(t *testing.T, fileName string, aes bool, keyLength int) {
 	ensurePermissionsNone(t, list)
 
 	conf = confForAlgorithm(aes, keyLength)
-	conf.Permissions = pdfcpu.PermissionsAll
+	conf.Permissions = model.PermissionsAll
 	cmd = cli.SetPermissionsCommand(outFile, "", conf)
 	if _, err = cli.Process(cmd); err == nil {
 		t.Fatalf("%s: set all permissions w/o pw for %s\n", msg, outFile)
@@ -552,7 +552,7 @@ func testPermissions(t *testing.T, fileName string, aes bool, keyLength int) {
 
 	conf = confForAlgorithm(aes, keyLength)
 	conf.UserPW = "upw"
-	conf.Permissions = pdfcpu.PermissionsAll
+	conf.Permissions = model.PermissionsAll
 	cmd = cli.SetPermissionsCommand(outFile, "", conf)
 	if _, err = cli.Process(cmd); err == nil {
 		t.Fatalf("%s: set all permissions w/o opw for %s\n", msg, outFile)
@@ -560,7 +560,7 @@ func testPermissions(t *testing.T, fileName string, aes bool, keyLength int) {
 
 	conf = confForAlgorithm(aes, keyLength)
 	conf.OwnerPW = "opw"
-	conf.Permissions = pdfcpu.PermissionsAll
+	conf.Permissions = model.PermissionsAll
 	cmd = cli.SetPermissionsCommand(outFile, "", conf)
 	if _, err = cli.Process(cmd); err == nil {
 		t.Fatalf("%s: set all permissions w/o both pws for %s\n", msg, outFile)
@@ -569,7 +569,7 @@ func testPermissions(t *testing.T, fileName string, aes bool, keyLength int) {
 	conf = confForAlgorithm(aes, keyLength)
 	conf.OwnerPW = "opw"
 	conf.UserPW = "upw"
-	conf.Permissions = pdfcpu.PermissionsAll
+	conf.Permissions = model.PermissionsAll
 	cmd = cli.SetPermissionsCommand(outFile, "", conf)
 	if _, err = cli.Process(cmd); err != nil {
 		t.Fatalf("%s: set all permissions for %s: %v\n", msg, outFile, err)

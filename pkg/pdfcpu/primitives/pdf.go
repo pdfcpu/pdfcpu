@@ -18,63 +18,164 @@ package primitives
 
 import (
 	"bytes"
+	"io"
+	"net/http"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 
-	pdffont "github.com/pdfcpu/pdfcpu/pkg/font"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/font"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
+	pdffont "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
+// FieldFlags represents the PDF form field flags.
+// See table 221 et.al.
+type FieldFlags int
+
+const (
+	FieldReadOnly FieldFlags = 1 << iota
+	FieldRequired
+	FieldNoExport
+	UnusedFlag4
+	UnusedFlag5
+	UnusedFlag6
+	UnusedFlag7
+	UnusedFlag8
+	UnusedFlag9
+	UnusedFlag10
+	UnusedFlag11
+	UnusedFlag12
+	FieldMultiline
+	FieldPassword
+	FieldNoToggleToOff
+	FieldRadio
+	FieldPushbutton
+	FieldCombo
+	FieldEdit
+	FieldSort
+	FieldFileSelect
+	FieldMultiselect
+	FieldDoNotSpellCheck
+	FieldDoNotScroll
+	FieldComb
+	FieldRichTextAndRadiosInUnison
+	FieldCommitOnSelChange
+)
+
+// PDF is the central structure for PDF generation.
 type PDF struct {
 	Paper           string               // default paper size
-	mediaBox        *pdfcpu.Rectangle    // default media box
+	mediaBox        *types.Rectangle     // default media box
 	Crop            string               // default crop box
-	cropBox         *pdfcpu.Rectangle    // default crop box
+	cropBox         *types.Rectangle     // default crop box
 	Origin          string               // origin of the coordinate system
-	origin          pdfcpu.Corner        // one of 4 page corners
+	origin          types.Corner         // one of 4 page corners
 	Guides          bool                 // render guides for layouting
 	ContentBox      bool                 // render contentBox = cropBox - header - footer
+	Debug           bool                 // highlight element positions
 	BackgroundColor string               `json:"bgCol"`
-	bgCol           *pdfcpu.SimpleColor  // default background color
-	Fonts           map[string]*FormFont // default fonts
-	FormFontIDs     map[string]string
-	FieldIDs        pdfcpu.StringSet
-	Fields          pdfcpu.Array
+	bgCol           *color.SimpleColor   // default background color
+	Fonts           map[string]*FormFont // global fonts
+	FormFonts       map[string]*FormFont
+	FieldIDs        types.StringSet
+	Fields          types.Array
 	InheritedDA     string
 	Header          *HorizontalBand
 	Footer          *HorizontalBand
 	Pages           map[string]*PDFPage
 	pages           []*PDFPage
-	Margin          *Margin               // the global margin named "margin"
-	Border          *Border               // the global border named "border"
-	Padding         *Padding              // the global padding named "padding"
-	Margins         map[string]*Margin    // global named margins
-	Borders         map[string]*Border    // global named borders
-	Paddings        map[string]*Padding   // global named paddings
-	SimpleBoxPool   map[string]*SimpleBox `json:"boxes"`
-	TextBoxPool     map[string]*TextBox   `json:"texts"`
-	ImageBoxPool    map[string]*ImageBox  `json:"images"`
-	TablePool       map[string]*Table     `json:"tables"`
+	Margin          *Margin                // the global margin named "margin"
+	Border          *Border                // the global border named "border"
+	Padding         *Padding               // the global padding named "padding"
+	Margins         map[string]*Margin     // global named margins
+	Borders         map[string]*Border     // global named borders
+	Paddings        map[string]*Padding    // global named paddings
+	SimpleBoxPool   map[string]*SimpleBox  `json:"boxes"`
+	TextBoxPool     map[string]*TextBox    `json:"texts"`
+	ImageBoxPool    map[string]*ImageBox   `json:"images"`
+	TablePool       map[string]*Table      `json:"tables"`
+	FieldGroupPool  map[string]*FieldGroup `json:"fieldgroups"`
 	Colors          map[string]string
-	colors          map[string]pdfcpu.SimpleColor
-	DirNames        map[string]string `json:"dirs"`
-	FileNames       map[string]string `json:"files"`
-	TimestampFormat string            `json:"timestamp"`
-	Conf            *pdfcpu.Configuration
-	XRefTable       *pdfcpu.XRefTable
-	Optimize        *pdfcpu.OptimizationContext
-	FontResIDs      map[int]pdfcpu.Dict
-	XObjectResIDs   map[int]pdfcpu.Dict
-	CheckBoxAPs     map[float64]*AP
-	RadioBtnAPs     map[float64]*AP
-	HasForm         bool
+	colors          map[string]color.SimpleColor
+	DirNames        map[string]string          `json:"dirs"`
+	FileNames       map[string]string          `json:"files"`
+	TimestampFormat string                     `json:"timestamp"`
+	DateFormat      string                     `json:"dateFormat"`
+	Conf            *model.Configuration       `json:"-"`
+	XRefTable       *model.XRefTable           `json:"-"`
+	Optimize        *model.OptimizationContext `json:"-"`
+	FontResIDs      map[int]types.Dict         `json:"-"`
+	XObjectResIDs   map[int]types.Dict         `json:"-"`
+	CheckBoxAPs     map[float64]*AP            `json:"-"`
+	RadioBtnAPs     map[float64]*AP            `json:"-"`
+	HasForm         bool                       `json:"-"`
+	OldFieldIDs     types.StringSet            `json:"-"`
+	httpClient      *http.Client
+}
+
+func (pdf *PDF) Update() bool {
+	return pdf.Optimize != nil
 }
 
 func (pdf *PDF) pageCount() int {
 	return len(pdf.pages)
+}
+
+func (pdf *PDF) color(s string) *color.SimpleColor {
+	sc, ok := pdf.colors[strings.ToLower(s)]
+	if !ok {
+		return nil
+	}
+	return &sc
+}
+
+func (pdf *PDF) parseColor(s string) (*color.SimpleColor, error) {
+	sc, err := color.ParseColor(s)
+	if err == nil {
+		return &sc, nil
+	}
+	if err != color.ErrInvalidColor || s[0] != '$' {
+		return nil, err
+	}
+	sc1 := pdf.color(s[1:])
+	if sc1 == nil {
+		return nil, color.ErrInvalidColor
+	}
+	return sc1, nil
+}
+
+func (pdf *PDF) resolveFileName(s string) (string, error) {
+	filePath, ok := pdf.FileNames[s]
+	if !ok {
+		return "", errors.Errorf("pdfcpu: can't resolve filename: %s", s)
+	}
+	if filePath[0] != '$' {
+		return filePath, nil
+	}
+
+	filePath = filePath[1:]
+	i := strings.Index(filePath, "/")
+	if i <= 0 {
+		return "", errors.Errorf("pdfcpu: corrupt filename: %s", s)
+	}
+
+	dirName := filePath[:i]
+	fileName := filePath[i:]
+
+	dirPath, ok := pdf.DirNames[dirName]
+	if !ok {
+		return "", errors.Errorf("pdfcpu: can't resolve dirname: %s", dirName)
+	}
+
+	s1 := filepath.Join(dirPath, fileName)
+
+	return s1, nil
 }
 
 func (pdf *PDF) validatePageBoundaries() error {
@@ -82,31 +183,31 @@ func (pdf *PDF) validatePageBoundaries() error {
 	defaultPaperSize := "A4"
 
 	// Default media box
-	pdf.mediaBox = pdfcpu.RectForFormat(defaultPaperSize)
+	pdf.mediaBox = types.RectForFormat(defaultPaperSize)
 	if pdf.Paper != "" {
-		dim, _, err := pdfcpu.ParsePageFormat(pdf.Paper)
+		dim, _, err := types.ParsePageFormat(pdf.Paper)
 		if err != nil {
 			return err
 		}
-		pdf.mediaBox = pdfcpu.RectForDim(dim.Width, dim.Height)
+		pdf.mediaBox = types.RectForDim(dim.Width, dim.Height)
 	}
 	pdf.cropBox = pdf.mediaBox.CroppedCopy(0)
 
 	if pdf.Crop != "" {
-		box, err := pdfcpu.ParseBox(pdf.Crop, pdfcpu.POINTS)
+		box, err := model.ParseBox(pdf.Crop, types.POINTS)
 		if err != nil {
 			return err
 		}
-		pdf.cropBox = pdfcpu.ApplyBox("CropBox", box, nil, pdf.mediaBox)
+		pdf.cropBox = model.ApplyBox("CropBox", box, nil, pdf.mediaBox)
 	}
 	return nil
 }
 
 func (pdf *PDF) validateOrigin() error {
 	// Layout coordinate system
-	pdf.origin = pdfcpu.LowerLeft
+	pdf.origin = types.LowerLeft
 	if pdf.Origin != "" {
-		corner, err := pdfcpu.ParseOrigin(pdf.Origin)
+		corner, err := types.ParseOrigin(pdf.Origin)
 		if err != nil {
 			return err
 		}
@@ -117,12 +218,12 @@ func (pdf *PDF) validateOrigin() error {
 
 func (pdf *PDF) validateColors() error {
 	// Custom colors
-	pdf.colors = map[string]pdfcpu.SimpleColor{}
+	pdf.colors = map[string]color.SimpleColor{}
 	for n, c := range pdf.Colors {
 		if c == "" {
 			continue
 		}
-		sc, err := pdfcpu.ParseHexColor(c)
+		sc, err := color.NewSimpleColorForHexCode(c)
 		if err != nil {
 			return err
 		}
@@ -156,7 +257,7 @@ func (pdf *PDF) validateHeader() error {
 		if err := pdf.Header.validate(); err != nil {
 			return err
 		}
-		pdf.Header.position = pdfcpu.TopCenter
+		pdf.Header.position = types.TopCenter
 		pdf.Header.pdf = pdf
 	}
 	return nil
@@ -167,7 +268,7 @@ func (pdf *PDF) validateFooter() error {
 		if err := pdf.Footer.validate(); err != nil {
 			return err
 		}
-		pdf.Footer.position = pdfcpu.BottomCenter
+		pdf.Footer.position = types.BottomCenter
 		pdf.Footer.pdf = pdf
 	}
 	return nil
@@ -276,6 +377,16 @@ func (pdf *PDF) validateTablePool() error {
 	return nil
 }
 
+func (pdf *PDF) validateFieldGroupPool() error {
+	for _, fg := range pdf.FieldGroupPool {
+		fg.pdf = pdf
+		if err := fg.validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (pdf *PDF) validatePools() error {
 	if err := pdf.validateSimpleBoxPool(); err != nil {
 		return err
@@ -286,7 +397,10 @@ func (pdf *PDF) validatePools() error {
 	if err := pdf.validateImageBoxPool(); err != nil {
 		return err
 	}
-	return pdf.validateTablePool()
+	if err := pdf.validateTablePool(); err != nil {
+		return err
+	}
+	return pdf.validateFieldGroupPool()
 }
 
 func (pdf *PDF) Validate() error {
@@ -317,6 +431,10 @@ func (pdf *PDF) Validate() error {
 
 	if pdf.TimestampFormat == "" {
 		pdf.TimestampFormat = pdf.Conf.TimestampFormat
+	}
+
+	if pdf.DateFormat == "" {
+		pdf.DateFormat = pdf.Conf.DateFormat
 	}
 
 	// What follows is a quirky way of turning a map of pages into a sorted slice of pages
@@ -363,8 +481,274 @@ func (pdf *PDF) Validate() error {
 	return pdf.validatePools()
 }
 
+func (pdf *PDF) DuplicateField(ID string) bool {
+	if pdf.FieldIDs[ID] || pdf.OldFieldIDs[ID] {
+		return true
+	}
+	oldID, err := types.EscapeUTF16String(ID)
+	if err != nil {
+		return true
+	}
+	return pdf.OldFieldIDs[*oldID]
+}
+
+func (pdf *PDF) calcFont(f *FormFont) error {
+	// called by non content primitives using fonts
+	if f.Name[0] != '$' {
+		return nil
+	}
+	fName := f.Name[1:]
+	f0 := pdf.Fonts[fName]
+	if f0 == nil {
+		return errors.Errorf("pdfcpu: unknown font %s", fName)
+	}
+	f.Name = f0.Name
+	if f.Size == 0 {
+		f.Size = f0.Size
+	}
+	if f.col == nil {
+		f.col = f0.col
+	}
+	if f.Lang == "" {
+		f.Lang = f0.Lang
+	}
+	if f.Script == "" {
+		f.Script = f0.Script
+	}
+	return nil
+}
+
+func (pdf *PDF) newPageFontID(indRef *types.IndirectRef, nextInd, pageNr int) string {
+	id := "F" + strconv.Itoa(nextInd)
+	if pdf.Update() {
+		fontResIDs := pdf.FontResIDs[pageNr]
+		id = fontResIDs.NewIDForPrefix("F", nextInd)
+		if indRef == nil {
+			return id
+		}
+		for k, v := range fontResIDs {
+			if v == *indRef {
+				id = k
+				break
+			}
+		}
+	}
+	return id
+}
+
+func (pdf *PDF) idForFontName(fontName, fontLang string, pageFonts, globalFonts model.FontMap, pageNr int) (string, error) {
+
+	// Used for textdescriptor configuration.
+
+	var (
+		id     string
+		indRef *types.IndirectRef
+	)
+
+	fr, ok := pageFonts[fontName]
+	if ok {
+		// Return id of known page fontResource.
+		return fr.Res.ID, nil
+	}
+
+	fr, ok = globalFonts[fontName]
+	if ok {
+		// Add global fontResource to page fontResource and return its id.
+		fr.Res.ID = pdf.newPageFontID(fr.Res.IndRef, len(pageFonts), pageNr)
+		pageFonts[fontName] = fr
+		return fr.Res.ID, nil
+	}
+
+	// Create new fontResource.
+
+	fr = model.FontResource{}
+
+	if pdf.Update() {
+
+		for objNr, fo := range pdf.Optimize.FormFontObjects {
+			//fmt.Printf("searching for %s - obj:%d fontName:%s prefix:%s\n", fontName, objNr, fo.FontName, fo.Prefix)
+			if fontName == fo.FontName {
+				if font.IsCoreFont(fontName) {
+					indRef = types.NewIndirectRef(objNr, 0)
+					break
+				}
+				err := pdffont.IndRefsForUserfontUpdate(pdf.XRefTable, fo.FontDict, fontLang, &fr)
+				if err == nil {
+					indRef = types.NewIndirectRef(objNr, 0)
+					break
+				}
+				if err != pdffont.ErrCorruptFontDict {
+					return "", err
+				}
+				break
+			}
+		}
+
+		if indRef == nil {
+			for objNr, fo := range pdf.Optimize.FontObjects {
+				//fmt.Printf("searching for %s - obj:%d fontName:%s prefix:%s\n", fontName, objNr, fo.FontName, fo.Prefix)
+				if fontName == fo.FontName {
+					indRef = types.NewIndirectRef(objNr, 0)
+					if font.IsUserFont(fontName) {
+						if err := pdffont.IndRefsForUserfontUpdate(pdf.XRefTable, fo.FontDict, fontLang, &fr); err != nil {
+							return "", err
+						}
+					}
+					break
+				}
+			}
+		}
+
+	}
+
+	id = pdf.newPageFontID(indRef, len(pageFonts), pageNr)
+	fr.Res = model.Resource{ID: id, IndRef: indRef}
+	fr.Lang = fontLang
+
+	globalFonts[fontName] = fr // id unique for pageFonts only.
+	pageFonts[fontName] = fr
+
+	return id, nil
+}
+
+func (pdf *PDF) ensureFont(fontID, fontName, fontLang string, fonts model.FontMap) (*types.IndirectRef, error) {
+
+	fr, ok := fonts[fontName]
+	if ok {
+		if fr.Res.IndRef != nil {
+			return fr.Res.IndRef, nil
+		}
+		var (
+			ir  *types.IndirectRef
+			err error
+		)
+		if font.IsUserFont(fontName) {
+			// Postpone font creation.
+			ir, err = pdf.XRefTable.IndRefForNewObject(nil)
+		} else {
+			ir, err = pdffont.EnsureFontDict(pdf.XRefTable, fontName, fr.Lang, "", false, false, nil)
+		}
+		if err != nil {
+			return nil, err
+		}
+		fr.Res.IndRef = ir
+		fonts[fontName] = fr
+		return ir, nil
+	}
+
+	var (
+		indRef *types.IndirectRef
+		err    error
+	)
+
+	if pdf.Update() {
+
+		fName := fontName
+		if strings.HasPrefix(fontName, "cjk:") {
+			fName = strings.TrimPrefix(fontName, "cjk:")
+		}
+
+		// TODO Is this used at all?
+		for objNr, fo := range pdf.Optimize.FormFontObjects {
+			//fmt.Printf("searching for %s - obj:%d fontName:%s prefix:%s\n", fontName, objNr, fo.FontName, fo.Prefix)
+			if fName == fo.FontName {
+				//fmt.Println("Match!")
+				indRef = types.NewIndirectRef(objNr, 0)
+				break
+			}
+		}
+
+		if indRef == nil {
+			for objNr, fo := range pdf.Optimize.FontObjects {
+				//fmt.Printf("searching for %s - obj:%d fontName:%s prefix:%s\n", fontName, objNr, fo.FontName, fo.Prefix)
+				if fontName == fo.FontName {
+					//fmt.Println("Match!")
+					indRef = types.NewIndirectRef(objNr, 0)
+					break
+				}
+			}
+		}
+	}
+
+	if indRef == nil {
+		fName := fontName
+		if strings.HasPrefix(fontName, "cjk:") {
+			fName = strings.TrimPrefix(fontName, "cjk:")
+		}
+		if font.IsUserFont(fName) {
+			// Postpone font creation.
+			indRef, err = pdf.XRefTable.IndRefForNewObject(nil)
+		} else {
+			indRef, err = pdffont.EnsureFontDict(pdf.XRefTable, fName, fontLang, "", false, false, nil)
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	fr.Res = model.Resource{IndRef: indRef}
+	fr.Lang = fontLang
+
+	fonts[fontName] = fr
+
+	return indRef, nil
+}
+
+func (pdf *PDF) ensureFormFont(font *FormFont) (string, error) {
+	for id, f := range pdf.FormFonts {
+		if f.Name == font.Name {
+			return id, nil
+		}
+	}
+
+	id := "F" + strconv.Itoa(len(pdf.FormFonts))
+
+	if pdf.Update() && pdf.HasForm {
+
+		for _, fo := range pdf.Optimize.FormFontObjects {
+			if font.Name == fo.FontName {
+				id := fo.ResourceNames[0]
+				return id, nil
+			}
+		}
+
+		// TODO Check for unique id
+		id = "F" + strconv.Itoa(len(pdf.Optimize.FormFontObjects))
+	}
+
+	pdf.FormFonts[id] = font
+	return id, nil
+}
+
+///////////////////////////////////////////////
+
 func (pdf *PDF) calcInheritedFonts() {
-	// Calc inherited fonts.
+
+	// Calc top level fonts.
+	for _, f0 := range pdf.Fonts {
+		if f0.Name[0] == '$' {
+			fName := f0.Name[1:]
+			for id, f1 := range pdf.Fonts {
+				if id == fName {
+					f0.Name = f1.Name
+					if f0.Size == 0 {
+						f0.Size = f1.Size
+					}
+					if f0.col == nil {
+						f0.col = f1.col
+					}
+					if f0.Lang == "" {
+						f0.Lang = f1.Lang
+					}
+					if f0.Script == "" {
+						f0.Script = f1.Script
+					}
+				}
+			}
+		}
+	}
+
+	// Calc inherited page fonts.
 	for id, f0 := range pdf.Fonts {
 		for _, page := range pdf.pages {
 			if page == nil {
@@ -376,6 +760,8 @@ func (pdf *PDF) calcInheritedFonts() {
 			}
 		}
 	}
+
+	// Calc inherited content fonts.
 	for _, page := range pdf.pages {
 		if page == nil {
 			continue
@@ -587,6 +973,34 @@ func (pdf *PDF) calcInheritedTables() {
 	}
 }
 
+func (pdf *PDF) calcInheritedFieldGroups() {
+	// Calc inherited field groups.
+	for id, fg0 := range pdf.FieldGroupPool {
+		for _, page := range pdf.pages {
+			if page == nil {
+				continue
+			}
+			fg1 := page.FieldGroupPool[id]
+			if fg1 != nil {
+				fg1.mergeIn(fg0)
+			}
+		}
+	}
+	for _, page := range pdf.pages {
+		if page == nil {
+			continue
+		}
+		fg := map[string]*FieldGroup{}
+		for k, v := range pdf.FieldGroupPool {
+			fg[k] = v
+		}
+		for k, v := range page.FieldGroupPool {
+			fg[k] = v
+		}
+		page.Content.calcFieldGroups(fg)
+	}
+}
+
 func (pdf *PDF) calcInheritedAttrs() {
 	pdf.calcInheritedFonts()
 	pdf.calcInheritedMargins()
@@ -596,214 +1010,22 @@ func (pdf *PDF) calcInheritedAttrs() {
 	pdf.calcInheritedTextBoxes()
 	pdf.calcInheritedImageBoxes()
 	pdf.calcInheritedTables()
+	pdf.calcInheritedFieldGroups()
 }
 
-func (pdf *PDF) color(s string) *pdfcpu.SimpleColor {
-	sc, ok := pdf.colors[strings.ToLower(s)]
-	if !ok {
-		return nil
-	}
-	return &sc
+func (pdf *PDF) highlightPos(w io.Writer, x, y float64, cBox *types.Rectangle) {
+	draw.DrawCircle(w, x, y, 5, color.Black, &color.Red)
+	draw.DrawHairCross(w, x, y, cBox)
 }
 
-func (pdf *PDF) parseColor(s string) (*pdfcpu.SimpleColor, error) {
-	sc, err := pdfcpu.ParseColor(s)
-	if err == nil {
-		return &sc, nil
-	}
-	if err != pdfcpu.ErrInvalidColor || s[0] != '$' {
-		return nil, err
-	}
-	sc1 := pdf.color(s[1:])
-	if sc1 == nil {
-		return nil, pdfcpu.ErrInvalidColor
-	}
-	return sc1, nil
-}
-
-func (pdf *PDF) resolveFileName(s string) (string, error) {
-	filePath, ok := pdf.FileNames[s]
-	if !ok {
-		return "", errors.Errorf("pdfcpu: can't resolve filename: %s", s)
-	}
-	if filePath[0] != '$' {
-		return filePath, nil
-	}
-
-	filePath = filePath[1:]
-	i := strings.Index(filePath, "/")
-	if i <= 0 {
-		return "", errors.Errorf("pdfcpu: corrupt filename: %s", s)
-	}
-
-	dirName := filePath[:i]
-	fileName := filePath[i:]
-
-	dirPath, ok := pdf.DirNames[dirName]
-	if !ok {
-		return "", errors.Errorf("pdfcpu: can't resolve dirname: %s", dirName)
-	}
-
-	s1 := filepath.Join(dirPath, fileName)
-
-	return s1, nil
-}
-
-func (pdf *PDF) calcFont(f *FormFont) error {
-	if f.Name[0] != '$' {
-		return nil
-	}
-	fName := f.Name[1:]
-	f0 := pdf.Fonts[fName]
-	if f0 == nil {
-		return errors.Errorf("pdfcpu: unknown font %s", fName)
-	}
-	f.Name = f0.Name
-	if f.Size == 0 {
-		f.Size = f0.Size
-	}
-	if f.col == nil {
-		f.col = f0.col
-	}
-	return nil
-}
-
-func (pdf *PDF) globalFont(fontName string, font pdfcpu.FontResource, pageFonts pdfcpu.FontMap, pageNr int) string {
-	fontResIDs := pdf.FontResIDs[pageNr]
-	font.Res.ID = "F" + strconv.Itoa(len(pageFonts))
-	if pdf.Optimize != nil && font.Res.IndRef != nil {
-		id := fontResIDs.NewIDForPrefix("F", len(pageFonts))
-		for k, v := range fontResIDs {
-			if v == *font.Res.IndRef {
-				id = k
-				break
-			}
-		}
-		font.Res.ID = id
-	}
-	pageFonts[fontName] = font
-	return font.Res.ID
-}
-
-func (pdf *PDF) newFontID(pageFonts pdfcpu.FontMap, pageNr int) string {
-	id := "F" + strconv.Itoa(len(pageFonts))
-	if pdf.Optimize != nil {
-		fontResIDs := pdf.FontResIDs[pageNr]
-		id = fontResIDs.NewIDForPrefix("F", len(pageFonts))
-	}
-	return id
-}
-
-func (pdf *PDF) idForFontName(fontName string, pageFonts, fonts pdfcpu.FontMap, pageNr int) (string, error) {
-
-	var (
-		id     string
-		indRef *pdfcpu.IndirectRef
-	)
-
-	font, ok := pageFonts[fontName]
-	if ok {
-		return font.Res.ID, nil
-	}
-
-	font, ok = fonts[fontName]
-	if ok {
-		return pdf.globalFont(fontName, font, pageFonts, pageNr), nil
-	}
-
-	font = pdfcpu.FontResource{}
-
-	fontResIDs := pdf.FontResIDs[pageNr]
-
-	if pdf.Optimize != nil {
-
-		for objNr, fo := range pdf.Optimize.FormFontObjects {
-			//fmt.Printf("searching for %s - obj:%d fontName:%s prefix:%s\n", fontName, objNr, fo.FontName, fo.Prefix)
-			if fontName == fo.FontName {
-				//fmt.Println("Match!")
-				indRef = pdfcpu.NewIndirectRef(objNr, 0)
-				break
-			}
-		}
-
-		if indRef == nil {
-			for objNr, fo := range pdf.Optimize.FontObjects {
-				//fmt.Printf("searching for %s - obj:%d fontName:%s prefix:%s\n", fontName, objNr, fo.FontName, fo.Prefix)
-				if fontName == fo.FontName {
-					//fmt.Println("Match!")
-					indRef = pdfcpu.NewIndirectRef(objNr, 0)
-					if pdffont.IsUserFont(fontName) {
-						if err := pdfcpu.IndRefsForUserfontUpdate(pdf.XRefTable, fo.FontDict, &font); err != nil {
-							return "", err
-						}
-					}
-					break
-				}
-			}
-		}
-
-		if indRef != nil {
-			id = fontResIDs.NewIDForPrefix("F", len(fonts))
-			for k, v := range fontResIDs {
-				if v == *indRef {
-					id = k
-					break
-				}
-			}
-		}
-
-	}
-
-	if indRef == nil {
-		id = pdf.newFontID(pageFonts, pageNr)
-	}
-
-	font.Res = pdfcpu.Resource{ID: id, IndRef: indRef}
-	fonts[fontName] = font
-	pageFonts[fontName] = font
-
-	return id, nil
-}
-
-func (pdf *PDF) ensureFormFont(fontName string) (string, error) {
-	id, ok := pdf.FormFontIDs[fontName]
-	if ok {
-		return id, nil
-	}
-	id = "F" + strconv.Itoa(len(pdf.FormFontIDs))
-	pdf.FormFontIDs[fontName] = id
-	return id, nil
-}
-
-func (pdf *PDF) RenderPages() ([]*pdfcpu.Page, pdfcpu.FontMap, pdfcpu.Array, error) {
+// RenderPages renders page content into model.Pages
+func (pdf *PDF) RenderPages() ([]*model.Page, model.FontMap, error) {
 
 	pdf.calcInheritedAttrs()
 
-	pp := []*pdfcpu.Page{}
-	fontMap := pdfcpu.FontMap{}
-	imageMap := pdfcpu.ImageMap{}
-	fields := pdfcpu.Array{}
-
-	// f := pdf.Fonts["input"]
-	// if f != nil {
-
-	// 	if f.col == nil {
-	// 		f.col = &pdfcpu.Black
-	// 	}
-
-	// 	fontName := f.Name
-	// 	fontSize := f.Size
-	// 	col := f.col
-
-	// 	id, err := pdf.ensureFormFont(fontName)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-
-	// 	da := fmt.Sprintf("/%s %d Tf %.2f %.2f %.2f rg", id, fontSize, col.R, col.G, col.B)
-
-	// 	pdf.InheritedDA = da
-	// }
+	pp := []*model.Page{}
+	fontMap := model.FontMap{}
+	imageMap := model.ImageMap{}
 
 	for i, page := range pdf.pages {
 
@@ -811,12 +1033,15 @@ func (pdf *PDF) RenderPages() ([]*pdfcpu.Page, pdfcpu.FontMap, pdfcpu.Array, err
 		mediaBox := pdf.mediaBox
 		cropBox := pdf.cropBox
 
-		p := pdfcpu.Page{
-			MediaBox: mediaBox,
-			CropBox:  cropBox,
-			Fm:       pdfcpu.FontMap{},
-			Im:       pdfcpu.ImageMap{},
-			Buf:      new(bytes.Buffer),
+		// check taborders
+
+		p := model.Page{
+			MediaBox:  mediaBox,
+			CropBox:   cropBox,
+			Fm:        model.FontMap{},
+			Im:        model.ImageMap{},
+			AnnotTabs: map[int]model.FieldAnnotation{},
+			Buf:       new(bytes.Buffer),
 		}
 
 		if page == nil {
@@ -824,17 +1049,30 @@ func (pdf *PDF) RenderPages() ([]*pdfcpu.Page, pdfcpu.FontMap, pdfcpu.Array, err
 				pp = append(pp, nil)
 				continue
 			}
+
 			// Create blank page with optional background color.
 			if pdf.bgCol != nil {
-				pdfcpu.FillRectNoBorder(p.Buf, p.CropBox, *pdf.bgCol)
+				draw.FillRectNoBorder(p.Buf, p.CropBox, *pdf.bgCol)
 			}
+
+			// Render page header.
+			if pdf.Header != nil {
+				if err := pdf.Header.render(&p, pageNr, fontMap, imageMap, true); err != nil {
+					return nil, nil, err
+				}
+			}
+
+			// Render page footer.
+			if pdf.Footer != nil {
+				if err := pdf.Footer.render(&p, pageNr, fontMap, imageMap, false); err != nil {
+					return nil, nil, err
+				}
+			}
+
 			pp = append(pp, &p)
 			continue
 		}
 
-		//if page.mediaBox != nil {
-		//	mediaBox = page.mediaBox
-		//}
 		if page.cropBox != nil {
 			cropBox = page.cropBox
 		}
@@ -844,7 +1082,7 @@ func (pdf *PDF) RenderPages() ([]*pdfcpu.Page, pdfcpu.FontMap, pdfcpu.Array, err
 			page.bgCol = pdf.bgCol
 		}
 		if page.bgCol != nil {
-			pdfcpu.FillRectNoBorder(p.Buf, cropBox, *page.bgCol)
+			draw.FillRectNoBorder(p.Buf, cropBox, *page.bgCol)
 		}
 
 		var headerHeight, headerDy float64
@@ -853,7 +1091,7 @@ func (pdf *PDF) RenderPages() ([]*pdfcpu.Page, pdfcpu.FontMap, pdfcpu.Array, err
 		// Render page header.
 		if pdf.Header != nil {
 			if err := pdf.Header.render(&p, pageNr, fontMap, imageMap, true); err != nil {
-				return nil, nil, nil, err
+				return nil, nil, err
 			}
 			headerHeight = pdf.Header.Height
 			headerDy = float64(pdf.Header.Dy)
@@ -862,7 +1100,7 @@ func (pdf *PDF) RenderPages() ([]*pdfcpu.Page, pdfcpu.FontMap, pdfcpu.Array, err
 		// Render page footer.
 		if pdf.Footer != nil {
 			if err := pdf.Footer.render(&p, pageNr, fontMap, imageMap, false); err != nil {
-				return nil, nil, nil, err
+				return nil, nil, err
 			}
 			footerHeight = pdf.Footer.Height
 			footerDy = float64(pdf.Footer.Dy)
@@ -873,12 +1111,12 @@ func (pdf *PDF) RenderPages() ([]*pdfcpu.Page, pdfcpu.FontMap, pdfcpu.Array, err
 		r.LL.Y += footerHeight + footerDy
 		r.UR.Y -= headerHeight + headerDy
 		page.Content.mediaBox = r
-		if err := page.Content.render(&p, pageNr, fontMap, imageMap, &fields); err != nil {
-			return nil, nil, nil, err
+		if err := page.Content.render(&p, pageNr, fontMap, imageMap); err != nil {
+			return nil, nil, err
 		}
 
 		pp = append(pp, &p)
 	}
 
-	return pp, fontMap, fields, nil
+	return pp, fontMap, nil
 }

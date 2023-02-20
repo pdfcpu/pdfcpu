@@ -1,5 +1,5 @@
 /*
-	Copyright 2020 The pdfcpu Authors.
+	Copyright 2020 The model Authors.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -23,44 +23,46 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 // PDFNUpConfig returns an NUp configuration for Nup-ing PDF files.
-func PDFNUpConfig(val int, desc string) (*pdfcpu.NUp, error) {
+func PDFNUpConfig(val int, desc string) (*model.NUp, error) {
 	return pdfcpu.PDFNUpConfig(val, desc)
 }
 
 // ImageNUpConfig returns an NUp configuration for Nup-ing image files.
-func ImageNUpConfig(val int, desc string) (*pdfcpu.NUp, error) {
+func ImageNUpConfig(val int, desc string) (*model.NUp, error) {
 	return pdfcpu.ImageNUpConfig(val, desc)
 }
 
 // PDFGridConfig returns a grid configuration for Grid-ing PDF files.
-func PDFGridConfig(rows, cols int, desc string) (*pdfcpu.NUp, error) {
+func PDFGridConfig(rows, cols int, desc string) (*model.NUp, error) {
 	return pdfcpu.PDFGridConfig(rows, cols, desc)
 }
 
 // ImageGridConfig returns a grid configuration for Grid-ing image files.
-func ImageGridConfig(rows, cols int, desc string) (*pdfcpu.NUp, error) {
+func ImageGridConfig(rows, cols int, desc string) (*model.NUp, error) {
 	return pdfcpu.ImageGridConfig(rows, cols, desc)
 }
 
 // PDFBookletConfig returns an NUp configuration for Booklet-ing PDF files.
-func PDFBookletConfig(val int, desc string) (*pdfcpu.NUp, error) {
+func PDFBookletConfig(val int, desc string) (*model.NUp, error) {
 	return pdfcpu.PDFBookletConfig(val, desc)
 }
 
 // ImageBookletConfig returns an NUp configuration for Booklet-ing image files.
-func ImageBookletConfig(val int, desc string) (*pdfcpu.NUp, error) {
+func ImageBookletConfig(val int, desc string) (*model.NUp, error) {
 	return pdfcpu.ImageBookletConfig(val, desc)
 }
 
 // NUpFromImage creates a single page n-up PDF for one image
 // or a sequence of n-up pages for more than one image.
-func NUpFromImage(conf *pdfcpu.Configuration, imageFileNames []string, nup *pdfcpu.NUp) (*pdfcpu.Context, error) {
+func NUpFromImage(conf *model.Configuration, imageFileNames []string, nup *model.NUp) (*model.Context, error) {
 	if nup.PageDim == nil {
 		// Set default paper size.
-		nup.PageDim = pdfcpu.PaperSize[nup.PageSize]
+		nup.PageDim = types.PaperSize[nup.PageSize]
 	}
 
 	ctx, err := pdfcpu.CreateContextWithXRefTable(conf, nup.PageDim)
@@ -90,16 +92,16 @@ func NUpFromImage(conf *pdfcpu.Configuration, imageFileNames []string, nup *pdfc
 
 // NUp rearranges PDF pages or images into page grids and writes the result to w.
 // Either rs or imgFiles will be used.
-func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *pdfcpu.NUp, conf *pdfcpu.Configuration) error {
+func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *model.NUp, conf *model.Configuration) error {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.NUP
+	conf.Cmd = model.NUP
 
 	log.Info.Printf("%s", nup)
 
 	var (
-		ctx *pdfcpu.Context
+		ctx *model.Context
 		err error
 	)
 
@@ -126,13 +128,13 @@ func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *p
 
 		// New pages get added to ctx while old pages get deleted.
 		// This way we avoid migrating objects between contexts.
-		if err = ctx.NUpFromPDF(pages, nup); err != nil {
+		if err = pdfcpu.NUpFromPDF(ctx, pages, nup); err != nil {
 			return err
 		}
 
 	}
 
-	if conf.ValidationMode != pdfcpu.ValidationNone {
+	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
 			return err
 		}
@@ -148,7 +150,7 @@ func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *p
 }
 
 // NUpFile rearranges PDF pages or images into page grids and writes the result to outFile.
-func NUpFile(inFiles []string, outFile string, selectedPages []string, nup *pdfcpu.NUp, conf *pdfcpu.Configuration) (err error) {
+func NUpFile(inFiles []string, outFile string, selectedPages []string, nup *model.NUp, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	if !nup.ImgInputFile {

@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The pdfcpu Authors.
+Copyright 2022 The pdfcpu Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,153 +17,148 @@ limitations under the License.
 package pdfcpu
 
 import (
-	"github.com/pdfcpu/pdfcpu/pkg/filter"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
-// PageContent returns the content in PDF syntax for page dict d.
-func (xRefTable *XRefTable) PageContent(d Dict) ([]byte, error) {
-
-	o, _ := d.Find("Contents")
-
-	o, err := xRefTable.Dereference(o)
-	if err != nil || o == nil {
-		return nil, err
-	}
-
-	bb := []byte{}
-
-	switch o := o.(type) {
-
-	case StreamDict:
-		// no further processing.
-		err := o.Decode()
-		if err == filter.ErrUnsupportedFilter {
-			return nil, errors.New("pdfcpu: unsupported filter: unable to decode content")
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		bb = append(bb, o.Content...)
-
-	case Array:
-		// process array of content stream dicts.
-		for _, o := range o {
-			if o == nil {
-				continue
-			}
-			o, _, err := xRefTable.DereferenceStreamDict(o)
-			if err != nil {
-				return nil, err
-			}
-			if o == nil {
-				continue
-			}
-			err = o.Decode()
-			if err == filter.ErrUnsupportedFilter {
-				return nil, errors.New("pdfcpu: unsupported filter: unable to decode content")
-			}
-			if err != nil {
-				return nil, err
-			}
-			bb = append(bb, o.Content...)
-		}
-
-	default:
-		return nil, errors.Errorf("pdfcpu: page content must be stream dict or array")
-	}
-
-	if len(bb) == 0 {
-		return nil, errNoContent
-	}
-
-	return bb, nil
-}
-
-func migratePageDict(d Dict, ctx, ctxDest *Context, migrated map[int]int) error {
-	var err error
-	for k, v := range d {
-		if k == "Parent" {
-			continue
-		}
-		if d[k], err = migrateObject(v, ctx, ctxDest, migrated); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// AddPages adds pages and corresponding resources from otherXRefTable to xRefTable.
-func AddPages(ctx, ctxDest *Context, pages []int, usePgCache bool) error {
+// AddPages adds pages and corresponding resources from ctxSrc to ctxDest.
+func AddPages(ctxSrc, ctxDest *model.Context, pageNrs []int, usePgCache bool) error {
 
 	pagesIndRef, err := ctxDest.Pages()
 	if err != nil {
 		return err
 	}
 
-	// This is the page tree root.
 	pagesDict, err := ctxDest.DereferenceDict(*pagesIndRef)
 	if err != nil {
 		return err
 	}
 
-	pageCache := map[int]*IndirectRef{}
+	pageCache := map[int]*types.IndirectRef{}
 	migrated := map[int]int{}
+	fields := types.Array{}
 
-	for _, i := range pages {
+	for _, i := range pageNrs {
 
 		if usePgCache {
 			if indRef, ok := pageCache[i]; ok {
-				if err := AppendPageTree(indRef, 1, pagesDict); err != nil {
+				if err := model.AppendPageTree(indRef, 1, pagesDict); err != nil {
 					return err
 				}
 				continue
 			}
 		}
 
-		// Move page i and required resources into new context.
-
-		consolidateRes := false
-		// TODO consolidate via optimize flag
-		d, _, inhPAttrs, err := ctx.PageDict(i, consolidateRes)
+		d, _, inhPAttrs, err := ctxSrc.PageDict(i, false)
 		if err != nil {
 			return err
 		}
 		if d == nil {
 			return errors.Errorf("pdfcpu: unknown page number: %d\n", i)
 		}
+
 		//log.Write.Printf("AddPages:\n%s\n", inhPAttrs.resources)
 
 		//fmt.Printf("migrresDict bef: \n%s", d)
 
-		d = d.Clone().(Dict)
+		d = d.Clone().(types.Dict)
 		d["Resources"] = inhPAttrs.Resources.Clone()
 		d["Parent"] = *pagesIndRef
-
-		// Migrate external page dict into ctxDest.
-		if err := migratePageDict(d, ctx, ctxDest, migrated); err != nil {
-			return err
-		}
 
 		// Handle inherited page attributes.
 		d["MediaBox"] = inhPAttrs.MediaBox.Array()
 		if inhPAttrs.Rotate%360 > 0 {
-			d["Rotate"] = Integer(inhPAttrs.Rotate)
+			d["Rotate"] = types.Integer(inhPAttrs.Rotate)
 		}
 
-		indRef, err := ctxDest.IndRefForNewObject(d)
+		pageIndRef, err := ctxDest.IndRefForNewObject(d)
 		if err != nil {
 			return err
 		}
 
-		if err := AppendPageTree(indRef, 1, pagesDict); err != nil {
+		// Migrate external page dict into ctxDest.
+		if err := migratePageDict(d, *pageIndRef, ctxSrc, ctxDest, migrated); err != nil {
+			return err
+		}
+
+		if d["Annots"] != nil && ctxSrc.AcroForm != nil {
+			// Record form fields
+			o, _ := ctxSrc.AcroForm.Find("Fields")
+			fieldsSrc, err := ctxSrc.DereferenceArray(o)
+			if err != nil {
+				return err
+			}
+			o, _ = d.Find("Annots")
+			annots, err := ctxDest.DereferenceArray(o)
+			if err != nil {
+				return err
+			}
+			for _, v := range annots {
+				indRef := v.(types.IndirectRef)
+				d, err := ctxDest.DereferenceDict(indRef)
+				if err != nil {
+					return err
+				}
+				if pIndRef := d.IndirectRefEntry("Parent"); pIndRef != nil {
+					indRef = *pIndRef
+				}
+				var found bool
+				for _, v := range fields {
+					ir := v.(types.IndirectRef)
+					//if ir.Equals(indRef) {
+					if ir == indRef {
+						found = true
+						break
+					}
+				}
+				if found {
+					continue
+				}
+				for _, v := range fieldsSrc {
+					ir := v.(types.IndirectRef)
+					objNr := ir.ObjectNumber.Value()
+					if migrated[objNr] == indRef.ObjectNumber.Value() {
+						fields = append(fields, indRef)
+						break
+					}
+					d, err := ctxSrc.DereferenceDict(ir)
+					if err != nil {
+						return err
+					}
+					o, ok := d.Find("Kids")
+					if !ok {
+						continue
+					}
+					kids, err := ctxSrc.DereferenceArray(o)
+					if err != nil {
+						return err
+					}
+					if ok, err = detectMigratedAnnot(ctxSrc, &indRef, kids, migrated); err != nil {
+						return err
+					}
+					if ok {
+						fields = append(fields, indRef)
+					}
+				}
+			}
+		}
+
+		if err := model.AppendPageTree(pageIndRef, 1, pagesDict); err != nil {
 			return err
 		}
 
 		if usePgCache {
-			pageCache[i] = indRef
+			pageCache[i] = pageIndRef
 		}
+	}
+
+	if ctxSrc.AcroForm != nil && len(fields) > 0 {
+		d := ctxSrc.AcroForm.Clone().(types.Dict)
+		if err := migrateFormDict(d, fields, ctxSrc, ctxDest, migrated); err != nil {
+			return err
+		}
+		ctxDest.RootDict["AcroForm"] = d
 	}
 
 	return nil

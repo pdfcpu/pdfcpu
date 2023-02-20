@@ -17,43 +17,319 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"fmt"
+
 	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-func patchIndRef(ir *IndirectRef, lookup map[int]int) {
-	i := ir.ObjectNumber.Value()
-	ir.ObjectNumber = Integer(lookup[i])
+func handleNeedAppearances(ctxSource *model.Context, dSrc, dDest types.Dict) error {
+	o, found := dSrc.Find("NeedAppearances")
+	if !found || o == nil {
+		return nil
+	}
+	b, err := ctxSource.DereferenceBoolean(o, model.V10)
+	if err != nil {
+		return err
+	}
+	if b != nil && *b {
+		dDest["NeedAppearances"] = types.Boolean(true)
+	}
+	return nil
 }
 
-func patchObject(o Object, lookup map[int]int) Object {
+func handleCO(ctxSource, ctxDest *model.Context, dSrc, dDest types.Dict) error {
+	o, found := dSrc.Find("CO")
+	if !found {
+		return nil
+	}
+	arrSrc, err := ctxSource.DereferenceArray(o)
+	if err != nil {
+		return err
+	}
+	o, found = dDest.Find("CO")
+	if !found {
+		dDest["CO"] = arrSrc
+		return nil
+	}
+	arrDest, err := ctxDest.DereferenceArray(o)
+	if err != nil {
+		return err
+	}
+	if len(arrDest) == 0 {
+		dDest["CO"] = arrSrc
+	} else {
+		arrDest = append(arrDest, arrSrc...)
+		dDest["CO"] = arrDest
+	}
+	return nil
+}
+
+func handleDR(ctxSource, ctxDest *model.Context, dSrc, dDest types.Dict) error {
+	o, found := dSrc.Find("DR")
+	if !found {
+		return nil
+	}
+	dSrc, err := ctxSource.DereferenceDict(o)
+	if err != nil {
+		return err
+	}
+	if len(dSrc) == 0 {
+		return nil
+	}
+	_, found = dDest.Find("DR")
+	if !found {
+		dDest["DR"] = dSrc
+	}
+	return nil
+}
+
+func handleDA(ctxSource *model.Context, dSrc, dDest types.Dict, arrFieldsSrc types.Array) error {
+	// (for each with field type  /FT /Tx w/o DA, set DA to default DA)
+	// TODO Walk field tree and inspect terminal fields.
+
+	sSrc := dSrc.StringEntry("DA")
+	if sSrc == nil || len(*sSrc) == 0 {
+		return nil
+	}
+	sDest := dDest.StringEntry("DA")
+	if sDest == nil {
+		dDest["DA"] = types.StringLiteral(*sSrc)
+		return nil
+	}
+	// Push sSrc down to all top level fields of dSource
+	for _, o := range arrFieldsSrc {
+		d, err := ctxSource.DereferenceDict(o)
+		if err != nil {
+			return err
+		}
+		n := d.NameEntry("FT")
+		if n != nil && *n == "Tx" {
+			_, found := d.Find("DA")
+			if !found {
+				d["DA"] = types.StringLiteral(*sSrc)
+			}
+		}
+	}
+	return nil
+}
+
+func handleQ(ctxSource *model.Context, dSrc, dDest types.Dict, arrFieldsSrc types.Array) error {
+	// (for each with field type /FT /Tx w/o Q, set Q to default Q)
+	// TODO Walk field tree and inspect terminal fields.
+
+	iSrc := dSrc.IntEntry("Q")
+	if iSrc == nil {
+		return nil
+	}
+	iDest := dDest.IntEntry("Q")
+	if iDest == nil {
+		dDest["Q"] = types.Integer(*iSrc)
+		return nil
+	}
+	// Push iSrc down to all top level fields of dSource
+	for _, o := range arrFieldsSrc {
+		d, err := ctxSource.DereferenceDict(o)
+		if err != nil {
+			return err
+		}
+		n := d.NameEntry("FT")
+		if n != nil && *n == "Tx" {
+			_, found := d.Find("Q")
+			if !found {
+				d["Q"] = types.Integer(*iSrc)
+			}
+		}
+	}
+	return nil
+}
+
+func handleFormAttributes(ctxSource, ctxDest *model.Context, dSrc, dDest types.Dict, arrFieldsSrc types.Array) error {
+
+	// NeedAppearances: try: set to true only
+	if err := handleNeedAppearances(ctxSource, dSrc, dDest); err != nil {
+		return err
+	}
+
+	// SigFlags: set bit 1 to true only (SignaturesExist)
+	//           set bit 2 to true only (AppendOnly)
+	dDest.Delete("SigFields")
+
+	// CO: add all indrefs
+	if err := handleCO(ctxSource, ctxDest, dSrc, dDest); err != nil {
+		return err
+	}
+
+	// DR: default resource dict
+	if err := handleDR(ctxSource, ctxDest, dSrc, dDest); err != nil {
+		return err
+	}
+
+	// DA: default appearance streams for variable text fields
+	if err := handleDA(ctxSource, dSrc, dDest, arrFieldsSrc); err != nil {
+		return err
+	}
+
+	// Q: left, center, right for variable text fields
+	if err := handleQ(ctxSource, dSrc, dDest, arrFieldsSrc); err != nil {
+		return err
+	}
+
+	// XFA: ignore
+	delete(dDest, "XFA")
+
+	return nil
+}
+
+func rootDicts(ctxSource, ctxDest *model.Context) (types.Dict, types.Dict, error) {
+
+	rootDictSource, err := ctxSource.Catalog()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	rootDictDest, err := ctxDest.Catalog()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return rootDictSource, rootDictDest, nil
+}
+
+func mergeInFields(ctxDest *model.Context, arrFieldsSrc, arrFieldsDest types.Array, dDest types.Dict) error {
+
+	parentDict :=
+		types.Dict(map[string]types.Object{
+			"Kids": arrFieldsSrc,
+			"T":    types.StringLiteral(fmt.Sprintf("%d", len(arrFieldsDest))),
+		})
+
+	ir, err := ctxDest.IndRefForNewObject(parentDict)
+	if err != nil {
+		return err
+	}
+
+	for _, ir1 := range arrFieldsSrc {
+		d, err := ctxDest.DereferenceDict(ir1)
+		if err != nil {
+			return err
+		}
+		if len(d) == 0 {
+			continue
+		}
+		d["Parent"] = *ir
+	}
+
+	dDest["Fields"] = append(arrFieldsDest, *ir)
+
+	return nil
+}
+
+func mergeAcroForms(ctxSource, ctxDest *model.Context) error {
+
+	rootDictSource, rootDictDest, err := rootDicts(ctxSource, ctxDest)
+	if err != nil {
+		return err
+	}
+
+	o, found := rootDictSource.Find("AcroForm")
+	if !found {
+		return nil
+	}
+
+	dSrc, err := ctxSource.DereferenceDict(o)
+	if err != nil || len(dSrc) == 0 {
+		return err
+	}
+
+	// Retrieve ctxSrc AcroForm Fields
+	o, found = dSrc.Find("Fields")
+	if !found {
+		return nil
+	}
+	arrFieldsSrc, err := ctxSource.DereferenceArray(o)
+	if err != nil {
+		return err
+	}
+	if len(arrFieldsSrc) == 0 {
+		return nil
+	}
+
+	// We have a ctxSrc.Acroform with fields.
+
+	o, found = rootDictDest.Find("AcroForm")
+	if !found {
+		rootDictDest["AcroForm"] = dSrc
+		return nil
+	}
+
+	dDest, err := ctxDest.DereferenceDict(o)
+	if err != nil {
+		return err
+	}
+
+	if len(dDest) == 0 {
+		rootDictDest["AcroForm"] = dSrc
+		return nil
+	}
+
+	// Retrieve ctxDest AcroForm Fields
+	o, found = dDest.Find("Fields")
+	if !found {
+		rootDictDest["AcroForm"] = dSrc
+		return nil
+	}
+	arrFieldsDest, err := ctxDest.DereferenceArray(o)
+	if err != nil {
+		return err
+	}
+	if len(arrFieldsDest) == 0 {
+		rootDictDest["AcroForm"] = dSrc
+		return nil
+	}
+
+	if err := mergeInFields(ctxDest, arrFieldsSrc, arrFieldsDest, dDest); err != nil {
+		return err
+	}
+
+	return handleFormAttributes(ctxSource, ctxDest, dSrc, dDest, arrFieldsSrc)
+}
+
+func patchIndRef(ir *types.IndirectRef, lookup map[int]int) {
+	i := ir.ObjectNumber.Value()
+	ir.ObjectNumber = types.Integer(lookup[i])
+}
+
+func patchObject(o types.Object, lookup map[int]int) types.Object {
 
 	log.Trace.Printf("patchObject before: %v\n", o)
 
-	var ob Object
+	var ob types.Object
 
 	switch obj := o.(type) {
 
-	case IndirectRef:
+	case types.IndirectRef:
 		patchIndRef(&obj, lookup)
 		ob = obj
 
-	case Dict:
+	case types.Dict:
 		patchDict(obj, lookup)
 		ob = obj
 
-	case StreamDict:
+	case types.StreamDict:
 		patchDict(obj.Dict, lookup)
 		ob = obj
 
-	case ObjectStreamDict:
+	case types.ObjectStreamDict:
 		patchDict(obj.Dict, lookup)
 		ob = obj
 
-	case XRefStreamDict:
+	case types.XRefStreamDict:
 		patchDict(obj.Dict, lookup)
 		ob = obj
 
-	case Array:
+	case types.Array:
 		patchArray(obj, lookup)
 		ob = obj
 
@@ -64,7 +340,7 @@ func patchObject(o Object, lookup map[int]int) Object {
 	return ob
 }
 
-func patchDict(d Dict, lookup map[int]int) {
+func patchDict(d types.Dict, lookup map[int]int) {
 
 	log.Trace.Printf("patchDict before: %v\n", d)
 
@@ -78,7 +354,7 @@ func patchDict(d Dict, lookup map[int]int) {
 	log.Trace.Printf("patchDict after: %v\n", d)
 }
 
-func patchArray(a Array, lookup map[int]int) {
+func patchArray(a types.Array, lookup map[int]int) {
 
 	log.Trace.Printf("patchArray begin: %v\n", a)
 
@@ -92,9 +368,9 @@ func patchArray(a Array, lookup map[int]int) {
 	log.Trace.Printf("patchArray end: %v\n", a)
 }
 
-func objNrsIntSet(ctx *Context) IntSet {
+func objNrsIntSet(ctx *model.Context) types.IntSet {
 
-	objNrs := IntSet{}
+	objNrs := types.IntSet{}
 
 	for k := range ctx.Table {
 		if k == 0 {
@@ -107,7 +383,7 @@ func objNrsIntSet(ctx *Context) IntSet {
 	return objNrs
 }
 
-func lookupTable(keys IntSet, i int) map[int]int {
+func lookupTable(keys types.IntSet, i int) map[int]int {
 
 	m := map[int]int{}
 
@@ -120,9 +396,9 @@ func lookupTable(keys IntSet, i int) map[int]int {
 }
 
 // Patch an IntSet of objNrs using lookup.
-func patchObjects(s IntSet, lookup map[int]int) IntSet {
+func patchObjects(s types.IntSet, lookup map[int]int) types.IntSet {
 
-	t := IntSet{}
+	t := types.IntSet{}
 
 	for k, v := range s {
 		if v {
@@ -133,7 +409,7 @@ func patchObjects(s IntSet, lookup map[int]int) IntSet {
 	return t
 }
 
-func patchSourceObjectNumbers(ctxSource, ctxDest *Context) {
+func patchSourceObjectNumbers(ctxSource, ctxDest *model.Context) {
 
 	log.Debug.Printf("patchSourceObjectNumbers: ctxSource: xRefTableSize:%d trailer.Size:%d - %s\n", len(ctxSource.Table), *ctxSource.Size, ctxSource.Read.FileName)
 	log.Debug.Printf("patchSourceObjectNumbers:   ctxDest: xRefTableSize:%d trailer.Size:%d - %s\n", len(ctxDest.Table), *ctxDest.Size, ctxDest.Read.FileName)
@@ -186,7 +462,7 @@ func patchSourceObjectNumbers(ctxSource, ctxDest *Context) {
 	}
 
 	// Patch xref entry object numbers.
-	m := make(map[int]*XRefTableEntry, *ctxSource.Size)
+	m := make(map[int]*model.XRefTableEntry, *ctxSource.Size)
 	for k, v := range lookup {
 		m[v] = ctxSource.Table[k]
 		//*ctxSource.Size++ // ?
@@ -209,7 +485,7 @@ func patchSourceObjectNumbers(ctxSource, ctxDest *Context) {
 	log.Debug.Printf("patchSourceObjectNumbers end")
 }
 
-func appendSourcePageTreeToDestPageTree(ctxSource, ctxDest *Context) error {
+func appendSourcePageTreeToDestPageTree(ctxSource, ctxDest *model.Context) error {
 
 	log.Debug.Println("appendSourcePageTreeToDestPageTree begin")
 
@@ -238,7 +514,7 @@ func appendSourcePageTreeToDestPageTree(ctxSource, ctxDest *Context) error {
 	a = append(a, *indRefPageTreeRootDictSource)
 	log.Debug.Printf("Kids after: %v\n", a)
 
-	pageTreeRootDictDest.Update("Count", Integer(*pageCountDest+*pageCountSource))
+	pageTreeRootDictDest.Update("Count", types.Integer(*pageCountDest+*pageCountSource))
 	pageTreeRootDictDest.Update("Kids", a)
 
 	ctxDest.PageCount += ctxSource.PageCount
@@ -248,7 +524,7 @@ func appendSourcePageTreeToDestPageTree(ctxSource, ctxDest *Context) error {
 	return nil
 }
 
-func appendSourceObjectsToDest(ctxSource, ctxDest *Context) {
+func appendSourceObjectsToDest(ctxSource, ctxDest *model.Context) {
 
 	log.Debug.Println("appendSourceObjectsToDest begin")
 
@@ -271,13 +547,13 @@ func appendSourceObjectsToDest(ctxSource, ctxDest *Context) {
 }
 
 // merge two disjunct IntSets
-func mergeIntSets(src, dest IntSet) {
+func mergeIntSets(src, dest types.IntSet) {
 	for k := range src {
 		dest[k] = true
 	}
 }
 
-func mergeDuplicateObjNumberIntSets(ctxSource, ctxDest *Context) {
+func mergeDuplicateObjNumberIntSets(ctxSource, ctxDest *model.Context) {
 
 	log.Debug.Println("mergeDuplicateObjNumberIntSets begin")
 
@@ -290,7 +566,7 @@ func mergeDuplicateObjNumberIntSets(ctxSource, ctxDest *Context) {
 }
 
 // MergeXRefTables merges Context ctxSource into ctxDest by appending its page tree.
-func MergeXRefTables(ctxSource, ctxDest *Context) (err error) {
+func MergeXRefTables(ctxSource, ctxDest *model.Context) (err error) {
 
 	// Sweep over ctxSource cross ref table and ensure valid object numbers in ctxDest's space.
 	patchSourceObjectNumbers(ctxSource, ctxDest)
@@ -309,7 +585,7 @@ func MergeXRefTables(ctxSource, ctxDest *Context) (err error) {
 	mergeAcroForms(ctxSource, ctxDest)
 
 	// Mark source's root object as free.
-	err = ctxDest.turnEntryToFree(int(ctxSource.Root.ObjectNumber))
+	err = ctxDest.FreeObject(int(ctxSource.Root.ObjectNumber))
 	if err != nil {
 		return
 	}
@@ -317,7 +593,7 @@ func MergeXRefTables(ctxSource, ctxDest *Context) (err error) {
 	// Mark source's info object as free.
 	// Note: Any indRefs this info object depends on are missed.
 	if ctxSource.Info != nil {
-		err = ctxDest.turnEntryToFree(int(ctxSource.Info.ObjectNumber))
+		err = ctxDest.FreeObject(int(ctxSource.Info.ObjectNumber))
 		if err != nil {
 			return
 		}

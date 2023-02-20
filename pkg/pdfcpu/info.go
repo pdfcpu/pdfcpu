@@ -18,18 +18,16 @@ package pdfcpu
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-func csvSafeString(s string) string {
-	return strings.Replace(s, ";", ",", -1)
-}
-
 // handleInfoDict extracts relevant infoDict fields into the context.
-func (ctx *Context) handleInfoDict(d Dict) (err error) {
+func handleInfoDict(ctx *model.Context, d types.Dict) (err error) {
 
 	for key, value := range d {
 
@@ -45,7 +43,7 @@ func (ctx *Context) handleInfoDict(d Dict) (err error) {
 			if err != nil {
 				return err
 			}
-			ctx.Author = csvSafeString(ctx.Author)
+			ctx.Author = model.CSVSafeString(ctx.Author)
 
 		case "Subject":
 			log.Write.Println("found Subject")
@@ -60,12 +58,12 @@ func (ctx *Context) handleInfoDict(d Dict) (err error) {
 			if err != nil {
 				return err
 			}
-			ctx.Creator = csvSafeString(ctx.Creator)
+			ctx.Creator = model.CSVSafeString(ctx.Creator)
 
 		case "Producer", "CreationDate", "ModDate":
 			// pdfcpu will modify these as direct dict entries.
 			log.Write.Printf("found %s", key)
-			if indRef, ok := value.(IndirectRef); ok {
+			if indRef, ok := value.(types.IndirectRef); ok {
 				// Get rid of these extra objects.
 				ctx.Optimize.DuplicateInfoObjects[int(indRef.ObjectNumber)] = true
 			}
@@ -82,7 +80,7 @@ func (ctx *Context) handleInfoDict(d Dict) (err error) {
 	return nil
 }
 
-func (ctx *Context) ensureInfoDict() error {
+func ensureInfoDict(ctx *model.Context) error {
 
 	// => 14.3.3 Document Information Dictionary
 
@@ -97,13 +95,13 @@ func (ctx *Context) ensureInfoDict() error {
 	// ModDate		        modified by pdfcpu
 	// Trapped              -
 
-	now := DateString(time.Now())
+	now := types.DateString(time.Now())
 
-	v := "pdfcpu " + VersionStr
+	v := "pdfcpu " + model.VersionStr
 
 	if ctx.Info == nil {
 
-		d := NewDict()
+		d := types.NewDict()
 		d.InsertString("Producer", v)
 		d.InsertString("CreationDate", now)
 		d.InsertString("ModDate", now)
@@ -123,19 +121,19 @@ func (ctx *Context) ensureInfoDict() error {
 		return err
 	}
 
-	if err = ctx.handleInfoDict(d); err != nil {
+	if err = handleInfoDict(ctx, d); err != nil {
 		return err
 	}
 
-	d.Update("CreationDate", StringLiteral(now))
-	d.Update("ModDate", StringLiteral(now))
-	d.Update("Producer", StringLiteral(v))
+	d.Update("CreationDate", types.StringLiteral(now))
+	d.Update("ModDate", types.StringLiteral(now))
+	d.Update("Producer", types.StringLiteral(v))
 
 	return nil
 }
 
 // Write the document info object for this PDF file.
-func (ctx *Context) writeDocumentInfoDict() error {
+func writeDocumentInfoDict(ctx *model.Context) error {
 
 	log.Write.Printf("*** writeDocumentInfoDict begin: offset=%d ***\n", ctx.Write.Offset)
 
@@ -165,7 +163,7 @@ func (ctx *Context) writeDocumentInfoDict() error {
 	return nil
 }
 
-func appendEqualMediaAndCropBoxInfo(ss *[]string, pb PageBoundaries, unit string, currUnit DisplayUnit) {
+func appendEqualMediaAndCropBoxInfo(ss *[]string, pb model.PageBoundaries, unit string, currUnit types.DisplayUnit) {
 	mb := pb.MediaBox()
 	tb := pb.TrimBox()
 	bb := pb.BleedBox()
@@ -195,7 +193,7 @@ func appendEqualMediaAndCropBoxInfo(ss *[]string, pb PageBoundaries, unit string
 	}
 }
 
-func trimBleedArtBoxString(cb, tb, bb, ab *Rectangle) string {
+func trimBleedArtBoxString(cb, tb, bb, ab *types.Rectangle) string {
 	s := ""
 	if tb == nil || tb.Equals(*cb) {
 		s += "= TrimBox"
@@ -219,7 +217,7 @@ func trimBleedArtBoxString(cb, tb, bb, ab *Rectangle) string {
 	return s
 }
 
-func appendNotEqualMediaAndCropBoxInfo(ss *[]string, pb PageBoundaries, unit string, currUnit DisplayUnit) {
+func appendNotEqualMediaAndCropBoxInfo(ss *[]string, pb model.PageBoundaries, unit string, currUnit types.DisplayUnit) {
 	mb := pb.MediaBox()
 	cb := pb.CropBox()
 	tb := pb.TrimBox()
@@ -240,7 +238,7 @@ func appendNotEqualMediaAndCropBoxInfo(ss *[]string, pb PageBoundaries, unit str
 	}
 }
 
-func appendPageBoxesInfo(ss *[]string, pb PageBoundaries, unit string, currUnit DisplayUnit, i int) {
+func appendPageBoxesInfo(ss *[]string, pb model.PageBoundaries, unit string, currUnit types.DisplayUnit, i int) {
 	d := pb.CropBox().Dimensions()
 	if pb.Rot%180 != 0 {
 		d.Width, d.Height = d.Height, d.Width
@@ -260,8 +258,8 @@ func appendPageBoxesInfo(ss *[]string, pb PageBoundaries, unit string, currUnit 
 	appendNotEqualMediaAndCropBoxInfo(ss, pb, unit, currUnit)
 }
 
-func (ctx *Context) pageInfo(selectedPages IntSet) ([]string, error) {
-	unit := ctx.unit()
+func pageInfo(ctx *model.Context, selectedPages types.IntSet) ([]string, error) {
+	unit := ctx.UnitString()
 	if len(selectedPages) > 0 {
 		// TODO ctx.PageBoundaries(selectedPages)
 		pbs, err := ctx.PageBoundaries()
@@ -283,7 +281,7 @@ func (ctx *Context) pageInfo(selectedPages IntSet) ([]string, error) {
 		return nil, err
 	}
 
-	m := map[Dim]bool{}
+	m := map[types.Dim]bool{}
 	for _, d := range pd {
 		m[d] = true
 	}
@@ -291,7 +289,7 @@ func (ctx *Context) pageInfo(selectedPages IntSet) ([]string, error) {
 	ss := []string{}
 	s := "Page size:"
 	for d := range m {
-		dc := ctx.convertToUnit(d)
+		dc := ctx.ConvertToUnit(d)
 		ss = append(ss, fmt.Sprintf("%21s %.2f x %.2f %s", s, dc.Width, dc.Height, unit))
 		s = ""
 	}
@@ -299,7 +297,7 @@ func (ctx *Context) pageInfo(selectedPages IntSet) ([]string, error) {
 	return ss, nil
 }
 
-func (ctx *Context) addFlagsToInfoDigest(ss *[]string, separator string) {
+func addFlagsToInfoDigest(ctx *model.Context, ss *[]string, separator string) {
 
 	*ss = append(*ss, separator)
 
@@ -371,7 +369,7 @@ func (ctx *Context) addFlagsToInfoDigest(ss *[]string, separator string) {
 }
 
 // InfoDigest returns info about ctx.
-func (ctx *Context) InfoDigest(selectedPages IntSet) ([]string, error) {
+func InfoDigest(ctx *model.Context, selectedPages types.IntSet) ([]string, error) {
 	var separator = "............................................"
 	var ss []string
 	v := ctx.HeaderVersion
@@ -381,7 +379,7 @@ func (ctx *Context) InfoDigest(selectedPages IntSet) ([]string, error) {
 	ss = append(ss, fmt.Sprintf("%20s: %s", "PDF version", v))
 	ss = append(ss, fmt.Sprintf("%20s: %d", "Page count", ctx.PageCount))
 
-	pi, err := ctx.pageInfo(selectedPages)
+	pi, err := pageInfo(ctx, selectedPages)
 	if err != nil {
 		return nil, err
 	}
@@ -396,19 +394,19 @@ func (ctx *Context) InfoDigest(selectedPages IntSet) ([]string, error) {
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Creation date", ctx.CreationDate))
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Modification date", ctx.ModDate))
 
-	if err := ctx.addKeywordsToInfoDigest(&ss); err != nil {
+	if err := addKeywordsToInfoDigest(ctx, &ss); err != nil {
 		return nil, err
 	}
 
-	if err := ctx.addPropertiesToInfoDigest(&ss); err != nil {
+	if err := ctx.AddPropertiesToInfoDigest(&ss); err != nil {
 		return nil, err
 	}
 
-	ctx.addFlagsToInfoDigest(&ss, separator)
+	addFlagsToInfoDigest(ctx, &ss, separator)
 
-	ctx.addPermissionsToInfoDigest(&ss)
+	addPermissionsToInfoDigest(ctx, &ss)
 
-	if err := ctx.addAttachmentsToInfoDigest(&ss); err != nil {
+	if err := ctx.AddAttachmentsToInfoDigest(&ss); err != nil {
 		return nil, err
 	}
 

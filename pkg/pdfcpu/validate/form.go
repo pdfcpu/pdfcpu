@@ -17,26 +17,27 @@ limitations under the License.
 package validate
 
 import (
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
-// func validateSignatureDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
-
+// func validateSignatureDict(xRefTable *model.XRefTable, o pdf.Object) error {
+//
 // 	d, err := xRefTable.DereferenceDict(o)
 // 	if err != nil || d == nil {
 // 		return err
 // 	}
-
+//
 // 	// Type, optional, name
-// 	_, err = validateNameEntry(xRefTable, d, "signatureDict", "Type", OPTIONAL, pdf.V10, func(s string) bool { return s == "Sig" })
-
+// 	_, err = validateNameEntry(xRefTable, d, "signatureDict", "Type", OPTIONAL, model.V10, func(s string) bool { return s == "Sig" })
+//
 // 	// process signature dict fields.
-
+//
 // 	return err
 // }
 
-func validateAppearanceSubDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
+func validateAppearanceSubDict(xRefTable *model.XRefTable, d types.Dict) error {
 
 	// dict of xobjects
 	for _, o := range d {
@@ -51,7 +52,7 @@ func validateAppearanceSubDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 	return nil
 }
 
-func validateAppearanceDictEntry(xRefTable *pdf.XRefTable, o pdf.Object) error {
+func validateAppearanceDictEntry(xRefTable *model.XRefTable, o types.Object) error {
 
 	// stream or dict
 	// single appearance stream or subdict
@@ -63,10 +64,10 @@ func validateAppearanceDictEntry(xRefTable *pdf.XRefTable, o pdf.Object) error {
 
 	switch o := o.(type) {
 
-	case pdf.Dict:
+	case types.Dict:
 		err = validateAppearanceSubDict(xRefTable, o)
 
-	case pdf.StreamDict:
+	case types.StreamDict:
 		err = validateXObjectStreamDict(xRefTable, o)
 
 	default:
@@ -77,7 +78,7 @@ func validateAppearanceDictEntry(xRefTable *pdf.XRefTable, o pdf.Object) error {
 	return err
 }
 
-func validateAppearanceDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
+func validateAppearanceDict(xRefTable *model.XRefTable, o types.Object) error {
 
 	// see 12.5.5 Appearance Streams
 
@@ -89,7 +90,7 @@ func validateAppearanceDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
 	// Normal Appearance
 	o, ok := d.Find("N")
 	if !ok {
-		if xRefTable.ValidationMode == pdf.ValidationStrict {
+		if xRefTable.ValidationMode == model.ValidationStrict {
 			return errors.New("pdfcpu: validateAppearanceDict: missing required entry \"N\"")
 		}
 	} else {
@@ -118,13 +119,13 @@ func validateAppearanceDict(xRefTable *pdf.XRefTable, o pdf.Object) error {
 	return nil
 }
 
-func validateAcroFieldDictEntries(xRefTable *pdf.XRefTable, d pdf.Dict, terminalNode bool, inFieldType *pdf.Name) (outFieldType *pdf.Name, err error) {
+func validateAcroFieldDictEntries(xRefTable *model.XRefTable, d types.Dict, terminalNode bool, inFieldType *types.Name) (outFieldType *types.Name, err error) {
 
 	dictName := "acroFieldDict"
 
 	// FT: name, Btn,Tx,Ch,Sig
-	validate := func(s string) bool { return pdf.MemberOf(s, []string{"Btn", "Tx", "Ch", "Sig"}) }
-	fieldType, err := validateNameEntry(xRefTable, d, dictName, "FT", terminalNode && inFieldType == nil, pdf.V10, validate)
+	validate := func(s string) bool { return types.MemberOf(s, []string{"Btn", "Tx", "Ch", "Sig"}) }
+	fieldType, err := validateNameEntry(xRefTable, d, dictName, "FT", terminalNode && inFieldType == nil, model.V10, validate)
 	if err != nil {
 		return nil, err
 	}
@@ -134,49 +135,49 @@ func validateAcroFieldDictEntries(xRefTable *pdf.XRefTable, d pdf.Dict, terminal
 	}
 
 	// Parent, required if this is a child in the field hierarchy.
-	_, err = validateIndRefEntry(xRefTable, d, dictName, "Parent", OPTIONAL, pdf.V10)
+	_, err = validateIndRefEntry(xRefTable, d, dictName, "Parent", OPTIONAL, model.V10)
 	if err != nil {
 		return nil, err
 	}
 
 	// T, optional, text string
-	_, err = validateStringEntry(xRefTable, d, dictName, "T", OPTIONAL, pdf.V10, nil)
+	_, err = validateStringEntry(xRefTable, d, dictName, "T", OPTIONAL, model.V10, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// TU, optional, text string, since V1.3
-	_, err = validateStringEntry(xRefTable, d, dictName, "TU", OPTIONAL, pdf.V13, nil)
+	_, err = validateStringEntry(xRefTable, d, dictName, "TU", OPTIONAL, model.V13, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// TM, optional, text string, since V1.3
-	_, err = validateStringEntry(xRefTable, d, dictName, "TM", OPTIONAL, pdf.V13, nil)
+	_, err = validateStringEntry(xRefTable, d, dictName, "TM", OPTIONAL, model.V13, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// Ff, optional, integer
-	_, err = validateIntegerEntry(xRefTable, d, dictName, "Ff", OPTIONAL, pdf.V10, nil)
+	_, err = validateIntegerEntry(xRefTable, d, dictName, "Ff", OPTIONAL, model.V10, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// V, optional, various
-	_, err = validateEntry(xRefTable, d, dictName, "V", OPTIONAL, pdf.V10)
+	_, err = validateEntry(xRefTable, d, dictName, "V", OPTIONAL, model.V10)
 	if err != nil {
 		return nil, err
 	}
 
 	// DV, optional, various
-	_, err = validateEntry(xRefTable, d, dictName, "DV", OPTIONAL, pdf.V10)
+	_, err = validateEntry(xRefTable, d, dictName, "DV", OPTIONAL, model.V10)
 	if err != nil {
 		return nil, err
 	}
 
 	// AA, optional, dict, since V1.2
-	err = validateAdditionalActions(xRefTable, d, dictName, "AA", OPTIONAL, pdf.V14, "fieldOrAnnot")
+	err = validateAdditionalActions(xRefTable, d, dictName, "AA", OPTIONAL, model.V12, "fieldOrAnnot")
 	if err != nil {
 		return nil, err
 	}
@@ -184,9 +185,9 @@ func validateAcroFieldDictEntries(xRefTable *pdf.XRefTable, d pdf.Dict, terminal
 	return outFieldType, nil
 }
 
-func validateAcroFieldParts(xRefTable *pdf.XRefTable, d pdf.Dict, inFieldType *pdf.Name) error {
+func validateAcroFieldParts(xRefTable *model.XRefTable, d types.Dict, inFieldType *types.Name) error {
 	// dict represents a terminal field and must have Subtype "Widget"
-	if _, err := validateNameEntry(xRefTable, d, "acroFieldDict", "Subtype", REQUIRED, pdf.V10, func(s string) bool { return s == "Widget" }); err != nil {
+	if _, err := validateNameEntry(xRefTable, d, "acroFieldDict", "Subtype", REQUIRED, model.V10, func(s string) bool { return s == "Widget" }); err != nil {
 		return err
 	}
 
@@ -200,7 +201,7 @@ func validateAcroFieldParts(xRefTable *pdf.XRefTable, d pdf.Dict, inFieldType *p
 	return err
 }
 
-func validateAcroFieldKid(xRefTable *pdf.XRefTable, d pdf.Dict, o pdf.Object, inFieldType *pdf.Name) error {
+func validateAcroFieldKid(xRefTable *model.XRefTable, d types.Dict, o types.Object, inFieldType *types.Name) error {
 	var err error
 	// dict represents a non terminal field.
 	if d.Subtype() != nil && *d.Subtype() == "Widget" {
@@ -208,7 +209,7 @@ func validateAcroFieldKid(xRefTable *pdf.XRefTable, d pdf.Dict, o pdf.Object, in
 	}
 
 	// Validate field entries.
-	var xInFieldType *pdf.Name
+	var xInFieldType *types.Name
 	if xInFieldType, err = validateAcroFieldDictEntries(xRefTable, d, false, inFieldType); err != nil {
 		return err
 	}
@@ -220,7 +221,7 @@ func validateAcroFieldKid(xRefTable *pdf.XRefTable, d pdf.Dict, o pdf.Object, in
 	}
 
 	for _, value := range a {
-		ir, ok := value.(pdf.IndirectRef)
+		ir, ok := value.(types.IndirectRef)
 		if !ok {
 			return errors.New("pdfcpu: validateAcroFieldKid: corrupt kids array: entries must be indirect reference")
 		}
@@ -239,13 +240,13 @@ func validateAcroFieldKid(xRefTable *pdf.XRefTable, d pdf.Dict, o pdf.Object, in
 	return nil
 }
 
-func validateAcroFieldDict(xRefTable *pdf.XRefTable, ir pdf.IndirectRef, inFieldType *pdf.Name) error {
+func validateAcroFieldDict(xRefTable *model.XRefTable, ir types.IndirectRef, inFieldType *types.Name) error {
 	d, err := xRefTable.DereferenceDict(ir)
 	if err != nil || d == nil {
 		return err
 	}
 
-	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		if len(d) == 0 {
 			return nil
 		}
@@ -262,7 +263,7 @@ func validateAcroFieldDict(xRefTable *pdf.XRefTable, ir pdf.IndirectRef, inField
 	return validateAcroFieldParts(xRefTable, d, inFieldType)
 }
 
-func validateAcroFormFields(xRefTable *pdf.XRefTable, o pdf.Object) error {
+func validateAcroFormFields(xRefTable *model.XRefTable, o types.Object) error {
 
 	a, err := xRefTable.DereferenceArray(o)
 	if err != nil || len(a) == 0 {
@@ -271,7 +272,7 @@ func validateAcroFormFields(xRefTable *pdf.XRefTable, o pdf.Object) error {
 
 	for _, value := range a {
 
-		ir, ok := value.(pdf.IndirectRef)
+		ir, ok := value.(types.IndirectRef)
 		if !ok {
 			return errors.New("pdfcpu: validateAcroFormFields: corrupt form field array entry")
 		}
@@ -292,7 +293,7 @@ func validateAcroFormFields(xRefTable *pdf.XRefTable, o pdf.Object) error {
 	return nil
 }
 
-func validateAcroFormCO(xRefTable *pdf.XRefTable, o pdf.Object, sinceVersion pdf.Version) error {
+func validateAcroFormCO(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
 
 	// see 12.6.3 Trigger Events
 	// Array of indRefs to field dicts with calculation actions, since V1.3
@@ -306,7 +307,7 @@ func validateAcroFormCO(xRefTable *pdf.XRefTable, o pdf.Object, sinceVersion pdf
 	return validateAcroFormFields(xRefTable, o)
 }
 
-func validateAcroFormXFA(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion pdf.Version) error {
+func validateAcroFormXFA(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
 
 	// see 12.7.8
 
@@ -324,10 +325,10 @@ func validateAcroFormXFA(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion pdf.
 
 	switch o := o.(type) {
 
-	case pdf.StreamDict:
+	case types.StreamDict:
 		// no further processing
 
-	case pdf.Array:
+	case types.Array:
 
 		i := 0
 
@@ -344,14 +345,14 @@ func validateAcroFormXFA(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion pdf.
 
 			if i%2 == 0 {
 
-				_, ok := o.(pdf.StringLiteral)
+				_, ok := o.(types.StringLiteral)
 				if !ok {
 					return errors.New("pdfcpu: validateAcroFormXFA: even array must be a string")
 				}
 
 			} else {
 
-				_, ok := o.(pdf.StreamDict)
+				_, ok := o.(types.StreamDict)
 				if !ok {
 					return errors.New("pdfcpu: validateAcroFormXFA: odd array entry must be a streamDict")
 				}
@@ -370,7 +371,7 @@ func validateAcroFormXFA(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion pdf.
 
 func validateQ(i int) bool { return i >= 0 && i <= 2 }
 
-func validateAcroFormEntryCO(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion pdf.Version) error {
+func validateAcroFormEntryCO(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
 
 	o, ok := d.Find("CO")
 	if !ok {
@@ -380,7 +381,7 @@ func validateAcroFormEntryCO(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion 
 	return validateAcroFormCO(xRefTable, o, sinceVersion)
 }
 
-func validateAcroFormEntryDR(xRefTable *pdf.XRefTable, d pdf.Dict) error {
+func validateAcroFormEntryDR(xRefTable *model.XRefTable, d types.Dict) error {
 
 	o, ok := d.Find("DR")
 	if !ok {
@@ -392,7 +393,7 @@ func validateAcroFormEntryDR(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 	return err
 }
 
-func validateAcroForm(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool, sinceVersion pdf.Version) error {
+func validateAcroForm(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
 
 	// => 12.7.2 Interactive Form Dictionary
 
@@ -424,13 +425,13 @@ func validateAcroForm(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool
 	dictName := "acroFormDict"
 
 	// NeedAppearances: optional, boolean
-	_, err = validateBooleanEntry(xRefTable, d, dictName, "NeedAppearances", OPTIONAL, pdf.V10, nil)
+	_, err = validateBooleanEntry(xRefTable, d, dictName, "NeedAppearances", OPTIONAL, model.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// SigFlags: optional, since 1.3, integer
-	sf, err := validateIntegerEntry(xRefTable, d, dictName, "SigFlags", OPTIONAL, pdf.V13, nil)
+	sf, err := validateIntegerEntry(xRefTable, d, dictName, "SigFlags", OPTIONAL, model.V13, nil)
 	if err != nil {
 		return err
 	}
@@ -441,7 +442,7 @@ func validateAcroForm(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool
 	}
 
 	// CO: arra
-	err = validateAcroFormEntryCO(xRefTable, d, pdf.V13)
+	err = validateAcroFormEntryCO(xRefTable, d, model.V13)
 	if err != nil {
 		return err
 	}
@@ -453,13 +454,13 @@ func validateAcroForm(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool
 	}
 
 	// DA: optional, string
-	_, err = validateStringEntry(xRefTable, d, dictName, "DA", OPTIONAL, pdf.V10, nil)
+	_, err = validateStringEntry(xRefTable, d, dictName, "DA", OPTIONAL, model.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// Q: optional, integer
-	_, err = validateIntegerEntry(xRefTable, d, dictName, "Q", OPTIONAL, pdf.V10, validateQ)
+	_, err = validateIntegerEntry(xRefTable, d, dictName, "Q", OPTIONAL, model.V10, validateQ)
 	if err != nil {
 		return err
 	}

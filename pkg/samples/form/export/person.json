@@ -1,0 +1,109 @@
+{
+	"header": {
+		"source": "person.pdf",
+		"version": "pdfcpu v0.4.0 dev",
+		"creation": "2023-02-10 21:43:44 CET",
+		"producer": "pdfcpu v0.4.0 dev"
+	},
+	"forms": [
+		{
+			"textfield": [
+				{
+					"id": "firstName",
+					"value": "",
+					"multiline": false,
+					"locked": false
+				},
+				{
+					"id": "lastName",
+					"value": "",
+					"multiline": false,
+					"locked": false
+				},
+				{
+					"id": "country",
+					"value": "",
+					"multiline": false,
+					"locked": false
+				},
+				{
+					"id": "planet",
+					"default": "Earth",
+					"value": "Earth",
+					"multiline": false,
+					"locked": true
+				},
+				{
+					"id": "occup",
+					"value": "",
+					"multiline": false,
+					"locked": false
+				}
+			],
+			"datefield": [
+				{
+					"id": "dob",
+					"format": "dd.mm.yyyy",
+					"value": "",
+					"locked": false
+				}
+			],
+			"checkbox": [
+				{
+					"id": "dobVerified",
+					"default": false,
+					"value": false,
+					"locked": false
+				}
+			],
+			"radiobuttongroup": [
+				{
+					"id": "gender",
+					"options": [
+						"female",
+						"male",
+						"non-binary"
+					],
+					"value": "",
+					"locked": false
+				}
+			],
+			"combobox": [
+				{
+					"id": "status",
+					"editable": false,
+					"options": [
+						"alive",
+						"deceased",
+						"imprisoned",
+						"killed",
+						"unknown"
+					],
+					"default": "unknown",
+					"value": "unknown",
+					"locked": false
+				},
+				{
+					"id": "license",
+					"editable": false,
+					"options": [
+						"CC BY 2.0",
+						"CC BY 3.0",
+						"CC BY 4.0",
+						"CC BY-SA 3.0",
+						"CC BY-SA 3.0 de",
+						"CC BY-SA 4.0",
+						"Copyrighted free use",
+						"PDM-owner",
+						"Public Domain",
+						"Twitter",
+						"fair use",
+						"unknown"
+					],
+					"value": "",
+					"locked": false
+				}
+			]
+		}
+	]
+}

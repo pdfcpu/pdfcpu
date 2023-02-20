@@ -1,0 +1,794 @@
+{
+	"paper": "A4L",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": true,
+	"debug": false,
+	"guides": true,
+	"colors": {
+		"DarkOrange": "#FF8C00",
+		"Beige": "#F5F5DC"
+	},
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"fonts": {
+		"myCourier": {
+			"name": "Courier",
+			"size": 12
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"borders": {
+		"myBorder": {
+			"width": 5,
+			"col": "#FF0000",
+			"style": "round"
+		}
+	},
+	"padding": {
+		"width": 10
+	},
+	"header": {
+		"font": {
+			"name": "Courier-Bold",
+			"size": 24,
+			"col": "#FF0000"
+		},
+		"bgCol": "#FFFFFF",
+		"left": "$logo1",
+		"center": "Imageboxes",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 10,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "$myCourier"
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Page %p of %P",
+		"right": "Source:\ntestdata/json/create/images.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"texts": {
+		"label": {
+			"dx": 2,
+			"dy": 2,
+			"font": {
+				"name": "$myCourier"
+			}
+		}
+	},
+	"pages": {
+		"1": {
+			"bgcol": "#8fbc2f",
+			"content": {
+				"bgcol": "#8fbcff",
+				"border": {
+					"width": 10,
+					"col": "#698b69",
+					"style": "round"
+				},
+				"guides": [
+					{
+						"pos": [
+							250,
+							150
+						]
+					},
+					{
+						"pos": [
+							250,
+							350
+						]
+					},
+					{
+						"pos": [
+							450,
+							-1
+						]
+					},
+					{
+						"pos": [
+							100,
+							100
+						]
+					}
+				],
+				"image": [
+					{
+						"src": "../../testdata/resources/demo.png",
+						"pos": [
+							0,
+							0
+						],
+						"width": 200,
+						"height": 100,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						}
+					},
+					{
+						"src": "../../testdata/resources/demo.png",
+						"pos": [
+							0,
+							150
+						],
+						"width": 100,
+						"height": 200,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						}
+					},
+					{
+						"src": "../../testdata/resources/demo.png",
+						"pos": [
+							250,
+							0
+						],
+						"width": 200,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						}
+					},
+					{
+						"src": "../../testdata/resources/demo.png",
+						"pos": [
+							250,
+							150
+						],
+						"height": 200,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						}
+					}
+				],
+				"text": [
+					{
+						"name": "$label",
+						"value": "w=200, h=100",
+						"pos": [
+							0,
+							100
+						]
+					},
+					{
+						"name": "$label",
+						"value": "w=100, h=200",
+						"pos": [
+							0,
+							350
+						]
+					},
+					{
+						"name": "$label",
+						"value": "w=200",
+						"pos": [
+							450,
+							0
+						]
+					},
+					{
+						"name": "$label",
+						"value": "h=200",
+						"pos": [
+							250,
+							350
+						]
+					},
+					{
+						"name": "$label",
+						"value": "border:5",
+						"align": "center",
+						"pos": [
+							-1,
+							375
+						],
+						"font": {
+							"name": "$myCourier",
+							"size": 18
+						}
+					}
+				]
+			}
+		},
+		"2": {
+			"bgcol": "#8fbc2f",
+			"content": {
+				"bgcol": "#8fbcff",
+				"border": {
+					"width": 10,
+					"col": "#698b69",
+					"style": "round"
+				},
+				"guides": [
+					{
+						"pos": [
+							250,
+							150
+						]
+					},
+					{
+						"pos": [
+							250,
+							350
+						]
+					}
+				],
+				"image": [
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"pos": [
+							0,
+							0
+						],
+						"width": 200,
+						"height": 100,
+						"bgCol": "$Beige",
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						},
+						"padding": {
+							"width": 10
+						}
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"pos": [
+							0,
+							150
+						],
+						"width": 100,
+						"height": 200,
+						"bgCol": "$Beige",
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						},
+						"padding": {
+							"width": 10
+						}
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"pos": [
+							250,
+							0
+						],
+						"width": 200,
+						"bgCol": "$Beige",
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						},
+						"padding": {
+							"width": 10
+						}
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"pos": [
+							250,
+							150
+						],
+						"height": 200,
+						"bgCol": "$Beige",
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						},
+						"padding": {
+							"width": 10
+						}
+					}
+				],
+				"text": [
+					{
+						"name": "$label",
+						"value": "w=200, h=100",
+						"pos": [
+							0,
+							100
+						]
+					},
+					{
+						"name": "$label",
+						"value": "w=100, h=200",
+						"pos": [
+							0,
+							350
+						]
+					},
+					{
+						"name": "$label",
+						"value": "w=200",
+						"pos": [
+							450,
+							0
+						]
+					},
+					{
+						"name": "$label",
+						"value": "h=200",
+						"pos": [
+							250,
+							350
+						]
+					},
+					{
+						"name": "$label",
+						"value": "bgCol, border:5, padding: 10",
+						"align": "center",
+						"pos": [
+							-1,
+							375
+						],
+						"font": {
+							"name": "$myCourier",
+							"size": 18
+						}
+					}
+				]
+			}
+		},
+		"3": {
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							-1,
+							-1
+						]
+					},
+					{
+						"pos": [
+							-1,
+							100
+						]
+					},
+					{
+						"pos": [
+							174,
+							-1
+						]
+					}
+				],
+				"image": [
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "topleft",
+						"height": 100,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						}
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "topcenter",
+						"height": 100,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						},
+						"padding": {
+							"width": 10
+						},
+						"bgCol": "$Beige"
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "topright",
+						"height": 100
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "left",
+						"height": 100,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						},
+						"padding": {
+							"width": 10
+						},
+						"bgCol": "$Beige"
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "center",
+						"height": 100
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "right",
+						"height": 100,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						}
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "bottomleft",
+						"height": 100
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "bottomcenter",
+						"height": 100,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						}
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "bottomright",
+						"height": 100,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						},
+						"padding": {
+							"width": 10
+						},
+						"bgCol": "$Beige"
+					}
+				],
+				"text": [
+					{
+						"name": "$label",
+						"value": "anchored, height: 100",
+						"align": "center",
+						"pos": [
+							-1,
+							290
+						],
+						"font": {
+							"name": "$myCourier",
+							"size": 18
+						}
+					}
+				]
+			}
+		},
+		"4": {
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							-1,
+							-1
+						]
+					},
+					{
+						"pos": [
+							-1,
+							86
+						]
+					},
+					{
+						"pos": [
+							150,
+							-1
+						]
+					}
+				],
+				"image": [
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "topleft",
+						"width": 150,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						}
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "topcenter",
+						"width": 150,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						},
+						"padding": {
+							"width": 10
+						},
+						"bgCol": "$Beige"
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "topright",
+						"width": 150
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "left",
+						"width": 150,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						},
+						"padding": {
+							"width": 10
+						},
+						"bgCol": "$Beige"
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "center",
+						"width": 150
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "right",
+						"width": 150,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						}
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "bottomleft",
+						"width": 150
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "bottomcenter",
+						"width": 150,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						}
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "bottomright",
+						"width": 150,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						},
+						"padding": {
+							"width": 10
+						},
+						"bgCol": "$Beige"
+					}
+				],
+				"text": [
+					{
+						"name": "$label",
+						"value": "anchored, width: 150",
+						"align": "center",
+						"pos": [
+							-1,
+							290
+						],
+						"font": {
+							"name": "$myCourier",
+							"size": 18
+						}
+					}
+				]
+			}
+		},
+		"5": {
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							-1,
+							-1
+						]
+					},
+					{
+						"pos": [
+							100,
+							100
+						]
+					}
+				],
+				"image": [
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "topleft",
+						"width": 100,
+						"height":100,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						}
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "topcenter",
+						"width": 100,
+						"height":100,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						},
+						"padding": {
+							"width": 10
+						},
+						"bgCol": "$Beige"
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "topright",
+						"width": 100,
+						"height":100
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "left",
+						"width": 100,
+						"height":100,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						},
+						"padding": {
+							"width": 10
+						},
+						"bgCol": "$Beige"
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "center",
+						"width": 100,
+						"height":100
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "right",
+						"width": 100,
+						"height":100,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						}
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "bottomleft",
+						"width": 100,
+						"height":100
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "bottomcenter",
+						"width": 100,
+						"height":100,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						}
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "bottomright",
+						"width": 100,
+						"height":100,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						},
+						"padding": {
+							"width": 10
+						},
+						"bgCol": "$Beige"
+					}
+				],
+				"text": [
+					{
+						"name": "$label",
+						"value": "anchored, width: 100, height: 100",
+						"align": "center",
+						"pos": [
+							-1,
+							290
+						],
+						"font": {
+							"name": "$myCourier",
+							"size": 18
+						}
+					}
+				]
+			}
+		}
+	}
+}

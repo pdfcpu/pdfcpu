@@ -35,11 +35,11 @@ func TestPagesCommand(t *testing.T) {
 	}
 
 	// Insert an empty page before pages 1 and 2.
-	cmd := cli.InsertPagesCommand(inFile, outFile, []string{"-2"}, nil, "before")
+	cmd := cli.InsertPagesCommand(inFile, outFile, []string{"-2"}, conf, "before")
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
-	if err := validateFile(t, outFile, nil); err != nil {
+	if err := validateFile(t, outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
@@ -52,11 +52,11 @@ func TestPagesCommand(t *testing.T) {
 	}
 
 	// Remove pages 1 and 2.
-	cmd = cli.RemovePagesCommand(outFile, "", []string{"-2"}, nil)
+	cmd = cli.RemovePagesCommand(outFile, "", []string{"-2"}, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
-	if err := validateFile(t, outFile, nil); err != nil {
+	if err := validateFile(t, outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 

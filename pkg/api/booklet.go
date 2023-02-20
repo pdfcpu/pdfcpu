@@ -23,13 +23,15 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 // BookletFromImages creates a booklet from images.
-func BookletFromImages(conf *pdfcpu.Configuration, imageFileNames []string, nup *pdfcpu.NUp) (*pdfcpu.Context, error) {
+func BookletFromImages(conf *model.Configuration, imageFileNames []string, nup *model.NUp) (*model.Context, error) {
 	if nup.PageDim == nil {
 		// Set default paper size.
-		nup.PageDim = pdfcpu.PaperSize[nup.PageSize]
+		nup.PageDim = types.PaperSize[nup.PageSize]
 	}
 
 	ctx, err := pdfcpu.CreateContextWithXRefTable(conf, nup.PageDim)
@@ -54,16 +56,16 @@ func BookletFromImages(conf *pdfcpu.Configuration, imageFileNames []string, nup 
 }
 
 // Booklet arranges PDF pages on larger sheets of paper and writes the result to w.
-func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *pdfcpu.NUp, conf *pdfcpu.Configuration) error {
+func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *model.NUp, conf *model.Configuration) error {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.BOOKLET
+	conf.Cmd = model.BOOKLET
 
 	log.Info.Printf("%s", nup)
 
 	var (
-		ctx *pdfcpu.Context
+		ctx *model.Context
 		err error
 	)
 
@@ -88,12 +90,12 @@ func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nu
 			return err
 		}
 
-		if err = ctx.BookletFromPDF(pages, nup); err != nil {
+		if err = pdfcpu.BookletFromPDF(ctx, pages, nup); err != nil {
 			return err
 		}
 	}
 
-	if conf.ValidationMode != pdfcpu.ValidationNone {
+	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
 			return err
 		}
@@ -109,7 +111,7 @@ func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nu
 }
 
 // BookletFile rearranges PDF pages or images into a booklet layout and writes the result to outFile.
-func BookletFile(inFiles []string, outFile string, selectedPages []string, nup *pdfcpu.NUp, conf *pdfcpu.Configuration) (err error) {
+func BookletFile(inFiles []string, outFile string, selectedPages []string, nup *model.NUp, conf *model.Configuration) (err error) {
 
 	var f1, f2 *os.File
 

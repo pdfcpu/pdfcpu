@@ -18,92 +18,146 @@ package pdfcpu
 
 import (
 	"fmt"
-	"io"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-// Image is a Reader representing an image resource.
-type Image struct {
-	io.Reader
-	Name        string // Resource name
-	FileType    string
-	pageNr      int
-	objNr       int
-	Width       int    // "Width"
-	Height      int    // "Height"
-	bpc         int    // "BitsPerComponent"
-	cs          string // "ColorSpace"
-	comp        int    // color component count
-	sMask       bool   // "SMask"
-	imgMask     bool   // "ImageMask"
-	thumb       bool   // "Thumbnail"
-	interpol    bool   // "Interpolate"
-	Size        int64  // "Length"
-	filter      string // filter pipeline
-	decodeParms string
-}
-
-func (ctx *Context) listImages(iii [][]Image, maxLenID, maxLenSize int) ([]string, int, error) {
+func listImages(ctx *model.Context, mm []map[int]model.Image, maxLenObjNr, maxLenID, maxLenSize, maxLenFilters int) ([]string, int, int64, error) {
 	ss := []string{}
 	first := true
-	j := 0
-	for _, ii := range iii {
+	j, size := 0, int64(0)
+	m := map[int]bool{}
+	horSep := []int{}
+	for _, ii := range mm {
 		if first {
-			s1 := ("page  obj# ")
-			s2 := fmt.Sprintf("%%%ds", maxLenID)
-			s3 := "  type width height colorspace comp bpc interp "
-			s4 := fmt.Sprintf("%%%ds", maxLenSize)
-			s5 := " filters"
-			s := fmt.Sprintf(s1+s2+s3+s4+s5, "id", "size")
+			s := "Page Obj# "
+			if maxLenObjNr > 4 {
+				s += strings.Repeat(" ", maxLenObjNr-4)
+				horSep = append(horSep, 10+maxLenObjNr-4)
+			} else {
+				horSep = append(horSep, 10)
+			}
+
+			s += draw.VBar + " Id "
+			if maxLenID > 2 {
+				s += strings.Repeat(" ", maxLenID-2)
+				horSep = append(horSep, 4+maxLenID-2)
+			} else {
+				horSep = append(horSep, 4)
+			}
+
+			s += draw.VBar + " Type  SoftMask ImgMask "
+			horSep = append(horSep, 24)
+
+			s += draw.VBar + " Width " + draw.VBar + " Height " + draw.VBar + " ColorSpace Comp bpc Interp "
+			horSep = append(horSep, 7, 8, 28)
+
+			s += draw.VBar + " "
+			if maxLenSize > 4 {
+				s += strings.Repeat(" ", maxLenSize-4)
+				horSep = append(horSep, 6+maxLenSize-4)
+			} else {
+				horSep = append(horSep, 6)
+			}
+			s += "Size " + draw.VBar + " Filters"
+			if maxLenFilters > 7 {
+				horSep = append(horSep, 8+maxLenFilters-7)
+			} else {
+				horSep = append(horSep, 8)
+			}
 			ss = append(ss, s)
-			ss = append(ss, strings.Repeat("=", len(s)))
 			first = false
 		}
+		ss = append(ss, draw.HorSepLine(horSep))
+
 		newPage := true
-		for _, img := range ii {
+
+		objNrs := []int{}
+		for k := range ii {
+			objNrs = append(objNrs, k)
+		}
+		sort.Ints(objNrs)
+
+		for _, objNr := range objNrs {
+			img := ii[objNr]
 			pageNr := ""
 			if newPage {
-				pageNr = strconv.Itoa(img.pageNr)
+				pageNr = strconv.Itoa(img.PageNr)
 				newPage = false
 			}
 			t := "image"
-			if img.sMask {
-				t = "smask"
-			}
-			if img.imgMask {
+			if img.IsImgMask {
 				t = "imask"
 			}
-			if img.thumb {
+			if img.Thumb {
 				t = "thumb"
 			}
+
+			sm := " "
+			if img.HasSMask {
+				sm = "*"
+			}
+
+			im := " "
+			if img.HasImgMask {
+				im = "*"
+			}
+
 			bpc := "-"
-			if img.bpc > 0 {
-				bpc = strconv.Itoa(img.bpc)
+			if img.Bpc > 0 {
+				bpc = strconv.Itoa(img.Bpc)
 			}
 
 			interp := " "
-			if img.interpol {
+			if img.Interpol {
 				interp = "*"
 			}
 
-			sID := fmt.Sprintf("%%%ds", maxLenID)
-			sSize := fmt.Sprintf("%%%ds", maxLenSize)
+			s := strconv.Itoa(img.ObjNr)
+			fill1 := strings.Repeat(" ", maxLenObjNr-len(s))
+			if maxLenObjNr < 4 {
+				fill1 += strings.Repeat(" ", 4-maxLenObjNr)
+			}
 
-			ss = append(ss, fmt.Sprintf("%4s %5d "+sID+" %s %5d  %5d %10s    %d   %s    %s   "+sSize+" %s",
-				pageNr, img.objNr, img.Name, t, img.Width, img.Height, img.cs, img.comp, bpc, interp, ByteSize(img.Size), img.filter))
-			j++
+			fill2 := strings.Repeat(" ", maxLenID-len(img.Name))
+			if maxLenID < 2 {
+				fill2 += strings.Repeat(" ", 2-maxLenID-len(img.Name))
+			}
+
+			sizeStr := types.ByteSize(img.Size).String()
+			fill3 := strings.Repeat(" ", maxLenSize-len(sizeStr))
+			if maxLenSize < 4 {
+				fill3 = strings.Repeat(" ", 4-maxLenSize)
+			}
+
+			ss = append(ss, fmt.Sprintf("%4s %s%s %s %s%s %s %s    %s        %s    %s %5d %s  %5d %s %10s    %d   %s    %s   %s %s%s %s %s",
+				pageNr, fill1, strconv.Itoa(img.ObjNr), draw.VBar,
+				fill2, img.Name, draw.VBar,
+				t, sm, im, draw.VBar,
+				img.Width, draw.VBar,
+				img.Height, draw.VBar,
+				img.Cs, img.Comp, bpc, interp, draw.VBar,
+				fill3, sizeStr, draw.VBar, img.Filter))
+
+			if !m[img.ObjNr] {
+				m[img.ObjNr] = true
+				j++
+				size += img.Size
+			}
 		}
 	}
-	return ss, j, nil
+	return ss, j, size, nil
 }
 
 // ListImages returns a list of embedded images.
-func (ctx *Context) ListImages(selectedPages IntSet) ([]string, error) {
+func ListImages(ctx *model.Context, selectedPages types.IntSet) ([]string, error) {
 	pageNrs := []int{}
 	for k, v := range selectedPages {
 		if !v {
@@ -113,51 +167,58 @@ func (ctx *Context) ListImages(selectedPages IntSet) ([]string, error) {
 	}
 	sort.Ints(pageNrs)
 
-	iii := [][]Image{}
+	mm := []map[int]model.Image{}
 	var (
-		maxLenID, maxLenSize int
+		maxLenObjNr, maxLenID, maxLenSize, maxLenFilters int
 	)
 
 	for _, i := range pageNrs {
-		ii, err := ctx.ExtractPageImages(i, true)
+		m, err := ExtractPageImages(ctx, i, true)
 		if err != nil {
 			return nil, err
 		}
-		if len(ii) == 0 {
+		if len(m) == 0 {
 			continue
 		}
-		for _, i := range ii {
+		for _, i := range m {
+			s := strconv.Itoa(i.ObjNr)
+			if len(s) > maxLenObjNr {
+				maxLenObjNr = len(s)
+			}
 			if len(i.Name) > maxLenID {
 				maxLenID = len(i.Name)
 			}
-			lenSize := len(ByteSize(i.Size).String())
+			lenSize := len(types.ByteSize(i.Size).String())
 			if lenSize > maxLenSize {
 				maxLenSize = lenSize
 			}
+			if len(i.Filter) > maxLenFilters {
+				maxLenFilters = len(i.Filter)
+			}
 		}
-		iii = append(iii, ii)
+		mm = append(mm, m)
 	}
 
-	ss, j, err := ctx.listImages(iii, maxLenID, maxLenSize)
+	ss, j, size, err := listImages(ctx, mm, maxLenObjNr, maxLenID, maxLenSize, maxLenFilters)
 	if err != nil {
 		return nil, err
 	}
 
-	return append([]string{fmt.Sprintf("%d images available", j)}, ss...), nil
+	return append([]string{fmt.Sprintf("%d images available(%s)", j, types.ByteSize(size))}, ss...), nil
 }
 
 // WriteImageToDisk returns a closure for writing img to disk.
-func WriteImageToDisk(outDir, fileName string) func(Image, bool, int) error {
-	return func(img Image, singleImgPerPage bool, maxPageDigits int) error {
+func WriteImageToDisk(outDir, fileName string) func(model.Image, bool, int) error {
+	return func(img model.Image, singleImgPerPage bool, maxPageDigits int) error {
 		if img.Reader == nil {
 			return nil
 		}
 		s := "%s_%" + fmt.Sprintf("0%dd", maxPageDigits)
 		qual := img.Name
-		if img.thumb {
+		if img.Thumb {
 			qual = "thumb"
 		}
-		f := fmt.Sprintf(s+"_%s.%s", fileName, img.pageNr, qual, img.FileType)
+		f := fmt.Sprintf(s+"_%s.%s", fileName, img.PageNr, qual, img.FileType)
 		// if singleImgPerPage {
 		// 	if img.thumb {
 		// 		s += "_" + qual

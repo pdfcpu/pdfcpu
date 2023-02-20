@@ -21,7 +21,7 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 func TestListBoxesCommand(t *testing.T) {
@@ -29,7 +29,7 @@ func TestListBoxesCommand(t *testing.T) {
 	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
 
 	// List all page boundaries for all pages.
-	cmd := cli.ListBoxesCommand(inFile, nil, nil, nil)
+	cmd := cli.ListBoxesCommand(inFile, nil, nil, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -52,25 +52,25 @@ func TestCropCommand(t *testing.T) {
 
 	for _, tt := range []struct {
 		s string
-		u pdfcpu.DisplayUnit
+		u types.DisplayUnit
 	}{
-		{"0 0 10 0", pdfcpu.POINTS},
-		{"[0 0 5 5]", pdfcpu.CENTIMETRES},
-		{"100", pdfcpu.POINTS},
-		{"20% 40%", pdfcpu.POINTS},
-		{"dim:30 30", pdfcpu.POINTS},
-		{"dim:50% 50%", pdfcpu.POINTS},
-		{"pos:bl, dim:50% 50%", pdfcpu.POINTS},
-		{"pos:tl, off: 10 -10, dim:50% 50%", pdfcpu.POINTS},
-		{"-1", pdfcpu.INCHES},
-		{"-25%", pdfcpu.POINTS},
+		{"0 0 10 0", types.POINTS},
+		{"[0 0 5 5]", types.CENTIMETRES},
+		{"100", types.POINTS},
+		{"20% 40%", types.POINTS},
+		{"dim:30 30", types.POINTS},
+		{"dim:50% 50%", types.POINTS},
+		{"pos:bl, dim:50% 50%", types.POINTS},
+		{"pos:tl, off: 10 -10, dim:50% 50%", types.POINTS},
+		{"-1", types.INCHES},
+		{"-25%", types.POINTS},
 	} {
 		box, err := api.Box(tt.s, tt.u)
 		if err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
 
-		cmd := cli.CropCommand(inFile, outFile, nil, box, nil)
+		cmd := cli.CropCommand(inFile, outFile, nil, box, conf)
 		if _, err := cli.Process(cmd); err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
@@ -84,22 +84,22 @@ func TestAddBoxesCommand(t *testing.T) {
 
 	for _, tt := range []struct {
 		s string
-		u pdfcpu.DisplayUnit
+		u types.DisplayUnit
 	}{
-		{"crop:[0 0 5 5]", pdfcpu.CENTIMETRES}, // Crop 5 x 5 cm at bottom left corner
-		{"crop:10", pdfcpu.POINTS},
-		{"crop:-10", pdfcpu.POINTS},
-		{"crop:10 20, trim:crop, art:bleed, bleed:art", pdfcpu.POINTS},
-		{"crop:10 20, trim:crop, art:bleed, bleed:media", pdfcpu.POINTS},
-		{"c:10 20, t:c, a:b, b:m", pdfcpu.POINTS},
-		{"crop:10, trim:20, art:trim", pdfcpu.POINTS},
+		{"crop:[0 0 5 5]", types.CENTIMETRES}, // Crop 5 x 5 cm at bottom left corner
+		{"crop:10", types.POINTS},
+		{"crop:-10", types.POINTS},
+		{"crop:10 20, trim:crop, art:bleed, bleed:art", types.POINTS},
+		{"crop:10 20, trim:crop, art:bleed, bleed:media", types.POINTS},
+		{"c:10 20, t:c, a:b, b:m", types.POINTS},
+		{"crop:10, trim:20, art:trim", types.POINTS},
 	} {
 		pb, err := api.PageBoundaries(tt.s, tt.u)
 		if err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
 
-		cmd := cli.AddBoxesCommand(inFile, outFile, nil, pb, nil)
+		cmd := cli.AddBoxesCommand(inFile, outFile, nil, pb, conf)
 		if _, err := cli.Process(cmd); err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
@@ -111,11 +111,11 @@ func TestAddRemoveBoxesCommand(t *testing.T) {
 	inFile := filepath.Join(inDir, "test.pdf")
 	outFile := filepath.Join(outDir, "out.pdf")
 
-	pb, err := api.PageBoundaries("crop:[0 0 100 100]", pdfcpu.POINTS)
+	pb, err := api.PageBoundaries("crop:[0 0 100 100]", types.POINTS)
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	cmd := cli.AddBoxesCommand(inFile, outFile, nil, pb, nil)
+	cmd := cli.AddBoxesCommand(inFile, outFile, nil, pb, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -124,7 +124,7 @@ func TestAddRemoveBoxesCommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	cmd = cli.RemoveBoxesCommand(inFile, outFile, nil, pb, nil)
+	cmd = cli.RemoveBoxesCommand(inFile, outFile, nil, pb, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}

@@ -19,7 +19,8 @@ package api
 import (
 	"fmt"
 
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 func ExampleValidateFile() {
@@ -30,14 +31,14 @@ func ExampleValidateFile() {
 
 func ExampleOptimizeFile() {
 
-	conf := pdfcpu.NewDefaultConfiguration()
+	conf := model.NewDefaultConfiguration()
 
 	// Set passwords for encrypted files.
 	conf.UserPW = "upw"
 	conf.OwnerPW = "opw"
 
 	// Configure end of line sequence for writing.
-	conf.Eol = pdfcpu.EolLF
+	conf.Eol = types.EolLF
 
 	// Create an optimized version of in.pdf and write it to out.pdf.
 	OptimizeFile("in.pdf", "out.pdf", conf)
@@ -125,22 +126,22 @@ func ExampleAddWatermarksFile() {
 	// Add a "Demo" watermark to all pages of in.pdf along the diagonal running from lower left to upper right.
 	onTop := false
 	update := false
-	wm, _ := TextWatermark("Demo", "", onTop, update, pdfcpu.POINTS)
+	wm, _ := TextWatermark("Demo", "", onTop, update, types.POINTS)
 	AddWatermarksFile("in.pdf", "", nil, wm, nil)
 
 	// Stamp all odd pages of in.pdf in red "Confidential" in 48 point Courier
 	// using a rotation angle of 45 degrees and an absolute scalefactor of 1.0.
 	onTop = true
-	wm, _ = TextWatermark("Confidential", "font:Courier, points:48, col: 1 0 0, rot:45, sc:1 abs, ", onTop, update, pdfcpu.POINTS)
+	wm, _ = TextWatermark("Confidential", "font:Courier, points:48, col: 1 0 0, rot:45, sc:1 abs, ", onTop, update, types.POINTS)
 	AddWatermarksFile("in.pdf", "", []string{"odd"}, wm, nil)
 
 	// Add image stamps to in.pdf using absolute scaling and a negative rotation of 90 degrees.
-	wm, _ = ImageWatermark("image.png", "scalefactor:.5 a, rot:-90", onTop, update, pdfcpu.POINTS)
+	wm, _ = ImageWatermark("image.png", "scalefactor:.5 a, rot:-90", onTop, update, types.POINTS)
 	AddWatermarksFile("in.pdf", "", nil, wm, nil)
 
 	// Add a PDF stamp to all pages of in.pdf using the 2nd page of stamp.pdf, use absolute scaling of 0.5
 	// and rotate along the 2nd diagonal running from upper left to lower right corner.
-	wm, _ = PDFWatermark("stamp.pdf:2", "sc:.5 abs, diagonal:2", onTop, update, pdfcpu.POINTS)
+	wm, _ = PDFWatermark("stamp.pdf:2", "sc:.5 abs, diagonal:2", onTop, update, types.POINTS)
 	AddWatermarksFile("in.pdf", "", nil, wm, nil)
 }
 
@@ -149,16 +150,16 @@ func ExampleRemoveWatermarksFile() {
 	// Add a "Demo" stamp to all pages of in.pdf along the diagonal running from lower left to upper right.
 	onTop := true
 	update := false
-	wm, _ := TextWatermark("Demo", "", onTop, update, pdfcpu.POINTS)
+	wm, _ := TextWatermark("Demo", "", onTop, update, types.POINTS)
 	AddWatermarksFile("in.pdf", "", nil, wm, nil)
 
 	// Update stamp for correction:
 	update = true
-	wm, _ = TextWatermark("Confidential", "", onTop, update, pdfcpu.POINTS)
+	wm, _ = TextWatermark("Confidential", "", onTop, update, types.POINTS)
 	AddWatermarksFile("in.pdf", "", nil, wm, nil)
 
 	// Add another watermark on top of page 1
-	wm, _ = TextWatermark("Footer stamp", "c:.5 1 1, pos:bc", onTop, update, pdfcpu.POINTS)
+	wm, _ = TextWatermark("Footer stamp", "c:.5 1 1, pos:bc", onTop, update, types.POINTS)
 	AddWatermarksFile("in.pdf", "", nil, wm, nil)
 
 	// Remove watermark on page 1
@@ -179,7 +180,7 @@ func ExampleImportImagesFile() {
 	// Import images by creating an A3 page for each image.
 	// Images are page centered with 1.0 relative scaling.
 	// Import an image as a new page of the existing out.pdf.
-	imp, _ := Import("form:A3, pos:c, s:1.0", pdfcpu.POINTS)
+	imp, _ := Import("form:A3, pos:c, s:1.0", types.POINTS)
 	ImportImagesFile([]string{"a1.png", "a2.jpg", "a3.tiff"}, "out.pdf", imp, nil)
 }
 
@@ -218,41 +219,41 @@ func ExampleListPermissionsFile() {
 func ExampleSetPermissionsFile() {
 
 	// Setting all permissions for the AES-256 encrypted in.pdf.
-	conf := pdfcpu.NewAESConfiguration("upw", "opw", 256)
-	conf.Permissions = pdfcpu.PermissionsAll
+	conf := model.NewAESConfiguration("upw", "opw", 256)
+	conf.Permissions = model.PermissionsAll
 	SetPermissionsFile("in.pdf", "", conf)
 
 	// Restricting permissions for the AES-256 encrypted in.pdf.
-	conf = pdfcpu.NewAESConfiguration("upw", "opw", 256)
-	conf.Permissions = pdfcpu.PermissionsNone
+	conf = model.NewAESConfiguration("upw", "opw", 256)
+	conf.Permissions = model.PermissionsNone
 	SetPermissionsFile("in.pdf", "", conf)
 }
 
 func ExampleEncryptFile() {
 
 	// Encrypting a file using AES-256.
-	conf := pdfcpu.NewAESConfiguration("upw", "opw", 256)
+	conf := model.NewAESConfiguration("upw", "opw", 256)
 	EncryptFile("in.pdf", "", conf)
 }
 
 func ExampleDecryptFile() {
 
 	// Decrypting an AES-256 encrypted file.
-	conf := pdfcpu.NewAESConfiguration("upw", "opw", 256)
+	conf := model.NewAESConfiguration("upw", "opw", 256)
 	DecryptFile("in.pdf", "", conf)
 }
 
 func ExampleChangeUserPasswordFile() {
 
 	// Changing the user password for an AES-256 encrypted file.
-	conf := pdfcpu.NewAESConfiguration("upw", "opw", 256)
+	conf := model.NewAESConfiguration("upw", "opw", 256)
 	ChangeUserPasswordFile("in.pdf", "", "upw", "upwNew", conf)
 }
 
 func ExampleChangeOwnerPasswordFile() {
 
 	// Changing the owner password for an AES-256 encrypted file.
-	conf := pdfcpu.NewAESConfiguration("upw", "opw", 256)
+	conf := model.NewAESConfiguration("upw", "opw", 256)
 	ChangeOwnerPasswordFile("in.pdf", "", "opw", "opwNew", conf)
 }
 

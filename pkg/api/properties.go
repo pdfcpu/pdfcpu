@@ -22,17 +22,18 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
 
 // ListProperties returns the property list of rs.
-func ListProperties(rs io.ReadSeeker, conf *pdf.Configuration) ([]string, error) {
+func ListProperties(rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {
 	if conf == nil {
-		conf = pdf.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	} else {
 		// Validation loads infodict.
-		conf.ValidationMode = pdf.ValidationRelaxed
+		conf.ValidationMode = model.ValidationRelaxed
 	}
 
 	fromStart := time.Now()
@@ -42,7 +43,7 @@ func ListProperties(rs io.ReadSeeker, conf *pdf.Configuration) ([]string, error)
 	}
 
 	fromWrite := time.Now()
-	list, err := ctx.PropertiesList()
+	list, err := pdfcpu.PropertiesList(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -50,13 +51,13 @@ func ListProperties(rs io.ReadSeeker, conf *pdf.Configuration) ([]string, error)
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	pdf.TimingStats("list files", durRead, durVal, durOpt, durWrite, durTotal)
+	model.TimingStats("list files", durRead, durVal, durOpt, durWrite, durTotal)
 
 	return list, nil
 }
 
 // ListPropertiesFile returns the property list of inFile.
-func ListPropertiesFile(inFile string, conf *pdf.Configuration) ([]string, error) {
+func ListPropertiesFile(inFile string, conf *model.Configuration) ([]string, error) {
 	f, err := os.Open(inFile)
 	if err != nil {
 		return nil, err
@@ -66,12 +67,12 @@ func ListPropertiesFile(inFile string, conf *pdf.Configuration) ([]string, error
 }
 
 // AddProperties embeds files into a PDF context read from rs and writes the result to w.
-func AddProperties(rs io.ReadSeeker, w io.Writer, properties map[string]string, conf *pdf.Configuration) error {
+func AddProperties(rs io.ReadSeeker, w io.Writer, properties map[string]string, conf *model.Configuration) error {
 	if conf == nil {
-		conf = pdf.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	} else {
 		// Validation loads infodict.
-		conf.ValidationMode = pdf.ValidationRelaxed
+		conf.ValidationMode = model.ValidationRelaxed
 	}
 
 	fromStart := time.Now()
@@ -82,7 +83,7 @@ func AddProperties(rs io.ReadSeeker, w io.Writer, properties map[string]string, 
 
 	from := time.Now()
 
-	if err = ctx.PropertiesAdd(properties); err != nil {
+	if err = pdfcpu.PropertiesAdd(ctx, properties); err != nil {
 		return err
 	}
 
@@ -101,7 +102,7 @@ func AddProperties(rs io.ReadSeeker, w io.Writer, properties map[string]string, 
 }
 
 // AddPropertiesFile embeds files into a PDF context read from inFile and writes the result to outFile.
-func AddPropertiesFile(inFile, outFile string, properties map[string]string, conf *pdf.Configuration) (err error) {
+func AddPropertiesFile(inFile, outFile string, properties map[string]string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {
@@ -142,12 +143,12 @@ func AddPropertiesFile(inFile, outFile string, properties map[string]string, con
 }
 
 // RemoveProperties deletes embedded files from a PDF context read from rs and writes the result to w.
-func RemoveProperties(rs io.ReadSeeker, w io.Writer, properties []string, conf *pdf.Configuration) error {
+func RemoveProperties(rs io.ReadSeeker, w io.Writer, properties []string, conf *model.Configuration) error {
 	if conf == nil {
-		conf = pdf.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	} else {
 		// Validation loads infodict.
-		conf.ValidationMode = pdf.ValidationRelaxed
+		conf.ValidationMode = model.ValidationRelaxed
 	}
 
 	fromStart := time.Now()
@@ -159,7 +160,7 @@ func RemoveProperties(rs io.ReadSeeker, w io.Writer, properties []string, conf *
 	from := time.Now()
 
 	var ok bool
-	if ok, err = ctx.PropertiesRemove(properties); err != nil {
+	if ok, err = pdfcpu.PropertiesRemove(ctx, properties); err != nil {
 		return err
 	}
 	if !ok {
@@ -180,7 +181,7 @@ func RemoveProperties(rs io.ReadSeeker, w io.Writer, properties []string, conf *
 }
 
 // RemovePropertiesFile deletes embedded files from a PDF context read from inFile and writes the result to outFile.
-func RemovePropertiesFile(inFile, outFile string, properties []string, conf *pdf.Configuration) (err error) {
+func RemovePropertiesFile(inFile, outFile string, properties []string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {

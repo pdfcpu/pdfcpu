@@ -1,0 +1,460 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "UpperLeft",
+	"contentBox": true,
+	"debug": false,
+	"guides": true,
+	"bgcol": "#BEDED9",
+	"fonts": {
+		"regular": {
+			"name": "Courier",
+			"size": 12
+		},
+		"bold": {
+			"name": "Courier-Bold",
+			"size": 12
+		},
+		"italic": {
+			"name": "Courier-Oblique",
+			"size": 12
+		}
+	},
+	"borders": {
+		"b": {
+			"width": 5,
+			"col": "#D08888",
+			"style": "round"
+		}
+	},
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"paddings": {
+		"p": {
+			"width": 5
+		}
+	},
+	"header": {
+		"font": {
+			"name": "Courier-Bold",
+			"size": 24,
+			"col": "#0000FF"
+		},
+		"left": "$logo1",
+		"center": "Fonts and Inheritance",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 10,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "$regular",
+			"size": 9
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Page %p of %P",
+		"right": "Source:\ntestdata/json/create/fonts.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"pages": {
+		"1": {
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							50,
+							50
+						]
+					},
+					{
+						"pos": [
+							50,
+							120
+						]
+					},
+					{
+						"pos": [
+							50,
+							190
+						]
+					},
+					{
+						"pos": [
+							50,
+							300
+						]
+					},
+					{
+						"pos": [
+							50,
+							370
+						]
+					},
+					{
+						"pos": [
+							50,
+							440
+						]
+					},
+					{
+						"pos": [
+							300,
+							50
+						]
+					}
+				],
+				"fonts": {
+					"pageRegular": {
+						"name": "Helvetica",
+						"size": 12
+					},
+					"pageBold": {
+						"name": "Helvetica-Bold",
+						"size": 12
+					},
+					"pageItalic": {
+						"name": "Helvetica-Oblique",
+						"size": 12
+					}
+				},
+				"text": [
+					{
+						"value": "Using a global font",
+						"pos": [
+							50,
+							50
+						],
+						"font": {
+							"name": "$regular"
+						}
+					},
+					{
+						"value": "Using a global font\nwith padding",
+						"pos": [
+							50,
+							120
+						],
+						"bgcol": "#BEDED9",
+						"font": {
+							"name": "$bold"
+						},
+						"padding": {
+							"name": "$p"
+						}
+					},
+					{
+						"value": "Using a global font\nwith border and padding",
+						"pos": [
+							50,
+							190
+						],
+						"bgcol": "#BEDED9",
+						"font": {
+							"name": "$italic"
+						},
+						"border": {
+							"name": "$b"
+						},
+						"padding": {
+							"name": "$p"
+						}
+					},
+					{
+						"value": "Overriding a global font",
+						"pos": [
+							300,
+							50
+						],
+						"bgcol": "#BEDED9",
+						"font": {
+							"name": "$regular",
+							"size": 16
+						}
+					},
+					{
+						"value": "Overriding a global font\nwith padding",
+						"pos": [
+							300,
+							120
+						],
+						"bgcol": "#BEDED9",
+						"font": {
+							"name": "$bold",
+							"size": 16
+						},
+						"padding": {
+							"name": "$p"
+						}
+					},
+					{
+						"value": "Overriding a global font\nwith border and padding",
+						"pos": [
+							300,
+							190
+						],
+						"bgcol": "#BEDED9",
+						"font": {
+							"name": "$italic",
+							"size": 16
+						},
+						"border": {
+							"name": "$b"
+						},
+						"padding": {
+							"name": "$p"
+						}
+					},
+					{
+						"value": "Using a page font",
+						"pos": [
+							50,
+							300
+						],
+						"bgCol": "#EEEE00",
+						"font": {
+							"name": "$pageRegular"
+						}
+					},
+					{
+						"value": "Using a page font\nwith padding",
+						"pos": [
+							50,
+							370
+						],
+						"bgCol": "#EEEE00",
+						"font": {
+							"name": "$pageBold"
+						},
+						"padding": {
+							"name": "$p"
+						}
+					},
+					{
+						"value": "Using a page font\nwith border and padding",
+						"pos": [
+							50,
+							440
+						],
+						"bgCol": "#EEEE00",
+						"font": {
+							"name": "$pageItalic"
+						},
+						"border": {
+							"name": "$b"
+						},
+						"padding": {
+							"name": "$p"
+						}
+					},
+					{
+						"value": "Overriding a page font",
+						"pos": [
+							300,
+							300
+						],
+						"bgCol": "#EEEE00",
+						"font": {
+							"name": "$pageRegular",
+							"size": 16,
+							"col": "#888888"
+						}
+					},
+					{
+						"value": "Overriding a page font\nwith padding",
+						"pos": [
+							300,
+							370
+						],
+						"bgCol": "#EEEE00",
+						"font": {
+							"name": "$pageBold",
+							"size": 16,
+							"col": "#888888"
+						},
+						"padding": {
+							"name": "$p"
+						}
+					},
+					{
+						"value": "Overriding a page font\nwith border and padding",
+						"pos": [
+							300,
+							440
+						],
+						"bgCol": "#EEEE00",
+						"font": {
+							"name": "$pageItalic",
+							"size": 16,
+							"col": "#888888"
+						},
+						"border": {
+							"name": "$b"
+						},
+						"padding": {
+							"name": "$p"
+						}
+					}
+				]
+			}
+		},
+		"2": {
+			"content": {
+				"guides": [
+					{
+						"top": true,
+						"pos": [
+							50,
+							50
+						]
+					},
+					{
+						"top": true,
+						"pos": [
+							50,
+							120
+						]
+					},
+					{
+						"top": true,
+						"pos": [
+							50,
+							190
+						]
+					},
+					{
+						"top": true,
+						"pos": [
+							300,
+							50
+						]
+					}
+				],
+				"fonts": {
+					"regular": {
+						"col": "#A68123"
+					},
+					"bold": {
+						"col": "#A68123"
+					},
+					"italic": {
+						"col": "#A68123"
+					}
+				},
+				"text": [
+					{
+						"value": "Using a page font\noverriding a global font",
+						"pos": [
+							50,
+							50
+						],
+						"font": {
+							"name": "$regular"
+						}
+					},
+					{
+						"value": "Using a page font\noverriding a global font\nwith padding",
+						"pos": [
+							50,
+							120
+						],
+						"bgcol": "#BEDED9",
+						"font": {
+							"name": "$bold"
+						},
+						"padding": {
+							"name": "$p"
+						}
+					},
+					{
+						"value": "Using a page font\noverriding a global font\nwith border and padding",
+						"pos": [
+							50,
+							190
+						],
+						"bgcol": "#BEDED9",
+						"font": {
+							"name": "$italic"
+						},
+						"border": {
+							"name": "$b"
+						},
+						"padding": {
+							"name": "$p"
+						}
+					},
+					{
+						"value": "Overriding a page font\noverriding a global font",
+						"pos": [
+							300,
+							50
+						],
+						"bgcol": "#BEDED9",
+						"font": {
+							"name": "$regular",
+							"size": 16
+						}
+					},
+					{
+						"value": "Overriding a page font\noverriding a global font\nwith padding",
+						"pos": [
+							300,
+							120
+						],
+						"bgcol": "#BEDED9",
+						"font": {
+							"name": "$bold",
+							"size": 16
+						},
+						"padding": {
+							"name": "$p"
+						}
+					},
+					{
+						"value": "Overriding a page font\noverriding a global font\nwith border and padding",
+						"pos": [
+							300,
+							190
+						],
+						"bgcol": "#BEDED9",
+						"font": {
+							"name": "$italic",
+							"size": 16
+						},
+						"border": {
+							"name": "$b"
+						},
+						"padding": {
+							"name": "$p"
+						}
+					}
+				]
+			}
+		}
+	}
+}

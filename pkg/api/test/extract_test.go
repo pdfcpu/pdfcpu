@@ -62,7 +62,7 @@ func TestExtractImagesLowLevel(t *testing.T) {
 
 	// Extract images for page 1.
 	i := 1
-	ii, err := ctx.ExtractPageImages(i, false)
+	ii, err := pdfcpu.ExtractPageImages(ctx, i, false)
 	if err != nil {
 		t.Fatalf("%s extractPageFonts(%d): %v\n", msg, i, err)
 	}
@@ -111,7 +111,7 @@ func TestExtractFontsLowLevel(t *testing.T) {
 
 	// Extract fonts for page 1.
 	i := 1
-	ff, err := ctx.ExtractPageFonts(i)
+	ff, err := pdfcpu.ExtractPageFonts(ctx, i)
 	if err != nil {
 		t.Fatalf("%s extractPageFonts(%d): %v\n", msg, i, err)
 	}
@@ -147,7 +147,7 @@ func TestExtractPagesLowLevel(t *testing.T) {
 
 	// Extract page 1.
 	i := 1
-	ctxNew, err := ctx.ExtractPage(i)
+	ctxNew, err := pdfcpu.ExtractPage(ctx, i)
 	if err != nil {
 		t.Fatalf("%s extractPage(%d): %v\n", msg, i, err)
 	}
@@ -181,7 +181,7 @@ func TestExtractContentLowLevel(t *testing.T) {
 
 	// Extract page content for page 2.
 	i := 2
-	r, err := ctx.ExtractPageContent(i)
+	r, err := pdfcpu.ExtractPageContent(ctx, i)
 	if err != nil {
 		t.Fatalf("%s extractPageContent(%d): %v\n", msg, i, err)
 	}
@@ -214,7 +214,7 @@ func TestExtractMetadataLowLevel(t *testing.T) {
 	}
 
 	// Extract all metadata.
-	mm, err := ctx.ExtractMetadata()
+	mm, err := pdfcpu.ExtractMetadata(ctx)
 	if err != nil {
 		t.Fatalf("%s ExtractMetadata: %v\n", msg, err)
 	}

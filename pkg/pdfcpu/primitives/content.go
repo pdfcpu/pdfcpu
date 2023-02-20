@@ -17,15 +17,19 @@
 package primitives
 
 import (
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
+// Content represents page content.
 type Content struct {
 	parent          *Content
 	page            *PDFPage
 	BackgroundColor string               `json:"bgCol"`
-	bgCol           *pdfcpu.SimpleColor  // page background color
+	bgCol           *color.SimpleColor   // page background color
 	Fonts           map[string]*FormFont // named fonts
 	Margins         map[string]*Margin   // named margins
 	Borders         map[string]*Border   // named borders
@@ -34,9 +38,9 @@ type Content struct {
 	Border          *Border              // content border
 	Padding         *Padding             // content padding
 	Regions         *Regions
-	mediaBox        *pdfcpu.Rectangle
-	borderRect      *pdfcpu.Rectangle
-	box             *pdfcpu.Rectangle
+	mediaBox        *types.Rectangle
+	borderRect      *types.Rectangle
+	box             *types.Rectangle
 	Guides          []*Guide              // hor/vert guidelines for layout
 	Bars            []*Bar                `json:"bar"`
 	SimpleBoxes     []*SimpleBox          `json:"box"`
@@ -48,9 +52,14 @@ type Content struct {
 	Tables          []*Table              `json:"table"`
 	TablePool       map[string]*Table     `json:"tables"`
 	// Form elements
-	TextFields        []*TextField        `json:"textfield"`        // input text fields with optional label
-	CheckBoxes        []*CheckBox         `json:"checkbox"`         // input checkboxes with optional label
-	RadioButtonGroups []*RadioButtonGroup `json:"radiobuttongroup"` // input radiobutton groups with optional label
+	TextFields        []*TextField           `json:"textfield"`        // input text fields with optional label
+	DateFields        []*DateField           `json:"datefield"`        // input date fields with optional label
+	CheckBoxes        []*CheckBox            `json:"checkbox"`         // input checkboxes with optional label
+	RadioButtonGroups []*RadioButtonGroup    `json:"radiobuttongroup"` // input radiobutton groups with optional label
+	ComboBoxes        []*ComboBox            `json:"combobox"`
+	ListBoxes         []*ListBox             `json:"listbox"`
+	FieldGroups       []*FieldGroup          `json:"fieldgroup"` // rectangular container holding form elements
+	FieldGroupPool    map[string]*FieldGroup `json:"fieldgroups"`
 }
 
 func (c *Content) validateBackgroundColor() error {
@@ -150,14 +159,29 @@ func (c *Content) validateRegions() error {
 	if len(c.Tables) > 0 {
 		return errors.Errorf("pdfcpu: \"table\" %s", s)
 	}
+	if len(c.FieldGroupPool) > 0 {
+		return errors.Errorf("pdfcpu: \"fieldgroups\" %s", s)
+	}
+	if len(c.FieldGroups) > 0 {
+		return errors.Errorf("pdfcpu: \"fieldgroup\" %s", s)
+	}
 	if len(c.TextFields) > 0 {
 		return errors.Errorf("pdfcpu: \"textfield\" %s", s)
+	}
+	if len(c.DateFields) > 0 {
+		return errors.Errorf("pdfcpu: \"datefield\" %s", s)
 	}
 	if len(c.CheckBoxes) > 0 {
 		return errors.Errorf("pdfcpu: \"checkbox\" %s", s)
 	}
 	if len(c.RadioButtonGroups) > 0 {
-		return errors.Errorf("pdfcpu: \"checkbox\" %s", s)
+		return errors.Errorf("pdfcpu: \"radiobuttongroup\" %s", s)
+	}
+	if len(c.ComboBoxes) > 0 {
+		return errors.Errorf("pdfcpu: \"combobox\" %s", s)
+	}
+	if len(c.ListBoxes) > 0 {
+		return errors.Errorf("pdfcpu: \"listbox\" %s", s)
 	}
 	c.Regions.page = c.page
 	c.Regions.parent = c
@@ -252,6 +276,18 @@ func (c *Content) validateTablePool() error {
 	return nil
 }
 
+func (c *Content) validateFieldGroupPool() error {
+	// textfield groups
+	for _, fg := range c.FieldGroupPool {
+		fg.pdf = c.page.pdf
+		fg.content = c
+		if err := fg.validate(); err != nil {
+			return err
+		}
+	}
+	return c.validateFieldGroups()
+}
+
 func (c *Content) validatePools() error {
 	if err := c.validateSimpleBoxPool(); err != nil {
 		return err
@@ -262,17 +298,15 @@ func (c *Content) validatePools() error {
 	if err := c.validateImageBoxPool(); err != nil {
 		return err
 	}
-	return c.validateTablePool()
+	if err := c.validateTablePool(); err != nil {
+		return err
+	}
+	return c.validateFieldGroupPool()
 }
 
 func (c *Content) validateTextFields() error {
-	// text fields
 	pdf := c.page.pdf
 	if len(c.TextFields) > 0 {
-		// Reject form fields for existing Acroform.
-		if pdf.HasForm {
-			return errors.New("pdfcpu: appending form fields to existing form unsupported")
-		}
 		for _, tf := range c.TextFields {
 			tf.pdf = pdf
 			tf.content = c
@@ -284,14 +318,37 @@ func (c *Content) validateTextFields() error {
 	return nil
 }
 
+func (c *Content) validateDateFields() error {
+	pdf := c.page.pdf
+	if len(c.DateFields) > 0 {
+		for _, df := range c.DateFields {
+			df.pdf = pdf
+			df.content = c
+			if err := df.validate(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (c *Content) validateFieldGroups() error {
+	pdf := c.page.pdf
+	if len(c.FieldGroups) > 0 {
+		for _, fg := range c.FieldGroups {
+			fg.pdf = pdf
+			fg.content = c
+			if err := fg.validate(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (c *Content) validateCheckBoxes() error {
-	// check boxes
 	pdf := c.page.pdf
 	if len(c.CheckBoxes) > 0 {
-		// Reject form fields for existing Acroform.
-		if pdf.HasForm {
-			return errors.New("pdfcpu: appending form fields to existing form unsupported")
-		}
 		for _, cb := range c.CheckBoxes {
 			cb.pdf = pdf
 			cb.content = c
@@ -304,17 +361,40 @@ func (c *Content) validateCheckBoxes() error {
 }
 
 func (c *Content) validateRadioButtonGroups() error {
-	// radio button groups
 	pdf := c.page.pdf
 	if len(c.RadioButtonGroups) > 0 {
-		// Reject form fields for existing Acroform.
-		if pdf.HasForm {
-			return errors.New("pdfcpu: appending form fields to existing form unsupported")
-		}
 		for _, rbg := range c.RadioButtonGroups {
 			rbg.pdf = pdf
 			rbg.content = c
 			if err := rbg.validate(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (c *Content) validateComboBoxes() error {
+	pdf := c.page.pdf
+	if len(c.ComboBoxes) > 0 {
+		for _, cb := range c.ComboBoxes {
+			cb.pdf = pdf
+			cb.content = c
+			if err := cb.validate(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (c *Content) validateListBoxes() error {
+	pdf := c.page.pdf
+	if len(c.ListBoxes) > 0 {
+		for _, lb := range c.ListBoxes {
+			lb.pdf = pdf
+			lb.content = c
+			if err := lb.validate(); err != nil {
 				return err
 			}
 		}
@@ -360,11 +440,23 @@ func (c *Content) validate() error {
 		return err
 	}
 
+	if err := c.validateDateFields(); err != nil {
+		return err
+	}
+
 	if err := c.validateCheckBoxes(); err != nil {
 		return err
 	}
 
-	return c.validateRadioButtonGroups()
+	if err := c.validateRadioButtonGroups(); err != nil {
+		return err
+	}
+
+	if err := c.validateComboBoxes(); err != nil {
+		return err
+	}
+
+	return c.validateListBoxes()
 }
 
 func (c *Content) namedFont(id string) *FormFont {
@@ -419,6 +511,10 @@ func (c *Content) namedPadding(id string) *Padding {
 	return c.page.namedPadding(id)
 }
 
+func (c *Content) padding() *Padding {
+	return c.namedPadding("padding")
+}
+
 func (c *Content) namedSimpleBox(id string) *SimpleBox {
 	sb := c.SimpleBoxPool[id]
 	if sb != nil {
@@ -463,8 +559,15 @@ func (c *Content) namedTable(id string) *Table {
 	return c.page.namedTable(id)
 }
 
-func (c *Content) padding() *Padding {
-	return c.namedPadding("padding")
+func (c *Content) namedFieldGroup(id string) *FieldGroup {
+	fg := c.FieldGroupPool[id]
+	if fg != nil {
+		return fg
+	}
+	if c.parent != nil {
+		return c.parent.namedFieldGroup(id)
+	}
+	return c.page.namedFieldGroup(id)
 }
 
 func (c *Content) calcFont(ff map[string]*FormFont) {
@@ -488,6 +591,120 @@ func (c *Content) calcFont(ff map[string]*FormFont) {
 			c.Regions.Bottom.calcFont(fff)
 		}
 	}
+}
+
+func (c *Content) calcInputFont(f *FormFont) (*FormFont, error) {
+
+	if f != nil {
+		var f0 *FormFont
+		if f.Name == "" {
+			// Use inherited named font "input".
+			f0 = c.namedFont("input")
+			if f0 == nil {
+				return nil, errors.Errorf("pdfcpu: missing named font \"input\"")
+			}
+			f.Name = f0.Name
+			if f.Size == 0 {
+				f.Size = f0.Size
+			}
+			if f.col == nil {
+				f.col = f0.col
+			}
+			if f.Lang == "" {
+				f.Lang = f0.Lang
+			}
+			if f.Script == "" {
+				f.Script = f0.Script
+			}
+		}
+		if f.Name != "" && f.Name[0] == '$' {
+			// use named font
+			fName := f.Name[1:]
+			f0 := c.namedFont(fName)
+			if f0 == nil {
+				return nil, errors.Errorf("pdfcpu: unknown font name %s", fName)
+			}
+			f.Name = f0.Name
+			if f.Size == 0 {
+				f.Size = f0.Size
+			}
+			if f.col == nil {
+				f.col = f0.col
+			}
+			if f.Lang == "" {
+				f.Lang = f0.Lang
+			}
+			if f.Script == "" {
+				f.Script = f0.Script
+			}
+		}
+	} else {
+		// Use inherited named font "input".
+		f = c.namedFont("input")
+		if f == nil {
+			return nil, errors.Errorf("pdfcpu: missing named font \"input\"")
+		}
+	}
+
+	if f.col == nil {
+		f.col = &color.Black
+	}
+
+	return f, nil
+}
+
+func (c *Content) calcLabelFont(f *FormFont) (*FormFont, error) {
+
+	if f != nil {
+		var f0 *FormFont
+		if f.Name == "" {
+			// Use inherited named font "label".
+			f0 = c.namedFont("label")
+			if f0 == nil {
+				return nil, errors.Errorf("pdfcpu: missing named font \"label\"")
+			}
+			f.Name = f0.Name
+			if f.Size == 0 {
+				f.Size = f0.Size
+			}
+			if f.col == nil {
+				f.col = f0.col
+			}
+			if f.Script == "" {
+				f.Script = f0.Script
+			}
+		}
+		if f.Name != "" && f.Name[0] == '$' {
+			// use named font
+			fName := f.Name[1:]
+			f0 := c.namedFont(fName)
+			if f0 == nil {
+				return nil, errors.Errorf("pdfcpu: unknown font name %s", fName)
+			}
+			f.Name = f0.Name
+			if f.Size == 0 {
+				f.Size = f0.Size
+			}
+			if f.col == nil {
+				f.col = f0.col
+			}
+			if f.Script == "" {
+				f.Script = f0.Script
+			}
+		}
+	} else {
+		// Use inherited named font "label".
+		f = c.namedFont("label")
+		if f == nil {
+			return nil, errors.Errorf("pdfcpu: missing named font \"label\"")
+		}
+	}
+
+	if f.col == nil {
+		f.col = &color.Black
+	}
+
+	return f, nil
 }
 
 func (c *Content) calcBorder(bb map[string]*Border) {
@@ -651,7 +868,31 @@ func (c *Content) calcTables(bb map[string]*Table) {
 	}
 }
 
-func (c *Content) BorderRect() *pdfcpu.Rectangle {
+func (c *Content) calcFieldGroups(bb map[string]*FieldGroup) {
+
+	bbb := map[string]*FieldGroup{}
+	for id, fg0 := range bb {
+		bbb[id] = fg0
+		fg1 := c.FieldGroupPool[id]
+		if fg1 != nil {
+			fg1.mergeIn(fg0)
+			bbb[id] = fg1
+		}
+	}
+
+	if c.Regions != nil {
+		if c.Regions.horizontal {
+			c.Regions.Left.calcFieldGroups(bbb)
+			c.Regions.Right.calcFieldGroups(bbb)
+		} else {
+			c.Regions.Top.calcFieldGroups(bbb)
+			c.Regions.Bottom.calcFieldGroups(bbb)
+		}
+	}
+}
+
+// BorderRect returns the border rect for c.
+func (c *Content) BorderRect() *types.Rectangle {
 
 	if c.borderRect == nil {
 
@@ -670,7 +911,7 @@ func (c *Content) BorderRect() *pdfcpu.Rectangle {
 			borderWidth = float64(b.Width)
 		}
 
-		c.borderRect = pdfcpu.RectForWidthAndHeight(
+		c.borderRect = types.RectForWidthAndHeight(
 			c.mediaBox.LL.X+mLeft+borderWidth/2,
 			c.mediaBox.LL.Y+mBottom+borderWidth/2,
 			c.mediaBox.Width()-mLeft-mRight-borderWidth,
@@ -681,7 +922,7 @@ func (c *Content) BorderRect() *pdfcpu.Rectangle {
 	return c.borderRect
 }
 
-func (c *Content) Box() *pdfcpu.Rectangle {
+func (c *Content) Box() *types.Rectangle {
 
 	if c.box == nil {
 
@@ -722,13 +963,71 @@ func (c *Content) Box() *pdfcpu.Rectangle {
 		lly := c.mediaBox.LL.Y + mBottom + borderWidth + pBottom
 		w := c.mediaBox.Width() - mLeft - mRight - 2*borderWidth - pLeft - pRight
 		h := c.mediaBox.Height() - mTop - mBottom - 2*borderWidth - pTop - pBottom
-		c.box = pdfcpu.RectForWidthAndHeight(llx, lly, w, h)
+		c.box = types.RectForWidthAndHeight(llx, lly, w, h)
 	}
 
 	return c.box
 }
 
-func (c *Content) renderBars(p *pdfcpu.Page) error {
+func (c *Content) calcPosition(x, y, dx, dy, mTop, mRight, mBottom, mLeft float64) (float64, float64) {
+
+	cBox := c.Box()
+
+	r := cBox.CroppedCopy(0)
+	r.LL.X += mLeft
+	r.LL.Y += mBottom
+	r.UR.X -= mRight
+	r.UR.Y -= mTop
+
+	pdf := c.page.pdf
+	x, y = types.NormalizeCoord(x, y, cBox, pdf.origin, false)
+
+	if x == -1 {
+		// Center horizontally
+		x = cBox.Center().X - r.LL.X
+	} else if x > 0 {
+		x -= mLeft
+		if x < 0 {
+			x = 0
+		}
+	}
+
+	if y == -1 {
+		// Center vertically
+		y = cBox.Center().Y - r.LL.Y
+	} else if y > 0 {
+		y -= mBottom
+		if y < 0 {
+			y = 0
+		}
+	}
+
+	if x >= 0 {
+		x = r.LL.X + x
+	}
+	if y >= 0 {
+		y = r.LL.Y + y
+	}
+
+	// Position text horizontally centered for x < 0.
+	if x < 0 {
+		x = r.LL.X + r.Width()/2
+	}
+
+	// Position text vertically centered for y < 0.
+	if y < 0 {
+		y = r.LL.Y + r.Height()/2
+	}
+
+	// Apply offset.
+	x += dx
+	y += dy
+
+	return x, y
+
+}
+
+func (c *Content) renderBars(p *model.Page) error {
 	for _, b := range c.Bars {
 		if b.Hide {
 			continue
@@ -740,7 +1039,7 @@ func (c *Content) renderBars(p *pdfcpu.Page) error {
 	return nil
 }
 
-func (c *Content) renderSimpleBoxes(p *pdfcpu.Page) error {
+func (c *Content) renderSimpleBoxes(p *model.Page) error {
 	for _, sb := range c.SimpleBoxes {
 		if sb.Hide {
 			continue
@@ -761,7 +1060,7 @@ func (c *Content) renderSimpleBoxes(p *pdfcpu.Page) error {
 	return nil
 }
 
-func (c *Content) renderTextBoxes(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) error {
+func (c *Content) renderTextBoxes(p *model.Page, pageNr int, fonts model.FontMap) error {
 	for _, tb := range c.TextBoxes {
 		if tb.Hide {
 			continue
@@ -782,7 +1081,7 @@ func (c *Content) renderTextBoxes(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontM
 	return nil
 }
 
-func (c *Content) renderImageBoxes(p *pdfcpu.Page, pageNr int, images pdfcpu.ImageMap) error {
+func (c *Content) renderImageBoxes(p *model.Page, pageNr int, images model.ImageMap) error {
 	for _, ib := range c.ImageBoxes {
 		if ib.Hide {
 			continue
@@ -792,7 +1091,7 @@ func (c *Content) renderImageBoxes(p *pdfcpu.Page, pageNr int, images pdfcpu.Ima
 			ibName := ib.Name[1:]
 			ib0 := c.namedImageBox(ibName)
 			if ib0 == nil {
-				return errors.Errorf("pdfcpu: unknown named text %s", ibName)
+				return errors.Errorf("pdfcpu: unknown named image %s", ibName)
 			}
 			ib.mergeIn(ib0)
 		}
@@ -803,17 +1102,17 @@ func (c *Content) renderImageBoxes(p *pdfcpu.Page, pageNr int, images pdfcpu.Ima
 	return nil
 }
 
-func (c *Content) renderTables(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) error {
+func (c *Content) renderTables(p *model.Page, pageNr int, fonts model.FontMap) error {
 	for _, t := range c.Tables {
 		if t.Hide {
 			continue
 		}
 		if t.Name != "" && t.Name[0] == '$' {
-			// Use named imagebox
+			// Use named table
 			tName := t.Name[1:]
 			t0 := c.namedTable(tName)
 			if t0 == nil {
-				return errors.Errorf("pdfcpu: unknown named text %s", tName)
+				return errors.Errorf("pdfcpu: unknown named table %s", tName)
 			}
 			t.mergeIn(t0)
 		}
@@ -824,7 +1123,7 @@ func (c *Content) renderTables(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap)
 	return nil
 }
 
-func (c *Content) renderTextFields(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) error {
+func (c *Content) renderTextFields(p *model.Page, pageNr int, fonts model.FontMap) error {
 	for _, tf := range c.TextFields {
 		if tf.Hide {
 			continue
@@ -836,7 +1135,19 @@ func (c *Content) renderTextFields(p *pdfcpu.Page, pageNr int, fonts pdfcpu.Font
 	return nil
 }
 
-func (c *Content) renderCheckBoxes(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) error {
+func (c *Content) renderDateFields(p *model.Page, pageNr int, fonts model.FontMap) error {
+	for _, df := range c.DateFields {
+		if df.Hide {
+			continue
+		}
+		if err := df.render(p, pageNr, fonts); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Content) renderCheckBoxes(p *model.Page, pageNr int, fonts model.FontMap) error {
 	for _, cb := range c.CheckBoxes {
 		if cb.Hide {
 			continue
@@ -848,25 +1159,70 @@ func (c *Content) renderCheckBoxes(p *pdfcpu.Page, pageNr int, fonts pdfcpu.Font
 	return nil
 }
 
-func (c *Content) renderRadioButtonGroups(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, fields *pdfcpu.Array) error {
+func (c *Content) renderRadioButtonGroups(p *model.Page, pageNr int, fonts model.FontMap) error {
 	for _, rbg := range c.RadioButtonGroups {
 		if rbg.Hide {
 			continue
 		}
-		if err := rbg.render(p, pageNr, fonts, fields); err != nil {
+		if err := rbg.render(p, pageNr, fonts); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (c *Content) renderBoxesAndGuides(p *pdfcpu.Page) {
+func (c *Content) renderComboBoxes(p *model.Page, pageNr int, fonts model.FontMap) error {
+	for _, cb := range c.ComboBoxes {
+		if cb.Hide {
+			continue
+		}
+		if err := cb.render(p, pageNr, fonts); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Content) renderListBoxes(p *model.Page, pageNr int, fonts model.FontMap) error {
+	for _, lb := range c.ListBoxes {
+		if lb.Hide {
+			continue
+		}
+		if err := lb.render(p, pageNr, fonts); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Content) renderFieldGroups(p *model.Page, pageNr int, fonts model.FontMap) error {
+	for _, fg := range c.FieldGroups {
+		if fg.Hide {
+			continue
+		}
+		if fg.Name != "" && fg.Name[0] == '$' {
+			// Use named field group
+			fgName := fg.Name[1:]
+			fg0 := c.namedFieldGroup(fgName)
+			if fg0 == nil {
+				return errors.Errorf("pdfcpu: unknown named field group %s", fgName)
+			}
+			fg.mergeIn(fg0)
+		}
+		if err := fg.render(p, pageNr, fonts); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Content) renderBoxesAndGuides(p *model.Page) {
 	pdf := c.page.pdf
 
 	// Render mediaBox & contentBox
 	if pdf.ContentBox {
-		pdfcpu.DrawRect(p.Buf, c.mediaBox, 0, &pdfcpu.Green, nil)
-		pdfcpu.DrawRect(p.Buf, c.Box(), 0, &pdfcpu.Red, nil)
+		draw.DrawRect(p.Buf, c.mediaBox, 0, &color.Green, nil)
+		draw.DrawRect(p.Buf, c.Box(), 0, &color.Red, nil)
 	}
 
 	// Render guides
@@ -877,23 +1233,23 @@ func (c *Content) renderBoxesAndGuides(p *pdfcpu.Page) {
 	}
 }
 
-func (c *Content) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, images pdfcpu.ImageMap, fields *pdfcpu.Array) error {
+func (c *Content) render(p *model.Page, pageNr int, fonts model.FontMap, images model.ImageMap) error {
 
 	if c.Regions != nil {
 		c.Regions.mediaBox = c.mediaBox
 		c.Regions.page = c.page
-		return c.Regions.render(p, pageNr, fonts, images, fields)
+		return c.Regions.render(p, pageNr, fonts, images)
 	}
 
 	// Render background
 	if c.bgCol != nil {
-		pdfcpu.FillRectNoBorder(p.Buf, c.BorderRect(), *c.bgCol)
+		draw.FillRectNoBorder(p.Buf, c.BorderRect(), *c.bgCol)
 	}
 
 	// Render border
 	b := c.border()
 	if b != nil && b.col != nil && b.Width >= 0 {
-		pdfcpu.DrawRect(p.Buf, c.BorderRect(), float64(b.Width), b.col, &b.style)
+		draw.DrawRect(p.Buf, c.BorderRect(), float64(b.Width), b.col, &b.style)
 	}
 
 	if err := c.renderBars(p); err != nil {
@@ -920,11 +1276,27 @@ func (c *Content) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, image
 		return err
 	}
 
+	if err := c.renderDateFields(p, pageNr, fonts); err != nil {
+		return err
+	}
+
 	if err := c.renderCheckBoxes(p, pageNr, fonts); err != nil {
 		return err
 	}
 
-	if err := c.renderRadioButtonGroups(p, pageNr, fonts, fields); err != nil {
+	if err := c.renderRadioButtonGroups(p, pageNr, fonts); err != nil {
+		return err
+	}
+
+	if err := c.renderComboBoxes(p, pageNr, fonts); err != nil {
+		return err
+	}
+
+	if err := c.renderListBoxes(p, pageNr, fonts); err != nil {
+		return err
+	}
+
+	if err := c.renderFieldGroups(p, pageNr, fonts); err != nil {
 		return err
 	}
 

@@ -22,14 +22,14 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
 func testBooklet(t *testing.T, msg string, inFiles []string, outFile string, selectedPages []string, desc string, n int, isImg bool) {
 	t.Helper()
 
 	var (
-		booklet *pdfcpu.NUp
+		booklet *model.NUp
 		err     error
 	)
 
@@ -43,12 +43,12 @@ func testBooklet(t *testing.T, msg string, inFiles []string, outFile string, sel
 		}
 	}
 
-	cmd := cli.BookletCommand(inFiles, outFile, selectedPages, booklet, nil)
+	cmd := cli.BookletCommand(inFiles, outFile, selectedPages, booklet, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
-	if err := validateFile(t, outFile, nil); err != nil {
+	if err := validateFile(t, outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }

@@ -19,599 +19,210 @@ package primitives
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
+// Note:
+// Mac Preview is unable to save modified radio buttons:
+// The Acrofield holding the kid terminal fields for each button does not get the current value assigned to V.
+// Instead Preview sets V in the widget annotation that corresponds to the selected radio button.
+
+// RadioButtonGroup represents a set of radio buttons including positioned labels.
 type RadioButtonGroup struct {
-	pdf         *PDF
-	content     *Content
-	Label       *TextFieldLabel
-	ID          string
-	Value       string     // checked button
-	Position    [2]float64 `json:"pos"` // x,y
-	x, y        float64
-	Width       float64
-	boundingBox *pdfcpu.Rectangle
-	Orientation string
-	hor         bool
-	Dx, Dy      float64
-	Margin      *Margin // applied to content box
-	Buttons     *Buttons
-	Hide        bool
-	//Border          *Border
-	//BackgroundColor string `json:"bgCol"`
-	//bgCol           *SimpleColor
+	pdf             *PDF
+	content         *Content
+	Label           *TextFieldLabel
+	ID              string
+	Tip             string
+	Value           string // checked button
+	Default         string
+	Position        [2]float64 `json:"pos"` // x,y
+	x, y            float64
+	Width           float64
+	boundingBox     *types.Rectangle
+	Orientation     string
+	hor             bool
+	Dx, Dy          float64
+	Margin          *Margin // applied to content box
+	BackgroundColor string  `json:"bgCol"`
+	bgCol           *color.SimpleColor
+	Buttons         *Buttons
+	RTL             bool
+	Tab             int
+	Locked          bool
+	Debug           bool
+	Hide            bool
 }
 
-func (rbg *RadioButtonGroup) font(name string) *FormFont {
-	return rbg.content.namedFont(name)
+func (rbg *RadioButtonGroup) Rtl() bool {
+	if rbg.Buttons == nil {
+		return false
+	}
+	return rbg.Buttons.Rtl()
 }
 
-func (rbg *RadioButtonGroup) margin(name string) *Margin {
-	return rbg.content.namedMargin(name)
-}
-
-func (rbg *RadioButtonGroup) validate() error {
-
+func (rbg *RadioButtonGroup) validateID() error {
 	if rbg.ID == "" {
 		return errors.New("pdfcpu: missing field id")
 	}
-	if rbg.pdf.FieldIDs[rbg.ID] {
+	if rbg.pdf.DuplicateField(rbg.ID) {
 		return errors.Errorf("pdfcpu: duplicate form field: %s", rbg.ID)
 	}
 	rbg.pdf.FieldIDs[rbg.ID] = true
+	return nil
+}
 
+func (rbg *RadioButtonGroup) validatePosition() error {
 	if rbg.Position[0] < 0 || rbg.Position[1] < 0 {
 		return errors.Errorf("pdfcpu: field: %s pos value < 0", rbg.ID)
 	}
 	rbg.x, rbg.y = rbg.Position[0], rbg.Position[1]
+	return nil
+}
 
+func parseRadioButtonOrientation(s string) (types.Orientation, error) {
+	var o types.Orientation
+	switch strings.ToLower(s) {
+	case "h", "hor", "horizontal":
+		o = types.Horizontal
+	case "v", "vert", "vertical":
+		o = types.Vertical
+	default:
+		return o, errors.Errorf("pdfcpu: unknown radiobutton orientation (hor, vert): %s", s)
+	}
+	return o, nil
+}
+
+func (rbg *RadioButtonGroup) validateOrientation() error {
 	rbg.hor = true
 	if rbg.Orientation != "" {
-		o, err := pdfcpu.ParseRadioButtonOrientation(rbg.Orientation)
+		o, err := parseRadioButtonOrientation(rbg.Orientation)
 		if err != nil {
 			return err
 		}
-		rbg.hor = o == pdfcpu.Horizontal
+		rbg.hor = o == types.Horizontal
 	}
+	return nil
+}
 
+func (rbg *RadioButtonGroup) validateWidth() error {
 	if rbg.Width <= 0 {
 		return errors.Errorf("pdfcpu: field: %s width <= 0", rbg.ID)
 	}
+	return nil
+}
 
+func (rbg *RadioButtonGroup) validateMargin() error {
 	if rbg.Margin != nil {
 		if err := rbg.Margin.validate(); err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
+func (rbg *RadioButtonGroup) validateLabel() error {
 	if rbg.Label != nil {
 		rbg.Label.pdf = rbg.pdf
 		if err := rbg.Label.validate(); err != nil {
 			return err
 		}
 	}
-
-	if rbg.Buttons == nil {
-		return errors.New("pdfcpu: radiobutton missing buttons")
-	}
-
-	rbg.Buttons.pdf = rbg.pdf
-	return rbg.Buttons.validate()
-}
-
-func (rbg *RadioButtonGroup) buttonLabelPosition(i int, maxWidth, firstWidth float64) (float64, float64) {
-	rbw := rbg.Width
-	g := float64(rbg.Buttons.Label.Gap)
-	w := float64(rbg.Buttons.Label.Width)
-
-	if rbg.hor {
-		if maxWidth+g > w {
-			w = maxWidth + g
-		}
-		var x float64
-		if rbg.Buttons.Label.horAlign == pdfcpu.AlignLeft {
-			x = rbg.boundingBox.LL.X + float64(i)*(rbw+w) + rbw
-		}
-		if rbg.Buttons.Label.horAlign == pdfcpu.AlignRight {
-			x = rbg.boundingBox.LL.X + firstWidth
-			if i > 0 {
-				x += float64(i) * (rbw + w)
-			}
-			//x -= 3
-		}
-		return x, rbg.boundingBox.LL.Y
-	}
-
-	if maxWidth > w {
-		w = maxWidth
-	}
-	dx := rbw
-	if rbg.Buttons.Label.horAlign == pdfcpu.AlignRight {
-		dx = w
-	}
-	dy := float64(i) * (rbw + g)
-	return rbg.boundingBox.LL.X + dx, rbg.boundingBox.LL.Y - dy
-}
-
-func (rbg *RadioButtonGroup) renderButtonLabels(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) error {
-	l := rbg.Buttons.Label
-
-	fontName := l.Font.Name
-	fontSize := l.Font.Size
-	col := l.Font.col
-
-	id, err := rbg.pdf.idForFontName(fontName, p.Fm, fonts, pageNr)
-	if err != nil {
-		return err
-	}
-
-	td := pdfcpu.TextDescriptor{
-		FontName: fontName,
-		FontKey:  id,
-		FontSize: fontSize,
-		Scale:    1.,
-		ScaleAbs: true,
-		RTL:      l.RTL, // for user fonts only!
-	}
-
-	if col != nil {
-		td.StrokeCol, td.FillCol = *col, *col
-	}
-
-	if l.bgCol != nil {
-		td.ShowTextBB = true
-		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *l.bgCol
-	}
-
-	w, firstw := rbg.Buttons.maxLabelWidth(rbg.hor)
-
-	td.HAlign, td.VAlign = l.horAlign, pdfcpu.AlignBottom
-
-	for i, v := range rbg.Buttons.Values {
-		td.Text = v
-		td.X, td.Y = rbg.buttonLabelPosition(i, w, firstw)
-		pdfcpu.WriteColumn(p.Buf, p.MediaBox, nil, td, 0)
-	}
-
 	return nil
 }
 
-func (rbg *RadioButtonGroup) buttonGroupBB() *pdfcpu.Rectangle {
-	maxWidth, lastWidth := rbg.Buttons.maxLabelWidth(rbg.hor)
-	g := float64(rbg.Buttons.Label.Gap)
-	w := float64(rbg.Buttons.Label.Width)
-
-	rbSize := rbg.Width
-	rbCount := float64(len(rbg.Buttons.Values))
-
-	if rbg.hor {
-		if maxWidth+g > w {
-			w = maxWidth + g
-		}
-
-		width := (rbCount-1)*(w+rbSize) + rbSize + lastWidth
-		// if rbg.Buttons.Label.horAlign == AlignRight {
-		// 	width += 3
-		// }
-		return pdfcpu.RectForWidthAndHeight(rbg.boundingBox.LL.X, rbg.boundingBox.LL.Y, width, rbSize)
+func (rbg *RadioButtonGroup) validateButtonsDefaultAndValue() error {
+	if rbg.Buttons == nil {
+		return errors.New("pdfcpu: radiobuttongroup missing buttons")
 	}
-
-	if maxWidth > w {
-		w = maxWidth
-	}
-	y := rbg.boundingBox.LL.Y - (rbCount-1)*(rbSize+g) // g is better smth derived from fontsize
-	h := rbSize + (rbCount-1)*(rbSize+g)
-
-	return pdfcpu.RectForWidthAndHeight(rbg.boundingBox.LL.X, y, w+rbSize, h)
+	rbg.Buttons.pdf = rbg.pdf
+	return rbg.Buttons.validate(rbg.Default, rbg.Value)
 }
 
-func labelPosition(
-	relPos pdfcpu.RelPosition,
-	horAlign pdfcpu.HAlignment,
-	boundingBox *pdfcpu.Rectangle,
-	labelHeight, w, g float64, multiline bool) (float64, float64) {
-
-	var x, y float64
-
-	switch relPos {
-
-	case pdfcpu.RelPosLeft:
-		x = boundingBox.LL.X - g
-		if horAlign == pdfcpu.AlignLeft {
-			x -= w
-			if x < 0 {
-				x = 0
-			}
-		}
-		if multiline {
-			y = boundingBox.UR.Y - labelHeight
-		} else {
-			y = boundingBox.LL.Y
-		}
-
-	case pdfcpu.RelPosRight:
-		x = boundingBox.UR.X + g
-		if horAlign == pdfcpu.AlignRight {
-			x += w
-		}
-		if multiline {
-			y = boundingBox.UR.Y - labelHeight
-		} else {
-			y = boundingBox.LL.Y
-		}
-
-	case pdfcpu.RelPosTop:
-		y = boundingBox.UR.Y + g
-		x = boundingBox.LL.X
-		if horAlign == pdfcpu.AlignRight {
-			x += boundingBox.Width()
-		} else if horAlign == pdfcpu.AlignCenter {
-			x += boundingBox.Width() / 2
-		}
-
-	case pdfcpu.RelPosBottom:
-		y = boundingBox.LL.Y - g - labelHeight
-		x = boundingBox.LL.X
-		if horAlign == pdfcpu.AlignRight {
-			x += boundingBox.Width()
-		} else if horAlign == pdfcpu.AlignCenter {
-			x += boundingBox.Width() / 2
-		}
-
+func (rbg *RadioButtonGroup) validateTab() error {
+	if rbg.Tab < 0 {
+		return errors.Errorf("pdfcpu: field: %s negative tab value", rbg.ID)
 	}
-
-	return x, y
-}
-
-func (rbg *RadioButtonGroup) renderLabels(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) error {
-
-	rbg.renderButtonLabels(p, pageNr, fonts)
-
-	// Main label:
-	if rbg.Label == nil {
+	if rbg.Tab == 0 {
 		return nil
 	}
-
-	l := rbg.Label
-	v := "Default"
-	if l.Value != "" {
-		v = l.Value
+	page := rbg.content.page
+	if page.Tabs == nil {
+		page.Tabs = types.IntSet{}
+	} else {
+		if page.Tabs[rbg.Tab] {
+			return errors.Errorf("pdfcpu: field: %s duplicate tab value %d", rbg.ID, rbg.Tab)
+		}
 	}
+	page.Tabs[rbg.Tab] = true
+	return nil
+}
 
-	w := float64(l.Width)
-	g := float64(l.Gap)
+func (rbg *RadioButtonGroup) validate() error {
 
-	fontName := l.Font.Name
-	fontSize := l.Font.Size
-	col := l.Font.col
-
-	id, err := rbg.pdf.idForFontName(fontName, p.Fm, fonts, pageNr)
-	if err != nil {
+	if err := rbg.validateID(); err != nil {
 		return err
 	}
 
-	td := pdfcpu.TextDescriptor{
-		Text:     v,
-		FontName: fontName,
-		FontKey:  id,
-		FontSize: fontSize,
-		HAlign:   l.horAlign,
-		Scale:    1.,
-		ScaleAbs: true,
-		RTL:      l.RTL, // for user fonts only!
+	if err := rbg.validatePosition(); err != nil {
+		return err
 	}
 
-	if col != nil {
-		td.StrokeCol, td.FillCol = *col, *col
+	if err := rbg.validateOrientation(); err != nil {
+		return err
 	}
 
-	if l.bgCol != nil {
-		td.ShowTextBB = true
-		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *l.bgCol
+	if err := rbg.validateWidth(); err != nil {
+		return err
 	}
 
-	bb := pdfcpu.WriteMultiLine(new(bytes.Buffer), pdfcpu.RectForFormat("A4"), nil, td)
-	buttonGroupBB := rbg.buttonGroupBB()
-	td.X, td.Y = labelPosition(l.relPos, l.horAlign, buttonGroupBB, bb.Height(), w, g, !rbg.hor)
-	td.VAlign = pdfcpu.AlignBottom
+	if err := rbg.validateMargin(); err != nil {
+		return err
+	}
 
-	pdfcpu.WriteColumn(p.Buf, p.MediaBox, nil, td, 0)
+	if err := rbg.validateLabel(); err != nil {
+		return err
+	}
+
+	if err := rbg.validateButtonsDefaultAndValue(); err != nil {
+		return err
+	}
+
+	return rbg.validateTab()
+}
+
+func (rbg *RadioButtonGroup) calcFont() error {
+
+	if rbg.Label != nil {
+		f, err := rbg.content.calcLabelFont(rbg.Label.Font)
+		if err != nil {
+			return err
+		}
+		rbg.Label.Font = f
+	}
+
+	if rbg.Buttons.Label != nil {
+		f, err := rbg.content.calcLabelFont(rbg.Buttons.Label.Font)
+		if err != nil {
+			return err
+		}
+		rbg.Buttons.Label.Font = f
+	}
 
 	return nil
 }
 
-func (rbg *RadioButtonGroup) rect(i, maxWidth, firstWidth float64) *pdfcpu.Rectangle {
-	rbw := rbg.Width
-	g := float64(rbg.Buttons.Label.Gap)
-	w := float64(rbg.Buttons.Label.Width)
-
-	if rbg.hor {
-		if maxWidth+g > w {
-			w = maxWidth + g
-		}
-		var x float64
-		if rbg.Buttons.Label.horAlign == pdfcpu.AlignLeft {
-			x = rbg.boundingBox.LL.X + i*(rbw+w)
-		}
-		if rbg.Buttons.Label.horAlign == pdfcpu.AlignRight {
-			x = rbg.boundingBox.LL.X + firstWidth // ??
-			if i > 0 {
-				x += i * (rbw + w)
-			}
-		}
-		// TODO Increase width to enlarge focusArea.
-		return pdfcpu.RectForWidthAndHeight(x, rbg.boundingBox.LL.Y, rbw, rbw)
-	}
-	if maxWidth > w {
-		w = maxWidth
-	}
-	dx := 0.
-	if rbg.Buttons.Label.horAlign == pdfcpu.AlignRight {
-		dx = w
-	}
-	dy := i * (rbw + g)
-	return pdfcpu.RectForWidthAndHeight(rbg.boundingBox.LL.X+dx, rbg.boundingBox.LL.Y-dy, rbw, rbw)
-}
-
-func (rbg *RadioButtonGroup) irDOff() (*pdfcpu.IndirectRef, error) {
-
-	w := rbg.Width
-
-	ap, found := rbg.pdf.RadioBtnAPs[w]
-	if found && ap.irDOff != nil {
-		return ap.irDOff, nil
-	}
-
-	f := .5523
-	r := w / 2
-	r1 := r - .5
-
-	buf := fmt.Sprintf("0.5g q 1 0 0 1 %.2f %.2f cm %.2f 0 m ", r, r, r)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", r, f*r, f*r, r, 0., r)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", -f*r, r, -r, f*r, -r, 0.)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", -r, -f*r, -f*r, -r, .0, -r)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", f*r, -r, r, -f*r, r, 0.)
-	buf += fmt.Sprintf("f Q q 1 0 0 1 %.2f %.2f cm %.2f 0 m ", r, r, r1)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", r1, f*r1, f*r1, r1, 0., r1)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", -f*r1, r1, -r1, f*r1, -r1, 0.)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", -r1, -f*r1, -f*r1, -r1, .0, -r1)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", f*r1, -r1, r1, -f*r1, r1, 0.)
-	buf += "s Q "
-
-	sd, err := rbg.pdf.XRefTable.NewStreamDictForBuf([]byte(buf))
-	if err != nil {
-		return nil, err
-	}
-
-	sd.InsertName("Type", "XObject")
-	sd.InsertName("Subtype", "Form")
-	sd.InsertInt("FormType", 1)
-	sd.Insert("BBox", pdfcpu.NewNumberArray(0, 0, w, w))
-	sd.Insert("Matrix", pdfcpu.NewNumberArray(1, 0, 0, 1, 0, 0))
-
-	if err := sd.Encode(); err != nil {
-		return nil, err
-	}
-
-	ir, err := rbg.pdf.XRefTable.IndRefForNewObject(*sd)
-	if err != nil {
-		return nil, err
-	}
-
-	if !found {
-		ap = &AP{}
-		rbg.pdf.CheckBoxAPs[w] = ap
-	}
-	ap.irDOff = ir
-
-	return ir, nil
-}
-
-func (rbg *RadioButtonGroup) irDYes() (*pdfcpu.IndirectRef, error) {
-
-	w := rbg.Width
-
-	ap, found := rbg.pdf.RadioBtnAPs[w]
-	if found && ap.irDYes != nil {
-		return ap.irDYes, nil
-	}
-
-	f := .5523
-	r := w / 2
-	r1 := r - .5
-	r2 := r / 2
-
-	buf := fmt.Sprintf("0.5 g q 1 0 0 1 %.2f %.2f cm %.2f 0 m ", r, r, r)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", r, f*r, f*r, r, 0., r)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", -f*r, r, -r, f*r, -r, 0.)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", -r, -f*r, -f*r, -r, .0, -r)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", f*r, -r, r, -f*r, r, 0.)
-	buf += fmt.Sprintf("f Q q 1 0 0 1 %.2f %.2f cm %.2f 0 m ", r, r, r1)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", r1, f*r1, f*r1, r1, 0., r1)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", -f*r1, r1, -r1, f*r1, -r1, 0.)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", -r1, -f*r1, -f*r1, -r1, .0, -r1)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", f*r1, -r1, r1, -f*r1, r1, 0.)
-	buf += fmt.Sprintf("s Q 0 g q 1 0 0 1 %.2f %.2f cm %.2f 0 m ", r, r, r2)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", r2, f*r2, f*r2, r2, 0., r2)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", -f*r2, r2, -r2, f*r2, -r2, 0.)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", -r2, -f*r2, -f*r2, -r2, .0, -r2)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", f*r2, -r2, r2, -f*r2, r2, 0.)
-	buf += "f Q "
-
-	sd, err := rbg.pdf.XRefTable.NewStreamDictForBuf([]byte(buf))
-	if err != nil {
-		return nil, err
-	}
-
-	sd.InsertName("Type", "XObject")
-	sd.InsertName("Subtype", "Form")
-	sd.InsertInt("FormType", 1)
-	sd.Insert("BBox", pdfcpu.NewNumberArray(0, 0, w, w))
-	sd.Insert("Matrix", pdfcpu.NewNumberArray(1, 0, 0, 1, 0, 0))
-
-	if err := sd.Encode(); err != nil {
-		return nil, err
-	}
-
-	ir, err := rbg.pdf.XRefTable.IndRefForNewObject(*sd)
-	if err != nil {
-		return nil, err
-	}
-
-	if !found {
-		ap = &AP{}
-		rbg.pdf.CheckBoxAPs[w] = ap
-	}
-	ap.irDOff = ir
-
-	return ir, nil
-}
-
-func (rbg *RadioButtonGroup) irNOff() (*pdfcpu.IndirectRef, error) {
-
-	w := rbg.Width
-
-	ap, found := rbg.pdf.RadioBtnAPs[w]
-	if found && ap.irNOff != nil {
-		return ap.irNOff, nil
-	}
-
-	f := .5523
-	r := w / 2
-	r1 := r - .5
-
-	buf := fmt.Sprintf("1 g q 1 0 0 1 %.2f %.2f cm %.2f 0 m ", r, r, r)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", r, f*r, f*r, r, 0., r)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", -f*r, r, -r, f*r, -r, 0.)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", -r, -f*r, -f*r, -r, .0, -r)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", f*r, -r, r, -f*r, r, 0.)
-	buf += fmt.Sprintf("f Q q 1 0 0 1 %.2f %.2f cm %.2f 0 m ", r, r, r1)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", r1, f*r1, f*r1, r1, 0., r1)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", -f*r1, r1, -r1, f*r1, -r1, 0.)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", -r1, -f*r1, -f*r1, -r1, .0, -r1)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", f*r1, -r1, r1, -f*r1, r1, 0.)
-	buf += "s Q "
-
-	sd, err := rbg.pdf.XRefTable.NewStreamDictForBuf([]byte(buf))
-	if err != nil {
-		return nil, err
-	}
-
-	sd.InsertName("Type", "XObject")
-	sd.InsertName("Subtype", "Form")
-	sd.InsertInt("FormType", 1)
-	sd.Insert("BBox", pdfcpu.NewNumberArray(0, 0, w, w))
-	sd.Insert("Matrix", pdfcpu.NewNumberArray(1, 0, 0, 1, 0, 0))
-
-	if err := sd.Encode(); err != nil {
-		return nil, err
-	}
-
-	ir, err := rbg.pdf.XRefTable.IndRefForNewObject(*sd)
-	if err != nil {
-		return nil, err
-	}
-
-	if !found {
-		ap = &AP{}
-		rbg.pdf.CheckBoxAPs[w] = ap
-	}
-	ap.irDOff = ir
-
-	return ir, nil
-}
-
-func (rbg *RadioButtonGroup) irNYes() (*pdfcpu.IndirectRef, error) {
-
-	w := rbg.Width
-
-	ap, found := rbg.pdf.RadioBtnAPs[w]
-	if found && ap.irNYes != nil {
-		return ap.irNYes, nil
-	}
-
-	f := .5523
-	r := w / 2
-	r1 := r - .5
-	r2 := r / 2
-
-	buf := fmt.Sprintf("1 g q 1 0 0 1 %.2f %.2f cm %.2f 0 m ", r, r, r)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", r, f*r, f*r, r, 0., r)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", -f*r, r, -r, f*r, -r, 0.)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", -r, -f*r, -f*r, -r, .0, -r)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", f*r, -r, r, -f*r, r, 0.)
-	buf += fmt.Sprintf("f Q q 1 0 0 1 %.2f %.2f cm %.2f 0 m ", r, r, r1)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", r1, f*r1, f*r1, r1, 0., r1)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", -f*r1, r1, -r1, f*r1, -r1, 0.)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", -r1, -f*r1, -f*r1, -r1, .0, -r1)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", f*r1, -r1, r1, -f*r1, r1, 0.)
-	buf += fmt.Sprintf("s Q 0 g q 1 0 0 1 %.2f %.2f cm %.2f 0 m ", r, r, r2)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", r2, f*r2, f*r2, r2, 0., r2)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", -f*r2, r2, -r2, f*r2, -r2, 0.)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", -r2, -f*r2, -f*r2, -r2, .0, -r2)
-	buf += fmt.Sprintf("%.3f %.3f %.3f %.3f %.3f %.3f c ", f*r2, -r2, r2, -f*r2, r2, 0.)
-	buf += "f Q "
-
-	sd, err := rbg.pdf.XRefTable.NewStreamDictForBuf([]byte(buf))
-	if err != nil {
-		return nil, err
-	}
-
-	sd.InsertName("Type", "XObject")
-	sd.InsertName("Subtype", "Form")
-	sd.InsertInt("FormType", 1)
-	sd.Insert("BBox", pdfcpu.NewNumberArray(0, 0, w, w))
-	sd.Insert("Matrix", pdfcpu.NewNumberArray(1, 0, 0, 1, 0, 0))
-
-	if err := sd.Encode(); err != nil {
-		return nil, err
-	}
-
-	ir, err := rbg.pdf.XRefTable.IndRefForNewObject(*sd)
-	if err != nil {
-		return nil, err
-	}
-
-	if !found {
-		ap = &AP{}
-		rbg.pdf.CheckBoxAPs[w] = ap
-	}
-	ap.irDOff = ir
-
-	return ir, nil
-}
-
-func (rbg *RadioButtonGroup) appearanceIndRefs() (
-	*pdfcpu.IndirectRef, *pdfcpu.IndirectRef, *pdfcpu.IndirectRef, *pdfcpu.IndirectRef, error) {
-
-	irDOff, err := rbg.irDOff()
-	if err != nil {
-		return nil, nil, nil, nil, err
-	}
-
-	irDYes, err := rbg.irDYes()
-	if err != nil {
-		return nil, nil, nil, nil, err
-	}
-
-	irNOff, err := rbg.irNOff()
-	if err != nil {
-		return nil, nil, nil, nil, err
-	}
-
-	irNYes, err := rbg.irNYes()
-	if err != nil {
-		return nil, nil, nil, nil, err
-	}
-
-	return irDOff, irDYes, irNOff, irNYes, nil
+func (rbg *RadioButtonGroup) margin(name string) *Margin {
+	return rbg.content.namedMargin(name)
 }
 
 func (rbg *RadioButtonGroup) prepareMargin() (float64, float64, float64, float64, error) {
-
 	mTop, mRight, mBot, mLeft := 0., 0., 0., 0.
 
 	if rbg.Margin != nil {
@@ -643,236 +254,834 @@ func (rbg *RadioButtonGroup) prepareMargin() (float64, float64, float64, float64
 	return mTop, mRight, mBot, mLeft, nil
 }
 
-func (rbg *RadioButtonGroup) prepareDict(r *pdfcpu.Rectangle, v string, parent pdfcpu.IndirectRef, irDOff, irDYes, irNOff, irNYes *pdfcpu.IndirectRef) (*pdfcpu.IndirectRef, pdfcpu.Dict, error) {
-	d := pdfcpu.Dict(map[string]pdfcpu.Object{
-		"Type":    pdfcpu.Name("Annot"),
-		"Subtype": pdfcpu.Name("Widget"),
-		"F":       pdfcpu.Integer(pdfcpu.AnnPrint),
+func (rbg *RadioButtonGroup) buttonLabelPosition(i int) (float64, float64) {
+	rbw := rbg.Width
+	g := float64(rbg.Buttons.Label.Gap)
+	w := float64(rbg.Buttons.Label.Width)
+	bg := float64(rbg.Buttons.Gap)
+	maxWidth := rbg.Buttons.maxWidth
+
+	if rbg.hor {
+		if maxWidth+g > w {
+			w = maxWidth + g
+		}
+		var x float64
+		if rbg.Buttons.Label.HorAlign == types.AlignLeft {
+			x = rbg.boundingBox.LL.X + rbw + bg + float64(i)*(rbw+w)
+		}
+		if rbg.Buttons.Label.HorAlign == types.AlignRight {
+			x = rbg.boundingBox.LL.X + rbg.Buttons.widths[0]
+			if i > 0 {
+				x += float64(i) * (rbw + w)
+			}
+		}
+		return x, rbg.boundingBox.LL.Y + rbg.boundingBox.Height()/2
+	}
+
+	if maxWidth > w {
+		w = maxWidth
+	}
+	var dx float64
+	if rbg.Buttons.Label.HorAlign == types.AlignLeft {
+		dx += rbw + bg
+	}
+	if rbg.Buttons.Label.HorAlign == types.AlignRight {
+		dx += w
+	}
+	dy := float64(i) * (rbw + g)
+	return rbg.boundingBox.LL.X + dx, rbg.boundingBox.LL.Y - dy
+}
+
+func (rbg *RadioButtonGroup) renderButtonLabels(p *model.Page, pageNr int, fonts model.FontMap) error {
+	l := rbg.Buttons.Label
+
+	fontName := l.Font.Name
+	fontLang := l.Font.Lang
+	fontSize := l.Font.Size
+	col := l.Font.col
+
+	id, err := rbg.pdf.idForFontName(fontName, fontLang, p.Fm, fonts, pageNr)
+	if err != nil {
+		return err
+	}
+
+	td := model.TextDescriptor{
+		FontName: fontName,
+		FontKey:  id,
+		FontSize: fontSize,
+		Scale:    1.,
+		ScaleAbs: true,
+		RTL:      l.RTL,
+	}
+
+	if col != nil {
+		td.StrokeCol, td.FillCol = *col, *col
+	}
+
+	if l.BgCol != nil {
+		td.ShowTextBB = true
+		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *l.BgCol
+	}
+
+	td.HAlign, td.VAlign = l.HorAlign, types.AlignBottom
+
+	for i, v := range rbg.Buttons.Values {
+		td.Text = v
+		td.X, td.Y = rbg.buttonLabelPosition(i)
+		if rbg.hor {
+			td.VAlign = types.AlignMiddle
+		}
+		model.WriteColumn(rbg.pdf.XRefTable, p.Buf, p.MediaBox, nil, td, 0)
+	}
+
+	return nil
+}
+
+func (rbg *RadioButtonGroup) buttonGroupBB() *types.Rectangle {
+	g := float64(rbg.Buttons.Label.Gap)
+	w := float64(rbg.Buttons.Label.Width)
+	bg := float64(rbg.Buttons.Gap)
+	maxWidth := rbg.Buttons.maxWidth
+
+	rbSize := rbg.Width
+	rbCount := float64(len(rbg.Buttons.Values))
+
+	if rbg.hor {
+		if maxWidth+g > w {
+			w = maxWidth + g
+		}
+		width := (rbCount-1)*(w+rbSize+bg) + rbSize
+		if rbg.Buttons.Label.HorAlign == types.AlignRight {
+			width += rbg.Buttons.widths[0]
+		}
+		if rbg.Buttons.Label.HorAlign == types.AlignLeft {
+			width += rbg.Buttons.widths[len(rbg.Buttons.widths)-1]
+		}
+		return types.RectForWidthAndHeight(rbg.boundingBox.LL.X, rbg.boundingBox.LL.Y, width, rbSize)
+	}
+
+	if maxWidth > w {
+		w = maxWidth
+	}
+	y := rbg.boundingBox.LL.Y - (rbCount-1)*(rbSize+g)
+	h := rbSize + (rbCount-1)*(rbSize+g)
+
+	return types.RectForWidthAndHeight(rbg.boundingBox.LL.X, y, w+rbSize+bg, h)
+}
+
+func labelPos(
+	relPos types.RelPosition,
+	horAlign types.HAlignment,
+	boundingBox *types.Rectangle,
+	labelHeight, w, g float64, multiline bool) (float64, float64) {
+
+	var x, y float64
+
+	switch relPos {
+
+	case types.RelPosLeft:
+		x = boundingBox.LL.X - g
+		if horAlign == types.AlignLeft {
+			x -= w
+			if x < 0 {
+				x = 0
+			}
+		}
+		if multiline {
+			y = boundingBox.UR.Y - labelHeight
+		} else {
+			y = boundingBox.LL.Y
+		}
+
+	case types.RelPosRight:
+		x = boundingBox.UR.X + g
+		if horAlign == types.AlignRight {
+			x += w
+		}
+		if multiline {
+			y = boundingBox.UR.Y - labelHeight
+		} else {
+			y = boundingBox.LL.Y
+		}
+
+	case types.RelPosTop:
+		y = boundingBox.UR.Y + g
+		x = boundingBox.LL.X
+		if horAlign == types.AlignRight {
+			x += boundingBox.Width()
+		} else if horAlign == types.AlignCenter {
+			x += boundingBox.Width() / 2
+		}
+
+	case types.RelPosBottom:
+		y = boundingBox.LL.Y - g - labelHeight
+		x = boundingBox.LL.X
+		if horAlign == types.AlignRight {
+			x += boundingBox.Width()
+		} else if horAlign == types.AlignCenter {
+			x += boundingBox.Width() / 2
+		}
+
+	}
+
+	return x, y
+}
+
+func (rbg *RadioButtonGroup) rect(i int) *types.Rectangle {
+	rbw := rbg.Width
+	g := float64(rbg.Buttons.Label.Gap)
+	w := float64(rbg.Buttons.Label.Width)
+	bg := float64(rbg.Buttons.Gap)
+
+	if rbg.hor {
+		if rbg.Buttons.maxWidth+g > w {
+			w = rbg.Buttons.maxWidth + g
+		}
+		var x float64
+		if rbg.Buttons.Label.HorAlign == types.AlignLeft {
+			x = rbg.boundingBox.LL.X + float64(i)*(rbw+w)
+		}
+		if rbg.Buttons.Label.HorAlign == types.AlignRight {
+			x = rbg.boundingBox.LL.X + rbg.Buttons.widths[0] + bg
+			if i > 0 {
+				x += float64(i) * (rbw + w)
+			}
+		}
+		return types.RectForWidthAndHeight(x, rbg.boundingBox.LL.Y, rbw, rbw)
+	}
+	dx := 0.
+	if rbg.Buttons.Label.HorAlign == types.AlignRight {
+		if rbg.Buttons.maxWidth > w {
+			w = rbg.Buttons.maxWidth
+		}
+		dx = w + bg
+	}
+	dy := float64(i) * (rbw + g)
+	return types.RectForWidthAndHeight(rbg.boundingBox.LL.X+dx, rbg.boundingBox.LL.Y-dy, rbw, rbw)
+}
+
+func (rbg *RadioButtonGroup) irDOff(asWidth float64, flip bool) (*types.IndirectRef, error) {
+
+	w := rbg.Width
+
+	ap, found := rbg.pdf.RadioBtnAPs[asWidth]
+	if found {
+		if !flip && ap.irDOffL != nil {
+			return ap.irDOffL, nil
+		}
+		if flip && ap.irDOffR != nil {
+			return ap.irDOffR, nil
+		}
+	}
+
+	f := .5523
+	r := w / 2
+	r1 := r - .5
+	dx := r
+	if flip {
+		dx = asWidth - r
+	}
+
+	buf := new(bytes.Buffer)
+
+	fmt.Fprintf(buf, "q 0.5 g 1 0 0 1 %.2f %.2f cm %.2f 0 m ", dx, r, r)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", r, f*r, f*r, r, 0., r)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", -f*r, r, -r, f*r, -r, 0.)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", -r, -f*r, -f*r, -r, .0, -r)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", f*r, -r, r, -f*r, r, 0.)
+	fmt.Fprintf(buf, "f Q q 1 0 0 1 %.2f %.2f cm %.2f 0 m ", dx, r, r1)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", r1, f*r1, f*r1, r1, 0., r1)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", -f*r1, r1, -r1, f*r1, -r1, 0.)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", -r1, -f*r1, -f*r1, -r1, .0, -r1)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", f*r1, -r1, r1, -f*r1, r1, 0.)
+	fmt.Fprint(buf, "s Q ")
+
+	sd, err := rbg.pdf.XRefTable.NewStreamDictForBuf(buf.Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	sd.InsertName("Type", "XObject")
+	sd.InsertName("Subtype", "Form")
+	sd.InsertInt("FormType", 1)
+	sd.Insert("BBox", types.NewNumberArray(0, 0, asWidth, w))
+	sd.Insert("Matrix", types.NewNumberArray(1, 0, 0, 1, 0, 0))
+
+	if err := sd.Encode(); err != nil {
+		return nil, err
+	}
+
+	ir, err := rbg.pdf.XRefTable.IndRefForNewObject(*sd)
+	if err != nil {
+		return nil, err
+	}
+
+	if !found {
+		ap = &AP{}
+		rbg.pdf.RadioBtnAPs[asWidth] = ap
+	}
+	if !flip {
+		ap.irDOffL = ir
+	}
+	if flip {
+		ap.irDOffR = ir
+	}
+
+	return ir, nil
+}
+
+func (rbg *RadioButtonGroup) irDYes(asWidth float64, flip bool) (*types.IndirectRef, error) {
+
+	w := rbg.Width
+
+	ap, found := rbg.pdf.RadioBtnAPs[asWidth]
+	if found {
+		if !flip && ap.irDYesL != nil {
+			return ap.irDYesL, nil
+		}
+		if flip && ap.irDYesR != nil {
+			return ap.irDYesR, nil
+		}
+	}
+
+	f := .5523
+	r := w / 2
+	r1 := r - .5
+	r2 := r / 2
+	dx := r
+	if flip {
+		dx = asWidth - r
+	}
+
+	buf := new(bytes.Buffer)
+
+	fmt.Fprintf(buf, "q 0.5 g 1 0 0 1 %.2f %.2f cm %.2f 0 m ", dx, r, r)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", r, f*r, f*r, r, 0., r)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", -f*r, r, -r, f*r, -r, 0.)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", -r, -f*r, -f*r, -r, .0, -r)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", f*r, -r, r, -f*r, r, 0.)
+	fmt.Fprintf(buf, "f Q q 1 0 0 1 %.2f %.2f cm %.2f 0 m ", dx, r, r1)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", r1, f*r1, f*r1, r1, 0., r1)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", -f*r1, r1, -r1, f*r1, -r1, 0.)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", -r1, -f*r1, -f*r1, -r1, .0, -r1)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", f*r1, -r1, r1, -f*r1, r1, 0.)
+	fmt.Fprintf(buf, "s Q 0 g q 1 0 0 1 %.2f %.2f cm %.2f 0 m ", dx, r, r2)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", r2, f*r2, f*r2, r2, 0., r2)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", -f*r2, r2, -r2, f*r2, -r2, 0.)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", -r2, -f*r2, -f*r2, -r2, .0, -r2)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", f*r2, -r2, r2, -f*r2, r2, 0.)
+	fmt.Fprint(buf, "f Q ")
+
+	sd, err := rbg.pdf.XRefTable.NewStreamDictForBuf(buf.Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	sd.InsertName("Type", "XObject")
+	sd.InsertName("Subtype", "Form")
+	sd.InsertInt("FormType", 1)
+	sd.Insert("BBox", types.NewNumberArray(0, 0, asWidth, w))
+	sd.Insert("Matrix", types.NewNumberArray(1, 0, 0, 1, 0, 0))
+
+	if err := sd.Encode(); err != nil {
+		return nil, err
+	}
+
+	ir, err := rbg.pdf.XRefTable.IndRefForNewObject(*sd)
+	if err != nil {
+		return nil, err
+	}
+
+	if !found {
+		ap = &AP{}
+		rbg.pdf.RadioBtnAPs[asWidth] = ap
+	}
+	if !flip {
+		ap.irDYesL = ir
+	}
+	if flip {
+		ap.irDYesR = ir
+	}
+
+	return ir, nil
+}
+
+func (rbg *RadioButtonGroup) irNOff(asWidth float64, flip bool, bgCol *color.SimpleColor) (*types.IndirectRef, error) {
+
+	w := rbg.Width
+
+	ap, found := rbg.pdf.RadioBtnAPs[asWidth]
+	if found {
+		if !flip && ap.irNOffL != nil {
+			return ap.irNOffL, nil
+		}
+		if flip && ap.irNOffR != nil {
+			return ap.irNOffR, nil
+		}
+	}
+
+	f := .5523
+	r := w / 2
+	r1 := r - .5
+	dx := r
+	if flip {
+		dx = asWidth - r
+	}
+
+	buf := new(bytes.Buffer)
+
+	fmt.Fprintf(buf, "q ")
+	if bgCol != nil {
+		fmt.Fprintf(buf, "%.2f %.2f %.2f rg ", bgCol.R, bgCol.G, bgCol.B)
+	} else {
+		fmt.Fprint(buf, "1 g ")
+	}
+
+	fmt.Fprintf(buf, "1 0 0 1 %.2f %.2f cm %.2f 0 m ", dx, r, r)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", r, f*r, f*r, r, 0., r)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", -f*r, r, -r, f*r, -r, 0.)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", -r, -f*r, -f*r, -r, .0, -r)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", f*r, -r, r, -f*r, r, 0.)
+	fmt.Fprintf(buf, "f Q q 1 0 0 1 %.2f %.2f cm %.2f 0 m ", dx, r, r1)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", r1, f*r1, f*r1, r1, 0., r1)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", -f*r1, r1, -r1, f*r1, -r1, 0.)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", -r1, -f*r1, -f*r1, -r1, .0, -r1)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", f*r1, -r1, r1, -f*r1, r1, 0.)
+	fmt.Fprint(buf, "s Q ")
+
+	sd, err := rbg.pdf.XRefTable.NewStreamDictForBuf(buf.Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	sd.InsertName("Type", "XObject")
+	sd.InsertName("Subtype", "Form")
+	sd.InsertInt("FormType", 1)
+	sd.Insert("BBox", types.NewNumberArray(0, 0, asWidth, w))
+	sd.Insert("Matrix", types.NewNumberArray(1, 0, 0, 1, 0, 0))
+
+	if err := sd.Encode(); err != nil {
+		return nil, err
+	}
+
+	ir, err := rbg.pdf.XRefTable.IndRefForNewObject(*sd)
+	if err != nil {
+		return nil, err
+	}
+
+	if !found {
+		ap = &AP{}
+		rbg.pdf.RadioBtnAPs[asWidth] = ap
+	}
+	if !flip {
+		ap.irNOffL = ir
+	}
+	if flip {
+		ap.irNOffR = ir
+	}
+
+	return ir, nil
+}
+
+func (rbg *RadioButtonGroup) irNYes(asWidth float64, flip bool, bgCol *color.SimpleColor) (*types.IndirectRef, error) {
+
+	w := rbg.Width
+
+	ap, found := rbg.pdf.RadioBtnAPs[asWidth]
+	if found {
+		if !flip && ap.irNYesL != nil {
+			return ap.irNYesL, nil
+		}
+		if flip && ap.irNYesR != nil {
+			return ap.irNYesR, nil
+		}
+	}
+
+	f := .5523
+	r := w / 2
+	r1 := r - .5
+	r2 := r / 2
+	dx := r
+	if flip {
+		dx = asWidth - r
+	}
+
+	buf := new(bytes.Buffer)
+
+	fmt.Fprintf(buf, "q ")
+	if bgCol != nil {
+		fmt.Fprintf(buf, "%.2f %.2f %.2f rg ", bgCol.R, bgCol.G, bgCol.B)
+	} else {
+		fmt.Fprint(buf, "1 g ")
+	}
+
+	fmt.Fprintf(buf, "1 0 0 1 %.2f %.2f cm %.2f 0 m ", dx, r, r)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", r, f*r, f*r, r, 0., r)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", -f*r, r, -r, f*r, -r, 0.)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", -r, -f*r, -f*r, -r, .0, -r)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", f*r, -r, r, -f*r, r, 0.)
+	fmt.Fprintf(buf, "f Q q 1 0 0 1 %.2f %.2f cm %.2f 0 m ", dx, r, r1)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", r1, f*r1, f*r1, r1, 0., r1)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", -f*r1, r1, -r1, f*r1, -r1, 0.)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", -r1, -f*r1, -f*r1, -r1, .0, -r1)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", f*r1, -r1, r1, -f*r1, r1, 0.)
+	fmt.Fprintf(buf, "s Q 0 g q 1 0 0 1 %.2f %.2f cm %.2f 0 m ", dx, r, r2)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", r2, f*r2, f*r2, r2, 0., r2)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", -f*r2, r2, -r2, f*r2, -r2, 0.)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", -r2, -f*r2, -f*r2, -r2, .0, -r2)
+	fmt.Fprintf(buf, "%.3f %.3f %.3f %.3f %.3f %.3f c ", f*r2, -r2, r2, -f*r2, r2, 0.)
+	fmt.Fprint(buf, "f Q ")
+
+	sd, err := rbg.pdf.XRefTable.NewStreamDictForBuf(buf.Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	sd.InsertName("Type", "XObject")
+	sd.InsertName("Subtype", "Form")
+	sd.InsertInt("FormType", 1)
+	sd.Insert("BBox", types.NewNumberArray(0, 0, asWidth, w))
+	sd.Insert("Matrix", types.NewNumberArray(1, 0, 0, 1, 0, 0))
+
+	if err := sd.Encode(); err != nil {
+		return nil, err
+	}
+
+	ir, err := rbg.pdf.XRefTable.IndRefForNewObject(*sd)
+	if err != nil {
+		return nil, err
+	}
+
+	if !found {
+		ap = &AP{}
+		rbg.pdf.RadioBtnAPs[asWidth] = ap
+	}
+	if !flip {
+		ap.irNYesL = ir
+	}
+	if flip {
+		ap.irNYesR = ir
+	}
+
+	return ir, nil
+}
+
+func (rbg *RadioButtonGroup) appearanceIndRefs(flip bool, bgCol *color.SimpleColor) (
+	*types.IndirectRef, *types.IndirectRef, *types.IndirectRef, *types.IndirectRef, error) {
+
+	w := rbg.Width
+
+	irDOff, err := rbg.irDOff(w, flip)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	irDYes, err := rbg.irDYes(w, flip)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	irNOff, err := rbg.irNOff(w, flip, bgCol)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	irNYes, err := rbg.irNYes(w, flip, bgCol)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	return irDOff, irDYes, irNOff, irNYes, nil
+}
+
+func (rbg *RadioButtonGroup) prepareButtonDict(r *types.Rectangle, v string, parent types.IndirectRef, irDOff, irDYes, irNOff, irNYes *types.IndirectRef) (*types.IndirectRef, types.Dict, error) {
+
+	/*	Note: Mac Preview seems to have a problem saving radio buttons.
+		1) Once saved in Mac Preview selected radio buttons don't get rendered in Mac Preview whereas Adobe Reader renders them w/o problem.
+		2) Preselected radio buttons remain sticky after saving across Mac Preview and Adobe Reader.
+	*/
+
+	s := types.EncodeName(v)
+
+	as := types.Name("Off")
+
+	v1 := rbg.Default
+	if rbg.Value != "" {
+		v1 = rbg.Value
+	}
+	if v == v1 {
+		as = types.Name(s)
+	}
+
+	d := types.Dict(map[string]types.Object{
+		"Type":    types.Name("Annot"),
+		"Subtype": types.Name("Widget"),
+		"F":       types.Integer(model.AnnPrint),
 		"Parent":  parent,
-		"AS":      pdfcpu.Name("Off"), // Preselect "Off" or buttonVal
+		"AS":      as,
 		"Rect":    r.Array(),
-		//"T":       id, // required
-		//"TU":      id, // Acrobat Reader Hover over field
-		"AP": pdfcpu.Dict(
-			map[string]pdfcpu.Object{
-				"D": pdfcpu.Dict(
-					map[string]pdfcpu.Object{
+		"AP": types.Dict(
+			map[string]types.Object{
+				"D": types.Dict(
+					map[string]types.Object{
 						"Off": *irDOff,
-						v:     *irDYes,
+						s:     *irDYes,
 					},
 				),
-				"N": pdfcpu.Dict(
-					map[string]pdfcpu.Object{
+				"N": types.Dict(
+					map[string]types.Object{
 						"Off": *irNOff,
-						v:     *irNYes,
+						s:     *irNYes,
 					},
 				),
 			},
 		),
-		"BS": pdfcpu.Dict(
-			map[string]pdfcpu.Object{
-				"S": pdfcpu.Name("I"),
-				"W": pdfcpu.Integer(1),
+		"BS": types.Dict(
+			map[string]types.Object{
+				"S": types.Name("I"),
+				"W": types.Integer(1),
 			},
 		),
 	})
-
-	if v == rbg.Value {
-		d["AS"] = pdfcpu.Name(v) // not on MacPreview!
-	}
 
 	ir, err := rbg.pdf.XRefTable.IndRefForNewObject(d)
 
 	return ir, d, err
 }
 
-func (rbg *RadioButtonGroup) renderRadioButtonFields(p *pdfcpu.Page, parent pdfcpu.IndirectRef) (pdfcpu.Array, error) {
+func (rbg *RadioButtonGroup) renderRadioButtonFields(p *model.Page, parent types.IndirectRef) (types.Array, error) {
+	flip := rbg.Buttons.Label.HorAlign == types.AlignRight
+	kids := types.Array{}
 
-	irDOff, irDYes, irNOff, irNYes, err := rbg.appearanceIndRefs()
-	if err != nil {
-		return nil, err
-	}
-
-	mTop, mRight, mBottom, mLeft, err := rbg.prepareMargin()
-	if err != nil {
-		return nil, err
-	}
-
-	cBox := rbg.content.Box()
-	r := cBox.CroppedCopy(0)
-	r.LL.X += mLeft
-	r.LL.Y += mBottom
-	r.UR.X -= mRight
-	r.UR.Y -= mTop
-
-	pdf := rbg.pdf
-	x, y := pdfcpu.NormalizeCoord(rbg.x, rbg.y, cBox, pdf.origin, false)
-
-	if x == -1 {
-		// Center horizontally
-		x = cBox.Center().X - r.LL.X
-	} else if x > 0 {
-		x -= mLeft
-		if x < 0 {
-			x = 0
+	bgCol := rbg.bgCol
+	if bgCol == nil {
+		bgCol = rbg.content.page.bgCol
+		if bgCol == nil {
+			bgCol = rbg.pdf.bgCol
 		}
 	}
 
-	if y == -1 {
-		// Center vertically
-		y = cBox.Center().Y - r.LL.Y
-	} else if y > 0 {
-		y -= mBottom
-		if y < 0 {
-			y = 0
+	for i := 0; i < len(rbg.Buttons.Values); i++ {
+
+		irDOff, irDYes, irNOff, irNYes, err := rbg.appearanceIndRefs(flip, bgCol)
+		if err != nil {
+			return nil, err
 		}
-	}
 
-	if x >= 0 {
-		x = r.LL.X + x
-	}
-	if y >= 0 {
-		y = r.LL.Y + y
-	}
+		r := rbg.rect(i)
+		v := rbg.Buttons.Values[i]
 
-	// Position text horizontally centered for x < 0.
-	if x < 0 {
-		x = r.LL.X + r.Width()/2
-	}
-
-	// Position text vertically centered for y < 0.
-	if y < 0 {
-		y = r.LL.Y + r.Height()/2
-	}
-
-	// Apply offset.
-	x += rbg.Dx
-	y += rbg.Dy
-
-	rbg.boundingBox = pdfcpu.RectForWidthAndHeight(x, y, rbg.Width, rbg.Width)
-
-	kids := pdfcpu.Array{}
-
-	maxw, firstw := rbg.Buttons.maxLabelWidth(rbg.hor)
-
-	for i, v := range rbg.Buttons.Values {
-
-		r := rbg.rect(float64(i), maxw, firstw)
-
-		ir, d, err := rbg.prepareDict(r, v, parent, irDOff, irDYes, irNOff, irNYes)
+		ir, _, err := rbg.prepareButtonDict(r, v, parent, irDOff, irDYes, irNOff, irNYes)
 		if err != nil {
 			return nil, err
 		}
 
 		kids = append(kids, *ir)
-		p.Annots = append(p.Annots, d)
-		p.AnnotIndRefs = append(p.AnnotIndRefs, *ir)
 	}
 
 	return kids, nil
 }
 
-func (rbg *RadioButtonGroup) labelFont() (*FormFont, error) {
-	// Use inherited named font "label".
-	f := rbg.font("label")
-	if f == nil {
-		return nil, errors.Errorf("pdfcpu: missing named font \"label\"")
+func (rbg *RadioButtonGroup) bbox() *types.Rectangle {
+	if rbg.Label == nil {
+		return rbg.Buttons.boundingBox.Clone()
 	}
-	if f.col == nil {
-		f.col = &pdfcpu.Black
+
+	l := rbg.Label
+	var r *types.Rectangle
+	x := l.td.X
+
+	switch l.td.HAlign {
+	case types.AlignCenter:
+		x -= float64(l.Width) / 2
+	case types.AlignRight:
+		x -= float64(l.Width)
 	}
-	return f, nil
+
+	y := l.td.Y
+	if rbg.hor {
+		y -= rbg.boundingBox.Height() / 2
+	}
+	r = types.RectForWidthAndHeight(x, y, float64(l.Width), l.height)
+
+	return model.CalcBoundingBoxForRects(rbg.Buttons.boundingBox, r)
 }
 
-func (rbg *RadioButtonGroup) calcFont(f *FormFont) error {
-	// Use named font.
-	fName := f.Name[1:]
-	f0 := rbg.font(fName)
-	if f0 == nil {
-		return errors.Errorf("pdfcpu: unknown font name %s", fName)
-	}
-	f.Name = f0.Name
-	if f.Size == 0 {
-		f.Size = f0.Size
-	}
-	if f.col == nil {
-		f.col = f0.col
-	}
-	if f.col == nil {
-		f.col = &pdfcpu.Black
-	}
-	return nil
+func (rbg *RadioButtonGroup) prepareRectLL(mTop, mRight, mBottom, mLeft float64) (float64, float64) {
+	return rbg.content.calcPosition(rbg.x, rbg.y, rbg.Dx, rbg.Dy, mTop, mRight, mBottom, mLeft)
 }
 
-func (rbg *RadioButtonGroup) prepareFonts() error {
-
-	if rbg.Buttons.Label.Font == nil {
-		f, err := rbg.labelFont()
-		if err != nil {
-			return err
-		}
-		rbg.Buttons.Label.Font = f
-	} else {
-		if err := rbg.calcFont(rbg.Buttons.Label.Font); err != nil {
-			return err
-		}
-	}
+func (rbg *RadioButtonGroup) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) error {
 
 	if rbg.Label == nil {
 		return nil
 	}
 
-	if rbg.Label.Font == nil {
-		f, err := rbg.labelFont()
+	l := rbg.Label
+	v := l.Value
+	w := float64(l.Width)
+	g := float64(l.Gap)
+
+	f := l.Font
+	fontName, fontLang, col := f.Name, f.Lang, f.col
+
+	id, err := rbg.pdf.idForFontName(fontName, fontLang, p.Fm, fonts, pageNr)
+	if err != nil {
+		return err
+	}
+
+	td := model.TextDescriptor{
+		Text:     v,
+		FontName: fontName,
+		FontKey:  id,
+		FontSize: f.Size,
+		HAlign:   l.HorAlign,
+		Scale:    1.,
+		ScaleAbs: true,
+		RTL:      l.RTL,
+	}
+
+	if col != nil {
+		td.StrokeCol, td.FillCol = *col, *col
+	}
+
+	if l.BgCol != nil {
+		td.ShowTextBB = true
+		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *l.BgCol
+	}
+
+	bb := model.WriteMultiLine(rbg.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	l.height = bb.Height()
+	if bb.Width() > w {
+		w = bb.Width()
+		l.Width = int(bb.Width())
+	}
+	td.X, td.Y = labelPos(l.relPos, l.HorAlign, rbg.buttonGroupBB(), l.height, w, g, !rbg.hor)
+	td.VAlign = types.AlignBottom
+	if rbg.hor {
+		td.Y += rbg.boundingBox.Height() / 2
+		td.VAlign = types.AlignMiddle
+	}
+
+	l.td = &td
+
+	return nil
+}
+
+func (rbg *RadioButtonGroup) prepForRender(p *model.Page, pageNr int, fonts model.FontMap) error {
+
+	if err := rbg.calcFont(); err != nil {
+		return err
+	}
+
+	rbg.Buttons.calcLabelWidths(rbg.hor)
+
+	mTop, mRight, mBottom, mLeft, err := rbg.prepareMargin()
+	if err != nil {
+		return err
+	}
+
+	x, y := rbg.prepareRectLL(mTop, mRight, mBottom, mLeft)
+
+	rbg.boundingBox = types.RectForWidthAndHeight(x, y, rbg.Width, rbg.Width)
+
+	rbg.Buttons.boundingBox = rbg.buttonGroupBB()
+
+	return rbg.prepLabel(p, pageNr, fonts)
+}
+
+func (rbg *RadioButtonGroup) prepareDict(p *model.Page, pageNr int, fonts model.FontMap) (*types.IndirectRef, types.Array, error) {
+
+	rbg.renderButtonLabels(p, pageNr, fonts)
+
+	id, err := types.EscapeUTF16String(rbg.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ff := FieldNoToggleToOff + FieldRadio
+	if rbg.Locked {
+		// Note: unsupported in Mac Preview
+		ff += FieldReadOnly
+	}
+
+	d := types.Dict(
+		map[string]types.Object{
+			"FT": types.Name("Btn"),
+			"Ff": types.Integer(ff),
+			"T":  types.StringLiteral(*id),
+		},
+	)
+
+	v := types.Name("Off")
+	if rbg.Value != "" {
+		s := types.EncodeName(rbg.Value)
+		v = types.Name(s)
+	}
+
+	if rbg.Default != "" {
+		s := types.EncodeName(rbg.Default)
+		d["DV"] = types.Name(s)
+		if rbg.Value == "" {
+			v = types.Name(s)
+		}
+	}
+
+	d["V"] = v
+
+	if rbg.Tip != "" {
+		tu, err := types.EscapeUTF16String(rbg.Tip)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
-		rbg.Label.Font = f
+		d["TU"] = types.StringLiteral(*tu)
+	}
+
+	ir, err := rbg.pdf.XRefTable.IndRefForNewObject(d)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	kids, err := rbg.renderRadioButtonFields(p, *ir)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	d["Kids"] = kids
+
+	return ir, kids, nil
+}
+
+func (rbg *RadioButtonGroup) doRender(p *model.Page, pageNr int, fonts model.FontMap) error {
+
+	ir, kids, err := rbg.prepareDict(p, pageNr, fonts)
+	if err != nil {
+		return err
+	}
+
+	ann := model.FieldAnnotation{IndRef: ir, Kids: kids}
+	if rbg.Tab > 0 {
+		p.AnnotTabs[rbg.Tab] = ann
 	} else {
-		if err := rbg.calcFont(rbg.Label.Font); err != nil {
-			return err
-		}
+		p.Annots = append(p.Annots, ann)
+	}
+
+	if rbg.Label != nil {
+		model.WriteColumn(rbg.pdf.XRefTable, p.Buf, p.MediaBox, nil, *rbg.Label.td, 0)
+	}
+
+	if rbg.Debug || rbg.pdf.Debug {
+		rbg.pdf.highlightPos(p.Buf, rbg.boundingBox.LL.X, rbg.boundingBox.LL.Y, rbg.content.Box())
 	}
 
 	return nil
 }
 
-func (rbg *RadioButtonGroup) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, fields *pdfcpu.Array) error {
+func (rbg *RadioButtonGroup) render(p *model.Page, pageNr int, fonts model.FontMap) error {
 
-	id := pdfcpu.StringLiteral(pdfcpu.EncodeUTF16String(rbg.ID))
-
-	d := pdfcpu.Dict(
-		map[string]pdfcpu.Object{
-			"FT": pdfcpu.Name("Btn"),
-			"Ff": pdfcpu.Integer(FieldNoToggleToOff + FieldRadio),
-			"T":  id,                 // required
-			"TU": id,                 // Acrobat Reader Hover over field
-			"V":  pdfcpu.Name("Off"), // -> extract set radio button, set for preselection
-			"DV": pdfcpu.Name("Off"),
-		},
-	)
-
-	ir, err := rbg.pdf.XRefTable.IndRefForNewObject(d)
-	if err != nil {
+	if err := rbg.prepForRender(p, pageNr, fonts); err != nil {
 		return err
 	}
 
-	if err := rbg.prepareFonts(); err != nil {
-		return err
-	}
-
-	kids, err := rbg.renderRadioButtonFields(p, *ir)
-	if err != nil {
-		return err
-	}
-
-	if err := rbg.renderLabels(p, pageNr, fonts); err != nil {
-		return err
-	}
-
-	d["Kids"] = kids
-
-	*fields = append(*fields, *ir)
-
-	return nil
+	return rbg.doRender(p, pageNr, fonts)
 }

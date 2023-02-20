@@ -19,12 +19,14 @@ package pdfcpu
 import (
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
 var (
 	errNoBookmarks        = errors.New("pdfcpu: no bookmarks available")
-	errCorruptedDests     = errors.New("pdfcpu: corrupted named destination")
 	errCorruptedBookmarks = errors.New("pdfcpu: corrupt bookmark")
 	errExistingBookmarks  = errors.New("pdfcpu: existing bookmarks")
 )
@@ -36,7 +38,7 @@ type Bookmark struct {
 	PageThru int // for extraction only; >= pageFrom and reaches until before pageFrom of the next bookmark.
 	Bold     bool
 	Italic   bool
-	Color    *SimpleColor
+	Color    *color.SimpleColor
 	Children []Bookmark
 	Parent   *Bookmark
 }
@@ -53,15 +55,7 @@ func (bm Bookmark) Style() int {
 	return i
 }
 
-func (ctx *Context) dereferenceDestinationArray(key string) (Array, error) {
-	o, ok := ctx.Names["Dests"].Value(key)
-	if !ok {
-		return nil, errCorruptedDests
-	}
-	return ctx.DereferenceArray(o)
-}
-
-func (ctx *Context) positionToOutlineTreeLevel1() (Dict, *IndirectRef, error) {
+func positionToOutlineTreeLevel1(ctx *model.Context) (types.Dict, *types.IndirectRef, error) {
 	// Load Dests nametree.
 	if err := ctx.LocateNameTree("Dests", false); err != nil {
 		return nil, nil, err
@@ -110,48 +104,43 @@ func outlineItemTitle(s string) string {
 }
 
 // PageObjFromDestinationArray return an IndirectRef for this destinations page object.
-func (ctx *Context) PageObjFromDestinationArray(dest Object) (*IndirectRef, error) {
+func PageObjFromDestinationArray(ctx *model.Context, dest types.Object) (*types.IndirectRef, error) {
 	var (
 		err error
-		ir  IndirectRef
-		arr Array
+		ir  types.IndirectRef
+		arr types.Array
 	)
 	switch dest := dest.(type) {
-	case Name:
-		arr, err = ctx.dereferenceDestinationArray(dest.Value())
+	case types.Name:
+		arr, err = ctx.DereferenceDestArray(dest.Value())
 		if err == nil {
-			ir = arr[0].(IndirectRef)
+			ir = arr[0].(types.IndirectRef)
 		}
-	case StringLiteral:
-		arr, err = ctx.dereferenceDestinationArray(dest.Value())
+	case types.StringLiteral:
+		arr, err = ctx.DereferenceDestArray(dest.Value())
 		if err == nil {
-			ir = arr[0].(IndirectRef)
+			ir = arr[0].(types.IndirectRef)
 		}
-	case HexLiteral:
-		arr, err = ctx.dereferenceDestinationArray(dest.Value())
+	case types.HexLiteral:
+		arr, err = ctx.DereferenceDestArray(dest.Value())
 		if err == nil {
-			ir = arr[0].(IndirectRef)
+			ir = arr[0].(types.IndirectRef)
 		}
-	case Array:
+	case types.Array:
 		if dest[0] != nil {
-			ir = dest[0].(IndirectRef)
+			ir = dest[0].(types.IndirectRef)
 		}
 		// else skipping bookmarks that don't point to anything.
-
 	}
 	return &ir, err
 }
 
 // BookmarksForOutlineItem returns the bookmarks tree for an outline item.
-func (ctx *Context) BookmarksForOutlineItem(item *IndirectRef, parent *Bookmark) ([]Bookmark, error) {
+func BookmarksForOutlineItem(ctx *model.Context, item *types.IndirectRef, parent *Bookmark) ([]Bookmark, error) {
 	bms := []Bookmark{}
 
-	// d, err := ctx.DereferenceDict(*item)
-	// if err != nil {
-	// 	return nil, err
-	// }
 	var (
-		d   Dict
+		d   types.Dict
 		err error
 	)
 
@@ -162,7 +151,7 @@ func (ctx *Context) BookmarksForOutlineItem(item *IndirectRef, parent *Bookmark)
 			return nil, err
 		}
 
-		s, _ := Text(d["Title"])
+		s, _ := model.Text(d["Title"])
 		title := outlineItemTitle(s)
 
 		// Retrieve page number out of a destination via "Dest" or "Goto Action".
@@ -173,16 +162,19 @@ func (ctx *Context) BookmarksForOutlineItem(item *IndirectRef, parent *Bookmark)
 				continue
 			}
 			act, _ = ctx.Dereference(act)
-			actType := act.(Dict)["S"]
+			actType := act.(types.Dict)["S"]
 			if actType.String() != "GoTo" {
 				continue
 			}
-			dest = act.(Dict)["D"]
+			dest = act.(types.Dict)["D"]
 		}
 
-		dest, _ = ctx.Dereference(dest)
+		dest, err := ctx.Dereference(dest)
+		if err != nil {
+			return nil, err
+		}
 
-		ir, err := ctx.PageObjFromDestinationArray(dest)
+		ir, err := PageObjFromDestinationArray(ctx, dest)
 		if err != nil {
 			return nil, err
 		}
@@ -211,8 +203,8 @@ func (ctx *Context) BookmarksForOutlineItem(item *IndirectRef, parent *Bookmark)
 
 		first := d["First"]
 		if first != nil {
-			indRef := first.(IndirectRef)
-			children, _ := ctx.BookmarksForOutlineItem(&indRef, &newBookmark)
+			indRef := first.(types.IndirectRef)
+			children, _ := BookmarksForOutlineItem(ctx, &indRef, &newBookmark)
 			newBookmark.Children = children
 		}
 
@@ -223,39 +215,39 @@ func (ctx *Context) BookmarksForOutlineItem(item *IndirectRef, parent *Bookmark)
 }
 
 // BookmarksForOutline returns all ctx bookmark information recursively.
-func (ctx *Context) BookmarksForOutline() ([]Bookmark, error) {
-	_, first, err := ctx.positionToOutlineTreeLevel1()
+func BookmarksForOutline(ctx *model.Context) ([]Bookmark, error) {
+	_, first, err := positionToOutlineTreeLevel1(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return ctx.BookmarksForOutlineItem(first, nil)
+	return BookmarksForOutlineItem(ctx, first, nil)
 }
 
-func bmDict(bm Bookmark, pageIndRef, parent IndirectRef, s string) Dict {
+func bmDict(bm Bookmark, pageIndRef, parent types.IndirectRef, s string) types.Dict {
 
-	d := Dict(map[string]Object{
-		"Dest":   Array{pageIndRef, Name("Fit")},
-		"Title":  StringLiteral(s),
+	d := types.Dict(map[string]types.Object{
+		"Dest":   types.Array{pageIndRef, types.Name("Fit")},
+		"Title":  types.StringLiteral(s),
 		"Parent": parent},
 	)
 
 	if bm.Color != nil {
-		d["C"] = Array{Float(bm.Color.R), Float(bm.Color.G), Float(bm.Color.B)}
+		d["C"] = types.Array{types.Float(bm.Color.R), types.Float(bm.Color.G), types.Float(bm.Color.B)}
 	}
 
 	if style := bm.Style(); style > 0 {
-		d["F"] = Integer(style)
+		d["F"] = types.Integer(style)
 	}
 
 	return d
 }
 
-func createOutlineItemDict(ctx *Context, bms []Bookmark, parent *IndirectRef, parentPageNr *int) (*IndirectRef, *IndirectRef, int, error) {
+func createOutlineItemDict(ctx *model.Context, bms []Bookmark, parent *types.IndirectRef, parentPageNr *int) (*types.IndirectRef, *types.IndirectRef, int, error) {
 	var (
-		first  *IndirectRef
-		irPrev *IndirectRef
-		dPrev  Dict
+		first  *types.IndirectRef
+		irPrev *types.IndirectRef
+		dPrev  types.Dict
 		count  int
 	)
 
@@ -274,7 +266,7 @@ func createOutlineItemDict(ctx *Context, bms []Bookmark, parent *IndirectRef, pa
 			return nil, nil, 0, err
 		}
 
-		s, err := Escape(EncodeUTF16String(bm.Title))
+		s, err := types.Escape(types.EncodeUTF16String(bm.Title))
 		if err != nil {
 			return nil, nil, 0, err
 		}
@@ -297,7 +289,7 @@ func createOutlineItemDict(ctx *Context, bms []Bookmark, parent *IndirectRef, pa
 			d["First"] = *first
 			d["Last"] = *last
 
-			d["Count"] = Integer(c + 1)
+			d["Count"] = types.Integer(c + 1)
 			count += c + 1
 		} else {
 			count++
@@ -317,7 +309,7 @@ func createOutlineItemDict(ctx *Context, bms []Bookmark, parent *IndirectRef, pa
 }
 
 // AddBookmarks adds bms to ctx.
-func (ctx *Context) AddBookmarks(bms []Bookmark) error {
+func AddBookmarks(ctx *model.Context, bms []Bookmark) error {
 
 	rootDict, err := ctx.Catalog()
 	if err != nil {
@@ -328,7 +320,7 @@ func (ctx *Context) AddBookmarks(bms []Bookmark) error {
 		return errExistingBookmarks
 	}
 
-	outlinesDict := Dict(map[string]Object{"Type": Name("Outlines")})
+	outlinesDict := types.Dict(map[string]types.Object{"Type": types.Name("Outlines")})
 	outlinesir, err := ctx.IndRefForNewObject(outlinesDict)
 	if err != nil {
 		return err
@@ -341,7 +333,7 @@ func (ctx *Context) AddBookmarks(bms []Bookmark) error {
 
 	outlinesDict["First"] = *first
 	outlinesDict["Last"] = *last
-	outlinesDict["Count"] = Integer(count)
+	outlinesDict["Count"] = types.Integer(count)
 
 	rootDict["Outlines"] = *outlinesir
 

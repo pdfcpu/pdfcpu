@@ -17,11 +17,33 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"fmt"
 	"strings"
+
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+func addKeywordsToInfoDigest(ctx *model.Context, ss *[]string) error {
+	if len(ctx.Keywords) == 0 {
+		return nil
+	}
+	kwl, err := KeywordsList(ctx.XRefTable)
+	if err != nil {
+		return err
+	}
+	for i, l := range kwl {
+		if i == 0 {
+			*ss = append(*ss, fmt.Sprintf("%20s: %s", "Keywords", l))
+			continue
+		}
+		*ss = append(*ss, fmt.Sprintf("%20s  %s", "", l))
+	}
+	return nil
+}
+
 // KeywordsList returns a list of keywords as recorded in the document info dict.
-func KeywordsList(xRefTable *XRefTable) ([]string, error) {
+func KeywordsList(xRefTable *model.XRefTable) ([]string, error) {
 	ss := strings.FieldsFunc(xRefTable.Keywords, func(c rune) bool { return c == ',' || c == ';' || c == '\r' })
 	for i, s := range ss {
 		ss[i] = strings.TrimSpace(s)
@@ -31,7 +53,7 @@ func KeywordsList(xRefTable *XRefTable) ([]string, error) {
 
 // KeywordsAdd adds keywords to the document info dict.
 // Returns true if at least one keyword was added.
-func KeywordsAdd(xRefTable *XRefTable, keywords []string) error {
+func KeywordsAdd(xRefTable *model.XRefTable, keywords []string) error {
 
 	list, err := KeywordsList(xRefTable)
 	if err != nil {
@@ -39,8 +61,8 @@ func KeywordsAdd(xRefTable *XRefTable, keywords []string) error {
 	}
 
 	for _, s := range keywords {
-		if !MemberOf(s, list) {
-			xRefTable.Keywords += ", " + UTF8ToCP1252(s)
+		if !types.MemberOf(s, list) {
+			xRefTable.Keywords += ", " + types.UTF8ToCP1252(s)
 		}
 	}
 
@@ -49,14 +71,14 @@ func KeywordsAdd(xRefTable *XRefTable, keywords []string) error {
 		return err
 	}
 
-	d["Keywords"] = StringLiteral(xRefTable.Keywords)
+	d["Keywords"] = types.StringLiteral(xRefTable.Keywords)
 
 	return nil
 }
 
 // KeywordsRemove deletes keywords from the document info dict.
 // Returns true if at least one keyword was removed.
-func KeywordsRemove(xRefTable *XRefTable, keywords []string) (bool, error) {
+func KeywordsRemove(xRefTable *model.XRefTable, keywords []string) (bool, error) {
 	// TODO Handle missing info dict.
 	d, err := xRefTable.DereferenceDict(*xRefTable.Info)
 	if err != nil || d == nil {
@@ -71,7 +93,7 @@ func KeywordsRemove(xRefTable *XRefTable, keywords []string) (bool, error) {
 
 	kw := make([]string, len(keywords))
 	for i, s := range keywords {
-		kw[i] = UTF8ToCP1252(s)
+		kw[i] = types.UTF8ToCP1252(s)
 	}
 
 	// Distil document keywords.
@@ -83,7 +105,7 @@ func KeywordsRemove(xRefTable *XRefTable, keywords []string) (bool, error) {
 
 	for _, s := range ss {
 		s = strings.TrimSpace(s)
-		if MemberOf(s, kw) {
+		if types.MemberOf(s, kw) {
 			removed = true
 			continue
 		}
@@ -96,7 +118,7 @@ func KeywordsRemove(xRefTable *XRefTable, keywords []string) (bool, error) {
 	}
 
 	if removed {
-		d["Keywords"] = StringLiteral(xRefTable.Keywords)
+		d["Keywords"] = types.StringLiteral(xRefTable.Keywords)
 	}
 
 	return removed, nil

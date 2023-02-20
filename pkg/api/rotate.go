@@ -23,14 +23,15 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
 // Rotate rotates selected pages of rs clockwise by rotation degrees and writes the result to w.
-func Rotate(rs io.ReadSeeker, w io.Writer, rotation int, selectedPages []string, conf *pdfcpu.Configuration) error {
+func Rotate(rs io.ReadSeeker, w io.Writer, rotation int, selectedPages []string, conf *model.Configuration) error {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.ROTATE
+	conf.Cmd = model.ROTATE
 
 	fromStart := time.Now()
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
@@ -56,7 +57,7 @@ func Rotate(rs io.ReadSeeker, w io.Writer, rotation int, selectedPages []string,
 	durStamp := time.Since(from).Seconds()
 	fromWrite := time.Now()
 
-	if conf.ValidationMode != pdfcpu.ValidationNone {
+	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
 			return err
 		}
@@ -74,7 +75,7 @@ func Rotate(rs io.ReadSeeker, w io.Writer, rotation int, selectedPages []string,
 }
 
 // RotateFile rotates selected pages of inFile clockwise by rotation degrees and writes the result to outFile.
-func RotateFile(inFile, outFile string, rotation int, selectedPages []string, conf *pdfcpu.Configuration) (err error) {
+func RotateFile(inFile, outFile string, rotation int, selectedPages []string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {

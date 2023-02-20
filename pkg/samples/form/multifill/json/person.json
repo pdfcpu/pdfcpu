@@ -1,0 +1,245 @@
+{
+	"header": {
+		"source": "person.pdf",
+		"version": "pdfcpu v0.4.0 dev",
+		"creation": "2023-01-28 21:00:08 CET",
+		"producer": "pdfcpu v0.4.0 dev"
+	},
+	"forms": [
+		{
+			"textfield": [
+				{
+					"id": "firstName",
+					"value": "Alan",
+					"locked": true
+				},
+				{
+					"id": "lastName",
+					"value": "Turing",
+					"locked": true
+				},
+				{
+					"id": "country",
+					"value": "UK",
+					"locked": true
+				},
+				{
+					"id": "occup",
+					"value": "Computer Scientist",
+					"locked": true
+				}
+			],
+			"datefield": [
+				{
+					"id": "dob",
+					"value": "23.06.1912",
+					"locked": true
+				}
+			],
+			"checkbox": [
+				{
+					"id": "dobVerified",
+					"value": true,
+					"locked": true
+				}
+			],
+			"radiobuttongroup": [
+				{
+					"id": "gender",
+					"value": "male",
+					"locked": true
+				}
+			],
+			"combobox": [
+				{
+					"id": "status",
+					"value": "deceased",
+					"locked": true
+				},
+				{
+					"id": "license",
+					"value": "abc",
+					"locked": true
+				}
+			],
+			"pages": {
+				"1": {
+					"image": [
+						{
+							"src": "https://upload.wikimedia.org/wikipedia/commons/a/a1/Alan_Turing_Aged_16.jpg",
+							"pos": [
+								40,
+								350
+							],
+							"width": 290,
+							"height": 200,
+							"bgCol": "#F5F5DC",
+							"border": {
+								"width": 5,
+								"col": "LightGray",
+								"style": "round"
+							},
+							"url": "https://en.wikipedia.org/wiki/Alan_Turing"
+						}
+					]
+				}
+			}
+		},
+		{
+			"textfield": [
+				{
+					"id": "firstName",
+					"value": "Gao",
+					"locked": true
+				},
+				{
+					"id": "lastName",
+					"value": "Zhisheng",
+					"locked": true
+				},
+				{
+					"id": "country",
+					"value": "China",
+					"locked": true
+				},
+				{
+					"id": "occup",
+					"value": "Human Rights Attorney",
+					"locked": true
+				}
+			],
+			"datefield": [
+				{
+					"id": "dob",
+					"value": "20.04.1964",
+					"locked": true
+				}
+			],
+			"checkbox": [
+				{
+					"id": "dobVerified",
+					"value": true,
+					"locked": true
+				}
+			],
+			"radiobuttongroup": [
+				{
+					"id": "gender",
+					"value": "male",
+					"locked": true
+				}
+			],
+			"combobox": [
+				{
+					"id": "status",
+					"value": "unknown"
+				},
+				{
+					"id": "license",
+					"value": "unknown"
+				}
+			],
+			"pages": {
+				"1": {
+					"image": [
+						{
+							"src": "https://upload.wikimedia.org/wikipedia/commons/4/4d/6-Kao.jpg",
+							"pos": [
+								40,
+								350
+							],
+							"width": 290,
+							"height": 200,
+							"bgCol": "#F5F5DC",
+							"border": {
+								"width": 5,
+								"col": "LightGray",
+								"style": "round"
+							},
+							"url": "https://en.wikipedia.org/wiki/Gao_Zhisheng"
+						}
+					]
+				}
+			}
+		},
+		{
+			"textfield": [
+				{
+					"id": "firstName",
+					"value": "Anna",
+					"locked": true
+				},
+				{
+					"id": "lastName",
+					"value": "Politkovskaya",
+					"locked": true
+				},
+				{
+					"id": "country",
+					"value": "Russia",
+					"locked": true
+				},
+				{
+					"id": "occup",
+					"value": "Human Rights Activist",
+					"locked": true
+				}
+			],
+			"datefield": [
+				{
+					"id": "dob",
+					"value": "30.08.1958",
+					"locked": true
+				}
+			],
+			"checkbox": [
+				{
+					"id": "dobVerified",
+					"value": true,
+					"locked": true
+				}
+			],
+			"radiobuttongroup": [
+				{
+					"id": "gender",
+					"value": "female",
+					"locked": true
+				}
+			],
+			"combobox": [
+				{
+					"id": "status",
+					"value": "killed",
+					"locked": true
+				},
+				{
+					"id": "license",
+					"value": "CC BY 2.0",
+					"locked": true
+				}
+			],
+			"pages": {
+				"1": {
+					"image": [
+						{
+							"src": "https://upload.wikimedia.org/wikipedia/commons/3/32/Anna_Politkovskaja_im_Gespr%C3%A4ch_mit_Christhard_L%C3%A4pple.jpg",
+							"pos": [
+								40,
+								350
+							],
+							"width": 290,
+							"height": 200,
+							"bgCol": "#F5F5DC",
+							"border": {
+								"width": 5,
+								"col": "LightGray",
+								"style": "round"
+							},
+							"url": "https://en.wikipedia.org/wiki/Anna_Politkovskaya"
+						}
+					]
+				}
+			}
+		}
+	]
+}

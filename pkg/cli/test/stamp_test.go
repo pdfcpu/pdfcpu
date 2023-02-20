@@ -22,16 +22,18 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 func testAddWatermarks(t *testing.T, msg, inFile, outFile string, selectedPages []string, mode, modeParm, desc string, onTop bool) {
 	t.Helper()
 	inFile = filepath.Join(inDir, inFile)
 	outFile = filepath.Join(outDir, outFile)
-	unit := pdfcpu.POINTS
+	unit := types.POINTS
 
 	var (
-		wm  *pdfcpu.Watermark
+		wm  *model.Watermark
 		err error
 	)
 	switch mode {
@@ -46,11 +48,11 @@ func testAddWatermarks(t *testing.T, msg, inFile, outFile string, selectedPages 
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
-	cmd := cli.AddWatermarksCommand(inFile, outFile, selectedPages, wm, nil)
+	cmd := cli.AddWatermarksCommand(inFile, outFile, selectedPages, wm, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
-	if err := validateFile(t, outFile, nil); err != nil {
+	if err := validateFile(t, outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
@@ -147,14 +149,14 @@ func TestStampingLifecyle(t *testing.T) {
 	inFile := filepath.Join(inDir, "Acroforms2.pdf")
 	outFile := filepath.Join(outDir, "stampLC.pdf")
 	onTop := true // we are testing stamps
-	unit := pdfcpu.POINTS
+	unit := types.POINTS
 
 	// Stamp all pages.
 	wm, err := pdfcpu.ParseTextWatermarkDetails("Demo", "", onTop, unit)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
-	cmd := cli.AddWatermarksCommand(inFile, outFile, nil, wm, nil)
+	cmd := cli.AddWatermarksCommand(inFile, outFile, nil, wm, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
@@ -165,7 +167,7 @@ func TestStampingLifecyle(t *testing.T) {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 	wm.Update = true
-	cmd = cli.AddWatermarksCommand(outFile, "", []string{"1"}, wm, nil)
+	cmd = cli.AddWatermarksCommand(outFile, "", []string{"1"}, wm, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
@@ -176,25 +178,25 @@ func TestStampingLifecyle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
-	cmd = cli.AddWatermarksCommand(outFile, "", nil, wm, nil)
+	cmd = cli.AddWatermarksCommand(outFile, "", nil, wm, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
 	// Remove stamp on page 1.
-	cmd = cli.RemoveWatermarksCommand(outFile, "", []string{"1"}, nil)
+	cmd = cli.RemoveWatermarksCommand(outFile, "", []string{"1"}, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
 	// Remove all stamps.
-	cmd = cli.RemoveWatermarksCommand(outFile, "", nil, nil)
+	cmd = cli.RemoveWatermarksCommand(outFile, "", nil, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
 	// Validate the result.
-	if err := validateFile(t, outFile, nil); err != nil {
+	if err := validateFile(t, outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }

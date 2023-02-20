@@ -34,26 +34,24 @@ func TestMergeCommand(t *testing.T) {
 	}
 
 	outFile := filepath.Join(outDir, "test.pdf")
-	cmd := cli.MergeCreateCommand(inFiles, outFile, nil)
+	cmd := cli.MergeCreateCommand(inFiles, outFile, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
-	cmd = cli.ValidateCommand([]string{outFile}, nil)
-	if _, err := cli.Process(cmd); err != nil {
-		t.Fatalf("%s %s: %v\n", msg, outFile, err)
+	if err := validateFile(t, outFile, conf); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
 	}
 
 	if err := copyFile(t, filepath.Join(inDir, "test.pdf"), outFile); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	cmd = cli.MergeAppendCommand(inFiles, outFile, nil)
+	cmd = cli.MergeAppendCommand(inFiles, outFile, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
-	cmd = cli.ValidateCommand([]string{outFile}, nil)
-	if _, err := cli.Process(cmd); err != nil {
-		t.Fatalf("%s %s: %v\n", msg, outFile, err)
+	if err := validateFile(t, outFile, conf); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
 	}
 }

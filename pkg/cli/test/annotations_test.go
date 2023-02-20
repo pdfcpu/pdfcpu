@@ -33,25 +33,25 @@ func TestListAndRemoveAnnotations(t *testing.T) {
 	// See also api/annotations_test.go for page annotation manipulation
 	// including adding annotations.
 
-	cmd := cli.ListAnnotationsCommand(inFile, nil, nil)
+	cmd := cli.ListAnnotationsCommand(inFile, nil, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
 	// Remove page annotation using obj# 34
-	cmd = cli.RemoveAnnotationsCommand(inFile, "", nil, []int{34}, nil)
+	cmd = cli.RemoveAnnotationsCommand(inFile, "", nil, []int{34}, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
 	// Remove all page annotations from page 14
-	cmd = cli.RemoveAnnotationsCommand(inFile, "", []string{"14"}, nil, nil)
+	cmd = cli.RemoveAnnotationsCommand(inFile, "", []string{"14"}, nil, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
 	// Remove all page annotations
-	cmd = cli.RemoveAnnotationsCommand(inFile, "", nil, nil, nil)
+	cmd = cli.RemoveAnnotationsCommand(inFile, "", nil, nil, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}

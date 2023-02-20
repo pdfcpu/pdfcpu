@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 func testPageSelectionSyntaxOk(t *testing.T, s string) {
@@ -59,7 +59,7 @@ func TestPageSelectionSyntax(t *testing.T) {
 	}
 }
 
-func selectedPagesString(sp pdfcpu.IntSet, pageCount int) string {
+func selectedPagesString(sp types.IntSet, pageCount int) string {
 	s := []string{}
 	var t string
 

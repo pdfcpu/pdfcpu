@@ -23,6 +23,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 func testImportImages(t *testing.T, msg string, imgFiles []string, outFile, impConf string) {
@@ -35,15 +36,15 @@ func testImportImages(t *testing.T, msg string, imgFiles []string, outFile, impC
 	// which overrides all other import conf parms.
 	imp := pdfcpu.DefaultImportConfig()
 	if impConf != "" {
-		if imp, err = api.Import(impConf, pdfcpu.POINTS); err != nil {
+		if imp, err = api.Import(impConf, types.POINTS); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	}
-	cmd := cli.ImportImagesCommand(imgFiles, outFile, imp, nil)
+	cmd := cli.ImportImagesCommand(imgFiles, outFile, imp, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
-	if err := validateFile(t, outFile, nil); err != nil {
+	if err := validateFile(t, outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }

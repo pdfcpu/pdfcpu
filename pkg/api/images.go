@@ -24,17 +24,18 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
 
 // ListImages returns a list of embedded images of rs.
-func ListImages(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Configuration) ([]string, error) {
+func ListImages(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration) ([]string, error) {
 	if rs == nil {
 		return nil, errors.New("pdfcpu: ListImages: Please provide rs")
 	}
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
-		conf.Cmd = pdfcpu.LISTIMAGES
+		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.LISTIMAGES
 	}
 	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, time.Now())
 	if err != nil {
@@ -48,16 +49,15 @@ func ListImages(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Configura
 		return nil, err
 	}
 
-	return ctx.ListImages(pages)
+	return pdfcpu.ListImages(ctx, pages)
 }
 
 // ListImagesFile returns a list of embedded images of inFile.
-func ListImagesFile(inFiles []string, selectedPages []string, conf *pdfcpu.Configuration) ([]string, error) {
+func ListImagesFile(inFiles []string, selectedPages []string, conf *model.Configuration) ([]string, error) {
 	if len(selectedPages) == 0 {
 		log.CLI.Printf("pages: all\n")
 	}
 	ss := []string{}
-	// Continue on error for file list.
 	for _, fn := range inFiles {
 		f, err := os.Open(fn)
 		if err != nil {

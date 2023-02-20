@@ -18,14 +18,16 @@ package pdfcpu
 
 import (
 	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 // CollectPages creates a new PDF Context for a custom PDF page sequence of the PDF represented by ctx.
-func CollectPages(ctx *Context, collectedPages []int) (*Context, error) {
+func CollectPages(ctx *model.Context, collectedPages []int) (*model.Context, error) {
 
 	log.Debug.Printf("CollectPages %v\n", collectedPages)
 
-	ctxDest, err := CreateContextWithXRefTable(nil, PaperSize["A4"])
+	ctxDest, err := CreateContextWithXRefTable(nil, types.PaperSize["A4"])
 	if err != nil {
 		return nil, err
 	}

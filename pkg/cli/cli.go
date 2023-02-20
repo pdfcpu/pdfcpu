@@ -19,14 +19,14 @@ package cli
 
 import (
 	"github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
 
 // Validate inFile against ISO-32000-1:2008.
 func Validate(cmd *Command) ([]string, error) {
 	conf := cmd.Conf
-	if conf != nil && conf.ValidationMode == pdfcpu.ValidationNone {
+	if conf != nil && conf.ValidationMode == model.ValidationNone {
 		return nil, errors.New("validate: mode == ValidationNone")
 	}
 	return nil, api.ValidateFiles(cmd.InFiles, conf)
@@ -112,7 +112,7 @@ func ImportImages(cmd *Command) ([]string, error) {
 // InsertPages inserts a blank page before or after each selected page.
 func InsertPages(cmd *Command) ([]string, error) {
 	before := true
-	if cmd.Mode == pdfcpu.INSERTPAGESAFTER {
+	if cmd.Mode == model.INSERTPAGESAFTER {
 		before = false
 	}
 	return nil, api.InsertPagesFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, before, cmd.Conf)
@@ -165,7 +165,7 @@ func ListAttachments(cmd *Command) ([]string, error) {
 
 // AddAttachments embeds inFiles into a PDF context read from inFile and writes the result to outFile.
 func AddAttachments(cmd *Command) ([]string, error) {
-	return nil, api.AddAttachmentsFile(*cmd.InFile, *cmd.OutFile, cmd.InFiles, cmd.Mode == pdfcpu.ADDATTACHMENTSPORTFOLIO, cmd.Conf)
+	return nil, api.AddAttachmentsFile(*cmd.InFile, *cmd.OutFile, cmd.InFiles, cmd.Mode == model.ADDATTACHMENTSPORTFOLIO, cmd.Conf)
 }
 
 // RemoveAttachments deletes inFiles from a PDF context read from inFile and writes the result to outFile.
@@ -205,12 +205,12 @@ func ListKeywords(cmd *Command) ([]string, error) {
 
 // AddKeywords adds keywords to inFile's document info dict and writes the result to outFile.
 func AddKeywords(cmd *Command) ([]string, error) {
-	return nil, api.AddKeywordsFile(*cmd.InFile, *cmd.OutFile, cmd.InFiles, cmd.Conf)
+	return nil, api.AddKeywordsFile(*cmd.InFile, *cmd.OutFile, cmd.StringVals, cmd.Conf)
 }
 
 // RemoveKeywords deletes keywords from inFile's document info dict and writes the result to outFile.
 func RemoveKeywords(cmd *Command) ([]string, error) {
-	return nil, api.RemoveKeywordsFile(*cmd.InFile, *cmd.OutFile, cmd.InFiles, cmd.Conf)
+	return nil, api.RemoveKeywordsFile(*cmd.InFile, *cmd.OutFile, cmd.StringVals, cmd.Conf)
 }
 
 // ListProperties returns inFile's properties.
@@ -225,7 +225,7 @@ func AddProperties(cmd *Command) ([]string, error) {
 
 // RemoveProperties deletes properties from inFile's document info dict and writes the result to outFile.
 func RemoveProperties(cmd *Command) ([]string, error) {
-	return nil, api.RemovePropertiesFile(*cmd.InFile, *cmd.OutFile, cmd.InFiles, cmd.Conf)
+	return nil, api.RemovePropertiesFile(*cmd.InFile, *cmd.OutFile, cmd.StringVals, cmd.Conf)
 }
 
 // Collect creates a custom page sequence for selected pages of inFile and writes result to outFile.
@@ -269,8 +269,55 @@ func ListImages(cmd *Command) ([]string, error) {
 	return api.ListImagesFile(cmd.InFiles, cmd.PageSelection, cmd.Conf)
 }
 
+// Dump known object to stdout.
+func Dump(cmd *Command) ([]string, error) {
+	hex := cmd.IntVals[0] == 1
+	objNr := cmd.IntVals[1]
+	return nil, api.DumpObjectFile(*cmd.InFile, objNr, hex, cmd.Conf)
+}
+
 // Create renders page content corresponding to declarations found in inJSONFile and writes the result to outFile.
 // If inFile is present, page content will be appended,
 func Create(cmd *Command) ([]string, error) {
-	return nil, api.CreateFromJSONFile(*cmd.inFileJSON, *cmd.InFile, *cmd.OutFile, cmd.Conf)
+	return nil, api.CreateFile(*cmd.InFileJSON, *cmd.InFile, *cmd.OutFile, cmd.Conf)
+}
+
+// ListFormFields returns inFile's form field ids.
+func ListFormFields(cmd *Command) ([]string, error) {
+	return api.ListFormFieldsFile(cmd.InFiles, cmd.Conf)
+}
+
+// RemoveFormFields removes some form fields from inFile.
+func RemoveFormFields(cmd *Command) ([]string, error) {
+	return nil, api.RemoveFormFieldsFile(*cmd.InFile, *cmd.OutFile, cmd.StringVals, cmd.Conf)
+}
+
+// LockFormFields makes some or all form fields of inFile read-only.
+func LockFormFields(cmd *Command) ([]string, error) {
+	return nil, api.LockFormFieldsFile(*cmd.InFile, *cmd.OutFile, cmd.StringVals, cmd.Conf)
+}
+
+// UnlockFormFields makes some or all form fields of inFile writeable.
+func UnlockFormFields(cmd *Command) ([]string, error) {
+	return nil, api.UnlockFormFieldsFile(*cmd.InFile, *cmd.OutFile, cmd.StringVals, cmd.Conf)
+}
+
+// ResetFormFields sets some or all form fields of inFile to the corresponding default value.
+func ResetFormFields(cmd *Command) ([]string, error) {
+	return nil, api.ResetFormFieldsFile(*cmd.InFile, *cmd.OutFile, cmd.StringVals, cmd.Conf)
+}
+
+// ExportFormFields returns a representation of inFile's form as outFileJSON.
+func ExportFormFields(cmd *Command) ([]string, error) {
+	return nil, api.ExportFormFile(*cmd.InFile, *cmd.OutFileJSON, cmd.Conf)
+}
+
+// FillFormFields fills out inFile's form using data represented by inFileJSON.
+func FillFormFields(cmd *Command) ([]string, error) {
+	return nil, api.FillFormFile(*cmd.InFile, *cmd.InFileJSON, *cmd.OutFile, cmd.Conf)
+}
+
+// MultiFillFormFields fills out multiple instances of inFile's form using JSON or CSV data.
+func MultiFillFormFields(cmd *Command) ([]string, error) {
+	return nil, api.MultiFillFormFile(*cmd.InFile, *cmd.InFileJSON, *cmd.OutDir, *cmd.OutFile, cmd.BoolVal, cmd.Conf)
 }

@@ -1,0 +1,166 @@
+{
+	"header": {
+		"source": "english.pdf",
+		"version": "pdfcpu v0.4.0 dev",
+		"creation": "2023-01-28 19:59:37 CET",
+		"producer": "pdfcpu v0.4.0 dev"
+	},
+	"forms": [
+		{
+			"textfield": [
+				{
+					"id": "firstName1",
+					"value": "Jane"
+				},
+				{
+					"id": "lastName1",
+					"value": "Doe"
+				},
+				{
+					"id": "note1",
+					"value": "Person #1"
+				}
+			],
+			"datefield": [
+				{
+					"id": "dob1",
+					"value": "06.01.2000"
+				}
+			],
+			"radiobuttongroup": [
+				{
+					"id": "gender1",
+					"value": "female"
+				}
+			],
+			"listbox": [
+				{
+					"id": "city11",
+					"values": [
+						"San Francisco"
+					]
+				}
+			],
+			"combobox": [
+				{
+					"id": "city12",
+					"value": "London"
+				}
+			],
+			"checkbox": [
+				{
+					"id": "cb11",
+					"value": false
+				},
+				{
+					"id": "cb12",
+					"value": true
+				}
+			]
+		},
+		{
+			"textfield": [
+				{
+					"id": "firstName1",
+					"value": "Joe"
+				},
+				{
+					"id": "lastName1",
+					"value": "Doe"
+				},
+				{
+					"id": "note1",
+					"value": "Person #2"
+				}
+			],
+			"datefield": [
+				{
+					"id": "dob1",
+					"value": "30.07.2001"
+				}
+			],
+			"radiobuttongroup": [
+				{
+					"id": "gender1",
+					"value": "male"
+				}
+			],
+			"listbox": [
+				{
+					"id": "city11",
+					"values": [
+						"São Paulo"
+					]
+				}
+			],
+			"combobox": [
+				{
+					"id": "city12",
+					"value": "San Francisco"
+				}
+			],
+			"checkbox": [
+				{
+					"id": "cb11",
+					"value": false
+				},
+				{
+					"id": "cb13",
+					"value": true
+				}
+			]
+		},
+		{
+			"textfield": [
+				{
+					"id": "firstName1",
+					"value": "Jackie"
+				},
+				{
+					"id": "lastName1",
+					"value": "Doe"
+				},
+				{
+					"id": "note1",
+					"value": "Person #3"
+				}
+			],
+			"datefield": [
+				{
+					"id": "dob1",
+					"value": "29.11.1965"
+				}
+			],
+			"radiobuttongroup": [
+				{
+					"id": "gender1",
+					"value": "non-binary"
+				}
+			],
+			"listbox": [
+				{
+					"id": "city11",
+					"values": [
+						"Vienna"
+					]
+				}
+			],
+			"combobox": [
+				{
+					"id": "city12",
+					"value": "Sidney"
+				}
+			],
+			"checkbox": [
+				{
+					"id": "cb11",
+					"value": false
+				},
+				{
+					"id": "cb14",
+					"value": true
+				}
+			]
+		}
+	]
+}

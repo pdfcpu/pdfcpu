@@ -28,17 +28,18 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
 
 // ExtractImagesRaw returns []pdfcpu.Image containing io.Readers for images contained in selectedPages.
 // Beware of memory intensive returned slice.
-func ExtractImagesRaw(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Configuration) ([]pdfcpu.Image, error) {
+func ExtractImagesRaw(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration) ([]map[int]model.Image, error) {
 	if rs == nil {
 		return nil, errors.New("pdfcpu: ExtractImages: Please provide rs")
 	}
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
 
 	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, time.Now())
@@ -55,28 +56,28 @@ func ExtractImagesRaw(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Con
 		return nil, err
 	}
 
-	var images []pdfcpu.Image
+	var images []map[int]model.Image
 	for i, v := range pages {
 		if !v {
 			continue
 		}
-		ii, err := ctx.ExtractPageImages(i, false)
+		mm, err := pdfcpu.ExtractPageImages(ctx, i, false)
 		if err != nil {
 			return nil, err
 		}
-		images = append(images, ii...)
+		images = append(images, mm)
 	}
 
 	return images, nil
 }
 
 // ExtractImages extracts and digests embedded image resources from rs for selected pages.
-func ExtractImages(rs io.ReadSeeker, selectedPages []string, digestImage func(pdfcpu.Image, bool, int) error, conf *pdfcpu.Configuration) error {
+func ExtractImages(rs io.ReadSeeker, selectedPages []string, digestImage func(model.Image, bool, int) error, conf *model.Configuration) error {
 	if rs == nil {
 		return errors.New("pdfcpu: ExtractImages: Please provide rs")
 	}
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
 
 	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, time.Now())
@@ -105,12 +106,12 @@ func ExtractImages(rs io.ReadSeeker, selectedPages []string, digestImage func(pd
 	maxPageDigits := len(strconv.Itoa(pageNrs[len(pageNrs)-1]))
 
 	for _, i := range pageNrs {
-		ii, err := ctx.ExtractPageImages(i, false)
+		mm, err := pdfcpu.ExtractPageImages(ctx, i, false)
 		if err != nil {
 			return err
 		}
-		singleImgPerPage := len(ii) == 1
-		for _, img := range ii {
+		singleImgPerPage := len(mm) == 1
+		for _, img := range mm {
 			if err := digestImage(img, singleImgPerPage, maxPageDigits); err != nil {
 				return err
 			}
@@ -121,7 +122,7 @@ func ExtractImages(rs io.ReadSeeker, selectedPages []string, digestImage func(pd
 }
 
 // ExtractImagesFile dumps embedded image resources from inFile into outDir for selected pages.
-func ExtractImagesFile(inFile, outDir string, selectedPages []string, conf *pdfcpu.Configuration) error {
+func ExtractImagesFile(inFile, outDir string, selectedPages []string, conf *model.Configuration) error {
 	f, err := os.Open(inFile)
 	if err != nil {
 		return err
@@ -132,13 +133,31 @@ func ExtractImagesFile(inFile, outDir string, selectedPages []string, conf *pdfc
 	return ExtractImages(f, selectedPages, pdfcpu.WriteImageToDisk(outDir, fileName), conf)
 }
 
+func writeFonts(ff []pdfcpu.Font, outDir, fileName string) error {
+	for _, f := range ff {
+		outFile := filepath.Join(outDir, fmt.Sprintf("%s_%s.%s", fileName, f.Name, f.Type))
+		log.CLI.Printf("writing %s\n", outFile)
+		w, err := os.Create(outFile)
+		if err != nil {
+			return err
+		}
+		if _, err = io.Copy(w, f); err != nil {
+			return err
+		}
+		if err := w.Close(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // ExtractFonts dumps embedded fontfiles from rs into outDir for selected pages.
-func ExtractFonts(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, conf *pdfcpu.Configuration) error {
+func ExtractFonts(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, conf *model.Configuration) error {
 	if rs == nil {
 		return errors.New("pdfcpu: ExtractFonts: Please provide rs")
 	}
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
 
 	fromStart := time.Now()
@@ -163,35 +182,32 @@ func ExtractFonts(rs io.ReadSeeker, outDir, fileName string, selectedPages []str
 		if !v {
 			continue
 		}
-		ff, err := ctx.ExtractPageFonts(i)
+		ff, err := pdfcpu.ExtractPageFonts(ctx, i)
 		if err != nil {
 			return err
 		}
-		for _, f := range ff {
-			outFile := filepath.Join(outDir, fmt.Sprintf("%s_%s.%s", fileName, f.Name, f.Type))
-			log.CLI.Printf("writing %s\n", outFile)
-			w, err := os.Create(outFile)
-			if err != nil {
-				return err
-			}
-			if _, err = io.Copy(w, f); err != nil {
-				return err
-			}
-			if err := w.Close(); err != nil {
-				return err
-			}
+		if err := writeFonts(ff, outDir, fileName); err != nil {
+			return err
 		}
+	}
+
+	ff, err := pdfcpu.ExtractFormFonts(ctx)
+	if err != nil {
+		return err
+	}
+	if err := writeFonts(ff, outDir, fileName); err != nil {
+		return err
 	}
 
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	pdfcpu.TimingStats("write fonts", durRead, durVal, durOpt, durWrite, durTotal)
+	model.TimingStats("write fonts", durRead, durVal, durOpt, durWrite, durTotal)
 	return nil
 }
 
 // ExtractFontsFile dumps embedded fontfiles from inFile into outDir for selected pages.
-func ExtractFontsFile(inFile, outDir string, selectedPages []string, conf *pdfcpu.Configuration) error {
+func ExtractFontsFile(inFile, outDir string, selectedPages []string, conf *model.Configuration) error {
 	f, err := os.Open(inFile)
 	if err != nil {
 		return err
@@ -202,13 +218,13 @@ func ExtractFontsFile(inFile, outDir string, selectedPages []string, conf *pdfcp
 }
 
 // ExtractPages generates single page PDF files from rs in outDir for selected pages.
-func ExtractPages(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, conf *pdfcpu.Configuration) error {
+func ExtractPages(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, conf *model.Configuration) error {
 	if rs == nil {
 		return errors.New("pdfcpu: ExtractPages: Please provide rs")
 	}
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
-		conf.Cmd = pdfcpu.EXTRACTPAGES
+		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.EXTRACTPAGES
 	}
 
 	fromStart := time.Now()
@@ -227,13 +243,18 @@ func ExtractPages(rs io.ReadSeeker, outDir, fileName string, selectedPages []str
 		return err
 	}
 
+	if len(pages) == 0 {
+		log.CLI.Println("aborted: nothing to extract!")
+		return nil
+	}
+
 	fileName = strings.TrimSuffix(filepath.Base(fileName), ".pdf")
 
 	for i, v := range pages {
 		if !v {
 			continue
 		}
-		ctxNew, err := ctx.ExtractPage(i)
+		ctxNew, err := pdfcpu.ExtractPage(ctx, i)
 		if err != nil {
 			return err
 		}
@@ -247,12 +268,12 @@ func ExtractPages(rs io.ReadSeeker, outDir, fileName string, selectedPages []str
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	pdfcpu.TimingStats("write PDFs", durRead, durVal, durOpt, durWrite, durTotal)
+	model.TimingStats("write PDFs", durRead, durVal, durOpt, durWrite, durTotal)
 	return nil
 }
 
 // ExtractPagesFile generates single page PDF files from inFile in outDir for selected pages.
-func ExtractPagesFile(inFile, outDir string, selectedPages []string, conf *pdfcpu.Configuration) error {
+func ExtractPagesFile(inFile, outDir string, selectedPages []string, conf *model.Configuration) error {
 	f, err := os.Open(inFile)
 	if err != nil {
 		return err
@@ -263,12 +284,12 @@ func ExtractPagesFile(inFile, outDir string, selectedPages []string, conf *pdfcp
 }
 
 // ExtractContent dumps "PDF source" files from rs into outDir for selected pages.
-func ExtractContent(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, conf *pdfcpu.Configuration) error {
+func ExtractContent(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, conf *model.Configuration) error {
 	if rs == nil {
 		return errors.New("pdfcpu: ExtractContent: Please provide rs")
 	}
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
 
 	fromStart := time.Now()
@@ -293,7 +314,7 @@ func ExtractContent(rs io.ReadSeeker, outDir, fileName string, selectedPages []s
 		if !v {
 			continue
 		}
-		r, err := ctx.ExtractPageContent(p)
+		r, err := pdfcpu.ExtractPageContent(ctx, p)
 		if err != nil {
 			return err
 		}
@@ -317,12 +338,12 @@ func ExtractContent(rs io.ReadSeeker, outDir, fileName string, selectedPages []s
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	pdfcpu.TimingStats("write content", durRead, durVal, durOpt, durWrite, durTotal)
+	model.TimingStats("write content", durRead, durVal, durOpt, durWrite, durTotal)
 	return nil
 }
 
 // ExtractContentFile dumps "PDF source" files from inFile into outDir for selected pages.
-func ExtractContentFile(inFile, outDir string, selectedPages []string, conf *pdfcpu.Configuration) error {
+func ExtractContentFile(inFile, outDir string, selectedPages []string, conf *model.Configuration) error {
 	f, err := os.Open(inFile)
 	if err != nil {
 		return err
@@ -333,12 +354,12 @@ func ExtractContentFile(inFile, outDir string, selectedPages []string, conf *pdf
 }
 
 // ExtractMetadata dumps all metadata dict entries for rs into outDir.
-func ExtractMetadata(rs io.ReadSeeker, outDir, fileName string, conf *pdfcpu.Configuration) error {
+func ExtractMetadata(rs io.ReadSeeker, outDir, fileName string, conf *model.Configuration) error {
 	if rs == nil {
 		return errors.New("pdfcpu: ExtractMetadata: Please provide rs")
 	}
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
 
 	fromStart := time.Now()
@@ -349,7 +370,7 @@ func ExtractMetadata(rs io.ReadSeeker, outDir, fileName string, conf *pdfcpu.Con
 
 	fromWrite := time.Now()
 
-	mm, err := ctx.ExtractMetadata()
+	mm, err := pdfcpu.ExtractMetadata(ctx)
 	if err != nil {
 		return err
 	}
@@ -375,12 +396,12 @@ func ExtractMetadata(rs io.ReadSeeker, outDir, fileName string, conf *pdfcpu.Con
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	pdfcpu.TimingStats("write metadata", durRead, durVal, durOpt, durWrite, durTotal)
+	model.TimingStats("write metadata", durRead, durVal, durOpt, durWrite, durTotal)
 	return nil
 }
 
 // ExtractMetadataFile dumps all metadata dict entries for inFile into outDir.
-func ExtractMetadataFile(inFile, outDir string, conf *pdfcpu.Configuration) error {
+func ExtractMetadataFile(inFile, outDir string, conf *model.Configuration) error {
 	f, err := os.Open(inFile)
 	if err != nil {
 		return err

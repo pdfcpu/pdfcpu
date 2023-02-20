@@ -31,12 +31,12 @@ func TestCollectCommand(t *testing.T) {
 	outFile := filepath.Join(outDir, "myPageSequence.pdf")
 
 	// Start with all odd pages but page 1, then append pages 8-11 and the last page.
-	cmd := cli.CollectCommand(inFile, outFile, []string{"odd", "!1", "8-11", "l"}, nil)
+	cmd := cli.CollectCommand(inFile, outFile, []string{"odd", "!1", "8-11", "l"}, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
-	if err := validateFile(t, outFile, nil); err != nil {
+	if err := validateFile(t, outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 

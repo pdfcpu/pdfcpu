@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
 func prepareForAttachmentTest(t *testing.T) error {
@@ -124,10 +124,10 @@ func timeEqualsTimeFromDateTime(t1, t2 *time.Time) bool {
 	return t11.Equal(*t2)
 }
 
-func addAttachment(t *testing.T, msg, outFile, id, desc, want string, modTime time.Time, ctx *pdfcpu.Context) {
+func addAttachment(t *testing.T, msg, outFile, id, desc, want string, modTime time.Time, ctx *model.Context) {
 	t.Helper()
 
-	a := pdfcpu.Attachment{
+	a := model.Attachment{
 		Reader:  strings.NewReader(want),
 		ID:      id,
 		Desc:    desc,
@@ -145,7 +145,7 @@ func addAttachment(t *testing.T, msg, outFile, id, desc, want string, modTime ti
 	}
 }
 
-func extractAttachment(t *testing.T, msg string, a pdfcpu.Attachment, ctx *pdfcpu.Context) pdfcpu.Attachment {
+func extractAttachment(t *testing.T, msg string, a model.Attachment, ctx *model.Context) model.Attachment {
 	t.Helper()
 
 	a1, err := ctx.ExtractAttachment(a)
@@ -161,7 +161,7 @@ func extractAttachment(t *testing.T, msg string, a pdfcpu.Attachment, ctx *pdfcp
 	return *a1
 }
 
-func removeAttachment(t *testing.T, msg, outFile string, a pdfcpu.Attachment, ctx *pdfcpu.Context) {
+func removeAttachment(t *testing.T, msg, outFile string, a model.Attachment, ctx *model.Context) {
 	t.Helper()
 	ok, err := ctx.RemoveAttachment(a)
 	if err != nil {

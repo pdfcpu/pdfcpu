@@ -20,121 +20,134 @@ import (
 	"io"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
 // Command represents an execution context.
 type Command struct {
-	Mode           pdfcpu.CommandMode
+	Mode           model.CommandMode
 	InFile         *string
-	inFileJSON     *string
+	InFileJSON     *string
 	InFiles        []string
 	InDir          *string
 	OutFile        *string
+	OutFileJSON    *string
 	OutDir         *string
 	PageSelection  []string
-	Conf           *pdfcpu.Configuration
+	Conf           *model.Configuration
 	PWOld          *string
 	PWNew          *string
-	Watermark      *pdfcpu.Watermark
+	Watermark      *model.Watermark
 	Span           int
 	Import         *pdfcpu.Import
 	Rotation       int
-	NUp            *pdfcpu.NUp
+	NUp            *model.NUp
 	Input          io.ReadSeeker
 	Inputs         []io.ReadSeeker
 	Output         io.Writer
 	StringMap      map[string]string
-	Box            *pdfcpu.Box
-	PageBoundaries *pdfcpu.PageBoundaries
+	Box            *model.Box
+	PageBoundaries *model.PageBoundaries
 	IntVals        []int
+	StringVals     []string
+	BoolVal        bool
 }
 
-var cmdMap = map[pdfcpu.CommandMode]func(cmd *Command) ([]string, error){
-	pdfcpu.VALIDATE:                Validate,
-	pdfcpu.OPTIMIZE:                Optimize,
-	pdfcpu.SPLIT:                   Split,
-	pdfcpu.MERGECREATE:             MergeCreate,
-	pdfcpu.MERGEAPPEND:             MergeAppend,
-	pdfcpu.EXTRACTIMAGES:           ExtractImages,
-	pdfcpu.EXTRACTFONTS:            ExtractFonts,
-	pdfcpu.EXTRACTPAGES:            ExtractPages,
-	pdfcpu.EXTRACTCONTENT:          ExtractContent,
-	pdfcpu.EXTRACTMETADATA:         ExtractMetadata,
-	pdfcpu.TRIM:                    Trim,
-	pdfcpu.ADDWATERMARKS:           AddWatermarks,
-	pdfcpu.REMOVEWATERMARKS:        RemoveWatermarks,
-	pdfcpu.LISTATTACHMENTS:         processAttachments,
-	pdfcpu.ADDATTACHMENTS:          processAttachments,
-	pdfcpu.ADDATTACHMENTSPORTFOLIO: processAttachments,
-	pdfcpu.REMOVEATTACHMENTS:       processAttachments,
-	pdfcpu.EXTRACTATTACHMENTS:      processAttachments,
-	pdfcpu.ENCRYPT:                 processEncryption,
-	pdfcpu.DECRYPT:                 processEncryption,
-	pdfcpu.CHANGEUPW:               processEncryption,
-	pdfcpu.CHANGEOPW:               processEncryption,
-	pdfcpu.LISTPERMISSIONS:         processPermissions,
-	pdfcpu.SETPERMISSIONS:          processPermissions,
-	pdfcpu.IMPORTIMAGES:            ImportImages,
-	pdfcpu.INSERTPAGESBEFORE:       processPages,
-	pdfcpu.INSERTPAGESAFTER:        processPages,
-	pdfcpu.REMOVEPAGES:             processPages,
-	pdfcpu.ROTATE:                  Rotate,
-	pdfcpu.NUP:                     NUp,
-	pdfcpu.BOOKLET:                 Booklet,
-	pdfcpu.INFO:                    Info,
-	pdfcpu.CHEATSHEETSFONTS:        CreateCheatSheetsFonts,
-	pdfcpu.INSTALLFONTS:            InstallFonts,
-	pdfcpu.LISTFONTS:               ListFonts,
-	pdfcpu.LISTKEYWORDS:            processKeywords,
-	pdfcpu.ADDKEYWORDS:             processKeywords,
-	pdfcpu.REMOVEKEYWORDS:          processKeywords,
-	pdfcpu.LISTPROPERTIES:          processProperties,
-	pdfcpu.ADDPROPERTIES:           processProperties,
-	pdfcpu.REMOVEPROPERTIES:        processProperties,
-	pdfcpu.COLLECT:                 Collect,
-	pdfcpu.LISTBOXES:               processPageBoundaries,
-	pdfcpu.ADDBOXES:                processPageBoundaries,
-	pdfcpu.REMOVEBOXES:             processPageBoundaries,
-	pdfcpu.CROP:                    processPageBoundaries,
-	pdfcpu.LISTANNOTATIONS:         processPageAnnotations,
-	pdfcpu.REMOVEANNOTATIONS:       processPageAnnotations,
-	pdfcpu.LISTIMAGES:              processImages,
-	pdfcpu.CREATE:                  Create,
+var cmdMap = map[model.CommandMode]func(cmd *Command) ([]string, error){
+	model.VALIDATE:                Validate,
+	model.OPTIMIZE:                Optimize,
+	model.SPLIT:                   Split,
+	model.MERGECREATE:             MergeCreate,
+	model.MERGEAPPEND:             MergeAppend,
+	model.EXTRACTIMAGES:           ExtractImages,
+	model.EXTRACTFONTS:            ExtractFonts,
+	model.EXTRACTPAGES:            ExtractPages,
+	model.EXTRACTCONTENT:          ExtractContent,
+	model.EXTRACTMETADATA:         ExtractMetadata,
+	model.TRIM:                    Trim,
+	model.ADDWATERMARKS:           AddWatermarks,
+	model.REMOVEWATERMARKS:        RemoveWatermarks,
+	model.LISTATTACHMENTS:         processAttachments,
+	model.ADDATTACHMENTS:          processAttachments,
+	model.ADDATTACHMENTSPORTFOLIO: processAttachments,
+	model.REMOVEATTACHMENTS:       processAttachments,
+	model.EXTRACTATTACHMENTS:      processAttachments,
+	model.ENCRYPT:                 processEncryption,
+	model.DECRYPT:                 processEncryption,
+	model.CHANGEUPW:               processEncryption,
+	model.CHANGEOPW:               processEncryption,
+	model.LISTPERMISSIONS:         processPermissions,
+	model.SETPERMISSIONS:          processPermissions,
+	model.IMPORTIMAGES:            ImportImages,
+	model.INSERTPAGESBEFORE:       processPages,
+	model.INSERTPAGESAFTER:        processPages,
+	model.REMOVEPAGES:             processPages,
+	model.ROTATE:                  Rotate,
+	model.NUP:                     NUp,
+	model.BOOKLET:                 Booklet,
+	model.INFO:                    Info,
+	model.CHEATSHEETSFONTS:        CreateCheatSheetsFonts,
+	model.INSTALLFONTS:            InstallFonts,
+	model.LISTFONTS:               ListFonts,
+	model.LISTKEYWORDS:            processKeywords,
+	model.ADDKEYWORDS:             processKeywords,
+	model.REMOVEKEYWORDS:          processKeywords,
+	model.LISTPROPERTIES:          processProperties,
+	model.ADDPROPERTIES:           processProperties,
+	model.REMOVEPROPERTIES:        processProperties,
+	model.COLLECT:                 Collect,
+	model.LISTBOXES:               processPageBoundaries,
+	model.ADDBOXES:                processPageBoundaries,
+	model.REMOVEBOXES:             processPageBoundaries,
+	model.CROP:                    processPageBoundaries,
+	model.LISTANNOTATIONS:         processPageAnnotations,
+	model.REMOVEANNOTATIONS:       processPageAnnotations,
+	model.LISTIMAGES:              processImages,
+	model.DUMP:                    Dump,
+	model.CREATE:                  Create,
+	model.LISTFORMFIELDS:          processForm,
+	model.REMOVEFORMFIELDS:        processForm,
+	model.LOCKFORMFIELDS:          processForm,
+	model.UNLOCKFORMFIELDS:        processForm,
+	model.RESETFORMFIELDS:         processForm,
+	model.EXPORTFORMFIELDS:        processForm,
+	model.FILLFORMFIELDS:          processForm,
+	model.MULTIFILLFORMFIELDS:     processForm,
 }
 
 // ValidateCommand creates a new command to validate a file.
-func ValidateCommand(inFiles []string, conf *pdfcpu.Configuration) *Command {
+func ValidateCommand(inFiles []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.VALIDATE
+	conf.Cmd = model.VALIDATE
 	return &Command{
-		Mode:    pdfcpu.VALIDATE,
+		Mode:    model.VALIDATE,
 		InFiles: inFiles,
 		Conf:    conf}
 }
 
 // OptimizeCommand creates a new command to optimize a file.
-func OptimizeCommand(inFile, outFile string, conf *pdfcpu.Configuration) *Command {
+func OptimizeCommand(inFile, outFile string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.OPTIMIZE
+	conf.Cmd = model.OPTIMIZE
 	return &Command{
-		Mode:    pdfcpu.OPTIMIZE,
+		Mode:    model.OPTIMIZE,
 		InFile:  &inFile,
 		OutFile: &outFile,
 		Conf:    conf}
 }
 
 // SplitCommand creates a new command to split a file into single page files.
-func SplitCommand(inFile, dirNameOut string, span int, conf *pdfcpu.Configuration) *Command {
+func SplitCommand(inFile, dirNameOut string, span int, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.SPLIT
+	conf.Cmd = model.SPLIT
 	return &Command{
-		Mode:   pdfcpu.SPLIT,
+		Mode:   model.SPLIT,
 		InFile: &inFile,
 		OutDir: &dirNameOut,
 		Span:   span,
@@ -143,13 +156,13 @@ func SplitCommand(inFile, dirNameOut string, span int, conf *pdfcpu.Configuratio
 
 // MergeCreateCommand creates a new command to merge files.
 // Outfile will be created. An existing outFile will be overwritten.
-func MergeCreateCommand(inFiles []string, outFile string, conf *pdfcpu.Configuration) *Command {
+func MergeCreateCommand(inFiles []string, outFile string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.MERGECREATE
+	conf.Cmd = model.MERGECREATE
 	return &Command{
-		Mode:    pdfcpu.MERGECREATE,
+		Mode:    model.MERGECREATE,
 		InFiles: inFiles,
 		OutFile: &outFile,
 		Conf:    conf}
@@ -157,13 +170,13 @@ func MergeCreateCommand(inFiles []string, outFile string, conf *pdfcpu.Configura
 
 // MergeAppendCommand creates a new command to merge files.
 // Any existing outFile PDF content will be preserved and serves as the beginning of the merge result.
-func MergeAppendCommand(inFiles []string, outFile string, conf *pdfcpu.Configuration) *Command {
+func MergeAppendCommand(inFiles []string, outFile string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.MERGEAPPEND
+	conf.Cmd = model.MERGEAPPEND
 	return &Command{
-		Mode:    pdfcpu.MERGEAPPEND,
+		Mode:    model.MERGEAPPEND,
 		InFiles: inFiles,
 		OutFile: &outFile,
 		Conf:    conf}
@@ -171,13 +184,13 @@ func MergeAppendCommand(inFiles []string, outFile string, conf *pdfcpu.Configura
 
 // ExtractImagesCommand creates a new command to extract embedded images.
 // (experimental)
-func ExtractImagesCommand(inFile string, outDir string, pageSelection []string, conf *pdfcpu.Configuration) *Command {
+func ExtractImagesCommand(inFile string, outDir string, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.EXTRACTIMAGES
+	conf.Cmd = model.EXTRACTIMAGES
 	return &Command{
-		Mode:          pdfcpu.EXTRACTIMAGES,
+		Mode:          model.EXTRACTIMAGES,
 		InFile:        &inFile,
 		OutDir:        &outDir,
 		PageSelection: pageSelection,
@@ -186,13 +199,13 @@ func ExtractImagesCommand(inFile string, outDir string, pageSelection []string, 
 
 // ExtractFontsCommand creates a new command to extract embedded fonts.
 // (experimental)
-func ExtractFontsCommand(inFile string, outDir string, pageSelection []string, conf *pdfcpu.Configuration) *Command {
+func ExtractFontsCommand(inFile string, outDir string, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.EXTRACTFONTS
+	conf.Cmd = model.EXTRACTFONTS
 	return &Command{
-		Mode:          pdfcpu.EXTRACTFONTS,
+		Mode:          model.EXTRACTFONTS,
 		InFile:        &inFile,
 		OutDir:        &outDir,
 		PageSelection: pageSelection,
@@ -200,13 +213,13 @@ func ExtractFontsCommand(inFile string, outDir string, pageSelection []string, c
 }
 
 // ExtractPagesCommand creates a new command to extract specific pages of a file.
-func ExtractPagesCommand(inFile string, outDir string, pageSelection []string, conf *pdfcpu.Configuration) *Command {
+func ExtractPagesCommand(inFile string, outDir string, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.EXTRACTPAGES
+	conf.Cmd = model.EXTRACTPAGES
 	return &Command{
-		Mode:          pdfcpu.EXTRACTPAGES,
+		Mode:          model.EXTRACTPAGES,
 		InFile:        &inFile,
 		OutDir:        &outDir,
 		PageSelection: pageSelection,
@@ -214,13 +227,13 @@ func ExtractPagesCommand(inFile string, outDir string, pageSelection []string, c
 }
 
 // ExtractContentCommand creates a new command to extract page content streams.
-func ExtractContentCommand(inFile string, outDir string, pageSelection []string, conf *pdfcpu.Configuration) *Command {
+func ExtractContentCommand(inFile string, outDir string, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.EXTRACTCONTENT
+	conf.Cmd = model.EXTRACTCONTENT
 	return &Command{
-		Mode:          pdfcpu.EXTRACTCONTENT,
+		Mode:          model.EXTRACTCONTENT,
 		InFile:        &inFile,
 		OutDir:        &outDir,
 		PageSelection: pageSelection,
@@ -228,26 +241,26 @@ func ExtractContentCommand(inFile string, outDir string, pageSelection []string,
 }
 
 // ExtractMetadataCommand creates a new command to extract metadata streams.
-func ExtractMetadataCommand(inFile string, outDir string, conf *pdfcpu.Configuration) *Command {
+func ExtractMetadataCommand(inFile string, outDir string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.EXTRACTMETADATA
+	conf.Cmd = model.EXTRACTMETADATA
 	return &Command{
-		Mode:   pdfcpu.EXTRACTMETADATA,
+		Mode:   model.EXTRACTMETADATA,
 		InFile: &inFile,
 		OutDir: &outDir,
 		Conf:   conf}
 }
 
 // TrimCommand creates a new command to trim the pages of a file.
-func TrimCommand(inFile, outFile string, pageSelection []string, conf *pdfcpu.Configuration) *Command {
+func TrimCommand(inFile, outFile string, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.TRIM
+	conf.Cmd = model.TRIM
 	return &Command{
-		Mode:          pdfcpu.TRIM,
+		Mode:          model.TRIM,
 		InFile:        &inFile,
 		OutFile:       &outFile,
 		PageSelection: pageSelection,
@@ -255,25 +268,25 @@ func TrimCommand(inFile, outFile string, pageSelection []string, conf *pdfcpu.Co
 }
 
 // ListAttachmentsCommand create a new command to list attachments.
-func ListAttachmentsCommand(inFile string, conf *pdfcpu.Configuration) *Command {
+func ListAttachmentsCommand(inFile string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.LISTATTACHMENTS
+	conf.Cmd = model.LISTATTACHMENTS
 	return &Command{
-		Mode:   pdfcpu.LISTATTACHMENTS,
+		Mode:   model.LISTATTACHMENTS,
 		InFile: &inFile,
 		Conf:   conf}
 }
 
 // AddAttachmentsCommand creates a new command to add attachments.
-func AddAttachmentsCommand(inFile, outFile string, fileNames []string, conf *pdfcpu.Configuration) *Command {
+func AddAttachmentsCommand(inFile, outFile string, fileNames []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.ADDATTACHMENTS
+	conf.Cmd = model.ADDATTACHMENTS
 	return &Command{
-		Mode:    pdfcpu.ADDATTACHMENTS,
+		Mode:    model.ADDATTACHMENTS,
 		InFile:  &inFile,
 		OutFile: &outFile,
 		InFiles: fileNames,
@@ -281,13 +294,13 @@ func AddAttachmentsCommand(inFile, outFile string, fileNames []string, conf *pdf
 }
 
 // AddAttachmentsPortfolioCommand creates a new command to add attachments to a portfolio.
-func AddAttachmentsPortfolioCommand(inFile, outFile string, fileNames []string, conf *pdfcpu.Configuration) *Command {
+func AddAttachmentsPortfolioCommand(inFile, outFile string, fileNames []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.ADDATTACHMENTSPORTFOLIO
+	conf.Cmd = model.ADDATTACHMENTSPORTFOLIO
 	return &Command{
-		Mode:    pdfcpu.ADDATTACHMENTSPORTFOLIO,
+		Mode:    model.ADDATTACHMENTSPORTFOLIO,
 		InFile:  &inFile,
 		OutFile: &outFile,
 		InFiles: fileNames,
@@ -295,13 +308,13 @@ func AddAttachmentsPortfolioCommand(inFile, outFile string, fileNames []string, 
 }
 
 // RemoveAttachmentsCommand creates a new command to remove attachments.
-func RemoveAttachmentsCommand(inFile, outFile string, fileNames []string, conf *pdfcpu.Configuration) *Command {
+func RemoveAttachmentsCommand(inFile, outFile string, fileNames []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.REMOVEATTACHMENTS
+	conf.Cmd = model.REMOVEATTACHMENTS
 	return &Command{
-		Mode:    pdfcpu.REMOVEATTACHMENTS,
+		Mode:    model.REMOVEATTACHMENTS,
 		InFile:  &inFile,
 		OutFile: &outFile,
 		InFiles: fileNames,
@@ -309,13 +322,13 @@ func RemoveAttachmentsCommand(inFile, outFile string, fileNames []string, conf *
 }
 
 // ExtractAttachmentsCommand creates a new command to extract attachments.
-func ExtractAttachmentsCommand(inFile string, outDir string, fileNames []string, conf *pdfcpu.Configuration) *Command {
+func ExtractAttachmentsCommand(inFile string, outDir string, fileNames []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.EXTRACTATTACHMENTS
+	conf.Cmd = model.EXTRACTATTACHMENTS
 	return &Command{
-		Mode:    pdfcpu.EXTRACTATTACHMENTS,
+		Mode:    model.EXTRACTATTACHMENTS,
 		InFile:  &inFile,
 		OutDir:  &outDir,
 		InFiles: fileNames,
@@ -323,39 +336,39 @@ func ExtractAttachmentsCommand(inFile string, outDir string, fileNames []string,
 }
 
 // EncryptCommand creates a new command to encrypt a file.
-func EncryptCommand(inFile, outFile string, conf *pdfcpu.Configuration) *Command {
+func EncryptCommand(inFile, outFile string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.ENCRYPT
+	conf.Cmd = model.ENCRYPT
 	return &Command{
-		Mode:    pdfcpu.ENCRYPT,
+		Mode:    model.ENCRYPT,
 		InFile:  &inFile,
 		OutFile: &outFile,
 		Conf:    conf}
 }
 
 // DecryptCommand creates a new command to decrypt a file.
-func DecryptCommand(inFile, outFile string, conf *pdfcpu.Configuration) *Command {
+func DecryptCommand(inFile, outFile string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.DECRYPT
+	conf.Cmd = model.DECRYPT
 	return &Command{
-		Mode:    pdfcpu.DECRYPT,
+		Mode:    model.DECRYPT,
 		InFile:  &inFile,
 		OutFile: &outFile,
 		Conf:    conf}
 }
 
 // ChangeUserPWCommand creates a new command to change the user password.
-func ChangeUserPWCommand(inFile, outFile string, pwOld, pwNew *string, conf *pdfcpu.Configuration) *Command {
+func ChangeUserPWCommand(inFile, outFile string, pwOld, pwNew *string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.CHANGEUPW
+	conf.Cmd = model.CHANGEUPW
 	return &Command{
-		Mode:    pdfcpu.CHANGEUPW,
+		Mode:    model.CHANGEUPW,
 		InFile:  &inFile,
 		OutFile: &outFile,
 		PWOld:   pwOld,
@@ -364,13 +377,13 @@ func ChangeUserPWCommand(inFile, outFile string, pwOld, pwNew *string, conf *pdf
 }
 
 // ChangeOwnerPWCommand creates a new command to change the owner password.
-func ChangeOwnerPWCommand(inFile, outFile string, pwOld, pwNew *string, conf *pdfcpu.Configuration) *Command {
+func ChangeOwnerPWCommand(inFile, outFile string, pwOld, pwNew *string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.CHANGEOPW
+	conf.Cmd = model.CHANGEOPW
 	return &Command{
-		Mode:    pdfcpu.CHANGEOPW,
+		Mode:    model.CHANGEOPW,
 		InFile:  &inFile,
 		OutFile: &outFile,
 		PWOld:   pwOld,
@@ -379,38 +392,38 @@ func ChangeOwnerPWCommand(inFile, outFile string, pwOld, pwNew *string, conf *pd
 }
 
 // ListPermissionsCommand create a new command to list permissions.
-func ListPermissionsCommand(inFile string, conf *pdfcpu.Configuration) *Command {
+func ListPermissionsCommand(inFile string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.LISTPERMISSIONS
+	conf.Cmd = model.LISTPERMISSIONS
 	return &Command{
-		Mode:   pdfcpu.LISTPERMISSIONS,
+		Mode:   model.LISTPERMISSIONS,
 		InFile: &inFile,
 		Conf:   conf}
 }
 
 // SetPermissionsCommand creates a new command to add permissions.
-func SetPermissionsCommand(inFile, outFile string, conf *pdfcpu.Configuration) *Command {
+func SetPermissionsCommand(inFile, outFile string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.SETPERMISSIONS
+	conf.Cmd = model.SETPERMISSIONS
 	return &Command{
-		Mode:    pdfcpu.SETPERMISSIONS,
+		Mode:    model.SETPERMISSIONS,
 		InFile:  &inFile,
 		OutFile: &outFile,
 		Conf:    conf}
 }
 
 // AddWatermarksCommand creates a new command to add Watermarks to a file.
-func AddWatermarksCommand(inFile, outFile string, pageSelection []string, wm *pdfcpu.Watermark, conf *pdfcpu.Configuration) *Command {
+func AddWatermarksCommand(inFile, outFile string, pageSelection []string, wm *model.Watermark, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.ADDWATERMARKS
+	conf.Cmd = model.ADDWATERMARKS
 	return &Command{
-		Mode:          pdfcpu.ADDWATERMARKS,
+		Mode:          model.ADDWATERMARKS,
 		InFile:        &inFile,
 		OutFile:       &outFile,
 		PageSelection: pageSelection,
@@ -419,13 +432,13 @@ func AddWatermarksCommand(inFile, outFile string, pageSelection []string, wm *pd
 }
 
 // RemoveWatermarksCommand creates a new command to remove Watermarks from a file.
-func RemoveWatermarksCommand(inFile, outFile string, pageSelection []string, conf *pdfcpu.Configuration) *Command {
+func RemoveWatermarksCommand(inFile, outFile string, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.REMOVEWATERMARKS
+	conf.Cmd = model.REMOVEWATERMARKS
 	return &Command{
-		Mode:          pdfcpu.REMOVEWATERMARKS,
+		Mode:          model.REMOVEWATERMARKS,
 		InFile:        &inFile,
 		OutFile:       &outFile,
 		PageSelection: pageSelection,
@@ -433,13 +446,13 @@ func RemoveWatermarksCommand(inFile, outFile string, pageSelection []string, con
 }
 
 // ImportImagesCommand creates a new command to import images.
-func ImportImagesCommand(imageFiles []string, outFile string, imp *pdfcpu.Import, conf *pdfcpu.Configuration) *Command {
+func ImportImagesCommand(imageFiles []string, outFile string, imp *pdfcpu.Import, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.IMPORTIMAGES
+	conf.Cmd = model.IMPORTIMAGES
 	return &Command{
-		Mode:    pdfcpu.IMPORTIMAGES,
+		Mode:    model.IMPORTIMAGES,
 		InFiles: imageFiles,
 		OutFile: &outFile,
 		Import:  imp,
@@ -447,13 +460,13 @@ func ImportImagesCommand(imageFiles []string, outFile string, imp *pdfcpu.Import
 }
 
 // InsertPagesCommand creates a new command to insert a blank page before or after selected pages.
-func InsertPagesCommand(inFile, outFile string, pageSelection []string, conf *pdfcpu.Configuration, mode string) *Command {
+func InsertPagesCommand(inFile, outFile string, pageSelection []string, conf *model.Configuration, mode string) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	cmdMode := pdfcpu.INSERTPAGESBEFORE
+	cmdMode := model.INSERTPAGESBEFORE
 	if mode == "after" {
-		cmdMode = pdfcpu.INSERTPAGESAFTER
+		cmdMode = model.INSERTPAGESAFTER
 	}
 	conf.Cmd = cmdMode
 	return &Command{
@@ -465,13 +478,13 @@ func InsertPagesCommand(inFile, outFile string, pageSelection []string, conf *pd
 }
 
 // RemovePagesCommand creates a new command to remove selected pages.
-func RemovePagesCommand(inFile, outFile string, pageSelection []string, conf *pdfcpu.Configuration) *Command {
+func RemovePagesCommand(inFile, outFile string, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.REMOVEPAGES
+	conf.Cmd = model.REMOVEPAGES
 	return &Command{
-		Mode:          pdfcpu.REMOVEPAGES,
+		Mode:          model.REMOVEPAGES,
 		InFile:        &inFile,
 		OutFile:       &outFile,
 		PageSelection: pageSelection,
@@ -479,13 +492,13 @@ func RemovePagesCommand(inFile, outFile string, pageSelection []string, conf *pd
 }
 
 // RotateCommand creates a new command to rotate pages.
-func RotateCommand(inFile, outFile string, rotation int, pageSelection []string, conf *pdfcpu.Configuration) *Command {
+func RotateCommand(inFile, outFile string, rotation int, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.ROTATE
+	conf.Cmd = model.ROTATE
 	return &Command{
-		Mode:          pdfcpu.ROTATE,
+		Mode:          model.ROTATE,
 		InFile:        &inFile,
 		OutFile:       &outFile,
 		PageSelection: pageSelection,
@@ -494,13 +507,13 @@ func RotateCommand(inFile, outFile string, rotation int, pageSelection []string,
 }
 
 // NUpCommand creates a new command to render PDFs or image files in n-up fashion.
-func NUpCommand(inFiles []string, outFile string, pageSelection []string, nUp *pdfcpu.NUp, conf *pdfcpu.Configuration) *Command {
+func NUpCommand(inFiles []string, outFile string, pageSelection []string, nUp *model.NUp, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.NUP
+	conf.Cmd = model.NUP
 	return &Command{
-		Mode:          pdfcpu.NUP,
+		Mode:          model.NUP,
 		InFiles:       inFiles,
 		OutFile:       &outFile,
 		PageSelection: pageSelection,
@@ -509,13 +522,13 @@ func NUpCommand(inFiles []string, outFile string, pageSelection []string, nUp *p
 }
 
 // BookletCommand creates a new command to render PDFs or image files in booklet fashion.
-func BookletCommand(inFiles []string, outFile string, pageSelection []string, nup *pdfcpu.NUp, conf *pdfcpu.Configuration) *Command {
+func BookletCommand(inFiles []string, outFile string, pageSelection []string, nup *model.NUp, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.BOOKLET
+	conf.Cmd = model.BOOKLET
 	return &Command{
-		Mode:          pdfcpu.BOOKLET,
+		Mode:          model.BOOKLET,
 		InFiles:       inFiles,
 		OutFile:       &outFile,
 		PageSelection: pageSelection,
@@ -524,113 +537,113 @@ func BookletCommand(inFiles []string, outFile string, pageSelection []string, nu
 }
 
 // InfoCommand creates a new command to output information about inFile.
-func InfoCommand(inFile string, pageSelection []string, conf *pdfcpu.Configuration) *Command {
+func InfoCommand(inFile string, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.INFO
+	conf.Cmd = model.INFO
 	return &Command{
-		Mode:          pdfcpu.INFO,
+		Mode:          model.INFO,
 		InFile:        &inFile,
 		PageSelection: pageSelection,
 		Conf:          conf}
 }
 
 // ListFontsCommand returns a list of supported fonts.
-func ListFontsCommand(conf *pdfcpu.Configuration) *Command {
+func ListFontsCommand(conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.LISTFONTS
+	conf.Cmd = model.LISTFONTS
 	return &Command{
-		Mode: pdfcpu.LISTFONTS,
+		Mode: model.LISTFONTS,
 		Conf: conf}
 }
 
 // InstallFontsCommand installs true type fonts for embedding.
-func InstallFontsCommand(fontFiles []string, conf *pdfcpu.Configuration) *Command {
+func InstallFontsCommand(fontFiles []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.INSTALLFONTS
+	conf.Cmd = model.INSTALLFONTS
 	return &Command{
-		Mode:    pdfcpu.INSTALLFONTS,
+		Mode:    model.INSTALLFONTS,
 		InFiles: fontFiles,
 		Conf:    conf}
 }
 
 // CreateCheatSheetsFontsCommand creates single page PDF cheat sheets in current dir.
-func CreateCheatSheetsFontsCommand(fontFiles []string, conf *pdfcpu.Configuration) *Command {
+func CreateCheatSheetsFontsCommand(fontFiles []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.CHEATSHEETSFONTS
+	conf.Cmd = model.CHEATSHEETSFONTS
 	return &Command{
-		Mode:    pdfcpu.CHEATSHEETSFONTS,
+		Mode:    model.CHEATSHEETSFONTS,
 		InFiles: fontFiles,
 		Conf:    conf}
 }
 
 // ListKeywordsCommand create a new command to list keywords.
-func ListKeywordsCommand(inFile string, conf *pdfcpu.Configuration) *Command {
+func ListKeywordsCommand(inFile string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.LISTKEYWORDS
+	conf.Cmd = model.LISTKEYWORDS
 	return &Command{
-		Mode:   pdfcpu.LISTKEYWORDS,
+		Mode:   model.LISTKEYWORDS,
 		InFile: &inFile,
 		Conf:   conf}
 }
 
 // AddKeywordsCommand creates a new command to add keywords.
-func AddKeywordsCommand(inFile, outFile string, keywords []string, conf *pdfcpu.Configuration) *Command {
+func AddKeywordsCommand(inFile, outFile string, keywords []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.ADDKEYWORDS
+	conf.Cmd = model.ADDKEYWORDS
 	return &Command{
-		Mode:    pdfcpu.ADDKEYWORDS,
-		InFile:  &inFile,
-		OutFile: &outFile,
-		InFiles: keywords,
-		Conf:    conf}
+		Mode:       model.ADDKEYWORDS,
+		InFile:     &inFile,
+		OutFile:    &outFile,
+		StringVals: keywords,
+		Conf:       conf}
 }
 
 // RemoveKeywordsCommand creates a new command to remove keywords.
-func RemoveKeywordsCommand(inFile, outFile string, keywords []string, conf *pdfcpu.Configuration) *Command {
+func RemoveKeywordsCommand(inFile, outFile string, keywords []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.REMOVEKEYWORDS
+	conf.Cmd = model.REMOVEKEYWORDS
 	return &Command{
-		Mode:    pdfcpu.REMOVEKEYWORDS,
-		InFile:  &inFile,
-		OutFile: &outFile,
-		InFiles: keywords,
-		Conf:    conf}
+		Mode:       model.REMOVEKEYWORDS,
+		InFile:     &inFile,
+		OutFile:    &outFile,
+		StringVals: keywords,
+		Conf:       conf}
 }
 
 // ListPropertiesCommand creates a new command to list document properties.
-func ListPropertiesCommand(inFile string, conf *pdfcpu.Configuration) *Command {
+func ListPropertiesCommand(inFile string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.LISTPROPERTIES
+	conf.Cmd = model.LISTPROPERTIES
 	return &Command{
-		Mode:   pdfcpu.LISTPROPERTIES,
+		Mode:   model.LISTPROPERTIES,
 		InFile: &inFile,
 		Conf:   conf}
 }
 
 // AddPropertiesCommand creates a new command to add document properties.
-func AddPropertiesCommand(inFile, outFile string, properties map[string]string, conf *pdfcpu.Configuration) *Command {
+func AddPropertiesCommand(inFile, outFile string, properties map[string]string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.ADDPROPERTIES
+	conf.Cmd = model.ADDPROPERTIES
 	return &Command{
-		Mode:      pdfcpu.ADDPROPERTIES,
+		Mode:      model.ADDPROPERTIES,
 		InFile:    &inFile,
 		OutFile:   &outFile,
 		StringMap: properties,
@@ -638,27 +651,27 @@ func AddPropertiesCommand(inFile, outFile string, properties map[string]string, 
 }
 
 // RemovePropertiesCommand creates a new command to remove document properties.
-func RemovePropertiesCommand(inFile, outFile string, propKeys []string, conf *pdfcpu.Configuration) *Command {
+func RemovePropertiesCommand(inFile, outFile string, propKeys []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.REMOVEPROPERTIES
+	conf.Cmd = model.REMOVEPROPERTIES
 	return &Command{
-		Mode:    pdfcpu.REMOVEPROPERTIES,
-		InFile:  &inFile,
-		OutFile: &outFile,
-		InFiles: propKeys,
-		Conf:    conf}
+		Mode:       model.REMOVEPROPERTIES,
+		InFile:     &inFile,
+		OutFile:    &outFile,
+		StringVals: propKeys,
+		Conf:       conf}
 }
 
 // CollectCommand creates a new command to create a custom PDF page sequence.
-func CollectCommand(inFile, outFile string, pageSelection []string, conf *pdfcpu.Configuration) *Command {
+func CollectCommand(inFile, outFile string, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.COLLECT
+	conf.Cmd = model.COLLECT
 	return &Command{
-		Mode:          pdfcpu.COLLECT,
+		Mode:          model.COLLECT,
 		InFile:        &inFile,
 		OutFile:       &outFile,
 		PageSelection: pageSelection,
@@ -666,13 +679,13 @@ func CollectCommand(inFile, outFile string, pageSelection []string, conf *pdfcpu
 }
 
 // ListBoxesCommand creates a new command to list page boundaries for selected pages.
-func ListBoxesCommand(inFile string, pageSelection []string, pb *pdfcpu.PageBoundaries, conf *pdfcpu.Configuration) *Command {
+func ListBoxesCommand(inFile string, pageSelection []string, pb *model.PageBoundaries, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.LISTBOXES
+	conf.Cmd = model.LISTBOXES
 	return &Command{
-		Mode:           pdfcpu.LISTBOXES,
+		Mode:           model.LISTBOXES,
 		InFile:         &inFile,
 		PageSelection:  pageSelection,
 		PageBoundaries: pb,
@@ -680,13 +693,13 @@ func ListBoxesCommand(inFile string, pageSelection []string, pb *pdfcpu.PageBoun
 }
 
 // AddBoxesCommand creates a new command to add page boundaries for selected pages.
-func AddBoxesCommand(inFile, outFile string, pageSelection []string, pb *pdfcpu.PageBoundaries, conf *pdfcpu.Configuration) *Command {
+func AddBoxesCommand(inFile, outFile string, pageSelection []string, pb *model.PageBoundaries, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.ADDBOXES
+	conf.Cmd = model.ADDBOXES
 	return &Command{
-		Mode:           pdfcpu.ADDBOXES,
+		Mode:           model.ADDBOXES,
 		InFile:         &inFile,
 		OutFile:        &outFile,
 		PageSelection:  pageSelection,
@@ -695,13 +708,13 @@ func AddBoxesCommand(inFile, outFile string, pageSelection []string, pb *pdfcpu.
 }
 
 // RemoveBoxesCommand creates a new command to remove page boundaries for selected pages.
-func RemoveBoxesCommand(inFile, outFile string, pageSelection []string, pb *pdfcpu.PageBoundaries, conf *pdfcpu.Configuration) *Command {
+func RemoveBoxesCommand(inFile, outFile string, pageSelection []string, pb *model.PageBoundaries, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.REMOVEBOXES
+	conf.Cmd = model.REMOVEBOXES
 	return &Command{
-		Mode:           pdfcpu.REMOVEBOXES,
+		Mode:           model.REMOVEBOXES,
 		InFile:         &inFile,
 		OutFile:        &outFile,
 		PageSelection:  pageSelection,
@@ -710,13 +723,13 @@ func RemoveBoxesCommand(inFile, outFile string, pageSelection []string, pb *pdfc
 }
 
 // CropCommand creates a new command to apply a cropBox to selected pages.
-func CropCommand(inFile, outFile string, pageSelection []string, box *pdfcpu.Box, conf *pdfcpu.Configuration) *Command {
+func CropCommand(inFile, outFile string, pageSelection []string, box *model.Box, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.CROP
+	conf.Cmd = model.CROP
 	return &Command{
-		Mode:          pdfcpu.CROP,
+		Mode:          model.CROP,
 		InFile:        &inFile,
 		OutFile:       &outFile,
 		PageSelection: pageSelection,
@@ -725,26 +738,26 @@ func CropCommand(inFile, outFile string, pageSelection []string, box *pdfcpu.Box
 }
 
 // ListAnnotationsCommand creates a new command to list annotations for selected pages.
-func ListAnnotationsCommand(inFile string, pageSelection []string, conf *pdfcpu.Configuration) *Command {
+func ListAnnotationsCommand(inFile string, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.LISTANNOTATIONS
+	conf.Cmd = model.LISTANNOTATIONS
 	return &Command{
-		Mode:          pdfcpu.LISTANNOTATIONS,
+		Mode:          model.LISTANNOTATIONS,
 		InFile:        &inFile,
 		PageSelection: pageSelection,
 		Conf:          conf}
 }
 
 // RemoveAnnotationsCommand creates a new command to remove annotations for selected pages.
-func RemoveAnnotationsCommand(inFile, outFile string, pageSelection []string, objNrs []int, conf *pdfcpu.Configuration) *Command {
+func RemoveAnnotationsCommand(inFile, outFile string, pageSelection []string, objNrs []int, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.REMOVEANNOTATIONS
+	conf.Cmd = model.REMOVEANNOTATIONS
 	return &Command{
-		Mode:          pdfcpu.REMOVEANNOTATIONS,
+		Mode:          model.REMOVEANNOTATIONS,
 		InFile:        &inFile,
 		OutFile:       &outFile,
 		PageSelection: pageSelection,
@@ -753,28 +766,152 @@ func RemoveAnnotationsCommand(inFile, outFile string, pageSelection []string, ob
 }
 
 // ListImagesCommand creates a new command to list annotations for selected pages.
-func ListImagesCommand(inFiles []string, pageSelection []string, conf *pdfcpu.Configuration) *Command {
+func ListImagesCommand(inFiles []string, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.LISTIMAGES
+	conf.Cmd = model.LISTIMAGES
 	return &Command{
-		Mode:          pdfcpu.LISTIMAGES,
+		Mode:          model.LISTIMAGES,
 		InFiles:       inFiles,
 		PageSelection: pageSelection,
 		Conf:          conf}
 }
 
-// CreateCommand creates a new command to create a PDF file.
-func CreateCommand(inFileJSON, inFilePDF, outFilePDF string, conf *pdfcpu.Configuration) *Command {
+// DumpCommand creates a new command to dump objects on stdout.
+func DumpCommand(inFilePDF string, vals []int, conf *model.Configuration) *Command {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.OPTIMIZE
+	conf.Cmd = model.DUMP
 	return &Command{
-		Mode:       pdfcpu.CREATE,
-		inFileJSON: &inFileJSON,
+		Mode:    model.DUMP,
+		InFile:  &inFilePDF,
+		IntVals: vals,
+		Conf:    conf}
+}
+
+// CreateCommand creates a new command to create a PDF file.
+func CreateCommand(inFileJSON, inFilePDF, outFilePDF string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.CREATE
+	return &Command{
+		Mode:       model.CREATE,
+		InFileJSON: &inFileJSON,
 		InFile:     &inFilePDF,
 		OutFile:    &outFilePDF,
+		Conf:       conf}
+}
+
+// ListFormFieldsCommand creates a new command to list the field ids from a PDF form.
+func ListFormFieldsCommand(inFiles []string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.LISTFORMFIELDS
+	return &Command{
+		Mode:    model.LISTFORMFIELDS,
+		InFiles: inFiles,
+		Conf:    conf}
+}
+
+// RemoveFormFieldsCommand creates a new command to remove fields from a PDF form.
+func RemoveFormFieldsCommand(inFile, outFile string, fieldIDs []string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.REMOVEFORMFIELDS
+	return &Command{
+		Mode:       model.REMOVEFORMFIELDS,
+		InFile:     &inFile,
+		OutFile:    &outFile,
+		StringVals: fieldIDs,
+		Conf:       conf}
+}
+
+// LockFormCommand creates a new command to lock PDF form fields.
+func LockFormCommand(inFile, outFile string, fieldIDs []string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.LOCKFORMFIELDS
+	return &Command{
+		Mode:       model.LOCKFORMFIELDS,
+		InFile:     &inFile,
+		OutFile:    &outFile,
+		StringVals: fieldIDs,
+		Conf:       conf}
+}
+
+// UnlockFormCommand creates a new command to unlock PDF form fields.
+func UnlockFormCommand(inFile, outFile string, fieldIDs []string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.UNLOCKFORMFIELDS
+	return &Command{
+		Mode:       model.UNLOCKFORMFIELDS,
+		InFile:     &inFile,
+		OutFile:    &outFile,
+		StringVals: fieldIDs,
+		Conf:       conf}
+}
+
+// ResetFormCommand creates a new command to lock PDF form fields.
+func ResetFormCommand(inFile, outFile string, fieldIDs []string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.RESETFORMFIELDS
+	return &Command{
+		Mode:       model.RESETFORMFIELDS,
+		InFile:     &inFile,
+		OutFile:    &outFile,
+		StringVals: fieldIDs,
+		Conf:       conf}
+}
+
+// ExportFormCommand creates a new command to export a PDF form.
+func ExportFormCommand(inFilePDF, outFileJSON string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.EXPORTFORMFIELDS
+	return &Command{
+		Mode:        model.EXPORTFORMFIELDS,
+		InFile:      &inFilePDF,
+		OutFileJSON: &outFileJSON,
+		Conf:        conf}
+}
+
+// FillFormCommand creates a new command to fill a PDF form with data.
+func FillFormCommand(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.FILLFORMFIELDS
+	return &Command{
+		Mode:       model.FILLFORMFIELDS,
+		InFile:     &inFilePDF,
+		InFileJSON: &inFileJSON,
+		OutFile:    &outFilePDF,
+		Conf:       conf}
+}
+
+// MultiFillFormCommand creates a new command to fill multiple PDF forms with JSON or CSV data.
+func MultiFillFormCommand(inFilePDF, inFileData, outDir, outFilePDF string, merge bool, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.MULTIFILLFORMFIELDS
+	return &Command{
+		Mode:       model.MULTIFILLFORMFIELDS,
+		InFile:     &inFilePDF,
+		InFileJSON: &inFileData, // TODO Fix name clash.
+		OutDir:     &outDir,
+		OutFile:    &outFilePDF,
+		BoolVal:    merge,
 		Conf:       conf}
 }

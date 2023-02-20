@@ -29,12 +29,12 @@ func TestTrimCommand(t *testing.T) {
 	inFile := filepath.Join(inDir, "pike-stanford.pdf")
 	outFile := filepath.Join(outDir, "test.pdf")
 
-	cmd := cli.TrimCommand(inFile, outFile, []string{"-2"}, nil)
+	cmd := cli.TrimCommand(inFile, outFile, []string{"-2"}, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
-	if err := validateFile(t, outFile, nil); err != nil {
+	if err := validateFile(t, outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }

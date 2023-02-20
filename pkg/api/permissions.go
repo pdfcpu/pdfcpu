@@ -23,15 +23,16 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
 
 // ListPermissions returns a list of user access permissions.
-func ListPermissions(rs io.ReadSeeker, conf *pdfcpu.Configuration) ([]string, error) {
+func ListPermissions(rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.LISTPERMISSIONS
+	conf.Cmd = model.LISTPERMISSIONS
 
 	fromStart := time.Now()
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
@@ -45,13 +46,13 @@ func ListPermissions(rs io.ReadSeeker, conf *pdfcpu.Configuration) ([]string, er
 	durList := time.Since(fromList).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	pdfcpu.TimingStats("list permissions", durRead, durVal, durOpt, durList, durTotal)
+	model.TimingStats("list permissions", durRead, durVal, durOpt, durList, durTotal)
 
 	return list, nil
 }
 
 // ListPermissionsFile returns a list of user access permissions for inFile.
-func ListPermissionsFile(inFile string, conf *pdfcpu.Configuration) ([]string, error) {
+func ListPermissionsFile(inFile string, conf *model.Configuration) ([]string, error) {
 	f, err := os.Open(inFile)
 	if err != nil {
 		return nil, err
@@ -67,11 +68,11 @@ func ListPermissionsFile(inFile string, conf *pdfcpu.Configuration) ([]string, e
 // SetPermissions sets user access permissions.
 // inFile has to be encrypted.
 // A configuration containing the current passwords is required.
-func SetPermissions(rs io.ReadSeeker, w io.Writer, conf *pdfcpu.Configuration) error {
+func SetPermissions(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
 	if conf == nil {
 		return errors.New("pdfcpu: missing configuration for setting permissions")
 	}
-	conf.Cmd = pdfcpu.SETPERMISSIONS
+	conf.Cmd = model.SETPERMISSIONS
 
 	fromStart := time.Now()
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
@@ -94,7 +95,7 @@ func SetPermissions(rs io.ReadSeeker, w io.Writer, conf *pdfcpu.Configuration) e
 // SetPermissionsFile sets inFile's user access permissions.
 // inFile has to be encrypted.
 // A configuration containing the current passwords is required.
-func SetPermissionsFile(inFile, outFile string, conf *pdfcpu.Configuration) (err error) {
+func SetPermissionsFile(inFile, outFile string, conf *model.Configuration) (err error) {
 	if conf == nil {
 		return errors.New("pdfcpu: missing configuration for setting permissions")
 	}
@@ -140,9 +141,9 @@ func SetPermissionsFile(inFile, outFile string, conf *pdfcpu.Configuration) (err
 }
 
 // GetPermissions returns the permissions for rs.
-func GetPermissions(rs io.ReadSeeker, conf *pdfcpu.Configuration) (*int16, error) {
+func GetPermissions(rs io.ReadSeeker, conf *model.Configuration) (*int16, error) {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
 	ctx, _, _, err := readAndValidate(rs, conf, time.Now())
 	if err != nil {
@@ -157,7 +158,7 @@ func GetPermissions(rs io.ReadSeeker, conf *pdfcpu.Configuration) (*int16, error
 }
 
 // GetPermissionsFile returns the permissions for inFile.
-func GetPermissionsFile(inFile string, conf *pdfcpu.Configuration) (*int16, error) {
+func GetPermissionsFile(inFile string, conf *model.Configuration) (*int16, error) {
 	f, err := os.Open(inFile)
 	if err != nil {
 		return nil, err

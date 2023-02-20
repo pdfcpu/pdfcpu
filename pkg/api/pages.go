@@ -22,18 +22,19 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
 // InsertPages inserts a blank page before or after every page selected of rs and writes the result to w.
-func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before bool, conf *pdfcpu.Configuration) error {
+func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before bool, conf *model.Configuration) error {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.INSERTPAGESAFTER
+	conf.Cmd = model.INSERTPAGESAFTER
 	if before {
-		conf.Cmd = pdfcpu.INSERTPAGESBEFORE
+		conf.Cmd = model.INSERTPAGESBEFORE
 	}
 
 	fromStart := time.Now()
@@ -57,7 +58,7 @@ func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before b
 
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
 
-	if conf.ValidationMode != pdfcpu.ValidationNone {
+	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
 			return err
 		}
@@ -73,7 +74,7 @@ func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before b
 }
 
 // InsertPagesFile inserts a blank page before or after every inFile page selected and writes the result to w.
-func InsertPagesFile(inFile, outFile string, selectedPages []string, before bool, conf *pdfcpu.Configuration) (err error) {
+func InsertPagesFile(inFile, outFile string, selectedPages []string, before bool, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {
@@ -115,11 +116,11 @@ func InsertPagesFile(inFile, outFile string, selectedPages []string, before bool
 }
 
 // RemovePages removes selected pages from rs and writes the result to w.
-func RemovePages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *pdfcpu.Configuration) error {
+func RemovePages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.Configuration) error {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.REMOVEPAGES
+	conf.Cmd = model.REMOVEPAGES
 
 	fromStart := time.Now()
 	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
@@ -159,7 +160,7 @@ func RemovePages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *pd
 }
 
 // RemovePagesFile removes selected inFile pages and writes the result to outFile..
-func RemovePagesFile(inFile, outFile string, selectedPages []string, conf *pdfcpu.Configuration) (err error) {
+func RemovePagesFile(inFile, outFile string, selectedPages []string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {
@@ -201,7 +202,7 @@ func RemovePagesFile(inFile, outFile string, selectedPages []string, conf *pdfcp
 }
 
 // PageCount returns rs's page count.
-func PageCount(rs io.ReadSeeker, conf *pdfcpu.Configuration) (int, error) {
+func PageCount(rs io.ReadSeeker, conf *model.Configuration) (int, error) {
 	ctx, err := ReadContext(rs, conf)
 	if err != nil {
 		return 0, err
@@ -220,11 +221,11 @@ func PageCountFile(inFile string) (int, error) {
 	}
 	defer f.Close()
 
-	return PageCount(f, pdfcpu.NewDefaultConfiguration())
+	return PageCount(f, model.NewDefaultConfiguration())
 }
 
 // PageDims returns a sorted slice of mediaBox dimensions for rs.
-func PageDims(rs io.ReadSeeker, conf *pdfcpu.Configuration) ([]pdfcpu.Dim, error) {
+func PageDims(rs io.ReadSeeker, conf *model.Configuration) ([]types.Dim, error) {
 	ctx, err := ReadContext(rs, conf)
 	if err != nil {
 		return nil, err
@@ -242,12 +243,12 @@ func PageDims(rs io.ReadSeeker, conf *pdfcpu.Configuration) ([]pdfcpu.Dim, error
 }
 
 // PageDimsFile returns a sorted slice of mediaBox dimensions for inFile.
-func PageDimsFile(inFile string) ([]pdfcpu.Dim, error) {
+func PageDimsFile(inFile string) ([]types.Dim, error) {
 	f, err := os.Open(inFile)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
-	return PageDims(f, pdfcpu.NewDefaultConfiguration())
+	return PageDims(f, model.NewDefaultConfiguration())
 }

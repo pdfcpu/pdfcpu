@@ -21,10 +21,10 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-func optimizeFile(t *testing.T, fileName string, conf *pdfcpu.Configuration) error {
+func optimizeFile(t *testing.T, fileName string, conf *model.Configuration) error {
 	t.Helper()
 	cmd := cli.OptimizeCommand(fileName, "", conf)
 	_, err := cli.Process(cmd)
@@ -36,21 +36,21 @@ func testOptimizeFile(t *testing.T, inFile, outFile string) {
 	msg := "testOptimizeFile"
 
 	// Optimize inFile and write result to outFile.
-	cmd := cli.OptimizeCommand(inFile, outFile, nil)
+	cmd := cli.OptimizeCommand(inFile, outFile, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
 
 	// Optimize outFile and write result to outFile.
-	cmd = cli.OptimizeCommand(outFile, "", nil)
+	cmd = cli.OptimizeCommand(outFile, "", conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
 	// Optimize outFile and write result to outFile.
 	// Also skip validation.
-	c := pdfcpu.NewDefaultConfiguration()
-	c.ValidationMode = pdfcpu.ValidationNone
+	c := model.NewDefaultConfiguration()
+	c.ValidationMode = model.ValidationNone
 
 	if err := optimizeFile(t, outFile, c); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
