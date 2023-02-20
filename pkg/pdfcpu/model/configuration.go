@@ -217,7 +217,7 @@ func ensureConfigFileAt(path string) error {
 	f, err := os.Open(path)
 	if err != nil {
 		f.Close()
-		s := fmt.Sprintf("#############################\n# pdfcpu %s        #\n# Created: %s #\n", VersionStr, time.Now().Format("2006-01-02 15:04"))
+		s := fmt.Sprintf("#############################\n# pdfcpu %s         #\n# Created: %s #\n", VersionStr, time.Now().Format("2006-01-02 15:04"))
 		bb := append([]byte(s), configFileBytes...)
 		if err := os.WriteFile(path, bb, os.ModePerm); err != nil {
 			return err
