@@ -27,13 +27,14 @@ import (
 func TestMergeCommand(t *testing.T) {
 	msg := "TestMergeCommand"
 
-	inFiles := []string(nil)
+	var inFiles []string
 	for _, f := range allPDFs(t, inDir) {
 		inFile := filepath.Join(inDir, f)
 		inFiles = append(inFiles, inFile)
 	}
 
 	outFile := filepath.Join(outDir, "test.pdf")
+
 	cmd := cli.MergeCreateCommand(inFiles, outFile, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)

@@ -18,7 +18,6 @@ package test
 
 import (
 	"bytes"
-	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -26,7 +25,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 )
 
-func TestMergeCreate(t *testing.T) {
+func TestMergeCreateNew(t *testing.T) {
 	msg := "TestMergeCreate"
 	inFiles := []string{
 		filepath.Join(inDir, "Acroforms2.pdf"),
@@ -41,7 +40,7 @@ func TestMergeCreate(t *testing.T) {
 	}
 }
 
-func TestMergeAppend(t *testing.T) {
+func TestMergeAppendNew(t *testing.T) {
 	msg := "TestMergeAppend"
 	inFiles := []string{
 		filepath.Join(inDir, "Acroforms2.pdf"),
@@ -59,7 +58,7 @@ func TestMergeAppend(t *testing.T) {
 	}
 }
 
-func TestMergeToBuf(t *testing.T) {
+func TestMergeToBufNew(t *testing.T) {
 	msg := "TestMergeToBuf"
 	inFiles := []string{
 		filepath.Join(inDir, "Acroforms2.pdf"),
@@ -67,22 +66,11 @@ func TestMergeToBuf(t *testing.T) {
 	}
 	outFile := filepath.Join(outDir, "test.pdf")
 
-	ff := []*os.File(nil)
-	for _, f := range inFiles {
-		f, err := os.Open(f)
-		if err != nil {
-			t.Fatalf("%s: open: %v\n", msg, err)
-		}
-		ff = append(ff, f)
-	}
-
-	rs := make([]io.ReadSeeker, len(ff))
-	for i, f := range ff {
-		rs[i] = f
-	}
+	destFile := inFiles[0]
+	inFiles = inFiles[1:]
 
 	buf := &bytes.Buffer{}
-	if err := api.Merge(rs, buf, nil); err != nil {
+	if err := api.Merge(destFile, inFiles, buf, nil); err != nil {
 		t.Fatalf("%s: merge: %v\n", msg, err)
 	}
 
