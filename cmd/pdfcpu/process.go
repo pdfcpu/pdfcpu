@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
@@ -97,12 +98,14 @@ func printConfiguration(conf *model.Configuration) {
 		os.Exit(1)
 	}
 	defer f.Close()
-	bb, err := io.ReadAll(f)
-	if err != nil {
+
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, f); err != nil {
 		fmt.Fprintf(os.Stderr, "can't read %s", conf.Path)
 		os.Exit(1)
 	}
-	fmt.Print(string(bb))
+
+	fmt.Print(string(buf.String()))
 }
 
 func printPaperSizes(conf *model.Configuration) {

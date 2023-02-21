@@ -550,11 +550,13 @@ func setImageWatermark(s string, wm *model.Watermark) error {
 		return err
 	}
 	defer f.Close()
-	bb, err := io.ReadAll(f)
-	if err != nil {
+
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, f); err != nil {
 		return err
 	}
-	wm.Image = bytes.NewReader(bb)
+
+	wm.Image = bytes.NewReader(buf.Bytes())
 	return nil
 }
 

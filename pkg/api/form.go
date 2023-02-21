@@ -17,6 +17,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -450,10 +451,12 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 		return err
 	}
 
-	bb, err := io.ReadAll(rd)
-	if err != nil {
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, rd); err != nil {
 		return err
 	}
+
+	bb := buf.Bytes()
 
 	if !json.Valid(bb) {
 		return errors.Errorf("pdfcpu: invalid JSON encoding detected.")
@@ -554,10 +557,12 @@ func parseFormGroup(rd io.Reader) (*form.FormGroup, error) {
 
 	formGroup := &form.FormGroup{}
 
-	bb, err := io.ReadAll(rd)
-	if err != nil {
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, rd); err != nil {
 		return nil, err
 	}
+
+	bb := buf.Bytes()
 
 	if !json.Valid(bb) {
 		return nil, errors.Errorf("pdfcpu: invalid JSON encoding detected.")

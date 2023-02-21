@@ -190,10 +190,13 @@ func (sd *StreamDict) Encode() error {
 		b = c
 	}
 
-	var err error
-	if sd.Raw, err = io.ReadAll(c); err != nil {
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, c); err != nil {
 		return err
 	}
+
+	sd.Raw = buf.Bytes()
+
 	streamLength := int64(len(sd.Raw))
 	sd.StreamLength = &streamLength
 	sd.Update("Length", Integer(streamLength))
@@ -281,10 +284,12 @@ func (sd *StreamDict) Decode() error {
 		b = c
 	}
 
-	var err error
-	if sd.Content, err = io.ReadAll(c); err != nil {
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, c); err != nil {
 		return err
 	}
+
+	sd.Content = buf.Bytes()
 
 	return nil
 }

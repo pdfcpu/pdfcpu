@@ -17,6 +17,7 @@
 package model
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -411,19 +412,21 @@ func (xRefTable *XRefTable) NewStreamDictForFile(filename string) (*types.Stream
 
 // NewEmbeddedStreamDict creates and returns an embeddedStreamDict containing the bytes represented by r.
 func (xRefTable *XRefTable) NewEmbeddedStreamDict(r io.Reader, modDate time.Time) (*types.IndirectRef, error) {
-	buf, err := io.ReadAll(r)
-	if err != nil {
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, r); err != nil {
 		return nil, err
 	}
 
-	sd, err := xRefTable.NewStreamDictForBuf(buf)
+	bb := buf.Bytes()
+
+	sd, err := xRefTable.NewStreamDictForBuf(bb)
 	if err != nil {
 		return nil, err
 	}
 
 	sd.InsertName("Type", "EmbeddedFile")
 	d := types.NewDict()
-	d.InsertInt("Size", len(buf))
+	d.InsertInt("Size", len(bb))
 	d.Insert("ModDate", types.StringLiteral(types.DateString(modDate)))
 	sd.Insert("Params", d)
 	if err = sd.Encode(); err != nil {

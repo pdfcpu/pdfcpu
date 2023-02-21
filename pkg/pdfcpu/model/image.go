@@ -539,12 +539,7 @@ func createDCTImageObjectForJPEG(xRefTable *XRefTable, c image.Config, bb bytes.
 		return nil, 0, 0, errors.New("pdfcpu: unexpected color model for JPEG")
 	}
 
-	buf, err := io.ReadAll(&bb)
-	if err != nil {
-		return nil, 0, 0, err
-	}
-
-	sd, err := CreateDCTImageObject(xRefTable, buf, c.Width, c.Height, 8, cs)
+	sd, err := CreateDCTImageObject(xRefTable, bb.Bytes(), c.Width, c.Height, 8, cs)
 
 	return sd, c.Width, c.Height, err
 }
@@ -554,12 +549,13 @@ func CreateImageStreamDict(xRefTable *XRefTable, r io.Reader, gray, sepia bool) 
 
 	var bb bytes.Buffer
 	tee := io.TeeReader(r, &bb)
-	sniff, err := io.ReadAll(tee)
-	if err != nil {
+
+	var sniff bytes.Buffer
+	if _, err := io.Copy(&sniff, tee); err != nil {
 		return nil, 0, 0, err
 	}
 
-	c, format, err := image.DecodeConfig(bytes.NewBuffer(sniff))
+	c, format, err := image.DecodeConfig(&sniff)
 	if err != nil {
 		return nil, 0, 0, err
 	}
@@ -589,14 +585,14 @@ func CreateImageStreamDict(xRefTable *XRefTable, r io.Reader, gray, sepia bool) 
 		}
 	}
 
-	buf, softMask, bpc, cs, err := createImageBuf(xRefTable, img, format)
+	imgBuf, softMask, bpc, cs, err := createImageBuf(xRefTable, img, format)
 	if err != nil {
 		return nil, 0, 0, err
 	}
 
 	w, h := img.Bounds().Dx(), img.Bounds().Dy()
 
-	return createImageDict(xRefTable, buf, softMask, w, h, bpc, format, cs)
+	return createImageDict(xRefTable, imgBuf, softMask, w, h, bpc, format, cs)
 }
 
 // CreateImageResource creates a new XObject for given image data represented by r and applies optional filters.

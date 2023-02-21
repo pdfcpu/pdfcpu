@@ -20,6 +20,7 @@ limitations under the License.
 package model
 
 import (
+	"bytes"
 	"io"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -102,11 +103,12 @@ func parseConfigFile(r io.Reader, configPath string) error {
 	// Enforce default for old config files.
 	c.CheckFileNameExt = true
 
-	bb, err := io.ReadAll(r)
-	if err != nil {
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, r); err != nil {
 		return err
 	}
-	if err := yaml.Unmarshal(bb, &c); err != nil {
+
+	if err := yaml.Unmarshal(buf.Bytes(), &c); err != nil {
 		return err
 	}
 

@@ -17,6 +17,7 @@
 package create
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"sort"
@@ -716,12 +717,12 @@ func handleAcroForm(
 // FromJSON generates PDF content into ctx as provided by rd.
 func FromJSON(ctx *model.Context, rd io.Reader) error {
 
-	bb, err := io.ReadAll(rd)
-	if err != nil {
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, rd); err != nil {
 		return err
 	}
 
-	pdf, err := parseFromJSON(ctx, bb)
+	pdf, err := parseFromJSON(ctx, buf.Bytes())
 	if err != nil {
 		return err
 	}
