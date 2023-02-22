@@ -117,7 +117,9 @@ func CreateFile(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configurat
 				f1.Close()
 			}
 			f0.Close()
-			os.Remove(tmpFile)
+			if outFilePDF == "" || inFilePDF == outFilePDF {
+				os.Remove(tmpFile)
+			}
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -131,12 +133,8 @@ func CreateFile(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configurat
 		if err = f0.Close(); err != nil {
 			return
 		}
-		s := outFilePDF
 		if outFilePDF == "" || inFilePDF == outFilePDF {
-			s = inFilePDF
-		}
-		if err = os.Rename(tmpFile, s); err != nil {
-			return
+			err = os.Rename(tmpFile, inFilePDF)
 		}
 	}()
 

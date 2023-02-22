@@ -64,11 +64,6 @@ func Collect(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.
 
 // CollectFile creates a custom PDF page sequence for inFile and writes the result to outFile.
 func CollectFile(inFile, outFile string, selectedPages []string, conf *model.Configuration) (err error) {
-	var f1, f2 *os.File
-
-	if f1, err = os.Open(inFile); err != nil {
-		return err
-	}
 
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
@@ -77,7 +72,15 @@ func CollectFile(inFile, outFile string, selectedPages []string, conf *model.Con
 	} else {
 		log.CLI.Printf("writing %s...\n", inFile)
 	}
+
+	var f1, f2 *os.File
+
+	if f1, err = os.Open(inFile); err != nil {
+		return err
+	}
+
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -85,7 +88,9 @@ func CollectFile(inFile, outFile string, selectedPages []string, conf *model.Con
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			os.Remove(tmpFile)
+			if outFile == "" || inFile == outFile {
+				os.Remove(tmpFile)
+			}
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -95,9 +100,7 @@ func CollectFile(inFile, outFile string, selectedPages []string, conf *model.Con
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 

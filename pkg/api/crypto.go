@@ -59,6 +59,7 @@ func EncryptFile(inFile, outFile string, conf *model.Configuration) (err error) 
 	}
 
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -66,7 +67,9 @@ func EncryptFile(inFile, outFile string, conf *model.Configuration) (err error) 
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			os.Remove(tmpFile)
+			if outFile == "" || inFile == outFile {
+				os.Remove(tmpFile)
+			}
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -76,9 +79,7 @@ func EncryptFile(inFile, outFile string, conf *model.Configuration) (err error) 
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 
@@ -119,6 +120,7 @@ func DecryptFile(inFile, outFile string, conf *model.Configuration) (err error) 
 	}
 
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -126,7 +128,9 @@ func DecryptFile(inFile, outFile string, conf *model.Configuration) (err error) 
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			os.Remove(tmpFile)
+			if outFile == "" || inFile == outFile {
+				os.Remove(tmpFile)
+			}
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -136,9 +140,7 @@ func DecryptFile(inFile, outFile string, conf *model.Configuration) (err error) 
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 
@@ -183,6 +185,7 @@ func ChangeUserPasswordFile(inFile, outFile string, pwOld, pwNew string, conf *m
 	}
 
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -190,7 +193,9 @@ func ChangeUserPasswordFile(inFile, outFile string, pwOld, pwNew string, conf *m
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			os.Remove(tmpFile)
+			if outFile == "" || inFile == outFile {
+				os.Remove(tmpFile)
+			}
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -200,9 +205,7 @@ func ChangeUserPasswordFile(inFile, outFile string, pwOld, pwNew string, conf *m
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 
@@ -254,7 +257,9 @@ func ChangeOwnerPasswordFile(inFile, outFile string, pwOld, pwNew string, conf *
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			os.Remove(tmpFile)
+			if outFile == "" || inFile == outFile {
+				os.Remove(tmpFile)
+			}
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -264,9 +269,7 @@ func ChangeOwnerPasswordFile(inFile, outFile string, pwOld, pwNew string, conf *
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 

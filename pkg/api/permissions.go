@@ -121,7 +121,9 @@ func SetPermissionsFile(inFile, outFile string, conf *model.Configuration) (err 
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			os.Remove(tmpFile)
+			if outFile == "" || inFile == outFile {
+				os.Remove(tmpFile)
+			}
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -131,9 +133,7 @@ func SetPermissionsFile(inFile, outFile string, conf *model.Configuration) (err 
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 

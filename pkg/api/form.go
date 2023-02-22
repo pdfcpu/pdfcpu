@@ -128,6 +128,7 @@ func RemoveFormFieldsFile(inFile, outFile string, fieldIDs []string, conf *model
 	log.CLI.Printf("writing %s...\n", outFile)
 
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -135,7 +136,9 @@ func RemoveFormFieldsFile(inFile, outFile string, fieldIDs []string, conf *model
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			os.Remove(tmpFile)
+			if outFile == "" || inFile == outFile {
+				os.Remove(tmpFile)
+			}
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -145,9 +148,7 @@ func RemoveFormFieldsFile(inFile, outFile string, fieldIDs []string, conf *model
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 
@@ -203,6 +204,7 @@ func LockFormFieldsFile(inFile, outFile string, fieldIDs []string, conf *model.C
 	log.CLI.Printf("writing %s...\n", outFile)
 
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -210,7 +212,9 @@ func LockFormFieldsFile(inFile, outFile string, fieldIDs []string, conf *model.C
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			os.Remove(tmpFile)
+			if outFile == "" || inFile == outFile {
+				os.Remove(tmpFile)
+			}
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -220,9 +224,7 @@ func LockFormFieldsFile(inFile, outFile string, fieldIDs []string, conf *model.C
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 
@@ -278,6 +280,7 @@ func UnlockFormFieldsFile(inFile, outFile string, fieldIDs []string, conf *model
 	log.CLI.Printf("writing %s...\n", outFile)
 
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -285,7 +288,9 @@ func UnlockFormFieldsFile(inFile, outFile string, fieldIDs []string, conf *model
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			os.Remove(tmpFile)
+			if outFile == "" || inFile == outFile {
+				os.Remove(tmpFile)
+			}
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -295,9 +300,7 @@ func UnlockFormFieldsFile(inFile, outFile string, fieldIDs []string, conf *model
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 
@@ -353,6 +356,7 @@ func ResetFormFieldsFile(inFile, outFile string, fieldIDs []string, conf *model.
 	log.CLI.Printf("writing %s...\n", outFile)
 
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -360,7 +364,9 @@ func ResetFormFieldsFile(inFile, outFile string, fieldIDs []string, conf *model.
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			os.Remove(tmpFile)
+			if outFile == "" || inFile == outFile {
+				os.Remove(tmpFile)
+			}
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -370,9 +376,7 @@ func ResetFormFieldsFile(inFile, outFile string, fieldIDs []string, conf *model.
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 
@@ -414,6 +418,7 @@ func ExportFormFile(inFilePDF, outFileJSON string, conf *model.Configuration) (e
 	}
 
 	if f2, err = os.Create(outFileJSON); err != nil {
+		f1.Close()
 		return err
 	}
 	log.CLI.Printf("writing %s...\n", outFileJSON)
@@ -506,6 +511,7 @@ func FillFormFile(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configur
 	}
 
 	if f1, err = os.Open(inFilePDF); err != nil {
+		f0.Close()
 		return err
 	}
 	rs := f1
@@ -517,36 +523,32 @@ func FillFormFile(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configur
 	log.CLI.Printf("writing %s...\n", outFilePDF)
 
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
+		f0.Close()
 		return err
 	}
 
 	defer func() {
 		if err != nil {
 			f2.Close()
-			if f1 != nil {
-				f1.Close()
-			}
+			f1.Close()
 			f0.Close()
-			os.Remove(tmpFile)
+			if outFilePDF == "" || inFilePDF == outFilePDF {
+				os.Remove(tmpFile)
+			}
 			return
 		}
 		if err = f2.Close(); err != nil {
 			return
 		}
-		if f1 != nil {
-			if err = f1.Close(); err != nil {
-				return
-			}
+		if err = f1.Close(); err != nil {
+			return
 		}
 		if err = f0.Close(); err != nil {
 			return
 		}
-		s := outFilePDF
 		if outFilePDF == "" || inFilePDF == outFilePDF {
-			s = inFilePDF
-		}
-		if err = os.Rename(tmpFile, s); err != nil {
-			return
+			err = os.Rename(tmpFile, inFilePDF)
 		}
 	}()
 
@@ -785,8 +787,9 @@ func MultiFillFormFile(inFilePDF, inFileData, outDir, outFilePDF string, merge b
 	}
 
 	defer func() {
-		if err1 := f.Close(); err1 != nil {
-			err = err1
+		cerr := f.Close()
+		if err == nil {
+			err = cerr
 		}
 	}()
 

@@ -94,6 +94,7 @@ func AddWatermarksMapFile(inFile, outFile string, m map[int]*model.Watermark, co
 		log.CLI.Printf("writing %s...\n", inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -101,7 +102,9 @@ func AddWatermarksMapFile(inFile, outFile string, m map[int]*model.Watermark, co
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			os.Remove(tmpFile)
+			if outFile == "" || inFile == outFile {
+				os.Remove(tmpFile)
+			}
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -111,9 +114,7 @@ func AddWatermarksMapFile(inFile, outFile string, m map[int]*model.Watermark, co
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 
@@ -181,6 +182,7 @@ func AddWatermarksSliceMapFile(inFile, outFile string, m map[int][]*model.Waterm
 		log.CLI.Printf("writing %s...\n", inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -188,7 +190,9 @@ func AddWatermarksSliceMapFile(inFile, outFile string, m map[int][]*model.Waterm
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			os.Remove(tmpFile)
+			if outFile == "" || inFile == outFile {
+				os.Remove(tmpFile)
+			}
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -198,9 +202,7 @@ func AddWatermarksSliceMapFile(inFile, outFile string, m map[int][]*model.Waterm
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 
@@ -277,6 +279,7 @@ func AddWatermarksFile(inFile, outFile string, selectedPages []string, wm *model
 		log.CLI.Printf("writing %s...\n", inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -284,7 +287,9 @@ func AddWatermarksFile(inFile, outFile string, selectedPages []string, wm *model
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			os.Remove(tmpFile)
+			if outFile == "" || inFile == outFile {
+				os.Remove(tmpFile)
+			}
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -294,9 +299,7 @@ func AddWatermarksFile(inFile, outFile string, selectedPages []string, wm *model
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 
@@ -368,6 +371,7 @@ func RemoveWatermarksFile(inFile, outFile string, selectedPages []string, conf *
 		log.CLI.Printf("writing %s...\n", inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -375,7 +379,9 @@ func RemoveWatermarksFile(inFile, outFile string, selectedPages []string, conf *
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			os.Remove(tmpFile)
+			if outFile == "" || inFile == outFile {
+				os.Remove(tmpFile)
+			}
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -385,9 +391,7 @@ func RemoveWatermarksFile(inFile, outFile string, selectedPages []string, conf *
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 

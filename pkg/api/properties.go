@@ -114,6 +114,7 @@ func AddPropertiesFile(inFile, outFile string, properties map[string]string, con
 		tmpFile = outFile
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -133,9 +134,7 @@ func AddPropertiesFile(inFile, outFile string, properties map[string]string, con
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 
@@ -193,6 +192,7 @@ func RemovePropertiesFile(inFile, outFile string, properties []string, conf *mod
 		tmpFile = outFile
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -212,9 +212,7 @@ func RemovePropertiesFile(inFile, outFile string, properties []string, conf *mod
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 

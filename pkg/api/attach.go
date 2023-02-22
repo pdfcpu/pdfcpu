@@ -186,6 +186,7 @@ func AddAttachmentsFile(inFile, outFile string, files []string, coll bool, conf 
 		tmpFile = outFile
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -205,9 +206,7 @@ func AddAttachmentsFile(inFile, outFile string, files []string, coll bool, conf 
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 
@@ -268,6 +267,7 @@ func RemoveAttachmentsFile(inFile, outFile string, files []string, conf *model.C
 		tmpFile = outFile
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -287,9 +287,7 @@ func RemoveAttachmentsFile(inFile, outFile string, files []string, conf *model.C
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 

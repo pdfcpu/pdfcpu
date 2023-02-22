@@ -150,11 +150,6 @@ func AddAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages []string, a
 
 // AddAnnotationsFile adds annotations for selected pages to a PDF context read from inFile and writes the result to outFile.
 func AddAnnotationsFile(inFile, outFile string, selectedPages []string, ar model.AnnotationRenderer, conf *model.Configuration, incr bool) (err error) {
-	var f1, f2 *os.File
-
-	if f1, err = os.Open(inFile); err != nil {
-		return err
-	}
 
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
@@ -172,7 +167,14 @@ func AddAnnotationsFile(inFile, outFile string, selectedPages []string, ar model
 		}
 	}
 
+	var f1, f2 *os.File
+
+	if f1, err = os.Open(inFile); err != nil {
+		return err
+	}
+
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -180,7 +182,9 @@ func AddAnnotationsFile(inFile, outFile string, selectedPages []string, ar model
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			os.Remove(tmpFile)
+			if outFile == "" || inFile == outFile {
+				os.Remove(tmpFile)
+			}
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -190,9 +194,7 @@ func AddAnnotationsFile(inFile, outFile string, selectedPages []string, ar model
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 
@@ -280,11 +282,6 @@ func AddAnnotationsMapAsIncrement(rws io.ReadWriteSeeker, m map[int][]model.Anno
 
 // AddAnnotationsMapFile adds annotations in m to corresponding pages of inFile and writes the result to outFile.
 func AddAnnotationsMapFile(inFile, outFile string, m map[int][]model.AnnotationRenderer, conf *model.Configuration, incr bool) (err error) {
-	var f1, f2 *os.File
-
-	if f1, err = os.Open(inFile); err != nil {
-		return err
-	}
 
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
@@ -302,7 +299,14 @@ func AddAnnotationsMapFile(inFile, outFile string, m map[int][]model.AnnotationR
 		}
 	}
 
+	var f1, f2 *os.File
+
+	if f1, err = os.Open(inFile); err != nil {
+		return err
+	}
+
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -310,7 +314,9 @@ func AddAnnotationsMapFile(inFile, outFile string, m map[int][]model.AnnotationR
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			os.Remove(tmpFile)
+			if outFile == "" || inFile == outFile {
+				os.Remove(tmpFile)
+			}
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -320,9 +326,7 @@ func AddAnnotationsMapFile(inFile, outFile string, m map[int][]model.AnnotationR
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 
@@ -422,13 +426,6 @@ func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, ids []s
 // RemoveAnnotationsFile removes annotations for selected pages by id and object number
 // from a PDF context read from inFile and writes the result to outFile.
 func RemoveAnnotationsFile(inFile, outFile string, selectedPages, ids []string, objNrs []int, conf *model.Configuration, incr bool) (err error) {
-	var f1, f2 *os.File
-
-	if f1, err = os.Open(inFile); err != nil {
-		return err
-	}
-
-	//fmt.Printf("RemoveAnnotationsFile: ids:%v objNrs:%v\n", ids, objNrs)
 
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
@@ -446,7 +443,14 @@ func RemoveAnnotationsFile(inFile, outFile string, selectedPages, ids []string, 
 		}
 	}
 
+	var f1, f2 *os.File
+
+	if f1, err = os.Open(inFile); err != nil {
+		return err
+	}
+
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -454,7 +458,9 @@ func RemoveAnnotationsFile(inFile, outFile string, selectedPages, ids []string, 
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			os.Remove(tmpFile)
+			if outFile == "" || inFile == outFile {
+				os.Remove(tmpFile)
+			}
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -464,9 +470,7 @@ func RemoveAnnotationsFile(inFile, outFile string, selectedPages, ids []string, 
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 

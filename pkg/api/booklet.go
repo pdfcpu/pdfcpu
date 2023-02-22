@@ -121,24 +121,21 @@ func BookletFile(inFiles []string, outFile string, selectedPages []string, nup *
 	}
 
 	if f2, err = os.Create(outFile); err != nil {
+		f1.Close()
 		return err
 	}
 	log.CLI.Printf("writing %s...\n", outFile)
 
 	defer func() {
 		if err != nil {
-			if f1 != nil {
-				f1.Close()
-			}
 			f2.Close()
+			f1.Close()
 			return
 		}
-		if f1 != nil {
-			if err = f1.Close(); err != nil {
-				return
-			}
+		if err = f2.Close(); err != nil {
+			return
 		}
-		err = f2.Close()
+		err = f1.Close()
 	}()
 
 	return Booklet(f1, f2, inFiles, selectedPages, nup, conf)

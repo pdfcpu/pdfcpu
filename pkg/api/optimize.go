@@ -89,7 +89,9 @@ func OptimizeFile(inFile, outFile string, conf *model.Configuration) (err error)
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			os.Remove(tmpFile)
+			if outFile == "" || inFile == outFile {
+				os.Remove(tmpFile)
+			}
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -99,9 +101,7 @@ func OptimizeFile(inFile, outFile string, conf *model.Configuration) (err error)
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 

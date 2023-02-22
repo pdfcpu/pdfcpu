@@ -82,6 +82,7 @@ func TrimFile(inFile, outFile string, selectedPages []string, conf *model.Config
 		log.CLI.Printf("writing %s...\n", inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -89,7 +90,9 @@ func TrimFile(inFile, outFile string, selectedPages []string, conf *model.Config
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			os.Remove(tmpFile)
+			if outFile == "" || inFile == outFile {
+				os.Remove(tmpFile)
+			}
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -99,9 +102,7 @@ func TrimFile(inFile, outFile string, selectedPages []string, conf *model.Config
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 

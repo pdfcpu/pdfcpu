@@ -161,24 +161,27 @@ func NUpFile(inFiles []string, outFile string, selectedPages []string, nup *mode
 	}
 
 	if f2, err = os.Create(outFile); err != nil {
+		if f1 != nil {
+			f1.Close()
+		}
 		return err
 	}
 	log.CLI.Printf("writing %s...\n", outFile)
 
 	defer func() {
 		if err != nil {
+			f2.Close()
 			if f1 != nil {
 				f1.Close()
 			}
-			f2.Close()
+			return
+		}
+		if err = f2.Close(); err != nil {
 			return
 		}
 		if f1 != nil {
-			if err = f1.Close(); err != nil {
-				return
-			}
+			err = f1.Close()
 		}
-		err = f2.Close()
 	}()
 
 	return NUp(f1, f2, inFiles, selectedPages, nup, conf)
