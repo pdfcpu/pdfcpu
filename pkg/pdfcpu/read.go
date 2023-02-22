@@ -96,6 +96,27 @@ func Read(rs io.ReadSeeker, conf *model.Configuration) (*model.Context, error) {
 	return ctx, nil
 }
 
+// fillBuffer reads from r until buf is full or read returns an error.
+// Unlike io.ReadAtLeast fillBuffer does not return ErrUnexpectedEOF
+// if an EOF happens after reading some but not all the bytes.
+// Special thanks go to Rene Kaufmann.
+func fillBuffer(r io.Reader, buf []byte) (int, error) {
+	var n int
+	var err error
+
+	for n < len(buf) && err == nil {
+		var nn int
+		nn, err = r.Read(buf[n:])
+		n += nn
+	}
+
+	if n > 0 && err == io.EOF {
+		return n, nil
+	}
+
+	return n, err
+}
+
 // ScanLines is a split function for a Scanner that returns each line of
 // text, stripped of any trailing end-of-line marker. The returned line may
 // be empty. The end-of-line marker is one carriage return followed
@@ -215,7 +236,7 @@ func offsetLastXRefSection(ctx *model.Context, skip int64) (*int64, error) {
 
 		curBuf := make([]byte, bufSize)
 
-		_, err = rs.Read(curBuf)
+		_, err = fillBuffer(rs, curBuf)
 		if err != nil {
 			return nil, err
 		}
@@ -767,7 +788,7 @@ func scanForPreviousXref(ctx *model.Context, offset *int64) *int64 {
 
 		curBuf := make([]byte, bufSize)
 
-		n, err := rd.Read(curBuf)
+		n, err := fillBuffer(rd, curBuf)
 		if err != nil {
 			return nil
 		}
@@ -1118,7 +1139,7 @@ func headerVersion(rs io.ReadSeeker, headerBufSize int) (v *model.Version, eolCo
 	}
 
 	buf := make([]byte, headerBufSize)
-	n, err := rs.Read(buf)
+	n, err := fillBuffer(rs, buf)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -1421,7 +1442,7 @@ func growBufBy(buf []byte, size int, rd io.Reader) ([]byte, error) {
 
 	b := make([]byte, size)
 
-	_, err := rd.Read(b)
+	_, err := fillBuffer(rd, b)
 	if err != nil {
 		return nil, err
 	}
@@ -1970,15 +1991,15 @@ func readStreamContent(rd io.Reader, streamLength int) ([]byte, error) {
 
 	log.Read.Printf("readStreamContent: begin streamLength:%d\n", streamLength)
 
-	// If streamLength == 0 read until "endstream" then fix "Length"
 	if streamLength == 0 {
+		// Read until "endstream" then fix "Length".
 		return readStreamContentBlindly(rd)
 	}
 
 	buf := make([]byte, streamLength)
 
 	for totalCount := 0; totalCount < streamLength; {
-		count, err := rd.Read(buf[totalCount:])
+		count, err := fillBuffer(rd, buf[totalCount:])
 		if err != nil {
 			if err != io.EOF {
 				return nil, err
@@ -1994,7 +2015,6 @@ func readStreamContent(rd io.Reader, streamLength int) ([]byte, error) {
 
 		log.Read.Printf("readStreamContent: count=%d, buflen=%d(%X)\n", count, len(buf), len(buf))
 		totalCount += count
-
 	}
 
 	log.Read.Printf("readStreamContent: end\n")
@@ -2002,14 +2022,14 @@ func readStreamContent(rd io.Reader, streamLength int) ([]byte, error) {
 	return buf, nil
 }
 
-// LoadEncodedStreamContent loads the encoded stream content from file into StreamDict.
+// LoadEncodedStreamContent loads the encoded stream content into sd.
 func loadEncodedStreamContent(ctx *model.Context, sd *types.StreamDict) ([]byte, error) {
 
 	log.Read.Printf("LoadEncodedStreamContent: begin\n%v\n", sd)
 
 	var err error
 
-	// Return saved decoded content.
+	// Return already available decoded content.
 	if sd.Raw != nil {
 		log.Read.Println("LoadEncodedStreamContent: end, already in memory.")
 		return sd.Raw, nil
@@ -2038,8 +2058,7 @@ func loadEncodedStreamContent(ctx *model.Context, sd *types.StreamDict) ([]byte,
 
 	log.Read.Printf("LoadEncodedStreamContent: seeked to offset:%d\n", newOffset)
 
-	// Buffer stream contents.
-	// Read content from disk.
+	// Read content bytes.
 	rawContent, err := readStreamContent(rd, int(*sd.StreamLength))
 	if err != nil {
 		return nil, err
@@ -2386,19 +2405,19 @@ func dereferenceObject(ctx *model.Context, objNr int) error {
 
 	o := entry.Object
 
-	// Already dereferenced object.
 	if o != nil {
+		// Already dereferenced.
 		logStream(entry.Object)
 		updateBinaryTotalSize(ctx, o)
 		log.Read.Printf("handleCachedStreamDict: using cached object %d of %d\n<%s>\n", objNr, xRefTableSize, entry.Object)
 		return nil
 	}
 
-	// Dereference (load from disk into memory).
+	// Dereference.
 
 	log.Read.Printf("dereferenceObject: dereferencing object %d\n", objNr)
 
-	// Parse object from file: anything goes dict, array, integer, float, streamdicts...
+	// Parse object from ctx: anything goes dict, array, integer, float, streamdict...
 	o, err := ParseObject(ctx, *entry.Offset, objNr, *entry.Generation)
 	if err != nil {
 		return errors.Wrapf(err, "dereferenceObject: problem dereferencing object %d", objNr)
