@@ -261,7 +261,8 @@ func ListAnnotations(cmd *Command) ([]string, error) {
 
 // RemoveAnnotations deletes annotations from inFile's page tree and writes the result to outFile.
 func RemoveAnnotations(cmd *Command) ([]string, error) {
-	return nil, api.RemoveAnnotationsFile(*cmd.InFile, "", cmd.PageSelection, nil, cmd.IntVals, cmd.Conf, false)
+	incr := false // No incremental writing on cli.
+	return nil, api.RemoveAnnotationsFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.StringVals, cmd.IntVals, cmd.Conf, incr)
 }
 
 // ListImages returns inFiles embedded images.

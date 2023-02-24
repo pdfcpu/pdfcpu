@@ -17,8 +17,6 @@ limitations under the License.
 package validate
 
 import (
-	"fmt"
-
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -1533,22 +1531,20 @@ func validatePageAnnotations(xRefTable *model.XRefTable, d types.Dict) error {
 		return err
 	}
 
+	if len(a) == 0 {
+		return nil
+	}
+
 	// array of indrefs to annotation dicts.
 	var annotsDict types.Dict
 
 	// an optional TrapNetAnnotation has to be the final entry in this list.
 	hasTrapNet := false
 
-	var i int
-
-	if len(a) == 0 {
-		return nil
-	}
-
 	pgAnnots := model.PgAnnots{}
 	xRefTable.PageAnnots[xRefTable.CurPage] = pgAnnots
 
-	for _, v := range a {
+	for i, v := range a {
 
 		if hasTrapNet {
 			return errors.New("pdfcpu: validatePageAnnotations: corrupted page annotation list, \"TrapNet\" has to be the last entry")
@@ -1556,13 +1552,13 @@ func validatePageAnnotations(xRefTable *model.XRefTable, d types.Dict) error {
 
 		var (
 			ok, hasIndRef bool
-			ir            types.IndirectRef
+			indRef        types.IndirectRef
 		)
 
-		if ir, ok = v.(types.IndirectRef); ok {
+		if indRef, ok = v.(types.IndirectRef); ok {
 			hasIndRef = true
-			log.Validate.Printf("processing annotDict %d\n", ir.ObjectNumber)
-			annotsDict, err = xRefTable.DereferenceDict(ir)
+			log.Validate.Printf("processing annotDict %d\n", indRef.ObjectNumber)
+			annotsDict, err = xRefTable.DereferenceDict(indRef)
 			if err != nil {
 				return err
 			}
@@ -1592,15 +1588,12 @@ func validatePageAnnotations(xRefTable *model.XRefTable, d types.Dict) error {
 			pgAnnots[ann.Type()] = annots
 		}
 
-		var k string
+		objNr := -i
 		if hasIndRef {
-			k = ir.ObjectNumber.String()
-			*(annots.IndRefs) = append(*(annots.IndRefs), ir)
-		} else {
-			k = fmt.Sprintf("?%d", i)
-			i++
+			objNr = indRef.ObjectNumber.Value()
+			*(annots.IndRefs) = append(*(annots.IndRefs), indRef)
 		}
-		annots.Map[k] = ann
+		annots.Map[objNr] = ann
 	}
 
 	return nil

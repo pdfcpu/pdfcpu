@@ -917,7 +917,7 @@ Examples:
 ` + usageBoxDescription
 
 	usageAnnotsList   = "pdfcpu annotations list   [-p(ages) selectedPages] inFile"
-	usageAnnotsRemove = "pdfcpu annotations remove [-p(ages) selectedPages] inFile [objNr...]" + generalFlags
+	usageAnnotsRemove = "pdfcpu annotations remove [-p(ages) selectedPages] inFile [outFile] [objNr|annotId|annotType]..." + generalFlags
 
 	usageAnnots = "usage: " + usageAnnotsList +
 		"\n       " + usageAnnotsRemove
@@ -926,21 +926,36 @@ Examples:
    
       pages ... Please refer to "pdfcpu selectedpages"
      inFile ... input pdf file
-      objNr ... annotation dict objNr
+      objNr ... obj# from "pdfcpu annotations list"
+    annotId ... id from "pdfcpu annotations list"
+  annotType ... Text, Link, FreeText, Line, Square, Circle, Polygon, PolyLine, HighLight, Underline, Squiggly, StrikeOut, Stamp,
+                Caret, Ink, Popup, FileAttachment, Sound, Movie, Widget, Screen, PrinterMark, TrapNet, Watermark, 3D, Redact
    
    Examples:
 
-      pdfcpu annot list in.pdf
-      pdfcpu annot list -pages 1-2 in.pdf
+      List all annotations:
+         pdfcpu annot list in.pdf
 
-      Remove all page annotations:
-         pdfcpu annot remove in.pdf
+      List annotation of first two pages:
+         pdfcpu annot list -pages 1-2 in.pdf
+
+      Remove all page annotations and write to out.pdf:
+         pdfcpu annot remove in.pdf out.pdf
       
       Remove annotations for first 10 pages:
          pdfcpu annot remove -pages 1-10 in.pdf
 
       Remove annotations with obj# 37, 38 (see output of pdfcpu annot list)
          pdfcpu annot remove in.pdf 37 38
+
+      Remove all Widget annotations and write to out.pdf:
+         pdfcpu annot remove in.pdf out.pdf Widget
+
+      Remove all Ink and Widget annotations on page 3:
+         pdfcpu annot remove -pages 3 in.pdf Ink Widget
+
+      Remove annotations by type, id and obj# and write to out.pdf:
+         pdfcpu annot remove in.pdf out.pdf Link 30 Text someId
       `
 
 	usageImagesList = "pdfcpu images list [-p(ages) selectedPages] inFile..." + generalFlags

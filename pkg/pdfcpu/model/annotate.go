@@ -426,7 +426,7 @@ func (ann LinkAnnotation) RenderDict(pageIndRef types.IndirectRef) types.Dict {
 }
 
 // AnnotMap represents annotations by object number of the corresponding annotation dict.
-type AnnotMap map[string]AnnotationRenderer
+type AnnotMap map[int]AnnotationRenderer
 
 type Annot struct {
 	IndRefs *[]types.IndirectRef
@@ -440,20 +440,14 @@ type PgAnnots map[AnnotationType]Annot
 func (ctx *Context) AnnotationObjNrs() ([]int, error) {
 	// Note: Not all cached annotations are based on IndRefs!
 	// pdfcpu also caches direct annot dict objects (violating the PDF spec) for listing purposes.
-	// Such annotations may only be removecd as part of removing all annotations (for a page).
+	// Such annotations may only be removed as part of removing all annotations (for a page).
 
 	objNrs := []int{}
 
 	for _, pageAnnots := range ctx.PageAnnots {
 		for _, annots := range pageAnnots {
-			for k := range annots.Map {
-				if k[0] != '?' {
-					i, err := strconv.Atoi(k)
-					if err != nil {
-						return nil, err
-					}
-					objNrs = append(objNrs, i)
-				}
+			for objNr := range annots.Map {
+				objNrs = append(objNrs, objNr)
 			}
 		}
 	}
@@ -461,7 +455,7 @@ func (ctx *Context) AnnotationObjNrs() ([]int, error) {
 	return objNrs, nil
 }
 
-func (ctx *Context) addAnnotation(ann AnnotationRenderer, pageNr int, objNr string) error {
+func (ctx *Context) addAnnotation(ann AnnotationRenderer, pageNr, objNr int) error {
 	pgAnnots, ok := ctx.PageAnnots[pageNr]
 	if !ok {
 		pgAnnots = PgAnnots{}
@@ -474,13 +468,13 @@ func (ctx *Context) addAnnotation(ann AnnotationRenderer, pageNr int, objNr stri
 		pgAnnots[ann.Type()] = annots
 	}
 	if _, ok := annots.Map[objNr]; ok {
-		return errors.Errorf("addAnnotation: obj#%s already cached", objNr)
+		return errors.Errorf("addAnnotation: obj#%d already cached", objNr)
 	}
 	annots.Map[objNr] = ann
 	return nil
 }
 
-func (ctx *Context) removeAnnotation(pageNr int, objNr string) error {
+func (ctx *Context) removeAnnotation(pageNr, objNr int) error {
 	pgAnnots, ok := ctx.PageAnnots[pageNr]
 	if !ok {
 		return errors.Errorf("removeAnnotation: no page annotations cached for page %d", pageNr)
@@ -497,7 +491,7 @@ func (ctx *Context) removeAnnotation(pageNr int, objNr string) error {
 			return nil
 		}
 	}
-	return errors.Errorf("removeAnnotation: no page annotation cached for obj#%s", objNr)
+	return errors.Errorf("removeAnnotation: no page annotation cached for obj#%d", objNr)
 }
 
 func (ctx *Context) findAnnotByID(id string, annots types.Array) (int, error) {
@@ -629,15 +623,26 @@ func (xRefTable *XRefTable) ListAnnotations(selectedPages types.IntSet) (int, []
 		if len(pageAnnots) == 0 {
 			continue
 		}
+
+		var annTypes []string
+		for t, _ := range pageAnnots {
+			annTypes = append(annTypes, AnnotTypeStrings[t])
+		}
+		sort.Strings(annTypes)
+
 		ss = append(ss, "")
 		ss = append(ss, fmt.Sprintf("Page %d:", i))
-		for annType, annots := range pageAnnots {
+
+		for _, annType := range annTypes {
+			annots := pageAnnots[annotTypes[annType]]
 			var (
 				maxLenRect    int
 				maxLenContent int
 			)
 			maxLenID := 2
-			for _, ann := range annots.Map {
+			var objNrs []int
+			for objNr, ann := range annots.Map {
+				objNrs = append(objNrs, objNr)
 				if len(ann.RectString()) > maxLenRect {
 					maxLenRect = len(ann.RectString())
 				}
@@ -648,8 +653,9 @@ func (xRefTable *XRefTable) ListAnnotations(selectedPages types.IntSet) (int, []
 					maxLenContent = len(ann.ContentString())
 				}
 			}
+			sort.Ints(objNrs)
 			ss = append(ss, "")
-			ss = append(ss, fmt.Sprintf("  %s:", AnnotTypeStrings[annType]))
+			ss = append(ss, fmt.Sprintf("  %s:", annType))
 			s1 := ("     obj# ")
 			s2 := fmt.Sprintf("%%%ds", maxLenRect)
 			s3 := fmt.Sprintf("%%%ds", maxLenID)
@@ -657,13 +663,9 @@ func (xRefTable *XRefTable) ListAnnotations(selectedPages types.IntSet) (int, []
 			s := fmt.Sprintf(s1+s2+" "+s3+" "+s4, "rect", "id", "content")
 			ss = append(ss, s)
 			ss = append(ss, "    "+strings.Repeat("=", len(s)-4))
-
-			for objNr, ann := range annots.Map {
-				s := "?"
-				if objNr[0] != '?' {
-					s = objNr
-				}
-				ss = append(ss, fmt.Sprintf("    %5s "+s2+" "+s3+" "+s4, s, ann.RectString(), ann.ID(), ann.ContentString()))
+			for _, objNr := range objNrs {
+				ann := annots.Map[objNr]
+				ss = append(ss, fmt.Sprintf("    %5d "+s2+" "+s3+" "+s4, objNr, ann.RectString(), ann.ID(), ann.ContentString()))
 				j++
 			}
 		}
@@ -705,7 +707,7 @@ func (ctx *Context) AddAnnotation(pageDictIndRef *types.IndirectRef, pageDict ty
 	}
 
 	// Add annotation to xreftable page annotation cache.
-	err = ctx.addAnnotation(ar, pageNr, annotIndRef.ObjectNumber.String())
+	err = ctx.addAnnotation(ar, pageNr, annotIndRef.ObjectNumber.Value())
 	if err != nil {
 		return false, err
 	}
@@ -862,11 +864,14 @@ func (ctx *Context) removeAllAnnotations(pageDict types.Dict, pageDictObjNr, pag
 	annots, _ := obj.(types.Array)
 
 	for _, o := range annots {
-		ir, _ := o.(types.IndirectRef)
-		objNr := ir.ObjectNumber.Value()
-		if err := ctx.DeleteObject(ir); err != nil {
+		if err := ctx.DeleteObject(o); err != nil {
 			return false, err
 		}
+		ir, ok := o.(types.IndirectRef)
+		if !ok {
+			continue
+		}
+		objNr := ir.ObjectNumber.Value()
 		if incr {
 			// Mark annotation dict obj for incremental writing.
 			ctx.Write.IncrementWithObjNr(objNr)
@@ -885,43 +890,125 @@ func (ctx *Context) removeAllAnnotations(pageDict types.Dict, pageDictObjNr, pag
 	return true, nil
 }
 
-func (ctx *Context) removeAnnotationsFromPageDictByID(ids []string, pageNr int, annots types.Array, incr bool) (types.Array, bool, error) {
-	var ok bool
-	for _, id := range ids {
-		i, err := ctx.findAnnotByID(id, annots)
-		if err != nil {
-			return nil, false, err
-		}
-		if i >= 0 {
-			ok = true
-			ir1, _ := annots[i].(types.IndirectRef)
+func (ctx *Context) removeAnnotationsFromPageDictByType(annotTypes []AnnotationType, pageNr int, annots types.Array, incr bool) (types.Array, bool, error) {
 
-			// Remove annotation from xreftable page annotation cache.
-			err = ctx.removeAnnotation(pageNr, ir1.ObjectNumber.String())
+	pgAnnots, found := ctx.PageAnnots[pageNr]
+	if !found {
+		return annots, false, nil
+	}
+
+	var ok bool
+
+	for _, annotType := range annotTypes {
+		annot, found := pgAnnots[annotType]
+		if !found {
+			continue
+		}
+		// We have cached annotType page annotations.
+		for _, indRef := range *annot.IndRefs {
+			objNr := indRef.ObjectNumber.Value()
+			i, err := ctx.findAnnotByObjNr(objNr, annots)
 			if err != nil {
 				return nil, false, err
 			}
-
-			if err := ctx.DeleteObject(ir1); err != nil {
+			if i < 0 {
+				return nil, false, errors.New("pdfcpu: missing annot indRef")
+			}
+			if err := ctx.DeleteObject(indRef); err != nil {
 				return nil, false, err
 			}
 			if incr {
 				// Mark annotation dict obj for incremental writing.
-				ctx.Write.IncrementWithObjNr(ir1.ObjectNumber.Value())
+				ctx.Write.IncrementWithObjNr(indRef.ObjectNumber.Value())
 			}
+
 			if len(annots) == 1 {
-				return nil, ok, nil
+				annots = nil
+				break
 			}
 			annots = append(annots[:i], annots[i+1:]...)
 		}
+
+		delete(pgAnnots, annotType)
+		if len(pgAnnots) == 0 {
+			delete(ctx.PageAnnots, pageNr)
+		}
+
+		ok = true
 	}
+
+	return annots, ok, nil
+}
+
+func (ctx *Context) removeAnnotationFromPageDictByID(id string, pageNr int, annots types.Array, incr bool) (types.Array, bool, error) {
+	i, err := ctx.findAnnotByID(id, annots)
+	if err != nil || i < 0 {
+		return annots, false, err
+	}
+
+	indRef, _ := annots[i].(types.IndirectRef)
+
+	// Remove annotation from xreftable page annotation cache.
+	err = ctx.removeAnnotation(pageNr, indRef.ObjectNumber.Value())
+	if err != nil {
+		return nil, false, err
+	}
+	if err := ctx.DeleteObject(indRef); err != nil {
+		return nil, false, err
+	}
+	if incr {
+		// Mark annotation dict obj for incremental writing.
+		ctx.Write.IncrementWithObjNr(indRef.ObjectNumber.Value())
+	}
+	if len(annots) == 1 {
+		if i != 0 {
+			return nil, false, err
+		}
+		return nil, true, nil
+	}
+	annots = append(annots[:i], annots[i+1:]...)
+
+	return annots, true, nil
+}
+
+func (ctx *Context) removeAnnotationsFromPageDictByID(ids []string, objNrSet types.IntSet, pageNr int, annots types.Array, incr bool) (types.Array, bool, error) {
+
+	var (
+		ok, ok1 bool
+		err     error
+	)
+
+	for _, id := range ids {
+		annots, ok1, err = ctx.removeAnnotationFromPageDictByID(id, pageNr, annots, incr)
+		if err != nil {
+			return nil, false, err
+		}
+		if ok1 {
+			ok = true
+		}
+	}
+
+	for objNr, v := range objNrSet {
+		if !v {
+			continue
+		}
+		annots, ok1, err = ctx.removeAnnotationFromPageDictByID(strconv.Itoa(objNr), pageNr, annots, incr)
+		if err != nil {
+			return nil, false, err
+		}
+		if ok1 {
+			delete(objNrSet, objNr)
+			ok = true
+		}
+	}
+
 	return annots, ok, nil
 }
 
 func (ctx *Context) removeAnnotationsFromPageDictByObjNr(objNrSet types.IntSet, pageNr int, annots types.Array, incr bool) (types.Array, bool, error) {
 	var ok bool
 	for objNr, v := range objNrSet {
-		if !v {
+		if !v || objNr < 0 {
 			continue
 		}
 		i, err := ctx.findAnnotByObjNr(objNr, annots)
@@ -930,23 +1017,26 @@ func (ctx *Context) removeAnnotationsFromPageDictByObjNr(objNrSet types.IntSet, 
 		}
 		if i >= 0 {
 			ok = true
-			ir1, _ := annots[i].(types.IndirectRef)
+			indRef, _ := annots[i].(types.IndirectRef)
 
 			// Remove annotation from xreftable page annotation cache.
-			err = ctx.removeAnnotation(pageNr, ir1.ObjectNumber.String())
+			err = ctx.removeAnnotation(pageNr, indRef.ObjectNumber.Value())
 			if err != nil {
 				return nil, false, err
 			}
 
-			if err := ctx.DeleteObject(ir1); err != nil {
+			if err := ctx.DeleteObject(indRef); err != nil {
 				return nil, false, err
 			}
 			if incr {
 				// Mark annotation dict obj for incremental writing.
-				ctx.Write.IncrementWithObjNr(ir1.ObjectNumber.Value())
+				ctx.Write.IncrementWithObjNr(indRef.ObjectNumber.Value())
 			}
 			delete(objNrSet, objNr)
 			if len(annots) == 1 {
+				if i != 0 {
+					return nil, false, err
+				}
 				return nil, ok, nil
 			}
 			annots = append(annots[:i], annots[i+1:]...)
@@ -955,55 +1045,56 @@ func (ctx *Context) removeAnnotationsFromPageDictByObjNr(objNrSet types.IntSet, 
 	return annots, ok, nil
 }
 
-func (ctx *Context) removeAnnotationsFromPageDictByIDOrObjNr(ids []string, objNrSet types.IntSet, pageNr int, annots types.Array, incr bool) (types.Array, bool, error) {
+func (ctx *Context) removeAnnotationsFromPageDict(
+	annotTypes []AnnotationType,
+	ids []string,
+	objNrSet types.IntSet,
+	pageNr int,
+	annots types.Array,
+	incr bool) (types.Array, bool, error) {
+
 	var (
-		ok  bool
-		err error
+		ok1, ok2, ok3 bool
+		err           error
 	)
 
-	if len(ids) > 0 {
-		annots, ok, err = ctx.removeAnnotationsFromPageDictByID(ids, pageNr, annots, incr)
+	// 1. Remove by annotType.
+	if len(annotTypes) > 0 {
+		annots, ok1, err = ctx.removeAnnotationsFromPageDictByType(annotTypes, pageNr, annots, incr)
 		if err != nil || annots == nil {
-			return nil, ok, err
+			return nil, ok1, err
 		}
 	}
 
-	return ctx.removeAnnotationsFromPageDictByObjNr(objNrSet, pageNr, annots, incr)
+	// 2. Remove by obj#.
+	if len(objNrSet) > 0 {
+		annots, ok2, err = ctx.removeAnnotationsFromPageDictByObjNr(objNrSet, pageNr, annots, incr)
+		if err != nil || annots == nil {
+			return nil, ok2, err
+		}
+	}
+
+	// 3. Remove by id for ids and objNrs considering possibly numeric ids.
+	if len(ids) > 0 || len(objNrSet) > 0 {
+		annots, ok3, err = ctx.removeAnnotationsFromPageDictByID(ids, objNrSet, pageNr, annots, incr)
+		if err != nil || annots == nil {
+			return nil, ok3, err
+		}
+	}
+
+	return annots, ok1 || ok2 || ok3, nil
 }
 
-func (ctx *Context) removeAnnotationsFromDirectObj(
-	annots types.Array,
+// RemoveAnnotationsFromPageDict removes an annotation by annotType, id and obj# from pageDict.
+func (ctx *Context) RemoveAnnotationsFromPageDict(
+	annotTypes []AnnotationType,
 	ids []string,
 	objNrSet types.IntSet,
 	pageDict types.Dict,
-	pageDictObjNr, pageNr int,
+	pageDictObjNr,
+	pageNr int,
 	incr bool) (bool, error) {
 
-	var (
-		ok  bool
-		err error
-	)
-	annots, ok, err = ctx.removeAnnotationsFromPageDictByIDOrObjNr(ids, objNrSet, pageNr, annots, incr)
-	if err != nil {
-		return false, err
-	}
-	if !ok {
-		return false, nil
-	}
-	if incr {
-		// Mark page dict obj for incremental writing.
-		ctx.Write.IncrementWithObjNr(pageDictObjNr)
-	}
-	if annots == nil {
-		pageDict.Delete("Annots")
-		return ok, nil
-	}
-	pageDict.Update("Annots", annots)
-	return true, nil
-}
-
-// RemoveAnnotationsFromPageDict removes an annotation by its object number annObjNr from pageDict.
-func (ctx *Context) RemoveAnnotationsFromPageDict(ids []string, objNrSet types.IntSet, pageDict types.Dict, pageDictObjNr, pageNr int, incr bool) (bool, error) {
 	var (
 		ok  bool
 		err error
@@ -1017,7 +1108,7 @@ func (ctx *Context) RemoveAnnotationsFromPageDict(ids []string, objNrSet types.I
 
 	//fmt.Printf("ids:%v objNrSet:%v\n", ids, objNrSet)
 
-	if len(ids) == 0 && len(objNrSet) == 0 {
+	if len(annotTypes) == 0 && len(ids) == 0 && len(objNrSet) == 0 {
 		ok, err = ctx.removeAllAnnotations(pageDict, pageDictObjNr, pageNr, incr)
 		return ok, err
 	}
@@ -1029,7 +1120,25 @@ func (ctx *Context) RemoveAnnotationsFromPageDict(ids []string, objNrSet types.I
 
 	ir, ok1 := obj.(types.IndirectRef)
 	if !ok1 {
-		return ctx.removeAnnotationsFromDirectObj(obj.(types.Array), ids, objNrSet, pageDict, pageDictObjNr, pageNr, incr)
+		annots, _ := obj.(types.Array)
+		annots, ok, err = ctx.removeAnnotationsFromPageDict(annotTypes, ids, objNrSet, pageNr, annots, incr)
+		if err != nil {
+			return false, err
+		}
+		if !ok {
+			return false, nil
+		}
+		if incr {
+			// Mark page dict obj for incremental writing.
+			ctx.Write.IncrementWithObjNr(pageDictObjNr)
+		}
+		if annots == nil {
+			pageDict.Delete("Annots")
+			return ok, nil
+		}
+		pageDict.Update("Annots", annots)
+		return ok, nil
+		//return ctx.removeAnnotationsFromDirectObj(obj.(types.Array), annotTypes, ids, objNrSet, pageDict, pageDictObjNr, pageNr, incr)
 	}
 
 	// Annots array is an IndirectReference.
@@ -1037,8 +1146,9 @@ func (ctx *Context) RemoveAnnotationsFromPageDict(ids []string, objNrSet types.I
 	if err != nil || o == nil {
 		return false, err
 	}
+
 	annots, _ := o.(types.Array)
-	annots, ok, err = ctx.removeAnnotationsFromPageDictByIDOrObjNr(ids, objNrSet, pageNr, annots, incr)
+	annots, ok, err = ctx.removeAnnotationsFromPageDict(annotTypes, ids, objNrSet, pageNr, annots, incr)
 	if err != nil {
 		return false, err
 	}
@@ -1076,16 +1186,21 @@ func (ctx *Context) sortedPageNrsForAnnots() []int {
 	return pageNrs
 }
 
-// RemoveAnnotations removes annotations for selected pages by id and object number.
-// All annotations for selected pages are removed if neither ids nor objNrs are provided.
-func (ctx *Context) RemoveAnnotations(selectedPages types.IntSet, ids []string, objNrs []int, incr bool) (bool, error) {
-	// Note: Selected pages only apply if no objNrs provided.
-	var removed bool
+// RemoveAnnotations removes annotations for selected pages by id, type or object number.
+// All annotations for selected pages are removed if neither idsAndTypes nor objNrs are provided.
+func (ctx *Context) RemoveAnnotations(selectedPages types.IntSet, idsAndTypes []string, objNrs []int, incr bool) (bool, error) {
 
-	// Remove all annotations for selectedPages
-	removeAll := len(ids) == 0 && len(objNrs) == 0
-	if removeAll {
-		log.CLI.Println("removing all annotations for selected pages!")
+	var annTypes []AnnotationType
+	var ids []string
+
+	if len(idsAndTypes) > 0 {
+		for _, s := range idsAndTypes {
+			if at, ok := annotTypes[s]; ok {
+				annTypes = append(annTypes, at)
+				continue
+			}
+			ids = append(ids, s)
+		}
 	}
 
 	objNrSet := types.IntSet{}
@@ -1093,10 +1208,18 @@ func (ctx *Context) RemoveAnnotations(selectedPages types.IntSet, ids []string, 
 		objNrSet[i] = true
 	}
 
+	// Remove all annotations for selectedPages
+	removeAll := len(idsAndTypes) == 0 && len(objNrs) == 0
+	if removeAll {
+		log.CLI.Println("removing all annotations for selected pages!")
+	}
+
 	if incr {
 		ctx.Write.Increment = true
 		ctx.Write.Offset = ctx.Read.FileSize
 	}
+
+	var removed bool
 
 	for _, pageNr := range ctx.sortedPageNrsForAnnots() {
 		if selectedPages != nil {
@@ -1117,16 +1240,17 @@ func (ctx *Context) RemoveAnnotations(selectedPages types.IntSet, ids []string, 
 
 		objNr := pageDictIndRef.ObjectNumber.Value()
 
-		ok, err := ctx.RemoveAnnotationsFromPageDict(ids, objNrSet, d, objNr, pageNr, incr)
+		ok, err := ctx.RemoveAnnotationsFromPageDict(annTypes, ids, objNrSet, d, objNr, pageNr, incr)
 		if err != nil {
 			return false, err
 		}
 		if ok {
 			removed = true
 		}
-		if !removeAll && len(ids) == 0 && len(objNrSet) == 0 {
-			// If all annotations with objNrs are removed
-			// and we don't need to remove by id we are done here!
+
+		// if we only remove by obj#, we delete the obj# on annotation removal from objNrSet
+		// and can terminate once objNrSet is empty.
+		if !removeAll && len(idsAndTypes) == 0 && len(objNrSet) == 0 {
 			break
 		}
 	}

@@ -1815,7 +1815,7 @@ func removePageWatermark(ctx *model.Context, pageNr int) (bool, error) {
 			return false, err
 		}
 		objNr := pageDictIndRef.ObjectNumber.Value()
-		if _, err = ctx.RemoveAnnotationsFromPageDict([]string{"pdfcpu"}, nil, d, objNr, pageNr, false); err != nil {
+		if _, err = ctx.RemoveAnnotationsFromPageDict(nil, []string{"pdfcpu"}, nil, d, objNr, pageNr, false); err != nil {
 			return false, err
 		}
 	}

@@ -751,7 +751,7 @@ func ListAnnotationsCommand(inFile string, pageSelection []string, conf *model.C
 }
 
 // RemoveAnnotationsCommand creates a new command to remove annotations for selected pages.
-func RemoveAnnotationsCommand(inFile, outFile string, pageSelection []string, objNrs []int, conf *model.Configuration) *Command {
+func RemoveAnnotationsCommand(inFile, outFile string, pageSelection []string, idsAndTypes []string, objNrs []int, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
@@ -761,6 +761,7 @@ func RemoveAnnotationsCommand(inFile, outFile string, pageSelection []string, ob
 		InFile:        &inFile,
 		OutFile:       &outFile,
 		PageSelection: pageSelection,
+		StringVals:    idsAndTypes,
 		IntVals:       objNrs,
 		Conf:          conf}
 }

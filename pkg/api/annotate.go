@@ -335,7 +335,7 @@ func AddAnnotationsMapFile(inFile, outFile string, m map[int][]model.AnnotationR
 
 // RemoveAnnotations removes annotations for selected pages by id and object number
 // from a PDF context read from rs and writes the result to w.
-func RemoveAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages, ids []string, objNrs []int, conf *model.Configuration) error {
+func RemoveAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages, idsAndTypes []string, objNrs []int, conf *model.Configuration) error {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 		conf.Cmd = model.REMOVEANNOTATIONS
@@ -355,7 +355,7 @@ func RemoveAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages, ids []strin
 		return err
 	}
 
-	ok, err := ctx.RemoveAnnotations(pages, ids, objNrs, false)
+	ok, err := ctx.RemoveAnnotations(pages, idsAndTypes, objNrs, false)
 	if err != nil {
 		return err
 	}
@@ -376,7 +376,7 @@ func RemoveAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages, ids []strin
 
 // RemoveAnnotationsAsIncrement removes annotations for selected pages by ids and object number
 // from a PDF context read from rs and writes out a PDF increment.
-func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, ids []string, objNrs []int, conf *model.Configuration) error {
+func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, idsAndTypes []string, objNrs []int, conf *model.Configuration) error {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 		conf.Cmd = model.REMOVEANNOTATIONS
@@ -400,7 +400,7 @@ func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, ids []s
 		return err
 	}
 
-	ok, err := ctx.RemoveAnnotations(pages, ids, objNrs, true)
+	ok, err := ctx.RemoveAnnotations(pages, idsAndTypes, objNrs, true)
 	if err != nil {
 		return err
 	}
@@ -425,7 +425,9 @@ func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, ids []s
 
 // RemoveAnnotationsFile removes annotations for selected pages by id and object number
 // from a PDF context read from inFile and writes the result to outFile.
-func RemoveAnnotationsFile(inFile, outFile string, selectedPages, ids []string, objNrs []int, conf *model.Configuration, incr bool) (err error) {
+func RemoveAnnotationsFile(inFile, outFile string, selectedPages, idsAndTypes []string, objNrs []int, conf *model.Configuration, incr bool) (err error) {
+
+	var f1, f2 *os.File
 
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
@@ -434,16 +436,18 @@ func RemoveAnnotationsFile(inFile, outFile string, selectedPages, ids []string, 
 	} else {
 		log.CLI.Printf("writing %s...\n", inFile)
 		if incr {
-			f, err := os.OpenFile(inFile, os.O_RDWR, 0644)
-			if err != nil {
+			if f1, err = os.OpenFile(inFile, os.O_RDWR, 0644); err != nil {
 				return err
 			}
-			defer f.Close()
-			return RemoveAnnotationsAsIncrement(f, selectedPages, ids, objNrs, conf)
+			defer func() {
+				cerr := f1.Close()
+				if err == nil {
+					err = cerr
+				}
+			}()
+			return RemoveAnnotationsAsIncrement(f1, selectedPages, idsAndTypes, objNrs, conf)
 		}
 	}
-
-	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {
 		return err
@@ -474,5 +478,5 @@ func RemoveAnnotationsFile(inFile, outFile string, selectedPages, ids []string, 
 		}
 	}()
 
-	return RemoveAnnotations(f1, f2, selectedPages, ids, objNrs, conf)
+	return RemoveAnnotations(f1, f2, selectedPages, idsAndTypes, objNrs, conf)
 }

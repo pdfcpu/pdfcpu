@@ -47,46 +47,95 @@ var linkAnn model.AnnotationRenderer = model.NewLinkAnnotation(
 	model.AnnNoZoom+model.AnnNoRotate,
 	nil)
 
-func TestAddRemoveAnnotationsById(t *testing.T) {
-	msg := "TestAddRemoveAnnotationsById"
+func add2Annotations(t *testing.T, msg, inFile string, incr bool) {
+	t.Helper()
+
+	// We start with 0 annotations.
+	if i, _, err := api.ListAnnotationsFile(inFile, nil, nil); err != nil || i > 0 {
+		t.Fatalf("%s list: %v\n", msg, err)
+	}
+
+	// Add a text annotation to page 1.
+	if err := api.AddAnnotationsFile(inFile, "", []string{"1"}, textAnn, nil, incr); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+
+	// Add a link annotation to page 1.
+	if err := api.AddAnnotationsFile(inFile, "", []string{"1"}, linkAnn, nil, incr); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+
+	// Now we should have 2 annotations.
+	i, s, err := api.ListAnnotationsFile(inFile, nil, nil)
+	if err != nil || i != 2 {
+		t.Fatalf("%s list: %v\n", msg, err)
+	}
+
+	_ = s
+}
+
+func TestAddRemoveAnnotationsByAnnotType(t *testing.T) {
+	msg := "TestAddRemoveAnnotationsByAnnotType"
+
+	incr := false // incremental updates
 
 	fn := "test.pdf"
 	copyFile(t, filepath.Join(inDir, fn), filepath.Join(outDir, fn))
 	inFile := filepath.Join(outDir, fn)
 
-	// We start with 0 annotations.
-	i, _, err := api.ListAnnotationsFile(inFile, nil, nil)
-	if err != nil || i > 0 {
-		t.Fatalf("%s list: %v\n", msg, err)
-	}
+	add2Annotations(t, msg, inFile, incr)
 
-	// Add a text annotation to page 1.
-	err = api.AddAnnotationsFile(inFile, "", []string{"1"}, textAnn, nil, false)
-	if err != nil {
-		t.Fatalf("%s add: %v\n", msg, err)
-	}
-
-	// Add a link annotation to page 1.
-	err = api.AddAnnotationsFile(inFile, "", []string{"1"}, linkAnn, nil, false)
-	if err != nil {
-		t.Fatalf("%s add: %v\n", msg, err)
-	}
-
-	// Now we should have 2 annotations.
-	i, _, err = api.ListAnnotationsFile(inFile, nil, nil)
-	if err != nil || i != 2 {
-		t.Fatalf("%s list: %v\n", msg, err)
-	}
-
-	// Remove both annotations by id.
-	err = api.RemoveAnnotationsFile(inFile, "", nil, []string{"ID1", "ID2"}, nil, nil, false)
-	if err != nil {
+	// Remove annotations by annotation type.
+	if err := api.RemoveAnnotationsFile(inFile, "", nil, []string{"Link", "Text"}, nil, nil, false); err != nil {
 		t.Fatalf("%s remove: %v\n", msg, err)
 	}
 
 	// We should have 0 annotations as at the beginning.
-	i, _, err = api.ListAnnotationsFile(inFile, nil, nil)
-	if err != nil || i > 0 {
+	if i, _, err := api.ListAnnotationsFile(inFile, nil, nil); err != nil || i > 0 {
+		t.Fatalf("%s list: %v\n", msg, err)
+	}
+}
+
+func TestAddRemoveAnnotationsById(t *testing.T) {
+	msg := "TestAddRemoveAnnotationsById"
+
+	incr := false // incremental updates
+
+	fn := "test.pdf"
+	copyFile(t, filepath.Join(inDir, fn), filepath.Join(outDir, fn))
+	inFile := filepath.Join(outDir, fn)
+
+	add2Annotations(t, msg, inFile, incr)
+
+	// Remove annotations by id.
+	if err := api.RemoveAnnotationsFile(inFile, "", nil, []string{"ID1", "ID2"}, nil, nil, incr); err != nil {
+		t.Fatalf("%s remove: %v\n", msg, err)
+	}
+
+	// We should have 0 annotations as at the beginning.
+	if i, _, err := api.ListAnnotationsFile(inFile, nil, nil); err != nil || i > 0 {
+		t.Fatalf("%s list: %v\n", msg, err)
+	}
+}
+
+func TestAddRemoveAnnotationsByIdAndAnnotType(t *testing.T) {
+	msg := "TestAddRemoveAnnotationsByIdAndAnnotType"
+
+	incr := false // incremental updates
+
+	fn := "test.pdf"
+	copyFile(t, filepath.Join(inDir, fn), filepath.Join(outDir, fn))
+	inFile := filepath.Join(outDir, fn)
+
+	add2Annotations(t, msg, inFile, incr)
+
+	// Remove annotations by id annotation type.
+	if err := api.RemoveAnnotationsFile(inFile, "", nil, []string{"ID1", "Link"}, nil, nil, incr); err != nil {
+		t.Fatalf("%s remove: %v\n", msg, err)
+	}
+
+	// We should have 0 annotations as at the beginning.
+	if i, _, err := api.ListAnnotationsFile(inFile, nil, nil); err != nil || i > 0 {
 		t.Fatalf("%s list: %v\n", msg, err)
 	}
 }
@@ -164,8 +213,55 @@ func TestAddRemoveAnnotationsByObjNr(t *testing.T) {
 
 }
 
+func TestAddRemoveAnnotationsByObjNrAndAnnotType(t *testing.T) {
+	msg := "TestAddRemoveAnnotationsByObjNrAndAnnotType"
+
+	incr := false // incremental updates
+
+	fn := "test.pdf"
+	copyFile(t, filepath.Join(inDir, fn), filepath.Join(outDir, fn))
+	inFile := filepath.Join(outDir, fn)
+
+	add2Annotations(t, msg, inFile, incr)
+
+	// Remove annotations by obj and annotation type.
+	// Here we use the obj# of the link Annotation to be removed.
+	if err := api.RemoveAnnotationsFile(inFile, "", nil, []string{"Link"}, []int{6}, nil, incr); err != nil {
+		t.Fatalf("%s remove: %v\n", msg, err)
+	}
+
+	// We should have 1 annotations.
+	if i, _, err := api.ListAnnotationsFile(inFile, nil, nil); err != nil || i != 1 {
+		t.Fatalf("%s list: %v\n", msg, err)
+	}
+}
+
+func TestAddRemoveAnnotationsByIdAndObjNrAndAnnotType(t *testing.T) {
+	msg := "TestAddRemoveAnnotationsByObjNrAndAnnotType"
+
+	incr := false // incremental updates
+
+	fn := "test.pdf"
+	copyFile(t, filepath.Join(inDir, fn), filepath.Join(outDir, fn))
+	inFile := filepath.Join(outDir, fn)
+
+	add2Annotations(t, msg, inFile, incr)
+
+	// Remove annotations by id annotation type.
+	if err := api.RemoveAnnotationsFile(inFile, "", nil, []string{"ID1", "Link"}, nil, nil, incr); err != nil {
+		t.Fatalf("%s remove: %v\n", msg, err)
+	}
+
+	// We should have 0 annotations as at the beginning.
+	if i, _, err := api.ListAnnotationsFile(inFile, nil, nil); err != nil || i > 0 {
+		t.Fatalf("%s list: %v\n", msg, err)
+	}
+}
+
 func TestRemoveAllAnnotations(t *testing.T) {
 	msg := "TestRemoveAllAnnotations"
+
+	incr := false
 
 	fn := "test.pdf"
 	copyFile(t, filepath.Join(inDir, fn), filepath.Join(outDir, fn))
@@ -177,7 +273,7 @@ func TestRemoveAllAnnotations(t *testing.T) {
 	anns[1] = linkAnn
 	m[1] = anns
 
-	err := api.AddAnnotationsMapFile(inFile, "", m, nil, false)
+	err := api.AddAnnotationsMapFile(inFile, "", m, nil, incr)
 	if err != nil {
 		t.Fatalf("%s add: %v\n", msg, err)
 	}
@@ -189,7 +285,7 @@ func TestRemoveAllAnnotations(t *testing.T) {
 	}
 
 	// Remove all annotations.
-	err = api.RemoveAnnotationsFile(inFile, "", nil, nil, nil, nil, false)
+	err = api.RemoveAnnotationsFile(inFile, "", nil, nil, nil, nil, incr)
 	if err != nil {
 		t.Fatalf("%s remove: %v\n", msg, err)
 	}
@@ -197,6 +293,28 @@ func TestRemoveAllAnnotations(t *testing.T) {
 	// We should have 0 annotations like at the beginning.
 	i, _, err = api.ListAnnotationsFile(inFile, nil, nil)
 	if err != nil || i > 0 {
+		t.Fatalf("%s list: %v\n", msg, err)
+	}
+}
+
+func TestAddRemoveAllAnnotationsAsIncrements(t *testing.T) {
+	msg := "TestAddRemoveAnnotationsAsIncrements"
+
+	incr := true // incremental updates
+
+	fn := "test.pdf"
+	copyFile(t, filepath.Join(inDir, fn), filepath.Join(outDir, fn))
+	inFile := filepath.Join(outDir, fn)
+
+	add2Annotations(t, msg, inFile, incr)
+
+	// Remove all page annotations and append the result as PDF increment to inFile.
+	if err := api.RemoveAnnotationsFile(inFile, "", nil, nil, nil, nil, true); err != nil {
+		t.Fatalf("%s remove: %v\n", msg, err)
+	}
+
+	// We should have 0 annotations like at the beginning.
+	if i, _, err := api.ListAnnotationsFile(inFile, nil, nil); err != nil || i > 0 {
 		t.Fatalf("%s list: %v\n", msg, err)
 	}
 }
@@ -261,52 +379,6 @@ func TestAddAnnotationsLowLevel(t *testing.T) {
 
 	// (after writing) We should have 0 annotations like at the beginning.
 	i, _, err = api.ListAnnotationsFile(outFile, nil, nil)
-	if err != nil || i > 0 {
-		t.Fatalf("%s list: %v\n", msg, err)
-	}
-}
-
-func TestAddRemoveAnnotationsAsIncrements(t *testing.T) {
-	msg := "TestAddRemoveAnnotationsAsIncrements"
-
-	fn := "test.pdf"
-	copyFile(t, filepath.Join(inDir, fn), filepath.Join(outDir, fn))
-	inFile := filepath.Join(outDir, fn)
-
-	// We start with 0 annotations.
-	i, _, err := api.ListAnnotationsFile(inFile, nil, nil)
-	if err != nil || i > 0 {
-		t.Fatalf("%s list: %v\n", msg, err)
-	}
-
-	increment := true
-
-	// Add a text annotation to page 1 and append as PDF increment to inFile.
-	err = api.AddAnnotationsFile(inFile, "", []string{"1"}, textAnn, nil, increment)
-	if err != nil {
-		t.Fatalf("%s add 1st: %v\n", msg, err)
-	}
-
-	// Add a link annotation to page 1 and append as PDF increment to inFile.
-	err = api.AddAnnotationsFile(inFile, "", []string{"1"}, linkAnn, nil, increment)
-	if err != nil {
-		t.Fatalf("%s add 2nd: %v\n", msg, err)
-	}
-
-	// Now we should have 2 annotations.
-	i, _, err = api.ListAnnotationsFile(inFile, nil, nil)
-	if err != nil || i != 2 {
-		t.Fatalf("%s list: %v\n", msg, err)
-	}
-
-	// Remove all page annotations and append the result as PDF increment to inFile.
-	err = api.RemoveAnnotationsFile(inFile, "", nil, nil, nil, nil, true)
-	if err != nil {
-		t.Fatalf("%s remove: %v\n", msg, err)
-	}
-
-	// We should have 0 annotations like at the beginning.
-	i, _, err = api.ListAnnotationsFile(inFile, nil, nil)
 	if err != nil || i > 0 {
 		t.Fatalf("%s list: %v\n", msg, err)
 	}

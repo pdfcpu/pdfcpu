@@ -1665,8 +1665,12 @@ func processRemoveAnnotationsCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	inFile := ""
-	objNrs := []int{}
+	inFile, outFile := "", ""
+
+	var (
+		idsAndTypes []string
+		objNrs      []int
+	)
 
 	for i, arg := range flag.Args() {
 		if i == 0 {
@@ -1676,15 +1680,23 @@ func processRemoveAnnotationsCommand(conf *model.Configuration) {
 			}
 			continue
 		}
-		i, err := strconv.Atoi(arg)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "objNr has to be a positiv numeric value")
-			os.Exit(1)
+		if i == 1 {
+			if hasPDFExtension(arg) {
+				outFile = arg
+				continue
+			}
 		}
-		objNrs = append(objNrs, i)
+
+		j, err := strconv.Atoi(arg)
+		if err != nil {
+			// strings args may be and id or annotType
+			idsAndTypes = append(idsAndTypes, arg)
+			continue
+		}
+		objNrs = append(objNrs, j)
 	}
 
-	process(cli.RemoveAnnotationsCommand(inFile, "", selectedPages, objNrs, conf))
+	process(cli.RemoveAnnotationsCommand(inFile, outFile, selectedPages, idsAndTypes, objNrs, conf))
 }
 
 func processListImagesCommand(conf *model.Configuration) {

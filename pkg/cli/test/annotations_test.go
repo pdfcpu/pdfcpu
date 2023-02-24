@@ -39,19 +39,19 @@ func TestListAndRemoveAnnotations(t *testing.T) {
 	}
 
 	// Remove page annotation using obj# 34
-	cmd = cli.RemoveAnnotationsCommand(inFile, "", nil, []int{34}, conf)
+	cmd = cli.RemoveAnnotationsCommand(inFile, "", nil, nil, []int{34}, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
 	// Remove all page annotations from page 14
-	cmd = cli.RemoveAnnotationsCommand(inFile, "", []string{"14"}, nil, conf)
+	cmd = cli.RemoveAnnotationsCommand(inFile, "", []string{"14"}, nil, nil, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
 	// Remove all page annotations
-	cmd = cli.RemoveAnnotationsCommand(inFile, "", nil, nil, conf)
+	cmd = cli.RemoveAnnotationsCommand(inFile, "", nil, nil, nil, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
