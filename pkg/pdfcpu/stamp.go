@@ -1344,10 +1344,12 @@ func addPageWatermark(ctx *model.Context, i int, wm model.Watermark) error {
 		ann := model.NewLinkAnnotation(
 			*wm.BbTrans.EnclosingRectangle(5.0),
 			types.QuadPoints{wm.BbTrans},
+			nil,
 			wm.URL,
 			"pdfcpu",
 			model.AnnNoZoom+model.AnnNoRotate,
-			nil)
+			nil,
+			false)
 
 		if _, err := ctx.AddAnnotation(pageIndRef, d, i, ann, false); err != nil {
 			return err

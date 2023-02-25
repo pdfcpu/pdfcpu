@@ -139,7 +139,7 @@ var AnnotTypeStrings = map[AnnotationType]string{
 
 // AnnotationRenderer is the interface for PDF annotations.
 type AnnotationRenderer interface {
-	RenderDict(pageIndRef types.IndirectRef) types.Dict
+	RenderDict(xRefTable *XRefTable, pageIndRef types.IndirectRef) (types.Dict, error)
 	Type() AnnotationType
 	RectString() string
 	ID() string
@@ -166,7 +166,7 @@ func NewAnnotation(
 	pageIndRef *types.IndirectRef,
 	nm string,
 	f AnnotationFlags,
-	backgrCol *color.SimpleColor) Annotation {
+	col *color.SimpleColor) Annotation {
 
 	return Annotation{
 		SubType:  typ,
@@ -175,7 +175,7 @@ func NewAnnotation(
 		P:        pageIndRef,
 		NM:       nm,
 		F:        f,
-		C:        backgrCol}
+		C:        col}
 }
 
 // NewAnnotationForRawType returns a new annotation of a specific type.
@@ -186,8 +186,8 @@ func NewAnnotationForRawType(
 	pageIndRef *types.IndirectRef,
 	nm string,
 	f AnnotationFlags,
-	backgrCol *color.SimpleColor) Annotation {
-	return NewAnnotation(annotTypes[typ], rect, contents, pageIndRef, nm, f, backgrCol)
+	col *color.SimpleColor) Annotation {
+	return NewAnnotation(annotTypes[typ], rect, contents, pageIndRef, nm, f, col)
 }
 
 // ID returns the annotation id.
@@ -216,8 +216,8 @@ func (ann Annotation) TypeString() string {
 }
 
 // RenderDict is a stub for behavior that renders ann's PDF dict.
-func (ann Annotation) RenderDict(pageIndRef types.IndirectRef) types.Dict {
-	return nil
+func (ann Annotation) RenderDict(xRefTable *XRefTable, pageIndRef types.IndirectRef) (types.Dict, error) {
+	return nil, nil
 }
 
 // PopupAnnotation represents PDF Popup annotations.
@@ -233,10 +233,10 @@ func NewPopupAnnotation(
 	pageIndRef *types.IndirectRef,
 	contents, id string,
 	f AnnotationFlags,
-	backgrCol *color.SimpleColor,
+	bgCol *color.SimpleColor,
 	parentIndRef *types.IndirectRef) PopupAnnotation {
 
-	ann := NewAnnotation(AnnPopup, rect, contents, pageIndRef, id, f, backgrCol)
+	ann := NewAnnotation(AnnPopup, rect, contents, pageIndRef, id, f, bgCol)
 
 	return PopupAnnotation{
 		Annotation:   ann,
@@ -270,12 +270,12 @@ func NewMarkupAnnotation(
 	pageIndRef *types.IndirectRef,
 	contents, id, title string,
 	f AnnotationFlags,
-	backgrCol *color.SimpleColor,
+	bgCol *color.SimpleColor,
 	popupIndRef *types.IndirectRef,
 	ca *float64,
 	rc, subject string) MarkupAnnotation {
 
-	ann := NewAnnotation(subType, rect, contents, pageIndRef, id, f, backgrCol)
+	ann := NewAnnotation(subType, rect, contents, pageIndRef, id, f, bgCol)
 
 	return MarkupAnnotation{
 		Annotation:   ann,
@@ -299,13 +299,13 @@ func NewTextAnnotation(
 	rect types.Rectangle,
 	contents, id, title string,
 	f AnnotationFlags,
-	backgrCol *color.SimpleColor,
+	bgCol *color.SimpleColor,
 	ca *float64,
 	rc, subj string,
 	open bool,
 	name string) TextAnnotation {
 
-	ma := NewMarkupAnnotation(AnnText, rect, nil, contents, id, title, f, backgrCol, nil, ca, rc, subj)
+	ma := NewMarkupAnnotation(AnnText, rect, nil, contents, id, title, f, bgCol, nil, ca, rc, subj)
 
 	return TextAnnotation{
 		MarkupAnnotation: ma,
@@ -315,7 +315,7 @@ func NewTextAnnotation(
 }
 
 // RenderDict renders ann into a PDF annotation dict.
-func (ann TextAnnotation) RenderDict(pageIndRef types.IndirectRef) types.Dict {
+func (ann TextAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef types.IndirectRef) (types.Dict, error) {
 	subject := "Sticky Note"
 	if ann.Subj != "" {
 		subject = ann.Subj
@@ -346,59 +346,62 @@ func (ann TextAnnotation) RenderDict(pageIndRef types.IndirectRef) types.Dict {
 		d.InsertString("Contents", ann.Contents)
 	}
 	if ann.NM != "" {
-		d.InsertString("NM", ann.NM) // check for uniqueness across annotations on this page
-	} // else {
-	// new UUID
-	// }
+		d.InsertString("NM", ann.NM) // TODO check for uniqueness across annotations on this page
+	}
 	if ann.T != "" {
 		d.InsertString("T", ann.T)
 	}
 	if ann.C != nil {
-		d.Insert("C", types.NewNumberArray(float64(ann.C.R), float64(ann.C.G), float64(ann.C.B)))
+		d.Insert("C", ann.C.Array())
 	}
-	return d
+	return d, nil
 }
 
 // LinkAnnotation represents a PDF link annotation.
 type LinkAnnotation struct {
 	Annotation
-	URI  string
-	Quad types.QuadPoints // Shall be ignored if any coordinate lies outside the region specified by Rect.
+	Dest   *Destination     // internal link
+	URI    string           // external link
+	Quad   types.QuadPoints // shall be ignored if any coordinate lies outside the region specified by Rect.
+	Border bool             // render border using borderColor.
 }
 
 // NewLinkAnnotation returns a new link annotation.
 func NewLinkAnnotation(
 	rect types.Rectangle,
 	quad types.QuadPoints,
-	uri, id string,
+	dest *Destination, // supply dest or uri, dest takes precedence
+	uri string,
+	id string,
 	f AnnotationFlags,
-	backgrCol *color.SimpleColor) LinkAnnotation {
+	borderCol *color.SimpleColor,
+	border bool) LinkAnnotation {
 
-	ann := NewAnnotation(AnnLink, rect, "", nil, id, f, backgrCol)
+	ann := NewAnnotation(AnnLink, rect, "", nil, id, f, borderCol)
 
 	return LinkAnnotation{
 		Annotation: ann,
+		Dest:       dest,
 		URI:        uri,
 		Quad:       quad,
+		Border:     border,
 	}
 }
 
 // ContentString returns a string representation of ann's content.
 func (ann LinkAnnotation) ContentString() string {
-	s := "(internal)"
 	if len(ann.URI) > 0 {
-		s = ann.URI
+		return ann.URI
 	}
-	return s
+	if ann.Dest != nil {
+		// eg. page /XYZ left top zoom
+		return fmt.Sprintf("Page %d %s", ann.Dest.PageNr, ann.Dest)
+	}
+	return "internal link"
 }
 
-// RenderDict renders ann into a PDF annotation dict.
-func (ann LinkAnnotation) RenderDict(pageIndRef types.IndirectRef) types.Dict {
-	actionDict := types.Dict(map[string]types.Object{
-		"Type": types.Name("Action"),
-		"S":    types.Name("URI"),
-		"URI":  types.StringLiteral(ann.URI),
-	})
+// RenderDict renders ann into a page annotation dict.
+func (ann LinkAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef types.IndirectRef) (types.Dict, error) {
 
 	d := types.Dict(map[string]types.Object{
 		"Type":    types.Name("Annot"),
@@ -406,23 +409,51 @@ func (ann LinkAnnotation) RenderDict(pageIndRef types.IndirectRef) types.Dict {
 		"Rect":    ann.Rect.Array(),
 		"P":       pageIndRef,
 		"F":       types.Integer(ann.F),
-		"Border":  types.NewIntegerArray(0, 0, 0), // no border
-		"H":       types.Name("I"),                // default
-		"A":       actionDict,
 	})
+
+	if !ann.Border {
+		d["Border"] = types.NewIntegerArray(0, 0, 0)
+	} else {
+		if ann.C != nil {
+			d["C"] = ann.C.Array()
+		}
+	}
+
+	if ann.Dest != nil {
+		dest := ann.Dest
+		if dest.Zoom == 0 {
+			dest.Zoom = 1
+		}
+		_, indRef, pAttr, err := xRefTable.PageDict(dest.PageNr, false)
+		if err != nil {
+			return nil, err
+		}
+		if dest.Typ == DestXYZ && dest.Left < 0 && dest.Top < 0 {
+			// Show top left corner of destination page.
+			dest.Left = int(pAttr.MediaBox.LL.X)
+			dest.Top = int(pAttr.MediaBox.UR.Y)
+			if pAttr.CropBox != nil {
+				dest.Left = int(pAttr.CropBox.LL.X)
+				dest.Top = int(pAttr.CropBox.UR.Y)
+			}
+		}
+		d["Dest"] = dest.Array(*indRef)
+	} else {
+		actionDict := types.Dict(map[string]types.Object{
+			"Type": types.Name("Action"),
+			"S":    types.Name("URI"),
+			"URI":  types.StringLiteral(ann.URI),
+		})
+		d["A"] = actionDict
+	}
 
 	if ann.NM != "" {
 		d.InsertString("NM", ann.NM)
-	} // else {
-	// new UUID
-	//}
-	if ann.C != nil {
-		d.Insert("C", types.NewNumberArray(float64(ann.C.R), float64(ann.C.G), float64(ann.C.B)))
 	}
 	if ann.Quad != nil {
 		d.Insert("QuadPoints", ann.Quad.Array())
 	}
-	return d
+	return d, nil
 }
 
 // AnnotMap represents annotations by object number of the corresponding annotation dict.
@@ -522,7 +553,10 @@ func (ctx *Context) findAnnotByObjNr(objNr int, annots types.Array) (int, error)
 }
 
 func (ctx *Context) createAnnot(ar AnnotationRenderer, pageIndRef *types.IndirectRef) (*types.IndirectRef, error) {
-	d := ar.RenderDict(*pageIndRef)
+	d, err := ar.RenderDict(ctx.XRefTable, *pageIndRef)
+	if err != nil {
+		return nil, err
+	}
 	return ctx.IndRefForNewObject(d)
 }
 
@@ -585,7 +619,8 @@ func (xRefTable *XRefTable) Annotation(d types.Dict) (AnnotationRenderer, error)
 				uri = string(bb)
 			}
 		}
-		ann = NewLinkAnnotation(*r, nil, uri, nm, f, nil)
+		dest := (*Destination)(nil) // will not collect link dest during validation.
+		ann = NewLinkAnnotation(*r, nil, dest, uri, nm, f, nil, false)
 
 	case "Popup":
 		parentIndRef := d.IndirectRefEntry("Parent")
@@ -625,7 +660,7 @@ func (xRefTable *XRefTable) ListAnnotations(selectedPages types.IntSet) (int, []
 		}
 
 		var annTypes []string
-		for t, _ := range pageAnnots {
+		for t := range pageAnnots {
 			annTypes = append(annTypes, AnnotTypeStrings[t])
 		}
 		sort.Strings(annTypes)

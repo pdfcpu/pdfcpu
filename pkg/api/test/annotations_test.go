@@ -31,7 +31,7 @@ var textAnn model.AnnotationRenderer = model.NewTextAnnotation(
 	"Test Content",
 	"ID1",
 	"Title1",
-	model.AnnNoZoom+model.AnnNoRotate,
+	0,
 	&color.Gray,
 	nil,
 	"",
@@ -42,10 +42,12 @@ var textAnn model.AnnotationRenderer = model.NewTextAnnotation(
 var linkAnn model.AnnotationRenderer = model.NewLinkAnnotation(
 	*types.NewRectangle(0, 0, 100, 100),
 	nil,
+	nil,
 	"https://pdfcpu.io",
 	"ID2",
-	model.AnnNoZoom+model.AnnNoRotate,
-	nil)
+	0,
+	nil,
+	false)
 
 func add2Annotations(t *testing.T, msg, inFile string, incr bool) {
 	t.Helper()
@@ -381,5 +383,32 @@ func TestAddAnnotationsLowLevel(t *testing.T) {
 	i, _, err = api.ListAnnotationsFile(outFile, nil, nil)
 	if err != nil || i > 0 {
 		t.Fatalf("%s list: %v\n", msg, err)
+	}
+}
+
+func TestAddLinkAnnotationWithDest(t *testing.T) {
+	msg := "TestAddLinkAnnotationWithDest"
+
+	inFile := filepath.Join(inDir, "Walden.pdf")
+	outFile := filepath.Join(samplesDir, "annotations", "LinkAnnotWithDestTopLeft.pdf")
+
+	// Create internal link:
+	// Add a 100x100 link rectangle on the bottom left corner of page 2.
+	// Set destination to top left corner of page 1.
+
+	internalLink := model.NewLinkAnnotation(
+		*types.NewRectangle(0, 0, 100, 100),
+		nil,
+		&model.Destination{Typ: model.DestXYZ, PageNr: 1, Left: -1, Top: -1},
+		"",
+		"id",
+		0,
+		&color.Red,
+		true,
+	)
+
+	err := api.AddAnnotationsFile(inFile, outFile, []string{"2"}, internalLink, nil, false)
+	if err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
 	}
 }

@@ -380,10 +380,12 @@ func (ib *ImageBox) createLink(p *model.Page, pageNr int, r *types.Rectangle, m 
 	ann := model.NewLinkAnnotation(
 		*ql.EnclosingRectangle(5.0),
 		types.QuadPoints{ql},
+		nil,
 		ib.Url,
 		id,
-		model.AnnNoZoom+model.AnnNoRotate,
-		nil)
+		0,
+		nil,
+		false)
 
 	p.LinkAnnots = append(p.LinkAnnots, ann)
 }

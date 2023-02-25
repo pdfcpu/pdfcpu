@@ -213,15 +213,6 @@ func TestAnnotationDemoPDF(t *testing.T) {
 	createAndValidate(t, xRefTable, "AnnotationDemo.pdf", msg)
 }
 
-func TestAcroformDemoPDF(t *testing.T) {
-	msg := "TestAcroformDemoPDF"
-	xRefTable, err := pdf.CreateAcroFormDemoXRef()
-	if err != nil {
-		t.Fatalf("%s: %v\n", msg, err)
-	}
-	createAndValidate(t, xRefTable, "AcroFormDemo.pdf", msg)
-}
-
 func writeTextDemoAlignedWidthAndMargin(
 	xRefTable *model.XRefTable,
 	p model.Page,

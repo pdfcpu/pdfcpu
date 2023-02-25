@@ -660,7 +660,7 @@ func parseBoxDimByPercentage(s, s1, s2 string, b *Box) error {
 		return errors.Errorf("pdfcpu: invalid percentage: %s", s)
 	}
 	h := pct / 100
-	b.Dim = &types.Dim{w, h}
+	b.Dim = &types.Dim{Width: w, Height: h}
 	return nil
 }
 
@@ -723,7 +723,7 @@ func parseBoxDim(s string, b *Box, u types.DisplayUnit) error {
 		w = types.ToUserSpace(w, u)
 		h = types.ToUserSpace(h, u)
 	}
-	b.Dim = &types.Dim{w, h}
+	b.Dim = &types.Dim{Width: w, Height: h}
 	return nil
 }
 
