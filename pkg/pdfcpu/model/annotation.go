@@ -346,7 +346,7 @@ func (ann TextAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef types.Indi
 		d.InsertString("Contents", ann.Contents)
 	}
 	if ann.NM != "" {
-		d.InsertString("NM", ann.NM) // TODO check for uniqueness across annotations on this page
+		d.InsertString("NM", ann.NM) // TODO check for uniqueness across annotations on this page.
 	}
 	if ann.T != "" {
 		d.InsertString("T", ann.T)
@@ -355,6 +355,90 @@ func (ann TextAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef types.Indi
 		d.Insert("C", ann.C.Array())
 	}
 	return d, nil
+}
+
+// A series of alternating x and y coordinates in PDF user space, specifying points along the path.
+type InkPath []float64
+
+type InkAnnotation struct {
+	MarkupAnnotation
+	InkList []InkPath
+	BS      *types.Dict
+	AP      *types.Dict
+}
+
+// NewInkAnnotation returns a new ink annotation.
+func NewInkAnnotation(
+	rect types.Rectangle,
+	contents, id, title string,
+	ink []InkPath,
+	bs *types.Dict,
+	f AnnotationFlags,
+	bgCol *color.SimpleColor,
+	ca *float64,
+	rc, subj string,
+	ap *types.Dict,
+) InkAnnotation {
+
+	ann := NewMarkupAnnotation(AnnInk, rect, nil, contents, id, title, f, bgCol, nil, ca, rc, subj)
+
+	return InkAnnotation{
+		MarkupAnnotation: ann,
+		InkList:          ink,
+		BS:               bs,
+		AP:               ap,
+	}
+}
+
+func (ann InkAnnotation) RenderDict(pageIndRef types.IndirectRef) types.Dict {
+	subject := "Ink Annotation"
+	if ann.Subj != "" {
+		subject = ann.Subj
+	}
+	ink := types.Array{}
+	for i := range ann.InkList {
+		ink = append(ink, types.NewNumberArray(ann.InkList[i]...))
+	}
+
+	d := types.Dict(map[string]types.Object{
+		"Type":         types.Name("Annot"),
+		"Subtype":      types.Name(ann.TypeString()),
+		"Rect":         ann.Rect.Array(),
+		"P":            pageIndRef,
+		"F":            types.Integer(ann.F),
+		"CreationDate": types.StringLiteral(ann.CreationDate),
+		"Subj":         types.StringLiteral(subject),
+		"InkList":      ink,
+	})
+	if ann.AP != nil {
+		d.Insert("AP", *ann.AP)
+	}
+	if ann.CA != nil {
+		d.Insert("CA", types.Float(*ann.CA))
+	}
+	if ann.PopupIndRef != nil {
+		d.Insert("Popup", *ann.PopupIndRef)
+	}
+	if ann.RC != "" {
+		d.InsertString("RC", ann.RC)
+	}
+	if ann.BS != nil {
+		d.Insert("BS", ann.BS)
+	}
+	if ann.Contents != "" {
+		d.InsertString("Contents", ann.Contents)
+	}
+	if ann.NM != "" {
+		d.InsertString("NM", ann.NM) // TODO check for uniqueness across annotations on this page.
+	}
+	if ann.T != "" {
+		d.InsertString("T", ann.T)
+	}
+	if ann.C != nil {
+		d.Insert("C", ann.C.Array())
+	}
+
+	return d
 }
 
 // LinkAnnotation represents a PDF link annotation.
@@ -446,9 +530,8 @@ func (ann LinkAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef types.Indi
 		})
 		d["A"] = actionDict
 	}
-
 	if ann.NM != "" {
-		d.InsertString("NM", ann.NM)
+		d.InsertString("NM", ann.NM) // TODO check for uniqueness across annotations on this page.
 	}
 	if ann.Quad != nil {
 		d.Insert("QuadPoints", ann.Quad.Array())
