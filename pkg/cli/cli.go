@@ -77,7 +77,7 @@ func Trim(cmd *Command) ([]string, error) {
 	return nil, api.TrimFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
 }
 
-// Rotate rotates selected pages of inFile and writes result to outFile.
+// Rotate selected pages of inFile and write result to outFile.
 func Rotate(cmd *Command) ([]string, error) {
 	return nil, api.RotateFile(*cmd.InFile, *cmd.OutFile, cmd.Rotation, cmd.PageSelection, cmd.Conf)
 }
@@ -321,4 +321,9 @@ func FillFormFields(cmd *Command) ([]string, error) {
 // MultiFillFormFields fills out multiple instances of inFile's form using JSON or CSV data.
 func MultiFillFormFields(cmd *Command) ([]string, error) {
 	return nil, api.MultiFillFormFile(*cmd.InFile, *cmd.InFileJSON, *cmd.OutDir, *cmd.OutFile, cmd.BoolVal, cmd.Conf)
+}
+
+// Resize selected pages and write result to outFile.
+func Resize(cmd *Command) ([]string, error) {
+	return nil, api.ResizeFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Resize, cmd.Conf)
 }

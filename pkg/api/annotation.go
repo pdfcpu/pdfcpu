@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
@@ -47,7 +48,7 @@ func ListAnnotations(rs io.ReadSeeker, selectedPages []string, conf *model.Confi
 		return 0, nil, err
 	}
 
-	return ctx.ListAnnotations(pages)
+	return pdfcpu.ListAnnotations(ctx, pages)
 }
 
 // ListAnnotationsFile returns a list of page annotations of inFile.
@@ -81,7 +82,7 @@ func AddAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages []string, ann m
 		return err
 	}
 
-	ok, err := ctx.AddAnnotations(pages, ann, false)
+	ok, err := pdfcpu.AddAnnotations(ctx, pages, ann, false)
 	if err != nil {
 		return err
 	}
@@ -125,7 +126,7 @@ func AddAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages []string, a
 		return err
 	}
 
-	ok, err := ctx.AddAnnotations(pages, ar, true)
+	ok, err := pdfcpu.AddAnnotations(ctx, pages, ar, true)
 	if err != nil {
 		return err
 	}
@@ -217,7 +218,7 @@ func AddAnnotationsMap(rs io.ReadSeeker, w io.Writer, m map[int][]model.Annotati
 		return err
 	}
 
-	ok, err := ctx.AddAnnotationsMap(m, false)
+	ok, err := pdfcpu.AddAnnotationsMap(ctx, m, false)
 	if err != nil {
 		return err
 	}
@@ -257,7 +258,7 @@ func AddAnnotationsMapAsIncrement(rws io.ReadWriteSeeker, m map[int][]model.Anno
 		return err
 	}
 
-	ok, err := ctx.AddAnnotationsMap(m, true)
+	ok, err := pdfcpu.AddAnnotationsMap(ctx, m, true)
 	if err != nil {
 		return err
 	}
@@ -355,7 +356,7 @@ func RemoveAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages, idsAndTypes
 		return err
 	}
 
-	ok, err := ctx.RemoveAnnotations(pages, idsAndTypes, objNrs, false)
+	ok, err := pdfcpu.RemoveAnnotations(ctx, pages, idsAndTypes, objNrs, false)
 	if err != nil {
 		return err
 	}
@@ -400,7 +401,7 @@ func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, idsAndT
 		return err
 	}
 
-	ok, err := ctx.RemoveAnnotations(pages, idsAndTypes, objNrs, true)
+	ok, err := pdfcpu.RemoveAnnotations(ctx, pages, idsAndTypes, objNrs, true)
 	if err != nil {
 		return err
 	}

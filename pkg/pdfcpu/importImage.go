@@ -41,7 +41,7 @@ func (m importParamMap) Handle(paramPrefix, paramValueStr string, imp *Import) e
 
 	// Completion support
 	for k := range m {
-		if !strings.HasPrefix(k, paramPrefix) {
+		if !strings.HasPrefix(k, strings.ToLower(paramPrefix)) {
 			continue
 		}
 		if len(param) > 0 {

@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -161,7 +162,7 @@ func TestAddRemoveAnnotationsByObjNr(t *testing.T) {
 	}
 
 	// Add link annotation to all pages.
-	ok, err := ctx.AddAnnotations(allPages, linkAnn, false)
+	ok, err := pdfcpu.AddAnnotations(ctx, allPages, linkAnn, false)
 	if err != nil || !ok {
 		t.Fatalf("%s add: %v\n", msg, err)
 	}
@@ -185,7 +186,7 @@ func TestAddRemoveAnnotationsByObjNr(t *testing.T) {
 	}
 
 	// Identify object numbers for located annotations
-	objNrs, err := ctx.AnnotationObjNrs()
+	objNrs, err := pdfcpu.CachedAnnotationObjNrs(ctx)
 	if err != nil {
 		t.Fatalf("%s annObjNrs: %v\n", msg, err)
 	}
@@ -196,7 +197,7 @@ func TestAddRemoveAnnotationsByObjNr(t *testing.T) {
 	// Remove annotations by their object numbers
 	// We could also do: api.RemoveAnnotationsFile
 	// but since we already have the ctx this is more straight forward.
-	_, err = ctx.RemoveAnnotations(allPages, nil, objNrs, false)
+	_, err = pdfcpu.RemoveAnnotations(ctx, allPages, nil, objNrs, false)
 	if err != nil {
 		t.Fatalf("%s remove: %v\n", msg, err)
 	}
@@ -341,7 +342,7 @@ func TestAddAnnotationsLowLevel(t *testing.T) {
 	m[1] = anns
 
 	// Add 2 annotations to page 1.
-	if ok, err := ctx.AddAnnotationsMap(m, false); err != nil || !ok {
+	if ok, err := pdfcpu.AddAnnotationsMap(ctx, m, false); err != nil || !ok {
 		t.Fatalf("%s add: %v\n", msg, err)
 	}
 
@@ -357,19 +358,19 @@ func TestAddAnnotationsLowLevel(t *testing.T) {
 	}
 
 	// We should have 2 annotations.
-	i, _, err := ctx.ListAnnotations(nil)
+	i, _, err := pdfcpu.ListAnnotations(ctx, nil)
 	if err != nil || i != 2 {
 		t.Fatalf("%s list: %v\n", msg, err)
 	}
 
 	// Remove all annotations.
-	_, err = ctx.RemoveAnnotations(nil, nil, nil, false)
+	_, err = pdfcpu.RemoveAnnotations(ctx, nil, nil, nil, false)
 	if err != nil {
 		t.Fatalf("%s remove: %v\n", msg, err)
 	}
 
 	// (before writing) We should have 0 annotations like at the beginning.
-	i, _, err = ctx.ListAnnotations(nil)
+	i, _, err = pdfcpu.ListAnnotations(ctx, nil)
 	if err != nil || i != 0 {
 		t.Fatalf("%s list: %v\n", msg, err)
 	}

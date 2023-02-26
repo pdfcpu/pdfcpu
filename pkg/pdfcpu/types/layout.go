@@ -294,8 +294,8 @@ func NormalizeOffset(x, y float64, origin Corner) (float64, float64) {
 	return x, y
 }
 
-func BestFitRectIntoRect(rSrc, rDest *Rectangle, enforceOrient bool) (w, h, dx, dy, rot float64) {
-	if rSrc.FitsWithin(rDest) {
+func BestFitRectIntoRect(rSrc, rDest *Rectangle, enforceOrient, scaleUp bool) (w, h, dx, dy, rot float64) {
+	if !scaleUp && rSrc.FitsWithin(rDest) {
 		// Translate rSrc into center of rDest without scaling.
 		w = rSrc.Width()
 		h = rSrc.Height()
@@ -388,14 +388,14 @@ func ParsePageFormat(v string) (*Dim, string, error) {
 	// eg. A4L means A4 in landscape mode whereas A4 defaults to A4P
 	// The default mode is defined implicitly via PaperSize dimensions.
 
-	var land, port bool
+	var landscape, portrait bool
 
 	if strings.HasSuffix(v, "L") {
 		v = v[:len(v)-1]
-		land = true
+		landscape = true
 	} else if strings.HasSuffix(v, "P") {
 		v = v[:len(v)-1]
-		port = true
+		portrait = true
 	}
 
 	d, ok := PaperSize[v]
@@ -403,7 +403,7 @@ func ParsePageFormat(v string) (*Dim, string, error) {
 		return nil, v, errors.Errorf("pdfcpu: page format %s is unsupported.\n", v)
 	}
 
-	if d.Portrait() && land || d.Landscape() && port {
+	if (d.Portrait() && landscape) || (d.Landscape() && portrait) {
 		d.Width, d.Height = d.Height, d.Width
 	}
 

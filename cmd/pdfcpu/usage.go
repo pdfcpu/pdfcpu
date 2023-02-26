@@ -53,7 +53,8 @@ The commands are:
    permissions   list, set user access permissions
    portfolio     list, add, remove, extract portfolio entries with optional description
    properties    list, add, remove document properties
-   rotate        rotate pages
+   resize        scale selected pages
+   rotate        rotate selected pages
    selectedpages print definition of the -pages flag
    split         split up a PDF by span or bookmark
    stamp         add, remove, update Unicode text, image or PDF stamps for selected pages
@@ -1091,4 +1092,39 @@ Supported usecases:
 
 
    (For syntax and details please refer to pdfcpu/pkg/api/test/form_test.go)`
+
+	usageResize     = "usage: pdfcpu resize [-p(ages) selectedPages] -- [description] inFile [outFile]" + generalFlags
+	usageLongResize = `Resize existing pages.
+
+      pages ... please refer to "pdfcpu selectedpages"
+description ... scalefactor, dimensions, enforce:f/t, formsize(=papersize), bgcolor
+     inFile ... input pdf file
+    outFile ... output pdf file
+
+      Use scalefactor < 1 to shrink pages
+      Use scalefactor > 1 to enlarge pages
+                               
+      Examples: 
+
+         pdfcpu resize "scale:2" in.pdf out.pdf
+            Enlarge pages by doubling the page dimensions, keep orientation.
+
+         pdfcpu resize -pages 1-3 -- "sc:.5" in.pdf out.pdf
+            Shrink first 3 pages by cutting in half the page dimensions, keep orientation.
+
+         pdfcpu resize -u cm -- "dim:40 0" in.pdf out.pdf
+            Resize pages to width of 40 cm, keep orientation.
+
+         pdfcpu resize "form:A4" in.pdf out.pdf
+            Resize pages to A4, keep orientation.
+
+         pdfcpu resize "f:A4P, bgcol:#d0d0d0" in.pdf out.pdf
+            Resize pages to A4 and enforce orientation(here: portrait mode), apply background color.
+
+         pdfcpu resize "dim:400 200" in.pdf out.pdf
+            Resize pages to 400 x 200 points, keep orientation.
+
+         pdfcpu resize "dim:400 200, enforce:true" in.pdf out.pdf
+            Resize pages to 400 x 200 points, enforce orientation.
+`
 )

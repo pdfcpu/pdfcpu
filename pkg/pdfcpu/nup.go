@@ -77,7 +77,7 @@ func (m nUpParamMap) Handle(paramPrefix, paramValueStr string, nup *model.NUp) e
 
 	// Completion support
 	for k := range m {
-		if !strings.HasPrefix(k, paramPrefix) {
+		if !strings.HasPrefix(k, strings.ToLower(paramPrefix)) {
 			continue
 		}
 		if len(param) > 0 {

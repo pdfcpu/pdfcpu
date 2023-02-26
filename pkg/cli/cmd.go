@@ -34,23 +34,24 @@ type Command struct {
 	OutFileJSON    *string
 	OutDir         *string
 	PageSelection  []string
-	Conf           *model.Configuration
 	PWOld          *string
 	PWNew          *string
-	Watermark      *model.Watermark
 	Span           int
-	Import         *pdfcpu.Import
 	Rotation       int
-	NUp            *model.NUp
+	BoolVal        bool
+	IntVals        []int
+	StringVals     []string
+	StringMap      map[string]string
 	Input          io.ReadSeeker
 	Inputs         []io.ReadSeeker
 	Output         io.Writer
-	StringMap      map[string]string
 	Box            *model.Box
+	Import         *pdfcpu.Import
+	NUp            *model.NUp
 	PageBoundaries *model.PageBoundaries
-	IntVals        []int
-	StringVals     []string
-	BoolVal        bool
+	Resize         *model.Resize
+	Watermark      *model.Watermark
+	Conf           *model.Configuration
 }
 
 var cmdMap = map[model.CommandMode]func(cmd *Command) ([]string, error){
@@ -113,6 +114,7 @@ var cmdMap = map[model.CommandMode]func(cmd *Command) ([]string, error){
 	model.EXPORTFORMFIELDS:        processForm,
 	model.FILLFORMFIELDS:          processForm,
 	model.MULTIFILLFORMFIELDS:     processForm,
+	model.RESIZE:                  Resize,
 }
 
 // ValidateCommand creates a new command to validate a file.
@@ -915,4 +917,19 @@ func MultiFillFormCommand(inFilePDF, inFileData, outDir, outFilePDF string, merg
 		OutFile:    &outFilePDF,
 		BoolVal:    merge,
 		Conf:       conf}
+}
+
+// ResizeCommand creates a new command to scale selected pages.
+func ResizeCommand(inFile, outFile string, pageSelection []string, resize *model.Resize, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.RESIZE
+	return &Command{
+		Mode:          model.RESIZE,
+		InFile:        &inFile,
+		OutFile:       &outFile,
+		PageSelection: pageSelection,
+		Resize:        resize,
+		Conf:          conf}
 }

@@ -121,6 +121,7 @@ const (
 	CHEATSHEETSFONTS
 	INSTALLFONTS
 	LISTFONTS
+	RESIZE
 )
 
 // Configuration of a Context.

@@ -562,7 +562,7 @@ func ExtractPageContent(ctx *model.Context, pageNr int) (io.Reader, error) {
 		return nil, err
 	}
 	bb, err := ctx.PageContent(d)
-	if err != nil && err != errNoContent {
+	if err != nil && err != model.ErrNoContent {
 		return nil, err
 	}
 	return bytes.NewReader(bb), nil

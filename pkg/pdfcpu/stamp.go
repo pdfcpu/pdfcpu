@@ -44,7 +44,6 @@ import (
 const stampWithBBox = false
 
 var (
-	errNoContent   = errors.New("pdfcpu: page without content")
 	errNoWatermark = errors.New("pdfcpu: no watermarks found")
 	errCorruptOCGs = errors.New("pdfcpu: OCProperties: corrupt OCGs element")
 )
@@ -78,7 +77,7 @@ func (m watermarkParamMap) Handle(paramPrefix, paramValueStr string, imp *model.
 
 	// Completion support
 	for k := range m {
-		if !strings.HasPrefix(k, paramPrefix) {
+		if !strings.HasPrefix(k, strings.ToLower(paramPrefix)) {
 			continue
 		}
 		if len(param) > 0 {
@@ -208,7 +207,7 @@ func parseFontSize(s string, wm *model.Watermark) error {
 func parseScaleFactor(s string) (float64, bool, error) {
 	ss := strings.Split(s, " ")
 	if len(ss) > 2 {
-		return 0, false, errors.Errorf("pdfcpu: invalid scale string %s: 0.0 < i <= 1.0 {rel} | 0.0 < i {abs}\n", s)
+		return 0, false, errors.Errorf("pdfcpu: invalid factor string %s: 0.0 < i <= 1.0 {rel} | 0.0 < i {abs}\n", s)
 	}
 
 	sc, err := strconv.ParseFloat(ss[0], 64)
@@ -217,7 +216,7 @@ func parseScaleFactor(s string) (float64, bool, error) {
 	}
 
 	if sc <= 0 {
-		return 0, false, errors.Errorf("pdfcpu: invalid scale value %.2f: 0.0 < i <= 1.0 {rel} | 0.0 < i {abs}\n", sc)
+		return 0, false, errors.Errorf("pdfcpu: invalid scale factor %.2f: 0.0 < i <= 1.0 {rel} | 0.0 < i {abs}\n", sc)
 	}
 
 	var scaleAbs bool
@@ -240,7 +239,7 @@ func parseScaleFactor(s string) (float64, bool, error) {
 	}
 
 	if !scaleAbs && sc > 1 {
-		return 0, false, errors.Errorf("pdfcpu: invalid relative scale value %.2f: 0.0 < i <= 1\n", sc)
+		return 0, false, errors.Errorf("pdfcpu: invalid relative scale factor %.2f: 0.0 < i <= 1\n", sc)
 	}
 
 	return sc, scaleAbs, nil
@@ -1091,7 +1090,7 @@ func updatePageResourcesForWM(ctx *model.Context, resDict types.Dict, wm model.W
 func wmContent(wm model.Watermark, gsID, xoID string) []byte {
 	m := wm.CalcTransformMatrix()
 	p1 := m.Transform(types.Point{X: wm.Bb.LL.X, Y: wm.Bb.LL.Y})
-	p2 := m.Transform(types.Point{X: wm.Bb.UR.X, Y: wm.Bb.LL.X})
+	p2 := m.Transform(types.Point{X: wm.Bb.UR.X, Y: wm.Bb.LL.Y})
 	p3 := m.Transform(types.Point{X: wm.Bb.UR.X, Y: wm.Bb.UR.Y})
 	p4 := m.Transform(types.Point{X: wm.Bb.LL.X, Y: wm.Bb.UR.Y})
 	wm.BbTrans = types.QuadLiteral{P1: p1, P2: p2, P3: p3, P4: p4}
@@ -1351,7 +1350,7 @@ func addPageWatermark(ctx *model.Context, i int, wm model.Watermark) error {
 			nil,
 			false)
 
-		if _, err := ctx.AddAnnotation(pageIndRef, d, i, ann, false); err != nil {
+		if _, err := AddAnnotation(ctx, pageIndRef, d, i, ann, false); err != nil {
 			return err
 		}
 	}
@@ -1817,7 +1816,7 @@ func removePageWatermark(ctx *model.Context, pageNr int) (bool, error) {
 			return false, err
 		}
 		objNr := pageDictIndRef.ObjectNumber.Value()
-		if _, err = ctx.RemoveAnnotationsFromPageDict(nil, []string{"pdfcpu"}, nil, d, objNr, pageNr, false); err != nil {
+		if _, err = RemoveAnnotationsFromPageDict(ctx, nil, []string{"pdfcpu"}, nil, d, objNr, pageNr, false); err != nil {
 			return false, err
 		}
 	}
@@ -1932,7 +1931,7 @@ func findPageWatermarks(ctx *model.Context, pageDictIndRef *types.IndirectRef) (
 
 	o, found := d.Find("Contents")
 	if !found {
-		return false, errNoContent
+		return false, model.ErrNoContent
 	}
 
 	var entry *model.XRefTableEntry

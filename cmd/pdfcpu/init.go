@@ -175,6 +175,7 @@ func initCommandMap() {
 		"permissions":   {nil, permissionsCmdMap, usagePerm, usageLongPerm},
 		"portfolio":     {nil, portfolioCmdMap, usagePortfolio, usageLongPortfolio},
 		"properties":    {nil, propertiesCmdMap, usageProperties, usageLongProperties},
+		"resize":        {processResizeCommand, nil, usageResize, usageLongResize},
 		"rotate":        {processRotateCommand, nil, usageRotate, usageLongRotate},
 		"selectedpages": {printSelectedPages, nil, usageSelectedPages, usageLongSelectedPages},
 		"split":         {processSplitCommand, nil, usageSplit, usageLongSplit},

@@ -33,6 +33,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+var ErrNoContent = errors.New("pdfcpu: page without content")
+
 var zero int64 = 0
 
 // XRefTableEntry represents an entry in the PDF cross reference table.
@@ -81,6 +83,17 @@ type Enc struct {
 	Emd        bool // encrypt meta data
 	ID         []byte
 }
+
+// AnnotMap represents annotations by object number of the corresponding annotation dict.
+type AnnotMap map[int]AnnotationRenderer
+
+type Annot struct {
+	IndRefs *[]types.IndirectRef
+	Map     AnnotMap
+}
+
+// PgAnnots represents a map of page annotations by type.
+type PgAnnots map[AnnotationType]Annot
 
 // XRefTable represents a PDF cross reference table plus stats for a PDF file.
 type XRefTable struct {
@@ -1600,8 +1613,6 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict types.Dict, pAttrs 
 	return xRefTable.consolidateResources(obj, pAttrs)
 }
 
-var errNoContent = errors.New("pdfcpu: page without content")
-
 // PageContent returns the content in PDF syntax for page dict d.
 func (xRefTable *XRefTable) PageContent(d types.Dict) ([]byte, error) {
 
@@ -1656,7 +1667,7 @@ func (xRefTable *XRefTable) PageContent(d types.Dict) ([]byte, error) {
 	}
 
 	if len(bb) == 0 {
-		return nil, errNoContent
+		return nil, ErrNoContent
 	}
 
 	return bb, nil
@@ -1712,7 +1723,7 @@ func consolidateResources(consolidateRes bool, xRefTable *XRefTable, pageDict, r
 
 	bb, err := xRefTable.PageContent(pageDict)
 	if err != nil {
-		if err == errNoContent {
+		if err == ErrNoContent {
 			return nil
 		}
 		return err
@@ -2048,6 +2059,10 @@ func (xRefTable *XRefTable) collectPageBoundariesForPageTree(root *types.Indirec
 		r = i.Value()
 	}
 
+	if err := xRefTable.collectMediaBoxAndCropBox(d, inhMediaBox, inhCropBox); err != nil {
+		return err
+	}
+
 	o, _ := d.Find("Kids")
 	o, _ = xRefTable.Dereference(o)
 	if o == nil {
@@ -2057,10 +2072,6 @@ func (xRefTable *XRefTable) collectPageBoundariesForPageTree(root *types.Indirec
 	kids, ok := o.(types.Array)
 	if !ok {
 		return errors.New("pdfcpu: validatePagesDict: corrupt \"Kids\" entry")
-	}
-
-	if err := xRefTable.collectMediaBoxAndCropBox(d, inhMediaBox, inhCropBox); err != nil {
-		return err
 	}
 
 	// Iterate over page tree.

@@ -210,7 +210,7 @@ func NUpTilePDFBytes(wr io.Writer, rSrc, rDest *types.Rectangle, formResID strin
 	// Best fit translation of a source rectangle into a destination rectangle.
 	// For nup we enforce the dest orientation,
 	// whereas in cases where the original orientation needs to be preserved eg. for booklets, we don't.
-	w, h, dx, dy, r := types.BestFitRectIntoRect(rSrc, rDestCr, enforceOrient)
+	w, h, dx, dy, r := types.BestFitRectIntoRect(rSrc, rDestCr, enforceOrient, false)
 
 	if nup.BgColor != nil {
 		if nup.ImgInputFile {
@@ -303,7 +303,7 @@ func (ctx *Context) NUpTilePDFBytesForPDF(
 
 	// Retrieve content stream bytes.
 	bb, err := ctx.PageContent(d)
-	if err == errNoContent {
+	if err == ErrNoContent {
 		// TODO render if has annotations.
 		return nil
 	}

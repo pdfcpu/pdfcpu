@@ -629,7 +629,7 @@ func (ib *ImageBox) render(p *model.Page, pageNr int, images model.ImageMap) err
 	if !missingImg {
 		// Render image
 		rDest := types.RectForWidthAndHeight(x+bWidth+pLeft, y+bWidth+pBot, ib.Width-2*bWidth-pLeft-pRight, ib.Height-2*bWidth-pTop-pBot)
-		sx, sy, dx, dy, _ := types.BestFitRectIntoRect(rSrc, rDest, false)
+		sx, sy, dx, dy, _ := types.BestFitRectIntoRect(rSrc, rDest, false, false)
 		dx += rDest.LL.X
 		dy += rDest.LL.Y
 

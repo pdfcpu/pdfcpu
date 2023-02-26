@@ -31,8 +31,9 @@ The commands are:
 	paper         print list of supported paper sizes
 	permissions   list, set user access permissions
 	portfolio     list, add, remove, extract portfolio entries with optional description
-	properties	   list, add, remove document properties
-	rotate        rotate pages
+	properties    list, add, remove document properties
+	resize        scale selected pages
+	rotate        rotate selected pages
 	selectedpages print definition of the -pages flag
 	split         split up a PDF by span or bookmark
 	stamp         add, remove, update Unicode text, image or PDF stamps for selected pages
