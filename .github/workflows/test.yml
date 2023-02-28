@@ -5,13 +5,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - macos-latest
-          - ubuntu-latest
-          - windows-latest
+        target:
+          - goos: js
+            goarch: wasm
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: linux
+            goarch: amd64
+          - goos: windows
+            goarch: amd64
         go:
-          - '1.17.x'  
-    runs-on: ${{ matrix.os }}
+          - '1.20.x'
+    runs-on: ubuntu-latest
 
     steps:
       - name: Set up Go ${{ matrix.go }}

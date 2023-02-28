@@ -22,7 +22,8 @@ This is an effort to build a comprehensive PDF processing library from the groun
   <kbd><a href="https://pdfcpu.io/core/watermark"><img src="resources/wmi1abs.png" height="150"></a></kbd>&nbsp;
   <kbd><a href="https://pdfcpu.io/generate/nup"><img src="resources/nup9pdf.png" height="150"></a></kbd>&nbsp;
   <kbd><a href="https://pdfcpu.io/fonts/fonts"><img src="resources/cjkv.png" height="150"></a></kbd>&nbsp;
-  <kbd><a href="https://pdfcpu.io/core/stamp"><img src="resources/4exp.png" height="150"></a></kbd><br><br>
+  <kbd><a href="https://pdfcpu.io/core/stamp"><img src="resources/4exp.png" height="150"></a></kbd>&nbsp;
+  <kbd><a href="https://pdfcpu.io/form/form"><img src="resources/form.png" height="150"></a></kbd><br><br>
   <kbd><a href="https://pdfcpu.io/generate/create"><img src="resources/table.png" height="100"></a></kbd>&nbsp;
   <kbd><a href="https://pdfcpu.io/core/stamp"><img src="resources/sti.png" height="150"></a></kbd>&nbsp;
   <kbd><img src="resources/hold3.png" height="150"></kbd>&nbsp;
@@ -54,6 +55,7 @@ The main focus lies on strong support for batch processing and scripting via a r
 * [encrypt](https://pdfcpu.io/encrypt/encryptPDF)
 * [extract](https://pdfcpu.io/extract/extract)
 * [fonts](https://pdfcpu.io/fonts/fonts)
+* [form](https://pdfcpu.io/form/form)
 * [grid](https://pdfcpu.io/generate/grid)
 * [images](https://pdfcpu.io/images/images)
 * [import](https://pdfcpu.io/generate/import)
@@ -66,6 +68,7 @@ The main focus lies on strong support for batch processing and scripting via a r
 * [permissions](https://pdfcpu.io/encrypt/perm_add)
 * [portfolio](https://pdfcpu.io/portfolio/portfolio)
 * [properties](https://pdfcpu.io/properties/properties)
+* [resize](https://pdfcpu.io/core/resize)
 * [rotate](https://pdfcpu.io/core/rotate)
 * [split](https://pdfcpu.io/core/split)
 * [stamp](https://pdfcpu.io/core/stamp)
