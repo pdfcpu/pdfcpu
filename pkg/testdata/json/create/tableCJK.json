@@ -34,12 +34,12 @@
 	},
 	"header": {
 		"font": {
-			"name": "Courier-Bold",
+			"name": "$simpleChinese",
 			"size": 24,
 			"col": "#00AA00"
 		},
 		"left": "$logo1",
-		"center": "Userfonts",
+		"center": "演示台",
 		"right": "$logo2",
 		"height": 40,
 		"dx": 5,
@@ -181,10 +181,10 @@
 						"cols": 4,
 						"width": 400,
 						"colWidths": [
-							0.10,
-							0.4,
-							0.25,
-							0.25
+							10,
+							40,
+							25,
+							25
 						],
 						"colAnchors": [
 							"Center",

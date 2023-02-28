@@ -19,6 +19,10 @@
 		"logo2": "$images/github.png"
 	},
 	"fonts": {
+		"unifont": {
+			"name": "UnifontMedium",
+			"size": 12
+		},
 		"myCourier": {
 			"name": "Courier",
 			"size": 12,
@@ -37,26 +41,27 @@
 	},
 	"header": {
 		"font": {
-			"name": "Courier-Bold",
+			"name": "$unifont",
 			"size": 24,
 			"col": "#00AA00"
 		},
 		"left": "$logo1",
-		"center": "Tables",
+		"center": "טבלת הדגמה",
 		"right": "$logo2",
 		"height": 40,
 		"dx": 5,
 		"dy": 10,
-		"border": false
+		"border": false,
+		"rtl": true
 	},
 	"footer": {
 		"font": {
-			"name": "$myCourier",
+			"name": "$unifont",
 			"col": "Black"
 		},
-		"left": "pdfcpu: %v\nCreated: %t",
-		"center": "Page %p of %P",
-		"right": "Source:\ntestdata/json/create/tables.json",
+		"left": "pdfcpu: %v\n%t :נוצר",
+		"center": "%P שֶׁל %p עמוד",
+		"right": "מָקוֹר:\ntestdata/json/create/tables.json",
 		"height": 30,
 		"dx": 5,
 		"dy": 5,
@@ -93,47 +98,78 @@
 					{
 						"hide": false,
 						"header": {
-							"values": ["Qty", "Description", "Price", "Amount"],
-							"colAnchors": ["Center", "Center", "Center", "Center"],
+							"values": [
+								"כמות",
+								"מחיר",
+								"תיאור",
+								"כַּמוּת"
+							],
+							"colAnchors": [
+								"Center",
+								"Center",
+								"Center",
+								"Center"
+							],
 							"bgCol": "$DarkSalmon",
 							"font": {
-								"name": "Courier-Bold",
+								"name": "$unifont",
 								"size": 15
 							}
 						},
 						"values": [
-							["1", "Mouse", "$115.00", "$115.00"],
-							["3", "Unicorn", "$250,000.00", "$750,000.00"],
-							["1", "Gopher", "(priceless)"]
+							[
+								"₪115.00",
+								"₪115.00",
+								"עכבר",
+								"1"
+							],
+							[
+								"₪750,000.00",
+								"₪250,000.00",
+								"חַדקֶרֶן",
+								"3"
+							],
+							[
+								"",
+								")לֹא יְסוּלֵא בְּפָּז(",
+								"סְנָאִי הָעַרָבָה",
+								"1"
+							]
 						],
 						"rows": 5,
 						"cols": 4,
 						"width": 400,
-						"colWidths": [0.10, 0.4, 0.25, 0.25 ],
-						"colAnchors": ["Center", "Left", "Right", "Right"],
+						"colWidths": [
+							25,
+							35,
+							30,
+							10
+						],
+						"colAnchors": [
+							"Right",
+							"Right",
+							"Right",
+							"Center"
+						],
 						"lheight": 30,
 						"grid": true,
 						"anchor": "center",
-						"//pos": [
-							100,
-							100
-						],
 						"dx": 0,
 						"dy": 0,
 						"bgCol": "$Beige",
 						"oddCol": "LightGray",
 						"evenCol": "Gray",
 						"font": {
-							"name": "Courier",
+							"name": "$unifont",
 							"size": 12,
 							"col": "Black"
 						},
+						"rtl": true,
 						"margin": {
 							"width": 0
 						},
 						"border": {
-							"width": 0,
-							"//col": "White"
+							"width": 0
 						},
 						"padding": {
 							"width": 5

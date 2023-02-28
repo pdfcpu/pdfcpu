@@ -67,7 +67,6 @@ func TestCreateContentPrimitivesViaJson(t *testing.T) {
 
 		// Font
 		{"TestFonts", "fonts.json", "fonts.pdf"},
-		{"TestUserFonts", "userfonts.json", "userfonts.pdf"},
 
 		// Text
 		{"TestTextAnchored", "textAnchored.json", "textAnchored.pdf"},
@@ -85,7 +84,9 @@ func TestCreateContentPrimitivesViaJson(t *testing.T) {
 		{"TestBoxesAndRotation", "boxesAndRotation.json", "boxesAndRotation.pdf"},
 
 		// Table
-		{"TestTables", "tables.json", "tables.pdf"},
+		{"TestTable", "table.json", "table.pdf"},
+		{"TestTableRTL", "tableRTL.json", "tableRTL.pdf"},
+		{"TestTableCJK", "tableCJK.json", "tableCJK.pdf"},
 
 		// Content Region
 		{"TestRegions", "regions.json", "regions.pdf"},
