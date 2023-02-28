@@ -64,7 +64,7 @@
 			"size": 9
 		},
 		"left": "pdfcpu: %v\nCreated: %t",
-		"center": "Page %p of %P",
+		"center": "Optimized for A.Reader\nPage %p of %P",
 		"right": "Source:\ntestdata/json/form/demoSinglePage/person.json",
 		"height": 30,
 		"dx": 5,
@@ -312,6 +312,7 @@
 							"CC BY 2.0",
 							"CC BY 3.0",
 							"CC BY 4.0",
+							"CC BY-SA 2.0",
 							"CC BY-SA 3.0",
 							"CC BY-SA 3.0 de",
 							"CC BY-SA 4.0",

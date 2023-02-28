@@ -49,7 +49,7 @@
 			"size": 9
 		},
 		"left": "pdfcpu: %v\nCreated: %t",
-		"center": "Page %p of %P",
+		"center": "Optimized for A.Reader\nPage %p of %P",
 		"right": "Source:\ntestdata/json/form/radiobuttonsHor.json",
 		"height": 30,
 		"dx": 5,
