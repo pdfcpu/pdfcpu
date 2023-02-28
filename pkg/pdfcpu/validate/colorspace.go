@@ -26,6 +26,10 @@ func validateDeviceColorSpaceName(s string) bool {
 	return types.MemberOf(s, []string{model.DeviceGrayCS, model.DeviceRGBCS, model.DeviceCMYKCS})
 }
 
+func validateAllColorSpaceNamesExceptPattern(s string) bool {
+	return types.MemberOf(s, []string{model.DeviceGrayCS, model.DeviceRGBCS, model.DeviceCMYKCS, model.CalGrayCS, model.CalRGBCS, model.LabCS, model.ICCBasedCS, model.IndexedCS, model.SeparationCS, model.DeviceNCS})
+}
+
 func validateCalGrayColorSpace(xRefTable *model.XRefTable, a types.Array, sinceVersion model.Version) error {
 
 	dictName := "calGrayCSDict"
@@ -131,6 +135,31 @@ func validateLabColorSpace(xRefTable *model.XRefTable, a types.Array, sinceVersi
 	return err
 }
 
+func validateAlternateColorSpaceEntryForICC(xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, excludePatternCS bool) error {
+
+	o, err := validateEntry(xRefTable, d, dictName, entryName, required, model.V10)
+	if err != nil || o == nil {
+		return err
+	}
+
+	switch o := o.(type) {
+
+	case types.Name:
+		if ok := validateAllColorSpaceNamesExceptPattern(o.Value()); !ok {
+			err = errors.Errorf("pdfcpu: validateAlternateColorSpaceEntryForICC: invalid Name:%s\n", o.Value())
+		}
+
+	case types.Array:
+		err = validateColorSpaceArray(xRefTable, o, excludePatternCS)
+
+	default:
+		err = errors.Errorf("pdfcpu: validateAlternateColorSpaceEntryForICC: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+
+	}
+
+	return err
+}
+
 func validateICCBasedColorSpace(xRefTable *model.XRefTable, a types.Array, sinceVersion model.Version) error {
 
 	// see 8.6.5.5
@@ -171,7 +200,7 @@ func validateICCBasedColorSpace(xRefTable *model.XRefTable, a types.Array, since
 		return err
 	}
 
-	err = validateColorSpaceEntry(xRefTable, sd.Dict, dictName, "Alternate", OPTIONAL, ExcludePatternCS)
+	err = validateAlternateColorSpaceEntryForICC(xRefTable, sd.Dict, dictName, "Alternate", OPTIONAL, ExcludePatternCS)
 	if err != nil {
 		return err
 	}
