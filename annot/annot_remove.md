@@ -10,7 +10,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu annotations remove [-p(ages) selectedPages] inFile [objNr...]
+pdfcpu annotations remove [-p(ages) selectedPages] inFile [outFile] [objNr|annotId|annotType]...
 ```
 
 <br>
@@ -34,7 +34,10 @@ pdfcpu annotations remove [-p(ages) selectedPages] inFile [objNr...]
 | name         | description         | required
 |:-------------|:--------------------|:--------
 | inFile       | PDF input file      | yes
+| outFile      | PDF input file      | no
 | objNr...     | one or more objNrs  | no
+| annotId...   | one or more annotIds  | no
+| annotType... | one or more annotTypes  | no
 
 <br>
 

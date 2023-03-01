@@ -6,6 +6,7 @@ layout: default
 
 | Date      | Tag / Commit                                                                                | Description  
 |:----------|:--------------------------------------------------------------------------------------------|:------------------------------
+|2023-02-28 | [v0.4.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.4.0)                              | Add form, resize commands
 |2021-12-04 | [e9f927d](https://github.com/pdfcpu/pdfcpu/commit/e9f927d44d0f2a8bbf7413692595f4f047f6371c) | Fix #396, Add config cmd
 |2021-12-01 | [a8a031e](https://github.com/pdfcpu/pdfcpu/commit/a8a031e36b4c08f7dfc63b8d34156263468e9bd5) | Fix #398
 |2021-11-30 | [v0.3.13](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.13)                            | Add create cmd, Fix 335, #349, #353,
