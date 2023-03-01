@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
@@ -73,11 +74,11 @@ func handleConfEol(v string, c *Configuration) error {
 	v1 := strings.ToLower(v)
 	switch v1 {
 	case "eollf":
-		c.Eol = EolLF
+		c.Eol = types.EolLF
 	case "eolcr":
-		c.Eol = EolCR
+		c.Eol = types.EolCR
 	case "eolcrlf":
-		c.Eol = EolCRLF
+		c.Eol = types.EolCRLF
 	default:
 		return errors.Errorf("invalid eol: %s", v)
 	}
@@ -116,7 +117,7 @@ func handleConfEncryptKeyLength(v string, c *Configuration) error {
 	if err != nil {
 		return errors.Errorf("encryptKeyLength is numeric, got: %s", v)
 	}
-	if !IntMemberOf(i, []int{40, 128, 256}) {
+	if !types.IntMemberOf(i, []int{40, 128, 256}) {
 		return errors.Errorf("encryptKeyLength possible values: 40, 128, 256, got: %s", v)
 	}
 	c.EncryptKeyLength = i
@@ -136,13 +137,13 @@ func handleConfUnit(v string, c *Configuration) error {
 	v1 := v
 	switch v1 {
 	case "points":
-		c.Unit = POINTS
+		c.Unit = types.POINTS
 	case "inches":
-		c.Unit = INCHES
+		c.Unit = types.INCHES
 	case "cm":
-		c.Unit = CENTIMETRES
+		c.Unit = types.CENTIMETRES
 	case "mm":
-		c.Unit = MILLIMETRES
+		c.Unit = types.MILLIMETRES
 	default:
 		return errors.Errorf("invalid unit: %s", v)
 	}
