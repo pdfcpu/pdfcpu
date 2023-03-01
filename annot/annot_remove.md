@@ -34,7 +34,7 @@ pdfcpu annotations remove [-p(ages) selectedPages] inFile [outFile] [objNr|annot
 | name         | description         | required
 |:-------------|:--------------------|:--------
 | inFile       | PDF input file      | yes
-| outFile      | PDF input file      | no
+| outFile      | PDF output file     | no
 | objNr...     | one or more objNrs  | no
 | annotId...   | one or more annotIds  | no
 | annotType... | one or more annotTypes  | no
