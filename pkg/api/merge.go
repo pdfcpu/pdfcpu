@@ -38,6 +38,48 @@ func appendTo(rs io.ReadSeeker, ctxDest *model.Context) error {
 	return pdfcpu.MergeXRefTables(ctxSource, ctxDest)
 }
 
+// MergeRaw merges a sequence of PDF streams and writes the result to w.
+func MergeRaw(rsc []io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
+
+	if rsc == nil {
+		return errors.New("pdfcpu: MergeRaw: Please provide rsc")
+	}
+
+	if w == nil {
+		return errors.New("pdfcpu: MergeRaw: Please provide w")
+	}
+
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.MERGECREATE
+
+	ctxDest, _, _, err := readAndValidate(rsc[0], conf, time.Now())
+	if err != nil {
+		return err
+	}
+
+	ctxDest.EnsureVersionForWriting()
+
+	for _, f := range rsc[1:] {
+		if err = appendTo(f, ctxDest); err != nil {
+			return err
+		}
+	}
+
+	if err = OptimizeContext(ctxDest); err != nil {
+		return err
+	}
+
+	if conf.ValidationMode != model.ValidationNone {
+		if err = ValidateContext(ctxDest); err != nil {
+			return err
+		}
+	}
+
+	return WriteContext(ctxDest, w)
+}
+
 func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configuration) error {
 
 	if w == nil {
