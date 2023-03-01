@@ -39,11 +39,11 @@ pdfcpu resize [-p(ages) selectedPages] -- [description] inFile [outFile]
 
 ### Arguments
 
-| name         | description          | required | values
-|:-------------|:---------------------|:---------|:-
-| description  | configuration string | yes      | 
-| inFile       | PDF input file       | yes      |
-| outFile      | PDF output file      | no       |
+| name         | description          | required 
+|:-------------|:---------------------|:---------
+| description  | configuration string | yes
+| inFile       | PDF input file       | yes
+| outFile      | PDF output file      | no
 
 <br>
 
