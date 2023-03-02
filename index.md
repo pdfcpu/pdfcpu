@@ -21,7 +21,7 @@ layout: default
   <kbd><a href="{{site.baseurl}}/form/form"><img src="resources/form1.png" height="100"></a></kbd>&nbsp;
   <kbd><a href="{{site.baseurl}}/generate/create"><img src="resources/imagebox.png" height="100"></a></kbd>&nbsp;
   <br><br>
-  <a href="https://twitter.com/pdfcpu"><img src="resources/twtr.png" height="100"></a><br>
+  <a href="https://twitter.com/pdfcpu"><img src="resources/twtr.png" height="50"></a><br>
   Follow us for news and release announcements!
 </p>
 
