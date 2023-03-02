@@ -18,7 +18,7 @@ layout: default
   <kbd><a href="{{site.baseurl}}/generate/grid"><img src="resources/gridimg.png" height="100"></a></kbd>
   <kbd><a href="{{site.baseurl}}/core/stamp"><img src="resources/stRoundBorder.png" height="100"></a></kbd>
   <kbd><a href="{{site.baseurl}}/generate/create"><img src="resources/table.png" height="100"></a></kbd>&nbsp;
-  <kbd><a href="{{site.baseurl}}/generate/booklet"><img src="resources/book4A4p1.png" height="100"></a></kbd>
+  <kbd><a href="{{site.baseurl}}/form/form"><img src="resources/form.png" height="100"></a></kbd>
   <kbd><a href="{{site.baseurl}}/generate/create"><img src="resources/imagebox.png" height="100"></a></kbd>&nbsp;
   <br><br><br>
   Follow <a href="https://twitter.com/pdfcpu">pdfcpu</a> on Twitter for news and release announcements!
