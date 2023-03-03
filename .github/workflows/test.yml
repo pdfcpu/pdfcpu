@@ -17,7 +17,7 @@ jobs:
           - goos: windows
             goarch: amd64
         go:
-          - '1.20.x'
+           - '1.20.x'
     runs-on: ubuntu-latest
 
     steps:

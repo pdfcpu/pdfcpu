@@ -8,7 +8,7 @@
 [![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Latest release](https://img.shields.io/github/release/pdfcpu/pdfcpu.svg)](https://github.com/pdfcpu/pdfcpu/releases)
 
-<img src="resources/logoSmall.png" width="150">
+<a href="https://pdfcpu.io"><img src="resources/logoSmall.png" width="150"></a>
 
 pdfcpu is a PDF processing library written in [Go](http://golang.org) supporting encryption.
 It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO-32000).
