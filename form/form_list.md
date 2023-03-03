@@ -53,8 +53,6 @@ The * indicates locked fields aka write-protected or read-only:
 ```
 pdfcpu form list person.pdf
 
-The * indicates locked fields which are write-protected / read-only.
-
 person.pdf
 Pg L Field     │ Name        │ Value   │ Options
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
