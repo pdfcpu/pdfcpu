@@ -12,7 +12,7 @@ layout: default
 * Split (split multi-page PDF into several PDFs according to split span)
 * Trim (generate a custom version of a PDF including selected pages)
 * Create (generate PDF via JSON with optional form)
-* Manage (fill,reset,lock,unlock) PDF forms.
+* Manage (export,fill,reset,lock,unlock,remove fields) PDF forms.
 * Collect (generate a PDF page sequence, pages may appear multiple times in any order)
 * Crop (apply a Crop Box for selected pages)
 * Resize selected pages

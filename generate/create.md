@@ -6,23 +6,23 @@ layout: default
 
 allows you to generate PDF via JSON
 
-* Create a new PDF file based on JSON input with optional form definition.
+* Create a new PDF file based on JSON input with optional form definition/data.
 
 * Repeatedly add pages to an existing PDF file serving an incremental PDF generation approach.
 
 * Append to content of specific pages.
 
-* Include page headers, footers
+* Include page headers and footers.
 
-* Include boxes, images, text, tables
+* Include boxes, images, text, tables.
 
-* Include date fields, text fields, checkboxes, radio button groups, comboboxes, listboxes
+* Include date fields, text fields, checkboxes, radio button groups, comboboxes, listboxes for forms.
 
-* Supports Unicode / pdfcpu user fonts (installed Open/TrueType fonts)
+* Supports Unicode / pdfcpu user fonts (installed Open/TrueType fonts).
 
 * Use layout guides and visible crop/content box through out the layout process.
 
-* Choose your preferred layout coordinate system
+* Choose your preferred layout coordinate system.
 
 <br>
 
