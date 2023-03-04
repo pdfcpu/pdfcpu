@@ -7,7 +7,7 @@ layout: default
 This command fills form fields with data via JSON.
 
 1. Export your form into JSON using `pdfcpu form export`.
-2. Edit `value` (or `values`where appropriate) for all form fields you want to fill in the exported file.
+2. Edit `value` (or `values` where appropriate) for all form fields you want to fill in the exported file.
 3. In addition to modifying `value(s)` you may change the `locked` status for fields.
 3. Remove all fields which shall remain untouched.
 4. Run `pdfcpu form fill`. This will process the attributes `value` and `locked` only.
@@ -79,6 +79,7 @@ writing tmp.json...
 * We inspect tmp.json and are satisfied with the result.
 * We open tmp.pdf and are satisfied with the result.
 * We fill the original form:
+
 ```
 pdfcpu form fill english.pdf english.json
 ```
