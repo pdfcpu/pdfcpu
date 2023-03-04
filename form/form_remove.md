@@ -24,7 +24,7 @@ pdfcpu form remove inFile [outFile] fieldID...
 | name         | description         | required
 |:-------------|:--------------------|:--------
 | inFile       | PDF input file containing form      | yes
-| outFile      | PDF output file     | no
+| outFile      | PDF output file for dry runs     | no
 | fieldID      | form field id       | yes
 
 <br>
