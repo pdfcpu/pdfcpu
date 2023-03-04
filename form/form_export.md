@@ -6,6 +6,17 @@ layout: default
 
 This command creates a JSON file containing a PDF form structure with optional data.
 
+The resulting JSON payload contains the single element array `forms` serving as a starting point for form filling.
+
+The content of this element contains all form fields grouped by field type:
+* text fields
+* date fields
+* check boxes
+* radio button groups
+* combo boxes
+* list boxes
+
+
 Have a look at some [examples](#examples).
 
 ## Usage
