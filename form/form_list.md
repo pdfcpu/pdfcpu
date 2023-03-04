@@ -4,7 +4,7 @@ layout: default
 
 # List form fields
 
-* This command prints a list of all form fields for a PDF form.
+This command prints a list of all form fields for a PDF form.
 
 Have a look at some [examples](#examples).
 
@@ -13,7 +13,6 @@ Have a look at some [examples](#examples).
 ```
 pdfcpu form list inFile...
 ```
-
 <br>
 
 ### Arguments
@@ -65,5 +64,5 @@ Pg L Field     │ Name        │ Value   │ Options
    * Textfield │ planet      │ Earth   │
      Textfield │ occup       │         │
      ComboBox  │ status      │ unknown │ alive,deceased,imprisoned,killed,unknown
-     ComboBox  │ license     │         │ CC BY 4.0,CC BY-SA 2.0,Public Domain,Twitter,fair useunknown
+     ComboBox  │ license     │         │ CC BY 4.0,CC BY-SA 2.0,Public Domain,unknown
 ```
