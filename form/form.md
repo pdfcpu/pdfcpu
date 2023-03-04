@@ -12,7 +12,7 @@ Manage your PDF forms.
 * Unlock fields by id
 * Reset fields by id
 * Export form to JSON
-* Fill form via JSON/CSV
+* Fill form via JSON
 * Multifill forms via JSON/CSV
 
 The focus of this command set is manipulating forms that were created using `pdfcpu create`.
