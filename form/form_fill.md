@@ -70,14 +70,15 @@ We trigger (a dry run for) form filling and write the filled form to `tmp.pdf`:
 pdfcpu form fill english.pdf english.json tmp.pdf
 ```
 
-We check the result by exporting the form out of `tmp.pdf`:
+* We open tmp.pdf in A.Reader and are satisfied with the result.
+* check the result by exporting the form out of `tmp.pdf`:
+
 ```
 pdfcpu export tmp.pdf tmp.json
 writing tmp.json...
 ```
 
 * We inspect tmp.json and are satisfied with the result.
-* We open tmp.pdf and are satisfied with the result.
 * We fill the original form:
 
 ```

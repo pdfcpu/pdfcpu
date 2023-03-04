@@ -17,6 +17,7 @@ Manage your PDF forms.
 
 The focus of this command set is manipulating forms that were created using `pdfcpu create`.
 
-You are welcome to try them on existing forms and they may even work!
+You are welcome to try the form commands on existing forms and they may even work!
+
 Issues are expected though so please report back any strange behavior
 based on using Adobe Reader only.
