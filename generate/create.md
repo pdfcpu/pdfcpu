@@ -6,7 +6,7 @@ layout: default
 
 allows you to generate PDF via JSON
 
-* Create a brand new PDF file based on your JSON input file.
+* Create a new PDF file based on your JSON input file with optional form.
 
 * Repeatedly add pages to an existing PDF file serving an incremental PDF generation approach.
 
