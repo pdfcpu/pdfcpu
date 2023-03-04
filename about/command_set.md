@@ -11,9 +11,11 @@ layout: default
 * Merge (a set of PDF files into one consolidated PDF file)
 * Split (split multi-page PDF into several PDFs according to split span)
 * Trim (generate a custom version of a PDF including selected pages)
-* Create (generate PDF via JSON)
+* Create (generate PDF via JSON with optional form)
+* Manage (fill,reset,lock,unlock) PDF forms.
 * Collect (generate a PDF page sequence, pages may appear multiple times in any order)
 * Crop (apply a Crop Box for selected pages)
+* Resize selected pages
 * Rotate selected pages
 * Manage (add,update,remove) stamps/watermarks for selected pages using text, images or PDF page content.
 * N-up (rearrange pages into grid layout for reduced number of pages)
