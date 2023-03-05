@@ -90,27 +90,27 @@ Compared to the JSON way this will reduce the input file size dramatically but i
 
 The workflow steps are:
 
-#### 1. Export your form into JSON using
+1. Export your form into JSON using
 ```
 pdfcpu form export
 ```
 
-#### 2. Generate a CSV file based on the JSON file you just created and individual form data.
+2. Generate a CSV file based on the JSON file you just created and individual form data.
 Values prefixed with * will be locked.
 Each column represents a form field identified in the header line by field id:
 
-|firstName  |lastName  |dob       |gender     |city         |country
-|:----------|:---------|:---------|:----------|-------------|-------
-|Jane       |Doe       |06.01.2000|*female    |San Francisco|USA
-|Joe        |Miller    |30.07.2001|*male      |São Paulo    |Brazil
-|Jackie     |Carson    |29.11.1965|*non-binary|Vienna       |Austria
+  |firstName  |lastName  |dob       |gender     |city         |country
+  |:----------|:---------|:---------|:----------|-------------|-------
+  |Jane       |Doe       |06.01.2000|*female    |San Francisco|USA
+  |Joe        |Miller    |30.07.2001|*male      |São Paulo    |Brazil
+  |Jackie     |Carson    |29.11.1965|*non-binary|Vienna       |Austria
 
-#### 3. To trigger form filling run
+3. To trigger form filling run
 ```
 pdfcpu form multifill in.pdf in.csv outDir
 ```
 
-#### 4. or if you are only interested in a single output file run
+4. or if you are only interested in a single output file run
 ```
 pdfcpu form multifill -m merge in.pdf in.csv outDir
 ```
