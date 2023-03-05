@@ -78,7 +78,7 @@ pdfcpu form export
 pdfcpu form multifill in.pdf in.json outDir
 ```
 
-7. or if you are only interested in a single output file run:
+7. If you are only interested in a single output file run:
 ```
 pdfcpu form multifill -m merge in.pdf in.json outDir
 ```
@@ -110,7 +110,7 @@ Each column represents a form field identified in the header line by field id:
 pdfcpu form multifill in.pdf in.csv outDir
 ```
 
-4. or if you are only interested in a single output file run:
+4. If you are only interested in a single output file run:
 ```
 pdfcpu form multifill -m merge in.pdf in.csv outDir
 ```
