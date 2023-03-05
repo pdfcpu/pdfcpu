@@ -31,7 +31,7 @@ pdfcpu form fill inFile inFileJSON [outFile]
 |:-------------|:--------------------|:--------
 | inFile       | PDF input file containing form      | yes
 | inFileJSON   | JSON input file with form data    | yes
-| outFile      | PDF output file for dry runs      | yes
+| outFile      | PDF output file for dry runs      | no
 
 <br>
 
