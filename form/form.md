@@ -18,7 +18,7 @@ Manage your PDF forms.
 The focus of this command set is manipulating forms that were created using `pdfcpu create`.
 
 <p align="center">
-    <a href="https://github.com/pdfcpu/pdfcpu/tree/master/pkg/samples/form/demo/english.pdf"><img style="border-color:silver" border="1" src="resources/_english.png" height="300"></a>
+    <a href="https://github.com/pdfcpu/pdfcpu/tree/master/pkg/samples/form/demo/english.pdf"><img style="border-color:silver" border="1" src="resources/english.png" height="300"></a>
 </p>
 
 To get you started pdfcpu has a [demo form set](https://github.com/pdfcpu/pdfcpu/tree/master/pkg/samples/form/demo) ([JSON sources](https://github.com/pdfcpu/pdfcpu/tree/master/pkg/testdata/json/form/demo)) available covering more than 40 languages:
