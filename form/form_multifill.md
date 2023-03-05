@@ -60,20 +60,20 @@ pdfcpu form multifill [-m(ode) single|merge] inFile inFileData outDir [outName]
 You can generate your JSON for bulk form fills in different ways.
 The workflow steps are:
 
-#### 1. Export your form into JSON using
+1. Export your form into JSON using
 ```
 pdfcpu form export
 ```
 
-#### 2. Remove all fields which shall remain untouched.
+2. Remove all fields which shall remain untouched.
 
-#### 3. Copy & paste the form element within the `forms` array.
+3. Copy & paste the form element within the `forms` array.
 
-#### 4. Edit `value` (or `values` where appropriate) for all fields in all form instances.
+4. Edit `value` (or `values` where appropriate) for all fields in all form instances.
 
-#### 5. In addition to modifying `value(s)` you may change the `locked` status for fields.
+5. In addition to modifying `value(s)` you may change the `locked` status for fields.
 
-#### 6. To trigger form filling run 
+6. To trigger form filling run 
 ```
 pdfcpu form multifill in.pdf in.json outDir
 ```
@@ -88,6 +88,12 @@ pdfcpu form multifill -m merge in.pdf in.json outDir
 Here the basic idea is to represent a form instance with a single CSV line in your input data file.
 Compared to the JSON way this will reduce the input file size dramatically but it has its limitations when it comes to expressiveness.
 
+|firstName  |lastName  |dob       |gender     |city         |country
+|:----------|:---------|:---------|:----------|-------------|-------
+|Jane       |Doe       |06.01.2000|*female    |San Francisco|USA
+|Joe        |Miller    |30.07.2001|*male      |São Paulo    |Brazil
+|Jackie     |Carson    |29.11.1965|*non-binary|Vienna       |Austria
+
 The workflow steps are:
 
 1. Export your form into JSON using
@@ -98,12 +104,6 @@ pdfcpu form export
 2. Generate a CSV file based on the JSON file you just created and individual form data.
 Values prefixed with * will be locked.
 Each column represents a form field identified in the header line by field id:
-
-  |firstName  |lastName  |dob       |gender     |city         |country
-  |:----------|:---------|:---------|:----------|-------------|-------
-  |Jane       |Doe       |06.01.2000|*female    |San Francisco|USA
-  |Joe        |Miller    |30.07.2001|*male      |São Paulo    |Brazil
-  |Jackie     |Carson    |29.11.1965|*non-binary|Vienna       |Austria
 
 3. To trigger form filling run
 ```
