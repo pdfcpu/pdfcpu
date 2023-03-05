@@ -75,7 +75,10 @@ The workflow steps are:
 pdfcpu form multifill in.pdf in.json outDir
 ```
 
-7. or if you are only interested in a single output file run ```pdfcpu form multifill -m merge in.pdf in.json outDir```.
+7. or if you are only interested in a single output file run
+```
+pdfcpu form multifill -m merge in.pdf in.json outDir
+```
 
 ### Multifill via CSV
 
@@ -96,9 +99,15 @@ Each column represents a form field identified in the header line by field id:
 |Joe        |Miller    |30.07.2001|*male      |São Paulo    |Brazil
 |Jackie     |Carson    |29.11.1965|*non-binary|Vienna       |Austria
 
-3. Run `pdfcpu form multifill in.pdf in.csv outDir` to trigger form filling
+3. To trigger form filling run
+```
+pdfcpu form multifill in.pdf in.csv outDir
+```
 
-4. or if you are only interested in a single output file run `pdfcpu form multifill -m merge in.pdf in.csv outDir`.
+4. or if you are only interested in a single output file run
+```
+pdfcpu form multifill -m merge in.pdf in.csv outDir
+```
 
 
 
