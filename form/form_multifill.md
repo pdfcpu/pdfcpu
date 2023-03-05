@@ -7,9 +7,9 @@ layout: default
 This command fills form fields with data via JSON or CSV.
 
 The workflow is similar to [simple form filling](form_fill.md)
-except here we import a collection of form instances and generate one PDF for each form instance.
+except here we import a collection of form instances and generate one PDF for each.
 
-Optionally this command merges the output PDFs together.
+Optionally this command can merge the output PDFs together.
 
 Have a look at some [examples](#examples). 
 
@@ -49,7 +49,7 @@ pdfcpu form multifill [-m(ode) single|merge] inFile inFileData outDir [outName]
 | inFile       | PDF input file containing form     | yes
 | inFileData   | JSON/CSV input file with form data | yes
 | outDir       | output directory                   | yes
-| outName      | output file name                   | yes
+| outName      | output file name                   | no
 
 <br>
 
@@ -70,9 +70,10 @@ The workflow steps are:
 
 5. In addition to modifying `value(s)` you may change the `locked` status for fields.
 
-6. Run `pdfcpu form multifill in.pdf in.json outDir` to trigger form filling
+6. To trigger form filling run 
+```pdfcpu form multifill in.pdf in.json outDir```
 
-7. or if you are only interested in a single output file run `pdfcpu form multifill -m merge in.pdf in.json outDir`.
+7. or if you are only interested in a single output file run ```pdfcpu form multifill -m merge in.pdf in.json outDir```.
 
 ### Multifill via CSV
 
