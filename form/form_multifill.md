@@ -60,7 +60,7 @@ pdfcpu form multifill [-m(ode) single|merge] inFile inFileData outDir [outName]
 You can generate your JSON for bulk form fills in different ways.
 The workflow steps are:
 
-1. Export your form into JSON using
+1. Export your form into JSON:
 ```
 pdfcpu form export
 ```
@@ -73,12 +73,12 @@ pdfcpu form export
 
 5. In addition to modifying `value(s)` you may change the `locked` status for fields.
 
-6. To trigger form filling run 
+6. To trigger form filling run:
 ```
 pdfcpu form multifill in.pdf in.json outDir
 ```
 
-#### 7. or if you are only interested in a single output file run
+7. or if you are only interested in a single output file run:
 ```
 pdfcpu form multifill -m merge in.pdf in.json outDir
 ```
@@ -96,7 +96,7 @@ Compared to the JSON way this will reduce the input file size dramatically but i
 
 The workflow steps are:
 
-1. Export your form into JSON using
+1. Export your form into JSON:
 ```
 pdfcpu form export
 ```
@@ -105,12 +105,12 @@ pdfcpu form export
 Values prefixed with * will be locked.
 Each column represents a form field identified in the header line by field id:
 
-3. To trigger form filling run
+3. To trigger form filling run:
 ```
 pdfcpu form multifill in.pdf in.csv outDir
 ```
 
-4. or if you are only interested in a single output file run
+4. or if you are only interested in a single output file run:
 ```
 pdfcpu form multifill -m merge in.pdf in.csv outDir
 ```
