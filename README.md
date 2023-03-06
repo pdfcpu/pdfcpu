@@ -111,9 +111,7 @@ Get the latest binary [here](https://github.com/pdfcpu/pdfcpu/releases).
 ### Using Go Modules
 
 ```
-git clone https://github.com/pdfcpu/pdfcpu
-cd pdfcpu/cmd/pdfcpu
-go install
+go install github.com/pdfcpu/pdfcpu/cmd/pdfcpu@latest
 pdfcpu version
 ```
 
