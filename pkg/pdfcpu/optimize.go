@@ -22,8 +22,8 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	pdffont "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/form"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/primitives"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
@@ -1239,7 +1239,7 @@ func fixReferencesToFreeObjects(ctx *model.Context) error {
 
 func cacheFormFonts(ctx *model.Context) error {
 
-	d, err := form.FontResDict(ctx.XRefTable)
+	d, err := primitives.FontResDict(ctx.XRefTable)
 	if err != nil {
 		return err
 	}

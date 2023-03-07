@@ -26,6 +26,7 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
+	pdffont "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -304,27 +305,18 @@ func (lb *ListBox) validate() error {
 	return lb.validateTab()
 }
 
-// NewListBox creates a new listbox for d.
-func NewListBox(xRefTable *model.XRefTable, d types.Dict, opts []string, ind types.Array) (*ListBox, error) {
-	lb := &ListBox{}
+func (lb *ListBox) calcFontFromDA(ctx *model.Context, da []string, fonts map[string]types.IndirectRef) error {
 
-	bb, _ := types.RectForArray(d.ArrayEntry("Rect"))
-	lb.BoundingBox = types.RectForDim(bb.Width(), bb.Height())
+	var (
+		f      FormFont
+		fontID string
+	)
 
-	var f FormFont
-
-	s := d.StringEntry("DA")
-	if s == nil {
-		return nil, errors.New("pdfcpu: listbox missing \"DA\"")
-	}
-	da := strings.Split(*s, " ")
-
-	var fontID string
-
+	f.SetCol(color.Black)
 	for i := 0; i < len(da); i++ {
 		if da[i] == "Tf" {
 			fontID = da[i-2][1:]
-			lb.SetFontID(fontID)
+			lb.SetFontID(fontID) // inputform only !
 			f.Size, _ = strconv.Atoi(da[i-1])
 			continue
 		}
@@ -334,57 +326,76 @@ func NewListBox(xRefTable *model.XRefTable, d types.Dict, opts []string, ind typ
 			b, _ := strconv.ParseFloat(da[i-1], 32)
 			f.SetCol(color.SimpleColor{R: float32(r), G: float32(g), B: float32(b)})
 		}
+		if da[i] == "g" {
+			g, _ := strconv.ParseFloat(da[i-1], 32)
+			f.SetCol(color.SimpleColor{R: float32(g), G: float32(g), B: float32(g)})
+		}
 	}
+
+	if len(lb.fontID) == 0 {
+		return errors.New("pdfcpu: unable to detect font id")
+	}
+
 	lb.Font = &f
 
-	lb.Ind = ind
-	lb.Options = opts
-
-	// lb.horAlign
-	q := d.IntEntry("Q")
-	lb.HorAlign = types.AlignLeft
-	if q != nil {
-		lb.HorAlign = types.HAlignment(*q)
+	_, name, lang, fontIndRef, err := extractFormFontDetails(ctx, lb.fontID, fonts)
+	if err != nil {
+		return err
+	}
+	if fontIndRef == nil {
+		return errors.New("pdfcpu: unable to detect indirect reference for font")
 	}
 
-	// lb.bgCol, lb.boCol
-	boCol := color.Black
+	lb.Font.Name = name
+	lb.Font.Lang = lang
+	lb.RTL = pdffont.RTL(lang)
 
-	o, err := xRefTable.DereferenceDictEntry(d, "MK")
+	return nil
+}
+
+// NewListBox creates a new listbox for d.
+func NewListBox(
+	ctx *model.Context,
+	d types.Dict,
+	irN *types.IndirectRef,
+	opts []string,
+	ind types.Array,
+	fonts map[string]types.IndirectRef) (*ListBox, error) {
+
+	lb := &ListBox{}
+
+	bb, err := types.RectForArray(d.ArrayEntry("Rect"))
 	if err != nil {
 		return nil, err
 	}
-	if o != nil {
-		d1, _ := o.(types.Dict)
-		if len(d1) > 0 {
 
-			if arr := d1.ArrayEntry("BG"); arr != nil {
-				bgCol := (color.NewSimpleColorForArray(arr))
-				lb.BgCol = &bgCol
-			}
+	lb.BoundingBox = types.RectForDim(bb.Width(), bb.Height())
 
-			if arr := d1.ArrayEntry("BC"); arr != nil {
-				boCol = (color.NewSimpleColorForArray(arr))
-			}
-		}
+	s := d.StringEntry("DA")
+	if s == nil {
+		return nil, errors.New("pdfcpu: listbox missing \"DA\"")
 	}
 
-	// lb.Border
-	boWidth := 0
-	if arr := d.ArrayEntry("Border"); arr != nil {
-		// 0, 1 ??
-		bw, ok := arr[2].(types.Integer)
-		if ok {
-			boWidth = bw.Value()
-		} else {
-			boWidth = int(arr[2].(types.Float).Value())
-		}
+	if err := lb.calcFontFromDA(ctx, strings.Split(*s, " "), fonts); err != nil {
+		return nil, err
 	}
+
+	lb.HorAlign = types.AlignLeft
+	if q := d.IntEntry("Q"); q != nil {
+		lb.HorAlign = types.HAlignment(*q)
+	}
+
+	bgCol, boCol, err := calcColsFromMK(ctx, d)
+	if err != nil {
+		return nil, err
+	}
+	lb.BgCol = bgCol
 
 	var b Border
+	boWidth := calcBorderWidth(d)
 	if boWidth > 0 {
 		b.Width = boWidth
-		b.SetCol(boCol)
+		b.SetCol(*boCol)
 	}
 	lb.Border = &b
 

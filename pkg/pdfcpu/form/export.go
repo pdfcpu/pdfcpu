@@ -436,19 +436,20 @@ func header(xRefTable *model.XRefTable, source string) Header {
 	return h
 }
 
-func fieldsForAnnots(xRefTable *model.XRefTable, annots, fields types.Array) ([]string, map[string]types.IndirectRef, error) {
+func fieldsForAnnots(xRefTable *model.XRefTable, annots, fields types.Array) ([]string, map[string]types.IndirectRef, map[string]*string, error) {
 
 	var ids []string
 	m := map[string]types.IndirectRef{}
+	tm := map[string]*string{}
 	var prevId string
 
 	for _, v := range annots {
 
 		indRef := v.(types.IndirectRef)
 
-		ok, pIndRef, id, err := isField(xRefTable, indRef, fields)
+		ok, pIndRef, id, ft, err := isField(xRefTable, indRef, fields)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		if !ok {
 			continue
@@ -459,13 +460,15 @@ func fieldsForAnnots(xRefTable *model.XRefTable, annots, fields types.Array) ([]
 		}
 		m[id] = indRef
 
+		tm[id] = ft
+
 		if id != prevId {
 			ids = append(ids, id)
 			prevId = id
 		}
 	}
 
-	return ids, m, nil
+	return ids, m, tm, nil
 }
 
 // ExportForm extracts form data originating from source from xRefTable and writes a JSON representation to w.
@@ -500,7 +503,7 @@ func ExportForm(xRefTable *model.XRefTable, source string, w io.Writer) (bool, e
 			return false, err
 		}
 
-		ids, fieldMap, err := fieldsForAnnots(xRefTable, arr, fields)
+		ids, fieldMap, typeMap, err := fieldsForAnnots(xRefTable, arr, fields)
 		if err != nil {
 			return false, err
 		}
@@ -523,9 +526,12 @@ func ExportForm(xRefTable *model.XRefTable, source string, w io.Writer) (bool, e
 				locked = uint(primitives.FieldFlags(*ff))&uint(primitives.FieldReadOnly) > 0
 			}
 
-			ft := d.NameEntry("FT")
+			ft := typeMap[id]
 			if ft == nil {
-				return false, errors.New("pdfcpu: corrupt form field: missing entry FT")
+				ft = d.NameEntry("FT")
+				if ft == nil {
+					return false, errors.New("pdfcpu: corrupt form field: missing entry FT")
+				}
 			}
 
 			switch *ft {

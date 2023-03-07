@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/mattn/go-runewidth"
-	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	pdffont "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
@@ -52,32 +51,6 @@ type Field struct {
 	dv     string
 	v      string
 	opts   string
-}
-
-// FontResDict returns form dict's font resource dict.
-func FontResDict(xRefTable *model.XRefTable) (types.Dict, error) {
-
-	d := xRefTable.AcroForm
-	if len(d) == 0 {
-		return nil, nil
-	}
-
-	o, found := d.Find("DR")
-	if !found {
-		return nil, nil
-	}
-
-	resDict, err := xRefTable.DereferenceDict(o)
-	if err != nil || len(resDict) == 0 {
-		return nil, err
-	}
-
-	o, found = resDict.Find("Font")
-	if !found {
-		return nil, nil
-	}
-
-	return xRefTable.DereferenceDict(o)
 }
 
 func fields(xRefTable *model.XRefTable) (types.Array, error) {
@@ -145,43 +118,50 @@ func fullyQualifiedFieldName(xRefTable *model.XRefTable, indRef types.IndirectRe
 	return true, nil
 }
 
-func isField(xRefTable *model.XRefTable, ir1 types.IndirectRef, fields types.Array) (bool, *types.IndirectRef, string, error) {
+func isField(xRefTable *model.XRefTable, ir1 types.IndirectRef, fields types.Array) (bool, *types.IndirectRef, string, *string, error) {
 
 	d, err := xRefTable.DereferenceDict(ir1)
 	if err != nil {
-		return false, nil, "", err
+		return false, nil, "", nil, err
 	}
 	if len(d) == 0 {
-		return false, nil, "", nil
+		return false, nil, "", nil, nil
 	}
 
-	var path string
+	var (
+		path string
+		ft   *string
+	)
 
 	ir := d.IndirectRefEntry("Parent")
 	if ir != nil {
 		dp, err := xRefTable.DereferenceDict(*ir)
 		if err != nil {
-			return false, nil, "", err
+			return false, nil, "", nil, err
 		}
 		if len(dp) == 0 {
-			return false, nil, "", nil
+			return false, nil, "", nil, nil
 		}
-		ff := dp.IntEntry("Ff")
-		if ff != nil {
+		ft = dp.NameEntry("FT")
+		if ft != nil && *ft == "Btn" {
 			// rbg
 			ok, err := fullyQualifiedFieldName(xRefTable, *ir, fields, &path)
 			if !ok || err != nil {
-				return false, nil, "", err
+				return false, nil, "", nil, err
 			}
-			return true, ir, path, nil
+			return true, ir, path, ft, nil
 		}
 	}
 
 	ok, err := fullyQualifiedFieldName(xRefTable, ir1, fields, &path)
 	if !ok || err != nil {
-		return false, nil, "", err
+		return false, nil, "", nil, err
 	}
-	return true, nil, path, nil
+
+	if ft == nil {
+		ft = d.NameEntry("FT")
+	}
+	return true, nil, path, ft, nil
 }
 
 func extractStringSlice(a types.Array) ([]string, error) {
@@ -262,7 +242,7 @@ func ListFormFields(ctx *model.Context) ([]string, error) {
 
 		for _, ir := range *(wAnnots.IndRefs) {
 
-			ok, pIndRef, id, err := isField(xRefTable, ir, fields)
+			ok, pIndRef, id, ft, err := isField(xRefTable, ir, fields)
 			if err != nil {
 				return nil, err
 			}
@@ -299,9 +279,11 @@ func ListFormFields(ctx *model.Context) ([]string, error) {
 			}
 			f.locked = locked
 
-			ft := d.NameEntry("FT")
 			if ft == nil {
-				return nil, errors.Errorf("pdfcpu: corrupt form field %s: missing entry FT\n%s", f.id, d)
+				ft = d.NameEntry("FT")
+				if ft == nil {
+					return nil, errors.Errorf("pdfcpu: corrupt form field %s: missing entry FT\n%s", f.id, d)
+				}
 			}
 
 			switch *ft {
@@ -317,8 +299,9 @@ func ListFormFields(ctx *model.Context) ([]string, error) {
 				}
 				if dv != "Off" {
 					if w := runewidth.StringWidth(dv); w > defMax {
-						defMax, def = w, true
+						defMax = w
 					}
+					def = true
 					f.dv = dv
 				}
 
@@ -331,8 +314,9 @@ func ListFormFields(ctx *model.Context) ([]string, error) {
 						}
 						if v != "Off" {
 							if w := runewidth.StringWidth(v); w > valMax {
-								valMax, val = w, true
+								valMax = w
 							}
+							val = true
 							f.v = v
 						}
 					}
@@ -371,8 +355,9 @@ func ListFormFields(ctx *model.Context) ([]string, error) {
 						if o.(types.Name) == "Yes" {
 							v := "Yes"
 							if len(v) > valMax {
-								valMax, val = len(v), true
+								valMax = len(v)
 							}
+							val = true
 							f.v = v
 						}
 					}
@@ -380,9 +365,6 @@ func ListFormFields(ctx *model.Context) ([]string, error) {
 
 			case "Ch":
 				ff := d.IntEntry("Ff")
-				//if ff == nil {
-				//	return nil, errors.New("pdfcpu: corrupt form field: missing entry Ff")
-				//}
 				vv, err := parseOptions(xRefTable, d)
 				if err != nil {
 					return nil, err
@@ -399,8 +381,9 @@ func ListFormFields(ctx *model.Context) ([]string, error) {
 							return nil, err
 						}
 						if w := runewidth.StringWidth(v); w > valMax {
-							valMax, val = w, true
+							valMax = w
 						}
+						val = true
 						f.v = v
 					}
 					if sl := d.StringLiteralEntry("DV"); sl != nil {
@@ -409,8 +392,9 @@ func ListFormFields(ctx *model.Context) ([]string, error) {
 							return nil, err
 						}
 						if w := runewidth.StringWidth(dv); w > defMax {
-							defMax, def = w, true
+							defMax = w
 						}
+						def = true
 						f.dv = dv
 					}
 				} else {
@@ -423,8 +407,9 @@ func ListFormFields(ctx *model.Context) ([]string, error) {
 								return nil, err
 							}
 							if w := runewidth.StringWidth(v); w > valMax {
-								valMax, val = w, true
+								valMax = w
 							}
+							val = true
 							f.v = v
 						}
 						if sl := d.StringLiteralEntry("DV"); sl != nil {
@@ -433,8 +418,9 @@ func ListFormFields(ctx *model.Context) ([]string, error) {
 								return nil, err
 							}
 							if w := runewidth.StringWidth(dv); w > defMax {
-								defMax, def = w, true
+								defMax = w
 							}
+							def = true
 							f.dv = dv
 						}
 					} else {
@@ -446,6 +432,7 @@ func ListFormFields(ctx *model.Context) ([]string, error) {
 						if w := runewidth.StringWidth(v); w > valMax {
 							valMax = w
 						}
+						val = true
 						f.v = v
 						vv, err = parseStringLiteralArray(xRefTable, d, "DV")
 						if err != nil {
@@ -453,8 +440,9 @@ func ListFormFields(ctx *model.Context) ([]string, error) {
 						}
 						dv := strings.Join(vv, ",")
 						if w := runewidth.StringWidth(dv); w > defMax {
-							defMax, def = w, true
+							defMax = w
 						}
+						def = true
 						f.dv = dv
 					}
 				}
@@ -472,8 +460,9 @@ func ListFormFields(ctx *model.Context) ([]string, error) {
 						v += "\\n"
 					}
 					if w := runewidth.StringWidth(v); w > valMax {
-						valMax, val = w, true
+						valMax = w
 					}
+					val = true
 					f.v = v
 				}
 				if o, found := d.Find("DV"); found {
@@ -489,8 +478,9 @@ func ListFormFields(ctx *model.Context) ([]string, error) {
 					}
 
 					if w := runewidth.StringWidth(dv); w > defMax {
-						defMax, def = w, true
+						defMax = w
 					}
+					def = true
 					f.dv = dv
 				}
 				df, err := extractDateFormat(xRefTable, d)
@@ -824,8 +814,6 @@ func RemoveFormFields(ctx *model.Context, fieldIDs []string) (bool, error) {
 
 	for i := 1; i <= xRefTable.PageCount && len(m) > 0; i++ {
 
-		// arr, err := xRefTable.AnnotationsForPage(i)
-
 		d, _, _, err := xRefTable.PageDict(i, false)
 		if err != nil {
 			return false, err
@@ -875,85 +863,85 @@ func RemoveFormFields(ctx *model.Context, fieldIDs []string) (bool, error) {
 	return ok, nil
 }
 
-func formFontNameAndLangForID(xRefTable *model.XRefTable, indRef types.IndirectRef) (*string, *string, error) {
+func renderComboBoxAP(ctx *model.Context, d types.Dict, v string, fonts map[string]types.IndirectRef) error {
 
-	objNr := int(indRef.ObjectNumber)
-	fontDict, err := xRefTable.DereferenceDict(indRef)
-	if err != nil || fontDict == nil {
-		return nil, nil, err
-	}
+	xRefTable := ctx.XRefTable
 
-	_, fName, err := pdffont.Name(xRefTable, fontDict, objNr)
+	cb, fontIndRef, err := primitives.NewComboBox(ctx, d, v, fonts)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
-	var fLang *string
-	if font.IsUserFont(fName) {
-		fLang, err = pdffont.Lang(xRefTable, fontDict)
-		if err != nil {
-			return nil, nil, err
-		}
+	irN, err := primitives.ComboBoxN(xRefTable, cb, *fontIndRef)
+	if err != nil {
+		return err
 	}
 
-	return &fName, fLang, nil
+	d["AP"] = types.Dict(map[string]types.Object{"N": *irN})
+
+	return nil
 }
 
-func extractFontDetails(xRefTable *model.XRefTable, indRef types.IndirectRef, fonts map[string]types.IndirectRef) (string, string, string, error) {
+func refreshListBoxAP(ctx *model.Context, d types.Dict, opts []string, ind types.Array, fonts map[string]types.IndirectRef) error {
 
-	sd, _, _ := xRefTable.DereferenceStreamDict(indRef)
-
-	d := sd.DictEntry("Resources")
-	if d == nil {
-		return "", "", "", errors.New("pdfcpu: missing resource dict")
+	apd := d.DictEntry("AP")
+	if apd == nil {
+		return nil
 	}
 
-	d1 := d.DictEntry("Font")
-	if d1 == nil {
-		return "", "", "", errors.New("pdfcpu: missing font resource dict")
+	irN := apd.IndirectRefEntry("N")
+	if irN == nil {
+		return nil
 	}
 
-	if len(d1) != 1 {
-		return "", "", "", errors.New("pdfcpu: corrupt form resource dict")
-	}
-
-	var fontID string
-	var ir types.IndirectRef
-	for k, v := range d1 {
-		fontID = k
-		ir = v.(types.IndirectRef)
-	}
-
-	fName, fLang, err := formFontNameAndLangForID(xRefTable, ir)
+	lb, err := primitives.NewListBox(ctx, d, irN, opts, ind, fonts)
 	if err != nil {
-		return "", "", "", err
+		return err
 	}
 
-	if fName == nil {
-		return "", "", "", errors.Errorf("pdfcpu: Unable to detect fontName for: %s", fontID)
+	return lb.RefreshN(ctx.XRefTable, irN)
+}
+
+func refreshTextFieldAP(ctx *model.Context, d types.Dict, s string, fonts map[string]types.IndirectRef) error {
+
+	apd := d.DictEntry("AP")
+	if apd == nil {
+		return nil
 	}
 
-	var lang string
-	if fLang != nil {
-		lang = *fLang
+	irN := apd.IndirectRefEntry("N")
+	if irN == nil {
+		return nil
 	}
 
-	if font.IsUserFont(*fName) {
-		d, err := xRefTable.DereferenceDict(ir)
-		if err != nil {
-			return "", "", "", err
-		}
-		if enc := d.NameEntry("Encoding"); *enc == "Identity-H" {
-			indRef, ok := fonts[*fName]
-			if !ok {
-				fonts[*fName] = ir
-			} else if indRef != ir {
-				return "", "", "", errors.Errorf("pdfcpu: %s: duplicate fontDicts", *fName)
-			}
-		}
+	ff := d.IntEntry("Ff")
+	multiLine := ff != nil && uint(primitives.FieldFlags(*ff))&uint(primitives.FieldMultiline) > 0
+	tf, err := primitives.NewTextField(ctx, d, irN, s, multiLine, fonts)
+	if err != nil {
+		return err
 	}
 
-	return fontID, *fName, lang, nil
+	return tf.RefreshN(ctx.XRefTable, irN)
+}
+
+func refreshDateFieldAP(ctx *model.Context, d types.Dict, s string, fonts map[string]types.IndirectRef) error {
+
+	apd := d.DictEntry("AP")
+	if apd == nil {
+		return nil
+	}
+
+	irN := apd.IndirectRefEntry("N")
+	if irN == nil {
+		return nil
+	}
+
+	df, err := primitives.NewDateField(ctx, d, irN, s, fonts)
+	if err != nil {
+		return err
+	}
+
+	return df.RefreshN(ctx.XRefTable, irN)
 }
 
 // ResetFormFields clears or resets all form fields contained in fieldIDs to its default.
@@ -1114,29 +1102,9 @@ func ResetFormFields(ctx *model.Context, fieldIDs []string) (bool, error) {
 			}
 
 			if primitives.FieldFlags(*ff)&primitives.FieldCombo == 0 {
-
-				lb, err := primitives.NewListBox(xRefTable, d, opts, ind)
-				if err != nil {
+				if err := refreshListBoxAP(ctx, d, opts, ind, fonts); err != nil {
 					return false, err
 				}
-
-				apd := d.DictEntry("AP")
-				if apd != nil {
-					irN := apd.IndirectRefEntry("N")
-					if irN != nil {
-						id, name, lang, err := extractFontDetails(xRefTable, *irN, fonts)
-						if err != nil {
-							return false, err
-						}
-						lb.SetFontID(id)
-						lb.Font.Name = name
-						lb.Font.Lang = lang
-						if err := lb.RefreshN(xRefTable, irN); err != nil {
-							return false, err
-						}
-					}
-				}
-
 			}
 
 		case "Tx":
@@ -1162,45 +1130,16 @@ func ResetFormFields(ctx *model.Context, fieldIDs []string) (bool, error) {
 				isDate = err == nil
 			}
 
-			var tf *primitives.TextField
-
-			var df *primitives.DateField
-			var err error
 			if isDate {
-				df, err = primitives.NewDateField(xRefTable, d, s)
+				err = refreshDateFieldAP(ctx, d, s, fonts)
 			} else {
-				ff := d.IntEntry("Ff")
-				multiLine := ff != nil && uint(primitives.FieldFlags(*ff))&uint(primitives.FieldMultiline) > 0
-				tf, err = primitives.NewTextField(xRefTable, d, s, multiLine)
+				err = refreshTextFieldAP(ctx, d, s, fonts)
 			}
+
 			if err != nil {
 				return false, err
 			}
 
-			apd := d.DictEntry("AP")
-			if apd != nil {
-				irN := apd.IndirectRefEntry("N")
-				if irN != nil {
-					id, name, lang, err := extractFontDetails(xRefTable, *irN, fonts)
-					if err != nil {
-						return false, err
-					}
-					if isDate {
-						df.SetFontID(id)
-						df.Font.Name = name
-						df.Font.Lang = lang
-						err = df.RefreshN(xRefTable, irN)
-					} else {
-						tf.SetFontID(id)
-						tf.Font.Name = name
-						tf.Font.Lang = lang
-						err = tf.RefreshN(xRefTable, irN)
-					}
-					if err != nil {
-						return false, err
-					}
-				}
-			}
 		}
 
 		ok = true
@@ -1224,96 +1163,6 @@ func ResetFormFields(ctx *model.Context, fieldIDs []string) (bool, error) {
 	}
 
 	return ok, nil
-}
-
-func formFontIndRef(xRefTable *model.XRefTable, fontID string) (*types.IndirectRef, error) {
-	d, err := FontResDict(xRefTable)
-	if err != nil {
-		return nil, err
-	}
-
-	for k, v := range d {
-		if k == fontID {
-			indRef, _ := v.(types.IndirectRef)
-			return &indRef, nil
-		}
-	}
-
-	return nil, errors.Errorf("pdfcpu: missing form font %s", fontID)
-}
-
-func fontIndRef(fName string, ctx *model.Context, fonts map[string]types.IndirectRef) (*types.IndirectRef, error) {
-
-	indRef, ok := fonts[fName]
-	if ok {
-		d, err := ctx.DereferenceDict(indRef)
-		if err != nil {
-			return nil, err
-		}
-		if enc := d.NameEntry("Encoding"); *enc == "Identity-H" {
-			return &indRef, nil
-		}
-	}
-
-	for objNr, fo := range ctx.Optimize.FontObjects {
-		if fo.FontName == fName {
-			indRef := types.NewIndirectRef(objNr, 0)
-			d, err := ctx.DereferenceDict(*indRef)
-			if err != nil {
-				return nil, err
-			}
-			if enc := d.NameEntry("Encoding"); *enc == "Identity-H" {
-				fonts[fName] = *indRef
-				return indRef, nil
-			}
-		}
-	}
-
-	return nil, nil
-}
-
-func extractFormFontDetails(ctx *model.Context, fontID string, fonts map[string]types.IndirectRef) (string, string, string, *types.IndirectRef, error) {
-
-	xRefTable := ctx.XRefTable
-
-	ir, err := formFontIndRef(xRefTable, fontID)
-	if err != nil {
-		return "", "", "", nil, err
-	}
-
-	fName, fLang, err := formFontNameAndLangForID(xRefTable, *ir)
-	if err != nil {
-		return "", "", "", nil, err
-	}
-
-	if fName == nil {
-		return "", "", "", nil, errors.Errorf("pdfcpu: Unable to detect fontName for: %s", fontID)
-	}
-
-	var lang string
-	if fLang != nil {
-		lang = *fLang
-	}
-
-	if font.IsUserFont(*fName) {
-		d, err := xRefTable.DereferenceDict(*ir)
-		if err != nil {
-			return "", "", "", nil, err
-		}
-		if enc := d.NameEntry("Encoding"); *enc == "Identity-H" {
-			indRef, ok := fonts[*fName]
-			if !ok {
-				fonts[*fName] = *ir
-			} else if indRef != *ir {
-				return "", "", "", nil, errors.Errorf("pdfcpu: %s: duplicate fontDicts", *fName)
-			}
-		} else {
-			ir, err = fontIndRef(*fName, ctx, fonts)
-			return fontID, *fName, lang, ir, err
-		}
-	}
-
-	return fontID, *fName, lang, ir, nil
 }
 
 func lockFormField(d types.Dict) {
@@ -1371,39 +1220,25 @@ func LockFormFields(ctx *model.Context, fieldIDs []string) (bool, error) {
 		if ft == nil {
 			return false, errors.New("pdfcpu: corrupt form field: missing entry FT")
 		}
+
 		if *ft == "Ch" {
+
 			ff := d.IntEntry("Ff")
 			if ff != nil && primitives.FieldFlags(*ff)&primitives.FieldCombo > 0 {
-				cb, err := primitives.NewComboBox(xRefTable, d, nil)
-				if err != nil {
-					return false, err
-				}
 
-				vOld := ""
+				v := ""
 				if sl := d.StringLiteralEntry("V"); sl != nil {
 					s, err := types.StringLiteralToString(*sl)
 					if err != nil {
 						return false, err
 					}
-					vOld = s
+					v = s
 				}
-				cb.Value = vOld
 
-				id, name, lang, ir, err := extractFormFontDetails(ctx, cb.FontID, fonts)
-				if err != nil {
+				if err := renderComboBoxAP(ctx, d, v, fonts); err != nil {
 					return false, err
 				}
-				if ir != nil {
-					cb.SetFontID(id)
-					cb.Font.Name = name
-					cb.Font.Lang = lang
-					cb.RTL = pdffont.RTL(lang)
-					irN, err := primitives.ComboBoxN(xRefTable, cb, *ir)
-					if err != nil {
-						return false, err
-					}
-					d["AP"] = types.Dict(map[string]types.Object{"N": *irN})
-				}
+
 			}
 		}
 

@@ -221,28 +221,20 @@ func (tf *TextField) validate() error {
 	}
 
 	if err := tf.validateLabel(); err != nil {
-
+		return err
 	}
 
 	return tf.validateTab()
 }
 
-func NewTextField(xRefTable *model.XRefTable, d types.Dict, v string, multiLine bool) (*TextField, error) {
-	tf := &TextField{Value: v, Multiline: multiLine}
+func (tf *TextField) calcFontFromDA(ctx *model.Context, da []string, fonts map[string]types.IndirectRef) error {
 
-	bb, _ := types.RectForArray(d.ArrayEntry("Rect"))
-	tf.BoundingBox = types.RectForDim(bb.Width(), bb.Height())
+	var (
+		f      FormFont
+		fontID string
+	)
 
-	var f FormFont
-
-	s := d.StringEntry("DA")
-	if s == nil {
-		return nil, errors.New("pdfcpu: textfield missing \"DA\"")
-	}
-	da := strings.Split(*s, " ")
-
-	var fontID string
-
+	f.SetCol(color.Black)
 	for i := 0; i < len(da); i++ {
 		if da[i] == "Tf" {
 			fontID = da[i-2][1:]
@@ -256,49 +248,113 @@ func NewTextField(xRefTable *model.XRefTable, d types.Dict, v string, multiLine 
 			b, _ := strconv.ParseFloat(da[i-1], 32)
 			f.SetCol(color.SimpleColor{R: float32(r), G: float32(g), B: float32(b)})
 		}
+		if da[i] == "g" {
+			g, _ := strconv.ParseFloat(da[i-1], 32)
+			f.SetCol(color.SimpleColor{R: float32(g), G: float32(g), B: float32(g)})
+		}
 	}
+
+	if len(tf.fontID) == 0 {
+		return errors.New("pdfcpu: unable to detect font id")
+	}
+
 	tf.Font = &f
 
-	// tf.horAlign
-	q := d.IntEntry("Q")
-	tf.HorAlign = types.AlignLeft
-	if q != nil {
-		tf.HorAlign = types.HAlignment(*q)
-	}
-
-	// tf.bgCol, tf.boCol
-	boCol := color.Black
-
-	o, err := xRefTable.DereferenceDictEntry(d, "MK")
+	_, name, lang, fontIndRef, err := extractFormFontDetails(ctx, tf.fontID, fonts)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	if o != nil {
-		d1, _ := o.(types.Dict)
+	if fontIndRef == nil {
+		return errors.New("pdfcpu: unable to detect indirect reference for font")
+	}
+
+	tf.Font.Name = name
+	tf.Font.Lang = lang
+	tf.RTL = pdffont.RTL(lang)
+
+	return nil
+}
+
+func calcColsFromMK(ctx *model.Context, d types.Dict) (*color.SimpleColor, *color.SimpleColor, error) {
+
+	var bgCol, boCol *color.SimpleColor
+
+	if o, found := d.Find("MK"); found {
+		d1, err := ctx.DereferenceDict(o)
+		if err != nil {
+			return nil, nil, err
+		}
 		if len(d1) > 0 {
-
-			if arr := d1.ArrayEntry("BG"); arr != nil {
-				bgCol := (color.NewSimpleColorForArray(arr))
-				tf.BgCol = &bgCol
+			if arr := d1.ArrayEntry("BG"); len(arr) == 3 {
+				sc := color.NewSimpleColorForArray(arr)
+				bgCol = &sc
 			}
-
-			if arr := d1.ArrayEntry("BC"); arr != nil {
-				boCol = (color.NewSimpleColorForArray(arr))
+			if arr := d1.ArrayEntry("BC"); len(arr) == 3 {
+				sc := color.NewSimpleColorForArray(arr)
+				boCol = &sc
 			}
 		}
 	}
 
-	// tf.Border
-	boWidth := 0
-	if arr := d.ArrayEntry("Border"); arr != nil {
+	return bgCol, boCol, nil
+}
+
+func calcBorderWidth(d types.Dict) int {
+	w := 0
+	if arr := d.ArrayEntry("Border"); len(arr) == 3 {
 		// 0, 1 ??
-		boWidth = int(arr[2].(types.Float).Value())
+		bw, ok := arr[2].(types.Integer)
+		if ok {
+			w = bw.Value()
+		} else {
+			w = int(arr[2].(types.Float).Value())
+		}
+	}
+	return w
+}
+
+func NewTextField(
+	ctx *model.Context,
+	d types.Dict,
+	irN *types.IndirectRef,
+	v string,
+	multiLine bool,
+	fonts map[string]types.IndirectRef) (*TextField, error) {
+
+	tf := &TextField{Value: v, Multiline: multiLine}
+
+	bb, err := types.RectForArray(d.ArrayEntry("Rect"))
+	if err != nil {
+		return nil, err
 	}
 
+	tf.BoundingBox = types.RectForDim(bb.Width(), bb.Height())
+
+	s := d.StringEntry("DA")
+	if s == nil {
+		return nil, errors.New("pdfcpu: textfield missing \"DA\"")
+	}
+
+	if err := tf.calcFontFromDA(ctx, strings.Split(*s, " "), fonts); err != nil {
+		return nil, err
+	}
+
+	tf.HorAlign = types.AlignLeft
+	if q := d.IntEntry("Q"); q != nil {
+		tf.HorAlign = types.HAlignment(*q)
+	}
+
+	bgCol, boCol, err := calcColsFromMK(ctx, d)
+	if err != nil {
+		return nil, err
+	}
+	tf.BgCol = bgCol
+
 	var b Border
+	boWidth := calcBorderWidth(d)
 	if boWidth > 0 {
 		b.Width = boWidth
-		b.SetCol(boCol)
+		b.SetCol(*boCol)
 	}
 	tf.Border = &b
 

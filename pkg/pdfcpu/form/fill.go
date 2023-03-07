@@ -80,7 +80,7 @@ func addImages(ctx *model.Context, pages map[string]*Page) ([]*model.Page, error
 
 	var pageNrs []int
 
-	for pageNr, _ := range pages {
+	for pageNr := range pages {
 		nr, err := strconv.Atoi(pageNr)
 		if err != nil {
 			return nil, errors.Errorf("pdfcpu: invalid page number: %s", pageNr)
@@ -461,349 +461,367 @@ func FillForm(
 	}
 
 	fonts := map[string]types.IndirectRef{}
+	pIndRefs := map[types.IndirectRef]bool{}
 
 	var ok bool
 
-	for _, ir := range fields {
-
-		d, err := xRefTable.DereferenceDict(ir)
-		if err != nil {
-			return false, nil, err
-		}
-		if len(d) == 0 {
+	for i := 1; i <= xRefTable.PageCount; i++ {
+		pgAnnots := xRefTable.PageAnnots[i]
+		if len(pgAnnots) == 0 {
 			continue
 		}
-		sl := d.StringLiteralEntry("T")
-		if sl == nil {
-			return false, nil, errors.New("pdfcpu: corrupt form field: missing entry T")
-		}
-		id, err := types.StringLiteralToString(*sl)
-		if err != nil {
-			return false, nil, err
+		wAnnots, found := pgAnnots[model.AnnWidget]
+		if !found {
+			continue
 		}
 
-		var locked bool
-		ff := d.IntEntry("Ff")
-		if ff != nil {
-			locked = uint(primitives.FieldFlags(*ff))&uint(primitives.FieldReadOnly) > 0
-		}
+		for _, ir := range *(wAnnots.IndRefs) {
 
-		ft := d.NameEntry("FT")
-		if ft == nil {
-			return false, nil, errors.New("pdfcpu: corrupt form field: missing entry FT")
-		}
-
-		switch *ft {
-
-		case "Btn":
-			if len(d.ArrayEntry("Kids")) > 0 {
-				vv, lock, found := fillDetails(id, FTRadioButtonGroup, format)
-				if !found {
-					continue
-				}
-				if locked {
-					if !lock {
-						unlockFormField(d)
-						ok = true
-					}
-				} else {
-					if lock {
-						lockFormField(d)
-						ok = true
-					}
-				}
-				vNew := vv[0]
-				vOld := ""
-				if s := d.NameEntry("V"); s != nil {
-					n, err := types.DecodeName(*s)
-					if err != nil {
-						return false, nil, err
-					}
-					if n != "Off" {
-						vOld = n
-					}
-				}
-				if vNew == vOld {
-					continue
-				}
-				s := types.EncodeName(vNew)
-				v := types.Name(s)
-				d["V"] = v
-
-				for _, o := range d.ArrayEntry("Kids") {
-					d, err := xRefTable.DereferenceDict(o)
-					if err != nil {
-						return false, nil, err
-					}
-					d1 := d.DictEntry("AP")
-					if d1 == nil {
-						return false, nil, errors.New("pdfcpu: corrupt form field: missing entry AP")
-					}
-					d2 := d1.DictEntry("N")
-					if d2 == nil {
-						return false, nil, errors.New("pdfcpu: corrupt AP field: missing entry N")
-					}
-					for k := range d2 {
-						k, err := types.DecodeName(k)
-						if err != nil {
-							return false, nil, err
-						}
-						if k != "Off" {
-							d["AS"] = types.Name("Off")
-							if k == vNew {
-								d["AS"] = v
-							}
-							break
-						}
-					}
-				}
-				ok = true
-
-			} else {
-
-				vv, lock, found := fillDetails(id, FTCheckBox, format)
-				if !found {
-					continue
-				}
-				if locked {
-					if !lock {
-						unlockFormField(d)
-						ok = true
-					}
-				} else {
-					if lock {
-						lockFormField(d)
-						ok = true
-					}
-				}
-				s := strings.ToLower(vv[0])
-				vNew := strings.HasPrefix(s, "t")
-				vOld := false
-				if o, found := d.Find("V"); found {
-					vOld = o.(types.Name) == "Yes"
-				}
-				if vNew == vOld {
-					continue
-				}
-				v := types.Name("Off")
-				if vNew {
-					v = types.Name("Yes")
-				}
-				d["V"] = v
-				if _, found := d.Find("AS"); found {
-					d["AS"] = v
-				}
-				ok = true
-			}
-
-		case "Ch":
-			if ff == nil {
-				return false, nil, errors.New("pdfcpu: corrupt form field: missing entry Ff")
-			}
-			opts, err := parseOptions(xRefTable, d)
+			found, pIndRef, id, ft, err := isField(xRefTable, ir, fields)
 			if err != nil {
 				return false, nil, err
 			}
-			if len(opts) == 0 {
-				return false, nil, errors.New("pdfcpu: missing Opts")
-			}
-
-			if primitives.FieldFlags(*ff)&primitives.FieldCombo > 0 {
-				vv, lock, found := fillDetails(id, FTComboBox, format)
-				if !found {
-					continue
-				}
-				vNew := vv[0]
-				if locked {
-					if !lock {
-						unlockFormField(d)
-						d.Delete("AP")
-						ok = true
-					}
-				} else if lock {
-					lockFormField(d)
-
-					cb, err := primitives.NewComboBox(xRefTable, d, opts)
-					if err != nil {
-						return false, nil, err
-					}
-					cb.Value = vNew
-
-					id, name, lang, ir, err := extractFormFontDetails(ctx, cb.FontID, fonts)
-					if err != nil {
-						return false, nil, err
-					}
-					if ir != nil {
-						cb.SetFontID(id)
-						cb.Font.Name = name
-						cb.Font.Lang = lang
-						cb.RTL = pdffont.RTL(lang)
-						irN, err := primitives.ComboBoxN(xRefTable, cb, *ir)
-						if err != nil {
-							return false, nil, err
-						}
-						d["AP"] = types.Dict(map[string]types.Object{"N": *irN})
-					}
-					ok = true
-				}
-
-				vOld := ""
-				if sl := d.StringLiteralEntry("V"); sl != nil {
-					s, err := types.StringLiteralToString(*sl)
-					if err != nil {
-						return false, nil, err
-					}
-					vOld = s
-				}
-				if vNew == vOld {
-					continue
-				}
-				s, err := types.EscapeUTF16String(vNew)
-				if err != nil {
-					return false, nil, err
-				}
-
-				ind := types.Array{}
-				for i, o := range opts {
-					if o == vNew {
-						ind = append(ind, types.Integer(i))
-						break
-					}
-				}
-				if len(ind) > 0 {
-					d["I"] = ind
-					d["V"] = types.StringLiteral(*s)
-				} else {
-					d.Delete("I")
-					d.Delete("V")
-				}
-				ok = true
-				continue
-			}
-
-			vNew, lock, found := fillDetails(id, FTListBox, format)
 			if !found {
 				continue
 			}
 
-			var vOld []string
-			multi := primitives.FieldFlags(*ff)&primitives.FieldMultiselect > 0
-			if !multi {
-				if sl := d.StringLiteralEntry("V"); sl != nil {
-					s, err := types.StringLiteralToString(*sl)
-					if err != nil {
-						return false, nil, err
-					}
-					vOld = []string{s}
+			if pIndRef != nil {
+				if pIndRefs[*pIndRef] {
+					continue
 				}
-			} else {
-				ss, err := parseStringLiteralArray(xRefTable, d, "V")
+				pIndRefs[*pIndRef] = true
+				ir = *pIndRef
+			}
+
+			d, err := xRefTable.DereferenceDict(ir)
+			if err != nil {
+				return false, nil, err
+			}
+			if len(d) == 0 {
+				continue
+			}
+
+			var locked bool
+			ff := d.IntEntry("Ff")
+			if ff != nil {
+				locked = uint(primitives.FieldFlags(*ff))&uint(primitives.FieldReadOnly) > 0
+			}
+
+			if ft == nil {
+				ft = d.NameEntry("FT")
+				if ft == nil {
+					return false, nil, errors.Errorf("pdfcpu: corrupt form field %s: missing entry FT\n%s", id, d)
+				}
+			}
+
+			switch *ft {
+
+			case "Btn":
+				if len(d.ArrayEntry("Kids")) > 0 {
+					vv, lock, found := fillDetails(id, FTRadioButtonGroup, format)
+					if !found {
+						continue
+					}
+					if locked {
+						if !lock {
+							unlockFormField(d)
+							ok = true
+						}
+					} else {
+						if lock {
+							lockFormField(d)
+							ok = true
+						}
+					}
+					vNew := vv[0]
+					vOld := ""
+					if s := d.NameEntry("V"); s != nil {
+						n, err := types.DecodeName(*s)
+						if err != nil {
+							return false, nil, err
+						}
+						if n != "Off" {
+							vOld = n
+						}
+					}
+					if vNew == vOld {
+						continue
+					}
+					s := types.EncodeName(vNew)
+					v := types.Name(s)
+					d["V"] = v
+
+					for _, o := range d.ArrayEntry("Kids") {
+						d, err := xRefTable.DereferenceDict(o)
+						if err != nil {
+							return false, nil, err
+						}
+						d1 := d.DictEntry("AP")
+						if d1 == nil {
+							return false, nil, errors.New("pdfcpu: corrupt form field: missing entry AP")
+						}
+						d2 := d1.DictEntry("N")
+						if d2 == nil {
+							return false, nil, errors.New("pdfcpu: corrupt AP field: missing entry N")
+						}
+						for k := range d2 {
+							k, err := types.DecodeName(k)
+							if err != nil {
+								return false, nil, err
+							}
+							if k != "Off" {
+								d["AS"] = types.Name("Off")
+								if k == vNew {
+									d["AS"] = v
+								}
+								break
+							}
+						}
+					}
+					ok = true
+
+				} else {
+
+					vv, lock, found := fillDetails(id, FTCheckBox, format)
+					if !found {
+						continue
+					}
+					if locked {
+						if !lock {
+							unlockFormField(d)
+							ok = true
+						}
+					} else {
+						if lock {
+							lockFormField(d)
+							ok = true
+						}
+					}
+					s := strings.ToLower(vv[0])
+					vNew := strings.HasPrefix(s, "t")
+					vOld := false
+					if o, found := d.Find("V"); found {
+						vOld = o.(types.Name) == "Yes"
+					}
+					if vNew == vOld {
+						continue
+					}
+					v := types.Name("Off")
+					if vNew {
+						v = types.Name("Yes")
+					}
+					d["V"] = v
+					if _, found := d.Find("AS"); found {
+						d["AS"] = v
+					}
+					ok = true
+				}
+
+			case "Ch":
+				if ff == nil {
+					return false, nil, errors.New("pdfcpu: corrupt form field: missing entry Ff")
+				}
+				opts, err := parseOptions(xRefTable, d)
 				if err != nil {
 					return false, nil, err
 				}
-				vOld = ss
-			}
-			if locked {
-				if !lock {
-					unlockFormField(d)
-					ok = true
+				if len(opts) == 0 {
+					return false, nil, errors.New("pdfcpu: missing Opts")
 				}
-				continue
-			} else {
-				if lock {
-					lockFormField(d)
+
+				if primitives.FieldFlags(*ff)&primitives.FieldCombo > 0 {
+					vv, lock, found := fillDetails(id, FTComboBox, format)
+					if !found {
+						continue
+					}
+					vNew := vv[0]
+					if locked {
+						if !lock {
+							unlockFormField(d)
+							d.Delete("AP")
+							ok = true
+						}
+					} else if lock {
+						lockFormField(d)
+						if err := renderComboBoxAP(ctx, d, vNew, fonts); err != nil {
+							return false, nil, err
+						}
+						ok = true
+					}
+
+					vOld := ""
+					if sl := d.StringLiteralEntry("V"); sl != nil {
+						s, err := types.StringLiteralToString(*sl)
+						if err != nil {
+							return false, nil, err
+						}
+						vOld = s
+					}
+					if vNew == vOld {
+						continue
+					}
+					s, err := types.EscapeUTF16String(vNew)
+					if err != nil {
+						return false, nil, err
+					}
+
+					ind := types.Array{}
+					for i, o := range opts {
+						if o == vNew {
+							ind = append(ind, types.Integer(i))
+							break
+						}
+					}
+					if len(ind) > 0 {
+						d["I"] = ind
+						d["V"] = types.StringLiteral(*s)
+					} else {
+						d.Delete("I")
+						d.Delete("V")
+					}
 					ok = true
+					continue
 				}
-			}
 
-			if types.EqualSlices(vOld, vNew) {
-				continue
-			}
+				vNew, lock, found := fillDetails(id, FTListBox, format)
+				if !found {
+					continue
+				}
 
-			ind := types.Array{}
-			if multi {
-				arr := types.Array{}
-				for _, v := range vNew {
+				var vOld []string
+				multi := primitives.FieldFlags(*ff)&primitives.FieldMultiselect > 0
+				if !multi {
+					if sl := d.StringLiteralEntry("V"); sl != nil {
+						s, err := types.StringLiteralToString(*sl)
+						if err != nil {
+							return false, nil, err
+						}
+						vOld = []string{s}
+					}
+				} else {
+					ss, err := parseStringLiteralArray(xRefTable, d, "V")
+					if err != nil {
+						return false, nil, err
+					}
+					vOld = ss
+				}
+				if locked {
+					if !lock {
+						unlockFormField(d)
+						ok = true
+					}
+					continue
+				} else {
+					if lock {
+						lockFormField(d)
+						ok = true
+					}
+				}
+
+				if types.EqualSlices(vOld, vNew) {
+					continue
+				}
+
+				ind := types.Array{}
+				if multi {
+					arr := types.Array{}
+					for _, v := range vNew {
+						for i, o := range opts {
+							if o == v {
+								ind = append(ind, types.Integer(i))
+								break
+							}
+						}
+						s, err := types.EscapeUTF16String(v)
+						if err != nil {
+							return false, nil, err
+						}
+						arr = append(arr, types.StringLiteral(*s))
+					}
+					if len(vNew) > 0 {
+						d["I"] = ind
+						d["V"] = arr
+					} else {
+						d.Delete("I")
+						d.Delete("V")
+					}
+				} else {
+					v := vNew[0]
+					s, err := types.EscapeUTF16String(v)
+					if err != nil {
+						return false, nil, err
+					}
 					for i, o := range opts {
 						if o == v {
 							ind = append(ind, types.Integer(i))
 							break
 						}
 					}
-					s, err := types.EscapeUTF16String(v)
-					if err != nil {
-						return false, nil, err
+					if len(ind) > 0 {
+						d["I"] = ind
+						d["V"] = types.StringLiteral(*s)
+					} else {
+						d.Delete("I")
+						d.Delete("V")
 					}
-					arr = append(arr, types.StringLiteral(*s))
 				}
-				if len(vNew) > 0 {
-					d["I"] = ind
-					d["V"] = arr
-				} else {
-					d.Delete("I")
-					d.Delete("V")
+
+				if err := refreshListBoxAP(ctx, d, opts, ind, fonts); err != nil {
+					return false, nil, err
 				}
-			} else {
-				v := vNew[0]
-				s, err := types.EscapeUTF16String(v)
+
+				ok = true
+
+			case "Tx":
+				df, err := extractDateFormat(xRefTable, d)
 				if err != nil {
 					return false, nil, err
 				}
-				for i, o := range opts {
-					if o == v {
-						ind = append(ind, types.Integer(i))
-						break
+				vOld := ""
+				if o, found := d.Find("V"); found {
+					sl, _ := o.(types.StringLiteral)
+					s, err := types.StringLiteralToString(sl)
+					if err != nil {
+						return false, nil, err
 					}
+					vOld = s
 				}
-				if len(ind) > 0 {
-					d["I"] = ind
+				if df != nil {
+					vv, lock, found := fillDetails(id, FTDate, format)
+					if !found {
+						continue
+					}
+					if locked {
+						if !lock {
+							unlockFormField(d)
+							ok = true
+						}
+					} else {
+						if lock {
+							lockFormField(d)
+							ok = true
+						}
+					}
+					vNew := vv[0]
+					if vNew == vOld {
+						continue
+					}
+					s, err := types.EscapeUTF16String(vNew)
+					if err != nil {
+						return false, nil, err
+					}
 					d["V"] = types.StringLiteral(*s)
-				} else {
-					d.Delete("I")
-					d.Delete("V")
-				}
-			}
 
-			lb, err := primitives.NewListBox(xRefTable, d, opts, ind)
-			if err != nil {
-				return false, nil, err
-			}
-
-			apd := d.DictEntry("AP")
-			if apd != nil {
-				irN := apd.IndirectRefEntry("N")
-				if irN != nil {
-					id, name, lang, err := extractFontDetails(xRefTable, *irN, fonts)
-					if err != nil {
+					if err := refreshDateFieldAP(ctx, d, vNew, fonts); err != nil {
 						return false, nil, err
 					}
-					lb.SetFontID(id)
-					lb.Font.Name = name
-					lb.Font.Lang = lang
-					lb.RTL = pdffont.RTL(lang)
-					if err := lb.RefreshN(xRefTable, irN); err != nil {
-						return false, nil, err
-					}
+
 					ok = true
-				}
-			}
 
-		case "Tx":
-			df, err := extractDateFormat(xRefTable, d)
-			if err != nil {
-				return false, nil, err
-			}
-			vOld := ""
-			if o, found := d.Find("V"); found {
-				sl, _ := o.(types.StringLiteral)
-				s, err := types.StringLiteralToString(sl)
-				if err != nil {
-					return false, nil, err
+					continue
 				}
-				vOld = s
-			}
-			if df != nil {
-				vv, lock, found := fillDetails(id, FTDate, format)
+
+				vv, lock, found := fillDetails(id, FTText, format)
 				if !found {
 					continue
 				}
@@ -827,80 +845,12 @@ func FillForm(
 					return false, nil, err
 				}
 				d["V"] = types.StringLiteral(*s)
-				df, err := primitives.NewDateField(xRefTable, d, vNew)
-				if err != nil {
+
+				if err := refreshTextFieldAP(ctx, d, vNew, fonts); err != nil {
 					return false, nil, err
 				}
 
-				apd := d.DictEntry("AP")
-				if apd != nil {
-					irN := apd.IndirectRefEntry("N")
-					if irN != nil {
-						id, name, lang, err := extractFontDetails(xRefTable, *irN, fonts)
-						if err != nil {
-							return false, nil, err
-						}
-						df.SetFontID(id)
-						df.Font.Name = name
-						df.Font.Lang = lang
-						err = df.RefreshN(xRefTable, irN)
-						if err != nil {
-							return false, nil, err
-						}
-						ok = true
-					}
-				}
-				continue
-			}
-
-			vv, lock, found := fillDetails(id, FTText, format)
-			if !found {
-				continue
-			}
-			if locked {
-				if !lock {
-					unlockFormField(d)
-					ok = true
-				}
-			} else {
-				if lock {
-					lockFormField(d)
-					ok = true
-				}
-			}
-			vNew := vv[0]
-			if vNew == vOld {
-				continue
-			}
-			s, err := types.EscapeUTF16String(vNew)
-			if err != nil {
-				return false, nil, err
-			}
-			d["V"] = types.StringLiteral(*s)
-			multiLine := ff != nil && uint(primitives.FieldFlags(*ff))&uint(primitives.FieldMultiline) > 0
-			tf, err := primitives.NewTextField(xRefTable, d, vNew, multiLine)
-			if err != nil {
-				return false, nil, err
-			}
-
-			apd := d.DictEntry("AP")
-			if apd != nil {
-				irN := apd.IndirectRefEntry("N")
-				if irN != nil {
-					id, name, lang, err := extractFontDetails(xRefTable, *irN, fonts)
-					if err != nil {
-						return false, nil, err
-					}
-					tf.SetFontID(id)
-					tf.Font.Name = name
-					tf.Font.Lang = lang
-					tf.RTL = pdffont.RTL(lang)
-					err = tf.RefreshN(xRefTable, irN)
-					if err != nil {
-						return false, nil, err
-					}
-					ok = true
-				}
+				ok = true
 			}
 		}
 	}
@@ -931,5 +881,4 @@ func FillForm(
 	}
 
 	return ok, pages, nil
-
 }

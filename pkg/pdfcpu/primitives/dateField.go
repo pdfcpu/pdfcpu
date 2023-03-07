@@ -283,23 +283,14 @@ func (df *DateField) validate() error {
 	return df.validateTab()
 }
 
-// NewDateField returns a new date field for d and v.
-func NewDateField(xRefTable *model.XRefTable, d types.Dict, v string) (*DateField, error) {
-	df := &DateField{Value: v}
+func (df *DateField) calcFontFromDA(ctx *model.Context, da []string, fonts map[string]types.IndirectRef) error {
 
-	bb, _ := types.RectForArray(d.ArrayEntry("Rect"))
-	df.BoundingBox = types.RectForDim(bb.Width(), bb.Height())
+	var (
+		f      FormFont
+		fontID string
+	)
 
-	var f FormFont
-
-	s := d.StringEntry("DA")
-	if s == nil {
-		return nil, errors.New("pdfcpu: datefield missing \"DA\"")
-	}
-	da := strings.Split(*s, " ")
-
-	var fontID string
-
+	f.SetCol(color.Black)
 	for i := 0; i < len(da); i++ {
 		if da[i] == "Tf" {
 			fontID = da[i-2][1:]
@@ -313,49 +304,75 @@ func NewDateField(xRefTable *model.XRefTable, d types.Dict, v string) (*DateFiel
 			b, _ := strconv.ParseFloat(da[i-1], 32)
 			f.SetCol(color.SimpleColor{R: float32(r), G: float32(g), B: float32(b)})
 		}
-	}
-	df.Font = &f
-
-	// tf.horAlign
-	q := d.IntEntry("Q")
-	df.HorAlign = types.AlignLeft
-	if q != nil {
-		df.HorAlign = types.HAlignment(*q)
-	}
-
-	// tf.bgCol, tf.boCol
-	boCol := color.Black
-
-	o, err := xRefTable.DereferenceDictEntry(d, "MK")
-	if err != nil {
-		return nil, err
-	}
-	if o != nil {
-		d1, _ := o.(types.Dict)
-		if len(d1) > 0 {
-
-			if arr := d1.ArrayEntry("BG"); arr != nil {
-				bgCol := (color.NewSimpleColorForArray(arr))
-				df.BgCol = &bgCol
-			}
-
-			if arr := d1.ArrayEntry("BC"); arr != nil {
-				boCol = (color.NewSimpleColorForArray(arr))
-			}
+		if da[i] == "g" {
+			g, _ := strconv.ParseFloat(da[i-1], 32)
+			f.SetCol(color.SimpleColor{R: float32(g), G: float32(g), B: float32(g)})
 		}
 	}
 
-	// tf.Border
-	boWidth := 0
-	if arr := d.ArrayEntry("Border"); arr != nil {
-		// 0, 1 ??
-		boWidth = int(arr[2].(types.Float).Value())
+	if len(df.fontID) == 0 {
+		return errors.New("pdfcpu: unable to detect font id")
 	}
 
+	df.Font = &f
+
+	_, name, lang, fontIndRef, err := extractFormFontDetails(ctx, df.fontID, fonts)
+	if err != nil {
+		return err
+	}
+	if fontIndRef == nil {
+		return errors.New("pdfcpu: unable to detect indirect reference for font")
+	}
+
+	df.Font.Name = name
+	df.Font.Lang = lang
+	//df.RTL = pdffont.RTL(lang)
+
+	return nil
+}
+
+// NewDateField returns a new date field for d and v.
+func NewDateField(
+	ctx *model.Context,
+	d types.Dict,
+	irN *types.IndirectRef,
+	v string,
+	fonts map[string]types.IndirectRef) (*DateField, error) {
+
+	df := &DateField{Value: v}
+
+	bb, err := types.RectForArray(d.ArrayEntry("Rect"))
+	if err != nil {
+		return nil, err
+	}
+
+	df.BoundingBox = types.RectForDim(bb.Width(), bb.Height())
+
+	s := d.StringEntry("DA")
+	if s == nil {
+		return nil, errors.New("pdfcpu: datefield missing \"DA\"")
+	}
+
+	if err := df.calcFontFromDA(ctx, strings.Split(*s, " "), fonts); err != nil {
+		return nil, err
+	}
+
+	df.HorAlign = types.AlignLeft
+	if q := d.IntEntry("Q"); q != nil {
+		df.HorAlign = types.HAlignment(*q)
+	}
+
+	bgCol, boCol, err := calcColsFromMK(ctx, d)
+	if err != nil {
+		return nil, err
+	}
+	df.BgCol = bgCol
+
 	var b Border
+	boWidth := calcBorderWidth(d)
 	if boWidth > 0 {
 		b.Width = boWidth
-		b.SetCol(boCol)
+		b.SetCol(*boCol)
 	}
 	df.Border = &b
 
