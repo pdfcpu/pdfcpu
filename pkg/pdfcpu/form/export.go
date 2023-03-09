@@ -46,6 +46,7 @@ type Header struct {
 // TextField represents an Acroform text field.
 type TextField struct {
 	ID        string `json:"id"`
+	ObjectNr  int    `json:"objectnr,omitempty"`
 	Default   string `json:"default,omitempty"`
 	Value     string `json:"value"`
 	Multiline bool   `json:"multiline"`
@@ -54,33 +55,37 @@ type TextField struct {
 
 // DateField represents an Acroform date field.
 type DateField struct {
-	ID      string `json:"id"`
-	Format  string `json:"format"`
-	Default string `json:"default,omitempty"`
-	Value   string `json:"value"`
-	Locked  bool   `json:"locked"`
+	ID       string `json:"id"`
+	ObjectNr int    `json:"objectnr,omitempty"`
+	Format   string `json:"format"`
+	Default  string `json:"default,omitempty"`
+	Value    string `json:"value"`
+	Locked   bool   `json:"locked"`
 }
 
 // RadioButtonGroup represents an Acroform checkbox.
 type CheckBox struct {
-	ID      string `json:"id"`
-	Default bool   `json:"default"`
-	Value   bool   `json:"value"`
-	Locked  bool   `json:"locked"`
+	ID       string `json:"id"`
+	ObjectNr int    `json:"objectnr,omitempty"`
+	Default  bool   `json:"default"`
+	Value    bool   `json:"value"`
+	Locked   bool   `json:"locked"`
 }
 
 // RadioButtonGroup represents an Acroform radio button group.
 type RadioButtonGroup struct {
-	ID      string   `json:"id"`
-	Options []string `json:"options"`
-	Default string   `json:"default,omitempty"`
-	Value   string   `json:"value"`
-	Locked  bool     `json:"locked"`
+	ID       string   `json:"id"`
+	ObjectNr int      `json:"objectnr,omitempty"`
+	Options  []string `json:"options"`
+	Default  string   `json:"default,omitempty"`
+	Value    string   `json:"value"`
+	Locked   bool     `json:"locked"`
 }
 
 // ListBox represents an Acroform combobox.
 type ComboBox struct {
 	ID       string   `json:"id"`
+	ObjectNr int      `json:"objectnr,omitempty"`
 	Editable bool     `json:"editable"`
 	Options  []string `json:"options"`
 	Default  string   `json:"default,omitempty"`
@@ -91,6 +96,7 @@ type ComboBox struct {
 // ListBox represents an Acroform listbox.
 type ListBox struct {
 	ID       string   `json:"id"`
+	ObjectNr int      `json:"objectnr,omitempty"`
 	Multi    bool     `json:"multi"`
 	Options  []string `json:"options"`
 	Defaults []string `json:"defaults,omitempty"`
@@ -174,9 +180,9 @@ func (f Form) listBoxValuesAndLock(id string) ([]string, bool, bool) {
 	return nil, false, false
 }
 
-func extractRadioButtonGroup(xRefTable *model.XRefTable, d types.Dict, id string, locked bool) (*RadioButtonGroup, error) {
+func extractRadioButtonGroup(xRefTable *model.XRefTable, d types.Dict, id string, objectNr int, locked bool) (*RadioButtonGroup, error) {
 
-	rbg := &RadioButtonGroup{ID: id, Locked: locked}
+	rbg := &RadioButtonGroup{ID: id, Locked: locked, ObjectNr: objectNr}
 
 	if s := d.NameEntry("DV"); s != nil {
 		n, err := types.DecodeName(*s)
@@ -227,9 +233,9 @@ func extractRadioButtonGroup(xRefTable *model.XRefTable, d types.Dict, id string
 	return rbg, nil
 }
 
-func extractCheckBox(d types.Dict, id string, locked bool) (*CheckBox, error) {
+func extractCheckBox(d types.Dict, id string, objectNr int, locked bool) (*CheckBox, error) {
 
-	cb := &CheckBox{ID: id, Locked: locked}
+	cb := &CheckBox{ID: id, Locked: locked, ObjectNr: objectNr}
 
 	if o, ok := d.Find("DV"); ok {
 		cb.Default = o.(types.Name) == "Yes"
@@ -242,9 +248,9 @@ func extractCheckBox(d types.Dict, id string, locked bool) (*CheckBox, error) {
 	return cb, nil
 }
 
-func extractComboBox(xRefTable *model.XRefTable, d types.Dict, id string, locked bool) (*ComboBox, error) {
+func extractComboBox(xRefTable *model.XRefTable, d types.Dict, id string, objectNr int, locked bool) (*ComboBox, error) {
 
-	cb := &ComboBox{ID: id, Locked: locked}
+	cb := &ComboBox{ID: id, Locked: locked, ObjectNr: objectNr}
 
 	if sl := d.StringLiteralEntry("DV"); sl != nil {
 		s, err := types.StringLiteralToString(*sl)
@@ -324,9 +330,9 @@ func extractDateFormat(xRefTable *model.XRefTable, d types.Dict) (*primitives.Da
 	return nil, nil
 }
 
-func extractDateField(d types.Dict, id string, df *primitives.DateFormat, locked bool) (*DateField, error) {
+func extractDateField(d types.Dict, id string, df *primitives.DateFormat, objectNr int, locked bool) (*DateField, error) {
 
-	dfield := &DateField{ID: id, Format: df.Ext, Locked: locked}
+	dfield := &DateField{ID: id, Format: df.Ext, Locked: locked, ObjectNr: objectNr}
 
 	if o, found := d.Find("DV"); found {
 		sl, _ := o.(types.StringLiteral)
@@ -349,11 +355,11 @@ func extractDateField(d types.Dict, id string, df *primitives.DateFormat, locked
 	return dfield, nil
 }
 
-func extractTextField(d types.Dict, id string, ff *int, locked bool) (*TextField, error) {
+func extractTextField(d types.Dict, id string, ff *int, objectNr int, locked bool) (*TextField, error) {
 
 	multiLine := ff != nil && uint(primitives.FieldFlags(*ff))&uint(primitives.FieldMultiline) > 0
 
-	tf := &TextField{ID: id, Multiline: multiLine, Locked: locked}
+	tf := &TextField{ID: id, Multiline: multiLine, Locked: locked, ObjectNr: objectNr}
 
 	if o, found := d.Find("DV"); found {
 		sl, _ := o.(types.StringLiteral)
@@ -376,9 +382,9 @@ func extractTextField(d types.Dict, id string, ff *int, locked bool) (*TextField
 	return tf, nil
 }
 
-func extractListBox(xRefTable *model.XRefTable, d types.Dict, id string, locked, multi bool) (*ListBox, error) {
+func extractListBox(xRefTable *model.XRefTable, d types.Dict, id string, objectNr int, locked, multi bool) (*ListBox, error) {
 
-	lb := &ListBox{ID: id, Locked: locked, Multi: multi}
+	lb := &ListBox{ID: id, Locked: locked, Multi: multi, ObjectNr: objectNr}
 
 	if !multi {
 		if sl := d.StringLiteralEntry("DV"); sl != nil {
@@ -538,7 +544,7 @@ func ExportForm(xRefTable *model.XRefTable, source string, w io.Writer) (bool, e
 
 			case "Btn":
 				if len(d.ArrayEntry("Kids")) > 0 {
-					rbg, err := extractRadioButtonGroup(xRefTable, d, id, locked)
+					rbg, err := extractRadioButtonGroup(xRefTable, d, id, int(indRef.ObjectNumber), locked)
 					if err != nil {
 						return false, err
 					}
@@ -546,7 +552,7 @@ func ExportForm(xRefTable *model.XRefTable, source string, w io.Writer) (bool, e
 					ok = true
 					continue
 				}
-				cb, err := extractCheckBox(d, id, locked)
+				cb, err := extractCheckBox(d, id, int(indRef.ObjectNumber), locked)
 				if err != nil {
 					return false, err
 				}
@@ -559,7 +565,7 @@ func ExportForm(xRefTable *model.XRefTable, source string, w io.Writer) (bool, e
 					return false, errors.New("pdfcpu: corrupt form field: missing entry Ff")
 				}
 				if primitives.FieldFlags(*ff)&primitives.FieldCombo > 0 {
-					cb, err := extractComboBox(xRefTable, d, id, locked)
+					cb, err := extractComboBox(xRefTable, d, id, int(indRef.ObjectNumber), locked)
 					if err != nil {
 						return false, err
 					}
@@ -568,7 +574,7 @@ func ExportForm(xRefTable *model.XRefTable, source string, w io.Writer) (bool, e
 					continue
 				}
 				multi := primitives.FieldFlags(*ff)&primitives.FieldMultiselect > 0
-				lb, err := extractListBox(xRefTable, d, id, locked, multi)
+				lb, err := extractListBox(xRefTable, d, id, int(indRef.ObjectNumber), locked, multi)
 				if err != nil {
 					return false, err
 				}
@@ -582,7 +588,7 @@ func ExportForm(xRefTable *model.XRefTable, source string, w io.Writer) (bool, e
 					return false, err
 				}
 				if df != nil {
-					df, err := extractDateField(d, id, df, locked)
+					df, err := extractDateField(d, id, df, int(indRef.ObjectNumber), locked)
 					if err != nil {
 						return false, err
 					}
@@ -590,7 +596,7 @@ func ExportForm(xRefTable *model.XRefTable, source string, w io.Writer) (bool, e
 					ok = true
 					continue
 				}
-				tf, err := extractTextField(d, id, ff, locked)
+				tf, err := extractTextField(d, id, ff, int(indRef.ObjectNumber), locked)
 				if err != nil {
 					return false, err
 				}
