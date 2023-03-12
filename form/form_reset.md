@@ -54,7 +54,7 @@ Reset the fields with id `firstName1` and `lastName1`:
 pdfcpu form list english.pdf
 
 english.pdf
-Pg L Field     │ Name       │ Default          │ Value                    │ Options
+Pg L Field     │ Id         │ Default          │ Value                    │ Options
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  1   Textfield │ firstName1 │ Joe              │ Jackie                   │
      Textfield │ lastName1  │ Doeby            │ Doe                      │
@@ -68,7 +68,7 @@ Pg L Field     │ Name       │ Default          │ Value                    
 pdfcpu form reset english.pdf firstName1 lastName1
 
 english.pdf
-Pg L Field     │ Name       │ Default          │ Value                    │ Options
+Pg L Field     │ Id         │ Default          │ Value                    │ Options
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  1   Textfield │ firstName1 │ Joe              │ Joe                      │
      Textfield │ lastName1  │ Doeby            │ Doeby                    │
@@ -88,7 +88,7 @@ Reset the whole form in engish.pdf:
 pdfcpu form reset english.pdf
 
 english.pdf
-Pg L Field     │ Name       │ Default          │ Value                    │ Options
+Pg L Field     │ Id         │ Default          │ Value                    │ Options
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  1   Textfield │ firstName1 │ Joe              │ Joe                      │
      Textfield │ lastName1  │ Doeby            │ Doeby                    │

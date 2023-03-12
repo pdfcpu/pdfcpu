@@ -49,7 +49,7 @@ Unlock the field with id **dob1**:
 pdfcpu form list english.pdf
 
 english.pdf
-Pg L Field     │ Name       │ Default          │ Value                    │ Options
+Pg L Field     │ Id         │ Default          │ Value                    │ Options
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  1 * Textfield │ firstName1 │ Joe              │ Jackie                   │
    * Textfield │ lastName1  │ Doeby            │ Doe                      │
@@ -66,7 +66,7 @@ writing english.pdf...
 pdfcpu form list english.pdf
 
 english.pdf
-Pg L Field     │ Name       │ Default          │ Value                    │ Options
+Pg L Field     │ Id         │ Default          │ Value                    │ Options
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  1 * Textfield │ firstName1 │ Joe              │ Jackie                   │
    * Textfield │ lastName1  │ Doeby            │ Doe                      │
@@ -90,7 +90,7 @@ writing english.pdf...
 pdfcpu form list english.pdf
 
 english.pdf
-Pg L Field     │ Name       │ Default          │ Value                    │ Options
+Pg L Field     │ Id         │ Default          │ Value                    │ Options
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  1   Textfield │ firstName1 │ Joe              │ Jackie                   │
      Textfield │ lastName1  │ Doeby            │ Doe                      │

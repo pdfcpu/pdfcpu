@@ -45,7 +45,7 @@ List all form fields of english.pdf:
 pdfcpu form list english.pdf
 
 english.pdf
-Pg L Field     │ Name       │ Default          │ Value                    │ Options
+Pg L Field     │ Id         │ Default          │ Value                    │ Options
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  1   Textfield │ firstName1 │ Joe              │ Jackie                   │
      Textfield │ lastName1  │ Doeby            │ Doe                      │
@@ -67,7 +67,7 @@ The * indicates locked fields aka write-protected or read-only:
 pdfcpu form list person.pdf
 
 person.pdf
-Pg L Field     │ Name        │ Value   │ Options
+Pg L Field     │ Id          │ Value   │ Options
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  1   Textfield │ firstName   │         │
      Textfield │ lastName    │         │
