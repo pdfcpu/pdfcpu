@@ -1029,6 +1029,7 @@ For more info on json syntax & samples please refer to :
       inFileData ... input CSV or JSON file
       outDir     ... output directory
       outFile    ... output pdf file
+      fieldID    ... as listed by pdfcpu form list
       outName    ... base output name
 
 
@@ -1042,7 +1043,7 @@ The output modes are:
 Supported usecases:
 
    1) Get a list of form fields:
-         "pdfcpu form list in.pdf" returns the list of fieldIds of in.pdf eg. "firstName, lastName, dob".
+         "pdfcpu form list in.pdf" returns a list of form fields of in.pdf eg. "firstName, lastName, dob".
    
    2) Remove some form fields:
          "pdfcpu form remove in.pdf middleName birthPlace" removes the the two fields with ids "middleName" and "birthPlace".
@@ -1075,7 +1076,7 @@ Supported usecases:
       or
          c) Export your form to in.json.
          d) Create a CSV file holding form instance data where each CSV line corresponds to one form data tuple.
-            The first line identifies fieldIds in in.json.
+            The first line identifies fields via id from in.json.
          e) "pdfcpu form multifill in.pdf in.csv outDir" creates a separate PDF for each filled form instance in outDir.
 
    or
@@ -1087,7 +1088,7 @@ Supported usecases:
       or
          c) Export your form to in.json.
          d) Create a CSV file holding form instance data where each CSV line corresponds to one form data tuple.
-            The first line identifies fieldIds in in.json.
+            The first line identifies fields via id in in.json.
          e) "pdfcpu form multifill -m merge in.pdf in.csv outDir" creates a single output PDF in outDir.
 
 

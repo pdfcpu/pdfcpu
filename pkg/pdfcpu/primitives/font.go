@@ -312,6 +312,36 @@ func extractFormFontDetails(
 		return "", "", "", nil, errors.Errorf("pdfcpu: Unable to detect fontName for: %s", fontID)
 	}
 
+	if !font.SupportedFont(*fName) {
+		// Use DA fontId from Acrodict
+		s := xRefTable.AcroForm.StringEntry("DA")
+		if s == nil {
+			// create Helvetica font dict.
+			return "", "", "", nil, errors.Errorf("pdfcpu: unsupported font: %s", *fName)
+		}
+		da := strings.Split(*s, " ")
+		rootFontID := ""
+		for i := 0; i < len(da); i++ {
+			if da[i] == "Tf" {
+				rootFontID = da[i-2][1:]
+				break
+			}
+		}
+		if rootFontID == "" {
+			// create Helvetica font dict.
+			return "", "", "", nil, errors.Errorf("pdfcpu: unsupported font: %s", *fName)
+		}
+		fontID = rootFontID
+		fontIndRef, err = formFontIndRef(xRefTable, fontID)
+		if err != nil {
+			return "", "", "", nil, err
+		}
+		fName, fLang, err = FormFontNameAndLangForID(xRefTable, *fontIndRef)
+		if err != nil {
+			return "", "", "", nil, err
+		}
+	}
+
 	var lang string
 	if fLang != nil {
 		lang = *fLang

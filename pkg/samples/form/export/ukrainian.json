@@ -2,13 +2,14 @@
 	"header": {
 		"source": "ukrainian.pdf",
 		"version": "pdfcpu v0.4.0 dev",
-		"creation": "2023-02-28 21:50:53 CET",
+		"creation": "2023-03-12 00:53:02 CET",
 		"producer": "pdfcpu v0.4.0 dev"
 	},
 	"forms": [
 		{
 			"textfield": [
 				{
+					"page": 1,
 					"id": "firstName1",
 					"default": "Володимир",
 					"value": "Джекі",
@@ -16,12 +17,14 @@
 					"locked": false
 				},
 				{
+					"page": 1,
 					"id": "lastName1",
 					"value": "лань",
 					"multiline": false,
 					"locked": false
 				},
 				{
+					"page": 1,
 					"id": "note1",
 					"value": "Це зразок тексту.\nЦе наступний рядок.",
 					"multiline": true,
@@ -30,6 +33,7 @@
 			],
 			"datefield": [
 				{
+					"page": 1,
 					"id": "dob1",
 					"format": "dd.mm.yyyy",
 					"default": "05.12.1992",
@@ -39,30 +43,35 @@
 			],
 			"checkbox": [
 				{
+					"page": 1,
 					"id": "cb11",
 					"default": false,
 					"value": true,
 					"locked": false
 				},
 				{
+					"page": 1,
 					"id": "cb12",
 					"default": false,
 					"value": false,
 					"locked": false
 				},
 				{
+					"page": 1,
 					"id": "cb13",
 					"default": false,
 					"value": false,
 					"locked": false
 				},
 				{
+					"page": 1,
 					"id": "cb14",
 					"default": false,
 					"value": false,
 					"locked": false
 				},
 				{
+					"page": 1,
 					"id": "cb15",
 					"default": false,
 					"value": false,
@@ -71,6 +80,7 @@
 			],
 			"radiobuttongroup": [
 				{
+					"page": 1,
 					"id": "gender1",
 					"options": [
 						"жіноча",
@@ -84,6 +94,7 @@
 			],
 			"combobox": [
 				{
+					"page": 1,
 					"id": "city12",
 					"editable": false,
 					"options": [
@@ -98,6 +109,7 @@
 			],
 			"listbox": [
 				{
+					"page": 1,
 					"id": "city11",
 					"multi": true,
 					"options": [

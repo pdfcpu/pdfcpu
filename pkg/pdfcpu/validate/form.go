@@ -42,6 +42,12 @@ func validateAppearanceSubDict(xRefTable *model.XRefTable, d types.Dict) error {
 	// dict of xobjects
 	for _, o := range d {
 
+		if xRefTable.ValidationMode == model.ValidationRelaxed {
+			if d, ok := o.(types.Dict); ok && len(d) == 0 {
+				continue
+			}
+		}
+
 		err := validateXObjectStreamDict(xRefTable, o)
 		if err != nil {
 			return err

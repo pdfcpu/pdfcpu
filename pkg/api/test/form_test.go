@@ -38,7 +38,7 @@ func TestListFormFields(t *testing.T) {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	for s := range ss {
+	for _, s := range ss {
 		fmt.Println(s)
 	}
 }

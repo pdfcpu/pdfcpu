@@ -87,12 +87,8 @@ func fullyQualifiedFieldName(xRefTable *model.XRefTable, indRef types.IndirectRe
 	}
 
 	id := indRef.ObjectNumber.String()
-	sl := d.StringLiteralEntry("T")
-	if sl != nil {
-		id, err = types.StringLiteralToString(*sl)
-		if err != nil {
-			return false, err
-		}
+	if s := d.StringOrHexLiteralEntry("T"); s != nil {
+		id = *s
 	}
 
 	pIndRef := d.IndirectRefEntry("Parent")
@@ -502,7 +498,7 @@ func ListFormFields(ctx *model.Context) ([]string, error) {
 
 	horSep := []int{15}
 
-	s := "Pg L Field     " + draw.VBar + " Name "
+	s := "Pg L Field     " + draw.VBar + " Id   "
 	if nameMax > 4 {
 		s += strings.Repeat(" ", nameMax-4)
 		horSep = append(horSep, 6+nameMax-4)
@@ -532,6 +528,9 @@ func ListFormFields(ctx *model.Context) ([]string, error) {
 		horSep = append(horSep, 8)
 	}
 
+	if ctx.SignatureExist || ctx.AppendOnly {
+		ss = append(ss, "(signed)")
+	}
 	ss = append(ss, s)
 	ss = append(ss, draw.HorSepLine(horSep))
 
@@ -631,15 +630,7 @@ func annotIndRefForFieldID(xRefTable *model.XRefTable, fields types.Array, field
 			_, hasKids := d.Find("Kids")
 			_, hasFT := d.Find("FT")
 			if !hasKids || hasFT {
-				sl := d.StringLiteralEntry("T")
-				if sl == nil {
-					return nil, errors.New("pdfcpu: corrupt form field: missing entry T")
-				}
-				id, err := types.StringLiteralToString(*sl)
-				if err != nil {
-					return nil, err
-				}
-				if id == fieldID {
+				if id := d.StringOrHexLiteralEntry("T"); id != nil && *id == fieldID {
 					return &indRef, nil
 				}
 			}
@@ -664,13 +655,8 @@ func annotIndRefForFieldID(xRefTable *model.XRefTable, fields types.Array, field
 		if err != nil {
 			return nil, err
 		}
-		sl := d.StringLiteralEntry("T")
-		if sl != nil {
-			id, err := types.StringLiteralToString(*sl)
-			if err != nil {
-				return nil, err
-			}
-			if partialName == id {
+		if id := d.StringOrHexLiteralEntry("T"); id != nil {
+			if *id == partialName {
 				fieldID = fieldID[len(partialName)+1:]
 				return annotIndRefForFieldID(xRefTable, kids, fieldID)
 			}
@@ -863,87 +849,6 @@ func RemoveFormFields(ctx *model.Context, fieldIDs []string) (bool, error) {
 	return ok, nil
 }
 
-func renderComboBoxAP(ctx *model.Context, d types.Dict, v string, fonts map[string]types.IndirectRef) error {
-
-	xRefTable := ctx.XRefTable
-
-	cb, fontIndRef, err := primitives.NewComboBox(ctx, d, v, fonts)
-	if err != nil {
-		return err
-	}
-
-	irN, err := primitives.ComboBoxN(xRefTable, cb, *fontIndRef)
-	if err != nil {
-		return err
-	}
-
-	d["AP"] = types.Dict(map[string]types.Object{"N": *irN})
-
-	return nil
-}
-
-func refreshListBoxAP(ctx *model.Context, d types.Dict, opts []string, ind types.Array, fonts map[string]types.IndirectRef) error {
-
-	apd := d.DictEntry("AP")
-	if apd == nil {
-		return nil
-	}
-
-	irN := apd.IndirectRefEntry("N")
-	if irN == nil {
-		return nil
-	}
-
-	lb, err := primitives.NewListBox(ctx, d, irN, opts, ind, fonts)
-	if err != nil {
-		return err
-	}
-
-	return lb.RefreshN(ctx.XRefTable, irN)
-}
-
-func refreshTextFieldAP(ctx *model.Context, d types.Dict, s string, fonts map[string]types.IndirectRef) error {
-
-	apd := d.DictEntry("AP")
-	if apd == nil {
-		return nil
-	}
-
-	irN := apd.IndirectRefEntry("N")
-	if irN == nil {
-		return nil
-	}
-
-	ff := d.IntEntry("Ff")
-	multiLine := ff != nil && uint(primitives.FieldFlags(*ff))&uint(primitives.FieldMultiline) > 0
-	tf, err := primitives.NewTextField(ctx, d, irN, s, multiLine, fonts)
-	if err != nil {
-		return err
-	}
-
-	return tf.RefreshN(ctx.XRefTable, irN)
-}
-
-func refreshDateFieldAP(ctx *model.Context, d types.Dict, s string, fonts map[string]types.IndirectRef) error {
-
-	apd := d.DictEntry("AP")
-	if apd == nil {
-		return nil
-	}
-
-	irN := apd.IndirectRefEntry("N")
-	if irN == nil {
-		return nil
-	}
-
-	df, err := primitives.NewDateField(ctx, d, irN, s, fonts)
-	if err != nil {
-		return err
-	}
-
-	return df.RefreshN(ctx.XRefTable, irN)
-}
-
 // ResetFormFields clears or resets all form fields contained in fieldIDs to its default.
 func ResetFormFields(ctx *model.Context, fieldIDs []string) (bool, error) {
 
@@ -1102,7 +1007,7 @@ func ResetFormFields(ctx *model.Context, fieldIDs []string) (bool, error) {
 			}
 
 			if primitives.FieldFlags(*ff)&primitives.FieldCombo == 0 {
-				if err := refreshListBoxAP(ctx, d, opts, ind, fonts); err != nil {
+				if err := primitives.EnsureListBoxAP(ctx, d, opts, ind, fonts); err != nil {
 					return false, err
 				}
 			}
@@ -1131,9 +1036,11 @@ func ResetFormFields(ctx *model.Context, fieldIDs []string) (bool, error) {
 			}
 
 			if isDate {
-				err = refreshDateFieldAP(ctx, d, s, fonts)
+				err = primitives.EnsureDateFieldAP(ctx, d, s, fonts)
 			} else {
-				err = refreshTextFieldAP(ctx, d, s, fonts)
+				ff := d.IntEntry("Ff")
+				multiLine := ff != nil && uint(primitives.FieldFlags(*ff))&uint(primitives.FieldMultiline) > 0
+				err = primitives.EnsureTextFieldAP(ctx, d, s, multiLine, fonts)
 			}
 
 			if err != nil {
@@ -1235,7 +1142,7 @@ func LockFormFields(ctx *model.Context, fieldIDs []string) (bool, error) {
 					v = s
 				}
 
-				if err := renderComboBoxAP(ctx, d, v, fonts); err != nil {
+				if err := primitives.EnsureComboBoxAP(ctx, d, v, fonts); err != nil {
 					return false, err
 				}
 

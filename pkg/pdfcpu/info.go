@@ -349,7 +349,7 @@ func addFlagsToInfoDigest(ctx *model.Context, ss *[]string, separator string) {
 	}
 	*ss = append(*ss, fmt.Sprintf("            Acroform: %s", s))
 	if ctx.AcroForm != nil {
-		if ctx.SignatureExist {
+		if ctx.SignatureExist || ctx.AppendOnly {
 			*ss = append(*ss, "     SignaturesExist: Yes")
 			s = "No"
 			if ctx.AppendOnly {

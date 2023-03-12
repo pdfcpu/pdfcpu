@@ -612,7 +612,13 @@ func FillForm(
 					}
 					d["V"] = v
 					if _, found := d.Find("AS"); found {
-						d["AS"] = v
+						offName, yesName := primitives.CalcCheckBoxASNames(d)
+						//fmt.Printf("off:<%s> yes:<%s>\n", offName, yesName)
+						asName := yesName
+						if v == "Off" {
+							asName = offName
+						}
+						d["AS"] = asName
 					}
 					ok = true
 				}
@@ -643,7 +649,7 @@ func FillForm(
 						}
 					} else if lock {
 						lockFormField(d)
-						if err := renderComboBoxAP(ctx, d, vNew, fonts); err != nil {
+						if err := primitives.EnsureComboBoxAP(ctx, d, vNew, fonts); err != nil {
 							return false, nil, err
 						}
 						ok = true
@@ -766,7 +772,7 @@ func FillForm(
 					}
 				}
 
-				if err := refreshListBoxAP(ctx, d, opts, ind, fonts); err != nil {
+				if err := primitives.EnsureListBoxAP(ctx, d, opts, ind, fonts); err != nil {
 					return false, nil, err
 				}
 
@@ -812,7 +818,7 @@ func FillForm(
 					}
 					d["V"] = types.StringLiteral(*s)
 
-					if err := refreshDateFieldAP(ctx, d, vNew, fonts); err != nil {
+					if err := primitives.EnsureDateFieldAP(ctx, d, vNew, fonts); err != nil {
 						return false, nil, err
 					}
 
@@ -846,7 +852,9 @@ func FillForm(
 				}
 				d["V"] = types.StringLiteral(*s)
 
-				if err := refreshTextFieldAP(ctx, d, vNew, fonts); err != nil {
+				ff := d.IntEntry("Ff")
+				multiLine := ff != nil && uint(primitives.FieldFlags(*ff))&uint(primitives.FieldMultiline) > 0
+				if err := primitives.EnsureTextFieldAP(ctx, d, vNew, multiLine, fonts); err != nil {
 					return false, nil, err
 				}
 

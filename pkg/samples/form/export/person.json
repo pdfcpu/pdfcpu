@@ -2,31 +2,35 @@
 	"header": {
 		"source": "person.pdf",
 		"version": "pdfcpu v0.4.0 dev",
-		"creation": "2023-02-28 21:50:53 CET",
+		"creation": "2023-03-12 00:53:02 CET",
 		"producer": "pdfcpu v0.4.0 dev"
 	},
 	"forms": [
 		{
 			"textfield": [
 				{
+					"page": 1,
 					"id": "firstName",
 					"value": "",
 					"multiline": false,
 					"locked": false
 				},
 				{
+					"page": 1,
 					"id": "lastName",
 					"value": "",
 					"multiline": false,
 					"locked": false
 				},
 				{
+					"page": 1,
 					"id": "country",
 					"value": "",
 					"multiline": false,
 					"locked": false
 				},
 				{
+					"page": 1,
 					"id": "planet",
 					"default": "Earth",
 					"value": "Earth",
@@ -34,6 +38,7 @@
 					"locked": true
 				},
 				{
+					"page": 1,
 					"id": "occup",
 					"value": "",
 					"multiline": false,
@@ -42,6 +47,7 @@
 			],
 			"datefield": [
 				{
+					"page": 1,
 					"id": "dob",
 					"format": "dd.mm.yyyy",
 					"value": "",
@@ -50,6 +56,7 @@
 			],
 			"checkbox": [
 				{
+					"page": 1,
 					"id": "dobVerified",
 					"default": false,
 					"value": false,
@@ -58,6 +65,7 @@
 			],
 			"radiobuttongroup": [
 				{
+					"page": 1,
 					"id": "gender",
 					"options": [
 						"female",
@@ -70,6 +78,7 @@
 			],
 			"combobox": [
 				{
+					"page": 1,
 					"id": "status",
 					"editable": false,
 					"options": [
@@ -84,6 +93,7 @@
 					"locked": false
 				},
 				{
+					"page": 1,
 					"id": "license",
 					"editable": false,
 					"options": [

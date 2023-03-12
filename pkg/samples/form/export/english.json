@@ -2,13 +2,14 @@
 	"header": {
 		"source": "english.pdf",
 		"version": "pdfcpu v0.4.0 dev",
-		"creation": "2023-02-28 21:50:53 CET",
+		"creation": "2023-03-12 00:53:02 CET",
 		"producer": "pdfcpu v0.4.0 dev"
 	},
 	"forms": [
 		{
 			"textfield": [
 				{
+					"page": 1,
 					"id": "firstName1",
 					"default": "Joe",
 					"value": "Jackie",
@@ -16,6 +17,7 @@
 					"locked": false
 				},
 				{
+					"page": 1,
 					"id": "lastName1",
 					"default": "Doeby",
 					"value": "Doe",
@@ -23,6 +25,7 @@
 					"locked": false
 				},
 				{
+					"page": 1,
 					"id": "note1",
 					"value": "This is a sample text.\nThis is the next line.",
 					"multiline": true,
@@ -31,6 +34,7 @@
 			],
 			"datefield": [
 				{
+					"page": 1,
 					"id": "dob1",
 					"format": "dd.mm.yyyy",
 					"default": "01.01.2000",
@@ -40,30 +44,35 @@
 			],
 			"checkbox": [
 				{
+					"page": 1,
 					"id": "cb11",
 					"default": false,
 					"value": true,
 					"locked": false
 				},
 				{
+					"page": 1,
 					"id": "cb12",
 					"default": false,
 					"value": false,
 					"locked": false
 				},
 				{
+					"page": 1,
 					"id": "cb13",
 					"default": false,
 					"value": false,
 					"locked": false
 				},
 				{
+					"page": 1,
 					"id": "cb14",
 					"default": false,
 					"value": false,
 					"locked": false
 				},
 				{
+					"page": 1,
 					"id": "cb15",
 					"default": false,
 					"value": false,
@@ -72,6 +81,7 @@
 			],
 			"radiobuttongroup": [
 				{
+					"page": 1,
 					"id": "gender1",
 					"options": [
 						"female",
@@ -85,6 +95,7 @@
 			],
 			"combobox": [
 				{
+					"page": 1,
 					"id": "city12",
 					"editable": false,
 					"options": [
@@ -99,6 +110,7 @@
 			],
 			"listbox": [
 				{
+					"page": 1,
 					"id": "city11",
 					"multi": true,
 					"options": [

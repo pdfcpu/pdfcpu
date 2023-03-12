@@ -227,7 +227,7 @@ func (tf *TextField) validate() error {
 	return tf.validateTab()
 }
 
-func (tf *TextField) calcFontFromDA(ctx *model.Context, da []string, fonts map[string]types.IndirectRef) error {
+func (tf *TextField) calcFontFromDA(ctx *model.Context, da []string, fonts map[string]types.IndirectRef) (*types.IndirectRef, error) {
 
 	var (
 		f      FormFont
@@ -238,8 +238,12 @@ func (tf *TextField) calcFontFromDA(ctx *model.Context, da []string, fonts map[s
 	for i := 0; i < len(da); i++ {
 		if da[i] == "Tf" {
 			fontID = da[i-2][1:]
-			tf.SetFontID(fontID) // inputform only !
-			f.Size, _ = strconv.Atoi(da[i-1])
+			tf.SetFontID(fontID)
+			fl, err := strconv.ParseFloat(da[i-1], 64)
+			if err != nil {
+				return nil, err
+			}
+			f.Size = int(fl)
 			continue
 		}
 		if da[i] == "rg" {
@@ -255,110 +259,25 @@ func (tf *TextField) calcFontFromDA(ctx *model.Context, da []string, fonts map[s
 	}
 
 	if len(tf.fontID) == 0 {
-		return errors.New("pdfcpu: unable to detect font id")
+		return nil, errors.New("pdfcpu: unable to detect font id")
 	}
 
 	tf.Font = &f
 
-	_, name, lang, fontIndRef, err := extractFormFontDetails(ctx, tf.fontID, fonts)
+	id, name, lang, fontIndRef, err := extractFormFontDetails(ctx, tf.fontID, fonts)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if fontIndRef == nil {
-		return errors.New("pdfcpu: unable to detect indirect reference for font")
+		return nil, errors.New("pdfcpu: unable to detect indirect reference for font")
 	}
 
+	tf.fontID = id
 	tf.Font.Name = name
 	tf.Font.Lang = lang
 	tf.RTL = pdffont.RTL(lang)
 
-	return nil
-}
-
-func calcColsFromMK(ctx *model.Context, d types.Dict) (*color.SimpleColor, *color.SimpleColor, error) {
-
-	var bgCol, boCol *color.SimpleColor
-
-	if o, found := d.Find("MK"); found {
-		d1, err := ctx.DereferenceDict(o)
-		if err != nil {
-			return nil, nil, err
-		}
-		if len(d1) > 0 {
-			if arr := d1.ArrayEntry("BG"); len(arr) == 3 {
-				sc := color.NewSimpleColorForArray(arr)
-				bgCol = &sc
-			}
-			if arr := d1.ArrayEntry("BC"); len(arr) == 3 {
-				sc := color.NewSimpleColorForArray(arr)
-				boCol = &sc
-			}
-		}
-	}
-
-	return bgCol, boCol, nil
-}
-
-func calcBorderWidth(d types.Dict) int {
-	w := 0
-	if arr := d.ArrayEntry("Border"); len(arr) == 3 {
-		// 0, 1 ??
-		bw, ok := arr[2].(types.Integer)
-		if ok {
-			w = bw.Value()
-		} else {
-			w = int(arr[2].(types.Float).Value())
-		}
-	}
-	return w
-}
-
-func NewTextField(
-	ctx *model.Context,
-	d types.Dict,
-	irN *types.IndirectRef,
-	v string,
-	multiLine bool,
-	fonts map[string]types.IndirectRef) (*TextField, error) {
-
-	tf := &TextField{Value: v, Multiline: multiLine}
-
-	bb, err := types.RectForArray(d.ArrayEntry("Rect"))
-	if err != nil {
-		return nil, err
-	}
-
-	tf.BoundingBox = types.RectForDim(bb.Width(), bb.Height())
-
-	s := d.StringEntry("DA")
-	if s == nil {
-		return nil, errors.New("pdfcpu: textfield missing \"DA\"")
-	}
-
-	if err := tf.calcFontFromDA(ctx, strings.Split(*s, " "), fonts); err != nil {
-		return nil, err
-	}
-
-	tf.HorAlign = types.AlignLeft
-	if q := d.IntEntry("Q"); q != nil {
-		tf.HorAlign = types.HAlignment(*q)
-	}
-
-	bgCol, boCol, err := calcColsFromMK(ctx, d)
-	if err != nil {
-		return nil, err
-	}
-	tf.BgCol = bgCol
-
-	var b Border
-	boWidth := calcBorderWidth(d)
-	if boWidth > 0 {
-		b.Width = boWidth
-		b.SetCol(*boCol)
-	}
-	tf.Border = &b
-
-	return tf, nil
+	return fontIndRef, nil
 }
 
 func (tf *TextField) calcFont() error {
@@ -916,4 +835,143 @@ func (tf *TextField) render(p *model.Page, pageNr int, fonts model.FontMap) erro
 	}
 
 	return tf.doRender(p, fonts)
+}
+
+func calcColsFromMK(ctx *model.Context, d types.Dict) (*color.SimpleColor, *color.SimpleColor, error) {
+
+	var bgCol, boCol *color.SimpleColor
+
+	if o, found := d.Find("MK"); found {
+		d1, err := ctx.DereferenceDict(o)
+		if err != nil {
+			return nil, nil, err
+		}
+		if len(d1) > 0 {
+			if arr := d1.ArrayEntry("BG"); len(arr) == 3 {
+				sc := color.NewSimpleColorForArray(arr)
+				bgCol = &sc
+			}
+			if arr := d1.ArrayEntry("BC"); len(arr) == 3 {
+				sc := color.NewSimpleColorForArray(arr)
+				boCol = &sc
+			}
+		}
+	}
+
+	return bgCol, boCol, nil
+}
+
+func calcBorderWidth(d types.Dict) int {
+	w := 0
+	if arr := d.ArrayEntry("Border"); len(arr) == 3 {
+		// 0, 1 ??
+		bw, ok := arr[2].(types.Integer)
+		if ok {
+			w = bw.Value()
+		} else {
+			w = int(arr[2].(types.Float).Value())
+		}
+	}
+	return w
+}
+
+// NewTextField returns a new text field for d.
+func NewTextField(
+	ctx *model.Context,
+	d types.Dict,
+	v string,
+	multiLine bool,
+	fonts map[string]types.IndirectRef) (*TextField, *types.IndirectRef, error) {
+
+	tf := &TextField{Value: v, Multiline: multiLine}
+
+	bb, err := types.RectForArray(d.ArrayEntry("Rect"))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	tf.BoundingBox = types.RectForDim(bb.Width(), bb.Height())
+
+	s := d.StringEntry("DA")
+	if s == nil {
+		return nil, nil, errors.New("pdfcpu: textfield missing \"DA\"")
+	}
+
+	fontIndRef, err := tf.calcFontFromDA(ctx, strings.Split(*s, " "), fonts)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	tf.HorAlign = types.AlignLeft
+	if q := d.IntEntry("Q"); q != nil {
+		tf.HorAlign = types.HAlignment(*q)
+	}
+
+	bgCol, boCol, err := calcColsFromMK(ctx, d)
+	if err != nil {
+		return nil, nil, err
+	}
+	tf.BgCol = bgCol
+
+	var b Border
+	boWidth := calcBorderWidth(d)
+	if boWidth > 0 {
+		b.Width = boWidth
+		b.SetCol(*boCol)
+	}
+	tf.Border = &b
+
+	return tf, fontIndRef, nil
+}
+
+func renderTextFieldAP(ctx *model.Context, d types.Dict, v string, multiLine bool, fonts map[string]types.IndirectRef) error {
+
+	tf, fontIndRef, err := NewTextField(ctx, d, v, multiLine, fonts)
+	if err != nil {
+		return err
+	}
+
+	bb, err := tf.renderN(ctx.XRefTable)
+	if err != nil {
+		return err
+	}
+
+	irN, err := NewForm(ctx.XRefTable, bb, tf.fontID, fontIndRef, tf.BoundingBox)
+	if err != nil {
+		return err
+	}
+
+	d["AP"] = types.Dict(map[string]types.Object{"N": *irN})
+
+	return nil
+}
+
+func refreshTextFieldAP(ctx *model.Context, d types.Dict, v string, multiLine bool, fonts map[string]types.IndirectRef, irN *types.IndirectRef) error {
+
+	tf, _, err := NewTextField(ctx, d, v, multiLine, fonts)
+	if err != nil {
+		return err
+	}
+
+	bb, err := tf.renderN(ctx.XRefTable)
+	if err != nil {
+		return err
+	}
+
+	return UpdateForm(ctx.XRefTable, bb, irN)
+}
+
+func EnsureTextFieldAP(ctx *model.Context, d types.Dict, v string, multiLine bool, fonts map[string]types.IndirectRef) error {
+
+	apd := d.DictEntry("AP")
+	if apd == nil {
+		return renderTextFieldAP(ctx, d, v, multiLine, fonts)
+	}
+
+	irN := apd.IndirectRefEntry("N")
+	if irN == nil {
+		return nil
+	}
+
+	return refreshTextFieldAP(ctx, d, v, multiLine, fonts, irN)
 }
