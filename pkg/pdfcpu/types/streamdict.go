@@ -167,7 +167,9 @@ func (sd *StreamDict) Encode() error {
 	b = bytes.NewReader(sd.Content)
 
 	// Apply each filter in the pipeline to result of preceding filter.
-	for _, f := range sd.FilterPipeline {
+
+	for i := len(sd.FilterPipeline) - 1; i >= 0; i-- {
+		f := sd.FilterPipeline[i]
 		if f.DecodeParms != nil {
 			log.Trace.Printf("encodeStream: encoding filter:%s\ndecodeParms:%s\n", f.Name, f.DecodeParms)
 		} else {
