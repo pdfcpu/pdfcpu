@@ -1174,7 +1174,7 @@ func headerVersion(rs io.ReadSeeker, headerBufSize int) (v *model.Version, eolCo
 		eolCount = 1
 	} else if s[i] == 0x0D {
 		eolCount = 1
-		if s[i+1] == 0x0A {
+		if (len(s) > i+1) && (s[i+1] == 0x0A) {
 			eolCount = 2
 		}
 	}
