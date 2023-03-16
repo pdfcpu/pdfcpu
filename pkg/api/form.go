@@ -80,7 +80,7 @@ func ListFormFieldsFile(inFiles []string, conf *model.Configuration) ([]string, 
 }
 
 // RemoveFormFields deletes form fields in rs and writes the result to w.
-func RemoveFormFields(rs io.ReadSeeker, w io.Writer, fieldIDs []string, conf *model.Configuration) error {
+func RemoveFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, conf *model.Configuration) error {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 		conf.Cmd = model.REMOVEFORMFIELDS
@@ -94,7 +94,7 @@ func RemoveFormFields(rs io.ReadSeeker, w io.Writer, fieldIDs []string, conf *mo
 		return err
 	}
 
-	ok, err := form.RemoveFormFields(ctx, fieldIDs)
+	ok, err := form.RemoveFormFields(ctx, fieldIDsOrNames)
 	if err != nil {
 		return err
 	}
@@ -156,7 +156,7 @@ func RemoveFormFieldsFile(inFile, outFile string, fieldIDs []string, conf *model
 }
 
 // LockFormFields turns form fields in rs into read-only and writes the result to w.
-func LockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDs []string, conf *model.Configuration) error {
+func LockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, conf *model.Configuration) error {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 		conf.Cmd = model.LOCKFORMFIELDS
@@ -170,7 +170,7 @@ func LockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDs []string, conf *mode
 		return err
 	}
 
-	ok, err := form.LockFormFields(ctx, fieldIDs)
+	ok, err := form.LockFormFields(ctx, fieldIDsOrNames)
 	if err != nil {
 		return err
 	}
@@ -190,7 +190,7 @@ func LockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDs []string, conf *mode
 }
 
 // LockFormFieldsFile turns form fields of inFile into read-only and writes the result to outFile.
-func LockFormFieldsFile(inFile, outFile string, fieldIDs []string, conf *model.Configuration) (err error) {
+func LockFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {
@@ -228,11 +228,11 @@ func LockFormFieldsFile(inFile, outFile string, fieldIDs []string, conf *model.C
 		}
 	}()
 
-	return LockFormFields(f1, f2, fieldIDs, conf)
+	return LockFormFields(f1, f2, fieldIDsOrNames, conf)
 }
 
 // UnlockFormFields makess form fields in rs writeable and writes the result to w.
-func UnlockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDs []string, conf *model.Configuration) error {
+func UnlockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, conf *model.Configuration) error {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 		conf.Cmd = model.UNLOCKFORMFIELDS
@@ -246,7 +246,7 @@ func UnlockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDs []string, conf *mo
 		return err
 	}
 
-	ok, err := form.UnlockFormFields(ctx, fieldIDs)
+	ok, err := form.UnlockFormFields(ctx, fieldIDsOrNames)
 	if err != nil {
 		return err
 	}
@@ -266,7 +266,7 @@ func UnlockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDs []string, conf *mo
 }
 
 // UnlockFormFieldsFile makes form fields of inFile writeable and writes the result to outFile.
-func UnlockFormFieldsFile(inFile, outFile string, fieldIDs []string, conf *model.Configuration) (err error) {
+func UnlockFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {
@@ -304,11 +304,11 @@ func UnlockFormFieldsFile(inFile, outFile string, fieldIDs []string, conf *model
 		}
 	}()
 
-	return UnlockFormFields(f1, f2, fieldIDs, conf)
+	return UnlockFormFields(f1, f2, fieldIDsOrNames, conf)
 }
 
 // ResetFormFields resets form fields of rs and writes the result to w.
-func ResetFormFields(rs io.ReadSeeker, w io.Writer, fieldIDs []string, conf *model.Configuration) error {
+func ResetFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, conf *model.Configuration) error {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 		conf.Cmd = model.RESETFORMFIELDS
@@ -322,7 +322,7 @@ func ResetFormFields(rs io.ReadSeeker, w io.Writer, fieldIDs []string, conf *mod
 		return err
 	}
 
-	ok, err := form.ResetFormFields(ctx, fieldIDs)
+	ok, err := form.ResetFormFields(ctx, fieldIDsOrNames)
 	if err != nil {
 		return err
 	}
@@ -342,7 +342,7 @@ func ResetFormFields(rs io.ReadSeeker, w io.Writer, fieldIDs []string, conf *mod
 }
 
 // ResetFormFieldsFile resets form fields of inFile and writes the result to outFile.
-func ResetFormFieldsFile(inFile, outFile string, fieldIDs []string, conf *model.Configuration) (err error) {
+func ResetFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {
@@ -380,7 +380,7 @@ func ResetFormFieldsFile(inFile, outFile string, fieldIDs []string, conf *model.
 		}
 	}()
 
-	return ResetFormFields(f1, f2, fieldIDs, conf)
+	return ResetFormFields(f1, f2, fieldIDsOrNames, conf)
 }
 
 // ExportForm extracts form data originating from source from rs and writes the result to w.
@@ -668,7 +668,7 @@ func parseCSVLines(rd io.Reader) ([][]string, error) {
 	// Does NOT do any fieldtype checking!
 	// Don't use unless you know your form anatomy inside out!
 
-	// The first row is expected to hold the fieldNames of the fields to be filled - the only form metadata needed for this usecase.
+	// The first row is expected to hold the fieldIDs/fieldNames of the fields to be filled - the only form metadata needed for this usecase.
 	// The remaining rows are the corresponding data tuples.
 	// Each row results in one separate PDF form written to outDir.
 
@@ -768,7 +768,7 @@ func multiFillFormCSV(inFilePDF string, rd io.Reader, outDir, fileName string, m
 	return nil
 }
 
-// MultiFillForm populates multiples instances of rs's form with data from rd and writes the result to outDir.
+// MultiFillForm populates multiples instances of inFilePDF's form with data from rd and writes the result to outDir.
 func MultiFillForm(inFilePDF string, rd io.Reader, outDir, fileName string, format form.DataFormat, merge bool, conf *model.Configuration) error {
 
 	if conf == nil {

@@ -2,14 +2,14 @@
 	"header": {
 		"source": "person.pdf",
 		"version": "pdfcpu v0.4.0 dev",
-		"creation": "2023-01-28 21:00:08 CET",
+		"creation": "2023-03-15 23:51:45 CET",
 		"producer": "pdfcpu v0.4.0 dev"
 	},
 	"forms": [
 		{
 			"textfield": [
 				{
-					"id": "firstName",
+					"name": "firstName",
 					"value": "Jackie",
 					"locked": true
 				},
@@ -19,44 +19,44 @@
 					"locked": true
 				},
 				{
-					"id": "country",
+					"name": "country",
 					"value": "US of the world",
 					"multiline": false,
 					"locked": false
 				},
 				{
-					"id": "occup",
+					"name": "occup",
 					"value": "Human"
 				}
 			],
 			"datefield": [
 				{
-					"id": "dob",
+					"name": "dob",
 					"value": "31.01.1999",
 					"locked": true
 				}
 			],
 			"checkbox": [
 				{
-					"id": "dobVerified",
+					"name": "dobVerified",
 					"value": true,
 					"locked": true
 				}
 			],
 			"radiobuttongroup": [
 				{
-					"id": "gender",
+					"name": "gender",
 					"value": "non-binary",
 					"locked": true
 				}
 			],
 			"combobox": [
 				{
-					"id": "status",
+					"name": "status",
 					"value": "alive"
 				},
 				{
-					"id": "license",
+					"name": "license",
 					"value": "unknown"
 				}
 			],

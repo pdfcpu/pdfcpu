@@ -2,7 +2,7 @@
 	"header": {
 		"source": "person.pdf",
 		"version": "pdfcpu v0.4.0 dev",
-		"creation": "2023-03-12 00:53:02 CET",
+		"creation": "2023-03-16 23:35:35 CET",
 		"producer": "pdfcpu v0.4.0 dev"
 	},
 	"forms": [
@@ -10,28 +10,24 @@
 			"textfield": [
 				{
 					"page": 1,
-					"id": "firstName",
+					"id": "36",
+					"name": "lastName",
 					"value": "",
 					"multiline": false,
 					"locked": false
 				},
 				{
 					"page": 1,
-					"id": "lastName",
+					"id": "31",
+					"name": "country",
 					"value": "",
 					"multiline": false,
 					"locked": false
 				},
 				{
 					"page": 1,
-					"id": "country",
-					"value": "",
-					"multiline": false,
-					"locked": false
-				},
-				{
-					"page": 1,
-					"id": "planet",
+					"id": "32",
+					"name": "planet",
 					"default": "Earth",
 					"value": "Earth",
 					"multiline": false,
@@ -39,7 +35,16 @@
 				},
 				{
 					"page": 1,
-					"id": "occup",
+					"id": "35",
+					"name": "firstName",
+					"value": "",
+					"multiline": false,
+					"locked": false
+				},
+				{
+					"page": 1,
+					"id": "33",
+					"name": "occup",
 					"value": "",
 					"multiline": false,
 					"locked": false
@@ -48,7 +53,8 @@
 			"datefield": [
 				{
 					"page": 1,
-					"id": "dob",
+					"id": "37",
+					"name": "dob",
 					"format": "dd.mm.yyyy",
 					"value": "",
 					"locked": false
@@ -57,7 +63,8 @@
 			"checkbox": [
 				{
 					"page": 1,
-					"id": "dobVerified",
+					"id": "38",
+					"name": "dobVerified",
 					"default": false,
 					"value": false,
 					"locked": false
@@ -66,7 +73,8 @@
 			"radiobuttongroup": [
 				{
 					"page": 1,
-					"id": "gender",
+					"id": "19",
+					"name": "gender",
 					"options": [
 						"female",
 						"male",
@@ -79,7 +87,8 @@
 			"combobox": [
 				{
 					"page": 1,
-					"id": "status",
+					"id": "39",
+					"name": "status",
 					"editable": false,
 					"options": [
 						"alive",
@@ -94,7 +103,8 @@
 				},
 				{
 					"page": 1,
-					"id": "license",
+					"id": "34",
+					"name": "license",
 					"editable": false,
 					"options": [
 						"CC BY 2.0",

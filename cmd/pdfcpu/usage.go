@@ -1005,10 +1005,10 @@ For more info on json syntax & samples please refer to :
    pdfcpu/pkg/samples/create/*`
 
 	usageFormListFields   = "pdfcpu form list   inFile..."
-	usageFormRemoveFields = "pdfcpu form remove inFile [outFile] fieldID..."
-	usageFormLock         = "pdfcpu form lock   inFile [outFile] [fieldID...]"
-	usageFormUnlock       = "pdfcpu form unlock inFile [outFile] [fieldID...]"
-	usageFormReset        = "pdfcpu form reset  inFile [outFile] [fieldID...]"
+	usageFormRemoveFields = "pdfcpu form remove inFile [outFile] <fieldID|fieldName>..."
+	usageFormLock         = "pdfcpu form lock   inFile [outFile] [fieldID|fieldName]..."
+	usageFormUnlock       = "pdfcpu form unlock inFile [outFile] [fieldID|fieldName]..."
+	usageFormReset        = "pdfcpu form reset  inFile [outFile] [fieldID|fieldName]..."
 	usageFormExport       = "pdfcpu form export inFile [outFileJSON]"
 	usageFormFill         = "pdfcpu form fill inFile inFileJSON [outFile]"
 	usageFormMultiFill    = "pdfcpu form multifill [-m(ode) single|merge] inFile inFileData outDir [outName]"
@@ -1029,9 +1029,9 @@ For more info on json syntax & samples please refer to :
       inFileData ... input CSV or JSON file
       outDir     ... output directory
       outFile    ... output pdf file
-      fieldID    ... as listed by pdfcpu form list
       outName    ... base output name
-
+      fieldID    ... as indicated by "pdfcpu form list"
+      fieldName  ... as indicated by "pdfcpu form list"
 
 The output modes are:
 
@@ -1043,52 +1043,60 @@ The output modes are:
 Supported usecases:
 
    1) Get a list of form fields:
-         "pdfcpu form list in.pdf" returns a list of form fields of in.pdf eg. "firstName, lastName, dob".
+         "pdfcpu form list in.pdf" returns a list of form fields of in.pdf.
+         Each field is identified by its name and id.
    
    2) Remove some form fields:
-         "pdfcpu form remove in.pdf middleName birthPlace" removes the the two fields with ids "middleName" and "birthPlace".
+         "pdfcpu form remove in.pdf middleName birthPlace" removes the the two fields "middleName" and "birthPlace".
+         You may supply a mixed list of field ids and field names.
       
    3) Make some or all fields read-only:
          "pdfcpu form lock in.pdf dateOfBirth" turns the field "dateOfBirth" into read-only.
          "pdfcpu from lock in.pdf" makes the form read-only.
+         You may supply a mixed list of field ids and field names.
    
    4) Make some or all read-only fields writeable:
          "pdfcpu form unlock in.pdf dateOfBirth" makes the field "dateOfBirth" writeable.
          "pdfcpu form unlock in.pdf" makes all fields of in.pdf writeable.
+         You may supply a mixed list of field ids and field names.
    
    5) Clear some or all fields:
          "pdfcpu form reset in.pdf firstName lastName" resets the fields "firstName" and "lastName" to its default values.
          "pdfcpu form reset in.pdf" resets the whole form of in.pdf.
+         You may supply a mixed list of field ids and field names.
        
    6) Export all form fields as preparation for form filling:
          "pdfcpu form export in.pdf" exports field data into a JSON structure written to in.json.
    
    7) Fill a form with data:
          a) Export your form into in.json and edit the field values.
-         b) "pdfcpu form fill in.pdf in.json out.pdf" fills in.pdf with form data from in.json and writes the result to out.pdf.
+         b) Optionally trim down each field to id or name and value(s).
+         c) "pdfcpu form fill in.pdf in.json out.pdf" fills in.pdf with form data from in.json and writes the result to out.pdf.
 
    or
 
    8) Generate a sequence of filled instances of a form:
          a) Export your form to in.json and edit the field values.
             Extend the JSON Array containing the form by using copy & paste and edit the corresponding form data.
-         b) "pdfcpu form multifill in.pdf in.json outDir" creates a separate PDF for each filled form instance in outDir.
+         b) Optionally trim down each field to id or name and value(s).
+         c) "pdfcpu form multifill in.pdf in.json outDir" creates a separate PDF for each filled form instance in outDir.
       or
-         c) Export your form to in.json.
-         d) Create a CSV file holding form instance data where each CSV line corresponds to one form data tuple.
-            The first line identifies fields via id from in.json.
-         e) "pdfcpu form multifill in.pdf in.csv outDir" creates a separate PDF for each filled form instance in outDir.
+         a) Export your form to in.json.
+         b) Create a CSV file holding form instance data where each CSV line corresponds to one form data tuple.
+            The first line identifies fields via id or name from in.json.
+         c) "pdfcpu form multifill in.pdf in.csv outDir" creates a separate PDF for each filled form instance in outDir.
 
    or
 
    9) Generate a sequence of filled instances of a form and merge output:
          a) Export your form to in.json and edit the field values.
             Extend the JSON Array containing the form by using copy & paste and edit the corresponding form data.
-         b) "pdfcpu form multifill -m merge in.pdf in.json outDir" creates a single output PDF in outDir.
+         b) Optionally trim down each field to id or name and value(s).
+         c) "pdfcpu form multifill -m merge in.pdf in.json outDir" creates a single output PDF in outDir.
       or
          c) Export your form to in.json.
          d) Create a CSV file holding form instance data where each CSV line corresponds to one form data tuple.
-            The first line identifies fields via id in in.json.
+            The first line identifies fields via id or name in in.json.
          e) "pdfcpu form multifill -m merge in.pdf in.csv outDir" creates a single output PDF in outDir.
 
 

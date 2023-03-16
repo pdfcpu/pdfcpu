@@ -2,7 +2,7 @@
 	"header": {
 		"source": "chineseSimple.pdf",
 		"version": "pdfcpu v0.4.0 dev",
-		"creation": "2023-03-12 00:53:02 CET",
+		"creation": "2023-03-16 23:35:35 CET",
 		"producer": "pdfcpu v0.4.0 dev"
 	},
 	"forms": [
@@ -10,7 +10,8 @@
 			"textfield": [
 				{
 					"page": 1,
-					"id": "firstName1",
+					"id": "31",
+					"name": "firstName1",
 					"default": "默认名称",
 					"value": "杰基",
 					"multiline": false,
@@ -18,14 +19,16 @@
 				},
 				{
 					"page": 1,
-					"id": "lastName1",
+					"id": "36",
+					"name": "lastName1",
 					"value": "能源部",
 					"multiline": false,
 					"locked": false
 				},
 				{
 					"page": 1,
-					"id": "note1",
+					"id": "37",
+					"name": "note1",
 					"value": "这是一个示例文本。\n那是下一行。",
 					"multiline": true,
 					"locked": false
@@ -34,7 +37,8 @@
 			"datefield": [
 				{
 					"page": 1,
-					"id": "dob1",
+					"id": "38",
+					"name": "dob1",
 					"format": "dd.mm.yyyy",
 					"default": "01.01.2000",
 					"value": "31.12.1999",
@@ -44,35 +48,40 @@
 			"checkbox": [
 				{
 					"page": 1,
-					"id": "cb11",
+					"id": "32",
+					"name": "cb11",
 					"default": false,
 					"value": true,
 					"locked": false
 				},
 				{
 					"page": 1,
-					"id": "cb12",
+					"id": "33",
+					"name": "cb12",
 					"default": false,
 					"value": false,
 					"locked": false
 				},
 				{
 					"page": 1,
-					"id": "cb13",
+					"id": "39",
+					"name": "cb13",
 					"default": false,
 					"value": false,
 					"locked": false
 				},
 				{
 					"page": 1,
-					"id": "cb14",
+					"id": "40",
+					"name": "cb14",
 					"default": false,
 					"value": false,
 					"locked": false
 				},
 				{
 					"page": 1,
-					"id": "cb15",
+					"id": "35",
+					"name": "cb15",
 					"default": false,
 					"value": false,
 					"locked": false
@@ -81,7 +90,8 @@
 			"radiobuttongroup": [
 				{
 					"page": 1,
-					"id": "gender1",
+					"id": "18",
+					"name": "gender1",
 					"options": [
 						"女性",
 						"男性",
@@ -95,7 +105,8 @@
 			"combobox": [
 				{
 					"page": 1,
-					"id": "city12",
+					"id": "34",
+					"name": "city12",
 					"editable": false,
 					"options": [
 						"北京",
@@ -110,7 +121,8 @@
 			"listbox": [
 				{
 					"page": 1,
-					"id": "city11",
+					"id": "30",
+					"name": "city11",
 					"multi": true,
 					"options": [
 						"旧金山",

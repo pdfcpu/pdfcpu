@@ -2,62 +2,62 @@
 	"header": {
 		"source": "person.pdf",
 		"version": "pdfcpu v0.4.0 dev",
-		"creation": "2023-01-28 21:00:08 CET",
+		"creation": "2023-03-15 23:51:45 CET",
 		"producer": "pdfcpu v0.4.0 dev"
 	},
 	"forms": [
 		{
 			"textfield": [
 				{
-					"id": "firstName",
+					"name": "firstName",
 					"value": "Alan",
 					"locked": true
 				},
 				{
-					"id": "lastName",
+					"name": "lastName",
 					"value": "Turing",
 					"locked": true
 				},
 				{
-					"id": "country",
+					"name": "country",
 					"value": "UK",
 					"locked": true
 				},
 				{
-					"id": "occup",
+					"name": "occup",
 					"value": "Computer Scientist",
 					"locked": true
 				}
 			],
 			"datefield": [
 				{
-					"id": "dob",
+					"name": "dob",
 					"value": "23.06.1912",
 					"locked": true
 				}
 			],
 			"checkbox": [
 				{
-					"id": "dobVerified",
+					"name": "dobVerified",
 					"value": true,
 					"locked": true
 				}
 			],
 			"radiobuttongroup": [
 				{
-					"id": "gender",
+					"name": "gender",
 					"value": "male",
 					"locked": true
 				}
 			],
 			"combobox": [
 				{
-					"id": "status",
+					"name": "status",
 					"value": "deceased",
 					"locked": true
 				},
 				{
-					"id": "license",
+					"name": "license",
 					"value": "abc",
 					"locked": true
 				}
@@ -88,54 +88,54 @@
 		{
 			"textfield": [
 				{
-					"id": "firstName",
+					"name": "firstName",
 					"value": "Gao",
 					"locked": true
 				},
 				{
-					"id": "lastName",
+					"name": "lastName",
 					"value": "Zhisheng",
 					"locked": true
 				},
 				{
-					"id": "country",
+					"name": "country",
 					"value": "China",
 					"locked": true
 				},
 				{
-					"id": "occup",
+					"name": "occup",
 					"value": "Human Rights Attorney",
 					"locked": true
 				}
 			],
 			"datefield": [
 				{
-					"id": "dob",
+					"name": "dob",
 					"value": "20.04.1964",
 					"locked": true
 				}
 			],
 			"checkbox": [
 				{
-					"id": "dobVerified",
+					"name": "dobVerified",
 					"value": true,
 					"locked": true
 				}
 			],
 			"radiobuttongroup": [
 				{
-					"id": "gender",
+					"name": "gender",
 					"value": "male",
 					"locked": true
 				}
 			],
 			"combobox": [
 				{
-					"id": "status",
+					"name": "status",
 					"value": "unknown"
 				},
 				{
-					"id": "license",
+					"name": "license",
 					"value": "unknown"
 				}
 			],
@@ -165,55 +165,55 @@
 		{
 			"textfield": [
 				{
-					"id": "firstName",
+					"name": "firstName",
 					"value": "Anna",
 					"locked": true
 				},
 				{
-					"id": "lastName",
+					"name": "lastName",
 					"value": "Politkovskaya",
 					"locked": true
 				},
 				{
-					"id": "country",
+					"name": "country",
 					"value": "Russia",
 					"locked": true
 				},
 				{
-					"id": "occup",
+					"name": "occup",
 					"value": "Human Rights Activist",
 					"locked": true
 				}
 			],
 			"datefield": [
 				{
-					"id": "dob",
+					"name": "dob",
 					"value": "30.08.1958",
 					"locked": true
 				}
 			],
 			"checkbox": [
 				{
-					"id": "dobVerified",
+					"name": "dobVerified",
 					"value": true,
 					"locked": true
 				}
 			],
 			"radiobuttongroup": [
 				{
-					"id": "gender",
+					"name": "gender",
 					"value": "female",
 					"locked": true
 				}
 			],
 			"combobox": [
 				{
-					"id": "status",
+					"name": "status",
 					"value": "killed",
 					"locked": true
 				},
 				{
-					"id": "license",
+					"name": "license",
 					"value": "CC BY 2.0",
 					"locked": true
 				}

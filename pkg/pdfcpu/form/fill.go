@@ -399,14 +399,18 @@ func FieldMap(fieldNames, formRecord []string) (map[string]CSVFieldAttributes, m
 }
 
 // FillDetails returns a closure that returns new form data provided by CSV or JSON.
-func FillDetails(form *Form, fieldMap map[string]CSVFieldAttributes) func(id string, fieldType FieldType, format DataFormat) ([]string, bool, bool) {
+func FillDetails(form *Form, fieldMap map[string]CSVFieldAttributes) func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool) {
 	f := form
 	fm := fieldMap
 
-	return func(id string, fieldType FieldType, format DataFormat) ([]string, bool, bool) {
+	return func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool) {
 
 		if format == CSV {
 			fa, ok := fm[id]
+			if ok {
+				return fa.Values, fa.Lock, true
+			}
+			fa, ok = fm[name]
 			if ok {
 				return fa.Values, fa.Lock, true
 			}
@@ -415,7 +419,7 @@ func FillDetails(form *Form, fieldMap map[string]CSVFieldAttributes) func(id str
 
 		switch fieldType {
 		case FTCheckBox:
-			v, lock, ok := form.checkBoxValueAndLock(id)
+			v, lock, ok := form.checkBoxValueAndLock(id, name)
 			c := "f"
 			if v {
 				c = "t"
@@ -423,22 +427,22 @@ func FillDetails(form *Form, fieldMap map[string]CSVFieldAttributes) func(id str
 			return []string{c}, lock, ok
 
 		case FTRadioButtonGroup:
-			v, lock, ok := form.radioButtonGroupValueAndLock(id)
+			v, lock, ok := form.radioButtonGroupValueAndLock(id, name)
 			return []string{v}, lock, ok
 
 		case FTComboBox:
-			v, lock, ok := f.comboBoxValueAndLock(id)
+			v, lock, ok := f.comboBoxValueAndLock(id, name)
 			return []string{v}, lock, ok
 
 		case FTListBox:
-			return f.listBoxValuesAndLock(id)
+			return f.listBoxValuesAndLock(id, name)
 
 		case FTDate:
-			v, lock, ok := f.dateFieldValueAndLock(id)
+			v, lock, ok := f.dateFieldValueAndLock(id, name)
 			return []string{v}, lock, ok
 
 		case FTText:
-			v, lock, ok := f.textFieldValueAndLock(id)
+			v, lock, ok := f.textFieldValueAndLock(id, name)
 			return []string{v}, lock, ok
 		}
 
@@ -449,7 +453,7 @@ func FillDetails(form *Form, fieldMap map[string]CSVFieldAttributes) func(id str
 // FillForm populates form fields as provided by fillDetails and also supports virtual image fields.
 func FillForm(
 	ctx *model.Context,
-	fillDetails func(id string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
+	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
 	imgs map[string]*Page,
 	format DataFormat) (bool, []*model.Page, error) {
 
@@ -461,7 +465,7 @@ func FillForm(
 	}
 
 	fonts := map[string]types.IndirectRef{}
-	pIndRefs := map[types.IndirectRef]bool{}
+	indRefs := map[types.IndirectRef]bool{}
 
 	var ok bool
 
@@ -475,9 +479,9 @@ func FillForm(
 			continue
 		}
 
-		for _, ir := range *(wAnnots.IndRefs) {
+		for _, indRef := range *(wAnnots.IndRefs) {
 
-			found, pIndRef, id, ft, err := isField(xRefTable, ir, fields)
+			found, fi, err := isField(xRefTable, indRef, fields)
 			if err != nil {
 				return false, nil, err
 			}
@@ -485,15 +489,17 @@ func FillForm(
 				continue
 			}
 
-			if pIndRef != nil {
-				if pIndRefs[*pIndRef] {
+			id, name := fi.id, fi.name
+
+			if fi.indRef != nil {
+				if indRefs[*fi.indRef] {
 					continue
 				}
-				pIndRefs[*pIndRef] = true
-				ir = *pIndRef
+				indRefs[*fi.indRef] = true
+				indRef = *fi.indRef
 			}
 
-			d, err := xRefTable.DereferenceDict(ir)
+			d, err := xRefTable.DereferenceDict(indRef)
 			if err != nil {
 				return false, nil, err
 			}
@@ -507,6 +513,7 @@ func FillForm(
 				locked = uint(primitives.FieldFlags(*ff))&uint(primitives.FieldReadOnly) > 0
 			}
 
+			ft := fi.ft
 			if ft == nil {
 				ft = d.NameEntry("FT")
 				if ft == nil {
@@ -518,7 +525,7 @@ func FillForm(
 
 			case "Btn":
 				if len(d.ArrayEntry("Kids")) > 0 {
-					vv, lock, found := fillDetails(id, FTRadioButtonGroup, format)
+					vv, lock, found := fillDetails(id, name, FTRadioButtonGroup, format)
 					if !found {
 						continue
 					}
@@ -582,7 +589,7 @@ func FillForm(
 
 				} else {
 
-					vv, lock, found := fillDetails(id, FTCheckBox, format)
+					vv, lock, found := fillDetails(id, name, FTCheckBox, format)
 					if !found {
 						continue
 					}
@@ -636,7 +643,7 @@ func FillForm(
 				}
 
 				if primitives.FieldFlags(*ff)&primitives.FieldCombo > 0 {
-					vv, lock, found := fillDetails(id, FTComboBox, format)
+					vv, lock, found := fillDetails(id, name, FTComboBox, format)
 					if !found {
 						continue
 					}
@@ -689,7 +696,7 @@ func FillForm(
 					continue
 				}
 
-				vNew, lock, found := fillDetails(id, FTListBox, format)
+				vNew, lock, found := fillDetails(id, name, FTListBox, format)
 				if !found {
 					continue
 				}
@@ -793,7 +800,7 @@ func FillForm(
 					vOld = s
 				}
 				if df != nil {
-					vv, lock, found := fillDetails(id, FTDate, format)
+					vv, lock, found := fillDetails(id, name, FTDate, format)
 					if !found {
 						continue
 					}
@@ -827,7 +834,7 @@ func FillForm(
 					continue
 				}
 
-				vv, lock, found := fillDetails(id, FTText, format)
+				vv, lock, found := fillDetails(id, name, FTText, format)
 				if !found {
 					continue
 				}
