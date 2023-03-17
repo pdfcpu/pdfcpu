@@ -116,7 +116,7 @@ func ValidateFiles(inFiles []string, conf *model.Configuration) error {
 			if len(inFiles) == 1 {
 				return err
 			}
-			fmt.Fprintf(os.Stderr, "%v\n", err)
+			fmt.Fprintf(os.Stderr, "%s: %v\n", fn, err)
 		}
 	}
 
