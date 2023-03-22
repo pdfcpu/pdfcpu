@@ -1772,15 +1772,16 @@ func processCreateCommand(conf *model.Configuration) {
 
 	inFile, outFile := "", ""
 	if len(flag.Args()) == 2 {
-		inFile := flag.Arg(1)
-		ensurePDFExtension(inFile)
-		outFile = inFile
-	} else {
 		outFile = flag.Arg(1)
+		ensurePDFExtension(outFile)
+	} else {
+		inFile = flag.Arg(1)
+		ensurePDFExtension(inFile)
+		outFile = flag.Arg(2)
 		ensurePDFExtension(outFile)
 	}
 
-	process(cli.CreateCommand(inFileJSON, inFile, outFile, conf))
+	process(cli.CreateCommand(inFile, inFileJSON, outFile, conf))
 }
 
 func processListFormFieldsCommand(conf *model.Configuration) {

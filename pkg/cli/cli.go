@@ -280,7 +280,7 @@ func Dump(cmd *Command) ([]string, error) {
 // Create renders page content corresponding to declarations found in inJSONFile and writes the result to outFile.
 // If inFile is present, page content will be appended,
 func Create(cmd *Command) ([]string, error) {
-	return nil, api.CreateFile(*cmd.InFileJSON, *cmd.InFile, *cmd.OutFile, cmd.Conf)
+	return nil, api.CreateFile(*cmd.InFile, *cmd.InFileJSON, *cmd.OutFile, cmd.Conf)
 }
 
 // ListFormFields returns inFile's form field ids.

@@ -795,15 +795,15 @@ func DumpCommand(inFilePDF string, vals []int, conf *model.Configuration) *Comma
 }
 
 // CreateCommand creates a new command to create a PDF file.
-func CreateCommand(inFileJSON, inFilePDF, outFilePDF string, conf *model.Configuration) *Command {
+func CreateCommand(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
 	conf.Cmd = model.CREATE
 	return &Command{
 		Mode:       model.CREATE,
-		InFileJSON: &inFileJSON,
 		InFile:     &inFilePDF,
+		InFileJSON: &inFileJSON,
 		OutFile:    &outFilePDF,
 		Conf:       conf}
 }
