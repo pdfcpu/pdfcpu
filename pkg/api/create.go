@@ -96,6 +96,7 @@ func CreateFile(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configurat
 		if f1, err = os.Open(inFilePDF); err != nil {
 			return err
 		}
+		log.CLI.Printf("reading %s...\n", inFilePDF)
 		rs = f1
 	}
 

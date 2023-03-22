@@ -69,7 +69,7 @@ func SetPermissions(cmd *Command) ([]string, error) {
 
 // Split inFile into single page PDFs and write result files to outDir.
 func Split(cmd *Command) ([]string, error) {
-	return nil, api.SplitFile(*cmd.InFile, *cmd.OutDir, cmd.Span, cmd.Conf)
+	return nil, api.SplitFile(*cmd.InFile, *cmd.OutDir, cmd.IntVal, cmd.Conf)
 }
 
 // Trim inFile and write result to outFile.
@@ -79,7 +79,7 @@ func Trim(cmd *Command) ([]string, error) {
 
 // Rotate selected pages of inFile and write result to outFile.
 func Rotate(cmd *Command) ([]string, error) {
-	return nil, api.RotateFile(*cmd.InFile, *cmd.OutFile, cmd.Rotation, cmd.PageSelection, cmd.Conf)
+	return nil, api.RotateFile(*cmd.InFile, *cmd.OutFile, cmd.IntVal, cmd.PageSelection, cmd.Conf)
 }
 
 // AddWatermarks adds watermarks or stamps to selected pages of inFile and writes the result to outFile.
@@ -326,4 +326,19 @@ func MultiFillFormFields(cmd *Command) ([]string, error) {
 // Resize selected pages and write result to outFile.
 func Resize(cmd *Command) ([]string, error) {
 	return nil, api.ResizeFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Resize, cmd.Conf)
+}
+
+// Create poster for selected pages and write result PDFs into outDir.
+func Poster(cmd *Command) ([]string, error) {
+	return nil, api.PosterFile(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Cut, cmd.Conf)
+}
+
+// NDown selected pages and write result PDFs into outDir.
+func NDown(cmd *Command) ([]string, error) {
+	return nil, api.NDownFile(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Cut, cmd.Conf)
+}
+
+// Cut selected pages and write result PDFs into outDir.
+func Cut(cmd *Command) ([]string, error) {
+	return nil, api.CutFile(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Cut, cmd.Conf)
 }

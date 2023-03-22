@@ -122,6 +122,9 @@ const (
 	INSTALLFONTS
 	LISTFONTS
 	RESIZE
+	POSTER // needed?
+	NDOWN  // needed?
+	CUT
 )
 
 // Configuration of a Context.

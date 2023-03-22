@@ -2057,3 +2057,120 @@ func processResizeCommand(conf *model.Configuration) {
 
 	process(cli.ResizeCommand(inFile, outFile, selectedPages, rc, conf))
 }
+
+func processPosterCommand(conf *model.Configuration) {
+	if len(flag.Args()) != 3 {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usagePoster)
+		os.Exit(1)
+	}
+
+	processDiplayUnit(conf)
+
+	// formsize(=papersize) or dimensions, optionally: scalefactor, border, margin, bgcolor
+	cut, err := pdfcpu.ParseCutConfigForPoster(flag.Arg(0), conf.Unit)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(1)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+
+	outDir := flag.Arg(2)
+
+	selectedPages, err := api.ParsePageSelection(selectedPages)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
+		os.Exit(1)
+	}
+
+	process(cli.CutCommand(inFile, outDir, selectedPages, cut, conf))
+}
+
+func processNDownCommand(conf *model.Configuration) {
+	if len(flag.Args()) < 3 || len(flag.Args()) > 4 {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usageNDown)
+		os.Exit(1)
+	}
+
+	processDiplayUnit(conf)
+
+	selectedPages, err := api.ParsePageSelection(selectedPages)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
+		os.Exit(1)
+	}
+
+	var inFile, outDir string
+
+	n, err := strconv.Atoi(flag.Arg(0))
+	if err == nil {
+		// pdfcpu ndown n inFile outDir
+		cut, err := pdfcpu.ParseCutConfigForN(n, "", conf.Unit)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		inFile = flag.Arg(1)
+		if conf.CheckFileNameExt {
+			ensurePDFExtension(inFile)
+		}
+		outDir = flag.Arg(2)
+		process(cli.CutCommand(inFile, outDir, selectedPages, cut, conf))
+	}
+
+	// pdfcpu ndown description n inFile outDir
+
+	// Optionally: border, margin, bgcolor
+	n, err = strconv.Atoi(flag.Arg(1))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+
+	cut, err := pdfcpu.ParseCutConfigForN(n, flag.Arg(0), conf.Unit)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+
+	inFile = flag.Arg(2)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+	outDir = flag.Arg(3)
+	process(cli.CutCommand(inFile, outDir, selectedPages, cut, conf))
+}
+
+func processCutCommand(conf *model.Configuration) {
+	if len(flag.Args()) != 3 {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usageCut)
+		os.Exit(1)
+	}
+
+	processDiplayUnit(conf)
+
+	// optionally: border, margin, bgcolor
+	cut, err := pdfcpu.ParseCutConfig(flag.Arg(0), conf.Unit)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(1)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+
+	outDir := flag.Arg(2)
+
+	selectedPages, err := api.ParsePageSelection(selectedPages)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
+		os.Exit(1)
+	}
+
+	process(cli.CutCommand(inFile, outDir, selectedPages, cut, conf))
+}

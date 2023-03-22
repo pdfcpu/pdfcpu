@@ -71,7 +71,7 @@ func ListImagesFile(inFiles []string, selectedPages []string, conf *model.Config
 		output, err := ListImages(f, selectedPages, conf)
 		if err != nil {
 			if len(inFiles) > 1 {
-				ss = append(ss, fmt.Sprintf("\nproblem processing %s: %v", fn, err))
+				ss = append(ss, fmt.Sprintf("\n%s: %v", fn, err))
 				continue
 			}
 			return nil, err

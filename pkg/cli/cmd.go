@@ -36,8 +36,7 @@ type Command struct {
 	PageSelection  []string
 	PWOld          *string
 	PWNew          *string
-	Span           int
-	Rotation       int
+	IntVal         int
 	BoolVal        bool
 	IntVals        []int
 	StringVals     []string
@@ -48,6 +47,7 @@ type Command struct {
 	Box            *model.Box
 	Import         *pdfcpu.Import
 	NUp            *model.NUp
+	Cut            *model.Cut
 	PageBoundaries *model.PageBoundaries
 	Resize         *model.Resize
 	Watermark      *model.Watermark
@@ -115,6 +115,9 @@ var cmdMap = map[model.CommandMode]func(cmd *Command) ([]string, error){
 	model.FILLFORMFIELDS:          processForm,
 	model.MULTIFILLFORMFIELDS:     processForm,
 	model.RESIZE:                  Resize,
+	model.POSTER:                  Poster,
+	model.NDOWN:                   NDown,
+	model.CUT:                     Cut,
 }
 
 // ValidateCommand creates a new command to validate a file.
@@ -152,7 +155,7 @@ func SplitCommand(inFile, dirNameOut string, span int, conf *model.Configuration
 		Mode:   model.SPLIT,
 		InFile: &inFile,
 		OutDir: &dirNameOut,
-		Span:   span,
+		IntVal: span,
 		Conf:   conf}
 }
 
@@ -504,7 +507,7 @@ func RotateCommand(inFile, outFile string, rotation int, pageSelection []string,
 		InFile:        &inFile,
 		OutFile:       &outFile,
 		PageSelection: pageSelection,
-		Rotation:      rotation,
+		IntVal:        rotation,
 		Conf:          conf}
 }
 
@@ -931,5 +934,20 @@ func ResizeCommand(inFile, outFile string, pageSelection []string, resize *model
 		OutFile:       &outFile,
 		PageSelection: pageSelection,
 		Resize:        resize,
+		Conf:          conf}
+}
+
+// CutCommand creates a new command to cut and slice pages horizontally or vertically.
+func CutCommand(inFile, outDir string, pageSelection []string, cut *model.Cut, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.CUT
+	return &Command{
+		Mode:          model.CUT,
+		InFile:        &inFile,
+		OutDir:        &outDir,
+		PageSelection: pageSelection,
+		Cut:           cut,
 		Conf:          conf}
 }

@@ -444,22 +444,26 @@ func ListFormFields(ctx *model.Context) ([]string, error) {
 						if err != nil {
 							return nil, err
 						}
-						v := strings.Join(vv, ",")
-						if w := runewidth.StringWidth(v); w > valMax {
-							valMax = w
+						if len(vv) > 0 {
+							v := strings.Join(vv, ",")
+							if w := runewidth.StringWidth(v); w > valMax {
+								valMax = w
+							}
+							val = true
+							f.v = v
 						}
-						val = true
-						f.v = v
 						vv, err = parseStringLiteralArray(xRefTable, d, "DV")
 						if err != nil {
 							return nil, err
 						}
-						dv := strings.Join(vv, ",")
-						if w := runewidth.StringWidth(dv); w > defMax {
-							defMax = w
+						if len(vv) > 0 {
+							dv := strings.Join(vv, ",")
+							if w := runewidth.StringWidth(dv); w > defMax {
+								defMax = w
+							}
+							def = true
+							f.dv = dv
 						}
-						def = true
-						f.dv = dv
 					}
 				}
 

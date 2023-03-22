@@ -68,7 +68,7 @@ func ListFormFieldsFile(inFiles []string, conf *model.Configuration) ([]string, 
 		output, err := ListFormFields(f, conf)
 		if err != nil {
 			if len(inFiles) > 1 {
-				ss = append(ss, fmt.Sprintf("\nproblem processing %s: %v", fn, err))
+				ss = append(ss, fmt.Sprintf("\n%s: %v", fn, err))
 				continue
 			}
 			return nil, err

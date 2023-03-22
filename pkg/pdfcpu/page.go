@@ -35,9 +35,18 @@ func AddPages(ctxSrc, ctxDest *model.Context, pageNrs []int, usePgCache bool) er
 		return err
 	}
 
+	fieldsSrc, fieldsDest := types.Array{}, types.Array{}
+
+	if ctxSrc.AcroForm != nil {
+		o, _ := ctxSrc.AcroForm.Find("Fields")
+		fieldsSrc, err = ctxSrc.DereferenceArray(o)
+		if err != nil {
+			return err
+		}
+	}
+
 	pageCache := map[int]*types.IndirectRef{}
 	migrated := map[int]int{}
-	fields := types.Array{}
 
 	for _, i := range pageNrs {
 
@@ -58,15 +67,9 @@ func AddPages(ctxSrc, ctxDest *model.Context, pageNrs []int, usePgCache bool) er
 			return errors.Errorf("pdfcpu: unknown page number: %d\n", i)
 		}
 
-		//log.Write.Printf("AddPages:\n%s\n", inhPAttrs.resources)
-
-		//fmt.Printf("migrresDict bef: \n%s", d)
-
 		d = d.Clone().(types.Dict)
 		d["Resources"] = inhPAttrs.Resources.Clone()
 		d["Parent"] = *pagesIndRef
-
-		// Handle inherited page attributes.
 		d["MediaBox"] = inhPAttrs.MediaBox.Array()
 		if inhPAttrs.Rotate%360 > 0 {
 			d["Rotate"] = types.Integer(inhPAttrs.Rotate)
@@ -77,70 +80,13 @@ func AddPages(ctxSrc, ctxDest *model.Context, pageNrs []int, usePgCache bool) er
 			return err
 		}
 
-		// Migrate external page dict into ctxDest.
 		if err := migratePageDict(d, *pageIndRef, ctxSrc, ctxDest, migrated); err != nil {
 			return err
 		}
 
-		if d["Annots"] != nil && ctxSrc.AcroForm != nil {
-			// Record form fields
-			o, _ := ctxSrc.AcroForm.Find("Fields")
-			fieldsSrc, err := ctxSrc.DereferenceArray(o)
-			if err != nil {
+		if d["Annots"] != nil && len(fieldsSrc) > 0 {
+			if err := migrateFields(d, &fieldsSrc, &fieldsDest, ctxSrc, ctxDest, migrated); err != nil {
 				return err
-			}
-			o, _ = d.Find("Annots")
-			annots, err := ctxDest.DereferenceArray(o)
-			if err != nil {
-				return err
-			}
-			for _, v := range annots {
-				indRef := v.(types.IndirectRef)
-				d, err := ctxDest.DereferenceDict(indRef)
-				if err != nil {
-					return err
-				}
-				if pIndRef := d.IndirectRefEntry("Parent"); pIndRef != nil {
-					indRef = *pIndRef
-				}
-				var found bool
-				for _, v := range fields {
-					ir := v.(types.IndirectRef)
-					//if ir.Equals(indRef) {
-					if ir == indRef {
-						found = true
-						break
-					}
-				}
-				if found {
-					continue
-				}
-				for _, v := range fieldsSrc {
-					ir := v.(types.IndirectRef)
-					objNr := ir.ObjectNumber.Value()
-					if migrated[objNr] == indRef.ObjectNumber.Value() {
-						fields = append(fields, indRef)
-						break
-					}
-					d, err := ctxSrc.DereferenceDict(ir)
-					if err != nil {
-						return err
-					}
-					o, ok := d.Find("Kids")
-					if !ok {
-						continue
-					}
-					kids, err := ctxSrc.DereferenceArray(o)
-					if err != nil {
-						return err
-					}
-					if ok, err = detectMigratedAnnot(ctxSrc, &indRef, kids, migrated); err != nil {
-						return err
-					}
-					if ok {
-						fields = append(fields, indRef)
-					}
-				}
 			}
 		}
 
@@ -153,9 +99,9 @@ func AddPages(ctxSrc, ctxDest *model.Context, pageNrs []int, usePgCache bool) er
 		}
 	}
 
-	if ctxSrc.AcroForm != nil && len(fields) > 0 {
+	if ctxSrc.AcroForm != nil && len(fieldsDest) > 0 {
 		d := ctxSrc.AcroForm.Clone().(types.Dict)
-		if err := migrateFormDict(d, fields, ctxSrc, ctxDest, migrated); err != nil {
+		if err := migrateFormDict(d, fieldsDest, ctxSrc, ctxDest, migrated); err != nil {
 			return err
 		}
 		ctxDest.RootDict["AcroForm"] = d
