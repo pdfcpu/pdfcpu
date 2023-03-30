@@ -2059,7 +2059,7 @@ func processResizeCommand(conf *model.Configuration) {
 }
 
 func processPosterCommand(conf *model.Configuration) {
-	if len(flag.Args()) != 3 {
+	if len(flag.Args()) < 3 || len(flag.Args()) > 4 {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usagePoster)
 		os.Exit(1)
 	}
@@ -2086,11 +2086,16 @@ func processPosterCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	process(cli.CutCommand(inFile, outDir, selectedPages, cut, conf))
+	var outFile string
+	if len(flag.Args()) == 4 {
+		outFile = flag.Arg(3)
+	}
+
+	process(cli.PosterCommand(inFile, outDir, outFile, selectedPages, cut, conf))
 }
 
 func processNDownCommand(conf *model.Configuration) {
-	if len(flag.Args()) < 3 || len(flag.Args()) > 4 {
+	if len(flag.Args()) < 3 || len(flag.Args()) > 5 {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usageNDown)
 		os.Exit(1)
 	}
@@ -2107,7 +2112,9 @@ func processNDownCommand(conf *model.Configuration) {
 
 	n, err := strconv.Atoi(flag.Arg(0))
 	if err == nil {
-		// pdfcpu ndown n inFile outDir
+		// pdfcpu ndown n inFile outDir outFile
+
+		// Optionally: border, margin, bgcolor
 		cut, err := pdfcpu.ParseCutConfigForN(n, "", conf.Unit)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -2118,18 +2125,24 @@ func processNDownCommand(conf *model.Configuration) {
 			ensurePDFExtension(inFile)
 		}
 		outDir = flag.Arg(2)
-		process(cli.CutCommand(inFile, outDir, selectedPages, cut, conf))
+
+		var outFile string
+		if len(flag.Args()) == 4 {
+			outFile = flag.Arg(3)
+		}
+
+		process(cli.NDownCommand(inFile, outDir, outFile, selectedPages, n, cut, conf))
 	}
 
-	// pdfcpu ndown description n inFile outDir
+	// pdfcpu ndown description n inFile outDir outFile
 
-	// Optionally: border, margin, bgcolor
 	n, err = strconv.Atoi(flag.Arg(1))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 
+	// Optionally: border, margin, bgcolor
 	cut, err := pdfcpu.ParseCutConfigForN(n, flag.Arg(0), conf.Unit)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -2141,17 +2154,24 @@ func processNDownCommand(conf *model.Configuration) {
 		ensurePDFExtension(inFile)
 	}
 	outDir = flag.Arg(3)
-	process(cli.CutCommand(inFile, outDir, selectedPages, cut, conf))
+
+	var outFile string
+	if len(flag.Args()) == 5 {
+		outFile = flag.Arg(4)
+	}
+
+	process(cli.NDownCommand(inFile, outDir, outFile, selectedPages, n, cut, conf))
 }
 
 func processCutCommand(conf *model.Configuration) {
-	if len(flag.Args()) != 3 {
+	if len(flag.Args()) < 3 || len(flag.Args()) > 4 {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usageCut)
 		os.Exit(1)
 	}
 
 	processDiplayUnit(conf)
 
+	// required: at least one of horizontalCut, verticalCut
 	// optionally: border, margin, bgcolor
 	cut, err := pdfcpu.ParseCutConfig(flag.Arg(0), conf.Unit)
 	if err != nil {
@@ -2172,5 +2192,10 @@ func processCutCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	process(cli.CutCommand(inFile, outDir, selectedPages, cut, conf))
+	var outFile string
+	if len(flag.Args()) >= 4 {
+		outFile = flag.Arg(3)
+	}
+
+	process(cli.CutCommand(inFile, outDir, outFile, selectedPages, cut, conf))
 }

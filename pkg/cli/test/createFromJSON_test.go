@@ -42,7 +42,7 @@ func createPDF(t *testing.T, msg, inFile, inFileJSON, outFile string, conf *mode
 		outFile = inFile
 	}
 
-	cmd := cli.CreateCommand(inFileJSON, inFile, outFile, conf)
+	cmd := cli.CreateCommand(inFile, inFileJSON, outFile, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}

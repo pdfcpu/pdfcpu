@@ -330,15 +330,15 @@ func Resize(cmd *Command) ([]string, error) {
 
 // Create poster for selected pages and write result PDFs into outDir.
 func Poster(cmd *Command) ([]string, error) {
-	return nil, api.PosterFile(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Cut, cmd.Conf)
+	return nil, api.PosterFile(*cmd.InFile, *cmd.OutDir, *cmd.OutFile, cmd.PageSelection, cmd.Cut, cmd.Conf)
 }
 
 // NDown selected pages and write result PDFs into outDir.
 func NDown(cmd *Command) ([]string, error) {
-	return nil, api.NDownFile(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Cut, cmd.Conf)
+	return nil, api.NDownFile(*cmd.InFile, *cmd.OutDir, *cmd.OutFile, cmd.PageSelection, cmd.IntVal, cmd.Cut, cmd.Conf)
 }
 
 // Cut selected pages and write result PDFs into outDir.
 func Cut(cmd *Command) ([]string, error) {
-	return nil, api.CutFile(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Cut, cmd.Conf)
+	return nil, api.CutFile(*cmd.InFile, *cmd.OutDir, *cmd.OutFile, cmd.PageSelection, cmd.Cut, cmd.Conf)
 }

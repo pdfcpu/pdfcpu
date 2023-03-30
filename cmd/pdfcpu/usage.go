@@ -1139,13 +1139,14 @@ description ... scalefactor, dimensions, enforce:f/t, formsize(=papersize), bgco
          pdfcpu resize "dim:400 200, enforce:true" in.pdf out.pdf
             Resize pages to 400 x 200 points, enforce orientation.
 `
-	usagePoster     = "usage: pdfcpu poster [-p(ages) selectedPages] -- description inFile outDir" + generalFlags
+	usagePoster     = "usage: pdfcpu poster [-p(ages) selectedPages] -- description inFile outDir [outFileName]" + generalFlags
 	usageLongPoster = `Create a poster using paper size.
 
    pages       ... Please refer to "pdfcpu selectedpages"
    description ... formsize(=papersize), dimensions, scalefactor, border, margin, bgcolor
    inFile      ... input pdf file
    outDir      ... output directory
+   outFileName ... output file name
 
    Optionally scale your page dimensions then define the poster grid tile size via form size or dimensions.
    
@@ -1155,16 +1156,16 @@ description ... scalefactor, dimensions, enforce:f/t, formsize(=papersize), bgco
             Page format is A2, the printer supports A4.
             Generate a poster(A2) via a corresponding 2x2 grid of A4 pages.
          
-         pdfcpu poster "f:A4, scale:.2.0" in.pdf outDir
+         pdfcpu poster "f:A4, scale:2.0" in.pdf outDir
             Page format is A2, the printer supports A4.
-            Generate a poster(A1) via a corresponding 4x4 grid of A4 pages.
+            Generate a poster(A0) via a corresponding 4x4 grid of A4 pages.
 
-         pdfcpu poster -u cm -- "dim:10 10" in.pdf outDir
-            Generate a poster via a corresponding grid with cell size 10x10 cm.
+         pdfcpu poster -u cm -- "dim:15 10" in.pdf outDir
+            Generate a poster via a corresponding grid with cell size 15x10 cm.
             
    See also the related commands: ndown, cut`
 
-	usageNDown     = "usage: pdfcpu ndown [-p(ages) selectedPages] -- [description] n inFile outDir" + generalFlags
+	usageNDown     = "usage: pdfcpu ndown [-p(ages) selectedPages] -- [description] n inFile outDir [outFileName]" + generalFlags
 	usageLongNDown = `Cut selected page into n pages symmetrically.
 
    pages       ... Please refer to "pdfcpu selectedpages"
@@ -1172,6 +1173,7 @@ description ... scalefactor, dimensions, enforce:f/t, formsize(=papersize), bgco
    n           ... the n-Down value (see below for details)
    inFile      ... input pdf file
    outDir      ... output directory
+   outFileName ... output file name
 
                                   grid Eg. 
    Supported values for n: 2 ...  1x2  A1 -> 2 x A2
@@ -1194,13 +1196,14 @@ description ... scalefactor, dimensions, enforce:f/t, formsize(=papersize), bgco
             
    See also the related commands: poster, cut`
 
-	usageCut     = "usage: pdfcpu cut [-p(ages) selectedPages] -- description inFile outDir" + generalFlags
+	usageCut     = "usage: pdfcpu cut [-p(ages) selectedPages] -- description inFile outDir [outFileName]" + generalFlags
 	usageLongCut = `Custom cut pages horizontally or vertically.
 
    pages       ... Please refer to "pdfcpu selectedpages"
    description ... horizontal, vertical, origin, bgcolor, border, margin
    inFile      ... input pdf file
    outDir      ... output directory
+   outFileName ... output file name
 
    Fine grained custom page cutting.
    Apply any number of horizontal or vertical page cuts.
@@ -1209,12 +1212,12 @@ description ... scalefactor, dimensions, enforce:f/t, formsize(=papersize), bgco
 
          pdfcpu cut -- "hor:.25" inFile outDir
             Apply a horizontal page cut at 0.25*height
-            Results in 2 PDFs.
+            Results in 2 PDF pages.
 
          pdfcpu cut -- "hor:.25, vert:.75" inFile outDir
             Apply a horizontal page cut at 0.25*height
             Apply a vertical page cut at 0.75*width
-            Results in 4 PDFs.
+            Results in 4 PDF pages.
 
          pdfcpu cut -- "hor:.33 .66" inFile outDir
             Has the same effect as: pdfcpu ndown 3 in.pdf outDir

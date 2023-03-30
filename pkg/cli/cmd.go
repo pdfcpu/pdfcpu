@@ -937,8 +937,41 @@ func ResizeCommand(inFile, outFile string, pageSelection []string, resize *model
 		Conf:          conf}
 }
 
+// PosterCommand creates a new command to cut and slice pages horizontally or vertically.
+func PosterCommand(inFile, outDir, outFile string, pageSelection []string, cut *model.Cut, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.POSTER
+	return &Command{
+		Mode:          model.CUT,
+		InFile:        &inFile,
+		OutDir:        &outDir,
+		OutFile:       &outFile,
+		PageSelection: pageSelection,
+		Cut:           cut,
+		Conf:          conf}
+}
+
+// NDownCommand creates a new command to cut and slice pages horizontally or vertically.
+func NDownCommand(inFile, outDir, outFile string, pageSelection []string, n int, cut *model.Cut, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.NDOWN
+	return &Command{
+		Mode:          model.CUT,
+		InFile:        &inFile,
+		OutDir:        &outDir,
+		OutFile:       &outFile,
+		PageSelection: pageSelection,
+		IntVal:        n,
+		Cut:           cut,
+		Conf:          conf}
+}
+
 // CutCommand creates a new command to cut and slice pages horizontally or vertically.
-func CutCommand(inFile, outDir string, pageSelection []string, cut *model.Cut, conf *model.Configuration) *Command {
+func CutCommand(inFile, outDir, outFile string, pageSelection []string, cut *model.Cut, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
@@ -947,6 +980,7 @@ func CutCommand(inFile, outDir string, pageSelection []string, cut *model.Cut, c
 		Mode:          model.CUT,
 		InFile:        &inFile,
 		OutDir:        &outDir,
+		OutFile:       &outFile,
 		PageSelection: pageSelection,
 		Cut:           cut,
 		Conf:          conf}

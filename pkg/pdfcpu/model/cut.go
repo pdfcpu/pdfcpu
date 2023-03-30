@@ -97,8 +97,11 @@ func parsePageDimCut(v string, u types.DisplayUnit) (*types.Dim, string, error) 
 
 func parseDimensionsCut(s string, cut *Cut) (err error) {
 	cut.PageDim, _, err = parsePageDimCut(s, cut.Unit)
+	if err != nil {
+		return err
+	}
 	cut.UserDim = true
-	return err
+	return nil
 }
 
 func parsePageFormatCut(s string, cut *Cut) error {
@@ -141,8 +144,8 @@ func parseScaleFactorCut(s string, cut *Cut) (err error) {
 		return errors.Errorf("pdfcpu: scale factor must be a float value: %s\n", s)
 	}
 
-	if sc <= 1 {
-		return errors.Errorf("pdfcpu: invalid scale factor %.2f: i > 1.0\n", sc)
+	if sc < 1 {
+		return errors.Errorf("pdfcpu: invalid scale factor %.2f: i >= 1.0\n", sc)
 	}
 
 	cut.Scale = sc
@@ -198,7 +201,7 @@ var CutParamMap = cutParameterMap{
 	"bgcolor":       parseBackgroundColorCut,
 }
 
-// Handle applies parameter completion and on success parse parameter values into cut.
+// Handle applies parameter completion and on success parse parameter values into resize.
 func (m cutParameterMap) Handle(paramPrefix, paramValueStr string, cut *Cut) error {
 
 	var param string

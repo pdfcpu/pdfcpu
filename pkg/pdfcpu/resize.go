@@ -164,7 +164,7 @@ func resizePage(ctx *model.Context, pageNr int, res *model.Resize) error {
 	}
 
 	if inhPAttrs.Rotate != 0 {
-		bbInvRot := model.ContentBytesForPageRotation(inhPAttrs.Rotate, cropBox.Width(), cropBox.Height())
+		bbInvRot := append([]byte(" q "), model.ContentBytesForPageRotation(inhPAttrs.Rotate, cropBox.Width(), cropBox.Height())...)
 		bb = append(bbInvRot, bb...)
 		bb = append(bb, []byte(" Q")...)
 	}
