@@ -53,7 +53,6 @@ The following PDF elements are not carried over into the merged document:
 
 * Outlines
 * Struct Trees
-* Forms
 
 <br>
 
