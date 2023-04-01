@@ -233,6 +233,43 @@ func mergeAcroForms(ctxSource, ctxDest *model.Context) error {
 		return err
 	}
 
+	o1, found := rootDictSource.Find("Dests")
+	if !found {
+		return nil
+	}
+
+	o2, found := rootDictDest.Find("Dests")
+	if !found {
+		rootDictDest["Dests"] = o1
+		return nil
+	}
+
+	// Merge Dests (simple: ignore duplicate keys)
+
+	destsSrc, err := ctxSource.DereferenceDict(o1)
+	if err != nil {
+		return err
+	}
+
+	destsDest, err := ctxDest.DereferenceDict(o2)
+	if err != nil {
+		return err
+	}
+
+	for k, v := range destsSrc {
+		destsDest[k] = v
+	}
+
+	return nil
+}
+
+func mergeDests(ctxSource, ctxDest *model.Context) error {
+
+	rootDictSource, rootDictDest, err := rootDicts(ctxSource, ctxDest)
+	if err != nil {
+		return err
+	}
+
 	o, found := rootDictSource.Find("AcroForm")
 	if !found {
 		return nil
@@ -583,6 +620,7 @@ func MergeXRefTables(ctxSource, ctxDest *model.Context) (err error) {
 	appendSourceObjectsToDest(ctxSource, ctxDest)
 
 	mergeAcroForms(ctxSource, ctxDest)
+	mergeDests(ctxSource, ctxDest)
 
 	// Mark source's root object as free.
 	err = ctxDest.FreeObject(int(ctxSource.Root.ObjectNumber))
