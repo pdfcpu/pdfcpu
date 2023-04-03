@@ -78,12 +78,40 @@ func validateOutlineItemDict(xRefTable *model.XRefTable, d types.Dict) error {
 	return validateActionOrDestination(xRefTable, d, dictName, model.V11)
 }
 
+func handleOutlineItemDict(xRefTable *model.XRefTable, ir types.IndirectRef, objNumber int) (types.Dict, error) {
+	d, err := xRefTable.DereferenceDict(ir)
+	if err != nil {
+		return nil, err
+	}
+	if d == nil {
+		return nil, errors.Errorf("validateOutlineTree: object #%d is nil.", objNumber)
+	}
+
+	if err = validateOutlineItemDict(xRefTable, d); err != nil {
+		return nil, err
+	}
+
+	return d, nil
+}
+
+func leaf(firstChild, lastChild *types.IndirectRef, objNumber int) bool {
+	if firstChild == nil && lastChild == nil {
+		// Leaf
+		return true
+	}
+	if firstChild != nil && firstChild.ObjectNumber.Value() == objNumber &&
+		lastChild != nil && lastChild.ObjectNumber.Value() == objNumber {
+		// Degenerated leaf.
+		return true
+	}
+	return false
+}
+
 func validateOutlineTree(xRefTable *model.XRefTable, first, last *types.IndirectRef) error {
 
 	var (
 		d         types.Dict
 		objNumber int
-		err       error
 	)
 
 	// Process linked list of outline items.
@@ -91,16 +119,7 @@ func validateOutlineTree(xRefTable *model.XRefTable, first, last *types.Indirect
 
 		objNumber = ir.ObjectNumber.Value()
 
-		// outline item dict
-		d, err = xRefTable.DereferenceDict(*ir)
-		if err != nil {
-			return err
-		}
-		if d == nil {
-			return errors.Errorf("validateOutlineTree: object #%d is nil.", objNumber)
-		}
-
-		err = validateOutlineItemDict(xRefTable, d)
+		d, err := handleOutlineItemDict(xRefTable, *ir, objNumber)
 		if err != nil {
 			return err
 		}
@@ -108,22 +127,14 @@ func validateOutlineTree(xRefTable *model.XRefTable, first, last *types.Indirect
 		firstChild := d.IndirectRefEntry("First")
 		lastChild := d.IndirectRefEntry("Last")
 
-		if firstChild == nil && lastChild == nil {
-			// Leaf
-			continue
-		}
-
-		if firstChild != nil && firstChild.ObjectNumber.Value() == objNumber &&
-			lastChild != nil && lastChild.ObjectNumber.Value() == objNumber {
-			// Degenerated leaf.
+		if leaf(firstChild, lastChild, objNumber) {
 			continue
 		}
 
 		if firstChild != nil && (xRefTable.ValidationMode == model.ValidationRelaxed ||
 			xRefTable.ValidationMode == model.ValidationStrict && lastChild != nil) {
 			// Recurse into subtree.
-			err = validateOutlineTree(xRefTable, firstChild, lastChild)
-			if err != nil {
+			if err = validateOutlineTree(xRefTable, firstChild, lastChild); err != nil {
 				return err
 			}
 			continue

@@ -181,57 +181,75 @@ func handleOptimizeDuplicateContentStreams(k, v string, c *Configuration) error 
 	return nil
 }
 
-func parseKeyValue(k, v string, c *Configuration) error {
-	var err error
+func parseKeysPart1(k, v string, c *Configuration) (bool, error) {
 	switch k {
 
 	case "checkFileNameExt":
-		err = handleCheckFileNameExt(k, v, c)
+		return true, handleCheckFileNameExt(k, v, c)
 
 	case "reader15":
-		err = handleConfReader15(k, v, c)
+		return true, handleConfReader15(k, v, c)
 
 	case "decodeAllStreams":
-		err = handleConfDecodeAllStreams(k, v, c)
+		return true, handleConfDecodeAllStreams(k, v, c)
 
 	case "validationMode":
-		err = handleConfValidationMode(v, c)
+		return true, handleConfValidationMode(v, c)
 
 	case "eol":
-		err = handleConfEol(v, c)
+		return true, handleConfEol(v, c)
 
 	case "writeObjectStream":
-		err = handleConfWriteObjectStream(k, v, c)
+		return true, handleConfWriteObjectStream(k, v, c)
 
 	case "writeXRefStream":
-		err = handleConfWriteXRefStream(k, v, c)
+		return true, handleConfWriteXRefStream(k, v, c)
 
-	case "encryptUsingAES":
-		err = handleConfEncryptUsingAES(k, v, c)
-
-	case "encryptKeyLength":
-		err = handleConfEncryptKeyLength(v, c)
-
-	case "permissions":
-		err = handleConfPermissions(v, c)
-
-	case "unit", "units":
-		err = handleConfUnit(v, c)
-
-	case "timestampFormat":
-		err = handleTimestampFormat(v, c)
-
-	case "dateFormat":
-		err = handleDateFormat(v, c)
-
-	case "headerBufSize":
-		err = handleHeaderBufSize(k, v, c)
-
-	case "optimizeDuplicateContentStreams":
-		err = handleOptimizeDuplicateContentStreams(k, v, c)
 	}
 
-	return err
+	return false, nil
+}
+
+func parseKeysPart2(k, v string, c *Configuration) error {
+	switch k {
+
+	case "encryptUsingAES":
+		return handleConfEncryptUsingAES(k, v, c)
+
+	case "encryptKeyLength":
+		return handleConfEncryptKeyLength(v, c)
+
+	case "permissions":
+		return handleConfPermissions(v, c)
+
+	case "unit", "units":
+		return handleConfUnit(v, c)
+
+	case "timestampFormat":
+		return handleTimestampFormat(v, c)
+
+	case "dateFormat":
+		return handleDateFormat(v, c)
+
+	case "headerBufSize":
+		return handleHeaderBufSize(k, v, c)
+
+	case "optimizeDuplicateContentStreams":
+		return handleOptimizeDuplicateContentStreams(k, v, c)
+	}
+
+	return nil
+}
+
+func parseKeyValue(k, v string, c *Configuration) error {
+	ok, err := parseKeysPart1(k, v, c)
+	if err != nil {
+		return err
+	}
+	if ok {
+		return nil
+	}
+	return parseKeysPart2(k, v, c)
 }
 
 func parseConfigFile(r io.Reader, configPath string) error {

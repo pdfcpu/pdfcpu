@@ -594,6 +594,20 @@ func parseFormGroup(rd io.Reader) (*form.FormGroup, error) {
 	return formGroup, nil
 }
 
+func mergeForms(outDir, fileName string, outFiles []string, conf *model.Configuration) error {
+	outFile := filepath.Join(outDir, fileName+".pdf")
+	if err := MergeCreateFile(outFiles, outFile, conf); err != nil {
+		return err
+	}
+	log.CLI.Println("cleaning up...")
+	for _, fn := range outFiles {
+		if err := os.Remove(fn); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func multiFillFormJSON(inFilePDF string, rd io.Reader, outDir, fileName string, merge bool, conf *model.Configuration) error {
 
 	formGroup, err := parseFormGroup(rd)
@@ -648,15 +662,8 @@ func multiFillFormJSON(inFilePDF string, rd io.Reader, outDir, fileName string, 
 	}
 
 	if merge {
-		outFile := filepath.Join(outDir, fileName+".pdf")
-		if err := MergeCreateFile(outFiles, outFile, conf); err != nil {
+		if err := mergeForms(outDir, fileName, outFiles, conf); err != nil {
 			return err
-		}
-		log.CLI.Println("cleaning up...")
-		for _, fn := range outFiles {
-			if err := os.Remove(fn); err != nil {
-				return err
-			}
 		}
 	}
 
@@ -753,15 +760,8 @@ func multiFillFormCSV(inFilePDF string, rd io.Reader, outDir, fileName string, m
 	}
 
 	if merge {
-		outFile := filepath.Join(outDir, fileName+".pdf")
-		if err := MergeCreateFile(outFiles, outFile, conf); err != nil {
+		if err := mergeForms(outDir, fileName, outFiles, conf); err != nil {
 			return err
-		}
-		log.CLI.Println("cleaning up...")
-		for _, fn := range outFiles {
-			if err := os.Remove(fn); err != nil {
-				return err
-			}
 		}
 	}
 

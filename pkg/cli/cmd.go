@@ -944,7 +944,7 @@ func PosterCommand(inFile, outDir, outFile string, pageSelection []string, cut *
 	}
 	conf.Cmd = model.POSTER
 	return &Command{
-		Mode:          model.CUT,
+		Mode:          model.POSTER,
 		InFile:        &inFile,
 		OutDir:        &outDir,
 		OutFile:       &outFile,
@@ -960,7 +960,7 @@ func NDownCommand(inFile, outDir, outFile string, pageSelection []string, n int,
 	}
 	conf.Cmd = model.NDOWN
 	return &Command{
-		Mode:          model.CUT,
+		Mode:          model.NDOWN,
 		InFile:        &inFile,
 		OutDir:        &outDir,
 		OutFile:       &outFile,

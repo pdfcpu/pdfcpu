@@ -462,6 +462,20 @@ func optimizeXObjectForm(ctx *model.Context, sd *types.StreamDict, rName string,
 	return nil, nil
 }
 
+func optimizeFormResources(ctx *model.Context, o types.Object, pageNumber, pageObjNumber int) error {
+	d, err := ctx.DereferenceDict(o)
+	if err != nil {
+		return err
+	}
+	if d != nil {
+		// Optimize image and font resources.
+		if err = optimizeResources(ctx, d, pageNumber, pageObjNumber); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNumber, pageObjNumber int) error {
 	log.Optimize.Printf("optimizeXObjectResourcesDict page#%dbegin: %s\n", pageObjNumber, rDict)
 	pageImages := pageImages(ctx, pageNumber)
@@ -517,16 +531,8 @@ func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNumb
 				continue
 			}
 
-			// Optimize form resources
-			d, err := ctx.DereferenceDict(o)
-			if err != nil {
+			if err := optimizeFormResources(ctx, o, pageNumber, pageObjNumber); err != nil {
 				return err
-			}
-			if d != nil {
-				// Optimize image and font resources.
-				if err = optimizeResources(ctx, d, pageNumber, pageObjNumber); err != nil {
-					return err
-				}
 			}
 
 			continue

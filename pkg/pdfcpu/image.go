@@ -29,6 +29,55 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+func prepHorSep(horSep *[]int, maxLenObjNr, maxLenID, maxLenSize, maxLenFilters int) string {
+	s := "Page Obj# "
+	if maxLenObjNr > 4 {
+		s += strings.Repeat(" ", maxLenObjNr-4)
+		*horSep = append(*horSep, 10+maxLenObjNr-4)
+	} else {
+		*horSep = append(*horSep, 10)
+	}
+
+	s += draw.VBar + " Id "
+	if maxLenID > 2 {
+		s += strings.Repeat(" ", maxLenID-2)
+		*horSep = append(*horSep, 4+maxLenID-2)
+	} else {
+		*horSep = append(*horSep, 4)
+	}
+
+	s += draw.VBar + " Type  SoftMask ImgMask "
+	*horSep = append(*horSep, 24)
+
+	s += draw.VBar + " Width " + draw.VBar + " Height " + draw.VBar + " ColorSpace Comp bpc Interp "
+	*horSep = append(*horSep, 7, 8, 28)
+
+	s += draw.VBar + " "
+	if maxLenSize > 4 {
+		s += strings.Repeat(" ", maxLenSize-4)
+		*horSep = append(*horSep, 6+maxLenSize-4)
+	} else {
+		*horSep = append(*horSep, 6)
+	}
+	s += "Size " + draw.VBar + " Filters"
+	if maxLenFilters > 7 {
+		*horSep = append(*horSep, 8+maxLenFilters-7)
+	} else {
+		*horSep = append(*horSep, 8)
+	}
+
+	return s
+}
+
+func sortedObjNrs(ii map[int]model.Image) []int {
+	objNrs := []int{}
+	for k := range ii {
+		objNrs = append(objNrs, k)
+	}
+	sort.Ints(objNrs)
+	return objNrs
+}
+
 func listImages(ctx *model.Context, mm []map[int]model.Image, maxLenObjNr, maxLenID, maxLenSize, maxLenFilters int) ([]string, int, int64, error) {
 	ss := []string{}
 	first := true
@@ -37,41 +86,7 @@ func listImages(ctx *model.Context, mm []map[int]model.Image, maxLenObjNr, maxLe
 	horSep := []int{}
 	for _, ii := range mm {
 		if first {
-			s := "Page Obj# "
-			if maxLenObjNr > 4 {
-				s += strings.Repeat(" ", maxLenObjNr-4)
-				horSep = append(horSep, 10+maxLenObjNr-4)
-			} else {
-				horSep = append(horSep, 10)
-			}
-
-			s += draw.VBar + " Id "
-			if maxLenID > 2 {
-				s += strings.Repeat(" ", maxLenID-2)
-				horSep = append(horSep, 4+maxLenID-2)
-			} else {
-				horSep = append(horSep, 4)
-			}
-
-			s += draw.VBar + " Type  SoftMask ImgMask "
-			horSep = append(horSep, 24)
-
-			s += draw.VBar + " Width " + draw.VBar + " Height " + draw.VBar + " ColorSpace Comp bpc Interp "
-			horSep = append(horSep, 7, 8, 28)
-
-			s += draw.VBar + " "
-			if maxLenSize > 4 {
-				s += strings.Repeat(" ", maxLenSize-4)
-				horSep = append(horSep, 6+maxLenSize-4)
-			} else {
-				horSep = append(horSep, 6)
-			}
-			s += "Size " + draw.VBar + " Filters"
-			if maxLenFilters > 7 {
-				horSep = append(horSep, 8+maxLenFilters-7)
-			} else {
-				horSep = append(horSep, 8)
-			}
+			s := prepHorSep(&horSep, maxLenObjNr, maxLenID, maxLenSize, maxLenFilters)
 			ss = append(ss, s)
 			first = false
 		}
@@ -79,13 +94,7 @@ func listImages(ctx *model.Context, mm []map[int]model.Image, maxLenObjNr, maxLe
 
 		newPage := true
 
-		objNrs := []int{}
-		for k := range ii {
-			objNrs = append(objNrs, k)
-		}
-		sort.Ints(objNrs)
-
-		for _, objNr := range objNrs {
+		for _, objNr := range sortedObjNrs(ii) {
 			img := ii[objNr]
 			pageNr := ""
 			if newPage {

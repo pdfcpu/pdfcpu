@@ -478,6 +478,154 @@ func fieldsForAnnots(xRefTable *model.XRefTable, annots, fields types.Array) (ma
 	return m, nil
 }
 
+func exportBtn(
+	xRefTable *model.XRefTable,
+	i int,
+	form Form,
+	d types.Dict,
+	id, name string,
+	locked bool,
+	ok *bool) error {
+
+	if len(d.ArrayEntry("Kids")) > 0 {
+		rbg, err := extractRadioButtonGroup(xRefTable, i, d, id, name, locked)
+		if err != nil {
+			return err
+		}
+		form.RadioButtonGroups = append(form.RadioButtonGroups, rbg)
+		*ok = true
+		return nil
+	}
+
+	cb, err := extractCheckBox(i, d, id, name, locked)
+	if err != nil {
+		return err
+	}
+
+	form.CheckBoxes = append(form.CheckBoxes, cb)
+	*ok = true
+	return nil
+}
+
+func exportCh(
+	xRefTable *model.XRefTable,
+	i int,
+	form Form,
+	d types.Dict,
+	id, name string,
+	locked bool,
+	ok *bool) error {
+
+	ff := d.IntEntry("Ff")
+	if ff == nil {
+		return errors.New("pdfcpu: corrupt form field: missing entry Ff")
+	}
+
+	if primitives.FieldFlags(*ff)&primitives.FieldCombo > 0 {
+		cb, err := extractComboBox(xRefTable, i, d, id, name, locked)
+		if err != nil {
+			return err
+		}
+		form.ComboBoxes = append(form.ComboBoxes, cb)
+		*ok = true
+		return nil
+	}
+
+	multi := primitives.FieldFlags(*ff)&primitives.FieldMultiselect > 0
+	lb, err := extractListBox(xRefTable, i, d, id, name, locked, multi)
+	if err != nil {
+		return err
+	}
+
+	form.ListBoxes = append(form.ListBoxes, lb)
+	*ok = true
+	return nil
+}
+
+func exportTx(
+	xRefTable *model.XRefTable,
+	i int,
+	form Form,
+	d types.Dict,
+	id, name string,
+	ff *int,
+	locked bool,
+	ok *bool) error {
+
+	df, err := extractDateFormat(xRefTable, d)
+	if err != nil {
+		return err
+	}
+
+	if df != nil {
+		df, err := extractDateField(i, d, id, name, df, locked)
+		if err != nil {
+			return err
+		}
+		form.DateFields = append(form.DateFields, df)
+		*ok = true
+		return nil
+	}
+
+	tf, err := extractTextField(i, d, id, name, ff, locked)
+	if err != nil {
+		return err
+	}
+
+	form.TextFields = append(form.TextFields, tf)
+	*ok = true
+	return nil
+}
+
+func exportPageFields(xRefTable *model.XRefTable, i int, form Form, m map[string]fieldInfo, ok *bool) error {
+	for id, fi := range m {
+
+		name := fi.name
+
+		d, err := xRefTable.DereferenceDict(*fi.indRef)
+		if err != nil {
+			return err
+		}
+		if len(d) == 0 {
+			continue
+		}
+
+		var locked bool
+		ff := d.IntEntry("Ff")
+		if ff != nil {
+			locked = uint(primitives.FieldFlags(*ff))&uint(primitives.FieldReadOnly) > 0
+		}
+
+		ft := fi.ft
+		if ft == nil {
+			ft = d.NameEntry("FT")
+			if ft == nil {
+				return errors.New("pdfcpu: corrupt form field: missing entry FT")
+			}
+		}
+
+		switch *ft {
+		case "Btn":
+			if err := exportBtn(xRefTable, i, form, d, id, name, locked, ok); err != nil {
+				return err
+			}
+
+		case "Ch":
+			if err := exportCh(xRefTable, i, form, d, id, name, locked, ok); err != nil {
+				return err
+			}
+
+		case "Tx":
+			if err := exportTx(xRefTable, i, form, d, id, name, ff, locked, ok); err != nil {
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
 // ExportForm extracts form data originating from source from xRefTable and writes a JSON representation to w.
 func ExportForm(xRefTable *model.XRefTable, source string, w io.Writer) (bool, error) {
 
@@ -515,98 +663,9 @@ func ExportForm(xRefTable *model.XRefTable, source string, w io.Writer) (bool, e
 			return false, err
 		}
 
-		for id, fi := range m {
-
-			name := fi.name
-
-			d, err := xRefTable.DereferenceDict(*fi.indRef)
-			if err != nil {
-				return false, err
-			}
-			if len(d) == 0 {
-				continue
-			}
-
-			var locked bool
-			ff := d.IntEntry("Ff")
-			if ff != nil {
-				locked = uint(primitives.FieldFlags(*ff))&uint(primitives.FieldReadOnly) > 0
-			}
-
-			ft := fi.ft
-			if ft == nil {
-				ft = d.NameEntry("FT")
-				if ft == nil {
-					return false, errors.New("pdfcpu: corrupt form field: missing entry FT")
-				}
-			}
-
-			switch *ft {
-
-			case "Btn":
-				if len(d.ArrayEntry("Kids")) > 0 {
-					rbg, err := extractRadioButtonGroup(xRefTable, i, d, id, name, locked)
-					if err != nil {
-						return false, err
-					}
-					form.RadioButtonGroups = append(form.RadioButtonGroups, rbg)
-					ok = true
-					continue
-				}
-				cb, err := extractCheckBox(i, d, id, name, locked)
-				if err != nil {
-					return false, err
-				}
-				form.CheckBoxes = append(form.CheckBoxes, cb)
-				ok = true
-
-			case "Ch":
-				ff := d.IntEntry("Ff")
-				if ff == nil {
-					return false, errors.New("pdfcpu: corrupt form field: missing entry Ff")
-				}
-				if primitives.FieldFlags(*ff)&primitives.FieldCombo > 0 {
-					cb, err := extractComboBox(xRefTable, i, d, id, name, locked)
-					if err != nil {
-						return false, err
-					}
-					form.ComboBoxes = append(form.ComboBoxes, cb)
-					ok = true
-					continue
-				}
-				multi := primitives.FieldFlags(*ff)&primitives.FieldMultiselect > 0
-				lb, err := extractListBox(xRefTable, i, d, id, name, locked, multi)
-				if err != nil {
-					return false, err
-				}
-				form.ListBoxes = append(form.ListBoxes, lb)
-				ok = true
-
-			case "Tx":
-
-				df, err := extractDateFormat(xRefTable, d)
-				if err != nil {
-					return false, err
-				}
-				if df != nil {
-					df, err := extractDateField(i, d, id, name, df, locked)
-					if err != nil {
-						return false, err
-					}
-					form.DateFields = append(form.DateFields, df)
-					ok = true
-					continue
-				}
-				tf, err := extractTextField(i, d, id, name, ff, locked)
-				if err != nil {
-					return false, err
-				}
-				form.TextFields = append(form.TextFields, tf)
-				ok = true
-			}
-
+		if err := exportPageFields(xRefTable, i, form, m, &ok); err != nil {
+			return false, err
 		}
-
 	}
 
 	formGroup.Forms = []Form{form}

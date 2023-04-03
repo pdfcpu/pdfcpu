@@ -226,7 +226,7 @@ func mergeInFields(ctxDest *model.Context, arrFieldsSrc, arrFieldsDest types.Arr
 	return nil
 }
 
-func mergeAcroForms(ctxSource, ctxDest *model.Context) error {
+func mergeDests(ctxSource, ctxDest *model.Context) error {
 
 	rootDictSource, rootDictDest, err := rootDicts(ctxSource, ctxDest)
 	if err != nil {
@@ -244,7 +244,7 @@ func mergeAcroForms(ctxSource, ctxDest *model.Context) error {
 		return nil
 	}
 
-	// Merge Dests (simple: ignore duplicate keys)
+	// Merge Dests (Note: We ignore duplicate keys)
 
 	destsSrc, err := ctxSource.DereferenceDict(o1)
 	if err != nil {
@@ -263,7 +263,7 @@ func mergeAcroForms(ctxSource, ctxDest *model.Context) error {
 	return nil
 }
 
-func mergeDests(ctxSource, ctxDest *model.Context) error {
+func mergeAcroForms(ctxSource, ctxDest *model.Context) error {
 
 	rootDictSource, rootDictDest, err := rootDicts(ctxSource, ctxDest)
 	if err != nil {

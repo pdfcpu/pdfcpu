@@ -1226,26 +1226,22 @@ func validateMarkupAnnotation(xRefTable *model.XRefTable, d types.Dict) error {
 	dictName := "markupAnnot"
 
 	// T, optional, text string, since V1.1
-	_, err := validateStringEntry(xRefTable, d, dictName, "T", OPTIONAL, model.V11, nil)
-	if err != nil {
+	if _, err := validateStringEntry(xRefTable, d, dictName, "T", OPTIONAL, model.V11, nil); err != nil {
 		return err
 	}
 
 	// Popup, optional, dict, since V1.3
-	err = validatePopupEntry(xRefTable, d, dictName, "Popup", OPTIONAL, model.V13)
-	if err != nil {
+	if err := validatePopupEntry(xRefTable, d, dictName, "Popup", OPTIONAL, model.V13); err != nil {
 		return err
 	}
 
 	// CA, optional, number, since V1.4
-	_, err = validateNumberEntry(xRefTable, d, dictName, "CA", OPTIONAL, model.V14, nil)
-	if err != nil {
+	if _, err := validateNumberEntry(xRefTable, d, dictName, "CA", OPTIONAL, model.V14, nil); err != nil {
 		return err
 	}
 
 	// RC, optional, text string or stream, since V1.5
-	err = validateStringOrStreamEntry(xRefTable, d, dictName, "RC", OPTIONAL, model.V15)
-	if err != nil {
+	if err := validateStringOrStreamEntry(xRefTable, d, dictName, "RC", OPTIONAL, model.V15); err != nil {
 		return err
 	}
 
@@ -1254,14 +1250,12 @@ func validateMarkupAnnotation(xRefTable *model.XRefTable, d types.Dict) error {
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V13
 	}
-	_, err = validateDateEntry(xRefTable, d, dictName, "CreationDate", OPTIONAL, sinceVersion)
-	if err != nil {
+	if _, err := validateDateEntry(xRefTable, d, dictName, "CreationDate", OPTIONAL, sinceVersion); err != nil {
 		return err
 	}
 
 	// IRT, optional, (in reply to) dict, since V1.5
-	err = validateIRTEntry(xRefTable, d, dictName, "IRT", OPTIONAL, model.V15)
-	if err != nil {
+	if err := validateIRTEntry(xRefTable, d, dictName, "IRT", OPTIONAL, model.V15); err != nil {
 		return err
 	}
 
@@ -1270,21 +1264,18 @@ func validateMarkupAnnotation(xRefTable *model.XRefTable, d types.Dict) error {
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V14
 	}
-	_, err = validateStringEntry(xRefTable, d, dictName, "Subj", OPTIONAL, sinceVersion, nil)
-	if err != nil {
+	if _, err := validateStringEntry(xRefTable, d, dictName, "Subj", OPTIONAL, sinceVersion, nil); err != nil {
 		return err
 	}
 
 	// RT, optional, name, since V1.6
 	validate := func(s string) bool { return s == "R" || s == "Group" }
-	_, err = validateNameEntry(xRefTable, d, dictName, "RT", OPTIONAL, model.V16, validate)
-	if err != nil {
+	if _, err := validateNameEntry(xRefTable, d, dictName, "RT", OPTIONAL, model.V16, validate); err != nil {
 		return err
 	}
 
 	// IT, optional, name, since V1.6
-	_, err = validateNameEntry(xRefTable, d, dictName, "IT", OPTIONAL, model.V16, nil)
-	if err != nil {
+	if _, err := validateNameEntry(xRefTable, d, dictName, "IT", OPTIONAL, model.V16, nil); err != nil {
 		return err
 	}
 
@@ -1295,12 +1286,9 @@ func validateMarkupAnnotation(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 	if d1 != nil {
 		err = validateExDataDict(xRefTable, d1)
-		if err != nil {
-			return err
-		}
 	}
 
-	return nil
+	return err
 }
 
 func validateEntryP(xRefTable *model.XRefTable, d types.Dict, dictName string, required bool, sinceVersion model.Version) error {

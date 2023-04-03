@@ -22,31 +22,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-// AddPages adds pages and corresponding resources from ctxSrc to ctxDest.
-func AddPages(ctxSrc, ctxDest *model.Context, pageNrs []int, usePgCache bool) error {
-
-	pagesIndRef, err := ctxDest.Pages()
-	if err != nil {
-		return err
-	}
-
-	pagesDict, err := ctxDest.DereferenceDict(*pagesIndRef)
-	if err != nil {
-		return err
-	}
-
-	fieldsSrc, fieldsDest := types.Array{}, types.Array{}
-
-	if ctxSrc.AcroForm != nil {
-		o, _ := ctxSrc.AcroForm.Find("Fields")
-		fieldsSrc, err = ctxSrc.DereferenceArray(o)
-		if err != nil {
-			return err
-		}
-	}
+func addPages(
+	ctxSrc, ctxDest *model.Context,
+	pageNrs []int,
+	usePgCache bool,
+	pagesIndRef types.IndirectRef,
+	pagesDict types.Dict,
+	fieldsSrc, fieldsDest types.Array,
+	migrated map[int]int) error {
 
 	pageCache := map[int]*types.IndirectRef{}
-	migrated := map[int]int{}
 
 	for _, i := range pageNrs {
 
@@ -69,7 +54,7 @@ func AddPages(ctxSrc, ctxDest *model.Context, pageNrs []int, usePgCache bool) er
 
 		d = d.Clone().(types.Dict)
 		d["Resources"] = inhPAttrs.Resources.Clone()
-		d["Parent"] = *pagesIndRef
+		d["Parent"] = pagesIndRef
 		d["MediaBox"] = inhPAttrs.MediaBox.Array()
 		if inhPAttrs.Rotate%360 > 0 {
 			d["Rotate"] = types.Integer(inhPAttrs.Rotate)
@@ -97,6 +82,38 @@ func AddPages(ctxSrc, ctxDest *model.Context, pageNrs []int, usePgCache bool) er
 		if usePgCache {
 			pageCache[i] = pageIndRef
 		}
+	}
+
+	return nil
+}
+
+// AddPages adds pages and corresponding resources from ctxSrc to ctxDest.
+func AddPages(ctxSrc, ctxDest *model.Context, pageNrs []int, usePgCache bool) error {
+
+	pagesIndRef, err := ctxDest.Pages()
+	if err != nil {
+		return err
+	}
+
+	pagesDict, err := ctxDest.DereferenceDict(*pagesIndRef)
+	if err != nil {
+		return err
+	}
+
+	fieldsSrc, fieldsDest := types.Array{}, types.Array{}
+
+	if ctxSrc.AcroForm != nil {
+		o, _ := ctxSrc.AcroForm.Find("Fields")
+		fieldsSrc, err = ctxSrc.DereferenceArray(o)
+		if err != nil {
+			return err
+		}
+	}
+
+	migrated := map[int]int{}
+
+	if err := addPages(ctxSrc, ctxDest, pageNrs, usePgCache, *pagesIndRef, pagesDict, fieldsSrc, fieldsDest, migrated); err != nil {
+		return err
 	}
 
 	if ctxSrc.AcroForm != nil && len(fieldsDest) > 0 {

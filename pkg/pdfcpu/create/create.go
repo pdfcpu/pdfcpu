@@ -163,58 +163,62 @@ func setAnnotationParentsAndFields(xRefTable *model.XRefTable, p *model.Page, pI
 	return nil
 }
 
-func mergeAnnotations(oldAnnots types.Array, ff []model.FieldAnnotation, m map[int]model.FieldAnnotation) (types.Array, error) {
+func addAnnotations(ff []model.FieldAnnotation, m map[int]model.FieldAnnotation) types.Array {
 
 	arr := types.Array{}
 
-	if len(oldAnnots) == 0 {
-
-		for i, j := 0, 0; j < len(ff); i++ {
-			an, ok := m[i+1]
-			if ok {
-				if an.Kids == nil {
-					arr = append(arr, *an.IndRef)
-				} else {
-					arr = append(arr, an.Kids...)
-				}
-				an.Field = true
-				m[i+1] = an
-				continue
-			}
-			if j < len(ff) {
-				an = ff[j]
-				if an.Kids == nil {
-					arr = append(arr, *an.IndRef)
-				} else {
-					arr = append(arr, an.Kids...)
-				}
-				j++
-				continue
-			}
-			break
-		}
-
-		keys := make([]int, 0, len(m))
-		for k, an := range m {
-			if !an.Field {
-				keys = append(keys, k)
-			}
-		}
-		sort.Ints(keys)
-
-		for _, k := range keys {
-			an := m[k]
+	for i, j := 0, 0; j < len(ff); i++ {
+		an, ok := m[i+1]
+		if ok {
 			if an.Kids == nil {
 				arr = append(arr, *an.IndRef)
 			} else {
 				arr = append(arr, an.Kids...)
 			}
+			an.Field = true
+			m[i+1] = an
+			continue
 		}
-
-		return arr, nil
-
+		if j < len(ff) {
+			an = ff[j]
+			if an.Kids == nil {
+				arr = append(arr, *an.IndRef)
+			} else {
+				arr = append(arr, an.Kids...)
+			}
+			j++
+			continue
+		}
+		break
 	}
 
+	keys := make([]int, 0, len(m))
+	for k, an := range m {
+		if !an.Field {
+			keys = append(keys, k)
+		}
+	}
+	sort.Ints(keys)
+
+	for _, k := range keys {
+		an := m[k]
+		if an.Kids == nil {
+			arr = append(arr, *an.IndRef)
+		} else {
+			arr = append(arr, an.Kids...)
+		}
+	}
+
+	return arr
+}
+
+func mergeAnnotations(oldAnnots types.Array, ff []model.FieldAnnotation, m map[int]model.FieldAnnotation) (types.Array, error) {
+
+	if len(oldAnnots) == 0 {
+		return addAnnotations(ff, m), nil
+	}
+
+	arr := types.Array{}
 	i := 0
 	for j := 0; j < len(oldAnnots); i++ {
 		an, ok := m[i+1]

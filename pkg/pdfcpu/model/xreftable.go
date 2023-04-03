@@ -1458,7 +1458,6 @@ func (xRefTable *XRefTable) IDFirstElement() (id []byte, err error) {
 		return nil, errors.New("pdfcpu: ID must contain hex literals or string literals")
 	}
 
-	//return Unescape(sl.Value())
 	return []byte(sl), nil
 }
 

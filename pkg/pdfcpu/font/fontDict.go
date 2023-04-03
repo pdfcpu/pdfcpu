@@ -60,6 +60,28 @@ func CJKEncoding(s string) bool {
 	return types.MemberOf(s, []string{"UniGB-UTF16-H", "UniCNS-UTF16-H", "UniJIS-UTF16-H", "UniKS-UTF16-H"})
 }
 
+func fontDescriptorIndRefs(fd types.Dict, lang string, font *model.FontResource) error {
+	if lang != "" {
+		if s := fd.NameEntry("Lang"); s != nil {
+			if strings.ToLower(*s) != lang {
+				return ErrCorruptFontDict
+			}
+		}
+	}
+
+	font.CIDSet = fd.IndirectRefEntry("CIDSet")
+	if font.CIDSet == nil {
+		return ErrCorruptFontDict
+	}
+
+	font.FontFile = fd.IndirectRefEntry("FontFile2")
+	if font.FontFile == nil {
+		return ErrCorruptFontDict
+	}
+
+	return nil
+}
+
 // IndRefsForUserfontUpdate detects used indirect references for a possible user font update.
 func IndRefsForUserfontUpdate(xRefTable *model.XRefTable, d types.Dict, lang string, font *model.FontResource) error {
 
@@ -108,25 +130,7 @@ func IndRefsForUserfontUpdate(xRefTable *model.XRefTable, d types.Dict, lang str
 		return err
 	}
 
-	if lang != "" {
-		if s := fd.NameEntry("Lang"); s != nil {
-			if strings.ToLower(*s) != lang {
-				return ErrCorruptFontDict
-			}
-		}
-	}
-
-	font.CIDSet = fd.IndirectRefEntry("CIDSet")
-	if font.CIDSet == nil {
-		return ErrCorruptFontDict
-	}
-
-	font.FontFile = fd.IndirectRefEntry("FontFile2")
-	if font.FontFile == nil {
-		return ErrCorruptFontDict
-	}
-
-	return nil
+	return fontDescriptorIndRefs(fd, lang, font)
 }
 
 func flateEncodedStreamIndRef(xRefTable *model.XRefTable, data []byte) (*types.IndirectRef, error) {

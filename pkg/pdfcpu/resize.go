@@ -99,27 +99,7 @@ func prepTransform(rSrc, rDest *types.Rectangle, enforce bool) (float64, float64
 	return sc, sin, cos, dx, dy
 }
 
-func resizePage(ctx *model.Context, pageNr int, res *model.Resize) error {
-
-	d, _, inhPAttrs, err := ctx.PageDict(pageNr, false)
-	if err != nil {
-		return err
-	}
-
-	cropBox := inhPAttrs.MediaBox
-	if inhPAttrs.CropBox != nil {
-		cropBox = inhPAttrs.CropBox
-	}
-
-	// Account for existing rotation.
-	if inhPAttrs.Rotate != 0 {
-		if types.IntMemberOf(inhPAttrs.Rotate, []int{+90, -90, +270, -270}) {
-			w := cropBox.Width()
-			cropBox.UR.X = cropBox.LL.X + cropBox.Height()
-			cropBox.UR.Y = cropBox.LL.Y + w
-		}
-	}
-
+func prepResize(res *model.Resize, cropBox *types.Rectangle) (*types.Rectangle, float64, float64, float64, float64, float64) {
 	ar := cropBox.AspectRatio()
 
 	var (
@@ -149,6 +129,32 @@ func resizePage(ctx *model.Context, pageNr int, res *model.Resize) error {
 			}
 		}
 	}
+
+	return r, sc, sin, cos, dx, dy
+}
+
+func resizePage(ctx *model.Context, pageNr int, res *model.Resize) error {
+
+	d, _, inhPAttrs, err := ctx.PageDict(pageNr, false)
+	if err != nil {
+		return err
+	}
+
+	cropBox := inhPAttrs.MediaBox
+	if inhPAttrs.CropBox != nil {
+		cropBox = inhPAttrs.CropBox
+	}
+
+	// Account for existing rotation.
+	if inhPAttrs.Rotate != 0 {
+		if types.IntMemberOf(inhPAttrs.Rotate, []int{+90, -90, +270, -270}) {
+			w := cropBox.Width()
+			cropBox.UR.X = cropBox.LL.X + cropBox.Height()
+			cropBox.UR.Y = cropBox.LL.Y + w
+		}
+	}
+
+	r, sc, sin, cos, dx, dy := prepResize(res, cropBox)
 
 	m := matrix.CalcTransformMatrix(sc, sc, sin, cos, dx, dy)
 
