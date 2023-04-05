@@ -160,9 +160,13 @@ func (ib *ImageBox) padding(name string) *Padding {
 	return ib.content.namedPadding(name)
 }
 
+func (ib *ImageBox) missingPosition() bool {
+	return ib.x == 0 && ib.y == 0
+}
+
 func (ib *ImageBox) mergeIn(ib0 *ImageBox) {
 
-	if !ib.anchored && ib.x == 0 && ib.y == 0 {
+	if !ib.anchored && ib.missingPosition() {
 		ib.x = ib0.x
 		ib.y = ib0.y
 		ib.anchor = ib0.anchor
@@ -256,12 +260,8 @@ func (ib *ImageBox) checkForExistingImage(sd *types.StreamDict, w, h int) (*type
 	return nil, nil
 }
 
-func (ib *ImageBox) imageResource(pageImages, images model.ImageMap, pageNr int) (*model.ImageResource, error) {
-
-	var err error
+func (ib *ImageBox) foo() (io.ReadCloser, error) {
 	pdf := ib.pdf
-	imgResIDs := pdf.XObjectResIDs[pageNr]
-
 	var f io.ReadCloser
 	if strings.HasPrefix(ib.Src, "http") {
 		client := pdf.httpClient
@@ -280,15 +280,25 @@ func (ib *ImageBox) imageResource(pageImages, images model.ImageMap, pageNr int)
 			log.CLI.Printf("http status %d: %s\n", resp.StatusCode, ib.Src)
 			return nil, nil
 		}
-		defer resp.Body.Close()
 		f = resp.Body
 	} else {
+		var err error
 		f, err = os.Open(ib.Src)
 		if err != nil {
 			return nil, err
 		}
-		defer f.Close()
 	}
+	return f, nil
+}
+
+func (ib *ImageBox) imageResource(pageImages, images model.ImageMap, pageNr int) (*model.ImageResource, error) {
+
+	f, err := ib.foo()
+	if err != nil || f == nil {
+		return nil, err
+	}
+
+	defer f.Close()
 
 	var (
 		w, h   int
@@ -297,9 +307,12 @@ func (ib *ImageBox) imageResource(pageImages, images model.ImageMap, pageNr int)
 		sd     *types.StreamDict
 	)
 
+	pdf := ib.pdf
+	imgResIDs := pdf.XObjectResIDs[pageNr]
+
 	if ib.pdf.Update() {
 
-		sd, w, h, err = model.CreateImageStreamDict(ib.pdf.XRefTable, f, false, false)
+		sd, w, h, err = model.CreateImageStreamDict(pdf.XRefTable, f, false, false)
 		if err != nil {
 			return nil, err
 		}
@@ -320,18 +333,17 @@ func (ib *ImageBox) imageResource(pageImages, images model.ImageMap, pageNr int)
 				id = imgResIDs.NewIDForPrefix("Im", len(images))
 			}
 		}
-
 	}
 
 	if indRef == nil {
-		if ib.pdf.Update() {
-			indRef, err = ib.pdf.XRefTable.IndRefForNewObject(*sd)
+		if pdf.Update() {
+			indRef, err = pdf.XRefTable.IndRefForNewObject(*sd)
 			if err != nil {
 				return nil, err
 			}
 			id = imgResIDs.NewIDForPrefix("Im", len(pageImages))
 		} else {
-			indRef, w, h, err = model.CreateImageResource(ib.pdf.XRefTable, f, false, false)
+			indRef, w, h, err = model.CreateImageResource(pdf.XRefTable, f, false, false)
 			if err != nil {
 				return nil, err
 			}
@@ -340,8 +352,8 @@ func (ib *ImageBox) imageResource(pageImages, images model.ImageMap, pageNr int)
 	}
 
 	res := model.Resource{ID: id, IndRef: indRef}
-	imgRes := model.ImageResource{Res: res, Width: w, Height: h}
-	return &imgRes, nil
+
+	return &model.ImageResource{Res: res, Width: w, Height: h}, nil
 }
 
 func (ib *ImageBox) image(pageImages, images model.ImageMap, pageNr int) (int, int, string, error) {

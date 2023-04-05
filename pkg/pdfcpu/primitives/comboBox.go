@@ -445,23 +445,7 @@ func (cb *ComboBox) calcBorder() (boWidth float64, boCol *color.SimpleColor) {
 	return cb.Border.calc()
 }
 
-func (cb *ComboBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
-	pdf := cb.pdf
-
-	id, err := types.EscapeUTF16String(cb.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	opt := types.Array{}
-	for _, s := range cb.Options {
-		s, err := types.EscapeUTF16String(s)
-		if err != nil {
-			return nil, err
-		}
-		opt = append(opt, types.StringLiteral(*s))
-	}
-
+func (cb *ComboBox) prepareFF() FieldFlags {
 	ff := FieldFlags(0)
 	ff += FieldCombo
 	if cb.Edit {
@@ -472,29 +456,10 @@ func (cb *ComboBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 		// Note: unsupported in Mac Preview
 		ff += FieldReadOnly
 	}
+	return ff
+}
 
-	d := types.Dict(
-		map[string]types.Object{
-			"Type":    types.Name("Annot"),
-			"Subtype": types.Name("Widget"),
-			"FT":      types.Name("Ch"),
-			"Rect":    cb.BoundingBox.Array(),
-			"F":       types.Integer(model.AnnPrint),
-			"Ff":      types.Integer(ff),
-			"Opt":     opt,
-			"Q":       types.Integer(cb.HorAlign),
-			"T":       types.StringLiteral(*id),
-		},
-	)
-
-	if cb.Tip != "" {
-		tu, err := types.EscapeUTF16String(cb.Tip)
-		if err != nil {
-			return nil, err
-		}
-		d["TU"] = types.StringLiteral(*tu)
-	}
-
+func (cb *ComboBox) handleBorderAndMK(d types.Dict) {
 	bgCol := cb.BgCol
 	if bgCol == nil {
 		bgCol = cb.content.page.bgCol
@@ -520,6 +485,50 @@ func (cb *ComboBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	if boWidth > 0 {
 		d["Border"] = types.NewNumberArray(0, 0, boWidth)
 	}
+}
+
+func (cb *ComboBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
+	pdf := cb.pdf
+
+	id, err := types.EscapeUTF16String(cb.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	opt := types.Array{}
+	for _, s := range cb.Options {
+		s, err := types.EscapeUTF16String(s)
+		if err != nil {
+			return nil, err
+		}
+		opt = append(opt, types.StringLiteral(*s))
+	}
+
+	ff := cb.prepareFF()
+
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":    types.Name("Annot"),
+			"Subtype": types.Name("Widget"),
+			"FT":      types.Name("Ch"),
+			"Rect":    cb.BoundingBox.Array(),
+			"F":       types.Integer(model.AnnPrint),
+			"Ff":      types.Integer(ff),
+			"Opt":     opt,
+			"Q":       types.Integer(cb.HorAlign),
+			"T":       types.StringLiteral(*id),
+		},
+	)
+
+	if cb.Tip != "" {
+		tu, err := types.EscapeUTF16String(cb.Tip)
+		if err != nil {
+			return nil, err
+		}
+		d["TU"] = types.StringLiteral(*tu)
+	}
+
+	cb.handleBorderAndMK(d)
 
 	v := cb.Value
 	if cb.Default != "" {

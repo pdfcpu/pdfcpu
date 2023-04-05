@@ -338,8 +338,7 @@ func wArr(ttf font.TTFLight, from, thru int) types.Array {
 	return a
 }
 
-func calcWidthArray(xRefTable *model.XRefTable, ttf font.TTFLight, fontName string, used bool) types.Array {
-
+func prepGids(xRefTable *model.XRefTable, ttf font.TTFLight, fontName string, used bool) []int {
 	gids := ttf.GlyphWidths
 	if used {
 		usedGIDs, ok := xRefTable.UsedGIDs[fontName]
@@ -351,9 +350,47 @@ func calcWidthArray(xRefTable *model.XRefTable, ttf font.TTFLight, fontName stri
 			sort.Ints(gids)
 		}
 	}
+	return gids
+}
+
+func handleEqualWidths(w, w0, wl, g, g0, gl *int, a *types.Array, skip, equalWidths *bool) {
+	if *w == 1000 || *w != *wl || *g-*gl > 1 {
+		// cutoff or switch to non-contiguous width block
+		*a = append(*a, types.Integer(*g0), types.Integer(*gl), types.Integer(*w0)) // write last contiguous width block
+		if *w == 1000 {
+			// cutoff via default
+			*skip = true
+		} else {
+			*g0, *w0 = *g, *w
+			*gl, *wl = *g0, *w0
+		}
+		*equalWidths = false
+	} else {
+		// Remain in contiguous width block
+		*gl = *g
+	}
+}
+
+func finalizeWidths(ttf font.TTFLight, w0, g0, gl int, skip, equalWidths bool, a *types.Array) {
+	if !skip {
+		if equalWidths {
+			// write last contiguous width block
+			*a = append(*a, types.Integer(g0), types.Integer(gl), types.Integer(w0))
+		} else {
+			// write last non-contiguous width block
+			*a = append(*a, types.Integer(g0))
+			a1 := wArr(ttf, g0, gl)
+			*a = append(*a, a1)
+		}
+	}
+}
+
+func calcWidthArray(xRefTable *model.XRefTable, ttf font.TTFLight, fontName string, used bool) types.Array {
+	gids := prepGids(xRefTable, ttf, fontName, used)
 	a := types.Array{}
 	var g0, w0, gl, wl int
 	start, equalWidths, skip := true, false, false
+
 	for g, w := range gids {
 		if used {
 			g = w
@@ -381,21 +418,7 @@ func calcWidthArray(xRefTable *model.XRefTable, ttf font.TTFLight, fontName stri
 		}
 
 		if equalWidths {
-			if w == 1000 || w != wl || g-gl > 1 {
-				// cutoff or switch to non-contiguous width block
-				a = append(a, types.Integer(g0), types.Integer(gl), types.Integer(w0)) // write last contiguous width block
-				if w == 1000 {
-					// cutoff via default
-					skip = true
-				} else {
-					g0, w0 = g, w
-					gl, wl = g0, w0
-				}
-				equalWidths = false
-			} else {
-				// Remain in contiguous width block
-				gl = g
-			}
+			handleEqualWidths(&w, &w0, &wl, &g, &g0, &gl, &a, &skip, &equalWidths)
 			continue
 		}
 
@@ -443,19 +466,7 @@ func calcWidthArray(xRefTable *model.XRefTable, ttf font.TTFLight, fontName stri
 		gl, wl = g, w
 	}
 
-	if skip {
-		return a
-	}
-
-	if equalWidths {
-		// write last contiguous width block
-		a = append(a, types.Integer(g0), types.Integer(gl), types.Integer(w0))
-	} else {
-		// write last non-contiguous width block
-		a = append(a, types.Integer(g0))
-		a1 := wArr(ttf, g0, gl)
-		a = append(a, a1)
-	}
+	finalizeWidths(ttf, w0, g0, gl, skip, equalWidths, &a)
 
 	return a
 }

@@ -575,6 +575,43 @@ func (df *DateField) calcBorder() (boWidth float64, boCol *color.SimpleColor) {
 	return df.Border.calc()
 }
 
+func (df *DateField) prepareFF() FieldFlags {
+	ff := FieldDoNotSpellCheck
+	ff += FieldDoNotScroll
+	if df.Locked {
+		ff += FieldReadOnly
+	}
+	return ff
+}
+
+func (df *DateField) handleBorderAndMK(d types.Dict) {
+	bgCol := df.BgCol
+	if bgCol == nil {
+		bgCol = df.content.page.bgCol
+		if bgCol == nil {
+			bgCol = df.pdf.bgCol
+		}
+	}
+	df.BgCol = bgCol
+
+	boWidth, boCol := df.calcBorder()
+
+	if bgCol != nil || boCol != nil {
+		appCharDict := types.Dict{}
+		if bgCol != nil {
+			appCharDict["BG"] = bgCol.Array()
+		}
+		if boCol != nil && df.Border.Width > 0 {
+			appCharDict["BC"] = boCol.Array()
+		}
+		d["MK"] = appCharDict
+	}
+
+	if boWidth > 0 {
+		d["Border"] = types.NewNumberArray(0, 0, boWidth)
+	}
+}
+
 func (df *DateField) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	pdf := df.pdf
 
@@ -583,11 +620,7 @@ func (df *DateField) prepareDict(fonts model.FontMap) (types.Dict, error) {
 		return nil, err
 	}
 
-	ff := FieldDoNotSpellCheck
-	ff += FieldDoNotScroll
-	if df.Locked {
-		ff += FieldReadOnly
-	}
+	ff := df.prepareFF()
 
 	format, err := types.Escape(fmt.Sprintf("AFDate_FormatEx(\"%s\");", df.dateFormat.Ext))
 	if err != nil {
@@ -636,31 +669,7 @@ func (df *DateField) prepareDict(fonts model.FontMap) (types.Dict, error) {
 		},
 	)
 
-	bgCol := df.BgCol
-	if bgCol == nil {
-		bgCol = df.content.page.bgCol
-		if bgCol == nil {
-			bgCol = df.pdf.bgCol
-		}
-	}
-	df.BgCol = bgCol
-
-	boWidth, boCol := df.calcBorder()
-
-	if bgCol != nil || boCol != nil {
-		appCharDict := types.Dict{}
-		if bgCol != nil {
-			appCharDict["BG"] = bgCol.Array()
-		}
-		if boCol != nil && df.Border.Width > 0 {
-			appCharDict["BC"] = boCol.Array()
-		}
-		d["MK"] = appCharDict
-	}
-
-	if boWidth > 0 {
-		d["Border"] = types.NewNumberArray(0, 0, boWidth)
-	}
+	df.handleBorderAndMK(d)
 
 	if df.Value != "" {
 		s, err := types.EscapeUTF16String(df.Value)

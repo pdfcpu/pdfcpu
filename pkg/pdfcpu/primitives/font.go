@@ -291,6 +291,34 @@ func FontIndRef(fName string, ctx *model.Context, fonts map[string]types.Indirec
 	return nil, nil
 }
 
+func ensureCorrectFontIndRef(
+	ctx *model.Context,
+	fontIndRef **types.IndirectRef,
+	fName string,
+	fonts map[string]types.IndirectRef) error {
+
+	d, err := ctx.DereferenceDict(**fontIndRef)
+	if err != nil {
+		return err
+	}
+
+	if enc := d.NameEntry("Encoding"); *enc == "Identity-H" {
+		indRef, ok := fonts[fName]
+		if !ok {
+			fonts[fName] = **fontIndRef
+			return nil
+		}
+		if indRef != **fontIndRef {
+			return errors.Errorf("pdfcpu: %s: duplicate fontDicts", fName)
+		}
+		return nil
+	}
+
+	*fontIndRef, err = FontIndRef(fName, ctx, fonts)
+
+	return err
+}
+
 func extractFormFontDetails(
 	ctx *model.Context,
 	fontID string,
@@ -316,7 +344,6 @@ func extractFormFontDetails(
 		// Use DA fontId from Acrodict
 		s := xRefTable.AcroForm.StringEntry("DA")
 		if s == nil {
-			// create Helvetica font dict.
 			return "", "", "", nil, errors.Errorf("pdfcpu: unsupported font: %s", *fName)
 		}
 		da := strings.Split(*s, " ")
@@ -328,7 +355,6 @@ func extractFormFontDetails(
 			}
 		}
 		if rootFontID == "" {
-			// create Helvetica font dict.
 			return "", "", "", nil, errors.Errorf("pdfcpu: unsupported font: %s", *fName)
 		}
 		fontID = rootFontID
@@ -348,22 +374,8 @@ func extractFormFontDetails(
 	}
 
 	if font.IsUserFont(*fName) {
-		d, err := xRefTable.DereferenceDict(*fontIndRef)
-		if err != nil {
-			return "", "", "", nil, err
-		}
-		if enc := d.NameEntry("Encoding"); *enc == "Identity-H" {
-			indRef, ok := fonts[*fName]
-			if !ok {
-				fonts[*fName] = *fontIndRef
-			} else if indRef != *fontIndRef {
-				return "", "", "", nil, errors.Errorf("pdfcpu: %s: duplicate fontDicts", *fName)
-			}
-		} else {
-			fontIndRef, err = FontIndRef(*fName, ctx, fonts)
-			return fontID, *fName, lang, fontIndRef, err
-		}
+		err = ensureCorrectFontIndRef(ctx, &fontIndRef, *fName, fonts)
 	}
 
-	return fontID, *fName, lang, fontIndRef, nil
+	return fontID, *fName, lang, fontIndRef, err
 }

@@ -133,8 +133,7 @@ func (c *Content) validatePaddings() error {
 	return nil
 }
 
-func (c *Content) validateRegions() error {
-	s := "must be defined within region content"
+func (c *Content) validatePrimitives(s string) error {
 	if len(c.SimpleBoxPool) > 0 {
 		return errors.Errorf("pdfcpu: \"boxes\" %s", s)
 	}
@@ -159,6 +158,10 @@ func (c *Content) validateRegions() error {
 	if len(c.Tables) > 0 {
 		return errors.Errorf("pdfcpu: \"table\" %s", s)
 	}
+	return nil
+}
+
+func (c *Content) validateFormPrimitives(s string) error {
 	if len(c.FieldGroupPool) > 0 {
 		return errors.Errorf("pdfcpu: \"fieldgroups\" %s", s)
 	}
@@ -182,6 +185,17 @@ func (c *Content) validateRegions() error {
 	}
 	if len(c.ListBoxes) > 0 {
 		return errors.Errorf("pdfcpu: \"listbox\" %s", s)
+	}
+	return nil
+}
+
+func (c *Content) validateRegions() error {
+	s := "must be defined within region content"
+	if err := c.validatePrimitives(s); err != nil {
+		return err
+	}
+	if err := c.validateFormPrimitives(s); err != nil {
+		return err
 	}
 	c.Regions.page = c.page
 	c.Regions.parent = c
@@ -593,49 +607,41 @@ func (c *Content) calcFont(ff map[string]*FormFont) {
 	}
 }
 
+func (c *Content) mergeIn(fName string, f *FormFont) error {
+	f0 := c.namedFont(fName)
+	if f0 == nil {
+		return errors.Errorf("pdfcpu: missing named font \"input\"")
+	}
+	f.Name = f0.Name
+	if f.Size == 0 {
+		f.Size = f0.Size
+	}
+	if f.col == nil {
+		f.col = f0.col
+	}
+	if f.Lang == "" {
+		f.Lang = f0.Lang
+	}
+	if f.Script == "" {
+		f.Script = f0.Script
+	}
+	return nil
+}
+
 func (c *Content) calcInputFont(f *FormFont) (*FormFont, error) {
 
 	if f != nil {
-		var f0 *FormFont
 		if f.Name == "" {
-			// Use inherited named font "input".
-			f0 = c.namedFont("input")
-			if f0 == nil {
-				return nil, errors.Errorf("pdfcpu: missing named font \"input\"")
-			}
-			f.Name = f0.Name
-			if f.Size == 0 {
-				f.Size = f0.Size
-			}
-			if f.col == nil {
-				f.col = f0.col
-			}
-			if f.Lang == "" {
-				f.Lang = f0.Lang
-			}
-			if f.Script == "" {
-				f.Script = f0.Script
+			// Inherited named font "input".
+			if err := c.mergeIn("input", f); err != nil {
+				return nil, err
 			}
 		}
 		if f.Name != "" && f.Name[0] == '$' {
-			// use named font
+			// Inherit some other named font.
 			fName := f.Name[1:]
-			f0 := c.namedFont(fName)
-			if f0 == nil {
-				return nil, errors.Errorf("pdfcpu: unknown font name %s", fName)
-			}
-			f.Name = f0.Name
-			if f.Size == 0 {
-				f.Size = f0.Size
-			}
-			if f.col == nil {
-				f.col = f0.col
-			}
-			if f.Lang == "" {
-				f.Lang = f0.Lang
-			}
-			if f.Script == "" {
-				f.Script = f0.Script
+			if err := c.mergeIn(fName, f); err != nil {
+				return nil, err
 			}
 		}
 	} else {
@@ -1233,25 +1239,7 @@ func (c *Content) renderBoxesAndGuides(p *model.Page) {
 	}
 }
 
-func (c *Content) render(p *model.Page, pageNr int, fonts model.FontMap, images model.ImageMap) error {
-
-	if c.Regions != nil {
-		c.Regions.mediaBox = c.mediaBox
-		c.Regions.page = c.page
-		return c.Regions.render(p, pageNr, fonts, images)
-	}
-
-	// Render background
-	if c.bgCol != nil {
-		draw.FillRectNoBorder(p.Buf, c.BorderRect(), *c.bgCol)
-	}
-
-	// Render border
-	b := c.border()
-	if b != nil && b.col != nil && b.Width >= 0 {
-		draw.DrawRect(p.Buf, c.BorderRect(), float64(b.Width), b.col, &b.style)
-	}
-
+func (c *Content) renderPrimitives(p *model.Page, pageNr int, fonts model.FontMap, images model.ImageMap) error {
 	if err := c.renderBars(p); err != nil {
 		return err
 	}
@@ -1268,10 +1256,10 @@ func (c *Content) render(p *model.Page, pageNr int, fonts model.FontMap, images 
 		return err
 	}
 
-	if err := c.renderTables(p, pageNr, fonts); err != nil {
-		return err
-	}
+	return c.renderTables(p, pageNr, fonts)
+}
 
+func (c *Content) renderFormPrimitives(p *model.Page, pageNr int, fonts model.FontMap) error {
 	if err := c.renderTextFields(p, pageNr, fonts); err != nil {
 		return err
 	}
@@ -1296,7 +1284,33 @@ func (c *Content) render(p *model.Page, pageNr int, fonts model.FontMap, images 
 		return err
 	}
 
-	if err := c.renderFieldGroups(p, pageNr, fonts); err != nil {
+	return c.renderFieldGroups(p, pageNr, fonts)
+}
+
+func (c *Content) render(p *model.Page, pageNr int, fonts model.FontMap, images model.ImageMap) error {
+
+	if c.Regions != nil {
+		c.Regions.mediaBox = c.mediaBox
+		c.Regions.page = c.page
+		return c.Regions.render(p, pageNr, fonts, images)
+	}
+
+	// Render background
+	if c.bgCol != nil {
+		draw.FillRectNoBorder(p.Buf, c.BorderRect(), *c.bgCol)
+	}
+
+	// Render border
+	b := c.border()
+	if b != nil && b.col != nil && b.Width >= 0 {
+		draw.DrawRect(p.Buf, c.BorderRect(), float64(b.Width), b.col, &b.style)
+	}
+
+	if err := c.renderPrimitives(p, pageNr, fonts, images); err != nil {
+		return err
+	}
+
+	if err := c.renderFormPrimitives(p, pageNr, fonts); err != nil {
 		return err
 	}
 

@@ -72,8 +72,7 @@ func (fg *FieldGroup) validateBackgroundColor() error {
 	return nil
 }
 
-func (fg *FieldGroup) validate() error {
-
+func (fg *FieldGroup) validateBorderPaddingBgCol() error {
 	if err := fg.validateBorder(); err != nil {
 		return err
 	}
@@ -82,7 +81,12 @@ func (fg *FieldGroup) validate() error {
 		return err
 	}
 
-	if err := fg.validateBackgroundColor(); err != nil {
+	return fg.validateBackgroundColor()
+}
+
+func (fg *FieldGroup) validate() error {
+
+	if err := fg.validateBorderPaddingBgCol(); err != nil {
 		return err
 	}
 

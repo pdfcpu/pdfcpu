@@ -263,6 +263,21 @@ func (tb *TextBox) calcFont() error {
 	return nil
 }
 
+func tdMargin(p *Padding, td *model.TextDescriptor) {
+	// TODO TextDescriptor margin is actually a padding.
+	if p.Width > 0 {
+		td.MTop = p.Width
+		td.MRight = p.Width
+		td.MBot = p.Width
+		td.MLeft = p.Width
+	} else {
+		td.MTop = p.Top
+		td.MRight = p.Right
+		td.MBot = p.Bottom
+		td.MLeft = p.Left
+	}
+}
+
 func (tb *TextBox) prepareTextDescriptor(p *model.Page, pageNr int, fonts model.FontMap) (*model.TextDescriptor, error) {
 
 	pdf := tb.pdf
@@ -340,19 +355,7 @@ func (tb *TextBox) prepareTextDescriptor(p *model.Page, pageNr int, fonts model.
 			}
 			p.mergeIn(p0)
 		}
-
-		// TODO TextDescriptor margin is actually a padding.
-		if p.Width > 0 {
-			td.MTop = p.Width
-			td.MRight = p.Width
-			td.MBot = p.Width
-			td.MLeft = p.Width
-		} else {
-			td.MTop = p.Top
-			td.MRight = p.Right
-			td.MBot = p.Bottom
-			td.MLeft = p.Left
-		}
+		tdMargin(p, &td)
 	}
 
 	return &td, nil

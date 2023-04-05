@@ -585,23 +585,7 @@ func (lb *ListBox) calcBorder() (boWidth float64, boCol *color.SimpleColor) {
 	return lb.Border.calc()
 }
 
-func (lb *ListBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
-	pdf := lb.pdf
-
-	id, err := types.EscapeUTF16String(lb.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	opt := types.Array{}
-	for _, s := range lb.Options {
-		s1, err := types.Escape(types.EncodeUTF16String(s))
-		if err != nil {
-			return nil, err
-		}
-		opt = append(opt, types.StringLiteral(*s1))
-	}
-
+func (lb *ListBox) prepareFF() FieldFlags {
 	ff := FieldFlags(0)
 	if lb.Multi {
 		// Note: unsupported in Mac Preview
@@ -610,29 +594,10 @@ func (lb *ListBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	if lb.Locked {
 		ff += FieldReadOnly
 	}
+	return ff
+}
 
-	d := types.Dict(
-		map[string]types.Object{
-			"Type":    types.Name("Annot"),
-			"Subtype": types.Name("Widget"),
-			"FT":      types.Name("Ch"),
-			"Rect":    lb.BoundingBox.Array(),
-			"F":       types.Integer(model.AnnPrint),
-			"Ff":      types.Integer(ff),
-			"Opt":     opt,
-			"Q":       types.Integer(lb.HorAlign),
-			"T":       types.StringLiteral(*id),
-		},
-	)
-
-	if lb.Tip != "" {
-		tu, err := types.EscapeUTF16String(lb.Tip)
-		if err != nil {
-			return nil, err
-		}
-		d["TU"] = types.StringLiteral(*tu)
-	}
-
+func (lb *ListBox) handleBorderAndMK(d types.Dict) {
 	bgCol := lb.BgCol
 	if bgCol == nil {
 		bgCol = lb.content.page.bgCol
@@ -658,7 +623,9 @@ func (lb *ListBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	if boWidth > 0 {
 		d["Border"] = types.NewNumberArray(0, 0, boWidth)
 	}
+}
 
+func (lb *ListBox) handleVAndDV(d types.Dict) error {
 	vv := lb.Values
 	if len(vv) == 0 {
 		vv = lb.Defaults
@@ -673,7 +640,7 @@ func (lb *ListBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 		}
 		s, err := types.EscapeUTF16String(v)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		arr = append(arr, types.StringLiteral(*s))
 	}
@@ -692,7 +659,7 @@ func (lb *ListBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	for _, v := range lb.Defaults {
 		s, err := types.EscapeUTF16String(v)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		arr = append(arr, types.StringLiteral(*s))
 	}
@@ -701,6 +668,56 @@ func (lb *ListBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	}
 	if len(arr) > 1 {
 		d["DV"] = arr
+	}
+
+	return nil
+}
+
+func (lb *ListBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
+	pdf := lb.pdf
+
+	id, err := types.EscapeUTF16String(lb.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	opt := types.Array{}
+	for _, s := range lb.Options {
+		s1, err := types.Escape(types.EncodeUTF16String(s))
+		if err != nil {
+			return nil, err
+		}
+		opt = append(opt, types.StringLiteral(*s1))
+	}
+
+	ff := lb.prepareFF()
+
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":    types.Name("Annot"),
+			"Subtype": types.Name("Widget"),
+			"FT":      types.Name("Ch"),
+			"Rect":    lb.BoundingBox.Array(),
+			"F":       types.Integer(model.AnnPrint),
+			"Ff":      types.Integer(ff),
+			"Opt":     opt,
+			"Q":       types.Integer(lb.HorAlign),
+			"T":       types.StringLiteral(*id),
+		},
+	)
+
+	if lb.Tip != "" {
+		tu, err := types.EscapeUTF16String(lb.Tip)
+		if err != nil {
+			return nil, err
+		}
+		d["TU"] = types.StringLiteral(*tu)
+	}
+
+	lb.handleBorderAndMK(d)
+
+	if err := lb.handleVAndDV(d); err != nil {
+		return nil, err
 	}
 
 	if pdf.InheritedDA != "" {
