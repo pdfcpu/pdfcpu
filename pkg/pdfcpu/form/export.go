@@ -481,7 +481,7 @@ func fieldsForAnnots(xRefTable *model.XRefTable, annots, fields types.Array) (ma
 func exportBtn(
 	xRefTable *model.XRefTable,
 	i int,
-	form Form,
+	form *Form,
 	d types.Dict,
 	id, name string,
 	locked bool,
@@ -510,7 +510,7 @@ func exportBtn(
 func exportCh(
 	xRefTable *model.XRefTable,
 	i int,
-	form Form,
+	form *Form,
 	d types.Dict,
 	id, name string,
 	locked bool,
@@ -545,7 +545,7 @@ func exportCh(
 func exportTx(
 	xRefTable *model.XRefTable,
 	i int,
-	form Form,
+	form *Form,
 	d types.Dict,
 	id, name string,
 	ff *int,
@@ -577,7 +577,7 @@ func exportTx(
 	return nil
 }
 
-func exportPageFields(xRefTable *model.XRefTable, i int, form Form, m map[string]fieldInfo, ok *bool) error {
+func exportPageFields(xRefTable *model.XRefTable, i int, form *Form, m map[string]fieldInfo, ok *bool) error {
 	for id, fi := range m {
 
 		name := fi.name
@@ -626,12 +626,12 @@ func exportPageFields(xRefTable *model.XRefTable, i int, form Form, m map[string
 	return nil
 }
 
-// ExportForm extracts form data originating from source from xRefTable and writes a JSON representation to w.
-func ExportForm(xRefTable *model.XRefTable, source string, w io.Writer) (bool, error) {
+// ExportFormToStruct extracts form data originating from source from xRefTable.
+func ExportFormToStruct(xRefTable *model.XRefTable, source string) (*FormGroup, bool, error) {
 
 	fields, err := fields(xRefTable)
 	if err != nil {
-		return false, err
+		return nil, false, err
 	}
 
 	formGroup := FormGroup{}
@@ -645,7 +645,7 @@ func ExportForm(xRefTable *model.XRefTable, source string, w io.Writer) (bool, e
 
 		d, _, _, err := xRefTable.PageDict(i, false)
 		if err != nil {
-			return false, err
+			return nil, false, err
 		}
 
 		o, found := d.Find("Annots")
@@ -655,20 +655,31 @@ func ExportForm(xRefTable *model.XRefTable, source string, w io.Writer) (bool, e
 
 		arr, err := xRefTable.DereferenceArray(o)
 		if err != nil {
-			return false, err
+			return nil, false, err
 		}
 
 		m, err := fieldsForAnnots(xRefTable, arr, fields)
 		if err != nil {
-			return false, err
+			return nil, false, err
 		}
 
-		if err := exportPageFields(xRefTable, i, form, m, &ok); err != nil {
-			return false, err
+		if err := exportPageFields(xRefTable, i, &form, m, &ok); err != nil {
+			return nil, false, err
 		}
 	}
 
 	formGroup.Forms = []Form{form}
+
+	return &formGroup, ok, nil
+}
+
+// ExportForm extracts form data originating from source from xRefTable and writes a JSON representation to w.
+func ExportForm(xRefTable *model.XRefTable, source string, w io.Writer) (bool, error) {
+
+	formGroup, ok, err := ExportFormToStruct(xRefTable, source)
+	if err != nil || !ok {
+		return false, err
+	}
 
 	bb, err := json.MarshalIndent(formGroup, "", "\t")
 	if err != nil {

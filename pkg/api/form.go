@@ -383,6 +383,32 @@ func ResetFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf 
 	return ResetFormFields(f1, f2, fieldIDsOrNames, conf)
 }
 
+// ExportForm extracts form data originating from source from rs.
+func ExportFormToStruct(rs io.ReadSeeker, source string, conf *model.Configuration) (*form.FormGroup, error) {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.EXPORTFORMFIELDS
+	}
+	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, time.Now())
+	if err != nil {
+		return nil, err
+	}
+
+	if err := ctx.EnsurePageCount(); err != nil {
+		return nil, err
+	}
+
+	formGroup, ok, err := form.ExportFormToStruct(ctx.XRefTable, source)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, errors.New("no form fields exported")
+	}
+
+	return formGroup, nil
+}
+
 // ExportForm extracts form data originating from source from rs and writes the result to w.
 func ExportForm(rs io.ReadSeeker, w io.Writer, source string, conf *model.Configuration) error {
 	if conf == nil {
