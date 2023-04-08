@@ -251,7 +251,7 @@ func writeNRGBAImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte) 
 				if xRefTable != nil && c.A != 0xFF {
 					softMask = true
 					sm = []byte{}
-					for j := 0; j < y*h+x; j++ {
+					for j := 0; j < y*w+x; j++ {
 						sm = append(sm, 0xFF)
 					}
 					sm = append(sm, c.A)
@@ -285,7 +285,7 @@ func writeNRGBA64ImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte
 				if xRefTable != nil && c.A != 0xFFFF {
 					softMask = true
 					sm = []byte{}
-					for j := 0; j < y*h+x; j++ {
+					for j := 0; j < y*w+x; j++ {
 						sm = append(sm, 0xFF)
 						sm = append(sm, 0xFF)
 					}
