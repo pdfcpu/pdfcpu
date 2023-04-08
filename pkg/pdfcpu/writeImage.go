@@ -236,15 +236,15 @@ func softMask(xRefTable *model.XRefTable, d *types.StreamDict, w, h, objNr int) 
 	return sm, nil
 }
 
-func renderDeviceCMYKToTIFF(im *PDFImage, resourceName string) (io.Reader, string, error) {
-	b := im.sd.Content
-	log.Debug.Printf("renderDeviceCMYKToTIFF: CMYK objNr=%d w=%d h=%d bpc=%d buflen=%d\n", im.objNr, im.w, im.h, im.bpc, len(b))
+func imageForCMYKWithoutSoftMask(im *PDFImage) image.Image {
+
+	// Preserve CMYK color model for print applications.
+
+	// TODO support bpc, decode.
 
 	img := image.NewCMYK(image.Rect(0, 0, im.w, im.h))
-
+	b := im.sd.Content
 	i := 0
-
-	// TODO support bpc, decode and softMask.
 
 	for y := 0; y < im.h; y++ {
 		for x := 0; x < im.w; x++ {
@@ -253,8 +253,42 @@ func renderDeviceCMYKToTIFF(im *PDFImage, resourceName string) (io.Reader, strin
 		}
 	}
 
+	return img
+
+}
+
+func imageForCMYKWithSoftMask(im *PDFImage) image.Image {
+
+	// TODO support bpc, decode.
+
+	img := image.NewNRGBA(image.Rect(0, 0, im.w, im.h))
+	b := im.sd.Content
+	i := 0
+
+	for y := 0; y < im.h; y++ {
+		for x := 0; x < im.w; x++ {
+			cr, cg, cb := color.CMYKToRGB(b[i], b[i+1], b[i+2], b[i+3])
+			alpha := im.softMask[y*im.w+x]
+			img.Set(x, y, color.NRGBA{cr, cg, cb, alpha})
+			i += 4
+		}
+	}
+
+	return img
+}
+
+func renderDeviceCMYKToTIFF(im *PDFImage, resourceName string) (io.Reader, string, error) {
+	b := im.sd.Content
+	log.Debug.Printf("renderDeviceCMYKToTIFF: CMYK objNr=%d w=%d h=%d bpc=%d buflen=%d\n", im.objNr, im.w, im.h, im.bpc, len(b))
+
+	var img image.Image
+	if im.softMask != nil {
+		img = imageForCMYKWithSoftMask(im)
+	} else {
+		img = imageForCMYKWithoutSoftMask(im)
+	}
+
 	var buf bytes.Buffer
-	// TODO softmask handling.
 	if err := tiff.Encode(&buf, img, nil); err != nil {
 		return nil, "", err
 	}
@@ -281,9 +315,8 @@ func renderDeviceGrayToPNG(im *PDFImage, resourceName string) (io.Reader, string
 		cvr = im.decode[0]
 	}
 
-	img := image.NewGray(image.Rect(0, 0, im.w, im.h))
+	img := image.NewNRGBA(image.Rect(0, 0, im.w, im.h))
 
-	// TODO support softmask.
 	i := 0
 	for y := 0; y < im.h; y++ {
 		for x := 0; x < im.w; {
@@ -294,8 +327,11 @@ func renderDeviceGrayToPNG(im *PDFImage, resourceName string) (io.Reader, string
 				if im.bpc < 8 {
 					v = scaleToBPC8(v, im.bpc)
 				}
-				//fmt.Printf("x=%d y=%d pix=#%02x v=#%02x\n", x, y, pix, v)
-				img.Set(x, y, color.Gray{Y: v})
+				alpha := uint8(255)
+				if im.softMask != nil {
+					alpha = im.softMask[y*im.w+x]
+				}
+				img.Set(x, y, color.NRGBA{R: v, G: v, B: v, A: alpha})
 				p <<= uint8(im.bpc)
 				x++
 			}
@@ -497,14 +533,16 @@ func renderIndexedRGBToPNG(im *PDFImage, resourceName string, lookup []byte) (io
 	return &buf, "png", nil
 }
 
-func renderIndexedCMYKToTIFF(im *PDFImage, resourceName string, lookup []byte) (io.Reader, string, error) {
-	b := im.sd.Content
+func imageForIndexedCMYKWithoutSoftMask(im *PDFImage, lookup []byte) image.Image {
+
+	// Preserve CMYK color model for print applications.
+
+	// TODO handle decode
 
 	img := image.NewCMYK(image.Rect(0, 0, im.w, im.h))
-
-	// TODO handle decode and softmask.
-
+	b := im.sd.Content
 	i := 0
+
 	for y := 0; y < im.h; y++ {
 		for x := 0; x < im.w; {
 			p := b[i]
@@ -520,8 +558,47 @@ func renderIndexedCMYKToTIFF(im *PDFImage, resourceName string, lookup []byte) (
 		}
 	}
 
+	return img
+}
+
+func imageForIndexedCMYKWithSoftMask(im *PDFImage, lookup []byte) image.Image {
+
+	// TODO handle decode
+
+	img := image.NewNRGBA(image.Rect(0, 0, im.w, im.h))
+	b := im.sd.Content
+	i := 0
+
+	for y := 0; y < im.h; y++ {
+		for x := 0; x < im.w; {
+			p := b[i]
+			for j := 0; j < 8/im.bpc; j++ {
+				ind := p >> (8 - uint8(im.bpc))
+				//fmt.Printf("x=%d y=%d i=%d j=%d p=#%02x ind=#%02x\n", x, y, i, j, p, ind)
+				l := 4 * int(ind)
+				cr, cg, cb := color.CMYKToRGB(lookup[l], lookup[l+1], lookup[l+2], lookup[l+3])
+				alpha := im.softMask[y*im.w+x]
+				img.Set(x, y, color.NRGBA{cr, cg, cb, alpha})
+				p <<= uint8(im.bpc)
+				x++
+			}
+			i++
+		}
+	}
+
+	return img
+}
+
+func renderIndexedCMYKToTIFF(im *PDFImage, resourceName string, lookup []byte) (io.Reader, string, error) {
+
+	var img image.Image
+	if im.softMask != nil {
+		img = imageForIndexedCMYKWithSoftMask(im, lookup)
+	} else {
+		img = imageForIndexedCMYKWithoutSoftMask(im, lookup)
+	}
+
 	var buf bytes.Buffer
-	// TODO softmask handling.
 	if err := tiff.Encode(&buf, img, nil); err != nil {
 		return nil, "", err
 	}
