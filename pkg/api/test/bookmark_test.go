@@ -29,6 +29,7 @@ import (
 // Mac Preview limitations: does not render color, style, outline tree collapsed by default.
 
 func TestAddSimpleBookmarks(t *testing.T) {
+	// Note: Existing bookmarks will be overwritten.
 	msg := "TestAddSimpleBookmarks"
 	inFile := filepath.Join(inDir, "CenterOfWhy.pdf")
 	outFile := filepath.Join("..", "..", "samples", "bookmarks", "bookmarkSimple.pdf")
