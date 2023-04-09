@@ -648,25 +648,33 @@ func validateNameTreeDictLimitsEntry(xRefTable *model.XRefTable, d types.Dict, f
 		return err
 	}
 
-	//fmt.Printf("validateNameTreeDictLimitsEntry: firstKey=%s lastKey=%s limits:%v\n", firstKey, lastKey, a)
-
 	var fkv, lkv string
 
-	fk, ok := a[0].(types.StringLiteral)
+	o, err := xRefTable.Dereference(a[0])
+	if err != nil {
+		return err
+	}
+	fk, ok := o.(types.StringLiteral)
 	if !ok {
-		fk, _ := a[0].(types.HexLiteral)
-		//bb, _ := fk.Bytes()
-		//fmt.Printf("fk: %v %s\n", bb, string(bb))
+		fk, ok1 := o.(types.HexLiteral)
+		if !ok1 {
+			return errors.Errorf("pdfcpu: validateNameTreeDictLimitsEntry: expected type \"string\", but encountered %T", o)
+		}
 		fkv = fk.Value()
 	} else {
 		fkv = fk.Value()
 	}
 
-	lk, ok := a[1].(types.StringLiteral)
+	o, err = xRefTable.Dereference(a[1])
+	if err != nil {
+		return err
+	}
+	lk, ok := o.(types.StringLiteral)
 	if !ok {
-		lk, _ := a[1].(types.HexLiteral)
-		//bb, _ := lk.Bytes()
-		//fmt.Printf("lk: %v %s\n", bb, string(bb))
+		lk, ok1 := a[1].(types.HexLiteral)
+		if !ok1 {
+			return errors.Errorf("pdfcpu: validateNameTreeDictLimitsEntry: expected type \"string\", but encountered %T", o)
+		}
 		lkv = lk.Value()
 	} else {
 		lkv = lk.Value()
