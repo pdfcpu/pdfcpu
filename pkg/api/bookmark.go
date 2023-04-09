@@ -28,9 +28,7 @@ import (
 )
 
 // AddBookmarks adds a single bookmark outline layer to the PDF context read from rs and writes the result to w.
-func AddBookmarks(rs io.ReadSeeker, w io.Writer, bms []pdf.Bookmark, conf *model.Configuration) error {
-
-	// Note: Existing bookmarks will be replaced.
+func AddBookmarks(rs io.ReadSeeker, w io.Writer, bms []pdf.Bookmark, replace bool, conf *model.Configuration) error {
 
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
@@ -51,7 +49,7 @@ func AddBookmarks(rs io.ReadSeeker, w io.Writer, bms []pdf.Bookmark, conf *model
 
 	from := time.Now()
 
-	if err := pdfcpu.AddBookmarks(ctx, bms); err != nil {
+	if err := pdfcpu.AddBookmarks(ctx, bms, replace); err != nil {
 		return err
 	}
 
@@ -70,9 +68,7 @@ func AddBookmarks(rs io.ReadSeeker, w io.Writer, bms []pdf.Bookmark, conf *model
 }
 
 // AddBookmarksFile adds a single bookmark outline layer to the PDF context read from inFile and writes the result to outFile.
-func AddBookmarksFile(inFile, outFile string, bms []pdf.Bookmark, conf *model.Configuration) (err error) {
-
-	// Note: Existing bookmarks will be replaced.
+func AddBookmarksFile(inFile, outFile string, bms []pdf.Bookmark, replace bool, conf *model.Configuration) (err error) {
 
 	var f1, f2 *os.File
 
@@ -109,5 +105,5 @@ func AddBookmarksFile(inFile, outFile string, bms []pdf.Bookmark, conf *model.Co
 		}
 	}()
 
-	return AddBookmarks(f1, f2, bms, conf)
+	return AddBookmarks(f1, f2, bms, replace, conf)
 }

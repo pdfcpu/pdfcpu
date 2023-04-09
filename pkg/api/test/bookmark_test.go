@@ -29,7 +29,6 @@ import (
 // Mac Preview limitations: does not render color, style, outline tree collapsed by default.
 
 func TestAddSimpleBookmarks(t *testing.T) {
-	// Note: Existing bookmarks will be overwritten.
 	msg := "TestAddSimpleBookmarks"
 	inFile := filepath.Join(inDir, "CenterOfWhy.pdf")
 	outFile := filepath.Join("..", "..", "samples", "bookmarks", "bookmarkSimple.pdf")
@@ -49,7 +48,8 @@ func TestAddSimpleBookmarks(t *testing.T) {
 		{PageFrom: 19, Title: "Page 19: Bold Red ", Color: &color.Red, Bold: true},
 	}
 
-	if err := api.AddBookmarksFile(inFile, outFile, bms, nil); err != nil {
+	replace := true // Replace existing bookmarks.
+	if err := api.AddBookmarksFile(inFile, outFile, bms, replace, nil); err != nil {
 		t.Fatalf("%s addBookmarks: %v\n", msg, err)
 	}
 }
@@ -73,7 +73,7 @@ func TestAddBookmarkTree2Levels(t *testing.T) {
 			}},
 	}
 
-	if err := api.AddBookmarksFile(inFile, outFile, bms, nil); err != nil {
+	if err := api.AddBookmarksFile(inFile, outFile, bms, false, nil); err != nil {
 		t.Fatalf("%s addBookmarks: %v\n", msg, err)
 	}
 }

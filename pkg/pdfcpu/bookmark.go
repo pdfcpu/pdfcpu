@@ -309,13 +309,17 @@ func createOutlineItemDict(ctx *model.Context, bms []Bookmark, parent *types.Ind
 }
 
 // AddBookmarks adds bms to ctx.
-func AddBookmarks(ctx *model.Context, bms []Bookmark) error {
-
-	// Note: Existing bookmarks will be replaced.
+func AddBookmarks(ctx *model.Context, bms []Bookmark, replace bool) error {
 
 	rootDict, err := ctx.Catalog()
 	if err != nil {
 		return err
+	}
+
+	if !replace {
+		if _, ok := rootDict.Find("Outlines"); ok {
+			return errExistingBookmarks
+		}
 	}
 
 	outlinesDict := types.Dict(map[string]types.Object{"Type": types.Name("Outlines")})
