@@ -59,6 +59,7 @@ func TestCrop(t *testing.T) {
 		{"dim:50% 50%", types.POINTS},
 		{"pos:bl, dim:50% 50%", types.POINTS},
 		{"pos:tl, off: 10 -10, dim:50% 50%", types.POINTS},
+		{"pos:tl, dim:.5 1 rel", types.POINTS},
 		{"-1", types.INCHES},
 		{"-25%", types.POINTS},
 	} {

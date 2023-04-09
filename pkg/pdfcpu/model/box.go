@@ -639,7 +639,7 @@ func parseBoxDimByPercentage(s, s1, s2 string, b *Box) error {
 	if err != nil {
 		return err
 	}
-	if pct <= 0 || pct >= 100 {
+	if pct <= 0 || pct > 100 {
 		return errors.Errorf("pdfcpu: invalid percentage: %s", s)
 	}
 	w := pct / 100
@@ -656,7 +656,7 @@ func parseBoxDimByPercentage(s, s1, s2 string, b *Box) error {
 	if err != nil {
 		return err
 	}
-	if pct <= 0 || pct >= 100 {
+	if pct <= 0 || pct > 100 {
 		return errors.Errorf("pdfcpu: invalid percentage: %s", s)
 	}
 	h := pct / 100
@@ -676,8 +676,8 @@ func parseBoxDimWidthAndHeight(s1, s2 string, abs bool) (float64, float64, error
 	}
 	if !abs {
 		// eg 0.25 rel (=25%)
-		if w <= 0 || w >= 1 {
-			return w, h, errors.Errorf("pdfcpu: invalid relative box width: %f must be positive < 1", w)
+		if w <= 0 || w > 1 {
+			return w, h, errors.Errorf("pdfcpu: invalid relative box width: %f must be positive <= 1", w)
 		}
 	}
 
@@ -687,8 +687,8 @@ func parseBoxDimWidthAndHeight(s1, s2 string, abs bool) (float64, float64, error
 	}
 	if !abs {
 		// eg 0.25 rel (=25%)
-		if h <= 0 || h >= 1 {
-			return w, h, errors.Errorf("pdfcpu: invalid relative box height: %f must be positive < 1", h)
+		if h <= 0 || h > 1 {
+			return w, h, errors.Errorf("pdfcpu: invalid relative box height: %f must be positive <= 1", h)
 		}
 	}
 
@@ -1000,11 +1000,11 @@ func boxLowerLeftCorner(r *types.Rectangle, w, h float64, a types.Anchor) types.
 
 func boxByDim(boxName string, b *Box, d types.Dict, parent *types.Rectangle) *types.Rectangle {
 	w := b.Dim.Width
-	if w < 1 {
+	if w <= 1 {
 		w *= parent.Width()
 	}
 	h := b.Dim.Height
-	if h < 1 {
+	if h <= 1 {
 		h *= parent.Height()
 	}
 	ll := boxLowerLeftCorner(parent, w, h, b.Pos)

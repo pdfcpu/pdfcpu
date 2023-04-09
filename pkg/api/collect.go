@@ -48,7 +48,7 @@ func Collect(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.
 		return err
 	}
 
-	ctxDest, err := pdfcpu.ExtractPages(ctx, pages, true)
+	ctxDest, err := pdfcpu.ExtractPages(ctx, pages, false)
 	if err != nil {
 		return err
 	}
