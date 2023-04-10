@@ -141,6 +141,9 @@ func parsePositionAnchorWM(s string, wm *model.Watermark) error {
 	if err != nil {
 		return err
 	}
+	if a == types.Full {
+		a = types.Center
+	}
 	wm.Pos = a
 	return nil
 }

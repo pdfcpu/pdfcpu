@@ -331,6 +331,83 @@ func LowerLeftCorner(vp *types.Rectangle, bbw, bbh float64, a types.Anchor) type
 	return p
 }
 
+func (wm *Watermark) alignWithPageBoundariesForNegRot() (float64, float64) {
+	w, h := wm.Bb.Width(), wm.Bb.Height()
+	var dx, dy float64
+
+	switch wm.Pos {
+
+	case types.TopLeft:
+		dx, dy = 0, h
+
+	case types.TopCenter:
+		dx, dy = (w-h)/2, h
+
+	case types.TopRight:
+		dx, dy = w-h, h
+
+	case types.Left:
+		dx, dy = 0, (w+h)/2
+
+	case types.Right:
+		dx, dy = w-h, (w+h)/2
+
+	case types.BottomLeft:
+		dx, dy = 0, w
+
+	case types.BottomCenter:
+		dx, dy = (w-h)/2, w
+
+	case types.BottomRight:
+		dx, dy = w-h, w
+	}
+
+	return dx, dy
+}
+
+func (wm *Watermark) alignWithPageBoundariesForPosRot() (float64, float64) {
+	w, h := wm.Bb.Width(), wm.Bb.Height()
+	var dx, dy float64
+
+	switch wm.Pos {
+
+	case types.TopLeft:
+		dx, dy = h, h-w
+
+	case types.TopCenter:
+		dx, dy = (w+h)/2, h-w
+
+	case types.TopRight:
+		dx, dy = w, h-w
+
+	case types.Left:
+		dx, dy = h, (h-w)/2
+
+	case types.Right:
+		dx, dy = w, (h-w)/2
+
+	case types.BottomLeft:
+		dx, dy = h, 0
+
+	case types.BottomCenter:
+		dx, dy = (w+h)/2, 0
+
+	case types.BottomRight:
+		dx, dy = w, 0
+
+	}
+
+	return dx, dy
+}
+
+func (wm *Watermark) alignWithPageBoundaries() (float64, float64) {
+	if wm.Rotation == 90 {
+		return wm.alignWithPageBoundariesForPosRot()
+	}
+	// wm.Rotation == -90
+	return wm.alignWithPageBoundariesForNegRot()
+}
+
 // CalcTransformMatrix return the transform matrix for a watermark.
 func (wm *Watermark) CalcTransformMatrix() matrix.Matrix {
 	var sin, cos float64
@@ -354,14 +431,21 @@ func (wm *Watermark) CalcTransformMatrix() matrix.Matrix {
 	sin = math.Sin(float64(r) * float64(DegToRad))
 	cos = math.Cos(float64(r) * float64(DegToRad))
 
-	var dy float64
+	var dx, dy float64
 	if !wm.IsImage() && !wm.IsPDF() {
 		dy = wm.Bb.LL.Y
 	}
+
 	ll := LowerLeftCorner(wm.Vp, wm.Bb.Width(), wm.Bb.Height(), wm.Pos)
 
-	dx := ll.X + wm.Bb.Width()/2 + wm.Dx + sin*(wm.Bb.Height()/2+dy) - cos*wm.Bb.Width()/2
-	dy = ll.Y + wm.Bb.Height()/2 + wm.Dy - cos*(wm.Bb.Height()/2+dy) - sin*wm.Bb.Width()/2
+	if wm.Pos != types.Center && (r == 90 || r == -90) {
+		dx, dy = wm.alignWithPageBoundaries()
+		dx = ll.X + dx + wm.Dx
+		dy = ll.Y + dy + wm.Dy
+	} else {
+		dx = ll.X + wm.Bb.Width()/2 + wm.Dx + sin*(wm.Bb.Height()/2+dy) - cos*wm.Bb.Width()/2
+		dy = ll.Y + wm.Bb.Height()/2 + wm.Dy - cos*(wm.Bb.Height()/2+dy) - sin*wm.Bb.Width()/2
+	}
 
 	return matrix.CalcTransformMatrix(1, 1, sin, cos, dx, dy)
 }
