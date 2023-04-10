@@ -78,7 +78,7 @@ type Import struct {
 	UserDim  bool              // true if one of dimensions or paperSize provided overriding the default.
 	DPI      int               // destination resolution to apply in dots per inch.
 	Pos      types.Anchor      // position anchor, one of tl,tc,tr,l,c,r,bl,bc,br,full.
-	Dx, Dy   int               // anchor offset.
+	Dx, Dy   float64           // anchor offset.
 	Scale    float64           // relative scale factor. 0 <= x <= 1
 	ScaleAbs bool              // true for absolute scaling.
 	InpUnit  types.DisplayUnit // input display unit.
@@ -105,7 +105,7 @@ func (imp Import) String() string {
 		sc = "absolute"
 	}
 
-	return fmt.Sprintf("Import conf: %s %s, pos=%s, dx=%d, dy=%d, scaling: %.1f %s\n",
+	return fmt.Sprintf("Import conf: %s %s, pos=%s, dx=%f.2, dy=%f.2, scaling: %.1f %s\n",
 		imp.PageSize, *imp.PageDim, imp.Pos, imp.Dx, imp.Dy, imp.Scale, sc)
 }
 
@@ -169,13 +169,13 @@ func parsePositionOffsetImp(s string, imp *Import) error {
 	if err != nil {
 		return err
 	}
-	imp.Dx = int(types.ToUserSpace(f, imp.InpUnit))
+	imp.Dx = types.ToUserSpace(f, imp.InpUnit)
 
 	f, err = strconv.ParseFloat(d[1], 64)
 	if err != nil {
 		return err
 	}
-	imp.Dy = int(types.ToUserSpace(f, imp.InpUnit))
+	imp.Dy = types.ToUserSpace(f, imp.InpUnit)
 
 	return nil
 }
@@ -320,10 +320,10 @@ func importImagePDFBytes(wr io.Writer, pageDim *types.Dim, imgWidth, imgHeight f
 
 	// Translate
 	ll := model.LowerLeftCorner(vp, bb.Width(), bb.Height(), imp.Pos)
-	m[2][0] = ll.X + float64(imp.Dx)
-	m[2][1] = ll.Y + float64(imp.Dy)
+	m[2][0] = ll.X + imp.Dx
+	m[2][1] = ll.Y + imp.Dy
 
-	fmt.Fprintf(wr, "q %.2f %.2f %.2f %.2f %.2f %.2f cm /Im0 Do Q",
+	fmt.Fprintf(wr, "q %.5f %.5f %.5f %.5f %.5f %.5f cm /Im0 Do Q",
 		m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 }
 

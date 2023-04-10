@@ -19,6 +19,7 @@ package pdfcpu
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"math"
 	"strings"
 
@@ -124,13 +125,46 @@ func ParseCutConfig(s string, u types.DisplayUnit) (*model.Cut, error) {
 	return cut, nil
 }
 
-func addCutOverviewPage(
+func drawOutlineCuts(w io.Writer, cropBox, cb *types.Rectangle, cut *model.Cut) {
+	for i, f := range cut.Hor {
+		if i == 0 {
+			continue
+		}
+		y := cropBox.UR.Y - f*cropBox.Height()
+		draw.DrawLineSimple(w, cb.LL.X, y, cb.UR.X, y)
+	}
+
+	for i, f := range cut.Vert {
+		if i == 0 {
+			continue
+		}
+		x := cropBox.LL.X + f*cropBox.Width()
+		draw.DrawLineSimple(w, x, cb.LL.Y, x, cb.UR.Y)
+	}
+}
+
+func createOutline(
 	ctxSrc, ctxDest *model.Context,
 	pagesIndRef types.IndirectRef,
 	pagesDict, d types.Dict,
 	cropBox *types.Rectangle,
 	migrated map[int]int,
 	cut *model.Cut) error {
+
+	cb := cropBox.Clone()
+
+	var expCropBox bool
+	if len(cut.Hor) > 0 && cut.Hor[len(cut.Hor)-1] > 1 {
+		h := cut.Hor[len(cut.Hor)-1] * cropBox.Height()
+		cb.LL.Y = cb.UR.Y - h
+		expCropBox = true
+	}
+
+	if len(cut.Vert) > 0 && cut.Vert[len(cut.Vert)-1] > 1 {
+		w := cut.Vert[len(cut.Vert)-1] * cropBox.Width()
+		cb.UR.X = cb.LL.X + w
+		expCropBox = true
+	}
 
 	d1 := d.Clone().(types.Dict)
 
@@ -141,21 +175,7 @@ func addCutOverviewPage(
 
 	// Assumption: origin = top left corner
 
-	for i, f := range cut.Hor {
-		if i == 0 {
-			continue
-		}
-		y := cropBox.UR.Y - f*cropBox.Height()
-		draw.DrawLineSimple(&buf, cropBox.LL.X, y, cropBox.UR.X, y)
-	}
-
-	for i, f := range cut.Vert {
-		if i == 0 {
-			continue
-		}
-		x := cropBox.LL.X + f*cropBox.Width()
-		draw.DrawLineSimple(&buf, x, cropBox.LL.Y, x, cropBox.UR.Y)
-	}
+	drawOutlineCuts(&buf, cropBox, cb, cut)
 
 	bb, err := ctxSrc.PageContent(d1)
 	if err != nil {
@@ -178,6 +198,10 @@ func addCutOverviewPage(
 
 	d1["Contents"] = *indRef
 	d1["Parent"] = pagesIndRef
+	if expCropBox {
+		d1["MediaBox"] = cb.Array()
+		d1["CropBox"] = cb.Array()
+	}
 
 	pageIndRef, err := ctxDest.IndRefForNewObject(d1)
 	if err != nil {
@@ -236,7 +260,7 @@ func prepForCut(ctxSrc *model.Context, i int) (
 	return ctxDest, cropBox, pagesIndRef, pagesDict, d, inhPAttrs, nil
 }
 
-func internPageRot(ctxSrc *model.Context, rotate int, cropBox *types.Rectangle, d types.Dict) error {
+func internPageRot(ctxSrc *model.Context, rotate int, cropBox *types.Rectangle, d types.Dict, trans []byte) error {
 	bb, err := ctxSrc.PageContent(d)
 	if err != nil {
 		return err
@@ -248,7 +272,10 @@ func internPageRot(ctxSrc *model.Context, rotate int, cropBox *types.Rectangle, 
 		bb = append(bb, []byte(" Q ")...)
 	}
 
-	bb = append([]byte("q "), bb...)
+	if len(trans) == 0 {
+		trans = []byte("q ")
+	}
+	bb = append(trans, bb...)
 	bb = append(bb, []byte("Q ")...)
 
 	sd, _ := ctxSrc.NewStreamDictForBuf(bb)
@@ -266,6 +293,88 @@ func internPageRot(ctxSrc *model.Context, rotate int, cropBox *types.Rectangle, 
 	return nil
 }
 
+func handleCutMargin(ctxSrc *model.Context, d, d1 types.Dict, cropBox, cb *types.Rectangle, i, j int, w, h float64, sc *float64, cut *model.Cut) error {
+	ar := cb.AspectRatio()
+	mv := cut.Margin / ar
+
+	// Scale & translate content.
+	if *sc == 0 {
+		*sc = (cb.Width() - 2*cut.Margin) / cb.Width()
+	}
+
+	cbsc := cropBox.Clone()
+	cbsc.UR.X = cbsc.LL.X + cbsc.Width()**sc
+	cbsc.UR.Y = cbsc.LL.Y + cbsc.Height()**sc
+
+	llx := cbsc.LL.X + cut.Vert[j]*cbsc.Width()
+
+	lly := cbsc.LL.Y
+	if i+1 < len(cut.Hor) {
+		lly = cbsc.UR.Y - cut.Hor[i+1]*cbsc.Height()
+	}
+
+	cbb := types.RectForWidthAndHeight(llx, lly, w, h)
+
+	d1["MediaBox"] = cbb.Array()
+	d1["CropBox"] = cbb.Array()
+
+	cb1 := cbb.Clone()
+	cb1.LL.X += cut.Margin
+	cb1.LL.Y += mv
+	cb1.UR.X -= cut.Margin
+	cb1.UR.Y -= mv
+
+	var buf bytes.Buffer
+
+	c := color.White
+	if cut.BgColor != nil {
+		c = *cut.BgColor
+	}
+
+	w, h = cb1.Width(), mv
+	r := types.RectForWidthAndHeight(cb1.LL.X, cb1.UR.Y, w, h)
+	draw.FillRectNoBorder(&buf, r, c)
+	r = types.RectForWidthAndHeight(cb1.LL.X, cb1.LL.Y-mv, w, h)
+	draw.FillRectNoBorder(&buf, r, c)
+
+	w, h = cut.Margin, cbb.Height()
+	r = types.RectForWidthAndHeight(cb1.UR.X, cb1.LL.Y-mv, w, h)
+	draw.FillRectNoBorder(&buf, r, c)
+	r = types.RectForWidthAndHeight(cb1.LL.X-cut.Margin, cb1.LL.Y-mv, w, h)
+	draw.FillRectNoBorder(&buf, r, c)
+
+	if cut.Border {
+		draw.DrawRect(&buf, cb1, 1, &color.Black, nil)
+	}
+
+	m := matrix.CalcTransformMatrix(*sc, *sc, 0, 1, cut.Margin, mv)
+	var trans bytes.Buffer
+	fmt.Fprintf(&trans, "q %.5f %.5f %.5f %.5f %.5f %.5f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
+
+	bbOrig, err := ctxSrc.PageContent(d)
+	if err != nil {
+		return err
+	}
+
+	bb := append(trans.Bytes(), bbOrig...)
+	bb = append(bb, []byte(" Q ")...)
+	bb = append(bb, buf.Bytes()...)
+
+	sd, _ := ctxSrc.NewStreamDictForBuf(bb)
+	if err := sd.Encode(); err != nil {
+		return err
+	}
+
+	indRef, err := ctxSrc.IndRefForNewObject(*sd)
+	if err != nil {
+		return err
+	}
+
+	d1["Contents"] = *indRef
+
+	return nil
+}
+
 func createTiles(
 	ctxSrc, ctxDest *model.Context,
 	pagesIndRef types.IndirectRef,
@@ -275,18 +384,30 @@ func createTiles(
 	migrated map[int]int,
 	cut *model.Cut) error {
 
+	var sc float64
+
 	for i := 0; i < len(cut.Hor); i++ {
 		ury := cropBox.UR.Y - cut.Hor[i]*cropBox.Height()
+		if ury < cropBox.LL.Y {
+			continue
+		}
 		lly := cropBox.LL.Y
 		if i+1 < len(cut.Hor) {
 			lly = cropBox.UR.Y - cut.Hor[i+1]*cropBox.Height()
 		}
+
+		h := ury - lly
+
 		for j := 0; j < len(cut.Vert); j++ {
 			llx := cropBox.LL.X + cut.Vert[j]*cropBox.Width()
+			if llx > cropBox.UR.X {
+				continue
+			}
 			urx := cropBox.UR.X
 			if j+1 < len(cut.Vert) {
 				urx = cropBox.LL.X + cut.Vert[j+1]*cropBox.Width()
 			}
+			w := urx - llx
 
 			cb := types.NewRectangle(llx, lly, urx, ury)
 
@@ -295,6 +416,12 @@ func createTiles(
 			d1["Parent"] = pagesIndRef
 			d1["MediaBox"] = cb.Array()
 			d1["CropBox"] = cb.Array()
+
+			if cut.Margin > 0 {
+				if err := handleCutMargin(ctxSrc, d, d1, cropBox, cb, i, j, w, h, &sc, cut); err != nil {
+					return err
+				}
+			}
 
 			pageIndRef, err := ctxDest.IndRefForNewObject(d1)
 			if err != nil {
@@ -335,13 +462,13 @@ func CutPage(ctxSrc *model.Context, i int, cut *model.Cut) (*model.Context, erro
 		d.Delete("Rotate")
 	}
 
-	if err := internPageRot(ctxSrc, rotate, cropBox, d); err != nil {
+	if err := internPageRot(ctxSrc, rotate, cropBox, d, nil); err != nil {
 		return nil, err
 	}
 
 	migrated := map[int]int{}
 
-	if err := addCutOverviewPage(ctxSrc, ctxDest, *pagesIndRef, pagesDict, d, cropBox, migrated, cut); err != nil {
+	if err := createOutline(ctxSrc, ctxDest, *pagesIndRef, pagesDict, d, cropBox, migrated, cut); err != nil {
 		return nil, err
 	}
 
@@ -360,23 +487,23 @@ func createNDownCuts(n int, cropBox *types.Rectangle, cut *model.Cut) {
 		s1 = append(s1, 0, .5)
 		s2 = append(s2, 0)
 	case 3:
-		s1 = append(s1, 0, .33, .66)
+		s1 = append(s1, 0, .33333, .66666)
 		s2 = append(s2, 0)
 	case 4:
 		s1 = append(s1, 0, .5)
 		s2 = append(s2, 0, .5)
 	case 6:
-		s1 = append(s1, 0, .33, .66)
+		s1 = append(s1, 0, .33333, .66666)
 		s2 = append(s2, 0, .5)
 	case 8:
 		s1 = append(s1, 0, .25, .5, .75)
 		s2 = append(s2, 0, .5)
 	case 9:
-		s1 = append(s1, 0, .33, .66)
-		s2 = append(s2, 0, .33, .66)
+		s1 = append(s1, 0, .33333, .66666)
+		s2 = append(s2, 0, .33333, .66666)
 	case 12:
 		s1 = append(s1, 0, .25, .5, .75)
-		s2 = append(s2, 0, .33, .66)
+		s2 = append(s2, 0, .33333, .66666)
 	case 16:
 		s1 = append(s1, 0, .25, .5, .75)
 		s2 = append(s2, 0, .25, .5, .75)
@@ -409,7 +536,7 @@ func NDownPage(ctxSrc *model.Context, i, n int, cut *model.Cut) (*model.Context,
 		d.Delete("Rotate")
 	}
 
-	if err := internPageRot(ctxSrc, rotate, cropBox, d); err != nil {
+	if err := internPageRot(ctxSrc, rotate, cropBox, d, nil); err != nil {
 		return nil, err
 	}
 
@@ -417,7 +544,7 @@ func NDownPage(ctxSrc *model.Context, i, n int, cut *model.Cut) (*model.Context,
 
 	migrated := map[int]int{}
 
-	if err := addCutOverviewPage(ctxSrc, ctxDest, *pagesIndRef, pagesDict, d, cropBox, migrated, cut); err != nil {
+	if err := createOutline(ctxSrc, ctxDest, *pagesIndRef, pagesDict, d, cropBox, migrated, cut); err != nil {
 		return nil, err
 	}
 
@@ -432,20 +559,26 @@ func createPosterCuts(cropBox *types.Rectangle, cut *model.Cut) {
 	dim := cut.PageDim
 
 	cut.Vert = []float64{0.}
-	for x := 0.; x+dim.Width <= cropBox.UR.X; x += dim.Width {
+	for x := 0.; ; x += dim.Width {
 		f := (x + dim.Width) / cropBox.Width()
-		f = math.Round(f*100) / 100
-		if f < 1. {
+		fr := math.Round(f*100) / 100
+		if fr != 1 {
 			cut.Vert = append(cut.Vert, f)
+		}
+		if fr >= 1 {
+			break
 		}
 	}
 
 	cut.Hor = []float64{0.}
-	for y := 0.; y+dim.Height <= cropBox.UR.Y; y += dim.Height {
+	for y := 0.; ; y += dim.Height {
 		f := (y + dim.Height) / cropBox.Height()
-		f = math.Round(f*100) / 100
-		if f < 1. {
-			cut.Hor = append(cut.Hor, math.Round(f*100)/100)
+		fr := math.Round(f*100) / 100
+		if fr != 1 {
+			cut.Hor = append(cut.Hor, f)
+		}
+		if fr >= 1 {
+			break
 		}
 	}
 }
@@ -487,9 +620,9 @@ func PosterPage(ctxSrc *model.Context, i int, cut *model.Cut) (*model.Context, e
 	m[1][1] = cut.Scale
 
 	var trans bytes.Buffer
-	fmt.Fprintf(&trans, "q %.2f %.2f %.2f %.2f %.2f %.2f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
+	fmt.Fprintf(&trans, "q %.5f %.5f %.5f %.5f %.5f %.5f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 
-	if err := internPageRot(ctxSrc, rotate, cropBox, d); err != nil {
+	if err := internPageRot(ctxSrc, rotate, cropBox, d, trans.Bytes()); err != nil {
 		return nil, err
 	}
 
@@ -497,7 +630,7 @@ func PosterPage(ctxSrc *model.Context, i int, cut *model.Cut) (*model.Context, e
 
 	migrated := map[int]int{}
 
-	if err := addCutOverviewPage(ctxSrc, ctxDest, *pagesIndRef, pagesDict, d, cropBox, migrated, cut); err != nil {
+	if err := createOutline(ctxSrc, ctxDest, *pagesIndRef, pagesDict, d, cropBox, migrated, cut); err != nil {
 		return nil, err
 	}
 

@@ -363,55 +363,51 @@ func parseMargins(s string, wm *model.Watermark) error {
 		return errors.Errorf("pdfcpu: margins: need 1,2,3 or 4 int values, %s\n", s)
 	}
 
-	f, err := strconv.ParseFloat(m[0], 64)
+	f1, err := strconv.ParseFloat(m[0], 64)
 	if err != nil {
 		return err
 	}
-	i := int(types.ToUserSpace(f, wm.InpUnit))
 
 	if len(m) == 1 {
-		wm.MLeft = i
-		wm.MRight = i
-		wm.MTop = i
-		wm.MBot = i
+		wm.MLeft = f1
+		wm.MRight = f1
+		wm.MTop = f1
+		wm.MBot = f1
 		return nil
 	}
 
-	f, err = strconv.ParseFloat(m[1], 64)
+	f2, err := strconv.ParseFloat(m[1], 64)
 	if err != nil {
 		return err
 	}
-	j := int(types.ToUserSpace(f, wm.InpUnit))
 
 	if len(m) == 2 {
-		wm.MTop, wm.MBot = i, i
-		wm.MLeft, wm.MRight = j, j
+		wm.MTop, wm.MBot = f1, f1
+		wm.MLeft, wm.MRight = f2, f2
 		return nil
 	}
 
-	f, err = strconv.ParseFloat(m[2], 64)
+	f3, err := strconv.ParseFloat(m[2], 64)
 	if err != nil {
 		return err
 	}
-	k := int(types.ToUserSpace(f, wm.InpUnit))
 
 	if len(m) == 3 {
-		wm.MTop = i
-		wm.MLeft, wm.MRight = j, j
-		wm.MBot = k
+		wm.MTop = f1
+		wm.MLeft, wm.MRight = f2, f2
+		wm.MBot = f3
 		return nil
 	}
 
-	f, err = strconv.ParseFloat(m[3], 64)
+	f4, err := strconv.ParseFloat(m[3], 64)
 	if err != nil {
 		return err
 	}
-	l := int(types.ToUserSpace(f, wm.InpUnit))
 
-	wm.MTop = i
-	wm.MRight = j
-	wm.MBot = k
-	wm.MLeft = l
+	wm.MTop = f1
+	wm.MRight = f2
+	wm.MBot = f3
+	wm.MLeft = f4
 	return nil
 }
 
@@ -430,7 +426,7 @@ func parseBorder(s string, wm *model.Watermark) error {
 		return errors.Errorf("pdfcpu: borders: need 1,2,3,4 or 5 int values, %s\n", s)
 	}
 
-	wm.BorderWidth, err = strconv.Atoi(b[0])
+	wm.BorderWidth, err = strconv.ParseFloat(b[0], 64)
 	if err != nil {
 		return err
 	}
@@ -872,7 +868,7 @@ func pdfFormContent(w io.Writer, pageNr int, wm model.Watermark) error {
 
 	m := m1.Multiply(m2)
 
-	fmt.Fprintf(w, "%.2f %.2f %.2f %.2f %.2f %.2f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
+	fmt.Fprintf(w, "%.5f %.5f %.5f %.5f %.5f %.5f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 
 	_, err := w.Write(cs)
 	return err
@@ -912,13 +908,13 @@ func setupTextDescriptor(wm model.Watermark, timestampFormat string, pageNr, pag
 	td.RTL = wm.RTL
 
 	// Set margins.
-	td.MLeft = float64(wm.MLeft)
-	td.MRight = float64(wm.MRight)
-	td.MTop = float64(wm.MTop)
-	td.MBot = float64(wm.MBot)
+	td.MLeft = wm.MLeft
+	td.MRight = wm.MRight
+	td.MTop = wm.MTop
+	td.MBot = wm.MBot
 
 	// Set border.
-	td.BorderWidth = float64(wm.BorderWidth)
+	td.BorderWidth = wm.BorderWidth
 	td.BorderStyle = wm.BorderStyle
 	if wm.BorderColor != nil {
 		td.ShowBorder = true
@@ -1097,7 +1093,7 @@ func wmContent(wm model.Watermark, gsID, xoID string) []byte {
 	p3 := m.Transform(types.Point{X: wm.Bb.UR.X, Y: wm.Bb.UR.Y})
 	p4 := m.Transform(types.Point{X: wm.Bb.LL.X, Y: wm.Bb.UR.Y})
 	wm.BbTrans = types.QuadLiteral{P1: p1, P2: p2, P3: p3, P4: p4}
-	insertOCG := " /Artifact <</Subtype /Watermark /Type /Pagination >>BDC q %.2f %.2f %.2f %.2f %.2f %.2f cm /%s gs /%s Do Q EMC "
+	insertOCG := " /Artifact <</Subtype /Watermark /Type /Pagination >>BDC q %.5f %.5f %.5f %.5f %.5f %.5f cm /%s gs /%s Do Q EMC "
 	var b bytes.Buffer
 	fmt.Fprintf(&b, insertOCG, m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1], gsID, xoID)
 	return b.Bytes()

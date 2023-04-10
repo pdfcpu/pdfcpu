@@ -25,10 +25,10 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-func testCut(t *testing.T, msg, inFile, outFile, cutConf string) {
+func testCut(t *testing.T, msg, inFile, outFile string, unit types.DisplayUnit, cutConf string) {
 	t.Helper()
 
-	cut, err := pdfcpu.ParseCutConfig(cutConf, types.POINTS)
+	cut, err := pdfcpu.ParseCutConfig(cutConf, unit)
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -43,44 +43,55 @@ func testCut(t *testing.T, msg, inFile, outFile, cutConf string) {
 
 func TestCut(t *testing.T) {
 	for _, tt := range []struct {
-		msg     string
-		inFile  string
-		outFile string
-		cutConf string
+		msg             string
+		inFile, outFile string
+		unit            types.DisplayUnit
+		cutConf         string
 	}{
 		{"TestRotatedCutHor",
 			"testRot.pdf",
 			"cutHorRot",
-			"hor:.5"},
+			types.CENTIMETRES,
+			"hor:.5, margin:1, border:on"},
 
 		{"TestCutHor",
 			"test.pdf",
 			"cutHor",
-			"hor:.5"},
+			types.CENTIMETRES,
+			"hor:.5, margin:1, bgcol:#E9967A, border:on"},
 
 		{"TestCutVer",
 			"test.pdf",
 			"cutVer",
-			"ver:.5"},
+			types.CENTIMETRES,
+			"ver:.5, margin:1, bgcol:#E9967A"},
 
 		{"TestCutHorAndVerQuarter",
 			"test.pdf",
 			"cutHorAndVerQuarter",
+			types.POINTS,
 			"h:.5, v:.5"},
 
 		{"TestCutHorAndVerThird",
 			"test.pdf",
 			"cutHorAndVerThird",
-			"h:.33, h:.66, v:.33, v:.66"},
+			types.POINTS,
+			"h:.33333, h:.66666, v:.33333, v:.66666"},
+
+		{"Test",
+			"test.pdf",
+			"cutCustom",
+			types.POINTS,
+			"h:.25, v:.5"},
 	} {
-		testCut(t, tt.msg, tt.inFile, tt.outFile, tt.cutConf)
+		testCut(t, tt.msg, tt.inFile, tt.outFile, tt.unit, tt.cutConf)
 	}
 }
 
-func testNDown(t *testing.T, msg, inFile, outFile string, n int, cutConf string) {
+func testNDown(t *testing.T, msg, inFile, outFile string, n int, unit types.DisplayUnit, cutConf string) {
 	t.Helper()
 
-	cut, err := pdfcpu.ParseCutConfigForN(n, cutConf, types.POINTS)
+	cut, err := pdfcpu.ParseCutConfigForN(n, cutConf, unit)
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -99,33 +110,38 @@ func TestNDown(t *testing.T) {
 		inFile  string
 		outFile string
 		n       int
+		unit    types.DisplayUnit
 		cutConf string
 	}{
 		{"TestNDownRot2",
 			"testRot.pdf",
 			"ndownRot2",
 			2,
-			""}, // optional border, margin, bgcolor
+			types.CENTIMETRES,
+			"margin:1, bgcol:#E9967A"},
 
 		{"TestNDown2",
 			"test.pdf",
 			"ndown2",
 			2,
-			""}, // optional border, margin, bgcolor
+			types.CENTIMETRES,
+			"margin:1, border:on"},
 
 		{"TestNDown9",
 			"test.pdf",
 			"ndown9",
 			9,
-			""}, // optional border, margin, bgcolor
+			types.CENTIMETRES,
+			"margin:1, bgcol:#E9967A, border:on"},
 
 		{"TestNDown16",
 			"test.pdf",
 			"ndown16",
 			16,
+			types.CENTIMETRES,
 			""}, // optional border, margin, bgcolor
 	} {
-		testNDown(t, tt.msg, tt.inFile, tt.outFile, tt.n, tt.cutConf)
+		testNDown(t, tt.msg, tt.inFile, tt.outFile, tt.n, tt.unit, tt.cutConf)
 	}
 }
 
@@ -162,20 +178,20 @@ func TestPoster(t *testing.T) {
 		{"TestPosterScaled", // 4x4 grid of A6 => A2
 			"test.pdf", // A4
 			"posterScaled",
-			types.POINTS,
-			"f:A6, scale:2.0"},
+			types.CENTIMETRES,
+			"f:A6, scale:2.0, margin:1, bgcol:#E9967A"},
 
 		{"TestPosterDim", // grid made up of 15x10 cm tiles => A4
 			"test.pdf", // A4
 			"posterDim",
 			types.CENTIMETRES,
-			"dim:15 10"},
+			"dim:15 10, margin:1, border:on"},
 
 		{"TestPosterDimScaled", // grid made up of 15x10 cm tiles => A2
 			"test.pdf", // A4
 			"posterDimScaled",
 			types.CENTIMETRES,
-			"dim:15 10, scale:2.0"},
+			"dim:15 10, scale:2.0, margin:1, bgcol:#E9967A, border:on"},
 	} {
 		testPoster(t, tt.msg, tt.inFile, tt.outFile, tt.unit, tt.cutConf)
 	}

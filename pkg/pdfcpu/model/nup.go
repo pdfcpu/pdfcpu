@@ -70,7 +70,7 @@ type NUp struct {
 	Grid          *types.Dim         // Intra page grid dimensions eg (2,2)
 	PageGrid      bool               // Create a m x n grid of pages for PDF inputfiles only (think "extra page n-Up").
 	ImgInputFile  bool               // Process image or PDF input files.
-	Margin        int                // Cropbox for n-Up content.
+	Margin        float64            // Cropbox for n-Up content.
 	Border        bool               // Draw bounding box.
 	BookletGuides bool               // Draw folding and cutting lines.
 	MultiFolio    bool               // Render booklet as sequence of folios.
@@ -203,7 +203,7 @@ func NUpTilePDFBytes(wr io.Writer, rSrc, rDest *types.Rectangle, formResID strin
 	}
 
 	// Apply margin to rDest which potentially makes it smaller.
-	rDestCr := rDest.CroppedCopy(float64(nup.Margin))
+	rDestCr := rDest.CroppedCopy(nup.Margin)
 
 	// Calculate transform matrix.
 
@@ -218,7 +218,7 @@ func NUpTilePDFBytes(wr io.Writer, rSrc, rDest *types.Rectangle, formResID strin
 			draw.FillRectNoBorder(wr, rDest, *nup.BgColor)
 		} else if nup.Margin > 0 {
 			// Fill margins.
-			m := float64(nup.Margin)
+			m := nup.Margin
 			DrawMargins(wr, *nup.BgColor, rDest, 0, m, m, m, m)
 		}
 	}
@@ -254,7 +254,7 @@ func NUpTilePDFBytes(wr io.Writer, rSrc, rDest *types.Rectangle, formResID strin
 	m := matrix.CalcTransformMatrix(sx, sy, sin, cos, dx, dy)
 
 	// Apply transform matrix and display form.
-	fmt.Fprintf(wr, "q %.2f %.2f %.2f %.2f %.2f %.2f cm /%s Do Q ",
+	fmt.Fprintf(wr, "q %.5f %.5f %.5f %.5f %.5f %.5f cm /%s Do Q ",
 		m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1], formResID)
 }
 
@@ -279,7 +279,7 @@ func ContentBytesForPageRotation(rot int, w, h float64) []byte {
 	// Note: PDF rotation is clockwise!
 	m := matrix.CalcRotateAndTranslateTransformMatrix(float64(-rot), dx, dy)
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "%.2f %.2f %.2f %.2f %.2f %.2f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
+	fmt.Fprintf(&b, "%.5f %.5f %.5f %.5f %.5f %.5f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 	return b.Bytes()
 }
 

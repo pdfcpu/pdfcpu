@@ -234,7 +234,7 @@ func TestImagesTextAndPDFWMViaWatermarkMap(t *testing.T) {
 	}
 
 	m := map[int]*model.Watermark{}
-	fileNames := imageFileNames(t, filepath.Join("..", "..", "..", "resources"))
+	fileNames := imageFileNames(t, resDir)
 
 	opacity := 1.0
 	onTop := true // All stamps!

@@ -44,13 +44,11 @@ func TestMain(m *testing.M) {
 
 	xRefTable, err = CreateXRefTableWithRootDict()
 	if err != nil {
-		//fmt.Printf("%v", err)
 		os.Exit(1)
 	}
 
 	outDir, err = os.MkdirTemp("", "pdfcpu_imageTests")
 	if err != nil {
-		//fmt.Printf("%v", err)
 		os.Exit(1)
 	}
 

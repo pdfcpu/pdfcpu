@@ -120,7 +120,7 @@ func TestResizeToDimensions(t *testing.T) {
 	inFile := filepath.Join(inDir, "test.pdf")
 
 	// Resize to 400 x 200 and keep orientation of input file.
-	// Apply background color.
+	// Apply background color to unused space.
 	res, err := pdfcpu.ParseResizeConfig("dim:400 200, bgcol:#E9967A", types.POINTS)
 	if err != nil {
 		t.Fatalf("%s invalid resize configuration: %v\n", msg, err)
@@ -133,7 +133,8 @@ func TestResizeToDimensions(t *testing.T) {
 	}
 
 	// Resize to 400 x 200 and enforce new orientation.
-	res, err = pdfcpu.ParseResizeConfig("dim:400 200, enforce:true", types.POINTS)
+	// Render border of original crop box.
+	res, err = pdfcpu.ParseResizeConfig("dim:400 200, enforce:true, border:on", types.POINTS)
 	if err != nil {
 		t.Fatalf("%s invalid resize configuration: %v\n", msg, err)
 	}

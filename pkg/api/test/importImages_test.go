@@ -50,7 +50,8 @@ func testImportImages(t *testing.T, msg string, imgFiles []string, outFile, impC
 }
 
 func TestImportImages(t *testing.T) {
-	outDir := filepath.Join("..", "..", "samples", "import")
+
+	outDir := filepath.Join(samplesDir, "import")
 
 	testFile1 := filepath.Join(outDir, "CenteredGraySepia.pdf")
 	os.Remove(testFile1)
@@ -90,7 +91,7 @@ func TestImportImages(t *testing.T) {
 
 		// Page dimensions match image dimensions.
 		{"TestFull",
-			imageFileNames(t, filepath.Join("..", "..", "..", "resources")),
+			imageFileNames(t, resDir),
 			testFile2,
 			"pos:full"},
 	} {

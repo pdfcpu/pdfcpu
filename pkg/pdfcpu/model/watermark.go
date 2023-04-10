@@ -77,9 +77,9 @@ type Watermark struct {
 	FillColor         color.SimpleColor   // text fill color(=non stroking color).
 	StrokeColor       color.SimpleColor   // text stroking color
 	BgColor           *color.SimpleColor  // text bounding box background color
-	MLeft, MRight     int                 // left and right bounding box margin
-	MTop, MBot        int                 // top and bottom bounding box margin
-	BorderWidth       int                 // Border width, visible if BgColor is set.
+	MLeft, MRight     float64             // left and right bounding box margin
+	MTop, MBot        float64             // top and bottom bounding box margin
+	BorderWidth       float64             // Border width, visible if BgColor is set.
 	BorderStyle       types.LineJoinStyle // Border style (bounding box corner style), visible if BgColor is set.
 	BorderColor       *color.SimpleColor  // border color
 	Rotation          float64             // rotation to apply in degrees. -180 <= x <= 180

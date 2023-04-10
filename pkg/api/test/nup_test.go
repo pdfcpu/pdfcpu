@@ -51,7 +51,8 @@ func testNUp(t *testing.T, msg string, inFiles []string, outFile string, selecte
 }
 
 func TestNUp(t *testing.T) {
-	outDir := filepath.Join("..", "..", "samples", "nup")
+
+	outDir := filepath.Join(samplesDir, "nup")
 
 	for _, tt := range []struct {
 		msg           string
@@ -82,7 +83,7 @@ func TestNUp(t *testing.T) {
 
 		// 16-Up an image
 		{"TestNUpFromSingleImage",
-			[]string{filepath.Join("..", "..", "..", "resources", "logoSmall.png")},
+			[]string{filepath.Join(resDir, "logoSmall.png")},
 			filepath.Join(outDir, "NUpFromSingleImage.pdf"),
 			nil,
 			"form:A3P, ma:10, bgcol:#f7e6c7",
@@ -91,7 +92,7 @@ func TestNUp(t *testing.T) {
 
 		// 6-Up a sequence of images.
 		{"TestNUpFromImages",
-			imageFileNames(t, filepath.Join("..", "..", "..", "resources")),
+			imageFileNames(t, resDir),
 			filepath.Join(outDir, "NUpFromImages.pdf"),
 			nil,
 			"form:Tabloid, border:on, ma:10, bgcol:#f7e6c7",

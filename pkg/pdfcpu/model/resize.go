@@ -32,6 +32,7 @@ type Resize struct {
 	PageSize      string             // paper size eg. A2,A3,A4,Legal,Ledger,...
 	EnforceOrient bool               // enforce orientation of PageDim
 	UserDim       bool               // true if dimensions set by dim rather than formsize
+	Border        bool               // true to render original crop box
 	BgColor       *color.SimpleColor // background color
 }
 
@@ -141,6 +142,19 @@ func parseBackgroundColorRes(s string, res *Resize) error {
 	return nil
 }
 
+func parseBorderRes(s string, res *Resize) error {
+	switch strings.ToLower(s) {
+	case "on", "true", "t":
+		res.Border = true
+	case "off", "false", "f":
+		res.Border = false
+	default:
+		return errors.New("pdfcpu: resize border, please provide one of: on/off true/false t/f")
+	}
+
+	return nil
+}
+
 type resizeParameterMap map[string]func(string, *Resize) error
 
 var ResizeParamMap = resizeParameterMap{
@@ -150,6 +164,7 @@ var ResizeParamMap = resizeParameterMap{
 	"papersize":   parsePageFormatRes,
 	"scalefactor": parseScaleFactorRes,
 	"bgcolor":     parseBackgroundColorRes,
+	"border":      parseBorderRes,
 }
 
 // Handle applies parameter completion and on success parse parameter values into resize.

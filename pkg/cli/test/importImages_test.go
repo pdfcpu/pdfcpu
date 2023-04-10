@@ -82,7 +82,7 @@ func TestImportCommand(t *testing.T) {
 
 		// Page dimensions match image dimensions.
 		{"TestFull",
-			imageFileNames(t, filepath.Join("..", "..", "..", "resources")),
+			imageFileNames(t, filepath.Join(resDir)),
 			"Full.pdf",
 			"pos:full"},
 	} {

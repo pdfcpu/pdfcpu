@@ -89,7 +89,7 @@ func compare(t *testing.T, fn1, fn2 string) {
 }
 
 func TestExtractImagesSoftMasks(t *testing.T) {
-	inFile := filepath.Join("..", "..", "testdata", "VectorApple.pdf")
+	inFile := filepath.Join(inDir, "VectorApple.pdf")
 	ctx, err := api.ReadContextFile(inFile)
 	if err != nil {
 		t.Fatal(err)
@@ -128,7 +128,7 @@ func TestExtractImagesSoftMasks(t *testing.T) {
 			t.Fatalf("err: %v\n", err)
 		}
 
-		fn2 := filepath.Join("..", "..", "testdata", "resources", filename)
+		fn2 := filepath.Join(resDir, filename)
 
 		compare(t, fn1, fn2)
 	}

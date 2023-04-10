@@ -1109,14 +1109,33 @@ Supported usecases:
 	usageLongResize = `Resize existing pages.
 
       pages ... please refer to "pdfcpu selectedpages"
-description ... scalefactor, dimensions, enforce:f/t, formsize(=papersize), bgcolor
+description ... scalefactor, dimensions, formsize, enforce, border, bgcolor
      inFile ... input pdf file
     outFile ... output pdf file
 
-      Use scalefactor < 1 to shrink pages
-      Use scalefactor > 1 to enlarge pages
-                               
-      Examples: 
+    <description> is a comma separated configuration string containing:
+
+      scalefactor:  Resize page by scale factor.
+                        Use scale < 1 to shrink pages.
+                        Use scale > 1 to enlarge pages.
+
+      formsize:     Resize page to form/paper size eg. A4, Letter, Legal...
+                        Append 'L' to enforce landscape mode. (eg. A3L)
+                        Append 'P' to enforce portrait mode. (eg. A4P, TabloidP)
+                        Please refer to "pdfcpu paper" for a comprehensive list of defined paper sizes.
+                        "papersize" is also accepted.
+
+      dimensions:   Resize page to custom dimensions.
+                        (width height) in given display unit eg. "400 200"
+
+      enforce:      if dimensions set only, enforce orientation (on/off, true/false, t/f).
+
+      border:       if dimensions set only, draw content region border (on/off, true/false, t/f).
+
+      bgcolor:      if dimensions set only, background color value for unused page regions.
+   
+      
+   Examples: 
 
          pdfcpu resize "scale:2" in.pdf out.pdf
             Enlarge pages by doubling the page dimensions, keep orientation.
@@ -1143,14 +1162,34 @@ description ... scalefactor, dimensions, enforce:f/t, formsize(=papersize), bgco
 	usageLongPoster = `Create a poster using paper size.
 
    pages       ... Please refer to "pdfcpu selectedpages"
-   description ... formsize(=papersize), dimensions, scalefactor, border, margin, bgcolor
+   description ... formsize(=papersize), dimensions, scalefactor, margin, bgcolor, border
    inFile      ... input pdf file
    outDir      ... output directory
    outFileName ... output file name
 
-   Optionally scale your page dimensions then define the poster grid tile size via form size or dimensions.
+   Optionally scale up your page dimensions then define the poster grid tile size via form size or dimensions.
+
+   <description> is a comma separated configuration string containing:
+
+      scalefactor:  Enlarge page by scale factor > 1.
+
+      formsize:     Posterize using tiles with form/paper size eg. A4, Letter, Legal...
+                        Append 'L' to enforce landscape mode. (eg. A3L)
+                        Append 'P' to enforce portrait mode. (eg. A4P, TabloidP)
+                        Please refer to "pdfcpu paper" for a comprehensive list of defined paper sizes.
+                        "papersize" is also accepted.
+
+      dimensions:   Posterize using tiles with custom dimensions.
+                        (width height) in given display unit eg. "400 200"
+
+      margin:       Apply margin / glue area (float >= 0 in given display unit)
+
+      bgcolor:      color value for visualization of margin / glue area.
+
+      border:       if margin set, draw content region border (on/off, true/false, t/f) 
    
-      Examples:
+   
+   Examples:
 
          pdfcpu poster "f:A4" in.pdf outDir
             Page format is A2, the printer supports A4.
@@ -1160,8 +1199,8 @@ description ... scalefactor, dimensions, enforce:f/t, formsize(=papersize), bgco
             Page format is A2, the printer supports A4.
             Generate a poster(A0) via a corresponding 4x4 grid of A4 pages.
 
-         pdfcpu poster -u cm -- "dim:15 10" in.pdf outDir
-            Generate a poster via a corresponding grid with cell size 15x10 cm.
+         pdfcpu poster -u cm -- "dim:15 10, margin:1, bgcol:DarkGray, border:on" in.pdf outDir
+            Generate a poster via a corresponding grid with cell size 15x10 cm and provide a glue area of 1 cm.
             
    See also the related commands: ndown, cut`
 
@@ -1169,11 +1208,20 @@ description ... scalefactor, dimensions, enforce:f/t, formsize(=papersize), bgco
 	usageLongNDown = `Cut selected page into n pages symmetrically.
 
    pages       ... Please refer to "pdfcpu selectedpages"
-   description ... border, margin, bgcolor
+   description ... margin, bgcolor, border
    n           ... the n-Down value (see below for details)
    inFile      ... input pdf file
    outDir      ... output directory
    outFileName ... output file name
+
+   <description> is a comma separated configuration string containing:
+
+      margin:       Apply margin / glue area (float >= 0 in given display unit)
+
+      bgcolor:      color value for visualization of margin / glue area.
+
+      border:       if margin set, draw content region border (on/off, true/false, t/f) 
+    
 
                                   grid Eg. 
    Supported values for n: 2 ...  1x2  A1 -> 2 x A2
@@ -1184,7 +1232,8 @@ description ... scalefactor, dimensions, enforce:f/t, formsize(=papersize), bgco
                           12 ...  3x4      
                           16 ...  4x4  A1 -> 16 x A5
 
-      Examples:
+
+   Examples:
 
          pdfcpu ndown 2 in.pdf outDir
             Page format is A2, the printer supports A3.
@@ -1193,6 +1242,10 @@ description ... scalefactor, dimensions, enforce:f/t, formsize(=papersize), bgco
          pdfcpu ndown 4 in.pdf outDir
             Page format is A2, the printer supports A4.
             Quick cut page into 4 equally (A4) sized pages.
+
+         pdfcpu ndown -u cm -- "margin:1, bgcol:DarkGray, border:on" 4 in.pdf outDir
+            Page format is A2, the printer supports A4.
+            Quick cut page into 4 equally (A4) sized pages and provide a glue area of 1 cm.
             
    See also the related commands: poster, cut`
 
@@ -1200,7 +1253,7 @@ description ... scalefactor, dimensions, enforce:f/t, formsize(=papersize), bgco
 	usageLongCut = `Custom cut pages horizontally or vertically.
 
    pages       ... Please refer to "pdfcpu selectedpages"
-   description ... horizontal, vertical, origin, bgcolor, border, margin
+   description ... horizontal, vertical, margin, bgcolor, border
    inFile      ... input pdf file
    outDir      ... output directory
    outFileName ... output file name
@@ -1208,7 +1261,22 @@ description ... scalefactor, dimensions, enforce:f/t, formsize(=papersize), bgco
    Fine grained custom page cutting.
    Apply any number of horizontal or vertical page cuts.
 
-      Examples:
+   <description> is a comma separated configuration string containing:
+
+      horizontal:   Apply horizontal page cuts at height fraction (origin top left corner) 
+                    A sequence of fractions separated by white space.
+
+      vertical:     Apply vertical page cuts at width fraction (origin top left corner)
+                    A sequence of fractions separated by white space.
+
+      margin:       Apply margin / glue area (float >= 0 in given display unit)
+
+      bgcolor:      color value for visualization of margin / glue area.
+              
+      border:       if margin set, draw content region border (on/off, true/false, t/f) 
+    
+   
+   Examples:
 
          pdfcpu cut -- "hor:.25" inFile outDir
             Apply a horizontal page cut at 0.25*height
@@ -1217,7 +1285,6 @@ description ... scalefactor, dimensions, enforce:f/t, formsize(=papersize), bgco
          pdfcpu cut -- "hor:.25, vert:.75" inFile outDir
             Apply a horizontal page cut at 0.25*height
             Apply a vertical page cut at 0.75*width
-            Results in 4 PDF pages.
 
          pdfcpu cut -- "hor:.33 .66" inFile outDir
             Has the same effect as: pdfcpu ndown 3 in.pdf outDir

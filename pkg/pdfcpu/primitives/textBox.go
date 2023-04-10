@@ -190,6 +190,10 @@ func (tb *TextBox) mergeIn(tb0 *TextBox) {
 		tb.anchored = tb0.anchored
 	}
 
+	if tb.Value == "" {
+		tb.Value = tb0.Value
+	}
+
 	if tb.Dx == 0 {
 		tb.Dx = tb0.Dx
 	}

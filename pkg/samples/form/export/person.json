@@ -1,16 +1,24 @@
 {
 	"header": {
 		"source": "person.pdf",
-		"version": "pdfcpu v0.4.0 dev",
-		"creation": "2023-03-16 23:35:35 CET",
-		"producer": "pdfcpu v0.4.0 dev"
+		"version": "pdfcpu v0.4.1 dev",
+		"creation": "2023-05-01 01:57:41 CEST",
+		"producer": "pdfcpu v0.4.1 dev"
 	},
 	"forms": [
 		{
 			"textfield": [
 				{
 					"page": 1,
-					"id": "36",
+					"id": "33",
+					"name": "firstName",
+					"value": "",
+					"multiline": false,
+					"locked": false
+				},
+				{
+					"page": 1,
+					"id": "39",
 					"name": "lastName",
 					"value": "",
 					"multiline": false,
@@ -18,15 +26,7 @@
 				},
 				{
 					"page": 1,
-					"id": "31",
-					"name": "country",
-					"value": "",
-					"multiline": false,
-					"locked": false
-				},
-				{
-					"page": 1,
-					"id": "32",
+					"id": "35",
 					"name": "planet",
 					"default": "Earth",
 					"value": "Earth",
@@ -35,15 +35,15 @@
 				},
 				{
 					"page": 1,
-					"id": "35",
-					"name": "firstName",
+					"id": "34",
+					"name": "country",
 					"value": "",
 					"multiline": false,
 					"locked": false
 				},
 				{
 					"page": 1,
-					"id": "33",
+					"id": "36",
 					"name": "occup",
 					"value": "",
 					"multiline": false,
@@ -63,7 +63,7 @@
 			"checkbox": [
 				{
 					"page": 1,
-					"id": "38",
+					"id": "31",
 					"name": "dobVerified",
 					"default": false,
 					"value": false,
@@ -87,23 +87,7 @@
 			"combobox": [
 				{
 					"page": 1,
-					"id": "39",
-					"name": "status",
-					"editable": false,
-					"options": [
-						"alive",
-						"deceased",
-						"imprisoned",
-						"killed",
-						"unknown"
-					],
-					"default": "unknown",
-					"value": "unknown",
-					"locked": false
-				},
-				{
-					"page": 1,
-					"id": "34",
+					"id": "32",
 					"name": "license",
 					"editable": false,
 					"options": [
@@ -111,6 +95,7 @@
 						"CC BY 3.0",
 						"CC BY 4.0",
 						"CC BY-SA 2.0",
+						"CC BY-SA 2.5",
 						"CC BY-SA 3.0",
 						"CC BY-SA 3.0 de",
 						"CC BY-SA 4.0",
@@ -122,6 +107,22 @@
 						"unknown"
 					],
 					"value": "",
+					"locked": false
+				},
+				{
+					"page": 1,
+					"id": "38",
+					"name": "status",
+					"editable": false,
+					"options": [
+						"alive",
+						"deceased",
+						"imprisoned",
+						"killed",
+						"unknown"
+					],
+					"default": "unknown",
+					"value": "unknown",
 					"locked": false
 				}
 			]

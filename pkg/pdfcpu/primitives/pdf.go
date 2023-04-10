@@ -449,6 +449,10 @@ func (pdf *PDF) Validate() error {
 		pdf.DateFormat = pdf.Conf.DateFormat
 	}
 
+	if len(pdf.Pages) == 0 {
+		return errors.New("pdfcpu: Please supply \"pages\"")
+	}
+
 	// What follows is a quirky way of turning a map of pages into a sorted slice of pages
 	// including entries for pages that are missing in the map.
 

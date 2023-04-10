@@ -107,7 +107,7 @@ func copyFile(t *testing.T, srcFileName, destFileName string) error {
 
 func imageFileNames(t *testing.T, dir string) []string {
 	t.Helper()
-	fn, err := model.ImageFileNames(dir)
+	fn, err := model.ImageFileNames(dir, types.MB)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -618,7 +618,7 @@ func (ib *ImageBox) render(p *model.Page, pageNr int, images model.ImageMap) err
 
 	m, x, y, sin, cos, r := ib.calcTransform(mLeft, mBot, mRight, mTop, pLeft, pBot, pRight, pTop, bWidth, rSrc)
 
-	fmt.Fprintf(p.Buf, "q %.2f %.2f %.2f %.2f %.2f %.2f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
+	fmt.Fprintf(p.Buf, "q %.5f %.5f %.5f %.5f %.5f %.5f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 
 	if ib.Url != "" {
 		ib.createLink(p, pageNr, r, m)
@@ -649,7 +649,7 @@ func (ib *ImageBox) render(p *model.Page, pageNr int, images model.ImageMap) err
 		dy += sy/2 - cos*(sy/2) - sin*sx/2
 
 		m = matrix.CalcTransformMatrix(sx, sy, sin, cos, dx, dy)
-		fmt.Fprintf(p.Buf, "q %.2f %.2f %.2f %.2f %.2f %.2f cm /%s Do Q ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1], id)
+		fmt.Fprintf(p.Buf, "q %.5f %.5f %.5f %.5f %.5f %.5f cm /%s Do Q ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1], id)
 	}
 
 	return nil

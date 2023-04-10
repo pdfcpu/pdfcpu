@@ -9,6 +9,7 @@
 [![Latest release](https://img.shields.io/github/release/pdfcpu/pdfcpu.svg)](https://github.com/pdfcpu/pdfcpu/releases)
 
 <a href="https://pdfcpu.io"><img src="resources/logoSmall.png" width="150"></a>
+<a href="https://pdfa.org"><img src="resources/pdfa.png" width="75"></a>
 
 pdfcpu is a PDF processing library written in [Go](http://golang.org) supporting encryption.
 It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO-32000).
@@ -51,6 +52,7 @@ The main focus lies on strong support for batch processing and scripting via a r
 * [collect](https://pdfcpu.io/core/collect)
 * [create](https://pdfcpu.io/generate/create)
 * [crop](https://pdfcpu.io/core/crop)
+* [cut](https://pdfcpu.io/generate/cut)
 * [decrypt](https://pdfcpu.io/encrypt/decryptPDF)
 * [encrypt](https://pdfcpu.io/encrypt/encryptPDF)
 * [extract](https://pdfcpu.io/extract/extract)
@@ -62,11 +64,13 @@ The main focus lies on strong support for batch processing and scripting via a r
 * [info](https://pdfcpu.io/info)
 * [keywords](https://pdfcpu.io/keywords/keywords)
 * [merge](https://pdfcpu.io/core/merge)
+* [ndown](https://pdfcpu.io/generate/ndown)
 * [nup](https://pdfcpu.io/generate/nup)
 * [optimize](https://pdfcpu.io/core/optimize)
 * [pages](https://pdfcpu.io/pages/pages)
 * [permissions](https://pdfcpu.io/encrypt/perm_add)
 * [portfolio](https://pdfcpu.io/portfolio/portfolio)
+* [poster](https://pdfcpu.io/generate/poster)
 * [properties](https://pdfcpu.io/properties/properties)
 * [resize](https://pdfcpu.io/core/resize)
 * [rotate](https://pdfcpu.io/core/rotate)
@@ -141,14 +145,15 @@ docker run -it --mount type=bind,source="$(pwd)",target=/app pdfcpu ./pdfcpu val
 
 ### What
 
-* Please open an issue if you find a bug or want to propose a change.
+* Please [create](https://github.com/pdfcpu/pdfcpu/issues/new/choose) an issue if you find a bug or want to propose a change.
 * Feature requests - always welcome!
 * Bug fixes - always welcome!
-* PRs - anytime!
+* PRs - let's [discuss](https://github.com/pdfcpu/pdfcpu/discussions) first or [create](https://github.com/pdfcpu/pdfcpu/issues/new/choose) an issue.
 * pdfcpu is stable but still *Alpha* and occasionally undergoing heavy changes.
 
 ### How
 
+* The pdfcpu [discussion board](https://github.com/pdfcpu/pdfcpu/discussions) is open! Please engage in any form helpful for the community.
 * If you want to report a bug please attach the *very verbose* (`pdfcpu cmd -vv ...`) output and ideally a test PDF that you can share.
 * Always make sure your contribution is based on the latest commit.
 * Please sign your commits.
@@ -201,8 +206,3 @@ Usage of pdfcpu assumes you know about and respect all copyrights of any PDF con
 
 Apache-2.0
 
-## Powered By
-
-<p align="center">
-  <a href="https://golang.org"> <img src="resources/Go-Logo_Aqua.png" width="200"> </a>
-</p>

@@ -33,8 +33,8 @@ type Cut struct {
 	PageDim  *types.Dim         // page dimensions in display unit
 	Unit     types.DisplayUnit  // display unit
 	UserDim  bool               // true if dimensions set by dim rather than formsize
-	Border   bool               // true will render crop boxes
-	Margin   int                // glue area in display unit
+	Border   bool               // true to render crop box
+	Margin   float64            // glue area in display unit
 	BgColor  *color.SimpleColor // background color
 	Origin   types.Corner       // one of 4 page corners, default = UpperLeft
 }
@@ -184,7 +184,7 @@ func parseMarginCut(s string, cut *Cut) error {
 		return errors.New("pdfcpu: cut margin, Please provide a positive value")
 	}
 
-	cut.Margin = int(types.ToUserSpace(f, cut.Unit))
+	cut.Margin = types.ToUserSpace(f, cut.Unit)
 
 	return nil
 }

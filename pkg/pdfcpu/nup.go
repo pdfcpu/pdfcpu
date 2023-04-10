@@ -187,7 +187,7 @@ func parseElementMargin(s string, nup *model.NUp) error {
 		return errors.New("pdfcpu: nUp margin, Please provide a positive value")
 	}
 
-	nup.Margin = int(types.ToUserSpace(f, nup.InpUnit))
+	nup.Margin = types.ToUserSpace(f, nup.InpUnit)
 
 	return nil
 }

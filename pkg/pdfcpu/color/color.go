@@ -98,6 +98,12 @@ func internalSimpleColor(s string) (SimpleColor, error) {
 		sc = LightGray
 	case "white":
 		sc = White
+	case "red":
+		sc = Red
+	case "green":
+		sc = Green
+	case "blue":
+		sc = Blue
 	default:
 		err = ErrInvalidColor
 	}

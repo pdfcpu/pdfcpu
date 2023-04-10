@@ -77,7 +77,7 @@ func ParseHorAlignment(s string) (HAlignment, error) {
 	case "j", "justify":
 		a = AlignJustify
 	default:
-		return a, errors.Errorf("pdfcpu: unknown textfield alignment (left, center, right): %s", s)
+		return a, errors.Errorf("pdfcpu: unknown textfield alignment (left, center, right, justify): %s", s)
 	}
 	return a, nil
 }

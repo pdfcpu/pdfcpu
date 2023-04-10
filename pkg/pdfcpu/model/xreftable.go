@@ -1458,7 +1458,12 @@ func (xRefTable *XRefTable) IDFirstElement() (id []byte, err error) {
 		return nil, errors.New("pdfcpu: ID must contain hex literals or string literals")
 	}
 
-	return []byte(sl), nil
+	bb, err := types.Unescape(sl.Value(), false)
+	if err != nil {
+		return nil, err
+	}
+
+	return bb, nil
 }
 
 // InheritedPageAttrs represents all inherited page attributes.
