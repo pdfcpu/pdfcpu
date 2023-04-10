@@ -115,7 +115,7 @@ but `op: .7` will do the job.
 | fontname         | a basefont                      | Please refer to `pdfcpu fonts list`                 | font: Helvetica
 | points           | fontsize in points              | in combination with absolute scaling only           | points: 24
 | rtl              | right to left userfont          | on/off, true/false, t/f                             | off
-| position         | the stamps lower left corner    | one of `full` or the anchors: `tl, tc, tr, l, c, r, bl, bc, br`| pos: c
+| position         | the stamps lower left corner    | anchors: `tl, tc, tr, l, c, r, bl, bc, br`          | pos: c
 | offset           |                                 | (dx,dy) in user units eg. '15 20'                   | off: 0 0
 | scalefactor      |                                 | 0.0 < i <= 1.0 followed by optional `abs` or `rel`  | sc: 0.5 rel
 | aligntext        | horizontal text alignment       | l..left, c..center, r..right, j..justified          | al:c
