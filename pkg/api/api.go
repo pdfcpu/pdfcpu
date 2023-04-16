@@ -37,6 +37,7 @@ import (
 	"bufio"
 	"io"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -160,11 +161,19 @@ func EnsureDefaultConfigAt(path string) error {
 	return model.EnsureDefaultConfigAt(path)
 }
 
+var (
+	// mutexDisableConfigDir protects DisableConfigDir from concurrent access.
+	// NOTE: This is not a guard for model.ConfigPath variable.
+	mutexDisableConfigDir sync.Mutex
+)
+
 // DisableConfigDir disables the configuration directory.
 // Any needed default configuration will be loaded from configuration.go
 // Since the config dir also contains the user font dir, this also limits font usage to the default core font set
 // No user fonts will be available.
 func DisableConfigDir() {
+	mutexDisableConfigDir.Lock()
+	defer mutexDisableConfigDir.Unlock()
 	// Call if you don't want to use a specific configuration
 	// and also do not need to use user fonts.
 	model.ConfigPath = "disable"
