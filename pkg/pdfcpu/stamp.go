@@ -178,7 +178,7 @@ type Watermark struct {
 	OnTop             bool          // if true this is a STAMP else this is a WATERMARK.
 	InpUnit           DisplayUnit   // input display unit.
 	Pos               Anchor        // position anchor, one of tl,tc,tr,l,c,r,bl,bc,br.
-	Dx, Dy            int           // anchor offset.
+	Dx, Dy            float64       // anchor offset.
 	HAlign            *HAlignment   // horizonal alignment for text watermarks.
 	FontName          string        // supported are Adobe base fonts only. (as of now: Helvetica, Times-Roman, Courier)
 	FontSize          int           // font scaling factor.
@@ -434,13 +434,13 @@ func parsePositionOffsetWM(s string, wm *Watermark) error {
 	if err != nil {
 		return err
 	}
-	wm.Dx = int(toUserSpace(f, wm.InpUnit))
+	wm.Dx = toUserSpace(f, wm.InpUnit)
 
 	f, err = strconv.ParseFloat(d[1], 64)
 	if err != nil {
 		return err
 	}
-	wm.Dy = int(toUserSpace(f, wm.InpUnit))
+	wm.Dy = toUserSpace(f, wm.InpUnit)
 
 	return nil
 }
@@ -959,8 +959,8 @@ func (wm *Watermark) calcTransformMatrix() Matrix {
 	}
 	ll := lowerLeftCorner(wm.vp, wm.bb.Width(), wm.bb.Height(), wm.Pos)
 
-	dx := ll.X + wm.bb.Width()/2 + float64(wm.Dx) + sin*(wm.bb.Height()/2+dy) - cos*wm.bb.Width()/2
-	dy = ll.Y + wm.bb.Height()/2 + float64(wm.Dy) - cos*(wm.bb.Height()/2+dy) - sin*wm.bb.Width()/2
+	dx := ll.X + wm.bb.Width()/2 + wm.Dx + sin*(wm.bb.Height()/2+dy) - cos*wm.bb.Width()/2
+	dy = ll.Y + wm.bb.Height()/2 + wm.Dy - cos*(wm.bb.Height()/2+dy) - sin*wm.bb.Width()/2
 
 	return CalcTransformMatrix(1, 1, sin, cos, dx, dy)
 }
