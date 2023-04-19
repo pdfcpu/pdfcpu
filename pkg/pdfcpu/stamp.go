@@ -155,13 +155,13 @@ func parsePositionOffsetWM(s string, wm *model.Watermark) error {
 	if err != nil {
 		return err
 	}
-	wm.Dx = int(types.ToUserSpace(f, wm.InpUnit))
+	wm.Dx = types.ToUserSpace(f, wm.InpUnit)
 
 	f, err = strconv.ParseFloat(d[1], 64)
 	if err != nil {
 		return err
 	}
-	wm.Dy = int(types.ToUserSpace(f, wm.InpUnit))
+	wm.Dy = types.ToUserSpace(f, wm.InpUnit)
 
 	return nil
 }
