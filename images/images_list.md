@@ -52,10 +52,10 @@ pdfcpu images list [-p(ages) selectedPages] inFile
 pdfcpu image list test.pdf
 pages: all
 4 images available
-page  obj#  id  type width height colorspace comp bpc interp   size filters
-===========================================================================
-    1     3 Im0 image  1667   2646  DeviceRGB    3   8        787 KB DCTDecode
-    2    10 Im0 image  1667   2646 DeviceGray    1   8        1.6 MB FlateDecode
-    3     8 Im0 image  1667   2646  DeviceRGB    3   8        1.7 MB FlateDecode
-    4     9 Im0 image  1667   2646  DeviceRGB    3   8        3.8 MB FlateDecode
+Page  Obj# | Id  | Type  SoftMask ImgMask | Width | Height | Colorspace Comp bpc Interp |   Size | Filters
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    1     3 | Im0 | image    *             |  1667 |   2646 |  DeviceRGB    3   8        | 787 KB | DCTDecode
+    2    10 | Im0 | image    *             |  1667 |   2646 | DeviceGray    1   8        | 1.6 MB | FlateDecode
+    3     8 | Im0 | image    *             |  1667 |   2646 |  DeviceRGB    3   8        | 1.7 MB | FlateDecode
+    4     9 | Im0 | image    *             |  1667 |   2646 |  DeviceRGB    3   8    *   | 3.8 MB | FlateDecode
 ```

@@ -55,16 +55,15 @@ A configuration string to specify the details of the image layout on the page.
 
 | parameter           | values                                                         | default
 |:--------------------|:---------------------------------------------------------------|:----------
-| dimensions          | (width, height) in user units eg. '400 200'                    | dim: 595 842
-| dpi                 | destination resolution in dots per inches                      | dpi: 72
-| formsize, papersize | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode| f: A4
-| position            | one of `full` or the anchors: `tl, tc, tr, l, c, r, bl, bc, br`| pos: full
-| offset              | (dx,dy) in user units eg. '15 20'                              | off: 0 0
-| scalefactor         | 0.0 <= s <= 1.0 followed by optional `abs` or `rel`            | sc: 0.5 rel
-| gray                | Convert to grayscale (on/off, true/false, t/f)                 | gray:off
-| sepia               | Apply sepia effect (on/off, true/false, t/f)                   | sepia: off
-| backgroundcolor, bgcol| 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red                  | none
-|                      | or the hex RGB value: #RRGGBB                                 |
+| dimensions          | (width, height) in user units eg. '400 200'                    | 595 842
+| dpi                 | destination resolution in dots per inches                      | 72
+| formsize, papersize | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode| A4
+| position            | one of `full` or the anchors: `tl, tc, tr, l, c, r, bl, bc, br`| full
+| offset              | (dx,dy) float vals in user units eg. '15 20' or '15.0 20.0'    | 0 0
+| scalefactor         | 0.0 <= s <= 1.0 followed by optional `abs` or `rel`            | 0.5 rel
+| gray                | Convert to grayscale (on/off, true/false, t/f)                 | off
+| sepia               | Apply sepia effect (on/off, true/false, t/f)                   | off
+| backgroundcolor, bgcol| [color](../getting_started/color.md)                         | none
 
 <br>
 

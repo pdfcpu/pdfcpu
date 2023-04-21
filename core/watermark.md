@@ -88,31 +88,28 @@ but `op: .7` will do the job.
 
 | parameter | description                            | values                                              | default
 |:-----------------|:--------------------------------|:----------------------------------------------------|:---------
-| fontname         | a basefont                      | Please refer to `pdfcpu fonts list`                 | font: Helvetica
-| points           | fontsize in points              | in combination with absolute scaling only           | points: 24
+| fontname         | a basefont                      | Please refer to `pdfcpu fonts list`                 | Helvetica
+| points           | fontsize in points              | in combination with absolute scaling only           | 24
 | rtl              | right to left userfont          | on/off, true/false, t/f                             | off
-| position         | the stamps lower left corner    | anchors: `tl, tc, tr, l, c, r, bl, bc, br`          | pos: c
-| offset           |                                 | (dx,dy) in user units eg. '15 20'                   | off: 0 0
-| scalefactor      |                                 | 0.0 < i <= 1.0 followed by optional `abs` or `rel`  | sc: 0.5 rel
-| aligntext        | horizontal text alignment       | l..left, c..center, r..right, j..justified          | al:c
-| strokecolor      | for rendering text (see mode)   | 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red         | strokec: 0.5 0.5 0.5 = gray
-|                  |                                 | or the hex RGB value: #RRGGBB
-| fillcolor        | for rendering text (see mode)   | 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red         | fillc: 0.5 0.5 0.5 = gray
-|                  | (=color)                        | or the hex RGB value: #RRGGBB                       |
-| backgroundcolor  | bounding box background         | 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red         | none
-|                  | (=bgcolor)                      | or the hex RGB value: #RRGGBB                       |
-| rotation         | rotation angle                  | -180.0 <= i <= 180.0                                | rot: 0.0
-| diagonal         | render along diagonal           | 1 .. lower left to upper right                      | d:1
+| position         | the stamps lower left corner    | anchors: `tl, tc, tr, l, c, r, bl, bc, br`          | c
+| offset           | (dx,dy) float vals in user units|  eg. '15 20' or '15.0 20.0'                         | 0 0
+| scalefactor      |                                 | 0.0 < i <= 1.0 followed by optional `abs` or `rel`  | 0.5 rel
+| aligntext        | horizontal text alignment       | l..left, c..center, r..right, j..justified          | c
+| strokecolor      | for rendering text (see mode)   | [color](../getting_started/color.md)                | 0.5 0.5 0.5 = gray
+| fillcolor, color         | for rendering text (see mode)   | [color](../getting_started/color.md)        | 0.5 0.5 0.5 = gray
+| backgroundcolor, bgcolor | bounding box background         | [color](../getting_started/color.md)        | none
+| rotation         | rotation angle                  | -180.0 <= i <= 180.0                                | 0.0
+| diagonal         | render along diagonal           | 1 .. lower left to upper right                      | 1
 |                  |                                 | 2 .. upper left to lower right                      |
-| opacity          |                                 | 0.0 <= i <= 1.0                                     | op:1
-| mode, rendermode | apply fill color                | 0 .. fill                                           | mo:0
+| opacity          |                                 | 0.0 <= i <= 1.0                                     | 1
+| mode, rendermode | apply fill color                | 0 .. fill                                           | 0
 |                  | apply stroke color              | 1 .. stroke                                         |
 |                  | apply both fill & stroke color  | 2 .. fill & stroke                                  |
-| margins          | bounding box margins for text   | i .. set all four margins                           | ma:0
+| margins          | bounding box margins for text   | i .. set all four margins                           | 0
 |                  | requires bgcolor                | i j .. set t/b margins to i, set l/r margins to j   |
 |                  |                                 | i j k .. set top to i, left/right to j, bot to k    |
 |                  |                                 | i j k l .. set top, right, bottom, left margins     |
-| border           | bounding box border for text    | i {round} {color}                                   | bo:0
+| border           | bounding box border for text    | i {round} {color}                                   | 0
 |                  | requires bccolor                | i .. border width > 0                               |
 |                  |                                 | round .. set round bounding box corners             |
 |                  |                                 | color .. border color                               |

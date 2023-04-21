@@ -62,22 +62,26 @@ cat out.json
 {
 	"header": {
 		"source": "english.pdf",
-		"version": "pdfcpu v0.4.0",
+		"version": "pdfcpu v0.4.1",
 		"creation": "2023-03-04 20:22:17 CET",
-		"producer": "pdfcpu v0.4.0"
+		"producer": "pdfcpu v0.4.1"
 	},
 	"forms": [
 		{
 			"textfield": [
 				{
-					"id": "firstName1",
+					"page": 1,
+					"id": "30",
+					"name": "firstName1",
 					"default": "Joe",
 					"value": "Jackie",
 					"multiline": false,
 					"locked": false
 				},
 				{
-					"id": "note1",
+					"page": 1,
+					"id": "31",
+					"name": "note1",
 					"value": "This is a sample text.\nThis is the next line.",
 					"multiline": true,
 					"locked": false
@@ -85,7 +89,9 @@ cat out.json
 			],
 			"datefield": [
 				{
-					"id": "dob1",
+					"page": 1,
+					"id": "33",
+					"name": "dob1",
 					"format": "dd.mm.yyyy",
 					"default": "01.01.2000",
 					"value": "31.12.1999",
@@ -94,7 +100,9 @@ cat out.json
 			],
 			"checkbox": [
 				{
-					"id": "cb11",
+					"page": 1,
+					"id": "34",
+					"name": "cb11",
 					"default": false,
 					"value": true,
 					"locked": false
@@ -102,7 +110,9 @@ cat out.json
 			],
 			"radiobuttongroup": [
 				{
-					"id": "gender1",
+					"page": 1,
+					"id": "35",
+					"name": "gender1",
 					"options": [
 						"female",
 						"male",
@@ -115,7 +125,9 @@ cat out.json
 			],
 			"combobox": [
 				{
-					"id": "city12",
+					"page": 1,
+					"id": "36",
+					"name": "city12",
 					"editable": false,
 					"options": [
 						"London",
@@ -129,7 +141,9 @@ cat out.json
 			],
 			"listbox": [
 				{
-					"id": "city11",
+					"page": 1,
+					"id": "37",
+					"name": "city11",
 					"multi": true,
 					"options": [
 						"San Francisco",

@@ -59,11 +59,11 @@ A configuration string to specify the details of the grid layout.
 
 | parameter            | values                                      | default
 |:---------------------|:--------------------------------------------|:--
-| dimensions           | (width, height) in user units eg. '400 200' | d: 595 842
-| formsize, paper size | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode| p: A4
-| orientation          | one of `rd, dr, ld, dl` for PDF input files | o: rd
-| border               | on/off true/false                           | bo: on
-| margin               | integer >= 0                                | ma: 0
+| dimensions           | (width, height) in user units eg. '400 200' | 595 842
+| formsize, paper size | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode| A4
+| orientation          | one of `rd, dr, ld, dl` for PDF input files | rd
+| border               | on/off true/false                           | on
+| margin               | float >= 0                                  | 0
 
 <br>
 

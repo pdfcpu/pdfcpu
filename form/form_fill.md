@@ -53,27 +53,28 @@ pdfcpu form fill inFile inFileJSON [outFile]
 
 Use an exported JSON file to fill `firstName` and `dob` and make `dob` read-only:
 
+Field identification may be processed via "id" or "name".
+
 We edit the JSON file:
 ```
 {
 	"header": {
 		"source": "english.pdf",
-		"version": "pdfcpu v0.4.0",
-		"creation": "2023-03-04 20:22:17 CET",
-		"producer": "pdfcpu v0.4.0"
+		"version": "pdfcpu v0.4.1",
+		"creation": "2023-04-04 20:22:17 CET",
+		"producer": "pdfcpu v0.4.1"
 	},
 	"forms": [
-		{
 			"textfield": [
 				{
-					"id": "firstName",
+					"name": "firstName",
 					"value": "Horst",
 					"locked": false
 				}
 			],
 			"datefield": [
 				{
-					"id": "dob",
+					"name": "dob",
 					"value": "31.12.1999",
 					"locked": true
 				}

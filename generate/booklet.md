@@ -90,15 +90,14 @@ A configuration string to specify the details of the booklet layout.
 
 | parameter            | values                                      | default
 |:---------------------|:--------------------------------------------|:--
-| dimensions           | (width, height) in user units eg. '400 200' | d: 595 842
-| formsize, paper size | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode| p: A4
-| multifolio           | on/off true/false, for n=2 and PDF input only | mu:off
-| foliosize            | for multi folio booklets only               | folios:8
-| guides               | on/off true/false                           | g: off
-| border               | on/off true/false                           | b: off
-| margin               | integer >= 0                                | ma: 0
-| backgroundcolor, bgcol | 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0, 0.0 = 1,0,0 = red | none
-|                      | or the hex RGB value: #RRGGBB               |
+| dimensions           | (width, height) in user units eg. '400 200' | 595 842
+| formsize, paper size | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode| A4
+| multifolio           | on/off true/false, for n=2 and PDF input only | off
+| foliosize            | for multi folio booklets only               | 8
+| guides               | on/off true/false                           | off
+| border               | on/off true/false                           | off
+| margin               | float >= 0                                | 0
+| backgroundcolor, bgcol | [color](../getting_started/color.md) | none
 
 <br>
 

@@ -15,7 +15,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu form remove inFile [outFile] fieldID...
+pdfcpu form remove inFile [outFile] <fieldID|fieldName>...
 ```
 <br>
 
@@ -39,42 +39,43 @@ pdfcpu form remove inFile [outFile] fieldID...
 |:-------------|:--------------------|:--------
 | inFile       | PDF input file containing form      | yes
 | outFile      | PDF output file for dry runs     | no
-| fieldID      | form field id       | yes
+| fieldID      | form field id       | either
+| fieldName    | form field name     | or
 
 <br>
 
 ## Examples
 
-Remove the field with id **dob1**:
+Remove the field with id **32**:
 
 ```
 pdfcpu form list english.pdf
 
 english.pdf
-Pg L Field     │ Id         │ Default          │ Value                    │ Options
+Pg L Field     │ Id | Name       │ Default          │ Value                    │ Options
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- 1   Textfield │ firstName1 │ Joe              │ Jackie                   │
-     Textfield │ lastName1  │ Doeby            │ Doe                      │
-   * Datefield │ dob1       │ 01.01.2000       │ 31.12.1999               │
-     RadioBGr. │ gender1    │ male             │ non-binary               │ female,male,non-binary
-     ListBox   │ city11     │ Vienna,São Paulo │ San Francisco,Vienna     │ San Francisco,São Paulo,Vienna
-     ComboBox  │ city12     │ San Francisco    │ Sidney                   │ London,San Francisco,Sidney
-     CheckBox  │ cb11       │                  │ Yes                      │
-     Textfield │ note1      │                  │ This is a sample text.\n │
+ 1   Textfield │ 30 | firstName1 │ Joe              │ Jackie                   │
+     Textfield │ 31 | lastName1  │ Doeby            │ Doe                      │
+   * Datefield │ 32 | dob1       │ 01.01.2000       │ 31.12.1999               │
+     RadioBGr. │ 33 | gender1    │ male             │ non-binary               │ female,male,non-binary
+     ListBox   │ 34 | city11     │ Vienna,São Paulo │ San Francisco,Vienna     │ San Francisco,São Paulo,Vienna
+     ComboBox  │ 35 | city12     │ San Francisco    │ Sidney                   │ London,San Francisco,Sidney
+     CheckBox  │ 36 | cb11       │                  │ Yes                      │
+     Textfield │ 37 | note1      │                  │ This is a sample text.\n │
 
-pdfcpu form remove english.pdf dob1
+pdfcpu form remove english.pdf 32
 writing english.pdf...
 
 pdfcpu form list english.pdf
 
 english.pdf
-Pg L Field     │ Id         │ Default          │ Value                    │ Options
+Pg L Field     │ Id | Name       │ Default          │ Value                    │ Options
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- 1   Textfield │ firstName1 │ Joe              │ Jackie                   │
-     Textfield │ lastName1  │ Doeby            │ Doe                      │
-     RadioBGr. │ gender1    │ male             │ non-binary               │ female,male,non-binary
-     ListBox   │ city11     │ Vienna,São Paulo │ San Francisco,Vienna     │ San Francisco,São Paulo,Vienna
-     ComboBox  │ city12     │ San Francisco    │ Sidney                   │ London,San Francisco,Sidney
-     CheckBox  │ cb11       │                  │ Yes                      │
-     Textfield │ note1      │                  │ This is a sample text.\n │
+ 1   Textfield │ 30 | firstName1 │ Joe              │ Jackie                   │
+     Textfield │ 31 | lastName1  │ Doeby            │ Doe                      │
+     RadioBGr. │ 33 | gender1    │ male             │ non-binary               │ female,male,non-binary
+     ListBox   │ 34 | city11     │ Vienna,São Paulo │ San Francisco,Vienna     │ San Francisco,São Paulo,Vienna
+     ComboBox  │ 35 | city12     │ San Francisco    │ Sidney                   │ London,San Francisco,Sidney
+     CheckBox  │ 36 | cb11       │                  │ Yes                      │
+     Textfield │ 37 | note1      │                  │ This is a sample text.\n │
 ```

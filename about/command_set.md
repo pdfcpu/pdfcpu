@@ -4,41 +4,45 @@ layout: default
 
 # Command Set
 
-* Read (build xref table from PDF file)
-* Validate (validate PDF files up to version 7.0)
-* Write (write xref table to PDF file)
-* Optimize (get rid of redundancies like duplicate fonts, images)
-* Merge (a set of PDF files into one consolidated PDF file)
-* Split (split multi-page PDF into several PDFs according to split span)
-* Trim (generate a custom version of a PDF including selected pages)
-* Create (generate PDF via JSON with optional form)
-* Manage (export,fill,reset,lock,unlock,remove fields) PDF forms.
-* Collect (generate a PDF page sequence, pages may appear multiple times in any order)
-* Crop (apply a Crop Box for selected pages)
-* Resize selected pages
-* Rotate selected pages
-* Manage (add,update,remove) stamps/watermarks for selected pages using text, images or PDF page content.
-* N-up (rearrange pages into grid layout for reduced number of pages)
-* Grid (rearrange pages into grid layout for enhanced browsing)
-* Booklet (arrange pages onto larger sheets of paper to make a booklet or zine)
-* Import convert/import images into PDF
-* Extract Images (extract embedded images of a PDF into a given dir)
-* Extract Fonts (extract all embedded fonts of a PDF file into a given dir)
-* Extract Content (extract the PDF-Source into given dir)
-* Extract Pages (extract specific pages into a given dir)
-* Extract Metadata (extract XML metadata)
-* Manage (add,remove,list,extract) embedded file attachments
-* Manage (add,remove,list,extract) portfolio entries
-* Encrypt (set password protection)
-* Decrypt (remove password protection)
-* Change user/owner password
-* Manage (add,list) user access permissions
-* Manage (insert,remove) pages
-* Manage (add,remove,list) search keywords
-* Manage (add,remove,list) document properties
-* Manage (add,remove,list) page boundaries
-* Manage (remove,list) annotations
-* Info (print file info)
-* Fonts (install, list supported fonts)
-* Paper (print list of supported papersizes)
-* List embedded images
+* [Booklet](../generate/booklet.md) (arrange pages onto larger sheets to make a booklet or zine)
+* [Collect](../core/collect.md) a custom PDF page sequence
+* [Create](../generate/create.md) PDF file via JSON with optional form
+* [Crop](../core/crop.md) (apply a custom crop box for selected pages)
+* [Cut](../generate/cut.md) page (apply custom horizontal/vertical cuts)
+* [Decrypt](../encrypt/decryptPDF.md) (remove password protection)
+* [Encrypt](../encrypt/encrypt.md) (set password protection)
+* [Extract Content](../extract/extract_content.md) (extract the PDF-Source into dir)
+* [Extract Fonts](../extract/extract_fonts.md) (extract all embedded fonts of a PDF file into dir)
+* [Extract Images](../extract/extract_images.md) (extract embedded images of a PDF into dir)
+* [Extract Metadata](../extract/extract_metadata.md) (extract XML metadata)
+* [Extract Pages](../extract/extract_pages.md) (extract specific pages into dir)
+* [Grid](../generate/grid.md) (rearrange pages into grid layout for enhanced browsing)
+* [Import](../generate/import.md) convert/import images into PDF
+* [Info](../info.md) (print file info)
+* [Merge](../core/merge.md) a set of PDF files into one consolidated PDF file
+* [N-down](../generate/ndown.md) (cut page into n pieces - the "inverse" of N-up)
+* [N-up](../generate/nup.md) (rearrange pages into grid layout for reduced number of pages)
+* [Optimize](../core/optimize.md) (get rid of redundancies like duplicate fonts, images)
+* [Paper](../paper.md) (print list of supported papersizes)
+* [Poster](../generate/poster.md) (create poster tiles for given paper size or dimensions)
+* [Resize](../core/resize.md) selected pages
+* [Rotate](../core/rotate.md) selected pages
+* [Split](../core/split.md) multi-page PDF into several PDFs according to split span
+* [Trim](../core/trim.md) (generate a custom version of a PDF including selected pages)
+* [Validate](../core/validate.md) PDF files up to version 7.0
+
+Manage
+
+* [Annotations](../annot/annot.md)
+* [Document properties](../properties/properties.md)
+* [Embedded file attachments](../attach/attach.md)
+* [Embedded images](../images/images.md)
+* [Fonts](../fonts/fonts.md)
+* [Forms](../form/form.md)
+* [Page boundaries](../boxes/boxes.md)
+* [Pages](../pages/pages.md)
+* [Portfolio entries](../portfolio/portfolio.md)
+* [Search keywords](../keywords/keywords.md)
+* [Stamps](../core/stamp.md)/[watermarks](../core/watermark.md) using text, images or foreign PDF content
+* [User](../encrypt/change_upw.md)/[Owner](../encrypt/change_opw.md) password
+* Permissions ([set](../encrypt/perm_add.md),[list](../encrypt/perm_list.md)) 

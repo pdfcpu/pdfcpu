@@ -55,10 +55,9 @@ A configuration string with input parameters for the resize command.
 |:--------------------|:------------------------------------------------------
 | scalefactor         | 0.0 < s < 1.0 or s > 1.0           
 | dimensions          | (width, height) in user units eg. '400 200'      
-| enforce             | on/off true/false               
+| enforce             | new aspect ratio: on/off true/false               
 | formsize, papersize | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode| f: A4
-| bgcolor             | 0.0 <= r,g,b <= 1.0, eg. 1.0, 0.0 0.0 = red                  | none
-|                      | or the hex RGB value: #RRGGBB                                 |
+| bgcolor             | [color](../getting_started/color.md)                  | none
 
 <br>
 

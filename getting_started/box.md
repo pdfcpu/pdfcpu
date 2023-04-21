@@ -19,7 +19,7 @@ A box is a rectangular region in user space describing one of PDF's page boundar
 
    Please refer to the PDF Specification 14.11.2 Page Boundaries for details.
 
-   All values are in display units (po, in, mm, cm)
+   All values are float values in display units (po, in, mm, cm)
 
 General rules:
 

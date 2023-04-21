@@ -24,8 +24,8 @@ or you can do the following which will print out both the config file path and i
 Go-> pdfcpu config
 config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 #############################
-# pdfcpu v0.3.13 dev        #
-# Created: 2021-12-04 15:58 #
+# pdfcpu v0.4.1 dev         #
+# Created: 2023-04-20 21:40 #
 #############################
 #   Default configuration   #
 #############################
@@ -35,6 +35,7 @@ checkFileNameExt: true
 
 reader15: true
 decodeAllStreams: false
+
 
 # validationMode:
 # ValidationStrict,
@@ -57,6 +58,7 @@ encryptKeyLength: 256
 
 # permissions for encrypted files:
 # -3901 = 0xF0C3 (PermissionsNone)
+# -1849 = 0xF8C7 (PermissionsPrint)
 #    -1 = 0xFFFF (PermissionsAll)
 permissions: -3901
 
@@ -65,12 +67,21 @@ permissions: -3901
 # inches
 # cm
 # mm
-unit: cm
+unit: points
 
 # timestamp format: yyyy-mm-dd hh:mm
 # Switch month and year by using: 2006-02-01 15:04
 # See more at https://pkg.go.dev/time@go1.17.1#pkg-constants
 timestampFormat: 2006-01-02 15:04
+
+# date format: yyyy-mm-dd
+dateFormat: 2006-01-02
+
+# buffer size >= 100 for locating PDF header
+headerBufSize: 100
+
+# optimize duplicate content streams across pages
+optimizeDuplicateContentStreams: false
 ```
 
 <br>

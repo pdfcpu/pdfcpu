@@ -6,13 +6,15 @@ layout: default
 
 | Date      | Tag / Commit                                                                                | Description  
 |:----------|:--------------------------------------------------------------------------------------------|:------------------------------
+|2023-04-?? | [v0.4.1](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.4.1)                              | Add cut, ndown, poster commands
 |2023-02-28 | [v0.4.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.4.0)                              | Add form, resize commands
-|2021-12-04 | [e9f927d](https://github.com/pdfcpu/pdfcpu/commit/e9f927d44d0f2a8bbf7413692595f4f047f6371c) | Fix #396, Add config cmd
+|2021-12-04 | [e9f927d](https://github.com/pdfcpu/pdfcpu/commit/e9f927d44d0f2a8bbf7413692595f4f047f6371c) | Fix #396, add config command
 |2021-12-01 | [a8a031e](https://github.com/pdfcpu/pdfcpu/commit/a8a031e36b4c08f7dfc63b8d34156263468e9bd5) | Fix #398
-|2021-11-30 | [v0.3.13](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.13)                            | Add create cmd, Fix 335, #349, #353,
+|2021-11-30 | [v0.3.13](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.13)                            | Add create command                 
+|           |                                                                                             | Fix 335, #349, #353,
 |           |                                                                                             | #354, #356, #358, #362, #366, #371,
 |           |                                                                                             | #380, #381, #386, #387, #394, #388
-|2021-07-12 | [v0.3.12](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.12)                            | Add new cmds: annotations, images
+|2021-07-12 | [v0.3.12](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.12)                            | Add annotations, images commands
 |           |                                                                                             | Fix #300, #302, #323, #324, #329,
 |           |                                                                                             | #331-336, #338, #341-343, #347, #350
 |2021-04-05 | [v0.3.11](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.11)                            | Add right to left stamping
@@ -22,7 +24,7 @@ layout: default
 |           |                                                                                             | #311, #313, #316, #319
 |2021-02-13 | [v0.3.9](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.9)                              | Add booklet cmd, Fix #276, #279,
 |           |                                                                                             | #280, #285, #288, #290, #291
-|2020-12-24 | [v0.3.8](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.8)                              | Add new cmds: boxes, crop
+|2020-12-24 | [v0.3.8](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.8)                              | Add boxes, crop commands
 |           |                                                                                             | Fix #210, #216, #236, #238, #241,
 |           |                                                                                             | #244, #245, #250, #252, #256, #258,
 |           |                                                                                             | #259, #262, #264, #265, #268
@@ -37,8 +39,8 @@ layout: default
 |2020-05-25 | [v0.3.3](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.3)                              | stamps: Add hAlign, margins, border
 |           |                                                                                             | Fix: #157,#170,#173,#175,#181-184,#188
 |2020-01-04 | [v0.3.2](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.2)                              | Support multi-stamping
-|           |                                                                                             | Add new cmds: keywords, properties
-|           |                                                                                             | Add new cmds: collect, portfolio
+|           |                                                                                             | Add keywords, properties commands
+|           |                                                                                             | Add collect, portfolio commands
 |           |                                                                                             | Fix #112,#140,#143,#144,#146,#148,#152
 |2019-11-15 | [v0.3.1](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.1)                              | TrueType support, fix #126,133,137,138
 |2019-11-15 | [v0.3](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3)                                  | Fix #113,#114,#117,#119,#121,#123,#130
