@@ -67,7 +67,7 @@ type Watermark struct {
 	OnTop             bool                // if true this is a STAMP else this is a WATERMARK.
 	InpUnit           types.DisplayUnit   // input display unit.
 	Pos               types.Anchor        // position anchor, one of tl,tc,tr,l,c,r,bl,bc,br.
-	Dx, Dy            int                 // anchor offset.
+	Dx, Dy            float64             // anchor offset.
 	HAlign            *types.HAlignment   // horizonal alignment for text watermarks.
 	FontName          string              // supported are Adobe base fonts only. (as of now: Helvetica, Times-Roman, Courier)
 	FontSize          int                 // font scaling factor.
@@ -360,8 +360,8 @@ func (wm *Watermark) CalcTransformMatrix() matrix.Matrix {
 	}
 	ll := LowerLeftCorner(wm.Vp, wm.Bb.Width(), wm.Bb.Height(), wm.Pos)
 
-	dx := ll.X + wm.Bb.Width()/2 + float64(wm.Dx) + sin*(wm.Bb.Height()/2+dy) - cos*wm.Bb.Width()/2
-	dy = ll.Y + wm.Bb.Height()/2 + float64(wm.Dy) - cos*(wm.Bb.Height()/2+dy) - sin*wm.Bb.Width()/2
+	dx := ll.X + wm.Bb.Width()/2 + wm.Dx + sin*(wm.Bb.Height()/2+dy) - cos*wm.Bb.Width()/2
+	dy = ll.Y + wm.Bb.Height()/2 + wm.Dy - cos*(wm.Bb.Height()/2+dy) - sin*wm.Bb.Width()/2
 
 	return matrix.CalcTransformMatrix(1, 1, sin, cos, dx, dy)
 }
