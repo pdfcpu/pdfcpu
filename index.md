@@ -21,8 +21,8 @@ layout: default
   <kbd><a href="{{site.baseurl}}/form/form"><img src="resources/form1.png" height="100"></a></kbd>&nbsp;
   <kbd><a href="{{site.baseurl}}/generate/create"><img src="resources/imagebox.png" height="100"></a></kbd>&nbsp;
   <br>
-  <a href="https://twitter.com/pdfcpu"><img src="resources/twtr.png" height="50"></a><br>
-  Follow us for news and release announcements!<br><br>
+  Follow us for news and release announcements!<br>
+  <a href="https://twitter.com/pdfcpu"><img src="resources/twtr.png" height="50"></a><br><br>
   <a href="https://pdfa.org"><img src="resources/pdfa.png" height="50"></a><br>
 </p>
 
