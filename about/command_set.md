@@ -10,7 +10,7 @@ layout: default
 * [Crop](../core/crop.md) (apply a custom crop box for selected pages)
 * [Cut](../generate/cut.md) page (apply custom horizontal/vertical cuts)
 * [Decrypt](../encrypt/decryptPDF.md) (remove password protection)
-* [Encrypt](../encrypt/encrypt.md) (set password protection)
+* [Encrypt](../encrypt/encryptPDF.md) (set password protection)
 * [Extract Content](../extract/extract_content.md) (extract the PDF-Source into dir)
 * [Extract Fonts](../extract/extract_fonts.md) (extract all embedded fonts of a PDF file into dir)
 * [Extract Images](../extract/extract_images.md) (extract embedded images of a PDF into dir)

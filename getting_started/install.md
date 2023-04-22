@@ -8,17 +8,8 @@ layout: default
 ## Download
 Get the latest binary [here](https://github.com/pdfcpu/pdfcpu/releases).
 
+Required go version for building: go1.20 and up
 
-## Using GOPATH
-
-Required go version for building: go1.16 and up
-
-```
-go get github.com/pdfcpu/pdfcpu/cmd/...
-cd $GOPATH/src/github.com/pdfcpu/pdfcpu/cmd/pdfcpu
-go install
-pdfcpu version
-```
 
 ## Using Go Modules
 
@@ -32,6 +23,11 @@ pdfcpu version
 ## Using Homebrew (macOS)
 ```
 brew install pdfcpu
+pdfcpu version
+```
+## Using DNF/YUM (Fedora)
+```
+sudo dnf install golang-github-pdfcpu
 pdfcpu version
 ```
 

@@ -4,7 +4,7 @@ layout: default
 
 # Papersizes
 
-Commands like [Import](generate/import.md), [N-up](core/nup.md) and [Grid](core/grid.md) rely on the output paper size for PDF rendering. This is also known as the *page format* and may be specified via the `f` parameter of the *command description string* and defaults to **A4**. Append P or L to enforce portrait or landscape mode.
+Commands like [Booklet](generate/booklet.md), [Grid](generate/grid.md), [Import](generate/import.md), [N-up](generate/nup.md) and [Poster](generate/poster.md) rely on the output paper size for PDF rendering. This is also known as the *page format* and may be specified via the `f` parameter of the *command description string* and defaults to **A4**. Append P or L to enforce portrait or landscape mode.
 
 Print the list of supported paper sizes:
 

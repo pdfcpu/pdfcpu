@@ -126,7 +126,7 @@ writing test_page_1.pdf
 
 <br>
 
-The page format is A2, the printer supports A4.
+The page format is A2, the printer supports A4.<br>
 Quick cut page into 4 equally (A4) sized pages and provide a dark gray glue area of 1 cm.<br>
 Results in a PDF containing 5 pages for each processed page:
 ```sh
@@ -136,7 +136,7 @@ writing test_page_1.pdf
 ````
 
 <p align="center">
-  <img style="border-color:silver" border="1" src="resources/posterOut.png" width="200"><br>
+  <img style="border-color:silver" border="1" src="resources/posterout.png" width="200"><br>
   <img style="border-color:silver" border="1" src="resources/ndownc1.png" width="200">
   <img style="border-color:silver" border="1" src="resources/ndownc2.png" width="200"><br>
   <img style="border-color:silver" border="1" src="resources/ndownc3.png" width="200">
