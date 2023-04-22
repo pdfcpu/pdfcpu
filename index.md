@@ -22,6 +22,7 @@ layout: default
   <kbd><a href="{{site.baseurl}}/generate/create"><img src="resources/imagebox.png" height="100"></a></kbd>&nbsp;
   <br><br>
   <a href="https://twitter.com/pdfcpu"><img src="resources/twtr.png" height="50"></a><br>
-  Follow us for news and release announcements!
+  Follow us for news and release announcements!<br>
+  <a href="https://pdfa.org"><img src="resources/pdfa.png" height="50"></a><br>
 </p>
 
