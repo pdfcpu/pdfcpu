@@ -65,7 +65,7 @@ Use "pdfcpu help [command]" for more information about a command.
 
 <br>
 
-## Core Commands
+## [Core Commands](../core/core.md)
 
 The basic processing features:
 ```
@@ -80,7 +80,9 @@ pdfcpu trim      -p(ages) selectedPages inFile [outFile]
 pdfcpu validate [-m(ode) strict|relaxed] [-l(inks)] inFile
 ```
 
-## Stamps
+<br>
+
+## [Stamps](../core/stamp.md)
 
 Manage your stamps:
 ```
@@ -91,7 +93,7 @@ pdfcpu stamp remove [-p(ages) selectedPages] inFile [outFile]
 
 <br>
 
-## Watermarks
+## [Watermarks](../core/watermark.md)
 
 Manage your watermarks:
 ```
@@ -103,7 +105,7 @@ pdfcpu watermark remove [-p(ages) selectedPages] inFile [outFile]
 <br>
 
 
-## Form
+## [Forms](../form/form.md)
 
 Manage your PDF forms:
 
@@ -117,7 +119,7 @@ pdfcpu form export inFile [outFileJSON]
 ```
 <br>
 
-## Fonts
+## [Fonts](../fonts/fonts.md)
 
 Manage core fonts and your user fonts:
 
@@ -129,7 +131,7 @@ pdfcpu fonts cheatsheet fontFiles...
 
 <br>
 
-## Generate Commands
+## [Generate Commands](../generate/generate.md)
 
 ```
 pdfcpu booklet [-p(ages) selectedPages] -- [description] outFile n inFile|imageFiles...
@@ -144,7 +146,7 @@ pdfcpu poster  [-p(ages) selectedPages] -- description inFile outDir [outFileNam
 
 <br>
 
-## Pages
+## [Pages](../pages/pages.md)
 
 Insert or remove pages:
 ```
@@ -154,7 +156,7 @@ pdfcpu pages remove  -p(ages) selectedPages inFile [outFile]
 
 <br>
 
-## Extraction
+## [Extract](../extract/extract.md)
 
 Extract components and resources:
 ```
@@ -163,7 +165,7 @@ pdfcpu extract -m(ode) image|font|content|page|meta [-p(ages) selectedPages] inF
 
 <br>
 
-## Attachments
+## [Attachments](../attach/attach.md)
 
 Manage your attachments:
 ```
@@ -175,7 +177,7 @@ pdfcpu attachments extract inFile outDir [file...]
 
 <br>
 
-## Portfolio
+## [Portfolio](../portfolio/portfolio.md)
 
 Manage your portfolios:
 ```
@@ -187,7 +189,7 @@ pdfcpu portfolio extract inFile outDir [file...]
 
 <br>
 
-## Annotations
+## [Annotations](../annot/annot.md)
 
 Manage your annotations:
 ```
@@ -197,7 +199,7 @@ pdfcpu annotations remove [-p(ages) selectedPages] inFile [outFile] [objNr|annot
 
 <br>
 
-## Images
+## [Images](../images/images.md)
 
 Manage your images:
 ```
@@ -206,7 +208,7 @@ pdfcpu images list [-p(ages) selectedPages] inFile...
 
 <br>
 
-## Encryption
+## [Encryption](../encrypt/encrypt.md)
 
 Secure your PDFs:
 ```
@@ -220,14 +222,14 @@ pdfcpu permissions set [-perm none|all] [-upw userpw] -opw ownerpw inFile
 
 <br>
 
-## Print Supported Papersizes
+## [Print Supported Papersizes](../paper.md)
 
 ```
 pdfcpu paper
 ```
 <br>
 
-## Keywords
+## [Keywords](../keywords/keywords.md)
 
 Manage your keywords for searching:
 ```
@@ -238,7 +240,7 @@ pdfcpu keywords remove  inFile [keyword...]
 
 <br>
 
-## Properties
+## [Properties](../properties/properties.md)
 
 Manage your document properties:
 ```
@@ -249,7 +251,7 @@ pdfcpu properties remove  inFile [name...]
 
 <br>
 
-## Boxes
+## [Boxes](../boxes/boxes.md)
 
 Manage your page boundaries:
 ```
@@ -260,7 +262,7 @@ pdfcpu boxes remove  [-p(ages) selectedPages] -- boxTypes inFile [outFile]
 
 <br>
 
-## Info
+## [Info](../info.md)
 
 Print file details:
 ```
@@ -269,7 +271,7 @@ pdfcpu info [-p(ages) selectedPages] inFile
 
 <br>
 
-## Print definition of the -pages flag
+## [Print definition of the -pages flag](../getting_started/page_selection.md)
 
 ```
 pdfcpu selectedpages

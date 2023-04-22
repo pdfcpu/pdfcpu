@@ -16,7 +16,7 @@ allows you to generate PDF via JSON
 
 * Include boxes, images, text, tables.
 
-* Include date fields, text fields, checkboxes, radio button groups, comboboxes, listboxes for forms.
+* Create a form by including date fields, text fields, checkboxes, radio button groups, comboboxes and listboxes.
 
 * Supports Unicode / pdfcpu user fonts (installed Open/TrueType fonts).
 
