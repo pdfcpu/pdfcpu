@@ -4,11 +4,9 @@ layout: default
 
 # Color
 
-Some commands expect color values.
-
 There are 3 ways to specify a color:
 
-1. Via RGB values
+1. Via RGB float values
 
        r,g,b with 0.0 <= r,g,b <= 1.0
        

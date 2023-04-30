@@ -12,7 +12,6 @@ A number of [global definitions](#globals), [attribute](#attributepools) and [pr
 
 ```
 {
-	"paper": "A4",
 	...
 	"pages": {
 		"1": {...},
@@ -29,7 +28,6 @@ You may either create a new PDF file or append or overlay existing pages.
 There may be gaps in the defined page sequence:
 ```
 {
-	"paper": "A4",
 	...
 	"pages": {
 		"1": {...},
@@ -46,27 +44,27 @@ There may be gaps in the defined page sequence:
 
 Global flags & defaults
 
-| name           | description                 | type   | default | required
-|:---------------|:----------------------------|--------|---------|----
-| origin         | coordinate system           | string | LL      | no
-| contentBox     | highlight crop & contentbox | bool   | false   | no
-| debug          | highlight positions         | bool   | false   | no
-| guides         | render layout guidelines      | bool   | false   | no
-| timestamp      | current timestamp format    | string | config  | no
-| dateFormat     | current date format         | string | config  | no
+| name           | description                 | type   | default
+|:---------------|:----------------------------|--------|--------
+| origin         | coordinate system           | string | LL     
+| contentBox     | highlight crop & contentbox | bool   | false  
+| debug          | highlight positions         | bool   | false  
+| guides         | render layout guidelines    | bool   | false 
+| timestamp      | current timestamp format    | string | [config](../getting_started/config_dir.md) 
+| dateFormat     | current date format         | string | [config](../getting_started/config_dir.md) 
 
 
 
 Global page defaults:
 
-| name           | description              | type   | default   | required
-|:---------------|:-------------------------|--------|-----------|----
-| paper          | size                     | string | -         | yes
-| crop           | crop box                 | string | media box | no
-| bgcol          | background color         | string | -         | no
-| border         | border                   | obj    | -         | no
-| margin         | margin                   | obj    | -         | no
-| padding        | padding                  | obj    | -         | no
+| name           | description              | type   | default   
+|:---------------|:-------------------------|--------|-----------
+| paper          | [page size](../paper.md) | string | A4 (=A4P) 
+| crop           | [crop box](../getting_started/box.md) | string | media box 
+| bgcol          | background [color](../getting_started/color.md) | string |          
+| border         | border                   | obj    |          
+| margin         | margin                   | obj    |          
+| padding        | padding                  | obj    |          
 
 You may also define `header` and `footer` as part of the global section.
 ## AttributePools
@@ -199,7 +197,9 @@ This is especially useful during the layout phase when using different alignment
 
 ## Origin
 
-As already explained the default coordinate system has its origin in the lower left corner of the content box. You may choose either corner of the content box instead but beware this does not change the fact that an elements position usually corresponds to its lower left corner.<br>
+The default coordinate system has its origin in the lower left corner of the content box. You may choose either corner of the content box instead.<br><br>
+**Warning**:
+❗This does not change the fact that an elements position usually corresponds to its lower left corner. ❗<br><br>
 Let's switch the origin to the upper left corner. We can achieve this using `ul` or `upperleft` and are not case sensitive:
 
 <p align="center">
@@ -213,7 +213,7 @@ Let's switch the origin to the upper left corner. We can achieve this using `ul`
 
 There are a couple of pdfcpu features supporting you throughout your design phase. We already discussed `contentbox` and `debug`. An important part during layouting is defining your layout regions.<br>
 
-A haircross is a pair of horizontal and vertical lines intersecting at a certain position, let's call this a `guide`. Using a couple of `guides` helps you keeping track of your layout regions.<br>
+A haircross is a pair of horizontal and vertical lines intersecting at a certain position, let's call this a `guide`. Using a couple of `guides` helps you to keep track of your layout regions.<br>
 
 `Guides` is an array of elements wrapping `guide` positions.<br>
 
