@@ -2,1062 +2,256 @@
 layout: default
 ---
 
-# General JSON Structure
+# The Create JSON Structure
 
-"paper": "A4L",
-"crop": "10",
-"origin": "UpperLeft",
-"contentBox": true,
-"guides": true,
-"bgcol": "#BEDED9",
-"timestamp": "Monday, 2.Jan 2006 15:04:05",
-"dateFormat":
-"debug": true,
-"margin": {...},
-"border": {...},
-"padding": {...},
+* Global: paper size, background color etc.  
+* Attribute: font, border, margin, padding, color, dir, file
+* Primitives: bar, text, box, image, table, form fields
 
-"margins": {...},
-"borders": {...},
-"paddings: {...},
-
-"boxes": {...},
-"images": {...},
-"texts": {...},
-"tables": {...},
-"fieldgroups": {...},
-
-"colors": {...},
-"dirs": {...},
-"files: {...},
-"fonts: {...},
-
-"header": {...},
-"footer": {...},
-
-
-A collection of page definitions identified by page number.
-You may layout new pages to be created or overlays for existing pages.
-
-Given the following snippet:
-
-"pages": {
-	"1": {...},
-    "3": {...}
-}
-
-If the outputfile does not exist:
-    create a PDF file consisting of 3 pages.
-    pdfcpu fills gaps in the specified page sequence with blank pages.
-    The 2nd page will be an empty page.
-
-If the output file aready exist:
-    Existing pages will be overlayed,
-    missing pages will be appended.
-    if the existing output file has a single page,
-    pdfcpu will append 2 pages, an empty page and page3.
-
-# page definition
-
-"pages": {
-	"1": {
-
-        "paper": "A4L",
-		"crop": "10",
-		"bgcol": "#8fbc2f",
-
-        "margin": {...},
-        "border": {...},
-        "padding": {...},
-        "margins": {...},
-        "borders": {...},
-        "paddings: {...},
-        
-        "boxes": {...},
-        "images": {...},
-        "texts": {...},
-        "tables": {...},
-        "fieldgroups": {...},
-        "files": {...},
-        "fonts": {...},
-        "guides": [...],
-
-        "content": {
-            "bgcol": "#BEDED9",
-            "guides": [...],
-
-            "margin": {...},
-            "border": {...},
-            "padding": {...},
-            "margins": {...},
-            "borders": {...},
-            "paddings: {...},
-
-            "fonts": {...},
-            "bar": [...],
-            "box": [...],
-            "image": [...],
-            "text": [...],
-            "table": [...],
-
-            "boxes": {...},
-            "images": {...},
-            "texts": {...},
-            "tables": {...},
-            "fieldgroups": {...},
-
-            "textfield": [...],
-            "datefield": [...],
-            "checkbox": [...],
-            "radiobuttongroup": [...],
-            "listbox": [...],
-            "combobox": [...],
-            "fieldgroup": [...],
-        }
-    }
-}
-
-
-
-
-
-
-
-
+A number of [global definitions](#globals), [attribute](#attributepools) and [primitive pools](#primitivepools) followed by a page dictionary consisting of `page number:page definition` key:value pairs:
 
 ```
 {
-	"paper": "A4L",
-	"crop": "10",
-	"origin": "UpperLeft",
-	"contentBox": false,
-	"debug": false,
-	"guides": false,
-	"colors": {
-		"Chocolate": "#D2691E",
-	},
-	"dirs": {
-		"images": "../../testdata/resources"
-	},
-	"files": {
-		"logo1": "$images/logoVerySmall.png",
-		"logo2": "$images/github.png"
-	},
-	"fonts": {
-		"myCourier": {
-			"name": "Courier",
-			"size": 12
-		}
-	},
-	"margin": {
-		"width": 10
-	},
-	"borders": {
-		"border": {
-			"width": 10,
-			"col": "$DodgerBlue1"
-		},
-		"myBorder": {
-			"width": 5,
-			"col": "#FF0000",
-			"style": "round"
-		}
-	},
-	"padding": {
-		"width": 10
-	},
-	"header": {
-		"font": {
-			"name": "Courier-Bold",
-			"size": 24,
-			"col": "#FF0000"
-		},
-		"bgCol": "#FFFFFF",
-		"left": "$logo1",
-		"center": "Boxes & colors",
-		"right": "$logo2",
-		"height": 40,
-		"dx": 5,
-		"dy": 10,
-		"border": false
-	},
-	"footer": {
-		"font": {
-			"name": "$myCourier"
-		},
-		"left": "pdfcpu: %v\nCreated: %t",
-		"center": "Page %p of %P",
-		"right": "Source:\ntestdata/json/create/boxesAndColors.json",
-		"height": 30,
-		"dx": 5,
-		"dy": 5,
-		"border": false
-	},
-	"boxes": {
-		"colorBox": {
-			"width": 100,
-			"height": 50,
-			"fillCol": "Black",
-			"border": {
-				"name": "$boxBorder"
-			}
-		}
-	},
-	"images": {
-		"logo1": {
-			"src": "$logo1",
-			"url": "https://pdfcpu.io",
-			"margin": {
-				"width": 5
-			}
-		},
-		"logo2": {
-			"src": "$logo2",
-			"url": "https://github.com/pdfcpu/pdfcpu",
-			"margin": {
-				"width": 5
-			}
-		}
-	},
-	"texts": {
-		"colorBoxLabel": {
-			"align": "center",
-			"font": {
-				"name": "$labelFont"
-			}
-		}
-	},
+	"paper": "A4",
+	...
 	"pages": {
-		"1": {
-			"bgcol": "#8fbc2f",
-			"content": {
-				"bgcol": "#8fbcff",
-				"border": {
-					"width": 10,
-					"col": "#698b69",
-					"style": "round"
-				},
-				"guides": [
-					{
-						"pos": [
-							-1,
-							-1
-						]
-					},
-					{
-						"pos": [
-							200,
-							100
-						]
-					}
-				],
-				"box": [
-					{
-						"hide": false,
-						"comment": "Empty box",
-						"anchor": "topLeft",
-						"width": 200,
-						"height": 100,
-						"border": {
-							"col": "black"
-						}
-					},
-					{
-						"hide": false,
-						"comment": "Filled box with border",
-						"anchor": "topCenter",
-						"width": 200,
-						"height": 100,
-						"fillCol": "$Beige",
-						"border": {
-							"width": 10,
-							"col": "#032890"
-						}
-					},
-					{
-						"hide": false,
-						"comment": "Filled box without border",
-						"anchor": "topRight",
-						"width": 200,
-						"height": 100,
-						"fillCol": "$Beige"
-					},
-					{
-						"hide": false,
-						"comment": "Filled box without border",
-						"anchor": "left",
-						"width": 200,
-						"height": 100,
-						"fillCol": "$beige",
-						"border": {
-							"col": "black"
-						}
-					},
-					{
-						"hide": false,
-						"comment": "Filled box with rounded border",
-						"anchor": "center",
-						"width": 200,
-						"height": 100,
-						"fillCol": "#AA2890",
-						"border": {
-							"width": 10,
-							"col": "#0022AA",
-							"style": "round"
-						}
-					},
-					{
-						"hide": false,
-						"comment": "Empty box with border",
-						"anchor": "right",
-						"width": 200,
-						"height": 100,
-						"border": {
-							"name": "$myBorder"
-						}
-					},
-					{
-						"hide": false,
-						"comment": "Empty box with border",
-						"anchor": "bottomLeft",
-						"width": 200,
-						"height": 100,
-						"border": {
-							"width": 10,
-							"col": "#00AA00",
-							"style": "round"
-						}
-					},
-					{
-						"hide": false,
-						"comment": "Empty box, red border",
-						"anchor": "bottomCenter",
-						"width": 200,
-						"height": 100,
-						"border": {
-							"width": 0,
-							"col": "#FF0000"
-						}
-					},
-					{
-						"hide": false,
-						"comment": "Filled box with border",
-						"anchor": "bottomRight",
-						"width": 200,
-						"height": 100,
-						"fillCol": "#032890",
-						"border": {
-							"width": 10,
-							"col": "#00AA00"
-						}
-					}
-				]
-			}
-		},
-		"2": {
-			"content": {
-				"borders": {
-					"boxBorder": {
-						"col": "Black"
-					}
-				},
-				"fonts": {
-					"labelFont": {
-						"name": "Courier",
-						"size": 9
-					}
-				},
-				"bar": [
-					{
-						"hide": false,
-						"y": 75,
-						"width": 0,
-						"col": "black",
-						"style": "round"
-					}
-				],
-				"guides": [
-					{
-						"pos": [
-							100,
-							100
-						]
-					}
-				],
-				"box": [
-					{
-						"pos": [
-							0,
-							50
-						],
-						"width": 100,
-						"height": 50,
-						"fillCol": "Black",
-						"border": {
-							"name": "$boxBorder"
-						}
-					},
-					{
-						"pos": [
-							110,
-							50
-						],
-						"width": 100,
-						"height": 50,
-						"fillCol": "DarkGray",
-						"border": {
-							"name": "$boxBorder"
-						}
-					},
-					{
-						"pos": [
-							220,
-							50
-						],
-						"width": 100,
-						"height": 50,
-						"fillCol": "Gray",
-						"border": {
-							"name": "$boxBorder"
-						}
-					},
-					{
-						"pos": [
-							330,
-							50
-						],
-						"width": 100,
-						"height": 50,
-						"fillCol": "LightGray",
-						"border": {
-							"name": "$boxBorder"
-						}
-					},
-					{
-						"pos": [
-							440,
-							50
-						],
-						"width": 100,
-						"height": 50,
-						"fillCol": "White",
-						"border": {
-							"name": "$boxBorder"
-						}
-					},
-					{
-						"pos": [
-							0,
-							140
-						],
-						"width": 100,
-						"height": 50,
-						"fillCol": "$forestGreen",
-						"border": {
-							"name": "$boxBorder"
-						}
-					},
-					{
-						"pos": [
-							110,
-							140
-						],
-						"width": 100,
-						"height": 50,
-						"fillCol": "$dodgerBlue1",
-						"border": {
-							"name": "$boxBorder"
-						}
-					},
-					{
-						"pos": [
-							220,
-							140
-						],
-						"width": 100,
-						"height": 50,
-						"fillCol": "$deepPink1",
-						"border": {
-							"name": "$boxBorder"
-						}
-					},
-					{
-						"pos": [
-							330,
-							140
-						],
-						"width": 100,
-						"height": 50,
-						"fillCol": "$darkSeaGreen",
-						"border": {
-							"name": "$boxBorder"
-						}
-					},
-					{
-						"pos": [
-							0,
-							210
-						],
-						"width": 100,
-						"height": 50,
-						"fillCol": "$darkSalmon",
-						"border": {
-							"name": "$boxBorder"
-						}
-					},
-					{
-						"pos": [
-							110,
-							210
-						],
-						"width": 100,
-						"height": 50,
-						"fillCol": "$darkOrange",
-						"border": {
-							"name": "$boxBorder"
-						}
-					},
-					{
-						"pos": [
-							220,
-							210
-						],
-						"width": 100,
-						"height": 50,
-						"fillCol": "$chocolate",
-						"border": {
-							"name": "$boxBorder"
-						}
-					},
-					{
-						"pos": [
-							0,
-							280
-						],
-						"width": 100,
-						"height": 50,
-						"fillCol": "$beige",
-						"border": {
-							"name": "$boxBorder"
-						}
-					},
-					{
-						"pos": [
-							110,
-							280
-						],
-						"width": 100,
-						"height": 50,
-						"fillCol": "$mediumPurple1",
-						"border": {
-							"name": "$boxBorder"
-						}
-					},
-					{
-						"pos": [
-							0,
-							350
-						],
-						"width": 100,
-						"height": 50,
-						"fillCol": "$pink",
-						"border": {
-							"name": "$boxBorder"
-						}
-					}
-				],
-				"text": [
-					{
-						"value": "Black",
-						"pos": [
-							50,
-							63
-						],
-						"align": "center",
-						"font": {
-							"name": "$labelFont"
-						}
-					},
-					{
-						"value": "DarkGray",
-						"pos": [
-							160,
-							63
-						],
-						"align": "center",
-						"font": {
-							"name": "$labelFont"
-						}
-					},
-					{
-						"value": "Gray",
-						"pos": [
-							270,
-							63
-						],
-						"align": "center",
-						"font": {
-							"name": "$labelFont"
-						}
-					},
-					{
-						"value": "LightGray",
-						"pos": [
-							380,
-							63
-						],
-						"align": "center",
-						"font": {
-							"name": "$labelFont"
-						}
-					},
-					{
-						"value": "White",
-						"pos": [
-							490,
-							63
-						],
-						"align": "center",
-						"font": {
-							"name": "$labelFont"
-						}
-					},
-					{
-						"value": "<= Predefined",
-						"align": "left",
-						"pos": [
-							600,
-							30
-						],
-						"font": {
-							"name": "$labelFont"
-						}
-					},
-					{
-						"value": "ForestGreen",
-						"pos": [
-							50,
-							153
-						],
-						"align": "center",
-						"font": {
-							"name": "$labelFont"
-						}
-					},
-					{
-						"value": "DodgerBlue1",
-						"pos": [
-							160,
-							153
-						],
-						"align": "center",
-						"font": {
-							"name": "$labelFont"
-						}
-					},
-					{
-						"value": "DeepPink1",
-						"pos": [
-							270,
-							153
-						],
-						"align": "center",
-						"font": {
-							"name": "$labelFont"
-						}
-					},
-					{
-						"value": "DarkSeaGreen",
-						"pos": [
-							380,
-							153
-						],
-						"align": "center",
-						"font": {
-							"name": "$labelFont"
-						}
-					},
-					{
-						"value": "<= Custom",
-						"align": "left",
-						"pos": [
-							600,
-							120
-						],
-						"font": {
-							"name": "$labelFont"
-						}
-					},
-					{
-						"value": "DarkSalmon",
-						"pos": [
-							50,
-							223
-						],
-						"align": "center",
-						"font": {
-							"name": "$labelFont"
-						}
-					},
-					{
-						"value": "DarkOrange",
-						"pos": [
-							160,
-							223
-						],
-						"align": "center",
-						"font": {
-							"name": "$labelFont"
-						}
-					},
-					{
-						"value": "Chocolate",
-						"pos": [
-							270,
-							223
-						],
-						"align": "center",
-						"font": {
-							"name": "$labelFont"
-						}
-					},
-					{
-						"value": "Beige",
-						"pos": [
-							50,
-							293
-						],
-						"align": "center",
-						"font": {
-							"name": "$labelFont"
-						}
-					},
-					{
-						"value": "MediumPurple1",
-						"pos": [
-							160,
-							293
-						],
-						"align": "center",
-						"font": {
-							"name": "$labelFont"
-						}
-					},
-					{
-						"value": "Pink",
-						"pos": [
-							50,
-							363
-						],
-						"align": "center",
-						"font": {
-							"name": "$labelFont"
-						}
-					}
-				]
-			}
-		},
-		"3": {
-			"content": {
-				"borders": {
-					"boxBorder": {
-						"col": "Black"
-					}
-				},
-				"fonts": {
-					"labelFont": {
-						"name": "Helvetica",
-						"size": 9
-					}
-				},
-				"bar": [
-					{
-						"hide": false,
-						"y": 75,
-						"width": 0,
-						"col": "black",
-						"style": "round"
-					}
-				],
-				"box": [
-					{
-						"name": "$colorBox",
-						"fillCol": "Black",
-						"pos": [
-							0,
-							50
-						]
-					},
-					{
-						"name": "$colorBox",
-						"fillCol": "DarkGray",
-						"pos": [
-							110,
-							50
-						]
-					},
-					{
-						"name": "$colorBox",
-						"fillCol": "Gray",
-						"pos": [
-							220,
-							50
-						]
-					},
-					{
-						"name": "$colorBox",
-						"fillCol": "LightGray",
-						"pos": [
-							330,
-							50
-						]
-					},
-					{
-						"name": "$colorBox",
-						"fillCol": "White",
-						"pos": [
-							440,
-							50
-						]
-					},
-					{
-						"name": "$colorBox",
-						"fillCol": "$forestGreen",
-						"pos": [
-							0,
-							140
-						]
-					},
-					{
-						"name": "$colorBox",
-						"fillCol": "$dodgerBlue1",
-						"pos": [
-							110,
-							140
-						]
-					},
-					{
-						"name": "$colorBox",
-						"fillCol": "$deepPink1",
-						"pos": [
-							220,
-							140
-						]
-					},
-					{
-						"name": "$colorBox",
-						"fillCol": "$darkSeaGreen",
-						"pos": [
-							330,
-							140
-						]
-					},
-					{
-						"name": "$colorBox",
-						"fillCol": "$darkSalmon",
-						"pos": [
-							0,
-							210
-						]
-					},
-					{
-						"name": "$colorBox",
-						"fillCol": "$darkOrange",
-						"pos": [
-							110,
-							210
-						]
-					},
-					{
-						"name": "$colorBox",
-						"fillCol": "$chocolate",
-						"pos": [
-							220,
-							210
-						]
-					},
-					{
-						"name": "$colorBox",
-						"fillCol": "$beige",
-						"pos": [
-							0,
-							280
-						]
-					},
-					{
-						"name": "$colorBox",
-						"fillCol": "$mediumPurple1",
-						"pos": [
-							110,
-							280
-						]
-					},
-					{
-						"name": "$colorBox",
-						"fillCol": "$pink",
-						"pos": [
-							0,
-							350
-						]
-					}
-				],
-				"text": [
-					{
-						"name": "$colorBoxLabel",
-						"value": "Black",
-						"pos": [
-							50,
-							63
-						]
-					},
-					{
-						"name": "$colorBoxLabel",
-						"value": "DarkGray",
-						"pos": [
-							160,
-							63
-						]
-					},
-					{
-						"name": "$colorBoxLabel",
-						"value": "Gray",
-						"pos": [
-							270,
-							63
-						]
-					},
-					{
-						"name": "$colorBoxLabel",
-						"value": "LightGray",
-						"pos": [
-							380,
-							63
-						]
-					},
-					{
-						"name": "$colorBoxLabel",
-						"value": "White",
-						"pos": [
-							490,
-							63
-						]
-					},
-					{
-						"value": "<= Predefined",
-						"align": "left",
-						"pos": [
-							600,
-							30
-						],
-						"font": {
-							"name": "$labelFont"
-						}
-					},
-					{
-						"name": "$colorBoxLabel",
-						"value": "ForestGreen",
-						"pos": [
-							50,
-							153
-						]
-					},
-					{
-						"name": "$colorBoxLabel",
-						"value": "DodgerBlue1",
-						"pos": [
-							160,
-							153
-						]
-					},
-					{
-						"name": "$colorBoxLabel",
-						"value": "DeepPink1",
-						"pos": [
-							270,
-							153
-						]
-					},
-					{
-						"name": "$colorBoxLabel",
-						"value": "DarkSeaGreen",
-						"pos": [
-							380,
-							153
-						]
-					},
-					{
-						"value": "<= Custom",
-						"align": "left",
-						"pos": [
-							600,
-							120
-						],
-						"font": {
-							"name": "$labelFont"
-						}
-					},
-					{
-						"name": "$colorBoxLabel",
-						"value": "DarkSalmon",
-						"pos": [
-							50,
-							223
-						]
-					},
-					{
-						"name": "$colorBoxLabel",
-						"value": "DarkOrange",
-						"pos": [
-							160,
-							223
-						]
-					},
-					{
-						"name": "$colorBoxLabel",
-						"value": "Chocolate",
-						"pos": [
-							270,
-							223
-						]
-					},
-					{
-						"name": "$colorBoxLabel",
-						"value": "Beige",
-						"pos": [
-							50,
-							293
-						]
-					},
-					{
-						"name": "$colorBoxLabel",
-						"value": "MediumPurple1",
-						"pos": [
-							160,
-							293
-						]
-					},
-					{
-						"name": "$colorBoxLabel",
-						"value": "Pink",
-						"pos": [
-							50,
-							363
-						]
-					},
-					{
-						"value": "Optimized using templates for box and text",
-						"anchor": "bottomCenter",
-						"align": "center",
-						"dy": 50,
-						"font": {
-							"name": "$labelFont",
-							"col": "Gray",
-							"size": 24
-						}
-					}
-				]
-			}
-		}
+		"1": {...},
+		"2": {...},
+		"3": {...}
 	}
 }
 ```
+
+You may either create a new PDF file or append or overlay existing pages.
+
+## Page Sequence Gaps
+
+There may be gaps in the defined page sequence:
+```
+{
+	"paper": "A4",
+	...
+	"pages": {
+		"1": {...},
+		"3": {...}
+	}
+}
+```
+
+* If you provide an existing input file, missing page definitions implied by page sequence gaps will only be appended but not modified.<br>
+
+* If you create a new PDF file, missing page definitions will result in blank pages.
+
+## Globals
+
+Global flags & defaults
+
+| name           | description                 | type   | default | required
+|:---------------|:----------------------------|--------|---------|----
+| origin         | coordinate system           | string | LL      | no
+| contentBox     | highlight crop & contentbox | bool   | false   | no
+| debug          | highlight positions         | bool   | false   | no
+| guides         | render layout guidelines      | bool   | false   | no
+| timestamp      | current timestamp format    | string | config  | no
+| dateFormat     | current date format         | string | config  | no
+
+
+
+Global page defaults:
+
+| name           | description              | type   | default   | required
+|:---------------|:-------------------------|--------|-----------|----
+| paper          | size                     | string | -         | yes
+| crop           | crop box                 | string | media box | no
+| bgcol          | background color         | string | -         | no
+| border         | border                   | obj    | -         | no
+| margin         | margin                   | obj    | -         | no
+| padding        | padding                  | obj    | -         | no
+
+You may also define `header` and `footer` as part of the global section.
+## AttributePools
+
+Different pages may share attributes like colors, fonts etc.<br>
+Attribute pools defined outside of the page sequence contain the definitions of `named attributes` and may serve as templates for inheritance.
+Eg. you may overwrite the font size or color at page/content level.<br>
+You may reference `named attributes` using `name: $myName`.
+
+| name           | description              
+|:---------------|:------------------
+| colors         | color pool/templates
+| dirs           | dir pool/templates                    
+| files          | file pool/templates   
+| fonts          | font pool/templates    
+| borders        | border pool/templates    
+| margins        | margin pool/templates     
+| paddings       | padding pool/templates    
+
+## PrimitivePools
+
+Different pages may share primitives like text, images etc.<br>
+Primitive pools defined outside of the page sequence contain the definitions of `named primitives` and may serve as  templates for inheritance. Eg. you may overwrite the background color or font for a `text` at page/content level.<br>
+You may reference `named primitives` using `name: $myName`.
+
+| name           | description              
+|:---------------|:--------------------
+| boxes          | box pool/templates        
+| images         | imagebox pool/templates      
+| texts          | textbox pool/templates   
+| tables         | table pool/templates    
+| fieldgroups    | form element group pool/templates  
+
+## Page Definition
+
+A number of [page defaults](#globals), [attribute](#attributepools) and [primitive pools](#primitivepools) followed by the [content](#content) element.
+
+
+## Content
+
+Optional [attribute](#attributepools) and [primitive pools](#primitivepools) followed by arrays for each used primitive containing the positioned primitive instances aka. content elements:
+
+| name   | description              
+|:-------|:-----------
+| bar    | horizontal/vertical bar
+| box    | simple box / rectangular region        
+| image  | image box     
+| text   | text box  
+| table  | table  
+ 
+For PDF form creation you may also add form fields:
+
+| name             | description              
+|:-----------------|:--------------------
+| textfield        | text input field       
+| datefield        | date input field     
+| checkbox         | checkbox input field   
+| radiobuttongroup | radiobutton input field   
+| listbox          | single/multi list selection  
+| combobox         | dropdown selection 
+| fieldgroup       | container for associated form fields  
+
+### Guides
+
+You may also define an array of guides supporting you during your page design. A guide is a haircross at a specified position within your content box.<br>
+You enable your guides using the global `guides` flag.
+
+## Getting Started
+We start out by creating a simple page using A6 in landscape mode.
+We use the predefined coordinate system with its origin in the lower left corner of the content box and add a single text box positioned at (50/40) using 24 point Helvetica:
+
+<p align="center">
+ <img style="border-color:silver" border="1" src="resources/g1shot.png" width="250"><br>
+  <img style="border-color:silver" border="1" src="resources/g1.png" width="250">
+</p>
+
+<br>
+
+## Page Border
+
+Let's add a page border..<br>
+We define the global border element which serves as default border for all pages. The page border is not part of the content box:
+
+<p align="center">
+ <img style="border-color:silver" border="1" src="resources/g2shot.png" width="250"><br>
+ <img style="border-color:silver" border="1" src="resources/g2.png" width="250">
+</p>
+
+<br>
+
+## Page Margin And Padding
+
+Let's add page margin and padding..<br>
+We define the global margin and padding elements which serve as default margin and padding for all pages:
+
+<p align="center">
+ <img style="border-color:silver" border="1" src="resources/g3shot.png" width="250"><br>
+ <img style="border-color:silver" border="1" src="resources/g3.png" width="250">
+</p>
+
+<br>
+
+## ContentBox
+
+We highlight the content box in red by turning on the global flag `contentBox`. This flag also highlights the crop box in green.<br>
+
+If you have not specified a crop box using `crop` your crop box defaults to your media box which corresponds to the dimensions of your chosen paper size.<br>
+* The page margin separates the page border from the crop box.<br>
+* The page padding separates the page border from the content region.<br>
+* All three regions are not part of the content region.<br>
+
+<p align="center">
+ <img style="border-color:silver" border="1" src="resources/g4shot.png" width="250"><br>
+  <img style="border-color:silver" border="1" src="resources/g4.png" width="250">
+</p>
+
+<br>
+
+## Debug
+
+We highlight the position of all content elements by turning on the global flag `debug`.<br>
+This is especially useful during the layout phase when using different alignments.
+
+<p align="center">
+ <img style="border-color:silver" border="1" src="resources/g5shot.png" width="250"><br>
+  <img style="border-color:silver" border="1" src="resources/g5.png" width="250">
+</p>
+
+<br>
+
+## Origin
+
+As already explained the default coordinate system has its origin in the lower left corner of the content box. You may choose either corner of the content box instead but beware this does not change the fact that an elements position usually corresponds to its lower left corner.<br>
+Let's switch the origin to the upper left corner. We can achieve this using `ul` or `upperleft` and are not case sensitive:
+
+<p align="center">
+ <img style="border-color:silver" border="1" src="resources/g6shot.png" width="250"><br>
+  <img style="border-color:silver" border="1" src="resources/g6.png" width="250">
+</p>
+
+<br>
+
+## Guides
+
+There are a couple of pdfcpu features supporting you throughout your design phase. We already discussed `contentbox` and `debug`. An important part during layouting is defining your layout regions.<br>
+
+A haircross is a pair of horizontal and vertical lines intersecting at a certain position, let's call this a `guide`. Using a couple of `guides` helps you keeping track of your layout regions.<br>
+
+`Guides` is an array of elements wrapping `guide` positions.<br>
+
+You need to enable guides rendering by turning on the global flag `guides`.
+
+If you use -1 for one of the position coordinates pdfcpu will apply the center position for content box width/height:
+
+
+<p align="center">
+ <img style="border-color:silver" border="1" src="resources/g7shot.png" width="250"><br>
+  <img style="border-color:silver" border="1" src="resources/g7.png" width="250">
+</p>
+
+<br>
+
+## Putting all together
+
+Let's finish up by extending this JSON in order to demonstrate text alignment.<br>
+
+`align` is an attribut of `text`.<br>
+The possible values are: `left`, `center`, `right`, `justify`<br>
+The default alignment is `left`<br><br>
+We want to render a short text in the center of the page with three different alignments.<br>
+We need three text boxes with corresponding alignment and also want to use different font colors.<br>
+The rest of the used `text` attributes `value`, `pos` and `font` are all the same.<br>
+Let's use a named text box defining `value`, `pos` and `font` and call it `sample1`.<br><br>
+We also want to render a multi line text box using all four possible alignments.<br>
+This time we will use individual positions, alignment and width.<br>
+The rest of the used `text` attributes `value`, `font`, `bgcol`, `padding` and `border` are shared.<br>
+Let's use a named text box defining `value`, `font`, `bgcol`, `padding` and `border` and call it `sample2`.<br><br>
+We want to use Helvetica for all text boxes, so we define a named font and call it `myFont`.<br>
+Font size and color will be overriden appropriately either within the text pool (`texts`) or within the final content elements:
+
+<p align="center">
+ <img style="border-color:silver" border="1" src="resources/g81shot.png" width="350"><br>
+ <img style="border-color:silver" border="1" src="resources/g82shot.png" width="350"><br>
+ <img style="border-color:silver" border="1" src="resources/g83shot.png" width="350"><br>
+  <img style="border-color:silver" border="1" src="resources/g8.png" width="350">
+</p>
+
+<br>

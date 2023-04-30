@@ -2,5 +2,5 @@
 layout: default
 ---
 
-# Render form
+# Render Images
 
