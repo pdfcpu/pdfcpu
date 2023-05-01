@@ -4,11 +4,13 @@ layout: default
 
 # The Create JSON Structure
 
-* Global: paper size, background color etc.  
+Definitions:
+* Global: paper size, background color, header, footer  
 * Attribute: font, border, margin, padding, color, dir, file
 * Primitives: bar, text, box, image, table, form fields
 
-A number of [global definitions](#globals), [attribute](#attributepools) and [primitive pools](#primitivepools) followed by a page dictionary consisting of `page number:page definition` key:value pairs:
+A number of [global definitions](#globals), [attribute](#attributepools) and [primitive pools](#primitivepools) followed by a page  dictionary consisting of key value pairs - `pages`.<br>
+The page number serves as key for a page definition.
 
 ```
 {
@@ -72,7 +74,7 @@ You may also define `header` and `footer` as part of the global section.
 Different pages may share attributes like colors, fonts etc.<br>
 Attribute pools defined outside of the page sequence contain the definitions of `named attributes` and may serve as templates for inheritance.<br>
 Eg. you may overwrite the font size or color at page/content level.<br>
-You may reference `named attributes` using `name: $myName`.
+You may reference `named attributes` via `name:$myName`.
 
 | name           | description              
 |:---------------|:------------------
@@ -89,7 +91,7 @@ You may reference `named attributes` using `name: $myName`.
 Different pages may share primitives like text, images etc.<br>
 Primitive pools defined outside of the page sequence contain the definitions of `named primitives` and may serve as  templates for inheritance.<br>
 Eg. you may overwrite the background color or font for a `text` at page/content level.<br>
-You may reference `named primitives` using `name: $myName`.
+You may reference `named primitives` via `name:$myName`.
 
 | name           | description              
 |:---------------|:--------------------
@@ -152,8 +154,8 @@ Let's add a border to the content region..<br>
 We define the global border element which serves as default border for all content regions:
 
 <p align="center">
- <img style="border-color:silver" border="1" src="resources/g2shot.png" width="250"><br>
- <img style="border-color:silver" border="1" src="resources/g2.png" width="250">
+ <img style="border-color:silver" border="1" src="resources/g2shot.png" width="80%"><br>
+ <img style="border-color:silver" border="1" src="resources/g2.png" width="80%">
 </p>
 
 <br>
@@ -164,8 +166,8 @@ Let's add margin and padding to the content region..<br>
 We define the global margin and padding elements which serve as default margin and padding for all content regions:
 
 <p align="center">
- <img style="border-color:silver" border="1" src="resources/g3shot.png" width="250"><br>
- <img style="border-color:silver" border="1" src="resources/g3.png" width="250">
+ <img style="border-color:silver" border="1" src="resources/g3shot.png" width="80%"><br>
+ <img style="border-color:silver" border="1" src="resources/g3.png" width="80%">
 </p>
 
 <br>
@@ -179,8 +181,8 @@ We highlight the content box in red by turning on the global flag `contentBox`. 
 If you have not specified a crop box using `crop` your crop box defaults to your media box which corresponds to the dimensions of your chosen paper size.<br>
 
 <p align="center">
- <img style="border-color:silver" border="1" src="resources/g4shot.png" width="250"><br>
-  <img style="border-color:silver" border="1" src="resources/g4.png" width="250">
+ <img style="border-color:silver" border="1" src="resources/g4shot.png" width="80%"><br>
+  <img style="border-color:silver" border="1" src="resources/g4.png" width="80%">
 </p>
 
 <br>
@@ -191,8 +193,8 @@ We highlight the position of all content elements by turning on the global `debu
 This is especially useful during the layout phase when using different alignments:
 
 <p align="center">
- <img style="border-color:silver" border="1" src="resources/g5shot.png" width="250"><br>
-  <img style="border-color:silver" border="1" src="resources/g5.png" width="250">
+ <img style="border-color:silver" border="1" src="resources/g5shot.png" width="80%"><br>
+  <img style="border-color:silver" border="1" src="resources/g5.png" width="80%">
 </p>
 
 <br>
@@ -205,8 +207,8 @@ The default coordinate system has its origin in the lower left corner of the con
 Let's switch the origin to the upper left corner. We can achieve this using `ul` or `upperleft` and are not case sensitive:
 
 <p align="center">
- <img style="border-color:silver" border="1" src="resources/g6shot.png" width="250"><br>
-  <img style="border-color:silver" border="1" src="resources/g6.png" width="250">
+ <img style="border-color:silver" border="1" src="resources/g6shot.png" width="80%"><br>
+  <img style="border-color:silver" border="1" src="resources/g6.png" width="80%">
 </p>
 
 <br>
@@ -225,8 +227,8 @@ If you use -1 for one of the position coordinates pdfcpu will apply the center p
 
 
 <p align="center">
- <img style="border-color:silver" border="1" src="resources/g7shot.png" width="250"><br>
-  <img style="border-color:silver" border="1" src="resources/g7.png" width="250">
+ <img style="border-color:silver" border="1" src="resources/g7shot.png" width="80%"><br>
+  <img style="border-color:silver" border="1" src="resources/g7.png" width="80%">
 </p>
 
 <br>
@@ -250,10 +252,10 @@ We want to use Helvetica for all text boxes, so we define a named font and call 
 Font size and color will be overriden appropriately either within the text pool (`texts`) or within the final content elements:
 
 <p align="center">
- <img style="border-color:silver" border="1" src="resources/g81shot.png" width="350"><br>
- <img style="border-color:silver" border="1" src="resources/g82shot.png" width="350"><br>
- <img style="border-color:silver" border="1" src="resources/g83shot.png" width="350"><br>
-  <img style="border-color:silver" border="1" src="resources/g8.png" width="350">
+ <img style="border-color:silver" border="1" src="resources/g81shot.png" width="80%"><br>
+ <img style="border-color:silver" border="1" src="resources/g82shot.png" width="80%"><br>
+ <img style="border-color:silver" border="1" src="resources/g83shot.png" width="80%"><br>
+  <img style="border-color:silver" border="1" src="resources/g8.png" width="80%">
 </p>
 
 <br>
