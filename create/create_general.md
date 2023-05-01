@@ -72,8 +72,8 @@ You may also define `header` and `footer` as part of the global section.
 ## AttributePools
 
 Different pages may share attributes like colors, fonts etc.<br>
-Attribute pools defined outside of the page sequence contain the definitions of `named attributes` and may serve as templates for inheritance.<br>
-Eg. you may overwrite the font size or color at page/content level.<br>
+Attribute pools defined outside of the page sequence contain the definitions of `named attributes` and may serve as templates for inheritance.
+Eg. you may overwrite the font size or color at page/content level.<br><br>
 You may reference `named attributes` via `name:$myName`.
 
 | name           | description              
@@ -89,8 +89,8 @@ You may reference `named attributes` via `name:$myName`.
 ## PrimitivePools
 
 Different pages may share primitives like text, images etc.<br>
-Primitive pools defined outside of the page sequence contain the definitions of `named primitives` and may serve as  templates for inheritance.<br>
-Eg. you may overwrite the background color or font for a `text` at page/content level.<br>
+Primitive pools defined outside of the page sequence contain the definitions of `named primitives` and may serve as  templates for inheritance. 
+Eg. you may overwrite the background color or font for a `text` at page/content level.<br><br>
 You may reference `named primitives` via `name:$myName`.
 
 | name           | description              
@@ -142,7 +142,7 @@ We use the predefined coordinate system with its origin in the lower left corner
 
 <p align="center">
  <img style="border-color:silver" border="1" src="resources/g1shot.png" width="80%"><br>
-  <img style="border-color:silver" border="1" src="resources/g1.png" width="80%">
+  <img style="border-color:silver" border="1" src="resources/g1.png" width="100%">
 </p>
 
 <br>
@@ -150,12 +150,11 @@ We use the predefined coordinate system with its origin in the lower left corner
 ## Border
 
 A content region is surrounded by margin, border and padding.<br>
-Let's add a border to the content region..<br>
 We define the global border element which serves as default border for all content regions:
 
 <p align="center">
  <img style="border-color:silver" border="1" src="resources/g2shot.png" width="80%"><br>
- <img style="border-color:silver" border="1" src="resources/g2.png" width="80%">
+ <img style="border-color:silver" border="1" src="resources/g2.png" width="100%">
 </p>
 
 <br>
@@ -167,7 +166,7 @@ We define the global margin and padding elements which serve as default margin a
 
 <p align="center">
  <img style="border-color:silver" border="1" src="resources/g3shot.png" width="80%"><br>
- <img style="border-color:silver" border="1" src="resources/g3.png" width="80%">
+ <img style="border-color:silver" border="1" src="resources/g3.png" width="100%">
 </p>
 
 <br>
@@ -175,14 +174,14 @@ We define the global margin and padding elements which serve as default margin a
 ## ContentBox
 
 A page has a single content region per default.<br>
-The content box is the bounding box of a content region.<br>
+The content box is the bounding box of a content region.<br><br>
 We highlight the content box in red by turning on the global flag `contentBox`. This flag also highlights the crop box in green.<br>
 
 If you have not specified a crop box using `crop` your crop box defaults to your media box which corresponds to the dimensions of your chosen paper size.<br>
 
 <p align="center">
  <img style="border-color:silver" border="1" src="resources/g4shot.png" width="80%"><br>
-  <img style="border-color:silver" border="1" src="resources/g4.png" width="80%">
+  <img style="border-color:silver" border="1" src="resources/g4.png" width="100%">
 </p>
 
 <br>
@@ -194,7 +193,7 @@ This is especially useful during the layout phase when using different alignment
 
 <p align="center">
  <img style="border-color:silver" border="1" src="resources/g5shot.png" width="80%"><br>
-  <img style="border-color:silver" border="1" src="resources/g5.png" width="80%">
+  <img style="border-color:silver" border="1" src="resources/g5.png" width="100%">
 </p>
 
 <br>
@@ -202,25 +201,26 @@ This is especially useful during the layout phase when using different alignment
 ## Origin
 
 The default coordinate system has its origin in the lower left corner of the content box. You may choose either corner of the content box instead.<br><br>
-**Warning**:
+**Warning**<br>
 ❗This does not change the fact that an elements position usually corresponds to its lower left corner. ❗<br><br>
-Let's switch the origin to the upper left corner. We can achieve this using `ul` or `upperleft` and are not case sensitive:
+Let's switch the origin to the upper left corner.<br>
+We can achieve this using `ul` or `upperleft` and are not case sensitive:
 
 <p align="center">
  <img style="border-color:silver" border="1" src="resources/g6shot.png" width="80%"><br>
-  <img style="border-color:silver" border="1" src="resources/g6.png" width="80%">
+  <img style="border-color:silver" border="1" src="resources/g6.png" width="100%">
 </p>
 
 <br>
 
 ## Guides
 
-There are a couple of pdfcpu features supporting you throughout your design phase. We already discussed `contentbox` and `debug`. An important part during layouting is defining your layout regions.<br>
+There are a couple of pdfcpu features supporting you throughout your design phase. We already discussed `contentbox` and `debug`.<br><br>
+An important part during layouting is defining your layout regions.<br><br>
 
 A haircross is a pair of horizontal and vertical lines intersecting at a certain position, let's call this a `guide`. Using a couple of `guides` helps you to keep track of your layout regions.<br>
 
 `Guides` is an array of elements wrapping `guide` positions.<br>
-
 You need to enable guides rendering by turning on the global `guides` flag.
 
 If you use -1 for one of the position coordinates pdfcpu will apply the center position for content box width/height:
@@ -228,7 +228,7 @@ If you use -1 for one of the position coordinates pdfcpu will apply the center p
 
 <p align="center">
  <img style="border-color:silver" border="1" src="resources/g7shot.png" width="80%"><br>
-  <img style="border-color:silver" border="1" src="resources/g7.png" width="80%">
+  <img style="border-color:silver" border="1" src="resources/g7.png" width="100%">
 </p>
 
 <br>
@@ -255,7 +255,7 @@ Font size and color will be overriden appropriately either within the text pool 
  <img style="border-color:silver" border="1" src="resources/g81shot.png" width="80%"><br>
  <img style="border-color:silver" border="1" src="resources/g82shot.png" width="80%"><br>
  <img style="border-color:silver" border="1" src="resources/g83shot.png" width="80%"><br>
-  <img style="border-color:silver" border="1" src="resources/g8.png" width="80%">
+  <img style="border-color:silver" border="1" src="resources/g8.png" width="100%">
 </p>
 
 <br>
