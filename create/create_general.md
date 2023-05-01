@@ -10,7 +10,7 @@ Definitions:
 * Primitives: bar, text, box, image, table, form fields
 
 A number of [global definitions](#globals), [attribute](#attributepools) and [primitive pools](#primitivepools) followed by a page  dictionary consisting of key value pairs called `pages`.<br>
-The page number serves as key for a page definitions.
+The page number serves as key for page definitions.
 
 ```
 {
@@ -217,9 +217,8 @@ We can achieve this using `ul` or `upperleft` and are not case sensitive:
 
 There are a couple of pdfcpu features supporting you throughout your design phase. We already discussed `contentbox` and `debug`.<br><br>
 An important part during layouting is defining your layout regions and using `guides` you can visualize them. <br><br>
-A haircross is a pair of horizontal and vertical lines intersecting at a certain position, let's call this a `guide`. Using a couple of `guides` helps you to keep track of your layout regions.<br>
-
-`Guides` is an array of elements wrapping `guide` positions.<br>
+A `guide` is a haircross is a pair of horizontal and vertical lines intersecting at a certain position.<br>
+`guides` is an array of elements wrapping `guide` positions.<br>
 You need to enable guides rendering by turning on the global `guides` flag.
 
 If you use -1 for one of the position coordinates pdfcpu will apply the center position for content box width/height:
@@ -232,7 +231,7 @@ If you use -1 for one of the position coordinates pdfcpu will apply the center p
 
 <br>
 
-## Putting all together
+## Putting It All Together
 
 Let's finish up by extending this JSON in order to demonstrate text alignment:<br>
 
@@ -241,11 +240,11 @@ The possible values are: `left`, `center`, `right`, `justify`<br>
 The default alignment is `left`.<br><br>
 We want to render a short text in the center of the page with three different alignments.
 We need three text boxes with corresponding alignment and also want to use different font colors.
-The rest of the used `text` attributes `value`, `pos` and `font` are all the same.<br>
+The rest of the used `text` attributes `value`, `pos` and `font` are all the same.<br><br>
 Let's use a named text box defining `value`, `pos` and `font` and call it `sample1`.<br><br>
 We also want to render a multi line text box using all four possible alignments.
 This time we will use individual positions, alignment and width.
-The rest of the used `text` attributes `value`, `font`, `bgcol`, `padding` and `border` are shared.
+The rest of the used `text` attributes `value`, `font`, `bgcol`, `padding` and `border` are shared.<br><br>
 Let's use a named text box defining `value`, `font`, `bgcol`, `padding` and `border` and call it `sample2`.<br><br>
 We want to use Helvetica for all text boxes, so we define a named font and call it `myFont`.
 Font size and color will be overriden appropriately either within the text pool (`texts`) or within the final content elements:
