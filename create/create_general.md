@@ -60,11 +60,11 @@ Global page defaults:
 | name           | description              | type   | default   
 |:---------------|:-------------------------|--------|-----------
 | paper          | [page size](../paper.md) | string | A4 (=A4P) 
-| crop           | [crop box](../getting_started/box.md) | string | media box 
+| crop           | [crop box](../getting_started/box.md)           | string | media box 
 | bgcol          | background [color](../getting_started/color.md) | string |          
-| border         | border                   | obj    |          
-| margin         | margin                   | obj    |          
-| padding        | padding                  | obj    |          
+| border         | The default border for content regions          | obj    |         
+| margin         | The default margin for content regions          | obj    |          
+| padding        | The default padding for content regions          | obj    |          
 
 You may also define `header` and `footer` as part of the global section.
 ## AttributePools
@@ -133,7 +133,8 @@ You may also define an array of guides supporting you during your page design. A
 You enable your guides using the global `guides` flag.
 
 ## Getting Started
-We start out by creating a simple page using A6 in landscape mode.
+We start out by creating a simple page using A6 in landscape mode.<br>
+A page has a single content region per default.<br>
 We use the predefined coordinate system with its origin in the lower left corner of the content box and add a single text box positioned at (50/40) using 24 point Helvetica:
 
 <p align="center">
@@ -143,10 +144,11 @@ We use the predefined coordinate system with its origin in the lower left corner
 
 <br>
 
-## Page Border
+## Border
 
-Let's add a page border..<br>
-We define the global border element which serves as default border for all pages. The page border is not part of the content box:
+A content region is surrounded by margin, border and padding.<br>
+Let's add a border to the content region..<br>
+We define the global border element which serves as default border for all content regions:
 
 <p align="center">
  <img style="border-color:silver" border="1" src="resources/g2shot.png" width="250"><br>
@@ -155,10 +157,10 @@ We define the global border element which serves as default border for all pages
 
 <br>
 
-## Page Margin And Padding
+## Margin And Padding
 
-Let's add page margin and padding..<br>
-We define the global margin and padding elements which serve as default margin and padding for all pages:
+Let's add margin and padding to the content region..<br>
+We define the global margin and padding elements which serve as default margin and padding for all content regions:
 
 <p align="center">
  <img style="border-color:silver" border="1" src="resources/g3shot.png" width="250"><br>
@@ -169,12 +171,11 @@ We define the global margin and padding elements which serve as default margin a
 
 ## ContentBox
 
+A page has a single content region per default.<br>
+The content box is the bounding box of a content region.<br>
 We highlight the content box in red by turning on the global flag `contentBox`. This flag also highlights the crop box in green.<br>
 
 If you have not specified a crop box using `crop` your crop box defaults to your media box which corresponds to the dimensions of your chosen paper size.<br>
-* The page margin separates the page border from the crop box.<br>
-* The page padding separates the page border from the content region.<br>
-* All three regions are not part of the content region.<br>
 
 <p align="center">
  <img style="border-color:silver" border="1" src="resources/g4shot.png" width="250"><br>
@@ -185,7 +186,7 @@ If you have not specified a crop box using `crop` your crop box defaults to your
 
 ## Debug
 
-We highlight the position of all content elements by turning on the global flag `debug`.<br>
+We highlight the position of all content elements by turning on the global `debug` flag.<br>
 This is especially useful during the layout phase when using different alignments.
 
 <p align="center">
