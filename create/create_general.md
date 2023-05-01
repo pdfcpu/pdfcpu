@@ -2,15 +2,15 @@
 layout: default
 ---
 
-# The Create JSON Structure
+# The JSON Dataset
 
 Definitions:
 * Global: paper size, background color, header, footer  
 * Attribute: font, border, margin, padding, color, dir, file
 * Primitives: bar, text, box, image, table, form fields
 
-A number of [global definitions](#globals), [attribute](#attributepools) and [primitive pools](#primitivepools) followed by a page  dictionary consisting of key value pairs - `pages`.<br>
-The page number serves as key for a page definition.
+A number of [global definitions](#globals), [attribute](#attributepools) and [primitive pools](#primitivepools) followed by a page  dictionary consisting of key value pairs called `pages`.<br>
+The page number serves as key for a page definitions.
 
 ```
 {
@@ -138,7 +138,7 @@ You enable your guides using the global `guides` flag.
 ## Getting Started
 We start out by creating a simple page using A6 in landscape mode.<br>
 A page has a single content region per default.<br><br>
-We use the predefined coordinate system with its origin in the lower left corner of the content box and add a single text box positioned at (50/40) using 24 point Helvetica:
+We use the predefined coordinate system with its origin in the lower left corner of the content box and add a single text box positioned at (50/100) using 24 point Helvetica:
 
 <p align="center">
  <img style="border-color:silver" border="1" src="resources/g1shot.png" width="80%"><br>
@@ -202,7 +202,7 @@ This is especially useful during the layout phase when using different alignment
 
 The default coordinate system has its origin in the lower left corner of the content box. You may choose either corner of the content box instead.<br><br>
 **Warning**<br>
-❗This does not change the fact that an elements position usually corresponds to its lower left corner. ❗<br><br>
+This does not change the fact that an elements position usually corresponds to its lower left corner!<br><br>
 Let's switch the origin to the upper left corner.<br>
 We can achieve this using `ul` or `upperleft` and are not case sensitive:
 
@@ -216,8 +216,7 @@ We can achieve this using `ul` or `upperleft` and are not case sensitive:
 ## Guides
 
 There are a couple of pdfcpu features supporting you throughout your design phase. We already discussed `contentbox` and `debug`.<br><br>
-An important part during layouting is defining your layout regions.<br><br>
-
+An important part during layouting is defining your layout regions and using `guides` you can visualize them. <br><br>
 A haircross is a pair of horizontal and vertical lines intersecting at a certain position, let's call this a `guide`. Using a couple of `guides` helps you to keep track of your layout regions.<br>
 
 `Guides` is an array of elements wrapping `guide` positions.<br>
