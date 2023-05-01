@@ -175,7 +175,7 @@ We define the global margin and padding elements which serve as default margin a
 
 A page has a single content region per default.<br>
 The content box is the bounding box of a content region.<br><br>
-We highlight the content box in red by turning on the global flag `contentBox`. This flag also highlights the crop box in green.<br>
+We highlight the content box in red by turning on the global `contentBox` flag. This flag also highlights the crop box in green.<br>
 
 If you have not specified a crop box using `crop` your crop box defaults to your media box which corresponds to the dimensions of your chosen paper size.<br>
 
@@ -216,8 +216,8 @@ We can achieve this using `ul` or `upperleft` and are not case sensitive:
 ## Guides
 
 There are a couple of pdfcpu features supporting you throughout your design phase. We already discussed `contentbox` and `debug`.<br><br>
-An important part during layouting is defining your layout regions and using `guides` you can visualize them. <br><br>
-A `guide` is a haircross is a pair of horizontal and vertical lines intersecting at a certain position.<br>
+An important part during layouting is defining your regions and using `guides` you can visualize them. <br><br>
+A `guide` is a haircross is a pair of horizontal and vertical lines intersecting at a certain position.<br><br>
 `guides` is an array of elements wrapping `guide` positions.<br>
 You need to enable guides rendering by turning on the global `guides` flag.
 
@@ -240,11 +240,11 @@ The possible values are: `left`, `center`, `right`, `justify`<br>
 The default alignment is `left`.<br><br>
 We want to render a short text in the center of the page with three different alignments.
 We need three text boxes with corresponding alignment and also want to use different font colors.
-The rest of the used `text` attributes `value`, `pos` and `font` are all the same.<br><br>
+The rest of the used `text` attributes `value`, `pos` and `font` are all the same.<br>
 Let's use a named text box defining `value`, `pos` and `font` and call it `sample1`.<br><br>
 We also want to render a multi line text box using all four possible alignments.
 This time we will use individual positions, alignment and width.
-The rest of the used `text` attributes `value`, `font`, `bgcol`, `padding` and `border` are shared.<br><br>
+The rest of the used `text` attributes `value`, `font`, `bgcol`, `padding` and `border` are shared.<br>
 Let's use a named text box defining `value`, `font`, `bgcol`, `padding` and `border` and call it `sample2`.<br><br>
 We want to use Helvetica for all text boxes, so we define a named font and call it `myFont`.
 Font size and color will be overriden appropriately either within the text pool (`texts`) or within the final content elements:
