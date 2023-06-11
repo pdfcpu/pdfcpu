@@ -574,6 +574,10 @@ func validatePieceDict(xRefTable *model.XRefTable, d types.Dict) error {
 
 func validateRootPieceInfo(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
 
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		return nil
+	}
+
 	_, err := validatePieceInfo(xRefTable, rootDict, "rootDict", "PieceInfo", required, sinceVersion)
 
 	return err

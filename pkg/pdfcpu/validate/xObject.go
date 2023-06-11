@@ -665,20 +665,22 @@ func validateEntryOPI(xRefTable *model.XRefTable, d types.Dict, dictName, entryN
 func validateFormStreamDictPart2(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 
 	// PieceInfo, dict, optional, since V1.3
-	hasPieceInfo, err := validatePieceInfo(xRefTable, d, dictName, "PieceInfo", OPTIONAL, model.V13)
-	if err != nil {
-		return err
-	}
+	if xRefTable.ValidationMode != model.ValidationRelaxed {
+		hasPieceInfo, err := validatePieceInfo(xRefTable, d, dictName, "PieceInfo", OPTIONAL, model.V13)
+		if err != nil {
+			return err
+		}
 
-	// LastModified, date, required if PieceInfo present, since V1.3
-	lm, err := validateDateEntry(xRefTable, d, dictName, "LastModified", OPTIONAL, model.V13)
-	if err != nil {
-		return err
-	}
+		// LastModified, date, required if PieceInfo present, since V1.3
+		lm, err := validateDateEntry(xRefTable, d, dictName, "LastModified", OPTIONAL, model.V13)
+		if err != nil {
+			return err
+		}
 
-	if hasPieceInfo && lm == nil {
-		err = errors.New("pdfcpu: validateFormStreamDictPart2: missing \"LastModified\" (required by \"PieceInfo\")")
-		return err
+		if hasPieceInfo && lm == nil {
+			err = errors.New("pdfcpu: validateFormStreamDictPart2: missing \"LastModified\" (required by \"PieceInfo\")")
+			return err
+		}
 	}
 
 	// StructParent, integer

@@ -222,7 +222,7 @@ func TestInfo(t *testing.T) {
 	msg := "TestInfo"
 	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
 
-	if _, err := api.InfoFile(inFile, nil, nil); err != nil {
+	if _, err := api.InfoFile(inFile, nil, model.NewDefaultConfiguration()); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
