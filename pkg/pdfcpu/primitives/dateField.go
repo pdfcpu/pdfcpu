@@ -19,6 +19,7 @@ package primitives
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 
@@ -433,23 +434,28 @@ func (df *DateField) labelPos(labelHeight, w, g float64) (float64, float64) {
 	return x, y
 }
 
+func (tf *DateField) renderBackground(w io.Writer, bgCol, boCol *color.SimpleColor, boWidth, width, height float64) {
+	if bgCol != nil || boCol != nil {
+		fmt.Fprint(w, "q ")
+		if bgCol != nil {
+			fmt.Fprintf(w, "%.2f %.2f %.2f rg 0 0 %.2f %.2f re f ", bgCol.R, bgCol.G, bgCol.B, width, height)
+		}
+		if boCol != nil && boWidth > 0 {
+			fmt.Fprintf(w, "%.2f %.2f %.2f RG %.2f w %.2f %.2f %.2f %.2f re s ",
+				boCol.R, boCol.G, boCol.B, boWidth, boWidth/2, boWidth/2, width-boWidth, height-boWidth)
+		}
+		fmt.Fprint(w, "Q ")
+	}
+}
+
 func (df *DateField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
+
 	w, h := df.BoundingBox.Width(), df.BoundingBox.Height()
 	bgCol := df.BgCol
 	boWidth, boCol := df.calcBorder()
 	buf := new(bytes.Buffer)
 
-	if bgCol != nil || boCol != nil {
-		fmt.Fprint(buf, "q ")
-		if bgCol != nil {
-			fmt.Fprintf(buf, "%.2f %.2f %.2f rg 0 0 %.2f %.2f re f ", bgCol.R, bgCol.G, bgCol.B, w, h)
-		}
-		if boCol != nil {
-			fmt.Fprintf(buf, "%.2f %.2f %.2f RG %.2f w %.2f %.2f %.2f %.2f re s ",
-				boCol.R, boCol.G, boCol.B, boWidth, boWidth/2, boWidth/2, w-boWidth, h-boWidth)
-		}
-		fmt.Fprint(buf, "Q ")
-	}
+	df.renderBackground(buf, bgCol, boCol, boWidth, w, h)
 
 	fmt.Fprint(buf, "/Tx BMC q ")
 	fmt.Fprintf(buf, "1 1 %.1f %.1f re W n ", w-2, h-2)

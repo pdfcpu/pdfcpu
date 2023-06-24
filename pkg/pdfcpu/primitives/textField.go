@@ -392,7 +392,7 @@ func (tf *TextField) renderBackground(w io.Writer, bgCol, boCol *color.SimpleCol
 		if bgCol != nil {
 			fmt.Fprintf(w, "%.2f %.2f %.2f rg 0 0 %.2f %.2f re f ", bgCol.R, bgCol.G, bgCol.B, width, height)
 		}
-		if boCol != nil {
+		if boCol != nil && boWidth > 0 {
 			fmt.Fprintf(w, "%.2f %.2f %.2f RG %.2f w %.2f %.2f %.2f %.2f re s ",
 				boCol.R, boCol.G, boCol.B, boWidth, boWidth/2, boWidth/2, width-boWidth, height-boWidth)
 		}
