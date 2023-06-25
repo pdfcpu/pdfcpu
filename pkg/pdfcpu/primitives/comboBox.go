@@ -251,6 +251,10 @@ func (cb *ComboBox) calcFontFromDA(ctx *model.Context, da []string, fonts map[st
 			if err != nil {
 				return nil, err
 			}
+			if fl == 0 {
+				// TODO derive size from acroDict DA and then use a default form font size (add to pdfcpu config)
+				fl = 12
+			}
 			f.Size = int(fl)
 			continue
 		}
@@ -754,10 +758,13 @@ func NewComboBox(
 
 	s := d.StringEntry("DA")
 	if s == nil {
-		return nil, nil, errors.New("pdfcpu: combobox missing \"DA\"")
+		s = ctx.AcroForm.StringEntry("DA")
+		if s == nil {
+			return nil, nil, errors.New("pdfcpu: combobox missing \"DA\"")
+		}
 	}
 
-	fontIndRef, err := cb.calcFontFromDA(ctx, strings.Split(*s, " "), fonts)
+	fontIndRef, err := cb.calcFontFromDA(ctx, strings.Fields(*s), fonts)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -346,7 +346,7 @@ func extractFormFontDetails(
 		if s == nil {
 			return "", "", "", nil, errors.Errorf("pdfcpu: unsupported font: %s", *fName)
 		}
-		da := strings.Split(*s, " ")
+		da := strings.Fields(*s)
 		rootFontID := ""
 		for i := 0; i < len(da); i++ {
 			if da[i] == "Tf" {

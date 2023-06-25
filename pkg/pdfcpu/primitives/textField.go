@@ -244,6 +244,10 @@ func (tf *TextField) calcFontFromDA(ctx *model.Context, da []string, fonts map[s
 			if err != nil {
 				return nil, err
 			}
+			if fl == 0 {
+				// TODO derive size from acroDict DA and then use a default form font size (add to pdfcpu config)
+				fl = 12
+			}
 			f.Size = int(fl)
 			continue
 		}
@@ -387,7 +391,7 @@ func (tf *TextField) labelPos(labelHeight, w, g float64) (float64, float64) {
 }
 
 func (tf *TextField) renderBackground(w io.Writer, bgCol, boCol *color.SimpleColor, boWidth, width, height float64) {
-	if bgCol != nil || boCol != nil {
+	if bgCol != nil || (boCol != nil && boWidth > 0) {
 		fmt.Fprint(w, "q ")
 		if bgCol != nil {
 			fmt.Fprintf(w, "%.2f %.2f %.2f rg 0 0 %.2f %.2f re f ", bgCol.R, bgCol.G, bgCol.B, width, height)
@@ -909,10 +913,13 @@ func NewTextField(
 
 	s := d.StringEntry("DA")
 	if s == nil {
-		return nil, nil, errors.New("pdfcpu: textfield missing \"DA\"")
+		s = ctx.AcroForm.StringEntry("DA")
+		if s == nil {
+			return nil, nil, errors.New("pdfcpu: textfield missing \"DA\"")
+		}
 	}
 
-	fontIndRef, err := tf.calcFontFromDA(ctx, strings.Split(*s, " "), fonts)
+	fontIndRef, err := tf.calcFontFromDA(ctx, strings.Fields(*s), fonts)
 	if err != nil {
 		return nil, nil, err
 	}
