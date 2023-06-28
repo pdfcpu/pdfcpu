@@ -18,6 +18,8 @@ package form
 
 import (
 	"fmt"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/mattn/go-runewidth"
@@ -63,7 +65,7 @@ func (ft FieldType) string() string {
 
 // Field represents a form field for s particular page number.
 type Field struct {
-	page   int
+	pages  []int
 	locked bool
 	typ    FieldType
 	id     string
@@ -73,9 +75,21 @@ type Field struct {
 	opts   string
 }
 
+func (f Field) pageString() string {
+	if len(f.pages) == 1 {
+		return strconv.Itoa(f.pages[0])
+	}
+	sort.Ints(f.pages)
+	ss := []string{}
+	for _, p := range f.pages {
+		ss = append(ss, strconv.Itoa(p))
+	}
+	return strings.Join(ss, ",")
+}
+
 type FieldMeta struct {
-	def, val, opt                  bool
-	defMax, valMax, idMax, nameMax int
+	def, val, opt                           bool
+	pageMax, defMax, valMax, idMax, nameMax int
 }
 
 func fields(xRefTable *model.XRefTable) (types.Array, error) {
@@ -176,8 +190,8 @@ func isField(xRefTable *model.XRefTable, indRef types.IndirectRef, fields types.
 			return false, nil, nil
 		}
 		ft = dp.NameEntry("FT")
-		if ft != nil && *ft == "Btn" {
-			// rbg
+		if ft != nil && (*ft == "Btn" || *ft == "Tx") {
+			// rbg or text/datefield hierarchy
 			ok, err := fullyQualifiedFieldName(xRefTable, *pIndRef, fields, &id, &name)
 			if !ok || err != nil {
 				return false, nil, err
@@ -280,7 +294,16 @@ func collectRadioButtonGroup(xRefTable *model.XRefTable, d types.Dict, f *Field,
 				return err
 			}
 			if k != "Off" {
-				vv = append(vv, k)
+				found := false
+				for _, opt := range vv {
+					if opt == k {
+						found = true
+						break
+					}
+				}
+				if !found {
+					vv = append(vv, k)
+				}
 				break
 			}
 		}
@@ -487,7 +510,20 @@ func collectPageField(
 	fm *FieldMeta,
 	fs *[]Field) error {
 
-	f := Field{page: i}
+	exists := false
+	for j, field := range *fs {
+		if field.id == fi.id && field.name == fi.name {
+			field.pages = append(field.pages, i)
+			ps := field.pageString()
+			if len(ps) > fm.pageMax {
+				fm.pageMax = len(ps)
+			}
+			(*fs)[j] = field
+			exists = true
+		}
+	}
+
+	f := Field{pages: []int{i}}
 
 	f.id = fi.id
 	if w := runewidth.StringWidth(fi.id); w > fm.idMax {
@@ -531,7 +567,9 @@ func collectPageField(
 		return err
 	}
 
-	*fs = append(*fs, f)
+	if !exists {
+		*fs = append(*fs, f)
+	}
 
 	return nil
 }
@@ -540,7 +578,7 @@ func collectPageFields(
 	xRefTable *model.XRefTable,
 	wAnnots model.Annot,
 	fields types.Array,
-	i int,
+	p int,
 	fm *FieldMeta,
 	fs *[]Field) error {
 
@@ -572,7 +610,7 @@ func collectPageFields(
 			continue
 		}
 
-		if err := collectPageField(xRefTable, d, i, fi, fm, fs); err != nil {
+		if err := collectPageField(xRefTable, d, p, fi, fm, fs); err != nil {
 			return err
 		}
 	}
@@ -583,9 +621,9 @@ func collectPageFields(
 func collectFields(xRefTable *model.XRefTable, fields types.Array, fm *FieldMeta) ([]Field, error) {
 	var fs []Field
 
-	for i := 1; i <= xRefTable.PageCount; i++ {
+	for p := 1; p <= xRefTable.PageCount; p++ {
 
-		pgAnnots := xRefTable.PageAnnots[i]
+		pgAnnots := xRefTable.PageAnnots[p]
 		if len(pgAnnots) == 0 {
 			continue
 		}
@@ -595,7 +633,7 @@ func collectFields(xRefTable *model.XRefTable, fields types.Array, fm *FieldMeta
 			continue
 		}
 
-		if err := collectPageFields(xRefTable, wAnnots, fields, i, fm, &fs); err != nil {
+		if err := collectPageFields(xRefTable, wAnnots, fields, p, fm, &fs); err != nil {
 			return nil, err
 		}
 	}
@@ -604,9 +642,17 @@ func collectFields(xRefTable *model.XRefTable, fields types.Array, fm *FieldMeta
 }
 
 func calcListHeader(fm *FieldMeta) (string, []int) {
-	horSep := []int{15}
+	horSep := []int{}
 
-	s := "Pg L Field     " + draw.VBar + " Id  "
+	s := "Pg "
+	if fm.pageMax > 2 {
+		s += strings.Repeat(" ", fm.pageMax-2)
+		horSep = append(horSep, 15+fm.pageMax-2)
+	} else {
+		horSep = append(horSep, 15)
+	}
+
+	s += "L Field     " + draw.VBar + " Id  "
 	if fm.idMax > 3 {
 		s += strings.Repeat(" ", fm.idMax-3)
 		horSep = append(horSep, 5+fm.idMax-3)
@@ -648,11 +694,102 @@ func calcListHeader(fm *FieldMeta) (string, []int) {
 	return s, horSep
 }
 
-func renderFields(ctx *model.Context, fs []Field, fm *FieldMeta) ([]string, error) {
+func multiPageFieldsMap(fs []Field) map[string][]Field {
+
+	m := map[string][]Field{}
+
+	for _, f := range fs {
+		if len(f.pages) == 1 {
+			continue
+		}
+		ps := f.pageString()
+		var fields []Field
+		if fs, ok := m[ps]; ok {
+			fields = append(fs, f)
+		} else {
+			fields = []Field{f}
+		}
+		m[ps] = fields
+	}
+
+	return m
+}
+
+func renderMultiPageFields(ctx *model.Context, m map[string][]Field, fm *FieldMeta) ([]string, error) {
+
+	var ss []string
 
 	s, horSep := calcListHeader(fm)
 
-	var ss []string
+	ss = append(ss, "Multi page fields:")
+	ss = append(ss, s)
+	ss = append(ss, draw.HorSepLine(horSep))
+
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	p := ""
+
+	for _, k := range keys {
+
+		if p != "" {
+			ss = append(ss, draw.HorSepLine(horSep))
+		}
+		p = k
+
+		for _, f := range m[k] {
+			l := " "
+			if f.locked {
+				l = "*"
+			}
+
+			t := f.typ.string()
+
+			pageFill := strings.Repeat(" ", fm.pageMax-runewidth.StringWidth(f.pageString()))
+			idFill := strings.Repeat(" ", fm.idMax-runewidth.StringWidth(f.id))
+			nameFill := strings.Repeat(" ", fm.nameMax-runewidth.StringWidth(f.name))
+			s := fmt.Sprintf("%s%s %s %-9s %s %s%s %s %s%s ", p, pageFill, l, t, draw.VBar, f.id, idFill, draw.VBar, f.name, nameFill)
+			p = strings.Repeat(" ", len(p))
+			if fm.def {
+				dvFill := strings.Repeat(" ", fm.defMax-runewidth.StringWidth(f.dv))
+				s += fmt.Sprintf("%s %s%s ", draw.VBar, f.dv, dvFill)
+			}
+			if fm.val {
+				vFill := strings.Repeat(" ", fm.valMax-runewidth.StringWidth(f.v))
+				s += fmt.Sprintf("%s %s%s ", draw.VBar, f.v, vFill)
+			}
+			if fm.opt {
+				s += fmt.Sprintf("%s %s", draw.VBar, f.opts)
+			}
+
+			ss = append(ss, s)
+		}
+	}
+
+	ss = append(ss, "")
+
+	return ss, nil
+}
+
+func renderFields(ctx *model.Context, fs []Field, fm *FieldMeta) ([]string, error) {
+
+	ss := []string{}
+
+	m := multiPageFieldsMap(fs)
+
+	if len(m) > 0 {
+		ss1, err := renderMultiPageFields(ctx, m, fm)
+		if err != nil {
+			return nil, err
+		}
+		ss = ss1
+	}
+
+	s, horSep := calcListHeader(fm)
+
 	if ctx.SignatureExist || ctx.AppendOnly {
 		ss = append(ss, "(signed)")
 	}
@@ -662,13 +799,18 @@ func renderFields(ctx *model.Context, fs []Field, fm *FieldMeta) ([]string, erro
 	i, needSep := 0, false
 	for _, f := range fs {
 
-		p := "  "
-		if f.page != i {
-			if f.page > 1 && needSep {
+		if len(f.pages) > 1 {
+			continue
+		}
+
+		p := " "
+		pg := f.pages[0]
+		if pg != i {
+			if pg > 1 && needSep {
 				ss = append(ss, draw.HorSepLine(horSep))
 			}
-			i += f.page - i
-			p = fmt.Sprintf("%2d", i)
+			i += pg - i
+			p = fmt.Sprintf("%d", i)
 			needSep = true
 		}
 
@@ -679,9 +821,10 @@ func renderFields(ctx *model.Context, fs []Field, fm *FieldMeta) ([]string, erro
 
 		t := f.typ.string()
 
+		pageFill := strings.Repeat(" ", fm.pageMax-runewidth.StringWidth(f.pageString()))
 		idFill := strings.Repeat(" ", fm.idMax-runewidth.StringWidth(f.id))
 		nameFill := strings.Repeat(" ", fm.nameMax-runewidth.StringWidth(f.name))
-		s := fmt.Sprintf("%s %s %-9s %s %s%s %s %s%s ", p, l, t, draw.VBar, f.id, idFill, draw.VBar, f.name, nameFill)
+		s := fmt.Sprintf("%s%s %s %-9s %s %s%s %s %s%s ", p, pageFill, l, t, draw.VBar, f.id, idFill, draw.VBar, f.name, nameFill)
 		if fm.def {
 			dvFill := strings.Repeat(" ", fm.defMax-runewidth.StringWidth(f.dv))
 			s += fmt.Sprintf("%s %s%s ", draw.VBar, f.dv, dvFill)
@@ -712,7 +855,7 @@ func ListFormFields(ctx *model.Context) ([]string, error) {
 		return nil, err
 	}
 
-	fm := &FieldMeta{idMax: 3, nameMax: 4, defMax: 7, valMax: 5}
+	fm := &FieldMeta{pageMax: 2, idMax: 3, nameMax: 4, defMax: 7, valMax: 5}
 
 	fs, err := collectFields(xRefTable, fields, fm)
 	if err != nil {

@@ -45,7 +45,7 @@ type Header struct {
 
 // TextField represents an Acroform text field.
 type TextField struct {
-	Page      int    `json:"page"`
+	Pages     []int  `json:"pages"`
 	ID        string `json:"id"`
 	Name      string `json:"name,omitempty"`
 	Default   string `json:"default,omitempty"`
@@ -56,7 +56,7 @@ type TextField struct {
 
 // DateField represents an Acroform date field.
 type DateField struct {
-	Page    int    `json:"page"`
+	Pages   []int  `json:"pages"`
 	ID      string `json:"id"`
 	Name    string `json:"name,omitempty"`
 	Format  string `json:"format"`
@@ -67,7 +67,7 @@ type DateField struct {
 
 // RadioButtonGroup represents an Acroform checkbox.
 type CheckBox struct {
-	Page    int    `json:"page"`
+	Pages   []int  `json:"pages"`
 	ID      string `json:"id"`
 	Name    string `json:"name,omitempty"`
 	Default bool   `json:"default"`
@@ -77,7 +77,7 @@ type CheckBox struct {
 
 // RadioButtonGroup represents an Acroform radio button group.
 type RadioButtonGroup struct {
-	Page    int      `json:"page"`
+	Pages   []int    `json:"pages"`
 	ID      string   `json:"id"`
 	Name    string   `json:"name,omitempty"`
 	Options []string `json:"options"`
@@ -88,7 +88,7 @@ type RadioButtonGroup struct {
 
 // ListBox represents an Acroform combobox.
 type ComboBox struct {
-	Page     int      `json:"page"`
+	Pages    []int    `json:"pages"`
 	ID       string   `json:"id"`
 	Name     string   `json:"name,omitempty"`
 	Editable bool     `json:"editable"`
@@ -100,7 +100,7 @@ type ComboBox struct {
 
 // ListBox represents an Acroform listbox.
 type ListBox struct {
-	Page     int      `json:"page"`
+	Pages    []int    `json:"pages"`
 	ID       string   `json:"id"`
 	Name     string   `json:"name,omitempty"`
 	Multi    bool     `json:"multi"`
@@ -188,7 +188,7 @@ func (f Form) listBoxValuesAndLock(id, name string) ([]string, bool, bool) {
 
 func extractRadioButtonGroup(xRefTable *model.XRefTable, page int, d types.Dict, id, name string, locked bool) (*RadioButtonGroup, error) {
 
-	rbg := &RadioButtonGroup{Page: page, ID: id, Name: name, Locked: locked}
+	rbg := &RadioButtonGroup{Pages: []int{page}, ID: id, Name: name, Locked: locked}
 
 	if s := d.NameEntry("DV"); s != nil {
 		n, err := types.DecodeName(*s)
@@ -209,12 +209,23 @@ func extractRadioButtonGroup(xRefTable *model.XRefTable, page int, d types.Dict,
 	}
 
 	var opts []string
+	p := 0
 
 	for _, o := range d.ArrayEntry("Kids") {
 		d, err := xRefTable.DereferenceDict(o)
 		if err != nil {
 			return nil, err
 		}
+
+		indRef := d.IndirectRefEntry("P")
+		if indRef != nil {
+			if p == 0 {
+				p = indRef.ObjectNumber.Value()
+			} else if p != indRef.ObjectNumber.Value() {
+				continue
+			}
+		}
+
 		d1 := d.DictEntry("AP")
 		if d1 == nil {
 			return nil, errors.New("corrupt form field: missing entry AP")
@@ -229,6 +240,11 @@ func extractRadioButtonGroup(xRefTable *model.XRefTable, page int, d types.Dict,
 				return nil, err
 			}
 			if k != "Off" {
+				for _, opt := range opts {
+					if opt == k {
+						continue
+					}
+				}
 				opts = append(opts, k)
 			}
 		}
@@ -241,7 +257,7 @@ func extractRadioButtonGroup(xRefTable *model.XRefTable, page int, d types.Dict,
 
 func extractCheckBox(page int, d types.Dict, id, name string, locked bool) (*CheckBox, error) {
 
-	cb := &CheckBox{Page: page, ID: id, Name: name, Locked: locked}
+	cb := &CheckBox{Pages: []int{page}, ID: id, Name: name, Locked: locked}
 
 	if o, ok := d.Find("DV"); ok {
 		cb.Default = o.(types.Name) == "Yes"
@@ -256,7 +272,7 @@ func extractCheckBox(page int, d types.Dict, id, name string, locked bool) (*Che
 
 func extractComboBox(xRefTable *model.XRefTable, page int, d types.Dict, id, name string, locked bool) (*ComboBox, error) {
 
-	cb := &ComboBox{Page: page, ID: id, Name: name, Locked: locked}
+	cb := &ComboBox{Pages: []int{page}, ID: id, Name: name, Locked: locked}
 
 	if sl := d.StringLiteralEntry("DV"); sl != nil {
 		s, err := types.StringLiteralToString(*sl)
@@ -338,7 +354,7 @@ func extractDateFormat(xRefTable *model.XRefTable, d types.Dict) (*primitives.Da
 
 func extractDateField(page int, d types.Dict, id, name string, df *primitives.DateFormat, locked bool) (*DateField, error) {
 
-	dfield := &DateField{Page: page, ID: id, Name: name, Format: df.Ext, Locked: locked}
+	dfield := &DateField{Pages: []int{page}, ID: id, Name: name, Format: df.Ext, Locked: locked}
 
 	if o, found := d.Find("DV"); found {
 		sl, _ := o.(types.StringLiteral)
@@ -365,7 +381,7 @@ func extractTextField(page int, d types.Dict, id, name string, ff *int, locked b
 
 	multiLine := ff != nil && uint(primitives.FieldFlags(*ff))&uint(primitives.FieldMultiline) > 0
 
-	tf := &TextField{Page: page, ID: id, Name: name, Multiline: multiLine, Locked: locked}
+	tf := &TextField{Pages: []int{page}, ID: id, Name: name, Multiline: multiLine, Locked: locked}
 
 	if o, found := d.Find("DV"); found {
 		sl, _ := o.(types.StringLiteral)
@@ -390,7 +406,7 @@ func extractTextField(page int, d types.Dict, id, name string, ff *int, locked b
 
 func extractListBox(xRefTable *model.XRefTable, page int, d types.Dict, id, name string, locked, multi bool) (*ListBox, error) {
 
-	lb := &ListBox{Page: page, ID: id, Name: name, Locked: locked, Multi: multi}
+	lb := &ListBox{Pages: []int{page}, ID: id, Name: name, Locked: locked, Multi: multi}
 
 	if !multi {
 		if sl := d.StringLiteralEntry("DV"); sl != nil {
@@ -488,13 +504,29 @@ func exportBtn(
 	ok *bool) error {
 
 	if len(d.ArrayEntry("Kids")) > 0 {
+
+		for _, rb := range form.RadioButtonGroups {
+			if rb.ID == id && rb.Name == name {
+				rb.Pages = append(rb.Pages, i)
+				return nil
+			}
+		}
+
 		rbg, err := extractRadioButtonGroup(xRefTable, i, d, id, name, locked)
 		if err != nil {
 			return err
 		}
+
 		form.RadioButtonGroups = append(form.RadioButtonGroups, rbg)
 		*ok = true
 		return nil
+	}
+
+	for _, cb := range form.CheckBoxes {
+		if cb.Name == name && cb.ID == id {
+			cb.Pages = append(cb.Pages, i)
+			return nil
+		}
 	}
 
 	cb, err := extractCheckBox(i, d, id, name, locked)
@@ -522,6 +554,14 @@ func exportCh(
 	}
 
 	if primitives.FieldFlags(*ff)&primitives.FieldCombo > 0 {
+
+		for _, cb := range form.ComboBoxes {
+			if cb.Name == name && cb.ID == id {
+				cb.Pages = append(cb.Pages, i)
+				return nil
+			}
+		}
+
 		cb, err := extractComboBox(xRefTable, i, d, id, name, locked)
 		if err != nil {
 			return err
@@ -529,6 +569,13 @@ func exportCh(
 		form.ComboBoxes = append(form.ComboBoxes, cb)
 		*ok = true
 		return nil
+	}
+
+	for _, lb := range form.ListBoxes {
+		if lb.Name == name && lb.ID == id {
+			lb.Pages = append(lb.Pages, i)
+			return nil
+		}
 	}
 
 	multi := primitives.FieldFlags(*ff)&primitives.FieldMultiselect > 0
@@ -558,13 +605,29 @@ func exportTx(
 	}
 
 	if df != nil {
+
+		for _, df := range form.DateFields {
+			if df.Name == name && df.ID == id {
+				df.Pages = append(df.Pages, i)
+				return nil
+			}
+		}
+
 		df, err := extractDateField(i, d, id, name, df, locked)
 		if err != nil {
 			return err
 		}
+
 		form.DateFields = append(form.DateFields, df)
 		*ok = true
 		return nil
+	}
+
+	for _, tf := range form.TextFields {
+		if tf.Name == name && tf.ID == id {
+			tf.Pages = append(tf.Pages, i)
+			return nil
+		}
 	}
 
 	tf, err := extractTextField(i, d, id, name, ff, locked)

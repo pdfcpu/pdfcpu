@@ -252,10 +252,19 @@ func formFontIndRef(xRefTable *model.XRefTable, fontID string) (*types.IndirectR
 	}
 
 	for k, v := range d {
-		if k == fontID {
+		if strings.HasPrefix(k, fontID) || strings.HasPrefix(fontID, k) {
 			indRef, _ := v.(types.IndirectRef)
 			return &indRef, nil
 		}
+	}
+
+	if font.IsCoreFont(fontID) {
+		indRef, err := pdffont.EnsureFontDict(xRefTable, fontID, "", "", false, false, nil)
+		if err != nil {
+			return nil, err
+		}
+		d[fontID] = *indRef
+		return indRef, nil
 	}
 
 	return nil, errors.Errorf("pdfcpu: missing form font %s", fontID)
