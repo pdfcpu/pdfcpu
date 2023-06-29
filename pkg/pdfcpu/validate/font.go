@@ -687,7 +687,7 @@ func validateType1FontDict(xRefTable *model.XRefTable, d types.Dict) error {
 	fn := (*fontName).Value()
 	required := xRefTable.Version() >= model.V15 || !validateStandardType1Font(fn)
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		required = !validateStandardType1Font(fn) && fn != "Arial"
+		required = false
 	}
 	// FirstChar,  required except for standard 14 fonts. since 1.5 always required, integer
 	fc, err := validateIntegerEntry(xRefTable, d, dictName, "FirstChar", required, model.V10, nil)
