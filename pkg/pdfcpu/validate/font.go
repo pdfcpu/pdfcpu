@@ -147,6 +147,8 @@ func validateFontDescriptorPart1(xRefTable *model.XRefTable, d types.Dict, dictN
 	}
 	_, err = validateStringEntry(xRefTable, d, dictName, "FontFamily", OPTIONAL, sinceVersion, nil)
 	if err != nil {
+		// Repair
+		_, err = validateNameEntry(xRefTable, d, dictName, "FontFamily", OPTIONAL, sinceVersion, nil)
 		return err
 	}
 
