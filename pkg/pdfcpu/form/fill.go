@@ -909,6 +909,7 @@ func fillTextField(
 	}
 
 	vNew := vv[0]
+
 	if vNew == vOld {
 		return nil
 	}
@@ -917,15 +918,35 @@ func fillTextField(
 	if err != nil {
 		return err
 	}
+
 	d["V"] = types.StringLiteral(*s)
 
 	multiLine := ff != nil && uint(primitives.FieldFlags(*ff))&uint(primitives.FieldMultiline) > 0
+
+	kids := d.ArrayEntry("Kids")
+	if len(kids) > 0 {
+		for _, o := range kids {
+
+			d, err := ctx.DereferenceDict(o)
+			if err != nil {
+				return err
+			}
+
+			if err := primitives.EnsureTextFieldAP(ctx, d, vNew, multiLine, fonts); err != nil {
+				return err
+			}
+
+			*ok = true
+		}
+
+		return nil
+	}
+
 	if err := primitives.EnsureTextFieldAP(ctx, d, vNew, multiLine, fonts); err != nil {
 		return err
 	}
 
 	*ok = true
-
 	return nil
 }
 
