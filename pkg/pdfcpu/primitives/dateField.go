@@ -922,7 +922,7 @@ func NewDateField(
 	boWidth := calcBorderWidth(d)
 	if boWidth > 0 {
 		b.Width = boWidth
-		b.SetCol(*boCol)
+		b.col = boCol
 	}
 	df.Border = &b
 

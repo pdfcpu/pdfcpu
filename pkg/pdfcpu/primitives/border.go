@@ -75,9 +75,9 @@ func (b *Border) mergeIn(b0 *Border) {
 	}
 }
 
-func (b *Border) SetCol(c color.SimpleColor) {
-	b.col = &c
-}
+// func (b *Border) SetCol(c color.SimpleColor) {
+// 	b.col = &c
+// }
 
 func (b Border) calc() (boWidth float64, boCol *color.SimpleColor) {
 	if b.col == nil {

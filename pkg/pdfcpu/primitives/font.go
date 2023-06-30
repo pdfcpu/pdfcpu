@@ -267,7 +267,8 @@ func formFontIndRef(xRefTable *model.XRefTable, fontID string) (*types.IndirectR
 		return indRef, nil
 	}
 
-	return nil, errors.Errorf("pdfcpu: missing form font %s", fontID)
+	//return nil, errors.Errorf("pdfcpu: missing form font %s", fontID)
+	return nil, nil
 }
 
 func FontIndRef(fName string, ctx *model.Context, fonts map[string]types.IndirectRef) (*types.IndirectRef, error) {
@@ -311,7 +312,7 @@ func ensureCorrectFontIndRef(
 		return err
 	}
 
-	if enc := d.NameEntry("Encoding"); *enc == "Identity-H" {
+	if enc := d.NameEntry("Encoding"); enc != nil && *enc == "Identity-H" {
 		indRef, ok := fonts[fName]
 		if !ok {
 			fonts[fName] = **fontIndRef
@@ -323,9 +324,15 @@ func ensureCorrectFontIndRef(
 		return nil
 	}
 
-	*fontIndRef, err = FontIndRef(fName, ctx, fonts)
+	indRef, err := FontIndRef(fName, ctx, fonts)
+	if err != nil {
+		return err
+	}
+	if indRef != nil {
+		*fontIndRef = indRef
+	}
 
-	return err
+	return nil
 }
 
 func extractFormFontDetails(
@@ -340,20 +347,27 @@ func extractFormFontDetails(
 		return "", "", "", nil, err
 	}
 
-	fName, fLang, err := FormFontNameAndLangForID(xRefTable, *fontIndRef)
-	if err != nil {
-		return "", "", "", nil, err
+	var fName, fLang *string
+
+	if fontIndRef != nil {
+		fName, fLang, err = FormFontNameAndLangForID(xRefTable, *fontIndRef)
+		if err != nil {
+			return "", "", "", nil, err
+		}
+
+		if fName == nil {
+			return "", "", "", nil, errors.Errorf("pdfcpu: Unable to detect fontName for: %s", fontID)
+		}
 	}
 
-	if fName == nil {
-		return "", "", "", nil, errors.Errorf("pdfcpu: Unable to detect fontName for: %s", fontID)
-	}
-
-	if !font.SupportedFont(*fName) {
+	if fontIndRef == nil || !font.SupportedFont(*fName) {
 		// Use DA fontId from Acrodict
 		s := xRefTable.AcroForm.StringEntry("DA")
 		if s == nil {
-			return "", "", "", nil, errors.Errorf("pdfcpu: unsupported font: %s", *fName)
+			if fName != nil {
+				return "", "", "", nil, errors.Errorf("pdfcpu: unsupported font: %s", *fName)
+			}
+			return "", "", "", nil, errors.Errorf("pdfcpu: unsupported fontID: %s", fontID)
 		}
 		da := strings.Fields(*s)
 		rootFontID := ""
@@ -364,7 +378,10 @@ func extractFormFontDetails(
 			}
 		}
 		if rootFontID == "" {
-			return "", "", "", nil, errors.Errorf("pdfcpu: unsupported font: %s", *fName)
+			if fName != nil {
+				return "", "", "", nil, errors.Errorf("pdfcpu: unsupported font: %s", *fName)
+			}
+			return "", "", "", nil, errors.Errorf("pdfcpu: unsupported fontID: %s", fontID)
 		}
 		fontID = rootFontID
 		fontIndRef, err = formFontIndRef(xRefTable, fontID)
