@@ -23,6 +23,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -294,7 +295,28 @@ func processMergeCommand(conf *model.Configuration) {
 	}
 
 	if sorted {
-		sort.Strings(filesIn)
+
+		// See PR #631
+
+		re := regexp.MustCompile(`\d+`)
+
+		sort.Slice(
+			filesIn,
+			func(i, j int) bool {
+
+				ssi := re.FindAllString(filesIn[i], 1)
+				ssj := re.FindAllString(filesIn[j], 1)
+
+				if len(ssi) == 0 || len(ssj) == 0 {
+					return filesIn[i] <= filesIn[j]
+				}
+
+				i1, _ := strconv.Atoi(ssi[0])
+				i2, _ := strconv.Atoi(ssj[0])
+
+				return i1 < i2
+			})
+
 	}
 
 	var cmd *cli.Command
