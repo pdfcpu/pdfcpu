@@ -52,9 +52,8 @@ func PropertiesAdd(ctx *model.Context, properties map[string]string) error {
 
 	for k, v := range properties {
 		k1 := types.UTF8ToCP1252(k)
-		v1 := types.UTF8ToCP1252(v)
-		d[k1] = types.StringLiteral(v1)
-		ctx.Properties[k1] = v1
+		d[k1] = types.StringLiteral(v)
+		ctx.Properties[k1] = v
 	}
 
 	return nil

@@ -66,7 +66,7 @@ func decodeFileSpecStreamDict(sd *types.StreamDict, id string) error {
 	return sd.Decode()
 }
 
-func fileSpectStreamFileName(xRefTable *XRefTable, d types.Dict) (string, error) {
+func fileSpecStreamFileName(xRefTable *XRefTable, d types.Dict) (string, error) {
 	o, found := d.Find("UF")
 	if found {
 		fileName, err := xRefTable.DereferenceStringOrHexLiteral(o, V10, nil)
@@ -105,7 +105,7 @@ func fileSpecStreamDict(xRefTable *XRefTable, d types.Dict) (*types.StreamDict, 
 }
 
 // NewFileSpectDictForAttachment returns a fileSpecDict for a.
-func (xRefTable *XRefTable) NewFileSpectDictForAttachment(a Attachment) (*types.IndirectRef, error) {
+func (xRefTable *XRefTable) NewFileSpecDictForAttachment(a Attachment) (*types.IndirectRef, error) {
 	modTime := time.Now()
 	if a.ModTime != nil {
 		modTime = *a.ModTime
@@ -115,7 +115,15 @@ func (xRefTable *XRefTable) NewFileSpectDictForAttachment(a Attachment) (*types.
 		return nil, err
 	}
 
-	d, err := xRefTable.NewFileSpecDict(a.ID, types.EncodeUTF16String(a.ID), a.Desc, *sd)
+	// TODO insert (escaped) reverse solidus before solidus between file name components.
+
+	// TODO Migrate to UTF-8 for both F and UF
+	s, err := types.EscapeUTF16String(a.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	d, err := xRefTable.NewFileSpecDict(a.ID, *s, a.Desc, *sd)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +146,7 @@ func fileSpecStreamDictInfo(xRefTable *XRefTable, id string, o types.Object, dec
 		}
 	}
 
-	fileName, err := fileSpectStreamFileName(xRefTable, d)
+	fileName, err := fileSpecStreamFileName(xRefTable, d)
 	if err != nil {
 		return nil, "", "", nil, err
 	}
@@ -210,7 +218,7 @@ func (ctx *Context) AddAttachment(a Attachment, useCollection bool) error {
 		}
 	}
 
-	ir, err := xRefTable.NewFileSpectDictForAttachment(a)
+	ir, err := xRefTable.NewFileSpecDictForAttachment(a)
 	if err != nil {
 		return err
 	}
