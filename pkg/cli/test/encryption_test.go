@@ -601,7 +601,7 @@ func testEncryptDecryptFile(t *testing.T, fileName string, mode string, keyLengt
 func TestEncryptDecrypt(t *testing.T) {
 	for _, fileName := range []string{
 		"5116.DCT_Filter.pdf",
-		"networkProgr.pdf",
+		"adobe_errata.pdf",
 	} {
 		testEncryptDecryptFile(t, fileName, "rc4", 40)
 		testEncryptDecryptFile(t, fileName, "rc4", 128)

@@ -243,38 +243,41 @@ func bmDict(bm Bookmark, pageIndRef, parent types.IndirectRef, s string) types.D
 	return d
 }
 
-func createOutlineItemDict(ctx *model.Context, bms []Bookmark, parent *types.IndirectRef, parentPageNr *int) (*types.IndirectRef, *types.IndirectRef, int, error) {
+func createOutlineItemDict(ctx *model.Context, bms []Bookmark, parent *types.IndirectRef, parentPageNr *int) (*types.IndirectRef, *types.IndirectRef, int, int, error) {
 	var (
-		first  *types.IndirectRef
-		irPrev *types.IndirectRef
-		dPrev  types.Dict
-		count  int
+		first   *types.IndirectRef
+		irPrev  *types.IndirectRef
+		dPrev   types.Dict
+		total   int
+		visible int
 	)
 
 	for i, bm := range bms {
 
 		if i == 0 && parentPageNr != nil && bm.PageFrom < *parentPageNr {
-			return nil, nil, 0, errCorruptedBookmarks
+			return nil, nil, 0, 0, errCorruptedBookmarks
 		}
 
 		if i > 0 && bm.PageFrom < bms[i-1].PageFrom {
-			return nil, nil, 0, errCorruptedBookmarks
+			return nil, nil, 0, 0, errCorruptedBookmarks
 		}
+
+		total++
 
 		_, pageIndRef, _, err := ctx.PageDict(bm.PageFrom, false)
 		if err != nil {
-			return nil, nil, 0, err
+			return nil, nil, 0, 0, err
 		}
 
 		s, err := types.Escape(types.EncodeUTF16String(bm.Title))
 		if err != nil {
-			return nil, nil, 0, err
+			return nil, nil, 0, 0, err
 		}
 
 		d := bmDict(bm, *pageIndRef, *parent, *s)
 		ir, err := ctx.IndRefForNewObject(d)
 		if err != nil {
-			return nil, nil, 0, err
+			return nil, nil, 0, 0, err
 		}
 
 		if first == nil {
@@ -282,17 +285,26 @@ func createOutlineItemDict(ctx *model.Context, bms []Bookmark, parent *types.Ind
 		}
 
 		if bm.Children != nil {
-			first, last, c, err := createOutlineItemDict(ctx, bm.Children, ir, &bm.PageFrom)
+
+			first, last, c, visc, err := createOutlineItemDict(ctx, bm.Children, ir, &bm.PageFrom)
 			if err != nil {
-				return nil, nil, 0, err
+				return nil, nil, 0, 0, err
 			}
+
 			d["First"] = *first
 			d["Last"] = *last
 
-			d["Count"] = types.Integer(c + 1)
-			count += c + 1
-		} else {
-			count++
+			if visc == 0 {
+				d["Count"] = types.Integer(c)
+				total += c
+			}
+
+			if visc > 0 {
+				d["Count"] = types.Integer(c + visc)
+				total += c
+				visible += visc
+			}
+
 		}
 
 		if irPrev != nil {
@@ -305,7 +317,7 @@ func createOutlineItemDict(ctx *model.Context, bms []Bookmark, parent *types.Ind
 
 	}
 
-	return first, irPrev, count, nil
+	return first, irPrev, total, visible, nil
 }
 
 // AddBookmarks adds bms to ctx.
@@ -328,14 +340,14 @@ func AddBookmarks(ctx *model.Context, bms []Bookmark, replace bool) error {
 		return err
 	}
 
-	first, last, count, err := createOutlineItemDict(ctx, bms, outlinesir, nil)
+	first, last, total, visible, err := createOutlineItemDict(ctx, bms, outlinesir, nil)
 	if err != nil {
 		return err
 	}
 
 	outlinesDict["First"] = *first
 	outlinesDict["Last"] = *last
-	outlinesDict["Count"] = types.Integer(count)
+	outlinesDict["Count"] = types.Integer(total + visible)
 
 	rootDict["Outlines"] = *outlinesir
 

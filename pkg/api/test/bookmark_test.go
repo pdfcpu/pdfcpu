@@ -63,7 +63,10 @@ func TestAddBookmarkTree2Levels(t *testing.T) {
 		{PageFrom: 1, Title: "Page 1: Level 1", Color: &color.Green,
 			Children: []pdfcpu.Bookmark{
 				{PageFrom: 2, Title: "Page 2: Level 1.1"},
-				{PageFrom: 3, Title: "Page 3: Level 1.2"},
+				{PageFrom: 3, Title: "Page 3: Level 1.2",
+					Children: []pdfcpu.Bookmark{
+						{PageFrom: 4, Title: "Page 4: Level 1.2.1"},
+					}},
 			}},
 		{PageFrom: 5, Title: "Page 5: Level 2", Color: &color.Blue,
 			Children: []pdfcpu.Bookmark{

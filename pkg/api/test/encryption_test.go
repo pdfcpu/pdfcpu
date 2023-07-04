@@ -154,7 +154,7 @@ func testEncryption(t *testing.T, fileName string, alg string, keyLength int) {
 func TestEncryption(t *testing.T) {
 	for _, fileName := range []string{
 		"5116.DCT_Filter.pdf",
-		"networkProgr.pdf",
+		"adobe_errata.pdf",
 	} {
 		testEncryption(t, fileName, "rc4", 40)
 		testEncryption(t, fileName, "rc4", 128)

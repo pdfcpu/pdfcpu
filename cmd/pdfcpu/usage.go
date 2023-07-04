@@ -311,6 +311,10 @@ content ... extract raw page content
          eg. pdfcpu watermark add -mode pdf -- "stamp.pdf:3" "" in.pdf out.pdf ... watermark each page of in.pdf with page 3 of stamp.pdf
          Omit page# for multistamping:
          eg. pdfcpu watermark add -mode pdf -- "stamp.pdf" "" in.pdf out.pdf   ... watermark each page of in.pdf with corresponding page of stamp.pdf
+
+
+   A watermark is the first content that gets rendered for a page.
+   The visibility of the watermark depends on the transparency of all layers rendered on top.
 `
 	usageWMDescription = `
 
