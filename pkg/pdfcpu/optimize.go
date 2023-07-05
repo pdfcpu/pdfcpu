@@ -545,6 +545,14 @@ func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNumb
 				continue
 			}
 
+			indRef, ok := o.(types.IndirectRef)
+			if ok {
+				if visited(indRef, vis) {
+					continue
+				}
+				vis = append(vis, indRef)
+			}
+
 			if err := optimizeFormResources(ctx, o, pageNumber, pageObjNumber, vis); err != nil {
 				return err
 			}
