@@ -20,6 +20,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
+	"golang.org/x/exp/slices"
 )
 
 func validateOutlineItemDict(xRefTable *model.XRefTable, d types.Dict) error {
@@ -128,10 +129,17 @@ func validateOutlineTree(xRefTable *model.XRefTable, first, last *types.Indirect
 		err       error
 	)
 
+	var visited []int
+
 	// Process linked list of outline items.
 	for ir := first; ir != nil; ir = d.IndirectRefEntry("Next") {
 
 		objNumber = ir.ObjectNumber.Value()
+
+		if slices.Contains(visited, objNumber) {
+			return 0, 0, errors.Errorf("pdfcpu: validateOutlineTree: circular reference at obj#%d", objNumber)
+		}
+		visited = append(visited, objNumber)
 
 		total++
 
