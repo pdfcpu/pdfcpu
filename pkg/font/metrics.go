@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/pdfcpu/pdfcpu/internal/corefont/metrics"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -195,6 +196,7 @@ var UserFontDir string
 
 // UserFontMetrics represents font metrics for TTF or OTF font files installed into UserFontDir.
 var UserFontMetrics = map[string]TTFLight{}
+var UserFontMetricsLock = &sync.RWMutex{}
 
 func load(fileName string, fd *TTFLight) error {
 	//fmt.Printf("reading gob from: %s\n", fileName)
@@ -244,7 +246,9 @@ func LoadUserFonts() error {
 		fn = strings.TrimSuffix(f.Name(), path.Ext(f.Name()))
 		//fmt.Printf("loading %s.ttf...\n", fn)
 		//fmt.Printf("Loaded %s:\n%s", fn, ttf)
+		UserFontMetricsLock.Lock()
 		UserFontMetrics[fn] = ttf
+		UserFontMetricsLock.Unlock()
 	}
 	return nil
 }
@@ -254,6 +258,8 @@ func BoundingBox(fontName string) *types.Rectangle {
 	if IsCoreFont(fontName) {
 		return metrics.CoreFontMetrics[fontName].FBox
 	}
+	UserFontMetricsLock.RLock()
+	defer UserFontMetricsLock.RUnlock()
 	llx := UserFontMetrics[fontName].LLx
 	lly := UserFontMetrics[fontName].LLy
 	urx := UserFontMetrics[fontName].URx
@@ -266,6 +272,8 @@ func CharWidth(fontName string, r rune) int {
 	if IsCoreFont(fontName) {
 		return metrics.CoreFontCharWidth(fontName, int(r))
 	}
+	UserFontMetricsLock.RLock()
+	defer UserFontMetricsLock.RUnlock()
 	ttf, ok := UserFontMetrics[fontName]
 	if !ok {
 		fmt.Fprintf(os.Stderr, "pdfcpu: user font not loaded: %s\n", fontName)
@@ -366,6 +374,8 @@ func CoreFontNames() []string {
 
 // IsUserFont returns true for installed TrueType fonts.
 func IsUserFont(fontName string) bool {
+	UserFontMetricsLock.RLock()
+	defer UserFontMetricsLock.RUnlock()
 	_, ok := UserFontMetrics[fontName]
 	return ok
 }
@@ -373,6 +383,8 @@ func IsUserFont(fontName string) bool {
 // UserFontNames return a list of all installed TrueType fonts.
 func UserFontNames() []string {
 	ss := []string{}
+	UserFontMetricsLock.RLock()
+	defer UserFontMetricsLock.RUnlock()
 	for fontName := range UserFontMetrics {
 		ss = append(ss, fontName)
 	}
@@ -382,6 +394,8 @@ func UserFontNames() []string {
 // UserFontNamesVerbose return a list of all installed TrueType fonts including glyph count.
 func UserFontNamesVerbose() []string {
 	ss := []string{}
+	UserFontMetricsLock.RLock()
+	defer UserFontMetricsLock.RUnlock()
 	for fName, ttf := range UserFontMetrics {
 		s := fName + " (" + strconv.Itoa(ttf.GlyphCount) + " glyphs)"
 		ss = append(ss, s)
