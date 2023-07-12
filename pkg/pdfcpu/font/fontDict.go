@@ -739,7 +739,10 @@ func usedGIDsFromCMap(cMap string) ([]uint16, error) {
 // UpdateUserfont updates the fontdict for fontName via supplied font resource.
 func UpdateUserfont(xRefTable *model.XRefTable, fontName string, f model.FontResource) error {
 
+	font.UserFontMetricsLock.RLock()
 	ttf, ok := font.UserFontMetrics[fontName]
+	font.UserFontMetricsLock.RUnlock()
+
 	if !ok {
 		return errors.Errorf("pdfcpu: userfont %s not available", fontName)
 	}
@@ -839,7 +842,9 @@ func CIDFontSpecialEncDict(xRefTable *model.XRefTable, ttf font.TTFLight, baseFo
 
 func type0CJKFontDict(xRefTable *model.XRefTable, fontName, lang, script string, indRef *types.IndirectRef) (*types.IndirectRef, error) {
 
+	font.UserFontMetricsLock.RLock()
 	ttf, ok := font.UserFontMetrics[fontName]
+	font.UserFontMetricsLock.RUnlock()
 	if !ok {
 		return nil, errors.Errorf("pdfcpu: font %s not available", fontName)
 	}
@@ -876,7 +881,9 @@ func type0FontDict(xRefTable *model.XRefTable, fontName, lang string, subFont bo
 	// Combines a CIDFont and a CMap to produce a font whose glyphs may be accessed
 	// by means of variable-length character codes in a string to be shown.
 
+	font.UserFontMetricsLock.RLock()
 	ttf, ok := font.UserFontMetrics[fontName]
+	font.UserFontMetricsLock.RUnlock()
 	if !ok {
 		return nil, errors.Errorf("pdfcpu: font %s not available", fontName)
 	}
@@ -923,8 +930,9 @@ func type0FontDict(xRefTable *model.XRefTable, fontName, lang string, subFont bo
 }
 
 func trueTypeFontDict(xRefTable *model.XRefTable, fontName, fontLang string) (*types.IndirectRef, error) {
-
+	font.UserFontMetricsLock.RLock()
 	ttf, ok := font.UserFontMetrics[fontName]
+	font.UserFontMetricsLock.RUnlock()
 	if !ok {
 		return nil, errors.Errorf("pdfcpu: font %s not available", fontName)
 	}

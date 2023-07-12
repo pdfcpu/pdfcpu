@@ -191,7 +191,11 @@ func PrepBytes(xRefTable *XRefTable, s, fontName string, cjk, rtl bool) string {
 				xRefTable.UsedGIDs[fontName] = map[uint16]bool{}
 				usedGIDs = xRefTable.UsedGIDs[fontName]
 			}
+
+			font.UserFontMetricsLock.RLock()
 			ttf := font.UserFontMetrics[fontName]
+			font.UserFontMetricsLock.RUnlock()
+
 			for _, r := range s {
 				gid, ok := ttf.Chars[uint32(r)]
 				if ok {

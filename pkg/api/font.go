@@ -200,7 +200,9 @@ func planeString(i int) string {
 // CreateUserFontDemoFiles creates single page PDF for each Unicode plane covered.
 func CreateUserFontDemoFiles(dir, fn string) error {
 	w, h := 7800, 7800
+	font.UserFontMetricsLock.RLock()
 	ttf, ok := font.UserFontMetrics[fn]
+	font.UserFontMetricsLock.RUnlock()
 	if !ok {
 		return errors.Errorf("pdfcpu: font %s not available\n", fn)
 	}

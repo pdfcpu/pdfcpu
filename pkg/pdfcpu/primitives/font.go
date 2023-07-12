@@ -55,7 +55,9 @@ func (f *FormFont) validateISO639() error {
 }
 
 func (f *FormFont) validateScriptSupport() error {
+	font.UserFontMetricsLock.RLock()
 	fd, ok := font.UserFontMetrics[f.Name]
+	font.UserFontMetricsLock.RUnlock()
 	if !ok {
 		return errors.Errorf("pdfcpu: userfont %s not available", f.Name)
 	}
