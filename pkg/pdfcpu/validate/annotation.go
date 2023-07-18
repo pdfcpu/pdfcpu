@@ -1241,12 +1241,16 @@ func validateMarkupAnnotation(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 
 	// RC, optional, text string or stream, since V1.5
-	if err := validateStringOrStreamEntry(xRefTable, d, dictName, "RC", OPTIONAL, model.V15); err != nil {
+	sinceVersion := model.V15
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V14
+	}
+	if err := validateStringOrStreamEntry(xRefTable, d, dictName, "RC", OPTIONAL, sinceVersion); err != nil {
 		return err
 	}
 
 	// CreationDate, optional, date, since V1.5
-	sinceVersion := model.V15
+	sinceVersion = model.V15
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V13
 	}
@@ -1255,7 +1259,11 @@ func validateMarkupAnnotation(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 
 	// IRT, optional, (in reply to) dict, since V1.5
-	if err := validateIRTEntry(xRefTable, d, dictName, "IRT", OPTIONAL, model.V15); err != nil {
+	sinceVersion = model.V15
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V14
+	}
+	if err := validateIRTEntry(xRefTable, d, dictName, "IRT", OPTIONAL, sinceVersion); err != nil {
 		return err
 	}
 
