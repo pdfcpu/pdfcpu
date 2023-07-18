@@ -153,7 +153,7 @@ func TestInfoCommand(t *testing.T) {
 	msg := "TestInfoCommand"
 	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
 
-	cmd := cli.InfoCommand(inFile, nil, conf)
+	cmd := cli.InfoCommand([]string{inFile}, nil, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}

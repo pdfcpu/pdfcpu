@@ -181,6 +181,15 @@ func handleOptimizeDuplicateContentStreams(k, v string, c *Configuration) error 
 	return nil
 }
 
+func handleCreateBookmarks(k, v string, c *Configuration) error {
+	v = strings.ToLower(v)
+	if v != "true" && v != "false" {
+		return errors.Errorf("config key %s is boolean", k)
+	}
+	c.CreateBookmarks = v == "true"
+	return nil
+}
+
 func parseKeysPart1(k, v string, c *Configuration) (bool, error) {
 	switch k {
 
@@ -236,6 +245,9 @@ func parseKeysPart2(k, v string, c *Configuration) error {
 
 	case "optimizeDuplicateContentStreams":
 		return handleOptimizeDuplicateContentStreams(k, v, c)
+
+	case "createBookmarks":
+		return handleCreateBookmarks(k, v, c)
 	}
 
 	return nil

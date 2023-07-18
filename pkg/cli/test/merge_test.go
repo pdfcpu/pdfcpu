@@ -24,13 +24,12 @@ import (
 )
 
 // Merge all PDFs in testdir into out/test.pdf.
-func TestMergeCommand(t *testing.T) {
-	msg := "TestMergeCommand"
+func TestMergeCreateCommand(t *testing.T) {
+	msg := "TestMergeCreateCommand"
 
 	var inFiles []string
 	for _, f := range allPDFs(t, inDir) {
-		inFile := filepath.Join(inDir, f)
-		inFiles = append(inFiles, inFile)
+		inFiles = append(inFiles, filepath.Join(inDir, f))
 	}
 
 	outFile := filepath.Join(outDir, "test.pdf")
@@ -43,11 +42,28 @@ func TestMergeCommand(t *testing.T) {
 	if err := validateFile(t, outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
+}
+
+func TestMergeAppendCommand(t *testing.T) {
+	msg := "TestMergeAppendCommand"
+
+	var inFiles []string
+	for _, f := range allPDFs(t, inDir) {
+		if f == "test.pdf" {
+			continue
+		}
+		inFiles = append(inFiles, filepath.Join(inDir, f))
+	}
+
+	outFile := filepath.Join(outDir, "test.pdf")
 
 	if err := copyFile(t, filepath.Join(inDir, "test.pdf"), outFile); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	cmd = cli.MergeAppendCommand(inFiles, outFile, conf)
+
+	// Merge inFiles by concatenation in the order specified and write the result to outFile.
+	// If outFile already exists its content will be preserved and serves as the beginning of the merge result.
+	cmd := cli.MergeAppendCommand(inFiles, outFile, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}

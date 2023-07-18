@@ -55,24 +55,12 @@ func (bm Bookmark) Style() int {
 	return i
 }
 
-func positionToOutlineTreeLevel1(ctx *model.Context) (types.Dict, *types.IndirectRef, error) {
-	// Load Dests nametree.
-	if err := ctx.LocateNameTree("Dests", false); err != nil {
-		return nil, nil, err
-	}
+func positionToFirstBookmark(ctx *model.Context) (types.Dict, *types.IndirectRef, error) {
 
-	ir, err := ctx.Outlines()
-	if err != nil {
-		return nil, nil, err
-	}
-	if ir == nil {
-		return nil, nil, errNoBookmarks
-	}
+	// Position to first bookmark on top most level with more than 1 bookmarks.
+	// Default to top most single bookmark level.
 
-	d, err := ctx.DereferenceDict(*ir)
-	if err != nil {
-		return nil, nil, err
-	}
+	d := ctx.Outlines
 	if d == nil {
 		return nil, nil, errNoBookmarks
 	}
@@ -80,8 +68,9 @@ func positionToOutlineTreeLevel1(ctx *model.Context) (types.Dict, *types.Indirec
 	first := d.IndirectRefEntry("First")
 	last := d.IndirectRefEntry("Last")
 
-	// We consider Bookmarks at level 1 or 2 only.
-	for *first == *last {
+	var err error
+
+	for first != nil && last != nil && *first == *last {
 		if d, err = ctx.DereferenceDict(*first); err != nil {
 			return nil, nil, err
 		}
@@ -103,8 +92,8 @@ func outlineItemTitle(s string) string {
 	return sb.String()
 }
 
-// PageObjFromDestinationArray return an IndirectRef for this destinations page object.
-func PageObjFromDestinationArray(ctx *model.Context, dest types.Object) (*types.IndirectRef, error) {
+// PageObjFromDestinationArray returns an IndirectRef of the destinations page.
+func PageObjFromDestination(ctx *model.Context, dest types.Object) (*types.IndirectRef, error) {
 	var (
 		err error
 		ir  types.IndirectRef
@@ -174,7 +163,7 @@ func BookmarksForOutlineItem(ctx *model.Context, item *types.IndirectRef, parent
 			return nil, err
 		}
 
-		ir, err := PageObjFromDestinationArray(ctx, dest)
+		ir, err := PageObjFromDestination(ctx, dest)
 		if err != nil {
 			return nil, err
 		}
@@ -216,7 +205,12 @@ func BookmarksForOutlineItem(ctx *model.Context, item *types.IndirectRef, parent
 
 // BookmarksForOutline returns all ctx bookmark information recursively.
 func BookmarksForOutline(ctx *model.Context) ([]Bookmark, error) {
-	_, first, err := positionToOutlineTreeLevel1(ctx)
+
+	if err := ctx.LocateNameTree("Dests", false); err != nil {
+		return nil, err
+	}
+
+	_, first, err := positionToFirstBookmark(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -224,11 +218,25 @@ func BookmarksForOutline(ctx *model.Context) ([]Bookmark, error) {
 	return BookmarksForOutlineItem(ctx, first, nil)
 }
 
-func bmDict(bm Bookmark, pageIndRef, parent types.IndirectRef, s string) types.Dict {
+func bmDict(ctx *model.Context, bm Bookmark, pageIndRef, parent types.IndirectRef) (types.Dict, error) {
+
+	arr := types.Array{pageIndRef, types.Name("Fit")}
+	ir, err := ctx.IndRefForNewObject(arr)
+	if err != nil {
+		return nil, err
+	}
+
+	var o types.Object = *ir
+	ctx.Names["Dests"].Add(ctx.XRefTable, bm.Title, o)
+
+	s, err := types.EscapeUTF16String(bm.Title)
+	if err != nil {
+		return nil, err
+	}
 
 	d := types.Dict(map[string]types.Object{
-		"Dest":   types.Array{pageIndRef, types.Name("Fit")},
-		"Title":  types.StringLiteral(s),
+		"Dest":   types.StringLiteral(bm.Title),
+		"Title":  types.StringLiteral(*s),
 		"Parent": parent},
 	)
 
@@ -240,7 +248,7 @@ func bmDict(bm Bookmark, pageIndRef, parent types.IndirectRef, s string) types.D
 		d["F"] = types.Integer(style)
 	}
 
-	return d
+	return d, nil
 }
 
 func createOutlineItemDict(ctx *model.Context, bms []Bookmark, parent *types.IndirectRef, parentPageNr *int) (*types.IndirectRef, *types.IndirectRef, int, int, error) {
@@ -269,12 +277,11 @@ func createOutlineItemDict(ctx *model.Context, bms []Bookmark, parent *types.Ind
 			return nil, nil, 0, 0, err
 		}
 
-		s, err := types.Escape(types.EncodeUTF16String(bm.Title))
+		d, err := bmDict(ctx, bm, *pageIndRef, *parent)
 		if err != nil {
 			return nil, nil, 0, 0, err
 		}
 
-		d := bmDict(bm, *pageIndRef, *parent, *s)
 		ir, err := ctx.IndRefForNewObject(d)
 		if err != nil {
 			return nil, nil, 0, 0, err
@@ -328,6 +335,11 @@ func AddBookmarks(ctx *model.Context, bms []Bookmark, replace bool) error {
 		return err
 	}
 
+	if err := ctx.LocateNameTree("Dests", true); err != nil {
+		return err
+	}
+
+	// TODO Merge with existing outlines.
 	if !replace {
 		if _, ok := rootDict.Find("Outlines"); ok {
 			return errExistingBookmarks

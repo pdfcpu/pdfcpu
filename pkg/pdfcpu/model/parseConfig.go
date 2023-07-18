@@ -45,6 +45,7 @@ type configuration struct {
 	DateFormat                      string `yaml:"dateFormat"`
 	HeaderBufSize                   int    `yaml:"headerBufSize"`
 	OptimizeDuplicateContentStreams bool   `yaml:"optimizeDuplicateContentStreams"`
+	CreateBookmarks                 bool   `yaml:"createBookmarks"`
 }
 
 func loadedConfig(c configuration, configPath string) *Configuration {
@@ -93,6 +94,7 @@ func loadedConfig(c configuration, configPath string) *Configuration {
 	conf.DateFormat = c.DateFormat
 	conf.HeaderBufSize = c.HeaderBufSize
 	conf.OptimizeDuplicateContentStreams = c.OptimizeDuplicateContentStreams
+	conf.CreateBookmarks = c.CreateBookmarks
 
 	return &conf
 }

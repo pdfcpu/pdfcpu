@@ -128,10 +128,17 @@ func validateOutlineTree(xRefTable *model.XRefTable, first, last *types.Indirect
 		err       error
 	)
 
+	m := map[int]bool{}
+
 	// Process linked list of outline items.
 	for ir := first; ir != nil; ir = d.IndirectRefEntry("Next") {
 
 		objNumber = ir.ObjectNumber.Value()
+
+		if m[objNumber] {
+			return 0, 0, errors.New("pdfcpu: validateOutlineTree: circular outline items")
+		}
+		m[objNumber] = true
 
 		total++
 
@@ -203,6 +210,8 @@ func validateOutlines(xRefTable *model.XRefTable, rootDict types.Dict, required 
 		return err
 	}
 
+	xRefTable.Outlines = d
+
 	// Type, optional, name
 	_, err = validateNameEntry(xRefTable, d, "outlineDict", "Type", OPTIONAL, model.V10, func(s string) bool { return s == "Outlines" || s == "Outline" })
 	if err != nil {
@@ -236,31 +245,26 @@ func validateOutlines(xRefTable *model.XRefTable, rootDict types.Dict, required 
 	if visible == 0 {
 		if count != nil {
 			if xRefTable.ValidationMode == model.ValidationStrict && *count == 0 {
-				println("x")
 				return errors.New("pdfcpu: validateOutlines: corrupted, root \"Count\" shall be omitted if there are no open outline items")
 			}
 			if xRefTable.ValidationMode == model.ValidationStrict && *count != total {
-				println("y")
-				return errors.Errorf("pdfcpu: validateOutlines: corrupted, root \"Count\" expected to be %d", total)
+				return errors.Errorf("pdfcpu: validateOutlines: corrupted, root \"Count\" = %d, expected to be %d", *count, total)
 			}
 			if xRefTable.ValidationMode == model.ValidationRelaxed && *count != total && *count != -total {
-				println("y")
-				return errors.Errorf("pdfcpu: validateOutlines: corrupted, root \"Count\" expected to be %d", total)
+				return errors.Errorf("pdfcpu: validateOutlines: corrupted, root \"Count\" = %d, expected to be %d", *count, total)
 			}
 		}
 	}
 
 	if visible > 0 {
 		if count == nil {
-			return errors.Errorf("pdfcpu: validateOutlines: corrupted, root \"Count\" expected to be %d", total+visible)
+			return errors.Errorf("pdfcpu: validateOutlines: corrupted, root \"Count\" is nil, expected to be %d", total+visible)
 		}
 		if xRefTable.ValidationMode == model.ValidationStrict && *count != total+visible {
-			return errors.Errorf("pdfcpu: validateOutlines: corrupted, root \"Count\" expected to be %d", total+visible)
+			return errors.Errorf("pdfcpu: validateOutlines: corrupted, root \"Count\" = %d, expected to be %d", *count, total+visible)
 		}
 		if xRefTable.ValidationMode == model.ValidationRelaxed && *count != total+visible && *count != -total-visible {
-			println(total)
-			println(visible)
-			return errors.Errorf("pdfcpu: validateOutlines: corrupted, root \"Count\" expected to be %d", total+visible)
+			return errors.Errorf("pdfcpu: validateOutlines: corrupted, root \"Count\" =%d, expected to be %d", *count, total+visible)
 		}
 	}
 

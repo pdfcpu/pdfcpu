@@ -186,9 +186,9 @@ func (ctx *Context) ListAttachments() ([]Attachment, error) {
 
 	aa := []Attachment{}
 
-	createAttachmentStub := func(xRefTable *XRefTable, id string, o types.Object) error {
+	createAttachmentStub := func(xRefTable *XRefTable, id string, o *types.Object) error {
 		decode := false
-		_, desc, fileName, modTime, err := fileSpecStreamDictInfo(xRefTable, id, o, decode)
+		_, desc, fileName, modTime, err := fileSpecStreamDictInfo(xRefTable, id, *o, decode)
 		if err != nil {
 			return err
 		}
@@ -223,7 +223,8 @@ func (ctx *Context) AddAttachment(a Attachment, useCollection bool) error {
 		return err
 	}
 
-	return xRefTable.Names["EmbeddedFiles"].Add(xRefTable, types.EncodeUTF16String(a.ID), *ir)
+	var o types.Object = *ir
+	return xRefTable.Names["EmbeddedFiles"].Add(xRefTable, types.EncodeUTF16String(a.ID), o)
 }
 
 var errContentMatch = errors.New("name tree content match")
@@ -236,15 +237,15 @@ func (ctx *Context) SearchEmbeddedFilesNameTreeNodeByContent(s string) (*string,
 		v types.Object
 	)
 
-	identifyAttachmentStub := func(xRefTable *XRefTable, id string, o types.Object) error {
+	identifyAttachmentStub := func(xRefTable *XRefTable, id string, o *types.Object) error {
 		decode := false
-		_, desc, fileName, _, err := fileSpecStreamDictInfo(xRefTable, id, o, decode)
+		_, desc, fileName, _, err := fileSpecStreamDictInfo(xRefTable, id, *o, decode)
 		if err != nil {
 			return err
 		}
 		if s == fileName || s == desc {
 			k = &id
-			v = o
+			v = *o
 			return errContentMatch
 		}
 		return nil
@@ -353,9 +354,9 @@ func (ctx *Context) ExtractAttachments(ids []string) ([]Attachment, error) {
 
 	aa := []Attachment{}
 
-	createAttachment := func(xRefTable *XRefTable, id string, o types.Object) error {
+	createAttachment := func(xRefTable *XRefTable, id string, o *types.Object) error {
 		decode := true
-		sd, desc, fileName, modTime, err := fileSpecStreamDictInfo(xRefTable, id, o, decode)
+		sd, desc, fileName, modTime, err := fileSpecStreamDictInfo(xRefTable, id, *o, decode)
 		if err != nil {
 			return err
 		}
@@ -381,7 +382,7 @@ func (ctx *Context) ExtractAttachments(ids []string) ([]Attachment, error) {
 				}
 				v = o
 			}
-			if err := createAttachment(ctx.XRefTable, id, v); err != nil {
+			if err := createAttachment(ctx.XRefTable, id, &v); err != nil {
 				return nil, err
 			}
 		}

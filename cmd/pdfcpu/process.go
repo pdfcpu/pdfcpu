@@ -319,6 +319,13 @@ func processMergeCommand(conf *model.Configuration) {
 
 	}
 
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+		conf.CreateBookmarks = bookmarks
+	}
+
+	conf.CreateBookmarks = bookmarks
+
 	var cmd *cli.Command
 
 	switch mode {
@@ -1301,14 +1308,26 @@ func processDiplayUnit(conf *model.Configuration) {
 }
 
 func processInfoCommand(conf *model.Configuration) {
-	if len(flag.Args()) != 1 {
+	if len(flag.Args()) < 1 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageInfo)
 		os.Exit(1)
 	}
 
-	inFile := flag.Arg(0)
-	if conf.CheckFileNameExt {
-		ensurePDFExtension(inFile)
+	filesIn := []string{}
+	for _, arg := range flag.Args() {
+		if strings.Contains(arg, "*") {
+			matches, err := filepath.Glob(arg)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s", err)
+				os.Exit(1)
+			}
+			filesIn = append(filesIn, matches...)
+			continue
+		}
+		if conf.CheckFileNameExt {
+			ensurePDFExtension(arg)
+		}
+		filesIn = append(filesIn, arg)
 	}
 
 	selectedPages, err := api.ParsePageSelection(selectedPages)
@@ -1319,7 +1338,7 @@ func processInfoCommand(conf *model.Configuration) {
 
 	processDiplayUnit(conf)
 
-	process(cli.InfoCommand(inFile, selectedPages, conf))
+	process(cli.InfoCommand(filesIn, selectedPages, conf))
 }
 
 func processListFontsCommand(conf *model.Configuration) {

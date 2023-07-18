@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
 func TestMergeCreateNew(t *testing.T) {
@@ -31,11 +32,16 @@ func TestMergeCreateNew(t *testing.T) {
 		filepath.Join(inDir, "Acroforms2.pdf"),
 		filepath.Join(inDir, "adobe_errata.pdf"),
 	}
-	outFile := filepath.Join(outDir, "test.pdf")
+	outFile := filepath.Join(outDir, "out.pdf")
 
 	// Merge inFiles by concatenation in the order specified and write the result to outFile.
 	// outFile will be overwritten.
-	if err := api.MergeCreateFile(inFiles, outFile, nil); err != nil {
+
+	// Bookmarks for the merged document will be created/preserved per default (see config.yaml)
+	conf := model.NewDefaultConfiguration()
+	//conf.CreateBookmarks = false
+
+	if err := api.MergeCreateFile(inFiles, outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }

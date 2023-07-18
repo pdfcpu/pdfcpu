@@ -157,6 +157,7 @@ type XRefTable struct {
 	Optimized      bool
 	Watermarked    bool
 	AcroForm       types.Dict
+	Outlines       types.Dict
 	SignatureExist bool
 	AppendOnly     bool
 
@@ -936,15 +937,6 @@ func (xRefTable *XRefTable) Pages() (*types.IndirectRef, error) {
 	return rootDict.IndirectRefEntry("Pages"), nil
 }
 
-// Outlines returns the Outlines reference contained in the catalog.
-func (xRefTable *XRefTable) Outlines() (*types.IndirectRef, error) {
-	rootDict, err := xRefTable.Catalog()
-	if err != nil {
-		return nil, err
-	}
-	return rootDict.IndirectRefEntry("Outlines"), nil
-}
-
 // MissingObjects returns the number of objects that were not written
 // plus the corresponding comma separated string representation.
 func (xRefTable *XRefTable) MissingObjects() (int, *string) {
@@ -1169,7 +1161,6 @@ func (xRefTable *XRefTable) bindNameTreeNode(name string, n *Node, root bool) er
 		n.D = dict
 	} else {
 		if root {
-			// Update root object after possible tree modification after removal of empty kid.
 			namesDict, err := xRefTable.NamesDict()
 			if err != nil {
 				return err
@@ -1202,8 +1193,7 @@ func (xRefTable *XRefTable) bindNameTreeNode(name string, n *Node, root bool) er
 
 	kids := types.Array{}
 	for _, k := range n.Kids {
-		err := xRefTable.bindNameTreeNode(name, k, false)
-		if err != nil {
+		if err := xRefTable.bindNameTreeNode(name, k, false); err != nil {
 			return err
 		}
 		indRef, err := xRefTable.IndRefForNewObject(k.D)
@@ -1303,14 +1293,21 @@ func (xRefTable *XRefTable) LocateNameTree(nameTreeName string, ensure bool) err
 // NamesDict returns the dict that contains all name trees.
 func (xRefTable *XRefTable) NamesDict() (types.Dict, error) {
 
-	rootDict, err := xRefTable.Catalog()
+	d, err := xRefTable.Catalog()
 	if err != nil {
 		return nil, err
 	}
 
-	o, found := rootDict.Find("Names")
+	o, found := d.Find("Names")
 	if !found {
-		return nil, errors.New("pdfcpu: NamesDict: root entry \"Names\" missing")
+		dict := types.NewDict()
+
+		ir, err := xRefTable.IndRefForNewObject(dict)
+		if err != nil {
+			return nil, err
+		}
+		d["Names"] = *ir
+		return d, nil
 	}
 
 	return xRefTable.DereferenceDict(o)

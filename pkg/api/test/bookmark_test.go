@@ -45,7 +45,7 @@ func TestAddSimpleBookmarks(t *testing.T) {
 		{PageFrom: 16, Title: "Page 16: The birthday of Smalltalk", Color: &bookmarkColor},
 		{PageFrom: 17, Title: "Page 17: Gray", Color: &color.Gray},
 		{PageFrom: 18, Title: "Page 18: Red", Color: &color.Red},
-		{PageFrom: 19, Title: "Page 19: Bold Red ", Color: &color.Red, Bold: true},
+		{PageFrom: 19, Title: "Page 19: Bold Red", Color: &color.Red, Bold: true},
 	}
 
 	replace := true // Replace existing bookmarks.

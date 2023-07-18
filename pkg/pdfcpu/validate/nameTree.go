@@ -581,6 +581,8 @@ func validateNameTreeValue(name string, xRefTable *model.XRefTable, o types.Obje
 
 func validateNameTreeDictNamesEntry(xRefTable *model.XRefTable, d types.Dict, name string, node *model.Node) (firstKey, lastKey string, err error) {
 
+	//fmt.Printf("validateNameTreeDictNamesEntry begin %s\n", d)
+
 	// Names: array of the form [key1 value1 key2 value2 ... key n value n]
 	o, found := d.Find("Names")
 	if !found {
@@ -601,7 +603,8 @@ func validateNameTreeDictNamesEntry(xRefTable *model.XRefTable, d types.Dict, na
 	}
 
 	var key string
-	for i, o := range a {
+	for i := 0; i < len(a); i++ {
+		o := a[i]
 
 		if i%2 == 0 {
 
@@ -636,6 +639,7 @@ func validateNameTreeDictNamesEntry(xRefTable *model.XRefTable, d types.Dict, na
 		}
 
 		node.AddToLeaf(key, o)
+
 	}
 
 	return firstKey, lastKey, nil
@@ -688,6 +692,8 @@ func validateNameTreeDictLimitsEntry(xRefTable *model.XRefTable, d types.Dict, f
 }
 
 func validateNameTree(xRefTable *model.XRefTable, name string, d types.Dict, root bool) (string, string, *model.Node, error) {
+
+	//fmt.Printf("validateNameTree begin %s\n", d)
 
 	// see 7.7.4
 
@@ -755,6 +761,8 @@ func validateNameTree(xRefTable *model.XRefTable, name string, d types.Dict, roo
 	// We track limits for all nodes internally.
 	node.Kmin = kmin
 	node.Kmax = kmax
+
+	//fmt.Println("validateNameTree end")
 
 	return kmin, kmax, node, nil
 }

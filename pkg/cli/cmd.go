@@ -542,14 +542,14 @@ func BookletCommand(inFiles []string, outFile string, pageSelection []string, nu
 }
 
 // InfoCommand creates a new command to output information about inFile.
-func InfoCommand(inFile string, pageSelection []string, conf *model.Configuration) *Command {
+func InfoCommand(inFiles []string, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
 	conf.Cmd = model.INFO
 	return &Command{
 		Mode:          model.INFO,
-		InFile:        &inFile,
+		InFiles:       inFiles,
 		PageSelection: pageSelection,
 		Conf:          conf}
 }

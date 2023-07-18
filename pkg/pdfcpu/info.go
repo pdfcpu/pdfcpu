@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -359,6 +360,18 @@ func addFlagsToInfoDigest(ctx *model.Context, ss *[]string, separator string) {
 		}
 	}
 
+	s = "No"
+	if ctx.Outlines != nil {
+		s = "Yes"
+	}
+	*ss = append(*ss, fmt.Sprintf("            Outlines: %s", s))
+
+	s = "No"
+	if len(ctx.Names) > 0 {
+		s = "Yes"
+	}
+	*ss = append(*ss, fmt.Sprintf("               Names: %s", s))
+
 	*ss = append(*ss, separator)
 
 	s = "No"
@@ -370,8 +383,10 @@ func addFlagsToInfoDigest(ctx *model.Context, ss *[]string, separator string) {
 
 // InfoDigest returns info about ctx.
 func InfoDigest(ctx *model.Context, selectedPages types.IntSet) ([]string, error) {
-	var separator = "............................................"
+	var separator = draw.HorSepLine([]int{44})
+
 	var ss []string
+
 	v := ctx.HeaderVersion
 	if ctx.RootVersion != nil {
 		v = ctx.RootVersion

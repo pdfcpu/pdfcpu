@@ -222,6 +222,10 @@ func initFlags() {
 	flag.BoolVar(&sorted, "sort", false, sortUsage)
 	flag.BoolVar(&sorted, "s", false, sortUsage)
 
+	bookmarksUsage := "create bookmarks while merging"
+	flag.BoolVar(&bookmarks, "bookmarks", true, bookmarksUsage)
+	flag.BoolVar(&bookmarks, "b", true, bookmarksUsage)
+
 	flag.BoolVar(&verbose, "verbose", false, "")
 	flag.BoolVar(&verbose, "v", false, "")
 	flag.BoolVar(&veryVerbose, "vv", false, "")

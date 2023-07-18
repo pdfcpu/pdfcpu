@@ -202,6 +202,9 @@ type Configuration struct {
 
 	// Optimize duplicate content streams across pages.
 	OptimizeDuplicateContentStreams bool
+
+	// Merge creates bookmarks
+	CreateBookmarks bool
 }
 
 // ConfigPath defines the location of pdfcpu's configuration directory.
@@ -273,6 +276,7 @@ func newDefaultConfiguration() *Configuration {
 		DateFormat:                      "2006-01-02",
 		HeaderBufSize:                   100,
 		OptimizeDuplicateContentStreams: false,
+		CreateBookmarks:                 true,
 	}
 }
 
@@ -339,7 +343,8 @@ func (c Configuration) String() string {
 		"TimestampFormat:	%s\n"+
 		"DateFormat:		%s\n"+
 		"HeaderBufSize:		%d\n"+
-		"OptimizeDuplicateContentStreams %t\n",
+		"OptimizeDuplicateContentStreams %t\n"+
+		"CreateBookmarks %t\n",
 		path,
 		c.CheckFileNameExt,
 		c.Reader15,
@@ -356,6 +361,7 @@ func (c Configuration) String() string {
 		c.DateFormat,
 		c.HeaderBufSize,
 		c.OptimizeDuplicateContentStreams,
+		c.CreateBookmarks,
 	)
 }
 

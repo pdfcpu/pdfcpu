@@ -17,6 +17,7 @@
 package api
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -52,10 +53,35 @@ func Info(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration) (
 
 // InfoFile returns information about inFile.
 func InfoFile(inFile string, selectedPages []string, conf *model.Configuration) ([]string, error) {
+
 	f, err := os.Open(inFile)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
-	return Info(f, selectedPages, conf)
+	ss, err := Info(f, selectedPages, conf)
+	s := fmt.Sprintf("%s:", inFile)
+	return append([]string{s}, ss...), err
+}
+
+// InfoFile returns information about inFile.
+func InfoFiles(inFiles []string, selectedPages []string, conf *model.Configuration) ([]string, error) {
+
+	var ss []string
+
+	for i, fn := range inFiles {
+		if i > 0 {
+			ss = append(ss, "")
+		}
+		ssx, err := InfoFile(fn, selectedPages, conf)
+		if err != nil {
+			if len(inFiles) == 1 {
+				return nil, err
+			}
+			fmt.Fprintf(os.Stderr, "%s: %v\n", fn, err)
+		}
+		ss = append(ss, ssx...)
+	}
+
+	return ss, nil
 }

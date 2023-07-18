@@ -122,11 +122,12 @@ The split modes are:
                    span will be ignored.
                    Assumption: inFile contains an outline dictionary.`
 
-	usageMerge     = "usage: pdfcpu merge [-m(ode) create|append] [-s(ort)] outFile inFile..." + generalFlags
+	usageMerge     = "usage: pdfcpu merge [-m(ode) create|append] [-s(ort) -b(ookmarks)] outFile inFile..." + generalFlags
 	usageLongMerge = `Concatenate a sequence of PDFs/inFiles into outFile.
 
       mode ... merge mode (defaults to create)
       sort ... sort inFiles by file name
+ bookmarks ... create bookmarks
    outFile ... output pdf file
     inFile ... a list of pdf files subject to concatenation.
     
@@ -135,7 +136,9 @@ The merge modes are:
     create ... outFile will be created and possibly overwritten (default).
 
     append ... if outFile does not exist, it will be created (like in default mode).
-               if outFile already exists, inFiles will be appended to outFile.`
+               if outFile already exists, inFiles will be appended to outFile.
+               
+Skip bookmark creation like so: -bookmarks=false`
 
 	usagePageSelection = `'-pages' selects pages for processing and is a comma separated list of expressions:
 
@@ -769,11 +772,11 @@ Examples: pdfcpu grid out.pdf 1 10 in.pdf
 	usageSelectedPages     = "usage: pdfcpu selectedpages"
 	usageLongSelectedPages = "Print definition of the -pages flag."
 
-	usageInfo     = "usage: pdfcpu info [-p(ages) selectedPages] inFile" + generalFlags
+	usageInfo     = "usage: pdfcpu info [-p(ages) selectedPages] inFile..." + generalFlags
 	usageLongInfo = `Print info about a PDF file.
    
    pages ... Please refer to "pdfcpu selectedpages"
-  inFile ... input pdf file`
+  inFile ... a list of pdf input files`
 
 	usageFontsList       = "pdfcpu fonts list"
 	usageFontsInstall    = "pdfcpu fonts install fontFiles..."
