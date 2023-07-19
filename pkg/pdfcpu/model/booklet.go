@@ -23,7 +23,6 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
-
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 

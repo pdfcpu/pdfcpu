@@ -638,7 +638,7 @@ func validateNameTreeDictNamesEntry(xRefTable *model.XRefTable, d types.Dict, na
 			return "", "", err
 		}
 
-		node.AddToLeaf(key, o)
+		node.AppendToNames(key, o)
 
 	}
 

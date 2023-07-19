@@ -1221,9 +1221,7 @@ func validateIRTEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryN
 	return nil
 }
 
-func validateMarkupAnnotation(xRefTable *model.XRefTable, d types.Dict) error {
-
-	dictName := "markupAnnot"
+func validateMarkupAnnotationPart1(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 
 	// T, optional, text string, since V1.1
 	if _, err := validateStringEntry(xRefTable, d, dictName, "T", OPTIONAL, model.V11, nil); err != nil {
@@ -1258,8 +1256,13 @@ func validateMarkupAnnotation(xRefTable *model.XRefTable, d types.Dict) error {
 		return err
 	}
 
+	return nil
+}
+
+func validateMarkupAnnotationPart2(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+
 	// IRT, optional, (in reply to) dict, since V1.5
-	sinceVersion = model.V15
+	sinceVersion := model.V15
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V14
 	}
@@ -1293,10 +1296,27 @@ func validateMarkupAnnotation(xRefTable *model.XRefTable, d types.Dict) error {
 		return err
 	}
 	if d1 != nil {
-		err = validateExDataDict(xRefTable, d1)
+		if err := validateExDataDict(xRefTable, d1); err != nil {
+			return err
+		}
 	}
 
-	return err
+	return nil
+}
+
+func validateMarkupAnnotation(xRefTable *model.XRefTable, d types.Dict) error {
+
+	dictName := "markupAnnot"
+
+	if err := validateMarkupAnnotationPart1(xRefTable, d, dictName); err != nil {
+		return err
+	}
+
+	if err := validateMarkupAnnotationPart2(xRefTable, d, dictName); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func validateEntryP(xRefTable *model.XRefTable, d types.Dict, dictName string, required bool, sinceVersion model.Version) error {

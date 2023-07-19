@@ -24,11 +24,10 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/font"
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
@@ -126,7 +125,7 @@ func TestCoreFontDemoPDF(t *testing.T) {
 	msg := "TestCoreFontDemoPDF"
 	w, h := 600, 600
 	for _, fn := range font.CoreFontNames() {
-		xRefTable, err := pdf.CreateDemoXRef()
+		xRefTable, err := pdfcpu.CreateDemoXRef()
 		if err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
@@ -135,7 +134,7 @@ func TestCoreFontDemoPDF(t *testing.T) {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
 		p := createCoreFontDemoPage(xRefTable, w, h, fn)
-		if err = pdf.AddPageTreeWithSamplePage(xRefTable, rootDict, p); err != nil {
+		if err = pdfcpu.AddPageTreeWithSamplePage(xRefTable, rootDict, p); err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
 		outFile := filepath.Join("..", "..", "samples", "fonts", "core", fn+".pdf")

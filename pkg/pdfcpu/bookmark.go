@@ -218,9 +218,14 @@ func BookmarksForOutline(ctx *model.Context) ([]Bookmark, error) {
 	return BookmarksForOutlineItem(ctx, first, nil)
 }
 
-func bmDict(ctx *model.Context, bm Bookmark, pageIndRef, parent types.IndirectRef) (types.Dict, error) {
+func bmDict(ctx *model.Context, bm Bookmark, parent types.IndirectRef) (types.Dict, error) {
 
-	arr := types.Array{pageIndRef, types.Name("Fit")}
+	_, pageIndRef, _, err := ctx.PageDict(bm.PageFrom, false)
+	if err != nil {
+		return nil, err
+	}
+
+	arr := types.Array{*pageIndRef, types.Name("Fit")}
 	ir, err := ctx.IndRefForNewObject(arr)
 	if err != nil {
 		return nil, err
@@ -272,12 +277,7 @@ func createOutlineItemDict(ctx *model.Context, bms []Bookmark, parent *types.Ind
 
 		total++
 
-		_, pageIndRef, _, err := ctx.PageDict(bm.PageFrom, false)
-		if err != nil {
-			return nil, nil, 0, 0, err
-		}
-
-		d, err := bmDict(ctx, bm, *pageIndRef, *parent)
+		d, err := bmDict(ctx, bm, *parent)
 		if err != nil {
 			return nil, nil, 0, 0, err
 		}

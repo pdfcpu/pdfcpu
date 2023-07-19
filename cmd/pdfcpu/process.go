@@ -252,6 +252,26 @@ func processSplitCommand(conf *model.Configuration) {
 	process(cli.SplitCommand(inFile, outDir, span, conf))
 }
 
+func sortFiles(filesIn []string) {
+
+	// See PR #631
+
+	re := regexp.MustCompile(`\d+`)
+
+	sort.Slice(
+		filesIn,
+		func(i, j int) bool {
+			ssi := re.FindAllString(filesIn[i], 1)
+			ssj := re.FindAllString(filesIn[j], 1)
+			if len(ssi) == 0 || len(ssj) == 0 {
+				return filesIn[i] <= filesIn[j]
+			}
+			i1, _ := strconv.Atoi(ssi[0])
+			i2, _ := strconv.Atoi(ssj[0])
+			return i1 < i2
+		})
+}
+
 func processMergeCommand(conf *model.Configuration) {
 	if mode == "" {
 		mode = "create"
@@ -295,28 +315,7 @@ func processMergeCommand(conf *model.Configuration) {
 	}
 
 	if sorted {
-
-		// See PR #631
-
-		re := regexp.MustCompile(`\d+`)
-
-		sort.Slice(
-			filesIn,
-			func(i, j int) bool {
-
-				ssi := re.FindAllString(filesIn[i], 1)
-				ssj := re.FindAllString(filesIn[j], 1)
-
-				if len(ssi) == 0 || len(ssj) == 0 {
-					return filesIn[i] <= filesIn[j]
-				}
-
-				i1, _ := strconv.Atoi(ssi[0])
-				i2, _ := strconv.Atoi(ssj[0])
-
-				return i1 < i2
-			})
-
+		sortFiles(filesIn)
 	}
 
 	if conf == nil {

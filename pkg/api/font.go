@@ -26,11 +26,10 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
@@ -206,7 +205,7 @@ func CreateUserFontDemoFiles(dir, fn string) error {
 	}
 	// Create a single page PDF for each Unicode plane with existing glyphs.
 	for i := range ttf.Planes {
-		xRefTable, err := pdf.CreateDemoXRef()
+		xRefTable, err := pdfcpu.CreateDemoXRef()
 		if err != nil {
 			return err
 		}
@@ -216,7 +215,7 @@ func CreateUserFontDemoFiles(dir, fn string) error {
 		if err != nil {
 			return err
 		}
-		if err = pdf.AddPageTreeWithSamplePage(xRefTable, rootDict, p); err != nil {
+		if err = pdfcpu.AddPageTreeWithSamplePage(xRefTable, rootDict, p); err != nil {
 			return err
 		}
 		fileName := filepath.Join(dir, fn+"_"+planeString(i)+".pdf")

@@ -23,7 +23,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
@@ -298,7 +297,7 @@ func pageInfo(ctx *model.Context, selectedPages types.IntSet) ([]string, error) 
 	return ss, nil
 }
 
-func addFlagsToInfoDigest(ctx *model.Context, ss *[]string, separator string) {
+func addFlagsToInfoDigestPart1(ctx *model.Context, ss *[]string, separator string) {
 
 	*ss = append(*ss, separator)
 
@@ -331,8 +330,11 @@ func addFlagsToInfoDigest(ctx *model.Context, ss *[]string, separator string) {
 		s = "Yes"
 	}
 	*ss = append(*ss, fmt.Sprintf("Using object streams: %s", s))
+}
 
-	s = "No"
+func addFlagsToInfoDigestPart2(ctx *model.Context, ss *[]string, separator string) {
+
+	s := "No"
 	if ctx.Watermarked {
 		s = "Yes"
 	}
@@ -379,6 +381,11 @@ func addFlagsToInfoDigest(ctx *model.Context, ss *[]string, separator string) {
 		s = "Yes"
 	}
 	*ss = append(*ss, fmt.Sprintf("%20s: %s", "Encrypted", s))
+}
+
+func addFlagsToInfoDigest(ctx *model.Context, ss *[]string, separator string) {
+	addFlagsToInfoDigestPart1(ctx, ss, separator)
+	addFlagsToInfoDigestPart2(ctx, ss, separator)
 }
 
 // InfoDigest returns info about ctx.

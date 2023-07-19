@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/font"
-
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 

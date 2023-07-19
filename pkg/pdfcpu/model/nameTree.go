@@ -97,8 +97,8 @@ func (n Node) Value(k string) (types.Object, bool) {
 	return nil, false
 }
 
-// AddToLeaf adds an entry to a leaf.
-func (n *Node) AddToLeaf(k string, v types.Object) {
+// AppendToNames adds an entry to a leaf node (for internalizing name trees).
+func (n *Node) AppendToNames(k string, v types.Object) {
 
 	//fmt.Printf("AddToLeaf: %s %v (%v)\n\n", k, v, &v)
 

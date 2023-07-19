@@ -186,27 +186,7 @@ func (f Form) listBoxValuesAndLock(id, name string) ([]string, bool, bool) {
 	return nil, false, false
 }
 
-func extractRadioButtonGroup(xRefTable *model.XRefTable, page int, d types.Dict, id, name string, locked bool) (*RadioButtonGroup, error) {
-
-	rbg := &RadioButtonGroup{Pages: []int{page}, ID: id, Name: name, Locked: locked}
-
-	if s := d.NameEntry("DV"); s != nil {
-		n, err := types.DecodeName(*s)
-		if err != nil {
-			return nil, err
-		}
-		rbg.Default = n
-	}
-
-	if s := d.NameEntry("V"); s != nil {
-		n, err := types.DecodeName(*s)
-		if err != nil {
-			return nil, err
-		}
-		if n != "Off" {
-			rbg.Value = n
-		}
-	}
+func extractRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([]string, error) {
 
 	var opts []string
 	p := 0
@@ -248,6 +228,36 @@ func extractRadioButtonGroup(xRefTable *model.XRefTable, page int, d types.Dict,
 				opts = append(opts, k)
 			}
 		}
+	}
+
+	return opts, nil
+}
+
+func extractRadioButtonGroup(xRefTable *model.XRefTable, page int, d types.Dict, id, name string, locked bool) (*RadioButtonGroup, error) {
+
+	rbg := &RadioButtonGroup{Pages: []int{page}, ID: id, Name: name, Locked: locked}
+
+	if s := d.NameEntry("DV"); s != nil {
+		n, err := types.DecodeName(*s)
+		if err != nil {
+			return nil, err
+		}
+		rbg.Default = n
+	}
+
+	if s := d.NameEntry("V"); s != nil {
+		n, err := types.DecodeName(*s)
+		if err != nil {
+			return nil, err
+		}
+		if n != "Off" {
+			rbg.Value = n
+		}
+	}
+
+	opts, err := extractRadioButtonGroupOptions(xRefTable, d)
+	if err != nil {
+		return nil, err
 	}
 
 	rbg.Options = opts

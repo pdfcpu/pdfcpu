@@ -485,6 +485,34 @@ func visited(o types.Object, visited []types.Object) bool {
 	return false
 }
 
+func optimizeForm(ctx *model.Context, osd *types.StreamDict, rName string, rDict types.Dict, objNr, pageNumber, pageObjNumber int, vis []types.Object) error {
+
+	ir, err := optimizeXObjectForm(ctx, osd, rName, objNr)
+	if err != nil {
+		return err
+	}
+
+	if ir != nil {
+		rDict[rName] = *ir
+		return nil
+	}
+
+	o, found := osd.Find("Resources")
+	if !found {
+		return nil
+	}
+
+	indRef, ok := o.(types.IndirectRef)
+	if ok {
+		if visited(indRef, vis) {
+			return nil
+		}
+		vis = append(vis, indRef)
+	}
+
+	return optimizeFormResources(ctx, o, pageNumber, pageObjNumber, vis)
+}
+
 func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNumber, pageObjNumber int, vis []types.Object) error {
 	log.Optimize.Printf("optimizeXObjectResourcesDict page#%dbegin: %s\n", pageObjNumber, rDict)
 	pageImages := pageImages(ctx, pageNumber)
@@ -531,29 +559,8 @@ func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNumb
 		}
 
 		if *osd.Subtype() == "Form" {
-			ir, err := optimizeXObjectForm(ctx, osd, rName, objNr)
-			if err != nil {
-				return err
-			}
-			if ir != nil {
-				rDict[rName] = *ir
-				continue
-			}
 
-			o, found := osd.Find("Resources")
-			if !found {
-				continue
-			}
-
-			indRef, ok := o.(types.IndirectRef)
-			if ok {
-				if visited(indRef, vis) {
-					continue
-				}
-				vis = append(vis, indRef)
-			}
-
-			if err := optimizeFormResources(ctx, o, pageNumber, pageObjNumber, vis); err != nil {
+			if err := optimizeForm(ctx, osd, rName, rDict, objNr, pageNumber, pageObjNumber, vis); err != nil {
 				return err
 			}
 

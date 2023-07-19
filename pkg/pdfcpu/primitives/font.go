@@ -158,67 +158,6 @@ func FormFontNameAndLangForID(xRefTable *model.XRefTable, indRef types.IndirectR
 	return &fName, fLang, nil
 }
 
-// func extractFontDetails(
-// 	xRefTable *model.XRefTable,
-// 	indRef types.IndirectRef,
-// 	fonts map[string]types.IndirectRef) (string, string, string, error) {
-
-// 	sd, _, _ := xRefTable.DereferenceStreamDict(indRef)
-
-// 	d := sd.DictEntry("Resources")
-// 	if d == nil {
-// 		return "", "", "", errors.New("pdfcpu: missing resource dict")
-// 	}
-
-// 	d1 := d.DictEntry("Font")
-// 	if d1 == nil {
-// 		// TODO if no font in AP then must be in containing Widget annotation.
-// 		return "", "", "", errors.New("pdfcpu: missing font resource dict")
-// 	}
-
-// 	if len(d1) != 1 {
-// 		return "", "", "", errors.New("pdfcpu: corrupt form resource dict")
-// 	}
-
-// 	var fontID string
-// 	var ir types.IndirectRef
-// 	for k, v := range d1 {
-// 		fontID = k
-// 		ir = v.(types.IndirectRef)
-// 	}
-
-// 	fName, fLang, err := FormFontNameAndLangForID(xRefTable, ir)
-// 	if err != nil {
-// 		return "", "", "", err
-// 	}
-
-// 	if fName == nil {
-// 		return "", "", "", errors.Errorf("pdfcpu: Unable to detect fontName for: %s", fontID)
-// 	}
-
-// 	var lang string
-// 	if fLang != nil {
-// 		lang = *fLang
-// 	}
-
-// 	if font.IsUserFont(*fName) {
-// 		d, err := xRefTable.DereferenceDict(ir)
-// 		if err != nil {
-// 			return "", "", "", err
-// 		}
-// 		if enc := d.NameEntry("Encoding"); *enc == "Identity-H" {
-// 			indRef, ok := fonts[*fName]
-// 			if !ok {
-// 				fonts[*fName] = ir
-// 			} else if indRef != ir {
-// 				return "", "", "", errors.Errorf("pdfcpu: %s: duplicate fontDicts", *fName)
-// 			}
-// 		}
-// 	}
-
-// 	return fontID, *fName, lang, nil
-// }
-
 // FontResDict returns form dict's font resource dict.
 func FontResDict(xRefTable *model.XRefTable) (types.Dict, error) {
 
@@ -335,6 +274,51 @@ func ensureCorrectFontIndRef(
 	return nil
 }
 
+func fontFromAcroDict(xRefTable *model.XRefTable, fName, fLang *string, fontID string) error {
+
+	// Use DA fontId from Acrodict
+
+	s := xRefTable.AcroForm.StringEntry("DA")
+	if s == nil {
+		if fName != nil {
+			return errors.Errorf("pdfcpu: unsupported font: %s", *fName)
+		}
+		return errors.Errorf("pdfcpu: unsupported fontID: %s", fontID)
+	}
+
+	da := strings.Fields(*s)
+	rootFontID := ""
+
+	for i := 0; i < len(da); i++ {
+		if da[i] == "Tf" {
+			rootFontID = da[i-2][1:]
+			break
+		}
+	}
+
+	if rootFontID == "" {
+		if fName != nil {
+			return errors.Errorf("pdfcpu: unsupported font: %s", *fName)
+		}
+		return errors.Errorf("pdfcpu: unsupported fontID: %s", fontID)
+	}
+
+	fontID = rootFontID
+	fontIndRef, err := formFontIndRef(xRefTable, fontID)
+	if err != nil {
+		return err
+	}
+
+	fN, fL, err := FormFontNameAndLangForID(xRefTable, *fontIndRef)
+	if err != nil {
+		return err
+	}
+
+	*fName, *fLang = *fN, *fL
+
+	return err
+}
+
 func extractFormFontDetails(
 	ctx *model.Context,
 	fontID string,
@@ -361,35 +345,7 @@ func extractFormFontDetails(
 	}
 
 	if fontIndRef == nil || !font.SupportedFont(*fName) {
-		// Use DA fontId from Acrodict
-		s := xRefTable.AcroForm.StringEntry("DA")
-		if s == nil {
-			if fName != nil {
-				return "", "", "", nil, errors.Errorf("pdfcpu: unsupported font: %s", *fName)
-			}
-			return "", "", "", nil, errors.Errorf("pdfcpu: unsupported fontID: %s", fontID)
-		}
-		da := strings.Fields(*s)
-		rootFontID := ""
-		for i := 0; i < len(da); i++ {
-			if da[i] == "Tf" {
-				rootFontID = da[i-2][1:]
-				break
-			}
-		}
-		if rootFontID == "" {
-			if fName != nil {
-				return "", "", "", nil, errors.Errorf("pdfcpu: unsupported font: %s", *fName)
-			}
-			return "", "", "", nil, errors.Errorf("pdfcpu: unsupported fontID: %s", fontID)
-		}
-		fontID = rootFontID
-		fontIndRef, err = formFontIndRef(xRefTable, fontID)
-		if err != nil {
-			return "", "", "", nil, err
-		}
-		fName, fLang, err = FormFontNameAndLangForID(xRefTable, *fontIndRef)
-		if err != nil {
+		if err = fontFromAcroDict(xRefTable, fName, fLang, fontID); err != nil {
 			return "", "", "", nil, err
 		}
 	}

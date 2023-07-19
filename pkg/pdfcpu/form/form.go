@@ -259,39 +259,27 @@ func parseStringLiteralArray(xRefTable *model.XRefTable, d types.Dict, key strin
 	return nil, nil
 }
 
-func collectRadioButtonGroup(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta) error {
-	f.typ = FTRadioButtonGroup
-	if s := d.NameEntry("V"); s != nil {
-		v, err := types.DecodeName(*s)
-		if err != nil {
-			return err
-		}
-		if v != "Off" {
-			if w := runewidth.StringWidth(v); w > fm.valMax {
-				fm.valMax = w
-			}
-			fm.val = true
-			f.v = v
-		}
-	}
+func collectRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) (string, error) {
+
 	var vv []string
+
 	for _, o := range d.ArrayEntry("Kids") {
 		d, err := xRefTable.DereferenceDict(o)
 		if err != nil {
-			return err
+			return "", err
 		}
 		d1 := d.DictEntry("AP")
 		if d1 == nil {
-			return errors.New("corrupt form field: missing entry AP")
+			return "", errors.New("corrupt form field: missing entry AP")
 		}
 		d2 := d1.DictEntry("N")
 		if d2 == nil {
-			return errors.New("corrupt AP field: missing entry N")
+			return "", errors.New("corrupt AP field: missing entry N")
 		}
 		for k := range d2 {
 			k, err := types.DecodeName(k)
 			if err != nil {
-				return err
+				return "", err
 			}
 			if k != "Off" {
 				found := false
@@ -308,10 +296,38 @@ func collectRadioButtonGroup(xRefTable *model.XRefTable, d types.Dict, f *Field,
 			}
 		}
 	}
-	f.opts = strings.Join(vv, ",")
+
+	return strings.Join(vv, ","), nil
+}
+
+func collectRadioButtonGroup(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta) error {
+
+	f.typ = FTRadioButtonGroup
+
+	if s := d.NameEntry("V"); s != nil {
+		v, err := types.DecodeName(*s)
+		if err != nil {
+			return err
+		}
+		if v != "Off" {
+			if w := runewidth.StringWidth(v); w > fm.valMax {
+				fm.valMax = w
+			}
+			fm.val = true
+			f.v = v
+		}
+	}
+
+	s, err := collectRadioButtonGroupOptions(xRefTable, d)
+	if err != nil {
+		return err
+	}
+
+	f.opts = s
 	if len(f.opts) > 0 {
 		fm.opt = true
 	}
+
 	return nil
 }
 

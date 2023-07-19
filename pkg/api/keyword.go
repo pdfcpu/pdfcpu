@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
@@ -43,7 +43,7 @@ func ListKeywords(rs io.ReadSeeker, conf *model.Configuration) ([]string, error)
 	}
 
 	fromWrite := time.Now()
-	list, err := pdf.KeywordsList(ctx.XRefTable)
+	list, err := pdfcpu.KeywordsList(ctx.XRefTable)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func AddKeywords(rs io.ReadSeeker, w io.Writer, files []string, conf *model.Conf
 
 	from := time.Now()
 
-	if err = pdf.KeywordsAdd(ctx.XRefTable, files); err != nil {
+	if err = pdfcpu.KeywordsAdd(ctx.XRefTable, files); err != nil {
 		return err
 	}
 
@@ -159,7 +159,7 @@ func RemoveKeywords(rs io.ReadSeeker, w io.Writer, keywords []string, conf *mode
 	from := time.Now()
 
 	var ok bool
-	if ok, err = pdf.KeywordsRemove(ctx.XRefTable, keywords); err != nil {
+	if ok, err = pdfcpu.KeywordsRemove(ctx.XRefTable, keywords); err != nil {
 		return err
 	}
 	if !ok {

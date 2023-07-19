@@ -22,13 +22,12 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
 
 // AddBookmarks adds a single bookmark outline layer to the PDF context read from rs and writes the result to w.
-func AddBookmarks(rs io.ReadSeeker, w io.Writer, bms []pdf.Bookmark, replace bool, conf *model.Configuration) error {
+func AddBookmarks(rs io.ReadSeeker, w io.Writer, bms []pdfcpu.Bookmark, replace bool, conf *model.Configuration) error {
 
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
@@ -68,7 +67,7 @@ func AddBookmarks(rs io.ReadSeeker, w io.Writer, bms []pdf.Bookmark, replace boo
 }
 
 // AddBookmarksFile adds a single bookmark outline layer to the PDF context read from inFile and writes the result to outFile.
-func AddBookmarksFile(inFile, outFile string, bms []pdf.Bookmark, replace bool, conf *model.Configuration) (err error) {
+func AddBookmarksFile(inFile, outFile string, bms []pdfcpu.Bookmark, replace bool, conf *model.Configuration) (err error) {
 
 	var f1, f2 *os.File
 

@@ -20,11 +20,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
@@ -554,7 +553,7 @@ func TestUserFonts(t *testing.T) {
 	mediaBox := types.RectForDim(w, h)
 	p := model.NewPageWithBg(mediaBox, color.NewSimpleColor(0xbeded9))
 
-	xRefTable, err := pdf.CreateDemoXRef()
+	xRefTable, err := pdfcpu.CreateDemoXRef()
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -571,7 +570,7 @@ func TestUserFonts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	if err = pdf.AddPageTreeWithSamplePage(xRefTable, rootDict, p); err != nil {
+	if err = pdfcpu.AddPageTreeWithSamplePage(xRefTable, rootDict, p); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 	outDir := filepath.Join("..", "..", "samples", "basic")

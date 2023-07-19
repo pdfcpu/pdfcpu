@@ -22,7 +22,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/format"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
@@ -181,7 +180,7 @@ func (tb *TextBox) padding(name string) *Padding {
 	return tb.content.namedPadding(name)
 }
 
-func (tb *TextBox) mergeIn(tb0 *TextBox) {
+func (tb *TextBox) mergeInPos(tb0 *TextBox) {
 
 	if !tb.anchored && tb.x == 0 && tb.y == 0 {
 		tb.x = tb0.x
@@ -190,15 +189,20 @@ func (tb *TextBox) mergeIn(tb0 *TextBox) {
 		tb.anchored = tb0.anchored
 	}
 
-	if tb.Value == "" {
-		tb.Value = tb0.Value
-	}
-
 	if tb.Dx == 0 {
 		tb.Dx = tb0.Dx
 	}
 	if tb.Dy == 0 {
 		tb.Dy = tb0.Dy
+	}
+}
+
+func (tb *TextBox) mergeIn(tb0 *TextBox) {
+
+	tb.mergeInPos(tb0)
+
+	if tb.Value == "" {
+		tb.Value = tb0.Value
 	}
 
 	if tb.Width == 0 {

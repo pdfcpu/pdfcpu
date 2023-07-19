@@ -19,10 +19,9 @@ package types
 import (
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"unicode/utf16"
 	"unicode/utf8"
-
-	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pkg/errors"
