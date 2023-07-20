@@ -9,7 +9,7 @@ Merge 2 or more PDF files into `outFile`. Have a look at some [examples](#exampl
 ## Usage
 
 ```
-pdfcpu merge [-m(ode) create|append] [-sort] outFile inFile...
+pdfcpu merge [-m(ode) create|append] [-s(ort) -b(ookmarks)] outFile inFile...
 ```
 
 <br>
@@ -18,8 +18,9 @@ pdfcpu merge [-m(ode) create|append] [-sort] outFile inFile...
 
 | name     | description     | default | required
 |:---------|:----------------|:--------|:--
-| m(ode)     | create, append  | create  | no
+| m(ode)   | create, append  | create  | no
 | sort     | sort inFiles if present | unsorted | no
+| bookmarks| create bookmarks | yes   | no
 
 
 <br>
@@ -51,7 +52,6 @@ pdfcpu merge [-m(ode) create|append] [-sort] outFile inFile...
 
 The following PDF elements are not carried over into the merged document:
 
-* Outlines
 * Struct Trees
 
 <br>

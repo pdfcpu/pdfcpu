@@ -6,6 +6,10 @@ layout: default
 
 | Date      | Tag / Commit                                                                                | Description  
 |:----------|:--------------------------------------------------------------------------------------------|:------------------------------
+|2023-07-20 | [v0.4.2](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.4.2)                              | Bookmark support for merging
+|           |                                                                                             | Fix #606, #608, #617, #618, #622,
+|           |                                                                                             | #623, #624, #626, #627, #630-#632, 
+|           |                                                                                             | #635-#637, #644, #649, #650, #654
 |2023-05-06 | [v0.4.1](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.4.1)                              | Add cut, ndown, poster commands
 |2023-02-28 | [v0.4.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.4.0)                              | Add form, resize commands
 |2021-12-04 | [e9f927d](https://github.com/pdfcpu/pdfcpu/commit/e9f927d44d0f2a8bbf7413692595f4f047f6371c) | Fix #396, add config command

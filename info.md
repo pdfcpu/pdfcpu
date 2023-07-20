@@ -63,6 +63,9 @@ pdfcpu info -u cm test.pdf
 Using object streams: Yes
          Watermarked: No
           Thumbnails: No
+            Acroform: No
+            Outlines: Yes
+               Names: Yes
 ..........................................
            Encrypted: No
          Permissions: Full access
