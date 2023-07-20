@@ -98,6 +98,9 @@ Page 2: rot=+0 orientation:portrait
 Using object streams: No
          Watermarked: No
           Thumbnails: No
+            Acroform: No
+            Outlines: Yes
+               Names: Yes
 ............................................
            Encrypted: No
          Permissions: Full access
