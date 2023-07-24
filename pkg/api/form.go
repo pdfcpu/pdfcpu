@@ -35,10 +35,10 @@ import (
 )
 
 var (
-	errNoFormData           = errors.New("pdfcpu: missing form data")
-	errNoFormFieldsAffected = errors.New("pdfcpu: no form fields affected")
-	errInvalidCSV           = errors.New("pdfcpu: invalid csv input file")
-	errInvalidJSON          = errors.New("pdfcpu: invalid JSON encoding")
+	ErrNoFormData           = errors.New("pdfcpu: missing form data")
+	ErrNoFormFieldsAffected = errors.New("pdfcpu: no form fields affected")
+	ErrInvalidCSV           = errors.New("pdfcpu: invalid csv input file")
+	ErrInvalidJSON          = errors.New("pdfcpu: invalid JSON encoding")
 )
 
 // ListFormFields returns a list of form field ids in rs.
@@ -106,7 +106,7 @@ func RemoveFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, c
 		return err
 	}
 	if !ok {
-		return errNoFormFieldsAffected
+		return ErrNoFormFieldsAffected
 	}
 
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
@@ -182,7 +182,7 @@ func LockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, con
 		return err
 	}
 	if !ok {
-		return errNoFormFieldsAffected
+		return ErrNoFormFieldsAffected
 	}
 
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
@@ -258,7 +258,7 @@ func UnlockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, c
 		return err
 	}
 	if !ok {
-		return errNoFormFieldsAffected
+		return ErrNoFormFieldsAffected
 	}
 
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
@@ -334,7 +334,7 @@ func ResetFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, co
 		return err
 	}
 	if !ok {
-		return errNoFormFieldsAffected
+		return ErrNoFormFieldsAffected
 	}
 
 	log.Stats.Printf("XRefTable:\n%s\n", ctx)
@@ -410,7 +410,7 @@ func ExportFormToStruct(rs io.ReadSeeker, source string, conf *model.Configurati
 		return nil, err
 	}
 	if !ok {
-		return nil, errNoFormFieldsAffected
+		return nil, ErrNoFormFieldsAffected
 	}
 
 	return formGroup, nil
@@ -436,7 +436,7 @@ func ExportForm(rs io.ReadSeeker, w io.Writer, source string, conf *model.Config
 		return err
 	}
 	if !ok {
-		return errNoFormFieldsAffected
+		return ErrNoFormFieldsAffected
 	}
 
 	return nil
@@ -510,7 +510,7 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 	bb := buf.Bytes()
 
 	if !json.Valid(bb) {
-		return errInvalidJSON
+		return ErrInvalidJSON
 	}
 
 	formGroup := form.FormGroup{}
@@ -520,7 +520,7 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 	}
 
 	if len(formGroup.Forms) == 0 {
-		return errNoFormData
+		return ErrNoFormData
 	}
 
 	f := formGroup.Forms[0]
@@ -530,7 +530,7 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 		return err
 	}
 	if !ok {
-		return errNoFormFieldsAffected
+		return ErrNoFormFieldsAffected
 	}
 
 	if _, _, err := create.UpdatePageTree(ctx, pp, nil); err != nil {
@@ -613,7 +613,7 @@ func parseFormGroup(rd io.Reader) (*form.FormGroup, error) {
 	bb := buf.Bytes()
 
 	if !json.Valid(bb) {
-		return nil, errInvalidJSON
+		return nil, ErrInvalidJSON
 	}
 
 	if err := json.Unmarshal(bb, formGroup); err != nil {
@@ -621,7 +621,7 @@ func parseFormGroup(rd io.Reader) (*form.FormGroup, error) {
 	}
 
 	if len(formGroup.Forms) == 0 {
-		return nil, errNoFormData
+		return nil, ErrNoFormData
 	}
 
 	return formGroup, nil
@@ -672,7 +672,7 @@ func multiFillFormJSON(inFilePDF string, rd io.Reader, outDir, fileName string, 
 			return err
 		}
 		if !ok {
-			return errNoFormFieldsAffected
+			return ErrNoFormFieldsAffected
 		}
 
 		if _, _, err := create.UpdatePageTree(ctx, pp, nil); err != nil {
@@ -723,12 +723,12 @@ func parseCSVLines(rd io.Reader) ([][]string, error) {
 	}
 
 	if len(csvLines) < 2 {
-		return nil, errInvalidCSV
+		return nil, ErrInvalidCSV
 	}
 
 	fieldNames := csvLines[0]
 	if len(fieldNames) == 0 {
-		return nil, errInvalidCSV
+		return nil, ErrInvalidCSV
 	}
 
 	return csvLines, nil
@@ -771,7 +771,7 @@ func multiFillFormCSV(inFilePDF string, rd io.Reader, outDir, fileName string, m
 			return err
 		}
 		if !ok {
-			return errNoFormFieldsAffected
+			return ErrNoFormFieldsAffected
 		}
 
 		if _, _, err := create.UpdatePageTree(ctx, pp, nil); err != nil {
