@@ -163,7 +163,7 @@ func EnsureDefaultConfigAt(path string) error {
 
 var (
 	// mutexDisableConfigDir protects DisableConfigDir from concurrent access.
-	// NOTE: This is not a guard for model.ConfigPath variable.
+	// NOTE Not a guard for model.ConfigPath!
 	mutexDisableConfigDir sync.Mutex
 )
 

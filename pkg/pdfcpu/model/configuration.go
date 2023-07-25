@@ -213,9 +213,8 @@ type Configuration struct {
 //	default:	Ensure config dir at default location
 //	disable:	Disable config dir usage
 //
-// WARNING: This is a global variable and should be safe for concurrent use.
-// If you want to change disable config dir,
-// call api.DisableConfigDir() that is concurrency safe instead of changing directly.
+// If you want to disable config dir usage in a multi threaded environment
+// you are encouraged to use api.DisableConfigDir().
 var ConfigPath string = "default"
 
 var loadedDefaultConfig *Configuration
