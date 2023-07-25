@@ -605,7 +605,12 @@ func fillBtn(
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
 	ok *bool) error {
 
-	if len(d.ArrayEntry("Kids")) > 0 {
+	ff := d.IntEntry("Ff")
+	if ff != nil && primitives.FieldFlags(*ff)&primitives.FieldPushbutton > 0 {
+		return nil
+	}
+
+	if len(d.ArrayEntry("Kids")) > 0 && primitives.FieldFlags(*ff)&primitives.FieldRadio > 0 {
 		if err := fillRadioButtonGroup(ctx, d, id, name, locked, format, fillDetails, ok); err != nil {
 			return err
 		}

@@ -55,8 +55,7 @@ func TestRemoveFormFields(t *testing.T) {
 	}
 	want := len(ss) - 2
 
-	// Remove "firstName1" by id'(=45) and "dob1" by name as per form list output.
-	if err := api.RemoveFormFieldsFile(inFile, outFile, []string{"dob1", "45"}, conf); err != nil {
+	if err := api.RemoveFormFieldsFile(inFile, outFile, []string{"dob1", "firstName1"}, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 

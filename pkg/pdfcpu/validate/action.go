@@ -566,7 +566,7 @@ func validateNamedActionDict(xRefTable *model.XRefTable, d types.Dict, dictName 
 		}
 
 		// Some known non standard named actions
-		if types.MemberOf(s, []string{"GoToPage", "GoBack", "GoForward", "Find", "Print", "Quit", "FullScreen"}) {
+		if types.MemberOf(s, []string{"GoToPage", "GoBack", "GoForward", "Find", "Print", "SaveAs", "Quit", "FullScreen"}) {
 			return true
 		}
 

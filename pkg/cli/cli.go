@@ -60,6 +60,7 @@ func ChangeOwnerPassword(cmd *Command) ([]string, error) {
 // ListPermissions of inFile.
 func ListPermissions(cmd *Command) ([]string, error) {
 	return api.ListPermissionsFile(*cmd.InFile, cmd.Conf)
+	// TODO turn struct into []string
 }
 
 // SetPermissions of inFile.
@@ -161,6 +162,7 @@ func ExtractMetadata(cmd *Command) ([]string, error) {
 // ListAttachments returns a list of embedded file attachments for inFile.
 func ListAttachments(cmd *Command) ([]string, error) {
 	return api.ListAttachmentsFile(*cmd.InFile, cmd.Conf)
+	// TODO turn struct into []string
 }
 
 // AddAttachments embeds inFiles into a PDF context read from inFile and writes the result to outFile.
@@ -181,6 +183,7 @@ func ExtractAttachments(cmd *Command) ([]string, error) {
 // Info gathers information about inFile and returns the result as []string.
 func Info(cmd *Command) ([]string, error) {
 	return api.InfoFiles(cmd.InFiles, cmd.PageSelection, cmd.Conf)
+	// TODO turn struct into []string
 }
 
 // CreateCheatSheetsFonts creates single page PDF cheat sheets for user fonts in current dir.
@@ -191,6 +194,7 @@ func CreateCheatSheetsFonts(cmd *Command) ([]string, error) {
 // ListFonts gathers information about supported fonts and returns the result as []string.
 func ListFonts(cmd *Command) ([]string, error) {
 	return api.ListFonts()
+	// TODO turn struct into []string
 }
 
 // InstallFonts installs True Type fonts into the pdfcpu pconfig dir.
@@ -201,6 +205,7 @@ func InstallFonts(cmd *Command) ([]string, error) {
 // ListKeywords returns a list of keywords for inFile.
 func ListKeywords(cmd *Command) ([]string, error) {
 	return api.ListKeywordsFile(*cmd.InFile, cmd.Conf)
+	// TODO turn struct into []string
 }
 
 // AddKeywords adds keywords to inFile's document info dict and writes the result to outFile.
@@ -216,6 +221,7 @@ func RemoveKeywords(cmd *Command) ([]string, error) {
 // ListProperties returns inFile's properties.
 func ListProperties(cmd *Command) ([]string, error) {
 	return api.ListPropertiesFile(*cmd.InFile, cmd.Conf)
+	// TODO turn struct into []string
 }
 
 // AddProperties adds properties to inFile's document info dict and writes the result to outFile.
@@ -236,6 +242,7 @@ func Collect(cmd *Command) ([]string, error) {
 // ListBoxes returns inFile's page boundaries.
 func ListBoxes(cmd *Command) ([]string, error) {
 	return api.ListBoxesFile(*cmd.InFile, cmd.PageSelection, cmd.PageBoundaries, cmd.Conf)
+	// TODO turn struct into []string
 }
 
 // AddBoxes adds page boundaries to inFile's page tree and writes the result to outFile.
@@ -256,6 +263,7 @@ func Crop(cmd *Command) ([]string, error) {
 // ListAnnotations returns inFile's page annotations.
 func ListAnnotations(cmd *Command) ([]string, error) {
 	_, ss, err := api.ListAnnotationsFile(*cmd.InFile, cmd.PageSelection, cmd.Conf)
+	// TODO turn struct into []string
 	return ss, err
 }
 
@@ -268,6 +276,7 @@ func RemoveAnnotations(cmd *Command) ([]string, error) {
 // ListImages returns inFiles embedded images.
 func ListImages(cmd *Command) ([]string, error) {
 	return api.ListImagesFile(cmd.InFiles, cmd.PageSelection, cmd.Conf)
+	// turn struct into []string
 }
 
 // Dump known object to stdout.
@@ -286,6 +295,7 @@ func Create(cmd *Command) ([]string, error) {
 // ListFormFields returns inFile's form field ids.
 func ListFormFields(cmd *Command) ([]string, error) {
 	return api.ListFormFieldsFile(cmd.InFiles, cmd.Conf)
+	// TODO turn struct into []string
 }
 
 // RemoveFormFields removes some form fields from inFile.

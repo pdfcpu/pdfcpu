@@ -1357,8 +1357,31 @@ func validateAppearDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName 
 	return err
 }
 
-func validateBorderArrayLength(a types.Array) bool {
-	return len(a) == 0 || len(a) == 3 || len(a) == 4
+func validateBorderArray(xRefTable *model.XRefTable, a types.Array) bool {
+	if len(a) == 0 {
+		return true
+	}
+	if len(a) == 1 || len(a) == 2 || len(a) > 4 {
+		return false
+	}
+	if len(a) == 3 {
+		_, err := validateNumberArray(xRefTable, a)
+		return err == nil
+	}
+
+	// len = 4
+
+	o := a[3]
+	a1, ok := o.(types.Array)
+	if !ok {
+		return false
+	}
+	if len(a1) != 2 {
+		return false
+	}
+
+	_, err := validateNumberArray(xRefTable, a1)
+	return err == nil
 }
 
 func validateAnnotationDictGeneral(xRefTable *model.XRefTable, d types.Dict, dictName string) (*types.Name, error) {
@@ -1424,9 +1447,12 @@ func validateAnnotationDictGeneral(xRefTable *model.XRefTable, d types.Dict, dic
 	}
 
 	// Border, optional, array of numbers
-	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "Border", OPTIONAL, model.V10, validateBorderArrayLength)
+	a, err := validateArrayEntry(xRefTable, d, dictName, "Border", OPTIONAL, model.V10, nil)
 	if err != nil {
 		return nil, err
+	}
+	if !validateBorderArray(xRefTable, a) {
+		return nil, errors.Errorf("invalid border array: %s", a)
 	}
 
 	// C, optional array, of numbers, since V1.1

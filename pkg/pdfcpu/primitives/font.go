@@ -314,7 +314,11 @@ func fontFromAcroDict(xRefTable *model.XRefTable, fName, fLang *string, fontID s
 		return err
 	}
 
-	*fName, *fLang = *fN, *fL
+	*fName = *fN
+
+	if fL != nil {
+		*fLang = *fL
+	}
 
 	return err
 }

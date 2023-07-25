@@ -332,6 +332,12 @@ func collectRadioButtonGroup(xRefTable *model.XRefTable, d types.Dict, f *Field,
 }
 
 func collectBtn(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta) error {
+
+	ff := d.IntEntry("Ff")
+	if ff != nil && primitives.FieldFlags(*ff)&primitives.FieldPushbutton > 0 {
+		return nil
+	}
+
 	v := types.Name("Off")
 	if s, found := d.Find("DV"); found {
 		v = s.(types.Name)
@@ -350,7 +356,9 @@ func collectBtn(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMet
 	}
 
 	if len(d.ArrayEntry("Kids")) > 0 {
-		return collectRadioButtonGroup(xRefTable, d, f, fm)
+		if ff != nil && primitives.FieldFlags(*ff)&primitives.FieldRadio > 0 {
+			return collectRadioButtonGroup(xRefTable, d, f, fm)
+		}
 	}
 
 	f.typ = FTCheckBox
@@ -1159,6 +1167,12 @@ func RemoveFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error
 }
 
 func resetBtn(xRefTable *model.XRefTable, d types.Dict) error {
+
+	ff := d.IntEntry("Ff")
+	if ff != nil && primitives.FieldFlags(*ff)&primitives.FieldPushbutton > 0 {
+		return nil
+	}
+
 	v := types.Name("Off")
 	if s, found := d.Find("DV"); found {
 		v = s.(types.Name)
