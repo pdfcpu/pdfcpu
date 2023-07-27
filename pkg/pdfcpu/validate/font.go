@@ -666,6 +666,9 @@ func validateType0FontDict(xRefTable *model.XRefTable, d types.Dict) error {
 
 	// ToUnicode, optional, CMap stream dict
 	_, err = validateStreamDictEntry(xRefTable, d, dictName, "ToUnicode", OPTIONAL, model.V12, nil)
+	if err != nil && xRefTable.ValidationMode == model.ValidationRelaxed {
+		_, err = validateNameEntry(xRefTable, d, dictName, "ToUnicode", REQUIRED, model.V12, func(s string) bool { return s == "Identity-H" })
+	}
 
 	return err
 }
