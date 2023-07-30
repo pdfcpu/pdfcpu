@@ -18,6 +18,7 @@ package test
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -77,6 +78,42 @@ func TestMergeToBufNew(t *testing.T) {
 
 	buf := &bytes.Buffer{}
 	if err := api.Merge(destFile, inFiles, buf, nil); err != nil {
+		t.Fatalf("%s: merge: %v\n", msg, err)
+	}
+
+	if err := os.WriteFile(outFile, buf.Bytes(), 0644); err != nil {
+		t.Fatalf("%s: write: %v\n", msg, err)
+	}
+}
+
+func TestMergeRaw(t *testing.T) {
+	msg := "TestMergeRaw"
+	inFiles := []string{
+		filepath.Join(inDir, "Acroforms2.pdf"),
+		filepath.Join(inDir, "adobe_errata.pdf"),
+	}
+
+	var rsc []io.ReadSeeker = make([]io.ReadSeeker, 2)
+
+	f0, err := os.Open(inFiles[0])
+	if err != nil {
+		t.Fatalf("%s: open file1: %v\n", msg, err)
+	}
+	defer f0.Close()
+	rsc[0] = f0
+
+	f1, err := os.Open(inFiles[1])
+	if err != nil {
+		t.Fatalf("%s: open file1: %v\n", msg, err)
+	}
+	defer f1.Close()
+	rsc[1] = f1
+
+	outFile := filepath.Join(outDir, "test.pdf")
+
+	buf := &bytes.Buffer{}
+
+	if err := api.MergeRaw(rsc, buf, nil); err != nil {
 		t.Fatalf("%s: merge: %v\n", msg, err)
 	}
 

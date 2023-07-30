@@ -55,6 +55,7 @@ func MergeRaw(rsc []io.ReadSeeker, w io.Writer, conf *model.Configuration) error
 		conf = model.NewDefaultConfiguration()
 	}
 	conf.Cmd = model.MERGECREATE
+	conf.CreateBookmarks = false
 
 	ctxDest, _, _, err := readAndValidate(rsc[0], conf, time.Now())
 	if err != nil {
