@@ -684,8 +684,16 @@ func validateCollectionFieldDict(xRefTable *model.XRefTable, d types.Dict) error
 	}
 
 	// Subtype, required name
+	subTypes := []string{"S", "D", "N", "F", "Desc", "ModDate", "CreationDate", "Size"}
+
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		// See i659.pdf
+		subTypes = append(subTypes, "AFRelationship")
+		subTypes = append(subTypes, "CompressedSize")
+	}
+
 	validateCollectionFieldSubtype := func(s string) bool {
-		return types.MemberOf(s, []string{"S", "D", "N", "F", "Desc", "ModDate", "CreationDate", "Size"})
+		return types.MemberOf(s, subTypes)
 	}
 	_, err = validateNameEntry(xRefTable, d, dictName, "Subtype", REQUIRED, model.V10, validateCollectionFieldSubtype)
 	if err != nil {
