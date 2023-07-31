@@ -116,7 +116,7 @@ func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configura
 	}
 
 	if conf.CreateBookmarks {
-		if err := pdfcpu.EnsureOutlines(ctxDest, filepath.Base(destFile)); err != nil {
+		if err := pdfcpu.EnsureOutlines(ctxDest, filepath.Base(destFile), conf.Cmd == model.MERGEAPPEND); err != nil {
 			return err
 		}
 	}
@@ -190,11 +190,11 @@ func MergeAppendFile(inFiles []string, outFile string, conf *model.Configuration
 
 	defer func() {
 		if err != nil {
-			if err = f.Close(); err != nil {
+			if err1 := f.Close(); err1 != nil {
 				return
 			}
 			if overWrite {
-				err = os.Remove(tmpFile)
+				os.Remove(tmpFile)
 			}
 			return
 		}
@@ -206,5 +206,6 @@ func MergeAppendFile(inFiles []string, outFile string, conf *model.Configuration
 		}
 	}()
 
-	return Merge(destFile, inFiles, f, conf)
+	err = Merge(destFile, inFiles, f, conf)
+	return err
 }

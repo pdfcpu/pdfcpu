@@ -24,7 +24,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-func EnsureOutlines(ctx *model.Context, fName string) error {
+func EnsureOutlines(ctx *model.Context, fName string, append bool) error {
 
 	rootDict, err := ctx.Catalog()
 	if err != nil {
@@ -51,6 +51,9 @@ func EnsureOutlines(ctx *model.Context, fName string) error {
 	outlinesDict["Count"] = types.Integer(total + visible)
 
 	if obj, ok := rootDict.Find("Outlines"); ok {
+		if append {
+			return nil
+		}
 		d, err := ctx.DereferenceDict(obj)
 		if err != nil {
 			return err

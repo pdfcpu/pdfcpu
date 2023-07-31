@@ -63,6 +63,12 @@ func TestMergeAppendNew(t *testing.T) {
 	if err := api.MergeAppendFile(inFiles, outFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
+
+	anotherFile := filepath.Join(inDir, "testRot.pdf")
+	err := api.MergeAppendFile([]string{anotherFile}, outFile, nil)
+	if err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
 }
 
 func TestMergeToBufNew(t *testing.T) {
@@ -92,6 +98,7 @@ func TestMergeRaw(t *testing.T) {
 		filepath.Join(inDir, "Acroforms2.pdf"),
 		filepath.Join(inDir, "adobe_errata.pdf"),
 	}
+	outFile := filepath.Join(outDir, "test.pdf")
 
 	var rsc []io.ReadSeeker = make([]io.ReadSeeker, 2)
 
@@ -104,15 +111,12 @@ func TestMergeRaw(t *testing.T) {
 
 	f1, err := os.Open(inFiles[1])
 	if err != nil {
-		t.Fatalf("%s: open file1: %v\n", msg, err)
+		t.Fatalf("%s: open file2: %v\n", msg, err)
 	}
 	defer f1.Close()
 	rsc[1] = f1
 
-	outFile := filepath.Join(outDir, "test.pdf")
-
 	buf := &bytes.Buffer{}
-
 	if err := api.MergeRaw(rsc, buf, nil); err != nil {
 		t.Fatalf("%s: merge: %v\n", msg, err)
 	}
