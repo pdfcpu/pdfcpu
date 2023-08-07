@@ -1724,7 +1724,7 @@ func createResetButton(xRefTable *model.XRefTable, pageAnnots *types.Array) (*ty
 		map[string]types.Object{
 			"Type":   types.Name("Action"),
 			"S":      types.Name("ResetForm"),
-			"Fields": types.NewStringArray("inputField"),
+			"Fields": types.NewStringLiteralArray("inputField"),
 			"Flags":  types.Integer(0),
 		},
 	)
@@ -1774,7 +1774,7 @@ func createSubmitButton(xRefTable *model.XRefTable, pageAnnots *types.Array) (*t
 			"Type":   types.Name("Action"),
 			"S":      types.Name("SubmitForm"),
 			"F":      urlSpec,
-			"Fields": types.NewStringArray("inputField"),
+			"Fields": types.NewStringLiteralArray("inputField"),
 			"Flags":  types.Integer(0),
 		},
 	)

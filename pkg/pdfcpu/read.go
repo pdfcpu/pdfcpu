@@ -1456,7 +1456,7 @@ func nextStreamOffset(line string, streamInd int) (off int) {
 	off = streamInd + len("stream")
 
 	// Skip optional blanks.
-	// TODO Should be skip optional whitespace instead?
+	// TODO Should we skip optional whitespace instead?
 	for ; line[off] == 0x20; off++ {
 	}
 

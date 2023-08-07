@@ -250,7 +250,7 @@ func validateAnnotationDictText(xRefTable *model.XRefTable, d types.Dict, dictNa
 	}
 
 	// State, optional, text string, since V1.5
-	validate := func(s string) bool { return types.MemberOf(s, []string{"None", "Unmarked"}) }
+	validate := func(s string) bool { return types.MemberOf(s, []string{"None", "Unmarked", "Completed"}) }
 	state, err := validateStringEntry(xRefTable, d, dictName, "State", OPTIONAL, model.V15, validate)
 	if err != nil {
 		return err
@@ -280,7 +280,17 @@ func validateActionOrDestination(xRefTable *model.XRefTable, d types.Dict, dictN
 		return err
 	}
 
-	return validateDestination(xRefTable, obj)
+	name, err := validateDestination(xRefTable, obj, false)
+	if err != nil {
+		return err
+	}
+
+	if len(name) > 0 && xRefTable.IsMerging() {
+		nm := xRefTable.NameRef("Dests")
+		nm.Add(name, d)
+	}
+
+	return nil
 }
 
 func validateURIActionDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {

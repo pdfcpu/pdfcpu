@@ -30,7 +30,8 @@ func validateDestsNameTreeValue(xRefTable *model.XRefTable, o types.Object, sinc
 		return err
 	}
 
-	return validateDestination(xRefTable, o)
+	_, err = validateDestination(xRefTable, o, false)
+	return err
 }
 
 func validateAPNameTreeValue(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
@@ -549,7 +550,6 @@ func validateIDTreeValue(xRefTable *model.XRefTable, o types.Object, sinceVersio
 
 func validateNameTreeValue(name string, xRefTable *model.XRefTable, o types.Object) (err error) {
 
-	// TODO
 	// The values associated with the keys may be objects of any type.
 	// Stream objects shall be specified by indirect object references.
 	// Dictionary, array, and string objects should be specified by indirect object references.
@@ -579,7 +579,7 @@ func validateNameTreeValue(name string, xRefTable *model.XRefTable, o types.Obje
 	return errors.Errorf("pdfcpu: validateNameTreeDictNamesEntry: unknown dict name: %s", name)
 }
 
-func validateNameTreeDictNamesEntry(xRefTable *model.XRefTable, d types.Dict, name string, node *model.Node) (firstKey, lastKey string, err error) {
+func validateNameTreeDictNamesEntry(xRefTable *model.XRefTable, d types.Dict, name string, node *model.Node) (string, string, error) {
 
 	//fmt.Printf("validateNameTreeDictNamesEntry begin %s\n", d)
 
@@ -602,27 +602,25 @@ func validateNameTreeDictNamesEntry(xRefTable *model.XRefTable, d types.Dict, na
 		return "", "", errors.Errorf("pdfcpu: validateNameTreeDictNamesEntry: Names array entry length needs to be even, length=%d\n", len(a))
 	}
 
-	var key string
+	var key, firstKey, lastKey string
+
 	for i := 0; i < len(a); i++ {
 		o := a[i]
 
 		if i%2 == 0 {
 
+			// TODO Do we really need to process indRefs here?
 			o, err = xRefTable.Dereference(o)
 			if err != nil {
 				return "", "", err
 			}
 
-			s, ok := o.(types.StringLiteral)
-			if !ok {
-				s, ok := o.(types.HexLiteral)
-				if !ok {
-					return "", "", errors.Errorf("pdfcpu: validateNameTreeDictNamesEntry: corrupt key <%v>\n", o)
-				}
-				key = s.Value()
-			} else {
-				key = s.Value()
+			k, err := types.StringOrHexLiteral(o)
+			if err != nil {
+				return "", "", err
 			}
+
+			key = *k
 
 			if firstKey == "" {
 				firstKey = key
@@ -658,31 +656,22 @@ func validateNameTreeDictLimitsEntry(xRefTable *model.XRefTable, d types.Dict, f
 	if err != nil {
 		return err
 	}
-	fk, ok := o.(types.StringLiteral)
-	if !ok {
-		fk, ok1 := o.(types.HexLiteral)
-		if !ok1 {
-			return errors.Errorf("pdfcpu: validateNameTreeDictLimitsEntry: expected type \"string\", but encountered %T", o)
-		}
-		fkv = fk.Value()
-	} else {
-		fkv = fk.Value()
-	}
 
-	o, err = xRefTable.Dereference(a[1])
+	s, err := types.StringOrHexLiteral(o)
 	if err != nil {
 		return err
 	}
-	lk, ok := o.(types.StringLiteral)
-	if !ok {
-		lk, ok1 := a[1].(types.HexLiteral)
-		if !ok1 {
-			return errors.Errorf("pdfcpu: validateNameTreeDictLimitsEntry: expected type \"string\", but encountered %T", o)
-		}
-		lkv = lk.Value()
-	} else {
-		lkv = lk.Value()
+	fkv = *s
+
+	if o, err = xRefTable.Dereference(a[1]); err != nil {
+		return err
 	}
+
+	s, err = types.StringOrHexLiteral(o)
+	if err != nil {
+		return err
+	}
+	lkv = *s
 
 	if firstKey < fkv || lastKey > lkv {
 		return errors.Errorf("pdfcpu: validateNameTreeDictLimitsEntry: leaf node corrupted (firstKey: %s vs %s) (lastKey: %s vs %s)\n", firstKey, fkv, lastKey, lkv)

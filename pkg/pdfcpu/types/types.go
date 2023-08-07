@@ -513,11 +513,7 @@ func (hexliteral HexLiteral) Value() string {
 
 // Bytes returns the byte representation.
 func (hexliteral HexLiteral) Bytes() ([]byte, error) {
-	b, err := hex.DecodeString(hexliteral.Value())
-	if err != nil {
-		return nil, err
-	}
-	return b, err
+	return hex.DecodeString(hexliteral.Value())
 }
 
 ///////////////////////////////////////////////////////////////////////////////////

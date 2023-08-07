@@ -122,6 +122,9 @@ func validateDocInfoDictEntry(xRefTable *model.XRefTable, k string, v types.Obje
 	// date, optional
 	case "CreationDate":
 		xRefTable.CreationDate, err = validateInfoDictDate(xRefTable, v)
+		if err != nil && xRefTable.ValidationMode == model.ValidationRelaxed {
+			err = nil
+		}
 
 	// date, required if PieceInfo is present in document catalog.
 	case "ModDate":

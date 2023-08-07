@@ -28,6 +28,26 @@ import (
 // Acrobat Reader "Bookmarks" = Mac Preview "Table of Contents".
 // Mac Preview limitations: does not render color, style, outline tree collapsed by default.
 
+func InactiveTestAddDuplicateBookmarks(t *testing.T) {
+	msg := "TestAddDuplicateBookmarks"
+	inFile := filepath.Join(inDir, "CenterOfWhy.pdf")
+	outFile := filepath.Join("..", "..", "samples", "bookmarks", "bookmarkDuplicates.pdf")
+
+	bms := []pdfcpu.Bookmark{
+		{PageFrom: 2, Title: "Duplicate Name"},
+		{PageFrom: 3, Title: "Duplicate Name"},
+		{PageFrom: 5, Title: "Duplicate Name"},
+	}
+
+	replace := true // Replace existing bookmarks.
+	if err := api.AddBookmarksFile(inFile, outFile, bms, replace, nil); err != nil {
+		t.Fatalf("%s addBookmarks: %v\n", msg, err)
+	}
+	if err := api.ValidateFile(outFile, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+}
+
 func TestAddSimpleBookmarks(t *testing.T) {
 	msg := "TestAddSimpleBookmarks"
 	inFile := filepath.Join(inDir, "CenterOfWhy.pdf")
@@ -51,6 +71,9 @@ func TestAddSimpleBookmarks(t *testing.T) {
 	replace := true // Replace existing bookmarks.
 	if err := api.AddBookmarksFile(inFile, outFile, bms, replace, nil); err != nil {
 		t.Fatalf("%s addBookmarks: %v\n", msg, err)
+	}
+	if err := api.ValidateFile(outFile, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
 
@@ -78,5 +101,8 @@ func TestAddBookmarkTree2Levels(t *testing.T) {
 
 	if err := api.AddBookmarksFile(inFile, outFile, bms, false, nil); err != nil {
 		t.Fatalf("%s addBookmarks: %v\n", msg, err)
+	}
+	if err := api.ValidateFile(outFile, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
 	}
 }

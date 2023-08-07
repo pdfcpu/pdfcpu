@@ -227,10 +227,7 @@ func validateInvisibleOutlineCount(xRefTable *model.XRefTable, total, visible in
 		if xRefTable.ValidationMode == model.ValidationStrict && *count == 0 {
 			return errors.New("pdfcpu: validateOutlines: corrupted, root \"Count\" shall be omitted if there are no open outline items")
 		}
-		if xRefTable.ValidationMode == model.ValidationStrict && *count != total {
-			return errors.Errorf("pdfcpu: validateOutlines: corrupted, root \"Count\" = %d, expected to be %d", *count, total)
-		}
-		if xRefTable.ValidationMode == model.ValidationRelaxed && *count != total && *count != -total {
+		if xRefTable.ValidationMode == model.ValidationStrict && *count != total && *count != -total {
 			return errors.Errorf("pdfcpu: validateOutlines: corrupted, root \"Count\" = %d, expected to be %d", *count, total)
 		}
 	}
@@ -255,7 +252,7 @@ func validateOutlines(xRefTable *model.XRefTable, rootDict types.Dict, required 
 
 	// => 12.3.3 Document Outline
 
-	ir, err := validateIndRefEntry(xRefTable, rootDict, "rootDict", "Outlines", OPTIONAL, sinceVersion)
+	ir, err := validateIndRefEntry(xRefTable, rootDict, "rootDict", "Outlines", required, sinceVersion)
 	if err != nil || ir == nil {
 		return err
 	}

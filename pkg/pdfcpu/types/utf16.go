@@ -47,6 +47,7 @@ func IsUTF16BE(b []byte) bool {
 }
 
 func decodeUTF16String(b []byte) (string, error) {
+	// Convert UTF-16 to UTF-8
 	// We only accept big endian byte order.
 	if !IsUTF16BE(b) {
 		log.Debug.Printf("decodeUTF16String: not UTF16BE: %s\n", hex.Dump(b))
@@ -127,34 +128,37 @@ func StringLiteralToString(sl StringLiteral) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	s1 := string(bb)
-
-	// Check for Big Endian UTF-16.
-	if IsStringUTF16BE(s1) {
-		return DecodeUTF16String(s1)
+	if IsUTF16BE(bb) {
+		return decodeUTF16String(bb)
 	}
-
 	// if no acceptable UTF16 encoding found, ensure utf8 encoding.
-	if !utf8.ValidString(s1) {
-		s1 = CP1252ToUTF8(s1)
+	s := string(bb)
+	if !utf8.ValidString(s) {
+		s = CP1252ToUTF8(s)
 	}
-	return s1, nil
+	return s, nil
 }
 
 // HexLiteralToString returns a possibly UTF16 encoded string for a hex string.
 func HexLiteralToString(hl HexLiteral) (string, error) {
-	// Get corresponding byte slice.
-	b, err := hex.DecodeString(hl.Value())
+	bb, err := hl.Bytes()
 	if err != nil {
 		return "", err
 	}
-
-	// Check for Big Endian UTF-16.
-	if IsUTF16BE(b) {
-		return decodeUTF16String(b)
+	if IsUTF16BE(bb) {
+		return decodeUTF16String(bb)
 	}
+	return string(bb), nil
+}
 
-	// if no acceptable UTF16 encoding found, just return decoded hexstring.
-	return string(b), nil
+func StringOrHexLiteral(obj Object) (*string, error) {
+	if sl, ok := obj.(StringLiteral); ok {
+		s, err := StringLiteralToString(sl)
+		return &s, err
+	}
+	if hl, ok := obj.(HexLiteral); ok {
+		s, err := HexLiteralToString(hl)
+		return &s, err
+	}
+	return nil, errors.New("pdfcpu: expected StringLiteral or HexLiteral")
 }

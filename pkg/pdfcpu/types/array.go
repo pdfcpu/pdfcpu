@@ -27,13 +27,25 @@ import (
 // Array represents a PDF array object.
 type Array []Object
 
-// NewStringArray returns a PDFArray with StringLiteral entries.
-func NewStringArray(sVars ...string) Array {
+// NewStringLiteralArray returns a PDFArray with StringLiteral entries.
+func NewStringLiteralArray(sVars ...string) Array {
 
 	a := Array{}
 
 	for _, s := range sVars {
 		a = append(a, StringLiteral(s))
+	}
+
+	return a
+}
+
+// NewHexLiteralArray returns a PDFArray with HexLiteralLiteral entries.
+func NewHexLiteralArray(sVars ...string) Array {
+
+	a := Array{}
+
+	for _, s := range sVars {
+		a = append(a, NewHexLiteral([]byte(s)))
 	}
 
 	return a

@@ -435,8 +435,8 @@ func mergeNames(ctxSrc, ctxDest *model.Context) error {
 
 	for id, namesSrc := range ctxSrc.Names {
 		if namesDest, ok := ctxDest.Names[id]; ok {
-			// Merge src tree into dest tree
-			if err := namesDest.AddTree(ctxDest.XRefTable, namesSrc); err != nil {
+			// Merge src tree into dest tree including collision detection.
+			if err := namesDest.AddTree(ctxDest.XRefTable, namesSrc, ctxSrc.NameRefs[id], []string{"D", "Dest"}); err != nil {
 				return err
 			}
 			continue

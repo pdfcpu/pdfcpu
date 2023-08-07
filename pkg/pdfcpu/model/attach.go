@@ -69,17 +69,15 @@ func decodeFileSpecStreamDict(sd *types.StreamDict, id string) error {
 func fileSpecStreamFileName(xRefTable *XRefTable, d types.Dict) (string, error) {
 	o, found := d.Find("UF")
 	if found {
-		fileName, err := xRefTable.DereferenceStringOrHexLiteral(o, V10, nil)
-		return fileName, err
+		return xRefTable.DereferenceStringOrHexLiteral(o, V10, nil)
 	}
 
 	o, found = d.Find("F")
-	if !found {
-		return "", errors.New("")
+	if found {
+		return xRefTable.DereferenceStringOrHexLiteral(o, V10, nil)
 	}
 
-	fileName, err := xRefTable.DereferenceStringOrHexLiteral(o, V10, nil)
-	return fileName, err
+	return "", errors.New("fileSpecStream missing \"UF\",\"F\"")
 }
 
 func fileSpecStreamDict(xRefTable *XRefTable, d types.Dict) (*types.StreamDict, error) {
@@ -105,7 +103,7 @@ func fileSpecStreamDict(xRefTable *XRefTable, d types.Dict) (*types.StreamDict, 
 }
 
 // NewFileSpectDictForAttachment returns a fileSpecDict for a.
-func (xRefTable *XRefTable) NewFileSpecDictForAttachment(a Attachment) (*types.IndirectRef, error) {
+func (xRefTable *XRefTable) NewFileSpecDictForAttachment(a Attachment) (types.Dict, error) {
 	modTime := time.Now()
 	if a.ModTime != nil {
 		modTime = *a.ModTime
@@ -117,18 +115,7 @@ func (xRefTable *XRefTable) NewFileSpecDictForAttachment(a Attachment) (*types.I
 
 	// TODO insert (escaped) reverse solidus before solidus between file name components.
 
-	// TODO Migrate to UTF-8 for both F and UF
-	s, err := types.EscapeUTF16String(a.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	d, err := xRefTable.NewFileSpecDict(a.ID, *s, a.Desc, *sd)
-	if err != nil {
-		return nil, err
-	}
-
-	return xRefTable.IndRefForNewObject(d)
+	return xRefTable.NewFileSpecDict(a.ID, a.ID, a.Desc, *sd)
 }
 
 func fileSpecStreamDictInfo(xRefTable *XRefTable, id string, o types.Object, decode bool) (*types.StreamDict, string, string, *time.Time, error) {
@@ -218,13 +205,19 @@ func (ctx *Context) AddAttachment(a Attachment, useCollection bool) error {
 		}
 	}
 
-	ir, err := xRefTable.NewFileSpecDictForAttachment(a)
+	d, err := xRefTable.NewFileSpecDictForAttachment(a)
 	if err != nil {
 		return err
 	}
 
-	var o types.Object = *ir
-	return xRefTable.Names["EmbeddedFiles"].Add(xRefTable, types.EncodeUTF16String(a.ID), o)
+	ir, err := xRefTable.IndRefForNewObject(d)
+	if err != nil {
+		return err
+	}
+
+	m := NameMap{a.ID: []types.Dict{d}}
+
+	return xRefTable.Names["EmbeddedFiles"].Add(xRefTable, a.ID, *ir, m, []string{"F", "UF"})
 }
 
 var errContentMatch = errors.New("name tree content match")

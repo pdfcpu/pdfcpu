@@ -33,7 +33,7 @@ func validateGoToActionDict(xRefTable *model.XRefTable, d types.Dict, dictName s
 	}
 
 	// D, required, name, byte string or array
-	return validateDestinationEntry(xRefTable, d, dictName, "D", required, model.V10)
+	return validateActionDestinationEntry(xRefTable, d, dictName, "D", required, model.V10)
 }
 
 func validateGoToRActionDict(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
@@ -47,7 +47,7 @@ func validateGoToRActionDict(xRefTable *model.XRefTable, d types.Dict, dictName 
 	}
 
 	// D, required, name, byte string or array
-	err = validateDestinationEntry(xRefTable, d, dictName, "D", REQUIRED, model.V10)
+	err = validateActionDestinationEntry(xRefTable, d, dictName, "D", REQUIRED, model.V10)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func validateGoToEActionDict(xRefTable *model.XRefTable, d types.Dict, dictName 
 	}
 
 	// D, required, name, byte string or array
-	err = validateDestinationEntry(xRefTable, d, dictName, "D", REQUIRED, model.V10)
+	err = validateActionDestinationEntry(xRefTable, d, dictName, "D", REQUIRED, model.V10)
 	if err != nil {
 		return err
 	}

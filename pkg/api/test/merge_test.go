@@ -24,7 +24,6 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
 func TestMergeCreateNew(t *testing.T) {
@@ -39,10 +38,12 @@ func TestMergeCreateNew(t *testing.T) {
 	// outFile will be overwritten.
 
 	// Bookmarks for the merged document will be created/preserved per default (see config.yaml)
-	conf := model.NewDefaultConfiguration()
-	//conf.CreateBookmarks = false
 
-	if err := api.MergeCreateFile(inFiles, outFile, conf); err != nil {
+	if err := api.MergeCreateFile(inFiles, outFile, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+
+	if err := api.ValidateFile(outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
@@ -60,13 +61,22 @@ func TestMergeAppendNew(t *testing.T) {
 
 	// Merge inFiles by concatenation in the order specified and write the result to outFile.
 	// If outFile already exists its content will be preserved and serves as the beginning of the merge result.
+
+	// Bookmarks for the merged document will be created/preserved per default (see config.yaml)
+
 	if err := api.MergeAppendFile(inFiles, outFile, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+	if err := api.ValidateFile(outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
 	anotherFile := filepath.Join(inDir, "testRot.pdf")
 	err := api.MergeAppendFile([]string{anotherFile}, outFile, nil)
 	if err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+	if err := api.ValidateFile(outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
@@ -89,6 +99,10 @@ func TestMergeToBufNew(t *testing.T) {
 
 	if err := os.WriteFile(outFile, buf.Bytes(), 0644); err != nil {
 		t.Fatalf("%s: write: %v\n", msg, err)
+	}
+
+	if err := api.ValidateFile(outFile, conf); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
 
@@ -123,5 +137,9 @@ func TestMergeRaw(t *testing.T) {
 
 	if err := os.WriteFile(outFile, buf.Bytes(), 0644); err != nil {
 		t.Fatalf("%s: write: %v\n", msg, err)
+	}
+
+	if err := api.ValidateFile(outFile, conf); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
 	}
 }

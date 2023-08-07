@@ -60,19 +60,6 @@ func validateMarkedContentReferenceDict(xRefTable *model.XRefTable, d types.Dict
 		err = errors.Errorf("pdfcpu: validateMarkedContentReferenceDict: missing entry \"MCID\".")
 	}
 
-	// if o, found := d.Find("MCID"); !found {
-	// 	// TODO FIX!
-	// } else {
-	// 	o, err := xRefTable.Dereference(o)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	if o == nil {
-	// 		return errors.Errorf("validateMarkedContentReferenceDict: missing entry \"MCID\".")
-	// 	}
-	// }
-
 	return err
 }
 

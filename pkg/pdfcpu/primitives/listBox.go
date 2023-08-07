@@ -686,7 +686,7 @@ func (lb *ListBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 
 	opt := types.Array{}
 	for _, s := range lb.Options {
-		s1, err := types.Escape(types.EncodeUTF16String(s))
+		s1, err := types.EscapeUTF16String(s)
 		if err != nil {
 			return nil, err
 		}

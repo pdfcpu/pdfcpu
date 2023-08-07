@@ -27,7 +27,7 @@ func checkAddResult(t *testing.T, r *Node, exp string, root bool) {
 	l := r.String()
 
 	if l != exp {
-		t.Fatalf("Add b: %s != %s", l, exp)
+		t.Fatalf("Add: %s != %s", l, exp)
 	}
 
 	if root {
@@ -75,7 +75,7 @@ func checkRemoveResult(t *testing.T, r *Node, k string, empty, ok bool, exp stri
 
 func buildNameTree(t *testing.T, r *Node) {
 
-	r.Add(nil, "b", types.StringLiteral("bv"))
+	r.Add(nil, "b", types.StringLiteral("bv"), nil, nil)
 	checkAddResult(t, r, "[(b,(bv)){b,b}]", true)
 
 	_, ok, _ := r.Remove(nil, "x")
@@ -83,7 +83,7 @@ func buildNameTree(t *testing.T, r *Node) {
 		t.Fatal("should not be able to Remove x")
 	}
 
-	r.Add(nil, "f", types.StringLiteral("fv"))
+	r.Add(nil, "f", types.StringLiteral("fv"), nil, nil)
 	checkAddResult(t, r, "[(b,(bv))(f,(fv)){b,f}]", true)
 
 	_, ok, _ = r.Remove(nil, "c")
@@ -91,7 +91,7 @@ func buildNameTree(t *testing.T, r *Node) {
 		t.Fatal("should not be able to Remove c")
 	}
 
-	r.Add(nil, "d", types.StringLiteral("dv"))
+	r.Add(nil, "d", types.StringLiteral("dv"), nil, nil)
 	checkAddResult(t, r, "[(b,(bv))(d,(dv))(f,(fv)){b,f}]", true)
 
 	_, ok = r.Value("c")
@@ -99,16 +99,16 @@ func buildNameTree(t *testing.T, r *Node) {
 		t.Fatal("should not find Value for c")
 	}
 
-	r.Add(nil, "h", types.StringLiteral("hv"))
+	r.Add(nil, "h", types.StringLiteral("hv"), nil, nil)
 	checkAddResult(t, r, "{b,h},[(b,(bv))(d,(dv)){b,d}],[(f,(fv))(h,(hv)){f,h}]", false)
 
-	r.Add(nil, "a", types.StringLiteral("av"))
+	r.Add(nil, "a", types.StringLiteral("av"), nil, nil)
 	checkAddResult(t, r, "{a,h},[(a,(av))(b,(bv))(d,(dv)){a,d}],[(f,(fv))(h,(hv)){f,h}]", false)
 
-	r.Add(nil, "i", types.StringLiteral("iv"))
+	r.Add(nil, "i", types.StringLiteral("iv"), nil, nil)
 	checkAddResult(t, r, "{a,i},[(a,(av))(b,(bv))(d,(dv)){a,d}],[(f,(fv))(h,(hv))(i,(iv)){f,i}]", false)
 
-	r.Add(nil, "c", types.StringLiteral("cv"))
+	r.Add(nil, "c", types.StringLiteral("cv"), nil, nil)
 	checkAddResult(t, r, "{a,i},{a,d},[(a,(av))(b,(bv)){a,b}],[(c,(cv))(d,(dv)){c,d}],[(f,(fv))(h,(hv))(i,(iv)){f,i}]", false)
 }
 
@@ -170,11 +170,8 @@ func destroyNameTree(t *testing.T, r *Node) {
 		t.Fatal("should not find Value for x")
 	}
 
-	r.Add(nil, "c", types.StringLiteral("cvv"))
-	l := r.String()
-	exp := "[(c,(cvv))(d,(dv)){c,d}]"
-	if l != exp {
-		t.Fatalf("update c: %s != %s", l, exp)
+	if err := r.Add(nil, "c", types.StringLiteral("cvv"), nil, nil); err == nil {
+		t.Fatalf("update c:should trigger DuplicateKeyException")
 	}
 
 	empty, ok, _ = r.Remove(nil, "c")
@@ -190,8 +187,8 @@ func destroyNameTree(t *testing.T, r *Node) {
 	if !empty {
 		t.Fatal("r should be empty after removing f")
 	}
-	l = r.String()
-	exp = "[{,}]"
+	l := r.String()
+	exp := "[{,}]"
 	if l != exp {
 		t.Fatalf("Remove d: %s != %s", l, exp)
 	}

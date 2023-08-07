@@ -127,7 +127,11 @@ func fullyQualifiedFieldName(xRefTable *model.XRefTable, indRef types.IndirectRe
 
 	thisID := indRef.ObjectNumber.String()
 	thisName := ""
-	if s := d.StringOrHexLiteralEntry("T"); s != nil {
+	s, err := d.StringOrHexLiteralEntry("T")
+	if err != nil {
+		return false, err
+	}
+	if s != nil {
 		thisName = *s
 	}
 
@@ -933,7 +937,11 @@ func annotIndRefSameLevel(xRefTable *model.XRefTable, fields types.Array, fieldI
 			if indRef.ObjectNumber.String() == fieldIDOrName {
 				return &indRef, nil
 			}
-			if id := d.StringOrHexLiteralEntry("T"); id != nil && *id == fieldIDOrName {
+			id, err := d.StringOrHexLiteralEntry("T")
+			if err != nil {
+				return nil, err
+			}
+			if id != nil && *id == fieldIDOrName {
 				return &indRef, nil
 			}
 		}
@@ -968,7 +976,11 @@ func annotIndRefForField(xRefTable *model.XRefTable, fields types.Array, fieldID
 		if indRef.ObjectNumber.String() == partialName {
 			return annotIndRefForField(xRefTable, kids, fieldIDOrName[len(partialName)+1:])
 		}
-		if id := d.StringOrHexLiteralEntry("T"); id != nil {
+		id, err := d.StringOrHexLiteralEntry("T")
+		if err != nil {
+			return nil, err
+		}
+		if id != nil {
 			if *id == partialName {
 				return annotIndRefForField(xRefTable, kids, fieldIDOrName[len(partialName)+1:])
 			}

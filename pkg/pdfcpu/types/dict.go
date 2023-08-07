@@ -326,32 +326,11 @@ func (d Dict) HexLiteralEntry(key string) *HexLiteral {
 	return nil
 }
 
-func (d Dict) StringOrHexLiteralEntry(key string) *string {
-
-	value, found := d.Find(key)
-	if !found {
-		return nil
+func (d Dict) StringOrHexLiteralEntry(key string) (*string, error) {
+	if obj, ok := d.Find(key); ok {
+		return StringOrHexLiteral(obj)
 	}
-
-	sl, ok := value.(StringLiteral)
-	if ok {
-		s, err := StringLiteralToString(sl)
-		if err != nil {
-			return nil
-		}
-		return &s
-	}
-
-	hl, ok := value.(HexLiteral)
-	if ok {
-		s, err := HexLiteralToString(hl)
-		if err != nil {
-			return nil
-		}
-		return &s
-	}
-
-	return nil
+	return nil, nil
 }
 
 // Length returns a *int64 for entry with key "Length".

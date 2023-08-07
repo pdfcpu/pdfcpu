@@ -31,7 +31,7 @@ func createMHBEDict() *types.Dict {
 			"U":    types.StringLiteral("vnd.adobe.swname:ADBE_Acrobat"),
 			"L":    types.NewIntegerArray(0),
 			"H":    types.NewIntegerArray(),
-			"OS":   types.NewStringArray(),
+			"OS":   types.NewStringLiteralArray(),
 		},
 	)
 
@@ -59,7 +59,7 @@ func createMHBEDict() *types.Dict {
 				},
 			),
 			"P": types.NewNameArray("1.3"),
-			"L": types.NewStringArray("en-US"),
+			"L": types.NewStringLiteralArray("en-US"),
 		},
 	)
 
@@ -77,7 +77,7 @@ func createMediaPlayersDict() *types.Dict {
 			"U":    types.StringLiteral("vnd.adobe.swname:ADBE_Acrobat"),
 			"L":    types.NewIntegerArray(0),
 			"H":    types.NewIntegerArray(),
-			"OS":   types.NewStringArray(),
+			"OS":   types.NewStringLiteralArray(),
 		},
 	)
 
@@ -163,7 +163,7 @@ func createMediaClipDataDict(xRefTable *model.XRefTable) (*types.IndirectRef, er
 			//"CT": StringLiteral("audio/mp4"),
 			//"CT":   StringLiteral("video/mp4"),
 			"P":   mediaPermissionsDict,
-			"Alt": types.NewStringArray("en-US", "My vacation", "de", "Mein Urlaub", "", "My vacation"),
+			"Alt": types.NewStringLiteralArray("en-US", "My vacation", "de", "Mein Urlaub", "", "My vacation"),
 			"PL":  *mediaPlayersDict,
 			"MH":  mhbe,
 			"BE":  mhbe,
@@ -234,7 +234,7 @@ func createFloatingWindowsParamsDict() *types.Dict {
 			"T":    types.Boolean(true),
 			"UC":   types.Boolean(true),
 			"R":    types.Integer(0),
-			"TT":   types.NewStringArray("en-US", "Special title", "de", "Spezieller Titel", "default title"),
+			"TT":   types.NewStringLiteralArray("en-US", "Special title", "de", "Spezieller Titel", "default title"),
 		},
 	)
 
@@ -299,7 +299,7 @@ func createSectionMediaRendition(mediaClipDataDict *types.IndirectRef) *types.Di
 			"S":    types.Name("MCS"), // media clip section
 			"N":    types.StringLiteral("Sample movie"),
 			"D":    *mediaClipDataDict,
-			"Alt":  types.NewStringArray("en-US", "My vacation", "de", "Mein Urlaub", "", "default vacation"),
+			"Alt":  types.NewStringLiteralArray("en-US", "My vacation", "de", "Mein Urlaub", "", "default vacation"),
 			"MH":   *mhbe,
 			"BE":   *mhbe,
 		},

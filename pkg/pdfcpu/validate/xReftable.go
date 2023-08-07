@@ -173,8 +173,7 @@ func validateNamedDestinations(xRefTable *model.XRefTable, rootDict types.Dict, 
 	}
 
 	for _, o := range d {
-		err = validateDestination(xRefTable, o)
-		if err != nil {
+		if _, err = validateDestination(xRefTable, o, false); err != nil {
 			return err
 		}
 	}

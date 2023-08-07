@@ -55,6 +55,7 @@ func MergeRaw(rsc []io.ReadSeeker, w io.Writer, conf *model.Configuration) error
 		conf = model.NewDefaultConfiguration()
 	}
 	conf.Cmd = model.MERGECREATE
+	conf.ValidationMode = model.ValidationRelaxed
 	conf.CreateBookmarks = false
 
 	ctxDest, _, _, err := readAndValidate(rsc[0], conf, time.Now())
@@ -74,12 +75,6 @@ func MergeRaw(rsc []io.ReadSeeker, w io.Writer, conf *model.Configuration) error
 		return err
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctxDest); err != nil {
-			return err
-		}
-	}
-
 	return WriteContext(ctxDest, w)
 }
 
@@ -93,6 +88,7 @@ func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configura
 		conf = model.NewDefaultConfiguration()
 	}
 	conf.Cmd = model.MERGECREATE
+	conf.ValidationMode = model.ValidationRelaxed
 
 	if destFile != "" {
 		conf.Cmd = model.MERGEAPPEND

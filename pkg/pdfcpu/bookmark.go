@@ -232,7 +232,6 @@ func bmDict(ctx *model.Context, bm Bookmark, parent types.IndirectRef) (types.Di
 	}
 
 	var o types.Object = *ir
-	ctx.Names["Dests"].Add(ctx.XRefTable, bm.Title, o)
 
 	s, err := types.EscapeUTF16String(bm.Title)
 	if err != nil {
@@ -240,10 +239,15 @@ func bmDict(ctx *model.Context, bm Bookmark, parent types.IndirectRef) (types.Di
 	}
 
 	d := types.Dict(map[string]types.Object{
-		"Dest":   types.StringLiteral(bm.Title),
+		"Dest":   types.NewHexLiteral([]byte(bm.Title)),
 		"Title":  types.StringLiteral(*s),
 		"Parent": parent},
 	)
+
+	m := model.NameMap{bm.Title: []types.Dict{d}}
+	if err := ctx.Names["Dests"].Add(ctx.XRefTable, bm.Title, o, m, []string{"D", "Dest"}); err != nil {
+		return nil, err
+	}
 
 	if bm.Color != nil {
 		d["C"] = types.Array{types.Float(bm.Color.R), types.Float(bm.Color.G), types.Float(bm.Color.B)}
@@ -291,7 +295,7 @@ func createOutlineItemDict(ctx *model.Context, bms []Bookmark, parent *types.Ind
 			first = ir
 		}
 
-		if bm.Children != nil {
+		if len(bm.Children) > 0 {
 
 			first, last, c, visc, err := createOutlineItemDict(ctx, bm.Children, ir, &bm.PageFrom)
 			if err != nil {
@@ -339,7 +343,6 @@ func AddBookmarks(ctx *model.Context, bms []Bookmark, replace bool) error {
 		return err
 	}
 
-	// TODO Merge with existing outlines.
 	if !replace {
 		if _, ok := rootDict.Find("Outlines"); ok {
 			return errExistingBookmarks
