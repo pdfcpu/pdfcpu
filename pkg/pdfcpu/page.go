@@ -102,8 +102,8 @@ func AddPages(ctxSrc, ctxDest *model.Context, pageNrs []int, usePgCache bool) er
 
 	fieldsSrc, fieldsDest := types.Array{}, types.Array{}
 
-	if ctxSrc.AcroForm != nil {
-		o, _ := ctxSrc.AcroForm.Find("Fields")
+	if ctxSrc.Form != nil {
+		o, _ := ctxSrc.Form.Find("Fields")
 		fieldsSrc, err = ctxSrc.DereferenceArray(o)
 		if err != nil {
 			return err
@@ -116,8 +116,8 @@ func AddPages(ctxSrc, ctxDest *model.Context, pageNrs []int, usePgCache bool) er
 		return err
 	}
 
-	if ctxSrc.AcroForm != nil && len(fieldsDest) > 0 {
-		d := ctxSrc.AcroForm.Clone().(types.Dict)
+	if ctxSrc.Form != nil && len(fieldsDest) > 0 {
+		d := ctxSrc.Form.Clone().(types.Dict)
 		if err := migrateFormDict(d, fieldsDest, ctxSrc, ctxDest, migrated); err != nil {
 			return err
 		}

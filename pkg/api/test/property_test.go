@@ -17,16 +17,47 @@ limitations under the License.
 package test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
+
+func listPropertiesFile(t *testing.T, fileName string, conf *model.Configuration) ([]string, error) {
+	t.Helper()
+
+	msg := "listProperties"
+
+	f, err := os.Open(fileName)
+	if err != nil {
+		t.Fatalf("%s open: %v\n", msg, err)
+	}
+	defer f.Close()
+
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	} else {
+		// Validation loads infodict.
+		conf.ValidationMode = model.ValidationRelaxed
+	}
+	conf.Cmd = model.LISTPROPERTIES
+
+	ctx, _, _, _, err := api.ReadValidateAndOptimize(f, conf, time.Now())
+	if err != nil {
+		t.Fatalf("%s ReadValidateAndOptimize: %v\n", msg, err)
+	}
+
+	return pdfcpu.PropertiesList(ctx)
+}
 
 func listProperties(t *testing.T, msg, fileName string, want []string) []string {
 	t.Helper()
 
-	got, err := api.ListPropertiesFile(fileName, nil)
+	got, err := listPropertiesFile(t, fileName, nil)
 	if err != nil {
 		t.Fatalf("%s list properties: %v\n", msg, err)
 	}

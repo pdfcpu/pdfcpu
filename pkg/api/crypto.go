@@ -28,6 +28,10 @@ import (
 // Encrypt reads a PDF stream from rs and writes the encrypted PDF stream to w.
 // A configuration containing at least the current passwords is required.
 func Encrypt(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: Encrypt: missing rs")
+	}
+
 	if conf == nil {
 		return errors.New("pdfcpu: missing configuration for encryption")
 	}
@@ -89,6 +93,10 @@ func EncryptFile(inFile, outFile string, conf *model.Configuration) (err error) 
 // Decrypt reads a PDF stream from rs and writes the encrypted PDF stream to w.
 // A configuration containing at least the current passwords is required.
 func Decrypt(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: Decrypt: missing rs")
+	}
+
 	if conf == nil {
 		return errors.New("pdfcpu: missing configuration for decryption")
 	}
@@ -150,9 +158,14 @@ func DecryptFile(inFile, outFile string, conf *model.Configuration) (err error) 
 // ChangeUserPassword reads a PDF stream from rs, changes the user password and writes the encrypted PDF stream to w.
 // A configuration containing the current passwords is required.
 func ChangeUserPassword(rs io.ReadSeeker, w io.Writer, pwOld, pwNew string, conf *model.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: ChangeUserPassword: missing rs")
+	}
+
 	if conf == nil {
 		return errors.New("pdfcpu: missing configuration for change user password")
 	}
+
 	conf.Cmd = model.CHANGEUPW
 	conf.UserPW = pwOld
 	conf.UserPWNew = &pwNew
@@ -166,6 +179,7 @@ func ChangeUserPasswordFile(inFile, outFile string, pwOld, pwNew string, conf *m
 	if conf == nil {
 		return errors.New("pdfcpu: missing configuration for change user password")
 	}
+
 	conf.Cmd = model.CHANGEUPW
 	conf.UserPW = pwOld
 	conf.UserPWNew = &pwNew
@@ -215,9 +229,14 @@ func ChangeUserPasswordFile(inFile, outFile string, pwOld, pwNew string, conf *m
 // ChangeOwnerPassword reads a PDF stream from rs, changes the owner password and writes the encrypted PDF stream to w.
 // A configuration containing the current passwords is required.
 func ChangeOwnerPassword(rs io.ReadSeeker, w io.Writer, pwOld, pwNew string, conf *model.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: ChangeOwnerPassword: missing rs")
+	}
+
 	if conf == nil {
 		return errors.New("pdfcpu: missing configuration for change owner password")
 	}
+
 	conf.Cmd = model.CHANGEOPW
 	conf.OwnerPW = pwOld
 	conf.OwnerPWNew = &pwNew

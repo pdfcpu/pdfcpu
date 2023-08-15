@@ -43,7 +43,7 @@ type Header struct {
 	Keywords string   `json:"keywords,omitempty"`
 }
 
-// TextField represents an Acroform text field.
+// TextField represents a form text field.
 type TextField struct {
 	Pages     []int  `json:"pages"`
 	ID        string `json:"id"`
@@ -65,7 +65,7 @@ type DateField struct {
 	Locked  bool   `json:"locked"`
 }
 
-// RadioButtonGroup represents an Acroform checkbox.
+// RadioButtonGroup represents a form checkbox.
 type CheckBox struct {
 	Pages   []int  `json:"pages"`
 	ID      string `json:"id"`
@@ -75,7 +75,7 @@ type CheckBox struct {
 	Locked  bool   `json:"locked"`
 }
 
-// RadioButtonGroup represents an Acroform radio button group.
+// RadioButtonGroup represents a form radio button group.
 type RadioButtonGroup struct {
 	Pages   []int    `json:"pages"`
 	ID      string   `json:"id"`
@@ -86,7 +86,7 @@ type RadioButtonGroup struct {
 	Locked  bool     `json:"locked"`
 }
 
-// ListBox represents an Acroform combobox.
+// ComboBox represents a form combobox.
 type ComboBox struct {
 	Pages    []int    `json:"pages"`
 	ID       string   `json:"id"`
@@ -98,7 +98,7 @@ type ComboBox struct {
 	Locked   bool     `json:"locked"`
 }
 
-// ListBox represents an Acroform listbox.
+// ListBox represents a form listbox.
 type ListBox struct {
 	Pages    []int    `json:"pages"`
 	ID       string   `json:"id"`
@@ -699,8 +699,8 @@ func exportPageFields(xRefTable *model.XRefTable, i int, form *Form, m map[strin
 	return nil
 }
 
-// ExportFormToStruct extracts form data originating from source from xRefTable.
-func ExportFormToStruct(xRefTable *model.XRefTable, source string) (*FormGroup, bool, error) {
+// ExportForm extracts form data originating from source from xRefTable.
+func ExportForm(xRefTable *model.XRefTable, source string) (*FormGroup, bool, error) {
 
 	fields, err := fields(xRefTable)
 	if err != nil {
@@ -746,10 +746,10 @@ func ExportFormToStruct(xRefTable *model.XRefTable, source string) (*FormGroup, 
 	return &formGroup, ok, nil
 }
 
-// ExportForm extracts form data originating from source from xRefTable and writes a JSON representation to w.
-func ExportForm(xRefTable *model.XRefTable, source string, w io.Writer) (bool, error) {
+// ExportFormJSON extracts form data originating from source from xRefTable and writes a JSON representation to w.
+func ExportFormJSON(xRefTable *model.XRefTable, source string, w io.Writer) (bool, error) {
 
-	formGroup, ok, err := ExportFormToStruct(xRefTable, source)
+	formGroup, ok, err := ExportForm(xRefTable, source)
 	if err != nil || !ok {
 		return false, err
 	}

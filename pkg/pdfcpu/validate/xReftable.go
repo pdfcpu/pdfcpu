@@ -985,7 +985,7 @@ func validateRootObject(xRefTable *model.XRefTable) error {
 		{validateOpenAction, OPTIONAL, model.V11},
 		{validateRootAdditionalActions, OPTIONAL, model.V14},
 		{validateURI, OPTIONAL, model.V11},
-		{validateAcroForm, OPTIONAL, model.V12},
+		{validateForm, OPTIONAL, model.V12},
 		{validateRootMetadata, OPTIONAL, model.V14},
 		{validateStructTree, OPTIONAL, model.V13},
 		{validateMarkInfo, OPTIONAL, model.V14},

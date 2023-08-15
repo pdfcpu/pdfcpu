@@ -917,7 +917,7 @@ func validateAdditionalActions(xRefTable *model.XRefTable, dict types.Dict, dict
 			}
 
 		case "fieldOrAnnot":
-			// A terminal acro field may be merged with a widget annotation.
+			// A terminal form field may be merged with a widget annotation.
 			fieldOptions := []string{"K", "F", "V", "C"}
 			annotOptions := []string{"E", "X", "D", "U", "Fo", "Bl", "PO", "PC", "PV", "Pl"}
 			options := append(fieldOptions, annotOptions...)

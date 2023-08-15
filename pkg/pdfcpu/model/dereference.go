@@ -347,3 +347,23 @@ func (xRefTable *XRefTable) DereferenceStringEntryBytes(d types.Dict, key string
 
 	return nil, errors.Errorf("pdfcpu: DereferenceStringEntryBytes dict=%s entry=%s, wrong type %T <%v>", d, key, o, o)
 }
+
+func (xRefTable *XRefTable) DestName(obj types.Object) (string, error) {
+	dest, err := xRefTable.Dereference(obj)
+	if err != nil {
+		return "", err
+	}
+
+	var s string
+
+	switch d := dest.(type) {
+	case types.Name:
+		s = d.Value()
+	case types.StringLiteral:
+		s, err = types.StringLiteralToString(d)
+	case types.HexLiteral:
+		s, err = types.HexLiteralToString(d)
+	}
+
+	return s, err
+}

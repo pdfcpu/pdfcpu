@@ -449,7 +449,7 @@ func mergeNames(ctxSrc, ctxDest *model.Context) error {
 	return nil
 }
 
-func mergeAcroForms(ctxSource, ctxDest *model.Context) error {
+func mergeForms(ctxSource, ctxDest *model.Context) error {
 
 	rootDictSource, rootDictDest, err := rootDicts(ctxSource, ctxDest)
 	if err != nil {
@@ -466,7 +466,7 @@ func mergeAcroForms(ctxSource, ctxDest *model.Context) error {
 		return err
 	}
 
-	// Retrieve ctxSrc AcroForm Fields
+	// Retrieve ctxSrc Form Fields
 	o, found = dSrc.Find("Fields")
 	if !found {
 		return nil
@@ -479,7 +479,7 @@ func mergeAcroForms(ctxSource, ctxDest *model.Context) error {
 		return nil
 	}
 
-	// We have a ctxSrc.Acroform with fields.
+	// We have a ctxSrc.Form with fields.
 
 	o, found = rootDictDest.Find("AcroForm")
 	if !found {
@@ -821,7 +821,7 @@ func MergeXRefTables(fName string, ctxSource, ctxDest *model.Context) (err error
 	log.Debug.Println("appendSourceObjectsToDest")
 	appendSourceObjectsToDest(ctxSource, ctxDest)
 
-	if err := mergeAcroForms(ctxSource, ctxDest); err != nil {
+	if err := mergeForms(ctxSource, ctxDest); err != nil {
 		return err
 	}
 

@@ -17,67 +17,40 @@ limitations under the License.
 package api
 
 import (
-	"fmt"
 	"io"
-	"os"
 	"time"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
 
-// ListImages returns a list of embedded images of rs.
-func ListImages(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration) ([]string, error) {
+// Images returns all embedded images of rs.
+func Images(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration) ([]map[int]model.Image, error) {
 	if rs == nil {
-		return nil, errors.New("pdfcpu: ListImages: Please provide rs")
+		return nil, errors.New("pdfcpu: ListImages: missing rs")
 	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
-		conf.Cmd = model.LISTIMAGES
 	}
-	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, time.Now())
+	conf.Cmd = model.LISTIMAGES
+
+	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
 	if err != nil {
 		return nil, err
 	}
+
 	if err := ctx.EnsurePageCount(); err != nil {
 		return nil, err
 	}
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
+
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return nil, err
 	}
 
-	return pdfcpu.ListImages(ctx, pages)
-}
+	ii, _, err := pdfcpu.Images(ctx, pages)
 
-// ListImagesFile returns a list of embedded images of inFile.
-func ListImagesFile(inFiles []string, selectedPages []string, conf *model.Configuration) ([]string, error) {
-	if len(selectedPages) == 0 {
-		log.CLI.Printf("pages: all\n")
-	}
-	ss := []string{}
-	for _, fn := range inFiles {
-		f, err := os.Open(fn)
-		if err != nil {
-			if len(inFiles) > 1 {
-				ss = append(ss, fmt.Sprintf("\ncan't open %s: %v", fn, err))
-				continue
-			}
-			return nil, err
-		}
-		defer f.Close()
-		output, err := ListImages(f, selectedPages, conf)
-		if err != nil {
-			if len(inFiles) > 1 {
-				ss = append(ss, fmt.Sprintf("\n%s: %v", fn, err))
-				continue
-			}
-			return nil, err
-		}
-		ss = append(ss, "\n"+fn)
-		ss = append(ss, output...)
-	}
-	return ss, nil
+	return ii, err
 }

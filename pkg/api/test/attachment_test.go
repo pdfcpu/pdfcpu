@@ -18,6 +18,7 @@ package test
 
 import (
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -39,19 +40,24 @@ func prepareForAttachmentTest(t *testing.T) error {
 	return copyFile(t, filepath.Join(resDir, "test.wav"), filepath.Join(outDir, "test.wav"))
 }
 
-func listAttachments(t *testing.T, msg, fileName string, want int) []string {
+func listAttachments(t *testing.T, msg, fileName string, want int) {
 	t.Helper()
 
-	list, err := api.ListAttachmentsFile(fileName, nil)
+	f, err := os.Open(fileName)
+	if err != nil {
+		t.Fatalf("%s open: %v\n", msg, err)
+	}
+	defer f.Close()
+
+	aa, err := api.Attachments(f, nil)
 	if err != nil {
 		t.Fatalf("%s list attachments: %v\n", msg, err)
 	}
 
-	got := len(list)
+	got := len(aa)
 	if got != want {
 		t.Fatalf("%s: list attachments %s: want %d got %d\n", msg, fileName, want, got)
 	}
-	return list
 }
 
 func TestAttachments(t *testing.T) {
@@ -76,10 +82,8 @@ func TestAttachments(t *testing.T) {
 	if err := api.AddAttachmentsFile(fileName, "", files, false, nil); err != nil {
 		t.Fatalf("%s add attachments: %v\n", msg, err)
 	}
-	list := listAttachments(t, msg, fileName, 4)
-	for _, s := range list {
-		t.Log(s)
-	}
+
+	listAttachments(t, msg, fileName, 4)
 
 	// Extract all attachments.
 	if err := api.ExtractAttachmentsFile(fileName, outDir, nil, nil); err != nil {

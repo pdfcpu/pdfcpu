@@ -113,6 +113,7 @@ func fileExists(filename string) bool {
 func prepImgFiles(imgFiles []string, f1 *os.File) ([]io.ReadCloser, []io.Reader, error) {
 	rc := make([]io.ReadCloser, len(imgFiles))
 	rr := make([]io.Reader, len(imgFiles))
+
 	for i, fn := range imgFiles {
 		f, err := os.Open(fn)
 		if err != nil {
@@ -124,6 +125,7 @@ func prepImgFiles(imgFiles []string, f1 *os.File) ([]io.ReadCloser, []io.Reader,
 		rc[i] = f
 		rr[i] = bufio.NewReader(f)
 	}
+
 	return rc, rr, nil
 }
 

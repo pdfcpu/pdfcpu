@@ -208,3 +208,21 @@ func processForm(cmd *Command) (out []string, err error) {
 
 	return nil, nil
 }
+
+func processBookmarks(cmd *Command) (out []string, err error) {
+	switch cmd.Mode {
+
+	case model.LISTBOOKMARKS:
+		return ListBookmarks(cmd)
+
+	case model.EXPORTBOOKMARKS:
+		return ExportBookmarks(cmd)
+
+	case model.IMPORTBOOKMARKS:
+		return ImportBookmarks(cmd)
+
+	case model.REMOVEBOOKMARKS:
+		return RemoveBookmarks(cmd)
+	}
+	return nil, nil
+}

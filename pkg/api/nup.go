@@ -121,7 +121,7 @@ func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *m
 			return err
 		}
 
-		pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
+		pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 		if err != nil {
 			return err
 		}

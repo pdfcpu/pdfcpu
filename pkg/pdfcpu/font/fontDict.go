@@ -1060,31 +1060,41 @@ func Name(xRefTable *model.XRefTable, fontDict types.Dict, objNumber int) (prefi
 }
 
 // Lang detects the optional language indicator in a font dict.
-func Lang(xRefTable *model.XRefTable, d types.Dict) (*string, error) {
+func Lang(xRefTable *model.XRefTable, d types.Dict) (string, error) {
 
 	o, found := d.Find("FontDescriptor")
 	if found {
 		fd, err := xRefTable.DereferenceDict(o)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
-		return fd.NameEntry("Lang"), nil
+		var s string
+		n := fd.NameEntry("Lang")
+		if n != nil {
+			s = *n
+		}
+		return s, nil
 	}
 
 	arr := d.ArrayEntry("DescendantFonts")
 	indRef := arr[0].(types.IndirectRef)
 	d1, err := xRefTable.DereferenceDict(indRef)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	o, found = d1.Find("FontDescriptor")
 	if found {
 		fd, err := xRefTable.DereferenceDict(o)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
-		return fd.NameEntry("Lang"), nil
+		var s string
+		n := fd.NameEntry("Lang")
+		if n != nil {
+			s = *n
+		}
+		return s, nil
 	}
 
-	return nil, nil
+	return "", nil
 }

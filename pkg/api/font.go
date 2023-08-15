@@ -68,6 +68,7 @@ func ListFonts() ([]string, error) {
 // InstallFonts installs true type fonts for embedding.
 func InstallFonts(fileNames []string) error {
 	log.CLI.Printf("installing to %s...", font.UserFontDir)
+
 	for _, fn := range fileNames {
 		switch filepath.Ext(fn) {
 		case ".ttf":
@@ -82,6 +83,7 @@ func InstallFonts(fileNames []string) error {
 			}
 		}
 	}
+
 	return font.LoadUserFonts()
 }
 
@@ -94,6 +96,7 @@ func rowLabel(xRefTable *model.XRefTable, i int, td model.TextDescriptor, baseFo
 	td.X, td.Y, td.Text = x, float64(7677-i*30), s
 	td.StrokeCol, td.FillCol = color.Black, color.SimpleColor{B: .8}
 	td.FontName, td.FontKey, td.FontSize = baseFontName, baseFontKey, 14
+
 	model.WriteMultiLine(xRefTable, buf, mb, nil, td)
 }
 
@@ -102,7 +105,9 @@ func columnsLabel(xRefTable *model.XRefTable, td model.TextDescriptor, baseFontN
 	if !top {
 		y = 0
 	}
+
 	td.FontName, td.FontKey = baseFontName, baseFontKey
+
 	for i := 0; i < 256; i++ {
 		s := fmt.Sprintf("#%02X", i)
 		td.X, td.Y, td.Text, td.FontSize = float64(70+i*30), y, s, 14
@@ -114,6 +119,7 @@ func columnsLabel(xRefTable *model.XRefTable, td model.TextDescriptor, baseFontN
 func surrogate(r rune) bool {
 	return r >= 0xD800 && r <= 0xDFFF
 }
+
 func writeUserFontDemoContent(xRefTable *model.XRefTable, p model.Page, fontName string, plane int) {
 	baseFontName := "Helvetica"
 	baseFontSize := 24

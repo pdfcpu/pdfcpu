@@ -63,9 +63,26 @@ func NewSimpleColor(rgb uint32) SimpleColor {
 
 // NewSimpleColorForArray returns a SimpleColor for an r,g,b array.
 func NewSimpleColorForArray(arr types.Array) SimpleColor {
-	r := float32(arr[0].(types.Float).Value())
-	g := float32(arr[1].(types.Float).Value())
-	b := float32(arr[2].(types.Float).Value())
+	var r, g, b float32
+
+	if f, ok := arr[0].(types.Float); ok {
+		r = float32(f.Value())
+	} else {
+		r = float32(arr[0].(types.Integer))
+	}
+
+	if f, ok := arr[1].(types.Float); ok {
+		g = float32(f.Value())
+	} else {
+		g = float32(arr[1].(types.Integer))
+	}
+
+	if f, ok := arr[2].(types.Float); ok {
+		b = float32(f.Value())
+	} else {
+		b = float32(arr[2].(types.Integer))
+	}
+
 	return SimpleColor{r, g, b}
 }
 

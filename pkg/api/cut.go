@@ -33,7 +33,7 @@ import (
 )
 
 func prepareForCut(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration) (*model.Context, types.IntSet, error) {
-	ctxSrc, _, _, _, err := readValidateAndOptimize(rs, conf, time.Now())
+	ctxSrc, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -42,7 +42,7 @@ func prepareForCut(rs io.ReadSeeker, selectedPages []string, conf *model.Configu
 		return nil, nil, err
 	}
 
-	pages, err := PagesForPageSelection(ctxSrc.PageCount, selectedPages, true)
+	pages, err := PagesForPageSelection(ctxSrc.PageCount, selectedPages, true, true)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -51,6 +51,9 @@ func prepareForCut(rs io.ReadSeeker, selectedPages []string, conf *model.Configu
 }
 
 func Poster(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut *model.Cut, conf *model.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: Poster: missing rs")
+	}
 
 	if cut.PageSize == "" && !cut.UserDim {
 		return errors.New("pdfcpu: poster - please supply either dimensions or form size ")
@@ -63,6 +66,7 @@ func Poster(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, c
 	if rs == nil {
 		return errors.New("pdfcpu poster: Please provide rs")
 	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
@@ -110,6 +114,7 @@ func PosterFile(inFile, outDir, outFile string, selectedPages []string, cut *mod
 		return err
 	}
 	defer f.Close()
+
 	log.CLI.Printf("ndown %s into %s/ ...\n", inFile, outDir)
 
 	if outFile == "" {
@@ -120,10 +125,10 @@ func PosterFile(inFile, outDir, outFile string, selectedPages []string, cut *mod
 }
 
 func NDown(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, n int, cut *model.Cut, conf *model.Configuration) error {
-
 	if rs == nil {
-		return errors.New("pdfcpu ndown: Please provide rs")
+		return errors.New("pdfcpu NDown: Please provide rs")
 	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
@@ -171,6 +176,7 @@ func NDownFile(inFile, outDir, outFile string, selectedPages []string, n int, cu
 		return err
 	}
 	defer f.Close()
+
 	log.CLI.Printf("ndown %s into %s/ ...\n", inFile, outDir)
 
 	if outFile == "" {
@@ -182,6 +188,7 @@ func NDownFile(inFile, outDir, outFile string, selectedPages []string, n int, cu
 
 func validateCut(cut *model.Cut) error {
 	sort.Float64s(cut.Hor)
+
 	for _, f := range cut.Hor {
 		if f < 0 || f >= 1 {
 			return errors.New("pdfcpu: Invalid cut points. Please consult pdfcpu help cut")
@@ -205,6 +212,9 @@ func validateCut(cut *model.Cut) error {
 }
 
 func Cut(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut *model.Cut, conf *model.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: Cut: missing rs")
+	}
 
 	if len(cut.Hor) == 0 && len(cut.Vert) == 0 {
 		return errors.New("pdfcpu: Invalid cut configuration string: missing hor/ver cutpoints. Please consult pdfcpu help cut")
@@ -217,6 +227,7 @@ func Cut(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut 
 	if rs == nil {
 		return errors.New("pdfcpu cut: Please provide rs")
 	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
@@ -264,6 +275,7 @@ func CutFile(inFile, outDir, outFile string, selectedPages []string, cut *model.
 		return err
 	}
 	defer f.Close()
+
 	log.CLI.Printf("cutting %s into %s/ ...\n", inFile, outDir)
 
 	if outFile == "" {

@@ -86,7 +86,7 @@ var cmdMap = map[model.CommandMode]func(cmd *Command) ([]string, error){
 	model.ROTATE:                  Rotate,
 	model.NUP:                     NUp,
 	model.BOOKLET:                 Booklet,
-	model.INFO:                    Info,
+	model.LISTINFO:                ListInfo,
 	model.CHEATSHEETSFONTS:        CreateCheatSheetsFonts,
 	model.INSTALLFONTS:            InstallFonts,
 	model.LISTFONTS:               ListFonts,
@@ -118,6 +118,10 @@ var cmdMap = map[model.CommandMode]func(cmd *Command) ([]string, error){
 	model.POSTER:                  Poster,
 	model.NDOWN:                   NDown,
 	model.CUT:                     Cut,
+	model.LISTBOOKMARKS:           processBookmarks,
+	model.EXPORTBOOKMARKS:         processBookmarks,
+	model.IMPORTBOOKMARKS:         processBookmarks,
+	model.REMOVEBOOKMARKS:         processBookmarks,
 }
 
 // ValidateCommand creates a new command to validate a file.
@@ -542,15 +546,16 @@ func BookletCommand(inFiles []string, outFile string, pageSelection []string, nu
 }
 
 // InfoCommand creates a new command to output information about inFile.
-func InfoCommand(inFiles []string, pageSelection []string, conf *model.Configuration) *Command {
+func InfoCommand(inFiles []string, pageSelection []string, json bool, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = model.INFO
+	conf.Cmd = model.LISTINFO
 	return &Command{
-		Mode:          model.INFO,
+		Mode:          model.LISTINFO,
 		InFiles:       inFiles,
 		PageSelection: pageSelection,
+		BoolVal:       json,
 		Conf:          conf}
 }
 
@@ -984,4 +989,57 @@ func CutCommand(inFile, outDir, outFile string, pageSelection []string, cut *mod
 		PageSelection: pageSelection,
 		Cut:           cut,
 		Conf:          conf}
+}
+
+// ListBookmarksCommand creates a new command to list bookmarks of inFile.
+func ListBookmarksCommand(inFile string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.LISTBOOKMARKS
+	return &Command{
+		Mode:   model.LISTBOOKMARKS,
+		InFile: &inFile,
+		Conf:   conf}
+}
+
+// ExportBookmarksCommand creates a new command to export bookmarks of inFile.
+func ExportBookmarksCommand(inFile, outFileJSON string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.EXPORTBOOKMARKS
+	return &Command{
+		Mode:        model.EXPORTBOOKMARKS,
+		InFile:      &inFile,
+		OutFileJSON: &outFileJSON,
+		Conf:        conf}
+}
+
+// ImportBookmarksCommand creates a new command to import bookmarks to inFile.
+func ImportBookmarksCommand(inFile, inFileJSON, outFile string, replace bool, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.IMPORTBOOKMARKS
+	return &Command{
+		Mode:       model.IMPORTBOOKMARKS,
+		BoolVal:    replace,
+		InFile:     &inFile,
+		InFileJSON: &inFileJSON,
+		OutFile:    &outFile,
+		Conf:       conf}
+}
+
+// RemoveBookmarksCommand creates a new command to remove all bookmarks from inFile.
+func RemoveBookmarksCommand(inFile, outFile string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.REMOVEBOOKMARKS
+	return &Command{
+		Mode:    model.REMOVEBOOKMARKS,
+		InFile:  &inFile,
+		OutFile: &outFile,
+		Conf:    conf}
 }

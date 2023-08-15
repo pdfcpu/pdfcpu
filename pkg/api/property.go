@@ -21,62 +21,49 @@ import (
 	"os"
 	"time"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
 
-// ListProperties returns the property list of rs.
-func ListProperties(rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {
+// Properties returns rs's properties as recorded in infoDict.
+func Properties(rs io.ReadSeeker, conf *model.Configuration) (map[string]string, error) {
+	if rs == nil {
+		return nil, errors.New("pdfcpu: ListProperties: missing rs")
+	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	} else {
 		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
 	}
+	conf.Cmd = model.LISTPROPERTIES
 
-	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
+	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
 	if err != nil {
 		return nil, err
 	}
 
-	fromWrite := time.Now()
-	list, err := pdfcpu.PropertiesList(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	durWrite := time.Since(fromWrite).Seconds()
-	durTotal := time.Since(fromStart).Seconds()
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	model.TimingStats("list files", durRead, durVal, durOpt, durWrite, durTotal)
-
-	return list, nil
-}
-
-// ListPropertiesFile returns the property list of inFile.
-func ListPropertiesFile(inFile string, conf *model.Configuration) ([]string, error) {
-	f, err := os.Open(inFile)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	return ListProperties(f, conf)
+	return ctx.Properties, nil
 }
 
 // AddProperties embeds files into a PDF context read from rs and writes the result to w.
 func AddProperties(rs io.ReadSeeker, w io.Writer, properties map[string]string, conf *model.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: AddProperties: missing rs")
+	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	} else {
 		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
 	}
+	conf.Cmd = model.ADDPROPERTIES
 
 	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
+	ctx, durRead, durVal, durOpt, err := ReadValidateAndOptimize(rs, conf, fromStart)
 	if err != nil {
 		return err
 	}
@@ -143,15 +130,20 @@ func AddPropertiesFile(inFile, outFile string, properties map[string]string, con
 
 // RemoveProperties deletes embedded files from a PDF context read from rs and writes the result to w.
 func RemoveProperties(rs io.ReadSeeker, w io.Writer, properties []string, conf *model.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: RemoveProperties: missing rs")
+	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	} else {
 		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
 	}
+	conf.Cmd = model.REMOVEPROPERTIES
 
 	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
+	ctx, durRead, durVal, durOpt, err := ReadValidateAndOptimize(rs, conf, fromStart)
 	if err != nil {
 		return err
 	}

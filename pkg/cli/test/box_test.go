@@ -74,6 +74,7 @@ func TestCropCommand(t *testing.T) {
 		if _, err := cli.Process(cmd); err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
+
 	}
 }
 

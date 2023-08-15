@@ -1337,7 +1337,7 @@ func processInfoCommand(conf *model.Configuration) {
 
 	processDiplayUnit(conf)
 
-	process(cli.InfoCommand(filesIn, selectedPages, conf))
+	process(cli.InfoCommand(filesIn, selectedPages, json, conf))
 }
 
 func processListFontsCommand(conf *model.Configuration) {
@@ -2238,4 +2238,81 @@ func processCutCommand(conf *model.Configuration) {
 	}
 
 	process(cli.CutCommand(inFile, outDir, outFile, selectedPages, cut, conf))
+}
+
+func processListBookmarksCommand(conf *model.Configuration) {
+	if len(flag.Args()) < 1 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageBookmarksList)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+
+	process(cli.ListBookmarksCommand(inFile, conf))
+}
+
+func processExportBookmarksCommand(conf *model.Configuration) {
+	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageBookmarksExport)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+
+	outFileJSON := "out.json"
+	if len(flag.Args()) == 2 {
+		outFileJSON = flag.Arg(1)
+		ensureJSONExtension(outFileJSON)
+	}
+
+	process(cli.ExportBookmarksCommand(inFile, outFileJSON, conf))
+}
+
+func processImportBookmarksCommand(conf *model.Configuration) {
+	if len(flag.Args()) == 0 || len(flag.Args()) > 3 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageBookmarksImport)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+
+	inFileJSON := flag.Arg(1)
+	ensureJSONExtension(inFileJSON)
+
+	outFile := ""
+	if len(flag.Args()) == 3 {
+		outFile = flag.Arg(2)
+		ensurePDFExtension(outFile)
+	}
+
+	process(cli.ImportBookmarksCommand(inFile, inFileJSON, outFile, replaceBookmarks, conf))
+}
+
+func processRemoveBookmarksCommand(conf *model.Configuration) {
+	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageBookmarksExport)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+
+	outFile := ""
+	if len(flag.Args()) == 2 {
+		outFile = flag.Arg(1)
+		ensurePDFExtension(outFile)
+	}
+
+	process(cli.RemoveBookmarksCommand(inFile, outFile, conf))
 }

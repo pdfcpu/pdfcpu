@@ -81,7 +81,7 @@ func testSelectedPages(s string, pageCount int, compareString string, t *testing
 		t.Fatalf("testSelectedPages(%s) %v\n", s, err)
 	}
 
-	selectedPages, err := api.PagesForPageSelection(pageCount, pageSelection, false)
+	selectedPages, err := api.PagesForPageSelection(pageCount, pageSelection, false, true)
 	if err != nil {
 		t.Fatalf("testSelectedPages(%s) %v\n", s, err)
 	}

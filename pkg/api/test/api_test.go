@@ -222,7 +222,17 @@ func TestInfo(t *testing.T) {
 	msg := "TestInfo"
 	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
 
-	if _, err := api.InfoFile(inFile, nil, model.NewDefaultConfiguration()); err != nil {
+	f, err := os.Open(inFile)
+	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
+	}
+	defer f.Close()
+
+	info, err := api.PDFInfo(f, inFile, nil, conf)
+	if err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+	if info == nil {
+		t.Fatalf("%s: missing Info\n", msg)
 	}
 }

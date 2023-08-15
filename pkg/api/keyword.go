@@ -21,62 +21,49 @@ import (
 	"os"
 	"time"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
 
-// ListKeywords returns the keyword list of rs.
-func ListKeywords(rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {
+// Keywords returns the keywords of rs's info dict.
+func Keywords(rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {
+	if rs == nil {
+		return nil, errors.New("pdfcpu: ListKeywords: missing rs")
+	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	} else {
 		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
 	}
+	conf.Cmd = model.LISTKEYWORDS
 
-	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
+	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
 	if err != nil {
 		return nil, err
 	}
 
-	fromWrite := time.Now()
-	list, err := pdfcpu.KeywordsList(ctx.XRefTable)
-	if err != nil {
-		return nil, err
-	}
-
-	durWrite := time.Since(fromWrite).Seconds()
-	durTotal := time.Since(fromStart).Seconds()
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	model.TimingStats("list files", durRead, durVal, durOpt, durWrite, durTotal)
-
-	return list, nil
-}
-
-// ListKeywordsFile returns the keyword list of inFile.
-func ListKeywordsFile(inFile string, conf *model.Configuration) ([]string, error) {
-	f, err := os.Open(inFile)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	return ListKeywords(f, conf)
+	return pdfcpu.KeywordsList(ctx.XRefTable)
 }
 
 // AddKeywords embeds files into a PDF context read from rs and writes the result to w.
 func AddKeywords(rs io.ReadSeeker, w io.Writer, files []string, conf *model.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: AddKeywords: missing rs")
+	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	} else {
 		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
 	}
+	conf.Cmd = model.ADDKEYWORDS
 
 	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
+	ctx, durRead, durVal, durOpt, err := ReadValidateAndOptimize(rs, conf, fromStart)
 	if err != nil {
 		return err
 	}
@@ -143,15 +130,20 @@ func AddKeywordsFile(inFile, outFile string, files []string, conf *model.Configu
 
 // RemoveKeywords deletes embedded files from a PDF context read from rs and writes the result to w.
 func RemoveKeywords(rs io.ReadSeeker, w io.Writer, keywords []string, conf *model.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: RemoveKeywords: missing rs")
+	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	} else {
 		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
 	}
+	conf.Cmd = model.REMOVEKEYWORDS
 
 	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
+	ctx, durRead, durVal, durOpt, err := ReadValidateAndOptimize(rs, conf, fromStart)
 	if err != nil {
 		return err
 	}

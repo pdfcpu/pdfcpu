@@ -18,6 +18,7 @@ jobs:
             goarch: amd64
         go:
            - '1.20.x'
+           - '1.21.x'
     runs-on: ubuntu-latest
 
     steps:

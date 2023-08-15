@@ -22,60 +22,49 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
 
-// ListPermissions returns a list of user access permissions.
-func ListPermissions(rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {
+// Permissions returns user access permissions for rs.
+func Permissions(rs io.ReadSeeker, conf *model.Configuration) (int, error) {
+	if rs == nil {
+		return 0, errors.New("pdfcpu: Permissions: missing rs")
+	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
 	conf.Cmd = model.LISTPERMISSIONS
 
-	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
+	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
-	fromList := time.Now()
-	list := pdfcpu.Permissions(ctx)
-
-	durList := time.Since(fromList).Seconds()
-	durTotal := time.Since(fromStart).Seconds()
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	model.TimingStats("list permissions", durRead, durVal, durOpt, durList, durTotal)
-
-	return list, nil
-}
-
-// ListPermissionsFile returns a list of user access permissions for inFile.
-func ListPermissionsFile(inFile string, conf *model.Configuration) ([]string, error) {
-	f, err := os.Open(inFile)
-	if err != nil {
-		return nil, err
+	p := 0
+	if ctx.E != nil {
+		p = ctx.E.P
 	}
 
-	defer func() {
-		f.Close()
-	}()
-
-	return ListPermissions(f, conf)
+	return p, nil
 }
 
 // SetPermissions sets user access permissions.
 // inFile has to be encrypted.
 // A configuration containing the current passwords is required.
 func SetPermissions(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: SetPermissions: missing rs")
+	}
+
 	if conf == nil {
 		return errors.New("pdfcpu: missing configuration for setting permissions")
 	}
 	conf.Cmd = model.SETPERMISSIONS
 
 	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
+	ctx, durRead, durVal, durOpt, err := ReadValidateAndOptimize(rs, conf, fromStart)
 	if err != nil {
 		return err
 	}
@@ -142,9 +131,15 @@ func SetPermissionsFile(inFile, outFile string, conf *model.Configuration) (err 
 
 // GetPermissions returns the permissions for rs.
 func GetPermissions(rs io.ReadSeeker, conf *model.Configuration) (*int16, error) {
+	if rs == nil {
+		return nil, errors.New("pdfcpu: GetPermissions: missing rs")
+	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
+	// No cmd available.
+
 	ctx, _, _, err := readAndValidate(rs, conf, time.Now())
 	if err != nil {
 		return nil, err

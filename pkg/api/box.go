@@ -42,44 +42,34 @@ func Box(s string, u types.DisplayUnit) (*model.Box, error) {
 	return model.ParseBox(s, u)
 }
 
-// ListBoxes returns a list of page boundaries for selected pages of rs.
-func ListBoxes(rs io.ReadSeeker, selectedPages []string, pb *model.PageBoundaries, conf *model.Configuration) ([]string, error) {
+func Boxes(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration) ([]model.PageBoundaries, error) {
 	if rs == nil {
-		return nil, errors.New("pdfcpu: ListBoxes: missing rs")
+		return nil, errors.New("pdfcpu: Boxes: missing rs")
 	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
-		conf.Cmd = model.LISTBOXES
 	}
-	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, time.Now())
+	conf.Cmd = model.LISTBOXES
+
+	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
 	if err != nil {
 		return nil, err
 	}
+
 	if err := ctx.EnsurePageCount(); err != nil {
 		return nil, err
 	}
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
+
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return nil, err
 	}
 
-	return ctx.ListPageBoundaries(pages, pb)
-}
+	//pb := &model.PageBoundaries{}
+	//pb.SelectAll()
 
-// ListBoxesFile returns a list of page boundaries for selected pages of inFile.
-func ListBoxesFile(inFile string, selectedPages []string, pb *model.PageBoundaries, conf *model.Configuration) ([]string, error) {
-	f, err := os.Open(inFile)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	if pb == nil {
-		pb = &model.PageBoundaries{}
-		pb.SelectAll()
-	}
-	log.CLI.Printf("listing %s for %s\n", pb, inFile)
-	return ListBoxes(f, selectedPages, pb, conf)
+	return ctx.PageBoundaries(pages)
 }
 
 // AddBoxes adds page boundaries for selected pages of rs and writes result to w.
@@ -87,19 +77,22 @@ func AddBoxes(rs io.ReadSeeker, w io.Writer, selectedPages []string, pb *model.P
 	if rs == nil {
 		return errors.New("pdfcpu: AddBoxes: missing rs")
 	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
 	conf.Cmd = model.ADDBOXES
 
-	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, time.Now())
+	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
 	if err != nil {
 		return err
 	}
+
 	if err := ctx.EnsurePageCount(); err != nil {
 		return err
 	}
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
+
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return err
 	}
@@ -171,19 +164,22 @@ func RemoveBoxes(rs io.ReadSeeker, w io.Writer, selectedPages []string, pb *mode
 	if rs == nil {
 		return errors.New("pdfcpu: RemoveBoxes: missing rs")
 	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
 	conf.Cmd = model.REMOVEBOXES
 
-	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, time.Now())
+	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
 	if err != nil {
 		return err
 	}
+
 	if err := ctx.EnsurePageCount(); err != nil {
 		return err
 	}
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
+
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return err
 	}
@@ -255,19 +251,22 @@ func Crop(rs io.ReadSeeker, w io.Writer, selectedPages []string, b *model.Box, c
 	if rs == nil {
 		return errors.New("pdfcpu: Crop: missing rs")
 	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
 	conf.Cmd = model.CROP
 
-	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, time.Now())
+	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
 	if err != nil {
 		return err
 	}
+
 	if err := ctx.EnsurePageCount(); err != nil {
 		return err
 	}
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
+
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return err
 	}

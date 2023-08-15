@@ -94,11 +94,11 @@ type FieldMeta struct {
 
 func fields(xRefTable *model.XRefTable) (types.Array, error) {
 
-	if xRefTable.AcroForm == nil {
+	if xRefTable.Form == nil {
 		return nil, errors.New("pdfcpu: no form available")
 	}
 
-	o, ok := xRefTable.AcroForm.Find("Fields")
+	o, ok := xRefTable.Form.Find("Fields")
 	if !ok {
 		return nil, errors.New("pdfcpu: no form fields available")
 	}
@@ -871,21 +871,32 @@ func renderFields(ctx *model.Context, fs []Field, fm *FieldMeta) ([]string, erro
 	return ss, nil
 }
 
-// ListFormFields returns a list of all form fields present in xRefTable.
-func ListFormFields(ctx *model.Context) ([]string, error) {
-
-	// TODO Align output for Bangla, Hindi, Marathi.
+// FormFields returns all form fields present in ctx.
+func FormFields(ctx *model.Context) ([]Field, *FieldMeta, error) {
 
 	xRefTable := ctx.XRefTable
 
 	fields, err := fields(xRefTable)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	fm := &FieldMeta{pageMax: 2, idMax: 3, nameMax: 4, defMax: 7, valMax: 5}
 
 	fs, err := collectFields(xRefTable, fields, fm)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return fs, fm, nil
+}
+
+// ListFormFields returns a list of all form fields present in ctx.
+func ListFormFields(ctx *model.Context) ([]string, error) {
+
+	// TODO Align output for Bangla, Hindi, Marathi.
+
+	fs, fm, err := FormFields(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1142,7 +1153,7 @@ func RemoveFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error
 	if len(fields) == 0 {
 		ctx.RootDict.Delete("AcroForm")
 	} else {
-		xRefTable.AcroForm["Fields"] = fields
+		xRefTable.Form["Fields"] = fields
 	}
 
 	var ok bool

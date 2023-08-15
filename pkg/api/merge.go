@@ -44,11 +44,11 @@ func appendTo(rs io.ReadSeeker, fName string, ctxDest *model.Context) error {
 func MergeRaw(rsc []io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
 
 	if rsc == nil {
-		return errors.New("pdfcpu: MergeRaw: Please provide rsc")
+		return errors.New("pdfcpu: MergeRaw: missing rsc")
 	}
 
 	if w == nil {
-		return errors.New("pdfcpu: MergeRaw: Please provide w")
+		return errors.New("pdfcpu: MergeRaw: missing w")
 	}
 
 	if conf == nil {

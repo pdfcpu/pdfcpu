@@ -41,6 +41,16 @@ func initCommandMap() {
 		attachCmdMap.register(k, v)
 	}
 
+	bookmarksCmdMap := newCommandMap()
+	for k, v := range map[string]command{
+		"list":   {processListBookmarksCommand, nil, "", ""},
+		"import": {processImportBookmarksCommand, nil, "", ""},
+		"export": {processExportBookmarksCommand, nil, "", ""},
+		"remove": {processRemoveBookmarksCommand, nil, "", ""},
+	} {
+		bookmarksCmdMap.register(k, v)
+	}
+
 	boxesCmdMap := newCommandMap()
 	for k, v := range map[string]command{
 		"list":   {processListBoxesCommand, nil, "", ""},
@@ -147,6 +157,7 @@ func initCommandMap() {
 	for k, v := range map[string]command{
 		"annotations":   {nil, annotsCmdMap, usageAnnots, usageLongAnnots},
 		"attachments":   {nil, attachCmdMap, usageAttach, usageLongAttach},
+		"bookmarks":     {nil, bookmarksCmdMap, usageBookmarks, usageLongBookmarks},
 		"booklet":       {processBookletCommand, nil, usageBooklet, usageLongBooklet},
 		"boxes":         {nil, boxesCmdMap, usageBoxes, usageLongBoxes},
 		"changeopw":     {processChangeOwnerPasswordCommand, nil, usageChangeOwnerPW, usageLongChangeOwnerPW},
@@ -193,54 +204,63 @@ func initCommandMap() {
 }
 
 func initFlags() {
-	statsUsage := "optimize: create a csv file for stats"
-	flag.StringVar(&fileStats, "stats", "", statsUsage)
-
-	modeUsage := "validate: strict|relaxed; extract: image|font|content|page|meta; encrypt: rc4|aes, stamp:text|image/pdf"
-	flag.StringVar(&mode, "mode", "", modeUsage)
-	flag.StringVar(&mode, "m", "", modeUsage)
-
-	keyUsage := "encrypt: 40|128|256"
-	flag.StringVar(&key, "key", "256", keyUsage)
-	flag.StringVar(&key, "k", "256", keyUsage)
-
-	permUsage := "encrypt, perm set: none|all"
-	flag.StringVar(&perm, "perm", "none", permUsage)
-
-	unitUsage := "info: po|in|cm|mm"
-	flag.StringVar(&unit, "unit", "", unitUsage)
-	flag.StringVar(&unit, "u", "", unitUsage)
-
-	selectedPagesUsage := "a comma separated list of pages or page ranges, see pdfcpu selectedpages"
-	flag.StringVar(&selectedPages, "pages", "", selectedPagesUsage)
-	flag.StringVar(&selectedPages, "p", "", selectedPagesUsage)
-
-	flag.BoolVar(&quiet, "quiet", false, "")
-	flag.BoolVar(&quiet, "q", false, "")
-
-	sortUsage := "sort files before merging"
-	flag.BoolVar(&sorted, "sort", false, sortUsage)
-	flag.BoolVar(&sorted, "s", false, sortUsage)
 
 	bookmarksUsage := "create bookmarks while merging"
 	flag.BoolVar(&bookmarks, "bookmarks", true, bookmarksUsage)
 	flag.BoolVar(&bookmarks, "b", true, bookmarksUsage)
 
-	flag.BoolVar(&verbose, "verbose", false, "")
-	flag.BoolVar(&verbose, "v", false, "")
-	flag.BoolVar(&veryVerbose, "vv", false, "")
+	confUsage := "the config directory path | skip | none"
+	flag.StringVar(&conf, "config", "", confUsage)
+	flag.StringVar(&conf, "conf", "", confUsage)
+	flag.StringVar(&conf, "c", "", confUsage)
+
+	jsonUsage := "produce JSON output"
+	flag.BoolVar(&json, "json", false, jsonUsage)
+	flag.BoolVar(&json, "j", false, jsonUsage)
+
+	keyUsage := "encrypt: 40|128|256"
+	flag.StringVar(&key, "key", "256", keyUsage)
+	flag.StringVar(&key, "k", "256", keyUsage)
 
 	linksUsage := "check for broken links"
 	flag.BoolVar(&links, "links", false, linksUsage)
 	flag.BoolVar(&links, "l", false, linksUsage)
 
+	modeUsage := "validate: strict|relaxed; extract: image|font|content|page|meta; encrypt: rc4|aes, stamp:text|image/pdf"
+	flag.StringVar(&mode, "mode", "", modeUsage)
+	flag.StringVar(&mode, "m", "", modeUsage)
+
+	selectedPagesUsage := "a comma separated list of pages or page ranges, see pdfcpu selectedpages"
+	flag.StringVar(&selectedPages, "pages", "", selectedPagesUsage)
+	flag.StringVar(&selectedPages, "p", "", selectedPagesUsage)
+
+	permUsage := "encrypt, perm set: none|all"
+	flag.StringVar(&perm, "perm", "none", permUsage)
+
+	flag.BoolVar(&quiet, "quiet", false, "")
+	flag.BoolVar(&quiet, "q", false, "")
+
+	replaceUsage := "replace existing bookmarks"
+	flag.BoolVar(&replaceBookmarks, "replace", false, replaceUsage)
+	flag.BoolVar(&replaceBookmarks, "r", false, replaceUsage)
+
+	sortUsage := "sort files before merging"
+	flag.BoolVar(&sorted, "sort", false, sortUsage)
+	flag.BoolVar(&sorted, "s", false, sortUsage)
+
+	statsUsage := "optimize: create a csv file for stats"
+	flag.StringVar(&fileStats, "stats", "", statsUsage)
+
+	unitUsage := "info: po|in|cm|mm"
+	flag.StringVar(&unit, "unit", "", unitUsage)
+	flag.StringVar(&unit, "u", "", unitUsage)
+
+	flag.BoolVar(&verbose, "verbose", false, "")
+	flag.BoolVar(&verbose, "v", false, "")
+	flag.BoolVar(&veryVerbose, "vv", false, "")
+
 	flag.StringVar(&upw, "upw", "", "user password")
 	flag.StringVar(&opw, "opw", "", "owner password")
-
-	confUsage := "the config directory path | skip | none"
-	flag.StringVar(&conf, "config", "", confUsage)
-	flag.StringVar(&conf, "conf", "", confUsage)
-	flag.StringVar(&conf, "c", "", confUsage)
 }
 
 func initLogging(verbose, veryVerbose bool) {

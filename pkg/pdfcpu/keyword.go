@@ -17,30 +17,11 @@ limitations under the License.
 package pdfcpu
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
-
-func addKeywordsToInfoDigest(ctx *model.Context, ss *[]string) error {
-	if len(ctx.Keywords) == 0 {
-		return nil
-	}
-	kwl, err := KeywordsList(ctx.XRefTable)
-	if err != nil {
-		return err
-	}
-	for i, l := range kwl {
-		if i == 0 {
-			*ss = append(*ss, fmt.Sprintf("%20s: %s", "Keywords", l))
-			continue
-		}
-		*ss = append(*ss, fmt.Sprintf("%20s  %s", "", l))
-	}
-	return nil
-}
 
 // KeywordsList returns a list of keywords as recorded in the document info dict.
 func KeywordsList(xRefTable *model.XRefTable) ([]string, error) {

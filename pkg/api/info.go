@@ -17,71 +17,45 @@
 package api
 
 import (
-	"fmt"
 	"io"
-	"os"
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pkg/errors"
 )
 
-// Info returns information about rs.
-func Info(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration) ([]string, error) {
+// PDFInfo returns information about rs.
+func PDFInfo(rs io.ReadSeeker, fileName string, selectedPages []string, conf *model.Configuration) (*pdfcpu.PDFInfo, error) {
+	if rs == nil {
+		return nil, errors.New("pdfcpu: PDFInfo: missing rs")
+	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	} else {
 		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
 	}
+	conf.Cmd = model.LISTINFO
+
 	ctx, _, _, err := readAndValidate(rs, conf, time.Now())
 	if err != nil {
 		return nil, err
 	}
+
 	if err := ctx.EnsurePageCount(); err != nil {
 		return nil, err
 	}
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, false)
+
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, false, true)
 	if err != nil {
 		return nil, err
 	}
+
 	if err := pdfcpu.DetectWatermarks(ctx); err != nil {
 		return nil, err
 	}
-	return pdfcpu.InfoDigest(ctx, pages)
-}
 
-// InfoFile returns information about inFile.
-func InfoFile(inFile string, selectedPages []string, conf *model.Configuration) ([]string, error) {
-
-	f, err := os.Open(inFile)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	ss, err := Info(f, selectedPages, conf)
-	s := fmt.Sprintf("%s:", inFile)
-	return append([]string{s}, ss...), err
-}
-
-// InfoFile returns information about inFile.
-func InfoFiles(inFiles []string, selectedPages []string, conf *model.Configuration) ([]string, error) {
-
-	var ss []string
-
-	for i, fn := range inFiles {
-		if i > 0 {
-			ss = append(ss, "")
-		}
-		ssx, err := InfoFile(fn, selectedPages, conf)
-		if err != nil {
-			if len(inFiles) == 1 {
-				return nil, err
-			}
-			fmt.Fprintf(os.Stderr, "%s: %v\n", fn, err)
-		}
-		ss = append(ss, ssx...)
-	}
-
-	return ss, nil
+	return pdfcpu.Info(ctx, fileName, pages)
 }

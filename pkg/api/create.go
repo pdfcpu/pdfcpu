@@ -26,6 +26,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/create"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+	"github.com/pkg/errors"
 )
 
 // CreatePDFFile creates a PDF file for an xRefTable and writes it to outFile.
@@ -43,6 +44,10 @@ func CreatePDFFile(xRefTable *model.XRefTable, outFile string, conf *model.Confi
 // If rs is present, new PDF content will be appended including any empty pages needed.
 // rd is a JSON representation of PDF page content which may include form data.
 func Create(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configuration) error {
+	if rd == nil {
+		return errors.New("pdfcpu: Create: missing rd")
+	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
@@ -54,7 +59,7 @@ func Create(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configurati
 	)
 
 	if rs != nil {
-		ctx, _, _, _, err = readValidateAndOptimize(rs, conf, time.Now())
+		ctx, _, _, _, err = ReadValidateAndOptimize(rs, conf, time.Now())
 	} else {
 		ctx, err = pdfcpu.CreateContextWithXRefTable(conf, types.PaperSize["A4"])
 	}

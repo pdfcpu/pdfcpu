@@ -17,16 +17,32 @@ limitations under the License.
 package test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
+
+func listKeywordsFile(t *testing.T, fileName string, conf *model.Configuration) ([]string, error) {
+	t.Helper()
+
+	msg := "listKeywords"
+
+	f, err := os.Open(fileName)
+	if err != nil {
+		t.Fatalf("%s open: %v\n", msg, err)
+	}
+	defer f.Close()
+
+	return api.Keywords(f, conf)
+}
 
 func listKeywords(t *testing.T, msg, fileName string, want []string) []string {
 	t.Helper()
 
-	got, err := api.ListKeywordsFile(fileName, nil)
+	got, err := listKeywordsFile(t, fileName, nil)
 	if err != nil {
 		t.Fatalf("%s list keywords: %v\n", msg, err)
 	}

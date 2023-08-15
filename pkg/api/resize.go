@@ -32,19 +32,22 @@ func Resize(rs io.ReadSeeker, w io.Writer, selectedPages []string, resize *model
 	if rs == nil {
 		return errors.New("pdfcpu: Resize: missing rs")
 	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
 	conf.Cmd = model.RESIZE
 
-	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, time.Now())
+	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
 	if err != nil {
 		return err
 	}
+
 	if err := ctx.EnsurePageCount(); err != nil {
 		return err
 	}
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true)
+
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return err
 	}

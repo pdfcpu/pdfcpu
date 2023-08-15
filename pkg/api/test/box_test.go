@@ -17,18 +17,49 @@ limitations under the License.
 package test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+func listBoxes(t *testing.T, fileName string, pb *model.PageBoundaries) ([]string, error) {
+	t.Helper()
+
+	msg := "listBoxes"
+
+	f, err := os.Open(fileName)
+	if err != nil {
+		t.Fatalf("%s open: %v\n", msg, err)
+	}
+	defer f.Close()
+
+	ctx, _, _, _, err := api.ReadValidateAndOptimize(f, conf, time.Now())
+	if err != nil {
+		t.Fatalf("%s ReadValidateAndOptimize: %v\n", msg, err)
+	}
+
+	if err := ctx.EnsurePageCount(); err != nil {
+		t.Fatalf("%s EnsurePageCount: %v\n", msg, err)
+	}
+
+	if pb == nil {
+		pb = &model.PageBoundaries{}
+		pb.SelectAll()
+	}
+
+	return ctx.ListPageBoundaries(nil, pb)
+}
 
 func TestListBoxes(t *testing.T) {
 	msg := "TestListBoxes"
 	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
 
-	if _, err := api.ListBoxesFile(inFile, nil, nil, nil); err != nil {
+	if _, err := listBoxes(t, inFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
@@ -37,7 +68,7 @@ func TestListBoxes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	if _, err := api.ListBoxesFile(inFile, nil, pb, nil); err != nil {
+	if _, err := listBoxes(t, inFile, pb); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }

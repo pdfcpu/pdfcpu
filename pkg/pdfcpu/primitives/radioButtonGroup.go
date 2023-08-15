@@ -29,7 +29,7 @@ import (
 
 // Note:
 // Mac Preview is unable to save modified radio buttons:
-// The Acrofield holding the kid terminal fields for each button does not get the current value assigned to V.
+// The form field holding the kid terminal fields for each button does not get the current value assigned to V.
 // Instead Preview sets V in the widget annotation that corresponds to the selected radio button.
 
 // RadioButtonGroup represents a set of radio buttons including positioned labels.

@@ -17,8 +17,6 @@ limitations under the License.
 package api
 
 import (
-	"fmt"
-
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
@@ -207,15 +205,6 @@ func ExampleNUpFile() {
 	NUpFile(inFiles, "out.pdf", nil, nup, nil)
 }
 
-func ExampleListPermissionsFile() {
-
-	// Output the current permissions of in.pdf.
-	list, _ := ListPermissionsFile("in.pdf", nil)
-	for _, s := range list {
-		fmt.Println(s)
-	}
-}
-
 func ExampleSetPermissionsFile() {
 
 	// Setting all permissions for the AES-256 encrypted in.pdf.
@@ -255,15 +244,6 @@ func ExampleChangeOwnerPasswordFile() {
 	// Changing the owner password for an AES-256 encrypted file.
 	conf := model.NewAESConfiguration("upw", "opw", 256)
 	ChangeOwnerPasswordFile("in.pdf", "", "opw", "opwNew", conf)
-}
-
-func ExampleListAttachmentsFile() {
-
-	// Output a list of attachments of in.pdf.
-	list, _ := ListAttachmentsFile("in.pdf", nil)
-	for _, s := range list {
-		fmt.Println(s)
-	}
 }
 
 func ExampleAddAttachmentsFile() {

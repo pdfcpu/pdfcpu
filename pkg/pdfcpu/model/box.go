@@ -906,8 +906,7 @@ func (ctx *Context) addPageBoundaryString(i int, pb PageBoundaries, wantPB *Page
 
 // ListPageBoundaries lists page boundaries specified in wantPB for selected pages.
 func (ctx *Context) ListPageBoundaries(selectedPages types.IntSet, wantPB *PageBoundaries) ([]string, error) {
-	// TODO ctx.PageBoundaries(selectedPages)
-	pbs, err := ctx.PageBoundaries()
+	pbs, err := ctx.PageBoundaries(selectedPages)
 	if err != nil {
 		return nil, err
 	}

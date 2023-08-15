@@ -17,6 +17,7 @@
 package primitives
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/font"
@@ -136,34 +137,34 @@ func (f FormFont) RTL() bool {
 	return types.MemberOf(f.Script, []string{"Arab", "Hebr"}) || types.MemberOf(f.Lang, []string{"ar", "fa", "he"})
 }
 
-func FormFontNameAndLangForID(xRefTable *model.XRefTable, indRef types.IndirectRef) (*string, *string, error) {
+func FormFontNameAndLangForID(xRefTable *model.XRefTable, indRef types.IndirectRef) (string, string, error) {
 
 	objNr := int(indRef.ObjectNumber)
 	fontDict, err := xRefTable.DereferenceDict(indRef)
 	if err != nil || fontDict == nil {
-		return nil, nil, err
+		return "", "", err
 	}
 
 	_, fName, err := pdffont.Name(xRefTable, fontDict, objNr)
 	if err != nil {
-		return nil, nil, err
+		return "", "", err
 	}
 
-	var fLang *string
+	var fLang string
 	if font.IsUserFont(fName) {
 		fLang, err = pdffont.Lang(xRefTable, fontDict)
 		if err != nil {
-			return nil, nil, err
+			return "", "", err
 		}
 	}
 
-	return &fName, fLang, nil
+	return fName, fLang, nil
 }
 
 // FontResDict returns form dict's font resource dict.
 func FontResDict(xRefTable *model.XRefTable) (types.Dict, error) {
 
-	d := xRefTable.AcroForm
+	d := xRefTable.Form
 	if len(d) == 0 {
 		return nil, nil
 	}
@@ -193,6 +194,7 @@ func formFontIndRef(xRefTable *model.XRefTable, fontID string) (*types.IndirectR
 	}
 
 	for k, v := range d {
+		//fmt.Printf("%s %s\n", k, v)
 		if strings.HasPrefix(k, fontID) || strings.HasPrefix(fontID, k) {
 			indRef, _ := v.(types.IndirectRef)
 			return &indRef, nil
@@ -276,11 +278,11 @@ func ensureCorrectFontIndRef(
 	return nil
 }
 
-func fontFromAcroDict(xRefTable *model.XRefTable, fName, fLang *string, fontID string) error {
+func fontFromAcroDict(xRefTable *model.XRefTable, fontIndRef *types.IndirectRef, fName, fLang *string, fontID string) error {
 
 	// Use DA fontId from Acrodict
 
-	s := xRefTable.AcroForm.StringEntry("DA")
+	s := xRefTable.Form.StringEntry("DA")
 	if s == nil {
 		if fName != nil {
 			return errors.Errorf("pdfcpu: unsupported font: %s", *fName)
@@ -293,7 +295,9 @@ func fontFromAcroDict(xRefTable *model.XRefTable, fName, fLang *string, fontID s
 
 	for i := 0; i < len(da); i++ {
 		if da[i] == "Tf" {
-			rootFontID = da[i-2][1:]
+			if i >= 2 {
+				rootFontID = da[i-2][1:]
+			}
 			break
 		}
 	}
@@ -306,23 +310,33 @@ func fontFromAcroDict(xRefTable *model.XRefTable, fName, fLang *string, fontID s
 	}
 
 	fontID = rootFontID
-	fontIndRef, err := formFontIndRef(xRefTable, fontID)
+	indRef, err := formFontIndRef(xRefTable, fontID)
 	if err != nil {
 		return err
 	}
 
-	fN, fL, err := FormFontNameAndLangForID(xRefTable, *fontIndRef)
+	*fontIndRef = *indRef
+
+	*fName, *fLang, err = FormFontNameAndLangForID(xRefTable, *indRef)
 	if err != nil {
 		return err
 	}
 
-	*fName = *fN
+	// if fN != nil {
+	// 	println("FN: " + *fN)
+	// }
 
-	if fL != nil {
-		*fLang = *fL
-	}
+	// if fL != nil {
+	// 	println("FL: " + *fL)
+	// }
 
-	return err
+	// *fName = fN
+
+	// if fL != nil {
+	// 	*fLang = *fL
+	// }
+
+	return nil
 }
 
 func extractFormFontDetails(
@@ -332,38 +346,90 @@ func extractFormFontDetails(
 
 	xRefTable := ctx.XRefTable
 
-	fontIndRef, err := formFontIndRef(xRefTable, fontID)
-	if err != nil {
-		return "", "", "", nil, err
-	}
+	var (
+		fName, fLang string
+		fontIndRef   *types.IndirectRef
+		err          error
+	)
 
-	var fName, fLang *string
+	if len(fontID) > 0 {
 
-	if fontIndRef != nil {
-		fName, fLang, err = FormFontNameAndLangForID(xRefTable, *fontIndRef)
+		fontIndRef, err = formFontIndRef(xRefTable, fontID)
 		if err != nil {
 			return "", "", "", nil, err
 		}
 
-		if fName == nil {
-			return "", "", "", nil, errors.Errorf("pdfcpu: Unable to detect fontName for: %s", fontID)
+		if fontIndRef != nil {
+			fName, fLang, err = FormFontNameAndLangForID(xRefTable, *fontIndRef)
+			if err != nil {
+				return "", "", "", nil, err
+			}
+
+			if fName == "" {
+				return "", "", "", nil, errors.Errorf("pdfcpu: Unable to detect fontName for: %s", fontID)
+			}
 		}
+
 	}
 
-	if fontIndRef == nil || !font.SupportedFont(*fName) {
-		if err = fontFromAcroDict(xRefTable, fName, fLang, fontID); err != nil {
+	if fontIndRef == nil || !font.SupportedFont(fName) {
+		var indRef types.IndirectRef
+		if err = fontFromAcroDict(xRefTable, &indRef, &fName, &fLang, fontID); err != nil {
 			return "", "", "", nil, err
 		}
+		fontIndRef = &indRef
 	}
 
-	var lang string
-	if fLang != nil {
-		lang = *fLang
+	// var lang string
+	// if fLang != nil {
+	// 	lang = *fLang
+	// }
+
+	if font.IsUserFont(fName) {
+		err = ensureCorrectFontIndRef(ctx, &fontIndRef, fName, fonts)
 	}
 
-	if font.IsUserFont(*fName) {
-		err = ensureCorrectFontIndRef(ctx, &fontIndRef, *fName, fonts)
+	return fontID, fName, fLang, fontIndRef, err
+}
+
+func fontFromDA(s string) (string, FormFont, error) {
+
+	da := strings.Fields(s)
+
+	var (
+		f      FormFont
+		fontID string
+	)
+
+	f.SetCol(color.Black)
+
+	for i := 0; i < len(da); i++ {
+		if da[i] == "Tf" {
+			fontID = da[i-2][1:]
+			//tf.SetFontID(fontID)
+			fl, err := strconv.ParseFloat(da[i-1], 64)
+			if err != nil {
+				return fontID, f, err
+			}
+			if fl == 0 {
+				// TODO derive size from acroDict DA and then use a default form font size (add to pdfcpu config)
+				fl = 12
+			}
+			f.Size = int(fl)
+			continue
+		}
+		if da[i] == "rg" {
+			r, _ := strconv.ParseFloat(da[i-3], 32)
+			g, _ := strconv.ParseFloat(da[i-2], 32)
+			b, _ := strconv.ParseFloat(da[i-1], 32)
+			f.SetCol(color.SimpleColor{R: float32(r), G: float32(g), B: float32(b)})
+			continue
+		}
+		if da[i] == "g" {
+			g, _ := strconv.ParseFloat(da[i-1], 32)
+			f.SetCol(color.SimpleColor{R: float32(g), G: float32(g), B: float32(g)})
+		}
 	}
 
-	return fontID, *fName, lang, fontIndRef, err
+	return fontID, f, nil
 }

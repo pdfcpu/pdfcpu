@@ -604,6 +604,19 @@ func (d Dim) ToMillimetres() Dim {
 	return Dim{d.Width * userSpaceToMm, d.Height * userSpaceToMm}
 }
 
+// ConvertToUnit converts d to unit.
+func (d Dim) ConvertToUnit(unit DisplayUnit) Dim {
+	switch unit {
+	case INCHES:
+		return d.ToInches()
+	case CENTIMETRES:
+		return d.ToCentimetres()
+	case MILLIMETRES:
+		return d.ToMillimetres()
+	}
+	return d
+}
+
 // AspectRatio returns the relation between width and height.
 func (d Dim) AspectRatio() float64 {
 	return d.Width / d.Height

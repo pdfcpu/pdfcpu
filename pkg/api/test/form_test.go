@@ -17,29 +17,60 @@ limitations under the License.
 package test
 
 import (
-	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/form"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
 /**************************************************************
  * All form related processing is optimized for Adobe Reader! *
  **************************************************************/
 
+func listFormFieldsFile(t *testing.T, inFile string, conf *model.Configuration) ([]string, error) {
+	t.Helper()
+
+	msg := "listFormFields"
+
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.LISTFORMFIELDS
+
+	f, err := os.Open(inFile)
+	if err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+	defer f.Close()
+
+	ctx, _, _, _, err := api.ReadValidateAndOptimize(f, conf, time.Now())
+	if err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+
+	if err := ctx.EnsurePageCount(); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+
+	return form.ListFormFields(ctx)
+}
+
 func TestListFormFields(t *testing.T) {
 
 	msg := "TestListFormFields"
 	inFile := filepath.Join(samplesDir, "form", "demo", "english.pdf")
 
-	ss, err := api.ListFormFieldsFile([]string{inFile}, conf)
+	ss, err := listFormFieldsFile(t, inFile, conf)
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	for _, s := range ss {
-		fmt.Println(s)
+	if len(ss) != 27 {
+		t.Fatalf("%s: want 27, got %d lines\n", msg, len(ss))
 	}
 }
 
@@ -49,7 +80,7 @@ func TestRemoveFormFields(t *testing.T) {
 	inFile := filepath.Join(samplesDir, "form", "demo", "english.pdf")
 	outFile := filepath.Join(samplesDir, "form", "remove", "removedField.pdf")
 
-	ss, err := api.ListFormFieldsFile([]string{inFile}, conf)
+	ss, err := listFormFieldsFile(t, inFile, conf)
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -59,7 +90,7 @@ func TestRemoveFormFields(t *testing.T) {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	ss, err = api.ListFormFieldsFile([]string{outFile}, conf)
+	ss, err = listFormFieldsFile(t, outFile, conf)
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}

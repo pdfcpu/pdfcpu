@@ -158,7 +158,7 @@ type XRefTable struct {
 
 	Optimized      bool
 	Watermarked    bool
-	AcroForm       types.Dict
+	Form           types.Dict
 	Outlines       types.Dict
 	SignatureExist bool
 	AppendOnly     bool
@@ -2060,7 +2060,14 @@ func (xRefTable *XRefTable) collectMediaBoxAndCropBox(d types.Dict, inhMediaBox,
 	return nil
 }
 
-func (xRefTable *XRefTable) collectPageBoundariesForPageTree(root *types.IndirectRef, inhMediaBox, inhCropBox **types.Rectangle, pb []PageBoundaries, r int, p *int) error {
+func (xRefTable *XRefTable) collectPageBoundariesForPageTree(
+	root *types.IndirectRef,
+	inhMediaBox, inhCropBox **types.Rectangle,
+	pb []PageBoundaries,
+	r int,
+	p *int,
+	selectedPages types.IntSet) error {
+
 	d, err := xRefTable.DereferenceDict(*root)
 	if err != nil {
 		return err
@@ -2110,13 +2117,19 @@ func (xRefTable *XRefTable) collectPageBoundariesForPageTree(root *types.Indirec
 		switch *pageNodeDict.Type() {
 
 		case "Pages":
-			if err = xRefTable.collectPageBoundariesForPageTree(&ir, inhMediaBox, inhCropBox, pb, r, p); err != nil {
+			if err = xRefTable.collectPageBoundariesForPageTree(&ir, inhMediaBox, inhCropBox, pb, r, p, selectedPages); err != nil {
 				return err
 			}
 
 		case "Page":
-			if err = xRefTable.collectPageBoundariesForPageTree(&ir, inhMediaBox, inhCropBox, pb, r, p); err != nil {
-				return err
+			collect := len(selectedPages) == 0
+			if !collect {
+				_, collect = selectedPages[(*p)+1]
+			}
+			if collect {
+				if err = xRefTable.collectPageBoundariesForPageTree(&ir, inhMediaBox, inhCropBox, pb, r, p, selectedPages); err != nil {
+					return err
+				}
 			}
 			*p++
 		}
@@ -2128,7 +2141,7 @@ func (xRefTable *XRefTable) collectPageBoundariesForPageTree(root *types.Indirec
 
 // PageBoundaries returns a sorted slice with page boundaries
 // for all pages sorted ascending by page number.
-func (xRefTable *XRefTable) PageBoundaries() ([]PageBoundaries, error) {
+func (xRefTable *XRefTable) PageBoundaries(selectedPages types.IntSet) ([]PageBoundaries, error) {
 	if err := xRefTable.EnsurePageCount(); err != nil {
 		return nil, err
 	}
@@ -2143,7 +2156,7 @@ func (xRefTable *XRefTable) PageBoundaries() ([]PageBoundaries, error) {
 	mb := &types.Rectangle{}
 	cb := &types.Rectangle{}
 	pbs := make([]PageBoundaries, xRefTable.PageCount)
-	if err := xRefTable.collectPageBoundariesForPageTree(root, &mb, &cb, pbs, 0, &i); err != nil {
+	if err := xRefTable.collectPageBoundariesForPageTree(root, &mb, &cb, pbs, 0, &i, selectedPages); err != nil {
 		return nil, err
 	}
 	return pbs, nil
@@ -2152,7 +2165,7 @@ func (xRefTable *XRefTable) PageBoundaries() ([]PageBoundaries, error) {
 // PageDims returns a sorted slice with effective media box dimensions
 // for all pages sorted ascending by page number.
 func (xRefTable *XRefTable) PageDims() ([]types.Dim, error) {
-	pbs, err := xRefTable.PageBoundaries()
+	pbs, err := xRefTable.PageBoundaries(nil)
 	if err != nil {
 		return nil, err
 	}

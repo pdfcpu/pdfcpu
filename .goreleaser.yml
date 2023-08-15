@@ -5,10 +5,16 @@ builds:
   ldflags:
      - '-s -w -X main.version={{.Version}} -X github.com/pdfcpu/pdfcpu/pkg/pdfcpu.VersionStr={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.Date}} -X main.builtBy=goreleaser'
   goos:
+    - ios
     - js
     - linux
     - darwin
     - windows
+  goarch:
+    - "386"
+    - arm64
+    - wasm
+    - amd64
 dist: ./dist
 archives:
   -
@@ -16,12 +22,16 @@ archives:
     format_overrides:
       - goos: windows
         format: zip
-    replacements:
-      darwin: macOS
-      linux: Linux
-      windows: Windows
-      386: i386
-      amd64: x86_64
+    name_template: >-
+      {{- .ProjectName }}_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "linux" }}Linux
+      {{- else if eq .Arch "windows" }}Windows
+      {{- else if eq .Arch "386" }}i386
+      {{- else if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end -}}
     wrap_in_directory: true
 checksum:
   name_template: 'checksums.txt'

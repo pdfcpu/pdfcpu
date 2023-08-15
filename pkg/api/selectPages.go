@@ -285,7 +285,7 @@ func logSelPages(selectedPages types.IntSet) {
 
 // selectedPages returns a set of used page numbers.
 // key==page# => key 0 unused!
-func selectedPages(pageCount int, pageSelection []string) (types.IntSet, error) {
+func selectedPages(pageCount int, pageSelection []string, log bool) (types.IntSet, error) {
 	selectedPages := types.IntSet{}
 
 	for _, v := range pageSelection {
@@ -357,15 +357,18 @@ func selectedPages(pageCount int, pageSelection []string) (types.IntSet, error) 
 
 	}
 
-	logSelPages(selectedPages)
+	if log {
+		logSelPages(selectedPages)
+	}
+
 	return selectedPages, nil
 }
 
 // PagesForPageSelection ensures a set of page numbers for an ascending page sequence
 // where each page number may appear only once.
-func PagesForPageSelection(pageCount int, pageSelection []string, ensureAllforNone bool) (types.IntSet, error) {
+func PagesForPageSelection(pageCount int, pageSelection []string, ensureAllforNone bool, log bool) (types.IntSet, error) {
 	if len(pageSelection) > 0 {
-		return selectedPages(pageCount, pageSelection)
+		return selectedPages(pageCount, pageSelection, log)
 	}
 	if !ensureAllforNone {
 		//log.CLI.Printf("pages: none\n")

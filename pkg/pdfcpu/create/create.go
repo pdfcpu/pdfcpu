@@ -400,11 +400,11 @@ func UpdatePage(xRefTable *model.XRefTable, dIndRef types.IndirectRef, d, res ty
 
 func cacheFormFieldIDs(ctx *model.Context, pdf *primitives.PDF) error {
 
-	if ctx.AcroForm == nil {
+	if ctx.Form == nil {
 		return nil
 	}
 
-	o, found := ctx.AcroForm.Find("Fields")
+	o, found := ctx.Form.Find("Fields")
 	if !found {
 		return nil
 	}
@@ -615,7 +615,7 @@ func prepareFormFontResDict(ctx *model.Context, pdf *primitives.PDF, fonts model
 	return d, nil
 }
 
-func createAcroForm(
+func createForm(
 	ctx *model.Context,
 	pdf *primitives.PDF,
 	fields types.Array,
@@ -636,13 +636,13 @@ func createAcroForm(
 	return nil
 }
 
-func updateAcroForm(
+func updateForm(
 	ctx *model.Context,
 	pdf *primitives.PDF,
 	fields types.Array,
 	fonts model.FontMap) error {
 
-	d := ctx.AcroForm
+	d := ctx.Form
 
 	o, _ := d.Find("Fields")
 	arr, err := ctx.DereferenceArray(o)
@@ -696,7 +696,7 @@ func updateAcroForm(
 	return nil
 }
 
-func handleAcroForm(
+func handleForm(
 	ctx *model.Context,
 	pdf *primitives.PDF,
 	fields types.Array,
@@ -704,9 +704,9 @@ func handleAcroForm(
 
 	var err error
 	if pdf.Update() && pdf.HasForm {
-		err = updateAcroForm(ctx, pdf, fields, fonts)
+		err = updateForm(ctx, pdf, fields, fonts)
 	} else {
-		err = createAcroForm(ctx, pdf, fields, fonts)
+		err = createForm(ctx, pdf, fields, fonts)
 	}
 	if err != nil {
 		return err
@@ -748,7 +748,7 @@ func FromJSON(ctx *model.Context, rd io.Reader) error {
 	}
 
 	if len(fields) > 0 {
-		if err := handleAcroForm(ctx, pdf, fields, fonts); err != nil {
+		if err := handleForm(ctx, pdf, fields, fonts); err != nil {
 			return err
 		}
 	}

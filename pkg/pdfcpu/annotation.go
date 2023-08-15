@@ -205,29 +205,51 @@ func Annotation(xRefTable *model.XRefTable, d types.Dict) (model.AnnotationRende
 	return ann, nil
 }
 
-// ListAnnotations returns a formatted list of annotations for selected pages.
-func ListAnnotations(ctx *model.Context, selectedPages types.IntSet) (int, []string, error) {
+func AnnotationsForSelectedPages(ctx *model.Context, selectedPages types.IntSet) map[int]model.PgAnnots {
+
+	var pageNrs []int
+	for k := range ctx.PageAnnots {
+		pageNrs = append(pageNrs, k)
+	}
+	sort.Ints(pageNrs)
+
+	m := map[int]model.PgAnnots{}
+
+	for _, i := range pageNrs {
+
+		if selectedPages != nil {
+			if _, found := selectedPages[i]; !found {
+				continue
+			}
+		}
+
+		pageAnnots := ctx.PageAnnots[i]
+		if len(pageAnnots) == 0 {
+			continue
+		}
+
+		m[i] = pageAnnots
+	}
+
+	return m
+}
+
+// ListAnnotations returns a formatted list of annotations.
+func ListAnnotations(annots map[int]model.PgAnnots) (int, []string, error) {
 	var (
 		j       int
 		pageNrs []int
 	)
 	ss := []string{}
 
-	for k := range ctx.PageAnnots {
+	for k := range annots {
 		pageNrs = append(pageNrs, k)
 	}
 	sort.Ints(pageNrs)
 
 	for _, i := range pageNrs {
-		if selectedPages != nil {
-			if _, found := selectedPages[i]; !found {
-				continue
-			}
-		}
-		pageAnnots := ctx.PageAnnots[i]
-		if len(pageAnnots) == 0 {
-			continue
-		}
+
+		pageAnnots := annots[i]
 
 		var annTypes []string
 		for t := range pageAnnots {

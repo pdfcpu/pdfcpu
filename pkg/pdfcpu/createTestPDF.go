@@ -933,7 +933,7 @@ func createPageWithAnnotations(xRefTable *model.XRefTable, parentPageIndRef type
 	return pageIndRef, nil
 }
 
-func createPageWithAcroForm(xRefTable *model.XRefTable, parentPageIndRef types.IndirectRef, annotsArray types.Array, mediaBox *types.Rectangle, fontName string) (*types.IndirectRef, error) {
+func createPageWithForm(xRefTable *model.XRefTable, parentPageIndRef types.IndirectRef, annotsArray types.Array, mediaBox *types.Rectangle, fontName string) (*types.IndirectRef, error) {
 	mba := mediaBox.Array()
 
 	pageDict := types.Dict(
@@ -1047,7 +1047,7 @@ func addPageTreeWithAnnotations(xRefTable *model.XRefTable, rootDict types.Dict,
 	return pageIndRef, nil
 }
 
-func addPageTreeWithAcroFields(xRefTable *model.XRefTable, rootDict types.Dict, annotsArray types.Array, fontName string) (*types.IndirectRef, error) {
+func addPageTreeWithFormFields(xRefTable *model.XRefTable, rootDict types.Dict, annotsArray types.Array, fontName string) (*types.IndirectRef, error) {
 	// mediabox = physical page dimensions
 	mediaBox := types.RectForFormat("A4")
 	mba := mediaBox.Array()
@@ -1066,7 +1066,7 @@ func addPageTreeWithAcroFields(xRefTable *model.XRefTable, rootDict types.Dict, 
 		return nil, err
 	}
 
-	pageIndRef, err := createPageWithAcroForm(xRefTable, *parentPageIndRef, annotsArray, mediaBox, fontName)
+	pageIndRef, err := createPageWithForm(xRefTable, *parentPageIndRef, annotsArray, mediaBox, fontName)
 	if err != nil {
 		return nil, err
 	}
@@ -1833,7 +1833,7 @@ func createXFAArray(xRefTable *model.XRefTable) (types.Array, error) {
 	}, nil
 }
 
-func createAcroFormDict(xRefTable *model.XRefTable, fontName string) (types.Dict, types.Array, error) {
+func createFormDict(xRefTable *model.XRefTable, fontName string) (types.Dict, types.Array, error) {
 	pageAnnots := types.Array{}
 
 	text, err := createFormTextField(xRefTable, &pageAnnots, fontName)
@@ -1878,8 +1878,8 @@ func createAcroFormDict(xRefTable *model.XRefTable, fontName string) (types.Dict
 	return d, pageAnnots, nil
 }
 
-// CreateAcroFormDemoXRef creates an xRefTable with an AcroForm example.
-func CreateAcroFormDemoXRef() (*model.XRefTable, error) {
+// CreateFormDemoXRef creates an xRefTable with an AcroForm example.
+func CreateFormDemoXRef() (*model.XRefTable, error) {
 	fontName := "Helvetica"
 
 	xRefTable, err := CreateXRefTableWithRootDict()
@@ -1892,14 +1892,14 @@ func CreateAcroFormDemoXRef() (*model.XRefTable, error) {
 		return nil, err
 	}
 
-	acroFormDict, annotsArray, err := createAcroFormDict(xRefTable, fontName)
+	formDict, annotsArray, err := createFormDict(xRefTable, fontName)
 	if err != nil {
 		return nil, err
 	}
 
-	rootDict.Insert("AcroForm", acroFormDict)
+	rootDict.Insert("AcroForm", formDict)
 
-	_, err = addPageTreeWithAcroFields(xRefTable, rootDict, annotsArray, fontName)
+	_, err = addPageTreeWithFormFields(xRefTable, rootDict, annotsArray, fontName)
 	if err != nil {
 		return nil, err
 	}

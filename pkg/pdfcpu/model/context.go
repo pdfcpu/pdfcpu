@@ -172,32 +172,7 @@ func (ctx *Context) UnitString() string {
 
 // ConvertToUnit converts dimensions in point to inches,cm,mm
 func (ctx *Context) ConvertToUnit(d types.Dim) types.Dim {
-	switch ctx.Unit {
-	case types.INCHES:
-		return d.ToInches()
-	case types.CENTIMETRES:
-		return d.ToCentimetres()
-	case types.MILLIMETRES:
-		return d.ToMillimetres()
-	}
-	return d
-}
-
-// AddPropertiesToInfoDigest append optional properties to info digest.
-func (ctx *Context) AddPropertiesToInfoDigest(ss *[]string) error {
-	if len(ctx.Properties) == 0 {
-		return nil
-	}
-	first := true
-	for k, v := range ctx.Properties {
-		if first {
-			*ss = append(*ss, fmt.Sprintf("%20s: %s = %s", "Properties", k, v))
-			first = false
-			continue
-		}
-		*ss = append(*ss, fmt.Sprintf("%20s  %s = %s", "", k, v))
-	}
-	return nil
+	return d.ConvertToUnit(ctx.Unit)
 }
 
 // ReadContext represents the context for reading a PDF file.

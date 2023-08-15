@@ -50,7 +50,7 @@ var (
 	// Needed permission bits for pdfcpu commands.
 	perm = map[model.CommandMode]struct{ extract, modify int }{
 		model.VALIDATE:                {0, 0},
-		model.INFO:                    {0, 0},
+		model.LISTINFO:                {0, 0},
 		model.OPTIMIZE:                {0, 0},
 		model.SPLIT:                   {1, 0},
 		model.MERGECREATE:             {0, 0},
@@ -91,7 +91,11 @@ var (
 		model.ROTATE:                  {0, 1},
 		model.NUP:                     {0, 1},
 		model.BOOKLET:                 {0, 1},
+		model.LISTBOOKMARKS:           {0, 0},
 		model.ADDBOOKMARKS:            {0, 1},
+		model.REMOVEBOOKMARKS:         {0, 1},
+		model.IMPORTBOOKMARKS:         {0, 1},
+		model.EXPORTBOOKMARKS:         {0, 1},
 		model.LISTIMAGES:              {0, 1},
 		model.CREATE:                  {0, 0},
 		model.DUMP:                    {0, 1},
@@ -575,24 +579,25 @@ func perms(p int) (list []string) {
 	return list
 }
 
-func addPermissionsToInfoDigest(ctx *model.Context, ss *[]string) {
-	l := Permissions(ctx)
-	if len(l) == 1 {
-		*ss = append(*ss, fmt.Sprintf("%20s: %s", "Permissions", l[0]))
-	} else {
-		*ss = append(*ss, fmt.Sprintf("%20s:", "Permissions"))
-		*ss = append(*ss, l...)
+// PermissionsList returns a list of set permissions.
+func PermissionsList(p int) (list []string) {
+
+	if p == 0 {
+		return append(list, "Full access")
 	}
+
+	return perms(p)
 }
 
 // Permissions returns a list of set permissions.
 func Permissions(ctx *model.Context) (list []string) {
 
-	if ctx.E == nil {
-		return append(list, "Full access")
+	p := 0
+	if ctx.E != nil {
+		p = ctx.E.P
 	}
 
-	return perms(ctx.E.P)
+	return PermissionsList(p)
 }
 
 func validatePermissions(ctx *model.Context) (bool, error) {

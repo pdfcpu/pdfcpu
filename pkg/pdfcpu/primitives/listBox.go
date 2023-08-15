@@ -20,8 +20,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"strconv"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/pdfcpu/pdfcpu/pkg/font"
@@ -304,46 +302,22 @@ func (lb *ListBox) validate() error {
 	return lb.validateTab()
 }
 
-func (lb *ListBox) calcFontFromDA(ctx *model.Context, da []string, fonts map[string]types.IndirectRef) (*types.IndirectRef, error) {
+func (lb *ListBox) calcFontFromDA(ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRef) (*types.IndirectRef, error) {
 
-	var (
-		f      FormFont
-		fontID string
-	)
-
-	f.SetCol(color.Black)
-	for i := 0; i < len(da); i++ {
-		if da[i] == "Tf" {
-			fontID = da[i-2][1:]
-			lb.SetFontID(fontID)
-			fl, err := strconv.ParseFloat(da[i-1], 64)
-			if err != nil {
-				return nil, err
-			}
-			if fl == 0 {
-				// TODO derive size from acroDict DA and then use a default form font size (add to pdfcpu config)
-				fl = 12
-			}
-			f.Size = int(fl)
-			continue
-		}
-		if da[i] == "rg" {
-			r, _ := strconv.ParseFloat(da[i-3], 32)
-			g, _ := strconv.ParseFloat(da[i-2], 32)
-			b, _ := strconv.ParseFloat(da[i-1], 32)
-			f.SetCol(color.SimpleColor{R: float32(r), G: float32(g), B: float32(b)})
-		}
-		if da[i] == "g" {
-			g, _ := strconv.ParseFloat(da[i-1], 32)
-			f.SetCol(color.SimpleColor{R: float32(g), G: float32(g), B: float32(g)})
+	s := d.StringEntry("DA")
+	if s == nil {
+		s = ctx.Form.StringEntry("DA")
+		if s == nil {
+			return nil, errors.New("pdfcpu: listbox missing \"DA\"")
 		}
 	}
 
-	if len(lb.fontID) == 0 {
-		return nil, errors.New("pdfcpu: unable to detect font id")
+	fontID, f, err := fontFromDA(*s)
+	if err != nil {
+		return nil, err
 	}
 
-	lb.Font = &f
+	lb.Font, lb.fontID = &f, fontID
 
 	id, name, lang, fontIndRef, err := extractFormFontDetails(ctx, lb.fontID, fonts)
 	if err != nil {
@@ -907,15 +881,7 @@ func NewListBox(
 
 	lb.BoundingBox = types.RectForDim(bb.Width(), bb.Height())
 
-	s := d.StringEntry("DA")
-	if s == nil {
-		s = ctx.AcroForm.StringEntry("DA")
-		if s == nil {
-			return nil, nil, errors.New("pdfcpu: listbox missing \"DA\"")
-		}
-	}
-
-	fontIndRef, err := lb.calcFontFromDA(ctx, strings.Fields(*s), fonts)
+	fontIndRef, err := lb.calcFontFromDA(ctx, d, fonts)
 	if err != nil {
 		return nil, nil, err
 	}

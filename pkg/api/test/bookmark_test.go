@@ -17,16 +17,56 @@
 package test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
 // Acrobat Reader "Bookmarks" = Mac Preview "Table of Contents".
 // Mac Preview limitations: does not render color, style, outline tree collapsed by default.
+
+func listBookmarksFile(t *testing.T, fileName string, conf *model.Configuration) ([]string, error) {
+	t.Helper()
+
+	msg := "listBookmarks"
+
+	f, err := os.Open(fileName)
+	if err != nil {
+		t.Fatalf("%s open: %v\n", msg, err)
+	}
+	defer f.Close()
+
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	} else {
+		// Validation loads infodict.
+		conf.ValidationMode = model.ValidationRelaxed
+	}
+	conf.Cmd = model.LISTBOOKMARKS
+
+	ctx, _, _, _, err := api.ReadValidateAndOptimize(f, conf, time.Now())
+	if err != nil {
+		t.Fatalf("%s ReadValidateAndOptimize: %v\n", msg, err)
+	}
+
+	return pdfcpu.BookmarkList(ctx)
+}
+
+func TestListBookmarks(t *testing.T) {
+	msg := "TestListBookmarks"
+	inDir := filepath.Join("..", "..", "samples", "bookmarks")
+	inFile := filepath.Join(inDir, "bookmarkTree.pdf")
+
+	if _, err := listBookmarksFile(t, inFile, nil); err != nil {
+		t.Fatalf("%s list bookmarks: %v\n", msg, err)
+	}
+}
 
 func InactiveTestAddDuplicateBookmarks(t *testing.T) {
 	msg := "TestAddDuplicateBookmarks"
@@ -84,15 +124,15 @@ func TestAddBookmarkTree2Levels(t *testing.T) {
 
 	bms := []pdfcpu.Bookmark{
 		{PageFrom: 1, Title: "Page 1: Level 1", Color: &color.Green,
-			Children: []pdfcpu.Bookmark{
+			Kids: []pdfcpu.Bookmark{
 				{PageFrom: 2, Title: "Page 2: Level 1.1"},
 				{PageFrom: 3, Title: "Page 3: Level 1.2",
-					Children: []pdfcpu.Bookmark{
+					Kids: []pdfcpu.Bookmark{
 						{PageFrom: 4, Title: "Page 4: Level 1.2.1"},
 					}},
 			}},
 		{PageFrom: 5, Title: "Page 5: Level 2", Color: &color.Blue,
-			Children: []pdfcpu.Bookmark{
+			Kids: []pdfcpu.Bookmark{
 				{PageFrom: 6, Title: "Page 6: Level 2.1"},
 				{PageFrom: 7, Title: "Page 7: Level 2.2"},
 				{PageFrom: 8, Title: "Page 8: Level 2.3"},
@@ -101,6 +141,47 @@ func TestAddBookmarkTree2Levels(t *testing.T) {
 
 	if err := api.AddBookmarksFile(inFile, outFile, bms, false, nil); err != nil {
 		t.Fatalf("%s addBookmarks: %v\n", msg, err)
+	}
+	if err := api.ValidateFile(outFile, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+}
+
+func TestRemoveBookmarks(t *testing.T) {
+	msg := "TestRemoveBookmarks"
+	inDir := filepath.Join("..", "..", "samples", "bookmarks")
+	inFile := filepath.Join(inDir, "bookmarkTree.pdf")
+	outFile := filepath.Join(inDir, "bookmarkTreeNoBookmarks.pdf")
+
+	if err := api.RemoveBookmarksFile(inFile, outFile, nil); err != nil {
+		t.Fatalf("%s removeBookmarks: %v\n", msg, err)
+	}
+	if err := api.ValidateFile(outFile, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+}
+
+func TestExportBookmarks(t *testing.T) {
+	msg := "TestExportBookmarks"
+	inDir := filepath.Join("..", "..", "samples", "bookmarks")
+	inFile := filepath.Join(inDir, "bookmarkTree.pdf")
+	outFile := filepath.Join(inDir, "bookmarkTree.json")
+
+	if err := api.ExportBookmarksFile(inFile, outFile, nil); err != nil {
+		t.Fatalf("%s export bookmarks: %v\n", msg, err)
+	}
+}
+
+func TestImportBookmarks(t *testing.T) {
+	msg := "TestImportBookmarks"
+	inDir := filepath.Join("..", "..", "samples", "bookmarks")
+	inFile := filepath.Join(inDir, "bookmarkTree.pdf")
+	inFileJSON := filepath.Join(inDir, "bookmarkTree.json")
+	outFile := filepath.Join(inDir, "bookmarkTreeImported.pdf")
+
+	replace := true
+	if err := api.ImportBookmarksFile(inFile, inFileJSON, outFile, replace, nil); err != nil {
+		t.Fatalf("%s importBookmarks: %v\n", msg, err)
 	}
 	if err := api.ValidateFile(outFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)

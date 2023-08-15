@@ -4,11 +4,11 @@ go 1.20
 
 require (
 	github.com/hhrutter/lzw v1.0.0
-	github.com/hhrutter/tiff v1.0.0
-	github.com/mattn/go-runewidth v0.0.14
+	github.com/hhrutter/tiff v1.0.1
+	github.com/mattn/go-runewidth v0.0.15
 	github.com/pkg/errors v0.9.1
-	golang.org/x/image v0.5.0
-	golang.org/x/text v0.7.0
+	golang.org/x/image v0.11.0
+	golang.org/x/text v0.12.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 

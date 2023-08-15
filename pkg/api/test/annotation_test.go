@@ -17,6 +17,7 @@ limitations under the License.
 package test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -50,12 +51,36 @@ var linkAnn model.AnnotationRenderer = model.NewLinkAnnotation(
 	nil,
 	false)
 
+func annotationCount(t *testing.T, inFile string) int {
+	t.Helper()
+
+	msg := "annotationCount"
+
+	f, err := os.Open(inFile)
+	if err != nil {
+		t.Fatalf("%s open: %v\n", msg, err)
+	}
+	defer f.Close()
+
+	annots, err := api.Annotations(f, nil, conf)
+	if err != nil {
+		t.Fatalf("%s annotations: %v\n", msg, err)
+	}
+
+	count, _, err := pdfcpu.ListAnnotations(annots)
+	if err != nil {
+		t.Fatalf("%s listAnnotations: %v\n", msg, err)
+	}
+
+	return count
+}
+
 func add2Annotations(t *testing.T, msg, inFile string, incr bool) {
 	t.Helper()
 
 	// We start with 0 annotations.
-	if i, _, err := api.ListAnnotationsFile(inFile, nil, nil); err != nil || i > 0 {
-		t.Fatalf("%s list: %v\n", msg, err)
+	if i := annotationCount(t, inFile); i > 0 {
+		t.Fatalf("%s count: got %d want 0\n", msg, i)
 	}
 
 	// Add a text annotation to page 1.
@@ -69,12 +94,9 @@ func add2Annotations(t *testing.T, msg, inFile string, incr bool) {
 	}
 
 	// Now we should have 2 annotations.
-	i, s, err := api.ListAnnotationsFile(inFile, nil, nil)
-	if err != nil || i != 2 {
-		t.Fatalf("%s list: %v\n", msg, err)
+	if i := annotationCount(t, inFile); i != 2 {
+		t.Fatalf("%s count: got %d want 2\n", msg, i)
 	}
-
-	_ = s
 }
 
 func TestAddRemoveAnnotationsByAnnotType(t *testing.T) {
@@ -94,8 +116,8 @@ func TestAddRemoveAnnotationsByAnnotType(t *testing.T) {
 	}
 
 	// We should have 0 annotations as at the beginning.
-	if i, _, err := api.ListAnnotationsFile(inFile, nil, nil); err != nil || i > 0 {
-		t.Fatalf("%s list: %v\n", msg, err)
+	if i := annotationCount(t, inFile); i > 0 {
+		t.Fatalf("%s count: got %d want 0\n", msg, i)
 	}
 }
 
@@ -116,8 +138,8 @@ func TestAddRemoveAnnotationsById(t *testing.T) {
 	}
 
 	// We should have 0 annotations as at the beginning.
-	if i, _, err := api.ListAnnotationsFile(inFile, nil, nil); err != nil || i > 0 {
-		t.Fatalf("%s list: %v\n", msg, err)
+	if i := annotationCount(t, inFile); i > 0 {
+		t.Fatalf("%s count: got %d want 0\n", msg, i)
 	}
 }
 
@@ -138,8 +160,8 @@ func TestAddRemoveAnnotationsByIdAndAnnotType(t *testing.T) {
 	}
 
 	// We should have 0 annotations as at the beginning.
-	if i, _, err := api.ListAnnotationsFile(inFile, nil, nil); err != nil || i > 0 {
-		t.Fatalf("%s list: %v\n", msg, err)
+	if i := annotationCount(t, inFile); i > 0 {
+		t.Fatalf("%s count: got %d want 0\n", msg, i)
 	}
 }
 
@@ -156,7 +178,7 @@ func TestAddRemoveAnnotationsByObjNr(t *testing.T) {
 		t.Fatalf("%s readContext: %v\n", msg, err)
 	}
 
-	allPages, err := api.PagesForPageSelection(ctx.PageCount, nil, true)
+	allPages, err := api.PagesForPageSelection(ctx.PageCount, nil, true, true)
 	if err != nil {
 		t.Fatalf("%s pagesForPageSelection: %v\n", msg, err)
 	}
@@ -174,9 +196,8 @@ func TestAddRemoveAnnotationsByObjNr(t *testing.T) {
 	}
 
 	// We should have 1 annotation
-	i, _, err := api.ListAnnotationsFile(inFile, nil, nil)
-	if err != nil || i != 1 {
-		t.Fatalf("%s list: %v\n", msg, err)
+	if i := annotationCount(t, inFile); i != 1 {
+		t.Fatalf("%s count: got %d want 0\n", msg, i)
 	}
 
 	// Create a context.
@@ -209,11 +230,9 @@ func TestAddRemoveAnnotationsByObjNr(t *testing.T) {
 	}
 
 	// We should have 0 annotations like at the beginning.
-	i, _, err = api.ListAnnotationsFile(inFile, nil, nil)
-	if err != nil || i > 0 {
-		t.Fatalf("%s list: %v\n", msg, err)
+	if i := annotationCount(t, inFile); i > 0 {
+		t.Fatalf("%s count: got %d want 0\n", msg, i)
 	}
-
 }
 
 func TestAddRemoveAnnotationsByObjNrAndAnnotType(t *testing.T) {
@@ -234,8 +253,8 @@ func TestAddRemoveAnnotationsByObjNrAndAnnotType(t *testing.T) {
 	}
 
 	// We should have 1 annotations.
-	if i, _, err := api.ListAnnotationsFile(inFile, nil, nil); err != nil || i != 1 {
-		t.Fatalf("%s list: %v\n", msg, err)
+	if i := annotationCount(t, inFile); i != 1 {
+		t.Fatalf("%s count: got %d want 0\n", msg, i)
 	}
 }
 
@@ -256,8 +275,8 @@ func TestAddRemoveAnnotationsByIdAndObjNrAndAnnotType(t *testing.T) {
 	}
 
 	// We should have 0 annotations as at the beginning.
-	if i, _, err := api.ListAnnotationsFile(inFile, nil, nil); err != nil || i > 0 {
-		t.Fatalf("%s list: %v\n", msg, err)
+	if i := annotationCount(t, inFile); i > 0 {
+		t.Fatalf("%s count: got %d want 0\n", msg, i)
 	}
 }
 
@@ -282,9 +301,8 @@ func TestRemoveAllAnnotations(t *testing.T) {
 	}
 
 	// We should have 2 annotations.
-	i, _, err := api.ListAnnotationsFile(inFile, nil, nil)
-	if err != nil || i != 2 {
-		t.Fatalf("%s list: %v\n", msg, err)
+	if i := annotationCount(t, inFile); i != 2 {
+		t.Fatalf("%s count: got %d want 0\n", msg, i)
 	}
 
 	// Remove all annotations.
@@ -294,9 +312,8 @@ func TestRemoveAllAnnotations(t *testing.T) {
 	}
 
 	// We should have 0 annotations like at the beginning.
-	i, _, err = api.ListAnnotationsFile(inFile, nil, nil)
-	if err != nil || i > 0 {
-		t.Fatalf("%s list: %v\n", msg, err)
+	if i := annotationCount(t, inFile); i > 0 {
+		t.Fatalf("%s count: got %d want 0\n", msg, i)
 	}
 }
 
@@ -317,8 +334,8 @@ func TestAddRemoveAllAnnotationsAsIncrements(t *testing.T) {
 	}
 
 	// We should have 0 annotations like at the beginning.
-	if i, _, err := api.ListAnnotationsFile(inFile, nil, nil); err != nil || i > 0 {
-		t.Fatalf("%s list: %v\n", msg, err)
+	if i := annotationCount(t, inFile); i > 0 {
+		t.Fatalf("%s count: got %d want 0\n", msg, i)
 	}
 }
 
@@ -358,7 +375,7 @@ func TestAddAnnotationsLowLevel(t *testing.T) {
 	}
 
 	// We should have 2 annotations.
-	i, _, err := pdfcpu.ListAnnotations(ctx, nil)
+	i, _, err := pdfcpu.ListAnnotations(ctx.PageAnnots)
 	if err != nil || i != 2 {
 		t.Fatalf("%s list: %v\n", msg, err)
 	}
@@ -370,7 +387,7 @@ func TestAddAnnotationsLowLevel(t *testing.T) {
 	}
 
 	// (before writing) We should have 0 annotations like at the beginning.
-	i, _, err = pdfcpu.ListAnnotations(ctx, nil)
+	i, _, err = pdfcpu.ListAnnotations(ctx.PageAnnots)
 	if err != nil || i != 0 {
 		t.Fatalf("%s list: %v\n", msg, err)
 	}
@@ -381,9 +398,8 @@ func TestAddAnnotationsLowLevel(t *testing.T) {
 	}
 
 	// (after writing) We should have 0 annotations like at the beginning.
-	i, _, err = api.ListAnnotationsFile(outFile, nil, nil)
-	if err != nil || i > 0 {
-		t.Fatalf("%s list: %v\n", msg, err)
+	if i := annotationCount(t, inFile); i > 0 {
+		t.Fatalf("%s count: got %d want 0\n", msg, i)
 	}
 }
 

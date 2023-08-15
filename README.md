@@ -46,6 +46,7 @@ The main focus lies on strong support for batch processing and scripting via a r
 * [annotations](https://pdfcpu.io/annot/annot)
 * [attachments](https://pdfcpu.io/attach/attach)
 * [booklet](https://pdfcpu.io/generate/booklet)
+* [bookmarks](https://pdfcpu.io/bookmarks/bookmarks)
 * [boxes](https://pdfcpu.io/boxes/boxes)
 * [change owner password](https://pdfcpu.io/encrypt/change_opw)
 * [change user password](https://pdfcpu.io/encrypt/change_upw)
@@ -115,30 +116,30 @@ Get the latest binary [here](https://github.com/pdfcpu/pdfcpu/releases).
 ### Using Go Modules
 
 ```
-git clone https://github.com/pdfcpu/pdfcpu
-cd pdfcpu/cmd/pdfcpu
-go install
-pdfcpu version
+$ git clone https://github.com/pdfcpu/pdfcpu
+$ cd pdfcpu/cmd/pdfcpu
+$ go install
+$ pdfcpu version
 ```
 
 ### Using Homebrew (macOS)
 ```
-brew install pdfcpu
-pdfcpu version
+$ brew install pdfcpu
+$ pdfcpu version
 ```
 
 ### Using DNF/YUM (Fedora)
 ```
-sudo dnf install golang-github-pdfcpu
-pdfcpu version
+$ sudo dnf install golang-github-pdfcpu
+$ pdfcpu version
 ```
 
 ### Run in a Docker container
 
 ```
-docker build -t pdfcpu .
+$ docker build -t pdfcpu .
 # mount current folder into container to process local files
-docker run -it --mount type=bind,source="$(pwd)",target=/app pdfcpu ./pdfcpu validate -mode strict /app/pdfs/a.pdf
+$ docker run -it --mount type=bind,source="$(pwd)",target=/app pdfcpu ./pdfcpu validate -mode strict /app/pdfs/a.pdf
 ```
 
 ## Contributing
@@ -166,13 +167,13 @@ For the majority of the cases this is due to a diverse pool of PDF Writers out t
 Regardless of the pdfcpu operation, please start using the pdfcpu command line to validate your file:
 
 ``` sh
-pdfcpu validate -v &> crash.log
+$ pdfcpu validate -v &> crash.log
 ```
 
  or to produce very verbose output
 
  ``` sh
- pdfcpu validate -vv &> crash.log
+ $ pdfcpu validate -vv &> crash.log
  ```
 
 will produce what's needed to investigate a crash. Then open an issue and post `crash.log` or its contents. Ideally post a test PDF you can share to reproduce this. You can also email to hhrutter@gmail.com or if you prefer Slack you can get in touch on the Gopher slack #pdfcpu channel.
