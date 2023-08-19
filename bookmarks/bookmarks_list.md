@@ -1,0 +1,81 @@
+---
+layout: default
+---
+
+# List Bookmarks
+
+* This command prints a list of any existing bookmarks. 
+
+Have a look at some [examples](#examples).
+
+## Usage
+
+```
+pdfcpu bookmarks list inFile
+```
+
+<br>
+
+### Common Flags
+
+| name                                            | description     | values
+|:------------------------------------------------|:----------------|:-------
+| [v(erbose)](../getting_started/common_flags.md) | turn on logging |
+| [vv](../getting_started/common_flags.md)        | verbose logging |
+| [q(uiet)](../getting_started/common_flags.md)   | quiet mode      |
+| [u(nit)](../getting_started/common_flags.md)    | display unit    | po(ints),in(ches),cm,mm
+| [c(onf)](../getting_started/common_flags.md)       | config dir      | $path, disable
+| [upw](../getting_started/common_flags.md)          | user password   |
+| [opw](../getting_started/common_flags.md)          | owner password  |
+
+<br>
+
+### Arguments
+
+| name         | description         | required
+|:-------------|:--------------------|:--------
+| inFile       | PDF input file      | yes
+
+<br>
+
+## Examples
+
+ List all page boundaries of test.pdf:
+
+```
+pdfcpu box list test.pdf
+listing mediaBox, cropBox, trimBox, bleedBox, artBox for upc.pdf
+pages: all
+Page 1: rot=+0 orientation:portrait
+  MediaBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71 (inherited)
+   CropBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71 (default)
+   TrimBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71 (default)
+  BleedBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71 (default)
+    ArtBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71 (default)
+
+Page 2: rot=+0 orientation:portrait
+  MediaBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71 (inherited)
+   CropBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71 (default)
+   TrimBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71 (default)
+  BleedBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71 (default)
+    ArtBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71 (default)
+```
+
+<br>
+
+List mediaBox and cropBox of page 1 of test.pdf using display unit cm:
+
+```
+pdfcpu box list -u cm -pages 1 -- "m,c" test.pdf
+listing mediaBox, cropBox for test.pdf
+pages: 1
+Page 1: rot=+0 orientation:portrait
+  MediaBox (cm) (0.00, 0.00, 21.00, 29.70) w=21.00 h=29.70 ar=0.71 (inherited)
+   CropBox (cm) (0.00, 0.00, 21.00, 29.70) w=21.00 h=29.70 ar=0.71 (default)
+```
+
+<br>
+
+## Hint
+
+The [info](../info.md) command also prints page boundaries if the *-pages* flag is present.
