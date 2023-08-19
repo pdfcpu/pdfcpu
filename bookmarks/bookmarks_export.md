@@ -4,7 +4,8 @@ layout: default
 
 # Export Bookmarks
 
-This command exports existing bookmarks to a JSON dataset.<br>
+This command exports existing bookmarks to a JSON dataset.
+
 The resulting JSON structure is also used by `pdfcpu bookmarks import`.
 
 
