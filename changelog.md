@@ -6,7 +6,10 @@ layout: default
 
 | Date      | Tag / Commit                                                                                | Description  
 |:----------|:--------------------------------------------------------------------------------------------|:------------------------------
-|2023-08-xx | [v0.5.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.5.0)                              | Add bookmarks command, Fix #506, #621
+|2023-08-xx | [v0.5.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.5.0)                              | Add bookmarks command,
+|           |                                                                                             | Fix #506, #604, #621, #657, #659,
+|           |                                                                                             | #660, #663, #664, #666, #667,
+|           |                                                                                             | #669, #671
 |2023-07-20 | [v0.4.2](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.4.2)                              | Bookmark support for merging
 |           |                                                                                             | Fix #606, #608, #617, #618, #622,
 |           |                                                                                             | #623, #624, #626, #627, #630-#632, 
