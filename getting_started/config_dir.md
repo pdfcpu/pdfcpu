@@ -13,7 +13,7 @@ pdfcpu will create this dir at the default [user's config directory](https://gol
 You can look up its location either like so:
 
 ```
-Go-> pdfcpu ver -v
+$ pdfcpu ver -v
 pdfcpu: v0.4.1 dev
 config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 ```
@@ -21,11 +21,11 @@ config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 or you can do the following which will print out both the config file path and its content. This file holds carefully selected default values for various aspects of pdfcpu's operations:
 
 ```
-Go-> pdfcpu config
+$ pdfcpu config
 config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 #############################
-# pdfcpu v0.4.1 dev         #
-# Created: 2023-04-20 21:40 #
+# pdfcpu v0.4.2 dev         #
+# Created: 2023-07-20 21:40 #
 #############################
 #   Default configuration   #
 #############################
@@ -82,6 +82,9 @@ headerBufSize: 100
 
 # optimize duplicate content streams across pages
 optimizeDuplicateContentStreams: false
+
+# merge creates bookmarks
+createBookmarks: true
 ```
 
 <br>
@@ -91,7 +94,7 @@ User fonts are installed using the [font install](../fonts/fonts_install.md) com
 pdfcpu also stores internal representations of installed user fonts in the config dir.
 
 ```
-Go-> tree
+$ tree
 .
 ├── config.yml
 └── fonts

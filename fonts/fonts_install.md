@@ -9,7 +9,7 @@ Install TrueType fonts for embedding text based stamps/watermarks.
 In order to produce stamps/watermarks using your favorite TrueType font you need to install it as a user font:
 
 ```sh
-pdfcpu font install SimSun.ttf
+$ pdfcpu font install SimSun.ttf
 installing to /Users/horstrutter/Library/Application Support/pdfcpu/fonts...
 SimSun
 ```
@@ -17,7 +17,7 @@ SimSun
 TrueType collections are also supported:
 
 ```sh
-pdfcpu font install Songti.ttc
+$ pdfcpu font install Songti.ttc
 installing to /Users/horstrutter/Library/Application Support/pdfcpu/fonts...
 STSongti-SC-Black
 STSongti-SC-Bold

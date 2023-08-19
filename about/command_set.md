@@ -34,6 +34,7 @@ layout: default
 Manage
 
 * [Annotations](../annot/annot.md)
+* [Bookmarks](../bookmarks/bookmarks.md)
 * [Document properties](../properties/properties.md)
 * [Embedded file attachments](../attach/attach.md)
 * [Embedded images](../images/images.md)

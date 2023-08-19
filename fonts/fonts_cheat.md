@@ -35,7 +35,7 @@ Some fonts - typically CJKV/Asian fonts cover a wide range of Unicode code point
 The following command will produce one cheat sheet for each Unicode plane with code points covered in a font in the current dir:
 
 ```
-pdfcpu font cheat Unifont-JPMedium
+$ pdfcpu font cheat Unifont-JPMedium
 creating cheatsheets for: Unifont-JPMedium
 
 ls Unifont-JP*
@@ -48,7 +48,7 @@ ls Unifont-JP*
 The following command will produce cheat sheets for all user fonts installed:
 
 ```
-pdfcpu font cheat
+$ pdfcpu font cheat
 creating cheatsheets for: Roboto-Regular
 creating cheatsheets for: STSong
 creating cheatsheets for: STSongti-SC-Black

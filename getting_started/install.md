@@ -14,27 +14,27 @@ Required go version for building: go1.20 and up
 ## Using Go Modules
 
 ```
-git clone https://github.com/pdfcpu/pdfcpu
-cd pdfcpu/cmd/pdfcpu
-go install
-pdfcpu version
+$ git clone https://github.com/pdfcpu/pdfcpu
+$ cd pdfcpu/cmd/pdfcpu
+$ go install
+$ pdfcpu version
 ```
 
 ## Using Homebrew (macOS)
 ```
-brew install pdfcpu
-pdfcpu version
+$ brew install pdfcpu
+$ pdfcpu version
 ```
 ## Using DNF/YUM (Fedora)
 ```
-sudo dnf install golang-github-pdfcpu
-pdfcpu version
+$ sudo dnf install golang-github-pdfcpu
+$ pdfcpu version
 ```
 
 ## Run in a Docker container
 
 ```
-docker build -t pdfcpu .
+$ docker build -t pdfcpu .
 # mount current folder into container to process local files
-docker run -it --mount type=bind,source="$(pwd)",target=/app pdfcpu ./pdfcpu validate -mode strict /app/pdfs/a.pdf
+$ docker run -it --mount type=bind,source="$(pwd)",target=/app pdfcpu ./pdfcpu validate -mode strict /app/pdfs/a.pdf
 ```

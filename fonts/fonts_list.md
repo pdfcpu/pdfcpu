@@ -7,7 +7,7 @@ layout: default
 Print the total list of supported fonts and user fonts.
 
 ```sh
-pdfcpu fonts list
+$ pdfcpu fonts list
 ```
 
 ## Supported Fonts
@@ -37,7 +37,7 @@ by pdfcpu eg. during stamping or watermarking.
 Any TrueType font installed via `pdfcpu fonts install`.
 
 ```sh
-pdfcpu font list
+$ pdfcpu fonts list
 Corefonts:
   Courier
   Courier-Bold
