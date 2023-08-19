@@ -63,7 +63,7 @@ pdfcpu create inFileJSON [inFile] outFile
 ## Futher Reference
 
 ```
-pdfcpu help create
+$ pdfcpu help create
 ``` 
 
 and

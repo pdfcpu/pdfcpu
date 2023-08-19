@@ -7,7 +7,7 @@ layout: default
 Use `pdfcpu` for a rundown of all commands:
 
 ```
-Go-> pdfcpu
+$ pdfcpu
 pdfcpu is a tool for PDF manipulation written in Go.
 
 Usage:
@@ -72,13 +72,13 @@ The basic processing features:
 ```
 pdfcpu collect   -p(ages) selectedPages inFile [outFile]
 pdfcpu crop     [-p(ages) selectedPages] -- description inFile [outFile]
-pdfcpu merge    [-m(ode) create|append] [-sort] outFile inFile...
+pdfcpu merge    [-m(ode) create|append] [-s(ort) -b(ookmarks)] outFile inFile...
 pdfcpu optimize [-stats csvFile] inFile [outFile]
 pdfcpu resize   [-p(ages) selectedPages] -- description inFile [outFile]
 pdfcpu rotate   [-p(ages) selectedPages] inFile rotation [outFile]
 pdfcpu split    [-m(ode) span|bookmark] inFile outDir [span]
 pdfcpu trim      -p(ages) selectedPages inFile [outFile]
-pdfcpu validate [-m(ode) strict|relaxed] [-l(inks)] inFile
+pdfcpu validate [-m(ode) strict|relaxed] [-l(inks)] inFile...
 ```
 
 <br>
@@ -252,6 +252,18 @@ pdfcpu properties remove  inFile [name...]
 
 <br>
 
+## [Bookmarks](../bookmarks/bookmarks.md)
+
+Manage your bookmarks:
+```
+pdfcpu bookmarks list inFile
+pdfcpu bookmarks import [-r(eplace)] inFile inFileJSON [outFile]
+pdfcpu bookmarks export inFile [outFileJSON]
+pdfcpu bookmarks remove inFile [outFile]
+```
+
+<br>
+
 ## [Boxes](../boxes/boxes.md)
 
 Manage your page boundaries:
@@ -267,7 +279,7 @@ pdfcpu boxes remove  [-p(ages) selectedPages] -- boxTypes inFile [outFile]
 
 Print file details:
 ```
-pdfcpu info [-p(ages) selectedPages] inFile
+pdfcpu info [-p(ages) selectedPages] [-j(son)] inFile...
 ```
 
 <br>

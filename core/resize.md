@@ -65,47 +65,47 @@ A configuration string with input parameters for the resize command.
 
 Enlarge pages by doubling the page dimensions, keep orientation:
 ```sh
-pdfcpu resize "scale:2" in.pdf out.pdf
+$ pdfcpu resize "scale:2" in.pdf out.pdf
 ```
 
 <br>
 
 Shrink first 3 pages by cutting in half the page dimensions, keep orientation.
 ```sh
-pdfcpu resize -pages 1-3 -- "sc:.5" in.pdf out.pdf
+$ pdfcpu resize -pages 1-3 -- "sc:.5" in.pdf out.pdf
 ```
 
 <br>
 
 Resize pages to width of 40 cm, keep orientation.
 ```sh
-pdfcpu resize -u cm -- "dim:40 0" in.pdf out.pdf
+$ pdfcpu resize -u cm -- "dim:40 0" in.pdf out.pdf
 ```
 
 <br>
 
 Resize pages to A4, keep orientation.
 ```sh
-pdfcpu resize "form:A4" in.pdf out.pdf
+$ pdfcpu resize "form:A4" in.pdf out.pdf
 ```
 
 <br>
 
 Resize pages to A4 and enforce orientation(here: portrait mode), apply background color.
 ```sh
-pdfcpu resize "f:A4P, bgcol:#d0d0d0" in.pdf out.pdf
+$ pdfcpu resize "f:A4P, bgcol:#d0d0d0" in.pdf out.pdf
 ```
 
 <br>
 
 Resize pages to 400 x 200 points, keep orientation.
 ```sh
-pdfcpu resize "dim:400 200" in.pdf out.pdf
+$ pdfcpu resize "dim:400 200" in.pdf out.pdf
 ```
 
 <br>
 
 Resize pages to 400 x 200 points, enforce orientation.
 ```sh
-pdfcpu resize "dim:400 200, enforce:true" in.pdf out.pdf
+$ pdfcpu resize "dim:400 200, enforce:true" in.pdf out.pdf
 ```

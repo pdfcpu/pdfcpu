@@ -94,7 +94,8 @@ The page format is A2, the printer supports A3.<br>
 Quick cut a page into 2 equally sized pages.<br>
 Results in a PDF containing 3 pages for each processed page:
 ```sh
-pdfcpu ndown 2 test.pdf .
+
+$ pdfcpu ndown 2 test.pdf .
 cut test.pdf into ./ ...
 writing test_page_1.pdf
 ```
@@ -111,7 +112,7 @@ The page format is A2, the printer supports A4.<br>
 Quick cut page into 4 equally (A4) sized pages.<br>
 Results in a PDF containing 5 pages for each processed page:
 ```sh
-pdfcpu ndown 4 test.pdf .
+$ pdfcpu ndown 4 test.pdf .
 cut test.pdf into ./ ...
 writing test_page_1.pdf
 ```
@@ -130,7 +131,7 @@ The page format is A2, the printer supports A4.<br>
 Quick cut page into 4 equally (A4) sized pages and provide a dark gray glue area of 1 cm.<br>
 Results in a PDF containing 5 pages for each processed page:
 ```sh
-pdfcpu ndown -u cm -- "margin:1, bgcol:DarkGray, border:on" 4 test.pdf .
+$ pdfcpu ndown -u cm -- "margin:1, bgcol:DarkGray, border:on" 4 test.pdf .
 cut test.pdf into ./ ...
 writing test_page_1.pdf
 ````

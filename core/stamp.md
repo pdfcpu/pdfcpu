@@ -77,7 +77,7 @@ Use the following format strings:
 * %P ... total pages
          
 ```
-pdfcpu stamp add -mode text "Page %p of %P" -- "sc:1.0 abs, pos:bc, rot:0" in.pdf out.pdf
+$ pdfcpu stamp add -mode text "Page %p of %P" -- "sc:1.0 abs, pos:bc, rot:0" in.pdf out.pdf
 ```
 
 <br>
@@ -88,7 +88,7 @@ If you want to use a specific page as your stamp,
 specify the page number after the stamp file and use ':' as separator:
 
 ```
-pdfcpu stamp add -mode pdf -- "stamp.pdf:1" "" in.pdf out.pdf
+$ pdfcpu stamp add -mode pdf -- "stamp.pdf:1" "" in.pdf out.pdf
 ```
 
 You can also apply a `multi-stamp`.
@@ -97,7 +97,7 @@ If in.pdf has more pages than stamp.pdf, the last page of stamp.pdf gets applied
 Omit the stamp page number for multi stamping:
 
 ```
-pdfcpu stamp add -mode pdf -- "stamp.pdf" "" in.pdf out.pdf
+$ pdfcpu stamp add -mode pdf -- "stamp.pdf" "" in.pdf out.pdf
 ```
 
 <br>
@@ -202,7 +202,7 @@ You only have to specify parameters that differ from the default.
 
 Create a stamp using defaults only:
 ```sh
-pdfcpu stamp add -mode text -- "This is a stamp" "" in.pdf out.pdf
+$ pdfcpu stamp add -mode text -- "This is a stamp" "" in.pdf out.pdf
 ```
 <p align="center">
   <img style="border-color:silver" border="1" src="resources/stt10.png" height="300">
@@ -212,7 +212,7 @@ pdfcpu stamp add -mode text -- "This is a stamp" "" in.pdf out.pdf
 Create a stamp using scale factor 1:
 
 ```sh
-pdfcpu stamp add -mode text -- "This is a stamp" "sc:1" in.pdf out.pdf
+$ pdfcpu stamp add -mode text -- "This is a stamp" "sc:1" in.pdf out.pdf
 ```
 
 <p align="center">
@@ -225,7 +225,7 @@ pdfcpu stamp add -mode text -- "This is a stamp" "sc:1" in.pdf out.pdf
 Create a stamp along the second diagonale using scale factor 0.9, default render mode `fill` and a fill color:
 
 ```sh
-pdfcpu stamp add -mode text -- "This is a stamp" "sc:.9, d:2, c:.6 .2 .9 in.pdf out.pdf
+$ pdfcpu stamp add -mode text -- "This is a stamp" "sc:.9, d:2, c:.6 .2 .9 in.pdf out.pdf
 ```
 
 <p align="center">
@@ -237,7 +237,7 @@ pdfcpu stamp add -mode text -- "This is a stamp" "sc:.9, d:2, c:.6 .2 .9 in.pdf 
 Create a stamp with 0 degree rotation using scale factor 0.9 and render mode `stroke`:
 
 ```sh
-pdfcpu stamp add -mode text -- "This is a stamp" "sc:.9, rot:0, mo:1" in.pdf out.pdf
+$ pdfcpu stamp add -mode text -- "This is a stamp" "sc:.9, rot:0, mo:1" in.pdf out.pdf
 ```
 
 <p align="center">
@@ -249,7 +249,7 @@ pdfcpu stamp add -mode text -- "This is a stamp" "sc:.9, rot:0, mo:1" in.pdf out
 Create a stamp with a counterclockwise rotation of 45 degrees using scale factor 1, render mode `fill & stroke` and a fill color:
 
 ```sh
-pdfcpu stamp add -mode text -- "This is a stamp" "scale:1, rot:45, mode:2, color:.2 .7 .9" in.pdf out.pdf
+$ pdfcpu stamp add -mode text -- "This is a stamp" "scale:1, rot:45, mode:2, color:.2 .7 .9" in.pdf out.pdf
 ```
 
 <p align="center">
@@ -261,7 +261,7 @@ pdfcpu stamp add -mode text -- "This is a stamp" "scale:1, rot:45, mode:2, color
 Create a stamp of some multi line text, show its bounding box by setting bgcol, set all margins to 5 and a border width of 7 rendering round corners.
 
 ```sh
-pdfcpu stamp add -mode text -- "Some multi\nline text" "ma:5, bo:7 round .3 .7 .7, fillc:#3277d3, bgcol:#beded9, rot:0" in.pdf out.pdf
+$ pdfcpu stamp add -mode text -- "Some multi\nline text" "ma:5, bo:7 round .3 .7 .7, fillc:#3277d3, bgcol:#beded9, rot:0" in.pdf out.pdf
 ```
 
 <p align="center">
@@ -273,9 +273,9 @@ pdfcpu stamp add -mode text -- "Some multi\nline text" "ma:5, bo:7 round .3 .7 .
 Create a stamp with default rotation, using scale factor 1, font size 48, default render mode `fill`, a fill color and increasing opacity from 0.3 to 1. By setting an opacity < 1 you can fake a watermark. This may be useful in scenarios where `pdfcpu watermark` does not produce satisfying results for a particular PDF file:
 
 ```sh
-pdfcpu stamp add -mode text -- "Draft" "points:48, sc:1, fillc:.8 .8 .4, op:.3" in1.pdf out1.pdf
-pdfcpu stamp add -mode text -- "Draft" "points:48, sc:1, fillc:.8 .8 .4, op:0.6" in2.pdf out2.pdf
-pdfcpu stamp add -mode text -- "Draft" "points:48, sc:1, fillc:.8 .8 .4, op:1" in3.pdf out3.pdf
+$ pdfcpu stamp add -mode text -- "Draft" "points:48, sc:1, fillc:.8 .8 .4, op:.3" in1.pdf out1.pdf
+$ pdfcpu stamp add -mode text -- "Draft" "points:48, sc:1, fillc:.8 .8 .4, op:0.6" in2.pdf out2.pdf
+$ pdfcpu stamp add -mode text -- "Draft" "points:48, sc:1, fillc:.8 .8 .4, op:1" in3.pdf out3.pdf
 ```
 
 <p align="center">
@@ -290,7 +290,7 @@ pdfcpu stamp add -mode text -- "Draft" "points:48, sc:1, fillc:.8 .8 .4, op:1" i
 
 Create a stamp using defaults only:
 ```sh
-pdfcpu stamp add -mode image -- "pic.jpg" "" in.pdf out.pdf
+$ pdfcpu stamp add -mode image -- "pic.jpg" "" in.pdf out.pdf
 ```
 
 <p align="center">
@@ -302,7 +302,7 @@ pdfcpu stamp add -mode image -- "pic.jpg" "" in.pdf out.pdf
 Create a stamp using 0 degree rotation and relative scaling of 1.0:
 
 ```sh
-pdfcpu stamp add -mode image -- "pic.jpg" "scalef:1 rel, rot:0" in.pdf out.pdf
+$ pdfcpu stamp add -mode image -- "pic.jpg" "scalef:1 rel, rot:0" in.pdf out.pdf
 ```
 
 <p align="center">
@@ -316,7 +316,7 @@ pdfcpu stamp add -mode image -- "pic.jpg" "scalef:1 rel, rot:0" in.pdf out.pdf
 Create a stamp using defaults only. This will apply page 1 of `some.pdf`:
 
 ```sh
-pdfcpu stamp add -mode pdf -- "some.pdf:1" "" in.pdf out.pdf
+$ pdfcpu stamp add -mode pdf -- "some.pdf:1" "" in.pdf out.pdf
 ```
 
 <p align="center">
@@ -331,7 +331,7 @@ Page 1 of in.pdf gets stamped with page 1 of stamp.pdf,
 page 2 of in.pdf gets stamped with page 2 of stamp.pdf and so forth.
 
 ```sh
-pdfcpu stamp add -mode pdf -- "stamp.pdf" "rot:0, scale:.3 rel" in.pdf out.pdf
+$ pdfcpu stamp add -mode pdf -- "stamp.pdf" "rot:0, scale:.3 rel" in.pdf out.pdf
 ```
 
 <p align="center">
@@ -344,7 +344,7 @@ pdfcpu stamp add -mode pdf -- "stamp.pdf" "rot:0, scale:.3 rel" in.pdf out.pdf
 
 Create a stamp using the default options.
 ```sh
-pdfcpu stamp add -mode text -- "Draft" "" template.pdf work.pdf
+$ pdfcpu stamp add -mode text -- "Draft" "" template.pdf work.pdf
 ```
 <p align="center">
   <img style="border-color:silver" border="1" src="resources/1exp.png" height="300">
@@ -354,7 +354,7 @@ pdfcpu stamp add -mode text -- "Draft" "" template.pdf work.pdf
 
 Let's edit the stamps color, render mode and opacity
 ```sh
-pdfcpu stamp update -mode text -- "Draft" "c: .2 .6 .5, rendermode:2, op:.7" work.pdf
+$ pdfcpu stamp update -mode text -- "Draft" "c: .2 .6 .5, rendermode:2, op:.7" work.pdf
 ```
 <p align="center">
   <img style="border-color:silver" border="1" src="resources/2exp.png" height="300">
@@ -364,7 +364,7 @@ pdfcpu stamp update -mode text -- "Draft" "c: .2 .6 .5, rendermode:2, op:.7" wor
 
 We add a centered footer on the bottom of the page.
 ```sh
-pdfcpu stamp add -mode text -- "Footer" "pos:bc, scale: 1.0 abs, rot:0, c: .5 .5 .9" work.pdf
+$ pdfcpu stamp add -mode text -- "Footer" "pos:bc, scale: 1.0 abs, rot:0, c: .5 .5 .9" work.pdf
 ```
 <p align="center">
   <img style="border-color:silver" border="1" src="resources/3exp.png" height="300">
@@ -374,7 +374,7 @@ pdfcpu stamp add -mode text -- "Footer" "pos:bc, scale: 1.0 abs, rot:0, c: .5 .5
 
 Let's add a logo in the top right corner.
 ```sh
-pdfcpu stamp add -mode image -- "logo.png" "pos:tr, rot:0, sc:.2" work.pdf
+$ pdfcpu stamp add -mode image -- "logo.png" "pos:tr, rot:0, sc:.2" work.pdf
 ```
 <p align="center">
   <img style="border-color:silver" border="1" src="resources/4exp.png" height="300">
@@ -384,7 +384,7 @@ pdfcpu stamp add -mode image -- "logo.png" "pos:tr, rot:0, sc:.2" work.pdf
 
 Let's get rid of the stamp on page 1
 ```
-pdfcpu stamp remove -pages 1 work.pdf
+$ pdfcpu stamp remove -pages 1 work.pdf
 ```
 <p align="center">
   <img style="border-color:silver" border="1" src="resources/t.png" height="300">
@@ -392,7 +392,7 @@ pdfcpu stamp remove -pages 1 work.pdf
 
 Finally let's remove all stamps of this file.
 ```
-pdfcpu stamp remove work.pdf
+$ pdfcpu stamp remove work.pdf
 ``` 
 
 <br>
@@ -409,7 +409,7 @@ Let's create a Unicode text stamp using a user font:
 ### Left-to-right, Simple Chinese
 
 ```
-pdfcpu stamp add -mode text "这是一个测试" "fo:SimSun" in.pdf out.pdf
+$ pdfcpu stamp add -mode text "这是一个测试" "fo:SimSun" in.pdf out.pdf
 writing out.pdf...
 pages: all
 ```
@@ -421,7 +421,7 @@ pages: all
 ### Right-to-left, Arabic
 
 ```
-pdfcpu stamp add -mode text "هذا اختبار" "rtl:true, fo:UnifontMedium" in.pdf out.pdf
+$ pdfcpu stamp add -mode text "هذا اختبار" "rtl:true, fo:UnifontMedium" in.pdf out.pdf
 writing out.pdf...
 pages: all
 ```

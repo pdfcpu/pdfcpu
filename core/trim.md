@@ -59,19 +59,19 @@ The following PDF elements are not carried over into the trimmed document:
 Get rid of unwanted blank pages:
 
 ```sh
-pdfcpu trim -pages even test.pdf test_trimmed.pdf
+$ pdfcpu trim -pages even test.pdf test_trimmed.pdf
 ```
 
 <br>
 Create a single page PDF file for a specific page number:
 
 ```sh
-pdfcpu trim -pages 1 test.pdf firstPage.pdf
+$ pdfcpu trim -pages 1 test.pdf firstPage.pdf
 ```
 
 <br>
 Get rid of the catalog and trailing index:
 
 ```sh
-pdfcpu trim -pages "!2-4,!12-" book.pdf essence.pdf
+$ pdfcpu trim -pages "!2-4,!12-" book.pdf essence.pdf
 ```

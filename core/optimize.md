@@ -54,7 +54,7 @@ Optimize a group of PDF input files and consolidate stats into the same CSV file
 The following shows a stats file with its header line and a single stats line:
 
 ```
-cat stats.csv
+$ cat stats.csv
 name;version;author;creator;producer;src_size (bin|text);src_bin:imgs|fonts|other;dest_size (bin|text);dest_bin:imgs|fonts|other;linearized;hybrid;xrefstr;objstr;pages;objs;missing;garbage;R_Version;R_Extensions;R_PageLabels;R_Names;R_Dests;R_ViewerPrefs;R_PageLayout;R_PageMode;R_Outlines;R_Threads;R_OpenAction;R_AA;R_URI;R_AcroForm;R_Metadata;R_StructTreeRoot;R_MarkInfo;R_Lang;R_SpiderInfo;R_OutputIntents;R_PieceInfo;R_OCProperties;R_Perms;R_Legal;R_Requirements;R_Collection;R_NeedsRendering;P_LastModified;P_Resources;P_MediaBox;P_CropBox;P_BleedBox;P_TrimBox;P_ArtBox;P_BoxColorInfo;P_Contents;P_Rotate;P_Group;P_Thumb;P_B;P_Dur;P_Trans;P_Annots;P_AA;P_Metadata;P_PieceInfo;P_StructParents;P_ID;P_PZ;P_SeparationInfo;P_Tabs;P_TemplateInstantiated;P_PresSteps;P_UserUnit;P_VP;
 test.pdf;1.2;;;;6 KB (67.4% | 32.6%); 0.0% |  0.0% | 100.0%;5 KB (86.6% | 13.4%); 0.0% |  0.0% | 100.0%;false;false;false;false;2;15;;;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;true;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false
 ```
@@ -66,7 +66,7 @@ test.pdf;1.2;;;;6 KB (67.4% | 32.6%); 0.0% |  0.0% | 100.0%;5 KB (86.6% | 13.4%)
 Optimize `test.pdf` and write the result to `test_new.pdf`:
 
 ```sh
-pdfcpu optimize test.pdf
+$ pdfcpu optimize test.pdf
 writing test_new.pdf ...
 ```
 
@@ -75,7 +75,7 @@ writing test_new.pdf ...
 Optimize `test.pdf` and write the result to `test_opt.pdf`:
 
 ```sh
-pdfcpu optimize test.pdf test_opt.pdf
+$ pdfcpu optimize test.pdf test_opt.pdf
 writing test_opt.pdf ...
 ```
 
@@ -84,7 +84,7 @@ writing test_opt.pdf ...
 Optimize `test.pdf`, write the result to `test_opt.pdf`, append stats to `stats.csv` and produce logging on standard out:
 
 ```sh
-pdfcpu optimize -verbose -stats stats.csv test.pdf test_opt.pdf
+$ pdfcpu optimize -verbose -stats stats.csv test.pdf test_opt.pdf
 stats will be appended to stats.csv
  INFO: 2019/02/20 23:20:12 reading upc.pdf..
  INFO: 2019/02/20 23:20:12 PDF Version 1.5 conforming reader

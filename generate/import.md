@@ -97,7 +97,7 @@ A configuration string to specify the details of the image layout on the page.
 Create a single page `photo.pdf` containing `photo.png` using the default positioning `pos:full`. The page size dimensions will match the dimensions of the image:
 
 ```sh
-pdfcpu import photo.pdf photo.png
+$ pdfcpu import photo.pdf photo.png
 ```
 
 <p align="center">
@@ -109,7 +109,7 @@ pdfcpu import photo.pdf photo.png
 Create a single page PDF using paper size `f:A5` using the default orientation *portrait* which could also be expressed with `f:A5P`. Use the positioning parameter `pos:c` to center the image on the page and the default relative scaling `sc:0.5 rel`:
 
 ```sh
-pdfcpu import -- "f:A5, pos:c" photo.pdf photo.jpg
+$ pdfcpu import -- "f:A5, pos:c" photo.pdf photo.jpg
 ```
 
 <p align="center">
@@ -121,7 +121,7 @@ pdfcpu import -- "f:A5, pos:c" photo.pdf photo.jpg
 Create a single page PDF using paper size `f:A5L` using the orientation landscape. Use the positioning parameter `pos:c` to center the image on the page and the default relative scaling `sc:0.5 rel`:
 
 ```sh
-pdfcpu import -- "f:A5L, pos:c" photo.pdf photo.jpg
+$ pdfcpu import -- "f:A5L, pos:c" photo.pdf photo.jpg
 ```
 
 <p align="center">
@@ -133,7 +133,7 @@ pdfcpu import -- "f:A5L, pos:c" photo.pdf photo.jpg
 Create a single page PDF using A5 landscape mode, a relative scaling of 0.5 and the positioning `pos:bl` which anchors the picture to the bottom left page corner:
 
 ```sh
-pdfcpu import -- "form:A5L, pos:bl" photo.pdf photo.jpg
+$ pdfcpu import -- "form:A5L, pos:bl" photo.pdf photo.jpg
 ```
 
 <p align="center">
@@ -145,7 +145,7 @@ pdfcpu import -- "form:A5L, pos:bl" photo.pdf photo.jpg
 Create a single page PDF using A5 landscape mode, relative scaling 0.5, positioning `pos:r` which anchors the picture to the right side vertically centered. Use a negative horizontal offset `off:-20 0` to impose a margin:
 
 ```sh
-pdfcpu import -- "form:A5L, pos:r, off:-20 0" photo.pdf photo.jpg
+$ pdfcpu import -- "form:A5L, pos:r, off:-20 0" photo.pdf photo.jpg
 ```
 
 <p align="center">
@@ -157,7 +157,7 @@ pdfcpu import -- "form:A5L, pos:r, off:-20 0" photo.pdf photo.jpg
 Import `photo.jpg` into a 500 x 500 single page PDF anchoring the image to the top left corner using a relative scaling of 0.3:
 
 ```sh
-pdfcpu import -- "d:500 500, pos:tl, sc:0.3 rel" photo.pdf photo.jpg
+$ pdfcpu import -- "d:500 500, pos:tl, sc:0.3 rel" photo.pdf photo.jpg
 ```
 
 <p align="center">
@@ -169,7 +169,7 @@ pdfcpu import -- "d:500 500, pos:tl, sc:0.3 rel" photo.pdf photo.jpg
 Import `photo.jpg` into a 500 x 500 single page PDF anchoring the image to the top left corner using a relative scaling of 1:
 
 ```sh
-pdfcpu import -- "d:500 500, pos:tl, sc:1" photo.pdf photo.jpg
+$ pdfcpu import -- "d:500 500, pos:tl, sc:1" photo.pdf photo.jpg
 ```
 
 <p align="center">
@@ -181,28 +181,28 @@ pdfcpu import -- "d:500 500, pos:tl, sc:1" photo.pdf photo.jpg
 Generate a PDF photo album assuming `pics/` contains image files (jpg, png, tif):
 
 ```sh
-pdfcpu import album.pdf pics/*
+$ pdfcpu import album.pdf pics/*
 ```
 <br>
 
 Generate a PDF photo album with images centered on the page using the default relative scaling of 0.5:
 
 ```sh
-pdfcpu import -- "pos:c" album.pdf pics/*
+$ pdfcpu import -- "pos:c" album.pdf pics/*
 ```
 <br>
 
 The following command also generates a PDF album but additionally configures the paper size *Letter* and positions the images to be anchored to the bottom left corner with a horizontal offset of 10 points and a vertical offset of 20 points with a scaling of 0.3 relative to page dimensions:
 
 ```sh
-pdfcpu import -- "f:Letter, pos:bl, off:10 20, scale:0.3" album.pdf *.jpg *.png
+$ pdfcpu import -- "f:Letter, pos:bl, off:10 20, scale:0.3" album.pdf *.jpg *.png
 ```
 <br>
 
 If an album created by *Import* ends up having some pages with images not in upright position the [Rotate](../core/rotate.md) command comes to the rescue. Let's say we just have created an album and the images on page 3 and 4 need to be rotated counter clockwise by 90 degrees. This happens frequently. We can fix this situation with:
 
 ```sh
-pdfcpu rotate -pages 3-4 album.pdf -90
+$ pdfcpu rotate -pages 3-4 album.pdf -90
 ```
 
 <br>
@@ -210,7 +210,7 @@ pdfcpu rotate -pages 3-4 album.pdf -90
 You can also convert your input images to grayscale:
 
 ```sh
-pdfcpu import -- "gray:true" gray.pdf test.jpg 
+$ pdfcpu import -- "gray:true" gray.pdf test.jpg 
 ```
 <div>
 <img width="150" src="https://user-images.githubusercontent.com/11322155/113626732-d0dc6c00-9662-11eb-9255-009e56009852.png">&nbsp;&nbsp;&nbsp;
@@ -222,7 +222,7 @@ pdfcpu import -- "gray:true" gray.pdf test.jpg
 Or you can apply a sepia effect:
 
 ```sh
-pdfcpu import -- "sepia:true" sepia.pdf test.jpg 
+$ pdfcpu import -- "sepia:true" sepia.pdf test.jpg 
 ```
 <div>
 <img width="150" src="https://user-images.githubusercontent.com/11322155/113626732-d0dc6c00-9662-11eb-9255-009e56009852.png">&nbsp;&nbsp;&nbsp;

@@ -14,7 +14,7 @@ You can look up its location either like so:
 
 ```
 $ pdfcpu ver -v
-pdfcpu: v0.4.1 dev
+pdfcpu: v0.4.2 dev
 config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 ```
 

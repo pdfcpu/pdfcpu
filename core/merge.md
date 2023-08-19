@@ -61,7 +61,7 @@ The following PDF elements are not carried over into the merged document:
 pdfcpu respects the order of the provided input files and merges accordingly. Merge three input files into `out.pdf` by concatenating `in3.pdf` to `in2.pdf` and the result to `in1.pdf`:
 
 ```sh
-pdfcpu merge out.pdf in1.pdf in2.pdf in3.pdf
+$ pdfcpu merge out.pdf in1.pdf in2.pdf in3.pdf
 ```
 
 <br>
@@ -69,7 +69,7 @@ pdfcpu merge out.pdf in1.pdf in2.pdf in3.pdf
 Merge all PDF Files in the current directory into `out.pdf`:
 
 ```sh
-pdfcpu merge out.pdf *.pdf
+$ pdfcpu merge out.pdf *.pdf
 ```
 
 <br>
@@ -77,5 +77,5 @@ pdfcpu merge out.pdf *.pdf
 Merge some PDF files into an existing PDF file `out.pdf`:
 
 ```sh
-pdfcpu merge -mode append out.pdf in1.pdf in2.pdf in3.pdf
+$ pdfcpu merge -mode append out.pdf in1.pdf in2.pdf in3.pdf
 ```

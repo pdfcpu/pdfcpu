@@ -51,12 +51,12 @@ pdfcpu rotate [-p(ages) selectedPages] inFile rotation [outFile]
 Rotate all pages of a PDF file clockwise by 90 degrees:
 
 ```sh
-pdfcpu rotate test.pdf 90
+$ pdfcpu rotate test.pdf 90
 ```
 
 <br>
 Rotate the first two pages counter clockwise by 90 degrees:
 
 ```sh
-pdfcpu rotate -pages 1-2 test.pdf -90
+$ pdfcpu rotate -pages 1-2 test.pdf -90
 ```
