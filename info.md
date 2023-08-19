@@ -9,16 +9,17 @@ Print information about a PDF file and its attachments.
 ## Usage
 
 ```
-pdfcpu info [-pages selectedPages] inFile
+pdfcpu info [-pages selectedPages] [-j(son)] inFile...
 ```
 
 <br>
 
 ### Flags
 
-| name                                    | description       | required
-|:----------------------------------------|:------------------|:--------
-| [p(ages)](getting_started/page_selection) | page selection    | no
+| name                                      | description         | required
+|:----------------------------------------  |:--------------------|:--------
+| [p(ages)](getting_started/page_selection) | page selection      | no
+| j(son)                                    | produce JSON output | no
 
 <br>
 
@@ -36,14 +37,21 @@ pdfcpu info [-pages selectedPages] inFile
 
 <br>
 
+### Arguments
+
+| name         | description         | required
+|:-------------|:--------------------|:--------
+| inFile       | PDF input files     | yes
+
 ## Example
 
 ```sh
-pdfcpu info -u cm test.pdf
+$ pdfcpu info -u cm test.pdf
+              Source: test.pdf
          PDF version: 1.7
           Page count: 1
            Page size: 21.00 x 29.70 cm
-.........................................
+---------------------------------------------
                Title:
               Author:
              Subject:
@@ -55,7 +63,7 @@ pdfcpu info -u cm test.pdf
                       key2
           Properties: name1 = val1
                       name2 = val2
-..........................................
+---------------------------------------------
               Tagged: No
               Hybrid: No
           Linearized: No
@@ -66,23 +74,28 @@ Using object streams: Yes
             Acroform: No
             Outlines: Yes
                Names: Yes
-..........................................
+---------------------------------------------
            Encrypted: No
          Permissions: Full access
 ```
 <br>
 
-Use the *pages* flag to include page boundaries for selected pages in your desired display unit:
+Use the *pages* flag to include page boundaries for selected pages in your desired display unit:<br><br>
+w  ... width<br>
+h  ... height<br>
+ar ... aspect ratio
+
 ```sh
-pdfcpu info -u po -pages 1,2 test.pdf
+$ pdfcpu info -u po -pages 1,2 test.pdf
 pages: 1,2
+              Source: test.pdf
          PDF version: 1.2
           Page count: 2
 Page 1: rot=+0 orientation:portrait
   MediaBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71  = CropBox, TrimBox, BleedBox, ArtBox
 Page 2: rot=+0 orientation:portrait
   MediaBox (points) (0.00, 0.00, 595.27, 841.89) w=595.27 h=841.89 ar=0.71  = CropBox, TrimBox, BleedBox, ArtBox
-............................................
+---------------------------------------------
                Title:
               Author:
              Subject:
@@ -90,7 +103,7 @@ Page 2: rot=+0 orientation:portrait
      Content creator:
        Creation date: D:20150122062117
    Modification date:
-............................................
+---------------------------------------------
               Tagged: No
               Hybrid: No
           Linearized: No
@@ -101,7 +114,51 @@ Using object streams: No
             Acroform: No
             Outlines: Yes
                Names: Yes
-............................................
+---------------------------------------------
            Encrypted: No
          Permissions: Full access
+```
+
+<br>
+
+Output a JSON data set:
+
+```
+$ pdfcpu info -json test.pdf
+{
+	"header": {
+		"version": "pdfcpu v0.5.0 dev",
+		"creation": "2023-08-20 00:24:45 CEST"
+	},
+	"Infos": [
+		{
+			"Source": "test.pdf",
+			"Version": 7,
+			"PageCount": 1,
+			"Title": "",
+			"Author": "",
+			"Subject": "",
+			"Producer": "pdfcpu v0.3.6 dev",
+			"Creator": "",
+			"CreationDate": "D:20201103224901+01'00'",
+			"ModificationDate": "D:20201103224901+01'00'",
+			"Keywords": [],
+			"Properties": {},
+			"Tagged": false,
+			"Hybrid": false,
+			"Linearized": false,
+			"UsingXRefStreams": true,
+			"UsingObjectStreams": true,
+			"Watermarked": false,
+			"Thumbnails": false,
+			"Form": false,
+			"Signatures": false,
+			"AppendOnly": false,
+			"Outlines": false,
+			"Names": false,
+			"Encrypted": false,
+			"Permissions": 0,
+		}
+	]
+}
 ```

@@ -42,7 +42,7 @@ pdfcpu attachments list inFile
  Any available attachment description will be shown in braces:
 
 ```sh
-pdfcpu attach list container.pdf
+$ pdfcpu attach list container.pdf
 forest.jpg
 pdfcpu.zip (description1)
 invoice.pdf (description2)

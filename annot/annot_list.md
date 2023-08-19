@@ -37,7 +37,7 @@ pdfcpu annotations list [-p(ages) selectedPages] inFile
 
  List all annotations of test.pdf:
 ```
-pdfcpu annot list test.pdf
+$ pdfcpu annot list test.pdf
 4 annotations available
 
 Page 3:

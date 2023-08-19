@@ -47,6 +47,7 @@ pdfcpu bookmarks export inFile [outFileJSON]
 ```sh
 $ pdfcpu bookm export bookmarkTree.pdf
 writing out.json...
+
 $ cat out.json
 {
 	"header": {

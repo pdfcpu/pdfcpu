@@ -42,7 +42,7 @@ pdfcpu attachments remove inFile [file...]
 Remove a specific attachment from container.pdf:
 
 ```sh
-pdfcpu attach remove container.pdf pdfcpu.zip
+$ pdfcpu attach remove container.pdf pdfcpu.zip
 removing pdfcpu.zip
 ```
 
@@ -51,6 +51,6 @@ removing pdfcpu.zip
 Remove all attachments:
 
 ```sh
-pdfcpu attach remove container.pdf
+$ pdfcpu attach remove container.pdf
 removing all attachments
 ```
