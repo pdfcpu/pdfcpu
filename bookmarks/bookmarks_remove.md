@@ -4,7 +4,7 @@ layout: default
 
 # Remove Bookmarks
 
-* This command removes all bookmarks.
+This command removes all bookmarks.
 
 Have a look at some [examples](#examples).
 
@@ -41,21 +41,11 @@ pdfcpu bookmarks remove inFile [outFile]
 
 ## Examples
 
- Remove all bookmarks of in.pdf:
+ Remove all bookmarks:
 
 ```
-pdfcpu box rem -pages 2 -- "c,b,a,t" in.pdf out.pdf
-removing cropBox, trimBox, bleedBox, artBox for in.pdf
-writing out.pdf...
-```
+$ pdfcpu bookmarks remove bookmarkSimple.pdf
 
-<br>
-
-Remove Crop Box for all pages of in.pdf:
-
-```
-pdfcpu box rem -- "crop" in.pdf out.pdf
-removing cropBox for in.pdf
-writing out.pdf...
-pages: all
+$ pdfcpu bookmarks list bookmarkSimple.pdf
+no bookmarks available
 ```
