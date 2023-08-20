@@ -52,7 +52,20 @@ pdfcpu bookmarks import [-r(eplace)] inFile inFileJSON [outFile]
 <br>
 
 
-### Description
+## Description
+A bookmark is a node in the so called Outline tree of a PDF file.
+Each bookmark may have kid nodes representing the bookmark hierarchy below:
+
+| attribute  | description      | type   | required
+|:-----------|:-----------------|:-------|:--------
+| title      | title            | UTF-8 string | yes
+| page       | destination page |  int   | yes
+| color      | RGB color        | triple of floats | no
+| bold       | style **bold**   |  bool  | no
+| italic     | style *italic*   |  bool  | no
+| kids       | bookmark subtree | bookmark array | no
+
+Note: color, bold and italic are not supported by Mac Preview!
 
 
 ## Examples
