@@ -6,7 +6,7 @@ layout: default
 
 | Date      | Tag / Commit                                                                                | Description  
 |:----------|:--------------------------------------------------------------------------------------------|:------------------------------
-|2023-08-xx | [v0.5.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.5.0)                              | Add bookmarks command,
+|2023-08-20 | [v0.5.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.5.0)                              | Add bookmarks command,
 |           |                                                                                             | Fix #506, #604, #621, #657, #659,
 |           |                                                                                             | #660, #663, #664, #666, #667,
 |           |                                                                                             | #669, #671
