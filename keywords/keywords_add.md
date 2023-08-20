@@ -43,5 +43,5 @@ Adding a key phrase and a keyword.
 Put key phrases under single quotes:
 
 ```sh
-pdfcpu keywords add in.pdf 'Tom Sawyer' classic
+$ pdfcpu keywords add in.pdf 'Tom Sawyer' classic
 ```

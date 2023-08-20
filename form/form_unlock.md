@@ -47,7 +47,7 @@ pdfcpu form unlock inFile [outFile] [fieldID|fieldName]...
 Unlock the field with name **dob1**:
 
 ```
-pdfcpu form list english.pdf
+$ pdfcpu form list english.pdf
 
 english.pdf
 Pg L Field     │ Id | Name       │ Default          │ Value                    │ Options
@@ -61,10 +61,10 @@ Pg L Field     │ Id | Name       │ Default          │ Value               
    * CheckBox  │ 36 | cb11       │                  │ Yes                      │
    * Textfield │ 37 | note1      │                  │ This is a sample text.\n │
 
-pdfcpu form unlock english.pdf dob1
+$ pdfcpu form unlock english.pdf dob1
 writing english.pdf...
 
-pdfcpu form list english.pdf
+$ pdfcpu form list english.pdf
 
 english.pdf
 Pg L Field     │ Id | Name       │ Default          │ Value                    │ Options
@@ -85,10 +85,10 @@ Pg L Field     │ Id | Name       │ Default          │ Value               
 Unlock the whole form in english.pdf:
 
 ```
-pdfcpu form unlock english.pdf
+$ pdfcpu form unlock english.pdf
 writing english.pdf...
 
-pdfcpu form list english.pdf
+$ pdfcpu form list english.pdf
 
 english.pdf
 Pg L Field     │ Id | Name       │ Default          │ Value                    │ Options

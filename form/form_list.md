@@ -42,7 +42,7 @@ pdfcpu form list inFile...
 List all form fields of english.pdf:
 
 ```
-pdfcpu form list english.pdf
+$ pdfcpu form list english.pdf
 
 english.pdf
 Pg L Field     │ Id | Name       │ Default          │ Value                    │ Options
@@ -64,7 +64,7 @@ List all form fields of person.pdf.
 The * indicates locked fields aka write-protected or read-only:
 
 ```
-pdfcpu form list person.pdf
+$ pdfcpu form list person.pdf
 
 person.pdf
 Pg L Field     │ Id | Name        │ Value   │ Options

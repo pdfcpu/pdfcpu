@@ -9,14 +9,14 @@ layout: default
 Extract XML-Metadata from `book.pdf` into the current directory:
 
 ```sh
-pdfcpu extract -mode meta book.pdf .
+$ pdfcpu extract -mode meta book.pdf .
 extracting metadata from book.pdf into . ...
 
-ls
+$ ls
 -rwxr-xr-x   1 horstrutter  staff    45K Mar  8 12:40 177_Catalog.txt*
 -rw-r-----@  1 horstrutter  staff   537K Jun  9  2017 book.pdf
 
-cat 177_Catalog.txt
+$ cat 177_Catalog.txt
 <?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="3.1.1-111">
    <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">

@@ -44,7 +44,7 @@ pdfcpu portfolio extract inFile outDir [file...]
 Extract a specific portfolio entry from `portfolio.pdf` into `out`:
 
 ```sh
-pdfcpu portfolio extract portfolio.pdf out sketch.pdf
+$ pdfcpu portfolio extract portfolio.pdf out sketch.pdf
 ```
 
 <br>
@@ -52,5 +52,5 @@ pdfcpu portfolio extract portfolio.pdf out sketch.pdf
 Extract all portfolio entries of `portfolio.pdf` into `out`:
 
 ```sh
-pdfcpu portfolio extract portfolio.pdf out
+$ pdfcpu portfolio extract portfolio.pdf out
 ```

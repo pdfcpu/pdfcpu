@@ -86,13 +86,13 @@ We edit the JSON file:
 
 We trigger (a dry run for) form filling and write the filled form to `tmp.pdf`:
 ```
-pdfcpu form fill english.pdf english.json tmp.pdf
+$ pdfcpu form fill english.pdf english.json tmp.pdf
 ```
 
 We check the result by exporting the form out of `tmp.pdf`:
 
 ```
-pdfcpu export tmp.pdf tmp.json
+$ pdfcpu export tmp.pdf tmp.json
 writing tmp.json...
 ```
 
@@ -101,5 +101,5 @@ writing tmp.json...
 * We fill the original form:
 
 ```
-pdfcpu form fill english.pdf english.json
+$ pdfcpu form fill english.pdf english.json
 ```

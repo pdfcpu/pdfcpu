@@ -4,7 +4,7 @@ layout: default
 
 # Remove form fields
 
-This command removes form fields by their id
+This command removes form fields by their id or name
 taken from the output of `pdfcpu form list`.
 
 Although the optional field label is an attribute of the 
@@ -49,7 +49,7 @@ pdfcpu form remove inFile [outFile] <fieldID|fieldName>...
 Remove the field with id **32**:
 
 ```
-pdfcpu form list english.pdf
+$ pdfcpu form list english.pdf
 
 english.pdf
 Pg L Field     │ Id | Name       │ Default          │ Value                    │ Options
@@ -63,10 +63,10 @@ Pg L Field     │ Id | Name       │ Default          │ Value               
      CheckBox  │ 36 | cb11       │                  │ Yes                      │
      Textfield │ 37 | note1      │                  │ This is a sample text.\n │
 
-pdfcpu form remove english.pdf 32
+$ wpdfcpu form remove english.pdf 32
 writing english.pdf...
 
-pdfcpu form list english.pdf
+$ pdfcpu form list english.pdf
 
 english.pdf
 Pg L Field     │ Id | Name       │ Default          │ Value                    │ Options

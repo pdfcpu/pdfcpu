@@ -41,7 +41,7 @@ pdfcpu portfolio list inFile
  List all portfolio entries embedded into `portfolio.pdf`. You may add any kind of file to a PDF portfolio:
 
 ```sh
-pdfcpu portfolio list portfolio.pdf
+$ pdfcpu portfolio list portfolio.pdf
 forest.jpg
 pdfcpu.zip
 invoice.pdf

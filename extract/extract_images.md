@@ -9,10 +9,10 @@ layout: default
 Extract all images of `book.pdf` into the current directory:
 
 ```sh
-pdfcpu extract -mode image book.pdf .
+$ pdfcpu extract -mode image book.pdf .
 extracting images from book.pdf into . ...
 
-ls
+$ ls
 -rwxr-xr-x   1 horstrutter  staff    28K Mar  8 11:57 Im0_16_165.jpg*
 -rw-r--r--   1 horstrutter  staff   600B Mar  8 11:57 Im1_3_36.png
 -rw-r--r--   1 horstrutter  staff    93B Mar  8 12:06 Im91_22_601.png
@@ -29,11 +29,11 @@ ls
 Extract all images of the first 5 pages of `folder.pdf` into `out`:
 
 ```sh
-pdfcpu extract -mode image -pages -5 folder.pdf out
+$ pdfcpu extract -mode image -pages -5 folder.pdf out
 pageSelection: -5
 extracting images from folder.pdf into out ...
 
- ls out
+ $ ls out
 -rwxr-xr-x   1 horstrutter  staff    26K Mar  8 12:10 Im0_1_2880.jpg*
 -rwxr-xr-x   1 horstrutter  staff    10K Mar  8 12:10 Im0_2_7.jpg*
 -rwxr-xr-x   1 horstrutter  staff   9.9K Mar  8 12:10 Im0_3_20.jpg*

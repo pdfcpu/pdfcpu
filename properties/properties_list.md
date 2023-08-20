@@ -41,7 +41,7 @@ pdfcpu properties list inFile
  List all document properties of `in.pdf`:
 
 ```sh
-pdfcpu properties list in.pdf
+$ pdfcpu properties list in.pdf
 dept = hr
 group = 3
 ```

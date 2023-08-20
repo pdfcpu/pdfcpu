@@ -95,7 +95,7 @@ Encrypt `test.pdf` using the default encryption AES with a 256-bit key and the [
 Set the owner password to `opw`. This password also known as the *master password* or the *set permissions password* may be used to change the [permissions](). Since there is no user password set any PDF Reader may open this document:
 
 ```sh
-pdfcpu encrypt -opw opw test.pdf
+$ pdfcpu encrypt -opw opw test.pdf
 writing test.pdf ...
 ```
 
@@ -106,7 +106,7 @@ Set the user password to `upw`. This password must be used to open the decrypted
 set the owner password to `opw`:
 
 ```sh
-pdfcpu encrypt -upw upw -opw opw test.pdf
+$ pdfcpu encrypt -upw upw -opw opw test.pdf
 writing test.pdf ...
 ```
 
@@ -116,7 +116,7 @@ Encrypt `test.pdf` and write the encrypted output file to `test_enc.pdf`. Use AE
 Set the mandatory owner password to `opw` which will also be needed to change the permissions of `test_enc.pdf`:
 
 ```sh
-pdfcpu encrypt -opw opw -mode aes -key 40 test.pdf test_enc.pdf
+$ pdfcpu encrypt -opw opw -mode aes -key 40 test.pdf test_enc.pdf
 writing test_enc.pdf ...
 ```
 
@@ -126,6 +126,6 @@ Encrypt `test.pdf` and write the encrypted output file to `test_enc.pdf`. Use RC
 Set the user password to `upw` which will be needed to open `test_enc.pdf`, also set the owner password to `opw`:
 
 ```sh
-pdfcpu encrypt -upw upw -opw opw -mode rc4 -key 128 -perm all test.pdf test_enc.pdf
+$ pdfcpu encrypt -upw upw -opw opw -mode rc4 -key 128 -perm all test.pdf test_enc.pdf
 writing test_enc.pdf ...
 ```

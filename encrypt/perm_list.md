@@ -40,10 +40,10 @@ pdfcpu permissions list [-upw userpw] [-opw ownerpw] inFile
 `pdfcpu` does not require any password for listing the permissions of an encrypted document unless the *user password* is set:
 
 ```
-pdfcpu encrypt -opw opw enc.pdf
+$ pdfcpu encrypt -opw opw enc.pdf
 writing enc.pdf ...
 
-pdfcpu perm list enc.pdf
+$ pdfcpu perm list enc.pdf
 permission bits:            0
 Bit  3: false (print(rev2), print quality(rev>=3))
 Bit  4: false (modify other than controlled by bits 6,9,11)
@@ -60,13 +60,13 @@ Bit 12: false (print high-level(rev>=3))
 If both passwords are set, you need to provide either one to list permissions:
 
 ```
-pdfcpu encrypt -opw opw -upw upw enc.pdf
+$ pdfcpu encrypt -opw opw -upw upw enc.pdf
 writing enc.pdf ...
 
-pdfcpu perm list enc.pdf
+$ pdfcpu perm list enc.pdf
 Please provide the correct password
 
-pdfcpu perm list -upw upw enc.pdf
+$ pdfcpu perm list -upw upw enc.pdf
 permission bits:            0
 Bit  3: false (print(rev2), print quality(rev>=3))
 Bit  4: false (modify other than controlled by bits 6,9,11)
@@ -77,7 +77,7 @@ Bit 10: false (extract(rev>=3))
 Bit 11: false (modify(rev>=3))
 Bit 12: false (print high-level(rev>=3))
 
-pdfcpu perm list -opw opw enc.pdf
+$ pdfcpu perm list -opw opw enc.pdf
 permission bits:            0
 Bit  3: false (print(rev2), print quality(rev>=3))
 Bit  4: false (modify other than controlled by bits 6,9,11)
@@ -94,13 +94,13 @@ Bit 12: false (print high-level(rev>=3))
 If only the *user password* is set then that's also what you need to provide:
 
 ```
-pdfcpu encrypt -upw upw enc.pdf
+$ pdfcpu encrypt -upw upw enc.pdf
 writing enc.pdf ...
 
-pdfcpu perm list enc.pdf
+$ pdfcpu perm list enc.pdf
 Please provide the correct password
 
-pdfcpu perm list -upw upw enc.pdf
+$ pdfcpu perm list -upw upw enc.pdf
 permission bits:            0
 Bit  3: false (print(rev2), print quality(rev>=3))
 Bit  4: false (modify other than controlled by bits 6,9,11)

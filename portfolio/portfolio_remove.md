@@ -42,7 +42,7 @@ pdfcpu portfolio remove inFile [file...]
 Remove a specific entry from `portfolio.pdf`:
 
 ```sh
-pdfcpu portfolio remove portfolio.pdf pdfcpu.zip
+$ pdfcpu portfolio remove portfolio.pdf pdfcpu.zip
 writing portfolio.pdf ...
 ```
 
@@ -51,6 +51,6 @@ writing portfolio.pdf ...
 Remove all portfolio entries:
 
 ```sh
-pdfcpu portfolio remove portfolio.pdf
+$ pdfcpu portfolio remove portfolio.pdf
 writing portfolio.pdf ...
 ```

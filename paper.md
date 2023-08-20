@@ -9,7 +9,7 @@ Commands like [Booklet](generate/booklet.md), [Grid](generate/grid.md), [Import]
 Print the list of supported paper sizes:
 
 ```sh
-pdfcpu paper
+$ pdfcpu paper
 ```
 
 ## Supported Paper Sizes

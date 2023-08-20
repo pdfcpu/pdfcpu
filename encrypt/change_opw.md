@@ -43,9 +43,9 @@ You have to set the *owner password* when you `encrypt` a file and you can chang
 
 Change the *owner password*:
 ```sh
-pdfcpu encrypt -opw opw enc.pdf
+$ pdfcpu encrypt -opw opw enc.pdf
 writing enc.pdf ...
 
-pdfcpu changeopw enc.pdf opw opwNew
+$ pdfcpu changeopw enc.pdf opw opwNew
 writing enc.pdf ...
 ```

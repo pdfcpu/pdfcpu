@@ -61,10 +61,10 @@ pdfcpu form lock inFile [outFile] [fieldID|fieldName]...
 Lock the field with name **dob1**:
 
 ```
-pdfcpu form lock english.pdf dob1
+$ pdfcpu form lock english.pdf dob1
 writing english.pdf...
 
-pdfcpu form list english.pdf
+$ pdfcpu form list english.pdf
 
 english.pdf
 Pg L Field     │ Id | Name       │ Default          │ Value                    │ Options
@@ -83,10 +83,10 @@ Pg L Field     │ Id | Name       │ Default          │ Value               
 Lock all form fields making the form read-only:
 
 ```
-pdfcpu form lock english.pdf
+$ pdfcpu form lock english.pdf
 writing english.pdf...
 
-pdfcpu form list english.pdf
+$ pdfcpu form list english.pdf
 
 english.pdf
 Pg L Field     │ Id | Name       │ Default          │ Value                    │ Options

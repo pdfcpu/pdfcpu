@@ -41,7 +41,7 @@ pdfcpu keywords list inFile
  List all document keywords of `in.pdf`:
 
 ```sh
-pdfcpu keyword list in.pdf
+$ pdfcpu keyword list in.pdf
 literature
 contemporary
 ```

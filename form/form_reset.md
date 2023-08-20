@@ -52,7 +52,7 @@ pdfcpu form reset inFile [outFile] [fieldID|fieldName]...
 Reset the fields with name `firstName1` and `lastName1`:
 
 ```
-pdfcpu form list english.pdf
+$ pdfcpu form list english.pdf
 
 english.pdf
 Pg L Field     │ Id | Name       │ Default          │ Value                    │ Options
@@ -66,7 +66,7 @@ Pg L Field     │ Id | Name       │ Default          │ Value               
      CheckBox  │ 36 | cb11       │                  │ Yes                      │
      Textfield │ 37 | note1      │                  │ This is a sample text.\n │
 
-pdfcpu form reset english.pdf firstName1 lastName1
+$ pdfcpu form reset english.pdf firstName1 lastName1
 
 english.pdf
 Pg L Field     │ Id | Name       │ Default          │ Value                    │ Options
@@ -86,7 +86,7 @@ Pg L Field     │ Id | Name       │ Default          │ Value               
 Reset the whole form in engish.pdf:
 
 ```
-pdfcpu form reset english.pdf
+$ pdfcpu form reset english.pdf
 
 english.pdf
 Pg L Field     │ Id | Name       │ Default          │ Value                    │ Options

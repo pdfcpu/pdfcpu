@@ -42,7 +42,7 @@ pdfcpu keywords remove inFile [keyword...]
 Remove a specific keyword from `test.pdf`:
 
 ```sh
-pdfcpu keyword remove test.pdf modern
+$ pdfcpu keywords remove test.pdf modern
 ```
 
 <br>
@@ -50,5 +50,5 @@ pdfcpu keyword remove test.pdf modern
 Remove all keywords:
 
 ```sh
-pdfcpu key remove test.pdf
+$ pdfcpu keywords remove test.pdf
 ```

@@ -60,7 +60,7 @@ pdfcpu pages insert [-p(ages) selectedPages] [-m(ode) before|after] inFile [outF
 Insert an empty page before every page of `in.pdf`. This way you get a PDF that gives you space for adding annotations for pages:
 
 ```sh
-pdfcpu page insert in.pdf
+$ pdfcpu page insert in.pdf
 writing in.pdf...
 ```
 
@@ -69,7 +69,7 @@ writing in.pdf...
 Insert an empty page before pages 1 to 5:
 
 ```sh
-pdfcpu page insert -pages 1-5 in.pdf out.pdf
+$ pdfcpu page insert -pages 1-5 in.pdf out.pdf
 writing out.pdf...
 ```
 
@@ -78,6 +78,6 @@ writing out.pdf...
 Insert an empty page after the last page:
 
 ```sh
-pdfcpu page insert -pages l -mode after in.pdf out.pdf
+$ pdfcpu page insert -pages l -mode after in.pdf out.pdf
 writing out.pdf...
 ```

@@ -62,7 +62,7 @@ The workflow steps are:
 
 1. Export your form into JSON:
 ```
-pdfcpu form export
+$ pdfcpu form export
 ```
 
 2. Remove all fields which shall remain untouched.
@@ -75,12 +75,12 @@ pdfcpu form export
 
 6. To trigger form filling run:
 ```
-pdfcpu form multifill in.pdf in.json outDir
+$ pdfcpu form multifill in.pdf in.json outDir
 ```
 
 7. If you are only interested in a single output file run:
 ```
-pdfcpu form multifill -m merge in.pdf in.json outDir
+$ pdfcpu form multifill -m merge in.pdf in.json outDir
 ```
 
 ### Multifill via CSV
@@ -98,7 +98,7 @@ The workflow steps are:
 
 1. Export your form into JSON:
 ```
-pdfcpu form export
+$ pdfcpu form export
 ```
 
 2. Generate a CSV file based on the JSON file you just created and individual form data.
@@ -107,12 +107,12 @@ Each column represents a form field identified in the header line by field id:
 
 3. To trigger form filling run:
 ```
-pdfcpu form multifill in.pdf in.csv outDir
+$ pdfcpu form multifill in.pdf in.csv outDir
 ```
 
 4. If you are only interested in a single output file run:
 ```
-pdfcpu form multifill -m merge in.pdf in.csv outDir
+$ pdfcpu form multifill -m merge in.pdf in.csv outDir
 ```
 
 

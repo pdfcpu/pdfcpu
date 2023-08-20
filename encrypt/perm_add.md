@@ -55,10 +55,10 @@ You have to provide any non empty password in order to change permissions.
 For a document encrypted with just the *owner password* you have to provide `opw` to change the permissions:
 
 ```
-pdfcpu encrypt -opw opw enc.pdf
+$ pdfcpu encrypt -opw opw enc.pdf
 writing enc.pdf ...
 
-pdfcpu perm list enc.pdf
+$ pdfcpu perm list enc.pdf
 permission bits:            0
 Bit  3: false (print(rev2), print quality(rev>=3))
 Bit  4: false (modify other than controlled by bits 6,9,11)
@@ -72,11 +72,11 @@ Bit 12: false (print high-level(rev>=3))
 pdfcpu perm add -perm all enc.pdf
 Please provide all non-empty passwords
 
-pdfcpu perm add -opw opw -perm all enc.pdf
+$ pdfcpu perm add -opw opw -perm all enc.pdf
 adding permissions to enc.pdf ...
 writing enc.pdf ...
 
-pdfcpu perm list enc.pdf
+$ pdfcpu perm list enc.pdf
 permission bits: 111100111100
 Bit  3: true (print(rev2), print quality(rev>=3))
 Bit  4: true (modify other than controlled by bits 6,9,11)
@@ -92,10 +92,10 @@ Bit 12: true (print high-level(rev>=3))
 
 For a document encrypted with just the *user password* you have to provide `upw` to change the permissions:
 ```
-pdfcpu encrypt -upw upw enc.pdf
+$ pdfcpu encrypt -upw upw enc.pdf
 writing enc.pdf ...
 
-pdfcpu perm list -upw upw enc.pdf
+$ pdfcpu perm list -upw upw enc.pdf
 permission bits:            0
 Bit  3: false (print(rev2), print quality(rev>=3))
 Bit  4: false (modify other than controlled by bits 6,9,11)
@@ -106,17 +106,17 @@ Bit 10: false (extract(rev>=3))
 Bit 11: false (modify(rev>=3))
 Bit 12: false (print high-level(rev>=3))
 
-pdfcpu perm add -perm all enc.pdf
+$ pdfcpu perm add -perm all enc.pdf
 Please provide all non-empty passwords#
 
-pdfcpu perm add -upw upw -perm all enc.pdf
+$ pdfcpu perm add -upw upw -perm all enc.pdf
 adding permissions to enc.pdf ...
 writing enc.pdf ...
 
-pdfcpu perm list enc.pdf
+$ pdfcpu perm list enc.pdf
 Please provide the correct password
 
-pdfcpu perm list -upw upw enc.pdf
+$ pdfcpu perm list -upw upw enc.pdf
 permission bits: 111100111100
 Bit  3: true (print(rev2), print quality(rev>=3))
 Bit  4: true (modify other than controlled by bits 6,9,11)
@@ -132,10 +132,10 @@ Bit 12: true (print high-level(rev>=3))
 
 For an encrypted document that has both passwords set you have to provide both `opw` and `upw` to change the permissions:
 ```
-pdfcpu encrypt -opw opw -upw upw enc.pdf
+$ pdfcpu encrypt -opw opw -upw upw enc.pdf
 writing enc.pdf ...
 
-pdfcpu perm list -opw opw enc.pdf
+$ pdfcpu perm list -opw opw enc.pdf
 permission bits:            0
 Bit  3: false (print(rev2), print quality(rev>=3))
 Bit  4: false (modify other than controlled by bits 6,9,11)
@@ -146,20 +146,20 @@ Bit 10: false (extract(rev>=3))
 Bit 11: false (modify(rev>=3))
 Bit 12: false (print high-level(rev>=3))
 
-pdfcpu perm add -perm all enc.pdf
+$ pdfcpu perm add -perm all enc.pdf
 Please provide all non-empty passwords
 
-pdfcpu perm add -opw opw -perm all enc.pdf
+$ pdfcpu perm add -opw opw -perm all enc.pdf
 Please provide the correct password
 
-pdfcpu perm add -upw upw -perm all enc.pdf
+$ pdfcpu perm add -upw upw -perm all enc.pdf
 Please provide all non-empty passwords
 
-pdfcpu perm add -upw upw -opw opw -perm all enc.pdf
+$ pdfcpu perm add -upw upw -opw opw -perm all enc.pdf
 adding permissions to enc.pdf ...
 writing enc.pdf ...
 
-pdfcpu perm list -upw upw enc.pdf
+$ pdfcpu perm list -upw upw enc.pdf
 permission bits: 111100111100
 Bit  3: true (print(rev2), print quality(rev>=3))
 Bit  4: true (modify other than controlled by bits 6,9,11)

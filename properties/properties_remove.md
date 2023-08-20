@@ -42,7 +42,7 @@ pdfcpu properties remove inFile [name...]
 Remove a specific property from `in.pdf`:
 
 ```sh
-pdfcpu prop remove in.pdf dept
+$ pdfcpu prop remove in.pdf dept
 ```
 
 <br>
@@ -50,5 +50,5 @@ pdfcpu prop remove in.pdf dept
 Remove all properties:
 
 ```sh
-pdfcpu prop remove test.pdf
+$ pdfcpu prop remove test.pdf
 ```

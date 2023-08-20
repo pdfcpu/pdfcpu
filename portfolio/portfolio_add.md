@@ -43,6 +43,6 @@ pdfcpu portfolio add inFile file[,desc]...
 Add pictures to a PDF portfolio for easy content delivery:
 
 ```sh
-pdfcpu portfolio add portfolio.pdf *.jpg
+$ pdfcpu portfolio add portfolio.pdf *.jpg
 writing portfolio.pdf ...
 ```

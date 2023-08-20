@@ -44,19 +44,19 @@ pdfcpu properties add inFile nameValuePair...
 Adding a property:
 
 ```sh
-pdfcpu properties add in.pdf name = value
+$ pdfcpu properties add in.pdf name = value
 ```
 
 ```sh
-pdfcpu properties add in.pdf 'name = value'
+$ pdfcpu properties add in.pdf 'name = value'
 ```
 
 Adding two properties:
 ```sh
-pdfcpu properties add in.pdf 'name1 = value1' 'name2 = value2'
+$ pdfcpu properties add in.pdf 'name1 = value1' 'name2 = value2'
 ```
 
 Setting Title and Author:
 ```sh
-pdfcpu properties add in.pdf 'Title = My title' 'Author = Me'
+$ pdfcpu properties add in.pdf 'Title = My title' 'Author = Me'
 ```
