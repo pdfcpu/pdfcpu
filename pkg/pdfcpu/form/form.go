@@ -65,23 +65,23 @@ func (ft FieldType) string() string {
 
 // Field represents a form field for s particular page number.
 type Field struct {
-	pages  []int
-	locked bool
-	typ    FieldType
-	id     string
-	name   string
-	dv     string
-	v      string
-	opts   string
+	Pages  []int
+	Locked bool
+	Typ    FieldType
+	ID     string
+	Name   string
+	Dv     string
+	V      string
+	Opts   string
 }
 
 func (f Field) pageString() string {
-	if len(f.pages) == 1 {
-		return strconv.Itoa(f.pages[0])
+	if len(f.Pages) == 1 {
+		return strconv.Itoa(f.Pages[0])
 	}
-	sort.Ints(f.pages)
+	sort.Ints(f.Pages)
 	ss := []string{}
-	for _, p := range f.pages {
+	for _, p := range f.Pages {
 		ss = append(ss, strconv.Itoa(p))
 	}
 	return strings.Join(ss, ",")
@@ -306,7 +306,7 @@ func collectRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) (s
 
 func collectRadioButtonGroup(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta) error {
 
-	f.typ = FTRadioButtonGroup
+	f.Typ = FTRadioButtonGroup
 
 	if s := d.NameEntry("V"); s != nil {
 		v, err := types.DecodeName(*s)
@@ -318,7 +318,7 @@ func collectRadioButtonGroup(xRefTable *model.XRefTable, d types.Dict, f *Field,
 				fm.valMax = w
 			}
 			fm.val = true
-			f.v = v
+			f.V = v
 		}
 	}
 
@@ -327,8 +327,8 @@ func collectRadioButtonGroup(xRefTable *model.XRefTable, d types.Dict, f *Field,
 		return err
 	}
 
-	f.opts = s
-	if len(f.opts) > 0 {
+	f.Opts = s
+	if len(f.Opts) > 0 {
 		fm.opt = true
 	}
 
@@ -356,7 +356,7 @@ func collectBtn(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMet
 			fm.defMax = w
 		}
 		fm.def = true
-		f.dv = dv
+		f.Dv = dv
 	}
 
 	if len(d.ArrayEntry("Kids")) > 0 {
@@ -365,7 +365,7 @@ func collectBtn(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMet
 		}
 	}
 
-	f.typ = FTCheckBox
+	f.Typ = FTCheckBox
 	if o, found := d.Find("V"); found {
 		if o.(types.Name) == "Yes" {
 			v := "Yes"
@@ -373,7 +373,7 @@ func collectBtn(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMet
 				fm.valMax = len(v)
 			}
 			fm.val = true
-			f.v = v
+			f.V = v
 		}
 	}
 
@@ -381,7 +381,7 @@ func collectBtn(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMet
 }
 
 func collectComboBox(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta) error {
-	f.typ = FTComboBox
+	f.Typ = FTComboBox
 	if sl := d.StringLiteralEntry("V"); sl != nil {
 		v, err := types.StringLiteralToString(*sl)
 		if err != nil {
@@ -391,7 +391,7 @@ func collectComboBox(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *Fie
 			fm.valMax = w
 		}
 		fm.val = true
-		f.v = v
+		f.V = v
 	}
 	if sl := d.StringLiteralEntry("DV"); sl != nil {
 		dv, err := types.StringLiteralToString(*sl)
@@ -402,13 +402,13 @@ func collectComboBox(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *Fie
 			fm.defMax = w
 		}
 		fm.def = true
-		f.dv = dv
+		f.Dv = dv
 	}
 	return nil
 }
 
 func collectListBox(xRefTable *model.XRefTable, multi bool, d types.Dict, f *Field, fm *FieldMeta) error {
-	f.typ = FTListBox
+	f.Typ = FTListBox
 	if !multi {
 		if sl := d.StringLiteralEntry("V"); sl != nil {
 			v, err := types.StringLiteralToString(*sl)
@@ -419,7 +419,7 @@ func collectListBox(xRefTable *model.XRefTable, multi bool, d types.Dict, f *Fie
 				fm.valMax = w
 			}
 			fm.val = true
-			f.v = v
+			f.V = v
 		}
 		if sl := d.StringLiteralEntry("DV"); sl != nil {
 			dv, err := types.StringLiteralToString(*sl)
@@ -430,7 +430,7 @@ func collectListBox(xRefTable *model.XRefTable, multi bool, d types.Dict, f *Fie
 				fm.defMax = w
 			}
 			fm.def = true
-			f.dv = dv
+			f.Dv = dv
 		}
 	} else {
 		vv, err := parseStringLiteralArray(xRefTable, d, "V")
@@ -443,7 +443,7 @@ func collectListBox(xRefTable *model.XRefTable, multi bool, d types.Dict, f *Fie
 				fm.valMax = w
 			}
 			fm.val = true
-			f.v = v
+			f.V = v
 		}
 		vv, err = parseStringLiteralArray(xRefTable, d, "DV")
 		if err != nil {
@@ -455,7 +455,7 @@ func collectListBox(xRefTable *model.XRefTable, multi bool, d types.Dict, f *Fie
 				fm.defMax = w
 			}
 			fm.def = true
-			f.dv = dv
+			f.Dv = dv
 		}
 	}
 	return nil
@@ -469,8 +469,8 @@ func collectCh(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta
 		return err
 	}
 
-	f.opts = strings.Join(vv, ",")
-	if len(f.opts) > 0 {
+	f.Opts = strings.Join(vv, ",")
+	if len(f.Opts) > 0 {
 		fm.opt = true
 	}
 
@@ -499,7 +499,7 @@ func collectTx(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta
 			fm.valMax = w
 		}
 		fm.val = true
-		f.v = v
+		f.V = v
 	}
 	if o, found := d.Find("DV"); found {
 		sl, _ := o.(types.StringLiteral)
@@ -517,15 +517,15 @@ func collectTx(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta
 			fm.defMax = w
 		}
 		fm.def = true
-		f.dv = dv
+		f.Dv = dv
 	}
 	df, err := extractDateFormat(xRefTable, d)
 	if err != nil {
 		return err
 	}
-	f.typ = FTText
+	f.Typ = FTText
 	if df != nil {
-		f.typ = FTDate
+		f.Typ = FTDate
 	}
 	return nil
 }
@@ -540,8 +540,8 @@ func collectPageField(
 
 	exists := false
 	for j, field := range *fs {
-		if field.id == fi.id && field.name == fi.name {
-			field.pages = append(field.pages, i)
+		if field.ID == fi.id && field.Name == fi.name {
+			field.Pages = append(field.Pages, i)
 			ps := field.pageString()
 			if len(ps) > fm.pageMax {
 				fm.pageMax = len(ps)
@@ -551,14 +551,14 @@ func collectPageField(
 		}
 	}
 
-	f := Field{pages: []int{i}}
+	f := Field{Pages: []int{i}}
 
-	f.id = fi.id
+	f.ID = fi.id
 	if w := runewidth.StringWidth(fi.id); w > fm.idMax {
 		fm.idMax = w
 	}
 
-	f.name = fi.name
+	f.Name = fi.name
 	if w := runewidth.StringWidth(fi.name); w > fm.nameMax {
 		fm.nameMax = w
 	}
@@ -568,13 +568,13 @@ func collectPageField(
 	if ff != nil {
 		locked = uint(primitives.FieldFlags(*ff))&uint(primitives.FieldReadOnly) > 0
 	}
-	f.locked = locked
+	f.Locked = locked
 
 	ft := fi.ft
 	if ft == nil {
 		ft = d.NameEntry("FT")
 		if ft == nil {
-			return errors.Errorf("pdfcpu: corrupt form field %s: missing entry FT\n%s", f.id, d)
+			return errors.Errorf("pdfcpu: corrupt form field %s: missing entry FT\n%s", f.ID, d)
 		}
 	}
 
@@ -727,7 +727,7 @@ func multiPageFieldsMap(fs []Field) map[string][]Field {
 	m := map[string][]Field{}
 
 	for _, f := range fs {
-		if len(f.pages) == 1 {
+		if len(f.Pages) == 1 {
 			continue
 		}
 		ps := f.pageString()
@@ -770,27 +770,27 @@ func renderMultiPageFields(ctx *model.Context, m map[string][]Field, fm *FieldMe
 
 		for _, f := range m[k] {
 			l := " "
-			if f.locked {
+			if f.Locked {
 				l = "*"
 			}
 
-			t := f.typ.string()
+			t := f.Typ.string()
 
 			pageFill := strings.Repeat(" ", fm.pageMax-runewidth.StringWidth(f.pageString()))
-			idFill := strings.Repeat(" ", fm.idMax-runewidth.StringWidth(f.id))
-			nameFill := strings.Repeat(" ", fm.nameMax-runewidth.StringWidth(f.name))
-			s := fmt.Sprintf("%s%s %s %-9s %s %s%s %s %s%s ", p, pageFill, l, t, draw.VBar, f.id, idFill, draw.VBar, f.name, nameFill)
+			idFill := strings.Repeat(" ", fm.idMax-runewidth.StringWidth(f.ID))
+			nameFill := strings.Repeat(" ", fm.nameMax-runewidth.StringWidth(f.Name))
+			s := fmt.Sprintf("%s%s %s %-9s %s %s%s %s %s%s ", p, pageFill, l, t, draw.VBar, f.ID, idFill, draw.VBar, f.Name, nameFill)
 			p = strings.Repeat(" ", len(p))
 			if fm.def {
-				dvFill := strings.Repeat(" ", fm.defMax-runewidth.StringWidth(f.dv))
-				s += fmt.Sprintf("%s %s%s ", draw.VBar, f.dv, dvFill)
+				dvFill := strings.Repeat(" ", fm.defMax-runewidth.StringWidth(f.Dv))
+				s += fmt.Sprintf("%s %s%s ", draw.VBar, f.Dv, dvFill)
 			}
 			if fm.val {
-				vFill := strings.Repeat(" ", fm.valMax-runewidth.StringWidth(f.v))
-				s += fmt.Sprintf("%s %s%s ", draw.VBar, f.v, vFill)
+				vFill := strings.Repeat(" ", fm.valMax-runewidth.StringWidth(f.V))
+				s += fmt.Sprintf("%s %s%s ", draw.VBar, f.V, vFill)
 			}
 			if fm.opt {
-				s += fmt.Sprintf("%s %s", draw.VBar, f.opts)
+				s += fmt.Sprintf("%s %s", draw.VBar, f.Opts)
 			}
 
 			ss = append(ss, s)
@@ -827,12 +827,12 @@ func renderFields(ctx *model.Context, fs []Field, fm *FieldMeta) ([]string, erro
 	i, needSep := 0, false
 	for _, f := range fs {
 
-		if len(f.pages) > 1 {
+		if len(f.Pages) > 1 {
 			continue
 		}
 
 		p := " "
-		pg := f.pages[0]
+		pg := f.Pages[0]
 		if pg != i {
 			if pg > 1 && needSep {
 				ss = append(ss, draw.HorSepLine(horSep))
@@ -843,26 +843,26 @@ func renderFields(ctx *model.Context, fs []Field, fm *FieldMeta) ([]string, erro
 		}
 
 		l := " "
-		if f.locked {
+		if f.Locked {
 			l = "*"
 		}
 
-		t := f.typ.string()
+		t := f.Typ.string()
 
 		pageFill := strings.Repeat(" ", fm.pageMax-runewidth.StringWidth(f.pageString()))
-		idFill := strings.Repeat(" ", fm.idMax-runewidth.StringWidth(f.id))
-		nameFill := strings.Repeat(" ", fm.nameMax-runewidth.StringWidth(f.name))
-		s := fmt.Sprintf("%s%s %s %-9s %s %s%s %s %s%s ", p, pageFill, l, t, draw.VBar, f.id, idFill, draw.VBar, f.name, nameFill)
+		idFill := strings.Repeat(" ", fm.idMax-runewidth.StringWidth(f.ID))
+		nameFill := strings.Repeat(" ", fm.nameMax-runewidth.StringWidth(f.Name))
+		s := fmt.Sprintf("%s%s %s %-9s %s %s%s %s %s%s ", p, pageFill, l, t, draw.VBar, f.ID, idFill, draw.VBar, f.Name, nameFill)
 		if fm.def {
-			dvFill := strings.Repeat(" ", fm.defMax-runewidth.StringWidth(f.dv))
-			s += fmt.Sprintf("%s %s%s ", draw.VBar, f.dv, dvFill)
+			dvFill := strings.Repeat(" ", fm.defMax-runewidth.StringWidth(f.Dv))
+			s += fmt.Sprintf("%s %s%s ", draw.VBar, f.Dv, dvFill)
 		}
 		if fm.val {
-			vFill := strings.Repeat(" ", fm.valMax-runewidth.StringWidth(f.v))
-			s += fmt.Sprintf("%s %s%s ", draw.VBar, f.v, vFill)
+			vFill := strings.Repeat(" ", fm.valMax-runewidth.StringWidth(f.V))
+			s += fmt.Sprintf("%s %s%s ", draw.VBar, f.V, vFill)
 		}
 		if fm.opt {
-			s += fmt.Sprintf("%s %s", draw.VBar, f.opts)
+			s += fmt.Sprintf("%s %s", draw.VBar, f.Opts)
 		}
 
 		ss = append(ss, s)
