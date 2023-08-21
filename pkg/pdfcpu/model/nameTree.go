@@ -224,11 +224,11 @@ func (n *Node) HandleLeaf(xRefTable *XRefTable, k string, v types.Object, m Name
 			if err == nil {
 				break
 			}
-			if len(m) == 0 {
-				return err
-			}
 			if err != errNameTreeDuplicateKey {
 				return err
+			}
+			if len(m) == 0 {
+				return nil
 			}
 			kNew := k + "\x01"
 			dd, ok := m[kOrig]

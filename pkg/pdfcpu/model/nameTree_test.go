@@ -170,8 +170,8 @@ func destroyNameTree(t *testing.T, r *Node) {
 		t.Fatal("should not find Value for x")
 	}
 
-	if err := r.Add(nil, "c", types.StringLiteral("cvv"), nil, nil); err == nil {
-		t.Fatalf("update c:should trigger DuplicateKeyException")
+	if err := r.Add(nil, "c", types.StringLiteral("cvv"), nil, nil); err != nil {
+		t.Fatalf("update c:should not trigger DuplicateKeyException")
 	}
 
 	empty, ok, _ = r.Remove(nil, "c")
