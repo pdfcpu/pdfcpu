@@ -1762,7 +1762,7 @@ func (xRefTable *XRefTable) processPageTreeForPageDict(root *types.IndirectRef, 
 
 	//fmt.Printf("entering processPageTreeForPageDict: p=%d obj#%d\n", *p, root.ObjectNumber.Value())
 
-	d, err := xRefTable.DereferenceDict(*root)
+	d, err := xRefTable.GetPagesDict(root)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1881,7 +1881,7 @@ func (xRefTable *XRefTable) processPageTreeForPageNumber(root *types.IndirectRef
 
 	//fmt.Printf("entering processPageTreeForPageNumber: p=%d obj#%d\n", *p, root.ObjectNumber.Value())
 
-	d, err := xRefTable.DereferenceDict(*root)
+	d, err := xRefTable.GetPagesDict(root)
 	if err != nil {
 		return 0, err
 	}
@@ -1950,8 +1950,7 @@ func (xRefTable *XRefTable) EnsurePageCount() error {
 	if err != nil {
 		return err
 	}
-
-	d, err := xRefTable.DereferenceDict(*pageRoot)
+	d, err := xRefTable.GetPagesDict(pageRoot)
 	if err != nil {
 		return err
 	}
@@ -2060,6 +2059,32 @@ func (xRefTable *XRefTable) collectMediaBoxAndCropBox(d types.Dict, inhMediaBox,
 	return nil
 }
 
+// GetPagesDict to get pages dict by pageRef or 'Catalog.Pages' direct dict
+func (xRefTable *XRefTable) GetPagesDict(pageRef *types.IndirectRef) (types.Dict, error) {
+	var (
+		d   types.Dict
+		err error
+	)
+	// avoid panic for Pages is not reference Dict
+	if pageRef != nil {
+		d, err = xRefTable.DereferenceDict(*pageRef)
+		if err != nil {
+			return nil, err
+		}
+		return d, nil
+	}
+	// This should really be isDict("Pages"), but I've seen at least one
+	// example: /Pages<</Kids[4 0 R 11 0 R 18 0 R 25 0 R 32 0 R 39 0 R]/Type/Pages/Count 6>>
+	rootDict, err := xRefTable.Catalog()
+	if err != nil {
+		return nil, err
+	}
+	if rootDict != nil {
+		d = rootDict.DictEntry("Pages")
+	}
+	return d, nil
+}
+
 func (xRefTable *XRefTable) collectPageBoundariesForPageTree(
 	root *types.IndirectRef,
 	inhMediaBox, inhCropBox **types.Rectangle,
@@ -2067,8 +2092,7 @@ func (xRefTable *XRefTable) collectPageBoundariesForPageTree(
 	r int,
 	p *int,
 	selectedPages types.IntSet) error {
-
-	d, err := xRefTable.DereferenceDict(*root)
+	d, err := xRefTable.GetPagesDict(root)
 	if err != nil {
 		return err
 	}
