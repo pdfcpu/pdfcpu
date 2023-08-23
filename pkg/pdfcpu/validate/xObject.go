@@ -528,7 +528,7 @@ func validateImageStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict, i
 	// SMask, stream, optional, since V1.4
 	sinceVersion := model.V14
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V13
+		sinceVersion = model.V12
 	}
 	sd1, err := validateStreamDictEntry(xRefTable, sd.Dict, dictName, "SMask", OPTIONAL, sinceVersion, nil)
 	if err != nil {

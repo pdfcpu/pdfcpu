@@ -1427,7 +1427,11 @@ func validateAnnotationDictGeneral(xRefTable *model.XRefTable, d types.Dict, dic
 	}
 
 	// NM, optional, text string, since V1.4
-	_, err = validateStringEntry(xRefTable, d, dictName, "NM", OPTIONAL, model.V14, nil)
+	sinceVersion := model.V14
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V13
+	}
+	_, err = validateStringEntry(xRefTable, d, dictName, "NM", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return nil, err
 	}
