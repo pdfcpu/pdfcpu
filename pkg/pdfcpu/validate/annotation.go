@@ -250,17 +250,38 @@ func validateAnnotationDictText(xRefTable *model.XRefTable, d types.Dict, dictNa
 	}
 
 	// State, optional, text string, since V1.5
-	validate := func(s string) bool { return types.MemberOf(s, []string{"None", "Unmarked", "Completed"}) }
+	// NOTE: acceptable state values depend on the StateModel.  for now, accept the union of all valid values for State.
+	//       once the StateModel is loaded and validated, we will check the State again to make sure it corresponds to
+	//       the model.
+	validate := func(s string) bool {
+		return types.MemberOf(s, []string{"None", "Marked", "Unmarked", "Completed", "Accepted", "Rejected", "Cancelled"})
+	}
 	state, err := validateStringEntry(xRefTable, d, dictName, "State", OPTIONAL, model.V15, validate)
 	if err != nil {
 		return err
 	}
 
-	// StateModel, text string, since V1.5
-	validate = func(s string) bool { return types.MemberOf(s, []string{"Marked", "Review"}) }
-	_, err = validateStringEntry(xRefTable, d, dictName, "StateModel", state != nil, model.V15, validate)
+	if state != nil {
+		// StateModel, text string, since V1.5
+		validate = func(s string) bool { return types.MemberOf(s, []string{"Marked", "Review"}) }
+		stateModel, err := validateStringEntry(xRefTable, d, dictName, "StateModel", REQUIRED, model.V15, validate)
+		if err != nil {
+			return err
+		}
 
-	return err
+		// Ensure that the state/model combo is valid.
+		var validStates []string
+		if *stateModel == "Marked" {
+			validStates = []string{"Marked", "Unmarked"}
+		} else {
+			validStates = []string{"Accepted", "Rejected", "Cancelled", "Completed", "None"}
+		}
+		if !types.MemberOf(*state, validStates) {
+			return errors.Errorf("pdfcpu: validateAnnotationDictText: dict=%s invalid state=%s for state model=%s", dictName, *state, *stateModel)
+		}
+	}
+
+	return nil
 }
 
 func validateActionOrDestination(xRefTable *model.XRefTable, d types.Dict, dictName string, sinceVersion model.Version) error {
