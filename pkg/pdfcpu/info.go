@@ -503,8 +503,12 @@ func Info(ctx *model.Context, fileName string, selectedPages types.IntSet) (*PDF
 	info.Watermarked = ctx.Watermarked
 	info.Thumbnails = len(ctx.PageThumbs) > 0
 	info.Form = ctx.Form != nil
+	info.Outlines = len(ctx.Outlines) > 0
+	info.Names = len(ctx.Names) > 0
+
 	info.Signatures = ctx.SignatureExist
 	info.AppendOnly = ctx.AppendOnly
+	info.Encrypted = ctx.Encrypt != nil
 
 	if ctx.E != nil {
 		info.Permissions = ctx.E.P
