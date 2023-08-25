@@ -1412,8 +1412,7 @@ func validateBorderArray(xRefTable *model.XRefTable, a types.Array) bool {
 	return err == nil
 }
 
-func validateAnnotationDictGeneral(xRefTable *model.XRefTable, d types.Dict, dictName string) (*types.Name, error) {
-
+func validateAnnotationDictGeneralPart1(xRefTable *model.XRefTable, d types.Dict, dictName string) (*types.Name, error) {
 	// Type, optional, name
 	_, err := validateNameEntry(xRefTable, d, dictName, "Type", OPTIONAL, model.V10, func(s string) bool { return s == "Annot" })
 	if err != nil {
@@ -1454,52 +1453,59 @@ func validateAnnotationDictGeneral(xRefTable *model.XRefTable, d types.Dict, dic
 		return nil, err
 	}
 
+	return subtype, nil
+}
+
+func validateAnnotationDictGeneralPart2(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// M, optional, date string in any format, since V1.1
-	_, err = validateStringEntry(xRefTable, d, dictName, "M", OPTIONAL, model.V11, nil)
-	if err != nil {
-		return nil, err
+	if _, err := validateStringEntry(xRefTable, d, dictName, "M", OPTIONAL, model.V11, nil); err != nil {
+		return err
 	}
 
 	// F, optional integer, since V1.1, annotation flags
-	_, err = validateIntegerEntry(xRefTable, d, dictName, "F", OPTIONAL, model.V11, nil)
-	if err != nil {
-		return nil, err
+	if _, err := validateIntegerEntry(xRefTable, d, dictName, "F", OPTIONAL, model.V11, nil); err != nil {
+		return err
 	}
 
 	// AP, optional, appearance dict, since V1.2
-	err = validateAppearDictEntry(xRefTable, d, dictName, OPTIONAL, model.V12)
-	if err != nil {
-		return nil, err
+	if err := validateAppearDictEntry(xRefTable, d, dictName, OPTIONAL, model.V12); err != nil {
+		return err
 	}
 
 	// AS, optional, name, since V1.2
-	_, err = validateNameEntry(xRefTable, d, dictName, "AS", OPTIONAL, model.V11, nil)
-	if err != nil {
-		return nil, err
+	if _, err := validateNameEntry(xRefTable, d, dictName, "AS", OPTIONAL, model.V11, nil); err != nil {
+		return err
 	}
 
 	// Border, optional, array of numbers
 	a, err := validateArrayEntry(xRefTable, d, dictName, "Border", OPTIONAL, model.V10, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if !validateBorderArray(xRefTable, a) {
-		return nil, errors.Errorf("invalid border array: %s", a)
+		return errors.Errorf("invalid border array: %s", a)
 	}
 
 	// C, optional array, of numbers, since V1.1
-	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "C", OPTIONAL, model.V11, nil)
-	if err != nil {
-		return nil, err
+	if _, err = validateNumberArrayEntry(xRefTable, d, dictName, "C", OPTIONAL, model.V11, nil); err != nil {
+		return err
 	}
 
 	// StructParent, optional, integer, since V1.3
-	_, err = validateIntegerEntry(xRefTable, d, dictName, "StructParent", OPTIONAL, model.V13, nil)
+	if _, err = validateIntegerEntry(xRefTable, d, dictName, "StructParent", OPTIONAL, model.V13, nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateAnnotationDictGeneral(xRefTable *model.XRefTable, d types.Dict, dictName string) (*types.Name, error) {
+	subType, err := validateAnnotationDictGeneralPart1(xRefTable, d, dictName)
 	if err != nil {
 		return nil, err
 	}
 
-	return subtype, nil
+	return subType, validateAnnotationDictGeneralPart2(xRefTable, d, dictName)
 }
 
 func validateAnnotationDictConcrete(xRefTable *model.XRefTable, d types.Dict, dictName string, subtype types.Name) error {

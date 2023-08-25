@@ -283,11 +283,7 @@ func logSelPages(selectedPages types.IntSet) {
 	log.CLI.Printf("pages: %s\n", s)
 }
 
-// selectedPages returns a set of used page numbers.
-// key==page# => key 0 unused!
-func selectedPages(pageCount int, pageSelection []string, log bool) (types.IntSet, error) {
-	selectedPages := types.IntSet{}
-
+func calcSelPages(pageCount int, pageSelection []string, selectedPages types.IntSet) error {
 	for _, v := range pageSelection {
 
 		//log.Stats.Printf("pageExp: <%s>\n", v)
@@ -315,7 +311,7 @@ func selectedPages(pageCount int, pageSelection []string, log bool) (types.IntSe
 			v = v[1:]
 
 			if err := handlePrefix(v, negated, pageCount, selectedPages); err != nil {
-				return nil, err
+				return err
 			}
 
 			continue
@@ -325,7 +321,7 @@ func selectedPages(pageCount int, pageSelection []string, log bool) (types.IntSe
 		if v[0] != 'l' && strings.HasSuffix(v, "-") {
 
 			if err := handleSuffix(v[:len(v)-1], negated, pageCount, selectedPages); err != nil {
-				return nil, err
+				return err
 			}
 
 			continue
@@ -334,7 +330,7 @@ func selectedPages(pageCount int, pageSelection []string, log bool) (types.IntSe
 		// l l-# l-#-
 		if v[0] == 'l' {
 			if err := handleSpecificPageOrLastXPages(v, negated, pageCount, selectedPages); err != nil {
-				return nil, err
+				return err
 			}
 			continue
 		}
@@ -344,7 +340,7 @@ func selectedPages(pageCount int, pageSelection []string, log bool) (types.IntSe
 			// v contains '-' somewhere in the middle
 			// #-# #-l #-l-#
 			if err := parsePageRange(pr, pageCount, negated, selectedPages); err != nil {
-				return nil, err
+				return err
 			}
 
 			continue
@@ -352,9 +348,21 @@ func selectedPages(pageCount int, pageSelection []string, log bool) (types.IntSe
 
 		// #
 		if err := handleSpecificPageOrLastXPages(pr[0], negated, pageCount, selectedPages); err != nil {
-			return nil, err
+			return err
 		}
 
+	}
+
+	return nil
+}
+
+// selectedPages returns a set of used page numbers.
+// key==page# => key 0 unused!
+func selectedPages(pageCount int, pageSelection []string, log bool) (types.IntSet, error) {
+	selectedPages := types.IntSet{}
+
+	if err := calcSelPages(pageCount, pageSelection, selectedPages); err != nil {
+		return nil, err
 	}
 
 	if log {

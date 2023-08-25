@@ -22,54 +22,69 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 )
 
-func initCommandMap() {
-	annotsCmdMap := newCommandMap()
+func initAnnotsCmdMap() commandMap {
+	m := newCommandMap()
 	for k, v := range map[string]command{
 		"list":   {processListAnnotationsCommand, nil, "", ""},
 		"remove": {processRemoveAnnotationsCommand, nil, "", ""},
 	} {
-		annotsCmdMap.register(k, v)
+		m.register(k, v)
 	}
+	return m
+}
 
-	attachCmdMap := newCommandMap()
+func initAttachCmdMap() commandMap {
+	m := newCommandMap()
 	for k, v := range map[string]command{
 		"list":    {processListAttachmentsCommand, nil, "", ""},
 		"add":     {processAddAttachmentsCommand, nil, "", ""},
 		"remove":  {processRemoveAttachmentsCommand, nil, "", ""},
 		"extract": {processExtractAttachmentsCommand, nil, "", ""},
 	} {
-		attachCmdMap.register(k, v)
+		m.register(k, v)
 	}
+	return m
+}
 
-	bookmarksCmdMap := newCommandMap()
+func initBookmarksCmdMap() commandMap {
+	m := newCommandMap()
 	for k, v := range map[string]command{
 		"list":   {processListBookmarksCommand, nil, "", ""},
 		"import": {processImportBookmarksCommand, nil, "", ""},
 		"export": {processExportBookmarksCommand, nil, "", ""},
 		"remove": {processRemoveBookmarksCommand, nil, "", ""},
 	} {
-		bookmarksCmdMap.register(k, v)
+		m.register(k, v)
 	}
+	return m
+}
 
-	boxesCmdMap := newCommandMap()
+func initBoxesCmdMap() commandMap {
+	m := newCommandMap()
 	for k, v := range map[string]command{
 		"list":   {processListBoxesCommand, nil, "", ""},
 		"add":    {processAddBoxesCommand, nil, "", ""},
 		"remove": {processRemoveBoxesCommand, nil, "", ""},
 	} {
-		boxesCmdMap.register(k, v)
+		m.register(k, v)
 	}
+	return m
+}
 
-	fontsCmdMap := newCommandMap()
+func initFontsCmdMap() commandMap {
+	m := newCommandMap()
 	for k, v := range map[string]command{
 		"cheatsheet": {processCreateCheatSheetFontsCommand, nil, "", ""},
 		"install":    {processInstallFontsCommand, nil, "", ""},
 		"list":       {processListFontsCommand, nil, "", ""},
 	} {
-		fontsCmdMap.register(k, v)
+		m.register(k, v)
 	}
+	return m
+}
 
-	formCmdMap := newCommandMap()
+func initFormCmdMap() commandMap {
+	m := newCommandMap()
 	for k, v := range map[string]command{
 		"list":      {processListFormFieldsCommand, nil, "", ""},
 		"remove":    {processRemoveFormFieldsCommand, nil, "", ""},
@@ -80,77 +95,119 @@ func initCommandMap() {
 		"fill":      {processFillFormCommand, nil, "", ""},
 		"multifill": {processMultiFillFormCommand, nil, "", ""},
 	} {
-		formCmdMap.register(k, v)
+		m.register(k, v)
 	}
+	return m
+}
 
-	imagesCmdMap := newCommandMap()
+func initImagesCmdMap() commandMap {
+	m := newCommandMap()
 	for k, v := range map[string]command{
 		"list": {processListImagesCommand, nil, "", ""},
 	} {
-		imagesCmdMap.register(k, v)
+		m.register(k, v)
 	}
+	return m
+}
 
-	keywordsCmdMap := newCommandMap()
+func initKeywordsCmdMap() commandMap {
+	m := newCommandMap()
 	for k, v := range map[string]command{
 		"list":   {processListKeywordsCommand, nil, "", ""},
 		"add":    {processAddKeywordsCommand, nil, "", ""},
 		"remove": {processRemoveKeywordsCommand, nil, "", ""},
 	} {
-		keywordsCmdMap.register(k, v)
+		m.register(k, v)
 	}
+	return m
+}
 
-	pagesCmdMap := newCommandMap()
+func initPagesCmdMap() commandMap {
+	m := newCommandMap()
 	for k, v := range map[string]command{
 		"insert": {processInsertPagesCommand, nil, "", ""},
 		"remove": {processRemovePagesCommand, nil, "", ""},
 	} {
-		pagesCmdMap.register(k, v)
+		m.register(k, v)
 	}
+	return m
+}
 
-	permissionsCmdMap := newCommandMap()
+func initPermissionsCmdMap() commandMap {
+	m := newCommandMap()
 	for k, v := range map[string]command{
 		"list": {processListPermissionsCommand, nil, "", ""},
 		"set":  {processSetPermissionsCommand, nil, "", ""},
 	} {
-		permissionsCmdMap.register(k, v)
+		m.register(k, v)
 	}
+	return m
+}
 
-	portfolioCmdMap := newCommandMap()
+func initPortfolioCmdMap() commandMap {
+	m := newCommandMap()
 	for k, v := range map[string]command{
 		"list":    {processListAttachmentsCommand, nil, "", ""},
 		"add":     {processAddAttachmentsPortfolioCommand, nil, "", ""},
 		"remove":  {processRemoveAttachmentsCommand, nil, "", ""},
 		"extract": {processExtractAttachmentsCommand, nil, "", ""},
 	} {
-		portfolioCmdMap.register(k, v)
+		m.register(k, v)
 	}
+	return m
+}
 
-	propertiesCmdMap := newCommandMap()
+func initPropertiesCmdMap() commandMap {
+	m := newCommandMap()
 	for k, v := range map[string]command{
 		"list":   {processListPropertiesCommand, nil, "", ""},
 		"add":    {processAddPropertiesCommand, nil, "", ""},
 		"remove": {processRemovePropertiesCommand, nil, "", ""},
 	} {
-		propertiesCmdMap.register(k, v)
+		m.register(k, v)
 	}
+	return m
+}
 
-	stampCmdMap := newCommandMap()
+func initStampCmdMap() commandMap {
+	m := newCommandMap()
 	for k, v := range map[string]command{
 		"add":    {processAddStampsCommand, nil, "", ""},
 		"remove": {processRemoveStampsCommand, nil, "", ""},
 		"update": {processUpdateStampsCommand, nil, "", ""},
 	} {
-		stampCmdMap.register(k, v)
+		m.register(k, v)
 	}
+	return m
+}
 
-	watermarkCmdMap := newCommandMap()
+func initWatermarkCmdMap() commandMap {
+	m := newCommandMap()
 	for k, v := range map[string]command{
 		"add":    {processAddWatermarksCommand, nil, "", ""},
 		"remove": {processRemoveWatermarksCommand, nil, "", ""},
 		"update": {processUpdateWatermarksCommand, nil, "", ""},
 	} {
-		watermarkCmdMap.register(k, v)
+		m.register(k, v)
 	}
+	return m
+}
+
+func initCommandMap() {
+	annotsCmdMap := initAnnotsCmdMap()
+	attachCmdMap := initAttachCmdMap()
+	bookmarksCmdMap := initBookmarksCmdMap()
+	boxesCmdMap := initBoxesCmdMap()
+	fontsCmdMap := initFontsCmdMap()
+	formCmdMap := initFormCmdMap()
+	imagesCmdMap := initImagesCmdMap()
+	keywordsCmdMap := initKeywordsCmdMap()
+	pagesCmdMap := initPagesCmdMap()
+	permissionsCmdMap := initPermissionsCmdMap()
+	portfolioCmdMap := initPortfolioCmdMap()
+	propertiesCmdMap := initPropertiesCmdMap()
+	stampCmdMap := initStampCmdMap()
+	watermarkCmdMap := initWatermarkCmdMap()
 
 	cmdMap = newCommandMap()
 

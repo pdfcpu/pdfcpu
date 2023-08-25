@@ -2060,6 +2060,56 @@ func (xRefTable *XRefTable) collectMediaBoxAndCropBox(d types.Dict, inhMediaBox,
 	return nil
 }
 
+func (xRefTable *XRefTable) collectPageBoundariesForPageTreeKids(kids types.Array,
+	inhMediaBox, inhCropBox **types.Rectangle,
+	pb []PageBoundaries,
+	r int,
+	p *int,
+	selectedPages types.IntSet) error {
+
+	// Iterate over page tree.
+	for _, o := range kids {
+
+		if o == nil {
+			continue
+		}
+
+		// Dereference next page node dict.
+		ir, ok := o.(types.IndirectRef)
+		if !ok {
+			return errors.Errorf("pdfcpu: collectPageBoundariesForPageTreeKids: corrupt page node dict")
+		}
+
+		pageNodeDict, err := xRefTable.DereferenceDict(ir)
+		if err != nil {
+			return err
+		}
+
+		switch *pageNodeDict.Type() {
+
+		case "Pages":
+			if err = xRefTable.collectPageBoundariesForPageTree(&ir, inhMediaBox, inhCropBox, pb, r, p, selectedPages); err != nil {
+				return err
+			}
+
+		case "Page":
+			collect := len(selectedPages) == 0
+			if !collect {
+				_, collect = selectedPages[(*p)+1]
+			}
+			if collect {
+				if err = xRefTable.collectPageBoundariesForPageTree(&ir, inhMediaBox, inhCropBox, pb, r, p, selectedPages); err != nil {
+					return err
+				}
+			}
+			*p++
+		}
+
+	}
+
+	return nil
+}
+
 func (xRefTable *XRefTable) collectPageBoundariesForPageTree(
 	root *types.IndirectRef,
 	inhMediaBox, inhCropBox **types.Rectangle,
@@ -2096,45 +2146,49 @@ func (xRefTable *XRefTable) collectPageBoundariesForPageTree(
 		return errors.New("pdfcpu: validatePagesDict: corrupt \"Kids\" entry")
 	}
 
-	// Iterate over page tree.
-	for _, o := range kids {
-
-		if o == nil {
-			continue
-		}
-
-		// Dereference next page node dict.
-		ir, ok := o.(types.IndirectRef)
-		if !ok {
-			return errors.Errorf("pdfcpu: collectMediaBoxesForPageTree: corrupt page node dict")
-		}
-
-		pageNodeDict, err := xRefTable.DereferenceDict(ir)
-		if err != nil {
-			return err
-		}
-
-		switch *pageNodeDict.Type() {
-
-		case "Pages":
-			if err = xRefTable.collectPageBoundariesForPageTree(&ir, inhMediaBox, inhCropBox, pb, r, p, selectedPages); err != nil {
-				return err
-			}
-
-		case "Page":
-			collect := len(selectedPages) == 0
-			if !collect {
-				_, collect = selectedPages[(*p)+1]
-			}
-			if collect {
-				if err = xRefTable.collectPageBoundariesForPageTree(&ir, inhMediaBox, inhCropBox, pb, r, p, selectedPages); err != nil {
-					return err
-				}
-			}
-			*p++
-		}
-
+	if err := xRefTable.collectPageBoundariesForPageTreeKids(kids, inhMediaBox, inhCropBox, pb, r, p, selectedPages); err != nil {
+		return err
 	}
+
+	// // Iterate over page tree.
+	// for _, o := range kids {
+
+	// 	if o == nil {
+	// 		continue
+	// 	}
+
+	// 	// Dereference next page node dict.
+	// 	ir, ok := o.(types.IndirectRef)
+	// 	if !ok {
+	// 		return errors.Errorf("pdfcpu: collectMediaBoxesForPageTree: corrupt page node dict")
+	// 	}
+
+	// 	pageNodeDict, err := xRefTable.DereferenceDict(ir)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+
+	// 	switch *pageNodeDict.Type() {
+
+	// 	case "Pages":
+	// 		if err = xRefTable.collectPageBoundariesForPageTree(&ir, inhMediaBox, inhCropBox, pb, r, p, selectedPages); err != nil {
+	// 			return err
+	// 		}
+
+	// 	case "Page":
+	// 		collect := len(selectedPages) == 0
+	// 		if !collect {
+	// 			_, collect = selectedPages[(*p)+1]
+	// 		}
+	// 		if collect {
+	// 			if err = xRefTable.collectPageBoundariesForPageTree(&ir, inhMediaBox, inhCropBox, pb, r, p, selectedPages); err != nil {
+	// 				return err
+	// 			}
+	// 		}
+	// 		*p++
+	// 	}
+
+	// }
 
 	return nil
 }
@@ -2433,4 +2487,19 @@ func (xRefTable *XRefTable) NameRef(nameType string) NameMap {
 		return nm
 	}
 	return nm
+}
+
+func (xRefTable *XRefTable) RemoveSignature() {
+	if xRefTable.SignatureExist || xRefTable.AppendOnly {
+		// TODO enable incremental writing
+		log.CLI.Println("removing signature...")
+		// root -> Perms -> UR3 -> = Sig dict
+		d1 := xRefTable.RootDict
+		delete(d1, "Perms")
+		d2 := xRefTable.Form
+		delete(d2, "SigFlags")
+		delete(d2, "XFA")
+		d1["AcroForm"] = d2
+		delete(d1, "Extensions")
+	}
 }

@@ -507,18 +507,7 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 		return err
 	}
 
-	if ctx.SignatureExist || ctx.AppendOnly {
-		// TODO enable incremental writing
-		log.CLI.Println("removing signature...")
-		// root -> Perms -> UR3 -> = Sig dict
-		d1 := ctx.RootDict
-		delete(d1, "Perms")
-		d2 := ctx.Form
-		delete(d2, "SigFlags")
-		delete(d2, "XFA")
-		d1["AcroForm"] = d2
-		delete(d1, "Extensions")
-	}
+	ctx.RemoveSignature()
 
 	if err := ctx.EnsurePageCount(); err != nil {
 		return err

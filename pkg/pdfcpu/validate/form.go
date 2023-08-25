@@ -224,6 +224,23 @@ func validateDARelaxed(s string) bool {
 	return true
 }
 
+func validateFormFieldDA(xRefTable *model.XRefTable, d types.Dict, dictName string, terminalNode bool, outFieldType *types.Name, requiresDA bool) (bool, error) {
+	validate := validateDA
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		validate = validateDARelaxed
+	}
+	if terminalNode && (*outFieldType).Value() == "Tx" {
+		da, err := validateStringEntry(xRefTable, d, dictName, "DA", terminalNode && requiresDA, model.V10, validate)
+		if err != nil {
+			return false, err
+		}
+
+		return da != nil && *da != "", nil
+	}
+
+	return false, nil
+}
+
 func validateFormFieldDictEntries(xRefTable *model.XRefTable, d types.Dict, terminalNode bool, inFieldType *types.Name, requiresDA bool) (outFieldType *types.Name, hasDA bool, err error) {
 
 	dictName := "formFieldDict"
@@ -288,20 +305,11 @@ func validateFormFieldDictEntries(xRefTable *model.XRefTable, d types.Dict, term
 		return nil, false, err
 	}
 
-	validate = validateDA
-	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		validate = validateDARelaxed
-	}
-	if terminalNode && (*outFieldType).Value() == "Tx" {
-		da, err := validateStringEntry(xRefTable, d, dictName, "DA", terminalNode && requiresDA, model.V10, validate)
-		if err != nil {
-			return nil, false, err
-		}
+	// DA, required for text fields, since ?
+	// The default appearance string containing a sequence of valid page-content graphics or text state operators that define such properties as the field’s text size and colour.
+	hasDA, err = validateFormFieldDA(xRefTable, d, dictName, terminalNode, outFieldType, requiresDA)
 
-		hasDA = da != nil && *da != ""
-	}
-
-	return outFieldType, hasDA, nil
+	return outFieldType, hasDA, err
 }
 
 func validateFormFieldParts(xRefTable *model.XRefTable, d types.Dict, inFieldType *types.Name, requiresDA bool) error {
@@ -562,7 +570,11 @@ func validateForm(xRefTable *model.XRefTable, rootDict types.Dict, required bool
 	}
 
 	// SigFlags: optional, since 1.3, integer
-	sf, err := validateIntegerEntry(xRefTable, d, dictName, "SigFlags", OPTIONAL, model.V13, nil)
+	sinceV := model.V13
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceV = model.V12
+	}
+	sf, err := validateIntegerEntry(xRefTable, d, dictName, "SigFlags", OPTIONAL, sinceV, nil)
 	if err != nil {
 		return err
 	}

@@ -251,6 +251,10 @@ func PageDims(rs io.ReadSeeker, conf *model.Configuration) ([]types.Dim, error) 
 		return nil, err
 	}
 
+	if err := ValidateContext(ctx); err != nil {
+		return nil, err
+	}
+
 	pd, err := ctx.PageDims()
 	if err != nil {
 		return nil, err
