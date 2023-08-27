@@ -121,6 +121,11 @@ $ cd pdfcpu/cmd/pdfcpu
 $ go install
 $ pdfcpu version
 ```
+or directly through Go install:
+
+```
+$ go install github.com/pdfcpu/pdfcpu/cmd/pdfcpu@latest
+```
 
 ### Using Homebrew (macOS)
 ```
