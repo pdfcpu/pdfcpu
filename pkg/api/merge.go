@@ -104,7 +104,9 @@ func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configura
 	}
 	defer f.Close()
 
-	log.CLI.Println("merging into " + destFile)
+	if conf.Cmd == model.MERGECREATE {
+		log.CLI.Println(destFile)
+	}
 
 	ctxDest, _, _, err := readAndValidate(f, conf, time.Now())
 	if err != nil {
@@ -139,6 +141,7 @@ func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configura
 		}
 	}
 
+	log.CLI.Println("optimizing...")
 	if err := OptimizeContext(ctxDest); err != nil {
 		return err
 	}
