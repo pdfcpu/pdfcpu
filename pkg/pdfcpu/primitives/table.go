@@ -806,13 +806,15 @@ func (t *Table) render(p *model.Page, pageNr int, fonts model.FontMap) error {
 		draw.FillRect(p.Buf, r, bWidth, bCol, *t.bgCol, &bStyle)
 	}
 
-	draw.DrawRect(p.Buf, r, bWidth, bCol, &bStyle)
+	if bWidth != 0. {
+		draw.DrawRect(p.Buf, r, bWidth, bCol, &bStyle)
+	}
 
 	t.renderBackground(p, bWidth, r)
 
 	colWidths := t.prepareColWidths(bWidth)
 
-	if t.Grid {
+	if t.Grid && bWidth != 0. {
 		t.renderGrid(p, colWidths, bWidth, bCol, r)
 	}
 
