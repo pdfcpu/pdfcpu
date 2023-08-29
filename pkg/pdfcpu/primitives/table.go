@@ -803,10 +803,20 @@ func (t *Table) render(p *model.Page, pageNr int, fonts model.FontMap) error {
 	fmt.Fprintf(p.Buf, "q %.5f %.5f %.5f %.5f %.5f %.5f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 
 	if t.bgCol != nil {
-		draw.FillRect(p.Buf, r, bWidth, bCol, *t.bgCol, &bStyle)
+		x, w := r.LL.X+bWidth/2, t.Width-2*bWidth
+		if bWidth == 0 {
+			// Reduce artefacts.
+			x += .5
+			w -= 1
+		}
+		y := r.LL.Y + bWidth/2
+		r1 := types.RectForWidthAndHeight(x, y, w, r.Height()-.5)
+		draw.FillRect(p.Buf, r1, 0, bCol, *t.bgCol, &bStyle)
 	}
 
-	draw.DrawRect(p.Buf, r, bWidth, bCol, &bStyle)
+	if t.Border != nil {
+		draw.DrawRect(p.Buf, r, bWidth, bCol, &bStyle)
+	}
 
 	t.renderBackground(p, bWidth, r)
 
