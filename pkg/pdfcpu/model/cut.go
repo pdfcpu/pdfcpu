@@ -131,7 +131,7 @@ func parsePageFormatCut(s string, cut *Cut) error {
 		d.Width, d.Height = d.Height, d.Width
 	}
 
-	cut.PageDim = d
+	cut.PageDim = &d
 	cut.PageSize = v
 
 	return nil

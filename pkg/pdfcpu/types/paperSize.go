@@ -17,7 +17,7 @@ limitations under the License.
 package types
 
 // PaperSize is a map of known paper sizes in user units (=72 dpi pixels).
-var PaperSize = map[string]*Dim{
+var PaperSize = map[string]Dim{
 
 	// ISO 216:1975 A
 	"4A0": {4768, 6741}, // 66 1/4" x 93 5/8"	1682 x 2378 mm

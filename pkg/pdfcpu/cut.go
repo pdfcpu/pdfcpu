@@ -228,7 +228,8 @@ func prepForCut(ctxSrc *model.Context, i int) (
 	*model.InheritedPageAttrs,
 	error) {
 
-	ctxDest, err := CreateContextWithXRefTable(nil, types.PaperSize["A4"])
+	dim := types.PaperSize["A4"]
+	ctxDest, err := CreateContextWithXRefTable(nil, &dim)
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, err
 	}

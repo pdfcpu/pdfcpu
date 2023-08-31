@@ -108,7 +108,7 @@ func parsePageFormatRes(s string, res *Resize) error {
 		d.Width, d.Height = d.Height, d.Width
 	}
 
-	res.PageDim = d
+	res.PageDim = &d
 	res.PageSize = v
 
 	return nil

@@ -407,5 +407,5 @@ func ParsePageFormat(v string) (*Dim, string, error) {
 		d.Width, d.Height = d.Height, d.Width
 	}
 
-	return d, v, nil
+	return &d, v, nil
 }

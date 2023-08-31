@@ -285,7 +285,8 @@ func BookletFromPDF(ctx *model.Context, selectedPages types.IntSet, nup *model.N
 	var mb *types.Rectangle
 
 	if nup.PageDim == nil {
-		nup.PageDim = types.PaperSize[nup.PageSize]
+		d := types.PaperSize[nup.PageSize]
+		nup.PageDim = &d
 	}
 
 	mb = types.RectForDim(nup.PageDim.Width, nup.PageDim.Height)

@@ -61,7 +61,8 @@ func Create(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configurati
 	if rs != nil {
 		ctx, _, _, _, err = ReadValidateAndOptimize(rs, conf, time.Now())
 	} else {
-		ctx, err = pdfcpu.CreateContextWithXRefTable(conf, types.PaperSize["A4"])
+		d := types.PaperSize["A4"]
+		ctx, err = pdfcpu.CreateContextWithXRefTable(conf, &d)
 	}
 	if err != nil {
 		return err

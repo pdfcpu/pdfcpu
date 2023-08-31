@@ -62,7 +62,8 @@ func ImageBookletConfig(val int, desc string) (*model.NUp, error) {
 func NUpFromImage(conf *model.Configuration, imageFileNames []string, nup *model.NUp) (*model.Context, error) {
 	if nup.PageDim == nil {
 		// Set default paper size.
-		nup.PageDim = types.PaperSize[nup.PageSize]
+		d := types.PaperSize[nup.PageSize]
+		nup.PageDim = &d
 	}
 
 	ctx, err := pdfcpu.CreateContextWithXRefTable(conf, nup.PageDim)

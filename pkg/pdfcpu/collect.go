@@ -27,7 +27,8 @@ func CollectPages(ctx *model.Context, collectedPages []int) (*model.Context, err
 
 	log.Debug.Printf("CollectPages %v\n", collectedPages)
 
-	ctxDest, err := CreateContextWithXRefTable(nil, types.PaperSize["A4"])
+	d := types.PaperSize["A4"]
+	ctxDest, err := CreateContextWithXRefTable(nil, &d)
 	if err != nil {
 		return nil, err
 	}

@@ -89,8 +89,9 @@ type Import struct {
 
 // DefaultImportConfig returns the default configuration.
 func DefaultImportConfig() *Import {
+	d := types.PaperSize["A4"]
 	return &Import{
-		PageDim:  types.PaperSize["A4"],
+		PageDim:  &d,
 		PageSize: "A4",
 		Pos:      types.Full,
 		Scale:    0.5,
