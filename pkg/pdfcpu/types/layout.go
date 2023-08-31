@@ -396,6 +396,8 @@ func ParsePageFormat(v string) (*Dim, string, error) {
 	} else if strings.HasSuffix(v, "P") {
 		v = v[:len(v)-1]
 		portrait = true
+	} else {
+		portrait = true
 	}
 
 	d, ok := PaperSize[v]
