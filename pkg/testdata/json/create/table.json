@@ -111,6 +111,7 @@
 						"width": 400,
 						"colWidths": [10, 40, 25, 25 ],
 						"colAnchors": ["Center", "Left", "Right", "Right"],
+						"colPaddings": [null, {"width": 0, "top": 5, "bottom": 5, "left": 20, "right": 5}, null, null],
 						"lheight": 30,
 						"grid": true,
 						"anchor": "center",
