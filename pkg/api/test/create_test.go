@@ -303,7 +303,7 @@ func writeTextDemoAlignedWidthAndMargin(
 }
 
 func createTextDemoAlignedWidthAndMargin(xRefTable *model.XRefTable, mediaBox *types.Rectangle, hAlign types.HAlignment, w, mLeft, mRight, mTop, mBot float64) model.Page {
-	p := model.NewPage(mediaBox)
+	p := model.NewPage(mediaBox, nil)
 	var region *types.Rectangle
 	writeTextDemoAlignedWidthAndMargin(xRefTable, p, region, hAlign, w, mLeft, mRight, mTop, mBot)
 	region = types.RectForWidthAndHeight(50, 70, 200, 200)
@@ -485,7 +485,7 @@ func writeTextAlignJustifyColumnDemo(xRefTable *model.XRefTable, p model.Page, r
 }
 
 func createTextAlignJustifyDemo(xRefTable *model.XRefTable, mediaBox *types.Rectangle) model.Page {
-	p := model.NewPage(mediaBox)
+	p := model.NewPage(mediaBox, nil)
 	var region *types.Rectangle
 	fontName := "Times-Roman"
 	writeTextAlignJustifyDemo(xRefTable, p, region, fontName)
@@ -495,7 +495,7 @@ func createTextAlignJustifyDemo(xRefTable *model.XRefTable, mediaBox *types.Rect
 }
 
 func createTextAlignJustifyColumnDemo(xRefTable *model.XRefTable, mediaBox *types.Rectangle) model.Page {
-	p := model.NewPage(mediaBox)
+	p := model.NewPage(mediaBox, nil)
 	var region *types.Rectangle
 	writeTextAlignJustifyColumnDemo(xRefTable, p, region)
 	region = types.RectForWidthAndHeight(0, 0, 200, 200)
@@ -579,7 +579,7 @@ func writeTextDemoAnchors(xRefTable *model.XRefTable, p model.Page, region *type
 }
 
 func createTextDemoAnchors(xRefTable *model.XRefTable, mediaBox *types.Rectangle) model.Page {
-	p := model.NewPage(mediaBox)
+	p := model.NewPage(mediaBox, nil)
 	var region *types.Rectangle
 	writeTextDemoAnchors(xRefTable, p, region)
 	region = types.RectForWidthAndHeight(50, 70, 200, 200)
@@ -588,7 +588,7 @@ func createTextDemoAnchors(xRefTable *model.XRefTable, mediaBox *types.Rectangle
 }
 
 func createTextDemoAnchorsWithOffset(xRefTable *model.XRefTable, mediaBox *types.Rectangle) model.Page {
-	p := model.NewPage(mediaBox)
+	p := model.NewPage(mediaBox, nil)
 	dx, dy := 20., 20.
 	var region *types.Rectangle
 	writeTextDemoAnchorsWithOffset(xRefTable, p, region, dx, dy)
@@ -695,7 +695,7 @@ func writeTextDemoColumnAnchored(xRefTable *model.XRefTable, p model.Page, regio
 }
 
 func createTextDemoColumnAnchored(xRefTable *model.XRefTable, mediaBox *types.Rectangle) model.Page {
-	p := model.NewPage(mediaBox)
+	p := model.NewPage(mediaBox, nil)
 	var region *types.Rectangle
 	writeTextDemoColumnAnchored(xRefTable, p, region)
 	region = types.RectForWidthAndHeight(50, 70, 400, 400)
@@ -704,7 +704,7 @@ func createTextDemoColumnAnchored(xRefTable *model.XRefTable, mediaBox *types.Re
 }
 
 func createTextDemoColumnAnchoredWithOffset(xRefTable *model.XRefTable, mediaBox *types.Rectangle) model.Page {
-	p := model.NewPage(mediaBox)
+	p := model.NewPage(mediaBox, nil)
 	var region *types.Rectangle
 	dx, dy := 20., 20.
 	writeTextDemoColumnAnchoredWithOffset(xRefTable, p, region, dx, dy)
@@ -835,7 +835,7 @@ func writeTextRotateDemo(xRefTable *model.XRefTable, p model.Page, region *types
 }
 
 func createTextRotateDemo(xRefTable *model.XRefTable, mediaBox *types.Rectangle) model.Page {
-	p := model.NewPage(mediaBox)
+	p := model.NewPage(mediaBox, nil)
 	var region *types.Rectangle
 	writeTextRotateDemo(xRefTable, p, region)
 	region = types.RectForWidthAndHeight(150, 150, 300, 300)
@@ -844,7 +844,7 @@ func createTextRotateDemo(xRefTable *model.XRefTable, mediaBox *types.Rectangle)
 }
 
 func createTextRotateDemoWithOffset(xRefTable *model.XRefTable, mediaBox *types.Rectangle) model.Page {
-	p := model.NewPage(mediaBox)
+	p := model.NewPage(mediaBox, nil)
 	var region *types.Rectangle
 	dx, dy := 20., 20.
 	writeTextRotateDemoWithOffset(xRefTable, p, region, dx, dy)
@@ -1030,7 +1030,7 @@ func writeTextScaleAbsoluteDemo(xRefTable *model.XRefTable, p model.Page, region
 }
 
 func createTextScaleAbsoluteDemo(xRefTable *model.XRefTable, mediaBox *types.Rectangle) model.Page {
-	p := model.NewPage(mediaBox)
+	p := model.NewPage(mediaBox, nil)
 	var region *types.Rectangle
 	writeTextScaleAbsoluteDemo(xRefTable, p, region)
 	region = types.RectForWidthAndHeight(20, 70, 180, 180)
@@ -1039,7 +1039,7 @@ func createTextScaleAbsoluteDemo(xRefTable *model.XRefTable, mediaBox *types.Rec
 }
 
 func createTextScaleAbsoluteDemoWithOffset(xRefTable *model.XRefTable, mediaBox *types.Rectangle) model.Page {
-	p := model.NewPage(mediaBox)
+	p := model.NewPage(mediaBox, nil)
 	dx, dy := 20., 20.
 	var region *types.Rectangle
 	writeTextScaleAbsoluteDemoWithOffset(xRefTable, p, region, dx, dy)
@@ -1241,7 +1241,7 @@ func writeTextScaleRelativeDemo(xRefTable *model.XRefTable, p model.Page, region
 }
 
 func createTextScaleRelativeDemo(xRefTable *model.XRefTable, mediaBox *types.Rectangle) model.Page {
-	p := model.NewPage(mediaBox)
+	p := model.NewPage(mediaBox, nil)
 	var region *types.Rectangle
 	writeTextScaleRelativeDemo(xRefTable, p, region)
 	region = types.RectForWidthAndHeight(50, 70, 200, 200)
@@ -1250,7 +1250,7 @@ func createTextScaleRelativeDemo(xRefTable *model.XRefTable, mediaBox *types.Rec
 }
 
 func createTextScaleRelativeDemoWithOffset(xRefTable *model.XRefTable, mediaBox *types.Rectangle) model.Page {
-	p := model.NewPage(mediaBox)
+	p := model.NewPage(mediaBox, nil)
 	var region *types.Rectangle
 	dx, dy := 20., 20.
 	writeTextScaleRelativeDemoWithOffset(xRefTable, p, region, dx, dy)
@@ -1803,7 +1803,7 @@ func writecreateTestRTLUserFont(xRefTable *model.XRefTable, p model.Page, region
 }
 
 func createTestRTLUserFont(xRefTable *model.XRefTable, mediaBox *types.Rectangle, language, fontName string) model.Page {
-	p := model.NewPage(mediaBox)
+	p := model.NewPage(mediaBox, nil)
 	var region *types.Rectangle
 	text := sampleTextRTL[language]
 	writecreateTestRTLUserFont(xRefTable, p, region, fontName, text)
@@ -1865,7 +1865,7 @@ func writecreateTestUserFontJustified(xRefTable *model.XRefTable, p model.Page, 
 }
 
 func createTestUserFontJustified(xRefTable *model.XRefTable, mediaBox *types.Rectangle, rtl bool) model.Page {
-	p := model.NewPage(mediaBox)
+	p := model.NewPage(mediaBox, nil)
 	var region *types.Rectangle
 	writecreateTestUserFontJustified(xRefTable, p, region, rtl)
 	return p
@@ -1946,7 +1946,7 @@ func TestUserFontRTL(t *testing.T) {
 }
 
 func createCJKVDemo(xRefTable *model.XRefTable, mediaBox *types.Rectangle) model.Page {
-	p := model.NewPage(mediaBox)
+	p := model.NewPage(mediaBox, nil)
 	mb := p.MediaBox
 
 	textEnglish := `pdfcpu

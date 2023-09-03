@@ -87,9 +87,15 @@ type Page struct {
 	Fields     types.Array
 }
 
-// NewPage creates a page for a mediaBox.
-func NewPage(mediaBox *types.Rectangle) Page {
-	return Page{MediaBox: mediaBox, Fm: FontMap{}, Im: ImageMap{}, Buf: new(bytes.Buffer)}
+// NewPage creates a page for given mediaBox and cropBox.
+func NewPage(mediaBox, cropBox *types.Rectangle) Page {
+	return Page{
+		MediaBox:  mediaBox,
+		CropBox:   cropBox,
+		Fm:        FontMap{},
+		Im:        ImageMap{},
+		AnnotTabs: map[int]FieldAnnotation{},
+		Buf:       new(bytes.Buffer)}
 }
 
 // NewPageWithBg creates a page for a mediaBox.

@@ -388,14 +388,13 @@ func ParsePageFormat(v string) (*Dim, string, error) {
 	// eg. A4L means A4 in landscape mode whereas A4 defaults to A4P
 	// The default mode is defined implicitly via PaperSize dimensions.
 
-	var landscape, portrait bool
+	portrait := true
 
 	if strings.HasSuffix(v, "L") {
 		v = v[:len(v)-1]
-		landscape = true
-	} else if strings.HasSuffix(v, "P") {
-		v = v[:len(v)-1]
-		portrait = true
+		portrait = false
+	} else {
+		v = strings.TrimSuffix(v, "P")
 	}
 
 	d, ok := PaperSize[v]
@@ -403,9 +402,10 @@ func ParsePageFormat(v string) (*Dim, string, error) {
 		return nil, v, errors.Errorf("pdfcpu: page format %s is unsupported.\n", v)
 	}
 
-	if (d.Portrait() && landscape) || (d.Landscape() && portrait) {
-		d.Width, d.Height = d.Height, d.Width
+	dim := Dim{d.Width, d.Height}
+	if (d.Portrait() && !portrait) || (d.Landscape() && portrait) {
+		dim.Width, dim.Height = dim.Height, dim.Width
 	}
 
-	return d, v, nil
+	return &dim, v, nil
 }
