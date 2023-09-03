@@ -17,7 +17,6 @@
 package primitives
 
 import (
-	"bytes"
 	"io"
 	"net/http"
 	"path/filepath"
@@ -1027,13 +1026,27 @@ func (pdf *PDF) highlightPos(w io.Writer, x, y float64, cBox *types.Rectangle) {
 	draw.DrawHairCross(w, x, y, cBox)
 }
 
-func (pdf *PDF) renderPageBackground(page *PDFPage, w io.Writer, cropBox *types.Rectangle) {
+func (pdf *PDF) renderPageBackground(page *PDFPage, w io.Writer) {
 	if page.bgCol == nil {
 		page.bgCol = pdf.bgCol
 	}
 	if page.bgCol != nil {
-		draw.FillRectNoBorder(w, cropBox, *page.bgCol)
+		draw.FillRectNoBorder(w, page.cropBox, *page.bgCol)
 	}
+}
+
+func (pdf *PDF) newModelPageforPDFPage(page *PDFPage) model.Page {
+	mediaBox := pdf.mediaBox
+	if page != nil && page.mediaBox != nil {
+		mediaBox = page.mediaBox
+	}
+
+	cropBox := pdf.cropBox
+	if page != nil && page.cropBox != nil {
+		cropBox = page.cropBox
+	}
+
+	return model.NewPage(mediaBox, cropBox)
 }
 
 // RenderPages renders page content into model.Pages
@@ -1048,19 +1061,8 @@ func (pdf *PDF) RenderPages() ([]*model.Page, model.FontMap, error) {
 	for i, page := range pdf.pages {
 
 		pageNr := i + 1
-		mediaBox := pdf.mediaBox
-		cropBox := pdf.cropBox
 
-		// check taborders
-
-		p := model.Page{
-			MediaBox:  mediaBox,
-			CropBox:   cropBox,
-			Fm:        model.FontMap{},
-			Im:        model.ImageMap{},
-			AnnotTabs: map[int]model.FieldAnnotation{},
-			Buf:       new(bytes.Buffer),
-		}
+		p := pdf.newModelPageforPDFPage(page)
 
 		if page == nil {
 			if pageNr <= pdf.XRefTable.PageCount {
@@ -1088,14 +1090,11 @@ func (pdf *PDF) RenderPages() ([]*model.Page, model.FontMap, error) {
 			}
 
 			pp = append(pp, &p)
+
 			continue
 		}
 
-		if page.cropBox != nil {
-			cropBox = page.cropBox
-		}
-
-		pdf.renderPageBackground(page, p.Buf, cropBox)
+		pdf.renderPageBackground(page, p.Buf)
 
 		var headerHeight, headerDy float64
 		var footerHeight, footerDy float64
@@ -1119,7 +1118,7 @@ func (pdf *PDF) RenderPages() ([]*model.Page, model.FontMap, error) {
 		}
 
 		// Render page content.
-		r := cropBox.CroppedCopy(0)
+		r := page.cropBox.CroppedCopy(0)
 		r.LL.Y += footerHeight + footerDy
 		r.UR.Y -= headerHeight + headerDy
 		page.Content.mediaBox = r

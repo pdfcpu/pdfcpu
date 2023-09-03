@@ -225,6 +225,8 @@ func appendNotEqualMediaAndCropBoxInfo(ss *[]string, pb model.PageBoundaries, un
 	bb := pb.BleedBox()
 	ab := pb.ArtBox()
 
+	*ss = append(*ss, fmt.Sprintf("  MediaBox (%s) %v", unit, mb.Format(currUnit)))
+
 	s := trimBleedArtBoxString(cb, tb, bb, ab)
 	*ss = append(*ss, fmt.Sprintf("   CropBox (%s) %v %s", unit, cb.Format(currUnit), s))
 

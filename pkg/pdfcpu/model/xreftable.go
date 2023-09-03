@@ -2226,7 +2226,7 @@ func (xRefTable *XRefTable) PageDims() ([]types.Dim, error) {
 
 	dims := make([]types.Dim, len(pbs))
 	for i, pb := range pbs {
-		d := pb.CropBox().Dimensions()
+		d := pb.MediaBox().Dimensions()
 		if pb.Rot%180 != 0 {
 			d.Width, d.Height = d.Height, d.Width
 		}
