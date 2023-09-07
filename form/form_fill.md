@@ -92,7 +92,7 @@ $ pdfcpu form fill english.pdf english.json tmp.pdf
 We check the result by exporting the form out of `tmp.pdf`:
 
 ```
-$ pdfcpu export tmp.pdf tmp.json
+$ pdfcpu form export tmp.pdf tmp.json
 writing tmp.json...
 ```
 
