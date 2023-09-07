@@ -63,7 +63,10 @@ func Validate(rs io.ReadSeeker, conf *model.Configuration) error {
 	dur2 := time.Since(from2).Seconds()
 	dur := time.Since(from1).Seconds()
 
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
+
 	model.ValidationTimingStats(dur1, dur2, dur)
 
 	// at this stage: no binary breakup available!

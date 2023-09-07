@@ -94,7 +94,9 @@ func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdfcpu.I
 		return err
 	}
 
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 
 	return nil
 }
@@ -142,9 +144,13 @@ func ImportImagesFile(imgFiles []string, outFile string, imp *pdfcpu.Import, con
 		}
 		rs = f1
 		tmpFile += ".tmp"
-		log.CLI.Printf("appending to %s...\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("appending to %s...\n", outFile)
+		}
 	} else {
-		log.CLI.Printf("writing %s...\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", outFile)
+		}
 	}
 
 	rc, rr, err := prepImgFiles(imgFiles, f1)

@@ -119,6 +119,9 @@ func (stats PDFStats) UsesPageAttr(name int) bool {
 
 // ValidationTimingStats prints processing time stats for validation.
 func ValidationTimingStats(dur1, dur2, dur float64) {
+	if !log.StatsEnabled() {
+		return
+	}
 	log.Stats.Println("Timing:")
 	log.Stats.Printf("read                 : %6.3fs  %4.1f%%\n", dur1, dur1/dur*100)
 	log.Stats.Printf("validate             : %6.3fs  %4.1f%%\n", dur2, dur2/dur*100)
@@ -127,6 +130,9 @@ func ValidationTimingStats(dur1, dur2, dur float64) {
 
 // TimingStats prints processing time stats for an operation.
 func TimingStats(op string, durRead, durVal, durOpt, durWrite, durTotal float64) {
+	if !log.StatsEnabled() {
+		return
+	}
 	log.Stats.Println("Timing:")
 	log.Stats.Printf("read                 : %6.3fs  %4.1f%%\n", durRead, durRead/durTotal*100)
 	log.Stats.Printf("validate             : %6.3fs  %4.1f%%\n", durVal, durVal/durTotal*100)

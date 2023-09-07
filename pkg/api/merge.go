@@ -105,7 +105,9 @@ func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configura
 	defer f.Close()
 
 	if conf.Cmd == model.MERGECREATE {
-		log.CLI.Println(destFile)
+		if log.CLIEnabled() {
+			log.CLI.Println(destFile)
+		}
 	}
 
 	ctxDest, _, _, err := readAndValidate(f, conf, time.Now())
@@ -129,7 +131,9 @@ func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configura
 			}
 			defer f.Close()
 
-			log.CLI.Println(fName)
+			if log.CLIEnabled() {
+				log.CLI.Println(fName)
+			}
 			if err = appendTo(f, filepath.Base(fName), ctxDest); err != nil {
 				return err
 			}
@@ -141,7 +145,9 @@ func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configura
 		}
 	}
 
-	log.CLI.Println("optimizing...")
+	if log.CLIEnabled() {
+		log.CLI.Println("optimizing...")
+	}
 	if err := OptimizeContext(ctxDest); err != nil {
 		return err
 	}
@@ -163,7 +169,9 @@ func MergeCreateFile(inFiles []string, outFile string, conf *model.Configuration
 		}
 	}()
 
-	log.CLI.Printf("writing %s...\n", outFile)
+	if log.CLIEnabled() {
+		log.CLI.Printf("writing %s...\n", outFile)
+	}
 	return Merge("", inFiles, f, conf)
 }
 
@@ -177,9 +185,13 @@ func MergeAppendFile(inFiles []string, outFile string, conf *model.Configuration
 		overWrite = true
 		destFile = outFile
 		tmpFile += ".tmp"
-		log.CLI.Printf("appending to %s...\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("appending to %s...\n", outFile)
+		}
 	} else {
-		log.CLI.Printf("writing %s...\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", outFile)
+		}
 	}
 
 	f, err := os.Create(tmpFile)

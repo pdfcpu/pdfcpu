@@ -67,7 +67,9 @@ func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nu
 	}
 	conf.Cmd = model.BOOKLET
 
-	log.Info.Printf("%s", nup)
+	if log.InfoEnabled() {
+		log.Info.Printf("%s", nup)
+	}
 
 	var (
 		ctx *model.Context
@@ -129,7 +131,9 @@ func BookletFile(inFiles []string, outFile string, selectedPages []string, nup *
 		f1.Close()
 		return err
 	}
-	log.CLI.Printf("writing %s...\n", outFile)
+	if log.CLIEnabled() {
+		log.CLI.Printf("writing %s...\n", outFile)
+	}
 
 	defer func() {
 		if err != nil {

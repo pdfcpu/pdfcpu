@@ -60,7 +60,9 @@ func AddWatermarksMap(rs io.ReadSeeker, w io.Writer, m map[int]*model.Watermark,
 		return err
 	}
 
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 
 	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
@@ -93,9 +95,13 @@ func AddWatermarksMapFile(inFile, outFile string, m map[int]*model.Watermark, co
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		log.CLI.Printf("writing %s...\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", outFile)
+		}
 	} else {
-		log.CLI.Printf("writing %s...\n", inFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", inFile)
+		}
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
 		f1.Close()
@@ -152,7 +158,9 @@ func AddWatermarksSliceMap(rs io.ReadSeeker, w io.Writer, m map[int][]*model.Wat
 		return err
 	}
 
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 
 	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
@@ -185,9 +193,13 @@ func AddWatermarksSliceMapFile(inFile, outFile string, m map[int][]*model.Waterm
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		log.CLI.Printf("writing %s...\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", outFile)
+		}
 	} else {
-		log.CLI.Printf("writing %s...\n", inFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", inFile)
+		}
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
 		f1.Close()
@@ -253,7 +265,9 @@ func AddWatermarks(rs io.ReadSeeker, w io.Writer, selectedPages []string, wm *mo
 		return err
 	}
 
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 
 	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
@@ -286,9 +300,13 @@ func AddWatermarksFile(inFile, outFile string, selectedPages []string, wm *model
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		log.CLI.Printf("writing %s...\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", outFile)
+		}
 	} else {
-		log.CLI.Printf("writing %s...\n", inFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", inFile)
+		}
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
 		f1.Close()
@@ -349,7 +367,9 @@ func RemoveWatermarks(rs io.ReadSeeker, w io.Writer, selectedPages []string, con
 		return err
 	}
 
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 
 	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
@@ -382,9 +402,13 @@ func RemoveWatermarksFile(inFile, outFile string, selectedPages []string, conf *
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		log.CLI.Printf("writing %s...\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", outFile)
+		}
 	} else {
-		log.CLI.Printf("writing %s...\n", inFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", inFile)
+		}
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
 		f1.Close()

@@ -661,7 +661,9 @@ func writePermissions(ctx *model.Context, d types.Dict) error {
 }
 
 func logP(enc *model.Enc) {
-
+	if !log.InfoEnabled() {
+		return
+	}
 	for _, s := range perms(enc.P) {
 		log.Info.Println(s)
 	}

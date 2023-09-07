@@ -57,8 +57,9 @@ type flate struct {
 
 // Encode implements encoding for a Flate filter.
 func (f flate) Encode(r io.Reader) (io.Reader, error) {
-
-	log.Trace.Println("EncodeFlate begin")
+	if log.TraceEnabled() {
+		log.Trace.Println("EncodeFlate begin")
+	}
 
 	// TODO Optional decode parameters may need predictor preprocessing.
 
@@ -70,15 +71,19 @@ func (f flate) Encode(r io.Reader) (io.Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Trace.Printf("EncodeFlate end: %d bytes written\n", written)
+
+	if log.TraceEnabled() {
+		log.Trace.Printf("EncodeFlate end: %d bytes written\n", written)
+	}
 
 	return &b, nil
 }
 
 // Decode implements decoding for a Flate filter.
 func (f flate) Decode(r io.Reader) (io.Reader, error) {
-
-	log.Trace.Println("DecodeFlate begin")
+	if log.TraceEnabled() {
+		log.Trace.Println("DecodeFlate begin")
+	}
 
 	rc, err := zlib.NewReader(r)
 	if err != nil {
@@ -326,7 +331,9 @@ func (f flate) decodePostProcess(r io.Reader) (io.Reader, error) {
 	}
 
 	if b.Len()%rowSize > 0 {
-		log.Info.Printf("failed postprocessing: %d %d\n", b.Len(), rowSize)
+		if log.InfoEnabled() {
+			log.Info.Printf("failed postprocessing: %d %d\n", b.Len(), rowSize)
+		}
 		return nil, errors.New("pdfcpu: filter FlateDecode: postprocessing failed")
 	}
 

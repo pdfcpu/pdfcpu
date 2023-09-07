@@ -228,7 +228,9 @@ func resizePage(ctx *model.Context, pageNr int, res *model.Resize) error {
 }
 
 func Resize(ctx *model.Context, selectedPages types.IntSet, res *model.Resize) error {
-	log.Debug.Printf("Resize:\n%s\n", res)
+	if log.DebugEnabled() {
+		log.Debug.Printf("Resize:\n%s\n", res)
+	}
 
 	if len(selectedPages) == 0 {
 		selectedPages = types.IntSet{}

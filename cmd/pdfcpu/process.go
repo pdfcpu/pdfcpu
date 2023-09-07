@@ -148,7 +148,7 @@ func process(cmd *cli.Command) {
 			fmt.Fprintln(os.Stdout, s)
 		}
 	}
-	os.Exit(0)
+	//os.Exit(0)
 }
 
 func processValidateCommand(conf *model.Configuration) {

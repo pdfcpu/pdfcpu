@@ -1638,7 +1638,9 @@ func validatePageAnnotations(xRefTable *model.XRefTable, d types.Dict) error {
 
 		if indRef, ok = v.(types.IndirectRef); ok {
 			hasIndRef = true
-			log.Validate.Printf("processing annotDict %d\n", indRef.ObjectNumber)
+			if log.ValidateEnabled() {
+				log.Validate.Printf("processing annotDict %d\n", indRef.ObjectNumber)
+			}
 			annotsDict, err = xRefTable.DereferenceDict(indRef)
 			if err != nil {
 				return err
@@ -1688,7 +1690,9 @@ func validatePagesAnnotations(xRefTable *model.XRefTable, d types.Dict, curPage 
 		return curPage, errors.New("pdfcpu: validatePagesAnnotations: missing \"Count\"")
 	}
 
-	log.Validate.Printf("validatePagesAnnotations: This page node has %d pages\n", *pageCount)
+	if log.ValidateEnabled() {
+		log.Validate.Printf("validatePagesAnnotations: This page node has %d pages\n", *pageCount)
+	}
 
 	// Iterate over page tree.
 	kidsArray := d.ArrayEntry("Kids")
@@ -1696,7 +1700,9 @@ func validatePagesAnnotations(xRefTable *model.XRefTable, d types.Dict, curPage 
 	for _, v := range kidsArray {
 
 		if v == nil {
-			log.Validate.Println("validatePagesAnnotations: kid is nil")
+			if log.ValidateEnabled() {
+				log.Validate.Println("validatePagesAnnotations: kid is nil")
+			}
 			continue
 		}
 

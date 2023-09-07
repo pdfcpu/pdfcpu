@@ -94,7 +94,9 @@ func RemoveFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, c
 		return ErrNoFormFieldsAffected
 	}
 
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 
 	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
@@ -117,7 +119,9 @@ func RemoveFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 	}
-	log.CLI.Printf("writing %s...\n", outFile)
+	if log.CLIEnabled() {
+		log.CLI.Printf("writing %s...\n", outFile)
+	}
 
 	if f2, err = os.Create(tmpFile); err != nil {
 		f1.Close()
@@ -175,7 +179,9 @@ func LockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, con
 		return ErrNoFormFieldsAffected
 	}
 
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 
 	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
@@ -198,7 +204,9 @@ func LockFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf *
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 	}
-	log.CLI.Printf("writing %s...\n", outFile)
+	if log.CLIEnabled() {
+		log.CLI.Printf("writing %s...\n", outFile)
+	}
 
 	if f2, err = os.Create(tmpFile); err != nil {
 		f1.Close()
@@ -256,7 +264,9 @@ func UnlockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, c
 		return ErrNoFormFieldsAffected
 	}
 
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 
 	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
@@ -279,7 +289,9 @@ func UnlockFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 	}
-	log.CLI.Printf("writing %s...\n", outFile)
+	if log.CLIEnabled() {
+		log.CLI.Printf("writing %s...\n", outFile)
+	}
 
 	if f2, err = os.Create(tmpFile); err != nil {
 		f1.Close()
@@ -337,7 +349,9 @@ func ResetFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, co
 		return ErrNoFormFieldsAffected
 	}
 
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 
 	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
@@ -360,7 +374,9 @@ func ResetFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf 
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 	}
-	log.CLI.Printf("writing %s...\n", outFile)
+	if log.CLIEnabled() {
+		log.CLI.Printf("writing %s...\n", outFile)
+	}
 
 	if f2, err = os.Create(tmpFile); err != nil {
 		f1.Close()
@@ -468,7 +484,9 @@ func ExportFormFile(inFilePDF, outFileJSON string, conf *model.Configuration) (e
 		f1.Close()
 		return err
 	}
-	log.CLI.Printf("writing %s...\n", outFileJSON)
+	if log.CLIEnabled() {
+		log.CLI.Printf("writing %s...\n", outFileJSON)
+	}
 
 	defer func() {
 		if err != nil {
@@ -548,7 +566,9 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 		return err
 	}
 
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 
 	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
@@ -577,7 +597,9 @@ func FillFormFile(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configur
 	if outFilePDF != "" && inFilePDF != outFilePDF {
 		tmpFile = outFilePDF
 	}
-	log.CLI.Printf("writing %s...\n", outFilePDF)
+	if log.CLIEnabled() {
+		log.CLI.Printf("writing %s...\n", outFilePDF)
+	}
 
 	if f2, err = os.Create(tmpFile); err != nil {
 		f1.Close()
@@ -643,7 +665,9 @@ func mergeForms(outDir, fileName string, outFiles []string, conf *model.Configur
 	if err := MergeCreateFile(outFiles, outFile, conf); err != nil {
 		return err
 	}
-	log.CLI.Println("cleaning up...")
+	if log.CLIEnabled() {
+		log.CLI.Println("cleaning up...")
+	}
 	for _, fn := range outFiles {
 		if err := os.Remove(fn); err != nil {
 			return err
@@ -697,7 +721,9 @@ func multiFillFormJSON(inFilePDF string, rd io.Reader, outDir, fileName string, 
 		}
 
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_%02d.pdf", fileName, i+1))
-		log.CLI.Printf("writing %s\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s\n", outFile)
+		}
 
 		if err := WriteContextFile(ctx, outFile); err != nil {
 			return err
@@ -796,7 +822,9 @@ func multiFillFormCSV(inFilePDF string, rd io.Reader, outDir, fileName string, m
 		}
 
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_%02d.pdf", fileName, i+1))
-		log.CLI.Printf("writing %s\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s\n", outFile)
+		}
 		if err := WriteContextFile(ctx, outFile); err != nil {
 			return err
 		}
@@ -857,7 +885,9 @@ func MultiFillFormFile(inFilePDF, inFileData, outDir, outFilePDF string, merge b
 
 	outFileBase := filepath.Base(outFilePDF)
 
-	log.CLI.Printf("filling multiple forms via %s based on %s data from %s into %s/%s ...\n", inFilePDF, s, inFileData, outDir, outFileBase)
+	if log.CLIEnabled() {
+		log.CLI.Printf("filling multiple forms via %s based on %s data from %s into %s/%s ...\n", inFilePDF, s, inFileData, outDir, outFileBase)
+	}
 
 	return MultiFillForm(inFilePDF, f, outDir, outFileBase, format, merge, conf)
 }

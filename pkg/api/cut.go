@@ -78,7 +78,9 @@ func Poster(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, c
 	}
 
 	if len(pages) == 0 {
-		log.CLI.Println("aborted: nothing to cut!")
+		if log.CLIEnabled() {
+			log.CLI.Println("aborted: nothing to cut!")
+		}
 		return nil
 	}
 
@@ -92,7 +94,9 @@ func Poster(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, c
 		}
 
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, i))
-		log.CLI.Printf("writing %s\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s\n", outFile)
+		}
 		if err := WriteContextFile(ctxDest, outFile); err != nil {
 			return err
 		}
@@ -140,7 +144,9 @@ func NDown(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, n 
 	}
 
 	if len(pages) == 0 {
-		log.CLI.Println("aborted: nothing to cut!")
+		if log.CLIEnabled() {
+			log.CLI.Println("aborted: nothing to cut!")
+		}
 		return nil
 	}
 
@@ -154,7 +160,9 @@ func NDown(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, n 
 		}
 
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, i))
-		log.CLI.Printf("writing %s\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s\n", outFile)
+		}
 		if err := WriteContextFile(ctxDest, outFile); err != nil {
 			return err
 		}
@@ -177,7 +185,9 @@ func NDownFile(inFile, outDir, outFile string, selectedPages []string, n int, cu
 	}
 	defer f.Close()
 
-	log.CLI.Printf("ndown %s into %s/ ...\n", inFile, outDir)
+	if log.CLIEnabled() {
+		log.CLI.Printf("ndown %s into %s/ ...\n", inFile, outDir)
+	}
 
 	if outFile == "" {
 		outFile = strings.TrimSuffix(filepath.Base(inFile), ".pdf")
@@ -239,7 +249,9 @@ func Cut(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut 
 	}
 
 	if len(pages) == 0 {
-		log.CLI.Println("aborted: nothing to cut!")
+		if log.CLIEnabled() {
+			log.CLI.Println("aborted: nothing to cut!")
+		}
 		return nil
 	}
 
@@ -253,7 +265,9 @@ func Cut(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut 
 		}
 
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, i))
-		log.CLI.Printf("writing %s\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s\n", outFile)
+		}
 		if err := WriteContextFile(ctxDest, outFile); err != nil {
 			return err
 		}
@@ -276,7 +290,9 @@ func CutFile(inFile, outDir, outFile string, selectedPages []string, cut *model.
 	}
 	defer f.Close()
 
-	log.CLI.Printf("cutting %s into %s/ ...\n", inFile, outDir)
+	if log.CLIEnabled() {
+		log.CLI.Printf("cutting %s into %s/ ...\n", inFile, outDir)
+	}
 
 	if outFile == "" {
 		outFile = strings.TrimSuffix(filepath.Base(inFile), ".pdf")

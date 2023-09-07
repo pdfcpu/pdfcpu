@@ -1015,7 +1015,9 @@ func annotIndRefsForFields(xRefTable *model.XRefTable, f []string, fields types.
 			indRefs = append(indRefs, *indRef)
 			continue
 		}
-		log.CLI.Printf("unable to resolve field id/name: %s\n", idOrName)
+		if log.CLIEnabled() {
+			log.CLI.Printf("unable to resolve field id/name: %s\n", idOrName)
+		}
 	}
 	return indRefs, nil
 }

@@ -188,14 +188,54 @@ func DisableLoggers() {
 	SetCLILogger(nil)
 }
 
-// IsTraceLoggerEnabled returns true if the Trace Logger is enabled.
-func IsTraceLoggerEnabled() bool {
+// CLIEnabled returns true if the CLI Logger is enabled.
+func CLIEnabled() bool {
+	return CLI.log != nil
+}
+
+// DebugEnabled returns true if the Debug Logger is enabled.
+func DebugEnabled() bool {
+	return Debug.log != nil
+}
+
+// InfoEnabled returns true if the Info Logger is enabled.
+func InfoEnabled() bool {
+	return Info.log != nil
+}
+
+// OptimizeEnabled returns true if the Optimize Logger is enabled.
+func OptimizeEnabled() bool {
+	return Optimize.log != nil
+}
+
+// ParseEnabled returns true if the Parse Logger is enabled.
+func ParseEnabled() bool {
+	return Parse.log != nil
+}
+
+// ReadEnabled returns true if the Read Logger is enabled.
+func ReadEnabled() bool {
+	return Read.log != nil
+}
+
+// StatsEnabled returns true if the Read Logger is enabled.
+func StatsEnabled() bool {
+	return Stats.log != nil
+}
+
+// TraceEnabled returns true if the Trace Logger is enabled.
+func TraceEnabled() bool {
 	return Trace.log != nil
 }
 
-// IsCLILoggerEnabled returns true if the CLI Logger is enabled.
-func IsCLILoggerEnabled() bool {
-	return CLI.log != nil
+// ValidateEnabled returns true if the Validate Logger is enabled.
+func ValidateEnabled() bool {
+	return Validate.log != nil
+}
+
+// WriteEnabled returns true if the Write Logger is enabled.
+func WriteEnabled() bool {
+	return Write.log != nil
 }
 
 // Printf writes a formatted message to the log.

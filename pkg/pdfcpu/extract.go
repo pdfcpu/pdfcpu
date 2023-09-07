@@ -337,7 +337,9 @@ func ExtractImage(ctx *model.Context, sd *types.StreamDict, thumb bool, resource
 	if imgMask {
 		// bpc = 1
 		if lastFilter != filter.CCITTFax {
-			log.Info.Printf("ExtractImage(%d): skip img with imageMask\n", objNr)
+			if log.InfoEnabled() {
+				log.Info.Printf("ExtractImage(%d): skip img with imageMask\n", objNr)
+			}
 			return nil, nil
 		}
 	}
@@ -345,7 +347,9 @@ func ExtractImage(ctx *model.Context, sd *types.StreamDict, thumb bool, resource
 	// An image XObject defining an image mask to be applied to this image, or an array specifying a range of colours to be applied to it as a colour key mask.
 	// Ignore if image has a Mask defined.
 	if sm, _ := sd.Find("Mask"); sm != nil {
-		log.Info.Printf("ExtractImage(%d): skip image, unsupported \"Mask\"\n", objNr)
+		if log.InfoEnabled() {
+			log.Info.Printf("ExtractImage(%d): skip image, unsupported \"Mask\"\n", objNr)
+		}
 		return nil, nil
 	}
 
@@ -373,7 +377,9 @@ func ExtractImage(ctx *model.Context, sd *types.StreamDict, thumb bool, resource
 		}
 
 	default:
-		log.Debug.Printf("ExtractImage(%d): skip img, filter %s unsupported\n", objNr, filters)
+		if log.DebugEnabled() {
+			log.Debug.Printf("ExtractImage(%d): skip img, filter %s unsupported\n", objNr, filters)
+		}
 		return nil, nil
 	}
 
@@ -451,7 +457,9 @@ func ExtractFont(ctx *model.Context, fontObject model.FontObject, objNr int) (*F
 
 	// Only embedded fonts have binary data.
 	if !fontObject.Embedded() {
-		log.Debug.Printf("ExtractFont: ignoring obj#%d - non embedded font: %s\n", objNr, fontObject.FontName)
+		if log.DebugEnabled() {
+			log.Debug.Printf("ExtractFont: ignoring obj#%d - non embedded font: %s\n", objNr, fontObject.FontName)
+		}
 		return nil, nil
 	}
 
@@ -461,13 +469,17 @@ func ExtractFont(ctx *model.Context, fontObject model.FontObject, objNr int) (*F
 	}
 
 	if d == nil {
-		log.Debug.Printf("ExtractFont: ignoring obj#%d - no fontDescriptor available for font: %s\n", objNr, fontObject.FontName)
+		if log.DebugEnabled() {
+			log.Debug.Printf("ExtractFont: ignoring obj#%d - no fontDescriptor available for font: %s\n", objNr, fontObject.FontName)
+		}
 		return nil, nil
 	}
 
 	ir := fontDescriptorFontFileIndirectObjectRef(d)
 	if ir == nil {
-		log.Debug.Printf("ExtractFont: ignoring obj#%d - no font file available for font: %s\n", objNr, fontObject.FontName)
+		if log.DebugEnabled() {
+			log.Debug.Printf("ExtractFont: ignoring obj#%d - no font file available for font: %s\n", objNr, fontObject.FontName)
+		}
 		return nil, nil
 	}
 
@@ -500,7 +512,9 @@ func ExtractFont(ctx *model.Context, fontObject model.FontObject, objNr int) (*F
 		f = &Font{bytes.NewReader(sd.Content), fontObject.FontName, "ttf"}
 
 	default:
-		log.Info.Printf("extractFontData: ignoring obj#%d - unsupported fonttype %s -  font: %s\n", objNr, fontType, fontObject.FontName)
+		if log.InfoEnabled() {
+			log.Info.Printf("extractFontData: ignoring obj#%d - unsupported fonttype %s -  font: %s\n", objNr, fontType, fontObject.FontName)
+		}
 		return nil, nil
 	}
 

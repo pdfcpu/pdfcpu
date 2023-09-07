@@ -50,7 +50,9 @@ func decodeUTF16String(b []byte) (string, error) {
 	// Convert UTF-16 to UTF-8
 	// We only accept big endian byte order.
 	if !IsUTF16BE(b) {
-		log.Debug.Printf("decodeUTF16String: not UTF16BE: %s\n", hex.Dump(b))
+		if log.DebugEnabled() {
+			log.Debug.Printf("decodeUTF16String: not UTF16BE: %s\n", hex.Dump(b))
+		}
 		return "", ErrInvalidUTF16BE
 	}
 

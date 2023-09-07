@@ -28,7 +28,7 @@ func addPages(
 	usePgCache bool,
 	pagesIndRef types.IndirectRef,
 	pagesDict types.Dict,
-	fieldsSrc, fieldsDest types.Array,
+	fieldsSrc, fieldsDest *types.Array,
 	migrated map[int]int) error {
 
 	pageCache := map[int]*types.IndirectRef{}
@@ -69,8 +69,8 @@ func addPages(
 			return err
 		}
 
-		if d["Annots"] != nil && len(fieldsSrc) > 0 {
-			if err := migrateFields(d, &fieldsSrc, &fieldsDest, ctxSrc, ctxDest, migrated); err != nil {
+		if d["Annots"] != nil && len(*fieldsSrc) > 0 {
+			if err := migrateFields(d, fieldsSrc, fieldsDest, ctxSrc, ctxDest, migrated); err != nil {
 				return err
 			}
 		}
@@ -112,7 +112,7 @@ func AddPages(ctxSrc, ctxDest *model.Context, pageNrs []int, usePgCache bool) er
 
 	migrated := map[int]int{}
 
-	if err := addPages(ctxSrc, ctxDest, pageNrs, usePgCache, *pagesIndRef, pagesDict, fieldsSrc, fieldsDest, migrated); err != nil {
+	if err := addPages(ctxSrc, ctxDest, pageNrs, usePgCache, *pagesIndRef, pagesDict, &fieldsSrc, &fieldsDest, migrated); err != nil {
 		return err
 	}
 

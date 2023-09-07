@@ -227,10 +227,8 @@ func detectMigratedAnnot(ctxSrc *model.Context, indRef *types.IndirectRef, kids 
 		ir := v.(types.IndirectRef)
 		objNr := ir.ObjectNumber.Value()
 		if migrated[objNr] == indRef.ObjectNumber.Value() {
-			indRef.ObjectNumber = types.Integer(migrated[objNr])
 			return true, nil
 		}
-
 		d, err := ctxSrc.DereferenceDict(ir)
 		if err != nil {
 			return false, err
@@ -250,6 +248,5 @@ func detectMigratedAnnot(ctxSrc *model.Context, indRef *types.IndirectRef, kids 
 			return true, nil
 		}
 	}
-
 	return false, nil
 }

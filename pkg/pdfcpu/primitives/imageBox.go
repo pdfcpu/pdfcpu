@@ -273,11 +273,15 @@ func (ib *ImageBox) foo() (io.ReadCloser, error) {
 		}
 		resp, err := client.Get(ib.Src)
 		if err != nil {
-			log.CLI.Printf("%v: %s\n", err, ib.Src)
+			if log.CLIEnabled() {
+				log.CLI.Printf("%v: %s\n", err, ib.Src)
+			}
 			return nil, err
 		}
 		if resp.StatusCode != 200 {
-			log.CLI.Printf("http status %d: %s\n", resp.StatusCode, ib.Src)
+			if log.CLIEnabled() {
+				log.CLI.Printf("http status %d: %s\n", resp.StatusCode, ib.Src)
+			}
 			return nil, nil
 		}
 		f = resp.Body

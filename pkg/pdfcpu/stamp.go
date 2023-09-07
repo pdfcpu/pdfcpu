@@ -1117,7 +1117,9 @@ func insertPageContentsForWM(ctx *model.Context, pageDict types.Dict, wm model.W
 func patchFirstContentStreamForWatermark(sd *types.StreamDict, gsID, xoID string, wm model.Watermark, isLast bool) error {
 	err := sd.Decode()
 	if err == filter.ErrUnsupportedFilter {
-		log.Info.Println("unsupported filter: unable to patch content with watermark.")
+		if log.InfoEnabled() {
+			log.Info.Println("unsupported filter: unable to patch content with watermark.")
+		}
 		return nil
 	}
 	if err != nil {
@@ -1158,7 +1160,9 @@ func patchFirstContentStreamForWatermark(sd *types.StreamDict, gsID, xoID string
 func patchLastContentStreamForWatermark(sd *types.StreamDict, gsID, xoID string, wm model.Watermark) error {
 	err := sd.Decode()
 	if err == filter.ErrUnsupportedFilter {
-		log.Info.Println("unsupported filter: unable to patch content with watermark.")
+		if log.InfoEnabled() {
+			log.Info.Println("unsupported filter: unable to patch content with watermark.")
+		}
 		return nil
 	}
 	if err != nil {
@@ -1274,9 +1278,13 @@ func addPageWatermark(ctx *model.Context, i int, wm model.Watermark) error {
 		return errors.Errorf("pdfcpu: invalid page number: %d", i)
 	}
 
-	log.Debug.Printf("addPageWatermark page:%d\n", i)
+	if log.DebugEnabled() {
+		log.Debug.Printf("addPageWatermark page:%d\n", i)
+	}
 	if wm.Update {
-		log.Debug.Println("Updating")
+		if log.DebugEnabled() {
+			log.Debug.Println("Updating")
+		}
 		if _, err := removePageWatermark(ctx, i); err != nil {
 			return err
 		}
@@ -1311,7 +1319,9 @@ func addPageWatermark(ctx *model.Context, i int, wm model.Watermark) error {
 		return err
 	}
 
-	log.Debug.Printf("\n%s\n", wm)
+	if log.DebugEnabled() {
+		log.Debug.Printf("\n%s\n", wm)
+	}
 
 	gsID := "GS0"
 	xoID := "Fm0"
@@ -1543,7 +1553,9 @@ func AddWatermarksSliceMap(ctx *model.Context, m map[int][]*model.Watermark) err
 
 // AddWatermarks adds watermarks to all pages selected.
 func AddWatermarks(ctx *model.Context, selectedPages types.IntSet, wm *model.Watermark) error {
-	log.Debug.Printf("AddWatermarks wm:\n%s\n", wm)
+	if log.DebugEnabled() {
+		log.Debug.Printf("AddWatermarks wm:\n%s\n", wm)
+	}
 	var err error
 	if wm.Ocg, err = prepareOCPropertiesInRoot(ctx, wm.OnTop); err != nil {
 		return err
@@ -1616,7 +1628,9 @@ func removeForms(ctx *model.Context, d types.Dict, ids []string, i int) error {
 func removeArtifacts(sd *types.StreamDict, i int) (ok bool, extGStates []string, forms []string, err error) {
 	err = sd.Decode()
 	if err == filter.ErrUnsupportedFilter {
-		log.Info.Printf("unsupported filter: unable to patch content with watermark for page %d\n", i)
+		if log.InfoEnabled() {
+			log.Info.Printf("unsupported filter: unable to patch content with watermark for page %d\n", i)
+		}
 		return false, nil, nil, nil
 	}
 	if err != nil {
@@ -1848,7 +1862,9 @@ func locateOCGs(ctx *model.Context) (types.Array, error) {
 
 // RemoveWatermarks removes watermarks for all pages selected.
 func RemoveWatermarks(ctx *model.Context, selectedPages types.IntSet) error {
-	log.Debug.Printf("RemoveWatermarks\n")
+	if log.DebugEnabled() {
+		log.Debug.Printf("RemoveWatermarks\n")
+	}
 
 	a, err := locateOCGs(ctx)
 	if err != nil {

@@ -139,7 +139,9 @@ func (ctx *Context) String() string {
 	// Print free list.
 	logStr, err := ctx.freeList(logStr)
 	if err != nil {
-		log.Info.Fatalln(err)
+		if log.InfoEnabled() {
+			log.Info.Fatalln(err)
+		}
 	}
 
 	// Print list of any missing objects.
@@ -262,15 +264,16 @@ func (rc *ReadContext) XRefStreamsString() (int, string) {
 
 // LogStats logs stats for read file.
 func (rc *ReadContext) LogStats(optimized bool) {
-
-	log := log.Stats
+	if !log.StatsEnabled() {
+		return
+	}
 
 	textSize := rc.FileSize - rc.BinaryTotalSize // = non binary content = non stream data
 
-	log.Println("Original:")
-	log.Printf("File size            : %s (%d bytes)\n", types.ByteSize(rc.FileSize), rc.FileSize)
-	log.Printf("Total binary data    : %s (%d bytes) %4.1f%%\n", types.ByteSize(rc.BinaryTotalSize), rc.BinaryTotalSize, float32(rc.BinaryTotalSize)/float32(rc.FileSize)*100)
-	log.Printf("Total other data     : %s (%d bytes) %4.1f%%\n\n", types.ByteSize(textSize), textSize, float32(textSize)/float32(rc.FileSize)*100)
+	log.Stats.Println("Original:")
+	log.Stats.Printf("File size            : %s (%d bytes)\n", types.ByteSize(rc.FileSize), rc.FileSize)
+	log.Stats.Printf("Total binary data    : %s (%d bytes) %4.1f%%\n", types.ByteSize(rc.BinaryTotalSize), rc.BinaryTotalSize, float32(rc.BinaryTotalSize)/float32(rc.FileSize)*100)
+	log.Stats.Printf("Total other data     : %s (%d bytes) %4.1f%%\n\n", types.ByteSize(textSize), textSize, float32(textSize)/float32(rc.FileSize)*100)
 
 	// Only when optimizing we get details about resource data usage.
 	if optimized {
@@ -284,10 +287,10 @@ func (rc *ReadContext) LogStats(optimized bool) {
 		// Content stream data, other font related stream data.
 		binaryOtherSize := rc.BinaryTotalSize - binaryImageSize - binaryFontSize
 
-		log.Println("Breakup of binary data:")
-		log.Printf("images               : %s (%d bytes) %4.1f%%\n", types.ByteSize(binaryImageSize), binaryImageSize, float32(binaryImageSize)/float32(rc.BinaryTotalSize)*100)
-		log.Printf("fonts                : %s (%d bytes) %4.1f%%\n", types.ByteSize(binaryFontSize), binaryFontSize, float32(binaryFontSize)/float32(rc.BinaryTotalSize)*100)
-		log.Printf("other                : %s (%d bytes) %4.1f%%\n\n", types.ByteSize(binaryOtherSize), binaryOtherSize, float32(binaryOtherSize)/float32(rc.BinaryTotalSize)*100)
+		log.Stats.Println("Breakup of binary data:")
+		log.Stats.Printf("images               : %s (%d bytes) %4.1f%%\n", types.ByteSize(binaryImageSize), binaryImageSize, float32(binaryImageSize)/float32(rc.BinaryTotalSize)*100)
+		log.Stats.Printf("fonts                : %s (%d bytes) %4.1f%%\n", types.ByteSize(binaryFontSize), binaryFontSize, float32(binaryFontSize)/float32(rc.BinaryTotalSize)*100)
+		log.Stats.Printf("other                : %s (%d bytes) %4.1f%%\n\n", types.ByteSize(binaryOtherSize), binaryOtherSize, float32(binaryOtherSize)/float32(rc.BinaryTotalSize)*100)
 	}
 }
 
@@ -624,6 +627,9 @@ func (wc *WriteContext) HasWriteOffset(objNumber int) bool {
 
 // LogStats logs stats for written file.
 func (wc *WriteContext) LogStats() {
+	if !log.StatsEnabled() {
+		return
+	}
 
 	fileSize := wc.FileSize
 	binaryTotalSize := wc.BinaryTotalSize  // stream data

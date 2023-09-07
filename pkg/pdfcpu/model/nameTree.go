@@ -137,7 +137,9 @@ func (m NameMap) Add(k string, d types.Dict) {
 }
 
 func (n *Node) insertIntoLeaf(k string, v types.Object, m NameMap) error {
-	log.Debug.Printf("Insert k:%s in the middle\n", k)
+	if log.DebugEnabled() {
+		log.Debug.Printf("Insert k:%s in the middle\n", k)
+	}
 	for i, e := range n.Names {
 		if keyLess(e.k, k) {
 			continue
@@ -151,7 +153,9 @@ func (n *Node) insertIntoLeaf(k string, v types.Object, m NameMap) error {
 		n.Names[i] = entry{k, v}
 		return nil
 	}
-	log.Debug.Printf("Insert k:%s at end\n", k)
+	if log.DebugEnabled() {
+		log.Debug.Printf("Insert k:%s at end\n", k)
+	}
 	n.Kmax = k
 	n.Names = append(n.Names, entry{k, v})
 	return nil
@@ -197,22 +201,30 @@ func (n *Node) HandleLeaf(xRefTable *XRefTable, k string, v types.Object, m Name
 	if len(n.Names) == 0 {
 		n.Names = append(n.Names, entry{k, v})
 		n.Kmin, n.Kmax = k, k
-		log.Debug.Printf("first key=%s\n", k)
+		if log.DebugEnabled() {
+			log.Debug.Printf("first key=%s\n", k)
+		}
 		return nil
 	}
 
-	log.Debug.Printf("kmin=%s kmax=%s\n", n.Kmin, n.Kmax)
+	if log.DebugEnabled() {
+		log.Debug.Printf("kmin=%s kmax=%s\n", n.Kmin, n.Kmax)
+	}
 
 	if keyLess(k, n.Kmin) {
 		// Prepend (k,v).
-		log.Debug.Printf("Insert k:%s at beginning\n", k)
+		if log.DebugEnabled() {
+			log.Debug.Printf("Insert k:%s at beginning\n", k)
+		}
 		n.Kmin = k
 		n.Names = append(n.Names, entry{})
 		copy(n.Names[1:], n.Names[0:])
 		n.Names[0] = entry{k, v}
 	} else if keyLess(n.Kmax, k) {
 		// Append (k,v).
-		log.Debug.Printf("Insert k:%s at end\n", k)
+		if log.DebugEnabled() {
+			log.Debug.Printf("Insert k:%s at end\n", k)
+		}
 		n.Kmax = k
 		n.Names = append(n.Names, entry{k, v})
 	} else {
@@ -341,7 +353,9 @@ func (n *Node) removeFromNames(xRefTable *XRefTable, k string) (ok bool, err err
 
 			if xRefTable != nil {
 				// Remove object graph of value.
-				log.Debug.Println("removeFromNames: deleting object graph of v")
+				if log.DebugEnabled() {
+					log.Debug.Println("removeFromNames: deleting object graph of v")
+				}
 				err := xRefTable.DeleteObjectGraph(v.v)
 				if err != nil {
 					return false, err
@@ -369,7 +383,9 @@ func (n *Node) removeFromLeaf(xRefTable *XRefTable, k string) (empty, ok bool, e
 	if len(n.Names) == 1 {
 		if xRefTable != nil {
 			// Remove object graph of value.
-			log.Debug.Println("removeFromLeaf: deleting object graph of v")
+			if log.DebugEnabled() {
+				log.Debug.Println("removeFromLeaf: deleting object graph of v")
+			}
 			err := xRefTable.DeleteObjectGraph(n.Names[0].v)
 			if err != nil {
 				return false, false, err
@@ -384,7 +400,9 @@ func (n *Node) removeFromLeaf(xRefTable *XRefTable, k string) (empty, ok bool, e
 
 		if xRefTable != nil {
 			// Remove object graph of value.
-			log.Debug.Println("removeFromLeaf: deleting object graph of v")
+			if log.DebugEnabled() {
+				log.Debug.Println("removeFromLeaf: deleting object graph of v")
+			}
 			err := xRefTable.DeleteObjectGraph(n.Names[0].v)
 			if err != nil {
 				return false, false, err
@@ -400,7 +418,9 @@ func (n *Node) removeFromLeaf(xRefTable *XRefTable, k string) (empty, ok bool, e
 
 		if xRefTable != nil {
 			// Remove object graph of value.
-			log.Debug.Println("removeFromLeaf: deleting object graph of v")
+			if log.DebugEnabled() {
+				log.Debug.Println("removeFromLeaf: deleting object graph of v")
+			}
 			err := xRefTable.DeleteObjectGraph(n.Names[len(n.Names)-1].v)
 			if err != nil {
 				return false, false, err
@@ -450,15 +470,21 @@ func (n *Node) removeFromKids(xRefTable *XRefTable, k string) (ok bool, err erro
 
 			if i == 0 {
 				// Remove first kid.
-				log.Debug.Println("removeFromKids: remove first kid.")
+				if log.DebugEnabled() {
+					log.Debug.Println("removeFromKids: remove first kid.")
+				}
 				n.Kids = n.Kids[1:]
 			} else if i == len(n.Kids)-1 {
-				log.Debug.Println("removeFromKids: remove last kid.")
+				if log.DebugEnabled() {
+					log.Debug.Println("removeFromKids: remove last kid.")
+				}
 				// Remove last kid.
 				n.Kids = n.Kids[:len(n.Kids)-1]
 			} else {
 				// Remove kid from the middle.
-				log.Debug.Println("removeFromKids: remove kid form the middle.")
+				if log.DebugEnabled() {
+					log.Debug.Println("removeFromKids: remove kid form the middle.")
+				}
 				n.Kids = append(n.Kids[:i], n.Kids[i+1:]...)
 			}
 
@@ -466,7 +492,9 @@ func (n *Node) removeFromKids(xRefTable *XRefTable, k string) (ok bool, err erro
 
 				// If a single kid remains we can merge it with its parent.
 				// By doing this we get rid of a redundant intermediary node.
-				log.Debug.Println("removeFromKids: only 1 kid")
+				if log.DebugEnabled() {
+					log.Debug.Println("removeFromKids: only 1 kid")
+				}
 
 				if xRefTable != nil {
 					err = xRefTable.DeleteObject(n.D)
@@ -477,7 +505,9 @@ func (n *Node) removeFromKids(xRefTable *XRefTable, k string) (ok bool, err erro
 
 				*n = *n.Kids[0]
 
-				log.Debug.Printf("removeFromKids: new n = %s\n", n)
+				if log.DebugEnabled() {
+					log.Debug.Printf("removeFromKids: new n = %s\n", n)
+				}
 
 				return true, nil
 			}

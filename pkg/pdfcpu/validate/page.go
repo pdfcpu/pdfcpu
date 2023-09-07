@@ -915,7 +915,9 @@ func validateResources(xRefTable *model.XRefTable, d types.Dict) (hasResources b
 		xRefTable.PageCount = *pageCount
 	}
 
-	log.Validate.Printf("validateResources: This page node has %d pages\n", *pageCount)
+	if log.ValidateEnabled() {
+		log.Validate.Printf("validateResources: This page node has %d pages\n", *pageCount)
+	}
 
 	// Resources: optional, dict
 	o, ok := d.Find("Resources")
@@ -955,7 +957,9 @@ func processPagesKids(xRefTable *model.XRefTable, kids types.Array, objNr int, h
 			return nil, errors.New("pdfcpu: validatePagesDict: missing indirect reference for kid")
 		}
 
-		log.Validate.Printf("validatePagesDict: PageNode: %s\n", ir)
+		if log.ValidateEnabled() {
+			log.Validate.Printf("validatePagesDict: PageNode: %s\n", ir)
+		}
 
 		objNumber := ir.ObjectNumber.Value()
 		if objNumber == 0 {
@@ -1075,7 +1079,9 @@ func repairPagesDict(xRefTable *model.XRefTable, obj types.Object, rootDict type
 			return nil, 0, errors.New("pdfcpu: repairPagesDict: missing indirect reference for kid")
 		}
 
-		log.Validate.Printf("repairPagesDict: PageNode: %s\n", ir)
+		if log.ValidateEnabled() {
+			log.Validate.Printf("repairPagesDict: PageNode: %s\n", ir)
+		}
 
 		objNumber := ir.ObjectNumber.Value()
 		if objNumber == 0 {
@@ -1118,8 +1124,12 @@ func validatePages(xRefTable *model.XRefTable, rootDict types.Dict) (types.Dict,
 			return nil, err
 		}
 		msg := "repaired: missing \"Pages\" indirect reference"
-		log.Debug.Println("pdfcpu " + msg)
-		log.CLI.Println(msg)
+		if log.DebugEnabled() {
+			log.Debug.Println("pdfcpu " + msg)
+		}
+		if log.CLIEnabled() {
+			log.CLI.Println(msg)
+		}
 	}
 
 	if ok {

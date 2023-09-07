@@ -153,7 +153,9 @@ func ReadValidateAndOptimize(rs io.ReadSeeker, conf *model.Configuration, from1 
 }
 
 func logOperationStats(ctx *model.Context, op string, durRead, durVal, durOpt, durWrite, durTotal float64) {
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 	model.TimingStats(op, durRead, durVal, durOpt, durWrite, durTotal)
 	if ctx.Read.FileSize > 0 {
 		ctx.Read.LogStats(ctx.Optimized)

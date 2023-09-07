@@ -67,19 +67,25 @@ func ListFonts() ([]string, error) {
 
 // InstallFonts installs true type fonts for embedding.
 func InstallFonts(fileNames []string) error {
-	log.CLI.Printf("installing to %s...", font.UserFontDir)
+	if log.CLIEnabled() {
+		log.CLI.Printf("installing to %s...", font.UserFontDir)
+	}
 
 	for _, fn := range fileNames {
 		switch filepath.Ext(fn) {
 		case ".ttf":
 			//log.CLI.Println(filepath.Base(fn))
 			if err := font.InstallTrueTypeFont(font.UserFontDir, fn); err != nil {
-				log.CLI.Printf("%v", err)
+				if log.CLIEnabled() {
+					log.CLI.Printf("%v", err)
+				}
 			}
 		case ".ttc":
 			//log.CLI.Println(filepath.Base(fn))
 			if err := font.InstallTrueTypeCollection(font.UserFontDir, fn); err != nil {
-				log.CLI.Printf("%v", err)
+				if log.CLIEnabled() {
+					log.CLI.Printf("%v", err)
+				}
 			}
 		}
 	}
@@ -242,10 +248,14 @@ func CreateCheatSheetsUserFonts(fontNames []string) error {
 	sort.Strings(fontNames)
 	for _, fn := range fontNames {
 		if !font.IsUserFont(fn) {
-			log.CLI.Printf("unknown user font: %s\n", fn)
+			if log.CLIEnabled() {
+				log.CLI.Printf("unknown user font: %s\n", fn)
+			}
 			continue
 		}
-		log.CLI.Println("creating cheatsheets for: " + fn)
+		if log.CLIEnabled() {
+			log.CLI.Println("creating cheatsheets for: " + fn)
+		}
 		if err := CreateUserFontDemoFiles(".", fn); err != nil {
 			return err
 		}

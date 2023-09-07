@@ -74,7 +74,7 @@ func writePageSpan(ctx *model.Context, from, thru int, outPath string) error {
 	if err != nil {
 		return err
 	}
-	if log.CLI != nil {
+	if log.CLIEnabled() {
 		log.CLI.Printf("writing %s...\n", outPath)
 	}
 	return pdfcpu.WriteReader(outPath, ps.Reader)
@@ -250,7 +250,9 @@ func SplitFile(inFile, outDir string, span int, conf *model.Configuration) error
 	if err != nil {
 		return err
 	}
-	log.CLI.Printf("splitting %s to %s/...\n", inFile, outDir)
+	if log.CLIEnabled() {
+		log.CLI.Printf("splitting %s to %s/...\n", inFile, outDir)
+	}
 
 	defer func() {
 		if err != nil {

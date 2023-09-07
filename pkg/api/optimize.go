@@ -45,7 +45,9 @@ func Optimize(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
 		return err
 	}
 
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 	fromWrite := time.Now()
 
 	if err = WriteContext(ctx, w); err != nil {
@@ -80,9 +82,13 @@ func OptimizeFile(inFile, outFile string, conf *model.Configuration) (err error)
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		log.CLI.Printf("writing %s...\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", outFile)
+		}
 	} else {
-		log.CLI.Printf("writing %s...\n", inFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", inFile)
+		}
 	}
 
 	if f2, err = os.Create(tmpFile); err != nil {

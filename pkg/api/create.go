@@ -87,9 +87,13 @@ func Create(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configurati
 func handleOutFilePDF(inFilePDF, outFilePDF string, tmpFile *string) {
 	if outFilePDF != "" && inFilePDF != outFilePDF {
 		*tmpFile = outFilePDF
-		log.CLI.Printf("writing %s...\n", outFilePDF)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", outFilePDF)
+		}
 	} else {
-		log.CLI.Printf("writing %s...\n", inFilePDF)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", inFilePDF)
+		}
 	}
 }
 
@@ -110,7 +114,9 @@ func CreateFile(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configurat
 		if f1, err = os.Open(inFilePDF); err != nil {
 			return err
 		}
-		log.CLI.Printf("reading %s...\n", inFilePDF)
+		if log.CLIEnabled() {
+			log.CLI.Printf("reading %s...\n", inFilePDF)
+		}
 		rs = f1
 	}
 

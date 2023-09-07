@@ -88,7 +88,9 @@ func AddAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages []string, ann m
 		return errors.New("pdfcpu: AddAnnotations: No annotations added")
 	}
 
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 
 	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
@@ -136,7 +138,9 @@ func AddAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages []string, a
 		return errors.New("pdfcpu: AddAnnotationsAsIncrement: No annotations added")
 	}
 
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 
 	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
@@ -157,9 +161,13 @@ func AddAnnotationsFile(inFile, outFile string, selectedPages []string, ar model
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		log.CLI.Printf("writing %s...\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", outFile)
+		}
 	} else {
-		log.CLI.Printf("writing %s...\n", inFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", inFile)
+		}
 		if incr {
 			f, err := os.OpenFile(inFile, os.O_RDWR, 0644)
 			if err != nil {
@@ -232,7 +240,9 @@ func AddAnnotationsMap(rs io.ReadSeeker, w io.Writer, m map[int][]model.Annotati
 		return errors.New("pdfcpu: AddAnnotationsMap: No annotations added")
 	}
 
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 
 	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
@@ -275,7 +285,9 @@ func AddAnnotationsMapAsIncrement(rws io.ReadWriteSeeker, m map[int][]model.Anno
 		return errors.New("pdfcpu: AddAnnotationsMapAsIncrement: No annotations added")
 	}
 
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 
 	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
@@ -296,9 +308,13 @@ func AddAnnotationsMapFile(inFile, outFile string, m map[int][]model.AnnotationR
 
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		log.CLI.Printf("writing %s...\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", outFile)
+		}
 	} else {
-		log.CLI.Printf("writing %s...\n", inFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", inFile)
+		}
 		if incr {
 			f, err := os.OpenFile(inFile, os.O_RDWR, 0644)
 			if err != nil {
@@ -377,7 +393,9 @@ func RemoveAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages, idsAndTypes
 		return errors.New("pdfcpu: RemoveAnnotations: No annotation removed")
 	}
 
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 
 	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
@@ -426,7 +444,9 @@ func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, idsAndT
 		return errors.New("pdfcpu: RemoveAnnotationsAsIncrement: No annotation removed")
 	}
 
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 
 	if conf.ValidationMode != model.ValidationNone {
 		if err = ValidateContext(ctx); err != nil {
@@ -450,9 +470,13 @@ func RemoveAnnotationsFile(inFile, outFile string, selectedPages, idsAndTypes []
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		log.CLI.Printf("writing %s...\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", outFile)
+		}
 	} else {
-		log.CLI.Printf("writing %s...\n", inFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", inFile)
+		}
 		if incr {
 			if f1, err = os.OpenFile(inFile, os.O_RDWR, 0644); err != nil {
 				return err

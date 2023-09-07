@@ -538,7 +538,9 @@ func (d Dict) PDFString() string {
 			continue
 		}
 
-		log.Info.Fatalf("PDFDict.PDFString(): entry of unknown object type: %T %[1]v\n", v)
+		if log.InfoEnabled() {
+			log.Info.Fatalf("PDFDict.PDFString(): entry of unknown object type: %T %[1]v\n", v)
+		}
 	}
 
 	logstr = append(logstr, ">>")

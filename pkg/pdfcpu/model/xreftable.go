@@ -323,7 +323,9 @@ func (xRefTable *XRefTable) FindTableEntryLight(objNr int) (*XRefTableEntry, boo
 
 // FindTableEntry returns the XRefTable entry for given object and generation numbers.
 func (xRefTable *XRefTable) FindTableEntry(objNr int, genNr int) (*XRefTableEntry, bool) {
-	log.Trace.Printf("FindTableEntry: obj#:%d gen:%d \n", objNr, genNr)
+	if log.TraceEnabled() {
+		log.Trace.Printf("FindTableEntry: obj#:%d gen:%d \n", objNr, genNr)
+	}
 	return xRefTable.Find(objNr)
 }
 
@@ -358,7 +360,9 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 	// This is because pdfcpu does not reuse objects
 	// in an incremental fashion like laid out in the PDF spec.
 
-	log.Write.Println("InsertAndUseRecycled: begin")
+	if log.WriteEnabled() {
+		log.Write.Println("InsertAndUseRecycled: begin")
+	}
 
 	// Get Next free object from freelist.
 	freeListHeadEntry, err := xRefTable.Free(0)
@@ -370,7 +374,9 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 	if *freeListHeadEntry.Offset == 0 {
 		xRefTableEntry.RefCount = 1
 		objNr = xRefTable.InsertNew(xRefTableEntry)
-		log.Write.Printf("InsertAndUseRecycled: end, new objNr=%d\n", objNr)
+		if log.WriteEnabled() {
+			log.Write.Printf("InsertAndUseRecycled: end, new objNr=%d\n", objNr)
+		}
 		return objNr, nil
 	}
 
@@ -393,7 +399,9 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 	xRefTableEntry.RefCount = 1
 	xRefTable.Table[objNr] = &xRefTableEntry
 
-	log.Write.Printf("InsertAndUseRecycled: end, recycled objNr=%d\n", objNr)
+	if log.WriteEnabled() {
+		log.Write.Printf("InsertAndUseRecycled: end, recycled objNr=%d\n", objNr)
+	}
 
 	return objNr, nil
 }
@@ -488,7 +496,9 @@ func (xRefTable *XRefTable) FreeObject(objNr int) error {
 
 	// see 7.5.4 Cross-Reference Table
 
-	log.Debug.Printf("FreeObject: begin %d\n", objNr)
+	if log.DebugEnabled() {
+		log.Debug.Printf("FreeObject: begin %d\n", objNr)
+	}
 
 	freeListHeadEntry, err := xRefTable.Free(0)
 	if err != nil {
@@ -501,7 +511,9 @@ func (xRefTable *XRefTable) FreeObject(objNr int) error {
 	}
 
 	if entry.Free {
-		log.Debug.Printf("FreeObject: end %d already free\n", objNr)
+		if log.DebugEnabled() {
+			log.Debug.Printf("FreeObject: end %d already free\n", objNr)
+		}
 		return nil
 	}
 
@@ -515,7 +527,9 @@ func (xRefTable *XRefTable) FreeObject(objNr int) error {
 	next := int64(objNr)
 	freeListHeadEntry.Offset = &next
 
-	log.Debug.Printf("FreeObject: end %d\n", objNr)
+	if log.DebugEnabled() {
+		log.Debug.Printf("FreeObject: end %d\n", objNr)
+	}
 
 	return nil
 }
@@ -569,8 +583,9 @@ func (xRefTable *XRefTable) DeleteObject(o types.Object) error {
 
 // DeleteObjectGraph deletes all objects reachable by indRef.
 func (xRefTable *XRefTable) DeleteObjectGraph(o types.Object) error {
-
-	log.Debug.Println("DeleteObjectGraph: begin")
+	if log.DebugEnabled() {
+		log.Debug.Println("DeleteObjectGraph: begin")
+	}
 
 	ir, ok := o.(types.IndirectRef)
 	if !ok {
@@ -582,7 +597,10 @@ func (xRefTable *XRefTable) DeleteObjectGraph(o types.Object) error {
 		return err
 	}
 
-	log.Debug.Println("DeleteObjectGraph: end")
+	if log.DebugEnabled() {
+		log.Debug.Println("DeleteObjectGraph: end")
+	}
+
 	return nil
 }
 
@@ -698,7 +716,9 @@ func (xRefTable *XRefTable) handleDanglingFree(m types.IntSet, head *XRefTableEn
 // EnsureValidFreeList ensures the integrity of the free list associated with the recorded free objects.
 // See 7.5.4 Cross-Reference Table
 func (xRefTable *XRefTable) EnsureValidFreeList() error {
-	log.Trace.Println("EnsureValidFreeList begin")
+	if log.TraceEnabled() {
+		log.Trace.Println("EnsureValidFreeList begin")
+	}
 
 	m := xRefTable.freeObjects()
 
@@ -725,7 +745,9 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 			*head.Offset = 0
 		}
 
-		log.Trace.Println("EnsureValidFreeList: empty free list.")
+		if log.TraceEnabled() {
+			log.Trace.Println("EnsureValidFreeList: empty free list.")
+		}
 		return nil
 	}
 
@@ -736,8 +758,9 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 
 	// until we have found the last free object which should point to obj 0.
 	for f != 0 {
-
-		log.Trace.Printf("EnsureValidFreeList: validating obj #%d %v\n", f, m)
+		if log.TraceEnabled() {
+			log.Trace.Printf("EnsureValidFreeList: validating obj #%d %v\n", f, m)
+		}
 		// verify if obj f is one of the free objects recorded.
 		if !m[f] {
 			if len(m) > 0 && lastValid == nil {
@@ -770,7 +793,9 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 	}
 
 	if len(m) == 0 {
-		log.Trace.Println("EnsureValidFreeList: end, regular linked list")
+		if log.TraceEnabled() {
+			log.Trace.Println("EnsureValidFreeList: end, regular linked list")
+		}
 		return nil
 	}
 
@@ -779,7 +804,9 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 	// In that case they have to point to obj 0.
 	err := xRefTable.handleDanglingFree(m, head)
 
-	log.Trace.Println("EnsureValidFreeList: end, linked list plus some dangling free objects.")
+	if log.TraceEnabled() {
+		log.Trace.Println("EnsureValidFreeList: end, linked list plus some dangling free objects.")
+	}
 
 	return err
 }
@@ -799,8 +826,9 @@ func (xRefTable *XRefTable) DeleteDictEntry(d types.Dict, key string) error {
 // UndeleteObject ensures an object is not recorded in the free list.
 // e.g. sometimes caused by indirect references to free objects in the original PDF file.
 func (xRefTable *XRefTable) UndeleteObject(objectNumber int) error {
-
-	log.Debug.Printf("UndeleteObject: begin %d\n", objectNumber)
+	if log.DebugEnabled() {
+		log.Debug.Printf("UndeleteObject: begin %d\n", objectNumber)
+	}
 
 	f, err := xRefTable.Free(0)
 	if err != nil {
@@ -817,7 +845,9 @@ func (xRefTable *XRefTable) UndeleteObject(objectNumber int) error {
 		}
 
 		if objNr == objectNumber {
-			log.Debug.Printf("UndeleteObject end: undeleting obj#%d\n", objectNumber)
+			if log.DebugEnabled() {
+				log.Debug.Printf("UndeleteObject end: undeleting obj#%d\n", objectNumber)
+			}
 			*f.Offset = *entry.Offset
 			entry.Offset = nil
 			if *entry.Generation > 0 {
@@ -830,7 +860,9 @@ func (xRefTable *XRefTable) UndeleteObject(objectNumber int) error {
 		f = entry
 	}
 
-	log.Debug.Printf("UndeleteObject: end: obj#%d not in free list.\n", objectNumber)
+	if log.DebugEnabled() {
+		log.Debug.Printf("UndeleteObject: end: obj#%d not in free list.\n", objectNumber)
+	}
 
 	return nil
 }
@@ -1095,7 +1127,7 @@ func (xRefTable *XRefTable) list(logStr []string) []string {
 				}
 
 				sd, ok := entry.Object.(types.StreamDict)
-				if ok && log.IsTraceLoggerEnabled() {
+				if ok && log.TraceEnabled() {
 					s := "decoded stream content (length = %d)\n%s\n"
 					if sd.IsPageContent {
 						str += fmt.Sprintf(s, len(sd.Content), sd.Content)
@@ -1127,8 +1159,9 @@ func (xRefTable *XRefTable) list(logStr []string) []string {
 // Dump the free list to logStr.
 // At this point the free list is assumed to be a linked list with its last node linked to the beginning.
 func (xRefTable *XRefTable) freeList(logStr []string) ([]string, error) {
-
-	log.Trace.Printf("freeList begin")
+	if log.TraceEnabled() {
+		log.Trace.Printf("freeList begin")
+	}
 
 	head, err := xRefTable.Free(0)
 	if err != nil {
@@ -1145,8 +1178,9 @@ func (xRefTable *XRefTable) freeList(logStr []string) ([]string, error) {
 	logStr = append(logStr, fmt.Sprintf("%5d %5d %5d\n", 0, f, types.FreeHeadGeneration))
 
 	for f != 0 {
-
-		log.Trace.Printf("freeList validating free object %d\n", f)
+		if log.TraceEnabled() {
+			log.Trace.Printf("freeList validating free object %d\n", f)
+		}
 
 		entry, err := xRefTable.Free(f)
 		if err != nil {
@@ -1157,12 +1191,16 @@ func (xRefTable *XRefTable) freeList(logStr []string) ([]string, error) {
 		generation := *entry.Generation
 		s := fmt.Sprintf("%5d %5d %5d\n", f, next, generation)
 		logStr = append(logStr, s)
-		log.Trace.Printf("freeList: %s", s)
+		if log.TraceEnabled() {
+			log.Trace.Printf("freeList: %s", s)
+		}
 
 		f = next
 	}
 
-	log.Trace.Printf("freeList end")
+	if log.TraceEnabled() {
+		log.Trace.Printf("freeList end")
+	}
 
 	return logStr, nil
 }
@@ -1185,7 +1223,9 @@ func (xRefTable *XRefTable) bindNameTreeNode(name string, n *Node, root bool) er
 			}
 			namesDict.Update(name, n.D)
 		}
-		log.Debug.Printf("bind dict = %v\n", n.D)
+		if log.DebugEnabled() {
+			log.Debug.Printf("bind dict = %v\n", n.D)
+		}
 		dict = n.D
 	}
 
@@ -1202,7 +1242,9 @@ func (xRefTable *XRefTable) bindNameTreeNode(name string, n *Node, root bool) er
 			a = append(a, e.v)
 		}
 		dict.Update("Names", a)
-		log.Debug.Printf("bound nametree node(leaf): %s/n", dict)
+		if log.DebugEnabled() {
+			log.Debug.Printf("bound nametree node(leaf): %s/n", dict)
+		}
 		return nil
 	}
 
@@ -1221,19 +1263,24 @@ func (xRefTable *XRefTable) bindNameTreeNode(name string, n *Node, root bool) er
 	dict.Update("Kids", kids)
 	dict.Delete("Names")
 
-	log.Debug.Printf("bound nametree node(intermediary): %s/n", dict)
+	if log.DebugEnabled() {
+		log.Debug.Printf("bound nametree node(intermediary): %s/n", dict)
+	}
 
 	return nil
 }
 
 // BindNameTrees syncs up the internal name tree cache with the xreftable.
 func (xRefTable *XRefTable) BindNameTrees() error {
-
-	log.Write.Println("BindNameTrees..")
+	if log.WriteEnabled() {
+		log.Write.Println("BindNameTrees..")
+	}
 
 	// Iterate over internal name tree rep.
 	for k, v := range xRefTable.Names {
-		log.Write.Printf("bindNameTree: %s\n", k)
+		if log.WriteEnabled() {
+			log.Write.Printf("bindNameTree: %s\n", k)
+		}
 		if err := xRefTable.bindNameTreeNode(k, v, true); err != nil {
 			return err
 		}
@@ -1359,7 +1406,9 @@ func (xRefTable *XRefTable) RemoveNameTree(nameTreeName string) error {
 		return err
 	}
 
-	log.Debug.Printf("Deleted Names from root: %s\n", rootDict)
+	if log.DebugEnabled() {
+		log.Debug.Printf("Deleted Names from root: %s\n", rootDict)
+	}
 
 	return nil
 }
@@ -1539,7 +1588,9 @@ func (xRefTable *XRefTable) consolidateResources(obj types.Object, pAttrs *Inher
 			}
 			pAttrs.Resources[k] = o.Clone()
 		}
-		log.Write.Printf("pA:\n%s\n", pAttrs.Resources)
+		if log.WriteEnabled() {
+			log.Write.Printf("pA:\n%s\n", pAttrs.Resources)
+		}
 		return nil
 	}
 
@@ -2411,7 +2462,9 @@ func (xRefTable *XRefTable) insertContent(pageDict types.Dict, bb []byte) error 
 func appendToContentStream(sd *types.StreamDict, bb []byte) error {
 	err := sd.Decode()
 	if err == filter.ErrUnsupportedFilter {
-		log.Info.Println("unsupported filter: unable to patch content with watermark.")
+		if log.InfoEnabled() {
+			log.Info.Println("unsupported filter: unable to patch content with watermark.")
+		}
 		return nil
 	}
 	if err != nil {
@@ -2492,7 +2545,9 @@ func (xRefTable *XRefTable) NameRef(nameType string) NameMap {
 func (xRefTable *XRefTable) RemoveSignature() {
 	if xRefTable.SignatureExist || xRefTable.AppendOnly {
 		// TODO enable incremental writing
-		log.CLI.Println("removing signature...")
+		if log.CLIEnabled() {
+			log.CLI.Println("removing signature...")
+		}
 		// root -> Perms -> UR3 -> = Sig dict
 		d1 := xRefTable.RootDict
 		delete(d1, "Perms")

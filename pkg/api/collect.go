@@ -73,9 +73,13 @@ func CollectFile(inFile, outFile string, selectedPages []string, conf *model.Con
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		log.CLI.Printf("writing %s...\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", outFile)
+		}
 	} else {
-		log.CLI.Printf("writing %s...\n", inFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", inFile)
+		}
 	}
 
 	var f1, f2 *os.File

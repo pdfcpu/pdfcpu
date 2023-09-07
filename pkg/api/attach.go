@@ -84,7 +84,9 @@ func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, co
 			desc = s[1]
 		}
 
-		log.CLI.Printf("adding %s\n", fileName)
+		if log.CLIEnabled() {
+			log.CLI.Printf("adding %s\n", fileName)
+		}
 		f, err := os.Open(fileName)
 		if err != nil {
 			return err
@@ -274,7 +276,9 @@ func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, con
 
 	for _, a := range aa {
 		fileName := filepath.Join(outDir, a.FileName)
-		log.CLI.Printf("writing %s\n", fileName)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s\n", fileName)
+		}
 		f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 		if err != nil {
 			return err

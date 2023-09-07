@@ -82,9 +82,13 @@ func TrimFile(inFile, outFile string, selectedPages []string, conf *model.Config
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		log.CLI.Printf("writing %s...\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", outFile)
+		}
 	} else {
-		log.CLI.Printf("writing %s...\n", inFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", inFile)
+		}
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
 		f1.Close()

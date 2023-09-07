@@ -112,14 +112,20 @@ func AddBoxes(rs io.ReadSeeker, w io.Writer, selectedPages []string, pb *model.P
 
 // AddBoxesFile adds page boundaries for selected pages of inFile and writes result to outFile.
 func AddBoxesFile(inFile, outFile string, selectedPages []string, pb *model.PageBoundaries, conf *model.Configuration) error {
-	log.CLI.Printf("adding %s for %s\n", pb, inFile)
+	if log.CLIEnabled() {
+		log.CLI.Printf("adding %s for %s\n", pb, inFile)
+	}
 
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		log.CLI.Printf("writing %s...\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", outFile)
+		}
 	} else {
-		log.CLI.Printf("writing %s...\n", inFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", inFile)
+		}
 	}
 
 	var (
@@ -199,14 +205,20 @@ func RemoveBoxes(rs io.ReadSeeker, w io.Writer, selectedPages []string, pb *mode
 
 // RemoveBoxesFile removes page boundaries as specified in pb for selected pages of inFile and writes result to outFile.
 func RemoveBoxesFile(inFile, outFile string, selectedPages []string, pb *model.PageBoundaries, conf *model.Configuration) error {
-	log.CLI.Printf("removing %s for %s\n", pb, inFile)
+	if log.CLIEnabled() {
+		log.CLI.Printf("removing %s for %s\n", pb, inFile)
+	}
 
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		log.CLI.Printf("writing %s...\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", outFile)
+		}
 	} else {
-		log.CLI.Printf("writing %s...\n", inFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", inFile)
+		}
 	}
 
 	var (
@@ -286,14 +298,20 @@ func Crop(rs io.ReadSeeker, w io.Writer, selectedPages []string, b *model.Box, c
 
 // CropFile adds crop boxes for selected pages of inFile and writes result to outFile.
 func CropFile(inFile, outFile string, selectedPages []string, b *model.Box, conf *model.Configuration) error {
-	log.CLI.Printf("cropping %s\n", inFile)
+	if log.CLIEnabled() {
+		log.CLI.Printf("cropping %s\n", inFile)
+	}
 
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		log.CLI.Printf("writing %s...\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", outFile)
+		}
 	} else {
-		log.CLI.Printf("writing %s...\n", inFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s...\n", inFile)
+		}
 	}
 
 	var (

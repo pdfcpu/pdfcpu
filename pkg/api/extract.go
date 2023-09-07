@@ -133,7 +133,9 @@ func ExtractImagesFile(inFile, outDir string, selectedPages []string, conf *mode
 	}
 	defer f.Close()
 
-	log.CLI.Printf("extracting images from %s into %s/ ...\n", inFile, outDir)
+	if log.CLIEnabled() {
+		log.CLI.Printf("extracting images from %s into %s/ ...\n", inFile, outDir)
+	}
 	fileName := strings.TrimSuffix(filepath.Base(inFile), ".pdf")
 
 	return ExtractImages(f, selectedPages, pdfcpu.WriteImageToDisk(outDir, fileName), conf)
@@ -142,7 +144,9 @@ func ExtractImagesFile(inFile, outDir string, selectedPages []string, conf *mode
 func writeFonts(ff []pdfcpu.Font, outDir, fileName string) error {
 	for _, f := range ff {
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_%s.%s", fileName, f.Name, f.Type))
-		log.CLI.Printf("writing %s\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s\n", outFile)
+		}
 		w, err := os.Create(outFile)
 		if err != nil {
 			return err
@@ -210,7 +214,9 @@ func ExtractFonts(rs io.ReadSeeker, outDir, fileName string, selectedPages []str
 
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 	model.TimingStats("write fonts", durRead, durVal, durOpt, durWrite, durTotal)
 
 	return nil
@@ -224,7 +230,9 @@ func ExtractFontsFile(inFile, outDir string, selectedPages []string, conf *model
 	}
 	defer f.Close()
 
-	log.CLI.Printf("extracting fonts from %s into %s/ ...\n", inFile, outDir)
+	if log.CLIEnabled() {
+		log.CLI.Printf("extracting fonts from %s into %s/ ...\n", inFile, outDir)
+	}
 
 	return ExtractFonts(f, outDir, filepath.Base(inFile), selectedPages, conf)
 }
@@ -257,7 +265,9 @@ func ExtractPages(rs io.ReadSeeker, outDir, fileName string, selectedPages []str
 	}
 
 	if len(pages) == 0 {
-		log.CLI.Println("aborted: nothing to extract!")
+		if log.CLIEnabled() {
+			log.CLI.Println("aborted: nothing to extract!")
+		}
 		return nil
 	}
 
@@ -272,7 +282,9 @@ func ExtractPages(rs io.ReadSeeker, outDir, fileName string, selectedPages []str
 			return err
 		}
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, i))
-		log.CLI.Printf("writing %s\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s\n", outFile)
+		}
 		if err := WriteContextFile(ctxNew, outFile); err != nil {
 			return err
 		}
@@ -280,7 +292,9 @@ func ExtractPages(rs io.ReadSeeker, outDir, fileName string, selectedPages []str
 
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 	model.TimingStats("write PDFs", durRead, durVal, durOpt, durWrite, durTotal)
 
 	return nil
@@ -294,7 +308,9 @@ func ExtractPagesFile(inFile, outDir string, selectedPages []string, conf *model
 	}
 	defer f.Close()
 
-	log.CLI.Printf("extracting pages from %s into %s/ ...\n", inFile, outDir)
+	if log.CLIEnabled() {
+		log.CLI.Printf("extracting pages from %s into %s/ ...\n", inFile, outDir)
+	}
 
 	return ExtractPages(f, outDir, filepath.Base(inFile), selectedPages, conf)
 }
@@ -342,7 +358,9 @@ func ExtractContent(rs io.ReadSeeker, outDir, fileName string, selectedPages []s
 		}
 
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_Content_page_%d.txt", fileName, p))
-		log.CLI.Printf("writing %s\n", outFile)
+		if log.CLIEnabled() {
+			log.CLI.Printf("writing %s\n", outFile)
+		}
 		f, err := os.Create(outFile)
 		if err != nil {
 			return err
@@ -359,7 +377,9 @@ func ExtractContent(rs io.ReadSeeker, outDir, fileName string, selectedPages []s
 
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 	model.TimingStats("write content", durRead, durVal, durOpt, durWrite, durTotal)
 
 	return nil
@@ -373,7 +393,9 @@ func ExtractContentFile(inFile, outDir string, selectedPages []string, conf *mod
 	}
 	defer f.Close()
 
-	log.CLI.Printf("extracting content from %s into %s/ ...\n", inFile, outDir)
+	if log.CLIEnabled() {
+		log.CLI.Printf("extracting content from %s into %s/ ...\n", inFile, outDir)
+	}
 
 	return ExtractContent(f, outDir, inFile, selectedPages, conf)
 }
@@ -406,7 +428,9 @@ func ExtractMetadata(rs io.ReadSeeker, outDir, fileName string, conf *model.Conf
 		fileName = strings.TrimSuffix(filepath.Base(fileName), ".pdf")
 		for _, m := range mm {
 			outFile := filepath.Join(outDir, fmt.Sprintf("%s_Metadata_%s_%d_%d.txt", fileName, m.ParentType, m.ParentObjNr, m.ObjNr))
-			log.CLI.Printf("writing %s\n", outFile)
+			if log.CLIEnabled() {
+				log.CLI.Printf("writing %s\n", outFile)
+			}
 			f, err := os.Create(outFile)
 			if err != nil {
 				return err
@@ -422,7 +446,9 @@ func ExtractMetadata(rs io.ReadSeeker, outDir, fileName string, conf *model.Conf
 
 	durWrite := time.Since(fromWrite).Seconds()
 	durTotal := time.Since(fromStart).Seconds()
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
 	model.TimingStats("write metadata", durRead, durVal, durOpt, durWrite, durTotal)
 
 	return nil
@@ -436,7 +462,9 @@ func ExtractMetadataFile(inFile, outDir string, conf *model.Configuration) error
 	}
 	defer f.Close()
 
-	log.CLI.Printf("extracting metadata from %s into %s/ ...\n", inFile, outDir)
+	if log.CLIEnabled() {
+		log.CLI.Printf("extracting metadata from %s into %s/ ...\n", inFile, outDir)
+	}
 
 	return ExtractMetadata(f, outDir, filepath.Base(inFile), conf)
 }

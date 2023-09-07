@@ -55,23 +55,31 @@ func validatePropertiesDict(xRefTable *model.XRefTable, o types.Object) error {
 
 	for key, val := range d {
 
-		log.Validate.Printf("validatePropertiesDict: key=%s val=%v\n", key, val)
+		if log.ValidateEnabled() {
+			log.Validate.Printf("validatePropertiesDict: key=%s val=%v\n", key, val)
+		}
 
 		switch key {
 
 		case "Metadata":
-			log.Validate.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
+			if log.ValidateEnabled() {
+				log.Validate.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
+			}
 			// see above
 
 		case "Contents":
-			log.Validate.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
+			if log.ValidateEnabled() {
+				log.Validate.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
+			}
 			_, err = validateStreamDict(xRefTable, val)
 			if err != nil {
 				return err
 			}
 
 		case "Resources":
-			log.Validate.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
+			if log.ValidateEnabled() {
+				log.Validate.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
+			}
 			_, err = validateResourceDict(xRefTable, val)
 			if err != nil {
 				return err
@@ -90,7 +98,9 @@ func validatePropertiesDict(xRefTable *model.XRefTable, o types.Object) error {
 		//case "Lang": -> default
 
 		default:
-			log.Validate.Printf("validatePropertiesDict: processing unrecognized key \"%s\"\n", key)
+			if log.ValidateEnabled() {
+				log.Validate.Printf("validatePropertiesDict: processing unrecognized key \"%s\"\n", key)
+			}
 			_, err = xRefTable.Dereference(val)
 			if err != nil {
 				return err

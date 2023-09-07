@@ -155,7 +155,9 @@ func parmsForFilter(d Dict) map[string]int {
 func (sd *StreamDict) Encode() error {
 	// No filter specified, nothing to encode.
 	if sd.FilterPipeline == nil {
-		log.Trace.Println("encodeStream: returning uncompressed stream.")
+		if log.TraceEnabled() {
+			log.Trace.Println("encodeStream: returning uncompressed stream.")
+		}
 		sd.Raw = sd.Content
 		streamLength := int64(len(sd.Raw))
 		sd.StreamLength = &streamLength
@@ -170,10 +172,12 @@ func (sd *StreamDict) Encode() error {
 
 	for i := len(sd.FilterPipeline) - 1; i >= 0; i-- {
 		f := sd.FilterPipeline[i]
-		if f.DecodeParms != nil {
-			log.Trace.Printf("encodeStream: encoding filter:%s\ndecodeParms:%s\n", f.Name, f.DecodeParms)
-		} else {
-			log.Trace.Printf("encodeStream: encoding filter:%s\n", f.Name)
+		if log.TraceEnabled() {
+			if f.DecodeParms != nil {
+				log.Trace.Printf("encodeStream: encoding filter:%s\ndecodeParms:%s\n", f.Name, f.DecodeParms)
+			} else {
+				log.Trace.Printf("encodeStream: encoding filter:%s\n", f.Name)
+			}
 		}
 
 		// Make parms map[string]int
@@ -234,7 +238,9 @@ func (sd *StreamDict) Decode() error {
 	// No filter or sole filter DTC && !CMYK or JPX - nothing to decode.
 	if fpl == nil || len(fpl) == 1 && ((fpl[0].Name == filter.DCT && sd.CSComponents != 4) || fpl[0].Name == filter.JPX) {
 		sd.Content = sd.Raw
-		log.Trace.Printf("decodedStream returning %d(#%02x)bytes: \n%s\n", len(sd.Content), len(sd.Content), hex.Dump(sd.Content))
+		if log.TraceEnabled() {
+			log.Trace.Printf("decodedStream returning %d(#%02x)bytes: \n%s\n", len(sd.Content), len(sd.Content), hex.Dump(sd.Content))
+		}
 		return nil
 	}
 
@@ -317,7 +323,9 @@ func (osd *ObjectStreamDict) AddObject(objNumber int, pdfString string) error {
 	//pdfString := entry.Object.PDFString()
 	osd.Content = append(osd.Content, []byte(pdfString)...)
 	osd.ObjCount++
-	log.Trace.Printf("AddObject end : ObjCount:%d prolog = <%s> Content = <%s>\n", osd.ObjCount, osd.Prolog, osd.Content)
+	if log.TraceEnabled() {
+		log.Trace.Printf("AddObject end : ObjCount:%d prolog = <%s> Content = <%s>\n", osd.ObjCount, osd.Prolog, osd.Content)
+	}
 	return nil
 }
 
@@ -325,7 +333,9 @@ func (osd *ObjectStreamDict) AddObject(objNumber int, pdfString string) error {
 func (osd *ObjectStreamDict) Finalize() {
 	osd.Content = append(osd.Prolog, osd.Content...)
 	osd.FirstObjOffset = len(osd.Prolog)
-	log.Trace.Printf("Finalize : firstObjOffset:%d Content = <%s>\n", osd.FirstObjOffset, osd.Content)
+	if log.TraceEnabled() {
+		log.Trace.Printf("Finalize : firstObjOffset:%d Content = <%s>\n", osd.FirstObjOffset, osd.Content)
+	}
 }
 
 // XRefStreamDict represents a cross reference stream dictionary.

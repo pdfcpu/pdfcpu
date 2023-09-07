@@ -268,7 +268,7 @@ func sortedPages(selectedPages types.IntSet) []int {
 }
 
 func logSelPages(selectedPages types.IntSet) {
-	if !log.IsCLILoggerEnabled() || len(selectedPages) == 0 {
+	if !log.CLIEnabled() || len(selectedPages) == 0 {
 		return
 	}
 	var b strings.Builder
@@ -280,7 +280,9 @@ func logSelPages(selectedPages types.IntSet) {
 		s = s[:len(s)-1]
 	}
 	// TODO Suppress for multifile cmds
-	log.CLI.Printf("pages: %s\n", s)
+	if log.CLIEnabled() {
+		log.CLI.Printf("pages: %s\n", s)
+	}
 }
 
 func calcSelPages(pageCount int, pageSelection []string, selectedPages types.IntSet) error {

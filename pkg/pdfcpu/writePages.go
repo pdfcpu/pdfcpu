@@ -44,11 +44,15 @@ func writePageDict(ctx *model.Context, ir *types.IndirectRef, pageDict types.Dic
 	genNr := ir.GenerationNumber.Value()
 
 	if ctx.Write.HasWriteOffset(objNr) {
-		log.Write.Printf("writePageDict: object #%d already written.\n", objNr)
+		if log.WriteEnabled() {
+			log.Write.Printf("writePageDict: object #%d already written.\n", objNr)
+		}
 		return nil
 	}
 
-	log.Write.Printf("writePageDict: logical pageNr=%d object #%d gets writeoffset: %d\n", pageNr, objNr, ctx.Write.Offset)
+	if log.WriteEnabled() {
+		log.Write.Printf("writePageDict: logical pageNr=%d object #%d gets writeoffset: %d\n", pageNr, objNr, ctx.Write.Offset)
+	}
 
 	dictName := "pageDict"
 
@@ -56,7 +60,9 @@ func writePageDict(ctx *model.Context, ir *types.IndirectRef, pageDict types.Dic
 		return err
 	}
 
-	log.Write.Printf("writePageDict: new offset = %d\n", ctx.Write.Offset)
+	if log.WriteEnabled() {
+		log.Write.Printf("writePageDict: new offset = %d\n", ctx.Write.Offset)
+	}
 
 	if ir := pageDict.IndirectRefEntry("Parent"); ir == nil {
 		return errors.New("pdfcpu: writePageDict: missing parent")
@@ -104,7 +110,9 @@ func writePageDict(ctx *model.Context, ir *types.IndirectRef, pageDict types.Dic
 
 	ctx.WritingPages = false
 
-	log.Write.Printf("*** writePageDict end: obj#%d offset=%d ***\n", objNr, ctx.Write.Offset)
+	if log.WriteEnabled() {
+		log.Write.Printf("*** writePageDict end: obj#%d offset=%d ***\n", objNr, ctx.Write.Offset)
+	}
 
 	return nil
 }
@@ -112,7 +120,9 @@ func writePageDict(ctx *model.Context, ir *types.IndirectRef, pageDict types.Dic
 func pageNodeDict(ctx *model.Context, o types.Object) (d types.Dict, indRef *types.IndirectRef, err error) {
 
 	if o == nil {
-		log.Write.Println("pageNodeDict: is nil")
+		if log.WriteEnabled() {
+			log.Write.Println("pageNodeDict: is nil")
+		}
 		return nil, nil, nil
 	}
 
@@ -121,7 +131,9 @@ func pageNodeDict(ctx *model.Context, o types.Object) (d types.Dict, indRef *typ
 	if !ok {
 		return nil, nil, errors.New("pdfcpu: pageNodeDict: missing indirect reference")
 	}
-	log.Write.Printf("pageNodeDict: PageNode: %s\n", ir)
+	if log.WriteEnabled() {
+		log.Write.Printf("pageNodeDict: PageNode: %s\n", ir)
+	}
 
 	d, err = ctx.DereferenceDict(ir)
 	if err != nil {
@@ -170,21 +182,29 @@ func writeKids(ctx *model.Context, a types.Array, pageNr *int) (types.Array, int
 		case "Page":
 			*pageNr++
 			if len(ctx.Write.SelectedPages) > 0 {
-				log.Write.Printf("selectedPages: %v\n", ctx.Write.SelectedPages)
+				if log.WriteEnabled() {
+					log.Write.Printf("selectedPages: %v\n", ctx.Write.SelectedPages)
+				}
 				writePage := ctx.Write.SelectedPages[*pageNr]
 				if ctx.Cmd == model.REMOVEPAGES {
 					writePage = !writePage
 				}
 				if writePage {
-					log.Write.Printf("writeKids: writing page:%d\n", *pageNr)
+					if log.WriteEnabled() {
+						log.Write.Printf("writeKids: writing page:%d\n", *pageNr)
+					}
 					err = writePageDict(ctx, ir, d, *pageNr)
 					kids = append(kids, o)
 					count++
 				} else {
-					log.Write.Printf("writeKids: skipping page:%d\n", *pageNr)
+					if log.WriteEnabled() {
+						log.Write.Printf("writeKids: skipping page:%d\n", *pageNr)
+					}
 				}
 			} else {
-				log.Write.Printf("writeKids: writing page anyway:%d\n", *pageNr)
+				if log.WriteEnabled() {
+					log.Write.Printf("writeKids: writing page anyway:%d\n", *pageNr)
+				}
 				err = writePageDict(ctx, ir, d, *pageNr)
 				kids = append(kids, o)
 				count++
@@ -214,8 +234,9 @@ func containsSelectedPages(ctx *model.Context, from, thru int) bool {
 }
 
 func writePagesDict(ctx *model.Context, ir *types.IndirectRef, pageNr *int) (skip bool, writtenPages int, err error) {
-
-	log.Write.Printf("writePagesDict: begin pageNr=%d\n", *pageNr)
+	if log.WriteEnabled() {
+		log.Write.Printf("writePagesDict: begin pageNr=%d\n", *pageNr)
+	}
 
 	dictName := "pagesDict"
 	objNr := int(ir.ObjectNumber)
@@ -240,12 +261,18 @@ func writePagesDict(ctx *model.Context, ir *types.IndirectRef, pageNr *int) (ski
 	// TRIM, REMOVEPAGES are the only commands where we modify the page tree during writing.
 	// In these cases the selected pages to be written or to be removed are defined in ctx.Write.SelectedPages.
 	if len(ctx.Write.SelectedPages) > 0 {
-		log.Write.Printf("writePagesDict: checking page range %d - %d \n", *pageNr+1, *pageNr+c)
+		if log.WriteEnabled() {
+			log.Write.Printf("writePagesDict: checking page range %d - %d \n", *pageNr+1, *pageNr+c)
+		}
 		if ctx.Cmd == model.REMOVEPAGES ||
 			((ctx.Cmd == model.TRIM) && containsSelectedPages(ctx, *pageNr+1, *pageNr+c)) {
-			log.Write.Println("writePagesDict: process this subtree")
+			if log.WriteEnabled() {
+				log.Write.Println("writePagesDict: process this subtree")
+			}
 		} else {
-			log.Write.Println("writePagesDict: skip this subtree")
+			if log.WriteEnabled() {
+				log.Write.Println("writePagesDict: skip this subtree")
+			}
 			*pageNr += c
 			return true, 0, nil
 		}
@@ -260,7 +287,9 @@ func writePagesDict(ctx *model.Context, ir *types.IndirectRef, pageNr *int) (ski
 
 	d.Update("Kids", kidsNew)
 	d.Update("Count", types.Integer(countNew))
-	log.Write.Printf("writePagesDict: writing pageDict for obj=%d page=%d\n%s", objNr, *pageNr, d)
+	if log.WriteEnabled() {
+		log.Write.Printf("writePagesDict: writing pageDict for obj=%d page=%d\n%s", objNr, *pageNr, d)
+	}
 
 	if err = writeDictObject(ctx, objNr, genNr, d); err != nil {
 		return false, 0, err
@@ -285,7 +314,9 @@ func writePagesDict(ctx *model.Context, ir *types.IndirectRef, pageNr *int) (ski
 	d.Update("Kids", kidsOrig)
 	d.Update("Count", countOrig)
 
-	log.Write.Printf("writePagesDict: end pageNr=%d\n", *pageNr)
+	if log.WriteEnabled() {
+		log.Write.Printf("writePagesDict: end pageNr=%d\n", *pageNr)
+	}
 
 	return false, countNew, nil
 }

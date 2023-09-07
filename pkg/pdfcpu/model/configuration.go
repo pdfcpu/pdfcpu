@@ -297,6 +297,7 @@ func NewDefaultConfiguration() *Configuration {
 		if err != nil {
 			path = os.TempDir()
 		}
+		println(path)
 		if err = EnsureDefaultConfigAt(path); err == nil {
 			c := *loadedDefaultConfig
 			return &c
@@ -415,7 +416,7 @@ func (c *Configuration) UnitString() string {
 // ApplyReducedFeatureSet returns true if complex entries like annotations shall not be written.
 func (c *Configuration) ApplyReducedFeatureSet() bool {
 	switch c.Cmd {
-	case SPLIT, TRIM, EXTRACTPAGES, MERGECREATE, MERGEAPPEND, IMPORTIMAGES:
+	case SPLIT, TRIM, EXTRACTPAGES, IMPORTIMAGES:
 		return true
 	}
 	return false

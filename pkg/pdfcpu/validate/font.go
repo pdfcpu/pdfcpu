@@ -112,7 +112,9 @@ func validateFontDescriptorType(xRefTable *model.XRefTable, d types.Dict) (err e
 	if dictType == nil {
 
 		if xRefTable.ValidationMode == model.ValidationRelaxed {
-			log.Validate.Println("validateFontDescriptor: missing entry \"Type\"")
+			if log.ValidateEnabled() {
+				log.Validate.Println("validateFontDescriptor: missing entry \"Type\"")
+			}
 		} else {
 			return errors.New("pdfcpu: validateFontDescriptor: missing entry \"Type\"")
 		}

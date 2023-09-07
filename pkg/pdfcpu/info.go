@@ -35,10 +35,14 @@ func handleInfoDict(ctx *model.Context, d types.Dict) (err error) {
 		switch key {
 
 		case "Title":
-			log.Write.Println("found Title")
+			if log.WriteEnabled() {
+				log.Write.Println("found Title")
+			}
 
 		case "Author":
-			log.Write.Println("found Author")
+			if log.WriteEnabled() {
+				log.Write.Println("found Author")
+			}
 			// Record for stats.
 			ctx.Author, err = ctx.DereferenceText(value)
 			if err != nil {
@@ -47,13 +51,19 @@ func handleInfoDict(ctx *model.Context, d types.Dict) (err error) {
 			ctx.Author = model.CSVSafeString(ctx.Author)
 
 		case "Subject":
-			log.Write.Println("found Subject")
+			if log.WriteEnabled() {
+				log.Write.Println("found Subject")
+			}
 
 		case "Keywords":
-			log.Write.Println("found Keywords")
+			if log.WriteEnabled() {
+				log.Write.Println("found Keywords")
+			}
 
 		case "Creator":
-			log.Write.Println("found Creator")
+			if log.WriteEnabled() {
+				log.Write.Println("found Creator")
+			}
 			// Record for stats.
 			ctx.Creator, err = ctx.DereferenceText(value)
 			if err != nil {
@@ -70,10 +80,14 @@ func handleInfoDict(ctx *model.Context, d types.Dict) (err error) {
 			}
 
 		case "Trapped":
-			log.Write.Println("found Trapped")
+			if log.WriteEnabled() {
+				log.Write.Println("found Trapped")
+			}
 
 		default:
-			log.Write.Printf("handleInfoDict: found out of spec entry %s %v\n", key, value)
+			if log.WriteEnabled() {
+				log.Write.Printf("handleInfoDict: found out of spec entry %s %v\n", key, value)
+			}
 
 		}
 	}
@@ -135,17 +149,22 @@ func ensureInfoDict(ctx *model.Context) error {
 
 // Write the document info object for this PDF file.
 func writeDocumentInfoDict(ctx *model.Context) error {
-
-	log.Write.Printf("*** writeDocumentInfoDict begin: offset=%d ***\n", ctx.Write.Offset)
+	if log.WriteEnabled() {
+		log.Write.Printf("*** writeDocumentInfoDict begin: offset=%d ***\n", ctx.Write.Offset)
+	}
 
 	// Note: The document info object is optional but pdfcpu ensures one.
 
 	if ctx.Info == nil {
-		log.Write.Printf("writeDocumentInfoObject end: No info object present, offset=%d\n", ctx.Write.Offset)
+		if log.WriteEnabled() {
+			log.Write.Printf("writeDocumentInfoObject end: No info object present, offset=%d\n", ctx.Write.Offset)
+		}
 		return nil
 	}
 
-	log.Write.Printf("writeDocumentInfoObject: %s\n", *ctx.Info)
+	if log.WriteEnabled() {
+		log.Write.Printf("writeDocumentInfoObject: %s\n", *ctx.Info)
+	}
 
 	o := *ctx.Info
 
@@ -159,7 +178,9 @@ func writeDocumentInfoDict(ctx *model.Context) error {
 		return err
 	}
 
-	log.Write.Printf("*** writeDocumentInfoDict end: offset=%d ***\n", ctx.Write.Offset)
+	if log.WriteEnabled() {
+		log.Write.Printf("*** writeDocumentInfoDict end: offset=%d ***\n", ctx.Write.Offset)
+	}
 
 	return nil
 }

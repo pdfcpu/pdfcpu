@@ -33,9 +33,12 @@ import (
 
 // XRefTable validates a PDF cross reference table obeying the validation mode.
 func XRefTable(xRefTable *model.XRefTable) error {
-
-	log.Info.Println("validating")
-	log.Validate.Println("*** validateXRefTable begin ***")
+	if log.InfoEnabled() {
+		log.Info.Println("validating")
+	}
+	if log.ValidateEnabled() {
+		log.Validate.Println("*** validateXRefTable begin ***")
+	}
 
 	// Validate root object(aka the document catalog) and page tree.
 	err := validateRootObject(xRefTable)
@@ -57,7 +60,9 @@ func XRefTable(xRefTable *model.XRefTable) error {
 
 	xRefTable.Valid = true
 
-	log.Validate.Println("*** validateXRefTable end ***")
+	if log.ValidateEnabled() {
+		log.Validate.Println("*** validateXRefTable end ***")
+	}
 
 	return nil
 }
@@ -855,7 +860,9 @@ func logURIError(xRefTable *model.XRefTable, pages []int) {
 				default:
 					s = fmt.Sprintf("status=%s", resp)
 				}
-				log.CLI.Printf("Page %d: %s %s\n", page, uri, s)
+				if log.CLIEnabled() {
+					log.CLI.Printf("Page %d: %s %s\n", page, uri, s)
+				}
 			}
 		}
 	}
@@ -863,7 +870,9 @@ func logURIError(xRefTable *model.XRefTable, pages []int) {
 
 func checkForBrokenLinks(xRefTable *model.XRefTable) error {
 	var httpErr bool
-	log.CLI.Println("validating URIs..")
+	if log.CLIEnabled() {
+		log.CLI.Println("validating URIs..")
+	}
 
 	pages := []int{}
 	for i := range xRefTable.URIs {
@@ -877,7 +886,7 @@ func checkForBrokenLinks(xRefTable *model.XRefTable) error {
 
 	for _, page := range pages {
 		for uri := range xRefTable.URIs[page] {
-			if log.IsCLILoggerEnabled() {
+			if log.CLIEnabled() {
 				fmt.Printf(".")
 			}
 			_, err := url.ParseRequestURI(uri)
@@ -901,7 +910,7 @@ func checkForBrokenLinks(xRefTable *model.XRefTable) error {
 		}
 	}
 
-	if log.IsCLILoggerEnabled() {
+	if log.CLIEnabled() {
 		logURIError(xRefTable, pages)
 	}
 
@@ -914,7 +923,9 @@ func checkForBrokenLinks(xRefTable *model.XRefTable) error {
 
 func validateRootObject(xRefTable *model.XRefTable) error {
 
-	log.Validate.Println("*** validateRootObject begin ***")
+	if log.ValidateEnabled() {
+		log.Validate.Println("*** validateRootObject begin ***")
+	}
 
 	// => 7.7.2 Document Catalog
 
@@ -1019,7 +1030,9 @@ func validateRootObject(xRefTable *model.XRefTable) error {
 	}
 
 	if err == nil {
-		log.Validate.Println("*** validateRootObject end ***")
+		if log.ValidateEnabled() {
+			log.Validate.Println("*** validateRootObject end ***")
+		}
 	}
 
 	return err
