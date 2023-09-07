@@ -54,7 +54,7 @@ pdfcpu form export inFile [outFileJSON]
 Export a form created with pdfcpu to JSON:
 
 ```
-$ pdfcpu export english.pdf
+$ pdfcpu form export english.pdf
 writing out.json...
 
 $ cat out.json
