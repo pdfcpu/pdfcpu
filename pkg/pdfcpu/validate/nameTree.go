@@ -429,6 +429,9 @@ func validateEmbeddedFilesNameTreeValue(xRefTable *model.XRefTable, o types.Obje
 	// Value is a file specification for an embedded file stream.
 
 	// Version check
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V13
+	}
 	err := xRefTable.ValidateVersion("EmbeddedFilesNameTreeValue", sinceVersion)
 	if err != nil {
 		return err
