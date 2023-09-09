@@ -1921,6 +1921,7 @@ func CreateContext(xRefTable *model.XRefTable, conf *model.Configuration) *model
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
+	xRefTable.Conf = conf
 	xRefTable.ValidationMode = conf.ValidationMode
 	return &model.Context{
 		Configuration: conf,
