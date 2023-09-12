@@ -950,7 +950,11 @@ func validateExtGStateDictPart3(xRefTable *model.XRefTable, d types.Dict, dictNa
 	}
 
 	// TK, boolean, optional, since V1.4, text knockout flag.
-	_, err = validateBooleanEntry(xRefTable, d, dictName, "TK", OPTIONAL, model.V14, nil)
+	sinceVersion = model.V14
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V13
+	}
+	_, err = validateBooleanEntry(xRefTable, d, dictName, "TK", OPTIONAL, sinceVersion, nil)
 
 	return err
 }
