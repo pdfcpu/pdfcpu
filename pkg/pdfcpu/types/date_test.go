@@ -55,6 +55,9 @@ func doParseDateTimeFail(s string, t *testing.T) {
 
 func TestParseDateTime(t *testing.T) {
 
+	// (D:YYYYMMDDHHmmSSOHH'mm)
+	// O = -,+,Z
+
 	s := "D:2017"
 	doParseDateTimeOK(s, t)
 
@@ -80,13 +83,13 @@ func TestParseDateTime(t *testing.T) {
 	s = "D:20170430155901"
 	doParseDateTimeOK(s, t)
 
-	s = "D:20170430155901+06'59'"
+	s = "D:20170430155901+06'59"
 	doParseDateTimeOK(s, t)
 
 	s = "D:20170430155901Z00"
 	doParseDateTimeOK(s, t)
 
-	s = "D:20170430155901Z00'00'"
+	s = "D:20170430155901Z00'00"
 	doParseDateTimeOK(s, t)
 
 	s = "D:20210602180254-06"
@@ -101,10 +104,13 @@ func TestParseDateTime(t *testing.T) {
 	s = "D:20210515103719-02'00"
 	doParseDateTimeOK(s, t)
 
-	s = "D:20170430155901+66'A9'"
+	s = "D:20170430155901+66'A9"
 	doParseDateTimeFail(s, t)
 
 	s = "D:20201222164228Z'"
+	doParseDateTimeRelaxedOK(s, t)
+
+	s = "D:20230912144809Z'0"
 	doParseDateTimeRelaxedOK(s, t)
 
 	s = "20141117162446Z00'00'"

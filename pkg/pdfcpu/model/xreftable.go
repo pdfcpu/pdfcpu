@@ -649,8 +649,17 @@ func (xRefTable *XRefTable) NewFileSpecDict(f, uf, desc string, indRefStreamDict
 
 	d := types.NewDict()
 	d.InsertName("Type", "Filespec")
-	d.InsertString("F", f)
-	d.InsertString("UF", uf)
+
+	s, err := types.EscapeUTF16String(f)
+	if err != nil {
+		return nil, err
+	}
+	d.InsertString("F", *s)
+
+	if s, err = types.EscapeUTF16String(uf); err != nil {
+		return nil, err
+	}
+	d.InsertString("UF", *s)
 
 	efDict := types.NewDict()
 	efDict.Insert("F", indRefStreamDict)
@@ -658,7 +667,10 @@ func (xRefTable *XRefTable) NewFileSpecDict(f, uf, desc string, indRefStreamDict
 	d.Insert("EF", efDict)
 
 	if desc != "" {
-		d.InsertString("Desc", desc)
+		if s, err = types.EscapeUTF16String(desc); err != nil {
+			return nil, err
+		}
+		d.InsertString("Desc", *s)
 	}
 
 	// CI, optional, collection item dict, since V1.7

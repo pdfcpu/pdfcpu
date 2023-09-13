@@ -119,12 +119,18 @@ func parseTimezone(s string, relaxed bool) (h, m int, ok bool) {
 
 	// local time equal to UT.
 	// "YYYYMMDDHHmmSSZ" or
-	// "YYYYMMDDHHmmSSZ'" if relaxed
-	if o == 'Z' && (len(s) == 15 || (relaxed && len(s) == 16 && s[15] == '\'')) {
-		return 0, 0, true
+	// if relaxed
+	// 		"YYYYMMDDHHmmSSZ'"
+	// 		"YYYYMMDDHHmmSSZ'0"
+
+	if o == 'Z' {
+		t := s[15:]
+		if t == "" || relaxed && (t == "'" || t == "'0") {
+			return 0, 0, true
+		}
 	}
 
-	// HH'mm'
+	// HH'mm
 	s = s[15:]
 	if s[0] == '-' {
 		s = s[1:]
@@ -336,7 +342,7 @@ func digestPopularOutOfSpecDates(s string) (time.Time, bool) {
 // DateTime decodes s into a time.Time.
 func DateTime(s string, relaxed bool) (time.Time, bool) {
 	// 7.9.4 Dates
-	// (D:YYYYMMDDHHmmSSOHH'mm')
+	// (D:YYYYMMDDHHmmSSOHH'mm)
 
 	var d time.Time
 
