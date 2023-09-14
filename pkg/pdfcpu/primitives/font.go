@@ -161,8 +161,8 @@ func FormFontNameAndLangForID(xRefTable *model.XRefTable, indRef types.IndirectR
 	return fName, fLang, nil
 }
 
-// FontResDict returns form dict's font resource dict.
-func FontResDict(xRefTable *model.XRefTable) (types.Dict, error) {
+// FormFontResDict returns form dict's font resource dict.
+func FormFontResDict(xRefTable *model.XRefTable) (types.Dict, error) {
 
 	d := xRefTable.Form
 	if len(d) == 0 {
@@ -188,7 +188,7 @@ func FontResDict(xRefTable *model.XRefTable) (types.Dict, error) {
 }
 
 func formFontIndRef(xRefTable *model.XRefTable, fontID string) (*types.IndirectRef, error) {
-	d, err := FontResDict(xRefTable)
+	d, err := FormFontResDict(xRefTable)
 	if err != nil {
 		return nil, err
 	}

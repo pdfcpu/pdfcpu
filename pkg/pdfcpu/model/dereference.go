@@ -280,6 +280,49 @@ func (xRefTable *XRefTable) DereferenceDict(o types.Object) (types.Dict, error) 
 	return d, nil
 }
 
+// DereferenceFontDict returns the font dict referenced by indRef.
+func (xRefTable *XRefTable) DereferenceFontDict(indRef types.IndirectRef) (types.Dict, error) {
+	d, err := xRefTable.DereferenceDict(indRef)
+	if err != nil {
+		return nil, err
+	}
+	if d == nil {
+		return nil, nil
+	}
+
+	if d.Type() == nil {
+		return nil, errors.Errorf("pdfcpu: DereferenceFontDict: missing dict type %s\n", indRef)
+	}
+
+	if *d.Type() != "Font" {
+		return nil, errors.Errorf("pdfcpu: DereferenceFontDict: expected Type=Font, unexpected Type: %s", *d.Type())
+	}
+
+	return d, nil
+}
+
+// DereferencePageNodeDict returns the page node dict referenced by indRef.
+func (xRefTable *XRefTable) DereferencePageNodeDict(indRef types.IndirectRef) (types.Dict, error) {
+	d, err := xRefTable.DereferenceDict(indRef)
+	if err != nil {
+		return nil, err
+	}
+	if d == nil {
+		return nil, nil
+	}
+
+	dictType := d.Type()
+	if dictType == nil {
+		return nil, errors.New("pdfcpu: DereferencePageNodeDict: Missing dict type")
+	}
+
+	if *dictType != "Pages" && *dictType != "Page" {
+		return nil, errors.Errorf("pdfcpu: DereferencePageNodeDict: unexpected Type: %s", *dictType)
+	}
+
+	return d, nil
+}
+
 func (xRefTable *XRefTable) dereferenceDestArray(o types.Object) (types.Array, error) {
 	o, err := xRefTable.Dereference(o)
 	if err != nil || o == nil {

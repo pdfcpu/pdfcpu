@@ -337,6 +337,14 @@ func (xRefTable *XRefTable) FindTableEntryForIndRef(ir *types.IndirectRef) (*XRe
 	return xRefTable.FindTableEntry(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
 }
 
+// IncrementRefCount increments the number of references for the object pointed to by indRef.
+func (xRefTable *XRefTable) IncrementRefCount(indRef *types.IndirectRef) {
+	entry, ok := xRefTable.FindTableEntryForIndRef(indRef)
+	if ok {
+		entry.RefCount++
+	}
+}
+
 // InsertNew adds given xRefTableEntry at next new objNumber into the cross reference table.
 // Only to be called once an xRefTable has been generated completely and all trailer dicts have been processed.
 // xRefTable.Size is the size entry of the first trailer dict processed.
@@ -904,7 +912,7 @@ func (xRefTable *XRefTable) SetValid(ir types.IndirectRef) error {
 	return nil
 }
 
-// DereferenceStreamDict resolves stream dictionary objects.
+// DereferenceStreamDict resolves a stream dictionary object.
 func (xRefTable *XRefTable) DereferenceStreamDict(o types.Object) (*types.StreamDict, bool, error) {
 	// TODO Check if we still need the bool return value
 	ir, ok := o.(types.IndirectRef)
@@ -933,6 +941,28 @@ func (xRefTable *XRefTable) DereferenceStreamDict(o types.Object) (*types.Stream
 	}
 
 	return &sd, ev, nil
+}
+
+// DereferenceXObjectDict resolves an XObject.
+func (xRefTable *XRefTable) DereferenceXObjectDict(indRef types.IndirectRef) (*types.StreamDict, error) {
+	sd, _, err := xRefTable.DereferenceStreamDict(indRef)
+	if err != nil {
+		return nil, err
+	}
+	if sd == nil {
+		return nil, nil
+	}
+
+	subType := sd.Dict.Subtype()
+	if subType == nil {
+		return nil, errors.Errorf("pdfcpu: DereferenceXObjectDict: missing stream dict Subtype %s\n", indRef)
+	}
+
+	if *subType != "Image" && *subType != "Form" {
+		return nil, errors.Errorf("pdfcpu: DereferenceXObjectDict: unexpected stream dict Subtype %s\n", *subType)
+	}
+
+	return sd, nil
 }
 
 // Catalog returns a pointer to the root object / catalog.

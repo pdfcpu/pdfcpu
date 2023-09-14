@@ -2689,10 +2689,7 @@ func processDictRefCounts(xRefTable *model.XRefTable, d types.Dict) {
 	for _, e := range d {
 		switch o1 := e.(type) {
 		case types.IndirectRef:
-			entry, ok := xRefTable.FindTableEntryForIndRef(&o1)
-			if ok {
-				entry.RefCount++
-			}
+			xRefTable.IncrementRefCount(&o1)
 		case types.Dict:
 			processRefCounts(xRefTable, o1)
 		case types.Array:
@@ -2705,10 +2702,7 @@ func processArrayRefCounts(xRefTable *model.XRefTable, a types.Array) {
 	for _, e := range a {
 		switch o1 := e.(type) {
 		case types.IndirectRef:
-			entry, ok := xRefTable.FindTableEntryForIndRef(&o1)
-			if ok {
-				entry.RefCount++
-			}
+			xRefTable.IncrementRefCount(&o1)
 		case types.Dict:
 			processRefCounts(xRefTable, o1)
 		case types.Array:

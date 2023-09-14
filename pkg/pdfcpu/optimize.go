@@ -54,10 +54,7 @@ func optimizeContentStreamUsage(ctx *model.Context, sd *types.StreamDict, objNr 
 		sd1 := f[objNr]
 		if bytes.Equal(sd.Raw, sd1.Raw) {
 			ir := types.NewIndirectRef(objNr, 0)
-			entry, ok := ctx.FindTableEntryForIndRef(ir)
-			if ok {
-				entry.RefCount++
-			}
+			ctx.IncrementRefCount(ir)
 			return ir, nil
 		}
 	}
@@ -252,6 +249,22 @@ func pageFonts(ctx *model.Context, pageNumber int) types.IntSet {
 	return pageFonts
 }
 
+func registerFontDict(ctx *model.Context, fontDict types.Dict, fName, rName, prefix string, objNr int) {
+	if log.OptimizeEnabled() {
+		log.Optimize.Printf("optimizeFontResourcesDict: adding new font %s obj#%d\n", fName, objNr)
+	}
+
+	fontObjNrs, found := ctx.Optimize.Fonts[fName]
+	if found {
+		if log.OptimizeEnabled() {
+			log.Optimize.Printf("optimizeFontResourcesDict: appending %d to %s\n", objNr, fName)
+		}
+		ctx.Optimize.Fonts[fName] = append(fontObjNrs, objNr)
+	} else {
+		ctx.Optimize.Fonts[fName] = []int{objNr}
+	}
+}
+
 // Get rid of redundant fonts for given fontResources dictionary.
 func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNumber, pageObjNumber int) error {
 	if log.OptimizeEnabled() {
@@ -268,24 +281,21 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNumber,
 			continue
 		}
 
-		if log.OptimizeEnabled() {
-			log.Optimize.Printf("optimizeFontResourcesDict: processing font: %s, %s\n", rName, indRef)
-		}
 		objNr := int(indRef.ObjectNumber)
+
 		if log.OptimizeEnabled() {
-			log.Optimize.Printf("optimizeFontResourcesDict: objectNumber = %d\n", objNr)
+			log.Optimize.Printf("optimizeFontResourcesDict: processing font: %s, objj#=%d\n", rName, objNr)
 		}
 
 		if _, found := ctx.Optimize.FontObjects[objNr]; found {
 			// This font has already been registered.
-			//logInfoOptimizePrintf("optimizeFontResourcesDict: Fontobject %d already registered\n", objectNumber)
+			//log.Optimize.Printf("optimizeFontResourcesDict: Fontobject %d already registered\n", objectNumber)
 			pageFonts[objNr] = true
 			continue
 		}
 
 		// We are dealing with a new font.
-		// Dereference the font dict.
-		fontDict, err := ctx.DereferenceDict(indRef)
+		fontDict, err := ctx.DereferenceFontDict(indRef)
 		if err != nil {
 			return err
 		}
@@ -297,19 +307,12 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNumber,
 			log.Optimize.Printf("optimizeFontResourcesDict: fontDict: %s\n", fontDict)
 		}
 
-		if fontDict.Type() == nil {
-			return errors.Errorf("pdfcpu: optimizeFontResourcesDict: missing dict type %s\n", v)
-		}
-
-		if *fontDict.Type() != "Font" {
-			return errors.Errorf("pdfcpu: optimizeFontResourcesDict: expected Type=Font, unexpected Type: %s", *fontDict.Type())
-		}
-
 		// Get the unique font name.
 		prefix, fName, err := pdffont.Name(ctx.XRefTable, fontDict, objNr)
 		if err != nil {
 			return err
 		}
+
 		if log.OptimizeEnabled() {
 			log.Optimize.Printf("optimizeFontResourcesDict: baseFont: prefix=%s name=%s\n", prefix, fName)
 		}
@@ -325,28 +328,11 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNumber,
 			// Update font resource dict so that rName points to the original.
 			ir := types.NewIndirectRef(*originalObjNr, 0)
 			rDict[rName] = *ir
-			// Increase refCount for *originalObjNr
-			entry, ok := ctx.FindTableEntryForIndRef(ir)
-			if ok {
-				entry.RefCount++
-			}
+			ctx.IncrementRefCount(ir)
 			continue
 		}
 
-		// Register new font dict.
-		if log.OptimizeEnabled() {
-			log.Optimize.Printf("optimizeFontResourcesDict: adding new font %s obj#%d\n", fName, objNr)
-		}
-
-		fontObjNrs, found := ctx.Optimize.Fonts[fName]
-		if found {
-			if log.OptimizeEnabled() {
-				log.Optimize.Printf("optimizeFontResourcesDict: appending %d to %s\n", objNr, fName)
-			}
-			ctx.Optimize.Fonts[fName] = append(fontObjNrs, objNr)
-		} else {
-			ctx.Optimize.Fonts[fName] = []int{objNr}
-		}
+		registerFontDict(ctx, fontDict, fName, rName, prefix, objNr)
 
 		ctx.Optimize.FontObjects[objNr] =
 			&model.FontObject{
@@ -357,7 +343,6 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNumber,
 			}
 
 		pageFonts[objNr] = true
-
 	}
 
 	if log.OptimizeEnabled() {
@@ -432,11 +417,7 @@ func optimizeXObjectImage(ctx *model.Context, osd *types.StreamDict, rName strin
 		// We have identified a redundant image!
 		// Update xobject resource dict so that rName points to the original.
 		ir := types.NewIndirectRef(*originalObjNr, 0)
-		// Increase refCount for *originalObjNr
-		entry, ok := ctx.FindTableEntryForIndRef(ir)
-		if ok {
-			entry.RefCount++
-		}
+		ctx.IncrementRefCount(ir)
 		return ir, nil
 	}
 
@@ -486,10 +467,7 @@ func optimizeXObjectForm(ctx *model.Context, sd *types.StreamDict, rName string,
 		}
 		if ok {
 			ir := types.NewIndirectRef(objNr, 0)
-			entry, ok := ctx.FindTableEntryForIndRef(ir)
-			if ok {
-				entry.RefCount++
-			}
+			ctx.IncrementRefCount(ir)
 			return ir, nil
 		}
 	}
@@ -553,6 +531,7 @@ func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNumb
 	if log.OptimizeEnabled() {
 		log.Optimize.Printf("optimizeXObjectResourcesDict page#%dbegin: %s\n", pageObjNumber, rDict)
 	}
+
 	pageImages := pageImages(ctx, pageNumber)
 
 	for rName, v := range rDict {
@@ -567,32 +546,26 @@ func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNumb
 		}
 		vis = append(vis, indRef)
 
-		if log.OptimizeEnabled() {
-			log.Optimize.Printf("optimizeXObjectResourcesDict: processing xobject: %s, %s\n", rName, indRef)
-		}
 		objNr := int(indRef.ObjectNumber)
+
 		if log.OptimizeEnabled() {
-			log.Optimize.Printf("optimizeXObjectResourcesDict: objectNumber = %d\n", objNr)
+			log.Optimize.Printf("optimizeXObjectResourcesDict: processing XObject: %s, obj#=%d\n", rName, objNr)
 		}
 
-		osd, _, err := ctx.DereferenceStreamDict(indRef)
+		sd, err := ctx.DereferenceXObjectDict(indRef)
 		if err != nil {
 			return err
 		}
-		if osd == nil {
+		if sd == nil {
 			continue
 		}
 
 		if log.OptimizeEnabled() {
-			log.Optimize.Printf("optimizeXObjectResourcesDict: dereferenced obj:%d\n%s", objNr, osd)
+			log.Optimize.Printf("optimizeXObjectResourcesDict: dereferenced obj:%d\n%s", objNr, sd)
 		}
 
-		if osd.Dict.Subtype() == nil {
-			return errors.Errorf("pdfcpu: optimizeXObjectResourcesDict: missing stream dict Subtype %s\n", v)
-		}
-
-		if *osd.Dict.Subtype() == "Image" {
-			ir, err := optimizeXObjectImage(ctx, osd, rName, objNr, pageNumber, pageImages)
+		if *sd.Dict.Subtype() == "Image" {
+			ir, err := optimizeXObjectImage(ctx, sd, rName, objNr, pageNumber, pageImages)
 			if err != nil {
 				return err
 			}
@@ -602,18 +575,13 @@ func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNumb
 			continue
 		}
 
-		if *osd.Subtype() == "Form" {
-
-			if err := optimizeForm(ctx, osd, rName, rDict, objNr, pageNumber, pageObjNumber, vis); err != nil {
+		if *sd.Subtype() == "Form" {
+			if err := optimizeForm(ctx, sd, rName, rDict, objNr, pageNumber, pageObjNumber, vis); err != nil {
 				return err
 			}
-
 			continue
 		}
 
-		if log.OptimizeEnabled() {
-			log.Optimize.Printf("optimizeXObjectResourcesDict: unexpected stream dict Subtype %s\n", *osd.Dict.Subtype())
-		}
 	}
 
 	if log.OptimizeEnabled() {
@@ -721,18 +689,14 @@ func parseResourcesDict(ctx *model.Context, pageDict types.Dict, pageNumber, pag
 // Iterate over all pages and optimize resources.
 func parsePagesDict(ctx *model.Context, pagesDict types.Dict, pageNumber int) (int, error) {
 	// TODO Integrate resource consolidation based on content stream requirements.
-	if log.OptimizeEnabled() {
-		log.Optimize.Printf("parsePagesDict begin (next page=%d): %s\n", pageNumber+1, pagesDict)
-	}
 
-	// Get number of pages of this PDF file.
 	count, found := pagesDict.Find("Count")
 	if !found {
 		return pageNumber, errors.New("pdfcpu: parsePagesDict: missing Count")
 	}
 
 	if log.OptimizeEnabled() {
-		log.Optimize.Printf("parsePagesDict: This page node has %d pages\n", int(count.(types.Integer)))
+		log.Optimize.Printf("parsePagesDict begin (next page=%d has %s pages): %s\n", pageNumber+1, count.(types.Integer), pagesDict)
 	}
 
 	ctx.Optimize.Cache = map[int]bool{}
@@ -742,6 +706,7 @@ func parsePagesDict(ctx *model.Context, pagesDict types.Dict, pageNumber int) (i
 	if !found {
 		return pageNumber, errors.New("pdfcpu: corrupt \"Kids\" entry")
 	}
+
 	kids, err := ctx.DereferenceArray(o)
 	if err != nil || kids == nil {
 		return pageNumber, errors.New("pdfcpu: corrupt \"Kids\" entry")
@@ -751,26 +716,24 @@ func parsePagesDict(ctx *model.Context, pagesDict types.Dict, pageNumber int) (i
 
 		// Dereference next page node dict.
 		ir, _ := v.(types.IndirectRef)
+
 		if log.OptimizeEnabled() {
 			log.Optimize.Printf("parsePagesDict PageNode: %s\n", ir)
 		}
-		o, err := ctx.Dereference(ir)
+
+		d, err := ctx.DereferencePageNodeDict(ir)
 		if err != nil {
 			return 0, errors.Wrap(err, "parsePagesDict: can't locate Pagedict or Pagesdict")
 		}
 
-		pageNodeDict := o.(types.Dict)
-		dictType := pageNodeDict.Type()
-		if dictType == nil {
-			return 0, errors.New("pdfcpu: parsePagesDict: Missing dict type")
-		}
+		dictType := d.Type()
 
-		// Note: Pages may contain a to be inherited ResourcesDict.
+		// Note: Resource dicts may be inherited.
 
 		if *dictType == "Pages" {
 
 			// Recurse over pagetree and optimize resources.
-			pageNumber, err = parsePagesDict(ctx, pageNodeDict, pageNumber)
+			pageNumber, err = parsePagesDict(ctx, d, pageNumber)
 			if err != nil {
 				return 0, err
 			}
@@ -778,22 +741,18 @@ func parsePagesDict(ctx *model.Context, pagesDict types.Dict, pageNumber int) (i
 			continue
 		}
 
-		if *dictType != "Page" {
-			return 0, errors.Errorf("pdfcpu: parsePagesDict: Unexpected dict type: %s\n", *dictType)
-		}
-
 		// Process page dict.
 
-		if err = optimizePageContent(ctx, pageNodeDict, int(ir.ObjectNumber)); err != nil {
+		if err = optimizePageContent(ctx, d, int(ir.ObjectNumber)); err != nil {
 			return 0, err
 		}
 
-		if err := ctx.DeleteDictEntry(pageNodeDict, "PieceInfo"); err != nil {
+		if err := ctx.DeleteDictEntry(d, "PieceInfo"); err != nil {
 			return 0, err
 		}
 
 		// Parse and optimize resource dict for one page.
-		if err = parseResourcesDict(ctx, pageNodeDict, pageNumber, int(ir.ObjectNumber)); err != nil {
+		if err = parseResourcesDict(ctx, d, pageNumber, int(ir.ObjectNumber)); err != nil {
 			return 0, err
 		}
 
@@ -1394,7 +1353,7 @@ func fixReferencesToFreeObjects(ctx *model.Context) error {
 
 func cacheFormFonts(ctx *model.Context) error {
 
-	d, err := primitives.FontResDict(ctx.XRefTable)
+	d, err := primitives.FormFontResDict(ctx.XRefTable)
 	if err != nil {
 		return err
 	}
@@ -1410,12 +1369,14 @@ func cacheFormFonts(ctx *model.Context) error {
 		if log.OptimizeEnabled() {
 			log.Optimize.Printf("optimizeFontResourcesDict: processing font: %s, %s\n", rName, indRef)
 		}
+
 		objNr := int(indRef.ObjectNumber)
+
 		if log.OptimizeEnabled() {
 			log.Optimize.Printf("optimizeFontResourcesDict: objectNumber = %d\n", objNr)
 		}
 
-		fontDict, err := ctx.DereferenceDict(indRef)
+		fontDict, err := ctx.DereferenceFontDict(indRef)
 		if err != nil {
 			return err
 		}
@@ -1425,14 +1386,6 @@ func cacheFormFonts(ctx *model.Context) error {
 
 		if log.OptimizeEnabled() {
 			log.Optimize.Printf("optimizeFontResourcesDict: fontDict: %s\n", fontDict)
-		}
-
-		if fontDict.Type() == nil {
-			return errors.Errorf("pdfcpu: optimizeFontResourcesDict: missing dict type %s\n", v)
-		}
-
-		if *fontDict.Type() != "Font" {
-			return errors.Errorf("pdfcpu: optimizeFontResourcesDict: expected Type=Font, unexpected Type: %s", *fontDict.Type())
 		}
 
 		// Get the unique font name.
@@ -1445,20 +1398,7 @@ func cacheFormFonts(ctx *model.Context) error {
 			log.Optimize.Printf("optimizeFontResourcesDict: baseFont: prefix=%s name=%s\n", prefix, fName)
 		}
 
-		// Register new font dict.
-		if log.OptimizeEnabled() {
-			log.Optimize.Printf("optimizeFontResourcesDict: adding new font %s obj#%d\n", fName, objNr)
-		}
-
-		fontObjNrs, found := ctx.Optimize.Fonts[fName]
-		if found {
-			if log.OptimizeEnabled() {
-				log.Optimize.Printf("optimizeFontResourcesDict: appending %d to %s\n", objNr, fName)
-			}
-			ctx.Optimize.Fonts[fName] = append(fontObjNrs, objNr)
-		} else {
-			ctx.Optimize.Fonts[fName] = []int{objNr}
-		}
+		registerFontDict(ctx, fontDict, fName, rName, prefix, objNr)
 
 		ctx.Optimize.FormFontObjects[objNr] =
 			&model.FontObject{
