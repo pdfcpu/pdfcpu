@@ -78,9 +78,7 @@ func Poster(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, c
 	}
 
 	if len(pages) == 0 {
-		if log.CLIEnabled() {
-			log.CLI.Println("aborted: nothing to cut!")
-		}
+		log.CLI.Println("aborted: nothing to cut!")
 		return nil
 	}
 
@@ -94,9 +92,8 @@ func Poster(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, c
 		}
 
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, i))
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s\n", outFile)
-		}
+		logWritingTo(outFile)
+
 		if err := WriteContextFile(ctxDest, outFile); err != nil {
 			return err
 		}
@@ -249,9 +246,7 @@ func Cut(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut 
 	}
 
 	if len(pages) == 0 {
-		if log.CLIEnabled() {
-			log.CLI.Println("aborted: nothing to cut!")
-		}
+		log.CLI.Println("aborted: nothing to cut!")
 		return nil
 	}
 
@@ -265,9 +260,8 @@ func Cut(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut 
 		}
 
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, i))
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s\n", outFile)
-		}
+		logWritingTo(outFile)
+
 		if err := WriteContextFile(ctxDest, outFile); err != nil {
 			return err
 		}

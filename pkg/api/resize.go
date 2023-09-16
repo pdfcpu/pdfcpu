@@ -74,13 +74,9 @@ func ResizeFile(inFile, outFile string, selectedPages []string, resize *model.Re
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s...\n", outFile)
-		}
+		logWritingTo(outFile)
 	} else {
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s...\n", inFile)
-		}
+		logWritingTo(inFile)
 	}
 
 	var (

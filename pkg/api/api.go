@@ -82,6 +82,9 @@ func ValidateContext(ctx *model.Context) error {
 
 // OptimizeContext optimizes ctx.
 func OptimizeContext(ctx *model.Context) error {
+	if log.CLIEnabled() {
+		log.CLI.Println("optimizing...")
+	}
 	return pdfcpu.OptimizeXRefTable(ctx)
 }
 
@@ -160,6 +163,12 @@ func logOperationStats(ctx *model.Context, op string, durRead, durVal, durOpt, d
 	if ctx.Read.FileSize > 0 {
 		ctx.Read.LogStats(ctx.Optimized)
 		ctx.Write.LogStats()
+	}
+}
+
+func logWritingTo(s string) {
+	if log.CLIEnabled() {
+		log.CLI.Printf("writing %s...\n", s)
 	}
 }
 

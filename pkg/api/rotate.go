@@ -90,13 +90,9 @@ func RotateFile(inFile, outFile string, rotation int, selectedPages []string, co
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s...\n", outFile)
-		}
+		logWritingTo(outFile)
 	} else {
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s...\n", inFile)
-		}
+		logWritingTo(inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
 		f1.Close()

@@ -157,17 +157,12 @@ func AddAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages []string, a
 
 // AddAnnotationsFile adds annotations for selected pages to a PDF context read from inFile and writes the result to outFile.
 func AddAnnotationsFile(inFile, outFile string, selectedPages []string, ar model.AnnotationRenderer, conf *model.Configuration, incr bool) (err error) {
-
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s...\n", outFile)
-		}
+		logWritingTo(outFile)
 	} else {
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s...\n", inFile)
-		}
+		logWritingTo(inFile)
 		if incr {
 			f, err := os.OpenFile(inFile, os.O_RDWR, 0644)
 			if err != nil {
@@ -308,13 +303,9 @@ func AddAnnotationsMapFile(inFile, outFile string, m map[int][]model.AnnotationR
 
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s...\n", outFile)
-		}
+		logWritingTo(outFile)
 	} else {
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s...\n", inFile)
-		}
+		logWritingTo(inFile)
 		if incr {
 			f, err := os.OpenFile(inFile, os.O_RDWR, 0644)
 			if err != nil {
@@ -464,19 +455,14 @@ func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, idsAndT
 // RemoveAnnotationsFile removes annotations for selected pages by id and object number
 // from a PDF context read from inFile and writes the result to outFile.
 func RemoveAnnotationsFile(inFile, outFile string, selectedPages, idsAndTypes []string, objNrs []int, conf *model.Configuration, incr bool) (err error) {
-
 	var f1, f2 *os.File
 
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s...\n", outFile)
-		}
+		logWritingTo(outFile)
 	} else {
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s...\n", inFile)
-		}
+		logWritingTo(inFile)
 		if incr {
 			if f1, err = os.OpenFile(inFile, os.O_RDWR, 0644); err != nil {
 				return err

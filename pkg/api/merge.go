@@ -42,7 +42,6 @@ func appendTo(rs io.ReadSeeker, fName string, ctxDest *model.Context) error {
 
 // MergeRaw merges a sequence of PDF streams and writes the result to w.
 func MergeRaw(rsc []io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
-
 	if rsc == nil {
 		return errors.New("pdfcpu: MergeRaw: missing rsc")
 	}
@@ -78,8 +77,24 @@ func MergeRaw(rsc []io.ReadSeeker, w io.Writer, conf *model.Configuration) error
 	return WriteContext(ctxDest, w)
 }
 
-func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configuration) error {
+func prepDestContext(destFile string, rs io.ReadSeeker, conf *model.Configuration) (*model.Context, error) {
+	ctxDest, _, _, err := readAndValidate(rs, conf, time.Now())
+	if err != nil {
+		return nil, err
+	}
 
+	if conf.CreateBookmarks {
+		if err := pdfcpu.EnsureOutlines(ctxDest, filepath.Base(destFile), conf.Cmd == model.MERGEAPPEND); err != nil {
+			return nil, err
+		}
+	}
+
+	ctxDest.EnsureVersionForWriting()
+
+	return ctxDest, nil
+}
+
+func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configuration) error {
 	if w == nil {
 		return errors.New("pdfcpu: Merge: Please provide w")
 	}
@@ -110,18 +125,10 @@ func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configura
 		}
 	}
 
-	ctxDest, _, _, err := readAndValidate(f, conf, time.Now())
+	ctxDest, err := prepDestContext(destFile, f, conf)
 	if err != nil {
 		return err
 	}
-
-	if conf.CreateBookmarks {
-		if err := pdfcpu.EnsureOutlines(ctxDest, filepath.Base(destFile), conf.Cmd == model.MERGEAPPEND); err != nil {
-			return err
-		}
-	}
-
-	ctxDest.EnsureVersionForWriting()
 
 	for _, fName := range inFiles {
 		if err := func() error {
@@ -145,9 +152,6 @@ func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configura
 		}
 	}
 
-	if log.CLIEnabled() {
-		log.CLI.Println("optimizing...")
-	}
 	if err := OptimizeContext(ctxDest); err != nil {
 		return err
 	}
@@ -156,7 +160,6 @@ func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configura
 }
 
 func MergeCreateFile(inFiles []string, outFile string, conf *model.Configuration) (err error) {
-
 	f, err := os.Create(outFile)
 	if err != nil {
 		return err
@@ -169,14 +172,11 @@ func MergeCreateFile(inFiles []string, outFile string, conf *model.Configuration
 		}
 	}()
 
-	if log.CLIEnabled() {
-		log.CLI.Printf("writing %s...\n", outFile)
-	}
+	logWritingTo(outFile)
 	return Merge("", inFiles, f, conf)
 }
 
 func MergeAppendFile(inFiles []string, outFile string, conf *model.Configuration) (err error) {
-
 	tmpFile := outFile
 	overWrite := false
 	destFile := ""
@@ -189,9 +189,7 @@ func MergeAppendFile(inFiles []string, outFile string, conf *model.Configuration
 			log.CLI.Printf("appending to %s...\n", outFile)
 		}
 	} else {
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s...\n", outFile)
-		}
+		logWritingTo(outFile)
 	}
 
 	f, err := os.Create(tmpFile)

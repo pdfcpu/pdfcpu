@@ -24,17 +24,13 @@ import (
 )
 
 func validatePropertiesDict(xRefTable *model.XRefTable, o types.Object) error {
-
 	// see 14.6.2
 	// a dictionary containing private information meaningful to the conforming writer creating marked content.
-
 	// anything possible +
-
 	// empty dict ok
 	// Optional Metadata entry ok
 	// Optional Contents entry ok
 	// Optional Resources entry ok
-
 	// Optional content group /OCG see 8.11.2
 	// Optional content membership dict. /OCMD see 8.11.2.2
 	// Optional MCID integer entry
@@ -43,53 +39,47 @@ func validatePropertiesDict(xRefTable *model.XRefTable, o types.Object) error {
 	// Optional E see since 1.4 14.9.5
 	// Optional Lang string RFC 3066 see 14.9.2
 
+	logProp := func(qual, k string, v types.Object) {
+		if log.ValidateEnabled() {
+			log.Validate.Printf("validatePropertiesDict: %s key=%s val=%v\n", qual, k, v)
+		}
+	}
+
 	d, err := xRefTable.DereferenceDict(o)
 	if err != nil || d == nil {
 		return err
 	}
 
-	err = validateMetadata(xRefTable, d, OPTIONAL, model.V14)
-	if err != nil {
+	if err = validateMetadata(xRefTable, d, OPTIONAL, model.V14); err != nil {
 		return err
 	}
 
 	for key, val := range d {
 
-		if log.ValidateEnabled() {
-			log.Validate.Printf("validatePropertiesDict: key=%s val=%v\n", key, val)
-		}
-
 		switch key {
 
 		case "Metadata":
-			if log.ValidateEnabled() {
-				log.Validate.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
-			}
-			// see above
+			logProp("known", key, val)
 
 		case "Contents":
-			if log.ValidateEnabled() {
-				log.Validate.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
-			}
-			_, err = validateStreamDict(xRefTable, val)
-			if err != nil {
+			logProp("known", key, val)
+			if _, err = validateStreamDict(xRefTable, val); err != nil {
 				return err
 			}
 
 		case "Resources":
-			if log.ValidateEnabled() {
-				log.Validate.Printf("validatePropertiesDict: recognized key \"%s\"\n", key)
-			}
-			_, err = validateResourceDict(xRefTable, val)
-			if err != nil {
+			logProp("known", key, val)
+			if _, err = validateResourceDict(xRefTable, val); err != nil {
 				return err
 			}
 
 		case "OCG":
-			return errors.Errorf("validatePropertiesDict: recognized unsupported key \"%s\"\n", key)
+			logProp("unsupported", key, val)
+			return errors.Errorf("validatePropertiesDict: unsupported key \"%s\"\n", key)
 
 		case "OCMD":
-			return errors.Errorf("validatePropertiesDict: recognized unsupported key \"%s\"\n", key)
+			logProp("unsupported", key, val)
+			return errors.Errorf("validatePropertiesDict: unsupported key \"%s\"\n", key)
 
 		//case "MCID": -> default
 		//case "Alt": -> default
@@ -98,11 +88,8 @@ func validatePropertiesDict(xRefTable *model.XRefTable, o types.Object) error {
 		//case "Lang": -> default
 
 		default:
-			if log.ValidateEnabled() {
-				log.Validate.Printf("validatePropertiesDict: processing unrecognized key \"%s\"\n", key)
-			}
-			_, err = xRefTable.Dereference(val)
-			if err != nil {
+			logProp("unknown", key, val)
+			if _, err = xRefTable.Dereference(val); err != nil {
 				return err
 			}
 		}
@@ -113,10 +100,7 @@ func validatePropertiesDict(xRefTable *model.XRefTable, o types.Object) error {
 }
 
 func validatePropertiesResourceDict(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
-
-	// Version check
-	err := xRefTable.ValidateVersion("PropertiesResourceDict", sinceVersion)
-	if err != nil {
+	if err := xRefTable.ValidateVersion("PropertiesResourceDict", sinceVersion); err != nil {
 		return err
 	}
 
@@ -127,10 +111,7 @@ func validatePropertiesResourceDict(xRefTable *model.XRefTable, o types.Object, 
 
 	// Iterate over properties resource dict
 	for _, o := range d {
-
-		// Process propDict
-		err = validatePropertiesDict(xRefTable, o)
-		if err != nil {
+		if err = validatePropertiesDict(xRefTable, o); err != nil {
 			return err
 		}
 	}

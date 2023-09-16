@@ -260,7 +260,7 @@ func (ib *ImageBox) checkForExistingImage(sd *types.StreamDict, w, h int) (*type
 	return nil, nil
 }
 
-func (ib *ImageBox) foo() (io.ReadCloser, error) {
+func (ib *ImageBox) resource() (io.ReadCloser, error) {
 	pdf := ib.pdf
 	var f io.ReadCloser
 	if strings.HasPrefix(ib.Src, "http") {
@@ -297,7 +297,7 @@ func (ib *ImageBox) foo() (io.ReadCloser, error) {
 
 func (ib *ImageBox) imageResource(pageImages, images model.ImageMap, pageNr int) (*model.ImageResource, error) {
 
-	f, err := ib.foo()
+	f, err := ib.resource()
 	if err != nil || f == nil {
 		return nil, err
 	}

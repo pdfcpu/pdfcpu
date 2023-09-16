@@ -95,13 +95,9 @@ func AddWatermarksMapFile(inFile, outFile string, m map[int]*model.Watermark, co
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s...\n", outFile)
-		}
+		logWritingTo(outFile)
 	} else {
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s...\n", inFile)
-		}
+		logWritingTo(inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
 		f1.Close()
@@ -193,13 +189,9 @@ func AddWatermarksSliceMapFile(inFile, outFile string, m map[int][]*model.Waterm
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s...\n", outFile)
-		}
+		logWritingTo(outFile)
 	} else {
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s...\n", inFile)
-		}
+		logWritingTo(inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
 		f1.Close()
@@ -300,13 +292,9 @@ func AddWatermarksFile(inFile, outFile string, selectedPages []string, wm *model
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s...\n", outFile)
-		}
+		logWritingTo(outFile)
 	} else {
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s...\n", inFile)
-		}
+		logWritingTo(inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
 		f1.Close()
@@ -402,13 +390,9 @@ func RemoveWatermarksFile(inFile, outFile string, selectedPages []string, conf *
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s...\n", outFile)
-		}
+		logWritingTo(outFile)
 	} else {
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s...\n", inFile)
-		}
+		logWritingTo(inFile)
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
 		f1.Close()

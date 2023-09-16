@@ -140,7 +140,6 @@ func handleSuffix(v string, negated bool, pageCount int, selectedPages types.Int
 }
 
 func handleSpecificPageOrLastXPages(s string, negated bool, pageCount int, selectedPages types.IntSet) error {
-
 	// l
 	if s == "l" {
 		selectedPages[pageCount] = !negated
@@ -489,7 +488,6 @@ func handleSuffixForCollection(v string, negated bool, pageCount int, cp *[]int)
 }
 
 func handleSpecificPageOrLastXPagesForCollection(s string, negated bool, pageCount int, cp *[]int) error {
-
 	// l
 	if s == "l" {
 		processPageForCollection(cp, negated, pageCount)

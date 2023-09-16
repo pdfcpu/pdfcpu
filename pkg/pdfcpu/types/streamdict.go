@@ -18,7 +18,6 @@ package types
 
 import (
 	"bytes"
-	"encoding/hex"
 	"fmt"
 	"io"
 
@@ -238,9 +237,7 @@ func (sd *StreamDict) Decode() error {
 	// No filter or sole filter DTC && !CMYK or JPX - nothing to decode.
 	if fpl == nil || len(fpl) == 1 && ((fpl[0].Name == filter.DCT && sd.CSComponents != 4) || fpl[0].Name == filter.JPX) {
 		sd.Content = sd.Raw
-		if log.TraceEnabled() {
-			log.Trace.Printf("decodedStream returning %d(#%02x)bytes: \n%s\n", len(sd.Content), len(sd.Content), hex.Dump(sd.Content))
-		}
+		//fmt.Printf("decodedStream returning %d(#%02x)bytes: \n%s\n", len(sd.Content), len(sd.Content), hex.Dump(sd.Content))
 		return nil
 	}
 

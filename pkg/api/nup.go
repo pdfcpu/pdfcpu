@@ -170,9 +170,7 @@ func NUpFile(inFiles []string, outFile string, selectedPages []string, nup *mode
 		}
 		return err
 	}
-	if log.CLIEnabled() {
-		log.CLI.Printf("writing %s...\n", outFile)
-	}
+	logWritingTo(outFile)
 
 	defer func() {
 		if err != nil {

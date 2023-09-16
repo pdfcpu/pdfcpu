@@ -21,7 +21,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
@@ -99,7 +98,7 @@ func ExportBookmarksFile(inFilePDF, outFileJSON string, conf *model.Configuratio
 		f1.Close()
 		return err
 	}
-	log.CLI.Printf("writing %s...\n", outFileJSON)
+	logWritingTo(outFileJSON)
 
 	defer func() {
 		if err != nil {
@@ -157,7 +156,6 @@ func ImportBookmarks(rs io.ReadSeeker, rd io.Reader, w io.Writer, replace bool, 
 
 // ImportBookmarks creates/replaces outlines in inFilePDF and writes the result to outFilePDF.
 func ImportBookmarksFile(inFilePDF, inFileJSON, outFilePDF string, replace bool, conf *model.Configuration) (err error) {
-
 	var f0, f1, f2 *os.File
 
 	if f0, err = os.Open(inFilePDF); err != nil {
@@ -235,7 +233,6 @@ func AddBookmarks(rs io.ReadSeeker, w io.Writer, bms []pdfcpu.Bookmark, replace 
 
 // AddBookmarksFile adds outlines to the PDF context read from inFile and writes the result to outFile.
 func AddBookmarksFile(inFile, outFile string, bms []pdfcpu.Bookmark, replace bool, conf *model.Configuration) (err error) {
-
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {

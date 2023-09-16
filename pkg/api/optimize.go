@@ -82,13 +82,9 @@ func OptimizeFile(inFile, outFile string, conf *model.Configuration) (err error)
 	tmpFile := inFile + ".tmp"
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s...\n", outFile)
-		}
+		logWritingTo(outFile)
 	} else {
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s...\n", inFile)
-		}
+		logWritingTo(inFile)
 	}
 
 	if f2, err = os.Create(tmpFile); err != nil {

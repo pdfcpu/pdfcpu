@@ -167,7 +167,6 @@ func applyHorDiff(row []byte, colors int) ([]byte, error) {
 }
 
 func processRow(pr, cr []byte, p, colors, bytesPerPixel int) ([]byte, error) {
-
 	//fmt.Printf("pr(%v) =\n%s\n", &pr, hex.Dump(pr))
 	//fmt.Printf("cr(%v) =\n%s\n", &cr, hex.Dump(cr))
 
@@ -219,7 +218,6 @@ func processRow(pr, cr []byte, p, colors, bytesPerPixel int) ([]byte, error) {
 }
 
 func (f flate) parameters() (colors, bpc, columns int, err error) {
-
 	// Colors, int
 	// The number of interleaved colour components per sample.
 	// Valid values are 1 to 4 (PDF 1.0) and 1 or greater (PDF 1.3). Default value: 1.
@@ -254,7 +252,6 @@ func (f flate) parameters() (colors, bpc, columns int, err error) {
 
 // decodePostProcess
 func (f flate) decodePostProcess(r io.Reader) (io.Reader, error) {
-
 	predictor, found := f.parms["Predictor"]
 	if !found || predictor == PredictorNo {
 		return passThru(r)
@@ -326,14 +323,11 @@ func (f flate) decodePostProcess(r io.Reader) (io.Reader, error) {
 			break
 		}
 
-		// Swap byte slices.
 		pr, cr = cr, pr
 	}
 
 	if b.Len()%rowSize > 0 {
-		if log.InfoEnabled() {
-			log.Info.Printf("failed postprocessing: %d %d\n", b.Len(), rowSize)
-		}
+		log.Info.Printf("failed postprocessing: %d %d\n", b.Len(), rowSize)
 		return nil, errors.New("pdfcpu: filter FlateDecode: postprocessing failed")
 	}
 

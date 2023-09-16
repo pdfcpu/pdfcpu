@@ -43,9 +43,7 @@ func ImageObjNrs(ctx *model.Context, pageNr int) []int {
 
 // StreamLength returns sd's stream length.
 func StreamLength(ctx *model.Context, sd *types.StreamDict) (int64, error) {
-
-	val := sd.Int64Entry("Length")
-	if val != nil {
+	if val := sd.Int64Entry("Length"); val != nil {
 		return *val, nil
 	}
 
@@ -98,6 +96,7 @@ func colorSpaceNameComponents(cs types.Name) int {
 	case model.DeviceCMYKCS:
 		return 4
 	}
+
 	return 0
 }
 
@@ -315,22 +314,12 @@ func prepareExtractImage(sd *types.StreamDict) (string, string, types.Dict, bool
 	return filters, lastFilter, d, imgMask
 }
 
-// ExtractImage extracts an image from sd.
-func ExtractImage(ctx *model.Context, sd *types.StreamDict, thumb bool, resourceId string, objNr int, stub bool) (*model.Image, error) {
-
-	if sd == nil {
-		return nil, nil
-	}
-
-	filters, lastFilter, decodeParms, imgMask := prepareExtractImage(sd)
-
-	if stub {
-		return imageStub(ctx, sd, resourceId, filters, lastFilter, decodeParms, thumb, imgMask, objNr)
-	}
-
-	if sd.FilterPipeline == nil {
-		return nil, nil
-	}
+func img(
+	ctx *model.Context,
+	sd *types.StreamDict,
+	thumb, imgMask bool,
+	resourceID, filters, lastFilter string,
+	objNr int) (*model.Image, error) {
 
 	// "ImageMask" is a flag indicating whether the image shall be treated as an image mask.
 	// We do not extract imageMasks with the exception of CCITTDecoded images.
@@ -355,8 +344,7 @@ func ExtractImage(ctx *model.Context, sd *types.StreamDict, thumb bool, resource
 
 	// CCITTDecoded images / (bit) masks don't have a ColorSpace attribute, but we render image files.
 	if lastFilter == filter.CCITTFax {
-		_, err := ctx.DereferenceDictEntry(sd.Dict, "ColorSpace")
-		if err != nil {
+		if _, err := ctx.DereferenceDictEntry(sd.Dict, "ColorSpace"); err != nil {
 			sd.InsertName("ColorSpace", model.DeviceGrayCS)
 		}
 	}
@@ -383,20 +371,39 @@ func ExtractImage(ctx *model.Context, sd *types.StreamDict, thumb bool, resource
 		return nil, nil
 	}
 
-	r, t, err := RenderImage(ctx.XRefTable, sd, thumb, resourceId, objNr)
+	r, t, err := RenderImage(ctx.XRefTable, sd, thumb, resourceID, objNr)
 	if err != nil {
 		return nil, err
 	}
 
 	img := &model.Image{
 		Reader:   r,
-		Name:     resourceId,
+		Name:     resourceID,
 		ObjNr:    objNr,
 		Thumb:    thumb,
 		FileType: t,
 	}
 
 	return img, nil
+}
+
+// ExtractImage extracts an image from sd.
+func ExtractImage(ctx *model.Context, sd *types.StreamDict, thumb bool, resourceID string, objNr int, stub bool) (*model.Image, error) {
+	if sd == nil {
+		return nil, nil
+	}
+
+	filters, lastFilter, decodeParms, imgMask := prepareExtractImage(sd)
+
+	if stub {
+		return imageStub(ctx, sd, resourceID, filters, lastFilter, decodeParms, thumb, imgMask, objNr)
+	}
+
+	if sd.FilterPipeline == nil {
+		return nil, nil
+	}
+
+	return img(ctx, sd, thumb, imgMask, resourceID, filters, lastFilter, objNr)
 }
 
 // ExtractPageImages extracts all images used by pageNr.
@@ -454,7 +461,6 @@ func FontObjNrs(ctx *model.Context, pageNr int) []int {
 
 // ExtractFont extracts a font from fontObject.
 func ExtractFont(ctx *model.Context, fontObject model.FontObject, objNr int) (*Font, error) {
-
 	// Only embedded fonts have binary data.
 	if !fontObject.Embedded() {
 		if log.DebugEnabled() {

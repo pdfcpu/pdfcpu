@@ -27,62 +27,68 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+func extractAuthor(ctx *model.Context, obj types.Object) (err error) {
+	// Record for stats.
+	if ctx.Author, err = ctx.DereferenceText(obj); err != nil {
+		return err
+	}
+	ctx.Author = model.CSVSafeString(ctx.Author)
+	return nil
+}
+
+func extractCreator(ctx *model.Context, obj types.Object) (err error) {
+	// Record for stats.
+	ctx.Creator, err = ctx.DereferenceText(obj)
+	if err != nil {
+		return err
+	}
+	ctx.Creator = model.CSVSafeString(ctx.Creator)
+	return nil
+}
+
+func logKey(key string) {
+	if log.WriteEnabled() {
+		log.Write.Println("found " + key)
+	}
+}
+
 // handleInfoDict extracts relevant infoDict fields into the context.
 func handleInfoDict(ctx *model.Context, d types.Dict) (err error) {
-
 	for key, value := range d {
 
 		switch key {
 
 		case "Title":
-			if log.WriteEnabled() {
-				log.Write.Println("found Title")
-			}
+			logKey(key)
 
 		case "Author":
-			if log.WriteEnabled() {
-				log.Write.Println("found Author")
-			}
-			// Record for stats.
-			ctx.Author, err = ctx.DereferenceText(value)
-			if err != nil {
+			logKey(key)
+			if err = extractAuthor(ctx, value); err != nil {
 				return err
 			}
-			ctx.Author = model.CSVSafeString(ctx.Author)
 
 		case "Subject":
-			if log.WriteEnabled() {
-				log.Write.Println("found Subject")
-			}
+			logKey(key)
 
 		case "Keywords":
-			if log.WriteEnabled() {
-				log.Write.Println("found Keywords")
-			}
+			logKey(key)
 
 		case "Creator":
-			if log.WriteEnabled() {
-				log.Write.Println("found Creator")
-			}
-			// Record for stats.
-			ctx.Creator, err = ctx.DereferenceText(value)
-			if err != nil {
+			logKey(key)
+			if err = extractCreator(ctx, value); err != nil {
 				return err
 			}
-			ctx.Creator = model.CSVSafeString(ctx.Creator)
 
 		case "Producer", "CreationDate", "ModDate":
 			// pdfcpu will modify these as direct dict entries.
-			log.Write.Printf("found %s", key)
+			logKey(key)
 			if indRef, ok := value.(types.IndirectRef); ok {
 				// Get rid of these extra objects.
 				ctx.Optimize.DuplicateInfoObjects[int(indRef.ObjectNumber)] = true
 			}
 
 		case "Trapped":
-			if log.WriteEnabled() {
-				log.Write.Println("found Trapped")
-			}
+			logKey("Trapped")
 
 		default:
 			if log.WriteEnabled() {
@@ -96,7 +102,6 @@ func handleInfoDict(ctx *model.Context, d types.Dict) (err error) {
 }
 
 func ensureInfoDict(ctx *model.Context) error {
-
 	// => 14.3.3 Document Information Dictionary
 
 	// Optional:
@@ -173,8 +178,7 @@ func writeDocumentInfoDict(ctx *model.Context) error {
 		return err
 	}
 
-	_, _, err = writeDeepObject(ctx, o)
-	if err != nil {
+	if _, _, err = writeDeepObject(ctx, o); err != nil {
 		return err
 	}
 
@@ -283,7 +287,6 @@ func appendPageBoxesInfo(ss *[]string, pb model.PageBoundaries, unit string, cur
 }
 
 func pageInfo(info *PDFInfo, selectedPages types.IntSet) ([]string, error) {
-
 	ss := []string{}
 
 	if len(selectedPages) > 0 {
@@ -364,7 +367,6 @@ func (info PDFInfo) renderProperties(ss *[]string) error {
 }
 
 func (info PDFInfo) renderFlagsPart1(ss *[]string, separator string) {
-
 	*ss = append(*ss, separator)
 
 	s := "No"
@@ -399,7 +401,6 @@ func (info PDFInfo) renderFlagsPart1(ss *[]string, separator string) {
 }
 
 func (info PDFInfo) renderFlagsPart2(ss *[]string, separator string) {
-
 	s := "No"
 	if info.Watermarked {
 		s = "Yes"
@@ -475,7 +476,6 @@ func (info *PDFInfo) renderAttachments(ss *[]string) {
 
 // Info returns info about ctx.
 func Info(ctx *model.Context, fileName string, selectedPages types.IntSet) (*PDFInfo, error) {
-
 	info := &PDFInfo{FileName: fileName, Unit: ctx.Unit, UnitString: ctx.UnitString()}
 
 	v := ctx.HeaderVersion
@@ -548,7 +548,6 @@ func Info(ctx *model.Context, fileName string, selectedPages types.IntSet) (*PDF
 
 // ListInfo returns formatted info about ctx.
 func ListInfo(info *PDFInfo, selectedPages types.IntSet) ([]string, error) {
-
 	var separator = draw.HorSepLine([]int{44})
 
 	var ss []string

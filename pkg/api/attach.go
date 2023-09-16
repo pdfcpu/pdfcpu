@@ -276,9 +276,7 @@ func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, con
 
 	for _, a := range aa {
 		fileName := filepath.Join(outDir, a.FileName)
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s\n", fileName)
-		}
+		logWritingTo(fileName)
 		f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 		if err != nil {
 			return err

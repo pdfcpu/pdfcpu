@@ -34,13 +34,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// func isSupportedFontFile(filename string) bool {
-// 	return strings.HasSuffix(strings.ToLower(filename), ".gob")
-// }
-
 // ListFonts returns a list of supported fonts.
 func ListFonts() ([]string, error) {
-
 	// Get list of PDF core fonts.
 	coreFonts := font.CoreFontNames()
 	for i, s := range coreFonts {

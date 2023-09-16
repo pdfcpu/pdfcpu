@@ -74,9 +74,7 @@ func writePageSpan(ctx *model.Context, from, thru int, outPath string) error {
 	if err != nil {
 		return err
 	}
-	if log.CLIEnabled() {
-		log.CLI.Printf("writing %s...\n", outPath)
-	}
+	logWritingTo(outPath)
 	return pdfcpu.WriteReader(outPath, ps.Reader)
 }
 

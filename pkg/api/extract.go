@@ -144,9 +144,7 @@ func ExtractImagesFile(inFile, outDir string, selectedPages []string, conf *mode
 func writeFonts(ff []pdfcpu.Font, outDir, fileName string) error {
 	for _, f := range ff {
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_%s.%s", fileName, f.Name, f.Type))
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s\n", outFile)
-		}
+		logWritingTo(outFile)
 		w, err := os.Create(outFile)
 		if err != nil {
 			return err
@@ -282,9 +280,7 @@ func ExtractPages(rs io.ReadSeeker, outDir, fileName string, selectedPages []str
 			return err
 		}
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, i))
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s\n", outFile)
-		}
+		logWritingTo(outFile)
 		if err := WriteContextFile(ctxNew, outFile); err != nil {
 			return err
 		}
@@ -358,9 +354,7 @@ func ExtractContent(rs io.ReadSeeker, outDir, fileName string, selectedPages []s
 		}
 
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_Content_page_%d.txt", fileName, p))
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing %s\n", outFile)
-		}
+		logWritingTo(outFile)
 		f, err := os.Create(outFile)
 		if err != nil {
 			return err
@@ -428,9 +422,7 @@ func ExtractMetadata(rs io.ReadSeeker, outDir, fileName string, conf *model.Conf
 		fileName = strings.TrimSuffix(filepath.Base(fileName), ".pdf")
 		for _, m := range mm {
 			outFile := filepath.Join(outDir, fmt.Sprintf("%s_Metadata_%s_%d_%d.txt", fileName, m.ParentType, m.ParentObjNr, m.ObjNr))
-			if log.CLIEnabled() {
-				log.CLI.Printf("writing %s\n", outFile)
-			}
+			logWritingTo(outFile)
 			f, err := os.Create(outFile)
 			if err != nil {
 				return err

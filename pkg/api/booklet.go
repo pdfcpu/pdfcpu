@@ -119,7 +119,6 @@ func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nu
 
 // BookletFile rearranges PDF pages or images into a booklet layout and writes the result to outFile.
 func BookletFile(inFiles []string, outFile string, selectedPages []string, nup *model.NUp, conf *model.Configuration) (err error) {
-
 	var f1, f2 *os.File
 
 	// booklet from a PDF
@@ -131,9 +130,7 @@ func BookletFile(inFiles []string, outFile string, selectedPages []string, nup *
 		f1.Close()
 		return err
 	}
-	if log.CLIEnabled() {
-		log.CLI.Printf("writing %s...\n", outFile)
-	}
+	logWritingTo(outFile)
 
 	defer func() {
 		if err != nil {
