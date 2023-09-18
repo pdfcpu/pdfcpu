@@ -68,14 +68,11 @@ func XRefTable(xRefTable *model.XRefTable) error {
 }
 
 func validateRootVersion(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	_, err := validateNameEntry(xRefTable, rootDict, "rootDict", "Version", OPTIONAL, sinceVersion, nil)
-
 	return err
 }
 
 func validateExtensions(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	// => 7.12 Extensions Dictionary
 
 	_, err := validateDictEntry(xRefTable, rootDict, "rootDict", "Extensions", required, sinceVersion, nil)
@@ -86,7 +83,6 @@ func validateExtensions(xRefTable *model.XRefTable, rootDict types.Dict, require
 }
 
 func validatePageLabels(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	// optional since PDF 1.3
 	// => 7.9.7 Number Trees, 12.4.2 Page Labels
 
@@ -119,7 +115,6 @@ func validatePageLabels(xRefTable *model.XRefTable, rootDict types.Dict, require
 }
 
 func validateNames(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	// => 7.7.4 Name Dictionary
 
 	d, err := validateDictEntry(xRefTable, rootDict, "rootDict", "Names", required, sinceVersion, nil)
@@ -167,7 +162,6 @@ func validateNames(xRefTable *model.XRefTable, rootDict types.Dict, required boo
 }
 
 func validateNamedDestinations(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	// => 12.3.2.3 Named Destinations
 
 	// indRef or dict with destination array values.
@@ -200,7 +194,6 @@ func validateBooleanOrNameEntry(xRefTable *model.XRefTable, d types.Dict, dictNa
 }
 
 func validateViewerPreferences(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	// => 12.2 Viewer Preferences
 
 	dictName := "rootDict"
@@ -252,27 +245,104 @@ func validateViewerPreferences(xRefTable *model.XRefTable, rootDict types.Dict, 
 		return err
 	}
 
-	_, err = validateNameEntry(xRefTable, d, dictName, "ViewArea", OPTIONAL, model.V14, nil)
+	validate = func(s string) bool {
+		return types.MemberOf(s, []string{"MediaBox", "CropBox", "BleedBox", "TrimBox", "ArtBox"})
+	}
+	if _, err = validateNameEntry(xRefTable, d, dictName, "ViewArea", OPTIONAL, model.V14, validate); err != nil {
+		return err
+	}
+	if _, err = validateNameEntry(xRefTable, d, dictName, "ViewClip", OPTIONAL, model.V14, validate); err != nil {
+		return err
+	}
+	if _, err = validateNameEntry(xRefTable, d, dictName, "PrintArea", OPTIONAL, model.V14, validate); err != nil {
+		return err
+	}
+	if _, err = validateNameEntry(xRefTable, d, dictName, "PrintClip", OPTIONAL, model.V14, validate); err != nil {
+		return err
+	}
+
+	sinceVersion = model.V16
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V13
+	}
+	validate = func(s string) bool {
+		return types.MemberOf(s, []string{"None", "AppDefault"})
+	}
+	if _, err = validateNameEntry(xRefTable, d, dictName, "PrintScaling", OPTIONAL, sinceVersion, validate); err != nil {
+		return err
+	}
+
+	validate = func(s string) bool {
+		return types.MemberOf(s, []string{"Simplex", "DuplexFlipShortEdge", "DuplexFlipLongEdge"})
+	}
+	if _, err = validateNameEntry(xRefTable, d, dictName, "Duplex", OPTIONAL, model.V17, validate); err != nil {
+		return err
+	}
+
+	if _, err = validateBooleanEntry(xRefTable, d, dictName, "PickTrayByPDFSize", OPTIONAL, model.V17, nil); err != nil {
+		return err
+	}
+
+	validatePageRange := func(arr types.Array) bool {
+		if len(arr) > 0 && len(arr)%2 > 0 {
+			return false
+		}
+		for i := 0; i < len(arr); i += 2 {
+			if arr[i].(types.Integer) >= arr[i+1].(types.Integer) {
+				return false
+			}
+		}
+		return true
+	}
+	if _, err = validateIntegerArrayEntry(xRefTable, d, dictName, "PrintPageRange", OPTIONAL, model.V17, validatePageRange); err != nil {
+		return err
+	}
+
+	if _, err = validateIntegerEntry(xRefTable, d, dictName, "NumCopies", OPTIONAL, model.V17, func(i int) bool { return i >= 1 }); err != nil {
+		return err
+	}
+
+	// Enforce since V2.0, optional array with entry PrintScaling if printScaling != AppDefault
 
 	return err
+}
+
+func pageLayoutValidator(v model.Version) func(s string) bool {
+	layouts := []string{"SinglePage", "OneColumn", "TwoColumnLeft", "TwoColumnRight"}
+	if v >= model.V15 {
+		layouts = append(layouts, "TwoPageLeft", "TwoPageRight")
+	}
+	validate := func(s string) bool {
+		return types.MemberOf(s, layouts)
+	}
+	return validate
 }
 
 func validatePageLayout(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
-	_, err := validateNameEntry(xRefTable, rootDict, "rootDict", "PageLayout", required, sinceVersion, nil)
-
+	_, err := validateNameEntry(xRefTable, rootDict, "rootDict", "PageLayout", required, sinceVersion, pageLayoutValidator(xRefTable.Version()))
 	return err
 }
 
+func pageModeValidator(v model.Version) func(s string) bool {
+	modes := []string{"UseNone", "UseOutlines", "UseThumbs", "FullScreen"}
+	if v >= model.V15 {
+		modes = append(modes, "UseOC")
+	}
+	if v >= model.V16 {
+		modes = append(modes, "UseAttachments")
+	}
+	validate := func(s string) bool {
+		return types.MemberOf(s, modes)
+	}
+	return validate
+}
+
 func validatePageMode(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
-	_, err := validateNameEntry(xRefTable, rootDict, "rootDict", "PageMode", required, sinceVersion, nil)
-
+	_, err := validateNameEntry(xRefTable, rootDict, "rootDict", "PageMode", required, sinceVersion, pageModeValidator(xRefTable.Version()))
 	return err
 }
 
 func validateOpenAction(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	// => 12.3.2 Destinations, 12.6 Actions
 
 	// A value specifying a destination that shall be displayed
@@ -304,7 +374,6 @@ func validateOpenAction(xRefTable *model.XRefTable, rootDict types.Dict, require
 }
 
 func validateURI(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	// => 12.6.4.7 URI Actions
 
 	// URI dict with one optional entry Base, ASCII string
@@ -321,12 +390,10 @@ func validateURI(xRefTable *model.XRefTable, rootDict types.Dict, required bool,
 }
 
 func validateRootMetadata(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	return validateMetadata(xRefTable, rootDict, required, sinceVersion)
 }
 
 func validateMetadata(xRefTable *model.XRefTable, d types.Dict, required bool, sinceVersion model.Version) error {
-
 	// => 14.3 Metadata
 	// In general, any PDF stream or dictionary may have metadata attached to it
 	// as long as the stream or dictionary represents an actual information resource,
@@ -355,7 +422,6 @@ func validateMetadata(xRefTable *model.XRefTable, d types.Dict, required bool, s
 }
 
 func validateMarkInfo(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	// => 14.7 Logical Structure
 
 	d, err := validateDictEntry(xRefTable, rootDict, "rootDict", "MarkInfo", required, sinceVersion, nil)
@@ -399,14 +465,11 @@ func validateMarkInfo(xRefTable *model.XRefTable, rootDict types.Dict, required 
 }
 
 func validateLang(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	_, err := validateStringEntry(xRefTable, rootDict, "rootDict", "Lang", required, sinceVersion, nil)
-
 	return err
 }
 
 func validateCaptureCommandDictArray(xRefTable *model.XRefTable, a types.Array) error {
-
 	for _, o := range a {
 
 		d, err := xRefTable.DereferenceDict(o)
@@ -429,7 +492,6 @@ func validateCaptureCommandDictArray(xRefTable *model.XRefTable, a types.Array) 
 }
 
 func validateWebCaptureInfoDict(xRefTable *model.XRefTable, d types.Dict) error {
-
 	dictName := "webCaptureInfoDict"
 
 	// V, required, since V1.3, number
@@ -452,7 +514,6 @@ func validateWebCaptureInfoDict(xRefTable *model.XRefTable, d types.Dict) error 
 }
 
 func validateSpiderInfo(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	// 14.10.2 Web Capture Information Dictionary
 
 	d, err := validateDictEntry(xRefTable, rootDict, "rootDict", "SpiderInfo", required, sinceVersion, nil)
@@ -464,7 +525,6 @@ func validateSpiderInfo(xRefTable *model.XRefTable, rootDict types.Dict, require
 }
 
 func validateOutputIntentDict(xRefTable *model.XRefTable, d types.Dict) error {
-
 	dictName := "outputIntentDict"
 
 	// Type, optional, name
@@ -510,7 +570,6 @@ func validateOutputIntentDict(xRefTable *model.XRefTable, d types.Dict) error {
 }
 
 func validateOutputIntents(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	// => 14.11.5 Output Intents
 
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
@@ -543,7 +602,6 @@ func validateOutputIntents(xRefTable *model.XRefTable, rootDict types.Dict, requ
 }
 
 func validatePieceDict(xRefTable *model.XRefTable, d types.Dict) error {
-
 	dictName := "pieceDict"
 
 	for _, o := range d {
@@ -577,7 +635,6 @@ func validatePieceDict(xRefTable *model.XRefTable, d types.Dict) error {
 }
 
 func validateRootPieceInfo(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		return nil
 	}
@@ -588,7 +645,6 @@ func validateRootPieceInfo(xRefTable *model.XRefTable, rootDict types.Dict, requ
 }
 
 func validatePieceInfo(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) (hasPieceInfo bool, err error) {
-
 	// 14.5 Page-Piece Dictionaries
 
 	pieceDict, err := validateDictEntry(xRefTable, d, dictName, entryName, required, sinceVersion, nil)
@@ -603,7 +659,6 @@ func validatePieceInfo(xRefTable *model.XRefTable, d types.Dict, dictName, entry
 
 // TODO implement
 func validatePermissions(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	// => 12.8.4 Permissions
 
 	d, err := validateDictEntry(xRefTable, rootDict, "rootDict", "Permissions", required, sinceVersion, nil)
@@ -616,7 +671,6 @@ func validatePermissions(xRefTable *model.XRefTable, rootDict types.Dict, requir
 
 // TODO implement
 func validateLegal(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	// => 12.8.5 Legal Content Attestations
 
 	d, err := validateDictEntry(xRefTable, rootDict, "rootDict", "Legal", required, sinceVersion, nil)
@@ -628,7 +682,6 @@ func validateLegal(xRefTable *model.XRefTable, rootDict types.Dict, required boo
 }
 
 func validateRequirementDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
-
 	dictName := "requirementDict"
 
 	// Type, optional, name,
@@ -649,7 +702,6 @@ func validateRequirementDict(xRefTable *model.XRefTable, d types.Dict, sinceVers
 }
 
 func validateRequirements(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	// => 12.10 Document Requirements
 
 	a, err := validateArrayEntry(xRefTable, rootDict, "rootDict", "Requirements", required, sinceVersion, nil)
@@ -679,7 +731,6 @@ func validateRequirements(xRefTable *model.XRefTable, rootDict types.Dict, requi
 }
 
 func validateCollectionFieldDict(xRefTable *model.XRefTable, d types.Dict) error {
-
 	dictName := "colFlddict"
 
 	_, err := validateNameEntry(xRefTable, d, dictName, "Type", OPTIONAL, model.V10, func(s string) bool { return s == "CollectionField" })
@@ -729,7 +780,6 @@ func validateCollectionFieldDict(xRefTable *model.XRefTable, d types.Dict) error
 }
 
 func validateCollectionSchemaDict(xRefTable *model.XRefTable, d types.Dict) error {
-
 	for k, v := range d {
 
 		if k == "Type" {
@@ -767,7 +817,6 @@ func validateCollectionSchemaDict(xRefTable *model.XRefTable, d types.Dict) erro
 }
 
 func validateCollectionSortDict(xRefTable *model.XRefTable, d types.Dict) error {
-
 	dictName := "colSortDict"
 
 	// S, required name or array of names.
@@ -785,7 +834,6 @@ func validateCollectionSortDict(xRefTable *model.XRefTable, d types.Dict) error 
 func validateInitialView(s string) bool { return s == "D" || s == "T" || s == "H" }
 
 func validateCollection(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	// => 12.3.5 Collections
 
 	d, err := validateDictEntry(xRefTable, rootDict, "rootDict", "Collection", required, sinceVersion, nil)
@@ -840,9 +888,7 @@ func validateCollection(xRefTable *model.XRefTable, rootDict types.Dict, require
 }
 
 func validateNeedsRendering(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	_, err := validateBooleanEntry(xRefTable, rootDict, "rootDict", "NeedsRendering", required, sinceVersion, nil)
-
 	return err
 }
 
@@ -922,7 +968,6 @@ func checkForBrokenLinks(xRefTable *model.XRefTable) error {
 }
 
 func validateRootObject(xRefTable *model.XRefTable) error {
-
 	if log.ValidateEnabled() {
 		log.Validate.Println("*** validateRootObject begin ***")
 	}
@@ -1039,7 +1084,6 @@ func validateRootObject(xRefTable *model.XRefTable) error {
 }
 
 func validateAdditionalStreams(xRefTable *model.XRefTable) error {
-
 	// Out of spec scope.
 	return nil
 }

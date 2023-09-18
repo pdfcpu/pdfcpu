@@ -217,7 +217,7 @@ func (xRefTable *XRefTable) ParseRootVersion() (v *string, err error) {
 // ValidateVersion validates against the xRefTable's version.
 func (xRefTable *XRefTable) ValidateVersion(element string, sinceVersion Version) error {
 	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("%s: unsupported in version %s\nThis file could be PDF/A compliant but pdfcpu only supports versions <= PDF V1.7\n", element, xRefTable.VersionString())
+		return errors.Errorf("%s: unsupported in version %s\n", element, xRefTable.VersionString())
 	}
 
 	return nil

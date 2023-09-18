@@ -185,9 +185,9 @@ func TestEncryption(t *testing.T) {
 		"adobe_errata.pdf",
 	} {
 		testEncryption(t, fileName, "rc4", 40)
-		//testEncryption(t, fileName, "rc4", 128)
-		//testEncryption(t, fileName, "aes", 40)
-		//testEncryption(t, fileName, "aes", 128)
-		//testEncryption(t, fileName, "aes", 256)
+		testEncryption(t, fileName, "rc4", 128)
+		testEncryption(t, fileName, "aes", 40)
+		testEncryption(t, fileName, "aes", 128)
+		testEncryption(t, fileName, "aes", 256)
 	}
 }
