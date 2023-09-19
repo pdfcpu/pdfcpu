@@ -1406,7 +1406,7 @@ func validateBorderArray(xRefTable *model.XRefTable, a types.Array) bool {
 	o := a[3]
 	a1, ok := o.(types.Array)
 	if !ok {
-		return false
+		return xRefTable.ValidationMode == model.ValidationRelaxed
 	}
 	if len(a1) != 2 {
 		return false
