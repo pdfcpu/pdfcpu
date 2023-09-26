@@ -507,6 +507,9 @@ func validatePageEntryPresSteps(xRefTable *model.XRefTable, d types.Dict, requir
 func validatePageEntryUserUnit(xRefTable *model.XRefTable, d types.Dict, required bool, sinceVersion model.Version) error {
 
 	// UserUnit, optional, positive number, since V1.6
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V13
+	}
 	_, err := validateNumberEntry(xRefTable, d, "pagesDict", "UserUnit", required, sinceVersion, func(f float64) bool { return f > 0 })
 
 	return err
