@@ -193,6 +193,69 @@ func validateBooleanOrNameEntry(xRefTable *model.XRefTable, d types.Dict, dictNa
 	return err
 }
 
+func validatePrinterPreferences(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+	validate := func(s string) bool {
+		return types.MemberOf(s, []string{"MediaBox", "CropBox", "BleedBox", "TrimBox", "ArtBox"})
+	}
+	if _, err := validateNameEntry(xRefTable, d, dictName, "ViewArea", OPTIONAL, model.V14, validate); err != nil {
+		return err
+	}
+	if _, err := validateNameEntry(xRefTable, d, dictName, "ViewClip", OPTIONAL, model.V14, validate); err != nil {
+		return err
+	}
+	if _, err := validateNameEntry(xRefTable, d, dictName, "PrintArea", OPTIONAL, model.V14, validate); err != nil {
+		return err
+	}
+	if _, err := validateNameEntry(xRefTable, d, dictName, "PrintClip", OPTIONAL, model.V14, validate); err != nil {
+		return err
+	}
+
+	sinceVersion := model.V16
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V13
+	}
+	validate = func(s string) bool {
+		return types.MemberOf(s, []string{"None", "AppDefault"})
+	}
+	if _, err := validateNameEntry(xRefTable, d, dictName, "PrintScaling", OPTIONAL, sinceVersion, validate); err != nil {
+		return err
+	}
+
+	validate = func(s string) bool {
+		return types.MemberOf(s, []string{"Simplex", "DuplexFlipShortEdge", "DuplexFlipLongEdge"})
+	}
+	if _, err := validateNameEntry(xRefTable, d, dictName, "Duplex", OPTIONAL, model.V17, validate); err != nil {
+		return err
+	}
+
+	if _, err := validateBooleanEntry(xRefTable, d, dictName, "PickTrayByPDFSize", OPTIONAL, model.V17, nil); err != nil {
+		return err
+	}
+
+	validatePageRange := func(arr types.Array) bool {
+		if len(arr) > 0 && len(arr)%2 > 0 {
+			return false
+		}
+		for i := 0; i < len(arr); i += 2 {
+			if arr[i].(types.Integer) >= arr[i+1].(types.Integer) {
+				return false
+			}
+		}
+		return true
+	}
+	if _, err := validateIntegerArrayEntry(xRefTable, d, dictName, "PrintPageRange", OPTIONAL, model.V17, validatePageRange); err != nil {
+		return err
+	}
+
+	if _, err := validateIntegerEntry(xRefTable, d, dictName, "NumCopies", OPTIONAL, model.V17, func(i int) bool { return i >= 1 }); err != nil {
+		return err
+	}
+
+	// Enforce since V2.0, optional array with entry PrintScaling if printScaling != AppDefault
+
+	return nil
+}
+
 func validateViewerPreferences(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
 	// => 12.2 Viewer Preferences
 
@@ -245,66 +308,7 @@ func validateViewerPreferences(xRefTable *model.XRefTable, rootDict types.Dict, 
 		return err
 	}
 
-	validate = func(s string) bool {
-		return types.MemberOf(s, []string{"MediaBox", "CropBox", "BleedBox", "TrimBox", "ArtBox"})
-	}
-	if _, err = validateNameEntry(xRefTable, d, dictName, "ViewArea", OPTIONAL, model.V14, validate); err != nil {
-		return err
-	}
-	if _, err = validateNameEntry(xRefTable, d, dictName, "ViewClip", OPTIONAL, model.V14, validate); err != nil {
-		return err
-	}
-	if _, err = validateNameEntry(xRefTable, d, dictName, "PrintArea", OPTIONAL, model.V14, validate); err != nil {
-		return err
-	}
-	if _, err = validateNameEntry(xRefTable, d, dictName, "PrintClip", OPTIONAL, model.V14, validate); err != nil {
-		return err
-	}
-
-	sinceVersion = model.V16
-	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V13
-	}
-	validate = func(s string) bool {
-		return types.MemberOf(s, []string{"None", "AppDefault"})
-	}
-	if _, err = validateNameEntry(xRefTable, d, dictName, "PrintScaling", OPTIONAL, sinceVersion, validate); err != nil {
-		return err
-	}
-
-	validate = func(s string) bool {
-		return types.MemberOf(s, []string{"Simplex", "DuplexFlipShortEdge", "DuplexFlipLongEdge"})
-	}
-	if _, err = validateNameEntry(xRefTable, d, dictName, "Duplex", OPTIONAL, model.V17, validate); err != nil {
-		return err
-	}
-
-	if _, err = validateBooleanEntry(xRefTable, d, dictName, "PickTrayByPDFSize", OPTIONAL, model.V17, nil); err != nil {
-		return err
-	}
-
-	validatePageRange := func(arr types.Array) bool {
-		if len(arr) > 0 && len(arr)%2 > 0 {
-			return false
-		}
-		for i := 0; i < len(arr); i += 2 {
-			if arr[i].(types.Integer) >= arr[i+1].(types.Integer) {
-				return false
-			}
-		}
-		return true
-	}
-	if _, err = validateIntegerArrayEntry(xRefTable, d, dictName, "PrintPageRange", OPTIONAL, model.V17, validatePageRange); err != nil {
-		return err
-	}
-
-	if _, err = validateIntegerEntry(xRefTable, d, dictName, "NumCopies", OPTIONAL, model.V17, func(i int) bool { return i >= 1 }); err != nil {
-		return err
-	}
-
-	// Enforce since V2.0, optional array with entry PrintScaling if printScaling != AppDefault
-
-	return err
+	return validatePrinterPreferences(xRefTable, d, dictName)
 }
 
 func pageLayoutValidator(v model.Version) func(s string) bool {

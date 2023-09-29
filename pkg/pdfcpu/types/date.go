@@ -49,6 +49,8 @@ func prevalidateDate(s string, relaxed bool) (string, bool) {
 		s = utf16s
 	}
 
+	s = strings.TrimPrefix(s, "\xEF\xBB\xBF")
+
 	// Remove trailing 0x00
 	s = strings.TrimRight(s, "\x00")
 

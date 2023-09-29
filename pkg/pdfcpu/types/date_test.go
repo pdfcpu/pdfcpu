@@ -152,7 +152,7 @@ func TestParseDateTime(t *testing.T) {
 	s = "D:20210419150333-04'00'Z"
 	doParseDateTimeRelaxedOK(s, t)
 
-	s = "D:20160404061414+65'53'"
+	s = "\357\273\277D:20160404061414+65'53'"
 	doParseDateTimeRelaxedOK(s, t)
 }
 

@@ -17,6 +17,7 @@ limitations under the License.
 package types
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -134,6 +135,7 @@ func StringLiteralToString(sl StringLiteral) (string, error) {
 		return decodeUTF16String(bb)
 	}
 	// if no acceptable UTF16 encoding found, ensure utf8 encoding.
+	bb = bytes.TrimPrefix(bb, []byte{239, 187, 191})
 	s := string(bb)
 	if !utf8.ValidString(s) {
 		s = CP1252ToUTF8(s)

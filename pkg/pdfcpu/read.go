@@ -38,6 +38,7 @@ const (
 
 var (
 	ErrWrongPassword       = errors.New("pdfcpu: please provide the correct password")
+	ErrCorruptHeader       = errors.New("pdfcpu: no header version available")
 	zero             int64 = 0
 )
 
@@ -277,7 +278,7 @@ func offsetLastXRefSection(ctx *model.Context, skip int64) (*int64, error) {
 	return &offset, nil
 }
 
-func createXRefTableEntry(entryType string, objNr int, offset int64, generation int) (model.XRefTableEntry, bool) {
+func createXRefTableEntry(entryType string, objNr int, offset, offExtra int64, generation int) (model.XRefTableEntry, bool) {
 	entry := model.XRefTableEntry{Offset: &offset, Generation: &generation}
 
 	if entryType == "n" {
@@ -294,6 +295,8 @@ func createXRefTableEntry(entryType string, objNr int, offset int64, generation 
 			}
 			return entry, false
 		}
+
+		*entry.Offset += offExtra
 
 		return entry, true
 	}
@@ -330,7 +333,7 @@ func decodeSubsection(fields []string, repairOff int) (int64, int, string, error
 }
 
 // Read next subsection entry and generate corresponding xref table entry.
-func parseXRefTableEntry(xRefTable *model.XRefTable, s *bufio.Scanner, objNr, repairOff int) error {
+func parseXRefTableEntry(xRefTable *model.XRefTable, s *bufio.Scanner, objNr int, offExtra int64, repairOff int) error {
 	if log.ReadEnabled() {
 		log.Read.Println("parseXRefTableEntry: begin")
 	}
@@ -358,7 +361,7 @@ func parseXRefTableEntry(xRefTable *model.XRefTable, s *bufio.Scanner, objNr, re
 		return err
 	}
 
-	entry, ok := createXRefTableEntry(entryType, objNr, offset, generation)
+	entry, ok := createXRefTableEntry(entryType, objNr, offset, offExtra, generation)
 	if !ok {
 		return nil
 	}
@@ -377,7 +380,7 @@ func parseXRefTableEntry(xRefTable *model.XRefTable, s *bufio.Scanner, objNr, re
 }
 
 // Process xRef table subsection and create corrresponding xRef table entries.
-func parseXRefTableSubSection(xRefTable *model.XRefTable, s *bufio.Scanner, fields []string, repairOff int) error {
+func parseXRefTableSubSection(xRefTable *model.XRefTable, s *bufio.Scanner, fields []string, offExtra int64, repairOff int) error {
 	if log.ReadEnabled() {
 		log.Read.Println("parseXRefTableSubSection: begin")
 	}
@@ -398,7 +401,7 @@ func parseXRefTableSubSection(xRefTable *model.XRefTable, s *bufio.Scanner, fiel
 
 	// Process all entries of this subsection into xRefTable entries.
 	for i := 0; i < objCount; i++ {
-		if err = parseXRefTableEntry(xRefTable, s, startObjNumber+i, repairOff); err != nil {
+		if err = parseXRefTableEntry(xRefTable, s, startObjNumber+i, offExtra, repairOff); err != nil {
 			return err
 		}
 	}
@@ -519,7 +522,7 @@ func parseObjectStream(osd *types.ObjectStreamDict) error {
 	return nil
 }
 
-func createXRefTableEntryFromXRefStream(entry byte, objNr int, c2, c3 int64, objStreams types.IntSet) model.XRefTableEntry {
+func createXRefTableEntryFromXRefStream(entry byte, objNr int, c2, c3, offExtra int64, objStreams types.IntSet) model.XRefTableEntry {
 	var xRefTableEntry model.XRefTableEntry
 
 	switch entry {
@@ -544,6 +547,8 @@ func createXRefTableEntryFromXRefStream(entry byte, objNr int, c2, c3 int64, obj
 			log.Read.Printf("createXRefTableEntryFromXRefStream: Object #%d is in use at offset=%d, generation=%d\n", objNr, c2, c3)
 		}
 		g := int(c3)
+
+		c2 += offExtra
 
 		xRefTableEntry =
 			model.XRefTableEntry{
@@ -575,7 +580,7 @@ func createXRefTableEntryFromXRefStream(entry byte, objNr int, c2, c3 int64, obj
 }
 
 // For each object embedded in this xRefStream create the corresponding xRef table entry.
-func extractXRefTableEntriesFromXRefStream(buf []byte, xsd *types.XRefStreamDict, ctx *model.Context) error {
+func extractXRefTableEntriesFromXRefStream(buf []byte, offExtra int64, xsd *types.XRefStreamDict, ctx *model.Context) error {
 	if log.ReadEnabled() {
 		log.Read.Printf("extractXRefTableEntriesFromXRefStream begin")
 	}
@@ -627,7 +632,7 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, xsd *types.XRefStreamDict
 		c2 := bufToInt64(buf[i2Start : i2Start+i2])
 		c3 := bufToInt64(buf[i2Start+i2 : i2Start+i2+i3])
 
-		entry := createXRefTableEntryFromXRefStream(buf[i], objNr, c2, c3, ctx.Read.ObjectStreams)
+		entry := createXRefTableEntryFromXRefStream(buf[i], objNr, c2, c3, offExtra, ctx.Read.ObjectStreams)
 
 		if ctx.XRefTable.Exists(objNr) {
 			if log.ReadEnabled() {
@@ -682,7 +687,7 @@ func xRefStreamDict(ctx *model.Context, o types.Object, objNr int, streamOffset 
 	return model.ParseXRefStreamDict(&sd)
 }
 
-func processXRefStream(ctx *model.Context, xsd *types.XRefStreamDict, objNr, genNr *int, offset *int64) (prevOffset *int64, err error) {
+func processXRefStream(ctx *model.Context, xsd *types.XRefStreamDict, objNr, genNr *int, offset *int64, offExtra int64) (prevOffset *int64, err error) {
 	if log.ReadEnabled() {
 		log.Read.Println("processXRefStream: begin")
 	}
@@ -692,9 +697,11 @@ func processXRefStream(ctx *model.Context, xsd *types.XRefStreamDict, objNr, gen
 	}
 
 	// Parse xRefStream and create xRefTable entries for embedded objects.
-	if err = extractXRefTableEntriesFromXRefStream(xsd.Content, xsd, ctx); err != nil {
+	if err = extractXRefTableEntriesFromXRefStream(xsd.Content, offExtra, xsd, ctx); err != nil {
 		return nil, err
 	}
+
+	*offset += offExtra
 
 	entry :=
 		model.XRefTableEntry{
@@ -719,7 +726,7 @@ func processXRefStream(ctx *model.Context, xsd *types.XRefStreamDict, objNr, gen
 }
 
 // Parse xRef stream and setup xrefTable entries for all embedded objects and the xref stream dict.
-func parseXRefStream(ctx *model.Context, rd io.Reader, offset *int64) (prevOffset *int64, err error) {
+func parseXRefStream(ctx *model.Context, rd io.Reader, offset *int64, offExtra int64) (prevOffset *int64, err error) {
 	if log.ReadEnabled() {
 		log.Read.Printf("parseXRefStream: begin at offset %d\n", *offset)
 	}
@@ -770,11 +777,11 @@ func parseXRefStream(ctx *model.Context, rd io.Reader, offset *int64) (prevOffse
 		return nil, err
 	}
 
-	return processXRefStream(ctx, xsd, objNr, genNr, offset)
+	return processXRefStream(ctx, xsd, objNr, genNr, offset, offExtra)
 }
 
 // Parse an xRefStream for a hybrid PDF file.
-func parseHybridXRefStream(ctx *model.Context, offset *int64) error {
+func parseHybridXRefStream(ctx *model.Context, offset *int64, offExtra int64) error {
 	if log.ReadEnabled() {
 		log.Read.Println("parseHybridXRefStream: begin")
 	}
@@ -784,7 +791,7 @@ func parseHybridXRefStream(ctx *model.Context, offset *int64) error {
 		return err
 	}
 
-	if _, err = parseXRefStream(ctx, rd, offset); err != nil {
+	if _, err = parseXRefStream(ctx, rd, offset, offExtra); err != nil {
 		return err
 	}
 
@@ -979,7 +986,7 @@ func offsetPrev(ctx *model.Context, trailerDict types.Dict, offCurXRef *int64) *
 	return offset
 }
 
-func parseTrailerDict(ctx *model.Context, trailerDict types.Dict, offCurXRef *int64) (*int64, error) {
+func parseTrailerDict(ctx *model.Context, trailerDict types.Dict, offCurXRef *int64, offExtra int64) (*int64, error) {
 	if log.ReadEnabled() {
 		log.Read.Println("parseTrailerDict begin")
 	}
@@ -1019,7 +1026,7 @@ func parseTrailerDict(ctx *model.Context, trailerDict types.Dict, offCurXRef *in
 	// Previous XRefSection is expected to have free entries for hidden entries.
 	// May appear in XRefSections only.
 	if ctx.Reader15 {
-		if err := parseHybridXRefStream(ctx, offsetXRefStream); err != nil {
+		if err := parseHybridXRefStream(ctx, offsetXRefStream, offExtra); err != nil {
 			return nil, err
 		}
 	}
@@ -1176,7 +1183,7 @@ func scanTrailer(s *bufio.Scanner, line string) (string, error) {
 	return scanTrailerDictRemainder(s, line, buf)
 }
 
-func processTrailer(ctx *model.Context, s *bufio.Scanner, line string, offCurXRef *int64) (*int64, error) {
+func processTrailer(ctx *model.Context, s *bufio.Scanner, line string, offCurXRef *int64, offExtra int64) (*int64, error) {
 	var trailerString string
 
 	if line != "trailer" {
@@ -1213,11 +1220,11 @@ func processTrailer(ctx *model.Context, s *bufio.Scanner, line string, offCurXRe
 		log.Read.Printf("processTrailer: trailerDict:\n%s\n", trailerDict)
 	}
 
-	return parseTrailerDict(ctx, trailerDict, offCurXRef)
+	return parseTrailerDict(ctx, trailerDict, offCurXRef, offExtra)
 }
 
 // Parse xRef section into corresponding number of xRef table entries.
-func parseXRefSection(ctx *model.Context, s *bufio.Scanner, ssCount *int, offCurXRef *int64, repairOff int) (*int64, error) {
+func parseXRefSection(ctx *model.Context, s *bufio.Scanner, ssCount *int, offCurXRef *int64, offExtra int64, repairOff int) (*int64, error) {
 	if log.ReadEnabled() {
 		log.Read.Println("parseXRefSection begin")
 	}
@@ -1236,7 +1243,7 @@ func parseXRefSection(ctx *model.Context, s *bufio.Scanner, ssCount *int, offCur
 	// Process all sub sections of this xRef section.
 	for !strings.HasPrefix(line, "trailer") && len(fields) == 2 {
 
-		if err = parseXRefTableSubSection(ctx.XRefTable, s, fields, repairOff); err != nil {
+		if err = parseXRefTableSubSection(ctx.XRefTable, s, fields, offExtra, repairOff); err != nil {
 			return nil, err
 		}
 		*ssCount++
@@ -1268,69 +1275,112 @@ func parseXRefSection(ctx *model.Context, s *bufio.Scanner, ssCount *int, offCur
 		log.Read.Println("parseXRefSection: parsing trailer dict..")
 	}
 
-	return processTrailer(ctx, s, line, offCurXRef)
+	return processTrailer(ctx, s, line, offCurXRef, offExtra)
+}
+
+func foo(rs io.ReadSeeker, prefix string) ([]byte, int, error) {
+	bufSize := 100
+
+	if _, err := rs.Seek(0, io.SeekStart); err != nil {
+		return nil, 0, err
+	}
+
+	buf := make([]byte, bufSize)
+	var curBuf []byte
+
+	off := 0
+	found := false
+	var buf2 []byte
+
+	for !found {
+		n, err := fillBuffer(rs, buf)
+		if err != nil {
+			return nil, 0, ErrCorruptHeader
+		}
+		curBuf = buf[:n]
+		for {
+			i := bytes.IndexByte(curBuf, '%')
+			if i < 0 {
+				// no match, check next block
+				off += bufSize
+				break
+			}
+
+			// Check all occurrences
+			if i < len(curBuf)-18 {
+				if !bytes.HasPrefix(curBuf[i:], []byte(prefix)) {
+					// No match, keep checking
+					curBuf = curBuf[i+1:]
+					continue
+				}
+				off += i
+				curBuf = curBuf[i:]
+				found = true
+				break
+			}
+
+			// Partial match, need 2nd buffer
+			if len(buf2) == 0 {
+				buf2 = make([]byte, bufSize)
+			}
+			n, err := fillBuffer(rs, buf2)
+			if err != nil {
+				return nil, 0, ErrCorruptHeader
+			}
+			buf3 := append(curBuf[i:], buf2[:n]...)
+			if !bytes.HasPrefix(buf3, []byte(prefix)) {
+				// No match, keep checking
+				curBuf = buf2
+				off += bufSize
+				continue
+			}
+			off += i
+			curBuf = buf3
+			found = true
+			break
+		}
+	}
+
+	return curBuf, off, nil
 }
 
 // Get version from first line of file.
 // Beginning with PDF 1.4, the Version entry in the document’s catalog dictionary
 // (located via the Root entry in the file’s trailer, as described in 7.5.5, "File Trailer"),
 // if present, shall be used instead of the version specified in the Header.
-// Save PDF Version from header to xRefTable.
 // The header version comes as the first line of the file.
 // eolCount is the number of characters used for eol (1 or 2).
-func headerVersion(rs io.ReadSeeker, headerBufSize int) (v *model.Version, eolCount int, err error) {
+func headerVersion(rs io.ReadSeeker) (v *model.Version, eolCount int, offset int64, err error) {
 	if log.ReadEnabled() {
 		log.Read.Println("headerVersion begin")
 	}
 
-	var (
-		errCorruptHeader = errors.New("pdfcpu: headerVersion: corrupt pdf stream - no header version available")
-		prefix           = "%PDF-"
-	)
+	prefix := "%PDF-"
 
-	// Get first line of file which holds the version of this PDFFile.
-	// We call this the header version.
-	if _, err = rs.Seek(0, io.SeekStart); err != nil {
-		return nil, 0, err
-	}
-
-	buf := make([]byte, headerBufSize)
-	n, err := fillBuffer(rs, buf)
+	s, off, err := foo(rs, prefix)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 
-	s := string(buf[:n])
-	if len(s) < 8 {
-		return nil, 0, errCorruptHeader
-	}
-
-	// Allow for leading bytes before %PDF-
-	i := strings.Index(s, prefix)
-	if i < 0 {
-		return nil, 0, errCorruptHeader
-	}
-	s = s[i:]
-
-	pdfVersion, err := model.PDFVersion(s[len(prefix) : len(prefix)+3])
+	pdfVersion, err := model.PDFVersion(string(s[len(prefix) : len(prefix)+3]))
 	if err != nil {
-		return nil, 0, errors.Wrapf(err, "headerVersion: unknown PDF Header Version")
+		return nil, 0, 0, errors.Wrapf(err, "headerVersion: unknown PDF Header Version")
 	}
 
 	s = s[8:]
-	s = strings.TrimLeft(s, "\t\f ")
+	s = bytes.TrimLeft(s, "\t\f ")
 
 	// Detect the used eol which should be 1 (0x00, 0x0D) or 2 chars (0x0D0A)long.
 	// %PDF-1.x{whiteSpace}{text}{eol} or
-	i = strings.IndexAny(s, "\x0A\x0D")
-	if i < 0 {
-		return nil, 0, errCorruptHeader
+	j := bytes.IndexAny(s, "\x0A\x0D")
+	if j < 0 {
+		return nil, 0, 0, ErrCorruptHeader
 	}
-	if s[i] == 0x0A {
+	if s[j] == 0x0A {
 		eolCount = 1
-	} else if s[i] == 0x0D {
+	} else if s[j] == 0x0D {
 		eolCount = 1
-		if (len(s) > i+1) && (s[i+1] == 0x0A) {
+		if (len(s) > j+1) && (s[j+1] == 0x0A) {
 			eolCount = 2
 		}
 	}
@@ -1339,13 +1389,13 @@ func headerVersion(rs io.ReadSeeker, headerBufSize int) (v *model.Version, eolCo
 		log.Read.Printf("headerVersion: end, found header version: %s\n", pdfVersion)
 	}
 
-	return &pdfVersion, eolCount, nil
+	return &pdfVersion, eolCount, int64(off), nil
 }
 
 // bypassXrefSection is a fix for digesting corrupt xref sections.
 // It populates the xRefTable by reading in all indirect objects line by line
 // and works on the assumption of a single xref section - meaning no incremental updates have been made.
-func bypassXrefSection(ctx *model.Context) error {
+func bypassXrefSection(ctx *model.Context, offExtra int64) error {
 	var z int64
 	g := types.FreeHeadGeneration
 	ctx.Table[0] = &model.XRefTableEntry{
@@ -1385,7 +1435,7 @@ func bypassXrefSection(ctx *model.Context) error {
 				i := strings.Index(line, "startxref")
 				if i >= 0 {
 					// Parse trailer.
-					_, err = processTrailer(ctx, s, string(bb), nil)
+					_, err = processTrailer(ctx, s, string(bb), nil, offExtra)
 					return err
 				}
 				continue
@@ -1458,7 +1508,7 @@ func postProcess(ctx *model.Context, xrefSectionCount int) {
 	}
 }
 
-func tryXRefSection(ctx *model.Context, rs io.ReadSeeker, offset *int64, xrefSectionCount *int) (*int64, error) {
+func tryXRefSection(ctx *model.Context, rs io.ReadSeeker, offset *int64, offExtra int64, xrefSectionCount *int) (*int64, error) {
 	rd, err := newPositionedReader(rs, offset)
 	if err != nil {
 		return nil, err
@@ -1482,7 +1532,7 @@ func tryXRefSection(ctx *model.Context, rs io.ReadSeeker, offset *int64, xrefSec
 		if log.ReadEnabled() {
 			log.Read.Println("tryXRefSection: found xref section")
 		}
-		return parseXRefSection(ctx, s, xrefSectionCount, offset, 0)
+		return parseXRefSection(ctx, s, xrefSectionCount, offset, offExtra, 0)
 	}
 
 	// Retry using next line. (Repair fix for #326)
@@ -1502,7 +1552,7 @@ func tryXRefSection(ctx *model.Context, rs io.ReadSeeker, offset *int64, xrefSec
 		if log.ReadEnabled() {
 			log.Read.Printf("Repair offset: %d\n", repairOff)
 		}
-		return parseXRefSection(ctx, s, xrefSectionCount, offset, repairOff)
+		return parseXRefSection(ctx, s, xrefSectionCount, offset, offExtra, repairOff)
 	}
 
 	return &zero, nil
@@ -1515,11 +1565,11 @@ func buildXRefTableStartingAt(ctx *model.Context, offset *int64) error {
 	}
 
 	rs := ctx.Read.RS
-	conf := ctx.Configuration
-	hv, eolCount, err := headerVersion(rs, conf.HeaderBufSize)
+	hv, eolCount, offExtra, err := headerVersion(rs) // TODO remove conf.HeaderBufSize)
 	if err != nil {
 		return err
 	}
+	*offset += offExtra
 
 	ctx.HeaderVersion = hv
 	ctx.Read.EolCount = eolCount
@@ -1539,7 +1589,7 @@ func buildXRefTableStartingAt(ctx *model.Context, offset *int64) error {
 
 		offs[*offset] = true
 
-		off, err := tryXRefSection(ctx, rs, offset, &xrefSectionCount)
+		off, err := tryXRefSection(ctx, rs, offset, offExtra, &xrefSectionCount)
 		if err != nil {
 			return err
 		}
@@ -1557,12 +1607,12 @@ func buildXRefTableStartingAt(ctx *model.Context, offset *int64) error {
 		if err != nil {
 			return err
 		}
-		if offset, err = parseXRefStream(ctx, rd, offset); err != nil {
+		if offset, err = parseXRefStream(ctx, rd, offset, offExtra); err != nil {
 			if log.ReadEnabled() {
 				log.Read.Printf("bypassXRefSection after %v\n", err)
 			}
 			// Try fix for corrupt single xref section.
-			return bypassXrefSection(ctx)
+			return bypassXrefSection(ctx, offExtra)
 		}
 
 	}
@@ -2739,26 +2789,44 @@ func dereferenceObjects(ctx *model.Context) error {
 
 	xRefTable := ctx.XRefTable
 
-	// Get sorted slice of object numbers.
-	// TODO Skip sorting for performance gain.
-	var keys []int
-	for k := range xRefTable.Table {
-		keys = append(keys, k)
-	}
-	sort.Ints(keys)
+	if log.StatsEnabled() {
 
-	for _, objNr := range keys {
-		if err := dereferenceObject(ctx, objNr); err != nil {
-			return err
+		var keys []int
+		for k := range xRefTable.Table {
+			keys = append(keys, k)
 		}
-	}
+		sort.Ints(keys)
 
-	for _, objNr := range keys {
-		entry := xRefTable.Table[objNr]
-		if entry.Free || entry.Compressed {
-			continue
+		for _, objNr := range keys {
+			if err := dereferenceObject(ctx, objNr); err != nil {
+				return err
+			}
 		}
-		processRefCounts(xRefTable, entry.Object)
+
+		for _, objNr := range keys {
+			entry := xRefTable.Table[objNr]
+			if entry.Free || entry.Compressed {
+				continue
+			}
+			processRefCounts(xRefTable, entry.Object)
+		}
+
+	} else {
+
+		for objNr := range xRefTable.Table {
+			if err := dereferenceObject(ctx, objNr); err != nil {
+				return err
+			}
+		}
+
+		for objNr := range xRefTable.Table {
+			entry := xRefTable.Table[objNr]
+			if entry.Free || entry.Compressed {
+				continue
+			}
+			processRefCounts(xRefTable, entry.Object)
+		}
+
 	}
 
 	if log.ReadEnabled() {
