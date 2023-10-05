@@ -393,38 +393,6 @@ func validateURI(xRefTable *model.XRefTable, rootDict types.Dict, required bool,
 	return err
 }
 
-func validateRootMetadata(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-	return validateMetadata(xRefTable, rootDict, required, sinceVersion)
-}
-
-func validateMetadata(xRefTable *model.XRefTable, d types.Dict, required bool, sinceVersion model.Version) error {
-	// => 14.3 Metadata
-	// In general, any PDF stream or dictionary may have metadata attached to it
-	// as long as the stream or dictionary represents an actual information resource,
-	// as opposed to serving as an implementation artifact.
-	// Some PDF constructs are considered implementational, and hence may not have associated metadata.
-
-	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V13
-	}
-
-	sd, err := validateStreamDictEntry(xRefTable, d, "dict", "Metadata", required, sinceVersion, nil)
-	if err != nil || sd == nil {
-		return err
-	}
-
-	dictName := "metaDataDict"
-
-	_, err = validateNameEntry(xRefTable, sd.Dict, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Metadata" })
-	if err != nil {
-		return err
-	}
-
-	_, err = validateNameEntry(xRefTable, sd.Dict, dictName, "Subtype", OPTIONAL, sinceVersion, func(s string) bool { return s == "XML" })
-
-	return err
-}
-
 func validateMarkInfo(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
 	// => 14.7 Logical Structure
 
