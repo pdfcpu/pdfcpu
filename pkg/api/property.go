@@ -48,7 +48,7 @@ func Properties(rs io.ReadSeeker, conf *model.Configuration) (map[string]string,
 	return ctx.Properties, nil
 }
 
-// AddProperties embeds files into a PDF context read from rs and writes the result to w.
+// AddProperties adds properties to rs's infodict and writes the result to w.
 func AddProperties(rs io.ReadSeeker, w io.Writer, properties map[string]string, conf *model.Configuration) error {
 	if rs == nil {
 		return errors.New("pdfcpu: AddProperties: missing rs")
@@ -88,7 +88,7 @@ func AddProperties(rs io.ReadSeeker, w io.Writer, properties map[string]string, 
 	return nil
 }
 
-// AddPropertiesFile embeds files into a PDF context read from inFile and writes the result to outFile.
+// AddPropertiesFile adds properties to inFile's infodict and writes the result to outFile.
 func AddPropertiesFile(inFile, outFile string, properties map[string]string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 
@@ -128,7 +128,7 @@ func AddPropertiesFile(inFile, outFile string, properties map[string]string, con
 	return AddProperties(f1, f2, properties, conf)
 }
 
-// RemoveProperties deletes embedded files from a PDF context read from rs and writes the result to w.
+// RemoveProperties deletes properties from rs's infodict and writes the result to w.
 func RemoveProperties(rs io.ReadSeeker, w io.Writer, properties []string, conf *model.Configuration) error {
 	if rs == nil {
 		return errors.New("pdfcpu: RemoveProperties: missing rs")
@@ -171,7 +171,7 @@ func RemoveProperties(rs io.ReadSeeker, w io.Writer, properties []string, conf *
 	return nil
 }
 
-// RemovePropertiesFile deletes embedded files from a PDF context read from inFile and writes the result to outFile.
+// RemovePropertiesFile deletes properties from inFile's infodict and writes the result to outFile.
 func RemovePropertiesFile(inFile, outFile string, properties []string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 

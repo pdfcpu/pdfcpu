@@ -321,6 +321,8 @@ type PDFInfo struct {
 	Creator            string                 `json:"creator"`
 	CreationDate       string                 `json:"creationDate"`
 	ModificationDate   string                 `json:"modificationDate"`
+	PageMode           string                 `json:"pageMode"`
+	PageLayout         string                 `json:"pageLayout"`
 	Keywords           []string               `json:"keywords"`
 	Properties         map[string]string      `json:"properties"`
 	Tagged             bool                   `json:"tagged"`
@@ -511,6 +513,16 @@ func Info(ctx *model.Context, fileName string, selectedPages types.IntSet) (*PDF
 	info.CreationDate = ctx.CreationDate
 	info.ModificationDate = ctx.ModDate
 
+	info.PageMode = ""
+	if ctx.PageMode != nil {
+		info.PageMode = ctx.PageMode.String()
+	}
+
+	info.PageLayout = ""
+	if ctx.PageLayout != nil {
+		info.PageLayout = ctx.PageLayout.String()
+	}
+
 	kwl, err := KeywordsList(ctx.XRefTable)
 	if err != nil {
 		return nil, err
@@ -572,6 +584,12 @@ func ListInfo(info *PDFInfo, selectedPages types.IntSet) ([]string, error) {
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Content creator", info.Creator))
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Creation date", info.CreationDate))
 	ss = append(ss, fmt.Sprintf("%20s: %s", "Modification date", info.ModificationDate))
+	if info.PageMode != "" {
+		ss = append(ss, fmt.Sprintf("%20s: %s", "Page mode", info.PageMode))
+	}
+	if info.PageLayout != "" {
+		ss = append(ss, fmt.Sprintf("%20s: %s", "Page Layout", info.PageLayout))
+	}
 
 	info.renderKeywords(&ss)
 	info.renderProperties(&ss)

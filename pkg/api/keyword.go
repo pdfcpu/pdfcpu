@@ -48,7 +48,7 @@ func Keywords(rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {
 	return pdfcpu.KeywordsList(ctx.XRefTable)
 }
 
-// AddKeywords embeds files into a PDF context read from rs and writes the result to w.
+// AddKeywords adds keywords to rs's infodict and writes the result to w.
 func AddKeywords(rs io.ReadSeeker, w io.Writer, files []string, conf *model.Configuration) error {
 	if rs == nil {
 		return errors.New("pdfcpu: AddKeywords: missing rs")
@@ -88,7 +88,7 @@ func AddKeywords(rs io.ReadSeeker, w io.Writer, files []string, conf *model.Conf
 	return nil
 }
 
-// AddKeywordsFile embeds files into a PDF context read from inFile and writes the result to outFile.
+// AddKeywordsFile adds keywords to inFile's infodict and writes the result to outFile.
 func AddKeywordsFile(inFile, outFile string, files []string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 
@@ -128,7 +128,7 @@ func AddKeywordsFile(inFile, outFile string, files []string, conf *model.Configu
 	return AddKeywords(f1, f2, files, conf)
 }
 
-// RemoveKeywords deletes embedded files from a PDF context read from rs and writes the result to w.
+// RemoveKeywords deletes keywords from rs's infodict and writes the result to w.
 func RemoveKeywords(rs io.ReadSeeker, w io.Writer, keywords []string, conf *model.Configuration) error {
 	if rs == nil {
 		return errors.New("pdfcpu: RemoveKeywords: missing rs")
@@ -171,7 +171,7 @@ func RemoveKeywords(rs io.ReadSeeker, w io.Writer, keywords []string, conf *mode
 	return nil
 }
 
-// RemoveKeywordsFile deletes embedded files from a PDF context read from inFile and writes the result to outFile.
+// RemoveKeywordsFile deletes keywords from inFile's infodict and writes the result to outFile.
 func RemoveKeywordsFile(inFile, outFile string, keywords []string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 

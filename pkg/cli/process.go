@@ -224,5 +224,38 @@ func processBookmarks(cmd *Command) (out []string, err error) {
 	case model.REMOVEBOOKMARKS:
 		return RemoveBookmarks(cmd)
 	}
+
+	return nil, nil
+}
+
+func processPageLayout(cmd *Command) (out []string, err error) {
+	switch cmd.Mode {
+
+	case model.LISTPAGELAYOUT:
+		return ListPageLayout(cmd)
+
+	case model.SETPAGELAYOUT:
+		return SetPageLayout(cmd)
+
+	case model.RESETPAGELAYOUT:
+		return ResetPageLayout(cmd)
+	}
+
+	return nil, nil
+}
+
+func processPageMode(cmd *Command) (out []string, err error) {
+	switch cmd.Mode {
+
+	case model.LISTPAGEMODE:
+		return ListPageMode(cmd)
+
+	case model.SETPAGEMODE:
+		return SetPageMode(cmd)
+
+	case model.RESETPAGEMODE:
+		return ResetPageMode(cmd)
+	}
+
 	return nil, nil
 }

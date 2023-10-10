@@ -362,3 +362,49 @@ func ImportBookmarks(cmd *Command) ([]string, error) {
 func RemoveBookmarks(cmd *Command) ([]string, error) {
 	return nil, api.RemoveBookmarksFile(*cmd.InFile, *cmd.OutFile, cmd.Conf)
 }
+
+// ListPageLayout returns inFile's page layout.
+func ListPageLayout(cmd *Command) ([]string, error) {
+	pl, err := api.ListPageLayoutFile(*cmd.InFile, cmd.Conf)
+	var ss []string
+	if pl != nil {
+		ss = append(ss, pl.String())
+	} else {
+		ss = append(ss, "No page layout set, PDF viewers will default to \"SinglePage\"")
+	}
+	return ss, err
+}
+
+// SetPageLayout sets inFile's page layout.
+func SetPageLayout(cmd *Command) ([]string, error) {
+	pageLayout := model.PageLayoutFor(cmd.StringVal)
+	return nil, api.SetPageLayoutFile(*cmd.InFile, *cmd.OutFile, *pageLayout, cmd.Conf)
+}
+
+// ResetPageLayout resets inFile's page layout.
+func ResetPageLayout(cmd *Command) ([]string, error) {
+	return nil, api.ResetPageLayoutFile(*cmd.InFile, *cmd.OutFile, cmd.Conf)
+}
+
+// ListPageMode returns inFile's page mode.
+func ListPageMode(cmd *Command) ([]string, error) {
+	pm, err := api.ListPageModeFile(*cmd.InFile, cmd.Conf)
+	var ss []string
+	if pm != nil {
+		ss = append(ss, pm.String())
+	} else {
+		ss = append(ss, "No page mode set, PDF viewers will default to \"UseNone\"")
+	}
+	return ss, err
+}
+
+// SetPageMode sets inFile's page mode.
+func SetPageMode(cmd *Command) ([]string, error) {
+	pageMode := model.PageModeFor(cmd.StringVal)
+	return nil, api.SetPageModeFile(*cmd.InFile, *cmd.OutFile, *pageMode, cmd.Conf)
+}
+
+// ResetPageMode resets inFile's page mode.
+func ResetPageMode(cmd *Command) ([]string, error) {
+	return nil, api.ResetPageModeFile(*cmd.InFile, *cmd.OutFile, cmd.Conf)
+}

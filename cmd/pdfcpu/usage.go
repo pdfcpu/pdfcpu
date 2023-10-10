@@ -25,47 +25,50 @@ Usage:
    
 The commands are:
 
-   annotations   list, remove page annotations
-   attachments   list, add, remove, extract embedded file attachments
-   booklet       arrange pages onto larger sheets of paper to make a booklet or zine
-   bookmarks     list, import, export, remove bookmarks
-   boxes         list, add, remove page boundaries for selected pages
-   changeopw     change owner password
-   changeupw     change user password
-   collect       create custom sequence of selected pages
-   config        print configuration
-   create        create PDF content including forms via JSON
-   crop          set cropbox for selected pages
-   cut           custom cut pages horizontally or vertically
-   decrypt       remove password protection
-   encrypt       set password protection		
-   extract       extract images, fonts, content, pages or metadata
-   fonts         install, list supported fonts, create cheat sheets
-   form          list, remove fields, lock, unlock, reset, export, fill form via JSON or CSV
-   grid          rearrange pages or images for enhanced browsing experience
-   images        list images for selected pages
-   import        import/convert images to PDF
-   info          print file info
-   keywords      list, add, remove keywords
-   merge         concatenate PDFs
-   ndown         cut selected pages into n pages symmetrically
-   nup           rearrange pages or images for reduced number of pages
-   optimize      optimize PDF by getting rid of redundant page resources
-   pages         insert, remove selected pages
-   paper         print list of supported paper sizes
-   permissions   list, set user access permissions
-   portfolio     list, add, remove, extract portfolio entries with optional description
-   poster        cut selected pages into poster using paper size or dimensions
-   properties    list, add, remove document properties
-   resize        scale selected pages
-   rotate        rotate selected pages
-   selectedpages print definition of the -pages flag
-   split         split up a PDF by span or bookmark
-   stamp         add, remove, update Unicode text, image or PDF stamps for selected pages
-   trim          create trimmed version of selected pages
-   validate      validate PDF against PDF 32000-1:2008 (PDF 1.7)
-   version       print version
-   watermark     add, remove, update Unicode text, image or PDF watermarks for selected pages
+   annotations     list, remove page annotations
+   attachments     list, add, remove, extract embedded file attachments
+   booklet         arrange pages onto larger sheets of paper to make a booklet or zine
+   bookmarks       list, import, export, remove bookmarks
+   boxes           list, add, remove page boundaries for selected pages
+   changeopw       change owner password
+   changeupw       change user password
+   collect         create custom sequence of selected pages
+   config          print configuration
+   create          create PDF content including forms via JSON
+   crop            set cropbox for selected pages
+   cut             custom cut pages horizontally or vertically
+   decrypt         remove password protection
+   encrypt         set password protection		
+   extract         extract images, fonts, content, pages or metadata
+   fonts           install, list supported fonts, create cheat sheets
+   form            list, remove fields, lock, unlock, reset, export, fill form via JSON or CSV
+   grid            rearrange pages or images for enhanced browsing experience
+   images          list images for selected pages
+   import          import/convert images to PDF
+   info            print file info
+   keywords        list, add, remove keywords
+   merge           concatenate PDFs
+   ndown           cut selected pages into n pages symmetrically
+   nup             rearrange pages or images for reduced number of pages
+   optimize        optimize PDF by getting rid of redundant page resources
+   pagelayout      list, set, reset page layout for opened document
+   pagemode        list, set, reset page mode for opened document
+   pages           insert, remove selected pages
+   paper           print list of supported paper sizes
+   permissions     list, set user access permissions
+   portfolio       list, add, remove, extract portfolio entries with optional description
+   poster          cut selected pages into poster using paper size or dimensions
+   properties      list, add, remove document properties
+   resize          scale selected pages
+   rotate          rotate selected pages
+   selectedpages   print definition of the -pages flag
+   split           split up a PDF by span or bookmark
+   stamp           add, remove, update Unicode text, image or PDF stamps for selected pages
+   trim            create trimmed version of selected pages
+   validate        validate PDF against PDF 32000-1:2008 (PDF 1.7)
+   version         print version
+   viewpreferences list, set, reset viewing preferences for opened document
+   watermark       add, remove, update Unicode text, image or PDF watermarks for selected pages
 
    All instantly recognizable command prefixes are supported eg. val for validation
    One letter Unix style abbreviations supported for flags and command parameters.
@@ -1322,4 +1325,147 @@ description ... scalefactor, dimensions, formsize, enforce, border, bgcolor
       outFile     ... output PDF file
       outFileJSON ... output PDF file
 `
+
+	usagePageLayoutList  = "pdfcpu pagelayout list  inFile"
+	usagePageLayoutSet   = "pdfcpu pagelayout set   inFile value"
+	usagePageLayoutReset = "pdfcpu pagelayout reset inFile" + generalFlags
+
+	usagePageLayout = "usage: " + usagePageLayoutList +
+		"\n       " + usagePageLayoutSet +
+		"\n       " + usagePageLayoutReset
+
+	usageLongPageLayout = `Manage the page layout which shall be used when the document is opened:
+
+    inFile ... input PDF file
+     value ... one of:
+
+     SinglePage     ... Display one page at a time (default)
+     TwoColumnLeft  ... Display the pages in two columns, with odd- numbered pages on the left
+     TwoColumnRight ... Display the pages in two columns, with odd- numbered pages on the right
+     TwoPageLeft    ... Display the pages two at a time, with odd-numbered pages on the left
+     TwoPageRight   ... Display the pages two at a time, with odd-numbered pages on the right
+    
+    Eg. set page layout:
+           pdfcpu pagelayout set test.pdf TwoPageLeft
+
+        remove page layout:
+           pdfcpu pagelayout remove test.pdf
+`
+
+	usagePageModeList  = "pdfcpu pagemode list  inFile"
+	usagePageModeSet   = "pdfcpu pagemode set   inFile value"
+	usagePageModeReset = "pdfcpu pagemode reset inFile" + generalFlags
+
+	usagePageMode = "usage: " + usagePageModeList +
+		"\n       " + usagePageModeSet +
+		"\n       " + usagePageModeReset
+
+	usageLongPageMode = `Manage how the document shall be displayed when opened:
+
+    inFile ... input PDF file
+     value ... one of:
+
+     UseNone        ... Neither document outline nor thumbnail images visible (default)
+     UseOutlines    ... Document outline visible
+     UseThumbs      ... Thumbnail images visible
+     FullScreen     ... Full-screen mode, with no menu bar, window controls, or any other window visible
+     UseOC          ... Optional content group panel visible (since PDF 1.5)
+     UseAttachments ... Attachments panel visible (since PDF 1.6)
+    
+    Eg. set page mode:
+           pdfcpu pagemode set test.pdf UseOutlines
+
+        remove page mode:
+           pdfcpu pagemode remove test.pdf
+    `
+
+	usageViewPrefList  = "pdfcpu viewpreferences list  inFile"
+	usageViewPrefSet   = "pdfcpu viewpreferences set   inFile inFileJSON | nameValuePair..."
+	usageViewPrefReset = "pdfcpu viewpreferences reset inFile" + generalFlags
+
+	usageViewPrefMode = "usage: " + usageViewPrefList +
+		"\n       " + usageViewPrefSet +
+		"\n       " + usageViewPrefReset
+
+	usageLongViewPrefMode = `Manage the way the document shall be displayed on the screen and shall be printed:
+
+    inFile        ... input PDF file
+    inFileJSON    ... input JSON file containing viewing preferences 
+    nameValuePair ... 'name = value'
+    
+    The preferences are:
+
+      HideToolbar           ... Hide tool bars when the document is active (default=false).
+      HideMenubar           ... Hide the menu bar when the document is active (default=false).
+      HideWindowUI          ... Hide user interface elements in the document’s window (default=false).
+      FitWindow             ... Resize the document’s window to fit the size of the first displayed page (default=false).
+      CenterWindow          ... Position the document’s window in the centre of the screen (default=false).
+      DisplayDocTitle       ... true: The window’s title bar should display the document title taken from the dc:title element of the XMP metadata stream.
+                                false: The title bar should display the name of the PDF file containing the document (default=false).
+
+      NonFullScreenPageMode ... How to display the document on exiting full-screen mode:
+                                    UseNone     = Neither document outline nor thumbnail images visible (=default)
+                                    UseOutlines = Documentoutlinevisible
+                                    UseThumbs   = Thumbnail images visible
+                                    UseOC       = Optional content group panel visible
+
+      Direction             ... The predominant logical content order for text
+                                    L2R         = Left to right (=default)
+                                    R2L         = Right to left (including vertical writing systems, such as Chinese, Japanese, and Korean)
+
+      Duplex                ... The paper handling option that shall be used when printing the file from the print dialogue (since PDF 1.7):
+                                    Simplex             = Print single-sided
+                                    DuplexFlipShortEdge = Duplex and flip on the short edge of the sheet
+                                    DuplexFlipLongEdge  = Duplex and flip on the long edge of the sheet
+
+      PickTrayByPDFSize     ... Whether the PDF page size shall be used to select the input paper tray. 
+      PrintPageRange        ... The page numbers used to initialize the print dialogue box when the file is printed (since PDF 1.7).
+                                The array shall contain an even number of integers to be interpreted in pairs, with each pair specifying
+                                the first and last pages in a sub-range of pages to be printed. The first page of the PDF file shall be denoted by 1.
+      NumCopies             ... The number of copies that shall be printed when the print dialog is opened for this file (since PDF 1.7).
+      Enforce               ... Array of names of Viewer preference settings that shall be enforced by PDF processors and
+                                that shall not be overridden by subsequent selections in the application user interface (since PDF 2.0).
+                                    Possible values: PrintScaling
+
+    Eg. list viewer preferences:
+         pdfcpu viewpref list test.pdf
+
+   remove viewer preferences:
+         pdfcpu viewpref remove test.pdf
+
+   set printer preferences:
+         pdfcpu viewpref add test.pdf 'duplex = duplexFlipShortEdge' 'printPageRange = 1 4 10 20' 'numcopies = 3'
+
+   set viewer preferences:
+         pdfcpu viewpref add test.pdf 'fitwindow = true', 'hidetoolbar = t', 'centerwindow = yes', 'hidemenubar = y'
+
+   set viewer preferences via JSON:
+         pdfcpu viewpref add test.pdf viewpref.json
+
+         and eg. viewpref.json (each preferences is optional!):
+
+         {
+            "viewingPreferences": {
+               "HideToolBar": true,
+               "HideMenuBar": false,
+               "HideWindowUI": false,
+               "FitWindow": true,
+               "CenterWindow": true,
+               "DisplayDocTitle": true,
+               "NonFullScreenPageMode": "UseThumbs",
+               "Direction": "R2L",
+               "Duplex": "Simplex",
+               "PickTrayByPDFSize": false,
+               "PrintPageRange": [
+                  1, 4,
+                  10, 20
+               ],
+               "NumCopies": 3,
+               "Enforce": [
+                  "PrintScaling"
+               ]
+            }
+         }
+   
+    `
 )

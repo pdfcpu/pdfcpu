@@ -2316,3 +2316,97 @@ func processRemoveBookmarksCommand(conf *model.Configuration) {
 
 	process(cli.RemoveBookmarksCommand(inFile, outFile, conf))
 }
+
+func processListPageLayoutCommand(conf *model.Configuration) {
+	if len(flag.Args()) != 1 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usagePageLayoutList)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+	process(cli.ListPageLayoutCommand(inFile, conf))
+}
+
+func processSetPageLayoutCommand(conf *model.Configuration) {
+	if len(flag.Args()) != 2 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usagePageLayoutSet)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+
+	v := flag.Arg(1)
+
+	if !validate.DocumentPageLayout(v) {
+		fmt.Fprintln(os.Stderr, "invalid page layout, use one of: SinglePage, TwoColumnLeft, TwoColumnRight, TwoPageLeft, TwoPageRight")
+		os.Exit(1)
+	}
+
+	process(cli.SetPageLayoutCommand(inFile, "", v, conf))
+}
+
+func processResetPageLayoutCommand(conf *model.Configuration) {
+	if len(flag.Args()) != 1 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usagePageLayoutReset)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+	process(cli.ResetPageLayoutCommand(inFile, "", conf))
+}
+
+func processListPageModeCommand(conf *model.Configuration) {
+	if len(flag.Args()) != 1 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usagePageModeList)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+	process(cli.ListPageModeCommand(inFile, conf))
+}
+
+func processSetPageModeCommand(conf *model.Configuration) {
+	if len(flag.Args()) != 2 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usagePageModeSet)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+
+	v := flag.Arg(1)
+
+	if !validate.DocumentPageMode(v) {
+		fmt.Fprintln(os.Stderr, "invalid page mode, use one of: UseNone, UseThumb, FullScreen, UseOC, UseAttachments")
+		os.Exit(1)
+	}
+
+	process(cli.SetPageModeCommand(inFile, "", v, conf))
+}
+
+func processResetPageModeCommand(conf *model.Configuration) {
+	if len(flag.Args()) != 1 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usagePageModeReset)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+	process(cli.ResetPageModeCommand(inFile, "", conf))
+}

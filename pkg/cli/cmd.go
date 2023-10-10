@@ -36,6 +36,7 @@ type Command struct {
 	PageSelection  []string
 	PWOld          *string
 	PWNew          *string
+	StringVal      string
 	IntVal         int
 	BoolVal        bool
 	IntVals        []int
@@ -122,6 +123,12 @@ var cmdMap = map[model.CommandMode]func(cmd *Command) ([]string, error){
 	model.EXPORTBOOKMARKS:         processBookmarks,
 	model.IMPORTBOOKMARKS:         processBookmarks,
 	model.REMOVEBOOKMARKS:         processBookmarks,
+	model.LISTPAGEMODE:            processPageMode,
+	model.SETPAGEMODE:             processPageMode,
+	model.RESETPAGEMODE:           processPageMode,
+	model.LISTPAGELAYOUT:          processPageLayout,
+	model.SETPAGELAYOUT:           processPageLayout,
+	model.RESETPAGELAYOUT:         processPageLayout,
 }
 
 // ValidateCommand creates a new command to validate a file.
@@ -1039,6 +1046,84 @@ func RemoveBookmarksCommand(inFile, outFile string, conf *model.Configuration) *
 	conf.Cmd = model.REMOVEBOOKMARKS
 	return &Command{
 		Mode:    model.REMOVEBOOKMARKS,
+		InFile:  &inFile,
+		OutFile: &outFile,
+		Conf:    conf}
+}
+
+// ListPageLayoutCommand creates a new command to list the document page layout.
+func ListPageLayoutCommand(inFile string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.LISTPAGELAYOUT
+	return &Command{
+		Mode:   model.LISTPAGELAYOUT,
+		InFile: &inFile,
+		Conf:   conf}
+}
+
+// SetPageLayoutCommand creates a new command to set the document page layout.
+func SetPageLayoutCommand(inFile, outFile, value string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.SETPAGELAYOUT
+	return &Command{
+		Mode:      model.SETPAGELAYOUT,
+		InFile:    &inFile,
+		OutFile:   &outFile,
+		StringVal: value,
+		Conf:      conf}
+}
+
+// ResetPageLayoutCommand creates a new command to reset the document page layout.
+func ResetPageLayoutCommand(inFile, outFile string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.RESETPAGELAYOUT
+	return &Command{
+		Mode:    model.RESETPAGELAYOUT,
+		InFile:  &inFile,
+		OutFile: &outFile,
+		Conf:    conf}
+}
+
+// ListPageModeCommand creates a new command to list the document page mode.
+func ListPageModeCommand(inFile string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.LISTPAGEMODE
+	return &Command{
+		Mode:   model.LISTPAGEMODE,
+		InFile: &inFile,
+		Conf:   conf}
+}
+
+// SetPageModeCommand creates a new command to set the document page mode.
+func SetPageModeCommand(inFile, outFile, value string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.SETPAGEMODE
+	return &Command{
+		Mode:      model.SETPAGEMODE,
+		InFile:    &inFile,
+		OutFile:   &outFile,
+		StringVal: value,
+		Conf:      conf}
+}
+
+// ResetPageModeCommand creates a new command to reset the document page mode.
+func ResetPageModeCommand(inFile, outFile string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.RESETPAGEMODE
+	return &Command{
+		Mode:    model.RESETPAGEMODE,
 		InFile:  &inFile,
 		OutFile: &outFile,
 		Conf:    conf}

@@ -17,6 +17,7 @@ limitations under the License.
 package validate
 
 import (
+	"strings"
 	"unicode/utf8"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -203,4 +204,14 @@ func validateDocumentInfoObject(xRefTable *model.XRefTable) error {
 	}
 
 	return nil
+}
+
+// DocumentPageLayout returns true for valid page layout values.
+func DocumentPageLayout(s string) bool {
+	return types.MemberOf(strings.ToLower(s), []string{"singlepage", "twocolumnleft", "twocolumnright", "twopageleft", "twopageright"})
+}
+
+// DocumentPageMode returns true for valid page mode values.
+func DocumentPageMode(s string) bool {
+	return types.MemberOf(strings.ToLower(s), []string{"usenone", "useoutlines", "usethumbs", "fullscreen", "useoc", "useattachments"})
 }

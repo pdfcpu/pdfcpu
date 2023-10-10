@@ -28,6 +28,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Attachments returns rs's attachments.
 func Attachments(rs io.ReadSeeker, conf *model.Configuration) ([]model.Attachment, error) {
 	if rs == nil {
 		return nil, errors.New("pdfcpu: Attachments: missing rs")

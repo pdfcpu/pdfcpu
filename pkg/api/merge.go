@@ -94,6 +94,9 @@ func prepDestContext(destFile string, rs io.ReadSeeker, conf *model.Configuratio
 	return ctxDest, nil
 }
 
+// Merge concatenates inFiles.
+// if destFile is supplied it appends the result to destfile (=MERGEAPPEND)
+// if no destFile supplied it writes the result to the first entry of inFiles (=MERGECREATE).
 func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configuration) error {
 	if w == nil {
 		return errors.New("pdfcpu: Merge: Please provide w")
@@ -159,6 +162,7 @@ func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configura
 	return WriteContext(ctxDest, w)
 }
 
+// MergeCreateFile merges inFiles and writes the result to outFile.
 func MergeCreateFile(inFiles []string, outFile string, conf *model.Configuration) (err error) {
 	f, err := os.Create(outFile)
 	if err != nil {
@@ -176,6 +180,7 @@ func MergeCreateFile(inFiles []string, outFile string, conf *model.Configuration
 	return Merge("", inFiles, f, conf)
 }
 
+// MergeAppendFile appends inFiles to outFile.
 func MergeAppendFile(inFiles []string, outFile string, conf *model.Configuration) (err error) {
 	tmpFile := outFile
 	overWrite := false

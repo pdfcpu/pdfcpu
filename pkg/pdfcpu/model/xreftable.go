@@ -127,6 +127,9 @@ type XRefTable struct {
 	ModDate      string
 	Properties   map[string]string
 
+	PageLayout *PageLayout
+	PageMode   *PageMode
+
 	// Linearization section (not yet supported)
 	OffsetPrimaryHintTable  *int64
 	OffsetOverflowHintTable *int64

@@ -323,8 +323,16 @@ func pageLayoutValidator(v model.Version) func(s string) bool {
 }
 
 func validatePageLayout(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-	_, err := validateNameEntry(xRefTable, rootDict, "rootDict", "PageLayout", required, sinceVersion, pageLayoutValidator(xRefTable.Version()))
-	return err
+	n, err := validateNameEntry(xRefTable, rootDict, "rootDict", "PageLayout", required, sinceVersion, pageLayoutValidator(xRefTable.Version()))
+	if err != nil {
+		return err
+	}
+
+	if n != nil {
+		xRefTable.PageLayout = model.PageLayoutFor(n.String())
+	}
+
+	return nil
 }
 
 func pageModeValidator(v model.Version) func(s string) bool {
@@ -342,8 +350,16 @@ func pageModeValidator(v model.Version) func(s string) bool {
 }
 
 func validatePageMode(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-	_, err := validateNameEntry(xRefTable, rootDict, "rootDict", "PageMode", required, sinceVersion, pageModeValidator(xRefTable.Version()))
-	return err
+	n, err := validateNameEntry(xRefTable, rootDict, "rootDict", "PageMode", required, sinceVersion, pageModeValidator(xRefTable.Version()))
+	if err != nil {
+		return err
+	}
+
+	if n != nil {
+		xRefTable.PageMode = model.PageModeFor(n.String())
+	}
+
+	return nil
 }
 
 func validateOpenAction(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {

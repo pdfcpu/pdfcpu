@@ -42,6 +42,7 @@ func Box(s string, u types.DisplayUnit) (*model.Box, error) {
 	return model.ParseBox(s, u)
 }
 
+// Boxes returns rs's page boundaries for selected pages of rs.
 func Boxes(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration) ([]model.PageBoundaries, error) {
 	if rs == nil {
 		return nil, errors.New("pdfcpu: Boxes: missing rs")

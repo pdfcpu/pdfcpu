@@ -128,6 +128,12 @@ const (
 	POSTER
 	NDOWN
 	CUT
+	LISTPAGELAYOUT
+	SETPAGELAYOUT
+	RESETPAGELAYOUT
+	LISTPAGEMODE
+	SETPAGEMODE
+	RESETPAGEMODE
 )
 
 // Configuration of a Context.
@@ -297,7 +303,6 @@ func NewDefaultConfiguration() *Configuration {
 		if err != nil {
 			path = os.TempDir()
 		}
-		println(path)
 		if err = EnsureDefaultConfigAt(path); err == nil {
 			c := *loadedDefaultConfig
 			return &c

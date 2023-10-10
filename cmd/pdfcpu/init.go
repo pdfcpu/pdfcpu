@@ -193,6 +193,30 @@ func initWatermarkCmdMap() commandMap {
 	return m
 }
 
+func initPageModeCmdMap() commandMap {
+	m := newCommandMap()
+	for k, v := range map[string]command{
+		"list":  {processListPageModeCommand, nil, "", ""},
+		"set":   {processSetPageModeCommand, nil, "", ""},
+		"reset": {processResetPageModeCommand, nil, "", ""},
+	} {
+		m.register(k, v)
+	}
+	return m
+}
+
+func initPageLayoutCmdMap() commandMap {
+	m := newCommandMap()
+	for k, v := range map[string]command{
+		"list":  {processListPageLayoutCommand, nil, "", ""},
+		"set":   {processSetPageLayoutCommand, nil, "", ""},
+		"reset": {processResetPageLayoutCommand, nil, "", ""},
+	} {
+		m.register(k, v)
+	}
+	return m
+}
+
 func initCommandMap() {
 	annotsCmdMap := initAnnotsCmdMap()
 	attachCmdMap := initAttachCmdMap()
@@ -208,6 +232,8 @@ func initCommandMap() {
 	propertiesCmdMap := initPropertiesCmdMap()
 	stampCmdMap := initStampCmdMap()
 	watermarkCmdMap := initWatermarkCmdMap()
+	pageModeCmdMap := initPageModeCmdMap()
+	pageLayoutCmdMap := initPageLayoutCmdMap()
 
 	cmdMap = newCommandMap()
 
@@ -240,6 +266,8 @@ func initCommandMap() {
 		"ndown":         {processNDownCommand, nil, usageNDown, usageLongNDown},
 		"nup":           {processNUpCommand, nil, usageNUp, usageLongNUp},
 		"optimize":      {processOptimizeCommand, nil, usageOptimize, usageLongOptimize},
+		"pagelayout":    {nil, pageLayoutCmdMap, usagePageLayout, usageLongPageLayout},
+		"pagemode":      {nil, pageModeCmdMap, usagePageMode, usageLongPageMode},
 		"pages":         {nil, pagesCmdMap, usagePages, usageLongPages},
 		"paper":         {printPaperSizes, nil, usagePaper, usageLongPaper},
 		"permissions":   {nil, permissionsCmdMap, usagePerm, usageLongPerm},

@@ -139,6 +139,7 @@ func readAndValidate(rs io.ReadSeeker, conf *model.Configuration, from1 time.Tim
 	return ctx, dur1, dur2, nil
 }
 
+// ReadValidateAndOptimize returns the model.Context of rs ready for processing.
 func ReadValidateAndOptimize(rs io.ReadSeeker, conf *model.Configuration, from1 time.Time) (ctx *model.Context, dur1, dur2, dur3 float64, err error) {
 	ctx, dur1, dur2, err = readAndValidate(rs, conf, from1)
 	if err != nil {
