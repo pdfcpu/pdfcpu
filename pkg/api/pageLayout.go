@@ -26,8 +26,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ListPageLayout lists rs's page layout.
-func ListPageLayout(rs io.ReadSeeker, conf *model.Configuration) (*model.PageLayout, error) {
+// PageLayout returns rs's page layout.
+func PageLayout(rs io.ReadSeeker, conf *model.Configuration) (*model.PageLayout, error) {
 	if rs == nil {
 		return nil, errors.New("pdfcpu: PageLayout: missing rs")
 	}
@@ -47,8 +47,44 @@ func ListPageLayout(rs io.ReadSeeker, conf *model.Configuration) (*model.PageLay
 	return ctx.PageLayout, nil
 }
 
+// PageLayoutFile returns inFile's page layout.
+func PageLayoutFile(inFile string, conf *model.Configuration) (*model.PageLayout, error) {
+	f, err := os.Open(inFile)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	return PageLayout(f, conf)
+}
+
+// ListPageLayout lists rs's page layout.
+func ListPageLayout(rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {
+	if rs == nil {
+		return nil, errors.New("pdfcpu: ListPageLayout: missing rs")
+	}
+
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	} else {
+		conf.ValidationMode = model.ValidationRelaxed
+	}
+	conf.Cmd = model.LISTPAGELAYOUT
+
+	ctx, _, _, err := readAndValidate(rs, conf, time.Now())
+	if err != nil {
+		return nil, err
+	}
+
+	if ctx.PageLayout != nil {
+		return []string{ctx.PageLayout.String()}, nil
+	}
+
+	return []string{"No page layout set, PDF viewers will default to \"SinglePage\""}, nil
+}
+
 // ListPageLayoutFile lists inFile's page layout.
-func ListPageLayoutFile(inFile string, conf *model.Configuration) (*model.PageLayout, error) {
+func ListPageLayoutFile(inFile string, conf *model.Configuration) ([]string, error) {
 	f, err := os.Open(inFile)
 	if err != nil {
 		return nil, err

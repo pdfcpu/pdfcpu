@@ -27,7 +27,7 @@ var (
 	upw, opw, key, perm, unit, conf string
 	verbose, veryVerbose            bool
 	links, quiet, sorted, bookmarks bool
-	json, replaceBookmarks          bool
+	all, json, replaceBookmarks     bool
 	needStackTrace                  = true
 	cmdMap                          commandMap
 )

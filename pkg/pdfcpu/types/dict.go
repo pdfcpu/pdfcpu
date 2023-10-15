@@ -61,6 +61,11 @@ func (d Dict) Insert(key string, value Object) (ok bool) {
 	return ok
 }
 
+// InsertBool adds a new bool entry to this PDFDict.
+func (d Dict) InsertBool(key string, value bool) {
+	d.Insert(key, Boolean(value))
+}
+
 // InsertInt adds a new int entry to this PDFDict.
 func (d Dict) InsertInt(key string, value int) {
 	d.Insert(key, Integer(value))

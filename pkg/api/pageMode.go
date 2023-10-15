@@ -26,8 +26,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ListPageMode lists rs's page mode.
-func ListPageMode(rs io.ReadSeeker, conf *model.Configuration) (*model.PageMode, error) {
+// PageMode returns rs's page mode.
+func PageMode(rs io.ReadSeeker, conf *model.Configuration) (*model.PageMode, error) {
 	if rs == nil {
 		return nil, errors.New("pdfcpu: PageMode: missing rs")
 	}
@@ -47,8 +47,44 @@ func ListPageMode(rs io.ReadSeeker, conf *model.Configuration) (*model.PageMode,
 	return ctx.PageMode, nil
 }
 
+// PageModeFile returns inFile's page mode.
+func PageModeFile(inFile string, conf *model.Configuration) (*model.PageMode, error) {
+	f, err := os.Open(inFile)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	return PageMode(f, conf)
+}
+
+// ListPageMode lists rs's page mode.
+func ListPageMode(rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {
+	if rs == nil {
+		return nil, errors.New("pdfcpu: ListPageMode: missing rs")
+	}
+
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	} else {
+		conf.ValidationMode = model.ValidationRelaxed
+	}
+	conf.Cmd = model.LISTPAGEMODE
+
+	ctx, _, _, err := readAndValidate(rs, conf, time.Now())
+	if err != nil {
+		return nil, err
+	}
+
+	if ctx.PageMode != nil {
+		return []string{ctx.PageMode.String()}, nil
+	}
+
+	return []string{"No page mode set, PDF viewers will default to \"UseNone\""}, nil
+}
+
 // ListPageModeFile lists inFile's page mode.
-func ListPageModeFile(inFile string, conf *model.Configuration) (*model.PageMode, error) {
+func ListPageModeFile(inFile string, conf *model.Configuration) ([]string, error) {
 	f, err := os.Open(inFile)
 	if err != nil {
 		return nil, err

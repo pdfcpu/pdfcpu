@@ -2410,3 +2410,52 @@ func processResetPageModeCommand(conf *model.Configuration) {
 	}
 	process(cli.ResetPageModeCommand(inFile, "", conf))
 }
+
+func processListViewerPreferencesCommand(conf *model.Configuration) {
+	if len(flag.Args()) != 1 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usageViewerPreferences)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+	process(cli.ListViewerPreferencesCommand(inFile, all, json, conf))
+}
+
+func processSetViewerPreferencesCommand(conf *model.Configuration) {
+	if len(flag.Args()) != 2 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usageViewerPreferences)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+
+	inFileJSON, stringJSON := "", ""
+
+	s := flag.Arg(1)
+	if hasJSONExtension(s) {
+		inFileJSON = s
+	} else {
+		stringJSON = s
+	}
+
+	process(cli.SetViewerPreferencesCommand(inFile, inFileJSON, "", stringJSON, conf))
+}
+
+func processResetViewerPreferencesCommand(conf *model.Configuration) {
+	if len(flag.Args()) != 1 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usageViewerPreferences)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+	process(cli.ResetViewerPreferencesCommand(inFile, "", conf))
+}

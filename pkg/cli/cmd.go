@@ -25,34 +25,36 @@ import (
 
 // Command represents an execution context.
 type Command struct {
-	Mode           model.CommandMode
-	InFile         *string
-	InFileJSON     *string
-	InFiles        []string
-	InDir          *string
-	OutFile        *string
-	OutFileJSON    *string
-	OutDir         *string
-	PageSelection  []string
-	PWOld          *string
-	PWNew          *string
-	StringVal      string
-	IntVal         int
-	BoolVal        bool
-	IntVals        []int
-	StringVals     []string
-	StringMap      map[string]string
-	Input          io.ReadSeeker
-	Inputs         []io.ReadSeeker
-	Output         io.Writer
-	Box            *model.Box
-	Import         *pdfcpu.Import
-	NUp            *model.NUp
-	Cut            *model.Cut
-	PageBoundaries *model.PageBoundaries
-	Resize         *model.Resize
-	Watermark      *model.Watermark
-	Conf           *model.Configuration
+	Mode              model.CommandMode
+	InFile            *string
+	InFileJSON        *string
+	InFiles           []string
+	InDir             *string
+	OutFile           *string
+	OutFileJSON       *string
+	OutDir            *string
+	PageSelection     []string
+	PWOld             *string
+	PWNew             *string
+	StringVal         string
+	IntVal            int
+	BoolVal1          bool
+	BoolVal2          bool
+	IntVals           []int
+	StringVals        []string
+	StringMap         map[string]string
+	Input             io.ReadSeeker
+	Inputs            []io.ReadSeeker
+	Output            io.Writer
+	Box               *model.Box
+	Import            *pdfcpu.Import
+	NUp               *model.NUp
+	Cut               *model.Cut
+	PageBoundaries    *model.PageBoundaries
+	Resize            *model.Resize
+	Watermark         *model.Watermark
+	ViewerPreferences *model.ViewerPreferences
+	Conf              *model.Configuration
 }
 
 var cmdMap = map[model.CommandMode]func(cmd *Command) ([]string, error){
@@ -129,6 +131,9 @@ var cmdMap = map[model.CommandMode]func(cmd *Command) ([]string, error){
 	model.LISTPAGELAYOUT:          processPageLayout,
 	model.SETPAGELAYOUT:           processPageLayout,
 	model.RESETPAGELAYOUT:         processPageLayout,
+	model.LISTVIEWERPREFERENCES:   processViewerPreferences,
+	model.SETVIEWERPREFERENCES:    processViewerPreferences,
+	model.RESETVIEWERPREFERENCES:  processViewerPreferences,
 }
 
 // ValidateCommand creates a new command to validate a file.
@@ -562,7 +567,7 @@ func InfoCommand(inFiles []string, pageSelection []string, json bool, conf *mode
 		Mode:          model.LISTINFO,
 		InFiles:       inFiles,
 		PageSelection: pageSelection,
-		BoolVal:       json,
+		BoolVal1:      json,
 		Conf:          conf}
 }
 
@@ -930,7 +935,7 @@ func MultiFillFormCommand(inFilePDF, inFileData, outDir, outFilePDF string, merg
 		InFileJSON: &inFileData, // TODO Fix name clash.
 		OutDir:     &outDir,
 		OutFile:    &outFilePDF,
-		BoolVal:    merge,
+		BoolVal1:   merge,
 		Conf:       conf}
 }
 
@@ -1031,7 +1036,7 @@ func ImportBookmarksCommand(inFile, inFileJSON, outFile string, replace bool, co
 	conf.Cmd = model.IMPORTBOOKMARKS
 	return &Command{
 		Mode:       model.IMPORTBOOKMARKS,
-		BoolVal:    replace,
+		BoolVal1:   replace,
 		InFile:     &inFile,
 		InFileJSON: &inFileJSON,
 		OutFile:    &outFile,
@@ -1124,6 +1129,50 @@ func ResetPageModeCommand(inFile, outFile string, conf *model.Configuration) *Co
 	conf.Cmd = model.RESETPAGEMODE
 	return &Command{
 		Mode:    model.RESETPAGEMODE,
+		InFile:  &inFile,
+		OutFile: &outFile,
+		Conf:    conf}
+}
+
+// ListViewerPreferencesCommand creates a new command to list the viewer preferences.
+func ListViewerPreferencesCommand(inFile string, all, json bool, conf *model.Configuration) *Command {
+
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.LISTVIEWERPREFERENCES
+	return &Command{
+		Mode:     model.LISTVIEWERPREFERENCES,
+		InFile:   &inFile,
+		BoolVal1: all,
+		BoolVal2: json,
+		Conf:     conf}
+}
+
+// SetViewerPreferencesCommand creates a new command to set the viewer preferences.
+func SetViewerPreferencesCommand(inFilePDF, inFileJSON, outFilePDF, stringJSON string, conf *model.Configuration) *Command {
+
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.SETVIEWERPREFERENCES
+	return &Command{
+		Mode:       model.SETVIEWERPREFERENCES,
+		InFile:     &inFilePDF,
+		InFileJSON: &inFileJSON,
+		OutFile:    &outFilePDF,
+		StringVal:  stringJSON,
+		Conf:       conf}
+}
+
+// ResetViewerPreferencesCommand creates a new command to reset the viewer preferences.
+func ResetViewerPreferencesCommand(inFile, outFile string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.RESETVIEWERPREFERENCES
+	return &Command{
+		Mode:    model.RESETVIEWERPREFERENCES,
 		InFile:  &inFile,
 		OutFile: &outFile,
 		Conf:    conf}

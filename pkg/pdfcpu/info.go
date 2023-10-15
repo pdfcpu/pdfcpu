@@ -309,39 +309,40 @@ func pageInfo(info *PDFInfo, selectedPages types.IntSet) ([]string, error) {
 }
 
 type PDFInfo struct {
-	FileName           string                 `json:"source,omitempty"`
-	Version            string                 `json:"version"`
-	PageCount          int                    `json:"pages"`
-	PageBoundaries     []model.PageBoundaries `json:"-"`
-	PageDimensions     map[types.Dim]bool     `json:"-"`
-	Title              string                 `json:"title"`
-	Author             string                 `json:"author"`
-	Subject            string                 `json:"subject"`
-	Producer           string                 `json:"producer"`
-	Creator            string                 `json:"creator"`
-	CreationDate       string                 `json:"creationDate"`
-	ModificationDate   string                 `json:"modificationDate"`
-	PageMode           string                 `json:"pageMode"`
-	PageLayout         string                 `json:"pageLayout"`
-	Keywords           []string               `json:"keywords"`
-	Properties         map[string]string      `json:"properties"`
-	Tagged             bool                   `json:"tagged"`
-	Hybrid             bool                   `json:"hybrid"`
-	Linearized         bool                   `json:"linearized"`
-	UsingXRefStreams   bool                   `json:"usingXRefStreams"`
-	UsingObjectStreams bool                   `json:"usingObjectStreams"`
-	Watermarked        bool                   `json:"watermarked"`
-	Thumbnails         bool                   `json:"thumbnails"`
-	Form               bool                   `json:"form"`
-	Signatures         bool                   `json:"signatures"`
-	AppendOnly         bool                   `json:"appendOnly"`
-	Outlines           bool                   `json:"bookmarks"`
-	Names              bool                   `json:"names"`
-	Encrypted          bool                   `json:"encrypted"`
-	Permissions        int                    `json:"permissions"`
-	Attachments        []model.Attachment     `json:"attachments,omitempty"`
-	Unit               types.DisplayUnit      `json:"-"`
-	UnitString         string                 `json:"-"`
+	FileName           string                   `json:"source,omitempty"`
+	Version            string                   `json:"version"`
+	PageCount          int                      `json:"pages"`
+	PageBoundaries     []model.PageBoundaries   `json:"-"`
+	PageDimensions     map[types.Dim]bool       `json:"-"`
+	Title              string                   `json:"title"`
+	Author             string                   `json:"author"`
+	Subject            string                   `json:"subject"`
+	Producer           string                   `json:"producer"`
+	Creator            string                   `json:"creator"`
+	CreationDate       string                   `json:"creationDate"`
+	ModificationDate   string                   `json:"modificationDate"`
+	PageMode           string                   `json:"pageMode,omitempty"`
+	PageLayout         string                   `json:"pageLayout,omitempty"`
+	ViewerPref         *model.ViewerPreferences `json:"viewerPreferences,omitempty"`
+	Keywords           []string                 `json:"keywords"`
+	Properties         map[string]string        `json:"properties"`
+	Tagged             bool                     `json:"tagged"`
+	Hybrid             bool                     `json:"hybrid"`
+	Linearized         bool                     `json:"linearized"`
+	UsingXRefStreams   bool                     `json:"usingXRefStreams"`
+	UsingObjectStreams bool                     `json:"usingObjectStreams"`
+	Watermarked        bool                     `json:"watermarked"`
+	Thumbnails         bool                     `json:"thumbnails"`
+	Form               bool                     `json:"form"`
+	Signatures         bool                     `json:"signatures"`
+	AppendOnly         bool                     `json:"appendOnly"`
+	Outlines           bool                     `json:"bookmarks"`
+	Names              bool                     `json:"names"`
+	Encrypted          bool                     `json:"encrypted"`
+	Permissions        int                      `json:"permissions"`
+	Attachments        []model.Attachment       `json:"attachments,omitempty"`
+	Unit               types.DisplayUnit        `json:"-"`
+	UnitString         string                   `json:"-"`
 }
 
 func (info PDFInfo) renderKeywords(ss *[]string) error {
@@ -523,6 +524,8 @@ func Info(ctx *model.Context, fileName string, selectedPages types.IntSet) (*PDF
 		info.PageLayout = ctx.PageLayout.String()
 	}
 
+	info.ViewerPref = ctx.ViewerPref
+
 	kwl, err := KeywordsList(ctx.XRefTable)
 	if err != nil {
 		return nil, err
@@ -589,6 +592,9 @@ func ListInfo(info *PDFInfo, selectedPages types.IntSet) ([]string, error) {
 	}
 	if info.PageLayout != "" {
 		ss = append(ss, fmt.Sprintf("%20s: %s", "Page Layout", info.PageLayout))
+	}
+	if info.ViewerPref != nil {
+		ss = append(ss, fmt.Sprintf("%20s: %s", "Viewer Prefs", info.ViewerPref))
 	}
 
 	info.renderKeywords(&ss)

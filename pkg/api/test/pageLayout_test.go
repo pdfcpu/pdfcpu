@@ -33,7 +33,7 @@ func TestPageLayout(t *testing.T) {
 
 	pageLayout := model.PageLayoutTwoColumnLeft
 
-	pl, err := api.ListPageLayoutFile(inFile, nil)
+	pl, err := api.PageLayoutFile(inFile, nil)
 	if err != nil {
 		t.Fatalf("%s %s: list pageLayout: %v\n", msg, inFile, err)
 	}
@@ -45,7 +45,7 @@ func TestPageLayout(t *testing.T) {
 		t.Fatalf("%s %s: set pageLayout: %v\n", msg, inFile, err)
 	}
 
-	pl, err = api.ListPageLayoutFile(inFile, nil)
+	pl, err = api.PageLayoutFile(inFile, nil)
 	if err != nil {
 		t.Fatalf("%s %s: list pageLayout: %v\n", msg, inFile, err)
 	}
@@ -53,14 +53,14 @@ func TestPageLayout(t *testing.T) {
 		t.Fatalf("%s %s: list pageLayout, missing page layout\n", msg, inFile)
 	}
 	if *pl != pageLayout {
-		t.Fatalf("%s %s: list pageLayout, want:%s, got:%s\n", msg, inFile, pageLayout, *pl)
+		t.Fatalf("%s %s: list pageLayout, want:%s, got:%s\n", msg, inFile, pageLayout.String(), pl.String())
 	}
 
 	if err := api.ResetPageLayoutFile(inFile, "", nil); err != nil {
 		t.Fatalf("%s %s: reset pageLayout: %v\n", msg, inFile, err)
 	}
 
-	pl, err = api.ListPageLayoutFile(inFile, nil)
+	pl, err = api.PageLayoutFile(inFile, nil)
 	if err != nil {
 		t.Fatalf("%s %s: list page layout: %v\n", msg, inFile, err)
 	}

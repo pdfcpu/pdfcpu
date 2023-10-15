@@ -259,3 +259,19 @@ func processPageMode(cmd *Command) (out []string, err error) {
 
 	return nil, nil
 }
+
+func processViewerPreferences(cmd *Command) (out []string, err error) {
+	switch cmd.Mode {
+
+	case model.LISTVIEWERPREFERENCES:
+		return ListViewerPreferences(cmd)
+
+	case model.SETVIEWERPREFERENCES:
+		return SetViewerPreferences(cmd)
+
+	case model.RESETVIEWERPREFERENCES:
+		return ResetViewerPreferences(cmd)
+	}
+
+	return nil, nil
+}

@@ -18,6 +18,7 @@ package validate
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -110,7 +111,7 @@ func validateArrayEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entr
 	return a, nil
 }
 
-func validateBooleanEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version, validate func(bool) bool) (*types.Boolean, error) {
+func validateBooleanEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version, validate func(bool) bool) (*bool, error) {
 	if log.ValidateEnabled() {
 		log.Validate.Printf("validateBooleanEntry begin: entry=%s\n", entryName)
 	}
@@ -153,7 +154,30 @@ func validateBooleanEntry(xRefTable *model.XRefTable, d types.Dict, dictName, en
 		log.Validate.Printf("validateBooleanEntry end: entry=%s\n", entryName)
 	}
 
-	return &b, nil
+	flag := b.Value()
+	return &flag, nil
+}
+
+func validateFlexBooleanEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) (*bool, error) {
+	flag, err := validateBooleanEntry(xRefTable, d, dictName, entryName, required, sinceVersion, nil)
+	if err == nil {
+		return flag, nil
+	}
+	if xRefTable.ValidationMode != model.ValidationRelaxed {
+		return nil, err
+	}
+	n, err := validateNameEntry(xRefTable, d, dictName, entryName, required, sinceVersion,
+		func(s string) bool {
+			return types.MemberOf(strings.ToLower(s), []string{"false", "true"})
+		},
+	)
+	if err != nil || n == nil {
+		return nil, err
+	}
+
+	*flag = strings.ToLower(n.Value()) == "true"
+
+	return flag, nil
 }
 
 func validateBooleanArrayEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version, validate func(types.Array) bool) (types.Array, error) {

@@ -217,6 +217,18 @@ func initPageLayoutCmdMap() commandMap {
 	return m
 }
 
+func initViewerPreferencesCmdMap() commandMap {
+	m := newCommandMap()
+	for k, v := range map[string]command{
+		"list":  {processListViewerPreferencesCommand, nil, "", ""},
+		"set":   {processSetViewerPreferencesCommand, nil, "", ""},
+		"reset": {processResetViewerPreferencesCommand, nil, "", ""},
+	} {
+		m.register(k, v)
+	}
+	return m
+}
+
 func initCommandMap() {
 	annotsCmdMap := initAnnotsCmdMap()
 	attachCmdMap := initAttachCmdMap()
@@ -234,6 +246,7 @@ func initCommandMap() {
 	watermarkCmdMap := initWatermarkCmdMap()
 	pageModeCmdMap := initPageModeCmdMap()
 	pageLayoutCmdMap := initPageLayoutCmdMap()
+	viewerPrefsCmdMap := initViewerPreferencesCmdMap()
 
 	cmdMap = newCommandMap()
 
@@ -283,6 +296,7 @@ func initCommandMap() {
 		"validate":      {processValidateCommand, nil, usageValidate, usageLongValidate},
 		"watermark":     {nil, watermarkCmdMap, usageWatermark, usageLongWatermark},
 		"version":       {printVersion, nil, usageVersion, usageLongVersion},
+		"viewerpref":    {nil, viewerPrefsCmdMap, usageViewerPreferences, usageLongViewerPreferences},
 	} {
 		cmdMap.register(k, v)
 	}
@@ -346,6 +360,9 @@ func initFlags() {
 
 	flag.StringVar(&upw, "upw", "", "user password")
 	flag.StringVar(&opw, "opw", "", "owner password")
+
+	flag.BoolVar(&all, "all", false, "")
+	flag.BoolVar(&all, "a", false, "")
 }
 
 func initLogging(verbose, veryVerbose bool) {

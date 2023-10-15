@@ -106,6 +106,15 @@ var (
 		model.RESETFORMFIELDS:         {0, 1},
 		model.EXPORTFORMFIELDS:        {0, 1},
 		model.FILLFORMFIELDS:          {0, 1},
+		model.LISTPAGELAYOUT:          {0, 1},
+		model.SETPAGELAYOUT:           {0, 1},
+		model.RESETPAGELAYOUT:         {0, 1},
+		model.LISTPAGEMODE:            {0, 1},
+		model.SETPAGEMODE:             {0, 1},
+		model.RESETPAGEMODE:           {0, 1},
+		model.LISTVIEWERPREFERENCES:   {0, 1},
+		model.SETVIEWERPREFERENCES:    {0, 1},
+		model.RESETVIEWERPREFERENCES:  {0, 1},
 	}
 
 	ErrUnknownEncryption = errors.New("pdfcpu: PDF 2.0 encryption not supported")

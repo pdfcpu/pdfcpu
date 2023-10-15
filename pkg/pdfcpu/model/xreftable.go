@@ -129,6 +129,7 @@ type XRefTable struct {
 
 	PageLayout *PageLayout
 	PageMode   *PageMode
+	ViewerPref *ViewerPreferences
 
 	// Linearization section (not yet supported)
 	OffsetPrimaryHintTable  *int64
@@ -2575,4 +2576,72 @@ func (xRefTable *XRefTable) RemoveSignature() {
 		d1["AcroForm"] = d2
 		delete(d1, "Extensions")
 	}
+}
+
+func (xRefTable *XRefTable) BindPrinterPreferences(vp *ViewerPreferences, d types.Dict) {
+	if vp.PrintArea != nil {
+		d.InsertName("PrintArea", vp.PrintArea.String())
+	}
+	if vp.PrintClip != nil {
+		d.InsertName("PrintClip", vp.PrintClip.String())
+	}
+	if vp.PrintScaling != nil {
+		d.InsertName("PrintScaling", vp.PrintScaling.String())
+	}
+	if vp.Duplex != nil {
+		d.InsertName("Duplex", vp.Duplex.String())
+	}
+	if vp.PickTrayByPDFSize != nil {
+		d.InsertBool("PickTrayByPDFSize", *vp.PickTrayByPDFSize)
+	}
+	if len(vp.PrintPageRange) > 0 {
+		d.Insert("PrintPageRange", vp.PrintPageRange)
+	}
+	if vp.NumCopies != nil {
+		d.Insert("NumCopies", *vp.NumCopies)
+	}
+	if len(vp.Enforce) > 0 {
+		d.Insert("Enforce", vp.Enforce)
+	}
+}
+
+func (xRefTable *XRefTable) BindViewerPreferences() {
+	vp := xRefTable.ViewerPref
+	d := types.NewDict()
+
+	if vp.HideToolbar != nil {
+		d.InsertBool("HideToolbar", *vp.HideToolbar)
+	}
+	if vp.HideMenubar != nil {
+		d.InsertBool("HideMenubar", *vp.HideMenubar)
+	}
+	if vp.HideWindowUI != nil {
+		d.InsertBool("HideWindowUI", *vp.HideWindowUI)
+	}
+	if vp.FitWindow != nil {
+		d.InsertBool("FitWindow", *vp.FitWindow)
+	}
+	if vp.CenterWindow != nil {
+		d.InsertBool("CenterWindow", *vp.CenterWindow)
+	}
+	if vp.DisplayDocTitle != nil {
+		d.InsertBool("DisplayDocTitle", *vp.DisplayDocTitle)
+	}
+	if vp.NonFullScreenPageMode != nil {
+		pm := PageMode(*vp.NonFullScreenPageMode)
+		d.InsertName("NonFullScreenPageMode", pm.String())
+	}
+	if vp.Direction != nil {
+		d.InsertName("Direction", vp.Direction.String())
+	}
+	if vp.ViewArea != nil {
+		d.InsertName("ViewArea", vp.ViewArea.String())
+	}
+	if vp.ViewClip != nil {
+		d.InsertName("ViewClip", vp.ViewClip.String())
+	}
+
+	xRefTable.BindPrinterPreferences(vp, d)
+
+	xRefTable.RootDict["ViewerPreferences"] = d
 }

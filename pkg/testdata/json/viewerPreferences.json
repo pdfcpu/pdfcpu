@@ -1,0 +1,17 @@
+{
+    "hideToolbar": true,
+    "hideMenubar": false,
+    "fitWindow": true,
+    "centerWindow": false,
+    "DisplayDocTitle": true,
+    "nonFullScreenPageMode": "UseOutlines",
+    "PrintScaling": "none",
+    "duplex": "simplex",
+    "numcopies": 3,
+    "printPageRange": [
+        1,4
+    ],
+    "xxxEnforce": [
+        "PrintScaling"
+    ]
+}

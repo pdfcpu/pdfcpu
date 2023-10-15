@@ -180,7 +180,7 @@ func ExtractAttachments(cmd *Command) ([]string, error) {
 
 // ListInfo gathers information about inFile and returns the result as []string.
 func ListInfo(cmd *Command) ([]string, error) {
-	return ListInfoFiles(cmd.InFiles, cmd.PageSelection, cmd.BoolVal, cmd.Conf)
+	return ListInfoFiles(cmd.InFiles, cmd.PageSelection, cmd.BoolVal1, cmd.Conf)
 }
 
 // CreateCheatSheetsFonts creates single page PDF cheat sheets for user fonts in current dir.
@@ -320,7 +320,7 @@ func FillFormFields(cmd *Command) ([]string, error) {
 
 // MultiFillFormFields fills out multiple instances of inFile's form using JSON or CSV data.
 func MultiFillFormFields(cmd *Command) ([]string, error) {
-	return nil, api.MultiFillFormFile(*cmd.InFile, *cmd.InFileJSON, *cmd.OutDir, *cmd.OutFile, cmd.BoolVal, cmd.Conf)
+	return nil, api.MultiFillFormFile(*cmd.InFile, *cmd.InFileJSON, *cmd.OutDir, *cmd.OutFile, cmd.BoolVal1, cmd.Conf)
 }
 
 // Resize selected pages and write result to outFile.
@@ -355,7 +355,7 @@ func ExportBookmarks(cmd *Command) ([]string, error) {
 
 // ImportBookmarks creates/replaces outlines of inFile corresponding to declarations found in inJSONFile and writes the result to outFile.
 func ImportBookmarks(cmd *Command) ([]string, error) {
-	return nil, api.ImportBookmarksFile(*cmd.InFile, *cmd.InFileJSON, *cmd.OutFile, cmd.BoolVal, cmd.Conf)
+	return nil, api.ImportBookmarksFile(*cmd.InFile, *cmd.InFileJSON, *cmd.OutFile, cmd.BoolVal1, cmd.Conf)
 }
 
 // RemoveBookmarks erases outlines of inFile.
@@ -365,14 +365,7 @@ func RemoveBookmarks(cmd *Command) ([]string, error) {
 
 // ListPageLayout returns inFile's page layout.
 func ListPageLayout(cmd *Command) ([]string, error) {
-	pl, err := api.ListPageLayoutFile(*cmd.InFile, cmd.Conf)
-	var ss []string
-	if pl != nil {
-		ss = append(ss, pl.String())
-	} else {
-		ss = append(ss, "No page layout set, PDF viewers will default to \"SinglePage\"")
-	}
-	return ss, err
+	return api.ListPageLayoutFile(*cmd.InFile, cmd.Conf)
 }
 
 // SetPageLayout sets inFile's page layout.
@@ -388,14 +381,7 @@ func ResetPageLayout(cmd *Command) ([]string, error) {
 
 // ListPageMode returns inFile's page mode.
 func ListPageMode(cmd *Command) ([]string, error) {
-	pm, err := api.ListPageModeFile(*cmd.InFile, cmd.Conf)
-	var ss []string
-	if pm != nil {
-		ss = append(ss, pm.String())
-	} else {
-		ss = append(ss, "No page mode set, PDF viewers will default to \"UseNone\"")
-	}
-	return ss, err
+	return api.ListPageModeFile(*cmd.InFile, cmd.Conf)
 }
 
 // SetPageMode sets inFile's page mode.
@@ -407,4 +393,23 @@ func SetPageMode(cmd *Command) ([]string, error) {
 // ResetPageMode resets inFile's page mode.
 func ResetPageMode(cmd *Command) ([]string, error) {
 	return nil, api.ResetPageModeFile(*cmd.InFile, *cmd.OutFile, cmd.Conf)
+}
+
+// ListViewerPreferences returns inFile's viewer preferences.
+func ListViewerPreferences(cmd *Command) ([]string, error) {
+	return api.ListViewerPreferencesFile(*cmd.InFile, cmd.BoolVal1, cmd.BoolVal2, cmd.Conf)
+}
+
+// SetViewerPreferences sets inFile's viewer preferences.
+func SetViewerPreferences(cmd *Command) ([]string, error) {
+	if *cmd.InFileJSON != "" {
+		return nil, api.SetViewerPreferencesFileFromJSONFile(*cmd.InFile, *cmd.OutFile, *cmd.InFileJSON, cmd.Conf)
+	}
+
+	return nil, api.SetViewerPreferencesFileFromJSONBytes(*cmd.InFile, *cmd.OutFile, []byte(cmd.StringVal), cmd.Conf)
+}
+
+// ResetViewerPreferences resets inFile's viewer preferences.
+func ResetViewerPreferences(cmd *Command) ([]string, error) {
+	return nil, api.ResetViewerPreferencesFile(*cmd.InFile, *cmd.OutFile, cmd.Conf)
 }
