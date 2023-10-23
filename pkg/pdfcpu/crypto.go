@@ -53,6 +53,7 @@ var (
 		model.LISTINFO:                {0, 0},
 		model.OPTIMIZE:                {0, 0},
 		model.SPLIT:                   {1, 0},
+		model.SPLITBYPAGENR:           {1, 0},
 		model.MERGECREATE:             {0, 0},
 		model.MERGEAPPEND:             {0, 0},
 		model.EXTRACTIMAGES:           {1, 0},

@@ -59,9 +59,26 @@ func TestSplitByBookmarkCommand(t *testing.T) {
 	msg := "TestSplitByBookmarkCommand"
 	fileName := "5116.DCT_Filter.pdf"
 	inFile := filepath.Join(inDir, fileName)
+
 	span := 0 // This means we are going to split by bookmarks.
 
 	cmd := cli.SplitCommand(inFile, outDir, span, conf)
+	if _, err := cli.Process(cmd); err != nil {
+		t.Fatalf("%s %s: %v\n", msg, inFile, err)
+	}
+}
+
+func TestSplitByPageNrCommand(t *testing.T) {
+	msg := "TestSplitByPageNrCommand"
+	fileName := "5116.DCT_Filter.pdf"
+	inFile := filepath.Join(inDir, fileName)
+
+	// Generate page section 1
+	// Generate page section 2-9
+	// Generate page section 10-49
+	// Generate page section 50-last page
+
+	cmd := cli.SplitByPageNrCommand(inFile, outDir, []int{2, 10, 50}, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}

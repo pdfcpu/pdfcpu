@@ -61,6 +61,7 @@ var cmdMap = map[model.CommandMode]func(cmd *Command) ([]string, error){
 	model.VALIDATE:                Validate,
 	model.OPTIMIZE:                Optimize,
 	model.SPLIT:                   Split,
+	model.SPLITBYPAGENR:           SplitByPageNr,
 	model.MERGECREATE:             MergeCreate,
 	model.MERGEAPPEND:             MergeAppend,
 	model.EXTRACTIMAGES:           ExtractImages,
@@ -161,7 +162,7 @@ func OptimizeCommand(inFile, outFile string, conf *model.Configuration) *Command
 		Conf:    conf}
 }
 
-// SplitCommand creates a new command to split a file into single page files.
+// SplitCommand creates a new command to split a file according to span or along bookmarks..
 func SplitCommand(inFile, dirNameOut string, span int, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
@@ -173,6 +174,20 @@ func SplitCommand(inFile, dirNameOut string, span int, conf *model.Configuration
 		OutDir: &dirNameOut,
 		IntVal: span,
 		Conf:   conf}
+}
+
+// SplitByPageNrCommand creates a new command to split a file into files along given pages.
+func SplitByPageNrCommand(inFile, dirNameOut string, pageNrs []int, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.SPLITBYPAGENR
+	return &Command{
+		Mode:    model.SPLITBYPAGENR,
+		InFile:  &inFile,
+		OutDir:  &dirNameOut,
+		IntVals: pageNrs,
+		Conf:    conf}
 }
 
 // MergeCreateCommand creates a new command to merge files.

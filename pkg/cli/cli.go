@@ -72,6 +72,11 @@ func Split(cmd *Command) ([]string, error) {
 	return nil, api.SplitFile(*cmd.InFile, *cmd.OutDir, cmd.IntVal, cmd.Conf)
 }
 
+// Split inFile along pages and write result files to outDir.
+func SplitByPageNr(cmd *Command) ([]string, error) {
+	return nil, api.SplitByPageNrFile(*cmd.InFile, *cmd.OutDir, cmd.IntVals, cmd.Conf)
+}
+
 // Trim inFile and write result to outFile.
 func Trim(cmd *Command) ([]string, error) {
 	return nil, api.TrimFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)

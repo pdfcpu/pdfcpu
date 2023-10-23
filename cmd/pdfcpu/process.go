@@ -218,12 +218,37 @@ func processOptimizeCommand(conf *model.Configuration) {
 	process(cli.OptimizeCommand(inFile, outFile, conf))
 }
 
+func processSplitVyPageNumberCommand(inFile, outDir string, conf *model.Configuration) {
+	if len(flag.Args()) == 2 {
+		fmt.Fprintln(os.Stderr, "split: missing page numbers")
+		os.Exit(1)
+	}
+
+	ii := types.IntSet{}
+	for i := 2; i < len(flag.Args()); i++ {
+		p, err := strconv.Atoi(flag.Arg(i))
+		if err != nil || p < 2 {
+			fmt.Fprintln(os.Stderr, "split: pageNr is a numeric value >= 2")
+			os.Exit(1)
+		}
+		ii[p] = true
+	}
+
+	pageNrs := make([]int, 0, len(ii))
+	for k := range ii {
+		pageNrs = append(pageNrs, k)
+	}
+	sort.Ints(pageNrs)
+
+	process(cli.SplitByPageNrCommand(inFile, outDir, pageNrs, conf))
+}
+
 func processSplitCommand(conf *model.Configuration) {
 	if mode == "" {
 		mode = "span"
 	}
-	mode = extractModeCompletion(mode, []string{"span", "bookmark"})
-	if mode == "" || len(flag.Args()) < 2 || len(flag.Args()) > 3 || selectedPages != "" {
+	mode = extractModeCompletion(mode, []string{"span", "bookmark", "page"})
+	if mode == "" || len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageSplit)
 		os.Exit(1)
 	}
@@ -231,6 +256,13 @@ func processSplitCommand(conf *model.Configuration) {
 	inFile := flag.Arg(0)
 	if conf.CheckFileNameExt {
 		ensurePDFExtension(inFile)
+	}
+
+	outDir := flag.Arg(1)
+
+	if mode == "page" {
+		processSplitVyPageNumberCommand(inFile, outDir, conf)
+		return
 	}
 
 	span := 0
@@ -246,8 +278,6 @@ func processSplitCommand(conf *model.Configuration) {
 			}
 		}
 	}
-
-	outDir := flag.Arg(1)
 
 	process(cli.SplitCommand(inFile, outDir, span, conf))
 }

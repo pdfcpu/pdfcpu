@@ -109,13 +109,14 @@ relaxed ... (default) like strict but doesn't complain about common seen spec vi
     inFile ... input PDF file
    outFile ... output PDF file`
 
-	usageSplit     = "usage: pdfcpu split [-m(ode) span|bookmark] inFile outDir [span]" + generalFlags
-	usageLongSplit = `Generate a set of PDFs for the input file in outDir according to given span value or along bookmarks.
+	usageSplit     = "usage: pdfcpu split [-m(ode) span|bookmark|page] inFile outDir [span|pageNr...]" + generalFlags
+	usageLongSplit = `Generate a set of PDFs for the input file in outDir according to given span value or along bookmarks or page numbers.
 
       mode ... split mode (defaults to span)
     inFile ... input PDF file
     outDir ... output directory
       span ... split span in pages (default: 1) for mode "span"
+    pageNr ... split before a specific page number for mode "page"
       
 The split modes are:
 
@@ -123,8 +124,34 @@ The split modes are:
                    span itself defaults to 1 resulting in single page PDF files.
   
       bookmark ... Split into PDF files representing sections defined by existing bookmarks.
-                   span will be ignored.
-                   Assumption: inFile contains an outline dictionary.`
+                   Assumption: inFile contains an outline dictionary.
+                   
+      page     ... Split before specific page numbers.
+      
+Eg. pdfcpu split test.pdf .      (= pdfcpu split -m span test.pdf . 1)
+      generates:
+         test_1.pdf
+         test_2.pdf
+         etc.
+
+    pdfcpu split test.pdf . 2    (= pdfcpu split -m span test.pdf . 2)
+      generates:
+         test_1-2.pdf
+         test_3-4.pdf
+         etc.
+
+    pdfcpu split -m bookmark test.pdf .
+      generates:
+         test_bm1Title_1-4.pdf
+         test_bm2Title.5-7-pdf
+         etc.
+
+    pdfcpu split -m page test.pdf . 2 4 10
+      generates:
+         test_1.pdf
+         test_2-3.pdf
+         test_4-9.pdf
+         test_10-20.pdf`
 
 	usageMerge     = "usage: pdfcpu merge [-m(ode) create|append] [-s(ort) -b(ookmarks)] outFile inFile..." + generalFlags
 	usageLongMerge = `Concatenate a sequence of PDFs/inFiles into outFile.

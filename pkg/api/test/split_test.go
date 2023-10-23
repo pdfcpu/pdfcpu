@@ -48,14 +48,29 @@ func TestSplitSpan2(t *testing.T) {
 	}
 }
 
-func TestSplit0ByBookmark(t *testing.T) {
-	msg := "TestSplit0ByBookmark"
+func TestSplitByBookmark(t *testing.T) {
+	msg := "TestSplitByBookmark"
 	fileName := "5116.DCT_Filter.pdf"
 	inFile := filepath.Join(inDir, fileName)
 
 	// Split along bookmarks.
 	span := 0
 	if err := api.SplitFile(inFile, outDir, span, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+}
+
+func TestSplitByPageNr(t *testing.T) {
+	msg := "TestSplitByPageNr"
+	fileName := "5116.DCT_Filter.pdf"
+	inFile := filepath.Join(inDir, fileName)
+
+	// Generate page section 1
+	// Generate page section 2-9
+	// Generate page section 10-49
+	// Generate page section 50-last page
+
+	if err := api.SplitByPageNrFile(inFile, outDir, []int{2, 10, 50}, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
