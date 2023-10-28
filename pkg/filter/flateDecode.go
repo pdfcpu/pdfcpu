@@ -98,6 +98,14 @@ func (f flate) Decode(r io.Reader) (io.Reader, error) {
 func passThru(rin io.Reader) (*bytes.Buffer, error) {
 	var b bytes.Buffer
 	_, err := io.Copy(&b, rin)
+	if err == io.ErrUnexpectedEOF {
+		// Workaround for missing support for partial flush in compress/flate.
+		// See also https://github.com/golang/go/issues/31514
+		if log.ReadEnabled() {
+			log.Read.Println("flateDecode: ignoring unexpected EOF")
+		}
+		err = nil
+	}
 	return &b, err
 }
 
