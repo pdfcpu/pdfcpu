@@ -646,7 +646,15 @@ func createPDFRes(ctx, otherCtx *model.Context, pageNr int, migrated map[int]int
 
 func createPDFResForWM(ctx *model.Context, wm *model.Watermark) error {
 	// Note: The stamp pdf is assumed to be valid!
-	otherCtx, err := ReadFile(wm.FileName, model.NewDefaultConfiguration())
+	var otherCtx *model.Context
+	var err error
+
+	if wm.PDF != nil {
+		otherCtx, err = Read(wm.PDF, model.NewDefaultConfiguration())
+	} else {
+		otherCtx, err = ReadFile(wm.FileName, model.NewDefaultConfiguration())
+	}
+
 	if err != nil {
 		return err
 	}
