@@ -153,12 +153,13 @@ Eg. pdfcpu split test.pdf .      (= pdfcpu split -m span test.pdf . 1)
          test_4-9.pdf
          test_10-20.pdf`
 
-	usageMerge     = "usage: pdfcpu merge [-m(ode) create|append] [-s(ort) -b(ookmarks)] outFile inFile..." + generalFlags
+	usageMerge     = "usage: pdfcpu merge [-m(ode) create|append|zip] [ -s(ort) -b(ookmarks) -d(ivider)] outFile inFile..." + generalFlags
 	usageLongMerge = `Concatenate a sequence of PDFs/inFiles into outFile.
 
       mode ... merge mode (defaults to create)
       sort ... sort inFiles by file name
  bookmarks ... create bookmarks
+   divider ... insert blank page between merged documents
    outFile ... output PDF file
     inFile ... a list of PDF files subject to concatenation.
     
@@ -168,6 +169,8 @@ The merge modes are:
 
     append ... if outFile does not exist, it will be created (like in default mode).
                if outFile already exists, inFiles will be appended to outFile.
+
+       zip ... zip inFile1 and inFile2 into outFile (which will be created and possibly overwritten).
                
 Skip bookmark creation like so: -bookmarks=false`
 
@@ -791,8 +794,8 @@ Examples: pdfcpu grid out.pdf 1 10 in.pdf
    Kiku4, Kiku5
    AB, B40, Shikisen`
 
-	usageVersion     = "usage: pdfcpu version [-v(erbose)|vv]"
-	usageLongVersion = "Print the pdfcpu version."
+	usageVersion     = "usage: pdfcpu version"
+	usageLongVersion = "Print the pdfcpu version & build info."
 
 	usagePaper     = "usage: pdfcpu paper"
 	usageLongPaper = "Print a list of supported paper sizes."

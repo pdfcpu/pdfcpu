@@ -303,6 +303,8 @@ func initCommandMap() {
 }
 
 func initFlags() {
+	flag.BoolVar(&all, "all", false, "")
+	flag.BoolVar(&all, "a", false, "")
 
 	bookmarksUsage := "create bookmarks while merging"
 	flag.BoolVar(&bookmarks, "bookmarks", true, bookmarksUsage)
@@ -312,6 +314,10 @@ func initFlags() {
 	flag.StringVar(&conf, "config", "", confUsage)
 	flag.StringVar(&conf, "conf", "", confUsage)
 	flag.StringVar(&conf, "c", "", confUsage)
+
+	dividerPageUsage := "create divider pages while merging"
+	flag.BoolVar(&dividerPage, "dividerPage", false, dividerPageUsage)
+	flag.BoolVar(&dividerPage, "d", false, dividerPageUsage)
 
 	jsonUsage := "produce JSON output"
 	flag.BoolVar(&json, "json", false, jsonUsage)
@@ -354,15 +360,12 @@ func initFlags() {
 	flag.StringVar(&unit, "unit", "", unitUsage)
 	flag.StringVar(&unit, "u", "", unitUsage)
 
-	flag.BoolVar(&verbose, "verbose", false, "")
-	flag.BoolVar(&verbose, "v", false, "")
-	flag.BoolVar(&veryVerbose, "vv", false, "")
-
 	flag.StringVar(&upw, "upw", "", "user password")
 	flag.StringVar(&opw, "opw", "", "owner password")
 
-	flag.BoolVar(&all, "all", false, "")
-	flag.BoolVar(&all, "a", false, "")
+	flag.BoolVar(&verbose, "verbose", false, "")
+	flag.BoolVar(&verbose, "v", false, "")
+	flag.BoolVar(&veryVerbose, "vv", false, "")
 }
 
 func initLogging(verbose, veryVerbose bool) {

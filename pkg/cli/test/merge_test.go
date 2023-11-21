@@ -34,7 +34,28 @@ func TestMergeCreateCommand(t *testing.T) {
 
 	outFile := filepath.Join(outDir, "test.pdf")
 
-	cmd := cli.MergeCreateCommand(inFiles, outFile, conf)
+	cmd := cli.MergeCreateCommand(inFiles, outFile, true, conf)
+	if _, err := cli.Process(cmd); err != nil {
+		t.Fatalf("%s %s: %v\n", msg, outFile, err)
+	}
+
+	if err := validateFile(t, outFile, conf); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+}
+
+func TestMergeCreateZippedCommand(t *testing.T) {
+	msg := "TestMergeCreateZippedCommand"
+
+	// The actual usecase for this is the recombination of 2 PDF files representing even and odd pages of some PDF source.
+	// See #716
+	inFiles := []string{
+		filepath.Join(inDir, "Acroforms2.pdf"),
+		filepath.Join(inDir, "adobe_errata.pdf"),
+	}
+	outFile := filepath.Join(outDir, "out.pdf")
+
+	cmd := cli.MergeCreateZipCommand(inFiles, outFile, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
@@ -63,7 +84,7 @@ func TestMergeAppendCommand(t *testing.T) {
 
 	// Merge inFiles by concatenation in the order specified and write the result to outFile.
 	// If outFile already exists its content will be preserved and serves as the beginning of the merge result.
-	cmd := cli.MergeAppendCommand(inFiles, outFile, conf)
+	cmd := cli.MergeAppendCommand(inFiles, outFile, false, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}

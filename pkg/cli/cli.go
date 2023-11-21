@@ -130,12 +130,17 @@ func RemovePages(cmd *Command) ([]string, error) {
 
 // MergeCreate merges inFiles in the order specified and writes the result to outFile.
 func MergeCreate(cmd *Command) ([]string, error) {
-	return nil, api.MergeCreateFile(cmd.InFiles, *cmd.OutFile, cmd.Conf)
+	return nil, api.MergeCreateFile(cmd.InFiles, *cmd.OutFile, cmd.BoolVal1, cmd.Conf)
+}
+
+// MergeCreateZip zips two inFiles in the order specified and writes the result to outFile.
+func MergeCreateZip(cmd *Command) ([]string, error) {
+	return nil, api.MergeCreateZipFile(cmd.InFiles[0], cmd.InFiles[1], *cmd.OutFile, cmd.Conf)
 }
 
 // MergeAppend merges inFiles in the order specified and writes the result to outFile.
 func MergeAppend(cmd *Command) ([]string, error) {
-	return nil, api.MergeAppendFile(cmd.InFiles, *cmd.OutFile, cmd.Conf)
+	return nil, api.MergeAppendFile(cmd.InFiles, *cmd.OutFile, cmd.BoolVal1, cmd.Conf)
 }
 
 // ExtractImages dumps embedded image resources from inFile into outDir for selected pages.

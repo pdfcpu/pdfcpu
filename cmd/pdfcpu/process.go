@@ -24,6 +24,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
+	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
@@ -123,13 +125,24 @@ func printVersion(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	fmt.Fprintf(os.Stdout, "pdfcpu: %v\n", model.VersionStr)
-	if date != "?" {
-		fmt.Fprintf(os.Stdout, "build : %v\ncommit: %v\n", date, commit)
+	fmt.Fprintf(os.Stdout, "pdfcpu: %s\n", model.VersionStr)
+
+	if date == "?" {
+		if info, ok := debug.ReadBuildInfo(); ok {
+			for _, setting := range info.Settings {
+				if setting.Key == "vcs.revision" {
+					commit = setting.Value
+				}
+				if setting.Key == "vcs.time" {
+					date = setting.Value
+				}
+			}
+		}
 	}
-	if verbose {
-		fmt.Fprintf(os.Stdout, "config: %s\n", conf.Path)
-	}
+
+	fmt.Fprintf(os.Stdout, "commit: %s (%s)\n", commit[:8], date)
+	fmt.Fprintf(os.Stdout, "base  : %s\n", runtime.Version())
+	fmt.Fprintf(os.Stdout, "config: %s\n", conf.Path)
 }
 
 func process(cmd *cli.Command) {
@@ -247,7 +260,7 @@ func processSplitCommand(conf *model.Configuration) {
 	if mode == "" {
 		mode = "span"
 	}
-	mode = extractModeCompletion(mode, []string{"span", "bookmark", "page"})
+	mode = modeCompletion(mode, []string{"span", "bookmark", "page"})
 	if mode == "" || len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageSplit)
 		os.Exit(1)
@@ -302,21 +315,7 @@ func sortFiles(filesIn []string) {
 		})
 }
 
-func processMergeCommand(conf *model.Configuration) {
-	if mode == "" {
-		mode = "create"
-	}
-	mode = extractModeCompletion(mode, []string{"create", "append"})
-	if mode == "" {
-		fmt.Fprintf(os.Stderr, "%s\n\n", usageMerge)
-		os.Exit(1)
-	}
-
-	if len(flag.Args()) < 2 || selectedPages != "" {
-		fmt.Fprintf(os.Stderr, "%s\n\n", usageMerge)
-		os.Exit(1)
-	}
-
+func processArgsForMerge(conf *model.Configuration) ([]string, string) {
 	filesIn := []string{}
 	outFile := ""
 	for i, arg := range flag.Args() {
@@ -329,7 +328,7 @@ func processMergeCommand(conf *model.Configuration) {
 			fmt.Fprintf(os.Stderr, "%s may appear as inFile or outFile only\n", outFile)
 			os.Exit(1)
 		}
-		if strings.Contains(arg, "*") {
+		if mode != "zip" && strings.Contains(arg, "*") {
 			matches, err := filepath.Glob(arg)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s", err)
@@ -343,6 +342,34 @@ func processMergeCommand(conf *model.Configuration) {
 		}
 		filesIn = append(filesIn, arg)
 	}
+	return filesIn, outFile
+}
+
+func processMergeCommand(conf *model.Configuration) {
+	if mode == "" {
+		mode = "create"
+	}
+	mode = modeCompletion(mode, []string{"create", "append", "zip"})
+	if mode == "" {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageMerge)
+		os.Exit(1)
+	}
+
+	if len(flag.Args()) < 2 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageMerge)
+		os.Exit(1)
+	}
+
+	if mode == "zip" && len(flag.Args()) != 3 {
+		fmt.Fprintf(os.Stderr, "merge zip: expecting outFile inFile1 inFile2\n")
+		os.Exit(1)
+	}
+
+	if mode == "zip" && dividerPage {
+		fmt.Fprintf(os.Stderr, "merge zip: -d(ivider) not applicable and will be ignored\n")
+	}
+
+	filesIn, outFile := processArgsForMerge(conf)
 
 	if sorted {
 		sortFiles(filesIn)
@@ -360,16 +387,20 @@ func processMergeCommand(conf *model.Configuration) {
 	switch mode {
 
 	case "create":
-		cmd = cli.MergeCreateCommand(filesIn, outFile, conf)
+		cmd = cli.MergeCreateCommand(filesIn, outFile, dividerPage, conf)
+
+	case "zip":
+		cmd = cli.MergeCreateZipCommand(filesIn, outFile, conf)
 
 	case "append":
-		cmd = cli.MergeAppendCommand(filesIn, outFile, conf)
+		cmd = cli.MergeAppendCommand(filesIn, outFile, dividerPage, conf)
+
 	}
 
 	process(cmd)
 }
 
-func extractModeCompletion(modePrefix string, modes []string) string {
+func modeCompletion(modePrefix string, modes []string) string {
 	var modeStr string
 	for _, mode := range modes {
 		if !strings.HasPrefix(mode, modePrefix) {
@@ -384,7 +415,7 @@ func extractModeCompletion(modePrefix string, modes []string) string {
 }
 
 func processExtractCommand(conf *model.Configuration) {
-	mode = extractModeCompletion(mode, []string{"image", "font", "page", "content", "meta"})
+	mode = modeCompletion(mode, []string{"image", "font", "page", "content", "meta"})
 	if len(flag.Args()) != 2 || mode == "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageExtract)
 		os.Exit(1)
@@ -2061,7 +2092,7 @@ func processMultiFillFormCommand(conf *model.Configuration) {
 	if mode == "" {
 		mode = "single"
 	}
-	mode = extractModeCompletion(mode, []string{"single", "merge"})
+	mode = modeCompletion(mode, []string{"single", "merge"})
 	if mode == "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageFormMultiFill)
 		os.Exit(1)

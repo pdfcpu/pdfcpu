@@ -32,14 +32,39 @@ func TestMergeCreateNew(t *testing.T) {
 		filepath.Join(inDir, "Acroforms2.pdf"),
 		filepath.Join(inDir, "adobe_errata.pdf"),
 	}
-	outFile := filepath.Join(outDir, "out.pdf")
 
 	// Merge inFiles by concatenation in the order specified and write the result to outFile.
 	// outFile will be overwritten.
 
 	// Bookmarks for the merged document will be created/preserved per default (see config.yaml)
 
-	if err := api.MergeCreateFile(inFiles, outFile, nil); err != nil {
+	outFile := filepath.Join(outDir, "out.pdf")
+	if err := api.MergeCreateFile(inFiles, outFile, false, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+
+	// Insert an empty page between merged files.
+	outFile = filepath.Join(outDir, "outWithDivider.pdf")
+	dividerPage := true
+	if err := api.MergeCreateFile(inFiles, outFile, dividerPage, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+
+	if err := api.ValidateFile(outFile, conf); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+}
+
+func TestMergeCreateZipped(t *testing.T) {
+	msg := "TestMergeCreateZipped"
+
+	// The actual usecase for this is the recombination of 2 PDF files representing even and odd pages of some PDF source.
+	// See #716
+	inFile2 := filepath.Join(inDir, "adobe_errata.pdf")
+	inFile1 := filepath.Join(inDir, "Acroforms2.pdf")
+	outFile := filepath.Join(outDir, "out.pdf")
+
+	if err := api.MergeCreateZipFile(inFile1, inFile2, outFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
@@ -64,7 +89,7 @@ func TestMergeAppendNew(t *testing.T) {
 
 	// Bookmarks for the merged document will be created/preserved per default (see config.yaml)
 
-	if err := api.MergeAppendFile(inFiles, outFile, nil); err != nil {
+	if err := api.MergeAppendFile(inFiles, outFile, false, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 	if err := api.ValidateFile(outFile, conf); err != nil {
@@ -72,7 +97,7 @@ func TestMergeAppendNew(t *testing.T) {
 	}
 
 	anotherFile := filepath.Join(inDir, "testRot.pdf")
-	err := api.MergeAppendFile([]string{anotherFile}, outFile, nil)
+	err := api.MergeAppendFile([]string{anotherFile}, outFile, false, nil)
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -93,7 +118,7 @@ func TestMergeToBufNew(t *testing.T) {
 	inFiles = inFiles[1:]
 
 	buf := &bytes.Buffer{}
-	if err := api.Merge(destFile, inFiles, buf, nil); err != nil {
+	if err := api.Merge(destFile, inFiles, buf, nil, false); err != nil {
 		t.Fatalf("%s: merge: %v\n", msg, err)
 	}
 
@@ -131,7 +156,7 @@ func TestMergeRaw(t *testing.T) {
 	rsc[1] = f1
 
 	buf := &bytes.Buffer{}
-	if err := api.MergeRaw(rsc, buf, nil); err != nil {
+	if err := api.MergeRaw(rsc, buf, false, nil); err != nil {
 		t.Fatalf("%s: merge: %v\n", msg, err)
 	}
 

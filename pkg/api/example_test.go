@@ -84,7 +84,7 @@ func ExampleMergeCreateFile() {
 	// Merge inFiles by concatenation in the order specified and write the result to out.pdf.
 	// out.pdf will be overwritten.
 	inFiles := []string{"in1.pdf", "in2.pdf"}
-	MergeCreateFile(inFiles, "out.pdf", nil)
+	MergeCreateFile(inFiles, "out.pdf", false, nil)
 }
 
 func ExampleMergeAppendFile() {
@@ -92,7 +92,7 @@ func ExampleMergeAppendFile() {
 	// Merge inFiles by concatenation in the order specified and write the result to out.pdf.
 	// If out.pdf already exists it will be preserved and serves as the beginning of the merge result.
 	inFiles := []string{"in1.pdf", "in2.pdf"}
-	MergeAppendFile(inFiles, "out.pdf", nil)
+	MergeAppendFile(inFiles, "out.pdf", false, nil)
 }
 
 func ExampleInsertPagesFile() {

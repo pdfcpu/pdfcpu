@@ -1915,6 +1915,10 @@ func (xRefTable *XRefTable) PageDict(pageNr int, consolidateRes bool) (types.Dic
 		pageCount int
 	)
 
+	if pageNr < 0 || pageNr > xRefTable.PageCount {
+		return nil, nil, nil, errors.New("pdfcpu: page not found")
+	}
+
 	// Get an indirect reference to the page tree root dict.
 	pageRootDictIndRef, err := xRefTable.Pages()
 	if err != nil {
@@ -2311,7 +2315,7 @@ func (xRefTable *XRefTable) PageDims() ([]types.Dim, error) {
 	return dims, nil
 }
 
-func (xRefTable *XRefTable) emptyPage(parentIndRef *types.IndirectRef, mediaBox *types.Rectangle) (*types.IndirectRef, error) {
+func (xRefTable *XRefTable) EmptyPage(parentIndRef *types.IndirectRef, mediaBox *types.Rectangle) (*types.IndirectRef, error) {
 	sd, _ := xRefTable.NewStreamDictForBuf(nil)
 
 	if err := sd.Encode(); err != nil {
@@ -2336,7 +2340,7 @@ func (xRefTable *XRefTable) emptyPage(parentIndRef *types.IndirectRef, mediaBox 
 	return xRefTable.IndRefForNewObject(pageDict)
 }
 
-func (xRefTable *XRefTable) pageMediaBox(d *types.Dict) (*types.Rectangle, error) {
+func (xRefTable *XRefTable) pageMediaBox(d types.Dict) (*types.Rectangle, error) {
 	o, found := d.Find("MediaBox")
 	if !found {
 		return nil, errors.Errorf("pdfcpu: pageMediaBox: missing mediaBox")
@@ -2350,20 +2354,21 @@ func (xRefTable *XRefTable) pageMediaBox(d *types.Dict) (*types.Rectangle, error
 	return rect(xRefTable, a)
 }
 
-func (xRefTable *XRefTable) insertEmptyPage(root *types.IndirectRef, pAttrs *InheritedPageAttrs, pageNodeDict types.Dict) (indRef *types.IndirectRef, err error) {
-	mediaBox := pAttrs.MediaBox
+func (xRefTable *XRefTable) emptyPage(parent *types.IndirectRef, d types.Dict, pAttrs *InheritedPageAttrs) (*types.IndirectRef, error) {
+	mediaBox, err := pAttrs.MediaBox, error(nil)
 	if mediaBox == nil {
-		mediaBox, err = xRefTable.pageMediaBox(&pageNodeDict)
+		mediaBox, err = xRefTable.pageMediaBox(d)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return xRefTable.emptyPage(root, mediaBox)
+	// TODO cache empty page
+	return xRefTable.EmptyPage(parent, mediaBox)
 }
 
-func (xRefTable *XRefTable) insertBlankPagesIntoPageTree(root *types.IndirectRef, pAttrs *InheritedPageAttrs, p *int, selectedPages types.IntSet, before bool) (int, error) {
-	d, err := xRefTable.DereferenceDict(*root)
+func (xRefTable *XRefTable) insertBlankPages(parent *types.IndirectRef, pAttrs *InheritedPageAttrs, p *int, selectedPages types.IntSet, before bool) (int, error) {
+	d, err := xRefTable.DereferenceDict(*parent)
 	if err != nil {
 		return 0, err
 	}
@@ -2390,7 +2395,7 @@ func (xRefTable *XRefTable) insertBlankPagesIntoPageTree(root *types.IndirectRef
 		// Dereference next page node dict.
 		ir, ok := o.(types.IndirectRef)
 		if !ok {
-			return 0, errors.Errorf("pdfcpu: insertIntoPageTree: corrupt page node dict")
+			return 0, errors.Errorf("pdfcpu: insertBlankPages: corrupt page node dict")
 		}
 
 		pageNodeDict, err := xRefTable.DereferenceDict(ir)
@@ -2402,7 +2407,7 @@ func (xRefTable *XRefTable) insertBlankPagesIntoPageTree(root *types.IndirectRef
 
 		case "Pages":
 			// Recurse over sub pagetree.
-			j, err := xRefTable.insertBlankPagesIntoPageTree(&ir, pAttrs, p, selectedPages, before)
+			j, err := xRefTable.insertBlankPages(&ir, pAttrs, p, selectedPages, before)
 			if err != nil {
 				return 0, err
 			}
@@ -2417,11 +2422,10 @@ func (xRefTable *XRefTable) insertBlankPagesIntoPageTree(root *types.IndirectRef
 			}
 			if selectedPages[*p] {
 				// Insert empty page.
-				indRef, err := xRefTable.insertEmptyPage(root, pAttrs, pageNodeDict)
+				indRef, err := xRefTable.emptyPage(parent, pageNodeDict, pAttrs)
 				if err != nil {
 					return 0, err
 				}
-
 				a = append(a, *indRef)
 				i++
 			}
@@ -2449,9 +2453,152 @@ func (xRefTable *XRefTable) InsertBlankPages(pages types.IntSet, before bool) er
 	var inhPAttrs InheritedPageAttrs
 	p := 0
 
-	_, err = xRefTable.insertBlankPagesIntoPageTree(root, &inhPAttrs, &p, pages, before)
+	_, err = xRefTable.insertBlankPages(root, &inhPAttrs, &p, pages, before)
 
 	return err
+}
+
+// Zip in ctx's pages: for each page weave in the corresponding ctx page as long as there is one.
+func (xRefTable *XRefTable) InsertPages(parent *types.IndirectRef, p *int, ctx *Context) (int, error) {
+	d, err := xRefTable.DereferenceDict(*parent)
+	if err != nil {
+		return 0, err
+	}
+
+	kids := d.ArrayEntry("Kids")
+	if kids == nil {
+		return 0, nil
+	}
+
+	i := 0
+	a := types.Array{}
+
+	for _, o := range kids {
+
+		if o == nil {
+			continue
+		}
+
+		// Dereference next page node dict.
+		ir, ok := o.(types.IndirectRef)
+		if !ok {
+			return 0, errors.Errorf("pdfcpu: InsertPagesIntoPageTree: corrupt page node dict")
+		}
+
+		pageNodeDict, err := xRefTable.DereferenceDict(ir)
+		if err != nil {
+			return 0, err
+		}
+
+		switch *pageNodeDict.Type() {
+
+		case "Pages":
+			// Recurse over sub pagetree.
+			j, err := xRefTable.InsertPages(&ir, p, ctx)
+			if err != nil {
+				return 0, err
+			}
+			a = append(a, ir)
+			i += j
+
+		case "Page":
+			*p++
+			a = append(a, ir)
+			i++
+			if *p <= ctx.PageCount {
+				// append indRef for ctx page i after this page
+				d1, indRef1, inhPAttrs, err := ctx.PageDict(*p, false)
+				if err != nil {
+					return 0, err
+				}
+				d1["Parent"] = *parent
+				if _, found := d1["Rotate"]; !found {
+					d1["Rotate"] = types.Integer(inhPAttrs.Rotate)
+				}
+				if _, found := d1["MediaBox"]; !found {
+					d1["MediaBox"] = inhPAttrs.MediaBox.Array()
+				}
+				a = append(a, *indRef1)
+				i++
+			}
+
+		}
+
+	}
+
+	d.Update("Kids", a)
+	d.Update("Count", types.Integer(i))
+
+	return i, nil
+}
+
+func (xRefTable *XRefTable) AppendPages(rootPageIndRef *types.IndirectRef, fromPageNr int, ctx *Context) (int, error) {
+	// Create an intermediary page node containing kids array with indRefs For all ctx Pages fromPageNr - end
+
+	rootPageDict, err := xRefTable.DereferenceDict(*rootPageIndRef)
+	if err != nil {
+		return 0, err
+	}
+
+	// Ensure page root with pages.
+	d := types.NewDict()
+	d.InsertName("Type", "Pages")
+
+	indRef, err := xRefTable.IndRefForNewObject(d)
+	if err != nil {
+		return 0, err
+	}
+
+	rootPageDict["Parent"] = *indRef
+
+	kids := types.Array{*rootPageIndRef}
+
+	count := ctx.PageCount - fromPageNr + 1
+
+	d1 := types.Dict(
+		map[string]types.Object{
+			"Type":   types.Name("Pages"),
+			"Parent": *indRef,
+			"Count":  types.Integer(count),
+		},
+	)
+
+	indRef1, err := xRefTable.IndRefForNewObject(d1)
+	if err != nil {
+		return 0, err
+	}
+
+	kids1 := types.Array{}
+
+	for i := fromPageNr; i <= ctx.PageCount; i++ {
+		d, indRef2, inhPAttrs, err := ctx.PageDict(i, false)
+		if err != nil {
+			return 0, err
+		}
+		d["Parent"] = *indRef1
+		if _, found := d["Rotate"]; !found {
+			d["Rotate"] = types.Integer(inhPAttrs.Rotate)
+		}
+		if _, found := d["MediaBox"]; !found {
+			d["MediaBox"] = inhPAttrs.MediaBox.Array()
+		}
+		kids1 = append(kids1, *indRef2)
+	}
+	d1["Kids"] = kids1
+
+	d["Kids"] = append(kids, *indRef1)
+
+	pageCount := *rootPageDict.IntEntry("Count") + count
+	d["Count"] = types.Integer(pageCount)
+
+	rootDict, err := xRefTable.Catalog()
+	if err != nil {
+		return 0, err
+	}
+
+	rootDict["Pages"] = *indRef
+
+	return pageCount, nil
 }
 
 // StreamDictIndRef creates a new stream dict for bb.

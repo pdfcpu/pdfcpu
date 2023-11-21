@@ -629,7 +629,7 @@ func parseFormGroup(rd io.Reader) (*form.FormGroup, error) {
 
 func mergeForms(outDir, fileName string, outFiles []string, conf *model.Configuration) error {
 	outFile := filepath.Join(outDir, fileName+".pdf")
-	if err := MergeCreateFile(outFiles, outFile, conf); err != nil {
+	if err := MergeCreateFile(outFiles, outFile, false, conf); err != nil {
 		return err
 	}
 	if log.CLIEnabled() {

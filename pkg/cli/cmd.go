@@ -63,6 +63,7 @@ var cmdMap = map[model.CommandMode]func(cmd *Command) ([]string, error){
 	model.SPLIT:                   Split,
 	model.SPLITBYPAGENR:           SplitByPageNr,
 	model.MERGECREATE:             MergeCreate,
+	model.MERGECREATEZIP:          MergeCreateZip,
 	model.MERGEAPPEND:             MergeAppend,
 	model.EXTRACTIMAGES:           ExtractImages,
 	model.EXTRACTFONTS:            ExtractFonts,
@@ -192,13 +193,28 @@ func SplitByPageNrCommand(inFile, dirNameOut string, pageNrs []int, conf *model.
 
 // MergeCreateCommand creates a new command to merge files.
 // Outfile will be created. An existing outFile will be overwritten.
-func MergeCreateCommand(inFiles []string, outFile string, conf *model.Configuration) *Command {
+func MergeCreateCommand(inFiles []string, outFile string, dividerPage bool, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
 	conf.Cmd = model.MERGECREATE
 	return &Command{
-		Mode:    model.MERGECREATE,
+		Mode:     model.MERGECREATE,
+		InFiles:  inFiles,
+		OutFile:  &outFile,
+		BoolVal1: dividerPage,
+		Conf:     conf}
+}
+
+// MergeCreateZipCommand creates a new command to zip merge 2 files.
+// Outfile will be created. An existing outFile will be overwritten.
+func MergeCreateZipCommand(inFiles []string, outFile string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.MERGECREATEZIP
+	return &Command{
+		Mode:    model.MERGECREATEZIP,
 		InFiles: inFiles,
 		OutFile: &outFile,
 		Conf:    conf}
@@ -206,16 +222,17 @@ func MergeCreateCommand(inFiles []string, outFile string, conf *model.Configurat
 
 // MergeAppendCommand creates a new command to merge files.
 // Any existing outFile PDF content will be preserved and serves as the beginning of the merge result.
-func MergeAppendCommand(inFiles []string, outFile string, conf *model.Configuration) *Command {
+func MergeAppendCommand(inFiles []string, outFile string, dividerPage bool, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
 	conf.Cmd = model.MERGEAPPEND
 	return &Command{
-		Mode:    model.MERGEAPPEND,
-		InFiles: inFiles,
-		OutFile: &outFile,
-		Conf:    conf}
+		Mode:     model.MERGEAPPEND,
+		InFiles:  inFiles,
+		OutFile:  &outFile,
+		BoolVal1: dividerPage,
+		Conf:     conf}
 }
 
 // ExtractImagesCommand creates a new command to extract embedded images.
