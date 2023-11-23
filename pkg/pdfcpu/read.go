@@ -183,10 +183,10 @@ func scanLinesForSingleEol(data []byte, atEOF bool) (advance int, token []byte, 
 	case indCR >= 0 && indLF >= 0:
 		if indCR < indLF {
 			// 0x0D ... 0x0A
-			return indCR + 1, data[0:indCR], nil
+			return indCR + 2, data[0:indCR], nil
 		}
 		// 0x0A ... 0x0D
-		return indLF + 1, data[0:indLF], nil
+		return indLF + 2, data[0:indLF], nil
 
 	case indCR >= 0:
 		// We have a full carriage return terminated line.
@@ -1483,6 +1483,27 @@ func bypassXrefSection(ctx *model.Context, offExtra int64) error {
 				Generation: generation}
 			bb = nil
 			withinObj = false
+		}
+		if strings.HasSuffix(line, ">>stream") {
+			i := strings.Index(line, "Length ")
+			s1 := line[i+7:]
+			var pos int
+			for j, char := range s1 {
+				if char < '0' || char > '9' {
+					pos = j
+					break
+				}
+			}
+			length, err := strconv.Atoi(s1[:pos])
+			if err != nil {
+				return err
+			}
+			offset += int64(length + eolCount)
+			rd, err := newPositionedReader(rs, &offset)
+			if err != nil {
+				return err
+			}
+			s = bufio.NewScanner(rd)
 		}
 	}
 	return nil
