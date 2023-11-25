@@ -21,8 +21,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strconv"
-
-	"github.com/pkg/errors"
 )
 
 // Supported line delimiters
@@ -170,32 +168,6 @@ type Rectangle struct {
 // NewRectangle returns a new rectangle for given corner coordinates.
 func NewRectangle(llx, lly, urx, ury float64) *Rectangle {
 	return &Rectangle{LL: Point{llx, lly}, UR: Point{urx, ury}}
-}
-
-// RectForArray returns a new rectangle for given Array.
-func RectForArray(a Array) (*Rectangle, error) {
-
-	llx, err := a.FloatNumber(0)
-	if err != nil {
-		return nil, err
-	}
-
-	lly, err := a.FloatNumber(1)
-	if err != nil {
-		return nil, err
-	}
-
-	urx, err := a.FloatNumber(2)
-	if err != nil {
-		return nil, err
-	}
-
-	ury, err := a.FloatNumber(3)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewRectangle(llx, lly, urx, ury), nil
 }
 
 // RectForDim returns a new rectangle for given dimensions.
@@ -347,19 +319,6 @@ func (r Rectangle) Format(unit DisplayUnit) string {
 		return r.formatToMillimetres()
 	}
 	return r.String()
-}
-
-// FloatNumber returns the element at index ind of a numbers array and returns a float64.
-func (a Array) FloatNumber(ind int) (float64, error) {
-	f, ok := a[ind].(Float)
-	if ok {
-		return f.Value(), nil
-	}
-	i, ok := a[ind].(Integer)
-	if ok {
-		return float64(i.Value()), nil
-	}
-	return 0, errors.Errorf("pdfcpu: array element %d not a number (Float/Integer", ind)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////

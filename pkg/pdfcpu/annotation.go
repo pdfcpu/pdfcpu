@@ -142,7 +142,7 @@ func Annotation(xRefTable *model.XRefTable, d types.Dict) (model.AnnotationRende
 		return nil, err
 	}
 
-	r, err := types.RectForArray(arr)
+	r, err := xRefTable.RectForArray(arr)
 	if err != nil {
 		return nil, err
 	}

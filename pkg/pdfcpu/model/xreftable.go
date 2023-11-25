@@ -2792,3 +2792,28 @@ func (xRefTable *XRefTable) BindViewerPreferences() {
 
 	xRefTable.RootDict["ViewerPreferences"] = d
 }
+
+// RectForArray returns a new rectangle for given Array.
+func (xRefTable *XRefTable) RectForArray(a types.Array) (*types.Rectangle, error) {
+	llx, err := xRefTable.DereferenceNumber(a[0])
+	if err != nil {
+		return nil, err
+	}
+
+	lly, err := xRefTable.DereferenceNumber(a[1])
+	if err != nil {
+		return nil, err
+	}
+
+	urx, err := xRefTable.DereferenceNumber(a[2])
+	if err != nil {
+		return nil, err
+	}
+
+	ury, err := xRefTable.DereferenceNumber(a[2])
+	if err != nil {
+		return nil, err
+	}
+
+	return types.NewRectangle(llx, lly, urx, ury), nil
+}
