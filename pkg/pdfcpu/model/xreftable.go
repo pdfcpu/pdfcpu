@@ -2810,7 +2810,7 @@ func (xRefTable *XRefTable) RectForArray(a types.Array) (*types.Rectangle, error
 		return nil, err
 	}
 
-	ury, err := xRefTable.DereferenceNumber(a[2])
+	ury, err := xRefTable.DereferenceNumber(a[3])
 	if err != nil {
 		return nil, err
 	}

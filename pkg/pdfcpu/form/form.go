@@ -360,9 +360,7 @@ func collectBtn(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMet
 	}
 
 	if len(d.ArrayEntry("Kids")) > 0 {
-		if ff != nil && primitives.FieldFlags(*ff)&primitives.FieldRadio > 0 {
-			return collectRadioButtonGroup(xRefTable, d, f, fm)
-		}
+		return collectRadioButtonGroup(xRefTable, d, f, fm)
 	}
 
 	f.Typ = FTCheckBox

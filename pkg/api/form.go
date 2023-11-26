@@ -31,6 +31,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/create"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/form"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
@@ -479,6 +480,66 @@ func ExportFormFile(inFilePDF, outFileJSON string, conf *model.Configuration) (e
 	return ExportFormJSON(f1, f2, inFilePDF, conf)
 }
 
+func validateComboBoxValues(f form.Form) error {
+	for _, cb := range f.ComboBoxes {
+		if cb.Value == "" || cb.Editable {
+			continue
+		}
+		if len(cb.Options) > 0 {
+			if !types.MemberOf(cb.Value, cb.Options) {
+				return errors.Errorf("pdfcpu: fill field name: \"%s\" unknown value: \"%s\" - options: %v\n", cb.Name, cb.Value, cb.Options)
+			}
+		}
+	}
+	return nil
+}
+
+func validateListBoxValues(f form.Form) error {
+	for _, lb := range f.ListBoxes {
+		if len(lb.Values) == 0 {
+			continue
+		}
+		if len(lb.Options) > 0 {
+			for _, v := range lb.Values {
+				if !types.MemberOf(v, lb.Options) {
+					return errors.Errorf("pdfcpu: fill field name: \"%s\" unknown value: \"%s\" - options: %v\n", lb.Name, v, lb.Options)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func validateRadioButtonGroupValues(f form.Form) error {
+	for _, rbg := range f.RadioButtonGroups {
+		if rbg.Value == "" {
+			continue
+		}
+		if len(rbg.Options) > 0 {
+			if !types.MemberOf(rbg.Value, rbg.Options) {
+				return errors.Errorf("pdfcpu: fill field name: \"%s\" unknown value: \"%s\" - options: %v\n", rbg.Name, rbg.Value, rbg.Options)
+			}
+		}
+	}
+	return nil
+}
+
+func validateOptionValues(f form.Form) error {
+	if err := validateRadioButtonGroupValues(f); err != nil {
+		return err
+	}
+
+	if err := validateComboBoxValues(f); err != nil {
+		return err
+	}
+
+	if err := validateListBoxValues(f); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // FillForm populates the form rs with data from rd and writes the result to w.
 func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configuration) error {
 	if rs == nil {
@@ -527,6 +588,14 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 	}
 
 	f := formGroup.Forms[0]
+
+	if err := validateOptionValues(f); err != nil {
+		return err
+	}
+
+	if log.CLIEnabled() {
+		log.CLI.Println("filling...")
+	}
 
 	ok, pp, err := form.FillForm(ctx, form.FillDetails(&f, nil), f.Pages, form.JSON)
 	if err != nil {

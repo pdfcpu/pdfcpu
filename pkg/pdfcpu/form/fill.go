@@ -610,7 +610,7 @@ func fillBtn(
 		return nil
 	}
 
-	if len(d.ArrayEntry("Kids")) > 0 && primitives.FieldFlags(*ff)&primitives.FieldRadio > 0 {
+	if len(d.ArrayEntry("Kids")) > 0 {
 		if err := fillRadioButtonGroup(ctx, d, id, name, locked, format, fillDetails, ok); err != nil {
 			return err
 		}
