@@ -282,9 +282,9 @@ func ListImages(cmd *Command) ([]string, error) {
 
 // Dump known object to stdout.
 func Dump(cmd *Command) ([]string, error) {
-	hex := cmd.IntVals[0] == 1
+	mode := cmd.IntVals[0]
 	objNr := cmd.IntVals[1]
-	return nil, api.DumpObjectFile(*cmd.InFile, objNr, hex, cmd.Conf)
+	return nil, api.DumpObjectFile(*cmd.InFile, mode, objNr, cmd.Conf)
 }
 
 // Create renders page content corresponding to declarations found in inFileJSON and writes the result to outFile.

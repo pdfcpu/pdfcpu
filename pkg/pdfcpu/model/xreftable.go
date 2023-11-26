@@ -17,6 +17,7 @@
 package model
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/hex"
 	"fmt"
@@ -29,6 +30,7 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/scan"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
@@ -1054,7 +1056,11 @@ func (xRefTable *XRefTable) sortedKeys() []int {
 	return keys
 }
 
-func (xRefTable *XRefTable) DumpStream(objNr int, hexOut bool) {
+func (xRefTable *XRefTable) DumpObject(objNr, mode int) {
+	// mode
+	//  0 .. silent / obj only
+	//  1 .. ascii
+	//  2 .. hex
 	entry := xRefTable.Table[objNr]
 	if entry == nil || entry.Free || entry.Compressed || entry.Object == nil {
 		fmt.Println(":(")
@@ -1088,32 +1094,41 @@ func (xRefTable *XRefTable) DumpStream(objNr int, hexOut bool) {
 		}
 	}
 
-	sd, ok := entry.Object.(types.StreamDict)
-	if ok {
+	if mode > 0 {
+		sd, ok := entry.Object.(types.StreamDict)
+		if ok {
 
-		err := sd.Decode()
-		if err == filter.ErrUnsupportedFilter {
-			str += "stream filter unsupported!"
-			fmt.Println(str)
-			return
-		}
-		if err != nil {
-			str += "decoding problem encountered!"
-			fmt.Println(str)
-			return
+			err := sd.Decode()
+			if err == filter.ErrUnsupportedFilter {
+				str += "stream filter unsupported!"
+				fmt.Println(str)
+				return
+			}
+			if err != nil {
+				str += "decoding problem encountered!"
+				fmt.Println(str)
+				return
+			}
+
+			s := "decoded stream content (length = %d)\n%s\n"
+			s1 := ""
+			switch mode {
+			case 1:
+				sc := bufio.NewScanner(bytes.NewReader(sd.Content))
+				sc.Split(scan.LinesForSingleEol)
+				for sc.Scan() {
+					s1 += sc.Text() + "\n"
+				}
+				str += fmt.Sprintf(s, len(sd.Content), s1)
+			case 2:
+				str += fmt.Sprintf(s, len(sd.Content), hex.Dump(sd.Content))
+			}
 		}
 
-		s := "decoded stream content (length = %d)\n%s\n"
-		if hexOut {
-			str += fmt.Sprintf(s, len(sd.Content), hex.Dump(sd.Content))
-		} else {
-			str += fmt.Sprintf(s, len(sd.Content), sd.Content)
+		osd, ok := entry.Object.(types.ObjectStreamDict)
+		if ok {
+			str += fmt.Sprintf("object stream count:%d size of objectarray:%d\n", osd.ObjCount, len(osd.ObjArray))
 		}
-	}
-
-	osd, ok := entry.Object.(types.ObjectStreamDict)
-	if ok {
-		str += fmt.Sprintf("object stream count:%d size of objectarray:%d\n", osd.ObjCount, len(osd.ObjArray))
 	}
 
 	fmt.Println(str)

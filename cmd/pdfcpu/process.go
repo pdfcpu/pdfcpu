@@ -1833,18 +1833,21 @@ func processListImagesCommand(conf *model.Configuration) {
 }
 
 func processDumpCommand(conf *model.Configuration) {
-	s := "No dump for you!! One year!\n\n"
+	s := "No dump for you! - One year!\n\n"
 	if len(flag.Args()) != 3 {
 		fmt.Fprintln(os.Stderr, s)
 		os.Exit(1)
 	}
 
-	mode := flag.Arg(0)
-	hex := mode[0] == 'h' || mode[0] == 'H'
-
 	vals := []int{0, 0}
-	if hex {
+
+	mode := strings.ToLower(flag.Arg(0))
+
+	switch mode[0] {
+	case 'a':
 		vals[0] = 1
+	case 'h':
+		vals[0] = 2
 	}
 
 	objNr, err := strconv.Atoi(flag.Arg(1))

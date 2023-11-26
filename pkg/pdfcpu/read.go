@@ -28,6 +28,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/scan"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
@@ -122,89 +123,6 @@ func fillBuffer(r io.Reader, buf []byte) (int, error) {
 	}
 
 	return n, err
-}
-
-// ScanLines is a split function for a Scanner that returns each line of
-// text, stripped of any trailing end-of-line marker. The returned line may
-// be empty. The end-of-line marker is one carriage return followed
-// by one newline or one carriage return or one newline.
-// The last non-empty line of input will be returned even if it has no newline.
-func scanLines(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	if atEOF && len(data) == 0 {
-		return 0, nil, nil
-	}
-
-	indCR := bytes.IndexByte(data, '\r')
-	indLF := bytes.IndexByte(data, '\n')
-
-	switch {
-
-	case indCR >= 0 && indLF >= 0:
-		if indCR < indLF {
-			if indLF == indCR+1 {
-				// 0x0D0A
-				return indLF + 1, data[0:indCR], nil
-			}
-			// 0x0D ... 0x0A
-			return indCR + 1, data[0:indCR], nil
-		}
-		// 0x0A ... 0x0D
-		return indLF + 1, data[0:indLF], nil
-
-	case indCR >= 0:
-		// We have a full carriage return terminated line.
-		return indCR + 1, data[0:indCR], nil
-
-	case indLF >= 0:
-		// We have a full newline-terminated line.
-		return indLF + 1, data[0:indLF], nil
-
-	}
-
-	// If we're at EOF, we have a final, non-terminated line. Return it.
-	if atEOF {
-		return len(data), data, nil
-	}
-
-	// Request more data.
-	return 0, nil, nil
-}
-
-func scanLinesForSingleEol(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	if atEOF && len(data) == 0 {
-		return 0, nil, nil
-	}
-
-	indCR := bytes.IndexByte(data, '\r')
-	indLF := bytes.IndexByte(data, '\n')
-
-	switch {
-
-	case indCR >= 0 && indLF >= 0:
-		if indCR < indLF {
-			// 0x0D ... 0x0A
-			return indCR + 2, data[0:indCR], nil
-		}
-		// 0x0A ... 0x0D
-		return indLF + 2, data[0:indLF], nil
-
-	case indCR >= 0:
-		// We have a full carriage return terminated line.
-		return indCR + 1, data[0:indCR], nil
-
-	case indLF >= 0:
-		// We have a full newline-terminated line.
-		return indLF + 1, data[0:indLF], nil
-
-	}
-
-	// If we're at EOF, we have a final, non-terminated line. Return it.
-	if atEOF {
-		return len(data), data, nil
-	}
-
-	// Request more data.
-	return 0, nil, nil
 }
 
 func newPositionedReader(rs io.ReadSeeker, offset *int64) (*bufio.Reader, error) {
@@ -1413,7 +1331,7 @@ func bypassXrefSection(ctx *model.Context, offExtra int64) error {
 	}
 
 	s := bufio.NewScanner(rd)
-	s.Split(scanLinesForSingleEol)
+	s.Split(scan.LinesForSingleEol)
 
 	bb := []byte{}
 	var (
@@ -1538,7 +1456,7 @@ func tryXRefSection(ctx *model.Context, rs io.ReadSeeker, offset *int64, offExtr
 	s := bufio.NewScanner(rd)
 	buf := make([]byte, 0, 4096)
 	s.Buffer(buf, 1024*1024)
-	s.Split(scanLines)
+	s.Split(scan.Lines)
 
 	line, err := scanLine(s)
 	if err != nil {

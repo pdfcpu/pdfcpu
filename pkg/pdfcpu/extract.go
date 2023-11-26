@@ -18,6 +18,7 @@ package pdfcpu
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"strings"
 
@@ -321,27 +322,6 @@ func img(
 	resourceID, filters, lastFilter string,
 	objNr int) (*model.Image, error) {
 
-	// "ImageMask" is a flag indicating whether the image shall be treated as an image mask.
-	// We do not extract imageMasks with the exception of CCITTDecoded images.
-	if imgMask {
-		// bpc = 1
-		if lastFilter != filter.CCITTFax {
-			if log.InfoEnabled() {
-				log.Info.Printf("ExtractImage(%d): skip img with imageMask\n", objNr)
-			}
-			return nil, nil
-		}
-	}
-
-	// An image XObject defining an image mask to be applied to this image, or an array specifying a range of colours to be applied to it as a colour key mask.
-	// Ignore if image has a Mask defined.
-	if sm, _ := sd.Find("Mask"); sm != nil {
-		if log.InfoEnabled() {
-			log.Info.Printf("ExtractImage(%d): skip image, unsupported \"Mask\"\n", objNr)
-		}
-		return nil, nil
-	}
-
 	// CCITTDecoded images / (bit) masks don't have a ColorSpace attribute, but we render image files.
 	if lastFilter == filter.CCITTFax {
 		if _, err := ctx.DereferenceDictEntry(sd.Dict, "ColorSpace"); err != nil {
@@ -365,8 +345,12 @@ func img(
 		}
 
 	default:
+		msg := fmt.Sprintf("pdfcpu: ExtractImage(obj#%d): skipping img, filter %s unsupported", objNr, filters)
 		if log.DebugEnabled() {
-			log.Debug.Printf("ExtractImage(%d): skip img, filter %s unsupported\n", objNr, filters)
+			log.Debug.Println(msg)
+		}
+		if log.CLIEnabled() {
+			log.CLI.Println(msg)
 		}
 		return nil, nil
 	}
