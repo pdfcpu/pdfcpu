@@ -423,6 +423,20 @@ func (c *Configuration) UnitString() string {
 	return s
 }
 
+// SetUnit configures the display unit.
+func (c *Configuration) SetUnit(s string) {
+	switch s {
+	case "points":
+		c.Unit = types.POINTS
+	case "inches":
+		c.Unit = types.INCHES
+	case "cm":
+		c.Unit = types.CENTIMETRES
+	case "mm":
+		c.Unit = types.MILLIMETRES
+	}
+}
+
 // ApplyReducedFeatureSet returns true if complex entries like annotations shall not be written.
 func (c *Configuration) ApplyReducedFeatureSet() bool {
 	switch c.Cmd {

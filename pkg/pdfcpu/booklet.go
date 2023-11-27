@@ -38,8 +38,12 @@ func DefaultBookletConfig() *model.NUp {
 }
 
 // PDFBookletConfig returns an NUp configuration for booklet-ing PDF files.
-func PDFBookletConfig(val int, desc string) (*model.NUp, error) {
+func PDFBookletConfig(val int, desc string, conf *model.Configuration) (*model.NUp, error) {
 	nup := DefaultBookletConfig()
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	nup.InpUnit = conf.Unit
 	if desc != "" {
 		if err := ParseNUpDetails(desc, nup); err != nil {
 			return nil, err
@@ -49,8 +53,8 @@ func PDFBookletConfig(val int, desc string) (*model.NUp, error) {
 }
 
 // ImageBookletConfig returns an NUp configuration for booklet-ing image files.
-func ImageBookletConfig(val int, desc string) (*model.NUp, error) {
-	nup, err := PDFBookletConfig(val, desc)
+func ImageBookletConfig(val int, desc string, conf *model.Configuration) (*model.NUp, error) {
+	nup, err := PDFBookletConfig(val, desc, conf)
 	if err != nil {
 		return nil, err
 	}

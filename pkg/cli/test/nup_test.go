@@ -25,7 +25,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-func testNUp(t *testing.T, msg string, inFiles []string, outFile string, selectedPages []string, desc string, n int, isImg bool) {
+func testNUp(t *testing.T, msg string, inFiles []string, outFile string, selectedPages []string, desc string, n int, isImg bool, conf *model.Configuration) {
 	t.Helper()
 
 	var (
@@ -34,11 +34,11 @@ func testNUp(t *testing.T, msg string, inFiles []string, outFile string, selecte
 	)
 
 	if isImg {
-		if nup, err = api.ImageNUpConfig(n, desc); err != nil {
+		if nup, err = api.ImageNUpConfig(n, desc, conf); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	} else {
-		if nup, err = api.PDFNUpConfig(n, desc); err != nil {
+		if nup, err = api.PDFNUpConfig(n, desc, conf); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	}
@@ -60,6 +60,7 @@ func TestNUpCommand(t *testing.T) {
 		outFile       string
 		selectedPages []string
 		desc          string
+		unit          string
 		n             int
 		isImg         bool
 	}{
@@ -68,6 +69,7 @@ func TestNUpCommand(t *testing.T) {
 			filepath.Join(outDir, "Acroforms2.pdf"),
 			nil,
 			"",
+			"points",
 			4,
 			false},
 
@@ -76,6 +78,7 @@ func TestNUpCommand(t *testing.T) {
 			filepath.Join(outDir, "out.pdf"),
 			nil,
 			"form:A3L",
+			"points",
 			9,
 			true},
 
@@ -88,9 +91,12 @@ func TestNUpCommand(t *testing.T) {
 			filepath.Join(outDir, "out1.pdf"),
 			nil,
 			"form:Tabloid, bo:off, ma:0",
+			"points",
 			6,
 			true},
 	} {
-		testNUp(t, tt.msg, tt.inFiles, tt.outFile, tt.selectedPages, tt.desc, tt.n, tt.isImg)
+		conf := model.NewDefaultConfiguration()
+		conf.SetUnit(tt.unit)
+		testNUp(t, tt.msg, tt.inFiles, tt.outFile, tt.selectedPages, tt.desc, tt.n, tt.isImg, conf)
 	}
 }

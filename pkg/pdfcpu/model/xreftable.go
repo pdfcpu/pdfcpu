@@ -2735,6 +2735,7 @@ func (xRefTable *XRefTable) RemoveSignature() {
 		d2 := xRefTable.Form
 		delete(d2, "SigFlags")
 		delete(d2, "XFA")
+		//delete(d2, "NeedAppearances") deprecated in PDF 2.0
 		d1["AcroForm"] = d2
 		delete(d1, "Extensions")
 	}

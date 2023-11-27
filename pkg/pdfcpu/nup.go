@@ -108,6 +108,7 @@ func parseDimensionsNUp(s string, nup *model.NUp) (err error) {
 	}
 	nup.PageDim, nup.PageSize, err = parsePageDim(s, nup.InpUnit)
 	nup.UserDim = true
+
 	return err
 }
 
@@ -228,8 +229,12 @@ func ParseNUpDetails(s string, nup *model.NUp) error {
 }
 
 // PDFNUpConfig returns an NUp configuration for Nup-ing PDF files.
-func PDFNUpConfig(val int, desc string) (*model.NUp, error) {
+func PDFNUpConfig(val int, desc string, conf *model.Configuration) (*model.NUp, error) {
 	nup := model.DefaultNUpConfig()
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	nup.InpUnit = conf.Unit
 	if desc != "" {
 		if err := ParseNUpDetails(desc, nup); err != nil {
 			return nil, err
@@ -239,8 +244,8 @@ func PDFNUpConfig(val int, desc string) (*model.NUp, error) {
 }
 
 // ImageNUpConfig returns an NUp configuration for Nup-ing image files.
-func ImageNUpConfig(val int, desc string) (*model.NUp, error) {
-	nup, err := PDFNUpConfig(val, desc)
+func ImageNUpConfig(val int, desc string, conf *model.Configuration) (*model.NUp, error) {
+	nup, err := PDFNUpConfig(val, desc, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -249,8 +254,12 @@ func ImageNUpConfig(val int, desc string) (*model.NUp, error) {
 }
 
 // PDFGridConfig returns a grid configuration for Nup-ing PDF files.
-func PDFGridConfig(rows, cols int, desc string) (*model.NUp, error) {
+func PDFGridConfig(rows, cols int, desc string, conf *model.Configuration) (*model.NUp, error) {
 	nup := model.DefaultNUpConfig()
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	nup.InpUnit = conf.Unit
 	nup.PageGrid = true
 	if desc != "" {
 		if err := ParseNUpDetails(desc, nup); err != nil {
@@ -261,8 +270,8 @@ func PDFGridConfig(rows, cols int, desc string) (*model.NUp, error) {
 }
 
 // ImageGridConfig returns a grid configuration for Nup-ing image files.
-func ImageGridConfig(rows, cols int, desc string) (*model.NUp, error) {
-	nup, err := PDFGridConfig(rows, cols, desc)
+func ImageGridConfig(rows, cols int, desc string, conf *model.Configuration) (*model.NUp, error) {
+	nup, err := PDFGridConfig(rows, cols, desc, conf)
 	if err != nil {
 		return nil, err
 	}

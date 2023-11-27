@@ -24,7 +24,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-func testGrid(t *testing.T, msg string, inFiles []string, outFile string, selectedPages []string, desc string, rows, cols int, isImg bool) {
+func testGrid(t *testing.T, msg string, inFiles []string, outFile string, selectedPages []string, desc string, rows, cols int, isImg bool, conf *model.Configuration) {
 	t.Helper()
 
 	var (
@@ -33,19 +33,19 @@ func testGrid(t *testing.T, msg string, inFiles []string, outFile string, select
 	)
 
 	if isImg {
-		if nup, err = api.ImageGridConfig(rows, cols, desc); err != nil {
+		if nup, err = api.ImageGridConfig(rows, cols, desc, conf); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	} else {
-		if nup, err = api.PDFGridConfig(rows, cols, desc); err != nil {
+		if nup, err = api.PDFGridConfig(rows, cols, desc, conf); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	}
 
-	if err := api.NUpFile(inFiles, outFile, selectedPages, nup, nil); err != nil {
+	if err := api.NUpFile(inFiles, outFile, selectedPages, nup, conf); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
-	if err := api.ValidateFile(outFile, nil); err != nil {
+	if err := api.ValidateFile(outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
@@ -60,24 +60,27 @@ func TestGrid(t *testing.T) {
 		outFile       string
 		selectedPages []string
 		desc          string
+		unit          string
 		rows, cols    int
 		isImg         bool
 	}{
 		{"TestGridFromPDF",
 			[]string{filepath.Join(inDir, "read.go.pdf")},
 			filepath.Join(outDir, "GridFromPDF.pdf"),
-			nil, "form:LegalP, o:dr, border:off", 4, 6, false},
+			nil, "form:LegalP, o:dr, border:off", "points", 4, 6, false},
 
 		{"TestGridFromPDFWithCropBox",
 			[]string{filepath.Join(inDir, "grid_example.pdf")},
 			filepath.Join(outDir, "GridFromPDFWithCropBox.pdf"),
-			nil, "form:A5L, border:on, margin:0", 2, 1, false},
+			nil, "form:A5L, border:on, margin:0", "points", 2, 1, false},
 
 		{"TestGridFromImages",
 			imageFileNames(t, resDir),
 			filepath.Join(outDir, "GridFromImages.pdf"),
-			nil, "d:500 500, margin:20, bo:off", 1, 4, true},
+			nil, "d:500 500, margin:20, bo:off", "points", 1, 4, true},
 	} {
-		testGrid(t, tt.msg, tt.inFiles, tt.outFile, tt.selectedPages, tt.desc, tt.rows, tt.cols, tt.isImg)
+		conf := model.NewDefaultConfiguration()
+		conf.SetUnit(tt.unit)
+		testGrid(t, tt.msg, tt.inFiles, tt.outFile, tt.selectedPages, tt.desc, tt.rows, tt.cols, tt.isImg, conf)
 	}
 }
