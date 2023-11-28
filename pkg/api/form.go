@@ -127,9 +127,7 @@ func RemoveFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -206,9 +204,7 @@ func LockFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf *
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -285,9 +281,7 @@ func UnlockFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -364,9 +358,7 @@ func ResetFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf 
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -649,9 +641,7 @@ func FillFormFile(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configur
 			f2.Close()
 			f1.Close()
 			f0.Close()
-			if outFilePDF == "" || inFilePDF == outFilePDF {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {

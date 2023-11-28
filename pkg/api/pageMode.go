@@ -142,9 +142,7 @@ func SetPageModeFile(inFile, outFile string, val model.PageMode, conf *model.Con
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -209,9 +207,7 @@ func ResetPageModeFile(inFile, outFile string, conf *model.Configuration) (err e
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {

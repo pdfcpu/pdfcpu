@@ -67,9 +67,6 @@ func Boxes(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration) 
 		return nil, err
 	}
 
-	//pb := &model.PageBoundaries{}
-	//pb.SelectAll()
-
 	return ctx.PageBoundaries(pages)
 }
 
@@ -143,9 +140,7 @@ func AddBoxesFile(inFile, outFile string, selectedPages []string, pb *model.Page
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -232,9 +227,7 @@ func RemoveBoxesFile(inFile, outFile string, selectedPages []string, pb *model.P
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -321,9 +314,7 @@ func CropFile(inFile, outFile string, selectedPages []string, b *model.Box, conf
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {

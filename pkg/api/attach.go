@@ -146,9 +146,7 @@ func AddAttachmentsFile(inFile, outFile string, files []string, coll bool, conf 
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -230,9 +228,7 @@ func RemoveAttachmentsFile(inFile, outFile string, files []string, conf *model.C
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {
