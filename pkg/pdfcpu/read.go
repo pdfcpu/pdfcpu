@@ -2889,7 +2889,7 @@ func handlePermissions(ctx *model.Context) error {
 
 	// Double check minimum permissions for pdfcpu processing.
 	if !hasNeededPermissions(ctx.Cmd, ctx.E) {
-		return errors.New("pdfcpu: insufficient access permissions")
+		return errors.New("pdfcpu: operation restriced via pdfcpu's permission bits setting")
 	}
 
 	return nil
