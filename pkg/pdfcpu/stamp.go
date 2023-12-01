@@ -535,7 +535,7 @@ func setTextWatermark(s string, wm *model.Watermark) {
 
 func setImageWatermark(s string, wm *model.Watermark) error {
 	if len(s) == 0 {
-		// The caller is expected to supply wm.Image
+		// The caller is expected to provide: wm.Image (see api.ImageWatermarkForReader)
 		return nil
 	}
 	if !model.ImageFileName(s) {
@@ -558,9 +558,27 @@ func setImageWatermark(s string, wm *model.Watermark) error {
 }
 
 func setPDFWatermark(s string, wm *model.Watermark) error {
+	if len(s) == 0 {
+		/*
+			The caller is expected to provide:
+				wm.PDF and optionally wm.PdfPageNrSrc (see api.PDFWatermarkForReadSeeker)
+			or
+				wm.PDF and wm.PdfMultiStartPageNrSrc and wm.PdfMultiStartPageNrDest (see api.PDFMultiWatermarkForReadSeeker)
+
+			Supported usecases:
+
+			pdfcpu stamp add -mode pdf -- "stamp.pdf:m"   "" in.pdf out.pdf ... single stamp using page n of source for selected pages of in.pdf
+
+			pdfcpu stamp add -mode pdf -- "stamp.pdf"     "" in.pdf out.pdf ... multi stamp starting at the beginning of source and dest
+
+			pdfcpu stamp add -mode pdf -- "stamp.pdf:m:n" "" in.pdf out.pdf ... multi stamp starting at source page m and dest page n
+
+		*/
+		return nil
+	}
 	i := strings.LastIndex(s, ":")
 	if i < 1 {
-		// No Colon.
+		// No colon => multi stamp
 		if strings.ToLower(filepath.Ext(s)) != ".pdf" {
 			return errors.Errorf("%s is not a PDF file", s)
 		}
@@ -569,22 +587,44 @@ func setPDFWatermark(s string, wm *model.Watermark) error {
 	}
 	// We have at least one Colon.
 	if strings.ToLower(filepath.Ext(s)) == ".pdf" {
-		// We have an absolute DOS filename.
+		// We have an absolute DOS filename eg. C:\test.pdf => multi stamp
 		wm.FileName = s
 		return nil
 	}
-	// We expect a page number on the right side of the right most Colon.
-	var err error
+
 	pageNumberStr := s[i+1:]
-	wm.Page, err = strconv.Atoi(pageNumberStr)
+	j, err := strconv.Atoi(pageNumberStr)
 	if err != nil {
-		return errors.Errorf("illegal PDF page number: %s\n", pageNumberStr)
+		return errors.Errorf("unable to detect PDF page number: %s\n", pageNumberStr)
 	}
-	fileName := s[:i]
-	if strings.ToLower(filepath.Ext(fileName)) != ".pdf" {
-		return errors.Errorf("%s is not a PDF file", fileName)
+
+	s = s[:i]
+	i = strings.LastIndex(s, ":")
+	if i < 1 {
+		// single stamp
+		wm.PdfPageNrSrc = j
+		if strings.ToLower(filepath.Ext(s)) != ".pdf" {
+			return errors.Errorf("%s is not a PDF file", s)
+		}
+		wm.FileName = s
+		return nil
 	}
-	wm.FileName = fileName
+
+	// multi stamp
+
+	wm.PdfMultiStartPageNrDest = j
+	pageNumberStr = s[i+1:]
+	wm.PdfMultiStartPageNrSrc, err = strconv.Atoi(pageNumberStr)
+	if err != nil {
+		return errors.Errorf("unable to detect PDF page number: %s\n", pageNumberStr)
+	}
+
+	s = s[:i]
+	if strings.ToLower(filepath.Ext(s)) != ".pdf" {
+		return errors.Errorf("%s is not a PDF file", s)
+	}
+	wm.FileName = s
+
 	return nil
 }
 
@@ -603,19 +643,19 @@ func setWatermarkType(mode int, s string, wm *model.Watermark) (err error) {
 	return err
 }
 
-func createPDFRes(ctx, otherCtx *model.Context, pageNr int, migrated map[int]int, wm *model.Watermark) error {
+func createPDFRes(ctx, otherCtx *model.Context, pageNrSrc, pageNrDest int, migrated map[int]int, wm *model.Watermark) error {
 	pdfRes := model.PdfResources{}
 	xRefTable := ctx.XRefTable
 	otherXRefTable := otherCtx.XRefTable
 
 	// Locate page dict & resource dict of PDF stamp.
 	consolidateRes := true
-	d, _, inhPAttrs, err := otherXRefTable.PageDict(pageNr, consolidateRes)
+	d, _, inhPAttrs, err := otherXRefTable.PageDict(pageNrSrc, consolidateRes)
 	if err != nil {
 		return err
 	}
 	if d == nil {
-		return errors.Errorf("pdfcpu: unknown page number: %d\n", pageNr)
+		return errors.Errorf("pdfcpu: unknown page number: %d\n", pageNrSrc)
 	}
 
 	// Retrieve content stream bytes of page dict.
@@ -639,14 +679,22 @@ func createPDFRes(ctx, otherCtx *model.Context, pageNr int, migrated map[int]int
 	}
 
 	pdfRes.Bb = viewPort(inhPAttrs)
-	wm.PdfRes[pageNr] = pdfRes
+	wm.PdfRes[pageNrDest] = pdfRes
 
 	return nil
 }
 
 func createPDFResForWM(ctx *model.Context, wm *model.Watermark) error {
 	// Note: The stamp pdf is assumed to be valid!
-	otherCtx, err := ReadFile(wm.FileName, model.NewDefaultConfiguration())
+	var (
+		otherCtx *model.Context
+		err      error
+	)
+	if wm.PDF != nil {
+		otherCtx, err = Read(wm.PDF, nil)
+	} else {
+		otherCtx, err = ReadFile(wm.FileName, nil)
+	}
 	if err != nil {
 		return err
 	}
@@ -658,19 +706,20 @@ func createPDFResForWM(ctx *model.Context, wm *model.Watermark) error {
 	migrated := map[int]int{}
 
 	if !wm.MultiStamp() {
-		if err := createPDFRes(ctx, otherCtx, wm.Page, migrated, wm); err != nil {
+		return createPDFRes(ctx, otherCtx, wm.PdfPageNrSrc, wm.PdfPageNrSrc, migrated, wm)
+	}
+
+	j := otherCtx.PageCount
+	if ctx.PageCount < otherCtx.PageCount {
+		j = ctx.PageCount
+	}
+
+	destPageNr := wm.PdfMultiStartPageNrDest
+	for srcPageNr := wm.PdfMultiStartPageNrSrc; srcPageNr <= j; srcPageNr++ {
+		if err := createPDFRes(ctx, otherCtx, srcPageNr, destPageNr, migrated, wm); err != nil {
 			return err
 		}
-	} else {
-		j := otherCtx.PageCount
-		if ctx.PageCount < otherCtx.PageCount {
-			j = ctx.PageCount
-		}
-		for i := 1; i <= j; i++ {
-			if err := createPDFRes(ctx, otherCtx, i, migrated, wm); err != nil {
-				return err
-			}
-		}
+		destPageNr++
 	}
 
 	return nil
@@ -805,14 +854,7 @@ func prepareOCPropertiesInRoot(ctx *model.Context, onTop bool) (*types.IndirectR
 
 func createFormResDict(ctx *model.Context, pageNr int, wm *model.Watermark) (*types.IndirectRef, error) {
 	if wm.IsPDF() {
-		i := wm.Page
-		if wm.MultiStamp() {
-			maxStampPageNr := len(wm.PdfRes)
-			i = pageNr
-			if pageNr > maxStampPageNr {
-				i = maxStampPageNr
-			}
-		}
+		i := wm.PdfResIndex(pageNr)
 		return wm.PdfRes[i].ResDict, nil
 	}
 
@@ -841,15 +883,9 @@ func cachedForm(wm model.Watermark) bool {
 }
 
 func pdfFormContent(w io.Writer, pageNr int, wm model.Watermark) error {
-	cs := wm.PdfRes[wm.Page].Content
-	if wm.MultiStamp() {
-		maxStampPageNr := len(wm.PdfRes)
-		i := pageNr
-		if pageNr > maxStampPageNr {
-			i = maxStampPageNr
-		}
-		cs = wm.PdfRes[i].Content
-	}
+	i := wm.PdfResIndex(pageNr)
+	cs := wm.PdfRes[i].Content
+
 	sc := wm.Scale
 	if !wm.ScaleAbs {
 		sc = wm.Bb.Width() / float64(wm.Width)
@@ -961,7 +997,9 @@ func createForm(ctx *model.Context, pageNr, pageCount int, wm *model.Watermark, 
 	// The forms bounding box is dependent on the page dimensions.
 	bb := wm.Bb
 
-	if !unique && (cachedForm(*wm) || pageNr > len(wm.PdfRes)) {
+	maxStampPageNr := wm.PdfMultiStartPageNrSrc + len(wm.PdfRes) - 1
+
+	if !unique && (cachedForm(*wm) || pageNr > maxStampPageNr) {
 		// Use cached form.
 		ir, ok := wm.FCache[*bb]
 		if ok {
@@ -1368,7 +1406,7 @@ func addPageWatermark(ctx *model.Context, pageNr int, wm model.Watermark) error 
 	return handleLink(ctx, pageIndRef, d, pageNr, wm)
 }
 
-func createWMResources(
+func createResourcesForPageNr(
 	ctx *model.Context,
 	wm *model.Watermark,
 	pageNr int,
@@ -1415,7 +1453,7 @@ func createResourcesForWMMap(
 
 	fm := map[string]types.IntSet{}
 	for pageNr, wm := range m {
-		if err := createWMResources(ctx, wm, pageNr, fm, ocgIndRef, extGStateIndRef, onTop, opacity); err != nil {
+		if err := createResourcesForPageNr(ctx, wm, pageNr, fm, ocgIndRef, extGStateIndRef, onTop, opacity); err != nil {
 			return nil, err
 		}
 	}
@@ -1433,7 +1471,7 @@ func createResourcesForWMSliceMap(
 	fm := map[string]types.IntSet{}
 	for pageNr, wms := range m {
 		for _, wm := range wms {
-			if err := createWMResources(ctx, wm, pageNr, fm, ocgIndRef, extGStateIndRef, onTop, opacity); err != nil {
+			if err := createResourcesForPageNr(ctx, wm, pageNr, fm, ocgIndRef, extGStateIndRef, onTop, opacity); err != nil {
 				return nil, err
 			}
 		}
@@ -1571,16 +1609,30 @@ func AddWatermarks(ctx *model.Context, selectedPages types.IntSet, wm *model.Wat
 		return err
 	}
 
-	if len(selectedPages) == 0 {
-		selectedPages = types.IntSet{}
-		for i := 1; i <= ctx.PageCount; i++ {
-			selectedPages[i] = true
-		}
-	}
+	// if len(selectedPages) == 0 {
+	// 	selectedPages = types.IntSet{}
+	// 	for i := wm.PdfMultiStartPageNrDest; i <= ctx.PageCount; i++ {
+	// 		selectedPages[i] = true
+	// 	}
+	// } else {
+	// 	for k, v := range selectedPages {
+	// 		if v && k < wm.PdfMultiStartPageNrDest {
+	// 			selectedPages[k] = false
+	// 		}
+	// 	}
+	// }
 
-	for k, v := range selectedPages {
-		if v {
-			if err = addPageWatermark(ctx, k, *wm); err != nil {
+	// for k, v := range selectedPages {
+	// 	if v {
+	// 		if err = addPageWatermark(ctx, k, *wm); err != nil {
+	// 			return err
+	// 		}
+	// 	}
+	// }
+
+	for i := wm.PdfMultiStartPageNrDest; i <= ctx.PageCount; i++ {
+		if len(selectedPages) == 0 || selectedPages[i] {
+			if err = addPageWatermark(ctx, i, *wm); err != nil {
 				return err
 			}
 		}
