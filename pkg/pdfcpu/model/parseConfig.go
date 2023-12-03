@@ -59,7 +59,7 @@ func loadedConfig(c configuration, configPath string) *Configuration {
 	conf.WriteXRefStream = c.WriteXRefStream
 	conf.EncryptUsingAES = c.EncryptUsingAES
 	conf.EncryptKeyLength = c.EncryptKeyLength
-	conf.Permissions = int16(c.Permissions)
+	conf.Permissions = PermissionFlags(c.Permissions)
 
 	switch c.ValidationMode {
 	case "ValidationStrict":

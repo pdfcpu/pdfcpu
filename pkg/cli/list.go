@@ -174,6 +174,8 @@ func listFormFields(rs io.ReadSeeker, conf *model.Configuration) ([]string, erro
 
 // ListFormFieldsFile returns a list of form field ids in inFile.
 func ListFormFieldsFile(inFiles []string, conf *model.Configuration) ([]string, error) {
+	log.SetCLILogger(nil)
+
 	ss := []string{}
 
 	for _, fn := range inFiles {
@@ -191,13 +193,13 @@ func ListFormFieldsFile(inFiles []string, conf *model.Configuration) ([]string, 
 		output, err := listFormFields(f, conf)
 		if err != nil {
 			if len(inFiles) > 1 {
-				ss = append(ss, fmt.Sprintf("\n%s: %v", fn, err))
+				ss = append(ss, fmt.Sprintf("\n%s:\n%v", fn, err))
 				continue
 			}
 			return nil, err
 		}
 
-		ss = append(ss, "\n"+fn)
+		ss = append(ss, "\n"+fn+":\n")
 		ss = append(ss, output...)
 	}
 
@@ -237,6 +239,8 @@ func ListImagesFile(inFiles []string, selectedPages []string, conf *model.Config
 		log.CLI.Printf("pages: all\n")
 	}
 
+	log.SetCLILogger(nil)
+
 	ss := []string{}
 
 	for _, fn := range inFiles {
@@ -257,7 +261,7 @@ func ListImagesFile(inFiles []string, selectedPages []string, conf *model.Config
 			}
 			return nil, err
 		}
-		ss = append(ss, "\n"+fn)
+		ss = append(ss, "\n"+fn+":")
 		ss = append(ss, output...)
 	}
 
@@ -381,17 +385,34 @@ func listPermissions(rs io.ReadSeeker, conf *model.Configuration) ([]string, err
 }
 
 // ListPermissionsFile returns a list of user access permissions for inFile.
-func ListPermissionsFile(inFile string, conf *model.Configuration) ([]string, error) {
-	f, err := os.Open(inFile)
-	if err != nil {
-		return nil, err
+func ListPermissionsFile(inFiles []string, conf *model.Configuration) ([]string, error) {
+	log.SetCLILogger(nil)
+
+	var ss []string
+
+	for i, fn := range inFiles {
+		if i > 0 {
+			ss = append(ss, "")
+		}
+		f, err := os.Open(fn)
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			f.Close()
+		}()
+		ssx, err := listPermissions(f, conf)
+		if err != nil {
+			if len(inFiles) == 1 {
+				return nil, err
+			}
+			fmt.Fprintf(os.Stderr, "%s: %v\n", fn, err)
+		}
+		ss = append(ss, fn+":")
+		ss = append(ss, ssx...)
 	}
 
-	defer func() {
-		f.Close()
-	}()
-
-	return listPermissions(f, conf)
+	return ss, nil
 }
 
 func listProperties(rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {

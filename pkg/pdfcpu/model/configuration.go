@@ -38,19 +38,44 @@ const (
 	ValidationNone
 )
 
+// See table 22 - User access permissions
+type PermissionFlags int
+
+const (
+	UnusedFlag1              PermissionFlags = 1 << iota // Bit 1:  unused
+	UnusedFlag2                                          // Bit 2:  unused
+	PermissionPrintRev2                                  // Bit 3:  Print (security handlers rev.2), draft print (security handlers >= rev.3)
+	PermissionModify                                     // Bit 4:  Modify contents by operations other than controlled by bits 6, 9, 11.
+	PermissionExtract                                    // Bit 5:  Copy, extract text & graphics
+	PermissionModAnnFillForm                             // Bit 6:  Add or modify annotations, fill form fields, in conjunction with bit 4 create/mod form fields.
+	UnusedFlag7                                          // Bit 7:  unused
+	UnusedFlag8                                          // Bit 8:  unused
+	PermissionFillRev3                                   // Bit 9:  Fill form fields (security handlers >= rev.3)
+	PermissionExtractRev3                                // Bit 10: Copy, extract text & graphics (security handlers >= rev.3) (unused since PDF 2.0)
+	PermissionAssembleRev3                               // Bit 11: Assemble document (security handlers >= rev.3)
+	PermissionPrintRev3                                  // Bit 12: Print (security handlers >= rev.3)
+)
+
+const (
+	PermissionsNone  = PermissionFlags(0xF0C3)
+	PermissionsPrint = PermissionsNone + PermissionPrintRev2 + PermissionPrintRev3
+	PermissionsAll   = PermissionFlags(0xFFFF)
+)
+
 const (
 
 	// StatsFileNameDefault is the standard stats filename.
 	StatsFileNameDefault = "stats.csv"
 
 	// PermissionsAll enables all user access permission bits.
-	PermissionsAll int16 = -1 // 0xFFFF
+	// int16(value), err := strconv.ParseUint("F8C7", 16, 16) = FFCs + flags
+	//PermissionsAll int16 = -1 // 0xFFFF
 
 	// PermissionsPrint disables all user access permissions bits except for printing.
-	PermissionsPrint int16 = -1849 // 0xF8C7
+	//PermissionsPrint int16 = -1849 // 0xF8C7
 
 	// PermissionsNone disables all user access permissions bits.
-	PermissionsNone int16 = -3901 // 0xF0C3
+	//PermissionsNone int16 = -3901 // 0xF0C3
 
 )
 
@@ -197,7 +222,7 @@ type Configuration struct {
 	EncryptKeyLength int
 
 	// Supplied user access permissions, see Table 22.
-	Permissions int16
+	Permissions PermissionFlags // int16
 
 	// Command being executed.
 	Cmd CommandMode
@@ -288,7 +313,7 @@ func newDefaultConfiguration() *Configuration {
 		WriteXRefStream:                 true,
 		EncryptUsingAES:                 true,
 		EncryptKeyLength:                256,
-		Permissions:                     PermissionsNone,
+		Permissions:                     PermissionsPrint,
 		TimestampFormat:                 "2006-01-02 15:04",
 		DateFormat:                      "2006-01-02",
 		HeaderBufSize:                   100,

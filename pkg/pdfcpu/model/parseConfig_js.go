@@ -129,7 +129,7 @@ func handleConfPermissions(v string, c *Configuration) error {
 	if err != nil {
 		return errors.Errorf("permissions is numeric, got: %s", v)
 	}
-	c.Permissions = int16(i)
+	c.Permissions = PermissionFlags(c.Permissions)
 	return nil
 }
 

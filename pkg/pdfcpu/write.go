@@ -908,7 +908,7 @@ func setupEncryption(ctx *model.Context) error {
 	d := newEncryptDict(
 		ctx.EncryptUsingAES,
 		ctx.EncryptKeyLength,
-		ctx.Permissions,
+		int16(ctx.Permissions),
 	)
 
 	if ctx.E, err = supportedEncryption(ctx, d); err != nil {

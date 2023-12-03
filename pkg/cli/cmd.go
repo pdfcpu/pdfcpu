@@ -445,15 +445,15 @@ func ChangeOwnerPWCommand(inFile, outFile string, pwOld, pwNew *string, conf *mo
 }
 
 // ListPermissionsCommand create a new command to list permissions.
-func ListPermissionsCommand(inFile string, conf *model.Configuration) *Command {
+func ListPermissionsCommand(inFiles []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
 	conf.Cmd = model.LISTPERMISSIONS
 	return &Command{
-		Mode:   model.LISTPERMISSIONS,
-		InFile: &inFile,
-		Conf:   conf}
+		Mode:    model.LISTPERMISSIONS,
+		InFiles: inFiles,
+		Conf:    conf}
 }
 
 // SetPermissionsCommand creates a new command to add permissions.

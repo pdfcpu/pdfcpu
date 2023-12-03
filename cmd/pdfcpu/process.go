@@ -170,7 +170,7 @@ func processValidateCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	filesIn := []string{}
+	inFiles := []string{}
 	for _, arg := range flag.Args() {
 		if strings.Contains(arg, "*") {
 			matches, err := filepath.Glob(arg)
@@ -178,13 +178,13 @@ func processValidateCommand(conf *model.Configuration) {
 				fmt.Fprintf(os.Stderr, "%s", err)
 				os.Exit(1)
 			}
-			filesIn = append(filesIn, matches...)
+			inFiles = append(inFiles, matches...)
 			continue
 		}
 		if conf.CheckFileNameExt {
 			ensurePDFExtension(arg)
 		}
-		filesIn = append(filesIn, arg)
+		inFiles = append(inFiles, arg)
 	}
 
 	if mode != "" && mode != "strict" && mode != "s" && mode != "relaxed" && mode != "r" {
@@ -203,7 +203,7 @@ func processValidateCommand(conf *model.Configuration) {
 		conf.ValidateLinks = true
 	}
 
-	process(cli.ValidateCommand(filesIn, conf))
+	process(cli.ValidateCommand(inFiles, conf))
 }
 
 func processOptimizeCommand(conf *model.Configuration) {
@@ -295,19 +295,19 @@ func processSplitCommand(conf *model.Configuration) {
 	process(cli.SplitCommand(inFile, outDir, span, conf))
 }
 
-func sortFiles(filesIn []string) {
+func sortFiles(inFiles []string) {
 
 	// See PR #631
 
 	re := regexp.MustCompile(`\d+`)
 
 	sort.Slice(
-		filesIn,
+		inFiles,
 		func(i, j int) bool {
-			ssi := re.FindAllString(filesIn[i], 1)
-			ssj := re.FindAllString(filesIn[j], 1)
+			ssi := re.FindAllString(inFiles[i], 1)
+			ssj := re.FindAllString(inFiles[j], 1)
 			if len(ssi) == 0 || len(ssj) == 0 {
-				return filesIn[i] <= filesIn[j]
+				return inFiles[i] <= inFiles[j]
 			}
 			i1, _ := strconv.Atoi(ssi[0])
 			i2, _ := strconv.Atoi(ssj[0])
@@ -316,7 +316,7 @@ func sortFiles(filesIn []string) {
 }
 
 func processArgsForMerge(conf *model.Configuration) ([]string, string) {
-	filesIn := []string{}
+	inFiles := []string{}
 	outFile := ""
 	for i, arg := range flag.Args() {
 		if i == 0 {
@@ -334,15 +334,15 @@ func processArgsForMerge(conf *model.Configuration) ([]string, string) {
 				fmt.Fprintf(os.Stderr, "%s", err)
 				os.Exit(1)
 			}
-			filesIn = append(filesIn, matches...)
+			inFiles = append(inFiles, matches...)
 			continue
 		}
 		if conf.CheckFileNameExt {
 			ensurePDFExtension(arg)
 		}
-		filesIn = append(filesIn, arg)
+		inFiles = append(inFiles, arg)
 	}
-	return filesIn, outFile
+	return inFiles, outFile
 }
 
 func processMergeCommand(conf *model.Configuration) {
@@ -369,10 +369,10 @@ func processMergeCommand(conf *model.Configuration) {
 		fmt.Fprintf(os.Stderr, "merge zip: -d(ivider) not applicable and will be ignored\n")
 	}
 
-	filesIn, outFile := processArgsForMerge(conf)
+	inFiles, outFile := processArgsForMerge(conf)
 
 	if sorted {
-		sortFiles(filesIn)
+		sortFiles(inFiles)
 	}
 
 	if conf == nil {
@@ -387,13 +387,13 @@ func processMergeCommand(conf *model.Configuration) {
 	switch mode {
 
 	case "create":
-		cmd = cli.MergeCreateCommand(filesIn, outFile, dividerPage, conf)
+		cmd = cli.MergeCreateCommand(inFiles, outFile, dividerPage, conf)
 
 	case "zip":
-		cmd = cli.MergeCreateZipCommand(filesIn, outFile, conf)
+		cmd = cli.MergeCreateZipCommand(inFiles, outFile, conf)
 
 	case "append":
-		cmd = cli.MergeAppendCommand(filesIn, outFile, dividerPage, conf)
+		cmd = cli.MergeAppendCommand(inFiles, outFile, dividerPage, conf)
 
 	}
 
@@ -616,40 +616,65 @@ func processExtractAttachmentsCommand(conf *model.Configuration) {
 }
 
 func processListPermissionsCommand(conf *model.Configuration) {
-	if len(flag.Args()) != 1 || selectedPages != "" {
+	if len(flag.Args()) == 0 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usagePermList)
 		os.Exit(1)
 	}
 
-	inFile := flag.Arg(0)
-	if conf.CheckFileNameExt {
-		ensurePDFExtension(inFile)
+	inFiles := []string{}
+	for _, arg := range flag.Args() {
+		if strings.Contains(arg, "*") {
+			matches, err := filepath.Glob(arg)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s", err)
+				os.Exit(1)
+			}
+			inFiles = append(inFiles, matches...)
+			continue
+		}
+		if conf.CheckFileNameExt {
+			ensurePDFExtension(arg)
+		}
+		inFiles = append(inFiles, arg)
 	}
 
-	process(cli.ListPermissionsCommand(inFile, conf))
+	process(cli.ListPermissionsCommand(inFiles, conf))
 }
 
 func permCompletion(permPrefix string) string {
-	var permStr string
 	for _, perm := range []string{"none", "print", "all"} {
 		if !strings.HasPrefix(perm, permPrefix) {
 			continue
 		}
-		if len(permStr) > 0 {
-			return ""
-		}
-		permStr = perm
+		return perm
 	}
 
-	return permStr
+	return permPrefix
+}
+
+func isBinary(s string) bool {
+	_, err := strconv.ParseUint(s, 2, 12)
+	return err == nil
+}
+
+func isHex(s string) bool {
+	if s[0] != 'x' {
+		return false
+	}
+	s = s[1:]
+	_, err := strconv.ParseUint(s, 16, 16)
+	return err == nil
 }
 
 func processSetPermissionsCommand(conf *model.Configuration) {
 	if perm != "" {
 		perm = permCompletion(perm)
 	}
-	if len(flag.Args()) != 1 || selectedPages != "" ||
-		!(perm == "none" || perm == "print" || perm == "all") {
+	if len(flag.Args()) != 1 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePermSet)
+		os.Exit(1)
+	}
+	if perm != "" && perm != "none" && perm != "print" && perm != "all" && !isBinary(perm) && !isHex(perm) {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePermSet)
 		os.Exit(1)
 	}
@@ -659,12 +684,23 @@ func processSetPermissionsCommand(conf *model.Configuration) {
 		ensurePDFExtension(inFile)
 	}
 
-	if perm == "print" {
-		conf.Permissions = model.PermissionsPrint
-	}
-
-	if perm == "all" {
-		conf.Permissions = model.PermissionsAll
+	if perm != "" {
+		switch perm {
+		case "none":
+			conf.Permissions = model.PermissionsNone
+		case "print":
+			conf.Permissions = model.PermissionsPrint
+		case "all":
+			conf.Permissions = model.PermissionsAll
+		default:
+			var p uint64
+			if perm[0] == 'x' {
+				p, _ = strconv.ParseUint(perm[1:], 16, 16)
+			} else {
+				p, _ = strconv.ParseUint(perm, 2, 12)
+			}
+			conf.Permissions = model.PermissionFlags(p)
+		}
 	}
 
 	process(cli.SetPermissionsCommand(inFile, "", conf))
@@ -1373,7 +1409,7 @@ func processInfoCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	filesIn := []string{}
+	inFiles := []string{}
 	for _, arg := range flag.Args() {
 		if strings.Contains(arg, "*") {
 			matches, err := filepath.Glob(arg)
@@ -1381,13 +1417,13 @@ func processInfoCommand(conf *model.Configuration) {
 				fmt.Fprintf(os.Stderr, "%s", err)
 				os.Exit(1)
 			}
-			filesIn = append(filesIn, matches...)
+			inFiles = append(inFiles, matches...)
 			continue
 		}
 		if conf.CheckFileNameExt {
 			ensurePDFExtension(arg)
 		}
-		filesIn = append(filesIn, arg)
+		inFiles = append(inFiles, arg)
 	}
 
 	selectedPages, err := api.ParsePageSelection(selectedPages)
@@ -1398,7 +1434,7 @@ func processInfoCommand(conf *model.Configuration) {
 
 	processDiplayUnit(conf)
 
-	process(cli.InfoCommand(filesIn, selectedPages, json, conf))
+	process(cli.InfoCommand(inFiles, selectedPages, json, conf))
 }
 
 func processListFontsCommand(conf *model.Configuration) {
@@ -1806,7 +1842,7 @@ func processListImagesCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	filesIn := []string{}
+	inFiles := []string{}
 	for _, arg := range flag.Args() {
 		if strings.Contains(arg, "*") {
 			matches, err := filepath.Glob(arg)
@@ -1814,13 +1850,13 @@ func processListImagesCommand(conf *model.Configuration) {
 				fmt.Fprintf(os.Stderr, "%s", err)
 				os.Exit(1)
 			}
-			filesIn = append(filesIn, matches...)
+			inFiles = append(inFiles, matches...)
 			continue
 		}
 		if conf.CheckFileNameExt {
 			ensurePDFExtension(arg)
 		}
-		filesIn = append(filesIn, arg)
+		inFiles = append(inFiles, arg)
 	}
 
 	selectedPages, err := api.ParsePageSelection(selectedPages)
@@ -1829,7 +1865,7 @@ func processListImagesCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	process(cli.ListImagesCommand(filesIn, selectedPages, conf))
+	process(cli.ListImagesCommand(inFiles, selectedPages, conf))
 }
 
 func processDumpCommand(conf *model.Configuration) {
@@ -1894,7 +1930,7 @@ func processListFormFieldsCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	filesIn := []string{}
+	inFiles := []string{}
 	for _, arg := range flag.Args() {
 		if strings.Contains(arg, "*") {
 			matches, err := filepath.Glob(arg)
@@ -1902,16 +1938,16 @@ func processListFormFieldsCommand(conf *model.Configuration) {
 				fmt.Fprintf(os.Stderr, "%s", err)
 				os.Exit(1)
 			}
-			filesIn = append(filesIn, matches...)
+			inFiles = append(inFiles, matches...)
 			continue
 		}
 		if conf.CheckFileNameExt {
 			ensurePDFExtension(arg)
 		}
-		filesIn = append(filesIn, arg)
+		inFiles = append(inFiles, arg)
 	}
 
-	process(cli.ListFormFieldsCommand(filesIn, conf))
+	process(cli.ListFormFieldsCommand(inFiles, conf))
 }
 
 func processRemoveFormFieldsCommand(conf *model.Configuration) {

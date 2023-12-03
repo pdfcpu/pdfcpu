@@ -141,14 +141,14 @@ func testEncryptDecryptUseCase1(t *testing.T, fileName string, aes bool, keyLeng
 
 func ensurePermissionsNone(t *testing.T, listPermOutput []string) {
 	t.Helper()
-	if len(listPermOutput) == 0 || !strings.HasPrefix(listPermOutput[0], "permission bits:            0") {
+	if len(listPermOutput) == 0 || !strings.HasPrefix(listPermOutput[1], "permission bits: 000000000000") {
 		t.Fail()
 	}
 }
 
 func ensurePermissionsAll(t *testing.T, listPermOutput []string) {
 	t.Helper()
-	if len(listPermOutput) == 0 || listPermOutput[0] != "permission bits: 111100111100" {
+	if len(listPermOutput) == 0 || !strings.HasPrefix(listPermOutput[1], "permission bits: 111100111100") {
 		t.Fail()
 	}
 }
@@ -224,7 +224,7 @@ func testEncryptDecryptUseCase2(t *testing.T, fileName string, aes bool, keyLeng
 	// List permissions
 	conf = model.NewDefaultConfiguration()
 	conf.OwnerPW = "opw"
-	cmd = cli.ListPermissionsCommand(outFile, conf)
+	cmd = cli.ListPermissionsCommand([]string{outFile}, conf)
 	list, err := cli.Process(cmd)
 	if err != nil {
 		t.Fatalf("%s: list permissions for %s: %v\n", msg, outFile, err)
@@ -445,12 +445,12 @@ func testPermissionsOPWOnly(t *testing.T, fileName string, aes bool, keyLength i
 	outFile := filepath.Join(outDir, "test.pdf")
 	t.Log(inFile)
 
-	cmd := cli.ListPermissionsCommand(inFile, nil)
+	cmd := cli.ListPermissionsCommand([]string{inFile}, nil)
 	list, err := cli.Process(cmd)
 	if err != nil {
 		t.Fatalf("%s: list permissions %s: %v\n", msg, inFile, err)
 	}
-	if len(list) == 0 || list[0] != "Full access" {
+	if len(list) == 0 || list[1] != "Full access" {
 		t.Fail()
 	}
 
@@ -461,7 +461,7 @@ func testPermissionsOPWOnly(t *testing.T, fileName string, aes bool, keyLength i
 		t.Fatalf("%s: encrypt %s: %v\n", msg, outFile, err)
 	}
 
-	cmd = cli.ListPermissionsCommand(outFile, nil)
+	cmd = cli.ListPermissionsCommand([]string{outFile}, nil)
 	if list, err = cli.Process(cmd); err != nil {
 		t.Fatalf("%s: list permissions %s: %v\n", msg, outFile, err)
 	}
@@ -475,7 +475,7 @@ func testPermissionsOPWOnly(t *testing.T, fileName string, aes bool, keyLength i
 		t.Fatalf("%s: set all permissions for %s: %v\n", msg, outFile, err)
 	}
 
-	cmd = cli.ListPermissionsCommand(outFile, nil)
+	cmd = cli.ListPermissionsCommand([]string{outFile}, nil)
 	if list, err = cli.Process(cmd); err != nil {
 		t.Fatalf("%s: list permissions for %s: %v\n", msg, outFile, err)
 	}
@@ -505,12 +505,12 @@ func testPermissions(t *testing.T, fileName string, aes bool, keyLength int) {
 	outFile := filepath.Join(outDir, "test.pdf")
 	t.Log(inFile)
 
-	cmd := cli.ListPermissionsCommand(inFile, nil)
+	cmd := cli.ListPermissionsCommand([]string{inFile}, nil)
 	list, err := cli.Process(cmd)
 	if err != nil {
 		t.Fatalf("%s: list permissions %s: %v\n", msg, inFile, err)
 	}
-	if len(list) == 0 || list[0] != "Full access" {
+	if len(list) == 0 || list[1] != "Full access" {
 		t.Fail()
 	}
 
@@ -522,14 +522,14 @@ func testPermissions(t *testing.T, fileName string, aes bool, keyLength int) {
 		t.Fatalf("%s: encrypt %s: %v\n", msg, outFile, err)
 	}
 
-	cmd = cli.ListPermissionsCommand(outFile, nil)
+	cmd = cli.ListPermissionsCommand([]string{outFile}, nil)
 	if _, err = cli.Process(cmd); err == nil {
 		t.Fatalf("%s: list permissions w/o pw %s\n", msg, outFile)
 	}
 
 	conf = confForAlgorithm(aes, keyLength)
 	conf.UserPW = "upw"
-	cmd = cli.ListPermissionsCommand(outFile, conf)
+	cmd = cli.ListPermissionsCommand([]string{outFile}, conf)
 	if list, err = cli.Process(cmd); err != nil {
 		t.Fatalf("%s: list permissions %s: %v\n", msg, outFile, err)
 	}
@@ -537,7 +537,7 @@ func testPermissions(t *testing.T, fileName string, aes bool, keyLength int) {
 
 	conf = model.NewDefaultConfiguration()
 	conf.OwnerPW = "opw"
-	cmd = cli.ListPermissionsCommand(outFile, conf)
+	cmd = cli.ListPermissionsCommand([]string{outFile}, conf)
 	if list, err = cli.Process(cmd); err != nil {
 		t.Fatalf("%s: list permissions %s: %v\n", msg, outFile, err)
 	}
@@ -575,14 +575,14 @@ func testPermissions(t *testing.T, fileName string, aes bool, keyLength int) {
 		t.Fatalf("%s: set all permissions for %s: %v\n", msg, outFile, err)
 	}
 
-	cmd = cli.ListPermissionsCommand(outFile, nil)
+	cmd = cli.ListPermissionsCommand([]string{outFile}, nil)
 	if _, err = cli.Process(cmd); err == nil {
 		t.Fatalf("%s: list permissions w/o pw %s\n", msg, outFile)
 	}
 
 	conf = confForAlgorithm(aes, keyLength)
 	conf.OwnerPW = "opw"
-	cmd = cli.ListPermissionsCommand(outFile, conf)
+	cmd = cli.ListPermissionsCommand([]string{outFile}, conf)
 	if list, err = cli.Process(cmd); err != nil {
 		t.Fatalf("%s: list permissions for %s: %v\n", msg, outFile, err)
 	}

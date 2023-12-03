@@ -577,7 +577,7 @@ func supportedCFEntry(d types.Dict) (bool, error) {
 
 func perms(p int) (list []string) {
 
-	list = append(list, fmt.Sprintf("permission bits: %12b", uint32(p)&0x0F3C))
+	list = append(list, fmt.Sprintf("permission bits: %012b (x%03X)", uint32(p)&0x0F3C, uint32(p)&0x0F3C))
 	list = append(list, fmt.Sprintf("Bit  3: %t (print(rev2), print quality(rev>=3))", p&0x0004 > 0))
 	list = append(list, fmt.Sprintf("Bit  4: %t (modify other than controlled by bits 6,9,11)", p&0x0008 > 0))
 	list = append(list, fmt.Sprintf("Bit  5: %t (extract(rev2), extract other than controlled by bit 10(rev>=3))", p&0x0010 > 0))

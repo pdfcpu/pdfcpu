@@ -94,7 +94,7 @@ common flags: -v(erbose)  ... turn on logging
 
       mode ... validation mode
      links ... check for broken links
-    inFile ... a list of pdf input files
+    inFile ... input PDF file
 		
 The validation modes are:
 
@@ -264,8 +264,8 @@ content ... extract raw page content
            pdfcpu portfolio add test.pdf "test.mp3, Test sound file" "test.mkv, Test video file"
     `
 
-	usagePermList = "pdfcpu permissions list [-upw userpw] [-opw ownerpw] inFile"
-	usagePermSet  = "pdfcpu permissions set [-perm none|print|all] [-upw userpw] -opw ownerpw inFile" + generalFlags
+	usagePermList = "pdfcpu permissions list [-upw userpw] [-opw ownerpw] inFile..."
+	usagePermSet  = "pdfcpu permissions set [-perm none|print|all|max4Hex|max12Bits] [-upw userpw] -opw ownerpw inFile" + generalFlags
 
 	usagePerm = "usage: " + usagePermList +
 		"\n       " + usagePermSet
@@ -273,7 +273,30 @@ content ... extract raw page content
 	usageLongPerm = `Manage user access permissions.
 
       perm ... user access permissions
-    inFile ... input PDF file`
+    inFile ... input PDF file
+    
+   perm modes:
+      
+           none: 000000000000 (x000)
+          print: 100000000100 (x804)
+            all: 111100111100 (xF3C)
+        max4Hex: x + max. 4 hex digits
+      max12Bits: max. 12 binary digits
+
+   using the permission bits:
+
+      1:  -
+      2:  -
+      3:  Print (security handlers rev.2), draft print (security handlers >= rev.3)
+      4:  Modify contents by operations other than controlled by bits 6, 9, 11.
+      5:  Copy, extract text & graphics
+      6:  Add or modify annotations, fill form fields, in conjunction with bit 4 create/mod form fields.
+      7:  -
+      8:  -
+      9: Fill form fields (security handlers >= rev.3)
+     10: Copy, extract text & graphics (security handlers >= rev.3) (unused since PDF 2.0)
+     11: Assemble document (security handlers >= rev.3)
+     12: Print (security handlers >= rev.3)`
 
 	usageEncrypt     = "usage: pdfcpu encrypt [-m(ode) rc4|aes] [-key 40|128|256] [-perm none|print|all] [-upw userpw] -opw ownerpw inFile [outFile]" + generalFlags
 	usageLongEncrypt = `Setup password protection based on user and owner password.

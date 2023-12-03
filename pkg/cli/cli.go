@@ -59,7 +59,7 @@ func ChangeOwnerPassword(cmd *Command) ([]string, error) {
 
 // ListPermissions of inFile.
 func ListPermissions(cmd *Command) ([]string, error) {
-	return ListPermissionsFile(*cmd.InFile, cmd.Conf)
+	return ListPermissionsFile(cmd.InFiles, cmd.Conf)
 }
 
 // SetPermissions of inFile.
