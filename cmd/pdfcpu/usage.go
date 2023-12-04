@@ -65,7 +65,7 @@ The commands are:
    split         split up a PDF by span or bookmark
    stamp         add, remove, update Unicode text, image or PDF stamps for selected pages
    trim          create trimmed version of selected pages
-   validate      validate PDF against PDF 32000-1:2008 (PDF 1.7)
+   validate      validate PDF against PDF 32000-1:2008 (PDF 1.7) + basic PDF 2.0 validation
    version       print version
    viewerpref    list, set, reset viewer preferences for opened document
    watermark     add, remove, update Unicode text, image or PDF watermarks for selected pages
@@ -98,7 +98,7 @@ common flags: -v(erbose)  ... turn on logging
 		
 The validation modes are:
 
- strict ... validates against PDF 32000-1:2008 (PDF 1.7)
+ strict ... validates against PDF 32000-1:2008 (PDF 1.7) and rudimentary against PDF 32000:2 (PDF 2.0)
 relaxed ... (default) like strict but doesn't complain about common seen spec violations.`
 
 	usageOptimize     = "usage: pdfcpu optimize [-stats csvFile] inFile [outFile]" + generalFlags
@@ -224,12 +224,12 @@ content ... extract raw page content
 	usageAttachList    = "pdfcpu attachments list    inFile"
 	usageAttachAdd     = "pdfcpu attachments add     inFile file..."
 	usageAttachRemove  = "pdfcpu attachments remove  inFile [file...]"
-	usageAttachExtract = "pdfcpu attachments extract inFile outDir [file...]" + generalFlags
+	usageAttachExtract = "pdfcpu attachments extract inFile outDir [file...]"
 
 	usageAttach = "usage: " + usageAttachList +
 		"\n       " + usageAttachAdd +
 		"\n       " + usageAttachRemove +
-		"\n       " + usageAttachExtract
+		"\n       " + usageAttachExtract + generalFlags
 
 	usageLongAttach = `Manage embedded file attachments.
 
@@ -243,12 +243,12 @@ content ... extract raw page content
 	usagePortfolioList    = "pdfcpu portfolio list    inFile"
 	usagePortfolioAdd     = "pdfcpu portfolio add     inFile file[,desc]..."
 	usagePortfolioRemove  = "pdfcpu portfolio remove  inFile [file...]"
-	usagePortfolioExtract = "pdfcpu portfolio extract inFile outDir [file...]" + generalFlags
+	usagePortfolioExtract = "pdfcpu portfolio extract inFile outDir [file...]"
 
 	usagePortfolio = "usage: " + usagePortfolioList +
 		"\n       " + usagePortfolioAdd +
 		"\n       " + usagePortfolioRemove +
-		"\n       " + usagePortfolioExtract
+		"\n       " + usagePortfolioExtract + generalFlags
 
 	usageLongPortfolio = `Manage portfolio entries.
 
@@ -265,10 +265,10 @@ content ... extract raw page content
     `
 
 	usagePermList = "pdfcpu permissions list [-upw userpw] [-opw ownerpw] inFile..."
-	usagePermSet  = "pdfcpu permissions set [-perm none|print|all|max4Hex|max12Bits] [-upw userpw] -opw ownerpw inFile" + generalFlags
+	usagePermSet  = "pdfcpu permissions set [-perm none|print|all|max4Hex|max12Bits] [-upw userpw] -opw ownerpw inFile"
 
 	usagePerm = "usage: " + usagePermList +
-		"\n       " + usagePermSet
+		"\n       " + usagePermSet + generalFlags
 
 	usageLongPerm = `Manage user access permissions.
 
@@ -280,7 +280,7 @@ content ... extract raw page content
            none: 000000000000 (x000)
           print: 100000000100 (x804)
             all: 111100111100 (xF3C)
-        max4Hex: x + max. 4 hex digits
+        max4Hex: x + max. 3 hex digits
       max12Bits: max. 12 binary digits
 
    using the permission bits:
@@ -345,10 +345,18 @@ content ... extract raw page content
          eg. pdfcpu stamp add -mode image -- "logo.png" "" in.pdf out.pdf
          
    3) PDF based
-      -mode pdf pdfFileName[:page#]
-         eg. pdfcpu stamp add -mode pdf -- "stamp.pdf:3" "" in.pdf out.pdf ... stamp each page of in.pdf with page 3 of stamp.pdf
-         Omit page# for multistamping:
-         eg. pdfcpu stamp add -mode pdf -- "stamp.pdf" "" in.pdf out.pdf   ... stamp each page of in.pdf with corresponding page of stamp.pdf
+      -mode pdf PDFFileName:page#
+         Stamp selected pages of infile with one specific page of a stamp PDF file.
+         Eg: pdfcpu stamp add -mode pdf -- "stamp.pdf:3" "" in.pdf out.pdf ... stamp each page of in.pdf with page 3 of stamp.pdf
+           
+      -mode pdf PDFFileName
+         Multistamp your file, meaning apply all pages of a stamp PDF file one by one to ascending pages of inFile.
+         Eg: pdfcpu stamp add -mode pdf -- "stamp.pdf" "" in.pdf out.pdf ... multistamp all pages of in.pdf with ascending pages of stamp.pdf
+   
+      -mode pdf PDFFileName:startPage#Src:startPage#Dest
+         Customize your multistamp by by starting with startPage#Src of a stamp PDF file.
+         Apply repeatedly pages of the stamp file to inFile starting at startPage#Dest.
+         Eg: pdfcpu stamp add -mode pdf -- "stamp.pdf:2:3" "" in.pdf out.pdf ... multistamp starting with page 2 of stamp.pdf onto page 3 of in.pdf
    `
 
 	usageWatermarkMode = `There are 3 different kinds of watermarks:
@@ -367,11 +375,18 @@ content ... extract raw page content
          eg. pdfcpu watermark add -mode image -- "logo.png" "" in.pdf out.pdf
          
    3) PDF based
-      -mode pdf PDFFileName[:page#]
-         eg. pdfcpu watermark add -mode pdf -- "stamp.pdf:3" "" in.pdf out.pdf ... watermark each page of in.pdf with page 3 of stamp.pdf
-         Omit page# for multistamping:
-         eg. pdfcpu watermark add -mode pdf -- "stamp.pdf" "" in.pdf out.pdf   ... watermark each page of in.pdf with corresponding page of stamp.pdf
+      -mode pdf PDFFileName:page#
+         Watermark selected pages of infile with one specific page of a watermark PDF file.
+         Eg: pdfcpu watermark add -mode pdf -- "watermark.pdf:3" "" in.pdf out.pdf ... watermark each page of in.pdf with page 3 of watermark.pdf
+        
+      -mode pdf PDFFileName
+         Multiwatermark your file, meaning apply all pages of a watermark PDF file one by one to ascending pages of inFile.
+         Eg: pdfcpu watermark add -mode pdf -- "watermark.pdf" "" in.pdf out.pdf ... multiwatermark all pages of in.pdf with ascending pages of watermark.pdf
 
+      -mode pdf PDFFileName:startPage#Src:startPage#Dest
+         Customize your multiwatermark by by starting with startPage#Src of a watermark PDF file.
+         Apply repeatedly pages of the watermark file to inFile starting at startPage#Dest.
+         Eg: pdfcpu watermark add -mode pdf -- "watermark.pdf:2:3" "" in.pdf out.pdf ... multiwatermark starting with page 2 of watermark.pdf onto page 3 of in.pdf
 
    A watermark is the first content that gets rendered for a page.
    The visibility of the watermark depends on the transparency of all layers rendered on top.
@@ -452,11 +467,11 @@ e.g. "pos:bl, off: 20 5"   "rot:45"                 "op:0.5, sc:0.5 abs, rot:0"
 
 	usageStampAdd    = "pdfcpu stamp add    [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]"
 	usageStampUpdate = "pdfcpu stamp update [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]"
-	usageStampRemove = "pdfcpu stamp remove [-p(ages) selectedPages] inFile [outFile]" + generalFlags
+	usageStampRemove = "pdfcpu stamp remove [-p(ages) selectedPages] inFile [outFile]"
 
 	usageStamp = "usage: " + usageStampAdd +
 		"\n       " + usageStampUpdate +
-		"\n       " + usageStampRemove
+		"\n       " + usageStampRemove + generalFlags
 
 	usageLongStamp = `Process stamping for selected pages. 
 
@@ -475,11 +490,11 @@ description ... fontname, points, position, offset, scalefactor, aligntext, rota
 
 	usageWatermarkAdd    = "pdfcpu watermark add    [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]"
 	usageWatermarkUpdate = "pdfcpu watermark update [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]"
-	usageWatermarkRemove = "pdfcpu watermark remove [-p(ages) selectedPages] inFile [outFile]" + generalFlags
+	usageWatermarkRemove = "pdfcpu watermark remove [-p(ages) selectedPages] inFile [outFile]"
 
 	usageWatermark = "usage: " + usageWatermarkAdd +
 		"\n       " + usageWatermarkUpdate +
-		"\n       " + usageWatermarkRemove
+		"\n       " + usageWatermarkRemove + generalFlags
 
 	usageLongWatermark = `Process watermarking for selected pages. 
 
@@ -548,10 +563,9 @@ description ... dimensions, format, position, offset, scale factor, boxes
        `
 
 	usagePagesInsert = "pdfcpu pages insert [-p(ages) selectedPages] [-m(ode) before|after] inFile [outFile]"
-	usagePagesRemove = "pdfcpu pages remove  -p(ages) selectedPages  inFile [outFile]" + generalFlags
-
-	usagePages = "usage: " + usagePagesInsert +
-		"\n       " + usagePagesRemove
+	usagePagesRemove = "pdfcpu pages remove  -p(ages) selectedPages  inFile [outFile]"
+	usagePages       = "usage: " + usagePagesInsert +
+		"\n       " + usagePagesRemove + generalFlags
 
 	usageLongPages = `Manage pages.
 
@@ -849,11 +863,11 @@ Create single page PDF cheat sheets in current dir.`
 
 	usageKeywordsList   = "pdfcpu keywords list    inFile"
 	usageKeywordsAdd    = "pdfcpu keywords add     inFile keyword..."
-	usageKeywordsRemove = "pdfcpu keywords remove  inFile [keyword...]" + generalFlags
+	usageKeywordsRemove = "pdfcpu keywords remove  inFile [keyword...]"
 
 	usageKeywords = "usage: " + usageKeywordsList +
 		"\n       " + usageKeywordsAdd +
-		"\n       " + usageKeywordsRemove
+		"\n       " + usageKeywordsRemove + generalFlags
 
 	usageLongKeywords = `Manage keywords.
 
@@ -869,11 +883,11 @@ Create single page PDF cheat sheets in current dir.`
 
 	usagePropertiesList   = "pdfcpu properties list    inFile"
 	usagePropertiesAdd    = "pdfcpu properties add     inFile nameValuePair..."
-	usagePropertiesRemove = "pdfcpu properties remove  inFile [name...]" + generalFlags
+	usagePropertiesRemove = "pdfcpu properties remove  inFile [name...]"
 
 	usageProperties = "usage: " + usagePropertiesList +
 		"\n       " + usagePropertiesAdd +
-		"\n       " + usagePropertiesRemove
+		"\n       " + usagePropertiesRemove + generalFlags
 
 	usageLongProperties = `Manage document properties.
 
@@ -955,11 +969,11 @@ Examples:
 
 	usageBoxesList   = "pdfcpu boxes list    [-p(ages) selectedPages] -- [boxTypes] inFile"
 	usageBoxesAdd    = "pdfcpu boxes add     [-p(ages) selectedPages] -- description inFile [outFile]"
-	usageBoxesRemove = "pdfcpu boxes remove  [-p(ages) selectedPages] -- boxTypes inFile [outFile]" + generalFlags
+	usageBoxesRemove = "pdfcpu boxes remove  [-p(ages) selectedPages] -- boxTypes inFile [outFile]"
 
 	usageBoxes = "usage: " + usageBoxesList +
 		"\n       " + usageBoxesAdd +
-		"\n       " + usageBoxesRemove
+		"\n       " + usageBoxesRemove + generalFlags
 
 	usageLongBoxes = `Manage page boundaries.
 
@@ -986,10 +1000,10 @@ Examples:
 ` + usageBoxDescription
 
 	usageAnnotsList   = "pdfcpu annotations list   [-p(ages) selectedPages] inFile"
-	usageAnnotsRemove = "pdfcpu annotations remove [-p(ages) selectedPages] inFile [outFile] [objNr|annotId|annotType]..." + generalFlags
+	usageAnnotsRemove = "pdfcpu annotations remove [-p(ages) selectedPages] inFile [outFile] [objNr|annotId|annotType]..."
 
 	usageAnnots = "usage: " + usageAnnotsList +
-		"\n       " + usageAnnotsRemove
+		"\n       " + usageAnnotsRemove + generalFlags
 
 	usageLongAnnots = `Manage annotations.
    
@@ -1381,11 +1395,11 @@ description ... scalefactor, dimensions, formsize, enforce, border, bgcolor
 
 	usagePageLayoutList  = "pdfcpu pagelayout list  inFile"
 	usagePageLayoutSet   = "pdfcpu pagelayout set   inFile value"
-	usagePageLayoutReset = "pdfcpu pagelayout reset inFile" + generalFlags
+	usagePageLayoutReset = "pdfcpu pagelayout reset inFile"
 
 	usagePageLayout = "usage: " + usagePageLayoutList +
 		"\n       " + usagePageLayoutSet +
-		"\n       " + usagePageLayoutReset
+		"\n       " + usagePageLayoutReset + generalFlags
 
 	usageLongPageLayout = `Manage the page layout which shall be used when the document is opened:
 
@@ -1401,17 +1415,17 @@ description ... scalefactor, dimensions, formsize, enforce, border, bgcolor
     Eg. set page layout:
            pdfcpu pagelayout set test.pdf TwoPageLeft
 
-        remove page layout:
-           pdfcpu pagelayout remove test.pdf
+        reset page layout:
+           pdfcpu pagelayout reset test.pdf
 `
 
 	usagePageModeList  = "pdfcpu pagemode list  inFile"
 	usagePageModeSet   = "pdfcpu pagemode set   inFile value"
-	usagePageModeReset = "pdfcpu pagemode reset inFile" + generalFlags
+	usagePageModeReset = "pdfcpu pagemode reset inFile"
 
 	usagePageMode = "usage: " + usagePageModeList +
 		"\n       " + usagePageModeSet +
-		"\n       " + usagePageModeReset
+		"\n       " + usagePageModeReset + generalFlags
 
 	usageLongPageMode = `Manage how the document shall be displayed when opened:
 
@@ -1428,17 +1442,17 @@ description ... scalefactor, dimensions, formsize, enforce, border, bgcolor
     Eg. set page mode:
            pdfcpu pagemode set test.pdf UseOutlines
 
-        remove page mode:
-           pdfcpu pagemode remove test.pdf
+        reset page mode:
+           pdfcpu pagemode reset test.pdf
     `
 
 	usageViewerPreferencesList  = "pdfcpu viewerpref list [-a(ll)] [-j(son)] inFile"
 	usageViewerPreferencesSet   = "pdfcpu viewerpref set                     inFile (inFileJSON | JSONstring)"
-	usageViewerPreferencesReset = "pdfcpu viewerpref reset                   inFile" + generalFlags
+	usageViewerPreferencesReset = "pdfcpu viewerpref reset                   inFile"
 
 	usageViewerPreferences = "usage: " + usageViewerPreferencesList +
 		"\n       " + usageViewerPreferencesSet +
-		"\n       " + usageViewerPreferencesReset
+		"\n       " + usageViewerPreferencesReset + generalFlags
 
 	usageLongViewerPreferences = `Manage the way the document shall be displayed on the screen and shall be printed:
 

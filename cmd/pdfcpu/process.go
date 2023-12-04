@@ -231,7 +231,7 @@ func processOptimizeCommand(conf *model.Configuration) {
 	process(cli.OptimizeCommand(inFile, outFile, conf))
 }
 
-func processSplitVyPageNumberCommand(inFile, outDir string, conf *model.Configuration) {
+func processSplitByPageNumberCommand(inFile, outDir string, conf *model.Configuration) {
 	if len(flag.Args()) == 2 {
 		fmt.Fprintln(os.Stderr, "split: missing page numbers")
 		os.Exit(1)
@@ -274,7 +274,7 @@ func processSplitCommand(conf *model.Configuration) {
 	outDir := flag.Arg(1)
 
 	if mode == "page" {
-		processSplitVyPageNumberCommand(inFile, outDir, conf)
+		processSplitByPageNumberCommand(inFile, outDir, conf)
 		return
 	}
 
@@ -666,24 +666,7 @@ func isHex(s string) bool {
 	return err == nil
 }
 
-func processSetPermissionsCommand(conf *model.Configuration) {
-	if perm != "" {
-		perm = permCompletion(perm)
-	}
-	if len(flag.Args()) != 1 || selectedPages != "" {
-		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePermSet)
-		os.Exit(1)
-	}
-	if perm != "" && perm != "none" && perm != "print" && perm != "all" && !isBinary(perm) && !isHex(perm) {
-		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePermSet)
-		os.Exit(1)
-	}
-
-	inFile := flag.Arg(0)
-	if conf.CheckFileNameExt {
-		ensurePDFExtension(inFile)
-	}
-
+func configPerm(perm string, conf *model.Configuration) {
 	if perm != "" {
 		switch perm {
 		case "none":
@@ -702,6 +685,27 @@ func processSetPermissionsCommand(conf *model.Configuration) {
 			conf.Permissions = model.PermissionFlags(p)
 		}
 	}
+}
+
+func processSetPermissionsCommand(conf *model.Configuration) {
+	if perm != "" {
+		perm = permCompletion(perm)
+	}
+	if len(flag.Args()) != 1 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePermSet)
+		os.Exit(1)
+	}
+	if perm != "" && perm != "none" && perm != "print" && perm != "all" && !isBinary(perm) && !isHex(perm) {
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePermSet)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+
+	configPerm(perm, conf)
 
 	process(cli.SetPermissionsCommand(inFile, "", conf))
 }
@@ -871,7 +875,7 @@ func addWatermarks(conf *model.Configuration, onTop bool) {
 	}
 
 	if len(flag.Args()) < 3 || len(flag.Args()) > 4 {
-		fmt.Fprintf(os.Stderr, "%s\n\n", u)
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", u)
 		os.Exit(1)
 	}
 
@@ -934,9 +938,9 @@ func processAddWatermarksCommand(conf *model.Configuration) {
 }
 
 func updateWatermarks(conf *model.Configuration, onTop bool) {
-	u := usageWatermarkAdd
+	u := usageWatermarkUpdate
 	if onTop {
-		u = usageStampAdd
+		u = usageStampUpdate
 	}
 
 	if len(flag.Args()) < 3 || len(flag.Args()) > 4 {
@@ -1107,7 +1111,7 @@ func processImportImagesCommand(conf *model.Configuration) {
 
 func processInsertPagesCommand(conf *model.Configuration) {
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 {
-		fmt.Fprintf(os.Stderr, "%s\n\n", usagePagesInsert)
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePagesInsert)
 		os.Exit(1)
 	}
 
@@ -1138,7 +1142,7 @@ func processInsertPagesCommand(conf *model.Configuration) {
 
 func processRemovePagesCommand(conf *model.Configuration) {
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || selectedPages == "" {
-		fmt.Fprintf(os.Stderr, "%s\n\n", usagePagesRemove)
+		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePagesRemove)
 		os.Exit(1)
 	}
 
@@ -1529,7 +1533,7 @@ func processRemoveKeywordsCommand(conf *model.Configuration) {
 
 func processListPropertiesCommand(conf *model.Configuration) {
 	if len(flag.Args()) != 1 || selectedPages != "" {
-		fmt.Fprintf(os.Stderr, "usage: %s\n", usageKeywordsList)
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usagePropertiesList)
 		os.Exit(1)
 	}
 
@@ -1903,7 +1907,7 @@ func processDumpCommand(conf *model.Configuration) {
 
 func processCreateCommand(conf *model.Configuration) {
 	if len(flag.Args()) <= 1 || len(flag.Args()) > 3 || selectedPages != "" {
-		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageCreate)
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageCreate)
 		os.Exit(1)
 	}
 
@@ -2166,7 +2170,7 @@ func processMultiFillFormCommand(conf *model.Configuration) {
 
 func processResizeCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 2 || len(flag.Args()) > 3 {
-		fmt.Fprintf(os.Stderr, "usage: %s\n", usageResize)
+		fmt.Fprintf(os.Stderr, "%s\n", usageResize)
 		os.Exit(1)
 	}
 
@@ -2200,7 +2204,7 @@ func processResizeCommand(conf *model.Configuration) {
 
 func processPosterCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 3 || len(flag.Args()) > 4 {
-		fmt.Fprintf(os.Stderr, "usage: %s\n", usagePoster)
+		fmt.Fprintf(os.Stderr, "%s\n", usagePoster)
 		os.Exit(1)
 	}
 
@@ -2236,7 +2240,7 @@ func processPosterCommand(conf *model.Configuration) {
 
 func processNDownCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 3 || len(flag.Args()) > 5 {
-		fmt.Fprintf(os.Stderr, "usage: %s\n", usageNDown)
+		fmt.Fprintf(os.Stderr, "%s\n", usageNDown)
 		os.Exit(1)
 	}
 
@@ -2305,7 +2309,7 @@ func processNDownCommand(conf *model.Configuration) {
 
 func processCutCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 3 || len(flag.Args()) > 4 {
-		fmt.Fprintf(os.Stderr, "usage: %s\n", usageCut)
+		fmt.Fprintf(os.Stderr, "%s\n", usageCut)
 		os.Exit(1)
 	}
 
@@ -2491,7 +2495,7 @@ func processSetPageModeCommand(conf *model.Configuration) {
 	v := flag.Arg(1)
 
 	if !validate.DocumentPageMode(v) {
-		fmt.Fprintln(os.Stderr, "invalid page mode, use one of: UseNone, UseThumb, FullScreen, UseOC, UseAttachments")
+		fmt.Fprintln(os.Stderr, "invalid page mode, use one of: UseNone, UseOutlines, UseThumbs, FullScreen, UseOC, UseAttachments")
 		os.Exit(1)
 	}
 
@@ -2513,7 +2517,7 @@ func processResetPageModeCommand(conf *model.Configuration) {
 
 func processListViewerPreferencesCommand(conf *model.Configuration) {
 	if len(flag.Args()) != 1 || selectedPages != "" {
-		fmt.Fprintf(os.Stderr, "usage: %s\n", usageViewerPreferences)
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usageViewerPreferencesList)
 		os.Exit(1)
 	}
 
@@ -2526,7 +2530,7 @@ func processListViewerPreferencesCommand(conf *model.Configuration) {
 
 func processSetViewerPreferencesCommand(conf *model.Configuration) {
 	if len(flag.Args()) != 2 || selectedPages != "" {
-		fmt.Fprintf(os.Stderr, "usage: %s\n", usageViewerPreferences)
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usageViewerPreferencesSet)
 		os.Exit(1)
 	}
 
@@ -2549,7 +2553,7 @@ func processSetViewerPreferencesCommand(conf *model.Configuration) {
 
 func processResetViewerPreferencesCommand(conf *model.Configuration) {
 	if len(flag.Args()) != 1 || selectedPages != "" {
-		fmt.Fprintf(os.Stderr, "usage: %s\n", usageViewerPreferences)
+		fmt.Fprintf(os.Stderr, "usage: %s\n", usageViewerPreferencesReset)
 		os.Exit(1)
 	}
 

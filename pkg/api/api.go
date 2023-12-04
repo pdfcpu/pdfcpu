@@ -146,6 +146,10 @@ func ReadValidateAndOptimize(rs io.ReadSeeker, conf *model.Configuration, from1 
 		return nil, 0, 0, 0, err
 	}
 
+	if ctx.Version() == model.V20 {
+		return nil, 0, 0, 0, pdfcpu.ErrUnsupportedVersion
+	}
+
 	from3 := time.Now()
 	if err = OptimizeContext(ctx); err != nil {
 		return nil, 0, 0, 0, err

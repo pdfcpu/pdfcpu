@@ -14,6 +14,8 @@
 pdfcpu is a PDF processing library written in [Go](http://golang.org) supporting encryption.
 It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO-32000).
 
+Support for PDF 2.0 is basic and ongoing work.
+
 ## Motivation
 
 This is an effort to build a comprehensive PDF processing library from the ground up written in Go. Over time pdfcpu aims to support the standard range of PDF processing features and also any interesting use cases that may present themselves along the way.
@@ -68,6 +70,8 @@ The main focus lies on strong support for batch processing and scripting via a r
 * [ndown](https://pdfcpu.io/generate/ndown)
 * [nup](https://pdfcpu.io/generate/nup)
 * [optimize](https://pdfcpu.io/core/optimize)
+* [pagelayout](https://pdfcpu.io/pagelayout/pagelayout)
+* [pagemode](https://pdfcpu.io/pagemode/pagemode)
 * [pages](https://pdfcpu.io/pages/pages)
 * [permissions](https://pdfcpu.io/encrypt/perm_add)
 * [portfolio](https://pdfcpu.io/portfolio/portfolio)
@@ -78,8 +82,9 @@ The main focus lies on strong support for batch processing and scripting via a r
 * [split](https://pdfcpu.io/core/split)
 * [stamp](https://pdfcpu.io/core/stamp)
 * [trim](https://pdfcpu.io/core/trim)
-* [validate](https://pdfcpu.io/core/validate)
-* [watermark](https://pdfcpu.io/core/watermark)
+* [validate](https://pdfcpu.io/core/validate) 👉 now including rudimentory support for PDF 2.0
+* [viewerpref](https://pdfcpu.io/viewerpref/viewerpref)
+* [watermark](https://pdfcpu.io/core/watermark) 
 
 ## Documentation
 
@@ -187,7 +192,7 @@ If processing your PDF with pdfcpu crashes during validation and can be opened b
 
 ## Contributors
 
-Thanks goes to these wonderful people:
+Thanks 💚 goes to these wonderful people:
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 ||||||||

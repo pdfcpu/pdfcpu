@@ -21,6 +21,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
@@ -112,6 +113,10 @@ func SetPageLayout(rs io.ReadSeeker, w io.Writer, val model.PageLayout, conf *mo
 		return err
 	}
 
+	if ctx.Version() == model.V20 {
+		return pdfcpu.ErrUnsupportedVersion
+	}
+
 	ctx.RootDict["PageLayout"] = types.Name(val.String())
 
 	if err = WriteContext(ctx, w); err != nil {
@@ -175,6 +180,10 @@ func ResetPageLayout(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) e
 	ctx, _, _, err := readAndValidate(rs, conf, time.Now())
 	if err != nil {
 		return err
+	}
+
+	if ctx.Version() == model.V20 {
+		return pdfcpu.ErrUnsupportedVersion
 	}
 
 	delete(ctx.RootDict, "PageLayout")

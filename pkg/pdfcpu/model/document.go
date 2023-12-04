@@ -30,7 +30,7 @@ type PageMode int
 const (
 	PageModeUseNone PageMode = iota
 	PageModeUseOutlines
-	PageModeUseThumb
+	PageModeUseThumbs
 	PageModeFullScreen
 	PageModeUseOC
 	PageModeUseAttachments
@@ -46,8 +46,8 @@ func PageModeFor(s string) *PageMode {
 		pm = PageModeUseNone
 	case "useoutlines":
 		pm = PageModeUseOutlines
-	case "usethumb":
-		pm = PageModeUseThumb
+	case "usethumbs":
+		pm = PageModeUseThumbs
 	case "fullscreen":
 		pm = PageModeFullScreen
 	case "useoc":
@@ -69,8 +69,8 @@ func (pm *PageMode) String() string {
 		return "UseNone" // = default
 	case PageModeUseOutlines:
 		return "UseOutlines"
-	case PageModeUseThumb:
-		return "UseThumb"
+	case PageModeUseThumbs:
+		return "UseThumbs"
 	case PageModeFullScreen:
 		return "FullScreen"
 	case PageModeUseOC:

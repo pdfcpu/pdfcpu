@@ -1117,5 +1117,12 @@ func FillForm(
 		}
 	}
 
+	// pdfcpu provides all appearance streams for form fields.
+	// Yet for some files and viewers form fields don't get rendered.
+	// In these cases you can order the viewer to provide form field appearance streams.
+	if ctx.NeedAppearances {
+		xRefTable.Form["NeedAppearances"] = types.Boolean(true)
+	}
+
 	return ok, pages, nil
 }

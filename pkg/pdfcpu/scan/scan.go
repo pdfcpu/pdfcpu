@@ -35,59 +35,22 @@ func Lines(data []byte, atEOF bool) (advance int, token []byte, err error) {
 
 	case indCR >= 0 && indLF >= 0:
 		if indCR < indLF {
-			if indLF == indCR+1 {
-				// 0x0D0A
-				return indLF + 1, data[0:indCR], nil
+			if indCR+1 == indLF {
+				// \r\n
+				return indCR + 2, data[0:indCR], nil
 			}
-			// 0x0D ... 0x0A
+			// \r
 			return indCR + 1, data[0:indCR], nil
 		}
-		// 0x0A ... 0x0D
+		// \n
 		return indLF + 1, data[0:indLF], nil
 
 	case indCR >= 0:
-		// We have a full carriage return terminated line.
+		// \r
 		return indCR + 1, data[0:indCR], nil
 
 	case indLF >= 0:
-		// We have a full newline-terminated line.
-		return indLF + 1, data[0:indLF], nil
-
-	}
-
-	// If we're at EOF, we have a final, non-terminated line. Return it.
-	if atEOF {
-		return len(data), data, nil
-	}
-
-	// Request more data.
-	return 0, nil, nil
-}
-
-func LinesForSingleEol(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	if atEOF && len(data) == 0 {
-		return 0, nil, nil
-	}
-
-	indCR := bytes.IndexByte(data, '\r')
-	indLF := bytes.IndexByte(data, '\n')
-
-	switch {
-
-	case indCR >= 0 && indLF >= 0:
-		if indCR < indLF {
-			// 0x0D ... 0x0A
-			return indCR + 2, data[0:indCR], nil
-		}
-		// 0x0A ... 0x0D
-		return indLF + 2, data[0:indLF], nil
-
-	case indCR >= 0:
-		// We have a full carriage return terminated line.
-		return indCR + 1, data[0:indCR], nil
-
-	case indLF >= 0:
-		// We have a full newline-terminated line.
+		// \n
 		return indLF + 1, data[0:indLF], nil
 
 	}

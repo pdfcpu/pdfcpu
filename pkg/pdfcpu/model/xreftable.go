@@ -1056,6 +1056,32 @@ func (xRefTable *XRefTable) sortedKeys() []int {
 	return keys
 }
 
+func objStr(entry *XRefTableEntry, objNr int) string {
+	typeStr := fmt.Sprintf("%T", entry.Object)
+
+	d, ok := entry.Object.(types.Dict)
+	if ok {
+		if d.Type() != nil {
+			typeStr += fmt.Sprintf(" type=%s", *d.Type())
+		}
+		if d.Subtype() != nil {
+			typeStr += fmt.Sprintf(" subType=%s", *d.Subtype())
+		}
+	}
+
+	if entry.ObjectStream != nil {
+		// was compressed, offset is nil.
+		return fmt.Sprintf("%5d: was compressed %d[%d] generation=%d %s \n%s\n", objNr, *entry.ObjectStream, *entry.ObjectStreamInd, *entry.Generation, typeStr, entry.Object)
+	}
+
+	// regular in use object with offset.
+	if entry.Offset != nil {
+		return fmt.Sprintf("%5d:   offset=%8d generation=%d %s \n%s\n", objNr, *entry.Offset, *entry.Generation, typeStr, entry.Object)
+	}
+
+	return fmt.Sprintf("%5d:   offset=nil generation=%d %s \n%s\n", objNr, *entry.Generation, typeStr, entry.Object)
+}
+
 func (xRefTable *XRefTable) DumpObject(objNr, mode int) {
 	// mode
 	//  0 .. silent / obj only
@@ -1067,32 +1093,7 @@ func (xRefTable *XRefTable) DumpObject(objNr, mode int) {
 		return
 	}
 
-	typeStr := fmt.Sprintf("%T", entry.Object)
-
-	d, ok := entry.Object.(types.Dict)
-
-	if ok {
-		if d.Type() != nil {
-			typeStr += fmt.Sprintf(" type=%s", *d.Type())
-		}
-		if d.Subtype() != nil {
-			typeStr += fmt.Sprintf(" subType=%s", *d.Subtype())
-		}
-	}
-
-	var str string
-
-	if entry.ObjectStream != nil {
-		// was compressed, offset is nil.
-		str = fmt.Sprintf("%5d: was compressed %d[%d] generation=%d %s \n%s\n", objNr, *entry.ObjectStream, *entry.ObjectStreamInd, *entry.Generation, typeStr, entry.Object)
-	} else {
-		// regular in use object with offset.
-		if entry.Offset != nil {
-			str = fmt.Sprintf("%5d:   offset=%8d generation=%d %s \n%s\n", objNr, *entry.Offset, *entry.Generation, typeStr, entry.Object)
-		} else {
-			str = fmt.Sprintf("%5d:   offset=nil generation=%d %s \n%s\n", objNr, *entry.Generation, typeStr, entry.Object)
-		}
-	}
+	str := objStr(entry, objNr)
 
 	if mode > 0 {
 		sd, ok := entry.Object.(types.StreamDict)
@@ -1115,7 +1116,7 @@ func (xRefTable *XRefTable) DumpObject(objNr, mode int) {
 			switch mode {
 			case 1:
 				sc := bufio.NewScanner(bytes.NewReader(sd.Content))
-				sc.Split(scan.LinesForSingleEol)
+				sc.Split(scan.Lines)
 				for sc.Scan() {
 					s1 += sc.Text() + "\n"
 				}

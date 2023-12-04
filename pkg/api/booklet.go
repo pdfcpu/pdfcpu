@@ -88,6 +88,10 @@ func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nu
 			return err
 		}
 
+		if ctx.Version() == model.V20 {
+			return pdfcpu.ErrUnsupportedVersion
+		}
+
 		if err := ctx.EnsurePageCount(); err != nil {
 			return err
 		}

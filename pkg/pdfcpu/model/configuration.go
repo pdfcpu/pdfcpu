@@ -66,17 +66,6 @@ const (
 
 	// StatsFileNameDefault is the standard stats filename.
 	StatsFileNameDefault = "stats.csv"
-
-	// PermissionsAll enables all user access permission bits.
-	// int16(value), err := strconv.ParseUint("F8C7", 16, 16) = FFCs + flags
-	//PermissionsAll int16 = -1 // 0xFFFF
-
-	// PermissionsPrint disables all user access permissions bits except for printing.
-	//PermissionsPrint int16 = -1849 // 0xF8C7
-
-	// PermissionsNone disables all user access permissions bits.
-	//PermissionsNone int16 = -3901 // 0xF0C3
-
 )
 
 // CommandMode specifies the operation being executed.
@@ -236,14 +225,14 @@ type Configuration struct {
 	// Date format.
 	DateFormat string
 
-	// Buffersize for locating PDF header <= 100
-	HeaderBufSize int
-
 	// Optimize duplicate content streams across pages.
 	OptimizeDuplicateContentStreams bool
 
 	// Merge creates bookmarks
 	CreateBookmarks bool
+
+	// PDF Viewer is expected to supply appearance streams for form fields.
+	NeedAppearances bool
 }
 
 // ConfigPath defines the location of pdfcpu's configuration directory.
@@ -316,9 +305,9 @@ func newDefaultConfiguration() *Configuration {
 		Permissions:                     PermissionsPrint,
 		TimestampFormat:                 "2006-01-02 15:04",
 		DateFormat:                      "2006-01-02",
-		HeaderBufSize:                   100,
 		OptimizeDuplicateContentStreams: false,
 		CreateBookmarks:                 true,
+		NeedAppearances:                 false,
 	}
 }
 
@@ -384,9 +373,9 @@ func (c Configuration) String() string {
 		"Unit :             %s\n"+
 		"TimestampFormat:	%s\n"+
 		"DateFormat:		%s\n"+
-		"HeaderBufSize:		%d\n"+
 		"OptimizeDuplicateContentStreams %t\n"+
-		"CreateBookmarks %t\n",
+		"CreateBookmarks %t\n"+
+		"NeedAppearances %t\n",
 		path,
 		c.CheckFileNameExt,
 		c.Reader15,
@@ -401,9 +390,9 @@ func (c Configuration) String() string {
 		c.UnitString(),
 		c.TimestampFormat,
 		c.DateFormat,
-		c.HeaderBufSize,
 		c.OptimizeDuplicateContentStreams,
 		c.CreateBookmarks,
+		c.NeedAppearances,
 	)
 }
 

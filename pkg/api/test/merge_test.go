@@ -43,6 +43,10 @@ func TestMergeCreateNew(t *testing.T) {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
+	if err := api.ValidateFile(outFile, conf); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+
 	// Insert an empty page between merged files.
 	outFile = filepath.Join(outDir, "outWithDivider.pdf")
 	dividerPage := true

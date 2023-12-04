@@ -43,9 +43,9 @@ type configuration struct {
 	Units                           string `yaml:"units"` // Be flexible if version < v0.3.8
 	TimestampFormat                 string `yaml:"timestampFormat"`
 	DateFormat                      string `yaml:"dateFormat"`
-	HeaderBufSize                   int    `yaml:"headerBufSize"`
 	OptimizeDuplicateContentStreams bool   `yaml:"optimizeDuplicateContentStreams"`
 	CreateBookmarks                 bool   `yaml:"createBookmarks"`
+	NeedAppearances                 bool   `yaml:"needAppearances"`
 }
 
 func loadedConfig(c configuration, configPath string) *Configuration {
@@ -92,9 +92,9 @@ func loadedConfig(c configuration, configPath string) *Configuration {
 
 	conf.TimestampFormat = c.TimestampFormat
 	conf.DateFormat = c.DateFormat
-	conf.HeaderBufSize = c.HeaderBufSize
 	conf.OptimizeDuplicateContentStreams = c.OptimizeDuplicateContentStreams
 	conf.CreateBookmarks = c.CreateBookmarks
+	conf.NeedAppearances = c.NeedAppearances
 
 	return &conf
 }
@@ -134,15 +134,7 @@ func parseConfigFile(r io.Reader, configPath string) error {
 		return errors.Errorf("encryptKeyLength possible values: 40, 128, 256, got: %s", c.Unit)
 	}
 
-	// TODO Disable on next release.
-	if c.HeaderBufSize == 0 {
-		c.HeaderBufSize = 100
-	}
-
-	if c.HeaderBufSize < 100 {
-		return errors.Errorf("headerBufSize must be >= 100, got: %d", c.HeaderBufSize)
-	}
-
 	loadedDefaultConfig = loadedConfig(c, configPath)
+
 	return nil
 }

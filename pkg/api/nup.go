@@ -119,6 +119,10 @@ func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *m
 			return err
 		}
 
+		if ctx.Version() == model.V20 {
+			return pdfcpu.ErrUnsupportedVersion
+		}
+
 		if err := ctx.EnsurePageCount(); err != nil {
 			return err
 		}
@@ -178,6 +182,7 @@ func NUpFile(inFiles []string, outFile string, selectedPages []string, nup *mode
 			if f1 != nil {
 				f1.Close()
 			}
+			os.Remove(outFile)
 			return
 		}
 		if err = f2.Close(); err != nil {

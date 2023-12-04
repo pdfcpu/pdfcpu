@@ -43,8 +43,9 @@ import (
 const stampWithBBox = false
 
 var (
-	errNoWatermark = errors.New("pdfcpu: no watermarks found")
-	errCorruptOCGs = errors.New("pdfcpu: OCProperties: corrupt OCGs element")
+	errNoWatermark        = errors.New("pdfcpu: no watermarks found")
+	errCorruptOCGs        = errors.New("pdfcpu: OCProperties: corrupt OCGs element")
+	ErrUnsupportedVersion = errors.New("pdfcpu: PDF 2.0 unsupported for this operation")
 )
 
 type watermarkParamMap map[string]func(string, *model.Watermark) error
@@ -697,6 +698,9 @@ func createPDFResForWM(ctx *model.Context, wm *model.Watermark) error {
 	}
 	if err != nil {
 		return err
+	}
+	if otherCtx.Version() == model.V20 {
+		return ErrUnsupportedVersion
 	}
 
 	if err := otherCtx.EnsurePageCount(); err != nil {

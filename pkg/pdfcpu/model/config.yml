@@ -6,8 +6,8 @@
 checkFileNameExt: true
 
 reader15: true
-decodeAllStreams: false
 
+decodeAllStreams: false
 
 # validationMode: 
 # ValidationStrict,
@@ -50,11 +50,11 @@ timestampFormat: 2006-01-02 15:04
 # date format: yyyy-mm-dd
 dateFormat: 2006-01-02
 
-# buffer size >= 100 for locating PDF header
-headerBufSize: 100
-
 # optimize duplicate content streams across pages
 optimizeDuplicateContentStreams: false
 
 # merge creates bookmarks
 createBookmarks: true
+
+# Viewer is expected to supply appearance streams for form fields.
+needAppearances: false

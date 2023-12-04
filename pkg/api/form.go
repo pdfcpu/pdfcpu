@@ -532,6 +532,18 @@ func validateOptionValues(f form.Form) error {
 	return nil
 }
 
+func fillPostProc(ctx *model.Context, pp []*model.Page, conf *model.Configuration) error {
+	if _, _, err := create.UpdatePageTree(ctx, pp, nil); err != nil {
+		return err
+	}
+
+	if conf.ValidationMode != model.ValidationNone {
+		return ValidateContext(ctx)
+	}
+
+	return nil
+}
+
 // FillForm populates the form rs with data from rd and writes the result to w.
 func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configuration) error {
 	if rs == nil {
@@ -597,14 +609,8 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 		return ErrNoFormFieldsAffected
 	}
 
-	if _, _, err := create.UpdatePageTree(ctx, pp, nil); err != nil {
+	if err := fillPostProc(ctx, pp, conf); err != nil {
 		return err
-	}
-
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
 	}
 
 	return WriteContext(ctx, w)

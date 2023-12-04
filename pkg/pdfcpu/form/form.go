@@ -1186,6 +1186,13 @@ func RemoveFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error
 		return false, errors.New("pdfcpu: Some form fields could not be removed")
 	}
 
+	// pdfcpu provides all appearance streams for form fields.
+	// Yet for some files and viewers form fields don't get rendered.
+	// In these cases you can order the viewer to provide form field appearance streams.
+	if ctx.NeedAppearances {
+		xRefTable.Form["NeedAppearances"] = types.Boolean(true)
+	}
+
 	return ok, nil
 }
 
@@ -1497,6 +1504,13 @@ func ResetFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error)
 		}
 	}
 
+	// pdfcpu provides all appearance streams for form fields.
+	// Yet for some files and viewers form fields don't get rendered.
+	// In these cases you can order the viewer to provide form field appearance streams.
+	if ctx.NeedAppearances {
+		xRefTable.Form["NeedAppearances"] = types.Boolean(true)
+	}
+
 	return ok, nil
 }
 
@@ -1654,6 +1668,13 @@ func LockFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error) 
 		}
 	}
 
+	// pdfcpu provides all appearance streams for form fields.
+	// Yet for some files and viewers form fields don't get rendered.
+	// In these cases you can order the viewer to provide form field appearance streams.
+	if ctx.NeedAppearances {
+		xRefTable.Form["NeedAppearances"] = types.Boolean(true)
+	}
+
 	return ok, nil
 }
 
@@ -1768,6 +1789,13 @@ func UnlockFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error
 		if err := unlockPageFields(xRefTable, fieldIDsOrNames, fields, wAnnots, &ok); err != nil {
 			return false, err
 		}
+	}
+
+	// pdfcpu provides all appearance streams for form fields.
+	// Yet for some files and viewers form fields don't get rendered.
+	// In these cases you can order the viewer to provide form field appearance streams.
+	if ctx.NeedAppearances {
+		xRefTable.Form["NeedAppearances"] = types.Boolean(true)
 	}
 
 	return ok, nil

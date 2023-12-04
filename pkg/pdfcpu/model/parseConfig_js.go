@@ -129,7 +129,7 @@ func handleConfPermissions(v string, c *Configuration) error {
 	if err != nil {
 		return errors.Errorf("permissions is numeric, got: %s", v)
 	}
-	c.Permissions = PermissionFlags(c.Permissions)
+	c.Permissions = PermissionFlags(i)
 	return nil
 }
 
@@ -160,18 +160,6 @@ func handleDateFormat(v string, c *Configuration) error {
 	return nil
 }
 
-func handleHeaderBufSize(k, v string, c *Configuration) error {
-	i, err := strconv.Atoi(v)
-	if err != nil {
-		return errors.Errorf("%s is numeric, got: %s", k, v)
-	}
-	if i < 100 {
-		return errors.Errorf("%s must be >= 100, got: %d", k, i)
-	}
-	c.HeaderBufSize = i
-	return nil
-}
-
 func handleOptimizeDuplicateContentStreams(k, v string, c *Configuration) error {
 	v = strings.ToLower(v)
 	if v != "true" && v != "false" {
@@ -187,6 +175,15 @@ func handleCreateBookmarks(k, v string, c *Configuration) error {
 		return errors.Errorf("config key %s is boolean", k)
 	}
 	c.CreateBookmarks = v == "true"
+	return nil
+}
+
+func handleNeedAppearances(k, v string, c *Configuration) error {
+	v = strings.ToLower(v)
+	if v != "true" && v != "false" {
+		return errors.Errorf("config key %s is boolean", k)
+	}
+	c.NeedAppearances = v == "true"
 	return nil
 }
 
@@ -240,14 +237,14 @@ func parseKeysPart2(k, v string, c *Configuration) error {
 	case "dateFormat":
 		return handleDateFormat(v, c)
 
-	case "headerBufSize":
-		return handleHeaderBufSize(k, v, c)
-
 	case "optimizeDuplicateContentStreams":
 		return handleOptimizeDuplicateContentStreams(k, v, c)
 
 	case "createBookmarks":
 		return handleCreateBookmarks(k, v, c)
+
+	case "needAppearances":
+		return handleNeedAppearances(k, v, c)
 	}
 
 	return nil
