@@ -35,6 +35,18 @@ pdfcpu permissions list [-upw userpw] [-opw ownerpw] inFile
 
 <br>
 
+## Permission Bits
+
+* There are twelve bits defined, four of which are unused.
+* Bits are counted starting with bit 1 from right to left.
+
+value | binary         | hex
+|:----|:---------------|:---
+|none | 0000 0000 0000 | x000
+|print| 1000 0000 0100 | x804
+|all  | 1111 0011 1100 | xF3C
+
+
 ## Examples
 
 `pdfcpu` does not require any password for listing the permissions of an encrypted document unless the *user password* is set:
@@ -44,7 +56,7 @@ $ pdfcpu encrypt -opw opw enc.pdf
 writing enc.pdf ...
 
 $ pdfcpu perm list enc.pdf
-permission bits:            0
+permission bits: 000000000000 (x000)
 Bit  3: false (print(rev2), print quality(rev>=3))
 Bit  4: false (modify other than controlled by bits 6,9,11)
 Bit  5: false (extract(rev2), extract other than controlled by bit 10(rev>=3))
@@ -67,7 +79,7 @@ $ pdfcpu perm list enc.pdf
 Please provide the correct password
 
 $ pdfcpu perm list -upw upw enc.pdf
-permission bits:            0
+permission bits: 000000000000 (x000)
 Bit  3: false (print(rev2), print quality(rev>=3))
 Bit  4: false (modify other than controlled by bits 6,9,11)
 Bit  5: false (extract(rev2), extract other than controlled by bit 10(rev>=3))
@@ -78,7 +90,7 @@ Bit 11: false (modify(rev>=3))
 Bit 12: false (print high-level(rev>=3))
 
 $ pdfcpu perm list -opw opw enc.pdf
-permission bits:            0
+permission bits: 000000000000 (x000)
 Bit  3: false (print(rev2), print quality(rev>=3))
 Bit  4: false (modify other than controlled by bits 6,9,11)
 Bit  5: false (extract(rev2), extract other than controlled by bit 10(rev>=3))
@@ -101,7 +113,7 @@ $ pdfcpu perm list enc.pdf
 Please provide the correct password
 
 $ pdfcpu perm list -upw upw enc.pdf
-permission bits:            0
+permission bits: 000000000000 (x000)
 Bit  3: false (print(rev2), print quality(rev>=3))
 Bit  4: false (modify other than controlled by bits 6,9,11)
 Bit  5: false (extract(rev2), extract other than controlled by bit 10(rev>=3))
