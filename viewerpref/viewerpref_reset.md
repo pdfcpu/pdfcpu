@@ -4,12 +4,14 @@ layout: default
 
 # Reset Viewer Preferences
 
-This command removes properties from a PDF document. Have a look at some [examples](#examples).
+This command resets the viewing preferences for a PDF document. 
+
+Have a look at some [examples](#examples).
 
 ## Usage
 
 ```
-pdfcpu properties remove inFile [name...]
+pdfcpu viewerpref reset inFile
 ```
 
 <br>
@@ -33,22 +35,13 @@ pdfcpu properties remove inFile [name...]
 | name         | description         | required
 |:-------------|:--------------------|:--------
 | inFile       | PDF input file      | yes
-| name...      | one or more property names | no
 
 <br>
 
 ## Examples
 
-Remove a specific property from `in.pdf`:
+Remove the viewer preferences from `test.pdf`:
 
 ```sh
-$ pdfcpu prop remove in.pdf dept
-```
-
-<br>
-
-Remove all properties:
-
-```sh
-$ pdfcpu prop remove test.pdf
+$ pdfcpu viewerpref reset test.pdf
 ```

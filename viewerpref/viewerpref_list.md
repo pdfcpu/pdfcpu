@@ -4,12 +4,14 @@ layout: default
 
 # List Viewer Preferences
 
-This command outputs a list of all properties. Have a look at some [examples](#examples).
+This command outputs a list of any configured viewer preferences.
+
+Have a look at some [examples](#examples).
 
 ## Usage
 
 ```
-pdfcpu properties list inFile
+pdfcpu viewerpref list [-a(ll)] [-j(son)] inFile
 ```
 
 <br>
@@ -30,18 +32,37 @@ pdfcpu properties list inFile
 
 ### Arguments
 
-| name         | description         | required
-|:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
+| name    | description         | required
+|:--------|:--------------------|:--------------------------
+| all     | output all (including default values)      | no
+| json    | output JSON                                | no
+| inFile  | PDF input file                             | yes
+
+
 
 <br>
 
 ## Examples
 
- List all document properties of `in.pdf`:
+```sh
+$ pdfcpu viewerpref list test.pdf
+```
+
+<br>
 
 ```sh
-$ pdfcpu properties list in.pdf
-dept = hr
-group = 3
+$ pdfcpu viewerpref list -all test.pdf
 ```
+
+<br>
+
+```sh
+$ pdfcpu viewerpref list -json test.pdf
+```
+
+<br>
+
+```sh
+$ pdfcpu viewerpref list -all -json test.pdf
+```
+
