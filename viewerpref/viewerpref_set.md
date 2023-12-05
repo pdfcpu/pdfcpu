@@ -75,10 +75,11 @@ pdfcpu viewerpref set inFile (inFileJSON | JSONstring)
 <br>
 
 #### DisplayDocTitle
+
 | value | description
 |:------|:------------
-|true   | The window’s title bar should display the document title taken from the dc:title element of the XMP metadata stream 
-|false  | The title bar should display the name of the PDF file containing the document 
+| true   | The window’s title bar should display the document title taken from the dc:title element of the XMP metadata stream 
+| false  | The title bar should display the name of the PDF file containing the document 
 
 <br>
 
