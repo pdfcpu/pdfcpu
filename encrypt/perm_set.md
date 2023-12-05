@@ -109,10 +109,10 @@ Bit 10: false (extract(rev>=3))
 Bit 11: false (modify(rev>=3))
 Bit 12: false (print high-level(rev>=3))
 
-$ pdfcpu perm add -perm print enc.pdf
+$ pdfcpu perm set -perm print enc.pdf
 Please provide all non-empty passwords#
 
-$ pdfcpu perm add -upw upw -perm print enc.pdf
+$ pdfcpu perm set -upw upw -perm print enc.pdf
 adding permissions to enc.pdf ...
 writing enc.pdf ...
 
@@ -149,27 +149,27 @@ Bit 10: false (extract(rev>=3))
 Bit 11: false (modify(rev>=3))
 Bit 12: false (print high-level(rev>=3))
 
-$ pdfcpu perm add -perm x804 enc.pdf
+$ pdfcpu perm set -perm 111100001111 enc.pdf
 Please provide all non-empty passwords
 
-$ pdfcpu perm add -opw opw -perm x804 enc.pdf
+$ pdfcpu perm set -opw opw -perm 111100001111 enc.pdf
 Please provide the correct password
 
-$ pdfcpu perm add -upw upw -perm x804 enc.pdf
+$ pdfcpu perm set -upw upw -perm 111100001111 enc.pdf
 Please provide all non-empty passwords
 
-$ pdfcpu perm add -upw upw -opw opw -perm x804 enc.pdf
+$ pdfcpu perm set -upw upw -opw opw -perm 111100001111 enc.pdf
 adding permissions to enc.pdf ...
 writing enc.pdf ...
 
 $ pdfcpu perm list -upw upw enc.pdf
-permission bits: 100000000100 (x804)
+permission bits: 111100001100 (xF0C)
 Bit  3: true (print(rev2), print quality(rev>=3))
-Bit  4: false (modify other than controlled by bits 6,9,11)
+Bit  4: true (modify other than controlled by bits 6,9,11)
 Bit  5: false (extract(rev2), extract other than controlled by bit 10(rev>=3))
 Bit  6: false (add or modify annotations)
-Bit  9: false (fill in form fields(rev>=3)
-Bit 10: false (extract(rev>=3))
-Bit 11: false (modify(rev>=3))
+Bit  9: true (fill in form fields(rev>=3)
+Bit 10: true (extract(rev>=3))
+Bit 11: true (modify(rev>=3))
 Bit 12: true (print high-level(rev>=3))
 ```
