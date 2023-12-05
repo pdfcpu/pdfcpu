@@ -68,7 +68,7 @@ pdfcpu viewerpref set inFile (inFileJSON | JSONstring)
 | PickTrayByPDFSize | Whether the PDF page size shall be used to select the input paper tray | -
 | PrintPageRange  | The page numbers used to initialize the print dialogue box when the file is printed (since PDF 1.7). The array shall contain an even number of integers to be interpreted in pairs, with each pair specifying the first and last pages in a sub-range of pages to be printed. The first page of the PDF file shall be denoted by 1. | -
 | NumCopies       | The number of copies that shall be printed when the print dialog is opened for this file (since PDF 1.7). | -
-| Enforce         | Array of names of Viewer preference settings that shall be enforced by PDF processors and that shall not be overridden by subsequent selections in the application user interface (since PDF 2.0) - possible value: PrintScaling
+| Enforce         | Array of names of Viewer preference settings that shall be enforced by PDF processors and that shall not be overridden by subsequent selections in the application user interface (since PDF 2.0) - possible value: PrintScaling | -
 
 
 
