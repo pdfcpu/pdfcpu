@@ -40,11 +40,11 @@ pdfcpu permissions list [-upw userpw] [-opw ownerpw] inFile
 * There are twelve bits defined, four of which are unused.
 * Bits are counted starting with bit 1 from right to left.
 
-value | binary         | hex
-|:----|:---------------|:---
-|none | 0000 0000 0000 | x000
-|print| 1000 0000 0100 | x804
-|all  | 1111 0011 1100 | xF3C
+| value | binary         | hex
+|:------|:---------------|:---
+|none   | 0000 0000 0000 | x000
+|print  | 1000 0000 0100 | x804
+|all    | 1111 0011 1100 | xF3C
 
 
 ## Examples
