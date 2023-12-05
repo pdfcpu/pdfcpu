@@ -13,8 +13,10 @@ pdfcpu will create this dir at the default [user's config directory](https://gol
 You can look up its location either like so:
 
 ```
-$ pdfcpu ver -v
-pdfcpu: v0.4.2 dev
+$ pdfcpu version
+pdfcpu: v0.6.0
+commit: adccd5de (2023-12-04T23:23:44Z)
+base  : go1.21.4
 config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 ```
 
@@ -24,8 +26,8 @@ or you can do the following which will print out both the config file path and i
 $ pdfcpu config
 config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 #############################
-# pdfcpu v0.4.2 dev         #
-# Created: 2023-07-20 21:40 #
+# pdfcpu v0.6.0             #
+# Created: 2023-12-04 23:23 #
 #############################
 #   Default configuration   #
 #############################
@@ -34,8 +36,8 @@ config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 checkFileNameExt: true
 
 reader15: true
-decodeAllStreams: false
 
+decodeAllStreams: false
 
 # validationMode:
 # ValidationStrict,
@@ -57,10 +59,11 @@ encryptUsingAES: true
 encryptKeyLength: 256
 
 # permissions for encrypted files:
-# -3901 = 0xF0C3 (PermissionsNone)
-# -1849 = 0xF8C7 (PermissionsPrint)
-#    -1 = 0xFFFF (PermissionsAll)
-permissions: -3901
+# 0xF0C3 (PermissionsNone)
+# 0xF8C7 (PermissionsPrint)
+# 0xFFFF (PermissionsAll)
+# See more at model.PermissionFlags and PDF spec table 22
+permissions: 0xF0C3
 
 # displayUnit:
 # points
@@ -76,9 +79,6 @@ timestampFormat: 2006-01-02 15:04
 
 # date format: yyyy-mm-dd
 dateFormat: 2006-01-02
-
-# buffer size >= 100 for locating PDF header
-headerBufSize: 100
 
 # optimize duplicate content streams across pages
 optimizeDuplicateContentStreams: false

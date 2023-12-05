@@ -13,18 +13,18 @@ Providing the *owner password* which is also known as the *set permissions passw
 ## Usage
 
 ```
-pdfcpu permissions set [-perm none|all] [-upw userpw] -opw ownerpw inFile
+pdfcpu permissions set [-p(erm) none|print|all|max4Hex|max12Bits] [-upw userpw] -opw ownerpw inFile
 ```
 
 <br>
 
 ### Flags
 
-| name                             | description     | required | values    | default
-|:---------------------------------|:----------------|:---------|:----------|:-------
-| perm                             | permissions     | no       | none, all | none
-| [upw](../getting_started/common_flags.md)     | user password   | if set
-| [opw](../getting_started/common_flags.md)     | owner password  | if set
+| name                                      | description     | required | default
+|:------------------------------------------|:----------------|:---------|:-------
+| p(erm)                                    | permission bits | no       | none
+| [upw](../getting_started/common_flags.md) | user password   | if set
+| [opw](../getting_started/common_flags.md) | owner password  | yes
 
 <br>
 

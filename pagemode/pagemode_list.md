@@ -2,9 +2,9 @@
 layout: default
 ---
 
-# List Viewer Preferences
+# List Page Mode
 
-This command outputs a list of any configured viewer preferences.
+This command outputs the configured page layout for a PDF file.
 
 Have a look at some [examples](#examples).
 

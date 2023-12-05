@@ -29,7 +29,7 @@ layout: default
 * [Rotate](../core/rotate.md) selected pages
 * [Split](../core/split.md) multi-page PDF into several PDFs according to split span
 * [Trim](../core/trim.md) (generate a custom version of a PDF including selected pages)
-* [Validate](../core/validate.md) PDF files up to version 7.0
+* [Validate](../core/validate.md) PDF files up to version 1.7 + basic validation version 2.0
 
 Manage
 
@@ -41,9 +41,12 @@ Manage
 * [Fonts](../fonts/fonts.md)
 * [Forms](../form/form.md)
 * [Page boundaries](../boxes/boxes.md)
+* [Page Layout](../pagelayout/pagelayout.md)
+* [Page Mode](../pagemode/pagemode.md)
 * [Pages](../pages/pages.md)
 * [Portfolio entries](../portfolio/portfolio.md)
 * [Search keywords](../keywords/keywords.md)
 * [Stamps](../core/stamp.md)/[watermarks](../core/watermark.md) using text, images or foreign PDF content
 * [User](../encrypt/change_upw.md)/[Owner](../encrypt/change_opw.md) password
-* Permissions ([set](../encrypt/perm_add.md),[list](../encrypt/perm_list.md)) 
+* Permissions ([set](../encrypt/perm_set.md),[list](../encrypt/perm_list.md)) 
+* [Viewer Preferences](../viewerpref/viewerpref.md)

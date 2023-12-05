@@ -2,9 +2,9 @@
 layout: default
 ---
 
-# Reset Viewer Preferences
+# Reset Page Mode
 
-This command resets the viewer preferences for a PDF document. 
+This command resets the configured page layout for a PDF file.
 
 Have a look at some [examples](#examples).
 

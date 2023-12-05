@@ -9,18 +9,19 @@ Merge 2 or more PDF files into `outFile`. Have a look at some [examples](#exampl
 ## Usage
 
 ```
-pdfcpu merge [-m(ode) create|append] [-s(ort) -b(ookmarks)] outFile inFile...
+pdfcpu merge [-m(ode) create|append|zip] [-s(ort) -b(ookmarks) -d(ivider)] outFile inFile...
 ```
 
 <br>
 
 ### Flags
 
-| name     | description     | default | required
-|:---------|:----------------|:--------|:--
-| m(ode)   | create, append  | create  | no
-| sort     | sort inFiles if present | unsorted | no
-| bookmarks| create bookmarks | yes   | no
+| name       | description                          | default   | required
+|:-----------|:-------------------------------------|:----------|:--
+| m(ode)     | create, append, zip                  | create    | no
+| s(ort)     | sort inFiles if present              | unsorted  | no
+| b(ookmarks)| create bookmarks                     | yes       | no
+| d(ivider)  | insert separator between merged docs | no        | no
 
 
 <br>
@@ -74,8 +75,15 @@ $ pdfcpu merge out.pdf *.pdf
 
 <br>
 
-Merge some PDF files into an existing PDF file `out.pdf`:
+Merge some PDF files into an existing PDF file `out.pdf` and create divider pages between the merged docuements:
 
 ```sh
-$ pdfcpu merge -mode append out.pdf in1.pdf in2.pdf in3.pdf
+$ pdfcpu merge -mode append -divider out.pdf in1.pdf in2.pdf in3.pdf
+```
+
+<br>
+
+Zip two files together (eg. like in 1a,1b,2a,2b..):
+```sh
+$ pdfcpu merge -mode zip out.pdf a.pdf b.pdf
 ```

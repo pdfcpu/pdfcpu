@@ -4,7 +4,19 @@ layout: default
 
 # Validate
 
-This command checks `inFile` for compliance with the specification [PDF 32000-1:2008](https://www.adobe.com/content/dam/acom/en/devnet/pdf/pdfs/PDF32000_2008.pdf) (PDF 1.7). Any PDF file you would like to process needs to pass validation. Optionally check for broken links.<br>Have a look at some [examples](#examples).
+Any PDF file you would like to process with pdfcpu needs to pass validation.
+
+This command validates `inFile` against:
+
+* PDF 1.7: [PDF 32000-1:2008](https://www.adobe.com/content/dam/acom/en/devnet/pdf/pdfs/PDF32000_2008.pdf)
+
+* PDF 2.0: [PDF 32000:2](https://www.loc.gov/preservation/digital/formats/fdd/fdd000474.shtml) (ongoing task!)
+
+
+<br>
+Validation can also check for broken links.
+
+<br>Have a look at some [examples](#examples).
 
 ## Usage
 
@@ -31,11 +43,12 @@ pdfcpu validate [-m(ode) strict|relaxed] [-l(inks)] inFile
 | [vv](../getting_started/common_flags.md)        | verbose logging |
 | [q(uiet)](../getting_started/common_flags.md)   | quiet mode      |
 | [u(nit)](../getting_started/common_flags.md)    | display unit    | po(ints),in(ches),cm,mm
-| [c(onf)](../getting_started/common_flags.md)       | config dir      | $path, disable
-| [upw](../getting_started/common_flags.md)          | user password   |
-| [opw](../getting_started/common_flags.md)          | owner password  |
+| [c(onf)](../getting_started/common_flags.md)    | config dir      | $path, disable
+| [upw](../getting_started/common_flags.md)       | user password   |
+| [opw](../getting_started/common_flags.md)       | owner password  |
 
 <br>
+
 ### Arguments
 
 | name         | description         | required
@@ -48,7 +61,7 @@ pdfcpu validate [-m(ode) strict|relaxed] [-l(inks)] inFile
 
 ##### Strict
 
-This mode validates against the specification [PDF 32000-1:2008](https://www.adobe.com/content/dam/acom/en/devnet/pdf/pdfs/PDF32000_2008.pdf) covering all PDF versions up to 1.7.
+This mode validates against the PDF specification covering all PDF versions up to 2.0.
 
 ##### Relaxed
 

@@ -9,7 +9,7 @@ Generate a set of PDF files for `inFile` in `outDir` according to given `span` v
 ## Usage
 
 ```
-pdfcpu split [-m(ode) span|bookmark] inFile outDir [span]
+pdfcpu split [-m(ode) span|bookmark|page] inFile outDir [span|pageNr...]
 ```
 
 <br>
@@ -18,8 +18,9 @@ pdfcpu split [-m(ode) span|bookmark] inFile outDir [span]
 
 | name       | required | value    | description
 |:-----------|:---------|:---------|:-----------
-| m(ode)     | no       | span     | Split into PDF files with span pages each (default)
+| m(ode)     | no       | span     | Split into PDF files with span pages each (default).
 |            |          | bookmark | Split into PDF files representing sections defined by existing bookmarks.
+|            |          | page     | Split before specific page number(s).
 
 <br>
 
@@ -60,15 +61,30 @@ The following PDF elements are not carried over into the output files:
 
 ## Examples
 
-Split up a PDF input file into single page PDF files in `out`:
+Split up a PDF file into single page PDF files in `out`:
 ```sh
 $ pdfcpu split test.pdf out
 ``` 
 
 <br>
 
-Split up a PDF input file into individual PDF files for every sheet of paper. Every PDF output file in `out` spans 2 pages of the original:
-
+Split up a PDF file into individual PDF files for every sheet of paper. Every PDF output file in `out` spans 2 pages of the original:
 ```sh
 $ pdfcpu split test.pdf out 2
 ```
+
+<br>
+
+Split up a PDF file along its bookmarks:
+```sh
+$ pdfcpu split -m bookmark test.pdf out
+```
+
+Split up a PDF file before pages 2,4,10:
+```sh
+$ pdfcpu split -m page test.pdf out 2 4 10
+```
+
+
+
+

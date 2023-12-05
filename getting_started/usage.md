@@ -42,6 +42,8 @@ The commands are:
    ndown       cut selected pages into n pages symmetrically
    nup         rearrange pages or images for reduced number of pages
    optimize    optimize PDF by getting rid of redundant page resources
+   pagelayout  list, set, reset page layout for opened document
+   pagemode    list, set, reset page mode for opened document
    pages       insert, remove selected pages
    paper       print list of supported paper sizes
    permissions list, set user access permissions
@@ -56,6 +58,7 @@ The commands are:
    trim        create trimmed version of selected pages
    validate    validate PDF against PDF 32000-1:2008 (PDF 1.7)
    version     print version
+   viewerpref  list, set, reset viewer preferences for opened document
    watermark   add, update, remove text, image or PDF watermarks to selected pages
 
    Completion supported for all commands.

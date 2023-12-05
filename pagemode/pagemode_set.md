@@ -2,9 +2,9 @@
 layout: default
 ---
 
-# Set Viewer Preferences
+# Set Page Mode
 
-This command configures how a PDF is displayed on the screen and shall be printed.
+This command configures the way a PDF is displayed on the screen and shall be printed.
 
 Define whether you want to display a toolbar, a menubar or if you want your document to be centered among others.
 
