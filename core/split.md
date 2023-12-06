@@ -61,26 +61,28 @@ The following PDF elements are not carried over into the output files:
 
 ## Examples
 
-Split up a PDF file into single page PDF files in `out`:
+Split a PDF file into single page PDF files in `out`:
 ```sh
 $ pdfcpu split test.pdf out
 ``` 
 
 <br>
 
-Split up a PDF file into individual PDF files for every sheet of paper. Every PDF output file in `out` spans 2 pages of the original:
+Split a PDF file into individual PDF files for every sheet of paper. Every PDF output file in `out` spans 2 pages of the original:
 ```sh
 $ pdfcpu split test.pdf out 2
 ```
 
 <br>
 
-Split up a PDF file along its bookmarks:
+Split a PDF file along its bookmarks:
 ```sh
 $ pdfcpu split -m bookmark test.pdf out
 ```
 
-Split up a PDF file before pages 2,4,10:
+<br>
+
+Split a PDF file before pages 2,4,10:
 ```sh
 $ pdfcpu split -m page test.pdf out 2 4 10
 ```
