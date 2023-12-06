@@ -4,14 +4,14 @@ layout: default
 
 # List Page Layout
 
-This command outputs the configured page layout for a PDF file.
+This command displays the configured page layout for a PDF file.
 
 Have a look at some [examples](#examples).
 
 ## Usage
 
 ```
-pdfcpu viewerpref list [-a(ll)] [-j(son)] inFile
+pdfcpu pagelayout list inFile
 ```
 
 <br>
@@ -34,80 +34,24 @@ pdfcpu viewerpref list [-a(ll)] [-j(son)] inFile
 
 | name    | description         | required
 |:--------|:--------------------|:--------------------------
-| all     | output all (including default values)      | no
-| json    | output JSON                                | no
 | inFile  | PDF input file                             | yes
-
 
 
 <br>
 
 ## Examples
 
-Display all non default viewer preferences:
+Display the page layout for `test1.pdf`:
 
 ```sh
-$ pdfcpu viewerpref list test.pdf
-Viewer preferences:
-   DisplayDocTitle = true
+$ pdfcpu pagelayout list test1.pdf
+No page layout set, PDF viewers will default to "SinglePage"
 ```
 
 <br>
 
-Display all viewer preferences:
+Display the page layout for `test2.pdf`:
 ```sh
-$ pdfcpu viewerpref list -all test.pdf
-Viewer preferences:
-   HideToolbar = false
-   HideMenubar = false
-   HideWindowUI = false
-   FitWindow = false
-   CenterWindow = false
-   DisplayDocTitle = true
-   NonFullScreenPageMode = UseNone
-   Direction = L2R
-   PrintScaling = AppDefault
-   NumCopies = 1
+$ pdfcpu pagelayout list test2.pdf
+TwoColumnLeft
 ```
-
-<br>
-
-Display all non default viewer preferences using JSON:
-```sh
-$ pdfcpu viewerpref list -json test.pdf
-{
-	"header": {
-		"version": "pdfcpu v0.6.0 dev",
-		"creation": "2023-12-05 14:23:56 CET"
-	},
-	"viewerPreferences": {
-		"displayDocTitle": true
-	}
-}
-```
-
-<br>
-
-Display all viewer preferences using JSON:
-```sh
-$ pdfcpu viewerpref list -all -json test.pdf
-{
-	"header": {
-		"version": "pdfcpu v0.6.0 dev",
-		"creation": "2023-12-05 14:24:04 CET"
-	},
-	"viewerPreferences": {
-		"hideToolbar": false,
-		"hideMenubar": false,
-		"hideWindowUI": false,
-		"fitWindow": false,
-		"centerWindow": false,
-		"displayDocTitle": true,
-		"nonFullScreenPageMode": "UseNone",
-		"direction": "L2R",
-		"printScaling": "AppDefault",
-		"numCopies": 1
-	}
-}
-```
-

@@ -11,7 +11,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu viewerpref reset inFile
+pdfcpu pagelayout reset inFile
 ```
 
 <br>
@@ -40,8 +40,9 @@ pdfcpu viewerpref reset inFile
 
 ## Examples
 
-Reset the viewer preferences for `test.pdf`:
-
+Reset page layout for `test.pdf`:
 ```sh
-$ pdfcpu viewerpref reset test.pdf
+$ pdfcpu pagelayout reset test.pdf
+$ pdfcpu pagelayout list test.pdf
+No page layout set, PDF viewers will default to "SinglePage"
 ```
