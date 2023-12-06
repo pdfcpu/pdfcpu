@@ -8,7 +8,6 @@ This command configures the page layout that shall be used when the document is 
 
 Have a look at some [examples](#examples).
 
-
 ## Usage
 
 ```
@@ -40,7 +39,7 @@ pdfcpu pagelayout set inFile value
 
 <br>
 
-### Page Layout Modes
+### Page Layouts
 
 | name           | description
 |:---------------|:-------------------------------------------------
@@ -54,7 +53,7 @@ pdfcpu pagelayout set inFile value
 
 ## Examples
 
-Set pagelayout for `test.pdf`:
+Set page layout for `test.pdf` (case agnostic):
 
 ```sh
 $ pdfcpu pagelayout set test.pdf TwoColumnLeft

@@ -4,7 +4,7 @@ layout: default
 
 # List Page Layout
 
-This command displays the configured page layout for a PDF file.
+This command prints the page layout that shall be used when the document is opened.
 
 Have a look at some [examples](#examples).
 
@@ -39,19 +39,31 @@ pdfcpu pagelayout list inFile
 
 <br>
 
-## Examples
+### Page Layouts
 
-Display the page layout for `test1.pdf`:
-
-```sh
-$ pdfcpu pagelayout list test1.pdf
-No page layout set, PDF viewers will default to "SinglePage"
-```
+| name           | description
+|:---------------|:-------------------------------------------------
+| SinglePage     | Display one page at a time (default)
+| TwoColumnLeft  | Display the pages in two columns, with odd-numbered pages on the left
+| TwoColumnRight | Display the pages in two columns, with odd-numbered pages on the right
+| TwoPageLeft    | Display the pages two at a time, with odd-numbered pages on the left
+| TwoPageRight   | Display the pages two at a time, with odd-numbered pages on the right
 
 <br>
 
-Display the page layout for `test2.pdf`:
+## Examples
+
+List page mode of `test1.pdf`:
+
 ```sh
-$ pdfcpu pagelayout list test2.pdf
-TwoColumnLeft
+pdfcpu pagemode list test1.pdf
+No page layout set, PDF viewers will default to "SinglePage"
 ```
+
+List page mode of `test2.pdf`:
+
+```sh
+pdfcpu pagemode list test2.pdf
+TwoPageLeft
+```
+

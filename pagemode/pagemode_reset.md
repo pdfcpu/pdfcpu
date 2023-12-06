@@ -4,14 +4,14 @@ layout: default
 
 # Reset Page Mode
 
-This command resets the configured page layout for a PDF file.
+This command resets the configured page mode for a PDF file.
 
 Have a look at some [examples](#examples).
 
 ## Usage
 
 ```
-pdfcpu viewerpref reset inFile
+pdfcpu pagemode reset inFile
 ```
 
 <br>
@@ -40,8 +40,10 @@ pdfcpu viewerpref reset inFile
 
 ## Examples
 
-Reset the viewer preferences for `test.pdf`:
+Reset page mode for `test.pdf`:
 
 ```sh
-$ pdfcpu viewerpref reset test.pdf
+$ pdfcpu pagemode reset test.pdf
+$ pdfcpu pagemode list test.pdf
+No page mode set, PDF viewers will default to "UseNone"
 ```

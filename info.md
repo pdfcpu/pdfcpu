@@ -55,10 +55,17 @@ $ pdfcpu info -u cm test.pdf
                Title:
               Author:
              Subject:
-        PDF Producer: pdfcpu v0.3.12
+        PDF Producer: pdfcpu v0.6.0
      Content creator:
-       Creation date: D:20210823010752+02'00'
-   Modification date: D:20210823010752+02'00'
+       Creation date: D:20231223010752+02'00'
+   Modification date: D:20231223010752+02'00'
+           Page mode: UseThumbs
+         Page Layout: SinglePage
+        Viewer Prefs: HideToolbar = true
+                      HideMenubar = true
+                      FitWindow = true
+                      CenterWindow = true
+                      NonFullScreenPageMode = UseNone
             Keywords: key1
                       key2
           Properties: name1 = val1

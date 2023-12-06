@@ -56,7 +56,7 @@ The commands are:
    split       split multi-page PDF into several PDFs according to split span
    stamp       add, update, remove text, image or PDF stamps to selected pages
    trim        create trimmed version of selected pages
-   validate    validate PDF against PDF 32000-1:2008 (PDF 1.7)
+   validate    validate PDF against PDF 32000-1:2008 (PDF 1.7) + basic validation version PDF 2.0
    version     print version
    viewerpref  list, set, reset viewer preferences for opened document
    watermark   add, update, remove text, image or PDF watermarks to selected pages
@@ -75,11 +75,11 @@ The basic processing features:
 ```
 pdfcpu collect   -p(ages) selectedPages inFile [outFile]
 pdfcpu crop     [-p(ages) selectedPages] -- description inFile [outFile]
-pdfcpu merge    [-m(ode) create|append] [-s(ort) -b(ookmarks)] outFile inFile...
+pdfcpu merge    [-m(ode) create|append|zip] [ -s(ort) -b(ookmarks) -d(ivider)] outFile inFile...
 pdfcpu optimize [-stats csvFile] inFile [outFile]
 pdfcpu resize   [-p(ages) selectedPages] -- description inFile [outFile]
 pdfcpu rotate   [-p(ages) selectedPages] inFile rotation [outFile]
-pdfcpu split    [-m(ode) span|bookmark] inFile outDir [span]
+pdfcpu split    [-m(ode) span|bookmark|page] inFile outDir [span|pageNr...]
 pdfcpu trim      -p(ages) selectedPages inFile [outFile]
 pdfcpu validate [-m(ode) strict|relaxed] [-l(inks)] inFile...
 ```
@@ -251,6 +251,39 @@ Manage your document properties:
 pdfcpu properties list    inFile
 pdfcpu properties add     inFile nameValuePair...
 pdfcpu properties remove  inFile [name...]
+```
+
+<br>
+
+## [Page Layout](../pagelayout/pagelayout.md)
+
+Manage the page layout for your opened document:
+```
+pdfcpu pagelayout list  inFile
+pdfcpu pagelayout set   inFile value
+pdfcpu pagelayout reset inFile
+```
+
+<br>
+
+## [Page Mode](../pagemode/pagemode.md)
+
+Manage the page mode for your opened document:
+```
+pdfcpu pagemode list  inFile
+pdfcpu pagemode set   inFile value
+pdfcpu pagemode reset inFile
+```
+
+<br>
+
+## [Viewer Preferences](../viewerpref/viewerpref.md)
+
+Manage the viewer preferences for your opened document:
+```
+pdfcpu viewerpref list [-a(ll)] [-j(son)] inFile
+pdfcpu viewerpref set                     inFile (inFileJSON | JSONstring)
+pdfcpu viewerpref reset                   inFile
 ```
 
 <br>

@@ -4,14 +4,14 @@ layout: default
 
 # List Page Mode
 
-This command outputs the configured page layout for a PDF file.
+This command prints the page mode that shall be used when the document is opened.
 
 Have a look at some [examples](#examples).
 
 ## Usage
 
 ```
-pdfcpu viewerpref list [-a(ll)] [-j(son)] inFile
+pdfcpu pagemode list inFile
 ```
 
 <br>
@@ -34,80 +34,28 @@ pdfcpu viewerpref list [-a(ll)] [-j(son)] inFile
 
 | name    | description         | required
 |:--------|:--------------------|:--------------------------
-| all     | output all (including default values)      | no
-| json    | output JSON                                | no
 | inFile  | PDF input file                             | yes
 
+<br>
 
+### Page Modes
+
+| name           | description
+|:---------------|:-------------------------------------------------
+| UseNone        | Neither document outline nor thumbnail images visible (default)
+| UseOutlines    | Document outline visible
+| UseThumbs      | Thumbnail images visible
+| FullScreen     | Optional content group panel visible (since PDF 1.5)
+| UseOC          | Display the pages two at a time, with odd-numbered pages on the right
+| UseAttachments | Attachments panel visible (since PDF 1.6)
 
 <br>
 
 ## Examples
 
-Display all non default viewer preferences:
-
 ```sh
-$ pdfcpu viewerpref list test.pdf
-Viewer preferences:
-   DisplayDocTitle = true
+$ pdfcpu pagemode list test.pdf
+FullScreen
 ```
 
-<br>
-
-Display all viewer preferences:
-```sh
-$ pdfcpu viewerpref list -all test.pdf
-Viewer preferences:
-   HideToolbar = false
-   HideMenubar = false
-   HideWindowUI = false
-   FitWindow = false
-   CenterWindow = false
-   DisplayDocTitle = true
-   NonFullScreenPageMode = UseNone
-   Direction = L2R
-   PrintScaling = AppDefault
-   NumCopies = 1
-```
-
-<br>
-
-Display all non default viewer preferences using JSON:
-```sh
-$ pdfcpu viewerpref list -json test.pdf
-{
-	"header": {
-		"version": "pdfcpu v0.6.0 dev",
-		"creation": "2023-12-05 14:23:56 CET"
-	},
-	"viewerPreferences": {
-		"displayDocTitle": true
-	}
-}
-```
-
-<br>
-
-Display all viewer preferences using JSON:
-```sh
-$ pdfcpu viewerpref list -all -json test.pdf
-{
-	"header": {
-		"version": "pdfcpu v0.6.0 dev",
-		"creation": "2023-12-05 14:24:04 CET"
-	},
-	"viewerPreferences": {
-		"hideToolbar": false,
-		"hideMenubar": false,
-		"hideWindowUI": false,
-		"fitWindow": false,
-		"centerWindow": false,
-		"displayDocTitle": true,
-		"nonFullScreenPageMode": "UseNone",
-		"direction": "L2R",
-		"printScaling": "AppDefault",
-		"numCopies": 1
-	}
-}
-```
 
