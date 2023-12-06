@@ -5,6 +5,7 @@ layout: default
 # Remove Annotations
 
 This command removes annotation from a PDF document by object number.
+
 Have a look at some [examples](#examples).
 
 ## Usage

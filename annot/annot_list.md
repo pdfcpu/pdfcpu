@@ -4,7 +4,7 @@ layout: default
 
 # List Annotations
 
-This command prints a list of annotations by type for selected pages
+This command prints a list of annotations by type for selected pages.
 
 Have a look at some [examples](#examples).
 
