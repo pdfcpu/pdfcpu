@@ -72,10 +72,10 @@ Bit 10: false (extract(rev>=3))
 Bit 11: false (modify(rev>=3))
 Bit 12: false (print high-level(rev>=3))
 
-pdfcpu perm add -perm all enc.pdf
+pdfcpu perm set -perm all enc.pdf
 Please provide all non-empty passwords
 
-$ pdfcpu perm add -opw opw -perm all enc.pdf
+$ pdfcpu perm set -opw opw -perm all enc.pdf
 adding permissions to enc.pdf ...
 writing enc.pdf ...
 
