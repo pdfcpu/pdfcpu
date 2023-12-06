@@ -53,9 +53,19 @@ pdfcpu pagemode list inFile
 
 ## Examples
 
+List page mode of `test1.pdf`:
+
 ```sh
-$ pdfcpu pagemode list test.pdf
+$ pdfcpu pagemode list test1.pdf
+No page mode set, PDF viewers will default to "UseNone"
+```
+
+List page mode of `test2.pdf`:
+
+```sh
+$ pdfcpu pagemode list test2.pdf
 FullScreen
 ```
+
 
 

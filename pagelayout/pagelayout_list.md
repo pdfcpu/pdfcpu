@@ -53,17 +53,17 @@ pdfcpu pagelayout list inFile
 
 ## Examples
 
-List page mode of `test1.pdf`:
+List page layout of `test1.pdf`:
 
 ```sh
-pdfcpu pagemode list test1.pdf
+$ pdfcpu pagelayout list test1.pdf
 No page layout set, PDF viewers will default to "SinglePage"
 ```
 
-List page mode of `test2.pdf`:
+List page layout of `test2.pdf`:
 
 ```sh
-pdfcpu pagemode list test2.pdf
+$ pdfcpu pagelayout list test2.pdf
 TwoPageLeft
 ```
 
