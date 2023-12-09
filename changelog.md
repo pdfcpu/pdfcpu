@@ -6,7 +6,12 @@ layout: default
 
 | Date      | Tag / Commit                                                                                | Description  
 |:----------|:--------------------------------------------------------------------------------------------|:------------------------------
-|2023-12-10 | [v0.6.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.6.0)                              | 
+|2023-12-10 | [v0.6.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.6.0)                              | Add pagelayout, pagemode, viewerpref
+|           |                                                                                             | cmds, basic PDF 2.0 validation
+|           |                                                                                             | #373, #472, #473, #635, #665, #689,
+|           |                                                                                             | #701, #705, #706, #708, #710, #711,
+|           |                                                                                             | #713, #716, #717, #722, #723, #727,
+|           |                                                                                             | #731-733, #734, #736-740, #742,747
 |2023-08-20 | [v0.5.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.5.0)                              | Add bookmarks command,
 |           |                                                                                             | Fix #506, #604, #621, #657, #659,
 |           |                                                                                             | #660, #663, #664, #666, #667,
