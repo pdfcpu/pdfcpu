@@ -16,6 +16,12 @@ This command fills form fields with data via JSON.
 
 4. Run `pdfcpu form fill`. This will process the attributes `value` and `locked` only.
 
+## Note
+pdfcpu generates all appearance streams for form fields, but if you do have form field display
+issues then the following configuration option may help:
+`needAppearances: true`
+
+
 Have a look at some [examples](#examples). 
 
 ## Usage
