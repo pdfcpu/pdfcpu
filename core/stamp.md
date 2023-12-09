@@ -108,7 +108,7 @@ If you want to start multistamping at page 2 of your stamp file
 and page 3 of your input file you can do the following:
 
 ```
-$ pdfcpu stamp add -mode pdf:2:3 -- "stamp.pdf" "" in.pdf out.pdf
+$ pdfcpu stamp add -mode pdf -- "stamp.pdf:2:3" "" in.pdf out.pdf
 ```
 
 
