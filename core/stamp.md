@@ -82,7 +82,7 @@ $ pdfcpu stamp add -mode text "Page %p of %P" -- "sc:1.0 abs, pos:bc, rot:0" in.
 
 <br>
 
-Special note for pdf stamps:
+Special note for PDF stamps:
 
 If you want to use a specific page as your stamp,
 specify the page number after the stamp file and use ':' as separator:
@@ -91,7 +91,9 @@ specify the page number after the stamp file and use ':' as separator:
 $ pdfcpu stamp add -mode pdf -- "stamp.pdf:1" "" in.pdf out.pdf
 ```
 
-You can also apply a `multi-stamp`.
+<br>
+
+You can also apply a `multistamp`.
 This means you repeatedly apply stamp.pdf's pages to stamp pages of in.pdf in an orderly fashion.
 If in.pdf has more pages than stamp.pdf, the last page of stamp.pdf gets applied for the remaining pages.
 Omit the stamp page number for multi stamping:
@@ -99,6 +101,16 @@ Omit the stamp page number for multi stamping:
 ```
 $ pdfcpu stamp add -mode pdf -- "stamp.pdf" "" in.pdf out.pdf
 ```
+
+<br>
+You can also customize your multistamp.
+If you want to start multistamping at page 2 of your stamp file
+and page 3 of your input file you can do the following:
+
+```
+$ pdfcpu stamp add -mode pdf:2:3 -- "stamp.pdf" "" in.pdf out.pdf
+```
+
 
 <br>
 
