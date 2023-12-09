@@ -85,6 +85,9 @@ optimizeDuplicateContentStreams: false
 
 # merge creates bookmarks
 createBookmarks: true
+
+# Viewer is expected to supply appearance streams for form fields.
+needAppearances: false
 ```
 
 <br>
