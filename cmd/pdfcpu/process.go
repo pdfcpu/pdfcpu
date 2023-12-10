@@ -132,6 +132,9 @@ func printVersion(conf *model.Configuration) {
 			for _, setting := range info.Settings {
 				if setting.Key == "vcs.revision" {
 					commit = setting.Value
+					if len(commit) >= 8 {
+						commit = commit[:8]
+					}
 				}
 				if setting.Key == "vcs.time" {
 					date = setting.Value
@@ -140,7 +143,7 @@ func printVersion(conf *model.Configuration) {
 		}
 	}
 
-	fmt.Fprintf(os.Stdout, "commit: %s (%s)\n", commit[:8], date)
+	fmt.Fprintf(os.Stdout, "commit: %s (%s)\n", commit, date)
 	fmt.Fprintf(os.Stdout, "base  : %s\n", runtime.Version())
 	fmt.Fprintf(os.Stdout, "config: %s\n", conf.Path)
 }
