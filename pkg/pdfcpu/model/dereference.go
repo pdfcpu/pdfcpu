@@ -377,7 +377,7 @@ func (xRefTable *XRefTable) DereferenceStringEntryBytes(d types.Dict, key string
 
 	switch o := o.(type) {
 	case types.StringLiteral:
-		bb, err := types.Unescape(o.Value(), false)
+		bb, err := types.Unescape(o.Value())
 		if err != nil {
 			return nil, err
 		}

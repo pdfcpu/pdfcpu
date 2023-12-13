@@ -1563,7 +1563,7 @@ func (xRefTable *XRefTable) IDFirstElement() (id []byte, err error) {
 		return nil, errors.New("pdfcpu: ID must contain hex literals or string literals")
 	}
 
-	bb, err := types.Unescape(sl.Value(), false)
+	bb, err := types.Unescape(sl.Value())
 	if err != nil {
 		return nil, err
 	}

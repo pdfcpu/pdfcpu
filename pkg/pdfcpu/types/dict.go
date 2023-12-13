@@ -561,7 +561,7 @@ func (d Dict) StringEntryBytes(key string) ([]byte, error) {
 
 	s := d.StringLiteralEntry(key)
 	if s != nil {
-		bb, err := Unescape(s.Value(), false)
+		bb, err := Unescape(s.Value())
 		if err != nil {
 			return nil, err
 		}

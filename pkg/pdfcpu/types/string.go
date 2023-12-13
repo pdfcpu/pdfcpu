@@ -107,10 +107,7 @@ func regularChar(c byte, esc bool) bool {
 }
 
 // Unescape resolves all escape sequences of s.
-func Unescape(s string, enc bool) ([]byte, error) {
-
-	// TODO remove "enc" parameter.
-
+func Unescape(s string) ([]byte, error) {
 	var esc bool
 	var longEol bool
 	var octalCode string
@@ -127,6 +124,21 @@ func Unescape(s string, enc bool) ([]byte, error) {
 			if c == 0x0A {
 				continue
 			}
+		}
+
+		if len(octalCode) > 0 {
+			if strings.ContainsRune("01234567", rune(c)) {
+				octalCode = octalCode + string(c)
+				if len(octalCode) == 3 {
+					b.WriteByte(ByteForOctalString(octalCode))
+					octalCode = ""
+					esc = false
+				}
+				continue
+			}
+			b.WriteByte(ByteForOctalString(octalCode))
+			octalCode = ""
+			esc = false
 		}
 
 		if regularChar(c, esc) {
@@ -148,19 +160,6 @@ func Unescape(s string, enc bool) ([]byte, error) {
 		}
 
 		// escaped = true && any other than \
-
-		if len(octalCode) > 0 {
-			if !strings.ContainsRune("01234567", rune(c)) {
-				return nil, errors.Errorf("Unescape: illegal octal sequence detected %X", octalCode)
-			}
-			octalCode = octalCode + string(c)
-			if len(octalCode) == 3 {
-				b.WriteByte(ByteForOctalString(octalCode))
-				octalCode = ""
-				esc = false
-			}
-			continue
-		}
 
 		// Ignore \eol line breaks.
 		if c == 0x0A {
@@ -187,6 +186,10 @@ func Unescape(s string, enc bool) ([]byte, error) {
 
 		b.WriteByte(c)
 		esc = false
+	}
+
+	if len(octalCode) > 0 {
+		b.WriteByte(ByteForOctalString(octalCode))
 	}
 
 	return b.Bytes(), nil

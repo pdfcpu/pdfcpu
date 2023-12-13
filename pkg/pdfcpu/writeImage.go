@@ -127,7 +127,7 @@ func colorLookupTable(xRefTable *model.XRefTable, o types.Object) ([]byte, error
 	switch o := o.(type) {
 
 	case types.StringLiteral:
-		return types.Unescape(o.Value(), false)
+		return types.Unescape(o.Value())
 
 	case types.HexLiteral:
 		return o.Bytes()

@@ -127,7 +127,7 @@ func EscapeUTF16String(s string) (*string, error) {
 
 // StringLiteralToString returns the best possible string rep for a string literal.
 func StringLiteralToString(sl StringLiteral) (string, error) {
-	bb, err := Unescape(sl.Value(), false)
+	bb, err := Unescape(sl.Value())
 	if err != nil {
 		return "", err
 	}
