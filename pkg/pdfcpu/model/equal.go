@@ -21,8 +21,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
+
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 // EqualObjects returns true if two objects are equal in the context of given xrefTable.
@@ -141,7 +142,7 @@ func equalFontNames(v1, v2 types.Object, xRefTable *XRefTable) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	bf2 := v2.(types.Name)
+	bf2, ok := v2.(types.Name)
 	if !ok {
 		return false, errors.Errorf("equalFontNames: type cast problem")
 	}
