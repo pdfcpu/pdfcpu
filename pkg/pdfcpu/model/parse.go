@@ -22,9 +22,10 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/pkg/errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 var (
@@ -1063,7 +1064,7 @@ func ParseXRefStreamDict(sd *types.StreamDict) (*types.XRefStreamDict, error) {
 			log.Parse.Println("ParseXRefStreamDict: using index dict")
 		}
 
-		if len(indArr)%2 > 1 {
+		if len(indArr)%2 != 0 {
 			return nil, errXrefStreamCorruptIndex
 		}
 
