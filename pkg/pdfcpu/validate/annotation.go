@@ -1393,27 +1393,90 @@ func validateBorderArray(xRefTable *model.XRefTable, a types.Array) bool {
 	if len(a) == 0 {
 		return true
 	}
-	if len(a) == 1 || len(a) == 2 || len(a) > 4 {
-		return false
-	}
-	if len(a) == 3 {
-		_, err := validateNumberArray(xRefTable, a)
-		return err == nil
+
+	if xRefTable.Version() == model.V10 {
+		return len(a) == 3
 	}
 
-	// len = 4
-
-	o := a[3]
-	a1, ok := o.(types.Array)
-	if !ok {
-		return xRefTable.ValidationMode == model.ValidationRelaxed
-	}
-	if len(a1) != 2 {
+	if !(len(a) == 3 || len(a) == 4) {
 		return false
 	}
 
-	_, err := validateNumberArray(xRefTable, a1)
-	return err == nil
+	for i := 0; i < len(a); i++ {
+
+		if i == 3 {
+			// validate dash pattern array
+			// len must be 0,1,2,3 numbers (dont'allow only 0s)
+			a1, ok := a[i].(types.Array)
+			if !ok {
+				return xRefTable.ValidationMode == model.ValidationRelaxed
+			}
+
+			if len(a1) == 0 {
+				return true
+			}
+
+			if len(a1) > 3 {
+				return false
+			}
+
+			all0 := true
+			for j := 0; j < len(a1); j++ {
+				o, err := xRefTable.Dereference(a1[j])
+				if err != nil || o == nil {
+					return false
+				}
+
+				var f float64
+
+				switch o := o.(type) {
+				case types.Integer:
+					f = float64(o.Value())
+				case types.Float:
+					f = o.Value()
+				default:
+					return false
+				}
+
+				if f < 0 {
+					return false
+				}
+
+				if f != 0 {
+					all0 = false
+					break
+				}
+
+			}
+			if all0 {
+				return false
+			}
+
+			continue
+		}
+
+		o, err := xRefTable.Dereference(a[i])
+		if err != nil || o == nil {
+			return false
+		}
+
+		var f float64
+
+		switch o := o.(type) {
+		case types.Integer:
+			f = float64(o.Value())
+		case types.Float:
+			f = o.Value()
+		default:
+			return false
+		}
+
+		if f < 0 {
+			return false
+		}
+	}
+
+	return true
 }
 
 func validateAnnotationDictGeneralPart1(xRefTable *model.XRefTable, d types.Dict, dictName string) (*types.Name, error) {
@@ -1482,21 +1545,24 @@ func validateAnnotationDictGeneralPart2(xRefTable *model.XRefTable, d types.Dict
 	}
 
 	// Border, optional, array of numbers
-	a, err := validateArrayEntry(xRefTable, d, dictName, "Border", OPTIONAL, model.V10, nil)
-	if err != nil {
-		return err
-	}
-	if !validateBorderArray(xRefTable, a) {
-		return errors.Errorf("invalid border array: %s", a)
+	obj, found := d.Find("BS")
+	if !found || obj == nil || xRefTable.Version() < model.V12 {
+		a, err := validateArrayEntry(xRefTable, d, dictName, "Border", OPTIONAL, model.V10, nil)
+		if err != nil {
+			return err
+		}
+		if !validateBorderArray(xRefTable, a) {
+			return errors.Errorf("invalid border array: %s", a)
+		}
 	}
 
 	// C, optional array, of numbers, since V1.1
-	if _, err = validateNumberArrayEntry(xRefTable, d, dictName, "C", OPTIONAL, model.V11, nil); err != nil {
+	if _, err := validateNumberArrayEntry(xRefTable, d, dictName, "C", OPTIONAL, model.V11, nil); err != nil {
 		return err
 	}
 
 	// StructParent, optional, integer, since V1.3
-	if _, err = validateIntegerEntry(xRefTable, d, dictName, "StructParent", OPTIONAL, model.V13, nil); err != nil {
+	if _, err := validateIntegerEntry(xRefTable, d, dictName, "StructParent", OPTIONAL, model.V13, nil); err != nil {
 		return err
 	}
 
