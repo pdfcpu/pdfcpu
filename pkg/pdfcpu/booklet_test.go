@@ -198,7 +198,7 @@ var bookletTestCases = []pageOrderResults{
 func TestBookletPageOrder(t *testing.T) {
 	for _, test := range bookletTestCases {
 		t.Run(test.id, func(t *testing.T) {
-			nup, err := PDFBookletConfig(test.nup, fmt.Sprintf("papersize:%s, btype:%s, binding: %s", test.papersize, test.bookletType, test.binding))
+			nup, err := PDFBookletConfig(test.nup, fmt.Sprintf("papersize:%s, btype:%s, binding: %s", test.papersize, test.bookletType, test.binding), nil)
 			if err != nil {
 				t.Fatal(err)
 			}
