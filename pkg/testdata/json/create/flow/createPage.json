@@ -1,0 +1,86 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"debug": true,
+	"contentBox": false,
+	"guides": false,
+	"fonts": {
+		"myCourier": {
+			"name": "Courier",
+			"size": 12
+		},
+		"label": {
+			"name": "Helvetica",
+			"size": 12
+		},
+		"userFont": {
+			"name": "Roboto-Regular",
+			"lang": "el",
+			"script": "Grek",
+			"size": 12
+		},
+		"cjkUserFont": {
+			"name": "UnifontMedium",
+			"lang": "zh",
+			"script": "HanS",
+			"size": 12
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"pages": {
+		"1": {
+			"bgcol": "LightGray",
+			"content": {
+				"text": [
+					{
+						"hide": false,
+						"value": "Textbox using Corefont Courier",
+						"pos": [
+							1,
+							690
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"hide": false,
+						"value": "Textbox using Corefont Helvetica",
+						"pos": [
+							1,
+							640
+						],
+						"font": {
+							"name": "$label"
+						}
+					},
+					{
+						"hide": false,
+						"value": "Textbox using Userfont Robotic",
+						"pos": [
+							1,
+							590
+						],
+						"font": {
+							"name": "$userFont"
+						}
+					},
+					{
+						"hide": false,
+						"value": "Textbox using cjk Userfont Unifont ",
+						"pos": [
+							1,
+							540
+						],
+						"font": {
+							"name": "$cjkUserFont"
+						}
+					}
+				]
+			}
+		}
+	}
+}

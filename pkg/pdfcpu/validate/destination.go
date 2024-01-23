@@ -17,24 +17,29 @@ limitations under the License.
 package validate
 
 import (
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
-func validateDestinationArrayFirstElement(xRefTable *pdf.XRefTable, a pdf.Array) (pdf.Object, error) {
+func validateDestinationArrayFirstElement(xRefTable *model.XRefTable, a types.Array) (types.Object, error) {
 
 	o, err := xRefTable.Dereference(a[0])
 	if err != nil || o == nil {
 		return nil, err
 	}
 
+	if o == nil {
+		return nil, errors.Errorf("destination array invalid: %s", a)
+	}
+
 	switch o := o.(type) {
 
-	case pdf.Integer, pdf.Name: // no further processing
+	case types.Integer, types.Name: // no further processing
 
-	case pdf.Dict:
-		if o.Type() == nil || (*o.Type() != "Page" && *o.Type() != "Pages") {
-			err = errors.New("pdfcpu: validateDestinationArrayFirstElement: first element refers to invalid destination page dict" + *o.Type())
+	case types.Dict:
+		if o.Type() == nil || (o.Type() != nil && (*o.Type() != "Page" && *o.Type() != "Pages")) {
+			err = errors.Errorf("pdfcpu: validateDestinationArrayFirstElement: first element must be a pageDict indRef or an integer: %v (%T)", o, o)
 		}
 
 	default:
@@ -44,12 +49,12 @@ func validateDestinationArrayFirstElement(xRefTable *pdf.XRefTable, a pdf.Array)
 	return o, err
 }
 
-func validateDestinationArrayLength(a pdf.Array) bool {
+func validateDestinationArrayLength(a types.Array) bool {
 	l := len(a)
 	return l == 2 || l == 3 || l == 5 || l == 6 || l == 4 // 4 = hack! see below
 }
 
-func validateDestinationArray(xRefTable *pdf.XRefTable, a pdf.Array) error {
+func validateDestinationArray(xRefTable *model.XRefTable, a types.Array) error {
 
 	// Validate first element: indRef of page dict or pageNumber(int) of remote doc for remote Go-to Action or nil.
 
@@ -71,7 +76,7 @@ func validateDestinationArray(xRefTable *pdf.XRefTable, a pdf.Array) error {
 
 	// Validate rest of array elements.
 
-	name, ok := a[i].(pdf.Name)
+	name, ok := a[i].(types.Name)
 	if !ok {
 		return errors.Errorf("pdfcpu: validateDestinationArray: second element must be a name %v (%d)", a[i], i)
 	}
@@ -81,10 +86,10 @@ func validateDestinationArray(xRefTable *pdf.XRefTable, a pdf.Array) error {
 	switch len(a) {
 
 	case 2:
-		if xRefTable.ValidationMode == pdf.ValidationRelaxed {
-			nameErr = !pdf.MemberOf(name.Value(), []string{"Fit", "FitB", "FitH"})
+		if xRefTable.ValidationMode == model.ValidationRelaxed {
+			nameErr = !types.MemberOf(name.Value(), []string{"Fit", "FitB", "FitH"})
 		} else {
-			nameErr = !pdf.MemberOf(name.Value(), []string{"Fit", "FitB"})
+			nameErr = !types.MemberOf(name.Value(), []string{"Fit", "FitB"})
 		}
 
 	case 3:
@@ -113,10 +118,10 @@ func validateDestinationArray(xRefTable *pdf.XRefTable, a pdf.Array) error {
 	return nil
 }
 
-func validateDestinationDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
+func validateDestinationDict(xRefTable *model.XRefTable, d types.Dict) error {
 
 	// D, required, array
-	a, err := validateArrayEntry(xRefTable, d, "DestinationDict", "D", REQUIRED, pdf.V10, nil)
+	a, err := validateArrayEntry(xRefTable, d, "DestinationDict", "D", REQUIRED, model.V10, nil)
 	if err != nil || a == nil {
 		return err
 	}
@@ -124,28 +129,31 @@ func validateDestinationDict(xRefTable *pdf.XRefTable, d pdf.Dict) error {
 	return validateDestinationArray(xRefTable, a)
 }
 
-func validateDestination(xRefTable *pdf.XRefTable, o pdf.Object) error {
+func validateDestination(xRefTable *model.XRefTable, o types.Object, forAction bool) (string, error) {
 
 	o, err := xRefTable.Dereference(o)
 	if err != nil || o == nil {
-		return err
+		return "", err
 	}
 
 	switch o := o.(type) {
 
-	case pdf.Name:
-		// no further processing.
+	case types.Name:
+		return o.Value(), nil
 
-	case pdf.StringLiteral:
-		// no further processing.
+	case types.StringLiteral:
+		return types.StringLiteralToString(o)
 
-	case pdf.HexLiteral:
-		// no further processing.
+	case types.HexLiteral:
+		return types.HexLiteralToString(o)
 
-	case pdf.Dict:
+	case types.Dict:
+		if forAction {
+			return "", errors.New("pdfcpu: validateDestination: unsupported PDF object")
+		}
 		err = validateDestinationDict(xRefTable, o)
 
-	case pdf.Array:
+	case types.Array:
 		err = validateDestinationArray(xRefTable, o)
 
 	default:
@@ -153,10 +161,10 @@ func validateDestination(xRefTable *pdf.XRefTable, o pdf.Object) error {
 
 	}
 
-	return err
+	return "", err
 }
 
-func validateDestinationEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName string, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateActionDestinationEntry(xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) error {
 
 	// see 12.3.2
 
@@ -165,5 +173,15 @@ func validateDestinationEntry(xRefTable *pdf.XRefTable, d pdf.Dict, dictName str
 		return err
 	}
 
-	return validateDestination(xRefTable, o)
+	name, err := validateDestination(xRefTable, o, true)
+	if err != nil {
+		return err
+	}
+
+	if len(name) > 0 && xRefTable.IsMerging() {
+		nm := xRefTable.NameRef("Dests")
+		nm.Add(name, d)
+	}
+
+	return nil
 }

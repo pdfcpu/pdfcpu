@@ -1,0 +1,690 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": true,
+	"debug": false,
+	"guides": false,
+	"colors": {
+		"DarkOrange": "#FF8C00",
+		"DarkSeaGreen": "#8FBC8F"
+	},
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"fonts": {
+		"myCourier": {
+			"name": "Courier",
+			"size": 12
+		},
+		"input": {
+			"name": "Courier",
+			"size": 12,
+			"col": "#222222"
+		},
+		"label": {
+			"name": "Courier",
+			"size": 12,
+			"col": "Gray"
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"header": {
+		"font": {
+			"name": "Courier-Bold",
+			"size": 24,
+			"col": "#C00000"
+		},
+		"left": "$logo1",
+		"center": "TextFields",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "$myCourier",
+			"size": 9
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Optimized for A.Reader\nPage %p of %P",
+		"right": "Source:\ntestdata/json/form/textfield.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"pages": {
+		"1": {
+			"bgcol": "LightGray",
+			"content": {
+				"textfield": [
+					{
+						"hide": false,
+						"id": "llfirstName",
+						"tip": "first name",
+						"value": "Jackie",
+						"pos": [
+							180,
+							670
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "$DarkOrange",
+						"label": {
+							"value": "First Name:",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "lllastName",
+						"tip": "last name",
+						"value": "Doe",
+						"pos": [
+							180,
+							650
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "$DarkOrange",
+						"label": {
+							"value": "Last Name:",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "lrfirstName",
+						"tip": "first name",
+						"value": "",
+						"pos": [
+							180,
+							620
+						],
+						"width": -1,
+						"align": "left",
+						"bgCol": "$DarkSeaGreen",
+						"label": {
+							"value": "First Name:",
+							"width": 100,
+							"gap": 10,
+							"align": "right",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "lrlastName",
+						"tip": "last name",
+						"value": "",
+						"pos": [
+							180,
+							600
+						],
+						"width": -1,
+						"align": "left",
+						"bgCol": "$DarkSeaGreen",
+						"label": {
+							"value": "Last Name:",
+							"width": 100,
+							"gap": 10,
+							"align": "right",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "rlfirstName",
+						"tip": "first name",
+						"value": "Jackie",
+						"pos": [
+							180,
+							515
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "$DarkOrange",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "rllastName",
+						"tip": "last name",
+						"value": "Doe",
+						"pos": [
+							180,
+							495
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "$DarkOrange",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "rrfirstName",
+						"tip": "first name",
+						"pos": [
+							0,
+							465
+						],
+						"width": 280,
+						"align": "right",
+						"bgCol": "$DarkSeaGreen",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 10,
+							"align": "right",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "rrlastName",
+						"tip": "last name",
+						"pos": [
+							0,
+							445
+						],
+						"width": 280,
+						"align": "right",
+						"bgCol": "$DarkSeaGreen",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 10,
+							"align": "right",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "tllfirstName",
+						"tip": "first name",
+						"value": "Jackie",
+						"pos": [
+							10,
+							345	
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 0,
+							"align": "left",
+							"pos": "top"
+						}
+					},
+					{
+						"hide": false,
+						"id": "tlllastName",
+						"tip": "last name",
+						"value": "Doe",
+						"pos": [
+							10,
+							305
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 0,
+							"align": "left",
+							"pos": "top"
+						}
+					},
+					{
+						"hide": false,
+						"id": "tlrfirstName",
+						"tip": "first name",
+						"value": "Jackie",
+						"pos": [
+							150,
+							345
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 0,
+							"align": "right",
+							"pos": "top"
+						}
+					},
+					{
+						"hide": false,
+						"id": "tlrlastName",
+						"tip": "last name",
+						"value": "Doe",
+						"pos": [
+							150,
+							305
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 0,
+							"align": "right",
+							"pos": "top"
+						}
+					},
+					{
+						"hide": false,
+						"id": "trlfirstName",
+						"tip": "first name",
+						"value": "Jackie",
+						"pos": [
+							310,
+							345
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 0,
+							"align": "left",
+							"pos": "top"
+						}
+					},
+					{
+						"hide": false,
+						"id": "trllastName",
+						"tip": "last name",
+						"value": "Doe",
+						"pos": [
+							310,
+							305
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 0,
+							"align": "left",
+							"pos": "top"
+						}
+					},
+					{
+						"hide": false,
+						"id": "trrfirstName",
+						"tip": "first name",
+						"value": "Jackie",
+						"pos": [
+							450,
+							345
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 0,
+							"align": "right",
+							"pos": "top"
+						}
+					},
+					{
+						"hide": false,
+						"id": "trrlastName",
+						"tip": "last name",
+						"value": "Doe",
+						"pos": [
+							450,
+							305
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 0,
+							"align": "right",
+							"pos": "top"
+						}
+					},
+					{
+						"hide": false,
+						"id": "tccfirstName",
+						"tip": "first name",
+						"value": "Jackie",
+						"pos": [
+							10,
+							260
+						],
+						"width": 100,
+						"align": "center",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 0,
+							"align": "center",
+							"pos": "top"
+						}
+					},
+					{
+						"hide": false,
+						"id": "tcclastName",
+						"tip": "last name",
+						"value": "Doe",
+						"pos": [
+							10,
+							220
+						],
+						"width": 100,
+						"align": "center",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 0,
+							"align": "center",
+							"pos": "top"
+						}
+					},
+					{
+						"hide": false,
+						"id": "bllfirstName",
+						"tip": "first name",
+						"value": "Jackie",
+						"pos": [
+							10,
+							150
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 0,
+							"align": "left",
+							"pos": "bottom"
+						}
+					},
+					{
+						"hide": false,
+						"id": "blllastName",
+						"tip": "last name",
+						"value": "Doe",
+						"pos": [
+							10,
+							110
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 0,
+							"align": "left",
+							"pos": "bottom"
+						}
+					},
+					{
+						"hide": false,
+						"id": "blrfirstName",
+						"tip": "first name",
+						"value": "Jackie",
+						"pos": [
+							150,
+							150
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 0,
+							"align": "right",
+							"pos": "bottom"
+						}
+					},
+					{
+						"hide": false,
+						"id": "blrlastName",
+						"tip": "last name",
+						"value": "Doe",
+						"pos": [
+							150,
+							110
+						],
+						"width": 100,
+						"align": "left",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 0,
+							"align": "right",
+							"pos": "bottom"
+						}
+					},
+					{
+						"hide": false,
+						"id": "brlfirstName",
+						"tip": "first name",
+						"value": "Jackie",
+						"pos": [
+							310,
+							150
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 0,
+							"align": "left",
+							"pos": "bottom"
+						}
+					},
+					{
+						"hide": false,
+						"id": "brllastName",
+						"tip": "last name",
+						"value": "Doe",
+						"pos": [
+							310,
+							110
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 0,
+							"align": "left",
+							"pos": "bottom"
+						}
+					},
+					{
+						"hide": false,
+						"id": "brrfirstName",
+						"tip": "first name",
+						"value": "Jackie",
+						"pos": [
+							450,
+							150
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 0,
+							"align": "right",
+							"pos": "bottom"
+						}
+					},
+					{
+						"hide": false,
+						"id": "brrlastName",
+						"tip": "last name",
+						"value": "Doe",
+						"pos": [
+							450,
+							110
+						],
+						"width": 100,
+						"align": "right",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 0,
+							"align": "right",
+							"pos": "bottom"
+						}
+					},
+					{
+						"hide": false,
+						"id": "bccfirstName",
+						"tip": "first name",
+						"value": "Jackie",
+						"pos": [
+							10,
+							70
+						],
+						"width": 100,
+						"align": "center",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "First Name",
+							"width": 100,
+							"gap": 0,
+							"align": "center",
+							"pos": "bottom"
+						}
+					},
+					{
+						"hide": false,
+						"id": "bcclastName",
+						"tip": "last name",
+						"value": "Doe",
+						"pos": [
+							0,
+							30
+						],
+						"width": -1,
+						"align": "center",
+						"bgCol": "#beded9",
+						"label": {
+							"value": "Last Name",
+							"width": 100,
+							"gap": 0,
+							"align": "center",
+							"pos": "bottom"
+						}
+					}
+				],
+				"text": [
+					{
+						"value": "Textfields with left label:",
+						"pos": [
+							0,
+							700
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Textfields with right label:",
+						"pos": [
+							0,
+							545
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Textfields with top label:",
+						"pos": [
+							0,
+							390
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Textfields with bottom label:",
+						"pos": [
+							0,
+							180
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					}
+				]
+			}
+		}
+	}
+}

@@ -1,0 +1,62 @@
+{
+	"header": {
+		"source": "bookmarkTree.pdf",
+		"version": "pdfcpu v0.5.0 dev",
+		"creation": "2023-08-19 10:12:08 CEST",
+		"title": "The Center of Why?\"",
+		"author": "Alan Kay",
+		"creator": "Acrobat PDFMaker 5.0 for Word",
+		"producer": "pdfcpu v0.5.0 dev",
+		"subject": "2004 Kyoto Prize Commorative Lecture"
+	},
+	"bookmarks": [
+		{
+			"title": "Page 1: Level 1",
+			"page": 1,
+			"color": {
+				"R": 0,
+				"G": 1,
+				"B": 0
+			},
+			"kids": [
+				{
+					"title": "Page 2: Level 1.1",
+					"page": 2
+				},
+				{
+					"title": "Page 3: Level 1.2",
+					"page": 3,
+					"kids": [
+						{
+							"title": "Page 4: Level 1.2.1",
+							"page": 4
+						}
+					]
+				}
+			]
+		},
+		{
+			"title": "Page 5: Level 2",
+			"page": 5,
+			"color": {
+				"R": 0,
+				"G": 0,
+				"B": 1
+			},
+			"kids": [
+				{
+					"title": "Page 6: Level 2.1",
+					"page": 6
+				},
+				{
+					"title": "Page 7: Level 2.2",
+					"page": 7
+				},
+				{
+					"title": "Page 8: Level 2.3",
+					"page": 8
+				}
+			]
+		}
+	]
+}

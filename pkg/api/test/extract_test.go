@@ -19,12 +19,14 @@ package test
 import (
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 func TestExtractImages(t *testing.T) {
@@ -41,6 +43,94 @@ func TestExtractImages(t *testing.T) {
 	inFile := filepath.Join(inDir, "testImage.pdf")
 	if err := api.ExtractImagesFile(inFile, outDir, []string{"1-"}, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
+	}
+}
+
+func compare(t *testing.T, fn1, fn2 string) {
+
+	f1, err := os.Open(fn1)
+	if err != nil {
+		t.Errorf("%s: %v", fn1, err)
+		return
+	}
+	defer f1.Close()
+
+	bb1, err := io.ReadAll(f1)
+	if err != nil {
+		t.Errorf("%s: %v", fn1, err)
+		return
+	}
+
+	f2, err := os.Open(fn2)
+	if err != nil {
+		t.Errorf("%s: %v", fn2, err)
+		return
+	}
+	defer f1.Close()
+
+	bb2, err := io.ReadAll(f2)
+	if err != nil {
+		t.Errorf("%s: %v", fn2, err)
+		return
+	}
+
+	if len(bb1) != len(bb2) {
+		t.Errorf("%s <-> %s: length mismatch %d != %d", fn1, fn2, len(bb1), len(bb2))
+		return
+	}
+
+	for i := 0; i < len(bb1); i++ {
+		if bb1[i] != bb2[i] {
+			t.Errorf("%s <-> %s: mismatch at %d, 0x%02x != 0x%02x\n", fn1, fn2, i, bb1[i], bb2[i])
+			return
+		}
+	}
+
+}
+
+func TestExtractImagesSoftMasks(t *testing.T) {
+	inFile := filepath.Join(inDir, "VectorApple.pdf")
+	ctx, err := api.ReadContextFile(inFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	images := make(map[int]*types.StreamDict)
+	for objId, obj := range ctx.XRefTable.Table {
+		if obj != nil {
+			if dict, ok := obj.Object.(types.StreamDict); ok {
+				if subtype := dict.Dict.NameEntry("Subtype"); subtype != nil && *subtype == "Image" {
+					images[objId] = &dict
+				}
+			}
+		}
+	}
+
+	expected := map[int]string{
+		36:  "VectorApple_36.tif",  // IndexedCMYK w/ softmask
+		245: "VectorApple_245.tif", // DeviceCMYK w/ softmask
+	}
+
+	for objId, filename := range expected {
+		sd := images[objId]
+
+		if err := sd.Decode(); err != nil {
+			t.Fatal(err)
+		}
+
+		tmpFileName := filepath.Join(outDir, filename)
+		fmt.Printf("tmpFileName: %s\n", tmpFileName)
+
+		// Write the image object (as TIFF file) to disk.
+		// fn1 is the resulting fileName path including the suffix (aka filetype extension).
+		fn1, err := pdfcpu.WriteImage(ctx.XRefTable, tmpFileName, sd, false, objId)
+		if err != nil {
+			t.Fatalf("err: %v\n", err)
+		}
+
+		fn2 := filepath.Join(resDir, filename)
+
+		compare(t, fn1, fn2)
 	}
 }
 
@@ -62,7 +152,7 @@ func TestExtractImagesLowLevel(t *testing.T) {
 
 	// Extract images for page 1.
 	i := 1
-	ii, err := ctx.ExtractPageImages(i, false)
+	ii, err := pdfcpu.ExtractPageImages(ctx, i, false)
 	if err != nil {
 		t.Fatalf("%s extractPageFonts(%d): %v\n", msg, i, err)
 	}
@@ -111,7 +201,7 @@ func TestExtractFontsLowLevel(t *testing.T) {
 
 	// Extract fonts for page 1.
 	i := 1
-	ff, err := ctx.ExtractPageFonts(i)
+	ff, err := pdfcpu.ExtractPageFonts(ctx, i)
 	if err != nil {
 		t.Fatalf("%s extractPageFonts(%d): %v\n", msg, i, err)
 	}
@@ -147,7 +237,7 @@ func TestExtractPagesLowLevel(t *testing.T) {
 
 	// Extract page 1.
 	i := 1
-	ctxNew, err := ctx.ExtractPage(i)
+	ctxNew, err := pdfcpu.ExtractPage(ctx, i)
 	if err != nil {
 		t.Fatalf("%s extractPage(%d): %v\n", msg, i, err)
 	}
@@ -181,7 +271,7 @@ func TestExtractContentLowLevel(t *testing.T) {
 
 	// Extract page content for page 2.
 	i := 2
-	r, err := ctx.ExtractPageContent(i)
+	r, err := pdfcpu.ExtractPageContent(ctx, i)
 	if err != nil {
 		t.Fatalf("%s extractPageContent(%d): %v\n", msg, i, err)
 	}
@@ -214,7 +304,7 @@ func TestExtractMetadataLowLevel(t *testing.T) {
 	}
 
 	// Extract all metadata.
-	mm, err := ctx.ExtractMetadata()
+	mm, err := pdfcpu.ExtractMetadata(ctx)
 	if err != nil {
 		t.Fatalf("%s ExtractMetadata: %v\n", msg, err)
 	}

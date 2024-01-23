@@ -23,6 +23,7 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 func testAddWatermarks(t *testing.T, msg, inFile, outFile string, selectedPages []string, mode, modeParam, desc string, onTop bool) {
@@ -32,7 +33,7 @@ func testAddWatermarks(t *testing.T, msg, inFile, outFile string, selectedPages 
 	if onTop {
 		s = "stamp"
 	}
-	outFile = filepath.Join("..", "..", "samples", s, mode, outFile)
+	outFile = filepath.Join(samplesDir, s, mode, outFile)
 
 	var err error
 	switch mode {
@@ -79,12 +80,20 @@ func TestAddWatermarks(t *testing.T) {
 			[]string{"1-"},
 			"text",
 			`A simple text watermark using defaults:
-			Unique abbreviations also work:
-			"fo:Helvetica, poi:24, align:c,
-			pos:c, off:0 0, sc:0.5 rel, d:1,
-			op:1, mode:0, fillc: 0.5 0.5 0.5,
-			strokec: #808080"`,
+				Unique abbreviations also work:
+				"fo:Helvetica, poi:24, align:c,
+				pos:c, off:0 0, sc:0.5 rel, d:1,
+				op:1, mode:0, fillc: 0.5 0.5 0.5,
+				strokec: #808080"`,
 			""},
+
+		{"TestWatermarkText",
+			"Walden.pdf",
+			"TextAlongLeftBorder.pdf",
+			[]string{"1-"},
+			"text",
+			"Welcome to pdfcpu",
+			"pos:l, off:0 0, rot:-90"},
 
 		{"TestWatermarkText",
 			"Walden.pdf",
@@ -384,20 +393,52 @@ func TestAddWatermarks(t *testing.T) {
 		// and rotate along the 2nd diagonal running from upper left to lower right corner.
 		{"TestWatermarkPDF",
 			"Walden.pdf",
-			"PdfDiagonale2Single.pdf",
+			"PdfSingleStampDefault.pdf",
 			nil,
 			"pdf",
 			filepath.Join(inDir, "Walden.pdf:1"),
 			"d:2"},
 
-		// Add a PDF multistamp to all pages of inFile
-		// and rotate along the 2nd diagonal running from upper left to lower right corner.
+		// Add a PDF multistamp in the top right corner to all pages of inFile.
 		{"TestWatermarkPDF",
 			"Walden.pdf",
-			"PdfDefaultsMulti.pdf",
+			"PdfMultistampDefault.pdf",
 			nil,
 			"pdf",
 			filepath.Join(inDir, "Walden.pdf"),
+			"sc:.2, pos:tr, off:-10 -10, rot:0"},
+
+		// Add a PDF multistamp to all pages of inFile.
+		// Start by stamping page 3 with page 1.
+		// You may filter stamping by defining selected Pages.
+		{"TestWatermarkPDF",
+			"zineTest.pdf",
+			"PdfMultistamp13.pdf",
+			nil,
+			"pdf",
+			filepath.Join(inDir, "zineTest.pdf:1:3"),
+			"sc:.2, pos:tr, off:-10 -10, rot:0"},
+
+		// Add a PDF multistamp to all pages of inFile.
+		// Start by stamping page 1 with page 3.
+		// You may filter stamping by defining selected Pages.
+		{"TestWatermarkPDF",
+			"zineTest.pdf",
+			"PdfMultistamp31.pdf",
+			nil,
+			"pdf",
+			filepath.Join(inDir, "zineTest.pdf:3:1"),
+			"sc:.2, pos:tr, off:-10 -10, rot:0"},
+
+		// Add a PDF multistamp to all pages of inFile.
+		// Start by stamping page 3 with page 3.
+		// You may filter stamping by defining selected Pages.
+		{"TestWatermarkPDF",
+			"zineTest.pdf",
+			"PdfMultistamp33.pdf",
+			nil,
+			"pdf",
+			filepath.Join(inDir, "zineTest.pdf:3:3"),
 			"sc:.2, pos:tr, off:-10 -10, rot:0"},
 	} {
 		testAddWatermarks(t, tt.msg, tt.inFile, tt.outFile, tt.selectedPages, tt.mode, tt.modeParm, tt.wmConf, false)
@@ -439,7 +480,7 @@ func TestAddStampWithLink(t *testing.T) {
 func TestCropBox(t *testing.T) {
 	msg := "TestCropBox"
 	inFile := filepath.Join(inDir, "empty.pdf")
-	outFile := filepath.Join("..", "..", "samples", "stamp", "pdf", "PdfWithCropBox.pdf")
+	outFile := filepath.Join(samplesDir, "stamp", "pdf", "PdfWithCropBox.pdf")
 	pdfFile := filepath.Join(inDir, "grid_example.pdf")
 
 	// Create a context.
@@ -449,11 +490,11 @@ func TestCropBox(t *testing.T) {
 	}
 
 	for _, pos := range []string{"tl", "tc", "tr", "l", "c", "r", "bl", "bc", "br"} {
-		wm, err := api.PDFWatermark(pdfFile+":1", fmt.Sprintf("sc:.25 rel, pos:%s, rot:0", pos), true, false, pdfcpu.POINTS)
+		wm, err := api.PDFWatermark(pdfFile+":1", fmt.Sprintf("sc:.25 rel, pos:%s, rot:0", pos), true, false, types.POINTS)
 		if err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
-		if err := ctx.AddWatermarks(nil, wm); err != nil {
+		if err := pdfcpu.AddWatermarks(ctx, nil, wm); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	}
@@ -488,7 +529,7 @@ func TestStampingLifecyle(t *testing.T) {
 		t.Fatalf("Watermarks found: %s\n", inFile)
 	}
 
-	unit := pdfcpu.POINTS
+	unit := types.POINTS
 
 	// Stamp all pages.
 	wm, err := api.TextWatermark("Demo", "", onTop, false, unit)
@@ -552,11 +593,11 @@ func TestStampingLifecyle(t *testing.T) {
 func TestRecycleWM(t *testing.T) {
 	msg := "TestRecycleWM"
 	inFile := filepath.Join(inDir, "test.pdf")
-	outFile := filepath.Join("..", "..", "samples", "watermark", "text", "TextRecycled.pdf")
+	outFile := filepath.Join(samplesDir, "watermark", "text", "TextRecycled.pdf")
 	onTop := false // we are testing watermarks
 
 	desc := "pos:tl, points:22, rot:0, scale:1 abs, off:0 -5, opacity:0.3"
-	wm, err := api.TextWatermark("This is a watermark", desc, onTop, false, pdfcpu.POINTS)
+	wm, err := api.TextWatermark("This is a watermark", desc, onTop, false, types.POINTS)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}

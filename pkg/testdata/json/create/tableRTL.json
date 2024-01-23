@@ -1,0 +1,183 @@
+{
+	"paper": "A4L",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": true,
+	"debug": false,
+	"guides": true,
+	"colors": {
+		"Beige": "#F5F5DC",
+		"DarkSalmon": "#E9967A"
+	},
+	"bgcol": "#BEDED9",
+	"timestamp": "Monday, 2.Jan 2006 15:04:05",
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"fonts": {
+		"unifont": {
+			"name": "UnifontMedium",
+			"size": 12
+		},
+		"myCourier": {
+			"name": "Courier",
+			"size": 12,
+			"col": "#00AA00"
+		}
+	},
+	"borders": {
+		"myBorder": {
+			"width": 5,
+			"//col": "#0000FF",
+			"//style": "bevel"
+		}
+	},
+	"margin": {
+		"width": 20
+	},
+	"header": {
+		"font": {
+			"name": "$unifont",
+			"size": 24,
+			"col": "#00AA00"
+		},
+		"left": "$logo1",
+		"center": "טבלת הדגמה",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 10,
+		"border": false,
+		"rtl": true
+	},
+	"footer": {
+		"font": {
+			"name": "$unifont",
+			"col": "Black"
+		},
+		"left": "pdfcpu: %v\n%t :נוצר",
+		"center": "%P שֶׁל %p עמוד",
+		"right": "מָקוֹר:\ntestdata/json/create/tables.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"pages": {
+		"1": {
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							-1,
+							-1
+						]
+					}
+				],
+				"table": [
+					{
+						"hide": false,
+						"header": {
+							"values": [
+								"כמות",
+								"מחיר",
+								"תיאור",
+								"כַּמוּת"
+							],
+							"colAnchors": [
+								"Center",
+								"Center",
+								"Center",
+								"Center"
+							],
+							"bgCol": "$DarkSalmon",
+							"font": {
+								"name": "$unifont",
+								"size": 15
+							}
+						},
+						"values": [
+							[
+								"₪115.00",
+								"₪115.00",
+								"עכבר",
+								"1"
+							],
+							[
+								"₪750,000.00",
+								"₪250,000.00",
+								"חַדקֶרֶן",
+								"3"
+							],
+							[
+								"",
+								")לֹא יְסוּלֵא בְּפָּז(",
+								"סְנָאִי הָעַרָבָה",
+								"1"
+							]
+						],
+						"rows": 5,
+						"cols": 4,
+						"width": 400,
+						"colWidths": [
+							25,
+							35,
+							30,
+							10
+						],
+						"colAnchors": [
+							"Right",
+							"Right",
+							"Right",
+							"Center"
+						],
+						"lheight": 30,
+						"grid": true,
+						"anchor": "center",
+						"dx": 0,
+						"dy": 0,
+						"bgCol": "$Beige",
+						"oddCol": "LightGray",
+						"evenCol": "Gray",
+						"font": {
+							"name": "$unifont",
+							"size": 12,
+							"col": "Black"
+						},
+						"rtl": true,
+						"margin": {
+							"width": 0
+						},
+						"border": {
+							"width": 0
+						},
+						"padding": {
+							"width": 5
+						},
+						"rot": 20
+					}
+				]
+			}
+		}
+	}
+}

@@ -1,0 +1,425 @@
+{
+	"paper": "A4L",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": true,
+	"debug": false,
+	"guides": true,
+	"bgcol": "#BEDED9",
+	"timestamp": "Monday, 2.Jan 2006 15:04:05",
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"fonts": {
+		"myCourier": {
+			"name": "Courier",
+			"size": 12,
+			"col": "#00AA00"
+		}
+	},
+	"borders": {
+		"myBorder": {
+			"width": 5,
+			"col": "#0000FF",
+			"style": "round"
+		}
+	},
+	"margins": {
+		"margin": {
+			"width": 5
+		},
+		"myMargin": {
+			"width": 10
+		}
+	},
+	"header": {
+		"font": {
+			"name": "Courier-Bold",
+			"size": 24,
+			"col": "#00AA00"
+		},
+		"left": "$logo1",
+		"center": "Anchored Textboxes",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 10,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "$myCourier",
+			"col": "Black"
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Page %p of %P",
+		"right": "Source:\ntestdata/json/create/textAnchored.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"pages": {
+		"1": {
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							-1,
+							-1
+						]
+					}
+				],
+				"fonts": {
+					"myCourier": {
+						"col": "#FFFF00"
+					}
+				},
+				"text": [
+					{
+						"value": "TopLeft",
+						"anchor": "topLeft",
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"margin": {
+							"name": "$myMargin"
+						}
+					},
+					{
+						"value": "TopCenter",
+						"anchor": "topCenter",
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"margin": {
+							"name": "$myMargin"
+						}
+					},
+					{
+						"value": "TopRight",
+						"anchor": "topRight",
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"margin": {
+							"name": "$myMargin"
+						}
+					},
+					{
+						"value": "Left",
+						"anchor": "left",
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"margin": {
+							"name": "$myMargin"
+						}
+					},
+					{
+						"value": "Center",
+						"anchor": "center",
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"margin": {
+							"name": "$myMargin"
+						}
+					},
+					{
+						"value": "Right",
+						"anchor": "right",
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"margin": {
+							"name": "$myMargin"
+						}
+					},
+					{
+						"value": "BottomLeft",
+						"anchor": "bottomleft",
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"margin": {
+							"name": "$myMargin"
+						}
+					},
+					{
+						"value": "BottomCenter",
+						"anchor": "bottomCenter",
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"margin": {
+							"name": "$myMargin"
+						}
+					},
+					{
+						"value": "BottomRight",
+						"anchor": "bottomRight",
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"margin": {
+							"name": "$myMargin"
+						}
+					}
+				]
+			}
+		},
+		"2": {
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							-1,
+							-1
+						]
+					}
+				],
+				"fonts": {
+					"myCourier": {
+						"col": "#FFFF44"
+					}
+				},
+				"text": [
+					{
+						"value": "TopLeft",
+						"anchor": "topLeft",
+						"dx": 10,
+						"dy": -10,
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"margin": {
+							"name": "$myMargin"
+						},
+						"padding": {
+							"top": 10,
+							"left":10
+						}
+					},
+					{
+						"value": "TopCenter",
+						"anchor": "topCenter",
+						"dy": -10,
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"margin": {
+							"name": "$myMargin"
+						},
+						"padding": {
+							"top": 10,
+							"left":10,
+							"right":10
+						}
+					},
+					{
+						"value": "TopRight",
+						"anchor": "topRight",
+						"dx": -10,
+						"dy": -10,
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"margin": {
+							"name": "$myMargin"
+						},
+						"padding": {
+							"top": 10,
+							"right":10
+						}
+					},
+					{
+						"value": "Left",
+						"anchor": "left",
+						"bgCol": "#032890",
+						"dx": 10,
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"margin": {
+							"name": "$myMargin"
+						},
+						"padding": {
+							"top":10,
+							"left":10,
+							"bottom":10
+						}
+					},
+					{
+						"value": "Center",
+						"anchor": "center",
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"margin": {
+							"name": "$myMargin"
+						},
+						"padding": {
+							"width":10
+						}
+					},
+					{
+						"value": "Right",
+						"anchor": "right",
+						"dx": -10,
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"margin": {
+							"name": "$myMargin"
+						},
+						"padding": {
+							"top":10,
+							"right":10,
+							"bottom":10
+						}
+					},
+					{
+						"value": "BottomLeft",
+						"anchor": "bottomleft",
+						"dx": 10,
+						"dy": 10,
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"margin": {
+							"name": "$myMargin"
+						},
+						"padding": {
+							"left":10,
+							"bottom": 10
+						}
+					},
+					{
+						"value": "BottomCenter",
+						"anchor": "bottomCenter",
+						"dy": 10,
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"margin": {
+							"name": "$myMargin"
+						},
+						"padding": {
+							"left":10,
+							"right":10,
+							"bottom": 10
+						}
+					},
+					{
+						"value": "BottomRight",
+						"anchor": "bottomRight",
+						"dx": -10,
+						"dy": 10,
+						"bgCol": "#032890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"margin": {
+							"name": "$myMargin"
+						},
+						"padding": {
+							"right":10,
+							"bottom": 10
+						}
+					}
+				]
+			}
+		}
+	}
+}

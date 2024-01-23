@@ -1,0 +1,143 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"debug": false,
+	"contentBox": false,
+	"guides": false,
+	"colors": {
+		"DarkOrange": "#FF8C00"
+	},
+	"fonts": {
+		"myCourier": {
+			"name": "Courier",
+			"size": 12,
+			"col": "#DF0000"
+		},
+		"label": {
+			"name": "Helvetica",
+			"size": 12,
+			"col": "#007000"
+		},
+		"userFont": {
+			"name": "Roboto-Regular",
+			"lang": "el",
+			"script": "Grek",
+			"size": 12,
+			"col": "#000070"
+		},
+		"cjkUserFont": {
+			"name": "UnifontMedium",
+			"lang": "zh",
+			"script": "HanS",
+			"size": 12,
+			"col": "$DarkOrange"
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"pages": {
+		"2": {
+			"content": {
+				"text": [
+					{
+						"hide": false,
+						"value": "Textbox reusing Corefont Courier",
+						"anchor": "tc",
+						"dy": -25,
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"hide": false,
+						"value": "Textbox reusing Corefont Helvetica",
+						"anchor": "tc",
+						"dy": -45,
+						"font": {
+							"name": "$label"
+						}
+					},
+					{
+						"hide": false,
+						"value": "Textbox reusing Userfont Robotic",
+						"anchor": "tc",
+						"dy": -65,
+						"font": {
+							"name": "$userFont"
+						}
+					},
+					{
+						"hide": false,
+						"value": "Textbox reusing cjk Userfont Unifont",
+						"anchor": "tc",
+						"dy": -85,
+						"font": {
+							"name": "$cjkUserFont"
+						}
+					},
+					{
+						"hide": false,
+						"value": "文本框重用 cjk Userfont Unifont",
+						"anchor": "tc",
+						"dy": -105,
+						"font": {
+							"name": "$cjkUserFont"
+						}
+					}
+				]
+			}
+		},
+		"3": {
+			"content": {
+				"text": [
+					{
+						"hide": false,
+						"value": "New page: Textbox reusing Corefont Courier",
+						"anchor": "c",
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"hide": false,
+						"value": "New page: Textbox reusing Corefont Helvetica",
+						"anchor": "c",
+						"dy": -20,
+						"font": {
+							"name": "$label"
+						}
+					},
+					{
+						"hide": false,
+						"value": "New page: Textbox reusing Userfont Robotic",
+						"anchor": "c",
+						"dy": -40,
+						"font": {
+							"name": "$userFont"
+						}
+					},
+					{
+						"hide": false,
+						"value": "New page: Textbox reusing cjk Userfont Unifont",
+						"anchor": "c",
+						"dy": -60,
+						"font": {
+							"name": "$cjkUserFont"
+						}
+					},
+					{
+						"hide": false,
+						"value": "新页面：文本框重用 cjk Userfont Unifont",
+						"anchor": "c",
+						"dy": -80,
+						"font": {
+							"name": "$cjkUserFont"
+						}
+					}
+				]
+			}
+		}
+	}
+}

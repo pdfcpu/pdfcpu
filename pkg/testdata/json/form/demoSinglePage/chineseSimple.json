@@ -1,0 +1,409 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": false,
+	"debug": false,
+	"guides": false,
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"fonts": {
+		"input": {
+			"name": "UnifontMedium",
+			"lang": "zh",
+			"script": "HanS",
+			"size": 12
+		},
+		"label": {
+			"name": "$input"
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"header": {
+		"font": {
+			"name": "$label",
+			"size": 24,
+			"col": "#C00000"
+		},
+		"left": "$logo1",
+		"center": "演示表格",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "Courier",
+			"size": 9
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Optimized for A.Reader\nPage %p of %P",
+		"right": "Source:\ntestdata/json/form/demo/chineseSimple.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	
+	"pages": {
+		"1": {
+			"content": {
+				"textfield": [
+					{
+						"hide": false,
+						"id": "firstName1",
+						"tip": "名",
+						"tab": 1,
+						"default": "默认名称",
+						"value": "杰基",
+						"pos": [
+							120,
+							665
+						],
+						"width": 200,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "名:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "lastName1",
+						"tip": "姓",
+						"tab": 2,
+						"value": "能源部",
+						"pos": [
+							120,
+							645
+						],
+						"width": 200,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "姓:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "note1",
+						"tip": "原因",
+						"tab": 12,
+						"multiline": true,
+						"value": "这是一个示例文本。\n那是下一行。", 
+						"pos": [
+							120,
+							132
+						],
+						"width": 200,
+						"height":70,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						}
+					}
+				],
+				
+				"datefield": [
+					{
+						"hide": false,
+						"id": "dob1",
+						"tab": 3,
+						"format": "dd.mm.yyyy",
+						"default": "01.01.2000",
+						"value": "31.12.1999",
+						"pos": [
+							120,
+							625
+						],
+						"width": 70,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "出生日期:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+ 						}
+					}
+				],
+
+				"radiobuttongroup": [
+					{
+						"hide": false,
+						"id": "gender1",
+						"tip": "性别",
+						"tab": 4,
+						"orientation": "hor",
+						"default": "女性",
+						"value": "非二进制",
+						"pos": [
+							120,
+							605
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"女性",
+								"男性",
+								"非二进制"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 50,
+								"gap": 10,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "性别:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"checkbox": [
+					{
+						"hide": false,
+						"id": "cb11",
+						"tip": "谷歌搜索",
+						"tab": 7,
+						"value": true,
+						"pos": [
+							30,
+							270
+						],
+						"width": 12,
+						"label": {
+							"value": "谷歌搜索",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb12",
+						"tip": "Github 搜索",
+						"tab": 8,
+						"value": false,
+						"pos": [
+							30,
+							250
+						],
+						"width": 12,
+						"label": {
+							"value": "Github 搜索",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb13",
+						"tip": "歌朗周刊",
+						"tab": 9,
+						"value": false,
+						"pos": [
+							30,
+							230
+						],
+						"width": 12,
+						"label": {
+							"value": "歌朗周刊",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb14",
+						"tip": "同伴地鼠",
+						"tab": 10,
+						"value": false,
+						"pos": [
+							30,
+							210
+						],
+						"width": 12,
+						"label": {
+							"value": "同伴地鼠",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb15",
+						"tip": "其他",
+						"tab": 11,
+						"value": false,
+						"pos": [
+							30,
+							190
+						],	
+						"width": 12,
+						"label": {
+							"value": "其他:",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					}
+				],
+
+				"listbox": [
+					{
+						"hide": false,
+						"id": "city11",
+						"tip": "最喜欢的城市",
+						"tab": 5,
+						"options": [
+							"旧金山",
+							"圣保罗",
+							"维也纳"
+						],
+						"multi": true,
+						"defaults": [
+							"维也纳",
+							"圣保罗"
+						],
+						"values": [
+							"旧金山",
+							"维也纳"
+						],
+						"pos": [
+							120,
+							530
+						],
+						"width": 200,
+						"height": 44,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "最喜欢的城市:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"combobox": [
+					{
+						"hide": false,
+						"id": "city12",
+						"tip": "城市",
+						"tab": 6,
+						"options": [
+							"北京",
+							"广州",
+						 	"上海"
+						],
+						"edit": false,
+						"default": "广州",
+						"value": "上海",
+						"pos": [
+							120,
+							500
+						],
+						"width": 200,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "城市:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+				
+				"text": [
+					{
+						"hide": false,
+						"value": "1) 请介绍一下您自己：",
+						"pos": [
+							10,
+							690
+						],
+						"font": {
+							"name": "$label"
+						}
+					},
+					{
+						"hide": false,
+						"value": "2) 你是怎么听说 pdfcpu 的：",
+						"pos": [
+							10,
+							290
+						],
+						"font": {
+							"name": "$label"
+						}
+					}
+				]
+			}
+		}
+	}
+}

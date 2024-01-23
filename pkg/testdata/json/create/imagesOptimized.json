@@ -1,0 +1,572 @@
+{
+	"paper": "A4L",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": true,
+	"debug": false,
+	"guides": true,
+	"colors": {
+		"DarkOrange": "#FF8C00",
+		"Beige": "#F5F5DC"
+	},
+	"files": {
+		"logo": "../../testdata/resources/demo.png",
+		"logo1": "../../testdata/resources/logoVerySmall.png",
+		"logo2": "../../testdata/resources/github.png"
+	},
+	"fonts": {
+		"myCourier": {
+			"name": "Courier",
+			"size": 12
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"borders": {
+		"myBorder": {
+			"width": 5,
+			"col": "#FF0000",
+			"style": "round"
+		}
+	},
+	"padding": {
+		"width": 10
+	},
+	"header": {
+		"font": {
+			"name": "Courier-Bold",
+			"size": 24,
+			"col": "#FF0000"
+		},
+		"bgCol": "#FFFFFF",
+		"left": "$logo1",
+		"center": "Imageboxes using optimized json",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 10,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "$myCourier"
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Page %p of %P",
+		"right": "Source:\ntestdata/json/create/imagesOptimized.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"images": {
+		"basic": {
+			"src": "$logo"
+		},
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		},
+		"withBorder": {
+			"src": "$logo",
+			"border": {
+				"width": 5,
+				"col": "$DarkOrange",
+				"style": "round"
+			}
+		},
+		"withBorderAndPadding": {
+			"src": "$logo",
+			"border": {
+				"width": 5,
+				"col": "$DarkOrange",
+				"style": "round"
+			},
+			"padding": {
+				"width": 10
+			},
+			"bgCol": "$Beige"
+		}
+	},
+	"texts": {
+		"label": {
+			"dx": 2,
+			"dy": 2,
+			"font": {
+				"name": "$myCourier"
+			}
+		},
+		"centeredLabel": {
+			"font": {
+				"name": "$myCourier",
+				"size": 18
+			},
+			"align": "center"
+		}
+	},
+	"pages": {
+		"1": {
+			"bgcol": "#8fbc2f",
+			"content": {
+				"bgcol": "#8fbcff",
+				"border": {
+					"width": 10,
+					"col": "#698b69",
+					"style": "round"
+				},
+				"guides": [
+					{
+						"pos": [
+							250,
+							150
+						]
+					},
+					{
+						"pos": [
+							250,
+							350
+						]
+					}
+				],
+				"image": [
+					{
+						"name": "$withBorder",
+						"pos": [
+							0,
+							0
+						],
+						"width": 200,
+						"height": 100
+					},
+					{
+						"name": "$withBorder",
+						"pos": [
+							0,
+							150
+						],
+						"width": 100,
+						"height": 200
+					},
+					{
+						"name": "$withBorder",
+						"pos": [
+							250,
+							0
+						],
+						"width": 200
+					},
+					{
+						"name": "$withBorder",
+						"pos": [
+							250,
+							150
+						],
+						"height": 200
+					}
+				],
+				"text": [
+					{
+						"name": "$label",
+						"value": "w=200, h=100",
+						"pos": [
+							0,
+							100
+						]
+					},
+					{
+						"name": "$label",
+						"value": "w=100, h=200",
+						"pos": [
+							0,
+							350
+						]
+					},
+					{
+						"name": "$label",
+						"value": "w=200",
+						"pos": [
+							450,
+							0
+						]
+					},
+					{
+						"name": "$label",
+						"value": "h=200",
+						"pos": [
+							250,
+							350
+						]
+					},
+					{
+						"name": "$centeredLabel",
+						"value": "border:5",
+						"pos": [
+							-1,
+							375
+						]
+					}
+				]
+			}
+		},
+		"2": {
+			"bgcol": "#8fbc2f",
+			"content": {
+				"bgcol": "#8fbcff",
+				"border": {
+					"width": 10,
+					"col": "#698b69",
+					"style": "round"
+				},
+				"guides": [
+					{
+						"pos": [
+							250,
+							150
+						]
+					},
+					{
+						"pos": [
+							250,
+							350
+						]
+					}
+				],
+				"image": [
+					{
+						"name": "$withBorderAndPadding",
+						"pos": [
+							0,
+							0
+						],
+						"width": 200,
+						"height": 100
+					},
+					{
+						"name": "$withBorderAndPadding",
+						"pos": [
+							0,
+							150
+						],
+						"width": 100,
+						"height": 200
+					},
+					{
+						"name": "$withBorderAndPadding",
+						"pos": [
+							250,
+							0
+						],
+						"width": 200
+					},
+					{
+						"name": "$withBorderAndPadding",
+						"pos": [
+							250,
+							150
+						],
+						"height": 200
+					}
+				],
+				"text": [
+					{
+						"name": "$label",
+						"value": "w=200, h=100",
+						"pos": [
+							0,
+							100
+						]
+					},
+					{
+						"name": "$label",
+						"value": "w=100, h=200",
+						"pos": [
+							0,
+							350
+						]
+					},
+					{
+						"name": "$label",
+						"value": "w=200",
+						"pos": [
+							450,
+							0
+						]
+					},
+					{
+						"name": "$label",
+						"value": "h=200",
+						"pos": [
+							250,
+							350
+						]
+					},
+					{
+						"name": "$centeredLabel",
+						"value": "bgCol, border:5, padding: 10",
+						"pos": [
+							-1,
+							375
+						]
+					}
+				]
+			}
+		},
+		"3": {
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							-1,
+							-1
+						]
+					},
+					{
+						"pos": [
+							-1,
+							100
+						]
+					},
+					{
+						"pos": [
+							174,
+							-1
+						]
+					}
+				],
+				"image": [
+					{
+						"name": "$withBorder",
+						"anchor": "topleft",
+						"height": 100
+					},
+					{
+						"name": "$withBorderAndPadding",
+						"anchor": "topcenter",
+						"height": 100
+					},
+					{
+						"name": "$basic",
+						"anchor": "topright",
+						"height": 100
+					},
+					{
+						"name": "$withBorderAndPadding",
+						"anchor": "left",
+						"height": 100
+					},
+					{
+						"name": "$basic",
+						"anchor": "center",
+						"height": 100
+					},
+					{
+						"name": "$withBorder",
+						"anchor": "right",
+						"height": 100
+					},
+					{
+						"name": "$basic",
+						"anchor": "bottomleft",
+						"height": 100
+					},
+					{
+						"name": "$withBorder",
+						"anchor": "bottomcenter",
+						"height": 100
+					},
+					{
+						"name": "$withBorderAndPadding",
+						"anchor": "bottomright",
+						"height": 100
+					}
+				],
+				"text": [
+					{
+						"name": "$centeredLabel",
+						"value": "anchored, height: 100",
+						"pos": [
+							-1,
+							290
+						]
+					}
+				]
+			}
+		},
+		"4": {
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							-1,
+							-1
+						]
+					},
+					{
+						"pos": [
+							-1,
+							86
+						]
+					},
+					{
+						"pos": [
+							150,
+							-1
+						]
+					}
+				],
+				"image": [
+					{
+						"name": "$withBorder",
+						"anchor": "topleft",
+						"width": 150
+					},
+					{
+						"name": "$withBorderAndPadding",
+						"anchor": "topcenter",
+						"width": 150
+					},
+					{
+						"name": "$basic",
+						"anchor": "topright",
+						"width": 150
+					},
+					{
+						"name": "$withBorderAndPadding",
+						"anchor": "left",
+						"width": 150
+					},
+					{
+						"name": "$basic",
+						"anchor": "center",
+						"width": 150
+					},
+					{
+						"name": "$withBorder",
+						"anchor": "right",
+						"width": 150
+					},
+					{
+						"name": "$basic",
+						"anchor": "bottomleft",
+						"width": 150
+					},
+					{
+						"name": "$withBorder",
+						"anchor": "bottomcenter",
+						"width": 150
+					},
+					{
+						"name": "$withBorderAndPadding",
+						"anchor": "bottomright",
+						"width": 150
+					}
+				],
+				"text": [
+					{
+						"name": "$centeredLabel",
+						"value": "anchored, width: 150",
+						"pos": [
+							-1,
+							290
+						]
+					}
+				]
+			}
+		},
+		"5": {
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							-1,
+							-1
+						]
+					},
+					{
+						"pos": [
+							100,
+							100
+						]
+					}
+				],
+				"image": [
+					{
+						"name": "$withBorder",
+						"anchor": "topleft",
+						"width": 100,
+						"height":100
+					},
+					{
+						"name": "$withBorderAndPadding",
+						"anchor": "topcenter",
+						"width": 100,
+						"height":100
+					},
+					{
+						"name": "$basic",
+						"anchor": "topright",
+						"width": 100,
+						"height":100
+					},
+					{
+						"name": "$withBorderAndPadding",
+						"anchor": "left",
+						"width": 100,
+						"height":100
+					},
+					{
+						"name": "$basic",
+						"anchor": "center",
+						"width": 100,
+						"height":100
+					},
+					{
+						"name": "$withBorder",
+						"anchor": "right",
+						"width": 100,
+						"height":100
+					},
+					{
+						"name": "$basic",
+						"anchor": "bottomleft",
+						"width": 100,
+						"height":100
+					},
+					{
+						"name": "$withBorder",
+						"anchor": "bottomcenter",
+						"width": 100,
+						"height":100
+					},
+					{
+						"name": "$withBorderAndPadding",
+						"anchor": "bottomright",
+						"width": 100,
+						"height":100
+					}
+				],
+				"text": [
+					{
+						"name": "$centeredLabel",
+						"value": "anchored, width: 100, height: 100",
+						"pos": [
+							-1,
+							290
+						]
+					}
+				]
+			}
+		}
+	}
+}

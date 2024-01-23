@@ -26,22 +26,58 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 )
 
-func TestMergeCreate(t *testing.T) {
+func TestMergeCreateNew(t *testing.T) {
 	msg := "TestMergeCreate"
 	inFiles := []string{
 		filepath.Join(inDir, "Acroforms2.pdf"),
 		filepath.Join(inDir, "adobe_errata.pdf"),
 	}
-	outFile := filepath.Join(outDir, "test.pdf")
 
 	// Merge inFiles by concatenation in the order specified and write the result to outFile.
 	// outFile will be overwritten.
-	if err := api.MergeCreateFile(inFiles, outFile, nil); err != nil {
+
+	// Bookmarks for the merged document will be created/preserved per default (see config.yaml)
+
+	outFile := filepath.Join(outDir, "out.pdf")
+	if err := api.MergeCreateFile(inFiles, outFile, false, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+
+	if err := api.ValidateFile(outFile, conf); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+
+	// Insert an empty page between merged files.
+	outFile = filepath.Join(outDir, "outWithDivider.pdf")
+	dividerPage := true
+	if err := api.MergeCreateFile(inFiles, outFile, dividerPage, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+
+	if err := api.ValidateFile(outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
 
-func TestMergeAppend(t *testing.T) {
+func TestMergeCreateZipped(t *testing.T) {
+	msg := "TestMergeCreateZipped"
+
+	// The actual usecase for this is the recombination of 2 PDF files representing even and odd pages of some PDF source.
+	// See #716
+	inFile2 := filepath.Join(inDir, "adobe_errata.pdf")
+	inFile1 := filepath.Join(inDir, "Acroforms2.pdf")
+	outFile := filepath.Join(outDir, "out.pdf")
+
+	if err := api.MergeCreateZipFile(inFile1, inFile2, outFile, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+
+	if err := api.ValidateFile(outFile, conf); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+}
+
+func TestMergeAppendNew(t *testing.T) {
 	msg := "TestMergeAppend"
 	inFiles := []string{
 		filepath.Join(inDir, "Acroforms2.pdf"),
@@ -54,12 +90,27 @@ func TestMergeAppend(t *testing.T) {
 
 	// Merge inFiles by concatenation in the order specified and write the result to outFile.
 	// If outFile already exists its content will be preserved and serves as the beginning of the merge result.
-	if err := api.MergeAppendFile(inFiles, outFile, nil); err != nil {
+
+	// Bookmarks for the merged document will be created/preserved per default (see config.yaml)
+
+	if err := api.MergeAppendFile(inFiles, outFile, false, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+	if err := api.ValidateFile(outFile, conf); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+
+	anotherFile := filepath.Join(inDir, "testRot.pdf")
+	err := api.MergeAppendFile([]string{anotherFile}, outFile, false, nil)
+	if err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+	if err := api.ValidateFile(outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
 
-func TestMergeToBuf(t *testing.T) {
+func TestMergeToBufNew(t *testing.T) {
 	msg := "TestMergeToBuf"
 	inFiles := []string{
 		filepath.Join(inDir, "Acroforms2.pdf"),
@@ -67,26 +118,57 @@ func TestMergeToBuf(t *testing.T) {
 	}
 	outFile := filepath.Join(outDir, "test.pdf")
 
-	ff := []*os.File(nil)
-	for _, f := range inFiles {
-		f, err := os.Open(f)
-		if err != nil {
-			t.Fatalf("%s: open: %v\n", msg, err)
-		}
-		ff = append(ff, f)
-	}
-
-	rs := make([]io.ReadSeeker, len(ff))
-	for i, f := range ff {
-		rs[i] = f
-	}
+	destFile := inFiles[0]
+	inFiles = inFiles[1:]
 
 	buf := &bytes.Buffer{}
-	if err := api.Merge(rs, buf, nil); err != nil {
+	if err := api.Merge(destFile, inFiles, buf, nil, false); err != nil {
 		t.Fatalf("%s: merge: %v\n", msg, err)
 	}
 
 	if err := os.WriteFile(outFile, buf.Bytes(), 0644); err != nil {
 		t.Fatalf("%s: write: %v\n", msg, err)
+	}
+
+	if err := api.ValidateFile(outFile, conf); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+}
+
+func TestMergeRaw(t *testing.T) {
+	msg := "TestMergeRaw"
+	inFiles := []string{
+		filepath.Join(inDir, "Acroforms2.pdf"),
+		filepath.Join(inDir, "adobe_errata.pdf"),
+	}
+	outFile := filepath.Join(outDir, "test.pdf")
+
+	var rsc []io.ReadSeeker = make([]io.ReadSeeker, 2)
+
+	f0, err := os.Open(inFiles[0])
+	if err != nil {
+		t.Fatalf("%s: open file1: %v\n", msg, err)
+	}
+	defer f0.Close()
+	rsc[0] = f0
+
+	f1, err := os.Open(inFiles[1])
+	if err != nil {
+		t.Fatalf("%s: open file2: %v\n", msg, err)
+	}
+	defer f1.Close()
+	rsc[1] = f1
+
+	buf := &bytes.Buffer{}
+	if err := api.MergeRaw(rsc, buf, false, nil); err != nil {
+		t.Fatalf("%s: merge: %v\n", msg, err)
+	}
+
+	if err := os.WriteFile(outFile, buf.Bytes(), 0644); err != nil {
+		t.Fatalf("%s: write: %v\n", msg, err)
+	}
+
+	if err := api.ValidateFile(outFile, conf); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
 	}
 }

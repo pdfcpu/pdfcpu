@@ -27,6 +27,8 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pkg/errors"
 )
 
 type PageSpan struct {
@@ -35,8 +37,8 @@ type PageSpan struct {
 	Reader io.Reader
 }
 
-func pageSpan(ctx *pdfcpu.Context, from, thru int) (*PageSpan, error) {
-	ctxNew, err := ctx.ExtractPages(PagesForPageRange(from, thru), false)
+func pageSpan(ctx *model.Context, from, thru int) (*PageSpan, error) {
+	ctxNew, err := pdfcpu.ExtractPages(ctx, PagesForPageRange(from, thru), false)
 	if err != nil {
 		return nil, err
 	}
@@ -67,24 +69,22 @@ func splitOutPath(outDir, fileName string, forBookmark bool, from, thru int) str
 	return p
 }
 
-func writePageSpan(ctx *pdfcpu.Context, from, thru int, outPath string) error {
+func writePageSpan(ctx *model.Context, from, thru int, outPath string) error {
 	ps, err := pageSpan(ctx, from, thru)
 	if err != nil {
 		return err
 	}
-	if log.CLI != nil {
-		log.CLI.Printf("writing %s...\n", outPath)
-	}
+	logWritingTo(outPath)
 	return pdfcpu.WriteReader(outPath, ps.Reader)
 }
 
-func context(rs io.ReadSeeker, conf *pdfcpu.Configuration) (*pdfcpu.Context, error) {
+func context(rs io.ReadSeeker, conf *model.Configuration) (*model.Context, error) {
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = pdfcpu.SPLIT
+	conf.Cmd = model.SPLIT
 
-	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, time.Now())
+	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
 	if err != nil {
 		return nil, err
 	}
@@ -96,10 +96,10 @@ func context(rs io.ReadSeeker, conf *pdfcpu.Configuration) (*pdfcpu.Context, err
 	return ctx, nil
 }
 
-func pageSpansSplitAlongBookmarks(ctx *pdfcpu.Context) ([]*PageSpan, error) {
+func pageSpansSplitAlongBookmarks(ctx *model.Context) ([]*PageSpan, error) {
 	pss := []*PageSpan{}
 
-	bms, err := ctx.BookmarksForOutline()
+	bms, err := pdfcpu.Bookmarks(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func pageSpansSplitAlongBookmarks(ctx *pdfcpu.Context) ([]*PageSpan, error) {
 	return pss, nil
 }
 
-func pageSpans(ctx *pdfcpu.Context, span int) ([]*PageSpan, error) {
+func pageSpans(ctx *model.Context, span int) ([]*PageSpan, error) {
 	pss := []*PageSpan{}
 
 	for i := 0; i < ctx.PageCount/span; i++ {
@@ -151,30 +151,7 @@ func pageSpans(ctx *pdfcpu.Context, span int) ([]*PageSpan, error) {
 	return pss, nil
 }
 
-func writePageSpansSplitAlongBookmarks(ctx *pdfcpu.Context, outDir string) error {
-	forBookmark := true
-
-	bms, err := ctx.BookmarksForOutline()
-	if err != nil {
-		return err
-	}
-
-	for _, bm := range bms {
-		fileName := strings.Replace(bm.Title, " ", "_", -1)
-		from, thru := bm.PageFrom, bm.PageThru
-		if thru == 0 {
-			thru = ctx.PageCount
-		}
-		path := splitOutPath(outDir, fileName, forBookmark, from, thru)
-		if err := writePageSpan(ctx, from, thru, path); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func writePageSpans(ctx *pdfcpu.Context, span int, outDir, fileName string) error {
+func writePageSpans(ctx *model.Context, span int, outDir, fileName string) error {
 	forBookmark := false
 
 	for i := 0; i < ctx.PageCount/span; i++ {
@@ -199,11 +176,68 @@ func writePageSpans(ctx *pdfcpu.Context, span int, outDir, fileName string) erro
 	return nil
 }
 
+func writePageSpansSplitAlongBookmarks(ctx *model.Context, outDir string) error {
+	forBookmark := true
+
+	bms, err := pdfcpu.Bookmarks(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, bm := range bms {
+		fileName := strings.Replace(bm.Title, " ", "_", -1)
+		from, thru := bm.PageFrom, bm.PageThru
+		if thru == 0 {
+			thru = ctx.PageCount
+		}
+		path := splitOutPath(outDir, fileName, forBookmark, from, thru)
+		if err := writePageSpan(ctx, from, thru, path); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func writePageSpansSplitAlongPages(ctx *model.Context, pageNrs []int, outDir, fileName string) error {
+	// pageNumbers is a a sorted sequence of page numbers.
+	forBookmark := false
+	from, thru := 1, 0
+
+	if len(pageNrs) < 1 {
+		return errors.New("pdfcpu: split along pageNrs - missing pageNrs")
+	}
+
+	if pageNrs[0] > ctx.PageCount {
+		return errors.New("pdfcpu: split along pageNrs - invalid page number sequence.")
+	}
+
+	for i := 0; i < len(pageNrs); i++ {
+		thru = pageNrs[i] - 1
+		if thru >= ctx.PageCount {
+			break
+		}
+		path := splitOutPath(outDir, fileName, forBookmark, from, thru)
+		if err := writePageSpan(ctx, from, thru, path); err != nil {
+			return err
+		}
+		from = thru + 1
+	}
+
+	thru = ctx.PageCount
+	path := splitOutPath(outDir, fileName, forBookmark, from, thru)
+	return writePageSpan(ctx, from, thru, path)
+}
+
 // SplitRaw returns page spans for the PDF stream read from rs obeying given split span.
 // If span == 1 splitting results in single page PDFs.
 // If span == 0 we split along given bookmarks (level 1 only).
 // Default span: 1
-func SplitRaw(rs io.ReadSeeker, span int, conf *pdfcpu.Configuration) ([]*PageSpan, error) {
+func SplitRaw(rs io.ReadSeeker, span int, conf *model.Configuration) ([]*PageSpan, error) {
+	if rs == nil {
+		return nil, errors.New("pdfcpu: SplitRaw: missing rs")
+	}
+
 	ctx, err := context(rs, conf)
 	if err != nil {
 		return nil, err
@@ -219,7 +253,11 @@ func SplitRaw(rs io.ReadSeeker, span int, conf *pdfcpu.Configuration) ([]*PageSp
 // If span == 1 splitting results in single page PDFs.
 // If span == 0 we split along given bookmarks (level 1 only).
 // Default span: 1
-func Split(rs io.ReadSeeker, outDir, fileName string, span int, conf *pdfcpu.Configuration) error {
+func Split(rs io.ReadSeeker, outDir, fileName string, span int, conf *model.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: Split: missing rs")
+	}
+
 	ctx, err := context(rs, conf)
 	if err != nil {
 		return err
@@ -235,12 +273,14 @@ func Split(rs io.ReadSeeker, outDir, fileName string, span int, conf *pdfcpu.Con
 // If span == 1 splitting results in single page PDFs.
 // If span == 0 we split along given bookmarks (level 1 only).
 // Default span: 1
-func SplitFile(inFile, outDir string, span int, conf *pdfcpu.Configuration) error {
+func SplitFile(inFile, outDir string, span int, conf *model.Configuration) error {
 	f, err := os.Open(inFile)
 	if err != nil {
 		return err
 	}
-	log.CLI.Printf("splitting %s to %s/...\n", inFile, outDir)
+	if log.CLIEnabled() {
+		log.CLI.Printf("splitting %s to %s/...\n", inFile, outDir)
+	}
 
 	defer func() {
 		if err != nil {
@@ -251,4 +291,39 @@ func SplitFile(inFile, outDir string, span int, conf *pdfcpu.Configuration) erro
 	}()
 
 	return Split(f, outDir, filepath.Base(inFile), span, conf)
+}
+
+// SplitFile generates a sequence of PDF files in outDir for rs splitting along pageNrs.
+func SplitByPageNr(rs io.ReadSeeker, outDir, fileName string, pageNrs []int, conf *model.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: SplitByPageNr: missing rs")
+	}
+
+	ctx, err := context(rs, conf)
+	if err != nil {
+		return err
+	}
+
+	return writePageSpansSplitAlongPages(ctx, pageNrs, outDir, fileName)
+}
+
+// SplitFile generates a sequence of PDF files in outDir for inFile splitting it along pageNrs.
+func SplitByPageNrFile(inFile, outDir string, pageNrs []int, conf *model.Configuration) error {
+	f, err := os.Open(inFile)
+	if err != nil {
+		return err
+	}
+	if log.CLIEnabled() {
+		log.CLI.Printf("splitting %s to %s/...\n", inFile, outDir)
+	}
+
+	defer func() {
+		if err != nil {
+			f.Close()
+			return
+		}
+		err = f.Close()
+	}()
+
+	return SplitByPageNr(f, outDir, filepath.Base(inFile), pageNrs, conf)
 }

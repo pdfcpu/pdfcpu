@@ -47,10 +47,7 @@ func TestPortfolio(t *testing.T) {
 	}
 
 	// List portfolio entries.
-	list := listAttachments(t, msg, fileName, 4)
-	for _, s := range list {
-		t.Log(s)
-	}
+	listAttachments(t, msg, fileName, 4)
 
 	// Extract all portfolio entries.
 	if err := api.ExtractAttachmentsFile(fileName, outDir, nil, nil); err != nil {

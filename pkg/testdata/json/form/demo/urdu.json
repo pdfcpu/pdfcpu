@@ -1,0 +1,759 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": false,
+	"guides": false,
+	"colors": {
+		"DarkOrange": "#FF8C00",
+		"DarkSeaGreen": "#8FBC8F"
+	},
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"fonts": {
+		"input": {
+			"name": "UnifontMedium",
+			"lang": "ur",
+			"script": "Arab",
+			"size": 12
+		},
+		"label": {
+			"name": "$input"
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"header": {
+		"font": {
+			"name": "$label",
+			"size": 24,
+			"col": "#C00000"
+		},
+		"left": "$logo1",
+		"center": "ڈیمو فارم",
+		"rtl": true,
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "Courier",
+			"size": 9
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Optimized for A.Reader\nPage %p of %P",
+		"right": "Source:\ntestdata/json/form/demo/urdu.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"pages": {
+		"1": {
+			"content": {
+				"textfield": [
+					{
+						"hide": false,
+						"id": "firstName",
+						"tip": "پہلا نام",
+						"tab": 1,
+						"pos": [
+							175,
+							665
+						],
+						"width": 240,
+						"align": "right",
+						"rtl": true,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "پہلا نام:",
+							"width": 95,
+							"gap": 10,
+							"align": "right",
+							"pos": "right",
+							"rtl": true
+						}
+					},
+					{
+						"hide": false,
+						"id": "lastName1",
+						"tip": "آخری نام",
+						"tab": 2,
+						"pos": [
+							175,
+							645
+						],
+						"width": 240,
+						"align": "right",
+						"rtl": true,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "آخری نام:",
+							"width": 95,
+							"gap": 10,
+							"align": "right",
+							"pos": "right",
+							"rtl": true
+						}
+					},
+					{
+						"hide": false,
+						"id": "note1",
+						"tip": "وجہ",
+						"tab": 12,
+						"multiline": true,
+						"value": "یہ ایک نمونہ متن ہے۔.\nیہ اگلی سطر ہے۔.",
+						"pos": [
+							175,
+							132
+						],
+						"width": 240,
+						"height":70,
+						"align": "right",
+						"rtl": true,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						}
+					}
+				],
+				
+				"datefield": [
+					{
+						"hide": false,
+						"id": "dob1",
+						"tab": 3,
+						"format": "dd.mm.yyyy",
+						"pos": [
+							345,
+							625
+						],
+						"width": 70,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "پیدائش کی تاریخ:",
+							"width": 94,
+							"gap": 10,
+							"align": "right",
+							"pos": "right",
+							"rtl": true
+ 						}
+					}
+				],
+
+				"radiobuttongroup": [
+					{
+						"hide": false,
+						"id": "gender1",
+						"tip": "صنف",
+						"tab": 4,
+						"orientation": "hor",
+						"pos": [
+							175,
+							605
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"غیر بائنری",
+								"مرد",
+								"عورت"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 70,
+								"gap": 10,
+								"pos": "left",
+								"rtl": true
+							}
+						},
+						"label": {
+							"value": "صنف:",
+							"width": 90,
+							"gap": 10,
+							"align": "right",
+							"pos": "right",
+							"rtl": true
+						}
+					}
+				],
+
+				"checkbox": [
+					{
+						"hide": false,
+						"id": "cb11",
+						"tip": "گوگل سرچ",
+						"tab": 7,
+						"value": false,
+						"pos": [
+							508,
+							270
+						],
+						"width": 12,
+						"label": {
+							"value": "گوگل سرچ",
+							"width": 80,
+							"gap": 5,
+							"align": "right",
+							"pos": "left",
+							"rtl": true
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb12",
+						"tip": "گیتھب سرچ",
+						"tab": 8,
+						"value": false,
+						"pos": [
+							508,
+							250
+						],
+						"width": 12,
+						"label": {
+							"value": "گیتھب سرچ",
+							"width": 80,
+							"gap": 5,
+							"align": "right",
+							"pos": "left",
+							"rtl": true
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb13",
+						"tip": "گولانگ ہفتہ وار",
+						"tab": 9,
+						"value": false,
+						"pos": [
+							508,
+							230
+						],
+						"width": 12,
+						"label": {
+							"value": "گولانگ ہفتہ وار",
+							"width": 80,
+							"gap": 5,
+							"align": "right",
+							"pos": "left",
+							"rtl": true
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb14",
+						"tip": "ساتھی گوفر",
+						"tab": 10,
+						"value": false,
+						"pos": [
+							508,
+							210
+						],
+						"width": 12,
+						"label": {
+							"value": "ساتھی گوفر",
+							"width": 80,
+							"gap": 5,
+							"align": "right",
+							"pos": "left",
+							"rtl": true
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb15",
+						"tip": "دیگر",
+						"tab": 11,
+						"value": false,
+						"pos": [
+							508,
+							190
+						],	
+						"width": 12,
+						"label": {
+							"value": "دیگر:",
+							"width": 80,
+							"gap": 5,
+							"align": "right",
+							"pos": "left",
+							"rtl": true
+						}
+					}
+				],
+
+				"listbox": [
+					{
+						"hide": false,
+						"id": "city11",
+						"tip": "پسندیدہ شہر",
+						"tab": 5,
+						"options": [
+							"سان فرانسسکو",
+							"ساؤ پالو",
+							"ویانا"
+						],
+						"multi": true,
+						"pos": [
+							175,
+							530
+						],
+						"width": 240,
+						"height": 44,
+						"align": "right",
+						"rtl": true,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "پسندیدہ شہر:",
+							"width": 90,
+							"gap": 10,
+							"align": "right",
+							"pos": "right",
+							"rtl": true
+						}
+					}
+				],
+
+				"combobox": [
+					{
+						"hide": false,
+						"id": "city12",
+						"tip": "شہر",
+						"tab": 6,
+						"options": [
+							"کراچی",
+							"راولپنڈی",
+							"پشاور"
+						],
+						"edit": false,
+						"pos": [
+							175,
+							504
+						],
+						"width": 240,
+						"align": "right",
+						"rtl": true,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "شہر:",
+							"width": 90,
+							"gap": 10,
+							"align": "right",
+							"pos": "right",
+							"rtl":true
+						}
+					}
+				],
+				
+				"text": [
+					{
+						"hide": false,
+						"value": "1. براہ کرم ہمیں اپنے بارے میں بتائیں:",
+						"pos": [
+							310,
+							690
+						],
+						"font": {
+							"name": "$label"
+						},
+						"rtl": true
+					},
+					{
+						"hide": false,
+						"value": "2. آپ نے upcfdp کے بارے میں کیسے سنا؟",
+						"pos": [
+							315,
+							290
+						],
+						"font": {
+							"name": "$label"
+						},
+						"rtl": true
+					}
+				]
+			}
+		},
+		"2": {
+			"content": {
+				"textfield": [
+					{
+						"hide": false,
+						"id": "firstName2",
+						"tip": "پہلا نام",
+						"tab": 1,
+						"value": "جیکی",
+						"pos": [
+							175,
+							665
+						],
+						"width": 240,
+						"align": "right",
+						"rtl": true,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "پہلا نام:",
+							"width": 95,
+							"gap": 10,
+							"align": "right",
+							"pos": "right",
+							"rtl": true
+						}
+					},
+					{
+						"hide": false,
+						"id": "lastName2",
+						"tip": "آخری نام",
+						"tab": 2,
+						"value": "ڈو",
+						"pos": [
+							175,
+							645
+						],
+						"width": 240,
+						"align": "right",
+						"rtl": true,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "آخری نام:",
+							"width": 95,
+							"gap": 10,
+							"align": "right",
+							"pos": "right",
+							"rtl": true
+						}
+					},
+					{
+						"hide": false,
+						"id": "note2",
+						"tip": "وجہ",
+						"tab": 12,
+						"multiline": true,
+						"value": "یہ ایک نمونہ متن ہے۔.\nیہ اگلی سطر ہے۔.",
+						"pos": [
+							175,
+							132
+						],
+						"width": 240,
+						"height":70,
+						"align": "right",
+						"rtl": true,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						}
+					}
+				],
+				
+				"datefield": [
+					{
+						"hide": false,
+						"id": "dob2",
+						"tab": 3,
+						"value": "31.12.1999",
+						"pos": [
+							345,
+							625
+						],
+						"width": 70,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "پیدائش کی تاریخ:",
+							"width": 94,
+							"gap": 10,
+							"align": "right",
+							"pos": "right",
+							"rtl": true
+ 						}
+					}
+				],
+
+				"radiobuttongroup": [
+					{
+						"hide": false,
+						"id": "gender2",
+						"tip": "صنف",
+						"tab": 4,
+						"value": "غیر بائنری",
+						"orientation": "hor",
+						"pos": [
+							175,
+							605
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"غیر بائنری",
+								"مرد",
+								"عورت"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 70,
+								"gap": 10,
+								"pos": "left",
+								"rtl": true
+							}
+						},
+						"label": {
+							"value": "صنف:",
+							"width": 90,
+							"gap": 10,
+							"align": "right",
+							"pos": "right",
+							"rtl": true
+						}
+					}
+				],
+
+				"checkbox": [
+					{
+						"hide": false,
+						"id": "cb21",
+						"tip": "گوگل سرچ",
+						"tab": 7,
+						"value": true,
+						"pos": [
+							508,
+							270
+						],
+						"width": 12,
+						"label": {
+							"value": "گوگل سرچ",
+							"width": 80,
+							"gap": 5,
+							"align": "right",
+							"pos": "left",
+							"rtl": true
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb22",
+						"tip": "گیتھب سرچ",
+						"tab": 8,
+						"value": false,
+						"pos": [
+							508,
+							250
+						],
+						"width": 12,
+						"label": {
+							"value": "گیتھب سرچ",
+							"width": 80,
+							"gap": 5,
+							"align": "right",
+							"pos": "left",
+							"rtl": true
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb23",
+						"tip": "گولانگ ہفتہ وار",
+						"tab": 9,
+						"value": false,
+						"pos": [
+							508,
+							230
+						],
+						"width": 12,
+						"label": {
+							"value": "گولانگ ہفتہ وار",
+							"width": 80,
+							"gap": 5,
+							"align": "right",
+							"pos": "left",
+							"rtl": true
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb24",
+						"tip": "ساتھی گوفر",
+						"tab": 10,
+						"value": false,
+						"pos": [
+							508,
+							210
+						],
+						"width": 12,
+						"label": {
+							"value": "ساتھی گوفر",
+							"width": 80,
+							"gap": 5,
+							"align": "right",
+							"pos": "left",
+							"rtl": true
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb25",
+						"tip": "دیگر",
+						"tab": 11,
+						"value": false,
+						"pos": [
+							508,
+							190
+						],	
+						"width": 12,
+						"label": {
+							"value": "دیگر:",
+							"width": 80,
+							"gap": 5,
+							"align": "right",
+							"pos": "left",
+							"rtl": true
+						}
+					}
+				],
+
+				"listbox": [
+					{
+						"hide": false,
+						"id": "city21",
+						"tip": "پسندیدہ شہر",
+						"tab": 5,
+						"options": [
+							"سان فرانسسکو",
+							"ساؤ پالو",
+							"ویانا"
+						],
+						"multi": false,
+						"value": "سان فرانسسکو",
+						"pos": [
+							175,
+							530
+						],
+						"width": 240,
+						"height": 44,
+						"align": "right",
+						"rtl": true,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "پسندیدہ شہر:",
+							"width": 90,
+							"gap": 10,
+							"align": "right",
+							"pos": "right",
+							"rtl": true
+						}
+					}
+				],
+
+				"combobox": [
+					{
+						"hide": false,
+						"id": "city22",
+						"tip": "شہر",
+						"tab": 6,
+						"options": [
+							"کراچی",
+							"راولپنڈی",
+							"پشاور"
+						],
+						"edit": false,
+						"value": "راولپنڈی",
+						"pos": [
+							175,
+							504
+						],
+						"width": 240,
+						"align": "right",
+						"rtl": true,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "شہر:",
+							"width": 90,
+							"gap": 10,
+							"align": "right",
+							"pos": "right",
+							"rtl":true
+						}
+					}
+				],
+				
+				"text": [
+					{
+						"hide": false,
+						"value": "1. براہ کرم ہمیں اپنے بارے میں بتائیں:",
+						"pos": [
+							310,
+							690
+						],
+						"font": {
+							"name": "$label"
+						},
+						"rtl": true
+					},
+					{
+						"hide": false,
+						"value": "2. آپ نے upcfdp کے بارے میں کیسے سنا؟",
+						"pos": [
+							315,
+							290
+						],
+						"font": {
+							"name": "$label"
+						},
+						"rtl": true
+					}
+				]
+			}
+		}
+	}
+}

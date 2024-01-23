@@ -18,43 +18,44 @@ package api
 
 import (
 	"io"
-	"os"
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pkg/errors"
 )
 
-// Info returns information about rs.
-func Info(rs io.ReadSeeker, selectedPages []string, conf *pdfcpu.Configuration) ([]string, error) {
+// PDFInfo returns information about rs.
+func PDFInfo(rs io.ReadSeeker, fileName string, selectedPages []string, conf *model.Configuration) (*pdfcpu.PDFInfo, error) {
+	if rs == nil {
+		return nil, errors.New("pdfcpu: PDFInfo: missing rs")
+	}
+
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	} else {
 		// Validation loads infodict.
-		conf.ValidationMode = pdfcpu.ValidationRelaxed
+		conf.ValidationMode = model.ValidationRelaxed
 	}
+	conf.Cmd = model.LISTINFO
+
 	ctx, _, _, err := readAndValidate(rs, conf, time.Now())
 	if err != nil {
 		return nil, err
 	}
+
 	if err := ctx.EnsurePageCount(); err != nil {
 		return nil, err
 	}
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, false)
-	if err != nil {
-		return nil, err
-	}
-	if err := ctx.DetectWatermarks(); err != nil {
-		return nil, err
-	}
-	return ctx.InfoDigest(pages)
-}
 
-// InfoFile returns information about inFile.
-func InfoFile(inFile string, selectedPages []string, conf *pdfcpu.Configuration) ([]string, error) {
-	f, err := os.Open(inFile)
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, false, true)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
-	return Info(f, selectedPages, conf)
+
+	if err := pdfcpu.DetectWatermarks(ctx); err != nil {
+		return nil, err
+	}
+
+	return pdfcpu.Info(ctx, fileName, pages)
 }

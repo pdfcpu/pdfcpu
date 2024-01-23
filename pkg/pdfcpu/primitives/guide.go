@@ -19,7 +19,8 @@ package primitives
 import (
 	"io"
 
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 // Guide represents horizontal and vertical lines at (x,y) for layout purposes.
@@ -33,13 +34,13 @@ func (g *Guide) validate() {
 	g.y = g.Position[1]
 }
 
-func (g *Guide) render(w io.Writer, r *pdfcpu.Rectangle, pdf *PDF) {
-	x, y := pdfcpu.NormalizeCoord(g.x, g.y, r, pdf.origin, true)
-	if g.x == 0 {
+func (g *Guide) render(w io.Writer, r *types.Rectangle, pdf *PDF) {
+	x, y := types.NormalizeCoord(g.x, g.y, r, pdf.origin, true)
+	if g.x < 0 {
 		x = 0
 	}
-	if g.y == 0 {
+	if g.y < 0 {
 		y = 0
 	}
-	pdfcpu.DrawHairCross(w, x, y, r)
+	draw.DrawHairCross(w, x, y, r)
 }

@@ -1,0 +1,717 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": false,
+	"guides": false,
+	"colors": {
+		"DarkOrange": "#FF8C00",
+		"DarkSeaGreen": "#8FBC8F"
+	},
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"fonts": {
+		"input": {
+			"name": "Roboto-Regular",
+			"lang": "be",
+			"script": "Cyrl",
+			"size": 12
+		},
+		"label": {
+			"name": "$input"
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"header": {
+		"font": {
+			"name": "$label",
+			"size": 24,
+			"col": "#C00000"
+		},
+		"left": "$logo1",
+		"center":  "Дэманстрацыйная форма",
+		"rtl": false,
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "Courier",
+			"size": 9
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Optimized for A.Reader\nPage %p of %P",
+		"right": "Source:\ntestdata/json/form/demo/belarusian.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"pages": {
+		"1": {
+			"content": {
+				"textfield": [
+					{
+						"hide": false,
+						"id": "firstName1",
+						"tip": "Імя",
+						"tab": 1,
+						"pos": [
+							160,
+							665
+						],
+						"width": 255,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Імя:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "lastName1",
+						"tip": "Прозвішча",
+						"tab": 2,
+						"pos": [
+							160,
+							645
+						],
+						"width": 255,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Прозвішча:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "note1",
+						"tip": "Прычына",
+						"tab": 12,
+						"multiline": true,
+						"value": "Гэта ўзор тэксту.\nГэта наступны радок.",
+						"pos": [
+							160,
+							132
+						],
+						"width": 255,
+						"height":70,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						}
+					}
+				],
+				
+				"datefield": [
+					{
+						"hide": false,
+						"id": "dob1",
+						"tab": 3,
+						"format": "dd.mm.yyyy",
+						"pos": [
+							160,
+							625
+						],
+						"width": 70,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Дата нараджэння:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+ 						}
+					}
+				],
+
+				"radiobuttongroup": [
+					{
+						"hide": false,
+						"id": "gender1",
+						"tip":  "Пол",
+						"tab": 4,
+						"orientation": "hor",
+						"pos": [
+							160,
+							605
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"жаночы",
+								"мужчынскі",
+								"недвайковы"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 55,
+								"gap": 10,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "Пол:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"checkbox": [
+					{
+						"hide": false,
+						"id": "cb11",
+						"tip": "Пошук Google",
+						"tab": 7,
+						"value": false,
+						"pos": [
+							30,
+							270
+						],
+						"width": 12,
+						"label": {
+							"value": "Пошук Google",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb12",
+						"tip": "Пошук на Github",
+						"tab": 8,
+						"value": false,
+						"pos": [
+							30,
+							250
+						],
+						"width": 12,
+						"label": {
+							"value": "Пошук на Github",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb13",
+						"tip": "Штотыднёвік Golang",
+						"tab": 9,
+						"value": false,
+						"pos": [
+							30,
+							230
+						],
+						"width": 12,
+						"label": {
+							"value": "Штотыднёвік Golang",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb14",
+						"tip": "Сямейны суслік",
+						"tab": 10,
+						"value": false,
+						"pos": [
+							30,
+							210
+						],
+						"width": 12,
+						"label": {
+							"value": "Сямейны суслік",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb15",
+						"tip": "Іншае",
+						"tab": 11,
+						"value": false,
+						"pos": [
+							30,
+							190
+						],	
+						"width": 12,
+						"label": {
+							"value": "Іншае:",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					}
+				],
+
+				"listbox": [
+					{
+						"hide": false,
+						"id": "city11",
+						"tip": "Любімы горад",
+						"tab": 5,
+						"options": [
+							"Сан-Францыска",
+							"Сан-Паўлу",
+							"Вена"
+						],
+						"multi": true,
+						"pos": [
+							160,
+							530
+						],
+						"width": 255,
+						"height": 54,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Любімы горад:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"combobox": [
+					{
+						"hide": false,
+						"id": "city12",
+						"tip": "горад",
+						"tab": 6,
+						"options": [
+							"Мінск",
+							"Барысаў",
+							"Салігорск"
+						],
+						"edit": false,
+						"pos": [
+							160,
+							500
+						],
+						"width": 255,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "горад:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+				
+				"text": [
+					{
+						"hide": false,
+						"value": "1) Раскажыце, калі ласка, пра сябе:",
+						"pos": [
+							10,
+							690
+						],
+						"font": {
+							"name": "$label"
+						}
+					},
+					{
+						"hide": false,
+						"value": "2) Як вы даведаліся пра pdfcpu:",
+						"pos": [
+							10,
+							290
+						],
+						"font": {
+							"name": "$label"
+						}
+					}
+				]
+			}
+		},
+		"2": {
+			"content": {
+				"textfield": [
+					{
+						"hide": false,
+						"id": "firstName2",
+						"tip": "Імя",
+						"tab": 1,
+						"value": "Джэкі",
+						"pos": [
+							160,
+							665
+						],
+						"width": 255,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Імя:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "lastName2",
+						"tip": "Прозвішча",
+						"tab": 2,
+						"value": "Лань",
+						"pos": [
+							160,
+							645
+						],
+						"width": 255,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Прозвішча:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "note2",
+						"tip": "Прычына",
+						"tab": 12,
+						"multiline": true,
+						"value": "Гэта ўзор тэксту.\nГэта наступны радок.",
+						"pos": [
+							160,
+							132
+						],
+						"width": 255,
+						"height":70,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						}
+					}
+				],
+				
+				"datefield": [
+					{
+						"hide": false,
+						"id": "dob2",
+						"tab": 3,
+						"value": "31.12.1999",
+						"pos": [
+							160,
+							625
+						],
+						"width": 70,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Дата нараджэння:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+ 						}
+					}
+				],
+
+				"radiobuttongroup": [
+					{
+						"hide": false,
+						"id": "gender2",
+						"tip":  "Пол",
+						"tab": 4,
+						"value": "недвайковы",
+						"orientation": "hor",
+						"pos": [
+							160,
+							605
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"жаночы",
+								"мужчынскі",
+								"недвайковы"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 55,
+								"gap": 10,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "Пол:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"checkbox": [
+					{
+						"hide": false,
+						"id": "cb21",
+						"tip": "Пошук Google",
+						"tab": 7,
+						"value": true,
+						"pos": [
+							30,
+							270
+						],
+						"width": 12,
+						"label": {
+							"value": "Пошук Google",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb22",
+						"tip": "Пошук на Github",
+						"tab": 8,
+						"value": false,
+						"pos": [
+							30,
+							250
+						],
+						"width": 12,
+						"label": {
+							"value": "Пошук на Github",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb23",
+						"tip": "Штотыднёвік Golang",
+						"tab": 9,
+						"value": false,
+						"pos": [
+							30,
+							230
+						],
+						"width": 12,
+						"label": {
+							"value": "Штотыднёвік Golang",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb24",
+						"tip": "Сямейны суслік",
+						"tab": 10,
+						"value": false,
+						"pos": [
+							30,
+							210
+						],
+						"width": 12,
+						"label": {
+							"value": "Сямейны суслік",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb25",
+						"tip": "Іншае",
+						"tab": 11,
+						"value": false,
+						"pos": [
+							30,
+							190
+						],	
+						"width": 12,
+						"label": {
+							"value": "Іншае:",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					}
+				],
+
+				"listbox": [
+					{
+						"hide": false,
+						"id": "city21",
+						"tip": "Любімы горад",
+						"tab": 5,
+						"options": [
+							"Сан-Францыска",
+							"Сан-Паўлу",
+							"Вена"
+						],
+						"multi": false,
+						"value": "Сан-Францыска",
+						"pos": [
+							160,
+							530
+						],
+						"width": 255,
+						"height": 54,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Любімы горад:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"combobox": [
+					{
+						"hide": false,
+						"id": "city22",
+						"tip": "горад",
+						"tab": 6,
+						"options": [
+							"Мінск",
+							"Барысаў",
+							"Салігорск"
+						],
+						"value":"Мінск",
+						"edit": false,
+						"pos": [
+							160,
+							500
+						],
+						"width": 255,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "горад:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+				
+				"text": [
+					{
+						"hide": false,
+						"value": "1) Раскажыце, калі ласка, пра сябе:",
+						"pos": [
+							10,
+							690
+						],
+						"font": {
+							"name": "$label"
+						}
+					},
+					{
+						"hide": false,
+						"value": "2) Як вы даведаліся пра pdfcpu:",
+						"pos": [
+							10,
+							290
+						],
+						"font": {
+							"name": "$label"
+						}
+					}
+				]
+			}
+		}
+	}
+}

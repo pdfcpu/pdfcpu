@@ -26,9 +26,34 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 )
 
-// Encode a test string twice with same filter
-// then decode the result twice to get to the original string.
-func encodeDecodeUsingFilterNamed(t *testing.T, filterName string) {
+func TestFilterSupport(t *testing.T) {
+	var filtersTests = []struct {
+		filterName string
+		expected   error
+	}{
+		{filter.ASCII85, nil},
+		{filter.ASCIIHex, nil},
+		{filter.RunLength, nil},
+		{filter.LZW, nil},
+		{filter.Flate, nil},
+		{filter.CCITTFax, nil},
+		{filter.DCT, nil},
+		{filter.JBIG2, filter.ErrUnsupportedFilter},
+		{filter.JPX, filter.ErrUnsupportedFilter},
+		{"INVALID_FILTER", errors.New("Invalid filter: <INVALID_FILTER>")},
+	}
+	for _, tt := range filtersTests {
+		_, err := filter.NewFilter(tt.filterName, nil)
+		if (tt.expected != nil && err != nil && err.Error() != tt.expected.Error()) ||
+			((err == nil || tt.expected == nil) && err != tt.expected) {
+			t.Errorf("Problem: '%s' (expected '%s')\n", err.Error(), tt.expected.Error())
+		}
+	}
+}
+
+// Encode a test string with filterName then decode and check if result matches original.
+func encodeDecodeString(t *testing.T, filterName string) {
+	t.Helper()
 
 	filter, err := filter.NewFilter(filterName, nil)
 	if err != nil {
@@ -72,34 +97,9 @@ func encodeDecodeUsingFilterNamed(t *testing.T, filterName string) {
 	}
 }
 
-func TestFilterSupport(t *testing.T) {
-	var filtersTests = []struct {
-		filterName string
-		expected   error
-	}{
-		{filter.ASCII85, nil},
-		{filter.ASCIIHex, nil},
-		{filter.RunLength, nil},
-		{filter.LZW, nil},
-		{filter.Flate, nil},
-		{filter.CCITTFax, nil},
-		{filter.DCT, nil},
-		{filter.JBIG2, filter.ErrUnsupportedFilter},
-		{filter.JPX, filter.ErrUnsupportedFilter},
-		{"INVALID_FILTER", errors.New("Invalid filter: <INVALID_FILTER>")},
-	}
-	for _, tt := range filtersTests {
-		_, err := filter.NewFilter(tt.filterName, nil)
-		if (tt.expected != nil && err != nil && err.Error() != tt.expected.Error()) ||
-			((err == nil || tt.expected == nil) && err != tt.expected) {
-			t.Errorf("Problem: '%s' (expected '%s')\n", err.Error(), tt.expected.Error())
-		}
-	}
-}
-
-func TestEncodeDecode(t *testing.T) {
+func TestEncodeDecodeString(t *testing.T) {
 	for _, f := range filter.List() {
-		encodeDecodeUsingFilterNamed(t, f)
+		encodeDecodeString(t, f)
 	}
 }
 
@@ -110,9 +110,9 @@ var filenames = []string{
 	"testdata/Mark.Twain-Tom.Sawyer.txt",
 }
 
-// testFile tests that encoding and then decoding the given file with
-// the given filter yields a file that is an exact match with the original file.
-func testFile(t *testing.T, filterName, fileName string) {
+// Encode fileName with filterName then decode and check if result matches original.
+func encodeDecode(t *testing.T, fileName, filterName string) {
+	t.Helper()
 
 	t.Logf("testFile: %s with filter:%s\n", fileName, filterName)
 
@@ -172,10 +172,102 @@ func testFile(t *testing.T, filterName, fileName string) {
 
 }
 
-func TestWriter(t *testing.T) {
+func TestEncodeDecode(t *testing.T) {
 	for _, filterName := range filter.List() {
 		for _, filename := range filenames {
-			testFile(t, filterName, filename)
+			encodeDecode(t, filename, filterName)
 		}
+	}
+}
+
+func encode(t *testing.T, r io.Reader, filterName string) io.Reader {
+	t.Helper()
+
+	f, err := filter.NewFilter(filterName, nil)
+	if err != nil {
+		t.Errorf("Problem: %v\n", err)
+	}
+
+	r, err = f.Encode(r)
+	if err != nil {
+		t.Errorf("Problem encoding: %v\n", err)
+	}
+
+	return r
+}
+
+func decode(t *testing.T, r io.Reader, filterName string) io.Reader {
+	t.Helper()
+
+	f, err := filter.NewFilter(filterName, nil)
+	if err != nil {
+		t.Errorf("Problem: %v\n", err)
+	}
+
+	r, err = f.Decode(r)
+	if err != nil {
+		t.Errorf("Problem decoding: %v\n", err)
+	}
+
+	return r
+}
+
+// Encode fileName with filter pipeline then decode and check if result matches original.
+func encodeDecodeFilterPipeline(t *testing.T, fileName string, fpl []string) {
+	t.Helper()
+
+	f0, err := os.Open(fileName)
+	if err != nil {
+		t.Errorf("%s: %v", fileName, err)
+		return
+	}
+	defer f0.Close()
+
+	r := io.Reader(f0)
+
+	for i := len(fpl) - 1; i >= 0; i-- {
+		r = encode(t, r, fpl[i])
+	}
+
+	for _, f := range fpl {
+		r = decode(t, r, f)
+	}
+
+	// Compare decoded bytes with original bytes.
+	golden, err := os.Open(fileName)
+	if err != nil {
+		t.Errorf("%s: %v", fileName, err)
+		return
+	}
+	defer golden.Close()
+
+	g, err := io.ReadAll(golden)
+	if err != nil {
+		t.Errorf("%s: %v", fileName, err)
+		return
+	}
+
+	d, err := io.ReadAll(r)
+	if err != nil {
+		t.Errorf("%s: %v", fileName, err)
+		return
+	}
+
+	if len(d) != len(g) {
+		t.Errorf("%s: length mismatch %d != %d", fileName, len(d), len(g))
+		return
+	}
+
+	for i := 0; i < len(d); i++ {
+		if d[i] != g[i] {
+			t.Errorf("%s: mismatch at %d, 0x%02x != 0x%02x\n", fileName, i, d[i], g[i])
+			return
+		}
+	}
+}
+
+func TestEncodeDecodeFilterPipeline(t *testing.T) {
+	for _, filename := range filenames {
+		encodeDecodeFilterPipeline(t, filename, []string{filter.ASCII85, filter.Flate})
 	}
 }

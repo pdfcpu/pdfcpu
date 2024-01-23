@@ -1,0 +1,223 @@
+{
+	"paper": "A4L",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": true,
+	"debug": false,
+	"guides": true,
+	"colors": {
+		"Beige": "#F5F5DC",
+		"DarkSalmon": "#E9967A"
+	},
+	"bgcol": "#BEDED9",
+	"timestamp": "2006-01-02 15:04:05",
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"fonts": {
+		"simpleChinese": {
+			"name": "UnifontMedium",
+			"size": 12
+		}
+	},
+	"borders": {
+		"myBorder": {
+			"width": 5
+		}
+	},
+	"margin": {
+		"width": 20
+	},
+	"header": {
+		"font": {
+			"name": "$simpleChinese",
+			"size": 24,
+			"col": "#00AA00"
+		},
+		"left": "$logo1",
+		"center": "演示台",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 10,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "$simpleChinese",
+			"col": "Black"
+		},
+		"left": "pdfcpu: %v\n创建: %t",
+		"center": "第 %p 页，共 %P 页",
+		"right": "来源:\ntestdata/json/create/userfonts.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"pages": {
+		"1": {
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							-1,
+							-1
+						]
+					}
+				],
+				"text": [
+					{
+						"value": "此文本框是使用 UnifontMedium.ttf 生成的\n这是第二行。",
+						"anchor": "topleft",
+						"bgCol": "#032890",
+						"font": {
+							"name": "$simpleChinese",
+							"size": 12,
+							"col": "$DarkSalmon"
+						},
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder",
+							"col": "White"
+						},
+						"padding": {
+							"width": 20
+						}
+					},
+					{
+						"hide": false,
+						"value": "This text box was generated using UnifontMedium.ttf\nThis is the second line.",
+						"anchor": "bottomleft",
+						"bgCol": "#032890",
+						"font": {
+							"name": "$simpleChinese",
+							"size": 12,
+							"col": "$DarkSalmon"
+						},
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder",
+							"col": "White"
+						},
+						"padding": {
+							"width": 20
+						}
+					}
+				],
+				"image": [
+					{
+						"src": "../../testdata/resources/pdfchip3.png",
+						"anchor": "bottomright",
+						"height": 50,
+						"url": "https://pdfcpu.io"
+					}
+				],
+				"table": [
+					{
+						"header": {
+							"values": [
+								"数量",
+								"描述",
+								"价钱",
+								"价值"
+							],
+							"colAnchors": [
+								"Center",
+								"Center",
+								"Center",
+								"Center"
+							],
+							"bgCol": "$DarkSalmon",
+							"font": {
+								"name": "$simpleChinese",
+								"size": 15
+							}
+						},
+						"values": [
+							[
+								"1",
+								"鼠",
+								"¥735,87",
+								"¥735,87"
+							],
+							[
+								"3",
+								"独角兽",
+								"¥1599725,00",
+								"¥4799175,00"
+							],
+							[
+								"1",
+								"地鼠",
+								"(无价)"
+							]
+						],
+						"rows": 5,
+						"cols": 4,
+						"width": 400,
+						"colWidths": [
+							10,
+							40,
+							25,
+							25
+						],
+						"colAnchors": [
+							"Center",
+							"Left",
+							"Right",
+							"Right"
+						],
+						"lheight": 30,
+						"grid": true,
+						"anchor": "center",
+						"dx": 0,
+						"dy": 0,
+						"bgCol": "$Beige",
+						"oddCol": "LightGray",
+						"evenCol": "Gray",
+						"font": {
+							"name": "$simpleChinese",
+							"size": 12,
+							"col": "Black"
+						},
+						"margin": {
+							"width": 0
+						},
+						"border": {
+							"width": 0
+						},
+						"padding": {
+							"width": 5
+						},
+						"rot": 20
+					}
+				]
+			}
+		}
+	}
+}

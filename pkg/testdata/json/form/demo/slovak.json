@@ -1,0 +1,736 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": false,
+	"debug": false,
+	"guides": false,
+	"colors": {
+		"DarkOrange": "#FF8C00",
+		"DarkSeaGreen": "#8FBC8F"
+	},
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"fonts": {
+		"myCourierBold": {
+			"name": "Courier-Bold",
+			"size": 12
+		},
+		"input": {
+			"name": "Helvetica",
+			"size": 12
+		},
+		"label": {	
+			"name": "$input"
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"header": {
+		"font": {
+			"name": "$myCourierBold",
+			"size": 24,
+			"col": "#C00000"
+		},
+		"left": "$logo1",
+		"center": "Demo formulár",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "Courier",
+			"size": 9
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Optimized for A.Reader\nPage %p of %P",
+		"right": "Source:\ntestdata/json/form/demo/slovak.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"pages": {
+		"1": {
+			"content": {
+				"textfield": [
+					{
+						"hide": false,
+						"debug": false,
+						"id": "firstName1",
+						"tip": "Krstné meno",
+						"tab": 1,
+						"//default": "default name",
+						"pos": [
+							140,
+							665
+						],
+						"width": 190,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Krstné meno:",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "lastName1",
+						"tip": "Priezvisko",
+						"tab": 2,
+						"pos": [
+							140,
+							645
+						],
+						"width": 190,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Priezvisko:",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "note1",
+						"tip": "Dôvod",
+						"tab": 12,
+						"multiline": true,
+						"value": "Toto je vzorový text.\nToto je ďalší riadok.",
+						"pos": [
+							140,
+							132
+						],
+						"width": 190,
+						"height":70,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						}
+					}
+				],
+				
+				"datefield": [
+					{
+						"hide": false,
+						"id": "dob1",
+						"tab": 3,
+						"format": "dd.mm.yyyy",
+						"//default": "01.01.2000",
+						"//value": "31.12.1999",
+						"pos": [
+							140,
+							625
+						],
+						"width": 70,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Dátum narodenia:",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"radiobuttongroup": [
+					{
+						"hide": false,
+						"id": "gender1",
+						"tip": "Rod",
+						"tab": 4,
+						"orientation": "hor",
+						"//default": "žena",
+						"//value": "Muž",
+						"pos": [
+							140,
+							605
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"žena",
+								"muž",
+								"nebinárne"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 48,
+								"gap": 10,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "Rod:",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"checkbox": [
+					{
+						"hide": false,
+						"id": "cb11",
+						"tip": "Google vyhľadávanie",
+						"tab": 7,
+						"//default": true,
+						"value": false,
+						"pos": [
+							30,
+							270
+						],
+						"width": 12,
+						"label": {
+							"value": "Google vyhľadávanie",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb12",
+						"tip": "Vyhľadávanie Github",
+						"tab": 8,
+						"value": false,
+						"pos": [
+							30,
+							250
+						],
+						"width": 12,
+						"label": {
+							"value": "Vyhľadávanie Github",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb13",
+						"tip": "Golang Weekly",
+						"tab": 9,
+						"value": false,
+						"pos": [
+							30,
+							230
+						],
+						"width": 12,
+						"label": {
+							"value": "Golang Weekly",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb14",
+						"tip": "Kolega Gopher",
+						"tab": 10,
+						"value": false,
+						"pos": [
+							30,
+							210
+						],
+						"width": 12,
+						"label": {
+							"value": "Kolega Gopher",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb15",
+						"tip": "Iné",
+						"tab": 11,
+						"value": false,
+						"pos": [
+							30,
+							190
+						],
+						"width": 12,
+						"label": {
+							"value": "Iné:",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					}
+				],
+
+				"listbox": [
+					{
+						"hide": false,
+						"id": "city11",
+						"tip": "Obľúbené mesto",
+						"tab": 5,
+						"options": [
+							"San Francisco",
+							"São Paulo",
+							"Viedeň"
+						],
+						"multi": true,
+						"//defaults": [
+							"Viedeň",
+							"São Paulo"
+						],
+						"//values": [
+							"San Francisco",
+							"Viedeň"
+						],
+						"pos": [
+							140,
+							530
+						],
+						"width": 190,
+						"height": 42,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Obľúbené mesto:",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"combobox": [
+					{
+						"hide": false,
+						"id": "city12",
+						"tip": "Mesto",
+						"tab": 6,
+						"options": [
+							"Banská Bystrica",
+							"Bratislava",
+							"Poprad"
+						],
+						"edit": false,
+						"//default": "Poprad",
+						"//value": "Bratislava",
+						"pos": [
+							140,
+							500
+						],
+						"width": 190,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Mesto:",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"text": [
+					{	
+						"hide": false,
+						"value": "1) Povedzte nám o sebe:",
+						"pos": [
+							10,
+							690
+						],
+						"font": {
+							"name": "$label"
+						}
+					},
+					{
+						"hide": false,
+						"value": "2) Ako ste sa dozvedeli o pdfcpu:",
+						"pos": [
+							10,
+							290
+						],
+						"font": {
+							"name": "$label"
+						}
+					}
+				]
+			}
+		},
+		"2": {
+			"content": {
+				"textfield": [
+					{
+						"hide": false,
+						"id": "firstName2",
+						"tip": "Krstné meno",
+						"tab": 1,
+						"value": "Jackie",
+						"pos": [
+							140,
+							665
+						],
+						"width": 190,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Krstné meno:",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "lastName2",
+						"tip": "Priezvisko",
+						"tab": 2,
+						"value": "Doe",
+						"pos": [
+							140,
+							645
+						],
+						"width": 190,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Priezvisko:",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "note2",
+						"tip": "Dôvod",
+						"tab": 12,
+						"multiline": true,
+						"value": "Toto je vzorový text.\nToto je ďalší riadok..",
+						"pos": [
+							140,
+							132
+						],
+						"width": 190,
+						"height":70,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						}
+					}
+				],
+
+				"datefield": [
+					{
+						"hide": false,
+						"id": "dob2",
+						"tab": 3,
+						"value": "31.12.1999",
+						"pos": [
+							140,
+							625
+						],
+						"width": 70,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Dátum narodenia:",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"radiobuttongroup": [
+					{
+						"hide": false,
+						"id": "gender2",
+						"tip": "Rod",
+						"tab": 4,
+						"value": "nebinárne",
+						"orientation": "hor",
+						"pos": [
+							140,
+							605
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"žena",
+								"muž",
+								"nebinárne"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 48,
+								"gap": 10,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "Rod:",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"checkbox": [
+					{
+						"hide": false,
+						"id": "cb21",
+						"tip": "Google vyhľadávanie",
+						"tab": 7,
+						"value": true,
+						"pos": [
+							30,
+							270
+						],
+						"width": 12,
+						"label": {
+							"value": "Google vyhľadávanie",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb22",
+						"tip": "Vyhľadávanie Github",
+						"tab": 8,
+						"value": false,
+						"pos": [
+							30,
+							250
+						],
+						"width": 12,
+						"label": {
+							"value": "Vyhľadávanie Github",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb23",
+						"tip": "Golang Weekly",
+						"tab": 9,
+						"value": false,
+						"pos": [
+							30,
+							230
+						],
+						"width": 12,
+						"label": {
+							"value": "Golang Weekly",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb24",
+						"tip": "Kolega Gopher",
+						"tab": 10,
+						"value": false,
+						"pos": [
+							30,
+							210
+						],
+						"width": 12,
+						"label": {
+							"value": "Kolega Gopher",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb25",
+						"tip": "Iné",
+						"tab": 11,
+						"value": false,
+						"pos": [
+							30,
+							190
+						],
+						"width": 12,
+						"label": {
+							"value": "Iné:",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					}
+				],
+
+				"listbox": [
+					{
+						"hide": false,
+						"id": "city21",
+						"tip": "Obľúbené mesto",
+						"tab": 5,
+						"options": [
+							"San Francisco",
+							"São Paulo",
+							"Viedeň"
+						],
+						"multi": false,
+						"value": "San Francisco",
+						"pos": [
+							140,
+							530
+						],
+						"width": 190,
+						"height": 42,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Obľúbené mesto:",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"combobox": [
+					{
+						"hide": false,
+						"id": "city22",
+						"tip": "Mesto",
+						"tab": 6,
+						"options": [
+							"Banská Bystrica",
+							"Bratislava",
+							"Poprad"
+						],
+						"edit": false,
+						"value": "Bratislava",
+						"pos": [
+							140,
+							500
+						],
+						"width": 190,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Mesto:",
+							"width": 100,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"text": [
+					{	
+						"hide": false,
+						"value": "1) Povedzte nám o sebe:",
+						"pos": [
+							10,
+							690
+						],
+						"font": {
+							"name": "$label"
+						}
+					},
+					{
+						"hide": false,
+						"value": "2) Ako ste sa dozvedeli o pdfcpu:",
+						"pos": [
+							10,
+							290
+						],
+						"font": {
+							"name": "$label"
+						}
+					}
+				]
+			}
+		}
+	}
+}

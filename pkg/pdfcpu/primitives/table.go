@@ -18,40 +18,72 @@ package primitives
 
 import (
 	"fmt"
+
 	"math"
 	"strings"
 
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/format"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/matrix"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
 type TableHeader struct {
 	Values          []string
 	ColAnchors      []string
-	colAnchors      []pdfcpu.Anchor
+	colAnchors      []types.Anchor
+	ColPaddings     []*Padding
 	BackgroundColor string `json:"bgCol"`
-	bgCol           *pdfcpu.SimpleColor
+	bgCol           *color.SimpleColor
 	Font            *FormFont // defaults to table font
+	RTL             bool
+}
+
+func (th *TableHeader) validateColumnPaddings(cols int) error {
+	if len(th.ColPaddings) == 0 {
+		return nil
+	}
+
+	if len(th.ColPaddings) != cols {
+		return errors.New("pdfcpu: table header colPaddings must be specified for each column.")
+	}
+
+	for i, p := range th.ColPaddings {
+		if p == nil {
+			continue
+		}
+		if err := p.validate(); err != nil {
+			return errors.Errorf("%s on table header colPaddings index %d", err.Error(), i)
+		}
+	}
+
+	return nil
 }
 
 func (th *TableHeader) validate(pdf *PDF, cols int) error {
-
 	if th.Values == nil || len(th.Values) != cols {
 		return errors.Errorf("pdfcpu: wants %d table header values", cols)
 	}
 
 	if len(th.ColAnchors) > 0 {
-		th.colAnchors = make([]pdfcpu.Anchor, cols)
+		th.colAnchors = make([]types.Anchor, cols)
 		if len(th.ColAnchors) != cols {
 			return errors.New("pdfcpu: table header colAnchors must be specified for each column.")
 		}
 		for i, s := range th.ColAnchors {
-			a, err := pdfcpu.ParseAnchor(s)
+			a, err := types.ParseAnchor(s)
 			if err != nil {
 				return err
 			}
 			th.colAnchors[i] = a
 		}
+	}
+
+	if err := th.validateColumnPaddings(cols); err != nil {
+		return err
 	}
 
 	if th.Font != nil {
@@ -71,6 +103,32 @@ func (th *TableHeader) validate(pdf *PDF, cols int) error {
 	return nil
 }
 
+func applyTextDescriptorPadding(td *model.TextDescriptor, p *Padding) {
+	if p == nil {
+		return
+	}
+
+	if p.Width > 0 {
+		td.MTop = p.Width
+		td.MRight = p.Width
+		td.MBot = p.Width
+		td.MLeft = p.Width
+		return
+	}
+
+	td.MTop = p.Top
+	td.MRight = p.Right
+	td.MBot = p.Bottom
+	td.MLeft = p.Left
+}
+
+func (th *TableHeader) calcColumnPadding(td *model.TextDescriptor, col int) {
+	if len(th.ColPaddings) > 0 && th.ColPaddings[col] != nil {
+		applyTextDescriptorPadding(td, th.ColPaddings[col])
+	}
+}
+
+// Table represents a positioned fillable data grid including a header row.
 type Table struct {
 	pdf             *PDF
 	content         *Content
@@ -80,13 +138,14 @@ type Table struct {
 	x, y            float64
 	Dx, Dy          float64
 	Anchor          string
-	anchor          pdfcpu.Anchor
+	anchor          types.Anchor
 	anchored        bool
 	Width           float64 // if < 1 then fraction of content width
 	Rows, Cols      int
-	ColWidths       []float64 // optional width fractions, 0 < x < 1 must total 1
+	ColWidths       []int // optional column width percentages
 	ColAnchors      []string
-	colAnchors      []pdfcpu.Anchor
+	colAnchors      []types.Anchor
+	ColPaddings     []*Padding
 	LineHeight      int `json:"lheight"`
 	Font            *FormFont
 	Margin          *Margin
@@ -95,9 +154,10 @@ type Table struct {
 	BackgroundColor string `json:"bgCol"`
 	OddColor        string `json:"oddCol"`
 	EvenColor       string `json:"evenCol"`
-	bgCol           *pdfcpu.SimpleColor
-	oddCol          *pdfcpu.SimpleColor
-	evenCol         *pdfcpu.SimpleColor
+	bgCol           *color.SimpleColor
+	oddCol          *color.SimpleColor
+	evenCol         *color.SimpleColor
+	RTL             bool
 	Rotation        float64 `json:"rot"`
 	Grid            bool
 	Hide            bool
@@ -117,7 +177,7 @@ func (t *Table) validateAnchor() error {
 		if t.Position[0] != 0 || t.Position[1] != 0 {
 			return errors.New("pdfcpu: Please supply \"pos\" or \"anchor\"")
 		}
-		a, err := pdfcpu.ParseAnchor(t.Anchor)
+		a, err := types.ParseAnchor(t.Anchor)
 		if err != nil {
 			return err
 		}
@@ -133,31 +193,31 @@ func (t *Table) validateColWidths() error {
 		if len(t.ColWidths) != t.Cols {
 			return errors.New("pdfcpu: colWidths must be specified for each column.")
 		}
-		total := 0.
+		total := 0
 		for _, w := range t.ColWidths {
-			if w <= 0 || w >= 1 {
+			if w <= 0 || w >= 100 {
 				return errors.New("pdfcpu: colWidths 0 < wi < 1")
 			}
 			total += w
 		}
-		if total != 1 {
-			return errors.New("pdfcpu: colWidths total must be 1.")
+		if total != 100 {
+			return errors.New("pdfcpu: colWidths % total must be 100.")
 		}
 	}
 	return nil
 }
 
 func (t *Table) validateColAnchors() error {
-	t.colAnchors = make([]pdfcpu.Anchor, t.Cols)
+	t.colAnchors = make([]types.Anchor, t.Cols)
 	for i := range t.colAnchors {
-		t.colAnchors[i] = pdfcpu.Center
+		t.colAnchors[i] = types.Center
 	}
 	if len(t.ColAnchors) > 0 {
 		if len(t.ColAnchors) != t.Cols {
 			return errors.New("pdfcpu: colAnchors must be specified for each column.")
 		}
 		for i, s := range t.ColAnchors {
-			a, err := pdfcpu.ParseAnchor(s)
+			a, err := types.ParseAnchor(s)
 			if err != nil {
 				return err
 			}
@@ -165,6 +225,33 @@ func (t *Table) validateColAnchors() error {
 		}
 	}
 	return nil
+}
+
+func (t *Table) validateColPaddings() error {
+	if len(t.ColPaddings) > 0 {
+		if len(t.ColPaddings) != t.Cols {
+			return errors.New("pdfcpu: colPaddings must be specified for each column.")
+		}
+		for i, p := range t.ColPaddings {
+			if p == nil {
+				continue
+			}
+			if err := p.validate(); err != nil {
+				return errors.Errorf("%s on colPaddings index %d", err.Error(), i)
+			}
+		}
+	}
+	return nil
+}
+
+func (t *Table) validateColumns() error {
+	if err := t.validateColWidths(); err != nil {
+		return err
+	}
+	if err := t.validateColAnchors(); err != nil {
+		return err
+	}
+	return t.validateColPaddings()
 }
 
 func (t *Table) validateValues() error {
@@ -292,12 +379,8 @@ func (t *Table) validate() error {
 		}
 	}
 
-	if err := t.validateColWidths(); err != nil {
-		return nil
-	}
-
-	if err := t.validateColAnchors(); err != nil {
-		return nil
+	if err := t.validateColumns(); err != nil {
+		return err
 	}
 
 	if t.LineHeight <= 0 {
@@ -305,23 +388,23 @@ func (t *Table) validate() error {
 	}
 
 	if err := t.validateValues(); err != nil {
-		return nil
+		return err
 	}
 
 	if err := t.validateFont(); err != nil {
-		return nil
+		return err
 	}
 
 	if err := t.validateMargin(); err != nil {
-		return nil
+		return err
 	}
 
 	if err := t.validateBorder(); err != nil {
-		return nil
+		return err
 	}
 
 	if err := t.validatePadding(); err != nil {
-		return nil
+		return err
 	}
 
 	return t.validateColors()
@@ -420,17 +503,23 @@ func (t *Table) calcFont() error {
 		if f.col == nil {
 			f.col = f0.col
 		}
+		if f.Lang == "" {
+			f.Lang = f0.Lang
+		}
+		if f.Script == "" {
+			f.Script = f0.Script
+		}
 	}
 	if f.col == nil {
-		f.col = &pdfcpu.Black
+		f.col = &color.Black
 	}
 	return nil
 }
 
-func (t *Table) calcBorder() (float64, *pdfcpu.SimpleColor, pdfcpu.LineJoinStyle, error) {
+func (t *Table) calcBorder() (float64, *color.SimpleColor, types.LineJoinStyle, error) {
 	bWidth := 0.
-	var bCol *pdfcpu.SimpleColor
-	bStyle := pdfcpu.LJMiter
+	var bCol *color.SimpleColor
+	bStyle := types.LJMiter
 	if t.Border != nil {
 		b := t.Border
 		if b.Name != "" && b.Name[0] == '$' {
@@ -481,7 +570,7 @@ func (t *Table) calcMargin() (float64, float64, float64, float64, error) {
 	return mTop, mRight, mBottom, mLeft, nil
 }
 
-func (t *Table) calcTransform(mLeft, mBottom, mRight, mTop, bWidth float64) (pdfcpu.Matrix, *pdfcpu.Rectangle) {
+func (t *Table) calcTransform(mLeft, mBottom, mRight, mTop, bWidth float64) (matrix.Matrix, *types.Rectangle) {
 	pdf := t.content.page.pdf
 	cBox := t.content.Box()
 	r := t.content.Box().CroppedCopy(0)
@@ -493,9 +582,9 @@ func (t *Table) calcTransform(mLeft, mBottom, mRight, mTop, bWidth float64) (pdf
 	var x, y float64
 	h := t.Height() + 2*bWidth
 	if t.anchored {
-		x, y = pdfcpu.AnchorPosition(t.anchor, r, t.Width, h)
+		x, y = types.AnchorPosition(t.anchor, r, t.Width, h)
 	} else {
-		x, y = pdfcpu.NormalizeCoord(t.x, t.y, r, pdf.origin, false)
+		x, y = types.NormalizeCoord(t.x, t.y, r, pdf.origin, false)
 		if y < 0 {
 			y = cBox.Center().Y - h/2 - r.LL.Y
 		} else if y > 0 {
@@ -523,14 +612,14 @@ func (t *Table) calcTransform(mLeft, mBottom, mRight, mTop, bWidth float64) (pdf
 		y = r.UR.Y - h
 	}
 
-	r = pdfcpu.RectForWidthAndHeight(x, y, t.Width, h)
+	r = types.RectForWidthAndHeight(x, y, t.Width, h)
 	r.LL.X += bWidth / 2
 	r.LL.Y += bWidth / 2
 	r.UR.X -= bWidth / 2
 	r.UR.Y -= bWidth / 2
 
-	sin := math.Sin(float64(t.Rotation) * float64(pdfcpu.DegToRad))
-	cos := math.Cos(float64(t.Rotation) * float64(pdfcpu.DegToRad))
+	sin := math.Sin(float64(t.Rotation) * float64(matrix.DegToRad))
+	cos := math.Cos(float64(t.Rotation) * float64(matrix.DegToRad))
 
 	dx := r.LL.X
 	dy := r.LL.Y
@@ -539,12 +628,12 @@ func (t *Table) calcTransform(mLeft, mBottom, mRight, mTop, bWidth float64) (pdf
 	dx += t.Dx + r.Width()/2 + sin*(r.Height()/2) - cos*r.Width()/2
 	dy += t.Dy + r.Height()/2 - cos*(r.Height()/2) - sin*r.Width()/2
 
-	m := pdfcpu.CalcTransformMatrix(1, 1, sin, cos, dx, dy)
+	m := matrix.CalcTransformMatrix(1, 1, sin, cos, dx, dy)
 
 	return m, r
 }
 
-func (t *Table) renderBackground(p *pdfcpu.Page, bWidth float64, r *pdfcpu.Rectangle) {
+func (t *Table) renderBackground(p *model.Page, bWidth float64, r *types.Rectangle) {
 	x := r.LL.X + bWidth/2
 	// Render odd,even row background.
 	if t.oddCol != nil || t.evenCol != nil {
@@ -563,8 +652,8 @@ func (t *Table) renderBackground(p *pdfcpu.Page, bWidth float64, r *pdfcpu.Recta
 				continue
 			}
 			y := r.LL.Y + bWidth/2 + float64(i*t.LineHeight)
-			r1 := pdfcpu.RectForWidthAndHeight(x, y, w, float64(t.LineHeight))
-			pdfcpu.FillRect(p.Buf, r1, 0, nil, *col, nil)
+			r1 := types.RectForWidthAndHeight(x, y, w, float64(t.LineHeight))
+			draw.FillRect(p.Buf, r1, 0, nil, *col, nil)
 		}
 	}
 
@@ -580,33 +669,35 @@ func (t *Table) renderBackground(p *pdfcpu.Page, bWidth float64, r *pdfcpu.Recta
 		}
 		y := r.LL.Y + bWidth/2 + float64(t.Rows*t.LineHeight)
 		col := t.Header.bgCol
-		r1 := pdfcpu.RectForWidthAndHeight(x, y, w, h)
-		pdfcpu.FillRect(p.Buf, r1, 0, nil, *col, nil)
+		r1 := types.RectForWidthAndHeight(x, y, w, h)
+		draw.FillRect(p.Buf, r1, 0, nil, *col, nil)
 	}
 }
 
 func (t *Table) prepareColWidths(bWidth float64) []float64 {
 	colWidths := make([]float64, t.Cols)
 	w := t.Width - 2*bWidth
+
 	if len(t.ColWidths) > 0 {
 		for i := 0; i < t.Cols; i++ {
-			colWidths[i] = t.ColWidths[i] * w
+			colWidths[i] = float64(t.ColWidths[i]) / 100 * w
 		}
-	} else {
-		colw := w / float64(t.Cols)
-		for i := 0; i < t.Cols; i++ {
-			colWidths[i] = colw
-		}
+		return colWidths
+	}
+
+	colw := w / float64(t.Cols)
+	for i := 0; i < t.Cols; i++ {
+		colWidths[i] = colw
 	}
 	return colWidths
 }
 
-func (t *Table) renderGrid(p *pdfcpu.Page, colWidths []float64, bWidth float64, bCol *pdfcpu.SimpleColor, r *pdfcpu.Rectangle) {
+func (t *Table) renderGrid(p *model.Page, colWidths []float64, bWidth float64, bCol *color.SimpleColor, r *types.Rectangle) {
 	// Draw vertical lines.
 	x := r.LL.X + bWidth/2
 	for i := 1; i < t.Cols; i++ {
 		x += colWidths[i-1]
-		pdfcpu.DrawLine(p.Buf, x, r.LL.Y, x, r.UR.Y, 0, bCol, nil)
+		draw.DrawLine(p.Buf, x, r.LL.Y, x, r.UR.Y, 0, bCol, nil)
 	}
 
 	// Draw horizontal lines.
@@ -617,51 +708,46 @@ func (t *Table) renderGrid(p *pdfcpu.Page, colWidths []float64, bWidth float64, 
 	y := r.LL.Y + bWidth/2
 	for i := 1; i < maxRows; i++ {
 		y += float64(t.LineHeight)
-		//y := r.LL.Y + bWidth/2 + float64(i*t.LineHeight)
-		pdfcpu.DrawLine(p.Buf, r.LL.X, y, r.UR.X, y, 0, bCol, nil)
+		draw.DrawLine(p.Buf, r.LL.X, y, r.UR.X, y, 0, bCol, nil)
 	}
 }
 
-func (t *Table) prepareTextDescriptor() (pdfcpu.TextDescriptor, error) {
-	td := pdfcpu.TextDescriptor{
-		Scale:    1.,
-		ScaleAbs: true,
-		//ShowTextBB:     true,
-		//ShowBorder:     true,
+func (t *Table) prepareTextDescriptor() (model.TextDescriptor, error) {
+	td := model.TextDescriptor{
+		Scale:      1.,
+		ScaleAbs:   true,
+		ShowTextBB: false,
+		ShowBorder: false,
 		//ShowBackground: true,
 		//BackgroundCol:  pdfcpu.White,
 	}
-	if t.Padding != nil {
-		p := t.Padding
-		if p.Name != "" && p.Name[0] == '$' {
-			// use named padding
-			pName := p.Name[1:]
-			p0 := t.padding(pName)
-			if p0 == nil {
-				return td, errors.Errorf("pdfcpu: unknown named padding %s", pName)
-			}
-			p.mergeIn(p0)
-		}
 
-		if p.Width > 0 {
-			td.MTop = p.Width
-			td.MRight = p.Width
-			td.MBot = p.Width
-			td.MLeft = p.Width
-		} else {
-			td.MTop = p.Top
-			td.MRight = p.Right
-			td.MBot = p.Bottom
-			td.MLeft = p.Left
-		}
-	}
+	applyTextDescriptorPadding(&td, t.Padding)
+
 	return td, nil
 }
 
-func (t *Table) renderValues(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, colWidths []float64, td pdfcpu.TextDescriptor, ll func(row, col int) (float64, float64)) error {
-	pdf := t.content.page.pdf
+func (t *Table) calcTextDescriptorPadding(td *model.TextDescriptor, p *Padding) error {
+	if p.Name != "" && p.Name[0] == '$' {
+		// use named padding
+		pName := p.Name[1:]
+		p0 := t.padding(pName)
+		if p0 == nil {
+			return errors.Errorf("pdfcpu: unknown named padding %s", pName)
+		}
+		p.mergeIn(p0)
+	}
+
+	applyTextDescriptorPadding(td, p)
+
+	return nil
+}
+
+func (t *Table) renderValues(p *model.Page, pageNr int, fonts model.FontMap, colWidths []float64, td model.TextDescriptor, ll func(row, col int) (float64, float64)) error {
+	pdf := t.pdf
+
 	f := t.Font
-	id, err := t.pdf.idForFontName(f.Name, p.Fm, fonts, pageNr)
+	id, err := pdf.idForFontName(f.Name, f.Lang, p.Fm, fonts, pageNr)
 	if err != nil {
 		return err
 	}
@@ -669,46 +755,66 @@ func (t *Table) renderValues(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, c
 	td.FontName = f.Name
 	td.FontKey = id
 	td.FontSize = f.Size
+	td.RTL = t.RTL
 	td.StrokeCol = *f.col
 	td.FillCol = *f.col
 
 	// Render values
 	for i := 0; i < t.Rows; i++ {
+
 		if len(t.Values) < i+1 {
 			break
 		}
+
 		for j := 0; j < t.Cols; j++ {
+
 			if len(t.Values[i]) < j+1 {
 				break
 			}
+
 			s := t.Values[i][j]
 			if len(strings.TrimSpace(s)) == 0 {
 				continue
 			}
-			td.Text, _ = pdfcpu.ResolveWMTextString(s, pdf.TimestampFormat, pageNr, pdf.pageCount())
+
+			colTd := td
+			if len(t.ColPaddings) > 0 && t.ColPaddings[j] != nil {
+				if err = t.calcTextDescriptorPadding(&colTd, t.ColPaddings[j]); err != nil {
+					return err
+				}
+			}
+
+			colTd.Text, _ = format.Text(s, pdf.TimestampFormat, pageNr, pdf.pageCount())
+
 			row := i
 			if t.Header != nil {
 				row++
 			}
+
 			x, y := ll(row, j)
-			r1 := pdfcpu.RectForWidthAndHeight(x, y, colWidths[j], float64(t.LineHeight))
-			bb := pdfcpu.WriteMultiLineAnchored(p.Buf, r1, nil, td, t.colAnchors[j])
+			r := types.RectForWidthAndHeight(x, y, colWidths[j], float64(t.LineHeight))
+
+			bb := model.WriteMultiLineAnchored(pdf.XRefTable, p.Buf, r, nil, colTd, t.colAnchors[j])
+
 			if bb.Width() > colWidths[j] {
-				return errors.Errorf("pdfcpu: table cell width overflow - reduce padding or text: %s", td.Text)
+				return errors.Errorf("pdfcpu: table cell width overflow - reduce padding or text: %s", colTd.Text)
 			}
+
 			if bb.Height() > float64(t.LineHeight) {
-				return errors.Errorf("pdfcpu: table cell height overflow - reduce padding or text: %s", td.Text)
+				return errors.Errorf("pdfcpu: table cell height overflow - reduce padding or text: %s", colTd.Text)
 			}
 		}
 	}
 	return nil
 }
 
-func (t *Table) renderHeader(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, colWidths []float64, td pdfcpu.TextDescriptor, ll func(row, col int) (float64, float64)) error {
-	h := t.Header
+func (t *Table) renderHeader(p *model.Page, pageNr int, fonts model.FontMap, colWidths []float64, td model.TextDescriptor, ll func(row, col int) (float64, float64)) error {
+	pdf := t.pdf
+	th := t.Header
+
 	f1 := *t.Font
-	if h.Font != nil {
-		f1 = *h.Font
+	if th.Font != nil {
+		f1 = *th.Font
 	}
 	if f1.Name[0] == '$' {
 		// use named font
@@ -718,6 +824,7 @@ func (t *Table) renderHeader(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, c
 			return errors.Errorf("pdfcpu: unknown font name %s", fName)
 		}
 		f1.Name = f0.Name
+		f1.Script = f0.Script
 		if f1.Size == 0 {
 			f1.Size = f0.Size
 		}
@@ -726,10 +833,10 @@ func (t *Table) renderHeader(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, c
 		}
 	}
 	if f1.col == nil {
-		f1.col = &pdfcpu.Black
+		f1.col = &color.Black
 	}
 
-	id, err := t.pdf.idForFontName(f1.Name, p.Fm, fonts, pageNr)
+	id, err := t.pdf.idForFontName(f1.Name, f1.Lang, p.Fm, fonts, pageNr)
 	if err != nil {
 		return err
 	}
@@ -737,34 +844,44 @@ func (t *Table) renderHeader(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, c
 	td.FontName = f1.Name
 	td.FontKey = id
 	td.FontSize = f1.Size
+	td.RTL = th.RTL
 	td.StrokeCol = *f1.col
 	td.FillCol = *f1.col
 
-	pdf := t.content.page.pdf
+	// Render header values.
+	for i, s := range th.Values {
 
-	for i, s := range t.Header.Values {
 		if len(strings.TrimSpace(s)) == 0 {
 			continue
 		}
-		td.Text, _ = pdfcpu.ResolveWMTextString(s, pdf.TimestampFormat, pageNr, pdf.pageCount())
+
+		colTd := td
+		th.calcColumnPadding(&colTd, i)
+		colTd.Text, _ = format.Text(s, pdf.TimestampFormat, pageNr, pdf.pageCount())
+
 		x, y := ll(0, i)
-		r1 := pdfcpu.RectForWidthAndHeight(x, y, colWidths[i], float64(t.LineHeight))
+		r := types.RectForWidthAndHeight(x, y, colWidths[i], float64(t.LineHeight))
+
 		a := t.colAnchors[i]
-		if len(t.Header.colAnchors) > 0 {
-			a = t.Header.colAnchors[i]
+		if len(th.colAnchors) > 0 {
+			a = th.colAnchors[i]
 		}
-		bb := pdfcpu.WriteMultiLineAnchored(p.Buf, r1, nil, td, a)
+
+		bb := model.WriteMultiLineAnchored(pdf.XRefTable, p.Buf, r, nil, colTd, a)
+
 		if bb.Width() > colWidths[i] {
-			return errors.Errorf("pdfcpu: table header cell width overflow - reduce padding or text: %s", td.Text)
+			return errors.Errorf("pdfcpu: table header cell width overflow - reduce padding or text: %s", colTd.Text)
 		}
+
 		if bb.Height() > float64(t.LineHeight) {
-			return errors.Errorf("pdfcpu: table header cell height overflow - reduce padding or text: %s", td.Text)
+			return errors.Errorf("pdfcpu: table header cell height overflow - reduce padding or text: %s", colTd.Text)
 		}
 	}
+
 	return nil
 }
 
-func (t *Table) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) error {
+func (t *Table) render(p *model.Page, pageNr int, fonts model.FontMap) error {
 
 	if err := t.calcFont(); err != nil {
 		return err
@@ -782,13 +899,23 @@ func (t *Table) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) error {
 
 	m, r := t.calcTransform(mTop, mRight, mBottom, mLeft, bWidth)
 
-	fmt.Fprintf(p.Buf, "q %.2f %.2f %.2f %.2f %.2f %.2f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
+	fmt.Fprintf(p.Buf, "q %.5f %.5f %.5f %.5f %.5f %.5f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 
 	if t.bgCol != nil {
-		pdfcpu.FillRect(p.Buf, r, bWidth, bCol, *t.bgCol, &bStyle)
+		x, w := r.LL.X+bWidth/2, t.Width-2*bWidth
+		if bWidth == 0 {
+			// Reduce artefacts.
+			x += .5
+			w -= 1
+		}
+		y := r.LL.Y + bWidth/2
+		r1 := types.RectForWidthAndHeight(x, y, w, r.Height()-.5)
+		draw.FillRect(p.Buf, r1, 0, bCol, *t.bgCol, &bStyle)
 	}
 
-	pdfcpu.DrawRect(p.Buf, r, bWidth, bCol, &bStyle)
+	if t.Border != nil {
+		draw.DrawRect(p.Buf, r, bWidth, bCol, &bStyle)
+	}
 
 	t.renderBackground(p, bWidth, r)
 
@@ -824,6 +951,11 @@ func (t *Table) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap) error {
 		}
 	}
 
+	if t.pdf.Debug {
+		draw.DrawCircle(p.Buf, r.LL.X, r.LL.Y, 5, color.Black, &color.Red)
+	}
+
 	fmt.Fprint(p.Buf, "Q ")
+
 	return nil
 }

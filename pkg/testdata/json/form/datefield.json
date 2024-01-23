@@ -1,0 +1,464 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": true,
+	"debug": false,
+	"guides": false,
+	"colors": {
+		"DarkOrange": "#FF8C00",
+		"DarkSeaGreen": "#8FBC8F"
+	},
+	"dateFormat": "2/1/2006",
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"fonts": {
+		"myCourier": {
+			"name": "Courier",
+			"size": 12
+		},
+		"input": {
+			"name": "Courier",
+			"size": 12,
+			"col": "Black"
+		},
+		"label": {
+			"name": "Helvetica",
+			"size": 12,
+			"col": "DarkGray"
+		},
+		"smallLabel": {
+			"name": "Helvetica",
+			"size": 9,
+			"col": "DarkGray"
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"header": {
+		"font": {
+			"name": "Courier-Bold",
+			"size": 24,
+			"col": "#C00000"
+		},
+		"left": "$logo1",
+		"center": "DateFields",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "$myCourier",
+			"size": 9
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Optimized for A.Reader\nPage %p of %P",
+		"right": "Source:\ntestdata/json/form/datefield.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"pages": {
+		"1": {
+			"bgcol": "LightGray",
+			"content": {
+				"datefield": [
+					{
+						"hide": false,
+						"id": "lldob1",
+						"pos": [
+							180,
+							650
+						],
+						"width": 80,
+						"format": "d.m.yyyy",
+						"font": {
+							"name": "$smallLabel"
+						},
+						"border": {
+							"width":3,
+							"col": "#C00000"
+						},
+						"label": {
+							"value": "Date Of Birth:",
+							"width": 130,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "lldob2",
+						"pos": [
+							180,
+							630
+						],
+						"width": 80,
+						"format": "dd.mm.yyyy",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Date Of Marriage:",
+							"width": 130,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "rldob1",
+						"tip": "Birth Date",
+						"value": "21.5.1990",
+						"pos": [
+							180,
+							600
+						],
+						"width": 80,
+						"bgCol": "$DarkSeaGreen",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Date Of Birth:",
+							"width": 130,
+							"gap": 10,
+							"align": "right",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "rldob2",
+						"tip": "Wedding Date",
+						"value": "21.05.1990",
+						"pos": [
+							180,
+							580
+						],
+						"width": 80,
+						"bgCol": "$DarkSeaGreen",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Date Of Marriage:",
+							"width": 130,
+							"gap": 10,
+							"align": "right",
+							"pos": "left"
+						}
+					},
+
+					{
+						"hide": false,
+						"id": "lrdob1",
+						"pos": [
+							180,
+							480
+						],
+						"width": 80,
+						"format": "yyyy-m-d",
+						"align": "right",
+						"bgCol": "$DarkOrange",
+						"label": {
+							"value": "Date Of Birth",
+							"width": 130,
+							"gap": 10,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "lrdob2",
+						"pos": [
+							180,
+							460
+						],
+						"width": 80,
+						"format": "yyyy-mm-dd",
+						"align": "right",
+						"bgCol": "$DarkOrange",
+						"label": {
+							"value": "Date Of Marriage",
+							"width": 130,
+							"gap": 10,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "rrdob1",
+						"pos": [
+							180,
+							430
+						],
+						"width": 80,
+						"format": "yyyy-m-d",
+						"align": "right",
+						"bgCol": "$DarkSeaGreen",
+						"label": {
+							"value": "Date Of Birth",
+							"width": 130,
+							"gap": 10,
+							"align": "right",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "rrdob2",
+						"pos": [
+							180,
+							410
+						],
+						"width": 80,
+						"format": "yyyy-mm-dd",
+						"align": "right",
+						"bgCol": "$DarkSeaGreen",
+						"label": {
+							"value": "Date Of Marriage",
+							"width": 130,
+							"gap": 10,
+							"align": "right",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "ltdob1",
+						"pos": [
+							50,
+							250
+						],
+						"width": 80,
+						"format": "yyyy/m/d",
+						"align": "left",
+						"bgCol": "White",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Date Of Birth",
+							"width": 130,
+							"gap": 0,
+							"align": "left",
+							"pos": "top",
+							"font": {
+								"name": "$smallLabel"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "ctdob1",
+						"pos": [
+							240,
+							250
+						],
+						"width": 80,
+						"format": "yyyy/mm/dd",
+						"align": "center",
+						"bgCol": "White",
+						"border": {
+							"width":1,
+							"col": "#ffff00"
+						},
+						"label": {
+							"value": "Date Of Birth",
+							"width": 130,
+							"gap": 0,
+							"align": "center",
+							"pos": "top",
+							"font": {
+								"name": "$smallLabel"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "rtdob1",
+						"pos": [
+							420,
+							250
+						],
+						"width": 80,
+						"format": "yyyy/mm/dd",
+						"align": "right",
+						"font": {
+							"name": "$input",
+							"col": "#FF0000"
+						},
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Date Of Birth",
+							"width": 130,
+							"gap": 0,
+							"align": "right",
+							"pos": "top",
+							"font": {
+								"name": "$smallLabel"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "lbdob1",
+						"pos": [
+							50,
+							80
+						],
+						"width": 80,
+						"format": "dd/mm/yyyy",
+						"align": "left",
+						"bgCol": "White",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Date Of Birth",
+							"width": 130,
+							"gap": 2,
+							"align": "left",
+							"pos": "bottom",
+							"font": {
+								"name": "$smallLabel"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "cbdob1",
+						"pos": [
+							240,
+							80
+						],
+						"width": 80,
+						"format": "dd/mm/yyyy",
+						"align": "center",
+						"bgCol": "White",
+						"border": {
+							"width":1,
+							"col": "#FF0000"
+						},
+						"label": {
+							"value": "Date Of Birth",
+							"width": 130,
+							"gap": 2,
+							"align": "center",
+							"pos": "bottom",
+							"font": {
+								"name": "$smallLabel"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "rbdob1",
+						"pos": [
+							420,
+							80
+						],
+						"width": 80,
+						"format": "dd/mm/yyyy",
+						"align": "right",
+						"border": {
+							"width":1,
+							"col": "DarkGray"
+						},
+						"label": {
+							"value": "Date Of Birth",
+							"width": 130,
+							"gap": 2,
+							"align": "right",
+							"pos": "bottom",
+							"font": {
+								"name": "$smallLabel"
+							}
+						}
+					}
+				],
+				"text": [
+					{
+						"value": "Datefields with left label:",
+						"pos": [
+							10,
+							690
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Datefields with right label:",
+						"pos": [
+							10,
+							520
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Datefields with top label:",
+						"pos": [
+							10,
+							350
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Datefields with bottom label:",
+						"pos": [
+							10,
+							170
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					}
+				]
+			}
+		}
+	}
+}

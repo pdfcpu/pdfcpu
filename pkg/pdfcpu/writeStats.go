@@ -23,10 +23,12 @@ import (
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
-func logWriteStats(ctx *Context) {
+func logWriteStats(ctx *model.Context) {
 
 	xRefTable := ctx.XRefTable
 
@@ -95,7 +97,7 @@ func statsHeadLine() *string {
 	return &hl
 }
 
-func statsLine(ctx *Context) *string {
+func statsLine(ctx *model.Context) *string {
 
 	xRefTable := ctx.XRefTable
 
@@ -109,7 +111,7 @@ func statsLine(ctx *Context) *string {
 	sourceNonBinarySize := sourceFileSize - sourceBinarySize
 
 	sourceSizeStats := fmt.Sprintf("%s (%4.1f%% | %4.1f%%)",
-		ByteSize(sourceFileSize),
+		types.ByteSize(sourceFileSize),
 		float32(sourceBinarySize)/float32(sourceFileSize)*100,
 		float32(sourceNonBinarySize)/float32(sourceFileSize)*100)
 
@@ -127,7 +129,7 @@ func statsLine(ctx *Context) *string {
 	destNonBinarySize := destFileSize - destBinarySize
 
 	destSizeStats := fmt.Sprintf("%s (%4.1f%% | %4.1f%%)",
-		ByteSize(destFileSize),
+		types.ByteSize(destFileSize),
 		float32(destBinarySize)/float32(destFileSize)*100,
 		float32(destNonBinarySize)/float32(destFileSize)*100)
 
@@ -172,67 +174,67 @@ func statsLine(ctx *Context) *string {
 		*xRefTable.Size,
 		missingObjs,
 		nonreferencedObjs,
-		xRefTable.Stats.UsesRootAttr(RootVersion),
-		xRefTable.Stats.UsesRootAttr(RootExtensions),
-		xRefTable.Stats.UsesRootAttr(RootPageLabels),
-		xRefTable.Stats.UsesRootAttr(RootNames),
-		xRefTable.Stats.UsesRootAttr(RootDests),
-		xRefTable.Stats.UsesRootAttr(RootViewerPrefs),
-		xRefTable.Stats.UsesRootAttr(RootPageLayout),
-		xRefTable.Stats.UsesRootAttr(RootPageMode),
-		xRefTable.Stats.UsesRootAttr(RootOutlines),
-		xRefTable.Stats.UsesRootAttr(RootThreads),
-		xRefTable.Stats.UsesRootAttr(RootOpenAction),
-		xRefTable.Stats.UsesRootAttr(RootAA),
-		xRefTable.Stats.UsesRootAttr(RootURI),
-		xRefTable.Stats.UsesRootAttr(RootAcroForm),
-		xRefTable.Stats.UsesRootAttr(RootMetadata),
-		xRefTable.Stats.UsesRootAttr(RootStructTreeRoot),
-		xRefTable.Stats.UsesRootAttr(RootMarkInfo),
-		xRefTable.Stats.UsesRootAttr(RootLang),
-		xRefTable.Stats.UsesRootAttr(RootSpiderInfo),
-		xRefTable.Stats.UsesRootAttr(RootOutputIntents),
-		xRefTable.Stats.UsesRootAttr(RootPieceInfo),
-		xRefTable.Stats.UsesRootAttr(RootOCProperties),
-		xRefTable.Stats.UsesRootAttr(RootPerms),
-		xRefTable.Stats.UsesRootAttr(RootLegal),
-		xRefTable.Stats.UsesRootAttr(RootRequirements),
-		xRefTable.Stats.UsesRootAttr(RootCollection),
-		xRefTable.Stats.UsesRootAttr(RootNeedsRendering),
-		xRefTable.Stats.UsesPageAttr(PageLastModified),
-		xRefTable.Stats.UsesPageAttr(PageResources),
-		xRefTable.Stats.UsesPageAttr(PageMediaBox),
-		xRefTable.Stats.UsesPageAttr(PageCropBox),
-		xRefTable.Stats.UsesPageAttr(PageBleedBox),
-		xRefTable.Stats.UsesPageAttr(PageTrimBox),
-		xRefTable.Stats.UsesPageAttr(PageArtBox),
-		xRefTable.Stats.UsesPageAttr(PageBoxColorInfo),
-		xRefTable.Stats.UsesPageAttr(PageContents),
-		xRefTable.Stats.UsesPageAttr(PageRotate),
-		xRefTable.Stats.UsesPageAttr(PageGroup),
-		xRefTable.Stats.UsesPageAttr(PageThumb),
-		xRefTable.Stats.UsesPageAttr(PageB),
-		xRefTable.Stats.UsesPageAttr(PageDur),
-		xRefTable.Stats.UsesPageAttr(PageTrans),
-		xRefTable.Stats.UsesPageAttr(PageAnnots),
-		xRefTable.Stats.UsesPageAttr(PageAA),
-		xRefTable.Stats.UsesPageAttr(PageMetadata),
-		xRefTable.Stats.UsesPageAttr(PagePieceInfo),
-		xRefTable.Stats.UsesPageAttr(PageStructParents),
-		xRefTable.Stats.UsesPageAttr(PageID),
-		xRefTable.Stats.UsesPageAttr(PagePZ),
-		xRefTable.Stats.UsesPageAttr(PageSeparationInfo),
-		xRefTable.Stats.UsesPageAttr(PageTabs),
-		xRefTable.Stats.UsesPageAttr(PageTemplateInstantiated),
-		xRefTable.Stats.UsesPageAttr(PagePresSteps),
-		xRefTable.Stats.UsesPageAttr(PageUserUnit),
-		xRefTable.Stats.UsesPageAttr(PageVP))
+		xRefTable.Stats.UsesRootAttr(model.RootVersion),
+		xRefTable.Stats.UsesRootAttr(model.RootExtensions),
+		xRefTable.Stats.UsesRootAttr(model.RootPageLabels),
+		xRefTable.Stats.UsesRootAttr(model.RootNames),
+		xRefTable.Stats.UsesRootAttr(model.RootDests),
+		xRefTable.Stats.UsesRootAttr(model.RootViewerPrefs),
+		xRefTable.Stats.UsesRootAttr(model.RootPageLayout),
+		xRefTable.Stats.UsesRootAttr(model.RootPageMode),
+		xRefTable.Stats.UsesRootAttr(model.RootOutlines),
+		xRefTable.Stats.UsesRootAttr(model.RootThreads),
+		xRefTable.Stats.UsesRootAttr(model.RootOpenAction),
+		xRefTable.Stats.UsesRootAttr(model.RootAA),
+		xRefTable.Stats.UsesRootAttr(model.RootURI),
+		xRefTable.Stats.UsesRootAttr(model.RootAcroForm),
+		xRefTable.Stats.UsesRootAttr(model.RootMetadata),
+		xRefTable.Stats.UsesRootAttr(model.RootStructTreeRoot),
+		xRefTable.Stats.UsesRootAttr(model.RootMarkInfo),
+		xRefTable.Stats.UsesRootAttr(model.RootLang),
+		xRefTable.Stats.UsesRootAttr(model.RootSpiderInfo),
+		xRefTable.Stats.UsesRootAttr(model.RootOutputIntents),
+		xRefTable.Stats.UsesRootAttr(model.RootPieceInfo),
+		xRefTable.Stats.UsesRootAttr(model.RootOCProperties),
+		xRefTable.Stats.UsesRootAttr(model.RootPerms),
+		xRefTable.Stats.UsesRootAttr(model.RootLegal),
+		xRefTable.Stats.UsesRootAttr(model.RootRequirements),
+		xRefTable.Stats.UsesRootAttr(model.RootCollection),
+		xRefTable.Stats.UsesRootAttr(model.RootNeedsRendering),
+		xRefTable.Stats.UsesPageAttr(model.PageLastModified),
+		xRefTable.Stats.UsesPageAttr(model.PageResources),
+		xRefTable.Stats.UsesPageAttr(model.PageMediaBox),
+		xRefTable.Stats.UsesPageAttr(model.PageCropBox),
+		xRefTable.Stats.UsesPageAttr(model.PageBleedBox),
+		xRefTable.Stats.UsesPageAttr(model.PageTrimBox),
+		xRefTable.Stats.UsesPageAttr(model.PageArtBox),
+		xRefTable.Stats.UsesPageAttr(model.PageBoxColorInfo),
+		xRefTable.Stats.UsesPageAttr(model.PageContents),
+		xRefTable.Stats.UsesPageAttr(model.PageRotate),
+		xRefTable.Stats.UsesPageAttr(model.PageGroup),
+		xRefTable.Stats.UsesPageAttr(model.PageThumb),
+		xRefTable.Stats.UsesPageAttr(model.PageB),
+		xRefTable.Stats.UsesPageAttr(model.PageDur),
+		xRefTable.Stats.UsesPageAttr(model.PageTrans),
+		xRefTable.Stats.UsesPageAttr(model.PageAnnots),
+		xRefTable.Stats.UsesPageAttr(model.PageAA),
+		xRefTable.Stats.UsesPageAttr(model.PageMetadata),
+		xRefTable.Stats.UsesPageAttr(model.PagePieceInfo),
+		xRefTable.Stats.UsesPageAttr(model.PageStructParents),
+		xRefTable.Stats.UsesPageAttr(model.PageID),
+		xRefTable.Stats.UsesPageAttr(model.PagePZ),
+		xRefTable.Stats.UsesPageAttr(model.PageSeparationInfo),
+		xRefTable.Stats.UsesPageAttr(model.PageTabs),
+		xRefTable.Stats.UsesPageAttr(model.PageTemplateInstantiated),
+		xRefTable.Stats.UsesPageAttr(model.PagePresSteps),
+		xRefTable.Stats.UsesPageAttr(model.PageUserUnit),
+		xRefTable.Stats.UsesPageAttr(model.PageVP))
 
 	return &line
 }
 
 // AppendStatsFile appends a stats line for this xRefTable to the configured csv file name.
-func AppendStatsFile(ctx *Context) error {
+func AppendStatsFile(ctx *model.Context) error {
 
 	fileName := ctx.StatsFileName
 

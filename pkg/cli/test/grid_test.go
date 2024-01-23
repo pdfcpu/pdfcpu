@@ -22,33 +22,33 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-func testGrid(t *testing.T, msg string, inFiles []string, outFile string, selectedPages []string, desc string, rows, cols int, isImg bool) {
+func testGrid(t *testing.T, msg string, inFiles []string, outFile string, selectedPages []string, desc string, rows, cols int, isImg bool, conf *model.Configuration) {
 	t.Helper()
 
 	var (
-		nup *pdfcpu.NUp
+		nup *model.NUp
 		err error
 	)
 
 	if isImg {
-		if nup, err = api.ImageGridConfig(rows, cols, desc); err != nil {
+		if nup, err = api.ImageGridConfig(rows, cols, desc, conf); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	} else {
-		if nup, err = api.PDFGridConfig(rows, cols, desc); err != nil {
+		if nup, err = api.PDFGridConfig(rows, cols, desc, conf); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	}
 
-	cmd := cli.NUpCommand(inFiles, outFile, selectedPages, nup, nil)
+	cmd := cli.NUpCommand(inFiles, outFile, selectedPages, nup, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
-	if err := validateFile(t, outFile, nil); err != nil {
+	if err := validateFile(t, outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
@@ -60,13 +60,14 @@ func TestGridCommand(t *testing.T) {
 		outFile       string
 		selectedPages []string
 		desc          string
+		unit          string
 		rows, cols    int
 		isImg         bool
 	}{
 		{"TestGridFromPDF",
 			[]string{filepath.Join(inDir, "Acroforms2.pdf")},
 			filepath.Join(outDir, "testGridFromPDF.pdf"),
-			nil, "form:LegalL", 1, 3, false},
+			nil, "form:LegalL", "points", 1, 3, false},
 
 		{"TestGridFromImages",
 			[]string{
@@ -75,8 +76,10 @@ func TestGridCommand(t *testing.T) {
 				filepath.Join(resDir, "snow.jpg"),
 			},
 			filepath.Join(outDir, "testGridFromImages.pdf"),
-			nil, "d:500 500, margin:20, border:off", 1, 3, true},
+			nil, "d:500 500, margin:20, border:off", "points", 1, 3, true},
 	} {
-		testGrid(t, tt.msg, tt.inFiles, tt.outFile, tt.selectedPages, tt.desc, tt.rows, tt.cols, tt.isImg)
+		conf := model.NewDefaultConfiguration()
+		conf.SetUnit(tt.unit)
+		testGrid(t, tt.msg, tt.inFiles, tt.outFile, tt.selectedPages, tt.desc, tt.rows, tt.cols, tt.isImg, conf)
 	}
 }

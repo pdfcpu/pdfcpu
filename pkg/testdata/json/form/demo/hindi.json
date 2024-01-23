@@ -1,0 +1,717 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": false,
+	"guides": false,
+	"colors": {
+		"DarkOrange": "#FF8C00",
+		"DarkSeaGreen": "#8FBC8F"
+	},
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"fonts": {
+		"input": {
+			"name": "UnifontMedium",
+			"lang": "hi",
+			"script": "Deva",
+			"size": 12
+		},
+		"label": {
+			"name": "$input"
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"header": {
+		"font": {
+			"name": "$label",
+			"size": 24,
+			"col": "#C00000"
+		},
+		"left": "$logo1",
+		"center":  "डेमो फॉर्म",
+		"rtl": false,
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "Courier",
+			"size": 9
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Optimized for A.Reader\nPage %p of %P",
+		"right": "Source:\ntestdata/json/form/demo/hindi.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"pages": {
+		"1": {
+			"content": {
+				"textfield": [
+					{
+						"hide": false,
+						"id": "firstName1",
+						"tip": "प्रथम नाम",
+						"tab": 1,
+						"pos": [
+							160,
+							665
+						],
+						"width": 240,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "प्रथम नाम:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "lastName1",
+						"tip": "उपनाम",
+						"tab": 2,
+						"pos": [
+							160,
+							645
+						],
+						"width": 240,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "उपनाम:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "note1",
+						"tip": "कारण",
+						"tab": 12,
+						"multiline": true,
+						"value": "यह एक नमूना पाठ है।\nयह अगली पंक्ति है।.",
+						"pos": [
+							160,
+							132
+						],
+						"width": 240,
+						"height":70,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						}
+					}
+				],
+				
+				"datefield": [
+					{
+						"hide": false,
+						"id": "dob1",
+						"tab": 3,
+						"format": "dd.mm.yyyy",
+						"pos": [
+							160,
+							625
+						],
+						"width": 70,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "जन्म की तारीख:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+ 						}
+					}
+				],
+
+				"radiobuttongroup": [
+					{
+						"hide": false,
+						"id": "gender1",
+						"tip":  "लिंग",
+						"tab": 4,
+						"orientation": "hor",
+						"pos": [
+							160,
+							605
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"महिला",
+								"नर",
+								"प्रवेश निषेध"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 55,
+								"gap": 10,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "लिंग:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"checkbox": [
+					{
+						"hide": false,
+						"id": "cb11",
+						"tip": "गूगल खोज",
+						"tab": 7,
+						"value": false,
+						"pos": [
+							30,
+							270
+						],
+						"width": 12,
+						"label": {
+							"value": "गूगल खोज",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb12",
+						"tip": "जीथब खोज",
+						"tab": 8,
+						"value": false,
+						"pos": [
+							30,
+							250
+						],
+						"width": 12,
+						"label": {
+							"value": "जीथब खोज",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb13",
+						"tip": "गोलांग वीकली",
+						"tab": 9,
+						"value": false,
+						"pos": [
+							30,
+							230
+						],
+						"width": 12,
+						"label": {
+							"value": "गोलांग वीकली",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb14",
+						"tip": "साथी गोफर",
+						"tab": 10,
+						"value": false,
+						"pos": [
+							30,
+							210
+						],
+						"width": 12,
+						"label": {
+							"value": "साथी गोफर",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb15",
+						"tip": "अन्य",
+						"tab": 11,
+						"value": false,
+						"pos": [
+							30,
+							190
+						],	
+						"width": 12,
+						"label": {
+							"value": "अन्य:",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					}
+				],
+
+				"listbox": [
+					{
+						"hide": false,
+						"id": "city11",
+						"tip": "पसंदीदा शहर",
+						"tab": 5,
+						"options": [
+							"सैन फ्रांसिस्को",
+							"साओ पाउलो",
+							"वियना"
+						],
+						"multi": true,
+						"pos": [
+							160,
+							530
+						],
+						"width": 240,
+						"height": 54,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "पसंदीदा शहर:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"combobox": [
+					{
+						"hide": false,
+						"id": "city12",
+						"tip": "शहर",
+						"tab": 6,
+						"options": [
+							"दिल्ली",
+							"मुंबई",
+							"बैंगलोर"
+						],
+						"edit": false,
+						"pos": [
+							160,
+							500
+						],
+						"width": 240,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "शहर:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+				
+				"text": [
+					{
+						"hide": false,
+						"value": "1) कृपया हमें अपने बारे में बताएं:",
+						"pos": [
+							10,
+							690
+						],
+						"font": {
+							"name": "$label"
+						}
+					},
+					{
+						"hide": false,
+						"value": "2) आपने पीडीएफसीपीयू के बारे में कैसे सुना:",
+						"pos": [
+							10,
+							290
+						],
+						"font": {
+							"name": "$label"
+						}
+					}
+				]
+			}
+		},
+		"2": {
+			"content": {
+				"textfield": [
+					{
+						"hide": false,
+						"id": "firstName2",
+						"tip": "प्रथम नाम",
+						"tab": 1,
+						"value": "जैकी",
+						"pos": [
+							160,
+							665
+						],
+						"width": 240,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "प्रथम नाम:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "lastName2",
+						"tip": "उपनाम",
+						"tab": 2,
+						"value": "हरिणी",
+						"pos": [
+							160,
+							645
+						],
+						"width": 240,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "उपनाम:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "note2",
+						"tip": "कारण",
+						"tab": 12,
+						"multiline": true,
+						"value": "यह एक नमूना पाठ है।\nयह अगली पंक्ति है।.",
+						"pos": [
+							160,
+							132
+						],
+						"width": 240,
+						"height":70,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						}
+					}
+				],
+				
+				"datefield": [
+					{
+						"hide": false,
+						"id": "dob2",
+						"tab": 3,
+						"value": "31.12.1999",
+						"pos": [
+							160,
+							625
+						],
+						"width": 70,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "जन्म की तारीख:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+ 						}
+					}
+				],
+
+				"radiobuttongroup": [
+					{
+						"hide": false,
+						"id": "gender2",
+						"tip":  "लिंग",
+						"tab": 4,
+						"value": "प्रवेश निषेध",
+						"orientation": "hor",
+						"pos": [
+							160,
+							605
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"महिला",
+								"नर",
+								"प्रवेश निषेध"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 55,
+								"gap": 10,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "लिंग:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"checkbox": [
+					{
+						"hide": false,
+						"id": "cb21",
+						"tip": "गूगल खोज",
+						"tab": 7,
+						"value": true,
+						"pos": [
+							30,
+							270
+						],
+						"width": 12,
+						"label": {
+							"value": "गूगल खोज",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb22",
+						"tip": "जीथब खोज",
+						"tab": 8,
+						"value": false,
+						"pos": [
+							30,
+							250
+						],
+						"width": 12,
+						"label": {
+							"value": "जीथब खोज",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb23",
+						"tip": "गोलांग वीकली",
+						"tab": 9,
+						"value": false,
+						"pos": [
+							30,
+							230
+						],
+						"width": 12,
+						"label": {
+							"value": "गोलांग वीकली",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb24",
+						"tip": "साथी गोफर",
+						"tab": 10,
+						"value": false,
+						"pos": [
+							30,
+							210
+						],
+						"width": 12,
+						"label": {
+							"value": "साथी गोफर",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb25",
+						"tip": "अन्य",
+						"tab": 11,
+						"value": false,
+						"pos": [
+							30,
+							190
+						],	
+						"width": 12,
+						"label": {
+							"value": "अन्य:",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					}
+				],
+
+				"listbox": [
+					{
+						"hide": false,
+						"id": "city21",
+						"tip": "पसंदीदा शहर",
+						"tab": 5,
+						"options": [
+							"सैन फ्रांसिस्को",
+							"साओ पाउलो",
+							"वियना"
+						],
+						"multi": false,
+						"value": "सैन फ्रांसिस्को",
+						"pos": [
+							160,
+							530
+						],
+						"width": 240,
+						"height": 54,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "पसंदीदा शहर:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"combobox": [
+					{
+						"hide": false,
+						"id": "city22",
+						"tip": "शहर",
+						"tab": 6,
+						"options": [
+							"दिल्ली",
+							"मुंबई",
+							"बैंगलोर"
+						],
+						"edit": false,
+						"value": "मुंबई",
+						"pos": [
+							160,
+							500
+						],
+						"width": 240,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "शहर:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+				
+				"text": [
+					{
+						"hide": false,
+						"value": "1) कृपया हमें अपने बारे में बताएं:",
+						"pos": [
+							10,
+							690
+						],
+						"font": {
+							"name": "$label"
+						}
+					},
+					{
+						"hide": false,
+						"value": "2) आपने पीडीएफसीपीयू के बारे में कैसे सुना:",
+						"pos": [
+							10,
+							290
+						],
+						"font": {
+							"name": "$label"
+						}
+					}
+				]
+			}
+		}
+	}
+}

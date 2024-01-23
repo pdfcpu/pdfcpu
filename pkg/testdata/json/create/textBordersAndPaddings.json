@@ -1,0 +1,429 @@
+{
+	"paper": "A4L",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": true,
+	"debug": false,
+	"guides": true,
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"fonts": {
+		"myCourier": {
+			"name": "Courier",
+			"size": 12
+		}
+	},
+	"borders": {
+		"globalBorder": {
+			"width": 5,
+			"col": "#D00000",
+			"style": "round"
+		}
+	},
+	"paddings": {
+		"globalPadding": {
+			"top": 5,
+			"right": 0,
+			"bottom": 5,
+			"left": 0
+		}
+	},
+	"header": {
+		"font": {
+			"name": "Courier-Bold",
+			"size": 24,
+			"col": "#0000FF"
+		},
+		"left": "$logo1",
+		"center": "Borders, Paddings and Inheritance",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 10,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "$myCourier",
+			"col": "Black"
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Page %p of %P",
+		"right": "Source:\ntestdata/json/create/textBordersAndPaddings.json",
+		"from": 1,
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"pages": {
+		"1": {
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							50,
+							50
+						]
+					},
+					{
+						"pos": [
+							50,
+							100
+						]
+					},
+					{
+						"pos": [
+							50,
+							150
+						]
+					},
+					{
+						"pos": [
+							50,
+							200
+						]
+					},
+					{
+						"pos": [
+							300,
+							100
+						]
+					},
+					{
+						"pos": [
+							300,
+							150
+						]
+					},
+					{
+						"pos": [
+							300,
+							200
+						]
+					},
+					{
+						"pos": [
+							550,
+							100
+						]
+					},
+					{
+						"pos": [
+							550,
+							150
+						]
+					},
+					{
+						"pos": [
+							550,
+							200
+						]
+					},
+					{
+						"pos": [
+							50,
+							280
+						]
+					},
+					{
+						"pos": [
+							50,
+							380
+						]
+					}
+				],
+				"bgcol": "#BEDED9",
+				"borders": {
+					"pageBorder": {
+						"width": 5,
+						"col": "#FFFF00",
+						"style": "round"
+					}
+				},
+				"paddings": {
+					"pagePadding": {
+						"top": 15,
+						"right": 0,
+						"bottom": 15,
+						"left": 0
+					}
+				},
+				"text": [
+					{
+						"hide": false,
+						"value": "A multiline textbox\nwithout border and padding",
+						"pos": [
+							50,
+							50
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"hide": false,
+						"value": "A multiline textbox\nusing border",
+						"pos": [
+							50,
+							100
+						],
+						"bgcol": "#BEDED9",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"width": 5,
+							"col": "#004444",
+							"style": "miter"
+						}
+					},
+					{
+						"hide": false,
+						"value": "A multiline textbox\nusing padding",
+						"pos": [
+							50,
+							150
+						],
+						"bgcol": "#BEDED9",
+						"font": {
+							"name": "$myCourier"
+						},
+						"padding": {
+							"width": 5
+						}
+					},
+					{
+						"hide": false,
+						"value": "A multiline textbox\nusing border & padding",
+						"pos": [
+							50,
+							200
+						],
+						"bgcol": "#BEDED9",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"width": 5,
+							"col": "#004444",
+							"style": "miter"
+						},
+						"padding": {
+							"width": 5
+						}
+					},
+					{
+						"hide": false,
+						"value": "A multiline textbox\nusing rounded border",
+						"pos": [
+							300,
+							100
+						],
+						"bgCol": "#EEEE00",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"width": 5,
+							"col": "#004444",
+							"style": "round"
+						}
+					},
+					{
+						"hide": false,
+						"value": "A multiline textbox\nusing padding",
+						"pos": [
+							300,
+							150
+						],
+						"bgCol": "#EEEE00",
+						"font": {
+							"name": "$myCourier"
+						},
+						"padding": {
+							"width": 5
+						}
+					},
+					{
+						"hide": false,
+						"value": "A multiline textbox\nusing rounded border & padding",
+						"pos": [
+							300,
+							200
+						],
+						"bgCol": "#EEEE00",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"width": 5,
+							"col": "#004444",
+							"style": "round"
+						},
+						"padding": {
+							"width": 5
+						}
+					},
+					{
+						"hide": false,
+						"value": "A multiline textbox\nusing beveled border",
+						"pos": [
+							550,
+							100
+						],
+						"bgCol": "#03F890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"width": 5,
+							"col": "#004444",
+							"style": "bevel"
+						}
+					},
+					{
+						"hide": false,
+						"value": "A multiline textbox\nusing padding",
+						"pos": [
+							550,
+							150
+						],
+						"bgCol": "#03F890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"padding": {
+							"top": 5,
+							"right": 15,
+							"bottom": 5,
+							"left": 15
+						}
+					},
+					{
+						"hide": false,
+						"value": "A multiline textbox\nusing beveled border & padding",
+						"pos": [
+							550,
+							200
+						],
+						"bgCol": "#03F890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"width": 5,
+							"col": "#004444",
+							"style": "bevel"
+						},
+						"padding": {
+							"top": 5,
+							"right": 15,
+							"bottom": 5,
+							"left": 15
+						}
+					},
+					{
+						"hide": false,
+						"value": "A multiline textbox\nusing global border and global padding",
+						"pos": [
+							50,
+							280
+						],
+						"bgCol": "#03F890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$globalBorder"
+						},
+						"padding": {
+							"name": "$globalPadding"
+						}
+					},
+					{
+						"hide": false,
+						"value": "A multiline textbox\nusing page border and page padding",
+						"pos": [
+							550,
+							280
+						],
+						"bgCol": "#03F890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$pageBorder"
+						},
+						"padding": {
+							"name": "$pagePadding"
+						}
+					},
+					{
+						"hide": false,
+						"value": "A multiline textbox\noveriding global border and global padding",
+						"pos": [
+							50,
+							380
+						],
+						"bgCol": "#03F890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$globalBorder",
+							"width": 10
+						},
+						"padding": {
+							"name": "$globalPadding",
+							"width": 10
+						}
+					},
+					{
+						"hide": false,
+						"value": "A multiline textbox\noveriding page border\nand page padding",
+						"pos": [
+							550,
+							380
+						],
+						"bgCol": "#03F890",
+						"font": {
+							"name": "$myCourier"
+						},
+						"border": {
+							"name": "$pageBorder",
+							"col": "#0000FF",
+							"style": "bevel"
+						},
+						"padding": {
+							"name": "$pagePadding",
+							"left": 20,
+							"right": 20
+						}
+					}
+				]
+			}
+		}
+	}
+}

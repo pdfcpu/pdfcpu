@@ -17,22 +17,26 @@
 package primitives
 
 import (
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
+// Divider is a positioned separator between two regions from p to q.
 type Divider struct {
 	pdf   *PDF
-	At    float64
-	p, q  pdfcpu.Point
-	Width int
-	Color string `json:"col"`
-	col   *pdfcpu.SimpleColor
+	Pos   float64     `json:"at"` // fraction 0..1
+	p, q  types.Point // Endpoints
+	Width int         // 1..10
+	Color string      `json:"col"`
+	col   *color.SimpleColor
 }
 
 func (d *Divider) validate() error {
-	if d.At <= 0 || d.At >= 1 {
-		return errors.Errorf("pdfcpu: div at(%.1f) needs to be between 0 and 1", d.At)
+	if d.Pos <= 0 || d.Pos >= 1 {
+		return errors.Errorf("pdfcpu: div at(%.1f) needs to be between 0 and 1", d.Pos)
 	}
 	if d.Width < 0 || d.Width > 10 {
 		return errors.Errorf("pdfcpu: div width(%d) needs to be between 0 and 10", d.Width)
@@ -47,13 +51,13 @@ func (d *Divider) validate() error {
 	return nil
 }
 
-func (d *Divider) render(p *pdfcpu.Page) error {
+func (d *Divider) render(p *model.Page) error {
 
 	if d.col == nil {
 		return nil
 	}
 
-	pdfcpu.DrawLine(p.Buf, d.p.X, d.p.Y, d.q.X, d.q.Y, float64(d.Width), d.col, nil)
+	draw.DrawLine(p.Buf, d.p.X, d.p.Y, d.q.X, d.q.Y, float64(d.Width), d.col, nil)
 
 	return nil
 }

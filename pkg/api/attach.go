@@ -17,105 +17,55 @@
 package api
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
 
-func listAttachments(rs io.ReadSeeker, conf *pdfcpu.Configuration, withDesc, sorted bool) ([]string, error) {
+// Attachments returns rs's attachments.
+func Attachments(rs io.ReadSeeker, conf *model.Configuration) ([]model.Attachment, error) {
 	if rs == nil {
-		return nil, errors.New("pdfcpu: ListAttachments: Please provide rs")
+		return nil, errors.New("pdfcpu: Attachments: missing rs")
 	}
+
 	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		conf = model.NewDefaultConfiguration()
 	}
+	conf.Cmd = model.LISTATTACHMENTS
 
 	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
+	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, fromStart)
 	if err != nil {
 		return nil, err
 	}
 
-	fromWrite := time.Now()
-
-	aa, err := ctx.ListAttachments()
-	if err != nil {
-		return nil, err
-	}
-
-	var ss []string
-	for _, a := range aa {
-		s := a.FileName
-		if withDesc && a.Desc != "" {
-			s = fmt.Sprintf("%s (%s)", s, a.Desc)
-		}
-		ss = append(ss, s)
-	}
-	if sorted {
-		sort.Strings(ss)
-	}
-
-	durWrite := time.Since(fromWrite).Seconds()
-	durTotal := time.Since(fromStart).Seconds()
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	pdfcpu.TimingStats("list files", durRead, durVal, durOpt, durWrite, durTotal)
-
-	return ss, nil
-}
-
-// ListAttachments returns a list of embedded file attachments of rs with optional description.
-func ListAttachments(rs io.ReadSeeker, conf *pdfcpu.Configuration) ([]string, error) {
-	return listAttachments(rs, conf, true, true)
-}
-
-// ListAttachmentsFile returns a list of embedded file attachments of inFile with optional description.
-func ListAttachmentsFile(inFile string, conf *pdfcpu.Configuration) ([]string, error) {
-	f, err := os.Open(inFile)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	return ListAttachments(f, conf)
-}
-
-// ListAttachmentsCompact returns a list of embedded file attachments of rs w/o optional description.
-func ListAttachmentsCompact(rs io.ReadSeeker, conf *pdfcpu.Configuration) ([]string, error) {
-	return listAttachments(rs, conf, false, false)
-}
-
-// ListAttachmentsCompactFile returns a list of embedded file attachments of inFile w/o optional description.
-func ListAttachmentsCompactFile(inFile string, conf *pdfcpu.Configuration) ([]string, error) {
-	f, err := os.Open(inFile)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	return ListAttachmentsCompact(f, conf)
+	return ctx.ListAttachments()
 }
 
 // AddAttachments embeds files into a PDF context read from rs and writes the result to w.
 // file is either a file name or a file name and a description separated by a comma.
-func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, conf *pdfcpu.Configuration) error {
+func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, conf *model.Configuration) error {
 	if rs == nil {
-		return errors.New("pdfcpu: AddAttachments: Please provide rs")
-	}
-	if w == nil {
-		return errors.New("pdfcpu: AddAttachments: Please provide w")
-	}
-	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		return errors.New("pdfcpu: AddAttachments: missing rs")
 	}
 
+	if w == nil {
+		return errors.New("pdfcpu: AddAttachments: missing w")
+	}
+
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.ADDATTACHMENTS
+
 	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
+	ctx, durRead, durVal, durOpt, err := ReadValidateAndOptimize(rs, conf, fromStart)
 	if err != nil {
 		return err
 	}
@@ -135,7 +85,9 @@ func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, co
 			desc = s[1]
 		}
 
-		log.CLI.Printf("adding %s\n", fileName)
+		if log.CLIEnabled() {
+			log.CLI.Printf("adding %s\n", fileName)
+		}
 		f, err := os.Open(fileName)
 		if err != nil {
 			return err
@@ -148,7 +100,7 @@ func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, co
 		}
 		mt := fi.ModTime()
 
-		a := pdfcpu.Attachment{Reader: f, ID: filepath.Base(fileName), Desc: desc, ModTime: &mt}
+		a := model.Attachment{Reader: f, ID: filepath.Base(fileName), Desc: desc, ModTime: &mt}
 		if err = ctx.AddAttachment(a, coll); err != nil {
 			return err
 		}
@@ -156,7 +108,7 @@ func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, co
 	}
 
 	if !ok {
-		return errors.New("no attachment added")
+		return errors.New("pdfcpu: AddAttachments: No attachment added")
 	}
 
 	durAdd := time.Since(from).Seconds()
@@ -174,7 +126,7 @@ func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, co
 }
 
 // AddAttachmentsFile embeds files into a PDF context read from inFile and writes the result to outFile.
-func AddAttachmentsFile(inFile, outFile string, files []string, coll bool, conf *pdfcpu.Configuration) (err error) {
+func AddAttachmentsFile(inFile, outFile string, files []string, coll bool, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {
@@ -186,6 +138,7 @@ func AddAttachmentsFile(inFile, outFile string, files []string, coll bool, conf 
 		tmpFile = outFile
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -193,9 +146,7 @@ func AddAttachmentsFile(inFile, outFile string, files []string, coll bool, conf 
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -205,9 +156,7 @@ func AddAttachmentsFile(inFile, outFile string, files []string, coll bool, conf 
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 
@@ -215,19 +164,22 @@ func AddAttachmentsFile(inFile, outFile string, files []string, coll bool, conf 
 }
 
 // RemoveAttachments deletes embedded files from a PDF context read from rs and writes the result to w.
-func RemoveAttachments(rs io.ReadSeeker, w io.Writer, files []string, conf *pdfcpu.Configuration) error {
+func RemoveAttachments(rs io.ReadSeeker, w io.Writer, files []string, conf *model.Configuration) error {
 	if rs == nil {
-		return errors.New("pdfcpu: RemoveAttachments: Please provide rs")
-	}
-	if w == nil {
-		return errors.New("pdfcpu: RemoveAttachments: Please provide w")
-	}
-	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		return errors.New("pdfcpu: RemoveAttachments: missing rs")
 	}
 
+	if w == nil {
+		return errors.New("pdfcpu: RemoveAttachments: missing w")
+	}
+
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.ADDATTACHMENTS
+
 	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := readValidateAndOptimize(rs, conf, fromStart)
+	ctx, durRead, durVal, durOpt, err := ReadValidateAndOptimize(rs, conf, fromStart)
 	if err != nil {
 		return err
 	}
@@ -239,7 +191,7 @@ func RemoveAttachments(rs io.ReadSeeker, w io.Writer, files []string, conf *pdfc
 		return err
 	}
 	if !ok {
-		return errors.New("no attachment removed")
+		return errors.New("pdfcpu: RemoveAttachments: No attachment removed")
 	}
 
 	durRemove := time.Since(from).Seconds()
@@ -256,7 +208,7 @@ func RemoveAttachments(rs io.ReadSeeker, w io.Writer, files []string, conf *pdfc
 }
 
 // RemoveAttachmentsFile deletes embedded files from a PDF context read from inFile and writes the result to outFile.
-func RemoveAttachmentsFile(inFile, outFile string, files []string, conf *pdfcpu.Configuration) (err error) {
+func RemoveAttachmentsFile(inFile, outFile string, files []string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {
@@ -268,6 +220,7 @@ func RemoveAttachmentsFile(inFile, outFile string, files []string, conf *pdfcpu.
 		tmpFile = outFile
 	}
 	if f2, err = os.Create(tmpFile); err != nil {
+		f1.Close()
 		return err
 	}
 
@@ -275,9 +228,7 @@ func RemoveAttachmentsFile(inFile, outFile string, files []string, conf *pdfcpu.
 		if err != nil {
 			f2.Close()
 			f1.Close()
-			if outFile == "" || inFile == outFile {
-				os.Remove(tmpFile)
-			}
+			os.Remove(tmpFile)
 			return
 		}
 		if err = f2.Close(); err != nil {
@@ -287,9 +238,7 @@ func RemoveAttachmentsFile(inFile, outFile string, files []string, conf *pdfcpu.
 			return
 		}
 		if outFile == "" || inFile == outFile {
-			if err = os.Rename(tmpFile, inFile); err != nil {
-				return
-			}
+			err = os.Rename(tmpFile, inFile)
 		}
 	}()
 
@@ -297,15 +246,17 @@ func RemoveAttachmentsFile(inFile, outFile string, files []string, conf *pdfcpu.
 }
 
 // ExtractAttachmentsRaw extracts embedded files from a PDF context read from rs.
-func ExtractAttachmentsRaw(rs io.ReadSeeker, outDir string, fileNames []string, conf *pdfcpu.Configuration) ([]pdfcpu.Attachment, error) {
+func ExtractAttachmentsRaw(rs io.ReadSeeker, outDir string, fileNames []string, conf *model.Configuration) ([]model.Attachment, error) {
 	if rs == nil {
-		return nil, errors.New("pdfcpu: ExtractAttachmentsRaw: Please provide rs")
-	}
-	if conf == nil {
-		conf = pdfcpu.NewDefaultConfiguration()
+		return nil, errors.New("pdfcpu: ExtractAttachmentsRaw: missing rs")
 	}
 
-	ctx, _, _, _, err := readValidateAndOptimize(rs, conf, time.Now())
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.EXTRACTATTACHMENTS
+
+	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
 	if err != nil {
 		return nil, err
 	}
@@ -314,7 +265,7 @@ func ExtractAttachmentsRaw(rs io.ReadSeeker, outDir string, fileNames []string, 
 }
 
 // ExtractAttachments extracts embedded files from a PDF context read from rs into outDir.
-func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, conf *pdfcpu.Configuration) error {
+func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, conf *model.Configuration) error {
 	aa, err := ExtractAttachmentsRaw(rs, outDir, fileNames, conf)
 	if err != nil {
 		return err
@@ -322,7 +273,7 @@ func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, con
 
 	for _, a := range aa {
 		fileName := filepath.Join(outDir, a.FileName)
-		log.CLI.Printf("writing %s\n", fileName)
+		logWritingTo(fileName)
 		f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 		if err != nil {
 			return err
@@ -339,11 +290,12 @@ func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, con
 }
 
 // ExtractAttachmentsFile extracts embedded files from a PDF context read from inFile into outDir.
-func ExtractAttachmentsFile(inFile, outDir string, files []string, conf *pdfcpu.Configuration) error {
+func ExtractAttachmentsFile(inFile, outDir string, files []string, conf *model.Configuration) error {
 	f, err := os.Open(inFile)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+
 	return ExtractAttachments(f, outDir, files, conf)
 }

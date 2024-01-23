@@ -42,7 +42,7 @@ func TestPortfolioCommand(t *testing.T) {
 		filepath.Join(outDir, "go-lecture.pdf"),
 		filepath.Join(outDir, "test.wav") + ", test audio file"}
 
-	cmd := cli.AddAttachmentsPortfolioCommand(fileName, "", files, nil)
+	cmd := cli.AddAttachmentsPortfolioCommand(fileName, "", files, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s add portfolio entries: %v\n", msg, err)
 	}
@@ -54,33 +54,33 @@ func TestPortfolioCommand(t *testing.T) {
 	}
 
 	// Extract all portfolio entries.
-	cmd = cli.ExtractAttachmentsCommand(fileName, outDir, nil, nil)
+	cmd = cli.ExtractAttachmentsCommand(fileName, outDir, nil, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s extract all portfolio entries: %v\n", msg, err)
 	}
 
 	// Extract 1 portfolio entry.
-	cmd = cli.ExtractAttachmentsCommand(fileName, outDir, []string{"golang.pdf"}, nil)
+	cmd = cli.ExtractAttachmentsCommand(fileName, outDir, []string{"golang.pdf"}, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s extract one portfolio entry: %v\n", msg, err)
 	}
 
 	// Remove 1 portfolio entry.
-	cmd = cli.RemoveAttachmentsCommand(fileName, "", []string{"golang.pdf"}, nil)
+	cmd = cli.RemoveAttachmentsCommand(fileName, "", []string{"golang.pdf"}, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s remove one portfolio entry: %v\n", msg, err)
 	}
 	listAttachments(t, msg, fileName, 3)
 
 	// Remove all portfolio entries.
-	cmd = cli.RemoveAttachmentsCommand(fileName, "", nil, nil)
+	cmd = cli.RemoveAttachmentsCommand(fileName, "", nil, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s remove all portfolio entries: %v\n", msg, err)
 	}
 	listAttachments(t, msg, fileName, 0)
 
 	// Validate the processed file.
-	if err := validateFile(t, fileName, nil); err != nil {
+	if err := validateFile(t, fileName, conf); err != nil {
 		t.Fatalf("%s: validate: %v\n", msg, err)
 	}
 }

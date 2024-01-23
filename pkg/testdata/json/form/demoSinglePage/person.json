@@ -1,0 +1,349 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": false,
+	"debug": false,
+	"guides": false,
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"fonts": {
+		"myCourierBold": {
+			"name": "Courier-Bold",
+			"size": 12
+		},
+		"input": {
+			"name": "Helvetica",
+			"size": 12
+		},
+		"label": {
+			"name": "$input"
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"header": {
+		"font": {
+			"name": "$myCourierBold",
+			"size": 24,
+			"col": "#C00000"
+		},
+		"left": "$logo1",
+		"center": "Person Of Impact",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "Courier",
+			"size": 9
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Optimized for A.Reader\nPage %p of %P",
+		"right": "Source:\ntestdata/json/form/demoSinglePage/person.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"pages": {
+		"1": {
+			"content": {
+				"textfield": [
+					{
+						"hide": false,
+						"id": "firstName",
+						"tip": "First Name",
+						"tab": 1,
+						"pos": [
+							120,
+							665
+						],
+						"width": 200,
+						"align": "left",
+						"border": {
+							"width": 1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "First Name:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "lastName",
+						"tip": "Last Name",
+						"tab": 2,
+						"pos": [
+							120,
+							645
+						],
+						"width": 200,
+						"align": "left",
+						"border": {
+							"width": 1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Last Name:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "country",
+						"tip": "Country",
+						"tab": 6,
+						"pos": [
+							120,
+							587
+						],
+						"width": 200,
+						"align": "left",
+						"border": {
+							"width": 1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Country:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "planet",
+						"tip": "Planet",
+						"default": "Earth",
+						"locked": true,
+						"tab": 7,
+						"pos": [
+							120,
+							567
+						],
+						"width": 50,
+						"align": "left",
+						"border": {
+							"width": 1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Planet:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "occup",
+						"tip": "Occupation",
+						"tab": 8,
+						"pos": [
+							120,
+							537
+						],
+						"width": 200,
+						"align": "left",
+						"border": {
+							"width": 1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Occupation:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+				"datefield": [
+					{
+						"hide": false,
+						"id": "dob",
+						"tab": 3,
+						"format": "dd.mm.yyyy",
+						"pos": [
+							120,
+							625
+						],
+						"width": 70,
+						"border": {
+							"width": 1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Date Of Birth:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+				"radiobuttongroup": [
+					{
+						"hide": false,
+						"id": "gender",
+						"tip": "Gender",
+						"tab": 5,
+						"orientation": "hor",
+						"pos": [
+							120,
+							608
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"female",
+								"male",
+								"non-binary"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 50,
+								"gap": 10,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "Gender:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+				"checkbox": [
+					{
+						"hide": false,
+						"id": "dobVerified",
+						"tip": "is dob verified?",
+						"tab": 4,
+						"pos": [
+							308,
+							627
+						],
+						"width": 12,
+						"label": {
+							"value": "verified",
+							"width": 40,
+							"gap": 5,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+				"combobox": [
+					{
+						"hide": false,
+						"id": "status",
+						"tip": "Status",
+						"tab": 9,
+						"options": [
+							"alive",
+							"deceased",
+							"imprisoned",
+							"killed",
+							"unknown"
+						],
+						"default": "unknown",
+						"edit": false,
+						"pos": [
+							120,
+							510
+						],
+						"width": 200,
+						"border": {
+							"width": 1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Status:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "license",
+						"tip": "License",
+						"tab": 10,
+						"options": [
+							"CC BY 2.0",
+							"CC BY 3.0",
+							"CC BY 4.0",
+							"CC BY-SA 2.0",
+							"CC BY-SA 2.5",
+							"CC BY-SA 3.0",
+							"CC BY-SA 3.0 de",
+							"CC BY-SA 4.0",
+							"Copyrighted free use",
+							"PDM-owner",
+							"Public Domain",
+							"Twitter",
+							"fair use",
+							"unknown"
+						],
+						"pos": [
+							120,
+							280
+						],
+						"width": 200,
+						"height": 160,
+						"border": {
+							"width": 1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "License:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				]
+			}
+		}
+	}
+}

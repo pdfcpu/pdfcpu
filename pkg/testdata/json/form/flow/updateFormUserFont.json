@@ -1,0 +1,198 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"debug": false,
+	"contentBox": false,
+	"guides": false,
+	"colors": {
+		"DarkOrange": "#FF8C00"
+	},
+	"fonts": {
+		"input": {
+			"name": "Roboto-Regular",
+			"lang": "uk",
+			"script": "Cyrl",
+			"size": 12,
+			"col": "$DarkOrange"
+		},
+		"label": {
+			"name": "$input"
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"pages": {
+		"1": {
+			"content": {
+				"textfield": [
+					{
+						"hide": false,
+						"id": "newtf",
+						"value": "Зміст",
+						"tip": "Нове Поле",
+						"tab": 9,
+						"pos": [
+							320,
+							495
+						],
+						"width": 200,
+						"align": "left",
+						"border": {
+							"width": 1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Нове Поле:",
+							"width": 80,
+							"gap": 10,
+							"align": "right",
+							"pos": "left"
+						}
+					}
+				],
+				"datefield": [
+					{
+						"hide": false,
+						"id": "newdf",
+						"tab": 10,
+						"pos": [
+							320,
+							475
+						],
+						"width": 70,
+						"format": "dd.mm.yyyy",
+						"border": {
+							"width": 1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Нова дата:",
+							"width": 80,
+							"gap": 10,
+							"align": "right",
+							"pos": "left"
+						}
+					}
+				],
+				"radiobuttongroup": [
+					{
+						"hide": false,
+						"id": "newrbg",
+						"tip": "колір",
+						"tab": 11,
+						"orientation": "hor",
+						"pos": [
+							320,
+							457
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"білий",
+								"сірий",
+								"чорний"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 50,
+								"gap": 10,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "колір:",
+							"width": 80,
+							"gap": 10,
+							"align": "right",
+							"pos": "left"
+						}
+					}
+				],
+				"listbox": [
+					{
+						"hide": false,
+						"id": "newlb",
+						"tip": "Пункт",
+						"tab": 12,
+						"options": [
+							"Пункт 1",
+							"Пункт 2",
+							"Пункт 3"
+						],
+						"multi": false,
+						"pos": [
+							320,
+							405
+						],
+						"width": 200,
+						"height": 44,
+						"border": {
+							"width": 1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Пункт:",
+							"width": 80,
+							"gap": 10,
+							"align": "right",
+							"pos": "left"
+						}
+					}
+				],
+				"combobox": [
+					{
+						"hide": false,
+						"id": "newcb",
+						"tip": "Номер",
+						"tab": 13,
+						"options": [
+							"один",
+							"два",
+							"три"
+						],
+						"edit": false,
+						"pos": [
+							320,
+							380
+						],
+						"width": 200,
+						"border": {
+							"width": 1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Номер:",
+							"width": 80,
+							"gap": 10,
+							"align": "right",
+							"pos": "left"
+						}
+					}
+				],
+				"checkbox": [
+					{
+						"hide": false,
+						"id": "newCheckbox",
+						"tip": "в порядку",
+						"tab": 14,
+						"value": false,
+						"pos": [
+							320,
+							365
+						],
+						"width": 12,
+						"label": {
+							"value": "в порядку:",
+							"width": 80,
+							"gap": 10,
+							"align": "right",
+							"pos": "left"
+						}
+					}
+				]
+			}
+		}
+	}
+}

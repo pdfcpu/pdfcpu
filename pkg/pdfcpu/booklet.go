@@ -19,51 +19,13 @@ package pdfcpu
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"os"
 
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
-
-type bookletType int
-
-// These are the types of booklet layouts
-const (
-	Booklet bookletType = iota
-	BookletAdvanced
-	BookletPerfectBound
-)
-
-func (b bookletType) String() string {
-	switch b {
-
-	case Booklet:
-		return "booklet"
-	case BookletAdvanced:
-		return "booklet advanced"
-	case BookletPerfectBound:
-		return "booklet perfect bound"
-	}
-
-	return ""
-}
-
-type bookletBinding int
-
-const (
-	shortEdge bookletBinding = iota
-	longEdge
-)
-
-func (b bookletBinding) String() string {
-	switch b {
-	case shortEdge:
-		return "short-edge"
-	case longEdge:
-		return "long-edge"
-	}
-	return ""
-}
 
 var (
 	errInvalidBookletGridID   = errors.New("pdfcpu booklet: n must be one of 2, 4, 6, 8")
@@ -71,21 +33,25 @@ var (
 )
 
 // DefaultBookletConfig returns the default configuration for a booklet
-func DefaultBookletConfig() *NUp {
-	nup := DefaultNUpConfig()
+func DefaultBookletConfig() *model.NUp {
+	nup := model.DefaultNUpConfig()
 	nup.Margin = 0
 	nup.Border = false
 	nup.BookletGuides = false
 	nup.MultiFolio = false
 	nup.FolioSize = 8
-	nup.BookletType = Booklet
-	nup.BookletBinding = longEdge
+	nup.BookletType = model.Booklet
+	nup.BookletBinding = model.LongEdge
 	return nup
 }
 
 // PDFBookletConfig returns an NUp configuration for booklet-ing PDF files.
-func PDFBookletConfig(val int, desc string) (*NUp, error) {
+func PDFBookletConfig(val int, desc string, conf *model.Configuration) (*model.NUp, error) {
 	nup := DefaultBookletConfig()
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	nup.InpUnit = conf.Unit
 	if desc != "" {
 		if err := ParseNUpDetails(desc, nup); err != nil {
 			return nil, err
@@ -98,21 +64,21 @@ func PDFBookletConfig(val int, desc string) (*NUp, error) {
 		return nup, errInvalidBookletGridID
 	}
 	// 6up and 8up special cases
-	if nup.isBooklet() && val > 4 && nup.isTopFoldBinding() {
+	if nup.IsBooklet() && val > 4 && nup.IsTopFoldBinding() {
 		// you can't top fold a 6up with 3 rows
 		// TODO: support this for 8up
 		return nup, fmt.Errorf("pdfcpu booklet: n>4 must have binding on side (portrait long-edge or landscape short-edge)")
 	}
 	// bookletadvanced
-	if nup.BookletType == BookletAdvanced && val == 4 && nup.isTopFoldBinding() {
+	if nup.BookletType == model.BookletAdvanced && val == 4 && nup.IsTopFoldBinding() {
 		return nup, errInvalidBookletAdvanced
 	}
 	return nup, nil
 }
 
 // ImageBookletConfig returns an NUp configuration for booklet-ing image files.
-func ImageBookletConfig(val int, desc string) (*NUp, error) {
-	nup, err := PDFBookletConfig(val, desc)
+func ImageBookletConfig(val int, desc string, conf *model.Configuration) (*model.NUp, error) {
+	nup, err := PDFBookletConfig(val, desc, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -126,79 +92,6 @@ func getPageNumber(pageNumbers []int, n int) int {
 		return 0
 	}
 	return pageNumbers[n]
-}
-
-func drawGuideLineLabel(w io.Writer, x, y float64, s string, mb *Rectangle, fm FontMap, rot int) {
-	fontName := "Helvetica"
-	td := TextDescriptor{
-		FontName:  fontName,
-		FontKey:   fm.EnsureKey(fontName),
-		FontSize:  9,
-		Scale:     1.0,
-		ScaleAbs:  true,
-		StrokeCol: Black,
-		FillCol:   Black,
-		X:         x,
-		Y:         y,
-		Rotation:  float64(rot),
-		Text:      s,
-	}
-	WriteMultiLine(w, mb, nil, td)
-}
-
-func drawScissors(w io.Writer, mb *Rectangle, fm FontMap) {
-	fontName := "ZapfDingbats"
-	td := TextDescriptor{
-		FontName:  fontName,
-		FontKey:   fm.EnsureKey(fontName),
-		FontSize:  12,
-		Scale:     1.0,
-		ScaleAbs:  true,
-		StrokeCol: Black,
-		FillCol:   Black,
-		X:         0,
-		Y:         mb.Height()/2 - 4,
-		Text:      string([]byte{byte(34)}),
-	}
-	WriteMultiLine(w, mb, nil, td)
-}
-
-func drawBookletGuides(nup *NUp, w io.Writer) FontMap {
-	width := nup.PageDim.Width
-	height := nup.PageDim.Height
-	var fm FontMap = FontMap{}
-	mb := RectForDim(nup.PageDim.Width, nup.PageDim.Height)
-
-	SetLineWidth(w, 0)
-	SetStrokeColor(w, Gray)
-
-	switch nup.N() {
-	case 2:
-		// Draw horizontal folding line.
-		fmt.Fprint(w, "[3] 0 d ")
-		DrawLineSimple(w, 0, height/2, width, height/2)
-		drawGuideLineLabel(w, 1, height/2+2, "Fold here", mb, fm, 0)
-	case 4:
-		// Draw vertical folding line.
-		fmt.Fprint(w, "[3] 0 d ")
-		DrawLineSimple(w, width/2, 0, width/2, height)
-		drawGuideLineLabel(w, width/2-23, 20, "Fold here", mb, fm, 90)
-
-		// Draw horizontal cutting line.
-		fmt.Fprint(w, "[3] 0 d ")
-		DrawLineSimple(w, 0, height/2, width, height/2)
-		drawGuideLineLabel(w, width, height/2+2, "Fold & Cut here", mb, fm, 0)
-
-		// Draw scissors over cutting line.
-		drawScissors(w, mb, fm)
-	}
-
-	return fm
-}
-
-type bookletPage struct {
-	number int
-	rotate bool
 }
 
 func nup2OutputPageNr(inputPageNr, inputPageCount int, pageNumbers []int) (int, bool) {
@@ -236,17 +129,17 @@ func get4upPos(pos int, isLandscape bool) (out int) {
 	return pos % 4
 }
 
-func nup4OutputPageNr(inputPageNr int, pageCount int, pageNumbers []int, nup *NUp) (int, bool) {
+func nup4OutputPageNr(inputPageNr int, pageCount int, pageNumbers []int, nup *model.NUp) (int, bool) {
 	switch nup.BookletType {
-	case Booklet:
+	case model.Booklet:
 		// simple booklets are collated by collecting the top of the sheet, then the bottom, then the top of the next sheet, and so on.
 		// this is conceptually easier for collation without specialized tools.
-		if nup.isTopFoldBinding() {
+		if nup.IsTopFoldBinding() {
 			return nup4BasicTopFoldOutputPageNr(inputPageNr, pageCount, pageNumbers, nup)
 		} else {
 			return nup4BasicSideFoldOutputPageNr(inputPageNr, pageCount, pageNumbers, nup)
 		}
-	case BookletAdvanced:
+	case model.BookletAdvanced:
 		// advanced booklets have a different collation pattern: collect the top of each sheet and then the bottom of each sheet.
 		// this allows printers to fold the sheets twice and then cut along one of the folds.
 		return nup4AdvancedSideFoldOutputPageNr(inputPageNr, pageCount, pageNumbers, nup)
@@ -254,7 +147,7 @@ func nup4OutputPageNr(inputPageNr int, pageCount int, pageNumbers []int, nup *NU
 	return 0, false
 }
 
-func nup4BasicSideFoldOutputPageNr(positionNumber int, inputPageCount int, pageNumbers []int, nup *NUp) (int, bool) {
+func nup4BasicSideFoldOutputPageNr(positionNumber int, inputPageCount int, pageNumbers []int, nup *model.NUp) (int, bool) {
 	var p int
 	bookletSheetSideNumber := positionNumber / 4
 	bookletPageNumber := positionNumber / 8
@@ -294,7 +187,7 @@ func nup4BasicSideFoldOutputPageNr(positionNumber int, inputPageCount int, pageN
 	return pageNr, rotate
 }
 
-func nup4BasicTopFoldOutputPageNr(positionNumber int, inputPageCount int, pageNumbers []int, nup *NUp) (int, bool) {
+func nup4BasicTopFoldOutputPageNr(positionNumber int, inputPageCount int, pageNumbers []int, nup *model.NUp) (int, bool) {
 	var p int
 	bookletSheetSideNumber := positionNumber / 4
 	bookletSheetNumber := positionNumber / 8
@@ -332,7 +225,7 @@ func nup4BasicTopFoldOutputPageNr(positionNumber int, inputPageCount int, pageNu
 	return pageNr, rotate
 }
 
-func nup4AdvancedSideFoldOutputPageNr(inputPageNr int, inputPageCount int, pageNumbers []int, nup *NUp) (int, bool) {
+func nup4AdvancedSideFoldOutputPageNr(inputPageNr int, inputPageCount int, pageNumbers []int, nup *model.NUp) (int, bool) {
 	// (output page, input page) = [(1,n), (2,1), (3, n/2+1), (4, n/2-0), (5, 2), (6, n-1), (7, n/2-1), (8, n/2+2) ...]
 	bookletPageNumber := inputPageNr / 4
 	var p int
@@ -371,7 +264,7 @@ func nup4AdvancedSideFoldOutputPageNr(inputPageNr int, inputPageCount int, pageN
 	return pageNr, rotate
 }
 
-func nupLRTBOutputPageNr(positionNumber int, inputPageCount int, pageNumbers []int, nup *NUp) (int, bool) {
+func nupLRTBOutputPageNr(positionNumber int, inputPageCount int, pageNumbers []int, nup *model.NUp) (int, bool) {
 	// move from left to right and then from top to bottom with no rotation
 	var p int
 	N := nup.N()
@@ -400,7 +293,7 @@ func nupLRTBOutputPageNr(positionNumber int, inputPageCount int, pageNumbers []i
 	return pageNr, false
 }
 
-func nup8OutputPageNr(portraitPositionNumber int, inputPageCount int, pageNumbers []int, nup *NUp) (int, bool) {
+func nup8OutputPageNr(portraitPositionNumber int, inputPageCount int, pageNumbers []int, nup *model.NUp) (int, bool) {
 	// 8up sheet has four rows and two columns
 	// but the spreads are NOT across the two columns - instead the spreads are rotated 90deg to fit in a portrait orientation on the sheet
 	// rather than coding up an entire new imposition, we're going to use the left-down-top-bottom imposition as a base
@@ -446,7 +339,7 @@ func nup8OutputPageNr(portraitPositionNumber int, inputPageCount int, pageNumber
 	return pageNumber, rotate
 }
 
-func nupPerfectBound(positionNumber int, inputPageCount int, pageNumbers []int, nup *NUp) (int, bool) {
+func nupPerfectBound(positionNumber int, inputPageCount int, pageNumbers []int, nup *model.NUp) (int, bool) {
 	// input: positionNumber
 	// output: original page number and rotation
 	var p int
@@ -485,7 +378,12 @@ func nupPerfectBound(positionNumber int, inputPageCount int, pageNumbers []int, 
 	return getPageNumber(pageNumbers, p-1), rotate // p is one-indexed and we want zero-indexed
 }
 
-func sortSelectedPagesForBooklet(pages IntSet, nup *NUp) []bookletPage {
+type bookletPage struct {
+	number int
+	rotate bool
+}
+
+func sortSelectedPagesForBooklet(pages types.IntSet, nup *model.NUp) []bookletPage {
 	pageNumbers := sortSelectedPages(pages)
 	pageCount := len(pageNumbers)
 
@@ -501,7 +399,7 @@ func sortSelectedPagesForBooklet(pages IntSet, nup *NUp) []bookletPage {
 	bookletPages := make([]bookletPage, pageCount)
 
 	switch nup.BookletType {
-	case Booklet, BookletAdvanced:
+	case model.Booklet, model.BookletAdvanced:
 		switch nup.N() {
 		case 2:
 			// (output page, input page) = [(1,n), (2,1), (3, n-1), (4, 2), (5, n-2), (6, 3), ...]
@@ -530,7 +428,7 @@ func sortSelectedPagesForBooklet(pages IntSet, nup *NUp) []bookletPage {
 				bookletPages[i].rotate = rotate
 			}
 		}
-	case BookletPerfectBound:
+	case model.BookletPerfectBound:
 		for i := 0; i < pageCount; i++ {
 			pageNr, rotate := nupPerfectBound(i, pageCount, pageNumbers, nup)
 			bookletPages[i].number = pageNr
@@ -541,15 +439,16 @@ func sortSelectedPagesForBooklet(pages IntSet, nup *NUp) []bookletPage {
 	return bookletPages
 }
 
-func (ctx *Context) bookletPages(
-	selectedPages IntSet,
-	nup *NUp,
-	pagesDict Dict,
-	pagesIndRef *IndirectRef) error {
+func bookletPages(
+	ctx *model.Context,
+	selectedPages types.IntSet,
+	nup *model.NUp,
+	pagesDict types.Dict,
+	pagesIndRef *types.IndirectRef) error {
 
 	var buf bytes.Buffer
-	formsResDict := NewDict()
-	rr := rectsForGrid(nup)
+	formsResDict := types.NewDict()
+	rr := nup.RectsForGrid()
 
 	for i, bp := range sortSelectedPagesForBooklet(selectedPages, nup) {
 
@@ -559,7 +458,7 @@ func (ctx *Context) bookletPages(
 				return err
 			}
 			buf.Reset()
-			formsResDict = NewDict()
+			formsResDict = types.NewDict()
 		}
 
 		rDest := rr[i%len(rr)]
@@ -567,12 +466,12 @@ func (ctx *Context) bookletPages(
 		if bp.number == 0 {
 			// This is an empty page at the end.
 			if nup.BgColor != nil {
-				FillRectNoBorder(&buf, rDest, *nup.BgColor)
+				draw.FillRectNoBorder(&buf, rDest, *nup.BgColor)
 			}
 			continue
 		}
 
-		if err := ctx.nUpTilePDFBytesForPDF(bp.number, formsResDict, &buf, rDest, nup, bp.rotate); err != nil {
+		if err := ctx.NUpTilePDFBytesForPDF(bp.number, formsResDict, &buf, rDest, nup, bp.rotate); err != nil {
 			return err
 		}
 	}
@@ -581,73 +480,10 @@ func (ctx *Context) bookletPages(
 	return wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef)
 }
 
-// BookletFromPDF creates a booklet version of the PDF represented by xRefTable.
-func (ctx *Context) BookletFromPDF(selectedPages IntSet, nup *NUp) error {
-	n := int(nup.Grid.Width * nup.Grid.Height)
-	if !(n == 2 || n == 4 || n == 6 || n == 8) {
-		return fmt.Errorf("pdfcpu: booklet must have n={2,4,6,8} pages per sheet, got %d", n)
-	}
-
-	var mb *Rectangle
-
-	if nup.PageDim == nil {
-		nup.PageDim = PaperSize[nup.PageSize]
-	}
-
-	mb = RectForDim(nup.PageDim.Width, nup.PageDim.Height)
-
-	pagesDict := Dict(
-		map[string]Object{
-			"Type":     Name("Pages"),
-			"Count":    Integer(0),
-			"MediaBox": mb.Array(),
-		},
-	)
-
-	pagesIndRef, err := ctx.IndRefForNewObject(pagesDict)
-	if err != nil {
-		return err
-	}
-
-	nup.PageDim = &Dim{mb.Width(), mb.Height()}
-
-	if nup.MultiFolio {
-		pages := IntSet{}
-		for _, i := range sortSelectedPages(selectedPages) {
-			pages[i] = true
-			if len(pages) == 4*nup.FolioSize {
-				if err = ctx.bookletPages(pages, nup, pagesDict, pagesIndRef); err != nil {
-					return err
-				}
-				pages = IntSet{}
-			}
-		}
-		if len(pages) > 0 {
-			if err = ctx.bookletPages(pages, nup, pagesDict, pagesIndRef); err != nil {
-				return err
-			}
-		}
-
-	} else {
-		if err = ctx.bookletPages(selectedPages, nup, pagesDict, pagesIndRef); err != nil {
-			return err
-		}
-	}
-
-	// Replace original pagesDict.
-	rootDict, err := ctx.Catalog()
-	if err != nil {
-		return err
-	}
-
-	rootDict.Update("Pages", *pagesIndRef)
-	return nil
-}
-
 // BookletFromImages creates a booklet version of the image sequence represented by fileNames.
-func BookletFromImages(ctx *Context, fileNames []string, nup *NUp, pagesDict Dict, pagesIndRef *IndirectRef) error {
+func BookletFromImages(ctx *model.Context, fileNames []string, nup *model.NUp, pagesDict types.Dict, pagesIndRef *types.IndirectRef) error {
 	// The order of images in fileNames corresponds to a desired booklet page sequence.
-	selectedPages := IntSet{}
+	selectedPages := types.IntSet{}
 	for i := 1; i <= len(fileNames); i++ {
 		selectedPages[i] = true
 	}
@@ -658,9 +494,9 @@ func BookletFromImages(ctx *Context, fileNames []string, nup *NUp, pagesDict Dic
 	}
 
 	xRefTable := ctx.XRefTable
-	formsResDict := NewDict()
+	formsResDict := types.NewDict()
 	var buf bytes.Buffer
-	rr := rectsForGrid(nup)
+	rr := nup.RectsForGrid()
 
 	for i, bp := range sortSelectedPagesForBooklet(selectedPages, nup) {
 
@@ -672,7 +508,7 @@ func BookletFromImages(ctx *Context, fileNames []string, nup *NUp, pagesDict Dic
 			}
 
 			buf.Reset()
-			formsResDict = NewDict()
+			formsResDict = types.NewDict()
 		}
 
 		rDest := rr[i%len(rr)]
@@ -680,7 +516,7 @@ func BookletFromImages(ctx *Context, fileNames []string, nup *NUp, pagesDict Dic
 		if bp.number == 0 {
 			// This is an empty page at the end of a booklet.
 			if nup.BgColor != nil {
-				FillRectNoBorder(&buf, rDest, *nup.BgColor)
+				draw.FillRectNoBorder(&buf, rDest, *nup.BgColor)
 			}
 			continue
 		}
@@ -690,7 +526,7 @@ func BookletFromImages(ctx *Context, fileNames []string, nup *NUp, pagesDict Dic
 			return err
 		}
 
-		imgIndRef, w, h, err := CreateImageResource(xRefTable, f, false, false)
+		imgIndRef, w, h, err := model.CreateImageResource(xRefTable, f, false, false)
 		if err != nil {
 			return err
 		}
@@ -709,9 +545,72 @@ func BookletFromImages(ctx *Context, fileNames []string, nup *NUp, pagesDict Dic
 
 		// Append to content stream of booklet page i.
 		enforceOrientation := false
-		nUpTilePDFBytes(&buf, RectForDim(float64(w), float64(h)), rr[i%len(rr)], formResID, nup, bp.rotate, enforceOrientation)
+		model.NUpTilePDFBytes(&buf, types.RectForDim(float64(w), float64(h)), rr[i%len(rr)], formResID, nup, bp.rotate, enforceOrientation)
 	}
 
 	// Wrap incomplete booklet page.
 	return wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef)
+}
+
+// BookletFromPDF creates a booklet version of the PDF represented by xRefTable.
+func BookletFromPDF(ctx *model.Context, selectedPages types.IntSet, nup *model.NUp) error {
+	n := int(nup.Grid.Width * nup.Grid.Height)
+	if !(n == 2 || n == 4 || n == 6 || n == 8) {
+		return fmt.Errorf("pdfcpu: booklet must have n={2,4,6,8} pages per sheet, got %d", n)
+	}
+
+	var mb *types.Rectangle
+
+	if nup.PageDim == nil {
+		nup.PageDim = types.PaperSize[nup.PageSize]
+	}
+
+	mb = types.RectForDim(nup.PageDim.Width, nup.PageDim.Height)
+
+	pagesDict := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Pages"),
+			"Count":    types.Integer(0),
+			"MediaBox": mb.Array(),
+		},
+	)
+
+	pagesIndRef, err := ctx.IndRefForNewObject(pagesDict)
+	if err != nil {
+		return err
+	}
+
+	nup.PageDim = &types.Dim{Width: mb.Width(), Height: mb.Height()}
+
+	if nup.MultiFolio {
+		pages := types.IntSet{}
+		for _, i := range sortSelectedPages(selectedPages) {
+			pages[i] = true
+			if len(pages) == 4*nup.FolioSize {
+				if err = bookletPages(ctx, pages, nup, pagesDict, pagesIndRef); err != nil {
+					return err
+				}
+				pages = types.IntSet{}
+			}
+		}
+		if len(pages) > 0 {
+			if err = bookletPages(ctx, pages, nup, pagesDict, pagesIndRef); err != nil {
+				return err
+			}
+		}
+
+	} else {
+		if err = bookletPages(ctx, selectedPages, nup, pagesDict, pagesIndRef); err != nil {
+			return err
+		}
+	}
+
+	// Replace original pagesDict.
+	rootDict, err := ctx.Catalog()
+	if err != nil {
+		return err
+	}
+
+	rootDict.Update("Pages", *pagesIndRef)
+	return nil
 }

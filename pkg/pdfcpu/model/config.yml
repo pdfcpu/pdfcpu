@@ -1,0 +1,60 @@
+#############################
+#   Default configuration   #
+#############################
+
+# toggle for inFilename extension check (.pdf) 
+checkFileNameExt: true
+
+reader15: true
+
+decodeAllStreams: false
+
+# validationMode: 
+# ValidationStrict,
+# ValidationRelaxed,
+# ValidationNone
+validationMode: ValidationRelaxed
+
+# eol for writing:
+# EolLF
+# EolCR
+# EolCRLF
+eol: EolLF
+
+writeObjectStream: true
+writeXRefStream: true
+encryptUsingAES: true
+
+# encryptKeyLength: max 256 
+encryptKeyLength: 256
+
+# permissions for encrypted files: 
+# 0xF0C3 (PermissionsNone)
+# 0xF8C7 (PermissionsPrint)
+# 0xFFFF (PermissionsAll)
+# See more at model.PermissionFlags and PDF spec table 22
+permissions: 0xF0C3
+
+# displayUnit:
+# points
+# inches
+# cm
+# mm
+unit: points
+
+# timestamp format: yyyy-mm-dd hh:mm
+# Switch month and year by using: 2006-02-01 15:04
+# See more at https://pkg.go.dev/time@go1.17.1#pkg-constants
+timestampFormat: 2006-01-02 15:04
+
+# date format: yyyy-mm-dd
+dateFormat: 2006-01-02
+
+# optimize duplicate content streams across pages
+optimizeDuplicateContentStreams: false
+
+# merge creates bookmarks
+createBookmarks: true
+
+# Viewer is expected to supply appearance streams for form fields.
+needAppearances: false

@@ -21,37 +21,38 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-func testNUp(t *testing.T, msg string, inFiles []string, outFile string, selectedPages []string, desc string, n int, isImg bool) {
+func testNUp(t *testing.T, msg string, inFiles []string, outFile string, selectedPages []string, desc string, n int, isImg bool, conf *model.Configuration) {
 	t.Helper()
 
 	var (
-		nup *pdfcpu.NUp
+		nup *model.NUp
 		err error
 	)
 
 	if isImg {
-		if nup, err = api.ImageNUpConfig(n, desc); err != nil {
+		if nup, err = api.ImageNUpConfig(n, desc, conf); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	} else {
-		if nup, err = api.PDFNUpConfig(n, desc); err != nil {
+		if nup, err = api.PDFNUpConfig(n, desc, conf); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	}
 
-	if err := api.NUpFile(inFiles, outFile, selectedPages, nup, nil); err != nil {
+	if err := api.NUpFile(inFiles, outFile, selectedPages, nup, conf); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
-	if err := api.ValidateFile(outFile, nil); err != nil {
+	if err := api.ValidateFile(outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
 
 func TestNUp(t *testing.T) {
-	outDir := filepath.Join("..", "..", "samples", "nup")
+
+	outDir := filepath.Join(samplesDir, "nup")
 
 	for _, tt := range []struct {
 		msg           string
@@ -59,6 +60,7 @@ func TestNUp(t *testing.T) {
 		outFile       string
 		selectedPages []string
 		desc          string
+		unit          string
 		n             int
 		isImg         bool
 	}{
@@ -67,7 +69,8 @@ func TestNUp(t *testing.T) {
 			[]string{filepath.Join(inDir, "WaldenFull.pdf")},
 			filepath.Join(outDir, "NUpFromPDF.pdf"),
 			nil,
-			"margin:10, bgcol:#f7e6c7",
+			"dim: 400 800, margin:10, bgcol:#f7e6c7",
+			"mm",
 			9,
 			false},
 
@@ -76,28 +79,33 @@ func TestNUp(t *testing.T) {
 			[]string{filepath.Join(inDir, "grid_example.pdf")},
 			filepath.Join(outDir, "NUpFromPDFWithCropBox.pdf"),
 			nil,
-			"form:A5L, border:on, margin:10, bgcol:#f7e6c7",
+			"form:A5L, border:on, margin:0, bgcol:#f7e6c7",
+			"points",
 			2,
 			false},
 
 		// 16-Up an image
 		{"TestNUpFromSingleImage",
-			[]string{filepath.Join("..", "..", "..", "resources", "logoSmall.png")},
+			[]string{filepath.Join(resDir, "logoSmall.png")},
 			filepath.Join(outDir, "NUpFromSingleImage.pdf"),
 			nil,
 			"form:A3P, ma:10, bgcol:#f7e6c7",
+			"points",
 			16,
 			true},
 
 		// 6-Up a sequence of images.
 		{"TestNUpFromImages",
-			imageFileNames(t, filepath.Join("..", "..", "..", "resources")),
+			imageFileNames(t, resDir),
 			filepath.Join(outDir, "NUpFromImages.pdf"),
 			nil,
 			"form:Tabloid, border:on, ma:10, bgcol:#f7e6c7",
+			"points",
 			6,
 			true},
 	} {
-		testNUp(t, tt.msg, tt.inFiles, tt.outFile, tt.selectedPages, tt.desc, tt.n, tt.isImg)
+		conf := model.NewDefaultConfiguration()
+		conf.SetUnit(tt.unit)
+		testNUp(t, tt.msg, tt.inFiles, tt.outFile, tt.selectedPages, tt.desc, tt.n, tt.isImg, conf)
 	}
 }

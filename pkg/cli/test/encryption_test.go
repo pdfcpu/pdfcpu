@@ -22,11 +22,11 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-func confForAlgorithm(aes bool, keyLength int) *pdfcpu.Configuration {
-	c := pdfcpu.NewDefaultConfiguration()
+func confForAlgorithm(aes bool, keyLength int) *model.Configuration {
+	c := model.NewDefaultConfiguration()
 	c.EncryptUsingAES = aes
 	c.EncryptKeyLength = keyLength
 	return c
@@ -141,14 +141,14 @@ func testEncryptDecryptUseCase1(t *testing.T, fileName string, aes bool, keyLeng
 
 func ensurePermissionsNone(t *testing.T, listPermOutput []string) {
 	t.Helper()
-	if len(listPermOutput) == 0 || !strings.HasPrefix(listPermOutput[0], "permission bits:            0") {
+	if len(listPermOutput) == 0 || !strings.HasPrefix(listPermOutput[1], "permission bits: 000000000000") {
 		t.Fail()
 	}
 }
 
 func ensurePermissionsAll(t *testing.T, listPermOutput []string) {
 	t.Helper()
-	if len(listPermOutput) == 0 || listPermOutput[0] != "permission bits: 111100111100" {
+	if len(listPermOutput) == 0 || !strings.HasPrefix(listPermOutput[1], "permission bits: 111100111100") {
 		t.Fail()
 	}
 }
@@ -215,16 +215,16 @@ func testEncryptDecryptUseCase2(t *testing.T, fileName string, aes bool, keyLeng
 	conf = confForAlgorithm(aes, keyLength)
 	conf.UserPW = "upw"
 	conf.OwnerPW = "opw"
-	conf.Permissions = pdfcpu.PermissionsAll
+	conf.Permissions = model.PermissionsAll
 	cmd = cli.SetPermissionsCommand(outFile, "", conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s: %s add permissions: %v\n", msg, outFile, err)
 	}
 
 	// List permissions
-	conf = pdfcpu.NewDefaultConfiguration()
+	conf = model.NewDefaultConfiguration()
 	conf.OwnerPW = "opw"
-	cmd = cli.ListPermissionsCommand(outFile, conf)
+	cmd = cli.ListPermissionsCommand([]string{outFile}, conf)
 	list, err := cli.Process(cmd)
 	if err != nil {
 		t.Fatalf("%s: list permissions for %s: %v\n", msg, outFile, err)
@@ -445,12 +445,12 @@ func testPermissionsOPWOnly(t *testing.T, fileName string, aes bool, keyLength i
 	outFile := filepath.Join(outDir, "test.pdf")
 	t.Log(inFile)
 
-	cmd := cli.ListPermissionsCommand(inFile, nil)
+	cmd := cli.ListPermissionsCommand([]string{inFile}, nil)
 	list, err := cli.Process(cmd)
 	if err != nil {
 		t.Fatalf("%s: list permissions %s: %v\n", msg, inFile, err)
 	}
-	if len(list) == 0 || list[0] != "Full access" {
+	if len(list) == 0 || list[1] != "Full access" {
 		t.Fail()
 	}
 
@@ -461,7 +461,7 @@ func testPermissionsOPWOnly(t *testing.T, fileName string, aes bool, keyLength i
 		t.Fatalf("%s: encrypt %s: %v\n", msg, outFile, err)
 	}
 
-	cmd = cli.ListPermissionsCommand(outFile, nil)
+	cmd = cli.ListPermissionsCommand([]string{outFile}, nil)
 	if list, err = cli.Process(cmd); err != nil {
 		t.Fatalf("%s: list permissions %s: %v\n", msg, outFile, err)
 	}
@@ -469,20 +469,20 @@ func testPermissionsOPWOnly(t *testing.T, fileName string, aes bool, keyLength i
 
 	conf = confForAlgorithm(aes, keyLength)
 	conf.OwnerPW = "opw"
-	conf.Permissions = pdfcpu.PermissionsAll
+	conf.Permissions = model.PermissionsAll
 	cmd = cli.SetPermissionsCommand(outFile, "", conf)
 	if _, err = cli.Process(cmd); err != nil {
 		t.Fatalf("%s: set all permissions for %s: %v\n", msg, outFile, err)
 	}
 
-	cmd = cli.ListPermissionsCommand(outFile, nil)
+	cmd = cli.ListPermissionsCommand([]string{outFile}, nil)
 	if list, err = cli.Process(cmd); err != nil {
 		t.Fatalf("%s: list permissions for %s: %v\n", msg, outFile, err)
 	}
 	ensurePermissionsAll(t, list)
 
 	conf = confForAlgorithm(aes, keyLength)
-	conf.Permissions = pdfcpu.PermissionsNone
+	conf.Permissions = model.PermissionsNone
 	cmd = cli.SetPermissionsCommand(outFile, "", conf)
 	if _, err = cli.Process(cmd); err == nil {
 		t.Fatalf("%s: clear all permissions w/o opw for %s\n", msg, outFile)
@@ -490,7 +490,7 @@ func testPermissionsOPWOnly(t *testing.T, fileName string, aes bool, keyLength i
 
 	conf = confForAlgorithm(aes, keyLength)
 	conf.OwnerPW = "opw"
-	conf.Permissions = pdfcpu.PermissionsNone
+	conf.Permissions = model.PermissionsNone
 	cmd = cli.SetPermissionsCommand(outFile, "", conf)
 	if _, err = cli.Process(cmd); err != nil {
 		t.Fatalf("%s: clear all permissions for %s: %v\n", msg, outFile, err)
@@ -505,12 +505,12 @@ func testPermissions(t *testing.T, fileName string, aes bool, keyLength int) {
 	outFile := filepath.Join(outDir, "test.pdf")
 	t.Log(inFile)
 
-	cmd := cli.ListPermissionsCommand(inFile, nil)
+	cmd := cli.ListPermissionsCommand([]string{inFile}, nil)
 	list, err := cli.Process(cmd)
 	if err != nil {
 		t.Fatalf("%s: list permissions %s: %v\n", msg, inFile, err)
 	}
-	if len(list) == 0 || list[0] != "Full access" {
+	if len(list) == 0 || list[1] != "Full access" {
 		t.Fail()
 	}
 
@@ -522,29 +522,29 @@ func testPermissions(t *testing.T, fileName string, aes bool, keyLength int) {
 		t.Fatalf("%s: encrypt %s: %v\n", msg, outFile, err)
 	}
 
-	cmd = cli.ListPermissionsCommand(outFile, nil)
+	cmd = cli.ListPermissionsCommand([]string{outFile}, nil)
 	if _, err = cli.Process(cmd); err == nil {
 		t.Fatalf("%s: list permissions w/o pw %s\n", msg, outFile)
 	}
 
 	conf = confForAlgorithm(aes, keyLength)
 	conf.UserPW = "upw"
-	cmd = cli.ListPermissionsCommand(outFile, conf)
+	cmd = cli.ListPermissionsCommand([]string{outFile}, conf)
 	if list, err = cli.Process(cmd); err != nil {
 		t.Fatalf("%s: list permissions %s: %v\n", msg, outFile, err)
 	}
 	ensurePermissionsNone(t, list)
 
-	conf = pdfcpu.NewDefaultConfiguration()
+	conf = model.NewDefaultConfiguration()
 	conf.OwnerPW = "opw"
-	cmd = cli.ListPermissionsCommand(outFile, conf)
+	cmd = cli.ListPermissionsCommand([]string{outFile}, conf)
 	if list, err = cli.Process(cmd); err != nil {
 		t.Fatalf("%s: list permissions %s: %v\n", msg, outFile, err)
 	}
 	ensurePermissionsNone(t, list)
 
 	conf = confForAlgorithm(aes, keyLength)
-	conf.Permissions = pdfcpu.PermissionsAll
+	conf.Permissions = model.PermissionsAll
 	cmd = cli.SetPermissionsCommand(outFile, "", conf)
 	if _, err = cli.Process(cmd); err == nil {
 		t.Fatalf("%s: set all permissions w/o pw for %s\n", msg, outFile)
@@ -552,7 +552,7 @@ func testPermissions(t *testing.T, fileName string, aes bool, keyLength int) {
 
 	conf = confForAlgorithm(aes, keyLength)
 	conf.UserPW = "upw"
-	conf.Permissions = pdfcpu.PermissionsAll
+	conf.Permissions = model.PermissionsAll
 	cmd = cli.SetPermissionsCommand(outFile, "", conf)
 	if _, err = cli.Process(cmd); err == nil {
 		t.Fatalf("%s: set all permissions w/o opw for %s\n", msg, outFile)
@@ -560,7 +560,7 @@ func testPermissions(t *testing.T, fileName string, aes bool, keyLength int) {
 
 	conf = confForAlgorithm(aes, keyLength)
 	conf.OwnerPW = "opw"
-	conf.Permissions = pdfcpu.PermissionsAll
+	conf.Permissions = model.PermissionsAll
 	cmd = cli.SetPermissionsCommand(outFile, "", conf)
 	if _, err = cli.Process(cmd); err == nil {
 		t.Fatalf("%s: set all permissions w/o both pws for %s\n", msg, outFile)
@@ -569,20 +569,20 @@ func testPermissions(t *testing.T, fileName string, aes bool, keyLength int) {
 	conf = confForAlgorithm(aes, keyLength)
 	conf.OwnerPW = "opw"
 	conf.UserPW = "upw"
-	conf.Permissions = pdfcpu.PermissionsAll
+	conf.Permissions = model.PermissionsAll
 	cmd = cli.SetPermissionsCommand(outFile, "", conf)
 	if _, err = cli.Process(cmd); err != nil {
 		t.Fatalf("%s: set all permissions for %s: %v\n", msg, outFile, err)
 	}
 
-	cmd = cli.ListPermissionsCommand(outFile, nil)
+	cmd = cli.ListPermissionsCommand([]string{outFile}, nil)
 	if _, err = cli.Process(cmd); err == nil {
 		t.Fatalf("%s: list permissions w/o pw %s\n", msg, outFile)
 	}
 
 	conf = confForAlgorithm(aes, keyLength)
 	conf.OwnerPW = "opw"
-	cmd = cli.ListPermissionsCommand(outFile, conf)
+	cmd = cli.ListPermissionsCommand([]string{outFile}, conf)
 	if list, err = cli.Process(cmd); err != nil {
 		t.Fatalf("%s: list permissions for %s: %v\n", msg, outFile, err)
 	}
@@ -601,7 +601,7 @@ func testEncryptDecryptFile(t *testing.T, fileName string, mode string, keyLengt
 func TestEncryptDecrypt(t *testing.T) {
 	for _, fileName := range []string{
 		"5116.DCT_Filter.pdf",
-		"networkProgr.pdf",
+		"adobe_errata.pdf",
 	} {
 		testEncryptDecryptFile(t, fileName, "rc4", 40)
 		testEncryptDecryptFile(t, fileName, "rc4", 128)

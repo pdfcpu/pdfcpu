@@ -17,7 +17,8 @@
 package primitives
 
 import (
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
@@ -26,9 +27,9 @@ type Border struct {
 	Name  string
 	Width int
 	Color string `json:"col"`
-	col   *pdfcpu.SimpleColor
+	col   *color.SimpleColor
 	Style string
-	style pdfcpu.LineJoinStyle
+	style types.LineJoinStyle
 }
 
 func (b *Border) validate() error {
@@ -45,15 +46,15 @@ func (b *Border) validate() error {
 		b.col = sc
 	}
 
-	b.style = pdfcpu.LJMiter
+	b.style = types.LJMiter
 	if b.Style != "" {
 		switch b.Style {
 		case "miter":
-			b.style = pdfcpu.LJMiter
+			b.style = types.LJMiter
 		case "round":
-			b.style = pdfcpu.LJRound
+			b.style = types.LJRound
 		case "bevel":
-			b.style = pdfcpu.LJBevel
+			b.style = types.LJBevel
 		default:
 			return errors.Errorf("pdfcpu: invalid border style: %s (should be \"miter\", \"round\" or \"bevel\")", b.Style)
 		}
@@ -69,7 +70,18 @@ func (b *Border) mergeIn(b0 *Border) {
 	if b.col == nil {
 		b.col = b0.col
 	}
-	if b.style == pdfcpu.LJMiter {
+	if b.style == types.LJMiter {
 		b.style = b0.style
 	}
+}
+
+// func (b *Border) SetCol(c color.SimpleColor) {
+// 	b.col = &c
+// }
+
+func (b Border) calc() (boWidth float64, boCol *color.SimpleColor) {
+	if b.col == nil {
+		return 0, &color.Black
+	}
+	return float64(b.Width), b.col
 }

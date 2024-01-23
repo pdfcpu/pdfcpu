@@ -29,11 +29,6 @@ func TestStampUserFont(t *testing.T) {
 	inFile := filepath.Join(inDir, "mountain.pdf")
 	outDir := filepath.Join("..", "..", "samples", "stamp", "text", "utf8")
 
-	api.LoadConfiguration()
-	if err := api.InstallFonts(userFonts(t, filepath.Join("..", "..", "testdata", "fonts"))); err != nil {
-		t.Fatalf("%s: %v\n", msg, err)
-	}
-
 	for _, sample := range langSamples {
 		outFile := filepath.Join(outDir, sample.lang+".pdf")
 		align, rtl := "l", "off"

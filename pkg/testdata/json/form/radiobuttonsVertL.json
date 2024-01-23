@@ -1,0 +1,604 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": true,
+	"debug": false,
+	"guides": false,
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"margin": {
+		"width": 10
+	},
+	"fonts": {
+		"myCourier": {
+			"name": "Courier",
+			"size": 12
+		},
+		"myCourierBold": {
+			"name": "Courier-Bold",
+			"size": 12
+		},
+		"label": {
+			"name": "Courier",
+			"size": 10
+		}
+	},
+	"header": {
+		"font": {
+			"name": "$myCourierBold",
+			"size": 18,
+			"col": "#C00000"
+		},
+		"left": "$logo1",
+		"center": "Vertical Radiobuttons Left Aligned",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "$myCourier",
+			"size": 9
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Optimized for A.Reader\nPage %p of %P",
+		"right": "Source:\ntestdata/json/form/radiobuttonsVertL.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"pages": {
+		"1": {
+			"bgcol": "LightGray",
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							-1,
+							-1
+						]
+					}
+				],
+				"radiobuttongroup": [
+					{
+						"hide": false,
+						"id": "ll1gender",
+						"tip": "Gender",
+						"orientation": "vert",
+						"pos": [
+							130,
+							680
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"female",
+								"male",
+								"non-binary"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 50,
+								"gap": 7,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "Gender:",
+							"width": 60,
+							"gap": 5,
+							"align": "left",
+							"pos": "left",
+							"font": {
+								"name": "$myCourierBold"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "ll2gender",
+						"tip": "Sex",
+						"orientation": "vert",
+						"pos": [
+							130,
+							610
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"female",
+								"male",
+								"non-binary"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 50,
+								"gap": 7,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "Sex:",
+							"width": 60,
+							"gap": 5,
+							"align": "left",
+							"pos": "left",
+							"font": {
+								"name": "$myCourierBold"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "lr1gender",
+						"tip": "Gender",
+						"orientation": "vert",
+						"pos": [
+							400,
+							680
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"female",
+								"male",
+								"non-binary"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 50,
+								"gap": 7,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "Gender:",
+							"width": 60,
+							"gap": 5,
+							"align": "right",
+							"pos": "left",
+							"font": {
+								"name": "$myCourierBold"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "lr2gender",
+						"tip": "Sex",
+						"orientation": "vert",
+						"pos": [
+							400,
+							610
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"female",
+								"male",
+								"non-binary"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 50,
+								"gap": 7,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "Sex:",
+							"width": 60,
+							"gap": 5,
+							"align": "right",
+							"pos": "left",
+							"font": {
+								"name": "$myCourierBold"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "rl1gender",
+						"tip": "Gender",
+						"orientation": "vert",
+						"pos": [
+							130,
+							500
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"female",
+								"male",
+								"non-binary"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 50,
+								"gap": 7,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "Gender",
+							"width": 60,
+							"gap": 5,
+							"align": "left",
+							"pos": "right",
+							"font": {
+								"name": "$myCourierBold"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "rl2gender",
+						"tip": "Sex",
+						"orientation": "vert",
+						"pos": [
+							130,
+							430
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"female",
+								"male",
+								"non-binary"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 50,
+								"gap": 7,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "Sex",
+							"width": 60,
+							"gap": 5,
+							"align": "left",
+							"pos": "right",
+							"font": {
+								"name": "$myCourierBold"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "rr1gender",
+						"tip": "Gender",
+						"orientation": "vert",
+						"pos": [
+							400,
+							500
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"female",
+								"male",
+								"non-binary"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 50,
+								"gap": 7,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "Gender",
+							"width": 60,
+							"gap": 5,
+							"align": "right",
+							"pos": "right",
+							"font": {
+								"name": "$myCourierBold"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "rr2gender",
+						"tip": "Gender",
+						"orientation": "vert",
+						"pos": [
+							400,
+							430
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"female",
+								"male",
+								"non-binary"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 50,
+								"gap": 7,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "Sex",
+							"width": 60,
+							"gap": 5,
+							"align": "right",
+							"pos": "right",
+							"font": {
+								"name": "$myCourierBold"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "tlgender",
+						"tip": "Gender",
+						"orientation": "vert",
+						"pos": [
+							100,
+							280
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"female",
+								"male",
+								"non-binary"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 50,
+								"gap": 7,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "Gender:",
+							"width": 60,
+							"gap": 7,
+							"align": "left",
+							"pos": "top",
+							"font": {
+								"name": "$myCourierBold"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "tmgender",
+						"tip": "Gender",
+						"orientation": "vert",
+						"pos": [
+							270,
+							280
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"female",
+								"male",
+								"non-binary"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 50,
+								"gap": 7,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "Gender:",
+							"width": 60,
+							"gap": 10,
+							"align": "center",
+							"pos": "top",
+							"font": {
+								"name": "$myCourierBold"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "trgender",
+						"tip": "Gender",
+						"orientation": "vert",
+						"pos": [
+							420,
+							280
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"female",
+								"male",
+								"non-binary"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 50,
+								"gap": 7,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "Gender:",
+							"width": 60,
+							"gap": 10,
+							"align": "right",
+							"pos": "top",
+							"font": {
+								"name": "$myCourierBold"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "blgender",
+						"tip": "Gender",
+						"orientation": "vert",
+						"pos": [
+							100,
+							120
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"female",
+								"male",
+								"non-binary"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 50,
+								"gap": 7,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "Gender",
+							"width": 60,
+							"gap": 7,
+							"align": "left",
+							"pos": "bottom",
+							"font": {
+								"name": "$myCourierBold"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "bmgender",
+						"tip": "Gender",
+						"orientation": "vert",
+						"pos": [
+							270,
+							120
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"female",
+								"male",
+								"non-binary"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 50,
+								"gap": 7,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "Gender",
+							"width": 60,
+							"gap": 10,
+							"align": "center",
+							"pos": "bottom",
+							"font": {
+								"name": "$myCourierBold"
+							}
+						}
+					},
+					{
+						"hide": false,
+						"id": "brgender",
+						"tip": "Gender",
+						"orientation": "vert",
+						"pos": [
+							420,
+							120
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"female",
+								"male",
+								"non-binary"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 50,
+								"gap": 7,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "Gender",
+							"width": 60,
+							"gap": 10,
+							"align": "right",
+							"pos": "bottom",
+							"font": {
+								"name": "$myCourierBold"
+							}
+						}
+					}
+				],
+				"text": [
+					{
+						"value": "Vertical left aligned radiobuttons with left label:",
+						"anchor": "topleft",
+						"font": {
+							"name": "$myCourierBold"
+						}
+					},
+					{
+						"value": "Vertical left aligned radiobuttons with right label:",
+						"pos": [
+							0,
+							540
+						],
+						"font": {
+							"name": "$myCourierBold"
+						}
+					},
+					{
+						"value": "Vertical left aligned radiobuttons with top label:",
+						"anchor": "left",
+						"font": {
+							"name": "$myCourierBold"
+						}
+					},
+					{
+						"value": "Vertical left aligned radiobuttons with bottom label:",
+						"pos": [
+							0,
+							170
+						],
+						"font": {
+							"name": "$myCourierBold"
+						}
+					}
+				]
+			}
+		}
+	}
+}

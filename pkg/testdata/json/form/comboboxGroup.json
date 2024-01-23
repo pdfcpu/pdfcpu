@@ -1,0 +1,840 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": false,
+	"debug": false,
+	"guides": false,
+	"colors": {
+		"DarkOrange": "#FF8C00",
+		"DarkSeaGreen": "#8FBC8F"
+	},
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"fonts": {
+		"myCourier": {
+			"name": "Courier",
+			"size": 12
+		},
+		"myCourierBold": {
+			"name": "Courier-Bold",
+			"size": 12
+		},
+		"input": {
+			"name": "Helvetica",
+			"size": 12,
+			"xcol": "#222222"
+		},
+		"label": {
+			"name": "Helvetica",
+			"size": 12
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"header": {
+		"font": {
+			"name": "$myCourierBold",
+			"size": 24,
+			"col": "#C00000"
+		},
+		"left": "$logo1",
+		"center": "Combobox Groups",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "Courier",
+			"size": 9
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Optimized for A.Reader\nPage %p of %P",
+		"right": "Source:\ntestdata/json/form/comboboxGroup.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"fieldgroups": {
+		"cbg": {
+			"hide": false,
+			"bgCol": "White",
+			"border": {
+				"width": 0,
+				"col": "Black",
+				"style": "round"
+			},
+			"padding": {
+				"width": 6
+			}
+		}
+	},
+	"pages": {
+		"1": {
+			"bgcol": "LightGray",
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							150,
+							650
+						]
+					},
+					{
+						"pos": [
+							250,
+							650
+						]
+					}
+				],
+				"fieldGroup": [
+					{
+						"name": "$cbg",
+						"combobox": [
+							{
+								"hide": false,
+								"id": "llgender",
+								"tip": "Gender",
+								"value": "male",
+								"options": [
+									"female",
+									"male",
+									"non binary"
+								],
+								"edit": false,
+								"pos": [
+									150,
+									650
+								],
+								"width": 100,
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "Gender:",
+									"width": 60,
+									"gap": 10,
+									"align": "left",
+									"pos": "left"
+								}
+							},
+							{
+								"hide": false,
+								"id": "llsex",
+								"tip": "Sex",
+								"options": [
+									"female",
+									"male",
+									"diverse",
+									"inter",
+									"undefined",
+									"no entry"
+								],
+								"edit": false,
+								"pos": [
+									150,
+									620
+								],
+								"width": 100,
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "Sex:",
+									"width": 60,
+									"gap": 10,
+									"align": "left",
+									"pos": "left"
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"combobox": [
+							{
+								"hide": false,
+								"id": "lrgender",
+								"tip": "Gender",
+								"options": [
+									"female",
+									"male",
+									"non binary"
+								],
+								"edit": false,
+								"pos": [
+									400,
+									650
+								],
+								"width": 100,
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "Gender:",
+									"width": 60,
+									"gap": 10,
+									"align": "right",
+									"pos": "left"
+								}
+							},
+							{
+								"hide": false,
+								"id": "lrsex",
+								"tip": "Sex",
+								"options": [
+									"female",
+									"male",
+									"diverse",
+									"inter",
+									"undefined",
+									"no entry"
+								],
+								"edit": false,
+								"pos": [
+									400,
+									620
+								],
+								"width": 100,
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "Sex:",
+									"width": 60,
+									"gap": 10,
+									"align": "right",
+									"pos": "left"
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"combobox": [
+							{
+								"hide": false,
+								"id": "llegender",
+								"tip": "Gender",
+								"options": [
+									"female",
+									"male",
+									"non binary"
+								],
+								"edit": true,
+								"pos": [
+									150,
+									540
+								],
+								"width": 100,
+								"bgcol": "#B0B0B0",
+								"label": {
+									"value": "Gender:",
+									"width": 60,
+									"gap": 10,
+									"align": "left",
+									"pos": "left"
+								}
+							},
+							{
+								"hide": false,
+								"id": "llesex",
+								"tip": "Sex",
+								"options": [
+									"female",
+									"male",
+									"diverse",
+									"inter",
+									"undefined",
+									"no entry"
+								],
+								"edit": true,
+								"pos": [
+									150,
+									510
+								],
+								"width": 100,
+								"bgcol": "#B0B0B0",
+								"label": {
+									"value": "Sex:",
+									"width": 60,
+									"gap": 10,
+									"align": "left",
+									"pos": "left"
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"combobox": [
+							{
+								"hide": false,
+								"id": "lregender",
+								"tip": "Gender",
+								"options": [
+									"female",
+									"male",
+									"non binary"
+								],
+								"edit": true,
+								"pos": [
+									400,
+									540
+								],
+								"width": 100,
+								"bgcol": "#B0B0B0",
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "Gender:",
+									"width": 60,
+									"gap": 10,
+									"align": "right",
+									"pos": "left"
+								}
+							},
+							{
+								"hide": false,
+								"id": "lresex",
+								"tip": "Sex",
+								"options": [
+									"female",
+									"male",
+									"diverse",
+									"inter",
+									"undefined",
+									"no entry"
+								],
+								"edit": true,
+								"pos": [
+									400,
+									510
+								],
+								"width": 100,
+								"bgcol": "#B0B0B0",
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "Sex:",
+									"width": 60,
+									"gap": 10,
+									"align": "right",
+									"pos": "left"
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"combobox": [
+							{
+								"hide": false,
+								"id": "rlgender",
+								"tip": "Gender",
+								"options": [
+									"female",
+									"male",
+									"non binary"
+								],
+								"edit": false,
+								"pos": [
+									150,
+									420
+								],
+								"width": 100,
+								"bgcol": "Gray",
+								"label": {
+									"value": "Gender",
+									"width": 60,
+									"gap": 10,
+									"align": "left",
+									"pos": "right"
+								}
+							},
+							{
+								"hide": false,
+								"id": "rlsex",
+								"tip": "Sex",
+								"options": [
+									"female",
+									"male",
+									"diverse",
+									"inter",
+									"undefined",
+									"no entry"
+								],
+								"edit": false,
+								"pos": [
+									150,
+									390
+								],
+								"width": 100,
+								"bgcol": "Gray",
+								"label": {
+									"value": "Sex",
+									"width": 60,
+									"gap": 10,
+									"align": "left",
+									"pos": "right"
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"combobox": [
+							{
+								"hide": false,
+								"id": "rrgender",
+								"tip": "Gender",
+								"options": [
+									"female",
+									"male",
+									"non binary"
+								],
+								"edit": false,
+								"pos": [
+									400,
+									420
+								],
+								"width": 100,
+								"bgcol": "Gray",
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "Gender",
+									"width": 40,
+									"gap": 10,
+									"align": "right",
+									"pos": "right"
+								}
+							},
+							{
+								"hide": false,
+								"id": "rrsex",
+								"tip": "Sex",
+								"options": [
+									"female",
+									"male",
+									"diverse",
+									"inter",
+									"undefined",
+									"no entry"
+								],
+								"edit": false,
+								"pos": [
+									400,
+									390
+								],
+								"width": 100,
+								"bgcol": "Gray",
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "Sex",
+									"width": 40,
+									"gap": 10,
+									"align": "right",
+									"pos": "right"
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"combobox": [
+							{
+								"hide": false,
+								"id": "rlegender",
+								"tip": "Gender",
+								"options": [
+									"female",
+									"male",
+									"non binary"
+								],
+								"edit": true,
+								"pos": [
+									150,
+									310
+								],
+								"width": 100,
+								"bgCol": "$DarkOrange",
+								"label": {
+									"value": "Gender",
+									"width": 60,
+									"gap": 10,
+									"align": "left",
+									"pos": "right"
+								}
+							},
+							{
+								"hide": false,
+								"id": "rlesex",
+								"tip": "Sex",
+								"options": [
+									"female",
+									"male",
+									"diverse",
+									"inter",
+									"undefined",
+									"no entry"
+								],
+								"edit": true,
+								"pos": [
+									150,
+									280
+								],
+								"width": 100,
+								"bgCol": "$DarkOrange",
+								"label": {
+									"value": "Sex",
+									"width": 60,
+									"gap": 10,
+									"align": "left",
+									"pos": "right"
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"combobox": [
+							{
+								"hide": false,
+								"id": "rregender",
+								"tip": "Gender",
+								"options": [
+									"female",
+									"male",
+									"non binary"
+								],
+								"edit": true,
+								"pos": [
+									400,
+									310
+								],
+								"width": 100,
+								"bgCol": "$DarkOrange",
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "Gender",
+									"width": 40,
+									"gap": 10,
+									"align": "right",
+									"pos": "right"
+								}
+							},
+							{
+								"hide": false,
+								"id": "rresex",
+								"tip": "Sex",
+								"options": [
+									"female",
+									"male",
+									"diverse",
+									"inter",
+									"undefined",
+									"no entry"
+								],
+								"edit": true,
+								"pos": [
+									400,
+									280
+								],
+								"width": 100,
+								"bgCol": "$DarkOrange",
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "Sex",
+									"width": 40,
+									"gap": 10,
+									"align": "right",
+									"pos": "right"
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"combobox": [
+							{
+								"hide": false,
+								"id": "tlgender",
+								"tip": "Gender",
+								"options": [
+									"female",
+									"male",
+									"non binary"
+								],
+								"edit": false,
+								"pos": [
+									100,
+									160
+								],
+								"width": 100,
+								"border": {
+									"width": 1,
+									"col": "#FF0000"
+								},
+								"label": {
+									"value": "Gender",
+									"width": 60,
+									"gap": 0,
+									"align": "left",
+									"pos": "top"
+								}
+							},
+							{
+								"hide": false,
+								"id": "tcgender",
+								"tip": "Gender",
+								"options": [
+									"female",
+									"male",
+									"non binary"
+								],
+								"edit": false,
+								"pos": [
+									250,
+									160
+								],
+								"width": 100,
+								"border": {
+									"width": 1,
+									"col": "#FF0000"
+								},
+								"label": {
+									"value": "Gender",
+									"width": 60,
+									"gap": 0,
+									"align": "center",
+									"pos": "top"
+								}
+							},
+							{
+								"hide": false,
+								"id": "trgender",
+								"tip": "Gender",
+								"options": [
+									"female",
+									"male",
+									"non binary"
+								],
+								"edit": false,
+								"pos": [
+									400,
+									160
+								],
+								"width": 100,
+								"border": {
+									"width": 1,
+									"col": "#FF0000"
+								},
+								"label": {
+									"value": "Gender",
+									"width": 60,
+									"gap": 0,
+									"align": "right",
+									"pos": "top"
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"combobox": [
+							{
+								"hide": false,
+								"id": "tlegender",
+								"tip": "Gender",
+								"options": [
+									"female",
+									"male",
+									"non binary"
+								],
+								"edit": true,
+								"pos": [
+									100,
+									50
+								],
+								"width": 100,
+								"border": {
+									"width": 1,
+									"col": "Gray"
+								},
+								"label": {
+									"value": "Gender",
+									"width": 60,
+									"gap": 0,
+									"align": "left",
+									"pos": "top"
+								}
+							},
+							{
+								"hide": false,
+								"id": "tcegender",
+								"tip": "Gender",
+								"options": [
+									"female",
+									"male",
+									"non binary"
+								],
+								"edit": true,
+								"pos": [
+									250,
+									50
+								],
+								"width": 100,
+								"border": {
+									"width": 1,
+									"col": "Gray"
+								},
+								"label": {
+									"value": "Gender",
+									"width": 60,
+									"gap": 0,
+									"align": "center",
+									"pos": "top"
+								}
+							},
+							{
+								"hide": false,
+								"id": "tregender",
+								"tip": "Gender",
+								"options": [
+									"female",
+									"male",
+									"non binary"
+								],
+								"edit": true,
+								"pos": [
+									400,
+									50
+								],
+								"width": 100,
+								"border": {
+									"width": 1,
+									"col": "Gray"
+								},
+								"label": {
+									"value": "Gender",
+									"width": 60,
+									"gap": 0,
+									"align": "right",
+									"pos": "top"
+								}
+							}
+						]
+					}
+				],
+				"text": [
+					{
+						"value": "Combobox with left label:",
+						"pos": [
+							10,
+							690
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Editable:",
+						"pos": [
+							30,
+							575
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Combobox with right label:",
+						"pos": [
+							10,
+							460
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Editable:",
+						"pos": [
+							30,
+							345
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Combobox with top label:",
+						"pos": [
+							10,
+							230
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Editable:",
+						"pos": [
+							30,
+							115
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					}
+				]
+			}
+		}
+	}
+}

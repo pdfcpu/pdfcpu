@@ -1,0 +1,716 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": false,
+	"guides": false,
+	"colors": {
+		"DarkOrange": "#FF8C00",
+		"DarkSeaGreen": "#8FBC8F"
+	},
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"fonts": {
+		"input": {
+			"name": "UnifontMedium",
+			"lang": "ko",
+			"script": "Kore",
+			"size": 12
+		},
+		"label": {
+			"name": "$input"
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"header": {
+		"font": {
+			"name": "$label",
+			"size": 24,
+			"col": "#C00000"
+		},
+		"left": "$logo1",
+		"center": "데모 양식",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "Courier",
+			"size": 9
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Optimized for A.Reader\nPage %p of %P",
+		"right": "Source:\ntestdata/json/form/demo/korean.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"pages": {
+		"1": {
+			"content": {
+				"textfield": [
+					{
+						"hide": false,
+						"id": "firstName1",
+						"tip": "이름 루터",
+						"tab": 1,
+						"pos": [
+							130,
+							665
+						],
+						"width": 210,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "이름:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "lastName1",
+						"tip": "성",
+						"tab": 2,
+						"pos": [
+							130,
+							645
+						],
+						"width": 210,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "성:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "note1",
+						"tip": "이유",
+						"tab": 12,
+						"multiline": true,
+						"value": "샘플 텍스트입니다.\n다음 줄입니다.",
+						"pos": [
+							130,
+							132
+						],
+						"width": 210,
+						"height":70,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						}
+					}
+				],
+				
+				"datefield": [
+					{
+						"hide": false,
+						"id": "dob1",
+						"tab": 3,
+						"format": "yyyy/mm/dd",
+						"pos": [
+							130,
+							625
+						],
+						"width": 70,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "생일:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+ 						}
+					}
+				],
+
+				"radiobuttongroup": [
+					{
+						"hide": false,
+						"id": "gender1",
+						"tip":  "성별",
+						"tab": 4,
+						"orientation": "hor",
+						"pos": [
+							130,
+							605
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"여자",
+								"남성",
+								"논바이너리"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 55,
+								"gap": 10,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "성별:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"checkbox": [
+					{
+						"hide": false,
+						"id": "cb11",
+						"tip": "구글 검색",
+						"tab": 7,
+						"value": false,
+						"pos": [
+							30,
+							270
+						],
+						"width": 12,
+						"label": {
+							"value": "구글 검색",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb12",
+						"tip": "Github 검색",
+						"tab": 8,
+						"value": false,
+						"pos": [
+							30,
+							250
+						],
+						"width": 12,
+						"label": {
+							"value": "Github 검색",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb13",
+						"tip": "골랑 위클리",
+						"tab": 9,
+						"value": false,
+						"pos": [
+							30,
+							230
+						],
+						"width": 12,
+						"label": {
+							"value": "골랑 위클리",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb14",
+						"tip": "동료 고퍼",
+						"tab": 10,
+						"value": false,
+						"pos": [
+							30,
+							210
+						],
+						"width": 12,
+						"label": {
+							"value": "동료 고퍼",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb15",
+						"tip": "다른",
+						"tab": 11,
+						"value": false,
+						"pos": [
+							30,
+							190
+						],	
+						"width": 12,
+						"label": {
+							"value": "다른:",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					}
+				],
+
+				"listbox": [
+					{
+						"hide": false,
+						"id": "city11",
+						"tip": "좋아하는 도시",
+						"tab": 5,
+						"options": [
+							"샌프란시스코",
+							"상파울루",
+							"비엔나"
+						],
+						"multi": true,
+						"pos": [
+							130,
+							530
+						],
+						"width": 210,
+						"height": 54,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "좋아하는 도시:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"combobox": [
+					{
+						"hide": false,
+						"id": "city12",
+						"tip": "도시",
+						"tab": 6,
+						"options": [
+							"서울",
+							"인천",
+						    "울산"
+						],
+						"edit": false,
+						"pos": [
+							130,
+							500
+						],
+						"width": 210,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "도시:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+				
+				"text": [
+					{
+						"hide": false,
+						"value": "1) 자기소개 부탁드립니다.",
+						"pos": [
+							10,
+							690
+						],
+						"font": {
+							"name": "$label"
+						}
+					},
+					{
+						"hide": false,
+						"value": "2) pdfcpu에 대해 어떻게 알게 되었나요?",
+						"pos": [
+							10,
+							290
+						],
+						"font": {
+							"name": "$label"
+						}
+					}
+				]
+			}
+		},
+		"2": {
+			"content": {
+				"textfield": [
+					{
+						"hide": false,
+						"id": "firstName2",
+						"tip": "이름 루터",
+						"tab": 1,
+						"value": "재키",
+						"pos": [
+							130,
+							665
+						],
+						"width": 210,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "이름:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "lastName2",
+						"tip": "성",
+						"tab": 2,
+						"value": "암사슴",
+						"pos": [
+							130,
+							645
+						],
+						"width": 210,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "성:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "note2",
+						"tip": "이유",
+						"tab": 12,
+						"multiline": true,
+						"value": "샘플 텍스트입니다.\n다음 줄입니다.",
+						"pos": [
+							130,
+							132
+						],
+						"width": 210,
+						"height":70,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						}
+					}
+				],
+				
+				"datefield": [
+					{
+						"hide": false,
+						"id": "dob2",
+						"tab": 3,
+						"value": "2000.12.31",
+						"pos": [
+							130,
+							625
+						],
+						"width": 70,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "생일:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+ 						}
+					}
+				],
+
+				"radiobuttongroup": [
+					{
+						"hide": false,
+						"id": "gender2",
+						"tip":  "성별",
+						"tab": 4,
+						"value": "논바이너리",
+						"orientation": "hor",
+						"pos": [
+							130,
+							605
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"여자",
+								"남성",
+								"논바이너리"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 55,
+								"gap": 10,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "성별:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"checkbox": [
+					{
+						"hide": false,
+						"id": "cb21",
+						"tip": "구글 검색",
+						"tab": 7,
+						"value": true,
+						"pos": [
+							30,
+							270
+						],
+						"width": 12,
+						"label": {
+							"value": "구글 검색",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb22",
+						"tip": "Github 검색",
+						"tab": 8,
+						"value": false,
+						"pos": [
+							30,
+							250
+						],
+						"width": 12,
+						"label": {
+							"value": "Github 검색",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb23",
+						"tip": "골랑 위클리",
+						"tab": 9,
+						"value": false,
+						"pos": [
+							30,
+							230
+						],
+						"width": 12,
+						"label": {
+							"value": "골랑 위클리",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb24",
+						"tip": "동료 고퍼",
+						"tab": 10,
+						"value": false,
+						"pos": [
+							30,
+							210
+						],
+						"width": 12,
+						"label": {
+							"value": "동료 고퍼",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb25",
+						"tip": "다른",
+						"tab": 11,
+						"value": false,
+						"pos": [
+							30,
+							190
+						],	
+						"width": 12,
+						"label": {
+							"value": "다른:",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					}
+				],
+
+				"listbox": [
+					{
+						"hide": false,
+						"id": "city21",
+						"tip": "좋아하는 도시",
+						"tab": 5,
+						"options": [
+							"샌프란시스코",
+							"상파울루",
+							"비엔나"
+						],
+						"multi": false,
+						"value": "샌프란시스코",
+						"pos": [
+							130,
+							530
+						],
+						"width": 210,
+						"height": 54,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "좋아하는 도시:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"combobox": [
+					{
+						"hide": false,
+						"id": "city22",
+						"tip": "도시",
+						"tab": 6,
+						"options": [
+							"서울",
+							"인천",
+						    "울산"
+						],
+						"edit": false,
+						"value": "인천",
+						"pos": [
+							130,
+							500
+						],
+						"width": 210,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "도시:",
+							"width": 80,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+				
+				"text": [
+					{
+						"hide": false,
+						"value": "1) 자기소개 부탁드립니다.",
+						"pos": [
+							10,
+							690
+						],
+						"font": {
+							"name": "$label"
+						}
+					},
+					{
+						"hide": false,
+						"value": "2) pdfcpu에 대해 어떻게 알게 되었나요?",
+						"pos": [
+							10,
+							290
+						],
+						"font": {
+							"name": "$label"
+						}
+					}
+				]
+			}
+		}
+	}
+}

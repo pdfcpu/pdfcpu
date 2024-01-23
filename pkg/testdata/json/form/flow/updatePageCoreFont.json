@@ -1,0 +1,29 @@
+{
+    "paper": "A4P",
+    "crop": "10",
+    "origin": "LowerLeft",
+    "debug": false,
+    "contentBox": false,
+    "guides": false,
+    "colors": {
+		"DarkOrange": "#FF8C00"
+	},
+    "pages": {
+        "1": {
+            "content": {
+                "text": [
+                    {
+                        "hide": false,
+                        "value": "Update: Textbox reusing Corefont Courier from page",
+                        "anchor": "c",
+                        "font": {
+                            "name": "Courier",
+                            "size": 12,
+                            "col": "$DarkOrange"
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}

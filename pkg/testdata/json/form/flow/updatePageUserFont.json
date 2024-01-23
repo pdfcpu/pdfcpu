@@ -1,0 +1,31 @@
+{
+    "paper": "A4P",
+    "crop": "10",
+    "origin": "LowerLeft",
+    "debug": false,
+    "contentBox": false,
+    "guides": false,
+    "colors": {
+		"DarkOrange": "#FF8C00"
+	},
+    "pages": {
+        "1": {
+            "content": {
+                "text": [
+                    {
+                        "hide": false,
+                        "value": "Update: Textbox reusing Userfont Roboto-Regular from page\nОновлення: текстове поле повторно використовує Userfont Roboto-Regular зі сторінки",
+                        "anchor": "c",
+                        "font": {
+                            "name": "Roboto-Regular",
+                            "lang": "uk",
+                            "script": "Cyrl",
+                            "size": 12,
+                            "col": "$DarkOrange"
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}

@@ -20,8 +20,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pdfcpu/pdfcpu/pkg/api"
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 const (
@@ -458,22 +461,22 @@ var langSamples = []sample{
 	{"Roboto-Regular", "Vietnamese", sampleVietnamese, false},
 }
 
-func renderArticle(p pdf.Page, row, col, lang int) {
+func renderArticle(xRefTable *model.XRefTable, p model.Page, row, col, lang int) {
 	mediaBox := p.MediaBox
 	w := mediaBox.Width() / 6
 	h := mediaBox.Height() / 5
-	region := pdf.RectForWidthAndHeight(float64(col)*w, float64(4-row)*h, w, h)
+	region := types.RectForWidthAndHeight(float64(col)*w, float64(4-row)*h, w, h)
 	buf := p.Buf
 	sample := langSamples[lang]
 
 	if lang%2 > 0 {
-		pdf.FillRectNoBorder(buf, region, pdf.SimpleColor{R: .75, G: .75, B: 1})
+		draw.FillRectNoBorder(buf, region, color.SimpleColor{R: .75, G: .75, B: 1})
 	}
 
 	fontName := "Helvetica"
 	k := p.Fm.EnsureKey("Helvetica")
 
-	td := pdf.TextDescriptor{
+	td := model.TextDescriptor{
 		Text:           sample.lang,
 		FontName:       fontName,
 		FontKey:        k,
@@ -484,25 +487,25 @@ func renderArticle(p pdf.Page, row, col, lang int) {
 		MBot:           5,
 		Scale:          1.,
 		ScaleAbs:       false,
-		HAlign:         pdf.AlignLeft,
-		VAlign:         pdf.AlignMiddle,
-		RMode:          pdf.RMFill,
-		StrokeCol:      pdf.NewSimpleColor(0x206A29),
-		FillCol:        pdf.NewSimpleColor(0x206A29),
+		HAlign:         types.AlignLeft,
+		VAlign:         types.AlignMiddle,
+		RMode:          draw.RMFill,
+		StrokeCol:      color.NewSimpleColor(0x206A29),
+		FillCol:        color.NewSimpleColor(0x206A29),
 		ShowBackground: true,
-		BackgroundCol:  pdf.SimpleColor{R: 1., G: .98, B: .77},
+		BackgroundCol:  color.SimpleColor{R: 1., G: .98, B: .77},
 		ShowBorder:     true,
 		ShowLineBB:     false,
 		ShowTextBB:     true,
 		HairCross:      false,
 	}
 
-	pdf.WriteColumnAnchored(buf, mediaBox, region, td, pdf.TopLeft, 0)
+	model.WriteColumnAnchored(xRefTable, buf, mediaBox, region, td, types.TopLeft, 0)
 
 	fontName = sample.fontName
 	k = p.Fm.EnsureKey(fontName)
 
-	td = pdf.TextDescriptor{
+	td = model.TextDescriptor{
 		Text:           sample.text,
 		FontName:       fontName,
 		RTL:            sample.rtl,
@@ -516,13 +519,13 @@ func renderArticle(p pdf.Page, row, col, lang int) {
 		Y:              -1,
 		Scale:          .9,
 		ScaleAbs:       false,
-		HAlign:         pdf.AlignJustify,
-		VAlign:         pdf.AlignMiddle,
-		RMode:          pdf.RMFill,
-		StrokeCol:      pdf.NewSimpleColor(0x206A29),
-		FillCol:        pdf.NewSimpleColor(0x206A29),
+		HAlign:         types.AlignJustify,
+		VAlign:         types.AlignMiddle,
+		RMode:          draw.RMFill,
+		StrokeCol:      color.NewSimpleColor(0x206A29),
+		FillCol:        color.NewSimpleColor(0x206A29),
 		ShowBackground: true,
-		BackgroundCol:  pdf.SimpleColor{R: 1., G: .98, B: .77},
+		BackgroundCol:  color.SimpleColor{R: 1., G: .98, B: .77},
 		ShowBorder:     true,
 		ShowLineBB:     false,
 		ShowTextBB:     false,
@@ -530,38 +533,47 @@ func renderArticle(p pdf.Page, row, col, lang int) {
 	}
 
 	if sample.lang == "Japanese" {
-		pdf.WriteColumn(buf, mediaBox, region, td, mediaBox.Width()*.9)
+		model.WriteColumn(xRefTable, buf, mediaBox, region, td, mediaBox.Width()*.9)
 		return
 	}
 
 	if sample.lang == "Thai" {
-		td.HAlign = pdf.AlignLeft
-		pdf.WriteColumn(buf, mediaBox, region, td, mediaBox.Width()*.9)
+		td.HAlign = types.AlignLeft
+		model.WriteColumn(xRefTable, buf, mediaBox, region, td, mediaBox.Width()*.9)
 		return
 	}
 
-	pdf.WriteMultiLine(buf, mediaBox, region, td)
+	model.WriteMultiLine(xRefTable, buf, mediaBox, region, td)
 }
 
 func TestUserFonts(t *testing.T) {
 	msg := "TestUserFonts"
 
-	api.LoadConfiguration()
-	if err := api.InstallFonts(userFonts(t, filepath.Join("..", "..", "testdata", "fonts"))); err != nil {
+	w, h := 600., 600.
+	mediaBox := types.RectForDim(w, h)
+	p := model.NewPageWithBg(mediaBox, color.NewSimpleColor(0xbeded9))
+
+	xRefTable, err := pdfcpu.CreateDemoXRef()
+	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-
-	w, h := 600., 600.
-	mediaBox := pdf.RectForDim(w, h)
-	p := pdf.NewPageWithBg(mediaBox, pdf.NewSimpleColor(0xbeded9))
 
 	lang := 0
 	for row := 0; row < 5; row++ {
 		for col := 0; col < 6; col++ {
-			renderArticle(p, row, col, lang)
+			renderArticle(xRefTable, p, row, col, lang)
 			lang++
 		}
 	}
 
-	createXRefAndWritePDF(t, msg, "UserFont_HumanRights", p)
+	rootDict, err := xRefTable.Catalog()
+	if err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+	if err = pdfcpu.AddPageTreeWithSamplePage(xRefTable, rootDict, p); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+	outDir := filepath.Join("..", "..", "samples", "basic")
+	outFile := filepath.Join(outDir, "UserFont_HumanRights.pdf")
+	createAndValidate(t, xRefTable, outFile, msg)
 }

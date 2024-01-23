@@ -20,33 +20,38 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
+// PDFPage represents a PDF page with content for generation.
 type PDFPage struct {
 	pdf             *PDF
 	number          int                  // page number
 	Paper           string               // page size
-	mediaBox        *pdfcpu.Rectangle    // page media box
+	mediaBox        *types.Rectangle     // page media box
 	Crop            string               // page crop box
-	cropBox         *pdfcpu.Rectangle    // page crop box
+	cropBox         *types.Rectangle     // page crop box
 	BackgroundColor string               `json:"bgCol"`
-	bgCol           *pdfcpu.SimpleColor  // page background color
+	bgCol           *color.SimpleColor   // page background color
 	Fonts           map[string]*FormFont // default fonts
-	DA              pdfcpu.Object
-	Guides          []*Guide              // hor/vert guidelines for layout
-	Margin          *Margin               // page margin
-	Border          *Border               // page border
-	Padding         *Padding              // page padding
-	Margins         map[string]*Margin    // page scoped named margins
-	Borders         map[string]*Border    // page scoped named borders
-	Paddings        map[string]*Padding   // page scoped named paddings
-	SimpleBoxPool   map[string]*SimpleBox `json:"boxes"`
-	TextBoxPool     map[string]*TextBox   `json:"texts"`
-	ImageBoxPool    map[string]*ImageBox  `json:"images"`
-	TablePool       map[string]*Table     `json:"tables"`
-	FileNames       map[string]string     `json:"files"`
+	DA              types.Object
+	Guides          []*Guide               // hor/vert guidelines for layout
+	Margin          *Margin                // page margin
+	Border          *Border                // page border
+	Padding         *Padding               // page padding
+	Margins         map[string]*Margin     // page scoped named margins
+	Borders         map[string]*Border     // page scoped named borders
+	Paddings        map[string]*Padding    // page scoped named paddings
+	SimpleBoxPool   map[string]*SimpleBox  `json:"boxes"`
+	TextBoxPool     map[string]*TextBox    `json:"texts"`
+	ImageBoxPool    map[string]*ImageBox   `json:"images"`
+	TablePool       map[string]*Table      `json:"tables"`
+	FieldGroupPool  map[string]*FieldGroup `json:"fieldgroups"`
+	FileNames       map[string]string      `json:"files"`
+	Tabs            types.IntSet           `json:"-"`
 	Content         *Content
 }
 
@@ -83,19 +88,19 @@ func (page *PDFPage) validatePageBoundaries() error {
 	page.mediaBox = pdf.mediaBox
 	page.cropBox = pdf.cropBox
 	if page.Paper != "" {
-		dim, _, err := pdfcpu.ParsePageFormat(page.Paper)
+		dim, _, err := types.ParsePageFormat(page.Paper)
 		if err != nil {
 			return err
 		}
-		page.mediaBox = pdfcpu.RectForDim(dim.Width, dim.Height)
+		page.mediaBox = types.RectForDim(dim.Width, dim.Height)
 		page.cropBox = page.mediaBox.CroppedCopy(0)
 	}
 	if page.Crop != "" {
-		box, err := pdfcpu.ParseBox(page.Crop, pdfcpu.POINTS)
+		box, err := model.ParseBox(page.Crop, types.POINTS)
 		if err != nil {
 			return err
 		}
-		page.cropBox = pdfcpu.ApplyBox("CropBox", box, nil, page.mediaBox)
+		page.cropBox = model.ApplyBox("CropBox", box, nil, page.mediaBox)
 	}
 	return nil
 }
@@ -226,6 +231,17 @@ func (page *PDFPage) validateTablePool() error {
 	return nil
 }
 
+func (page *PDFPage) validateFieldGroupPool() error {
+	// textfield group templates
+	for _, fg := range page.FieldGroupPool {
+		fg.pdf = page.pdf
+		if err := fg.validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (page *PDFPage) validatePools() error {
 	if err := page.validateSimpleBoxPool(); err != nil {
 		return err
@@ -236,7 +252,10 @@ func (page *PDFPage) validatePools() error {
 	if err := page.validateImageBoxPool(); err != nil {
 		return err
 	}
-	return page.validateTablePool()
+	if err := page.validateTablePool(); err != nil {
+		return err
+	}
+	return page.validateFieldGroupPool()
 }
 
 func (page *PDFPage) validate() error {
@@ -276,7 +295,9 @@ func (page *PDFPage) validate() error {
 	if page.Content == nil {
 		return errors.New("pdfcpu: Please supply page \"content\"")
 	}
+
 	page.Content.page = page
+
 	return page.Content.validate()
 }
 
@@ -342,4 +363,12 @@ func (page *PDFPage) namedTable(id string) *Table {
 		return t
 	}
 	return page.pdf.TablePool[id]
+}
+
+func (page *PDFPage) namedFieldGroup(id string) *FieldGroup {
+	fg := page.FieldGroupPool[id]
+	if fg != nil {
+		return fg
+	}
+	return page.pdf.FieldGroupPool[id]
 }

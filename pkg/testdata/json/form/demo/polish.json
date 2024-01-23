@@ -1,0 +1,715 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": false,
+	"guides": false,
+	"colors": {
+		"DarkOrange": "#FF8C00",
+		"DarkSeaGreen": "#8FBC8F"
+	},
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"fonts": {
+		"input": {
+			"name": "Helvetica",
+			"size": 12
+		},
+		"label": {
+			"name": "$input"
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"header": {
+		"font": {
+			"name": "$label",
+			"size": 24,
+			"col": "#C00000"
+		},
+		"left": "$logo1",
+		"center":  "Formularz demonstracyjny",
+		"rtl": false,
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "Courier",
+			"size": 9
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Optimized for A.Reader\nPage %p of %P",
+		"right": "Source:\ntestdata/json/form/demo/polish.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"pages": {
+		"1": {
+			"content": {
+				"textfield": [
+					{
+						"hide": false,
+						"id": "firstName1",
+						"tip": "Imię",
+						"tab": 1,
+						"pos": [
+							160,
+							665
+						],
+						"width": 240,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Imię:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "lastName1",
+						"tip": "Nazwisko",
+						"tab": 2,
+						"pos": [
+							160,
+							645
+						],
+						"width": 240,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Nazwisko:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "note1",
+						"tip": "Powód",
+						"tab": 12,
+						"multiline": true,
+						"value": "To jest przykładowy tekst.\nTo jest następna linia.",
+						"pos": [
+							160,
+							132
+						],
+						"width": 240,
+						"height":70,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						}
+					}
+				],
+				
+				"datefield": [
+					{
+						"hide": false,
+						"id": "dob1",
+						"tab": 3,
+						"format": "dd.mm.yyyy",
+						"pos": [
+							160,
+							625
+						],
+						"width": 70,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Data urodzenia:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+ 						}
+					}
+				],
+
+				"radiobuttongroup": [
+					{
+						"hide": false,
+						"id": "gender1",
+						"tip":  "Płeć",
+						"tab": 4,
+						"orientation": "hor",
+						"pos": [
+							160,
+							605
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"kobieta",
+								"mężczyzna",
+								"nie binarny"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 55,
+								"gap": 10,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "Płeć:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"checkbox": [
+					{
+						"hide": false,
+						"id": "cb11",
+						"tip": "Wyszukiwarka Google",
+						"tab": 7,
+						"value": false,
+						"pos": [
+							30,
+							270
+						],
+						"width": 12,
+						"label": {
+							"value": "Wyszukiwarka Google",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb12",
+						"tip": "Wyszukiwanie na Github",
+						"tab": 8,
+						"value": false,
+						"pos": [
+							30,
+							250
+						],
+						"width": 12,
+						"label": {
+							"value": "Wyszukiwanie na Github",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb13",
+						"tip": "Tygodnik Golang",
+						"tab": 9,
+						"value": false,
+						"pos": [
+							30,
+							230
+						],
+						"width": 12,
+						"label": {
+							"value": "Tygodnik Golang",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb14",
+						"tip": "Kolega suseł",
+						"tab": 10,
+						"value": false,
+						"pos": [
+							30,
+							210
+						],
+						"width": 12,
+						"label": {
+							"value": "Kolega suseł",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb15",
+						"tip": "Inny",
+						"tab": 11,
+						"value": false,
+						"pos": [
+							30,
+							190
+						],	
+						"width": 12,
+						"label": {
+							"value": "Inny:",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					}
+				],
+
+				"listbox": [
+					{
+						"hide": false,
+						"id": "city11",
+						"tip": "Ulubione miasto",
+						"tab": 5,
+						"options": [
+							"San Francisco",
+							"São Paulo",
+							"Wiedeń"
+						],
+						"multi": true,
+						"pos": [
+							160,
+							530
+						],
+						"width": 240,
+						"height": 54,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Ulubione miasto:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"combobox": [
+					{
+						"hide": false,
+						"id": "city12",
+						"tip": "Miasto",
+						"tab": 6,
+						"options": [
+							"Warszawa",
+							"Kraków",
+							"Katowice"
+						],
+						"edit": false,
+						"pos": [
+							160,
+							500
+						],
+						"width": 240,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Miasto:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+				
+				"text": [
+					{
+						"hide": false,
+						"value": "1) Opowiedz nam o sobie:",
+						"pos": [
+							10,
+							690
+						],
+						"font": {
+							"name": "$label"
+						}
+					},
+					{
+						"hide": false,
+						"value": "2) Jak dowiedziałeś się o pdfcpu:",
+						"pos": [
+							10,
+							290
+						],
+						"font": {
+							"name": "$label"
+						}
+					}
+				]
+			}
+		},
+		"2": {
+			"content": {
+				"textfield": [
+					{
+						"hide": false,
+						"id": "firstName2",
+						"tip": "Imię",
+						"tab": 1,
+						"value": "Jackie",
+						"pos": [
+							160,
+							665
+						],
+						"width": 240,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Imię:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "lastName2",
+						"tip": "Nazwisko",
+						"tab": 2,
+						"value": "Doe",
+						"pos": [
+							160,
+							645
+						],
+						"width": 240,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Nazwisko:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					},
+					{
+						"hide": false,
+						"id": "note2",
+						"tip": "Powód",
+						"tab": 12,
+						"multiline": true,
+						"value": "To jest przykładowy tekst.\nTo jest następna linia.",
+						"pos": [
+							160,
+							132
+						],
+						"width": 240,
+						"height":70,
+						"align": "left",
+						"border": {
+							"width":1,
+							"col": "Gray"
+						}
+					}
+				],
+				
+				"datefield": [
+					{
+						"hide": false,
+						"id": "dob2",
+						"tab": 3,
+						"value": "31.12.1999",
+						"pos": [
+							160,
+							625
+						],
+						"width": 70,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Data urodzenia:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+ 						}
+					}
+				],
+
+				"radiobuttongroup": [
+					{
+						"hide": false,
+						"id": "gender2",
+						"tip":  "Płeć",
+						"tab": 4,
+						"value": "nie binarny",
+						"orientation": "hor",
+						"pos": [
+							160,
+							605
+						],
+						"width": 12,
+						"buttons": {
+							"values": [
+								"kobieta",
+								"mężczyzna",
+								"nie binarny"
+							],
+							"label": {
+								"value": "dummy",
+								"width": 55,
+								"gap": 10,
+								"pos": "right"
+							}
+						},
+						"label": {
+							"value": "Płeć:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"checkbox": [
+					{
+						"hide": false,
+						"id": "cb21",
+						"tip": "Wyszukiwarka Google",
+						"tab": 7,
+						"value": true,
+						"pos": [
+							30,
+							270
+						],
+						"width": 12,
+						"label": {
+							"value": "Wyszukiwarka Google",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb22",
+						"tip": "Wyszukiwanie na Github",
+						"tab": 8,
+						"value": false,
+						"pos": [
+							30,
+							250
+						],
+						"width": 12,
+						"label": {
+							"value": "Wyszukiwanie na Github",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb23",
+						"tip": "Tygodnik Golang",
+						"tab": 9,
+						"value": false,
+						"pos": [
+							30,
+							230
+						],
+						"width": 12,
+						"label": {
+							"value": "Tygodnik Golang",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb24",
+						"tip": "Kolega suseł",
+						"tab": 10,
+						"value": false,
+						"pos": [
+							30,
+							210
+						],
+						"width": 12,
+						"label": {
+							"value": "Kolega suseł",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					},
+					{
+						"hide": false,
+						"id": "cb25",
+						"tip": "Inny",
+						"tab": 11,
+						"value": false,
+						"pos": [
+							30,
+							190
+						],	
+						"width": 12,
+						"label": {
+							"value": "Inny:",
+							"width": 80,
+							"gap": 5,
+							"align": "left",
+							"pos": "right"
+						}
+					}
+				],
+
+				"listbox": [
+					{
+						"hide": false,
+						"id": "city21",
+						"tip": "Ulubione miasto",
+						"tab": 5,
+						"options": [
+							"San Francisco",
+							"São Paulo",
+							"Wiedeń"
+						],
+						"multi": false,
+						"value": "San Francisco",
+						"pos": [
+							160,
+							530
+						],
+						"width": 240,
+						"height": 54,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Ulubione miasto:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+
+				"combobox": [
+					{
+						"hide": false,
+						"id": "city22",
+						"tip": "Miasto",
+						"tab": 6,
+						"options": [
+							"Warszawa",
+							"Kraków",
+							"Katowice"
+						],
+						"edit": false,
+						"value": "Warszawa",
+						"pos": [
+							160,
+							500
+						],
+						"width": 240,
+						"border": {
+							"width":1,
+							"col": "Gray"
+						},
+						"label": {
+							"value": "Miasto:",
+							"width": 110,
+							"gap": 10,
+							"align": "left",
+							"pos": "left"
+						}
+					}
+				],
+				
+				"text": [
+					{
+						"hide": false,
+						"value": "1) Opowiedz nam o sobie:",
+						"pos": [
+							10,
+							690
+						],
+						"font": {
+							"name": "$label"
+						}
+					},
+					{
+						"hide": false,
+						"value": "2) Jak dowiedziałeś się o pdfcpu:",
+						"pos": [
+							10,
+							290
+						],
+						"font": {
+							"name": "$label"
+						}
+					}
+				]
+			}
+		}
+	}
+}

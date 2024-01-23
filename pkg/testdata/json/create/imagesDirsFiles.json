@@ -1,0 +1,265 @@
+{
+	"paper": "A4L",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": true,
+	"debug": false,
+	"guides": false,
+	"colors": {
+		"DarkOrange": "#FF8C00",
+		"Beige": "#F5F5DC"
+	},
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/demo.png",
+		"logo2": "../../testdata/resources/demo.png",
+		"logo_pdfcpu": "$images/logoVerySmall.png",
+		"logo_gh": "$images/github.png"
+	},
+	"fonts": {
+		"myCourier": {
+			"name": "Courier",
+			"size": 12
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"borders": {
+		"myBorder": {
+			"width": 5,
+			"col": "#FF0000",
+			"style": "round"
+		}
+	},
+	"padding": {
+		"width": 10
+	},
+	"header": {
+		"font": {
+			"name": "Courier-Bold",
+			"size": 24,
+			"col": "#FF0000"
+		},
+		"bgCol": "#FFFFFF",
+		"left": "$logo_pdfcpu",
+		"center": "Imageboxes, dirs & files",
+		"right": "$logo_gh",
+		"height": 50,
+		"dx": 5,
+		"dy": 10,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "$myCourier"
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Page %p of %P",
+		"right": "Source:\ntestdata/json/create/imagesDirsFiles.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"images": {
+		"logo_pdfcpu": {
+			"src": "$logo_pdfcpu",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo_gh": {
+			"src": "$logo_gh",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"texts": {
+		"label": {
+			"dx": 2,
+			"dy": 2,
+			"font": {
+				"name": "$myCourier"
+			}
+		}
+	},
+	"pages": {
+		"1": {
+			"files": {
+				"logo1": "$images/pdfchip3.png",
+				"logo2": "../../testdata/resources/pdfchip3.png"
+			},
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							-1,
+							-1
+						]
+					}
+				],	
+				"image": [
+					{
+						"hide": false,
+						"src": "$logo1",
+						"anchor": "left",
+						"height": 100,
+						"url": "https://pdfcpu.io"
+					},
+					{
+						"hide": false,
+						"src": "$logo2",
+						"anchor": "center",
+						"height": 100,
+						"url": "https://pdfcpu.io"
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/pdfchip3.png",
+						"anchor": "right",
+						"height": 100,
+						"url": "https://pdfcpu.io"
+					}
+				],
+				"text": [
+					{
+						"name": "$label",
+						"value": "using page scoped filenames",
+						"align": "center",
+						"pos": [
+							-1,
+							290
+						],
+						"font": {
+							"name": "$myCourier",
+							"size": 18
+						}
+					}
+				]
+			}
+		},
+		"2": {
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							-1,
+							-1
+						]
+					}
+				],
+				"image": [
+					{
+						"hide": false,
+						"src": "$logo1",
+						"anchor": "left",
+						"height": 100,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						}
+					},
+					{
+						"hide": false,
+						"src": "$logo2",
+						"anchor": "center",
+						"height": 100,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						}
+					},
+					{
+						"hide": false,
+						"src": "../../testdata/resources/demo.png",
+						"anchor": "right",
+						"height": 100,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						}
+					}
+				],
+				"text": [
+					{
+						"name": "$label",
+						"value": "using global scoped filenames",
+						"align": "center",
+						"pos": [
+							-1,
+							290
+						],
+						"font": {
+							"name": "$myCourier",
+							"size": 18
+						}
+					}
+				]
+			}
+		},
+		"3": {
+			"content": {
+				"image": [
+					{
+						"hide": false,
+						"src": "https://upload.wikimedia.org/wikipedia/commons/a/a1/Alan_Turing_Aged_16.jpg",
+						"anchor": "left",
+						"height": 100,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						},
+						"url": "https://en.wikipedia.org/wiki/Alan_Turing"
+					},
+					{
+						"hide": false,
+						"src": "https://upload.wikimedia.org/wikipedia/commons/9/9c/Rob-pike-oscon.jpg",
+						"anchor": "center",
+						"height": 100,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						},
+						"url": "https://en.wikipedia.org/wiki/Rob_Pike"
+					},
+					{
+						"hide": false,
+						"src": "https://upload.wikimedia.org/wikipedia/commons/4/43/Pauli.jpg",
+						"anchor": "right",
+						"height": 100,
+						"border": {
+							"width": 5,
+							"col": "$DarkOrange",
+							"style": "round"
+						},
+						"url": "https://en.wikipedia.org/wiki/Wolfgang_Pauli"
+					}
+				],
+				"text": [
+					{
+						"name": "$label",
+						"value": "using urls",
+						"align": "center",
+						"anchor": "center",
+						"dy": 80,
+						"font": {
+							"name": "$myCourier",
+							"size": 18
+						}
+					}
+				]
+			}
+		}
+	}
+}

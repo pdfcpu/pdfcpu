@@ -1,0 +1,628 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": false,
+	"debug": false,
+	"guides": false,
+	"colors": {
+		"DarkOrange": "#FF8C00",
+		"DarkSeaGreen": "#8FBC8F"
+	},
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"fonts": {
+		"myCourier": {
+			"name": "Courier",
+			"size": 12
+		},
+		"input": {
+			"name": "Courier",
+			"size": 12,
+			"col": "#222222"
+		},
+		"label": {
+			"name": "Helvetica",
+			"size": 9,
+			"col": "Gray"
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"header": {
+		"font": {
+			"name": "Courier-Bold",
+			"size": 24,
+			"col": "#C00000"
+		},
+		"left": "$logo1",
+		"center": "Textarea Groups",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "$myCourier",
+			"size": 9
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Optimized for A.Reader\nPage %p of %P",
+		"right": "Source:\ntestdata/json/form/textareaGroup.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"fieldgroups": {
+		"tfg": {
+			"bgCol": "White",
+			"border": {
+				"width": 0,
+				"col": "Black",
+				"style": "round"
+			},
+			"padding": {
+				"width": 6
+			}
+		}
+	},
+	"pages": {
+		"1": {
+			"bgcol": "LightGray",
+			"fonts": {
+				"labelOrange": {
+					"name": "Courier-Bold",
+					"comment": "label fontsize enforced by input font!",
+					"size": 12,
+					"col": "$DarkOrange"
+				},
+				"labelGreen": {
+					"name": "Courier-Bold",
+					"comment": "label fontsize enforced by input font!",
+					"size": 12,
+					"col": "$DarkSeaGreen"
+				}
+			},
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							200,
+							640
+						]
+					}
+				],
+				"fieldGroup": [
+					{
+						"name": "$tfg",
+						"hide": false,
+						"textfield": [
+							{
+								"hide": false,
+								"multiline": true,
+								"id": "llnote1",
+								"tip": "note",
+								"pos": [
+									200,
+									640
+								],
+								"width": 100,
+								"height":50,
+								"align": "left",
+								"bgCol": "$DarkOrange",
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "First note:",
+									"width": 100,
+									"gap": 10,
+									"align": "left",
+									"pos": "left",
+									"font": {
+										"col": "$DarkOrange"
+									}
+								}
+							},
+							{
+								"hide": false,
+								"id": "llnote2",
+								"tip": "note",
+								"multiline": true,
+								"pos": [
+									200,
+									580
+								],
+								"width": 100,
+								"height":50,
+								"align": "left",
+								"bgCol": "$DarkOrange",
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "Second note:",
+									"width": 100,
+									"gap": 10,
+									"align": "left",
+									"pos": "left"
+								}
+							}
+						]
+					},
+					{
+						"name": "$tfg",
+						"hide": false,
+						"textfield": [
+							{
+								"hide": false,
+								"id": "lrnote1",
+								"tip": "note",
+								"multiline": true,
+								"value": "line1\nand line2",
+								"pos": [
+									440,
+									640
+								],
+								"width": 100,
+								"height":50,
+								"align": "left",
+								"bgCol": "$DarkOrange",
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "First note:",
+									"width": 100,
+									"gap": 10,
+									"align": "right",
+									"pos": "left"
+								}
+							},
+							{
+								"hide": false,
+								"id": "lrnote2",
+								"tip": "note",
+								"multiline": true,
+								"value": "line1\nand line2",
+								"pos": [
+									440,
+									580
+								],
+								"width": 100,
+								"height":50,
+								"align": "left",
+								"bgCol": "$DarkOrange",
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "Second note:",
+									"width": 100,
+									"gap": 10,
+									"align": "right",
+									"pos": "left"
+								}
+							}
+						]
+					},
+					{
+						"name": "$tfg",
+						"hide": false,
+						"textfield": [
+							{
+								"hide": false,
+								"id": "rlnote1",
+								"tip": "note",
+								"multiline": true,
+								"pos": [
+									90,
+									485
+								],
+								"width": 100,
+								"height":50,
+								"align": "right",
+								"bgCol": "$DarkSeaGreen",
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "First note",
+									"width": 100,
+									"gap": 10,
+									"align": "left",
+									"pos": "right",
+									"font": {
+										"col": "$DarkSeaGreen"
+									}
+								}
+							},
+							{
+								"hide": false,
+								"id": "rlnote2",
+								"tip": "note",
+								"multiline": true,
+								"pos": [
+									90,
+									425
+								],
+								"width": 100,
+								"height":50,
+								"align": "right",
+								"bgCol": "$DarkSeaGreen",
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "Second note",
+									"width": 100,
+									"gap": 10,
+									"align": "left",
+									"pos": "right"
+								}
+							}
+						]
+					},
+					{
+						"name": "$tfg",
+						"textfield": [
+							{
+								"hide": false,
+								"id": "rrnote1",
+								"tip": "note",
+								"multiline": true,
+								"value": "line1\nand line2",
+								"pos": [
+									330,
+									485
+								],
+								"width": 100,
+								"height":50,
+								"align": "right",
+								"bgCol": "$DarkSeaGreen",
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "First note",
+									"width": 100,
+									"gap": 10,
+									"align": "right",
+									"pos": "right"
+								}
+							},
+							{
+								"hide": false,
+								"id": "rrnote2",
+								"tip": "note",
+								"multiline": true,
+								"value": "line1\nand line2",
+								"pos": [
+									330,
+									425
+								],
+								"width": 100,
+								"height":50,
+								"align": "right",
+								"bgCol": "$DarkSeaGreen",
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "Second note",
+									"width": 100,
+									"gap": 10,
+									"align": "right",
+									"pos": "right"
+								}
+							}
+						]
+					},
+					{
+						"name": "$tfg",
+						"textfield": [
+							{
+								"hide": false,
+								"id": "tlnote",
+								"tip": "note",
+								"multiline": true,
+								"pos": [
+									100,
+									310
+								],
+								"width": 100,
+								"height":50,
+								"align": "left",
+								"bgCol": "LightGray",
+								"border": {
+									"width": 1,
+									"col": "#C00000"
+								},
+								"label": {
+									"value": "Note",
+									"width": 100,
+									"align": "left",
+									"pos": "top"
+								}
+							}
+						]
+					},
+					{
+						"name": "$tfg",
+						"textfield": [
+							{
+								"hide": false,
+								"id": "tcnote",
+								"tip": "note",
+								"multiline": true,
+								"pos": [
+									250,
+									310
+								],
+								"width": 100,
+								"height":50,
+								"align": "center",
+								"bgCol": "LightGray",
+								"border": {
+									"width": 1,
+									"col": "#C00000"
+								},
+								"label": {
+									"value": "Note",
+									"width": 100,
+									"align": "center",
+									"pos": "top"
+								}
+							}
+						]
+					},
+					{
+						"name": "$tfg",
+						"textfield": [
+							{
+								"hide": false,
+								"id": "trnote",
+								"tip": "note",
+								"multiline": true,
+								"pos": [
+									400,
+									310
+								],
+								"width": 100,
+								"height":50,
+								"align": "right",
+								"bgCol": "LightGray",
+								"border": {
+									"width": 1,
+									"col": "#C00000"
+								},
+								"label": {
+									"value": "Note",
+									"width": 100,
+									"align": "right",
+									"pos": "top"
+								}
+							}
+						]
+					},
+					{
+						"name": "$tfg",
+						"textfield": [
+							{
+								"hide": false,
+								"id": "tclnote",
+								"tip": "note",
+								"multiline": true,
+								"pos": [
+									250,
+									220
+								],
+								"width": 100,
+								"height":50,
+								"align": "left",
+								"bgCol": "LightGray",
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "Note",
+									"width": 100,
+									"align": "center",
+									"pos": "top"
+								}
+							}
+						]
+					},
+					{
+						"name": "$tfg",
+						"textfield": [
+							{
+								"hide": false,
+								"id": "blnote",
+								"tip": "note",
+								"multiline": true,
+								"pos": [
+									100,
+									110
+								],
+								"width": 100,
+								"height":50,
+								"align": "left",
+								"border": {
+									"width": 1,
+									"col": "Gray"
+								},
+								"label": {
+									"value": "Note",
+									"width": 100,
+									"align": "left",
+									"pos": "bottom"
+								}
+							}
+						]
+					},
+					{
+						"name": "$tfg",
+						"textfield": [
+							{
+								"hide": false,
+								"id": "bcnote",
+								"tip": "note",
+								"multiline": true,
+								"pos": [
+									250,
+									110
+								],
+								"width": 100,
+								"height":50,
+								"align": "center",
+								"border": {
+									"width": 1,
+									"col": "Gray"
+								},
+								"label": {
+									"value": "Note",
+									"width": 100,
+									"align": "center",
+									"pos": "bottom"
+								}
+							}
+						]
+					},
+					{
+						"name": "$tfg",
+						"textfield": [
+							{
+								"hide": false,
+								"id": "brnote",
+								"tip": "note",
+								"multiline": true,
+								"pos": [
+									400,
+									110
+								],
+								"width": 100,
+								"height":50,
+								"align": "right",
+								"border": {
+									"width": 1,
+									"col": "Gray"
+								},
+								"label": {
+									"value": "Note",
+									"width": 100,
+									"align": "right",
+									"pos": "bottom"
+								}
+							}
+						]
+					},
+					{
+						"name": "$tfg",
+						"textfield": [
+							{
+								"hide": false,
+								"id": "bclnote",
+								"tip": "note",
+								"multiline": true,
+								"pos": [
+									250,
+									20
+								],
+								"width": 100,
+								"height":50,
+								"align": "left",
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "Note",
+									"width": 100,
+									"align": "center",
+									"pos": "bottom"
+								}
+							}
+						]
+					}
+				],
+				"text": [
+					{
+						"value": "Textareas with left label:",
+						"pos": [
+							0,
+							700
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Textareas with right label:",
+						"pos": [
+							0,
+							545
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Textareas with top label:",
+						"pos": [
+							0,
+							390
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Textareas with bottom label:",
+						"pos": [
+							0,
+							180
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					}
+				]
+			}
+		}
+	}
+}

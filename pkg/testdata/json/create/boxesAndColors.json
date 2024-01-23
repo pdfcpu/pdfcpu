@@ -1,0 +1,943 @@
+{
+	"paper": "A4L",
+	"crop": "10",
+	"origin": "UpperLeft",
+	"contentBox": false,
+	"debug": false,
+	"guides": false,
+	"colors": {
+		"ForestGreen": "#228B22",
+		"DodgerBlue1": "#1E90FF",
+		"DeepPink1": "#FF1493",
+		"DarkSeaGreen": "#8FBC8F",
+		"DarkSalmon": "#E9967A",
+		"DarkOrange": "#FF8C00",
+		"Chocolate": "#D2691E",
+		"Beige": "#F5F5DC",
+		"MediumPurple1": "#AB82FF",
+		"Pink": "#FFC0CB"
+	},
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"fonts": {
+		"myCourier": {
+			"name": "Courier",
+			"size": 12
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"borders": {
+		"border": {
+			"width": 10,
+			"col": "$DodgerBlue1"
+		},
+		"myBorder": {
+			"width": 5,
+			"col": "#FF0000",
+			"style": "round"
+		}
+	},
+	"padding": {
+		"width": 10
+	},
+	"header": {
+		"font": {
+			"name": "Courier-Bold",
+			"size": 24,
+			"col": "#FF0000"
+		},
+		"bgCol": "#FFFFFF",
+		"left": "$logo1",
+		"center": "Boxes & colors",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 10,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "$myCourier"
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Page %p of %P",
+		"right": "Source:\ntestdata/json/create/boxesAndColors.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"boxes": {
+		"colorBox": {
+			"width": 100,
+			"height": 50,
+			"fillCol": "Black",
+			"border": {
+				"name": "$boxBorder"
+			}
+		}
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"texts": {
+		"colorBoxLabel": {
+			"align": "center",
+			"font": {
+				"name": "$labelFont"
+			}
+		}
+	},
+	"pages": {
+		"1": {
+			"bgcol": "#8fbc2f",
+			"content": {
+				"bgcol": "#8fbcff",
+				"border": {
+					"width": 10,
+					"col": "#698b69",
+					"style": "round"
+				},
+				"guides": [
+					{
+						"pos": [
+							-1,
+							-1
+						]
+					},
+					{
+						"pos": [
+							200,
+							100
+						]
+					}
+				],
+				"box": [
+					{
+						"hide": false,
+						"comment": "Empty box",
+						"anchor": "topLeft",
+						"width": 200,
+						"height": 100,
+						"border": {
+							"col": "black"
+						}
+					},
+					{
+						"hide": false,
+						"comment": "Filled box with border",
+						"anchor": "topCenter",
+						"width": 200,
+						"height": 100,
+						"fillCol": "$Beige",
+						"border": {
+							"width": 10,
+							"col": "#032890"
+						}
+					},
+					{
+						"hide": false,
+						"comment": "Filled box without border",
+						"anchor": "topRight",
+						"width": 200,
+						"height": 100,
+						"fillCol": "$Beige"
+					},
+					{
+						"hide": false,
+						"comment": "Filled box without border",
+						"anchor": "left",
+						"width": 200,
+						"height": 100,
+						"fillCol": "$beige",
+						"border": {
+							"col": "black"
+						}
+					},
+					{
+						"hide": false,
+						"comment": "Filled box with rounded border",
+						"anchor": "center",
+						"width": 200,
+						"height": 100,
+						"fillCol": "#AA2890",
+						"border": {
+							"width": 10,
+							"col": "#0022AA",
+							"style": "round"
+						}
+					},
+					{
+						"hide": false,
+						"comment": "Empty box with border",
+						"anchor": "right",
+						"width": 200,
+						"height": 100,
+						"border": {
+							"name": "$myBorder"
+						}
+					},
+					{
+						"hide": false,
+						"comment": "Empty box with border",
+						"anchor": "bottomLeft",
+						"width": 200,
+						"height": 100,
+						"border": {
+							"width": 10,
+							"col": "#00AA00",
+							"style": "round"
+						}
+					},
+					{
+						"hide": false,
+						"comment": "Empty box, red border",
+						"anchor": "bottomCenter",
+						"width": 200,
+						"height": 100,
+						"border": {
+							"width": 0,
+							"col": "#FF0000"
+						}
+					},
+					{
+						"hide": false,
+						"comment": "Filled box with border",
+						"anchor": "bottomRight",
+						"width": 200,
+						"height": 100,
+						"fillCol": "#032890",
+						"border": {
+							"width": 10,
+							"col": "#00AA00"
+						}
+					}
+				]
+			}
+		},
+		"2": {
+			"content": {
+				"borders": {
+					"boxBorder": {
+						"col": "Black"
+					}
+				},
+				"fonts": {
+					"labelFont": {
+						"name": "Courier",
+						"size": 9
+					}
+				},
+				"bar": [
+					{
+						"hide": false,
+						"y": 75,
+						"width": 0,
+						"col": "black",
+						"style": "round"
+					}
+				],
+				"guides": [
+					{
+						"pos": [
+							100,
+							100
+						]
+					}
+				],
+				"box": [
+					{
+						"pos": [
+							0,
+							50
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "Black",
+						"border": {
+							"name": "$boxBorder"
+						}
+					},
+					{
+						"pos": [
+							110,
+							50
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "DarkGray",
+						"border": {
+							"name": "$boxBorder"
+						}
+					},
+					{
+						"pos": [
+							220,
+							50
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "Gray",
+						"border": {
+							"name": "$boxBorder"
+						}
+					},
+					{
+						"pos": [
+							330,
+							50
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "LightGray",
+						"border": {
+							"name": "$boxBorder"
+						}
+					},
+					{
+						"pos": [
+							440,
+							50
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "White",
+						"border": {
+							"name": "$boxBorder"
+						}
+					},
+					{
+						"pos": [
+							0,
+							140
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "$forestGreen",
+						"border": {
+							"name": "$boxBorder"
+						}
+					},
+					{
+						"pos": [
+							110,
+							140
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "$dodgerBlue1",
+						"border": {
+							"name": "$boxBorder"
+						}
+					},
+					{
+						"pos": [
+							220,
+							140
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "$deepPink1",
+						"border": {
+							"name": "$boxBorder"
+						}
+					},
+					{
+						"pos": [
+							330,
+							140
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "$darkSeaGreen",
+						"border": {
+							"name": "$boxBorder"
+						}
+					},
+					{
+						"pos": [
+							0,
+							210
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "$darkSalmon",
+						"border": {
+							"name": "$boxBorder"
+						}
+					},
+					{
+						"pos": [
+							110,
+							210
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "$darkOrange",
+						"border": {
+							"name": "$boxBorder"
+						}
+					},
+					{
+						"pos": [
+							220,
+							210
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "$chocolate",
+						"border": {
+							"name": "$boxBorder"
+						}
+					},
+					{
+						"pos": [
+							0,
+							280
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "$beige",
+						"border": {
+							"name": "$boxBorder"
+						}
+					},
+					{
+						"pos": [
+							110,
+							280
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "$mediumPurple1",
+						"border": {
+							"name": "$boxBorder"
+						}
+					},
+					{
+						"pos": [
+							0,
+							350
+						],
+						"width": 100,
+						"height": 50,
+						"fillCol": "$pink",
+						"border": {
+							"name": "$boxBorder"
+						}
+					}
+				],
+				"text": [
+					{
+						"value": "Black",
+						"pos": [
+							50,
+							63
+						],
+						"align": "center",
+						"font": {
+							"name": "$labelFont"
+						}
+					},
+					{
+						"value": "DarkGray",
+						"pos": [
+							160,
+							63
+						],
+						"align": "center",
+						"font": {
+							"name": "$labelFont"
+						}
+					},
+					{
+						"value": "Gray",
+						"pos": [
+							270,
+							63
+						],
+						"align": "center",
+						"font": {
+							"name": "$labelFont"
+						}
+					},
+					{
+						"value": "LightGray",
+						"pos": [
+							380,
+							63
+						],
+						"align": "center",
+						"font": {
+							"name": "$labelFont"
+						}
+					},
+					{
+						"value": "White",
+						"pos": [
+							490,
+							63
+						],
+						"align": "center",
+						"font": {
+							"name": "$labelFont"
+						}
+					},
+					{
+						"value": "<= Predefined",
+						"align": "left",
+						"pos": [
+							600,
+							30
+						],
+						"font": {
+							"name": "$labelFont"
+						}
+					},
+					{
+						"value": "ForestGreen",
+						"pos": [
+							50,
+							153
+						],
+						"align": "center",
+						"font": {
+							"name": "$labelFont"
+						}
+					},
+					{
+						"value": "DodgerBlue1",
+						"pos": [
+							160,
+							153
+						],
+						"align": "center",
+						"font": {
+							"name": "$labelFont"
+						}
+					},
+					{
+						"value": "DeepPink1",
+						"pos": [
+							270,
+							153
+						],
+						"align": "center",
+						"font": {
+							"name": "$labelFont"
+						}
+					},
+					{
+						"value": "DarkSeaGreen",
+						"pos": [
+							380,
+							153
+						],
+						"align": "center",
+						"font": {
+							"name": "$labelFont"
+						}
+					},
+					{
+						"value": "<= Custom",
+						"align": "left",
+						"pos": [
+							600,
+							120
+						],
+						"font": {
+							"name": "$labelFont"
+						}
+					},
+					{
+						"value": "DarkSalmon",
+						"pos": [
+							50,
+							223
+						],
+						"align": "center",
+						"font": {
+							"name": "$labelFont"
+						}
+					},
+					{
+						"value": "DarkOrange",
+						"pos": [
+							160,
+							223
+						],
+						"align": "center",
+						"font": {
+							"name": "$labelFont"
+						}
+					},
+					{
+						"value": "Chocolate",
+						"pos": [
+							270,
+							223
+						],
+						"align": "center",
+						"font": {
+							"name": "$labelFont"
+						}
+					},
+					{
+						"value": "Beige",
+						"pos": [
+							50,
+							293
+						],
+						"align": "center",
+						"font": {
+							"name": "$labelFont"
+						}
+					},
+					{
+						"value": "MediumPurple1",
+						"pos": [
+							160,
+							293
+						],
+						"align": "center",
+						"font": {
+							"name": "$labelFont"
+						}
+					},
+					{
+						"value": "Pink",
+						"pos": [
+							50,
+							363
+						],
+						"align": "center",
+						"font": {
+							"name": "$labelFont"
+						}
+					}
+				]
+			}
+		},
+		"3": {
+			"content": {
+				"borders": {
+					"boxBorder": {
+						"col": "Black"
+					}
+				},
+				"fonts": {
+					"labelFont": {
+						"name": "Helvetica",
+						"size": 9
+					}
+				},
+				"bar": [
+					{
+						"hide": false,
+						"y": 75,
+						"width": 0,
+						"col": "black",
+						"style": "round"
+					}
+				],
+				"box": [
+					{
+						"name": "$colorBox",
+						"fillCol": "Black",
+						"pos": [
+							0,
+							50
+						]
+					},
+					{
+						"name": "$colorBox",
+						"fillCol": "DarkGray",
+						"pos": [
+							110,
+							50
+						]
+					},
+					{
+						"name": "$colorBox",
+						"fillCol": "Gray",
+						"pos": [
+							220,
+							50
+						]
+					},
+					{
+						"name": "$colorBox",
+						"fillCol": "LightGray",
+						"pos": [
+							330,
+							50
+						]
+					},
+					{
+						"name": "$colorBox",
+						"fillCol": "White",
+						"pos": [
+							440,
+							50
+						]
+					},
+					{
+						"name": "$colorBox",
+						"fillCol": "$forestGreen",
+						"pos": [
+							0,
+							140
+						]
+					},
+					{
+						"name": "$colorBox",
+						"fillCol": "$dodgerBlue1",
+						"pos": [
+							110,
+							140
+						]
+					},
+					{
+						"name": "$colorBox",
+						"fillCol": "$deepPink1",
+						"pos": [
+							220,
+							140
+						]
+					},
+					{
+						"name": "$colorBox",
+						"fillCol": "$darkSeaGreen",
+						"pos": [
+							330,
+							140
+						]
+					},
+					{
+						"name": "$colorBox",
+						"fillCol": "$darkSalmon",
+						"pos": [
+							0,
+							210
+						]
+					},
+					{
+						"name": "$colorBox",
+						"fillCol": "$darkOrange",
+						"pos": [
+							110,
+							210
+						]
+					},
+					{
+						"name": "$colorBox",
+						"fillCol": "$chocolate",
+						"pos": [
+							220,
+							210
+						]
+					},
+					{
+						"name": "$colorBox",
+						"fillCol": "$beige",
+						"pos": [
+							0,
+							280
+						]
+					},
+					{
+						"name": "$colorBox",
+						"fillCol": "$mediumPurple1",
+						"pos": [
+							110,
+							280
+						]
+					},
+					{
+						"name": "$colorBox",
+						"fillCol": "$pink",
+						"pos": [
+							0,
+							350
+						]
+					}
+				],
+				"text": [
+					{
+						"name": "$colorBoxLabel",
+						"value": "Black",
+						"pos": [
+							50,
+							63
+						]
+					},
+					{
+						"name": "$colorBoxLabel",
+						"value": "DarkGray",
+						"pos": [
+							160,
+							63
+						]
+					},
+					{
+						"name": "$colorBoxLabel",
+						"value": "Gray",
+						"pos": [
+							270,
+							63
+						]
+					},
+					{
+						"name": "$colorBoxLabel",
+						"value": "LightGray",
+						"pos": [
+							380,
+							63
+						]
+					},
+					{
+						"name": "$colorBoxLabel",
+						"value": "White",
+						"pos": [
+							490,
+							63
+						]
+					},
+					{
+						"value": "<= Predefined",
+						"align": "left",
+						"pos": [
+							600,
+							30
+						],
+						"font": {
+							"name": "$labelFont"
+						}
+					},
+					{
+						"name": "$colorBoxLabel",
+						"value": "ForestGreen",
+						"pos": [
+							50,
+							153
+						]
+					},
+					{
+						"name": "$colorBoxLabel",
+						"value": "DodgerBlue1",
+						"pos": [
+							160,
+							153
+						]
+					},
+					{
+						"name": "$colorBoxLabel",
+						"value": "DeepPink1",
+						"pos": [
+							270,
+							153
+						]
+					},
+					{
+						"name": "$colorBoxLabel",
+						"value": "DarkSeaGreen",
+						"pos": [
+							380,
+							153
+						]
+					},
+					{
+						"value": "<= Custom",
+						"align": "left",
+						"pos": [
+							600,
+							120
+						],
+						"font": {
+							"name": "$labelFont"
+						}
+					},
+					{
+						"name": "$colorBoxLabel",
+						"value": "DarkSalmon",
+						"pos": [
+							50,
+							223
+						]
+					},
+					{
+						"name": "$colorBoxLabel",
+						"value": "DarkOrange",
+						"pos": [
+							160,
+							223
+						]
+					},
+					{
+						"name": "$colorBoxLabel",
+						"value": "Chocolate",
+						"pos": [
+							270,
+							223
+						]
+					},
+					{
+						"name": "$colorBoxLabel",
+						"value": "Beige",
+						"pos": [
+							50,
+							293
+						]
+					},
+					{
+						"name": "$colorBoxLabel",
+						"value": "MediumPurple1",
+						"pos": [
+							160,
+							293
+						]
+					},
+					{
+						"name": "$colorBoxLabel",
+						"value": "Pink",
+						"pos": [
+							50,
+							363
+						]
+					},
+					{
+						"value": "Optimized using templates for box and text",
+						"anchor": "bottomCenter",
+						"align": "center",
+						"dy": 50,
+						"font": {
+							"name": "$labelFont",
+							"col": "Gray",
+							"size": 24
+						}
+					}
+				]
+			}
+		}
+	}
+}

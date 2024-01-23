@@ -17,24 +17,30 @@
 package primitives
 
 import (
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/format"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
+// HorizontalBand is a horizontal region used for header and footer.
 type HorizontalBand struct {
 	pdf             *PDF
 	Left            string
 	Center          string
 	Right           string
-	position        pdfcpu.Anchor // topcenter, center, bottomcenter
+	position        types.Anchor // topcenter, center, bottomcenter
 	Height          float64
 	Dx, Dy          int
 	BackgroundColor string `json:"bgCol"`
-	bgCol           *pdfcpu.SimpleColor
+	bgCol           *color.SimpleColor
 	Font            *FormFont
 	From            int
 	Thru            int
 	Border          bool
+	RTL             bool
 }
 
 func (hb *HorizontalBand) validate() error {
@@ -65,11 +71,11 @@ func (hb *HorizontalBand) validate() error {
 
 func (hb *HorizontalBand) renderAnchoredImageBox(
 	imageName string,
-	r *pdfcpu.Rectangle,
-	a pdfcpu.Anchor,
-	p *pdfcpu.Page,
+	r *types.Rectangle,
+	a types.Anchor,
+	p *model.Page,
 	pageNr int,
-	images pdfcpu.ImageMap) error {
+	images model.ImageMap) error {
 
 	ib := hb.pdf.ImageBoxPool[imageName]
 	if ib == nil {
@@ -104,35 +110,36 @@ func (hb *HorizontalBand) renderAnchoredImageBox(
 }
 
 func (hb *HorizontalBand) renderAnchoredTextBox(
-	text string,
-	r *pdfcpu.Rectangle,
-	a pdfcpu.Anchor,
-	p *pdfcpu.Page,
+	s string,
+	r *types.Rectangle,
+	a types.Anchor,
+	p *model.Page,
 	pageNr int,
-	fonts pdfcpu.FontMap) error {
+	fonts model.FontMap) error {
 
 	pdf := hb.pdf
 	font := hb.Font
 	bgCol := hb.bgCol
 
 	fontName := font.Name
+	fontLang := font.Lang
 	fontSize := font.Size
 	col := font.col
-	t, _ := pdfcpu.ResolveWMTextString(text, pdf.TimestampFormat, pageNr, pdf.pageCount())
+	t, _ := format.Text(s, pdf.TimestampFormat, pageNr, pdf.pageCount())
 
-	id, err := pdf.idForFontName(fontName, p.Fm, fonts, pageNr)
+	id, err := pdf.idForFontName(fontName, fontLang, p.Fm, fonts, pageNr)
 	if err != nil {
 		return err
 	}
 
-	td := pdfcpu.TextDescriptor{
+	td := model.TextDescriptor{
 		Text:     t,
 		FontName: fontName,
 		FontKey:  id,
 		FontSize: fontSize,
 		Scale:    1.,
 		ScaleAbs: true,
-		//RTL:      tb.RTL, // for user fonts only!
+		RTL:      hb.RTL, // for user fonts only!
 	}
 
 	if col != nil {
@@ -143,19 +150,19 @@ func (hb *HorizontalBand) renderAnchoredTextBox(
 		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *bgCol
 	}
 
-	pdfcpu.WriteMultiLineAnchored(p.Buf, r, nil, td, a)
+	model.WriteMultiLineAnchored(hb.pdf.XRefTable, p.Buf, r, nil, td, a)
 
 	return nil
 }
 
 func (hb *HorizontalBand) renderComponent(
 	content string,
-	a pdfcpu.Anchor,
-	r *pdfcpu.Rectangle,
-	p *pdfcpu.Page,
+	a types.Anchor,
+	r *types.Rectangle,
+	p *model.Page,
 	pageNr int,
-	fonts pdfcpu.FontMap,
-	images pdfcpu.ImageMap) error {
+	fonts model.FontMap,
+	images model.ImageMap) error {
 
 	if content[0] == '$' {
 		return hb.renderAnchoredImageBox(content[1:], r, a, p, pageNr, images)
@@ -164,19 +171,19 @@ func (hb *HorizontalBand) renderComponent(
 	return hb.renderAnchoredTextBox(content, r, a, p, pageNr, fonts)
 }
 
-func (hb *HorizontalBand) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMap, images pdfcpu.ImageMap, top bool) error {
+func (hb *HorizontalBand) render(p *model.Page, pageNr int, fonts model.FontMap, images model.ImageMap, top bool) error {
 
 	if pageNr < hb.From || (hb.Thru > 0 && pageNr > hb.Thru) {
 		return nil
 	}
 
-	left := pdfcpu.BottomLeft
-	center := pdfcpu.BottomCenter
-	right := pdfcpu.BottomRight
+	left := types.BottomLeft
+	center := types.BottomCenter
+	right := types.BottomRight
 	if top {
-		left = pdfcpu.Left
-		center = pdfcpu.Center
-		right = pdfcpu.Right
+		left = types.Left
+		center = types.Center
+		right = types.Right
 	}
 
 	if hb.Font.Name[0] == '$' {
@@ -192,7 +199,7 @@ func (hb *HorizontalBand) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMa
 	}
 	w := p.CropBox.Width() - float64(2*hb.Dx)
 	h := hb.Height
-	r := pdfcpu.RectForWidthAndHeight(llx, lly, w, h)
+	r := types.RectForWidthAndHeight(llx, lly, w, h)
 
 	if hb.Left != "" {
 		if err := hb.renderComponent(hb.Left, left, r, p, pageNr, fonts, images); err != nil {
@@ -213,7 +220,7 @@ func (hb *HorizontalBand) render(p *pdfcpu.Page, pageNr int, fonts pdfcpu.FontMa
 	}
 
 	if hb.Border {
-		pdfcpu.DrawRect(p.Buf, r, 0, &pdfcpu.Black, nil)
+		draw.DrawRect(p.Buf, r, 0, &color.Black, nil)
 	}
 
 	return nil

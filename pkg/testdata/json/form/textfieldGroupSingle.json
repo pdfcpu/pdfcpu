@@ -1,0 +1,522 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": false,
+	"debug": false,
+	"guides": false,
+	"colors": {
+		"DarkOrange": "#FF8C00",
+		"DarkSeaGreen": "#8FBC8F"
+	},
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"fonts": {
+		"myCourier": {
+			"name": "Courier",
+			"size": 12
+		},
+		"input": {
+			"name": "Courier",
+			"size": 12,
+			"col": "#222222"
+		},
+		"label": {
+			"name": "Helvetica",
+			"size": 7,
+			"col": "Gray"
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"header": {
+		"font": {
+			"name": "Courier-Bold",
+			"size": 24,
+			"col": "#C00000"
+		},
+		"left": "$logo1",
+		"center": "TextField Groups Single",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "$myCourier",
+			"size": 9
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Optimized for A.Reader\nPage %p of %P",
+		"right": "Source:\ntestdata/json/form/textfieldGroupSingle.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"fieldgroups": {
+		"tfg": {
+			"hide": false,
+			"bgCol": "White",
+			"border": {
+				"width": 0,
+				"col": "Black",
+				"style": "round"
+			},
+			"padding": {
+				"width": 6
+			}
+		}
+	},
+	"pages": {
+		"1": {
+			"bgcol": "LightGray",
+			"content": {
+				"fieldGroup": [
+					{
+						"name": "$tfg",
+						"textfield": [
+							{
+								"hide": false,
+								"id": "llfirstName",
+								"tip": "first name",
+								"value": "",
+								"pos": [
+									180,
+									670
+								],
+								"width": 100,
+								"align": "left",
+								"bgCol": "$DarkOrange",
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "First Name:",
+									"width": 100,
+									"gap": 10,
+									"align": "left",
+									"pos": "left"
+								}
+							}
+						]
+					},
+					{
+						"name": "$tfg",
+						"textfield": [
+							{
+								"hide": false,
+								"id": "lrfirstName",
+								"tip": "first name",
+								"value": "",
+								"pos": [
+									180,
+									620
+								],
+								"width": 100,
+								"align": "left",
+								"bgCol": "$DarkSeaGreen",
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "First Name:",
+									"width": 100,
+									"gap": 10,
+									"align": "right",
+									"pos": "left"
+								}
+							}
+						]
+					},
+					{
+						"name": "$tfg",
+						"textfield": [
+							{
+								"hide": false,
+								"id": "rlfirstName",
+								"tip": "first name",
+								"value": "",
+								"pos": [
+									180,
+									515
+								],
+								"width": 100,
+								"align": "right",
+								"bgCol": "$DarkOrange",
+								"label": {
+									"value": "First Name",
+									"width": 100,
+									"gap": 10,
+									"align": "left",
+									"pos": "right"
+								}
+							}
+						]
+					},
+					{
+						"name": "$tfg",
+						"textfield": [
+							{
+								"hide": false,
+								"id": "rrfirstName",
+								"tip": "first name",
+								"value": "",
+								"pos": [
+									180,
+									465
+								],
+								"width": 100,
+								"align": "right",
+								"bgCol": "$DarkSeaGreen",
+								"label": {
+									"value": "First Name",
+									"width": 100,
+									"gap": 10,
+									"align": "right",
+									"pos": "right"
+								}
+							}
+						]
+					},
+					{
+						"hide": false,
+						"name": "$tfg",
+						"bgCol": "$DarkSeaGreen",
+						"textfield": [
+							{
+								"hide": false,
+								"id": "tllfirstName",
+								"tip": "first name",
+								"value": "",
+								"pos": [
+									10,
+									345
+								],
+								"width": 100,
+								"align": "left",
+								"bgCol": "LightGray",
+								"label": {
+									"value": "First Name",
+									"width": 100,
+									"gap": 0,
+									"align": "left",
+									"pos": "top"
+								}
+							}
+						]
+					},
+					{
+						"hide": false,
+						"name": "$tfg",
+						"bgCol": "$DarkSeaGreen",
+						"border": {
+							"width": 5,
+							"col": "#00AA00",
+							"style": "round"
+						},
+						"textfield": [
+							{
+								"hide": false,
+								"id": "tlrfirstName",
+								"tip": "first name",
+								"value": "",
+								"pos": [
+									150,
+									345
+								],
+								"width": 100,
+								"align": "left",
+								"bgCol": "LightGray",
+								"label": {
+									"value": "First Name",
+									"width": 100,
+									"gap": 0,
+									"align": "right",
+									"pos": "top"
+								}
+							}
+						]
+					},
+					{
+						"name": "$tfg",
+						"textfield": [
+							{
+								"hide": false,
+								"id": "trlfirstName",
+								"tip": "first name",
+								"value": "",
+								"pos": [
+									310,
+									345
+								],
+								"width": 100,
+								"align": "right",
+								"bgCol": "LightGray",
+								"border": {
+									"width": 1,
+									"col": "Black"
+								},
+								"label": {
+									"value": "First Name",
+									"width": 100,
+									"gap": 0,
+									"align": "left",
+									"pos": "top"
+								}
+							}
+						]
+					},
+					{
+						"name": "$tfg",
+						"textfield": [
+							{
+								"hide": false,
+								"id": "trrfirstName",
+								"tip": "first name",
+								"value": "",
+								"pos": [
+									450,
+									345
+								],
+								"width": 100,
+								"align": "right",
+								"bgCol": "LightGray",
+								"label": {
+									"value": "First Name",
+									"width": 100,
+									"gap": 0,
+									"align": "right",
+									"pos": "top"
+								}
+							}
+						]
+					},
+					{
+						"name": "$tfg",
+						"textfield": [
+							{
+								"hide": false,
+								"id": "tccfirstName",
+								"tip": "first name",
+								"value": "",
+								"pos": [
+									10,
+									260
+								],
+								"width": 100,
+								"align": "center",
+								"bgCol": "LightGray",
+								"label": {
+									"value": "First Name",
+									"width": 100,
+									"gap": 0,
+									"align": "center",
+									"pos": "top"
+								}
+							}
+						]
+					},
+					{
+						"name": "$tfg",
+						"textfield": [
+							{
+								"hide": false,
+								"id": "bllfirstName",
+								"tip": "first name",
+								"value": "",
+								"pos": [
+									10,
+									150
+								],
+								"width": 100,
+								"align": "left",
+								"label": {
+									"value": "First Name",
+									"width": 100,
+									"gap": 0,
+									"align": "left",
+									"pos": "bottom"
+								}
+							}
+						]
+					},
+					{
+						"name": "$tfg",
+						"textfield": [
+							{
+								"hide": false,
+								"id": "blrfirstName",
+								"tip": "first name",
+								"value": "",
+								"pos": [
+									150,
+									150
+								],
+								"width": 100,
+								"align": "left",
+								"label": {
+									"value": "First Name",
+									"width": 100,
+									"gap": 0,
+									"align": "right",
+									"pos": "bottom"
+								}
+							}
+						]
+					},
+					{
+						"name": "$tfg",
+						"textfield": [
+							{
+								"hide": false,
+								"id": "brlfirstName",
+								"tip": "first name",
+								"value": "",
+								"pos": [
+									310,
+									150
+								],
+								"width": 100,
+								"align": "right",
+								"label": {
+									"value": "First Name",
+									"width": 100,
+									"gap": 0,
+									"align": "left",
+									"pos": "bottom"
+								}
+							}
+						]
+					},
+					{
+						"name": "$tfg",
+						"textfield": [
+							{
+								"hide": false,
+								"id": "brrfirstName",
+								"tip": "first name",
+								"value": "",
+								"pos": [
+									450,
+									150
+								],
+								"width": 100,
+								"align": "right",
+								"label": {
+									"value": "First Name",
+									"width": 100,
+									"gap": 0,
+									"align": "right",
+									"pos": "bottom"
+								}
+							}
+						]
+					},
+					{
+						"comment": "this time w/o template usage",
+						"hide": false,
+						"bgCol": "White",
+						"border": {
+							"width": 0,
+							"col": "Black",
+							"style": "round"
+						},
+						"padding": {
+							"width": 6
+						},
+						"textfield": [
+							{
+								"hide": false,
+								"id": "bccfirstName",
+								"tip": "first name",
+								"value": "",
+								"pos": [
+									10,
+									66
+								],
+								"width": 100,
+								"align": "center",
+								"label": {
+									"value": "First Name",
+									"width": 100,
+									"gap": 0,
+									"align": "center",
+									"pos": "bottom"
+								}
+							}
+						]
+					}
+				],
+				"text": [
+					{
+						"value": "Textfields with left label:",
+						"pos": [
+							0,
+							700
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Textfields with right label:",
+						"pos": [
+							0,
+							545
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Textfields with top label:",
+						"pos": [
+							0,
+							390
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					},
+					{
+						"value": "Textfields with bottom label:",
+						"pos": [
+							0,
+							180
+						],
+						"font": {
+							"name": "$myCourier"
+						}
+					}
+				]
+			}
+		}
+	}
+}

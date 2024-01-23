@@ -23,7 +23,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 var (
@@ -33,7 +34,7 @@ var (
 
 // Command represents command meta information and details.
 type command struct {
-	handler    func(conf *pdfcpu.Configuration)
+	handler    func(conf *model.Configuration)
 	cmdMap     commandMap // Optional map of sub commands.
 	usageShort string     // Short command description.
 	usageLong  string     // Long command description.
@@ -91,22 +92,22 @@ func validateConfigDirFlag() {
 			fmt.Fprintf(os.Stderr, "conf: %s not a directory\n\n", conf)
 			os.Exit(1)
 		}
-		pdfcpu.ConfigPath = conf
+		model.ConfigPath = conf
 		return
 	}
 	if conf == "disable" {
-		pdfcpu.ConfigPath = "disable"
+		model.ConfigPath = "disable"
 	}
 }
 
-func ensureDefaultConfig() (*pdfcpu.Configuration, error) {
+func ensureDefaultConfig() (*model.Configuration, error) {
 	validateConfigDirFlag()
-	if !pdfcpu.MemberOf(pdfcpu.ConfigPath, []string{"default", "disable"}) {
-		if err := pdfcpu.EnsureDefaultConfigAt(pdfcpu.ConfigPath); err != nil {
+	if !types.MemberOf(model.ConfigPath, []string{"default", "disable"}) {
+		if err := model.EnsureDefaultConfigAt(model.ConfigPath); err != nil {
 			return nil, err
 		}
 	}
-	return pdfcpu.NewDefaultConfiguration(), nil
+	return model.NewDefaultConfiguration(), nil
 }
 
 // process applies command completion and if successful processes the resulting command.

@@ -1,0 +1,66 @@
+{
+	"header": {
+		"source": "arabic.pdf",
+		"version": "pdfcpu v0.4.0 dev",
+		"creation": "2023-03-15 23:51:45 CET",
+		"producer": "pdfcpu v0.4.0 dev"
+	},
+	"forms": [
+		{
+			"textfield": [
+				{
+					"name": "firstName1",
+					"value": "عائشة",
+					"locked": true
+				},
+				{
+					"name": "lastName1",
+					"value": "أحمد",
+					"locked": true
+				},
+				{
+					"name": "note1",
+					"value": "تم التعبئة باستخدام JSON."
+				}
+			],
+			"datefield": [
+				{
+					"name": "dob1",
+					"value": "06/07/1970",
+					"locked": true
+				}
+			],
+			"checkbox": [
+				{
+					"name": "cb11",
+					"value": false
+				},
+				{
+					"name": "cb15",
+					"value": true
+				}
+			],
+			"radiobuttongroup": [
+				{
+					"name": "gender1",
+					"value": "أنثى",
+					"locked": true
+				}
+			],
+			"combobox": [
+				{
+					"name": "city12",
+					"value": "دبي"
+				}
+			],
+			"listbox": [
+				{
+					"name": "city11",
+					"values": [
+						"فيينا"
+					]
+				}
+			]
+		}
+	]
+}

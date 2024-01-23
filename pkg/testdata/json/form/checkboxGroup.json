@@ -1,0 +1,808 @@
+{
+	"paper": "A4P",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": true,
+	"debug": false,
+	"guides": false,
+	"colors": {
+		"DarkOrange": "#FF8C00",
+		"DarkSeaGreen": "#8FBC8F"
+	},
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"fonts": {
+		"myCourierBold": {
+			"name": "Courier-Bold",
+			"size": 12
+		},
+		"label": {
+			"name": "Helvetica",
+			"size": 7,
+			"col": "Gray"
+		}
+	},
+	"margin": {
+		"width": 10
+	},
+	"header": {
+		"font": {
+			"name": "$myCourierBold",
+			"size": 24,
+			"col": "#C00000"
+		},
+		"left": "$logo1",
+		"center": "Checkbox Groups",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "Courier",
+			"size": 9
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Optimized for A.Reader\nPage %p of %P",
+		"right": "Source:\ntestdata/json/form/checkboxGroup.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"fieldgroups": {
+		"cbg": {
+			"hide": false,
+			"bgCol": "White",
+			"border": {
+				"width": 0,
+				"col": "Black",
+				"style": "round"
+			},
+			"padding": {
+				"width": 6 
+			}
+		}
+	},
+	"pages": {
+		"1": {
+			"bgcol": "LightGray",
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							150,
+							670
+						]
+					}
+				],
+				"fieldGroup": [
+					{
+						"name": "$cbg",
+						"hide": false,
+						"checkbox": [
+							{
+								"hide": false,
+								"id": "llcheckbox1",
+								"tip": "tooltip",
+								"value": false,
+								"pos": [
+									150,
+									680
+								],
+								"width": 12,
+								"label": {
+									"value": "Check this:",
+									"width": 100,
+									"gap": 10,
+									"align": "left",
+									"pos": "left"
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"hide": false,	
+						"checkbox": [
+							{
+								"hide": false,
+								"id": "llcheckbox2",
+								"value": true,
+								"pos": [
+									150,
+									650
+								],
+								"width": 12,
+								"label": {
+									"value": "Checked:",
+									"width": 100,
+									"gap": 10,
+									"align": "left",
+									"pos": "left"
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"hide": false,	
+						"checkbox": [
+							{
+								"hide": false,	
+								"id": "lrcheckbox1",
+								"value": false,
+								"pos": [
+									150,
+									610
+								],
+								"width": 12,
+								"label": {
+									"value": "Check this:",
+									"width": 100,
+									"gap": 10,
+									"align": "right",
+									"pos": "left"
+								}
+							},
+							{
+								"hide": false,
+								"id": "lrcheckbox2",
+								"value": true,
+								"pos": [
+									150,
+									590
+								],
+								"width": 12,
+								"label": {
+									"value": "Checked:",
+									"width": 100,
+									"gap": 10,
+									"align": "right",
+									"pos": "left"
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"hide": false,	
+						"checkbox": [
+							{
+								"id": "llcheckbox1b",
+								"value": false,
+								"pos": [
+									500,
+									676
+								],
+								"width": 18,
+								"label": {
+									"value": "Check this:",
+									"width": 180,
+									"gap": 10,
+									"align": "left",
+									"pos": "left",
+									"font": {
+										"name": "$label",
+										"size": 18
+									}
+								}
+							},
+							{
+								"hide": false,
+								"id": "llcheckbox2b",
+								"value": true,
+								"pos": [
+									500,
+									650
+								],
+								"width": 18,
+								"label": {
+									"value": "Checked:",
+									"width": 180,
+									"gap": 10,
+									"align": "left",
+									"pos": "left",
+									"font": {
+										"name": "$label",
+										"size": 18
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"hide": false,	
+						"bgCol": "$DarkSeaGreen",
+						"border": {
+							"width": 5,
+							"col": "#00AA00",
+							"style": "round"
+						},
+						"checkbox": [
+							{
+								"hide": false,
+								"id": "lrcheckbox1b",
+								"value": false,
+								"pos": [
+									500,
+									605
+								],
+								"width": 18,
+								"label": {
+									"value": "Check this:",
+									"width": 100,
+									"gap": 10,
+									"align": "right",
+									"pos": "left",
+									"font": {
+										"name": "$label",
+										"size": 18
+									}
+								}
+							},
+							{
+								"hide": false,
+								"id": "lrcheckbox2b",
+								"value": true,
+								"pos": [
+									500,
+									584
+								],
+								"width": 18,
+								"label": {
+									"value": "Checked:",
+									"width": 100,
+									"gap": 10,
+									"align": "right",
+									"pos": "left",
+									"font": {
+										"name": "$label",
+										"size": 18
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"hide": false,	
+						"bgCol": "$DarkSeaGreen",
+						"checkbox": [
+							{
+								"hide": false,
+								"id": "rlcheckbox1",
+								"value": false,
+								"pos": [
+									150,
+									500
+								],
+								"width": 12,
+								"label": {
+									"value": "Check this",
+									"width": 100,
+									"gap": 10,
+									"align": "left",
+									"pos": "right"
+								}
+							},
+							{
+								"hide": false,
+								"id": "rlcheckbox2",
+								"value": true,
+								"pos": [
+									150,
+									480
+								],
+								"width": 12,
+								"label": {
+									"value": "Checked",
+									"width": 100,
+									"gap": 10,
+									"align": "left",
+									"pos": "right"
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"hide": false,
+						"checkbox": [
+							{
+								"hide": false,
+								"id": "rrcheckbox1",
+								"value": false,
+								"pos": [
+									150,
+									440
+								],
+								"width": 12,
+								"label": {
+									"value": "Check this",
+									"width": 100,
+									"gap": 10,
+									"align": "right",
+									"pos": "right"
+								}
+							},
+							{
+								"hide": false,
+								"id": "rrcheckbox2",
+								"value": true,
+								"pos": [
+									150,
+									420
+								],
+								"width": 12,
+								"label": {
+									"value": "Checked",
+									"width": 100,
+									"gap": 10,
+									"align": "right",
+									"pos": "right"
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"hide": false,	
+						"checkbox": [
+							{
+								"hide": false,
+								"id": "rlcheckbox1b",
+								"value": false,
+								"pos": [
+									320,
+									506
+								],
+								"width": 18,
+								"label": {
+									"value": "Check this",
+									"width": 100,
+									"gap": 10,
+									"align": "left",
+									"pos": "right",
+									"font": {
+										"name": "$label",
+										"size": 18
+									}
+								}
+							},
+							{
+								"hide": false,
+								"id": "rlcheckbox2b",
+								"value": true,
+								"pos": [
+									320,
+									480
+								],
+								"width": 18,
+								"label": {
+									"value": "Checked",
+									"width": 100,
+									"gap": 10,
+									"align": "left",
+									"pos": "right",
+									"font": {
+										"name": "$label",
+										"size": 18
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"hide": false,	
+						"checkbox": [
+							{
+								"hide": false,
+								"id": "rrcheckbox1b",
+								"value": false,
+								"pos": [
+									320,
+									440
+								],
+								"width": 18,
+								"label": {
+									"value": "Check this",
+									"width": 130,
+									"gap": 10,
+									"align": "right",
+									"pos": "right",
+									"font": {
+										"name": "$label",
+										"size": 18
+									}
+								}
+							},
+							{
+								"hide": false,
+								"id": "rrcheckbox2b",
+								"value": true,
+								"pos": [
+									320,
+									414
+								],
+								"width": 18,
+								"label": {
+									"value": "Checked",
+									"width": 130,
+									"gap": 10,
+									"align": "right",
+									"pos": "right",
+									"font": {
+										"name": "$label",
+										"size": 18
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"hide": false,	
+						"checkbox": [
+							{
+								"hide": false,
+								"id": "tlcheckbox",
+								"value": false,
+								"pos": [
+									150,
+									310
+								],
+								"width": 12,
+								"label": {
+									"value": "Check this",
+									"width": 100,
+									"gap": 5,
+									"align": "left",
+									"pos": "top"
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"hide": false,	
+						"checkbox": [
+							{
+								"hide": false,
+								"id": "tccheckbox",
+								"value": false,
+								"pos": [
+									150,
+									260
+								],
+								"width": 12,
+								"label": {
+									"value": "Check this",
+									"width": 100,
+									"gap": 5,
+									"align": "center",
+									"pos": "top"
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"hide": false,	
+						"checkbox": [
+							{
+								"hide": false,
+								"id": "trcheckbox",
+								"value": false,
+								"pos": [
+									150,
+									210
+								],
+								"width": 12,
+								"label": {
+									"value": "Check this",
+									"width": 100,
+									"gap": 5,
+									"align": "right",
+									"pos": "top"
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"hide": false,	
+						"checkbox": [
+							{
+								"hide": false,
+								"id": "tlcheckbox1",
+								"value": false,
+								"pos": [
+									410,
+									320
+								],
+								"width": 18,
+								"label": {
+									"value": "Check this",
+									"width": 100,
+									"gap": 5,
+									"align": "left",
+									"pos": "top",
+									"font": {
+										"name": "$label",
+										"size": 18
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"hide": false,	
+						"checkbox": [
+							{
+								"hide": false,
+								"id": "tccheckbox1",
+								"value": false,
+								"pos": [
+									410,
+									260
+								],
+								"width": 18,
+								"label": {
+									"value": "Check this",
+									"width": 100,
+									"gap": 5,
+									"align": "center",
+									"pos": "top",
+									"font": {
+										"name": "$label",
+										"size": 18
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"hide": false,	
+						"checkbox": [
+							{
+								"hide": false,
+								"id": "trcheckbox1",
+								"value": false,
+								"pos": [
+									410,
+									200
+								],
+								"width": 18,
+								"label": {
+									"value": "Check this",
+									"width": 100,
+									"gap": 5,
+									"align": "right",
+									"pos": "top",
+									"font": {
+										"name": "$label",
+										"size": 18
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"hide": false,	
+						"checkbox": [
+							{
+								"hide": false,
+								"id": "blcheckbox",
+								"value": false,
+								"pos": [
+									150,
+									130
+								],
+								"width": 12,
+								"label": {
+									"value": "Check this",
+									"width": 100,
+									"gap": 5,
+									"align": "left",
+									"pos": "bottom"
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"hide": false,	
+						"checkbox": [
+							{
+								"hide": false,
+								"id": "bccheckbox",
+								"value": false,
+								"pos": [
+									150,
+									80
+								],
+								"width": 12,
+								"label": {
+									"value": "Check this",
+									"width": 100,
+									"gap": 5,
+									"align": "center",
+									"pos": "bottom"
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"hide": false,	
+						"checkbox": [
+							{
+								"hide": false,
+								"id": "brcheckbox",
+								"value": false,
+								"pos": [
+									150,
+									30
+								],
+								"width": 12,
+								"label": {
+									"value": "Check this",
+									"width": 100,
+									"gap": 5,
+									"align": "right",
+									"pos": "bottom"
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"hide": false,	
+						"checkbox": [
+							{
+								"hide": false,
+								"id": "blcheckbox1",
+								"value": false,
+								"pos": [
+									410,
+									155
+								],
+								"width": 18,
+								"label": {
+									"value": "Check this",
+									"width": 100,
+									"gap": 5,
+									"align": "left",
+									"pos": "bottom",
+									"font": {
+										"name": "$label",
+										"size": 18
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"hide": false,	
+						"checkbox": [
+							{
+								"hide": false,
+								"id": "bccheckbox1",
+								"value": false,
+								"pos": [
+									410,
+									95
+								],
+								"width": 18,
+								"label": {
+									"value": "Check this",
+									"width": 100,
+									"gap": 5,
+									"align": "center",
+									"pos": "bottom",
+									"font": {
+										"name": "$label",
+										"size": 18
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "$cbg",
+						"hide": false,
+						"checkbox": [
+							{
+								"hide": false,
+								"id": "brcheckbox1",
+								"value": false,
+								"pos": [
+									410,
+									35
+								],
+								"width": 18,
+								"label": {
+									"value": "Check this",
+									"width": 100,
+									"gap": 5,
+									"align": "right",
+									"pos": "bottom",
+									"font": {
+										"name": "$label",
+										"size": 18
+									}
+								}
+							}
+						]
+					}
+				],
+				"text": [
+					{
+						"value": "Checkbox with left label:",
+						"anchor": "topleft",
+						"font": {
+							"name": "$myCourierBold"
+						}
+					},
+					{
+						"value": "Checkbox with right label:",
+						"pos": [
+							0,
+							540
+						],
+						"font": {
+							"name": "$myCourierBold"
+						}
+					},
+					{
+						"value": "Checkbox with top label:",
+						"anchor": "left",
+						"font": {
+							"name": "$myCourierBold"
+						}
+					},
+					{
+						"value": "Checkbox with bottom label:",
+						"pos": [
+							0,
+							170
+						],
+						"font": {
+							"name": "$myCourierBold"
+						}
+					}
+				]
+			}
+		}
+	}
+}

@@ -19,16 +19,20 @@ package pdfcpu
 import (
 	"path/filepath"
 	"time"
+
+	pdffont "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 // Functions needed to create a test.pdf that gets used for validation testing (see process_test.go)
 
-func createTextAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createTextAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
-	d := Dict(map[string]Object{
-		"Type":     Name("Annot"),
-		"Subtype":  Name("Text"),
-		"Contents": StringLiteral("Text Annotation"),
+	d := types.Dict(map[string]types.Object{
+		"Type":     types.Name("Annot"),
+		"Subtype":  types.Name("Text"),
+		"Contents": types.StringLiteral("Text Annotation"),
 		"Rect":     annotRect,
 		"P":        pageIndRef,
 		//"NM": "",
@@ -40,71 +44,71 @@ func createTextAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRec
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createLinkAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createLinkAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
-	usageDict := Dict(
-		map[string]Object{
-			"CreatorInfo": Dict(
-				map[string]Object{
-					"Creator": StringLiteral("pdfcpu"),
-					"Subtype": Name("Technical"),
+	usageDict := types.Dict(
+		map[string]types.Object{
+			"CreatorInfo": types.Dict(
+				map[string]types.Object{
+					"Creator": types.StringLiteral("pdfcpu"),
+					"Subtype": types.Name("Technical"),
 				},
 			),
-			"Language": Dict(
-				map[string]Object{
-					"Lang":      StringLiteral("en-us"),
-					"Preferred": Name("ON"),
+			"Language": types.Dict(
+				map[string]types.Object{
+					"Lang":      types.StringLiteral("en-us"),
+					"Preferred": types.Name("ON"),
 				},
 			),
-			"Export": Dict(
-				map[string]Object{
-					"ExportState": Name("ON"),
+			"Export": types.Dict(
+				map[string]types.Object{
+					"ExportState": types.Name("ON"),
 				},
 			),
-			"Zoom": Dict(
-				map[string]Object{
-					"min": Float(0),
+			"Zoom": types.Dict(
+				map[string]types.Object{
+					"min": types.Float(0),
 				},
 			),
-			"Print": Dict(
-				map[string]Object{
-					"Subtype":    Name("Watermark"),
-					"PrintState": Name("ON"),
+			"Print": types.Dict(
+				map[string]types.Object{
+					"Subtype":    types.Name("Watermark"),
+					"PrintState": types.Name("ON"),
 				},
 			),
-			"View": Dict(
-				map[string]Object{
-					"ViewState": Name("Ind"),
+			"View": types.Dict(
+				map[string]types.Object{
+					"ViewState": types.Name("Ind"),
 				},
 			),
-			"User": Dict(
-				map[string]Object{
-					"Type": Name("ON"),
-					"Name": StringLiteral("Horst Rutter"),
+			"User": types.Dict(
+				map[string]types.Object{
+					"Type": types.Name("ON"),
+					"Name": types.StringLiteral("Horst Rutter"),
 				},
 			),
-			"PageElement": Dict(
-				map[string]Object{
-					"Subtype": Name("FG"),
+			"PageElement": types.Dict(
+				map[string]types.Object{
+					"Subtype": types.Name("FG"),
 				},
 			),
 		},
 	)
 
-	optionalContentGroupDict := Dict(
-		map[string]Object{
-			"Type":   Name("OCG"),
-			"Name":   StringLiteral("OCG"),
-			"Intent": Name("Design"),
+	optionalContentGroupDict := types.Dict(
+		map[string]types.Object{
+			"Type":   types.Name("OCG"),
+			"Name":   types.StringLiteral("OCG"),
+			"Intent": types.Name("Design"),
 			"Usage":  usageDict,
 		},
 	)
 
-	uriActionDict := Dict(
-		map[string]Object{
-			"Type": Name("Action"),
-			"S":    Name("URI"),
-			"URI":  StringLiteral("https://golang.org"),
+	uriActionDict := types.Dict(
+		map[string]types.Object{
+			"Type": types.Name("Action"),
+			"S":    types.Name("URI"),
+			"URI":  types.StringLiteral("https://golang.org"),
 		},
 	)
 
@@ -113,17 +117,17 @@ func createLinkAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRec
 		return nil, err
 	}
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("Link"),
-			"Contents": StringLiteral("Link Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("Link"),
+			"Contents": types.StringLiteral("Link Annotation"),
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 5),
-			"C":        NewNumberArray(0, 0, 1),
+			"Border":   types.NewIntegerArray(0, 0, 5),
+			"C":        types.NewNumberArray(0, 0, 1),
 			"A":        *indRef,
-			"H":        Name("I"),
+			"H":        types.Name("I"),
 			"PA":       *indRef,
 			"OC":       optionalContentGroupDict,
 		},
@@ -132,37 +136,37 @@ func createLinkAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRec
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createFreeTextAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createFreeTextAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("FreeText"),
-			"Contents": StringLiteral("FreeText Annotation"),
-			"F":        Integer(128), // Lock
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("FreeText"),
+			"Contents": types.StringLiteral("FreeText Annotation"),
+			"F":        types.Integer(128), // Lock
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 1),
-			"C":        NewNumberArray(0, 1, 0),
-			"DA":       StringLiteral("DA"),
+			"Border":   types.NewIntegerArray(0, 0, 1),
+			"C":        types.NewNumberArray(0, 1, 0),
+			"DA":       types.StringLiteral("DA"),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createLineAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createLineAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("Line"),
-			"Contents": StringLiteral("Line Annotation"),
-			"F":        Integer(128), // Lock
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("Line"),
+			"Contents": types.StringLiteral("Line Annotation"),
+			"F":        types.Integer(128), // Lock
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 1),
-			"C":        NewNumberArray(0, 1, 0),
+			"Border":   types.NewIntegerArray(0, 0, 1),
+			"C":        types.NewNumberArray(0, 1, 0),
 			"L":        annotRect,
 		},
 	)
@@ -170,131 +174,131 @@ func createLineAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRec
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createSquareAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createSquareAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("Square"),
-			"Contents": StringLiteral("Square Annotation"),
-			"F":        Integer(128), // Lock
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("Square"),
+			"Contents": types.StringLiteral("Square Annotation"),
+			"F":        types.Integer(128), // Lock
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 1),
-			"C":        NewNumberArray(0, .3, .3),
-			"IC":       NewNumberArray(0.8, .8, .8),
+			"Border":   types.NewIntegerArray(0, 0, 1),
+			"C":        types.NewNumberArray(0, .3, .3),
+			"IC":       types.NewNumberArray(0.8, .8, .8),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createCircleAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createCircleAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("Circle"),
-			"Contents": StringLiteral("Circle Annotation"),
-			"F":        Integer(128), // Lock
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("Circle"),
+			"Contents": types.StringLiteral("Circle Annotation"),
+			"F":        types.Integer(128), // Lock
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 10),
-			"C":        NewNumberArray(0.5, 0, 5, 0),
-			"IC":       NewNumberArray(0.8, .8, .8),
+			"Border":   types.NewIntegerArray(0, 0, 10),
+			"C":        types.NewNumberArray(0.5, 0, 5, 0),
+			"IC":       types.NewNumberArray(0.8, .8, .8),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createPolygonAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createPolygonAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
 	// Construct a polyline using the annot rects both lower corners and the upper right corner.
-	v := Array{nil, nil, nil, nil}
+	v := types.Array{nil, nil, nil, nil}
 	copy(v, annotRect)
 	v = append(v, annotRect[2])
 	v = append(v, annotRect[1])
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("Polygon"),
-			"Contents": StringLiteral("Polygon Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("Polygon"),
+			"Contents": types.StringLiteral("Polygon Annotation"),
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 1),
-			"C":        NewNumberArray(0, 1, 0),
+			"Border":   types.NewIntegerArray(0, 0, 1),
+			"C":        types.NewNumberArray(0, 1, 0),
 			"Vertices": v,
-			"IC":       NewNumberArray(0.3, 0.5, 0.0),
-			"BS": Dict(
-				map[string]Object{
-					"Type": Name("Border"),
-					"W":    Float(0.5),
-					"S":    Name("D"),
+			"IC":       types.NewNumberArray(0.3, 0.5, 0.0),
+			"BS": types.Dict(
+				map[string]types.Object{
+					"Type": types.Name("Border"),
+					"W":    types.Float(0.5),
+					"S":    types.Name("D"),
 				},
 			),
-			"BE": Dict(
-				map[string]Object{
-					"S": Name("C"),
-					"I": Float(1),
+			"BE": types.Dict(
+				map[string]types.Object{
+					"S": types.Name("C"),
+					"I": types.Float(1),
 				},
 			),
-			"IT": Name("PolygonCloud"),
+			"IT": types.Name("PolygonCloud"),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createPolyLineAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createPolyLineAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
 	// Construct a polyline using the annot rects both lower corners and the upper right corner.
-	v := Array{nil, nil, nil, nil}
+	v := types.Array{nil, nil, nil, nil}
 	copy(v, annotRect)
 	v = append(v, annotRect[2])
 	v = append(v, annotRect[1])
 
-	optionalContentGroupDict := Dict(
-		map[string]Object{
-			"Type":   Name("OCG"),
-			"Name":   StringLiteral("OCG"),
-			"Intent": NewNameArray("Design", "View"),
+	optionalContentGroupDict := types.Dict(
+		map[string]types.Object{
+			"Type":   types.Name("OCG"),
+			"Name":   types.StringLiteral("OCG"),
+			"Intent": types.NewNameArray("Design", "View"),
 		},
 	)
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("PolyLine"),
-			"Contents": StringLiteral("PolyLine Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("PolyLine"),
+			"Contents": types.StringLiteral("PolyLine Annotation"),
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 1),
-			"C":        NewNumberArray(0, 1, 0),
+			"Border":   types.NewIntegerArray(0, 0, 1),
+			"C":        types.NewNumberArray(0, 1, 0),
 			"Vertices": v,
 			"OC":       optionalContentGroupDict,
-			"IC":       NewNumberArray(0.3, 0.5, 0.0),
-			"BS": Dict(
-				map[string]Object{
-					"Type": Name("Border"),
-					"W":    Float(0.5),
-					"S":    Name("D"),
+			"IC":       types.NewNumberArray(0.3, 0.5, 0.0),
+			"BS": types.Dict(
+				map[string]types.Object{
+					"Type": types.Name("Border"),
+					"W":    types.Float(0.5),
+					"S":    types.Name("D"),
 				},
 			),
-			"IT": Name("PolygonCloud"),
+			"IT": types.Name("PolygonCloud"),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createHighlightAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createHighlightAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
 	// Create a quad points array corresponding to the annot rect.
 	ar := annotRect
 
-	qp := Array{}
+	qp := types.Array{}
 	qp = append(qp, ar[0])
 	qp = append(qp, ar[1])
 	qp = append(qp, ar[2])
@@ -304,48 +308,48 @@ func createHighlightAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, ann
 	qp = append(qp, ar[0])
 	qp = append(qp, ar[3])
 
-	optionalContentGroupDict := Dict(
-		map[string]Object{
-			"Type": Name("OCG"),
-			"Name": StringLiteral("OCG"),
+	optionalContentGroupDict := types.Dict(
+		map[string]types.Object{
+			"Type": types.Name("OCG"),
+			"Name": types.StringLiteral("OCG"),
 		},
 	)
 
-	optionalContentMembershipDict := Dict(
-		map[string]Object{
-			"Type": Name("OCMD"),
-			"OCGs": Array{nil, optionalContentGroupDict},
-			"P":    Name("AllOn"),
-			"VE":   Array{},
+	optionalContentMembershipDict := types.Dict(
+		map[string]types.Object{
+			"Type": types.Name("OCMD"),
+			"OCGs": types.Array{nil, optionalContentGroupDict},
+			"P":    types.Name("AllOn"),
+			"VE":   types.Array{},
 		},
 	)
 
 	_ = optionalContentMembershipDict
 
-	d := Dict(
-		map[string]Object{
-			"Type":       Name("Annot"),
-			"Subtype":    Name("Highlight"),
-			"Contents":   StringLiteral("Highlight Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":       types.Name("Annot"),
+			"Subtype":    types.Name("Highlight"),
+			"Contents":   types.StringLiteral("Highlight Annotation"),
 			"Rect":       annotRect,
 			"P":          pageIndRef,
-			"Border":     NewIntegerArray(0, 0, 1),
-			"C":          NewNumberArray(.2, 0, 0),
+			"Border":     types.NewIntegerArray(0, 0, 1),
+			"C":          types.NewNumberArray(.2, 0, 0),
 			"OC":         optionalContentMembershipDict,
 			"QuadPoints": qp,
-			"T":          StringLiteral("MyTitle"),
+			"T":          types.StringLiteral("MyTitle"),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createUnderlineAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createUnderlineAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
 	// Create a quad points array corresponding to annot rect.
 	ar := annotRect
 
-	qp := Array{}
+	qp := types.Array{}
 	qp = append(qp, ar[0])
 	qp = append(qp, ar[1])
 	qp = append(qp, ar[2])
@@ -355,15 +359,15 @@ func createUnderlineAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, ann
 	qp = append(qp, ar[0])
 	qp = append(qp, ar[3])
 
-	d := Dict(
-		map[string]Object{
-			"Type":       Name("Annot"),
-			"Subtype":    Name("Underline"),
-			"Contents":   StringLiteral("Underline Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":       types.Name("Annot"),
+			"Subtype":    types.Name("Underline"),
+			"Contents":   types.StringLiteral("Underline Annotation"),
 			"Rect":       annotRect,
 			"P":          pageIndRef,
-			"Border":     NewIntegerArray(0, 0, 1),
-			"C":          NewNumberArray(.5, 0, 0),
+			"Border":     types.NewIntegerArray(0, 0, 1),
+			"C":          types.NewNumberArray(.5, 0, 0),
 			"QuadPoints": qp,
 		},
 	)
@@ -371,12 +375,12 @@ func createUnderlineAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, ann
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createSquigglyAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createSquigglyAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
 	// Create a quad points array corresponding to annot rect.
 	ar := annotRect
 
-	qp := Array{}
+	qp := types.Array{}
 	qp = append(qp, ar[0])
 	qp = append(qp, ar[1])
 	qp = append(qp, ar[2])
@@ -386,15 +390,15 @@ func createSquigglyAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, anno
 	qp = append(qp, ar[0])
 	qp = append(qp, ar[3])
 
-	d := Dict(
-		map[string]Object{
-			"Type":       Name("Annot"),
-			"Subtype":    Name("Squiggly"),
-			"Contents":   StringLiteral("Squiggly Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":       types.Name("Annot"),
+			"Subtype":    types.Name("Squiggly"),
+			"Contents":   types.StringLiteral("Squiggly Annotation"),
 			"Rect":       annotRect,
 			"P":          pageIndRef,
-			"Border":     NewIntegerArray(0, 0, 1),
-			"C":          NewNumberArray(.5, 0, 0),
+			"Border":     types.NewIntegerArray(0, 0, 1),
+			"C":          types.NewNumberArray(.5, 0, 0),
 			"QuadPoints": qp,
 		},
 	)
@@ -402,12 +406,12 @@ func createSquigglyAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, anno
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createStrikeOutAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createStrikeOutAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
 	// Create a quad points array corresponding to annot rect.
 	ar := annotRect
 
-	qp := Array{}
+	qp := types.Array{}
 	qp = append(qp, ar[0])
 	qp = append(qp, ar[1])
 	qp = append(qp, ar[2])
@@ -417,15 +421,15 @@ func createStrikeOutAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, ann
 	qp = append(qp, ar[0])
 	qp = append(qp, ar[3])
 
-	d := Dict(
-		map[string]Object{
-			"Type":       Name("Annot"),
-			"Subtype":    Name("StrikeOut"),
-			"Contents":   StringLiteral("StrikeOut Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":       types.Name("Annot"),
+			"Subtype":    types.Name("StrikeOut"),
+			"Contents":   types.StringLiteral("StrikeOut Annotation"),
 			"Rect":       annotRect,
 			"P":          pageIndRef,
-			"Border":     NewIntegerArray(0, 0, 1),
-			"C":          NewNumberArray(.5, 0, 0),
+			"Border":     types.NewIntegerArray(0, 0, 1),
+			"C":          types.NewNumberArray(.5, 0, 0),
 			"QuadPoints": qp,
 		},
 	)
@@ -433,68 +437,68 @@ func createStrikeOutAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, ann
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createCaretAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createCaretAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("Caret"),
-			"Contents": StringLiteral("Caret Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("Caret"),
+			"Contents": types.StringLiteral("Caret Annotation"),
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 1),
-			"C":        NewNumberArray(0.5, 0.5, 0),
-			"RD":       NewNumberArray(0, 0, 0, 0),
-			"Sy":       Name("None"),
+			"Border":   types.NewIntegerArray(0, 0, 1),
+			"C":        types.NewNumberArray(0.5, 0.5, 0),
+			"RD":       types.NewNumberArray(0, 0, 0, 0),
+			"Sy":       types.Name("None"),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createStampAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createStampAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("Stamp"),
-			"Contents": StringLiteral("Stamp Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("Stamp"),
+			"Contents": types.StringLiteral("Stamp Annotation"),
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 1),
-			"C":        NewNumberArray(0.5, 0.5, 0.9),
-			"Name":     Name("Approved"),
+			"Border":   types.NewIntegerArray(0, 0, 1),
+			"C":        types.NewNumberArray(0.5, 0.5, 0.9),
+			"Name":     types.Name("Approved"),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createInkAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createInkAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
 	ar := annotRect
 
-	l := Array{
-		Array{ar[0], ar[1], ar[2], ar[1]},
-		Array{ar[2], ar[1], ar[2], ar[3]},
-		Array{ar[2], ar[3], ar[0], ar[3]},
-		Array{ar[0], ar[3], ar[0], ar[1]},
+	l := types.Array{
+		types.Array{ar[0], ar[1], ar[2], ar[1]},
+		types.Array{ar[2], ar[1], ar[2], ar[3]},
+		types.Array{ar[2], ar[3], ar[0], ar[3]},
+		types.Array{ar[0], ar[3], ar[0], ar[1]},
 	}
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("Ink"),
-			"Contents": StringLiteral("Ink Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("Ink"),
+			"Contents": types.StringLiteral("Ink Annotation"),
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 1),
-			"C":        NewNumberArray(0.5, 0, 0.3),
+			"Border":   types.NewIntegerArray(0, 0, 1),
+			"C":        types.NewNumberArray(0.5, 0, 0.3),
 			"InkList":  l,
-			"ExData": Dict(
-				map[string]Object{
-					"Type":    Name("ExData"),
-					"Subtype": Name("Markup3D"),
+			"ExData": types.Dict(
+				map[string]types.Object{
+					"Type":    types.Name("ExData"),
+					"Subtype": types.Name("Markup3D"),
 				},
 			),
 		},
@@ -503,24 +507,24 @@ func createInkAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createPopupAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createPopupAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("Popup"),
-			"Contents": StringLiteral("Ink Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("Popup"),
+			"Contents": types.StringLiteral("Ink Annotation"),
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 1),
-			"C":        NewNumberArray(0.5, 0, 0.3),
+			"Border":   types.NewIntegerArray(0, 0, 1),
+			"C":        types.NewNumberArray(0.5, 0, 0.3),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createFileAttachmentAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createFileAttachmentAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
 	// macOS starts up iTunes for audio file attachments.
 
@@ -532,7 +536,13 @@ func createFileAttachmentAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef
 	}
 
 	fn := filepath.Base(fileName)
-	fileSpecDict, err := xRefTable.NewFileSpecDict(fn, EncodeUTF16String(fn), "attached by pdfcpu", *ir)
+
+	s, err := types.EscapeUTF16String(fn)
+	if err != nil {
+		return nil, err
+	}
+
+	fileSpecDict, err := xRefTable.NewFileSpecDict(fn, *s, "attached by pdfcpu", *ir)
 	if err != nil {
 		return nil, err
 	}
@@ -542,40 +552,46 @@ func createFileAttachmentAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef
 		return nil, err
 	}
 
-	now := StringLiteral(DateString(time.Now()))
+	now := types.StringLiteral(types.DateString(time.Now()))
 
-	d := Dict(
-		map[string]Object{
-			"Type":         Name("Annot"),
-			"Subtype":      Name("FileAttachment"),
-			"Contents":     StringLiteral("FileAttachment Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":         types.Name("Annot"),
+			"Subtype":      types.Name("FileAttachment"),
+			"Contents":     types.StringLiteral("FileAttachment Annotation"),
 			"Rect":         annotRect,
 			"P":            pageIndRef,
 			"M":            now,
-			"F":            Integer(0),
-			"Border":       NewIntegerArray(0, 0, 1),
-			"C":            NewNumberArray(0.5, 0.0, 0.5),
-			"CA":           Float(0.95),
+			"F":            types.Integer(0),
+			"Border":       types.NewIntegerArray(0, 0, 1),
+			"C":            types.NewNumberArray(0.5, 0.0, 0.5),
+			"CA":           types.Float(0.95),
 			"CreationDate": now,
-			"Name":         Name("Paperclip"),
+			"Name":         types.Name("Paperclip"),
 			"FS":           *ir,
-			"NM":           StringLiteral("SoundFileAttachmentAnnot"),
+			"NM":           types.StringLiteral("SoundFileAttachmentAnnot"),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createFileSpecDict(xRefTable *XRefTable, fileName string) (Dict, error) {
+func createFileSpecDict(xRefTable *model.XRefTable, fileName string) (types.Dict, error) {
 	ir, err := xRefTable.NewEmbeddedFileStreamDict(fileName)
 	if err != nil {
 		return nil, err
 	}
 	fn := filepath.Base(fileName)
-	return xRefTable.NewFileSpecDict(fn, EncodeUTF16String(fn), "attached by pdfcpu", *ir)
+
+	s, err := types.EscapeUTF16String(fn)
+	if err != nil {
+		return nil, err
+	}
+
+	return xRefTable.NewFileSpecDict(fn, *s, "attached by pdfcpu", *ir)
 }
 
-func createSoundObject(xRefTable *XRefTable) (*IndirectRef, error) {
+func createSoundObject(xRefTable *model.XRefTable) (*types.IndirectRef, error) {
 	fileName := testAudioFileWAV
 	fileSpecDict, err := createFileSpecDict(xRefTable, fileName)
 	if err != nil {
@@ -584,31 +600,31 @@ func createSoundObject(xRefTable *XRefTable) (*IndirectRef, error) {
 	return xRefTable.NewSoundStreamDict(fileName, 44100, fileSpecDict)
 }
 
-func createSoundAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createSoundAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
 	indRef, err := createSoundObject(xRefTable)
 	if err != nil {
 		return nil, err
 	}
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("Sound"),
-			"Contents": StringLiteral("Sound Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("Sound"),
+			"Contents": types.StringLiteral("Sound Annotation"),
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 1),
-			"C":        NewNumberArray(0, 0.5, 0.5),
+			"Border":   types.NewIntegerArray(0, 0, 1),
+			"C":        types.NewNumberArray(0, 0.5, 0.5),
 			"Sound":    *indRef,
-			"Name":     Name("Speaker"),
+			"Name":     types.Name("Speaker"),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createMovieDict(xRefTable *XRefTable) (*IndirectRef, error) {
+func createMovieDict(xRefTable *model.XRefTable) (*types.IndirectRef, error) {
 
 	// not supported: mp3,mp4,m4a
 
@@ -617,48 +633,48 @@ func createMovieDict(xRefTable *XRefTable) (*IndirectRef, error) {
 		return nil, err
 	}
 
-	d := Dict(
-		map[string]Object{
+	d := types.Dict(
+		map[string]types.Object{
 			"F":      fileSpecDict,
-			"Aspect": NewIntegerArray(200, 200),
-			"Rotate": Integer(0),
-			"Poster": Boolean(true),
+			"Aspect": types.NewIntegerArray(200, 200),
+			"Rotate": types.Integer(0),
+			"Poster": types.Boolean(true),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createMovieAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createMovieAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
 	indRef, err := createMovieDict(xRefTable)
 	if err != nil {
 		return nil, err
 	}
 
-	movieActivationDict := Dict(
-		map[string]Object{
-			"Start":        Integer(10),
-			"Duration":     Integer(60),
-			"Rate":         Float(1.0),
-			"Volume":       Float(1.0),
-			"ShowControls": Boolean(true),
-			"Mode":         Name("Once"),
-			"Synchronous":  Boolean(false),
+	movieActivationDict := types.Dict(
+		map[string]types.Object{
+			"Start":        types.Integer(10),
+			"Duration":     types.Integer(60),
+			"Rate":         types.Float(1.0),
+			"Volume":       types.Float(1.0),
+			"ShowControls": types.Boolean(true),
+			"Mode":         types.Name("Once"),
+			"Synchronous":  types.Boolean(false),
 		},
 	)
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("Movie"),
-			"Contents": StringLiteral("Movie Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("Movie"),
+			"Contents": types.StringLiteral("Movie Annotation"),
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 3), // rounded corners don't work
-			"C":        NewNumberArray(0.3, 0.5, 0.5),
+			"Border":   types.NewIntegerArray(0, 0, 3), // rounded corners don't work
+			"C":        types.NewNumberArray(0.3, 0.5, 0.5),
 			"Movie":    *indRef,
-			"T":        StringLiteral("Sample Movie"),
+			"T":        types.StringLiteral("Sample Movie"),
 			"A":        movieActivationDict,
 		},
 	)
@@ -666,35 +682,35 @@ func createMovieAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRe
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createMediaRenditionAction(xRefTable *XRefTable, mediaClipDataDict *IndirectRef) Dict {
+func createMediaRenditionAction(xRefTable *model.XRefTable, mediaClipDataDict *types.IndirectRef) types.Dict {
 
 	r := createMediaRendition(xRefTable, mediaClipDataDict)
 
-	return Dict(
-		map[string]Object{
-			"Type": Name("Action"),
-			"S":    Name("Rendition"),
-			"R":    *r,         // rendition object
-			"OP":   Integer(0), // Play
+	return types.Dict(
+		map[string]types.Object{
+			"Type": types.Name("Action"),
+			"S":    types.Name("Rendition"),
+			"R":    *r,               // rendition object
+			"OP":   types.Integer(0), // Play
 		},
 	)
 }
 
-func createSelectorRenditionAction(mediaClipDataDict *IndirectRef) Dict {
+func createSelectorRenditionAction(mediaClipDataDict *types.IndirectRef) types.Dict {
 
 	r := createSelectorRendition(mediaClipDataDict)
 
-	return Dict(
-		map[string]Object{
-			"Type": Name("Action"),
-			"S":    Name("Rendition"),
-			"R":    *r,         // rendition object
-			"OP":   Integer(0), // Play
+	return types.Dict(
+		map[string]types.Object{
+			"Type": types.Name("Action"),
+			"S":    types.Name("Rendition"),
+			"R":    *r,               // rendition object
+			"OP":   types.Integer(0), // Play
 		},
 	)
 }
 
-func createScreenAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createScreenAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
 	ir, err := createMediaClipDataDict(xRefTable)
 	if err != nil {
@@ -705,18 +721,18 @@ func createScreenAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotR
 
 	selectorRenditionAction := createSelectorRenditionAction(ir)
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("Screen"),
-			"Contents": StringLiteral("Screen Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("Screen"),
+			"Contents": types.StringLiteral("Screen Annotation"),
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 3),
-			"C":        NewNumberArray(0.2, 0.8, 0.5),
+			"Border":   types.NewIntegerArray(0, 0, 3),
+			"C":        types.NewNumberArray(0.2, 0.8, 0.5),
 			"A":        mediaRenditionAction,
-			"AA": Dict(
-				map[string]Object{
+			"AA": types.Dict(
+				map[string]types.Object{
 					"D": selectorRenditionAction,
 				},
 			),
@@ -735,33 +751,33 @@ func createScreenAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotR
 	return ir, nil
 }
 
-func createWidgetAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createWidgetAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
-	appearanceCharacteristicsDict := Dict(
-		map[string]Object{
-			"R":  Integer(0),
-			"BC": NewNumberArray(0.0, 0.0, 0.0),
-			"BG": NewNumberArray(0.5, 0.0, 0.5),
-			"RC": StringLiteral("Rollover caption"),
-			"IF": Dict(
-				map[string]Object{
-					"SW": Name("A"),
-					"S":  Name("A"),
-					"FB": Boolean(true),
+	appearanceCharacteristicsDict := types.Dict(
+		map[string]types.Object{
+			"R":  types.Integer(0),
+			"BC": types.NewNumberArray(0.0, 0.0, 0.0),
+			"BG": types.NewNumberArray(0.5, 0.0, 0.5),
+			"RC": types.StringLiteral("Rollover caption"),
+			"IF": types.Dict(
+				map[string]types.Object{
+					"SW": types.Name("A"),
+					"S":  types.Name("A"),
+					"FB": types.Boolean(true),
 				},
 			),
 		},
 	)
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("Widget"),
-			"Contents": StringLiteral("Widget Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("Widget"),
+			"Contents": types.StringLiteral("Widget Annotation"),
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 3),
-			"C":        NewNumberArray(0.5, 0.5, 0.5),
+			"Border":   types.NewIntegerArray(0, 0, 3),
+			"C":        types.NewNumberArray(0.5, 0.5, 0.5),
 			"MK":       appearanceCharacteristicsDict,
 		},
 	)
@@ -769,14 +785,14 @@ func createWidgetAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotR
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createXObjectForPrinterMark(xRefTable *XRefTable) (*IndirectRef, error) {
+func createXObjectForPrinterMark(xRefTable *model.XRefTable) (*types.IndirectRef, error) {
 	buf := `0 0 m 0 25 l 25 25 l 25 0 l s`
 	sd, _ := xRefTable.NewStreamDictForBuf([]byte(buf))
 	sd.InsertName("Type", "XObject")
 	sd.InsertName("Subtype", "Form")
 	sd.InsertInt("FormType", 1)
-	sd.Insert("BBox", NewNumberArray(0, 0, 25, 25))
-	sd.Insert("Matrix", NewIntegerArray(1, 0, 0, 1, 0, 0))
+	sd.Insert("BBox", types.NewNumberArray(0, 0, 25, 25))
+	sd.Insert("Matrix", types.NewIntegerArray(1, 0, 0, 1, 0, 0))
 
 	if err := sd.Encode(); err != nil {
 		return nil, err
@@ -785,44 +801,44 @@ func createXObjectForPrinterMark(xRefTable *XRefTable) (*IndirectRef, error) {
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createPrinterMarkAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createPrinterMarkAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
 	ir, err := createXObjectForPrinterMark(xRefTable)
 	if err != nil {
 		return nil, err
 	}
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("PrinterMark"),
-			"Contents": StringLiteral("PrinterMark Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("PrinterMark"),
+			"Contents": types.StringLiteral("PrinterMark Annotation"),
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 3),
-			"C":        NewNumberArray(0.2, 0.8, 0.5),
-			"F":        Integer(0),
-			"AP": Dict(
-				map[string]Object{
+			"Border":   types.NewIntegerArray(0, 0, 3),
+			"C":        types.NewNumberArray(0.2, 0.8, 0.5),
+			"F":        types.Integer(0),
+			"AP": types.Dict(
+				map[string]types.Object{
 					"N": *ir,
 				},
 			),
-			"MN": Name("ColorBar"),
+			"MN": types.Name("ColorBar"),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createXObjectForWaterMark(xRefTable *XRefTable) (*IndirectRef, error) {
-	fIndRef, err := EnsureFontDict(xRefTable, "Helvetica", false, nil)
+func createXObjectForWaterMark(xRefTable *model.XRefTable) (*types.IndirectRef, error) {
+	fIndRef, err := pdffont.EnsureFontDict(xRefTable, "Helvetica", "", "", false, false, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	fResDict := NewDict()
+	fResDict := types.NewDict()
 	fResDict.Insert("F1", *fIndRef)
-	resourceDict := NewDict()
+	resourceDict := types.NewDict()
 	resourceDict.Insert("Font", fResDict)
 
 	buf := `0 0 m 0 200 l 200 200 l 200 0 l s BT /F1 48 Tf 0.7 0.7 -0.7 0.7 30 10 Tm 1 Tr 2 w (Watermark) Tj ET`
@@ -830,8 +846,8 @@ func createXObjectForWaterMark(xRefTable *XRefTable) (*IndirectRef, error) {
 	sd.InsertName("Type", "XObject")
 	sd.InsertName("Subtype", "Form")
 	sd.InsertInt("FormType", 1)
-	sd.Insert("BBox", NewNumberArray(0, 0, 200, 200))
-	sd.Insert("Matrix", NewIntegerArray(1, 0, 0, 1, 0, 0))
+	sd.Insert("BBox", types.NewNumberArray(0, 0, 200, 200))
+	sd.Insert("Matrix", types.NewIntegerArray(1, 0, 0, 1, 0, 0))
 	sd.Insert("Resources", resourceDict)
 
 	if err = sd.Encode(); err != nil {
@@ -841,34 +857,34 @@ func createXObjectForWaterMark(xRefTable *XRefTable) (*IndirectRef, error) {
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createWaterMarkAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createWaterMarkAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
 	ir, err := createXObjectForWaterMark(xRefTable)
 	if err != nil {
 		return nil, err
 	}
 
-	d1 := Dict(
-		map[string]Object{
-			"Type":   Name("FixedPrint"),
-			"Matrix": NewIntegerArray(1, 0, 0, 1, 72, -72),
-			"H":      Float(0),
-			"V":      Float(0),
+	d1 := types.Dict(
+		map[string]types.Object{
+			"Type":   types.Name("FixedPrint"),
+			"Matrix": types.NewIntegerArray(1, 0, 0, 1, 72, -72),
+			"H":      types.Float(0),
+			"V":      types.Float(0),
 		},
 	)
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("Watermark"),
-			"Contents": StringLiteral("Watermark Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("Watermark"),
+			"Contents": types.StringLiteral("Watermark Annotation"),
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 3),
-			"C":        NewNumberArray(0.2, 0.8, 0.5),
-			"F":        Integer(0),
-			"AP": Dict(
-				map[string]Object{
+			"Border":   types.NewIntegerArray(0, 0, 3),
+			"C":        types.NewNumberArray(0.2, 0.8, 0.5),
+			"F":        types.Integer(0),
+			"AP": types.Dict(
+				map[string]types.Object{
 					"N": *ir,
 				},
 			),
@@ -879,32 +895,32 @@ func createWaterMarkAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, ann
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func create3DAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func create3DAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("3D"),
-			"Contents": StringLiteral("3D Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("3D"),
+			"Contents": types.StringLiteral("3D Annotation"),
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 3),
-			"C":        NewNumberArray(0.2, 0.8, 0.5),
-			"F":        Integer(0),
-			"3DD":      NewDict(), // stream or 3D reference dict
-			"3DV":      Name("F"),
-			"3DA":      NewDict(), // activation dict
-			"3DI":      Boolean(true),
+			"Border":   types.NewIntegerArray(0, 0, 3),
+			"C":        types.NewNumberArray(0.2, 0.8, 0.5),
+			"F":        types.Integer(0),
+			"3DD":      types.NewDict(), // stream or 3D reference dict
+			"3DV":      types.Name("F"),
+			"3DA":      types.NewDict(), // activation dict
+			"3DI":      types.Boolean(true),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createRedactAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createRedactAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
 	// Create a quad points array corresponding to annot rect.
-	qp := Array{}
+	qp := types.Array{}
 	qp = append(qp, annotRect[0])
 	qp = append(qp, annotRect[1])
 	qp = append(qp, annotRect[2])
@@ -914,68 +930,68 @@ func createRedactAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotR
 	qp = append(qp, annotRect[0])
 	qp = append(qp, annotRect[3])
 
-	d := Dict(
-		map[string]Object{
-			"Type":        Name("Annot"),
-			"Subtype":     Name("Redact"),
-			"Contents":    StringLiteral("Redact Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":        types.Name("Annot"),
+			"Subtype":     types.Name("Redact"),
+			"Contents":    types.StringLiteral("Redact Annotation"),
 			"Rect":        annotRect,
 			"P":           pageIndRef,
-			"Border":      NewIntegerArray(0, 0, 3),
-			"C":           NewNumberArray(0.2, 0.8, 0.5),
-			"F":           Integer(0),
+			"Border":      types.NewIntegerArray(0, 0, 3),
+			"C":           types.NewNumberArray(0.2, 0.8, 0.5),
+			"F":           types.Integer(0),
 			"QuadPoints":  qp,
-			"IC":          NewNumberArray(0.5, 0.0, 0.9),
-			"OverlayText": StringLiteral("An overlay"),
-			"Repeat":      Boolean(true),
-			"DA":          StringLiteral("x"),
-			"Q":           Integer(1),
+			"IC":          types.NewNumberArray(0.5, 0.0, 0.9),
+			"OverlayText": types.StringLiteral("An overlay"),
+			"Repeat":      types.Boolean(true),
+			"DA":          types.StringLiteral("x"),
+			"Q":           types.Integer(1),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createRemoteGoToAction(xRefTable *XRefTable) (*IndirectRef, error) {
+func createRemoteGoToAction(xRefTable *model.XRefTable) (*types.IndirectRef, error) {
 
-	d := Dict(
-		map[string]Object{
-			"Type":      Name("Action"),
-			"S":         Name("GoToR"),
-			"F":         StringLiteral("./go.pdf"),
-			"D":         Array{Integer(0), Name("Fit")},
-			"NewWindow": Boolean(true),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":      types.Name("Action"),
+			"S":         types.Name("GoToR"),
+			"F":         types.StringLiteral("./go.pdf"),
+			"D":         types.Array{types.Integer(0), types.Name("Fit")},
+			"NewWindow": types.Boolean(true),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createLinkAnnotationWithRemoteGoToAction(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createLinkAnnotationWithRemoteGoToAction(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
 	ir, err := createRemoteGoToAction(xRefTable)
 	if err != nil {
 		return nil, err
 	}
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("Link"),
-			"Contents": StringLiteral("Link Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("Link"),
+			"Contents": types.StringLiteral("Link Annotation"),
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 1),
-			"C":        NewNumberArray(0, 0, 1),
+			"Border":   types.NewIntegerArray(0, 0, 1),
+			"C":        types.NewNumberArray(0, 0, 1),
 			"A":        *ir,
-			"H":        Name("I"),
+			"H":        types.Name("I"),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createEmbeddedGoToAction(xRefTable *XRefTable) (*IndirectRef, error) {
+func createEmbeddedGoToAction(xRefTable *model.XRefTable) (*types.IndirectRef, error) {
 
 	f := filepath.Join(testDir, "go.pdf")
 	fileSpecDict, err := createFileSpecDict(xRefTable, f)
@@ -983,17 +999,17 @@ func createEmbeddedGoToAction(xRefTable *XRefTable) (*IndirectRef, error) {
 		return nil, err
 	}
 
-	d := Dict(
-		map[string]Object{
-			"Type":      Name("Action"),
-			"S":         Name("GoToE"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":      types.Name("Action"),
+			"S":         types.Name("GoToE"),
 			"F":         fileSpecDict,
-			"D":         Array{Integer(0), Name("Fit")},
-			"NewWindow": Boolean(true), // not honored by Acrobat Reader.
-			"T": Dict(
-				map[string]Object{
-					"R": Name("C"),
-					"N": StringLiteral(filepath.Base(f)),
+			"D":         types.Array{types.Integer(0), types.Name("Fit")},
+			"NewWindow": types.Boolean(true), // not honoured by Acrobat Reader.
+			"T": types.Dict(
+				map[string]types.Object{
+					"R": types.Name("C"),
+					"N": types.StringLiteral(filepath.Base(f)),
 				},
 			),
 		},
@@ -1002,168 +1018,168 @@ func createEmbeddedGoToAction(xRefTable *XRefTable) (*IndirectRef, error) {
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createLinkAnnotationWithEmbeddedGoToAction(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createLinkAnnotationWithEmbeddedGoToAction(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
 	ir, err := createEmbeddedGoToAction(xRefTable)
 	if err != nil {
 		return nil, err
 	}
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("Link"),
-			"Contents": StringLiteral("Link Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("Link"),
+			"Contents": types.StringLiteral("Link Annotation"),
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 1),
-			"C":        NewNumberArray(0, 0, 1),
+			"Border":   types.NewIntegerArray(0, 0, 1),
+			"C":        types.NewNumberArray(0, 0, 1),
 			"A":        *ir,
-			"H":        Name("I"),
+			"H":        types.Name("I"),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createLinkAnnotationDictWithLaunchAction(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createLinkAnnotationDictWithLaunchAction(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("Link"),
-			"Contents": StringLiteral("Link Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("Link"),
+			"Contents": types.StringLiteral("Link Annotation"),
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 1),
-			"C":        NewNumberArray(0, 0, 1),
-			"A": Dict(
-				map[string]Object{
-					"Type": Name("Action"),
-					"S":    Name("Launch"),
-					"F":    StringLiteral("golang.pdf"),
-					"Win": Dict(
-						map[string]Object{
-							"F": StringLiteral("golang.pdf"),
-							"O": StringLiteral("O"),
+			"Border":   types.NewIntegerArray(0, 0, 1),
+			"C":        types.NewNumberArray(0, 0, 1),
+			"A": types.Dict(
+				map[string]types.Object{
+					"Type": types.Name("Action"),
+					"S":    types.Name("Launch"),
+					"F":    types.StringLiteral("golang.pdf"),
+					"Win": types.Dict(
+						map[string]types.Object{
+							"F": types.StringLiteral("golang.pdf"),
+							"O": types.StringLiteral("O"),
 						},
 					),
-					"NewWindow": Boolean(true),
+					"NewWindow": types.Boolean(true),
 				},
 			),
-			"H": Name("I"),
+			"H": types.Name("I"),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createLinkAnnotationDictWithThreadAction(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createLinkAnnotationDictWithThreadAction(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("Link"),
-			"Contents": StringLiteral("Link Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("Link"),
+			"Contents": types.StringLiteral("Link Annotation"),
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 1),
-			"C":        NewNumberArray(0, 0, 1),
-			"A": Dict(
-				map[string]Object{
-					"Type": Name("Action"),
-					"S":    Name("Thread"),
-					"D":    Integer(0), // jump to first article thread
-					"B":    Integer(0), // jump to first bead
+			"Border":   types.NewIntegerArray(0, 0, 1),
+			"C":        types.NewNumberArray(0, 0, 1),
+			"A": types.Dict(
+				map[string]types.Object{
+					"Type": types.Name("Action"),
+					"S":    types.Name("Thread"),
+					"D":    types.Integer(0), // jump to first article thread
+					"B":    types.Integer(0), // jump to first bead
 				},
 			),
-			"H": Name("I"),
+			"H": types.Name("I"),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createLinkAnnotationDictWithSoundAction(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createLinkAnnotationDictWithSoundAction(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
 	ir, err := createSoundObject(xRefTable)
 	if err != nil {
 		return nil, err
 	}
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("Link"),
-			"Contents": StringLiteral("Link Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("Link"),
+			"Contents": types.StringLiteral("Link Annotation"),
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 1),
-			"C":        NewNumberArray(0, 0, 1),
-			"A": Dict(
-				map[string]Object{
-					"Type":        Name("Action"),
-					"S":           Name("Sound"),
+			"Border":   types.NewIntegerArray(0, 0, 1),
+			"C":        types.NewNumberArray(0, 0, 1),
+			"A": types.Dict(
+				map[string]types.Object{
+					"Type":        types.Name("Action"),
+					"S":           types.Name("Sound"),
 					"Sound":       *ir,
-					"Synchronous": Boolean(false),
-					"Repeat":      Boolean(false),
-					"Mix":         Boolean(false),
+					"Synchronous": types.Boolean(false),
+					"Repeat":      types.Boolean(false),
+					"Mix":         types.Boolean(false),
 				},
 			),
-			"H": Name("I"),
+			"H": types.Name("I"),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createLinkAnnotationDictWithMovieAction(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createLinkAnnotationDictWithMovieAction(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("Link"),
-			"Contents": StringLiteral("Link Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("Link"),
+			"Contents": types.StringLiteral("Link Annotation"),
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 1),
-			"C":        NewNumberArray(0, 0, 1),
-			"A": Dict(
-				map[string]Object{
-					"Type":      Name("Action"),
-					"S":         Name("Movie"),
-					"T":         StringLiteral("Sample Movie"),
-					"Operation": Name("Play"),
+			"Border":   types.NewIntegerArray(0, 0, 1),
+			"C":        types.NewNumberArray(0, 0, 1),
+			"A": types.Dict(
+				map[string]types.Object{
+					"Type":      types.Name("Action"),
+					"S":         types.Name("Movie"),
+					"T":         types.StringLiteral("Sample Movie"),
+					"Operation": types.Name("Play"),
 				},
 			),
-			"H": Name("I"),
+			"H": types.Name("I"),
 		},
 	)
 
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createLinkAnnotationDictWithHideAction(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createLinkAnnotationDictWithHideAction(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
-	hideActionDict := Dict(
-		map[string]Object{
-			"Type": Name("Action"),
-			"S":    Name("Hide"),
-			"H":    Boolean(true),
+	hideActionDict := types.Dict(
+		map[string]types.Object{
+			"Type": types.Name("Action"),
+			"S":    types.Name("Hide"),
+			"H":    types.Boolean(true),
 		},
 	)
 
-	d := Dict(
-		map[string]Object{
-			"Type":     Name("Annot"),
-			"Subtype":  Name("Link"),
-			"Contents": StringLiteral("Link Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Annot"),
+			"Subtype":  types.Name("Link"),
+			"Contents": types.StringLiteral("Link Annotation"),
 			"Rect":     annotRect,
 			"P":        pageIndRef,
-			"Border":   NewIntegerArray(0, 0, 1),
-			"C":        NewNumberArray(0, 0, 1),
+			"Border":   types.NewIntegerArray(0, 0, 1),
+			"C":        types.NewNumberArray(0, 0, 1),
 			"A":        hideActionDict,
-			"H":        Name("I"),
+			"H":        types.Name("I"),
 		},
 	)
 
@@ -1178,25 +1194,25 @@ func createLinkAnnotationDictWithHideAction(xRefTable *XRefTable, pageIndRef Ind
 	return ir, nil
 }
 
-func createTrapNetAnnotation(xRefTable *XRefTable, pageIndRef IndirectRef, annotRect Array) (*IndirectRef, error) {
+func createTrapNetAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
-	ir, err := EnsureFontDict(xRefTable, "Helvetica", false, nil)
+	ir, err := pdffont.EnsureFontDict(xRefTable, "Helvetica", "", "", false, false, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	d := Dict(
-		map[string]Object{
-			"Type":         Name("Annot"),
-			"Subtype":      Name("TrapNet"),
-			"Contents":     StringLiteral("TrapNet Annotation"),
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":         types.Name("Annot"),
+			"Subtype":      types.Name("TrapNet"),
+			"Contents":     types.StringLiteral("TrapNet Annotation"),
 			"Rect":         annotRect,
 			"P":            pageIndRef,
-			"Border":       NewIntegerArray(0, 0, 3),
-			"C":            NewNumberArray(0.2, 0.8, 0.5),
-			"F":            Integer(0),
-			"LastModified": StringLiteral(DateString(time.Now())),
-			"FontFauxing":  Array{*ir},
+			"Border":       types.NewIntegerArray(0, 0, 3),
+			"C":            types.NewNumberArray(0.2, 0.8, 0.5),
+			"F":            types.Integer(0),
+			"LastModified": types.StringLiteral(types.DateString(time.Now())),
+			"FontFauxing":  types.Array{*ir},
 		},
 	)
 

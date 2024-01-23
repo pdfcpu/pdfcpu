@@ -17,11 +17,12 @@ limitations under the License.
 package validate
 
 import (
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
-func validateTilingPatternDict(xRefTable *pdf.XRefTable, sd *pdf.StreamDict, sinceVersion pdf.Version) error {
+func validateTilingPatternDict(xRefTable *model.XRefTable, sd *types.StreamDict, sinceVersion model.Version) error {
 
 	dictName := "tilingPatternDict"
 
@@ -66,7 +67,7 @@ func validateTilingPatternDict(xRefTable *pdf.XRefTable, sd *pdf.StreamDict, sin
 		return err
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, dictName, "Matrix", OPTIONAL, sinceVersion, func(a pdf.Array) bool { return len(a) == 6 })
+	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, dictName, "Matrix", OPTIONAL, sinceVersion, func(a types.Array) bool { return len(a) == 6 })
 	if err != nil {
 		return err
 	}
@@ -81,7 +82,7 @@ func validateTilingPatternDict(xRefTable *pdf.XRefTable, sd *pdf.StreamDict, sin
 	return err
 }
 
-func validateShadingPatternDict(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion pdf.Version) error {
+func validateShadingPatternDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
 
 	dictName := "shadingPatternDict"
 
@@ -100,7 +101,7 @@ func validateShadingPatternDict(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersi
 		return err
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "Matrix", OPTIONAL, sinceVersion, func(a pdf.Array) bool { return len(a) == 6 })
+	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "Matrix", OPTIONAL, sinceVersion, func(a types.Array) bool { return len(a) == 6 })
 	if err != nil {
 		return err
 	}
@@ -126,7 +127,7 @@ func validateShadingPatternDict(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersi
 	return validateShading(xRefTable, o)
 }
 
-func validatePattern(xRefTable *pdf.XRefTable, o pdf.Object) error {
+func validatePattern(xRefTable *model.XRefTable, o types.Object) error {
 
 	o, err := xRefTable.Dereference(o)
 	if err != nil || o == nil {
@@ -135,11 +136,11 @@ func validatePattern(xRefTable *pdf.XRefTable, o pdf.Object) error {
 
 	switch o := o.(type) {
 
-	case pdf.Dict:
-		err = validateShadingPatternDict(xRefTable, o, pdf.V13)
+	case types.Dict:
+		err = validateShadingPatternDict(xRefTable, o, model.V13)
 
-	case pdf.StreamDict:
-		err = validateTilingPatternDict(xRefTable, &o, pdf.V10)
+	case types.StreamDict:
+		err = validateTilingPatternDict(xRefTable, &o, model.V10)
 
 	default:
 		err = errors.New("pdfcpu: validatePattern: corrupt obj typ, must be dict or stream dict")
@@ -149,7 +150,7 @@ func validatePattern(xRefTable *pdf.XRefTable, o pdf.Object) error {
 	return err
 }
 
-func validatePatternResourceDict(xRefTable *pdf.XRefTable, o pdf.Object, sinceVersion pdf.Version) error {
+func validatePatternResourceDict(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
 
 	// see 8.7 Patterns
 

@@ -23,7 +23,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pdfcpu/pdfcpu/pkg/types"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/matrix"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
@@ -37,7 +41,7 @@ func (m importParamMap) Handle(paramPrefix, paramValueStr string, imp *Import) e
 
 	// Completion support
 	for k := range m {
-		if !strings.HasPrefix(k, paramPrefix) {
+		if !strings.HasPrefix(k, strings.ToLower(paramPrefix)) {
 			continue
 		}
 		if len(param) > 0 {
@@ -69,28 +73,28 @@ var impParamMap = importParamMap{
 
 // Import represents the command details for the command "ImportImage".
 type Import struct {
-	PageDim  *Dim        // page dimensions in display unit.
-	PageSize string      // one of A0,A1,A2,A3,A4(=default),A5,A6,A7,A8,Letter,Legal,Ledger,Tabloid,Executive,ANSIC,ANSID,ANSIE.
-	UserDim  bool        // true if one of dimensions or paperSize provided overriding the default.
-	DPI      int         // destination resolution to apply in dots per inch.
-	Pos      Anchor      // position anchor, one of tl,tc,tr,l,c,r,bl,bc,br,full.
-	Dx, Dy   int         // anchor offset.
-	Scale    float64     // relative scale factor. 0 <= x <= 1
-	ScaleAbs bool        // true for absolute scaling.
-	InpUnit  DisplayUnit // input display unit.
-	Gray     bool        // true for rendering in Gray.
+	PageDim  *types.Dim        // page dimensions in display unit.
+	PageSize string            // one of A0,A1,A2,A3,A4(=default),A5,A6,A7,A8,Letter,Legal,Ledger,Tabloid,Executive,ANSIC,ANSID,ANSIE.
+	UserDim  bool              // true if one of dimensions or paperSize provided overriding the default.
+	DPI      int               // destination resolution to apply in dots per inch.
+	Pos      types.Anchor      // position anchor, one of tl,tc,tr,l,c,r,bl,bc,br,full.
+	Dx, Dy   float64           // anchor offset.
+	Scale    float64           // relative scale factor. 0 <= x <= 1
+	ScaleAbs bool              // true for absolute scaling.
+	InpUnit  types.DisplayUnit // input display unit.
+	Gray     bool              // true for rendering in Gray.
 	Sepia    bool
-	BgColor  *SimpleColor // background color
+	BgColor  *color.SimpleColor // background color
 }
 
 // DefaultImportConfig returns the default configuration.
 func DefaultImportConfig() *Import {
 	return &Import{
-		PageDim:  PaperSize["A4"],
+		PageDim:  types.PaperSize["A4"],
 		PageSize: "A4",
-		Pos:      Full,
+		Pos:      types.Full,
 		Scale:    0.5,
-		InpUnit:  POINTS,
+		InpUnit:  types.POINTS,
 	}
 }
 
@@ -101,50 +105,20 @@ func (imp Import) String() string {
 		sc = "absolute"
 	}
 
-	return fmt.Sprintf("Import conf: %s %s, pos=%s, dx=%d, dy=%d, scaling: %.1f %s\n",
+	return fmt.Sprintf("Import conf: %s %s, pos=%s, dx=%f.2, dy=%f.2, scaling: %.1f %s\n",
 		imp.PageSize, *imp.PageDim, imp.Pos, imp.Dx, imp.Dy, imp.Scale, sc)
-}
-
-func ParsePageFormat(v string) (*Dim, string, error) {
-
-	// Optional: appended last letter L indicates landscape mode.
-	// Optional: appended last letter P indicates portrait mode.
-	// eg. A4L means A4 in landscape mode whereas A4 defaults to A4P
-	// The default mode is defined implicitly via PaperSize dimensions.
-
-	var land, port bool
-
-	if strings.HasSuffix(v, "L") {
-		v = v[:len(v)-1]
-		land = true
-	} else if strings.HasSuffix(v, "P") {
-		v = v[:len(v)-1]
-		port = true
-	}
-
-	d, ok := PaperSize[v]
-	if !ok {
-		return nil, v, errors.Errorf("pdfcpu: page format %s is unsupported.\n", v)
-	}
-
-	if d.Portrait() && land || d.Landscape() && port {
-		// flip the dimensions
-		return &Dim{d.Height, d.Width}, v, nil
-	}
-
-	return d, v, nil
 }
 
 func parsePageFormatImp(s string, imp *Import) (err error) {
 	if imp.UserDim {
 		return errors.New("pdfcpu: only one of formsize(papersize) or dimensions allowed")
 	}
-	imp.PageDim, imp.PageSize, err = ParsePageFormat(s)
+	imp.PageDim, imp.PageSize, err = types.ParsePageFormat(s)
 	imp.UserDim = true
 	return err
 }
 
-func parsePageDim(v string, u DisplayUnit) (*Dim, string, error) {
+func parsePageDim(v string, u types.DisplayUnit) (*types.Dim, string, error) {
 
 	ss := strings.Split(v, " ")
 	if len(ss) != 2 {
@@ -161,7 +135,7 @@ func parsePageDim(v string, u DisplayUnit) (*Dim, string, error) {
 		return nil, v, errors.Errorf("pdfcpu: dimension Y must be a positiv numeric value: %s\n", ss[1])
 	}
 
-	d := Dim{toUserSpace(w, u), toUserSpace(h, u)}
+	d := types.Dim{Width: types.ToUserSpace(w, u), Height: types.ToUserSpace(h, u)}
 
 	return &d, "", nil
 }
@@ -175,92 +149,8 @@ func parseDimensionsImp(s string, imp *Import) (err error) {
 	return err
 }
 
-type Anchor int
-
-func (a Anchor) String() string {
-
-	switch a {
-
-	case TopLeft:
-		return "top left"
-
-	case TopCenter:
-		return "top center"
-
-	case TopRight:
-		return "top right"
-
-	case Left:
-		return "left"
-
-	case Center:
-		return "center"
-
-	case Right:
-		return "right"
-
-	case BottomLeft:
-		return "bottom left"
-
-	case BottomCenter:
-		return "bottom center"
-
-	case BottomRight:
-		return "bottom right"
-
-	case Full:
-		return "full"
-
-	}
-
-	return ""
-}
-
-// These are the defined anchors for relative positioning.
-const (
-	TopLeft Anchor = iota
-	TopCenter
-	TopRight
-	Left
-	Center // default
-	Right
-	BottomLeft
-	BottomCenter
-	BottomRight
-	Full // special case, no anchor needed, imageSize = pageSize
-)
-
-func parsePositionAnchor(s string) (Anchor, error) {
-	var a Anchor
-	switch s {
-	case "tl", "topleft", "top-left":
-		a = TopLeft
-	case "tc", "topcenter", "top-center":
-		a = TopCenter
-	case "tr", "topright", "top-right":
-		a = TopRight
-	case "l", "left":
-		a = Left
-	case "c", "center":
-		a = Center
-	case "r", "right":
-		a = Right
-	case "bl", "bottomleft", "bottom-left":
-		a = BottomLeft
-	case "bc", "bottomcenter", "bottom-center":
-		a = BottomCenter
-	case "br", "bottomright", "bottom-right":
-		a = BottomRight
-	case "f", "full":
-		a = Full
-	default:
-		return a, errors.Errorf("pdfcpu: unknown position anchor: %s", s)
-	}
-	return a, nil
-}
-
 func parsePositionAnchorImp(s string, imp *Import) error {
-	a, err := parsePositionAnchor(s)
+	a, err := types.ParsePositionAnchor(s)
 	if err != nil {
 		return err
 	}
@@ -279,13 +169,13 @@ func parsePositionOffsetImp(s string, imp *Import) error {
 	if err != nil {
 		return err
 	}
-	imp.Dx = int(toUserSpace(f, imp.InpUnit))
+	imp.Dx = types.ToUserSpace(f, imp.InpUnit)
 
 	f, err = strconv.ParseFloat(d[1], 64)
 	if err != nil {
 		return err
 	}
-	imp.Dy = int(toUserSpace(f, imp.InpUnit))
+	imp.Dy = types.ToUserSpace(f, imp.InpUnit)
 
 	return nil
 }
@@ -327,7 +217,7 @@ func parseSepia(s string, imp *Import) error {
 }
 
 func parseImportBackgroundColor(s string, imp *Import) error {
-	c, err := ParseColor(s)
+	c, err := color.ParseColor(s)
 	if err != nil {
 		return err
 	}
@@ -336,7 +226,7 @@ func parseImportBackgroundColor(s string, imp *Import) error {
 }
 
 // ParseImportDetails parses an Import command string into an internal structure.
-func ParseImportDetails(s string, u DisplayUnit) (*Import, error) {
+func ParseImportDetails(s string, u types.DisplayUnit) (*Import, error) {
 
 	if s == "" {
 		return nil, nil
@@ -365,77 +255,18 @@ func ParseImportDetails(s string, u DisplayUnit) (*Import, error) {
 	return imp, nil
 }
 
-// AppendPageTree appends a pagetree d1 to page tree d2.
-func AppendPageTree(d1 *IndirectRef, countd1 int, d2 Dict) error {
-	a := d2.ArrayEntry("Kids")
-	a = append(a, *d1)
-	d2.Update("Kids", a)
-	return d2.IncrementBy("Count", countd1)
-}
-
-func lowerLeftCorner(vp *Rectangle, bbw, bbh float64, a Anchor) types.Point {
-
-	var p types.Point
-	vpw := vp.Width()
-	vph := vp.Height()
-
-	switch a {
-
-	case TopLeft:
-		p.X = vp.LL.X
-		p.Y = vp.UR.Y - bbh
-
-	case TopCenter:
-		p.X = vp.LL.X + (vpw/2 - bbw/2)
-		p.Y = vp.UR.Y - bbh
-
-	case TopRight:
-		p.X = vp.UR.X - bbw
-		p.Y = vp.UR.Y - bbh
-
-	case Left:
-		p.X = vp.LL.X
-		p.Y = vp.LL.Y + (vph/2 - bbh/2)
-
-	case Center:
-		p.X = vp.LL.X + (vpw/2 - bbw/2)
-		p.Y = vp.LL.Y + (vph/2 - bbh/2)
-
-	case Right:
-		p.X = vp.UR.X - bbw
-		p.Y = vp.LL.Y + (vph/2 - bbh/2)
-
-	case BottomLeft:
-		p.X = vp.LL.X
-		p.Y = vp.LL.Y
-
-	case BottomCenter:
-		p.X = vp.LL.X + (vpw/2 - bbw/2)
-		p.Y = vp.LL.Y
-
-	case BottomRight:
-		p.X = vp.UR.X - bbw
-		p.Y = vp.LL.Y
-	}
-
-	return p
-}
-
-func importImagePDFBytes(wr io.Writer, pageDim *Dim, imgWidth, imgHeight float64, imp *Import) {
+func importImagePDFBytes(wr io.Writer, pageDim *types.Dim, imgWidth, imgHeight float64, imp *Import) {
 
 	vpw := float64(pageDim.Width)
 	vph := float64(pageDim.Height)
+	vp := types.RectForDim(vpw, vph)
 
-	bb := RectForDim(vpw, vph)
 	if imp.BgColor != nil {
-		FillRectNoBorder(wr, bb, *imp.BgColor)
+		draw.FillRectNoBorder(wr, vp, *imp.BgColor)
 	}
 
-	if imp.Pos == Full {
-		// The bounding box equals the page dimensions.
-		bb.UR.X = bb.Width()
-		bb.UR.Y = bb.UR.X / bb.AspectRatio()
-		fmt.Fprintf(wr, "q %f 0 0 %f 0 0 cm /Im0 Do Q", bb.Width(), bb.Height())
+	if imp.Pos == types.Full {
+		fmt.Fprintf(wr, "q %f 0 0 %f 0 0 cm /Im0 Do Q", vp.Width(), vp.Height())
 		return
 	}
 
@@ -445,7 +276,7 @@ func importImagePDFBytes(wr io.Writer, pageDim *Dim, imgWidth, imgHeight float64
 		imgHeight *= float64(72) / float64(imp.DPI)
 	}
 
-	bb = RectForDim(imgWidth, imgHeight)
+	bb := types.RectForDim(imgWidth, imgHeight)
 	ar := bb.AspectRatio()
 
 	if imp.ScaleAbs {
@@ -453,43 +284,63 @@ func importImagePDFBytes(wr io.Writer, pageDim *Dim, imgWidth, imgHeight float64
 		bb.UR.Y = bb.UR.X / ar
 	} else {
 		if ar >= 1 {
-			bb.UR.X = imp.Scale * vpw
-			bb.UR.Y = bb.UR.X / ar
+			if vp.AspectRatio() <= 1 {
+				bb.UR.X = imp.Scale * vpw
+				bb.UR.Y = bb.UR.X / ar
+			} else {
+				if ar >= vp.AspectRatio() {
+					bb.UR.X = imp.Scale * vpw
+					bb.UR.Y = bb.UR.X / ar
+				} else {
+					bb.UR.Y = imp.Scale * vph
+					bb.UR.X = bb.UR.Y * ar
+				}
+			}
 		} else {
-			bb.UR.Y = imp.Scale * vph
-			bb.UR.X = bb.UR.Y * ar
+			if vp.AspectRatio() >= 1 {
+				bb.UR.Y = imp.Scale * vph
+				bb.UR.X = bb.UR.Y * ar
+			} else {
+				if ar <= vp.AspectRatio() {
+					bb.UR.Y = imp.Scale * vph
+					bb.UR.X = bb.UR.Y * ar
+				} else {
+					bb.UR.X = imp.Scale * vpw
+					bb.UR.Y = bb.UR.X / ar
+				}
+			}
 		}
 	}
 
-	m := identMatrix
+	m := matrix.IdentMatrix
 
 	// Scale
 	m[0][0] = bb.Width()
 	m[1][1] = bb.Height()
 
 	// Translate
-	ll := lowerLeftCorner(bb, bb.Width(), bb.Height(), imp.Pos)
-	m[2][0] = ll.X + float64(imp.Dx)
-	m[2][1] = ll.Y + float64(imp.Dy)
+	ll := model.LowerLeftCorner(vp, bb.Width(), bb.Height(), imp.Pos)
+	m[2][0] = ll.X + imp.Dx
+	m[2][1] = ll.Y + imp.Dy
 
-	fmt.Fprintf(wr, "q %.2f %.2f %.2f %.2f %.2f %.2f cm /Im0 Do Q",
+	fmt.Fprintf(wr, "q %.5f %.5f %.5f %.5f %.5f %.5f cm /Im0 Do Q",
 		m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 }
 
 // NewPageForImage creates a new page dict in xRefTable for given image reader r.
-func NewPageForImage(xRefTable *XRefTable, r io.Reader, parentIndRef *IndirectRef, imp *Import) (*IndirectRef, error) {
+func NewPageForImage(xRefTable *model.XRefTable, r io.Reader, parentIndRef *types.IndirectRef, imp *Import) (*types.IndirectRef, error) {
 
 	// create image dict.
-	imgIndRef, w, h, err := CreateImageResource(xRefTable, r, imp.Gray, imp.Sepia)
+	imgIndRef, w, h, err := model.CreateImageResource(xRefTable, r, imp.Gray, imp.Sepia)
 	if err != nil {
 		return nil, err
 	}
 
 	// create resource dict for XObject.
-	d := Dict(
-		map[string]Object{
-			"ProcSet": NewNameArray("PDF", "Text", "ImageB", "ImageC", "ImageI"),
-			"XObject": Dict(map[string]Object{"Im0": *imgIndRef}),
+	d := types.Dict(
+		map[string]types.Object{
+			"ProcSet": types.NewNameArray("PDF", "Text", "ImageB", "ImageC", "ImageI"),
+			"XObject": types.Dict(map[string]types.Object{"Im0": *imgIndRef}),
 		},
 	)
 
@@ -498,12 +349,12 @@ func NewPageForImage(xRefTable *XRefTable, r io.Reader, parentIndRef *IndirectRe
 		return nil, err
 	}
 
-	dim := &Dim{float64(w), float64(h)}
-	if imp.Pos != Full {
+	dim := &types.Dim{Width: float64(w), Height: float64(h)}
+	if imp.Pos != types.Full {
 		dim = imp.PageDim
 	}
 	// mediabox = physical page dimensions
-	mediaBox := RectForDim(dim.Width, dim.Height)
+	mediaBox := types.RectForDim(dim.Width, dim.Height)
 
 	var buf bytes.Buffer
 	importImagePDFBytes(&buf, dim, float64(w), float64(h), imp)
@@ -517,9 +368,9 @@ func NewPageForImage(xRefTable *XRefTable, r io.Reader, parentIndRef *IndirectRe
 		return nil, err
 	}
 
-	pageDict := Dict(
-		map[string]Object{
-			"Type":      Name("Page"),
+	pageDict := types.Dict(
+		map[string]types.Object{
+			"Type":      types.Name("Page"),
 			"Parent":    *parentIndRef,
 			"MediaBox":  mediaBox.Array(),
 			"Resources": *resIndRef,

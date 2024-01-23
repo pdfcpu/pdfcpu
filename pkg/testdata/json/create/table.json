@@ -1,0 +1,148 @@
+{
+	"paper": "A4L",
+	"crop": "10",
+	"origin": "LowerLeft",
+	"contentBox": true,
+	"debug": false,
+	"guides": true,
+	"colors": {
+		"Beige": "#F5F5DC",
+		"DarkSalmon": "#E9967A"
+	},
+	"bgcol": "#BEDED9",
+	"timestamp": "Monday, 2.Jan 2006 15:04:05",
+	"dirs": {
+		"images": "../../testdata/resources"
+	},
+	"files": {
+		"logo1": "$images/logoVerySmall.png",
+		"logo2": "$images/github.png"
+	},
+	"fonts": {
+		"myCourier": {
+			"name": "Courier",
+			"size": 12,
+			"col": "#00AA00"
+		}
+	},
+	"borders": {
+		"myBorder": {
+			"width": 5,
+			"//col": "#0000FF",
+			"//style": "bevel"
+		}
+	},
+	"margin": {
+		"width": 20
+	},
+	"header": {
+		"font": {
+			"name": "Courier-Bold",
+			"size": 24,
+			"col": "#00AA00"
+		},
+		"left": "$logo1",
+		"center": "Demo Table",
+		"right": "$logo2",
+		"height": 40,
+		"dx": 5,
+		"dy": 10,
+		"border": false
+	},
+	"footer": {
+		"font": {
+			"name": "$myCourier",
+			"col": "Black"
+		},
+		"left": "pdfcpu: %v\nCreated: %t",
+		"center": "Page %p of %P",
+		"right": "Source:\ntestdata/json/create/tables.json",
+		"height": 30,
+		"dx": 5,
+		"dy": 5,
+		"border": false
+	},
+	"images": {
+		"logo1": {
+			"src": "$logo1",
+			"url": "https://pdfcpu.io",
+			"margin": {
+				"width": 5
+			}
+		},
+		"logo2": {
+			"src": "$logo2",
+			"url": "https://github.com/pdfcpu/pdfcpu",
+			"margin": {
+				"width": 5
+			}
+		}
+	},
+	"pages": {
+		"1": {
+			"content": {
+				"guides": [
+					{
+						"pos": [
+							-1,
+							-1
+						]
+					}
+				],
+				"table": [
+					{
+						"hide": false,
+						"header": {
+							"values": ["Qty", "Description", "Price", "Amount"],
+							"colAnchors": ["Center", "Center", "Center", "Center"],
+							"bgCol": "$DarkSalmon",
+							"font": {
+								"name": "Courier-Bold",
+								"size": 15
+							}
+						},
+						"values": [
+							["1", "Mouse", "$115.00", "$115.00"],
+							["3", "Unicorn", "$250,000.00", "$750,000.00"],
+							["1", "Gopher", "(priceless)"]
+						],
+						"rows": 5,
+						"cols": 4,
+						"width": 400,
+						"colWidths": [10, 40, 25, 25 ],
+						"colAnchors": ["Center", "Left", "Right", "Right"],
+						"colPaddings": [null, {"width": 0, "top": 5, "bottom": 5, "left": 20, "right": 5}, null, null],
+						"lheight": 30,
+						"grid": true,
+						"anchor": "center",
+						"//pos": [
+							100,
+							100
+						],
+						"dx": 0,
+						"dy": 0,
+						"bgCol": "$Beige",
+						"oddCol": "LightGray",
+						"evenCol": "Gray",
+						"font": {
+							"name": "Courier",
+							"size": 12,
+							"col": "Black"
+						},
+						"margin": {
+							"width": 0
+						},
+						"border": {
+							"width": 0,
+							"//col": "White"
+						},
+						"padding": {
+							"width": 5
+						},
+						"rot": 20
+					}
+				]
+			}
+		}
+	}
+}

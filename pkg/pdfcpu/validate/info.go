@@ -17,26 +17,28 @@ limitations under the License.
 package validate
 
 import (
+	"strings"
 	"unicode/utf8"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
 // DocumentProperty ensures a property name that may be modified.
 func DocumentProperty(s string) bool {
-	return !pdf.MemberOf(s, []string{"Keywords", "Creator", "Producer", "CreationDate", "ModDate", "Trapped"})
+	return !types.MemberOf(s, []string{"Keywords", "Creator", "Producer", "CreationDate", "ModDate", "Trapped"})
 }
 
-func handleDefault(xRefTable *pdf.XRefTable, o pdf.Object) (string, error) {
+func handleDefault(xRefTable *model.XRefTable, o types.Object) (string, error) {
 
-	s, err := xRefTable.DereferenceStringOrHexLiteral(o, pdf.V10, nil)
+	s, err := xRefTable.DereferenceStringOrHexLiteral(o, model.V10, nil)
 	if err == nil {
 		return s, nil
 	}
 
-	if xRefTable.ValidationMode == pdf.ValidationStrict {
+	if xRefTable.ValidationMode == model.ValidationStrict {
 		return "", err
 	}
 
@@ -44,19 +46,19 @@ func handleDefault(xRefTable *pdf.XRefTable, o pdf.Object) (string, error) {
 	return "", err
 }
 
-func validateInfoDictDate(xRefTable *pdf.XRefTable, o pdf.Object) (s string, err error) {
-	return validateDateObject(xRefTable, o, pdf.V10)
+func validateInfoDictDate(xRefTable *model.XRefTable, o types.Object) (s string, err error) {
+	return validateDateObject(xRefTable, o, model.V10)
 }
 
-func validateInfoDictTrapped(xRefTable *pdf.XRefTable, o pdf.Object) error {
+func validateInfoDictTrapped(xRefTable *model.XRefTable, o types.Object) error {
 
-	sinceVersion := pdf.V13
+	sinceVersion := model.V13
 
-	validate := func(s string) bool { return pdf.MemberOf(s, []string{"True", "False", "Unknown"}) }
+	validate := func(s string) bool { return types.MemberOf(s, []string{"True", "False", "Unknown"}) }
 
-	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		validate = func(s string) bool {
-			return pdf.MemberOf(s, []string{"True", "False", "Unknown", "true", "false", "unknown"})
+			return types.MemberOf(s, []string{"True", "False", "Unknown", "true", "false", "unknown"})
 		}
 	}
 
@@ -65,16 +67,16 @@ func validateInfoDictTrapped(xRefTable *pdf.XRefTable, o pdf.Object) error {
 		return nil
 	}
 
-	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		_, err = xRefTable.DereferenceBoolean(o, sinceVersion)
 	}
 
 	return err
 }
 
-func handleProperties(xRefTable *pdf.XRefTable, key string, val pdf.Object) error {
+func handleProperties(xRefTable *model.XRefTable, key string, val types.Object) error {
 	if !utf8.ValidString(key) {
-		key = pdf.CP1252ToUTF8(key)
+		key = types.CP1252ToUTF8(key)
 	}
 	s, err := handleDefault(xRefTable, val)
 	if err != nil {
@@ -86,7 +88,7 @@ func handleProperties(xRefTable *pdf.XRefTable, key string, val pdf.Object) erro
 	return nil
 }
 
-func validateDocInfoDictEntry(xRefTable *pdf.XRefTable, k string, v pdf.Object) (bool, error) {
+func validateDocInfoDictEntry(xRefTable *model.XRefTable, k string, v types.Object) (bool, error) {
 	var (
 		err        error
 		hasModDate bool
@@ -96,31 +98,34 @@ func validateDocInfoDictEntry(xRefTable *pdf.XRefTable, k string, v pdf.Object) 
 
 	// text string, opt, since V1.1
 	case "Title":
-		xRefTable.Title, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V11, nil)
+		xRefTable.Title, err = xRefTable.DereferenceStringOrHexLiteral(v, model.V11, nil)
 
 	// text string, optional
 	case "Author":
-		xRefTable.Author, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V10, nil)
+		xRefTable.Author, err = xRefTable.DereferenceStringOrHexLiteral(v, model.V10, nil)
 
 	// text string, optional, since V1.1
 	case "Subject":
-		xRefTable.Subject, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V11, nil)
+		xRefTable.Subject, err = xRefTable.DereferenceStringOrHexLiteral(v, model.V11, nil)
 
 	// text string, optional, since V1.1
 	case "Keywords":
-		xRefTable.Keywords, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V11, nil)
+		xRefTable.Keywords, err = xRefTable.DereferenceStringOrHexLiteral(v, model.V11, nil)
 
 	// text string, optional
 	case "Creator":
-		xRefTable.Creator, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V10, nil)
+		xRefTable.Creator, err = xRefTable.DereferenceStringOrHexLiteral(v, model.V10, nil)
 
 	// text string, optional
 	case "Producer":
-		xRefTable.Producer, err = xRefTable.DereferenceStringOrHexLiteral(v, pdf.V10, nil)
+		xRefTable.Producer, err = xRefTable.DereferenceStringOrHexLiteral(v, model.V10, nil)
 
 	// date, optional
 	case "CreationDate":
 		xRefTable.CreationDate, err = validateInfoDictDate(xRefTable, v)
+		if err != nil && xRefTable.ValidationMode == model.ValidationRelaxed {
+			err = nil
+		}
 
 	// date, required if PieceInfo is present in document catalog.
 	case "ModDate":
@@ -139,7 +144,7 @@ func validateDocInfoDictEntry(xRefTable *pdf.XRefTable, k string, v pdf.Object) 
 	return hasModDate, err
 }
 
-func validateDocumentInfoDict(xRefTable *pdf.XRefTable, obj pdf.Object) (bool, error) {
+func validateDocumentInfoDict(xRefTable *model.XRefTable, obj types.Object) (bool, error) {
 	// Document info object is optional.
 	d, err := xRefTable.DereferenceDict(obj)
 	if err != nil || d == nil {
@@ -152,7 +157,7 @@ func validateDocumentInfoDict(xRefTable *pdf.XRefTable, obj pdf.Object) (bool, e
 
 		hmd, err := validateDocInfoDictEntry(xRefTable, k, v)
 
-		if err == pdf.ErrInvalidUTF16BE {
+		if err == types.ErrInvalidUTF16BE {
 			// Fix for #264:
 			err = nil
 		}
@@ -169,14 +174,16 @@ func validateDocumentInfoDict(xRefTable *pdf.XRefTable, obj pdf.Object) (bool, e
 	return hasModDate, nil
 }
 
-func validateDocumentInfoObject(xRefTable *pdf.XRefTable) error {
+func validateDocumentInfoObject(xRefTable *model.XRefTable) error {
 
 	// Document info object is optional.
 	if xRefTable.Info == nil {
 		return nil
 	}
 
-	log.Validate.Println("*** validateDocumentInfoObject begin ***")
+	if log.ValidateEnabled() {
+		log.Validate.Println("*** validateDocumentInfoObject begin ***")
+	}
 
 	hasModDate, err := validateDocumentInfoDict(xRefTable, *xRefTable.Info)
 	if err != nil {
@@ -192,7 +199,19 @@ func validateDocumentInfoObject(xRefTable *pdf.XRefTable) error {
 		return errors.Errorf("validateDocumentInfoObject: missing required entry \"ModDate\"")
 	}
 
-	log.Validate.Println("*** validateDocumentInfoObject end ***")
+	if log.ValidateEnabled() {
+		log.Validate.Println("*** validateDocumentInfoObject end ***")
+	}
 
 	return nil
+}
+
+// DocumentPageLayout returns true for valid page layout values.
+func DocumentPageLayout(s string) bool {
+	return types.MemberOf(strings.ToLower(s), []string{"singlepage", "twocolumnleft", "twocolumnright", "twopageleft", "twopageright"})
+}
+
+// DocumentPageMode returns true for valid page mode values.
+func DocumentPageMode(s string) bool {
+	return types.MemberOf(strings.ToLower(s), []string{"usenone", "useoutlines", "usethumbs", "fullscreen", "useoc", "useattachments"})
 }

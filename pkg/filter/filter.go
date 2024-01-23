@@ -77,7 +77,9 @@ func NewFilter(filterName string, parms map[string]int) (filter Filter, err erro
 
 	case JPX:
 		// Unsupported
-		log.Info.Printf("Filter not supported: <%s>", filterName)
+		if log.InfoEnabled() {
+			log.Info.Printf("Filter not supported: <%s>", filterName)
+		}
 		err = ErrUnsupportedFilter
 
 	default:

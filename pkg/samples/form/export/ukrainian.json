@@ -1,0 +1,145 @@
+{
+	"header": {
+		"source": "ukrainian.pdf",
+		"version": "pdfcpu v0.4.0 dev",
+		"creation": "2023-03-16 23:35:35 CET",
+		"producer": "pdfcpu v0.4.0 dev"
+	},
+	"forms": [
+		{
+			"textfield": [
+				{
+					"page": 1,
+					"id": "36",
+					"name": "lastName1",
+					"value": "лань",
+					"multiline": false,
+					"locked": false
+				},
+				{
+					"page": 1,
+					"id": "29",
+					"name": "note1",
+					"value": "Це зразок тексту.\nЦе наступний рядок.",
+					"multiline": true,
+					"locked": false
+				},
+				{
+					"page": 1,
+					"id": "35",
+					"name": "firstName1",
+					"default": "Володимир",
+					"value": "Джекі",
+					"multiline": false,
+					"locked": false
+				}
+			],
+			"datefield": [
+				{
+					"page": 1,
+					"id": "30",
+					"name": "dob1",
+					"format": "dd.mm.yyyy",
+					"default": "05.12.1992",
+					"value": "31.12.1999",
+					"locked": false
+				}
+			],
+			"checkbox": [
+				{
+					"page": 1,
+					"id": "32",
+					"name": "cb13",
+					"default": false,
+					"value": false,
+					"locked": false
+				},
+				{
+					"page": 1,
+					"id": "39",
+					"name": "cb14",
+					"default": false,
+					"value": false,
+					"locked": false
+				},
+				{
+					"page": 1,
+					"id": "33",
+					"name": "cb15",
+					"default": false,
+					"value": false,
+					"locked": false
+				},
+				{
+					"page": 1,
+					"id": "38",
+					"name": "cb11",
+					"default": false,
+					"value": true,
+					"locked": false
+				},
+				{
+					"page": 1,
+					"id": "31",
+					"name": "cb12",
+					"default": false,
+					"value": false,
+					"locked": false
+				}
+			],
+			"radiobuttongroup": [
+				{
+					"page": 1,
+					"id": "17",
+					"name": "gender1",
+					"options": [
+						"жіноча",
+						"чоловічий",
+						"небінарний"
+					],
+					"default": "жіноча",
+					"value": "небінарний",
+					"locked": false
+				}
+			],
+			"combobox": [
+				{
+					"page": 1,
+					"id": "34",
+					"name": "city12",
+					"editable": false,
+					"options": [
+						"Київ",
+						"Маріуполь",
+						"Севастополь"
+					],
+					"default": "Маріуполь",
+					"value": "Севастополь",
+					"locked": false
+				}
+			],
+			"listbox": [
+				{
+					"page": 1,
+					"id": "37",
+					"name": "city11",
+					"multi": true,
+					"options": [
+						"Сан Франциско",
+						"Сан-Паулу",
+						"Відень"
+					],
+					"defaults": [
+						"Відень",
+						"Сан-Паулу"
+					],
+					"values": [
+						"Сан Франциско",
+						"Відень"
+					],
+					"locked": false
+				}
+			]
+		}
+	]
+}

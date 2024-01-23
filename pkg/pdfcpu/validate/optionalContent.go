@@ -17,11 +17,12 @@ limitations under the License.
 package validate
 
 import (
-	pdf "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
-func validateOptionalContentGroupIntent(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateOptionalContentGroupIntent(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
 
 	// see 8.11.2.1
 
@@ -36,12 +37,12 @@ func validateOptionalContentGroupIntent(xRefTable *pdf.XRefTable, d pdf.Dict, di
 
 	switch o := o.(type) {
 
-	case pdf.Name:
+	case types.Name:
 		if !validate(o.Value()) {
 			return errors.Errorf("validateOptionalContentGroupIntent: invalid intent: %s", o.Value())
 		}
 
-	case pdf.Array:
+	case types.Array:
 
 		for i, v := range o {
 
@@ -49,7 +50,7 @@ func validateOptionalContentGroupIntent(xRefTable *pdf.XRefTable, d pdf.Dict, di
 				continue
 			}
 
-			n, ok := v.(pdf.Name)
+			n, ok := v.(types.Name)
 			if !ok {
 				return errors.Errorf("pdfcpu: validateOptionalContentGroupIntent: invalid type at index %d\n", i)
 			}
@@ -66,7 +67,7 @@ func validateOptionalContentGroupIntent(xRefTable *pdf.XRefTable, d pdf.Dict, di
 	return nil
 }
 
-func validateOptionalContentGroupUsageDict(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateOptionalContentGroupUsageDict(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
 
 	// see 8.11.4.4
 
@@ -125,7 +126,7 @@ func validateOptionalContentGroupUsageDict(xRefTable *pdf.XRefTable, d pdf.Dict,
 	return err
 }
 
-func validateOptionalContentGroupDict(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion pdf.Version) error {
+func validateOptionalContentGroupDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
 
 	// see 8.11 Optional Content
 
@@ -153,7 +154,7 @@ func validateOptionalContentGroupDict(xRefTable *pdf.XRefTable, d pdf.Dict, sinc
 	return validateOptionalContentGroupUsageDict(xRefTable, d, dictName, "Usage", OPTIONAL, sinceVersion)
 }
 
-func validateOptionalContentGroupArray(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, dictEntry string, sinceVersion pdf.Version) error {
+func validateOptionalContentGroupArray(xRefTable *model.XRefTable, d types.Dict, dictName, dictEntry string, sinceVersion model.Version) error {
 
 	a, err := validateArrayEntry(xRefTable, d, dictName, dictEntry, OPTIONAL, sinceVersion, nil)
 	if err != nil || a == nil {
@@ -185,7 +186,7 @@ func validateOptionalContentGroupArray(xRefTable *pdf.XRefTable, d pdf.Dict, dic
 	return nil
 }
 
-func validateOCGs(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, sinceVersion pdf.Version) error {
+func validateOCGs(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, sinceVersion model.Version) error {
 
 	// see 8.11.2.2
 
@@ -205,7 +206,7 @@ func validateOCGs(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName stri
 		return err
 	}
 
-	d1, ok := o.(pdf.Dict)
+	d1, ok := o.(types.Dict)
 	if ok {
 		return validateOptionalContentGroupDict(xRefTable, d1, sinceVersion)
 	}
@@ -213,7 +214,7 @@ func validateOCGs(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName stri
 	return validateOptionalContentGroupArray(xRefTable, d, dictName, entryName, sinceVersion)
 }
 
-func validateOptionalContentMembershipDict(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion pdf.Version) error {
+func validateOptionalContentMembershipDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
 
 	// see 8.11.2.2
 
@@ -226,19 +227,19 @@ func validateOptionalContentMembershipDict(xRefTable *pdf.XRefTable, d pdf.Dict,
 	}
 
 	// P, optional, name
-	validate := func(s string) bool { return pdf.MemberOf(s, []string{"AllOn", "AnyOn", "AnyOff", "AllOff"}) }
+	validate := func(s string) bool { return types.MemberOf(s, []string{"AllOn", "AnyOn", "AnyOff", "AllOff"}) }
 	_, err = validateNameEntry(xRefTable, d, dictName, "P", OPTIONAL, sinceVersion, validate)
 	if err != nil {
 		return err
 	}
 
 	// VE, optional, array, since V1.6
-	_, err = validateArrayEntry(xRefTable, d, dictName, "VE", OPTIONAL, pdf.V16, nil)
+	_, err = validateArrayEntry(xRefTable, d, dictName, "VE", OPTIONAL, model.V16, nil)
 
 	return err
 }
 
-func validateOptionalContent(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, entryName string, required bool, sinceVersion pdf.Version) error {
+func validateOptionalContent(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
 
 	d1, err := validateDictEntry(xRefTable, d, dictName, entryName, required, sinceVersion, nil)
 	if err != nil || d1 == nil {
@@ -258,7 +259,7 @@ func validateOptionalContent(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, ent
 	return validateOptionalContentMembershipDict(xRefTable, d1, sinceVersion)
 }
 
-func validateUsageApplicationDict(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion pdf.Version) error {
+func validateUsageApplicationDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
 
 	dictName := "usageAppDict"
 
@@ -280,7 +281,7 @@ func validateUsageApplicationDict(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVer
 	return err
 }
 
-func validateUsageApplicationDictArray(xRefTable *pdf.XRefTable, d pdf.Dict, dictName, dictEntry string, required bool, sinceVersion pdf.Version) error {
+func validateUsageApplicationDictArray(xRefTable *model.XRefTable, d types.Dict, dictName, dictEntry string, required bool, sinceVersion model.Version) error {
 
 	a, err := validateArrayEntry(xRefTable, d, dictName, dictEntry, required, sinceVersion, nil)
 	if err != nil || a == nil {
@@ -312,7 +313,7 @@ func validateUsageApplicationDictArray(xRefTable *pdf.XRefTable, d pdf.Dict, dic
 	return nil
 }
 
-func validateOptionalContentConfigurationDict(xRefTable *pdf.XRefTable, d pdf.Dict, sinceVersion pdf.Version) error {
+func validateOptionalContentConfigurationDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
 
 	dictName := "optContentConfigDict"
 
@@ -329,7 +330,7 @@ func validateOptionalContentConfigurationDict(xRefTable *pdf.XRefTable, d pdf.Di
 	}
 
 	// BaseState, optional, name
-	validate := func(s string) bool { return pdf.MemberOf(s, []string{"ON", "OFF", "UNCHANGED"}) }
+	validate := func(s string) bool { return types.MemberOf(s, []string{"ON", "OFF", "UNCHANGED"}) }
 	baseState, err := validateNameEntry(xRefTable, d, dictName, "BaseState", OPTIONAL, sinceVersion, validate)
 	if err != nil {
 		return err
@@ -374,7 +375,7 @@ func validateOptionalContentConfigurationDict(xRefTable *pdf.XRefTable, d pdf.Di
 	}
 
 	// ListMode, optional, name
-	validate = func(s string) bool { return pdf.MemberOf(s, []string{"AllPages", "VisiblePages"}) }
+	validate = func(s string) bool { return types.MemberOf(s, []string{"AllPages", "VisiblePages"}) }
 	_, err = validateNameEntry(xRefTable, d, dictName, "ListMode", OPTIONAL, sinceVersion, validate)
 	if err != nil {
 		return err
@@ -387,17 +388,17 @@ func validateOptionalContentConfigurationDict(xRefTable *pdf.XRefTable, d pdf.Di
 	}
 
 	// Locked, optional, array
-	return validateOptionalContentGroupArray(xRefTable, d, dictName, "Locked", pdf.V16)
+	return validateOptionalContentGroupArray(xRefTable, d, dictName, "Locked", model.V16)
 }
 
-func validateOCProperties(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required bool, sinceVersion pdf.Version) error {
+func validateOCProperties(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
 
 	// aka optional content properties dict.
 
 	// => 8.11.4 Configuring Optional Content
 
-	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
-		sinceVersion = pdf.V14
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V14
 	}
 
 	d, err := validateDictEntry(xRefTable, rootDict, "rootDict", "OCProperties", required, sinceVersion, nil)
@@ -409,7 +410,7 @@ func validateOCProperties(xRefTable *pdf.XRefTable, rootDict pdf.Dict, required 
 
 	// "OCGs" required array of already written indRefs
 	r := true
-	if xRefTable.ValidationMode == pdf.ValidationRelaxed {
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		r = false
 	}
 	_, err = validateIndRefArrayEntry(xRefTable, d, dictName, "OCGs", r, sinceVersion, nil)
