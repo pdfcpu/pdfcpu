@@ -1361,7 +1361,10 @@ func showRep() {
 // bypassXrefSection is a fix for digesting corrupt xref sections.
 // It populates the xRefTable by reading in all indirect objects line by line
 // and works on the assumption of a single xref section - meaning no incremental updates.
-func bypassXrefSection(ctx *model.Context, offExtra int64) error {
+func bypassXrefSection(ctx *model.Context, offExtra int64, wasErr error) error {
+	if log.ReadEnabled() {
+		log.Read.Printf("bypassXRefSection after %v\n", wasErr)
+	}
 	var z int64
 	g := types.FreeHeadGeneration
 	ctx.Table[0] = &model.XRefTableEntry{
@@ -1561,11 +1564,10 @@ func buildXRefTableStartingAt(ctx *model.Context, offset *int64) error {
 			return err
 		}
 		if offset, err = parseXRefStream(ctx, rd, offset, offExtra); err != nil {
-			if log.ReadEnabled() {
-				log.Read.Printf("bypassXRefSection after %v\n", err)
+			if ctx.XRefTable.ValidationMode == model.ValidationRelaxed {
+				// Try fix for corrupt single xref section.
+				return bypassXrefSection(ctx, offExtra, err)
 			}
-			// Try fix for corrupt single xref section.
-			return bypassXrefSection(ctx, offExtra)
 		}
 
 	}

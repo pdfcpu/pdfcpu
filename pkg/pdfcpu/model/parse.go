@@ -527,78 +527,90 @@ func parseName(line *string) (*types.Name, error) {
 	return &nameObj, nil
 }
 
+func insertKey(d types.Dict, key string, val types.Object, usesHexCodes bool) (bool, error) {
+	var duplicateKeyErr bool
+
+	if !usesHexCodes {
+		if strings.IndexByte(key, '#') < 0 {
+			// Avoid expensive "DecodeName".
+			if _, found := d[key]; !found {
+				d[key] = val
+			} else {
+				duplicateKeyErr = true
+			}
+		} else {
+			duplicateKeyErr = d.Insert(key, val)
+			usesHexCodes = true
+		}
+	} else {
+		duplicateKeyErr = d.Insert(key, val)
+	}
+
+	if duplicateKeyErr {
+		// for now we digest duplicate keys.
+		// TODO
+		// if !validationRelaxed {
+		// 	return false, errDictionaryDuplicateKey
+		// }
+		// if log.CLIEnabled() {
+		// 	log.CLI.Printf("ParseDict: digesting duplicate key\n")
+		// }
+		_ = duplicateKeyErr
+	}
+
+	if log.ParseEnabled() {
+		log.Parse.Printf("ParseDict: dict[%s]=%v\n", key, val)
+	}
+
+	return usesHexCodes, nil
+}
+
 func processDictKeys(line *string, relaxed bool) (types.Dict, error) {
 	l := *line
 	var eol bool
-	var hasNames bool
+	var usesHexCodes bool
 	d := types.NewDict()
 	for !strings.HasPrefix(l, ">>") {
-		key, err := parseName(&l)
+		keyName, err := parseName(&l)
 		if err != nil {
 			return nil, err
 		}
 		if log.ParseEnabled() {
-			log.Parse.Printf("ParseDict: key = %s\n", key)
+			log.Parse.Printf("ParseDict: key = %s\n", keyName)
 		}
 
-		// position to first non whitespace after key
+		// Position to first non whitespace after key.
 		l, eol = trimLeftSpace(l, relaxed)
 
 		if len(l) == 0 {
 			if log.ParseEnabled() {
 				log.Parse.Println("ParseDict: only whitespace after key")
 			}
-			// only whitespace after key
+			// Only whitespace after key.
 			return nil, errDictionaryNotTerminated
 		}
 
-		// Fix for #252:
-		// For dicts with kv pairs terminated by eol we accept a missing value as an empty string.
-		if eol {
-			obj := types.StringLiteral("")
-			if log.ParseEnabled() {
-				log.Parse.Printf("ParseDict: dict[%s]=%v\n", key, obj)
-			}
-			stringKey := string(*key)
-			if !hasNames {
-				// Avoid expensive "DecodeName" on existing keys in "Insert".
-				if _, found := d[stringKey]; found {
-					return nil, errDictionaryDuplicateKey
-				}
-				d[stringKey] = obj
-				hasNames = strings.IndexByte(stringKey, '#') >= 0
-			} else {
-				if ok := d.Insert(stringKey, obj); !ok {
-					return nil, errDictionaryDuplicateKey
-				}
-			}
-			continue
-		}
+		var val types.Object
 
-		obj, err := ParseObject(&l)
-		if err != nil {
-			return nil, err
+		if eol {
+			// #252: For dicts with kv pairs terminated by eol we accept a missing value as an empty string.
+			val = types.StringLiteral("")
+		} else {
+			if val, err = ParseObject(&l); err != nil {
+				return nil, err
+			}
 		}
 
 		// Specifying the null object as the value of a dictionary entry (7.3.7, "Dictionary Objects")
-		// hall be equivalent to omitting the entry entirely.
-		if obj != nil {
-			stringKey := string(*key)
-			if !hasNames {
-				// Avoid expensive "DecodeName" on existing keys in "Insert".
-				if _, found := d[stringKey]; !found {
-					d[stringKey] = obj
-					hasNames = strings.IndexByte(stringKey, '#') >= 0
-				}
-			} else {
-				d.Insert(stringKey, obj)
+		// shall be equivalent to omitting the entry entirely.
+		if val != nil {
+			detectedHexCodes, err := insertKey(d, string(*keyName), val, usesHexCodes)
+			if err != nil {
+				return nil, err
 			}
-			if log.ParseEnabled() {
-				log.Parse.Printf("ParseDict: dict[%s]=%v\n", key, obj)
+			if !usesHexCodes && detectedHexCodes {
+				usesHexCodes = true
 			}
-			// if ok := d.Insert(string(*key), obj); !ok {
-			// 	return nil, errDictionaryDuplicateKey
-			// }
 		}
 
 		// We are positioned on the char behind the last parsed dict value.

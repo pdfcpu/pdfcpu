@@ -148,8 +148,6 @@ func doTestParseDictWithComments(t *testing.T) {
 }
 
 func doTestLargeDicts(t *testing.T) {
-	// Make sure parsing large dictionaries is fast. Found a file in the wild
-	// that has two dictionaries with about 200.000 entries each.
 	var sb strings.Builder
 	sb.WriteString("<<")
 	for i := 0; i < 50000; i++ {
