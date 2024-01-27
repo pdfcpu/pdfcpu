@@ -30,7 +30,7 @@ func TestReadFileContext(t *testing.T) {
 	defer cancel()
 
 	conf := model.NewDefaultConfiguration()
-	if doc, err := ReadFileContext(ctx, "../samples/basic/Test.pdf", conf); err == nil {
+	if doc, err := ReadFileContext(ctx, "../samples/basic/test.pdf", conf); err == nil {
 		t.Errorf("reading should have failed, got %+v", doc)
 	} else if !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("should have failed with timeout, got %s", err)
@@ -38,7 +38,7 @@ func TestReadFileContext(t *testing.T) {
 }
 
 func TestReadContext(t *testing.T) {
-	fp, err := os.Open("../samples/basic/Test.pdf")
+	fp, err := os.Open("../samples/basic/test.pdf")
 	if err != nil {
 		t.Fatal(err)
 	}

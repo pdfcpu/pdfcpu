@@ -44,14 +44,14 @@ var (
 	zero             int64 = 0
 )
 
-// ReadFile reads in a PDF file and builds an internal structure holding its cross reference table aka the Context.
+// ReadFile reads in a PDF file and builds an internal structure holding its cross reference table aka the PDF model context.
 func ReadFile(inFile string, conf *model.Configuration) (*model.Context, error) {
-	return ReadFileContext(context.Background(), inFile, conf)
+	return ReadFileWithContext(context.Background(), inFile, conf)
 }
 
-// ReadFileContext reads in a PDF file and builds an internal structure holding its cross reference table aka the Context.
-// If the passed context is cancelled, reading will be interrupted.
-func ReadFileContext(c context.Context, inFile string, conf *model.Configuration) (*model.Context, error) {
+// ReadFileContext reads in a PDF file and builds an internal structure holding its cross reference table aka the PDF model context.
+// If the passed Go context is cancelled, reading will be interrupted.
+func ReadFileWithContext(c context.Context, inFile string, conf *model.Configuration) (*model.Context, error) {
 	if log.InfoEnabled() {
 		log.Info.Printf("reading %s..\n", inFile)
 	}
@@ -65,19 +65,19 @@ func ReadFileContext(c context.Context, inFile string, conf *model.Configuration
 		f.Close()
 	}()
 
-	return ReadContext(c, f, conf)
+	return ReadWithContext(c, f, conf)
 }
 
-// Read takes a readSeeker and generates a Context,
+// Read takes a readSeeker and generates a PDF model context,
 // an in-memory representation containing a cross reference table.
 func Read(rs io.ReadSeeker, conf *model.Configuration) (*model.Context, error) {
-	return ReadContext(context.Background(), rs, conf)
+	return ReadWithContext(context.Background(), rs, conf)
 }
 
-// Read takes a readSeeker and generates a Context,
+// Read takes a readSeeker and generates a PDF model context,
 // an in-memory representation containing a cross reference table.
-// If the passed context is cancelled, reading will be interrupted.
-func ReadContext(c context.Context, rs io.ReadSeeker, conf *model.Configuration) (*model.Context, error) {
+// If the passed Go context is cancelled, reading will be interrupted.
+func ReadWithContext(c context.Context, rs io.ReadSeeker, conf *model.Configuration) (*model.Context, error) {
 	if log.ReadEnabled() {
 		log.Read.Println("Read: begin")
 	}
@@ -1340,7 +1340,7 @@ func parseAndLoad(c context.Context, ctx *model.Context, line string, offset *in
 		Generation: generation}
 
 	ctx.Table[*objNr] = &entry
-	o, err := ParseObjectContext(c, ctx, *entry.Offset, *objNr, *entry.Generation)
+	o, err := ParseObjectWithContext(c, ctx, *entry.Offset, *objNr, *entry.Generation)
 	if err != nil {
 		return err
 	}
@@ -1547,6 +1547,7 @@ func buildXRefTableStartingAt(c context.Context, ctx *model.Context, offset *int
 	xrefSectionCount := 0
 
 	for offset != nil {
+
 		if err := c.Err(); err != nil {
 			return err
 		}
@@ -2036,10 +2037,10 @@ func object(c context.Context, ctx *model.Context, offset int64, objNr, genNr in
 
 // ParseObject parses an object from file at given offset.
 func ParseObject(ctx *model.Context, offset int64, objNr, genNr int) (types.Object, error) {
-	return ParseObjectContext(context.Background(), ctx, offset, objNr, genNr)
+	return ParseObjectWithContext(context.Background(), ctx, offset, objNr, genNr)
 }
 
-func ParseObjectContext(c context.Context, ctx *model.Context, offset int64, objNr, genNr int) (types.Object, error) {
+func ParseObjectWithContext(c context.Context, ctx *model.Context, offset int64, objNr, genNr int) (types.Object, error) {
 	if log.ReadEnabled() {
 		log.Read.Printf("ParseObject: begin, obj#%d, offset:%d\n", objNr, offset)
 	}
@@ -2111,7 +2112,7 @@ func dereferencedObject(c context.Context, ctx *model.Context, objNr int) (types
 			log.Read.Printf("dereferencedObject: dereferencing object %d\n", objNr)
 		}
 
-		o, err := ParseObjectContext(c, ctx, *entry.Offset, objNr, *entry.Generation)
+		o, err := ParseObjectWithContext(c, ctx, *entry.Offset, objNr, *entry.Generation)
 		if err != nil {
 			return nil, errors.Wrapf(err, "dereferencedObject: problem dereferencing object %d", objNr)
 		}
@@ -2475,7 +2476,7 @@ func decodeObjectStream(c context.Context, ctx *model.Context, objNr int) error 
 	}
 
 	// Parse object stream from file.
-	o, err := ParseObjectContext(c, ctx, *entry.Offset, objNr, *entry.Generation)
+	o, err := ParseObjectWithContext(c, ctx, *entry.Offset, objNr, *entry.Generation)
 	if err != nil || o == nil {
 		return errors.New("pdfcpu: decodeObjectStream: corrupt object stream")
 	}
@@ -2632,7 +2633,7 @@ func dereferenceAndLoad(c context.Context, ctx *model.Context, objNr int, entry 
 	}
 
 	// Parse object from ctx: anything goes dict, array, integer, float, streamdict...
-	o, err := ParseObjectContext(c, ctx, *entry.Offset, objNr, *entry.Generation)
+	o, err := ParseObjectWithContext(c, ctx, *entry.Offset, objNr, *entry.Generation)
 	if err != nil {
 		return errors.Wrapf(err, "dereferenceAndLoad: problem dereferencing object %d", objNr)
 	}
