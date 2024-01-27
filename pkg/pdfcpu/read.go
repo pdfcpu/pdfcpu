@@ -402,6 +402,7 @@ func parseObjectStream(c context.Context, osd *types.ObjectStreamDict) error {
 	var offsetOld int
 
 	for i := 0; i < len(objs); i += 2 {
+
 		if err := c.Err(); err != nil {
 			return err
 		}
@@ -1378,7 +1379,11 @@ func showRep() {
 // bypassXrefSection is a fix for digesting corrupt xref sections.
 // It populates the xRefTable by reading in all indirect objects line by line
 // and works on the assumption of a single xref section - meaning no incremental updates.
-func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64) error {
+func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64, wasErr error) error {
+	if log.ReadEnabled() {
+		log.Read.Printf("bypassXRefSection after %v\n", wasErr)
+	}
+
 	var z int64
 	g := types.FreeHeadGeneration
 	ctx.Table[0] = &model.XRefTableEntry{
@@ -1581,12 +1586,10 @@ func buildXRefTableStartingAt(c context.Context, ctx *model.Context, offset *int
 		if err != nil {
 			return err
 		}
+
 		if offset, err = parseXRefStream(c, ctx, rd, offset, offExtra); err != nil {
-			if log.ReadEnabled() {
-				log.Read.Printf("bypassXRefSection after %v\n", err)
-			}
 			// Try fix for corrupt single xref section.
-			return bypassXrefSection(c, ctx, offExtra)
+			return bypassXrefSection(c, ctx, offExtra, err)
 		}
 
 	}
@@ -2541,6 +2544,7 @@ func decodeObjectStreams(c context.Context, ctx *model.Context) error {
 	sort.Ints(keys)
 
 	for _, objNr := range keys {
+
 		if err := c.Err(); err != nil {
 			return err
 		}

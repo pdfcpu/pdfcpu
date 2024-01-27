@@ -52,13 +52,12 @@ func (d Dict) Clone() Object {
 }
 
 // Insert adds a new entry to this PDFDict.
-func (d Dict) Insert(key string, value Object) (ok bool) {
-	_, found := d.Find(key)
-	if !found {
-		d[key] = value
-		ok = true
+func (d Dict) Insert(k string, v Object) bool {
+	if _, found := d.Find(k); !found {
+		d[k] = v
+		return true
 	}
-	return ok
+	return false
 }
 
 // InsertBool adds a new bool entry to this PDFDict.
