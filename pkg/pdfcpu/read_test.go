@@ -20,17 +20,17 @@ import (
 	"context"
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
-
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
 func TestReadFileContext(t *testing.T) {
+	inFile := filepath.Join("..", "testdata", "test.pdf")
+
 	ctx, cancel := context.WithTimeout(context.Background(), 0)
 	defer cancel()
 
-	conf := model.NewDefaultConfiguration()
-	if doc, err := ReadFileWithContext(ctx, "../samples/basic/test.pdf", conf); err == nil {
+	if doc, err := ReadFileWithContext(ctx, inFile, nil); err == nil {
 		t.Errorf("reading should have failed, got %+v", doc)
 	} else if !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("should have failed with timeout, got %s", err)
@@ -38,7 +38,9 @@ func TestReadFileContext(t *testing.T) {
 }
 
 func TestReadContext(t *testing.T) {
-	fp, err := os.Open("../samples/basic/test.pdf")
+	inFile := filepath.Join("..", "testdata", "test.pdf")
+
+	fp, err := os.Open(inFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,8 +49,7 @@ func TestReadContext(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 0)
 	defer cancel()
 
-	conf := model.NewDefaultConfiguration()
-	if doc, err := ReadWithContext(ctx, fp, conf); err == nil {
+	if doc, err := ReadWithContext(ctx, fp, nil); err == nil {
 		t.Errorf("reading should have failed, got %+v", doc)
 	} else if !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("should have failed with timeout, got %s", err)
