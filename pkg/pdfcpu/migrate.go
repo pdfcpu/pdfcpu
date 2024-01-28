@@ -95,7 +95,10 @@ func migrateAnnots(o types.Object, pageIndRef types.IndirectRef, ctxSrc, ctxDest
 	}
 
 	for i, v := range arr {
-		o := v.(types.IndirectRef)
+		o, ok := v.(types.IndirectRef)
+		if !ok {
+			continue
+		}
 		objNr := o.ObjectNumber.Value()
 		if migrated[objNr] > 0 {
 			o.ObjectNumber = types.Integer(migrated[objNr])
@@ -107,7 +110,10 @@ func migrateAnnots(o types.Object, pageIndRef types.IndirectRef, ctxSrc, ctxDest
 			return nil, err
 		}
 		arr[i] = o
-		d := o1.(types.Dict)
+		d, ok := o1.(types.Dict)
+		if !ok {
+			continue
+		}
 		for k, v := range d {
 			if k == "P" {
 				d["P"] = pageIndRef
@@ -179,7 +185,10 @@ func migrateFields(d types.Dict, fieldsSrc, fieldsDest *types.Array, ctxSrc, ctx
 			continue
 		}
 		for _, v := range *fieldsSrc {
-			ir := v.(types.IndirectRef)
+			ir, ok := v.(types.IndirectRef)
+			if !ok {
+				continue
+			}
 			objNr := ir.ObjectNumber.Value()
 			if migrated[objNr] == indRef.ObjectNumber.Value() {
 				*fieldsDest = append(*fieldsDest, indRef)
@@ -224,7 +233,10 @@ func migrateFormDict(d types.Dict, fields types.Array, ctxSrc, ctxDest *model.Co
 
 func detectMigratedAnnot(ctxSrc *model.Context, indRef *types.IndirectRef, kids types.Array, migrated map[int]int) (bool, error) {
 	for _, v := range kids {
-		ir := v.(types.IndirectRef)
+		ir, ok := v.(types.IndirectRef)
+		if !ok {
+			continue
+		}
 		objNr := ir.ObjectNumber.Value()
 		if migrated[objNr] == indRef.ObjectNumber.Value() {
 			return true, nil
