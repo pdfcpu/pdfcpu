@@ -276,6 +276,8 @@ func validateOutlines(xRefTable *model.XRefTable, rootDict types.Dict, required 
 			return errors.New("pdfcpu: validateOutlines: corrupted, root missing \"First\"")
 		}
 		// empty outlines
+		xRefTable.Outlines = nil
+		rootDict.Delete("Outlines")
 		return nil
 	}
 	if last == nil {
