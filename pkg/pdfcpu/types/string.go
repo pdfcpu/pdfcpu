@@ -19,7 +19,6 @@ package types
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -226,33 +225,103 @@ func Reverse(s string) string {
 	return string(outRunes)
 }
 
+// needsHexSequence checks if a given character must be hex-encoded.
+// See "7.3.5 Name Objects" for details.
+func needsHexSequence(ch byte) bool {
+	switch ch {
+	// Delimiter characters (see "7.2.2 Character Set")
+	case '(':
+		fallthrough
+	case ')':
+		fallthrough
+	case '<':
+		fallthrough
+	case '>':
+		fallthrough
+	case '[':
+		fallthrough
+	case ']':
+		fallthrough
+	case '{':
+		fallthrough
+	case '}':
+		fallthrough
+	case '/':
+		fallthrough
+	case '%':
+		return true
+	case '#':
+		return true
+	default:
+		return ch < '!' || ch > '~'
+	}
+}
+
 // EncodeName applies name encoding according to PDF spec.
 func EncodeName(s string) string {
-	bb := []byte{}
+	replaced := false
+	var sb strings.Builder // will be used only if replacements are necessary
 	for i := 0; i < len(s); i++ {
-		bb = append(bb, []byte(fmt.Sprintf("#%x", s[i]))...)
+		ch := s[i]
+		// TODO: This should handle the invalid character 0x00.
+		if needsHexSequence(ch) {
+			if !replaced {
+				sb.WriteString(s[:i])
+			}
+			sb.WriteByte('#')
+			sb.WriteString(hex.EncodeToString([]byte{ch}))
+			replaced = true
+		} else if replaced {
+			sb.WriteByte(ch)
+		}
 	}
-	return string(bb)
+	if !replaced {
+		return s
+	}
+	return sb.String()
 }
 
 // DecodeName applies name decoding according to PDF spec.
 func DecodeName(s string) (string, error) {
-	if len(s) == 0 || strings.IndexByte(s, '#') < 0 {
-		return s, nil
-	}
-	var bb []byte
-	for i := 0; i < len(s); {
-		if s[i] == '#' {
-			hb, err := hex.DecodeString(s[i+1 : i+3])
-			if err != nil {
-				return "", err
+	replaced := false
+	var sb strings.Builder // will be used only if replacements are necessary
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c == 0 {
+			return "", errors.New("a name may not contain a null byte")
+		} else if c != '#' {
+			if replaced {
+				sb.WriteByte(c)
 			}
-			bb = append(bb, hb...)
-			i += 3
 			continue
 		}
-		bb = append(bb, s[i])
-		i++
+
+		// # detected, next 2 chars have to exist.
+		if len(s) < i+3 {
+			return "", errors.New("not enough characters after #")
+		}
+
+		s1 := s[i+1 : i+3]
+
+		// And they have to be hex characters.
+		decoded, err := hex.DecodeString(s1)
+		if err != nil {
+			return "", err
+		}
+
+		if decoded[0] == 0 {
+			return "", errors.New("a name may not contain a null byte")
+		}
+
+		if !replaced {
+			sb.WriteString(s[:i])
+			replaced = true
+		}
+		sb.Write(decoded)
+		i += 2
 	}
-	return string(bb), nil
+	if !replaced {
+		return s, nil
+	}
+	return sb.String(), nil
 }

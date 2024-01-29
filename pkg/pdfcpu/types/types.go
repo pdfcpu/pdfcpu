@@ -17,7 +17,6 @@ limitations under the License.
 package types
 
 import (
-	"bytes"
 	"encoding/hex"
 	"fmt"
 	"strconv"
@@ -388,34 +387,14 @@ func (nameObject Name) String() string {
 func (nameObject Name) PDFString() string {
 	s := " "
 	if len(nameObject) > 0 {
-		s = string(nameObject)
+		s = EncodeName(string(nameObject))
 	}
 	return fmt.Sprintf("/%s", s)
 }
 
 // Value returns a string value for this PDF object.
 func (nameObject Name) Value() string {
-
-	s := string(nameObject)
-	var b bytes.Buffer
-
-	for i := 0; i < len(s); {
-		c := s[i]
-		if c != '#' {
-			b.WriteByte(c)
-			i++
-			continue
-		}
-
-		// # detected, next 2 chars have to exist.
-		// This gets checked during parsing.
-		s1 := s[i+1 : i+3]
-		b1, _ := hex.DecodeString(s1)
-		b.WriteByte(b1[0])
-		i += 3
-	}
-
-	return b.String()
+	return string(nameObject)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////

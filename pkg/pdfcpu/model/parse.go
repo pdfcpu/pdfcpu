@@ -18,7 +18,6 @@ package model
 
 import (
 	"context"
-	"encoding/hex"
 	"strconv"
 	"strings"
 	"unicode"
@@ -461,30 +460,13 @@ func parseHexLiteral(line *string) (types.Object, error) {
 	return types.HexLiteral(*hexStr), nil
 }
 
-func validateNameHexSequence(s string) error {
-	for i := 0; i < len(s); {
-		c := s[i]
-		if c != '#' {
-			i++
-			continue
-		}
-
-		// # detected, next 2 chars have to exist.
-		if len(s) < i+3 {
-			return errNameObjectCorrupt
-		}
-
-		s1 := s[i+1 : i+3]
-
-		// And they have to be hex characters.
-		_, err := hex.DecodeString(s1)
-		if err != nil {
-			return errNameObjectCorrupt
-		}
-
-		i += 3
+func decodeNameHexSequence(s string) (string, error) {
+	decoded, err := types.DecodeName(s)
+	if err != nil {
+		return "", errNameObjectCorrupt
 	}
-	return nil
+
+	return decoded, nil
 }
 
 func parseName(line *string) (*types.Name, error) {
@@ -518,8 +500,8 @@ func parseName(line *string) (*types.Name, error) {
 		l = l[:eok]
 	}
 
-	// Validate optional #xx sequences
-	err := validateNameHexSequence(l)
+	// Decode optional #xx sequences
+	l, err := decodeNameHexSequence(l)
 	if err != nil {
 		return nil, err
 	}
@@ -528,48 +510,30 @@ func parseName(line *string) (*types.Name, error) {
 	return &nameObj, nil
 }
 
-func insertKey(d types.Dict, key string, val types.Object, usesHexCodes bool) (bool, error) {
-	var duplicateKeyErr bool
-
-	if !usesHexCodes {
-		if strings.IndexByte(key, '#') < 0 {
-			// Avoid expensive "DecodeName".
-			if _, found := d[key]; !found {
-				d[key] = val
-			} else {
-				duplicateKeyErr = true
-			}
-		} else {
-			duplicateKeyErr = d.Insert(key, val)
-			usesHexCodes = true
-		}
+func insertKey(d types.Dict, key string, val types.Object) error {
+	if _, found := d[key]; !found {
+		d[key] = val
 	} else {
-		duplicateKeyErr = d.Insert(key, val)
-	}
-
-	if duplicateKeyErr {
 		// for now we digest duplicate keys.
 		// TODO
 		// if !validationRelaxed {
-		// 	return false, errDictionaryDuplicateKey
+		// 	return errDictionaryDuplicateKey
 		// }
 		// if log.CLIEnabled() {
 		// 	log.CLI.Printf("ParseDict: digesting duplicate key\n")
 		// }
-		_ = duplicateKeyErr
 	}
 
 	if log.ParseEnabled() {
 		log.Parse.Printf("ParseDict: dict[%s]=%v\n", key, val)
 	}
 
-	return usesHexCodes, nil
+	return nil
 }
 
 func processDictKeys(c context.Context, line *string, relaxed bool) (types.Dict, error) {
 	l := *line
 	var eol bool
-	var usesHexCodes bool
 	d := types.NewDict()
 
 	for !strings.HasPrefix(l, ">>") {
@@ -612,12 +576,8 @@ func processDictKeys(c context.Context, line *string, relaxed bool) (types.Dict,
 		// Specifying the null object as the value of a dictionary entry (7.3.7, "Dictionary Objects")
 		// shall be equivalent to omitting the entry entirely.
 		if val != nil {
-			detectedHexCodes, err := insertKey(d, string(*keyName), val, usesHexCodes)
-			if err != nil {
+			if err := insertKey(d, string(*keyName), val); err != nil {
 				return nil, err
-			}
-			if !usesHexCodes && detectedHexCodes {
-				usesHexCodes = true
 			}
 		}
 

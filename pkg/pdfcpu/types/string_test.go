@@ -174,3 +174,27 @@ func TestDecodeName(t *testing.T) {
 		})
 	}
 }
+
+func TestEncodeName(t *testing.T) {
+	testcases := []struct {
+		Input    string
+		Expected string
+	}{
+		{"Foo", "Foo"},
+		{"A#", "A#23"},
+		{"F#o", "F#23o"},
+		{"A;Name_With-Various***Characters?", "A;Name_With-Various***Characters?"},
+		{"1.2", "1.2"},
+		{"$$", "$$"},
+		{"@pattern", "@pattern"},
+		{".notdef", ".notdef"},
+		{"Lime Green", "Lime#20Green"},
+		{"paired()parentheses", "paired#28#29parentheses"},
+		{"The_Key_of_F#_Minor", "The_Key_of_F#23_Minor"},
+	}
+	for _, tc := range testcases {
+		if encoded := EncodeName(tc.Input); encoded != tc.Expected {
+			t.Errorf("expected %s for %s, got %s", tc.Expected, tc.Input, encoded)
+		}
+	}
+}
