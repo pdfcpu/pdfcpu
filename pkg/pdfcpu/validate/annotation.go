@@ -1450,8 +1450,14 @@ func validateBorderArray(xRefTable *model.XRefTable, a types.Array) bool {
 				}
 
 			}
+
 			if all0 {
-				return false
+				if xRefTable.ValidationMode != model.ValidationRelaxed {
+					return false
+				}
+				if log.ValidateEnabled() {
+					log.Validate.Println("digesting invalid dash pattern array: %s", a1)
+				}
 			}
 
 			continue
