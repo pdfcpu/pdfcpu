@@ -1256,8 +1256,10 @@ func updatePageContentsForWM(ctx *model.Context, obj types.Object, wm model.Wate
 		wm.Objs[objNr] = true
 
 	case types.Array:
-
 		// Get stream dict for first array element.
+		if len(o) == 0 {
+			return nil
+		}
 		o1 := o[0]
 		ir, _ := o1.(types.IndirectRef)
 		objNr = ir.ObjectNumber.Value()
@@ -1824,6 +1826,9 @@ func removeArtifacts1(ctx *model.Context, o types.Object, entry *model.XRefTable
 
 		if len(o) > 1 {
 			// Get stream dict for last element.
+			if len(o) == 0 {
+				return false, nil
+			}
 			o1 := o[len(o)-1]
 			ir, _ := o1.(types.IndirectRef)
 			objNr = ir.ObjectNumber.Value()
@@ -2030,6 +2035,9 @@ func findPageWatermarks(ctx *model.Context, pageDictIndRef *types.IndirectRef) (
 
 	case types.Array:
 		// Get stream dict for first element.
+		if len(o) == 0 {
+			return false, nil
+		}
 		o1 := o[0]
 		ir, _ := o1.(types.IndirectRef)
 		objNr := ir.ObjectNumber.Value()

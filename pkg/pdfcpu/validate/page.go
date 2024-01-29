@@ -102,6 +102,10 @@ func validatePageContents(xRefTable *model.XRefTable, d types.Dict) (hasContents
 
 		}
 
+		if xRefTable.ValidationMode != model.ValidationRelaxed {
+			return false, errors.Errorf("validatePageContents: empty page content array detected")
+		}
+
 	default:
 		return false, errors.Errorf("validatePageContents: page content must be stream dict or array")
 	}
