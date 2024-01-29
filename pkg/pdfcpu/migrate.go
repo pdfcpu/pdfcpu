@@ -95,24 +95,23 @@ func migrateAnnots(o types.Object, pageIndRef types.IndirectRef, ctxSrc, ctxDest
 	}
 
 	for i, v := range arr {
+		var d types.Dict
 		o, ok := v.(types.IndirectRef)
-		if !ok {
-			continue
-		}
-		objNr := o.ObjectNumber.Value()
-		if migrated[objNr] > 0 {
-			o.ObjectNumber = types.Integer(migrated[objNr])
+		if ok {
+			objNr := o.ObjectNumber.Value()
+			if migrated[objNr] > 0 {
+				o.ObjectNumber = types.Integer(migrated[objNr])
+				arr[i] = o
+				continue
+			}
+			o1, err := migrateIndRef(&o, ctxSrc, ctxDest, migrated)
+			if err != nil {
+				return nil, err
+			}
 			arr[i] = o
-			continue
-		}
-		o1, err := migrateIndRef(&o, ctxSrc, ctxDest, migrated)
-		if err != nil {
-			return nil, err
-		}
-		arr[i] = o
-		d, ok := o1.(types.Dict)
-		if !ok {
-			continue
+			d = o1.(types.Dict)
+		} else {
+			d = v.(types.Dict)
 		}
 		for k, v := range d {
 			if k == "P" {
@@ -166,7 +165,10 @@ func migrateFields(d types.Dict, fieldsSrc, fieldsDest *types.Array, ctxSrc, ctx
 		return err
 	}
 	for _, v := range annots {
-		indRef := v.(types.IndirectRef)
+		indRef, ok := v.(types.IndirectRef)
+		if !ok {
+			continue
+		}
 		d, err := ctxDest.DereferenceDict(indRef)
 		if err != nil {
 			return err
