@@ -186,7 +186,16 @@ func BookmarksForOutlineItem(ctx *model.Context, item *types.IndirectRef, parent
 			return nil, err
 		}
 
-		s, _ := model.Text(d["Title"])
+		obj, err := ctx.Dereference(d["Title"])
+		if err != nil {
+			return nil, err
+		}
+
+		s, err := model.Text(obj)
+		if err != nil {
+			return nil, err
+		}
+
 		title := outlineItemTitle(s)
 
 		// Retrieve page number out of a destination via "Dest" or "Goto Action".
@@ -204,7 +213,7 @@ func BookmarksForOutlineItem(ctx *model.Context, item *types.IndirectRef, parent
 			dest = act.(types.Dict)["D"]
 		}
 
-		obj, err := ctx.Dereference(dest)
+		obj, err = ctx.Dereference(dest)
 		if err != nil {
 			return nil, err
 		}
