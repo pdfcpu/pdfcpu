@@ -441,28 +441,24 @@ func (d Dict) indentedString(level int) string {
 
 		v := d[k]
 
-		if subdict, ok := v.(Dict); ok {
-			dictStr := subdict.indentedString(level + 1)
+		switch v := v.(type) {
+		case Dict:
+			dictStr := v.indentedString(level + 1)
 			logstr = append(logstr, fmt.Sprintf("%s<%s, %s>\n", tabstr, k, dictStr))
-			continue
-		}
-
-		if a, ok := v.(Array); ok {
-			arrStr := a.indentedString(level + 1)
+		case Array:
+			arrStr := v.indentedString(level + 1)
 			logstr = append(logstr, fmt.Sprintf("%s<%s, %s>\n", tabstr, k, arrStr))
-			continue
-		}
-
-		val := "null"
-		if v != nil {
-			val = v.String()
-			if n, ok := v.(Name); ok {
-				val, _ = DecodeName(string(n))
+		default:
+			val := "null"
+			if v != nil {
+				val = v.String()
+				if n, ok := v.(Name); ok {
+					val, _ = DecodeName(string(n))
+				}
 			}
+
+			logstr = append(logstr, fmt.Sprintf("%s<%s, %v>\n", tabstr, k, val))
 		}
-
-		logstr = append(logstr, fmt.Sprintf("%s<%s, %v>\n", tabstr, k, val))
-
 	}
 
 	logstr = append(logstr, fmt.Sprintf("%s%s", strings.Repeat("\t", level-1), ">>"))
@@ -487,67 +483,31 @@ func (d Dict) PDFString() string {
 		v := d[k]
 		keyName := EncodeName(k)
 
-		if v == nil {
+		switch v := v.(type) {
+		case nil:
 			logstr = append(logstr, fmt.Sprintf("/%s null", keyName))
-			continue
-		}
-
-		d, ok := v.(Dict)
-		if ok {
-			logstr = append(logstr, fmt.Sprintf("/%s%s", keyName, d.PDFString()))
-			continue
-		}
-
-		a, ok := v.(Array)
-		if ok {
-			logstr = append(logstr, fmt.Sprintf("/%s%s", keyName, a.PDFString()))
-			continue
-		}
-
-		ir, ok := v.(IndirectRef)
-		if ok {
-			logstr = append(logstr, fmt.Sprintf("/%s %s", keyName, ir.PDFString()))
-			continue
-		}
-
-		n, ok := v.(Name)
-		if ok {
-			logstr = append(logstr, fmt.Sprintf("/%s%s", keyName, n.PDFString()))
-			continue
-		}
-
-		i, ok := v.(Integer)
-		if ok {
-			logstr = append(logstr, fmt.Sprintf("/%s %s", keyName, i.PDFString()))
-			continue
-		}
-
-		f, ok := v.(Float)
-		if ok {
-			logstr = append(logstr, fmt.Sprintf("/%s %s", keyName, f.PDFString()))
-			continue
-		}
-
-		b, ok := v.(Boolean)
-		if ok {
-			logstr = append(logstr, fmt.Sprintf("/%s %s", keyName, b.PDFString()))
-			continue
-		}
-
-		sl, ok := v.(StringLiteral)
-		if ok {
-			logstr = append(logstr, fmt.Sprintf("/%s%s", keyName, sl.PDFString()))
-			continue
-		}
-
-		hl, ok := v.(HexLiteral)
-		if ok {
-			logstr = append(logstr, fmt.Sprintf("/%s%s", keyName, hl.PDFString()))
-			continue
-		}
-
-		if log.InfoEnabled() {
-			log.Info.Fatalf("PDFDict.PDFString(): entry of unknown object type: %T %[1]v\n", v)
+		case Dict:
+			logstr = append(logstr, fmt.Sprintf("/%s%s", keyName, v.PDFString()))
+		case Array:
+			logstr = append(logstr, fmt.Sprintf("/%s%s", keyName, v.PDFString()))
+		case IndirectRef:
+			logstr = append(logstr, fmt.Sprintf("/%s %s", keyName, v.PDFString()))
+		case Name:
+			logstr = append(logstr, fmt.Sprintf("/%s%s", keyName, v.PDFString()))
+		case Integer:
+			logstr = append(logstr, fmt.Sprintf("/%s %s", keyName, v.PDFString()))
+		case Float:
+			logstr = append(logstr, fmt.Sprintf("/%s %s", keyName, v.PDFString()))
+		case Boolean:
+			logstr = append(logstr, fmt.Sprintf("/%s %s", keyName, v.PDFString()))
+		case StringLiteral:
+			logstr = append(logstr, fmt.Sprintf("/%s%s", keyName, v.PDFString()))
+		case HexLiteral:
+			logstr = append(logstr, fmt.Sprintf("/%s%s", keyName, v.PDFString()))
+		default:
+			if log.InfoEnabled() {
+				log.Info.Fatalf("PDFDict.PDFString(): entry of unknown object type: %T %[1]v\n", v)
+			}
 		}
 	}
 

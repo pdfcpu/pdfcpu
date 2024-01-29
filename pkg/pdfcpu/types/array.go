@@ -115,28 +115,25 @@ func (a Array) indentedString(level int) string {
 			sepstr = " "
 		}
 
-		if subdict, ok := entry.(Dict); ok {
-			dictstr := subdict.indentedString(level + 1)
+		switch entry := entry.(type) {
+		case Dict:
+			dictstr := entry.indentedString(level + 1)
 			logstr = append(logstr, fmt.Sprintf("\n%[1]s%[2]s\n%[1]s", tabstr, dictstr))
 			first = true
-			continue
-		}
-
-		if array, ok := entry.(Array); ok {
-			arrstr := array.indentedString(level + 1)
+		case Array:
+			arrstr := entry.indentedString(level + 1)
 			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, arrstr))
-			continue
-		}
-
-		v := "null"
-		if entry != nil {
-			v = entry.String()
-			if n, ok := entry.(Name); ok {
-				v, _ = DecodeName(string(n))
+		default:
+			v := "null"
+			if entry != nil {
+				v = entry.String()
+				if n, ok := entry.(Name); ok {
+					v, _ = DecodeName(string(n))
+				}
 			}
-		}
 
-		logstr = append(logstr, fmt.Sprintf("%s%v", sepstr, v))
+			logstr = append(logstr, fmt.Sprintf("%s%v", sepstr, v))
+		}
 	}
 
 	logstr = append(logstr, "]")
@@ -165,66 +162,32 @@ func (a Array) PDFString() string {
 			sepstr = " "
 		}
 
-		if entry == nil {
+		switch entry := entry.(type) {
+		case nil:
 			logstr = append(logstr, fmt.Sprintf("%snull", sepstr))
+		case Dict:
+			logstr = append(logstr, entry.PDFString())
+		case Array:
+			logstr = append(logstr, entry.PDFString())
 			continue
-		}
-
-		d, ok := entry.(Dict)
-		if ok {
-			logstr = append(logstr, d.PDFString())
-			continue
-		}
-
-		a, ok := entry.(Array)
-		if ok {
-			logstr = append(logstr, a.PDFString())
-			continue
-		}
-
-		ir, ok := entry.(IndirectRef)
-		if ok {
-			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, ir.PDFString()))
-			continue
-		}
-
-		n, ok := entry.(Name)
-		if ok {
-			logstr = append(logstr, n.PDFString())
-			continue
-		}
-
-		i, ok := entry.(Integer)
-		if ok {
-			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, i.PDFString()))
-			continue
-		}
-
-		f, ok := entry.(Float)
-		if ok {
-			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, f.PDFString()))
-			continue
-		}
-
-		b, ok := entry.(Boolean)
-		if ok {
-			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, b.PDFString()))
-			continue
-		}
-		sl, ok := entry.(StringLiteral)
-		if ok {
-			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, sl.PDFString()))
-			continue
-		}
-
-		hl, ok := entry.(HexLiteral)
-		if ok {
-			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, hl.PDFString()))
-			continue
-		}
-
-		if log.InfoEnabled() {
-			log.Info.Fatalf("PDFArray.PDFString(): entry of unknown object type: %[1]T %[1]v\n", entry)
+		case IndirectRef:
+			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, entry.PDFString()))
+		case Name:
+			logstr = append(logstr, entry.PDFString())
+		case Integer:
+			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, entry.PDFString()))
+		case Float:
+			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, entry.PDFString()))
+		case Boolean:
+			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, entry.PDFString()))
+		case StringLiteral:
+			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, entry.PDFString()))
+		case HexLiteral:
+			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, entry.PDFString()))
+		default:
+			if log.InfoEnabled() {
+				log.Info.Fatalf("PDFArray.PDFString(): entry of unknown object type: %[1]T %[1]v\n", entry)
+			}
 		}
 	}
 
