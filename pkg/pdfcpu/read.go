@@ -2187,11 +2187,13 @@ func readStreamContentBlindly(rd io.Reader) (buf []byte, err error) {
 		return nil, err
 	}
 
-	var i int
-	for i = -1; i < 0; i = bytes.Index(buf, []byte("endstream")) {
-		buf, err = growBufBy(buf, defaultBufSize, rd)
-		if err != nil {
-			return nil, err
+	i := bytes.Index(buf, []byte("endstream"))
+	if i < 0 {
+		for i = -1; i < 0; i = bytes.Index(buf, []byte("endstream")) {
+			buf, err = growBufBy(buf, defaultBufSize, rd)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -2289,7 +2291,7 @@ func loadEncodedStreamContent(c context.Context, ctx *model.Context, sd *types.S
 	}
 
 	l1 := 0
-	if !fixLength {
+	if sd.StreamLength != nil {
 		l1 = int(*sd.StreamLength)
 	}
 	rawContent, err := readStreamContent(rd, l1)
