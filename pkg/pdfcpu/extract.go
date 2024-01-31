@@ -314,14 +314,7 @@ func prepareExtractImage(sd *types.StreamDict) (string, string, types.Dict, bool
 
 	return filters, lastFilter, d, imgMask
 }
-
-func img(
-	ctx *model.Context,
-	sd *types.StreamDict,
-	thumb, imgMask bool,
-	resourceID, filters, lastFilter string,
-	objNr int) (*model.Image, error) {
-
+func decodeImage(ctx *model.Context, sd *types.StreamDict, filters, lastFilter string, objNr int) error {
 	// CCITTDecoded images / (bit) masks don't have a ColorSpace attribute, but we render image files.
 	if lastFilter == filter.CCITTFax {
 		if _, err := ctx.DereferenceDictEntry(sd.Dict, "ColorSpace"); err != nil {
@@ -332,7 +325,7 @@ func img(
 	if lastFilter == filter.DCT {
 		comp, err := ColorSpaceComponents(ctx.XRefTable, sd)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		sd.CSComponents = comp
 	}
@@ -341,7 +334,7 @@ func img(
 
 	case filter.DCT, filter.JPX, filter.Flate, filter.CCITTFax, filter.RunLength:
 		if err := sd.Decode(); err != nil {
-			return nil, err
+			return err
 		}
 
 	default:
@@ -352,7 +345,25 @@ func img(
 		if log.CLIEnabled() {
 			log.CLI.Println(msg)
 		}
-		return nil, nil
+		return nil
+	}
+
+	return nil
+}
+
+func img(
+	ctx *model.Context,
+	sd *types.StreamDict,
+	thumb, imgMask bool,
+	resourceID, filters, lastFilter string,
+	objNr int) (*model.Image, error) {
+
+	if sd.FilterPipeline == nil {
+		sd.Content = sd.Raw
+	} else {
+		if err := decodeImage(ctx, sd, filters, lastFilter, objNr); err != nil {
+			return nil, err
+		}
 	}
 
 	r, t, err := RenderImage(ctx.XRefTable, sd, thumb, resourceID, objNr)
@@ -381,10 +392,6 @@ func ExtractImage(ctx *model.Context, sd *types.StreamDict, thumb bool, resource
 
 	if stub {
 		return imageStub(ctx, sd, resourceID, filters, lastFilter, decodeParms, thumb, imgMask, objNr)
-	}
-
-	if sd.FilterPipeline == nil {
-		return nil, nil
 	}
 
 	return img(ctx, sd, thumb, imgMask, resourceID, filters, lastFilter, objNr)

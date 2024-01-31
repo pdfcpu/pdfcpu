@@ -259,7 +259,7 @@ func imageForCMYKWithoutSoftMask(im *PDFImage) image.Image {
 	for y := 0; y < im.h; y++ {
 		for x := 0; x < im.w; x++ {
 			img.Set(x, y, color.CMYK{C: b[i], M: b[i+1], Y: b[i+2], K: b[i+3]})
-			i += 4
+			i += im.comp
 		}
 	}
 
@@ -773,17 +773,37 @@ func renderIndexed(xRefTable *model.XRefTable, im *PDFImage, resourceName string
 }
 
 func renderDeviceN(xRefTable *model.XRefTable, im *PDFImage, resourceName string, cs types.Array) (io.Reader, string, error) {
+	if im.comp <= 4 {
+		switch im.comp {
+		case 1:
+			// Gray
+			return renderDeviceGrayToPNG(im, resourceName)
 
-	switch im.comp {
-	case 1:
+		case 3:
+			// RGB
+			return renderDeviceRGBToPNG(im, resourceName)
+
+		case 4:
+			// CMYK
+			return renderDeviceCMYKToTIFF(im, resourceName)
+		}
+	}
+
+	alternateCS, ok := cs[2].(types.Name)
+	if !ok {
+		return nil, "", nil
+	}
+
+	switch alternateCS {
+	case model.DeviceGrayCS:
 		// Gray
 		return renderDeviceGrayToPNG(im, resourceName)
 
-	case 3:
+	case model.DeviceRGBCS:
 		// RGB
 		return renderDeviceRGBToPNG(im, resourceName)
 
-	case 4:
+	case model.DeviceCMYKCS:
 		// CMYK
 		return renderDeviceCMYKToTIFF(im, resourceName)
 	}
@@ -791,7 +811,7 @@ func renderDeviceN(xRefTable *model.XRefTable, im *PDFImage, resourceName string
 	return nil, "", nil
 }
 
-func renderFlateEncodedImage(xRefTable *model.XRefTable, sd *types.StreamDict, thumb bool, resourceName string, objNr int) (io.Reader, string, error) {
+func renderImage(xRefTable *model.XRefTable, sd *types.StreamDict, thumb bool, resourceName string, objNr int) (io.Reader, string, error) {
 	// If color space is CMYK then write .tif else write .png
 
 	pdfImage, err := pdfImage(xRefTable, sd, thumb, objNr)
@@ -820,7 +840,7 @@ func renderFlateEncodedImage(xRefTable *model.XRefTable, sd *types.StreamDict, t
 
 		default:
 			if log.InfoEnabled() {
-				log.Info.Printf("renderFlateEncodedImage: objNr=%d, unsupported name colorspace %s\n", objNr, cs.String())
+				log.Info.Printf("renderImage: objNr=%d, unsupported name colorspace %s\n", objNr, cs.String())
 			}
 		}
 
@@ -846,7 +866,7 @@ func renderFlateEncodedImage(xRefTable *model.XRefTable, sd *types.StreamDict, t
 
 		default:
 			if log.InfoEnabled() {
-				log.Info.Printf("renderFlateEncodedImage: objNr=%d, unsupported array colorspace %s\n", objNr, csn)
+				log.Info.Printf("renderImage: objNr=%d, unsupported array colorspace %s\n", objNr, csn)
 			}
 		}
 
@@ -908,12 +928,16 @@ func renderDCTToPNG(xRefTable *model.XRefTable, sd *types.StreamDict, thumb bool
 func RenderImage(xRefTable *model.XRefTable, sd *types.StreamDict, thumb bool, resourceName string, objNr int) (io.Reader, string, error) {
 	// Image compression is the last filter in the pipeline.
 
+	if len(sd.FilterPipeline) == 0 {
+		return renderImage(xRefTable, sd, thumb, resourceName, objNr)
+	}
+
 	f := sd.FilterPipeline[len(sd.FilterPipeline)-1].Name
 
 	switch f {
 
 	case filter.Flate, filter.CCITTFax, filter.RunLength:
-		return renderFlateEncodedImage(xRefTable, sd, thumb, resourceName, objNr)
+		return renderImage(xRefTable, sd, thumb, resourceName, objNr)
 
 	case filter.DCT:
 		if sd.CSComponents == 4 {
