@@ -135,11 +135,18 @@ func validateFontDescriptorPart1(xRefTable *model.XRefTable, d types.Dict, dictN
 		return err
 	}
 
-	_, err = validateNameEntry(xRefTable, d, dictName, "FontName", REQUIRED, model.V10, nil)
+	required := true
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		required = false
+	}
+	_, err = validateNameEntry(xRefTable, d, dictName, "FontName", required, model.V10, nil)
 	if err != nil {
-		_, err = validateStringEntry(xRefTable, d, dictName, "FontName", REQUIRED, model.V10, nil)
+		_, err = validateStringEntry(xRefTable, d, dictName, "FontName", required, model.V10, nil)
 		if err != nil {
-			return err
+			if xRefTable.ValidationMode != model.ValidationRelaxed {
+				return err
+			}
+			reportSpecViolation(xRefTable, err)
 		}
 	}
 

@@ -102,8 +102,12 @@ func validatePageContents(xRefTable *model.XRefTable, d types.Dict) (hasContents
 
 		}
 
-		if xRefTable.ValidationMode != model.ValidationRelaxed {
-			return false, errors.Errorf("validatePageContents: empty page content array detected")
+		if !hasContents {
+			err := errors.Errorf("validatePageContents: empty page content array detected")
+			if xRefTable.ValidationMode == model.ValidationStrict {
+				return false, err
+			}
+			reportSpecViolation(xRefTable, err)
 		}
 
 	default:
