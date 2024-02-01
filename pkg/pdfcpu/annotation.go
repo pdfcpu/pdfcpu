@@ -494,7 +494,7 @@ func removeAllAnnotations(
 			return false, err
 		}
 		objNr := ir.ObjectNumber.Value()
-		if err := ctx.DeleteObject(ir); err != nil {
+		if err = ctx.FreeObject(objNr); err != nil {
 			return false, err
 		}
 		if incr {
@@ -502,6 +502,7 @@ func removeAllAnnotations(
 			ctx.Write.IncrementWithObjNr(objNr)
 		}
 	}
+
 	annots, _ := obj.(types.Array)
 
 	for _, o := range annots {
@@ -928,6 +929,13 @@ func RemoveAnnotations(ctx *model.Context, selectedPages types.IntSet, idsAndTyp
 		if !removeAll && len(idsAndTypes) == 0 && len(objNrSet) == 0 {
 			break
 		}
+	}
+
+	if removeAll {
+		// Hacky, actually we only want to remove struct tree elements using removed annotations
+		// but this is most probably what we want anyway.
+		root, _ := ctx.Catalog()
+		root.Delete("StructTreeRoot")
 	}
 
 	return removed, nil

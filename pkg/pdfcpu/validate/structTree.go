@@ -90,7 +90,7 @@ func validateObjectReferenceDict(xRefTable *model.XRefTable, d types.Dict) error
 	}
 
 	if obj == nil {
-		return errors.New("pdfcpu: validateObjectReferenceDict: missing required entry \"Obj\"")
+		return errors.Errorf("pdfcpu: validateObjectReferenceDict: missing obj#%s", ir.ObjectNumber)
 	}
 
 	return nil
