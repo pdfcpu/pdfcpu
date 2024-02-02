@@ -95,19 +95,24 @@ func migrateAnnots(o types.Object, pageIndRef types.IndirectRef, ctxSrc, ctxDest
 	}
 
 	for i, v := range arr {
-		o := v.(types.IndirectRef)
-		objNr := o.ObjectNumber.Value()
-		if migrated[objNr] > 0 {
-			o.ObjectNumber = types.Integer(migrated[objNr])
+		var d types.Dict
+		o, ok := v.(types.IndirectRef)
+		if ok {
+			objNr := o.ObjectNumber.Value()
+			if migrated[objNr] > 0 {
+				o.ObjectNumber = types.Integer(migrated[objNr])
+				arr[i] = o
+				continue
+			}
+			o1, err := migrateIndRef(&o, ctxSrc, ctxDest, migrated)
+			if err != nil {
+				return nil, err
+			}
 			arr[i] = o
-			continue
+			d = o1.(types.Dict)
+		} else {
+			d = v.(types.Dict)
 		}
-		o1, err := migrateIndRef(&o, ctxSrc, ctxDest, migrated)
-		if err != nil {
-			return nil, err
-		}
-		arr[i] = o
-		d := o1.(types.Dict)
 		for k, v := range d {
 			if k == "P" {
 				d["P"] = pageIndRef
@@ -160,7 +165,10 @@ func migrateFields(d types.Dict, fieldsSrc, fieldsDest *types.Array, ctxSrc, ctx
 		return err
 	}
 	for _, v := range annots {
-		indRef := v.(types.IndirectRef)
+		indRef, ok := v.(types.IndirectRef)
+		if !ok {
+			continue
+		}
 		d, err := ctxDest.DereferenceDict(indRef)
 		if err != nil {
 			return err
@@ -179,7 +187,10 @@ func migrateFields(d types.Dict, fieldsSrc, fieldsDest *types.Array, ctxSrc, ctx
 			continue
 		}
 		for _, v := range *fieldsSrc {
-			ir := v.(types.IndirectRef)
+			ir, ok := v.(types.IndirectRef)
+			if !ok {
+				continue
+			}
 			objNr := ir.ObjectNumber.Value()
 			if migrated[objNr] == indRef.ObjectNumber.Value() {
 				*fieldsDest = append(*fieldsDest, indRef)
@@ -224,7 +235,10 @@ func migrateFormDict(d types.Dict, fields types.Array, ctxSrc, ctxDest *model.Co
 
 func detectMigratedAnnot(ctxSrc *model.Context, indRef *types.IndirectRef, kids types.Array, migrated map[int]int) (bool, error) {
 	for _, v := range kids {
-		ir := v.(types.IndirectRef)
+		ir, ok := v.(types.IndirectRef)
+		if !ok {
+			continue
+		}
 		objNr := ir.ObjectNumber.Value()
 		if migrated[objNr] == indRef.ObjectNumber.Value() {
 			return true, nil

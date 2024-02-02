@@ -24,6 +24,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+var errInvalidPageAnnotArray = errors.New("pdfcpu: validatePageAnnotations: page annotation array without indirect references.")
+
 func validateAAPLAKExtrasDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
 
 	// No documentation for this PDF-Extension - purely speculative implementation.
@@ -1448,8 +1450,14 @@ func validateBorderArray(xRefTable *model.XRefTable, a types.Array) bool {
 				}
 
 			}
+
 			if all0 {
-				return false
+				if xRefTable.ValidationMode != model.ValidationRelaxed {
+					return false
+				}
+				if log.ValidateEnabled() {
+					log.Validate.Println("digesting invalid dash pattern array: %s", a1)
+				}
 			}
 
 			continue
@@ -1716,10 +1724,16 @@ func validatePageAnnotations(xRefTable *model.XRefTable, d types.Dict) error {
 				return err
 			}
 			if annotsDict == nil {
-				return errors.New("pdfcpu: validatePageAnnotations: corrupted annotation dict")
+				continue
 			}
+		} else if xRefTable.ValidationMode != model.ValidationRelaxed {
+			return errInvalidPageAnnotArray
 		} else if annotsDict, ok = v.(types.Dict); !ok {
-			return errors.New("pdfcpu: validatePageAnnotations: corrupted array of indrefs")
+			return errInvalidPageAnnotArray
+		} else {
+			if log.ValidateEnabled() {
+				log.Validate.Println("digesting page annotation array w/o indirect references")
+			}
 		}
 
 		hasTrapNet, err = validateAnnotationDict(xRefTable, annotsDict)

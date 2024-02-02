@@ -31,6 +31,17 @@ import (
 	"github.com/pkg/errors"
 )
 
+func reportSpecViolation(xRefTable *model.XRefTable, err error) {
+	// TODO Apply across code base.
+	pre := fmt.Sprintf("digesting spec violation around obj#(%d)", xRefTable.CurObj)
+	if log.ValidateEnabled() {
+		log.CLI.Printf("%s: %v\n", pre, err)
+	}
+	if log.CLIEnabled() {
+		log.Validate.Printf("%s: %v\n", pre, err)
+	}
+}
+
 // XRefTable validates a PDF cross reference table obeying the validation mode.
 func XRefTable(xRefTable *model.XRefTable) error {
 	if log.InfoEnabled() {

@@ -222,7 +222,7 @@ func Text(o types.Object) (string, error) {
 	case types.HexLiteral:
 		return types.HexLiteralToString(obj)
 	default:
-		return "", errors.Errorf("pdfcpu: text: corrupt -  %v\n", obj)
+		return "", errors.Errorf("pdfcpu: corrupt text: %v\n", obj)
 	}
 }
 

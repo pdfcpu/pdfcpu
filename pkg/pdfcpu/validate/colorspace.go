@@ -597,8 +597,10 @@ func validateColorSpaceArray(xRefTable *model.XRefTable, a types.Array, excludeP
 	case model.DeviceNCS:
 		err = validateDeviceNColorSpace(xRefTable, a, model.V13)
 
-	// Relaxed validation:
-	case model.DeviceRGBCS:
+	case model.DeviceGrayCS, model.DeviceRGBCS, model.DeviceCMYKCS:
+		if xRefTable.ValidationMode != model.ValidationRelaxed {
+			err = errors.Errorf("pdfcpu: validateColorSpaceArray: undefined color space: %s\n", name)
+		}
 
 	default:
 		err = errors.Errorf("pdfcpu: validateColorSpaceArray: undefined color space: %s\n", name)
