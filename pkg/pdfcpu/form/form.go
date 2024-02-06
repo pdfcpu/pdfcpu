@@ -44,7 +44,7 @@ const (
 	FTRadioButtonGroup
 )
 
-func (ft FieldType) string() string {
+func (ft FieldType) String() string {
 	var s string
 	switch ft {
 	case FTText:
@@ -794,7 +794,7 @@ func renderMultiPageFields(ctx *model.Context, m map[string][]Field, fm *FieldMe
 				l = "*"
 			}
 
-			t := f.Typ.string()
+			t := f.Typ.String()
 
 			pageFill := strings.Repeat(" ", fm.pageMax-runewidth.StringWidth(f.pageString()))
 			idFill := strings.Repeat(" ", fm.idMax-runewidth.StringWidth(f.ID))
@@ -867,7 +867,7 @@ func renderFields(ctx *model.Context, fs []Field, fm *FieldMeta) ([]string, erro
 			l = "*"
 		}
 
-		t := f.Typ.string()
+		t := f.Typ.String()
 
 		pageFill := strings.Repeat(" ", fm.pageMax-runewidth.StringWidth(f.pageString()))
 		idFill := strings.Repeat(" ", fm.idMax-runewidth.StringWidth(f.ID))
