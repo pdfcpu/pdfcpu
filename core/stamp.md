@@ -77,7 +77,7 @@ Use the following format strings:
 * %P ... total pages
          
 ```
-$ pdfcpu stamp add -mode text "Page %p of %P" -- "sc:1.0 abs, pos:bc, rot:0" in.pdf out.pdf
+$ pdfcpu stamp add -mode text "Page %p of %P" -- "scale:1.0 abs, pos:bc, rot:0" in.pdf out.pdf
 ```
 
 <br>
@@ -125,6 +125,7 @@ but `op: .7` will do the job.
 | parameter | description                            | values                                              | default
 |:-----------------|:--------------------------------|:----------------------------------------------------|:---------
 | fontname         | a basefont                      | Please refer to `pdfcpu fonts list`                 | Helvetica
+| scriptname       | ISO-15924 code                  | Hans, Hant, Hira, Kana, Jpan, Hang, Kore            |
 | points           | fontsize in points              | in combination with absolute scaling only           | 24
 | rtl              | right to left userfont          | on/off, true/false, t/f                             | off
 | position         | the stamps lower left corner    | anchors: `tl, tc, tr, l, c, r, bl, bc, br`          | c
@@ -156,6 +157,7 @@ Only one of rotation and diagonal is allowed.
 The following description parameters are for text based stamps only:
 
 * fontname
+* scriptname (for CJK fonts if you want to avoid font embedding)
 * points
 * aligntext
 * strokecolor 
@@ -182,7 +184,7 @@ The following description parameters are for text based stamps only:
 #### Default description
 
 ```sh
-'f:Helvetica, points:24, rtl:off, sc:0.5 rel, pos:c, off:0 0, align:c, fillc:#808080, strokec:#808080, rot:0, d:1, op:1, mo:0, ma:0, bo:0'
+'f:Helvetica, points:24, rtl:off, scale:0.5 rel, pos:c, off:0 0, align:c, fillc:#808080, strokec:#808080, rot:0, d:1, op:1, mo:0, ma:0, bo:0'
 ```
 The default stamp configuration is:
 
@@ -224,7 +226,7 @@ $ pdfcpu stamp add -mode text -- "This is a stamp" "" in.pdf out.pdf
 Create a stamp using scale factor 1:
 
 ```sh
-$ pdfcpu stamp add -mode text -- "This is a stamp" "sc:1" in.pdf out.pdf
+$ pdfcpu stamp add -mode text -- "This is a stamp" "scale:1" in.pdf out.pdf
 ```
 
 <p align="center">
@@ -237,7 +239,7 @@ $ pdfcpu stamp add -mode text -- "This is a stamp" "sc:1" in.pdf out.pdf
 Create a stamp along the second diagonale using scale factor 0.9, default render mode `fill` and a fill color:
 
 ```sh
-$ pdfcpu stamp add -mode text -- "This is a stamp" "sc:.9, d:2, c:.6 .2 .9 in.pdf out.pdf
+$ pdfcpu stamp add -mode text -- "This is a stamp" "scale:.9, d:2, c:.6 .2 .9 in.pdf out.pdf
 ```
 
 <p align="center">
@@ -249,7 +251,7 @@ $ pdfcpu stamp add -mode text -- "This is a stamp" "sc:.9, d:2, c:.6 .2 .9 in.pd
 Create a stamp with 0 degree rotation using scale factor 0.9 and render mode `stroke`:
 
 ```sh
-$ pdfcpu stamp add -mode text -- "This is a stamp" "sc:.9, rot:0, mo:1" in.pdf out.pdf
+$ pdfcpu stamp add -mode text -- "This is a stamp" "scale:.9, rot:0, mo:1" in.pdf out.pdf
 ```
 
 <p align="center">
@@ -285,9 +287,9 @@ $ pdfcpu stamp add -mode text -- "Some multi\nline text" "ma:5, bo:7 round .3 .7
 Create a stamp with default rotation, using scale factor 1, font size 48, default render mode `fill`, a fill color and increasing opacity from 0.3 to 1. By setting an opacity < 1 you can fake a watermark. This may be useful in scenarios where `pdfcpu watermark` does not produce satisfying results for a particular PDF file:
 
 ```sh
-$ pdfcpu stamp add -mode text -- "Draft" "points:48, sc:1, fillc:.8 .8 .4, op:.3" in1.pdf out1.pdf
-$ pdfcpu stamp add -mode text -- "Draft" "points:48, sc:1, fillc:.8 .8 .4, op:0.6" in2.pdf out2.pdf
-$ pdfcpu stamp add -mode text -- "Draft" "points:48, sc:1, fillc:.8 .8 .4, op:1" in3.pdf out3.pdf
+$ pdfcpu stamp add -mode text -- "Draft" "points:48, scale:1, fillc:.8 .8 .4, op:.3" in1.pdf out1.pdf
+$ pdfcpu stamp add -mode text -- "Draft" "points:48, scale:1, fillc:.8 .8 .4, op:0.6" in2.pdf out2.pdf
+$ pdfcpu stamp add -mode text -- "Draft" "points:48, scale:1, fillc:.8 .8 .4, op:1" in3.pdf out3.pdf
 ```
 
 <p align="center">
@@ -386,7 +388,7 @@ $ pdfcpu stamp add -mode text -- "Footer" "pos:bc, scale: 1.0 abs, rot:0, c: .5 
 
 Let's add a logo in the top right corner.
 ```sh
-$ pdfcpu stamp add -mode image -- "logo.png" "pos:tr, rot:0, sc:.2" work.pdf
+$ pdfcpu stamp add -mode image -- "logo.png" "pos:tr, rot:0, scale:.2" work.pdf
 ```
 <p align="center">
   <img style="border-color:silver" border="1" src="resources/4exp.png" height="300">
@@ -429,6 +431,7 @@ pages: all
   <img style="border-color:silver" border="1" src="https://user-images.githubusercontent.com/11322155/98120442-3e1a8400-1eae-11eb-9918-9f9b755d841d.png" height="300">
 </p>
 
+TODO: Explain avoiding font embedding for CJK fonts by configuring *scriptname*
 
 ### Right-to-left, Arabic
 

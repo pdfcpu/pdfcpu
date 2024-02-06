@@ -89,6 +89,7 @@ but `op: .7` will do the job.
 | parameter | description                            | values                                              | default
 |:-----------------|:--------------------------------|:----------------------------------------------------|:---------
 | fontname         | a basefont                      | Please refer to `pdfcpu fonts list`                 | Helvetica
+| scriptname       | ISO-15924 code                  | Hans, Hant, Hira, Kana, Jpan, Hang, Kore            |
 | points           | fontsize in points              | in combination with absolute scaling only           | 24
 | rtl              | right to left userfont          | on/off, true/false, t/f                             | off
 | position         | the stamps lower left corner    | anchors: `tl, tc, tr, l, c, r, bl, bc, br`          | c
@@ -119,6 +120,7 @@ Only one of rotation and diagonal is allowed.
 The following description parameters are for text based watermarks only:
 
 * fontname
+* scriptname (for CJK fonts if you want to avoid font embedding)
 * points
 * aligntext
 * strokecolor
@@ -187,7 +189,7 @@ $ pdfcpu watermark add -mode text -- "This is a watermark" "" in.pdf out.pdf
 Create a watermark using scale factor 1:
 
 ```sh
-$ pdfcpu watermark add -mode text -- "This is a watermark" "sc:1" in.pdf out.pdf
+$ pdfcpu watermark add -mode text -- "This is a watermark" "scale:1" in.pdf out.pdf
 ```
 
 <p align="center">
@@ -200,7 +202,7 @@ $ pdfcpu watermark add -mode text -- "This is a watermark" "sc:1" in.pdf out.pdf
 Create a watermark along the second diagonale using scale factor 0.9, default render mode `fill` and a fill color:
 
 ```sh
-$ pdfcpu watermark add -mode text -- "This is a watermark" "sc:.9, d:2, c:.6 .2 .9" in.pdf out.pdf
+$ pdfcpu watermark add -mode text -- "This is a watermark" "scale:.9, d:2, c:.6 .2 .9" in.pdf out.pdf
 ```
 
 <p align="center">
@@ -212,7 +214,7 @@ $ pdfcpu watermark add -mode text -- "This is a watermark" "sc:.9, d:2, c:.6 .2 
 Create a watermark with 0 degree rotation using scale factor 0.9 and render mode `stroke`:
 
 ```sh
-$ pdfcpu watermark add -mode text -- "This is a watermark" "sc:.9, rot:0, mo:1" in.pdf out.pdf
+$ pdfcpu watermark add -mode text -- "This is a watermark" "scale:.9, rot:0, mo:1" in.pdf out.pdf
 ```
 
 <p align="center">
@@ -224,7 +226,7 @@ $ pdfcpu watermark add -mode text -- "This is a watermark" "sc:.9, rot:0, mo:1" 
 Create a watermark with a counterclockwise rotation of 45 degrees using scale factor 1, render mode `fill & stroke` and a fill color:
 
 ```sh
-$ pdfcpu watermark add -mode text -- "This is a watermark" "sc:1, rot:45, mo:2, c:.2 .7 .9" in.pdf out.pdf
+$ pdfcpu watermark add -mode text -- "This is a watermark" "scale:1, rot:45, mo:2, c:.2 .7 .9" in.pdf out.pdf
 ```
 
 <p align="center">
@@ -282,7 +284,7 @@ $ pdfcpu watermark add -mode image -- "pic.jpg" "" in.pdf out.pdf
 Create a watermark using 0 degree rotation and relative scaling of 1.0:
 
 ```sh
-$ pdfcpu watermark add -mode image -- "pic.jpg" "sc:1 rel, rot:0" in.pdf out.pdf
+$ pdfcpu watermark add -mode image -- "pic.jpg" "scale:1 rel, rot:0" in.pdf out.pdf
 ```
 
 <p align="center">
@@ -294,7 +296,7 @@ $ pdfcpu watermark add -mode image -- "pic.jpg" "sc:1 rel, rot:0" in.pdf out.pdf
 Create a watermark using 0 degree rotation and absolute scaling of 1.0:
 
 ```sh
-$ pdfcpu watermark add -mode image -- "pic.jpg" "sc:1 abs, rot:0" in.pdf out.pdf
+$ pdfcpu watermark add -mode image -- "pic.jpg" "scale:1 abs, rot:0" in.pdf out.pdf
 ```
 
 <p align="center">
@@ -318,7 +320,7 @@ $ pdfcpu watermark add -mode image -- "pic.jpg" "rotation:-30, scalefactor:1 abs
 Create a watermark using a clockwise rotation of 30 degrees and absolute scaling of 0.25:
 
 ```sh
-$ pdfcpu watermark add -mode image -- "pic.jpg" "rot:-30, sc:.25 abs" in.pdf out.pdf
+$ pdfcpu watermark add -mode image -- "pic.jpg" "rot:-30, scale:.25 abs" in.pdf out.pdf
 ```
 
 <p align="center">
