@@ -147,7 +147,7 @@ The following description parameters are for text based watermarks only:
 #### Default description
 
 ```sh
-'f:Helvetica, points:24, rtl:off, sc:0.5 rel, pos:c, off:0 0, align:c, fillc:#808080, strokec:#808080, rot:0, d:1, op:1, mo:0, ma:0, bo:0'
+'f:Helvetica, points:24, rtl:off, scale:0.5 rel, pos:c, off:0 0, align:c, fillc:#808080, strokec:#808080, rot:0, d:1, op:1, mo:0, ma:0, bo:0'
 ```
 
 The default watermark configuration is:
