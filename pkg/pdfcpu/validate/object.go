@@ -1032,7 +1032,7 @@ func decodeString(o types.Object, dictName, entryName string) (s string, err err
 	case types.HexLiteral:
 		s, err = types.HexLiteralToString(o)
 	default:
-		err = errors.Errorf("pdfcpu: decodeString: dict=%s entry=%s invalid type", dictName, entryName)
+		err = errors.Errorf("pdfcpu: decodeString: dict=%s entry=%s invalid type %T", dictName, entryName, o)
 	}
 	return s, err
 }

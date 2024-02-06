@@ -234,6 +234,10 @@ func validateFormFieldDA(xRefTable *model.XRefTable, d types.Dict, dictName stri
 		if err != nil {
 			return false, err
 		}
+		if xRefTable.ValidationMode == model.ValidationRelaxed && da != nil {
+			// Repair
+			d["DA"] = types.StringLiteral(*da)
+		}
 
 		return da != nil && *da != "", nil
 	}
@@ -551,9 +555,17 @@ func validateForm(xRefTable *model.XRefTable, rootDict types.Dict, required bool
 	dictName := "acroFormDict"
 
 	// DA: optional, string
-	da, err := validateStringEntry(xRefTable, d, dictName, "DA", OPTIONAL, model.V10, validateDA)
+	validate := validateDA
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		validate = validateDARelaxed
+	}
+	da, err := validateStringEntry(xRefTable, d, dictName, "DA", OPTIONAL, model.V10, validate)
 	if err != nil {
 		return err
+	}
+	if xRefTable.ValidationMode == model.ValidationRelaxed && da != nil {
+		// Repair
+		d["DA"] = types.StringLiteral(*da)
 	}
 
 	requiresDA := da == nil || len(*da) == 0

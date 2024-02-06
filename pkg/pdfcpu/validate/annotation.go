@@ -376,9 +376,17 @@ func validateAnnotationDictLink(xRefTable *model.XRefTable, d types.Dict, dictNa
 func validateAnnotationDictFreeTextPart1(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 
 	// DA, required, string
-	_, err := validateStringEntry(xRefTable, d, dictName, "DA", REQUIRED, model.V10, nil)
+	validate := validateDA
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		validate = validateDARelaxed
+	}
+	da, err := validateStringEntry(xRefTable, d, dictName, "DA", REQUIRED, model.V10, validate)
 	if err != nil {
 		return err
+	}
+	if xRefTable.ValidationMode == model.ValidationRelaxed && da != nil {
+		// Repair
+		d["DA"] = types.StringLiteral(*da)
 	}
 
 	// Q, optional, integer, since V1.4, 0,1,2
@@ -1177,9 +1185,17 @@ func validateAnnotationDictRedact(xRefTable *model.XRefTable, d types.Dict, dict
 	}
 
 	// DA, required, byte string
-	_, err = validateStringEntry(xRefTable, d, dictName, "DA", REQUIRED, model.V10, nil)
+	validate := validateDA
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		validate = validateDARelaxed
+	}
+	da, err := validateStringEntry(xRefTable, d, dictName, "DA", REQUIRED, model.V10, validate)
 	if err != nil {
 		return err
+	}
+	if xRefTable.ValidationMode == model.ValidationRelaxed && da != nil {
+		// Repair
+		d["DA"] = types.StringLiteral(*da)
 	}
 
 	// Q, optional, integer
