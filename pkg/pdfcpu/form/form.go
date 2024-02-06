@@ -218,12 +218,34 @@ func isField(xRefTable *model.XRefTable, indRef types.IndirectRef, fields types.
 func extractStringSlice(a types.Array) ([]string, error) {
 	var ss []string
 	for _, o := range a {
-		sl, _ := o.(types.StringLiteral)
+		sl, ok := o.(types.StringLiteral)
+		if ok {
+			s, err := types.StringLiteralToString(sl)
+			if err != nil {
+				return nil, err
+			}
+			s = strings.TrimSpace(s)
+			if len(s) > 0 {
+				ss = append(ss, s)
+			}
+			continue
+		}
+		arr, ok := o.(types.Array)
+		if !ok || len(arr) != 2 {
+			return nil, errors.New("corrupt choice field")
+		}
+		sl, ok = arr[1].(types.StringLiteral)
+		if !ok {
+			return nil, errors.New("corrupt choice field")
+		}
 		s, err := types.StringLiteralToString(sl)
 		if err != nil {
 			return nil, err
 		}
-		ss = append(ss, s)
+		s = strings.TrimSpace(s)
+		if len(s) > 0 {
+			ss = append(ss, s)
+		}
 	}
 	return ss, nil
 }

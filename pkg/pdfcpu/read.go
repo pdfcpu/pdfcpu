@@ -2949,6 +2949,10 @@ func handlePermissions(ctx *model.Context) error {
 		return errors.New("pdfcpu: corrupted permissions after upw ok")
 	}
 
+	if ctx.OwnerPW == "" && ctx.UserPW == "" {
+		return nil
+	}
+
 	// Double check minimum permissions for pdfcpu processing.
 	if !hasNeededPermissions(ctx.Cmd, ctx.E) {
 		return errors.New("pdfcpu: operation restriced via pdfcpu's permission bits setting")
