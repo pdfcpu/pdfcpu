@@ -306,6 +306,7 @@ func (rbg *RadioButtonGroup) renderButtonLabels(p *model.Page, pageNr int, fonts
 
 	td := model.TextDescriptor{
 		FontName: fontName,
+		Embed:    true,
 		FontKey:  id,
 		FontSize: fontSize,
 		Scale:    1.,
@@ -932,6 +933,7 @@ func (rbg *RadioButtonGroup) prepLabel(p *model.Page, pageNr int, fonts model.Fo
 	td := model.TextDescriptor{
 		Text:     v,
 		FontName: fontName,
+		Embed:    true,
 		FontKey:  id,
 		FontSize: f.Size,
 		HAlign:   l.HorAlign,

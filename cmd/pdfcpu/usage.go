@@ -337,7 +337,7 @@ content ... extract raw page content
          Use the following format strings:
                %p ... current page number
                %P ... total pages
-         eg. pdfcpu stamp add -mode text -- "Page %p of %P" "sc:1.0 abs, pos:bc, rot:0" in.pdf out.pdf
+         eg. pdfcpu stamp add -mode text -- "Page %p of %P" "scale:1.0 abs, pos:bc, rot:0" in.pdf out.pdf
    
    2) image based
       -mode image imageFileName
@@ -354,7 +354,7 @@ content ... extract raw page content
          Eg: pdfcpu stamp add -mode pdf -- "stamp.pdf" "" in.pdf out.pdf ... multistamp all pages of in.pdf with ascending pages of stamp.pdf
    
       -mode pdf PDFFileName:startPage#Src:startPage#Dest
-         Customize your multistamp by by starting with startPage#Src of a stamp PDF file.
+         Customize your multistamp by starting with startPage#Src of a stamp PDF file.
          Apply repeatedly pages of the stamp file to inFile starting at startPage#Dest.
          Eg: pdfcpu stamp add -mode pdf -- "stamp.pdf:2:3" "" in.pdf out.pdf ... multistamp starting with page 2 of stamp.pdf onto page 3 of in.pdf
    `
@@ -367,7 +367,7 @@ content ... extract raw page content
          Use the following format strings:
                %p ... current page number
                %P ... total pages
-         eg. pdfcpu watermark add -mode text -- "Page %p of %P" "sc:1.0 abs, pos:bc, rot:0" in.pdf out.pdf
+         eg. pdfcpu watermark add -mode text -- "Page %p of %P" "scale:1.0 abs, pos:bc, rot:0" in.pdf out.pdf
    
    2) image based
       -mode image imageFileName
@@ -384,7 +384,7 @@ content ... extract raw page content
          Eg: pdfcpu watermark add -mode pdf -- "watermark.pdf" "" in.pdf out.pdf ... multiwatermark all pages of in.pdf with ascending pages of watermark.pdf
 
       -mode pdf PDFFileName:startPage#Src:startPage#Dest
-         Customize your multiwatermark by by starting with startPage#Src of a watermark PDF file.
+         Customize your multiwatermark by starting with startPage#Src of a watermark PDF file.
          Apply repeatedly pages of the watermark file to inFile starting at startPage#Dest.
          Eg: pdfcpu watermark add -mode pdf -- "watermark.pdf:2:3" "" in.pdf out.pdf ... multiwatermark starting with page 2 of watermark.pdf onto page 3 of in.pdf
 
@@ -395,9 +395,17 @@ content ... extract raw page content
 
 <description> is a comma separated configuration string containing these optional entries:
    
-   (defaults: "font:Helvetica, points:24, rtl:off, pos:c, off:0,0 sc:0.5 rel, rot:0, d:1, op:1, m:0 and for all colors: 0.5 0.5 0.5")
+   (defaults: "font:Helvetica, points:24, rtl:off, pos:c, off:0,0 scale:0.5 rel, rot:0, d:1, op:1, m:0 and for all colors: 0.5 0.5 0.5")
 
    fontname:         Please refer to "pdfcpu fonts list"
+
+   scriptname:       to avoid embedding of big font files
+
+                     ISO-15924 code    CID System Info
+                     Hans              UniGB-UTF16-H  / GB1
+                     Hant              UniCNS-UTF16-H / CNS1
+                     Hira, Kana, Jpan  UniJIS-UTF16-H / Japan1
+                     Hang, Kore        UniKS-UTF16-H  / KR
 
    points:           fontsize in points, in combination with absolute scaling only.
 
@@ -458,9 +466,9 @@ A color value: 3 color intensities, where 0.0 < i < 1.0, eg 1.0,
 
 All configuration string parameters support completion.
 
-e.g. "pos:bl, off: 20 5"   "rot:45"                 "op:0.5, sc:0.5 abs, rot:0"
-     "d:2"                 "sc:.75 abs, points:48"  "rot:-90, scale:0.75 rel"
-     "f:Courier, sc:0.75, str: 0.5 0.0 0.0, rot:20"
+e.g. "pos:bl, off: 20 5"   "rot:45"                 "op:0.5, scale:0.5 abs, rot:0"
+     "d:2"                 "scale:.75 abs, points:48"  "rot:-90, scale:0.75 rel"
+     "f:Courier, scale:0.75, str: 0.5 0.0 0.0, rot:20"
 
 
 `

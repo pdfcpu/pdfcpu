@@ -36,6 +36,7 @@ type TextDescriptor struct {
 	Text           string              // A multi line string using \n for line breaks.
 	FontName       string              // Name of the core or user font to be used.
 	RTL            bool                // Right to left user font.
+	Embed          bool                // Embed font.
 	FontKey        string              // Resource id registered for FontName.
 	FontSize       int                 // Fontsize in points.
 	X, Y           float64             // Position of first char's baseline.
@@ -172,13 +173,13 @@ func calcBoundingBoxForLines(lines []string, x, y float64, fontName string, font
 	return box, maxLine
 }
 
-func PrepBytes(xRefTable *XRefTable, s, fontName string, cjk, rtl bool) string {
+func PrepBytes(xRefTable *XRefTable, s, fontName string, embed, rtl bool) string {
 	if font.IsUserFont(fontName) {
 		if rtl {
 			s = types.Reverse(s)
 		}
 		bb := []byte{}
-		if cjk {
+		if !embed {
 			for _, r := range s {
 				b := make([]byte, 2)
 				binary.BigEndian.PutUint16(b, uint16(r))
@@ -212,7 +213,7 @@ func PrepBytes(xRefTable *XRefTable, s, fontName string, cjk, rtl bool) string {
 }
 
 func writeStringToBuf(xRefTable *XRefTable, w io.Writer, s string, x, y float64, td TextDescriptor) {
-	s = PrepBytes(xRefTable, s, td.FontName, false, td.RTL)
+	s = PrepBytes(xRefTable, s, td.FontName, td.Embed, td.RTL)
 	fmt.Fprintf(w, "BT 0 Tw %.2f %.2f %.2f RG %.2f %.2f %.2f rg %.2f %.2f Td %d Tr (%s) Tj ET ",
 		td.StrokeCol.R, td.StrokeCol.G, td.StrokeCol.B, td.FillCol.R, td.FillCol.G, td.FillCol.B, x, y, td.RMode, s)
 }
@@ -249,8 +250,8 @@ func horAdjustBoundingBoxForLines(r, box *types.Rectangle, dx, dy float64, x, y 
 	}
 }
 
-func prepJustifiedLine(xRefTable *XRefTable, lines *[]string, strbuf []string, strWidth, w float64, fontSize int, fontName string, rtl bool) {
-	blank := PrepBytes(xRefTable, " ", fontName, false, false)
+func prepJustifiedLine(xRefTable *XRefTable, lines *[]string, strbuf []string, strWidth, w float64, fontSize int, fontName string, embed, rtl bool) {
+	blank := PrepBytes(xRefTable, " ", fontName, embed, false)
 	var sb strings.Builder
 	sb.WriteString("[")
 	wc := len(strbuf)
@@ -260,7 +261,7 @@ func prepJustifiedLine(xRefTable *XRefTable, lines *[]string, strbuf []string, s
 		if rtl {
 			j = wc - 1 - i
 		}
-		s := PrepBytes(xRefTable, strbuf[j], fontName, false, rtl)
+		s := PrepBytes(xRefTable, strbuf[j], fontName, embed, rtl)
 		sb.WriteString(fmt.Sprintf(" (%s)", s))
 		if i < wc-1 {
 			sb.WriteString(fmt.Sprintf(" %d (%s)", -int(dx), blank))
@@ -273,7 +274,7 @@ func prepJustifiedLine(xRefTable *XRefTable, lines *[]string, strbuf []string, s
 func newPrepJustifiedString(
 	xRefTable *XRefTable,
 	fontName string,
-	fontSize int) func(lines *[]string, s string, w float64, fontName string, fontSize *int, lastline, parIndent, rtl bool) int {
+	fontSize int) func(lines *[]string, s string, w float64, fontName string, fontSize *int, lastline, parIndent, cjk, rtl bool) int {
 
 	// Not yet rendered content.
 	strbuf := []string{}
@@ -289,11 +290,11 @@ func newPrepJustifiedString(
 
 	blankWidth := font.TextWidth(" ", fontName, fontSize)
 
-	return func(lines *[]string, s string, w float64, fontName string, fontSize *int, lastline, parIndent, rtl bool) int {
+	return func(lines *[]string, s string, w float64, fontName string, fontSize *int, lastline, parIndent, embed, rtl bool) int {
 
 		if len(s) == 0 {
 			if len(strbuf) > 0 {
-				s1 := PrepBytes(xRefTable, strings.Join(strbuf, " "), fontName, false, rtl)
+				s1 := PrepBytes(xRefTable, strings.Join(strbuf, " "), fontName, embed, rtl)
 				if rtl {
 					dx := font.GlyphSpaceUnits(w-strWidth, *fontSize)
 					s = fmt.Sprintf("[ %d (%s) ] TJ ", -int(dx), s1)
@@ -337,10 +338,10 @@ func newPrepJustifiedString(
 				*fontSize = fs
 			}
 			if len(strbuf) == 0 {
-				prepJustifiedLine(xRefTable, lines, []string{s1}, s1Width, w, *fontSize, fontName, rtl)
+				prepJustifiedLine(xRefTable, lines, []string{s1}, s1Width, w, *fontSize, fontName, embed, rtl)
 			} else {
 				// Note: Previous lines have whitespace based on bigger font size.
-				prepJustifiedLine(xRefTable, lines, strbuf, strWidth, w, *fontSize, fontName, rtl)
+				prepJustifiedLine(xRefTable, lines, strbuf, strWidth, w, *fontSize, fontName, embed, rtl)
 				strbuf = []string{s1}
 				strWidth = s1Width
 			}
@@ -376,13 +377,13 @@ func preRenderJustifiedText(
 	prepJustifiedString := newPrepJustifiedString(xRefTable, td.FontName, *fontSize)
 	l := []string{}
 	for i, s := range *lines {
-		linefeeds := prepJustifiedString(&l, s, ww, td.FontName, fontSize, false, td.ParIndent, td.RTL)
+		linefeeds := prepJustifiedString(&l, s, ww, td.FontName, fontSize, false, td.ParIndent, td.Embed, td.RTL)
 		for j := 0; j < linefeeds; j++ {
 			l = append(l, "")
 		}
 		isLastLine := i == len(*lines)-1
 		if isLastLine {
-			prepJustifiedString(&l, "", ww, td.FontName, fontSize, true, td.ParIndent, td.RTL)
+			prepJustifiedString(&l, "", ww, td.FontName, fontSize, true, td.ParIndent, td.Embed, td.RTL)
 		}
 	}
 	*lines = l

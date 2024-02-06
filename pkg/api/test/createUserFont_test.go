@@ -508,6 +508,7 @@ func renderArticle(xRefTable *model.XRefTable, p model.Page, row, col, lang int)
 	td = model.TextDescriptor{
 		Text:           sample.text,
 		FontName:       fontName,
+		Embed:          true,
 		RTL:            sample.rtl,
 		FontKey:        k,
 		FontSize:       16,

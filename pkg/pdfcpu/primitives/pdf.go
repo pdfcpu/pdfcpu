@@ -627,7 +627,7 @@ func fontIndRef(xRefTable *model.XRefTable, fontName, fontLang string) (*types.I
 		// Postpone font creation.
 		return xRefTable.IndRefForNewObject(nil)
 	}
-	return pdffont.EnsureFontDict(xRefTable, fName, fontLang, "", false, false, nil)
+	return pdffont.EnsureFontDict(xRefTable, fName, fontLang, "", false, nil)
 }
 
 func (pdf *PDF) ensureFont(fontID, fontName, fontLang string, fonts model.FontMap) (*types.IndirectRef, error) {
@@ -645,7 +645,7 @@ func (pdf *PDF) ensureFont(fontID, fontName, fontLang string, fonts model.FontMa
 			// Postpone font creation.
 			ir, err = pdf.XRefTable.IndRefForNewObject(nil)
 		} else {
-			ir, err = pdffont.EnsureFontDict(pdf.XRefTable, fontName, fr.Lang, "", false, false, nil)
+			ir, err = pdffont.EnsureFontDict(pdf.XRefTable, fontName, fr.Lang, "", false, nil)
 		}
 		if err != nil {
 			return nil, err

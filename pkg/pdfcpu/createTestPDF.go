@@ -86,7 +86,7 @@ func addPageTreeForResourceDictInheritanceDemo(xRefTable *model.XRefTable, rootD
 
 	// Create root page node.
 
-	fIndRef, err := pdffont.EnsureFontDict(xRefTable, "Courier", "", "", false, false, nil)
+	fIndRef, err := pdffont.EnsureFontDict(xRefTable, "Courier", "", "", false, nil)
 	if err != nil {
 		return err
 	}
@@ -115,7 +115,7 @@ func addPageTreeForResourceDictInheritanceDemo(xRefTable *model.XRefTable, rootD
 
 	// Create intermediate page node.
 
-	f100IndRef, err := pdffont.EnsureFontDict(xRefTable, "Courier-Bold", "", "", false, false, nil)
+	f100IndRef, err := pdffont.EnsureFontDict(xRefTable, "Courier-Bold", "", "", false, nil)
 	if err != nil {
 		return err
 	}
@@ -342,7 +342,7 @@ func createPostScriptCalculatorFunctionStreamDict(xRefTable *model.XRefTable) (*
 }
 
 func addResources(xRefTable *model.XRefTable, pageDict types.Dict, fontName string) error {
-	fIndRef, err := pdffont.EnsureFontDict(xRefTable, fontName, "", "", true, false, nil)
+	fIndRef, err := pdffont.EnsureFontDict(xRefTable, fontName, "", "", true, nil)
 	if err != nil {
 		return err
 	}
@@ -1418,7 +1418,7 @@ func createFormTextField(xRefTable *model.XRefTable, pageAnnots *types.Array, fo
 		return nil, err
 	}
 
-	fontDict, err := pdffont.EnsureFontDict(xRefTable, fontName, "", "", true, false, nil)
+	fontDict, err := pdffont.EnsureFontDict(xRefTable, fontName, "", "", true, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1543,7 +1543,7 @@ func createOffAppearance(xRefTable *model.XRefTable, resourceDict types.Dict, w,
 }
 
 func createCheckBoxButtonField(xRefTable *model.XRefTable, pageAnnots *types.Array) (*types.IndirectRef, error) {
-	fontDict, err := pdffont.EnsureFontDict(xRefTable, "ZapfDingbats", "", "", false, false, nil)
+	fontDict, err := pdffont.EnsureFontDict(xRefTable, "ZapfDingbats", "", "", false, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1624,7 +1624,7 @@ func createRadioButtonField(xRefTable *model.XRefTable, pageAnnots *types.Array)
 		return nil, err
 	}
 
-	fontDict, err := pdffont.EnsureFontDict(xRefTable, "ZapfDingbats", "", "", false, false, nil)
+	fontDict, err := pdffont.EnsureFontDict(xRefTable, "ZapfDingbats", "", "", false, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -135,6 +135,7 @@ func (hb *HorizontalBand) renderAnchoredTextBox(
 	td := model.TextDescriptor{
 		Text:     t,
 		FontName: fontName,
+		Embed:    true,
 		FontKey:  id,
 		FontSize: fontSize,
 		Scale:    1.,

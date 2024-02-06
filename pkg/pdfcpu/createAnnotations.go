@@ -831,7 +831,7 @@ func createPrinterMarkAnnotation(xRefTable *model.XRefTable, pageIndRef types.In
 }
 
 func createXObjectForWaterMark(xRefTable *model.XRefTable) (*types.IndirectRef, error) {
-	fIndRef, err := pdffont.EnsureFontDict(xRefTable, "Helvetica", "", "", false, false, nil)
+	fIndRef, err := pdffont.EnsureFontDict(xRefTable, "Helvetica", "", "", false, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1196,7 +1196,7 @@ func createLinkAnnotationDictWithHideAction(xRefTable *model.XRefTable, pageIndR
 
 func createTrapNetAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
 
-	ir, err := pdffont.EnsureFontDict(xRefTable, "Helvetica", "", "", false, false, nil)
+	ir, err := pdffont.EnsureFontDict(xRefTable, "Helvetica", "", "", false, nil)
 	if err != nil {
 		return nil, err
 	}

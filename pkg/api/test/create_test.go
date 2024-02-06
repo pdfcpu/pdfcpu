@@ -240,6 +240,7 @@ func writeTextDemoAlignedWidthAndMargin(
 
 	td := model.TextDescriptor{
 		FontName:       fontName,
+		Embed:          true,
 		FontKey:        k,
 		FontSize:       24,
 		ShowMargins:    true,
@@ -397,6 +398,7 @@ func writeTextAlignJustifyDemo(xRefTable *model.XRefTable, p model.Page, region 
 	td := model.TextDescriptor{
 		Text:           sampleText,
 		FontName:       fontName,
+		Embed:          true,
 		FontKey:        k,
 		FontSize:       12,
 		MLeft:          5,
@@ -449,6 +451,7 @@ func writeTextAlignJustifyColumnDemo(xRefTable *model.XRefTable, p model.Page, r
 
 	td := model.TextDescriptor{
 		Text:           sampleText,
+		Embed:          true,
 		MLeft:          5,
 		MRight:         5,
 		MTop:           5,
@@ -525,6 +528,7 @@ func writeTextDemoAnchorsWithOffset(xRefTable *model.XRefTable, p model.Page, re
 
 	td := model.TextDescriptor{
 		FontName:       fontName,
+		Embed:          true,
 		FontKey:        k,
 		FontSize:       24,
 		MLeft:          10,
@@ -623,6 +627,7 @@ func writeTextDemoColumnAnchoredWithOffset(xRefTable *model.XRefTable, p model.P
 	td := model.TextDescriptor{
 		Text:           sampleText,
 		FontName:       fontName,
+		Embed:          true,
 		FontKey:        k,
 		FontSize:       6,
 		MLeft:          5,
@@ -739,6 +744,7 @@ func writeTextRotateDemoWithOffset(xRefTable *model.XRefTable, p model.Page, reg
 	td := model.TextDescriptor{
 		Text:           "Hello Gopher!\nLine 2",
 		FontName:       fontName,
+		Embed:          true,
 		FontKey:        k,
 		FontSize:       24,
 		MLeft:          10,
@@ -879,6 +885,7 @@ func writeTextScaleAbsoluteDemoWithOffset(xRefTable *model.XRefTable, p model.Pa
 	td := model.TextDescriptor{
 		Text:           sampleText,
 		FontName:       fontName,
+		Embed:          true,
 		FontKey:        k,
 		FontSize:       18,
 		MLeft:          5,
@@ -929,6 +936,7 @@ func writeTextScaleAbsoluteDemoWithOffset(xRefTable *model.XRefTable, p model.Pa
 
 	td = model.TextDescriptor{
 		FontName:       fontName,
+		Embed:          true,
 		FontKey:        k,
 		FontSize:       12,
 		MLeft:          5,
@@ -1074,6 +1082,7 @@ func writeTextScaleRelativeDemoWithOffset(xRefTable *model.XRefTable, p model.Pa
 	td := model.TextDescriptor{
 		Text:           sampleText,
 		FontName:       fontName,
+		Embed:          true,
 		FontKey:        k,
 		FontSize:       18,
 		MLeft:          5,
@@ -1107,6 +1116,7 @@ func writeTextScaleRelativeDemoWithOffset(xRefTable *model.XRefTable, p model.Pa
 	td = model.TextDescriptor{
 		Text:           "Justified column\nWidth=130",
 		FontName:       fontName,
+		Embed:          true,
 		FontKey:        k,
 		FontSize:       18,
 		MLeft:          5,
@@ -1136,6 +1146,7 @@ func writeTextScaleRelativeDemoWithOffset(xRefTable *model.XRefTable, p model.Pa
 
 	td = model.TextDescriptor{
 		FontName:       fontName,
+		Embed:          true,
 		FontKey:        k,
 		FontSize:       18,
 		MLeft:          5,
@@ -1265,6 +1276,7 @@ func createTextDemoColumns(xRefTable *model.XRefTable, mediaBox *types.Rectangle
 	k := p.Fm.EnsureKey(fontName)
 	td := model.TextDescriptor{
 		FontName:       fontName,
+		Embed:          true,
 		FontKey:        k,
 		FontSize:       9,
 		MLeft:          10,
@@ -1370,6 +1382,7 @@ func writeTextBorderTest(xRefTable *model.XRefTable, p model.Page, region *types
 	k := p.Fm.EnsureKey(fontName)
 	td := model.TextDescriptor{
 		FontName:   fontName,
+		Embed:      true,
 		FontKey:    k,
 		FontSize:   7,
 		MLeft:      10,
@@ -1480,6 +1493,7 @@ func createTextBorderNoMarginAlignLeftTest(xRefTable *model.XRefTable, mediaBox 
 	td := model.TextDescriptor{
 		Text:           sampleText2,
 		FontName:       fontName,
+		Embed:          true,
 		FontKey:        k,
 		FontSize:       12,
 		Scale:          1.,
@@ -1523,6 +1537,7 @@ func createTextBorderNoMarginAlignRightTest(xRefTable *model.XRefTable, mediaBox
 	td := model.TextDescriptor{
 		Text:           sampleText2,
 		FontName:       fontName,
+		Embed:          true,
 		FontKey:        k,
 		FontSize:       12,
 		Scale:          1.,
@@ -1566,6 +1581,7 @@ func createTextBorderNoMarginAlignCenterTest(xRefTable *model.XRefTable, mediaBo
 	td := model.TextDescriptor{
 		Text:           sampleText2,
 		FontName:       fontName,
+		Embed:          true,
 		FontKey:        k,
 		FontSize:       12,
 		Scale:          1.,
@@ -1608,6 +1624,7 @@ func createTextBorderNoMarginAlignJustifyTest(xRefTable *model.XRefTable, mediaB
 	td := model.TextDescriptor{
 		Text:           sampleText2,
 		FontName:       fontName,
+		Embed:          true,
 		FontKey:        k,
 		FontSize:       12,
 		Scale:          1.,
@@ -1773,6 +1790,7 @@ func writecreateTestRTLUserFont(xRefTable *model.XRefTable, p model.Page, region
 	td := model.TextDescriptor{
 		Text:           s,
 		FontName:       fontName,
+		Embed:          true,
 		FontKey:        k,
 		FontSize:       12,
 		RTL:            true,
@@ -1835,6 +1853,7 @@ func writecreateTestUserFontJustified(xRefTable *model.XRefTable, p model.Page, 
 	td := model.TextDescriptor{
 		Text:           sampleText,
 		FontName:       fontName,
+		Embed:          true,
 		FontKey:        k,
 		FontSize:       12,
 		RTL:            rtl,
@@ -1971,6 +1990,7 @@ Bây giờ với sự hỗ trợ cho các phông chữ CJKV!`
 
 	td := model.TextDescriptor{
 		FontSize:       24,
+		Embed:          true,
 		MLeft:          5,
 		MRight:         5,
 		MTop:           5,

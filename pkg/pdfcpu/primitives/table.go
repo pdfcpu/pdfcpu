@@ -753,6 +753,7 @@ func (t *Table) renderValues(p *model.Page, pageNr int, fonts model.FontMap, col
 	}
 
 	td.FontName = f.Name
+	td.Embed = true
 	td.FontKey = id
 	td.FontSize = f.Size
 	td.RTL = t.RTL
@@ -842,6 +843,7 @@ func (t *Table) renderHeader(p *model.Page, pageNr int, fonts model.FontMap, col
 	}
 
 	td.FontName = f1.Name
+	td.Embed = true
 	td.FontKey = id
 	td.FontSize = f1.Size
 	td.RTL = th.RTL

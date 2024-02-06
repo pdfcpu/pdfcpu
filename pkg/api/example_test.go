@@ -130,7 +130,7 @@ func ExampleAddWatermarksFile() {
 	// Stamp all odd pages of in.pdf in red "Confidential" in 48 point Courier
 	// using a rotation angle of 45 degrees and an absolute scalefactor of 1.0.
 	onTop = true
-	wm, _ = TextWatermark("Confidential", "font:Courier, points:48, col: 1 0 0, rot:45, sc:1 abs, ", onTop, update, types.POINTS)
+	wm, _ = TextWatermark("Confidential", "font:Courier, points:48, col: 1 0 0, rot:45, scale:1 abs, ", onTop, update, types.POINTS)
 	AddWatermarksFile("in.pdf", "", []string{"odd"}, wm, nil)
 
 	// Add image stamps to in.pdf using absolute scaling and a negative rotation of 90 degrees.
@@ -139,7 +139,7 @@ func ExampleAddWatermarksFile() {
 
 	// Add a PDF stamp to all pages of in.pdf using the 2nd page of stamp.pdf, use absolute scaling of 0.5
 	// and rotate along the 2nd diagonal running from upper left to lower right corner.
-	wm, _ = PDFWatermark("stamp.pdf:2", "sc:.5 abs, diagonal:2", onTop, update, types.POINTS)
+	wm, _ = PDFWatermark("stamp.pdf:2", "scale:.5 abs, diagonal:2", onTop, update, types.POINTS)
 	AddWatermarksFile("in.pdf", "", nil, wm, nil)
 }
 

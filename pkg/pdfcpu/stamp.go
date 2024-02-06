@@ -102,6 +102,7 @@ var wmParamMap = watermarkParamMap{
 	"diagonal":        parseDiagonal,
 	"fillcolor":       parseFillColor,
 	"fontname":        parseFontName,
+	"scriptname":      parseScriptName,
 	"margins":         parseMargins,
 	"mode":            parseRenderMode,
 	"offset":          parsePositionOffsetWM,
@@ -179,6 +180,21 @@ func parseFontName(s string, wm *model.Watermark) error {
 		return errors.Errorf("pdfcpu: %s is unsupported, please refer to \"pdfcpu fonts list\".\n", s)
 	}
 	wm.FontName = s
+	if strings.HasSuffix(strings.ToUpper(wm.FontName), "GB2312") {
+		wm.ScriptName = "HANS"
+	}
+
+	return nil
+}
+
+func parseScriptName(s string, wm *model.Watermark) error {
+	script := strings.ToUpper(s)
+	if !pdffont.SupportedScript(script) {
+		return errors.Errorf("pdfcpu: unsupported font script \"%s\" - Supported are: HANS, HANT, HIRA, KANA, JPAN, HANG, KORE \n", script)
+	}
+
+	wm.ScriptName = script
+
 	return nil
 }
 
@@ -740,7 +756,7 @@ func createFontResForWM(ctx *model.Context, wm *model.Watermark) (err error) {
 		td, _ := setupTextDescriptor(*wm, "", 123456789, 0)
 		model.WriteMultiLine(ctx.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
 	}
-	wm.Font, err = pdffont.EnsureFontDict(ctx.XRefTable, wm.FontName, "", "", true, false, nil)
+	wm.Font, err = pdffont.EnsureFontDict(ctx.XRefTable, wm.FontName, "", wm.ScriptName, false, nil)
 	return err
 }
 
@@ -946,6 +962,8 @@ func setupTextDescriptor(wm model.Watermark, timestampFormat string, pageNr, pag
 	// Set right to left rendering.
 	td.RTL = wm.RTL
 
+	td.Embed = wm.ScriptName == ""
+
 	// Set margins.
 	td.MLeft = wm.MLeft
 	td.MRight = wm.MRight
@@ -1127,7 +1145,7 @@ func updatePageResourcesForWM(ctx *model.Context, resDict types.Dict, wm model.W
 	return nil
 }
 
-func wmContent(wm model.Watermark, gsID, xoID string) []byte {
+func wmContent(wm *model.Watermark, gsID, xoID string) []byte {
 	m := wm.CalcTransformMatrix()
 	p1 := m.Transform(types.Point{X: wm.Bb.LL.X, Y: wm.Bb.LL.Y})
 	p2 := m.Transform(types.Point{X: wm.Bb.UR.X, Y: wm.Bb.LL.Y})
@@ -1140,7 +1158,7 @@ func wmContent(wm model.Watermark, gsID, xoID string) []byte {
 	return b.Bytes()
 }
 
-func insertPageContentsForWM(ctx *model.Context, pageDict types.Dict, wm model.Watermark, gsID, xoID string) error {
+func insertPageContentsForWM(ctx *model.Context, pageDict types.Dict, wm *model.Watermark, gsID, xoID string) error {
 	sd, _ := ctx.NewStreamDictForBuf(wmContent(wm, gsID, xoID))
 	if err := sd.Encode(); err != nil {
 		return err
@@ -1156,7 +1174,7 @@ func insertPageContentsForWM(ctx *model.Context, pageDict types.Dict, wm model.W
 	return nil
 }
 
-func patchFirstContentStreamForWatermark(sd *types.StreamDict, gsID, xoID string, wm model.Watermark, isLast bool) error {
+func patchFirstContentStreamForWatermark(sd *types.StreamDict, gsID, xoID string, wm *model.Watermark, isLast bool) error {
 	err := sd.Decode()
 	if err == filter.ErrUnsupportedFilter {
 		if log.InfoEnabled() {
@@ -1199,7 +1217,7 @@ func patchFirstContentStreamForWatermark(sd *types.StreamDict, gsID, xoID string
 	return sd.Encode()
 }
 
-func patchLastContentStreamForWatermark(sd *types.StreamDict, gsID, xoID string, wm model.Watermark) error {
+func patchLastContentStreamForWatermark(sd *types.StreamDict, gsID, xoID string, wm *model.Watermark) error {
 	err := sd.Decode()
 	if err == filter.ErrUnsupportedFilter {
 		if log.InfoEnabled() {
@@ -1227,7 +1245,7 @@ func patchLastContentStreamForWatermark(sd *types.StreamDict, gsID, xoID string,
 	return nil
 }
 
-func updatePageContentsForWM(ctx *model.Context, obj types.Object, wm model.Watermark, gsID, xoID string) error {
+func updatePageContentsForWM(ctx *model.Context, obj types.Object, wm *model.Watermark, gsID, xoID string) error {
 	var entry *model.XRefTableEntry
 	var objNr int
 
@@ -1401,9 +1419,9 @@ func addPageWatermark(ctx *model.Context, pageNr int, wm model.Watermark) error 
 
 	obj, found := d.Find("Contents")
 	if found {
-		err = updatePageContentsForWM(ctx, obj, wm, gsID, xoID)
+		err = updatePageContentsForWM(ctx, obj, &wm, gsID, xoID)
 	} else {
-		err = insertPageContentsForWM(ctx, d, wm, gsID, xoID)
+		err = insertPageContentsForWM(ctx, d, &wm, gsID, xoID)
 	}
 	if err != nil {
 		return err
@@ -1515,7 +1533,7 @@ func AddWatermarksMap(ctx *model.Context, m map[int]*model.Watermark) error {
 
 	// TODO Reuse font dict.
 	for fontName, pageSet := range fm {
-		ir, err := pdffont.EnsureFontDict(ctx.XRefTable, fontName, "", "", true, false, nil)
+		ir, err := pdffont.EnsureFontDict(ctx.XRefTable, fontName, "", "", false, nil)
 		if err != nil {
 			return err
 		}
@@ -1569,7 +1587,7 @@ func AddWatermarksSliceMap(ctx *model.Context, m map[int][]*model.Watermark) err
 
 	// TODO Take existing font dicts in xref into account.
 	for fontName, pageSet := range fm {
-		ir, err := pdffont.EnsureFontDict(ctx.XRefTable, fontName, "", "", true, false, nil)
+		ir, err := pdffont.EnsureFontDict(ctx.XRefTable, fontName, "", "", false, nil)
 		if err != nil {
 			return err
 		}
@@ -1614,27 +1632,6 @@ func AddWatermarks(ctx *model.Context, selectedPages types.IntSet, wm *model.Wat
 	if wm.ExtGState, err = createExtGStateForStamp(ctx, wm.Opacity); err != nil {
 		return err
 	}
-
-	// if len(selectedPages) == 0 {
-	// 	selectedPages = types.IntSet{}
-	// 	for i := wm.PdfMultiStartPageNrDest; i <= ctx.PageCount; i++ {
-	// 		selectedPages[i] = true
-	// 	}
-	// } else {
-	// 	for k, v := range selectedPages {
-	// 		if v && k < wm.PdfMultiStartPageNrDest {
-	// 			selectedPages[k] = false
-	// 		}
-	// 	}
-	// }
-
-	// for k, v := range selectedPages {
-	// 	if v {
-	// 		if err = addPageWatermark(ctx, k, *wm); err != nil {
-	// 			return err
-	// 		}
-	// 	}
-	// }
 
 	for i := wm.PdfMultiStartPageNrDest; i <= ctx.PageCount; i++ {
 		if len(selectedPages) == 0 || selectedPages[i] {

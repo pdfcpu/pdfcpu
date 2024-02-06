@@ -311,6 +311,7 @@ func (tb *TextBox) prepareTextDescriptor(p *model.Page, pageNr int, fonts model.
 		HAlign:   tb.horAlign,
 		VAlign:   types.AlignBottom,
 		FontName: fontName,
+		Embed:    true,
 		FontKey:  id,
 		FontSize: fontSize,
 		Scale:    1.,

@@ -386,7 +386,7 @@ func (cb *ComboBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 		v = model.DecodeUTF8ToByte(v)
 	}
 	lineBB := model.CalcBoundingBox(v, 0, 0, f.Name, f.Size)
-	s := model.PrepBytes(xRefTable, v, f.Name, false, cb.RTL)
+	s := model.PrepBytes(xRefTable, v, f.Name, true, cb.RTL)
 	x := 2 * boWidth
 	if x == 0 {
 		x = 2
@@ -600,6 +600,7 @@ func (cb *ComboBox) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) er
 	td := model.TextDescriptor{
 		Text:     v,
 		FontName: fontName,
+		Embed:    true,
 		FontKey:  id,
 		FontSize: f.Size,
 		Scale:    1.,
@@ -656,6 +657,7 @@ func (cb *ComboBox) prepForRender(p *model.Page, pageNr int, fonts model.FontMap
 	td := model.TextDescriptor{
 		Text:     "Xy",
 		FontName: cb.Font.Name,
+		Embed:    true,
 		FontSize: cb.Font.Size,
 		Scale:    1.,
 		ScaleAbs: true,

@@ -89,36 +89,10 @@ func writeCoreFontDemoContent(xRefTable *model.XRefTable, p model.Page, fontName
 	}
 }
 
-// func writeCP1252SpecialMappings(p pdf.Page, fontName string) {
-
-// 	k := p.Fm.EnsureKey(fontName)
-
-// 	td := pdf.TextDescriptor{
-// 		Text:           "€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ",
-// 		FontName:       fontName,
-// 		FontKey:        k,
-// 		FontSize:       24,
-// 		HAlign:         pdf.AlignCenter,
-// 		VAlign:         pdf.AlignBaseline,
-// 		X:              -1,
-// 		Y:              550,
-// 		Scale:          1.0,
-// 		ScaleAbs:       true,
-// 		RMode:          pdf.RMFill,
-// 		StrokeCol:      pdf.SimpleColor{},
-// 		FillCol:        pdf.NewSimpleColor(0xab6f30),
-// 		ShowBackground: true,
-// 		BackgroundCol:  pdf.SimpleColor{R: 1., G: .98, B: .77},
-// 	}
-
-// 	pdf.WriteMultiLine(p.Buf, p.MediaBox, nil, td)
-// }
-
 func createCoreFontDemoPage(xRefTable *model.XRefTable, w, h int, fontName string) model.Page {
 	mediaBox := types.RectForDim(float64(w), float64(h))
 	p := model.NewPageWithBg(mediaBox, color.NewSimpleColor(0xbeded9))
 	writeCoreFontDemoContent(xRefTable, p, fontName)
-	//writeCP1252SpecialMappings(p, fontName)
 	return p
 }
 func TestCoreFontDemoPDF(t *testing.T) {

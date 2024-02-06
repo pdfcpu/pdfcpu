@@ -134,6 +134,7 @@ func writeUserFontDemoContent(xRefTable *model.XRefTable, p model.Page, fontName
 
 	td := model.TextDescriptor{
 		FontName:       fontName,
+		Embed:          true,
 		FontKey:        fontKey,
 		FontSize:       baseFontSize,
 		HAlign:         types.AlignCenter,

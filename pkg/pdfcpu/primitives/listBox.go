@@ -481,7 +481,7 @@ func (lb *ListBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 			s = model.DecodeUTF8ToByte(s)
 		}
 		lineBB := model.CalcBoundingBox(s, 0, 0, f.Name, f.Size)
-		s = model.PrepBytes(xRefTable, s, f.Name, false, lb.RTL)
+		s = model.PrepBytes(xRefTable, s, f.Name, true, lb.RTL)
 		x := 2 * boWidth
 		if x == 0 {
 			x = 2
@@ -771,6 +771,7 @@ func (lb *ListBox) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) err
 	td := model.TextDescriptor{
 		Text:     v,
 		FontName: fontName,
+		Embed:    true,
 		FontKey:  id,
 		FontSize: f.Size,
 		Scale:    1.,

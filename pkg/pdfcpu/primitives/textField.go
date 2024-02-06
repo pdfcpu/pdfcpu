@@ -410,12 +410,13 @@ func (tf *TextField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 		fmt.Fprintf(buf, "q 1 1 %.1f %.1f re W n ", w-2, h-2)
 	}
 
-	cjk := pdffont.CJK(f.Script, f.Lang)
+	//cjk := pdffont.CJK(f.Script, f.Lang)
 
 	for i := 0; i < len(lines); i++ {
 		s := lines[i]
 		lineBB := model.CalcBoundingBox(s, 0, 0, f.Name, f.Size)
-		s = model.PrepBytes(xRefTable, s, f.Name, cjk, f.RTL()) //tf.RTL)
+		//s = model.PrepBytes(xRefTable, s, f.Name, cjk, f.RTL())
+		s = model.PrepBytes(xRefTable, s, f.Name, true, f.RTL())
 		x := 2 * boWidth
 		if x == 0 {
 			x = 2
@@ -711,6 +712,7 @@ func (tf *TextField) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) e
 	td := model.TextDescriptor{
 		Text:     t,
 		FontName: fontName,
+		Embed:    true,
 		FontKey:  id,
 		FontSize: f.Size,
 		Scale:    1.,

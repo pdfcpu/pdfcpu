@@ -202,7 +202,7 @@ func formFontIndRef(xRefTable *model.XRefTable, fontID string) (*types.IndirectR
 	}
 
 	if font.IsCoreFont(fontID) {
-		indRef, err := pdffont.EnsureFontDict(xRefTable, fontID, "", "", false, false, nil)
+		indRef, err := pdffont.EnsureFontDict(xRefTable, fontID, "", "", false, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -210,7 +210,6 @@ func formFontIndRef(xRefTable *model.XRefTable, fontID string) (*types.IndirectR
 		return indRef, nil
 	}
 
-	//return nil, errors.Errorf("pdfcpu: missing form font %s", fontID)
 	return nil, nil
 }
 

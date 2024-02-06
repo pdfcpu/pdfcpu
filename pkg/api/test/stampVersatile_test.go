@@ -59,7 +59,7 @@ func TestAlternatingPageNumbersViaWatermarkMap(t *testing.T) {
 			dx = -10
 			fillCol = "#0000E0"
 		}
-		desc := fmt.Sprintf("font:%s, points:12, sc:1 abs, pos:%s, off:%d 10, fillcol:%s, rot:0", fontName, pos, dx, fillCol)
+		desc := fmt.Sprintf("font:%s, points:12, scale:1 abs, pos:%s, off:%d 10, fillcol:%s, rot:0", fontName, pos, dx, fillCol)
 		wm, err := api.TextWatermark(text, desc, true, false, types.POINTS)
 		if err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
@@ -73,12 +73,12 @@ func TestAlternatingPageNumbersViaWatermarkMap(t *testing.T) {
 
 	// Add a stamp with the creation date on the center of the bottom of every page.
 	text := fmt.Sprintf("%%p of %%P - Creation date: %v", time.Now().Format("2006-01-02 15:04"))
-	if err := api.AddTextWatermarksFile(outFile, outFile, nil, true, text, "fo:Roboto-Regular, points:12, sc:1 abs, pos:bc, off:0 10, rot:0", nil); err != nil {
+	if err := api.AddTextWatermarksFile(outFile, outFile, nil, true, text, "fo:Roboto-Regular, points:12, scale:1 abs, pos:bc, off:0 10, rot:0", nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
 	// Add a "Draft" stamp with opacity 0.6 along the 1st diagonale in light blue using Courier.
-	if err := api.AddTextWatermarksFile(outFile, outFile, nil, true, "Draft", "fo:Courier, sc:.9, fillcol:#00aacc, op:.6", nil); err != nil {
+	if err := api.AddTextWatermarksFile(outFile, outFile, nil, true, "Draft", "fo:Courier, scale:.9, fillcol:#00aacc, op:.6", nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 }
@@ -112,7 +112,7 @@ func TestAlternatingPageNumbersViaWatermarkMapLowLevel(t *testing.T) {
 			dx = -10
 			fillCol = "#0000E0"
 		}
-		desc := fmt.Sprintf("font:%s, points:12, sc:1 abs, pos:%s, off:%d 10, fillcol:%s, rot:0", fontName, pos, dx, fillCol)
+		desc := fmt.Sprintf("font:%s, points:12, scale:1 abs, pos:%s, off:%d 10, fillcol:%s, rot:0", fontName, pos, dx, fillCol)
 		wm, err := api.TextWatermark(text, desc, true, false, unit)
 		if err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
@@ -126,7 +126,7 @@ func TestAlternatingPageNumbersViaWatermarkMapLowLevel(t *testing.T) {
 
 	// Add a stamp with the creation date on the center of the bottom of every page.
 	text := fmt.Sprintf("%%p of %%P - Creation date: %v", time.Now().Format("2006-01-02 15:04"))
-	wm, err := api.TextWatermark(text, "fo:Roboto-Regular, points:12, sc:1 abs, pos:bc, off:0 10, rot:0", true, false, unit)
+	wm, err := api.TextWatermark(text, "fo:Roboto-Regular, points:12, scale:1 abs, pos:bc, off:0 10, rot:0", true, false, unit)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
@@ -135,7 +135,7 @@ func TestAlternatingPageNumbersViaWatermarkMapLowLevel(t *testing.T) {
 	}
 
 	// Add a "Draft" stamp with opacity 0.6 along the 1st diagonale in light blue using Courier.
-	wm, err = api.TextWatermark("Draft", "fo:Courier, sc:.9, fillcol:#00aacc, op:.6", true, false, unit)
+	wm, err = api.TextWatermark("Draft", "fo:Courier, scale:.9, fillcol:#00aacc, op:.6", true, false, unit)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
@@ -186,7 +186,7 @@ func TestAlternatingPageNumbersViaWatermarkSliceMap(t *testing.T) {
 			dx = -10
 			fillCol = "#0000E0"
 		}
-		desc := fmt.Sprintf("font:%s, points:12, sc:1 abs, pos:%s, off:%d 10, fillcol:%s, rot:0, op:%f", fontName, pos, dx, fillCol, opacity)
+		desc := fmt.Sprintf("font:%s, points:12, scale:1 abs, pos:%s, off:%d 10, fillcol:%s, rot:0, op:%f", fontName, pos, dx, fillCol, opacity)
 		wm, err := api.TextWatermark(text, desc, onTop, update, unit)
 		if err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
@@ -196,7 +196,7 @@ func TestAlternatingPageNumbersViaWatermarkSliceMap(t *testing.T) {
 		// 2nd watermark on page
 		// Add a stamp with the creation date on the center of the bottom of every page.
 		text = fmt.Sprintf("%%p of %%P - Creation date: %v", time.Now().Format("2006-01-02 15:04"))
-		desc = fmt.Sprintf("fo:Roboto-Regular, points:12, sc:1 abs, pos:bc, off:0 10, rot:0, op:%f", opacity)
+		desc = fmt.Sprintf("fo:Roboto-Regular, points:12, scale:1 abs, pos:bc, off:0 10, rot:0, op:%f", opacity)
 		wm, err = api.TextWatermark(text, desc, onTop, update, unit)
 		if err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
@@ -206,7 +206,7 @@ func TestAlternatingPageNumbersViaWatermarkSliceMap(t *testing.T) {
 		// 3rd watermark on page
 		// Add a "Draft" stamp with opacity 0.6 along the 1st diagonale in light blue using Courier.
 		text = "Draft"
-		desc = fmt.Sprintf("fo:Courier, sc:.9, fillcol:#00aacc, op:%f", opacity)
+		desc = fmt.Sprintf("fo:Courier, scale:.9, fillcol:#00aacc, op:%f", opacity)
 		wm, err = api.TextWatermark(text, desc, onTop, update, unit)
 		if err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
@@ -245,7 +245,7 @@ func TestImagesTextAndPDFWMViaWatermarkMap(t *testing.T) {
 	// Apply a mix of image, text and PDF watermarks in one go.
 	for i := 1; i <= pageCount; i++ {
 		if i <= len(fileNames) {
-			desc := fmt.Sprintf("pos:bl, sc:.25, rot:0, op:%f", opacity)
+			desc := fmt.Sprintf("pos:bl, scale:.25, rot:0, op:%f", opacity)
 			wm, err := api.ImageWatermark(fileNames[i-1], desc, onTop, update, unit)
 			if err != nil {
 				t.Fatalf("%s: %v\n", msg, err)
@@ -255,7 +255,7 @@ func TestImagesTextAndPDFWMViaWatermarkMap(t *testing.T) {
 		}
 
 		if i%2 > 0 {
-			desc := fmt.Sprintf("sc:.25, pos:br, rot:0, op:%f", opacity)
+			desc := fmt.Sprintf("scale:.25, pos:br, rot:0, op:%f", opacity)
 			wm, err := api.PDFWatermark(inFile+":1", desc, onTop, update, unit)
 			if err != nil {
 				t.Fatalf("%s: %v\n", msg, err)
@@ -309,9 +309,9 @@ func TestPdfSingleStampVariations(t *testing.T) {
 		wm, err := api.PDFWatermarkForReadSeeker(
 			rs,
 			tt.pageNrSrc,
-			"sc:.2, pos:tr, off:-10 -10, rot:0", // scaled @ top right corner using some offset and 0 rotation.
-			true,                                // stamp
-			false,                               // no update
+			"scale:.2, pos:tr, off:-10 -10, rot:0", // scaled @ top right corner using some offset and 0 rotation.
+			true,                                   // stamp
+			false,                                  // no update
 			conf.Unit,
 		)
 
@@ -360,12 +360,12 @@ func TestPdfMultiStampVariations(t *testing.T) {
 		},
 		{"TestPdfMultiStamp31", // Start stamping at page 1 using page 3 of stampFile.
 			"PdfMultiStamp31.pdf",
-			1,
 			3,
+			1,
 		},
 		{"TestPdfMultiStamp33", // Skip first 2 page and start stamping at page 3 using page 3 of stampFile.
 			"PdfMultiStamp33.pdf",
-			1,
+			3,
 			3,
 		},
 	} {
@@ -373,9 +373,9 @@ func TestPdfMultiStampVariations(t *testing.T) {
 			rs,
 			tt.startPageNrSrc,
 			tt.startPageNrDest,
-			"sc:.2, pos:tr, off:-10 -10, rot:0", // scaled @ top right corner using some offset and 0 rotation.
-			true,                                // stamp
-			false,                               // no update
+			"scale:.2, pos:tr, off:-10 -10, rot:0", // scaled @ top right corner using some offset and 0 rotation.
+			true,                                   // stamp
+			false,                                  // no update
 			conf.Unit,
 		)
 
