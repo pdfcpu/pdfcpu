@@ -268,23 +268,24 @@ func BoundingBox(fontName string) *types.Rectangle {
 }
 
 // CharWidth returns the character width for a char and font in glyph space units.
-func CharWidth(fontName string, r rune) int {
+func CharWidth(fontName string, r rune) (int, error) {
 	if IsCoreFont(fontName) {
-		return metrics.CoreFontCharWidth(fontName, int(r))
+		return metrics.CoreFontCharWidth(fontName, int(r)), nil
 	}
 	UserFontMetricsLock.RLock()
 	defer UserFontMetricsLock.RUnlock()
 	ttf, ok := UserFontMetrics[fontName]
 	if !ok {
 		fmt.Fprintf(os.Stderr, "pdfcpu: user font not loaded: %s\n", fontName)
-		os.Exit(1)
+		return 0, fmt.Errorf("pdfcpu: user font not loaded: %s", fontName)
+		//os.Exit(1)
 	}
 
 	pos, ok := ttf.Chars[uint32(r)]
 	if !ok {
 		pos = 0
 	}
-	return int(ttf.GlyphWidths[pos])
+	return int(ttf.GlyphWidths[pos]), nil
 }
 
 // UserSpaceUnits transforms glyphSpaceUnits into userspace units.
@@ -319,32 +320,46 @@ func LineHeight(fontName string, fontSize int) float64 {
 	return UserSpaceUnits(fbb.Height(), fontSize)
 }
 
-func glyphSpaceWidth(text, fontName string) int {
+func glyphSpaceWidth(text, fontName string) (int, error) {
 	var w int
 	if IsCoreFont(fontName) {
 		for i := 0; i < len(text); i++ {
 			c := text[i]
-			w += CharWidth(fontName, rune(c))
+			cw, err := CharWidth(fontName, rune(c))
+			if err != nil {
+				return 0, err
+			}
+			w += cw
 		}
-		return w
+		return w, nil
 	}
 	for _, r := range text {
-		w += CharWidth(fontName, r)
+		cw, err := CharWidth(fontName, r)
+		if err != nil {
+			return 0, err
+		}
+		w += cw
 	}
-	return w
+	return w, nil
 }
 
 // TextWidth represents the width in user space units for a given text string, font name and font size.
-func TextWidth(text, fontName string, fontSize int) float64 {
-	w := glyphSpaceWidth(text, fontName)
-	return UserSpaceUnits(float64(w), fontSize)
+func TextWidth(text, fontName string, fontSize int) (float64, error) {
+	w, err := glyphSpaceWidth(text, fontName)
+	if err != nil {
+		return 0, err
+	}
+	return UserSpaceUnits(float64(w), fontSize), nil
 }
 
 // Size returns the needed font size (aka. font scaling factor) in points
 // for rendering a given text string using a given font name with a given user space width.
-func Size(text, fontName string, width float64) int {
-	w := glyphSpaceWidth(text, fontName)
-	return fontScalingFactor(float64(w), width)
+func Size(text, fontName string, width float64) (int, error) {
+	w, err := glyphSpaceWidth(text, fontName)
+	if err != nil {
+		return 0, err
+	}
+	return fontScalingFactor(float64(w), width), nil
 }
 
 // UserSpaceFontBBox returns the font box for given font name and font size in user space coordinates.

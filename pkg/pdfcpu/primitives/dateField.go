@@ -450,7 +450,10 @@ func (df *DateField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 
 	f := df.Font
 	//cjk := fo.CJK(f.Script, f.Lang)
-	lineBB := model.CalcBoundingBox(v, 0, 0, f.Name, f.Size)
+	lineBB, err := model.CalcBoundingBox(v, 0, 0, f.Name, f.Size)
+	if err != nil {
+		return nil, err
+	}
 	s := model.PrepBytes(xRefTable, v, f.Name, true, false)
 	x := 2 * boWidth
 	if x == 0 {
@@ -769,7 +772,10 @@ func (df *DateField) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) e
 		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *l.BgCol
 	}
 
-	bb := model.WriteMultiLine(df.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	bb, err := model.WriteMultiLine(df.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	if err != nil {
+		return err
+	}
 	l.height = bb.Height()
 	if bb.Width() > w {
 		w = bb.Width()

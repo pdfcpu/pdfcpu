@@ -414,7 +414,10 @@ func (tf *TextField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 
 	for i := 0; i < len(lines); i++ {
 		s := lines[i]
-		lineBB := model.CalcBoundingBox(s, 0, 0, f.Name, f.Size)
+		lineBB, err := model.CalcBoundingBox(s, 0, 0, f.Name, f.Size)
+		if err != nil {
+			return nil, err
+		}
 		//s = model.PrepBytes(xRefTable, s, f.Name, cjk, f.RTL())
 		s = model.PrepBytes(xRefTable, s, f.Name, true, f.RTL())
 		x := 2 * boWidth
@@ -728,7 +731,10 @@ func (tf *TextField) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) e
 		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *l.BgCol
 	}
 
-	bb := model.WriteMultiLine(tf.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	bb, err := model.WriteMultiLine(tf.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	if err != nil {
+		return err
+	}
 	l.height = bb.Height()
 	if bb.Width() > w {
 		w = bb.Width()

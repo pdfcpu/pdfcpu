@@ -54,7 +54,7 @@ func userFonts(dir string) ([]string, error) {
 	return ff, nil
 }
 
-func TestMain(m *testing.M) {
+func TestMain(m *testing.M) error {
 	inDir = filepath.Join("..", "..", "testdata")
 	resDir = filepath.Join(inDir, "resources")
 	samplesDir = filepath.Join("..", "..", "samples")
@@ -65,17 +65,24 @@ func TestMain(m *testing.M) {
 	fonts, err := userFonts(filepath.Join(inDir, "fonts"))
 	if err != nil {
 		fmt.Printf("%v", err)
-		os.Exit(1)
+		fmt.Errorf("%v", err)
+		return err
+		// os.Exit(1)
+
 	}
 
 	if err := api.InstallFonts(fonts); err != nil {
 		fmt.Printf("%v", err)
-		os.Exit(1)
+		fmt.Errorf("%v", err)
+		return err
+		// os.Exit(1)
 	}
 
 	if outDir, err = os.MkdirTemp("", "pdfcpu_api_tests"); err != nil {
 		fmt.Printf("%v", err)
-		os.Exit(1)
+		fmt.Errorf("%v", err)
+		return err
+		// os.Exit(1)
 	}
 	// fmt.Printf("outDir = %s\n", outDir)
 
@@ -83,10 +90,13 @@ func TestMain(m *testing.M) {
 
 	if err = os.RemoveAll(outDir); err != nil {
 		fmt.Printf("%v", err)
-		os.Exit(1)
+		fmt.Errorf("%v", err)
+		return err
+		// os.Exit(1)
 	}
 
 	os.Exit(exitCode)
+	return nil
 }
 
 func copyFile(t *testing.T, srcFileName, destFileName string) error {

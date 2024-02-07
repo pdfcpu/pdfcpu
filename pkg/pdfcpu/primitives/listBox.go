@@ -480,7 +480,10 @@ func (lb *ListBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 		if font.IsCoreFont(f.Name) && utf8.ValidString(s) {
 			s = model.DecodeUTF8ToByte(s)
 		}
-		lineBB := model.CalcBoundingBox(s, 0, 0, f.Name, f.Size)
+		lineBB, err := model.CalcBoundingBox(s, 0, 0, f.Name, f.Size)
+		if err != nil {
+			return nil, err
+		}
 		s = model.PrepBytes(xRefTable, s, f.Name, true, lb.RTL)
 		x := 2 * boWidth
 		if x == 0 {
@@ -787,7 +790,10 @@ func (lb *ListBox) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) err
 		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *l.BgCol
 	}
 
-	bb := model.WriteMultiLine(lb.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	bb, err := model.WriteMultiLine(lb.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	if err != nil {
+		return err
+	}
 	l.height = bb.Height()
 	if bb.Width() > w {
 		w = bb.Width()

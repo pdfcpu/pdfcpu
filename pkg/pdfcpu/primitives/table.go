@@ -795,7 +795,10 @@ func (t *Table) renderValues(p *model.Page, pageNr int, fonts model.FontMap, col
 			x, y := ll(row, j)
 			r := types.RectForWidthAndHeight(x, y, colWidths[j], float64(t.LineHeight))
 
-			bb := model.WriteMultiLineAnchored(pdf.XRefTable, p.Buf, r, nil, colTd, t.colAnchors[j])
+			bb, err := model.WriteMultiLineAnchored(pdf.XRefTable, p.Buf, r, nil, colTd, t.colAnchors[j])
+			if err != nil {
+				return err
+			}
 
 			if bb.Width() > colWidths[j] {
 				return errors.Errorf("pdfcpu: table cell width overflow - reduce padding or text: %s", colTd.Text)
@@ -869,7 +872,10 @@ func (t *Table) renderHeader(p *model.Page, pageNr int, fonts model.FontMap, col
 			a = th.colAnchors[i]
 		}
 
-		bb := model.WriteMultiLineAnchored(pdf.XRefTable, p.Buf, r, nil, colTd, a)
+		bb, err := model.WriteMultiLineAnchored(pdf.XRefTable, p.Buf, r, nil, colTd, a)
+		if err != nil {
+			return err
+		}
 
 		if bb.Width() > colWidths[i] {
 			return errors.Errorf("pdfcpu: table header cell width overflow - reduce padding or text: %s", colTd.Text)

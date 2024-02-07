@@ -86,11 +86,14 @@ func (b *Buttons) validate(defValue, value string) error {
 	return nil
 }
 
-func (b *Buttons) calcLeftAlignedHorLabelWidths(td model.TextDescriptor) {
+func (b *Buttons) calcLeftAlignedHorLabelWidths(td model.TextDescriptor) error {
 	var maxw float64
 	for i := 0; i < len(b.Values); i++ {
 		td.Text = b.Values[i]
-		bb := model.WriteMultiLine(b.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+		bb, err := model.WriteMultiLine(b.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+		if err != nil {
+			return err
+		}
 		// Leave last label width as is.
 		if i == len(b.Values)-1 {
 			b.maxWidth = maxw
@@ -100,19 +103,23 @@ func (b *Buttons) calcLeftAlignedHorLabelWidths(td model.TextDescriptor) {
 			if bb.Width() > maxw {
 				b.widths[i] = bb.Width()
 			}
-			return
+			return nil
 		}
 		if bb.Width() > maxw {
 			maxw = bb.Width()
 		}
 	}
+	return nil
 }
 
-func (b *Buttons) calcRightAlignedHorLabelWidths(td model.TextDescriptor) {
+func (b *Buttons) calcRightAlignedHorLabelWidths(td model.TextDescriptor) error {
 	var maxw float64
 	for i := 0; i < len(b.Values); i++ {
 		td.Text = b.Values[i]
-		bb := model.WriteMultiLine(b.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+		bb, err := model.WriteMultiLine(b.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+		if err != nil {
+			return err
+		}
 		// Leave first label width as is.
 		if i == 0 {
 			b.widths[0] = bb.Width()
@@ -129,6 +136,7 @@ func (b *Buttons) calcRightAlignedHorLabelWidths(td model.TextDescriptor) {
 	for i := 1; i < len(b.Values); i++ {
 		b.widths[i] = maxw
 	}
+	return nil
 }
 
 func (b *Buttons) calcHorLabelWidths(td model.TextDescriptor) {
@@ -139,11 +147,14 @@ func (b *Buttons) calcHorLabelWidths(td model.TextDescriptor) {
 	b.calcRightAlignedHorLabelWidths(td)
 }
 
-func (b *Buttons) calcVerLabelWidths(td model.TextDescriptor) {
+func (b *Buttons) calcVerLabelWidths(td model.TextDescriptor) error {
 	var maxw float64
 	for _, v := range b.Values {
 		td.Text = v
-		bb := model.WriteMultiLine(b.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+		bb, err := model.WriteMultiLine(b.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+		if err != nil {
+			return err
+		}
 		if bb.Width() > maxw {
 			maxw = bb.Width()
 		}
@@ -152,6 +163,7 @@ func (b *Buttons) calcVerLabelWidths(td model.TextDescriptor) {
 		b.widths[i] = maxw
 	}
 	b.maxWidth = maxw
+	return nil
 }
 
 func (b *Buttons) calcLabelWidths(hor bool) {

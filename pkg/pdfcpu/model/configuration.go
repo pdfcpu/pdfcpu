@@ -312,10 +312,10 @@ func newDefaultConfiguration() *Configuration {
 }
 
 // NewDefaultConfiguration returns the default pdfcpu configuration.
-func NewDefaultConfiguration() *Configuration {
+func NewDefaultConfiguration() (*Configuration, error) {
 	if loadedDefaultConfig != nil {
 		c := *loadedDefaultConfig
-		return &c
+		return &c, nil
 	}
 	if ConfigPath != "disable" {
 		path, err := os.UserConfigDir()
@@ -324,33 +324,40 @@ func NewDefaultConfiguration() *Configuration {
 		}
 		if err = EnsureDefaultConfigAt(path); err == nil {
 			c := *loadedDefaultConfig
-			return &c
+			return &c, nil
 		}
 		fmt.Fprintf(os.Stderr, "pdfcpu: config dir problem: %v\n", err)
-		os.Exit(1)
+		// os.Exit(1)
+		return nil, fmt.Errorf("pdfcpu: config dir problem: %v", err)
 	}
 	// Bypass config.yml
-	return newDefaultConfiguration()
+	return newDefaultConfiguration(), nil
 }
 
 // NewAESConfiguration returns a default configuration for AES encryption.
-func NewAESConfiguration(userPW, ownerPW string, keyLength int) *Configuration {
-	c := NewDefaultConfiguration()
+func NewAESConfiguration(userPW, ownerPW string, keyLength int) (*Configuration, error) {
+	c, err := NewDefaultConfiguration()
+	if err != nil {
+		return nil, err
+	}
 	c.UserPW = userPW
 	c.OwnerPW = ownerPW
 	c.EncryptUsingAES = true
 	c.EncryptKeyLength = keyLength
-	return c
+	return c, nil
 }
 
 // NewRC4Configuration returns a default configuration for RC4 encryption.
-func NewRC4Configuration(userPW, ownerPW string, keyLength int) *Configuration {
-	c := NewDefaultConfiguration()
+func NewRC4Configuration(userPW, ownerPW string, keyLength int) (*Configuration, error) {
+	c, err := NewDefaultConfiguration()
+	if err != nil {
+		return nil, err
+	}
 	c.UserPW = userPW
 	c.OwnerPW = ownerPW
 	c.EncryptUsingAES = false
 	c.EncryptKeyLength = keyLength
-	return c
+	return c, nil
 }
 
 func (c Configuration) String() string {

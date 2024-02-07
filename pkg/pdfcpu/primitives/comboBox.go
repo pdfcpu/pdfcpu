@@ -385,7 +385,10 @@ func (cb *ComboBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	if font.IsCoreFont(f.Name) && utf8.ValidString(v) {
 		v = model.DecodeUTF8ToByte(v)
 	}
-	lineBB := model.CalcBoundingBox(v, 0, 0, f.Name, f.Size)
+	lineBB, err := model.CalcBoundingBox(v, 0, 0, f.Name, f.Size)
+	if err != nil {
+		return nil, err
+	}
 	s := model.PrepBytes(xRefTable, v, f.Name, true, cb.RTL)
 	x := 2 * boWidth
 	if x == 0 {
@@ -616,7 +619,10 @@ func (cb *ComboBox) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) er
 		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *l.BgCol
 	}
 
-	bb := model.WriteMultiLine(cb.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	bb, err := model.WriteMultiLine(cb.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	if err != nil {
+		return err
+	}
 	l.height = bb.Height() + 10
 
 	// Weird heuristic for vertical alignment with label
@@ -663,7 +669,10 @@ func (cb *ComboBox) prepForRender(p *model.Page, pageNr int, fonts model.FontMap
 		ScaleAbs: true,
 	}
 
-	bb := model.WriteMultiLine(cb.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	bb, err := model.WriteMultiLine(cb.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	if err != nil {
+		return err
+	}
 
 	if cb.Width < 0 {
 		// Extend width to maxWidth.

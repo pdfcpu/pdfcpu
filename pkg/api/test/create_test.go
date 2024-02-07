@@ -1430,7 +1430,7 @@ func writeTextBorderTest(xRefTable *model.XRefTable, p model.Page, region *types
 	td.BackgroundCol = color.SimpleColor{R: .6, G: .98, B: .77}
 	td.BorderStyle = types.LJMiter
 	td.Dy = 100
-	bb := model.WriteColumnAnchored(xRefTable, p.Buf, mediaBox, region, td, types.Center, w)
+	bb, _ := model.WriteColumnAnchored(xRefTable, p.Buf, mediaBox, region, td, types.Center, w)
 
 	// with background, no margin, with border, without border background
 	td.Text = sampleText2
