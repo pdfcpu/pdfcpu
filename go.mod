@@ -2,6 +2,8 @@ module github.com/pdfcpu/pdfcpu
 
 go 1.20
 
+replace github.com/pdfcpu/pdfcpu => github.com/robomotionio/pdfcpu v0.0.1
+
 require (
 	github.com/hhrutter/lzw v1.0.0
 	github.com/hhrutter/tiff v1.0.1
