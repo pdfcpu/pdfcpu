@@ -36,8 +36,12 @@ func Import(s string, u types.DisplayUnit) (*pdfcpu.Import, error) {
 // ImportImages appends PDF pages containing images to rs and writes the result to w.
 // If rs == nil a new PDF file will be written to w.
 func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdfcpu.Import, conf *model.Configuration) error {
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.IMPORTIMAGES
 
@@ -47,7 +51,6 @@ func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdfcpu.I
 
 	var (
 		ctx *model.Context
-		err error
 	)
 
 	if rs != nil {

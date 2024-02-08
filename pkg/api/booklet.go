@@ -58,12 +58,16 @@ func BookletFromImages(conf *model.Configuration, imageFileNames []string, nup *
 
 // Booklet arranges PDF pages on larger sheets of paper and writes the result to w.
 func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *model.NUp, conf *model.Configuration) error {
+	var err error
 	if rs == nil {
 		return errors.New("pdfcpu: Booklet: missing rs")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.BOOKLET
 
@@ -73,7 +77,6 @@ func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nu
 
 	var (
 		ctx *model.Context
-		err error
 	)
 
 	if nup.ImgInputFile {

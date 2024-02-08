@@ -31,8 +31,13 @@ func Images(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration)
 		return nil, errors.New("pdfcpu: ListImages: missing rs")
 	}
 
+	var err error
+
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	}
 	conf.Cmd = model.LISTIMAGES
 

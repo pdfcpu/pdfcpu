@@ -37,9 +37,12 @@ func listAttachments(rs io.ReadSeeker, conf *model.Configuration, withDesc, sort
 	if rs == nil {
 		return nil, errors.New("pdfcpu: listAttachments: missing rs")
 	}
-
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	}
 	conf.Cmd = model.LISTATTACHMENTS
 
@@ -115,8 +118,12 @@ func listBoxes(rs io.ReadSeeker, selectedPages []string, pb *model.PageBoundarie
 		return nil, errors.New("pdfcpu: listBoxes: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	}
 	conf.Cmd = model.LISTBOXES
 
@@ -155,8 +162,12 @@ func ListBoxesFile(inFile string, selectedPages []string, pb *model.PageBoundari
 }
 
 func listFormFields(rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	}
 	conf.Cmd = model.LISTFORMFIELDS
 
@@ -211,8 +222,12 @@ func listImages(rs io.ReadSeeker, selectedPages []string, conf *model.Configurat
 		return nil, errors.New("pdfcpu: listImages: Please provide rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	}
 	conf.Cmd = model.LISTIMAGES
 
@@ -371,8 +386,12 @@ func listPermissions(rs io.ReadSeeker, conf *model.Configuration) ([]string, err
 		return nil, errors.New("pdfcpu: listPermissions: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	}
 	conf.Cmd = model.LISTPERMISSIONS
 
@@ -420,8 +439,12 @@ func listProperties(rs io.ReadSeeker, conf *model.Configuration) ([]string, erro
 		return nil, errors.New("pdfcpu: listProperties: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
@@ -452,8 +475,12 @@ func listBookmarks(rs io.ReadSeeker, conf *model.Configuration) ([]string, error
 		return nil, errors.New("pdfcpu: listBookmarks: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed

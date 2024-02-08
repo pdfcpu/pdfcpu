@@ -79,8 +79,12 @@ func writePageSpan(ctx *model.Context, from, thru int, outPath string) error {
 }
 
 func context(rs io.ReadSeeker, conf *model.Configuration) (*model.Context, error) {
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	}
 	conf.Cmd = model.SPLIT
 

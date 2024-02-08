@@ -47,9 +47,12 @@ func FormFields(rs io.ReadSeeker, conf *model.Configuration) ([]form.Field, erro
 	if rs == nil {
 		return nil, errors.New("pdfcpu: FormFields: missing rs")
 	}
-
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	}
 	conf.Cmd = model.LISTFORMFIELDS
 
@@ -73,8 +76,12 @@ func RemoveFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, c
 		return errors.New("pdfcpu: RemoveFormFields: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.REMOVEFORMFIELDS
 
@@ -150,8 +157,12 @@ func LockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, con
 		return errors.New("pdfcpu: LockFormFields: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.LOCKFORMFIELDS
 
@@ -227,8 +238,12 @@ func UnlockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, c
 		return errors.New("pdfcpu: UnlockFormFields: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.UNLOCKFORMFIELDS
 
@@ -304,8 +319,12 @@ func ResetFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, co
 		return errors.New("pdfcpu: ResetFormFields: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.RESETFORMFIELDS
 
@@ -381,8 +400,12 @@ func ExportForm(rs io.ReadSeeker, source string, conf *model.Configuration) (*fo
 		return nil, errors.New("pdfcpu: ExportForm: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	}
 	conf.Cmd = model.EXPORTFORMFIELDS
 
@@ -416,8 +439,12 @@ func ExportFormJSON(rs io.ReadSeeker, w io.Writer, source string, conf *model.Co
 		return errors.New("pdfcpu: ExportFormJSON: missing w")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.EXPORTFORMFIELDS
 
@@ -554,8 +581,12 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 		return errors.New("pdfcpu: FillForm: missing rd")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.FILLFORMFIELDS
 
@@ -869,8 +900,12 @@ func multiFillFormCSV(inFilePDF string, rd io.Reader, outDir, fileName string, m
 
 // MultiFillForm populates multiples instances of inFilePDF's form with data from rd and writes the result to outDir.
 func MultiFillForm(inFilePDF string, rd io.Reader, outDir, fileName string, format form.DataFormat, merge bool, conf *model.Configuration) error {
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.MULTIFILLFORMFIELDS
 

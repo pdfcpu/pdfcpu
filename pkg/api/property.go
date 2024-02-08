@@ -32,8 +32,12 @@ func Properties(rs io.ReadSeeker, conf *model.Configuration) (map[string]string,
 		return nil, errors.New("pdfcpu: ListProperties: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
@@ -54,8 +58,12 @@ func AddProperties(rs io.ReadSeeker, w io.Writer, properties map[string]string, 
 		return errors.New("pdfcpu: AddProperties: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	} else {
 		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
@@ -132,8 +140,12 @@ func RemoveProperties(rs io.ReadSeeker, w io.Writer, properties []string, conf *
 		return errors.New("pdfcpu: RemoveProperties: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	} else {
 		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed

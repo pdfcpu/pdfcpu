@@ -27,9 +27,12 @@ func ExampleValidateFile() {
 	ValidateFile("in.pdf", nil)
 }
 
-func ExampleOptimizeFile() {
+func ExampleOptimizeFile() error {
 
-	conf := model.NewDefaultConfiguration()
+	conf, err := model.NewDefaultConfiguration()
+	if err != nil {
+		return err
+	}
 
 	// Set passwords for encrypted files.
 	conf.UserPW = "upw"
@@ -45,6 +48,7 @@ func ExampleOptimizeFile() {
 	// If you want to modify the original file, pass an empty string for outFile.
 	// Use nil for a default configuration.
 	OptimizeFile("in.pdf", "", nil)
+	return nil
 }
 
 func ExampleTrimFile() {
@@ -205,45 +209,68 @@ func ExampleNUpFile() {
 	NUpFile(inFiles, "out.pdf", nil, nup, nil)
 }
 
-func ExampleSetPermissionsFile() {
+func ExampleSetPermissionsFile() error {
 
 	// Setting all permissions for the AES-256 encrypted in.pdf.
-	conf := model.NewAESConfiguration("upw", "opw", 256)
+	conf, err := model.NewAESConfiguration("upw", "opw", 256)
+	if err != nil {
+		return err
+	}
 	conf.Permissions = model.PermissionsAll
 	SetPermissionsFile("in.pdf", "", conf)
 
 	// Restricting permissions for the AES-256 encrypted in.pdf.
-	conf = model.NewAESConfiguration("upw", "opw", 256)
+	conf, err = model.NewAESConfiguration("upw", "opw", 256)
+	if err != nil {
+		return err
+	}
 	conf.Permissions = model.PermissionsNone
 	SetPermissionsFile("in.pdf", "", conf)
+	return nil
 }
 
-func ExampleEncryptFile() {
+func ExampleEncryptFile() error {
 
 	// Encrypting a file using AES-256.
-	conf := model.NewAESConfiguration("upw", "opw", 256)
+	conf, err := model.NewAESConfiguration("upw", "opw", 256)
+	if err != nil {
+		return err
+	}
 	EncryptFile("in.pdf", "", conf)
+	return nil
 }
 
-func ExampleDecryptFile() {
+func ExampleDecryptFile() error {
 
 	// Decrypting an AES-256 encrypted file.
-	conf := model.NewAESConfiguration("upw", "opw", 256)
+	conf, err := model.NewAESConfiguration("upw", "opw", 256)
+	if err != nil {
+		return err
+	}
 	DecryptFile("in.pdf", "", conf)
+	return nil
 }
 
-func ExampleChangeUserPasswordFile() {
+func ExampleChangeUserPasswordFile() error {
 
 	// Changing the user password for an AES-256 encrypted file.
-	conf := model.NewAESConfiguration("upw", "opw", 256)
+	conf, err := model.NewAESConfiguration("upw", "opw", 256)
+	if err != nil {
+		return err
+	}
 	ChangeUserPasswordFile("in.pdf", "", "upw", "upwNew", conf)
+	return nil
 }
 
-func ExampleChangeOwnerPasswordFile() {
+func ExampleChangeOwnerPasswordFile() error {
 
 	// Changing the owner password for an AES-256 encrypted file.
-	conf := model.NewAESConfiguration("upw", "opw", 256)
+	conf, err := model.NewAESConfiguration("upw", "opw", 256)
+	if err != nil {
+		return err
+	}
 	ChangeOwnerPasswordFile("in.pdf", "", "opw", "opwNew", conf)
+	return nil
 }
 
 func ExampleAddAttachmentsFile() {

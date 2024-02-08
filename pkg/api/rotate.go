@@ -33,8 +33,12 @@ func Rotate(rs io.ReadSeeker, w io.Writer, rotation int, selectedPages []string,
 		return errors.New("pdfcpu: Rotate: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.ROTATE
 

@@ -30,9 +30,12 @@ func PDFInfo(rs io.ReadSeeker, fileName string, selectedPages []string, conf *mo
 	if rs == nil {
 		return nil, errors.New("pdfcpu: PDFInfo: missing rs")
 	}
-
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed

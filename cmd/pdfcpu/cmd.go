@@ -107,7 +107,11 @@ func ensureDefaultConfig() (*model.Configuration, error) {
 			return nil, err
 		}
 	}
-	return model.NewDefaultConfiguration(), nil
+	conf, err := model.NewDefaultConfiguration()
+	if err != nil {
+		return nil, err
+	}
+	return conf, nil
 }
 
 // process applies command completion and if successful processes the resulting command.

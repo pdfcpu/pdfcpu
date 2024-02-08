@@ -39,8 +39,12 @@ func AddWatermarksMap(rs io.ReadSeeker, w io.Writer, m map[int]*model.Watermark,
 		return errors.New("pdfcpu: AddWatermarksMap: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.ADDWATERMARKS
 
@@ -131,8 +135,12 @@ func AddWatermarksSliceMap(rs io.ReadSeeker, w io.Writer, m map[int][]*model.Wat
 		return errors.New("pdfcpu: AddWatermarksSliceMap: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.ADDWATERMARKS
 
@@ -223,8 +231,12 @@ func AddWatermarks(rs io.ReadSeeker, w io.Writer, selectedPages []string, wm *mo
 		return errors.New("pdfcpu: AddWatermarks: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.ADDWATERMARKS
 	conf.OptimizeDuplicateContentStreams = false
@@ -325,8 +337,12 @@ func RemoveWatermarks(rs io.ReadSeeker, w io.Writer, selectedPages []string, con
 		return errors.New("pdfcpu: RemoveWatermarks: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.REMOVEWATERMARKS
 
@@ -435,8 +451,12 @@ func HasWatermarks(rs io.ReadSeeker, conf *model.Configuration) (bool, error) {
 
 // HasWatermarksFile checks inFile for watermarks.
 func HasWatermarksFile(inFile string, conf *model.Configuration) (bool, error) {
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return false, err
+		}
 	}
 
 	f, err := os.Open(inFile)

@@ -1919,7 +1919,7 @@ func CreateFormDemoXRef() (*model.XRefTable, error) {
 // CreateContext creates a Context for given cross reference table and configuration.
 func CreateContext(xRefTable *model.XRefTable, conf *model.Configuration) *model.Context {
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, _ = model.NewDefaultConfiguration()
 	}
 	xRefTable.Conf = conf
 	xRefTable.ValidationMode = conf.ValidationMode

@@ -28,12 +28,16 @@ import (
 
 // Collect creates a custom PDF page sequence for selected pages of rs and writes the result to w.
 func Collect(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.Configuration) error {
+	var err error
 	if rs == nil {
 		return errors.New("pdfcpu: Collect: missing rs")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.COLLECT
 

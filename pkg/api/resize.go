@@ -33,8 +33,12 @@ func Resize(rs io.ReadSeeker, w io.Writer, selectedPages []string, resize *model
 		return errors.New("pdfcpu: Resize: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.RESIZE
 
@@ -111,7 +115,10 @@ func ResizeFile(inFile, outFile string, selectedPages []string, resize *model.Re
 	}()
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.RESIZE
 

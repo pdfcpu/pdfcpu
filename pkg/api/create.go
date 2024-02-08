@@ -44,18 +44,21 @@ func CreatePDFFile(xRefTable *model.XRefTable, outFile string, conf *model.Confi
 // If rs is present, new PDF content will be appended including any empty pages needed.
 // rd is a JSON representation of PDF page content which may include form data.
 func Create(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configuration) error {
+	var err error
 	if rd == nil {
 		return errors.New("pdfcpu: Create: missing rd")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.CREATE
 
 	var (
 		ctx *model.Context
-		err error
 	)
 
 	if rs != nil {

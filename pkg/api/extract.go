@@ -35,12 +35,16 @@ import (
 // ExtractImagesRaw returns []pdfcpu.Image containing io.Readers for images contained in selectedPages.
 // Beware of memory intensive returned slice.
 func ExtractImagesRaw(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration) ([]map[int]model.Image, error) {
+	var err error
 	if rs == nil {
 		return nil, errors.New("pdfcpu: ExtractImages: missing rs")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	}
 	conf.Cmd = model.EXTRACTIMAGES
 
@@ -75,12 +79,16 @@ func ExtractImagesRaw(rs io.ReadSeeker, selectedPages []string, conf *model.Conf
 
 // ExtractImages extracts and digests embedded image resources from rs for selected pages.
 func ExtractImages(rs io.ReadSeeker, selectedPages []string, digestImage func(model.Image, bool, int) error, conf *model.Configuration) error {
+	var err error
 	if rs == nil {
 		return errors.New("pdfcpu: ExtractImages: missing rs")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.EXTRACTIMAGES
 
@@ -162,12 +170,16 @@ func writeFonts(ff []pdfcpu.Font, outDir, fileName string) error {
 
 // ExtractFonts dumps embedded fontfiles from rs into outDir for selected pages.
 func ExtractFonts(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, conf *model.Configuration) error {
+	var err error
 	if rs == nil {
 		return errors.New("pdfcpu: ExtractFonts: missing rs")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.EXTRACTFONTS
 
@@ -237,12 +249,16 @@ func ExtractFontsFile(inFile, outDir string, selectedPages []string, conf *model
 
 // ExtractPages generates single page PDF files from rs in outDir for selected pages.
 func ExtractPages(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, conf *model.Configuration) error {
+	var err error
 	if rs == nil {
 		return errors.New("pdfcpu: ExtractPages: missing rs")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 		conf.Cmd = model.EXTRACTPAGES
 	}
 
@@ -313,12 +329,16 @@ func ExtractPagesFile(inFile, outDir string, selectedPages []string, conf *model
 
 // ExtractContent dumps "PDF source" files from rs into outDir for selected pages.
 func ExtractContent(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, conf *model.Configuration) error {
+	var err error
 	if rs == nil {
 		return errors.New("pdfcpu: ExtractContent: missing rs")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.EXTRACTCONTENT
 
@@ -396,12 +416,16 @@ func ExtractContentFile(inFile, outDir string, selectedPages []string, conf *mod
 
 // ExtractMetadata dumps all metadata dict entries for rs into outDir.
 func ExtractMetadata(rs io.ReadSeeker, outDir, fileName string, conf *model.Configuration) error {
+	var err error
 	if rs == nil {
 		return errors.New("pdfcpu: ExtractMetadata: missing rs")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.EXTRACTMETADATA
 

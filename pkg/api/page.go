@@ -33,8 +33,12 @@ func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before b
 		return errors.New("pdfcpu: InsertPages: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.INSERTPAGESAFTER
 	if before {
@@ -128,8 +132,12 @@ func RemovePages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *mo
 		return errors.New("pdfcpu: RemovePages: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.REMOVEPAGES
 
@@ -236,8 +244,11 @@ func PageCountFile(inFile string) (int, error) {
 		return 0, err
 	}
 	defer f.Close()
-
-	return PageCount(f, model.NewDefaultConfiguration())
+	conf, err := model.NewDefaultConfiguration()
+	if err != nil {
+		return 0, err
+	}
+	return PageCount(f, conf)
 }
 
 // PageDims returns a sorted slice of mediaBox dimensions for rs.
@@ -275,5 +286,10 @@ func PageDimsFile(inFile string) ([]types.Dim, error) {
 	}
 	defer f.Close()
 
-	return PageDims(f, model.NewDefaultConfiguration())
+	conf, err := model.NewDefaultConfiguration()
+	if err != nil {
+		return nil, err
+	}
+
+	return PageDims(f, conf)
 }

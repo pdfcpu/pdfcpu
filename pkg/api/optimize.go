@@ -33,8 +33,12 @@ func Optimize(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
 		return errors.New("pdfcpu: Optimize: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	//conf.Cmd = model.OPTIMIZE
 
@@ -110,7 +114,10 @@ func OptimizeFile(inFile, outFile string, conf *model.Configuration) (err error)
 	}()
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.OPTIMIZE
 

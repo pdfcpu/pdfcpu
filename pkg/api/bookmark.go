@@ -33,12 +33,16 @@ var (
 
 // Bookmarks returns rs's bookmark hierarchy.
 func Bookmarks(rs io.ReadSeeker, conf *model.Configuration) ([]pdfcpu.Bookmark, error) {
+	var err error
 	if rs == nil {
 		return nil, errors.New("pdfcpu: Bookmarks: missing rs")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		conf.ValidationMode = model.ValidationRelaxed
 	}
@@ -53,6 +57,7 @@ func Bookmarks(rs io.ReadSeeker, conf *model.Configuration) ([]pdfcpu.Bookmark, 
 
 // ExportBookmarksJSON extracts outline data from rs (originating from source) and writes the result to w.
 func ExportBookmarksJSON(rs io.ReadSeeker, w io.Writer, source string, conf *model.Configuration) error {
+	var err error
 	if rs == nil {
 		return errors.New("pdfcpu: ExportBookmarksJSON: missing rs")
 	}
@@ -62,7 +67,10 @@ func ExportBookmarksJSON(rs io.ReadSeeker, w io.Writer, source string, conf *mod
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.EXPORTBOOKMARKS
 
@@ -119,6 +127,7 @@ func ExportBookmarksFile(inFilePDF, outFileJSON string, conf *model.Configuratio
 
 // ImportBookmarks creates/replaces outlines in rs and writes the result to w.
 func ImportBookmarks(rs io.ReadSeeker, rd io.Reader, w io.Writer, replace bool, conf *model.Configuration) error {
+	var err error
 	if rs == nil {
 		return errors.New("pdfcpu: ImportBookmarks: missing rs")
 	}
@@ -128,7 +137,10 @@ func ImportBookmarks(rs io.ReadSeeker, rd io.Reader, w io.Writer, replace bool, 
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	} else {
 		conf.ValidationMode = model.ValidationRelaxed
 	}
@@ -198,12 +210,16 @@ func ImportBookmarksFile(inFilePDF, inFileJSON, outFilePDF string, replace bool,
 
 // AddBookmarks adds a single bookmark outline layer to the PDF context read from rs and writes the result to w.
 func AddBookmarks(rs io.ReadSeeker, w io.Writer, bms []pdfcpu.Bookmark, replace bool, conf *model.Configuration) error {
+	var err error
 	if rs == nil {
 		return errors.New("pdfcpu: AddBookmarks: missing rs")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	} else {
 		conf.ValidationMode = model.ValidationRelaxed
 	}
@@ -269,12 +285,16 @@ func AddBookmarksFile(inFile, outFile string, bms []pdfcpu.Bookmark, replace boo
 
 // RemoveBookmarks deletes outlines from rs and writes the result to w.
 func RemoveBookmarks(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
+	var err error
 	if rs == nil {
 		return errors.New("pdfcpu: AddBookmarks: missing rs")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	} else {
 		conf.ValidationMode = model.ValidationRelaxed
 	}

@@ -231,8 +231,12 @@ func ParseNUpDetails(s string, nup *model.NUp) error {
 // PDFNUpConfig returns an NUp configuration for Nup-ing PDF files.
 func PDFNUpConfig(val int, desc string, conf *model.Configuration) (*model.NUp, error) {
 	nup := model.DefaultNUpConfig()
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	}
 	nup.InpUnit = conf.Unit
 	if desc != "" {
@@ -256,8 +260,12 @@ func ImageNUpConfig(val int, desc string, conf *model.Configuration) (*model.NUp
 // PDFGridConfig returns a grid configuration for Nup-ing PDF files.
 func PDFGridConfig(rows, cols int, desc string, conf *model.Configuration) (*model.NUp, error) {
 	nup := model.DefaultNUpConfig()
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	}
 	nup.InpUnit = conf.Unit
 	nup.PageGrid = true

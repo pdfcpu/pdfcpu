@@ -44,12 +44,16 @@ func Box(s string, u types.DisplayUnit) (*model.Box, error) {
 
 // Boxes returns rs's page boundaries for selected pages of rs.
 func Boxes(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration) ([]model.PageBoundaries, error) {
+	var err error
 	if rs == nil {
 		return nil, errors.New("pdfcpu: Boxes: missing rs")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	}
 	conf.Cmd = model.LISTBOXES
 
@@ -72,12 +76,16 @@ func Boxes(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration) 
 
 // AddBoxes adds page boundaries for selected pages of rs and writes result to w.
 func AddBoxes(rs io.ReadSeeker, w io.Writer, selectedPages []string, pb *model.PageBoundaries, conf *model.Configuration) error {
+	var err error
 	if rs == nil {
 		return errors.New("pdfcpu: AddBoxes: missing rs")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.ADDBOXES
 
@@ -155,12 +163,16 @@ func AddBoxesFile(inFile, outFile string, selectedPages []string, pb *model.Page
 
 // RemoveBoxes removes page boundaries as specified in pb for selected pages of rs and writes result to w.
 func RemoveBoxes(rs io.ReadSeeker, w io.Writer, selectedPages []string, pb *model.PageBoundaries, conf *model.Configuration) error {
+	var err error
 	if rs == nil {
 		return errors.New("pdfcpu: RemoveBoxes: missing rs")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.REMOVEBOXES
 
@@ -239,12 +251,16 @@ func RemoveBoxesFile(inFile, outFile string, selectedPages []string, pb *model.P
 
 // Crop adds crop boxes for selected pages of rs and writes result to w.
 func Crop(rs io.ReadSeeker, w io.Writer, selectedPages []string, b *model.Box, conf *model.Configuration) error {
+	var err error
 	if rs == nil {
 		return errors.New("pdfcpu: Crop: missing rs")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.CROP
 
@@ -278,7 +294,6 @@ func Crop(rs io.ReadSeeker, w io.Writer, selectedPages []string, b *model.Box, c
 // CropFile adds crop boxes for selected pages of inFile and writes result to outFile.
 func CropFile(inFile, outFile string, selectedPages []string, b *model.Box, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
-
 	if log.CLIEnabled() {
 		log.CLI.Printf("cropping %s\n", inFile)
 	}
@@ -319,7 +334,10 @@ func CropFile(inFile, outFile string, selectedPages []string, b *model.Box, conf
 	}()
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.CROP
 

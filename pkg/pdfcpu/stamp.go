@@ -999,22 +999,30 @@ func drawBoundingBox(b *bytes.Buffer, wm model.Watermark, bb *types.Rectangle) {
 	)
 }
 
-func calcFormBoundingBox(xRefTable *model.XRefTable, w io.Writer, timestampFormat string, pageNr, pageCount int, wm *model.Watermark) bool {
+func calcFormBoundingBox(xRefTable *model.XRefTable, w io.Writer, timestampFormat string, pageNr, pageCount int, wm *model.Watermark) (bool, error) {
 	var unique bool
+	var err error
 	if wm.IsImage() || wm.IsPDF() {
 		wm.CalcBoundingBox(pageNr)
 	} else {
 		var td model.TextDescriptor
 		td, unique = setupTextDescriptor(*wm, timestampFormat, pageNr, pageCount)
 		// Render td into b and return the bounding box.
-		wm.Bb = model.WriteMultiLine(xRefTable, w, types.RectForDim(wm.Vp.Width(), wm.Vp.Height()), nil, td)
+		wm.Bb, err = model.WriteMultiLine(xRefTable, w, types.RectForDim(wm.Vp.Width(), wm.Vp.Height()), nil, td)
+		if err != nil {
+			return false, err
+		}
 	}
-	return unique
+	return unique, nil
 }
 
 func createForm(ctx *model.Context, pageNr, pageCount int, wm *model.Watermark, withBB bool) error {
 	var b bytes.Buffer
-	unique := calcFormBoundingBox(ctx.XRefTable, &b, ctx.Configuration.TimestampFormat, pageNr, pageCount, wm)
+	var err error
+	unique, err := calcFormBoundingBox(ctx.XRefTable, &b, ctx.Configuration.TimestampFormat, pageNr, pageCount, wm)
+	if err != nil {
+		return err
+	}
 
 	// The forms bounding box is dependent on the page dimensions.
 	bb := wm.Bb

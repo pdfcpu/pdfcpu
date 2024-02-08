@@ -33,8 +33,12 @@ func Validate(rs io.ReadSeeker, conf *model.Configuration) error {
 		return errors.New("pdfcpu: Validate: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.VALIDATE
 
@@ -79,8 +83,12 @@ func Validate(rs io.ReadSeeker, conf *model.Configuration) error {
 
 // ValidateFile validates inFile.
 func ValidateFile(inFile string, conf *model.Configuration) error {
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 
 	if conf != nil && conf.ValidationMode == model.ValidationNone {
@@ -107,8 +115,12 @@ func ValidateFile(inFile string, conf *model.Configuration) error {
 
 // ValidateFiles validates inFiles.
 func ValidateFiles(inFiles []string, conf *model.Configuration) error {
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 
 	if conf != nil && conf.ValidationMode == model.ValidationNone {
@@ -136,8 +148,12 @@ func DumpObject(rs io.ReadSeeker, mode, objNr int, conf *model.Configuration) er
 		return errors.New("pdfcpu: DumpObject: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.DUMP
 
@@ -161,8 +177,12 @@ func DumpObject(rs io.ReadSeeker, mode, objNr int, conf *model.Configuration) er
 
 // DumpObjectFile writes an object from rs to stdout.
 func DumpObjectFile(inFile string, mode, objNr int, conf *model.Configuration) error {
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 
 	f, err := os.Open(inFile)

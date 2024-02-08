@@ -54,8 +54,12 @@ func MergeRaw(rsc []io.ReadSeeker, w io.Writer, dividerPage bool, conf *model.Co
 		return errors.New("pdfcpu: MergeRaw: missing w")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.MERGECREATE
 	conf.ValidationMode = model.ValidationRelaxed
@@ -106,8 +110,12 @@ func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configura
 		return errors.New("pdfcpu: Merge: Please provide w")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.MERGECREATE
 	conf.ValidationMode = model.ValidationRelaxed
@@ -245,8 +253,12 @@ func MergeCreateZip(rs1, rs2 io.ReadSeeker, w io.Writer, conf *model.Configurati
 		return errors.New("pdfcpu: MergeCreateZip: missing w")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.MERGECREATEZIP
 	conf.ValidationMode = model.ValidationRelaxed

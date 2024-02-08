@@ -42,8 +42,12 @@ type Context struct {
 // NewContext initializes a new Context.
 func NewContext(rs io.ReadSeeker, conf *Configuration) (*Context, error) {
 
+	var err error
 	if conf == nil {
-		conf = NewDefaultConfiguration()
+		conf, err = NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	rdCtx, err := newReadContext(rs)

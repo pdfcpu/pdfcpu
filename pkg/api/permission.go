@@ -31,8 +31,12 @@ func Permissions(rs io.ReadSeeker, conf *model.Configuration) (int, error) {
 		return 0, errors.New("pdfcpu: Permissions: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return 0, err
+		}
 	}
 	conf.Cmd = model.LISTPERMISSIONS
 
@@ -132,8 +136,12 @@ func GetPermissions(rs io.ReadSeeker, conf *model.Configuration) (*int16, error)
 		return nil, errors.New("pdfcpu: GetPermissions: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	}
 	// No cmd available.
 

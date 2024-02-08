@@ -33,8 +33,12 @@ func PageMode(rs io.ReadSeeker, conf *model.Configuration) (*model.PageMode, err
 		return nil, errors.New("pdfcpu: PageMode: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		conf.ValidationMode = model.ValidationRelaxed
 	}
@@ -65,8 +69,12 @@ func ListPageMode(rs io.ReadSeeker, conf *model.Configuration) ([]string, error)
 		return nil, errors.New("pdfcpu: ListPageMode: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		conf.ValidationMode = model.ValidationRelaxed
 	}
@@ -101,8 +109,12 @@ func SetPageMode(rs io.ReadSeeker, w io.Writer, val model.PageMode, conf *model.
 		return errors.New("pdfcpu: SetPageMode: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	} else {
 		conf.ValidationMode = model.ValidationRelaxed
 	}
@@ -170,8 +182,12 @@ func ResetPageMode(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) err
 		return errors.New("pdfcpu: ResetPageMode: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	} else {
 		conf.ValidationMode = model.ValidationRelaxed
 	}

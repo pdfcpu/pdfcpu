@@ -62,8 +62,11 @@ func ReadContextFile(inFile string) (*model.Context, error) {
 		return nil, err
 	}
 	defer f.Close()
-
-	ctx, err := ReadContext(f, model.NewDefaultConfiguration())
+	conf, err := model.NewDefaultConfiguration()
+	if err != nil {
+		return nil, err
+	}
+	ctx, err := ReadContext(f, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +207,7 @@ func DisableConfigDir() {
 
 // LoadConfiguration locates and loads the default configuration
 // and also loads installed user fonts.
-func LoadConfiguration() *model.Configuration {
+func LoadConfiguration() (*model.Configuration, error) {
 	// Call if you don't have a specific config dir location
 	// and need to use user fonts for stamping or watermarking.
 	return model.NewDefaultConfiguration()

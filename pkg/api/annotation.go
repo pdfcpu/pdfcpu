@@ -29,12 +29,16 @@ import (
 
 // Annotations returns page annotations of rs for selected pages.
 func Annotations(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration) (map[int]model.PgAnnots, error) {
+	var err error
 	if rs == nil {
 		return nil, errors.New("pdfcpu: Annotations: missing rs")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	}
 	conf.Cmd = model.LISTANNOTATIONS
 
@@ -57,12 +61,16 @@ func Annotations(rs io.ReadSeeker, selectedPages []string, conf *model.Configura
 
 // AddAnnotations adds annotations for selected pages in rs and writes the result to w.
 func AddAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages []string, ann model.AnnotationRenderer, conf *model.Configuration) error {
+	var err error
 	if rs == nil {
 		return errors.New("pdfcpu: AddAnnotations: missing rs")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.ADDANNOTATIONS
 
@@ -103,12 +111,16 @@ func AddAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages []string, ann m
 
 // AddAnnotationsAsIncrement adds annotations for selected pages in rws and writes out a PDF increment.
 func AddAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages []string, ar model.AnnotationRenderer, conf *model.Configuration) error {
+	var err error
 	if rws == nil {
 		return errors.New("pdfcpu: AddAnnotationsAsIncrement: missing rws")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.ADDANNOTATIONS
 
@@ -207,12 +219,16 @@ func AddAnnotationsFile(inFile, outFile string, selectedPages []string, ar model
 
 // AddAnnotationsMap adds annotations in m to corresponding pages of rs and writes the result to w.
 func AddAnnotationsMap(rs io.ReadSeeker, w io.Writer, m map[int][]model.AnnotationRenderer, conf *model.Configuration) error {
+	var err error
 	if rs == nil {
 		return errors.New("pdfcpu: AddAnnotationsMap: missing rs")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.ADDANNOTATIONS
 
@@ -248,12 +264,16 @@ func AddAnnotationsMap(rs io.ReadSeeker, w io.Writer, m map[int][]model.Annotati
 
 // AddAnnotationsMapAsIncrement adds annotations in m to corresponding pages of rws and writes out a PDF increment.
 func AddAnnotationsMapAsIncrement(rws io.ReadWriteSeeker, m map[int][]model.AnnotationRenderer, conf *model.Configuration) error {
+	var err error
 	if rws == nil {
 		return errors.New("pdfcpu: AddAnnotationsMapAsIncrement: missing rws")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.ADDANNOTATIONS
 
@@ -349,12 +369,16 @@ func AddAnnotationsMapFile(inFile, outFile string, m map[int][]model.AnnotationR
 // RemoveAnnotations removes annotations for selected pages by id and object number
 // from a PDF context read from rs and writes the result to w.
 func RemoveAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages, idsAndTypes []string, objNrs []int, conf *model.Configuration) error {
+	var err error
 	if rs == nil {
 		return errors.New("pdfcpu: RemoveAnnotations: missing rs")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.REMOVEANNOTATIONS
 
@@ -396,12 +420,16 @@ func RemoveAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages, idsAndTypes
 // RemoveAnnotationsAsIncrement removes annotations for selected pages by ids and object number
 // from a PDF context read from rs and writes out a PDF increment.
 func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, idsAndTypes []string, objNrs []int, conf *model.Configuration) error {
+	var err error
 	if rws == nil {
 		return errors.New("pdfcpu: RemoveAnnotationsAsIncrement: missing rws")
 	}
 
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.REMOVEANNOTATIONS
 

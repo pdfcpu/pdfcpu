@@ -93,8 +93,12 @@ func NUpFromImage(conf *model.Configuration, imageFileNames []string, nup *model
 // NUp rearranges PDF pages or images into page grids and writes the result to w.
 // Either rs or imgFiles will be used.
 func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *model.NUp, conf *model.Configuration) error {
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	}
 	conf.Cmd = model.NUP
 
@@ -104,7 +108,6 @@ func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *m
 
 	var (
 		ctx *model.Context
-		err error
 	)
 
 	if nup.ImgInputFile {

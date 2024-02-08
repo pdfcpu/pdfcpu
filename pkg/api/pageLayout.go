@@ -33,8 +33,12 @@ func PageLayout(rs io.ReadSeeker, conf *model.Configuration) (*model.PageLayout,
 		return nil, errors.New("pdfcpu: PageLayout: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		conf.ValidationMode = model.ValidationRelaxed
 	}
@@ -65,8 +69,12 @@ func ListPageLayout(rs io.ReadSeeker, conf *model.Configuration) ([]string, erro
 		return nil, errors.New("pdfcpu: ListPageLayout: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		conf.ValidationMode = model.ValidationRelaxed
 	}
@@ -101,8 +109,12 @@ func SetPageLayout(rs io.ReadSeeker, w io.Writer, val model.PageLayout, conf *mo
 		return errors.New("pdfcpu: SetPageLayout: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	} else {
 		conf.ValidationMode = model.ValidationRelaxed
 	}
@@ -170,8 +182,12 @@ func ResetPageLayout(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) e
 		return errors.New("pdfcpu: ResetPageLayout: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	} else {
 		conf.ValidationMode = model.ValidationRelaxed
 	}

@@ -40,8 +40,12 @@ func DefaultBookletConfig() *model.NUp {
 // PDFBookletConfig returns an NUp configuration for booklet-ing PDF files.
 func PDFBookletConfig(val int, desc string, conf *model.Configuration) (*model.NUp, error) {
 	nup := DefaultBookletConfig()
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	}
 	nup.InpUnit = conf.Unit
 	if desc != "" {

@@ -36,8 +36,12 @@ func ViewerPreferences(rs io.ReadSeeker, conf *model.Configuration) (*model.View
 		return nil, nil, errors.New("pdfcpu: ViewerPreferences: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, nil, err
+		}
 	} else {
 		conf.ValidationMode = model.ValidationRelaxed
 	}
@@ -79,8 +83,12 @@ func ListViewerPreferences(rs io.ReadSeeker, all bool, conf *model.Configuration
 		return nil, errors.New("pdfcpu: ListViewerPreferences: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		conf.ValidationMode = model.ValidationRelaxed
 	}
@@ -171,8 +179,12 @@ func SetViewerPreferences(rs io.ReadSeeker, w io.Writer, vp model.ViewerPreferen
 		return errors.New("pdfcpu: SetViewerPreferences: missing w")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	} else {
 		conf.ValidationMode = model.ValidationRelaxed
 	}
@@ -349,8 +361,12 @@ func ResetViewerPreferences(rs io.ReadSeeker, w io.Writer, conf *model.Configura
 		return errors.New("pdfcpu: ResetViewerPreferences: missing w")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	} else {
 		conf.ValidationMode = model.ValidationRelaxed
 	}

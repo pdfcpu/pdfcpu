@@ -31,9 +31,12 @@ func Keywords(rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {
 	if rs == nil {
 		return nil, errors.New("pdfcpu: ListKeywords: missing rs")
 	}
-
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
@@ -54,8 +57,12 @@ func AddKeywords(rs io.ReadSeeker, w io.Writer, files []string, conf *model.Conf
 		return errors.New("pdfcpu: AddKeywords: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	} else {
 		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
@@ -132,8 +139,12 @@ func RemoveKeywords(rs io.ReadSeeker, w io.Writer, keywords []string, conf *mode
 		return errors.New("pdfcpu: RemoveKeywords: missing rs")
 	}
 
+	var err error
 	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+		conf, err = model.NewDefaultConfiguration()
+		if err != nil {
+			return err
+		}
 	} else {
 		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
