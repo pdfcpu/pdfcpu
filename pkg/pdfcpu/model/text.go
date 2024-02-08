@@ -280,7 +280,8 @@ func prepJustifiedLine(xRefTable *XRefTable, lines *[]string, strbuf []string, s
 func newPrepJustifiedString(
 	xRefTable *XRefTable,
 	fontName string,
-	fontSize int) func(lines *[]string, s string, w float64, fontName string, fontSize *int, lastline, parIndent, cjk, rtl bool) int {
+	fontSize int,
+) func(lines *[]string, s string, w float64, fontName string, fontSize *int, lastline, parIndent, cjk, rtl bool) (int, error) {
 
 	// Not yet rendered content.
 	strbuf := []string{}
@@ -290,14 +291,16 @@ func newPrepJustifiedString(
 
 	// Indent first line of paragraphs.
 	var indent bool = true
-
 	// Indentation string for first line of paragraphs.
 	identPrefix := "    "
+	normalFontSize := fontSize
 
-	blankWidth := font.TextWidth(" ", fontName, fontSize)
+	return func(lines *[]string, s string, w float64, fontName string, fontSize *int, lastline, parIndent, embed, rtl bool) (int, error) {
 
-	return func(lines *[]string, s string, w float64, fontName string, fontSize *int, lastline, parIndent, embed, rtl bool) int {
-
+		blankWidth, err := font.TextWidth(" ", fontName, normalFontSize)
+		if err != nil {
+			return 0, err
+		}
 		if len(s) == 0 {
 			if len(strbuf) > 0 {
 				s1 := PrepBytes(xRefTable, strings.Join(strbuf, " "), fontName, embed, rtl)
@@ -312,13 +315,13 @@ func newPrepJustifiedString(
 				strWidth = 0
 			}
 			if lastline {
-				return 0
+				return 0, nil
 			}
 			indent = true
 			if parIndent {
-				return 0
+				return 0, nil
 			}
-			return 1
+			return 1, nil
 		}
 
 		linefeeds := 0
@@ -328,7 +331,10 @@ func newPrepJustifiedString(
 		}
 
 		for _, s1 := range ss {
-			s1Width := font.TextWidth(s1, fontName, *fontSize)
+			s1Width, err := font.TextWidth(s1, fontName, *fontSize)
+			if err != nil {
+				return 0, err
+			}
 			bw := 0.
 			if len(strbuf) > 0 {
 				bw = blankWidth
@@ -339,7 +345,10 @@ func newPrepJustifiedString(
 				continue
 			}
 			// Ensure s1 fits into w.
-			fs := font.Size(s1, fontName, w)
+			fs, err := font.Size(s1, fontName, w)
+			if err != nil {
+				return 0, err
+			}
 			if fs < *fontSize {
 				*fontSize = fs
 			}
@@ -354,7 +363,7 @@ func newPrepJustifiedString(
 			linefeeds++
 			indent = false
 		}
-		return 0
+		return 0, nil
 	}
 }
 
@@ -386,7 +395,10 @@ func preRenderJustifiedText(
 	prepJustifiedString := newPrepJustifiedString(xRefTable, td.FontName, *fontSize)
 	l := []string{}
 	for i, s := range *lines {
-		linefeeds := prepJustifiedString(&l, s, ww, td.FontName, fontSize, false, td.ParIndent, td.Embed, td.RTL)
+		linefeeds, err := prepJustifiedString(&l, s, ww, td.FontName, fontSize, false, td.ParIndent, td.Embed, td.RTL)
+		if err != nil {
+			return 0, err
+		}
 		for j := 0; j < linefeeds; j++ {
 			l = append(l, "")
 		}
