@@ -77,7 +77,7 @@ func ensureCSVExtension(filename string) error {
 	return nil
 }
 
-func printHelp(conf *model.Configuration) {
+func printHelp(conf *model.Configuration) error {
 	switch len(flag.Args()) {
 
 	case 0:
@@ -94,6 +94,7 @@ func printHelp(conf *model.Configuration) {
 		fmt.Fprintln(os.Stderr, "usage: pdfcpu help command\n\nToo many arguments.")
 
 	}
+	return nil
 }
 
 func printConfiguration(conf *model.Configuration) error {
@@ -115,18 +116,20 @@ func printConfiguration(conf *model.Configuration) error {
 	return nil
 }
 
-func printPaperSizes(conf *model.Configuration) {
+func printPaperSizes(conf *model.Configuration) error {
 	fmt.Fprintln(os.Stderr, paperSizes)
+	return nil
 }
 
-func printSelectedPages(conf *model.Configuration) {
+func printSelectedPages(conf *model.Configuration) error {
 	fmt.Fprintln(os.Stderr, usagePageSelection)
+	return nil
 }
 
 func printVersion(conf *model.Configuration) error {
 	if len(flag.Args()) != 0 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageVersion)
-		return fmt.Errorf("%s\n\n", usageVersion)
+		return fmt.Errorf("%s", usageVersion)
 	}
 
 	fmt.Fprintf(os.Stdout, "pdfcpu: %s\n", model.VersionStr)
@@ -159,10 +162,10 @@ func process(cmd *cli.Command) error {
 	if err != nil {
 		if needStackTrace {
 			fmt.Fprintf(os.Stderr, "Fatal: %+v\n", err)
-			return fmt.Errorf("Fatal: %+v\n", err)
+			return fmt.Errorf("fatal: %+v", err)
 		} else {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
-			return fmt.Errorf("%v\n", err)
+			return fmt.Errorf("%v", err)
 		}
 	}
 
@@ -178,7 +181,7 @@ func process(cmd *cli.Command) error {
 func processValidateCommand(conf *model.Configuration) error {
 	if len(flag.Args()) == 0 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageValidate)
-		return fmt.Errorf("%s\n\n", usageValidate)
+		return fmt.Errorf("%s", usageValidate)
 	}
 
 	inFiles := []string{}
@@ -200,7 +203,7 @@ func processValidateCommand(conf *model.Configuration) error {
 
 	if mode != "" && mode != "strict" && mode != "s" && mode != "relaxed" && mode != "r" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageValidate)
-		return fmt.Errorf("%s\n\n", usageValidate)
+		return fmt.Errorf("%s", usageValidate)
 	}
 
 	switch mode {
@@ -221,7 +224,7 @@ func processValidateCommand(conf *model.Configuration) error {
 func processOptimizeCommand(conf *model.Configuration) error {
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageOptimize)
-		return fmt.Errorf("%s\n\n", usageOptimize)
+		return fmt.Errorf("%s", usageOptimize)
 	}
 
 	inFile := flag.Arg(0)
@@ -277,7 +280,7 @@ func processSplitCommand(conf *model.Configuration) error {
 	mode = modeCompletion(mode, []string{"span", "bookmark", "page"})
 	if mode == "" || len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageSplit)
-		return fmt.Errorf("%s\n\n", usageSplit)
+		return fmt.Errorf("%s", usageSplit)
 	}
 
 	inFile := flag.Arg(0)
@@ -368,12 +371,12 @@ func processMergeCommand(conf *model.Configuration) error {
 	mode = modeCompletion(mode, []string{"create", "append", "zip"})
 	if mode == "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageMerge)
-		return fmt.Errorf("%s\n\n", usageMerge)
+		return fmt.Errorf("%s", usageMerge)
 	}
 
 	if len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageMerge)
-		return fmt.Errorf("%s\n\n", usageMerge)
+		return fmt.Errorf("%s", usageMerge)
 	}
 
 	if mode == "zip" && len(flag.Args()) != 3 {
@@ -441,7 +444,7 @@ func processExtractCommand(conf *model.Configuration) error {
 	mode = modeCompletion(mode, []string{"image", "font", "page", "content", "meta"})
 	if len(flag.Args()) != 2 || mode == "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageExtract)
-		return fmt.Errorf("%s\n\n", usageExtract)
+		return fmt.Errorf("%s", usageExtract)
 	}
 
 	inFile := flag.Arg(0)
@@ -488,7 +491,7 @@ func processExtractCommand(conf *model.Configuration) error {
 func processTrimCommand(conf *model.Configuration) error {
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || selectedPages == "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageTrim)
-		return fmt.Errorf("%s\n\n", usageTrim)
+		return fmt.Errorf("%s", usageTrim)
 	}
 
 	pages, err := api.ParsePageSelection(selectedPages)
@@ -752,7 +755,7 @@ func processSetPermissionsCommand(conf *model.Configuration) error {
 func processDecryptCommand(conf *model.Configuration) error {
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageDecrypt)
-		return fmt.Errorf("%s\n\n", usageDecrypt)
+		return fmt.Errorf("%s", usageDecrypt)
 	}
 
 	inFile := flag.Arg(0)
@@ -774,7 +777,7 @@ func processDecryptCommand(conf *model.Configuration) error {
 func validateEncryptModeFlag() error {
 	if !types.MemberOf(mode, []string{"rc4", "aes", ""}) {
 		fmt.Fprintf(os.Stderr, "%s\n\n", "valid modes: rc4,aes default:aes")
-		return fmt.Errorf("%s\n\n", "valid modes: rc4,aes default:aes")
+		return fmt.Errorf("%s", "valid modes: rc4,aes default:aes")
 	}
 
 	// Default to AES encryption.
@@ -796,7 +799,7 @@ func validateEncryptModeFlag() error {
 	if mode == "aes" {
 		if key != "40" && key != "128" && key != "256" && key != "" {
 			fmt.Fprintf(os.Stderr, "%s\n\n", "supported AES key lengths: 40,128,256 default:256")
-			return fmt.Errorf("%s\n\n", "supported AES key lengths: 40,128,256 default:256")
+			return fmt.Errorf("%s", "supported AES key lengths: 40,128,256 default:256")
 		}
 	}
 
@@ -808,7 +811,7 @@ func validateEncryptFlags() error {
 	validateEncryptModeFlag()
 	if perm != "none" && perm != "print" && perm != "all" && perm != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", "supported permissions: none,print,all default:none (viewing always allowed!)")
-		return fmt.Errorf("%s\n\n", "supported permissions: none,print,all default:none (viewing always allowed!)")
+		return fmt.Errorf("%s", "supported permissions: none,print,all default:none (viewing always allowed!)")
 	}
 
 	return nil
@@ -821,7 +824,7 @@ func processEncryptCommand(conf *model.Configuration) error {
 	if len(flag.Args()) == 0 || len(flag.Args()) > 2 ||
 		!(perm == "none" || perm == "print" || perm == "all") {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageEncrypt)
-		return fmt.Errorf("%s\n\n", usageEncrypt)
+		return fmt.Errorf("%s", usageEncrypt)
 	}
 
 	if conf.OwnerPW == "" {
@@ -867,7 +870,7 @@ func processEncryptCommand(conf *model.Configuration) error {
 func processChangeUserPasswordCommand(conf *model.Configuration) error {
 	if len(flag.Args()) != 3 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageChangeUserPW)
-		return fmt.Errorf("%s\n\n", usageChangeUserPW)
+		return fmt.Errorf("%s", usageChangeUserPW)
 	}
 
 	inFile := flag.Arg(0)
@@ -892,7 +895,7 @@ func processChangeUserPasswordCommand(conf *model.Configuration) error {
 func processChangeOwnerPasswordCommand(conf *model.Configuration) error {
 	if len(flag.Args()) != 3 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageChangeOwnerPW)
-		return fmt.Errorf("%s\n\n", usageChangeOwnerPW)
+		return fmt.Errorf("%s", usageChangeOwnerPW)
 	}
 
 	inFile := flag.Arg(0)
@@ -982,12 +985,20 @@ func addWatermarks(conf *model.Configuration, onTop bool) error {
 	return nil
 }
 
-func processAddStampsCommand(conf *model.Configuration) {
-	addWatermarks(conf, true)
+func processAddStampsCommand(conf *model.Configuration) error {
+	err := addWatermarks(conf, true)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func processAddWatermarksCommand(conf *model.Configuration) {
-	addWatermarks(conf, false)
+func processAddWatermarksCommand(conf *model.Configuration) error {
+	err := addWatermarks(conf, false)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func updateWatermarks(conf *model.Configuration, onTop bool) error {
@@ -998,12 +1009,12 @@ func updateWatermarks(conf *model.Configuration, onTop bool) error {
 
 	if len(flag.Args()) < 3 || len(flag.Args()) > 4 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", u)
-		return fmt.Errorf("%s\n\n", u)
+		return fmt.Errorf("%s", u)
 	}
 
 	if mode != "text" && mode != "image" && mode != "pdf" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", u)
-		return fmt.Errorf("%s\n\n", u)
+		return fmt.Errorf("%s", u)
 	}
 
 	processDiplayUnit(conf)
@@ -1055,12 +1066,20 @@ func updateWatermarks(conf *model.Configuration, onTop bool) error {
 	return nil
 }
 
-func processUpdateStampsCommand(conf *model.Configuration) {
-	updateWatermarks(conf, true)
+func processUpdateStampsCommand(conf *model.Configuration) error {
+	err := updateWatermarks(conf, true)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func processUpdateWatermarksCommand(conf *model.Configuration) {
-	updateWatermarks(conf, false)
+func processUpdateWatermarksCommand(conf *model.Configuration) error {
+	err := updateWatermarks(conf, false)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func removeWatermarks(conf *model.Configuration, onTop bool) error {
@@ -1070,7 +1089,7 @@ func removeWatermarks(conf *model.Configuration, onTop bool) error {
 			s = usageStampRemove
 		}
 		fmt.Fprintf(os.Stderr, "%s\n\n", s)
-		return fmt.Errorf("%s\n\n", s)
+		return fmt.Errorf("%s", s)
 	}
 
 	selectedPages, err := api.ParsePageSelection(selectedPages)
@@ -1095,12 +1114,14 @@ func removeWatermarks(conf *model.Configuration, onTop bool) error {
 	return nil
 }
 
-func processRemoveStampsCommand(conf *model.Configuration) {
+func processRemoveStampsCommand(conf *model.Configuration) error {
 	removeWatermarks(conf, true)
+	return nil
 }
 
-func processRemoveWatermarksCommand(conf *model.Configuration) {
+func processRemoveWatermarksCommand(conf *model.Configuration) error {
 	removeWatermarks(conf, false)
+	return nil
 }
 
 func ensureImageExtension(filename string) error {
@@ -1137,7 +1158,7 @@ func parseArgsForImageFileNames(startInd int) ([]string, error) {
 func processImportImagesCommand(conf *model.Configuration) error {
 	if len(flag.Args()) < 2 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageImportImages)
-		return fmt.Errorf("%s\n\n", usageImportImages)
+		return fmt.Errorf("%s", usageImportImages)
 	}
 
 	processDiplayUnit(conf)
@@ -1201,7 +1222,7 @@ func processInsertPagesCommand(conf *model.Configuration) error {
 	// Set default to insert pages before selected pages.
 	if mode != "" && mode != "before" && mode != "after" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usagePagesInsert)
-		return fmt.Errorf("%s\n\n", usagePagesInsert)
+		return fmt.Errorf("%s", usagePagesInsert)
 	}
 
 	process(cli.InsertPagesCommand(inFile, outFile, pages, conf, mode))
@@ -1251,7 +1272,7 @@ func abs(i int) int {
 func processRotateCommand(conf *model.Configuration) error {
 	if len(flag.Args()) < 2 || len(flag.Args()) > 3 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageRotate)
-		return fmt.Errorf("%s\n\n", usageRotate)
+		return fmt.Errorf("%s", usageRotate)
 	}
 
 	inFile := flag.Arg(0)
@@ -1327,7 +1348,7 @@ func parseAfterNUpDetails(nup *model.NUp, argInd int, filenameOut string) ([]str
 				usage = usageGrid
 			}
 			fmt.Fprintf(os.Stderr, "%s\n\n", usage)
-			return nil, fmt.Errorf("%s\n\n", usage)
+			return nil, fmt.Errorf("%s", usage)
 		}
 		if filenameIn == filenameOut {
 			fmt.Fprintln(os.Stderr, "inFile and outFile can't be the same.")
@@ -1348,7 +1369,7 @@ func parseAfterNUpDetails(nup *model.NUp, argInd int, filenameOut string) ([]str
 func processNUpCommand(conf *model.Configuration) error {
 	if len(flag.Args()) < 3 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageNUp)
-		return fmt.Errorf("%s\n\n", usageNUp)
+		return fmt.Errorf("%s", usageNUp)
 	}
 
 	processDiplayUnit(conf)
@@ -1390,7 +1411,7 @@ func processNUpCommand(conf *model.Configuration) error {
 func processGridCommand(conf *model.Configuration) error {
 	if len(flag.Args()) < 4 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageGrid)
-		return fmt.Errorf("%s\n\n", usageGrid)
+		return fmt.Errorf("%s", usageGrid)
 	}
 
 	processDiplayUnit(conf)
@@ -1433,7 +1454,7 @@ func processGridCommand(conf *model.Configuration) error {
 func processBookletCommand(conf *model.Configuration) error {
 	if len(flag.Args()) < 3 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageBooklet)
-		return fmt.Errorf("%s\n\n", usageBooklet)
+		return fmt.Errorf("%s", usageBooklet)
 	}
 
 	processDiplayUnit(conf)
@@ -1501,7 +1522,7 @@ func processDiplayUnit(conf *model.Configuration) error {
 func processInfoCommand(conf *model.Configuration) error {
 	if len(flag.Args()) < 1 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageInfo)
-		return fmt.Errorf("%s\n\n", usageInfo)
+		return fmt.Errorf("%s", usageInfo)
 	}
 
 	inFiles := []string{}
@@ -1534,8 +1555,9 @@ func processInfoCommand(conf *model.Configuration) error {
 	return nil
 }
 
-func processListFontsCommand(conf *model.Configuration) {
+func processListFontsCommand(conf *model.Configuration) error {
 	process(cli.ListFontsCommand(conf))
+	return nil
 }
 
 func processInstallFontsCommand(conf *model.Configuration) error {
@@ -1559,12 +1581,13 @@ func processInstallFontsCommand(conf *model.Configuration) error {
 	return nil
 }
 
-func processCreateCheatSheetFontsCommand(conf *model.Configuration) {
+func processCreateCheatSheetFontsCommand(conf *model.Configuration) error {
 	fileNames := []string{}
 	if len(flag.Args()) > 0 {
 		fileNames = append(fileNames, flag.Args()...)
 	}
 	process(cli.CreateCheatSheetsFontsCommand(fileNames, conf))
+	return nil
 }
 
 func processListKeywordsCommand(conf *model.Configuration) error {
@@ -1714,7 +1737,7 @@ func processRemovePropertiesCommand(conf *model.Configuration) error {
 func processCollectCommand(conf *model.Configuration) error {
 	if len(flag.Args()) < 1 || len(flag.Args()) > 2 || selectedPages == "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageCollect)
-		return fmt.Errorf("%s\n\n", usageCollect)
+		return fmt.Errorf("%s", usageCollect)
 	}
 
 	inFile := flag.Arg(0)
@@ -2034,7 +2057,7 @@ func processDumpCommand(conf *model.Configuration) error {
 func processCreateCommand(conf *model.Configuration) error {
 	if len(flag.Args()) <= 1 || len(flag.Args()) > 3 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageCreate)
-		return fmt.Errorf("%s\n\n", usageCreate)
+		return fmt.Errorf("%s", usageCreate)
 	}
 
 	inFileJSON := flag.Arg(0)
@@ -2122,10 +2145,10 @@ func processRemoveFormFieldsCommand(conf *model.Configuration) error {
 	return nil
 }
 
-func processLockFormCommand(conf *model.Configuration) {
+func processLockFormCommand(conf *model.Configuration) error {
 	if len(flag.Args()) == 0 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageFormLock)
-		os.Exit(1)
+		return fmt.Errorf("usage: %s\n\n", usageFormLock)
 	}
 
 	inFile := flag.Arg(0)
@@ -2152,12 +2175,14 @@ func processLockFormCommand(conf *model.Configuration) {
 	}
 
 	process(cli.LockFormCommand(inFile, outFile, fieldIDs, conf))
+
+	return nil
 }
 
-func processUnlockFormCommand(conf *model.Configuration) {
+func processUnlockFormCommand(conf *model.Configuration) error {
 	if len(flag.Args()) == 0 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usageFormUnlock)
-		os.Exit(1)
+		return fmt.Errorf("usage: %s\n\n", usageFormUnlock)
 	}
 
 	inFile := flag.Arg(0)
@@ -2184,6 +2209,8 @@ func processUnlockFormCommand(conf *model.Configuration) {
 	}
 
 	process(cli.UnlockFormCommand(inFile, outFile, fieldIDs, conf))
+
+	return nil
 }
 
 func processResetFormCommand(conf *model.Configuration) error {
