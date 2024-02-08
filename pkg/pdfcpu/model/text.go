@@ -280,7 +280,7 @@ func prepJustifiedLine(xRefTable *XRefTable, lines *[]string, strbuf []string, s
 func newPrepJustifiedString(
 	xRefTable *XRefTable,
 	fontName string,
-	fontSize int) (func(lines *[]string, s string, w float64, fontName string, fontSize *int, lastline, parIndent, cjk, rtl bool) int, error) {
+	fontSize int) func(lines *[]string, s string, w float64, fontName string, fontSize *int, lastline, parIndent, cjk, rtl bool) int {
 
 	// Not yet rendered content.
 	strbuf := []string{}
@@ -294,10 +294,7 @@ func newPrepJustifiedString(
 	// Indentation string for first line of paragraphs.
 	identPrefix := "    "
 
-	blankWidth, err := font.TextWidth(" ", fontName, fontSize)
-	if err != nil {
-		return nil, err
-	}
+	blankWidth := font.TextWidth(" ", fontName, fontSize)
 
 	return func(lines *[]string, s string, w float64, fontName string, fontSize *int, lastline, parIndent, embed, rtl bool) int {
 
@@ -315,13 +312,13 @@ func newPrepJustifiedString(
 				strWidth = 0
 			}
 			if lastline {
-				return 0, nil
+				return 0
 			}
 			indent = true
 			if parIndent {
-				return 0, nil
+				return 0
 			}
-			return 1, nil
+			return 1
 		}
 
 		linefeeds := 0
@@ -331,10 +328,7 @@ func newPrepJustifiedString(
 		}
 
 		for _, s1 := range ss {
-			s1Width, err := font.TextWidth(s1, fontName, *fontSize)
-			if err != nil {
-				return 0, err
-			}
+			s1Width := font.TextWidth(s1, fontName, *fontSize)
 			bw := 0.
 			if len(strbuf) > 0 {
 				bw = blankWidth
@@ -345,10 +339,7 @@ func newPrepJustifiedString(
 				continue
 			}
 			// Ensure s1 fits into w.
-			fs, err := font.Size(s1, fontName, w)
-			if err != nil {
-				return 0, err
-			}
+			fs := font.Size(s1, fontName, w)
 			if fs < *fontSize {
 				*fontSize = fs
 			}
@@ -364,7 +355,7 @@ func newPrepJustifiedString(
 			indent = false
 		}
 		return 0
-	}, nil
+	}
 }
 
 // Prerender justified text in order to calculate bounding box height.
@@ -769,11 +760,11 @@ func WriteColumn(xRefTable *XRefTable, w io.Writer, mediaBox, region *types.Rect
 // WriteMultiLine writes s at position x/y using a certain font, fontsize and a desired horizontal and vertical alignment.
 // It returns the bounding box of this text column.
 func WriteMultiLine(xRefTable *XRefTable, w io.Writer, mediaBox, region *types.Rectangle, td TextDescriptor) (*types.Rectangle, error) {
-	write, err := WriteColumn(xRefTable, w, mediaBox, region, td, 0)
+	forWriteColumn, err := WriteColumn(xRefTable, w, mediaBox, region, td, 0)
 	if err != nil {
 		return nil, err
 	}
-	return write, nil
+	return forWriteColumn, nil
 }
 
 // AnchorPosAndAlign calculates position and alignment for an anchored rectangle r.
