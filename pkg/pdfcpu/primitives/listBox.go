@@ -946,7 +946,7 @@ func NewForm(
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func UpdateForm(xRefTable *model.XRefTable, bb []byte, indRef *types.IndirectRef) error {
+func updateForm(xRefTable *model.XRefTable, bb []byte, indRef *types.IndirectRef) error {
 
 	entry, _ := xRefTable.FindTableEntryForIndRef(indRef)
 
@@ -996,7 +996,7 @@ func refreshListBoxAP(ctx *model.Context, d types.Dict, opts []string, ind types
 		return err
 	}
 
-	return UpdateForm(ctx.XRefTable, bb, irN)
+	return updateForm(ctx.XRefTable, bb, irN)
 }
 
 func EnsureListBoxAP(ctx *model.Context, d types.Dict, opts []string, ind types.Array, fonts map[string]types.IndirectRef) error {

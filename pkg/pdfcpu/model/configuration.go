@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/font"
+	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
@@ -248,8 +249,11 @@ var ConfigPath string = "default"
 
 var loadedDefaultConfig *Configuration
 
-//go:embed config.yml
+//go:embed resources/config.yml
 var configFileBytes []byte
+
+//go:embed resources/Roboto-Regular.ttf
+var robotoFontFileBytes []byte
 
 func ensureConfigFileAt(path string) error {
 	f, err := os.Open(path)
@@ -282,6 +286,25 @@ func EnsureDefaultConfigAt(path string) error {
 		return err
 	}
 	//fmt.Println(loadedDefaultConfig)
+
+	files, err := os.ReadDir(font.UserFontDir)
+	if err != nil {
+		return err
+	}
+
+	if len(files) == 0 {
+		// Ensure Roboto font for form filling.
+		fn := "Roboto-Regular"
+		if log.CLIEnabled() {
+			log.CLI.Printf("installing user font:")
+		}
+		if err := font.InstallFontFromBytes(font.UserFontDir, fn, robotoFontFileBytes); err != nil {
+			if log.CLIEnabled() {
+				log.CLI.Printf("%v", err)
+			}
+		}
+	}
+
 	return font.LoadUserFonts()
 }
 

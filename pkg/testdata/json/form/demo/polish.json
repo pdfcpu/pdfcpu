@@ -33,7 +33,9 @@
 	},
 	"fonts": {
 		"input": {
-			"name": "Helvetica",
+			"name": "Roboto-Regular",
+			"lang": "pl",
+			"script": "Latn",
 			"size": 12
 		},
 		"label": {

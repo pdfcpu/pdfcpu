@@ -1096,6 +1096,7 @@ func FillForm(
 		if len(ctx.UsedGIDs[fName]) == 0 {
 			continue
 		}
+		// Update user font.
 		fDict, err := xRefTable.DereferenceDict(indRef)
 		if err != nil {
 			return false, nil, err
@@ -1119,7 +1120,7 @@ func FillForm(
 
 	// pdfcpu provides all appearance streams for form fields.
 	// Yet for some files and viewers form fields don't get rendered.
-	// In these cases you can order the viewer to provide form field appearance streams.
+	// In these cases you can force the viewer to provide form field appearance streams.
 	if ctx.NeedAppearances {
 		xRefTable.Form["NeedAppearances"] = types.Boolean(true)
 	}

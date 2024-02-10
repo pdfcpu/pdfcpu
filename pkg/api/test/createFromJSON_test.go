@@ -163,7 +163,6 @@ func TestCreateSinglePageDemoFormsViaJson(t *testing.T) {
 		inFileJSON string
 		outFile    string
 	}{
-
 		{"TestFormDemoEN", "english.json", "english.pdf"},             // Core font (Helvetica)
 		{"TestFormDemoUK", "ukrainian.json", "ukrainian.pdf"},         // User font (Roboto-Regular)
 		{"TestFormDemoAR", "arabic.json", "arabic.pdf"},               // User font RTL (Roboto-Regular)
@@ -203,7 +202,6 @@ func TestCreateDemoFormsViaJson(t *testing.T) {
 		{"TestFormDemoIC", "icelandic.json", "icelandic.pdf"},
 		{"TestFormDemoIT", "italian.json", "italian.pdf"},
 		{"TestFormDemoNO", "norwegian.json", "norwegian.pdf"},
-		{"TestFormDemoPO", "polish.json", "polish.pdf"},
 		{"TestFormDemoPT", "portuguese.json", "portuguese.pdf"},
 		{"TestFormDemoSK", "slovak.json", "slovak.pdf"},
 		{"TestFormDemoSL", "slovenian.json", "slovenian.pdf"},
@@ -218,6 +216,7 @@ func TestCreateDemoFormsViaJson(t *testing.T) {
 		{"TestFormDemoCZ", "czech.json", "czech.pdf"},
 		{"TestFormDemoGR", "greek.json", "greek.pdf"},
 		{"TestFormDemoKU", "kurdish.json", "kurdish.pdf"},
+		{"TestFormDemoPO", "polish.json", "polish.pdf"},
 		{"TestFormDemoRO", "romanian.json", "romanian.pdf"},
 		{"TestFormDemoRU", "russian.json", "russian.pdf"},
 		{"TestFormDemoTK", "turkish.json", "turkish.pdf"},

@@ -792,7 +792,7 @@ func refreshComboBoxAP(ctx *model.Context, d types.Dict, v string, fonts map[str
 		return err
 	}
 
-	return UpdateForm(ctx.XRefTable, bb, irN)
+	return updateForm(ctx.XRefTable, bb, irN)
 }
 
 func EnsureComboBoxAP(ctx *model.Context, d types.Dict, v string, fonts map[string]types.IndirectRef) error {

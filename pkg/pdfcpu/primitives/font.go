@@ -201,15 +201,6 @@ func formFontIndRef(xRefTable *model.XRefTable, fontID string) (*types.IndirectR
 		}
 	}
 
-	if font.IsCoreFont(fontID) {
-		indRef, err := pdffont.EnsureFontDict(xRefTable, fontID, "", "", false, nil)
-		if err != nil {
-			return nil, err
-		}
-		d[fontID] = *indRef
-		return indRef, nil
-	}
-
 	return nil, nil
 }
 
@@ -321,21 +312,34 @@ func fontFromAcroDict(xRefTable *model.XRefTable, fontIndRef *types.IndirectRef,
 		return err
 	}
 
-	// if fN != nil {
-	// 	println("FN: " + *fN)
-	// }
-
-	// if fL != nil {
-	// 	println("FL: " + *fL)
-	// }
-
-	// *fName = fN
-
-	// if fL != nil {
-	// 	*fLang = *fL
-	// }
-
 	return nil
+}
+
+func ensureUTF8FormFont(ctx *model.Context, fonts map[string]types.IndirectRef) (string, string, string, *types.IndirectRef, error) {
+
+	// TODO Make name of UTF-8 userfont part of pdfcpu configs.
+
+	fontID, fontName := "F0", "Roboto-Regular"
+
+	if indRef, ok := fonts[fontName]; ok {
+		return fontID, fontName, "", &indRef, nil
+	}
+
+	for objNr, fo := range ctx.Optimize.FontObjects {
+		if fo.FontName == fontName && fo.Prefix != "" {
+			indRef := types.NewIndirectRef(objNr, 0)
+			fonts[fontName] = *indRef
+			return fontID, fontName, "", indRef, nil
+		}
+	}
+
+	indRef, err := pdffont.EnsureFontDict(ctx.XRefTable, fontName, "", "", false, nil)
+	if err != nil {
+		return "", "", "", nil, err
+	}
+	fonts[fontName] = *indRef
+
+	return fontID, fontName, "", indRef, nil
 }
 
 func extractFormFontDetails(
@@ -371,21 +375,8 @@ func extractFormFontDetails(
 
 	}
 
-	if fontIndRef == nil || !font.SupportedFont(fName) {
-		var indRef types.IndirectRef
-		if err = fontFromAcroDict(xRefTable, &indRef, &fName, &fLang, fontID); err != nil {
-			return "", "", "", nil, err
-		}
-		fontIndRef = &indRef
-	}
-
-	// var lang string
-	// if fLang != nil {
-	// 	lang = *fLang
-	// }
-
-	if font.IsUserFont(fName) {
-		err = ensureCorrectFontIndRef(ctx, &fontIndRef, fName, fonts)
+	if fontIndRef == nil {
+		return ensureUTF8FormFont(ctx, fonts)
 	}
 
 	return fontID, fName, fLang, fontIndRef, err

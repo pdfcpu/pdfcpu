@@ -51,8 +51,10 @@ var cjkParms = map[string]cjk{
 	"KANA": {"UniJIS-UTF16-H", "Japan1", 7},
 	"JPAN": {"UniJIS-UTF16-H", "Japan1", 7},
 	// K
-	"HANG": {"UniKS-UTF16-H", "KR", 9},
-	"KORE": {"UniKS-UTF16-H", "KR", 9},
+	"HANG": {"UniKS-UTF16-H", "Korea1", 1},
+	"KORE": {"UniKS-UTF16-H", "Korea1", 1},
+	//"HANG": {"UniKS-UTF16-H", "KR", 9},
+	//"KORE": {"UniKS-UTF16-H", "KR", 9},
 }
 
 func SupportedScript(s string) bool {
@@ -172,6 +174,56 @@ func ttfSubFontFile(xRefTable *model.XRefTable, ttf font.TTFLight, fontName stri
 	return indRef, nil
 }
 
+func PDFDocEncoding(xRefTable *model.XRefTable) (*types.IndirectRef, error) {
+	arr := types.Array{
+		types.Integer(24),
+		types.Name("breve"), types.Name("caron"), types.Name("circumflex"), types.Name("dotaccent"),
+		types.Name("hungarumlaut"), types.Name("ogonek"), types.Name("ring"), types.Name("tilde"),
+		types.Integer(39),
+		types.Name("quotesingle"),
+		types.Integer(96),
+		types.Name("grave"),
+		types.Integer(128),
+		types.Name("bullet"), types.Name("dagger"), types.Name("daggerdbl"), types.Name("ellipsis"), types.Name("emdash"), types.Name("endash"),
+		types.Name("florin"), types.Name("fraction"), types.Name("guilsinglleft"), types.Name("guilsinglright"), types.Name("minus"), types.Name("perthousand"),
+		types.Name("quotedblbase"), types.Name("quotedblleft"), types.Name("quotedblright"), types.Name("quoteleft"), types.Name("quoteright"), types.Name("quotesinglbase"),
+		types.Name("trademark"), types.Name("fi"), types.Name("fl"), types.Name("Lslash"), types.Name("OE"), types.Name("Scaron"), types.Name("Ydieresis"),
+		types.Name("Zcaron"), types.Name("dotlessi"), types.Name("lslash"), types.Name("oe"), types.Name("scaron"), types.Name("zcaron"),
+		types.Integer(160),
+		types.Name("Euro"),
+		types.Integer(164),
+		types.Name("currency"),
+		types.Integer(166),
+		types.Name("brokenbar"), types.Integer(168), types.Name("dieresis"), types.Name("copyright"), types.Name("ordfeminine"),
+		types.Integer(172),
+		types.Name("logicalnot"), types.Name(".notdef"), types.Name("registered"), types.Name("macron"), types.Name("degree"),
+		types.Name("plusminus"), types.Name("twosuperior"), types.Name("threesuperior"), types.Name("acute"), types.Name("mu"),
+		types.Integer(183),
+		types.Name("periodcentered"), types.Name("cedilla"), types.Name("onesuperior"), types.Name("ordmasculine"),
+		types.Integer(188),
+		types.Name("onequarter"), types.Name("onehalf"), types.Name("threequarters"),
+		types.Integer(192),
+		types.Name("Agrave"), types.Name("Aacute"), types.Name("Acircumflex"), types.Name("Atilde"), types.Name("Adieresis"), types.Name("Aring"), types.Name("AE"),
+		types.Name("Ccedilla"), types.Name("Egrave"), types.Name("Eacute"), types.Name("Ecircumflex"), types.Name("Edieresis"), types.Name("Igrave"), types.Name("Iacute"),
+		types.Name("Icircumflex"), types.Name("Idieresis"), types.Name("Eth"), types.Name("Ntilde"), types.Name("Ograve"), types.Name("Oacute"), types.Name("Ocircumflex"),
+		types.Name("Otilde"), types.Name("Odieresis"), types.Name("multiply"), types.Name("Oslash"), types.Name("Ugrave"), types.Name("Uacute"), types.Name("Ucircumflex"),
+		types.Name("Udieresis"), types.Name("Yacute"), types.Name("Thorn"), types.Name("germandbls"), types.Name("agrave"), types.Name("aacute"), types.Name("acircumflex"),
+		types.Name("atilde"), types.Name("adieresis"), types.Name("aring"), types.Name("ae"), types.Name("ccedilla"), types.Name("egrave"), types.Name("eacute"), types.Name("ecircumflex"),
+		types.Name("edieresis"), types.Name("igrave"), types.Name("iacute"), types.Name("icircumflex"), types.Name("idieresis"), types.Name("eth"), types.Name("ntilde"),
+		types.Name("ograve"), types.Name("oacute"), types.Name("ocircumflex"), types.Name("otilde"), types.Name("odieresis"), types.Name("divide"), types.Name("oslash"),
+		types.Name("ugrave"), types.Name("uacute"), types.Name("ucircumflex"), types.Name("udieresis"), types.Name("yacute"), types.Name("thorn"), types.Name("ydieresis"),
+	}
+
+	d := types.Dict(
+		map[string]types.Object{
+			"Type":        types.Name("Encoding"),
+			"Differences": arr,
+		},
+	)
+
+	return xRefTable.IndRefForNewObject(d)
+}
+
 func coreFontDict(xRefTable *model.XRefTable, coreFontName string) (*types.IndirectRef, error) {
 	d := types.NewDict()
 	d.InsertName("Type", "Font")
@@ -180,6 +232,15 @@ func coreFontDict(xRefTable *model.XRefTable, coreFontName string) (*types.Indir
 	if coreFontName != "Symbol" && coreFontName != "ZapfDingbats" {
 		d.InsertName("Encoding", "WinAnsiEncoding")
 	}
+	// if coreFontName == "Helvetica" {
+	// 	indRef, err := PDFDocEncoding(xRefTable)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	d.Insert("Encoding", *indRef)
+	// } else if coreFontName != "Symbol" && coreFontName != "ZapfDingbats" {
+	// 	d.InsertName("Encoding", "WinAnsiEncoding")
+	// }
 	return xRefTable.IndRefForNewObject(d)
 }
 
@@ -734,8 +795,8 @@ func subFontPrefix() string {
 	return string(bb)
 }
 
-// CIDFontSpecialEncDict returns the descendant font dict with special encoding for Type0 fonts.
-func CIDFontSpecialEncDict(xRefTable *model.XRefTable, ttf font.TTFLight, fontName, baseFontName, lang string, parms *cjk) (*types.IndirectRef, error) {
+// CIDFontDict returns the descendant font dict with special encoding for Type0 fonts.
+func CIDFontDict(xRefTable *model.XRefTable, ttf font.TTFLight, fontName, baseFontName, lang string, parms *cjk) (*types.IndirectRef, error) {
 	fdIndRef, err := CIDFontDescriptor(xRefTable, ttf, fontName, baseFontName, lang, parms == nil)
 	if err != nil {
 		return nil, err
@@ -798,12 +859,14 @@ func CIDFontSpecialEncDict(xRefTable *model.XRefTable, ttf font.TTFLight, fontNa
 		d["CIDToGIDMap"] = types.Name("Identity")
 	}
 
-	wIndRef, err := CIDWidths(xRefTable, ttf, fontName, parms == nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	if wIndRef != nil {
-		d["W"] = *wIndRef
+	if parms == nil {
+		wIndRef, err := CIDWidths(xRefTable, ttf, fontName, parms == nil, nil)
+		if err != nil {
+			return nil, err
+		}
+		if wIndRef != nil {
+			d["W"] = *wIndRef
+		}
 	}
 
 	return xRefTable.IndRefForNewObject(d)
@@ -841,7 +904,7 @@ func type0FontDict(xRefTable *model.XRefTable, fontName, lang, script string, in
 		encoding = parms.encoding
 	}
 
-	descendentFontIndRef, err := CIDFontSpecialEncDict(xRefTable, ttf, fontName, baseFontName, lang, parms)
+	descendentFontIndRef, err := CIDFontDict(xRefTable, ttf, fontName, baseFontName, lang, parms)
 	if err != nil {
 		return nil, err
 	}
@@ -850,7 +913,7 @@ func type0FontDict(xRefTable *model.XRefTable, fontName, lang, script string, in
 	d.InsertName("Type", "Font")
 	d.InsertName("Subtype", "Type0")
 	d.InsertName("BaseFont", baseFontName)
-	//d.InsertName("Name", fontName)
+	d.InsertName("Name", fontName)
 	d.InsertName("Encoding", encoding)
 	d.Insert("DescendantFonts", types.Array{*descendentFontIndRef})
 

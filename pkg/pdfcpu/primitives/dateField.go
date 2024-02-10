@@ -449,7 +449,10 @@ func (df *DateField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	}
 
 	f := df.Font
-	//cjk := fo.CJK(f.Script, f.Lang)
+	if float64(f.Size) > h {
+		f.Size = font.SizeForLineHeight(f.Name, h)
+	}
+
 	lineBB := model.CalcBoundingBox(v, 0, 0, f.Name, f.Size)
 	s := model.PrepBytes(xRefTable, v, f.Name, true, false)
 	x := 2 * boWidth
@@ -929,7 +932,7 @@ func refreshDateFieldAP(ctx *model.Context, d types.Dict, v string, fonts map[st
 		return err
 	}
 
-	return UpdateForm(ctx.XRefTable, bb, irN)
+	return updateForm(ctx.XRefTable, bb, irN)
 }
 
 func EnsureDateFieldAP(ctx *model.Context, d types.Dict, v string, fonts map[string]types.IndirectRef) error {

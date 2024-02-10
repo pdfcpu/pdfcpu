@@ -347,6 +347,13 @@ func Size(text, fontName string, width float64) int {
 	return fontScalingFactor(float64(w), width)
 }
 
+// SizeForLineHeight returns the needed font size in points
+// for rendering using a given font name fitting into given line height lh.
+func SizeForLineHeight(fontName string, lh float64) int {
+	fbb := BoundingBox(fontName)
+	return int(math.Round(lh / (fbb.Height() / 1000)))
+}
+
 // UserSpaceFontBBox returns the font box for given font name and font size in user space coordinates.
 func UserSpaceFontBBox(fontName string, fontSize int) *types.Rectangle {
 	fontBBox := BoundingBox(fontName)

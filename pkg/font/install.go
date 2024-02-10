@@ -663,7 +663,10 @@ func installTrueTypeRep(fontDir, fontName string, header []byte, tables map[stri
 	}
 	fd.FontFile = bb
 
-	log.CLI.Println(fd.PostscriptName)
+	if log.CLIEnabled() {
+		log.CLI.Println(fd.PostscriptName)
+	}
+
 	gobName := filepath.Join(fontDir, fd.PostscriptName+".gob")
 
 	// Write the populated ttf struct as gob.
@@ -741,6 +744,16 @@ func InstallTrueTypeFont(fontDir, fontName string) error {
 	defer f.Close()
 
 	header, tables, err := headerAndTables(fontName, f, 0)
+	if err != nil {
+		return err
+	}
+	return installTrueTypeRep(fontDir, fontName, header, tables)
+}
+
+// InstallFontFromBytes saves an internal representation of TrueType font fontName to the pdfcpu config dir.
+func InstallFontFromBytes(fontDir, fontName string, bb []byte) error {
+	rd := bytes.NewReader(bb)
+	header, tables, err := headerAndTables(fontName, rd, 0)
 	if err != nil {
 		return err
 	}
