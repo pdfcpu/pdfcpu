@@ -242,7 +242,7 @@ func parseBookletType(s string, nup *model.NUp) error {
 	case "perfectbound":
 		nup.BookletType = model.BookletPerfectBound
 	default:
-		return errors.New("pdfcpu: booklet type, please provide one of: booklet perfectbound cover coverfullspan")
+		return errors.New("pdfcpu: booklet type, please provide one of: booklet perfectbound")
 	}
 	return nil
 }

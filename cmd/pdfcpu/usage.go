@@ -656,34 +656,86 @@ Examples: pdfcpu nup out.pdf 4 in.pdf
               pages       ... for inFile only, please refer to "pdfcpu selectedpages"
               description ... dimensions, formsize, border, margin
               outFile     ... output PDF file
-              n           ... booklet style (2 or 4)
+              n           ... booklet style (2, 4, 6, 8)
               inFile      ... input PDF file
               imageFiles  ... input image file(s)
 
-There are two styles of booklet, depending on your page/input and sheet/output size:
+There are several styles of booklet, depending on your page/input and sheet/output size, 
+the edge along which your booklet will be bound,
+and your prefered method for creating the booklet:
 
-n=2: Two of your pages fit on one side of a sheet (eg statement on letter, A5 on A4)
+n=2: This is the simplest case and the most common for those printing at home.
+Two of your pages fit on one side of a sheet (eg statement on letter, A5 on A4)
 Assemble by printing on both sides (odd pages on the front and even pages on the back) and folding down the middle.
 
-A variant of n=2 is a technique to bind your own hardback book.
-It works best when the source PDF holding your book content has at least 128 pages.
-You bind your paper in eight sheet folios each making up 32 pages of your book.
-Each sheet is going to make four pages of your book, gets printed on both sides and folded in half.
+A variant of n=2 is multifolio, a technique to bind your own hardback book.
+This technique makes the most sense when your book has at least 128 pages.
+For example, you can bind your paper in eight sheet folios (also known as signatures), with each folio containing 32 pages of your book.
 For such a multi folio booklet set 'multifolio:on' and play around with 'foliosize' which defaults to 8.
 
-n=4: Four of your pages fit on one side of a sheet (eg statement on ledger, A5 on A3, A6 on A4)
-Assemble by printing on both sides, then cutting the sheets horizontally.
-The sets of pages on the bottom of the sheet are rotated so that the cut side of the
-paper is on the bottom of the booklet for every page. After cutting, place the bottom
-set of pages after the top set of pages in the booklet. Then fold the half sheets.
+n=4: Four of your pages fit on one side of a sheet (eg statement on ledger, A5 on A3, A6 on A4).
+
+When printing 4-up, your booklet can be bound either along the long-edge (for portrait this is the left side of the paper, for landscape the top)
+or the short-edge (for portrait this is the top of the paper, for landscape the left side). 
+Using a different binding will change the ordering of the pages on the sheet. 
+You can set long or short-edge with the 'binding' option.
+
+In 4-up printing, the sets of pages on the bottom of the sheet are rotated so that the cut side of the
+paper is on the bottom of the booklet for every page (for the default portrait, long-edge binding case.
+Similar rotation logic applies for the other three orientations). 
+Having the cut edge always on bottom makes for more uniform pages within the book and less work in trimming.
+
+For the default binding method (btype=booklet) with 4-up printing, assemble by:
+- print on both sides
+- cut the sheets in half
+- arrange the stacks of half sheets for collation in the following order: top half sheet 1, bottom half sheet 1, top half sheet 2, ...
+- collate the stacks into individual sets of booklets
+- fold, bind, and trim (if desired)
+
+The btype=advanced is a special method for assembling, only for 4-up booklets.
+Printers that are used to collating first and then cutting may prefer this method.
+Assemble by:
+- print on both sides
+- collate the whole sheets
+- cut each of the collated sets in half
+- place the bottom half (un-rotated) under the top half. This will produce a correctly ordered booklet.
+- procede to fold, bind, and trim (if desired)
+
+n=6: Six of your pages fit on one side of a sheet. This produces an unusual sized booklet. Assemble by:
+- print on both sides
+- cut the sheets in thrids horizontally
+- arrange the sheet stacks for collation: moving top to bottom, then by sheet (ie top third sheet 1, middle third sheet 1, bottom third sheet 1, top third sheet 2, ...)
+- collate the stacks into individual sets of booklets
+- fold, bind, and trim (if desired)
+
+Only available for portrait, long-edge orientation.
+
+n=8: Eight of your pages fit on one side of a sheet (eg A6 on A3).
+
+Pages are arranged similar to 4-up with btype=booklet (but without the rotation). Assemble by:
+- printing on both sides
+- print on both sides
+- cut the sheets in half horizontally and then cutting those half-sheets in half vertically
+- arrange the sheet stacks for collation: moving left to right, then top to bottom, then by sheet (ie top-left sheet 1, top-right sheet 1, middle-left sheet 1, ...)
+- collate the stacks into individual sets of booklets
+- fold, bind, and trim (if desired)
+
+Only available for portrait, long-edge orientation.
+
+Perfect binding is a special type of booklet. The main difference is that the binding is glued into a spine,
+meaning that the pages are cut along the binding and not folded as in the other forms of booklet.
+This results in a different page ordering on the sheet than the other methods. If you intend to perfect bind your booklet,
+use btype=perfectbound.
 
                              portrait landscape
- Possible values for n: 2 ...  1x2       2x1
+ Possible values for n: 2 ...  1x2       --
                         4 ...  2x2       2x2
+                        6 ...  2x3       --
+                        8 ...  2x4       --
 
 <description> is a comma separated configuration string containing these optional entries:
 
-   (defaults: "dim:595 842, formsize:A4, border:off, guides:off, margin:0")
+   (defaults: "dim:595 842, formsize:A4, btype: booklet, binding: long, multifolio: false, border:off, guides:off, margin:0")
 
    dimensions:       (width,height) of the output sheet in given display unit eg. '400 200'
    formsize:         The output sheet size, eg. A4, Letter, Legal...
@@ -692,6 +744,8 @@ set of pages after the top set of pages in the booklet. Then fold the half sheet
                      Only one of dimensions or format is allowed.
                      Please refer to "pdfcpu paper" for a comprehensive list of defined paper sizes.
                      "papersize" is also accepted.
+   btype:            The method for arranging pages into a booklet. (booklet, bookletadvanced, perfectbound)
+   binding:          The edge of the paper which has the binding. (long, short)
    multifolio:       Generate multi folio booklet (on/off, true/false, t/f) for n=2 and PDF input only.
    foliosize:        folio size for multi folio booklets only (default:8)
    border:           Print border (on/off, true/false, t/f) 
@@ -707,13 +761,25 @@ Examples: pdfcpu booklet -- "formsize:Letter" out.pdf 2 in.pdf
 
           pdfcpu booklet -- "formsize:Ledger" out.pdf 4 in.pdf"
            Arrange pages of in.pdf 4 per sheet side (8 per sheet, back and front) onto out.pdf
+           
+           pdfcpu booklet -- "formsize:Ledger" out.pdf 6 in.pdf"
+             Arrange pages of in.pdf 6 per sheet side (12 per sheet, back and front) onto out.pdf
+  
+           pdfcpu booklet -- "formsize:A3" out.pdf 8 in.pdf"
+             Arrange pages of in.pdf 8 per sheet side (16 per sheet, back and front) onto out.pdf
 
-          pdfcpu booklet -- "formsize:A4" out.pdf 2 in.pdf
-           Arrange pages of in.pdf 2 per sheet side (4 per sheet, back and front) onto out.pdf
+           pdfcpu booklet -- "formsize:A3, binding:short" out.pdf 4 in.pdf"
+             Arrange pages of in.pdf 4 per sheet side, with short-edge binding onto out.pdf
 
-          pdfcpu booklet -- "formsize:A4, multifolio:on" hardbackbook.pdf 2 in.pdf
-           Arrange pages of in.pdf 2 per sheetside as sequence of folios covering 4*foliosize pages each.
-           See also: https://www.instructables.com/How-to-bind-your-own-Hardback-Book/
+           pdfcpu booklet -- "formsize:A4, multifolio:on" hardbackbook.pdf 2 in.pdf
+            Arrange pages of in.pdf 2 per sheetside as sequence of folios covering 4*foliosize pages each.
+            See also: https://www.instructables.com/How-to-bind-your-own-Hardback-Book/
+
+           pdfcpu booklet -- "formsize:A4, btype:perfectbound" out.pdf 2 in.pdf
+             Arrange pages of in.pdf 2 per sheet side, arranged for perfect binding, onto out.pdf
+  
+           pdfcpu booklet -- "formsize:A3, btype:bookletadvanced" out.pdf 4 in.pdf
+             Arrange pages of in.pdf 4 per sheet side, arranged for advanced binding, onto out.pdf
 `
 
 	usageGrid     = "usage: pdfcpu grid [-p(ages) selectedPages] -- [description] outFile m n inFile|imageFiles..." + generalFlags
