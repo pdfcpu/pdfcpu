@@ -20,6 +20,8 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -27,10 +29,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
-	errInvalidBookletGridID   = errors.New("pdfcpu booklet: n must be one of 2, 4, 6, 8")
-	errInvalidBookletAdvanced = errors.New("pdfcpu booklet advanced cannot have binding along the top (portrait short-edge, landscape long-edge). use plain booklet instead.")
-)
+var errInvalidBookletAdvanced = errors.New("pdfcpu booklet advanced cannot have binding along the top (portrait short-edge, landscape long-edge). use plain booklet instead.")
+
+var NUpValuesForBooklets = []int{2, 4, 6, 8}
 
 // DefaultBookletConfig returns the default configuration for a booklet
 func DefaultBookletConfig() *model.NUp {
@@ -57,15 +58,19 @@ func PDFBookletConfig(val int, desc string, conf *model.Configuration) (*model.N
 			return nil, err
 		}
 	}
+	if !types.IntMemberOf(val, NUpValuesForBooklets) {
+		ss := make([]string, len(NUpValuesForBooklets))
+		for i, v := range NUpValuesForBooklets {
+			ss[i] = strconv.Itoa(v)
+		}
+		return nil, errors.Errorf("pdfcpu: n must be one of %s", strings.Join(ss, ", "))
+	}
 	if err := ParseNUpValue(val, nup); err != nil {
 		return nil, err
 	}
-	if !(val == 2 || val == 4 || val == 6 || val == 8) {
-		return nup, errInvalidBookletGridID
-	}
 	// 6up and 8up special cases
 	if nup.IsBooklet() && val > 4 && nup.IsTopFoldBinding() {
-		// you can't top fold a 6up with 3 rows
+		// You can't top fold a 6up with 3 rows.
 		// TODO: support this for 8up
 		return nup, fmt.Errorf("pdfcpu booklet: n>4 must have binding on side (portrait long-edge or landscape short-edge)")
 	}
