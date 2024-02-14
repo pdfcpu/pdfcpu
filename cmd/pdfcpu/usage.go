@@ -662,7 +662,7 @@ Examples: pdfcpu nup out.pdf 4 in.pdf
 
 There are several styles of booklet, depending on your page/input and sheet/output size, 
 the edge along which your booklet will be bound,
-and your prefered method for creating the booklet:
+and your preferred method for creating the booklet:
 
 n=2: This is the simplest case and the most common for those printing at home.
 Two of your pages fit on one side of a sheet (eg statement on letter, A5 on A4)
@@ -699,11 +699,11 @@ Assemble by:
 - collate the whole sheets
 - cut each of the collated sets in half
 - place the bottom half (un-rotated) under the top half. This will produce a correctly ordered booklet.
-- procede to fold, bind, and trim (if desired)
+- fold, bind, and trim (if desired)
 
 n=6: Six of your pages fit on one side of a sheet. This produces an unusual sized booklet. Assemble by:
 - print on both sides
-- cut the sheets in thrids horizontally
+- cut the sheets in thirds horizontally
 - arrange the sheet stacks for collation: moving top to bottom, then by sheet (ie top third sheet 1, middle third sheet 1, bottom third sheet 1, top third sheet 2, ...)
 - collate the stacks into individual sets of booklets
 - fold, bind, and trim (if desired)
