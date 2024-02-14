@@ -662,7 +662,9 @@ Examples: pdfcpu nup out.pdf 4 in.pdf
 
 There are several styles of booklet, depending on your page/input and sheet/output size, 
 the edge along which your booklet will be bound,
-and your preferred method for creating the booklet:
+and your preferred method for creating the booklet.
+
+For assembly instructions for each type, see: https://pdfcpu.io/generate/booklet
 
 n=2: This is the simplest case and the most common for those printing at home.
 Two of your pages fit on one side of a sheet (eg statement on letter, A5 on A4)
@@ -685,40 +687,14 @@ paper is on the bottom of the booklet for every page (for the default portrait, 
 Similar rotation logic applies for the other three orientations). 
 Having the cut edge always on bottom makes for more uniform pages within the book and less work in trimming.
 
-For the default binding method (btype=booklet) with 4-up printing, assemble by:
-- print on both sides
-- cut the sheets in half
-- arrange the stacks of half sheets for collation in the following order: top half sheet 1, bottom half sheet 1, top half sheet 2, ...
-- collate the stacks into individual sets of booklets
-- fold, bind, and trim (if desired)
-
 The btype=advanced is a special method for assembling, only for 4-up booklets.
 Printers that are used to collating first and then cutting may prefer this method.
-Assemble by:
-- print on both sides
-- collate the whole sheets
-- cut each of the collated sets in half
-- place the bottom half (un-rotated) under the top half. This will produce a correctly ordered booklet.
-- fold, bind, and trim (if desired)
 
-n=6: Six of your pages fit on one side of a sheet. This produces an unusual sized booklet. Assemble by:
-- print on both sides
-- cut the sheets in thirds horizontally
-- arrange the sheet stacks for collation: moving top to bottom, then by sheet (ie top third sheet 1, middle third sheet 1, bottom third sheet 1, top third sheet 2, ...)
-- collate the stacks into individual sets of booklets
-- fold, bind, and trim (if desired)
+n=6: Six of your pages fit on one side of a sheet. This produces an unusual sized booklet. 
 
 Only available for portrait, long-edge orientation.
 
 n=8: Eight of your pages fit on one side of a sheet (eg A6 on A3).
-
-Pages are arranged similar to 4-up with btype=booklet (but without the rotation). Assemble by:
-- printing on both sides
-- print on both sides
-- cut the sheets in half horizontally and then cutting those half-sheets in half vertically
-- arrange the sheet stacks for collation: moving left to right, then top to bottom, then by sheet (ie top-left sheet 1, top-right sheet 1, middle-left sheet 1, ...)
-- collate the stacks into individual sets of booklets
-- fold, bind, and trim (if desired)
 
 Only available for portrait, long-edge orientation.
 
