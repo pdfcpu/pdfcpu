@@ -76,7 +76,7 @@ The n-up value will be how many pages of your booklet will fit on one side of th
 
 This is the simplest case and the most common for those printing at home.
 Two of your pages fit on one side of a sheet (eg statement on letter, A5 on A4).
-Assemble by printing on both sides (odd pages on the front and even pages on the back) and folding down the middle.
+Assemble by printing on both sides (odd pages on the front and even pages on the back), folding down the middle, and binding the booklet with staples, sewing, etc.
 
 #### n=4
 
@@ -90,7 +90,7 @@ paper is on the bottom of the booklet for every page (for the default portrait, 
 Similar rotation logic applies for the other three orientations).
 Having the cut edge always on bottom makes for more uniform pages within the book and less work in trimming.
 
-For the default binding method (`btype=booklet`) with 4-up printing, assemble by:
+To assemble booklets with the default 4-up binding method (`btype=booklet`):
 
 - print on both sides
 - cut the sheets in half
@@ -102,17 +102,16 @@ For the default binding method (`btype=booklet`) with 4-up printing, assemble by
 
 The `btype=advanced` is a special method for assembling, only for 4-up booklets.
 Printers that are used to collating first and then cutting may prefer this method.
-Assemble by:
+To assemble:
 
 - print on both sides
 - collate the whole sheets
-- cut each of the collated sets in half
-- place the bottom half (un-rotated) under the top half. This will produce a correctly ordered booklet.
-- fold, bind, and trim (if desired)
+- cut each of the collated sets in half horizontally and place the bottom half (un-rotated) under the top half. Alternately, you can fold each set horizontally and again vertically, then trim the bottom fold off. Both of these methods will produce a correctly ordered booklet.
+- bind and trim (if desired)
 
 #### n=6
 
-Six of your pages fit on one side of a sheet. This produces an unusual sized booklet, but can be an efficient use of paper. Assemble by:
+Six of your pages fit on one side of a sheet. This produces an unusual sized booklet, but can be an efficient use of paper. To assemble:
 
 - print on both sides
 - cut the sheets in thirds horizontally
@@ -126,9 +125,8 @@ _Only available for portrait, long-edge orientation._
 
 Eight of your pages fit on one side of a sheet (eg A6 on A3).
 
-Pages are arranged similar to 4-up with btype=booklet (but without the rotation). Assemble by:
+Pages are arranged similar to 4-up with btype=booklet (but without the rotation). To assemble:
 
-- printing on both sides
 - print on both sides
 - cut the sheets in half horizontally and then cutting those half-sheets in half vertically
 - arrange the sheet stacks for collation: moving left to right, then top to bottom, then by sheet (ie top-left sheet 1, top-right sheet 1, middle-left sheet 1, ...)
@@ -143,7 +141,13 @@ _Only available for portrait, long-edge orientation._
 Perfect binding is a special type of booklet. The main difference is that the binding is glued into the book's spine,
 meaning that all pages are cut from the sheet and not folded as in the other forms of booklet.
 This results in a different page ordering on the sheet than the other methods. If you intend to perfect bind your booklet,
-use `btype:perfectbound`.
+use `btype:perfectbound`. To assemble:
+
+- print on both sides
+- cut the sheets in half horizontally and then cutting those half-sheets in half vertically
+- arrange the sheet stacks for collation: moving left to right, then top to bottom, then by sheet
+- collate the stacks into individual sets of booklets
+- perfect bind and trim (if desired)
 
 ### Multifolio or Signatures
 
