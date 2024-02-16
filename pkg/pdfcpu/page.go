@@ -31,6 +31,8 @@ func addPages(
 	fieldsSrc, fieldsDest *types.Array,
 	migrated map[int]int) error {
 
+	// Used by collect, extractPages, split
+
 	pageCache := map[int]*types.IndirectRef{}
 
 	for _, i := range pageNrs {
@@ -44,7 +46,7 @@ func addPages(
 			}
 		}
 
-		d, _, inhPAttrs, err := ctxSrc.PageDict(i, false)
+		d, _, inhPAttrs, err := ctxSrc.PageDict(i, true)
 		if err != nil {
 			return err
 		}

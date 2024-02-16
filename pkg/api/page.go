@@ -19,9 +19,11 @@ package api
 import (
 	"io"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
@@ -134,7 +136,7 @@ func RemovePages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *mo
 	conf.Cmd = model.REMOVEPAGES
 
 	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := ReadValidateAndOptimize(rs, conf, fromStart)
+	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, fromStart)
 	if err != nil {
 		return err
 	}
@@ -143,31 +145,38 @@ func RemovePages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *mo
 		return err
 	}
 
-	fromWrite := time.Now()
-
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, false, true)
+	pages, err := RemainingPagesForPageRemoval(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return err
 	}
 
-	// ctx.Pagecount gets set during validation.
-	if len(pages) >= ctx.PageCount {
-		return errors.New("pdfcpu: operation invalid")
+	if len(pages) == 0 {
+		if log.CLIEnabled() {
+			log.CLI.Println("aborted: missing page numbers!")
+		}
+		return nil
 	}
 
-	// No special context processing required.
-	// WriteContext decides which pages get written by checking conf.Cmd
+	var pageNrs []int
+	for k, v := range pages {
+		if v {
+			pageNrs = append(pageNrs, k)
+		}
+	}
+	sort.Ints(pageNrs)
 
-	ctx.Write.SelectedPages = pages
-	if err = WriteContext(ctx, w); err != nil {
+	ctxDest, err := pdfcpu.ExtractPages(ctx, pageNrs, false)
+	if err != nil {
 		return err
 	}
 
-	durWrite := time.Since(fromWrite).Seconds()
-	durTotal := time.Since(fromStart).Seconds()
-	logOperationStats(ctx, "remove pages, write", durRead, durVal, durOpt, durWrite, durTotal)
+	if conf.ValidationMode != model.ValidationNone {
+		if err = ValidateContext(ctxDest); err != nil {
+			return err
+		}
+	}
 
-	return nil
+	return WriteContext(ctxDest, w)
 }
 
 // RemovePagesFile removes selected inFile pages and writes the result to outFile..

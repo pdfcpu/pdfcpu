@@ -21,6 +21,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
@@ -66,6 +67,10 @@ func SetPermissions(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) er
 	ctx, durRead, durVal, durOpt, err := ReadValidateAndOptimize(rs, conf, fromStart)
 	if err != nil {
 		return err
+	}
+
+	if ctx.Version() == model.V20 {
+		return pdfcpu.ErrUnsupportedVersion
 	}
 
 	fromWrite := time.Now()
@@ -141,6 +146,11 @@ func GetPermissions(rs io.ReadSeeker, conf *model.Configuration) (*int16, error)
 	if err != nil {
 		return nil, err
 	}
+
+	if ctx.Version() == model.V20 {
+		return nil, pdfcpu.ErrUnsupportedVersion
+	}
+
 	if ctx.E == nil {
 		// Full access - permissions don't apply.
 		return nil, nil

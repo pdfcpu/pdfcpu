@@ -47,6 +47,25 @@ import (
 	"github.com/pkg/errors"
 )
 
+func logDisclaimerPDF20() {
+	disclaimer := `
+***************************** Disclaimer ****************************
+* PDF 2.0 features are supported on a need basis.                   *
+* (See ISO 32000:2 6.3.2 Conformance of PDF processors)             *
+* At the moment pdfcpu comes with basic PDF 2.0 support.            *
+* Please let us know which feature you would like to see supported, *
+* provide a sample PDF file and create an issue:                    *
+* https://github.com/pdfcpu/pdfcpu/issues/new/choose                *
+*********************************************************************`
+
+	if log.ValidateEnabled() {
+		log.Validate.Println(disclaimer)
+	}
+	if log.CLIEnabled() {
+		log.CLI.Println(disclaimer)
+	}
+}
+
 // ReadContext uses an io.ReadSeeker to build an internal structure holding its cross reference table aka the Context.
 func ReadContext(rs io.ReadSeeker, conf *model.Configuration) (*model.Context, error) {
 	if rs == nil {
@@ -68,6 +87,10 @@ func ReadContextFile(inFile string) (*model.Context, error) {
 		return nil, err
 	}
 
+	if ctx.Version() == model.V20 {
+		logDisclaimerPDF20()
+	}
+
 	if err = validate.XRefTable(ctx.XRefTable); err != nil {
 		return nil, err
 	}
@@ -77,6 +100,11 @@ func ReadContextFile(inFile string) (*model.Context, error) {
 
 // ValidateContext validates ctx.
 func ValidateContext(ctx *model.Context) error {
+
+	if ctx.Version() == model.V20 {
+		logDisclaimerPDF20()
+	}
+
 	return validate.XRefTable(ctx.XRefTable)
 }
 
@@ -130,6 +158,10 @@ func readAndValidate(rs io.ReadSeeker, conf *model.Configuration, from1 time.Tim
 
 	from2 := time.Now()
 
+	if ctx.Version() == model.V20 {
+		logDisclaimerPDF20()
+	}
+
 	if err = validate.XRefTable(ctx.XRefTable); err != nil {
 		return nil, 0, 0, err
 	}
@@ -144,10 +176,6 @@ func ReadValidateAndOptimize(rs io.ReadSeeker, conf *model.Configuration, from1 
 	ctx, dur1, dur2, err = readAndValidate(rs, conf, from1)
 	if err != nil {
 		return nil, 0, 0, 0, err
-	}
-
-	if ctx.Version() == model.V20 {
-		return nil, 0, 0, 0, pdfcpu.ErrUnsupportedVersion
 	}
 
 	from3 := time.Now()

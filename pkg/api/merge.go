@@ -36,7 +36,7 @@ func appendTo(rs io.ReadSeeker, fName string, ctxDest *model.Context, dividerPag
 		return err
 	}
 
-	if ctxSource.Version() == model.V20 {
+	if ctxDest.Version() < model.V20 && ctxSource.Version() == model.V20 {
 		return pdfcpu.ErrUnsupportedVersion
 	}
 
@@ -93,7 +93,9 @@ func prepDestContext(destFile string, rs io.ReadSeeker, conf *model.Configuratio
 		}
 	}
 
-	ctxDest.EnsureVersionForWriting()
+	if ctxDest.Version() < model.V20 {
+		ctxDest.EnsureVersionForWriting()
+	}
 
 	return ctxDest, nil
 }
@@ -134,9 +136,6 @@ func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configura
 	ctxDest, err := prepDestContext(destFile, f, conf)
 	if err != nil {
 		return err
-	}
-	if ctxDest.Version() == model.V20 {
-		return pdfcpu.ErrUnsupportedVersion
 	}
 
 	for _, fName := range inFiles {
@@ -181,6 +180,7 @@ func MergeCreateFile(inFiles []string, outFile string, dividerPage bool, conf *m
 				return
 			}
 			os.Remove(outFile)
+			return
 		}
 		if err = f.Close(); err != nil {
 			return

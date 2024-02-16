@@ -391,6 +391,26 @@ func PagesForPageSelection(pageCount int, pageSelection []string, ensureAllforNo
 	return m, nil
 }
 
+func RemainingPagesForPageRemoval(pageCount int, pageSelection []string, log bool) (types.IntSet, error) {
+	pagesToRemove, err := selectedPages(pageCount, pageSelection, log)
+	if err != nil {
+		return nil, err
+	}
+
+	m := types.IntSet{}
+	for i := 1; i <= pageCount; i++ {
+		m[i] = true
+	}
+
+	for k, v := range pagesToRemove {
+		if v {
+			m[k] = false
+		}
+	}
+
+	return m, nil
+}
+
 func deletePageFromCollection(cp *[]int, p int) {
 	a := []int{}
 	for _, i := range *cp {

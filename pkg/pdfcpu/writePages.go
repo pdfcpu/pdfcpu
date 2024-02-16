@@ -220,15 +220,6 @@ func writeKids(ctx *model.Context, a types.Array, pageNr *int) (types.Array, int
 	return kids, count, nil
 }
 
-func containsSelectedPages(ctx *model.Context, from, thru int) bool {
-	for i := from; i <= thru; i++ {
-		if ctx.Write.SelectedPages[i] {
-			return true
-		}
-	}
-	return false
-}
-
 func writePageEntries(ctx *model.Context, d types.Dict, dictName string) error {
 	// TODO Check inheritance rules.
 	for _, e := range []struct {
@@ -246,31 +237,6 @@ func writePageEntries(ctx *model.Context, d types.Dict, dictName string) error {
 	}
 
 	return nil
-}
-
-func skipPageSubTree(ctx *model.Context, pageNr *int, c int) bool {
-	// TRIM, REMOVEPAGES are the only commands where we modify the page tree during writing.
-	// In these cases the selected pages to be written or to be removed are defined in ctx.Write.SelectedPages.
-
-	if len(ctx.Write.SelectedPages) > 0 {
-		if log.WriteEnabled() {
-			log.Write.Printf("writePagesDict: checking page range %d - %d \n", *pageNr+1, *pageNr+c)
-		}
-		if ctx.Cmd == model.REMOVEPAGES ||
-			((ctx.Cmd == model.TRIM) && containsSelectedPages(ctx, *pageNr+1, *pageNr+c)) {
-			if log.WriteEnabled() {
-				log.Write.Println("writePagesDict: process this subtree")
-			}
-		} else {
-			if log.WriteEnabled() {
-				log.Write.Println("writePagesDict: skip this subtree")
-			}
-			*pageNr += c
-			return true
-		}
-	}
-
-	return false
 }
 
 func writePagesDict(ctx *model.Context, indRef *types.IndirectRef, pageNr *int) (skip bool, writtenPages int, err error) {
@@ -297,10 +263,6 @@ func writePagesDict(ctx *model.Context, indRef *types.IndirectRef, pageNr *int) 
 	}
 
 	kidsOrig := d.ArrayEntry("Kids")
-
-	if skipPageSubTree(ctx, pageNr, c) {
-		return true, 0, nil
-	}
 
 	// Iterate over page tree.
 	kidsArray := d.ArrayEntry("Kids")

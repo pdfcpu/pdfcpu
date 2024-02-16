@@ -1825,9 +1825,16 @@ func consolidateResourceDict(d types.Dict, prn PageResourceNames, pageNr int) er
 	return nil
 }
 
-func consolidateResources(consolidateRes bool, xRefTable *XRefTable, pageDict, resDict types.Dict, page int) error {
+func (xRefTable *XRefTable) consolidateResourcesWithContent(pageDict, resDict types.Dict, page int, consolidateRes bool) error {
 	if !consolidateRes {
 		return nil
+	}
+
+	if obj, found := pageDict.Find("Resources"); found {
+		if _, ok := obj.(types.IndirectRef); !ok {
+			return nil
+		}
+
 	}
 
 	bb, err := xRefTable.PageContent(pageDict)
@@ -1875,10 +1882,9 @@ func (xRefTable *XRefTable) processPageTreeForPageDict(root *types.IndirectRef, 
 		return nil, nil, err
 	}
 
-	// Iterate over page tree.
 	kids := d.ArrayEntry("Kids")
 	if kids == nil {
-		return d, root, consolidateResources(consolidateRes, xRefTable, d, pAttrs.Resources, page)
+		return d, root, xRefTable.consolidateResourcesWithContent(d, pAttrs.Resources, page, consolidateRes)
 	}
 
 	for _, o := range kids {

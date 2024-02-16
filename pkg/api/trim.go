@@ -19,8 +19,11 @@ package api
 import (
 	"io"
 	"os"
+	"sort"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
@@ -38,7 +41,7 @@ func Trim(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.Con
 	conf.Cmd = model.TRIM
 
 	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := ReadValidateAndOptimize(rs, conf, fromStart)
+	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, fromStart)
 	if err != nil {
 		return err
 	}
@@ -47,26 +50,38 @@ func Trim(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.Con
 		return err
 	}
 
-	fromWrite := time.Now()
-
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, false, true)
 	if err != nil {
 		return err
 	}
 
-	// No special context processing required.
-	// WriteContext decides which pages get written by checking conf.Cmd
+	if len(pages) == 0 {
+		if log.CLIEnabled() {
+			log.CLI.Println("aborted: missing page numbers!")
+		}
+		return nil
+	}
 
-	ctx.Write.SelectedPages = pages
-	if err = WriteContext(ctx, w); err != nil {
+	var pageNrs []int
+	for k, v := range pages {
+		if v {
+			pageNrs = append(pageNrs, k)
+		}
+	}
+	sort.Ints(pageNrs)
+
+	ctxDest, err := pdfcpu.ExtractPages(ctx, pageNrs, false)
+	if err != nil {
 		return err
 	}
 
-	durWrite := time.Since(fromWrite).Seconds()
-	durTotal := time.Since(fromStart).Seconds()
-	logOperationStats(ctx, "trim, write", durRead, durVal, durOpt, durWrite, durTotal)
+	if conf.ValidationMode != model.ValidationNone {
+		if err = ValidateContext(ctxDest); err != nil {
+			return err
+		}
+	}
 
-	return nil
+	return WriteContext(ctxDest, w)
 }
 
 // TrimFile generates a trimmed version of inFile

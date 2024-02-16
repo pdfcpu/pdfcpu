@@ -183,10 +183,6 @@ func SetViewerPreferences(rs io.ReadSeeker, w io.Writer, vp model.ViewerPreferen
 		return err
 	}
 
-	if ctx.Version() == model.V20 {
-		return pdfcpu.ErrUnsupportedVersion
-	}
-
 	version := ctx.Version()
 
 	if err := vp.Validate(version); err != nil {
@@ -363,10 +359,6 @@ func ResetViewerPreferences(rs io.ReadSeeker, w io.Writer, conf *model.Configura
 
 	if ctx.ViewerPref == nil {
 		return ErrNoOp
-	}
-
-	if ctx.Version() == model.V20 {
-		return pdfcpu.ErrUnsupportedVersion
 	}
 
 	delete(ctx.RootDict, "ViewerPreferences")

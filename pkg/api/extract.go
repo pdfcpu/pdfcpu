@@ -264,7 +264,7 @@ func ExtractPages(rs io.ReadSeeker, outDir, fileName string, selectedPages []str
 
 	if len(pages) == 0 {
 		if log.CLIEnabled() {
-			log.CLI.Println("aborted: nothing to extract!")
+			log.CLI.Println("aborted: missing page numbers!")
 		}
 		return nil
 	}

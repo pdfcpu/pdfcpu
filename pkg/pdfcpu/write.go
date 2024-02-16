@@ -100,7 +100,13 @@ func Write(ctx *model.Context) (err error) {
 
 	// Since we support PDF Collections (since V1.7) for file attachments
 	// we need to generate V1.7 PDF files.
-	if err = writeHeader(ctx.Write, model.V17); err != nil {
+	v := model.V17
+
+	if ctx.Version() == model.V20 {
+		v = model.V20
+	}
+
+	if err = writeHeader(ctx.Write, v); err != nil {
 		return err
 	}
 
@@ -203,8 +209,10 @@ func ensureFileID(ctx *model.Context) error {
 }
 
 func ensureInfoDictAndFileID(ctx *model.Context) error {
-	if err := ensureInfoDict(ctx); err != nil {
-		return err
+	if ctx.Version() < model.V20 {
+		if err := ensureInfoDict(ctx); err != nil {
+			return err
+		}
 	}
 
 	return ensureFileID(ctx)
@@ -344,7 +352,6 @@ func writeRootObject(ctx *model.Context) error {
 		d.Delete("Dests")
 		d.Delete("Outlines")
 		d.Delete("OpenAction")
-		//d.Delete("AcroForm")
 		d.Delete("StructTreeRoot")
 		d.Delete("OCProperties")
 	}
@@ -1001,6 +1008,17 @@ func updateEncryption(ctx *model.Context) error {
 }
 
 func handleEncryption(ctx *model.Context) error {
+
+	if ctx.Version() == model.V20 {
+		if ctx.Cmd == model.ENCRYPT ||
+			ctx.Cmd == model.DECRYPT ||
+			ctx.Cmd == model.CHANGEUPW ||
+			ctx.Cmd == model.CHANGEOPW ||
+			ctx.Cmd == model.SETPERMISSIONS {
+			return ErrUnsupportedVersion
+		}
+	}
+
 	if ctx.Cmd == model.ENCRYPT || ctx.Cmd == model.DECRYPT {
 
 		if ctx.Cmd == model.DECRYPT {

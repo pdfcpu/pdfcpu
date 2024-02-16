@@ -874,6 +874,10 @@ func validateRootObject(xRefTable *model.XRefTable) error {
 	// Collection           y   1.7         dict            => 12.3.5 Collections
 	// NeedsRendering       y   1.7         boolean         => XML Forms Architecture (XFA) Spec.
 
+	// DSS					y	2.0			dict			=> 12.8.4.3 Document Security Store	TODO
+	// AF					y	2.0			array of dicts	=> 14.3 Associated Files			TODO
+	// DPartRoot			y	2.0			dict			=> 14.12 Document parts				TODO
+
 	d, err := xRefTable.Catalog()
 	if err != nil {
 		return err

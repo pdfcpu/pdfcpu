@@ -1399,17 +1399,18 @@ func fileID(ctx *model.Context) (types.HexLiteral, error) {
 	h.Write([]byte(strconv.Itoa(ctx.Read.ReadFileSize())))
 
 	// All values of the info dict which is assumed to be there at this point.
-	d, err := ctx.DereferenceDict(*ctx.Info)
-	if err != nil {
-		return "", err
-	}
-
-	for _, v := range d {
-		o, err := ctx.Dereference(v)
+	if ctx.Version() < model.V20 {
+		d, err := ctx.DereferenceDict(*ctx.Info)
 		if err != nil {
 			return "", err
 		}
-		h.Write([]byte(o.String()))
+		for _, v := range d {
+			o, err := ctx.Dereference(v)
+			if err != nil {
+				return "", err
+			}
+			h.Write([]byte(o.String()))
+		}
 	}
 
 	m := h.Sum(nil)
