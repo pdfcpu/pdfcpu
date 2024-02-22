@@ -117,28 +117,28 @@ func leaf(firstChild, lastChild *types.IndirectRef, objNumber, validationMode in
 	return false, nil
 }
 
-func evalOutlineCount(xRefTable *model.XRefTable, c, visc int, count, total, visible *int) error {
+func evalOutlineCount(xRefTable *model.XRefTable, c, visc int, count int, total, visible *int) error {
 	if visc == 0 {
-		if count == nil || *count == 0 {
+		if count == 0 {
 			if xRefTable.ValidationMode == model.ValidationStrict {
 				return errors.New("pdfcpu: validateOutlineTree: non-empty outline item dict needs \"Count\" <> 0")
 			}
-			*count = c
+			count = c
 		}
-		if *count != c && *count != -c {
+		if count != c && count != -c {
 			if xRefTable.ValidationMode == model.ValidationStrict {
-				return errors.Errorf("pdfcpu: validateOutlineTree: non-empty outline item dict got \"Count\" %d, want %d or %d", *count, c, -c)
+				return errors.Errorf("pdfcpu: validateOutlineTree: non-empty outline item dict got \"Count\" %d, want %d or %d", count, c, -c)
 			}
-			*count = c
+			count = c
 		}
-		if *count == c {
+		if count == c {
 			*total += c
 		}
 	}
 
 	if visc > 0 {
-		if count == nil || *count != c+visc {
-			return errors.Errorf("pdfcpu: validateOutlineTree: non-empty outline item dict got \"Count\" %d, want %d", *count, c+visc)
+		if count != c+visc {
+			return errors.Errorf("pdfcpu: validateOutlineTree: non-empty outline item dict got \"Count\" %d, want %d", count, c+visc)
 		}
 		*total += c
 		*visible += visc
@@ -174,7 +174,10 @@ func validateOutlineTree(xRefTable *model.XRefTable, first, last *types.Indirect
 			return 0, 0, err
 		}
 
-		count := d.IntEntry("Count")
+		var count int
+		if c := d.IntEntry("Count"); c != nil {
+			count = *c
+		}
 
 		firstChild := d.IndirectRefEntry("First")
 		lastChild := d.IndirectRefEntry("Last")
@@ -184,7 +187,7 @@ func validateOutlineTree(xRefTable *model.XRefTable, first, last *types.Indirect
 			return 0, 0, err
 		}
 		if ok {
-			if count != nil && *count != 0 {
+			if count != 0 {
 				return 0, 0, errors.New("pdfcpu: validateOutlineTree: empty outline item dict \"Count\" must be 0")
 			}
 			continue
