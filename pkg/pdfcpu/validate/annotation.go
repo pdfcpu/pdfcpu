@@ -410,7 +410,11 @@ func validateAnnotationDictFreeTextPart1(xRefTable *model.XRefTable, d types.Dic
 	}
 
 	// DS, optional, text string, since V1.5
-	_, err = validateStringEntry(xRefTable, d, dictName, "DS", OPTIONAL, model.V15, nil)
+	sinceVersion = model.V15
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V14
+	}
+	_, err = validateStringEntry(xRefTable, d, dictName, "DS", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
