@@ -404,8 +404,7 @@ func ParsePageFormat(v string) (*Dim, string, error) {
 
 	dim := Dim{d.Width, d.Height}
 	if (d.Portrait() && !portrait) || (d.Landscape() && portrait) {
-		// flip the dimensions
-		return &Dim{d.Height, d.Width}, v, nil
+		dim.Width, dim.Height = dim.Height, dim.Width
 	}
 
 	return &dim, v, nil
