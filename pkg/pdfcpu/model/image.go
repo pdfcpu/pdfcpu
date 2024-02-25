@@ -70,7 +70,8 @@ func ImageFileNames(dir string, maxFileSize types.ByteSize) ([]string, error) {
 		return nil, err
 	}
 	fn := []string{}
-	for _, fi := range files {
+	for i := 0; i < len(files); i++ {
+		fi := files[i]
 		fileInfo, err := fi.Info()
 		if err != nil {
 			continue

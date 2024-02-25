@@ -77,6 +77,10 @@ func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdfcpu.I
 			return err
 		}
 
+		if err := ctx.SetValid(*indRef); err != nil {
+			return err
+		}
+
 		if err = model.AppendPageTree(indRef, 1, pagesDict); err != nil {
 			return err
 		}

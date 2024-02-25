@@ -757,6 +757,7 @@ func createDividerPagesDict(ctx *model.Context, parentIndRef types.IndirectRef) 
 	if err != nil {
 		return nil, err
 	}
+	ctx.SetValid(*indRefPageDict)
 
 	d.Insert("Kids", types.Array{*indRefPageDict})
 

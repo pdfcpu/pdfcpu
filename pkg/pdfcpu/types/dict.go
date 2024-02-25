@@ -371,6 +371,10 @@ func (d Dict) Size() *int {
 	return d.IntEntry("Size")
 }
 
+func (d Dict) IsPage() bool {
+	return d.Type() != nil && *d.Type() == "Page"
+}
+
 // IsObjStm returns true if given PDFDict is an object stream.
 func (d Dict) IsObjStm() bool {
 	return d.Type() != nil && *d.Type() == "ObjStm"

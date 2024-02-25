@@ -440,6 +440,10 @@ func NUpFromOneImage(ctx *model.Context, fileName string, nup *model.NUp, pagesD
 		return err
 	}
 
+	if err := ctx.SetValid(*indRef); err != nil {
+		return err
+	}
+
 	if err = model.AppendPageTree(indRef, 1, pagesDict); err != nil {
 		return err
 	}
@@ -503,6 +507,10 @@ func wrapUpPage(ctx *model.Context, nup *model.NUp, d types.Dict, buf bytes.Buff
 
 	indRef, err := xRefTable.IndRefForNewObject(pageDict)
 	if err != nil {
+		return err
+	}
+
+	if err := ctx.SetValid(*indRef); err != nil {
 		return err
 	}
 

@@ -208,6 +208,10 @@ func createOutline(
 		return err
 	}
 
+	if err := ctxDest.SetValid(*pageIndRef); err != nil {
+		return err
+	}
+
 	if err := migratePageDict(d1, *pageIndRef, ctxSrc, ctxDest, migrated); err != nil {
 		return err
 	}
@@ -425,6 +429,10 @@ func createTiles(
 
 			pageIndRef, err := ctxDest.IndRefForNewObject(d1)
 			if err != nil {
+				return err
+			}
+
+			if err := ctxDest.SetValid(*pageIndRef); err != nil {
 				return err
 			}
 

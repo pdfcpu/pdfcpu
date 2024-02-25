@@ -106,6 +106,7 @@ func parsePageFormatRes(s string, res *Resize) error {
 
 	if (d.Portrait() && landscape) || (d.Landscape() && portrait) {
 		d.Width, d.Height = d.Height, d.Width
+		res.EnforceOrient = true
 	}
 
 	res.PageDim = d

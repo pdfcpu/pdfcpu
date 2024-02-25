@@ -1013,6 +1013,9 @@ func processPagesKids(xRefTable *model.XRefTable, kids types.Array, objNr int, h
 			if err = validatePageDict(xRefTable, pageNodeDict, objNumber, hasResources, hasMediaBox); err != nil {
 				return nil, err
 			}
+			if err := xRefTable.SetValid(ir); err != nil {
+				return nil, err
+			}
 
 		default:
 			return nil, errors.Errorf("pdfcpu: validatePagesDict: Unexpected dict type: %s", dictType)

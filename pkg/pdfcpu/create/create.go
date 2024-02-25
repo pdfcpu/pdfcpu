@@ -510,6 +510,10 @@ func appendPage(
 		return err
 	}
 
+	if err := ctx.SetValid(*ir); err != nil {
+		return err
+	}
+
 	if err := model.AppendPageTree(ir, 1, pagesDict); err != nil {
 		return err
 	}

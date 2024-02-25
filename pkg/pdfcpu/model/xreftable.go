@@ -889,16 +889,21 @@ func (xRefTable *XRefTable) UndeleteObject(objectNumber int) error {
 	return nil
 }
 
-// IsValid returns true if the object referenced by ir has already been validated.
-func (xRefTable *XRefTable) IsValid(ir types.IndirectRef) (bool, error) {
-	entry, found := xRefTable.FindTableEntry(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
+// IsValidObj returns true if the object with objNr and genNr is valid.
+func (xRefTable *XRefTable) IsValidObj(objNr, genNr int) (bool, error) {
+	entry, found := xRefTable.FindTableEntry(objNr, genNr)
 	if !found {
-		return false, errors.Errorf("pdfcpu: IsValid: no entry for obj#%d\n", ir.ObjectNumber.Value())
+		return false, errors.Errorf("pdfcpu: IsValid: no entry for obj#%d\n", objNr)
 	}
 	if entry.Free {
-		return false, errors.Errorf("pdfcpu: IsValid: unexpected free entry for obj#%d\n", ir.ObjectNumber.Value())
+		return false, errors.Errorf("pdfcpu: IsValid: unexpected free entry for obj#%d\n", objNr)
 	}
 	return entry.Valid, nil
+}
+
+// IsValid returns true if the object referenced by ir is valid.
+func (xRefTable *XRefTable) IsValid(ir types.IndirectRef) (bool, error) {
+	return xRefTable.IsValidObj(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
 }
 
 // SetValid marks the xreftable entry of the object referenced by ir as valid.
@@ -2450,6 +2455,7 @@ func (xRefTable *XRefTable) insertBlankPages(parent *types.IndirectRef, pAttrs *
 				}
 				a = append(a, *indRef)
 				i++
+				xRefTable.SetValid(*indRef)
 			}
 			if before {
 				a = append(a, ir)
