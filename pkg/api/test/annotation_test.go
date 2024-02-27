@@ -42,14 +42,42 @@ var textAnn model.AnnotationRenderer = model.NewTextAnnotation(
 	"Comment")
 
 var linkAnn model.AnnotationRenderer = model.NewLinkAnnotation(
-	*types.NewRectangle(0, 0, 100, 100),
+	*types.NewRectangle(200, 0, 300, 100),
 	nil,
 	nil,
 	"https://pdfcpu.io",
 	"ID2",
 	0,
+	1,
+	model.BSSolid,
+	&color.Red,
+	true)
+
+var squareAnn model.AnnotationRenderer = model.NewSquareAnnotation(
+	*types.NewRectangle(300, 0, 350, 50),
+	"Square Annotation",
+	"ID3",
+	0,
+	1,
+	model.BSSolid,
+	&color.Blue,
+	false,
+	0,
 	nil,
-	false)
+	0, 0, 0, 0)
+
+var circleAnn model.AnnotationRenderer = model.NewCircleAnnotation(
+	*types.NewRectangle(400, 0, 450, 50),
+	"Circle Annotation",
+	"ID4",
+	model.AnnLocked,
+	3,
+	model.BSBeveled,
+	&color.Green,
+	true,
+	1,
+	&color.Blue,
+	10, 10, 10, 10)
 
 func annotationCount(t *testing.T, inFile string) int {
 	t.Helper()
@@ -420,6 +448,8 @@ func TestAddLinkAnnotationWithDest(t *testing.T) {
 		"",
 		"id",
 		0,
+		1,
+		model.BSSolid,
 		&color.Red,
 		true,
 	)
@@ -428,4 +458,64 @@ func TestAddLinkAnnotationWithDest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s add: %v\n", msg, err)
 	}
+}
+
+func TestAddAnnotationsFile(t *testing.T) {
+	msg := "TestAddAnnotationsFile"
+
+	inFile := filepath.Join(inDir, "test.pdf")
+	outFile := filepath.Join(samplesDir, "annotations", "TestAnnotationsFile.pdf")
+
+	// Add text annotation.
+	if err := api.AddAnnotationsFile(inFile, outFile, nil, textAnn, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+
+	// Add link annotation.
+	if err := api.AddAnnotationsFile(outFile, outFile, nil, linkAnn, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+
+	// Add square annotation.
+	if err := api.AddAnnotationsFile(outFile, outFile, nil, squareAnn, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+
+	// Add circle annotation.
+	if err := api.AddAnnotationsFile(outFile, outFile, nil, circleAnn, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+}
+
+func TestAddAnnotations(t *testing.T) {
+	msg := "TestAddAnnotations"
+
+	inFile := filepath.Join(inDir, "test.pdf")
+	outFile := filepath.Join(samplesDir, "annotations", "TestAnnotations.pdf")
+
+	// Create a context from inFile.
+	ctx, err := api.ReadContextFile(inFile)
+	if err != nil {
+		t.Fatalf("%s readContext: %v\n", msg, err)
+	}
+
+	// Prepare annotations for page 1.
+	m := map[int][]model.AnnotationRenderer{}
+	anns := make([]model.AnnotationRenderer, 4)
+	anns[0] = textAnn
+	anns[1] = linkAnn
+	anns[2] = squareAnn
+	anns[3] = circleAnn
+	m[1] = anns
+
+	// Add 4 annotations to page 1.
+	if ok, err := pdfcpu.AddAnnotationsMap(ctx, m, false); err != nil || !ok {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+
+	// Write context to outFile.
+	if err := api.WriteContextFile(ctx, outFile); err != nil {
+		t.Fatalf("%s write: %v\n", msg, err)
+	}
+
 }

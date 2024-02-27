@@ -400,6 +400,8 @@ func (ib *ImageBox) createLink(p *model.Page, pageNr int, r *types.Rectangle, m 
 		ib.Url,
 		id,
 		0,
+		0,
+		model.BSSolid,
 		nil,
 		false)
 

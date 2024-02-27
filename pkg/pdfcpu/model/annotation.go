@@ -131,6 +131,55 @@ var AnnotTypeStrings = map[AnnotationType]string{
 	AnnRedact:         "Redact",
 }
 
+// BorderStyle (see table 168)
+type BorderStyle int
+
+const (
+	BSSolid BorderStyle = iota
+	BSDashed
+	BSBeveled
+	BSInset
+	BSUnderline
+)
+
+func borderStyleDict(width float64, style BorderStyle) types.Dict {
+	d := types.Dict(map[string]types.Object{
+		"Type": types.Name("Border"),
+		"W":    types.Float(width),
+	})
+
+	var s string
+
+	switch style {
+	case BSSolid:
+		s = "S"
+	case BSDashed:
+		s = "D"
+	case BSBeveled:
+		s = "B"
+	case BSInset:
+		s = "I"
+	case BSUnderline:
+		s = "U"
+	}
+
+	d["S"] = types.Name(s)
+
+	return d
+}
+
+func borderEffectDict(cloudyBorder bool, intensity int) types.Dict {
+	s := "S"
+	if cloudyBorder {
+		s = "C"
+	}
+
+	return types.Dict(map[string]types.Object{
+		"S": types.Name(s),
+		"I": types.Integer(intensity),
+	})
+}
+
 // AnnotationRenderer is the interface for PDF annotations.
 type AnnotationRenderer interface {
 	RenderDict(xRefTable *XRefTable, pageIndRef types.IndirectRef) (types.Dict, error)
@@ -357,8 +406,8 @@ type InkPath []float64
 type InkAnnotation struct {
 	MarkupAnnotation
 	InkList []InkPath
-	BS      *types.Dict
-	AP      *types.Dict
+	BS      types.Dict
+	AP      types.Dict
 }
 
 // NewInkAnnotation returns a new ink annotation.
@@ -366,12 +415,12 @@ func NewInkAnnotation(
 	rect types.Rectangle,
 	contents, id, title string,
 	ink []InkPath,
-	bs *types.Dict,
+	bs types.Dict,
 	f AnnotationFlags,
 	bgCol *color.SimpleColor,
 	ca *float64,
 	rc, subj string,
-	ap *types.Dict,
+	ap types.Dict,
 ) InkAnnotation {
 
 	ann := NewMarkupAnnotation(AnnInk, rect, nil, contents, id, title, f, bgCol, nil, ca, rc, subj)
@@ -405,7 +454,7 @@ func (ann InkAnnotation) RenderDict(pageIndRef types.IndirectRef) types.Dict {
 		"InkList":      ink,
 	})
 	if ann.AP != nil {
-		d.Insert("AP", *ann.AP)
+		d.Insert("AP", ann.AP)
 	}
 	if ann.CA != nil {
 		d.Insert("CA", types.Float(*ann.CA))
@@ -438,10 +487,12 @@ func (ann InkAnnotation) RenderDict(pageIndRef types.IndirectRef) types.Dict {
 // LinkAnnotation represents a PDF link annotation.
 type LinkAnnotation struct {
 	Annotation
-	Dest   *Destination     // internal link
-	URI    string           // external link
-	Quad   types.QuadPoints // shall be ignored if any coordinate lies outside the region specified by Rect.
-	Border bool             // render border using borderColor.
+	Dest        *Destination     // internal link
+	URI         string           // external link
+	Quad        types.QuadPoints // shall be ignored if any coordinate lies outside the region specified by Rect.
+	Border      bool             // render border using borderColor.
+	BorderWidth float64
+	BorderStyle BorderStyle
 }
 
 // NewLinkAnnotation returns a new link annotation.
@@ -452,17 +503,21 @@ func NewLinkAnnotation(
 	uri string,
 	id string,
 	f AnnotationFlags,
+	borderWidth float64,
+	borderStyle BorderStyle,
 	borderCol *color.SimpleColor,
 	border bool) LinkAnnotation {
 
 	ann := NewAnnotation(AnnLink, rect, "", nil, id, f, borderCol)
 
 	return LinkAnnotation{
-		Annotation: ann,
-		Dest:       dest,
-		URI:        uri,
-		Quad:       quad,
-		Border:     border,
+		Annotation:  ann,
+		Dest:        dest,
+		URI:         uri,
+		Quad:        quad,
+		Border:      border,
+		BorderWidth: borderWidth,
+		BorderStyle: borderStyle,
 	}
 }
 
@@ -480,13 +535,13 @@ func (ann LinkAnnotation) ContentString() string {
 
 // RenderDict renders ann into a page annotation dict.
 func (ann LinkAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef types.IndirectRef) (types.Dict, error) {
-
 	d := types.Dict(map[string]types.Object{
 		"Type":    types.Name("Annot"),
 		"Subtype": types.Name(ann.TypeString()),
 		"Rect":    ann.Rect.Array(),
 		"P":       pageIndRef,
 		"F":       types.Integer(ann.F),
+		"BS":      borderStyleDict(ann.BorderWidth, ann.BorderStyle),
 	})
 
 	if !ann.Border {
@@ -530,5 +585,175 @@ func (ann LinkAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef types.Indi
 	if ann.Quad != nil {
 		d.Insert("QuadPoints", ann.Quad.Array())
 	}
+	return d, nil
+}
+
+// SquareAnnotation represents a square annotation.
+type SquareAnnotation struct {
+	Annotation
+	FillCol               *color.SimpleColor
+	Margins               types.Array
+	BorderWidth           float64
+	BorderStyle           BorderStyle
+	CloudyBorder          bool
+	CloudyBorderIntensity int // 0,1,2
+}
+
+// NewSquareAnnotation returns a new square annotation.
+func NewSquareAnnotation(
+	rect types.Rectangle,
+	contents string,
+	id string,
+	f AnnotationFlags,
+	borderWidth float64,
+	borderStyle BorderStyle,
+	borderCol *color.SimpleColor,
+	cloudyBorder bool,
+	cloudyBorderIntensity int,
+	fillCol *color.SimpleColor,
+	MLeft, MTop, MRight, MBot float64) SquareAnnotation {
+
+	ann := NewAnnotation(AnnSquare, rect, contents, nil, id, f, borderCol)
+
+	if cloudyBorderIntensity < 0 || cloudyBorderIntensity > 2 {
+		cloudyBorderIntensity = 0
+	}
+
+	squareAnn := SquareAnnotation{
+		Annotation:            ann,
+		FillCol:               fillCol,
+		BorderWidth:           borderWidth,
+		BorderStyle:           borderStyle,
+		CloudyBorder:          cloudyBorder,
+		CloudyBorderIntensity: cloudyBorderIntensity,
+	}
+
+	if MLeft > 0 || MTop > 0 || MRight > 0 || MBot > 0 {
+		squareAnn.Margins = types.NewNumberArray(MLeft, MTop, MRight, MBot)
+	}
+
+	return squareAnn
+}
+
+// RenderDict renders ann into a page annotation dict.
+func (ann SquareAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef types.IndirectRef) (types.Dict, error) {
+	d := types.Dict(map[string]types.Object{
+		"Type":    types.Name("Annot"),
+		"Subtype": types.Name(ann.TypeString()),
+		"Rect":    ann.Rect.Array(),
+		"P":       pageIndRef,
+		"F":       types.Integer(ann.F),
+		"BS":      borderStyleDict(ann.BorderWidth, ann.BorderStyle),
+	})
+
+	if ann.NM != "" {
+		d.InsertString("NM", ann.NM) // TODO check for uniqueness across annotations on this page.
+	}
+
+	if ann.Contents != "" {
+		d.InsertString("Contents", ann.Contents)
+	}
+
+	if ann.C != nil {
+		d["C"] = ann.C.Array()
+	}
+
+	if ann.FillCol != nil {
+		d["IC"] = ann.FillCol.Array()
+	}
+
+	if ann.Margins != nil {
+		d["RD"] = ann.Margins
+	}
+
+	if ann.CloudyBorder && ann.CloudyBorderIntensity > 0 {
+		d["BE"] = borderEffectDict(ann.CloudyBorder, ann.CloudyBorderIntensity)
+	}
+
+	return d, nil
+}
+
+// CircleAnnotation represents a square annotation.
+type CircleAnnotation struct {
+	Annotation
+	FillCol               *color.SimpleColor
+	Margins               types.Array
+	BorderWidth           float64
+	BorderStyle           BorderStyle
+	CloudyBorder          bool
+	CloudyBorderIntensity int // 0,1,2
+}
+
+// NewCircleAnnotation returns a new circle annotation.
+func NewCircleAnnotation(
+	rect types.Rectangle,
+	contents string,
+	id string,
+	f AnnotationFlags,
+	borderWidth float64,
+	borderStyle BorderStyle,
+	borderCol *color.SimpleColor,
+	cloudyBorder bool,
+	cloudyBorderIntensity int,
+	fillCol *color.SimpleColor,
+	MLeft, MTop, MRight, MBot float64) CircleAnnotation {
+
+	ann := NewAnnotation(AnnCircle, rect, contents, nil, id, f, borderCol)
+
+	if cloudyBorderIntensity < 0 || cloudyBorderIntensity > 2 {
+		cloudyBorderIntensity = 0
+	}
+
+	circleAnn := CircleAnnotation{
+		Annotation:            ann,
+		FillCol:               fillCol,
+		BorderWidth:           borderWidth,
+		BorderStyle:           borderStyle,
+		CloudyBorder:          cloudyBorder,
+		CloudyBorderIntensity: cloudyBorderIntensity,
+	}
+
+	if MLeft > 0 || MTop > 0 || MRight > 0 || MBot > 0 {
+		circleAnn.Margins = types.NewNumberArray(MLeft, MTop, MRight, MBot)
+	}
+
+	return circleAnn
+}
+
+// RenderDict renders ann into a page annotation dict.
+func (ann CircleAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef types.IndirectRef) (types.Dict, error) {
+	d := types.Dict(map[string]types.Object{
+		"Type":    types.Name("Annot"),
+		"Subtype": types.Name(ann.TypeString()),
+		"Rect":    ann.Rect.Array(),
+		"P":       pageIndRef,
+		"F":       types.Integer(ann.F),
+		"BS":      borderStyleDict(ann.BorderWidth, ann.BorderStyle),
+	})
+
+	if ann.NM != "" {
+		d.InsertString("NM", ann.NM) // TODO check for uniqueness across annotations on this page.
+	}
+
+	if ann.Contents != "" {
+		d.InsertString("Contents", ann.Contents)
+	}
+
+	if ann.C != nil {
+		d["C"] = ann.C.Array()
+	}
+
+	if ann.FillCol != nil {
+		d["IC"] = ann.FillCol.Array()
+	}
+
+	if ann.Margins != nil {
+		d["RD"] = ann.Margins
+	}
+
+	if ann.CloudyBorder && ann.CloudyBorderIntensity > 0 {
+		d["BE"] = borderEffectDict(ann.CloudyBorder, ann.CloudyBorderIntensity)
+	}
+
 	return d, nil
 }

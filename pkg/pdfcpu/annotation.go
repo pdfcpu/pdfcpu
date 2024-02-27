@@ -112,7 +112,7 @@ func findAnnotByID(ctx *model.Context, id string, annots types.Array) (int, erro
 	return -1, nil
 }
 
-func findAnnotByObjNr(ctx *model.Context, objNr int, annots types.Array) (int, error) {
+func findAnnotByObjNr(objNr int, annots types.Array) (int, error) {
 	for i, o := range annots {
 		indRef, _ := o.(types.IndirectRef)
 		if indRef.ObjectNumber.Value() == objNr {
@@ -190,7 +190,7 @@ func Annotation(xRefTable *model.XRefTable, d types.Dict) (model.AnnotationRende
 			}
 		}
 		dest := (*model.Destination)(nil) // will not collect link dest during validation.
-		ann = model.NewLinkAnnotation(*r, nil, dest, uri, nm, f, nil, false)
+		ann = model.NewLinkAnnotation(*r, nil, dest, uri, nm, f, 0, model.BSSolid, nil, false)
 
 	case "Popup":
 		parentIndRef := d.IndirectRefEntry("Parent")
@@ -556,7 +556,7 @@ func removeAnnotationsByType(
 		// We have cached annotType page annotations.
 		for _, indRef := range *annot.IndRefs {
 			objNr := indRef.ObjectNumber.Value()
-			i, err := findAnnotByObjNr(ctx, objNr, annots)
+			i, err := findAnnotByObjNr(objNr, annots)
 			if err != nil {
 				return nil, false, err
 			}
@@ -678,7 +678,7 @@ func removeAnnotationsByObjNr(
 		if !v || objNr < 0 {
 			continue
 		}
-		i, err := findAnnotByObjNr(ctx, objNr, annots)
+		i, err := findAnnotByObjNr(objNr, annots)
 		if err != nil {
 			return nil, false, err
 		}

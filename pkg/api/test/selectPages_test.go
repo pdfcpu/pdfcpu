@@ -146,7 +146,7 @@ func TestSelectedPages(t *testing.T) {
 	testSelectedPages("1-l,!2-l-1", pageCount, "10001", t)
 }
 
-func collectedPagesString(cp []int, pageCount int) string {
+func collectedPagesString(cp []int) string {
 	return fmt.Sprint(cp)
 }
 
@@ -161,7 +161,7 @@ func testCollectedPages(s string, pageCount int, want string, t *testing.T) {
 		t.Fatalf("testCollectedPages(%s) %v\n", s, err)
 	}
 
-	got := collectedPagesString(collectedPages, pageCount)
+	got := collectedPagesString(collectedPages)
 	//fmt.Printf("%s\n", resultString)
 
 	if got != want {

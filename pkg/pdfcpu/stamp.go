@@ -1347,6 +1347,8 @@ func handleLink(ctx *model.Context, pageIndRef *types.IndirectRef, d types.Dict,
 		wm.URL,
 		"pdfcpu",
 		model.AnnNoZoom+model.AnnNoRotate,
+		0,
+		model.BSSolid,
 		nil,
 		false)
 

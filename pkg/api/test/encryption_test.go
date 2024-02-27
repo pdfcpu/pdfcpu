@@ -38,10 +38,7 @@ func listPermissions(t *testing.T, fileName string) ([]string, error) {
 	}
 	defer f.Close()
 
-	var conf *model.Configuration
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
+	conf := model.NewDefaultConfiguration()
 	conf.Cmd = model.LISTPERMISSIONS
 
 	ctx, _, _, _, err := api.ReadValidateAndOptimize(f, conf, time.Now())
