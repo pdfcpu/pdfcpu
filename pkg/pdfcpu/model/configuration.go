@@ -34,9 +34,6 @@ const (
 
 	// ValidationRelaxed ensures PDF compliance based on frequently encountered validation errors.
 	ValidationRelaxed
-
-	// ValidationNone bypasses validation.
-	ValidationNone
 )
 
 // See table 22 - User access permissions
@@ -438,10 +435,7 @@ func (c *Configuration) ValidationModeString() string {
 	if c.ValidationMode == ValidationStrict {
 		return "strict"
 	}
-	if c.ValidationMode == ValidationRelaxed {
-		return "relaxed"
-	}
-	return "none"
+	return "relaxed"
 }
 
 // UnitString returns a string rep for the display unit in effect.

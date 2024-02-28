@@ -34,7 +34,6 @@ func PDFInfo(rs io.ReadSeeker, fileName string, selectedPages []string, conf *mo
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	} else {
-		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
 	}
 	conf.Cmd = model.LISTINFO

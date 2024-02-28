@@ -99,10 +99,8 @@ func AddBoxes(rs io.ReadSeeker, w io.Writer, selectedPages []string, pb *model.P
 		return err
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	return WriteContext(ctx, w)
@@ -182,10 +180,8 @@ func RemoveBoxes(rs io.ReadSeeker, w io.Writer, selectedPages []string, pb *mode
 		return err
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	return WriteContext(ctx, w)
@@ -266,10 +262,8 @@ func Crop(rs io.ReadSeeker, w io.Writer, selectedPages []string, b *model.Box, c
 		return err
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	return WriteContext(ctx, w)

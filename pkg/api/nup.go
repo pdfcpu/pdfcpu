@@ -136,10 +136,8 @@ func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *m
 
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	if err = WriteContext(ctx, w); err != nil {

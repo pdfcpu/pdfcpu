@@ -62,10 +62,8 @@ func Rotate(rs io.ReadSeeker, w io.Writer, rotation int, selectedPages []string,
 	durStamp := time.Since(from).Seconds()
 	fromWrite := time.Now()
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	if err = WriteContext(ctx, w); err != nil {

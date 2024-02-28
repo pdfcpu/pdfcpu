@@ -427,7 +427,6 @@ func listProperties(rs io.ReadSeeker, conf *model.Configuration) ([]string, erro
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	} else {
-		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
 	}
 	conf.Cmd = model.LISTPROPERTIES
@@ -459,7 +458,6 @@ func listBookmarks(rs io.ReadSeeker, conf *model.Configuration) ([]string, error
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	} else {
-		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
 	}
 	conf.Cmd = model.LISTBOOKMARKS

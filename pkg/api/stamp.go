@@ -64,10 +64,8 @@ func AddWatermarksMap(rs io.ReadSeeker, w io.Writer, m map[int]*model.Watermark,
 		log.Stats.Printf("XRefTable:\n%s\n", ctx)
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	durStamp := time.Since(from).Seconds()
@@ -156,10 +154,8 @@ func AddWatermarksSliceMap(rs io.ReadSeeker, w io.Writer, m map[int][]*model.Wat
 		log.Stats.Printf("XRefTable:\n%s\n", ctx)
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	durStamp := time.Since(from).Seconds()
@@ -258,10 +254,8 @@ func AddWatermarks(rs io.ReadSeeker, w io.Writer, selectedPages []string, wm *mo
 		log.Stats.Printf("XRefTable:\n%s\n", ctx)
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	durStamp := time.Since(from).Seconds()
@@ -354,10 +348,8 @@ func RemoveWatermarks(rs io.ReadSeeker, w io.Writer, selectedPages []string, con
 		log.Stats.Printf("XRefTable:\n%s\n", ctx)
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	durStamp := time.Since(from).Seconds()

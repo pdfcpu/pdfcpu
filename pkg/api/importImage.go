@@ -88,10 +88,8 @@ func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdfcpu.I
 		ctx.PageCount++
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	if err = WriteContext(ctx, w); err != nil {

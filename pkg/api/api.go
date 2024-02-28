@@ -151,11 +151,6 @@ func readAndValidate(rs io.ReadSeeker, conf *model.Configuration, from1 time.Tim
 
 	dur1 = time.Since(from1).Seconds()
 
-	if conf.ValidationMode == model.ValidationNone {
-		// Bypass validation
-		return ctx, 0, 0, nil
-	}
-
 	from2 := time.Now()
 
 	if ctx.Version() == model.V20 {

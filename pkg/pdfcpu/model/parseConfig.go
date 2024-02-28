@@ -66,8 +66,6 @@ func loadedConfig(c configuration, configPath string) *Configuration {
 		conf.ValidationMode = ValidationStrict
 	case "ValidationRelaxed":
 		conf.ValidationMode = ValidationRelaxed
-	case "ValidationNone":
-		conf.ValidationMode = ValidationNone
 	}
 
 	switch c.Eol {
@@ -114,7 +112,7 @@ func parseConfigFile(r io.Reader, configPath string) error {
 		return err
 	}
 
-	if !types.MemberOf(c.ValidationMode, []string{"ValidationStrict", "ValidationRelaxed", "ValidationNone"}) {
+	if !types.MemberOf(c.ValidationMode, []string{"ValidationStrict", "ValidationRelaxed"}) {
 		return errors.Errorf("invalid validationMode: %s", c.ValidationMode)
 	}
 	if !types.MemberOf(c.Eol, []string{"EolLF", "EolCR", "EolCRLF"}) {

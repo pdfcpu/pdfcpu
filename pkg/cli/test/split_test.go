@@ -31,9 +31,7 @@ func TestSplitCommand(t *testing.T) {
 	inFile := filepath.Join(inDir, fileName)
 	span := 1
 
-	// Skip validation to boost processing.
 	conf := model.NewDefaultConfiguration()
-	conf.ValidationMode = model.ValidationNone
 
 	cmd := cli.SplitCommand(inFile, outDir, span, conf)
 	if _, err := cli.Process(cmd); err != nil {

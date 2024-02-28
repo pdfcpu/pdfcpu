@@ -1424,6 +1424,7 @@ func optimizeResourceDicts(ctx *model.Context) error {
 			d["Resources"] = inhPAttrs.Resources
 		}
 	}
+	// TODO Remove resource dicts from inner nodes.
 	return nil
 }
 

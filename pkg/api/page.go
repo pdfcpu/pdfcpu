@@ -66,10 +66,8 @@ func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before b
 		log.Stats.Printf("XRefTable:\n%s\n", ctx)
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	if err = WriteContext(ctx, w); err != nil {
@@ -170,10 +168,8 @@ func RemovePages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *mo
 		return err
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctxDest); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctxDest); err != nil {
+		return err
 	}
 
 	return WriteContext(ctxDest, w)

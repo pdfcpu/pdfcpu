@@ -95,10 +95,8 @@ func RemoveFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, c
 		return ErrNoFormFieldsAffected
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	return WriteContext(ctx, w)
@@ -172,10 +170,8 @@ func LockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, con
 		return ErrNoFormFieldsAffected
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	return WriteContext(ctx, w)
@@ -249,10 +245,8 @@ func UnlockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, c
 		return ErrNoFormFieldsAffected
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	return WriteContext(ctx, w)
@@ -326,10 +320,8 @@ func ResetFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, co
 		return ErrNoFormFieldsAffected
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	return WriteContext(ctx, w)
@@ -537,11 +529,7 @@ func fillPostProc(ctx *model.Context, pp []*model.Page, conf *model.Configuratio
 		return err
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		return ValidateContext(ctx)
-	}
-
-	return nil
+	return ValidateContext(ctx)
 }
 
 // FillForm populates the form rs with data from rd and writes the result to w.
@@ -745,10 +733,8 @@ func multiFillFormJSON(inFilePDF string, rd io.Reader, outDir, fileName string, 
 			return err
 		}
 
-		if conf.ValidationMode != model.ValidationNone {
-			if err = ValidateContext(ctx); err != nil {
-				return err
-			}
+		if err = ValidateContext(ctx); err != nil {
+			return err
 		}
 
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_%02d.pdf", fileName, i+1))
@@ -844,10 +830,8 @@ func multiFillFormCSV(inFilePDF string, rd io.Reader, outDir, fileName string, m
 			return err
 		}
 
-		if conf.ValidationMode != model.ValidationNone {
-			if err = ValidateContext(ctx); err != nil {
-				return err
-			}
+		if err = ValidateContext(ctx); err != nil {
+			return err
 		}
 
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_%02d.pdf", fileName, i+1))

@@ -20,16 +20,11 @@ package cli
 import (
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-	"github.com/pkg/errors"
 )
 
 // Validate inFile against ISO-32000-1:2008.
 func Validate(cmd *Command) ([]string, error) {
-	conf := cmd.Conf
-	if conf != nil && conf.ValidationMode == model.ValidationNone {
-		return nil, errors.New("validate: mode == ValidationNone")
-	}
-	return nil, api.ValidateFiles(cmd.InFiles, conf)
+	return nil, api.ValidateFiles(cmd.InFiles, cmd.Conf)
 }
 
 // Optimize inFile and write result to outFile.

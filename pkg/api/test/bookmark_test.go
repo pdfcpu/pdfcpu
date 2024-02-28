@@ -45,7 +45,6 @@ func listBookmarksFile(t *testing.T, fileName string, conf *model.Configuration)
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	} else {
-		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
 	}
 	conf.Cmd = model.LISTBOOKMARKS

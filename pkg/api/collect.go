@@ -57,10 +57,8 @@ func Collect(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.
 		return err
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctxDest); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctxDest); err != nil {
+		return err
 	}
 
 	return WriteContext(ctxDest, w)

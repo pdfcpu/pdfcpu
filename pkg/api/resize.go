@@ -56,10 +56,8 @@ func Resize(rs io.ReadSeeker, w io.Writer, selectedPages []string, resize *model
 		return err
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	return WriteContext(ctx, w)

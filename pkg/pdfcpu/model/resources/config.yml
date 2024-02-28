@@ -12,7 +12,6 @@ decodeAllStreams: false
 # validationMode: 
 # ValidationStrict,
 # ValidationRelaxed,
-# ValidationNone
 validationMode: ValidationRelaxed
 
 # eol for writing:

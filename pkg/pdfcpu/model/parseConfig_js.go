@@ -62,8 +62,6 @@ func handleConfValidationMode(v string, c *Configuration) error {
 		c.ValidationMode = ValidationStrict
 	case "validationrelaxed":
 		c.ValidationMode = ValidationRelaxed
-	case "validationone":
-		c.ValidationMode = ValidationNone
 	default:
 		return errors.Errorf("invalid validationMode: %s", v)
 	}

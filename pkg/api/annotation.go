@@ -92,10 +92,8 @@ func AddAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages []string, ann m
 		log.Stats.Printf("XRefTable:\n%s\n", ctx)
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	return WriteContext(ctx, w)
@@ -142,10 +140,8 @@ func AddAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages []string, a
 		log.Stats.Printf("XRefTable:\n%s\n", ctx)
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	if _, err = rws.Seek(0, io.SeekEnd); err != nil {
@@ -237,10 +233,8 @@ func AddAnnotationsMap(rs io.ReadSeeker, w io.Writer, m map[int][]model.Annotati
 		log.Stats.Printf("XRefTable:\n%s\n", ctx)
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	return WriteContext(ctx, w)
@@ -282,10 +276,8 @@ func AddAnnotationsMapAsIncrement(rws io.ReadWriteSeeker, m map[int][]model.Anno
 		log.Stats.Printf("XRefTable:\n%s\n", ctx)
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	if _, err = rws.Seek(0, io.SeekEnd); err != nil {
@@ -384,10 +376,8 @@ func RemoveAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages, idsAndTypes
 		log.Stats.Printf("XRefTable:\n%s\n", ctx)
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	return WriteContext(ctx, w)
@@ -435,10 +425,8 @@ func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, idsAndT
 		log.Stats.Printf("XRefTable:\n%s\n", ctx)
 	}
 
-	if conf.ValidationMode != model.ValidationNone {
-		if err = ValidateContext(ctx); err != nil {
-			return err
-		}
+	if err = ValidateContext(ctx); err != nil {
+		return err
 	}
 
 	if _, err = rws.Seek(0, io.SeekEnd); err != nil {

@@ -48,11 +48,7 @@ func testOptimizeFile(t *testing.T, inFile, outFile string) {
 	}
 
 	// Optimize outFile and write result to outFile.
-	// Also skip validation.
-	c := model.NewDefaultConfiguration()
-	c.ValidationMode = model.ValidationNone
-
-	if err := optimizeFile(t, outFile, c); err != nil {
+	if err := optimizeFile(t, outFile, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 }

@@ -35,7 +35,6 @@ func Keywords(rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	} else {
-		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
 	}
 	conf.Cmd = model.LISTKEYWORDS
@@ -57,7 +56,6 @@ func AddKeywords(rs io.ReadSeeker, w io.Writer, files []string, conf *model.Conf
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	} else {
-		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
 	}
 	conf.Cmd = model.ADDKEYWORDS
@@ -135,7 +133,6 @@ func RemoveKeywords(rs io.ReadSeeker, w io.Writer, keywords []string, conf *mode
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	} else {
-		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
 	}
 	conf.Cmd = model.REMOVEKEYWORDS

@@ -38,10 +38,6 @@ func Validate(rs io.ReadSeeker, conf *model.Configuration) error {
 	}
 	conf.Cmd = model.VALIDATE
 
-	if conf.ValidationMode == model.ValidationNone {
-		return errors.New("pdfcpu: validate: mode ValidationNone not allowed")
-	}
-
 	from1 := time.Now()
 
 	ctx, err := ReadContext(rs, conf)
@@ -83,10 +79,6 @@ func ValidateFile(inFile string, conf *model.Configuration) error {
 		conf = model.NewDefaultConfiguration()
 	}
 
-	if conf != nil && conf.ValidationMode == model.ValidationNone {
-		return nil
-	}
-
 	log.CLI.Printf("validating(mode=%s) %s ...\n", conf.ValidationModeString(), inFile)
 
 	f, err := os.Open(inFile)
@@ -109,10 +101,6 @@ func ValidateFile(inFile string, conf *model.Configuration) error {
 func ValidateFiles(inFiles []string, conf *model.Configuration) error {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
-	}
-
-	if conf != nil && conf.ValidationMode == model.ValidationNone {
-		return nil
 	}
 
 	for i, fn := range inFiles {

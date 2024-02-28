@@ -99,11 +99,10 @@ func Poster(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, c
 			return err
 		}
 
-		if conf.ValidationMode != model.ValidationNone {
-			if err = ValidateContext(ctxDest); err != nil {
-				return err
-			}
+		if err = ValidateContext(ctxDest); err != nil {
+			return err
 		}
+
 	}
 
 	return nil
@@ -166,10 +165,8 @@ func NDown(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, n 
 			return err
 		}
 
-		if conf.ValidationMode != model.ValidationNone {
-			if err = ValidateContext(ctxDest); err != nil {
-				return err
-			}
+		if err = ValidateContext(ctxDest); err != nil {
+			return err
 		}
 	}
 
@@ -269,10 +266,8 @@ func Cut(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut 
 			return err
 		}
 
-		if conf.ValidationMode != model.ValidationNone {
-			if err = ValidateContext(ctxDest); err != nil {
-				return err
-			}
+		if err = ValidateContext(ctxDest); err != nil {
+			return err
 		}
 	}
 

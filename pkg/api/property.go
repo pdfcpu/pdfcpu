@@ -34,8 +34,6 @@ func Properties(rs io.ReadSeeker, conf *model.Configuration) (map[string]string,
 
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
-	} else {
-		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
 	}
 	conf.Cmd = model.LISTPROPERTIES
@@ -57,7 +55,6 @@ func AddProperties(rs io.ReadSeeker, w io.Writer, properties map[string]string, 
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	} else {
-		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
 	}
 	conf.Cmd = model.ADDPROPERTIES
@@ -135,7 +132,6 @@ func RemoveProperties(rs io.ReadSeeker, w io.Writer, properties []string, conf *
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	} else {
-		// Validation loads infodict.
 		conf.ValidationMode = model.ValidationRelaxed
 	}
 	conf.Cmd = model.REMOVEPROPERTIES
