@@ -227,34 +227,13 @@ func Reverse(s string) string {
 
 // needsHexSequence checks if a given character must be hex-encoded.
 // See "7.3.5 Name Objects" for details.
-func needsHexSequence(ch byte) bool {
-	switch ch {
-	// Delimiter characters (see "7.2.2 Character Set")
-	case '(':
-		fallthrough
-	case ')':
-		fallthrough
-	case '<':
-		fallthrough
-	case '>':
-		fallthrough
-	case '[':
-		fallthrough
-	case ']':
-		fallthrough
-	case '{':
-		fallthrough
-	case '}':
-		fallthrough
-	case '/':
-		fallthrough
-	case '%':
+func needsHexSequence(c byte) bool {
+	switch c {
+	case '(', ')', '<', '>', '[', ']', '{', '}', '/', '%', '#':
+		// Delimiter characters (see "7.2.2 Character Set")
 		return true
-	case '#':
-		return true
-	default:
-		return ch < '!' || ch > '~'
 	}
+	return c < '!' || c > '~'
 }
 
 // EncodeName applies name encoding according to PDF spec.
@@ -263,7 +242,7 @@ func EncodeName(s string) string {
 	var sb strings.Builder // will be used only if replacements are necessary
 	for i := 0; i < len(s); i++ {
 		ch := s[i]
-		// TODO: This should handle the invalid character 0x00.
+		// TODO: Handle invalid character 0x00, 2nd error return value
 		if needsHexSequence(ch) {
 			if !replaced {
 				sb.WriteString(s[:i])

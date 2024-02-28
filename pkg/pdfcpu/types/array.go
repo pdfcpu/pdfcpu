@@ -169,7 +169,6 @@ func (a Array) PDFString() string {
 			logstr = append(logstr, entry.PDFString())
 		case Array:
 			logstr = append(logstr, entry.PDFString())
-			continue
 		case IndirectRef:
 			logstr = append(logstr, fmt.Sprintf("%s%s", sepstr, entry.PDFString()))
 		case Name:
