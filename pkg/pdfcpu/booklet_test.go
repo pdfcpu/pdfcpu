@@ -328,7 +328,7 @@ func TestBookletPageOrder(t *testing.T) {
 				tt.Fatalf("page order output has the wrong length, expected %d but got %d", len(test.expectedPageOrder), len(out))
 			}
 			for i, p := range out {
-				pageOrder[i] = p.number
+				pageOrder[i] = p.Number
 			}
 			for i, expected := range test.expectedPageOrder {
 				if pageOrder[i] != expected {

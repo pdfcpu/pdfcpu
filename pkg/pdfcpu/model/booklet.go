@@ -64,6 +64,11 @@ func (b BookletBinding) String() string {
 	return ""
 }
 
+type BookletPage struct {
+	Number int
+	Rotate bool
+}
+
 func drawGuideLineLabel(w io.Writer, x, y float64, s string, mb *types.Rectangle, fm FontMap, rot int) {
 	fontName := "Helvetica"
 	td := TextDescriptor{
