@@ -1835,13 +1835,6 @@ func (xRefTable *XRefTable) consolidateResourcesWithContent(pageDict, resDict ty
 		return nil
 	}
 
-	if obj, found := pageDict.Find("Resources"); found {
-		if _, ok := obj.(types.IndirectRef); !ok {
-			return nil
-		}
-
-	}
-
 	bb, err := xRefTable.PageContent(pageDict)
 	if err != nil {
 		if err == ErrNoContent {

@@ -249,7 +249,7 @@ func pageFonts(ctx *model.Context, pageNumber int) types.IntSet {
 	return pageFonts
 }
 
-func registerFontDict(ctx *model.Context, fontDict types.Dict, fName, rName, prefix string, objNr int) {
+func registerFontDictObjNr(ctx *model.Context, fName string, objNr int) {
 	if log.OptimizeEnabled() {
 		log.Optimize.Printf("optimizeFontResourcesDict: adding new font %s obj#%d\n", fName, objNr)
 	}
@@ -332,7 +332,7 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNumber,
 			continue
 		}
 
-		registerFontDict(ctx, fontDict, fName, rName, prefix, objNr)
+		registerFontDictObjNr(ctx, fName, objNr)
 
 		ctx.Optimize.FontObjects[objNr] =
 			&model.FontObject{
@@ -436,7 +436,7 @@ func optimizeXObjectImage(ctx *model.Context, osd *types.StreamDict, rName strin
 	return nil, nil
 }
 
-func optimizeXObjectForm(ctx *model.Context, sd *types.StreamDict, rName string, objNr int) (*types.IndirectRef, error) {
+func optimizeXObjectForm(ctx *model.Context, sd *types.StreamDict, objNr int) (*types.IndirectRef, error) {
 
 	f := ctx.Optimize.FormStreamCache
 	if len(f) == 0 {
@@ -501,7 +501,7 @@ func visited(o types.Object, visited []types.Object) bool {
 
 func optimizeForm(ctx *model.Context, osd *types.StreamDict, rName string, rDict types.Dict, objNr, pageNumber, pageObjNumber int, vis []types.Object) error {
 
-	ir, err := optimizeXObjectForm(ctx, osd, rName, objNr)
+	ir, err := optimizeXObjectForm(ctx, osd, objNr)
 	if err != nil {
 		return err
 	}
@@ -1232,7 +1232,7 @@ func calcBinarySizes(ctx *model.Context) error {
 	return nil
 }
 
-func fixDeepDict(ctx *model.Context, d types.Dict, objNr, genNr int) error {
+func fixDeepDict(ctx *model.Context, d types.Dict) error {
 	for k, v := range d {
 		ir, err := fixDeepObject(ctx, v)
 		if err != nil {
@@ -1246,7 +1246,7 @@ func fixDeepDict(ctx *model.Context, d types.Dict, objNr, genNr int) error {
 	return nil
 }
 
-func fixDeepArray(ctx *model.Context, a types.Array, objNr, genNr int) error {
+func fixDeepArray(ctx *model.Context, a types.Array) error {
 	for i, v := range a {
 		ir, err := fixDeepObject(ctx, v)
 		if err != nil {
@@ -1289,7 +1289,6 @@ func fixDirectObject(ctx *model.Context, o types.Object) error {
 
 func fixIndirectObject(ctx *model.Context, ir *types.IndirectRef) error {
 	objNr := int(ir.ObjectNumber)
-	genNr := int(ir.GenerationNumber)
 
 	if ctx.Optimize.Cache[objNr] {
 		return nil
@@ -1324,13 +1323,13 @@ func fixIndirectObject(ctx *model.Context, ir *types.IndirectRef) error {
 	switch o := entry.Object.(type) {
 
 	case types.Dict:
-		err = fixDeepDict(ctx, o, objNr, genNr)
+		err = fixDeepDict(ctx, o)
 
 	case types.StreamDict:
-		err = fixDeepDict(ctx, o.Dict, objNr, genNr)
+		err = fixDeepDict(ctx, o.Dict)
 
 	case types.Array:
-		err = fixDeepArray(ctx, o, objNr, genNr)
+		err = fixDeepArray(ctx, o)
 
 	}
 
@@ -1398,7 +1397,7 @@ func cacheFormFonts(ctx *model.Context) error {
 			log.Optimize.Printf("optimizeFontResourcesDict: baseFont: prefix=%s name=%s\n", prefix, fName)
 		}
 
-		registerFontDict(ctx, fontDict, fName, rName, prefix, objNr)
+		registerFontDictObjNr(ctx, fName, objNr)
 
 		ctx.Optimize.FormFontObjects[objNr] =
 			&model.FontObject{
@@ -1409,6 +1408,22 @@ func cacheFormFonts(ctx *model.Context) error {
 			}
 	}
 
+	return nil
+}
+
+func optimizeResourceDicts(ctx *model.Context) error {
+	for i := 1; i <= ctx.PageCount; i++ {
+		d, _, inhPAttrs, err := ctx.PageDict(i, true)
+		if err != nil {
+			return err
+		}
+		if d == nil {
+			continue
+		}
+		if len(inhPAttrs.Resources) > 0 {
+			d["Resources"] = inhPAttrs.Resources
+		}
+	}
 	return nil
 }
 
@@ -1431,6 +1446,14 @@ func OptimizeXRefTable(ctx *model.Context) error {
 	// TODO optimize form fonts.
 	if err := cacheFormFonts(ctx); err != nil {
 		return err
+	}
+
+	if ctx.Cmd == model.OPTIMIZE {
+		// Consolidate resource dicts.
+		// Extra step with potential for performance hit when processing large files.
+		if err := optimizeResourceDicts(ctx); err != nil {
+			return err
+		}
 	}
 
 	// Get rid of duplicate embedded fonts and images.
