@@ -31,12 +31,10 @@ const eodHexDecode = '>'
 // Encode implements encoding for an ASCIIHexDecode filter.
 func (f asciiHexDecode) Encode(r io.Reader) (io.Reader, error) {
 
-	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, r); err != nil {
+	bb, err := getReaderBytes(r)
+	if err != nil {
 		return nil, err
 	}
-
-	bb := buf.Bytes()
 
 	dst := make([]byte, hex.EncodedLen(len(bb)))
 	hex.Encode(dst, bb)
@@ -50,12 +48,10 @@ func (f asciiHexDecode) Encode(r io.Reader) (io.Reader, error) {
 // Decode implements decoding for an ASCIIHexDecode filter.
 func (f asciiHexDecode) Decode(r io.Reader) (io.Reader, error) {
 
-	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, r); err != nil {
+	bb, err := getReaderBytes(r)
+	if err != nil {
 		return nil, err
 	}
-
-	bb := buf.Bytes()
 
 	var p []byte
 

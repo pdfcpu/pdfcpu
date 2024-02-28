@@ -18,6 +18,7 @@ limitations under the License.
 package filter
 
 import (
+	"bytes"
 	"io"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -97,4 +98,20 @@ func List() []string {
 
 type baseFilter struct {
 	parms map[string]int
+}
+
+func getReaderBytes(r io.Reader) ([]byte, error) {
+	var bb []byte
+	if buf, ok := r.(*bytes.Buffer); ok {
+		bb = buf.Bytes()
+	} else {
+		var buf bytes.Buffer
+		if _, err := io.Copy(&buf, r); err != nil {
+			return nil, err
+		}
+
+		bb = buf.Bytes()
+	}
+
+	return bb, nil
 }
