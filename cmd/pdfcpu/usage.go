@@ -706,7 +706,7 @@ meaning that the pages are cut along the binding and not folded as in the other 
 This results in a different page ordering on the sheet than the other methods. If you intend to perfect bind your booklet,
 use btype=perfectbound.
 
-There is also an option to use signatures, a bookbinding method useful for higher page count books.
+There is also an option to use signatures, a bookbinding method useful for books with higher page counts.
 In this method of binding, you arrange your folios (sheets folded in half) in groups of 'foliosize'.
 Each group is called a signature. You then stack the signatures together to form the book.
 For example, you can bind your paper in groups of eight sheets (foliosize=8), so that each signature containing 32 pages of your book.
