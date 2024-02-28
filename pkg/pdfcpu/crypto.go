@@ -1122,8 +1122,20 @@ func encrypt(m map[string]types.Object, k string, v types.Object, objNr, genNr i
 }
 
 func encryptDict(d types.Dict, objNr, genNr int, key []byte, needAES bool, r int) error {
-
+	isSig := false
+	ft := d["FT"]
+	if ft == nil {
+		ft = d["Type"]
+	}
+	if ft != nil {
+		if ftv, ok := ft.(types.Name); ok && ftv == "Sig" {
+			isSig = true
+		}
+	}
 	for k, v := range d {
+		if isSig && k == "Contents" {
+			continue
+		}
 		err := encrypt(d, k, v, objNr, genNr, key, needAES, r)
 		if err != nil {
 			return err
@@ -1191,16 +1203,20 @@ func encryptDeepObject(objIn types.Object, objNr, genNr int, key []byte, needAES
 }
 
 func decryptDict(d types.Dict, objNr, genNr int, key []byte, needAES bool, r int) error {
+	isSig := false
 	ft := d["FT"]
 	if ft == nil {
 		ft = d["Type"]
 	}
 	if ft != nil {
 		if ftv, ok := ft.(types.Name); ok && ftv == "Sig" {
-			return nil
+			isSig = true
 		}
 	}
 	for k, v := range d {
+		if isSig && k == "Contents" {
+			continue
+		}
 		s, err := decryptDeepObject(v, objNr, genNr, key, needAES, r)
 		if err != nil {
 			return err
