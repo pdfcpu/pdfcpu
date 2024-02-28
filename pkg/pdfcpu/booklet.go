@@ -19,6 +19,7 @@ package pdfcpu
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -388,7 +389,7 @@ type bookletPage struct {
 	rotate bool
 }
 
-func sortSelectedPagesForBooklet(pages types.IntSet, nup *model.NUp) []bookletPage {
+func SortSelectedPagesForBooklet(pages types.IntSet, nup *model.NUp) []bookletPage {
 	pageNumbers := sortSelectedPages(pages)
 	pageCount := len(pageNumbers)
 
@@ -401,6 +402,27 @@ func sortSelectedPagesForBooklet(pages types.IntSet, nup *model.NUp) []bookletPa
 		pageCount += sheetPageCount - pageCount%sheetPageCount
 	}
 
+	if nup.MultiFolio {
+		bookletPages := make([]bookletPage, 0)
+		// folioSize is the number of sheets - each "folio" has two sides and two pages per side
+		nPagesPerSignature := nup.FolioSize * 4
+		nSignaturesInBooklet := int(math.Ceil(float64(pageCount) / float64(nPagesPerSignature)))
+		for j := 0; j < nSignaturesInBooklet; j++ {
+			start := j * nPagesPerSignature
+			stop := (j + 1) * nPagesPerSignature
+			if stop > len(pageNumbers) {
+				// last signature may be short
+				stop = len(pageNumbers)
+				nPagesPerSignature = pageCount - start
+			}
+			bookletPages = append(bookletPages, getBookletPageOrdering(nup, pageNumbers[start:stop], nPagesPerSignature)...)
+		}
+		return bookletPages
+	}
+	return getBookletPageOrdering(nup, pageNumbers, pageCount)
+}
+
+func getBookletPageOrdering(nup *model.NUp, pageNumbers []int, pageCount int) []bookletPage {
 	bookletPages := make([]bookletPage, pageCount)
 
 	switch nup.BookletType {
@@ -455,7 +477,7 @@ func bookletPages(
 	formsResDict := types.NewDict()
 	rr := nup.RectsForGrid()
 
-	for i, bp := range sortSelectedPagesForBooklet(selectedPages, nup) {
+	for i, bp := range SortSelectedPagesForBooklet(selectedPages, nup) {
 
 		if i > 0 && i%len(rr) == 0 {
 			// Wrap complete page.
@@ -503,7 +525,7 @@ func BookletFromImages(ctx *model.Context, fileNames []string, nup *model.NUp, p
 	var buf bytes.Buffer
 	rr := nup.RectsForGrid()
 
-	for i, bp := range sortSelectedPagesForBooklet(selectedPages, nup) {
+	for i, bp := range SortSelectedPagesForBooklet(selectedPages, nup) {
 
 		if i > 0 && i%len(rr) == 0 {
 
@@ -587,27 +609,8 @@ func BookletFromPDF(ctx *model.Context, selectedPages types.IntSet, nup *model.N
 
 	nup.PageDim = &types.Dim{Width: mb.Width(), Height: mb.Height()}
 
-	if nup.MultiFolio {
-		pages := types.IntSet{}
-		for _, i := range sortSelectedPages(selectedPages) {
-			pages[i] = true
-			if len(pages) == 4*nup.FolioSize {
-				if err = bookletPages(ctx, pages, nup, pagesDict, pagesIndRef); err != nil {
-					return err
-				}
-				pages = types.IntSet{}
-			}
-		}
-		if len(pages) > 0 {
-			if err = bookletPages(ctx, pages, nup, pagesDict, pagesIndRef); err != nil {
-				return err
-			}
-		}
-
-	} else {
-		if err = bookletPages(ctx, selectedPages, nup, pagesDict, pagesIndRef); err != nil {
-			return err
-		}
+	if err = bookletPages(ctx, selectedPages, nup, pagesDict, pagesIndRef); err != nil {
+		return err
 	}
 
 	// Replace original pagesDict.

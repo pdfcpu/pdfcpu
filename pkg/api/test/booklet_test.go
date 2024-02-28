@@ -239,7 +239,6 @@ func TestBooklet(t *testing.T) {
 		// 2-up multi folio booklet from PDF on A4 using 8 sheets per folio
 		// using the default foliosize:8
 		// Here we print 2 complete folios (2 x 8 sheets) + 1 partial folio
-		// multi folio only makes sense for n = 2
 		// See also  https://www.instructables.com/How-to-bind-your-own-Hardback-Book/
 		{"TestHardbackBookFromPDF",
 			[]string{filepath.Join(inDir, "WaldenFull.pdf")},
