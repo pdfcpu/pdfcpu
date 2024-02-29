@@ -313,7 +313,7 @@ func validateMarkInfo(xRefTable *model.XRefTable, rootDict types.Dict, required 
 	// Suspects: optional, since V1.6, boolean
 	sinceVersion = model.V16
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V15
+		sinceVersion = model.V14
 	}
 	suspects, err := validateBooleanEntry(xRefTable, d, dictName, "Suspects", OPTIONAL, sinceVersion, nil)
 	if err != nil {
