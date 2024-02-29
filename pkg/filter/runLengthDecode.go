@@ -112,13 +112,13 @@ func (f runLengthDecode) encode(w io.ByteWriter, src []byte) {
 // Encode implements encoding for a RunLengthDecode filter.
 func (f runLengthDecode) Encode(r io.Reader) (io.Reader, error) {
 
-	var b1 bytes.Buffer
-	if _, err := io.Copy(&b1, r); err != nil {
+	b1, err := getReaderBytes(r)
+	if err != nil {
 		return nil, err
 	}
 
 	var b2 bytes.Buffer
-	f.encode(&b2, b1.Bytes())
+	f.encode(&b2, b1)
 
 	return &b2, nil
 }
@@ -126,13 +126,13 @@ func (f runLengthDecode) Encode(r io.Reader) (io.Reader, error) {
 // Decode implements decoding for an RunLengthDecode filter.
 func (f runLengthDecode) Decode(r io.Reader) (io.Reader, error) {
 
-	var b1 bytes.Buffer
-	if _, err := io.Copy(&b1, r); err != nil {
+	b1, err := getReaderBytes(r)
+	if err != nil {
 		return nil, err
 	}
 
 	var b2 bytes.Buffer
-	f.decode(&b2, b1.Bytes())
+	f.decode(&b2, b1)
 
 	return &b2, nil
 }
