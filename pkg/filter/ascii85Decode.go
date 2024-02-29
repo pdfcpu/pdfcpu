@@ -75,10 +75,5 @@ func (f ascii85Decode) Decode(r io.Reader) (io.Reader, error) {
 		return nil, err
 	}
 
-	// buf, err := io.ReadAll(decoder)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	return &b2, nil
 }
