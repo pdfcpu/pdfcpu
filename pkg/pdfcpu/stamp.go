@@ -1019,7 +1019,7 @@ func createForm(ctx *model.Context, pageNr, pageCount int, wm *model.Watermark, 
 	// The forms bounding box is dependent on the page dimensions.
 	bb := wm.Bb
 
-	maxStampPageNr := wm.PdfMultiStartPageNrSrc + len(wm.PdfRes) - 1
+	maxStampPageNr := wm.PdfMultiStartPageNrDest + len(wm.PdfRes) - 1
 
 	if !unique && (cachedForm(*wm) || pageNr > maxStampPageNr) {
 		// Use cached form.
