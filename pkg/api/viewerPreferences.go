@@ -43,7 +43,7 @@ func ViewerPreferences(rs io.ReadSeeker, conf *model.Configuration) (*model.View
 	}
 	conf.Cmd = model.LISTVIEWERPREFERENCES
 
-	ctx, _, _, err := readAndValidate(rs, conf, time.Now())
+	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -86,7 +86,7 @@ func ListViewerPreferences(rs io.ReadSeeker, all bool, conf *model.Configuration
 	}
 	conf.Cmd = model.LISTVIEWERPREFERENCES
 
-	ctx, _, _, err := readAndValidate(rs, conf, time.Now())
+	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func SetViewerPreferences(rs io.ReadSeeker, w io.Writer, vp model.ViewerPreferen
 	}
 	conf.Cmd = model.SETVIEWERPREFERENCES
 
-	ctx, _, _, err := readAndValidate(rs, conf, time.Now())
+	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
 		return err
 	}
@@ -352,7 +352,7 @@ func ResetViewerPreferences(rs io.ReadSeeker, w io.Writer, conf *model.Configura
 	}
 	conf.Cmd = model.RESETVIEWERPREFERENCES
 
-	ctx, _, _, err := readAndValidate(rs, conf, time.Now())
+	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
 		return err
 	}
@@ -363,11 +363,7 @@ func ResetViewerPreferences(rs io.ReadSeeker, w io.Writer, conf *model.Configura
 
 	delete(ctx.RootDict, "ViewerPreferences")
 
-	if err = WriteContext(ctx, w); err != nil {
-		return err
-	}
-
-	return nil
+	return WriteContext(ctx, w)
 }
 
 // ResetViewerPreferencesFile resets inFile's viewer preferences and writes the result to outFile.

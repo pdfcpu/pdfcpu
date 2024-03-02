@@ -19,7 +19,6 @@ package api
 import (
 	"io"
 	"os"
-	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -59,7 +58,7 @@ func Create(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configurati
 	)
 
 	if rs != nil {
-		ctx, _, _, _, err = ReadValidateAndOptimize(rs, conf, time.Now())
+		ctx, err = ReadValidateAndOptimize(rs, conf)
 	} else {
 		ctx, err = pdfcpu.CreateContextWithXRefTable(conf, types.PaperSize["A4"])
 	}

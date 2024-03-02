@@ -19,7 +19,6 @@ package api
 import (
 	"io"
 	"os"
-	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -39,7 +38,7 @@ func PageLayout(rs io.ReadSeeker, conf *model.Configuration) (*model.PageLayout,
 	}
 	conf.Cmd = model.LISTPAGELAYOUT
 
-	ctx, _, _, err := readAndValidate(rs, conf, time.Now())
+	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +70,7 @@ func ListPageLayout(rs io.ReadSeeker, conf *model.Configuration) ([]string, erro
 	}
 	conf.Cmd = model.LISTPAGELAYOUT
 
-	ctx, _, _, err := readAndValidate(rs, conf, time.Now())
+	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +106,7 @@ func SetPageLayout(rs io.ReadSeeker, w io.Writer, val model.PageLayout, conf *mo
 	}
 	conf.Cmd = model.SETPAGELAYOUT
 
-	ctx, _, _, err := readAndValidate(rs, conf, time.Now())
+	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
 		return err
 	}
@@ -172,7 +171,7 @@ func ResetPageLayout(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) e
 	}
 	conf.Cmd = model.RESETPAGELAYOUT
 
-	ctx, _, _, err := readAndValidate(rs, conf, time.Now())
+	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
 		return err
 	}

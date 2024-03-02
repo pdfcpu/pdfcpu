@@ -18,7 +18,6 @@ package api
 
 import (
 	"io"
-	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -38,7 +37,7 @@ func PDFInfo(rs io.ReadSeeker, fileName string, selectedPages []string, conf *mo
 	}
 	conf.Cmd = model.LISTINFO
 
-	ctx, _, _, err := readAndValidate(rs, conf, time.Now())
+	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
 		return nil, err
 	}

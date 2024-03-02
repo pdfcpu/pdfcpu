@@ -23,7 +23,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -33,7 +32,7 @@ import (
 )
 
 func prepareForCut(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration) (*model.Context, types.IntSet, error) {
-	ctxSrc, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
+	ctxSrc, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return nil, nil, err
 	}

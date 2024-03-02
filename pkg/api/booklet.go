@@ -19,7 +19,6 @@ package api
 import (
 	"io"
 	"os"
-	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -84,7 +83,7 @@ func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nu
 
 	} else {
 
-		if ctx, _, _, err = readAndValidate(rs, conf, time.Now()); err != nil {
+		if ctx, err = ReadAndValidate(rs, conf); err != nil {
 			return err
 		}
 

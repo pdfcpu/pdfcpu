@@ -19,7 +19,6 @@ package api
 import (
 	"io"
 	"os"
-	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -38,7 +37,7 @@ func Annotations(rs io.ReadSeeker, selectedPages []string, conf *model.Configura
 	}
 	conf.Cmd = model.LISTANNOTATIONS
 
-	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +65,7 @@ func AddAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages []string, ann m
 	}
 	conf.Cmd = model.ADDANNOTATIONS
 
-	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}
@@ -110,7 +109,7 @@ func AddAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages []string, a
 	}
 	conf.Cmd = model.ADDANNOTATIONS
 
-	ctx, _, _, err := readAndValidate(rws, conf, time.Now())
+	ctx, err := ReadAndValidate(rws, conf)
 	if err != nil {
 		return err
 	}
@@ -212,7 +211,7 @@ func AddAnnotationsMap(rs io.ReadSeeker, w io.Writer, m map[int][]model.Annotati
 	}
 	conf.Cmd = model.ADDANNOTATIONS
 
-	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}
@@ -251,7 +250,7 @@ func AddAnnotationsMapAsIncrement(rws io.ReadWriteSeeker, m map[int][]model.Anno
 	}
 	conf.Cmd = model.ADDANNOTATIONS
 
-	ctx, _, _, err := readAndValidate(rws, conf, time.Now())
+	ctx, err := ReadAndValidate(rws, conf)
 	if err != nil {
 		return err
 	}
@@ -350,7 +349,7 @@ func RemoveAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages, idsAndTypes
 	}
 	conf.Cmd = model.REMOVEANNOTATIONS
 
-	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}
@@ -395,7 +394,7 @@ func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, idsAndT
 	}
 	conf.Cmd = model.REMOVEANNOTATIONS
 
-	ctx, _, _, err := readAndValidate(rws, conf, time.Now())
+	ctx, err := ReadAndValidate(rws, conf)
 	if err != nil {
 		return err
 	}

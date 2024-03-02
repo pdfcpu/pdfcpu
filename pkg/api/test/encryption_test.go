@@ -20,7 +20,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -41,7 +40,7 @@ func listPermissions(t *testing.T, fileName string) ([]string, error) {
 	conf := model.NewDefaultConfiguration()
 	conf.Cmd = model.LISTPERMISSIONS
 
-	ctx, _, _, _, err := api.ReadValidateAndOptimize(f, conf, time.Now())
+	ctx, err := api.ReadValidateAndOptimize(f, conf)
 	if err != nil {
 		return nil, err
 	}

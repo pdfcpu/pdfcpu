@@ -20,7 +20,6 @@ import (
 	"io"
 	"os"
 	"sort"
-	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -43,8 +42,7 @@ func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before b
 		conf.Cmd = model.INSERTPAGESBEFORE
 	}
 
-	fromStart := time.Now()
-	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, fromStart)
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}
@@ -133,8 +131,7 @@ func RemovePages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *mo
 	}
 	conf.Cmd = model.REMOVEPAGES
 
-	fromStart := time.Now()
-	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, fromStart)
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}

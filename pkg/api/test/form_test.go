@@ -20,7 +20,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/form"
@@ -47,7 +46,7 @@ func listFormFieldsFile(t *testing.T, inFile string, conf *model.Configuration) 
 	}
 	defer f.Close()
 
-	ctx, _, _, _, err := api.ReadValidateAndOptimize(f, conf, time.Now())
+	ctx, err := api.ReadValidateAndOptimize(f, conf)
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}

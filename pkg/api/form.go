@@ -25,7 +25,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/create"
@@ -53,7 +52,7 @@ func FormFields(rs io.ReadSeeker, conf *model.Configuration) ([]form.Field, erro
 	}
 	conf.Cmd = model.LISTFORMFIELDS
 
-	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +77,7 @@ func RemoveFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, c
 	}
 	conf.Cmd = model.REMOVEFORMFIELDS
 
-	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}
@@ -153,7 +152,7 @@ func LockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, con
 	}
 	conf.Cmd = model.LOCKFORMFIELDS
 
-	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}
@@ -228,7 +227,7 @@ func UnlockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, c
 	}
 	conf.Cmd = model.UNLOCKFORMFIELDS
 
-	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}
@@ -303,7 +302,7 @@ func ResetFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, co
 	}
 	conf.Cmd = model.RESETFORMFIELDS
 
-	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}
@@ -378,7 +377,7 @@ func ExportForm(rs io.ReadSeeker, source string, conf *model.Configuration) (*fo
 	}
 	conf.Cmd = model.EXPORTFORMFIELDS
 
-	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -413,7 +412,7 @@ func ExportFormJSON(rs io.ReadSeeker, w io.Writer, source string, conf *model.Co
 	}
 	conf.Cmd = model.EXPORTFORMFIELDS
 
-	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}
@@ -547,7 +546,7 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 	}
 	conf.Cmd = model.FILLFORMFIELDS
 
-	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}
@@ -712,7 +711,7 @@ func multiFillFormJSON(inFilePDF string, rd io.Reader, outDir, fileName string, 
 		}
 		defer rs.Close()
 
-		ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
+		ctx, err := ReadValidateAndOptimize(rs, conf)
 		if err != nil {
 			return err
 		}
@@ -804,7 +803,7 @@ func multiFillFormCSV(inFilePDF string, rd io.Reader, outDir, fileName string, m
 		}
 		defer f.Close()
 
-		ctx, _, _, _, err := ReadValidateAndOptimize(f, conf, time.Now())
+		ctx, err := ReadValidateAndOptimize(f, conf)
 		if err != nil {
 			return err
 		}

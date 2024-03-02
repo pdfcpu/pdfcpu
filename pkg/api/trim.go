@@ -20,7 +20,6 @@ import (
 	"io"
 	"os"
 	"sort"
-	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -40,8 +39,7 @@ func Trim(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.Con
 	}
 	conf.Cmd = model.TRIM
 
-	fromStart := time.Now()
-	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, fromStart)
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}

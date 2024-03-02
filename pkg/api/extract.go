@@ -24,7 +24,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -44,7 +43,7 @@ func ExtractImagesRaw(rs io.ReadSeeker, selectedPages []string, conf *model.Conf
 	}
 	conf.Cmd = model.EXTRACTIMAGES
 
-	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +83,7 @@ func ExtractImages(rs io.ReadSeeker, selectedPages []string, digestImage func(mo
 	}
 	conf.Cmd = model.EXTRACTIMAGES
 
-	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}
@@ -171,8 +170,7 @@ func ExtractFonts(rs io.ReadSeeker, outDir, fileName string, selectedPages []str
 	}
 	conf.Cmd = model.EXTRACTFONTS
 
-	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := ReadValidateAndOptimize(rs, conf, fromStart)
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}
@@ -181,7 +179,6 @@ func ExtractFonts(rs io.ReadSeeker, outDir, fileName string, selectedPages []str
 		return err
 	}
 
-	fromWrite := time.Now()
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return err
@@ -206,18 +203,8 @@ func ExtractFonts(rs io.ReadSeeker, outDir, fileName string, selectedPages []str
 	if err != nil {
 		return err
 	}
-	if err := writeFonts(ff, outDir, fileName); err != nil {
-		return err
-	}
 
-	durWrite := time.Since(fromWrite).Seconds()
-	durTotal := time.Since(fromStart).Seconds()
-	if log.StatsEnabled() {
-		log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	}
-	model.TimingStats("write fonts", durRead, durVal, durOpt, durWrite, durTotal)
-
-	return nil
+	return writeFonts(ff, outDir, fileName)
 }
 
 // ExtractFontsFile dumps embedded fontfiles from inFile into outDir for selected pages.
@@ -246,8 +233,7 @@ func ExtractPages(rs io.ReadSeeker, outDir, fileName string, selectedPages []str
 		conf.Cmd = model.EXTRACTPAGES
 	}
 
-	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := ReadValidateAndOptimize(rs, conf, fromStart)
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}
@@ -256,7 +242,6 @@ func ExtractPages(rs io.ReadSeeker, outDir, fileName string, selectedPages []str
 		return err
 	}
 
-	fromWrite := time.Now()
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return err
@@ -285,13 +270,6 @@ func ExtractPages(rs io.ReadSeeker, outDir, fileName string, selectedPages []str
 			return err
 		}
 	}
-
-	durWrite := time.Since(fromWrite).Seconds()
-	durTotal := time.Since(fromStart).Seconds()
-	if log.StatsEnabled() {
-		log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	}
-	model.TimingStats("write PDFs", durRead, durVal, durOpt, durWrite, durTotal)
 
 	return nil
 }
@@ -322,8 +300,7 @@ func ExtractContent(rs io.ReadSeeker, outDir, fileName string, selectedPages []s
 	}
 	conf.Cmd = model.EXTRACTCONTENT
 
-	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := ReadValidateAndOptimize(rs, conf, fromStart)
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}
@@ -332,7 +309,6 @@ func ExtractContent(rs io.ReadSeeker, outDir, fileName string, selectedPages []s
 		return err
 	}
 
-	fromWrite := time.Now()
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return err
@@ -369,13 +345,6 @@ func ExtractContent(rs io.ReadSeeker, outDir, fileName string, selectedPages []s
 		}
 	}
 
-	durWrite := time.Since(fromWrite).Seconds()
-	durTotal := time.Since(fromStart).Seconds()
-	if log.StatsEnabled() {
-		log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	}
-	model.TimingStats("write content", durRead, durVal, durOpt, durWrite, durTotal)
-
 	return nil
 }
 
@@ -405,13 +374,10 @@ func ExtractMetadata(rs io.ReadSeeker, outDir, fileName string, conf *model.Conf
 	}
 	conf.Cmd = model.EXTRACTMETADATA
 
-	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := ReadValidateAndOptimize(rs, conf, fromStart)
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}
-
-	fromWrite := time.Now()
 
 	mm, err := pdfcpu.ExtractMetadata(ctx)
 	if err != nil {
@@ -435,13 +401,6 @@ func ExtractMetadata(rs io.ReadSeeker, outDir, fileName string, conf *model.Conf
 			}
 		}
 	}
-
-	durWrite := time.Since(fromWrite).Seconds()
-	durTotal := time.Since(fromStart).Seconds()
-	if log.StatsEnabled() {
-		log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	}
-	model.TimingStats("write metadata", durRead, durVal, durOpt, durWrite, durTotal)
 
 	return nil
 }

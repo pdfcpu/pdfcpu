@@ -19,7 +19,6 @@ package api
 import (
 	"io"
 	"os"
-	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -38,9 +37,7 @@ func Optimize(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
 	}
 	//conf.Cmd = model.OPTIMIZE
 
-	fromStart := time.Now()
-
-	ctx, durRead, durVal, durOpt, err := ReadValidateAndOptimize(rs, conf, fromStart)
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}
@@ -48,15 +45,10 @@ func Optimize(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
 	if log.StatsEnabled() {
 		log.Stats.Printf("XRefTable:\n%s\n", ctx)
 	}
-	fromWrite := time.Now()
 
 	if err = WriteContext(ctx, w); err != nil {
 		return err
 	}
-
-	durWrite := time.Since(fromWrite).Seconds()
-	durTotal := time.Since(fromStart).Seconds()
-	logOperationStats(ctx, "write", durRead, durVal, durOpt, durWrite, durTotal)
 
 	// For Optimize only.
 	if ctx.StatsFileName != "" {

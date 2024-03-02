@@ -20,7 +20,6 @@ import (
 	"bufio"
 	"io"
 	"os"
-	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -51,7 +50,7 @@ func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdfcpu.I
 	)
 
 	if rs != nil {
-		ctx, _, _, err = readAndValidate(rs, conf, time.Now())
+		ctx, err = ReadAndValidate(rs, conf)
 	} else {
 		ctx, err = pdfcpu.CreateContextWithXRefTable(conf, imp.PageDim)
 	}

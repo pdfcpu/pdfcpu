@@ -19,9 +19,7 @@ package api
 import (
 	"io"
 	"os"
-	"time"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
@@ -38,8 +36,7 @@ func Rotate(rs io.ReadSeeker, w io.Writer, rotation int, selectedPages []string,
 	}
 	conf.Cmd = model.ROTATE
 
-	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := ReadValidateAndOptimize(rs, conf, fromStart)
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}
@@ -48,7 +45,6 @@ func Rotate(rs io.ReadSeeker, w io.Writer, rotation int, selectedPages []string,
 		return err
 	}
 
-	from := time.Now()
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return err
@@ -58,23 +54,11 @@ func Rotate(rs io.ReadSeeker, w io.Writer, rotation int, selectedPages []string,
 		return err
 	}
 
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	durStamp := time.Since(from).Seconds()
-	fromWrite := time.Now()
-
 	if err = ValidateContext(ctx); err != nil {
 		return err
 	}
 
-	if err = WriteContext(ctx, w); err != nil {
-		return err
-	}
-
-	durWrite := durStamp + time.Since(fromWrite).Seconds()
-	durTotal := time.Since(fromStart).Seconds()
-	logOperationStats(ctx, "rotate, write", durRead, durVal, durOpt, durWrite, durTotal)
-
-	return nil
+	return WriteContext(ctx, w)
 }
 
 // RotateFile rotates selected pages of inFile clockwise by rotation degrees and writes the result to outFile.

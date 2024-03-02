@@ -38,7 +38,6 @@ import (
 	"io"
 	"os"
 	"sync"
-	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -144,43 +143,35 @@ func WriteContextFile(ctx *model.Context, outFile string) error {
 	return WriteContext(ctx, f)
 }
 
-func readAndValidate(rs io.ReadSeeker, conf *model.Configuration, from1 time.Time) (ctx *model.Context, dur1, dur2 float64, err error) {
+// ReadAndValidate returns a model.Context of rs ready for processing.
+func ReadAndValidate(rs io.ReadSeeker, conf *model.Configuration) (ctx *model.Context, err error) {
 	if ctx, err = ReadContext(rs, conf); err != nil {
-		return nil, 0, 0, err
+		return nil, err
 	}
-
-	dur1 = time.Since(from1).Seconds()
-
-	from2 := time.Now()
 
 	if ctx.Version() == model.V20 {
 		logDisclaimerPDF20()
 	}
 
 	if err = validate.XRefTable(ctx.XRefTable); err != nil {
-		return nil, 0, 0, err
+		return nil, err
 	}
 
-	dur2 = time.Since(from2).Seconds()
-
-	return ctx, dur1, dur2, nil
+	return ctx, nil
 }
 
-// ReadValidateAndOptimize returns the model.Context of rs ready for processing.
-func ReadValidateAndOptimize(rs io.ReadSeeker, conf *model.Configuration, from1 time.Time) (ctx *model.Context, dur1, dur2, dur3 float64, err error) {
-	ctx, dur1, dur2, err = readAndValidate(rs, conf, from1)
+// ReadValidateAndOptimize returns an optimized model.Context of rs ready for processing.
+func ReadValidateAndOptimize(rs io.ReadSeeker, conf *model.Configuration) (ctx *model.Context, err error) {
+	ctx, err = ReadAndValidate(rs, conf)
 	if err != nil {
-		return nil, 0, 0, 0, err
+		return nil, err
 	}
 
-	from3 := time.Now()
 	if err = OptimizeContext(ctx); err != nil {
-		return nil, 0, 0, 0, err
+		return nil, err
 	}
 
-	dur3 = time.Since(from3).Seconds()
-
-	return ctx, dur1, dur2, dur3, nil
+	return ctx, nil
 }
 
 func logOperationStats(ctx *model.Context, op string, durRead, durVal, durOpt, durWrite, durTotal float64) {

@@ -19,7 +19,6 @@ package api
 import (
 	"io"
 	"os"
-	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -39,7 +38,7 @@ func Keywords(rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {
 	}
 	conf.Cmd = model.LISTKEYWORDS
 
-	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -60,30 +59,16 @@ func AddKeywords(rs io.ReadSeeker, w io.Writer, files []string, conf *model.Conf
 	}
 	conf.Cmd = model.ADDKEYWORDS
 
-	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := ReadValidateAndOptimize(rs, conf, fromStart)
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}
-
-	from := time.Now()
 
 	if err = pdfcpu.KeywordsAdd(ctx.XRefTable, files); err != nil {
 		return err
 	}
 
-	durAdd := time.Since(from).Seconds()
-	fromWrite := time.Now()
-
-	if err = WriteContext(ctx, w); err != nil {
-		return err
-	}
-
-	durWrite := durAdd + time.Since(fromWrite).Seconds()
-	durTotal := time.Since(fromStart).Seconds()
-	logOperationStats(ctx, "add keyword, write", durRead, durVal, durOpt, durWrite, durTotal)
-
-	return nil
+	return WriteContext(ctx, w)
 }
 
 // AddKeywordsFile adds keywords to inFile's infodict and writes the result to outFile.
@@ -137,13 +122,10 @@ func RemoveKeywords(rs io.ReadSeeker, w io.Writer, keywords []string, conf *mode
 	}
 	conf.Cmd = model.REMOVEKEYWORDS
 
-	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := ReadValidateAndOptimize(rs, conf, fromStart)
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}
-
-	from := time.Now()
 
 	var ok bool
 	if ok, err = pdfcpu.KeywordsRemove(ctx.XRefTable, keywords); err != nil {
@@ -153,17 +135,7 @@ func RemoveKeywords(rs io.ReadSeeker, w io.Writer, keywords []string, conf *mode
 		return errors.New("no keyword removed")
 	}
 
-	durRemove := time.Since(from).Seconds()
-	fromWrite := time.Now()
-	if err = WriteContext(ctx, w); err != nil {
-		return err
-	}
-
-	durWrite := durRemove + time.Since(fromWrite).Seconds()
-	durTotal := time.Since(fromStart).Seconds()
-	logOperationStats(ctx, "remove att, write", durRead, durVal, durOpt, durWrite, durTotal)
-
-	return nil
+	return WriteContext(ctx, w)
 }
 
 // RemoveKeywordsFile deletes keywords from inFile's infodict and writes the result to outFile.

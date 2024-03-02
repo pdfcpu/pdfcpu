@@ -20,7 +20,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -38,7 +37,7 @@ func listBoxes(t *testing.T, fileName string, pb *model.PageBoundaries) ([]strin
 	}
 	defer f.Close()
 
-	ctx, _, _, _, err := api.ReadValidateAndOptimize(f, conf, time.Now())
+	ctx, err := api.ReadValidateAndOptimize(f, conf)
 	if err != nil {
 		t.Fatalf("%s ReadValidateAndOptimize: %v\n", msg, err)
 	}

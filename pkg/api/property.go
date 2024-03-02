@@ -19,7 +19,6 @@ package api
 import (
 	"io"
 	"os"
-	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -38,7 +37,7 @@ func Properties(rs io.ReadSeeker, conf *model.Configuration) (map[string]string,
 	}
 	conf.Cmd = model.LISTPROPERTIES
 
-	ctx, _, _, _, err := ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -59,30 +58,16 @@ func AddProperties(rs io.ReadSeeker, w io.Writer, properties map[string]string, 
 	}
 	conf.Cmd = model.ADDPROPERTIES
 
-	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := ReadValidateAndOptimize(rs, conf, fromStart)
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}
-
-	from := time.Now()
 
 	if err = pdfcpu.PropertiesAdd(ctx, properties); err != nil {
 		return err
 	}
 
-	durAdd := time.Since(from).Seconds()
-	fromWrite := time.Now()
-
-	if err = WriteContext(ctx, w); err != nil {
-		return err
-	}
-
-	durWrite := durAdd + time.Since(fromWrite).Seconds()
-	durTotal := time.Since(fromStart).Seconds()
-	logOperationStats(ctx, "add keyword, write", durRead, durVal, durOpt, durWrite, durTotal)
-
-	return nil
+	return WriteContext(ctx, w)
 }
 
 // AddPropertiesFile adds properties to inFile's infodict and writes the result to outFile.
@@ -136,13 +121,10 @@ func RemoveProperties(rs io.ReadSeeker, w io.Writer, properties []string, conf *
 	}
 	conf.Cmd = model.REMOVEPROPERTIES
 
-	fromStart := time.Now()
-	ctx, durRead, durVal, durOpt, err := ReadValidateAndOptimize(rs, conf, fromStart)
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return err
 	}
-
-	from := time.Now()
 
 	var ok bool
 	if ok, err = pdfcpu.PropertiesRemove(ctx, properties); err != nil {
@@ -152,17 +134,7 @@ func RemoveProperties(rs io.ReadSeeker, w io.Writer, properties []string, conf *
 		return errors.New("no property removed")
 	}
 
-	durRemove := time.Since(from).Seconds()
-	fromWrite := time.Now()
-	if err = WriteContext(ctx, w); err != nil {
-		return err
-	}
-
-	durWrite := durRemove + time.Since(fromWrite).Seconds()
-	durTotal := time.Since(fromStart).Seconds()
-	logOperationStats(ctx, "remove prop, write", durRead, durVal, durOpt, durWrite, durTotal)
-
-	return nil
+	return WriteContext(ctx, w)
 }
 
 // RemovePropertiesFile deletes properties from inFile's infodict and writes the result to outFile.

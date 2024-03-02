@@ -43,7 +43,7 @@ func listAttachments(rs io.ReadSeeker, conf *model.Configuration, withDesc, sort
 	}
 	conf.Cmd = model.LISTATTACHMENTS
 
-	ctx, _, _, _, err := api.ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := api.ReadAndValidate(rs, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func listBoxes(rs io.ReadSeeker, selectedPages []string, pb *model.PageBoundarie
 	}
 	conf.Cmd = model.LISTBOXES
 
-	ctx, _, _, _, err := api.ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := api.ReadAndValidate(rs, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +160,7 @@ func listFormFields(rs io.ReadSeeker, conf *model.Configuration) ([]string, erro
 	}
 	conf.Cmd = model.LISTFORMFIELDS
 
-	ctx, _, _, _, err := api.ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := api.ReadAndValidate(rs, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +216,7 @@ func listImages(rs io.ReadSeeker, selectedPages []string, conf *model.Configurat
 	}
 	conf.Cmd = model.LISTIMAGES
 
-	ctx, _, _, _, err := api.ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := api.ReadAndValidate(rs, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -376,7 +376,7 @@ func listPermissions(rs io.ReadSeeker, conf *model.Configuration) ([]string, err
 	}
 	conf.Cmd = model.LISTPERMISSIONS
 
-	ctx, _, _, _, err := api.ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := api.ReadAndValidate(rs, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -431,7 +431,7 @@ func listProperties(rs io.ReadSeeker, conf *model.Configuration) ([]string, erro
 	}
 	conf.Cmd = model.LISTPROPERTIES
 
-	ctx, _, _, _, err := api.ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := api.ReadAndValidate(rs, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -462,7 +462,7 @@ func listBookmarks(rs io.ReadSeeker, conf *model.Configuration) ([]string, error
 	}
 	conf.Cmd = model.LISTBOOKMARKS
 
-	ctx, _, _, _, err := api.ReadValidateAndOptimize(rs, conf, time.Now())
+	ctx, err := api.ReadAndValidate(rs, conf)
 	if err != nil {
 		return nil, err
 	}

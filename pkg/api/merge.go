@@ -21,7 +21,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -31,7 +30,7 @@ import (
 
 // appendTo appends rs to ctxDest's page tree.
 func appendTo(rs io.ReadSeeker, fName string, ctxDest *model.Context, dividerPage bool) error {
-	ctxSource, _, _, err := readAndValidate(rs, ctxDest.Configuration, time.Now())
+	ctxSource, err := ReadAndValidate(rs, ctxDest.Configuration)
 	if err != nil {
 		return err
 	}
@@ -61,7 +60,7 @@ func MergeRaw(rsc []io.ReadSeeker, w io.Writer, dividerPage bool, conf *model.Co
 	conf.ValidationMode = model.ValidationRelaxed
 	conf.CreateBookmarks = false
 
-	ctxDest, _, _, err := readAndValidate(rsc[0], conf, time.Now())
+	ctxDest, err := ReadAndValidate(rsc[0], conf)
 	if err != nil {
 		return err
 	}
@@ -82,7 +81,7 @@ func MergeRaw(rsc []io.ReadSeeker, w io.Writer, dividerPage bool, conf *model.Co
 }
 
 func prepDestContext(destFile string, rs io.ReadSeeker, conf *model.Configuration) (*model.Context, error) {
-	ctxDest, _, _, err := readAndValidate(rs, conf, time.Now())
+	ctxDest, err := ReadAndValidate(rs, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +250,7 @@ func MergeCreateZip(rs1, rs2 io.ReadSeeker, w io.Writer, conf *model.Configurati
 	conf.Cmd = model.MERGECREATEZIP
 	conf.ValidationMode = model.ValidationRelaxed
 
-	ctxDest, _, _, err := readAndValidate(rs1, conf, time.Now())
+	ctxDest, err := ReadAndValidate(rs1, conf)
 	if err != nil {
 		return err
 	}
@@ -264,7 +263,7 @@ func MergeCreateZip(rs1, rs2 io.ReadSeeker, w io.Writer, conf *model.Configurati
 		return err
 	}
 
-	ctxSrc, _, _, err := readAndValidate(rs2, conf, time.Now())
+	ctxSrc, err := ReadAndValidate(rs2, conf)
 	if err != nil {
 		return err
 	}
