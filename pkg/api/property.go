@@ -67,7 +67,7 @@ func AddProperties(rs io.ReadSeeker, w io.Writer, properties map[string]string, 
 		return err
 	}
 
-	return WriteContext(ctx, w)
+	return Write(ctx, w, conf)
 }
 
 // AddPropertiesFile adds properties to inFile's infodict and writes the result to outFile.
@@ -134,7 +134,7 @@ func RemoveProperties(rs io.ReadSeeker, w io.Writer, properties []string, conf *
 		return errors.New("no property removed")
 	}
 
-	return WriteContext(ctx, w)
+	return Write(ctx, w, conf)
 }
 
 // RemovePropertiesFile deletes properties from inFile's infodict and writes the result to outFile.

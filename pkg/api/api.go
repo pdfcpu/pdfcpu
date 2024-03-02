@@ -55,6 +55,7 @@ func logDisclaimerPDF20() {
 * Please let us know which feature you would like to see supported, *
 * provide a sample PDF file and create an issue:                    *
 * https://github.com/pdfcpu/pdfcpu/issues/new/choose                *
+* Thank you for using pdfcpu <3                                     *
 *********************************************************************`
 
 	if log.ValidateEnabled() {
@@ -99,11 +100,9 @@ func ReadContextFile(inFile string) (*model.Context, error) {
 
 // ValidateContext validates ctx.
 func ValidateContext(ctx *model.Context) error {
-
 	if ctx.Version() == model.V20 {
 		logDisclaimerPDF20()
 	}
-
 	return validate.XRefTable(ctx.XRefTable)
 }
 
@@ -149,11 +148,7 @@ func ReadAndValidate(rs io.ReadSeeker, conf *model.Configuration) (ctx *model.Co
 		return nil, err
 	}
 
-	if ctx.Version() == model.V20 {
-		logDisclaimerPDF20()
-	}
-
-	if err = validate.XRefTable(ctx.XRefTable); err != nil {
+	if err := ValidateContext(ctx); err != nil {
 		return nil, err
 	}
 
@@ -174,21 +169,43 @@ func ReadValidateAndOptimize(rs io.ReadSeeker, conf *model.Configuration) (ctx *
 	return ctx, nil
 }
 
-func logOperationStats(ctx *model.Context, op string, durRead, durVal, durOpt, durWrite, durTotal float64) {
-	if log.StatsEnabled() {
-		log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	}
-	model.TimingStats(op, durRead, durVal, durOpt, durWrite, durTotal)
-	if ctx.Read.FileSize > 0 {
-		ctx.Read.LogStats(ctx.Optimized)
-		ctx.Write.LogStats()
-	}
-}
-
 func logWritingTo(s string) {
 	if log.CLIEnabled() {
 		log.CLI.Printf("writing %s...\n", s)
 	}
+}
+
+func Write(ctx *model.Context, w io.Writer, conf *model.Configuration) error {
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
+
+	if conf.PostProcessValidate {
+		if err := ValidateContext(ctx); err != nil {
+			return err
+		}
+	}
+
+	return WriteContext(ctx, w)
+}
+
+func WriteIncr(ctx *model.Context, rws io.ReadWriteSeeker, conf *model.Configuration) error {
+
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
+
+	if conf.PostProcessValidate {
+		if err := ValidateContext(ctx); err != nil {
+			return err
+		}
+	}
+
+	if _, err := rws.Seek(0, io.SeekEnd); err != nil {
+		return err
+	}
+
+	return WriteIncrement(ctx, rws)
 }
 
 // EnsureDefaultConfigAt switches to the pdfcpu config dir located at path.

@@ -42,10 +42,6 @@ func Resize(rs io.ReadSeeker, w io.Writer, selectedPages []string, resize *model
 		return err
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		return err
-	}
-
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return err
@@ -55,11 +51,7 @@ func Resize(rs io.ReadSeeker, w io.Writer, selectedPages []string, resize *model
 		return err
 	}
 
-	if err = ValidateContext(ctx); err != nil {
-		return err
-	}
-
-	return WriteContext(ctx, w)
+	return Write(ctx, w, conf)
 }
 
 // ResizeFile applies resizeConf for selected pages of inFile and writes result to outFile.

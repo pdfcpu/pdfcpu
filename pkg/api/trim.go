@@ -44,10 +44,6 @@ func Trim(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.Con
 		return err
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		return err
-	}
-
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, false, true)
 	if err != nil {
 		return err
@@ -73,8 +69,10 @@ func Trim(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.Con
 		return err
 	}
 
-	if err = ValidateContext(ctxDest); err != nil {
-		return err
+	if conf.PostProcessValidate {
+		if err = ValidateContext(ctxDest); err != nil {
+			return err
+		}
 	}
 
 	return WriteContext(ctxDest, w)

@@ -42,10 +42,6 @@ func listBoxes(t *testing.T, fileName string, pb *model.PageBoundaries) ([]strin
 		t.Fatalf("%s ReadValidateAndOptimize: %v\n", msg, err)
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		t.Fatalf("%s EnsurePageCount: %v\n", msg, err)
-	}
-
 	if pb == nil {
 		pb = &model.PageBoundaries{}
 		pb.SelectAll()

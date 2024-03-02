@@ -87,10 +87,6 @@ func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nu
 			return err
 		}
 
-		if err := ctx.EnsurePageCount(); err != nil {
-			return err
-		}
-
 		pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 		if err != nil {
 			return err
@@ -101,17 +97,7 @@ func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nu
 		}
 	}
 
-	if err = ValidateContext(ctx); err != nil {
-		return err
-	}
-
-	if err = WriteContext(ctx, w); err != nil {
-		return err
-	}
-
-	log.Stats.Printf("XRefTable:\n%s\n", ctx)
-
-	return nil
+	return Write(ctx, w, conf)
 }
 
 // BookletFile rearranges PDF pages or images into a booklet layout and writes the result to outFile.

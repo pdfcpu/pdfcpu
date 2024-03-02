@@ -55,6 +55,15 @@ func handleConfDecodeAllStreams(k, v string, c *Configuration) error {
 	return nil
 }
 
+func handleConfPostProcessValidate(k, v string, c *Configuration) error {
+	v = strings.ToLower(v)
+	if v != "true" && v != "false" {
+		return errors.Errorf("config key %s is boolean", k)
+	}
+	c.PostProcessValidate = v == "true"
+	return nil
+}
+
 func handleConfValidationMode(v string, c *Configuration) error {
 	v1 := strings.ToLower(v)
 	switch v1 {
@@ -200,6 +209,9 @@ func parseKeysPart1(k, v string, c *Configuration) (bool, error) {
 	case "validationMode":
 		return true, handleConfValidationMode(v, c)
 
+	case "postProcessValidate":
+		return true, handleConfPostProcessValidate(k, v, c)
+
 	case "eol":
 		return true, handleConfEol(v, c)
 
@@ -208,7 +220,6 @@ func parseKeysPart1(k, v string, c *Configuration) (bool, error) {
 
 	case "writeXRefStream":
 		return true, handleConfWriteXRefStream(k, v, c)
-
 	}
 
 	return false, nil

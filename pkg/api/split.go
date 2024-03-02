@@ -83,16 +83,7 @@ func context(rs io.ReadSeeker, conf *model.Configuration) (*model.Context, error
 	}
 	conf.Cmd = model.SPLIT
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := ctx.EnsurePageCount(); err != nil {
-		return nil, err
-	}
-
-	return ctx, nil
+	return ReadValidateAndOptimize(rs, conf)
 }
 
 func pageSpansSplitAlongBookmarks(ctx *model.Context) ([]*PageSpan, error) {

@@ -14,6 +14,9 @@ decodeAllStreams: false
 # ValidationRelaxed,
 validationMode: ValidationRelaxed
 
+# validate cross reference table right before writing
+postProcessValidate: true
+
 # eol for writing:
 # EolLF
 # EolCR

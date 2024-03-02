@@ -33,6 +33,7 @@ type configuration struct {
 	Reader15                        bool   `yaml:"reader15"`
 	DecodeAllStreams                bool   `yaml:"decodeAllStreams"`
 	ValidationMode                  string `yaml:"validationMode"`
+	PostProcessValidate             bool   `yaml:"postProcessValidate"`
 	Eol                             string `yaml:"eol"`
 	WriteObjectStream               bool   `yaml:"writeObjectStream"`
 	WriteXRefStream                 bool   `yaml:"writeXRefStream"`
@@ -67,6 +68,8 @@ func loadedConfig(c configuration, configPath string) *Configuration {
 	case "ValidationRelaxed":
 		conf.ValidationMode = ValidationRelaxed
 	}
+
+	conf.PostProcessValidate = c.PostProcessValidate
 
 	switch c.Eol {
 	case "EolLF":

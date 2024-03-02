@@ -113,11 +113,7 @@ func SetPageLayout(rs io.ReadSeeker, w io.Writer, val model.PageLayout, conf *mo
 
 	ctx.RootDict["PageLayout"] = types.Name(val.String())
 
-	if err = WriteContext(ctx, w); err != nil {
-		return err
-	}
-
-	return nil
+	return Write(ctx, w, conf)
 }
 
 // SetPageLayoutFile sets inFile's page layout and writes the result to outFile.
@@ -178,11 +174,7 @@ func ResetPageLayout(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) e
 
 	delete(ctx.RootDict, "PageLayout")
 
-	if err = WriteContext(ctx, w); err != nil {
-		return err
-	}
-
-	return nil
+	return Write(ctx, w, conf)
 }
 
 // ResetPageLayoutFile resets inFile's page layout and writes the result to outFile.

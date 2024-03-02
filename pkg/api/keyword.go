@@ -68,7 +68,7 @@ func AddKeywords(rs io.ReadSeeker, w io.Writer, files []string, conf *model.Conf
 		return err
 	}
 
-	return WriteContext(ctx, w)
+	return Write(ctx, w, conf)
 }
 
 // AddKeywordsFile adds keywords to inFile's infodict and writes the result to outFile.
@@ -135,7 +135,7 @@ func RemoveKeywords(rs io.ReadSeeker, w io.Writer, keywords []string, conf *mode
 		return errors.New("no keyword removed")
 	}
 
-	return WriteContext(ctx, w)
+	return Write(ctx, w, conf)
 }
 
 // RemoveKeywordsFile deletes keywords from inFile's infodict and writes the result to outFile.

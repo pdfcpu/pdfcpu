@@ -20,7 +20,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
@@ -39,10 +38,6 @@ func Annotations(rs io.ReadSeeker, selectedPages []string, conf *model.Configura
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := ctx.EnsurePageCount(); err != nil {
 		return nil, err
 	}
 
@@ -70,10 +65,6 @@ func AddAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages []string, ann m
 		return err
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		return err
-	}
-
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return err
@@ -87,15 +78,7 @@ func AddAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages []string, ann m
 		return errors.New("pdfcpu: AddAnnotations: No annotations added")
 	}
 
-	if log.StatsEnabled() {
-		log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	}
-
-	if err = ValidateContext(ctx); err != nil {
-		return err
-	}
-
-	return WriteContext(ctx, w)
+	return Write(ctx, w, conf)
 }
 
 // AddAnnotationsAsIncrement adds annotations for selected pages in rws and writes out a PDF increment.
@@ -118,10 +101,6 @@ func AddAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages []string, a
 		return errors.New("Incremental writing not supported for PDF version < V1.4 (Hint: Use pdfcpu optimize then try again)")
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		return err
-	}
-
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return err
@@ -135,19 +114,7 @@ func AddAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages []string, a
 		return errors.New("pdfcpu: AddAnnotationsAsIncrement: No annotations added")
 	}
 
-	if log.StatsEnabled() {
-		log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	}
-
-	if err = ValidateContext(ctx); err != nil {
-		return err
-	}
-
-	if _, err = rws.Seek(0, io.SeekEnd); err != nil {
-		return err
-	}
-
-	return WriteIncrement(ctx, rws)
+	return WriteIncr(ctx, rws, conf)
 }
 
 // AddAnnotationsFile adds annotations for selected pages to a PDF context read from inFile and writes the result to outFile.
@@ -216,10 +183,6 @@ func AddAnnotationsMap(rs io.ReadSeeker, w io.Writer, m map[int][]model.Annotati
 		return err
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		return err
-	}
-
 	ok, err := pdfcpu.AddAnnotationsMap(ctx, m, false)
 	if err != nil {
 		return err
@@ -228,15 +191,7 @@ func AddAnnotationsMap(rs io.ReadSeeker, w io.Writer, m map[int][]model.Annotati
 		return errors.New("pdfcpu: AddAnnotationsMap: No annotations added")
 	}
 
-	if log.StatsEnabled() {
-		log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	}
-
-	if err = ValidateContext(ctx); err != nil {
-		return err
-	}
-
-	return WriteContext(ctx, w)
+	return Write(ctx, w, conf)
 }
 
 // AddAnnotationsMapAsIncrement adds annotations in m to corresponding pages of rws and writes out a PDF increment.
@@ -259,10 +214,6 @@ func AddAnnotationsMapAsIncrement(rws io.ReadWriteSeeker, m map[int][]model.Anno
 		return errors.New("Increment writing not supported for PDF version < V1.4 (Hint: Use pdfcpu optimize then try again)")
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		return err
-	}
-
 	ok, err := pdfcpu.AddAnnotationsMap(ctx, m, true)
 	if err != nil {
 		return err
@@ -271,19 +222,7 @@ func AddAnnotationsMapAsIncrement(rws io.ReadWriteSeeker, m map[int][]model.Anno
 		return errors.New("pdfcpu: AddAnnotationsMapAsIncrement: No annotations added")
 	}
 
-	if log.StatsEnabled() {
-		log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	}
-
-	if err = ValidateContext(ctx); err != nil {
-		return err
-	}
-
-	if _, err = rws.Seek(0, io.SeekEnd); err != nil {
-		return err
-	}
-
-	return WriteIncrement(ctx, rws)
+	return WriteIncr(ctx, rws, conf)
 }
 
 // AddAnnotationsMapFile adds annotations in m to corresponding pages of inFile and writes the result to outFile.
@@ -354,10 +293,6 @@ func RemoveAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages, idsAndTypes
 		return err
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		return err
-	}
-
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return err
@@ -371,15 +306,7 @@ func RemoveAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages, idsAndTypes
 		return errors.New("pdfcpu: RemoveAnnotations: No annotation removed")
 	}
 
-	if log.StatsEnabled() {
-		log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	}
-
-	if err = ValidateContext(ctx); err != nil {
-		return err
-	}
-
-	return WriteContext(ctx, w)
+	return Write(ctx, w, conf)
 }
 
 // RemoveAnnotationsAsIncrement removes annotations for selected pages by ids and object number
@@ -403,10 +330,6 @@ func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, idsAndT
 		return errors.New("pdfcpu: Incremental writing unsupported for PDF version < V1.4 (Hint: Use pdfcpu optimize then try again)")
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		return err
-	}
-
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return err
@@ -420,19 +343,7 @@ func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, idsAndT
 		return errors.New("pdfcpu: RemoveAnnotationsAsIncrement: No annotation removed")
 	}
 
-	if log.StatsEnabled() {
-		log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	}
-
-	if err = ValidateContext(ctx); err != nil {
-		return err
-	}
-
-	if _, err = rws.Seek(0, io.SeekEnd); err != nil {
-		return err
-	}
-
-	return WriteIncrement(ctx, rws)
+	return WriteIncr(ctx, rws, conf)
 }
 
 // RemoveAnnotationsFile removes annotations for selected pages by id and object number

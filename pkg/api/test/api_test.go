@@ -21,6 +21,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -111,6 +112,7 @@ func imageFileNames(t *testing.T, dir string) []string {
 	if err != nil {
 		t.Fatal(err)
 	}
+	sort.Strings(fn)
 	return fn
 }
 

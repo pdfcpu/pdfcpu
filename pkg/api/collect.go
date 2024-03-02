@@ -41,10 +41,6 @@ func Collect(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.
 		return err
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		return err
-	}
-
 	pages, err := PagesForPageCollection(ctx.PageCount, selectedPages)
 	if err != nil {
 		return err
@@ -55,11 +51,7 @@ func Collect(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.
 		return err
 	}
 
-	if err = ValidateContext(ctxDest); err != nil {
-		return err
-	}
-
-	return WriteContext(ctxDest, w)
+	return Write(ctxDest, w, conf)
 }
 
 // CollectFile creates a custom PDF page sequence for inFile and writes the result to outFile.

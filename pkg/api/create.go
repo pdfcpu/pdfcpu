@@ -66,16 +66,14 @@ func Create(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configurati
 		return err
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		return err
-	}
-
 	if err := create.FromJSON(ctx, rd); err != nil {
 		return err
 	}
 
-	if err = ValidateContext(ctx); err != nil {
-		return err
+	if conf.PostProcessValidate {
+		if err = ValidateContext(ctx); err != nil {
+			return err
+		}
 	}
 
 	return WriteContext(ctx, w)

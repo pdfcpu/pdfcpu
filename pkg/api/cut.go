@@ -32,21 +32,17 @@ import (
 )
 
 func prepareForCut(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration) (*model.Context, types.IntSet, error) {
-	ctxSrc, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if err := ctxSrc.EnsurePageCount(); err != nil {
-		return nil, nil, err
-	}
-
-	pages, err := PagesForPageSelection(ctxSrc.PageCount, selectedPages, true, true)
+	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return ctxSrc, pages, nil
+	return ctx, pages, nil
 }
 
 // Poster applies cut for selected pages of rs and generates corresponding poster tiles in outDir.
@@ -94,14 +90,15 @@ func Poster(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, c
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, i))
 		logWritingTo(outFile)
 
+		if conf.PostProcessValidate {
+			if err = ValidateContext(ctxDest); err != nil {
+				return err
+			}
+		}
+
 		if err := WriteContextFile(ctxDest, outFile); err != nil {
 			return err
 		}
-
-		if err = ValidateContext(ctxDest); err != nil {
-			return err
-		}
-
 	}
 
 	return nil
@@ -156,15 +153,17 @@ func NDown(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, n 
 			return err
 		}
 
+		if conf.PostProcessValidate {
+			if err = ValidateContext(ctxDest); err != nil {
+				return err
+			}
+		}
+
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, i))
 		if log.CLIEnabled() {
 			log.CLI.Printf("writing %s\n", outFile)
 		}
 		if err := WriteContextFile(ctxDest, outFile); err != nil {
-			return err
-		}
-
-		if err = ValidateContext(ctxDest); err != nil {
 			return err
 		}
 	}
@@ -258,14 +257,16 @@ func Cut(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut 
 			return err
 		}
 
+		if conf.PostProcessValidate {
+			if err = ValidateContext(ctxDest); err != nil {
+				return err
+			}
+		}
+
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, i))
 		logWritingTo(outFile)
 
 		if err := WriteContextFile(ctxDest, outFile); err != nil {
-			return err
-		}
-
-		if err = ValidateContext(ctxDest); err != nil {
 			return err
 		}
 	}

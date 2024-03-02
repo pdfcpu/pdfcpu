@@ -170,6 +170,9 @@ type Configuration struct {
 	// Validate against ISO-32000: strict or relaxed.
 	ValidationMode int
 
+	// Enable validation right before writing.
+	PostProcessValidate bool
+
 	// Check for broken links in LinkedAnnotations/URIActions.
 	ValidateLinks bool
 

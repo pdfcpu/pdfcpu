@@ -40,10 +40,6 @@ func Images(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration)
 		return nil, err
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		return nil, err
-	}
-
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return nil, err

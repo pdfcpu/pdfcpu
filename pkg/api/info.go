@@ -42,10 +42,6 @@ func PDFInfo(rs io.ReadSeeker, fileName string, selectedPages []string, conf *mo
 		return nil, err
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		return nil, err
-	}
-
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, false, true)
 	if err != nil {
 		return nil, err

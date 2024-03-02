@@ -47,10 +47,6 @@ func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before b
 		return err
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		return err
-	}
-
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return err
@@ -60,23 +56,7 @@ func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before b
 		return err
 	}
 
-	if log.StatsEnabled() {
-		log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	}
-
-	if err = ValidateContext(ctx); err != nil {
-		return err
-	}
-
-	if err = WriteContext(ctx, w); err != nil {
-		return err
-	}
-
-	if log.StatsEnabled() {
-		log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	}
-
-	return nil
+	return Write(ctx, w, conf)
 }
 
 // InsertPagesFile inserts a blank page before or after every inFile page selected and writes the result to w.
@@ -136,10 +116,6 @@ func RemovePages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *mo
 		return err
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		return err
-	}
-
 	pages, err := RemainingPagesForPageRemoval(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return err
@@ -165,11 +141,7 @@ func RemovePages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *mo
 		return err
 	}
 
-	if err = ValidateContext(ctxDest); err != nil {
-		return err
-	}
-
-	return WriteContext(ctxDest, w)
+	return Write(ctxDest, w, conf)
 }
 
 // RemovePagesFile removes selected inFile pages and writes the result to outFile..
@@ -219,12 +191,8 @@ func PageCount(rs io.ReadSeeker, conf *model.Configuration) (int, error) {
 		return 0, errors.New("pdfcpu: PageCount: missing rs")
 	}
 
-	ctx, err := ReadContext(rs, conf)
+	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
-		return 0, err
-	}
-
-	if err := ValidateContext(ctx); err != nil {
 		return 0, err
 	}
 
@@ -248,12 +216,8 @@ func PageDims(rs io.ReadSeeker, conf *model.Configuration) ([]types.Dim, error) 
 		return nil, errors.New("pdfcpu: PageDims: missing rs")
 	}
 
-	ctx, err := ReadContext(rs, conf)
+	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := ValidateContext(ctx); err != nil {
 		return nil, err
 	}
 

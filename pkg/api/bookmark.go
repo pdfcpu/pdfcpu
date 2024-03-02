@@ -70,10 +70,6 @@ func ExportBookmarksJSON(rs io.ReadSeeker, w io.Writer, source string, conf *mod
 		return err
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		return err
-	}
-
 	ok, err := pdfcpu.ExportBookmarksJSON(ctx, source, w)
 	if err != nil {
 		return err
@@ -135,10 +131,6 @@ func ImportBookmarks(rs io.ReadSeeker, rd io.Reader, w io.Writer, replace bool, 
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
-		return err
-	}
-
-	if err := ctx.EnsurePageCount(); err != nil {
 		return err
 	}
 
@@ -221,11 +213,7 @@ func AddBookmarks(rs io.ReadSeeker, w io.Writer, bms []pdfcpu.Bookmark, replace 
 		return err
 	}
 
-	if err = WriteContext(ctx, w); err != nil {
-		return err
-	}
-
-	return nil
+	return WriteContext(ctx, w)
 }
 
 // AddBookmarksFile adds outlines to the PDF context read from inFile and writes the result to outFile.

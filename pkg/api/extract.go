@@ -48,10 +48,6 @@ func ExtractImagesRaw(rs io.ReadSeeker, selectedPages []string, conf *model.Conf
 		return nil, err
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		return nil, err
-	}
-
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return nil, err
@@ -85,10 +81,6 @@ func ExtractImages(rs io.ReadSeeker, selectedPages []string, digestImage func(mo
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
-		return err
-	}
-
-	if err := ctx.EnsurePageCount(); err != nil {
 		return err
 	}
 
@@ -175,10 +167,6 @@ func ExtractFonts(rs io.ReadSeeker, outDir, fileName string, selectedPages []str
 		return err
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		return err
-	}
-
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return err
@@ -235,10 +223,6 @@ func ExtractPages(rs io.ReadSeeker, outDir, fileName string, selectedPages []str
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
-		return err
-	}
-
-	if err := ctx.EnsurePageCount(); err != nil {
 		return err
 	}
 
@@ -302,10 +286,6 @@ func ExtractContent(rs io.ReadSeeker, outDir, fileName string, selectedPages []s
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
-		return err
-	}
-
-	if err := ctx.EnsurePageCount(); err != nil {
 		return err
 	}
 

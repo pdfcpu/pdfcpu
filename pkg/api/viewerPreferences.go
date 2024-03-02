@@ -197,7 +197,7 @@ func SetViewerPreferences(rs io.ReadSeeker, w io.Writer, vp model.ViewerPreferen
 
 	ctx.XRefTable.BindViewerPreferences()
 
-	return WriteContext(ctx, w)
+	return Write(ctx, w, conf)
 }
 
 // SetViewerPreferencesFromJSONBytes sets rs's viewer preferences corresponding to jsonBytes and writes the result to w.
@@ -363,7 +363,7 @@ func ResetViewerPreferences(rs io.ReadSeeker, w io.Writer, conf *model.Configura
 
 	delete(ctx.RootDict, "ViewerPreferences")
 
-	return WriteContext(ctx, w)
+	return Write(ctx, w, conf)
 }
 
 // ResetViewerPreferencesFile resets inFile's viewer preferences and writes the result to outFile.

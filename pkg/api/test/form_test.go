@@ -51,10 +51,6 @@ func listFormFieldsFile(t *testing.T, inFile string, conf *model.Configuration) 
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		t.Fatalf("%s: %v\n", msg, err)
-	}
-
 	return form.ListFormFields(ctx)
 }
 

@@ -87,19 +87,7 @@ func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdfcpu.I
 		ctx.PageCount++
 	}
 
-	if err = ValidateContext(ctx); err != nil {
-		return err
-	}
-
-	if err = WriteContext(ctx, w); err != nil {
-		return err
-	}
-
-	if log.StatsEnabled() {
-		log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	}
-
-	return nil
+	return Write(ctx, w, conf)
 }
 
 func fileExists(filename string) bool {

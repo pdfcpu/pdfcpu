@@ -113,11 +113,7 @@ func SetPageMode(rs io.ReadSeeker, w io.Writer, val model.PageMode, conf *model.
 
 	ctx.RootDict["PageMode"] = types.Name(val.String())
 
-	if err = WriteContext(ctx, w); err != nil {
-		return err
-	}
-
-	return nil
+	return Write(ctx, w, conf)
 }
 
 // SetPageModeFile sets inFile's page mode and writes the result to outFile.
@@ -178,11 +174,7 @@ func ResetPageMode(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) err
 
 	delete(ctx.RootDict, "PageMode")
 
-	if err = WriteContext(ctx, w); err != nil {
-		return err
-	}
-
-	return nil
+	return Write(ctx, w, conf)
 }
 
 // ResetPageModeFile resets inFile's page mode and writes the result to outFile.

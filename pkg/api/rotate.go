@@ -41,10 +41,6 @@ func Rotate(rs io.ReadSeeker, w io.Writer, rotation int, selectedPages []string,
 		return err
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		return err
-	}
-
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return err
@@ -54,11 +50,7 @@ func Rotate(rs io.ReadSeeker, w io.Writer, rotation int, selectedPages []string,
 		return err
 	}
 
-	if err = ValidateContext(ctx); err != nil {
-		return err
-	}
-
-	return WriteContext(ctx, w)
+	return Write(ctx, w, conf)
 }
 
 // RotateFile rotates selected pages of inFile clockwise by rotation degrees and writes the result to outFile.

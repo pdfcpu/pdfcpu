@@ -125,10 +125,6 @@ func listBoxes(rs io.ReadSeeker, selectedPages []string, pb *model.PageBoundarie
 		return nil, err
 	}
 
-	if err := ctx.EnsurePageCount(); err != nil {
-		return nil, err
-	}
-
 	pages, err := api.PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
 		return nil, err
@@ -162,10 +158,6 @@ func listFormFields(rs io.ReadSeeker, conf *model.Configuration) ([]string, erro
 
 	ctx, err := api.ReadAndValidate(rs, conf)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := ctx.EnsurePageCount(); err != nil {
 		return nil, err
 	}
 
@@ -218,10 +210,6 @@ func listImages(rs io.ReadSeeker, selectedPages []string, conf *model.Configurat
 
 	ctx, err := api.ReadAndValidate(rs, conf)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := ctx.EnsurePageCount(); err != nil {
 		return nil, err
 	}
 
