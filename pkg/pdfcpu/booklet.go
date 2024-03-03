@@ -384,7 +384,7 @@ func nupPerfectBound(positionNumber int, inputPageCount int, pageNumbers []int, 
 	return getPageNumber(pageNumbers, p-1), rotate // p is one-indexed and we want zero-indexed
 }
 
-func SortSelectedPagesForBooklet(pages types.IntSet, nup *model.NUp) []model.BookletPage {
+func GetBookletOrdering(pages types.IntSet, nup *model.NUp) []model.BookletPage {
 	pageNumbers := sortSelectedPages(pages)
 	pageCount := len(pageNumbers)
 
@@ -472,7 +472,7 @@ func bookletPages(
 	formsResDict := types.NewDict()
 	rr := nup.RectsForGrid()
 
-	for i, bp := range SortSelectedPagesForBooklet(selectedPages, nup) {
+	for i, bp := range GetBookletOrdering(selectedPages, nup) {
 
 		if i > 0 && i%len(rr) == 0 {
 			// Wrap complete page.
@@ -520,7 +520,7 @@ func BookletFromImages(ctx *model.Context, fileNames []string, nup *model.NUp, p
 	var buf bytes.Buffer
 	rr := nup.RectsForGrid()
 
-	for i, bp := range SortSelectedPagesForBooklet(selectedPages, nup) {
+	for i, bp := range GetBookletOrdering(selectedPages, nup) {
 
 		if i > 0 && i%len(rr) == 0 {
 
