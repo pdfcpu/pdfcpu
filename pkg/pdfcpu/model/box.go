@@ -31,27 +31,28 @@ import (
 // Media box serves as parent box for crop box.
 // Crop box serves as parent box for trim, bleed and art box.
 type Box struct {
-	Rect      *types.Rectangle // Rectangle in user space.
-	Inherited bool             // Media box and Crop box may be inherited.
-	RefBox    string           // Use position of another box,
+	Rect      *types.Rectangle `json:"rect"` // Rectangle in user space.
+	Inherited bool             `json:"-"`    // Media box and Crop box may be inherited.
+	RefBox    string           `json:"-"`    // Use position of another box,
 	// Margins to parent box in points.
 	// Relative to parent box if 0 < x < 0.5
-	MLeft, MRight float64
-	MTop, MBot    float64
+	MLeft, MRight float64 `json:"-"`
+	MTop, MBot    float64 `json:"-"`
 	// Relative position within parent box
-	Dim    *types.Dim   // dimensions
-	Pos    types.Anchor // position anchor within parent box, one of tl,tc,tr,l,c,r,bl,bc,br.
-	Dx, Dy int          // anchor offset
+	Dim    *types.Dim   `json:"-"` // dimensions
+	Pos    types.Anchor `json:"-"` // position anchor within parent box, one of tl,tc,tr,l,c,r,bl,bc,br.
+	Dx, Dy int          `json:"-"` // anchor offset
 }
 
 // PageBoundaries represent the defined PDF page boundaries.
 type PageBoundaries struct {
-	Media *Box
-	Crop  *Box
-	Trim  *Box
-	Bleed *Box
-	Art   *Box
-	Rot   int // The effective page rotation.
+	Media       *Box   `json:"mediaBox,omitempty"`
+	Crop        *Box   `json:"cropBox,omitempty"`
+	Trim        *Box   `json:"trimBox,omitempty"`
+	Bleed       *Box   `json:"bleedBox,omitempty"`
+	Art         *Box   `json:"artBox,omitempty"`
+	Rot         int    `json:"rot"` // The effective page rotation.
+	Orientation string `json:"orient"`
 }
 
 // SelectAll selects all page boundaries.
@@ -727,7 +728,7 @@ func parseBoxDim(s string, b *Box, u types.DisplayUnit) error {
 	return nil
 }
 
-func parseBoxByPosWithinParent(s string, ss []string, u types.DisplayUnit) (*Box, error) {
+func parseBoxByPosWithinParent(ss []string, u types.DisplayUnit) (*Box, error) {
 	b := &Box{Pos: types.Center}
 	for _, s := range ss {
 
@@ -827,7 +828,7 @@ func ParseBox(s string, u types.DisplayUnit) (*Box, error) {
 		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	if len(ss) > 1 || strings.HasPrefix(ss[0], "dim") {
-		return parseBoxByPosWithinParent(s, ss, u)
+		return parseBoxByPosWithinParent(ss, u)
 	}
 
 	// Via margins relative to parent box.
