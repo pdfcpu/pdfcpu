@@ -297,6 +297,7 @@ func initCommandMap() {
 		"watermark":     {nil, watermarkCmdMap, usageWatermark, usageLongWatermark},
 		"version":       {printVersion, nil, usageVersion, usageLongVersion},
 		"viewerpref":    {nil, viewerPrefsCmdMap, usageViewerPreferences, usageLongViewerPreferences},
+		"zoom":          {processZoomCommand, nil, usageZoom, usageLongZoom},
 	} {
 		cmdMap.register(k, v)
 	}

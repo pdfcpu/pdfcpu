@@ -410,11 +410,15 @@ func SetViewerPreferences(cmd *Command) ([]string, error) {
 	if *cmd.InFileJSON != "" {
 		return nil, api.SetViewerPreferencesFileFromJSONFile(*cmd.InFile, *cmd.OutFile, *cmd.InFileJSON, cmd.Conf)
 	}
-
 	return nil, api.SetViewerPreferencesFileFromJSONBytes(*cmd.InFile, *cmd.OutFile, []byte(cmd.StringVal), cmd.Conf)
 }
 
 // ResetViewerPreferences resets inFile's viewer preferences.
 func ResetViewerPreferences(cmd *Command) ([]string, error) {
 	return nil, api.ResetViewerPreferencesFile(*cmd.InFile, *cmd.OutFile, cmd.Conf)
+}
+
+// Zoom in/out of selected pages either by zoom factor or corresponding margin.
+func Zoom(cmd *Command) ([]string, error) {
+	return nil, api.ZoomFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Zoom, cmd.Conf)
 }

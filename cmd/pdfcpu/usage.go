@@ -57,7 +57,7 @@ The commands are:
    paper         print list of supported paper sizes
    permissions   list, set user access permissions
    portfolio     list, add, remove, extract portfolio entries with optional description
-   poster        cut selected pages into poster using paper size or dimensions
+   poster        cut selected pages into poster by paper size or dimensions
    properties    list, add, remove document properties
    resize        scale selected pages
    rotate        rotate selected pages
@@ -69,6 +69,7 @@ The commands are:
    version       print version
    viewerpref    list, set, reset viewer preferences for opened document
    watermark     add, remove, update Unicode text, image or PDF watermarks for selected pages
+   zoom          zoom in/out of selected pages by magnification factor or corresponding margin
 
    All instantly recognizable command prefixes are supported eg. val for validation
    One letter Unix style abbreviations supported for flags and command parameters.
@@ -1601,4 +1602,30 @@ description ... scalefactor, dimensions, formsize, enforce, border, bgcolor
          }
    
     `
+
+	usageZoom = "usage: pdfcpu zoom [-p(ages) selectedPages] -- description inFile [outFile]" + generalFlags
+
+	usageLongZoom = `Zoom in/out of selected pages either by magnification factor or corresponding margin.
+
+      pages ... Please refer to "pdfcpu selectedpages"
+description ... factor, hmargin, vmargin, border, bgcolor
+     inFile ... input PDF file
+    outFile ... output PDF file
+
+Examples:
+   pdfcpu zoom -- "factor: 2"  in.pdf out.pdf           ... zoom in to magnification of 200%
+   pdfcpu zoom -- "factor: .5" in.pdf out.pdf           ... zoom out to magnification of 50%
+   
+   pdfcpu zoom -- "hmargin: -10" in.pdf out.pdf         ... zoom in to horizontal margin of -10 points
+   pdfcpu zoom -- "hmargin:  10" in.pdf out.pdf         ... zoom out to horizontal margin of 10 points
+
+   pdfcpu zoom -unit cm -- "hmargin: -1" in.pdf out.pdf ... zoom in to horizontal margin of -1 cm
+   pdfcpu zoom -unit cm -- "hmargin:  1" in.pdf out.pdf ... zoom out to horizontal margin of 1 cm
+   
+   pdfcpu zoom -- "vmargin: -10" in.pdf out.pdf         ... zoom in to vertical margin of -10 points
+   pdfcpu zoom -- "vmargin:  10" in.pdf out.pdf         ... zoom out to vertical margin of 10 points
+
+   pdfcpu zoom -unit cm -- "vmargin: -1" in.pdf out.pdf ... zoom in to vertical margin of -1 cm
+   pdfcpu zoom -unit cm -- "vmargin: 1, border:true, bgcolor:lightgray" in.pdf out.pdf ... zoom out to vertical margin of 1 cm
+`
 )

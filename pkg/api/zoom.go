@@ -1,5 +1,5 @@
 /*
-Copyright 2023 The pdfcpu Authors.
+Copyright 2024 The pdfcpu Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,16 +26,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Resize applies resizeConf for selected pages of rs and writes result to w.
-func Resize(rs io.ReadSeeker, w io.Writer, selectedPages []string, resize *model.Resize, conf *model.Configuration) error {
+// Zoom applies resizeConf for selected pages of rs and writes result to w.
+func Zoom(rs io.ReadSeeker, w io.Writer, selectedPages []string, zoom *model.Zoom, conf *model.Configuration) error {
 	if rs == nil {
-		return errors.New("pdfcpu: Resize: missing rs")
+		return errors.New("pdfcpu: Zoom: missing rs")
 	}
 
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = model.RESIZE
+	conf.Cmd = model.ZOOM
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -47,17 +47,17 @@ func Resize(rs io.ReadSeeker, w io.Writer, selectedPages []string, resize *model
 		return err
 	}
 
-	if err = pdfcpu.Resize(ctx, pages, resize); err != nil {
+	if err = pdfcpu.Zoom(ctx, pages, zoom); err != nil {
 		return err
 	}
 
 	return Write(ctx, w, conf)
 }
 
-// ResizeFile applies resizeConf for selected pages of inFile and writes result to outFile.
-func ResizeFile(inFile, outFile string, selectedPages []string, resize *model.Resize, conf *model.Configuration) (err error) {
+// ZoomFile applies zoomConf for selected pages of inFile and writes result to outFile.
+func ZoomFile(inFile, outFile string, selectedPages []string, zoom *model.Zoom, conf *model.Configuration) (err error) {
 	if log.CLIEnabled() {
-		log.CLI.Printf("resizing %s\n", inFile)
+		log.CLI.Printf("zooming %s\n", inFile)
 	}
 
 	tmpFile := inFile + ".tmp"
@@ -102,7 +102,7 @@ func ResizeFile(inFile, outFile string, selectedPages []string, resize *model.Re
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
-	conf.Cmd = model.RESIZE
+	conf.Cmd = model.ZOOM
 
-	return Resize(f1, f2, selectedPages, resize, conf)
+	return Zoom(f1, f2, selectedPages, zoom, conf)
 }

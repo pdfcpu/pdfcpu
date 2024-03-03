@@ -52,6 +52,7 @@ type Command struct {
 	Cut               *model.Cut
 	PageBoundaries    *model.PageBoundaries
 	Resize            *model.Resize
+	Zoom              *model.Zoom
 	Watermark         *model.Watermark
 	ViewerPreferences *model.ViewerPreferences
 	Conf              *model.Configuration
@@ -136,6 +137,7 @@ var cmdMap = map[model.CommandMode]func(cmd *Command) ([]string, error){
 	model.LISTVIEWERPREFERENCES:   processViewerPreferences,
 	model.SETVIEWERPREFERENCES:    processViewerPreferences,
 	model.RESETVIEWERPREFERENCES:  processViewerPreferences,
+	model.ZOOM:                    Zoom,
 }
 
 // ValidateCommand creates a new command to validate a file.
@@ -1208,4 +1210,19 @@ func ResetViewerPreferencesCommand(inFile, outFile string, conf *model.Configura
 		InFile:  &inFile,
 		OutFile: &outFile,
 		Conf:    conf}
+}
+
+// ZoomCommand creates a new command to zoom in/out of selected pages.
+func ZoomCommand(inFile, outFile string, pageSelection []string, zoom *model.Zoom, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.ZOOM
+	return &Command{
+		Mode:          model.ZOOM,
+		InFile:        &inFile,
+		OutFile:       &outFile,
+		PageSelection: pageSelection,
+		Zoom:          zoom,
+		Conf:          conf}
 }

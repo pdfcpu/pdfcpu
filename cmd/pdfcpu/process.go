@@ -2576,3 +2576,37 @@ func processResetViewerPreferencesCommand(conf *model.Configuration) {
 	}
 	process(cli.ResetViewerPreferencesCommand(inFile, "", conf))
 }
+
+func processZoomCommand(conf *model.Configuration) {
+	if len(flag.Args()) < 2 || len(flag.Args()) > 3 {
+		fmt.Fprintf(os.Stderr, "%s\n", usageZoom)
+		os.Exit(1)
+	}
+
+	processDiplayUnit(conf)
+
+	zc, err := pdfcpu.ParseZoomConfig(flag.Arg(0), conf.Unit)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(1)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+
+	outFile := ""
+	if len(flag.Args()) == 3 {
+		outFile = flag.Arg(2)
+		ensurePDFExtension(outFile)
+	}
+
+	selectedPages, err := api.ParsePageSelection(selectedPages)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
+		os.Exit(1)
+	}
+
+	process(cli.ZoomCommand(inFile, outFile, selectedPages, zc, conf))
+}

@@ -36,7 +36,7 @@ The commands are:
 	paper         print list of supported paper sizes
 	permissions   list, set user access permissions
 	portfolio     list, add, remove, extract portfolio entries with optional description
-	poster        cut selected pages into poster using paper size or dimensions
+	poster        cut selected pages into poster by paper size or dimensions
 	properties    list, add, remove document properties
 	resize        scale selected pages
 	rotate        rotate selected pages
@@ -48,5 +48,6 @@ The commands are:
 	version       print version
 	viewpref      list, set, reset viewer preferences for opened document
 	watermark     add, remove, update Unicode text, image or PDF watermarks for selected pages
+	zoom          zoom in/out of selected pages by magnification factor or corresponding margin
 */
 package pdfcpu
