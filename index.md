@@ -22,13 +22,15 @@ layout: default
   <kbd><a href="{{site.baseurl}}/generate/create"><img src="resources/imagebox.png" height="100"></a></kbd>&nbsp;
   <br><br>
   Now with basic support for PDF 2.0!
-  <br><br>
+  <br>
+  Follow us for news and release announcements!
   <p align="center">
-    Follow us for news and release announcements!
     <kbd><a href="https://twitter.com/intent/follow?screen_name=pdfcpu"><img src="resources/x.png" height="30"></a></kbd>&nbsp;
     <kbd><a href="https://bsky.app/profile/pdfcpu.bsky.social"><img src="resources/bluesky.png" height="30"></a></kbd>&nbsp;
     <kbd><a href="https://mastodon.social/@pdfcpu"><img src="resources/mastodon.png" height="30"></a></kbd>&nbsp;
   </p>
-  <a href="https://pdfa.org"><img src="resources/pdfa.png" height="50"></a>
+  <p align="center">
+    <a href="https://pdfa.org"><img src="resources/pdfa.png" height="50"></a>
+  </p>
 </p>
 
