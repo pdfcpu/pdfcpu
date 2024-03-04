@@ -98,7 +98,7 @@ Zoom out by factor.
 $ pdfcpu zoom -- "factor: .5"  in.pdf out.pdf
 ```
 <p align="center">
-  <img style="border-color:silver" border="1" src="resources/zoomOutbyFactor05.png" height="500">
+  <img style="border-color:silver" border="1" src="resources/zoomOutByFactor05.png" height="500">
 </p>
 
 <br>
