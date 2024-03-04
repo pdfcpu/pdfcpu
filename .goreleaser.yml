@@ -5,7 +5,6 @@ builds:
   ldflags:
      - '-s -w -X main.version={{.Version}} -X github.com/pdfcpu/pdfcpu/pkg/pdfcpu.VersionStr={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.Date}} -X main.builtBy=goreleaser'
   goos:
-    - ios
     - js
     - linux
     - darwin

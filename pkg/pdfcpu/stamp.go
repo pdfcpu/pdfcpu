@@ -1119,7 +1119,7 @@ func updatePageResourcesForWM(ctx *model.Context, resDict types.Dict, wm model.W
 		resDict.Insert("ExtGState", types.Dict(map[string]types.Object{*gsID: *wm.ExtGState}))
 	} else {
 		d, _ := ctx.DereferenceDict(o)
-		for i := 0; i < 1000; i++ {
+		for i := 0; i < 10000000; i++ {
 			*gsID = "GS" + strconv.Itoa(i)
 			if _, found := d.Find(*gsID); !found {
 				break
@@ -1133,7 +1133,7 @@ func updatePageResourcesForWM(ctx *model.Context, resDict types.Dict, wm model.W
 		resDict.Insert("XObject", types.Dict(map[string]types.Object{*xoID: *wm.Form}))
 	} else {
 		d, _ := ctx.DereferenceDict(o)
-		for i := 0; i < 1000; i++ {
+		for i := 0; i < 10000000; i++ {
 			*xoID = "Fm" + strconv.Itoa(i)
 			if _, found := d.Find(*xoID); !found {
 				break
