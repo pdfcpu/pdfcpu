@@ -25,9 +25,9 @@ layout: default
   <br>
   Follow us for news and release announcements!
   <p align="center">
-    <kbd><a href="https://twitter.com/intent/follow?screen_name=pdfcpu"><img src="resources/x.png" height="30"></a></kbd>&nbsp;
+    <a href="https://twitter.com/intent/follow?screen_name=pdfcpu"><img src="resources/x.png" height="30"></a>&nbsp;
     <a href="https://bsky.app/profile/pdfcpu.bsky.social"><img src="resources/bluesky.png" height="30"></a>&nbsp;
-    <kbd><a href="https://mastodon.social/@pdfcpu"><img src="resources/mastodon.png" height="30"></a></kbd>&nbsp;
+    <a href="https://mastodon.social/@pdfcpu"><img src="resources/mastodon.png" height="30"></a>&nbsp;
   </p>
   <p align="center">
     <a href="https://pdfa.org"><img src="resources/pdfa.png" height="50"></a>
