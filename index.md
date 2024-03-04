@@ -24,7 +24,8 @@ layout: default
   Now with basic support for PDF 2.0!
   <br><br>
   Follow us for news and release announcements!<br>
-  <a href="https://twitter.com/intent/follow?screen_name=pdfcpu"><img src="resources/x.png" height="30"></a><br>
+  <a href="https://twitter.com/intent/follow?screen_name=pdfcpu"><img src="resources/x.png" height="30"></a>
+  <br><br>
   <a href="https://pdfa.org"><img src="resources/pdfa.png" height="50"></a><br>
 </p>
 
