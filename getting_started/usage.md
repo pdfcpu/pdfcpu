@@ -60,6 +60,7 @@ The commands are:
    version     print version
    viewerpref  list, set, reset viewer preferences for opened document
    watermark   add, update, remove text, image or PDF watermarks to selected pages
+   zoom        zoom in/out of selected pages by magnification factor or corresponding margin
 
    Completion supported for all commands.
    One letter Unix style abbreviations supported for flags.
@@ -82,6 +83,7 @@ pdfcpu rotate   [-p(ages) selectedPages] inFile rotation [outFile]
 pdfcpu split    [-m(ode) span|bookmark|page] inFile outDir [span|pageNr...]
 pdfcpu trim      -p(ages) selectedPages inFile [outFile]
 pdfcpu validate [-m(ode) strict|relaxed] [-l(inks)] inFile...
+pdfcpu zoom     [-p(ages) selectedPages] -- description inFile [outFile]
 ```
 
 <br>

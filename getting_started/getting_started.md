@@ -12,4 +12,4 @@ The focus of this site is to document all available commands, their flags and pa
 
 ## API
 
-You can find the documentation of the API [here](https://godoc.org/github.com/pdfcpu/pdfcpu/pkg/api).
+You can find the documentation of the API [here](https://pkg.go.dev/github.com/pdfcpu/pdfcpu/pkg/api).

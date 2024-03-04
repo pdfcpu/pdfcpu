@@ -14,9 +14,9 @@ You can look up its location either like so:
 
 ```
 $ pdfcpu version
-pdfcpu: v0.6.0
-commit: adccd5de (2023-12-04T23:23:44Z)
-base  : go1.21.4
+pdfcpu: v0.7.0 dev
+commit: 5fd675dc (2024-03-04T19:21:23Z)
+base  : go1.22.0
 config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 ```
 
@@ -24,10 +24,9 @@ or you can do the following which will print out both the config file path and i
 
 ```
 $ pdfcpu config
-config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 #############################
-# pdfcpu v0.6.0             #
-# Created: 2023-12-04 23:23 #
+# pdfcpu v0.7.0 dev         #
+# Created: 2024-03-04 20:33 #
 #############################
 #   Default configuration   #
 #############################
@@ -42,8 +41,10 @@ decodeAllStreams: false
 # validationMode:
 # ValidationStrict,
 # ValidationRelaxed,
-# ValidationNone
 validationMode: ValidationRelaxed
+
+# validate cross reference table right before writing
+postProcessValidate: true
 
 # eol for writing:
 # EolLF

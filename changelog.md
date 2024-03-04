@@ -6,8 +6,14 @@ layout: default
 
 | Date      | Tag / Commit                                                                                | Description  
 |:----------|:--------------------------------------------------------------------------------------------|:------------------------------
+|2024-03-04 | [v0.7.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.7.0)                              | Add zoom command, basic PDF 2.0
+|           |                                                                                             | updating, Fix #628, #724, #756, 
+|           |                                                                                             | #758-#760, #765-#766, #769-#774,  
+|           |                                                                                             | #780, #783-#784, #786-#787, 
+|           |                                                                                             | #793-#796, #798, #802, #805-#811,
+|           |                                                                                             | #813-815, #818
 |2023-12-10 | [v0.6.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.6.0)                              | Add pagelayout, pagemode, viewerpref
-|           |                                                                                             | cmds, basic PDF 2.0 validation
+|           |                                                                                             | cmds, basic PDF 2.0 validation, Fix
 |           |                                                                                             | #373, #472, #473, #635, #665, #689,
 |           |                                                                                             | #701, #705, #706, #708, #710, #711,
 |           |                                                                                             | #713, #716, #717, #722, #723, #727,

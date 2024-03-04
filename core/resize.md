@@ -63,7 +63,7 @@ A configuration string with input parameters for the resize command.
 
 ## Examples
 
-Enlarge pages by doubling the page dimensions, keep orientation:
+Enlarge pages by doubling the page dimensions, keep orientation.
 ```sh
 $ pdfcpu resize "scale:2" in.pdf out.pdf
 ```
