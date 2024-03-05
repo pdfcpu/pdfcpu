@@ -5,6 +5,8 @@
 # VSCode 
 .vscode/*
 
+.idea/*
+
 # Coverage
 c.out
 
