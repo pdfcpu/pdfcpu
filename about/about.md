@@ -4,7 +4,15 @@ layout: default
 
 # About
 
-`pdfcpu` is a PDF processor written in Go supporting encryption.
+`pdfcpu` is a PDF processor written in Go supporting encryption and is available on all major platforms. It can process files based on all versions up to PDF V1.7.
+The parser which has been carefully crafted is able to handle many files violating the PDF specification and also repairs corrupt files on the fly.<br><br>
+Support for PDF 2.0 is ongoing work and coming up.<br>
+pdfcpu v0.6.0 introduced basic support for validation and as of v0.7.0 pdfcpu also supports writing back validated PDF 2.0 files.
+Support for new PDF 2.0 features will be implemented on an as-needed basis since PDF 2.0 files are hard to find.<br>
+Please open an issue if you want to have a specific feature addressed and can share a test file.
+
+
+
 
 ## Use the Command Line Interface
 
