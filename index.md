@@ -23,9 +23,10 @@ layout: default
   <br><br>
   Now with basic support for PDF 2.0!
   <br>
-  <div>
+  <div align="center">
     Follow us for news and release announcements!
   </div>
+  <div align="center">
   <div align="center">
     <a href="https://twitter.com/intent/follow?screen_name=pdfcpu"><img src="resources/x.png" height="30"></a>&nbsp;
     <a href="https://bsky.app/profile/pdfcpu.bsky.social"><img src="resources/bluesky.png" height="30"></a>&nbsp;
