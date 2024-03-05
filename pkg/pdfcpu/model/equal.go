@@ -23,7 +23,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+	"github.com/angel-one/pdfcpu/pkg/pdfcpu/types"
 )
 
 // EqualObjects returns true if two objects are equal in the context of given xrefTable.

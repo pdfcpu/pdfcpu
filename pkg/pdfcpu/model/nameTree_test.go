@@ -19,7 +19,7 @@ package model
 import (
 	"testing"
 
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+	"github.com/angel-one/pdfcpu/pkg/pdfcpu/types"
 )
 
 func checkAddResult(t *testing.T, r *Node, exp string, root bool) {

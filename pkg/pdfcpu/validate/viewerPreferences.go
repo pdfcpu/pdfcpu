@@ -17,8 +17,8 @@ limitations under the License.
 package validate
 
 import (
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+	"github.com/angel-one/pdfcpu/pkg/pdfcpu/model"
+	"github.com/angel-one/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 

@@ -20,8 +20,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pdfcpu/pdfcpu/pkg/cli"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/angel-one/pdfcpu/pkg/cli"
+	"github.com/angel-one/pdfcpu/pkg/pdfcpu/model"
 )
 
 /**************************************************************

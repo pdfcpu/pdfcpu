@@ -20,8 +20,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/angel-one/pdfcpu/pkg/api"
+	"github.com/angel-one/pdfcpu/pkg/pdfcpu"
 )
 
 func TestCollect(t *testing.T) {

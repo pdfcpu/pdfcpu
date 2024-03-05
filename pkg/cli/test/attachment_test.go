@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pdfcpu/pdfcpu/pkg/cli"
+	"github.com/angel-one/pdfcpu/pkg/cli"
 )
 
 func prepareForAttachmentTest(t *testing.T) error {
