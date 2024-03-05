@@ -17,10 +17,10 @@
 package primitives
 
 import (
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+	"github.com/angel-one/pdfcpu/pkg/pdfcpu/color"
+	"github.com/angel-one/pdfcpu/pkg/pdfcpu/draw"
+	"github.com/angel-one/pdfcpu/pkg/pdfcpu/model"
+	"github.com/angel-one/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 

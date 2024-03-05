@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pdfcpu/pdfcpu/pkg/cli"
+	"github.com/angel-one/pdfcpu/pkg/cli"
 )
 
 // Trim test PDF file so that only the first two pages are rendered.

@@ -24,11 +24,11 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/pdfcpu/pdfcpu/pkg/font"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/matrix"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+	"github.com/angel-one/pdfcpu/pkg/font"
+	"github.com/angel-one/pdfcpu/pkg/pdfcpu/color"
+	"github.com/angel-one/pdfcpu/pkg/pdfcpu/draw"
+	"github.com/angel-one/pdfcpu/pkg/pdfcpu/matrix"
+	"github.com/angel-one/pdfcpu/pkg/pdfcpu/types"
 )
 
 // TextDescriptor contains all attributes needed for rendering a text column in PDF user space.

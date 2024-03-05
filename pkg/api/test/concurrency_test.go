@@ -20,8 +20,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/angel-one/pdfcpu/pkg/api"
+	"github.com/angel-one/pdfcpu/pkg/pdfcpu/model"
 )
 
 func TestDisableConfigDir(t *testing.T) {
