@@ -24,14 +24,14 @@ layout: default
   Now with basic support for PDF 2.0!
   <br>
   <div align="center">
-    Follow us for news and release announcements!
-  </div>
-  <div align="center">
-  <div align="center">
     <a href="https://twitter.com/intent/follow?screen_name=pdfcpu"><img src="resources/x.png" height="30"></a>&nbsp;
     <a href="https://bsky.app/profile/pdfcpu.bsky.social"><img src="resources/bluesky.png" height="30"></a>&nbsp;
     <a href="https://mastodon.social/@pdfcpu"><img src="resources/mastodon.png" height="30"></a>&nbsp;
   </div>
+  <div align="center">
+    Follow us for news & release announcements!
+  </div>
+  <br>
   <div align="center">
     <a href="https://pdfa.org"><img src="resources/pdfa.png" height="50"></a>
   </div>
