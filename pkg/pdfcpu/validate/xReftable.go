@@ -147,6 +147,11 @@ func validateNames(xRefTable *model.XRefTable, rootDict types.Dict, required boo
 			continue
 		}
 
+		if xRefTable.Names[treeName] != nil {
+			// Already internalized.
+			continue
+		}
+
 		d, err := xRefTable.DereferenceDict(value)
 		if err != nil {
 			return err
@@ -160,10 +165,8 @@ func validateNames(xRefTable *model.XRefTable, rootDict types.Dict, required boo
 			return err
 		}
 
-		// Internalize this name tree.
-		// If no validation takes place, name trees have to be internalized via xRefTable.LocateNameTree
-		// TODO Move this out of validation into Read.
 		if tree != nil {
+			// Internalize.
 			xRefTable.Names[treeName] = tree
 		}
 

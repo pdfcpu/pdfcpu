@@ -107,7 +107,7 @@ func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, co
 		return errors.New("pdfcpu: AddAttachments: No attachment added")
 	}
 
-	return WriteContext(ctx, w)
+	return Write(ctx, w, conf)
 }
 
 // AddAttachmentsFile embeds files into a PDF context read from inFile and writes the result to outFile.
@@ -176,7 +176,7 @@ func RemoveAttachments(rs io.ReadSeeker, w io.Writer, files []string, conf *mode
 		return errors.New("pdfcpu: RemoveAttachments: No attachment removed")
 	}
 
-	return WriteContext(ctx, w)
+	return Write(ctx, w, conf)
 }
 
 // RemoveAttachmentsFile deletes embedded files from a PDF context read from inFile and writes the result to outFile.
