@@ -211,7 +211,7 @@ func listImages(rs io.ReadSeeker, selectedPages []string, conf *model.Configurat
 	}
 	conf.Cmd = model.LISTIMAGES
 
-	ctx, err := api.ReadAndValidate(rs, conf)
+	ctx, err := api.ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return nil, err
 	}

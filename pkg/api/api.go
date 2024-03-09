@@ -162,7 +162,15 @@ func ReadValidateAndOptimize(rs io.ReadSeeker, conf *model.Configuration) (ctx *
 		return nil, err
 	}
 
-	if err = OptimizeContext(ctx); err != nil {
+	// TODO add optimize flag to config.yml
+	if ctx.Conf.Optimize {
+		if err = OptimizeContext(ctx); err != nil {
+			return nil, err
+		}
+	}
+
+	// TODO move to form related commands.
+	if err := pdfcpu.CacheFormFonts(ctx); err != nil {
 		return nil, err
 	}
 

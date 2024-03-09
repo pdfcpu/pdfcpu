@@ -1350,7 +1350,7 @@ func fixReferencesToFreeObjects(ctx *model.Context) error {
 	return fixDirectObject(ctx, ctx.RootDict)
 }
 
-func cacheFormFonts(ctx *model.Context) error {
+func CacheFormFonts(ctx *model.Context) error {
 
 	d, err := primitives.FormFontResDict(ctx.XRefTable)
 	if err != nil {
@@ -1440,12 +1440,6 @@ func OptimizeXRefTable(ctx *model.Context) error {
 	// Sometimes free objects are used although they are part of the free object list.
 	// Replace references to free xref table entries with a reference to a NULL object.
 	if err := fixReferencesToFreeObjects(ctx); err != nil {
-		return err
-	}
-
-	// Cache form fonts.
-	// TODO optimize form fonts.
-	if err := cacheFormFonts(ctx); err != nil {
 		return err
 	}
 

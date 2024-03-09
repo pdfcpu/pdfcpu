@@ -34,7 +34,22 @@ import (
 func ImageObjNrs(ctx *model.Context, pageNr int) []int {
 	// TODO Exclude SMask image objects.
 	objNrs := []int{}
-	for k, v := range ctx.Optimize.PageImages[pageNr-1] {
+
+	if pageNr < 1 {
+		return objNrs
+	}
+
+	imgObjNrs := ctx.Optimize.PageImages
+	if len(imgObjNrs) == 0 {
+		return objNrs
+	}
+
+	pageImgObjNrs := imgObjNrs[pageNr-1]
+	if pageImgObjNrs == nil {
+		return objNrs
+	}
+
+	for k, v := range pageImgObjNrs {
 		if v {
 			objNrs = append(objNrs, k)
 		}
@@ -442,7 +457,22 @@ type Font struct {
 // Requires an optimized context.
 func FontObjNrs(ctx *model.Context, pageNr int) []int {
 	objNrs := []int{}
-	for k, v := range ctx.Optimize.PageFonts[pageNr-1] {
+
+	if pageNr < 1 {
+		return objNrs
+	}
+
+	fontObjNrs := ctx.Optimize.PageFonts
+	if len(fontObjNrs) == 0 {
+		return objNrs
+	}
+
+	pageFontObjNrs := fontObjNrs[pageNr-1]
+	if pageFontObjNrs == nil {
+		return objNrs
+	}
+
+	for k, v := range pageFontObjNrs {
 		if v {
 			objNrs = append(objNrs, k)
 		}
