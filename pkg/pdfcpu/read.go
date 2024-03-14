@@ -1723,8 +1723,11 @@ func buffer(rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffset i
 		}
 
 		line := string(buf)
-		endInd = strings.Index(line, "endobj")
-		streamInd = strings.Index(line, "stream")
+
+		endInd, streamInd, err = model.DetectKeywords(line)
+		if err != nil {
+			return nil, 0, 0, 0, err
+		}
 
 		if endInd > 0 && (streamInd < 0 || streamInd > endInd) {
 			// No stream marker in buf detected.

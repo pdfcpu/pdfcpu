@@ -1098,3 +1098,58 @@ func ObjectStreamDict(sd *types.StreamDict) (*types.ObjectStreamDict, error) {
 
 	return &osd, nil
 }
+
+func detectMarkers(line string, off int, endInd, streamInd *int) {
+	if *endInd <= 0 {
+		*endInd = strings.Index(line, "endobj")
+		if *endInd > 0 {
+			*endInd += off
+		}
+	}
+	if *streamInd <= 0 {
+		*streamInd = strings.Index(line, "stream")
+		if *streamInd > 0 {
+			*streamInd += off
+		}
+	}
+}
+
+func positionAfterStringLiteral(line string) (string, int, error) {
+	i := balancedParenthesesPrefix(line)
+	if i < 0 {
+		return "", 0, errStringLiteralCorrupt
+	}
+
+	line = forwardParseBuf(line[i:], 1)
+
+	return line, i + 1, nil
+}
+
+func DetectKeywords(line string) (endInd int, streamInd int, err error) {
+	off, i := 0, 0
+	for {
+
+		// TODO ignore "\(""
+		pos := strings.Index(line, "(")
+		if pos < 0 {
+			detectMarkers(line, off, &endInd, &streamInd)
+			return endInd, streamInd, nil
+		}
+
+		l := line[:pos]
+		detectMarkers(l, off, &endInd, &streamInd)
+		if endInd > 0 || streamInd > 0 {
+			return endInd, streamInd, nil
+		}
+
+		line, i, err = positionAfterStringLiteral(line[pos:])
+		if err != nil {
+			if endInd < 0 && streamInd < 0 {
+				err = nil
+			}
+			return -1, -1, err
+		}
+
+		off += pos + i
+	}
+}
