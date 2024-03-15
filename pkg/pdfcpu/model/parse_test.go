@@ -66,3 +66,27 @@ func TestDecodeNameHexValid(t *testing.T) {
 		}
 	}
 }
+
+func TestDetectKeywords(t *testing.T) {
+	msg := "detectKeywords"
+
+	s := "1 0 obj\n<<\n /Lang (en-endobject-stream-UK%)  % comment \n>>\nendobj\n\n2 0 obj\n"
+	//    0....... ..1 .........2.........3.........4.........5..... ... .6
+	endInd, _, err := DetectKeywords(s)
+	if err != nil {
+		t.Errorf("%s failed: %v", msg, err)
+	}
+	if endInd != 59 {
+		t.Errorf("%s failed: want %d, got %d", msg, 59, endInd)
+	}
+
+	s = "1 0 obj\n<<\n /Lang (en-endobject-stream-UK%)  % endobject"
+	endInd, _, err = DetectKeywords(s)
+	if err != nil {
+		t.Errorf("%s failed: %v", msg, err)
+	}
+	if endInd > 0 {
+		t.Errorf("%s failed: want %d, got %d", msg, 0, endInd)
+	}
+
+}

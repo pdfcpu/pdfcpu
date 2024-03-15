@@ -74,15 +74,15 @@ func positionToNextWhitespaceOrChar(s, chars string) (int, string) {
 	return -1, s
 }
 
-func positionToNextEOL(s string) string {
+func positionToNextEOL(s string) (string, int) {
 	for i, c := range s {
 		for _, m := range "\x0A\x0D" {
 			if c == m {
-				return s[i:]
+				return s[i:], i
 			}
 		}
 	}
-	return ""
+	return "", 0
 }
 
 // trimLeftSpace trims leading whitespace and trailing comment.
@@ -118,7 +118,7 @@ func trimLeftSpace(s string, relaxed bool) (string, bool) {
 			break
 		}
 		// trim PDF comment (= '%' up to eol)
-		s = positionToNextEOL(s)
+		s, _ = positionToNextEOL(s)
 		if log.ParseEnabled() {
 			log.Parse.Printf("2 outstr: <%s>\n", s)
 		}
@@ -1129,27 +1129,42 @@ func DetectKeywords(line string) (endInd int, streamInd int, err error) {
 	off, i := 0, 0
 	for {
 
-		// TODO ignore "\(""
-		pos := strings.Index(line, "(")
-		if pos < 0 {
+		pos1 := strings.Index(line, "(") // TODO ignore "\(""
+		pos2 := strings.Index(line, "%") // TODO ignore "\%""
+
+		if pos1 < 0 && pos2 < 0 {
 			detectMarkers(line, off, &endInd, &streamInd)
 			return endInd, streamInd, nil
 		}
 
-		l := line[:pos]
+		if pos2 < 0 || (pos1 >= 0 && pos1 < pos2) {
+			// Skip string literal.
+			l := line[:pos1]
+			detectMarkers(l, off, &endInd, &streamInd)
+			if endInd > 0 || streamInd > 0 {
+				return endInd, streamInd, nil
+			}
+			line, i, err = positionAfterStringLiteral(line[pos1:])
+			if err != nil {
+				if endInd < 0 && streamInd < 0 {
+					err = nil
+				}
+				return -1, -1, err
+			}
+			off += pos1 + i
+			continue
+		}
+
+		// Skip comment.
+		l := line[:pos2]
 		detectMarkers(l, off, &endInd, &streamInd)
 		if endInd > 0 || streamInd > 0 {
 			return endInd, streamInd, nil
 		}
-
-		line, i, err = positionAfterStringLiteral(line[pos:])
-		if err != nil {
-			if endInd < 0 && streamInd < 0 {
-				err = nil
-			}
-			return -1, -1, err
+		line, i = positionToNextEOL(line[pos2:])
+		if line == "" {
+			return -1, -1, nil
 		}
-
-		off += pos + i
+		off += pos2 + i
 	}
 }

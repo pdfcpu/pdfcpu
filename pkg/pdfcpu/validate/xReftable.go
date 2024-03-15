@@ -219,17 +219,15 @@ func validatePageLayout(xRefTable *model.XRefTable, rootDict types.Dict, require
 }
 
 func pageModeValidator(v model.Version) func(s string) bool {
-	modes := []string{"UseNone", "UseOutlines", "UseThumbs", "FullScreen"}
+	// "None" is out of spec - but no need to repair.
+	modes := []string{"UseNone", "UseOutlines", "UseThumbs", "FullScreen", "None"}
 	if v >= model.V15 {
 		modes = append(modes, "UseOC")
 	}
 	if v >= model.V16 {
 		modes = append(modes, "UseAttachments")
 	}
-	validate := func(s string) bool {
-		return types.MemberOf(s, modes)
-	}
-	return validate
+	return func(s string) bool { return types.MemberOf(s, modes) }
 }
 
 func validatePageMode(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
