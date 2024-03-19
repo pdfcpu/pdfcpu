@@ -1160,21 +1160,29 @@ func processTrailer(c context.Context, ctx *model.Context, s *bufio.Scanner, lin
 }
 
 // Parse xRef section into corresponding number of xRef table entries.
-func parseXRefSection(c context.Context, ctx *model.Context, s *bufio.Scanner, ssCount *int, offCurXRef *int64, offExtra int64, repairOff int) (*int64, error) {
+func parseXRefSection(c context.Context, ctx *model.Context, s *bufio.Scanner, fields []string, ssCount *int, offCurXRef *int64, offExtra int64, repairOff int) (*int64, error) {
 	if log.ReadEnabled() {
 		log.Read.Println("parseXRefSection begin")
 	}
 
-	line, err := scanLine(s)
-	if err != nil {
-		return nil, err
-	}
+	var (
+		line string
+		err  error
+	)
 
-	if log.ReadEnabled() {
-		log.Read.Printf("parseXRefSection: <%s>\n", line)
-	}
+	if len(fields) == 0 {
 
-	fields := strings.Fields(line)
+		line, err = scanLine(s)
+		if err != nil {
+			return nil, err
+		}
+
+		if log.ReadEnabled() {
+			log.Read.Printf("parseXRefSection: <%s>\n", line)
+		}
+
+		fields = strings.Fields(line)
+	}
 
 	// Process all sub sections of this xRef section.
 	for !strings.HasPrefix(line, "trailer") && len(fields) == 2 {
@@ -1507,10 +1515,18 @@ func tryXRefSection(c context.Context, ctx *model.Context, rs io.ReadSeeker, off
 		if log.ReadEnabled() {
 			log.Read.Println("tryXRefSection: found xref section")
 		}
-		return parseXRefSection(c, ctx, s, xrefSectionCount, offset, offExtra, 0)
+		return parseXRefSection(c, ctx, s, nil, xrefSectionCount, offset, offExtra, 0)
 	}
 
-	// Retry using next line. (Repair fix for #326)
+	// Repair fix for #823
+	if strings.HasPrefix(line, "xref") {
+		fields := strings.Fields(line)
+		if len(fields) == 3 {
+			return parseXRefSection(c, ctx, s, fields[1:], xrefSectionCount, offset, offExtra, 0)
+		}
+	}
+
+	// Repair fix for #326
 	if line, err = scanLine(s); err != nil {
 		return nil, err
 	}
@@ -1527,7 +1543,7 @@ func tryXRefSection(c context.Context, ctx *model.Context, rs io.ReadSeeker, off
 		if log.ReadEnabled() {
 			log.Read.Printf("Repair offset: %d\n", repairOff)
 		}
-		return parseXRefSection(c, ctx, s, xrefSectionCount, offset, offExtra, repairOff)
+		return parseXRefSection(c, ctx, s, nil, xrefSectionCount, offset, offExtra, repairOff)
 	}
 
 	return &zero, nil
@@ -2103,7 +2119,7 @@ func ParseObjectWithContext(c context.Context, ctx *model.Context, offset int64,
 func dereferencedObject(c context.Context, ctx *model.Context, objNr int) (types.Object, error) {
 	entry, ok := ctx.Find(objNr)
 	if !ok {
-		return nil, errors.New("pdfcpu: dereferencedObject: unregistered object")
+		return nil, errors.Errorf("pdfcpu: dereferencedObject: unregistered object: %d", objNr)
 	}
 
 	if entry.Compressed {

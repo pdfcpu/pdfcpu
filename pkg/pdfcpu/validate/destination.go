@@ -70,9 +70,9 @@ func validateDestinationArray(xRefTable *model.XRefTable, a types.Array) error {
 	// NOTE if len == 4 we possible have a missing first element, which should be an indRef to the dest page.
 	// TODO Investigate.
 	i := 1
-	// if len(a) == 4 {
-	// 	i = 0
-	// }
+	if len(a) == 4 {
+		i = 0
+	}
 
 	// Validate rest of array elements.
 
