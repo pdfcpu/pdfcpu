@@ -227,9 +227,11 @@ type Configuration struct {
 	// Date format.
 	DateFormat string
 
-	// TODO Add to config.yml
-	// Optimize page resources.
+	// Optimize.
 	Optimize bool
+
+	// Optimize page resources via content stream analysis.
+	OptimizeResourceDicts bool
 
 	// Optimize duplicate content streams across pages.
 	OptimizeDuplicateContentStreams bool
@@ -334,6 +336,7 @@ func newDefaultConfiguration() *Configuration {
 		TimestampFormat:                 "2006-01-02 15:04",
 		DateFormat:                      "2006-01-02",
 		Optimize:                        true,
+		OptimizeResourceDicts:           true,
 		OptimizeDuplicateContentStreams: false,
 		CreateBookmarks:                 true,
 		NeedAppearances:                 false,
@@ -405,6 +408,7 @@ func (c Configuration) String() string {
 		"TimestampFormat:	  %s\n"+
 		"DateFormat:		  %s\n"+
 		"Optimize %t\n"+
+		"OptimizeResourceDicts %t\n"+
 		"OptimizeDuplicateContentStreams %t\n"+
 		"CreateBookmarks %t\n"+
 		"NeedAppearances %t\n",
@@ -425,6 +429,7 @@ func (c Configuration) String() string {
 		c.TimestampFormat,
 		c.DateFormat,
 		c.Optimize,
+		c.OptimizeResourceDicts,
 		c.OptimizeDuplicateContentStreams,
 		c.CreateBookmarks,
 		c.NeedAppearances,

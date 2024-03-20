@@ -44,6 +44,8 @@ type configuration struct {
 	Units                           string `yaml:"units"` // Be flexible if version < v0.3.8
 	TimestampFormat                 string `yaml:"timestampFormat"`
 	DateFormat                      string `yaml:"dateFormat"`
+	Optimize                        bool   `yaml:"optimize"`
+	OptimizeResourceDicts           bool   `yaml:"optimizeResourceDicts"`
 	OptimizeDuplicateContentStreams bool   `yaml:"optimizeDuplicateContentStreams"`
 	CreateBookmarks                 bool   `yaml:"createBookmarks"`
 	NeedAppearances                 bool   `yaml:"needAppearances"`
@@ -93,6 +95,8 @@ func loadedConfig(c configuration, configPath string) *Configuration {
 
 	conf.TimestampFormat = c.TimestampFormat
 	conf.DateFormat = c.DateFormat
+	conf.Optimize = c.Optimize
+	conf.OptimizeResourceDicts = c.OptimizeResourceDicts
 	conf.OptimizeDuplicateContentStreams = c.OptimizeDuplicateContentStreams
 	conf.CreateBookmarks = c.CreateBookmarks
 	conf.NeedAppearances = c.NeedAppearances

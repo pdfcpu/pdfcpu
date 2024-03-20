@@ -1443,8 +1443,7 @@ func OptimizeXRefTable(ctx *model.Context) error {
 		return err
 	}
 
-	if ctx.Cmd == model.OPTIMIZE {
-		// Consolidate resource dicts.
+	if ctx.Cmd == model.OPTIMIZE && ctx.Conf.OptimizeResourceDicts {
 		// Extra step with potential for performance hit when processing large files.
 		if err := optimizeResourceDicts(ctx); err != nil {
 			return err

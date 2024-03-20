@@ -14,7 +14,7 @@ decodeAllStreams: false
 # ValidationRelaxed,
 validationMode: ValidationRelaxed
 
-# validate cross reference table right before writing
+# validate cross reference table right before writing.
 postProcessValidate: true
 
 # eol for writing:
@@ -52,10 +52,16 @@ timestampFormat: 2006-01-02 15:04
 # date format: yyyy-mm-dd
 dateFormat: 2006-01-02
 
-# optimize duplicate content streams across pages
+# toggle optimization
+optimize: true
+
+# optimize page resources via content stream analysis.
+optimizeResourceDicts: true
+
+# optimize duplicate content streams across pages.
 optimizeDuplicateContentStreams: false
 
-# merge creates bookmarks
+# merge creates bookmarks.
 createBookmarks: true
 
 # Viewer is expected to supply appearance streams for form fields.

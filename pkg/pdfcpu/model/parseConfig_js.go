@@ -167,6 +167,24 @@ func handleDateFormat(v string, c *Configuration) error {
 	return nil
 }
 
+func handleOptimize(k, v string, c *Configuration) error {
+	v = strings.ToLower(v)
+	if v != "true" && v != "false" {
+		return errors.Errorf("config key %s is boolean", k)
+	}
+	c.Optimize = v == "true"
+	return nil
+}
+
+func handleOptimizeResourceDicts(k, v string, c *Configuration) error {
+	v = strings.ToLower(v)
+	if v != "true" && v != "false" {
+		return errors.Errorf("config key %s is boolean", k)
+	}
+	c.OptimizeResourceDicts = v == "true"
+	return nil
+}
+
 func handleOptimizeDuplicateContentStreams(k, v string, c *Configuration) error {
 	v = strings.ToLower(v)
 	if v != "true" && v != "false" {
@@ -245,6 +263,12 @@ func parseKeysPart2(k, v string, c *Configuration) error {
 
 	case "dateFormat":
 		return handleDateFormat(v, c)
+
+	case "optimize":
+		return handleOptimize(k, v, c)
+
+	case "optimizeResourceDicts":
+		return handleOptimizeResourceDicts(k, v, c)
 
 	case "optimizeDuplicateContentStreams":
 		return handleOptimizeDuplicateContentStreams(k, v, c)

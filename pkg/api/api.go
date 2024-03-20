@@ -162,8 +162,7 @@ func ReadValidateAndOptimize(rs io.ReadSeeker, conf *model.Configuration) (ctx *
 		return nil, err
 	}
 
-	// TODO add optimize flag to config.yml
-	if ctx.Conf.Optimize {
+	if conf.Cmd == model.OPTIMIZE || conf.Optimize {
 		if err = OptimizeContext(ctx); err != nil {
 			return nil, err
 		}

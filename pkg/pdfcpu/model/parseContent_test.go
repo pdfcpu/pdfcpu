@@ -26,11 +26,12 @@ func TestParseContent(t *testing.T) {
 	Span<</ActualText<FEFF0020002E>>>, Span<</ActualText<FEFF002E>>>, Span<</ActualText<FEFF00090009>>> BDC
 	/a1 BMC/a2 MP /a3 /MC0 BDC/P0 scn/RelativeColorimetric ri/P1 SCN/GS0 gs[(Q[i,j]/2.)16.6(The/]maxi\)-)]TJ/CS1 CS/a4<</A<FEFF>>> BDC /a5 <</A<FEFF>>>
 	BDC (0.5*\(1/8\)*64 or +/4.\))Tj/T1_0 1 Tf <00150015> Tj /Im5 Do/a5 << /A <FEFF> >> BDC/a6/MC1 DP /a7<<>>DP
-	BI /IM true/W 1/CS/InlineCS/H 1/BPC 1 ID EI Q /Pattern cs/Span<</ActualText<FEFF0009>>> BDC/SH1 sh`
+	BI /IM true/W 1/CS/CS2/H 1/BPC 1 ID EI Q /Pattern cs/Span<</ActualText<FEFF0009>>> BDC/SH1 sh`
 
 	want := NewPageResourceNames()
 	want["ColorSpace"]["CS0"] = true
 	want["ColorSpace"]["CS1"] = true
+	want["ColorSpace"]["CS2"] = true
 	want["ExtGState"]["GS0"] = true
 	want["Font"]["T1_0"] = true
 	want["Pattern"]["P0"] = true
