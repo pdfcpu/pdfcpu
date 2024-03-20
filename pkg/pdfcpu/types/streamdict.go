@@ -18,6 +18,7 @@ package types
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 
@@ -100,6 +101,63 @@ func (sd StreamDict) Image() bool {
 		return false
 	}
 	return true
+}
+
+type DecodeLazyObjectStreamObjectFunc func(c context.Context, s string) (Object, error)
+
+type LazyObjectStreamObject struct {
+	osd  *ObjectStreamDict
+	data []byte
+
+	decodeFunc    DecodeLazyObjectStreamObjectFunc
+	decodedObject Object
+	decodedError  error
+}
+
+func NewLazyObjectStreamObject(osd *ObjectStreamDict, data []byte, decodeFunc DecodeLazyObjectStreamObjectFunc) Object {
+	return &LazyObjectStreamObject{
+		osd:  osd,
+		data: data,
+
+		decodeFunc: decodeFunc,
+	}
+}
+
+func (l *LazyObjectStreamObject) Clone() Object {
+	return &LazyObjectStreamObject{
+		osd:  l.osd,
+		data: l.data,
+
+		decodeFunc:    l.decodeFunc,
+		decodedObject: l.decodedObject,
+		decodedError:  l.decodedError,
+	}
+}
+
+func (l *LazyObjectStreamObject) PDFString() string {
+	return string(l.data)
+}
+
+func (l *LazyObjectStreamObject) String() string {
+	return l.PDFString()
+}
+
+func (l *LazyObjectStreamObject) DecodedObject(c context.Context) (Object, error) {
+	if l.decodedObject == nil && l.decodedError == nil {
+		if log.ReadEnabled() {
+			log.Read.Printf("parseObjectStream: objString = %s\n", l.data)
+		}
+
+		l.decodedObject, l.decodedError = l.decodeFunc(c, string(l.data))
+		if l.decodedError != nil {
+			return nil, l.decodedError
+		}
+
+		if log.ReadEnabled() {
+			//log.Read.Printf("parseObjectStream: [%d] = obj %s:\n%s\n", i/2-1, objs[i-2], o)
+		}
+	}
+	return l.decodedObject, l.decodedError
 }
 
 // ObjectStreamDict represents a object stream dictionary.
