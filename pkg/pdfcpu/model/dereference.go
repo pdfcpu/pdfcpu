@@ -17,11 +17,49 @@ limitations under the License.
 package model
 
 import (
+	"context"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
+
+func processDictRefCounts(xRefTable *XRefTable, d types.Dict) {
+	for _, e := range d {
+		switch o1 := e.(type) {
+		case types.IndirectRef:
+			xRefTable.IncrementRefCount(&o1)
+		case types.Dict:
+			ProcessRefCounts(xRefTable, o1)
+		case types.Array:
+			ProcessRefCounts(xRefTable, o1)
+		}
+	}
+}
+
+func processArrayRefCounts(xRefTable *XRefTable, a types.Array) {
+	for _, e := range a {
+		switch o1 := e.(type) {
+		case types.IndirectRef:
+			xRefTable.IncrementRefCount(&o1)
+		case types.Dict:
+			ProcessRefCounts(xRefTable, o1)
+		case types.Array:
+			ProcessRefCounts(xRefTable, o1)
+		}
+	}
+}
+
+func ProcessRefCounts(xRefTable *XRefTable, o types.Object) {
+	switch o := o.(type) {
+	case types.Dict:
+		processDictRefCounts(xRefTable, o)
+	case types.StreamDict:
+		processDictRefCounts(xRefTable, o.Dict)
+	case types.Array:
+		processArrayRefCounts(xRefTable, o)
+	}
+}
 
 func (xRefTable *XRefTable) indRefToObject(ir *types.IndirectRef) (types.Object, error) {
 	if ir == nil {
@@ -37,6 +75,16 @@ func (xRefTable *XRefTable) indRefToObject(ir *types.IndirectRef) (types.Object,
 	}
 
 	xRefTable.CurObj = int(ir.ObjectNumber)
+
+	if l, ok := entry.Object.(*types.LazyObjectStreamObject); ok {
+		ob, err := l.DecodedObject(context.TODO())
+		if err != nil {
+			return nil, err
+		}
+
+		ProcessRefCounts(xRefTable, ob)
+		entry.Object = ob
+	}
 
 	// return dereferenced object
 	return entry.Object, nil

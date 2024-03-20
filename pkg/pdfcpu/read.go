@@ -419,34 +419,14 @@ func parseObjectStream(c context.Context, osd *types.ObjectStreamDict) error {
 		offset += osd.FirstObjOffset
 
 		if i > 0 {
-			dstr := string(decodedContent[offsetOld:offset])
-			if log.ReadEnabled() {
-				log.Read.Printf("parseObjectStream: objString = %s\n", dstr)
-			}
-			o, err := compressedObject(c, dstr)
-			if err != nil {
-				return err
-			}
-
-			if log.ReadEnabled() {
-				log.Read.Printf("parseObjectStream: [%d] = obj %s:\n%s\n", i/2-1, objs[i-2], o)
-			}
+			dstr := decodedContent[offsetOld:offset]
+			o := types.NewLazyObjectStreamObject(osd, dstr, compressedObject)
 			objArray = append(objArray, o)
 		}
 
 		if i == len(objs)-2 {
-			dstr := string(decodedContent[offset:])
-			if log.ReadEnabled() {
-				log.Read.Printf("parseObjectStream: objString = %s\n", dstr)
-			}
-			o, err := compressedObject(c, dstr)
-			if err != nil {
-				return err
-			}
-
-			if log.ReadEnabled() {
-				log.Read.Printf("parseObjectStream: [%d] = obj %s:\n%s\n", i/2, objs[i], o)
-			}
+			dstr := decodedContent[offset:]
+			o := types.NewLazyObjectStreamObject(osd, dstr, compressedObject)
 			objArray = append(objArray, o)
 		}
 
@@ -2148,6 +2128,14 @@ func dereferencedObject(c context.Context, ctx *model.Context, objNr int) (types
 		}
 
 		entry.Object = o
+	} else if l, ok := entry.Object.(*types.LazyObjectStreamObject); ok {
+		o, err := l.DecodedObject(c)
+		if err != nil {
+			return nil, errors.Wrapf(err, "dereferencedObject: problem dereferencing object %d", objNr)
+		}
+
+		model.ProcessRefCounts(ctx.XRefTable, o)
+		entry.Object = o
 	}
 
 	return entry.Object, nil
@@ -2756,43 +2744,6 @@ func dereferenceObject(c context.Context, ctx *model.Context, objNr int) error {
 	return nil
 }
 
-func processDictRefCounts(xRefTable *model.XRefTable, d types.Dict) {
-	for _, e := range d {
-		switch o1 := e.(type) {
-		case types.IndirectRef:
-			xRefTable.IncrementRefCount(&o1)
-		case types.Dict:
-			processRefCounts(xRefTable, o1)
-		case types.Array:
-			processRefCounts(xRefTable, o1)
-		}
-	}
-}
-
-func processArrayRefCounts(xRefTable *model.XRefTable, a types.Array) {
-	for _, e := range a {
-		switch o1 := e.(type) {
-		case types.IndirectRef:
-			xRefTable.IncrementRefCount(&o1)
-		case types.Dict:
-			processRefCounts(xRefTable, o1)
-		case types.Array:
-			processRefCounts(xRefTable, o1)
-		}
-	}
-}
-
-func processRefCounts(xRefTable *model.XRefTable, o types.Object) {
-	switch o := o.(type) {
-	case types.Dict:
-		processDictRefCounts(xRefTable, o)
-	case types.StreamDict:
-		processDictRefCounts(xRefTable, o.Dict)
-	case types.Array:
-		processArrayRefCounts(xRefTable, o)
-	}
-}
-
 // Dereferences all objects including compressed objects from object streams.
 func dereferenceObjects(c context.Context, ctx *model.Context) error {
 	if log.ReadEnabled() {
@@ -2826,7 +2777,7 @@ func dereferenceObjects(c context.Context, ctx *model.Context) error {
 			if err := c.Err(); err != nil {
 				return err
 			}
-			processRefCounts(xRefTable, entry.Object)
+			model.ProcessRefCounts(xRefTable, entry.Object)
 		}
 
 	} else {
@@ -2848,7 +2799,7 @@ func dereferenceObjects(c context.Context, ctx *model.Context) error {
 			if err := c.Err(); err != nil {
 				return err
 			}
-			processRefCounts(xRefTable, entry.Object)
+			model.ProcessRefCounts(xRefTable, entry.Object)
 		}
 
 	}
