@@ -384,6 +384,14 @@ func parseObjectStream(c context.Context, osd *types.ObjectStreamDict) error {
 	}
 
 	decodedContent := osd.Content
+	if decodedContent == nil {
+		// The actual content will be decoded lazily, only decode the prolog here.
+		var err error
+		decodedContent, err = osd.DecodeLength(int64(osd.FirstObjOffset))
+		if err != nil {
+			return err
+		}
+	}
 	prolog := decodedContent[:osd.FirstObjOffset]
 
 	// The separator used in the prolog shall be white space
@@ -415,14 +423,12 @@ func parseObjectStream(c context.Context, osd *types.ObjectStreamDict) error {
 		offset += osd.FirstObjOffset
 
 		if i > 0 {
-			dstr := decodedContent[offsetOld:offset]
-			o := types.NewLazyObjectStreamObject(osd, dstr, compressedObject)
+			o := types.NewLazyObjectStreamObject(osd, offsetOld, offset, compressedObject)
 			objArray = append(objArray, o)
 		}
 
 		if i == len(objs)-2 {
-			dstr := decodedContent[offset:]
-			o := types.NewLazyObjectStreamObject(osd, dstr, compressedObject)
+			o := types.NewLazyObjectStreamObject(osd, offset, -1, compressedObject)
 			objArray = append(objArray, o)
 		}
 
@@ -2504,8 +2510,8 @@ func decodeObjectStream(c context.Context, ctx *model.Context, objNr int) error 
 		return errors.Wrapf(err, "decodeObjectStream: problem dereferencing object stream %d", objNr)
 	}
 
-	// Save decoded stream content to xRefTable.
-	if err = saveDecodedStreamContent(ctx, &sd, objNr, *entry.Generation, true); err != nil {
+	// Will only decrypt, the actual stream content is decoded later lazily.
+	if err = saveDecodedStreamContent(ctx, &sd, objNr, *entry.Generation, false); err != nil {
 		if log.ReadEnabled() {
 			log.Read.Printf("obj %d: %s", objNr, err)
 		}
