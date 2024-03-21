@@ -71,7 +71,7 @@ func TestRunLengthEncoding(t *testing.T) {
 		compare(t, enc.Bytes(), []byte(tt.enc))
 
 		var raw bytes.Buffer
-		f.decode(&raw, enc.Bytes())
+		f.decode(&raw, enc.Bytes(), -1)
 		compare(t, raw.Bytes(), []byte(tt.raw))
 	}
 

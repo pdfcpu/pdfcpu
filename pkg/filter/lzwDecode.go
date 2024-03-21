@@ -59,6 +59,10 @@ func (f lzwDecode) Encode(r io.Reader) (io.Reader, error) {
 
 // Decode implements decoding for an LZWDecode filter.
 func (f lzwDecode) Decode(r io.Reader) (io.Reader, error) {
+	return f.DecodeLength(r, -1)
+}
+
+func (f lzwDecode) DecodeLength(r io.Reader, maxLen int64) (io.Reader, error) {
 	if log.TraceEnabled() {
 		log.Trace.Println("DecodeLZW begin")
 	}
@@ -77,7 +81,13 @@ func (f lzwDecode) Decode(r io.Reader) (io.Reader, error) {
 	defer rc.Close()
 
 	var b bytes.Buffer
-	written, err := io.Copy(&b, rc)
+	var written int64
+	var err error
+	if maxLen < 0 {
+		written, err = io.Copy(&b, rc)
+	} else {
+		written, err = io.CopyN(&b, rc, maxLen)
+	}
 	if err != nil {
 		return nil, err
 	}
