@@ -81,6 +81,10 @@ func (f flate) Encode(r io.Reader) (io.Reader, error) {
 
 // Decode implements decoding for a Flate filter.
 func (f flate) Decode(r io.Reader) (io.Reader, error) {
+	return f.DecodeLength(r, -1)
+}
+
+func (f flate) DecodeLength(r io.Reader, maxLen int64) (io.Reader, error) {
 	if log.TraceEnabled() {
 		log.Trace.Println("DecodeFlate begin")
 	}
@@ -92,12 +96,17 @@ func (f flate) Decode(r io.Reader) (io.Reader, error) {
 	defer rc.Close()
 
 	// Optional decode parameters need postprocessing.
-	return f.decodePostProcess(rc)
+	return f.decodePostProcess(rc, maxLen)
 }
 
-func passThru(rin io.Reader) (*bytes.Buffer, error) {
+func passThru(rin io.Reader, maxLen int64) (*bytes.Buffer, error) {
 	var b bytes.Buffer
-	_, err := io.Copy(&b, rin)
+	var err error
+	if maxLen < 0 {
+		_, err = io.Copy(&b, rin)
+	} else {
+		_, err = io.CopyN(&b, rin, maxLen)
+	}
 	if err == io.ErrUnexpectedEOF {
 		// Workaround for missing support for partial flush in compress/flate.
 		// See also https://github.com/golang/go/issues/31514
@@ -259,10 +268,10 @@ func (f flate) parameters() (colors, bpc, columns int, err error) {
 }
 
 // decodePostProcess
-func (f flate) decodePostProcess(r io.Reader) (io.Reader, error) {
+func (f flate) decodePostProcess(r io.Reader, maxLen int64) (io.Reader, error) {
 	predictor, found := f.parms["Predictor"]
 	if !found || predictor == PredictorNo {
-		return passThru(r)
+		return passThru(r, maxLen)
 	}
 
 	if !intMemberOf(
@@ -299,7 +308,7 @@ func (f flate) decodePostProcess(r io.Reader) (io.Reader, error) {
 	// Output buffer
 	var b bytes.Buffer
 
-	for {
+	for maxLen < 0 || int64(b.Len()) < maxLen {
 
 		// Read decompressed bytes for one pixel row.
 		n, err := io.ReadFull(r, cr)
@@ -334,7 +343,7 @@ func (f flate) decodePostProcess(r io.Reader) (io.Reader, error) {
 		pr, cr = cr, pr
 	}
 
-	if b.Len()%rowSize > 0 {
+	if maxLen < 0 && b.Len()%rowSize > 0 {
 		log.Info.Printf("failed postprocessing: %d %d\n", b.Len(), rowSize)
 		return nil, errors.New("pdfcpu: filter FlateDecode: postprocessing failed")
 	}
