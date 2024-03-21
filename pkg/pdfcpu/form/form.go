@@ -387,7 +387,7 @@ func collectBtn(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMet
 
 	f.Typ = FTCheckBox
 	if o, found := d.Find("V"); found {
-		if o.(types.Name) == "Yes" {
+		if o.(types.Name) == "Yes" || o.(types.Name) == "1" {
 			v := "Yes"
 			if len(v) > fm.valMax {
 				fm.valMax = len(v)
@@ -400,7 +400,7 @@ func collectBtn(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMet
 	return nil
 }
 
-func collectComboBox(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta) error {
+func collectComboBox(d types.Dict, f *Field, fm *FieldMeta) error {
 	f.Typ = FTComboBox
 	if sl := d.StringLiteralEntry("V"); sl != nil {
 		v, err := types.StringLiteralToString(*sl)
@@ -495,7 +495,7 @@ func collectCh(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta
 	}
 
 	if ff != nil && primitives.FieldFlags(*ff)&primitives.FieldCombo > 0 {
-		return collectComboBox(xRefTable, d, f, fm)
+		return collectComboBox(d, f, fm)
 	}
 
 	multi := ff != nil && (primitives.FieldFlags(*ff)&primitives.FieldMultiselect > 0)
@@ -503,12 +503,15 @@ func collectCh(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta
 	return collectListBox(xRefTable, multi, d, f, fm)
 }
 
-func collectTx(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta) error {
+func collectTx(d types.Dict, f *Field, fm *FieldMeta) error {
 	if o, found := d.Find("V"); found {
-		sl, _ := o.(types.StringLiteral)
-		s, err := types.StringLiteralToString(sl)
+		s1, err := types.StringOrHexLiteral(o)
 		if err != nil {
 			return err
+		}
+		s := ""
+		if s1 != nil {
+			s = *s1
 		}
 		v := s
 		if i := strings.Index(s, "\n"); i >= 0 {
@@ -522,10 +525,13 @@ func collectTx(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta
 		f.V = v
 	}
 	if o, found := d.Find("DV"); found {
-		sl, _ := o.(types.StringLiteral)
-		s, err := types.StringLiteralToString(sl)
+		s1, err := types.StringOrHexLiteral(o)
 		if err != nil {
 			return err
+		}
+		s := ""
+		if s1 != nil {
+			s = *s1
 		}
 		dv := s
 		if i := strings.Index(s, "\n"); i >= 0 {
@@ -539,7 +545,7 @@ func collectTx(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta
 		fm.def = true
 		f.Dv = dv
 	}
-	df, err := extractDateFormat(xRefTable, d)
+	df, err := extractDateFormat(d)
 	if err != nil {
 		return err
 	}
@@ -608,7 +614,7 @@ func collectPageField(
 		err = collectCh(xRefTable, d, &f, fm)
 
 	case "Tx":
-		err = collectTx(xRefTable, d, &f, fm)
+		err = collectTx(d, &f, fm)
 	}
 
 	if err != nil {
@@ -763,7 +769,7 @@ func multiPageFieldsMap(fs []Field) map[string][]Field {
 	return m
 }
 
-func renderMultiPageFields(ctx *model.Context, m map[string][]Field, fm *FieldMeta) ([]string, error) {
+func renderMultiPageFields(m map[string][]Field, fm *FieldMeta) ([]string, error) {
 
 	var ss []string
 
@@ -829,7 +835,7 @@ func renderFields(ctx *model.Context, fs []Field, fm *FieldMeta) ([]string, erro
 	m := multiPageFieldsMap(fs)
 
 	if len(m) > 0 {
-		ss1, err := renderMultiPageFields(ctx, m, fm)
+		ss1, err := renderMultiPageFields(m, fm)
 		if err != nil {
 			return nil, err
 		}
@@ -1051,7 +1057,7 @@ func removeIndRefByIndex(indRefs []types.IndirectRef, i int) []types.IndirectRef
 	return indRefs[:lastIndex]
 }
 
-func removeFromFields(xRefTable *model.XRefTable, indRefs *[]types.IndirectRef, fields *types.Array) error {
+func removeFormFields(xRefTable *model.XRefTable, indRefs *[]types.IndirectRef, fields *types.Array) error {
 	f := types.Array{}
 	for _, v := range *fields {
 		indRef1 := v.(types.IndirectRef)
@@ -1085,7 +1091,7 @@ func removeFromFields(xRefTable *model.XRefTable, indRefs *[]types.IndirectRef, 
 		if err != nil {
 			return err
 		}
-		if err := removeFromFields(xRefTable, indRefs, &kids); err != nil {
+		if err := removeFormFields(xRefTable, indRefs, &kids); err != nil {
 			return err
 		}
 		if len(kids) > 0 {
@@ -1164,7 +1170,7 @@ func RemoveFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error
 	copy(indRefsClone, indRefs)
 
 	// Remove fields from AcroDict.
-	if err := removeFromFields(xRefTable, &indRefsClone, &fields); err != nil {
+	if err := removeFormFields(xRefTable, &indRefsClone, &fields); err != nil {
 		return false, err
 	}
 

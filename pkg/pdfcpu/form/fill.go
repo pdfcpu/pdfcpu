@@ -542,7 +542,6 @@ func fillRadioButtonGroup(
 }
 
 func fillCheckBox(
-	ctx *model.Context,
 	d types.Dict,
 	id, name string,
 	locked bool,
@@ -615,7 +614,7 @@ func fillBtn(
 			return err
 		}
 	} else {
-		if err := fillCheckBox(ctx, d, id, name, locked, format, fillDetails, ok); err != nil {
+		if err := fillCheckBox(d, id, name, locked, format, fillDetails, ok); err != nil {
 			return err
 		}
 	}
@@ -632,7 +631,6 @@ func fillComboBox(
 	format DataFormat,
 	fonts map[string]types.IndirectRef,
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
-	ff *int,
 	ok *bool) error {
 
 	vv, lock, found := fillDetails(id, name, FTComboBox, format)
@@ -830,7 +828,7 @@ func fillCh(
 	}
 
 	if primitives.FieldFlags(*ff)&primitives.FieldCombo > 0 {
-		return fillComboBox(ctx, d, id, name, opts, locked, format, fonts, fillDetails, ff, ok)
+		return fillComboBox(ctx, d, id, name, opts, locked, format, fonts, fillDetails, ok)
 	}
 
 	return fillListBox(ctx, d, id, name, opts, locked, format, fonts, fillDetails, ff, ok)
@@ -844,7 +842,6 @@ func fillDateField(
 	format DataFormat,
 	fonts map[string]types.IndirectRef,
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
-	ff *int,
 	ok *bool) error {
 
 	vv, lock, found := fillDetails(id, name, FTDate, format)
@@ -966,22 +963,24 @@ func fillTx(
 	ff *int,
 	ok *bool) error {
 
-	df, err := extractDateFormat(ctx.XRefTable, d)
+	df, err := extractDateFormat(d)
 	if err != nil {
 		return err
 	}
 	vOld := ""
 	if o, found := d.Find("V"); found {
-		sl, _ := o.(types.StringLiteral)
-		s, err := types.StringLiteralToString(sl)
+		s, err := types.StringOrHexLiteral(o)
 		if err != nil {
 			return err
 		}
-		vOld = s
+		vOld = ""
+		if s != nil {
+			vOld = *s
+		}
 	}
 
 	if df != nil {
-		return fillDateField(ctx, d, id, name, vOld, locked, format, fonts, fillDetails, ff, ok)
+		return fillDateField(ctx, d, id, name, vOld, locked, format, fonts, fillDetails, ok)
 	}
 
 	return fillTextField(ctx, d, id, name, vOld, locked, format, fonts, fillDetails, ff, ok)

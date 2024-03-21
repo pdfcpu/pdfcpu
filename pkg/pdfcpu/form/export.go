@@ -270,11 +270,11 @@ func extractCheckBox(page int, d types.Dict, id, name string, locked bool) (*Che
 	cb := &CheckBox{Pages: []int{page}, ID: id, Name: name, Locked: locked}
 
 	if o, ok := d.Find("DV"); ok {
-		cb.Default = o.(types.Name) == "Yes"
+		cb.Default = o.(types.Name) == "Yes" || o.(types.Name) == "1"
 	}
 
 	if o, ok := d.Find("V"); ok {
-		cb.Value = o.(types.Name) == "Yes"
+		cb.Value = o.(types.Name) == "Yes" || o.(types.Name) == "1"
 	}
 
 	return cb, nil
@@ -313,7 +313,7 @@ func extractComboBox(xRefTable *model.XRefTable, page int, d types.Dict, id, nam
 	return cb, nil
 }
 
-func extractDateFormat(xRefTable *model.XRefTable, d types.Dict) (*primitives.DateFormat, error) {
+func extractDateFormat(d types.Dict) (*primitives.DateFormat, error) {
 
 	d1 := d.DictEntry("AA")
 	if len(d1) > 0 {
@@ -338,10 +338,13 @@ func extractDateFormat(xRefTable *model.XRefTable, d types.Dict) (*primitives.Da
 	}
 
 	if o, found := d.Find("DV"); found {
-		sl, _ := o.(types.StringLiteral)
-		s, err := types.StringLiteralToString(sl)
+		sl, err := types.StringOrHexLiteral(o)
 		if err != nil {
 			return nil, err
+		}
+		s := ""
+		if sl != nil {
+			s = *sl
 		}
 		if df, err := primitives.DateFormatForDate(s); err == nil {
 			return df, nil
@@ -349,10 +352,13 @@ func extractDateFormat(xRefTable *model.XRefTable, d types.Dict) (*primitives.Da
 	}
 
 	if o, found := d.Find("V"); found {
-		sl, _ := o.(types.StringLiteral)
-		s, err := types.StringLiteralToString(sl)
+		sl, err := types.StringOrHexLiteral(o)
 		if err != nil {
 			return nil, err
+		}
+		s := ""
+		if sl != nil {
+			s = *sl
 		}
 		if df, err := primitives.DateFormatForDate(s); err == nil {
 			return df, nil
@@ -367,21 +373,25 @@ func extractDateField(page int, d types.Dict, id, name string, df *primitives.Da
 	dfield := &DateField{Pages: []int{page}, ID: id, Name: name, Format: df.Ext, Locked: locked}
 
 	if o, found := d.Find("DV"); found {
-		sl, _ := o.(types.StringLiteral)
-		s, err := types.StringLiteralToString(sl)
+		sl, err := types.StringOrHexLiteral(o)
 		if err != nil {
 			return nil, err
 		}
-		dfield.Default = s
+		dfield.Default = ""
+		if sl != nil {
+			dfield.Default = *sl
+		}
 	}
 
 	if o, found := d.Find("V"); found {
-		sl, _ := o.(types.StringLiteral)
-		s, err := types.StringLiteralToString(sl)
+		sl, err := types.StringOrHexLiteral(o)
 		if err != nil {
 			return nil, err
 		}
-		dfield.Value = s
+		dfield.Value = ""
+		if sl != nil {
+			dfield.Value = *sl
+		}
 	}
 
 	return dfield, nil
@@ -394,21 +404,25 @@ func extractTextField(page int, d types.Dict, id, name string, ff *int, locked b
 	tf := &TextField{Pages: []int{page}, ID: id, Name: name, Multiline: multiLine, Locked: locked}
 
 	if o, found := d.Find("DV"); found {
-		sl, _ := o.(types.StringLiteral)
-		s, err := types.StringLiteralToString(sl)
+		s, err := types.StringOrHexLiteral(o)
 		if err != nil {
 			return nil, err
 		}
-		tf.Default = s
+		tf.Default = ""
+		if s != nil {
+			tf.Default = *s
+		}
 	}
 
 	if o, found := d.Find("V"); found {
-		sl, _ := o.(types.StringLiteral)
-		s, err := types.StringLiteralToString(sl)
+		s, err := types.StringOrHexLiteral(o)
 		if err != nil {
 			return nil, err
 		}
-		tf.Value = s
+		tf.Value = ""
+		if s != nil {
+			tf.Value = *s
+		}
 	}
 
 	return tf, nil
@@ -600,7 +614,6 @@ func exportCh(
 }
 
 func exportTx(
-	xRefTable *model.XRefTable,
 	i int,
 	form *Form,
 	d types.Dict,
@@ -609,7 +622,7 @@ func exportTx(
 	locked bool,
 	ok *bool) error {
 
-	df, err := extractDateFormat(xRefTable, d)
+	df, err := extractDateFormat(d)
 	if err != nil {
 		return err
 	}
@@ -689,7 +702,7 @@ func exportPageFields(xRefTable *model.XRefTable, i int, form *Form, m map[strin
 			}
 
 		case "Tx":
-			if err := exportTx(xRefTable, i, form, d, id, name, ff, locked, ok); err != nil {
+			if err := exportTx(i, form, d, id, name, ff, locked, ok); err != nil {
 				return err
 			}
 		}
