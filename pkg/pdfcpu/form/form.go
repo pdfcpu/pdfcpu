@@ -387,7 +387,7 @@ func collectBtn(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMet
 
 	f.Typ = FTCheckBox
 	if o, found := d.Find("V"); found {
-		if o.(types.Name) == "Yes" || o.(types.Name) == "1" {
+		if o.(types.Name) != "Off" {
 			v := "Yes"
 			if len(v) > fm.valMax {
 				fm.valMax = len(v)

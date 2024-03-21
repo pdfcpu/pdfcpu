@@ -270,11 +270,11 @@ func extractCheckBox(page int, d types.Dict, id, name string, locked bool) (*Che
 	cb := &CheckBox{Pages: []int{page}, ID: id, Name: name, Locked: locked}
 
 	if o, ok := d.Find("DV"); ok {
-		cb.Default = o.(types.Name) == "Yes" || o.(types.Name) == "1"
+		cb.Default = o.(types.Name) != "Off"
 	}
 
 	if o, ok := d.Find("V"); ok {
-		cb.Value = o.(types.Name) == "Yes" || o.(types.Name) == "1"
+		cb.Value = o.(types.Name) != "Off"
 	}
 
 	return cb, nil
