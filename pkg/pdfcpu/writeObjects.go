@@ -673,6 +673,9 @@ func writeObjectGeneric(ctx *model.Context, o types.Object, objNr, genNr int) (e
 	case types.Name:
 		err = writeNameObject(ctx, objNr, genNr, o)
 
+	case *types.LazyObjectStreamObject:
+		err = writeObject(ctx, objNr, genNr, o.PDFString())
+
 	default:
 		err = errors.Errorf("writeIndirectObject: undefined PDF object #%d %T\n", objNr, o)
 	}
@@ -691,7 +694,7 @@ func writeIndirectObject(ctx *model.Context, ir types.IndirectRef) error {
 		return nil
 	}
 
-	o, err := ctx.Dereference(ir)
+	o, err := ctx.DereferenceForWrite(ir)
 	if err != nil {
 		return errors.Wrapf(err, "writeIndirectObject: unable to dereference indirect object #%d", objNr)
 	}

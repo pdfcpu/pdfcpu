@@ -61,7 +61,7 @@ func ProcessRefCounts(xRefTable *XRefTable, o types.Object) {
 	}
 }
 
-func (xRefTable *XRefTable) indRefToObject(ir *types.IndirectRef) (types.Object, error) {
+func (xRefTable *XRefTable) indRefToObject(ir *types.IndirectRef, decodeLazy bool) (types.Object, error) {
 	if ir == nil {
 		return nil, errors.New("pdfcpu: indRefToObject: input argument is nil")
 	}
@@ -76,7 +76,7 @@ func (xRefTable *XRefTable) indRefToObject(ir *types.IndirectRef) (types.Object,
 
 	xRefTable.CurObj = int(ir.ObjectNumber)
 
-	if l, ok := entry.Object.(*types.LazyObjectStreamObject); ok {
+	if l, ok := entry.Object.(*types.LazyObjectStreamObject); ok && decodeLazy {
 		ob, err := l.DecodedObject(context.TODO())
 		if err != nil {
 			return nil, err
@@ -98,7 +98,17 @@ func (xRefTable *XRefTable) Dereference(o types.Object) (types.Object, error) {
 		return o, nil
 	}
 
-	return xRefTable.indRefToObject(&ir)
+	return xRefTable.indRefToObject(&ir, true)
+}
+
+func (xRefTable *XRefTable) DereferenceForWrite(o types.Object) (types.Object, error) {
+	ir, ok := o.(types.IndirectRef)
+	if !ok {
+		// Nothing do dereference.
+		return o, nil
+	}
+
+	return xRefTable.indRefToObject(&ir, false)
 }
 
 // DereferenceBoolean resolves and validates a boolean object, which may be an indirect reference.
