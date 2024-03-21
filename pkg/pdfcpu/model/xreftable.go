@@ -982,7 +982,7 @@ func (xRefTable *XRefTable) Catalog() (types.Dict, error) {
 		return nil, errors.New("pdfcpu: Catalog: missing root dict")
 	}
 
-	o, err := xRefTable.indRefToObject(xRefTable.Root)
+	o, err := xRefTable.indRefToObject(xRefTable.Root, true)
 	if err != nil || o == nil {
 		return nil, err
 	}
@@ -999,7 +999,7 @@ func (xRefTable *XRefTable) Catalog() (types.Dict, error) {
 
 // EncryptDict returns a pointer to the root object / catalog.
 func (xRefTable *XRefTable) EncryptDict() (types.Dict, error) {
-	o, err := xRefTable.indRefToObject(xRefTable.Encrypt)
+	o, err := xRefTable.indRefToObject(xRefTable.Encrypt, true)
 	if err != nil || o == nil {
 		return nil, err
 	}
