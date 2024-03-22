@@ -319,7 +319,7 @@ func validateFormFieldDictEntries(xRefTable *model.XRefTable, d types.Dict, term
 func validateFormFieldParts(xRefTable *model.XRefTable, d types.Dict, inFieldType *types.Name, requiresDA bool) error {
 	// dict represents a terminal field and must have Subtype "Widget"
 	if _, err := validateNameEntry(xRefTable, d, "formFieldDict", "Subtype", REQUIRED, model.V10, func(s string) bool { return s == "Widget" }); err != nil {
-		return err
+		d["Subtype"] = types.Name("Widget")
 	}
 
 	// Validate field dict entries.
