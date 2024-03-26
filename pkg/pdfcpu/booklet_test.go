@@ -22,16 +22,52 @@ import (
 )
 
 type pageOrderResults struct {
-	id                string
-	nup               int
-	pageCount         int
-	expectedPageOrder []int
-	papersize         string
-	bookletType       string
-	binding           string
+	id                 string
+	nup                int
+	pageCount          int
+	expectedPageOrder  []int
+	papersize          string
+	bookletType        string
+	binding            string
+	useSignatures      bool
+	nPagesPerSignature int
 }
 
 var bookletTestCases = []pageOrderResults{
+	{
+		id:        "2up",
+		nup:       2,
+		pageCount: 16,
+		expectedPageOrder: []int{
+			16, 1,
+			15, 2,
+			14, 3,
+			13, 4,
+			12, 5,
+			11, 6,
+			10, 7,
+			9, 8,
+		},
+		papersize:   "A6",
+		bookletType: "booklet",
+		binding:     "long",
+	},
+	{
+		id:        "2up with trailing blank pages",
+		nup:       2,
+		pageCount: 10,
+		expectedPageOrder: []int{
+			0, 1,
+			0, 2,
+			10, 3,
+			9, 4,
+			8, 5,
+			7, 6,
+		},
+		papersize:   "A6",
+		bookletType: "booklet",
+		binding:     "long",
+	},
 	// basic booklet sidefold test cases
 	{
 		id:        "booklet portrait long edge",
@@ -208,26 +244,95 @@ var bookletTestCases = []pageOrderResults{
 		bookletType: "perfectbound",
 		binding:     "long",
 	},
+	// signatures
+	{
+		id:        "signatures 2up",
+		nup:       2,
+		pageCount: 16,
+		expectedPageOrder: []int{
+			12, 1, // signature 1
+			11, 2,
+			10, 3,
+			9, 4,
+			8, 5,
+			7, 6,
+			16, 13, // signature 2, incomplete
+			15, 14,
+		},
+		papersize:          "A6",
+		bookletType:        "booklet",
+		binding:            "long",
+		useSignatures:      true,
+		nPagesPerSignature: 12,
+	},
+	{
+		id:        "signatures 4up",
+		nup:       4,
+		pageCount: 24,
+		expectedPageOrder: []int{
+			16, 1, 3, 14, // signature 1
+			2, 15, 13, 4,
+			12, 5, 7, 10,
+			6, 11, 9, 8,
+			24, 17, 19, 22, // signature 2, incomplete
+			18, 23, 21, 20,
+		},
+		papersize:          "A5",
+		bookletType:        "booklet",
+		binding:            "long",
+		useSignatures:      true,
+		nPagesPerSignature: 16,
+	},
+	{
+		id:        "signatures 2up with trailing blank pages",
+		nup:       2,
+		pageCount: 18,
+		expectedPageOrder: []int{
+			12, 1, // signature 1
+			11, 2,
+			10, 3,
+			9, 4,
+			8, 5,
+			7, 6,
+			0, 13, // signature 2, incomplete, with blanks
+			0, 14,
+			18, 15,
+			17, 16,
+		},
+		papersize:          "A6",
+		bookletType:        "booklet",
+		binding:            "long",
+		useSignatures:      true,
+		nPagesPerSignature: 12,
+	},
 }
 
 func TestBookletPageOrder(t *testing.T) {
 	for _, test := range bookletTestCases {
-		t.Run(test.id, func(t *testing.T) {
-			nup, err := PDFBookletConfig(test.nup, fmt.Sprintf("papersize:%s, btype:%s, binding: %s", test.papersize, test.bookletType, test.binding), nil)
+		t.Run(test.id, func(tt *testing.T) {
+			desc := fmt.Sprintf("papersize:%s, btype:%s, binding: %s", test.papersize, test.bookletType, test.binding)
+			if test.useSignatures {
+				desc += fmt.Sprintf(", multifolio:on, foliosize:%d", test.nPagesPerSignature/4)
+			}
+			nup, err := PDFBookletConfig(test.nup, desc, nil)
 			if err != nil {
-				t.Fatal(err)
+				tt.Fatal(err)
 			}
 			pageNumbers := make(map[int]bool)
 			for i := 0; i < test.pageCount; i++ {
 				pageNumbers[i+1] = true
 			}
-			pageOrder := make([]int, test.pageCount)
-			for i, p := range sortSelectedPagesForBooklet(pageNumbers, nup) {
-				pageOrder[i] = p.number
+			pageOrder := make([]int, len(test.expectedPageOrder))
+			out := GetBookletOrdering(pageNumbers, nup)
+			if len(test.expectedPageOrder) != len(out) {
+				tt.Fatalf("page order output has the wrong length, expected %d but got %d", len(test.expectedPageOrder), len(out))
+			}
+			for i, p := range out {
+				pageOrder[i] = p.Number
 			}
 			for i, expected := range test.expectedPageOrder {
 				if pageOrder[i] != expected {
-					t.Fatal("incorrect page order\nexpected:", arrayToString(test.expectedPageOrder), "\n     got:", arrayToString(pageOrder))
+					tt.Fatal("incorrect page order\nexpected:", arrayToString(test.expectedPageOrder), "\n     got:", arrayToString(pageOrder))
 				}
 			}
 		})

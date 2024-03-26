@@ -679,11 +679,6 @@ n=2: This is the simplest case and the most common for those printing at home.
 Two of your pages fit on one side of a sheet (eg statement on letter, A5 on A4)
 Assemble by printing on both sides (odd pages on the front and even pages on the back) and folding down the middle.
 
-A variant of n=2 is multifolio, a technique to bind your own hardback book.
-This technique makes the most sense when your book has at least 128 pages.
-For example, you can bind your paper in eight sheet folios (also known as signatures), with each folio containing 32 pages of your book.
-For such a multi folio booklet set 'multifolio:on' and play around with 'foliosize' which defaults to 8.
-
 n=4: Four of your pages fit on one side of a sheet (eg statement on ledger, A5 on A3, A6 on A4).
 
 When printing 4-up, your booklet can be bound either along the long-edge (for portrait this is the left side of the paper, for landscape the top)
@@ -711,6 +706,14 @@ Perfect binding is a special type of booklet. The main difference is that the bi
 meaning that the pages are cut along the binding and not folded as in the other forms of booklet.
 This results in a different page ordering on the sheet than the other methods. If you intend to perfect bind your booklet,
 use btype=perfectbound.
+
+There is also an option to use signatures, a bookbinding method useful for books with higher page counts.
+In this method of binding, you arrange your folios (sheets folded in half) in groups of 'foliosize'.
+Each group is called a signature. You then stack the signatures together to form the book.
+For example, you can bind your paper in groups of eight sheets (foliosize=8), so that each signature containing 32 pages of your book.
+For such a multi folio booklet set 'multifolio:on' and 'foliosize', which defaults to 8.
+The last signature may be shorter, e.g. for a booklet of 120 pages with signature size=16 (foliosize=4) will have 7 complete signatures and a final signature of only 8 pages.
+
 
                              portrait landscape
  Possible values for n: 2 ...  1x2       --
