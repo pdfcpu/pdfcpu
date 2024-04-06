@@ -62,7 +62,11 @@ func validateOutlineItemDict(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 
 	// C, optional, array of 3 numbers, since V1.4
-	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "C", OPTIONAL, model.V14, func(a types.Array) bool { return len(a) == 3 })
+	version := model.V14
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		version = model.V13
+	}
+	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "C", OPTIONAL, version, func(a types.Array) bool { return len(a) == 3 })
 	if err != nil {
 		return err
 	}
