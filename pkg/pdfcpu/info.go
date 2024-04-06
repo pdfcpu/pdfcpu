@@ -18,7 +18,6 @@ package pdfcpu
 
 import (
 	"fmt"
-	"sort"
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -471,12 +470,13 @@ func (info *PDFInfo) renderPermissions(ss *[]string) {
 }
 
 func (info *PDFInfo) renderAttachments(ss *[]string) {
-	ss0 := []string{}
-	for _, a := range info.Attachments {
-		ss0 = append(ss0, a.FileName)
+	for i, a := range info.Attachments {
+		if i == 0 {
+			*ss = append(*ss, fmt.Sprintf("%20s: %s", "Attachments", a.FileName))
+			continue
+		}
+		*ss = append(*ss, fmt.Sprintf("%20s  %s", "", a.FileName))
 	}
-	sort.Strings(ss0)
-	*ss = append(*ss, ss0...)
 }
 
 // Info returns info about ctx.

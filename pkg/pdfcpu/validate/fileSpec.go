@@ -351,7 +351,7 @@ func validateFileSpecDict(xRefTable *model.XRefTable, d types.Dict) error {
 	// UF, optional, text string
 	sinceVersion := model.V17
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V14
+		sinceVersion = model.V13
 	}
 	_, err = validateStringEntry(xRefTable, d, dictName, "UF", OPTIONAL, sinceVersion, validateFileSpecString)
 	if err != nil {
