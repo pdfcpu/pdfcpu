@@ -677,7 +677,7 @@ func createPDFRes(ctx, otherCtx *model.Context, pageNrSrc, pageNrDest int, migra
 
 	// Retrieve content stream bytes of page dict.
 	pdfRes.Content, err = otherXRefTable.PageContent(d)
-	if err != nil {
+	if err != nil && err != model.ErrNoContent {
 		return err
 	}
 
