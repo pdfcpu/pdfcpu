@@ -218,8 +218,8 @@ func ExtractPages(rs io.ReadSeeker, outDir, fileName string, selectedPages []str
 
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
-		conf.Cmd = model.EXTRACTPAGES
 	}
+	conf.Cmd = model.EXTRACTPAGES
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
