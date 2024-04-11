@@ -155,6 +155,15 @@ func ReadAndValidate(rs io.ReadSeeker, conf *model.Configuration) (ctx *model.Co
 	return ctx, nil
 }
 
+func cmdAssumingOptimization(cmd model.CommandMode) bool {
+	return cmd == model.OPTIMIZE ||
+		cmd == model.FILLFORMFIELDS ||
+		cmd == model.RESETFORMFIELDS ||
+		cmd == model.LISTIMAGES ||
+		cmd == model.EXTRACTIMAGES ||
+		cmd == model.EXTRACTFONTS
+}
+
 // ReadValidateAndOptimize returns an optimized model.Context of rs ready for processing a specific command.
 // conf.Cmd is expected to be configured properly.
 func ReadValidateAndOptimize(rs io.ReadSeeker, conf *model.Configuration) (ctx *model.Context, err error) {
@@ -167,9 +176,10 @@ func ReadValidateAndOptimize(rs io.ReadSeeker, conf *model.Configuration) (ctx *
 		return nil, err
 	}
 
-	// With the exception of the OPTIMIZE command optimization of the cross reference table is optional but usually recommended.
-	// For large or complex files it may make sense to skip optimization.
-	if conf.Cmd == model.OPTIMIZE || conf.Optimize {
+	// With the exception of commands utilizing structs provided the Optimize step
+	// command optimization of the cross reference table is optional but usually recommended.
+	// For large or complex files it may make sense to skip optimization and set conf.Optimize = false.
+	if cmdAssumingOptimization(conf.Cmd) || conf.Optimize {
 		if err = OptimizeContext(ctx); err != nil {
 			return nil, err
 		}
