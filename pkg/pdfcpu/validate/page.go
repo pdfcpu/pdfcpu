@@ -111,7 +111,7 @@ func validatePageContents(xRefTable *model.XRefTable, d types.Dict) (hasContents
 		}
 
 	default:
-		return false, errors.Errorf("validatePageContents: page content must be stream dict or array")
+		return false, errors.Errorf("validatePageContents: page content must be stream dict or array, got: %T", o)
 	}
 
 	return hasContents, nil

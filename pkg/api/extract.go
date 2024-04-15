@@ -17,6 +17,7 @@
 package api
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -210,6 +211,35 @@ func ExtractFontsFile(inFile, outDir string, selectedPages []string, conf *model
 	return ExtractFonts(f, outDir, filepath.Base(inFile), selectedPages, conf)
 }
 
+// WritePage consumes an io.Reader containing some PDF bytes and writes to outDir/fileName.
+func WritePage(r io.Reader, outDir, fileName string, pageNr int) error {
+	outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, pageNr))
+	logWritingTo(outFile)
+	w, err := os.Create(outFile)
+	if err != nil {
+		return err
+	}
+	if _, err = io.Copy(w, r); err != nil {
+		return err
+	}
+	return w.Close()
+}
+
+// ExtractPage extracts the page with pageNr out of ctx into an io.Reader.
+func ExtractPage(ctx *model.Context, pageNr int) (io.Reader, error) {
+	ctxNew, err := pdfcpu.ExtractPages(ctx, []int{pageNr}, false)
+	if err != nil {
+		return nil, err
+	}
+
+	var b bytes.Buffer
+	if err := WriteContext(ctxNew, &b); err != nil {
+		return nil, err
+	}
+
+	return &b, nil
+}
+
 // ExtractPages generates single page PDF files from rs in outDir for selected pages.
 func ExtractPages(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, conf *model.Configuration) error {
 	if rs == nil {
@@ -244,13 +274,11 @@ func ExtractPages(rs io.ReadSeeker, outDir, fileName string, selectedPages []str
 		if !v {
 			continue
 		}
-		ctxNew, err := pdfcpu.ExtractPage(ctx, i)
+		r, err := ExtractPage(ctx, i)
 		if err != nil {
 			return err
 		}
-		outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, i))
-		logWritingTo(outFile)
-		if err := WriteContextFile(ctxNew, outFile); err != nil {
+		if err := WritePage(r, outDir, fileName, i); err != nil {
 			return err
 		}
 	}

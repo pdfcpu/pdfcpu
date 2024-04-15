@@ -227,7 +227,7 @@ func TestExtractPages(t *testing.T) {
 func TestExtractPagesLowLevel(t *testing.T) {
 	msg := "TestExtractPagesLowLevel"
 	inFile := filepath.Join(inDir, "TheGoProgrammingLanguageCh1.pdf")
-	outFile := filepath.Join(outDir, "MyExtractedAndProcessedSinglePage.pdf")
+	outFile := "MyExtractedAndProcessedSinglePage.pdf"
 
 	// Create a context.
 	ctx, err := api.ReadContextFile(inFile)
@@ -237,17 +237,16 @@ func TestExtractPagesLowLevel(t *testing.T) {
 
 	// Extract page 1.
 	i := 1
-	ctxNew, err := pdfcpu.ExtractPage(ctx, i)
+
+	r, err := api.ExtractPage(ctx, i)
 	if err != nil {
 		t.Fatalf("%s extractPage(%d): %v\n", msg, i, err)
 	}
 
-	// Here you can process this single page PDF context.
-
-	// Write context to file.
-	if err := api.WriteContextFile(ctxNew, outFile); err != nil {
-		t.Fatalf("%s write: %v\n", msg, err)
+	if err := api.WritePage(r, outDir, outFile, i); err != nil {
+		t.Fatalf("%s writePage(%d): %v\n", msg, i, err)
 	}
+
 }
 
 func TestExtractContent(t *testing.T) {
