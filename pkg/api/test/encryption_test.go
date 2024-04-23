@@ -189,6 +189,22 @@ func TestEncryption(t *testing.T) {
 	}
 }
 
+func TestPDF20Encryption(t *testing.T) {
+	// PDF 2.0 encryption assumes aes/256.
+	for _, fileName := range []string{
+		"i277.pdf",
+		"imageWithBPC.pdf",
+		"pageLevelOutputIntent.pdf",
+		"SimplePDF2.0.pdf",
+		"utf8stringAndAnnotation.pdf",
+		"utf8test.pdf",
+		"viaIncrementalSave.pdf",
+		"withOffsetStart.pdf",
+	} {
+		testEncryption(t, filepath.Join("pdf20", fileName), "aes", 256)
+	}
+}
+
 func TestSetPermissions(t *testing.T) {
 	msg := "TestSetPermissions"
 	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")

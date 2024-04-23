@@ -909,10 +909,11 @@ func setupEncryption(ctx *model.Context) error {
 	var err error
 
 	if ok := validateAlgorithm(ctx); !ok {
-		return errors.New("pdfcpu: unsupported encryption algorithm")
+		return errors.New("pdfcpu: unsupported encryption algorithm (PDF 2.0 assumes AES/256)")
 	}
 
 	d := newEncryptDict(
+		ctx.Version(),
 		ctx.EncryptUsingAES,
 		ctx.EncryptKeyLength,
 		int16(ctx.Permissions),
@@ -980,12 +981,13 @@ func updateEncryption(ctx *model.Context) error {
 		ctx.OwnerPW = *ctx.OwnerPWNew
 	}
 
-	if ctx.E.R == 5 {
+	if ctx.E.R == 5 || ctx.E.R == 6 {
 
 		if err = calcOAndU(ctx, d); err != nil {
 			return err
 		}
 
+		// Calc Perms for rev 5, 6.
 		return writePermissions(ctx, d)
 	}
 
@@ -1008,16 +1010,6 @@ func updateEncryption(ctx *model.Context) error {
 }
 
 func handleEncryption(ctx *model.Context) error {
-
-	if ctx.Version() == model.V20 {
-		if ctx.Cmd == model.ENCRYPT ||
-			ctx.Cmd == model.DECRYPT ||
-			ctx.Cmd == model.CHANGEUPW ||
-			ctx.Cmd == model.CHANGEOPW ||
-			ctx.Cmd == model.SETPERMISSIONS {
-			return ErrUnsupportedVersion
-		}
-	}
 
 	if ctx.Cmd == model.ENCRYPT || ctx.Cmd == model.DECRYPT {
 

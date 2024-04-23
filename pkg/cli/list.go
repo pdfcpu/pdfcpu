@@ -446,10 +446,6 @@ func listPermissions(rs io.ReadSeeker, conf *model.Configuration) ([]string, err
 		return nil, err
 	}
 
-	if ctx.Version() == model.V20 {
-		return nil, pdfcpu.ErrUnsupportedVersion
-	}
-
 	return pdfcpu.Permissions(ctx), nil
 }
 

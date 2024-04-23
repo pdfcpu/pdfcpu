@@ -306,7 +306,9 @@ content ... extract raw page content
        key ... key length in bits (default=256)
       perm ... user access permissions
     inFile ... input PDF file
-   outFile ... output PDF file`
+   outFile ... output PDF file
+   
+   PDF 2.0 files have to be encrypted using aes/256.`
 
 	usageDecrypt     = "usage: pdfcpu decrypt [-upw userpw] [-opw ownerpw] inFile [outFile]" + generalFlags
 	usageLongDecrypt = `Remove password protection and reset permissions.

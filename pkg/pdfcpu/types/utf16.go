@@ -152,6 +152,14 @@ func HexLiteralToString(hl HexLiteral) (string, error) {
 	if IsUTF16BE(bb) {
 		return decodeUTF16String(bb)
 	}
+
+	bb, err = Unescape(string(bb))
+	if err != nil {
+		return "", err
+	}
+
+	bb = bytes.TrimPrefix(bb, []byte{239, 187, 191})
+
 	return string(bb), nil
 }
 
