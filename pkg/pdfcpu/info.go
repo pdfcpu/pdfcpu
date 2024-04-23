@@ -510,6 +510,7 @@ func Info(ctx *model.Context, fileName string, selectedPages types.IntSet) (*PDF
 	info.PageDimensions = m
 
 	info.Title = ctx.Title
+	info.Author = ctx.Author
 	info.Subject = ctx.Subject
 	info.Producer = ctx.Producer
 	info.Creator = ctx.Creator
