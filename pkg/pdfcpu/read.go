@@ -162,6 +162,10 @@ func offsetLastXRefSection(ctx *model.Context, skip int64) (*int64, error) {
 		offset           int64
 	)
 
+	if ctx.Read.FileSize < bufSize {
+		bufSize = ctx.Read.FileSize
+	}
+
 	for i := 1; offset == 0; i++ {
 
 		off, err := rs.Seek(-int64(i)*bufSize-skip, io.SeekEnd)
