@@ -6,7 +6,8 @@ layout: default
 
 | Date      | Tag / Commit                                                                                | Description  
 |:----------|:--------------------------------------------------------------------------------------------|:------------------------------
-|2024-04-25 | [v0.8.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.8.0)                              | ?
+|2024-04-25 | [v0.8.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.8.0)                              | PDF 2.0 encryption, parser speedup
+|           |                                                                                             | ...
 |2024-03-04 | [v0.7.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.7.0)                              | Add zoom command, basic PDF 2.0
 |           |                                                                                             | updating, Fix #628, #724, #756, 
 |           |                                                                                             | #758-#760, #765-#766, #769-#774,  

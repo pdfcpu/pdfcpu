@@ -15,7 +15,7 @@ You can look up its location either like so:
 ```
 $ pdfcpu version
 pdfcpu: v0.8.0 dev
-commit: 5fd675dc (2024-04-25T19:21:23Z)
+commit: 38b29927 (2024-04-24T21:08:47Z)
 base  : go1.22.0
 config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 ```
@@ -26,7 +26,7 @@ or you can do the following which will print out both the config file path and i
 $ pdfcpu config
 #############################
 # pdfcpu v0.8.0 dev         #
-# Created: 2024-04-25 20:33 #
+# Created: 2024-04-25 00:16 #
 #############################
 #   Default configuration   #
 #############################
@@ -43,7 +43,7 @@ decodeAllStreams: false
 # ValidationRelaxed,
 validationMode: ValidationRelaxed
 
-# validate cross reference table right before writing
+# validate cross reference table right before writing.
 postProcessValidate: true
 
 # eol for writing:
@@ -87,10 +87,10 @@ optimize: true
 # optimize page resources via content stream analysis.
 optimizeResourceDicts: true
 
-# optimize duplicate content streams across pages
+# optimize duplicate content streams across pages.
 optimizeDuplicateContentStreams: false
 
-# merge creates bookmarks
+# merge creates bookmarks.
 createBookmarks: true
 
 # Viewer is expected to supply appearance streams for form fields.
