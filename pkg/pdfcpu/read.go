@@ -2130,7 +2130,7 @@ func dereferencedObject(c context.Context, ctx *model.Context, objNr int) (types
 		}
 
 		entry.Object = o
-	} else if l, ok := entry.Object.(*types.LazyObjectStreamObject); ok {
+	} else if l, ok := entry.Object.(types.LazyObjectStreamObject); ok {
 		o, err := l.DecodedObject(c)
 		if err != nil {
 			return nil, errors.Wrapf(err, "dereferencedObject: problem dereferencing object %d", objNr)
