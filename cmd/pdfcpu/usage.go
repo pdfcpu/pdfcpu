@@ -534,7 +534,7 @@ description ... dimensions, format, position, offset, scale factor, boxes
 
   optional entries:
 
-      (defaults: "d:595 842, f:A4, pos:full, off:0 0, sc:0.5 rel, dpi:72, gray:off, sepia:off")
+      (defaults: "dim:595 842, f:A4, pos:full, off:0 0, sc:0.5 rel, dpi:72, gray:off, sepia:off")
 
   dimensions:      (width height) in given display unit eg. '400 200' setting the media box
 
@@ -567,11 +567,10 @@ description ... dimensions, format, position, offset, scale factor, boxes
   
   All configuration string parameters support completion.
 
-  e.g. "f:A5, pos:c"                              ... render the image centered on A5 with relative scaling 0.5.'
-       "d:300 600, pos:bl, off:20 20, sc:1.0 abs" ... render the image anchored to bottom left corner with offset 20,20 and abs. scaling 1.0.
-       "pos:full"                                 ... render the image to a page with corresponding dimensions.
-       "f:A4, pos:c, dpi:300"                     ... render the image centered on A4 respecting a destination resolution of 300 dpi.
-       `
+  e.g. "f:A5, pos:c"                                ... render the image centered on A5 with relative scaling 0.5.'
+       "dim:300 600, pos:bl, off:20 20, sc:1.0 abs" ... render the image anchored to bottom left corner with offset 20,20 and abs. scaling 1.0.
+       "pos:full"                                   ... render the image to a page with corresponding dimensions.
+       "f:A4, pos:c, dpi:300"                       ... render the image centered on A4 respecting a destination resolution of 300 dpi.`
 
 	usagePagesInsert = "pdfcpu pages insert [-p(ages) selectedPages] [-m(ode) before|after] inFile [outFile]"
 	usagePagesRemove = "pdfcpu pages remove  -p(ages) selectedPages  inFile [outFile]"
