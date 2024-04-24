@@ -659,7 +659,7 @@ func parseXRefStream(c context.Context, ctx *model.Context, rd io.Reader, offset
 		log.Read.Printf("parseXRefStream: begin at offset %d\n", *offset)
 	}
 
-	buf, endInd, streamInd, streamOffset, err := buffer(rd)
+	buf, endInd, streamInd, streamOffset, err := buffer(c, rd)
 	if err != nil {
 		return nil, err
 	}
@@ -1715,7 +1715,7 @@ func lastStreamMarker(streamInd *int, endInd int, line string) {
 }
 
 // Provide a PDF file buffer of sufficient size for parsing an object w/o stream.
-func buffer(rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffset int64, err error) {
+func buffer(c context.Context, rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffset int64, err error) {
 	// process: # gen obj ... obj dict ... {stream ... data ... endstream} ... endobj
 	//                                    streamInd                            endInd
 	//                                  -1 if absent                        -1 if absent
@@ -1725,6 +1725,9 @@ func buffer(rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffset i
 	endInd, streamInd = -1, -1
 
 	for endInd < 0 && streamInd < 0 {
+		if err := c.Err(); err != nil {
+			return nil, 0, 0, 0, err
+		}
 
 		if buf, err = growBufBy(buf, defaultBufSize, rd); err != nil {
 			return nil, 0, 0, 0, err
@@ -1977,7 +1980,7 @@ func object(c context.Context, ctx *model.Context, offset int64, objNr, genNr in
 	//                                    streamInd                        endInd
 	//                                  -1 if absent                    -1 if absent
 	var buf []byte
-	if buf, endInd, streamInd, streamOffset, err = buffer(rd); err != nil {
+	if buf, endInd, streamInd, streamOffset, err = buffer(c, rd); err != nil {
 		return nil, 0, 0, 0, err
 	}
 
