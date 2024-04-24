@@ -157,7 +157,7 @@ $ pdfcpu import -- "form:A5L, pos:r, off:-20 0" photo.pdf photo.jpg
 Import `photo.jpg` into a 500 x 500 single page PDF anchoring the image to the top left corner using a relative scaling of 0.3:
 
 ```sh
-$ pdfcpu import -- "d:500 500, pos:tl, sc:0.3 rel" photo.pdf photo.jpg
+$ pdfcpu import -- "dim:500 500, pos:tl, sc:0.3 rel" photo.pdf photo.jpg
 ```
 
 <p align="center">
@@ -169,7 +169,7 @@ $ pdfcpu import -- "d:500 500, pos:tl, sc:0.3 rel" photo.pdf photo.jpg
 Import `photo.jpg` into a 500 x 500 single page PDF anchoring the image to the top left corner using a relative scaling of 1:
 
 ```sh
-$ pdfcpu import -- "d:500 500, pos:tl, sc:1" photo.pdf photo.jpg
+$ pdfcpu import -- "dim:500 500, pos:tl, sc:1" photo.pdf photo.jpg
 ```
 
 <p align="center">

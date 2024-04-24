@@ -14,8 +14,8 @@ You can look up its location either like so:
 
 ```
 $ pdfcpu version
-pdfcpu: v0.7.0 dev
-commit: 5fd675dc (2024-03-04T19:21:23Z)
+pdfcpu: v0.8.0 dev
+commit: 5fd675dc (2024-04-25T19:21:23Z)
 base  : go1.22.0
 config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 ```
@@ -25,8 +25,8 @@ or you can do the following which will print out both the config file path and i
 ```
 $ pdfcpu config
 #############################
-# pdfcpu v0.7.0 dev         #
-# Created: 2024-03-04 20:33 #
+# pdfcpu v0.8.0 dev         #
+# Created: 2024-04-25 20:33 #
 #############################
 #   Default configuration   #
 #############################
@@ -80,6 +80,12 @@ timestampFormat: 2006-01-02 15:04
 
 # date format: yyyy-mm-dd
 dateFormat: 2006-01-02
+
+# toggle optimization
+optimize: true
+
+# optimize page resources via content stream analysis.
+optimizeResourceDicts: true
 
 # optimize duplicate content streams across pages
 optimizeDuplicateContentStreams: false
