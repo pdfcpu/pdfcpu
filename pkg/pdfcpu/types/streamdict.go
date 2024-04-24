@@ -116,7 +116,7 @@ type LazyObjectStreamObject struct {
 }
 
 func NewLazyObjectStreamObject(osd *ObjectStreamDict, startOffset, endOffset int, decodeFunc DecodeLazyObjectStreamObjectFunc) Object {
-	return &LazyObjectStreamObject{
+	return LazyObjectStreamObject{
 		osd:         osd,
 		startOffset: startOffset,
 		endOffset:   endOffset,
@@ -125,8 +125,8 @@ func NewLazyObjectStreamObject(osd *ObjectStreamDict, startOffset, endOffset int
 	}
 }
 
-func (l *LazyObjectStreamObject) Clone() Object {
-	return &LazyObjectStreamObject{
+func (l LazyObjectStreamObject) Clone() Object {
+	return LazyObjectStreamObject{
 		osd:         l.osd,
 		startOffset: l.startOffset,
 		endOffset:   l.endOffset,
@@ -137,8 +137,8 @@ func (l *LazyObjectStreamObject) Clone() Object {
 	}
 }
 
-func (l *LazyObjectStreamObject) PDFString() string {
-	data, err := l.getData()
+func (l LazyObjectStreamObject) PDFString() string {
+	data, err := l.GetData()
 	if err != nil {
 		panic(err)
 	}
@@ -146,11 +146,11 @@ func (l *LazyObjectStreamObject) PDFString() string {
 	return string(data)
 }
 
-func (l *LazyObjectStreamObject) String() string {
+func (l LazyObjectStreamObject) String() string {
 	return l.PDFString()
 }
 
-func (l *LazyObjectStreamObject) getData() ([]byte, error) {
+func (l *LazyObjectStreamObject) GetData() ([]byte, error) {
 	if err := l.osd.Decode(); err != nil {
 		return nil, err
 	}
@@ -166,7 +166,7 @@ func (l *LazyObjectStreamObject) getData() ([]byte, error) {
 
 func (l *LazyObjectStreamObject) DecodedObject(c context.Context) (Object, error) {
 	if l.decodedObject == nil && l.decodedError == nil {
-		data, err := l.getData()
+		data, err := l.GetData()
 		if err != nil {
 			return nil, err
 		}

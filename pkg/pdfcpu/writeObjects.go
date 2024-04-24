@@ -643,6 +643,15 @@ func writeDeepArray(ctx *model.Context, a types.Array, objNr, genNr int) error {
 	return nil
 }
 
+func writeLazyObjectStreamObject(ctx *model.Context, objNr, genNr int, o types.LazyObjectStreamObject) error {
+	data, err := o.GetData()
+	if err != nil {
+		return err
+	}
+
+	return writeObject(ctx, objNr, genNr, string(data))
+}
+
 func writeObjectGeneric(ctx *model.Context, o types.Object, objNr, genNr int) (err error) {
 	switch o := o.(type) {
 
@@ -673,8 +682,8 @@ func writeObjectGeneric(ctx *model.Context, o types.Object, objNr, genNr int) (e
 	case types.Name:
 		err = writeNameObject(ctx, objNr, genNr, o)
 
-	case *types.LazyObjectStreamObject:
-		err = writeObject(ctx, objNr, genNr, o.PDFString())
+	case types.LazyObjectStreamObject:
+		err = writeLazyObjectStreamObject(ctx, objNr, genNr, o)
 
 	default:
 		err = errors.Errorf("writeIndirectObject: undefined PDF object #%d %T\n", objNr, o)

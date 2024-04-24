@@ -76,7 +76,7 @@ func (xRefTable *XRefTable) indRefToObject(ir *types.IndirectRef, decodeLazy boo
 
 	xRefTable.CurObj = int(ir.ObjectNumber)
 
-	if l, ok := entry.Object.(*types.LazyObjectStreamObject); ok && decodeLazy {
+	if l, ok := entry.Object.(types.LazyObjectStreamObject); ok && decodeLazy {
 		ob, err := l.DecodedObject(context.TODO())
 		if err != nil {
 			return nil, err
