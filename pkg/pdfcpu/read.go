@@ -39,9 +39,11 @@ const (
 )
 
 var (
-	ErrWrongPassword       = errors.New("pdfcpu: please provide the correct password")
-	ErrCorruptHeader       = errors.New("pdfcpu: no header version available")
-	zero             int64 = 0
+	ErrWrongPassword         = errors.New("pdfcpu: please provide the correct password")
+	ErrCorruptHeader         = errors.New("pdfcpu: no header version available")
+	ErrReferenceDoesNotExist = errors.New("pdfcpu: referenced object does not exist")
+
+	zero int64 = 0
 )
 
 // ReadFile reads in a PDF file and builds an internal structure holding its cross reference table aka the PDF model context.
@@ -2124,6 +2126,10 @@ func dereferencedObject(c context.Context, ctx *model.Context, objNr int) (types
 			log.Read.Printf("dereferencedObject: dereferencing object %d\n", objNr)
 		}
 
+		if entry.Free {
+			return nil, ErrReferenceDoesNotExist
+		}
+
 		o, err := ParseObjectWithContext(c, ctx, *entry.Offset, objNr, *entry.Generation)
 		if err != nil {
 			return nil, errors.Wrapf(err, "dereferencedObject: problem dereferencing object %d", objNr)
@@ -2294,7 +2300,9 @@ func loadEncodedStreamContent(c context.Context, ctx *model.Context, sd *types.S
 			return errors.New("pdfcpu: loadEncodedStreamContent: missing streamLength")
 		}
 		if sd.StreamLength, err = int64Object(c, ctx, *sd.StreamLengthObjNr); err != nil {
-			return err
+			if err != ErrReferenceDoesNotExist {
+				return err
+			}
 		}
 		if log.ReadEnabled() {
 			log.Read.Printf("loadEncodedStreamContent: new indirect streamLength:%d\n", *sd.StreamLength)
@@ -2317,7 +2325,7 @@ func loadEncodedStreamContent(c context.Context, ctx *model.Context, sd *types.S
 	}
 
 	l := int64(len(rawContent))
-	if fixLength || l != *sd.StreamLength {
+	if fixLength || sd.StreamLength == nil || l != *sd.StreamLength {
 		sd.StreamLength = &l
 		sd.Dict["Length"] = types.Integer(l)
 	}
