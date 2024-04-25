@@ -1910,7 +1910,7 @@ func pdfFilterPipeline(c context.Context, ctx *model.Context, dict types.Dict) (
 	decodeParms, found := dict.Find("DecodeParms")
 	if found {
 		decodeParmsArr, ok = decodeParms.(types.Array)
-		if !ok || len(decodeParmsArr) != len(filterArray) {
+		if ok && len(decodeParmsArr) != len(filterArray) {
 			return nil, errors.New("pdfcpu: pdfFilterPipeline: expected decodeParms array corrupt")
 		}
 	}

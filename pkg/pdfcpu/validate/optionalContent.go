@@ -420,12 +420,11 @@ func validateOCProperties(xRefTable *model.XRefTable, rootDict types.Dict, requi
 
 	// "D" required dict, default viewing optional content configuration dict.
 	d1, err := validateDictEntry(xRefTable, d, dictName, "D", REQUIRED, sinceVersion, nil)
-	if err != nil {
-		return err
-	}
-	err = validateOptionalContentConfigurationDict(xRefTable, d1, sinceVersion)
-	if err != nil {
-		return err
+	if err == nil  {
+		err = validateOptionalContentConfigurationDict(xRefTable, d1, sinceVersion)
+		if err != nil {
+			return err
+		}
 	}
 
 	// "Configs" optional array of alternate optional content configuration dicts.
