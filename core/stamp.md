@@ -77,7 +77,7 @@ Use the following format strings:
 * %P ... total pages
          
 ```
-$ pdfcpu stamp add -mode text "Page %p of %P" -- "scale:1.0 abs, pos:bc, rot:0" in.pdf out.pdf
+$ pdfcpu stamp add -mode text -- "Page %p of %P" "scale:1.0 abs, pos:bc, rot:0" in.pdf out.pdf
 ```
 
 <br>
