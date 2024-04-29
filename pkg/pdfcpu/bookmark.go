@@ -94,30 +94,12 @@ func (bm Bookmark) Style() int {
 	return i
 }
 
-func positionToFirstBookmark(ctx *model.Context) (types.Dict, *types.IndirectRef, error) {
-
-	// Position to first bookmark on top most level with more than 1 bookmarks.
-	// Default to top most single bookmark level.
-
+func positionToFirstBookmark(ctx *model.Context) (*types.IndirectRef, error) {
 	d := ctx.Outlines
 	if d == nil {
-		return nil, nil, errNoBookmarks
+		return nil, errNoBookmarks
 	}
-
-	first := d.IndirectRefEntry("First")
-	last := d.IndirectRefEntry("Last")
-
-	var err error
-
-	for first != nil && last != nil && *first == *last {
-		if d, err = ctx.DereferenceDict(*first); err != nil {
-			return nil, nil, err
-		}
-		first = d.IndirectRefEntry("First")
-		last = d.IndirectRefEntry("Last")
-	}
-
-	return d, first, nil
+	return d.IndirectRefEntry("First"), nil
 }
 
 func outlineItemTitle(s string) string {
@@ -277,7 +259,7 @@ func Bookmarks(ctx *model.Context) ([]Bookmark, error) {
 		return nil, err
 	}
 
-	_, first, err := positionToFirstBookmark(ctx)
+	first, err := positionToFirstBookmark(ctx)
 	if err != nil {
 		if err != errNoBookmarks {
 			return nil, err
@@ -531,7 +513,7 @@ func removeNamedDests(ctx *model.Context, item *types.IndirectRef) error {
 
 // RemoveBookmarks erases all outlines from ctx.
 func RemoveBookmarks(ctx *model.Context) (bool, error) {
-	_, first, err := positionToFirstBookmark(ctx)
+	first, err := positionToFirstBookmark(ctx)
 	if err != nil {
 		if err != errNoBookmarks {
 			return false, err
