@@ -381,7 +381,7 @@ func collectBtn(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMet
 		f.Dv = dv
 	}
 
-	if len(d.ArrayEntry("Kids")) > 0 {
+	if len(d.ArrayEntry("Kids")) > 1 {
 		return collectRadioButtonGroup(xRefTable, d, f, fm)
 	}
 

@@ -485,14 +485,12 @@ func (df *DateField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 
 // RefreshN updates the normal appearance referred to by indRef according to df.
 func (df *DateField) RefreshN(xRefTable *model.XRefTable, indRef *types.IndirectRef) error {
-
-	entry, _ := xRefTable.FindTableEntryForIndRef(indRef)
-
 	bb, err := df.renderN(xRefTable)
 	if err != nil {
 		return err
 	}
 
+	entry, _ := xRefTable.FindTableEntryForIndRef(indRef)
 	sd, _ := entry.Object.(types.StreamDict)
 
 	sd.Content = bb
@@ -936,7 +934,6 @@ func refreshDateFieldAP(ctx *model.Context, d types.Dict, v string, fonts map[st
 }
 
 func EnsureDateFieldAP(ctx *model.Context, d types.Dict, v string, fonts map[string]types.IndirectRef) error {
-
 	apd := d.DictEntry("AP")
 	if apd == nil {
 		return renderDateFieldAP(ctx, d, v, fonts)

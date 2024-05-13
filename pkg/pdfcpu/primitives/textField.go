@@ -381,6 +381,35 @@ func (tf *TextField) renderBackground(w io.Writer, bgCol, boCol *color.SimpleCol
 	}
 }
 
+func (tf *TextField) renderLines(xRefTable *model.XRefTable, boWidth, lh, w, y float64, lines []string, buf io.Writer) {
+	f := tf.Font
+	cjk := pdffont.CJK(f.Script, f.Lang)
+	for i := 0; i < len(lines); i++ {
+		s := lines[i]
+		lineBB := model.CalcBoundingBox(s, 0, 0, f.Name, f.Size)
+		s = model.PrepBytes(xRefTable, s, f.Name, !cjk, f.RTL())
+		x := 2 * boWidth
+		if x == 0 {
+			x = 2
+		}
+		switch tf.HorAlign {
+		case types.AlignCenter:
+			x = w/2 - lineBB.Width()/2
+		case types.AlignRight:
+			x = w - lineBB.Width() - 2
+		}
+		fmt.Fprint(buf, "BT ")
+		if i == 0 {
+			fmt.Fprintf(buf, "/%s %d Tf %.2f %.2f %.2f RG %.2f %.2f %.2f rg ",
+				tf.fontID, f.Size,
+				f.col.R, f.col.G, f.col.B,
+				f.col.R, f.col.G, f.col.B)
+		}
+		fmt.Fprintf(buf, "%.2f %.2f Td (%s) Tj ET ", x, y, s)
+		y -= lh
+	}
+}
+
 func (tf *TextField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	w, h := tf.BoundingBox.Width(), tf.BoundingBox.Height()
 	bgCol := tf.BgCol
@@ -417,32 +446,33 @@ func (tf *TextField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 		fmt.Fprintf(buf, "q 1 1 %.1f %.1f re W n ", w-2, h-2)
 	}
 
-	cjk := pdffont.CJK(f.Script, f.Lang)
+	tf.renderLines(xRefTable, boWidth, lh, w, y, lines, buf)
+	//cjk := pdffont.CJK(f.Script, f.Lang)
 
-	for i := 0; i < len(lines); i++ {
-		s := lines[i]
-		lineBB := model.CalcBoundingBox(s, 0, 0, f.Name, f.Size)
-		s = model.PrepBytes(xRefTable, s, f.Name, !cjk, f.RTL())
-		x := 2 * boWidth
-		if x == 0 {
-			x = 2
-		}
-		switch tf.HorAlign {
-		case types.AlignCenter:
-			x = w/2 - lineBB.Width()/2
-		case types.AlignRight:
-			x = w - lineBB.Width() - 2
-		}
-		fmt.Fprint(buf, "BT ")
-		if i == 0 {
-			fmt.Fprintf(buf, "/%s %d Tf %.2f %.2f %.2f RG %.2f %.2f %.2f rg ",
-				tf.fontID, f.Size,
-				f.col.R, f.col.G, f.col.B,
-				f.col.R, f.col.G, f.col.B)
-		}
-		fmt.Fprintf(buf, "%.2f %.2f Td (%s) Tj ET ", x, y, s)
-		y -= lh
-	}
+	// for i := 0; i < len(lines); i++ {
+	// 	s := lines[i]
+	// 	lineBB := model.CalcBoundingBox(s, 0, 0, f.Name, f.Size)
+	// 	s = model.PrepBytes(xRefTable, s, f.Name, !cjk, f.RTL())
+	// 	x := 2 * boWidth
+	// 	if x == 0 {
+	// 		x = 2
+	// 	}
+	// 	switch tf.HorAlign {
+	// 	case types.AlignCenter:
+	// 		x = w/2 - lineBB.Width()/2
+	// 	case types.AlignRight:
+	// 		x = w - lineBB.Width() - 2
+	// 	}
+	// 	fmt.Fprint(buf, "BT ")
+	// 	if i == 0 {
+	// 		fmt.Fprintf(buf, "/%s %d Tf %.2f %.2f %.2f RG %.2f %.2f %.2f rg ",
+	// 			tf.fontID, f.Size,
+	// 			f.col.R, f.col.G, f.col.B,
+	// 			f.col.R, f.col.G, f.col.B)
+	// 	}
+	// 	fmt.Fprintf(buf, "%.2f %.2f Td (%s) Tj ET ", x, y, s)
+	// 	y -= lh
+	// }
 
 	if len(lines) > 0 {
 		fmt.Fprint(buf, "Q ")

@@ -1376,6 +1376,19 @@ func showRep() {
 	}
 }
 
+func processObject(c context.Context, ctx *model.Context, line string, offset *int64) (*bufio.Scanner, error) {
+	if err := parseAndLoad(c, ctx, line, offset); err != nil {
+		return nil, err
+	}
+	rd, err := newPositionedReader(ctx.Read.RS, offset)
+	if err != nil {
+		return nil, err
+	}
+	s := bufio.NewScanner(rd)
+	s.Split(scan.Lines)
+	return s, nil
+}
+
 // bypassXrefSection is a fix for digesting corrupt xref sections.
 // It populates the xRefTable by reading in all indirect objects line by line
 // and works on the assumption of a single xref section - meaning no incremental updates.
@@ -1445,15 +1458,10 @@ func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64, wa
 		i = strings.Index(line, "obj")
 		if i >= 0 {
 			if i > 2 && strings.Index(line, "endobj") != i-3 {
-				if err := parseAndLoad(c, ctx, line, &offset); err != nil {
-					return err
-				}
-				rd, err = newPositionedReader(ctx.Read.RS, &offset)
+				s, err = processObject(c, ctx, line, &offset)
 				if err != nil {
 					return err
 				}
-				s = bufio.NewScanner(rd)
-				s.Split(scan.Lines)
 				continue
 			}
 		}

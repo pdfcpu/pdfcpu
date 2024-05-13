@@ -528,6 +528,50 @@ func validateFormEntryDR(xRefTable *model.XRefTable, d types.Dict) error {
 	return err
 }
 
+func validateFormEntries(xRefTable *model.XRefTable, d types.Dict, dictName string, requiresDA bool, sinceVersion model.Version) error {
+	// NeedAppearances: optional, boolean
+	_, err := validateBooleanEntry(xRefTable, d, dictName, "NeedAppearances", OPTIONAL, model.V10, nil)
+	if err != nil {
+		return err
+	}
+
+	// SigFlags: optional, since 1.3, integer
+	sinceV := model.V13
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceV = model.V12
+	}
+	sf, err := validateIntegerEntry(xRefTable, d, dictName, "SigFlags", OPTIONAL, sinceV, nil)
+	if err != nil {
+		return err
+	}
+	if sf != nil {
+		i := sf.Value()
+		xRefTable.SignatureExist = i&1 > 0
+		xRefTable.AppendOnly = i&2 > 0
+	}
+
+	// CO: arra
+	err = validateFormEntryCO(xRefTable, d, model.V13, requiresDA)
+	if err != nil {
+		return err
+	}
+
+	// DR, optional, resource dict
+	err = validateFormEntryDR(xRefTable, d)
+	if err != nil {
+		return err
+	}
+
+	// Q: optional, integer
+	_, err = validateIntegerEntry(xRefTable, d, dictName, "Q", OPTIONAL, model.V10, validateQ)
+	if err != nil {
+		return err
+	}
+
+	// XFA: optional, since 1.5, stream or array
+	return validateFormXFA(xRefTable, d, sinceVersion)
+}
+
 func validateForm(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
 
 	// => 12.7.2 Interactive Form Dictionary
@@ -575,45 +619,5 @@ func validateForm(xRefTable *model.XRefTable, rootDict types.Dict, required bool
 		return err
 	}
 
-	// NeedAppearances: optional, boolean
-	_, err = validateBooleanEntry(xRefTable, d, dictName, "NeedAppearances", OPTIONAL, model.V10, nil)
-	if err != nil {
-		return err
-	}
-
-	// SigFlags: optional, since 1.3, integer
-	sinceV := model.V13
-	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceV = model.V12
-	}
-	sf, err := validateIntegerEntry(xRefTable, d, dictName, "SigFlags", OPTIONAL, sinceV, nil)
-	if err != nil {
-		return err
-	}
-	if sf != nil {
-		i := sf.Value()
-		xRefTable.SignatureExist = i&1 > 0
-		xRefTable.AppendOnly = i&2 > 0
-	}
-
-	// CO: arra
-	err = validateFormEntryCO(xRefTable, d, model.V13, requiresDA)
-	if err != nil {
-		return err
-	}
-
-	// DR, optional, resource dict
-	err = validateFormEntryDR(xRefTable, d)
-	if err != nil {
-		return err
-	}
-
-	// Q: optional, integer
-	_, err = validateIntegerEntry(xRefTable, d, dictName, "Q", OPTIONAL, model.V10, validateQ)
-	if err != nil {
-		return err
-	}
-
-	// XFA: optional, since 1.5, stream or array
-	return validateFormXFA(xRefTable, d, sinceVersion)
+	return validateFormEntries(xRefTable, d, dictName, requiresDA, sinceVersion)
 }

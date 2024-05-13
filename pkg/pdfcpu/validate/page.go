@@ -954,6 +954,17 @@ func pagesDictKids(xRefTable *model.XRefTable, d types.Dict) types.Array {
 	return kids
 }
 
+func validateParent(pageNodeDict types.Dict, objNr int) error {
+	parentIndRef := pageNodeDict.IndirectRefEntry("Parent")
+	if parentIndRef == nil {
+		return errors.New("pdfcpu: validatePagesDict: missing parent node")
+	}
+	if parentIndRef.ObjectNumber.Value() != objNr {
+		return errors.New("pdfcpu: validatePagesDict: corrupt parent node")
+	}
+	return nil
+}
+
 func processPagesKids(xRefTable *model.XRefTable, kids types.Array, objNr int, hasResources, hasMediaBox bool, curPage *int) (types.Array, error) {
 	var a types.Array
 
@@ -987,12 +998,8 @@ func processPagesKids(xRefTable *model.XRefTable, kids types.Array, objNr int, h
 			return nil, errors.New("pdfcpu: validatePagesDict: corrupt page node")
 		}
 
-		parentIndRef := pageNodeDict.IndirectRefEntry("Parent")
-		if parentIndRef == nil {
-			return nil, errors.New("pdfcpu: validatePagesDict: missing parent node")
-		}
-		if parentIndRef.ObjectNumber.Value() != objNr {
-			return nil, errors.New("pdfcpu: validatePagesDict: corrupt parent node")
+		if err := validateParent(pageNodeDict, objNr); err != nil {
+			return nil, err
 		}
 
 		dictType, err := dictTypeForPageNodeDict(pageNodeDict)

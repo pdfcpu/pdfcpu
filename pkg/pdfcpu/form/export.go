@@ -527,7 +527,7 @@ func exportBtn(
 	locked bool,
 	ok *bool) error {
 
-	if len(d.ArrayEntry("Kids")) > 0 {
+	if len(d.ArrayEntry("Kids")) > 1 {
 
 		for _, rb := range form.RadioButtonGroups {
 			if rb.ID == id && rb.Name == name {

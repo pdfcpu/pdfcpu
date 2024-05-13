@@ -541,7 +541,37 @@ func fillRadioButtonGroup(
 	return nil
 }
 
+func fillCheckBoxKid(ctx *model.Context, kids types.Array, off bool) (*types.Name, error) {
+	d, err := ctx.DereferenceDict(kids[0])
+	if err != nil {
+		return nil, err
+	}
+
+	d1 := d.DictEntry("AP")
+	if d1 == nil {
+		return nil, errors.New("pdfcpu: corrupt form field: missing entry AP")
+	}
+
+	d2 := d1.DictEntry("N")
+	if d2 == nil {
+		return nil, errors.New("pdfcpu: corrupt AP field: missing entry N")
+	}
+
+	offName, yesName := primitives.CalcCheckBoxASNames(d2)
+	asName := yesName
+	if off {
+		asName = offName
+	}
+
+	if _, found := d.Find("AS"); found {
+		d["AS"] = asName
+	}
+
+	return &asName, nil
+}
+
 func fillCheckBox(
+	ctx *model.Context,
 	d types.Dict,
 	id, name string,
 	locked bool,
@@ -570,7 +600,7 @@ func fillCheckBox(
 	vNew := strings.HasPrefix(s, "t")
 	vOld := false
 	if o, found := d.Find("V"); found {
-		vOld = o.(types.Name) == "Yes"
+		vOld = o.(types.Name) != "Off"
 	}
 	if vNew == vOld {
 		return nil
@@ -580,6 +610,18 @@ func fillCheckBox(
 	if vNew {
 		v = types.Name("Yes")
 	}
+
+	kids := d.ArrayEntry("Kids")
+	if len(kids) == 1 {
+		asName, err := fillCheckBoxKid(ctx, kids, v == types.Name("Off"))
+		if err != nil {
+			return err
+		}
+		d["V"] = *asName
+		*ok = true
+		return nil
+	}
+
 	d["V"] = v
 	if _, found := d.Find("AS"); found {
 		offName, yesName := primitives.CalcCheckBoxASNames(d)
@@ -589,9 +631,9 @@ func fillCheckBox(
 			asName = offName
 		}
 		d["AS"] = asName
+		d["V"] = asName
 	}
 	*ok = true
-
 	return nil
 }
 
@@ -609,12 +651,12 @@ func fillBtn(
 		return nil
 	}
 
-	if len(d.ArrayEntry("Kids")) > 0 {
+	if len(d.ArrayEntry("Kids")) > 1 {
 		if err := fillRadioButtonGroup(ctx, d, id, name, locked, format, fillDetails, ok); err != nil {
 			return err
 		}
 	} else {
-		if err := fillCheckBox(d, id, name, locked, format, fillDetails, ok); err != nil {
+		if err := fillCheckBox(ctx, d, id, name, locked, format, fillDetails, ok); err != nil {
 			return err
 		}
 	}
