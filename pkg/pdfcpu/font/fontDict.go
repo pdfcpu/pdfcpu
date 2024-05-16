@@ -1083,7 +1083,16 @@ func Lang(xRefTable *model.XRefTable, d types.Dict) (string, error) {
 		return s, nil
 	}
 
-	arr := d.ArrayEntry("DescendantFonts")
+	o, found = d.Find("DescendantFonts")
+	if !found {
+		return "", ErrCorruptFontDict
+	}
+
+	arr, err := xRefTable.DereferenceArray(o)
+	if err != nil {
+		return "", err
+	}
+
 	indRef := arr[0].(types.IndirectRef)
 	d1, err := xRefTable.DereferenceDict(indRef)
 	if err != nil {
