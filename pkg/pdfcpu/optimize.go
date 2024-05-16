@@ -459,14 +459,14 @@ func optimizeXObjectForm(ctx *model.Context, sd *types.StreamDict, objNr int) (*
 		return nil, nil
 	}
 
-	for _, objNr := range cachedObjNrs {
-		sd1 := f[objNr]
+	for _, objNr1 := range cachedObjNrs {
+		sd1 := f[objNr1]
 		ok, err := model.EqualStreamDicts(sd, sd1, ctx.XRefTable)
 		if err != nil {
 			return nil, err
 		}
 		if ok {
-			ir := types.NewIndirectRef(objNr, 0)
+			ir := types.NewIndirectRef(objNr1, 0)
 			ctx.IncrementRefCount(ir)
 			return ir, nil
 		}
@@ -562,6 +562,10 @@ func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNumb
 
 		if log.OptimizeEnabled() {
 			log.Optimize.Printf("optimizeXObjectResourcesDict: dereferenced obj:%d\n%s", objNr, sd)
+		}
+
+		if err := ctx.DeleteDictEntry(sd.Dict, "PieceInfo"); err != nil {
+			return err
 		}
 
 		if *sd.Dict.Subtype() == "Image" {
