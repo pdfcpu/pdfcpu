@@ -187,21 +187,20 @@ func FormFontResDict(xRefTable *model.XRefTable) (types.Dict, error) {
 	return xRefTable.DereferenceDict(o)
 }
 
-func formFontIndRef(xRefTable *model.XRefTable, fontID string) (*types.IndirectRef, error) {
-	d, err := FormFontResDict(xRefTable)
-	if err != nil {
-		return nil, err
+func formFontIndRef(xRefTable *model.XRefTable, fontID string) *types.IndirectRef {
+
+	indRef, ok := xRefTable.FillFonts[fontID]
+	if ok {
+		return &indRef
 	}
 
-	for k, v := range d {
-		//fmt.Printf("%s %s\n", k, v)
+	for k, v := range xRefTable.FillFonts {
 		if strings.HasPrefix(k, fontID) || strings.HasPrefix(fontID, k) {
-			indRef, _ := v.(types.IndirectRef)
-			return &indRef, nil
+			return &v
 		}
 	}
 
-	return nil, nil
+	return nil
 }
 
 func FontIndRef(fName string, ctx *model.Context, fonts map[string]types.IndirectRef) (*types.IndirectRef, error) {
@@ -232,87 +231,6 @@ func FontIndRef(fName string, ctx *model.Context, fonts map[string]types.Indirec
 	}
 
 	return nil, nil
-}
-
-func ensureCorrectFontIndRef(
-	ctx *model.Context,
-	fontIndRef **types.IndirectRef,
-	fName string,
-	fonts map[string]types.IndirectRef) error {
-
-	d, err := ctx.DereferenceDict(**fontIndRef)
-	if err != nil {
-		return err
-	}
-
-	if enc := d.NameEntry("Encoding"); enc != nil && *enc == "Identity-H" {
-		indRef, ok := fonts[fName]
-		if !ok {
-			fonts[fName] = **fontIndRef
-			return nil
-		}
-		if indRef != **fontIndRef {
-			return errors.Errorf("pdfcpu: %s: duplicate fontDicts", fName)
-		}
-		return nil
-	}
-
-	indRef, err := FontIndRef(fName, ctx, fonts)
-	if err != nil {
-		return err
-	}
-	if indRef != nil {
-		*fontIndRef = indRef
-	}
-
-	return nil
-}
-
-func fontFromAcroDict(xRefTable *model.XRefTable, fontIndRef *types.IndirectRef, fName, fLang *string, fontID string) error {
-
-	// Use DA fontId from Acrodict
-
-	s := xRefTable.Form.StringEntry("DA")
-	if s == nil {
-		if fName != nil {
-			return errors.Errorf("pdfcpu: unsupported font: %s", *fName)
-		}
-		return errors.Errorf("pdfcpu: unsupported fontID: %s", fontID)
-	}
-
-	da := strings.Fields(*s)
-	rootFontID := ""
-
-	for i := 0; i < len(da); i++ {
-		if da[i] == "Tf" {
-			if i >= 2 {
-				rootFontID = da[i-2][1:]
-			}
-			break
-		}
-	}
-
-	if rootFontID == "" {
-		if fName != nil {
-			return errors.Errorf("pdfcpu: unsupported font: %s", *fName)
-		}
-		return errors.Errorf("pdfcpu: unsupported fontID: %s", fontID)
-	}
-
-	fontID = rootFontID
-	indRef, err := formFontIndRef(xRefTable, fontID)
-	if err != nil {
-		return err
-	}
-
-	*fontIndRef = *indRef
-
-	*fName, *fLang, err = FormFontNameAndLangForID(xRefTable, *indRef)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func ensureUTF8FormFont(ctx *model.Context, fonts map[string]types.IndirectRef) (string, string, string, *types.IndirectRef, error) {
@@ -357,11 +275,7 @@ func extractFormFontDetails(
 
 	if len(fontID) > 0 {
 
-		fontIndRef, err = formFontIndRef(xRefTable, fontID)
-		if err != nil {
-			return "", "", "", nil, err
-		}
-
+		fontIndRef = formFontIndRef(xRefTable, fontID)
 		if fontIndRef != nil {
 			fName, fLang, err = FormFontNameAndLangForID(xRefTable, *fontIndRef)
 			if err != nil {

@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/pkg/font"
 	pdffont "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/primitives"
@@ -1099,6 +1100,34 @@ func fillWidgetAnnots(
 	return nil
 }
 
+func setupFillFonts(xRefTable *model.XRefTable) error {
+	d, err := primitives.FormFontResDict(xRefTable)
+	if err != nil {
+		return err
+	}
+
+	m := xRefTable.FillFonts
+
+	if d == nil {
+		// setup/reuse Helvetica and add to m
+		return nil
+	}
+
+	for k, v := range d {
+		indRef := v.(types.IndirectRef)
+		fontName, _, err := primitives.FormFontNameAndLangForID(xRefTable, indRef)
+		if err != nil {
+			return err
+		}
+
+		if font.IsCoreFont(fontName) || font.IsUserFont(fontName) {
+			m[k] = indRef
+		}
+	}
+
+	return nil
+}
+
 // FillForm populates form fields as provided by fillDetails and also supports virtual image fields.
 func FillForm(
 	ctx *model.Context,
@@ -1115,6 +1144,10 @@ func FillForm(
 
 	fonts := map[string]types.IndirectRef{}
 	indRefs := map[types.IndirectRef]bool{}
+
+	if err := setupFillFonts(xRefTable); err != nil {
+		return false, nil, err
+	}
 
 	var ok bool
 

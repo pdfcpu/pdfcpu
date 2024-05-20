@@ -232,15 +232,6 @@ func coreFontDict(xRefTable *model.XRefTable, coreFontName string) (*types.Indir
 	if coreFontName != "Symbol" && coreFontName != "ZapfDingbats" {
 		d.InsertName("Encoding", "WinAnsiEncoding")
 	}
-	// if coreFontName == "Helvetica" {
-	// 	indRef, err := PDFDocEncoding(xRefTable)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	d.Insert("Encoding", *indRef)
-	// } else if coreFontName != "Symbol" && coreFontName != "ZapfDingbats" {
-	// 	d.InsertName("Encoding", "WinAnsiEncoding")
-	// }
 	return xRefTable.IndRefForNewObject(d)
 }
 

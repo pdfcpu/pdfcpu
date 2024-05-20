@@ -289,7 +289,7 @@ func extractComboBox(xRefTable *model.XRefTable, page int, d types.Dict, id, nam
 		if err != nil {
 			return nil, err
 		}
-		cb.Default = s
+		cb.Default = strings.TrimSpace(s)
 	}
 
 	if sl := d.StringLiteralEntry("V"); sl != nil {
@@ -297,7 +297,7 @@ func extractComboBox(xRefTable *model.XRefTable, page int, d types.Dict, id, nam
 		if err != nil {
 			return nil, err
 		}
-		cb.Value = s
+		cb.Value = strings.TrimSpace(s)
 	}
 
 	opts, err := parseOptions(xRefTable, d)
@@ -438,14 +438,14 @@ func extractListBox(xRefTable *model.XRefTable, page int, d types.Dict, id, name
 			if err != nil {
 				return nil, err
 			}
-			lb.Defaults = []string{s}
+			lb.Defaults = []string{strings.TrimSpace(s)}
 		}
 		if sl := d.StringLiteralEntry("V"); sl != nil {
 			s, err := types.StringLiteralToString(*sl)
 			if err != nil {
 				return nil, err
 			}
-			lb.Values = []string{s}
+			lb.Values = []string{strings.TrimSpace(s)}
 		}
 	} else {
 		ss, err := parseStringLiteralArray(xRefTable, d, "DV")

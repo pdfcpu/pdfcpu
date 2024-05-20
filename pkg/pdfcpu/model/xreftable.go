@@ -169,7 +169,8 @@ type XRefTable struct {
 	AppendOnly     bool
 
 	// Fonts
-	UsedGIDs map[string]map[uint16]bool
+	UsedGIDs  map[string]map[uint16]bool
+	FillFonts map[string]types.IndirectRef
 }
 
 // NewXRefTable creates a new XRefTable.
@@ -187,6 +188,7 @@ func newXRefTable(conf *Configuration) (xRefTable *XRefTable) {
 		ValidateLinks:     conf.ValidateLinks,
 		URIs:              map[int]map[string]string{},
 		UsedGIDs:          map[string]map[uint16]bool{},
+		FillFonts:         map[string]types.IndirectRef{},
 		Conf:              conf,
 	}
 }
