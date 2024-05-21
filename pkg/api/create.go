@@ -24,6 +24,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/create"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/primitives"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
@@ -67,6 +68,42 @@ func Create(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configurati
 	}
 
 	if err := create.FromJSON(ctx, rd); err != nil {
+		return err
+	}
+
+	if conf.PostProcessValidate {
+		if err = ValidateContext(ctx); err != nil {
+			return err
+		}
+	}
+
+	return WriteContext(ctx, w)
+}
+
+// CreatePDF renders the PDF structure represented by rs into w.
+// If rs is present, new PDF content will be appended including any empty pages needed.
+func CreatePDF(rs io.ReadSeeker, pdf *primitives.PDF, w io.Writer, conf *model.Configuration) error {
+
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.CREATE
+
+	var (
+		ctx *model.Context
+		err error
+	)
+
+	if rs != nil {
+		ctx, err = ReadValidateAndOptimize(rs, conf)
+	} else {
+		ctx, err = pdfcpu.CreateContextWithXRefTable(conf, types.PaperSize["A4"])
+	}
+	if err != nil {
+		return err
+	}
+
+	if err := create.FromStruct(ctx, pdf); err != nil {
 		return err
 	}
 

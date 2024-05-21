@@ -759,3 +759,51 @@ func FromJSON(ctx *model.Context, rd io.Reader) error {
 
 	return nil
 }
+
+// FromStruct generates PDF content into ctx as provided by PDF structure.
+func FromStruct(ctx *model.Context, pdf *primitives.PDF) error {
+
+	pdf.Conf = ctx.Configuration
+	pdf.XRefTable = ctx.XRefTable
+	pdf.Optimize = ctx.Optimize
+
+	if pdf.Update() {
+
+		_, found := ctx.RootDict.Find("AcroForm")
+
+		pdf.HasForm = found
+
+		if pdf.HasForm {
+			if err := cacheFormFieldIDs(ctx, pdf); err != nil {
+				return err
+			}
+		}
+
+		if err := cacheResIDs(ctx, pdf); err != nil {
+			return err
+		}
+
+	}
+
+	if err := pdf.Validate(); err != nil {
+		return err
+	}
+
+	pages, fontMap, err := pdf.RenderPages()
+	if err != nil {
+		return err
+	}
+
+	fields, fonts, err := UpdatePageTree(ctx, pages, fontMap)
+	if err != nil {
+		return err
+	}
+
+	if len(fields) > 0 {
+		if err := handleForm(ctx, pdf, fields, fonts); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
