@@ -335,7 +335,7 @@ func renderDeviceGrayToPNG(im *PDFImage, resourceName string) (io.Reader, string
 	for y := 0; y < im.h; y++ {
 		for x := 0; x < im.w; {
 			p := b[i]
-			for j := 0; j < 8/im.bpc; j++ {
+			for j := 0; j < 8/im.bpc && x < im.w; j++ {
 				pix := p >> (8 - uint8(im.bpc))
 				v := decodePixelValue(pix, im.bpc, cvr)
 				if im.bpc < 8 {
@@ -498,7 +498,7 @@ func renderIndexedGrayToPNG(im *PDFImage, resourceName string, lookup []byte) (i
 	for y := 0; y < im.h; y++ {
 		for x := 0; x < im.w; {
 			p := b[i]
-			for j := 0; j < 8/im.bpc; j++ {
+			for j := 0; j < 8/im.bpc && x < im.w; j++ {
 				ind := p >> (8 - uint8(im.bpc))
 				v := decodePixelValue(lookup[ind], im.bpc, cvr)
 				if im.bpc < 8 {
@@ -531,7 +531,7 @@ func renderIndexedRGBToPNG(im *PDFImage, resourceName string, lookup []byte) (io
 	for y := 0; y < im.h; y++ {
 		for x := 0; x < im.w; {
 			p := b[i]
-			for j := 0; j < 8/im.bpc; j++ {
+			for j := 0; j < 8/im.bpc && x < im.w; j++ {
 				ind := p >> (8 - uint8(im.bpc))
 				//fmt.Printf("x=%d y=%d i=%d j=%d p=#%02x ind=#%02x\n", x, y, i, j, p, ind)
 				alpha := uint8(255)
@@ -568,7 +568,7 @@ func imageForIndexedCMYKWithoutSoftMask(im *PDFImage, lookup []byte) image.Image
 	for y := 0; y < im.h; y++ {
 		for x := 0; x < im.w; {
 			p := b[i]
-			for j := 0; j < 8/im.bpc; j++ {
+			for j := 0; j < 8/im.bpc && x < im.w; j++ {
 				ind := p >> (8 - uint8(im.bpc))
 				//fmt.Printf("x=%d y=%d i=%d j=%d p=#%02x ind=#%02x\n", x, y, i, j, p, ind)
 				l := 4 * int(ind)
@@ -594,7 +594,7 @@ func imageForIndexedCMYKWithSoftMask(im *PDFImage, lookup []byte) image.Image {
 	for y := 0; y < im.h; y++ {
 		for x := 0; x < im.w; {
 			p := b[i]
-			for j := 0; j < 8/im.bpc; j++ {
+			for j := 0; j < 8/im.bpc && x < im.w; j++ {
 				ind := p >> (8 - uint8(im.bpc))
 				//fmt.Printf("x=%d y=%d i=%d j=%d p=#%02x ind=#%02x\n", x, y, i, j, p, ind)
 				l := 4 * int(ind)
