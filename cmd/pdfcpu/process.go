@@ -1576,7 +1576,7 @@ func processAddPropertiesCommand(conf *model.Configuration) {
 			continue
 		}
 		// Ensure key value pair.
-		ss := strings.Split(arg, "=")
+		ss := strings.SplitN(arg, "=", 2)
 		if len(ss) != 2 {
 			fmt.Fprintf(os.Stderr, "keyValuePair = 'key = value'\n")
 			fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePropertiesAdd)
