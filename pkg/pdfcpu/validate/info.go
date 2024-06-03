@@ -28,7 +28,7 @@ import (
 
 // DocumentProperty ensures a property name that may be modified.
 func DocumentProperty(s string) bool {
-	return !types.MemberOf(s, []string{"Keywords", "Creator", "Producer", "CreationDate", "ModDate", "Trapped"})
+	return !types.MemberOf(s, []string{"Keywords", "Producer", "CreationDate", "ModDate", "Trapped"})
 }
 
 func handleDefault(xRefTable *model.XRefTable, o types.Object) (string, error) {
