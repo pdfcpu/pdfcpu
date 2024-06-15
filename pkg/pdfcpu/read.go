@@ -1340,7 +1340,10 @@ func parseAndLoad(c context.Context, ctx *model.Context, line string, offset *in
 		Offset:     offset,
 		Generation: generation}
 
-	ctx.Table[*objNr] = &entry
+	if !ctx.XRefTable.Exists(*objNr) {
+		ctx.Table[*objNr] = &entry
+	}
+
 	o, err := ParseObjectWithContext(c, ctx, *entry.Offset, *objNr, *entry.Generation)
 	if err != nil {
 		return err

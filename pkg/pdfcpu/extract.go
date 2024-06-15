@@ -224,15 +224,25 @@ func imageStub(
 	thumb, imgMask bool,
 	objNr int) (*model.Image, error) {
 
-	w := sd.IntEntry("Width")
-	if w == nil {
+	obj, ok := sd.Find("Width")
+	if !ok {
 		return nil, errors.Errorf("pdfcpu: missing image width obj#%d", objNr)
 	}
+	i, err := ctx.DereferenceInteger(obj)
+	if err != nil {
+		return nil, err
+	}
+	w := i.Value()
 
-	h := sd.IntEntry("Height")
-	if h == nil {
+	obj, ok = sd.Find("Height")
+	if !ok {
 		return nil, errors.Errorf("pdfcpu: missing image height obj#%d", objNr)
 	}
+	i, err = ctx.DereferenceInteger(obj)
+	if err != nil {
+		return nil, err
+	}
+	h := i.Value()
 
 	cs, err := ColorSpaceString(ctx, sd)
 	if err != nil {
@@ -271,7 +281,7 @@ func imageStub(
 		interpol = true
 	}
 
-	i, err := StreamLength(ctx, sd)
+	size, err := StreamLength(ctx, sd)
 	if err != nil {
 		return nil, err
 	}
@@ -288,13 +298,13 @@ func imageStub(
 		IsImgMask:   imgMask,
 		HasImgMask:  mask,
 		HasSMask:    sMask,
-		Width:       *w,
-		Height:      *h,
+		Width:       w,
+		Height:      h,
 		Cs:          cs,
 		Comp:        comp,
 		Bpc:         bpc,
 		Interpol:    interpol,
-		Size:        i,
+		Size:        size,
 		Filter:      filters,
 		DecodeParms: s,
 	}

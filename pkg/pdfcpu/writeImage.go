@@ -91,8 +91,25 @@ func pdfImage(xRefTable *model.XRefTable, sd *types.StreamDict, thumb bool, objN
 
 	bpc := *sd.IntEntry("BitsPerComponent")
 
-	w := *sd.IntEntry("Width")
-	h := *sd.IntEntry("Height")
+	obj, ok := sd.Find("Width")
+	if !ok {
+		return nil, errors.Errorf("pdfcpu: missing image width obj#%d", objNr)
+	}
+	i, err := xRefTable.DereferenceInteger(obj)
+	if err != nil {
+		return nil, err
+	}
+	w := i.Value()
+
+	obj, ok = sd.Find("Height")
+	if !ok {
+		return nil, errors.Errorf("pdfcpu: missing image height obj#%d", objNr)
+	}
+	i, err = xRefTable.DereferenceInteger(obj)
+	if err != nil {
+		return nil, err
+	}
+	h := i.Value()
 
 	decode := decodeArr(sd.ArrayEntry("Decode"))
 
