@@ -17,6 +17,8 @@ limitations under the License.
 package validate
 
 import (
+	"strconv"
+
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -1529,7 +1531,18 @@ func validateAnnotationDictGeneralPart1(xRefTable *model.XRefTable, d types.Dict
 	// Contents, optional, text string
 	_, err = validateStringEntry(xRefTable, d, dictName, "Contents", OPTIONAL, model.V10, nil)
 	if err != nil {
-		return nil, err
+		if xRefTable.ValidationMode != model.ValidationRelaxed {
+			return nil, err
+		}
+		i, err := validateIntegerEntry(xRefTable, d, dictName, "Contents", OPTIONAL, model.V10, nil)
+		if err != nil {
+			return nil, err
+		}
+		if i != nil {
+			// Repair
+			s := strconv.Itoa(i.Value())
+			d["Contents"] = types.StringLiteral(s)
+		}
 	}
 
 	// P, optional, indRef of page dict
