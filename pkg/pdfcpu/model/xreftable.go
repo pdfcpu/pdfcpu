@@ -1937,7 +1937,7 @@ func (xRefTable *XRefTable) PageDict(pageNr int, consolidateRes bool) (types.Dic
 		pageCount int
 	)
 
-	if pageNr < 0 || pageNr > xRefTable.PageCount {
+	if pageNr <= 0 || pageNr > xRefTable.PageCount {
 		return nil, nil, nil, errors.New("pdfcpu: page not found")
 	}
 
