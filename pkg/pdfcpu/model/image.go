@@ -184,15 +184,29 @@ func CreateDCTImageObject(xRefTable *XRefTable, buf []byte, w, h, bpc int, cs st
 	return sd, nil
 }
 
-func writeRGBAImageBuf(img image.Image) []byte {
+func writeRGBAImageBuf(img image.Image) ([]byte, []byte) {
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
 	i := 0
+	var sm []byte
 	buf := make([]byte, w*h*3)
+	var softMask bool
 
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
 			c := img.At(x, y).(color.RGBA)
+			if !softMask {
+				if c.A != 0xFF {
+					softMask = true
+					sm = []byte{}
+					for j := 0; j < y*w+x; j++ {
+						sm = append(sm, 0xFF)
+					}
+					sm = append(sm, c.A)
+				}
+			} else {
+				sm = append(sm, c.A)
+			}
 			buf[i] = c.R
 			buf[i+1] = c.G
 			buf[i+2] = c.B
@@ -200,7 +214,7 @@ func writeRGBAImageBuf(img image.Image) []byte {
 		}
 	}
 
-	return buf
+	return buf, sm
 }
 
 func writeRGBA64ImageBuf(img image.Image) []byte {
@@ -463,7 +477,7 @@ func createImageBuf(xRefTable *XRefTable, img image.Image, format string) ([]byt
 		// An alpha-premultiplied color component C has been scaled by alpha (A), so it has valid values 0 <= C <= A.
 		cs = DeviceRGBCS
 		bpc = 8
-		buf = writeRGBAImageBuf(img)
+		buf, sm = writeRGBAImageBuf(img)
 
 	case *image.RGBA64:
 		// A 64-bit alpha-premultiplied color, having 16 bits for each of red, green, blue and alpha.
@@ -511,7 +525,7 @@ func createImageBuf(xRefTable *XRefTable, img image.Image, format string) ([]byt
 	case *image.YCbCr:
 		cs = DeviceRGBCS
 		bpc = 8
-		buf = writeRGBAImageBuf(convertToRGBA(img))
+		buf, sm = writeRGBAImageBuf(convertToRGBA(img))
 
 	case *image.NYCbCrA:
 		return buf, sm, bpc, cs, errors.New("pdfcpu: unsupported image type: NYCbCrA")
@@ -520,7 +534,7 @@ func createImageBuf(xRefTable *XRefTable, img image.Image, format string) ([]byt
 		// In-memory image of uint8 indices into a given palette.
 		cs = DeviceRGBCS
 		bpc = 8
-		buf = writeRGBAImageBuf(convertToRGBA(img))
+		buf, sm = writeRGBAImageBuf(convertToRGBA(img))
 
 	default:
 		return buf, sm, bpc, cs, errors.Errorf("pdfcpu: unsupported image type: %T", img)
