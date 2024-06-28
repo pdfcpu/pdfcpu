@@ -75,9 +75,17 @@ func skipStringLiteral(l *string) error {
 	i := 0
 	for {
 		i = strings.IndexByte(s, byte(')'))
-		if i <= 0 || i > 0 && s[i-1] != '\\' || i > 1 && s[i-2] == '\\' {
+		if i <= 0 || i > 0 && s[i-1] != '\\' {
 			break
 		}
+		k := 0
+		for j := i - 1; j >= 0 && s[j] == '\\'; j-- {
+			k++
+		}
+		if k%2 == 0 {
+			break
+		}
+		// Skip \)
 		s = s[i+1:]
 	}
 	if i < 0 {
