@@ -1366,19 +1366,6 @@ func parseAndLoad(c context.Context, ctx *model.Context, line string, offset *in
 	return nil
 }
 
-func showRep() {
-	msg := "repaired: xreftable"
-	if log.DebugEnabled() {
-		log.Debug.Println("pdfcpu " + msg)
-	}
-	if log.ReadEnabled() {
-		log.Read.Println("pdfcpu " + msg)
-	}
-	if log.CLIEnabled() {
-		log.CLI.Println(msg)
-	}
-}
-
 func processObject(c context.Context, ctx *model.Context, line string, offset *int64) (*bufio.Scanner, error) {
 	if err := parseAndLoad(c, ctx, line, offset); err != nil {
 		return nil, err
@@ -1439,7 +1426,7 @@ func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64, wa
 				if i >= 0 {
 					_, err = processTrailer(c, ctx, s, string(bb), nil, offExtra)
 					if err == nil {
-						showRep()
+						model.ShowRepaired("xreftable")
 					}
 					return err
 				}
