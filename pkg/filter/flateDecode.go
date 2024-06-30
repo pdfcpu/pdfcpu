@@ -267,6 +267,21 @@ func (f flate) parameters() (colors, bpc, columns int, err error) {
 	return colors, bpc, columns, nil
 }
 
+func checkBufLen(b bytes.Buffer, maxLen int64) bool {
+	return maxLen < 0 || int64(b.Len()) < maxLen
+}
+
+func process(w io.Writer, pr, cr []byte, predictor, colors, bytesPerPixel int) error {
+	d, err := processRow(pr, cr, predictor, colors, bytesPerPixel)
+	if err != nil {
+		return err
+	}
+
+	_, err = w.Write(d)
+
+	return err
+}
+
 // decodePostProcess
 func (f flate) decodePostProcess(r io.Reader, maxLen int64) (io.Reader, error) {
 	predictor, found := f.parms["Predictor"]
@@ -308,7 +323,7 @@ func (f flate) decodePostProcess(r io.Reader, maxLen int64) (io.Reader, error) {
 	// Output buffer
 	var b bytes.Buffer
 
-	for maxLen < 0 || int64(b.Len()) < maxLen {
+	for checkBufLen(b, maxLen) {
 
 		// Read decompressed bytes for one pixel row.
 		n, err := io.ReadFull(r, cr)
@@ -326,14 +341,8 @@ func (f flate) decodePostProcess(r io.Reader, maxLen int64) (io.Reader, error) {
 			return nil, errors.Errorf("pdfcpu: filter FlateDecode: read error, expected %d bytes, got: %d", m, n)
 		}
 
-		d, err1 := processRow(pr, cr, predictor, colors, bytesPerPixel)
-		if err1 != nil {
-			return nil, err1
-		}
-
-		_, err1 = b.Write(d)
-		if err1 != nil {
-			return nil, err1
+		if err := process(&b, pr, cr, predictor, colors, bytesPerPixel); err != nil {
+			return nil, err
 		}
 
 		if err == io.EOF {

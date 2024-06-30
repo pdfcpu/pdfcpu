@@ -560,10 +560,6 @@ func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNumb
 			continue
 		}
 
-		if log.OptimizeEnabled() {
-			log.Optimize.Printf("optimizeXObjectResourcesDict: dereferenced obj:%d\n%s", objNr, sd)
-		}
-
 		if err := ctx.DeleteDictEntry(sd.Dict, "PieceInfo"); err != nil {
 			return err
 		}
@@ -583,7 +579,6 @@ func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNumb
 			if err := optimizeForm(ctx, sd, rName, rDict, objNr, pageNumber, pageObjNumber, vis); err != nil {
 				return err
 			}
-			continue
 		}
 
 	}

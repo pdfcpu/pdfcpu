@@ -2278,6 +2278,14 @@ func readStreamContent(rd io.Reader, streamLength int) ([]byte, error) {
 	return buf, nil
 }
 
+func ensureStreamLength(sd *types.StreamDict, rawContent []byte, fixLength bool) {
+	l := int64(len(rawContent))
+	if fixLength || sd.StreamLength == nil || l != *sd.StreamLength {
+		sd.StreamLength = &l
+		sd.Dict["Length"] = types.Integer(l)
+	}
+}
+
 // loadEncodedStreamContent loads the encoded stream content into sd.
 func loadEncodedStreamContent(c context.Context, ctx *model.Context, sd *types.StreamDict, fixLength bool) error {
 	if log.ReadEnabled() {
@@ -2325,11 +2333,7 @@ func loadEncodedStreamContent(c context.Context, ctx *model.Context, sd *types.S
 		return err
 	}
 
-	l := int64(len(rawContent))
-	if fixLength || sd.StreamLength == nil || l != *sd.StreamLength {
-		sd.StreamLength = &l
-		sd.Dict["Length"] = types.Integer(l)
-	}
+	ensureStreamLength(sd, rawContent, fixLength)
 
 	sd.Raw = rawContent
 

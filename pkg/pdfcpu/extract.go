@@ -216,6 +216,30 @@ func ColorSpaceComponents(xRefTable *model.XRefTable, sd *types.StreamDict) (int
 	return 0, nil
 }
 
+func imageWidth(ctx *model.Context, sd *types.StreamDict, objNr int) (int, error) {
+	obj, ok := sd.Find("Width")
+	if !ok {
+		return 0, errors.Errorf("pdfcpu: missing image width obj#%d", objNr)
+	}
+	i, err := ctx.DereferenceInteger(obj)
+	if err != nil {
+		return 0, err
+	}
+	return i.Value(), nil
+}
+
+func imageHeight(ctx *model.Context, sd *types.StreamDict, objNr int) (int, error) {
+	obj, ok := sd.Find("Height")
+	if !ok {
+		return 0, errors.Errorf("pdfcpu: missing image height obj#%d", objNr)
+	}
+	i, err := ctx.DereferenceInteger(obj)
+	if err != nil {
+		return 0, err
+	}
+	return i.Value(), nil
+}
+
 func imageStub(
 	ctx *model.Context,
 	sd *types.StreamDict,
@@ -224,25 +248,15 @@ func imageStub(
 	thumb, imgMask bool,
 	objNr int) (*model.Image, error) {
 
-	obj, ok := sd.Find("Width")
-	if !ok {
-		return nil, errors.Errorf("pdfcpu: missing image width obj#%d", objNr)
-	}
-	i, err := ctx.DereferenceInteger(obj)
+	w, err := imageWidth(ctx, sd, objNr)
 	if err != nil {
 		return nil, err
 	}
-	w := i.Value()
 
-	obj, ok = sd.Find("Height")
-	if !ok {
-		return nil, errors.Errorf("pdfcpu: missing image height obj#%d", objNr)
-	}
-	i, err = ctx.DereferenceInteger(obj)
+	h, err := imageHeight(ctx, sd, objNr)
 	if err != nil {
 		return nil, err
 	}
-	h := i.Value()
 
 	cs, err := ColorSpaceString(ctx, sd)
 	if err != nil {

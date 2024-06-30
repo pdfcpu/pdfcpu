@@ -602,5 +602,5 @@ func (d Dim) Portrait() bool {
 }
 
 func (d Dim) String() string {
-	return fmt.Sprintf("%fx%f points", d.Width, d.Height)
+	return fmt.Sprintf("%fx%f", d.Width, d.Height)
 }
