@@ -363,7 +363,7 @@ func validateStructElementDictPart1(xRefTable *model.XRefTable, d types.Dict, di
 			return err
 		}
 		if i != nil {
-			// Repair
+			// "Repair"
 			d["S"] = types.Name(strconv.Itoa((*i).Value()))
 		}
 	}
@@ -450,8 +450,12 @@ func validateStructElementDictPart2(xRefTable *model.XRefTable, d types.Dict, di
 		return err
 	}
 
-	// E: optional, text sttring, since 1.5
-	_, err = validateStringEntry(xRefTable, d, dictName, "E", OPTIONAL, model.V15, nil)
+	// E: optional, text string, since 1.5
+	sinceVersion = model.V15
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V14
+	}
+	_, err = validateStringEntry(xRefTable, d, dictName, "E", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
