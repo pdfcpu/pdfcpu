@@ -1099,16 +1099,40 @@ func ObjectStreamDict(sd *types.StreamDict) (*types.ObjectStreamDict, error) {
 	return &osd, nil
 }
 
+func detectMarker(line, marker string) int {
+	i := strings.Index(line, marker)
+	if i < 0 {
+		return i
+	}
+
+	// Skip until keyword is followed by eol.
+	for c := line[i+len(marker)]; c != 0x0A && c != 0x0D; {
+		line = line[i+len(marker):]
+		i = strings.Index(line, marker)
+		if i < 0 {
+			return i
+		}
+	}
+
+	return i
+}
+
 func detectMarkers(line string, off int, endInd, streamInd *int) {
+	//fmt.Printf("buflen=%d\n%s", len(line), hex.Dump([]byte(line)))
 	if *endInd <= 0 {
-		*endInd = strings.Index(line, "endobj")
-		if *endInd > 0 {
+		*endInd = detectMarker(line, "endobj")
+		if *endInd >= 0 {
+			//l := fmt.Sprintf("%x", *endInd)
+			//fmt.Printf("endobj: %s\n", l)
 			*endInd += off
+
 		}
 	}
 	if *streamInd <= 0 {
-		*streamInd = strings.Index(line, "stream")
+		*streamInd = detectMarker(line, "stream")
 		if *streamInd > 0 {
+			//l := fmt.Sprintf("%x", *streamInd)
+			//fmt.Printf("stream: %s\n", l)
 			*streamInd += off
 		}
 	}
