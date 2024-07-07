@@ -89,12 +89,8 @@ func migrateObject(o types.Object, ctxSource, ctxDest *model.Context, migrated m
 }
 
 func migrateAnnots(o types.Object, pageIndRef types.IndirectRef, ctxSrc, ctxDest *model.Context, migrated map[int]int) (types.Object, error) {
-	arr, err := ctxSrc.DereferenceArray(o)
-	if err != nil {
-		return nil, err
-	}
-
-	for i, v := range arr {
+	arr := o.(types.Array)
+	for i, v := range o.(types.Array) {
 		var d types.Dict
 		o, ok := v.(types.IndirectRef)
 		if ok {
@@ -130,9 +126,11 @@ func migrateAnnots(o types.Object, pageIndRef types.IndirectRef, ctxSrc, ctxDest
 				}
 				pDict.Delete("Parent")
 			}
-			if d[k], err = migrateObject(v, ctxSrc, ctxDest, migrated); err != nil {
+			o1, err := migrateObject(v, ctxSrc, ctxDest, migrated)
+			if err != nil {
 				return nil, err
 			}
+			d[k] = o1
 		}
 	}
 
@@ -146,6 +144,24 @@ func migratePageDict(d types.Dict, pageIndRef types.IndirectRef, ctxSrc, ctxDest
 			continue
 		}
 		if k == "Annots" {
+			o, ok := d[k].(types.IndirectRef)
+			if ok {
+				objNr := o.ObjectNumber.Value()
+				if migrated[objNr] > 0 {
+					o.ObjectNumber = types.Integer(migrated[objNr])
+					d[k] = o
+					continue
+				}
+				v, err = migrateIndRef(&o, ctxSrc, ctxDest, migrated)
+				if err != nil {
+					return err
+				}
+				d[k] = o
+				if _, err = migrateAnnots(v, pageIndRef, ctxSrc, ctxDest, migrated); err != nil {
+					return err
+				}
+				continue
+			}
 			if d[k], err = migrateAnnots(v, pageIndRef, ctxSrc, ctxDest, migrated); err != nil {
 				return err
 			}

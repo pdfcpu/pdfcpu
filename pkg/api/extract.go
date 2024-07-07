@@ -270,10 +270,7 @@ func ExtractPages(rs io.ReadSeeker, outDir, fileName string, selectedPages []str
 
 	fileName = strings.TrimSuffix(filepath.Base(fileName), ".pdf")
 
-	for i, v := range pages {
-		if !v {
-			continue
-		}
+	for _, i := range sortedPages(pages) {
 		r, err := ExtractPage(ctx, i)
 		if err != nil {
 			return err

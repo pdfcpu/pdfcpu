@@ -325,31 +325,7 @@ func (sd *StreamDict) Decode() error {
 	return err
 }
 
-func (sd *StreamDict) DecodeLength(maxLen int64) ([]byte, error) {
-	if sd.Content != nil {
-		// This stream has already been decoded.
-		if maxLen < 0 {
-			return sd.Content, nil
-		}
-
-		return sd.Content[:maxLen], nil
-	}
-
-	fpl := sd.FilterPipeline
-
-	// No filter or sole filter DTC && !CMYK or JPX - nothing to decode.
-	if fpl == nil || len(fpl) == 1 && ((fpl[0].Name == filter.DCT && sd.CSComponents != 4) || fpl[0].Name == filter.JPX) {
-		sd.Content = sd.Raw
-		//fmt.Printf("decodedStream returning %d(#%02x)bytes: \n%s\n", len(sd.Content), len(sd.Content), hex.Dump(sd.Content))
-		if maxLen < 0 {
-			return sd.Content, nil
-		}
-
-		return sd.Content[:maxLen], nil
-	}
-
-	//fmt.Printf("decodedStream before:\n%s\n", hex.Dump(sd.Raw))
-
+func (sd *StreamDict) decodeLength(maxLen int64) ([]byte, error) {
 	var b, c io.Reader
 	b = bytes.NewReader(sd.Raw)
 
@@ -418,6 +394,34 @@ func (sd *StreamDict) DecodeLength(maxLen int64) ([]byte, error) {
 	}
 
 	return data[:maxLen], nil
+}
+
+func (sd *StreamDict) DecodeLength(maxLen int64) ([]byte, error) {
+	if sd.Content != nil {
+		// This stream has already been decoded.
+		if maxLen < 0 {
+			return sd.Content, nil
+		}
+
+		return sd.Content[:maxLen], nil
+	}
+
+	fpl := sd.FilterPipeline
+
+	// No filter or sole filter DTC && !CMYK or JPX - nothing to decode.
+	if fpl == nil || len(fpl) == 1 && ((fpl[0].Name == filter.DCT && sd.CSComponents != 4) || fpl[0].Name == filter.JPX) {
+		sd.Content = sd.Raw
+		//fmt.Printf("decodedStream returning %d(#%02x)bytes: \n%s\n", len(sd.Content), len(sd.Content), hex.Dump(sd.Content))
+		if maxLen < 0 {
+			return sd.Content, nil
+		}
+
+		return sd.Content[:maxLen], nil
+	}
+
+	//fmt.Printf("decodedStream before:\n%s\n", hex.Dump(sd.Raw))
+
+	return sd.decodeLength(maxLen)
 }
 
 // IndexedObject returns the object at given index from a ObjectStreamDict.

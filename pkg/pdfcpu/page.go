@@ -46,7 +46,7 @@ func addPages(
 			}
 		}
 
-		d, _, inhPAttrs, err := ctxSrc.PageDict(i, true)
+		d, pageIndRef, inhPAttrs, err := ctxSrc.PageDict(i, true)
 		if err != nil {
 			return err
 		}
@@ -54,17 +54,17 @@ func addPages(
 			return errors.Errorf("pdfcpu: unknown page number: %d\n", i)
 		}
 
-		d = d.Clone().(types.Dict)
+		obj, err := migrateIndRef(pageIndRef, ctxSrc, ctxDest, migrated)
+		if err != nil {
+			return err
+		}
+
+		d = obj.(types.Dict)
 		d["Resources"] = inhPAttrs.Resources.Clone()
 		d["Parent"] = pagesIndRef
 		d["MediaBox"] = inhPAttrs.MediaBox.Array()
 		if inhPAttrs.Rotate%360 > 0 {
 			d["Rotate"] = types.Integer(inhPAttrs.Rotate)
-		}
-
-		pageIndRef, err := ctxDest.IndRefForNewObject(d)
-		if err != nil {
-			return err
 		}
 
 		if err := migratePageDict(d, *pageIndRef, ctxSrc, ctxDest, migrated); err != nil {

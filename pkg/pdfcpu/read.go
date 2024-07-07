@@ -2763,64 +2763,78 @@ func dereferenceObject(c context.Context, ctx *model.Context, objNr int) error {
 	return nil
 }
 
+func dereferenceObjectsSorted(c context.Context, ctx *model.Context) error {
+	xRefTable := ctx.XRefTable
+	var keys []int
+	for k := range xRefTable.Table {
+		keys = append(keys, k)
+	}
+	sort.Ints(keys)
+
+	for _, objNr := range keys {
+		if err := c.Err(); err != nil {
+			return err
+		}
+		if err := dereferenceObject(c, ctx, objNr); err != nil {
+			return err
+		}
+	}
+
+	for _, objNr := range keys {
+		entry := xRefTable.Table[objNr]
+		if entry.Free || entry.Compressed {
+			continue
+		}
+		if err := c.Err(); err != nil {
+			return err
+		}
+		model.ProcessRefCounts(xRefTable, entry.Object)
+	}
+
+	return nil
+}
+
+func dereferenceObjectsRaw(c context.Context, ctx *model.Context) error {
+	xRefTable := ctx.XRefTable
+	for objNr := range xRefTable.Table {
+		if err := c.Err(); err != nil {
+			return err
+		}
+		if err := dereferenceObject(c, ctx, objNr); err != nil {
+			return err
+		}
+	}
+
+	for objNr := range xRefTable.Table {
+		entry := xRefTable.Table[objNr]
+		if entry.Free || entry.Compressed {
+			continue
+		}
+		if err := c.Err(); err != nil {
+			return err
+		}
+		model.ProcessRefCounts(xRefTable, entry.Object)
+	}
+
+	return nil
+}
+
 // Dereferences all objects including compressed objects from object streams.
 func dereferenceObjects(c context.Context, ctx *model.Context) error {
 	if log.ReadEnabled() {
 		log.Read.Println("dereferenceObjects: begin")
 	}
 
-	xRefTable := ctx.XRefTable
+	var err error
 
 	if log.StatsEnabled() {
-
-		var keys []int
-		for k := range xRefTable.Table {
-			keys = append(keys, k)
-		}
-		sort.Ints(keys)
-
-		for _, objNr := range keys {
-			if err := c.Err(); err != nil {
-				return err
-			}
-			if err := dereferenceObject(c, ctx, objNr); err != nil {
-				return err
-			}
-		}
-
-		for _, objNr := range keys {
-			entry := xRefTable.Table[objNr]
-			if entry.Free || entry.Compressed {
-				continue
-			}
-			if err := c.Err(); err != nil {
-				return err
-			}
-			model.ProcessRefCounts(xRefTable, entry.Object)
-		}
-
+		err = dereferenceObjectsSorted(c, ctx)
 	} else {
+		err = dereferenceObjectsRaw(c, ctx)
+	}
 
-		for objNr := range xRefTable.Table {
-			if err := c.Err(); err != nil {
-				return err
-			}
-			if err := dereferenceObject(c, ctx, objNr); err != nil {
-				return err
-			}
-		}
-
-		for objNr := range xRefTable.Table {
-			entry := xRefTable.Table[objNr]
-			if entry.Free || entry.Compressed {
-				continue
-			}
-			if err := c.Err(); err != nil {
-				return err
-			}
-			model.ProcessRefCounts(xRefTable, entry.Object)
-		}
-
+	if err != nil {
+		return err
 	}
 
 	if log.ReadEnabled() {
