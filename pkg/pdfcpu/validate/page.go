@@ -497,7 +497,7 @@ func validatePageEntryTabs(xRefTable *model.XRefTable, d types.Dict, required bo
 	validateTabs := func(s string) bool { return types.MemberOf(s, []string{"R", "C", "S", "A", "W"}) }
 
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V14
+		sinceVersion = model.V13
 	}
 	_, err := validateNameEntry(xRefTable, d, "pagesDict", "Tabs", required, sinceVersion, validateTabs)
 
