@@ -1664,6 +1664,7 @@ func processListBoxesCommand(conf *model.Configuration) {
 			ensurePDFExtension(inFile)
 		}
 		process(cli.ListBoxesCommand(inFile, selectedPages, nil, conf))
+		return
 	}
 
 	pb, err := api.PageBoundariesFromBoxList(flag.Arg(0))
@@ -1808,6 +1809,7 @@ func processListAnnotationsCommand(conf *model.Configuration) {
 
 	process(cli.ListAnnotationsCommand(inFile, selectedPages, conf))
 }
+
 func processRemoveAnnotationsCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 1 {
 		fmt.Fprintf(os.Stderr, "usage: %s\n", usageAnnotsRemove)
@@ -2290,6 +2292,7 @@ func processNDownCommand(conf *model.Configuration) {
 		}
 
 		process(cli.NDownCommand(inFile, outDir, outFile, selectedPages, n, cut, conf))
+		return
 	}
 
 	// pdfcpu ndown description n inFile outDir outFile

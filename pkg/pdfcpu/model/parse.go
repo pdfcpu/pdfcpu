@@ -1105,12 +1105,19 @@ func detectMarker(line, marker string) int {
 		return i
 	}
 
+	if i+len(marker) >= len(line) {
+		return -1
+	}
+
 	// Skip until keyword is followed by eol.
 	for c := line[i+len(marker)]; c != 0x0A && c != 0x0D; {
 		line = line[i+len(marker):]
 		i = strings.Index(line, marker)
 		if i < 0 {
 			return i
+		}
+		if i+len(marker) >= len(line) {
+			return -1
 		}
 	}
 

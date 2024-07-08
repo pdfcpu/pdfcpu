@@ -1019,81 +1019,31 @@ func scanTrailerDictStart(s *bufio.Scanner, line *string) error {
 }
 
 func scanTrailerDictRemainder(s *bufio.Scanner, line string, buf bytes.Buffer) (string, error) {
-	var err error
-	var i, j, k int
+	var (
+		i   int
+		err error
+	)
 
-	buf.WriteString(line)
-	buf.WriteString("\x0a")
-	// log.Read.Printf("scanTrailer dictBuf after start tag: <%s>\n", line)
-
-	line = line[2:]
-
-	for {
-
-		if len(line) == 0 {
-			if line, err = scanLine(s); err != nil {
-				return "", err
-			}
-			buf.WriteString(line)
-			buf.WriteString("\x0a")
-			// log.Read.Printf("scanTrailer dictBuf next line: <%s>\n", line)
+	for i = strings.Index(line, "startxref"); i < 0; {
+		if log.ReadEnabled() {
+			log.Read.Printf("line: <%s>\n", line)
 		}
-
-		i = strings.Index(line, "<<")
-		if i < 0 {
-			// No <<
-			j = strings.Index(line, ">>")
-			if j >= 0 {
-				// Yes >>
-				if k == 0 {
-					// Check for dict
-					ok, err := isDict(buf.String())
-					if err == nil && ok {
-						return buf.String(), nil
-					}
-				} else {
-					k--
-				}
-				line = line[j+2:]
-				continue
-			}
-			// No >>
-			line, err = scanLine(s)
-			if err != nil {
-				return "", err
-			}
-			buf.WriteString(line)
-			buf.WriteString("\x0a")
-			//	log.Read.Printf("scanTrailer dictBuf next line: <%s>\n", line)
-		} else {
-			// Yes <<
-			j = strings.Index(line, ">>")
-			if j < 0 {
-				// No >>
-				k++
-				line = line[i+2:]
-			} else {
-				// Yes >>
-				if i < j {
-					// handle <<
-					k++
-					line = line[i+2:]
-				} else {
-					// handle >>
-					if k == 0 {
-						// Check for dict
-						ok, err := isDict(buf.String())
-						if err == nil && ok {
-							return buf.String(), nil
-						}
-					} else {
-						k--
-					}
-					line = line[j+2:]
-				}
-			}
+		buf.WriteString(line)
+		buf.WriteString("\x0a")
+		if line, err = scanLine(s); err != nil {
+			return "", err
 		}
+		i = strings.Index(line, "startxref")
 	}
+
+	line = line[:i]
+	if log.ReadEnabled() {
+		log.Read.Printf("line: <%s>\n", line)
+	}
+	buf.WriteString(line[:i])
+	buf.WriteString("\x0a")
+
+	return buf.String(), nil
 }
 
 func scanTrailer(s *bufio.Scanner, line string) (string, error) {
@@ -1102,12 +1052,10 @@ func scanTrailer(s *bufio.Scanner, line string) (string, error) {
 		log.Read.Printf("line: <%s>\n", line)
 	}
 
-	// Scan for dict start tag "<<".
 	if err := scanTrailerDictStart(s, &line); err != nil {
 		return "", err
 	}
 
-	// Scan for dict end tag ">>" but account for inner dicts.
 	return scanTrailerDictRemainder(s, line, buf)
 }
 
