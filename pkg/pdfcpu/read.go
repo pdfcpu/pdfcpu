@@ -2034,21 +2034,21 @@ func ParseObjectWithContext(c context.Context, ctx *model.Context, offset int64,
 
 	case types.StringLiteral:
 		if ctx.EncKey != nil {
-			bb, err := decryptString(o.Value(), objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
+			sl, err := decryptStringLiteral(o, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
 			if err != nil {
 				return nil, err
 			}
-			return types.NewHexLiteral(bb), nil
+			return *sl, nil
 		}
 		return o, nil
 
 	case types.HexLiteral:
 		if ctx.EncKey != nil {
-			bb, err := decryptHexLiteral(o, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
+			hl, err := decryptHexLiteral(o, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
 			if err != nil {
 				return nil, err
 			}
-			return types.NewHexLiteral(bb), nil
+			return *hl, nil
 		}
 		return o, nil
 

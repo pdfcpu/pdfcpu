@@ -284,7 +284,7 @@ func writeNameObject(ctx *model.Context, objNumber, genNumber int, name types.Na
 	return writeObject(ctx, objNumber, genNumber, name.PDFString())
 }
 
-func writeStringLiteralObject(ctx *model.Context, objNumber, genNumber int, stringLiteral types.StringLiteral) error {
+func writeStringLiteralObject(ctx *model.Context, objNumber, genNumber int, sl types.StringLiteral) error {
 	ok, err := writeToObjectStream(ctx, objNumber, genNumber)
 	if err != nil {
 		return err
@@ -294,21 +294,19 @@ func writeStringLiteralObject(ctx *model.Context, objNumber, genNumber int, stri
 		return nil
 	}
 
-	sl := stringLiteral
-
 	if ctx.EncKey != nil {
-		s1, err := encryptString(stringLiteral.Value(), objNumber, genNumber, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
+		sl1, err := encryptStringLiteral(sl, objNumber, genNumber, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
 		if err != nil {
 			return err
 		}
 
-		sl = types.StringLiteral(*s1)
+		sl = *sl1
 	}
 
 	return writeObject(ctx, objNumber, genNumber, sl.PDFString())
 }
 
-func writeHexLiteralObject(ctx *model.Context, objNumber, genNumber int, hexLiteral types.HexLiteral) error {
+func writeHexLiteralObject(ctx *model.Context, objNumber, genNumber int, hl types.HexLiteral) error {
 	ok, err := writeToObjectStream(ctx, objNumber, genNumber)
 	if err != nil {
 		return err
@@ -318,15 +316,13 @@ func writeHexLiteralObject(ctx *model.Context, objNumber, genNumber int, hexLite
 		return nil
 	}
 
-	hl := hexLiteral
-
 	if ctx.EncKey != nil {
-		s1, err := encryptString(hexLiteral.Value(), objNumber, genNumber, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
+		hl1, err := encryptHexLiteral(hl, objNumber, genNumber, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
 		if err != nil {
 			return err
 		}
 
-		hl = types.HexLiteral(*s1)
+		hl = *hl1
 	}
 
 	return writeObject(ctx, objNumber, genNumber, hl.PDFString())

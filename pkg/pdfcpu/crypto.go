@@ -1228,29 +1228,10 @@ func encryptBytes(b []byte, objNr, genNr int, encKey []byte, needAES bool, r int
 		if r != 5 {
 			k = decryptKey(objNr, genNr, encKey, needAES)
 		}
-		bb, err := encryptAESBytes(b, k)
-		if err != nil {
-			return nil, err
-		}
-		return bb, nil
+		return encryptAESBytes(b, k)
 	}
 
 	return applyRC4CipherBytes(b, objNr, genNr, encKey, needAES)
-}
-
-// EncryptString encrypts s using RC4 or AES.
-func encryptString(s string, objNr, genNr int, key []byte, needAES bool, r int) (*string, error) {
-	b, err := encryptBytes([]byte(s), objNr, genNr, key, needAES, r)
-	if err != nil {
-		return nil, err
-	}
-
-	s1, err := types.Escape(string(b))
-	if err != nil {
-		return nil, err
-	}
-
-	return s1, err
 }
 
 // decryptBytes decrypts bb using RC4 or AES.
@@ -1260,24 +1241,10 @@ func decryptBytes(b []byte, objNr, genNr int, encKey []byte, needAES bool, r int
 		if r != 5 {
 			k = decryptKey(objNr, genNr, encKey, needAES)
 		}
-		bb, err := decryptAESBytes(b, k)
-		if err != nil {
-			return nil, err
-		}
-		return bb, nil
+		return decryptAESBytes(b, k)
 	}
 
 	return applyRC4CipherBytes(b, objNr, genNr, encKey, needAES)
-}
-
-// decryptString decrypts s using RC4 or AES.
-func decryptString(s string, objNr, genNr int, key []byte, needAES bool, r int) ([]byte, error) {
-	bb, err := types.Unescape(s)
-	if err != nil {
-		return nil, err
-	}
-
-	return decryptBytes(bb, objNr, genNr, key, needAES, r)
 }
 
 func applyRC4CipherBytes(b []byte, objNr, genNr int, key []byte, needAES bool) ([]byte, error) {
@@ -1298,7 +1265,7 @@ func encrypt(m map[string]types.Object, k string, v types.Object, objNr, genNr i
 	}
 
 	if s != nil {
-		m[k] = *s
+		m[k] = s
 	}
 
 	return nil
@@ -1328,8 +1295,82 @@ func encryptDict(d types.Dict, objNr, genNr int, key []byte, needAES bool, r int
 	return nil
 }
 
+func encryptStringLiteral(sl types.StringLiteral, objNr, genNr int, key []byte, needAES bool, r int) (*types.StringLiteral, error) {
+	bb, err := types.Unescape(sl.Value())
+	if err != nil {
+		return nil, err
+	}
+
+	bb, err = encryptBytes(bb, objNr, genNr, key, needAES, r)
+	if err != nil {
+		return nil, err
+	}
+
+	s, err := types.Escape(string(bb))
+	if err != nil {
+		return nil, err
+	}
+
+	sl = types.StringLiteral(*s)
+
+	return &sl, nil
+}
+
+func decryptStringLiteral(sl types.StringLiteral, objNr, genNr int, key []byte, needAES bool, r int) (*types.StringLiteral, error) {
+	bb, err := types.Unescape(sl.Value())
+	if err != nil {
+		return nil, err
+	}
+
+	bb, err = decryptBytes(bb, objNr, genNr, key, needAES, r)
+	if err != nil {
+		return nil, err
+	}
+
+	s, err := types.Escape(string(bb))
+	if err != nil {
+		return nil, err
+	}
+
+	sl = types.StringLiteral(*s)
+
+	return &sl, nil
+}
+
+func encryptHexLiteral(hl types.HexLiteral, objNr, genNr int, key []byte, needAES bool, r int) (*types.HexLiteral, error) {
+	bb, err := hl.Bytes()
+	if err != nil {
+		return nil, err
+	}
+
+	bb, err = encryptBytes(bb, objNr, genNr, key, needAES, r)
+	if err != nil {
+		return nil, err
+	}
+
+	hl = types.NewHexLiteral(bb)
+
+	return &hl, nil
+}
+
+func decryptHexLiteral(hl types.HexLiteral, objNr, genNr int, key []byte, needAES bool, r int) (*types.HexLiteral, error) {
+	bb, err := hl.Bytes()
+	if err != nil {
+		return nil, err
+	}
+
+	bb, err = decryptBytes(bb, objNr, genNr, key, needAES, r)
+	if err != nil {
+		return nil, err
+	}
+
+	hl = types.NewHexLiteral(bb)
+
+	return &hl, nil
+}
+
 // EncryptDeepObject recurses over non trivial PDF objects and encrypts all strings encountered.
-func encryptDeepObject(objIn types.Object, objNr, genNr int, key []byte, needAES bool, r int) (*types.HexLiteral, error) {
+func encryptDeepObject(objIn types.Object, objNr, genNr int, key []byte, needAES bool, r int) (types.Object, error) {
 	_, ok := objIn.(types.IndirectRef)
 	if ok {
 		return nil, nil
@@ -1356,26 +1397,23 @@ func encryptDeepObject(objIn types.Object, objNr, genNr int, key []byte, needAES
 				return nil, err
 			}
 			if s != nil {
-				obj[i] = *s
+				obj[i] = s
 			}
 		}
 
 	case types.StringLiteral:
-		s := obj.Value()
-		b, err := encryptBytes([]byte(s), objNr, genNr, key, needAES, r)
+		sl, err := encryptStringLiteral(obj, objNr, genNr, key, needAES, r)
 		if err != nil {
 			return nil, err
 		}
-		hl := types.NewHexLiteral(b)
-		return &hl, nil
+		return *sl, nil
 
 	case types.HexLiteral:
-		bb, err := encryptHexLiteral(obj, objNr, genNr, key, needAES, r)
+		hl, err := encryptHexLiteral(obj, objNr, genNr, key, needAES, r)
 		if err != nil {
 			return nil, err
 		}
-		hl := types.NewHexLiteral(bb)
-		return &hl, nil
+		return *hl, nil
 
 	default:
 
@@ -1404,13 +1442,13 @@ func decryptDict(d types.Dict, objNr, genNr int, key []byte, needAES bool, r int
 			return err
 		}
 		if s != nil {
-			d[k] = *s
+			d[k] = s
 		}
 	}
 	return nil
 }
 
-func decryptDeepObject(objIn types.Object, objNr, genNr int, key []byte, needAES bool, r int) (*types.HexLiteral, error) {
+func decryptDeepObject(objIn types.Object, objNr, genNr int, key []byte, needAES bool, r int) (types.Object, error) {
 	_, ok := objIn.(types.IndirectRef)
 	if ok {
 		return nil, nil
@@ -1430,25 +1468,23 @@ func decryptDeepObject(objIn types.Object, objNr, genNr int, key []byte, needAES
 				return nil, err
 			}
 			if s != nil {
-				obj[i] = *s
+				obj[i] = s
 			}
 		}
 
 	case types.StringLiteral:
-		bb, err := decryptString(obj.Value(), objNr, genNr, key, needAES, r)
+		sl, err := decryptStringLiteral(obj, objNr, genNr, key, needAES, r)
 		if err != nil {
 			return nil, err
 		}
-		hl := types.NewHexLiteral(bb)
-		return &hl, nil
+		return *sl, nil
 
 	case types.HexLiteral:
-		bb, err := decryptHexLiteral(obj, objNr, genNr, key, needAES, r)
+		hl, err := decryptHexLiteral(obj, objNr, genNr, key, needAES, r)
 		if err != nil {
 			return nil, err
 		}
-		hl := types.NewHexLiteral(bb)
-		return &hl, nil
+		return *hl, nil
 
 	default:
 
@@ -1607,24 +1643,6 @@ func fileID(ctx *model.Context) (types.HexLiteral, error) {
 	m := h.Sum(nil)
 
 	return types.HexLiteral(hex.EncodeToString(m)), nil
-}
-
-func encryptHexLiteral(hl types.HexLiteral, objNr, genNr int, key []byte, needAES bool, r int) ([]byte, error) {
-	bb, err := hl.Bytes()
-	if err != nil {
-		return nil, err
-	}
-
-	return encryptBytes(bb, objNr, genNr, key, needAES, r)
-}
-
-func decryptHexLiteral(hl types.HexLiteral, objNr, genNr int, key []byte, needAES bool, r int) ([]byte, error) {
-	bb, err := hl.Bytes()
-	if err != nil {
-		return nil, err
-	}
-
-	return decryptBytes(bb, objNr, genNr, key, needAES, r)
 }
 
 func calcFileEncKey(ctx *model.Context) error {
