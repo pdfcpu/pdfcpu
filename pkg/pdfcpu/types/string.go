@@ -194,7 +194,7 @@ func Unescape(s string) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// UTF8ToCP1252 converts UTF-8 to CP1252.
+// UTF8ToCP1252 converts UTF-8 to CP1252. Unused
 func UTF8ToCP1252(s string) string {
 	bb := []byte{}
 	for _, r := range s {
@@ -203,7 +203,7 @@ func UTF8ToCP1252(s string) string {
 	return string(bb)
 }
 
-// CP1252ToUTF8 converts CP1252 to UTF-8.
+// CP1252ToUTF8 converts CP1252 to UTF-8. Unused
 func CP1252ToUTF8(s string) string {
 	utf8Buf := make([]byte, utf8.UTFMax)
 	bb := []byte{}

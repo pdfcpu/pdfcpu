@@ -51,9 +51,13 @@ func PropertiesAdd(ctx *model.Context, properties map[string]string) error {
 	d, _ := ctx.DereferenceDict(*ctx.Info)
 
 	for k, v := range properties {
-		k1 := types.UTF8ToCP1252(k)
-		d[k1] = types.StringLiteral(v)
-		ctx.Properties[k1] = v
+		s, err := types.Escape(v)
+		if err != nil {
+			return err
+		}
+		key := types.EncodeName(k)
+		d[key] = types.StringLiteral(*s)
+		ctx.Properties[key] = *s
 	}
 
 	return nil
@@ -65,6 +69,7 @@ func PropertiesRemove(ctx *model.Context, properties []string) (bool, error) {
 	if ctx.Info == nil {
 		return false, nil
 	}
+
 	d, err := ctx.DereferenceDict(*ctx.Info)
 	if err != nil || d == nil {
 		return false, err
@@ -73,8 +78,7 @@ func PropertiesRemove(ctx *model.Context, properties []string) (bool, error) {
 	if len(properties) == 0 {
 		// Remove all properties.
 		for k := range ctx.Properties {
-			k1 := types.UTF8ToCP1252(k)
-			delete(d, k1)
+			delete(d, types.EncodeName(k))
 		}
 		ctx.Properties = map[string]string{}
 		return true, nil
@@ -82,11 +86,11 @@ func PropertiesRemove(ctx *model.Context, properties []string) (bool, error) {
 
 	var removed bool
 	for _, k := range properties {
-		k1 := types.UTF8ToCP1252(k)
-		_, ok := d[k1]
+		key := types.EncodeName(k)
+		_, ok := d[key]
 		if ok && !removed {
-			delete(d, k1)
-			delete(ctx.Properties, k1)
+			delete(d, key)
+			delete(ctx.Properties, k)
 			removed = true
 		}
 	}

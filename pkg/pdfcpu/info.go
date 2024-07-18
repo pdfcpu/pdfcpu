@@ -529,7 +529,7 @@ func Info(ctx *model.Context, fileName string, selectedPages types.IntSet) (*PDF
 
 	info.ViewerPref = ctx.ViewerPref
 
-	kwl, err := KeywordsList(ctx.XRefTable)
+	kwl, err := KeywordsList(ctx)
 	if err != nil {
 		return nil, err
 	}

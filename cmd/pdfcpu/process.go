@@ -1612,6 +1612,13 @@ func processRemovePropertiesCommand(conf *model.Configuration) {
 			}
 			continue
 		}
+
+		if !validate.DocumentProperty(arg) {
+			fmt.Fprintf(os.Stderr, "property name \"%s\" not allowed!\n", arg)
+			fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePropertiesRemove)
+			os.Exit(1)
+		}
+
 		keys = append(keys, arg)
 	}
 

@@ -18,7 +18,6 @@ package validate
 
 import (
 	"strings"
-	"unicode/utf8"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -29,21 +28,6 @@ import (
 // DocumentProperty ensures a property name that may be modified.
 func DocumentProperty(s string) bool {
 	return !types.MemberOf(s, []string{"Keywords", "Producer", "CreationDate", "ModDate", "Trapped"})
-}
-
-func handleDefault(xRefTable *model.XRefTable, o types.Object) (string, error) {
-
-	s, err := xRefTable.DereferenceStringOrHexLiteral(o, model.V10, nil)
-	if err == nil {
-		return s, nil
-	}
-
-	if xRefTable.ValidationMode == model.ValidationStrict {
-		return "", err
-	}
-
-	_, err = xRefTable.Dereference(o)
-	return "", err
 }
 
 func validateInfoDictDate(xRefTable *model.XRefTable, o types.Object) (s string, err error) {
@@ -75,16 +59,26 @@ func validateInfoDictTrapped(xRefTable *model.XRefTable, o types.Object) error {
 }
 
 func handleProperties(xRefTable *model.XRefTable, key string, val types.Object) error {
-	if !utf8.ValidString(key) {
-		key = types.CP1252ToUTF8(key)
-	}
-	s, err := handleDefault(xRefTable, val)
+
+	v, err := xRefTable.DereferenceStringOrHexLiteral(val, model.V10, nil)
 	if err != nil {
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return err
+		}
+		_, err = xRefTable.Dereference(val)
 		return err
 	}
-	if s != "" {
-		xRefTable.Properties[key] = s
+
+	if v != "" {
+
+		k, err := types.DecodeName(key)
+		if err != nil {
+			return err
+		}
+
+		xRefTable.Properties[k] = v
 	}
+
 	return nil
 }
 

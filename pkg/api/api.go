@@ -204,6 +204,7 @@ func Write(ctx *model.Context, w io.Writer, conf *model.Configuration) error {
 		log.Stats.Printf("XRefTable:\n%s\n", ctx)
 	}
 
+	// Note side effects of validation before writing!
 	if conf.PostProcessValidate {
 		if err := ValidateContext(ctx); err != nil {
 			return err

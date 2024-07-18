@@ -24,8 +24,8 @@ import (
 )
 
 // KeywordsList returns a list of keywords as recorded in the document info dict.
-func KeywordsList(xRefTable *model.XRefTable) ([]string, error) {
-	ss := strings.FieldsFunc(xRefTable.Keywords, func(c rune) bool { return c == ',' || c == ';' || c == '\r' })
+func KeywordsList(ctx *model.Context) ([]string, error) {
+	ss := strings.FieldsFunc(ctx.Keywords, func(c rune) bool { return c == ',' || c == ';' || c == '\r' })
 	for i, s := range ss {
 		ss[i] = strings.TrimSpace(s)
 	}
@@ -34,34 +34,49 @@ func KeywordsList(xRefTable *model.XRefTable) ([]string, error) {
 
 // KeywordsAdd adds keywords to the document info dict.
 // Returns true if at least one keyword was added.
-func KeywordsAdd(xRefTable *model.XRefTable, keywords []string) error {
+func KeywordsAdd(ctx *model.Context, keywords []string) error {
+	if err := ensureInfoDictAndFileID(ctx); err != nil {
+		return err
+	}
 
-	list, err := KeywordsList(xRefTable)
+	list, err := KeywordsList(ctx)
 	if err != nil {
 		return err
 	}
 
-	for _, s := range keywords {
-		if !types.MemberOf(s, list) {
-			xRefTable.Keywords += ", " + types.UTF8ToCP1252(s)
+	for _, kw := range keywords {
+		if !types.MemberOf(kw, list) {
+			if len(ctx.Keywords) == 0 {
+				ctx.Keywords = kw
+			} else {
+				ctx.Keywords += ", " + kw
+			}
 		}
 	}
 
-	d, err := xRefTable.DereferenceDict(*xRefTable.Info)
+	d, err := ctx.DereferenceDict(*ctx.Info)
 	if err != nil || d == nil {
 		return err
 	}
 
-	d["Keywords"] = types.StringLiteral(xRefTable.Keywords)
+	s, err := types.EscapeUTF16String(ctx.Keywords)
+	if err != nil {
+		return err
+	}
+
+	d["Keywords"] = types.StringLiteral(*s)
 
 	return nil
 }
 
 // KeywordsRemove deletes keywords from the document info dict.
 // Returns true if at least one keyword was removed.
-func KeywordsRemove(xRefTable *model.XRefTable, keywords []string) (bool, error) {
-	// TODO Handle missing info dict.
-	d, err := xRefTable.DereferenceDict(*xRefTable.Info)
+func KeywordsRemove(ctx *model.Context, keywords []string) (bool, error) {
+	if ctx.Info == nil {
+		return false, nil
+	}
+
+	d, err := ctx.DereferenceDict(*ctx.Info)
 	if err != nil || d == nil {
 		return false, err
 	}
@@ -72,34 +87,36 @@ func KeywordsRemove(xRefTable *model.XRefTable, keywords []string) (bool, error)
 		return true, nil
 	}
 
-	kw := make([]string, len(keywords))
-	for i, s := range keywords {
-		kw[i] = types.UTF8ToCP1252(s)
-	}
+	ss := strings.FieldsFunc(ctx.Keywords, func(c rune) bool { return c == ',' || c == ';' || c == '\r' })
 
-	// Distil document keywords.
-	ss := strings.FieldsFunc(xRefTable.Keywords, func(c rune) bool { return c == ',' || c == ';' || c == '\r' })
-
-	xRefTable.Keywords = ""
+	ctx.Keywords = ""
 	var removed bool
 	first := true
 
 	for _, s := range ss {
 		s = strings.TrimSpace(s)
-		if types.MemberOf(s, kw) {
+		if types.MemberOf(s, keywords) {
 			removed = true
 			continue
 		}
+
 		if first {
-			xRefTable.Keywords = s
+			ctx.Keywords = s
 			first = false
 			continue
 		}
-		xRefTable.Keywords += ", " + s
+
+		ctx.Keywords += ", " + s
 	}
 
 	if removed {
-		d["Keywords"] = types.StringLiteral(xRefTable.Keywords)
+
+		s, err := types.EscapeUTF16String(ctx.Keywords)
+		if err != nil {
+			return false, err
+		}
+
+		d["Keywords"] = types.StringLiteral(*s)
 	}
 
 	return removed, nil

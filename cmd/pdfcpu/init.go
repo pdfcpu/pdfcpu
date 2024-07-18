@@ -372,6 +372,7 @@ func initFlags() {
 func initLogging(verbose, veryVerbose bool) {
 	needStackTrace = verbose || veryVerbose
 	if quiet {
+		// TODO Need separate logger for command result output.
 		return
 	}
 

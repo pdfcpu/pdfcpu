@@ -43,7 +43,7 @@ func Keywords(rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {
 		return nil, err
 	}
 
-	return pdfcpu.KeywordsList(ctx.XRefTable)
+	return pdfcpu.KeywordsList(ctx)
 }
 
 // AddKeywords adds keywords to rs's infodict and writes the result to w.
@@ -64,7 +64,7 @@ func AddKeywords(rs io.ReadSeeker, w io.Writer, files []string, conf *model.Conf
 		return err
 	}
 
-	if err = pdfcpu.KeywordsAdd(ctx.XRefTable, files); err != nil {
+	if err = pdfcpu.KeywordsAdd(ctx, files); err != nil {
 		return err
 	}
 
@@ -128,7 +128,7 @@ func RemoveKeywords(rs io.ReadSeeker, w io.Writer, keywords []string, conf *mode
 	}
 
 	var ok bool
-	if ok, err = pdfcpu.KeywordsRemove(ctx.XRefTable, keywords); err != nil {
+	if ok, err = pdfcpu.KeywordsRemove(ctx, keywords); err != nil {
 		return err
 	}
 	if !ok {
