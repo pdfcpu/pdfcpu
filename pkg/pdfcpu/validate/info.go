@@ -35,7 +35,6 @@ func validateInfoDictDate(xRefTable *model.XRefTable, o types.Object) (s string,
 }
 
 func validateInfoDictTrapped(xRefTable *model.XRefTable, o types.Object) error {
-
 	sinceVersion := model.V13
 
 	validate := func(s string) bool { return types.MemberOf(s, []string{"True", "False", "Unknown"}) }
@@ -59,7 +58,6 @@ func validateInfoDictTrapped(xRefTable *model.XRefTable, o types.Object) error {
 }
 
 func handleProperties(xRefTable *model.XRefTable, key string, val types.Object) error {
-
 	v, err := xRefTable.DereferenceStringOrHexLiteral(val, model.V10, nil)
 	if err != nil {
 		if xRefTable.ValidationMode == model.ValidationStrict {
@@ -105,6 +103,14 @@ func validateDocInfoDictEntry(xRefTable *model.XRefTable, k string, v types.Obje
 	// text string, optional, since V1.1
 	case "Keywords":
 		xRefTable.Keywords, err = xRefTable.DereferenceStringOrHexLiteral(v, model.V11, nil)
+		if err != nil {
+			return hasModDate, err
+		}
+		ss := strings.FieldsFunc(xRefTable.Keywords, func(c rune) bool { return c == ',' || c == ';' || c == '\r' })
+		for _, s := range ss {
+			keyword := strings.TrimSpace(s)
+			xRefTable.KeywordList[keyword] = true
+		}
 
 	// text string, optional
 	case "Creator":
@@ -169,7 +175,6 @@ func validateDocumentInfoDict(xRefTable *model.XRefTable, obj types.Object) (boo
 }
 
 func validateDocumentInfoObject(xRefTable *model.XRefTable) error {
-
 	// Document info object is optional.
 	if xRefTable.Info == nil {
 		return nil

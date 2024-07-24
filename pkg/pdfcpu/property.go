@@ -51,13 +51,12 @@ func PropertiesAdd(ctx *model.Context, properties map[string]string) error {
 	d, _ := ctx.DereferenceDict(*ctx.Info)
 
 	for k, v := range properties {
-		s, err := types.Escape(v)
+		s, err := types.EscapeUTF16String(v)
 		if err != nil {
 			return err
 		}
-		key := types.EncodeName(k)
-		d[key] = types.StringLiteral(*s)
-		ctx.Properties[key] = *s
+		d[k] = types.StringLiteral(*s)
+		ctx.Properties[k] = *s
 	}
 
 	return nil
@@ -86,10 +85,9 @@ func PropertiesRemove(ctx *model.Context, properties []string) (bool, error) {
 
 	var removed bool
 	for _, k := range properties {
-		key := types.EncodeName(k)
-		_, ok := d[key]
+		_, ok := d[k]
 		if ok && !removed {
-			delete(d, key)
+			delete(d, k)
 			delete(ctx.Properties, k)
 			removed = true
 		}

@@ -25,11 +25,69 @@ import (
 
 // KeywordsList returns a list of keywords as recorded in the document info dict.
 func KeywordsList(ctx *model.Context) ([]string, error) {
-	ss := strings.FieldsFunc(ctx.Keywords, func(c rune) bool { return c == ',' || c == ';' || c == '\r' })
-	for i, s := range ss {
-		ss[i] = strings.TrimSpace(s)
+	var ss []string
+	for keyword, val := range ctx.KeywordList {
+		if val {
+			ss = append(ss, keyword)
+		}
 	}
 	return ss, nil
+}
+
+func removeKeywordsFromMetadata(ctx *model.Context) error {
+	rootDict, err := ctx.Catalog()
+	if err != nil {
+		return err
+	}
+
+	indRef, _ := rootDict["Metadata"].(types.IndirectRef)
+	entry, _ := ctx.FindTableEntryForIndRef(&indRef)
+	sd, _ := entry.Object.(types.StreamDict)
+
+	if err = sd.Decode(); err != nil {
+		return err
+	}
+
+	if err = model.RemoveKeywords(&sd.Content); err != nil {
+		return err
+	}
+
+	//fmt.Println(hex.Dump(sd.Content))
+
+	if err := sd.Encode(); err != nil {
+		return err
+	}
+
+	entry.Object = sd
+
+	return nil
+}
+
+func finalizeKeywords(ctx *model.Context) error {
+	d, err := ctx.DereferenceDict(*ctx.Info)
+	if err != nil || d == nil {
+		return err
+	}
+
+	ss, err := KeywordsList(ctx)
+	if err != nil {
+		return err
+	}
+
+	s0 := strings.Join(ss, "; ")
+
+	s, err := types.EscapeUTF16String(s0)
+	if err != nil {
+		return err
+	}
+
+	d["Keywords"] = types.StringLiteral(*s)
+
+	if ctx.CatalogXMPMeta != nil {
+		removeKeywordsFromMetadata(ctx)
+	}
+
+	return nil
 }
 
 // KeywordsAdd adds keywords to the document info dict.
@@ -39,34 +97,11 @@ func KeywordsAdd(ctx *model.Context, keywords []string) error {
 		return err
 	}
 
-	list, err := KeywordsList(ctx)
-	if err != nil {
-		return err
+	for _, keyword := range keywords {
+		ctx.KeywordList[strings.TrimSpace(keyword)] = true
 	}
 
-	for _, kw := range keywords {
-		if !types.MemberOf(kw, list) {
-			if len(ctx.Keywords) == 0 {
-				ctx.Keywords = kw
-			} else {
-				ctx.Keywords += ", " + kw
-			}
-		}
-	}
-
-	d, err := ctx.DereferenceDict(*ctx.Info)
-	if err != nil || d == nil {
-		return err
-	}
-
-	s, err := types.EscapeUTF16String(ctx.Keywords)
-	if err != nil {
-		return err
-	}
-
-	d["Keywords"] = types.StringLiteral(*s)
-
-	return nil
+	return finalizeKeywords(ctx)
 }
 
 // KeywordsRemove deletes keywords from the document info dict.
@@ -84,40 +119,25 @@ func KeywordsRemove(ctx *model.Context, keywords []string) (bool, error) {
 	if len(keywords) == 0 {
 		// Remove all keywords.
 		delete(d, "Keywords")
+
+		if ctx.CatalogXMPMeta != nil {
+			removeKeywordsFromMetadata(ctx)
+		}
+
 		return true, nil
 	}
 
-	ss := strings.FieldsFunc(ctx.Keywords, func(c rune) bool { return c == ',' || c == ';' || c == '\r' })
-
-	ctx.Keywords = ""
 	var removed bool
-	first := true
-
-	for _, s := range ss {
-		s = strings.TrimSpace(s)
-		if types.MemberOf(s, keywords) {
+	for keyword := range ctx.KeywordList {
+		if types.MemberOf(keyword, keywords) {
+			ctx.KeywordList[keyword] = false
 			removed = true
-			continue
 		}
-
-		if first {
-			ctx.Keywords = s
-			first = false
-			continue
-		}
-
-		ctx.Keywords += ", " + s
 	}
 
 	if removed {
-
-		s, err := types.EscapeUTF16String(ctx.Keywords)
-		if err != nil {
-			return false, err
-		}
-
-		d["Keywords"] = types.StringLiteral(*s)
+		err = finalizeKeywords(ctx)
 	}
 
-	return removed, nil
+	return removed, err
 }

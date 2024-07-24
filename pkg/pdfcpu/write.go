@@ -98,6 +98,10 @@ func Write(ctx *model.Context) (err error) {
 		return err
 	}
 
+	// if exists metadata, update from info dict
+	// else if v2 create from scratch
+	// else nothing just write info dict
+
 	// Since we support PDF Collections (since V1.7) for file attachments
 	// we need to generate V1.7 PDF files.
 	v := model.V17

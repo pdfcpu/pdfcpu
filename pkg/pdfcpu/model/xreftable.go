@@ -117,17 +117,19 @@ type XRefTable struct {
 	RootVersion   *Version // Optional PDF version taking precedence over the header version.
 
 	// Document information section
-	ID           types.Array        // from trailer
-	Info         *types.IndirectRef // Infodict (reference to info dict object)
-	Title        string
-	Subject      string
-	Keywords     string
-	Author       string
-	Creator      string
-	Producer     string
-	CreationDate string
-	ModDate      string
-	Properties   map[string]string
+	ID             types.Array        // from trailer
+	Info           *types.IndirectRef // Infodict (reference to info dict object)
+	Title          string
+	Subject        string
+	Author         string
+	Creator        string
+	Producer       string
+	CreationDate   string
+	ModDate        string
+	Keywords       string
+	KeywordList    types.StringSet
+	Properties     map[string]string
+	CatalogXMPMeta *XMPMeta
 
 	PageLayout *PageLayout
 	PageMode   *PageMode
@@ -179,6 +181,7 @@ func newXRefTable(conf *Configuration) (xRefTable *XRefTable) {
 		Table:             map[int]*XRefTableEntry{},
 		Names:             map[string]*Node{},
 		NameRefs:          map[string]NameMap{},
+		KeywordList:       types.StringSet{},
 		Properties:        map[string]string{},
 		LinearizationObjs: types.IntSet{},
 		PageAnnots:        map[int]PgAnnots{},

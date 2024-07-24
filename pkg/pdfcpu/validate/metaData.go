@@ -18,92 +18,14 @@ package validate
 
 import (
 	"encoding/xml"
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
+	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
-
-const userDateFormatNoTimeZone = "2006-01-02T15:04:05Z"
-const userDateFormatNegTimeZone = "2006-01-02T15:04:05-07:00"
-const userDateFormatPosTimeZone = "2006-01-02T15:04:05+07:00"
-
-type userDate time.Time
-
-func (ud *userDate) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-	dateString := ""
-	err := d.DecodeElement(&dateString, &start)
-	if err != nil {
-		return err
-	}
-	dat, err := time.Parse(userDateFormatNoTimeZone, dateString)
-	if err == nil {
-		*ud = userDate(dat)
-		return nil
-	}
-	dat, err = time.Parse(userDateFormatPosTimeZone, dateString)
-	if err == nil {
-		*ud = userDate(dat)
-		return nil
-	}
-	dat, err = time.Parse(userDateFormatNegTimeZone, dateString)
-	if err == nil {
-		*ud = userDate(dat)
-		return nil
-	}
-	return err
-}
-
-type Alt struct {
-	//XMLName xml.Name `xml:"http://www.w3.org/1999/02/22-rdf-syntax-ns# Alt"`
-	Entries []string `xml:"http://www.w3.org/1999/02/22-rdf-syntax-ns# li"`
-}
-
-type Seq struct {
-	//XMLName xml.Name `xml:"http://www.w3.org/1999/02/22-rdf-syntax-ns# Seq"`
-	Entries []string `xml:"http://www.w3.org/1999/02/22-rdf-syntax-ns# li"`
-}
-
-type Title struct {
-	//XMLName xml.Name `xml:"http://purl.org/dc/elements/1.1/ title"`
-	Alt Alt `xml:"http://www.w3.org/1999/02/22-rdf-syntax-ns# Alt"`
-}
-
-type Desc struct {
-	//XMLName xml.Name `xml:"http://purl.org/dc/elements/1.1/ description"`
-	Alt Alt `xml:"http://www.w3.org/1999/02/22-rdf-syntax-ns# Alt"`
-}
-
-type Creator struct {
-	//XMLName xml.Name `xml:"http://purl.org/dc/elements/1.1/ creator"`
-	Seq Seq `xml:"http://www.w3.org/1999/02/22-rdf-syntax-ns# Seq"`
-}
-
-type Description struct {
-	//XMLName      xml.Name `xml:"http://www.w3.org/1999/02/22-rdf-syntax-ns# Description"`
-	Title        Title    `xml:"http://purl.org/dc/elements/1.1/ title"`
-	Author       Creator  `xml:"http://purl.org/dc/elements/1.1/ creator"`
-	Subject      Desc     `xml:"http://purl.org/dc/elements/1.1/ description"`
-	Creator      string   `xml:"http://ns.adobe.com/xap/1.0/ CreatorTool"`
-	CreationDate userDate `xml:"http://ns.adobe.com/xap/1.0/ CreateDate"`
-	ModDate      userDate `xml:"http://ns.adobe.com/xap/1.0/ ModifyDate"`
-	Producer     string   `xml:"http://ns.adobe.com/pdf/1.3/ Producer"`
-	Trapped      bool     `xml:"http://ns.adobe.com/pdf/1.3/ Trapped"`
-	Keywords     string   `xml:"http://ns.adobe.com/pdf/1.3/ Keywords"`
-}
-
-type RDF struct {
-	XMLName     xml.Name `xml:"http://www.w3.org/1999/02/22-rdf-syntax-ns# RDF"`
-	Description Description
-}
-
-type XMPMeta struct {
-	XMLName xml.Name `xml:"adobe:ns:meta/ xmpmeta"`
-	RDF     RDF
-}
 
 func validateMetadataStream(xRefTable *model.XRefTable, d types.Dict, required bool, sinceVersion model.Version) (*types.StreamDict, error) {
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
@@ -139,30 +61,45 @@ func validateMetadata(xRefTable *model.XRefTable, d types.Dict, required bool, s
 	return err
 }
 
-func validateRootMetadata(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
+func catalogMetaData(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) (*model.XMPMeta, error) {
 	sd, err := validateMetadataStream(xRefTable, rootDict, required, sinceVersion)
 	if err != nil || sd == nil {
-		return err
+		return nil, err
 	}
 
-	if xRefTable.Version() < model.V20 {
-		return nil
-	}
+	// if xRefTable.Version() < model.V20 {
+	// 	return nil
+	// }
 
 	// Decode streamDict for supported filters only.
-	if err := sd.Decode(); err == filter.ErrUnsupportedFilter {
-		return nil
+	err = sd.Decode()
+	if err == filter.ErrUnsupportedFilter {
+		return nil, nil
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	x := XMPMeta{}
+	x := model.XMPMeta{}
 
 	if err = xml.Unmarshal(sd.Content, &x); err != nil {
-		fmt.Printf("error: %v", err)
-		return err
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return nil, err
+		}
+		log.CLI.Println("ignoring metadata parse error")
+		return nil, nil
 	}
+
+	return &x, nil
+}
+
+func validateRootMetadata(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
+
+	if xRefTable.CatalogXMPMeta == nil {
+		return nil
+	}
+
+	x := xRefTable.CatalogXMPMeta
 
 	// fmt.Printf("       Title: %v\n", x.RDF.Description.Title.Alt.Entries)
 	// fmt.Printf("      Author: %v\n", x.RDF.Description.Author.Seq.Entries)
@@ -183,7 +120,12 @@ func validateRootMetadata(xRefTable *model.XRefTable, rootDict types.Dict, requi
 	xRefTable.ModDate = time.Time(d.ModDate).Format(time.RFC3339Nano)
 	xRefTable.Producer = d.Producer
 	//xRefTable.Trapped = d.Trapped
-	xRefTable.Keywords = d.Keywords
+
+	ss := strings.FieldsFunc(d.Keywords, func(c rune) bool { return c == ',' || c == ';' || c == '\r' })
+	for _, s := range ss {
+		keyword := strings.TrimSpace(s)
+		xRefTable.KeywordList[keyword] = true
+	}
 
 	return nil
 }

@@ -1757,7 +1757,7 @@ func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) error {
 			if err != nil {
 				return err
 			}
-			if annotsDict == nil {
+			if len(annotsDict) == 0 {
 				continue
 			}
 		} else if xRefTable.ValidationMode != model.ValidationRelaxed {

@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 func listKeywords(t *testing.T, msg, fileName string, want []string) []string {
@@ -33,8 +34,9 @@ func listKeywords(t *testing.T, msg, fileName string, want []string) []string {
 	if len(got) != len(want) {
 		t.Fatalf("%s: list keywords %s: want %d got %d\n", msg, fileName, len(want), len(got))
 	}
-	for i, v := range got {
-		if v != want[i] {
+
+	for _, v := range got {
+		if !types.MemberOf(v, want) {
 			t.Fatalf("%s: list keywords %s: want %v got %v\n", msg, fileName, want, got)
 		}
 	}

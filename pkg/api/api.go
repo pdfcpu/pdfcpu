@@ -205,11 +205,11 @@ func Write(ctx *model.Context, w io.Writer, conf *model.Configuration) error {
 	}
 
 	// Note side effects of validation before writing!
-	if conf.PostProcessValidate {
-		if err := ValidateContext(ctx); err != nil {
-			return err
-		}
-	}
+	// if conf.PostProcessValidate {
+	// 	if err := ValidateContext(ctx); err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	return WriteContext(ctx, w)
 }

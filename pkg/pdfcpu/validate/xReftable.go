@@ -40,16 +40,32 @@ func XRefTable(xRefTable *model.XRefTable) error {
 		log.Validate.Println("*** validateXRefTable begin ***")
 	}
 
-	// Validate root object(aka the document catalog) and page tree.
-	err := validateRootObject(xRefTable)
+	metaDataAuthoritative, err := metaDataModifiedAfterInfoDict(xRefTable)
 	if err != nil {
 		return err
 	}
 
-	// Validate document information dictionary.
-	err = validateDocumentInfoObject(xRefTable)
+	if metaDataAuthoritative {
+		// if both info dict and catalog metadata present and metadata modification date after infodict modification date
+		// validate document information dictionary before catalog metadata.
+		err := validateDocumentInfoObject(xRefTable)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Validate root object(aka the document catalog) and page tree.
+	err = validateRootObject(xRefTable)
 	if err != nil {
 		return err
+	}
+
+	if !metaDataAuthoritative {
+		// Validate document information dictionary after catalog metadata.
+		err = validateDocumentInfoObject(xRefTable)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Validate offspec additional streams as declared in pdf trailer.
@@ -65,6 +81,62 @@ func XRefTable(xRefTable *model.XRefTable) error {
 	}
 
 	return nil
+}
+
+func metaDataModifiedAfterInfoDict(xRefTable *model.XRefTable) (bool, error) {
+	rootDict, err := xRefTable.Catalog()
+	if err != nil {
+		return false, err
+	}
+
+	xmpMeta, err := catalogMetaData(xRefTable, rootDict, OPTIONAL, model.V14)
+	if err != nil {
+		return false, err
+	}
+
+	if xmpMeta == nil || xRefTable.Info == nil {
+		return false, nil
+	}
+
+	xRefTable.CatalogXMPMeta = xmpMeta
+
+	d, err := xRefTable.DereferenceDict(*xRefTable.Info)
+	if err != nil {
+		return false, err
+	}
+	if d == nil {
+		return true, nil
+	}
+
+	modDate, ok := d["ModDate"]
+	if !ok {
+		return true, nil
+	}
+
+	modTimestampInfoDict, err := timeOfDateObject(xRefTable, modDate, model.V10)
+	if err != nil {
+		return false, err
+	}
+	if modTimestampInfoDict == nil {
+		return true, nil
+	}
+
+	modTimestampMetaData := time.Time(xmpMeta.RDF.Description.ModDate)
+	if modTimestampMetaData.IsZero() {
+		//  xmlns:xap='http://ns.adobe.com/xap/1.0/ ...xap:ModifyDate='2006-06-05T21:58:13-05:00'></rdf:Description>
+		//fmt.Println("metadata modificationDate is zero -> older than infodict")
+		return false, nil
+	}
+
+	//fmt.Printf("infoDict: %s metaData: %s\n", modTimestampInfoDict, modTimestampMetaData)
+
+	if *modTimestampInfoDict == modTimestampMetaData {
+		return false, nil
+	}
+
+	infoDictOlderThanMetaDict := (*modTimestampInfoDict).Before(modTimestampMetaData)
+
+	return infoDictOlderThanMetaDict, nil
 }
 
 func validateRootVersion(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {

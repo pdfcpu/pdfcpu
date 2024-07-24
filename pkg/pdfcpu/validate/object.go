@@ -213,6 +213,24 @@ func validateBooleanArrayEntry(xRefTable *model.XRefTable, d types.Dict, dictNam
 	return a, nil
 }
 
+func timeOfDateObject(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) (*time.Time, error) {
+	s, err := xRefTable.DereferenceStringOrHexLiteral(o, sinceVersion, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if s == "" {
+		return nil, nil
+	}
+
+	t, ok := types.DateTime(s, xRefTable.ValidationMode == model.ValidationRelaxed)
+	if !ok {
+		return nil, errors.Errorf("pdfcpu: validateDateObject: <%s> invalid date", s)
+	}
+
+	return &t, nil
+}
+
 func validateDateObject(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) (string, error) {
 	s, err := xRefTable.DereferenceStringOrHexLiteral(o, sinceVersion, nil)
 	if err != nil {
