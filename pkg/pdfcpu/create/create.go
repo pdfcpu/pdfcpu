@@ -332,7 +332,7 @@ func CreatePage(
 	}
 
 	for _, la := range p.LinkAnnots {
-		d, err := la.RenderDict(xRefTable, *pageDictIndRef)
+		d, err := la.RenderDict(xRefTable, pageDictIndRef)
 		if err != nil {
 			return nil, nil, &json.UnsupportedTypeError{}
 		}
@@ -382,7 +382,7 @@ func UpdatePage(xRefTable *model.XRefTable, dIndRef types.IndirectRef, d, res ty
 	}
 
 	for _, la := range p.LinkAnnots {
-		d, err := la.RenderDict(xRefTable, dIndRef)
+		d, err := la.RenderDict(xRefTable, &dIndRef)
 		if err != nil {
 			return err
 		}

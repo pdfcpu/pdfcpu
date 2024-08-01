@@ -631,19 +631,26 @@ func processXRefStream(ctx *model.Context, xsd *types.XRefStreamDict, objNr, gen
 
 	*offset += offExtra
 
-	entry :=
-		model.XRefTableEntry{
-			Free:       false,
-			Offset:     offset,
-			Generation: genNr,
-			Object:     *xsd}
-
-	if log.ReadEnabled() {
-		log.Read.Printf("processXRefStream: Insert new xRefTable entry for Object %d\n", *objNr)
+	if entry, ok := ctx.Table[*objNr]; ok && *entry.Offset == *offset {
+		entry.Object = *xsd
 	}
 
-	ctx.Table[*objNr] = &entry
-	ctx.Read.XRefStreams[*objNr] = true
+	//////////////////
+	// entry :=
+	// 	model.XRefTableEntry{
+	// 		Free:       false,
+	// 		Offset:     offset,
+	// 		Generation: genNr,
+	// 		Object:     *xsd}
+
+	// if log.ReadEnabled() {
+	// 	log.Read.Printf("processXRefStream: Insert new xRefTable entry for Object %d\n", *objNr)
+	// }
+
+	// ctx.Table[*objNr] = &entry
+	// ctx.Read.XRefStreams[*objNr] = true
+	///////////////////
+
 	prevOffset = xsd.PreviousOffset
 
 	if log.ReadEnabled() {

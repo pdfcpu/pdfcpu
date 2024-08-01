@@ -499,7 +499,7 @@ func deleteRedundantObject(ctx *model.Context, objNr int) {
 	}
 
 	if ctx.IsLinearizationObject(objNr) || ctx.Optimize.IsDuplicateInfoObject(objNr) ||
-		ctx.Read.IsObjectStreamObject(objNr) || ctx.Read.IsXRefStreamObject(objNr) {
+		ctx.Read.IsObjectStreamObject(objNr) {
 		ctx.FreeObject(objNr)
 	}
 
@@ -511,7 +511,7 @@ func detectLinearizationObjs(xRefTable *model.XRefTable, entry *model.XRefTableE
 		if *entry.Offset == *xRefTable.OffsetPrimaryHintTable {
 			xRefTable.LinearizationObjs[i] = true
 			if log.WriteEnabled() {
-				log.Write.Printf("deleteRedundantObjects: primaryHintTable at obj #%d\n", i)
+				log.Write.Printf("detectLinearizationObjs: primaryHintTable at obj #%d\n", i)
 			}
 		}
 
@@ -519,7 +519,7 @@ func detectLinearizationObjs(xRefTable *model.XRefTable, entry *model.XRefTableE
 			*entry.Offset == *xRefTable.OffsetOverflowHintTable {
 			xRefTable.LinearizationObjs[i] = true
 			if log.WriteEnabled() {
-				log.Write.Printf("deleteRedundantObjects: overflowHintTable at obj #%d\n", i)
+				log.Write.Printf("detectLinearizationObjs: overflowHintTable at obj #%d\n", i)
 			}
 		}
 

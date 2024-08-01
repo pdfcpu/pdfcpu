@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
@@ -122,12 +123,16 @@ func findAnnotByObjNr(objNr int, annots types.Array) (int, error) {
 	return -1, nil
 }
 
-func createAnnot(ctx *model.Context, ar model.AnnotationRenderer, pageIndRef *types.IndirectRef) (*types.IndirectRef, error) {
-	d, err := ar.RenderDict(ctx.XRefTable, *pageIndRef)
+func createAnnot(ctx *model.Context, ar model.AnnotationRenderer, pageIndRef *types.IndirectRef) (*types.IndirectRef, types.Dict, error) {
+	d, err := ar.RenderDict(ctx.XRefTable, pageIndRef)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return ctx.IndRefForNewObject(d)
+	indRef, err := ctx.IndRefForNewObject(d)
+	if err != nil {
+		return nil, nil, err
+	}
+	return indRef, d, nil
 }
 
 // Annotation returns an annotation renderer.
@@ -147,11 +152,13 @@ func Annotation(xRefTable *model.XRefTable, d types.Dict) (model.AnnotationRende
 		return nil, err
 	}
 
-	bb, err := d.StringEntryBytes("Contents")
-	if err != nil {
-		return nil, err
+	contents := ""
+	if c, ok := d["Contents"]; ok {
+		contents, err = xRefTable.DereferenceStringOrHexLiteral(c, model.V10, nil)
+		if err != nil {
+			return nil, err
+		}
 	}
-	contents := string(bb)
 
 	var nm string
 	s := d.StringEntry("NM") // This is what pdfcpu refers to as the annotation id.
@@ -170,7 +177,8 @@ func Annotation(xRefTable *model.XRefTable, d types.Dict) (model.AnnotationRende
 	switch *subtype {
 
 	case "Text":
-		ann = model.NewTextAnnotation(*r, contents, nm, "", f, nil, nil, "", "", true, "")
+		popupIndRef := d.IndirectRefEntry("Popup")
+		ann = model.NewTextAnnotation(*r, contents, nm, "", f, nil, "", popupIndRef, nil, "", "", true, "")
 
 	case "Link":
 		var uri string
@@ -190,16 +198,17 @@ func Annotation(xRefTable *model.XRefTable, d types.Dict) (model.AnnotationRende
 			}
 		}
 		dest := (*model.Destination)(nil) // will not collect link dest during validation.
-		ann = model.NewLinkAnnotation(*r, nil, dest, uri, nm, f, 0, model.BSSolid, nil, false)
+		ann = model.NewLinkAnnotation(*r, contents, nm, "", f, nil, dest, uri, nil, false, 0, model.BSSolid)
 
 	case "Popup":
 		parentIndRef := d.IndirectRefEntry("Parent")
-		ann = model.NewPopupAnnotation(*r, nil, contents, nm, f, nil, parentIndRef)
+		ann = model.NewPopupAnnotation(*r, contents, nm, "", f, nil, parentIndRef, false)
 
 	// TODO handle remaining annotation types.
 
 	default:
-		ann = model.NewAnnotationForRawType(*subtype, *r, contents, nil, nm, f, nil)
+		ann = model.NewAnnotationForRawType(*subtype, *r, contents, nm, "", f, nil)
+
 	}
 
 	return ann, nil
@@ -234,6 +243,46 @@ func AnnotationsForSelectedPages(ctx *model.Context, selectedPages types.IntSet)
 	return m
 }
 
+func prepareHeader(horSep *[]int, maxLen *AnnotListMaxLengths) string {
+	s := "     Obj# "
+	if maxLen.ObjNr > 4 {
+		s += strings.Repeat(" ", maxLen.ObjNr-4)
+		*horSep = append(*horSep, 10+maxLen.ObjNr-4)
+	} else {
+		*horSep = append(*horSep, 10)
+	}
+
+	s += draw.VBar + " Id "
+	if maxLen.ID > 2 {
+		s += strings.Repeat(" ", maxLen.ID-2)
+		*horSep = append(*horSep, 4+maxLen.ID-2)
+	} else {
+		*horSep = append(*horSep, 4)
+	}
+
+	s += draw.VBar + " Rect "
+	if maxLen.Rect > 4 {
+		s += strings.Repeat(" ", maxLen.Rect-4)
+		*horSep = append(*horSep, 6+maxLen.Rect-4)
+	} else {
+		*horSep = append(*horSep, 6)
+	}
+
+	s += draw.VBar + " Content"
+	if maxLen.Content > 7 {
+		s += strings.Repeat(" ", maxLen.Rect-7)
+		*horSep = append(*horSep, 8+maxLen.Rect-7)
+	} else {
+		*horSep = append(*horSep, 8)
+	}
+
+	return s
+}
+
+type AnnotListMaxLengths struct {
+	ObjNr, ID, Rect, Content int
+}
+
 // ListAnnotations returns a formatted list of annotations.
 func ListAnnotations(annots map[int]model.PgAnnots) (int, []string, error) {
 	var (
@@ -262,37 +311,62 @@ func ListAnnotations(annots map[int]model.PgAnnots) (int, []string, error) {
 
 		for _, annType := range annTypes {
 			annots := pageAnnots[model.AnnotTypes[annType]]
-			var (
-				maxLenRect    int
-				maxLenContent int
-			)
-			maxLenID := 2
+
+			var maxLen AnnotListMaxLengths
+			maxLen.ID = 2
+			maxLen.Content = len("Content")
+
 			var objNrs []int
 			for objNr, ann := range annots.Map {
 				objNrs = append(objNrs, objNr)
-				if len(ann.RectString()) > maxLenRect {
-					maxLenRect = len(ann.RectString())
+				s := strconv.Itoa(objNr)
+				if len(s) > maxLen.ObjNr {
+					maxLen.ObjNr = len(s)
 				}
-				if len(ann.ID()) > maxLenID {
-					maxLenID = len(ann.ID())
+				if len(ann.RectString()) > maxLen.Rect {
+					maxLen.Rect = len(ann.RectString())
 				}
-				if len(ann.ContentString()) > maxLenContent {
-					maxLenContent = len(ann.ContentString())
+				if len(ann.ID()) > maxLen.ID {
+					maxLen.ID = len(ann.ID())
+				}
+				if len(ann.ContentString()) > maxLen.Content {
+					maxLen.Content = len(ann.ContentString())
 				}
 			}
 			sort.Ints(objNrs)
 			ss = append(ss, "")
 			ss = append(ss, fmt.Sprintf("  %s:", annType))
-			s1 := ("     obj# ")
-			s2 := fmt.Sprintf("%%%ds", maxLenRect)
-			s3 := fmt.Sprintf("%%%ds", maxLenID)
-			s4 := fmt.Sprintf("%%%ds", maxLenContent)
-			s := fmt.Sprintf(s1+s2+" "+s3+" "+s4, "rect", "id", "content")
-			ss = append(ss, s)
-			ss = append(ss, "    "+strings.Repeat("=", len(s)-4))
+
+			horSep := []int{}
+
+			// Render header.
+			ss = append(ss, prepareHeader(&horSep, &maxLen))
+
+			// Render separator.
+			ss = append(ss, draw.HorSepLine(horSep))
+
+			// Render content.
 			for _, objNr := range objNrs {
 				ann := annots.Map[objNr]
-				ss = append(ss, fmt.Sprintf("    %5d "+s2+" "+s3+" "+s4, objNr, ann.RectString(), ann.ID(), ann.ContentString()))
+
+				s := strconv.Itoa(objNr)
+				fill1 := strings.Repeat(" ", maxLen.ObjNr-len(s))
+				if maxLen.ObjNr < 4 {
+					fill1 += strings.Repeat(" ", 4-maxLen.ObjNr)
+				}
+
+				s = ann.ID()
+				fill2 := strings.Repeat(" ", maxLen.ID-len(s))
+				if maxLen.ID < 2 {
+					fill2 += strings.Repeat(" ", 2-maxLen.ID)
+				}
+
+				s = ann.RectString()
+				fill3 := strings.Repeat(" ", maxLen.Rect-len(s))
+
+				ss = append(ss, fmt.Sprintf("     %s%d %s %s%s %s %s%s %s %s",
+					fill1, objNr, draw.VBar, fill2, ann.ID(), draw.VBar, fill3, ann.RectString(), draw.VBar, ann.ContentString()))
+
 				j++
 			}
 		}
@@ -308,14 +382,14 @@ func addAnnotationToDirectObj(
 	pageDict types.Dict,
 	pageNr int,
 	ar model.AnnotationRenderer,
-	incr bool) (bool, error) {
+	incr bool) error {
 
 	i, err := findAnnotByID(ctx, ar.ID(), annots)
 	if err != nil {
-		return false, err
+		return err
 	}
 	if i >= 0 {
-		return false, errors.Errorf("page %d: duplicate annotation with id:%s\n", pageNr, ar.ID())
+		return errors.Errorf("page %d: duplicate annotation with id:%s\n", pageNr, ar.ID())
 	}
 	pageDict.Update("Annots", append(annots, *annotIndRef))
 	if incr {
@@ -323,7 +397,7 @@ func addAnnotationToDirectObj(
 		ctx.Write.IncrementWithObjNr(pageDictIndRef.ObjectNumber.Value())
 	}
 	ctx.EnsureVersionForWriting()
-	return true, nil
+	return nil
 }
 
 // AddAnnotation adds ar to pageDict.
@@ -333,18 +407,18 @@ func AddAnnotation(
 	pageDict types.Dict,
 	pageNr int,
 	ar model.AnnotationRenderer,
-	incr bool) (bool, error) {
+	incr bool) (*types.IndirectRef, types.Dict, error) {
 
 	// Create xreftable entry for annotation.
-	annotIndRef, err := createAnnot(ctx, ar, pageDictIndRef)
+	annotIndRef, d, err := createAnnot(ctx, ar, pageDictIndRef)
 	if err != nil {
-		return false, err
+		return nil, nil, err
 	}
 
 	// Add annotation to xreftable page annotation cache.
 	err = addAnnotationToCache(ctx, ar, pageNr, annotIndRef.ObjectNumber.Value())
 	if err != nil {
-		return false, err
+		return nil, nil, err
 	}
 
 	if incr {
@@ -360,33 +434,33 @@ func AddAnnotation(
 			ctx.Write.IncrementWithObjNr(pageDictIndRef.ObjectNumber.Value())
 		}
 		ctx.EnsureVersionForWriting()
-		return true, nil
+		return annotIndRef, d, nil
 	}
 
 	ir, ok := obj.(types.IndirectRef)
 	if !ok {
-		return addAnnotationToDirectObj(ctx, obj.(types.Array), annotIndRef, pageDictIndRef, pageDict, pageNr, ar, incr)
+		return annotIndRef, d, addAnnotationToDirectObj(ctx, obj.(types.Array), annotIndRef, pageDictIndRef, pageDict, pageNr, ar, incr)
 	}
 
 	// Annots array is an IndirectReference.
 
 	o, err := ctx.Dereference(ir)
 	if err != nil || o == nil {
-		return false, err
+		return nil, nil, err
 	}
 
 	annots, _ := o.(types.Array)
 	i, err := findAnnotByID(ctx, ar.ID(), annots)
 	if err != nil {
-		return false, err
+		return nil, nil, err
 	}
 	if i >= 0 {
-		return false, errors.Errorf("page %d: duplicate annotation with id:%s\n", pageNr, ar.ID())
+		return nil, nil, errors.Errorf("page %d: duplicate annotation with id:%s\n", pageNr, ar.ID())
 	}
 
 	entry, ok := ctx.FindTableEntryForIndRef(&ir)
 	if !ok {
-		return false, errors.Errorf("page %d: can't dereference Annots indirect reference(obj#:%d)\n", pageNr, ir.ObjectNumber)
+		return nil, nil, errors.Errorf("page %d: can't dereference Annots indirect reference(obj#:%d)\n", pageNr, ir.ObjectNumber)
 	}
 	entry.Object = append(annots, *annotIndRef)
 	if incr {
@@ -395,7 +469,21 @@ func AddAnnotation(
 	}
 
 	ctx.EnsureVersionForWriting()
-	return true, nil
+	return annotIndRef, d, nil
+}
+
+func AddAnnotationToPage(ctx *model.Context, pageNr int, ar model.AnnotationRenderer, incr bool) (*types.IndirectRef, types.Dict, error) {
+	pageDictIndRef, err := ctx.PageDictIndRef(pageNr)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	d, err := ctx.DereferenceDict(*pageDictIndRef)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return AddAnnotation(ctx, pageDictIndRef, d, pageNr, ar, incr)
 }
 
 // AddAnnotations adds ar to selected pages.
@@ -424,11 +512,11 @@ func AddAnnotations(ctx *model.Context, selectedPages types.IntSet, ar model.Ann
 			return false, err
 		}
 
-		added, err := AddAnnotation(ctx, pageDictIndRef, d, k, ar, incr)
+		indRef, _, err := AddAnnotation(ctx, pageDictIndRef, d, k, ar, incr)
 		if err != nil {
 			return false, err
 		}
-		if added {
+		if indRef != nil {
 			ok = true
 		}
 	}
@@ -460,11 +548,11 @@ func AddAnnotationsMap(ctx *model.Context, m map[int][]model.AnnotationRenderer,
 		}
 
 		for _, annot := range annots {
-			added, err := AddAnnotation(ctx, pageDictIndRef, d, i, annot, incr)
+			indRef, _, err := AddAnnotation(ctx, pageDictIndRef, d, i, annot, incr)
 			if err != nil {
 				return false, err
 			}
-			if added {
+			if indRef != nil {
 				ok = true
 			}
 		}

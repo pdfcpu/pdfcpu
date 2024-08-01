@@ -358,6 +358,20 @@ type QuadLiteral struct {
 	P1, P2, P3, P4 Point
 }
 
+func NewQuadLiteralForRect(r *Rectangle) *QuadLiteral {
+	// p1 := Point{X: r.LL.X, Y: r.LL.Y}
+	// p2 := Point{X: r.UR.X, Y: r.LL.Y}
+	// p3 := Point{X: r.UR.X, Y: r.UR.Y}
+	// p4 := Point{X: r.LL.X, Y: r.UR.Y}
+
+	p3 := Point{X: r.LL.X, Y: r.LL.Y}
+	p4 := Point{X: r.UR.X, Y: r.LL.Y}
+	p2 := Point{X: r.UR.X, Y: r.UR.Y}
+	p1 := Point{X: r.LL.X, Y: r.UR.Y}
+
+	return &QuadLiteral{P1: p1, P2: p2, P3: p3, P4: p4}
+}
+
 // Array returns the PDF representation of ql.
 func (ql QuadLiteral) Array() Array {
 	return NewNumberArray(ql.P1.X, ql.P1.Y, ql.P2.X, ql.P2.Y, ql.P3.X, ql.P3.Y, ql.P4.X, ql.P4.Y)

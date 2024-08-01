@@ -394,16 +394,19 @@ func (ib *ImageBox) createLink(p *model.Page, pageNr int, r *types.Rectangle, m 
 
 	id := fmt.Sprintf("l%d%d", pageNr, len(p.LinkAnnots))
 	ann := model.NewLinkAnnotation(
-		*ql.EnclosingRectangle(5.0),
-		types.QuadPoints{ql},
-		nil,
-		ib.Url,
-		id,
-		0,
-		0,
-		model.BSSolid,
-		nil,
-		false)
+		*ql.EnclosingRectangle(5.0), // rect
+		"",                          // contents
+		id,                          // id
+		"",                          // modDate
+		0,                           // f
+		&color.Red,                  // borderCol
+		nil,                         // dest
+		ib.Url,                      // uri
+		types.QuadPoints{ql},        // quad
+		false,                       // border
+		0,                           // borderWidth
+		model.BSSolid,               // borderStyle
+	)
 
 	p.LinkAnnots = append(p.LinkAnnots, ann)
 }

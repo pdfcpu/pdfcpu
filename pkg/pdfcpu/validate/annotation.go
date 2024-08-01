@@ -1727,8 +1727,9 @@ func validateAnnotationDict(xRefTable *model.XRefTable, d types.Dict) (isTrapNet
 
 func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) error {
 
-	// array of indrefs to annotation dicts.
-	var annotsDict types.Dict
+	// a ... array of indrefs to annotation dicts.
+
+	var annotDict types.Dict
 
 	pgAnnots := model.PgAnnots{}
 	xRefTable.PageAnnots[xRefTable.CurPage] = pgAnnots
@@ -1753,16 +1754,16 @@ func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) error {
 			if log.ValidateEnabled() {
 				log.Validate.Printf("processing annotDict %d\n", indRef.ObjectNumber)
 			}
-			annotsDict, err = xRefTable.DereferenceDict(indRef)
+			annotDict, err = xRefTable.DereferenceDict(indRef)
 			if err != nil {
 				return err
 			}
-			if len(annotsDict) == 0 {
+			if len(annotDict) == 0 {
 				continue
 			}
 		} else if xRefTable.ValidationMode != model.ValidationRelaxed {
 			return errInvalidPageAnnotArray
-		} else if annotsDict, ok = v.(types.Dict); !ok {
+		} else if annotDict, ok = v.(types.Dict); !ok {
 			return errInvalidPageAnnotArray
 		} else {
 			if log.ValidateEnabled() {
@@ -1770,19 +1771,20 @@ func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) error {
 			}
 		}
 
-		hasTrapNet, err = validateAnnotationDict(xRefTable, annotsDict)
+		hasTrapNet, err = validateAnnotationDict(xRefTable, annotDict)
 		if err != nil {
 			return err
 		}
 
-		// Collect annotations.
-		ann, err := pdfcpu.Annotation(xRefTable, annotsDict)
+		// Collect annotation.
+
+		ann, err := pdfcpu.Annotation(xRefTable, annotDict)
 		if err != nil {
 			return err
 		}
 
-		annots, ok1 := pgAnnots[ann.Type()]
-		if !ok1 {
+		annots, ok := pgAnnots[ann.Type()]
+		if !ok {
 			annots = model.Annot{}
 			annots.IndRefs = &[]types.IndirectRef{}
 			annots.Map = model.AnnotMap{}

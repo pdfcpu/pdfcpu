@@ -22,6 +22,7 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+	"github.com/pkg/errors"
 )
 
 // AnnotationFlags represents the PDF annotation flags.
@@ -81,7 +82,7 @@ var AnnotTypes = map[string]AnnotationType{
 	"Circle":         AnnCircle,
 	"Polygon":        AnnPolygon,
 	"PolyLine":       AnnPolyLine,
-	"HighLight":      AnnHighLight,
+	"Highlight":      AnnHighLight,
 	"Underline":      AnnUnderline,
 	"Squiggly":       AnnSquiggly,
 	"StrikeOut":      AnnStrikeOut,
@@ -111,7 +112,7 @@ var AnnotTypeStrings = map[AnnotationType]string{
 	AnnCircle:         "Circle",
 	AnnPolygon:        "Polygon",
 	AnnPolyLine:       "PolyLine",
-	AnnHighLight:      "HighLight",
+	AnnHighLight:      "Highlight",
 	AnnUnderline:      "Underline",
 	AnnSquiggly:       "Squiggly",
 	AnnStrikeOut:      "StrikeOut",
@@ -182,7 +183,7 @@ func borderEffectDict(cloudyBorder bool, intensity int) types.Dict {
 
 // AnnotationRenderer is the interface for PDF annotations.
 type AnnotationRenderer interface {
-	RenderDict(xRefTable *XRefTable, pageIndRef types.IndirectRef) (types.Dict, error)
+	RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error)
 	Type() AnnotationType
 	RectString() string
 	ID() string
@@ -191,46 +192,47 @@ type AnnotationRenderer interface {
 
 // Annotation represents a PDF annnotation.
 type Annotation struct {
-	SubType  AnnotationType     // The type of annotation that this dictionary describes.
-	Rect     types.Rectangle    // The annotation rectangle, defining the location of the annotation on the page in default user space units.
-	Contents string             // Text that shall be displayed for the annotation.
-	P        *types.IndirectRef // An indirect reference to the page object with which this annotation is associated.
-	NM       string             // (Since V1.4) The annotation name, a text string uniquely identifying it among all the annotations on its page.
-	ModDate  string             // The date and time when the annotation was most recently modified.
-	F        AnnotationFlags    // A set of flags specifying various characteristics of the annotation.
-	C        *color.SimpleColor // The background color of the annotation’s icon when closed.
+	SubType          AnnotationType     // The type of annotation that this dictionary describes.
+	Rect             types.Rectangle    // The annotation rectangle, defining the location of the annotation on the page in default user space units.
+	Contents         string             // Text that shall be displayed for the annotation.
+	NM               string             // (Since V1.4) The annotation name, a text string uniquely identifying it among all the annotations on its page.
+	ModificationDate string             // M - The date and time when the annotation was most recently modified.
+	P                *types.IndirectRef // An indirect reference to the page object with which this annotation is associated.
+	F                AnnotationFlags    // A set of flags specifying various characteristics of the annotation.
+	C                *color.SimpleColor // The background color of the annotation’s icon when closed, pop up title bar color, link ann border color.
+	// StructParent int
+	// OC types.dict
 }
 
 // NewAnnotation returns a new annotation.
 func NewAnnotation(
 	typ AnnotationType,
 	rect types.Rectangle,
-	contents string,
-	pageIndRef *types.IndirectRef,
-	nm string,
+	contents, id string,
+	modDate string,
 	f AnnotationFlags,
 	col *color.SimpleColor) Annotation {
 
 	return Annotation{
-		SubType:  typ,
-		Rect:     rect,
-		Contents: contents,
-		P:        pageIndRef,
-		NM:       nm,
-		F:        f,
-		C:        col}
+		SubType:          typ,
+		Rect:             rect,
+		Contents:         contents,
+		NM:               id,
+		ModificationDate: modDate,
+		F:                f,
+		C:                col}
 }
 
 // NewAnnotationForRawType returns a new annotation of a specific type.
 func NewAnnotationForRawType(
 	typ string,
 	rect types.Rectangle,
-	contents string,
-	pageIndRef *types.IndirectRef,
-	nm string,
+	contents, id string,
+	modDate string,
 	f AnnotationFlags,
+
 	col *color.SimpleColor) Annotation {
-	return NewAnnotation(AnnotTypes[typ], rect, contents, pageIndRef, nm, f, col)
+	return NewAnnotation(AnnotTypes[typ], rect, contents, id, modDate, f, col)
 }
 
 // ID returns the annotation id.
@@ -258,32 +260,73 @@ func (ann Annotation) TypeString() string {
 	return AnnotTypeStrings[ann.SubType]
 }
 
-// RenderDict is a stub for behavior that renders ann's PDF dict.
-func (ann Annotation) RenderDict(xRefTable *XRefTable, pageIndRef types.IndirectRef) (types.Dict, error) {
-	return nil, nil
+func (ann Annotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
+	d := types.Dict(map[string]types.Object{
+		"Type":    types.Name("Annot"),
+		"Subtype": types.Name(ann.TypeString()),
+		"Rect":    ann.Rect.Array(),
+	})
+
+	if pageIndRef != nil {
+		d["P"] = *pageIndRef
+	}
+
+	if ann.Contents != "" {
+		s, err := types.EscapeUTF16String(ann.Contents)
+		if err != nil {
+			return nil, err
+		}
+		d.InsertString("Contents", *s)
+	}
+
+	if ann.NM != "" {
+		d.InsertString("NM", ann.NM)
+	}
+
+	if ann.ModificationDate != "" {
+		_, ok := types.DateTime(ann.ModificationDate, xRefTable.ValidationMode == ValidationRelaxed)
+		if !ok {
+			return nil, errors.Errorf("pdfcpu: annotation renderDict - validateDateEntry: <%s> invalid date", ann.ModificationDate)
+		}
+		d.InsertString("ModDate", ann.ModificationDate)
+	}
+
+	if ann.F != 0 {
+		d["F"] = types.Integer(ann.F)
+	}
+
+	if ann.C != nil {
+		d["C"] = ann.C.Array()
+	}
+
+	return d, nil
 }
 
 // PopupAnnotation represents PDF Popup annotations.
 type PopupAnnotation struct {
 	Annotation
-	ParentIndRef *types.IndirectRef // The parent annotation with which this pop-up annotation shall be associated.
+	ParentIndRef *types.IndirectRef // The optional parent markup annotation with which this pop-up annotation shall be associated.
 	Open         bool               // A flag specifying whether the annotation shall initially be displayed open.
 }
 
 // NewPopupAnnotation returns a new popup annotation.
 func NewPopupAnnotation(
 	rect types.Rectangle,
-	pageIndRef *types.IndirectRef,
 	contents, id string,
+	modDate string,
 	f AnnotationFlags,
-	bgCol *color.SimpleColor,
-	parentIndRef *types.IndirectRef) PopupAnnotation {
+	col *color.SimpleColor,
 
-	ann := NewAnnotation(AnnPopup, rect, contents, pageIndRef, id, f, bgCol)
+	parentIndRef *types.IndirectRef,
+	displayOpen bool) PopupAnnotation {
+
+	ann := NewAnnotation(AnnPopup, rect, contents, id, modDate, f, col)
 
 	return PopupAnnotation{
 		Annotation:   ann,
-		ParentIndRef: parentIndRef}
+		ParentIndRef: parentIndRef,
+		Open:         displayOpen,
+	}
 }
 
 // ContentString returns a string representation of ann's content.
@@ -293,6 +336,21 @@ func (ann PopupAnnotation) ContentString() string {
 		s = "-> #" + ann.ParentIndRef.ObjectNumber.String()
 	}
 	return s
+}
+
+func (ann PopupAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
+	d, err := ann.Annotation.RenderDict(xRefTable, pageIndRef)
+	if err != nil {
+		return nil, err
+	}
+
+	if ann.ParentIndRef != nil {
+		d["Parent"] = *ann.ParentIndRef
+	}
+
+	d["Open"] = types.Boolean(ann.Open)
+
+	return d, nil
 }
 
 // MarkupAnnotation represents a PDF markup annotation.
@@ -310,24 +368,74 @@ type MarkupAnnotation struct {
 func NewMarkupAnnotation(
 	subType AnnotationType,
 	rect types.Rectangle,
-	pageIndRef *types.IndirectRef,
-	contents, id, title string,
+	contents, id string,
+	modDate string,
 	f AnnotationFlags,
-	bgCol *color.SimpleColor,
+	col *color.SimpleColor,
+
+	title string,
 	popupIndRef *types.IndirectRef,
 	ca *float64,
 	rc, subject string) MarkupAnnotation {
 
-	ann := NewAnnotation(subType, rect, contents, pageIndRef, id, f, bgCol)
+	ann := NewAnnotation(subType, rect, contents, id, modDate, f, col)
 
 	return MarkupAnnotation{
 		Annotation:   ann,
 		T:            title,
 		PopupIndRef:  popupIndRef,
-		CreationDate: types.DateString(time.Now()),
 		CA:           ca,
 		RC:           rc,
+		CreationDate: types.DateString(time.Now()),
 		Subj:         subject}
+}
+
+// ContentString returns a string representation of ann's content.
+func (ann MarkupAnnotation) ContentString() string {
+	s := "\"" + ann.Contents + "\""
+	if ann.PopupIndRef != nil {
+		s += "-> #" + ann.PopupIndRef.ObjectNumber.String()
+	}
+	return s
+}
+
+func (ann MarkupAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
+	d, err := ann.Annotation.RenderDict(xRefTable, pageIndRef)
+	if err != nil {
+		return nil, err
+	}
+
+	if ann.T != "" {
+		d.InsertString("T", ann.T)
+	}
+
+	if ann.PopupIndRef != nil {
+		d.Insert("Popup", *ann.PopupIndRef)
+	}
+
+	if ann.CA != nil {
+		d.Insert("CA", types.Float(*ann.CA))
+	}
+
+	if ann.RC != "" {
+		s, err := types.EscapeUTF16String(ann.RC)
+		if err != nil {
+			return nil, err
+		}
+		d.InsertString("RC", *s)
+	}
+
+	d.InsertString("CreationDate", ann.CreationDate)
+
+	if ann.Subj != "" {
+		s, err := types.EscapeUTF16String(ann.Subj)
+		if err != nil {
+			return nil, err
+		}
+		d.InsertString("Subj", *s)
+	}
+
+	return d, nil
 }
 
 // TextAnnotation represents a PDF text annotation aka "Sticky Note".
@@ -340,63 +448,40 @@ type TextAnnotation struct {
 // NewTextAnnotation returns a new text annotation.
 func NewTextAnnotation(
 	rect types.Rectangle,
-	contents, id, title string,
+	contents, id string,
+	modDate string,
 	f AnnotationFlags,
-	bgCol *color.SimpleColor,
+	col *color.SimpleColor,
+	title string,
+	popupIndRef *types.IndirectRef,
 	ca *float64,
-	rc, subj string,
-	open bool,
+	rc, subject string,
+
+	displayOpen bool,
 	name string) TextAnnotation {
 
-	ma := NewMarkupAnnotation(AnnText, rect, nil, contents, id, title, f, bgCol, nil, ca, rc, subj)
+	ma := NewMarkupAnnotation(AnnText, rect, contents, id, modDate, f, col, title, popupIndRef, ca, rc, subject)
 
 	return TextAnnotation{
 		MarkupAnnotation: ma,
-		Open:             open,
+		Open:             displayOpen,
 		Name:             name,
 	}
 }
 
 // RenderDict renders ann into a PDF annotation dict.
-func (ann TextAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef types.IndirectRef) (types.Dict, error) {
-	subject := "Sticky Note"
-	if ann.Subj != "" {
-		subject = ann.Subj
+func (ann TextAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
+	d, err := ann.Annotation.RenderDict(xRefTable, pageIndRef)
+	if err != nil {
+		return nil, err
 	}
-	d := types.Dict(map[string]types.Object{
-		"Type":         types.Name("Annot"),
-		"Subtype":      types.Name(ann.TypeString()),
-		"Rect":         ann.Rect.Array(),
-		"P":            pageIndRef,
-		"F":            types.Integer(ann.F),
-		"CreationDate": types.StringLiteral(ann.CreationDate),
-		"Subj":         types.StringLiteral(subject),
-		"Open":         types.Boolean(ann.Open),
-	})
-	if ann.CA != nil {
-		d.Insert("CA", types.Float(*ann.CA))
-	}
-	if ann.PopupIndRef != nil {
-		d.Insert("Popup", *ann.PopupIndRef)
-	}
-	if ann.RC != "" {
-		d.InsertString("RC", ann.RC)
-	}
+
+	d["Open"] = types.Boolean(ann.Open)
+
 	if ann.Name != "" {
 		d.InsertName("Name", ann.Name)
 	}
-	if ann.Contents != "" {
-		d.InsertString("Contents", ann.Contents)
-	}
-	if ann.NM != "" {
-		d.InsertString("NM", ann.NM) // TODO check for uniqueness across annotations on this page.
-	}
-	if ann.T != "" {
-		d.InsertString("T", ann.T)
-	}
-	if ann.C != nil {
-		d.Insert("C", ann.C.Array())
-	}
+
 	return d, nil
 }
 
@@ -404,84 +489,50 @@ func (ann TextAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef types.Indi
 type InkPath []float64
 
 type InkAnnotation struct {
-	MarkupAnnotation
-	InkList []InkPath
-	BS      types.Dict
-	AP      types.Dict
+	Annotation
+	InkList     []InkPath // Array of n arrays, each representing a stroked path of points in user space.
+	BorderWidth float64
+	BorderStyle BorderStyle
 }
 
-// NewInkAnnotation returns a new ink annotation.
 func NewInkAnnotation(
 	rect types.Rectangle,
-	contents, id, title string,
-	ink []InkPath,
-	bs types.Dict,
+	contents, id string,
+	modDate string,
 	f AnnotationFlags,
-	bgCol *color.SimpleColor,
-	ca *float64,
-	rc, subj string,
-	ap types.Dict,
-) InkAnnotation {
+	col *color.SimpleColor,
 
-	ann := NewMarkupAnnotation(AnnInk, rect, nil, contents, id, title, f, bgCol, nil, ca, rc, subj)
+	ink []InkPath,
+	borderWidth float64,
+	borderStyle BorderStyle) InkAnnotation {
+
+	ann := NewAnnotation(AnnInk, rect, contents, id, modDate, f, col)
 
 	return InkAnnotation{
-		MarkupAnnotation: ann,
-		InkList:          ink,
-		BS:               bs,
-		AP:               ap,
+		Annotation:  ann,
+		InkList:     ink,
+		BorderWidth: borderWidth,
+		BorderStyle: borderStyle,
 	}
 }
 
-func (ann InkAnnotation) RenderDict(pageIndRef types.IndirectRef) types.Dict {
-	subject := "Ink Annotation"
-	if ann.Subj != "" {
-		subject = ann.Subj
+func (ann InkAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
+	d, err := ann.Annotation.RenderDict(xRefTable, pageIndRef)
+	if err != nil {
+		return nil, err
 	}
+
 	ink := types.Array{}
 	for i := range ann.InkList {
 		ink = append(ink, types.NewNumberArray(ann.InkList[i]...))
 	}
+	d["InkList"] = ink
 
-	d := types.Dict(map[string]types.Object{
-		"Type":         types.Name("Annot"),
-		"Subtype":      types.Name(ann.TypeString()),
-		"Rect":         ann.Rect.Array(),
-		"P":            pageIndRef,
-		"F":            types.Integer(ann.F),
-		"CreationDate": types.StringLiteral(ann.CreationDate),
-		"Subj":         types.StringLiteral(subject),
-		"InkList":      ink,
-	})
-	if ann.AP != nil {
-		d.Insert("AP", ann.AP)
-	}
-	if ann.CA != nil {
-		d.Insert("CA", types.Float(*ann.CA))
-	}
-	if ann.PopupIndRef != nil {
-		d.Insert("Popup", *ann.PopupIndRef)
-	}
-	if ann.RC != "" {
-		d.InsertString("RC", ann.RC)
-	}
-	if ann.BS != nil {
-		d.Insert("BS", ann.BS)
-	}
-	if ann.Contents != "" {
-		d.InsertString("Contents", ann.Contents)
-	}
-	if ann.NM != "" {
-		d.InsertString("NM", ann.NM) // TODO check for uniqueness across annotations on this page.
-	}
-	if ann.T != "" {
-		d.InsertString("T", ann.T)
-	}
-	if ann.C != nil {
-		d.Insert("C", ann.C.Array())
+	if ann.BorderWidth > 0 {
+		d["BS"] = borderStyleDict(ann.BorderWidth, ann.BorderStyle)
 	}
 
-	return d
+	return d, nil
 }
 
 // LinkAnnotation represents a PDF link annotation.
@@ -498,17 +549,19 @@ type LinkAnnotation struct {
 // NewLinkAnnotation returns a new link annotation.
 func NewLinkAnnotation(
 	rect types.Rectangle,
-	quad types.QuadPoints,
+	contents, id string,
+	modDate string,
+	f AnnotationFlags,
+	borderCol *color.SimpleColor,
+
 	dest *Destination, // supply dest or uri, dest takes precedence
 	uri string,
-	id string,
-	f AnnotationFlags,
+	quad types.QuadPoints,
+	border bool,
 	borderWidth float64,
-	borderStyle BorderStyle,
-	borderCol *color.SimpleColor,
-	border bool) LinkAnnotation {
+	borderStyle BorderStyle) LinkAnnotation {
 
-	ann := NewAnnotation(AnnLink, rect, "", nil, id, f, borderCol)
+	ann := NewAnnotation(AnnLink, rect, contents, id, modDate, f, borderCol)
 
 	return LinkAnnotation{
 		Annotation:  ann,
@@ -534,22 +587,10 @@ func (ann LinkAnnotation) ContentString() string {
 }
 
 // RenderDict renders ann into a page annotation dict.
-func (ann LinkAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef types.IndirectRef) (types.Dict, error) {
-	d := types.Dict(map[string]types.Object{
-		"Type":    types.Name("Annot"),
-		"Subtype": types.Name(ann.TypeString()),
-		"Rect":    ann.Rect.Array(),
-		"P":       pageIndRef,
-		"F":       types.Integer(ann.F),
-		"BS":      borderStyleDict(ann.BorderWidth, ann.BorderStyle),
-	})
-
-	if !ann.Border {
-		d["Border"] = types.NewIntegerArray(0, 0, 0)
-	} else {
-		if ann.C != nil {
-			d["C"] = ann.C.Array()
-		}
+func (ann LinkAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
+	d, err := ann.Annotation.RenderDict(xRefTable, pageIndRef)
+	if err != nil {
+		return nil, err
 	}
 
 	if ann.Dest != nil {
@@ -579,18 +620,27 @@ func (ann LinkAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef types.Indi
 		})
 		d["A"] = actionDict
 	}
-	if ann.NM != "" {
-		d.InsertString("NM", ann.NM) // TODO check for uniqueness across annotations on this page.
-	}
+
 	if ann.Quad != nil {
 		d.Insert("QuadPoints", ann.Quad.Array())
 	}
+
+	if !ann.Border {
+		d["Border"] = types.NewIntegerArray(0, 0, 0)
+	} else {
+		if ann.C != nil {
+			d["C"] = ann.C.Array()
+		}
+	}
+
+	d["BS"] = borderStyleDict(ann.BorderWidth, ann.BorderStyle)
+
 	return d, nil
 }
 
 // SquareAnnotation represents a square annotation.
 type SquareAnnotation struct {
-	Annotation
+	MarkupAnnotation
 	FillCol               *color.SimpleColor
 	Margins               types.Array
 	BorderWidth           float64
@@ -602,25 +652,30 @@ type SquareAnnotation struct {
 // NewSquareAnnotation returns a new square annotation.
 func NewSquareAnnotation(
 	rect types.Rectangle,
-	contents string,
-	id string,
+	contents, id string,
+	modDate string,
 	f AnnotationFlags,
+	col *color.SimpleColor,
+	title string,
+	popupIndRef *types.IndirectRef,
+	ca *float64,
+	rc, subject string,
+
+	fillCol *color.SimpleColor,
+	MLeft, MTop, MRight, MBot float64,
 	borderWidth float64,
 	borderStyle BorderStyle,
-	borderCol *color.SimpleColor,
 	cloudyBorder bool,
-	cloudyBorderIntensity int,
-	fillCol *color.SimpleColor,
-	MLeft, MTop, MRight, MBot float64) SquareAnnotation {
+	cloudyBorderIntensity int) SquareAnnotation {
 
-	ann := NewAnnotation(AnnSquare, rect, contents, nil, id, f, borderCol)
+	ma := NewMarkupAnnotation(AnnSquare, rect, contents, id, modDate, f, col, title, popupIndRef, ca, rc, subject)
 
 	if cloudyBorderIntensity < 0 || cloudyBorderIntensity > 2 {
 		cloudyBorderIntensity = 0
 	}
 
 	squareAnn := SquareAnnotation{
-		Annotation:            ann,
+		MarkupAnnotation:      ma,
 		FillCol:               fillCol,
 		BorderWidth:           borderWidth,
 		BorderStyle:           borderStyle,
@@ -636,26 +691,10 @@ func NewSquareAnnotation(
 }
 
 // RenderDict renders ann into a page annotation dict.
-func (ann SquareAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef types.IndirectRef) (types.Dict, error) {
-	d := types.Dict(map[string]types.Object{
-		"Type":    types.Name("Annot"),
-		"Subtype": types.Name(ann.TypeString()),
-		"Rect":    ann.Rect.Array(),
-		"P":       pageIndRef,
-		"F":       types.Integer(ann.F),
-		"BS":      borderStyleDict(ann.BorderWidth, ann.BorderStyle),
-	})
-
-	if ann.NM != "" {
-		d.InsertString("NM", ann.NM) // TODO check for uniqueness across annotations on this page.
-	}
-
-	if ann.Contents != "" {
-		d.InsertString("Contents", ann.Contents)
-	}
-
-	if ann.C != nil {
-		d["C"] = ann.C.Array()
+func (ann SquareAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
+	d, err := ann.Annotation.RenderDict(xRefTable, pageIndRef)
+	if err != nil {
+		return nil, err
 	}
 
 	if ann.FillCol != nil {
@@ -664,6 +703,10 @@ func (ann SquareAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef types.In
 
 	if ann.Margins != nil {
 		d["RD"] = ann.Margins
+	}
+
+	if ann.BorderWidth > 0 {
+		d["BS"] = borderStyleDict(ann.BorderWidth, ann.BorderStyle)
 	}
 
 	if ann.CloudyBorder && ann.CloudyBorderIntensity > 0 {
@@ -675,7 +718,7 @@ func (ann SquareAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef types.In
 
 // CircleAnnotation represents a square annotation.
 type CircleAnnotation struct {
-	Annotation
+	MarkupAnnotation
 	FillCol               *color.SimpleColor
 	Margins               types.Array
 	BorderWidth           float64
@@ -687,25 +730,30 @@ type CircleAnnotation struct {
 // NewCircleAnnotation returns a new circle annotation.
 func NewCircleAnnotation(
 	rect types.Rectangle,
-	contents string,
-	id string,
+	contents, id string,
+	modDate string,
 	f AnnotationFlags,
+	col *color.SimpleColor,
+	title string,
+	popupIndRef *types.IndirectRef,
+	ca *float64,
+	rc, subject string,
+
+	fillCol *color.SimpleColor,
+	MLeft, MTop, MRight, MBot float64,
 	borderWidth float64,
 	borderStyle BorderStyle,
-	borderCol *color.SimpleColor,
 	cloudyBorder bool,
-	cloudyBorderIntensity int,
-	fillCol *color.SimpleColor,
-	MLeft, MTop, MRight, MBot float64) CircleAnnotation {
+	cloudyBorderIntensity int) CircleAnnotation {
 
-	ann := NewAnnotation(AnnCircle, rect, contents, nil, id, f, borderCol)
+	ma := NewMarkupAnnotation(AnnCircle, rect, contents, id, modDate, f, col, title, popupIndRef, ca, rc, subject)
 
 	if cloudyBorderIntensity < 0 || cloudyBorderIntensity > 2 {
 		cloudyBorderIntensity = 0
 	}
 
 	circleAnn := CircleAnnotation{
-		Annotation:            ann,
+		MarkupAnnotation:      ma,
 		FillCol:               fillCol,
 		BorderWidth:           borderWidth,
 		BorderStyle:           borderStyle,
@@ -721,26 +769,10 @@ func NewCircleAnnotation(
 }
 
 // RenderDict renders ann into a page annotation dict.
-func (ann CircleAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef types.IndirectRef) (types.Dict, error) {
-	d := types.Dict(map[string]types.Object{
-		"Type":    types.Name("Annot"),
-		"Subtype": types.Name(ann.TypeString()),
-		"Rect":    ann.Rect.Array(),
-		"P":       pageIndRef,
-		"F":       types.Integer(ann.F),
-		"BS":      borderStyleDict(ann.BorderWidth, ann.BorderStyle),
-	})
-
-	if ann.NM != "" {
-		d.InsertString("NM", ann.NM) // TODO check for uniqueness across annotations on this page.
-	}
-
-	if ann.Contents != "" {
-		d.InsertString("Contents", ann.Contents)
-	}
-
-	if ann.C != nil {
-		d["C"] = ann.C.Array()
+func (ann CircleAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
+	d, err := ann.Annotation.RenderDict(xRefTable, pageIndRef)
+	if err != nil {
+		return nil, err
 	}
 
 	if ann.FillCol != nil {
@@ -751,9 +783,141 @@ func (ann CircleAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef types.In
 		d["RD"] = ann.Margins
 	}
 
+	if ann.BorderWidth > 0 {
+		d["BS"] = borderStyleDict(ann.BorderWidth, ann.BorderStyle)
+	}
+
 	if ann.CloudyBorder && ann.CloudyBorderIntensity > 0 {
 		d["BE"] = borderEffectDict(ann.CloudyBorder, ann.CloudyBorderIntensity)
 	}
 
 	return d, nil
+}
+
+type TextMarkupAnnotation struct {
+	MarkupAnnotation
+	Quad types.QuadPoints
+}
+
+func NewTextMarkupAnnotation(
+	subType AnnotationType,
+	rect types.Rectangle,
+	contents, id string,
+	modDate string,
+	f AnnotationFlags,
+	col *color.SimpleColor,
+	title string,
+	popupIndRef *types.IndirectRef,
+	ca *float64,
+	rc, subject string,
+
+	quad types.QuadPoints) TextMarkupAnnotation {
+
+	ma := NewMarkupAnnotation(subType, rect, contents, id, modDate, f, col, title, popupIndRef, ca, rc, subject)
+
+	return TextMarkupAnnotation{
+		MarkupAnnotation: ma,
+		Quad:             quad,
+	}
+}
+
+func (ann TextMarkupAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
+	d, err := ann.MarkupAnnotation.RenderDict(xRefTable, pageIndRef)
+	if err != nil {
+		return nil, err
+	}
+
+	if ann.Quad != nil {
+		d.Insert("QuadPoints", ann.Quad.Array())
+	}
+
+	return d, nil
+}
+
+type HighlightAnnotation struct {
+	TextMarkupAnnotation
+}
+
+func NewHighlightAnnotation(
+	rect types.Rectangle,
+	contents, id string,
+	modDate string,
+	f AnnotationFlags,
+	col *color.SimpleColor,
+	title string,
+	popupIndRef *types.IndirectRef,
+	ca *float64,
+	rc, subject string,
+
+	quad types.QuadPoints) HighlightAnnotation {
+
+	return HighlightAnnotation{
+		NewTextMarkupAnnotation(AnnHighLight, rect, contents, id, modDate, f, col, title, popupIndRef, ca, rc, subject, quad),
+	}
+}
+
+type UnderlineAnnotation struct {
+	TextMarkupAnnotation
+}
+
+func NewUnderlineAnnotation(
+	rect types.Rectangle,
+	contents, id string,
+	modDate string,
+	f AnnotationFlags,
+	col *color.SimpleColor,
+	title string,
+	popupIndRef *types.IndirectRef,
+	ca *float64,
+	rc, subject string,
+
+	quad types.QuadPoints) UnderlineAnnotation {
+
+	return UnderlineAnnotation{
+		NewTextMarkupAnnotation(AnnUnderline, rect, contents, id, modDate, f, col, title, popupIndRef, ca, rc, subject, quad),
+	}
+}
+
+type SquigglyAnnotation struct {
+	TextMarkupAnnotation
+}
+
+func NewSquigglyAnnotation(
+	rect types.Rectangle,
+	contents, id string,
+	modDate string,
+	f AnnotationFlags,
+	col *color.SimpleColor,
+	title string,
+	popupIndRef *types.IndirectRef,
+	ca *float64,
+	rc, subject string,
+
+	quad types.QuadPoints) SquigglyAnnotation {
+
+	return SquigglyAnnotation{
+		NewTextMarkupAnnotation(AnnSquiggly, rect, contents, id, modDate, f, col, title, popupIndRef, ca, rc, subject, quad),
+	}
+}
+
+type StrikeOutAnnotation struct {
+	TextMarkupAnnotation
+}
+
+func NewStrikeOutAnnotation(
+	rect types.Rectangle,
+	contents, id string,
+	modDate string,
+	f AnnotationFlags,
+	col *color.SimpleColor,
+	title string,
+	popupIndRef *types.IndirectRef,
+	ca *float64,
+	rc, subject string,
+
+	quad types.QuadPoints) StrikeOutAnnotation {
+
+	return StrikeOutAnnotation{
+		NewTextMarkupAnnotation(AnnStrikeOut, rect, contents, id, modDate, f, col, title, popupIndRef, ca, rc, subject, quad),
+	}
 }

@@ -1341,18 +1341,21 @@ func handleLink(ctx *model.Context, pageIndRef *types.IndirectRef, d types.Dict,
 	}
 
 	ann := model.NewLinkAnnotation(
-		*wm.BbTrans.EnclosingRectangle(5.0),
-		types.QuadPoints{wm.BbTrans},
-		nil,
-		wm.URL,
-		"pdfcpu",
-		model.AnnNoZoom+model.AnnNoRotate,
-		0,
-		model.BSSolid,
-		nil,
-		false)
+		*wm.BbTrans.EnclosingRectangle(5.0), // rect
+		"",                                  // contents
+		"pdfcpu",                            // id
+		"",                                  // modDate
+		model.AnnNoZoom+model.AnnNoRotate,   // f
+		&color.Red,                          // borderCol
+		nil,                                 // dest
+		wm.URL,                              // uri
+		types.QuadPoints{wm.BbTrans},        // quad
+		false,                               // border
+		0,                                   // borderWidth
+		model.BSSolid,                       // borderStyle
+	)
 
-	_, err := AddAnnotation(ctx, pageIndRef, d, pageNr, ann, false)
+	_, _, err := AddAnnotation(ctx, pageIndRef, d, pageNr, ann, false)
 
 	return err
 }

@@ -238,30 +238,6 @@ func (rc *ReadContext) ObjectStreamsString() (int, string) {
 	return len(objStreams), strings.Join(objStreams, ",")
 }
 
-// IsXRefStreamObject returns true if object #i is a an xref stream.
-func (rc *ReadContext) IsXRefStreamObject(i int) bool {
-	return rc.XRefStreams[i]
-}
-
-// XRefStreamsString returns a formatted string and the number of xref stream objects.
-func (rc *ReadContext) XRefStreamsString() (int, string) {
-
-	var objs []int
-	for k := range rc.XRefStreams {
-		if rc.XRefStreams[k] {
-			objs = append(objs, k)
-		}
-	}
-	sort.Ints(objs)
-
-	var xrefStreams []string
-	for _, i := range objs {
-		xrefStreams = append(xrefStreams, fmt.Sprintf("%d", i))
-	}
-
-	return len(xrefStreams), strings.Join(xrefStreams, ",")
-}
-
 // LogStats logs stats for read file.
 func (rc *ReadContext) LogStats(optimized bool) {
 	if !log.StatsEnabled() {

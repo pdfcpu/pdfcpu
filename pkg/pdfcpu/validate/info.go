@@ -80,6 +80,21 @@ func handleProperties(xRefTable *model.XRefTable, key string, val types.Object) 
 	return nil
 }
 
+func validateKeywords(xRefTable *model.XRefTable, v types.Object) (err error) {
+	xRefTable.Keywords, err = xRefTable.DereferenceStringOrHexLiteral(v, model.V11, nil)
+	if err != nil {
+		return err
+	}
+
+	ss := strings.FieldsFunc(xRefTable.Keywords, func(c rune) bool { return c == ',' || c == ';' || c == '\r' })
+	for _, s := range ss {
+		keyword := strings.TrimSpace(s)
+		xRefTable.KeywordList[keyword] = true
+	}
+
+	return nil
+}
+
 func validateDocInfoDictEntry(xRefTable *model.XRefTable, k string, v types.Object) (bool, error) {
 	var (
 		err        error
@@ -102,14 +117,8 @@ func validateDocInfoDictEntry(xRefTable *model.XRefTable, k string, v types.Obje
 
 	// text string, optional, since V1.1
 	case "Keywords":
-		xRefTable.Keywords, err = xRefTable.DereferenceStringOrHexLiteral(v, model.V11, nil)
-		if err != nil {
+		if err := validateKeywords(xRefTable, v); err != nil {
 			return hasModDate, err
-		}
-		ss := strings.FieldsFunc(xRefTable.Keywords, func(c rune) bool { return c == ',' || c == ';' || c == '\r' })
-		for _, s := range ss {
-			keyword := strings.TrimSpace(s)
-			xRefTable.KeywordList[keyword] = true
 		}
 
 	// text string, optional
