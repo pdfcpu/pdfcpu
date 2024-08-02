@@ -621,22 +621,29 @@ description ... dimensions, format, orientation
 
     optional entries:
   
-        (defaults: "di:595 842, form:A4, or:rd, bo:on, ma:3")
+        (defaults: "di:595 842, form:A4, or:rd, bo:on, ma:3, enforce:on")
   
     dimensions:      (width,height) in given display unit eg. '400 200'
+
     formsize:        The output sheet size, eg. A4, Letter, Legal...
                      Append 'L' to enforce landscape mode. (eg. A3L)
                      Append 'P' to enforce portrait mode. (eg. TabloidP)
                      Only one of dimensions or format is allowed.
                      Please refer to "pdfcpu paper" for a comprehensive list of defined paper sizes.
                      "papersize" is also accepted.
+
     orientation:     one of rd ... right down (=default)
                             dr ... down right
                             ld ... left down
                             dl ... down left
                      Orientation applies to PDF input files only.
-    border:          Print border (on/off, true/false, t/f) 
+
+    enforce:         enforce best-fit orientation of individual content (on/off, true/false, t/f).
+
+    border:          Print border (on/off, true/false, t/f)
+
     margin:          for n-up content: float >= 0 in given display unit
+    
     backgroundcolor: backgound color for margin > 0.
                      "bgcolor" is also accepted.
 
@@ -780,7 +787,7 @@ For image inputfiles each output page shows all images laid out onto grids of gi
 This command produces poster like PDF pages convenient for page and image browsing. 
 
       pages ... Please refer to "pdfcpu selectedpages"
-description ... dimensions, format, orientation
+description ... dimensions, format, orientation, enforce
     outFile ... output PDF file
           m ... grid lines
           n ... grid columns
@@ -791,21 +798,27 @@ description ... dimensions, format, orientation
 
     optional entries:
   
-        (defaults: "d:595 842, form:A4, o:rd, bo:on, ma:3")
+        (defaults: "d:595 842, form:A4, o:rd, bo:on, ma:3, enforce:on")
   
     dimensions:   (width height) in given display unit eg. '400 200'
+
     formsize:     The output sheet size, eg. A4, Letter, Legal...
                   Append 'L' to enforce landscape mode. (eg. A3L)
                   Append 'P' to enforce portrait mode. (eg. TabloidP)
                   Only one of dimensions or format is allowed.
                   Please refer to "pdfcpu paper" for a comprehensive list of defined paper sizes.
                   "papersize" is also accepted.
+
     orientation:  one of rd ... right down (=default)
                          dr ... down right
                          ld ... left down
                          dl ... down left
                   Orientation applies to PDF input files only.
-    border:       Print border (on/off, true/false, t/f) 
+
+    enforce:      enforce best-fit orientation of individual content (on/off, true/false, t/f).
+
+    border:       Print border (on/off, true/false, t/f)
+    
     margin:       Apply content margin (float >= 0 in given display unit)
 
 All configuration string parameters support completion.

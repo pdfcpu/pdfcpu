@@ -90,7 +90,7 @@ func TestNUpCommand(t *testing.T) {
 			},
 			filepath.Join(outDir, "out1.pdf"),
 			nil,
-			"form:Tabloid, bo:off, ma:0",
+			"form:Tabloid, bo:off, ma:0, enforce:off",
 			"points",
 			6,
 			true},

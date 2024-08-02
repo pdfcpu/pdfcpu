@@ -70,6 +70,7 @@ var nupParamMap = nUpParamMap{
 	"foliosize":       parseBookletFolioSize,
 	"btype":           parseBookletType,
 	"binding":         parseBookletBinding,
+	"enforce":         parseEnforce,
 }
 
 // Handle applies parameter completion and if successful
@@ -126,6 +127,19 @@ func parseOrientation(s string, nup *model.NUp) error {
 		nup.Orient = model.DownLeft
 	default:
 		return errors.Errorf("pdfcpu: unknown nUp orientation: %s", s)
+	}
+
+	return nil
+}
+
+func parseEnforce(s string, nup *model.NUp) error {
+	switch strings.ToLower(s) {
+	case "on", "true", "t":
+		nup.Enforce = true
+	case "off", "false", "f":
+		nup.Enforce = false
+	default:
+		return errors.New("pdfcpu: enforce best-fit orientation of content, please provide one of: on/off true/false")
 	}
 
 	return nil
@@ -408,7 +422,7 @@ func ParseNUpGridDefinition(rows, cols int, nUp *model.NUp) error {
 func nUpImagePDFBytes(w io.Writer, imgWidth, imgHeight int, nup *model.NUp, formResID string) {
 	for _, r := range nup.RectsForGrid() {
 		// Append to content stream.
-		model.NUpTilePDFBytes(w, types.RectForDim(float64(imgWidth), float64(imgHeight)), r, formResID, nup, false, true)
+		model.NUpTilePDFBytes(w, types.RectForDim(float64(imgWidth), float64(imgHeight)), r, formResID, nup, false)
 	}
 }
 
@@ -743,7 +757,7 @@ func NUpFromMultipleImages(ctx *model.Context, fileNames []string, nup *model.NU
 		formsResDict.Insert(formResID, *formIndRef)
 
 		// Append to content stream of page i.
-		model.NUpTilePDFBytes(&buf, types.RectForDim(float64(w), float64(h)), rr[i%len(rr)], formResID, nup, false, true)
+		model.NUpTilePDFBytes(&buf, types.RectForDim(float64(w), float64(h)), rr[i%len(rr)], formResID, nup, false)
 	}
 
 	// Wrap incomplete nUp page.

@@ -670,6 +670,10 @@ func PagesForPageCollection(pageCount int, pageSelection []string) ([]int, error
 			return nil, err
 		}
 	}
+	if len(collectedPages) == 0 {
+		return nil, errors.Errorf("pdfcpu: no page selected")
+	}
+
 	return collectedPages, nil
 }
 

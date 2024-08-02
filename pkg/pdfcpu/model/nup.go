@@ -72,7 +72,8 @@ type NUp struct {
 	PageDim         *types.Dim         // Page dimensions in display unit.
 	PageSize        string             // Paper size eg. A4L, A4P, A4(=default=A4P), see paperSize.go
 	UserDim         bool               // true if one of dimensions or paperSize provided overriding the default.
-	Orient          orientation        // One of rd(=default),dr,ld,dl
+	Orient          orientation        // One of rd(=default),dr,ld,dl - grid orientation
+	Enforce         bool               // enforce best-fit orientation of individual content on grid.
 	Grid            *types.Dim         // Intra page grid dimensions eg (2,2)
 	PageGrid        bool               // Create a m x n grid of pages for PDF inputfiles only (think "extra page n-Up").
 	ImgInputFile    bool               // Process image or PDF input files.
@@ -95,6 +96,7 @@ func DefaultNUpConfig() *NUp {
 		Orient:   RightDown,
 		Margin:   3,
 		Border:   true,
+		Enforce:  true,
 	}
 }
 
@@ -197,7 +199,7 @@ func createNUpFormForPDF(xRefTable *XRefTable, resDict *types.IndirectRef, conte
 }
 
 // NUpTilePDFBytesForPDF applies nup tiles to content bytes.
-func NUpTilePDFBytes(wr io.Writer, rSrc, rDest *types.Rectangle, formResID string, nup *NUp, rotate, enforceOrient bool) {
+func NUpTilePDFBytes(wr io.Writer, rSrc, rDest *types.Rectangle, formResID string, nup *NUp, rotate bool) {
 
 	// rScr is a rectangular region represented by form formResID in form space.
 
@@ -227,7 +229,7 @@ func NUpTilePDFBytes(wr io.Writer, rSrc, rDest *types.Rectangle, formResID strin
 	// Best fit translation of a source rectangle into a destination rectangle.
 	// For nup we enforce the dest orientation,
 	// whereas in cases where the original orientation needs to be preserved eg. for booklets, we don't.
-	w, h, dx, dy, r := types.BestFitRectIntoRect(rSrc, rDestCr, enforceOrient, false)
+	w, h, dx, dy, r := types.BestFitRectIntoRect(rSrc, rDestCr, nup.Enforce, false)
 
 	if nup.BgColor != nil {
 		if nup.ImgInputFile {
@@ -358,7 +360,7 @@ func (ctx *Context) NUpTilePDFBytesForPDF(
 	formsResDict.Insert(formResID, *formIndRef)
 
 	// Append to content stream buf of destination page.
-	NUpTilePDFBytes(buf, cropBox, rDest, formResID, nup, rotate, true)
+	NUpTilePDFBytes(buf, cropBox, rDest, formResID, nup, rotate)
 
 	return nil
 }

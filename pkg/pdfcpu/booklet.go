@@ -44,6 +44,7 @@ func DefaultBookletConfig() *model.NUp {
 	nup.FolioSize = 8
 	nup.BookletType = model.Booklet
 	nup.BookletBinding = model.LongEdge
+	nup.Enforce = false
 	return nup
 }
 
@@ -566,8 +567,7 @@ func BookletFromImages(ctx *model.Context, fileNames []string, nup *model.NUp, p
 		formsResDict.Insert(formResID, *formIndRef)
 
 		// Append to content stream of booklet page i.
-		enforceOrientation := false
-		model.NUpTilePDFBytes(&buf, types.RectForDim(float64(w), float64(h)), rr[i%len(rr)], formResID, nup, bp.Rotate, enforceOrientation)
+		model.NUpTilePDFBytes(&buf, types.RectForDim(float64(w), float64(h)), rr[i%len(rr)], formResID, nup, bp.Rotate)
 	}
 
 	// Wrap incomplete booklet page.
