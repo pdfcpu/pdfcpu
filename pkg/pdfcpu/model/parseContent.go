@@ -189,6 +189,12 @@ func positionToNextContentToken(line *string, prn PageResourceNames) (bool, erro
 			// whitespace or eol only
 			return true, nil
 		}
+		if l[0] == '%' {
+			// Skip comment.
+			l, _ = positionToNextEOL(l)
+			continue
+		}
+
 		if l[0] == '[' {
 			// Skip TJ expression:
 			// [()...()] TJ
