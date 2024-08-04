@@ -703,6 +703,11 @@ func TestInkAnnotation(t *testing.T) {
 		"",                                  // modDate
 		0,                                   // f
 		&color.Red,                          // col
+		"Title1",                            // title
+		nil,                                 // popupIndRef
+		nil,                                 // ca
+		"",                                  // rc
+		"",                                  // subject
 		[]model.InkPath{p1, p2},             // InkList
 		0,                                   // borderWidth
 		model.BSSolid,                       // borderStyle

@@ -283,13 +283,15 @@ func (ann Annotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.Indirec
 		d.InsertString("NM", ann.NM)
 	}
 
+	modDate := types.DateString(time.Now())
 	if ann.ModificationDate != "" {
 		_, ok := types.DateTime(ann.ModificationDate, xRefTable.ValidationMode == ValidationRelaxed)
 		if !ok {
 			return nil, errors.Errorf("pdfcpu: annotation renderDict - validateDateEntry: <%s> invalid date", ann.ModificationDate)
 		}
-		d.InsertString("ModDate", ann.ModificationDate)
+		modDate = ann.ModificationDate
 	}
+	d.InsertString("ModDate", modDate)
 
 	if ann.F != 0 {
 		d["F"] = types.Integer(ann.F)
@@ -349,188 +351,6 @@ func (ann PopupAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.In
 	}
 
 	d["Open"] = types.Boolean(ann.Open)
-
-	return d, nil
-}
-
-// MarkupAnnotation represents a PDF markup annotation.
-type MarkupAnnotation struct {
-	Annotation
-	T            string             // The text label that shall be displayed in the title bar of the annotation’s pop-up window when open and active. This entry shall identify the user who added the annotation.
-	PopupIndRef  *types.IndirectRef // An indirect reference to a pop-up annotation for entering or editing the text associated with this annotation.
-	CA           *float64           // (Default: 1.0) The constant opacity value that shall be used in painting the annotation.
-	RC           string             // A rich text string that shall be displayed in the pop-up window when the annotation is opened.
-	CreationDate string             // The date and time when the annotation was created.
-	Subj         string             // Text representing a short description of the subject being addressed by the annotation.
-}
-
-// NewMarkupAnnotation returns a new markup annotation.
-func NewMarkupAnnotation(
-	subType AnnotationType,
-	rect types.Rectangle,
-	contents, id string,
-	modDate string,
-	f AnnotationFlags,
-	col *color.SimpleColor,
-
-	title string,
-	popupIndRef *types.IndirectRef,
-	ca *float64,
-	rc, subject string) MarkupAnnotation {
-
-	ann := NewAnnotation(subType, rect, contents, id, modDate, f, col)
-
-	return MarkupAnnotation{
-		Annotation:   ann,
-		T:            title,
-		PopupIndRef:  popupIndRef,
-		CA:           ca,
-		RC:           rc,
-		CreationDate: types.DateString(time.Now()),
-		Subj:         subject}
-}
-
-// ContentString returns a string representation of ann's content.
-func (ann MarkupAnnotation) ContentString() string {
-	s := "\"" + ann.Contents + "\""
-	if ann.PopupIndRef != nil {
-		s += "-> #" + ann.PopupIndRef.ObjectNumber.String()
-	}
-	return s
-}
-
-func (ann MarkupAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
-	d, err := ann.Annotation.RenderDict(xRefTable, pageIndRef)
-	if err != nil {
-		return nil, err
-	}
-
-	if ann.T != "" {
-		d.InsertString("T", ann.T)
-	}
-
-	if ann.PopupIndRef != nil {
-		d.Insert("Popup", *ann.PopupIndRef)
-	}
-
-	if ann.CA != nil {
-		d.Insert("CA", types.Float(*ann.CA))
-	}
-
-	if ann.RC != "" {
-		s, err := types.EscapeUTF16String(ann.RC)
-		if err != nil {
-			return nil, err
-		}
-		d.InsertString("RC", *s)
-	}
-
-	d.InsertString("CreationDate", ann.CreationDate)
-
-	if ann.Subj != "" {
-		s, err := types.EscapeUTF16String(ann.Subj)
-		if err != nil {
-			return nil, err
-		}
-		d.InsertString("Subj", *s)
-	}
-
-	return d, nil
-}
-
-// TextAnnotation represents a PDF text annotation aka "Sticky Note".
-type TextAnnotation struct {
-	MarkupAnnotation
-	Open bool   // A flag specifying whether the annotation shall initially be displayed open.
-	Name string // The name of an icon that shall be used in displaying the annotation. Comment, Key, (Note), Help, NewParagraph, Paragraph, Insert
-}
-
-// NewTextAnnotation returns a new text annotation.
-func NewTextAnnotation(
-	rect types.Rectangle,
-	contents, id string,
-	modDate string,
-	f AnnotationFlags,
-	col *color.SimpleColor,
-	title string,
-	popupIndRef *types.IndirectRef,
-	ca *float64,
-	rc, subject string,
-
-	displayOpen bool,
-	name string) TextAnnotation {
-
-	ma := NewMarkupAnnotation(AnnText, rect, contents, id, modDate, f, col, title, popupIndRef, ca, rc, subject)
-
-	return TextAnnotation{
-		MarkupAnnotation: ma,
-		Open:             displayOpen,
-		Name:             name,
-	}
-}
-
-// RenderDict renders ann into a PDF annotation dict.
-func (ann TextAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
-	d, err := ann.Annotation.RenderDict(xRefTable, pageIndRef)
-	if err != nil {
-		return nil, err
-	}
-
-	d["Open"] = types.Boolean(ann.Open)
-
-	if ann.Name != "" {
-		d.InsertName("Name", ann.Name)
-	}
-
-	return d, nil
-}
-
-// A series of alternating x and y coordinates in PDF user space, specifying points along the path.
-type InkPath []float64
-
-type InkAnnotation struct {
-	Annotation
-	InkList     []InkPath // Array of n arrays, each representing a stroked path of points in user space.
-	BorderWidth float64
-	BorderStyle BorderStyle
-}
-
-func NewInkAnnotation(
-	rect types.Rectangle,
-	contents, id string,
-	modDate string,
-	f AnnotationFlags,
-	col *color.SimpleColor,
-
-	ink []InkPath,
-	borderWidth float64,
-	borderStyle BorderStyle) InkAnnotation {
-
-	ann := NewAnnotation(AnnInk, rect, contents, id, modDate, f, col)
-
-	return InkAnnotation{
-		Annotation:  ann,
-		InkList:     ink,
-		BorderWidth: borderWidth,
-		BorderStyle: borderStyle,
-	}
-}
-
-func (ann InkAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
-	d, err := ann.Annotation.RenderDict(xRefTable, pageIndRef)
-	if err != nil {
-		return nil, err
-	}
-
-	ink := types.Array{}
-	for i := range ann.InkList {
-		ink = append(ink, types.NewNumberArray(ann.InkList[i]...))
-	}
-	d["InkList"] = ink
-
-	if ann.BorderWidth > 0 {
-		d["BS"] = borderStyleDict(ann.BorderWidth, ann.BorderStyle)
-	}
 
 	return d, nil
 }
@@ -638,6 +458,192 @@ func (ann LinkAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.Ind
 	return d, nil
 }
 
+// MarkupAnnotation represents a PDF markup annotation.
+type MarkupAnnotation struct {
+	Annotation
+	T            string             // The text label that shall be displayed in the title bar of the annotation’s pop-up window when open and active. This entry shall identify the user who added the annotation.
+	PopupIndRef  *types.IndirectRef // An indirect reference to a pop-up annotation for entering or editing the text associated with this annotation.
+	CA           *float64           // (Default: 1.0) The constant opacity value that shall be used in painting the annotation.
+	RC           string             // A rich text string that shall be displayed in the pop-up window when the annotation is opened.
+	CreationDate string             // The date and time when the annotation was created.
+	Subj         string             // Text representing a short description of the subject being addressed by the annotation.
+}
+
+// NewMarkupAnnotation returns a new markup annotation.
+func NewMarkupAnnotation(
+	subType AnnotationType,
+	rect types.Rectangle,
+	contents, id string,
+	modDate string,
+	f AnnotationFlags,
+	col *color.SimpleColor,
+
+	title string,
+	popupIndRef *types.IndirectRef,
+	ca *float64,
+	rc, subject string) MarkupAnnotation {
+
+	ann := NewAnnotation(subType, rect, contents, id, modDate, f, col)
+
+	return MarkupAnnotation{
+		Annotation:   ann,
+		T:            title,
+		PopupIndRef:  popupIndRef,
+		CA:           ca,
+		RC:           rc,
+		CreationDate: types.DateString(time.Now()),
+		Subj:         subject}
+}
+
+// ContentString returns a string representation of ann's content.
+func (ann MarkupAnnotation) ContentString() string {
+	s := "\"" + ann.Contents + "\""
+	if ann.PopupIndRef != nil {
+		s += "-> #" + ann.PopupIndRef.ObjectNumber.String()
+	}
+	return s
+}
+
+func (ann MarkupAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
+	d, err := ann.Annotation.RenderDict(xRefTable, pageIndRef)
+	if err != nil {
+		return nil, err
+	}
+
+	if ann.T != "" {
+		d.InsertString("T", ann.T)
+	}
+
+	if ann.PopupIndRef != nil {
+		d.Insert("Popup", *ann.PopupIndRef)
+	}
+
+	if ann.CA != nil {
+		d.Insert("CA", types.Float(*ann.CA))
+	}
+
+	if ann.RC != "" {
+		s, err := types.EscapeUTF16String(ann.RC)
+		if err != nil {
+			return nil, err
+		}
+		d.InsertString("RC", *s)
+	}
+
+	d.InsertString("CreationDate", ann.CreationDate)
+
+	if ann.Subj != "" {
+		s, err := types.EscapeUTF16String(ann.Subj)
+		if err != nil {
+			return nil, err
+		}
+		d.InsertString("Subj", *s)
+	}
+
+	return d, nil
+}
+
+// A series of alternating x and y coordinates in PDF user space, specifying points along the path.
+type InkPath []float64
+
+type InkAnnotation struct {
+	MarkupAnnotation
+	InkList     []InkPath // Array of n arrays, each representing a stroked path of points in user space.
+	BorderWidth float64
+	BorderStyle BorderStyle
+}
+
+func NewInkAnnotation(
+	rect types.Rectangle,
+	contents, id string,
+	modDate string,
+	f AnnotationFlags,
+	col *color.SimpleColor,
+	title string,
+	popupIndRef *types.IndirectRef,
+	ca *float64,
+	rc, subject string,
+
+	ink []InkPath,
+	borderWidth float64,
+	borderStyle BorderStyle) InkAnnotation {
+
+	ma := NewMarkupAnnotation(AnnInk, rect, contents, id, modDate, f, col, title, popupIndRef, ca, rc, subject)
+
+	return InkAnnotation{
+		MarkupAnnotation: ma,
+		InkList:          ink,
+		BorderWidth:      borderWidth,
+		BorderStyle:      borderStyle,
+	}
+}
+
+func (ann InkAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
+	d, err := ann.MarkupAnnotation.RenderDict(xRefTable, pageIndRef)
+	if err != nil {
+		return nil, err
+	}
+
+	ink := types.Array{}
+	for i := range ann.InkList {
+		ink = append(ink, types.NewNumberArray(ann.InkList[i]...))
+	}
+	d["InkList"] = ink
+
+	if ann.BorderWidth > 0 {
+		d["BS"] = borderStyleDict(ann.BorderWidth, ann.BorderStyle)
+	}
+
+	return d, nil
+}
+
+// TextAnnotation represents a PDF text annotation aka "Sticky Note".
+type TextAnnotation struct {
+	MarkupAnnotation
+	Open bool   // A flag specifying whether the annotation shall initially be displayed open.
+	Name string // The name of an icon that shall be used in displaying the annotation. Comment, Key, (Note), Help, NewParagraph, Paragraph, Insert
+}
+
+// NewTextAnnotation returns a new text annotation.
+func NewTextAnnotation(
+	rect types.Rectangle,
+	contents, id string,
+	modDate string,
+	f AnnotationFlags,
+	col *color.SimpleColor,
+	title string,
+	popupIndRef *types.IndirectRef,
+	ca *float64,
+	rc, subject string,
+
+	displayOpen bool,
+	name string) TextAnnotation {
+
+	ma := NewMarkupAnnotation(AnnText, rect, contents, id, modDate, f, col, title, popupIndRef, ca, rc, subject)
+
+	return TextAnnotation{
+		MarkupAnnotation: ma,
+		Open:             displayOpen,
+		Name:             name,
+	}
+}
+
+// RenderDict renders ann into a PDF annotation dict.
+func (ann TextAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
+	d, err := ann.MarkupAnnotation.RenderDict(xRefTable, pageIndRef)
+	if err != nil {
+		return nil, err
+	}
+
+	d["Open"] = types.Boolean(ann.Open)
+
+	if ann.Name != "" {
+		d.InsertName("Name", ann.Name)
+	}
+
+	return d, nil
+}
+
 // SquareAnnotation represents a square annotation.
 type SquareAnnotation struct {
 	MarkupAnnotation
@@ -692,7 +698,7 @@ func NewSquareAnnotation(
 
 // RenderDict renders ann into a page annotation dict.
 func (ann SquareAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
-	d, err := ann.Annotation.RenderDict(xRefTable, pageIndRef)
+	d, err := ann.MarkupAnnotation.RenderDict(xRefTable, pageIndRef)
 	if err != nil {
 		return nil, err
 	}
@@ -770,7 +776,7 @@ func NewCircleAnnotation(
 
 // RenderDict renders ann into a page annotation dict.
 func (ann CircleAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
-	d, err := ann.Annotation.RenderDict(xRefTable, pageIndRef)
+	d, err := ann.MarkupAnnotation.RenderDict(xRefTable, pageIndRef)
 	if err != nil {
 		return nil, err
 	}
