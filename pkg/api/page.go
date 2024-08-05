@@ -29,7 +29,7 @@ import (
 )
 
 // InsertPages inserts a blank page before or after every page selected of rs and writes the result to w.
-func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before bool, conf *model.Configuration) error {
+func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before bool, pageConf *pdfcpu.PageConfiguration, conf *model.Configuration) error {
 	if rs == nil {
 		return errors.New("pdfcpu: InsertPages: missing rs")
 	}
@@ -52,7 +52,12 @@ func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before b
 		return err
 	}
 
-	if err = ctx.InsertBlankPages(pages, before); err != nil {
+	var dim *types.Dim
+	if pageConf != nil {
+		dim = pageConf.PageDim
+	}
+
+	if err = ctx.InsertBlankPages(pages, dim, before); err != nil {
 		return err
 	}
 
@@ -60,7 +65,7 @@ func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before b
 }
 
 // InsertPagesFile inserts a blank page before or after every inFile page selected and writes the result to w.
-func InsertPagesFile(inFile, outFile string, selectedPages []string, before bool, conf *model.Configuration) (err error) {
+func InsertPagesFile(inFile, outFile string, selectedPages []string, before bool, pageConf *pdfcpu.PageConfiguration, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 
 	if f1, err = os.Open(inFile); err != nil {
@@ -97,7 +102,7 @@ func InsertPagesFile(inFile, outFile string, selectedPages []string, before bool
 		}
 	}()
 
-	return InsertPages(f1, f2, selectedPages, before, conf)
+	return InsertPages(f1, f2, selectedPages, before, pageConf, conf)
 }
 
 // RemovePages removes selected pages from rs and writes the result to w.

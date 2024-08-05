@@ -55,6 +55,7 @@ type Command struct {
 	Zoom              *model.Zoom
 	Watermark         *model.Watermark
 	ViewerPreferences *model.ViewerPreferences
+	PageConf          *pdfcpu.PageConfiguration
 	Conf              *model.Configuration
 }
 
@@ -515,7 +516,7 @@ func ImportImagesCommand(imageFiles []string, outFile string, imp *pdfcpu.Import
 }
 
 // InsertPagesCommand creates a new command to insert a blank page before or after selected pages.
-func InsertPagesCommand(inFile, outFile string, pageSelection []string, conf *model.Configuration, mode string) *Command {
+func InsertPagesCommand(inFile, outFile string, pageSelection []string, conf *model.Configuration, mode string, pageConf *pdfcpu.PageConfiguration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
@@ -529,6 +530,7 @@ func InsertPagesCommand(inFile, outFile string, pageSelection []string, conf *mo
 		InFile:        &inFile,
 		OutFile:       &outFile,
 		PageSelection: pageSelection,
+		PageConf:      pageConf,
 		Conf:          conf}
 }
 

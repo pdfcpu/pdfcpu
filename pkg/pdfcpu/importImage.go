@@ -118,7 +118,7 @@ func parsePageFormatImp(s string, imp *Import) (err error) {
 	return err
 }
 
-func parsePageDim(v string, u types.DisplayUnit) (*types.Dim, string, error) {
+func ParsePageDim(v string, u types.DisplayUnit) (*types.Dim, string, error) {
 
 	ss := strings.Split(v, " ")
 	if len(ss) != 2 {
@@ -144,7 +144,7 @@ func parseDimensionsImp(s string, imp *Import) (err error) {
 	if imp.UserDim {
 		return errors.New("pdfcpu: only one of formsize(papersize) or dimensions allowed")
 	}
-	imp.PageDim, imp.PageSize, err = parsePageDim(s, imp.InpUnit)
+	imp.PageDim, imp.PageSize, err = ParsePageDim(s, imp.InpUnit)
 	imp.UserDim = true
 	return err
 }

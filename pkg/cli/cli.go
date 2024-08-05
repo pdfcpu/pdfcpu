@@ -115,7 +115,7 @@ func InsertPages(cmd *Command) ([]string, error) {
 	if cmd.Mode == model.INSERTPAGESAFTER {
 		before = false
 	}
-	return nil, api.InsertPagesFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, before, cmd.Conf)
+	return nil, api.InsertPagesFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, before, cmd.PageConf, cmd.Conf)
 }
 
 // RemovePages removes selected pages.

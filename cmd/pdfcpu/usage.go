@@ -526,7 +526,7 @@ If outFile already exists the page sequence will be appended.
 Each imageFile will be rendered to a separate page.
 In its simplest form this converts an image into a PDF: "pdfcpu import img.pdf img.jpg"
 
-description ... dimensions, format, position, offset, scale factor, boxes
+description ... dimensions, formsize, position, offset, scale factor, boxes
     outFile ... output PDF file
   imageFile ... a list of image files
   
@@ -562,7 +562,7 @@ description ... dimensions, format, position, offset, scale factor, boxes
 
   backgroundcolor: "bgcolor" is also accepted.
   
-  Only one of dimensions or format is allowed.
+  Only one of dimensions or formsize is allowed.
   position: full => image dimensions equal page dimensions.
   
   All configuration string parameters support completion.
@@ -572,7 +572,7 @@ description ... dimensions, format, position, offset, scale factor, boxes
        "pos:full"                                   ... render the image to a page with corresponding dimensions.
        "f:A4, pos:c, dpi:300"                       ... render the image centered on A4 respecting a destination resolution of 300 dpi.`
 
-	usagePagesInsert = "pdfcpu pages insert [-p(ages) selectedPages] [-m(ode) before|after] inFile [outFile]"
+	usagePagesInsert = "pdfcpu pages insert [-p(ages) selectedPages] [-m(ode) before|after] [description] inFile [outFile]"
 	usagePagesRemove = "pdfcpu pages remove  -p(ages) selectedPages  inFile [outFile]"
 	usagePages       = "usage: " + usagePagesInsert +
 		"\n       " + usagePagesRemove + generalFlags
@@ -581,9 +581,38 @@ description ... dimensions, format, position, offset, scale factor, boxes
 
       pages ... Please refer to "pdfcpu selectedpages"
        mode ... before, after (default: before)
+description ... dimensions, formsize
      inFile ... input PDF file
     outFile ... output PDF file
 
+  <description> is a comma separated configuration string containing:
+
+  optional entries:
+
+      (defaults: "dim:595 842, f:A4")
+
+  dimensions:      (width height) in given display unit eg. '400 200' setting the media box
+
+  formsize:        eg. A4, Letter, Legal...
+                   Append 'L' to enforce landscape mode. (eg. A3L)
+                   Append 'P' to enforce portrait mode. (eg. TabloidP)
+                   Please refer to "pdfcpu paper" for a comprehensive list of defined paper sizes.
+                   "papersize" is also accepted.
+
+   All configuration string parameters support completion.
+    
+   Examples:      pdfcpu pages insert in.pdf
+                  Insert one blank page before each page using the form size imposed internally by the current media box.
+                  
+                  pdfcpu pages insert -pages 3 "f:A5L" in.pdf
+                  Insert one blank A5 page in landscape mode before page 3.
+
+                  pdfcpu pages insert "dim: 10 5" -u cm in.pdf
+                  Insert one blank 10 x 5 cm separator page for all pages.
+
+                  pdfcpu pages remove -p odd in.pdf out.pdf
+                  pdfcpu pages remove -pages=odd in.pdf out.pdf
+                  Remove all odd pages.
 `
 
 	usageRotate     = "usage: pdfcpu rotate [-p(ages) selectedPages] inFile rotation [outFile]" + generalFlags
@@ -602,7 +631,7 @@ This reduces the number of pages and therefore the required print time.
 If the input is one imageFile a single page n-up PDF gets generated.
 
       pages ... inFile only, please refer to "pdfcpu selectedpages"
-description ... dimensions, format, orientation
+description ... dimensions, formsize, orientation
     outFile ... output PDF file
           n ... the n-Up value (see below for details)
      inFile ... input PDF file
@@ -628,7 +657,7 @@ description ... dimensions, format, orientation
     formsize:        The output sheet size, eg. A4, Letter, Legal...
                      Append 'L' to enforce landscape mode. (eg. A3L)
                      Append 'P' to enforce portrait mode. (eg. TabloidP)
-                     Only one of dimensions or format is allowed.
+                     Only one of dimensions or formsize is allowed.
                      Please refer to "pdfcpu paper" for a comprehensive list of defined paper sizes.
                      "papersize" is also accepted.
 
@@ -659,10 +688,10 @@ Examples: pdfcpu nup out.pdf 4 in.pdf
            in.pdf's page size will be preserved.
 
           pdfcpu nup out.pdf 9 logo.jpg
-           Arrange instances of logo.jpg into a 3x3 grid and write result to out.pdf using the A4 default format.
+           Arrange instances of logo.jpg into a 3x3 grid and write result to out.pdf using the A4 default form size.
           
           pdfcpu nup -- "form:Tabloid" out.pdf 4 *.jpg 
-           Rearrange all jpg files into 2x2 grids and write result to out.pdf using the Tabloid format
+           Rearrange all jpg files into 2x2 grids and write result to out.pdf using the Tabloid form size
            and the default orientation.
 
 `
@@ -737,7 +766,7 @@ The last signature may be shorter, e.g. for a booklet of 120 pages with signatur
    formsize:         The output sheet size, eg. A4, Letter, Legal...
                      Append 'L' to enforce landscape mode. (eg. A3L)
                      Append 'P' to enforce portrait mode. (eg. TabloidP)
-                     Only one of dimensions or format is allowed.
+                     Only one of dimensions or formsize is allowed.
                      Please refer to "pdfcpu paper" for a comprehensive list of defined paper sizes.
                      "papersize" is also accepted.
    btype:            The method for arranging pages into a booklet. (booklet, bookletadvanced, perfectbound)
@@ -787,7 +816,7 @@ For image inputfiles each output page shows all images laid out onto grids of gi
 This command produces poster like PDF pages convenient for page and image browsing. 
 
       pages ... Please refer to "pdfcpu selectedpages"
-description ... dimensions, format, orientation, enforce
+description ... dimensions, formsize, orientation, enforce
     outFile ... output PDF file
           m ... grid lines
           n ... grid columns
@@ -805,7 +834,7 @@ description ... dimensions, format, orientation, enforce
     formsize:     The output sheet size, eg. A4, Letter, Legal...
                   Append 'L' to enforce landscape mode. (eg. A3L)
                   Append 'P' to enforce portrait mode. (eg. TabloidP)
-                  Only one of dimensions or format is allowed.
+                  Only one of dimensions or formsize is allowed.
                   Please refer to "pdfcpu paper" for a comprehensive list of defined paper sizes.
                   "papersize" is also accepted.
 
@@ -1343,11 +1372,11 @@ description ... scalefactor, dimensions, formsize, enforce, border, bgcolor
    Examples:
 
          pdfcpu poster "f:A4" in.pdf outDir
-            Page format is A2, the printer supports A4.
+            Page form size is A2, the printer supports A4.
             Generate a poster(A2) via a corresponding 2x2 grid of A4 pages.
          
          pdfcpu poster "f:A4, scale:2.0" in.pdf outDir
-            Page format is A2, the printer supports A4.
+            Page form size is A2, the printer supports A4.
             Generate a poster(A0) via a corresponding 4x4 grid of A4 pages.
 
          pdfcpu poster -u cm -- "dim:15 10, margin:1, bgcol:DarkGray, border:on" in.pdf outDir
@@ -1387,15 +1416,15 @@ description ... scalefactor, dimensions, formsize, enforce, border, bgcolor
    Examples:
 
          pdfcpu ndown 2 in.pdf outDir
-            Page format is A2, the printer supports A3.
+            Page form size is A2, the printer supports A3.
             Quick cut page into 2 equally sized pages.
 
          pdfcpu ndown 4 in.pdf outDir
-            Page format is A2, the printer supports A4.
+            Page form size is A2, the printer supports A4.
             Quick cut page into 4 equally (A4) sized pages.
 
          pdfcpu ndown -u cm -- "margin:1, bgcol:DarkGray, border:on" 4 in.pdf outDir
-            Page format is A2, the printer supports A4.
+            Page format size is A2, the printer supports A4.
             Quick cut page into 4 equally (A4) sized pages and provide a glue area of 1 cm.
             
    See also the related commands: poster, cut`

@@ -2333,7 +2333,11 @@ func (xRefTable *XRefTable) pageMediaBox(d types.Dict) (*types.Rectangle, error)
 	return rect(xRefTable, a)
 }
 
-func (xRefTable *XRefTable) emptyPage(parent *types.IndirectRef, d types.Dict, pAttrs *InheritedPageAttrs) (*types.IndirectRef, error) {
+func (xRefTable *XRefTable) emptyPage(parent *types.IndirectRef, d types.Dict, dim *types.Dim, pAttrs *InheritedPageAttrs) (*types.IndirectRef, error) {
+	if dim != nil {
+		return xRefTable.EmptyPage(parent, types.RectForDim(dim.Width, dim.Height))
+	}
+
 	mediaBox, err := pAttrs.MediaBox, error(nil)
 	if mediaBox == nil {
 		mediaBox, err = xRefTable.pageMediaBox(d)
@@ -2346,7 +2350,13 @@ func (xRefTable *XRefTable) emptyPage(parent *types.IndirectRef, d types.Dict, p
 	return xRefTable.EmptyPage(parent, mediaBox)
 }
 
-func (xRefTable *XRefTable) insertBlankPages(parent *types.IndirectRef, pAttrs *InheritedPageAttrs, p *int, selectedPages types.IntSet, before bool) (int, error) {
+func (xRefTable *XRefTable) insertBlankPages(
+	parent *types.IndirectRef,
+	pAttrs *InheritedPageAttrs,
+	p *int, selectedPages types.IntSet,
+	dim *types.Dim,
+	before bool) (int, error) {
+
 	d, err := xRefTable.DereferenceDict(*parent)
 	if err != nil {
 		return 0, err
@@ -2386,7 +2396,7 @@ func (xRefTable *XRefTable) insertBlankPages(parent *types.IndirectRef, pAttrs *
 
 		case "Pages":
 			// Recurse over sub pagetree.
-			j, err := xRefTable.insertBlankPages(&ir, pAttrs, p, selectedPages, before)
+			j, err := xRefTable.insertBlankPages(&ir, pAttrs, p, selectedPages, dim, before)
 			if err != nil {
 				return 0, err
 			}
@@ -2401,7 +2411,7 @@ func (xRefTable *XRefTable) insertBlankPages(parent *types.IndirectRef, pAttrs *
 			}
 			if selectedPages[*p] {
 				// Insert empty page.
-				indRef, err := xRefTable.emptyPage(parent, pageNodeDict, pAttrs)
+				indRef, err := xRefTable.emptyPage(parent, pageNodeDict, dim, pAttrs)
 				if err != nil {
 					return 0, err
 				}
@@ -2424,7 +2434,7 @@ func (xRefTable *XRefTable) insertBlankPages(parent *types.IndirectRef, pAttrs *
 }
 
 // InsertBlankPages inserts a blank page before or after each selected page.
-func (xRefTable *XRefTable) InsertBlankPages(pages types.IntSet, before bool) error {
+func (xRefTable *XRefTable) InsertBlankPages(pages types.IntSet, dim *types.Dim, before bool) error {
 	root, err := xRefTable.Pages()
 	if err != nil {
 		return err
@@ -2433,7 +2443,7 @@ func (xRefTable *XRefTable) InsertBlankPages(pages types.IntSet, before bool) er
 	var inhPAttrs InheritedPageAttrs
 	p := 0
 
-	_, err = xRefTable.insertBlankPages(root, &inhPAttrs, &p, pages, before)
+	_, err = xRefTable.insertBlankPages(root, &inhPAttrs, &p, pages, dim, before)
 
 	return err
 }

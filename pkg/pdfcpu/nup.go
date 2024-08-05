@@ -109,7 +109,7 @@ func parseDimensionsNUp(s string, nup *model.NUp) (err error) {
 	if nup.UserDim {
 		return errors.New("pdfcpu: only one of formsize(papersize) or dimensions allowed")
 	}
-	nup.PageDim, nup.PageSize, err = parsePageDim(s, nup.InpUnit)
+	nup.PageDim, nup.PageSize, err = ParsePageDim(s, nup.InpUnit)
 	nup.UserDim = true
 
 	return err

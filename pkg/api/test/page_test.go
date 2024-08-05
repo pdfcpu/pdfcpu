@@ -21,6 +21,8 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 func TestInsertRemovePages(t *testing.T) {
@@ -34,7 +36,7 @@ func TestInsertRemovePages(t *testing.T) {
 	}
 
 	// Insert an empty page before pages 1 and 2.
-	if err := api.InsertPagesFile(inFile, outFile, []string{"-2"}, true, nil); err != nil {
+	if err := api.InsertPagesFile(inFile, outFile, []string{"-2"}, true, nil, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 	if err := api.ValidateFile(outFile, nil); err != nil {
@@ -62,4 +64,37 @@ func TestInsertRemovePages(t *testing.T) {
 	if n1 != n2 {
 		t.Fatalf("%s %s: pageCount want:%d got:%d\n", msg, inFile, n1, n2)
 	}
+}
+
+func TestInsertCustomBlankPage(t *testing.T) {
+	msg := "TestInsertCustomBlankPage"
+	inFile := filepath.Join(inDir, "Acroforms2.pdf")
+	outFile := filepath.Join(outDir, "test.pdf")
+
+	selectedPages := []string{"2"}
+
+	before := false
+
+	pageConf, err := pdfcpu.ParsePageConfiguration("f:A5L", conf.Unit)
+	if err != nil {
+		t.Fatalf("%s %s: %v\n", msg, outFile, err)
+	}
+
+	// Insert an empty A5 page in landscape mode after page 5.
+	if err := api.InsertPagesFile(inFile, outFile, selectedPages, before, pageConf, conf); err != nil {
+		t.Fatalf("%s %s: %v\n", msg, outFile, err)
+	}
+
+	selectedPages = []string{"odd"}
+
+	pageConf, err = pdfcpu.ParsePageConfiguration("dim:5 10", types.CENTIMETRES)
+	if err != nil {
+		t.Fatalf("%s %s: %v\n", msg, outFile, err)
+	}
+
+	// Insert an empty page with dimensions 5 x 10 cm after every odd page.
+	if err := api.InsertPagesFile(inFile, outFile, selectedPages, before, pageConf, conf); err != nil {
+		t.Fatalf("%s %s: %v\n", msg, outFile, err)
+	}
+
 }

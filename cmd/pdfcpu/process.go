@@ -1112,19 +1112,9 @@ func processImportImagesCommand(conf *model.Configuration) {
 }
 
 func processInsertPagesCommand(conf *model.Configuration) {
-	if len(flag.Args()) == 0 || len(flag.Args()) > 2 {
+	if len(flag.Args()) == 0 || len(flag.Args()) > 3 {
 		fmt.Fprintf(os.Stderr, "usage: %s\n\n", usagePagesInsert)
 		os.Exit(1)
-	}
-
-	inFile := flag.Arg(0)
-	if conf.CheckFileNameExt {
-		ensurePDFExtension(inFile)
-	}
-	outFile := ""
-	if len(flag.Args()) == 2 {
-		outFile = flag.Arg(1)
-		ensurePDFExtension(outFile)
 	}
 
 	pages, err := api.ParsePageSelection(selectedPages)
@@ -1139,7 +1129,43 @@ func processInsertPagesCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	process(cli.InsertPagesCommand(inFile, outFile, pages, conf, mode))
+	inFile := flag.Arg(0)
+	if hasPDFExtension(inFile) {
+		// pdfcpu pages insert inFile [outFile]
+
+		outFile := ""
+		if len(flag.Args()) == 2 {
+			outFile = flag.Arg(1)
+			ensurePDFExtension(outFile)
+		}
+
+		process(cli.InsertPagesCommand(inFile, outFile, pages, conf, mode, nil))
+
+		return
+	}
+
+	// pdfcpu pages insert description inFile [outFile]
+
+	pageConf, err := pdfcpu.ParsePageConfiguration(flag.Arg(0), conf.Unit)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+	if pageConf == nil {
+		fmt.Fprintf(os.Stderr, "missing page configuration\n")
+		os.Exit(1)
+	}
+
+	inFile = flag.Arg(1)
+	ensurePDFExtension(inFile)
+
+	outFile := ""
+	if len(flag.Args()) == 3 {
+		outFile = flag.Arg(2)
+		ensurePDFExtension(outFile)
+	}
+
+	process(cli.InsertPagesCommand(inFile, outFile, pages, conf, mode, pageConf))
 }
 
 func processRemovePagesCommand(conf *model.Configuration) {
