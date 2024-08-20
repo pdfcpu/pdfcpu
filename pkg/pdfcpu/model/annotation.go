@@ -181,6 +181,49 @@ func borderEffectDict(cloudyBorder bool, intensity int) types.Dict {
 	})
 }
 
+// LineEndingStyle (see table 179)
+type LineEndingStyle int
+
+const (
+	LESquare LineEndingStyle = iota
+	LECircle
+	LEDiamond
+	LEOpenArrow
+	LEClosedArrow
+	LENone
+	LEButt
+	LEROpenArrow
+	LERClosedArrow
+	LESlash
+)
+
+func LineEndingStyleName(les LineEndingStyle) string {
+	var s string
+	switch les {
+	case LESquare:
+		s = "Square"
+	case LECircle:
+		s = "Circle"
+	case LEDiamond:
+		s = "Diamond"
+	case LEOpenArrow:
+		s = "OpenArrow"
+	case LEClosedArrow:
+		s = "ClosedArrow"
+	case LENone:
+		s = "None"
+	case LEButt:
+		s = "Butt"
+	case LEROpenArrow:
+		s = "ROpenArrow"
+	case LERClosedArrow:
+		s = "RClosedArrow"
+	case LESlash:
+		s = "Slash"
+	}
+	return s
+}
+
 // AnnotationRenderer is the interface for PDF annotations.
 type AnnotationRenderer interface {
 	RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error)
@@ -639,6 +682,189 @@ func (ann TextAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.Ind
 
 	if ann.Name != "" {
 		d.InsertName("Name", ann.Name)
+	}
+
+	return d, nil
+}
+
+// FreeTextIntent represents the various free text annotatation intents.
+type FreeTextIntent int
+
+const (
+	IntentFreeText FreeTextIntent = 1 << iota
+	IntentFreeTextCallout
+	IntentFreeTextTypeWriter
+)
+
+func FreeTextIntentName(fti FreeTextIntent) string {
+	var s string
+	switch fti {
+	case IntentFreeText:
+		s = "FreeText"
+	case IntentFreeTextCallout:
+		s = "FreeTextCallout"
+	case IntentFreeTextTypeWriter:
+		s = "FreeTextTypeWriter"
+	}
+	return s
+}
+
+// FreeText Annotation displays text directly on the page.
+type FreeTextAnnotation struct {
+	MarkupAnnotation
+	Text                   string             // Rich text string, see XFA 3.3
+	HAlign                 types.HAlignment   // Code specifying the form of quadding (justification)
+	FontName               string             // font name
+	FontSize               int                // font size
+	FontCol                *color.SimpleColor // font color
+	DS                     string             // Default style string
+	Intent                 string             // Description of the intent of the free text annotation
+	CallOutLine            types.Array        // if intent is FreeTextCallout
+	CallOutLineEndingStyle string
+	Margins                types.Array
+	BorderWidth            float64
+	BorderStyle            BorderStyle
+	CloudyBorder           bool
+	CloudyBorderIntensity  int // 0,1,2
+}
+
+// XFA conform rich text string examples:
+// The<b> second </b>and<span style="font-weight:bold"> fourth </span> words are bold.
+// The<i> second </i>and<span style="font-style:italic"> fourth </span> words are italicized.
+// For more information see <a href="http://www.example.com/">this</a> web site.
+
+// NewFreeTextAnnotation returns a new free text annotation.
+func NewFreeTextAnnotation(
+	rect types.Rectangle,
+	contents, id string,
+	modDate string,
+	f AnnotationFlags,
+	col *color.SimpleColor,
+	title string,
+	popupIndRef *types.IndirectRef,
+	ca *float64,
+	rc, subject string,
+
+	text string,
+	hAlign types.HAlignment,
+	fontName string,
+	fontSize int,
+	fontCol *color.SimpleColor,
+	ds string,
+	intent *FreeTextIntent,
+	callOutLine types.Array,
+	callOutLineEndingStyle *LineEndingStyle,
+	MLeft, MTop, MRight, MBot float64,
+	borderWidth float64,
+	borderStyle BorderStyle,
+	cloudyBorder bool,
+	cloudyBorderIntensity int) FreeTextAnnotation {
+
+	// validate required DA, DS
+
+	// validate callOutline: 2 or 3 points => array of 4 or 6 numbers.
+
+	ma := NewMarkupAnnotation(AnnFreeText, rect, contents, id, modDate, f, col, title, popupIndRef, ca, rc, subject)
+
+	if cloudyBorderIntensity < 0 || cloudyBorderIntensity > 2 {
+		cloudyBorderIntensity = 0
+	}
+
+	freeTextIntent := ""
+	if intent != nil {
+		freeTextIntent = FreeTextIntentName(*intent)
+	}
+
+	leStyle := ""
+	if callOutLineEndingStyle != nil {
+		leStyle = LineEndingStyleName(*callOutLineEndingStyle)
+	}
+
+	freeTextAnn := FreeTextAnnotation{
+		MarkupAnnotation:       ma,
+		Text:                   text,
+		HAlign:                 hAlign,
+		FontName:               fontName,
+		FontSize:               fontSize,
+		FontCol:                fontCol,
+		DS:                     ds,
+		Intent:                 freeTextIntent,
+		CallOutLine:            callOutLine,
+		CallOutLineEndingStyle: leStyle,
+		BorderWidth:            borderWidth,
+		BorderStyle:            borderStyle,
+		CloudyBorder:           cloudyBorder,
+		CloudyBorderIntensity:  cloudyBorderIntensity,
+	}
+
+	if MLeft > 0 || MTop > 0 || MRight > 0 || MBot > 0 {
+		freeTextAnn.Margins = types.NewNumberArray(MLeft, MTop, MRight, MBot)
+	}
+
+	return freeTextAnn
+}
+
+// RenderDict renders ann into a PDF annotation dict.
+func (ann FreeTextAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
+	d, err := ann.MarkupAnnotation.RenderDict(xRefTable, pageIndRef)
+	if err != nil {
+		return nil, err
+	}
+
+	da := ""
+
+	// TODO Implement Tf operator
+
+	// fontID, err := xRefTable.EnsureFont(ann.FontName) // in root page Resources?
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// da := fmt.Sprintf("/%s %d Tf", fontID, ann.FontSize)
+
+	if ann.FontCol != nil {
+		da += fmt.Sprintf(" %.2f %.2f %.2f rg", ann.FontCol.R, ann.FontCol.G, ann.FontCol.B)
+	}
+	d["DA"] = types.StringLiteral(da)
+
+	d.InsertInt("Q", int(ann.HAlign))
+
+	if ann.Text == "" {
+		if ann.Contents == "" {
+			return nil, errors.New("pdfcpu: FreeTextAnnotation missing \"text\"")
+		}
+		ann.Text = ann.Contents
+	}
+	s, err := types.EscapeUTF16String(ann.Text)
+	if err != nil {
+		return nil, err
+	}
+	d.InsertString("RC", *s)
+
+	if ann.DS != "" {
+		d.InsertString("DS", ann.DS)
+	}
+
+	if ann.Intent != "" {
+		d.InsertName("IT", ann.Intent)
+		if ann.Intent == "FreeTextCallout" {
+			if len(ann.CallOutLine) > 0 {
+				d["CL"] = ann.CallOutLine
+				d.InsertName("LE", ann.CallOutLineEndingStyle)
+			}
+		}
+	}
+
+	if ann.Margins != nil {
+		d["RD"] = ann.Margins
+	}
+
+	if ann.BorderWidth > 0 {
+		d["BS"] = borderStyleDict(ann.BorderWidth, ann.BorderStyle)
+	}
+
+	if ann.CloudyBorder && ann.CloudyBorderIntensity > 0 {
+		d["BE"] = borderEffectDict(ann.CloudyBorder, ann.CloudyBorderIntensity)
 	}
 
 	return d, nil

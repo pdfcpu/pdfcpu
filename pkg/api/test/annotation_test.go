@@ -58,6 +58,43 @@ var textAnnCJK model.AnnotationRenderer = model.NewTextAnnotation(
 	true,                                  // displayOpen
 	"Comment")                             // name
 
+var freeTextAnn model.AnnotationRenderer = model.NewFreeTextAnnotation(
+	*types.NewRectangle(200, 300, 400, 500), // rect
+	`Mac Preview shows "Contents"
+line 2
+line 3`, // contents
+	"ID1",           // id
+	"",              // modDate
+	model.AnnLocked, // f
+	&color.Gray,     // col
+	"Title1",        // title
+	nil,             // popupIndRef
+	nil,             // ca
+	"",              // rc
+	"",              // subject
+	`A.Reader renders rich text ("RC").
+line 2
+line 3`,
+	// `<?xml version="1.0" encoding="UTF-8"?>
+	//  <xhtml xmlns="http://www.w3.org/1999/xhtml" xmlns:xfa="http://www.xfa.org/schema/xfa-data/1.0/">
+	//  	<body>
+	// 		<p>This is some <b>rich text.</b></p>
+	// 	</body>
+	//  </xhmtl>`, // rich text (ignored by Mac Preview and rendered mediocre by Adobe Reader)
+	types.AlignCenter, // horizontal alignment
+	"Helvetica",       // font name (TODO)
+	12,                // font size in points (TODO)
+	&color.Green,      // font color
+	"",                // DS (default style string)
+	nil,               // Intent
+	nil,               // callOutLine
+	nil,               // callOutLineEndingStyle
+	0, 0, 0, 0,        // margin
+	0,             // borderWidth
+	model.BSSolid, // borderStyle
+	false,         // cloudyBorder
+	0)             // cloudyBorderIntensity
+
 var linkAnn model.AnnotationRenderer = model.NewLinkAnnotation(
 	*types.NewRectangle(200, 0, 300, 100), // rect
 	"",                                    // contents
@@ -847,6 +884,20 @@ func TestStrikeOutAnnotation(t *testing.T) {
 
 	// Add StrikeOut annotation.
 	if err := api.AddAnnotationsFile(inFile, outFile, nil, strikeOutAnn, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+}
+
+func TestFreeTextOutAnnotation(t *testing.T) {
+	msg := "TestFreeTextOutAnnotation"
+
+	// Best viewed with Adobe Reader.
+
+	inFile := filepath.Join(inDir, "test.pdf")
+	outFile := filepath.Join(samplesDir, "annotations", "FreeTextAnnotation.pdf")
+
+	// Add Free text annotation.
+	if err := api.AddAnnotationsFile(inFile, outFile, nil, freeTextAnn, nil, false); err != nil {
 		t.Fatalf("%s add: %v\n", msg, err)
 	}
 }
