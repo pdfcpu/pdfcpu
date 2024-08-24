@@ -154,10 +154,7 @@ func skipBI(l *string, prn PageResourceNames) error {
 			token := s[:i]
 			if token == "CS" || token == "ColorSpace" {
 				s = s[i:]
-				i, _ = positionToNextWhitespaceOrChar(s, "/")
-				if i < 0 {
-					return errBIExpressionCorrupt
-				}
+				s, _ = trimLeftSpace(s, false)
 				s = s[1:]
 				i, _ = positionToNextWhitespaceOrChar(s, "/")
 				if i < 0 {
