@@ -193,6 +193,27 @@ func addPages(
 	return nil
 }
 
+func migrateNamedDests(ctxSrc *model.Context, n *model.Node, migrated map[int]int) error {
+	patchValues := func(xRefTable *model.XRefTable, k string, v *types.Object) error {
+		arr, err := xRefTable.DereferenceArray(*v)
+		if err == nil {
+			arr[0] = patchObject(arr[0], migrated)
+			*v = arr
+			return nil
+		}
+		d, err := xRefTable.DereferenceDict(*v)
+		if err != nil {
+			return err
+		}
+		arr = d.ArrayEntry("D")
+		arr[0] = patchObject(arr[0], migrated)
+		*v = d
+		return nil
+	}
+
+	return n.Process(ctxSrc.XRefTable, patchValues)
+}
+
 // AddPages adds pages and corresponding resources from ctxSrc to ctxDest.
 func AddPages(ctxSrc, ctxDest *model.Context, pageNrs []int, usePgCache bool) error {
 
@@ -228,6 +249,14 @@ func AddPages(ctxSrc, ctxDest *model.Context, pageNrs []int, usePgCache bool) er
 			return err
 		}
 		ctxDest.RootDict["AcroForm"] = d
+	}
+
+	if n, ok := ctxSrc.Names["Dests"]; ok {
+		// Carry over used named destinations.
+		if err := migrateNamedDests(ctxSrc, n, migrated); err != nil {
+			return err
+		}
+		ctxDest.Names = map[string]*model.Node{"Dests": n}
 	}
 
 	return nil
