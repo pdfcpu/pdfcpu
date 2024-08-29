@@ -687,7 +687,7 @@ func (ann TextAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.Ind
 	return d, nil
 }
 
-// FreeTextIntent represents the various free text annotatation intents.
+// FreeTextIntent represents the various free text annotation intents.
 type FreeTextIntent int
 
 const (
@@ -1013,6 +1013,252 @@ func (ann CircleAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.I
 
 	if ann.Margins != nil {
 		d["RD"] = ann.Margins
+	}
+
+	if ann.BorderWidth > 0 {
+		d["BS"] = borderStyleDict(ann.BorderWidth, ann.BorderStyle)
+	}
+
+	if ann.CloudyBorder && ann.CloudyBorderIntensity > 0 {
+		d["BE"] = borderEffectDict(ann.CloudyBorder, ann.CloudyBorderIntensity)
+	}
+
+	return d, nil
+}
+
+// PolyLineIntent represents the various polyline annotation intents.
+type PolyLineIntent int
+
+const (
+	IntentPolyLinePolygonCloud PolyLineIntent = 1 << iota
+	IntentPolyLineDimension
+)
+
+func PolyLineIntentName(pi PolyLineIntent) string {
+	var s string
+	switch pi {
+	case IntentPolyLineDimension:
+		s = "PolyLineDimension"
+	}
+	return s
+}
+
+type PolyLineAnnotation struct {
+	MarkupAnnotation
+	Vertices    types.Array // Array of numbers specifying the alternating horizontal and vertical coordinates, respectively, of each vertex, in default user space.
+	Path        types.Array // Array of n arrays, each supplying the operands for a path building operator (m, l or c).
+	Intent      string      // Optional description of the intent of the polyline annotation.
+	Measure     types.Dict  // Optional measure dictionary that shall specify the scale and units that apply to the annotation.
+	FillCol     *color.SimpleColor
+	BorderWidth float64
+	BorderStyle BorderStyle
+	LineEndings types.Array // Optional array of two names that shall specify the line ending styles.
+}
+
+// NewPolyLineAnnotation returns a new polyline annotation.
+func NewPolyLineAnnotation(
+	rect types.Rectangle,
+	contents, id string,
+	modDate string,
+	f AnnotationFlags,
+	col *color.SimpleColor,
+	title string,
+	popupIndRef *types.IndirectRef,
+	ca *float64,
+	rc, subject string,
+
+	vertices types.Array,
+	path types.Array,
+	intent *PolyLineIntent,
+	measure types.Dict,
+	fillCol *color.SimpleColor,
+	borderWidth float64,
+	borderStyle BorderStyle,
+	beginLineEndingStyle *LineEndingStyle,
+	endLineEndingStyle *LineEndingStyle) PolyLineAnnotation {
+
+	ma := NewMarkupAnnotation(AnnPolyLine, rect, contents, id, modDate, f, col, title, popupIndRef, ca, rc, subject)
+
+	polyLineIntent := ""
+	if intent != nil {
+		polyLineIntent = PolyLineIntentName(*intent)
+	}
+
+	polyLineAnn := PolyLineAnnotation{
+		MarkupAnnotation: ma,
+		Vertices:         vertices,
+		Path:             path,
+		Intent:           polyLineIntent,
+		Measure:          measure,
+		FillCol:          fillCol,
+		BorderWidth:      borderWidth,
+		BorderStyle:      borderStyle,
+	}
+
+	if beginLineEndingStyle != nil && endLineEndingStyle != nil {
+		polyLineAnn.LineEndings =
+			types.NewNameArray(
+				LineEndingStyleName(*beginLineEndingStyle),
+				LineEndingStyleName(*endLineEndingStyle),
+			)
+	}
+
+	return polyLineAnn
+}
+
+// RenderDict renders ann into a PDF annotation dict.
+func (ann PolyLineAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
+
+	d, err := ann.MarkupAnnotation.RenderDict(xRefTable, pageIndRef)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(ann.Measure) > 0 {
+		d["Measure"] = ann.Measure
+	}
+
+	if len(ann.Vertices) > 0 && len(ann.Path) > 0 {
+		return nil, errors.New("pdfcpu: PolyLineAnnotation supports \"Vertices\" or \"Path\" only")
+	}
+
+	if len(ann.Vertices) > 0 {
+		d["Vertices"] = ann.Vertices
+	} else {
+		d["Path"] = ann.Path
+	}
+
+	if ann.Intent != "" {
+		d.InsertName("IT", ann.Intent)
+
+	}
+
+	if ann.FillCol != nil {
+		d["IC"] = ann.FillCol.Array()
+	}
+
+	if ann.BorderWidth > 0 {
+		d["BS"] = borderStyleDict(ann.BorderWidth, ann.BorderStyle)
+	}
+
+	if len(ann.LineEndings) == 2 {
+		d["LE"] = ann.LineEndings
+	}
+
+	return d, nil
+}
+
+// PolygonIntent represents the various polygon annotation intents.
+type PolygonIntent int
+
+const (
+	IntentPolygonCloud PolygonIntent = 1 << iota
+	IntentPolygonDimension
+)
+
+func PolygonIntentName(pi PolygonIntent) string {
+	var s string
+	switch pi {
+	case IntentPolygonCloud:
+		s = "PolygonCloud"
+	case IntentPolygonDimension:
+		s = "PolygonDimension"
+	}
+	return s
+}
+
+// PolygonAnnotation represents a polygon annotation.
+type PolygonAnnotation struct {
+	MarkupAnnotation
+	Vertices              types.Array // Array of numbers specifying the alternating horizontal and vertical coordinates, respectively, of each vertex, in default user space.
+	Path                  types.Array // Array of n arrays, each supplying the operands for a path building operator (m, l or c).
+	Intent                string      // Optional description of the intent of the polygon annotation.
+	Measure               types.Dict  // Optional measure dictionary that shall specify the scale and units that apply to the annotation.
+	FillCol               *color.SimpleColor
+	BorderWidth           float64
+	BorderStyle           BorderStyle
+	CloudyBorder          bool
+	CloudyBorderIntensity int // 0,1,2
+}
+
+// NewPolygonAnnotation returns a new polygon annotation.
+func NewPolygonAnnotation(
+	rect types.Rectangle,
+	contents, id string,
+	modDate string,
+	f AnnotationFlags,
+	col *color.SimpleColor,
+	title string,
+	popupIndRef *types.IndirectRef,
+	ca *float64,
+	rc, subject string,
+
+	vertices types.Array,
+	path types.Array,
+	intent *PolygonIntent,
+	measure types.Dict,
+	fillCol *color.SimpleColor,
+	borderWidth float64,
+	borderStyle BorderStyle,
+	cloudyBorder bool,
+	cloudyBorderIntensity int) PolygonAnnotation {
+
+	ma := NewMarkupAnnotation(AnnPolygon, rect, contents, id, modDate, f, col, title, popupIndRef, ca, rc, subject)
+
+	polygonIntent := ""
+	if intent != nil {
+		polygonIntent = PolygonIntentName(*intent)
+	}
+
+	if cloudyBorderIntensity < 0 || cloudyBorderIntensity > 2 {
+		cloudyBorderIntensity = 0
+	}
+
+	polygonAnn := PolygonAnnotation{
+		MarkupAnnotation:      ma,
+		Vertices:              vertices,
+		Path:                  path,
+		Intent:                polygonIntent,
+		Measure:               measure,
+		FillCol:               fillCol,
+		BorderWidth:           borderWidth,
+		BorderStyle:           borderStyle,
+		CloudyBorder:          cloudyBorder,
+		CloudyBorderIntensity: cloudyBorderIntensity,
+	}
+
+	return polygonAnn
+}
+
+// RenderDict renders ann into a PDF annotation dict.
+func (ann PolygonAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
+
+	d, err := ann.MarkupAnnotation.RenderDict(xRefTable, pageIndRef)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(ann.Measure) > 0 {
+		d["Measure"] = ann.Measure
+	}
+
+	if len(ann.Vertices) > 0 && len(ann.Path) > 0 {
+		return nil, errors.New("pdfcpu: PolygonAnnotation supports \"Vertices\" or \"Path\" only")
+	}
+
+	if len(ann.Vertices) > 0 {
+		d["Vertices"] = ann.Vertices
+	} else {
+		d["Path"] = ann.Path
+	}
+
+	if ann.Intent != "" {
+		d.InsertName("IT", ann.Intent)
+
+	}
+
+	if ann.FillCol != nil {
+		d["IC"] = ann.FillCol.Array()
 	}
 
 	if ann.BorderWidth > 0 {

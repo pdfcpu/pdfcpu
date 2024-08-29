@@ -888,8 +888,8 @@ func TestStrikeOutAnnotation(t *testing.T) {
 	}
 }
 
-func TestFreeTextOutAnnotation(t *testing.T) {
-	msg := "TestFreeTextOutAnnotation"
+func TestFreeTextAnnotation(t *testing.T) {
+	msg := "TestFreeTextAnnotation"
 
 	// Best viewed with Adobe Reader.
 
@@ -898,6 +898,82 @@ func TestFreeTextOutAnnotation(t *testing.T) {
 
 	// Add Free text annotation.
 	if err := api.AddAnnotationsFile(inFile, outFile, nil, freeTextAnn, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+}
+
+func TestPolyLineAnnotation(t *testing.T) {
+	msg := "TestPolyLineAnnotation"
+
+	// Best viewed with Adobe Reader.
+
+	inFile := filepath.Join(inDir, "test.pdf")
+	outFile := filepath.Join(samplesDir, "annotations", "PolyLineAnnotation.pdf")
+
+	leButt := model.LEButt
+	leOpenArrow := model.LEOpenArrow
+
+	polyLineAnn := model.NewPolyLineAnnotation(
+		*types.NewRectangle(30, 30, 110, 110), // rect
+		"PolyLine Annotation",                 // contents
+		"IDPolyLine",                          // id
+		"",                                    // modDate
+		0,                                     // f
+		&color.Gray,                           // col
+		"Title1",                              // title
+		nil,                                   // popupIndRef
+		nil,                                   // ca
+		"",                                    // rc
+		"",                                    // subject
+		types.NewNumberArray(30, 30, 110, 110, 110, 30), // vertices
+		nil,            // path
+		nil,            // intent
+		nil,            // measure
+		&color.Green,   // fillCol
+		1,              // borderWidth
+		model.BSDashed, // borderStyle
+		&leButt,        // start lineEndingStyle
+		&leOpenArrow,   // end lineEndingStyle
+	)
+
+	// Add PolyLine annotation.
+	if err := api.AddAnnotationsFile(inFile, outFile, nil, polyLineAnn, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+}
+
+func TestPolygonAnnotation(t *testing.T) {
+	msg := "TestPolygonAnnotation"
+
+	// Best viewed with Adobe Reader.
+
+	inFile := filepath.Join(inDir, "test.pdf")
+	outFile := filepath.Join(samplesDir, "annotations", "PolygonAnnotation.pdf")
+
+	polygonAnn := model.NewPolygonAnnotation(
+		*types.NewRectangle(30, 30, 110, 110), // rect
+		"Polygon Annotation",                  // contents
+		"IDPolygon",                           // id
+		"",                                    // modDate
+		0,                                     // f
+		&color.Gray,                           // col
+		"Title1",                              // title
+		nil,                                   // popupIndRef
+		nil,                                   // ca
+		"",                                    // rc
+		"",                                    // subject
+		types.NewNumberArray(30, 30, 110, 110, 110, 30), // vertices
+		nil,            // path
+		nil,            // intent
+		nil,            // measure
+		&color.Green,   // fillCol
+		5,              // borderWidth
+		model.BSDashed, // borderStyle
+		true,           // cloudyBorder
+		2)              // cloudyBorderIntensity
+
+	// Add Polygon text annotation.
+	if err := api.AddAnnotationsFile(inFile, outFile, nil, polygonAnn, nil, false); err != nil {
 		t.Fatalf("%s add: %v\n", msg, err)
 	}
 }
