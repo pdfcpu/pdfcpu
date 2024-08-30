@@ -870,6 +870,173 @@ func (ann FreeTextAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types
 	return d, nil
 }
 
+// LineIntent represents the various line annotation intents.
+type LineIntent int
+
+const (
+	IntentLineArrow LineIntent = 1 << iota
+	IntentLineDimension
+)
+
+func LineIntentName(li LineIntent) string {
+	var s string
+	switch li {
+	case IntentLineArrow:
+		s = "LineArrow"
+	case IntentLineDimension:
+		s = "LineDimension"
+	}
+	return s
+}
+
+// LineAnnotation represents a line annotation.
+type LineAnnotation struct {
+	MarkupAnnotation
+	P1, P2                    types.Point // Two points in default user space.
+	LineEndings               types.Array // Optional array of two names that shall specify the line ending styles.
+	LeaderLineLength          float64     // Length of leader lines in default user space that extend from each endpoint of the line perpendicular to the line itself.
+	LeaderLineOffset          float64     // Non-negative number that shall represent the length of the leader line offset, which is the amount of empty space between the endpoints of the annotation and the beginning of the leader lines.
+	LeaderLineExtensionLength float64     // Non-negative number that shall represents the length of leader line extensions that extend from the line proper 180 degrees from the leader lines,
+	Intent                    string      // Optional description of the intent of the line annotation.
+	Measure                   types.Dict  // Optional measure dictionary that shall specify the scale and units that apply to the line annotation.
+	Caption                   bool        // Use text specified by "Contents" or "RC" as caption.
+	CaptionPositionTop        bool        // if true the caption shall be on top of the line else caption shall be centred inside the line.
+	CaptionOffsetX            float64
+	CaptionOffsetY            float64
+	FillCol                   *color.SimpleColor
+	BorderWidth               float64
+	BorderStyle               BorderStyle
+}
+
+// NewLineAnnotation returns a new line annotation.
+func NewLineAnnotation(
+	rect types.Rectangle,
+	contents, id string,
+	modDate string,
+	f AnnotationFlags,
+	col *color.SimpleColor,
+	title string,
+	popupIndRef *types.IndirectRef,
+	ca *float64,
+	rc, subject string,
+
+	p1, p2 types.Point,
+	beginLineEndingStyle *LineEndingStyle,
+	endLineEndingStyle *LineEndingStyle,
+	leaderLineLength float64,
+	leaderLineOffset float64,
+	leaderLineExtensionLength float64,
+	intent *LineIntent,
+	measure types.Dict,
+	caption bool,
+	captionPosTop bool,
+	captionOffsetX float64,
+	captionOffsetY float64,
+	fillCol *color.SimpleColor,
+	borderWidth float64,
+	borderStyle BorderStyle) LineAnnotation {
+
+	ma := NewMarkupAnnotation(AnnLine, rect, contents, id, modDate, f, col, title, popupIndRef, ca, rc, subject)
+
+	lineIntent := ""
+	if intent != nil {
+		lineIntent = LineIntentName(*intent)
+	}
+
+	lineAnn := LineAnnotation{
+		MarkupAnnotation:          ma,
+		P1:                        p1,
+		P2:                        p2,
+		LeaderLineLength:          leaderLineLength,
+		LeaderLineOffset:          leaderLineOffset,
+		LeaderLineExtensionLength: leaderLineExtensionLength,
+		Intent:                    lineIntent,
+		Measure:                   measure,
+		Caption:                   caption,
+		CaptionPositionTop:        captionPosTop,
+		CaptionOffsetX:            captionOffsetX,
+		CaptionOffsetY:            captionOffsetY,
+		FillCol:                   fillCol,
+		BorderWidth:               borderWidth,
+		BorderStyle:               borderStyle,
+	}
+
+	if beginLineEndingStyle != nil && endLineEndingStyle != nil {
+		lineAnn.LineEndings =
+			types.NewNameArray(
+				LineEndingStyleName(*beginLineEndingStyle),
+				LineEndingStyleName(*endLineEndingStyle),
+			)
+	}
+
+	return lineAnn
+}
+
+// RenderDict renders ann into a PDF annotation dict.
+func (ann LineAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
+
+	d, err := ann.MarkupAnnotation.RenderDict(xRefTable, pageIndRef)
+	if err != nil {
+		return nil, err
+	}
+
+	if ann.LeaderLineExtensionLength < 0 {
+		return nil, errors.New("pdfcpu: LineAnnotation leader line extension length must not be negative.")
+	}
+
+	if ann.LeaderLineExtensionLength > 0 && ann.LeaderLineLength == 0 {
+		return nil, errors.New("pdfcpu: LineAnnotation leader line length missing.")
+	}
+
+	if ann.LeaderLineOffset < 0 {
+		return nil, errors.New("pdfcpu: LineAnnotation leader line offset must not be negative.")
+	}
+
+	d["L"] = types.NewNumberArray(ann.P1.X, ann.P1.Y, ann.P2.X, ann.P2.Y)
+
+	if ann.LeaderLineExtensionLength > 0 {
+		d["LLE"] = types.Float(ann.LeaderLineExtensionLength)
+	}
+
+	if ann.LeaderLineLength > 0 {
+		d["LL"] = types.Float(ann.LeaderLineLength)
+		if ann.LeaderLineOffset > 0 {
+			d["LLO"] = types.Float(ann.LeaderLineOffset)
+		}
+	}
+
+	if len(ann.Measure) > 0 {
+		d["Measure"] = ann.Measure
+	}
+
+	if ann.Intent != "" {
+		d.InsertName("IT", ann.Intent)
+
+	}
+
+	d["Cap"] = types.Boolean(ann.Caption)
+	if ann.Caption {
+		if ann.CaptionPositionTop {
+			d["CP"] = types.Name("Top")
+		}
+		d["CO"] = types.NewNumberArray(ann.CaptionOffsetX, ann.CaptionOffsetY)
+	}
+
+	if ann.FillCol != nil {
+		d["IC"] = ann.FillCol.Array()
+	}
+
+	if ann.BorderWidth > 0 {
+		d["BS"] = borderStyleDict(ann.BorderWidth, ann.BorderStyle)
+	}
+
+	if len(ann.LineEndings) == 2 {
+		d["LE"] = ann.LineEndings
+	}
+
+	return d, nil
+}
+
 // SquareAnnotation represents a square annotation.
 type SquareAnnotation struct {
 	MarkupAnnotation

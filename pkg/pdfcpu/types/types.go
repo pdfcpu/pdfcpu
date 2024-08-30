@@ -150,6 +150,10 @@ type Point struct {
 	Y float64 `json:"y"`
 }
 
+func NewPoint(x, y float64) Point {
+	return Point{X: x, Y: y}
+}
+
 // Translate modifies p's coordinates.
 func (p *Point) Translate(dx, dy float64) {
 	p.X += dx

@@ -972,8 +972,53 @@ func TestPolygonAnnotation(t *testing.T) {
 		true,           // cloudyBorder
 		2)              // cloudyBorderIntensity
 
-	// Add Polygon text annotation.
+	// Add Polygon annotation.
 	if err := api.AddAnnotationsFile(inFile, outFile, nil, polygonAnn, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+}
+
+func TestLineAnnotation(t *testing.T) {
+	msg := "TestLineAnnotation"
+
+	// Best viewed with Adobe Reader.
+
+	inFile := filepath.Join(inDir, "test.pdf")
+	outFile := filepath.Join(samplesDir, "annotations", "LineAnnotation.pdf")
+
+	leOpenArrow := model.LEOpenArrow
+
+	lineAnn := model.NewLineAnnotation(
+		*types.NewRectangle(30, 30, 110, 110), // rect
+		"Diagonal",                            // contents
+		"IDLine",                              // id
+		"",                                    // modDate
+		0,                                     // f
+		&color.DarkGray,                       // col
+		"Title1",                              // title
+		nil,                                   // popupIndRef
+		nil,                                   // ca
+		"",                                    // rc
+		"",                                    // subject
+		types.NewPoint(148.75, 140.33),        // P1
+		types.NewPoint(297.5, 280.66),         // P2
+		&leOpenArrow,                          // start lineEndingStyle
+		&leOpenArrow,                          // end lineEndingStyle
+		50,                                    // leader line length
+		0,                                     // leader line offset
+		10,                                    // leader line extension length
+		nil,                                   // intent
+		nil,                                   // measure
+		true,                                  // caption
+		false,                                 // caption position top
+		0,                                     // caption offset X
+		0,                                     // caption offset Y
+		nil,                                   // fillCol
+		1,                                     // borderWidth
+		model.BSSolid)                         // borderStyle
+
+	// Add line annotation.
+	if err := api.AddAnnotationsFile(inFile, outFile, nil, lineAnn, nil, false); err != nil {
 		t.Fatalf("%s add: %v\n", msg, err)
 	}
 }
