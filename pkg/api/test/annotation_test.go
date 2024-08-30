@@ -40,6 +40,9 @@ var textAnn model.AnnotationRenderer = model.NewTextAnnotation(
 	nil,                                 // ca
 	"",                                  // rc
 	"",                                  // subject
+	0,                                   // borderRadX
+	0,                                   // borderRadY
+	2,                                   // borderWidth
 	false,                               // displayOpen
 	"Comment")                           // name
 
@@ -55,6 +58,9 @@ var textAnnCJK model.AnnotationRenderer = model.NewTextAnnotation(
 	nil,                                   // ca
 	"RC",                                  // rc
 	"",                                    // subject
+	0,                                     // borderRadX
+	0,                                     // borderRadY
+	2,                                     // borderWidth
 	true,                                  // displayOpen
 	"Comment")                             // name
 
@@ -703,6 +709,9 @@ func TestPopupAnnotation(t *testing.T) {
 		"",                                  // modDate
 		0,                                   // f
 		&color.Green,                        // col
+		0,                                   // borderRadX
+		0,                                   // borderRadY
+		2,                                   // borderWidth
 		parentIndRef,                        // parentIndRef,
 		false,                               // displayOpen
 	)
@@ -775,6 +784,9 @@ func TestHighlightAnnotation(t *testing.T) {
 		"",                    // modDate
 		model.AnnLocked,       // f
 		&color.Yellow,         // col
+		0,                     // borderRadX
+		0,                     // borderRadY
+		2,                     // borderWidth
 		"Comment by Horst",    // title
 		nil,                   // popupIndRef
 		nil,                   // ca
@@ -808,6 +820,9 @@ func TestUnderlineAnnotation(t *testing.T) {
 		"",                    // modDate
 		model.AnnLocked,       // f
 		&color.Yellow,         // col
+		0,                     // borderRadX
+		0,                     // borderRadY
+		2,                     // borderWidth
 		"Title1",              // title
 		nil,                   // popupIndRef
 		nil,                   // ca
@@ -841,6 +856,9 @@ func TestSquigglyAnnotation(t *testing.T) {
 		"",                    // modDate
 		model.AnnLocked,       // f
 		&color.Yellow,         // col
+		0,                     // borderRadX
+		0,                     // borderRadY
+		2,                     // borderWidth
 		"Title1",              // title
 		nil,                   // popupIndRef
 		nil,                   // ca
@@ -874,6 +892,9 @@ func TestStrikeOutAnnotation(t *testing.T) {
 		"",                    // modDate
 		model.AnnLocked,       // f
 		&color.Yellow,         // col
+		0,                     // borderRadX
+		0,                     // borderRadY
+		2,                     // borderWidth
 		"Title1",              // title
 		nil,                   // popupIndRef
 		nil,                   // ca
@@ -1019,6 +1040,38 @@ func TestLineAnnotation(t *testing.T) {
 
 	// Add line annotation.
 	if err := api.AddAnnotationsFile(inFile, outFile, nil, lineAnn, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+}
+
+func TestCaretAnnotation(t *testing.T) {
+	msg := "TestCaretAnnotation"
+
+	// Best viewed with Adobe Reader.
+
+	inFile := filepath.Join(inDir, "test.pdf")
+	outFile := filepath.Join(samplesDir, "annotations", "CaretAnnotation.pdf")
+
+	caretAnn := model.NewCaretAnnotation(
+		*types.NewRectangle(30, 30, 110, 110), // rect
+		"Caret Annotation",                    // contents
+		"IDCaret",                             // id
+		"",                                    // modDate
+		0,                                     // f,
+		nil,                                   // col
+		0,                                     // borderRadX
+		0,                                     // borderRadY
+		0,                                     // borderWidth
+		"Title1",                              // title
+		nil,                                   // popupIndRef
+		nil,                                   // ca
+		"",                                    // rc
+		"",                                    // subject
+		types.NewRectangle(20, 20, 20, 20),    // RD
+		true)                                  // paragraph symbol
+
+	// Add line annotation.
+	if err := api.AddAnnotationsFile(inFile, outFile, nil, caretAnn, nil, false); err != nil {
 		t.Fatalf("%s add: %v\n", msg, err)
 	}
 }

@@ -178,7 +178,7 @@ func Annotation(xRefTable *model.XRefTable, d types.Dict) (model.AnnotationRende
 
 	case "Text":
 		popupIndRef := d.IndirectRefEntry("Popup")
-		ann = model.NewTextAnnotation(*r, contents, nm, "", f, nil, "", popupIndRef, nil, "", "", true, "")
+		ann = model.NewTextAnnotation(*r, contents, nm, "", f, nil, "", popupIndRef, nil, "", "", 0, 0, 0, true, "")
 
 	case "Link":
 		var uri string
@@ -202,12 +202,12 @@ func Annotation(xRefTable *model.XRefTable, d types.Dict) (model.AnnotationRende
 
 	case "Popup":
 		parentIndRef := d.IndirectRefEntry("Parent")
-		ann = model.NewPopupAnnotation(*r, contents, nm, "", f, nil, parentIndRef, false)
+		ann = model.NewPopupAnnotation(*r, contents, nm, "", f, nil, 0, 0, 0, parentIndRef, false)
 
 	// TODO handle remaining annotation types.
 
 	default:
-		ann = model.NewAnnotationForRawType(*subtype, *r, contents, nm, "", f, nil)
+		ann = model.NewAnnotationForRawType(*subtype, *r, contents, nm, "", f, nil, 0, 0, 0)
 
 	}
 
