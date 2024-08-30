@@ -62,6 +62,7 @@ A configuration string to specify the details of the grid layout.
 | dimensions           | (width, height) in user units eg. '400 200' | 595 842
 | formsize, paper size | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode| A4
 | orientation          | one of `rd, dr, ld, dl` for PDF input files | rd
+| enforce              | on/off true/false                           | on
 | border               | on/off true/false                           | on
 | margin               | float >= 0                                  | 0
 
@@ -81,10 +82,18 @@ This is usually associated with the writing direction used in the document to be
 
 <br>
 
+#### Enforce
+
+*true* enforces best-fit orientation of individual content artifacts during rendering on grid.
+
+*false* keeps original orientation of individual content artifacts during rendering on grid.
+
+<br>
+
 #### Default description
 
 ```sh
-'form:A4, d:595 842, o:rd, bo:on, ma:3'
+'form:A4, d:595 842, o:rd, bo:on, ma:3, enforce:on'
 ```
 
 * You only have to specify any parameter diverging from the default.
