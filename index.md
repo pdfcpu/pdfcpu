@@ -21,7 +21,7 @@ layout: default
   <kbd><a href="{{site.baseurl}}/form/form"><img src="resources/form1.png" height="100"></a></kbd>&nbsp;
   <kbd><a href="{{site.baseurl}}/generate/create"><img src="resources/imagebox.png" height="100"></a></kbd>&nbsp;
   <br><br>
-  Now with basic support for PDF 2.0!
+  Now supporting PDF 2.0!
   <br>
   <div align="center">
     <a href="https://twitter.com/intent/follow?screen_name=pdfcpu"><img src="resources/x.png" height="30"></a>&nbsp;
