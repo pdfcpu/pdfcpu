@@ -1,20 +1,18 @@
-# pdfcpu: a Go PDF processor
+# pdfcpu: a Go PDF processor and CLI
 
-[![Open in Visual Studio Code](https://img.shields.io/static/v1?logo=visualstudiocode&label=&message=Open%20in%20Visual%20Studio%20Code&labelColor=2c2c32&color=007acc&logoColor=007acc)](https://open.vscode.dev/pdfcpu/pdfcpu)
 [![Test](https://github.com/pdfcpu/pdfcpu/workflows/Test/badge.svg)](https://github.com/pdfcpu/pdfcpu/actions)
 [![Coverage Status](https://coveralls.io/repos/github/pdfcpu/pdfcpu/badge.svg?branch=master)](https://coveralls.io/github/pdfcpu/pdfcpu?branch=master)
 [![GoDoc](https://godoc.org/github.com/pdfcpu/pdfcpu?status.svg)](https://pkg.go.dev/github.com/pdfcpu/pdfcpu)
 [![Go Report Card](https://goreportcard.com/badge/github.com/pdfcpu/pdfcpu)](https://goreportcard.com/report/github.com/pdfcpu/pdfcpu)
 [![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Latest release](https://img.shields.io/github/release/pdfcpu/pdfcpu.svg)](https://github.com/pdfcpu/pdfcpu/releases)
+[![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/hhrutter)
 
 <a href="https://pdfcpu.io"><img src="resources/logoSmall.png" width="150"></a>
 <a href="https://pdfa.org"><img src="resources/pdfa.png" width="75"></a>
 
-pdfcpu is a PDF processing library written in [Go](http://golang.org) supporting encryption.
-It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO-32000).
+pdfcpu is a PDF processing library written in [Go](http://golang.org) that supports encryption and offers both an API and a command-line interface (CLI). It is compatible with all PDF versions with basic support and ongoing improvement for PDF 2.0 (ISO-32000-2).
 
-Support for PDF 2.0 is basic and ongoing work.
 
 ## Motivation
 
@@ -83,16 +81,17 @@ Simultaneously, pdfcpu aims to simplify the integration of PDF processing into y
 * [split](https://pdfcpu.io/core/split)
 * [stamp](https://pdfcpu.io/core/stamp)
 * [trim](https://pdfcpu.io/core/trim)
-* [validate](https://pdfcpu.io/core/validate) 👉 now including rudimentory support for PDF 2.0
+* [validate](https://pdfcpu.io/core/validate)
 * [viewerpref](https://pdfcpu.io/viewerpref/viewerpref)
 * [watermark](https://pdfcpu.io/core/watermark)
 * [zoom](https://pdfcpu.io/core/zoom)
 
 ## Documentation
 
-* The main entry point is [pdfcpu.io](https://pdfcpu.io).
-* For CLI examples also go to [pdfcpu.io](https://pdfcpu.io). There you will find explanations of all the commands and their parameters.
-* For API examples of all pdfcpu operations please refer to [GoDoc](https://pkg.go.dev/github.com/pdfcpu/pdfcpu/pkg/api).
+* [pdfcpu.io](https://pdfcpu.io)
+* [API tests](https://github.com/pdfcpu/pdfcpu/tree/master/pkg/api/test)
+* [API samples](https://github.com/pdfcpu/pdfcpu/tree/master/pkg/samples) 
+* CLI usage: `$ pdfcpu help cmd`
 
 ### GoDoc
 
