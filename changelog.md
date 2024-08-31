@@ -6,11 +6,17 @@ layout: default
 
 | Date      | Tag / Commit                                                                                | Description  
 |:----------|:--------------------------------------------------------------------------------------------|:------------------------------
-|2024-08-31 | [v0.8.1](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.8.1)                              | ?
+|2024-08-31 | [v0.8.1](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.8.1)                              | Improve CJK, annotation support,
+|           |                                                                                             | Fix #628, #687, #767, #819, #830, 
+|           |                                                                                             | #862, #867, #871, #881, #884-#887,
+|           |                                                                                             | #890, #891, #895, #898, #903, #907, 
+|           |                                                                                             | #908, #910-#912, #914, #915, #918, 
+|           |                                                                                             | #921, #924, #926, #930-#932
 |2024-04-25 | [v0.8.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.8.0)                              | PDF 2.0 encryption, parser speedup,
-|           |                                                                                             | booklet enhancements, 821, 823, 826,
-|           |                                                                                             | 828, 832, 834, 835, 838, 839, 841,
-|           |                                                                                             | 844, 849, 851, 852, 855
+|           |                                                                                             | booklet enhancements,
+|           |                                                                                             | Fix #821, #823, #826, #828, #832,
+|           |                                                                                             | #834, #835, #838,  #839, #841, #844, 
+|           |                                                                                             | #849, #851, #852, #855
 |2024-03-04 | [v0.7.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.7.0)                              | Add zoom command, basic PDF 2.0
 |           |                                                                                             | updating, Fix #628, #724, #756, 
 |           |                                                                                             | #758-#760, #765-#766, #769-#774,  
