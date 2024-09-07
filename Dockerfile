@@ -41,7 +41,7 @@ ENV PATH="${PATH}:/root"
 
 WORKDIR /data
 
-# Command to run executable
-CMD pdfcpu && echo && pdfcpu version -v
+# Entrypoint for container default executable
+ENTRYPOINT ["pdfcpu"]
 
 
