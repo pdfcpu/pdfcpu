@@ -150,7 +150,7 @@ $ pdfcpu version
 ```
 $ docker build -t pdfcpu .
 # mount current folder into container to process local files
-$ docker run -it --mount type=bind,source="$(pwd)",target=/app pdfcpu ./pdfcpu validate /app/pdfs/a.pdf
+$ docker run -it --mount type=bind,source="$(pwd)",target=/app pdfcpu pdfcpu validate /app/pdfs/a.pdf
 ```
 
 ## Contributing
