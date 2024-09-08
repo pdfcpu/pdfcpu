@@ -952,6 +952,22 @@ func NewLineAnnotation(
 	return lineAnn
 }
 
+func (ann LineAnnotation) validateLeaderLineAttrs() error {
+	if ann.LeaderLineExtensionLength < 0 {
+		return errors.New("pdfcpu: LineAnnotation leader line extension length must not be negative.")
+	}
+
+	if ann.LeaderLineExtensionLength > 0 && ann.LeaderLineLength == 0 {
+		return errors.New("pdfcpu: LineAnnotation leader line length missing.")
+	}
+
+	if ann.LeaderLineOffset < 0 {
+		return errors.New("pdfcpu: LineAnnotation leader line offset must not be negative.")
+	}
+
+	return nil
+}
+
 // RenderDict renders ann into a PDF annotation dict.
 func (ann LineAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
 
@@ -960,16 +976,8 @@ func (ann LineAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.Ind
 		return nil, err
 	}
 
-	if ann.LeaderLineExtensionLength < 0 {
-		return nil, errors.New("pdfcpu: LineAnnotation leader line extension length must not be negative.")
-	}
-
-	if ann.LeaderLineExtensionLength > 0 && ann.LeaderLineLength == 0 {
-		return nil, errors.New("pdfcpu: LineAnnotation leader line length missing.")
-	}
-
-	if ann.LeaderLineOffset < 0 {
-		return nil, errors.New("pdfcpu: LineAnnotation leader line offset must not be negative.")
+	if err := ann.validateLeaderLineAttrs(); err != nil {
+		return nil, err
 	}
 
 	d["L"] = types.NewNumberArray(ann.P1.X, ann.P1.Y, ann.P2.X, ann.P2.Y)

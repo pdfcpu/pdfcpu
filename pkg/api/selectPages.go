@@ -601,10 +601,9 @@ func parsePageRangeForCollection(pr []string, pageCount int, negated bool, cp *[
 	return nil
 }
 
-// PagesForPageCollection returns a slice of page numbers for a page collection.
-// Any page number in any order any number of times allowed.
-func PagesForPageCollection(pageCount int, pageSelection []string) ([]int, error) {
+func calcPagesForPageCollection(pageCount int, pageSelection []string) ([]int, error) {
 	collectedPages := []int{}
+
 	for _, v := range pageSelection {
 
 		if v == "even" {
@@ -670,6 +669,18 @@ func PagesForPageCollection(pageCount int, pageSelection []string) ([]int, error
 			return nil, err
 		}
 	}
+
+	return collectedPages, nil
+}
+
+// PagesForPageCollection returns a slice of page numbers for a page collection.
+// Any page number in any order any number of times allowed.
+func PagesForPageCollection(pageCount int, pageSelection []string) ([]int, error) {
+	collectedPages, err := calcPagesForPageCollection(pageCount, pageSelection)
+	if err != nil {
+		return nil, err
+	}
+
 	if len(collectedPages) == 0 {
 		return nil, errors.Errorf("pdfcpu: no page selected")
 	}

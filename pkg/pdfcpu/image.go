@@ -126,7 +126,7 @@ func sortedObjNrs(ii map[int]model.Image) []int {
 	return objNrs
 }
 
-func listImages(ctx *model.Context, mm []map[int]model.Image, maxLen *ImageListMaxLengths) ([]string, int, int64, error) {
+func listImages(mm []map[int]model.Image, maxLen *ImageListMaxLengths) ([]string, int, int64, error) {
 	ss := []string{}
 	first := true
 	j, size := 0, int64(0)
@@ -225,7 +225,7 @@ func ListImages(ctx *model.Context, selectedPages types.IntSet) ([]string, error
 		return nil, err
 	}
 
-	ss, j, size, err := listImages(ctx, mm, maxLen)
+	ss, j, size, err := listImages(mm, maxLen)
 	if err != nil {
 		return nil, err
 	}
