@@ -135,10 +135,30 @@ func createAnnot(ctx *model.Context, ar model.AnnotationRenderer, pageIndRef *ty
 	return indRef, d, nil
 }
 
+func linkAnnotation(xRefTable *model.XRefTable, d types.Dict, r *types.Rectangle, apObjNr int, contents, nm string, f model.AnnotationFlags) (model.AnnotationRenderer, error) {
+	var uri string
+	o, found := d.Find("A")
+	if found && o != nil {
+		d, err := xRefTable.DereferenceDict(o)
+		if err != nil {
+			return nil, err
+		}
+
+		bb, err := xRefTable.DereferenceStringEntryBytes(d, "URI")
+		if err != nil {
+			return nil, err
+		}
+		if len(bb) > 0 {
+			uri = string(bb)
+		}
+	}
+	dest := (*model.Destination)(nil) // will not collect link dest during validation.
+	return model.NewLinkAnnotation(*r, apObjNr, contents, nm, "", f, nil, dest, uri, nil, false, 0, model.BSSolid), nil
+}
+
 // Annotation returns an annotation renderer.
 // Validation sets up a cache of annotation renderers.
 func Annotation(xRefTable *model.XRefTable, d types.Dict) (model.AnnotationRenderer, error) {
-
 	subtype := d.NameEntry("Subtype")
 
 	o, _ := d.Find("Rect")
@@ -188,24 +208,10 @@ func Annotation(xRefTable *model.XRefTable, d types.Dict) (model.AnnotationRende
 		ann = model.NewTextAnnotation(*r, apObjNr, contents, nm, "", f, nil, "", popupIndRef, nil, "", "", 0, 0, 0, true, "")
 
 	case "Link":
-		var uri string
-		o, found := d.Find("A")
-		if found && o != nil {
-			d, err := xRefTable.DereferenceDict(o)
-			if err != nil {
-				return nil, err
-			}
-
-			bb, err := xRefTable.DereferenceStringEntryBytes(d, "URI")
-			if err != nil {
-				return nil, err
-			}
-			if len(bb) > 0 {
-				uri = string(bb)
-			}
+		ann, err = linkAnnotation(xRefTable, d, r, apObjNr, contents, nm, f)
+		if err != nil {
+			return nil, err
 		}
-		dest := (*model.Destination)(nil) // will not collect link dest during validation.
-		ann = model.NewLinkAnnotation(*r, apObjNr, contents, nm, "", f, nil, dest, uri, nil, false, 0, model.BSSolid)
 
 	case "Popup":
 		parentIndRef := d.IndirectRefEntry("Parent")

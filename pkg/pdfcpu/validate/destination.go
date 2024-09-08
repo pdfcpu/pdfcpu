@@ -52,6 +52,35 @@ func validateDestinationArrayLength(a types.Array) bool {
 	return len(a) >= 2 && len(a) <= 6
 }
 
+func validateDestType(a types.Array, destType types.Name) error {
+	switch destType {
+	case "Fit":
+	case "FitB":
+		if len(a) > 2 {
+			return errors.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", destType, len(a))
+		}
+	case "FitH":
+	case "FitV":
+	case "FitBH":
+	case "FitBV":
+		if len(a) > 3 {
+			return errors.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", destType, len(a))
+		}
+	case "XYZ":
+		if len(a) > 5 {
+			return errors.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", destType, len(a))
+		}
+	case "FitR":
+		if len(a) > 6 {
+			return errors.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", destType, len(a))
+		}
+	default:
+		return errors.Errorf("pdfcpu: validateDestinationArray     j- invalid mode: %s", destType)
+	}
+
+	return nil
+}
+
 func validateDestinationArray(xRefTable *model.XRefTable, a types.Array) error {
 	if !validateDestinationArrayLength(a) {
 		return errors.Errorf("pdfcpu: validateDestinationArray: invalid length: %d", len(a))
@@ -68,32 +97,7 @@ func validateDestinationArray(xRefTable *model.XRefTable, a types.Array) error {
 		return errors.Errorf("pdfcpu: validateDestinationArray: second element must be a name %v", a[1])
 	}
 
-	switch name {
-	case "Fit":
-	case "FitB":
-		if len(a) > 2 {
-			return errors.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", name, len(a))
-		}
-	case "FitH":
-	case "FitV":
-	case "FitBH":
-	case "FitBV":
-		if len(a) > 3 {
-			return errors.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", name, len(a))
-		}
-	case "XYZ":
-		if len(a) > 5 {
-			return errors.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", name, len(a))
-		}
-	case "FitR":
-		if len(a) > 6 {
-			return errors.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", name, len(a))
-		}
-	default:
-		return errors.Errorf("pdfcpu: validateDestinationArray     j- invalid mode: %s", name)
-	}
-
-	return nil
+	return validateDestType(a, name)
 }
 
 func validateDestinationDict(xRefTable *model.XRefTable, d types.Dict) error {

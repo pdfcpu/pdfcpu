@@ -9,6 +9,7 @@ The commands are:
 	booklet       arrange pages onto larger sheets of paper to make a booklet or zine
 	bookmarks     list, import, export, remove bookmarks
 	boxes         list, add, remove page boundaries for selected pages
+	certificates  list, import, reset certificates
 	changeopw     change owner password
 	changeupw     change user password
 	collect       create custom sequence of selected pages
@@ -41,6 +42,7 @@ The commands are:
 	resize        scale selected pages
 	rotate        rotate selected pages
 	selectedpages print definition of the -pages flag
+	signatures    validate signatures
 	split         split up a PDF by span or bookmark
 	stamp         add, remove, update Unicode text, image or PDF stamps for selected pages
 	trim          create trimmed version of selected pages

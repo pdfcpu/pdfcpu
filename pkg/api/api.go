@@ -51,7 +51,7 @@ func logDisclaimerPDF20() {
 ***************************** Disclaimer ****************************
 * PDF 2.0 features are supported on a need basis.                   *
 * (See ISO 32000:2 6.3.2 Conformance of PDF processors)             *
-* At the moment pdfcpu comes with basic PDF 2.0 support.            *
+* At the moment pdfcpu ships with basic PDF 2.0 support.            *
 * Please let us know which feature you would like to see supported, *
 * provide a sample PDF file and create an issue:                    *
 * https://github.com/pdfcpu/pdfcpu/issues/new/choose                *
@@ -126,7 +126,7 @@ func WriteContext(ctx *model.Context, w io.Writer) error {
 	}
 	ctx.Write.Writer = bufio.NewWriter(w)
 	defer ctx.Write.Flush()
-	return pdfcpu.Write(ctx)
+	return pdfcpu.WriteContext(ctx)
 }
 
 // WriteIncrement writes a PDF increment for ctx to w.

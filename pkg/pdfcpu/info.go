@@ -425,15 +425,17 @@ func (info PDFInfo) renderFlagsPart2(ss *[]string, separator string) {
 		s = "Yes"
 	}
 	*ss = append(*ss, fmt.Sprintf("                Form: %s", s))
+
+	if info.Signatures || info.AppendOnly {
+		*ss = append(*ss, "          Signatures: Yes")
+	}
+
 	if info.Form {
-		if info.Signatures || info.AppendOnly {
-			*ss = append(*ss, "     SignaturesExist: Yes")
-			s = "No"
-			if info.AppendOnly {
-				s = "Yes"
-			}
-			*ss = append(*ss, fmt.Sprintf("          AppendOnly: %s", s))
+		s = "No"
+		if info.AppendOnly {
+			s = "Yes"
 		}
+		*ss = append(*ss, fmt.Sprintf("          AppendOnly: %s", s))
 	}
 
 	s = "No"
@@ -512,6 +514,28 @@ func (info *PDFInfo) renderFonts(ss *[]string) {
 	}
 }
 
+func setupFontInfos(ctx *model.Context, fontInfos *[]model.FontInfo) {
+	var fontNames []string
+	for k := range ctx.Optimize.Fonts {
+		fontNames = append(fontNames, k)
+	}
+	sort.Strings(fontNames)
+
+	for _, fontName := range fontNames {
+		for _, objNr := range ctx.Optimize.Fonts[fontName] {
+			fontObj := ctx.Optimize.FontObjects[objNr]
+			fontInfo := model.FontInfo{
+				Prefix:   fontObj.Prefix,
+				Name:     fontObj.FontName,
+				Type:     fontObj.SubType(),
+				Encoding: fontObj.Encoding(),
+				Embedded: fontObj.Embedded,
+			}
+			*fontInfos = append(*fontInfos, fontInfo)
+		}
+	}
+}
+
 // Info returns info about ctx.
 func Info(ctx *model.Context, fileName string, selectedPages types.IntSet, fonts bool) (*PDFInfo, error) {
 	info := &PDFInfo{FileName: fileName, Unit: ctx.Unit, UnitString: ctx.UnitString()}
@@ -580,7 +604,7 @@ func Info(ctx *model.Context, fileName string, selectedPages types.IntSet, fonts
 	info.Outlines = len(ctx.Outlines) > 0
 	info.Names = len(ctx.Names) > 0
 
-	info.Signatures = ctx.SignatureExist
+	info.Signatures = ctx.SignatureExist || ctx.AppendOnly || len(ctx.Signatures) > 0
 	info.AppendOnly = ctx.AppendOnly
 	info.Encrypted = ctx.Encrypt != nil
 
@@ -597,26 +621,7 @@ func Info(ctx *model.Context, fileName string, selectedPages types.IntSet, fonts
 	fontInfos := []model.FontInfo{}
 
 	if fonts {
-
-		var fontNames []string
-		for k := range ctx.Optimize.Fonts {
-			fontNames = append(fontNames, k)
-		}
-		sort.Strings(fontNames)
-
-		for _, fontName := range fontNames {
-			for _, objNr := range ctx.Optimize.Fonts[fontName] {
-				fontObj := ctx.Optimize.FontObjects[objNr]
-				fontInfo := model.FontInfo{
-					Prefix:   fontObj.Prefix,
-					Name:     fontObj.FontName,
-					Type:     fontObj.SubType(),
-					Encoding: fontObj.Encoding(),
-					Embedded: fontObj.Embedded,
-				}
-				fontInfos = append(fontInfos, fontInfo)
-			}
-		}
+		setupFontInfos(ctx, &fontInfos)
 	}
 
 	info.Fonts = fontInfos

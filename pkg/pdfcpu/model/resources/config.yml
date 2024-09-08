@@ -48,7 +48,7 @@ timestampFormat: 2006-01-02 15:04
 # date format: yyyy-mm-dd
 dateFormat: 2006-01-02
 
-# toggle optimization
+# toggle optimization.
 optimize: true
 
 # optimize page resources via content stream analysis.
@@ -68,3 +68,14 @@ offline: false
 
 # http timeout in seconds.
 timeout: 5
+
+# http timeout in seconds for CRL revocation checking.
+timeoutCRL: 10
+
+# http timeout in seconds for OSCP revocation checking.
+timeoutOSCP: 10
+
+# preferred certificate revocation checking mechanism:
+# crl
+# ocsp
+preferredCertRevocationChecker: crl

@@ -629,16 +629,46 @@ func validatePieceInfo(xRefTable *model.XRefTable, d types.Dict, dictName, entry
 	return hasPieceInfo, err
 }
 
-// TODO implement
 func validatePermissions(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
 	// => 12.8.4 Permissions
 
-	d, err := validateDictEntry(xRefTable, rootDict, "rootDict", "Permissions", required, sinceVersion, nil)
-	if err != nil || d == nil {
+	d, err := validateDictEntry(xRefTable, rootDict, "rootDict", "Perms", required, sinceVersion, nil)
+	if err != nil {
 		return err
 	}
+	if len(d) == 0 {
+		return nil
+	}
 
-	return errors.New("pdfcpu: validatePermissions: not supported")
+	i := 0
+
+	if indRef := d.IndirectRefEntry("DocMDP"); indRef != nil {
+		d1, err := xRefTable.DereferenceDict(*indRef)
+		if err != nil {
+			return err
+		}
+		if len(d1) > 0 {
+			xRefTable.CertifiedSigObjNr = indRef.ObjectNumber.Value()
+			i++
+		}
+	}
+
+	d1, err := validateDictEntry(xRefTable, d, "permDict", "UR3", OPTIONAL, sinceVersion, nil)
+	if err != nil {
+		return err
+	}
+	if len(d1) == 0 {
+		return nil
+	}
+
+	xRefTable.URSignature = d1
+	i++
+
+	if i == 0 {
+		return errors.New("pdfcpu: validatePermissions: unsupported permissions detected")
+	}
+
+	return nil
 }
 
 // TODO implement
@@ -646,11 +676,11 @@ func validateLegal(xRefTable *model.XRefTable, rootDict types.Dict, required boo
 	// => 12.8.5 Legal Content Attestations
 
 	d, err := validateDictEntry(xRefTable, rootDict, "rootDict", "Legal", required, sinceVersion, nil)
-	if err != nil || d == nil {
+	if err != nil || len(d) == 0 {
 		return err
 	}
 
-	return errors.New("pdfcpu: validateLegal: not supported")
+	return errors.New("pdfcpu: \"Legal\" not supported")
 }
 
 func validateRequirementDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
@@ -864,6 +894,41 @@ func validateNeedsRendering(xRefTable *model.XRefTable, rootDict types.Dict, req
 	return err
 }
 
+func validateDSS(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
+	// => 12.8.4.3 Document Security Store
+
+	d, err := validateDictEntry(xRefTable, rootDict, "rootDict", "DSS", required, sinceVersion, nil)
+	if err != nil || d == nil {
+		return err
+	}
+
+	xRefTable.DSS = d
+
+	return nil
+}
+
+func validateAF(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
+	// => 14.13 Associated Files
+
+	a, err := validateArrayEntry(xRefTable, rootDict, "rootDict", "AF", required, sinceVersion, nil)
+	if err != nil || len(a) == 0 {
+		return err
+	}
+
+	return errors.New("pdfcpu: PDF2.0 \"AF\" not supported")
+}
+
+func validateDPartRoot(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
+	// => 14.12 Document Parts
+
+	d, err := validateDictEntry(xRefTable, rootDict, "rootDict", "DPartRoot", required, sinceVersion, nil)
+	if err != nil || len(d) == 0 {
+		return err
+	}
+
+	return errors.New("pdfcpu: PDF2.0 \"DPartRoot\" not supported")
+}
+
 func logURIError(xRefTable *model.XRefTable, pages []int) {
 	if log.CLIEnabled() {
 		log.CLI.Println()
@@ -914,7 +979,7 @@ func checkLinks(xRefTable *model.XRefTable, client http.Client, pages []int) boo
 				continue
 			}
 			defer res.Body.Close()
-			if res.StatusCode != 200 {
+			if res.StatusCode != http.StatusOK {
 				httpErr = true
 				xRefTable.URIs[page][uri] = strconv.Itoa(res.StatusCode)
 				continue
@@ -1060,6 +1125,9 @@ func validateRootObject(ctx *model.Context) error {
 		{validateRequirements, OPTIONAL, model.V17},
 		{validateCollection, OPTIONAL, model.V17},
 		{validateNeedsRendering, OPTIONAL, model.V17},
+		{validateDSS, OPTIONAL, model.V17},
+		{validateAF, OPTIONAL, model.V20},
+		{validateDPartRoot, OPTIONAL, model.V20},
 	} {
 		if !f.required && xRefTable.Version() < f.sinceVersion {
 			// Ignore optional fields if currentVersion < sinceVersion

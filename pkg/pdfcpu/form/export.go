@@ -359,8 +359,7 @@ func extractComboBox(xRefTable *model.XRefTable, page int, d types.Dict, id, nam
 	return cb, nil
 }
 
-func extractDateFormat(xRefTable *model.XRefTable, d types.Dict) (*primitives.DateFormat, error) {
-
+func dateFormatFromJSAction(d types.Dict) (*primitives.DateFormat, error) {
 	d1 := d.DictEntry("AA")
 	if len(d1) > 0 {
 		d2 := d1.DictEntry("F")
@@ -381,6 +380,17 @@ func extractDateFormat(xRefTable *model.XRefTable, d types.Dict) (*primitives.Da
 				}
 			}
 		}
+	}
+	return nil, nil
+}
+
+func extractDateFormat(xRefTable *model.XRefTable, d types.Dict) (*primitives.DateFormat, error) {
+	df, err := dateFormatFromJSAction(d)
+	if err != nil {
+		return nil, err
+	}
+	if df != nil {
+		return df, nil
 	}
 
 	if o, found := d.Find("DV"); found {
@@ -728,6 +738,21 @@ func exportTx(
 	return nil
 }
 
+func exportPageField(ft string, xRefTable *model.XRefTable, i int, form *Form, d types.Dict, id, name, altName string, locked bool, ok *bool, ff *int) error {
+	var err error
+
+	switch ft {
+	case "Btn":
+		err = exportBtn(xRefTable, i, form, d, id, name, altName, locked, ok)
+	case "Ch":
+		err = exportCh(xRefTable, i, form, d, id, name, altName, locked, ok)
+	case "Tx":
+		err = exportTx(xRefTable, i, form, d, id, name, altName, ff, locked, ok)
+	}
+
+	return err
+}
+
 func exportPageFields(xRefTable *model.XRefTable, i int, form *Form, m map[string]fieldInfo, ok *bool) error {
 	for id, fi := range m {
 
@@ -766,23 +791,9 @@ func exportPageFields(xRefTable *model.XRefTable, i int, form *Form, m map[strin
 			}
 		}
 
-		switch *ft {
-		case "Btn":
-			if err := exportBtn(xRefTable, i, form, d, id, name, altName, locked, ok); err != nil {
-				return err
-			}
-
-		case "Ch":
-			if err := exportCh(xRefTable, i, form, d, id, name, altName, locked, ok); err != nil {
-				return err
-			}
-
-		case "Tx":
-			if err := exportTx(xRefTable, i, form, d, id, name, altName, ff, locked, ok); err != nil {
-				return err
-			}
+		if err := exportPageField(*ft, xRefTable, i, form, d, id, name, altName, locked, ok, ff); err != nil {
+			return err
 		}
-
 	}
 
 	return nil

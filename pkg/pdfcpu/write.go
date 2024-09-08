@@ -60,8 +60,8 @@ func writeObjects(ctx *model.Context) error {
 	return writeEncryptDict(ctx)
 }
 
-// Write generates a PDF file for the cross reference table contained in Context.
-func Write(ctx *model.Context) (err error) {
+// WriteContext generates a PDF file for the cross reference table contained in Context.
+func WriteContext(ctx *model.Context) (err error) {
 	// Create a writer for dirname and filename if not already supplied.
 	if ctx.Write.Writer == nil {
 
@@ -102,8 +102,7 @@ func Write(ctx *model.Context) (err error) {
 	// else if v2 create from scratch
 	// else nothing just write info dict
 
-	// Since we support PDF Collections (since V1.7) for file attachments
-	// we need to generate V1.7 PDF files.
+	// We support PDF Collections (since V1.7) for file attachments
 	v := model.V17
 
 	if ctx.XRefTable.Version() == model.V20 {
@@ -268,6 +267,11 @@ func writePages(ctx *model.Context, rootDict types.Dict) error {
 }
 
 func writeRootAttrsBatch1(ctx *model.Context, d types.Dict, dictName string) error {
+
+	if err := writeAcroFormRootEntry(ctx, d, dictName); err != nil {
+		return err
+	}
+
 	for _, e := range []struct {
 		entryName string
 		statsAttr int
@@ -284,7 +288,7 @@ func writeRootAttrsBatch1(ctx *model.Context, d types.Dict, dictName string) err
 		{"OpenAction", model.RootOpenAction},
 		{"AA", model.RootAA},
 		{"URI", model.RootURI},
-		{"AcroForm", model.RootAcroForm},
+		//{"AcroForm", model.RootAcroForm},
 		{"Metadata", model.RootMetadata},
 	} {
 		if err := writeRootEntry(ctx, d, dictName, e.entryName, e.statsAttr); err != nil {

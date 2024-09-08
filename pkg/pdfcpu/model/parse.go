@@ -1247,9 +1247,64 @@ func DetectKeywords(line string) (endInd int, streamInd int, err error) {
 	return DetectKeywordsWithContext(context.Background(), line)
 }
 
+func skipComment(line string, commentPos int, off, endInd, streamInd *int) string {
+	l, i := positionToNextEOL(line[commentPos:])
+	if l == "" {
+		return l
+	}
+	delta := commentPos + i
+	*off += delta
+
+	// Adjust found positions for changed line.
+	if *endInd > delta {
+		*endInd -= delta
+	} else if *endInd != -1 {
+		*endInd = 0
+	}
+	if *streamInd > delta {
+		*streamInd -= delta
+	} else if *streamInd != -1 {
+		*streamInd = 0
+	}
+	return l
+}
+
+func skipStringLit(line string, strLitPos int, off, endInd, streamInd *int) (string, error) {
+	l, i, err := positionAfterStringLiteral(line[strLitPos:])
+	if err != nil {
+		return "", err
+	}
+	delta := strLitPos + i
+	*off += delta
+	// Adjust found positions for changed line.
+	if *endInd > delta {
+		*endInd -= delta
+	} else if *endInd != -1 {
+		*endInd = 0
+	}
+	if *streamInd > delta {
+		*streamInd -= delta
+	} else if *streamInd != -1 {
+		*streamInd = 0
+	}
+	return l, nil
+}
+
+func skipCommentOrStringLiteral(line string, commentPos, slPos int, off, endInd, streamInd *int) (string, error) {
+	if isComment(commentPos, slPos) {
+		// skip comment if % before any (
+		line = skipComment(line, commentPos, off, endInd, streamInd)
+		if line == "" {
+			return "", nil
+		}
+		return line, nil
+	}
+	return skipStringLit(line, slPos, off, endInd, streamInd)
+}
+
 func DetectKeywordsWithContext(c context.Context, line string) (endInd int, streamInd int, err error) {
 	// return endInd or streamInd which ever first encountered.
-	off, i := 0, 0
+	off := 0
 	strLitPos, commentPos := 0, 0
 	for {
 		if err := c.Err(); err != nil {
@@ -1291,46 +1346,9 @@ func DetectKeywordsWithContext(c context.Context, line string) (endInd int, stre
 			}
 		}
 
-		// skip comment if % before any (
-		if isComment(commentPos, strLitPos) {
-			line, i = positionToNextEOL(line[commentPos:])
-			if line == "" {
-				return -1, -1, nil
-			}
-			delta := commentPos + i
-			off += delta
-
-			// Adjust found positions for changed line.
-			if endInd > delta {
-				endInd -= delta
-			} else if endInd != -1 {
-				endInd = 0
-			}
-			if streamInd > delta {
-				streamInd -= delta
-			} else if streamInd != -1 {
-				streamInd = 0
-			}
-			continue
-		}
-
-		// Skip string literal.
-		line, i, err = positionAfterStringLiteral(line[strLitPos:])
+		line, err = skipCommentOrStringLiteral(line, commentPos, strLitPos, &off, &endInd, &streamInd)
 		if err != nil {
 			return -1, -1, err
-		}
-		delta := strLitPos + i
-		off += delta
-		// Adjust found positions for changed line.
-		if endInd > delta {
-			endInd -= delta
-		} else if endInd != -1 {
-			endInd = 0
-		}
-		if streamInd > delta {
-			streamInd -= delta
-		} else if streamInd != -1 {
-			streamInd = 0
 		}
 	}
 }

@@ -50,6 +50,7 @@ type XRefTableEntry struct {
 	Free            bool
 	Offset          *int64
 	Generation      *int
+	Incr            int
 	RefCount        int
 	Object          types.Object
 	Compressed      bool
@@ -150,13 +151,19 @@ type XRefTable struct {
 	// Thumbnail images
 	PageThumbs map[int]types.IndirectRef
 
+	Signatures        map[int]map[int]Signature // form signatures and signatures located via page annotations only keyed by increment #.
+	URSignature       types.Dict                // usage rights signature
+	CertifiedSigObjNr int                       // authoritative signature
+	DSS               types.Dict                // document security store, currently unsupported
+	DTS               time.Time                 // trusted digital timestamp
+
 	// Offspec section
 	AdditionalStreams *types.Array // array of IndirectRef - trailer :e.g., Oasis "Open Doc"
 
 	// Statistics
 	Stats PDFStats
 
-	Tagged           bool // File is using tags. This is important for ???
+	Tagged           bool // File is using tags.
 	CustomExtensions bool // File is using custom extensions for annotations and/or keywords.
 
 	// Validation
@@ -191,6 +198,7 @@ func newXRefTable(conf *Configuration) (xRefTable *XRefTable) {
 		LinearizationObjs: types.IntSet{},
 		PageAnnots:        map[int]PgAnnots{},
 		PageThumbs:        map[int]types.IndirectRef{},
+		Signatures:        map[int]map[int]Signature{},
 		Stats:             NewPDFStats(),
 		ValidationMode:    conf.ValidationMode,
 		ValidateLinks:     conf.ValidateLinks,
@@ -1026,7 +1034,7 @@ func (xRefTable *XRefTable) Catalog() (types.Dict, error) {
 		return nil, errors.New("pdfcpu: Catalog: missing root dict")
 	}
 
-	o, err := xRefTable.indRefToObject(xRefTable.Root, true)
+	o, _, err := xRefTable.indRefToObject(xRefTable.Root, true)
 	if err != nil || o == nil {
 		return nil, err
 	}
@@ -1043,7 +1051,7 @@ func (xRefTable *XRefTable) Catalog() (types.Dict, error) {
 
 // EncryptDict returns a pointer to the root object / catalog.
 func (xRefTable *XRefTable) EncryptDict() (types.Dict, error) {
-	o, err := xRefTable.indRefToObject(xRefTable.Encrypt, true)
+	o, _, err := xRefTable.indRefToObject(xRefTable.Encrypt, true)
 	if err != nil || o == nil {
 		return nil, err
 	}

@@ -24,10 +24,7 @@ import (
 
 var ErrBookmarksRepair = errors.New("pdfcpu: bookmarks repair failed")
 
-func validateOutlineItemDict(xRefTable *model.XRefTable, d types.Dict) error {
-	dictName := "outlineItemDict"
-
-	// Title, required, text string
+func validateTitle(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	_, err := validateStringEntry(xRefTable, d, dictName, "Title", REQUIRED, model.V10, nil)
 	if err != nil {
 		if xRefTable.ValidationMode == model.ValidationStrict {
@@ -37,8 +34,16 @@ func validateOutlineItemDict(xRefTable *model.XRefTable, d types.Dict) error {
 			return err
 		}
 	}
+	return nil
+}
 
-	// fmt.Printf("Title: %s\n", *title)
+func validateOutlineItemDict(xRefTable *model.XRefTable, d types.Dict) error {
+	dictName := "outlineItemDict"
+
+	// Title, required, text string
+	if err := validateTitle(xRefTable, d, dictName); err != nil {
+		return err
+	}
 
 	// Parent, required, dict indRef
 	ir, err := validateIndRefEntry(xRefTable, d, dictName, "Parent", REQUIRED, model.V10)

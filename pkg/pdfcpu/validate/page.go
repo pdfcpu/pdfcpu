@@ -69,19 +69,8 @@ func validateResourceDict(xRefTable *model.XRefTable, o types.Object) (hasResour
 	return true, nil
 }
 
-func validatePageContents(xRefTable *model.XRefTable, d types.Dict) (hasContents bool, err error) {
-
-	o, found := d.Find("Contents")
-	if !found {
-		return false, err
-	}
-
-	o, err = xRefTable.Dereference(o)
-	if err != nil || o == nil {
-		return false, err
-	}
-
-	switch o := o.(type) {
+func validateContents(obj types.Object, xRefTable *model.XRefTable, d types.Dict) (hasContents bool, err error) {
+	switch obj := obj.(type) {
 
 	case types.StreamDict:
 		// no further processing.
@@ -90,8 +79,8 @@ func validatePageContents(xRefTable *model.XRefTable, d types.Dict) (hasContents
 	case types.Array:
 		// process array of content stream dicts.
 
-		for _, o := range o {
-			o1, _, err := xRefTable.DereferenceStreamDict(o)
+		for _, obj := range obj {
+			o1, _, err := xRefTable.DereferenceStreamDict(obj)
 			if err != nil {
 				return false, err
 			}
@@ -118,10 +107,10 @@ func validatePageContents(xRefTable *model.XRefTable, d types.Dict) (hasContents
 
 	case types.StringLiteral:
 
-		s := strings.TrimSpace(o.Value())
+		s := strings.TrimSpace(obj.Value())
 
 		if len(s) > 0 || xRefTable.ValidationMode == model.ValidationStrict {
-			return false, errors.Errorf("validatePageContents: page content must be stream dict or array, got: %T", o)
+			return false, errors.Errorf("validatePageContents: page content must be stream dict or array, got: %T", obj)
 		}
 
 		// Digest empty string literal.
@@ -130,8 +119,8 @@ func validatePageContents(xRefTable *model.XRefTable, d types.Dict) (hasContents
 
 	case types.Dict:
 
-		if len(o) > 0 || xRefTable.ValidationMode == model.ValidationStrict {
-			return false, errors.Errorf("validatePageContents: page content must be stream dict or array, got: %T", o)
+		if len(obj) > 0 || xRefTable.ValidationMode == model.ValidationStrict {
+			return false, errors.Errorf("validatePageContents: page content must be stream dict or array, got: %T", obj)
 		}
 
 		// Digest empty dict.
@@ -139,10 +128,24 @@ func validatePageContents(xRefTable *model.XRefTable, d types.Dict) (hasContents
 		model.ShowRepaired("page dict \"Contents\"")
 
 	default:
-		return false, errors.Errorf("validatePageContents: page content must be stream dict or array, got: %T", o)
+		return false, errors.Errorf("validatePageContents: page content must be stream dict or array, got: %T", obj)
 	}
 
 	return hasContents, nil
+}
+
+func validatePageContents(xRefTable *model.XRefTable, d types.Dict) (hasContents bool, err error) {
+	o, found := d.Find("Contents")
+	if !found {
+		return false, err
+	}
+
+	o, err = xRefTable.Dereference(o)
+	if err != nil || o == nil {
+		return false, err
+	}
+
+	return validateContents(o, xRefTable, d)
 }
 
 func validatePageResources(xRefTable *model.XRefTable, d types.Dict, hasResources, hasContents bool) error {

@@ -250,7 +250,53 @@ func validateFormFieldDA(xRefTable *model.XRefTable, d types.Dict, dictName stri
 	return false, nil
 }
 
-func validateFormFieldDictEntries(xRefTable *model.XRefTable, d types.Dict, terminalNode bool, inFieldType *types.Name, requiresDA bool) (outFieldType *types.Name, hasDA bool, err error) {
+func cacheSig(xRefTable *model.XRefTable, d types.Dict, dictName string, form bool, objNr, incr int) error {
+	fieldType := d.NameEntry("FT")
+	if fieldType == nil || *fieldType != "Sig" {
+		return nil
+	}
+
+	sig := &model.Signature{Type: model.SigTypePage, ObjNr: objNr, Signed: d["V"] != nil, PageNr: xRefTable.CurPage}
+	if form {
+		sig.Type = model.SigTypeForm
+	}
+
+	var dts bool
+
+	if indRef := d.IndirectRefEntry("V"); indRef != nil {
+		sigDict, err := xRefTable.DereferenceDict(*indRef)
+		if err != nil {
+			return nil
+		}
+		if typ := sigDict.Type(); typ != nil {
+			if *typ == "DocTimeStamp" {
+				sig.Type = model.SigTypeDTS
+				dts = true
+			}
+		}
+	}
+
+	arr, err := validateRectangleEntry(xRefTable, d, dictName, "Rect", REQUIRED, model.V10, nil)
+	if err != nil {
+		return err
+	}
+	r := types.RectForArray(arr)
+	sig.Visible = r.Visible() && !dts
+
+	if _, ok := xRefTable.Signatures[incr]; !ok {
+		xRefTable.Signatures[incr] = map[int]model.Signature{}
+	}
+	if sig1, ok := xRefTable.Signatures[incr][sig.ObjNr]; !ok {
+		xRefTable.Signatures[incr][sig.ObjNr] = *sig
+	} else {
+		sig1.PageNr = xRefTable.CurPage
+		xRefTable.Signatures[incr][sig.ObjNr] = sig1
+	}
+
+	return nil
+}
+
+func validateFormFieldDictEntries(xRefTable *model.XRefTable, objNr, incr int, d types.Dict, terminalNode bool, inFieldType *types.Name, requiresDA bool) (outFieldType *types.Name, hasDA bool, err error) {
 
 	dictName := "formFieldDict"
 
@@ -301,6 +347,9 @@ func validateFormFieldDictEntries(xRefTable *model.XRefTable, d types.Dict, term
 	if err != nil {
 		return nil, false, err
 	}
+	if err := cacheSig(xRefTable, d, dictName, true, objNr, incr); err != nil {
+		return nil, false, err
+	}
 
 	// DV, optional, various
 	_, err = validateEntry(xRefTable, d, dictName, "DV", OPTIONAL, model.V10)
@@ -321,14 +370,14 @@ func validateFormFieldDictEntries(xRefTable *model.XRefTable, d types.Dict, term
 	return outFieldType, hasDA, err
 }
 
-func validateFormFieldParts(xRefTable *model.XRefTable, d types.Dict, inFieldType *types.Name, requiresDA bool) error {
+func validateFormFieldParts(xRefTable *model.XRefTable, objNr, incr int, d types.Dict, inFieldType *types.Name, requiresDA bool) error {
 	// dict represents a terminal field and must have Subtype "Widget"
 	if _, err := validateNameEntry(xRefTable, d, "formFieldDict", "Subtype", REQUIRED, model.V10, func(s string) bool { return s == "Widget" }); err != nil {
 		d["Subtype"] = types.Name("Widget")
 	}
 
 	// Validate field dict entries.
-	if _, _, err := validateFormFieldDictEntries(xRefTable, d, true, inFieldType, requiresDA); err != nil {
+	if _, _, err := validateFormFieldDictEntries(xRefTable, objNr, incr, d, true, inFieldType, requiresDA); err != nil {
 		return err
 	}
 
@@ -337,7 +386,7 @@ func validateFormFieldParts(xRefTable *model.XRefTable, d types.Dict, inFieldTyp
 	return err
 }
 
-func validateFormFieldKids(xRefTable *model.XRefTable, d types.Dict, o types.Object, inFieldType *types.Name, requiresDA bool) error {
+func validateFormFieldKids(xRefTable *model.XRefTable, objNr, incr int, d types.Dict, o types.Object, inFieldType *types.Name, requiresDA bool) error {
 	var err error
 	// dict represents a non terminal field.
 	if d.Subtype() != nil && *d.Subtype() == "Widget" {
@@ -347,7 +396,7 @@ func validateFormFieldKids(xRefTable *model.XRefTable, d types.Dict, o types.Obj
 	// Validate field entries.
 	var xInFieldType *types.Name
 	var hasDA bool
-	if xInFieldType, hasDA, err = validateFormFieldDictEntries(xRefTable, d, false, inFieldType, requiresDA); err != nil {
+	if xInFieldType, hasDA, err = validateFormFieldDictEntries(xRefTable, objNr, incr, d, false, inFieldType, requiresDA); err != nil {
 		return err
 	}
 	if requiresDA && hasDA {
@@ -381,7 +430,7 @@ func validateFormFieldKids(xRefTable *model.XRefTable, d types.Dict, o types.Obj
 }
 
 func validateFormFieldDict(xRefTable *model.XRefTable, ir types.IndirectRef, inFieldType *types.Name, requiresDA bool) error {
-	d, err := xRefTable.DereferenceDict(ir)
+	d, incr, err := xRefTable.DereferenceDictWithIncr(ir)
 	if err != nil || d == nil {
 		return err
 	}
@@ -396,11 +445,13 @@ func validateFormFieldDict(xRefTable *model.XRefTable, ir types.IndirectRef, inF
 		return err
 	}
 
+	objNr := ir.ObjectNumber.Value()
+
 	if o, ok := d.Find("Kids"); ok {
-		return validateFormFieldKids(xRefTable, d, o, inFieldType, requiresDA)
+		return validateFormFieldKids(xRefTable, objNr, incr, d, o, inFieldType, requiresDA)
 	}
 
-	return validateFormFieldParts(xRefTable, d, inFieldType, requiresDA)
+	return validateFormFieldParts(xRefTable, objNr, incr, d, inFieldType, requiresDA)
 }
 
 func validateFormFields(xRefTable *model.XRefTable, arr types.Array, requiresDA bool) error {
@@ -418,6 +469,7 @@ func validateFormFields(xRefTable *model.XRefTable, arr types.Array, requiresDA 
 		}
 
 		if !valid {
+			// TODO Locate sig dicts in chronol. order.
 			if err = validateFormFieldDict(xRefTable, ir, nil, requiresDA); err != nil {
 				return err
 			}
@@ -637,9 +689,28 @@ func validateForm(xRefTable *model.XRefTable, rootDict types.Dict, required bool
 	return validateFormEntries(xRefTable, d, dictName, requiresDA, sinceVersion)
 }
 
+func locateAnnForAPAndRect(d types.Dict, r *types.Rectangle, pageAnnots map[int]model.PgAnnots) *types.IndirectRef {
+	if indRef1 := d.IndirectRefEntry("AP"); indRef1 != nil {
+		apObjNr := indRef1.ObjectNumber.Value()
+		for _, m := range pageAnnots {
+			annots, ok := m[model.AnnWidget]
+			if ok {
+				for objNr, annRend := range annots.Map {
+					if objNr > 0 {
+						if annRend.RectString() == r.ShortString() && annRend.APObjNrInt() == apObjNr {
+							return types.NewIndirectRef(objNr, 0)
+						}
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func pageAnnotIndRefForAcroField(xRefTable *model.XRefTable, indRef types.IndirectRef) (*types.IndirectRef, error) {
 
-	// The indRef should be part of a page annotation dict.
+	// indRef should be part of a page annotation dict.
 
 	for _, m := range xRefTable.PageAnnots {
 		annots, ok := m[model.AnnWidget]
@@ -673,27 +744,25 @@ func pageAnnotIndRefForAcroField(xRefTable *model.XRefTable, indRef types.Indire
 		return nil, err
 	}
 
-	var apObjNr int
-	indRef1 := d.IndirectRefEntry("AP")
-	if indRef1 == nil && (r.Width() == 0 && r.Height() == 0) {
-		// Probably a signature field.
-		return &indRef, nil
-	}
-
-	apObjNr = indRef1.ObjectNumber.Value()
-
-	for _, m := range xRefTable.PageAnnots {
-		annots, ok := m[model.AnnWidget]
-		if ok {
-			for objNr, annRend := range annots.Map {
-				if annRend.RectString() == r.ShortString() && annRend.APObjNrInt() == apObjNr {
-					return types.NewIndirectRef(objNr, 0), nil
-				}
-			}
+	// Possible orphan sig field dicts.
+	if ft := d.NameEntry("FT"); ft != nil && *ft == "Sig" {
+		// Signature Field
+		if _, ok := d.Find("V"); !ok {
+			// without linked sig dict (unsigned)
+			return &indRef, nil
+		}
+		// signed but invisible
+		if !r.Visible() {
+			return &indRef, nil
 		}
 	}
 
-	return nil, errors.New("pdfcpu: can't repair form fields")
+	if indRef := locateAnnForAPAndRect(d, r, xRefTable.PageAnnots); indRef != nil {
+		return indRef, nil
+	}
+
+	return &indRef, nil
+	//return nil, errors.Errorf("pdfcpu: can't repair form field: %d\n", indRef.ObjectNumber.Value())
 }
 
 func validateFormFieldsAgainstPageAnnotations(xRefTable *model.XRefTable) error {

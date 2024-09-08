@@ -22,6 +22,7 @@ package model
 import (
 	"bytes"
 	"io"
+	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
@@ -43,17 +44,19 @@ type configuration struct {
 	EncryptKeyLength                int    `yaml:"encryptKeyLength"`
 	Permissions                     int    `yaml:"permissions"`
 	Unit                            string `yaml:"unit"`
-	Units                           string `yaml:"units"` // Be flexible if version < v0.3.8
 	TimestampFormat                 string `yaml:"timestampFormat"`
 	DateFormat                      string `yaml:"dateFormat"`
 	Optimize                        bool   `yaml:"optimize"`
-	OptimizeBeforeWriting           bool
-	OptimizeResourceDicts           bool `yaml:"optimizeResourceDicts"`
-	OptimizeDuplicateContentStreams bool `yaml:"optimizeDuplicateContentStreams"`
-	CreateBookmarks                 bool `yaml:"createBookmarks"`
-	NeedAppearances                 bool `yaml:"needAppearances"`
-	Offline                         bool `yaml:"offline"`
-	Timeout                         int  `yaml:"timeout"`
+	OptimizeBeforeWriting           bool   `yaml:"optimizeBeforeWriting"`
+	OptimizeResourceDicts           bool   `yaml:"optimizeResourceDicts"`
+	OptimizeDuplicateContentStreams bool   `yaml:"optimizeDuplicateContentStreams"`
+	CreateBookmarks                 bool   `yaml:"createBookmarks"`
+	NeedAppearances                 bool   `yaml:"needAppearances"`
+	Offline                         bool   `yaml:"offline"`
+	Timeout                         int    `yaml:"timeout"`
+	TimeoutCRL                      int    `yaml:"timeoutCRL"`
+	TimeoutOCSP                     int    `yaml:"timeoutOCSP"`
+	PreferredCertRevocationChecker  string `yaml:"preferredCertRevocationChecker"`
 }
 
 func loadedConfig(c configuration, configPath string) *Configuration {
@@ -113,6 +116,15 @@ func loadedConfig(c configuration, configPath string) *Configuration {
 	conf.NeedAppearances = c.NeedAppearances
 	conf.Offline = c.Offline
 	conf.Timeout = c.Timeout
+	conf.TimeoutCRL = c.TimeoutCRL
+	conf.TimeoutOCSP = c.TimeoutOCSP
+
+	switch strings.ToLower(c.PreferredCertRevocationChecker) {
+	case "crl":
+		conf.PreferredCertRevocationChecker = CRL
+	case "ocsp":
+		conf.PreferredCertRevocationChecker = OCSP
+	}
 
 	return &conf
 }
@@ -135,21 +147,21 @@ func parseConfigFile(r io.Reader, configPath string) error {
 	if !types.MemberOf(c.ValidationMode, []string{"ValidationStrict", "ValidationRelaxed"}) {
 		return errors.Errorf("invalid validationMode: %s", c.ValidationMode)
 	}
+
 	if !types.MemberOf(c.Eol, []string{"EolLF", "EolCR", "EolCRLF"}) {
 		return errors.Errorf("invalid eol: %s", c.Eol)
 	}
-	if c.Unit == "" {
-		// v0.3.8 modifies "units" to "unit".
-		if c.Units != "" {
-			c.Unit = c.Units
-		}
-	}
+
 	if !types.MemberOf(c.Unit, []string{"points", "inches", "cm", "mm"}) {
 		return errors.Errorf("invalid unit: %s", c.Unit)
 	}
 
 	if !types.IntMemberOf(c.EncryptKeyLength, []int{40, 128, 256}) {
 		return errors.Errorf("encryptKeyLength possible values: 40, 128, 256, got: %s", c.Unit)
+	}
+
+	if !types.MemberOf(c.PreferredCertRevocationChecker, []string{"crl", "ocsp"}) {
+		return errors.Errorf("invalid preferred certificate revocation checker: %s", c.PreferredCertRevocationChecker)
 	}
 
 	loadedDefaultConfig = loadedConfig(c, configPath)

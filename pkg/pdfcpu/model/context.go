@@ -580,6 +580,8 @@ type WriteContext struct {
 	BinaryFontSize      int64         // total font stream data (fontfiles) = copy of Read.BinaryFontSize.
 	Table               map[int]int64 // object write offsets
 	Offset              int64         // current write offset
+	OffsetSigByteRange  int64         // write offset of signature dict value for "ByteRange"
+	OffsetSigContents   int64         // write offset of signature dict value for "Contents"
 	WriteToObjectStream bool          // if true start to embed objects into object streams and obey ObjectStreamMaxObjects.
 	CurrentObjStream    *int          // if not nil, any new non-stream-object gets added to the object stream with this object number.
 	Eol                 string        // end of line char sequence

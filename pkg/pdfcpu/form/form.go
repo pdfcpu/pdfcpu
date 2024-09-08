@@ -584,28 +584,47 @@ func collectTx(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta
 	return nil
 }
 
-func collectPageField(
-	xRefTable *model.XRefTable,
-	d types.Dict,
-	i int,
-	fi *fieldInfo,
-	fm *FieldMeta,
-	fs *[]Field) error {
+func collectField(xRefTable *model.XRefTable, ft string, d types.Dict, f *Field, fm *FieldMeta) error {
+	var err error
 
-	exists := false
+	switch ft {
+	case "Btn":
+		err = collectBtn(xRefTable, d, f, fm)
+	case "Ch":
+		err = collectCh(xRefTable, d, f, fm)
+	case "Tx":
+		err = collectTx(xRefTable, d, f, fm)
+	}
+
+	return err
+}
+
+func locateField(fs *[]Field, fi *fieldInfo, fm *FieldMeta, pageNr int) bool {
 	for j, field := range *fs {
 		if field.ID == fi.id && field.Name == fi.name {
-			field.Pages = append(field.Pages, i)
+			field.Pages = append(field.Pages, pageNr)
 			ps := field.pageString()
 			if len(ps) > fm.pageMax {
 				fm.pageMax = len(ps)
 			}
 			(*fs)[j] = field
-			exists = true
+			return true
 		}
 	}
+	return false
+}
 
-	f := Field{Pages: []int{i}}
+func collectPageField(
+	xRefTable *model.XRefTable,
+	d types.Dict,
+	pageNr int,
+	fi *fieldInfo,
+	fm *FieldMeta,
+	fs *[]Field) error {
+
+	foundField := locateField(fs, fi, fm, pageNr)
+
+	f := Field{Pages: []int{pageNr}}
 
 	f.ID = fi.id
 	if w := runewidth.StringWidth(fi.id); w > fm.idMax {
@@ -653,24 +672,11 @@ func collectPageField(
 		f.AltName = altName
 	}
 
-	var err error
-
-	switch *ft {
-	case "Btn":
-		err = collectBtn(xRefTable, d, &f, fm)
-
-	case "Ch":
-		err = collectCh(xRefTable, d, &f, fm)
-
-	case "Tx":
-		err = collectTx(xRefTable, d, &f, fm)
-	}
-
-	if err != nil {
+	if err := collectField(xRefTable, *ft, d, &f, fm); err != nil {
 		return err
 	}
 
-	if !exists {
+	if !foundField {
 		*fs = append(*fs, f)
 	}
 

@@ -291,7 +291,7 @@ func (ib *ImageBox) resource() (io.ReadCloser, error) {
 			}
 			return nil, err
 		}
-		if resp.StatusCode != 200 {
+		if resp.StatusCode != http.StatusOK {
 			if log.CLIEnabled() {
 				log.CLI.Printf("http status %d: %s\n", resp.StatusCode, ib.Src)
 			}

@@ -440,3 +440,23 @@ func ResetViewerPreferences(cmd *Command) ([]string, error) {
 func Zoom(cmd *Command) ([]string, error) {
 	return nil, api.ZoomFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Zoom, cmd.Conf)
 }
+
+// ListCertificates returns installed certificates.
+func ListCertificates(cmd *Command) ([]string, error) {
+	return ListCertificatesAll(cmd.BoolVal1, cmd.Conf)
+}
+
+// ListCertificates returns installed certificates.
+func ImportCertificates(cmd *Command) ([]string, error) {
+	return api.ImportCertificates(cmd.InFiles)
+}
+
+// // ResetCertificates ensures a clean cert pool containing system root certificates only.
+// func ResetCertificates(cmd *Command) ([]string, error) {
+// 	return ResetCertificates(cmd.Conf)
+// }
+
+func ValidateSignatures(cmd *Command) ([]string, error) {
+	return api.ValidateSignaturesFile(*cmd.InFile, cmd.BoolVal1, cmd.BoolVal2, cmd.Conf)
+	//return api.ValidateSignatures(cmd.InFiles, cmd.Conf)
+}

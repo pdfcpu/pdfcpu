@@ -61,9 +61,9 @@ func ProcessRefCounts(xRefTable *XRefTable, o types.Object) {
 	}
 }
 
-func (xRefTable *XRefTable) indRefToObject(ir *types.IndirectRef, decodeLazy bool) (types.Object, error) {
+func (xRefTable *XRefTable) indRefToObject(ir *types.IndirectRef, decodeLazy bool) (types.Object, int, error) {
 	if ir == nil {
-		return nil, errors.New("pdfcpu: indRefToObject: input argument is nil")
+		return nil, 0, errors.New("pdfcpu: indRefToObject: input argument is nil")
 	}
 
 	// 7.3.10
@@ -71,7 +71,7 @@ func (xRefTable *XRefTable) indRefToObject(ir *types.IndirectRef, decodeLazy boo
 	// it shall be treated as a reference to the null object.
 	entry, found := xRefTable.FindTableEntryForIndRef(ir)
 	if !found || entry.Free {
-		return nil, nil
+		return nil, 0, nil
 	}
 
 	xRefTable.CurObj = int(ir.ObjectNumber)
@@ -79,15 +79,15 @@ func (xRefTable *XRefTable) indRefToObject(ir *types.IndirectRef, decodeLazy boo
 	if l, ok := entry.Object.(types.LazyObjectStreamObject); ok && decodeLazy {
 		ob, err := l.DecodedObject(context.TODO())
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
 		ProcessRefCounts(xRefTable, ob)
 		entry.Object = ob
 	}
 
-	// return dereferenced object
-	return entry.Object, nil
+	// return dereferenced object and increment nr.
+	return entry.Object, entry.Incr, nil
 }
 
 // Dereference resolves an indirect object and returns the resulting PDF object.
@@ -96,6 +96,20 @@ func (xRefTable *XRefTable) Dereference(o types.Object) (types.Object, error) {
 	if !ok {
 		// Nothing do dereference.
 		return o, nil
+	}
+
+	obj, _, err := xRefTable.indRefToObject(&ir, true)
+	return obj, err
+}
+
+// Dereference resolves an indirect object and returns the resulting PDF object.
+// It also returns the number of the written PDF Increment this object is part of.
+// The higher the increment number the older the object.
+func (xRefTable *XRefTable) DereferenceWithIncr(o types.Object) (types.Object, int, error) {
+	ir, ok := o.(types.IndirectRef)
+	if !ok {
+		// Nothing do dereference.
+		return o, 0, nil
 	}
 
 	return xRefTable.indRefToObject(&ir, true)
@@ -108,7 +122,8 @@ func (xRefTable *XRefTable) DereferenceForWrite(o types.Object) (types.Object, e
 		return o, nil
 	}
 
-	return xRefTable.indRefToObject(&ir, false)
+	obj, _, err := xRefTable.indRefToObject(&ir, false)
+	return obj, err
 }
 
 // DereferenceBoolean resolves and validates a boolean object, which may be an indirect reference.
@@ -336,6 +351,24 @@ func (xRefTable *XRefTable) DereferenceDict(o types.Object) (types.Dict, error) 
 	}
 
 	return d, nil
+}
+
+// DereferenceDictWithIncr resolves and validates a dictionary object, which may be an indirect reference.
+// It also returns the number of the written PDF Increment this object is part of.
+// The higher the increment number the older the object.
+func (xRefTable *XRefTable) DereferenceDictWithIncr(o types.Object) (types.Dict, int, error) {
+
+	o, incr, err := xRefTable.DereferenceWithIncr(o)
+	if err != nil || o == nil {
+		return nil, 0, err
+	}
+
+	d, ok := o.(types.Dict)
+	if !ok {
+		return nil, 0, errors.Errorf("pdfcpu: dereferenceDictWithIncr: wrong type %T <%v>", o, o)
+	}
+
+	return d, incr, nil
 }
 
 // DereferenceFontDict returns the font dict referenced by indRef.

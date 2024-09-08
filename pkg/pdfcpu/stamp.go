@@ -1564,6 +1564,27 @@ func AddWatermarksMap(ctx *model.Context, m map[int]*model.Watermark) error {
 	return nil
 }
 
+func resolveFonts(fm map[string]types.IntSet, xRefTable *model.XRefTable, m1 map[int][]*model.Watermark) error {
+	// TODO Take existing font dicts in xref into account.
+	for fontName, pageSet := range fm {
+		ir, err := pdffont.EnsureFontDict(xRefTable, fontName, "", "", false, nil)
+		if err != nil {
+			return err
+		}
+		for pageNr, v := range pageSet {
+			if !v {
+				continue
+			}
+			for _, wm := range m1[pageNr] {
+				if wm.IsText() && wm.FontName == fontName {
+					wm.Font = ir
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // AddWatermarksSliceMap adds watermarks in m to corresponding pages.
 func AddWatermarksSliceMap(ctx *model.Context, m map[int][]*model.Watermark) error {
 	var (
@@ -1603,22 +1624,8 @@ func AddWatermarksSliceMap(ctx *model.Context, m map[int][]*model.Watermark) err
 		return err
 	}
 
-	// TODO Take existing font dicts in xref into account.
-	for fontName, pageSet := range fm {
-		ir, err := pdffont.EnsureFontDict(ctx.XRefTable, fontName, "", "", false, nil)
-		if err != nil {
-			return err
-		}
-		for pageNr, v := range pageSet {
-			if !v {
-				continue
-			}
-			for _, wm := range m1[pageNr] {
-				if wm.IsText() && wm.FontName == fontName {
-					wm.Font = ir
-				}
-			}
-		}
+	if err := resolveFonts(fm, ctx.XRefTable, m1); err != nil {
+		return err
 	}
 
 	for k, wms := range m1 {

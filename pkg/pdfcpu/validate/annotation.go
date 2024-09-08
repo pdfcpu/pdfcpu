@@ -1658,6 +1658,23 @@ func validateAnnotationDict(xRefTable *model.XRefTable, d types.Dict) (isTrapNet
 	return *subtype == "TrapNet", nil
 }
 
+func addAnnotation(ann model.AnnotationRenderer, pgAnnots model.PgAnnots, i int, hasIndRef bool, indRef types.IndirectRef) {
+	annots, ok := pgAnnots[ann.Type()]
+	if !ok {
+		annots = model.Annot{}
+		annots.IndRefs = &[]types.IndirectRef{}
+		annots.Map = model.AnnotMap{}
+		pgAnnots[ann.Type()] = annots
+	}
+
+	objNr := -i
+	if hasIndRef {
+		objNr = indRef.ObjectNumber.Value()
+		*(annots.IndRefs) = append(*(annots.IndRefs), indRef)
+	}
+	annots.Map[objNr] = ann
+}
+
 func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) error {
 
 	// a ... array of indrefs to annotation dicts.
@@ -1677,9 +1694,11 @@ func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) error {
 		}
 
 		var (
-			ok, hasIndRef bool
-			indRef        types.IndirectRef
-			err           error
+			ok        bool
+			hasIndRef bool
+			indRef    types.IndirectRef
+			incr      int
+			err       error
 		)
 
 		if indRef, ok = v.(types.IndirectRef); ok {
@@ -1687,7 +1706,7 @@ func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) error {
 			if log.ValidateEnabled() {
 				log.Validate.Printf("processing annotDict %d\n", indRef.ObjectNumber)
 			}
-			annotDict, err = xRefTable.DereferenceDict(indRef)
+			annotDict, incr, err = xRefTable.DereferenceDictWithIncr(indRef)
 			if err != nil {
 				return err
 			}
@@ -1704,6 +1723,15 @@ func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) error {
 			}
 		}
 
+		if hasIndRef {
+			objNr := indRef.ObjectNumber.Value()
+			if objNr > 0 {
+				if err := cacheSig(xRefTable, annotDict, "formFieldDict", false, objNr, incr); err != nil {
+					return err
+				}
+			}
+		}
+
 		hasTrapNet, err = validateAnnotationDict(xRefTable, annotDict)
 		if err != nil {
 			return err
@@ -1716,20 +1744,7 @@ func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) error {
 			return err
 		}
 
-		annots, ok := pgAnnots[ann.Type()]
-		if !ok {
-			annots = model.Annot{}
-			annots.IndRefs = &[]types.IndirectRef{}
-			annots.Map = model.AnnotMap{}
-			pgAnnots[ann.Type()] = annots
-		}
-
-		objNr := -i
-		if hasIndRef {
-			objNr = indRef.ObjectNumber.Value()
-			*(annots.IndRefs) = append(*(annots.IndRefs), indRef)
-		}
-		annots.Map[objNr] = ann
+		addAnnotation(ann, pgAnnots, i, hasIndRef, indRef)
 	}
 
 	return nil

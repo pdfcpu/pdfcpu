@@ -593,7 +593,76 @@ func createImageResourcesForJPEG(xRefTable *XRefTable, c image.Config, bb bytes.
 	return []ImageResource{ir}, err
 }
 
-func createImageResourcesForTIFF(xRefTable *XRefTable, c image.Config, bb bytes.Buffer, gray, sepia bool) ([]ImageResource, error) {
+func decodeImage(xRefTable *XRefTable, buf *bytes.Reader, currentOffset int64, gray, sepia bool, byteOrder binary.ByteOrder, imgResources *[]ImageResource) (int64, error) {
+	img, err := tiff.DecodeAt(buf, currentOffset)
+	if err != nil {
+		return 0, err
+	}
+
+	if gray {
+		switch img.(type) {
+		case *image.Gray, *image.Gray16:
+		default:
+			img = convertToGray(img)
+		}
+	}
+
+	if sepia {
+		switch img.(type) {
+		case *image.Gray, *image.Gray16:
+		default:
+			img = convertToSepia(img)
+		}
+	}
+
+	imgBuf, softMask, bpc, cs, err := createImageBuf(xRefTable, img, "tiff")
+	if err != nil {
+		return 0, err
+	}
+
+	w, h := img.Bounds().Dx(), img.Bounds().Dy()
+
+	sd, err := createImageStreamDict(xRefTable, imgBuf, softMask, w, h, bpc, "tiff", cs)
+	if err != nil {
+		return 0, err
+	}
+
+	indRef, err := xRefTable.IndRefForNewObject(*sd)
+	if err != nil {
+		return 0, err
+	}
+
+	res := Resource{ID: "Im0", IndRef: indRef}
+	ir := ImageResource{Res: res, Width: w, Height: h}
+	*imgResources = append(*imgResources, ir)
+
+	if _, err := buf.Seek(currentOffset, io.SeekStart); err != nil {
+		return 0, err
+	}
+
+	var numEntries uint16
+	if err := binary.Read(buf, byteOrder, &numEntries); err != nil {
+		return 0, err
+	}
+
+	if _, err := buf.Seek(int64(numEntries)*12, io.SeekCurrent); err != nil {
+		return 0, err
+	}
+
+	var nextIFDOffset uint32
+	if err := binary.Read(buf, byteOrder, &nextIFDOffset); err != nil {
+		return 0, err
+	}
+
+	// if nextIFDOffset >= uint32(bb.Len()) {
+	// 	fmt.Println("Invalid next IFD offset, stopping.")
+	// 	break
+	// }
+
+	return int64(nextIFDOffset), nil
+}
+
+func createImageResourcesForTIFF(xRefTable *XRefTable, bb bytes.Buffer, gray, sepia bool) ([]ImageResource, error) {
 	imgResources := []ImageResource{}
 
 	buf := bytes.NewReader(bb.Bytes())
@@ -617,76 +686,15 @@ func createImageResourcesForTIFF(xRefTable *XRefTable, c image.Config, bb bytes.
 		return nil, fmt.Errorf("invalid TIFF file: no valid IFD")
 	}
 
-	currentOffset := int64(firstIFDOffset)
+	var err error
 
-	for currentOffset != 0 {
+	off := int64(firstIFDOffset)
 
-		img, err := tiff.DecodeAt(buf, currentOffset)
+	for off != 0 && off < int64(bb.Len()) {
+		off, err = decodeImage(xRefTable, buf, off, gray, sepia, byteOrder, &imgResources)
 		if err != nil {
 			return nil, err
 		}
-
-		if gray {
-			switch img.(type) {
-			case *image.Gray, *image.Gray16:
-			default:
-				img = convertToGray(img)
-			}
-		}
-
-		if sepia {
-			switch img.(type) {
-			case *image.Gray, *image.Gray16:
-			default:
-				img = convertToSepia(img)
-			}
-		}
-
-		imgBuf, softMask, bpc, cs, err := createImageBuf(xRefTable, img, "tiff")
-		if err != nil {
-			return nil, err
-		}
-
-		w, h := img.Bounds().Dx(), img.Bounds().Dy()
-
-		sd, err := createImageStreamDict(xRefTable, imgBuf, softMask, w, h, bpc, "tiff", cs)
-		if err != nil {
-			return nil, err
-		}
-
-		indRef, err := xRefTable.IndRefForNewObject(*sd)
-		if err != nil {
-			return nil, err
-		}
-
-		res := Resource{ID: "Im0", IndRef: indRef}
-		ir := ImageResource{Res: res, Width: w, Height: h}
-		imgResources = append(imgResources, ir)
-
-		if _, err := buf.Seek(currentOffset, io.SeekStart); err != nil {
-			return nil, err
-		}
-
-		var numEntries uint16
-		if err := binary.Read(buf, byteOrder, &numEntries); err != nil {
-			return nil, err
-		}
-
-		if _, err := buf.Seek(int64(numEntries)*12, io.SeekCurrent); err != nil {
-			return nil, err
-		}
-
-		var nextIFDOffset uint32
-		if err := binary.Read(buf, byteOrder, &nextIFDOffset); err != nil {
-			return nil, err
-		}
-
-		if nextIFDOffset >= uint32(bb.Len()) {
-			fmt.Println("Invalid next IFD offset, stopping.")
-			break
-		}
-
-		currentOffset = int64(nextIFDOffset)
 	}
 
 	return imgResources, nil
@@ -756,7 +764,7 @@ func CreateImageResources(xRefTable *XRefTable, r io.Reader, gray, sepia bool) (
 	}
 
 	if format == "tiff" {
-		return createImageResourcesForTIFF(xRefTable, c, bb, gray, sepia)
+		return createImageResourcesForTIFF(xRefTable, bb, gray, sepia)
 	}
 
 	if format == "jpeg" && !gray && !sepia {

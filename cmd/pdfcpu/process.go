@@ -151,12 +151,26 @@ func resetConfiguration(conf *model.Configuration) {
 				fmt.Fprintf(os.Stderr, "pdfcpu: config problem: %v\n", err)
 				os.Exit(1)
 			}
-			fmt.Println("Ready - Don't forget to update config.yml with your modifications.")
+			fmt.Println("Finished - Don't forget to update config.yml with your modifications.")
 		} else {
 			fmt.Println("Operation canceled.")
 		}
 	} else {
 		fmt.Println("Operation canceled.")
+	}
+}
+
+func resetCertificates(conf *model.Configuration) {
+	fmt.Println("Are you ready to reset your certificates to your system root certificates?")
+	if confirmed() {
+		fmt.Println("resetting..")
+		if err := model.ResetCertificates(); err != nil {
+			fmt.Fprintf(os.Stderr, "pdfcpu: config problem: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("Finished")
+	} else {
+		fmt.Println("Operation canceled")
 	}
 }
 
@@ -484,6 +498,7 @@ func processArgsForMerge(conf *model.Configuration) ([]string, string) {
 				fmt.Fprintf(os.Stderr, "%s", err)
 				os.Exit(1)
 			}
+			// TODO check extension
 			inFiles = append(inFiles, matches...)
 			continue
 		}
@@ -792,6 +807,7 @@ func processListPermissionsCommand(conf *model.Configuration) {
 				fmt.Fprintf(os.Stderr, "%s", err)
 				os.Exit(1)
 			}
+			// TODO check extension
 			inFiles = append(inFiles, matches...)
 			continue
 		}
@@ -1614,6 +1630,7 @@ func processInfoCommand(conf *model.Configuration) {
 				fmt.Fprintf(os.Stderr, "%s", err)
 				os.Exit(1)
 			}
+			// TODO check extension
 			inFiles = append(inFiles, matches...)
 			continue
 		}
@@ -2060,6 +2077,7 @@ func processListImagesCommand(conf *model.Configuration) {
 				fmt.Fprintf(os.Stderr, "%s", err)
 				os.Exit(1)
 			}
+			// TODO check extension
 			inFiles = append(inFiles, matches...)
 			continue
 		}
@@ -2217,6 +2235,7 @@ func processListFormFieldsCommand(conf *model.Configuration) {
 				fmt.Fprintf(os.Stderr, "%s", err)
 				os.Exit(1)
 			}
+			// TODO check extension
 			inFiles = append(inFiles, matches...)
 			continue
 		}
@@ -2877,4 +2896,61 @@ func processZoomCommand(conf *model.Configuration) {
 	}
 
 	process(cli.ZoomCommand(inFile, outFile, selectedPages, zc, conf))
+}
+
+func processListCertificatesCommand(conf *model.Configuration) {
+	if len(flag.Args()) > 1 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageCertificatesList)
+		os.Exit(1)
+	}
+	if json {
+		log.SetCLILogger(nil)
+	}
+	process(cli.ListCertificatesCommand(json, conf))
+}
+
+func processImportCertificatesCommand(conf *model.Configuration) {
+	if len(flag.Args()) < 1 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageCertificatesImport)
+		os.Exit(1)
+	}
+	inFiles := []string{}
+	for _, arg := range flag.Args() {
+		if strings.Contains(arg, "*") {
+			matches, err := filepath.Glob(arg)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s", err)
+				os.Exit(1)
+			}
+			for _, inFile := range matches {
+				if !model.IsPEM(inFile) && !model.IsP7C(inFile) {
+					fmt.Fprintf(os.Stderr, "skipping %s - needs extension \".pem\" or \".p7c\".\n", inFile)
+				}
+				inFiles = append(inFiles, inFile)
+			}
+			continue
+		}
+		if !model.IsPEM(arg) && !model.IsP7C(arg) {
+			fmt.Fprintf(os.Stderr, "%s needs extension \".pem\" or \".p7c\".\n", arg)
+			os.Exit(1)
+		}
+		inFiles = append(inFiles, arg)
+	}
+
+	process(cli.ImportCertificatesCommand(inFiles, conf))
+}
+
+func processValidateSignaturesCommand(conf *model.Configuration) {
+	if len(flag.Args()) > 1 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageSignaturesValidate)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+
+	process(cli.ValidateSignaturesCommand(inFile, all, full, conf))
 }
