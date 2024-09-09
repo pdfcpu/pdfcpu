@@ -182,7 +182,7 @@ func migrateAnnot(indRef *types.IndirectRef, fieldsSrc, fieldsDest *types.Array,
 		}
 		objNr := ir.ObjectNumber.Value()
 		if migrated[objNr] == indRef.ObjectNumber.Value() {
-			*fieldsDest = append(*fieldsDest, indRef)
+			*fieldsDest = append(*fieldsDest, *indRef)
 			break
 		}
 		d, err := ctxSrc.DereferenceDict(ir)
