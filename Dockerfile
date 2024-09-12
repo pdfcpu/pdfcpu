@@ -39,9 +39,10 @@ COPY --from=builder /go/bin ./
 # Export path of executable
 ENV PATH="${PATH}:/root"
 
-WORKDIR /data
+VOLUME /app
+WORKDIR /app
 
-# Command to run executable
-CMD pdfcpu && echo && pdfcpu version -v
+# Entrypoint for container default executable
+ENTRYPOINT ["pdfcpu"]
 
 
