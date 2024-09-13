@@ -377,12 +377,25 @@ func validateAnnotationDictLink(xRefTable *model.XRefTable, d types.Dict, dictNa
 
 func validateAnnotationDictFreeTextPart1(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 
+	required := REQUIRED
+
 	// DA, required, string
 	validate := validateDA
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
+
 		validate = validateDARelaxed
+
+		// An existing AP entry takes precedence over a DA entry.
+		d1, err := validateDictEntry(xRefTable, d, dictName, "AP", OPTIONAL, model.V12, nil)
+		if err != nil {
+			return err
+		}
+		if len(d1) > 0 {
+			required = OPTIONAL
+		}
 	}
-	da, err := validateStringEntry(xRefTable, d, dictName, "DA", REQUIRED, model.V10, validate)
+
+	da, err := validateStringEntry(xRefTable, d, dictName, "DA", required, model.V10, validate)
 	if err != nil {
 		return err
 	}
