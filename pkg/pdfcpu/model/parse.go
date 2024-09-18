@@ -1110,8 +1110,23 @@ func detectMarker(line, marker string) int {
 	}
 
 	// Skip until keyword is followed by eol.
-	for c := line[i+len(marker)]; c != 0x0A && c != 0x0D; {
-		line = line[i+len(marker):]
+	off := i + len(marker)
+	for c := line[off]; c != 0x0A && c != 0x0D; {
+		if c == 0x20 {
+			off++
+			c = line[off]
+			continue
+		}
+		line = line[off:]
+		if marker == "endobj" {
+			j := strings.Index(line, "xref")
+			if j >= 0 {
+				r := rune(line[j+4])
+				if unicode.IsSpace(r) || r == 0x0000 {
+					return i
+				}
+			}
+		}
 		i = strings.Index(line, marker)
 		if i < 0 {
 			return i
