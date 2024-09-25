@@ -289,6 +289,17 @@ func collectRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) (s
 
 	var vv []string
 
+	//When given use the Opt Array for the Correct Names of the Options instead of the Numbers
+	ignore := false
+	for _, o := range d.ArrayEntry("Opt") {
+		ignore = true
+		vv = append(vv, o.String())
+	}
+
+	if ignore {
+		return strings.Join(vv, ","), nil
+	}
+
 	for _, o := range d.ArrayEntry("Kids") {
 		d, err := xRefTable.DereferenceDict(o)
 		if err != nil {

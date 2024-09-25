@@ -502,6 +502,18 @@ func fillRadioButtonGroup(
 		return nil
 	}
 
+	dtest, _ := ctx.DereferenceArray(d["Opt"])
+	if len(dtest) != 0 {
+		//Resolve Opt Value to real KIDS AP Value
+		for index, o := range dtest {
+			d, _ := ctx.DereferenceText(o)
+			if d == vv[0] {
+				vv[0] = strconv.Itoa(index)
+				break
+			}
+		}
+	}
+
 	if locked {
 		if !lock {
 			unlockFormField(d)
@@ -529,8 +541,12 @@ func fillRadioButtonGroup(
 		return nil
 	}
 
-	s := types.EncodeName(vNew)
-	v := types.Name(s)
+	//Is not required for values
+	s, err := types.Escape(vNew)
+	if err != nil {
+		return err
+	}
+	v := types.Name(*s)
 	d["V"] = v
 
 	if err := fillRadioButtons(ctx, d, vNew, v); err != nil {
@@ -1084,7 +1100,6 @@ func fillWidgetAnnots(
 		switch *ft {
 		case "Btn":
 			err = fillBtn(ctx, d, id, name, locked, format, fillDetails, ok)
-
 		case "Ch":
 			err = fillCh(ctx, d, id, name, locked, format, fonts, fillDetails, ff, ok)
 
