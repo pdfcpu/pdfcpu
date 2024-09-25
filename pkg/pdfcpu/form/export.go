@@ -191,6 +191,19 @@ func extractRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([
 	var opts []string
 	p := 0
 
+	//When given use the Opt Array for the Correct Names of the Options instead of the Numbers
+	ignore := false
+	ww, _ := xRefTable.DereferenceArray(d["Opt"])
+	for _, o := range ww {
+		ignore = true
+		w, _ := xRefTable.DereferenceText(o)
+		opts = append(opts, w)
+	}
+
+	if ignore {
+		return opts, nil
+	}
+
 	for _, o := range d.ArrayEntry("Kids") {
 		d, err := xRefTable.DereferenceDict(o)
 		if err != nil {
