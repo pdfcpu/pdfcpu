@@ -298,7 +298,13 @@ func pageModeValidator(v model.Version) func(s string) bool {
 func validatePageMode(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
 	n, err := validateNameEntry(xRefTable, rootDict, "rootDict", "PageMode", required, sinceVersion, pageModeValidator(xRefTable.Version()))
 	if err != nil {
-		return err
+		if xRefTable.ValidationMode == model.ValidationStrict || n == nil {
+			return err
+		}
+		// Relax validation of "UseAttachments" before PDF v1.6.
+		if *n != "UseAttachments" {
+			return err
+		}
 	}
 
 	if n != nil {

@@ -428,7 +428,7 @@ func (nameObject Name) Clone() Object {
 }
 
 func (nameObject Name) String() string {
-	return fmt.Sprint(string(nameObject))
+	return string(nameObject)
 }
 
 // PDFString returns a string representation as found in and written to a PDF file.
@@ -442,7 +442,7 @@ func (nameObject Name) PDFString() string {
 
 // Value returns a string value for this PDF object.
 func (nameObject Name) Value() string {
-	return string(nameObject)
+	return nameObject.String()
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
