@@ -76,6 +76,10 @@ func XRefTable(xRefTable *model.XRefTable) error {
 
 	xRefTable.Valid = true
 
+	if xRefTable.AAPLExtensions && log.CLIEnabled() {
+		log.CLI.Println("Note: PDF extensions by Apple will not be validated.")
+	}
+
 	if log.ValidateEnabled() {
 		log.Validate.Println("*** validateXRefTable end ***")
 	}

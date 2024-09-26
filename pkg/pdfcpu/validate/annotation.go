@@ -37,24 +37,29 @@ func validateAAPLAKExtrasDictEntry(xRefTable *model.XRefTable, d types.Dict, dic
 		return err
 	}
 
-	dictName = "AAPLAKExtrasDict"
+	// We have identified modifications by Apple.
 
-	// AAPL:AKAnnotationObject, string
-	_, err = validateStringEntry(xRefTable, d1, dictName, "AAPL:AKAnnotationObject", OPTIONAL, sinceVersion, nil)
-	if err != nil {
-		return err
-	}
+	xRefTable.AAPLExtensions = true
 
-	// AAPL:AKPDFAnnotationDictionary, annotationDict
-	ad, err := validateDictEntry(xRefTable, d1, dictName, "AAPL:AKPDFAnnotationDictionary", OPTIONAL, sinceVersion, nil)
-	if err != nil {
-		return err
-	}
+	// // Validation deactivated
+	// dictName = "AAPLAKExtrasDict"
 
-	_, err = validateAnnotationDict(xRefTable, ad)
-	if err != nil {
-		return err
-	}
+	// // AAPL:AKAnnotationObject, string
+	// _, err = validateStringEntry(xRefTable, d1, dictName, "AAPL:AKAnnotationObject", OPTIONAL, sinceVersion, nil)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// // AAPL:AKPDFAnnotationDictionary, annotationDict
+	// ad, err := validateDictEntry(xRefTable, d1, dictName, "AAPL:AKPDFAnnotationDictionary", OPTIONAL, sinceVersion, nil)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// _, err = validateAnnotationDict(xRefTable, ad)
+	// if err != nil {
+	// 	return err
+	// }
 
 	return nil
 }
@@ -1713,6 +1718,7 @@ func validateAnnotationDictSpecial(xRefTable *model.XRefTable, d types.Dict, dic
 
 	// AAPL:AKExtras
 	// No documentation for this PDF-Extension - this is a speculative implementation.
+
 	return validateAAPLAKExtrasDictEntry(xRefTable, d, dictName, "AAPL:AKExtras", OPTIONAL, model.V10)
 }
 

@@ -986,7 +986,21 @@ func validateExtGStateDict(xRefTable *model.XRefTable, o types.Object) error {
 		return err
 	}
 
-	return validateExtGStateDictPart3(xRefTable, d, dictName)
+	err = validateExtGStateDictPart3(xRefTable, d, dictName)
+	if err != nil {
+		return err
+	}
+
+	// Check for AAPL extensions.
+	o, err = d.Entry(dictName, "AAPL:AA", OPTIONAL)
+	if err != nil {
+		return err
+	}
+	if o != nil {
+		xRefTable.AAPLExtensions = true
+	}
+
+	return nil
 }
 
 func validateExtGStateResourceDict(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
